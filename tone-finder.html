@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語聲調搜尋 — 泰華眼裡的泰語教學</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=2">
+<style>
+  body { background: var(--ink); color: var(--white); }
+
+  /* ── Page wrapper ── */
+  .tf-page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: calc(var(--nav-h) + 24px) 16px 80px;
+    min-height: 100vh;
+  }
+
+  /* ── Page header ── */
+  .tf-page-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .tf-page-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 900;
+    color: #D4A017;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .tf-page-hint {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: clamp(13px, 2vw, 15px);
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 1px;
+    line-height: 1.7;
+  }
+
+  /* ── Main card ── */
+  .tf-card {
+    background: rgba(255,255,255,0.03);
+    border: 1.5px solid rgba(212,160,23,0.2);
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  /* ── Word banner ── */
+  .tf-word-banner {
+    display: none;
+    padding: 9px 22px;
+    background: rgba(212,160,23,0.08);
+    border-bottom: 1px solid rgba(212,160,23,0.15);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #D4A017;
+    letter-spacing: 3px;
+    text-align: center;
+  }
+
+  /* ── Breadcrumb ── */
+  .tf-bc {
+    display: none;
+    padding: 8px 28px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    font-size: 12px;
+  }
+  .tf-bc-item {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 11px;
+    background: rgba(212,160,23,0.1);
+    color: rgba(212,160,23,0.75);
+    padding: 2px 9px;
+    border-radius: 0;
+  }
+  .tf-bc-sep { color: rgba(212,160,23,0.3); font-size: 11px; }
+
+  /* ── Nav bar (history back/forward) ── */
+  .tf-nav-bar {
+    display: none;
+    padding: 10px 28px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    gap: 8px;
+    align-items: center;
+  }
+  .tf-nav-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 0;
+    color: rgba(255,255,255,0.55);
+    font-size: 14px;
+    padding: 5px 14px;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: all 0.15s;
+  }
+  .tf-nav-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .tf-nav-btn:disabled { opacity: 0.25; cursor: default; }
+
+  /* ── Body ── */
+  .tf-body { padding: 20px 22px 18px; }
+
+  /* ── Input ── */
+  .tf-input-wrap { text-align: center; }
+  .tf-input {
+    width: 100%;
+    max-width: 320px;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(212,160,23,0.3);
+    border-radius: 0;
+    color: #fff;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 26px;
+    text-align: center;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .tf-input:focus { border-color: rgba(212,160,23,0.75); }
+  .tf-search-btn {
+    margin-top: 16px;
+    padding: 11px 30px;
+    background: #D4A017;
+    color: #111;
+    border: none;
+    border-radius: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: opacity 0.2s;
+  }
+  .tf-search-btn:hover { opacity: 0.88; }
+
+  /* ── Step badge ── */
+  .tf-step-badge {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #D4A017;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ── Question box ── */
+  .tf-qbox {
+    padding: 18px 20px;
+    background: rgba(255,255,255,0.04);
+    border-left: 4px solid #D4A017;
+    border-radius: 0;
+    margin-bottom: 22px;
+  }
+  .tf-qtext {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.7;
+  }
+
+  /* ── Options ── */
+  .tf-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .tf-opt-wrap { display: flex; align-items: stretch; gap: 8px; }
+  .tf-opt {
+    flex: 1;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    border-radius: 0;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.4;
+  }
+  .tf-opt:hover { border-color: rgba(212,160,23,0.55); background: rgba(212,160,23,0.08); }
+
+  /* ── Tip button ── */
+  .tf-tip-btn {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    align-self: center;
+    background: rgba(212,160,23,0.1);
+    border: 1.5px solid rgba(212,160,23,0.3);
+    border-radius: 0;
+    color: #D4A017;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .tf-tip-btn:hover { background: rgba(212,160,23,0.22); }
+
+  /* ── Tone mark buttons ── */
+  .tf-mark-opts { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .tf-mark-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 26px 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    border-radius: 0;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .tf-mark-btn:hover { border-color: rgba(212,160,23,0.55); background: rgba(212,160,23,0.08); }
+  .tf-mark-symbol {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 46px;
+    font-weight: 700;
+    color: #D4A017;
+    line-height: 1;
+  }
+
+  /* ── Helper banner ── */
+  .tf-helper-banner {
+    background: rgba(212,160,23,0.07);
+    border: 1px solid rgba(212,160,23,0.2);
+    border-radius: 0;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #D4A017;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  /* ── Helper trigger button ── */
+  .tf-helper-trigger {
+    display: block;
+    width: 100%;
+    margin-bottom: 18px;
+    padding: 10px 20px;
+    background: rgba(212,160,23,0.07);
+    color: #D4A017;
+    border: 1px solid rgba(212,160,23,0.28);
+    border-radius: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-align: center;
+    transition: background 0.15s;
+  }
+  .tf-helper-trigger:hover { background: rgba(212,160,23,0.16); }
+
+  /* ── Helper result ── */
+  .tf-helper-result {
+    border: 2px solid;
+    border-radius: 0;
+    padding: 22px;
+    text-align: center;
+    margin-bottom: 22px;
+  }
+  .tf-helper-result-label {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 28px;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+  .tf-helper-result-desc {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    color: rgba(255,255,255,0.65);
+  }
+
+  /* ── Footer buttons ── */
+  .tf-footer { text-align: center; padding-top: 4px; }
+  .tf-restart-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.28);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .tf-restart-btn:hover { color: rgba(255,255,255,0.55); }
+
+  /* ── RESULT page ── */
+  .tf-result { text-align: center; }
+  .tf-result-word {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 28px;
+    letter-spacing: 4px;
+  }
+  .tf-result-card {
+    border: 2.5px solid;
+    border-radius: 0;
+    padding: 22px 20px;
+    margin-bottom: 22px;
+  }
+  .tf-result-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .tf-result-tone-num {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .tf-result-tone-name {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .tf-result-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    margin: 18px 0;
+  }
+  .tf-result-match-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .tf-result-match {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 18px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 500;
+    line-height: 1.6;
+  }
+  .tf-result-path {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    text-align: left;
+  }
+  .tf-result-path-title {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .tf-result-path-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+  }
+  .tf-result-path-item {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    background: rgba(212,160,23,0.1);
+    color: rgba(212,160,23,0.75);
+    padding: 3px 10px;
+    border-radius: 0;
+  }
+  .tf-result-path-sep { color: rgba(212,160,23,0.35); font-size: 12px; }
+  .tf-result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .tf-result-primary {
+    padding: 14px 34px;
+    background: #D4A017;
+    color: #111;
+    border: none;
+    border-radius: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .tf-result-secondary {
+    padding: 14px 24px;
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.65);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .tf-result-restart {
+    margin-top: 16px;
+    padding: 12px 28px;
+    background: none;
+    color: rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 1px;
+  }
+  .tf-result-restart:hover { color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.25); }
+
+  /* ── Error overlay ── */
+  .tf-error-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.72);
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .tf-error-box {
+    background: #111;
+    border: 1.5px solid rgba(255,107,107,0.4);
+    border-top: 3px solid #ff6b6b;
+    border-radius: 0;
+    padding: 28px 28px 24px;
+    max-width: 440px;
+    width: 100%;
+  }
+  .tf-error-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #ff6b6b;
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tf-error-msg {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    color: rgba(255,255,255,0.82);
+    line-height: 1.9;
+    margin-bottom: 22px;
+  }
+  .tf-error-close {
+    width: 100%;
+    padding: 13px;
+    background: #D4A017;
+    color: #111;
+    border: none;
+    border-radius: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .tf-error-close:hover { opacity: 0.88; }
+
+  /* ── Tip overlay ── */
+  .tf-tip-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .tf-tip-box {
+    background: #111;
+    border: 1.5px solid rgba(212,160,23,0.3);
+    border-top: 3px solid #D4A017;
+    border-radius: 0;
+    padding: 0;
+    max-width: 440px;
+    width: 100%;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .tf-tip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 22px 14px;
+    border-bottom: 1px solid rgba(212,160,23,0.2);
+  }
+  .tf-tip-header-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 15px;
+    color: #D4A017;
+    letter-spacing: 2px;
+    font-weight: 900;
+  }
+  .tf-tip-close-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+  }
+  .tf-tip-close-btn:hover { color: rgba(255,255,255,0.8); }
+  .tf-tip-entry { margin: 0; padding: 18px 22px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .tf-tip-entry:last-child { border-bottom: none; }
+  .tf-tip-zh {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #D4A017;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .tf-tip-chars {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 20px;
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.04);
+    padding: 14px 16px;
+    border-radius: 0;
+    line-height: 2.4;
+    border-left: 3px solid rgba(212,160,23,0.35);
+  }
+  .tf-tip-desc {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    color: rgba(255,255,255,0.7);
+    line-height: 2;
+    white-space: pre-line;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="site-nav"></nav>
+<div class="avail-band"><div class="avail-dot"></div><span class="avail-text">🎉 全新功能 · <strong>拼音規則練習專區</strong> 即將上線 ✦ &nbsp;｜&nbsp; 🔥 現在買課程立折 <strong>100 元</strong>，額度有限，手慢則無！</span><button class="avail-cta" onclick="openModal('modal-social')">訂閱消息</button>
+</div>
+
+<!-- ── PAGE BOTTOM NAV ── -->
+<div style="position:fixed;bottom:0;left:0;right:0;z-index:990;background:rgba(17,17,17,0.97);border-top:1px solid rgba(212,160,23,0.3);display:flex;justify-content:center;align-items:center;gap:0;height:44px;">
+  <span style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);margin-right:12px;text-transform:uppercase;">頁面</span>
+  <a href="index.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:5px 14px;border:1px solid rgba(255,255,255,0.3);margin:0 3px;">老師・介紹</a>
+  <a href="page2.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:5px 14px;border:1px solid rgba(255,255,255,0.3);margin:0 3px;">課程・費用</a>
+  <a href="page3.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:5px 14px;border:1px solid rgba(255,255,255,0.3);margin:0 3px;">須知・服務</a>
+  <a href="page4.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:5px 14px;border:1px solid rgba(255,255,255,0.3);margin:0 3px;">泰語・分享</a>
+  <a href="tone-finder.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:900;color:#D4A017;text-decoration:none;padding:5px 14px;border:1px solid rgba(212,160,23,0.5);margin:0 3px;background:rgba(212,160,23,0.1);">聲調・搜尋</a>
+</div>
+
+<!-- ── MINIMAL MODALS (for nav modal triggers) ── -->
+<div class="modal-overlay" id="modal-quiz" onclick="closeModalOutside(event,'modal-quiz')">
+  <div class="modal-box"><div class="modal-header"><div class="modal-title">🎯 快速程度測驗</div><button class="modal-close" onclick="closeModal('modal-quiz')">✕</button></div><div class="modal-body"><p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-muted);text-align:center;padding:20px 0;">請前往主頁進行程度測驗</p><a href="index.html" style="display:block;text-align:center;padding:12px;background:var(--gold-bright);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:700;text-decoration:none;">前往主頁</a></div></div>
+</div>
+<!-- ── MAIN PAGE ── -->
+<div class="tf-page">
+  <div class="tf-page-header">
+    <div class="tf-page-title">🎵 泰語聲調搜尋</div>
+    <div class="tf-page-hint" id="tf-hint">輸入泰文單字，逐步分析聲調</div>
+  </div>
+
+  <div class="tf-card">
+    <div class="tf-word-banner" id="tf-banner"></div>
+    <div class="tf-bc" id="tf-bc"></div>
+    <div class="tf-nav-bar" id="tf-nav-bar">
+      <button class="tf-nav-btn" id="tf-back-btn" onclick="TF.back()" disabled>← 上一步</button>
+      <button class="tf-nav-btn" id="tf-fwd-btn" onclick="TF.forward()" disabled>下一步 →</button>
+    </div>
+    <div class="tf-body" id="tf-body"></div>
+  </div>
+</div>
+
+<!-- ── SCRIPTS ── -->
+<script>
+// ════════════════════════════════════════════════════════════
+// DEFINITIONS
+// ════════════════════════════════════════════════════════════
+var DEFS = {
+  toneMark: {
+    zh: '聲調符號',
+    desc: '標示在子音上方，決定音節聲調的符號。\n四種聲調符號：\二聲符（ ่ ）  三聲符（ ้ ）  四聲符（ ๊ ）  五聲符（ ๋ ）'
+  },
+  low:  { zh: '低子音',  chars: 'ค คร คล คว ฅ ฆ ง ช ซ ซร ฌ ญ ฑ ฒ ณ ท ทร ธ น พ พร พล ฟ ภ ม ย ร ล ว ฬ ฮ' },
+  high: { zh: '高子音',  chars: 'ข ขร ขล ขว ฃ ฉ ฐ ถ ผ ฝ ศ ศร ษ ส สร ห' },
+  mid:  { zh: '中子音',  chars: 'ก จ จร ด ต ตร บ ป ปร ปล อ ฎ ฏ กร กล กว' },
+  lead: { zh: '前引字',  chars: 'หน หม หล หว หย หร หญ หง อย', desc: '由 ห 或 อ 帶頭，與後方低子音結合使聲調改變的組合。' },
+  other: { zh: '其他子音', desc: '指「中子音」「高子音」或「前引字」三類的統稱。' },
+  live:  { zh: '活音', desc: '① 有長尾音（น ณ ญ ร ล ฬ ม ย ว ง）收尾\n② 無尾音但使用長母音' },
+  dead:  { zh: '死音', desc: '① 有短尾音（ก ข ค ฆ บ ป พ ฟ ภ จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส）收尾\n② 無尾音但使用短母音' },
+  longVowel:  { zh: '長母音', chars: '-า  -ี  -ื  -ู  เ-  แ-  โ-  -อ  เ-อ  เ-ิ-  เ-ีย  -ัว  ฤๅ  ฦๅ' },
+  shortVowel: { zh: '短母音', chars: '-ะ  -ั-  -ิ  -ึ  -ุ  เ-ะ  เ-็-  แ-ะ  แ-็-  โ-ะ  เ-าะ  เ-อะ  เ-ียะ  เ-ือะ  -ัวะ' },
+  longEnd:  { zh: '長尾音', chars: 'น  ณ  ญ  ร  ล  ฬ  ม  ย  ว  ง' },
+  shortEnd: { zh: '短尾音', chars: 'ก  ข  ค  ฆ  บ  ป  พ  ฟ  ภ  จ  ช  ซ  ฎ  ฏ  ฐ  ฑ  ฒ  ด  ต  ถ  ท  ธ  ศ  ษ  ส' }
+};
+
+// ════════════════════════════════════════════════════════════
+// TONES (Thai primary, Chinese secondary)
+// ════════════════════════════════════════════════════════════
+var TONES = {
+  1: { zh:'第一聲', match:'對應中文的第一聲',       color:'#6cb8ff' },
+  2: { zh:'第二聲', match:'對應中文的第三聲',       color:'#7ec87e' },
+  3: { zh:'第三聲', match:'對應中文的第四聲',       color:'#ff7c7c' },
+  4: { zh:'第四聲', match:'對應中文的第一聲高 tone', color:'#ffb347' },
+  5: { zh:'第五聲', match:'對應中文的第二聲',       color:'#c39bff' }
+};
+
+// ════════════════════════════════════════════════════════════
+// THAI WORD PARSER  (smart error detection)
+// ════════════════════════════════════════════════════════════
+var TH = (function() {
+  var LOW_SET  = new Set('คฅฆงชซฌญฑฒณทธนพฟภมยรลวฬฮ'.split(''));
+  var HIGH_SET = new Set('ขฃฉฐถผฝศษสห'.split(''));
+  var MID_SET  = new Set('กจดตบปอฎฏ'.split(''));
+  var SHORT_TAIL = new Set('กขคฆบปพฟภจชซฎฏฐฑฒดตถทธศษส'.split(''));
+  var LONG_TAIL  = new Set('นณญรลฬมยวง'.split(''));
+  var CONS_SET   = new Set('กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ'.split(''));
+  var LEAD_PATS  = ['หน','หม','หล','หว','หย','หร','หญ','หง','อย'];
+  // Short vowel characters
+  var SHORT_V = new Set(['ะ','ั','ิ','ึ','ุ']); // ะ ั ิ ึ ุ
+  // Long vowel characters
+  var LONG_V  = new Set(['า','ี','ื','ู','เ','แ','โ']); // า ี ื ู เ แ โ
+  // Tone mark characters
+  var TONE_CHARS = new Set(['่','้','๊','๋']); // ่ ้ ๊ ๋
+
+  return {
+    hasToneMark: function(word) {
+      for (var i=0; i<word.length; i++) if (TONE_CHARS.has(word[i])) return true;
+      return false;
+    },
+    getToneMark: function(word) {
+      for (var i=0; i<word.length; i++) if (TONE_CHARS.has(word[i])) return word[i];
+      return null;
+    },
+    getInitClass: function(word) {
+      for (var i=0; i<LEAD_PATS.length; i++) {
+        if (word.indexOf(LEAD_PATS[i]) === 0) return 'lead';
+      }
+      for (var j=0; j<word.length; j++) {
+        var c = word[j];
+        if (LOW_SET.has(c))  return 'low';
+        if (HIGH_SET.has(c)) return 'high';
+        if (MID_SET.has(c))  return 'mid';
+      }
+      return null;
+    },
+    getInitChar: function(word) {
+      for (var i=0; i<LEAD_PATS.length; i++) {
+        if (word.indexOf(LEAD_PATS[i]) === 0) return LEAD_PATS[i];
+      }
+      for (var j=0; j<word.length; j++) {
+        if (CONS_SET.has(word[j])) return word[j];
+      }
+      return null;
+    },
+    isLiveWord: function(word) {
+      var cons = [];
+      for (var i=0; i<word.length; i++) if (CONS_SET.has(word[i])) cons.push(word[i]);
+      if (cons.length >= 2) {
+        var last = cons[cons.length-1];
+        if (SHORT_TAIL.has(last)) return false;
+        if (LONG_TAIL.has(last))  return true;
+      }
+      for (var j=0; j<word.length; j++) if (SHORT_V.has(word[j])) return false;
+      for (var k=0; k<word.length; k++) if (LONG_V.has(word[k]))  return true;
+      return null;
+    },
+    classLabel: function(cls) {
+      return {low:'低子音',high:'高子音',mid:'中子音',lead:'前引字'}[cls] || cls;
+    },
+    getVowelType: function(word) {
+      for (var i=0; i<word.length; i++) if (SHORT_V.has(word[i])) return 'short';
+      for (var j=0; j<word.length; j++) if (LONG_V.has(word[j]))  return 'long';
+      return null;
+    },
+    hasTailCons: function(word) {
+      var cons = [];
+      for (var i=0; i<word.length; i++) if (CONS_SET.has(word[i])) cons.push(word[i]);
+      return cons.length >= 2;
+    },
+    getEndConsType: function(word) {
+      var cons = [];
+      for (var i=0; i<word.length; i++) if (CONS_SET.has(word[i])) cons.push(word[i]);
+      if (cons.length >= 2) {
+        var last = cons[cons.length-1];
+        if (SHORT_TAIL.has(last)) return 'short';
+        if (LONG_TAIL.has(last))  return 'long';
+      }
+      return null;
+    }
+  };
+})();
+
+// ════════════════════════════════════════════════════════════
+// STATE & HISTORY
+// ════════════════════════════════════════════════════════════
+var S = { word:'', step:'input', path:[], tone:null };
+var hist = [];
+var histPos = -1;
+var _acts = {}, _actId = 0;
+
+function act(fn) {
+  var id = 'a'+(++_actId);
+  _acts[id] = fn;
+  return "TF._run('"+id+"')";
+}
+
+function navigate(nextStep, label, toneNum) {
+  // Truncate forward history
+  hist = hist.slice(0, histPos+1);
+  // Apply new state
+  var newPath = label ? S.path.concat([label]) : S.path.slice();
+  var newTone = (toneNum !== undefined) ? toneNum : null;
+  S = { word:S.word, step:nextStep, path:newPath, tone:newTone };
+  // Save to history
+  hist.push({ step:S.step, path:S.path.slice(), tone:S.tone });
+  histPos = hist.length-1;
+  render();
+}
+
+function restoreState(pos) {
+  histPos = pos;
+  var snap = hist[pos];
+  S = { word:S.word, step:snap.step, path:snap.path.slice(), tone:snap.tone };
+  render();
+}
+
+// ════════════════════════════════════════════════════════════
+// ERROR DETECTION
+// ════════════════════════════════════════════════════════════
+function validate(choiceKey, choiceLabel) {
+  var w = S.word;
+  if (!w) return null;
+
+  // Step 1: tone mark check
+  if (S.step === 's1') {
+    var hasMark = TH.hasToneMark(w);
+    if (choiceKey === 'hasMark' && !hasMark) {
+      return '「'+w+'」好像沒有聲調符號耶～\n再確認一下輸入的字，或改選「無聲調符號」吧！';
+    }
+    if (choiceKey === 'noMark' && hasMark) {
+      var mk = TH.getToneMark(w);
+      return '「'+w+'」有聲調符號「'+mk+'」喔～\n請選「有聲調符號」再繼續吧！';
+    }
+  }
+
+  // Step 2a: consonant class (when has tone mark)
+  if (S.step === 's2a') {
+    var actual = TH.getInitClass(w);
+    if (actual) {
+      if (choiceKey === 'low' && actual !== 'low') {
+        return '「'+TH.getInitChar(w)+'」是'+TH.classLabel(actual)+'呢，不是低子音～\n再看一下選哪個比較合適吧！';
+      }
+      if (choiceKey === 'other' && actual === 'low') {
+        return '「'+TH.getInitChar(w)+'」是低子音喔～\n選「低子音」就對了！';
+      }
+    }
+  }
+
+  // Step 2a_other: sub-class
+  if (S.step === 's2a_other') {
+    var ac2 = TH.getInitClass(w);
+    if (ac2 && choiceKey !== ac2) {
+      return '「'+TH.getInitChar(w)+'」應該是'+TH.classLabel(ac2)+'喔～\n再確認一下子音的種類吧！';
+    }
+  }
+
+  // Step 2b: live/dead
+  if (S.step === 's2b') {
+    var isLive = TH.isLiveWord(w);
+    if (isLive !== null) {
+      if (choiceKey === 'live' && !isLive) {
+        return '「'+w+'」看起來是死音喔～\n試試選「死音」，或用判斷工具確認一下吧！';
+      }
+      if (choiceKey === 'dead' && isLive) {
+        return '「'+w+'」看起來是活音喔～\n試試選「活音」，或用判斷工具確認一下吧！';
+      }
+    }
+  }
+
+  // Mark selection: validate the mark actually exists in the word
+  if (S.step === 's2a_low' || S.step === 's2a_mid' || S.step === 's2a_hi') {
+    var actualMark = TH.getToneMark(w);
+    if (actualMark && choiceKey !== actualMark) {
+      return '「'+w+'」上面的聲調符號是「'+actualMark+'」，好像選錯了喔～\n再看一下字上面的符號是哪個吧！';
+    }
+  }
+
+  // s2b_live: validate consonant class
+  if (S.step === 's2b_live') {
+    var cls3 = TH.getInitClass(w);
+    if (cls3) {
+      if (choiceKey === 'mid_low' && (cls3 === 'high' || cls3 === 'lead')) {
+        return '「'+TH.getInitChar(w)+'」是'+TH.classLabel(cls3)+'喔～\n試試選「高子音／前引字」吧！';
+      }
+      if (choiceKey === 'high_lead' && (cls3 === 'mid' || cls3 === 'low')) {
+        return '「'+TH.getInitChar(w)+'」是'+TH.classLabel(cls3)+'喔～\n試試選「中子音／低子音」吧！';
+      }
+    }
+  }
+
+  // s2b_dead: validate consonant class
+  if (S.step === 's2b_dead') {
+    var cls4 = TH.getInitClass(w);
+    if (cls4) {
+      if (choiceKey === 'high_lead_mid' && cls4 === 'low') {
+        return '「'+TH.getInitChar(w)+'」是低子音喔～\n試試選「低子音」吧！';
+      }
+      if (choiceKey === 'low_dead' && cls4 !== 'low') {
+        return '「'+TH.getInitChar(w)+'」是'+TH.classLabel(cls4)+'，不是低子音喔～\n試試選「高子音／前引字／中子音」吧！';
+      }
+    }
+  }
+
+  // s2b_dl: validate vowel type
+  if (S.step === 's2b_dl') {
+    var vowelType = TH.getVowelType(w);
+    if (vowelType) {
+      if (choiceKey === 'long_vowel' && vowelType === 'short') {
+        return '「'+w+'」看起來是短母音喔～\n試試選「短母音」吧！';
+      }
+      if (choiceKey === 'short_vowel' && vowelType === 'long') {
+        return '「'+w+'」看起來是長母音喔～\n試試選「長母音」吧！';
+      }
+    }
+  }
+
+  // helper step 1: has ending consonant?
+  if (S.step === 'helper') {
+    var hasTail = TH.hasTailCons(w);
+    if (choiceKey === 'has_tail' && !hasTail) {
+      return '「'+w+'」沒有尾音喔～\n試試選「無尾音」吧！';
+    }
+    if (choiceKey === 'no_tail' && hasTail) {
+      return '「'+w+'」有尾音呢～\n試試選「有尾音」吧！';
+    }
+  }
+
+  // helper h_with: ending consonant type (短尾音 or 長尾音)
+  if (S.step === 'h_with') {
+    var endType = TH.getEndConsType(w);
+    if (endType) {
+      if (endType === 'short' && choiceKey === 'long_tail') {
+        return '「'+w+'」的尾音是短尾音喔～\n試試選「短尾音→死音」吧！';
+      }
+      if (endType === 'long' && choiceKey === 'short_tail') {
+        return '「'+w+'」的尾音是長尾音喔～\n試試選「長尾音→活音」吧！';
+      }
+    }
+  }
+
+  // helper h_no: vowel type (短母音 or 長母音)
+  if (S.step === 'h_no') {
+    var vowelH = TH.getVowelType(w);
+    if (vowelH) {
+      if (vowelH === 'short' && choiceKey === 'long_vowel_h') {
+        return '「'+w+'」是短母音喔～\n試試選「短母音→死音」吧！';
+      }
+      if (vowelH === 'long' && choiceKey === 'short_vowel_h') {
+        return '「'+w+'」是長母音喔～\n試試選「長母音→活音」吧！';
+      }
+    }
+  }
+
+  return null; // no error
+}
+
+function tryNavigate(choiceKey, choiceLabel, nextStep, toneNum) {
+  var err = validate(choiceKey, choiceLabel);
+  if (err) { showError(err); return; }
+  if (toneNum !== undefined) navigate(nextStep, choiceLabel, toneNum);
+  else navigate(nextStep, choiceLabel);
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════════
+function render() {
+  _acts = {}; _actId = 0;
+
+  // Word banner
+  var banner = document.getElementById('tf-banner');
+  if (S.word && S.step !== 'input') {
+    banner.style.display = 'block';
+    banner.textContent = S.word;
+    document.getElementById('tf-hint').style.display = 'none';
+  } else {
+    banner.style.display = 'none';
+    document.getElementById('tf-hint').style.display = 'block';
+  }
+
+  // Breadcrumb
+  var bc = document.getElementById('tf-bc');
+  if (S.path.length > 1 && S.step !== 'input' && S.step !== 'result') {
+    bc.style.display = 'flex';
+    bc.innerHTML = S.path.map(function(p,i){
+      return (i>0?'<span class="tf-bc-sep">›</span>':'') +
+        '<span class="tf-bc-item">'+p+'</span>';
+    }).join('');
+  } else { bc.style.display = 'none'; }
+
+  // Nav bar (back/forward)
+  var navBar = document.getElementById('tf-nav-bar');
+  var backBtn = document.getElementById('tf-back-btn');
+  var fwdBtn = document.getElementById('tf-fwd-btn');
+  if (S.step !== 'input') {
+    navBar.style.display = 'flex';
+    backBtn.disabled = (histPos <= 0);
+    fwdBtn.disabled = (histPos >= hist.length-1);
+  } else {
+    navBar.style.display = 'none';
+  }
+
+  // Main body
+  var body = document.getElementById('tf-body');
+  body.innerHTML = buildStep();
+}
+
+function buildStep() {
+  switch(S.step) {
+    case 'input':     return stepInput();
+    case 's1':        return step1();
+    case 's2a':       return step2a();
+    case 's2a_low':   return step2aLow();
+    case 's2a_other': return step2aOther();
+    case 's2a_mid':   return step2aMid();
+    case 's2a_hi':    return step2aHi();
+    case 's2b':       return step2b();
+    case 'helper':    return helperStep1();
+    case 'h_with':    return helperWith();
+    case 'h_no':      return helperNo();
+    case 'h_done':    return helperDone();
+    case 's2b_live':  return s2bLive();
+    case 's2b_dead':  return s2bDead();
+    case 's2b_dl':    return s2bDeadLow();
+    case 'result':    return stepResult();
+    default: return '';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// STEP BUILDERS
+// ════════════════════════════════════════════════════════════
+function stepInput() {
+  return '<div class="tf-input-wrap">' +
+    '<input id="tf-inp" class="tf-input" type="text" autocomplete="off" spellcheck="false" ' +
+      'placeholder="例：กา, ข้าว, ไทย…" ' +
+      'oninput="TF.filterThai(this)" ' +
+      'onkeydown="if(event.key===\'Enter\')TF.search()">' +
+    '<div id="tf-lang-warn" style="display:none;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#ff6b6b;margin-top:8px;letter-spacing:0.5px;">⚠️ 請輸入泰文字符（ภาษาไทยเท่านั้น）</div>' +
+    '<div><button class="tf-search-btn" onclick="TF.search()">🔍 開始分析</button></div>' +
+  '</div>';
+}
+
+function qbox(stepNum, text) {
+  return '<div class="tf-qbox">' +
+    (stepNum ? '<div class="tf-step-badge">步驟 ' + stepNum + '</div>' : '') +
+    '<div class="tf-qtext">' + text + '</div>' +
+  '</div>';
+}
+
+function optRow(label, onclickStr, defKeys) {
+  var tipBtn = defKeys && defKeys.length
+    ? '<button class="tf-tip-btn" onclick="event.stopPropagation();TF.tip(' + JSON.stringify(defKeys).replace(/"/g, '&quot;') + ')">?</button>'
+    : '';
+  return '<div class="tf-opt-wrap"><button class="tf-opt" onclick="'+onclickStr+'">'+label+'</button>'+tipBtn+'</div>';
+}
+
+function markSymbol(mark) {
+  // Display mark alone using a transparent base character
+  return '<span style="font-family:\'Sarabun\',sans-serif;">' +
+    '<span style="visibility:hidden;font-size:44px;">ก</span>' +
+    '<span class="tf-mark-symbol" style="margin-left:-0.6em;">'+mark+'</span>' +
+  '</span>';
+}
+
+function markRow(mark, onclickStr) {
+  return '<button class="tf-mark-btn" onclick="'+onclickStr+'">' +
+    markSymbol(mark) +
+  '</button>';
+}
+
+function footer() {
+  return '<div class="tf-footer"><button class="tf-restart-btn" onclick="TF.reset()">↺ 重新開始</button></div>';
+}
+
+// ── Steps ──
+function step1() {
+  return qbox('1','這個字有<strong style="color:#D4A017;">聲調符號</strong>嗎？') +
+    '<div class="tf-options">' +
+      optRow('有聲調符號', act(function(){ tryNavigate('hasMark','有聲調符號','s2a'); }), ['toneMark']) +
+      optRow('無聲調符號', act(function(){ tryNavigate('noMark','無聲調符號','s2b'); })) +
+    '</div>' + footer();
+}
+
+function step2a() {
+  return qbox('2','起首子音屬於哪一組？') +
+    '<div class="tf-options">' +
+      optRow('低子音', act(function(){ tryNavigate('low','低子音','s2a_low'); }), ['low']) +
+      optRow('其他子音（中子音 ／ 高子音 ／ 前引字）', act(function(){ tryNavigate('other','其他子音','s2a_other'); }), ['other']) +
+    '</div>' + footer();
+}
+
+function step2aLow() {
+  return qbox('3','聲調符號是哪一個？') +
+    '<div class="tf-mark-opts">' +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result',3); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',4); })) +
+    '</div>' + footer();
+}
+
+function step2aOther() {
+  return qbox('3','請選擇確切的子音種類') +
+    '<div class="tf-options">' +
+      optRow('中子音', act(function(){ tryNavigate('mid','中子音','s2a_mid'); }), ['mid']) +
+      optRow('高子音', act(function(){ tryNavigate('high','高子音','s2a_hi'); }), ['high']) +
+      optRow('前引字', act(function(){ tryNavigate('lead','前引字','s2a_hi'); }), ['lead']) +
+    '</div>' + footer();
+}
+
+function step2aMid() {
+  return qbox('4','聲調符號是哪一個？') +
+    '<div class="tf-mark-opts">' +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result',2); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',3); })) +
+      markRow('๊', act(function(){ tryNavigate('๊','๊ 第四聲符號','result',4); })) +
+      markRow('๋', act(function(){ tryNavigate('๋','๋ 第五聲符號','result',5); })) +
+    '</div>' + footer();
+}
+
+function step2aHi() {
+  return qbox('4','聲調符號是哪一個？') +
+    '<div class="tf-mark-opts">' +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result',2); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',3); })) +
+    '</div>' + footer();
+}
+
+function step2b() {
+  return qbox('2','這個字是<strong style="color:#7ec87e;">活音</strong>還是<strong style="color:#ff7c7c;">死音</strong>？') +
+    '<button class="tf-helper-trigger" onclick="'+act(function(){ navigate('helper','開啟判斷工具'); })+'">🔎 還不確定？ 檢查活音／死音</button>' +
+    '<div class="tf-options">' +
+      optRow('活音', act(function(){ tryNavigate('live','活音','s2b_live'); }), ['live']) +
+      optRow('死音', act(function(){ tryNavigate('dead','死音','s2b_dead'); }), ['dead']) +
+    '</div>' + footer();
+}
+
+function helperBannerHTML() {
+  return '<div class="tf-helper-banner">🔎 活音／死音 判斷工具</div>';
+}
+
+function helperStep1() {
+  return helperBannerHTML() + qbox('','這個字有「尾音」嗎？') +
+    '<div class="tf-options">' +
+      optRow('有尾音', act(function(){ tryNavigate('has_tail','有尾音','h_with'); }), ['longEnd','shortEnd']) +
+      optRow('無尾音', act(function(){ tryNavigate('no_tail','無尾音','h_no'); }), ['longVowel','shortVowel']) +
+    '</div>';
+}
+
+function helperWith() {
+  return helperBannerHTML() + qbox('','尾音是哪種類型？') +
+    '<div class="tf-options">' +
+      optRow('短尾音', act(function(){ tryNavigate('short_tail','短尾音','h_done'); }), ['shortEnd']) +
+      optRow('長尾音', act(function(){ tryNavigate('long_tail','長尾音','h_done'); }), ['longEnd']) +
+    '</div>';
+}
+
+function helperNo() {
+  return helperBannerHTML() + qbox('','使用的母音是哪種類型？') +
+    '<div class="tf-options">' +
+      optRow('短母音', act(function(){ tryNavigate('short_vowel_h','短母音','h_done'); }), ['shortVowel']) +
+      optRow('長母音', act(function(){ tryNavigate('long_vowel_h','長母音','h_done'); }), ['longVowel']) +
+    '</div>';
+}
+
+function helperDone() {
+  var last = S.path[S.path.length-1];
+  var isDead = (last === '短尾音' || last === '短母音');
+  var col = isDead ? '#ff7c7c' : '#7ec87e';
+  var label = isDead ? '死音' : '活音';
+  var nextStep = isDead ? 's2b_dead' : 's2b_live';
+  var continueAct = act(function(){ navigate(nextStep, label); });
+  return helperBannerHTML() +
+    '<div class="tf-helper-result" style="border-color:'+col+';">' +
+      '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.4);letter-spacing:3px;margin-bottom:10px;">判斷結果</div>' +
+      '<div class="tf-helper-result-label" style="color:'+col+';">'+label+'</div>' +
+      '<div class="tf-helper-result-desc">這個字是「'+label+'」</div>' +
+    '</div>' +
+    '<div style="text-align:center;"><button class="tf-search-btn" onclick="'+continueAct+'">繼續分析 →</button></div>';
+}
+
+function s2bLive() {
+  return qbox('3','起首子音屬於哪一組？') +
+    '<div class="tf-options">' +
+      optRow('中子音 ／ 低子音', act(function(){ tryNavigate('mid_low','中子音/低子音','result',1); }), ['mid','low']) +
+      optRow('高子音 ／ 前引字', act(function(){ tryNavigate('high_lead','高子音/前引字','result',5); }), ['high','lead']) +
+    '</div>' + footer();
+}
+
+function s2bDead() {
+  return qbox('3','起首子音屬於哪一組？') +
+    '<div class="tf-options">' +
+      optRow('高子音 ／ 前引字 ／ 中子音', act(function(){ tryNavigate('high_lead_mid','高子音/前引字/中子音','result',2); }), ['high','lead','mid']) +
+      optRow('低子音', act(function(){ tryNavigate('low_dead','低子音','s2b_dl'); }), ['low']) +
+    '</div>' + footer();
+}
+
+function s2bDeadLow() {
+  return qbox('4','母音是哪種類型？') +
+    '<div class="tf-options">' +
+      optRow('長母音', act(function(){ tryNavigate('long_vowel','長母音','result',3); }), ['longVowel']) +
+      optRow('短母音', act(function(){ tryNavigate('short_vowel','短母音','result',4); }), ['shortVowel']) +
+    '</div>' + footer();
+}
+
+// ── RESULT ──
+function stepResult() {
+  var t = TONES[S.tone];
+  if (!t) return '';
+  var pathHtml = S.path.map(function(p,i){
+    return (i>0?'<span class="tf-result-path-sep">›</span>':'') +
+      '<span class="tf-result-path-item">'+p+'</span>';
+  }).join('');
+  var againAct = act(function(){
+    var w = S.word;
+    hist=[]; histPos=-1;
+    hist.push({step:'s1',path:[w],tone:null});
+    histPos=0;
+    S = {word:w,step:'s1',path:[w],tone:null};
+    render();
+  });
+  return '<div class="tf-result">' +
+    '<div class="tf-result-word">'+S.word+'</div>' +
+
+    '<div class="tf-result-card" style="border-color:'+t.color+';">' +
+      '<div class="tf-result-label">聲調分析結果</div>' +
+      '<div class="tf-result-tone-num" style="color:'+t.color+';">'+t.zh+'</div>' +
+      '<div class="tf-result-divider"></div>' +
+      '<div class="tf-result-match">'+t.match+'</div>' +
+    '</div>' +
+
+    '<div class="tf-result-path">' +
+      '<div class="tf-result-path-title">分析路徑</div>' +
+      '<div class="tf-result-path-items">'+pathHtml+'</div>' +
+    '</div>' +
+
+    '<div style="text-align:center;">' +
+      '<button class="tf-result-restart" onclick="TF.reset()">重新開始</button>' +
+    '</div>' +
+  '</div>';
+}
+
+// ════════════════════════════════════════════════════════════
+// POPUPS  (Error + Tip)
+// ════════════════════════════════════════════════════════════
+function showError(msg) {
+  var old = document.getElementById('tf-err');
+  if (old) old.remove();
+  var div = document.createElement('div');
+  div.id = 'tf-err';
+  div.className = 'tf-error-overlay';
+  div.innerHTML =
+    '<div class="tf-error-box">' +
+      '<div class="tf-error-title">🤔 好像選錯囉</div>' +
+      '<div class="tf-error-msg">' + msg.replace(/\n/g,'<br>') + '</div>' +
+      '<button class="tf-error-close" onclick="document.getElementById(\'tf-err\').remove()">確認，再試一次</button>' +
+    '</div>';
+  document.body.appendChild(div);
+}
+
+function showTip(keys) {
+  var old = document.getElementById('tf-tip-ov');
+  if (old) old.remove();
+  var rows = keys.map(function(k){
+    var d = DEFS[k];
+    if (!d) return '';
+    return '<div class="tf-tip-entry">' +
+      '<div class="tf-tip-zh">'+d.zh+'</div>' +
+      (d.chars ? '<div class="tf-tip-chars">'+d.chars+'</div>' : '') +
+      (d.desc  ? '<div class="tf-tip-desc">'+d.desc+'</div>' : '') +
+    '</div>';
+  }).join('');
+  var div = document.createElement('div');
+  div.id = 'tf-tip-ov';
+  div.className = 'tf-tip-overlay';
+  div.onclick = function(e){ if (e.target===div) div.remove(); };
+  div.innerHTML =
+    '<div class="tf-tip-box">' +
+      '<div class="tf-tip-header">' +
+        '<span class="tf-tip-header-title">說明</span>' +
+        '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-tip-ov\').remove()">✕</button>' +
+      '</div>' +
+      rows +
+    '</div>';
+  document.body.appendChild(div);
+}
+
+// ════════════════════════════════════════════════════════════
+// PUBLIC API
+// ════════════════════════════════════════════════════════════
+var TF = {
+  filterThai: function(inp) {
+    var orig = inp.value;
+    // Allow only Thai characters (U+0E00–U+0E7F) and spaces
+    var filtered = orig.replace(/[^฀-๿\s]/g, '');
+    if (filtered !== orig) {
+      inp.value = filtered;
+      // Restore cursor position
+      var warn = document.getElementById('tf-lang-warn');
+      if (warn) { warn.style.display = 'block'; setTimeout(function(){ warn.style.display='none'; }, 2500); }
+    }
+  },
+  search: function() {
+    var inp = document.getElementById('tf-inp');
+    var w = inp ? inp.value.trim() : '';
+    if (!w) { if(inp) inp.style.borderColor='#ff6b6b'; return; }
+    // Validate Thai only
+    if (/[^฀-๿\s]/.test(w)) {
+      if(inp) inp.style.borderColor='#ff6b6b';
+      var warn = document.getElementById('tf-lang-warn');
+      if (warn) warn.style.display = 'block';
+      return;
+    }
+    var warn = document.getElementById('tf-lang-warn');
+    if (warn) warn.style.display = 'none';
+    hist = []; histPos = -1;
+    S = { word:w, step:'s1', path:[w], tone:null };
+    hist.push({step:'s1', path:[w], tone:null});
+    histPos = 0;
+    render();
+  },
+  back: function() {
+    if (histPos > 0) restoreState(histPos-1);
+  },
+  forward: function() {
+    if (histPos < hist.length-1) restoreState(histPos+1);
+  },
+  reset: function() {
+    hist=[]; histPos=-1;
+    S = { word:'', step:'input', path:[], tone:null };
+    render();
+  },
+  tip: function(keys) { showTip(keys); },
+  _run: function(id) { if(_acts[id]) _acts[id](); }
+};
+
+// ════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════
+render();
+</script>
+
+<div style="height:44px;background:#0A0804;"></div>
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學
+</footer>
+<script src="posts-data.js"></script>
+<script src="lessons-data.js"></script>
+<script src="shared.js?v=2"></script>
+</body>
+</html>

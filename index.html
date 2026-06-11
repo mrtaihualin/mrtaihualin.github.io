@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰華眼裡的泰語教學 — 專為台灣人設計的泰文課</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=2">
+</head>
+<body>
+<!-- MODALS -->
+<!-- Quiz Modal -->
+<div class="modal-overlay" id="modal-quiz" onclick="closeModalOutside(event,'modal-quiz')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">🎯 快速程度測驗</div>
+      <button class="modal-close" onclick="closeModal('modal-quiz')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="quiz-wrap" id="quiz-wrap">
+        <!-- Step 1 -->
+        <div class="quiz-step active" id="q1">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你目前的泰文程度是？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">🆕 完全零基礎，從來沒學過</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">📖 學過一點點（知道一些單字或發音）</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',1)">🗣️ 可以簡單對話，但常卡關</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',2)">✅ 能日常溝通，想精進特定部分</button>
+          </div>
+        </div>
+        <!-- Step 2 -->
+        <div class="quiz-step" id="q2">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你最大的學習困境是什麼？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">🔤 不了解聲調系統，不確定自己發音對不對</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">📝 看不懂泰文文字，不知如何開始</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',1)">🧱 單字認識不少，但說不出完整句子</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',2)">🎯 有特定溝通場景需要突破（工作/旅遊/追星）</button>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="quiz-step" id="q3">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你希望多快開始說出第一句泰語？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">🚀 越快越好，第一堂就想開口</button>
+            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">📅 1–2 個月內穩定打好基礎</button>
+            <button class="quiz-opt" onclick="quizNext('q3','q4',1)">🧘 慢慢來，重視紮實理解</button>
+          </div>
+        </div>
+        <!-- Step 4 -->
+        <div class="quiz-step" id="q4">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div></div>
+          <div class="quiz-q-text">你每週大概可以投入多少學習時間？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizResult(0)">⏱️ 每週 1–2 小時（上課為主）</button>
+            <button class="quiz-opt" onclick="quizResult(1)">📚 每週 3–5 小時（上課＋課後複習）</button>
+            <button class="quiz-opt" onclick="quizResult(2)">🔥 每週 5 小時以上（密集學習）</button>
+          </div>
+        </div>
+        <!-- Results -->
+        <div class="quiz-result" id="result-basic">
+          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
+          <div class="quiz-result-title">建議從 Basic 開始</div>
+          <div class="quiz-result-desc">根據你的答案，目前最適合從零開始系統性建立發音與語感基礎。<br>Basic 課程會讓你在 10 堂內真正開口說出第一句完整的泰語。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，無任何壓力。</span></div>
+          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
+          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
+        </div>
+        <div class="quiz-result" id="result-standard">
+          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
+          <div class="quiz-result-title">建議選擇 Standard</div>
+          <div class="quiz-result-desc">你已有一定基礎，Standard 課程的客製化設計能精準鎖定你的弱點，突破目前的停滯期，讓進步更有效率。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，馬上確認你的程度。</span></div>
+          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
+          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule -->
+<div class="modal-overlay" id="modal-schedule" onclick="closeModalOutside(event,'modal-schedule')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📅 預約上課時段</div>
+      <button class="modal-close" onclick="closeModal('modal-schedule')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="coming-soon-wrap">
+        <span class="coming-soon-icon">🗓️</span>
+        <div class="coming-soon-title">線上排課系統</div>
+        <p class="coming-soon-sub">即將推出可視化時段選擇介面<br>讓你直接挑選最方便的上課時間<br>無需來回確認，一鍵完成預約</p>
+        <div class="coming-soon-badge">即將推出 · Coming Soon</div>
+        <p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-muted);margin-top:24px;line-height:1.8;">目前請透過下方聯絡方式預約體驗課，我們將盡快為你安排時間。</p>
+        <button class="contact-cta" style="margin-top:16px;" onclick="closeModal('modal-schedule');openModal('modal-contact')">立即聯絡預約 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Blog -->
+<div class="modal-overlay" id="modal-blog" onclick="closeModalOutside(event,'modal-blog')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📚 泰文學習知識庫</div>
+      <button class="modal-close" onclick="closeModal('modal-blog')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="coming-soon-wrap">
+        <span class="coming-soon-icon">✍️</span>
+        <div class="coming-soon-title">學習文章與資源</div>
+        <p class="coming-soon-sub">即將推出泰文學習專欄<br>涵蓋發音技巧、聲調解析、常用句型<br>以及台灣人最常犯的學習盲點</p>
+        <div class="coming-soon-badge">即將推出 · Coming Soon</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Videos -->
+<div class="modal-overlay" id="modal-videos" onclick="closeModalOutside(event,'modal-videos');stopYTVideo();">
+  <div class="modal-box dark" style="max-width:720px;width:95vw;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--white)">📺 泰語影片學習庫</div>
+      <button class="modal-close" onclick="stopYTVideo();closeModal('modal-videos')">✕</button>
+    </div>
+    <div class="modal-body" style="padding-top:0;">
+      <!-- Video Player -->
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;background:#111;margin-bottom:16px;">
+        <iframe id="yt-player"
+          style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"
+          frameborder="0" allowfullscreen
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+        </iframe>
+        <div id="yt-empty-state" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+          <span style="font-size:48px;">📺</span>
+          <div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:rgba(255,255,255,0.5);text-align:center;">影片即將上線<br>敬請期待！</div>
+        </div>
+      </div>
+      <!-- Video Info -->
+      <div id="yt-title" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:var(--white);font-weight:700;margin-bottom:4px;line-height:1.5;min-height:22px;"></div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--gold);letter-spacing:1px;margin-bottom:16px;">Mr. Thai Hua · 泰語老師</div>
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button id="yt-shuffle-btn" onclick="shuffleYTVideo()" style="flex:1;min-width:130px;padding:12px 20px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔀 換一部影片</button>
+        <a href="https://www.youtube.com/@mrtaihua" target="_blank" style="flex:1;min-width:130px;padding:12px 20px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">▶ 前往 YouTube 頻道</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Share Popup -->
+<div id="share-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;" onclick="closeSharePopup()"></div>
+<div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(212,160,23,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+  <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
+  <textarea id="share-text-area" readonly rows="7" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.85);font-family:'Noto Sans TC',sans-serif;font-size:13px;line-height:1.8;padding:12px 14px;resize:none;outline:none;box-sizing:border-box;"></textarea>
+  <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:rgba(255,255,255,0.25);margin:8px 0 14px;">⚠️ 請勿刪除連結，分享時請保留完整內容，感謝您🙏</div>
+  <div style="display:flex;gap:8px;">
+    <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">一鍵複製</button>
+    <button onclick="closeSharePopup()" style="padding:12px 20px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;cursor:pointer;">取消</button>
+  </div>
+</div>
+
+<!-- Facebook Posts -->
+<div class="modal-overlay" id="modal-fbposts" onclick="closeModalOutside(event,'modal-fbposts')">
+  <div class="modal-box dark" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
+    <!-- Header -->
+    <div class="modal-header" style="flex-shrink:0;padding:16px 22px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="modal-title" style="color:var(--white)">🚀 貼文分享區</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-fbposts')">✕</button>
+    </div>
+
+    <!-- LIST VIEW -->
+    <div id="fb-list-view" style="overflow-y:auto;flex:1;padding:8px 0 16px;"></div>
+
+    <!-- DETAIL VIEW -->
+    <div id="fb-detail-view" style="display:none;overflow-y:auto;flex:1;">
+      <div id="fb-detail-img-wrap" style="display:none;">
+        <img id="fb-detail-img" src="" alt="" style="width:100%;display:block;max-height:340px;object-fit:cover;">
+      </div>
+      <div style="padding:22px 28px 20px;border-bottom:1px solid rgba(212,160,23,0.2);">
+        <div id="fb-detail-date" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--gold);letter-spacing:2px;margin-bottom:14px;"></div>
+        <div id="fb-detail-text" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:2;color:rgba(255,255,255,0.92);white-space:pre-wrap;word-break:break-word;"></div>
+      </div>
+      <!-- Action Buttons -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:16px 28px;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <button onclick="openLinkedSSFromPost()" style="padding:12px 8px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">📖 看文章學泰文</button>
+        <button onclick="shareFBPost()" style="padding:12px 8px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.14)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">🔗 分享本文</button>
+        <button onclick="closeModal('modal-fbposts');openModal('modal-line-qr')" style="padding:12px 8px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.14)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">🙋 前往提問</button>
+      </div></div>
+  </div>
+</div>
+
+<!-- Self-Study -->
+<div class="modal-overlay" id="modal-selfstudy" onclick="closeModalOutside(event,'modal-selfstudy')">
+  <div class="modal-box dark" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;padding:16px 22px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="modal-title" style="color:var(--white)">📖 自學專區</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-selfstudy')">✕</button>
+    </div>
+    <!-- LIST VIEW -->
+    <div id="ss-list-view" style="overflow-y:auto;flex:1;padding:8px 0 16px;"></div>
+    <!-- DETAIL VIEW -->
+    <div id="ss-detail-view" style="display:none;overflow-y:auto;flex:1;padding:22px 26px 28px;">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:16px;" id="ss-detail-label"></div>
+      <div id="ss-vocab-card" style="border-radius:12px;overflow:hidden;margin-bottom:20px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <button id="ss-read-btn" onclick="openLinkedFBPost(window._ssCurrentId)" style="padding:12px 8px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">📄 閱讀文章</button>
+        <button id="ss-share-btn" onclick="shareSSArticle()" style="padding:12px 8px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.14)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">🔗 分享詞彙</button>
+        <button onclick="closeModal('modal-selfstudy');openModal('modal-line-qr')" style="padding:12px 8px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.14)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">🙋 前往提問</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Thai Q&A Modal -->
+<!-- Contact -->
+<!-- SOCIAL MODAL -->
+<!-- LINE QR MODAL -->
+<!-- FLOATING<!-- FLOATING LINE QR WIDGET -->
+<div class="floating-qr" id="floating-qr">
+  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
+  <span class="floating-qr-top">預約免費體驗課</span>
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR" loading="lazy">
+  <span class="floating-qr-label">掃碼加入 LINE</span>
+</div>
+
+<!-- NAV -->
+<nav class="site-nav"></nav>
+
+<!-- AVAILABILITY BAND -->
+<div class="avail-band"><div class="avail-dot"></div><span class="avail-text">🎉 全新功能 · <strong>拼音規則練習專區</strong> 即將上線 ✦ &nbsp;｜&nbsp; 🔥 現在買課程立折 <strong>100 元</strong>，額度有限，手慢則無！</span><button class="avail-cta" onclick="openModal('modal-social')">訂閱消息</button></div>
+
+
+<!-- PAGE NAV STRIP -->
+<div style="position:fixed;bottom:0;left:0;right:0;z-index:990;background:rgba(17,17,17,0.97);border-top:1px solid rgba(212,160,23,0.3);display:flex;justify-content:center;align-items:center;gap:0;height:44px;overflow-x:auto;color:rgba(255,255,255,0.5);">
+  <span style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);margin-right:16px;text-transform:uppercase;">頁面</span>
+  <a href="index.html" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:900;color:#D4A017;text-decoration:none;padding:6px 18px;border:1px solid rgba(212,160,23,0.5);margin:0 4px;background:rgba(212,160,23,0.1);">老師・介紹</a>
+  <a href="page2.html" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:6px 18px;border:1px solid rgba(255,255,255,0.3);margin:0 4px;">課程・費用</a>
+  <a href="page3.html" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:6px 18px;border:1px solid rgba(255,255,255,0.3);margin:0 4px;">須知・服務</a>
+  <a href="page4.html" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:6px 18px;border:1px solid rgba(255,255,255,0.3);margin:0 4px;">泰語・分享</a>
+  <a href="tone-finder.html" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:6px 18px;border:1px solid rgba(255,255,255,0.3);margin:0 4px;">聲調・搜尋</a>
+</div>
+<!-- HERO -->
+<section id="home">
+  <div class="hero-bg">ภาษาไทย</div>
+  <span class="badge">泰文學習 · 專業一對一 · 線上課程</span>
+  <h1 class="hero-title">學了很久<br>還是<span class="accent">開不了口？</span></h1>
+  <p class="hero-slogan">知道不等於會講，來上課吧</p>
+  <p class="hero-sub">問題不在你的天分<br>在於你還沒遇到真正能幫你突破的老師</p>
+  <button class="hero-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button>
+  <div class="scroll-hint"><span>往下看</span><div class="line"></div></div>
+</section>
+
+
+
+<!-- PROBLEMS -->
+<div id="problems">
+  <div class="section-wrap">
+    <span class="eyebrow reveal">學習者的真實困境</span>
+    <h2 class="section-heading reveal">這些障礙<br>你遇過幾個？</h2>
+    <div class="problems-grid">
+      <div class="problem-card reveal-left reveal-delay-1">
+        <span class="card-icon">👂</span>
+        <div class="card-cat">聽力理解</div>
+        <div class="card-title">聽得到，卻聽不懂</div>
+        <ul class="problem-list">
+          <li>能辨識單字發音，卻無法掌握完整語意</li>
+          <li>學過的內容，面對母語者時仍完全無法理解</li>
+          <li>自己開口後，一旦對方回應就立刻聽不懂</li>
+        </ul>
+      </div>
+      <div class="problem-card reveal-right reveal-delay-2">
+        <span class="card-icon">🗣️</span>
+        <div class="card-cat">口說表達</div>
+        <div class="card-title">說得出來，卻說不好</div>
+        <ul class="problem-list">
+          <li>認識單字，卻無法將其組織成完整句子</li>
+          <li>聲調與發音缺乏把握，導致不敢開口</li>
+          <li>開口後對方反應困惑，不確定自己哪裡說錯</li>
+          <li>說完了，仍然無法判斷表達是否正確</li>
+        </ul>
+      </div>
+      <div class="problem-card reveal-left reveal-delay-3">
+        <span class="card-icon">📖</span>
+        <div class="card-cat">語言理解</div>
+        <div class="card-title">看得懂字，卻讀不懂意思</div>
+        <ul class="problem-list">
+          <li>每個單字認識，合在一起卻完全無法理解</li>
+          <li>查到的詞義過於書面，實際對話中派不上用場</li>
+          <li>無法判斷自己的表達是否符合當地慣用法</li>
+        </ul>
+      </div>
+      <div class="problem-card reveal-right reveal-delay-4">
+        <span class="card-icon">🙋</span>
+        <div class="card-cat">練習環境</div>
+        <div class="card-title">想開口，卻缺乏機會</div>
+        <ul class="problem-list">
+          <li>沒有適合的對象進行真實對話練習</li>
+          <li>說錯了沒人即時糾正，錯誤習慣不斷累積</li>
+          <li>自學進度停滯，找不到突破口</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-band">
+  <div class="stats-inner">
+    <div class="stat reveal"><div class="stat-num">8,000+</div><div class="stat-label">累積教學時數</div></div>
+    <div class="stat reveal"><div class="stat-num">雙語</div><div class="stat-label">中文授課 · 泰語思維</div></div>
+    <div class="stat reveal"><div class="stat-num">1 對 1</div><div class="stat-label">線上 · 即時回饋</div></div>
+  </div>
+</div>
+<!-- TEACHER STORY -->
+<div class="teacher-story" id="teacher">
+  <div class="teacher-story-inner">
+    <div class="teacher-photo-wrap reveal reveal-slow">
+      <div class="teacher-photo-placeholder">
+        <span>📸</span>
+        <p>照片<br>即將更新</p>
+      </div>
+      <div class="teacher-photo-badge">泰華老師</div>
+    </div>
+    <div class="teacher-story-content">
+      <span class="teacher-story-eyebrow reveal reveal-slow">關於老師</span>
+      <h2 class="teacher-story-title reveal reveal-slow">不只是母語者——<br>是真正<em>懂你講不出來</em>的那個人</h2>
+
+      <div class="reveal reveal-slow" style="border:2px solid var(--ink);margin-bottom:32px;">
+
+        <div style="padding:24px 28px;border-bottom:2px solid var(--ink);">
+          <div style="font-family:'Noto Sans TC',sans-serif;font-size:16px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.82);font-weight:700;margin-bottom:10px;">身份背景</div>
+          <div style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--gold);margin-bottom:10px;line-height:1.3;">屬地泰國 · 屬血台灣</div>
+          <p style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:1.9;color:rgba(212,160,23,0.7);">在泰國土生土長的純台灣人。我同時擁有泰國人的語言直覺與台灣人的思維框架——這個雙重身份，讓我能精準看見你講不出來的真正原因。</p>
+        </div>
+
+        <div style="padding:24px 28px;border-bottom:2px solid var(--ink);">
+          <div style="font-family:'Noto Sans TC',sans-serif;font-size:16px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.82);font-weight:700;margin-bottom:10px;">教學核心</div>
+          <div style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--gold);margin-bottom:10px;line-height:1.3;">不是鼓勵，是方法</div>
+          <p style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:1.9;color:rgba(212,160,23,0.7);">說泰文說得流利，不只是背單字——你需要懂泰國人腦海裡在想什麼，以及這跟台灣人思維系統的差別在哪裡。你遇到的每一個發音困惑、每一個「明明背過卻說不出來」，在我這裡都有具體的解法。</p>
+        </div>
+
+        <div style="padding:24px 28px;">
+          <div style="font-family:'Noto Sans TC',sans-serif;font-size:16px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.82);font-weight:700;margin-bottom:10px;">親身學語言的經歷</div>
+          <div style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--gold);margin-bottom:10px;line-height:1.3;">日文從零到 N2 · 曾在日本企業任職</div>
+          <p style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:1.9;color:rgba(212,160,23,0.7);">我本人從零學日文，考取 N2 並在日本公司工作過。我走過每一個「從零開始學新語言」的困境——我突破了，也知道怎麼幫你突破。</p>
+        </div>
+
+      </div>
+
+      <!-- VIDEO INTRO -->
+      <div class="reveal reveal-slow" style="margin-bottom:32px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);font-weight:700;margin-bottom:12px;">老師自我介紹影片</div>
+        <div style="position:relative;width:100%;aspect-ratio:16/9;background:#1a1a1a;border:2px solid rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;overflow:hidden;">
+          <!-- decorative corner lines -->
+          <div style="position:absolute;top:12px;left:12px;width:24px;height:24px;border-top:2px solid var(--gold-bright);border-left:2px solid var(--gold-bright);"></div>
+          <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;border-top:2px solid var(--gold-bright);border-right:2px solid var(--gold-bright);"></div>
+          <div style="position:absolute;bottom:12px;left:12px;width:24px;height:24px;border-bottom:2px solid var(--gold-bright);border-left:2px solid var(--gold-bright);"></div>
+          <div style="position:absolute;bottom:12px;right:12px;width:24px;height:24px;border-bottom:2px solid var(--gold-bright);border-right:2px solid var(--gold-bright);"></div>
+          <!-- play icon -->
+          <div style="width:64px;height:64px;border:2px solid rgba(212,160,23,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+            <div style="width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-left:18px solid rgba(212,160,23,0.5);margin-left:4px;"></div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:'Noto Serif TC',serif;font-size:16px;font-weight:900;color:rgba(255,255,255,0.6);margin-bottom:6px;">影片即將上線</div>
+            <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:2px;color:rgba(255,255,255,0.3);">COMING SOON</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="answer-cta reveal" onclick="openModal('modal-line-qr')" style="display:inline-block;">預約免費體驗課</button>
+        <button class="quiz-opt reveal" onclick="openModal('modal-quiz')" style="border-color:var(--ink);padding:14px 24px;font-size:14px;font-weight:700;background:var(--white);color:var(--ink);">🎯 先測驗自己的程度</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEXT PAGE CTA -->
+<div style="background:var(--ink);border-top:3px solid var(--gold-bright);padding:60px 32px;text-align:center;">
+  <span style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);font-weight:700;display:block;margin-bottom:16px;">了解課程</span>
+  <p style="font-family:'Noto Serif TC',serif;font-size:clamp(20px,3vw,32px);font-weight:900;color:var(--white);margin-bottom:8px;line-height:1.3;">想知道怎麼上課、費用多少？</p>
+  <p style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:rgba(255,255,255,0.5);margin-bottom:32px;">上課方式・學費方案・學習進程・課堂預覽</p>
+  <a href="page2.html" style="display:inline-block;background:#D4A017;color:#111111;font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:15px;padding:16px 48px;text-decoration:none;letter-spacing:1px;transition:background 0.2s;box-sizing:border-box;">前往課程詳情 →</a>
+</div>
+<div style="height:44px;background:#0A0804;"></div><!-- spacer so footer not hidden -->
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學
+</footer>
+
+<!-- LIGHTBOX -->
+<style>
+  #lightbox {
+    display:none;
+    position:fixed;
+    top:0;left:0;right:0;bottom:0;
+    z-index:3000;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(17,17,17,0);
+    transition:background 0.35s ease;
+  }
+  #lightbox.lb-open {
+    background:rgba(17,17,17,0.75);
+  }
+  #lightbox-inner {
+    transform:translateY(60px) scale(0.88);
+    opacity:0;
+    transition:transform 0.55s cubic-bezier(0.22,1,0.36,1), opacity 0.48s ease;
+    position:relative;
+    max-width:90vw;
+    max-height:90vh;
+    border:2px solid var(--gold-bright);
+    background:var(--white);
+    padding:12px;
+  }
+  #lightbox.lb-open #lightbox-inner {
+    transform:translateY(0) scale(1);
+    opacity:1;
+  }
+  #lightbox-img {
+    display:block;
+    max-width:calc(90vw - 28px);
+    max-height:calc(88vh - 28px);
+    object-fit:contain;
+  }
+  #lb-close {
+    position:absolute;
+    top:-16px;right:-16px;
+    width:32px;height:32px;
+    background:var(--ink);
+    border:2px solid var(--gold-bright);
+    color:var(--gold-bright);
+    font-size:14px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:0;
+    z-index:1;
+  }
+  #lb-close:hover { background:#333; }
+</style>
+<div id="lightbox" onclick="closeLightbox()">
+  <div id="lightbox-inner" onclick="event.stopPropagation()">
+    <button id="lb-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="">
+  </div>
+</div>
+
+<script>
+// ===== 📺 泰語影片學習庫 =====
+// ดึงวิดีโอจากช่อง @mrtaihua อัตโนมัติผ่าน YouTube RSS feed
+// ถ้าดึงไม่ได้ จะแสดง fallback list ด้านล่าง
+var YT_CHANNEL_HANDLE = 'mrtaihua'; // เปลี่ยนตรงนี้ถ้าต้องการเปลี่ยนช่อง
+var YT_FALLBACK = []; // เพิ่ม { id, title } ที่นี่เป็น fallback ถ้าต้องการ
+
+var _ytVideos = [];
+var _ytCurrentIndex = -1;
+var _ytLoaded = false;
+
+async function openYTVideoModal() {
+  openModal('modal-videos');
+  if (!_ytLoaded) {
+    _showYTState('loading');
+    var fetched = await _fetchYTVideos();
+    _ytVideos = (fetched && fetched.length) ? fetched : YT_FALLBACK;
+    _ytLoaded = true;
+  }
+  loadRandomYTVideo();
+}
+
+async function _fetchYTVideos() {
+  var API_KEY = 'AIzaSyAi2d7emgwWPo_KlDZOUs8v-3IUr16By2Y';
+  try {
+    // Step 1: หา uploads playlist ID จาก channel handle
+    var r1 = await fetch('https://www.googleapis.com/youtube/v3/channels?key=' + API_KEY + '&forHandle=' + YT_CHANNEL_HANDLE + '&part=contentDetails&maxResults=1');
+    var d1 = await r1.json();
+    if (d1.error) throw new Error(d1.error.message);
+    var uploadsId = d1.items && d1.items[0] && d1.items[0].contentDetails.relatedPlaylists.uploads;
+    if (!uploadsId) throw new Error('no uploads playlist');
+
+    // Step 2: ดึงวิดีโอทั้งหมดจาก uploads playlist
+    var r2 = await fetch('https://www.googleapis.com/youtube/v3/playlistItems?key=' + API_KEY + '&playlistId=' + uploadsId + '&part=snippet&maxResults=50');
+    var d2 = await r2.json();
+    if (d2.error) throw new Error(d2.error.message);
+    var items = d2.items || [];
+    if (!items.length) throw new Error('no videos');
+
+    console.log('[YT] Loaded', items.length, 'videos via YouTube API');
+    return items.map(function(item) {
+      return {
+        id: item.snippet.resourceId.videoId,
+        title: item.snippet.title
+      };
+    });
+  } catch(e) {
+    console.warn('[YT] YouTube API failed:', e.message);
+    return null;
+  }
+}
+
+function _showYTState(state) {
+  var player = document.getElementById('yt-player');
+  var emptyEl = document.getElementById('yt-empty-state');
+  var titleEl = document.getElementById('yt-title');
+  var shuffleBtn = document.getElementById('yt-shuffle-btn');
+  if (state === 'loading') {
+    if (player) { player.src = ''; player.style.display = 'none'; }
+    if (emptyEl) { emptyEl.style.display = 'flex'; emptyEl.innerHTML = '<span style="font-size:36px;animation:spin 1s linear infinite">⏳</span><div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:rgba(255,255,255,0.45);margin-top:10px;">載入中...</div>'; }
+    if (titleEl) titleEl.textContent = '';
+    if (shuffleBtn) shuffleBtn.style.display = 'none';
+  } else if (state === 'empty') {
+    if (player) { player.src = ''; player.style.display = 'none'; }
+    if (emptyEl) { emptyEl.style.display = 'flex'; emptyEl.innerHTML = '<span style="font-size:48px;">📺</span><div style="font-family:\'Noto Sans TC\',sans-serif;font-size:14px;color:rgba(255,255,255,0.5);text-align:center;margin-top:10px;">影片即將上線<br>敬請期待！</div>'; }
+    if (titleEl) titleEl.textContent = '';
+    if (shuffleBtn) shuffleBtn.style.display = 'none';
+  }
+}
+
+function loadRandomYTVideo() {
+  var player = document.getElementById('yt-player');
+  var titleEl = document.getElementById('yt-title');
+  var emptyEl = document.getElementById('yt-empty-state');
+  var shuffleBtn = document.getElementById('yt-shuffle-btn');
+  if (!player) return;
+
+  if (!_ytVideos.length) { _showYTState('empty'); return; }
+
+  var idx;
+  if (_ytVideos.length === 1) { idx = 0; }
+  else { do { idx = Math.floor(Math.random() * _ytVideos.length); } while (idx === _ytCurrentIndex); }
+  _ytCurrentIndex = idx;
+  var v = _ytVideos[idx];
+
+  player.style.display = '';
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (shuffleBtn) shuffleBtn.style.display = '';
+  player.src = 'https://www.youtube.com/embed/' + v.id + '?autoplay=1&rel=0';
+  if (titleEl) titleEl.textContent = v.title || '';
+}
+
+function shuffleYTVideo() {
+  var player = document.getElementById('yt-player');
+  if (player) player.src = '';
+  setTimeout(loadRandomYTVideo, 80);
+}
+
+function stopYTVideo() {
+  var player = document.getElementById('yt-player');
+  if (player) player.src = '';
+  // allow re-fetch next time if needed (in case channel updated)
+}
+
+// FB_POSTS และ SELFSTUDY_ARTICLES อยู่ใน posts-data.js และ lessons-data.js
+
+var _fbDetailPostId = null;
+
+function openFBPostModal() {
+  openModal('modal-fbposts');
+  showFBList();
+}
+
+function openLinkedFBPost(postId) {
+  closeModal('modal-selfstudy');
+  openModal('modal-fbposts');
+  showFBDetail(postId);
+}
+
+
+window._ssCurrentId = null;
+
+function openSSModal() {
+  openModal('modal-selfstudy');
+  showSSList();
+}
+
+function showSSList() {
+  document.getElementById('ss-list-view').style.display = 'block';
+  document.getElementById('ss-detail-view').style.display = 'none';
+  var _ssb=document.getElementById('ss-back-btn');if(_ssb)_ssb.style.display='none';
+  _renderSSList();
+}
+
+function _renderSSList() {
+  var list = document.getElementById('ss-list-view');
+  if (!SELFSTUDY_ARTICLES.length) { list.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;color:rgba(255,255,255,0.4);">尚無文章</div>'; return; }
+  list.innerHTML = SELFSTUDY_ARTICLES.map(function(a) {
+    var vocabCount = (a.vocabulary || []).length;
+    return '<div onclick="showSSDetail(\'' + a.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(212,160,23,0.07)\'" onmouseout="this.style.background=\'\'">'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--gold);letter-spacing:1px;margin-bottom:5px;">' + a.date + '</div>'
+      + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:15px;font-weight:700;color:rgba(255,255,255,0.92);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + a.title + '</div>'
+      + (vocabCount ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;">📚 ' + vocabCount + ' 個詞彙</div>' : '')
+      + '</div>'
+      + '<div style="color:rgba(212,160,23,0.7);font-size:20px;margin-left:16px;flex-shrink:0;">›</div>'
+      + '</div>';
+  }).join('');
+}
+
+function showSSDetail(articleId) {
+  var a = SELFSTUDY_ARTICLES.find(function(x) { return x.id === articleId; });
+  if (!a) return;
+  window._ssCurrentId = a.linkedPostId;
+  document.getElementById('ss-list-view').style.display = 'none';
+  document.getElementById('ss-detail-view').style.display = 'block';
+  var _ssb=document.getElementById('ss-back-btn');if(_ssb)_ssb.style.display='';
+  document.getElementById('ss-detail-view').scrollTop = 0;
+  document.getElementById('ss-detail-label').textContent = '詞彙學習 · คำศัพท์';
+
+  var html = '';
+
+  // Section 1: Vocabulary
+  if (a.vocabulary && a.vocabulary.length) {
+    html += '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:3px;margin-bottom:14px;text-transform:uppercase;">1 · Vocabulary & Useful Phrases</div>';
+    a.vocabulary.forEach(function(v, i) {
+      html += '<div style="border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;margin-bottom:14px;">'
+        // Word header
+        + '<div style="background:rgba(255,255,255,0.04);padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;">'
+        + '<span style="font-family:\'Sarabun\',sans-serif;font-size:28px;font-weight:700;color:var(--gold);">' + v.thai + '</span>'
+        + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:1px;">' + v.phonetic + '</span>'
+        + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,0.85);margin-left:auto;">' + v.meaning + '</span>'
+        + '</div>'
+        // Note
+        + '<div style="padding:12px 20px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);line-height:1.7;border-bottom:1px solid rgba(255,255,255,0.06);">💡 ' + v.note + '</div>'
+        // Examples
+        + '<div style="padding:12px 20px 16px;">'
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;">📌 例句</div>';
+      v.examples.forEach(function(ex, ei) {
+        html += '<div style="margin-bottom:' + (ei < v.examples.length-1 ? '12' : '0') + 'px;">'
+          + '<div style="font-family:\'Sarabun\',sans-serif;font-size:16px;color:rgba(255,255,255,0.9);">' + ex.thai + '</div>'
+          + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">' + ex.zh + '</div>'
+          + '</div>';
+      });
+      html += '</div></div>';
+    });
+  }
+
+  // Section 2: Conversation
+  if (a.conversation) {
+    var cv = a.conversation;
+    html += '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:3px;margin:22px 0 14px;text-transform:uppercase;">2 · Real-life Conversation</div>';
+    html += '<div style="border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">'
+      + '<div style="background:rgba(255,255,255,0.04);padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.07);font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:rgba(255,255,255,0.7);">' + cv.situation + '</div>'
+      + '<div style="padding:14px 20px;display:flex;flex-direction:column;gap:14px;">';
+    cv.lines.forEach(function(line) {
+      var isYou = line.speaker === '你';
+      html += '<div style="display:flex;gap:10px;' + (isYou ? 'flex-direction:row-reverse;' : '') + '">'
+        + '<div style="flex-shrink:0;font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--gold);padding-top:4px;min-width:36px;text-align:' + (isYou ? 'left' : 'right') + ';">' + line.speaker + '</div>'
+        + '<div style="background:' + (isYou ? 'rgba(212,160,23,0.12)' : 'rgba(255,255,255,0.05)') + ';border-radius:8px;padding:10px 14px;max-width:85%;">'
+        + '<div style="font-family:\'Sarabun\',sans-serif;font-size:15px;color:rgba(255,255,255,0.9);margin-bottom:3px;">' + line.thai + '</div>'
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);">' + line.zh + '</div>'
+        + '</div></div>';
+    });
+    html += '</div></div>';
+  }
+
+  document.getElementById('ss-vocab-card').innerHTML = html;
+  var readBtn = document.getElementById('ss-read-btn');
+  if (readBtn) readBtn.style.display = a.linkedPostId ? '' : 'none';
+}
+
+
+function showFBList() {
+  document.getElementById('fb-list-view').style.display = 'block';
+  document.getElementById('fb-detail-view').style.display = 'none';
+  var _fbb=document.getElementById('fb-back-btn');if(_fbb)_fbb.style.display='none';
+  _renderFBList();
+}
+
+function _renderFBList() {
+  var list = document.getElementById('fb-list-view');
+  if (!FB_POSTS.length) { list.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;color:rgba(255,255,255,0.4);">尚無文章</div>'; return; }
+  list.innerHTML = FB_POSTS.map(function(p) {
+    var count = _getFBComments(p.id).length;
+    return '<div onclick="showFBDetail(\'' + p.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(212,160,23,0.07)\'" onmouseout="this.style.background=\'\'">'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--gold);letter-spacing:1px;margin-bottom:5px;">' + p.date + '</div>'
+      + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:15px;font-weight:700;color:rgba(255,255,255,0.92);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.title + '</div>'
+      + (count ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;">💬 ' + count + ' 則留言</div>' : '')
+      + '</div>'
+      + '<div style="color:rgba(212,160,23,0.7);font-size:20px;margin-left:16px;flex-shrink:0;">›</div>'
+      + '</div>';
+  }).join('');
+}
+
+function showFBDetail(postId) {
+  var post = FB_POSTS.find(function(p) { return p.id === postId; });
+  if (!post) return;
+  _fbDetailPostId = postId;
+
+  document.getElementById('fb-list-view').style.display = 'none';
+  document.getElementById('fb-detail-view').style.display = 'block';
+  var _fbb=document.getElementById('fb-back-btn');if(_fbb)_fbb.style.display='';
+  document.getElementById('fb-detail-view').scrollTop = 0;
+
+  document.getElementById('fb-detail-date').textContent = post.date;
+  document.getElementById('fb-detail-text').textContent = post.text;
+
+  var imgWrap = document.getElementById('fb-detail-img-wrap');
+  var img = document.getElementById('fb-detail-img');
+  if (post.image) { img.src = post.image; imgWrap.style.display = 'block'; }
+  else { imgWrap.style.display = 'none'; }
+
+  var artBtn = document.getElementById('fb-article-btn');
+  if (artBtn) { artBtn.style.opacity = post.articleUrl ? '1' : '0.35'; artBtn.style.cursor = post.articleUrl ? 'pointer' : 'default'; }
+
+  _renderFBComments(postId);
+}
+
+function openFBArticle() {
+  var post = FB_POSTS.find(function(p) { return p.id === _fbDetailPostId; });
+  if (post && post.articleUrl) window.open(post.articleUrl, '_blank');
+}
+
+var SITE_URL = 'https://mrtaihua.netlify.app'; // ← เปลี่ยนเป็น domain จริงเมื่อมี
+
+function shareFBPost() {
+  var post = FB_POSTS.find(function(p) { return p.id === _fbDetailPostId; });
+  if (!post) return;
+  // ตัด preview ส่วนแรกของโพส ~60 ตัวอักษร
+  var preview = post.text ? post.text.substring(0, 65).replace(/\n/g,' ') + '...' : '';
+  openSharePopup(post.title, preview);
+}
+
+function shareSSArticle() {
+  var a = SELFSTUDY_ARTICLES.find(function(x) { return x.linkedPostId === window._ssCurrentId; });
+  if (!a) return;
+  // ใช้ vocab ตัวแรกเป็น preview
+  var preview = '';
+  if (a.vocabulary && a.vocabulary.length) {
+    var v = a.vocabulary[0];
+    preview = v.thai + '（' + v.phonetic + '）= ' + v.meaning + '\n'
+      + '例：' + v.examples[0].thai + '\n　　' + v.examples[0].zh;
+  }
+  openSharePopup(a.title, preview);
+}
+
+function openSharePopup(title, preview) {
+  var text = '我在「泰華眼裡的泰語教學」發現了一個很實用的泰語學習資源！\n\n'
+    + '📌 ' + title + '\n'
+    + (preview ? preview + '\n\n' : '\n')
+    + '🌐 更多文章內容及免費泰語課程與學習內容：\n'
+    + SITE_URL + '\n\n'
+    + '學泰語沒有你想的那麼難！每天一句，去泰國旅遊再也不怕了 🇹🇭 快來一起學！';
+  document.getElementById('share-text-area').value = text;
+  document.getElementById('share-copy-btn').textContent = '一鍵複製';
+  document.getElementById('share-bg').style.display = 'block';
+  document.getElementById('share-popup').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function execShareCopy() {
+  var ta = document.getElementById('share-text-area');
+  ta.select();
+  try {
+    document.execCommand('copy');
+    document.getElementById('share-copy-btn').textContent = '✅ 已複製！';
+    setTimeout(function(){ document.getElementById('share-copy-btn').textContent = '一鍵複製'; }, 2000);
+  } catch(e) { ta.select(); }
+}
+
+function closeSharePopup() {
+  document.getElementById('share-bg').style.display = 'none';
+  document.getElementById('share-popup').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Comments (localStorage)
+function _getFBComments(postId) {
+  try { return JSON.parse(localStorage.getItem('fbcmt_' + postId)) || []; } catch(e) { return []; }
+}
+function _saveFBComments(postId, arr) {
+  try { localStorage.setItem('fbcmt_' + postId, JSON.stringify(arr)); } catch(e) {}
+}
+function _renderFBComments(postId) {
+  var comments = _getFBComments(postId);
+  var el = document.getElementById('fb-comments-list');
+  if (!el) return;
+  if (!comments.length) { el.innerHTML = '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:rgba(255,255,255,0.3);text-align:center;padding:8px 0;">成為第一個留言的人！</div>'; return; }
+  el.innerHTML = comments.map(function(c, i) {
+    return '<div style="background:rgba(255,255,255,0.05);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+      + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:var(--gold);">' + (c.name || '匿名讀者') + '</span>'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:rgba(255,255,255,0.3);">' + c.date + '</span>'
+      + '<button onclick="deleteFBComment(\'' + postId + '\',' + i + ')" style="background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:14px;padding:0;line-height:1;" onmouseover="this.style.color=\'#ff6b6b\'" onmouseout="this.style.color=\'rgba(255,255,255,0.25)\'">✕</button>'
+      + '</div>'
+      + '</div>'
+      + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;line-height:1.7;color:rgba(255,255,255,0.82);">' + c.text.replace(/</g,'&lt;') + '</div>'
+      + '</div>';
+  }).join('');
+}
+function submitFBComment() {
+  var name = (document.getElementById('fb-comment-name').value || '').trim();
+  var text = (document.getElementById('fb-comment-text').value || '').trim();
+  if (!text) { alert('請填寫留言內容'); return; }
+  var comments = _getFBComments(_fbDetailPostId);
+  var now = new Date();
+  comments.push({ name: name, text: text, date: now.getFullYear() + '/' + (now.getMonth()+1) + '/' + now.getDate() });
+  _saveFBComments(_fbDetailPostId, comments);
+  document.getElementById('fb-comment-name').value = '';
+  document.getElementById('fb-comment-text').value = '';
+  _renderFBComments(_fbDetailPostId);
+  _renderFBList(); // update comment count in list
+}
+function deleteFBComment(postId, idx) {
+  var comments = _getFBComments(postId);
+  comments.splice(idx, 1);
+  _saveFBComments(postId, comments);
+  _renderFBComments(postId);
+  _renderFBList();
+}
+</script>
+<script src="posts-data.js"></script>
+<script src="lessons-data.js"></script>
+<script src="tone-finder.js"></script>
+<script src="shared.js?v=2"></script>
+</body>
+</html>
