@@ -220,7 +220,7 @@ window.goHome = function() {
     if(window.scrollY > 200) { el.classList.add('visible'); } else { el.classList.remove('visible'); }
   }, {passive:true});
 
-document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-dot"></div><span class="avail-text">🎉 全新功能 · <strong>拼音規則練習專區</strong> 即將上線 ✦ &nbsp;｜&nbsp; 🔥 現在買課程立折 <strong>100 元</strong>，額度有限，手慢則無！</span><button class="avail-cta" onclick="openModal(\'modal-social\')">訂閱消息</button></div>'; });
+document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！ ✦ &nbsp;｜&nbsp; 🔥 現在買課程立折 <strong>100 元</strong>，額度有限，手慢則無！</span><button class="avail-cta" onclick="openModal(\'modal-social\')">訂閱消息</button></div>'; });
 
 // ===== 📬 Contact / LINE QR / Social Modal Injection =====
 (function injectSharedModals() {

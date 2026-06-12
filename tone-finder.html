@@ -37,6 +37,18 @@
     letter-spacing: 1px;
     line-height: 1.7;
   }
+  .tf-page-note {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: #D4A017;
+    background: rgba(212,160,23,0.1);
+    border: 1px solid rgba(212,160,23,0.35);
+    border-radius: 20px;
+  }
 
   /* ── Main card ── */
   .tf-card {
@@ -560,28 +572,95 @@
 
 <!-- ── NAV ── -->
 <nav class="site-nav"></nav>
-<div class="avail-band"><div class="avail-dot"></div><span class="avail-text">🎉 全新功能 · <strong>拼音規則練習專區</strong> 即將上線 ✦ &nbsp;｜&nbsp; 🔥 現在買課程立折 <strong>100 元</strong>，額度有限，手慢則無！</span><button class="avail-cta" onclick="openModal('modal-social')">訂閱消息</button>
+<div class="avail-band"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！ ✦ &nbsp;｜&nbsp; 🔥 現在買課程立折 <strong>100 元</strong>，額度有限，手慢則無！</span><button class="avail-cta" onclick="openModal('modal-social')">訂閱消息</button>
 </div>
 
 <!-- ── PAGE BOTTOM NAV ── -->
-<div style="position:fixed;bottom:0;left:0;right:0;z-index:990;background:rgba(17,17,17,0.97);border-top:1px solid rgba(212,160,23,0.3);display:flex;justify-content:center;align-items:center;gap:0;height:44px;">
-  <span style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);margin-right:12px;text-transform:uppercase;">頁面</span>
-  <a href="index.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:5px 14px;border:1px solid rgba(255,255,255,0.3);margin:0 3px;">老師・介紹</a>
-  <a href="page2.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:5px 14px;border:1px solid rgba(255,255,255,0.3);margin:0 3px;">課程・費用</a>
-  <a href="page3.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:5px 14px;border:1px solid rgba(255,255,255,0.3);margin:0 3px;">須知・服務</a>
-  <a href="page4.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:5px 14px;border:1px solid rgba(255,255,255,0.3);margin:0 3px;">泰語・分享</a>
-  <a href="tone-finder.html" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:900;color:#D4A017;text-decoration:none;padding:5px 14px;border:1px solid rgba(212,160,23,0.5);margin:0 3px;background:rgba(212,160,23,0.1);">聲調・搜尋</a>
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="page2.html">課程・費用</a>
+  <a href="page3.html">須知・服務</a>
+  <a href="page4.html">泰語・分享</a>
+  <a href="tone-finder.html" class="active">聲調・搜尋</a>
 </div>
 
 <!-- ── MINIMAL MODALS (for nav modal triggers) ── -->
 <div class="modal-overlay" id="modal-quiz" onclick="closeModalOutside(event,'modal-quiz')">
-  <div class="modal-box"><div class="modal-header"><div class="modal-title">🎯 快速程度測驗</div><button class="modal-close" onclick="closeModal('modal-quiz')">✕</button></div><div class="modal-body"><p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-muted);text-align:center;padding:20px 0;">請前往主頁進行程度測驗</p><a href="index.html" style="display:block;text-align:center;padding:12px;background:var(--gold-bright);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:700;text-decoration:none;">前往主頁</a></div></div>
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">🎯 快速程度測驗</div>
+      <button class="modal-close" onclick="closeModal('modal-quiz')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="quiz-wrap" id="quiz-wrap">
+        <!-- Step 1 -->
+        <div class="quiz-step active" id="q1">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你目前的泰文程度是？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">🆕 完全零基礎，從來沒學過</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">📖 學過一點點（知道一些單字或發音）</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',1)">🗣️ 可以簡單對話，但常卡關</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',2)">✅ 能日常溝通，想精進特定部分</button>
+          </div>
+        </div>
+        <!-- Step 2 -->
+        <div class="quiz-step" id="q2">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你最大的學習困境是什麼？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">🔤 不了解聲調系統，不確定自己發音對不對</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">📝 看不懂泰文文字，不知如何開始</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',1)">🧱 單字認識不少，但說不出完整句子</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',2)">🎯 有特定溝通場景需要突破（工作/旅遊/追星）</button>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="quiz-step" id="q3">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你希望多快開始說出第一句泰語？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">🚀 越快越好，第一堂就想開口</button>
+            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">📅 1–2 個月內穩定打好基礎</button>
+            <button class="quiz-opt" onclick="quizNext('q3','q4',1)">🧘 慢慢來，重視紮實理解</button>
+          </div>
+        </div>
+        <!-- Step 4 -->
+        <div class="quiz-step" id="q4">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div></div>
+          <div class="quiz-q-text">你每週大概可以投入多少學習時間？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizResult(0)">⏱️ 每週 1–2 小時（上課為主）</button>
+            <button class="quiz-opt" onclick="quizResult(1)">📚 每週 3–5 小時（上課＋課後複習）</button>
+            <button class="quiz-opt" onclick="quizResult(2)">🔥 每週 5 小時以上（密集學習）</button>
+          </div>
+        </div>
+        <!-- Results -->
+        <div class="quiz-result" id="result-basic">
+          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
+          <div class="quiz-result-title">建議從 Basic 開始</div>
+          <div class="quiz-result-desc">根據你的答案，目前最適合從零開始系統性建立發音與語感基礎。<br>Basic 課程會讓你在 10 堂內真正開口說出第一句完整的泰語。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，無任何壓力。</span></div>
+          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
+          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
+        </div>
+        <div class="quiz-result" id="result-standard">
+          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
+          <div class="quiz-result-title">建議選擇 Standard</div>
+          <div class="quiz-result-desc">你已有一定基礎，Standard 課程的客製化設計能精準鎖定你的弱點，突破目前的停滯期，讓進步更有效率。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，馬上確認你的程度。</span></div>
+          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
+          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <!-- ── MAIN PAGE ── -->
 <div class="tf-page">
   <div class="tf-page-header">
     <div class="tf-page-title">🎵 泰語聲調搜尋</div>
     <div class="tf-page-hint" id="tf-hint">輸入泰文單字，逐步分析聲調</div>
+    <div class="tf-page-note">ℹ️ 目前僅支援單音節詞彙搜尋，多音節詞彙功能開發中</div>
   </div>
 
   <div class="tf-card">
@@ -971,7 +1050,7 @@ function stepInput() {
       'placeholder="例：กา, ข้าว, ไทย…" ' +
       'oninput="TF.filterThai(this)" ' +
       'onkeydown="if(event.key===\'Enter\')TF.search()">' +
-    '<div id="tf-lang-warn" style="display:none;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#ff6b6b;margin-top:8px;letter-spacing:0.5px;">⚠️ 請輸入泰文字符（ภาษาไทยเท่านั้น）</div>' +
+    '<div id="tf-lang-warn" style="display:none;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#ff6b6b;margin-top:8px;letter-spacing:0.5px;">⚠️ 請輸入泰文字符</div>' +
     '<div><button class="tf-search-btn" onclick="TF.search()">🔍 開始分析</button></div>' +
   '</div>';
 }
