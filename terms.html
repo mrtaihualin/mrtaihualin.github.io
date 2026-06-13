@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>使用條款與著作權聲明 — 泰華眼裡的泰語教學</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=2">
+</head>
+<body>
+<!-- MODALS -->
+<!-- Quiz Modal -->
+<div class="modal-overlay" id="modal-quiz" onclick="closeModalOutside(event,'modal-quiz')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">🎯 快速程度測驗</div>
+      <button class="modal-close" onclick="closeModal('modal-quiz')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="quiz-wrap" id="quiz-wrap">
+        <!-- Step 1 -->
+        <div class="quiz-step active" id="q1">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你目前的泰文程度是？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">🆕 完全零基礎，從來沒學過</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">📖 學過一點點（知道一些單字或發音）</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',1)">🗣️ 可以簡單對話，但常卡關</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',2)">✅ 能日常溝通，想精進特定部分</button>
+          </div>
+        </div>
+        <!-- Step 2 -->
+        <div class="quiz-step" id="q2">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你最大的學習困境是什麼？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">🔤 不了解聲調系統，不確定自己發音對不對</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">📝 看不懂泰文文字，不知如何開始</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',1)">🧱 單字認識不少，但說不出完整句子</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',2)">🎯 有特定溝通場景需要突破（工作/旅遊/追星）</button>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="quiz-step" id="q3">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你希望多快開始說出第一句泰語？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">🚀 越快越好，第一堂就想開口</button>
+            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">📅 1–2 個月內穩定打好基礎</button>
+            <button class="quiz-opt" onclick="quizNext('q3','q4',1)">🧘 慢慢來，重視紮實理解</button>
+          </div>
+        </div>
+        <!-- Step 4 -->
+        <div class="quiz-step" id="q4">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div></div>
+          <div class="quiz-q-text">你每週大概可以投入多少學習時間？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizResult(0)">⏱️ 每週 1–2 小時（上課為主）</button>
+            <button class="quiz-opt" onclick="quizResult(1)">📚 每週 3–5 小時（上課＋課後複習）</button>
+            <button class="quiz-opt" onclick="quizResult(2)">🔥 每週 5 小時以上（密集學習）</button>
+          </div>
+        </div>
+        <!-- Results -->
+        <div class="quiz-result" id="result-basic">
+          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
+          <div class="quiz-result-title">建議從 Basic 開始</div>
+          <div class="quiz-result-desc">根據你的答案，目前最適合從零開始系統性建立發音與語感基礎。<br>Basic 課程會讓你在 10 堂內真正開口說出第一句完整的泰語。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，無任何壓力。</span></div>
+          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
+          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
+        </div>
+        <div class="quiz-result" id="result-standard">
+          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
+          <div class="quiz-result-title">建議選擇 Standard</div>
+          <div class="quiz-result-desc">你已有一定基礎，Standard 課程的客製化設計能精準鎖定你的弱點，突破目前的停滯期，讓進步更有效率。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，馬上確認你的程度。</span></div>
+          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
+          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING LINE QR WIDGET -->
+<div class="floating-qr" id="floating-qr">
+  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
+  <span class="floating-qr-top">預約免費體驗課</span>
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR" loading="lazy">
+  <span class="floating-qr-label">掃碼加入 LINE</span>
+</div>
+
+<!-- NAV -->
+<nav class="site-nav"></nav>
+
+<!-- AVAILABILITY BAND -->
+<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>
+
+<!-- PAGE NAV STRIP -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="page2.html">課程・費用</a>
+  <a href="page3.html">須知・服務</a>
+  <a href="page4.html">泰語・分享</a>
+  <a href="tone-finder.html">聲調・搜尋</a>
+</div>
+
+<!-- TERMS CONTENT -->
+<div id="terms">
+  <div class="section-wrap">
+    <span class="eyebrow reveal" style="color:var(--gold-bright);">法律聲明</span>
+    <h2 class="section-heading reveal">使用條款<br>與著作權聲明</h2>
+
+    <div class="reveal" style="font-family:'Noto Sans TC',sans-serif; color:var(--ink-muted); font-size:13px; line-height:1.8; margin-bottom:40px;">
+      最後更新日期：2026 年 6 月。歡迎使用「泰華眼裡的世界」網站，使用本網站即表示您已閱讀、了解並同意以下條款內容。
+    </div>
+
+    <div class="reveal" style="display:flex; flex-direction:column; gap:36px; max-width:760px;">
+
+      <div>
+        <div style="font-family:'Noto Serif TC',serif; font-size:20px; font-weight:900; color:var(--ink); margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--gold-bright);">一、網站使用條款</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>本網站所提供之課程資訊、文章內容、聲調搜尋工具及其他功能，僅供使用者學習泰語與了解課程資訊之用途。</li>
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>使用者於使用本網站服務時，應遵守當地相關法令，不得有侵害他人權益、散布不實資訊或其他不當行為。</li>
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>本網站保留隨時修改、暫停或終止任何頁面、功能、課程內容或服務之權利，且不另行通知。</li>
+        </ul>
+      </div>
+
+      <div>
+        <div style="font-family:'Noto Serif TC',serif; font-size:20px; font-weight:900; color:var(--ink); margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--gold-bright);">二、著作權聲明</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>本網站所載之全部內容，包括但不限於文字、圖片、影音教材、課程設計、版面編排與程式碼，其著作權均歸「泰華眼裡的世界」（Mr. Thai Hua）所有，或經合法授權使用。</li>
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>除另有註明外，任何人不得未經事先書面同意，以任何形式複製、重製、改作、公開傳輸、散布本網站內容，或將其用於商業用途。</li>
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>如欲引用本網站內容，請註明出處並事先取得授權同意。</li>
+        </ul>
+      </div>
+
+      <div>
+        <div style="font-family:'Noto Serif TC',serif; font-size:20px; font-weight:900; color:var(--ink); margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--gold-bright);">三、智慧財產權聲明</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>本網站獨家開發之教學方法、課程架構、聲調搜尋系統及相關學習工具，屬本站智慧財產，受著作權法及相關法令保護。</li>
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>禁止任何形式之抄襲、模仿、逆向工程、轉售，或以本站教材、工具為基礎開發競品服務。</li>
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>如發現有侵害本站著作權或智慧財產權之行為，本站保留依法採取法律行動之權利。</li>
+        </ul>
+      </div>
+
+      <div>
+        <div style="font-family:'Noto Serif TC',serif; font-size:20px; font-weight:900; color:var(--ink); margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--gold-bright);">四、免責聲明</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>本網站所提供之學習資訊與課程內容，係基於教學經驗整理而成，惟實際學習成果因個人基礎、投入程度等因素而異，本站不對特定學習成效作出保證。</li>
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>本網站所連結之外部社群平台（如 Facebook、Instagram、LINE、YouTube、TikTok 等）內容由第三方提供與維護，本站不對其內容之正確性、安全性或可用性負責。</li>
+        </ul>
+      </div>
+
+      <div>
+        <div style="font-family:'Noto Serif TC',serif; font-size:20px; font-weight:900; color:var(--ink); margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--gold-bright);">五、條款修訂與聯絡方式</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:10px;">
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>本條款內容如有修訂，將直接公布於本網站，請使用者隨時留意。持續使用本網站，即視為同意修訂後之條款內容。</li>
+          <li style="font-family:'Noto Sans TC',sans-serif; font-size:14px; line-height:1.9; color:var(--ink-soft); display:flex; gap:8px;"><span style="color:var(--gold-bright); flex-shrink:0;">—</span>如對本條款有任何疑問，歡迎透過<a href="javascript:void(0)" onclick="openModal('modal-contact')" style="color:var(--gold); font-weight:700; text-decoration:underline;">「聯絡我們」</a>與我們聯繫。</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div style="height:44px;background:#0A0804;"></div>
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:rgba(255,255,255,0.5);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="shared.js?v=2"></script>
+</body>
+</html>

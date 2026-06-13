@@ -153,6 +153,167 @@
   }
   .tf-search-btn:hover { opacity: 0.88; }
 
+  /* ── Input action row (search + random word) ── */
+  .tf-input-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .tf-input-actions .tf-search-btn { margin-top: 0; }
+  .tf-secondary-btn {
+    margin-top: 0;
+    padding: 11px 24px;
+    background: none;
+    color: #D4A017;
+    border: 1.5px solid rgba(212,160,23,0.4);
+    border-radius: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .tf-secondary-btn:hover { background: rgba(212,160,23,0.1); }
+
+  /* ── Random-word info buttons ── */
+  .tf-word-info-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .tf-info-btn {
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    color: rgba(255,255,255,0.65);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tf-info-btn:hover { color: #D4A017; border-color: rgba(212,160,23,0.4); }
+  .tf-word-info-box {
+    margin: 12px auto 0;
+    max-width: 320px;
+    padding: 12px 16px;
+    background: rgba(212,160,23,0.07);
+    border: 1px solid rgba(212,160,23,0.25);
+    text-align: center;
+  }
+  .tf-word-info-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .tf-word-info-value {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 16px;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .tf-word-info-value.tf-word-info-th {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 22px;
+    color: #D4A017;
+    letter-spacing: 1px;
+  }
+
+  /* ── Stats button (page header) ── */
+  .tf-stats-btn {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 16px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tf-stats-btn:hover { color: #D4A017; border-color: rgba(212,160,23,0.4); }
+
+  /* ── Stats overlay ── */
+  .tf-stats-summary {
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .tf-stats-date { font-size: 12px; letter-spacing: 2px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+  .tf-stats-count { font-size: 22px; font-weight: 900; color: #D4A017; }
+  .tf-stats-count span { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.5); margin-left: 4px; }
+  .tf-stats-entry { padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); font-family: 'Noto Sans TC', sans-serif; }
+  .tf-stats-entry:last-child { border-bottom: none; }
+  .tf-stats-entry-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .tf-stats-word { font-family: 'Sarabun', sans-serif; font-size: 18px; color: #fff; letter-spacing: 1px; }
+  .tf-stats-time { font-size: 11px; color: rgba(255,255,255,0.35); }
+  .tf-stats-step { font-size: 12px; color: #D4A017; margin-bottom: 4px; letter-spacing: 0.5px; }
+  .tf-stats-choice { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.6; }
+  .tf-stats-empty { padding: 28px 22px; text-align: center; font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+
+  /* ── Stats: section blocks ── */
+  .tf-stats-section { padding: 16px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); font-family: 'Noto Sans TC', sans-serif; }
+  .tf-stats-section-title { font-size: 11px; letter-spacing: 3px; color: rgba(255,255,255,0.4); margin-bottom: 12px; text-transform: uppercase; }
+  .tf-stats-bar-row { margin-bottom: 10px; }
+  .tf-stats-bar-row:last-child { margin-bottom: 0; }
+  .tf-stats-bar-label { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 4px; line-height: 1.5; }
+  .tf-stats-bar-label b { color: #D4A017; font-weight: 700; white-space: nowrap; }
+  .tf-stats-bar-track { height: 6px; background: rgba(255,255,255,0.07); }
+  .tf-stats-bar-fill { height: 100%; background: #D4A017; }
+  .tf-stats-words { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tf-stats-word-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    color: #fff;
+  }
+  .tf-stats-word-chip b { font-family: 'Noto Sans TC', sans-serif; font-size: 11px; font-weight: 700; color: #D4A017; }
+  .tf-stats-lesson {
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    background: rgba(212,160,23,0.06);
+    border-left: 3px solid #D4A017;
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.8);
+  }
+  .tf-stats-lesson:last-child { margin-bottom: 0; }
+  .tf-stats-lesson b { color: #D4A017; }
+
+  .tf-stats-action-row { padding: 14px 22px 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .tf-stats-clear-btn, .tf-stats-download-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.4);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 8px 18px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tf-stats-clear-btn:hover { color: #ff6b6b; border-color: rgba(255,107,107,0.4); }
+  .tf-stats-download-btn { color: #D4A017; border-color: rgba(212,160,23,0.4); }
+  .tf-stats-download-btn:hover { background: rgba(212,160,23,0.1); }
+
   /* ── Step badge ── */
   .tf-step-badge {
     font-family: 'Noto Sans TC', sans-serif;
@@ -572,8 +733,7 @@
 
 <!-- ── NAV ── -->
 <nav class="site-nav"></nav>
-<div class="avail-band"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！ ✦ &nbsp;｜&nbsp; 🔥 現在買課程立折 <strong>100 元</strong>，額度有限，手慢則無！</span><button class="avail-cta" onclick="openModal('modal-social')">訂閱消息</button>
-</div>
+<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>
 
 <!-- ── PAGE BOTTOM NAV ── -->
 <div class="page-strip">
@@ -661,6 +821,7 @@
     <div class="tf-page-title">🎵 泰語聲調搜尋</div>
     <div class="tf-page-hint" id="tf-hint">輸入泰文單字，逐步分析聲調</div>
     <div class="tf-page-note">ℹ️ 目前僅支援單音節詞彙搜尋，多音節詞彙功能開發中</div>
+    <div><button class="tf-stats-btn" type="button" onclick="TF.showStats()">📊 今日統計</button></div>
   </div>
 
   <div class="tf-card">
@@ -707,6 +868,130 @@ var TONES = {
   4: { zh:'第四聲', match:'對應中文的第一聲高 tone', color:'#ffb347' },
   5: { zh:'第五聲', match:'對應中文的第二聲',       color:'#c39bff' }
 };
+
+// ════════════════════════════════════════════════════════════
+// RANDOM WORD LIST
+// 「隨機一個字」按鈕用的詞庫，之後可以直接擴充這個陣列。
+// 每個項目格式：
+//   word      → 拿來搜尋／聲調分析用的泰文寫法
+//   readingTH → 泰文讀音（口語唸法的泰文拼寫，可能跟 word 不同）
+//   readingEN → 羅馬拼音讀音
+//   zh        → 中文（台灣）翻譯
+// ════════════════════════════════════════════════════════════
+var WORD_LIST = [
+  { word:'กา', readingTH:'กา', readingEN:'gaa', zh:'烏鴉' },
+  { word:'ข้าว', readingTH:'ข้าว', readingEN:'khâao', zh:'飯、米' },
+  { word:'ไทย', readingTH:'ไทย', readingEN:'thai', zh:'泰國、泰文' },
+  { word:'น้ำ', readingTH:'น้ำ', readingEN:'náam', zh:'水' },
+  { word:'ม้า', readingTH:'ม้า', readingEN:'máa', zh:'馬' },
+  { word:'ปู', readingTH:'ปู', readingEN:'puu', zh:'螃蟹' },
+  { word:'ไก่', readingTH:'ไก่', readingEN:'gài', zh:'雞' },
+  { word:'เสือ', readingTH:'เสือ', readingEN:'sěua', zh:'老虎' },
+  { word:'ดี', readingTH:'ดี', readingEN:'dii', zh:'好' },
+  { word:'เก่ง', readingTH:'เก่ง', readingEN:'gèng', zh:'厲害、棒' },
+  { word:'รัก', readingTH:'รัก', readingEN:'rák', zh:'愛' },
+  { word:'หิน', readingTH:'หิน', readingEN:'hǐn', zh:'石頭' },
+  { word:'ก้อน', readingTH:'ก้อน', readingEN:'gôn', zh:'顆、塊（量詞）' },
+  { word:'เพื่อน', readingTH:'เพื่อน', readingEN:'pêuan', zh:'朋友' },
+  { word:'ดู', readingTH:'ดู', readingEN:'duu', zh:'看' },
+  { word:'ต้อง', readingTH:'ต้อง', readingEN:'dtông', zh:'必須' },
+  { word:'จะ', readingTH:'จะ', readingEN:'jà', zh:'要、將要' },
+  { word:'กลับ', readingTH:'กลับ', readingEN:'glàp', zh:'回' },
+  { word:'บ้าน', readingTH:'บ้าน', readingEN:'bâan', zh:'家' },
+  { word:'นอน', readingTH:'นอน', readingEN:'norn', zh:'睡' },
+  { word:'งาน', readingTH:'งาน', readingEN:'ngaan', zh:'工作、活動' },
+  { word:'ใหญ่', readingTH:'ใหญ่', readingEN:'yài', zh:'大' },
+  { word:'ทุก', readingTH:'ทุก', readingEN:'túk', zh:'每' },
+  { word:'สวย', readingTH:'สวย', readingEN:'sǔay', zh:'漂亮' },
+  { word:'เคย', readingTH:'เคย', readingEN:'koei', zh:'曾經' },
+  { word:'มาก', readingTH:'มาก', readingEN:'mâak', zh:'很、非常' },
+  { word:'เลย', readingTH:'เลย', readingEN:'loei', zh:'（加強語氣詞）' },
+  { word:'รถ', readingTH:'รถ', readingEN:'rót', zh:'車' },
+  { word:'เก็บ', readingTH:'เก็บ', readingEN:'gèp', zh:'收拾、整理' },
+  { word:'โต๊ะ', readingTH:'โต๊ะ', readingEN:'dtó', zh:'桌子' },
+  { word:'ขาย', readingTH:'ขาย', readingEN:'khǎai', zh:'賣' },
+  { word:'ห้าง', readingTH:'ห้าง', readingEN:'hâang', zh:'百貨、購物中心' },
+  { word:'สี', readingTH:'สี', readingEN:'sǐi', zh:'顏色' },
+  { word:'บ่อย', readingTH:'บ่อย', readingEN:'bòi', zh:'常常' },
+  { word:'ช้า', readingTH:'ช้า', readingEN:'cháa', zh:'慢' },
+  { word:'เส้น', readingTH:'เส้น', readingEN:'sên', zh:'條（量詞）' },
+  { word:'ลด', readingTH:'ลด', readingEN:'lót', zh:'減、降' },
+  { word:'เที่ยว', readingTH:'เที่ยว', readingEN:'thîeow', zh:'玩、旅遊' },
+  { word:'เครียด', readingTH:'เครียด', readingEN:'khrîat', zh:'緊張、壓力大' },
+  { word:'งู', readingTH:'งู', readingEN:'nguu', zh:'蛇' },
+  { word:'โทร', readingTH:'โทร', readingEN:'thoo', zh:'打電話' },
+  { word:'ว่าง', readingTH:'ว่าง', readingEN:'wâang', zh:'有空' },
+  { word:'เขียน', readingTH:'เขียน', readingEN:'khǐan', zh:'寫' },
+  { word:'ต่อ', readingTH:'ต่อ', readingEN:'dtòr', zh:'繼續' },
+  { word:'เดี๋ยว', readingTH:'เดี๋ยว', readingEN:'dǐeow', zh:'等一下、現在' },
+  { word:'นาน', readingTH:'นาน', readingEN:'naan', zh:'久' },
+  { word:'ฝาก', readingTH:'ฝาก', readingEN:'fàak', zh:'寄放、託帶' },
+  { word:'ค่อย', readingTH:'ค่อย', readingEN:'khôi', zh:'再（做）' },
+  { word:'นัด', readingTH:'นัด', readingEN:'nát', zh:'約' },
+  { word:'ลืม', readingTH:'ลืม', readingEN:'leum', zh:'忘記' },
+  { word:'ถ้วย', readingTH:'ถ้วย', readingEN:'thûay', zh:'碗' },
+  { word:'แรง', readingTH:'แรง', readingEN:'raeng', zh:'強（訊號、力氣）' },
+  { word:'เน็ต', readingTH:'เน็ต', readingEN:'nét', zh:'網路' },
+  { word:'นิ่ม', readingTH:'นิ่ม', readingEN:'nîm', zh:'軟' },
+  { word:'แข็ง', readingTH:'แข็ง', readingEN:'khǎeng', zh:'硬' },
+  { word:'กรอบ', readingTH:'กรอบ', readingEN:'gròp', zh:'脆' },
+  { word:'นุ่ม', readingTH:'นุ่ม', readingEN:'nûm', zh:'軟嫩' },
+  { word:'เละ', readingTH:'เละ', readingEN:'lé', zh:'爛糊' },
+  { word:'อ้วก', readingTH:'อ้วก', readingEN:'ûak', zh:'吐' },
+  { word:'มด', readingTH:'มด', readingEN:'mót', zh:'螞蟻' },
+  { word:'กล่อง', readingTH:'กล่อง', readingEN:'glòng', zh:'箱子' },
+  { word:'กล้อง', readingTH:'กล้อง', readingEN:'glông', zh:'相機' },
+  { word:'ซิม', readingTH:'ซิม', readingEN:'sim', zh:'SIM卡' },
+  { word:'จอง', readingTH:'จอง', readingEN:'jong', zh:'預訂' },
+  { word:'ถูก', readingTH:'ถูก', readingEN:'thùuk', zh:'便宜、對' },
+  { word:'ใบ', readingTH:'ใบ', readingEN:'bai', zh:'張（量詞）' },
+  { word:'เผ็ด', readingTH:'เผ็ด', readingEN:'phèt', zh:'辣' },
+  { word:'ฟรี', readingTH:'ฟรี', readingEN:'frii', zh:'免費' },
+  { word:'ไฟ', readingTH:'ไฟ', readingEN:'fai', zh:'火、電、燈' },
+  { word:'ก๊อก', readingTH:'ก๊อก', readingEN:'kók', zh:'水龍頭' },
+  { word:'ตัด', readingTH:'ตัด', readingEN:'dtàt', zh:'剪' },
+  { word:'ย้อม', readingTH:'ย้อม', readingEN:'yôm', zh:'染' },
+  { word:'แอบ', readingTH:'แอบ', readingEN:'àep', zh:'偷偷地' },
+  { word:'จีบ', readingTH:'จีบ', readingEN:'jìip', zh:'追求、搭訕' },
+  { word:'ดัง', readingTH:'ดัง', readingEN:'dang', zh:'有名、紅' },
+  { word:'แก้ว', readingTH:'แก้ว', readingEN:'gâew', zh:'杯子' },
+  { word:'ขับ', readingTH:'ขับ', readingEN:'khàp', zh:'開（車）' },
+  { word:'จ่าย', readingTH:'จ่าย', readingEN:'jàai', zh:'付（錢）' },
+  { word:'หยิบ', readingTH:'หยิบ', readingEN:'yìp', zh:'拿' },
+  { word:'เริ่ม', readingTH:'เริ่ม', readingEN:'rêrm', zh:'開始' },
+  { word:'เช็ค', readingTH:'เช็ค', readingEN:'chék', zh:'檢查、確認' },
+  { word:'หวาน', readingTH:'หวาน', readingEN:'wǎan', zh:'甜' },
+  { word:'เกือบ', readingTH:'เกือบ', readingEN:'gèuap', zh:'差一點、快要' },
+  { word:'ตาย', readingTH:'ตาย', readingEN:'dtaai', zh:'死' },
+  { word:'งอน', readingTH:'งอน', readingEN:'ngorn', zh:'鬧脾氣' },
+  { word:'เชื่อ', readingTH:'เชื่อ', readingEN:'chêua', zh:'相信' },
+  { word:'หนี', readingTH:'หนี', readingEN:'nǐi', zh:'逃跑' },
+  { word:'หมา', readingTH:'หมา', readingEN:'mǎa', zh:'狗' },
+  { word:'ผอม', readingTH:'ผอม', readingEN:'phǒm', zh:'瘦' },
+  { word:'นิ่ง', readingTH:'นิ่ง', readingEN:'nîng', zh:'平靜、不動' },
+  { word:'ขน', readingTH:'ขน', readingEN:'khǒn', zh:'搬運' },
+  { word:'รอบ', readingTH:'รอบ', readingEN:'rôp', zh:'趟、輪、回' },
+  { word:'สร้าง', readingTH:'สร้าง', readingEN:'sâang', zh:'建造' },
+  { word:'พา', readingTH:'พา', readingEN:'phaa', zh:'帶（人去）' },
+  { word:'ทัน', readingTH:'ทัน', readingEN:'than', zh:'來得及' },
+  { word:'หนัก', readingTH:'หนัก', readingEN:'nàk', zh:'重' },
+  { word:'เบา', readingTH:'เบา', readingEN:'bao', zh:'輕' },
+  { word:'เกม', readingTH:'เกม', readingEN:'geem', zh:'遊戲' },
+  { word:'โบสถ์', readingTH:'โบด', readingEN:'bòot', zh:'教堂' },
+  { word:'อ้าง', readingTH:'อ้าง', readingEN:'âang', zh:'藉口、聲稱' },
+  { word:'เปลี่ยน', readingTH:'เปลี่ยน', readingEN:'bplìan', zh:'換' },
+  { word:'เตรียม', readingTH:'เตรียม', readingEN:'dtriam', zh:'準備' },
+  { word:'งั้น', readingTH:'งั้น', readingEN:'ngán', zh:'那樣、那麼' },
+  { word:'แล้ว', readingTH:'แล้ว', readingEN:'láew', zh:'已經、了' },
+  { word:'เหมาะ', readingTH:'เหมาะ', readingEN:'mòr', zh:'適合' },
+  { word:'คุ้ม', readingTH:'คุ้ม', readingEN:'khúm', zh:'划算' },
+  { word:'จำ', readingTH:'จำ', readingEN:'jam', zh:'記得' },
+  { word:'ย้าย', readingTH:'ย้าย', readingEN:'yáai', zh:'搬（家）' },
+  { word:'พิมพ์', readingTH:'พิม', readingEN:'phim', zh:'打字' },
+  { word:'คอม', readingTH:'คอม', readingEN:'khom', zh:'電腦' },
+  { word:'ทริป', readingTH:'ทริบ', readingEN:'tríp', zh:'旅行行程' },
+  { word:'เพิ่ม', readingTH:'เพิ่ม', readingEN:'phêrm', zh:'增加' }
+];
 
 // ════════════════════════════════════════════════════════════
 // THAI WORD PARSER  (smart error detection)
@@ -801,6 +1086,7 @@ var S = { word:'', step:'input', path:[], tone:null };
 var hist = [];
 var histPos = -1;
 var _acts = {}, _actId = 0;
+var randomEntry = null; // currently-displayed random word's full data (word/readingTH/readingEN/zh), or null
 
 function act(fn) {
   var id = 'a'+(++_actId);
@@ -826,6 +1112,105 @@ function restoreState(pos) {
   var snap = hist[pos];
   S = { word:S.word, step:snap.step, path:snap.path.slice(), tone:snap.tone };
   render();
+}
+
+// ════════════════════════════════════════════════════════════
+// DAILY WRONG-ANSWER STATS (localStorage)
+// ════════════════════════════════════════════════════════════
+var STATS_KEY = 'tf_wrong_stats_v1';
+var STATS_KEEP_DAYS = 30;
+
+var STEP_LABELS = {
+  s1: '步驟一：聲調符號判斷',
+  s2a: '步驟二：子音分類（低子音／其他）',
+  s2a_other: '步驟二：子音細分類',
+  s2a_low: '步驟二：聲調符號選擇',
+  s2a_mid: '步驟二：聲調符號選擇',
+  s2a_hi: '步驟二：聲調符號選擇',
+  s2b: '步驟三：活音／死音判斷',
+  s2b_live: '步驟三：起首子音分類（活音）',
+  s2b_dead: '步驟三：起首子音分類（死音）',
+  s2b_dl: '步驟四：母音類型',
+  helper: '判斷工具：是否有尾音',
+  h_with: '判斷工具：尾音類型',
+  h_no: '判斷工具：母音類型'
+};
+
+// 依「步驟」整理出來的簡易課程重點，用於今日統計的學習建議
+var LESSON_TIPS = {
+  s1: '看單字上方有沒有聲調符號（่ ้ ๊ ๋）。有符號才能選「有聲調符號」，沒有就選「無聲調符號」。',
+  s2a: '先找出單字的「起首子音」，再對照低子音表（ค คร คล ฅ ฆ ง ช ซ ฌ ญ...）判斷是不是低子音。',
+  s2a_other: '不是低子音的話，再分清楚是中子音、高子音，還是 ห/อ 開頭的「前引字」組合。',
+  s2a_low: '核對單字上方真正的聲調符號是哪一個（่ ้ ๊ ๋），再依低子音的規則往下選。',
+  s2a_mid: '核對單字上方真正的聲調符號是哪一個（่ ้ ๊ ๋），再依中子音的規則往下選。',
+  s2a_hi: '核對單字上方真正的聲調符號是哪一個（่ ้ ๊ ๋），再依高子音的規則往下選。',
+  s2b: '判斷活音／死音：有「長尾音」或長母音收尾 ＝ 活音；有「短尾音」或短母音收尾 ＝ 死音。',
+  s2b_live: '活音字要再看起首子音：中子音／低子音走一條路，高子音／前引字走另一條路。',
+  s2b_dead: '死音字先看起首子音是不是低子音，是低子音才會進入下一步看母音長短。',
+  s2b_dl: '死音＋低子音時，要再分清楚母音是長母音還是短母音。',
+  helper: '使用判斷工具時，先看清楚單字最後有沒有「尾音」子音。',
+  h_with: '有尾音的話，要分清楚尾音是短尾音還是長尾音。',
+  h_no: '沒有尾音的話，要分清楚使用的母音是短母音還是長母音。'
+};
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
+
+function timeStr() {
+  var d = new Date();
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+function loadStats() {
+  try {
+    var raw = localStorage.getItem(STATS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+
+function saveStats(data) {
+  try {
+    // Keep only the most recent STATS_KEEP_DAYS days
+    var days = Object.keys(data).sort();
+    while (days.length > STATS_KEEP_DAYS) {
+      delete data[days.shift()];
+    }
+    localStorage.setItem(STATS_KEY, JSON.stringify(data));
+  } catch (e) { /* localStorage unavailable, ignore */ }
+}
+
+function recordMistake(choiceLabel, errMsg) {
+  var data = loadStats();
+  var day = todayStr();
+  if (!data[day]) data[day] = [];
+  data[day].push({
+    time: timeStr(),
+    word: S.word,
+    step: S.step,
+    choice: choiceLabel,
+    message: errMsg
+  });
+  saveStats(data);
+}
+
+// Count occurrences of a key in entries, return sorted desc [{key,count}, ...]
+function countBy(entries, keyFn) {
+  var counts = {};
+  entries.forEach(function(e){
+    var k = keyFn(e);
+    counts[k] = (counts[k]||0) + 1;
+  });
+  return Object.keys(counts).map(function(k){
+    return { key:k, count:counts[k] };
+  }).sort(function(a,b){ return b.count - a.count; });
+}
+
+function pctStr(n, total) {
+  return total ? (n/total*100).toFixed(1) : '0.0';
 }
 
 // ════════════════════════════════════════════════════════════
@@ -970,7 +1355,7 @@ function validate(choiceKey, choiceLabel) {
 
 function tryNavigate(choiceKey, choiceLabel, nextStep, toneNum) {
   var err = validate(choiceKey, choiceLabel);
-  if (err) { showError(err); return; }
+  if (err) { recordMistake(choiceLabel, err); showError(err); return; }
   if (toneNum !== undefined) navigate(nextStep, choiceLabel, toneNum);
   else navigate(nextStep, choiceLabel);
 }
@@ -1051,7 +1436,16 @@ function stepInput() {
       'oninput="TF.filterThai(this)" ' +
       'onkeydown="if(event.key===\'Enter\')TF.search()">' +
     '<div id="tf-lang-warn" style="display:none;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#ff6b6b;margin-top:8px;letter-spacing:0.5px;">⚠️ 請輸入泰文字符</div>' +
-    '<div><button class="tf-search-btn" onclick="TF.search()">🔍 開始分析</button></div>' +
+    '<div class="tf-input-actions">' +
+      '<button class="tf-secondary-btn" type="button" onclick="TF.randomWord()">🎲 隨機一個字</button>' +
+      '<button class="tf-search-btn" onclick="TF.search()">🔍 開始分析</button>' +
+    '</div>' +
+    '<div class="tf-word-info-row" id="tf-word-info-row" style="display:none;">' +
+      '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'zh\')">🇹🇼 中文翻譯</button>' +
+      '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'th\')">🔤 泰文讀音</button>' +
+      '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'en\')">🔡 English 讀音</button>' +
+    '</div>' +
+    '<div class="tf-word-info-box" id="tf-word-info-box" style="display:none;"></div>' +
   '</div>';
 }
 
@@ -1298,6 +1692,156 @@ function showTip(keys) {
   document.body.appendChild(div);
 }
 
+function showStats() {
+  var old = document.getElementById('tf-stats-ov');
+  if (old) old.remove();
+  var data = loadStats();
+  var day = todayStr();
+  var entries = data[day] || [];
+  var total = entries.length;
+
+  var bodyHtml;
+  if (!total) {
+    bodyHtml = '<div class="tf-stats-empty">今天還沒有答錯紀錄 🎉</div>';
+  } else {
+    var stepCounts = countBy(entries, function(e){ return e.step; });
+    var wordCounts = countBy(entries, function(e){ return e.word; });
+
+    // ── 最常選錯的關卡 ──
+    var stepRows = stepCounts.map(function(s){
+      var label = STEP_LABELS[s.key] || s.key;
+      var pct = pctStr(s.count, total);
+      return '<div class="tf-stats-bar-row">' +
+        '<div class="tf-stats-bar-label"><span>'+label+'</span><b>'+s.count+' 次（'+pct+'%）</b></div>' +
+        '<div class="tf-stats-bar-track"><div class="tf-stats-bar-fill" style="width:'+pct+'%;"></div></div>' +
+      '</div>';
+    }).join('');
+
+    // ── 最常選錯的字 ──
+    var wordChips = wordCounts.map(function(w){
+      var pct = pctStr(w.count, total);
+      return '<span class="tf-stats-word-chip">'+w.key+'<b>×'+w.count+'（'+pct+'%）</b></span>';
+    }).join('');
+
+    // ── 今日課程重點（依出現頻率排序）──
+    var lessons = stepCounts.map(function(s){
+      var tip = LESSON_TIPS[s.key];
+      if (!tip) return '';
+      var label = STEP_LABELS[s.key] || s.key;
+      return '<div class="tf-stats-lesson"><b>'+label+'：</b>'+tip+'</div>';
+    }).join('');
+
+    // ── 詳細紀錄（時間倒序）──
+    var entryRows = entries.slice().reverse().map(function(e){
+      var stepLabel = STEP_LABELS[e.step] || e.step;
+      return '<div class="tf-stats-entry">' +
+        '<div class="tf-stats-entry-head">' +
+          '<span class="tf-stats-word">'+e.word+'</span>' +
+          '<span class="tf-stats-time">'+e.time+'</span>' +
+        '</div>' +
+        '<div class="tf-stats-step">'+stepLabel+'</div>' +
+        '<div class="tf-stats-choice">選了「'+e.choice+'」 → '+e.message.replace(/\n/g,'　') + '</div>' +
+      '</div>';
+    }).join('');
+
+    bodyHtml =
+      '<div class="tf-stats-section"><div class="tf-stats-section-title">最常選錯的關卡</div>' + stepRows + '</div>' +
+      '<div class="tf-stats-section"><div class="tf-stats-section-title">最常選錯的字</div><div class="tf-stats-words">' + wordChips + '</div></div>' +
+      (lessons ? '<div class="tf-stats-section"><div class="tf-stats-section-title">今日課程重點</div>' + lessons + '</div>' : '') +
+      '<div class="tf-stats-section"><div class="tf-stats-section-title">詳細紀錄</div></div>' +
+      entryRows;
+  }
+
+  var div = document.createElement('div');
+  div.id = 'tf-stats-ov';
+  div.className = 'tf-tip-overlay';
+  div.onclick = function(e){ if (e.target===div) div.remove(); };
+  div.innerHTML =
+    '<div class="tf-tip-box">' +
+      '<div class="tf-tip-header">' +
+        '<span class="tf-tip-header-title">今日統計</span>' +
+        '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-stats-ov\').remove()">✕</button>' +
+      '</div>' +
+      '<div class="tf-stats-summary">' +
+        '<div class="tf-stats-date">'+day+'</div>' +
+        '<div class="tf-stats-count">'+total+'<span>次答錯</span></div>' +
+      '</div>' +
+      bodyHtml +
+      (total ? '<div class="tf-stats-action-row">' +
+        '<button class="tf-stats-download-btn" onclick="TF.downloadStats()">💾 下載今日統計</button>' +
+        '<button class="tf-stats-clear-btn" onclick="TF.clearTodayStats()">清除今日紀錄</button>' +
+      '</div>' : '') +
+    '</div>';
+  document.body.appendChild(div);
+}
+
+function clearTodayStats() {
+  var data = loadStats();
+  delete data[todayStr()];
+  saveStats(data);
+  showStats();
+}
+
+function buildStatsReportText(day, entries) {
+  var total = entries.length;
+  var stepCounts = countBy(entries, function(e){ return e.step; });
+  var wordCounts = countBy(entries, function(e){ return e.word; });
+  var lines = [];
+
+  lines.push('泰語聲調搜尋 － 今日統計報告');
+  lines.push('日期：' + day);
+  lines.push('今日答錯總數：' + total + ' 次');
+  lines.push('');
+
+  lines.push('【最常選錯的關卡】');
+  stepCounts.forEach(function(s, i){
+    var label = STEP_LABELS[s.key] || s.key;
+    lines.push((i+1) + '. ' + label + ' － ' + s.count + ' 次（' + pctStr(s.count, total) + '%）');
+  });
+  lines.push('');
+
+  lines.push('【最常選錯的字】');
+  wordCounts.forEach(function(w, i){
+    lines.push((i+1) + '. ' + w.key + ' － ' + w.count + ' 次（' + pctStr(w.count, total) + '%）');
+  });
+  lines.push('');
+
+  lines.push('【今日課程重點】');
+  var hasLesson = false;
+  stepCounts.forEach(function(s){
+    var tip = LESSON_TIPS[s.key];
+    if (!tip) return;
+    hasLesson = true;
+    lines.push('・' + (STEP_LABELS[s.key] || s.key) + '：' + tip);
+  });
+  if (!hasLesson) lines.push('（無）');
+  lines.push('');
+
+  lines.push('【詳細紀錄】');
+  entries.forEach(function(e){
+    var stepLabel = STEP_LABELS[e.step] || e.step;
+    lines.push(e.time + ' | ' + e.word + ' | ' + stepLabel + ' | 選了「' + e.choice + '」 → ' + e.message.replace(/\n/g, ' '));
+  });
+
+  return lines.join('\n');
+}
+
+function downloadStats() {
+  var data = loadStats();
+  var day = todayStr();
+  var entries = data[day] || [];
+  var text = buildStatsReportText(day, entries);
+  var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '泰語聲調搜尋_今日統計_' + day + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
 // ════════════════════════════════════════════════════════════
 // PUBLIC API
 // ════════════════════════════════════════════════════════════
@@ -1312,6 +1856,43 @@ var TF = {
       var warn = document.getElementById('tf-lang-warn');
       if (warn) { warn.style.display = 'block'; setTimeout(function(){ warn.style.display='none'; }, 2500); }
     }
+    // User edited the input manually — the word info (中文翻譯／讀音) no longer
+    // matches what's in the box, so hide it.
+    randomEntry = null;
+    var infoRow = document.getElementById('tf-word-info-row');
+    if (infoRow) infoRow.style.display = 'none';
+    var infoBox = document.getElementById('tf-word-info-box');
+    if (infoBox) { infoBox.style.display = 'none'; infoBox.innerHTML = ''; }
+  },
+  randomWord: function() {
+    if (!WORD_LIST || !WORD_LIST.length) return;
+    var entry = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+    randomEntry = entry;
+    var inp = document.getElementById('tf-inp');
+    if (!inp) return;
+    inp.value = entry.word;
+    inp.style.borderColor = '';
+    var warn = document.getElementById('tf-lang-warn');
+    if (warn) warn.style.display = 'none';
+    var infoRow = document.getElementById('tf-word-info-row');
+    if (infoRow) infoRow.style.display = 'flex';
+    var infoBox = document.getElementById('tf-word-info-box');
+    if (infoBox) { infoBox.style.display = 'none'; infoBox.innerHTML = ''; }
+    inp.focus();
+  },
+  showWordInfo: function(type) {
+    if (!randomEntry) return;
+    var box = document.getElementById('tf-word-info-box');
+    if (!box) return;
+    var label, value, isThai = false;
+    if (type === 'zh') { label = '中文翻譯（台灣）'; value = randomEntry.zh; }
+    else if (type === 'th') { label = '泰文讀音'; value = randomEntry.readingTH; isThai = true; }
+    else if (type === 'en') { label = 'English 讀音'; value = randomEntry.readingEN; isThai = true; }
+    else return;
+    box.innerHTML =
+      '<div class="tf-word-info-label">'+label+'</div>' +
+      '<div class="tf-word-info-value' + (isThai ? ' tf-word-info-th' : '') + '">'+value+'</div>';
+    box.style.display = 'block';
   },
   search: function() {
     var inp = document.getElementById('tf-inp');
@@ -1341,9 +1922,13 @@ var TF = {
   reset: function() {
     hist=[]; histPos=-1;
     S = { word:'', step:'input', path:[], tone:null };
+    randomEntry = null;
     render();
   },
   tip: function(keys) { showTip(keys); },
+  showStats: function() { showStats(); },
+  clearTodayStats: function() { clearTodayStats(); },
+  downloadStats: function() { downloadStats(); },
   _run: function(id) { if(_acts[id]) _acts[id](); }
 };
 
@@ -1355,7 +1940,8 @@ render();
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
-  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:rgba(255,255,255,0.5);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>

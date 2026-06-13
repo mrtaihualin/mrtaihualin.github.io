@@ -223,7 +223,7 @@
 <nav class="site-nav"></nav>
 
 <!-- AVAILABILITY BAND -->
-<div class="avail-band"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！ ✦ &nbsp;｜&nbsp; 🔥 現在買課程立折 <strong>100 元</strong>，額度有限，手慢則無！</span><button class="avail-cta" onclick="openModal('modal-social')">訂閱消息</button></div>
+<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>
 
 
 <!-- PAGE NAV STRIP -->
@@ -344,38 +344,6 @@
         <div class="lesson-note">✦ 懂泰國人講話的結果概念，就能順利學會怎麼開口——不只是會單字，而是真正說出完整的句子</div>
       </div>
     </div>
-
-    <!-- VIDEO PREVIEW -->
-    <div class="reveal" style="margin-top:56px;">
-      <span class="eyebrow" style="margin-bottom:16px;display:block;">實際課堂影片</span>
-      <div style="position:relative;width:100%;max-width:800px;margin:0 auto;aspect-ratio:16/9;background:var(--ink);border:2px solid var(--ink);overflow:hidden;">
-        <!-- 把下方 src 換成你的 YouTube embed 連結，例如 https://www.youtube.com/embed/XXXXXXXXX -->
-        <iframe
-          id="lesson-video"
-          src=""
-          title="課堂預覽影片"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen
-          style="position:absolute;top:0;left:0;width:100%;height:100%;">
-        </iframe>
-        <!-- 當 src 為空時顯示佔位符 -->
-        <div id="video-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--ink);color:rgba(255,255,255,0.3);">
-          <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="28" cy="28" r="27" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
-            <polygon points="22,18 42,28 22,38" fill="rgba(212,160,23,0.6)"/>
-          </svg>
-          <span style="font-family:'Noto Sans TC',sans-serif;font-size:13px;letter-spacing:2px;">課堂影片即將上線</span>
-        </div>
-      </div>
-    </div>
-    <script>
-      (function(){
-        var v = document.getElementById('lesson-video');
-        var p = document.getElementById('video-placeholder');
-        if(v && v.src && v.src !== window.location.href) { if(p) p.style.display='none'; }
-      })();
-    </script>
 
   </div>
 </div>
@@ -674,7 +642,8 @@
 </div>
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
-  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:rgba(255,255,255,0.5);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
 <!-- LIGHTBOX -->

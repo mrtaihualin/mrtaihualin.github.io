@@ -104,6 +104,7 @@
   .hero-title { font-family:'Noto Serif TC',serif; font-size:clamp(44px,9vw,96px); font-weight:900; color:var(--white); line-height:1.08; letter-spacing:-1px; margin-bottom:20px; opacity:0; animation:fadeUp 0.6s 0.35s forwards; }
   .hero-title .accent { color:var(--gold-bright); }
   .hero-slogan { font-family:'Noto Sans TC',sans-serif; font-size:clamp(14px,1.8vw,18px); color:rgba(255,255,255,0.5); letter-spacing:2px; margin-bottom:14px; opacity:0; animation:fadeUp 0.5s 0.5s forwards; }
+  .hero-slogan .slogan-accent { background:linear-gradient(90deg,var(--gold-bright),#FFD86B); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:700; letter-spacing:3px; }
   .hero-sub { font-family:'Noto Sans TC',sans-serif; font-size:clamp(16px,2.2vw,20px); color:rgba(255,255,255,0.82); line-height:1.85; max-width:480px; margin-bottom:48px; opacity:0; animation:fadeUp 0.6s 0.6s forwards; }
   .hero-cta { background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:16px; padding:18px 52px; border:none; cursor:pointer; letter-spacing:1px; transition:all 0.25s; opacity:0; animation:fadeUp 0.6s 0.75s forwards; }
   .hero-cta:hover { background:#E8B820; transform:translateY(-3px); box-shadow:0 10px 28px rgba(0,0,0,0.35); }
@@ -215,13 +216,17 @@
 
   /* AVAILABILITY BAND */
 
-  .avail-band { background:var(--ink); border-top:3px solid var(--gold-bright); border-bottom:3px solid var(--gold-bright); padding:10px 16px; display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:nowrap; overflow:hidden; }
-  @media(max-width:600px){ .avail-band { gap:8px; padding:10px 12px; } .avail-text { font-size:11px; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .avail-cta { font-size:11px; padding:7px 12px; flex-shrink:0; } }
+  .avail-band { background:var(--ink); border-top:3px solid var(--gold-bright); border-bottom:3px solid var(--gold-bright); padding:10px 16px; display:flex; flex-direction:column; gap:8px; }
+  .avail-row { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:nowrap; overflow:hidden; }
+  .avail-row + .avail-row { padding-top:8px; border-top:1px solid rgba(255,255,255,0.1); }
+  a.avail-row { text-decoration:none; cursor:pointer; transition:opacity 0.2s; }
+  a.avail-row:hover { opacity:0.78; }
+  @media(max-width:600px){ .avail-band { gap:6px; padding:8px 12px; } .avail-row + .avail-row { padding-top:6px; } .avail-text { font-size:11px; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .avail-cta { font-size:11px; padding:7px 12px; flex-shrink:0; } }
   .avail-dot { width:10px; height:10px; background:#4CAF50; border-radius:50%; animation:blink 1.8s infinite; flex-shrink:0; }
   @keyframes blink { 0%,100%{opacity:1;}50%{opacity:0.3;} }
   .avail-text { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:var(--white); letter-spacing:1px; }
   .avail-text strong { color:var(--gold-bright); }
-  .avail-cta { background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:12px; padding:8px 18px; border:none; cursor:pointer; letter-spacing:1px; white-space:nowrap; transition:background 0.2s; }
+  .avail-cta { background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:12px; padding:8px 18px; border:none; cursor:pointer; letter-spacing:1px; white-space:nowrap; transition:background 0.2s; text-decoration:none; display:inline-block; flex-shrink:0; }
   .avail-cta:hover { background:#E8B820; }
 
   /* QUIZ MODAL */
@@ -339,7 +344,7 @@
   .cta-accompany { margin-top:28px; font-family:'Noto Sans TC',sans-serif; font-size:15px; color:var(--ink-muted); line-height:1.8; }
 
   /* FOOTER */
-  footer { text-align:center; padding:28px 24px; font-family:'Noto Sans TC',sans-serif; font-size:12px; letter-spacing:2px; color:rgba(255,255,255,0.3); background:#0A0804; border-top:1px solid rgba(255,255,255,0.06); }
+  footer { text-align:center; padding:28px 24px 72px; font-family:'Noto Sans TC',sans-serif; font-size:12px; letter-spacing:2px; color:rgba(255,255,255,0.3); background:#0A0804; border-top:1px solid rgba(255,255,255,0.06); }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);} }
   @keyframes pulse { 0%,100%{opacity:0.3;}50%{opacity:0.8;} }
