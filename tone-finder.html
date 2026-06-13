@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DKVQE30982');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>泰語聲調搜尋 — 泰華眼裡的泰語教學</title>
@@ -298,6 +306,20 @@
   .tf-stats-lesson b { color: #D4A017; }
 
   .tf-stats-action-row { padding: 14px 22px 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* ── Phonics (拼音規則) overlay ── */
+  .tf-phon-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .tf-phon-row:last-child { border-bottom: none; }
+  .tf-phon-name { font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); min-width: 96px; }
+  .tf-phon-name b { color: #D4A017; }
+  .tf-phon-chars { font-family: 'Sarabun', sans-serif; font-size: 16px; color: #fff; text-align: right; letter-spacing: 1px; }
+  .tf-phon-example { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'Noto Sans TC', sans-serif; }
+  .tf-phon-example:last-child { border-bottom: none; }
+  .tf-phon-th { font-family: 'Sarabun', sans-serif; font-size: 17px; color: #D4A017; letter-spacing: 0.5px; }
+  .tf-phon-arrow { color: rgba(255,255,255,0.35); font-size: 12px; margin: 0 6px; }
+  .tf-phon-read { font-family: 'Sarabun', sans-serif; font-size: 15px; color: rgba(255,255,255,0.85); }
+  .tf-phon-note { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.7; margin-top: 4px; }
+  .tf-phon-intro { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.9; margin-bottom: 12px; }
   .tf-stats-clear-btn, .tf-stats-download-btn {
     background: none;
     border: 1px solid rgba(255,255,255,0.15);
@@ -731,6 +753,14 @@
 </head>
 <body>
 
+<!-- FLOATING LINE QR WIDGET -->
+<div class="floating-qr" id="floating-qr">
+  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
+  <span class="floating-qr-top">預約免費體驗課</span>
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR" loading="lazy">
+  <span class="floating-qr-label">掃碼加入 LINE</span>
+</div>
+
 <!-- ── NAV ── -->
 <nav class="site-nav"></nav>
 <div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>
@@ -821,7 +851,9 @@
     <div class="tf-page-title">🎵 泰語聲調搜尋</div>
     <div class="tf-page-hint" id="tf-hint">輸入泰文單字，逐步分析聲調</div>
     <div class="tf-page-note">ℹ️ 目前僅支援單音節詞彙搜尋，多音節詞彙功能開發中</div>
-    <div><button class="tf-stats-btn" type="button" onclick="TF.showStats()">📊 今日統計</button></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="tf-stats-btn" type="button" onclick="TF.showStats()" style="color:#D4A017;border-color:rgba(212,160,23,0.4);">📊 今日統計</button>
+    </div>
   </div>
 
   <div class="tf-card">
@@ -990,8 +1022,146 @@ var WORD_LIST = [
   { word:'พิมพ์', readingTH:'พิม', readingEN:'phim', zh:'打字' },
   { word:'คอม', readingTH:'คอม', readingEN:'khom', zh:'電腦' },
   { word:'ทริป', readingTH:'ทริบ', readingEN:'tríp', zh:'旅行行程' },
-  { word:'เพิ่ม', readingTH:'เพิ่ม', readingEN:'phêrm', zh:'增加' }
+  { word:'เพิ่ม', readingTH:'เพิ่ม', readingEN:'phêrm', zh:'增加' },
+
+  // ── 拼音規則練習區：新增詞庫 ──
+  { word:'ภาษาไทย', readingTH:'พา-สา-ไทย', readingEN:'phaa-sǎa-thai', zh:'泰文' },
+  { word:'ใหม่', readingTH:'ใหม่', readingEN:'mài', zh:'新' },
+  { word:'ให้', readingTH:'ให้', readingEN:'hâi', zh:'給' },
+  { word:'ใคร', readingTH:'ใคร', readingEN:'khrai', zh:'誰' },
+  { word:'ใคร่', readingTH:'ใคร่', readingEN:'khrâi', zh:'慾望' },
+  { word:'ใส', readingTH:'ใส', readingEN:'sǎi', zh:'清' },
+  { word:'ใด', readingTH:'ใด', readingEN:'dai', zh:'什麼' },
+  { word:'ใฝ่', readingTH:'ใฝ่', readingEN:'fài', zh:'偏向' },
+  { word:'หลงใหล', readingTH:'หลง-ใหล', readingEN:'lǒng-lǎi', zh:'著迷' },
+  { word:'ใช่', readingTH:'ใช่', readingEN:'châi', zh:'對' },
+  { word:'ใช้', readingTH:'ใช้', readingEN:'chái', zh:'使用' },
+  { word:'ใจ', readingTH:'ใจ', readingEN:'jai', zh:'心' },
+  { word:'ใส่', readingTH:'ใส่', readingEN:'sài', zh:'放進' },
+  { word:'ใน', readingTH:'ใน', readingEN:'nai', zh:'裡' },
+  { word:'ใต้', readingTH:'ใต้', readingEN:'dtâi', zh:'底下' },
+  { word:'ใกล้', readingTH:'ใกล้', readingEN:'glâi', zh:'近' },
+  { word:'สะใภ้', readingTH:'สะ-ใภ้', readingEN:'sà-phái', zh:'媳婦' },
+  { word:'ใย', readingTH:'ใย', readingEN:'yai', zh:'纖維' },
+  { word:'บันทึก', readingTH:'บัน-ทึก', readingEN:'ban-théuk', zh:'筆記' },
+  { word:'ใบ้', readingTH:'ใบ้', readingEN:'bâi', zh:'啞巴' },
+  { word:'สบาย', readingTH:'สะ-บาย', readingEN:'sà-baai', zh:'舒服' },
+  { word:'กรรไกร', readingTH:'กัน-ไกร', readingEN:'gan-grai', zh:'剪刀' },
+  { word:'ธรรมดา', readingTH:'ทัม-มะ-ดา', readingEN:'tham-má-daa', zh:'普通' },
+  { word:'มือ', readingTH:'มือ', readingEN:'meu', zh:'手' },
+  { word:'วัน', readingTH:'วัน', readingEN:'wan', zh:'日' },
+  { word:'ดื่ม', readingTH:'ดื่ม', readingEN:'dèum', zh:'喝' },
+  { word:'เตะ', readingTH:'เตะ', readingEN:'tè', zh:'踢' },
+  { word:'เจ็บ', readingTH:'เจ็บ', readingEN:'jèp', zh:'痛' },
+  { word:'แตะ', readingTH:'แตะ', readingEN:'tàe', zh:'碰' },
+  { word:'หก', readingTH:'หก', readingEN:'hòk', zh:'六' },
+  { word:'เคาะ', readingTH:'เคาะ', readingEN:'kháo', zh:'敲' },
+  { word:'ล็อก', readingTH:'ล็อก', readingEN:'lók', zh:'鎖' },
+  { word:'ก็', readingTH:'เก้าะ', readingEN:'gôr', zh:'就、也' },
+  { word:'พอ', readingTH:'พอ', readingEN:'phor', zh:'夠' },
+  { word:'บอก', readingTH:'บอก', readingEN:'bòk', zh:'告訴' },
+  { word:'อักษร', readingTH:'อัก-สอน', readingEN:'àk-sǒn', zh:'文字' },
+  { word:'หัว', readingTH:'หัว', readingEN:'hǔa', zh:'頭' },
+  { word:'ขวด', readingTH:'ขวด', readingEN:'khùat', zh:'瓶子' },
+  { word:'เธอ', readingTH:'เทอ', readingEN:'ter', zh:'你、妳' },
+  { word:'ท่าน', readingTH:'ท่าน', readingEN:'thân', zh:'您' },
+  { word:'ส่ง', readingTH:'ส่ง', readingEN:'sòng', zh:'送' },
+  { word:'คอย', readingTH:'คอย', readingEN:'khoi', zh:'等' },
+  { word:'ปาฏิหาริย์', readingTH:'ปา-ติ-หาน', readingEN:'paa-tì-hǎan', zh:'奇蹟' },
+  { word:'สมัคร', readingTH:'สะ-หมัก', readingEN:'sà-màk', zh:'報名' },
+  { word:'เนย', readingTH:'เนย', readingEN:'noei', zh:'奶油' },
+  { word:'เดิน', readingTH:'เดิน', readingEN:'doern', zh:'走路' },
+  { word:'วันนี้', readingTH:'วัน-นี้', readingEN:'wan-níi', zh:'今天' },
+  { word:'วานนี้', readingTH:'วาน-นี้', readingEN:'waan-níi', zh:'昨天' },
+  { word:'กบ', readingTH:'กบ', readingEN:'gòp', zh:'青蛙' },
+  { word:'กด', readingTH:'กด', readingEN:'gòt', zh:'按' },
+  { word:'พระพรหม', readingTH:'พระ-พรม', readingEN:'phrá-phrom', zh:'四面佛' },
+  { word:'เมรุ', readingTH:'เมน', readingEN:'meen', zh:'火葬場' },
+  { word:'เพชร', readingTH:'เพ็ด', readingEN:'phét', zh:'鑽石' },
+  { word:'เหตุผล', readingTH:'เหด-ผน', readingEN:'hèt-phǒn', zh:'理由' },
+  { word:'เครื่องจักร', readingTH:'เครื่อง-จัก', readingEN:'khrêuang-jàk', zh:'機器' },
+  { word:'เกษตร', readingTH:'กะ-เสด', readingEN:'kà-sèt', zh:'農業' },
+  { word:'วันสารทจีน', readingTH:'วัน-สาด-จีน', readingEN:'wan-sàat-jiin', zh:'中元節' },
+  { word:'วุฒิสภา', readingTH:'วุด-ทิ-สะ-พา', readingEN:'wút-thí-sà-phaa', zh:'參議院' },
+  { word:'ธรรมชาติ', readingTH:'ทัม-มะ-ชาด', readingEN:'tham-má-châat', zh:'大自然' },
+  { word:'สามารถ', readingTH:'สา-มาด', readingEN:'sǎa-mâat', zh:'能力' },
+  { word:'จักรพรรดิ', readingTH:'จัก-กระ-พัด', readingEN:'jàk-krà-phát', zh:'天皇' },
+  { word:'กษัตริย์', readingTH:'กะ-สัด', readingEN:'kà-sàt', zh:'國王' },
+  { word:'มหาสมุทร', readingTH:'มะ-หา-สะ-หมุด', readingEN:'má-hǎa-sà-mùt', zh:'海洋' },
+  { word:'พุทธ', readingTH:'พุด', readingEN:'phút', zh:'佛教' },
+  { word:'ขนม', readingTH:'ขะ-หนม', readingEN:'khà-nǒm', zh:'零食' },
+  { word:'ตลาด', readingTH:'ตะ-หลาด', readingEN:'tà-làat', zh:'市場' },
+  { word:'ประโยชน์', readingTH:'ประ-โหยด', readingEN:'prà-yòot', zh:'用處' },
+  { word:'ตำรวจ', readingTH:'ตำ-หรวด', readingEN:'tam-rùat', zh:'警察' },
+  { word:'นั่งขัดสมาธิ', readingTH:'นั่ง-ขัด-สะ-หมาด', readingEN:'nâng-khàt-sà-màat', zh:'盤坐' },
+  { word:'กอปร', readingTH:'กอบ', readingEN:'gòp', zh:'組合' },
+  { word:'กราบ', readingTH:'กราบ', readingEN:'gràap', zh:'跪拜' },
+  { word:'เพราะ', readingTH:'เพราะ', readingEN:'phró', zh:'因為' },
+  { word:'คล่อง', readingTH:'คล่อง', readingEN:'khlông', zh:'流利' },
+  { word:'จมูก', readingTH:'จะ-หมูก', readingEN:'jà-mùuk', zh:'鼻子' },
+  { word:'แสดง', readingTH:'สะ-แดง', readingEN:'sà-daeng', zh:'表示' },
+  { word:'ตวาด', readingTH:'ตะ-หวาด', readingEN:'tà-wàat', zh:'罵' },
+  { word:'ประวัติศาสตร์', readingTH:'ประ-หวัด-สาด', readingEN:'prà-wàt-sàat', zh:'歷史' },
+  { word:'สมาธิ', readingTH:'สะ-มา-ที', readingEN:'sà-maa-thii', zh:'集中力' },
+  { word:'วาสนา', readingTH:'วาด-สะ-หนา', readingEN:'wâat-sà-nǎa', zh:'緣分' },
+  { word:'สมาชิก', readingTH:'สะ-มา-ชิก', readingEN:'sà-maa-chík', zh:'成員' },
+  { word:'ปริศนา', readingTH:'ปริด-สะ-หนา', readingEN:'prìt-sà-nǎa', zh:'謎' },
+  { word:'บัณฑิต', readingTH:'บัน-ดิด', readingEN:'ban-dìt', zh:'畢業生' },
+  { word:'จักรวาล', readingTH:'จัก-กระ-วาน', readingEN:'jàk-krà-waan', zh:'宇宙' },
+  { word:'โฆษณา', readingTH:'โคด-สะ-นา', readingEN:'khôot-sà-naa', zh:'廣告' },
+  { word:'ศาสนา', readingTH:'สาด-สะ-หนา', readingEN:'sàat-sà-nǎa', zh:'宗教' },
+  { word:'ซื่อสัตย์', readingTH:'ซื่อ-สัด', readingEN:'sêu-sàt', zh:'忠心' },
+  { word:'ผลลัพธ์', readingTH:'ผน-ลับ', readingEN:'phǒn-láp', zh:'結果' },
+  { word:'พยัญชนะ', readingTH:'พะ-ยัน-ชะ-นะ', readingEN:'phá-yan-chá-ná', zh:'子音' },
+  { word:'อนุญาต', readingTH:'อะ-นุ-ยาด', readingEN:'à-nú-yâat', zh:'允許' },
+  { word:'กวาง', readingTH:'กวาง', readingEN:'gwaang', zh:'鹿' },
+  { word:'จริง', readingTH:'จิง', readingEN:'jing', zh:'事實' },
+  { word:'ควาย', readingTH:'ควาย', readingEN:'khwaai', zh:'水牛' },
+  { word:'ทรง', readingTH:'ซง', readingEN:'song', zh:'樣子' },
+  { word:'เศร้า', readingTH:'เส้า', readingEN:'sâo', zh:'傷心' },
+  { word:'ทราบ', readingTH:'ซาบ', readingEN:'sâap', zh:'知道' },
+  { word:'สร้อย', readingTH:'ส้อย', readingEN:'sôi', zh:'項鍊' },
+  { word:'สัตว์', readingTH:'สัด', readingEN:'sàt', zh:'動物' },
+  { word:'วันอาทิตย์', readingTH:'วัน-อา-ทิด', readingEN:'wan-aa-thít', zh:'禮拜日' },
+  { word:'เผ่าพันธุ์', readingTH:'เผ่า-พัน', readingEN:'phào-phan', zh:'種族' },
+  { word:'เวทมนตร์', readingTH:'เวด-มน', readingEN:'wêet-mon', zh:'魔法' },
+  { word:'สัญลักษณ์', readingTH:'สัน-ยะ-ลัก', readingEN:'sǎn-yá-lák', zh:'標示' },
+  { word:'วันจันทร์', readingTH:'วัน-จัน', readingEN:'wan-jan', zh:'禮拜一' },
+  { word:'นิรันดร์', readingTH:'นิ-รัน', readingEN:'ní-ran', zh:'永遠' },
+  { word:'ศักดิ์สิทธิ์', readingTH:'สัก-สิด', readingEN:'sàk-sìt', zh:'靈' },
+  { word:'กาญจน์', readingTH:'กาน', readingEN:'gaan', zh:'金' },
+  { word:'เหตุการณ์', readingTH:'เหด-กาน', readingEN:'hèt-gaan', zh:'情況' },
+  { word:'ขยาย', readingTH:'ขะ-หยาย', readingEN:'khà-yǎai', zh:'擴大' },
+  { word:'ภาพยนตร์', readingTH:'พาบ-พะ-ยน', readingEN:'phâap-phá-yon', zh:'電影' },
+  { word:'ฝรั่ง', readingTH:'ฝะ-หรั่ง', readingEN:'fà-ràng', zh:'芭樂' },
+  { word:'สงบ', readingTH:'สะ-หงบ', readingEN:'sà-ngòp', zh:'安靜' },
+  { word:'ฉลาด', readingTH:'ฉะ-หลาด', readingEN:'chà-làat', zh:'聰明' },
+  { word:'สมอง', readingTH:'สะ-หมอง', readingEN:'sà-mǒng', zh:'頭腦' },
+  { word:'องุ่น', readingTH:'อะ-หงุ่น', readingEN:'à-ngùn', zh:'葡萄' }
 ];
+
+// ════════════════════════════════════════════════════════════
+// SYLLABLE LIST — multi-syllable words split by readingTH
+// ════════════════════════════════════════════════════════════
+var SYLLABLE_LIST = (function() {
+  var list = [];
+  WORD_LIST.forEach(function(w) {
+    if (w.readingTH.indexOf('-') === -1) return;
+    var parts = w.readingTH.split('-');
+    parts.forEach(function(syl, i) {
+      list.push({
+        word: syl,
+        readingTH: w.readingTH,
+        readingEN: w.readingEN,
+        zh: w.zh,
+        parentWord: w.word,
+        sylNum: i + 1,
+        sylTotal: parts.length
+      });
+    });
+  });
+  return list;
+})();
 
 // ════════════════════════════════════════════════════════════
 // THAI WORD PARSER  (smart error detection)
@@ -1782,6 +1952,157 @@ function clearTodayStats() {
   showStats();
 }
 
+// ── 拼音規則：8 มาตราตัวสะกด ＋ ตัวการันต์ 特殊不發音規則 ──
+function showPhonics() {
+  var old = document.getElementById('tf-phon-ov');
+  if (old) old.remove();
+
+  var MATRA = [
+    { name:'แม่กก', sound:'尾音 -k', chars:'ก ข ค ฆ' },
+    { name:'แม่กด', sound:'尾音 -t', chars:'จ ฉ ช ซ ฌ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส' },
+    { name:'แม่กบ', sound:'尾音 -p', chars:'บ ป ผ ฝ พ ฟ ภ' },
+    { name:'แม่กง', sound:'尾音 -ng', chars:'ง' },
+    { name:'แม่กน', sound:'尾音 -n', chars:'น ณ ญ ร ล ฬ' },
+    { name:'แม่กม', sound:'尾音 -m', chars:'ม' },
+    { name:'แม่เกย', sound:'尾音 -i / -y', chars:'ย' },
+    { name:'แม่เกอว', sound:'尾音 -o / -w', chars:'ว' }
+  ];
+  var matraRows = MATRA.map(function(m){
+    return '<div class="tf-phon-row">' +
+      '<div class="tf-phon-name"><b>'+m.name+'</b><br>'+m.sound+'</div>' +
+      '<div class="tf-phon-chars">'+m.chars+'</div>' +
+    '</div>';
+  }).join('');
+
+  var SPECIAL = [
+    { th:'ทราบ', read:'ซาบ', note:'字首「ทร」讀作「ซ」' },
+    { th:'ทรง', read:'ซง', note:'字首「ทร」讀作「ซ」' },
+    { th:'เศร้า', read:'เส้า', note:'「ศร」讀作「ซ」' },
+    { th:'สร้อย', read:'ส้อย', note:'「สร」讀作「ซ」' },
+    { th:'กรรไกร', read:'กัน-ไกร', note:'「รร」（ร หัน）讀作 -ั + 後面子音的尾音（此處為 -น）' },
+    { th:'ธรรมดา', read:'ทัม-มะ-ดา', note:'「รร」在此讀作 -ั + ม（尾音 -m）' },
+    { th:'ธรรมชาติ', read:'ทัม-มะ-ชาด', note:'「รร」讀作 -ั + ม；字尾「ชาติ」的 -ิ 是沉默母音，讀作 -ด（แม่กด）' },
+    { th:'วันสารทจีน', read:'วัน-สาด-จีน', note:'「สารท」中的 ร 是 รร 減寫，讀 -า + 後面尾音 ท → -ด（แม่กด）' }
+  ];
+  var specialRows = SPECIAL.map(function(s){
+    return '<div class="tf-phon-example">' +
+      '<span class="tf-phon-th">'+s.th+'</span>' +
+      '<span class="tf-phon-arrow">→</span>' +
+      '<span class="tf-phon-read">'+s.read+'</span>' +
+      '<div class="tf-phon-note">'+s.note+'</div>' +
+    '</div>';
+  }).join('');
+
+  var KARAN1 = [
+    { th:'สัตว์', read:'สัด', note:'「ว์」不發音' },
+    { th:'วันอาทิตย์', read:'วัน-อา-ทิด', note:'「ย์」不發音' }
+  ];
+  var karan1Rows = KARAN1.map(function(s){
+    return '<div class="tf-phon-example">' +
+      '<span class="tf-phon-th">'+s.th+'</span>' +
+      '<span class="tf-phon-arrow">→</span>' +
+      '<span class="tf-phon-read">'+s.read+'</span>' +
+      '<div class="tf-phon-note">'+s.note+'</div>' +
+    '</div>';
+  }).join('');
+
+  var KARAN2 = [
+    { th:'เวทมนตร์', read:'เวด-มน', note:'「ตร์」兩個子音一起不發音' },
+    { th:'วันจันทร์', read:'วัน-จัน', note:'「ทร์」兩個子音一起不發音' },
+    { th:'สัญลักษณ์', read:'สัน-ยะ-ลัก', note:'「ษณ์」兩個子音一起不發音' },
+    { th:'นิรันดร์', read:'นิ-รัน', note:'「ดร์」兩個子音一起不發音' },
+    { th:'กาญจน์', read:'กาน', note:'「จน์」兩個子音一起不發音' },
+    { th:'ภาพยนตร์', read:'พาบ-พะ-ยน', note:'「ตร์」兩個子音一起不發音' },
+    { th:'เผ่าพันธุ์', read:'เผ่า-พัน', note:'「ธุ์」子音＋母音一起不發音' },
+    { th:'ศักดิ์สิทธิ์', read:'สัก-สิด', note:'一個字裡有兩處การันต์：「ดิ์」與「ทิ์」都不發音' }
+  ];
+  var karan2Rows = KARAN2.map(function(s){
+    return '<div class="tf-phon-example">' +
+      '<span class="tf-phon-th">'+s.th+'</span>' +
+      '<span class="tf-phon-arrow">→</span>' +
+      '<span class="tf-phon-read">'+s.read+'</span>' +
+      '<div class="tf-phon-note">'+s.note+'</div>' +
+    '</div>';
+  }).join('');
+
+  // ── สระจม（沉默母音）──
+  var SARA_JOM = [
+    { th:'ธรรมชาติ', read:'ทัม-มะ-ชาด', note:'字尾「ติ」的 -ิ（สระ อิ）沉默，讀作 -ด（แม่กด）' },
+    { th:'ประวัติศาสตร์', read:'ประ-หวัด-สาด', note:'「วัติ」的 -ิ 沉默，讀 -ด；「ศาสตร์」的 ตร์ 不發音' },
+    { th:'จักรพรรดิ', read:'จัก-กระ-พัด', note:'字尾「ดิ」的 -ิ 沉默，讀作 -ด（แม่กด）' },
+    { th:'เหตุผล', read:'เหด-ผน', note:'「เหตุ」的 -ุ（สระ อุ）沉默，讀作 -ด（แม่กด）' },
+    { th:'เมรุ', read:'เมน', note:'「เมรุ」的 -ุ 沉默，ร 作尾音讀 -น（แม่กน）' }
+  ];
+  var saraJomRows = SARA_JOM.map(function(s){
+    return '<div class="tf-phon-example">' +
+      '<span class="tf-phon-th">'+s.th+'</span>' +
+      '<span class="tf-phon-arrow">→</span>' +
+      '<span class="tf-phon-read">'+s.read+'</span>' +
+      '<div class="tf-phon-note">'+s.note+'</div>' +
+    '</div>';
+  }).join('');
+
+  // ── คำโบราณ / ตัว ร ไม่ออกเสียง（古語・ร 不發音）──
+  var ANCIENT = [
+    { th:'สมัคร', read:'สะ-หมัก', note:'字尾 ร 不發音，คร 收音作 แม่ก๊ก (-ก)' },
+    { th:'เพชร', read:'เพ็ด', note:'ชร 合為尾音 แม่กด (-ด)，ร 不單獨發音' },
+    { th:'สามารถ', read:'สา-มาด', note:'รถ 合為尾音 แม่กด (-ด)，ร 不單獨發音' },
+    { th:'เกษตร', read:'กะ-เสด', note:'ตร 合為尾音 แม่กด (-ด)，ร 不單獨發音' },
+    { th:'เครื่องจักร', read:'เครื่อง-จัก', note:'กร 合為尾音 แม่ก๊ก (-ก)，ร 不單獨發音' },
+    { th:'บัณฑิต', read:'บัน-ดิด', note:'ณ 作 แม่กน（-น）；ฑ 讀作 ด；字尾 ต 讀作 -ด（แม่กด）' },
+    { th:'กอปร', read:'กอบ', note:'รก 兩音合併只留尾音 แม่กบ (-บ)，古語寫法' },
+    { th:'ผลลัพธ์', read:'ผน-ลับ', note:'พธ์ 中 ธ์ 作 การันต์ 不發音，พ 作 แม่กบ（-บ）；ผล 讀 ผน' }
+  ];
+  var ancientRows = ANCIENT.map(function(s){
+    return '<div class="tf-phon-example">' +
+      '<span class="tf-phon-th">'+s.th+'</span>' +
+      '<span class="tf-phon-arrow">→</span>' +
+      '<span class="tf-phon-read">'+s.read+'</span>' +
+      '<div class="tf-phon-note">'+s.note+'</div>' +
+    '</div>';
+  }).join('');
+
+  var div = document.createElement('div');
+  div.id = 'tf-phon-ov';
+  div.className = 'tf-tip-overlay';
+  div.onclick = function(e){ if (e.target===div) div.remove(); };
+  div.innerHTML =
+    '<div class="tf-tip-box">' +
+      '<div class="tf-tip-header">' +
+        '<span class="tf-tip-header-title">拼音規則：尾音與不發音子音</span>' +
+        '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-phon-ov\').remove()">✕</button>' +
+      '</div>' +
+      '<div class="tf-stats-section">' +
+        '<div class="tf-stats-section-title">8 มาตราตัวสะกด（尾音八大類）</div>' +
+        '<div class="tf-phon-intro">無論單字結尾是哪個子音，發音時都會歸入下面 8 種尾音之一：</div>' +
+        matraRows +
+      '</div>' +
+      '<div class="tf-stats-section">' +
+        '<div class="tf-stats-section-title">ตัวสะกดพิเศษ（特殊讀法）</div>' +
+        specialRows +
+      '</div>' +
+      '<div class="tf-stats-section">' +
+        '<div class="tf-stats-section-title">ตัวการันต์ ์（不發音記號）－ 單一子音不發音</div>' +
+        karan1Rows +
+      '</div>' +
+      '<div class="tf-stats-section">' +
+        '<div class="tf-stats-section-title">ตัวการันต์ ์－ 兩個符號一起不發音</div>' +
+        karan2Rows +
+      '</div>' +
+      '<div class="tf-stats-section">' +
+        '<div class="tf-stats-section-title">สระจม（沉默母音）－ 字尾母音不發音</div>' +
+        '<div class="tf-phon-intro">某些字的字尾母音（-ิ 或 -ุ）完全不發音，子音直接收尾：</div>' +
+        saraJomRows +
+      '</div>' +
+      '<div class="tf-stats-section">' +
+        '<div class="tf-stats-section-title">คำโบราณ（古語）－ ร ไม่ออกเสียง / ตัวสะกดพิเศษ</div>' +
+        '<div class="tf-phon-intro">古語或梵文借詞，字尾 ร 不單獨發音，與前面子音合為一個尾音：</div>' +
+        ancientRows +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(div);
+}
+
 function buildStatsReportText(day, entries) {
   var total = entries.length;
   var stepCounts = countBy(entries, function(e){ return e.step; });
@@ -1864,9 +2185,28 @@ var TF = {
     var infoBox = document.getElementById('tf-word-info-box');
     if (infoBox) { infoBox.style.display = 'none'; infoBox.innerHTML = ''; }
   },
+  randomSyllable: function() {
+    if (!SYLLABLE_LIST || !SYLLABLE_LIST.length) return;
+    var entry = SYLLABLE_LIST[Math.floor(Math.random() * SYLLABLE_LIST.length)];
+    randomEntry = entry;
+    var inp = document.getElementById('tf-inp');
+    if (!inp) return;
+    inp.value = entry.word;
+    inp.style.borderColor = '';
+    var warn = document.getElementById('tf-lang-warn');
+    if (warn) warn.style.display = 'none';
+    var infoRow = document.getElementById('tf-word-info-row');
+    if (infoRow) infoRow.style.display = 'flex';
+    var infoBox = document.getElementById('tf-word-info-box');
+    if (infoBox) { infoBox.style.display = 'none'; infoBox.innerHTML = ''; }
+    inp.focus();
+  },
   randomWord: function() {
     if (!WORD_LIST || !WORD_LIST.length) return;
-    var entry = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+    // 目前僅隨機抽單音節詞彙；多音節（readingTH 含「-」）暫時停用。
+    var pool = WORD_LIST.filter(function(w) { return w.readingTH.indexOf('-') === -1; });
+    if (!pool.length) return;
+    var entry = pool[Math.floor(Math.random() * pool.length)];
     randomEntry = entry;
     var inp = document.getElementById('tf-inp');
     if (!inp) return;
@@ -1885,8 +2225,9 @@ var TF = {
     var box = document.getElementById('tf-word-info-box');
     if (!box) return;
     var label, value, isThai = false;
-    if (type === 'zh') { label = '中文翻譯（台灣）'; value = randomEntry.zh; }
-    else if (type === 'th') { label = '泰文讀音'; value = randomEntry.readingTH; isThai = true; }
+    var isSyl = !!randomEntry.parentWord;
+    if (type === 'zh') { label = '中文翻譯'; value = randomEntry.zh + (isSyl ? '　（' + randomEntry.parentWord + '）' : ''); }
+    else if (type === 'th') { label = isSyl ? '泰文讀音（完整）' : '泰文讀音'; value = randomEntry.readingTH; isThai = true; }
     else if (type === 'en') { label = 'English 讀音'; value = randomEntry.readingEN; isThai = true; }
     else return;
     box.innerHTML =
