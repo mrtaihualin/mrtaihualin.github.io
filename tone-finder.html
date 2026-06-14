@@ -15,7 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=2">
 <style>
-  body { background: var(--ink); color: var(--white); }
+  body { background: #F5F0E8; color: #1C1C1C; }
 
   /* ── Page wrapper ── */
   .tf-page {
@@ -34,14 +34,14 @@
     font-family: 'Noto Serif TC', serif;
     font-size: clamp(22px, 4vw, 32px);
     font-weight: 900;
-    color: #D4A017;
+    color: #8B6310;
     letter-spacing: 2px;
     margin-bottom: 10px;
   }
   .tf-page-hint {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: clamp(13px, 2vw, 15px);
-    color: rgba(255,255,255,0.6);
+    color: #666;
     letter-spacing: 1px;
     line-height: 1.7;
   }
@@ -52,16 +52,16 @@
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 12px;
     letter-spacing: 0.5px;
-    color: #D4A017;
-    background: rgba(212,160,23,0.1);
-    border: 1px solid rgba(212,160,23,0.35);
+    color: #8B6310;
+    background: rgba(139,99,16,0.10);
+    border: 1px solid rgba(139,99,16,0.30);
     border-radius: 20px;
   }
 
   /* ── Main card ── */
   .tf-card {
-    background: rgba(255,255,255,0.03);
-    border: 1.5px solid rgba(212,160,23,0.2);
+    background: #FFFFFF;
+    border: 1.5px solid rgba(139,99,16,0.15);
     border-radius: 0;
     overflow: hidden;
   }
@@ -69,23 +69,34 @@
   /* ── Word banner ── */
   .tf-word-banner {
     display: none;
-    padding: 9px 22px;
-    background: rgba(212,160,23,0.08);
-    border-bottom: 1px solid rgba(212,160,23,0.15);
-    font-family: 'Sarabun', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: #D4A017;
-    letter-spacing: 3px;
+    padding: 16px 22px 14px;
+    background: linear-gradient(180deg, #EFDDB4 0%, #F8F0DE 100%);
+    border-bottom: 2px solid rgba(184,134,40,0.50);
     text-align: center;
+  }
+  .tf-banner-counter {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #C8973A;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .tf-banner-word {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 38px;
+    font-weight: 700;
+    color: #8B6310;
+    letter-spacing: 4px;
+    line-height: 1.45;
   }
 
   /* ── Breadcrumb ── */
   .tf-bc {
     display: none;
     padding: 8px 28px;
-    background: rgba(0,0,0,0.3);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.04);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
     flex-wrap: wrap;
     gap: 5px;
     align-items: center;
@@ -94,34 +105,34 @@
   .tf-bc-item {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 11px;
-    background: rgba(212,160,23,0.1);
-    color: rgba(212,160,23,0.75);
+    background: rgba(139,99,16,0.10);
+    color: rgba(139,99,16,0.70);
     padding: 2px 9px;
     border-radius: 0;
   }
-  .tf-bc-sep { color: rgba(212,160,23,0.3); font-size: 11px; }
+  .tf-bc-sep { color: rgba(139,99,16,0.25); font-size: 11px; }
 
   /* ── Nav bar (history back/forward) ── */
   .tf-nav-bar {
     display: none;
     padding: 10px 28px;
-    background: rgba(0,0,0,0.2);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.03);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
     gap: 8px;
     align-items: center;
   }
   .tf-nav-btn {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.12);
     border-radius: 0;
-    color: rgba(255,255,255,0.55);
+    color: #777;
     font-size: 14px;
     padding: 5px 14px;
     cursor: pointer;
     font-family: 'Noto Sans TC', sans-serif;
     transition: all 0.15s;
   }
-  .tf-nav-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .tf-nav-btn:hover { background: rgba(0,0,0,0.06); color: #1C1C1C; }
   .tf-nav-btn:disabled { opacity: 0.25; cursor: default; }
 
   /* ── Body ── */
@@ -131,24 +142,26 @@
   .tf-input-wrap { text-align: center; }
   .tf-input {
     width: 100%;
-    max-width: 320px;
-    padding: 12px 16px;
-    background: rgba(255,255,255,0.07);
-    border: 2px solid rgba(212,160,23,0.3);
+    max-width: 420px;
+    padding: 20px 20px 16px;
+    background: rgba(0,0,0,0.04);
+    border: 2px solid rgba(139,99,16,0.25);
     border-radius: 0;
-    color: #fff;
+    color: #1C1C1C;
     font-family: 'Sarabun', sans-serif;
-    font-size: 26px;
+    font-size: 22px;
+    line-height: 1.8;
     text-align: center;
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.2s;
+    overflow: visible;
   }
-  .tf-input:focus { border-color: rgba(212,160,23,0.75); }
+  .tf-input:focus { border-color: rgba(139,99,16,0.70); }
   .tf-search-btn {
     margin-top: 16px;
     padding: 11px 30px;
-    background: #D4A017;
+    background: #8B6310;
     color: #111;
     border: none;
     border-radius: 0;
@@ -174,8 +187,8 @@
     margin-top: 0;
     padding: 11px 24px;
     background: none;
-    color: #D4A017;
-    border: 1.5px solid rgba(212,160,23,0.4);
+    color: #8B6310;
+    border: 1.5px solid rgba(139,99,16,0.35);
     border-radius: 0;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 15px;
@@ -184,7 +197,7 @@
     letter-spacing: 1px;
     transition: background 0.2s, color 0.2s;
   }
-  .tf-secondary-btn:hover { background: rgba(212,160,23,0.1); }
+  .tf-secondary-btn:hover { background: rgba(139,99,16,0.10); }
 
   /* ── Random-word info buttons ── */
   .tf-word-info-row {
@@ -196,43 +209,43 @@
   }
   .tf-info-btn {
     padding: 6px 14px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.12);
     border-radius: 20px;
-    color: rgba(255,255,255,0.65);
+    color: #666;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 12px;
     letter-spacing: 0.5px;
     cursor: pointer;
     transition: color 0.2s, border-color 0.2s;
   }
-  .tf-info-btn:hover { color: #D4A017; border-color: rgba(212,160,23,0.4); }
+  .tf-info-btn:hover { color: #8B6310; border-color: rgba(139,99,16,0.35); }
   .tf-word-info-box {
     margin: 12px auto 0;
     max-width: 320px;
     padding: 12px 16px;
-    background: rgba(212,160,23,0.07);
-    border: 1px solid rgba(212,160,23,0.25);
+    background: rgba(139,99,16,0.07);
+    border: 1px solid rgba(139,99,16,0.20);
     text-align: center;
   }
   .tf-word-info-label {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 11px;
     letter-spacing: 3px;
-    color: rgba(255,255,255,0.4);
+    color: #999;
     margin-bottom: 6px;
     text-transform: uppercase;
   }
   .tf-word-info-value {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 16px;
-    color: #fff;
+    color: #1C1C1C;
     letter-spacing: 0.5px;
   }
   .tf-word-info-value.tf-word-info-th {
     font-family: 'Sarabun', sans-serif;
     font-size: 22px;
-    color: #D4A017;
+    color: #8B6310;
     letter-spacing: 1px;
   }
 
@@ -244,86 +257,86 @@
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 12px;
     letter-spacing: 1px;
-    color: rgba(255,255,255,0.6);
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.15);
+    color: #666;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.12);
     border-radius: 20px;
     cursor: pointer;
     transition: color 0.2s, border-color 0.2s;
   }
-  .tf-stats-btn:hover { color: #D4A017; border-color: rgba(212,160,23,0.4); }
+  .tf-stats-btn:hover { color: #8B6310; border-color: rgba(139,99,16,0.35); }
 
   /* ── Stats overlay ── */
   .tf-stats-summary {
     padding: 18px 22px;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
+    border-bottom: 1px solid rgba(0,0,0,0.07);
     font-family: 'Noto Sans TC', sans-serif;
   }
-  .tf-stats-date { font-size: 12px; letter-spacing: 2px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
-  .tf-stats-count { font-size: 22px; font-weight: 900; color: #D4A017; }
-  .tf-stats-count span { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.5); margin-left: 4px; }
-  .tf-stats-entry { padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); font-family: 'Noto Sans TC', sans-serif; }
+  .tf-stats-date { font-size: 12px; letter-spacing: 2px; color: #999; margin-bottom: 6px; }
+  .tf-stats-count { font-size: 22px; font-weight: 900; color: #8B6310; }
+  .tf-stats-count span { font-size: 13px; font-weight: 500; color: #888; margin-left: 4px; }
+  .tf-stats-entry { padding: 14px 22px; border-bottom: 1px solid rgba(0,0,0,0.07); font-family: 'Noto Sans TC', sans-serif; }
   .tf-stats-entry:last-child { border-bottom: none; }
   .tf-stats-entry-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .tf-stats-word { font-family: 'Sarabun', sans-serif; font-size: 18px; color: #fff; letter-spacing: 1px; }
-  .tf-stats-time { font-size: 11px; color: rgba(255,255,255,0.35); }
-  .tf-stats-step { font-size: 12px; color: #D4A017; margin-bottom: 4px; letter-spacing: 0.5px; }
-  .tf-stats-choice { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.6; }
-  .tf-stats-empty { padding: 28px 22px; text-align: center; font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+  .tf-stats-word { font-family: 'Sarabun', sans-serif; font-size: 18px; color: #1C1C1C; letter-spacing: 1px; }
+  .tf-stats-time { font-size: 11px; color: #aaa; }
+  .tf-stats-step { font-size: 12px; color: #8B6310; margin-bottom: 4px; letter-spacing: 0.5px; }
+  .tf-stats-choice { font-size: 12px; color: #777; line-height: 1.6; }
+  .tf-stats-empty { padding: 28px 22px; text-align: center; font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: #999; letter-spacing: 1px; }
 
   /* ── Stats: section blocks ── */
-  .tf-stats-section { padding: 16px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); font-family: 'Noto Sans TC', sans-serif; }
-  .tf-stats-section-title { font-size: 11px; letter-spacing: 3px; color: rgba(255,255,255,0.4); margin-bottom: 12px; text-transform: uppercase; }
+  .tf-stats-section { padding: 16px 22px; border-bottom: 1px solid rgba(0,0,0,0.07); font-family: 'Noto Sans TC', sans-serif; }
+  .tf-stats-section-title { font-size: 11px; letter-spacing: 3px; color: #999; margin-bottom: 12px; text-transform: uppercase; }
   .tf-stats-bar-row { margin-bottom: 10px; }
   .tf-stats-bar-row:last-child { margin-bottom: 0; }
-  .tf-stats-bar-label { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 4px; line-height: 1.5; }
-  .tf-stats-bar-label b { color: #D4A017; font-weight: 700; white-space: nowrap; }
-  .tf-stats-bar-track { height: 6px; background: rgba(255,255,255,0.07); }
-  .tf-stats-bar-fill { height: 100%; background: #D4A017; }
+  .tf-stats-bar-label { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: #555; margin-bottom: 4px; line-height: 1.5; }
+  .tf-stats-bar-label b { color: #8B6310; font-weight: 700; white-space: nowrap; }
+  .tf-stats-bar-track { height: 6px; background: rgba(0,0,0,0.04); }
+  .tf-stats-bar-fill { height: 100%; background: #8B6310; }
   .tf-stats-words { display: flex; flex-wrap: wrap; gap: 8px; }
   .tf-stats-word-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     padding: 5px 12px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.10);
     font-family: 'Sarabun', sans-serif;
     font-size: 14px;
-    color: #fff;
+    color: #1C1C1C;
   }
-  .tf-stats-word-chip b { font-family: 'Noto Sans TC', sans-serif; font-size: 11px; font-weight: 700; color: #D4A017; }
+  .tf-stats-word-chip b { font-family: 'Noto Sans TC', sans-serif; font-size: 11px; font-weight: 700; color: #8B6310; }
   .tf-stats-lesson {
     padding: 10px 14px;
     margin-bottom: 8px;
-    background: rgba(212,160,23,0.06);
-    border-left: 3px solid #D4A017;
+    background: rgba(139,99,16,0.06);
+    border-left: 3px solid #8B6310;
     font-size: 13px;
     line-height: 1.7;
-    color: rgba(255,255,255,0.8);
+    color: #444;
   }
   .tf-stats-lesson:last-child { margin-bottom: 0; }
-  .tf-stats-lesson b { color: #D4A017; }
+  .tf-stats-lesson b { color: #8B6310; }
 
   .tf-stats-action-row { padding: 14px 22px 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
   /* ── Phonics (拼音規則) overlay ── */
-  .tf-phon-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .tf-phon-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
   .tf-phon-row:last-child { border-bottom: none; }
-  .tf-phon-name { font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: rgba(255,255,255,0.75); min-width: 96px; }
-  .tf-phon-name b { color: #D4A017; }
-  .tf-phon-chars { font-family: 'Sarabun', sans-serif; font-size: 16px; color: #fff; text-align: right; letter-spacing: 1px; }
-  .tf-phon-example { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'Noto Sans TC', sans-serif; }
+  .tf-phon-name { font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: #555; min-width: 96px; }
+  .tf-phon-name b { color: #8B6310; }
+  .tf-phon-chars { font-family: 'Sarabun', sans-serif; font-size: 16px; color: #1C1C1C; text-align: right; letter-spacing: 1px; }
+  .tf-phon-example { padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-family: 'Noto Sans TC', sans-serif; }
   .tf-phon-example:last-child { border-bottom: none; }
-  .tf-phon-th { font-family: 'Sarabun', sans-serif; font-size: 17px; color: #D4A017; letter-spacing: 0.5px; }
-  .tf-phon-arrow { color: rgba(255,255,255,0.35); font-size: 12px; margin: 0 6px; }
-  .tf-phon-read { font-family: 'Sarabun', sans-serif; font-size: 15px; color: rgba(255,255,255,0.85); }
-  .tf-phon-note { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.7; margin-top: 4px; }
-  .tf-phon-intro { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.9; margin-bottom: 12px; }
+  .tf-phon-th { font-family: 'Sarabun', sans-serif; font-size: 17px; color: #8B6310; letter-spacing: 0.5px; }
+  .tf-phon-arrow { color: #aaa; font-size: 12px; margin: 0 6px; }
+  .tf-phon-read { font-family: 'Sarabun', sans-serif; font-size: 15px; color: #333; }
+  .tf-phon-note { font-size: 12px; color: #888; line-height: 1.7; margin-top: 4px; }
+  .tf-phon-intro { font-size: 13px; color: #666; line-height: 1.9; margin-bottom: 12px; }
   .tf-stats-clear-btn, .tf-stats-download-btn {
     background: none;
-    border: 1px solid rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.4);
+    border: 1px solid rgba(0,0,0,0.12);
+    color: #999;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 12px;
     letter-spacing: 1px;
@@ -333,15 +346,15 @@
     transition: color 0.2s, border-color 0.2s;
   }
   .tf-stats-clear-btn:hover { color: #ff6b6b; border-color: rgba(255,107,107,0.4); }
-  .tf-stats-download-btn { color: #D4A017; border-color: rgba(212,160,23,0.4); }
-  .tf-stats-download-btn:hover { background: rgba(212,160,23,0.1); }
+  .tf-stats-download-btn { color: #8B6310; border-color: rgba(139,99,16,0.35); }
+  .tf-stats-download-btn:hover { background: rgba(139,99,16,0.10); }
 
   /* ── Step badge ── */
   .tf-step-badge {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 14px;
     font-weight: 700;
-    color: #D4A017;
+    color: #8B6310;
     letter-spacing: 3px;
     text-transform: uppercase;
     margin-bottom: 10px;
@@ -349,17 +362,18 @@
 
   /* ── Question box ── */
   .tf-qbox {
-    padding: 18px 20px;
-    background: rgba(255,255,255,0.04);
-    border-left: 4px solid #D4A017;
-    border-radius: 0;
+    padding: 16px 20px;
+    background: linear-gradient(180deg,#FBF5E7 0%,#FFFFFF 100%);
+    border: 1px solid rgba(139,99,16,0.15);
+    border-left: 4px solid #C8973A;
+    border-radius: 12px;
     margin-bottom: 22px;
   }
   .tf-qtext {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 16px;
     font-weight: 700;
-    color: rgba(255,255,255,0.92);
+    color: #5a3e0a;
     line-height: 1.7;
   }
 
@@ -368,20 +382,20 @@
   .tf-opt-wrap { display: flex; align-items: stretch; gap: 8px; }
   .tf-opt {
     flex: 1;
-    padding: 12px 16px;
-    background: rgba(255,255,255,0.05);
-    border: 1.5px solid rgba(255,255,255,0.12);
-    border-radius: 0;
+    padding: 13px 18px;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.25);
+    border-radius: 10px;
     text-align: left;
     cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
+    transition: border-color 0.18s, background 0.18s, transform 0.1s;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 15px;
     font-weight: 700;
-    color: #fff;
+    color: #5a3e0a;
     line-height: 1.4;
   }
-  .tf-opt:hover { border-color: rgba(212,160,23,0.55); background: rgba(212,160,23,0.08); }
+  .tf-opt:hover { border-color: rgba(139,99,16,0.6); background: rgba(139,99,16,0.06); transform: translateY(-1px); }
 
   /* ── Tip button ── */
   .tf-tip-btn {
@@ -389,10 +403,10 @@
     height: 28px;
     flex-shrink: 0;
     align-self: center;
-    background: rgba(212,160,23,0.1);
-    border: 1.5px solid rgba(212,160,23,0.3);
-    border-radius: 0;
-    color: #D4A017;
+    background: rgba(139,99,16,0.10);
+    border: 1.5px solid rgba(139,99,16,0.30);
+    border-radius: 50%;
+    color: #8B6310;
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -402,43 +416,43 @@
     justify-content: center;
     line-height: 1;
   }
-  .tf-tip-btn:hover { background: rgba(212,160,23,0.22); }
+  .tf-tip-btn:hover { background: rgba(139,99,16,0.18); }
 
   /* ── Tone mark buttons ── */
   .tf-mark-opts { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
   .tf-mark-btn {
     flex: 1;
     min-width: 80px;
-    padding: 26px 10px;
-    background: rgba(255,255,255,0.05);
-    border: 1.5px solid rgba(255,255,255,0.12);
-    border-radius: 0;
+    padding: 24px 10px;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.25);
+    border-radius: 12px;
     cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
+    transition: border-color 0.18s, background 0.18s, transform 0.1s;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
-  .tf-mark-btn:hover { border-color: rgba(212,160,23,0.55); background: rgba(212,160,23,0.08); }
+  .tf-mark-btn:hover { border-color: rgba(139,99,16,0.6); background: rgba(139,99,16,0.06); transform: translateY(-1px); }
   .tf-mark-symbol {
     font-family: 'Sarabun', sans-serif;
     font-size: 46px;
     font-weight: 700;
-    color: #D4A017;
+    color: #8B6310;
     line-height: 1;
   }
 
   /* ── Helper banner ── */
   .tf-helper-banner {
-    background: rgba(212,160,23,0.07);
-    border: 1px solid rgba(212,160,23,0.2);
+    background: rgba(139,99,16,0.07);
+    border: 1px solid rgba(139,99,16,0.15);
     border-radius: 0;
     padding: 12px 16px;
     margin-bottom: 18px;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 13px;
-    color: #D4A017;
+    color: #8B6310;
     font-weight: 700;
     letter-spacing: 2px;
   }
@@ -449,9 +463,9 @@
     width: 100%;
     margin-bottom: 18px;
     padding: 10px 20px;
-    background: rgba(212,160,23,0.07);
-    color: #D4A017;
-    border: 1px solid rgba(212,160,23,0.28);
+    background: rgba(139,99,16,0.07);
+    color: #8B6310;
+    border: 1px solid rgba(139,99,16,0.22);
     border-radius: 0;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 13px;
@@ -461,7 +475,7 @@
     text-align: center;
     transition: background 0.15s;
   }
-  .tf-helper-trigger:hover { background: rgba(212,160,23,0.16); }
+  .tf-helper-trigger:hover { background: rgba(139,99,16,0.14); }
 
   /* ── Helper result ── */
   .tf-helper-result {
@@ -480,7 +494,7 @@
   .tf-helper-result-desc {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 14px;
-    color: rgba(255,255,255,0.65);
+    color: #666;
   }
 
   /* ── Footer buttons ── */
@@ -488,21 +502,151 @@
   .tf-restart-btn {
     background: none;
     border: none;
-    color: rgba(255,255,255,0.28);
+    color: #a07c2e;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 12px;
     cursor: pointer;
     padding: 4px 8px;
   }
-  .tf-restart-btn:hover { color: rgba(255,255,255,0.55); }
+  .tf-restart-btn:hover { color: #8B6310; }
 
+  /* ── Level / Category selection ── */
+  .tf-level-select {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 0 4px;
+  }
+  .tf-level-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    color: #8B6310;
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .tf-level-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 18px 16px;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.22);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tf-level-btn:hover { border-color: rgba(139,99,16,0.6); background: rgba(139,99,16,0.04); }
+  .tf-level-emoji { font-size: 22px; }
+  .tf-level-label {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #5a3e0a;
+  }
+  .tf-level-sub {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    color: #999;
+    letter-spacing: 0.5px;
+  }
+  .tf-cat-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+  .tf-cat-btn {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    color: #5a3e0a;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.28);
+    border-radius: 8px;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tf-cat-btn:hover { border-color: rgba(139,99,16,0.65); background: rgba(139,99,16,0.05); }
+  .tf-back-level-btn {
+    background: none;
+    border: none;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    color: #bbb;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-top: 4px;
+  }
+  .tf-back-level-btn:hover { color: #888; }
+
+  /* ── Session Quiz ── */
+  .tf-session-quiz { text-align: center; padding: 8px 0; }
+  .tf-session-progress { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#aaa; letter-spacing:2px; margin-bottom:12px; }
+  .tf-session-word { font-family:'Sarabun',sans-serif; font-size:56px; color:#5a3e0a; margin: 8px 0 16px; }
+  .tf-session-question { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#888; margin-bottom:16px; letter-spacing:1px; }
+  .tf-tone-guess-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:320px; margin:0 auto; }
+  .tf-tone-guess-btn { display:flex; flex-direction:column; align-items:center; gap:3px; padding:14px 10px; background:#fff; border:2px solid; border-radius:10px; cursor:pointer; transition:opacity 0.15s; }
+  .tf-tone-guess-btn:hover { opacity:0.75; }
+  .tf-tone-guess-zh { font-family:'Noto Serif TC',serif; font-size:16px; font-weight:700; }
+  .tf-tone-guess-sub { font-family:'Sarabun',sans-serif; font-size:13px; opacity:0.7; }
+  /* ── Session Result ── */
+  .tf-session-result { text-align:center; padding:4px 0; }
+  .tf-session-result-badge { font-family:'Noto Serif TC',serif; font-size:22px; font-weight:700; padding:10px 24px; border-radius:24px; display:inline-block; margin-bottom:10px; }
+  .tf-session-result-badge.correct { color:#4a9a4a; background:rgba(74,154,74,0.1); }
+  .tf-session-result-badge.wrong   { color:#cc4444; background:rgba(204,68,68,0.1); }
+  .tf-session-correction { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#666; margin-bottom:10px; }
+  .tf-session-answer-word { font-family:'Sarabun',sans-serif; font-size:48px; color:#5a3e0a; margin:8px 0 4px; }
+  .tf-speak-word-btn { font-family:'Noto Sans TC',sans-serif; font-size:13px; background:rgba(139,99,16,0.08); border:1px solid rgba(139,99,16,0.25); border-radius:20px; padding:6px 16px; cursor:pointer; color:#7a5510; margin-bottom:14px; }
+  .tf-speak-word-btn:hover { background:rgba(139,99,16,0.15); }
+  .tf-session-info-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
+  .tf-session-info-item { background:#f9f6f0; border-radius:8px; padding:8px 14px; min-width:80px; }
+  .tf-session-info-label { font-family:'Noto Sans TC',sans-serif; font-size:10px; color:#aaa; letter-spacing:1px; margin-bottom:2px; }
+  .tf-session-info-val { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#5a3e0a; font-weight:600; }
+  .tf-session-info-val.tf-th { font-family:'Sarabun',sans-serif; }
+  .tf-breakdown-section { background:#f5f2ec; border-radius:10px; padding:12px 16px; margin-bottom:14px; text-align:left; }
+  .tf-breakdown-title { font-family:'Noto Sans TC',sans-serif; font-size:11px; color:#aaa; letter-spacing:2px; margin-bottom:8px; }
+  .tf-breakdown-table { width:100%; border-collapse:collapse; }
+  .tf-breakdown-table td { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#5a3e0a; padding:5px 8px; }
+  .tf-bd-th { font-family:'Sarabun',sans-serif; font-size:18px; }
+  .tf-speak-btn { background:none; border:1px solid rgba(139,99,16,0.3); border-radius:12px; padding:2px 8px; font-size:13px; cursor:pointer; }
+  .tf-soon-toast {
+    position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
+    background: rgba(90,62,10,0.96); color: #fff;
+    font-family: 'Noto Sans TC', 'Sarabun', sans-serif; font-size: 14px; letter-spacing: 0.5px;
+    padding: 12px 24px; border-radius: 24px; z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3); animation: tfSoonIn 0.2s ease;
+  }
+  @keyframes tfSoonIn { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+  .tf-set-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .tf-set-num { font-family:'Noto Sans TC',sans-serif; font-size:22px; font-weight:800; color:#5a3e0a; }
+  .tf-set-count { font-family:'Noto Sans TC','Sarabun',sans-serif; font-size:12px; color:#a07c2e; }
+  .tf-known-bar { text-align:center; margin-top:18px; }
+  .tf-known-btn { font-family:'Noto Sans TC','Sarabun',sans-serif; font-size:13px; background:rgba(126,200,126,0.12); border:1.5px solid rgba(110,170,110,0.5); color:#3f7a3f; border-radius:22px; padding:9px 22px; cursor:pointer; transition:background 0.15s; }
+  .tf-known-btn:hover { background:rgba(126,200,126,0.22); }
+  .tf-soon-card { font-family:'Noto Sans TC','Sarabun',sans-serif; font-size:16px; font-weight:700; color:#8B6310; background:linear-gradient(180deg,#F3E4C2,#FBF5E7); border:1.5px solid rgba(184,134,40,0.4); border-radius:14px; padding:18px; text-align:center; margin-bottom:16px; }
+  .tf-adv-note { font-family:'Noto Sans TC','Sarabun',sans-serif; font-size:12px; color:#8a7a5a; line-height:1.7; background:rgba(139,99,16,0.06); border:1px solid rgba(139,99,16,0.18); border-radius:12px; padding:12px 14px; margin:14px 0; }
+  .tf-session-next-btn { font-family:'Noto Serif TC',serif; font-size:15px; background:linear-gradient(135deg,#c9a227,#8B6310); color:#fff; border:none; border-radius:10px; padding:12px 28px; cursor:pointer; margin-top:4px; }
+  .tf-session-next-btn:hover { opacity:0.88; }
+  /* ── Session Summary ── */
+  .tf-session-summary { padding:4px 0; }
+  .tf-sum-score { font-family:'Noto Serif TC',serif; font-size:48px; font-weight:900; color:#8B6310; text-align:center; }
+  .tf-sum-score-label { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#aaa; text-align:center; margin-bottom:16px; letter-spacing:1px; }
+  .tf-sum-table { width:100%; border-collapse:collapse; margin-bottom:14px; font-family:'Noto Sans TC',sans-serif; font-size:13px; }
+  .tf-sum-table th { color:#8B6310; font-weight:600; padding:6px 8px; border-bottom:1px solid rgba(139,99,16,0.2); text-align:left; }
+  .tf-sum-table td { padding:6px 8px; border-bottom:1px solid rgba(0,0,0,0.05); }
+  .tf-sum-th { font-family:'Sarabun',sans-serif; font-size:16px; }
+  .tf-sum-analysis { background:#f5f2ec; border-radius:10px; padding:12px 16px; font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#5a3e0a; line-height:1.8; }
+  .tf-sum-analysis p { margin:4px 0; }
   /* ── RESULT page ── */
   .tf-result { text-align: center; }
   .tf-result-word {
     font-family: 'Sarabun', sans-serif;
     font-size: 42px;
     font-weight: 700;
-    color: #fff;
+    color: #1C1C1C;
     margin-bottom: 28px;
     letter-spacing: 4px;
   }
@@ -515,7 +659,7 @@
   .tf-result-label {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 15px;
-    color: rgba(255,255,255,0.4);
+    color: #999;
     letter-spacing: 3px;
     text-transform: uppercase;
     margin-bottom: 14px;
@@ -541,19 +685,19 @@
   .tf-result-match-label {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 13px;
-    color: rgba(255,255,255,0.4);
+    color: #999;
     letter-spacing: 2px;
     margin-bottom: 8px;
   }
   .tf-result-match {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 18px;
-    color: rgba(255,255,255,0.8);
+    color: #444;
     font-weight: 500;
     line-height: 1.6;
   }
   .tf-result-path {
-    background: rgba(255,255,255,0.03);
+    background: #FFFFFF;
     border-radius: 0;
     padding: 16px 20px;
     margin-bottom: 24px;
@@ -563,7 +707,7 @@
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 13px;
     font-weight: 700;
-    color: rgba(255,255,255,0.45);
+    color: #888;
     letter-spacing: 2px;
     margin-bottom: 10px;
     text-transform: uppercase;
@@ -577,16 +721,16 @@
   .tf-result-path-item {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 12px;
-    background: rgba(212,160,23,0.1);
-    color: rgba(212,160,23,0.75);
+    background: rgba(139,99,16,0.10);
+    color: rgba(139,99,16,0.70);
     padding: 3px 10px;
     border-radius: 0;
   }
-  .tf-result-path-sep { color: rgba(212,160,23,0.35); font-size: 12px; }
+  .tf-result-path-sep { color: rgba(139,99,16,0.30); font-size: 12px; }
   .tf-result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .tf-result-primary {
     padding: 14px 34px;
-    background: #D4A017;
+    background: #8B6310;
     color: #111;
     border: none;
     border-radius: 0;
@@ -598,9 +742,9 @@
   }
   .tf-result-secondary {
     padding: 14px 24px;
-    background: rgba(255,255,255,0.07);
-    color: rgba(255,255,255,0.65);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.04);
+    color: #666;
+    border: 1px solid rgba(0,0,0,0.12);
     border-radius: 0;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 14px;
@@ -610,8 +754,8 @@
     margin-top: 16px;
     padding: 12px 28px;
     background: none;
-    color: rgba(255,255,255,0.35);
-    border: 1px solid rgba(255,255,255,0.12);
+    color: #aaa;
+    border: 1px solid rgba(0,0,0,0.10);
     border-radius: 0;
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 13px;
@@ -619,13 +763,61 @@
     width: 100%;
     letter-spacing: 1px;
   }
-  .tf-result-restart:hover { color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.25); }
+  .tf-result-restart:hover { color: #666; border-color: #ccc; }
+
+  /* ── Multi-syllable overview ── */
+  .tf-syl-grid {
+    display: flex;
+    gap: 10px;
+    margin: 18px 0 10px;
+    flex-wrap: wrap;
+  }
+  .tf-syl-card {
+    flex: 1;
+    min-width: 90px;
+    background: rgba(0,0,0,0.03);
+    border: 1.5px solid rgba(0,0,0,0.12);
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+  }
+  .tf-syl-card:hover { border-color: rgba(139,99,16,0.50); background: rgba(139,99,16,0.08); }
+  .tf-syl-card.active { border-color: #8B6310; background: rgba(139,99,16,0.12); }
+  .tf-syl-card .syl-thai { font-family: 'Sarabun', sans-serif; font-size: 30px; color: #1C1C1C; line-height: 1.3; }
+  .tf-syl-card .syl-num { font-size: 11px; color: #aaa; margin-top: 4px; letter-spacing: 1px; }
+  .tf-syl-detail {
+    border: 1.5px solid rgba(139,99,16,0.25);
+    padding: 16px 18px;
+    margin-top: 4px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.8;
+  }
+  .tf-syl-detail-title { font-size: 11px; color: #aaa; letter-spacing: 2px; margin-bottom: 8px; }
+  .tf-syl-detail-word { font-family: 'Sarabun', sans-serif; font-size: 28px; color: #8B6310; margin-bottom: 10px; }
+  .tf-syl-analyze-btn {
+    margin-top: 14px;
+    padding: 10px 20px;
+    background: rgba(139,99,16,0.12);
+    border: 1.5px solid rgba(139,99,16,0.40);
+    color: #8B6310;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 1px;
+    transition: background 0.18s;
+  }
+  .tf-syl-analyze-btn:hover { background: rgba(139,99,16,0.20); }
 
   /* ── Error overlay ── */
   .tf-error-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.72);
+    background: rgba(0,0,0,0.55);
     z-index: 4000;
     display: flex;
     align-items: center;
@@ -633,7 +825,7 @@
     padding: 20px;
   }
   .tf-error-box {
-    background: #111;
+    background: #fff;
     border: 1.5px solid rgba(255,107,107,0.4);
     border-top: 3px solid #ff6b6b;
     border-radius: 0;
@@ -655,14 +847,14 @@
   .tf-error-msg {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 15px;
-    color: rgba(255,255,255,0.82);
+    color: rgba(0,0,0,0.75);
     line-height: 1.9;
     margin-bottom: 22px;
   }
   .tf-error-close {
     width: 100%;
     padding: 13px;
-    background: #D4A017;
+    background: #8B6310;
     color: #111;
     border: none;
     border-radius: 0;
@@ -687,9 +879,9 @@
     padding: 20px;
   }
   .tf-tip-box {
-    background: #111;
-    border: 1.5px solid rgba(212,160,23,0.3);
-    border-top: 3px solid #D4A017;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.25);
+    border-top: 3px solid #8B6310;
     border-radius: 0;
     padding: 0;
     max-width: 440px;
@@ -702,54 +894,496 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 22px 14px;
-    border-bottom: 1px solid rgba(212,160,23,0.2);
+    border-bottom: 1px solid rgba(139,99,16,0.15);
   }
   .tf-tip-header-title {
     font-family: 'Noto Serif TC', serif;
     font-size: 15px;
-    color: #D4A017;
+    color: #8B6310;
     letter-spacing: 2px;
     font-weight: 900;
   }
   .tf-tip-close-btn {
     background: none;
     border: none;
-    color: rgba(255,255,255,0.4);
+    color: #999;
     font-size: 22px;
     cursor: pointer;
     line-height: 1;
     padding: 0;
   }
-  .tf-tip-close-btn:hover { color: rgba(255,255,255,0.8); }
-  .tf-tip-entry { margin: 0; padding: 18px 22px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .tf-tip-close-btn:hover { color: #444; }
+  .tf-tip-entry { margin: 0; padding: 18px 22px 16px; border-bottom: 1px solid rgba(0,0,0,0.07); }
   .tf-tip-entry:last-child { border-bottom: none; }
   .tf-tip-zh {
     font-family: 'Noto Serif TC', serif;
     font-size: 18px;
     font-weight: 900;
-    color: #D4A017;
+    color: #8B6310;
     margin-bottom: 10px;
     letter-spacing: 1px;
   }
   .tf-tip-chars {
     font-family: 'Sarabun', sans-serif;
     font-size: 20px;
-    color: rgba(255,255,255,0.9);
-    background: rgba(255,255,255,0.04);
+    color: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.02);
     padding: 14px 16px;
     border-radius: 0;
     line-height: 2.4;
-    border-left: 3px solid rgba(212,160,23,0.35);
+    border-left: 3px solid rgba(139,99,16,0.30);
   }
   .tf-tip-desc {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 15px;
-    color: rgba(255,255,255,0.7);
+    color: rgba(0,0,0,0.75);
     line-height: 2;
     white-space: pre-line;
     margin-top: 10px;
   }
+
+  /* ── Session Guess Page (New Page 1) ── */
+  .sg-word {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 72px;
+    font-weight: 700;
+    color: #5a3e0a;
+    text-align: center;
+    margin: 4px 0 18px;
+    letter-spacing: 4px;
+    line-height: 1.2;
+  }
+  .sg-breakdown {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .sg-bd-chip {
+    background: rgba(139,99,16,0.07);
+    border: 1px solid rgba(139,99,16,0.15);
+    border-radius: 10px;
+    padding: 9px 14px;
+    text-align: center;
+    min-width: 68px;
+  }
+  .sg-bd-label {
+    font-family: 'Noto Sans TC', 'Sarabun', sans-serif;
+    font-size: 11px;
+    color: #8B6310;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+  .sg-bd-sub {
+    font-family: 'Noto Sans TC', 'Sarabun', sans-serif;
+    font-size: 11px;
+    color: #a07c2e;
+    margin-top: 4px;
+  }
+  .sg-bd-wrap { margin: 4px 0 14px; }
+  .sg-bd-group { margin-bottom: 12px; }
+  .sg-syl-head {
+    font-family: 'Sarabun', 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #8B6310;
+    text-align: center;
+    margin-bottom: 7px;
+  }
+  .sg-ov-bd-title {
+    font-family: 'Noto Sans TC', 'Sarabun', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #8B6310;
+    letter-spacing: 1px;
+    text-align: center;
+    margin: 4px 0 10px;
+  }
+  .sg-bd-value {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 22px;
+    color: #5a3e0a;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .sg-bd-value.zh {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .sg-toggle-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .sg-toggle-btn {
+    padding: 7px 14px;
+    background: rgba(0,0,0,0.03);
+    border: 1.5px solid rgba(0,0,0,0.12);
+    border-radius: 20px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sg-toggle-btn.active {
+    background: rgba(139,99,16,0.10);
+    border-color: rgba(139,99,16,0.40);
+    color: #7a5510;
+    font-weight: 700;
+  }
+  .sg-info-box {
+    background: rgba(139,99,16,0.06);
+    border: 1px solid rgba(139,99,16,0.15);
+    border-radius: 10px;
+    padding: 10px 16px;
+    text-align: center;
+    margin: 0 auto 16px;
+    max-width: 340px;
+    min-height: 44px;
+    display: none;
+    line-height: 1.4;
+  }
+  .sg-divider { height: 1px; background: rgba(0,0,0,0.07); margin: 16px 0; }
+  .sg-question {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: #5a3e0a;
+    text-align: center;
+    margin-bottom: 18px;
+    letter-spacing: 1px;
+  }
+  .sg-tone-grid {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .sg-tone-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2.5px solid;
+    background: #fff;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .sg-tone-btn:hover { transform: scale(1.12); box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+  .sg-dontknow-btn {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+    padding: 11px 20px;
+    background: rgba(0,0,0,0.02);
+    border: 1.5px dashed rgba(0,0,0,0.18);
+    border-radius: 10px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #888;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .sg-dontknow-btn:hover { background: rgba(0,0,0,0.05); color: #555; }
+
+  /* ── Start Inflection Overlay (popup) ── */
+  .sg-start-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 9900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sg-start-popup {
+    background: linear-gradient(135deg, #8B6310 0%, #5a3e0a 100%);
+    border-radius: 20px;
+    padding: 32px 52px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    animation: sgPopupIn 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  @keyframes sgPopupIn { from { transform: scale(0.82); opacity:0; } to { transform: scale(1); opacity:1; } }
+  .sg-start-thai {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 34px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+  .sg-start-zh {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 3px;
+  }
+  .sg-start-btn {
+    margin-top: 22px;
+    font-family: 'Noto Sans TC', 'Sarabun', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #5a3e0a;
+    background: #fff;
+    border: none;
+    border-radius: 24px;
+    padding: 12px 38px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .sg-start-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.32); }
+  .sg-start-btn:active { transform: translateY(0); }
+
+  /* ── Pre-Result Confirm Page ── */
+  .prc-page { text-align: center; padding: 8px 0; }
+  .prc-word {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 64px;
+    font-weight: 700;
+    color: #5a3e0a;
+    margin-bottom: 6px;
+    letter-spacing: 4px;
+  }
+  .prc-audio-btn {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    background: rgba(139,99,16,0.10);
+    border: 1.5px solid rgba(139,99,16,0.28);
+    border-radius: 22px;
+    padding: 8px 22px;
+    cursor: pointer;
+    color: #7a5510;
+    margin-bottom: 14px;
+    display: inline-block;
+    transition: background 0.18s;
+  }
+  .prc-audio-btn:hover { background: rgba(139,99,16,0.20); }
+  .prc-question {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #5a3e0a;
+    margin-bottom: 6px;
+  }
+  .prc-guess-hint {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 18px;
+    letter-spacing: 0.5px;
+  }
+  .prc-same-btn {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto 14px;
+    padding: 14px 20px;
+    background: rgba(139,99,16,0.09);
+    border: 2px solid rgba(139,99,16,0.30);
+    border-radius: 12px;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #7a5510;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .prc-same-btn:hover { background: rgba(139,99,16,0.16); border-color: rgba(139,99,16,0.50); }
+  .prc-change-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 11px;
+    color: #bbb;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .prc-tone-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .prc-tone-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: #fff;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .prc-tone-btn:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+
+  /* ── Redesigned Result Page v2 ── */
+  .result-v2 { text-align: center; padding: 4px 0 8px; }
+  .result-v2-word {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 44px;
+    font-weight: 700;
+    color: #1C1C1C;
+    letter-spacing: 3px;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+  .result-v2-speak-btn {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    background: rgba(139,99,16,0.08);
+    border: 1px solid rgba(139,99,16,0.22);
+    border-radius: 20px;
+    padding: 5px 14px;
+    cursor: pointer;
+    color: #7a5510;
+    margin-bottom: 16px;
+    display: inline-block;
+  }
+  .result-v2-speak-btn:hover { background: rgba(139,99,16,0.15); }
+  .result-v2-tone-card {
+    border-radius: 16px;
+    padding: 22px 18px;
+    margin-bottom: 16px;
+  }
+  .result-v2-tone-num {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .result-v2-tone-match {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    opacity: 0.8;
+    margin-top: 6px;
+  }
+  .result-v2-session-badge {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .result-v2-guess-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .result-v2-guess-item {
+    background: rgba(0,0,0,0.03);
+    border-radius: 10px;
+    padding: 9px 12px;
+    min-width: 85px;
+    text-align: center;
+    flex: 1;
+    max-width: 120px;
+  }
+  .result-v2-guess-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .result-v2-guess-val {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .result-v2-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .result-v2-info-cell {
+    background: #f9f6f0;
+    border-radius: 10px;
+    padding: 9px 10px;
+  }
+  .result-v2-info-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .result-v2-info-val {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #5a3e0a;
+    font-weight: 600;
+    line-height: 1.3;
+    word-break: break-all;
+  }
+  .result-v2-info-val.th { font-family: 'Sarabun', sans-serif; font-size: 15px; }
+  .result-v2-bd {
+    background: rgba(139,99,16,0.05);
+    border: 1px solid rgba(139,99,16,0.12);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    text-align: left;
+  }
+  .result-v2-bd-title {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .result-v2-path {
+    background: rgba(0,0,0,0.03);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .result-v2-path-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .result-v2-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -849,11 +1483,7 @@
 <div class="tf-page">
   <div class="tf-page-header">
     <div class="tf-page-title">🎵 泰語聲調搜尋</div>
-    <div class="tf-page-hint" id="tf-hint">輸入泰文單字，逐步分析聲調</div>
-    <div class="tf-page-note">ℹ️ 目前僅支援單音節詞彙搜尋，多音節詞彙功能開發中</div>
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-      <button class="tf-stats-btn" type="button" onclick="TF.showStats()" style="color:#D4A017;border-color:rgba(212,160,23,0.4);">📊 今日統計</button>
-    </div>
+    <div class="tf-page-hint" id="tf-hint">選擇等級與主題，開始練習聲調</div>
   </div>
 
   <div class="tf-card">
@@ -875,15 +1505,15 @@
 var DEFS = {
   toneMark: {
     zh: '聲調符號',
-    desc: '標示在子音上方，決定音節聲調的符號。\n四種聲調符號：\二聲符（ ่ ）  三聲符（ ้ ）  四聲符（ ๊ ）  五聲符（ ๋ ）'
+    desc: '標示在子音上方，決定音節聲調的符號。\n\n四種聲調符號：\n　• 二聲符（ไม้เอก）　ก่\n　• 三聲符（ไม้โท）　ก้\n　• 四聲符（ไม้ตรี）　ก๊\n　• 五聲符（ไม้จัตวา）　ก๋'
   },
   low:  { zh: '低子音',  chars: 'ค คร คล คว ฅ ฆ ง ช ซ ซร ฌ ญ ฑ ฒ ณ ท ทร ธ น พ พร พล ฟ ภ ม ย ร ล ว ฬ ฮ' },
   high: { zh: '高子音',  chars: 'ข ขร ขล ขว ฃ ฉ ฐ ถ ผ ฝ ศ ศร ษ ส สร ห' },
   mid:  { zh: '中子音',  chars: 'ก จ จร ด ต ตร บ ป ปร ปล อ ฎ ฏ กร กล กว' },
   lead: { zh: '前引字',  chars: 'หน หม หล หว หย หร หญ หง อย', desc: '由 ห 或 อ 帶頭，與後方低子音結合使聲調改變的組合。' },
   other: { zh: '其他子音', desc: '指「中子音」「高子音」或「前引字」三類的統稱。' },
-  live:  { zh: '活音', desc: '① 有長尾音（น ณ ญ ร ล ฬ ม ย ว ง）收尾\n② 無尾音但使用長母音' },
-  dead:  { zh: '死音', desc: '① 有短尾音（ก ข ค ฆ บ ป พ ฟ ภ จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส）收尾\n② 無尾音但使用短母音' },
+  live:  { zh: '活音', desc: '① 有長尾音（น ณ ญ ร ล ฬ ม ย ว ง）收尾\n② 無尾音但使用長母音\n　　長母音：-า  -ี  -ื  -ู  เ-  แ-  โ-  -อ  เ-อ  เ-ิ-  เ-ีย  -ัว  ฤๅ  ฦๅ' },
+  dead:  { zh: '死音', desc: '① 有短尾音（ก ข ค ฆ บ ป พ ฟ ภ จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส）收尾\n② 無尾音但使用短母音\n　　短母音：-ะ  -ั-  -ิ  -ึ  -ุ  เ-ะ  เ-็-  แ-ะ  แ-็-  โ-ะ  เ-าะ  เ-อะ  เ-ียะ  เ-ือะ  -ัวะ' },
   longVowel:  { zh: '長母音', chars: '-า  -ี  -ื  -ู  เ-  แ-  โ-  -อ  เ-อ  เ-ิ-  เ-ีย  -ัว  ฤๅ  ฦๅ' },
   shortVowel: { zh: '短母音', chars: '-ะ  -ั-  -ิ  -ึ  -ุ  เ-ะ  เ-็-  แ-ะ  แ-็-  โ-ะ  เ-าะ  เ-อะ  เ-ียะ  เ-ือะ  -ัวะ' },
   longEnd:  { zh: '長尾音', chars: 'น  ณ  ญ  ร  ล  ฬ  ม  ย  ว  ง' },
@@ -911,233 +1541,308 @@ var TONES = {
 //   zh        → 中文（台灣）翻譯
 // ════════════════════════════════════════════════════════════
 var WORD_LIST = [
-  { word:'กา', readingTH:'กา', readingEN:'gaa', zh:'烏鴉' },
-  { word:'ข้าว', readingTH:'ข้าว', readingEN:'khâao', zh:'飯、米' },
-  { word:'ไทย', readingTH:'ไทย', readingEN:'thai', zh:'泰國、泰文' },
-  { word:'น้ำ', readingTH:'น้ำ', readingEN:'náam', zh:'水' },
-  { word:'ม้า', readingTH:'ม้า', readingEN:'máa', zh:'馬' },
-  { word:'ปู', readingTH:'ปู', readingEN:'puu', zh:'螃蟹' },
-  { word:'ไก่', readingTH:'ไก่', readingEN:'gài', zh:'雞' },
-  { word:'เสือ', readingTH:'เสือ', readingEN:'sěua', zh:'老虎' },
-  { word:'ดี', readingTH:'ดี', readingEN:'dii', zh:'好' },
-  { word:'เก่ง', readingTH:'เก่ง', readingEN:'gèng', zh:'厲害、棒' },
-  { word:'รัก', readingTH:'รัก', readingEN:'rák', zh:'愛' },
-  { word:'หิน', readingTH:'หิน', readingEN:'hǐn', zh:'石頭' },
-  { word:'ก้อน', readingTH:'ก้อน', readingEN:'gôn', zh:'顆、塊（量詞）' },
-  { word:'เพื่อน', readingTH:'เพื่อน', readingEN:'pêuan', zh:'朋友' },
-  { word:'ดู', readingTH:'ดู', readingEN:'duu', zh:'看' },
-  { word:'ต้อง', readingTH:'ต้อง', readingEN:'dtông', zh:'必須' },
-  { word:'จะ', readingTH:'จะ', readingEN:'jà', zh:'要、將要' },
-  { word:'กลับ', readingTH:'กลับ', readingEN:'glàp', zh:'回' },
-  { word:'บ้าน', readingTH:'บ้าน', readingEN:'bâan', zh:'家' },
-  { word:'นอน', readingTH:'นอน', readingEN:'norn', zh:'睡' },
-  { word:'งาน', readingTH:'งาน', readingEN:'ngaan', zh:'工作、活動' },
-  { word:'ใหญ่', readingTH:'ใหญ่', readingEN:'yài', zh:'大' },
-  { word:'ทุก', readingTH:'ทุก', readingEN:'túk', zh:'每' },
-  { word:'สวย', readingTH:'สวย', readingEN:'sǔay', zh:'漂亮' },
-  { word:'เคย', readingTH:'เคย', readingEN:'koei', zh:'曾經' },
-  { word:'มาก', readingTH:'มาก', readingEN:'mâak', zh:'很、非常' },
-  { word:'เลย', readingTH:'เลย', readingEN:'loei', zh:'（加強語氣詞）' },
-  { word:'รถ', readingTH:'รถ', readingEN:'rót', zh:'車' },
-  { word:'เก็บ', readingTH:'เก็บ', readingEN:'gèp', zh:'收拾、整理' },
-  { word:'โต๊ะ', readingTH:'โต๊ะ', readingEN:'dtó', zh:'桌子' },
-  { word:'ขาย', readingTH:'ขาย', readingEN:'khǎai', zh:'賣' },
-  { word:'ห้าง', readingTH:'ห้าง', readingEN:'hâang', zh:'百貨、購物中心' },
-  { word:'สี', readingTH:'สี', readingEN:'sǐi', zh:'顏色' },
-  { word:'บ่อย', readingTH:'บ่อย', readingEN:'bòi', zh:'常常' },
-  { word:'ช้า', readingTH:'ช้า', readingEN:'cháa', zh:'慢' },
-  { word:'เส้น', readingTH:'เส้น', readingEN:'sên', zh:'條（量詞）' },
-  { word:'ลด', readingTH:'ลด', readingEN:'lót', zh:'減、降' },
-  { word:'เที่ยว', readingTH:'เที่ยว', readingEN:'thîeow', zh:'玩、旅遊' },
-  { word:'เครียด', readingTH:'เครียด', readingEN:'khrîat', zh:'緊張、壓力大' },
-  { word:'งู', readingTH:'งู', readingEN:'nguu', zh:'蛇' },
-  { word:'โทร', readingTH:'โทร', readingEN:'thoo', zh:'打電話' },
-  { word:'ว่าง', readingTH:'ว่าง', readingEN:'wâang', zh:'有空' },
-  { word:'เขียน', readingTH:'เขียน', readingEN:'khǐan', zh:'寫' },
-  { word:'ต่อ', readingTH:'ต่อ', readingEN:'dtòr', zh:'繼續' },
-  { word:'เดี๋ยว', readingTH:'เดี๋ยว', readingEN:'dǐeow', zh:'等一下、現在' },
-  { word:'นาน', readingTH:'นาน', readingEN:'naan', zh:'久' },
-  { word:'ฝาก', readingTH:'ฝาก', readingEN:'fàak', zh:'寄放、託帶' },
-  { word:'ค่อย', readingTH:'ค่อย', readingEN:'khôi', zh:'再（做）' },
-  { word:'นัด', readingTH:'นัด', readingEN:'nát', zh:'約' },
-  { word:'ลืม', readingTH:'ลืม', readingEN:'leum', zh:'忘記' },
-  { word:'ถ้วย', readingTH:'ถ้วย', readingEN:'thûay', zh:'碗' },
-  { word:'แรง', readingTH:'แรง', readingEN:'raeng', zh:'強（訊號、力氣）' },
-  { word:'เน็ต', readingTH:'เน็ต', readingEN:'nét', zh:'網路' },
-  { word:'นิ่ม', readingTH:'นิ่ม', readingEN:'nîm', zh:'軟' },
-  { word:'แข็ง', readingTH:'แข็ง', readingEN:'khǎeng', zh:'硬' },
-  { word:'กรอบ', readingTH:'กรอบ', readingEN:'gròp', zh:'脆' },
-  { word:'นุ่ม', readingTH:'นุ่ม', readingEN:'nûm', zh:'軟嫩' },
-  { word:'เละ', readingTH:'เละ', readingEN:'lé', zh:'爛糊' },
-  { word:'อ้วก', readingTH:'อ้วก', readingEN:'ûak', zh:'吐' },
-  { word:'มด', readingTH:'มด', readingEN:'mót', zh:'螞蟻' },
-  { word:'กล่อง', readingTH:'กล่อง', readingEN:'glòng', zh:'箱子' },
-  { word:'กล้อง', readingTH:'กล้อง', readingEN:'glông', zh:'相機' },
-  { word:'ซิม', readingTH:'ซิม', readingEN:'sim', zh:'SIM卡' },
-  { word:'จอง', readingTH:'จอง', readingEN:'jong', zh:'預訂' },
-  { word:'ถูก', readingTH:'ถูก', readingEN:'thùuk', zh:'便宜、對' },
-  { word:'ใบ', readingTH:'ใบ', readingEN:'bai', zh:'張（量詞）' },
-  { word:'เผ็ด', readingTH:'เผ็ด', readingEN:'phèt', zh:'辣' },
-  { word:'ฟรี', readingTH:'ฟรี', readingEN:'frii', zh:'免費' },
-  { word:'ไฟ', readingTH:'ไฟ', readingEN:'fai', zh:'火、電、燈' },
-  { word:'ก๊อก', readingTH:'ก๊อก', readingEN:'kók', zh:'水龍頭' },
-  { word:'ตัด', readingTH:'ตัด', readingEN:'dtàt', zh:'剪' },
-  { word:'ย้อม', readingTH:'ย้อม', readingEN:'yôm', zh:'染' },
-  { word:'แอบ', readingTH:'แอบ', readingEN:'àep', zh:'偷偷地' },
-  { word:'จีบ', readingTH:'จีบ', readingEN:'jìip', zh:'追求、搭訕' },
-  { word:'ดัง', readingTH:'ดัง', readingEN:'dang', zh:'有名、紅' },
-  { word:'แก้ว', readingTH:'แก้ว', readingEN:'gâew', zh:'杯子' },
-  { word:'ขับ', readingTH:'ขับ', readingEN:'khàp', zh:'開（車）' },
-  { word:'จ่าย', readingTH:'จ่าย', readingEN:'jàai', zh:'付（錢）' },
-  { word:'หยิบ', readingTH:'หยิบ', readingEN:'yìp', zh:'拿' },
-  { word:'เริ่ม', readingTH:'เริ่ม', readingEN:'rêrm', zh:'開始' },
-  { word:'เช็ค', readingTH:'เช็ค', readingEN:'chék', zh:'檢查、確認' },
-  { word:'หวาน', readingTH:'หวาน', readingEN:'wǎan', zh:'甜' },
-  { word:'เกือบ', readingTH:'เกือบ', readingEN:'gèuap', zh:'差一點、快要' },
-  { word:'ตาย', readingTH:'ตาย', readingEN:'dtaai', zh:'死' },
-  { word:'งอน', readingTH:'งอน', readingEN:'ngorn', zh:'鬧脾氣' },
-  { word:'เชื่อ', readingTH:'เชื่อ', readingEN:'chêua', zh:'相信' },
-  { word:'หนี', readingTH:'หนี', readingEN:'nǐi', zh:'逃跑' },
-  { word:'หมา', readingTH:'หมา', readingEN:'mǎa', zh:'狗' },
-  { word:'ผอม', readingTH:'ผอม', readingEN:'phǒm', zh:'瘦' },
-  { word:'นิ่ง', readingTH:'นิ่ง', readingEN:'nîng', zh:'平靜、不動' },
-  { word:'ขน', readingTH:'ขน', readingEN:'khǒn', zh:'搬運' },
-  { word:'รอบ', readingTH:'รอบ', readingEN:'rôp', zh:'趟、輪、回' },
-  { word:'สร้าง', readingTH:'สร้าง', readingEN:'sâang', zh:'建造' },
-  { word:'พา', readingTH:'พา', readingEN:'phaa', zh:'帶（人去）' },
-  { word:'ทัน', readingTH:'ทัน', readingEN:'than', zh:'來得及' },
-  { word:'หนัก', readingTH:'หนัก', readingEN:'nàk', zh:'重' },
-  { word:'เบา', readingTH:'เบา', readingEN:'bao', zh:'輕' },
-  { word:'เกม', readingTH:'เกม', readingEN:'geem', zh:'遊戲' },
-  { word:'โบสถ์', readingTH:'โบด', readingEN:'bòot', zh:'教堂' },
-  { word:'อ้าง', readingTH:'อ้าง', readingEN:'âang', zh:'藉口、聲稱' },
-  { word:'เปลี่ยน', readingTH:'เปลี่ยน', readingEN:'bplìan', zh:'換' },
-  { word:'เตรียม', readingTH:'เตรียม', readingEN:'dtriam', zh:'準備' },
-  { word:'งั้น', readingTH:'งั้น', readingEN:'ngán', zh:'那樣、那麼' },
-  { word:'แล้ว', readingTH:'แล้ว', readingEN:'láew', zh:'已經、了' },
-  { word:'เหมาะ', readingTH:'เหมาะ', readingEN:'mòr', zh:'適合' },
-  { word:'คุ้ม', readingTH:'คุ้ม', readingEN:'khúm', zh:'划算' },
-  { word:'จำ', readingTH:'จำ', readingEN:'jam', zh:'記得' },
-  { word:'ย้าย', readingTH:'ย้าย', readingEN:'yáai', zh:'搬（家）' },
-  { word:'พิมพ์', readingTH:'พิม', readingEN:'phim', zh:'打字' },
-  { word:'คอม', readingTH:'คอม', readingEN:'khom', zh:'電腦' },
-  { word:'ทริป', readingTH:'ทริบ', readingEN:'tríp', zh:'旅行行程' },
-  { word:'เพิ่ม', readingTH:'เพิ่ม', readingEN:'phêrm', zh:'增加' },
+  // ── 初級：ตัวเลข ──
+  { word:'หนึ่ง', readingTH:'หนึ่ง', readingEN:'nèung', zh:'一', level:1, category:'ตัวเลข' },
+  { word:'สอง',   readingTH:'สอง',   readingEN:'sǒong', zh:'二', level:1, category:'ตัวเลข' },
+  { word:'สาม',   readingTH:'สาม',   readingEN:'sǎam',  zh:'三', level:1, category:'ตัวเลข' },
+  { word:'สี่',    readingTH:'สี่',    readingEN:'sìi',   zh:'四', level:1, category:'ตัวเลข' },
+  { word:'ห้า',   readingTH:'ห้า',   readingEN:'hâa',   zh:'五', level:1, category:'ตัวเลข' },
+  { word:'หก',   readingTH:'หก',   readingEN:'hòk',   zh:'六', level:1, category:'ตัวเลข' },
+  { word:'เจ็ด', readingTH:'เจ็ด', readingEN:'jèt',   zh:'七', level:1, category:'ตัวเลข' },
+  { word:'แปด',  readingTH:'แปด',  readingEN:'bpàet', zh:'八', level:1, category:'ตัวเลข' },
+  { word:'เก้า', readingTH:'เก้า', readingEN:'gâo',   zh:'九', level:1, category:'ตัวเลข' },
+  { word:'สิบ',  readingTH:'สิบ',  readingEN:'sìp',   zh:'十', level:1, category:'ตัวเลข' },
+  // ── 初級：สี ──
+  { word:'ดำ',    readingTH:'ดำ',    readingEN:'dam',    zh:'黑', level:1, category:'สี' },
+  { word:'ขาว',   readingTH:'ขาว',   readingEN:'khǎao',  zh:'白', level:1, category:'สี' },
+  { word:'แดง',   readingTH:'แดง',   readingEN:'daeng',  zh:'紅', level:1, category:'สี' },
+  { word:'เหลือง',readingTH:'เหลือง',readingEN:'lʉ̌ang', zh:'黃', level:1, category:'สี' },
+  { word:'ฟ้า',   readingTH:'ฟ้า',   readingEN:'fáa',    zh:'藍', level:1, category:'สี' },
+  // ── 初級：กริยา ──
+  { word:'กิน',   readingTH:'กิน',   readingEN:'gin',    zh:'吃', level:1, category:'กริยา' },
+  { word:'ดื่ม',  readingTH:'ดื่ม',  readingEN:'dèum',   zh:'喝', level:1, category:'กริยา' },
+  { word:'ไป',    readingTH:'ไป',    readingEN:'bpai',   zh:'去', level:1, category:'กริยา' },
+  { word:'มา',    readingTH:'มา',    readingEN:'maa',    zh:'來', level:1, category:'กริยา' },
+  { word:'ซื้อ',  readingTH:'ซื้อ',  readingEN:'séu',    zh:'買', level:1, category:'กริยา' },
+  // ── 初級：คำขยาย ──
+  { word:'ดี',    readingTH:'ดี',    readingEN:'dii',    zh:'好', level:1, category:'คำขยาย' },
+  { word:'ใหญ่',  readingTH:'ใหญ่',  readingEN:'yài',    zh:'大', level:1, category:'คำขยาย' },
+  { word:'เล็ก',  readingTH:'เล็ก',  readingEN:'lék',    zh:'小', level:1, category:'คำขยาย' },
+  { word:'ร้อน',  readingTH:'ร้อน',  readingEN:'róon',   zh:'熱', level:1, category:'คำขยาย' },
+  { word:'แพง',   readingTH:'แพง',   readingEN:'phaeng', zh:'貴', level:1, category:'คำขยาย' },
+  // ── 中級：ร้านอาหาร ──
+  { word:'อาหาร',      readingTH:'อา-หาน',        readingEN:'aa-hǎan',       zh:'食物/料理', level:2, category:'ร้านอาหาร' },
+  { word:'ร้านอาหาร',  readingTH:'ร้าน-อา-หาน',   readingEN:'ráan-aa-hǎan',  zh:'餐廳',      level:2, category:'ร้านอาหาร' },
+  { word:'เมนู',       readingTH:'เม-นู',          readingEN:'mee-nuu',       zh:'菜單',      level:2, category:'ร้านอาหาร' },
+  { word:'ของหวาน',    readingTH:'ของ-หวาน',       readingEN:'khǒong-wǎan',   zh:'甜點',      level:2, category:'ร้านอาหาร' },
+  { word:'น้ำแข็ง',   readingTH:'น้ำ-แข็ง',       readingEN:'náam-khǎeng',   zh:'冰塊',      level:2, category:'ร้านอาหาร' },
+  { word:'ใบเสร็จ',    readingTH:'ใบ-เสร็จ',       readingEN:'bai-sèt',       zh:'收據/帳單',  level:2, category:'ร้านอาหาร' },
+  // ── 中級：การเดินทาง ──
+  { word:'สนามบิน',   readingTH:'สะ-หนาม-บิน',   readingEN:'sa-nǎam-bin',   zh:'機場',      level:2, category:'การเดินทาง' },
+  { word:'แท็กซี่',   readingTH:'แท็ก-ซี่',       readingEN:'tháek-sîi',     zh:'計程車',    level:2, category:'การเดินทาง' },
+  { word:'รถไฟฟ้า',   readingTH:'รด-ไฟ-ฟ้า',     readingEN:'rót-fai-fáa',   zh:'捷運/地鐵', level:2, category:'การเดินทาง' },
+  { word:'แผนที่',     readingTH:'แผน-ที่',         readingEN:'phǎen-thîi',    zh:'地圖',      level:2, category:'การเดินทาง' },
+  { word:'ทางออก',     readingTH:'ทาง-ออก',         readingEN:'thaang-òk',     zh:'出口',      level:2, category:'การเดินทาง' },
+  { word:'ห้องน้ำ',   readingTH:'ห้อง-น้ำ',       readingEN:'hông-náam',     zh:'洗手間',    level:2, category:'การเดินทาง' },
+  // ── 中級：โรงแรม ──
+  { word:'โรงแรม',     readingTH:'โรง-แรม',         readingEN:'roong-raem',    zh:'飯店',      level:2, category:'โรงแรม' },
+  { word:'ห้องพัก',   readingTH:'ห้อง-พัก',       readingEN:'hông-phák',     zh:'客房',      level:2, category:'โรงแรม' },
+  { word:'เช็คอิน',   readingTH:'เช็ค-อิน',       readingEN:'chék-in',       zh:'辦理入住',  level:2, category:'โรงแรม' },
+  { word:'เช็คเอาท์', readingTH:'เช็ค-เอาท์',     readingEN:'chék-áo',       zh:'退房',      level:2, category:'โรงแรม' },
+  { word:'สระว่ายน้ำ',readingTH:'สะ-หระ-ว่าย-น้ำ',readingEN:'sà-wâai-náam', zh:'游泳池',    level:2, category:'โรงแรม' },
+  // ── 中級：งาน ──
+  { word:'บริษัท',    readingTH:'บอ-ริ-สัด',      readingEN:'bor-rí-sàt',    zh:'公司',      level:2, category:'งาน' },
+  { word:'ประชุม',    readingTH:'ปฺระ-ชุม',        readingEN:'bprà-chum',     zh:'開會',      level:2, category:'งาน' },
+  { word:'ลูกค้า',    readingTH:'ลูก-ค้า',         readingEN:'lûuk-kháa',     zh:'客戶',      level:2, category:'งาน' },
+  { word:'นัดหมาย',   readingTH:'นัด-หมาย',        readingEN:'nát-mǎai',      zh:'預約/約定', level:2, category:'งาน' },
+  { word:'รายงาน',    readingTH:'ราย-งาน',          readingEN:'raai-ngaan',    zh:'報告',      level:2, category:'งาน' },
+  // ── 中級：ช้อปปิ้ง ──
+  { word:'ราคา',       readingTH:'รา-คา',           readingEN:'raa-khaa',      zh:'價格',      level:2, category:'ช้อปปิ้ง' },
+  { word:'ลดราคา',     readingTH:'ลด-รา-คา',        readingEN:'lót-raa-khaa',  zh:'打折',      level:2, category:'ช้อปปิ้ง' },
+  { word:'ต่อรอง',     readingTH:'ต่อ-รอง',          readingEN:'dtòr-rong',     zh:'殺價',      level:2, category:'ช้อปปิ้ง' },
+  { word:'ชำระเงิน',  readingTH:'ชำ-ระ-เงิน',      readingEN:'cham-rá-ngoen', zh:'付款',      level:2, category:'ช้อปปิ้ง' },
+  { word:'ห้างสรรพสินค้า',readingTH:'ห้าง-สับ-พะ-สิน-ค้า',readingEN:'hâang-sàp-phá-sǐn-kháa',zh:'百貨公司',level:2,category:'ช้อปปิ้ง' },
+  // ── 中級：อื่นๆ ──
+  { word:'สวัสดี',    readingTH:'สะ-หวัด-ดี',      readingEN:'sà-wàt-dii',   zh:'你好/再見', level:2, category:'อื่นๆ' },
+  { word:'ขอบคุณ',    readingTH:'ขอบ-คุณ',          readingEN:'khòp-khun',     zh:'謝謝',      level:2, category:'อื่นๆ' },
+  { word:'ขอโทษ',     readingTH:'ขอ-โทด',           readingEN:'khǒr-thôot',    zh:'對不起',    level:2, category:'อื่นๆ' },
+  { word:'ไม่เป็นไร', readingTH:'ไม่-เป็น-ไร',     readingEN:'mâi-bpen-rai',  zh:'沒關係',    level:2, category:'อื่นๆ' },
+  { word:'ไม่เข้าใจ', readingTH:'ไม่-เข้า-ใจ',     readingEN:'mâi-khâo-jai',  zh:'我不懂',    level:2, category:'อื่นๆ' },
+  { word:'ช่วยด้วย',  readingTH:'ช่วย-ด้วย',       readingEN:'chûai-dûai',    zh:'幫幫我',    level:2, category:'อื่นๆ' },
+  // ── เพิ่มเติม: สี / ลักษณนาม / กริยา / คำขยาย ──
+  // ── 名詞 4 หมวด ──
+  // ── 中級 เพิ่มเติม 6 หมวด ──
+  { word:'ข้าวผัด', readingTH:'ข้าว-ผัด', readingEN:'khâao-phàt', zh:'炒飯', level:2, category:'ร้านอาหาร' },
+  { word:'ต้มยำ', readingTH:'ต้ม-ยำ', readingEN:'dtôm-yam', zh:'冬陰湯', level:2, category:'ร้านอาหาร' },
+  { word:'ผัดไทย', readingTH:'ผัด-ไท', readingEN:'phàt-thai', zh:'泰式炒麵', level:2, category:'ร้านอาหาร' },
+  { word:'ส้มตำ', readingTH:'ส้ม-ตำ', readingEN:'sôm-dtam', zh:'涼拌木瓜', level:2, category:'ร้านอาหาร' },
+  { word:'ข้าวต้ม', readingTH:'ข้าว-ต้ม', readingEN:'khâao-dtôm', zh:'粥', level:2, category:'ร้านอาหาร' },
+  { word:'ไก่ทอด', readingTH:'ไก่-ทอด', readingEN:'gài-thôot', zh:'炸雞', level:2, category:'ร้านอาหาร' },
+  { word:'หมูปิ้ง', readingTH:'หมู-ปิ้ง', readingEN:'mǔu-bpîng', zh:'烤豬肉', level:2, category:'ร้านอาหาร' },
+  { word:'กาแฟ', readingTH:'กา-แฟ', readingEN:'gaa-fae', zh:'咖啡', level:2, category:'ร้านอาหาร' },
+  { word:'น้ำชา', readingTH:'น้ำ-ชา', readingEN:'nám-chaa', zh:'茶', level:2, category:'ร้านอาหาร' },
+  { word:'น้ำส้ม', readingTH:'น้ำ-ส้ม', readingEN:'nám-sôm', zh:'柳橙汁', level:2, category:'ร้านอาหาร' },
+  { word:'ขนมปัง', readingTH:'ขะ-หนม-ปัง', readingEN:'khà-nǒm-bpang', zh:'麵包', level:2, category:'ร้านอาหาร' },
+  { word:'ช้อนส้อม', readingTH:'ช้อน-ส้อม', readingEN:'chóon-sôom', zh:'餐具', level:2, category:'ร้านอาหาร' },
+  { word:'ตะเกียบ', readingTH:'ตะ-เกียบ', readingEN:'dta-gìap', zh:'筷子', level:2, category:'ร้านอาหาร' },
+  { word:'จานข้าว', readingTH:'จาน-ข้าว', readingEN:'jaan-khâao', zh:'飯盤', level:2, category:'ร้านอาหาร' },
+  { word:'รถเมล์', readingTH:'รด-เม', readingEN:'rót-mee', zh:'公車', level:2, category:'การเดินทาง' },
+  { word:'รถทัวร์', readingTH:'รด-ทัว', readingEN:'rót-thua', zh:'遊覽車', level:2, category:'การเดินทาง' },
+  { word:'เครื่องบิน', readingTH:'เครื่อง-บิน', readingEN:'khrʉ̂ang-bin', zh:'飛機', level:2, category:'การเดินทาง' },
+  { word:'สถานี', readingTH:'สะ-ถา-นี', readingEN:'sà-thǎa-nii', zh:'車站', level:2, category:'การเดินทาง' },
+  { word:'สะพาน', readingTH:'สะ-พาน', readingEN:'sà-phaan', zh:'橋', level:2, category:'การเดินทาง' },
+  { word:'ถนน', readingTH:'ถะ-หนน', readingEN:'thà-nǒn', zh:'馬路', level:2, category:'การเดินทาง' },
+  { word:'ทางด่วน', readingTH:'ทาง-ด่วน', readingEN:'thaang-dùan', zh:'高速公路', level:2, category:'การเดินทาง' },
+  { word:'น้ำมัน', readingTH:'น้ำ-มัน', readingEN:'nám-man', zh:'油', level:2, category:'การเดินทาง' },
+  { word:'กระเป๋า', readingTH:'กฺระ-เป๋า', readingEN:'grà-bpǎo', zh:'包包', level:2, category:'การเดินทาง' },
+  { word:'ตำรวจ', readingTH:'ตำ-หรวด', readingEN:'dtam-rùat', zh:'警察', level:2, category:'การเดินทาง' },
+  { word:'ที่จอดรถ', readingTH:'ที่-จอด-รด', readingEN:'thîi-jòot-rót', zh:'停車場', level:2, category:'การเดินทาง' },
+  { word:'ทางม้าลาย', readingTH:'ทาง-ม้า-ลาย', readingEN:'thaang-máa-laai', zh:'斑馬線', level:2, category:'การเดินทาง' },
+  { word:'ระยะทาง', readingTH:'ระ-ยะ-ทาง', readingEN:'rá-yá-thaang', zh:'距離', level:2, category:'การเดินทาง' },
+  { word:'ป้ายรถ', readingTH:'ป้าย-รด', readingEN:'bpâai-rót', zh:'站牌', level:2, category:'การเดินทาง' },
+  { word:'พนักงาน', readingTH:'พะ-นัก-งาน', readingEN:'phá-nák-ngaan', zh:'員工', level:2, category:'โรงแรม' },
+  { word:'เตียงนอน', readingTH:'เตียง-นอน', readingEN:'dtiang-noon', zh:'床', level:2, category:'โรงแรม' },
+  { word:'ผ้าเช็ดตัว', readingTH:'ผ้า-เช็ด-ตัว', readingEN:'phâa-chét-dtua', zh:'毛巾', level:2, category:'โรงแรม' },
+  { word:'กุญแจ', readingTH:'กุน-แจ', readingEN:'gun-jae', zh:'鑰匙', level:2, category:'โรงแรม' },
+  { word:'ระเบียง', readingTH:'ระ-เบียง', readingEN:'rá-biang', zh:'陽台', level:2, category:'โรงแรม' },
+  { word:'ห้องอาหาร', readingTH:'ห้อง-อา-หาน', readingEN:'hôong-aa-hǎan', zh:'餐廳', level:2, category:'โรงแรม' },
+  { word:'ค่าห้อง', readingTH:'ค่า-ห้อง', readingEN:'khâa-hôong', zh:'房費', level:2, category:'โรงแรม' },
+  { word:'อาหารเช้า', readingTH:'อา-หาน-เช้า', readingEN:'aa-hǎan-cháo', zh:'早餐', level:2, category:'โรงแรม' },
+  { word:'สบู่', readingTH:'สะ-บู่', readingEN:'sà-bùu', zh:'肥皂', level:2, category:'โรงแรม' },
+  { word:'ผ้าห่ม', readingTH:'ผ้า-ห่ม', readingEN:'phâa-hòm', zh:'棉被', level:2, category:'โรงแรม' },
+  { word:'ทีวี', readingTH:'ที-วี', readingEN:'thii-wii', zh:'電視', level:2, category:'โรงแรม' },
+  { word:'น้ำอุ่น', readingTH:'น้ำ-อุ่น', readingEN:'nám-ùn', zh:'熱水', level:2, category:'โรงแรม' },
+  { word:'ยาสีฟัน', readingTH:'ยา-สี-ฟัน', readingEN:'yaa-sǐi-fan', zh:'牙膏', level:2, category:'โรงแรม' },
+  { word:'หมอน', readingTH:'หมอน', readingEN:'mǒon', zh:'枕頭', level:2, category:'โรงแรม' },
+  { word:'ต้อนรับ', readingTH:'ต้อน-รับ', readingEN:'dtôon-ráp', zh:'接待', level:2, category:'โรงแรม' },
+  { word:'เงินเดือน', readingTH:'เงิน-เดือน', readingEN:'ngern-dʉan', zh:'薪水', level:2, category:'งาน' },
+  { word:'หัวหน้า', readingTH:'หัว-หน้า', readingEN:'hǔa-nâa', zh:'主管', level:2, category:'งาน' },
+  { word:'โทรศัพท์', readingTH:'โท-ระ-สับ', readingEN:'thoo-rá-sàp', zh:'電話', level:2, category:'งาน' },
+  { word:'เอกสาร', readingTH:'เอก-กะ-สาน', readingEN:'èek-gà-sǎan', zh:'文件', level:2, category:'งาน' },
+  { word:'สัมภาษณ์', readingTH:'สำ-พาด', readingEN:'sǎm-phâat', zh:'面試', level:2, category:'งาน' },
+  { word:'ตำแหน่ง', readingTH:'ตำ-แหน่ง', readingEN:'dtam-nàeng', zh:'職位', level:2, category:'งาน' },
+  { word:'ออฟฟิศ', readingTH:'ออฟ-ฟิด', readingEN:'óp-fít', zh:'辦公室', level:2, category:'งาน' },
+  { word:'งานเลี้ยง', readingTH:'งาน-เลี้ยง', readingEN:'ngaan-líang', zh:'聚會', level:2, category:'งาน' },
+  { word:'อีเมล', readingTH:'อี-เมล', readingEN:'ii-meeo', zh:'電子郵件', level:2, category:'งาน' },
+  { word:'โต๊ะทำงาน', readingTH:'โต๊ะ-ทำ-งาน', readingEN:'tó-tham-ngaan', zh:'辦公桌', level:2, category:'งาน' },
+  { word:'วันหยุด', readingTH:'วัน-หยุด', readingEN:'wan-yùt', zh:'假日', level:2, category:'งาน' },
+  { word:'นามบัตร', readingTH:'นาม-บัด', readingEN:'naam-bàt', zh:'名片', level:2, category:'งาน' },
+  { word:'เลขา', readingTH:'เล-ขา', readingEN:'lee-khǎa', zh:'秘書', level:2, category:'งาน' },
+  { word:'ประชุมงาน', readingTH:'ปฺระ-ชุม-งาน', readingEN:'bprà-chum-ngaan', zh:'工作會議', level:2, category:'งาน' },
+  { word:'เวลางาน', readingTH:'เว-ลา-งาน', readingEN:'wee-laa-ngaan', zh:'上班時間', level:2, category:'งาน' },
+  { word:'เสื้อผ้า', readingTH:'เสื้อ-ผ้า', readingEN:'sʉ̂a-phâa', zh:'衣服', level:2, category:'ช้อปปิ้ง' },
+  { word:'รองเท้า', readingTH:'รอง-เท้า', readingEN:'roong-tháo', zh:'鞋子', level:2, category:'ช้อปปิ้ง' },
+  { word:'กระเป๋าเงิน', readingTH:'กฺระ-เป๋า-เงิน', readingEN:'grà-bpǎo-ngern', zh:'錢包', level:2, category:'ช้อปปิ้ง' },
+  { word:'ของขวัญ', readingTH:'ของ-ขวัน', readingEN:'khǒong-khwǎn', zh:'禮物', level:2, category:'ช้อปปิ้ง' },
+  { word:'ตลาด', readingTH:'ตะ-หลาด', readingEN:'dta-làat', zh:'市場', level:2, category:'ช้อปปิ้ง' },
+  { word:'ร้านค้า', readingTH:'ร้าน-ค้า', readingEN:'ráan-kháa', zh:'商店', level:2, category:'ช้อปปิ้ง' },
+  { word:'สินค้า', readingTH:'สิน-ค้า', readingEN:'sǐn-kháa', zh:'商品', level:2, category:'ช้อปปิ้ง' },
+  { word:'คุณภาพ', readingTH:'คุน-นะ-พาบ', readingEN:'khun-ná-phâap', zh:'品質', level:2, category:'ช้อปปิ้ง' },
+  { word:'ส่วนลด', readingTH:'ส่วน-ลด', readingEN:'sùan-lót', zh:'折扣', level:2, category:'ช้อปปิ้ง' },
+  { word:'เงินสด', readingTH:'เงิน-สด', readingEN:'ngern-sòt', zh:'現金', level:2, category:'ช้อปปิ้ง' },
+  { word:'เงินทอน', readingTH:'เงิน-ทอน', readingEN:'ngern-thoon', zh:'找零', level:2, category:'ช้อปปิ้ง' },
+  { word:'ขนาด', readingTH:'ขะ-หนาด', readingEN:'khà-nàat', zh:'尺寸', level:2, category:'ช้อปปิ้ง' },
+  { word:'รองเท้าแตะ', readingTH:'รอง-เท้า-แตะ', readingEN:'roong-tháo-dtàe', zh:'拖鞋', level:2, category:'ช้อปปิ้ง' },
+  { word:'เครื่องสำอาง', readingTH:'เครื่อง-สำ-อาง', readingEN:'khrʉ̂ang-sǎm-aang', zh:'化妝品', level:2, category:'ช้อปปิ้ง' },
+  { word:'แว่นตา', readingTH:'แว่น-ตา', readingEN:'wâen-dtaa', zh:'眼鏡', level:2, category:'ช้อปปิ้ง' },
+  { word:'เวลา', readingTH:'เว-ลา', readingEN:'wee-laa', zh:'時間', level:2, category:'อื่นๆ' },
+  { word:'นาฬิกา', readingTH:'นา-ลิ-กา', readingEN:'naa-lí-gaa', zh:'時鐘', level:2, category:'อื่นๆ' },
+  { word:'อากาศ', readingTH:'อา-กาด', readingEN:'aa-gàat', zh:'天氣', level:2, category:'อื่นๆ' },
+  { word:'ครอบครัว', readingTH:'คฺรอบ-คฺรัว', readingEN:'khrôop-khrua', zh:'家庭', level:2, category:'อื่นๆ' },
+  { word:'ภาษา', readingTH:'พา-สา', readingEN:'phaa-sǎa', zh:'語言', level:2, category:'อื่นๆ' },
+  { word:'ประเทศ', readingTH:'ปฺระ-เทด', readingEN:'bprà-thêet', zh:'國家', level:2, category:'อื่นๆ' },
+  { word:'เมืองไทย', readingTH:'เมือง-ไท', readingEN:'mʉang-thai', zh:'泰國', level:2, category:'อื่นๆ' },
+  { word:'วันนี้', readingTH:'วัน-นี้', readingEN:'wan-níi', zh:'今天', level:2, category:'อื่นๆ' },
+  { word:'พรุ่งนี้', readingTH:'พฺรุ่ง-นี้', readingEN:'phrûng-níi', zh:'明天', level:2, category:'อื่นๆ' },
+  { word:'เมื่อวาน', readingTH:'เมื่อ-วาน', readingEN:'mʉ̂a-waan', zh:'昨天', level:2, category:'อื่นๆ' },
+  { word:'ปัจจุบัน', readingTH:'ปัด-จุ-บัน', readingEN:'bpàt-jù-ban', zh:'現在', level:2, category:'อื่นๆ' },
+  { word:'อนาคต', readingTH:'อะ-นา-คด', readingEN:'à-naa-khót', zh:'未來', level:2, category:'อื่นๆ' },
+  { word:'ดนตรี', readingTH:'ดน-ตรี', readingEN:'don-dtrii', zh:'音樂', level:2, category:'อื่นๆ' },
+  { word:'อาชีพ', readingTH:'อา-ชีบ', readingEN:'aa-chîip', zh:'職業', level:2, category:'อื่นๆ' },
+  { word:'หู', readingTH:'หู', readingEN:'hǔu', zh:'耳朵', level:1, category:'นามร่างกาย' },
+  { word:'ปาก', readingTH:'ปาก', readingEN:'bpàak', zh:'嘴', level:1, category:'นามร่างกาย' },
+  { word:'ฟัน', readingTH:'ฟัน', readingEN:'fan', zh:'牙齒', level:1, category:'นามร่างกาย' },
+  { word:'ลิ้น', readingTH:'ลิ้น', readingEN:'lín', zh:'舌頭', level:1, category:'นามร่างกาย' },
+  { word:'หน้า', readingTH:'หน้า', readingEN:'nâa', zh:'臉', level:1, category:'นามร่างกาย' },
+  { word:'ผม', readingTH:'ผม', readingEN:'phǒm', zh:'頭髮', level:1, category:'นามร่างกาย' },
+  { word:'คอ', readingTH:'คอ', readingEN:'khoo', zh:'脖子', level:1, category:'นามร่างกาย' },
+  { word:'เล็บ', readingTH:'เล็บ', readingEN:'lép', zh:'指甲', level:1, category:'นามร่างกาย' },
+  { word:'ใจ', readingTH:'ใจ', readingEN:'jai', zh:'心', level:1, category:'นามร่างกาย' },
+  { word:'แขน', readingTH:'แขน', readingEN:'khǎen', zh:'手臂', level:1, category:'นามร่างกาย' },
+  { word:'นิ้ว', readingTH:'นิ้ว', readingEN:'níu', zh:'手指', level:1, category:'นามร่างกาย' },
+  { word:'อก', readingTH:'อก', readingEN:'òk', zh:'胸', level:1, category:'นามร่างกาย' },
+  { word:'เลือด', readingTH:'เลือด', readingEN:'lʉ̂at', zh:'血', level:1, category:'นามร่างกาย' },
+  { word:'ขา', readingTH:'ขา', readingEN:'khǎa', zh:'腿', level:1, category:'นามร่างกาย' },
+  { word:'เท้า', readingTH:'เท้า', readingEN:'tháo', zh:'腳', level:1, category:'นามร่างกาย' },
+  { word:'ท้อง', readingTH:'ท้อง', readingEN:'thóong', zh:'肚子', level:1, category:'นามร่างกาย' },
+  { word:'เข่า', readingTH:'เข่า', readingEN:'khào', zh:'膝蓋', level:1, category:'นามร่างกาย' },
+  { word:'ลูก', readingTH:'ลูก', readingEN:'lûuk', zh:'孩子', level:1, category:'นามคน' },
+  { word:'พี่', readingTH:'พี่', readingEN:'phîi', zh:'哥哥／姊姊', level:1, category:'นามคน' },
+  { word:'น้อง', readingTH:'น้อง', readingEN:'nóong', zh:'弟弟／妹妹', level:1, category:'นามคน' },
+  { word:'ปู่', readingTH:'ปู่', readingEN:'bpùu', zh:'爺爺', level:1, category:'นามคน' },
+  { word:'ย่า', readingTH:'ย่า', readingEN:'yâa', zh:'奶奶', level:1, category:'นามคน' },
+  { word:'ยาย', readingTH:'ยาย', readingEN:'yaai', zh:'外婆', level:1, category:'นามคน' },
+  { word:'หลาน', readingTH:'หลาน', readingEN:'lǎan', zh:'孫子', level:1, category:'นามคน' },
+  { word:'ญาติ', readingTH:'ญาติ', readingEN:'yâat', zh:'親戚', level:1, category:'นามคน' },
+  { word:'หมอ', readingTH:'หมอ', readingEN:'mǒo', zh:'醫生', level:1, category:'นามคน' },
+  { word:'นาย', readingTH:'นาย', readingEN:'naai', zh:'先生', level:1, category:'นามคน' },
+  { word:'ท่าน', readingTH:'ท่าน', readingEN:'thâan', zh:'您', level:1, category:'นามคน' },
+  { word:'เจ้า', readingTH:'เจ้า', readingEN:'jâo', zh:'主人', level:1, category:'นามคน' },
+  { word:'ชาย', readingTH:'ชาย', readingEN:'chaai', zh:'男人', level:1, category:'นามคน' },
+  { word:'เด็ก', readingTH:'เด็ก', readingEN:'dèk', zh:'小孩', level:1, category:'นามคน' },
+  { word:'แขก', readingTH:'แขก', readingEN:'khàek', zh:'客人', level:1, category:'นามคน' },
+  { word:'ผัว', readingTH:'ผัว', readingEN:'phǔa', zh:'丈夫', level:1, category:'นามคน' },
+  { word:'เมีย', readingTH:'เมีย', readingEN:'mia', zh:'妻子', level:1, category:'นามคน' },
+  { word:'ไข่', readingTH:'ไข่', readingEN:'khài', zh:'蛋', level:1, category:'นามอาหาร' },
+  { word:'นม', readingTH:'นม', readingEN:'nom', zh:'牛奶', level:1, category:'นามอาหาร' },
+  { word:'ชา', readingTH:'ชา', readingEN:'chaa', zh:'茶', level:1, category:'นามอาหาร' },
+  { word:'กุ้ง', readingTH:'กุ้ง', readingEN:'gûng', zh:'蝦', level:1, category:'นามอาหาร' },
+  { word:'ปู', readingTH:'ปู', readingEN:'bpuu', zh:'螃蟹', level:1, category:'นามอาหาร' },
+  { word:'เนื้อ', readingTH:'เนื้อ', readingEN:'nʉ́a', zh:'肉', level:1, category:'นามอาหาร' },
+  { word:'ผัก', readingTH:'ผัก', readingEN:'phàk', zh:'蔬菜', level:1, category:'นามอาหาร' },
+  { word:'พริก', readingTH:'พริก', readingEN:'phrík', zh:'辣椒', level:1, category:'นามอาหาร' },
+  { word:'เกลือ', readingTH:'เกลือ', readingEN:'glʉa', zh:'鹽', level:1, category:'นามอาหาร' },
+  { word:'ขิง', readingTH:'ขิง', readingEN:'khǐng', zh:'薑', level:1, category:'นามอาหาร' },
+  { word:'เส้น', readingTH:'เส้น', readingEN:'sên', zh:'麵條', level:1, category:'นามอาหาร' },
+  { word:'ซุป', readingTH:'ซุป', readingEN:'súp', zh:'湯', level:1, category:'นามอาหาร' },
+  { word:'แกง', readingTH:'แกง', readingEN:'gaeng', zh:'咖哩', level:1, category:'นามอาหาร' },
+  { word:'โจ๊ก', readingTH:'โจ๊ก', readingEN:'jóok', zh:'粥', level:1, category:'นามอาหาร' },
+  { word:'กล้วย', readingTH:'กล้วย', readingEN:'glûay', zh:'香蕉', level:1, category:'นามอาหาร' },
+  { word:'ร้าน', readingTH:'ร้าน', readingEN:'ráan', zh:'店', level:1, category:'นามของใช้' },
+  { word:'วัด', readingTH:'วัด', readingEN:'wát', zh:'寺廟', level:1, category:'นามของใช้' },
+  { word:'เมือง', readingTH:'เมือง', readingEN:'mʉang', zh:'城市', level:1, category:'นามของใช้' },
+  { word:'นา', readingTH:'นา', readingEN:'naa', zh:'田', level:1, category:'นามของใช้' },
+  { word:'สวน', readingTH:'สวน', readingEN:'sǔan', zh:'花園', level:1, category:'นามของใช้' },
+  { word:'ไร่', readingTH:'ไร่', readingEN:'râi', zh:'農場', level:1, category:'นามของใช้' },
+  { word:'เขา', readingTH:'เขา', readingEN:'khǎo', zh:'山', level:1, category:'นามของใช้' },
+  { word:'เกาะ', readingTH:'เกาะ', readingEN:'gò', zh:'島', level:1, category:'นามของใช้' },
+  { word:'ถุง', readingTH:'ถุง', readingEN:'thǔng', zh:'袋子', level:1, category:'นามของใช้' },
+  { word:'โต๊ะ', readingTH:'โต๊ะ', readingEN:'tó', zh:'桌子', level:1, category:'นามของใช้' },
+  { word:'เตียง', readingTH:'เตียง', readingEN:'tiang', zh:'床', level:1, category:'นามของใช้' },
+  { word:'แก้ว', readingTH:'แก้ว', readingEN:'gâeo', zh:'杯子', level:1, category:'นามของใช้' },
+  { word:'ช้อน', readingTH:'ช้อน', readingEN:'chóon', zh:'湯匙', level:1, category:'นามของใช้' },
+  { word:'ส้อม', readingTH:'ส้อม', readingEN:'sôom', zh:'叉子', level:1, category:'นามของใช้' },
+  { word:'มีด', readingTH:'มีด', readingEN:'mîit', zh:'刀子', level:1, category:'นามของใช้' },
+  { word:'หม้อ', readingTH:'หม้อ', readingEN:'môo', zh:'鍋子', level:1, category:'นามของใช้' },
+  { word:'พัด', readingTH:'พัด', readingEN:'phát', zh:'扇子', level:1, category:'นามของใช้' },
+  { word:'ทำ', readingTH:'ทำ', readingEN:'tam', zh:'做', level:1, category:'กริยา' },
+  { word:'พูด', readingTH:'พูด', readingEN:'phûut', zh:'說', level:1, category:'กริยา' },
+  { word:'ดู', readingTH:'ดู', readingEN:'duu', zh:'看', level:1, category:'กริยา' },
+  { word:'ฟัง', readingTH:'ฟัง', readingEN:'fang', zh:'聽', level:1, category:'กริยา' },
+  { word:'อ่าน', readingTH:'อ่าน', readingEN:'àan', zh:'讀', level:1, category:'กริยา' },
+  { word:'เขียน', readingTH:'เขียน', readingEN:'khǐan', zh:'寫', level:1, category:'กริยา' },
+  { word:'รัก', readingTH:'รัก', readingEN:'rák', zh:'愛', level:1, category:'กริยา' },
+  { word:'สูง', readingTH:'สูง', readingEN:'sǔung', zh:'高', level:1, category:'คำขยาย' },
+  { word:'ใหม่', readingTH:'ใหม่', readingEN:'mài', zh:'新', level:1, category:'คำขยาย' },
+  { word:'น้ำ', readingTH:'น้ำ', readingEN:'náam', zh:'水', level:1, category:'นามอาหาร' },
+  { word:'ข้าว', readingTH:'ข้าว', readingEN:'khâao', zh:'飯', level:1, category:'นามอาหาร' },
+  { word:'หมา', readingTH:'หมา', readingEN:'mǎa', zh:'狗', level:1, category:'คำนาม' },
+  { word:'แมว', readingTH:'แมว', readingEN:'maeo', zh:'貓', level:1, category:'คำนาม' },
+  { word:'บ้าน', readingTH:'บ้าน', readingEN:'bâan', zh:'家', level:1, category:'นามของใช้' },
+  { word:'รถ', readingTH:'รถ', readingEN:'rót', zh:'車', level:1, category:'นามของใช้' },
+  { word:'พ่อ', readingTH:'พ่อ', readingEN:'phôo', zh:'爸爸', level:1, category:'นามคน' },
+  { word:'แม่', readingTH:'แม่', readingEN:'mâe', zh:'媽媽', level:1, category:'นามคน' },
+  { word:'ครู', readingTH:'ครู', readingEN:'khruu', zh:'老師', level:1, category:'นามคน' },
+  { word:'เงิน', readingTH:'เงิน', readingEN:'ngern', zh:'錢', level:1, category:'นามของใช้' },
+  { word:'ฝน', readingTH:'ฝน', readingEN:'fǒn', zh:'雨', level:1, category:'คำนาม' },
+  { word:'ลม', readingTH:'ลม', readingEN:'lom', zh:'風', level:1, category:'คำนาม' },
+  { word:'ไฟ', readingTH:'ไฟ', readingEN:'fai', zh:'火', level:1, category:'คำนาม' },
+  { word:'ปลา', readingTH:'ปลา', readingEN:'plaa', zh:'魚', level:1, category:'นามอาหาร' },
+  { word:'ไก่', readingTH:'ไก่', readingEN:'gài', zh:'雞', level:1, category:'นามอาหาร' },
+  { word:'หมู', readingTH:'หมู', readingEN:'mǔu', zh:'豬', level:1, category:'นามอาหาร' },
+  { word:'นก', readingTH:'นก', readingEN:'nók', zh:'鳥', level:1, category:'คำนาม' },
+  { word:'ตา', readingTH:'ตา', readingEN:'taa', zh:'眼睛', level:1, category:'นามร่างกาย' },
+  { word:'มือ', readingTH:'มือ', readingEN:'mʉʉ', zh:'手', level:1, category:'นามร่างกาย' },
+  { word:'หัว', readingTH:'หัว', readingEN:'hǔa', zh:'頭', level:1, category:'นามร่างกาย' },
+  { word:'ส้ม', readingTH:'ส้ม', readingEN:'sôm', zh:'橙', level:1, category:'สี' },
+  { word:'เขียว', readingTH:'เขียว', readingEN:'khǐao', zh:'綠', level:1, category:'สี' },
+  { word:'น้ำเงิน', readingTH:'น้ำ-เงิน', readingEN:'nám-ngern', zh:'深藍', level:1, category:'สี' },
+  { word:'ม่วง', readingTH:'ม่วง', readingEN:'mûang', zh:'紫', level:1, category:'สี' },
+  { word:'ชมพู', readingTH:'ชม-พู', readingEN:'chom-phuu', zh:'粉紅', level:1, category:'สี' },
+  { word:'เทา', readingTH:'เทา', readingEN:'thao', zh:'灰', level:1, category:'สี' },
+  { word:'น้ำตาล', readingTH:'น้ำ-ตาล', readingEN:'nám-taan', zh:'棕', level:1, category:'สี' },
+  { word:'คน', readingTH:'คน', readingEN:'khon', zh:'個／位', level:1, category:'ลักษณนาม' },
+  { word:'ตัว', readingTH:'ตัว', readingEN:'tua', zh:'隻／條', level:1, category:'ลักษณนาม' },
+  { word:'ใบ', readingTH:'ใบ', readingEN:'bai', zh:'張／片', level:1, category:'ลักษณนาม' },
+  { word:'อัน', readingTH:'อัน', readingEN:'an', zh:'個／件', level:1, category:'ลักษณนาม' },
+  { word:'ชิ้น', readingTH:'ชิ้น', readingEN:'chín', zh:'塊／片', level:1, category:'ลักษณนาม' },
+  { word:'แผ่น', readingTH:'แผ่น', readingEN:'phàen', zh:'片／張', level:1, category:'ลักษณนาม' },
+  { word:'เล่ม', readingTH:'เล่ม', readingEN:'lêm', zh:'本', level:1, category:'ลักษณนาม' },
+  { word:'ฉบับ', readingTH:'ฉะ-บับ', readingEN:'chà-bàp', zh:'份／冊', level:1, category:'ลักษณนาม' },
+  { word:'ขวด', readingTH:'ขวด', readingEN:'khùat', zh:'瓶', level:1, category:'ลักษณนาม' },
+  { word:'ก้อน', readingTH:'ก้อน', readingEN:'gôon', zh:'塊', level:1, category:'ลักษณนาม' },
+  { word:'คัน', readingTH:'คัน', readingEN:'khan', zh:'輛', level:1, category:'ลักษณนาม' },
+  { word:'ลำ', readingTH:'ลำ', readingEN:'lam', zh:'架／艘', level:1, category:'ลักษณนาม' },
+  { word:'หลัง', readingTH:'หลัง', readingEN:'lǎng', zh:'棟', level:1, category:'ลักษณนาม' },
+  { word:'ห้อง', readingTH:'ห้อง', readingEN:'hôong', zh:'間', level:1, category:'ลักษณนาม' },
+  { word:'ชั้น', readingTH:'ชั้น', readingEN:'chán', zh:'層', level:1, category:'ลักษณนาม' },
+  { word:'จาน', readingTH:'จาน', readingEN:'jaan', zh:'盤', level:1, category:'ลักษณนาม' },
+  { word:'ถ้วย', readingTH:'ถ้วย', readingEN:'thûay', zh:'碗／杯', level:1, category:'ลักษณนาม' },
+  { word:'ต้น', readingTH:'ต้น', readingEN:'tôn', zh:'棵', level:1, category:'ลักษณนาม' },
+  { word:'ผล', readingTH:'ผล', readingEN:'phǒn', zh:'顆／個', level:1, category:'ลักษณนาม' },
+  { word:'มื้อ', readingTH:'มื้อ', readingEN:'mʉ́ʉ', zh:'餐', level:1, category:'ลักษณนาม' },
+  { word:'นอน', readingTH:'นอน', readingEN:'norn', zh:'睡', level:1, category:'กริยา' },
+  { word:'ตื่น', readingTH:'ตื่น', readingEN:'tʉ̀ʉn', zh:'醒', level:1, category:'กริยา' },
+  { word:'อยู่', readingTH:'อยู่', readingEN:'yùu', zh:'住／在', level:1, category:'กริยา' },
+  { word:'เรียก', readingTH:'เรียก', readingEN:'rîak', zh:'叫', level:1, category:'กริยา' },
+  { word:'ร้อง', readingTH:'ร้อง', readingEN:'róong', zh:'唱／哭', level:1, category:'กริยา' },
+  { word:'คุย', readingTH:'คุย', readingEN:'khui', zh:'聊天', level:1, category:'กริยา' },
+  { word:'โกรธ', readingTH:'โกรธ', readingEN:'gròot', zh:'生氣', level:1, category:'กริยา' },
+  { word:'หัวเราะ', readingTH:'หัว-เราะ', readingEN:'hǔa-ró', zh:'笑', level:1, category:'กริยา' },
+  { word:'เย็น', readingTH:'เย็น', readingEN:'yen', zh:'冷／冰', level:1, category:'คำขยาย' },
+  { word:'อุ่น', readingTH:'อุ่น', readingEN:'ùn', zh:'暖／溫', level:1, category:'คำขยาย' },
+  { word:'แข็ง', readingTH:'แข็ง', readingEN:'khǎeng', zh:'硬', level:1, category:'คำขยาย' },
+  { word:'นิ่ม', readingTH:'นิ่ม', readingEN:'nîm', zh:'軟', level:1, category:'คำขยาย' },
+  { word:'สว่าง', readingTH:'สะ-หว่าง', readingEN:'sà-wàang', zh:'亮', level:1, category:'คำขยาย' },
+  { word:'มืด', readingTH:'มืด', readingEN:'mʉ̂ʉt', zh:'暗', level:1, category:'คำขยาย' },
+  { word:'ดัง', readingTH:'ดัง', readingEN:'dang', zh:'響／有名', level:1, category:'คำขยาย' },
+  { word:'เงียบ', readingTH:'เงียบ', readingEN:'ngîap', zh:'靜', level:1, category:'คำขยาย' },
+  { word:'เต็ม', readingTH:'เต็ม', readingEN:'tem', zh:'滿', level:1, category:'คำขยาย' },
+  { word:'ว่าง', readingTH:'ว่าง', readingEN:'wâang', zh:'空／有空', level:1, category:'คำขยาย' },
+  { word:'สะอาด', readingTH:'สะ-อาด', readingEN:'sà-àat', zh:'淨／乾淨', level:1, category:'คำขยาย' },
+  { word:'สกปรก', readingTH:'สก-กะ-ปรก', readingEN:'sòk-gà-pròk', zh:'髒', level:1, category:'คำขยาย' },
+  { word:'ถูก', readingTH:'ถูก', readingEN:'thùuk', zh:'便宜／對', level:1, category:'คำขยาย' },
 
-  // ── 拼音規則練習區：新增詞庫 ──
-  { word:'ภาษาไทย', readingTH:'พา-สา-ไทย', readingEN:'phaa-sǎa-thai', zh:'泰文' },
-  { word:'ใหม่', readingTH:'ใหม่', readingEN:'mài', zh:'新' },
-  { word:'ให้', readingTH:'ให้', readingEN:'hâi', zh:'給' },
-  { word:'ใคร', readingTH:'ใคร', readingEN:'khrai', zh:'誰' },
-  { word:'ใคร่', readingTH:'ใคร่', readingEN:'khrâi', zh:'慾望' },
-  { word:'ใส', readingTH:'ใส', readingEN:'sǎi', zh:'清' },
-  { word:'ใด', readingTH:'ใด', readingEN:'dai', zh:'什麼' },
-  { word:'ใฝ่', readingTH:'ใฝ่', readingEN:'fài', zh:'偏向' },
-  { word:'หลงใหล', readingTH:'หลง-ใหล', readingEN:'lǒng-lǎi', zh:'著迷' },
-  { word:'ใช่', readingTH:'ใช่', readingEN:'châi', zh:'對' },
-  { word:'ใช้', readingTH:'ใช้', readingEN:'chái', zh:'使用' },
-  { word:'ใจ', readingTH:'ใจ', readingEN:'jai', zh:'心' },
-  { word:'ใส่', readingTH:'ใส่', readingEN:'sài', zh:'放進' },
-  { word:'ใน', readingTH:'ใน', readingEN:'nai', zh:'裡' },
-  { word:'ใต้', readingTH:'ใต้', readingEN:'dtâi', zh:'底下' },
-  { word:'ใกล้', readingTH:'ใกล้', readingEN:'glâi', zh:'近' },
-  { word:'สะใภ้', readingTH:'สะ-ใภ้', readingEN:'sà-phái', zh:'媳婦' },
-  { word:'ใย', readingTH:'ใย', readingEN:'yai', zh:'纖維' },
-  { word:'บันทึก', readingTH:'บัน-ทึก', readingEN:'ban-théuk', zh:'筆記' },
-  { word:'ใบ้', readingTH:'ใบ้', readingEN:'bâi', zh:'啞巴' },
-  { word:'สบาย', readingTH:'สะ-บาย', readingEN:'sà-baai', zh:'舒服' },
-  { word:'กรรไกร', readingTH:'กัน-ไกร', readingEN:'gan-grai', zh:'剪刀' },
-  { word:'ธรรมดา', readingTH:'ทัม-มะ-ดา', readingEN:'tham-má-daa', zh:'普通' },
-  { word:'มือ', readingTH:'มือ', readingEN:'meu', zh:'手' },
-  { word:'วัน', readingTH:'วัน', readingEN:'wan', zh:'日' },
-  { word:'ดื่ม', readingTH:'ดื่ม', readingEN:'dèum', zh:'喝' },
-  { word:'เตะ', readingTH:'เตะ', readingEN:'tè', zh:'踢' },
-  { word:'เจ็บ', readingTH:'เจ็บ', readingEN:'jèp', zh:'痛' },
-  { word:'แตะ', readingTH:'แตะ', readingEN:'tàe', zh:'碰' },
-  { word:'หก', readingTH:'หก', readingEN:'hòk', zh:'六' },
-  { word:'เคาะ', readingTH:'เคาะ', readingEN:'kháo', zh:'敲' },
-  { word:'ล็อก', readingTH:'ล็อก', readingEN:'lók', zh:'鎖' },
-  { word:'ก็', readingTH:'เก้าะ', readingEN:'gôr', zh:'就、也' },
-  { word:'พอ', readingTH:'พอ', readingEN:'phor', zh:'夠' },
-  { word:'บอก', readingTH:'บอก', readingEN:'bòk', zh:'告訴' },
-  { word:'อักษร', readingTH:'อัก-สอน', readingEN:'àk-sǒn', zh:'文字' },
-  { word:'หัว', readingTH:'หัว', readingEN:'hǔa', zh:'頭' },
-  { word:'ขวด', readingTH:'ขวด', readingEN:'khùat', zh:'瓶子' },
-  { word:'เธอ', readingTH:'เทอ', readingEN:'ter', zh:'你、妳' },
-  { word:'ท่าน', readingTH:'ท่าน', readingEN:'thân', zh:'您' },
-  { word:'ส่ง', readingTH:'ส่ง', readingEN:'sòng', zh:'送' },
-  { word:'คอย', readingTH:'คอย', readingEN:'khoi', zh:'等' },
-  { word:'ปาฏิหาริย์', readingTH:'ปา-ติ-หาน', readingEN:'paa-tì-hǎan', zh:'奇蹟' },
-  { word:'สมัคร', readingTH:'สะ-หมัก', readingEN:'sà-màk', zh:'報名' },
-  { word:'เนย', readingTH:'เนย', readingEN:'noei', zh:'奶油' },
-  { word:'เดิน', readingTH:'เดิน', readingEN:'doern', zh:'走路' },
-  { word:'วันนี้', readingTH:'วัน-นี้', readingEN:'wan-níi', zh:'今天' },
-  { word:'วานนี้', readingTH:'วาน-นี้', readingEN:'waan-níi', zh:'昨天' },
-  { word:'กบ', readingTH:'กบ', readingEN:'gòp', zh:'青蛙' },
-  { word:'กด', readingTH:'กด', readingEN:'gòt', zh:'按' },
-  { word:'พระพรหม', readingTH:'พระ-พรม', readingEN:'phrá-phrom', zh:'四面佛' },
-  { word:'เมรุ', readingTH:'เมน', readingEN:'meen', zh:'火葬場' },
-  { word:'เพชร', readingTH:'เพ็ด', readingEN:'phét', zh:'鑽石' },
-  { word:'เหตุผล', readingTH:'เหด-ผน', readingEN:'hèt-phǒn', zh:'理由' },
-  { word:'เครื่องจักร', readingTH:'เครื่อง-จัก', readingEN:'khrêuang-jàk', zh:'機器' },
-  { word:'เกษตร', readingTH:'กะ-เสด', readingEN:'kà-sèt', zh:'農業' },
-  { word:'วันสารทจีน', readingTH:'วัน-สาด-จีน', readingEN:'wan-sàat-jiin', zh:'中元節' },
-  { word:'วุฒิสภา', readingTH:'วุด-ทิ-สะ-พา', readingEN:'wút-thí-sà-phaa', zh:'參議院' },
-  { word:'ธรรมชาติ', readingTH:'ทัม-มะ-ชาด', readingEN:'tham-má-châat', zh:'大自然' },
-  { word:'สามารถ', readingTH:'สา-มาด', readingEN:'sǎa-mâat', zh:'能力' },
-  { word:'จักรพรรดิ', readingTH:'จัก-กระ-พัด', readingEN:'jàk-krà-phát', zh:'天皇' },
-  { word:'กษัตริย์', readingTH:'กะ-สัด', readingEN:'kà-sàt', zh:'國王' },
-  { word:'มหาสมุทร', readingTH:'มะ-หา-สะ-หมุด', readingEN:'má-hǎa-sà-mùt', zh:'海洋' },
-  { word:'พุทธ', readingTH:'พุด', readingEN:'phút', zh:'佛教' },
-  { word:'ขนม', readingTH:'ขะ-หนม', readingEN:'khà-nǒm', zh:'零食' },
-  { word:'ตลาด', readingTH:'ตะ-หลาด', readingEN:'tà-làat', zh:'市場' },
-  { word:'ประโยชน์', readingTH:'ประ-โหยด', readingEN:'prà-yòot', zh:'用處' },
-  { word:'ตำรวจ', readingTH:'ตำ-หรวด', readingEN:'tam-rùat', zh:'警察' },
-  { word:'นั่งขัดสมาธิ', readingTH:'นั่ง-ขัด-สะ-หมาด', readingEN:'nâng-khàt-sà-màat', zh:'盤坐' },
-  { word:'กอปร', readingTH:'กอบ', readingEN:'gòp', zh:'組合' },
-  { word:'กราบ', readingTH:'กราบ', readingEN:'gràap', zh:'跪拜' },
-  { word:'เพราะ', readingTH:'เพราะ', readingEN:'phró', zh:'因為' },
-  { word:'คล่อง', readingTH:'คล่อง', readingEN:'khlông', zh:'流利' },
-  { word:'จมูก', readingTH:'จะ-หมูก', readingEN:'jà-mùuk', zh:'鼻子' },
-  { word:'แสดง', readingTH:'สะ-แดง', readingEN:'sà-daeng', zh:'表示' },
-  { word:'ตวาด', readingTH:'ตะ-หวาด', readingEN:'tà-wàat', zh:'罵' },
-  { word:'ประวัติศาสตร์', readingTH:'ประ-หวัด-สาด', readingEN:'prà-wàt-sàat', zh:'歷史' },
-  { word:'สมาธิ', readingTH:'สะ-มา-ที', readingEN:'sà-maa-thii', zh:'集中力' },
-  { word:'วาสนา', readingTH:'วาด-สะ-หนา', readingEN:'wâat-sà-nǎa', zh:'緣分' },
-  { word:'สมาชิก', readingTH:'สะ-มา-ชิก', readingEN:'sà-maa-chík', zh:'成員' },
-  { word:'ปริศนา', readingTH:'ปริด-สะ-หนา', readingEN:'prìt-sà-nǎa', zh:'謎' },
-  { word:'บัณฑิต', readingTH:'บัน-ดิด', readingEN:'ban-dìt', zh:'畢業生' },
-  { word:'จักรวาล', readingTH:'จัก-กระ-วาน', readingEN:'jàk-krà-waan', zh:'宇宙' },
-  { word:'โฆษณา', readingTH:'โคด-สะ-นา', readingEN:'khôot-sà-naa', zh:'廣告' },
-  { word:'ศาสนา', readingTH:'สาด-สะ-หนา', readingEN:'sàat-sà-nǎa', zh:'宗教' },
-  { word:'ซื่อสัตย์', readingTH:'ซื่อ-สัด', readingEN:'sêu-sàt', zh:'忠心' },
-  { word:'ผลลัพธ์', readingTH:'ผน-ลับ', readingEN:'phǒn-láp', zh:'結果' },
-  { word:'พยัญชนะ', readingTH:'พะ-ยัน-ชะ-นะ', readingEN:'phá-yan-chá-ná', zh:'子音' },
-  { word:'อนุญาต', readingTH:'อะ-นุ-ยาด', readingEN:'à-nú-yâat', zh:'允許' },
-  { word:'กวาง', readingTH:'กวาง', readingEN:'gwaang', zh:'鹿' },
-  { word:'จริง', readingTH:'จิง', readingEN:'jing', zh:'事實' },
-  { word:'ควาย', readingTH:'ควาย', readingEN:'khwaai', zh:'水牛' },
-  { word:'ทรง', readingTH:'ซง', readingEN:'song', zh:'樣子' },
-  { word:'เศร้า', readingTH:'เส้า', readingEN:'sâo', zh:'傷心' },
-  { word:'ทราบ', readingTH:'ซาบ', readingEN:'sâap', zh:'知道' },
-  { word:'สร้อย', readingTH:'ส้อย', readingEN:'sôi', zh:'項鍊' },
-  { word:'สัตว์', readingTH:'สัด', readingEN:'sàt', zh:'動物' },
-  { word:'วันอาทิตย์', readingTH:'วัน-อา-ทิด', readingEN:'wan-aa-thít', zh:'禮拜日' },
-  { word:'เผ่าพันธุ์', readingTH:'เผ่า-พัน', readingEN:'phào-phan', zh:'種族' },
-  { word:'เวทมนตร์', readingTH:'เวด-มน', readingEN:'wêet-mon', zh:'魔法' },
-  { word:'สัญลักษณ์', readingTH:'สัน-ยะ-ลัก', readingEN:'sǎn-yá-lák', zh:'標示' },
-  { word:'วันจันทร์', readingTH:'วัน-จัน', readingEN:'wan-jan', zh:'禮拜一' },
-  { word:'นิรันดร์', readingTH:'นิ-รัน', readingEN:'ní-ran', zh:'永遠' },
-  { word:'ศักดิ์สิทธิ์', readingTH:'สัก-สิด', readingEN:'sàk-sìt', zh:'靈' },
-  { word:'กาญจน์', readingTH:'กาน', readingEN:'gaan', zh:'金' },
-  { word:'เหตุการณ์', readingTH:'เหด-กาน', readingEN:'hèt-gaan', zh:'情況' },
-  { word:'ขยาย', readingTH:'ขะ-หยาย', readingEN:'khà-yǎai', zh:'擴大' },
-  { word:'ภาพยนตร์', readingTH:'พาบ-พะ-ยน', readingEN:'phâap-phá-yon', zh:'電影' },
-  { word:'ฝรั่ง', readingTH:'ฝะ-หรั่ง', readingEN:'fà-ràng', zh:'芭樂' },
-  { word:'สงบ', readingTH:'สะ-หงบ', readingEN:'sà-ngòp', zh:'安靜' },
-  { word:'ฉลาด', readingTH:'ฉะ-หลาด', readingEN:'chà-làat', zh:'聰明' },
-  { word:'สมอง', readingTH:'สะ-หมอง', readingEN:'sà-mǒng', zh:'頭腦' },
-  { word:'องุ่น', readingTH:'อะ-หงุ่น', readingEN:'à-ngùn', zh:'葡萄' }
 ];
 
 // ════════════════════════════════════════════════════════════
@@ -1166,6 +1871,326 @@ var SYLLABLE_LIST = (function() {
 // ════════════════════════════════════════════════════════════
 // THAI WORD PARSER  (smart error detection)
 // ════════════════════════════════════════════════════════════
+// องค์ประกอบของแต่ละคำ (พยัญชนะต้น / สระ / ตัวสะกด) แบ่งตามพยางค์ — แก้ไข/เพิ่มเติมได้
+// แต่ละพยางค์: { c: พยัญชนะต้น, vn: ชื่อสระ, vf: รูปสระ, f: ตัวสะกด ('' = ไม่มี) }
+var WORD_PARTS = {
+  'หนึ่ง':[{c:'หน',vn:'สระอึ',vf:'ึ',f:'ง'}],
+  'สอง':[{c:'ส',vn:'สระออ',vf:'◌อ',f:'ง'}],
+  'สาม':[{c:'ส',vn:'สระอา',vf:'◌า',f:'ม'}],
+  'สี่':[{c:'ส',vn:'สระอี',vf:'ี',f:''}],
+  'ห้า':[{c:'ห',vn:'สระอา',vf:'◌า',f:''}],
+  'หก':[{c:'ห',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ก'}],
+  'เจ็ด':[{c:'จ',vn:'สระเอะ',vf:'เ็',f:'ด'}],
+  'แปด':[{c:'ป',vn:'สระแอ',vf:'แ◌',f:'ด'}],
+  'เก้า':[{c:'ก',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'สิบ':[{c:'ส',vn:'สระอิ',vf:'ิ',f:'บ'}],
+  'ดำ':[{c:'ด',vn:'สระอำ',vf:'◌ำ',f:''}],
+  'ขาว':[{c:'ข',vn:'สระอา',vf:'◌า',f:'ว'}],
+  'แดง':[{c:'ด',vn:'สระแอ',vf:'แ◌',f:'ง'}],
+  'เหลือง':[{c:'หล',vn:'สระเอือ',vf:'เือ',f:'ง'}],
+  'ฟ้า':[{c:'ฟ',vn:'สระอา',vf:'◌า',f:''}],
+  'กิน':[{c:'ก',vn:'สระอิ',vf:'ิ',f:'น'}],
+  'ดื่ม':[{c:'ด',vn:'สระอือ',vf:'ื',f:'ม'}],
+  'ไป':[{c:'ป',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''}],
+  'มา':[{c:'ม',vn:'สระอา',vf:'◌า',f:''}],
+  'ซื้อ':[{c:'ซ',vn:'สระอือ',vf:'ือ',f:''}],
+  'ดี':[{c:'ด',vn:'สระอี',vf:'ี',f:''}],
+  'ใหญ่':[{c:'หญ',vn:'สระไอ (ไม้ม้วน)',vf:'ใ◌',f:''}],
+  'เล็ก':[{c:'ล',vn:'สระเอะ',vf:'เ็',f:'ก'}],
+  'ร้อน':[{c:'ร',vn:'สระออ',vf:'◌อ',f:'น'}],
+  'แพง':[{c:'พ',vn:'สระแอ',vf:'แ◌',f:'ง'}],
+  'อาหาร':[{c:'อ',vn:'สระอา',vf:'◌า',f:''},{c:'ห',vn:'สระอา',vf:'◌า',f:'ร'}],
+  'ร้านอาหาร':[{c:'ร',vn:'สระอา',vf:'◌า',f:'น'},{c:'อ',vn:'สระอา',vf:'◌า',f:''},{c:'ห',vn:'สระอา',vf:'◌า',f:'ร'}],
+  'เมนู':[{c:'ม',vn:'สระเอ',vf:'เ◌',f:''},{c:'น',vn:'สระอู',vf:'ู',f:''}],
+  'ของหวาน':[{c:'ข',vn:'สระออ',vf:'◌อ',f:'ง'},{c:'หว',vn:'สระอา',vf:'◌า',f:'น'}],
+  'น้ำแข็ง':[{c:'น',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ข',vn:'สระแอะ',vf:'แ็',f:'ง'}],
+  'ใบเสร็จ':[{c:'บ',vn:'สระไอ (ไม้ม้วน)',vf:'ใ◌',f:''},{c:'ส',vn:'สระเอะ',vf:'เ็',f:'จ'}],
+  'สนามบิน':[{c:'ส',vn:'สระอะ',vf:'◌ะ',f:''},{c:'สน',vn:'สระอา',vf:'◌า',f:'ม'},{c:'บ',vn:'สระอิ',vf:'ิ',f:'น'}],
+  'แท็กซี่':[{c:'ท',vn:'สระแอะ',vf:'แ็',f:'ก'},{c:'ซ',vn:'สระอี',vf:'ี',f:''}],
+  'รถไฟฟ้า':[{c:'ร',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ถ'},{c:'ฟ',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''},{c:'ฟ',vn:'สระอา',vf:'◌า',f:''}],
+  'แผนที่':[{c:'ผ',vn:'สระแอ',vf:'แ◌',f:'น'},{c:'ท',vn:'สระอี',vf:'ี',f:''}],
+  'ทางออก':[{c:'ท',vn:'สระอา',vf:'◌า',f:'ง'},{c:'อ',vn:'สระออ',vf:'◌อ',f:'ก'}],
+  'ห้องน้ำ':[{c:'ห',vn:'สระออ',vf:'◌อ',f:'ง'},{c:'น',vn:'สระอำ',vf:'◌ำ',f:''}],
+  'โรงแรม':[{c:'ร',vn:'สระโอ',vf:'โ◌',f:'ง'},{c:'ร',vn:'สระแอ',vf:'แ◌',f:'ม'}],
+  'ห้องพัก':[{c:'ห',vn:'สระออ',vf:'◌อ',f:'ง'},{c:'พ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ก'}],
+  'เช็คอิน':[{c:'ช',vn:'สระเอะ',vf:'เ็',f:'ค'},{c:'อ',vn:'สระอิ',vf:'ิ',f:'น'}],
+  'เช็คเอาท์':[{c:'ช',vn:'สระเอะ',vf:'เ็',f:'ค'},{c:'อ',vn:'สระเอา',vf:'เ◌า',f:'ท์ (การันต์)'}],
+  'สระว่ายน้ำ':[{c:'ส',vn:'สระอะ',vf:'◌ะ',f:''},{c:'สร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ว',vn:'สระอา',vf:'◌า',f:'ย'},{c:'น',vn:'สระอำ',vf:'◌ำ',f:''}],
+  'บริษัท':[{c:'บ',vn:'สระออ (ลดรูป)',vf:'◌อ',f:''},{c:'ร',vn:'สระอิ',vf:'ิ',f:''},{c:'ษ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ท'}],
+  'ประชุม':[{c:'ปร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ช',vn:'สระอุ',vf:'ุ',f:'ม'}],
+  'ลูกค้า':[{c:'ล',vn:'สระอู',vf:'ู',f:'ก'},{c:'ค',vn:'สระอา',vf:'◌า',f:''}],
+  'นัดหมาย':[{c:'น',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ด'},{c:'หม',vn:'สระอา',vf:'◌า',f:'ย'}],
+  'รายงาน':[{c:'ร',vn:'สระอา',vf:'◌า',f:'ย'},{c:'ง',vn:'สระอา',vf:'◌า',f:'น'}],
+  'ราคา':[{c:'ร',vn:'สระอา',vf:'◌า',f:''},{c:'ค',vn:'สระอา',vf:'◌า',f:''}],
+  'ลดราคา':[{c:'ล',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ด'},{c:'ร',vn:'สระอา',vf:'◌า',f:''},{c:'ค',vn:'สระอา',vf:'◌า',f:''}],
+  'ต่อรอง':[{c:'ต',vn:'สระออ',vf:'◌อ',f:''},{c:'ร',vn:'สระออ',vf:'◌อ',f:'ง'}],
+  'ชำระเงิน':[{c:'ช',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ง',vn:'สระเออ',vf:'เิ',f:'น'}],
+  'ห้างสรรพสินค้า':[{c:'ห',vn:'สระอา',vf:'◌า',f:'ง'},{c:'ส',vn:'สระอะ (รร แทนเสียงอะ)',vf:'ั',f:'บ'},{c:'พ',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ส',vn:'สระอิ',vf:'ิ',f:'น'},{c:'ค',vn:'สระอา',vf:'◌า',f:''}],
+  'สวัสดี':[{c:'ส',vn:'สระอะ',vf:'◌ะ',f:''},{c:'สว',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ส'},{c:'ด',vn:'สระอี',vf:'ี',f:''}],
+  'ขอบคุณ':[{c:'ข',vn:'สระออ',vf:'◌อ',f:'บ'},{c:'ค',vn:'สระอุ',vf:'ุ',f:'ณ'}],
+  'ขอโทษ':[{c:'ข',vn:'สระออ',vf:'◌อ',f:''},{c:'ท',vn:'สระโอ',vf:'โ◌',f:'ษ'}],
+  'ไม่เป็นไร':[{c:'ม',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''},{c:'ป',vn:'สระเอะ',vf:'เ็',f:'น'},{c:'ร',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''}],
+  'ไม่เข้าใจ':[{c:'ม',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''},{c:'ข',vn:'สระเอา',vf:'เ◌า',f:''},{c:'จ',vn:'สระไอ (ไม้ม้วน)',vf:'ใ◌',f:''}],
+  'ช่วยด้วย':[{c:'ช',vn:'สระอัว',vf:'◌ว',f:'ย'},{c:'ด',vn:'สระอัว',vf:'◌ว',f:'ย'}],
+  'ข้าวผัด':[{c:'ข',vn:'สระอา',vf:'◌า',f:'ว'},{c:'ผ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ด'}],
+  'ต้มยำ':[{c:'ต',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'},{c:'ย',vn:'สระอำ',vf:'◌ำ',f:''}],
+  'ผัดไทย':[{c:'ผ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ด'},{c:'ท',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:'ย'}],
+  'ส้มตำ':[{c:'ส',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'},{c:'ต',vn:'สระอำ',vf:'◌ำ',f:''}],
+  'ข้าวต้ม':[{c:'ข',vn:'สระอา',vf:'◌า',f:'ว'},{c:'ต',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'}],
+  'ไก่ทอด':[{c:'ก',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''},{c:'ท',vn:'สระออ',vf:'◌อ',f:'ด'}],
+  'หมูปิ้ง':[{c:'หม',vn:'สระอู',vf:'ู',f:''},{c:'ป',vn:'สระอิ',vf:'ิ',f:'ง'}],
+  'กาแฟ':[{c:'ก',vn:'สระอา',vf:'◌า',f:''},{c:'ฟ',vn:'สระแอ',vf:'แ◌',f:''}],
+  'น้ำชา':[{c:'น',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ช',vn:'สระอา',vf:'◌า',f:''}],
+  'น้ำส้ม':[{c:'น',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ส',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'}],
+  'ขนมปัง':[{c:'ข',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'หน',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'},{c:'ป',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ง'}],
+  'ช้อนส้อม':[{c:'ช',vn:'สระออ',vf:'◌อ',f:'น'},{c:'ส',vn:'สระออ',vf:'◌อ',f:'ม'}],
+  'ตะเกียบ':[{c:'ต',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ก',vn:'สระเอีย',vf:'เีย',f:'บ'}],
+  'จานข้าว':[{c:'จ',vn:'สระอา',vf:'◌า',f:'น'},{c:'ข',vn:'สระอา',vf:'◌า',f:'ว'}],
+  'รถเมล์':[{c:'ร',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ถ'},{c:'ม',vn:'สระเอ',vf:'เ◌',f:''}],
+  'รถทัวร์':[{c:'ร',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ถ'},{c:'ท',vn:'สระอัว',vf:'ัว',f:''}],
+  'เครื่องบิน':[{c:'คร',vn:'สระเอือ',vf:'เือ',f:'ง'},{c:'บ',vn:'สระอิ',vf:'ิ',f:'น'}],
+  'สถานี':[{c:'ส',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'ถ',vn:'สระอา',vf:'◌า',f:'น'},{c:'น',vn:'สระอี',vf:'ี',f:''}],
+  'สะพาน':[{c:'ส',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'พ',vn:'สระอา',vf:'◌า',f:'น'}],
+  'ถนน':[{c:'ถ',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'หน',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'น'}],
+  'ทางด่วน':[{c:'ท',vn:'สระอา',vf:'◌า',f:'ง'},{c:'ด',vn:'สระอัว',vf:'◌ว',f:'น'}],
+  'น้ำมัน':[{c:'น',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ม',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'}],
+  'กระเป๋า':[{c:'กร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ป',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'ตำรวจ':[{c:'ต',vn:'สระอำ',vf:'◌ำ',f:''},{c:'หร',vn:'สระอัว',vf:'◌ว',f:'จ'}],
+  'ที่จอดรถ':[{c:'ท',vn:'สระอี',vf:'ี',f:''},{c:'จ',vn:'สระออ',vf:'◌อ',f:'ด'},{c:'ร',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ถ'}],
+  'ทางม้าลาย':[{c:'ท',vn:'สระอา',vf:'◌า',f:'ง'},{c:'ม',vn:'สระอา',vf:'◌า',f:''},{c:'ล',vn:'สระอา',vf:'◌า',f:'ย'}],
+  'ระยะทาง':[{c:'ร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ย',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ท',vn:'สระอา',vf:'◌า',f:'ง'}],
+  'ป้ายรถ':[{c:'ป',vn:'สระอา',vf:'◌า',f:'ย'},{c:'ร',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ถ'}],
+  'พนักงาน':[{c:'พ',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'น',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ก'},{c:'ง',vn:'สระอา',vf:'◌า',f:'น'}],
+  'เตียงนอน':[{c:'ต',vn:'สระเอีย',vf:'เีย',f:'ง'},{c:'น',vn:'สระออ',vf:'◌อ',f:'น'}],
+  'ผ้าเช็ดตัว':[{c:'ผ',vn:'สระอา',vf:'◌า',f:''},{c:'ช',vn:'สระเอะ',vf:'เ็',f:'ด'},{c:'ต',vn:'สระอัว',vf:'ัว',f:''}],
+  'กุญแจ':[{c:'ก',vn:'สระอุ',vf:'ุ',f:'ญ'},{c:'จ',vn:'สระแอ',vf:'แ◌',f:''}],
+  'ระเบียง':[{c:'ร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'บ',vn:'สระเอีย',vf:'เีย',f:'ง'}],
+  'ห้องอาหาร':[{c:'ห',vn:'สระออ',vf:'◌อ',f:'ง'},{c:'อ',vn:'สระอา',vf:'◌า',f:''},{c:'ห',vn:'สระอา',vf:'◌า',f:'ร'}],
+  'ค่าห้อง':[{c:'ค',vn:'สระอา',vf:'◌า',f:''},{c:'ห',vn:'สระออ',vf:'◌อ',f:'ง'}],
+  'อาหารเช้า':[{c:'อ',vn:'สระอา',vf:'◌า',f:''},{c:'ห',vn:'สระอา',vf:'◌า',f:'ร'},{c:'ช',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'สบู่':[{c:'ส',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'บ',vn:'สระอู',vf:'ู',f:''}],
+  'ผ้าห่ม':[{c:'ผ',vn:'สระอา',vf:'◌า',f:''},{c:'ห',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'}],
+  'ทีวี':[{c:'ท',vn:'สระอี',vf:'ี',f:''},{c:'ว',vn:'สระอี',vf:'ี',f:''}],
+  'น้ำอุ่น':[{c:'น',vn:'สระอำ',vf:'◌ำ',f:''},{c:'อ',vn:'สระอุ',vf:'ุ',f:'น'}],
+  'ยาสีฟัน':[{c:'ย',vn:'สระอา',vf:'◌า',f:''},{c:'ส',vn:'สระอี',vf:'ี',f:''},{c:'ฟ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'}],
+  'หมอน':[{c:'หม',vn:'สระออ',vf:'◌อ',f:'น'}],
+  'ต้อนรับ':[{c:'ต',vn:'สระออ',vf:'◌อ',f:'น'},{c:'ร',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'บ'}],
+  'เงินเดือน':[{c:'ง',vn:'สระเออ',vf:'เิ',f:'น'},{c:'ด',vn:'สระเอือ',vf:'เือ',f:'น'}],
+  'หัวหน้า':[{c:'ห',vn:'สระอัว',vf:'ัว',f:''},{c:'หน',vn:'สระอา',vf:'◌า',f:''}],
+  'โทรศัพท์':[{c:'ท',vn:'สระโอ',vf:'โ◌',f:''},{c:'ร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ส',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'บ'}],
+  'เอกสาร':[{c:'อ',vn:'สระเอ',vf:'เ◌',f:'ก'},{c:'ก',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'ส',vn:'สระอา',vf:'◌า',f:'ร'}],
+  'สัมภาษณ์':[{c:'ส',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ม'},{c:'พ',vn:'สระอา',vf:'◌า',f:'ษ'}],
+  'ตำแหน่ง':[{c:'ต',vn:'สระอำ',vf:'◌ำ',f:''},{c:'หน',vn:'สระแอ',vf:'แ◌',f:'ง'}],
+  'ออฟฟิศ':[{c:'อ',vn:'สระออ',vf:'◌อ',f:'ฟ'},{c:'ฟ',vn:'สระอิ',vf:'ิ',f:'ศ'}],
+  'งานเลี้ยง':[{c:'ง',vn:'สระอา',vf:'◌า',f:'น'},{c:'ล',vn:'สระเอีย',vf:'เีย',f:'ง'}],
+  'อีเมล':[{c:'อ',vn:'สระอี',vf:'ี',f:''},{c:'ม',vn:'สระเอ',vf:'เ◌',f:'ล'}],
+  'โต๊ะทำงาน':[{c:'ต',vn:'สระโอะ',vf:'โ◌ะ',f:''},{c:'ท',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ง',vn:'สระอา',vf:'◌า',f:'น'}],
+  'วันหยุด':[{c:'ว',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'},{c:'หย',vn:'สระอุ',vf:'ุ',f:'ด'}],
+  'นามบัตร':[{c:'น',vn:'สระอา',vf:'◌า',f:'ม'},{c:'บ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ตร'}],
+  'เลขา':[{c:'ล',vn:'สระเอ',vf:'เ◌',f:''},{c:'ข',vn:'สระอา',vf:'◌า',f:''}],
+  'ประชุมงาน':[{c:'ปร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ช',vn:'สระอุ',vf:'ุ',f:'ม'},{c:'ง',vn:'สระอา',vf:'◌า',f:'น'}],
+  'เวลางาน':[{c:'ว',vn:'สระเอ',vf:'เ◌',f:''},{c:'ล',vn:'สระอา',vf:'◌า',f:''},{c:'ง',vn:'สระอา',vf:'◌า',f:'น'}],
+  'เสื้อผ้า':[{c:'ส',vn:'สระเอือ',vf:'เือ',f:''},{c:'ผ',vn:'สระอา',vf:'◌า',f:''}],
+  'รองเท้า':[{c:'ร',vn:'สระออ',vf:'◌อ',f:'ง'},{c:'ท',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'กระเป๋าเงิน':[{c:'กร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ป',vn:'สระเอา',vf:'เ◌า',f:''},{c:'ง',vn:'สระเออ',vf:'เิ',f:'น'}],
+  'ของขวัญ':[{c:'ข',vn:'สระออ',vf:'◌อ',f:'ง'},{c:'ขว',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'}],
+  'ตลาด':[{c:'ต',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'หล',vn:'สระอา',vf:'◌า',f:'ด'}],
+  'ร้านค้า':[{c:'ร',vn:'สระอา',vf:'◌า',f:'น'},{c:'ค',vn:'สระอา',vf:'◌า',f:''}],
+  'สินค้า':[{c:'ส',vn:'สระอิ',vf:'ิ',f:'น'},{c:'ค',vn:'สระอา',vf:'◌า',f:''}],
+  'คุณภาพ':[{c:'ค',vn:'สระอุ',vf:'ุ',f:'ณ'},{c:'น',vn:'สระอะ',vf:'◌ะ',f:''},{c:'พ',vn:'สระอา',vf:'◌า',f:'พ'}],
+  'ส่วนลด':[{c:'ส',vn:'สระอัว',vf:'◌ว',f:'น'},{c:'ล',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ด'}],
+  'เงินสด':[{c:'ง',vn:'สระเออ',vf:'เิ',f:'น'},{c:'ส',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ด'}],
+  'เงินทอน':[{c:'ง',vn:'สระเออ',vf:'เิ',f:'น'},{c:'ท',vn:'สระออ',vf:'◌อ',f:'น'}],
+  'ขนาด':[{c:'ข',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'หน',vn:'สระอา',vf:'◌า',f:'ด'}],
+  'รองเท้าแตะ':[{c:'ร',vn:'สระออ',vf:'◌อ',f:'ง'},{c:'ท',vn:'สระเอา',vf:'เ◌า',f:''},{c:'ต',vn:'สระแอะ',vf:'แ◌ะ',f:''}],
+  'เครื่องสำอาง':[{c:'คร',vn:'สระเอือ',vf:'เือ',f:'ง'},{c:'ส',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ม'},{c:'อ',vn:'สระอา',vf:'◌า',f:'ง'}],
+  'แว่นตา':[{c:'ว',vn:'สระแอ',vf:'แ◌',f:'น'},{c:'ต',vn:'สระอา',vf:'◌า',f:''}],
+  'เวลา':[{c:'ว',vn:'สระเอ',vf:'เ◌',f:''},{c:'ล',vn:'สระอา',vf:'◌า',f:''}],
+  'นาฬิกา':[{c:'น',vn:'สระอา',vf:'◌า',f:''},{c:'ล',vn:'สระอิ',vf:'ิ',f:''},{c:'ก',vn:'สระอา',vf:'◌า',f:''}],
+  'อากาศ':[{c:'อ',vn:'สระอา',vf:'◌า',f:''},{c:'ก',vn:'สระอา',vf:'◌า',f:'ศ'}],
+  'ครอบครัว':[{c:'คร',vn:'สระออ',vf:'◌อ',f:'บ'},{c:'คร',vn:'สระอัว',vf:'ัว',f:''}],
+  'ภาษา':[{c:'พ',vn:'สระอา',vf:'◌า',f:''},{c:'ส',vn:'สระอา',vf:'◌า',f:''}],
+  'ประเทศ':[{c:'ปร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ท',vn:'สระเอ',vf:'เ◌',f:'ศ'}],
+  'เมืองไทย':[{c:'ม',vn:'สระเอือ',vf:'เือ',f:'ง'},{c:'ท',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:'ย'}],
+  'วันนี้':[{c:'ว',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'},{c:'น',vn:'สระอี',vf:'ี',f:''}],
+  'พรุ่งนี้':[{c:'พร',vn:'สระอุ',vf:'ุ',f:'ง'},{c:'น',vn:'สระอี',vf:'ี',f:''}],
+  'เมื่อวาน':[{c:'ม',vn:'สระเอือ',vf:'เือ',f:''},{c:'ว',vn:'สระอา',vf:'◌า',f:'น'}],
+  'ปัจจุบัน':[{c:'ป',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'จ'},{c:'จ',vn:'สระอุ',vf:'ุ',f:''},{c:'บ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'}],
+  'อนาคต':[{c:'อ',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'น',vn:'สระอา',vf:'◌า',f:''},{c:'ค',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ต'}],
+  'ดนตรี':[{c:'ด',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'น'},{c:'ตร',vn:'สระอี',vf:'ี',f:''}],
+  'อาชีพ':[{c:'อ',vn:'สระอา',vf:'◌า',f:''},{c:'ช',vn:'สระอี',vf:'ี',f:'พ'}],
+  'หู':[{c:'ห',vn:'สระอู',vf:'ู',f:''}],
+  'ปาก':[{c:'ป',vn:'สระอา',vf:'◌า',f:'ก'}],
+  'ฟัน':[{c:'ฟ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'}],
+  'ลิ้น':[{c:'ล',vn:'สระอิ',vf:'ิ',f:'น'}],
+  'หน้า':[{c:'หน',vn:'สระอา',vf:'◌า',f:''}],
+  'ผม':[{c:'ผ',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'}],
+  'คอ':[{c:'ค',vn:'สระออ',vf:'◌อ',f:''}],
+  'เล็บ':[{c:'ล',vn:'สระเอะ',vf:'เ็',f:'บ'}],
+  'ใจ':[{c:'จ',vn:'สระไอ (ไม้ม้วน)',vf:'ใ◌',f:''}],
+  'แขน':[{c:'ข',vn:'สระแอ',vf:'แ◌',f:'น'}],
+  'นิ้ว':[{c:'น',vn:'สระอิ',vf:'ิ',f:'ว'}],
+  'อก':[{c:'อ',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ก'}],
+  'เลือด':[{c:'ล',vn:'สระเอือ',vf:'เือ',f:'ด'}],
+  'ขา':[{c:'ข',vn:'สระอา',vf:'◌า',f:''}],
+  'เท้า':[{c:'ท',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'ท้อง':[{c:'ท',vn:'สระออ',vf:'◌อ',f:'ง'}],
+  'เข่า':[{c:'ข',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'ลูก':[{c:'ล',vn:'สระอู',vf:'ู',f:'ก'}],
+  'พี่':[{c:'พ',vn:'สระอี',vf:'ี',f:''}],
+  'น้อง':[{c:'น',vn:'สระออ',vf:'◌อ',f:'ง'}],
+  'ปู่':[{c:'ป',vn:'สระอู',vf:'ู',f:''}],
+  'ย่า':[{c:'ย',vn:'สระอา',vf:'◌า',f:''}],
+  'ยาย':[{c:'ย',vn:'สระอา',vf:'◌า',f:'ย'}],
+  'หลาน':[{c:'หล',vn:'สระอา',vf:'◌า',f:'น'}],
+  'ญาติ':[{c:'ญ',vn:'สระอา',vf:'◌า',f:'ติ'}],
+  'หมอ':[{c:'หม',vn:'สระออ',vf:'◌อ',f:''}],
+  'นาย':[{c:'น',vn:'สระอา',vf:'◌า',f:'ย'}],
+  'ท่าน':[{c:'ท',vn:'สระอา',vf:'◌า',f:'น'}],
+  'เจ้า':[{c:'จ',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'ชาย':[{c:'ช',vn:'สระอา',vf:'◌า',f:'ย'}],
+  'เด็ก':[{c:'ด',vn:'สระเอะ',vf:'เ็',f:'ก'}],
+  'แขก':[{c:'ข',vn:'สระแอ',vf:'แ◌',f:'ก'}],
+  'ผัว':[{c:'ผ',vn:'สระอัว',vf:'ัว',f:''}],
+  'เมีย':[{c:'ม',vn:'สระเอีย',vf:'เีย',f:''}],
+  'ไข่':[{c:'ข',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''}],
+  'นม':[{c:'น',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'}],
+  'ชา':[{c:'ช',vn:'สระอา',vf:'◌า',f:''}],
+  'กุ้ง':[{c:'ก',vn:'สระอุ',vf:'ุ',f:'ง'}],
+  'ปู':[{c:'ป',vn:'สระอู',vf:'ู',f:''}],
+  'เนื้อ':[{c:'น',vn:'สระเอือ',vf:'เือ',f:''}],
+  'ผัก':[{c:'ผ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ก'}],
+  'พริก':[{c:'พร',vn:'สระอิ',vf:'ิ',f:'ก'}],
+  'เกลือ':[{c:'กล',vn:'สระเอือ',vf:'เือ',f:''}],
+  'ขิง':[{c:'ข',vn:'สระอิ',vf:'ิ',f:'ง'}],
+  'เส้น':[{c:'ส',vn:'สระเอ',vf:'เ◌',f:'น'}],
+  'ซุป':[{c:'ซ',vn:'สระอุ',vf:'ุ',f:'ป'}],
+  'แกง':[{c:'ก',vn:'สระแอ',vf:'แ◌',f:'ง'}],
+  'โจ๊ก':[{c:'จ',vn:'สระโอ',vf:'โ◌',f:'ก'}],
+  'กล้วย':[{c:'กล',vn:'สระอัว',vf:'ัว',f:'ย'}],
+  'ร้าน':[{c:'ร',vn:'สระอา',vf:'◌า',f:'น'}],
+  'วัด':[{c:'ว',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ด'}],
+  'เมือง':[{c:'ม',vn:'สระเอือ',vf:'เือ',f:'ง'}],
+  'นา':[{c:'น',vn:'สระอา',vf:'◌า',f:''}],
+  'สวน':[{c:'ส',vn:'สระอัว',vf:'◌ว',f:'น'}],
+  'ไร่':[{c:'ร',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''}],
+  'เขา':[{c:'ข',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'เกาะ':[{c:'ก',vn:'สระเอาะ',vf:'เ◌าะ',f:''}],
+  'ถุง':[{c:'ถ',vn:'สระอุ',vf:'ุ',f:'ง'}],
+  'โต๊ะ':[{c:'ต',vn:'สระโอะ',vf:'โ◌ะ',f:''}],
+  'เตียง':[{c:'ต',vn:'สระเอีย',vf:'เีย',f:'ง'}],
+  'แก้ว':[{c:'ก',vn:'สระแอ',vf:'แ◌',f:'ว'}],
+  'ช้อน':[{c:'ช',vn:'สระออ',vf:'◌อ',f:'น'}],
+  'ส้อม':[{c:'ส',vn:'สระออ',vf:'◌อ',f:'ม'}],
+  'มีด':[{c:'ม',vn:'สระอี',vf:'ี',f:'ด'}],
+  'หม้อ':[{c:'หม',vn:'สระออ',vf:'◌อ',f:''}],
+  'พัด':[{c:'พ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ด'}],
+  'ทำ':[{c:'ท',vn:'สระอำ',vf:'◌ำ',f:''}],
+  'พูด':[{c:'พ',vn:'สระอู',vf:'ู',f:'ด'}],
+  'ดู':[{c:'ด',vn:'สระอู',vf:'ู',f:''}],
+  'ฟัง':[{c:'ฟ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ง'}],
+  'อ่าน':[{c:'อ',vn:'สระอา',vf:'◌า',f:'น'}],
+  'เขียน':[{c:'ข',vn:'สระเอีย',vf:'เีย',f:'น'}],
+  'รัก':[{c:'ร',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ก'}],
+  'สูง':[{c:'ส',vn:'สระอู',vf:'ู',f:'ง'}],
+  'ใหม่':[{c:'หม',vn:'สระไอ (ไม้ม้วน)',vf:'ใ◌',f:''}],
+  'น้ำ':[{c:'น',vn:'สระอำ',vf:'◌ำ',f:''}],
+  'ข้าว':[{c:'ข',vn:'สระอา',vf:'◌า',f:'ว'}],
+  'หมา':[{c:'หม',vn:'สระอา',vf:'◌า',f:''}],
+  'แมว':[{c:'ม',vn:'สระแอ',vf:'แ◌',f:'ว'}],
+  'บ้าน':[{c:'บ',vn:'สระอา',vf:'◌า',f:'น'}],
+  'รถ':[{c:'ร',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ถ'}],
+  'พ่อ':[{c:'พ',vn:'สระออ',vf:'◌อ',f:''}],
+  'แม่':[{c:'ม',vn:'สระแอ',vf:'แ◌',f:''}],
+  'ครู':[{c:'คร',vn:'สระอู',vf:'ู',f:''}],
+  'เงิน':[{c:'ง',vn:'สระเออ',vf:'เิ',f:'น'}],
+  'ฝน':[{c:'ฝ',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'น'}],
+  'ลม':[{c:'ล',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'}],
+  'ไฟ':[{c:'ฟ',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''}],
+  'ปลา':[{c:'ปล',vn:'สระอา',vf:'◌า',f:''}],
+  'ไก่':[{c:'ก',vn:'สระไอ (ไม้มลาย)',vf:'ไ◌',f:''}],
+  'หมู':[{c:'หม',vn:'สระอู',vf:'ู',f:''}],
+  'นก':[{c:'น',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ก'}],
+  'ตา':[{c:'ต',vn:'สระอา',vf:'◌า',f:''}],
+  'มือ':[{c:'ม',vn:'สระอือ',vf:'ือ',f:''}],
+  'หัว':[{c:'ห',vn:'สระอัว',vf:'ัว',f:''}],
+  'ส้ม':[{c:'ส',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'}],
+  'เขียว':[{c:'ข',vn:'สระเอีย',vf:'เีย',f:'ว'}],
+  'น้ำเงิน':[{c:'น',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ง',vn:'สระเออ',vf:'เิ',f:'น'}],
+  'ม่วง':[{c:'ม',vn:'สระอัว',vf:'ัว',f:'ง'}],
+  'ชมพู':[{c:'ช',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ม'},{c:'พ',vn:'สระอู',vf:'ู',f:''}],
+  'เทา':[{c:'ท',vn:'สระเอา',vf:'เ◌า',f:''}],
+  'น้ำตาล':[{c:'น',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ต',vn:'สระอา',vf:'◌า',f:'ล'}],
+  'คน':[{c:'ค',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'น'}],
+  'ตัว':[{c:'ต',vn:'สระอัว',vf:'ัว',f:''}],
+  'ใบ':[{c:'บ',vn:'สระไอ (ไม้ม้วน)',vf:'ใ◌',f:''}],
+  'อัน':[{c:'อ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'}],
+  'ชิ้น':[{c:'ช',vn:'สระอิ',vf:'ิ',f:'น'}],
+  'แผ่น':[{c:'ผ',vn:'สระแอ',vf:'แ◌',f:'น'}],
+  'เล่ม':[{c:'ล',vn:'สระเอ',vf:'เ◌',f:'ม'}],
+  'ฉบับ':[{c:'ฉ',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'บ',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'บ'}],
+  'ขวด':[{c:'ข',vn:'สระอัว (ลดรูป)',vf:'◌ว',f:'ด'}],
+  'ก้อน':[{c:'ก',vn:'สระออ',vf:'◌อ',f:'น'}],
+  'คัน':[{c:'ค',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'}],
+  'ลำ':[{c:'ล',vn:'สระอำ',vf:'◌ำ',f:''}],
+  'หลัง':[{c:'หล',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ง'}],
+  'ห้อง':[{c:'ห',vn:'สระออ',vf:'◌อ',f:'ง'}],
+  'ชั้น':[{c:'ช',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'น'}],
+  'จาน':[{c:'จ',vn:'สระอา',vf:'◌า',f:'น'}],
+  'ถ้วย':[{c:'ถ',vn:'สระอัว',vf:'ัว',f:'ย'}],
+  'ต้น':[{c:'ต',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'น'}],
+  'ผล':[{c:'ผ',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ล'}],
+  'มื้อ':[{c:'ม',vn:'สระอือ',vf:'ือ',f:''}],
+  'นอน':[{c:'น',vn:'สระออ',vf:'◌อ',f:'น'}],
+  'ตื่น':[{c:'ต',vn:'สระอือ',vf:'ื',f:'น'}],
+  'อยู่':[{c:'อย',vn:'สระอู',vf:'ู',f:''}],
+  'เรียก':[{c:'ร',vn:'สระเอีย',vf:'เีย',f:'ก'}],
+  'ร้อง':[{c:'ร',vn:'สระออ',vf:'◌อ',f:'ง'}],
+  'คุย':[{c:'ค',vn:'สระอุ',vf:'ุ',f:'ย'}],
+  'โกรธ':[{c:'กร',vn:'สระโอ',vf:'โ◌',f:'ธ'}],
+  'หัวเราะ':[{c:'ห',vn:'สระอัว',vf:'ัว',f:''},{c:'ร',vn:'สระเอาะ',vf:'เ◌าะ',f:''}],
+  'เย็น':[{c:'ย',vn:'สระเอะ',vf:'เ็',f:'น'}],
+  'อุ่น':[{c:'อ',vn:'สระอุ',vf:'ุ',f:'น'}],
+  'แข็ง':[{c:'ข',vn:'สระแอะ',vf:'แ็',f:'ง'}],
+  'นิ่ม':[{c:'น',vn:'สระอิ',vf:'ิ',f:'ม'}],
+  'สว่าง':[{c:'ส',vn:'สระอะ',vf:'◌ะ',f:''},{c:'สว',vn:'สระอา',vf:'◌า',f:'ง'}],
+  'มืด':[{c:'ม',vn:'สระอือ',vf:'ื',f:'ด'}],
+  'ดัง':[{c:'ด',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ง'}],
+  'เงียบ':[{c:'ง',vn:'สระเอีย',vf:'เีย',f:'บ'}],
+  'เต็ม':[{c:'ต',vn:'สระเอะ',vf:'เ็',f:'ม'}],
+  'ว่าง':[{c:'ว',vn:'สระอา',vf:'◌า',f:'ง'}],
+  'สะอาด':[{c:'ส',vn:'สระอะ',vf:'◌ะ',f:''},{c:'อ',vn:'สระอา',vf:'◌า',f:'ด'}],
+  'สกปรก':[{c:'ส',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ก'},{c:'ก',vn:'สระอะ (ลดรูป)',vf:'◌ะ',f:''},{c:'ปร',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ก'}],
+  'ถูก':[{c:'ถ',vn:'สระอู',vf:'ู',f:'ก'}]
+};
+
+function vowelText(vn) {
+  if (vn.indexOf('ไม้ม้วน') !== -1) return 'ใอ';
+  return vn.replace(/\s*\(.*\)\s*/, '').replace(/^สระ/, '');
+}
+function singlePartChips(p) {
+  return '<div class="sg-bd-wrap"><div class="sg-bd-group"><div class="sg-breakdown">'+
+    '<div class="sg-bd-chip"><div class="sg-bd-label">子音</div><div class="sg-bd-value">'+p.c+'</div></div>'+
+    '<div class="sg-bd-chip"><div class="sg-bd-label">母音</div><div class="sg-bd-value">'+vowelText(p.vn)+'</div></div>'+
+    '<div class="sg-bd-chip"><div class="sg-bd-label">尾音</div><div class="sg-bd-value">'+(p.f||'—')+'</div></div>'+
+    '</div></div></div>';
+}
+function breakdownChipsHTML(word, sylLabels) {
+  var parts = WORD_PARTS[word];
+  if (!parts || !parts.length) return '';
+  var multi = parts.length > 1;
+  return '<div class="sg-bd-wrap">' + parts.map(function(p, i) {
+    var head = multi
+      ? '<div class="sg-syl-head">' + (sylLabels && sylLabels[i] ? sylLabels[i] : ('音節 ' + (i+1))) + '</div>'
+      : '';
+    var chips =
+      '<div class="sg-bd-chip"><div class="sg-bd-label">子音</div><div class="sg-bd-value">' + p.c + '</div></div>' +
+      '<div class="sg-bd-chip"><div class="sg-bd-label">母音</div><div class="sg-bd-value">' + vowelText(p.vn) + '</div></div>' +
+      '<div class="sg-bd-chip"><div class="sg-bd-label">尾音</div><div class="sg-bd-value">' + (p.f || '—') + '</div></div>';
+    return '<div class="sg-bd-group">' + head + '<div class="sg-breakdown">' + chips + '</div></div>';
+  }).join('') + '</div>';
+}
+
 var TH = (function() {
   var LOW_SET  = new Set('คฅฆงชซฌญฑฒณทธนพฟภมยรลวฬฮ'.split(''));
   var HIGH_SET = new Set('ขฃฉฐถผฝศษสห'.split(''));
@@ -1252,11 +2277,14 @@ var TH = (function() {
 // ════════════════════════════════════════════════════════════
 // STATE & HISTORY
 // ════════════════════════════════════════════════════════════
-var S = { word:'', step:'input', path:[], tone:null };
+var S = { word:'', step:'level-select', path:[], tone:null };
 var hist = [];
 var histPos = -1;
 var _acts = {}, _actId = 0;
-var randomEntry = null; // currently-displayed random word's full data (word/readingTH/readingEN/zh), or null
+var randomEntry = null;
+var selectedLevel = null;
+var selectedCategory = null;
+var session = null;
 
 function act(fn) {
   var id = 'a'+(++_actId);
@@ -1265,14 +2293,25 @@ function act(fn) {
 }
 
 function navigate(nextStep, label, toneNum) {
+  // ── INTERCEPT: in session mode, redirect 'result' → 'pre-result-confirm' ──
+  if (nextStep === 'result' && session && session.initialGuess !== undefined && S.step !== 'pre-result-confirm') {
+    hist = hist.slice(0, histPos+1);
+    var newPath = label ? S.path.concat([label]) : S.path.slice();
+    var tone = (toneNum !== undefined) ? toneNum : null;
+    S = { word: S.word, step: 'pre-result-confirm', path: newPath, tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults };
+    hist.push({ step: 'pre-result-confirm', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults });
+    histPos = hist.length - 1;
+    render();
+    return;
+  }
   // Truncate forward history
   hist = hist.slice(0, histPos+1);
   // Apply new state
   var newPath = label ? S.path.concat([label]) : S.path.slice();
   var newTone = (toneNum !== undefined) ? toneNum : null;
-  S = { word:S.word, step:nextStep, path:newPath, tone:newTone };
+  S = { word:S.word, step:nextStep, path:newPath, tone:newTone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults };
   // Save to history
-  hist.push({ step:S.step, path:S.path.slice(), tone:S.tone });
+  hist.push({ step:S.step, path:S.path.slice(), tone:S.tone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults });
   histPos = hist.length-1;
   render();
 }
@@ -1280,7 +2319,7 @@ function navigate(nextStep, label, toneNum) {
 function restoreState(pos) {
   histPos = pos;
   var snap = hist[pos];
-  S = { word:S.word, step:snap.step, path:snap.path.slice(), tone:snap.tone };
+  S = { word:S.word, step:snap.step, path:snap.path.slice(), tone:snap.tone, syllables:snap.syllables, selectedSyl:snap.selectedSyl, sylResults:snap.sylResults };
   render();
 }
 
@@ -1365,6 +2404,8 @@ function recordMistake(choiceLabel, errMsg) {
     message: errMsg
   });
   saveStats(data);
+  // Session mistake tracking
+  if (session) session.currentWordMistakes = (session.currentWordMistakes || 0) + 1;
 }
 
 // Count occurrences of a key in entries, return sorted desc [{key,count}, ...]
@@ -1525,7 +2566,7 @@ function validate(choiceKey, choiceLabel) {
 
 function tryNavigate(choiceKey, choiceLabel, nextStep, toneNum) {
   var err = validate(choiceKey, choiceLabel);
-  if (err) { recordMistake(choiceLabel, err); showError(err); return; }
+  if (err) { showError(err); return; }
   if (toneNum !== undefined) navigate(nextStep, choiceLabel, toneNum);
   else navigate(nextStep, choiceLabel);
 }
@@ -1538,9 +2579,14 @@ function render() {
 
   // Word banner
   var banner = document.getElementById('tf-banner');
-  if (S.word && S.step !== 'input') {
+  var isSelectScreen = (S.step === 'level-select' || S.step === 'cat-select' || S.step === 'set-select' || S.step === 'noun-subcat' || S.step === 'advanced' || S.step === 'session-summary');
+  var noBannerSteps = ['result'];
+  if (S.word && S.step !== 'input' && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
-    banner.textContent = S.word;
+    var counterHtml = (session && session.words && session.words.length)
+      ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字</div>'
+      : '';
+    banner.innerHTML = counterHtml + '<div class="tf-banner-word">' + S.word + '</div>';
     document.getElementById('tf-hint').style.display = 'none';
   } else {
     banner.style.display = 'none';
@@ -1549,7 +2595,7 @@ function render() {
 
   // Breadcrumb
   var bc = document.getElementById('tf-bc');
-  if (S.path.length > 1 && S.step !== 'input' && S.step !== 'result') {
+  if (S.path.length > 1 && S.step !== 'input' && S.step !== 'result' && !isSelectScreen) {
     bc.style.display = 'flex';
     bc.innerHTML = S.path.map(function(p,i){
       return (i>0?'<span class="tf-bc-sep">›</span>':'') +
@@ -1561,9 +2607,10 @@ function render() {
   var navBar = document.getElementById('tf-nav-bar');
   var backBtn = document.getElementById('tf-back-btn');
   var fwdBtn = document.getElementById('tf-fwd-btn');
-  if (S.step !== 'input') {
+  var noNavSteps = ['input'];
+  if (S.step !== 'input' && !isSelectScreen && noNavSteps.indexOf(S.step) === -1) {
     navBar.style.display = 'flex';
-    backBtn.disabled = (histPos <= 0);
+    backBtn.disabled = (histPos <= 0 && !(session && selectedLevel));
     fwdBtn.disabled = (histPos >= hist.length-1);
   } else {
     navBar.style.display = 'none';
@@ -1572,10 +2619,20 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
+  var practiceSteps = ['session-guess','overview'];
+  if (session && practiceSteps.indexOf(S.step) !== -1) {
+    body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+  }
 }
 
 function buildStep() {
   switch(S.step) {
+    case 'level-select':    return stepLevelSelect();
+    case 'cat-select':      return stepCatSelect();
+    case 'set-select':      return stepSetSelect();
+    case 'noun-subcat':     return stepNounSubcat();
+    case 'advanced':        return stepAdvanced();
+    case 'session-summary': return stepSessionSummary();
     case 'input':     return stepInput();
     case 's1':        return step1();
     case 's2a':       return step2a();
@@ -1590,8 +2647,11 @@ function buildStep() {
     case 'h_done':    return helperDone();
     case 's2b_live':  return s2bLive();
     case 's2b_dead':  return s2bDead();
-    case 's2b_dl':    return s2bDeadLow();
-    case 'result':    return stepResult();
+    case 's2b_dl':          return s2bDeadLow();
+    case 'session-guess':   return stepSessionGuess();
+    case 'pre-result-confirm': return stepPreResultConfirm();
+    case 'result':          return stepResult();
+    case 'overview':        return stepOverview();
     default: return '';
   }
 }
@@ -1599,6 +2659,363 @@ function buildStep() {
 // ════════════════════════════════════════════════════════════
 // STEP BUILDERS
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+// SESSION: TONE COMPUTATION + TTS + PHONEME BREAKDOWN
+// ════════════════════════════════════════════════════════════
+function computeTone(word) {
+  var cls  = TH.getInitClass(word);
+  var mark = TH.getToneMark(word);
+  var live = TH.isLiveWord(word);
+  var vowel = TH.getVowelType(word);
+  if (!cls) return null;
+  var e = (cls === 'lead') ? 'high' : cls;
+  if (mark) {
+    if (e === 'low') {
+      if (mark === '่') return 3;
+      if (mark === '้') return 4;
+    } else if (e === 'mid') {
+      if (mark === '่') return 2;
+      if (mark === '้') return 3;
+      if (mark === '๊') return 4;
+      if (mark === '๋') return 5;
+    } else {
+      if (mark === '่') return 2;
+      if (mark === '้') return 3;
+    }
+  } else {
+    if (live) return (e === 'high') ? 5 : 1;
+    if (e === 'high' || e === 'mid') return 2;
+    return (vowel === 'short') ? 4 : 3;
+  }
+  return null;
+}
+
+function speakThai(text) {
+  // เสียงยังไม่พร้อมใช้งาน — แสดงข้อความ "เร็ว ๆ นี้"
+  showComingSoon();
+}
+function showComingSoon() {
+  var old = document.getElementById('tf-soon-toast');
+  if (old) old.remove();
+  var d = document.createElement('div');
+  d.id = 'tf-soon-toast';
+  d.className = 'tf-soon-toast';
+  d.textContent = '🔊 即將推出';
+  document.body.appendChild(d);
+  setTimeout(function(){ if (d) d.remove(); }, 1800);
+}
+
+function getBreakdown(word) {
+  var CONS_STR = 'กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ';
+  var init = TH.getInitChar(word);
+  var consList = [];
+  for (var i = 0; i < word.length; i++) {
+    if (CONS_STR.indexOf(word[i]) >= 0) consList.push(word[i]);
+  }
+  var finalCons = (consList.length >= 2) ? consList[consList.length - 1] : null;
+  var vowelType = TH.getVowelType(word);
+  return { init: init, finalCons: finalCons, vowelType: vowelType };
+}
+
+function generateAnalysis(results) {
+  var wrong = results.filter(function(r){ return !r.correct; });
+  if (wrong.length === 0) return '<p>🎉 全部答對！聲調規則掌握得很好，繼續保持！</p>';
+  var toneErrors = {};
+  wrong.forEach(function(r){
+    var k = TONES[r.correctTone].zh;
+    toneErrors[k] = (toneErrors[k]||0) + 1;
+  });
+  var hardTones = Object.keys(toneErrors).sort(function(a,b){ return toneErrors[b]-toneErrors[a]; });
+  var lines = [];
+  lines.push('答錯 '+wrong.length+' 題：' + wrong.map(function(r){ return r.entry.zh+'（'+r.entry.word+'）'; }).join('、') + '。');
+  if (hardTones.length) lines.push('需要加強：<strong>'+hardTones[0]+'</strong> 的辨識。');
+  var correct = results.filter(function(r){ return r.correct; });
+  if (correct.length) lines.push('答對 '+correct.length+' 題，繼續練習效果會更好！');
+  lines.push('建議：多聆聽'+hardTones[0]+'的發音，配合聲調規則複習。');
+  return lines.map(function(l){ return '<p>'+l+'</p>'; }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// SESSION STEP BUILDERS
+// ════════════════════════════════════════════════════════════
+function deriveText(word) {
+  var cls = TH.getInitClass(word);
+  var clsL = TH.classLabel(cls);
+  var mark = TH.getToneMark(word);
+  var live = TH.isLiveWord(word);
+  var tone = computeTone(word);
+  var parts = [clsL];
+  parts.push(mark ? ('有聲調符號 ' + mark) : '無聲調符號');
+  if (!mark) parts.push(live ? '活音' : '死音');
+  return parts.join(' + ') + ' → ' + (TONES[tone] ? TONES[tone].zh : '—');
+}
+
+function buildReportInner() {
+  var results = session.results;
+  var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞','ลักษณนาม':'量詞','คำนาม':'名詞',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','อื่นๆ':'其他','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
+  var dateStr = new Date().toLocaleDateString('zh-TW');
+  var levelStr = ({1:'初級',2:'中級'})[selectedLevel] || '—';
+  var catStr = catZh[selectedCategory] || selectedCategory || '全部';
+  var total = results.length;
+  var correct = results.filter(function(r){ return r.mistakes===0; });
+  var wrong = results.filter(function(r){ return r.mistakes>0; });
+  var rowsHtml = results.map(function(r,i){
+    var w = r.entry.word;
+    var parts = WORD_PARTS[w] || [];
+    var bd = parts.map(function(p){ return '子音 '+p.c+' ／ 母音 '+vowelText(p.vn)+' ／ 尾音 '+(p.f||'—'); }).join('<br>');
+    var tone = r.tone!=null ? r.tone : computeTone(w);
+    var ok = r.mistakes===0;
+    return '<tr><td>'+(i+1)+'</td><td class="th big">'+w+'</td><td class="th">'+r.entry.readingTH+'</td><td>'+r.entry.readingEN+'</td><td>'+r.entry.zh+'</td><td class="bd">'+bd+'</td><td class="dv">'+deriveText(w)+'</td><td style="color:'+(ok?'#3f7a3f':'#cc4444')+';font-weight:700;">'+(ok?'✓':'✗')+'</td></tr>';
+  }).join('');
+  var correctList = correct.length ? correct.map(function(r){ return r.entry.word+'（'+r.entry.zh+'）'; }).join('、') : '—';
+  var wrongList = wrong.length ? wrong.map(function(r){ var ct=r.tone!=null?r.tone:computeTone(r.entry.word); return r.entry.word+'（'+r.entry.zh+'）→ 正確：'+(TONES[ct]?TONES[ct].zh:'—'); }).join('、') : '無，全部答對！';
+  var needList = '無，表現很好！';
+  if (wrong.length) {
+    var nt = {}; wrong.forEach(function(r){ var t=r.tone!=null?r.tone:computeTone(r.entry.word); if(t) nt[t]=(nt[t]||0)+1; });
+    needList = Object.keys(nt).sort(function(a,b){ return nt[b]-nt[a]; }).map(function(t){ return TONES[t]?TONES[t].zh:t; }).join('、');
+  }
+  return '<style>'+
+    '@page{margin:15mm;}'+
+    'body{font-family:"Noto Sans TC","Sarabun",sans-serif;color:#3a2c10;margin:0;padding:22px;background:#fff;}'+
+    '.rp-head{text-align:center;border-bottom:3px solid #C8973A;padding-bottom:14px;margin-bottom:18px;}'+
+    '.rp-title{font-size:25px;font-weight:700;color:#8B6310;letter-spacing:2px;}'+
+    '.rp-meta{font-size:13px;color:#7a6a4a;margin-top:8px;}'+
+    '.rp-score{font-size:18px;color:#5a3e0a;margin-top:6px;font-weight:700;}'+
+    'table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12.5px;}'+
+    'th{background:#8B6310;color:#fff;padding:8px 6px;font-weight:700;}'+
+    'td{border:1px solid #e0d2ad;padding:7px 6px;vertical-align:middle;text-align:center;}'+
+    'td.th{font-family:"Sarabun",sans-serif;}'+
+    'td.big{font-size:20px;font-weight:700;color:#5a3e0a;}'+
+    'td.bd{font-size:11px;color:#5a3e0a;text-align:left;}'+
+    'td.dv{font-size:11px;color:#6a5320;text-align:left;}'+
+    '.rp-analysis{background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(139,99,16,0.2);border-left:4px solid #C8973A;border-radius:10px;padding:14px 18px;margin-top:16px;}'+
+    '.rp-analysis h3{color:#8B6310;margin:0 0 8px;font-size:15px;}'+
+    '.rp-analysis p{margin:5px 0;font-size:13px;line-height:1.7;}'+
+    '.rp-foot{text-align:center;color:#a08a5a;font-size:11px;margin-top:22px;}'+
+    '</style>'+
+    '<div class="rp-head"><div class="rp-title">🎵 泰語聲調練習報告</div>'+
+    '<div class="rp-meta">日期 '+dateStr+' ・ 等級 '+levelStr+' ・ 主題 '+catStr+'</div>'+
+    '<div class="rp-score">一次答對 '+correct.length+' / '+total+'</div></div>'+
+    '<table><thead><tr><th>#</th><th>單字</th><th>泰文讀音</th><th>英文拼音</th><th>中文</th><th>拆解（子音／母音／尾音）</th><th>聲調推導</th><th>結果</th></tr></thead><tbody>'+rowsHtml+'</tbody></table>'+
+    '<div class="rp-analysis"><h3>📊 練習分析</h3>'+
+    '<p>📝 共練習 <strong>'+total+'</strong> 個單字。</p>'+
+    '<p>✅ 已正確（一次答對）：'+correctList+'</p>'+
+    '<p>❌ 答錯的字：'+wrongList+'</p>'+
+    '<p>💪 需要加強：'+needList+'</p></div>'+
+    '<div class="rp-foot">泰華眼裡的泰語教學 ・ 自動產生於 '+dateStr+'</div>';
+}
+
+function buildReportHTML() {
+  return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>泰語聲調練習報告</title>'+
+    '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet"></head><body>'+
+    buildReportInner() + '</body></html>';
+}
+function openReportPrint() {
+  var win = window.open('', '_blank');
+  if (!win) { showComingSoon(); return; }
+  win.document.open(); win.document.write(buildReportHTML()); win.document.close(); win.focus();
+  setTimeout(function(){ try{ win.print(); }catch(e){} }, 600);
+}
+
+function stepSessionSummary() {
+  if (!session) return '';
+  var results = session.results;
+  var total = results.length;
+  var perfectCount = results.filter(function(r){ return r.mistakes === 0; }).length;
+  var rows = results.map(function(r, i){
+    var tone = r.tone != null ? r.tone : computeTone(r.entry.word);
+    var tl = TONES[tone] || {};
+    var ok = r.mistakes === 0;
+    return '<tr>' +
+      '<td style="color:#bbb;font-size:12px;width:24px;">'+(i+1)+'</td>' +
+      '<td class="tf-sum-th">'+r.entry.word+'</td>' +
+      '<td>'+r.entry.zh+'</td>' +
+      '<td style="color:'+(tl.color||'#666')+'">'+(tl.zh||'—')+'</td>' +
+      '<td style="color:'+(ok?'#7ec87e':'#ff7c7c')+';font-weight:700">'+(ok?'✓':'✗ ×'+r.mistakes)+'</td>' +
+    '</tr>';
+  }).join('');
+  // analysis
+  var wrongWords = results.filter(function(r){ return r.mistakes > 0; });
+  var toneCounts = {};
+  results.forEach(function(r){
+    var t = r.tone != null ? r.tone : computeTone(r.entry.word);
+    if (t) toneCounts[t] = (toneCounts[t]||0)+1;
+  });
+  var topTones = Object.keys(toneCounts).sort(function(a,b){ return toneCounts[b]-toneCounts[a]; });
+  var correctWords = results.filter(function(r){ return r.mistakes === 0; });
+  var analysisLines = [];
+  analysisLines.push('<p>📝 共練習 <strong>'+total+'</strong> 個單字。</p>');
+  analysisLines.push('<p>✅ 已正確（一次答對）：'+(correctWords.length ? correctWords.map(function(r){ return r.entry.word+'（'+r.entry.zh+'）'; }).join('、') : '—')+'</p>');
+  analysisLines.push('<p>❌ 答錯的字：'+(wrongWords.length ? wrongWords.map(function(r){ var ct=r.tone!=null?r.tone:computeTone(r.entry.word); return r.entry.word+'（'+r.entry.zh+'）→ 正確：'+(TONES[ct]?TONES[ct].zh:'—'); }).join('、') : '無，全部答對！🎉')+'</p>');
+  if (wrongWords.length) {
+    var needTones = {};
+    wrongWords.forEach(function(r){ var t=r.tone!=null?r.tone:computeTone(r.entry.word); if(t) needTones[t]=(needTones[t]||0)+1; });
+    var nt = Object.keys(needTones).sort(function(a,b){ return needTones[b]-needTones[a]; }).map(function(t){ return TONES[t]?TONES[t].zh:t; }).join('、');
+    analysisLines.push('<p>💪 需要加強：'+nt+' 的辨識。</p>');
+  } else {
+    analysisLines.push('<p>💪 需要加強：無，表現很好！</p>');
+  }
+  return '<div class="tf-session-summary">' +
+    '<div class="tf-sum-score">'+perfectCount+' / '+total+'</div>' +
+    '<div class="tf-sum-score-label">'+(perfectCount===total?'全部一次答對！🎉':'繼續加油！')+'</div>' +
+    '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th></tr></thead>' +
+      '<tbody>'+rows+'</tbody></table>' +
+    '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
+    '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
+      '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
+      '<button class="tf-restart-btn" onclick="TF.reselectTopic()">重新選主題</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function stepAdvanced() {
+  return '<div class="tf-level-select">'+
+    '<div class="tf-level-title">\u9ad8\u7d1a</div>'+
+    '<div class="tf-soon-card">\ud83d\udea7 \u5373\u5c07\u958b\u653e</div>'+
+    '<button class="tf-back-level-btn" onclick="TF.reset()">\u2190 \u8fd4\u56de</button>'+
+  '</div>';
+}
+
+function stepLevelSelect() {
+  var levels = [
+    { id:1, emoji:'🌱', label:'初級', sub:'單音節・聲調基礎' },
+    { id:2, emoji:'🌿', label:'中級', sub:'多音節・日常用語' },
+  ];
+  return '<div class="tf-level-select">' +
+    '<div class="tf-level-title">選擇等級</div>' +
+    levels.map(function(l){
+      return '<button class="tf-level-btn" onclick="TF.selectLevel('+l.id+')">' +
+        '<span class="tf-level-emoji">'+l.emoji+'</span>' +
+        '<span class="tf-level-label">'+l.label+'</span>' +
+        '<span class="tf-level-sub">'+l.sub+'</span>' +
+      '</button>';
+    }).join('') +
+    '<button class="tf-level-btn" onclick="TF.openAdvanced()" style="opacity:0.85;">' +
+      '<span class="tf-level-emoji">🌳</span>' +
+      '<span class="tf-level-label">高級</span>' +
+      '<span class="tf-level-sub">即將開放</span>' +
+    '</button>' +
+    '<button class="tf-level-btn" onclick="TF.openSearch()">' +
+      '<span class="tf-level-emoji">🔎</span>' +
+      '<span class="tf-level-label">自行搜尋</span>' +
+      '<span class="tf-level-sub">自行輸入單字</span>' +
+    '</button>' +
+  '</div>';
+}
+
+// แบ่ง "ชุด" (set) ของแต่ละหมวด — ลำดับตามที่ส่งมา; สี = ชุดละ 6, หมวดอื่น = ชุดละ 5
+var WORD_SETS = {
+  'ตัวเลข': [['หนึ่ง','สอง','สาม','สี่','ห้า'],['หก','เจ็ด','แปด','เก้า','สิบ']],
+  'สี': [['แดง','ส้ม','เหลือง','เขียว','ฟ้า','น้ำเงิน'],['ม่วง','ชมพู','ขาว','ดำ','เทา','น้ำตาล']],
+  'ลักษณนาม': [['คน','ตัว','ใบ','อัน','ชิ้น'],['แผ่น','เล่ม','ฉบับ','ขวด','ก้อน'],['คัน','ลำ','หลัง','ห้อง','ชั้น'],['จาน','ถ้วย','ต้น','ผล','มื้อ']],
+  'กริยา': [['กิน','ดื่ม','นอน','ตื่น','อยู่'],['ไป','มา','ซื้อ','เรียก','ร้อง'],['คุย','โกรธ','หัวเราะ','ทำ','พูด'],['ดู','ฟัง','อ่าน','เขียน','รัก']],
+  'คำขยาย': [['ร้อน','เย็น','อุ่น','แข็ง','นิ่ม'],['สว่าง','มืด','ดัง','เงียบ','เต็ม'],['ว่าง','สะอาด','สกปรก','ถูก','แพง'],['ดี','ใหญ่','เล็ก','สูง','ใหม่']],
+  'คำนาม': [['น้ำ','ข้าว','หมา','แมว','บ้าน'],['รถ','พ่อ','แม่','ครู','เงิน'],['ฝน','ลม','ไฟ','ปลา','ไก่'],['หมู','นก','ตา','มือ','หัว']],
+  'นามร่างกาย': [['ตา','หู','ปาก','ฟัน','ลิ้น'],['หน้า','ผม','คอ','เล็บ','ใจ'],['มือ','แขน','นิ้ว','อก','เลือด'],['หัว','ขา','เท้า','ท้อง','เข่า']],
+  'นามคน': [['พ่อ','แม่','ลูก','พี่','น้อง'],['ปู่','ย่า','ยาย','หลาน','ญาติ'],['ครู','หมอ','นาย','ท่าน','เจ้า'],['ชาย','เด็ก','แขก','ผัว','เมีย']],
+  'นามอาหาร': [['ข้าว','น้ำ','ไข่','นม','ชา'],['หมู','ไก่','ปลา','กุ้ง','ปู'],['เนื้อ','ผัก','พริก','เกลือ','ขิง'],['เส้น','ซุป','แกง','โจ๊ก','กล้วย']],
+  'นามของใช้': [['บ้าน','ร้าน','วัด','เมือง','นา'],['สวน','ไร่','เขา','เกาะ','ถุง'],['โต๊ะ','เตียง','แก้ว','ช้อน','ส้อม'],['มีด','หม้อ','พัด','รถ','เงิน']]
+};
+
+function getSets(cat) {
+  if (WORD_SETS[cat]) return WORD_SETS[cat];
+  var pool = WORD_LIST.filter(function(w){
+    if (selectedLevel && w.level !== selectedLevel) return false;
+    if (cat && cat !== 'ทั้งหมด' && w.category !== cat) return false;
+    return true;
+  }).map(function(w){ return w.word; });
+  var size = (cat === 'สี') ? 6 : 5;
+  var out = [];
+  for (var i = 0; i < pool.length; i += size) out.push(pool.slice(i, i + size));
+  return out;
+}
+
+function startSetSession(words) {
+  var entries = words.map(function(wd){
+    for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === wd) return WORD_LIST[i];
+    return null;
+  }).filter(Boolean);
+  if (!entries.length) return;
+  entries = entries.slice().sort(function(){ return Math.random() - 0.5; });  // สุ่มลำดับใหม่ทุกครั้ง
+  session = { words: entries, index: 0, results: [], currentWordMistakes: 0 };
+  hist = []; histPos = -1;
+  var entry = entries[0]; randomEntry = entry; var w = entry.word;
+  if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
+    S = { word:w, step:'overview', path:[w], tone:null, syllables:entry.readingTH.split('-'), selectedSyl:null };
+  } else {
+    S = { word:w, step:'session-guess', path:[w], tone:null };
+  }
+  hist.push(S); histPos = 0;
+  render();
+}
+
+function stepNounSubcat() {
+  var subs = [
+    {k:'นามร่างกาย', zh:'身體'},
+    {k:'นามคน', zh:'家庭與人'},
+    {k:'นามอาหาร', zh:'食物'},
+    {k:'นามของใช้', zh:'生活物品'}
+  ];
+  var btns = subs.map(function(c){ return '<button class="tf-cat-btn" onclick="TF.selectNounSub(\''+c.k+'\')">'+c.zh+'</button>'; }).join('');
+  return '<div class="tf-level-select">'+
+    '<div class="tf-level-title">名詞 — 選擇分類</div>'+
+    '<div class="tf-cat-grid">'+btns+'</div>'+
+    '<button class="tf-back-level-btn" onclick="TF.selectLevel('+selectedLevel+')">← 返回主題</button>'+
+  '</div>';
+}
+
+function stepSetSelect() {
+  var cat = selectedCategory;
+  var sets = getSets(cat);
+  var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞','ลักษณนาม':'量詞',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','อื่นๆ':'其他','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
+  var label = catZh[cat] || cat;
+  var btns = sets.map(function(set, i){
+    return '<button class="tf-cat-btn tf-set-btn" onclick="TF.selectSet('+i+')">'+
+      '<span class="tf-set-num">'+(i+1)+' / '+sets.length+'</span>'+
+      '<span class="tf-set-count">'+set.length+' 字</span>'+
+    '</button>';
+  }).join('');
+  return '<div class="tf-level-select">'+
+    '<div class="tf-level-title">'+label+' — 選擇組別</div>'+
+    '<div class="tf-cat-grid">'+btns+'</div>'+
+    '<button class="tf-back-level-btn" onclick="TF.selectLevel('+selectedLevel+')">← 返回主題</button>'+
+  '</div>';
+}
+
+function stepCatSelect() {
+  var catMap = {
+    1: [
+      {th:'ทั้งหมด', zh:'全部'},
+      {th:'ตัวเลข',  zh:'數字'},
+      {th:'สี',      zh:'顏色'},
+      {th:'กริยา',   zh:'動詞'},
+      {th:'คำขยาย', zh:'形容詞'},
+      {th:'ลักษณนาม', zh:'量詞'},
+      {th:'คำนาม', zh:'名詞'}
+    ],
+    2: [
+      {th:'ทั้งหมด',      zh:'全部'},
+      {th:'ร้านอาหาร',   zh:'餐廳'},
+      {th:'การเดินทาง',  zh:'交通'},
+      {th:'โรงแรม',      zh:'住宿'},
+      {th:'งาน',          zh:'工作'},
+      {th:'ช้อปปิ้ง',    zh:'購物'},
+      {th:'อื่นๆ',        zh:'其他'}
+    ]
+  };
+  var cats = catMap[selectedLevel] || [];
+  var levelLabel = {1:'初級',2:'中級'}[selectedLevel] || '';
+  return '<div class="tf-level-select">' +
+    '<div class="tf-level-title">'+levelLabel+' — 選擇主題</div>' +
+    '<div class="tf-cat-grid">' +
+      cats.map(function(c){
+        return '<button class="tf-cat-btn" onclick="TF.selectCategory(\''+c.th+'\')">'+c.zh+'</button>';
+      }).join('') +
+    '</div>' +
+    '<button class="tf-back-level-btn" onclick="TF.backToLevelSelect()">← 返回等級選擇</button>' +
+  '</div>';
+}
+
 function stepInput() {
   return '<div class="tf-input-wrap">' +
     '<input id="tf-inp" class="tf-input" type="text" autocomplete="off" spellcheck="false" ' +
@@ -1607,7 +3024,7 @@ function stepInput() {
       'onkeydown="if(event.key===\'Enter\')TF.search()">' +
     '<div id="tf-lang-warn" style="display:none;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#ff6b6b;margin-top:8px;letter-spacing:0.5px;">⚠️ 請輸入泰文字符</div>' +
     '<div class="tf-input-actions">' +
-      '<button class="tf-secondary-btn" type="button" onclick="TF.randomWord()">🎲 隨機一個字</button>' +
+      '<button class="tf-secondary-btn" type="button" onclick="TF.randomWord()">🎲 隨機取字</button>' +
       '<button class="tf-search-btn" onclick="TF.search()">🔍 開始分析</button>' +
     '</div>' +
     '<div class="tf-word-info-row" id="tf-word-info-row" style="display:none;">' +
@@ -1616,6 +3033,9 @@ function stepInput() {
       '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'en\')">🔡 English 讀音</button>' +
     '</div>' +
     '<div class="tf-word-info-box" id="tf-word-info-box" style="display:none;"></div>' +
+    '<div style="text-align:center;margin-top:18px;">' +
+      '<button class="tf-back-level-btn" onclick="TF.reset()">← 返回</button>' +
+    '</div>' +
   '</div>';
 }
 
@@ -1648,7 +3068,7 @@ function markRow(mark, onclickStr) {
 }
 
 function footer() {
-  return '<div class="tf-footer"><button class="tf-restart-btn" onclick="TF.reset()">↺ 重新開始</button></div>';
+  return '<div class="tf-footer"><button class="tf-restart-btn" onclick="TF.reselectTopic()">↺ 重新選主題</button></div>';
 }
 
 // ── Steps ──
@@ -1720,7 +3140,7 @@ function helperStep1() {
   return helperBannerHTML() + qbox('','這個字有「尾音」嗎？') +
     '<div class="tf-options">' +
       optRow('有尾音', act(function(){ tryNavigate('has_tail','有尾音','h_with'); }), ['longEnd','shortEnd']) +
-      optRow('無尾音', act(function(){ tryNavigate('no_tail','無尾音','h_no'); }), ['longVowel','shortVowel']) +
+      optRow('無尾音', act(function(){ tryNavigate('no_tail','無尾音','h_no'); })) +
     '</div>';
 }
 
@@ -1780,40 +3200,367 @@ function s2bDeadLow() {
     '</div>' + footer();
 }
 
+// ════════════════════════════════════════════════════════════
+// NEW PAGE 1: SESSION GUESS  (before tone-inflection)
+// ════════════════════════════════════════════════════════════
+function stepSessionGuess() {
+  if (!session) return '';
+  var entry = session.words[session.index];
+  var word = S.word || entry.word;
+  var bd = getBreakdown(word);
+  var cls = TH.getInitClass(word);
+  var clsLabel = TH.classLabel(cls);
+  var initChar = TH.getInitChar(word);
+  var isLive = TH.isLiveWord(word);
+  var vType = bd.vowelType;
+
+  // Large word display
+  var wordHtml = '';  // word now shown by top banner (counter + big word)
+
+  // Breakdown chips
+  var chips = [];
+  if (initChar) {
+    chips.push('<div class="sg-bd-chip">'+
+      '<div class="sg-bd-label">'+(cls === 'lead' ? '前引字' : '起首子音')+'</div>'+
+      '<div class="sg-bd-value">'+initChar+'</div>'+
+      '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:10px;color:#bbb;margin-top:3px;">'+clsLabel+'</div>'+
+    '</div>');
+  }
+  chips.push('<div class="sg-bd-chip">'+
+    '<div class="sg-bd-label">สระ</div>'+
+    '<div class="sg-bd-value zh">'+(vType === 'short' ? '短母音' : vType === 'long' ? '長母音' : '—')+'</div>'+
+  '</div>');
+  if (bd.finalCons) {
+    chips.push('<div class="sg-bd-chip">'+
+      '<div class="sg-bd-label">尾音</div>'+
+      '<div class="sg-bd-value">'+bd.finalCons+'</div>'+
+    '</div>');
+  }
+  var sylPart = (S.parentWord && WORD_PARTS[S.parentWord] && S.selectedSyl != null) ? WORD_PARTS[S.parentWord][S.selectedSyl] : null;
+  var customBd = sylPart ? singlePartChips(sylPart) : breakdownChipsHTML(word, null);
+  var breakdownHtml = customBd || '<div class="sg-breakdown">'+chips.join('')+'</div>';
+
+  // Toggle info buttons
+  var toggleHtml =
+    '<div class="sg-toggle-row">'+
+      '<button class="sg-toggle-btn" id="sg-btn-zh" onclick="TF.sgToggle(\'zh\')">🇹🇼 中文翻譯</button>'+
+      '<button class="sg-toggle-btn" id="sg-btn-th" onclick="TF.sgToggle(\'th\')">🔤 泰文讀音</button>'+
+      '<button class="sg-toggle-btn" id="sg-btn-en" onclick="TF.sgToggle(\'en\')">🔡 English 讀音</button>'+
+    '</div>'+
+    '<div class="sg-info-box" id="sg-info-box" style="display:none;"></div>';
+
+  // Tone guess buttons
+  var toneColors = ['#6cb8ff','#7ec87e','#ff7c7c','#ffb347','#c39bff'];
+  var toneBtns = [1,2,3,4,5].map(function(n) {
+    var c = toneColors[n-1];
+    var captureN = n;
+    var clickAct = act(function(){
+      session.initialGuess = captureN;
+      showStartInflection(navigateToInflection);
+    });
+    return '<button class="sg-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="'+clickAct+'">'+n+'</button>';
+  }).join('');
+
+  var dontKnowAct = act(function(){
+    session.initialGuess = 0;
+    showStartInflection(navigateToInflection);
+  });
+
+  return '<div style="text-align:center;padding:4px 0 8px;">'+
+    wordHtml+
+    breakdownHtml+
+    toggleHtml+
+    '<div class="sg-divider"></div>'+
+    '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
+    '<div class="sg-tone-grid">'+toneBtns+'</div>'+
+    '<button class="sg-dontknow-btn" onclick="'+dontKnowAct+'">🤷 我不太確定</button>'+
+  '</div>';
+}
+
+function showStartInflection(callback) {
+  var old = document.getElementById('sg-start-ov');
+  if (old) old.remove();
+  var div = document.createElement('div');
+  div.id = 'sg-start-ov';
+  div.className = 'sg-start-overlay';
+  div.innerHTML =
+    '<div class="sg-start-popup">'+
+      '<div class="sg-start-thai">開始聲調推導</div>'+
+      '<div class="sg-start-zh">點擊開始分析這個字的聲調</div>'+
+      '<button class="sg-start-btn" id="sg-start-go" type="button">開始 →</button>'+
+    '</div>';
+  document.body.appendChild(div);
+  // Click OUTSIDE the popup (on the overlay) → just close, stay on this page.
+  div.addEventListener('click', function(e){
+    if (e.target === div) div.remove();
+  });
+  // Click the button → close popup and continue.
+  var goBtn = document.getElementById('sg-start-go');
+  if (goBtn) goBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    div.remove();
+    if (callback) callback();
+  });
+}
+
+function navigateToInflection() {
+  var w = S.word;
+  hist = hist.slice(0, histPos+1);
+  S = { word: w, step: 's1', path: [w], tone: null, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults, parentWord: S.parentWord };
+  hist.push({ step: 's1', path: [w], tone: null, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults });
+  histPos = hist.length - 1;
+  render();
+}
+
+// ════════════════════════════════════════════════════════════
+// NEW PAGE: PRE-RESULT CONFIRM  (after tone-inflection, before answer)
+// ════════════════════════════════════════════════════════════
+function stepPreResultConfirm() {
+  if (!TONES[S.tone]) return '';
+  var word = S.word;
+  var initialGuess = session ? session.initialGuess : null;
+  var toneColors = ['#6cb8ff','#7ec87e','#ff7c7c','#ffb347','#c39bff'];
+
+  var guessHintText = '';
+  if (initialGuess === 0) guessHintText = '（你當時選了「我不太確定」）';
+  else if (initialGuess) guessHintText = '（你當時猜的是第 '+initialGuess+' 聲）';
+
+  var sameBtnHtml = '';
+  if (initialGuess !== undefined && initialGuess !== null) {
+    var sameLabel = (initialGuess && initialGuess !== 0)
+      ? '✅ 和剛才一樣，第 '+initialGuess+' 聲'
+      : '✅ 和剛才一樣，我還不確定';
+    var sameAct = act(function(){ goToResult(session ? session.initialGuess : 0); });
+    sameBtnHtml = '<button class="prc-same-btn" onclick="'+sameAct+'">'+sameLabel+'</button>';
+  }
+
+  var changeBtns = [1,2,3,4,5].map(function(n) {
+    var c = toneColors[n-1];
+    var captureN = n;
+    var changeAct = act(function(){ goToResult(captureN); });
+    return '<button class="prc-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="'+changeAct+'">'+n+'</button>';
+  }).join('');
+
+  return '<div class="prc-page">'+
+    '<button class="prc-audio-btn" onclick="speakThai(\''+word.replace(/'/g,"\\'")+'\')" type="button">🔊 點擊聽發音</button>'+
+    '<div class="sg-divider"></div>'+
+    '<div class="prc-question">分析完之後，你還是覺得是同一個聲調嗎？</div>'+
+    (guessHintText ? '<div class="prc-guess-hint">'+guessHintText+'</div>' : '')+
+    sameBtnHtml+
+    '<div class="prc-change-label">或者改選聲調</div>'+
+    '<div class="prc-tone-row">'+changeBtns+'</div>'+
+  '</div>';
+}
+
+function goToResult(finalAnswer) {
+  if (session) session.finalAnswer = finalAnswer;
+  hist = hist.slice(0, histPos+1);
+  var tone = S.tone;
+  S = { word: S.word, step: 'result', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults };
+  hist.push({ step: 'result', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults });
+  histPos = hist.length - 1;
+  render();
+}
+
 // ── RESULT ──
+function stepOverview() {
+  var syls = S.syllables || [];
+  var sel = S.selectedSyl != null ? S.selectedSyl : null;
+  var results = S.sylResults || {};
+  var allDone = syls.length > 0 && syls.every(function(_, i){ return results[i] != null; });
+
+  var cardsHtml = syls.map(function(syl, i) {
+    var isActive = (sel === i);
+    var isDone = results[i] != null;
+    var t = isDone ? TONES[results[i].tone] : null;
+    var captureI = i;
+    var selectAct = act(function(){ S.selectedSyl = captureI; render(); });
+    var doneTag = isDone && t
+      ? '<div class="syl-num" style="color:' + t.color + ';">' + t.zh + '</div>'
+      : '<div class="syl-num">音節 ' + (i+1) + ' / ' + syls.length + '</div>';
+    return '<div class="tf-syl-card' + (isActive ? ' active' : '') + (isDone ? '" style="border-color:' + t.color + '33;' : '') + '" onclick="' + selectAct + '">' +
+      '<div class="syl-thai">' + syl + '</div>' +
+      doneTag +
+    '</div>';
+  }).join('');
+
+  var detailHtml = '';
+  if (sel !== null) {
+    var chosen = syls[sel];
+    var isDoneChosen = results[sel] != null;
+    var capSel = sel;
+    var capChosen = chosen;
+    var analyzeAct = act(function() {
+      hist = hist.slice(0, histPos+1);
+      var ns = { word: capChosen, step: 'session-guess', path: [capChosen], tone: null, syllables: syls, selectedSyl: capSel, sylResults: results, parentWord: S.word };
+      hist.push(ns); histPos++;
+      S = ns;
+      render();
+    });
+    var reanalyzeLabel = isDoneChosen ? '🔄 重新分析此音節' : '🔍 分析此音節';
+    detailHtml =
+      '<div class="tf-syl-detail">' +
+        '<div class="tf-syl-detail-title">已選音節</div>' +
+        '<div class="tf-syl-detail-word">' + chosen + '</div>' +
+        (isDoneChosen && TONES[results[sel].tone]
+          ? '<div style="font-size:13px;color:' + TONES[results[sel].tone].color + ';margin-bottom:8px;">上次結果：' + TONES[results[sel].tone].zh + '</div>'
+          : '') +
+        '<button class="tf-syl-analyze-btn" onclick="' + analyzeAct + '">' + reanalyzeLabel + '</button>' +
+      '</div>';
+  }
+
+  var summaryHtml = '';
+  if (allDone) {
+    summaryHtml =
+      '<div style="margin-top:18px;border:1.5px solid rgba(212,160,23,0.35);padding:16px 18px;">' +
+        '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:12px;">聲調總覽</div>' +
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+          syls.map(function(syl, i) {
+            var t = TONES[results[i].tone];
+            return '<div style="text-align:center;">' +
+              '<div style="font-family:\'Sarabun\',sans-serif;font-size:22px;color:#5a3e0a;">' + syl + '</div>' +
+              '<div style="font-size:12px;color:' + (t ? t.color : '#fff') + ';margin-top:2px;">' + (t ? t.zh : '?') + '</div>' +
+            '</div>';
+          }).join('<div style="color:rgba(139,99,16,0.35);align-self:center;font-size:18px;">+</div>') +
+        '</div>' +
+      '</div>';
+  }
+
+  var overviewBd = breakdownChipsHTML(S.word, syls);
+  var bdSection = overviewBd ? '<div class="sg-ov-bd-title">音節拆解</div>' + overviewBd : '';
+  return '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:8px;">選擇要分析的音節</div>' +
+    bdSection +
+    '<div class="tf-syl-grid">' + cardsHtml + '</div>' +
+    detailHtml +
+    summaryHtml +
+    '<div style="text-align:center;margin-top:20px;">' +
+      '<button class="tf-result-restart" onclick="TF.nextWord()" style="margin-right:10px;">下一個字 →</button>' +
+      '<button class="tf-result-restart" onclick="TF.reselectTopic()">重新選主題</button>' +
+    '</div>';
+}
+
 function stepResult() {
   var t = TONES[S.tone];
   if (!t) return '';
+
+  // Analysis path
   var pathHtml = S.path.map(function(p,i){
-    return (i>0?'<span class="tf-result-path-sep">›</span>':'') +
+    return (i>0?'<span class="tf-result-path-sep">›</span>':'')+
       '<span class="tf-result-path-item">'+p+'</span>';
   }).join('');
+
+  // Re-analyze action
   var againAct = act(function(){
     var w = S.word;
     hist=[]; histPos=-1;
     hist.push({step:'s1',path:[w],tone:null});
     histPos=0;
-    S = {word:w,step:'s1',path:[w],tone:null};
+    S={word:w,step:'s1',path:[w],tone:null};
     render();
   });
-  return '<div class="tf-result">' +
-    '<div class="tf-result-word">'+S.word+'</div>' +
 
-    '<div class="tf-result-card" style="border-color:'+t.color+';">' +
-      '<div class="tf-result-label">聲調分析結果</div>' +
-      '<div class="tf-result-tone-num" style="color:'+t.color+';">'+t.zh+'</div>' +
-      '<div class="tf-result-divider"></div>' +
-      '<div class="tf-result-match">'+t.match+'</div>' +
-    '</div>' +
+  // ── Session block ──
+  var sessionBlock = '';
+  if (session) {
+    var sEntry = session.words[session.index];
+    var bd = getBreakdown(sEntry.word);
+    var noMistakes = (session.currentWordMistakes || 0) === 0;
+    var initialGuess = session.initialGuess;
+    var finalAnswer = session.finalAnswer;
+    var toneColors = ['#6cb8ff','#7ec87e','#ff7c7c','#ffb347','#c39bff'];
 
-    '<div class="tf-result-path">' +
-      '<div class="tf-result-path-title">分析路徑</div>' +
-      '<div class="tf-result-path-items">'+pathHtml+'</div>' +
-    '</div>' +
+    // Performance badge
+    var badge = noMistakes
+      ? '<span class="result-v2-session-badge" style="color:#4a9a4a;background:rgba(74,154,74,0.12);">✓ 推導過程一次答對！</span>'
+      : '<span class="result-v2-session-badge" style="color:#cc4444;background:rgba(204,68,68,0.12);">✗ 推導過程選錯 '+session.currentWordMistakes+' 次</span>';
 
-    '<div style="text-align:center;">' +
-      '<button class="tf-result-restart" onclick="TF.reset()">重新開始</button>' +
-    '</div>' +
+    // Guess comparison row
+    var igTone = initialGuess && initialGuess !== 0 ? TONES[initialGuess] : null;
+    var faAnswerKey = (finalAnswer !== undefined && finalAnswer !== null) ? finalAnswer : initialGuess;
+    var faTone = faAnswerKey && faAnswerKey !== 0 ? TONES[faAnswerKey] : null;
+    var igLabel = initialGuess === 0 ? '不確定' : (igTone ? igTone.zh : '—');
+    var faLabel = faAnswerKey === 0 ? '不確定' : (faTone ? faTone.zh : '—');
+    var guessCorrect = faAnswerKey === S.tone || (faAnswerKey === 0 && initialGuess === S.tone);
+
+    var guessRow = '<div class="result-v2-guess-row">'+
+      '<div class="result-v2-guess-item">'+
+        '<div class="result-v2-guess-label">初始猜測</div>'+
+        '<div class="result-v2-guess-val" style="color:'+(igTone ? igTone.color : '#aaa')+';">'+igLabel+'</div>'+
+      '</div>'+
+      '<div class="result-v2-guess-item">'+
+        '<div class="result-v2-guess-label">最終選擇</div>'+
+        '<div class="result-v2-guess-val" style="color:'+(faTone ? faTone.color : '#aaa')+';">'+faLabel+'</div>'+
+      '</div>'+
+      '<div class="result-v2-guess-item">'+
+        '<div class="result-v2-guess-label">猜測結果</div>'+
+        '<div class="result-v2-guess-val" style="color:'+(guessCorrect?'#4a9a4a':'#cc4444')+'">'+(guessCorrect?'✓ 猜對了！':'✗ 猜錯了')+'</div>'+
+      '</div>'+
+    '</div>';
+
+    // Info grid
+    var infoGrid = '<div class="result-v2-info-grid">'+
+      '<div class="result-v2-info-cell"><div class="result-v2-info-label">中文</div><div class="result-v2-info-val">'+sEntry.zh+'</div></div>'+
+      '<div class="result-v2-info-cell"><div class="result-v2-info-label">泰文讀音</div><div class="result-v2-info-val th">'+sEntry.readingTH+'</div></div>'+
+      '<div class="result-v2-info-cell"><div class="result-v2-info-label">英文拼音</div><div class="result-v2-info-val">'+sEntry.readingEN+'</div></div>'+
+    '</div>';
+
+    // Breakdown
+    var bdRows = '';
+    if (bd.init) bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;white-space:nowrap;">起首子音</td><td class="tf-bd-th" style="padding:6px 10px;">'+bd.init+'</td></tr>';
+    var vd = bd.vowelType === 'short' ? '短母音' : bd.vowelType === 'long' ? '長母音' : '—';
+    bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;">母音</td><td style="padding:6px 10px;">'+vd+'</td></tr>';
+    if (bd.finalCons) bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;">尾音</td><td class="tf-bd-th" style="padding:6px 10px;">'+bd.finalCons+'</td></tr>';
+
+    sessionBlock =
+      '<div style="margin-bottom:12px;">'+badge+'</div>'+
+      guessRow+
+      infoGrid+
+      '<div class="result-v2-bd">'+
+        '<div class="result-v2-bd-title">音節拆解</div>'+
+        '<table class="tf-breakdown-table"><tbody>'+bdRows+'</tbody></table>'+
+      '</div>';
+  }
+
+  var isLastSessionWord = session && (session.index + 1 >= session.words.length);
+  var nextBtnLabel = session ? (isLastSessionWord ? '查看成績 →' : '下一個字 →') : '分析新單字';
+
+  return '<div class="result-v2">'+
+    '<div class="result-v2-word">'+S.word+'</div>'+
+    '<button class="result-v2-speak-btn" onclick="speakThai(\''+S.word+'\')">🔊 聽發音</button>'+
+
+    '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+
+      '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:10px;letter-spacing:3px;color:'+t.color+'99;margin-bottom:8px;text-transform:uppercase;">聲調分析結果</div>'+
+      '<div class="result-v2-tone-num" style="color:'+t.color+';">'+t.zh+'</div>'+
+      '<div class="result-v2-tone-match" style="color:'+t.color+'cc;">'+t.match+'</div>'+
+    '</div>'+
+
+    sessionBlock+
+
+    '<div class="result-v2-path">'+
+      '<div class="result-v2-path-label">分析路徑</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">'+pathHtml+'</div>'+
+    '</div>'+
+
+    (S.syllables && S.syllables.length > 1
+      ? '<button class="tf-syl-analyze-btn" style="margin-bottom:12px;" onclick="'+act(function(){
+          var parentWord = S.syllables.join('');
+          var syls = S.syllables;
+          var sel = S.selectedSyl;
+          var results = S.sylResults || {};
+          if (sel != null && S.tone != null) results[sel] = { tone: S.tone };
+          var ns = { word: parentWord, step: 'overview', path: [parentWord], tone: null, syllables: syls, selectedSyl: sel, sylResults: results };
+          hist = hist.slice(0, histPos+1);
+          hist.push(ns); histPos++;
+          S = ns;
+          render();
+        })+'">← 回到音節總覽</button>'
+      : '')+
+
+    '<div class="result-v2-actions">'+
+      '<button class="tf-session-next-btn" onclick="TF.nextWord()">'+nextBtnLabel+'</button>'+
+      (session ? '' : '<button class="tf-result-secondary" onclick="'+againAct+'">↺ 重新分析</button>')+
+      '<button class="tf-result-restart" onclick="TF.reselectTopic()" style="margin-top:0;">重新選主題</button>'+
+    '</div>'+
   '</div>';
 }
 
@@ -1854,7 +3601,7 @@ function showTip(keys) {
   div.innerHTML =
     '<div class="tf-tip-box">' +
       '<div class="tf-tip-header">' +
-        '<span class="tf-tip-header-title">說明</span>' +
+        '<span class="tf-tip-header-title" style="color:#000000">說明</span>' +
         '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-tip-ov\').remove()">✕</button>' +
       '</div>' +
       rows +
@@ -2203,9 +3950,12 @@ var TF = {
   },
   randomWord: function() {
     if (!WORD_LIST || !WORD_LIST.length) return;
-    // 目前僅隨機抽單音節詞彙；多音節（readingTH 含「-」）暫時停用。
-    var pool = WORD_LIST.filter(function(w) { return w.readingTH.indexOf('-') === -1; });
-    if (!pool.length) return;
+    var pool = WORD_LIST.filter(function(w){
+      if (selectedLevel && w.level !== selectedLevel) return false;
+      if (selectedCategory && selectedCategory !== 'ทั้งหมด' && w.category !== selectedCategory) return false;
+      return true;
+    });
+    if (!pool.length) pool = WORD_LIST;
     var entry = pool[Math.floor(Math.random() * pool.length)];
     randomEntry = entry;
     var inp = document.getElementById('tf-inp');
@@ -2221,15 +3971,33 @@ var TF = {
     inp.focus();
   },
   showWordInfo: function(type) {
-    if (!randomEntry) return;
+    // Resolve the entry: prefer the last random pick, otherwise look up
+    // whatever the user typed in the box against the vocab / syllable lists.
+    var entry = randomEntry;
+    if (!entry) {
+      var inpEl = document.getElementById('tf-inp');
+      var val = inpEl ? inpEl.value.trim() : '';
+      if (val) {
+        entry = WORD_LIST.filter(function(e){ return e.word === val; })[0]
+             || (SYLLABLE_LIST || []).filter(function(e){ return e.word === val; })[0]
+             || null;
+      }
+    }
     var box = document.getElementById('tf-word-info-box');
     if (!box) return;
     var label, value, isThai = false;
-    var isSyl = !!randomEntry.parentWord;
-    if (type === 'zh') { label = '中文翻譯'; value = randomEntry.zh + (isSyl ? '　（' + randomEntry.parentWord + '）' : ''); }
-    else if (type === 'th') { label = isSyl ? '泰文讀音（完整）' : '泰文讀音'; value = randomEntry.readingTH; isThai = true; }
-    else if (type === 'en') { label = 'English 讀音'; value = randomEntry.readingEN; isThai = true; }
-    else return;
+    var isSyl = entry && !!entry.parentWord;
+    if (!entry) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    if (type === 'zh') {
+      label = '中文翻譯';
+      value = (entry.zh || '—') + (isSyl ? '　（' + entry.parentWord + '）' : '');
+    } else if (type === 'th') {
+      label = isSyl ? '泰文讀音（完整）' : '泰文讀音';
+      value = entry.readingTH; isThai = true;
+    } else if (type === 'en') {
+      label = 'English 讀音';
+      value = entry.readingEN; isThai = true;
+    } else return;
     box.innerHTML =
       '<div class="tf-word-info-label">'+label+'</div>' +
       '<div class="tf-word-info-value' + (isThai ? ' tf-word-info-th' : '') + '">'+value+'</div>';
@@ -2249,27 +4017,246 @@ var TF = {
     var warn = document.getElementById('tf-lang-warn');
     if (warn) warn.style.display = 'none';
     hist = []; histPos = -1;
-    S = { word:w, step:'s1', path:[w], tone:null };
-    hist.push({step:'s1', path:[w], tone:null});
-    histPos = 0;
+    // Check if word is multi-syllable in WORD_LIST
+    var entry = WORD_LIST.find ? WORD_LIST.find(function(e){ return e.word === w; }) : (function(){
+      for(var i=0;i<WORD_LIST.length;i++){ if(WORD_LIST[i].word===w) return WORD_LIST[i]; }
+      return null;
+    })();
+    if (entry && entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
+      var syls = entry.readingTH.split('-');
+      S = { word: w, step: 'overview', path: [w], tone: null, syllables: syls, selectedSyl: null };
+      hist.push(S);
+      histPos = 0;
+    } else {
+      S = { word:w, step:'s1', path:[w], tone:null };
+      hist.push({step:'s1', path:[w], tone:null});
+      histPos = 0;
+    }
     render();
   },
   back: function() {
-    if (histPos > 0) restoreState(histPos-1);
+    if (histPos > 0) { restoreState(histPos-1); return; }
+    if (selectedCategory) { S = { word:'', step:'set-select', path:[], tone:null }; hist=[S]; histPos=0; render(); }
   },
   forward: function() {
     if (histPos < hist.length-1) restoreState(histPos+1);
   },
   reset: function() {
     hist=[]; histPos=-1;
-    S = { word:'', step:'input', path:[], tone:null };
+    S = { word:'', step:'level-select', path:[], tone:null };
     randomEntry = null;
+    selectedLevel = null;
+    selectedCategory = null;
+    session = null;
     render();
   },
+  // Re-select TOPIC: keep the chosen level, go back to the 選擇主題 (category) page.
+  reselectTopic: function() {
+    hist=[]; histPos=-1;
+    randomEntry = null;
+    selectedCategory = null;
+    session = null;
+    if (selectedLevel) {
+      S = { word:'', step:'cat-select', path:[], tone:null };
+    } else {
+      S = { word:'', step:'level-select', path:[], tone:null };
+    }
+    render();
+  },
+  selectLevel: function(level) {
+    selectedLevel = level;
+    selectedCategory = null;
+    S = { word:'', step:'cat-select', path:[], tone:null };
+    hist=[S]; histPos=0;
+    render();
+  },
+  selectCategory: function(cat) {
+    selectedCategory = cat;
+    if (cat === 'ทั้งหมด') {
+      // 全部：รวมทุกคำในระดับนั้น (ไม่จำกัด 5)
+      var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
+      pool = pool.sort(function(){ return Math.random() - 0.5; });
+      startSetSession(pool);
+      return;
+    }
+    if (cat === 'คำนาม') {
+      S = { word:'', step:'noun-subcat', path:[], tone:null };
+      hist = [S]; histPos = 0; render(); return;
+    }
+    S = { word:'', step:'set-select', path:[], tone:null };
+    hist = [S]; histPos = 0;
+    render();
+  },
+  selectSet: function(i) {
+    var sets = getSets(selectedCategory);
+    startSetSession(sets[i] || sets[0] || []);
+  },
+  selectNounSub: function(k) {
+    selectedCategory = k;
+    S = { word:'', step:'set-select', path:[], tone:null };
+    hist = [S]; histPos = 0; render();
+  },
+  markKnown: function() {
+    if (!session) return;
+    session.index++;
+    session.currentWordMistakes = 0;
+    session.initialGuess = undefined;
+    session.finalAnswer = undefined;
+    if (session.index >= session.words.length) {
+      S = { word:'', step:'session-summary', path:[], tone:null };
+      hist.push({ step:'session-summary' }); histPos++;
+      render();
+    } else {
+      var entry = session.words[session.index];
+      randomEntry = entry; var w = entry.word;
+      if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
+        S = { word:w, step:'overview', path:[w], tone:null, syllables:entry.readingTH.split('-'), selectedSyl:null };
+      } else {
+        S = { word:w, step:'session-guess', path:[w], tone:null };
+      }
+      hist.push(S); histPos++; render();
+    }
+  },
+  openAdvanced: function() {
+    S = { word:'', step:'advanced', path:[], tone:null };
+    hist = [S]; histPos = 0;
+    render();
+  },
+  openSearch: function() {
+    selectedLevel = null; selectedCategory = null; session = null; randomEntry = null;
+    S = { word:'', step:'input', path:[], tone:null };
+    hist = []; histPos = -1;
+    render();
+  },
+  nextWord: function() {
+    if (session) {
+      session.results.push({
+        entry: session.words[session.index],
+        tone: S.tone != null ? S.tone : computeTone(session.words[session.index].word),
+        mistakes: session.currentWordMistakes || 0,
+        initialGuess: session.initialGuess,
+        finalAnswer: session.finalAnswer
+      });
+      session.index++;
+      session.currentWordMistakes = 0;
+      session.initialGuess = undefined;
+      session.finalAnswer = undefined;
+      if (session.index >= session.words.length) {
+        S = { word:'', step:'session-summary', path:[], tone:null };
+        hist.push({ step:'session-summary' }); histPos++;
+        render();
+      } else {
+        var entry = session.words[session.index];
+        randomEntry = entry;
+        var w = entry.word;
+        if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
+          var syls = entry.readingTH.split('-');
+          S = { word:w, step:'overview', path:[w], tone:null, syllables:syls, selectedSyl:null };
+        } else {
+          S = { word:w, step:'session-guess', path:[w], tone:null };
+        }
+        hist.push(S); histPos++;
+        render();
+      }
+    } else {
+      TF.selectCategory(selectedCategory || 'ทั้งหมด');
+    }
+  },
+  downloadSummary: function() {
+    if (!session) return;
+    var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','อื่นๆ':'其他','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
+    var results = session.results;
+    var lines = [
+      '泰語聲調練習報告',
+      '==================',
+      '日期：' + new Date().toLocaleDateString('zh-TW'),
+      '等級：' + ({1:'初級',2:'中級'}[selectedLevel]||'—'),
+      '主題：' + (catZh[selectedCategory]||selectedCategory||'全部'),
+      '練習字數：' + results.length,
+      '', '練習記錄：', '----------'
+    ];
+    results.forEach(function(r,i){
+      var tone = r.tone != null ? r.tone : computeTone(r.entry.word);
+      var tl = TONES[tone] || {};
+      var ok = r.mistakes === 0;
+      lines.push((i+1)+'. '+(ok?'✓':'✗')+' '+r.entry.word+' ('+r.entry.zh+') — 聲調：'+(tl.zh||'—')+(ok?'':' ／選錯'+r.mistakes+'次'));
+    });
+    lines.push('', '聲調分析：', '----------');
+    var toneCounts = {};
+    results.forEach(function(r){
+      var t = r.tone != null ? r.tone : computeTone(r.entry.word);
+      if (t) toneCounts[t] = (toneCounts[t]||0)+1;
+    });
+    Object.keys(toneCounts).sort().forEach(function(t){
+      lines.push('- '+(TONES[t]?TONES[t].zh:t)+'：'+toneCounts[t]+'次');
+    });
+    lines.push('', '建議多聆聽泰語發音，配合聲調規則反覆練習！');
+    var blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download='泰語聲調練習_'+new Date().toISOString().slice(0,10)+'.txt'; a.click();
+    URL.revokeObjectURL(url);
+  },
+  downloadReport: function() {
+    if (!session) return;
+    var fname = '泰語聲調練習_' + new Date().toISOString().slice(0,10) + '.pdf';
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:760px;background:#fff;padding:6px;';
+    wrap.innerHTML = buildReportInner();
+    document.body.appendChild(wrap);
+    if (window.html2pdf) {
+      window.html2pdf().set({
+        margin: [8,8,8,8],
+        filename: fname,
+        image: { type:'jpeg', quality:0.96 },
+        html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
+        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+      }).from(wrap).save().then(function(){ wrap.remove(); }).catch(function(){ wrap.remove(); openReportPrint(); });
+    } else {
+      wrap.remove();
+      openReportPrint();
+    }
+  },
+  backToLevelSelect: function() {
+    selectedLevel = null;
+    selectedCategory = null;
+    S = { word:'', step:'level-select', path:[], tone:null };
+    hist=[]; histPos=-1;
+    render();
+  },
+  sgToggle: function(type) {
+    if (!session) return;
+    var entry = session.words[session.index];
+    if (!entry) return;
+    var box = document.getElementById('sg-info-box');
+    if (!box) return;
+    var btnZh = document.getElementById('sg-btn-zh');
+    var btnTh = document.getElementById('sg-btn-th');
+    var btnEn = document.getElementById('sg-btn-en');
+    var allBtns = [btnZh, btnTh, btnEn];
+    // Toggle off if already showing same type
+    if (box.getAttribute('data-active') === type) {
+      box.removeAttribute('data-active');
+      box.style.cssText = 'display:none;';
+      allBtns.forEach(function(b){ if(b) b.classList.remove('active'); });
+      return;
+    }
+    allBtns.forEach(function(b){ if(b) b.classList.remove('active'); });
+    box.setAttribute('data-active', type);
+    var html = '';
+    if (type === 'zh') {
+      if (btnZh) btnZh.classList.add('active');
+      html = '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:22px;color:#5a3e0a;font-weight:700;">'+(entry.zh||'—')+'</span>';
+    } else if (type === 'th') {
+      if (btnTh) btnTh.classList.add('active');
+      html = '<span style="font-family:\'Sarabun\',sans-serif;font-size:22px;color:#8B6310;letter-spacing:1px;">'+(entry.readingTH||'—')+'</span>';
+    } else if (type === 'en') {
+      if (btnEn) btnEn.classList.add('active');
+      html = '<span style="font-family:\'Sarabun\',sans-serif;font-size:20px;color:#666;">'+(entry.readingEN||'—')+'</span>';
+    }
+    box.innerHTML = html;
+    box.style.cssText = 'display:block;';
+  },
   tip: function(keys) { showTip(keys); },
-  showStats: function() { showStats(); },
-  clearTodayStats: function() { clearTodayStats(); },
-  downloadStats: function() { downloadStats(); },
   _run: function(id) { if(_acts[id]) _acts[id](); }
 };
 
