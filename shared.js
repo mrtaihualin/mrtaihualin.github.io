@@ -464,14 +464,14 @@ if (typeof openFBPostModal === 'undefined') {
   window._renderFBList = function() {
     var list = document.getElementById('fb-list-view');
     if (!list) return;
-    if (!FB_POSTS.length) { list.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;color:rgba(255,255,255,0.4);">尚無文章</div>'; return; }
+    if (!FB_POSTS.length) { list.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);">尚無文章</div>'; return; }
     list.innerHTML = FB_POSTS.map(function(p) {
       var count = _getFBComments(p.id).length;
-      return '<div onclick="showFBDetail(\'' + p.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(212,160,23,0.07)\'" onmouseout="this.style.background=\'\'">'
+      return '<div onclick="showFBDetail(\'' + p.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(212,160,23,0.07)\'" onmouseout="this.style.background=\'\'">'
         + '<div style="flex:1;min-width:0;">'
         + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#D4A017;letter-spacing:1px;margin-bottom:5px;">' + p.date + '</div>'
-        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:15px;font-weight:700;color:rgba(255,255,255,0.92);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.title + '</div>'
-        + (count ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;">💬 ' + count + ' 則留言</div>' : '')
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:15px;font-weight:700;color:var(--ink);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.title + '</div>'
+        + (count ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--ink-muted);margin-top:4px;">💬 ' + count + ' 則留言</div>' : '')
         + '</div>'
         + '<div style="color:rgba(212,160,23,0.7);font-size:20px;margin-left:16px;flex-shrink:0;">›</div>'
         + '</div>';
@@ -506,17 +506,17 @@ if (typeof openFBPostModal === 'undefined') {
     var comments = _getFBComments(postId);
     var el = document.getElementById('fb-comments-list');
     if (!el) return;
-    if (!comments.length) { el.innerHTML = '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:rgba(255,255,255,0.3);text-align:center;padding:8px 0;">成為第一個留言的人！</div>'; return; }
+    if (!comments.length) { el.innerHTML = '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:var(--ink-muted);text-align:center;padding:8px 0;">成為第一個留言的人！</div>'; return; }
     el.innerHTML = comments.map(function(c, i) {
-      return '<div style="background:rgba(255,255,255,0.05);border-left:3px solid #D4A017;border-radius:0 6px 6px 0;padding:12px 14px;">'
+      return '<div style="background:rgba(139,99,16,0.06);border-left:3px solid #D4A017;border-radius:0 6px 6px 0;padding:12px 14px;">'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
         + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:#D4A017;">' + (c.name || '匿名讀者') + '</span>'
         + '<div style="display:flex;align-items:center;gap:10px;">'
-        + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:rgba(255,255,255,0.3);">' + c.date + '</span>'
-        + '<button onclick="deleteFBComment(\'' + postId + '\',' + i + ')" style="background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:14px;padding:0;line-height:1;" onmouseover="this.style.color=\'#ff6b6b\'" onmouseout="this.style.color=\'rgba(255,255,255,0.25)\'">✕</button>'
+        + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--ink-muted);">' + c.date + '</span>'
+        + '<button onclick="deleteFBComment(\'' + postId + '\',' + i + ')" style="background:none;border:none;color:rgba(139,99,16,0.45);cursor:pointer;font-size:14px;padding:0;line-height:1;" onmouseover="this.style.color=\'#ff6b6b\'" onmouseout="this.style.color=\'rgba(139,99,16,0.4)\'">✕</button>'
         + '</div>'
         + '</div>'
-        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;line-height:1.7;color:rgba(255,255,255,0.82);">' + c.text.replace(/</g,'&lt;') + '</div>'
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;line-height:1.7;color:var(--ink-soft);">' + c.text.replace(/</g,'&lt;') + '</div>'
         + '</div>';
     }).join('');
   };
@@ -559,14 +559,14 @@ if (typeof openSSModal === 'undefined') {
   window._renderSSList = function() {
     var list = document.getElementById('ss-list-view');
     if (!list) return;
-    if (!SELFSTUDY_ARTICLES.length) { list.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;color:rgba(255,255,255,0.4);">尚無文章</div>'; return; }
+    if (!SELFSTUDY_ARTICLES.length) { list.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);">尚無文章</div>'; return; }
     list.innerHTML = SELFSTUDY_ARTICLES.map(function(a) {
       var vocabCount = (a.vocabulary || []).length;
-      return '<div onclick="showSSDetail(\'' + a.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(212,160,23,0.07)\'" onmouseout="this.style.background=\'\'">'
+      return '<div onclick="showSSDetail(\'' + a.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(212,160,23,0.07)\'" onmouseout="this.style.background=\'\'">'
         + '<div style="flex:1;min-width:0;">'
         + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#D4A017;letter-spacing:1px;margin-bottom:5px;">' + a.date + '</div>'
-        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:15px;font-weight:700;color:rgba(255,255,255,0.92);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + a.title + '</div>'
-        + (vocabCount ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;">📚 ' + vocabCount + ' 個詞彙</div>' : '')
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:15px;font-weight:700;color:var(--ink);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + a.title + '</div>'
+        + (vocabCount ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--ink-muted);margin-top:4px;">📚 ' + vocabCount + ' 個詞彙</div>' : '')
         + '</div>'
         + '<div style="color:rgba(212,160,23,0.7);font-size:20px;margin-left:16px;flex-shrink:0;">›</div>'
         + '</div>';
@@ -586,19 +586,19 @@ if (typeof openSSModal === 'undefined') {
     if (a.vocabulary && a.vocabulary.length) {
       html += '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:#D4A017;letter-spacing:3px;margin-bottom:14px;text-transform:uppercase;">1 · Vocabulary & Useful Phrases</div>';
       a.vocabulary.forEach(function(v) {
-        html += '<div style="border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;margin-bottom:14px;">'
-          + '<div style="background:rgba(255,255,255,0.04);padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;">'
+        html += '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px;">'
+          + '<div style="background:rgba(139,99,16,0.05);padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;">'
           + '<span style="font-family:\'Sarabun\',sans-serif;font-size:28px;font-weight:700;color:#D4A017;">' + v.thai + '</span>'
-          + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:1px;">' + v.phonetic + '</span>'
-          + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,0.85);margin-left:auto;">' + v.meaning + '</span>'
+          + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--ink-muted);letter-spacing:1px;">' + v.phonetic + '</span>'
+          + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);margin-left:auto;">' + v.meaning + '</span>'
           + '</div>'
-          + '<div style="padding:12px 20px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);line-height:1.7;border-bottom:1px solid rgba(255,255,255,0.06);">💡 ' + v.note + '</div>'
+          + '<div style="padding:12px 20px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.7;border-bottom:1px solid var(--border);">💡 ' + v.note + '</div>'
           + '<div style="padding:12px 20px 16px;">'
           + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#D4A017;letter-spacing:2px;margin-bottom:10px;">📌 例句</div>';
         v.examples.forEach(function(ex, ei) {
           html += '<div style="margin-bottom:' + (ei < v.examples.length-1 ? '12' : '0') + 'px;">'
-            + '<div style="font-family:\'Sarabun\',sans-serif;font-size:16px;color:rgba(255,255,255,0.9);">' + ex.thai + '</div>'
-            + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">' + ex.zh + '</div>'
+            + '<div style="font-family:\'Sarabun\',sans-serif;font-size:16px;color:var(--ink);">' + ex.thai + '</div>'
+            + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--ink-muted);margin-top:2px;">' + ex.zh + '</div>'
             + '</div>';
         });
         html += '</div></div>';
@@ -607,16 +607,16 @@ if (typeof openSSModal === 'undefined') {
     if (a.conversation) {
       var cv = a.conversation;
       html += '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:#D4A017;letter-spacing:3px;margin:22px 0 14px;text-transform:uppercase;">2 · Real-life Conversation</div>';
-      html += '<div style="border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">'
-        + '<div style="background:rgba(255,255,255,0.04);padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.07);font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:rgba(255,255,255,0.7);">' + cv.situation + '</div>'
+      html += '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">'
+        + '<div style="background:rgba(139,99,16,0.05);padding:12px 20px;border-bottom:1px solid var(--border);font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:var(--ink-soft);">' + cv.situation + '</div>'
         + '<div style="padding:14px 20px;display:flex;flex-direction:column;gap:14px;">';
       cv.lines.forEach(function(line) {
         var isYou = line.speaker === '你';
         html += '<div style="display:flex;gap:10px;' + (isYou ? 'flex-direction:row-reverse;' : '') + '">'
           + '<div style="flex-shrink:0;font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#D4A017;padding-top:4px;min-width:36px;text-align:' + (isYou ? 'left' : 'right') + ';">' + line.speaker + '</div>'
-          + '<div style="background:' + (isYou ? 'rgba(212,160,23,0.12)' : 'rgba(255,255,255,0.05)') + ';border-radius:8px;padding:10px 14px;max-width:85%;">'
-          + '<div style="font-family:\'Sarabun\',sans-serif;font-size:15px;color:rgba(255,255,255,0.9);margin-bottom:3px;">' + line.thai + '</div>'
-          + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.45);">' + line.zh + '</div>'
+          + '<div style="background:' + (isYou ? 'rgba(212,160,23,0.12)' : 'rgba(139,99,16,0.06)') + ';border-radius:8px;padding:10px 14px;max-width:85%;">'
+          + '<div style="font-family:\'Sarabun\',sans-serif;font-size:15px;color:var(--ink);margin-bottom:3px;">' + line.thai + '</div>'
+          + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--ink-muted);">' + line.zh + '</div>'
           + '</div></div>';
       });
       html += '</div></div>';

@@ -13,7 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>泰語聲調搜尋 — 泰華眼裡的泰語教學</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=2">
+<link rel="stylesheet" href="shared.css?v=5">
 <style>
   body { background: #F5F0E8; color: #1C1C1C; }
 
@@ -581,6 +581,59 @@
     margin-top: 4px;
   }
   .tf-back-level-btn:hover { color: #888; }
+
+  /* ── 字母練習區 入口 ── */
+  .tf-alpha-entry {
+    background: linear-gradient(180deg, #FBF5E7, #F3E4C2);
+    border-color: rgba(184,134,40,0.45);
+  }
+  .tf-alpha-entry:hover { border-color: rgba(184,134,40,0.8); background: linear-gradient(180deg,#FBF5E7,#EEDBB0); }
+
+  /* ── 字母字卡 (Flashcards) ── */
+  .afc-scene { perspective: 1000px; display:flex; justify-content:center; margin: 6px 0 14px; }
+  .afc-card {
+    width: 230px; height: 230px; cursor: pointer;
+    transform-style: preserve-3d; transition: transform 0.5s;
+    position: relative;
+  }
+  .afc-card.flipped { transform: rotateY(180deg); }
+  .afc-inner { width:100%; height:100%; position:relative; transform-style: preserve-3d; }
+  .afc-face {
+    position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    border:1.5px solid rgba(139,99,16,0.3); border-radius:18px;
+    box-shadow: 0 4px 14px rgba(139,99,16,0.12);
+  }
+  .afc-front { background:#fff; }
+  .afc-back  { background:linear-gradient(180deg,#FBF5E7,#F3E4C2); transform: rotateY(180deg); }
+  .afc-letter { font-family:'Sarabun',sans-serif; font-size:96px; line-height:1; color:#5a3e0a; }
+  .afc-tap { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#bba26a; letter-spacing:1px; }
+  .afc-zhuyin { font-family:'Noto Sans TC',sans-serif; font-size:46px; font-weight:700; color:#5a3e0a; }
+  .afc-pinyin { font-family:'Sarabun',sans-serif; font-size:26px; color:#8B6310; }
+  .afc-note { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#7a5510; margin-top:4px; }
+  .afc-mem  { font-family:'Sarabun',sans-serif; font-size:13px; color:#9a7a3a; padding:0 14px; text-align:center; }
+  .afc-audio-btn {
+    display:block; margin:0 auto 10px; font-family:'Noto Sans TC',sans-serif; font-size:14px;
+    background:rgba(139,99,16,0.10); border:1px solid rgba(139,99,16,0.3); border-radius:22px;
+    padding:8px 22px; cursor:pointer; color:#7a5510;
+  }
+  .afc-audio-btn:hover { background:rgba(139,99,16,0.2); }
+  .afc-controls { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:10px; }
+  .afc-nav-btn {
+    font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#5a3e0a; background:#fff;
+    border:1.5px solid rgba(139,99,16,0.28); border-radius:8px; padding:8px 16px; cursor:pointer;
+  }
+  .afc-nav-btn:hover { border-color:rgba(139,99,16,0.65); background:rgba(139,99,16,0.05); }
+  .afc-counter { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#999; min-width:54px; text-align:center; }
+  .afc-shuffle { align-self:center; }
+  .afc-exp {
+    background:#fff; border:1.5px solid rgba(139,99,16,0.25); border-radius:12px;
+    padding:14px 16px; margin:0 auto 12px; max-width:340px; text-align:left;
+  }
+  .afc-exp-cat { font-family:'Noto Serif TC',serif; font-size:14px; font-weight:700; color:#8B6310; margin-bottom:8px; letter-spacing:1px; }
+  .afc-exp-row { font-family:'Noto Sans TC',sans-serif; font-size:13.5px; color:#5a3e0a; line-height:1.7; margin-bottom:6px; }
+  .afc-exp-row:last-child { margin-bottom:0; }
+  .afc-exp-k { display:inline-block; font-weight:700; color:#a07a28; margin-right:6px; }
 
   /* ── Session Quiz ── */
   .tf-session-quiz { text-align: center; padding: 8px 0; }
@@ -1521,6 +1574,121 @@ var DEFS = {
 };
 
 // ════════════════════════════════════════════════════════════
+// 字母練習區 ALPHABET PRACTICE DATA
+// 資料來源：使用者提供的字母對照表圖片（注音／拼音為該教材自訂系統）
+// 每張卡片：ch=泰文字母, zh=注音, py=拼音, note=補充, tts=發音用文字(可選)
+// ════════════════════════════════════════════════════════════
+var ALPHA = {
+  consonant: {
+    mid:  { zh:'中子音', sub:'อักษรกลาง・9 個',
+      common: [
+        {ch:'ก', zh:'ㄍ⁻', py:'g'},
+        {ch:'จ', zh:'ㄗ⁻', py:'z'},
+        {ch:'ด', zh:'ㄉ⁻', py:'d'},
+        {ch:'ต', zh:'ㄉ⁻', py:'d'},
+        {ch:'อ', zh:'ㄛ⁻', py:'o'},
+        {ch:'บ', zh:'ㄅ⁻', py:'b'},
+        {ch:'ป', zh:'ㄅ⁻', py:'b'}
+      ],
+      forgot: [
+        {ch:'ฎ', zh:'—', py:'—', note:'同 ด（ㄉ⁻）'},
+        {ch:'ฏ', zh:'—', py:'—', note:'同 ต（ㄉ⁻）'}
+      ]
+    },
+    high: { zh:'高子音', sub:'อักษรสูง・10 個',
+      common: [
+        {ch:'ข', zh:'ㄎˊ', py:'k'},
+        {ch:'ถ', zh:'ㄊˊ', py:'t'},
+        {ch:'ผ', zh:'ㄆˊ', py:'p'},
+        {ch:'ส', zh:'ㄙˊ', py:'s'},
+        {ch:'ห', zh:'ㄏˊ', py:'h'}
+      ],
+      forgot: [
+        {ch:'ฉ', zh:'—', py:'—'},
+        {ch:'ฐ', zh:'—', py:'—'},
+        {ch:'ฝ', zh:'—', py:'—'},
+        {ch:'ศ', zh:'—', py:'—'},
+        {ch:'ษ', zh:'—', py:'—'}
+      ]
+    },
+    low:  { zh:'低子音', sub:'อักษรต่ำ・常用 15 個',
+      common: [
+        {ch:'ค', zh:'ㄎ⁻', py:'k'},
+        {ch:'ง', zh:'ㄋ⁻', py:'n'},
+        {ch:'ช', zh:'ㄔ⁻', py:'c'},
+        {ch:'ซ', zh:'ㄙ⁻', py:'s'},
+        {ch:'ท', zh:'ㄊ⁻', py:'t'},
+        {ch:'ธ', zh:'ㄊ⁻', py:'t'},
+        {ch:'น', zh:'ㄋ⁻', py:'n'},
+        {ch:'พ', zh:'ㄆ⁻', py:'p'},
+        {ch:'ภ', zh:'ㄆ⁻', py:'p'},
+        {ch:'ฟ', zh:'ㄈ⁻', py:'f'},
+        {ch:'ม', zh:'ㄇ⁻', py:'m'},
+        {ch:'ย', zh:'ㄖ⁻', py:'r'},
+        {ch:'ร', zh:'ㄌ⁻', py:'l'},
+        {ch:'ล', zh:'ㄌ⁻', py:'l'},
+        {ch:'ว', zh:'窩', py:'—'}
+      ],
+      forgot: [
+        {ch:'ฅ', zh:'—', py:'—'},
+        {ch:'ฌ', zh:'—', py:'—'},
+        {ch:'ญ', zh:'—', py:'—'},
+        {ch:'ฑ', zh:'—', py:'—'},
+        {ch:'ฒ', zh:'—', py:'—'},
+        {ch:'ณ', zh:'—', py:'—'},
+        {ch:'ฬ', zh:'—', py:'—'},
+        {ch:'ฮ', zh:'—', py:'—'}
+      ]
+    }
+  },
+  vowel: {
+    short: [
+      {ch:'อะ', zh:'ㄚˇ', py:'ǎ'},
+      {ch:'อุ', zh:'ㄨˇ', py:'ǔ'},
+      {ch:'อิ', zh:'ㄧˇ', py:'ǐ'},
+      {ch:'อึ', zh:'—', py:'ueˇ'},
+      {ch:'เอะ', zh:'ㄟˇ', py:'eǐ'},
+      {ch:'แอะ', zh:'—', py:'Aeˇ'}
+    ],
+    long: [
+      {ch:'อา', zh:'ㄚ⁻', py:'ā'},
+      {ch:'อู', zh:'ㄨ⁻', py:'ū'},
+      {ch:'อี', zh:'ㄧ⁻', py:'ī'},
+      {ch:'อือ', zh:'—', py:'ue⁻'},
+      {ch:'เอ', zh:'ㄟ⁻', py:'eī'},
+      {ch:'แอ', zh:'—', py:'Ae⁻'},
+      {ch:'โอ', zh:'ㄡ⁻', py:'ōu'},
+      {ch:'ออ', zh:'ㄛ⁻', py:'ō'},
+      {ch:'เออ', zh:'ㄜ⁻', py:'ē'},
+      {ch:'เอีย', zh:'ㄧㄚ⁻', py:'iā'},
+      {ch:'เอือ', zh:'—', py:'Uea⁻'},
+      {ch:'อัว', zh:'ㄨㄚ⁻', py:'uā'},
+      {ch:'อำ', zh:'—', py:'am⁻', note:'อำ = อัม'},
+      {ch:'เอา', zh:'ㄠ⁻', py:'āo', note:'เอา = อะ + ว'},
+      {ch:'ไอ ใอ', zh:'ㄞ⁻', py:'āi', note:'ไอ・ใอ = อัย', tts:'ไอ'}
+    ]
+  },
+  ending: [
+    {ch:'ง', zh:'แม่กง', py:'-ng', note:'長尾音（活音）', mem:'ง',
+      exp:{cat:'第一類・與中文相同', how:'鼻音化，聲音在喉嚨後方共鳴。', thai:'ต้อง (tong) — 聲音移到喉嚨後方。', zh:'東 (dōng) — 收尾鼻音完全相同。'}},
+    {ch:'น', zh:'แม่กน', py:'-n', note:'長尾音（活音）', mem:'น ณ ญ ร ล ฬ',
+      exp:{cat:'第一類・與中文相同', how:'音節結尾時舌頭頂住上顎，與英文 N 或中文「-an」結尾相同，聲音可拉長。', thai:'วัน (wan) — 舌頭頂住上顎並拉長聲音。', zh:'灣 (wān) — 舌頭頂住上顎的方式完全相同。'}},
+    {ch:'ม', zh:'แม่กม', py:'-m', note:'長尾音（活音）', mem:'ม',
+      exp:{cat:'第二類・與英文相同', how:'與英文字母 M 相同。雙唇完全閉合，鼻音拉長。', thai:'', zh:''}},
+    {ch:'ย', zh:'แม่เกย', py:'-i', note:'長尾音（活音）', mem:'ย',
+      exp:{cat:'第一類・與中文相同', how:'音節以「-i（ee）」音收尾。', thai:'ใหญ่ (yai) — 以「-i」音收尾。', zh:'賣 (mài) — 收尾的「-i」音完全相同。'}},
+    {ch:'ว', zh:'แม่เกอว', py:'-u', note:'長尾音（活音）', mem:'ว',
+      exp:{cat:'第一類・與中文相同', how:'嘴巴結尾要呈現圓嘟嘟的形狀（像「屋 wu」音）。', thai:'ข้าว (khao) — 嘴巴收在圓唇形狀。', zh:'要 (yào) — 嘴型自然收在相同的圓唇位置。'}},
+    {ch:'ก', zh:'แม่กก', py:'-k', note:'短尾音（死音）', mem:'ก ข ค ฆ',
+      exp:{cat:'第二類・與英文相同', how:'對應英文短促的 K／G 音。英文唸尾音時會在喉嚨後方短暫擋住氣流再釋放「kuh／guh」；泰文則在那一刻直接停住氣流，不釋放尾音。', thai:'', zh:''}},
+    {ch:'ด', zh:'แม่กด', py:'-t', note:'短尾音（死音）', mem:'จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส',
+      exp:{cat:'第二類・與英文相同', how:'對應英文短促的 T／D 音。英文唸尾音時舌尖會抵在門牙後方擋住氣流再釋放「tuh／duh」；泰文則在那一刻直接停住氣流，不釋放尾音。', thai:'', zh:''}},
+    {ch:'บ', zh:'แม่กบ', py:'-p', note:'短尾音（死音）', mem:'บ ป พ ฟ ภ',
+      exp:{cat:'第二類・與英文相同', how:'對應英文短促的 P／B 音。英文唸尾音時雙唇會短暫閉合擋住氣流再釋放「puh／buh」；泰文則在那一刻直接停住氣流，不釋放尾音。', thai:'', zh:''}}
+  ]
+};
+
+// ════════════════════════════════════════════════════════════
 // TONES (Thai primary, Chinese secondary)
 // ════════════════════════════════════════════════════════════
 var TONES = {
@@ -2285,6 +2453,7 @@ var randomEntry = null;
 var selectedLevel = null;
 var selectedCategory = null;
 var session = null;
+var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, flipped, back }
 
 function act(fn) {
   var id = 'a'+(++_actId);
@@ -2579,7 +2748,7 @@ function render() {
 
   // Word banner
   var banner = document.getElementById('tf-banner');
-  var isSelectScreen = (S.step === 'level-select' || S.step === 'cat-select' || S.step === 'set-select' || S.step === 'noun-subcat' || S.step === 'advanced' || S.step === 'session-summary');
+  var isSelectScreen = (S.step === 'level-select' || S.step === 'cat-select' || S.step === 'set-select' || S.step === 'noun-subcat' || S.step === 'advanced' || S.step === 'session-summary' || S.step === 'alpha-home' || S.step === 'alpha-consonant' || S.step === 'alpha-vowel' || S.step === 'alpha-flashcard');
   var noBannerSteps = ['result'];
   if (S.word && S.step !== 'input' && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
@@ -2628,6 +2797,10 @@ function render() {
 function buildStep() {
   switch(S.step) {
     case 'level-select':    return stepLevelSelect();
+    case 'alpha-home':      return stepAlphaHome();
+    case 'alpha-consonant': return stepAlphaConsonant();
+    case 'alpha-vowel':     return stepAlphaVowel();
+    case 'alpha-flashcard': return stepAlphaFlashcard();
     case 'cat-select':      return stepCatSelect();
     case 'set-select':      return stepSetSelect();
     case 'noun-subcat':     return stepNounSubcat();
@@ -2691,8 +2864,28 @@ function computeTone(word) {
 }
 
 function speakThai(text) {
-  // เสียงยังไม่พร้อมใช้งาน — แสดงข้อความ "เร็ว ๆ นี้"
-  showComingSoon();
+  // 使用瀏覽器內建語音合成（Web Speech API）唸出泰文
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    showComingSoon();
+    return;
+  }
+  try {
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(String(text));
+    u.lang = 'th-TH';
+    u.rate = 0.75;
+    var voices = window.speechSynthesis.getVoices() || [];
+    for (var i = 0; i < voices.length; i++) {
+      if (/^th/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
+    }
+    window.speechSynthesis.speak(u);
+  } catch (e) {
+    showComingSoon();
+  }
+}
+// 預先載入語音清單（部分瀏覽器首次為非同步）
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = function(){ window.speechSynthesis.getVoices(); };
 }
 function showComingSoon() {
   var old = document.getElementById('tf-soon-toast');
@@ -2876,6 +3069,121 @@ function stepAdvanced() {
   '</div>';
 }
 
+// ════════════════════════════════════════════════════════════
+// 字母練習區 SCREENS
+// ════════════════════════════════════════════════════════════
+function stepAlphaHome() {
+  var cats = [
+    {emoji:'🅰️', label:'子音', sub:'พยัญชนะ・中／高／低／遺忘版', fn:'TF.alphaConsonants()'},
+    {emoji:'🔡', label:'母音', sub:'สระ・短母音／長母音', fn:'TF.alphaVowels()'},
+    {emoji:'🔚', label:'尾音', sub:'ตัวสะกด・8 個尾音類別', fn:'TF.alphaEndings()'}
+  ];
+  return '<div class="tf-level-select">' +
+    '<div class="tf-level-title">字母練習區</div>' +
+    cats.map(function(c){
+      return '<button class="tf-level-btn" onclick="'+c.fn+'">' +
+        '<span class="tf-level-emoji">'+c.emoji+'</span>' +
+        '<span class="tf-level-label">'+c.label+'</span>' +
+        '<span class="tf-level-sub">'+c.sub+'</span>' +
+      '</button>';
+    }).join('') +
+    '<button class="tf-back-level-btn" onclick="TF.reset()">← 返回選擇等級</button>' +
+  '</div>';
+}
+
+function stepAlphaConsonant() {
+  var btns = [
+    {label:'中子音', sub:ALPHA.consonant.mid.sub,  fn:"TF.startFlashcards('mid')"},
+    {label:'高子音', sub:ALPHA.consonant.high.sub, fn:"TF.startFlashcards('high')"},
+    {label:'低子音', sub:ALPHA.consonant.low.sub,  fn:"TF.startFlashcards('low')"},
+    {label:'遺忘版', sub:'三類少用字母混合複習', fn:"TF.startFlashcards('forgot')"}
+  ];
+  return '<div class="tf-level-select">' +
+    '<div class="tf-level-title">子音 — 選擇分類</div>' +
+    btns.map(function(b){
+      return '<button class="tf-level-btn" onclick="'+b.fn+'">' +
+        '<span class="tf-level-label">'+b.label+'</span>' +
+        '<span class="tf-level-sub">'+b.sub+'</span>' +
+      '</button>';
+    }).join('') +
+    '<button class="tf-back-level-btn" onclick="TF.openAlpha()">← 返回字母練習區</button>' +
+  '</div>';
+}
+
+function stepAlphaVowel() {
+  var btns = [
+    {label:'短母音', sub:'สระเสียงสั้น・6 個', fn:"TF.startFlashcards('v_short')"},
+    {label:'長母音', sub:'สระเสียงยาว・15 個', fn:"TF.startFlashcards('v_long')"},
+    {label:'全部混合', sub:'短母音＋長母音', fn:"TF.startFlashcards('v_all')"}
+  ];
+  return '<div class="tf-level-select">' +
+    '<div class="tf-level-title">母音 — 選擇分類</div>' +
+    btns.map(function(b){
+      return '<button class="tf-level-btn" onclick="'+b.fn+'">' +
+        '<span class="tf-level-label">'+b.label+'</span>' +
+        '<span class="tf-level-sub">'+b.sub+'</span>' +
+      '</button>';
+    }).join('') +
+    '<button class="tf-back-level-btn" onclick="TF.openAlpha()">← 返回字母練習區</button>' +
+  '</div>';
+}
+
+function stepAlphaFlashcard() {
+  if (!flash || !flash.cards.length) return '';
+  var card = flash.cards[flash.order[flash.index]];
+  var total = flash.cards.length;
+  var backFn = flash.back === 'alpha-consonant' ? 'TF.alphaConsonants()'
+             : flash.back === 'alpha-vowel' ? 'TF.alphaVowels()'
+             : 'TF.openAlpha()';
+  var noteHtml = card.note ? '<div class="afc-note">'+card.note+'</div>' : '';
+  var memHtml  = card.mem  ? '<div class="afc-mem">包含字母：'+card.mem+'</div>' : '';
+  var isEnding = !!card.exp;
+  var actionBtn, expHtml = '';
+  if (isEnding) {
+    actionBtn = '<button class="afc-audio-btn" onclick="TF.flashToggleExp()">📖 '+(flash.showExp?'收合發音解釋':'查看發音解釋')+'</button>';
+    if (flash.showExp) {
+      var e = card.exp;
+      expHtml = '<div class="afc-exp">' +
+        '<div class="afc-exp-cat">'+e.cat+'</div>' +
+        '<div class="afc-exp-row"><span class="afc-exp-k">發音方式</span>'+e.how+'</div>' +
+        (e.thai ? '<div class="afc-exp-row"><span class="afc-exp-k">泰文範例</span>'+e.thai+'</div>' : '') +
+        (e.zh   ? '<div class="afc-exp-row"><span class="afc-exp-k">中文對應</span>'+e.zh+'</div>' : '') +
+      '</div>';
+    }
+    var frontTap = '點擊翻面看尾音類別';
+  } else {
+    actionBtn = '<button class="afc-audio-btn" onclick="TF.flashSpeak()">🔊 播放發音</button>';
+    var frontTap = '點擊翻面看注音／拼音';
+  }
+  return '<div class="tf-level-select">' +
+    '<div class="tf-level-title">'+flash.title+'</div>' +
+    '<div class="afc-scene">' +
+      '<div class="afc-card'+(flash.flipped?' flipped':'')+'" id="afc-card" onclick="TF.flashFlip()">' +
+        '<div class="afc-inner">' +
+          '<div class="afc-face afc-front">' +
+            '<div class="afc-letter">'+card.ch+'</div>' +
+            '<div class="afc-tap">'+frontTap+'</div>' +
+          '</div>' +
+          '<div class="afc-face afc-back">' +
+            '<div class="afc-zhuyin">'+(card.zh||'—')+'</div>' +
+            '<div class="afc-pinyin">'+(card.py||'—')+'</div>' +
+            noteHtml + memHtml +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    actionBtn +
+    expHtml +
+    '<div class="afc-controls">' +
+      '<button class="afc-nav-btn" onclick="TF.flashPrev()">‹ 上一張</button>' +
+      '<span class="afc-counter">'+(flash.index+1)+' / '+total+'</span>' +
+      '<button class="afc-nav-btn" onclick="TF.flashNext()">下一張 ›</button>' +
+    '</div>' +
+    '<button class="tf-cat-btn afc-shuffle" onclick="TF.flashShuffle()">🔀 隨機順序</button>' +
+    '<button class="tf-back-level-btn" onclick="'+backFn+'">← 返回</button>' +
+  '</div>';
+}
+
 function stepLevelSelect() {
   var levels = [
     { id:1, emoji:'🌱', label:'初級', sub:'單音節・聲調基礎' },
@@ -2883,6 +3191,11 @@ function stepLevelSelect() {
   ];
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">選擇等級</div>' +
+    '<button class="tf-level-btn tf-alpha-entry" onclick="TF.openAlpha()">' +
+      '<span class="tf-level-emoji">🔤</span>' +
+      '<span class="tf-level-label">字母練習區</span>' +
+      '<span class="tf-level-sub">子音・母音・尾音・字卡</span>' +
+    '</button>' +
     levels.map(function(l){
       return '<button class="tf-level-btn" onclick="TF.selectLevel('+l.id+')">' +
         '<span class="tf-level-emoji">'+l.emoji+'</span>' +
@@ -4128,6 +4441,87 @@ var TF = {
     hist = []; histPos = -1;
     render();
   },
+  // ── 字母練習區 ──
+  openAlpha: function() {
+    selectedLevel = null; selectedCategory = null; session = null; randomEntry = null;
+    S = { word:'', step:'alpha-home', path:[], tone:null };
+    hist = [S]; histPos = 0;
+    render();
+  },
+  alphaConsonants: function() {
+    S = { word:'', step:'alpha-consonant', path:[], tone:null };
+    hist = [S]; histPos = 0; render();
+  },
+  alphaVowels: function() {
+    S = { word:'', step:'alpha-vowel', path:[], tone:null };
+    hist = [S]; histPos = 0; render();
+  },
+  alphaEndings: function() {
+    this.startFlashcards('ending');
+  },
+  startFlashcards: function(key) {
+    var cards = [], title = '', back = 'alpha-home';
+    var C = ALPHA.consonant;
+    if (key === 'mid')  { cards = C.mid.common;  title = '中子音 字卡'; back = 'alpha-consonant'; }
+    else if (key === 'high') { cards = C.high.common; title = '高子音 字卡'; back = 'alpha-consonant'; }
+    else if (key === 'low')  { cards = C.low.common;  title = '低子音 字卡'; back = 'alpha-consonant'; }
+    else if (key === 'forgot') {
+      cards = C.mid.forgot.concat(C.high.forgot, C.low.forgot);
+      title = '遺忘版 字卡（混合複習）'; back = 'alpha-consonant';
+    }
+    else if (key === 'v_short') { cards = ALPHA.vowel.short; title = '短母音 字卡'; back = 'alpha-vowel'; }
+    else if (key === 'v_long')  { cards = ALPHA.vowel.long;  title = '長母音 字卡'; back = 'alpha-vowel'; }
+    else if (key === 'v_all')   { cards = ALPHA.vowel.short.concat(ALPHA.vowel.long); title = '母音 字卡（全部）'; back = 'alpha-vowel'; }
+    else if (key === 'ending')  { cards = ALPHA.ending; title = '尾音 字卡'; back = 'alpha-home'; }
+    if (!cards.length) return;
+    var order = cards.map(function(_,i){ return i; });
+    flash = { title:title, cards:cards, order:order, index:0, flipped:false, back:back };
+    S = { word:'', step:'alpha-flashcard', path:[], tone:null };
+    hist = [S]; histPos = 0;
+    render();
+  },
+  flashFlip: function() {
+    if (!flash) return;
+    flash.flipped = !flash.flipped;
+    var inner = document.getElementById('afc-card');
+    if (inner) inner.classList.toggle('flipped', flash.flipped);
+    var card = flash.cards[flash.order[flash.index]];
+    if (card && !card.exp) this.flashSpeak();  // 尾音卡不自動發音（改看解釋）
+  },
+  flashSpeak: function() {
+    if (!flash) return;
+    var card = flash.cards[flash.order[flash.index]];
+    if (card) speakThai(card.tts || card.ch);
+  },
+  flashToggleExp: function() {
+    if (!flash) return;
+    flash.showExp = !flash.showExp;
+    render();
+  },
+  flashNext: function() {
+    if (!flash) return;
+    flash.index = (flash.index + 1) % flash.cards.length;
+    flash.flipped = false; flash.showExp = false; render();
+    var card = flash.cards[flash.order[flash.index]];
+    if (card && !card.exp) this.flashSpeak();
+  },
+  flashPrev: function() {
+    if (!flash) return;
+    flash.index = (flash.index - 1 + flash.cards.length) % flash.cards.length;
+    flash.flipped = false; flash.showExp = false; render();
+    var card = flash.cards[flash.order[flash.index]];
+    if (card && !card.exp) this.flashSpeak();
+  },
+  flashShuffle: function() {
+    if (!flash) return;
+    for (var i = flash.order.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = flash.order[i]; flash.order[i] = flash.order[j]; flash.order[j] = t;
+    }
+    flash.index = 0; flash.flipped = false; flash.showExp = false; render();
+    var card = flash.cards[flash.order[flash.index]];
+    if (card && !card.exp) this.flashSpeak();
+  },
   nextWord: function() {
     if (session) {
       session.results.push({
@@ -4273,6 +4667,6 @@ render();
 </footer>
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
-<script src="shared.js?v=2"></script>
+<script src="shared.js?v=3"></script>
 </body>
 </html>

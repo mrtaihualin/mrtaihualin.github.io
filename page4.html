@@ -13,15 +13,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>泰語・分享 — 泰華眼裡的泰語教學</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=2">
+<link rel="stylesheet" href="shared.css?v=5">
 <style>
 
 /* ══════════════════════════════════════
    VIDEO SECTION
 ══════════════════════════════════════ */
 .p4-videos {
-  background: var(--ink);
-  border-bottom: 3px solid rgba(212,160,23,0.3);
+  background: linear-gradient(180deg,#FBF5E7 0%,#F5F0E8 100%);
+  border-top: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
 }
 .p4-section-head {
   display: flex;
@@ -36,7 +37,7 @@
 
 .p4-shuffle-btn {
   padding: 12px 26px;
-  background: #D4A017;
+  background: #C8973A;
   color: #111;
   border: none;
   font-family: 'Noto Sans TC', sans-serif;
@@ -61,12 +62,12 @@
 /* Video card */
 .p4-vc {
   cursor: pointer;
-  background: rgba(255,255,255,0.03);
-  border: 1.5px solid rgba(255,255,255,0.08);
+  background: var(--white);
+  border: 1.5px solid var(--border);
   overflow: hidden;
-  transition: border-color 0.18s, transform 0.18s;
+  transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
 }
-.p4-vc:hover { border-color: rgba(212,160,23,0.55); transform: translateY(-3px); }
+.p4-vc:hover { border-color: rgba(200,151,58,0.55); transform: translateY(-3px); box-shadow: 0 8px 22px rgba(139,99,16,0.12); }
 
 .p4-vc-thumb {
   position: relative;
@@ -87,14 +88,14 @@
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 50px; height: 50px;
-  background: rgba(212,160,23,0.9);
+  background: rgba(200,151,58,0.9);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   transition: background 0.18s, transform 0.18s;
   pointer-events: none;
 }
 .p4-vc:hover .p4-vc-play {
-  background: #D4A017;
+  background: #C8973A;
   transform: translate(-50%, -50%) scale(1.12);
 }
 .p4-vc-play span { color: #111; font-size: 18px; margin-left: 3px; line-height: 1; }
@@ -103,7 +104,7 @@
   padding: 10px 13px 13px;
   font-family: 'Noto Sans TC', sans-serif;
   font-size: 12px;
-  color: rgba(255,255,255,0.72);
+  color: var(--ink-soft);
   line-height: 1.55;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -130,7 +131,7 @@
   padding: 64px 20px;
   font-family: 'Noto Sans TC', sans-serif;
   font-size: 14px;
-  color: rgba(255,255,255,0.35);
+  color: var(--ink-muted);
   letter-spacing: 2px;
 }
 
@@ -157,18 +158,18 @@
 
 .p4-col-header {
   padding: 20px 26px 16px;
-  background: var(--ink);
+  background: var(--gold-light);
   border-bottom: 2px solid var(--ink);
   flex-shrink: 0;
 }
 .p4-col-eyebrow {
   font-family: 'Noto Sans TC', sans-serif;
   font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
-  color: #D4A017; font-weight: 700; display: block; margin-bottom: 5px;
+  color: var(--gold-deep); font-weight: 700; display: block; margin-bottom: 5px;
 }
 .p4-col-title {
   font-family: 'Noto Serif TC', serif;
-  font-size: 19px; font-weight: 900; color: var(--white); line-height: 1.25;
+  font-size: 19px; font-weight: 900; color: var(--gold-deep); line-height: 1.25;
 }
 
 .p4-list { flex: 1; }
@@ -317,9 +318,9 @@
         </div>
       </div>
       <div id="yt-title" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:var(--white);font-weight:700;margin-bottom:4px;line-height:1.5;min-height:22px;"></div>
-      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#D4A017;letter-spacing:1px;margin-bottom:16px;">Mr. Thai Hua · 泰語老師</div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#C8973A;letter-spacing:1px;margin-bottom:16px;">Mr. Thai Hua · 泰語老師</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button id="yt-shuffle-btn" onclick="shuffleYTVideo()" style="flex:1;min-width:130px;padding:12px 20px;background:#D4A017;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;">🔀 換一部影片</button>
+        <button id="yt-shuffle-btn" onclick="shuffleYTVideo()" style="flex:1;min-width:130px;padding:12px 20px;background:#C8973A;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;">🔀 換一部影片</button>
         <a href="https://www.youtube.com/@mrtaihua" target="_blank" style="flex:1;min-width:130px;padding:12px 20px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;">▶ 前往 YouTube 頻道</a>
       </div>
     </div>
@@ -328,45 +329,45 @@
 
 <!-- FB Posts Modal -->
 <div class="modal-overlay" id="modal-fbposts" onclick="closeModalOutside(event,'modal-fbposts')">
-  <div class="modal-box dark" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
+  <div class="modal-box" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
     <div class="modal-header" style="flex-shrink:0;padding:16px 22px;">
       <div style="display:flex;align-items:center;gap:12px;">
-        <div class="modal-title" style="color:var(--white)">🚀 貼文分享區</div>
+        <div class="modal-title" style="color:var(--ink)">🚀 貼文分享區</div>
       </div>
       <button class="modal-close" onclick="closeModal('modal-fbposts')">✕</button>
     </div>
     <div id="fb-list-view" style="overflow-y:auto;flex:1;padding:8px 0 16px;"></div>
     <div id="fb-detail-view" style="display:none;overflow-y:auto;flex:1;">
       <div id="fb-detail-img-wrap" style="display:none;"><img id="fb-detail-img" src="" alt="" style="width:100%;display:block;max-height:340px;object-fit:cover;"></div>
-      <div style="padding:22px 28px 20px;border-bottom:1px solid rgba(212,160,23,0.2);">
-        <div id="fb-detail-date" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#D4A017;letter-spacing:2px;margin-bottom:14px;"></div>
-        <div id="fb-detail-text" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:2;color:rgba(255,255,255,0.92);white-space:pre-wrap;word-break:break-word;"></div>
+      <div style="padding:22px 28px 20px;border-bottom:1px solid rgba(200,151,58,0.2);">
+        <div id="fb-detail-date" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#C8973A;letter-spacing:2px;margin-bottom:14px;"></div>
+        <div id="fb-detail-text" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:2;color:var(--ink);white-space:pre-wrap;word-break:break-word;"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:16px 28px;border-bottom:1px solid rgba(255,255,255,0.06);">
-        <button onclick="openLinkedSSFromPost()" style="padding:12px 8px;background:#D4A017;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📖 看文章學泰文</button>
-        <button onclick="shareFBPost()" style="padding:12px 8px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔗 分享本文</button>
-        <button onclick="closeModal('modal-fbposts');openModal('modal-line-qr')" style="padding:12px 8px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🙋 前往提問</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:16px 28px;border-bottom:1px solid var(--border);">
+        <button onclick="openLinkedSSFromPost()" style="padding:12px 8px;background:#C8973A;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📖 看文章學泰文</button>
+        <button onclick="shareFBPost()" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔗 分享本文</button>
+        <button onclick="closeModal('modal-fbposts');openModal('modal-line-qr')" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🙋 前往提問</button>
       </div></div>
   </div>
 </div>
 
 <!-- Self-Study Modal -->
 <div class="modal-overlay" id="modal-selfstudy" onclick="closeModalOutside(event,'modal-selfstudy')">
-  <div class="modal-box dark" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
+  <div class="modal-box" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
     <div class="modal-header" style="flex-shrink:0;padding:16px 22px;">
       <div style="display:flex;align-items:center;gap:12px;">
-        <div class="modal-title" style="color:var(--white)">📖 自學專區</div>
+        <div class="modal-title" style="color:var(--ink)">📖 自學專區</div>
       </div>
       <button class="modal-close" onclick="closeModal('modal-selfstudy')">✕</button>
     </div>
     <div id="ss-list-view" style="overflow-y:auto;flex:1;padding:8px 0 16px;"></div>
     <div id="ss-detail-view" style="display:none;overflow-y:auto;flex:1;padding:22px 26px 28px;">
-      <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:3px;color:#D4A017;margin-bottom:16px;" id="ss-detail-label"></div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:3px;color:#C8973A;margin-bottom:16px;" id="ss-detail-label"></div>
       <div id="ss-vocab-card" style="border-radius:12px;overflow:hidden;margin-bottom:20px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <button id="ss-read-btn" onclick="openLinkedFBPost(window._ssCurrentId)" style="padding:12px 8px;background:#D4A017;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📄 閱讀文章</button>
-        <button id="ss-share-btn" onclick="shareSSArticle()" style="padding:12px 8px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔗 分享詞彙</button>
-        <button onclick="closeModal('modal-selfstudy');openModal('modal-line-qr')" style="padding:12px 8px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🙋 前往提問</button>
+        <button id="ss-read-btn" onclick="openLinkedFBPost(window._ssCurrentId)" style="padding:12px 8px;background:#C8973A;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📄 閱讀文章</button>
+        <button id="ss-share-btn" onclick="shareSSArticle()" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔗 分享詞彙</button>
+        <button onclick="closeModal('modal-selfstudy');openModal('modal-line-qr')" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🙋 前往提問</button>
       </div>
     </div>
   </div>
@@ -388,12 +389,12 @@
 
 <!-- Share Popup -->
 <div id="share-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;" onclick="closeSharePopup()"></div>
-<div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(212,160,23,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
-  <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#D4A017;letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
+<div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(200,151,58,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+  <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#C8973A;letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
   <textarea id="share-text-area" readonly rows="7" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.85);font-family:'Noto Sans TC',sans-serif;font-size:13px;line-height:1.8;padding:12px 14px;resize:none;outline:none;box-sizing:border-box;"></textarea>
   <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:rgba(255,255,255,0.25);margin:8px 0 14px;">⚠️ 請勿刪除連結，分享時請保留完整內容，感謝您🙏</div>
   <div style="display:flex;gap:8px;">
-    <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:#D4A017;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">一鍵複製</button>
+    <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:#C8973A;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">一鍵複製</button>
     <button onclick="closeSharePopup()" style="padding:12px 20px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;cursor:pointer;">取消</button>
   </div>
 </div>
@@ -416,7 +417,7 @@
 <!-- ════════════ SECTION 1 · VIDEO GRID ════════════ -->
 <div id="videos" class="p4-videos">
   <div class="section-wrap">
-    <span class="eyebrow reveal" style="color:var(--gold-bright);">泰語影片學習庫</span>
+    <span class="eyebrow reveal" style="color:var(--gold);">泰語影片學習庫</span>
     <div class="p4-section-head">
       <h2 class="section-heading section-heading-white reveal">📺 泰語教學影片</h2>
       <button class="p4-shuffle-btn" id="p4-shuffle-btn" onclick="P4.shuffle()" disabled>⏳ 載入中…</button>
@@ -424,28 +425,28 @@
     <div class="p4-video-grid" id="p4-video-grid">
       <!-- 6 placeholder skeleton cards while loading -->
       <div class="p4-vc" style="pointer-events:none;">
-        <div class="p4-vc-thumb" style="background:rgba(255,255,255,0.06);"></div>
-        <div class="p4-vc-title" style="background:rgba(255,255,255,0.06);color:transparent;">　</div>
+        <div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div>
+        <div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div>
       </div>
       <div class="p4-vc" style="pointer-events:none;">
-        <div class="p4-vc-thumb" style="background:rgba(255,255,255,0.06);"></div>
-        <div class="p4-vc-title" style="background:rgba(255,255,255,0.06);color:transparent;">　</div>
+        <div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div>
+        <div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div>
       </div>
       <div class="p4-vc" style="pointer-events:none;">
-        <div class="p4-vc-thumb" style="background:rgba(255,255,255,0.06);"></div>
-        <div class="p4-vc-title" style="background:rgba(255,255,255,0.06);color:transparent;">　</div>
+        <div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div>
+        <div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div>
       </div>
       <div class="p4-vc" style="pointer-events:none;">
-        <div class="p4-vc-thumb" style="background:rgba(255,255,255,0.06);"></div>
-        <div class="p4-vc-title" style="background:rgba(255,255,255,0.06);color:transparent;">　</div>
+        <div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div>
+        <div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div>
       </div>
       <div class="p4-vc" style="pointer-events:none;">
-        <div class="p4-vc-thumb" style="background:rgba(255,255,255,0.06);"></div>
-        <div class="p4-vc-title" style="background:rgba(255,255,255,0.06);color:transparent;">　</div>
+        <div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div>
+        <div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div>
       </div>
       <div class="p4-vc" style="pointer-events:none;">
-        <div class="p4-vc-thumb" style="background:rgba(255,255,255,0.06);"></div>
-        <div class="p4-vc-title" style="background:rgba(255,255,255,0.06);color:transparent;">　</div>
+        <div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div>
+        <div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div>
       </div>
     </div>
   </div>
@@ -482,10 +483,10 @@
   </div>
 </div>
 
-<div style="height:44px;background:#0A0804;"></div>
+<div style="height:44px;background:var(--off-white);"></div>
 <footer>
   專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
-  <a href="terms.html" style="color:rgba(255,255,255,0.5);text-decoration:underline;">使用條款與著作權聲明</a>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
 <!-- ════════════ SCRIPTS ════════════ -->
@@ -648,6 +649,6 @@ var P4 = (function () {
 document.addEventListener('DOMContentLoaded', function () { P4.init(); });
 </script>
 
-<script src="shared.js?v=2"></script>
+<script src="shared.js?v=3"></script>
 </body>
 </html>
