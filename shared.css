@@ -6,6 +6,9 @@
     --white: #FFFFFF; --off-white: #F5F0E8; --border: rgba(139,99,16,0.18);
     --card-bg: #F5F0E8; --nav-h: 60px;
     --cream: #FBF5E7; --cream-soft: #F9F6F0; --warm-line: rgba(139,99,16,0.30);
+    /* difficulty ramp — easy→hard, light→dark */
+    --d1:#A07820; --d1-bg:#FDF4DC; --d2:#8B6310; --d2-bg:#F8EAC0;
+    --d3:#7A5510; --d3-bg:#F4E0A8; --d4:#5A3C08; --d4-bg:#EDD898;
   }
   * { margin:0; padding:0; box-sizing:border-box; scroll-behavior:smooth; }
   a:visited { color: currentColor; }
@@ -209,7 +212,7 @@
   .plan-card.featured .plan-price-block { border-top-color:rgba(139,99,16,0.25); }
   .plan-cta { width:100%; margin-top:16px; background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:14px; padding:14px; border:none; cursor:pointer; letter-spacing:1px; transition:background 0.2s; }
   .plan-cta:hover { background:#b07820; }
-  .plan-card.featured .plan-cta { background:var(--gold); color:#fff; }
+  .plan-card.featured .plan-cta { background:var(--gold-bright); color:var(--ink); }
   .plan-card.featured .plan-cta:hover { background:#7a5510; }
   .pair-prices-inline { margin-bottom:4px; }
 
@@ -461,4 +464,38 @@
 
   /* Gold accent bar under section headings for a refined highlight */
   .eyebrow { background:linear-gradient(90deg,#A8780F,#8B6310); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
+
+  /* ═══════════════════════════════════════════
+     DIFFICULTY COLOUR-GRADING  (easy→hard, light→dark)
+     Unified with the tone-finder level cards.
+     ═══════════════════════════════════════════ */
+
+  /* — Learning progress timeline: stage 1→4 green→amber→coral→deep — */
+  .prog-step:nth-child(1) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d1-bg) 100%); }
+  .prog-step:nth-child(2) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d2-bg) 100%); }
+  .prog-step:nth-child(3) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d3-bg) 100%); }
+  .prog-step:nth-child(4) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d4-bg) 100%); }
+  .prog-step:nth-child(1) .prog-circle { background:var(--d1); border-color:var(--d1); color:#fff; }
+  .prog-step:nth-child(2) .prog-circle { background:var(--d2); border-color:var(--d2); color:#fff; }
+  .prog-step:nth-child(3) .prog-circle { background:var(--d3); border-color:var(--d3); color:#fff; }
+  .prog-step:nth-child(4) .prog-circle { background:var(--d4); border-color:var(--d4); color:#fff; }
+  .prog-step:nth-child(1) .prog-title, .prog-step:nth-child(1) .prog-hours { color:var(--d1); -webkit-text-fill-color:var(--d1); }
+  .prog-step:nth-child(2) .prog-title, .prog-step:nth-child(2) .prog-hours { color:var(--d2); -webkit-text-fill-color:var(--d2); }
+  .prog-step:nth-child(3) .prog-title, .prog-step:nth-child(3) .prog-hours { color:var(--d3); -webkit-text-fill-color:var(--d3); }
+  .prog-step:nth-child(4) .prog-title, .prog-step:nth-child(4) .prog-hours { color:var(--d4); -webkit-text-fill-color:var(--d4); }
+
+  /* — Lesson preview cards: 1→3 green→amber→coral — */
+  .lesson-card:nth-child(1) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d1-bg) 100%); }
+  .lesson-card:nth-child(2) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d2-bg) 100%); }
+  .lesson-card:nth-child(3) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d3-bg) 100%); }
+  .lesson-card:nth-child(1) .lesson-card-tag { color:var(--d1); }
+  .lesson-card:nth-child(2) .lesson-card-tag { color:var(--d2); }
+  .lesson-card:nth-child(3) .lesson-card-tag { color:var(--d3); }
+  .lesson-card:nth-child(1) .lesson-sample { border-left-color:var(--d1); }
+  .lesson-card:nth-child(2) .lesson-sample { border-left-color:var(--d2); }
+  .lesson-card:nth-child(3) .lesson-sample { border-left-color:var(--d3); }
+
+  /* — Pricing tiers: Basic (beginner) green → Standard (higher) coral — */
+  .pricing-grid .plan-card:nth-child(1) .plan-tag { color:var(--d1); }
+  .pricing-grid .plan-card:nth-child(2) .plan-tag { color:var(--d3); }
 
