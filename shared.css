@@ -256,6 +256,7 @@
   .teacher-story-inner { max-width:1080px; margin:0 auto; padding:96px 32px; display:grid; grid-template-columns:1fr 2fr; gap:64px; align-items:start; }
   .teacher-photo-wrap { position:relative; }
   .teacher-photo-placeholder { width:100%; aspect-ratio:3/4; background:var(--off-white); border:2px solid var(--ink); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
+  .teacher-photo-img { width:100%; aspect-ratio:3/4; object-fit:cover; object-position:center top; border:2px solid var(--ink); display:block; }
   .teacher-photo-placeholder span { font-size:48px; }
   .teacher-photo-placeholder p { font-family:'Noto Sans TC',sans-serif; font-size:11px; letter-spacing:2px; color:var(--ink-muted); text-align:center; }
   .teacher-photo-badge { position:absolute; bottom:-16px; right:-16px; background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-size:11px; font-weight:900; letter-spacing:1px; padding:10px 16px; border:2px solid var(--ink); }

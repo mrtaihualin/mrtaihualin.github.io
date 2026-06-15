@@ -13,7 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>泰語聲調搜尋 — 泰華眼裡的泰語教學</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=5">
+<link rel="stylesheet" href="shared.css?v=6">
 <style>
   body { background: #F5F0E8; color: #1C1C1C; }
 
@@ -584,23 +584,41 @@
 
   /* ── 字母練習區 入口 ── */
   .tf-alpha-entry {
-    background: linear-gradient(180deg, #FBF5E7, #F3E4C2);
-    border-color: rgba(184,134,40,0.45);
+    background: linear-gradient(180deg, #F5E9BC 0%, #FFFFFF 100%);
+    border-color: rgba(184,134,40,0.40);
   }
-  .tf-alpha-entry:hover { border-color: rgba(184,134,40,0.8); background: linear-gradient(180deg,#FBF5E7,#EEDBB0); }
+  .tf-alpha-entry:hover { border-color: rgba(184,134,40,0.65); background: linear-gradient(180deg, #F0E0A8 0%, #FDFAF2 100%); }
+
+  /* ── 依難度漸層配色 difficulty colour-grading ── */
+  /* 初級 beginner — green */
+  .tf-lvl-1 { background: linear-gradient(180deg,#D4ECAC 0%,#FFFFFF 100%); border-color: rgba(99,153,34,0.35); }
+  .tf-lvl-1:hover { border-color: rgba(99,153,34,0.60); background: linear-gradient(180deg,#C4E494 0%,#F6FCF0 100%); }
+  .tf-lvl-1 .tf-level-label { color: #3B6D11; }
+  /* 中級 intermediate — amber/gold */
+  .tf-lvl-2 { background: linear-gradient(180deg,#F0DBA0 0%,#FFFFFF 100%); border-color: rgba(186,117,23,0.38); }
+  .tf-lvl-2:hover { border-color: rgba(186,117,23,0.65); background: linear-gradient(180deg,#E8CF88 0%,#FDFAF0 100%); }
+  .tf-lvl-2 .tf-level-label { color: #854F0B; }
+  /* 高級 advanced — coral/terracotta */
+  .tf-lvl-adv { background: linear-gradient(180deg,#F4C8B0 0%,#FFFFFF 100%); border-color: rgba(216,90,48,0.35); }
+  .tf-lvl-adv:hover { border-color: rgba(216,90,48,0.60); background: linear-gradient(180deg,#EDBA9C 0%,#FDF6F3 100%); }
+  .tf-lvl-adv .tf-level-label { color: #993C1D; }
+  /* 自行搜尋 search — neutral warm */
+  .tf-lvl-search { background: linear-gradient(180deg,#E0D8C4 0%,#FFFFFF 100%); border-color: rgba(90,62,10,0.22); }
+  .tf-lvl-search:hover { border-color: rgba(90,62,10,0.40); background: linear-gradient(180deg,#D4CAAE 0%,#FAF8F4 100%); }
 
   /* ── 字母字卡 (Flashcards) ── */
   .afc-scene { perspective: 1000px; display:flex; justify-content:center; margin: 6px 0 14px; }
   .afc-card {
-    width: 230px; height: 230px; cursor: pointer;
+    width: 250px; cursor: pointer;
     transform-style: preserve-3d; transition: transform 0.5s;
     position: relative;
   }
   .afc-card.flipped { transform: rotateY(180deg); }
-  .afc-inner { width:100%; height:100%; position:relative; transform-style: preserve-3d; }
+  .afc-inner { width:100%; display:grid; transform-style: preserve-3d; }
   .afc-face {
-    position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    grid-area:1/1; backface-visibility:hidden; -webkit-backface-visibility:hidden;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    min-height:230px; padding:22px 18px; box-sizing:border-box;
     border:1.5px solid rgba(139,99,16,0.3); border-radius:18px;
     box-shadow: 0 4px 14px rgba(139,99,16,0.12);
   }
@@ -611,7 +629,7 @@
   .afc-zhuyin { font-family:'Noto Sans TC',sans-serif; font-size:46px; font-weight:700; color:#5a3e0a; }
   .afc-pinyin { font-family:'Sarabun',sans-serif; font-size:26px; color:#8B6310; }
   .afc-note { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#7a5510; margin-top:4px; }
-  .afc-mem  { font-family:'Sarabun',sans-serif; font-size:13px; color:#9a7a3a; padding:0 14px; text-align:center; }
+  .afc-mem  { font-family:'Sarabun',sans-serif; font-size:13px; color:#9a7a3a; padding:0 6px; text-align:center; line-height:1.7; max-width:100%; word-break:break-word; }
   .afc-audio-btn {
     display:block; margin:0 auto 10px; font-family:'Noto Sans TC',sans-serif; font-size:14px;
     background:rgba(139,99,16,0.10); border:1px solid rgba(139,99,16,0.3); border-radius:22px;
@@ -1558,16 +1576,16 @@
 var DEFS = {
   toneMark: {
     zh: '聲調符號',
-    desc: '標示在子音上方，決定音節聲調的符號。\n\n四種聲調符號：\n　• 二聲符（ไม้เอก）　ก่\n　• 三聲符（ไม้โท）　ก้\n　• 四聲符（ไม้ตรี）　ก๊\n　• 五聲符（ไม้จัตวา）　ก๋'
+    desc: '標示在子音上方，決定音節聲調的符號。\n\n四種聲調符號：\n　• 二聲符　อ่\n　• 三聲符　อ้\n　• 四聲符　อ๊\n　• 五聲符　อ๋'
   },
   low:  { zh: '低子音',  chars: 'ค คร คล คว ฅ ฆ ง ช ซ ซร ฌ ญ ฑ ฒ ณ ท ทร ธ น พ พร พล ฟ ภ ม ย ร ล ว ฬ ฮ' },
   high: { zh: '高子音',  chars: 'ข ขร ขล ขว ฃ ฉ ฐ ถ ผ ฝ ศ ศร ษ ส สร ห' },
   mid:  { zh: '中子音',  chars: 'ก จ จร ด ต ตร บ ป ปร ปล อ ฎ ฏ กร กล กว' },
   lead: { zh: '前引字',  chars: 'หน หม หล หว หย หร หญ หง อย', desc: '由 ห 或 อ 帶頭，與後方低子音結合使聲調改變的組合。' },
   other: { zh: '其他子音', desc: '指「中子音」「高子音」或「前引字」三類的統稱。' },
-  live:  { zh: '活音', desc: '① 有長尾音（น ณ ญ ร ล ฬ ม ย ว ง）收尾\n② 無尾音但使用長母音\n　　長母音：-า  -ี  -ื  -ู  เ-  แ-  โ-  -อ  เ-อ  เ-ิ-  เ-ีย  -ัว  ฤๅ  ฦๅ' },
+  live:  { zh: '活音', desc: '① 有長尾音（น ณ ญ ร ล ฬ ม ย ว ง）收尾\n② 無尾音但使用長母音\n　　長母音：-า  -ี  -ื  -ู  เ-  แ-  โ-  -อ  เ-อ  เ-ิ-  เ-ีย  -ัว' },
   dead:  { zh: '死音', desc: '① 有短尾音（ก ข ค ฆ บ ป พ ฟ ภ จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส）收尾\n② 無尾音但使用短母音\n　　短母音：-ะ  -ั-  -ิ  -ึ  -ุ  เ-ะ  เ-็-  แ-ะ  แ-็-  โ-ะ  เ-าะ  เ-อะ  เ-ียะ  เ-ือะ  -ัวะ' },
-  longVowel:  { zh: '長母音', chars: '-า  -ี  -ื  -ู  เ-  แ-  โ-  -อ  เ-อ  เ-ิ-  เ-ีย  -ัว  ฤๅ  ฦๅ' },
+  longVowel:  { zh: '長母音', chars: '-า  -ี  -ื  -ู  เ-  แ-  โ-  -อ  เ-อ  เ-ิ-  เ-ีย  -ัว' },
   shortVowel: { zh: '短母音', chars: '-ะ  -ั-  -ิ  -ึ  -ุ  เ-ะ  เ-็-  แ-ะ  แ-็-  โ-ะ  เ-าะ  เ-อะ  เ-ียะ  เ-ือะ  -ัวะ' },
   longEnd:  { zh: '長尾音', chars: 'น  ณ  ญ  ร  ล  ฬ  ม  ย  ว  ง' },
   shortEnd: { zh: '短尾音', chars: 'ก  ข  ค  ฆ  บ  ป  พ  ฟ  ภ  จ  ช  ซ  ฎ  ฏ  ฐ  ฑ  ฒ  ด  ต  ถ  ท  ธ  ศ  ษ  ส' }
@@ -1580,7 +1598,7 @@ var DEFS = {
 // ════════════════════════════════════════════════════════════
 var ALPHA = {
   consonant: {
-    mid:  { zh:'中子音', sub:'อักษรกลาง・9 個',
+    mid:  { zh:'中子音', sub:'7 個',
       common: [
         {ch:'ก', zh:'ㄍ⁻', py:'g'},
         {ch:'จ', zh:'ㄗ⁻', py:'z'},
@@ -1591,11 +1609,11 @@ var ALPHA = {
         {ch:'ป', zh:'ㄅ⁻', py:'b'}
       ],
       forgot: [
-        {ch:'ฎ', zh:'—', py:'—', note:'同 ด（ㄉ⁻）'},
-        {ch:'ฏ', zh:'—', py:'—', note:'同 ต（ㄉ⁻）'}
+        {ch:'ฎ', zh:'ㄉ⁻', py:'d'},
+        {ch:'ฏ', zh:'ㄉ⁻', py:'d'}
       ]
     },
-    high: { zh:'高子音', sub:'อักษรสูง・10 個',
+    high: { zh:'高子音', sub:'5 個',
       common: [
         {ch:'ข', zh:'ㄎˊ', py:'k'},
         {ch:'ถ', zh:'ㄊˊ', py:'t'},
@@ -1604,14 +1622,14 @@ var ALPHA = {
         {ch:'ห', zh:'ㄏˊ', py:'h'}
       ],
       forgot: [
-        {ch:'ฉ', zh:'—', py:'—'},
-        {ch:'ฐ', zh:'—', py:'—'},
-        {ch:'ฝ', zh:'—', py:'—'},
-        {ch:'ศ', zh:'—', py:'—'},
-        {ch:'ษ', zh:'—', py:'—'}
+        {ch:'ฉ', zh:'ㄔˊ', py:'c'},
+        {ch:'ฐ', zh:'ㄊˊ', py:'t'},
+        {ch:'ฝ', zh:'ㄈˊ', py:'f'},
+        {ch:'ศ', zh:'ㄙˊ', py:'s'},
+        {ch:'ษ', zh:'ㄙˊ', py:'s'}
       ]
     },
-    low:  { zh:'低子音', sub:'อักษรต่ำ・常用 15 個',
+    low:  { zh:'低子音', sub:'常用 15 個',
       common: [
         {ch:'ค', zh:'ㄎ⁻', py:'k'},
         {ch:'ง', zh:'ㄋ⁻', py:'n'},
@@ -1625,19 +1643,18 @@ var ALPHA = {
         {ch:'ฟ', zh:'ㄈ⁻', py:'f'},
         {ch:'ม', zh:'ㄇ⁻', py:'m'},
         {ch:'ย', zh:'ㄖ⁻', py:'r'},
-        {ch:'ร', zh:'ㄌ⁻', py:'l'},
+        {ch:'ร', zh:'ㄌ⁻', py:'l', note:'彈舌音'},
         {ch:'ล', zh:'ㄌ⁻', py:'l'},
-        {ch:'ว', zh:'窩', py:'—'}
+        {ch:'ว', zh:'w', py:'w'}
       ],
       forgot: [
-        {ch:'ฅ', zh:'—', py:'—'},
-        {ch:'ฌ', zh:'—', py:'—'},
-        {ch:'ญ', zh:'—', py:'—'},
-        {ch:'ฑ', zh:'—', py:'—'},
-        {ch:'ฒ', zh:'—', py:'—'},
-        {ch:'ณ', zh:'—', py:'—'},
-        {ch:'ฬ', zh:'—', py:'—'},
-        {ch:'ฮ', zh:'—', py:'—'}
+        {ch:'ฌ', zh:'ㄔ⁻', py:'c'},
+        {ch:'ญ', zh:'ㄖ⁻', py:'r'},
+        {ch:'ฑ', zh:'ㄔ⁻', py:'c'},
+        {ch:'ฒ', zh:'ㄔ⁻', py:'c'},
+        {ch:'ณ', zh:'ㄋ⁻', py:'n'},
+        {ch:'ฬ', zh:'ㄌ⁻', py:'l'},
+        {ch:'ฮ', zh:'ㄏ⁻', py:'h'}
       ]
     }
   },
@@ -1663,27 +1680,27 @@ var ALPHA = {
       {ch:'เอีย', zh:'ㄧㄚ⁻', py:'iā'},
       {ch:'เอือ', zh:'—', py:'Uea⁻'},
       {ch:'อัว', zh:'ㄨㄚ⁻', py:'uā'},
-      {ch:'อำ', zh:'—', py:'am⁻', note:'อำ = อัม'},
-      {ch:'เอา', zh:'ㄠ⁻', py:'āo', note:'เอา = อะ + ว'},
-      {ch:'ไอ ใอ', zh:'ㄞ⁻', py:'āi', note:'ไอ・ใอ = อัย', tts:'ไอ'}
+      {ch:'อำ', zh:'—', py:'am⁻'},
+      {ch:'เอา', zh:'ㄠ⁻', py:'āo'},
+      {ch:'ไอ ใอ', zh:'ㄞ⁻', py:'āi', tts:'ไอ'}
     ]
   },
   ending: [
-    {ch:'ง', zh:'แม่กง', py:'-ng', note:'長尾音（活音）', mem:'ง',
-      exp:{cat:'第一類・與中文相同', how:'鼻音化，聲音在喉嚨後方共鳴。', thai:'ต้อง (tong) — 聲音移到喉嚨後方。', zh:'東 (dōng) — 收尾鼻音完全相同。'}},
-    {ch:'น', zh:'แม่กน', py:'-n', note:'長尾音（活音）', mem:'น ณ ญ ร ล ฬ',
-      exp:{cat:'第一類・與中文相同', how:'音節結尾時舌頭頂住上顎，與英文 N 或中文「-an」結尾相同，聲音可拉長。', thai:'วัน (wan) — 舌頭頂住上顎並拉長聲音。', zh:'灣 (wān) — 舌頭頂住上顎的方式完全相同。'}},
-    {ch:'ม', zh:'แม่กม', py:'-m', note:'長尾音（活音）', mem:'ม',
-      exp:{cat:'第二類・與英文相同', how:'與英文字母 M 相同。雙唇完全閉合，鼻音拉長。', thai:'', zh:''}},
-    {ch:'ย', zh:'แม่เกย', py:'-i', note:'長尾音（活音）', mem:'ย',
-      exp:{cat:'第一類・與中文相同', how:'音節以「-i（ee）」音收尾。', thai:'ใหญ่ (yai) — 以「-i」音收尾。', zh:'賣 (mài) — 收尾的「-i」音完全相同。'}},
-    {ch:'ว', zh:'แม่เกอว', py:'-u', note:'長尾音（活音）', mem:'ว',
-      exp:{cat:'第一類・與中文相同', how:'嘴巴結尾要呈現圓嘟嘟的形狀（像「屋 wu」音）。', thai:'ข้าว (khao) — 嘴巴收在圓唇形狀。', zh:'要 (yào) — 嘴型自然收在相同的圓唇位置。'}},
-    {ch:'ก', zh:'แม่กก', py:'-k', note:'短尾音（死音）', mem:'ก ข ค ฆ',
+    {ch:'ง', zh:'', py:'-ng', note:'長尾音（活音）', mem:'ง',
+      exp:{cat:'第一類・與中文相同', how:'鼻音化，聲音在喉嚨後方共鳴。', thai:'', zh:'東 (dōng) — 收尾鼻音完全相同。'}},
+    {ch:'น', zh:'', py:'-n', note:'長尾音（活音）', mem:'น ณ ญ ร ล ฬ',
+      exp:{cat:'第一類・與中文相同', how:'音節結尾時舌頭頂住上顎，與英文 N 或中文「-an」結尾相同，聲音可拉長。', thai:'', zh:'灣 (wān) — 舌頭頂住上顎的方式完全相同。'}},
+    {ch:'ม', zh:'', py:'-m', note:'長尾音（活音）', mem:'ม',
+      exp:{cat:'第二類・與英文相同', how:'發音方式與英文尾音 M 相同。雙唇完全閉合，聲音拉長。', thai:'', zh:''}},
+    {ch:'ย', zh:'', py:'-i', note:'長尾音（活音）', mem:'ย',
+      exp:{cat:'第一類・與中文相同', how:'音節以「-i（ee）」音收尾。', thai:'ไม่ (mai) — 以「-i」音收尾。', zh:'賣 (mài) — 收尾的「-i」音完全相同。'}},
+    {ch:'ว', zh:'', py:'-u', note:'長尾音（活音）', mem:'ว',
+      exp:{cat:'第一類・與中文相同', how:'嘴巴結尾要呈現圓嘟嘟的形狀（像「屋 wu」音）。', thai:'', zh:'要 (yào) — 嘴型自然收在相同的圓唇位置。'}},
+    {ch:'ก', zh:'', py:'-k', note:'短尾音（死音）・注音參考使用', mem:'ก ข ค ฆ',
       exp:{cat:'第二類・與英文相同', how:'對應英文短促的 K／G 音。英文唸尾音時會在喉嚨後方短暫擋住氣流再釋放「kuh／guh」；泰文則在那一刻直接停住氣流，不釋放尾音。', thai:'', zh:''}},
-    {ch:'ด', zh:'แม่กด', py:'-t', note:'短尾音（死音）', mem:'จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส',
+    {ch:'ด', zh:'', py:'-t', note:'短尾音（死音）・注音參考使用', mem:'จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส',
       exp:{cat:'第二類・與英文相同', how:'對應英文短促的 T／D 音。英文唸尾音時舌尖會抵在門牙後方擋住氣流再釋放「tuh／duh」；泰文則在那一刻直接停住氣流，不釋放尾音。', thai:'', zh:''}},
-    {ch:'บ', zh:'แม่กบ', py:'-p', note:'短尾音（死音）', mem:'บ ป พ ฟ ภ',
+    {ch:'บ', zh:'', py:'-p', note:'短尾音（死音）・注音參考使用', mem:'บ ป พ ฟ ภ',
       exp:{cat:'第二類・與英文相同', how:'對應英文短促的 P／B 音。英文唸尾音時雙唇會短暫閉合擋住氣流再釋放「puh／buh」；泰文則在那一刻直接停住氣流，不釋放尾音。', thai:'', zh:''}}
   ]
 };
@@ -1709,77 +1726,75 @@ var TONES = {
 //   zh        → 中文（台灣）翻譯
 // ════════════════════════════════════════════════════════════
 var WORD_LIST = [
-  // ── 初級：ตัวเลข ──
+  // ── 初級 Level 1：ตัวเลข（數字） ──
   { word:'หนึ่ง', readingTH:'หนึ่ง', readingEN:'nèung', zh:'一', level:1, category:'ตัวเลข' },
-  { word:'สอง',   readingTH:'สอง',   readingEN:'sǒong', zh:'二', level:1, category:'ตัวเลข' },
-  { word:'สาม',   readingTH:'สาม',   readingEN:'sǎam',  zh:'三', level:1, category:'ตัวเลข' },
-  { word:'สี่',    readingTH:'สี่',    readingEN:'sìi',   zh:'四', level:1, category:'ตัวเลข' },
-  { word:'ห้า',   readingTH:'ห้า',   readingEN:'hâa',   zh:'五', level:1, category:'ตัวเลข' },
-  { word:'หก',   readingTH:'หก',   readingEN:'hòk',   zh:'六', level:1, category:'ตัวเลข' },
-  { word:'เจ็ด', readingTH:'เจ็ด', readingEN:'jèt',   zh:'七', level:1, category:'ตัวเลข' },
-  { word:'แปด',  readingTH:'แปด',  readingEN:'bpàet', zh:'八', level:1, category:'ตัวเลข' },
-  { word:'เก้า', readingTH:'เก้า', readingEN:'gâo',   zh:'九', level:1, category:'ตัวเลข' },
-  { word:'สิบ',  readingTH:'สิบ',  readingEN:'sìp',   zh:'十', level:1, category:'ตัวเลข' },
-  // ── 初級：สี ──
-  { word:'ดำ',    readingTH:'ดำ',    readingEN:'dam',    zh:'黑', level:1, category:'สี' },
-  { word:'ขาว',   readingTH:'ขาว',   readingEN:'khǎao',  zh:'白', level:1, category:'สี' },
-  { word:'แดง',   readingTH:'แดง',   readingEN:'daeng',  zh:'紅', level:1, category:'สี' },
-  { word:'เหลือง',readingTH:'เหลือง',readingEN:'lʉ̌ang', zh:'黃', level:1, category:'สี' },
-  { word:'ฟ้า',   readingTH:'ฟ้า',   readingEN:'fáa',    zh:'藍', level:1, category:'สี' },
-  // ── 初級：กริยา ──
-  { word:'กิน',   readingTH:'กิน',   readingEN:'gin',    zh:'吃', level:1, category:'กริยา' },
-  { word:'ดื่ม',  readingTH:'ดื่ม',  readingEN:'dèum',   zh:'喝', level:1, category:'กริยา' },
-  { word:'ไป',    readingTH:'ไป',    readingEN:'bpai',   zh:'去', level:1, category:'กริยา' },
-  { word:'มา',    readingTH:'มา',    readingEN:'maa',    zh:'來', level:1, category:'กริยา' },
-  { word:'ซื้อ',  readingTH:'ซื้อ',  readingEN:'séu',    zh:'買', level:1, category:'กริยา' },
-  // ── 初級：คำขยาย ──
-  { word:'ดี',    readingTH:'ดี',    readingEN:'dii',    zh:'好', level:1, category:'คำขยาย' },
-  { word:'ใหญ่',  readingTH:'ใหญ่',  readingEN:'yài',    zh:'大', level:1, category:'คำขยาย' },
-  { word:'เล็ก',  readingTH:'เล็ก',  readingEN:'lék',    zh:'小', level:1, category:'คำขยาย' },
-  { word:'ร้อน',  readingTH:'ร้อน',  readingEN:'róon',   zh:'熱', level:1, category:'คำขยาย' },
-  { word:'แพง',   readingTH:'แพง',   readingEN:'phaeng', zh:'貴', level:1, category:'คำขยาย' },
-  // ── 中級：ร้านอาหาร ──
-  { word:'อาหาร',      readingTH:'อา-หาน',        readingEN:'aa-hǎan',       zh:'食物/料理', level:2, category:'ร้านอาหาร' },
-  { word:'ร้านอาหาร',  readingTH:'ร้าน-อา-หาน',   readingEN:'ráan-aa-hǎan',  zh:'餐廳',      level:2, category:'ร้านอาหาร' },
-  { word:'เมนู',       readingTH:'เม-นู',          readingEN:'mee-nuu',       zh:'菜單',      level:2, category:'ร้านอาหาร' },
-  { word:'ของหวาน',    readingTH:'ของ-หวาน',       readingEN:'khǒong-wǎan',   zh:'甜點',      level:2, category:'ร้านอาหาร' },
-  { word:'น้ำแข็ง',   readingTH:'น้ำ-แข็ง',       readingEN:'náam-khǎeng',   zh:'冰塊',      level:2, category:'ร้านอาหาร' },
-  { word:'ใบเสร็จ',    readingTH:'ใบ-เสร็จ',       readingEN:'bai-sèt',       zh:'收據/帳單',  level:2, category:'ร้านอาหาร' },
-  // ── 中級：การเดินทาง ──
-  { word:'สนามบิน',   readingTH:'สะ-หนาม-บิน',   readingEN:'sa-nǎam-bin',   zh:'機場',      level:2, category:'การเดินทาง' },
-  { word:'แท็กซี่',   readingTH:'แท็ก-ซี่',       readingEN:'tháek-sîi',     zh:'計程車',    level:2, category:'การเดินทาง' },
-  { word:'รถไฟฟ้า',   readingTH:'รด-ไฟ-ฟ้า',     readingEN:'rót-fai-fáa',   zh:'捷運/地鐵', level:2, category:'การเดินทาง' },
-  { word:'แผนที่',     readingTH:'แผน-ที่',         readingEN:'phǎen-thîi',    zh:'地圖',      level:2, category:'การเดินทาง' },
-  { word:'ทางออก',     readingTH:'ทาง-ออก',         readingEN:'thaang-òk',     zh:'出口',      level:2, category:'การเดินทาง' },
-  { word:'ห้องน้ำ',   readingTH:'ห้อง-น้ำ',       readingEN:'hông-náam',     zh:'洗手間',    level:2, category:'การเดินทาง' },
-  // ── 中級：โรงแรม ──
-  { word:'โรงแรม',     readingTH:'โรง-แรม',         readingEN:'roong-raem',    zh:'飯店',      level:2, category:'โรงแรม' },
-  { word:'ห้องพัก',   readingTH:'ห้อง-พัก',       readingEN:'hông-phák',     zh:'客房',      level:2, category:'โรงแรม' },
-  { word:'เช็คอิน',   readingTH:'เช็ค-อิน',       readingEN:'chék-in',       zh:'辦理入住',  level:2, category:'โรงแรม' },
-  { word:'เช็คเอาท์', readingTH:'เช็ค-เอาท์',     readingEN:'chék-áo',       zh:'退房',      level:2, category:'โรงแรม' },
-  { word:'สระว่ายน้ำ',readingTH:'สะ-หระ-ว่าย-น้ำ',readingEN:'sà-wâai-náam', zh:'游泳池',    level:2, category:'โรงแรม' },
-  // ── 中級：งาน ──
-  { word:'บริษัท',    readingTH:'บอ-ริ-สัด',      readingEN:'bor-rí-sàt',    zh:'公司',      level:2, category:'งาน' },
-  { word:'ประชุม',    readingTH:'ปฺระ-ชุม',        readingEN:'bprà-chum',     zh:'開會',      level:2, category:'งาน' },
-  { word:'ลูกค้า',    readingTH:'ลูก-ค้า',         readingEN:'lûuk-kháa',     zh:'客戶',      level:2, category:'งาน' },
-  { word:'นัดหมาย',   readingTH:'นัด-หมาย',        readingEN:'nát-mǎai',      zh:'預約/約定', level:2, category:'งาน' },
-  { word:'รายงาน',    readingTH:'ราย-งาน',          readingEN:'raai-ngaan',    zh:'報告',      level:2, category:'งาน' },
-  // ── 中級：ช้อปปิ้ง ──
-  { word:'ราคา',       readingTH:'รา-คา',           readingEN:'raa-khaa',      zh:'價格',      level:2, category:'ช้อปปิ้ง' },
-  { word:'ลดราคา',     readingTH:'ลด-รา-คา',        readingEN:'lót-raa-khaa',  zh:'打折',      level:2, category:'ช้อปปิ้ง' },
-  { word:'ต่อรอง',     readingTH:'ต่อ-รอง',          readingEN:'dtòr-rong',     zh:'殺價',      level:2, category:'ช้อปปิ้ง' },
-  { word:'ชำระเงิน',  readingTH:'ชำ-ระ-เงิน',      readingEN:'cham-rá-ngoen', zh:'付款',      level:2, category:'ช้อปปิ้ง' },
-  { word:'ห้างสรรพสินค้า',readingTH:'ห้าง-สับ-พะ-สิน-ค้า',readingEN:'hâang-sàp-phá-sǐn-kháa',zh:'百貨公司',level:2,category:'ช้อปปิ้ง' },
-  // ── 中級：อื่นๆ ──
-  { word:'สวัสดี',    readingTH:'สะ-หวัด-ดี',      readingEN:'sà-wàt-dii',   zh:'你好/再見', level:2, category:'อื่นๆ' },
-  { word:'ขอบคุณ',    readingTH:'ขอบ-คุณ',          readingEN:'khòp-khun',     zh:'謝謝',      level:2, category:'อื่นๆ' },
-  { word:'ขอโทษ',     readingTH:'ขอ-โทด',           readingEN:'khǒr-thôot',    zh:'對不起',    level:2, category:'อื่นๆ' },
-  { word:'ไม่เป็นไร', readingTH:'ไม่-เป็น-ไร',     readingEN:'mâi-bpen-rai',  zh:'沒關係',    level:2, category:'อื่นๆ' },
-  { word:'ไม่เข้าใจ', readingTH:'ไม่-เข้า-ใจ',     readingEN:'mâi-khâo-jai',  zh:'我不懂',    level:2, category:'อื่นๆ' },
-  { word:'ช่วยด้วย',  readingTH:'ช่วย-ด้วย',       readingEN:'chûai-dûai',    zh:'幫幫我',    level:2, category:'อื่นๆ' },
-  // ── เพิ่มเติม: สี / ลักษณนาม / กริยา / คำขยาย ──
-  // ── 名詞 4 หมวด ──
-  // ── 中級 เพิ่มเติม 6 หมวด ──
+  { word:'สอง', readingTH:'สอง', readingEN:'sǒong', zh:'二', level:1, category:'ตัวเลข' },
+  { word:'สาม', readingTH:'สาม', readingEN:'sǎam', zh:'三', level:1, category:'ตัวเลข' },
+  { word:'สี่', readingTH:'สี่', readingEN:'sìi', zh:'四', level:1, category:'ตัวเลข' },
+  { word:'ห้า', readingTH:'ห้า', readingEN:'hâa', zh:'五', level:1, category:'ตัวเลข' },
+  { word:'หก', readingTH:'หก', readingEN:'hòk', zh:'六', level:1, category:'ตัวเลข' },
+  { word:'เจ็ด', readingTH:'เจ็ด', readingEN:'jèt', zh:'七', level:1, category:'ตัวเลข' },
+  { word:'แปด', readingTH:'แปด', readingEN:'bpàet', zh:'八', level:1, category:'ตัวเลข' },
+  { word:'เก้า', readingTH:'เก้า', readingEN:'gâo', zh:'九', level:1, category:'ตัวเลข' },
+  { word:'สิบ', readingTH:'สิบ', readingEN:'sìp', zh:'十', level:1, category:'ตัวเลข' },
+  // ── 初級 Level 1：สี（顏色） ──
+  { word:'ดำ', readingTH:'ดำ', readingEN:'dam', zh:'黑', level:1, category:'สี' },
+  { word:'ขาว', readingTH:'ขาว', readingEN:'khǎao', zh:'白', level:1, category:'สี' },
+  { word:'แดง', readingTH:'แดง', readingEN:'daeng', zh:'紅', level:1, category:'สี' },
+  { word:'เหลือง', readingTH:'เหลือง', readingEN:'lʉ̌ang', zh:'黃', level:1, category:'สี' },
+  { word:'ฟ้า', readingTH:'ฟ้า', readingEN:'fáa', zh:'藍', level:1, category:'สี' },
+  // ── 初級 Level 1：กริยา（動詞） ──
+  { word:'กิน', readingTH:'กิน', readingEN:'gin', zh:'吃', level:1, category:'กริยา' },
+  { word:'ดื่ม', readingTH:'ดื่ม', readingEN:'dèum', zh:'喝', level:1, category:'กริยา' },
+  { word:'ไป', readingTH:'ไป', readingEN:'bpai', zh:'去', level:1, category:'กริยา' },
+  { word:'มา', readingTH:'มา', readingEN:'maa', zh:'來', level:1, category:'กริยา' },
+  { word:'ซื้อ', readingTH:'ซื้อ', readingEN:'séu', zh:'買', level:1, category:'กริยา' },
+  // ── 初級 Level 1：คำขยาย（形容詞） ──
+  { word:'ดี', readingTH:'ดี', readingEN:'dii', zh:'好', level:1, category:'คำขยาย' },
+  { word:'ใหญ่', readingTH:'ใหญ่', readingEN:'yài', zh:'大', level:1, category:'คำขยาย' },
+  { word:'เล็ก', readingTH:'เล็ก', readingEN:'lék', zh:'小', level:1, category:'คำขยาย' },
+  { word:'ร้อน', readingTH:'ร้อน', readingEN:'róon', zh:'熱', level:1, category:'คำขยาย' },
+  { word:'แพง', readingTH:'แพง', readingEN:'phaeng', zh:'貴', level:1, category:'คำขยาย' },
+  // ── 中級 Level 2：ร้านอาหาร（餐廳） ──
+  { word:'อาหาร', readingTH:'อา-หาน', readingEN:'aa-hǎan', zh:'食物/料理', level:2, category:'ร้านอาหาร' },
+  { word:'ร้านอาหาร', readingTH:'ร้าน-อา-หาน', readingEN:'ráan-aa-hǎan', zh:'餐廳', level:2, category:'ร้านอาหาร' },
+  { word:'เมนู', readingTH:'เม-นู', readingEN:'mee-nuu', zh:'菜單', level:2, category:'ร้านอาหาร' },
+  { word:'ของหวาน', readingTH:'ของ-หวาน', readingEN:'khǒong-wǎan', zh:'甜點', level:2, category:'ร้านอาหาร' },
+  { word:'น้ำแข็ง', readingTH:'น้ำ-แข็ง', readingEN:'náam-khǎeng', zh:'冰塊', level:2, category:'ร้านอาหาร' },
+  { word:'ใบเสร็จ', readingTH:'ใบ-เส็ด', readingEN:'bai-sèt', zh:'收據/帳單', level:2, category:'ร้านอาหาร' },
+  // ── 中級 Level 2：การเดินทาง（交通） ──
+  { word:'สนามบิน', readingTH:'สะ-หนาม-บิน', readingEN:'sa-nǎam-bin', zh:'機場', level:2, category:'การเดินทาง' },
+  { word:'แท็กซี่', readingTH:'แท็ก-ซี่', readingEN:'tháek-sîi', zh:'計程車', level:2, category:'การเดินทาง' },
+  { word:'รถไฟฟ้า', readingTH:'รด-ไฟ-ฟ้า', readingEN:'rót-fai-fáa', zh:'捷運/地鐵', level:2, category:'การเดินทาง' },
+  { word:'แผนที่', readingTH:'แผน-ที่', readingEN:'phǎen-thîi', zh:'地圖', level:2, category:'การเดินทาง' },
+  { word:'ทางออก', readingTH:'ทาง-ออก', readingEN:'thaang-òk', zh:'出口', level:2, category:'การเดินทาง' },
+  { word:'ห้องน้ำ', readingTH:'ห้อง-น้ำ', readingEN:'hông-náam', zh:'洗手間', level:2, category:'การเดินทาง' },
+  // ── 中級 Level 2：โรงแรม（飯店） ──
+  { word:'โรงแรม', readingTH:'โรง-แรม', readingEN:'roong-raem', zh:'飯店', level:2, category:'โรงแรม' },
+  { word:'ห้องพัก', readingTH:'ห้อง-พัก', readingEN:'hông-phák', zh:'客房', level:2, category:'โรงแรม' },
+  { word:'เช็คอิน', readingTH:'เช็ค-อิน', readingEN:'chék-in', zh:'辦理入住', level:2, category:'โรงแรม' },
+  { word:'เช็คเอาท์', readingTH:'เช็ค-เอาท์', readingEN:'chék-áo', zh:'退房', level:2, category:'โรงแรม' },
+  { word:'สระว่ายน้ำ', readingTH:'สะ-ว่าย-น้ำ', readingEN:'sà-wâai-náam', zh:'游泳池', level:2, category:'โรงแรม' },
+  // ── 中級 Level 2：งาน（工作） ──
+  { word:'บริษัท', readingTH:'บอ-ริ-สัด', readingEN:'bor-rí-sàt', zh:'公司', level:2, category:'งาน' },
+  { word:'ประชุม', readingTH:'ปฺระ-ชุม', readingEN:'bprà-chum', zh:'開會', level:2, category:'งาน' },
+  { word:'ลูกค้า', readingTH:'ลูก-ค้า', readingEN:'lûuk-kháa', zh:'客戶', level:2, category:'งาน' },
+  { word:'นัดหมาย', readingTH:'นัด-หมาย', readingEN:'nát-mǎai', zh:'預約/約定', level:2, category:'งาน' },
+  { word:'รายงาน', readingTH:'ราย-งาน', readingEN:'raai-ngaan', zh:'報告', level:2, category:'งาน' },
+  // ── 中級 Level 2：ช้อปปิ้ง（購物） ──
+  { word:'ราคา', readingTH:'รา-คา', readingEN:'raa-khaa', zh:'價格', level:2, category:'ช้อปปิ้ง' },
+  { word:'ลดราคา', readingTH:'ลด-รา-คา', readingEN:'lót-raa-khaa', zh:'打折', level:2, category:'ช้อปปิ้ง' },
+  { word:'ต่อรอง', readingTH:'ต่อ-รอง', readingEN:'dtòr-rong', zh:'殺價', level:2, category:'ช้อปปิ้ง' },
+  { word:'ชำระเงิน', readingTH:'ชำ-ระ-เงิน', readingEN:'cham-rá-ngoen', zh:'付款', level:2, category:'ช้อปปิ้ง' },
+  { word:'ห้างสรรพสินค้า', readingTH:'ห้าง-สับ-พะ-สิน-ค้า', readingEN:'hâang-sàp-phá-sǐn-kháa', zh:'百貨公司', level:2, category:'ช้อปปิ้ง' },
+  // ── 中級 Level 2：อื่นๆ（其他） ──
+  { word:'สวัสดี', readingTH:'สะ-หวัด-ดี', readingEN:'sà-wàt-dii', zh:'你好/再見', level:2, category:'อื่นๆ' },
+  { word:'ขอบคุณ', readingTH:'ขอบ-คุณ', readingEN:'khòp-khun', zh:'謝謝', level:2, category:'อื่นๆ' },
+  { word:'ขอโทษ', readingTH:'ขอ-โทด', readingEN:'khǒr-thôot', zh:'對不起', level:2, category:'อื่นๆ' },
+  { word:'ไม่เป็นไร', readingTH:'ไม่-เป็น-ไร', readingEN:'mâi-bpen-rai', zh:'沒關係', level:2, category:'อื่นๆ' },
+  { word:'ไม่เข้าใจ', readingTH:'ไม่-เข้า-ใจ', readingEN:'mâi-khâo-jai', zh:'我不懂', level:2, category:'อื่นๆ' },
+  { word:'ช่วยด้วย', readingTH:'ช่วย-ด้วย', readingEN:'chûai-dûai', zh:'幫幫我', level:2, category:'อื่นๆ' },
+  // ── 中級 Level 2：ร้านอาหาร（餐廳） ──
   { word:'ข้าวผัด', readingTH:'ข้าว-ผัด', readingEN:'khâao-phàt', zh:'炒飯', level:2, category:'ร้านอาหาร' },
   { word:'ต้มยำ', readingTH:'ต้ม-ยำ', readingEN:'dtôm-yam', zh:'冬陰湯', level:2, category:'ร้านอาหาร' },
   { word:'ผัดไทย', readingTH:'ผัด-ไท', readingEN:'phàt-thai', zh:'泰式炒麵', level:2, category:'ร้านอาหาร' },
@@ -1794,6 +1809,7 @@ var WORD_LIST = [
   { word:'ช้อนส้อม', readingTH:'ช้อน-ส้อม', readingEN:'chóon-sôom', zh:'餐具', level:2, category:'ร้านอาหาร' },
   { word:'ตะเกียบ', readingTH:'ตะ-เกียบ', readingEN:'dta-gìap', zh:'筷子', level:2, category:'ร้านอาหาร' },
   { word:'จานข้าว', readingTH:'จาน-ข้าว', readingEN:'jaan-khâao', zh:'飯盤', level:2, category:'ร้านอาหาร' },
+  // ── 中級 Level 2：การเดินทาง（交通） ──
   { word:'รถเมล์', readingTH:'รด-เม', readingEN:'rót-mee', zh:'公車', level:2, category:'การเดินทาง' },
   { word:'รถทัวร์', readingTH:'รด-ทัว', readingEN:'rót-thua', zh:'遊覽車', level:2, category:'การเดินทาง' },
   { word:'เครื่องบิน', readingTH:'เครื่อง-บิน', readingEN:'khrʉ̂ang-bin', zh:'飛機', level:2, category:'การเดินทาง' },
@@ -1808,6 +1824,7 @@ var WORD_LIST = [
   { word:'ทางม้าลาย', readingTH:'ทาง-ม้า-ลาย', readingEN:'thaang-máa-laai', zh:'斑馬線', level:2, category:'การเดินทาง' },
   { word:'ระยะทาง', readingTH:'ระ-ยะ-ทาง', readingEN:'rá-yá-thaang', zh:'距離', level:2, category:'การเดินทาง' },
   { word:'ป้ายรถ', readingTH:'ป้าย-รด', readingEN:'bpâai-rót', zh:'站牌', level:2, category:'การเดินทาง' },
+  // ── 中級 Level 2：โรงแรม（飯店） ──
   { word:'พนักงาน', readingTH:'พะ-นัก-งาน', readingEN:'phá-nák-ngaan', zh:'員工', level:2, category:'โรงแรม' },
   { word:'เตียงนอน', readingTH:'เตียง-นอน', readingEN:'dtiang-noon', zh:'床', level:2, category:'โรงแรม' },
   { word:'ผ้าเช็ดตัว', readingTH:'ผ้า-เช็ด-ตัว', readingEN:'phâa-chét-dtua', zh:'毛巾', level:2, category:'โรงแรม' },
@@ -1823,6 +1840,7 @@ var WORD_LIST = [
   { word:'ยาสีฟัน', readingTH:'ยา-สี-ฟัน', readingEN:'yaa-sǐi-fan', zh:'牙膏', level:2, category:'โรงแรม' },
   { word:'หมอน', readingTH:'หมอน', readingEN:'mǒon', zh:'枕頭', level:2, category:'โรงแรม' },
   { word:'ต้อนรับ', readingTH:'ต้อน-รับ', readingEN:'dtôon-ráp', zh:'接待', level:2, category:'โรงแรม' },
+  // ── 中級 Level 2：งาน（工作） ──
   { word:'เงินเดือน', readingTH:'เงิน-เดือน', readingEN:'ngern-dʉan', zh:'薪水', level:2, category:'งาน' },
   { word:'หัวหน้า', readingTH:'หัว-หน้า', readingEN:'hǔa-nâa', zh:'主管', level:2, category:'งาน' },
   { word:'โทรศัพท์', readingTH:'โท-ระ-สับ', readingEN:'thoo-rá-sàp', zh:'電話', level:2, category:'งาน' },
@@ -1838,6 +1856,7 @@ var WORD_LIST = [
   { word:'เลขา', readingTH:'เล-ขา', readingEN:'lee-khǎa', zh:'秘書', level:2, category:'งาน' },
   { word:'ประชุมงาน', readingTH:'ปฺระ-ชุม-งาน', readingEN:'bprà-chum-ngaan', zh:'工作會議', level:2, category:'งาน' },
   { word:'เวลางาน', readingTH:'เว-ลา-งาน', readingEN:'wee-laa-ngaan', zh:'上班時間', level:2, category:'งาน' },
+  // ── 中級 Level 2：ช้อปปิ้ง（購物） ──
   { word:'เสื้อผ้า', readingTH:'เสื้อ-ผ้า', readingEN:'sʉ̂a-phâa', zh:'衣服', level:2, category:'ช้อปปิ้ง' },
   { word:'รองเท้า', readingTH:'รอง-เท้า', readingEN:'roong-tháo', zh:'鞋子', level:2, category:'ช้อปปิ้ง' },
   { word:'กระเป๋าเงิน', readingTH:'กฺระ-เป๋า-เงิน', readingEN:'grà-bpǎo-ngern', zh:'錢包', level:2, category:'ช้อปปิ้ง' },
@@ -1853,6 +1872,7 @@ var WORD_LIST = [
   { word:'รองเท้าแตะ', readingTH:'รอง-เท้า-แตะ', readingEN:'roong-tháo-dtàe', zh:'拖鞋', level:2, category:'ช้อปปิ้ง' },
   { word:'เครื่องสำอาง', readingTH:'เครื่อง-สำ-อาง', readingEN:'khrʉ̂ang-sǎm-aang', zh:'化妝品', level:2, category:'ช้อปปิ้ง' },
   { word:'แว่นตา', readingTH:'แว่น-ตา', readingEN:'wâen-dtaa', zh:'眼鏡', level:2, category:'ช้อปปิ้ง' },
+  // ── 中級 Level 2：อื่นๆ（其他） ──
   { word:'เวลา', readingTH:'เว-ลา', readingEN:'wee-laa', zh:'時間', level:2, category:'อื่นๆ' },
   { word:'นาฬิกา', readingTH:'นา-ลิ-กา', readingEN:'naa-lí-gaa', zh:'時鐘', level:2, category:'อื่นๆ' },
   { word:'อากาศ', readingTH:'อา-กาด', readingEN:'aa-gàat', zh:'天氣', level:2, category:'อื่นๆ' },
@@ -1867,6 +1887,7 @@ var WORD_LIST = [
   { word:'อนาคต', readingTH:'อะ-นา-คด', readingEN:'à-naa-khót', zh:'未來', level:2, category:'อื่นๆ' },
   { word:'ดนตรี', readingTH:'ดน-ตรี', readingEN:'don-dtrii', zh:'音樂', level:2, category:'อื่นๆ' },
   { word:'อาชีพ', readingTH:'อา-ชีบ', readingEN:'aa-chîip', zh:'職業', level:2, category:'อื่นๆ' },
+  // ── 初級 Level 1：นามร่างกาย（名詞·身體） ──
   { word:'หู', readingTH:'หู', readingEN:'hǔu', zh:'耳朵', level:1, category:'นามร่างกาย' },
   { word:'ปาก', readingTH:'ปาก', readingEN:'bpàak', zh:'嘴', level:1, category:'นามร่างกาย' },
   { word:'ฟัน', readingTH:'ฟัน', readingEN:'fan', zh:'牙齒', level:1, category:'นามร่างกาย' },
@@ -1884,6 +1905,7 @@ var WORD_LIST = [
   { word:'เท้า', readingTH:'เท้า', readingEN:'tháo', zh:'腳', level:1, category:'นามร่างกาย' },
   { word:'ท้อง', readingTH:'ท้อง', readingEN:'thóong', zh:'肚子', level:1, category:'นามร่างกาย' },
   { word:'เข่า', readingTH:'เข่า', readingEN:'khào', zh:'膝蓋', level:1, category:'นามร่างกาย' },
+  // ── 初級 Level 1：นามคน（名詞·家庭與人） ──
   { word:'ลูก', readingTH:'ลูก', readingEN:'lûuk', zh:'孩子', level:1, category:'นามคน' },
   { word:'พี่', readingTH:'พี่', readingEN:'phîi', zh:'哥哥／姊姊', level:1, category:'นามคน' },
   { word:'น้อง', readingTH:'น้อง', readingEN:'nóong', zh:'弟弟／妹妹', level:1, category:'นามคน' },
@@ -1891,7 +1913,7 @@ var WORD_LIST = [
   { word:'ย่า', readingTH:'ย่า', readingEN:'yâa', zh:'奶奶', level:1, category:'นามคน' },
   { word:'ยาย', readingTH:'ยาย', readingEN:'yaai', zh:'外婆', level:1, category:'นามคน' },
   { word:'หลาน', readingTH:'หลาน', readingEN:'lǎan', zh:'孫子', level:1, category:'นามคน' },
-  { word:'ญาติ', readingTH:'ญาติ', readingEN:'yâat', zh:'親戚', level:1, category:'นามคน' },
+  { word:'ญาติ', readingTH:'ยาด', readingEN:'yâat', zh:'親戚', level:1, category:'นามคน' },
   { word:'หมอ', readingTH:'หมอ', readingEN:'mǒo', zh:'醫生', level:1, category:'นามคน' },
   { word:'นาย', readingTH:'นาย', readingEN:'naai', zh:'先生', level:1, category:'นามคน' },
   { word:'ท่าน', readingTH:'ท่าน', readingEN:'thâan', zh:'您', level:1, category:'นามคน' },
@@ -1901,6 +1923,7 @@ var WORD_LIST = [
   { word:'แขก', readingTH:'แขก', readingEN:'khàek', zh:'客人', level:1, category:'นามคน' },
   { word:'ผัว', readingTH:'ผัว', readingEN:'phǔa', zh:'丈夫', level:1, category:'นามคน' },
   { word:'เมีย', readingTH:'เมีย', readingEN:'mia', zh:'妻子', level:1, category:'นามคน' },
+  // ── 初級 Level 1：นามอาหาร（名詞·食物） ──
   { word:'ไข่', readingTH:'ไข่', readingEN:'khài', zh:'蛋', level:1, category:'นามอาหาร' },
   { word:'นม', readingTH:'นม', readingEN:'nom', zh:'牛奶', level:1, category:'นามอาหาร' },
   { word:'ชา', readingTH:'ชา', readingEN:'chaa', zh:'茶', level:1, category:'นามอาหาร' },
@@ -1916,6 +1939,7 @@ var WORD_LIST = [
   { word:'แกง', readingTH:'แกง', readingEN:'gaeng', zh:'咖哩', level:1, category:'นามอาหาร' },
   { word:'โจ๊ก', readingTH:'โจ๊ก', readingEN:'jóok', zh:'粥', level:1, category:'นามอาหาร' },
   { word:'กล้วย', readingTH:'กล้วย', readingEN:'glûay', zh:'香蕉', level:1, category:'นามอาหาร' },
+  // ── 初級 Level 1：นามของใช้（名詞·生活物品） ──
   { word:'ร้าน', readingTH:'ร้าน', readingEN:'ráan', zh:'店', level:1, category:'นามของใช้' },
   { word:'วัด', readingTH:'วัด', readingEN:'wát', zh:'寺廟', level:1, category:'นามของใช้' },
   { word:'เมือง', readingTH:'เมือง', readingEN:'mʉang', zh:'城市', level:1, category:'นามของใช้' },
@@ -1933,6 +1957,7 @@ var WORD_LIST = [
   { word:'มีด', readingTH:'มีด', readingEN:'mîit', zh:'刀子', level:1, category:'นามของใช้' },
   { word:'หม้อ', readingTH:'หม้อ', readingEN:'môo', zh:'鍋子', level:1, category:'นามของใช้' },
   { word:'พัด', readingTH:'พัด', readingEN:'phát', zh:'扇子', level:1, category:'นามของใช้' },
+  // ── 初級 Level 1：กริยา（動詞） ──
   { word:'ทำ', readingTH:'ทำ', readingEN:'tam', zh:'做', level:1, category:'กริยา' },
   { word:'พูด', readingTH:'พูด', readingEN:'phûut', zh:'說', level:1, category:'กริยา' },
   { word:'ดู', readingTH:'ดู', readingEN:'duu', zh:'看', level:1, category:'กริยา' },
@@ -1940,28 +1965,39 @@ var WORD_LIST = [
   { word:'อ่าน', readingTH:'อ่าน', readingEN:'àan', zh:'讀', level:1, category:'กริยา' },
   { word:'เขียน', readingTH:'เขียน', readingEN:'khǐan', zh:'寫', level:1, category:'กริยา' },
   { word:'รัก', readingTH:'รัก', readingEN:'rák', zh:'愛', level:1, category:'กริยา' },
+  // ── 初級 Level 1：คำขยาย（形容詞） ──
   { word:'สูง', readingTH:'สูง', readingEN:'sǔung', zh:'高', level:1, category:'คำขยาย' },
   { word:'ใหม่', readingTH:'ใหม่', readingEN:'mài', zh:'新', level:1, category:'คำขยาย' },
+  // ── 初級 Level 1：นามอาหาร（名詞·食物） ──
   { word:'น้ำ', readingTH:'น้ำ', readingEN:'náam', zh:'水', level:1, category:'นามอาหาร' },
   { word:'ข้าว', readingTH:'ข้าว', readingEN:'khâao', zh:'飯', level:1, category:'นามอาหาร' },
+  // ── 初級 Level 1：คำนาม（名詞(其他)） ──
   { word:'หมา', readingTH:'หมา', readingEN:'mǎa', zh:'狗', level:1, category:'คำนาม' },
   { word:'แมว', readingTH:'แมว', readingEN:'maeo', zh:'貓', level:1, category:'คำนาม' },
+  // ── 初級 Level 1：นามของใช้（名詞·生活物品） ──
   { word:'บ้าน', readingTH:'บ้าน', readingEN:'bâan', zh:'家', level:1, category:'นามของใช้' },
   { word:'รถ', readingTH:'รถ', readingEN:'rót', zh:'車', level:1, category:'นามของใช้' },
+  // ── 初級 Level 1：นามคน（名詞·家庭與人） ──
   { word:'พ่อ', readingTH:'พ่อ', readingEN:'phôo', zh:'爸爸', level:1, category:'นามคน' },
   { word:'แม่', readingTH:'แม่', readingEN:'mâe', zh:'媽媽', level:1, category:'นามคน' },
   { word:'ครู', readingTH:'ครู', readingEN:'khruu', zh:'老師', level:1, category:'นามคน' },
+  // ── 初級 Level 1：นามของใช้（名詞·生活物品） ──
   { word:'เงิน', readingTH:'เงิน', readingEN:'ngern', zh:'錢', level:1, category:'นามของใช้' },
+  // ── 初級 Level 1：คำนาม（名詞(其他)） ──
   { word:'ฝน', readingTH:'ฝน', readingEN:'fǒn', zh:'雨', level:1, category:'คำนาม' },
   { word:'ลม', readingTH:'ลม', readingEN:'lom', zh:'風', level:1, category:'คำนาม' },
   { word:'ไฟ', readingTH:'ไฟ', readingEN:'fai', zh:'火', level:1, category:'คำนาม' },
+  // ── 初級 Level 1：นามอาหาร（名詞·食物） ──
   { word:'ปลา', readingTH:'ปลา', readingEN:'plaa', zh:'魚', level:1, category:'นามอาหาร' },
   { word:'ไก่', readingTH:'ไก่', readingEN:'gài', zh:'雞', level:1, category:'นามอาหาร' },
   { word:'หมู', readingTH:'หมู', readingEN:'mǔu', zh:'豬', level:1, category:'นามอาหาร' },
+  // ── 初級 Level 1：คำนาม（名詞(其他)） ──
   { word:'นก', readingTH:'นก', readingEN:'nók', zh:'鳥', level:1, category:'คำนาม' },
+  // ── 初級 Level 1：นามร่างกาย（名詞·身體） ──
   { word:'ตา', readingTH:'ตา', readingEN:'taa', zh:'眼睛', level:1, category:'นามร่างกาย' },
   { word:'มือ', readingTH:'มือ', readingEN:'mʉʉ', zh:'手', level:1, category:'นามร่างกาย' },
   { word:'หัว', readingTH:'หัว', readingEN:'hǔa', zh:'頭', level:1, category:'นามร่างกาย' },
+  // ── 初級 Level 1：สี（顏色） ──
   { word:'ส้ม', readingTH:'ส้ม', readingEN:'sôm', zh:'橙', level:1, category:'สี' },
   { word:'เขียว', readingTH:'เขียว', readingEN:'khǐao', zh:'綠', level:1, category:'สี' },
   { word:'น้ำเงิน', readingTH:'น้ำ-เงิน', readingEN:'nám-ngern', zh:'深藍', level:1, category:'สี' },
@@ -1969,6 +2005,7 @@ var WORD_LIST = [
   { word:'ชมพู', readingTH:'ชม-พู', readingEN:'chom-phuu', zh:'粉紅', level:1, category:'สี' },
   { word:'เทา', readingTH:'เทา', readingEN:'thao', zh:'灰', level:1, category:'สี' },
   { word:'น้ำตาล', readingTH:'น้ำ-ตาล', readingEN:'nám-taan', zh:'棕', level:1, category:'สี' },
+  // ── 初級 Level 1：ลักษณนาม（量詞） ──
   { word:'คน', readingTH:'คน', readingEN:'khon', zh:'個／位', level:1, category:'ลักษณนาม' },
   { word:'ตัว', readingTH:'ตัว', readingEN:'tua', zh:'隻／條', level:1, category:'ลักษณนาม' },
   { word:'ใบ', readingTH:'ใบ', readingEN:'bai', zh:'張／片', level:1, category:'ลักษณนาม' },
@@ -1989,14 +2026,16 @@ var WORD_LIST = [
   { word:'ต้น', readingTH:'ต้น', readingEN:'tôn', zh:'棵', level:1, category:'ลักษณนาม' },
   { word:'ผล', readingTH:'ผล', readingEN:'phǒn', zh:'顆／個', level:1, category:'ลักษณนาม' },
   { word:'มื้อ', readingTH:'มื้อ', readingEN:'mʉ́ʉ', zh:'餐', level:1, category:'ลักษณนาม' },
+  // ── 初級 Level 1：กริยา（動詞） ──
   { word:'นอน', readingTH:'นอน', readingEN:'norn', zh:'睡', level:1, category:'กริยา' },
   { word:'ตื่น', readingTH:'ตื่น', readingEN:'tʉ̀ʉn', zh:'醒', level:1, category:'กริยา' },
   { word:'อยู่', readingTH:'อยู่', readingEN:'yùu', zh:'住／在', level:1, category:'กริยา' },
   { word:'เรียก', readingTH:'เรียก', readingEN:'rîak', zh:'叫', level:1, category:'กริยา' },
   { word:'ร้อง', readingTH:'ร้อง', readingEN:'róong', zh:'唱／哭', level:1, category:'กริยา' },
   { word:'คุย', readingTH:'คุย', readingEN:'khui', zh:'聊天', level:1, category:'กริยา' },
-  { word:'โกรธ', readingTH:'โกรธ', readingEN:'gròot', zh:'生氣', level:1, category:'กริยา' },
+  { word:'โกรธ', readingTH:'โกรด', readingEN:'gròot', zh:'生氣', level:1, category:'กริยา' },
   { word:'หัวเราะ', readingTH:'หัว-เราะ', readingEN:'hǔa-ró', zh:'笑', level:1, category:'กริยา' },
+  // ── 初級 Level 1：คำขยาย（形容詞） ──
   { word:'เย็น', readingTH:'เย็น', readingEN:'yen', zh:'冷／冰', level:1, category:'คำขยาย' },
   { word:'อุ่น', readingTH:'อุ่น', readingEN:'ùn', zh:'暖／溫', level:1, category:'คำขยาย' },
   { word:'แข็ง', readingTH:'แข็ง', readingEN:'khǎeng', zh:'硬', level:1, category:'คำขยาย' },
@@ -2010,7 +2049,6 @@ var WORD_LIST = [
   { word:'สะอาด', readingTH:'สะ-อาด', readingEN:'sà-àat', zh:'淨／乾淨', level:1, category:'คำขยาย' },
   { word:'สกปรก', readingTH:'สก-กะ-ปรก', readingEN:'sòk-gà-pròk', zh:'髒', level:1, category:'คำขยาย' },
   { word:'ถูก', readingTH:'ถูก', readingEN:'thùuk', zh:'便宜／對', level:1, category:'คำขยาย' },
-
 ];
 
 // ════════════════════════════════════════════════════════════
@@ -2368,7 +2406,7 @@ var TH = (function() {
   var CONS_SET   = new Set('กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ'.split(''));
   var LEAD_PATS  = ['หน','หม','หล','หว','หย','หร','หญ','หง','อย'];
   // Short vowel characters
-  var SHORT_V = new Set(['ะ','ั','ิ','ึ','ุ']); // ะ ั ิ ึ ุ
+  var SHORT_V = new Set(['ะ','ั','ิ','ึ','ุ','็']); // ะ ั ิ ึ ุ + ็ (ไม้ไต่คู้ = ย่อเสียงสระให้สั้น)
   // Long vowel characters
   var LONG_V  = new Set(['า','ี','ื','ู','เ','แ','โ']); // า ี ื ู เ แ โ
   // Tone mark characters
@@ -2759,7 +2797,7 @@ function render() {
     document.getElementById('tf-hint').style.display = 'none';
   } else {
     banner.style.display = 'none';
-    document.getElementById('tf-hint').style.display = 'block';
+    document.getElementById('tf-hint').style.display = (S.step === 'level-select') ? 'block' : 'none';
   }
 
   // Breadcrumb
@@ -2835,7 +2873,16 @@ function buildStep() {
 // ════════════════════════════════════════════════════════════
 // SESSION: TONE COMPUTATION + TTS + PHONEME BREAKDOWN
 // ════════════════════════════════════════════════════════════
+// TONE OVERRIDES — คำทับศัพท์ที่ไม่ตามกฎมาตรฐาน ระบุเสียงตรงๆ
+var TONE_OVERRIDE = {
+  'เอาท์': 4,  // เช็คเอาท์ → พยางค์ 2 เสียงตรี
+  'คีย์':  1,  // คีย์การ์ด → พยางค์ 1 เสียงสามัญ
+  'การ์ด': 4,  // คีย์การ์ด → พยางค์ 2 เสียงตรี
+  'ออฟ':  4   // ออฟฟิศ   → พยางค์ 1 เสียงตรี
+};
+
 function computeTone(word) {
+  if (TONE_OVERRIDE[word] !== undefined) return TONE_OVERRIDE[word];
   var cls  = TH.getInitClass(word);
   var mark = TH.getToneMark(word);
   var live = TH.isLiveWord(word);
@@ -2908,6 +2955,26 @@ function getBreakdown(word) {
   var finalCons = (consList.length >= 2) ? consList[consList.length - 1] : null;
   var vowelType = TH.getVowelType(word);
   return { init: init, finalCons: finalCons, vowelType: vowelType };
+}
+
+// 取出母音符號，以 อ 為輔助底字呈現（例：หนึ่ง → อึ、เก่ง → เอ、กา → อา）
+function vowelFormOh(word) {
+  var PRE  = 'เแโใไ';            // 前置母音符號
+  var SIGN = 'ะัาำิีึืุู็ๅ';    // 上／下／後置母音符號
+  var CONS = 'กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ';
+  var pre = '', sign = '', initSeen = false;
+  for (var i = 0; i < word.length; i++) {
+    var ch = word[i];
+    if (PRE.indexOf(ch) >= 0) { pre += ch; }
+    else if (SIGN.indexOf(ch) >= 0) { sign += ch; }
+    else if (ch === 'อ') {
+      // อ 為起首子音時略過；其餘位置的 อ 視為母音成分（如 -อ、-ือ）
+      if (initSeen) sign += ch; else initSeen = true;
+    }
+    else if (CONS.indexOf(ch) >= 0) { initSeen = true; }
+  }
+  if (!pre && !sign) return null;  // 無顯性母音符號時回傳 null（交由呼叫端處理）
+  return pre + 'อ' + sign;
 }
 
 function generateAnalysis(results) {
@@ -3074,9 +3141,9 @@ function stepAdvanced() {
 // ════════════════════════════════════════════════════════════
 function stepAlphaHome() {
   var cats = [
-    {emoji:'🅰️', label:'子音', sub:'พยัญชนะ・中／高／低／遺忘版', fn:'TF.alphaConsonants()'},
-    {emoji:'🔡', label:'母音', sub:'สระ・短母音／長母音', fn:'TF.alphaVowels()'},
-    {emoji:'🔚', label:'尾音', sub:'ตัวสะกด・8 個尾音類別', fn:'TF.alphaEndings()'}
+    {emoji:'🅰️', label:'子音', sub:'中／高／低／遺忘版', fn:'TF.alphaConsonants()'},
+    {emoji:'🔡', label:'母音', sub:'短母音／長母音', fn:'TF.alphaVowels()'},
+    {emoji:'🔚', label:'尾音', sub:'8 個尾音類別', fn:'TF.alphaEndings()'}
   ];
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">字母練習區</div>' +
@@ -3112,8 +3179,8 @@ function stepAlphaConsonant() {
 
 function stepAlphaVowel() {
   var btns = [
-    {label:'短母音', sub:'สระเสียงสั้น・6 個', fn:"TF.startFlashcards('v_short')"},
-    {label:'長母音', sub:'สระเสียงยาว・15 個', fn:"TF.startFlashcards('v_long')"},
+    {label:'短母音', sub:'6 個', fn:"TF.startFlashcards('v_short')"},
+    {label:'長母音', sub:'15 個', fn:"TF.startFlashcards('v_long')"},
     {label:'全部混合', sub:'短母音＋長母音', fn:"TF.startFlashcards('v_all')"}
   ];
   return '<div class="tf-level-select">' +
@@ -3165,7 +3232,7 @@ function stepAlphaFlashcard() {
             '<div class="afc-tap">'+frontTap+'</div>' +
           '</div>' +
           '<div class="afc-face afc-back">' +
-            '<div class="afc-zhuyin">'+(card.zh||'—')+'</div>' +
+            (card.zh ? '<div class="afc-zhuyin">'+card.zh+'</div>' : '') +
             '<div class="afc-pinyin">'+(card.py||'—')+'</div>' +
             noteHtml + memHtml +
           '</div>' +
@@ -3197,18 +3264,18 @@ function stepLevelSelect() {
       '<span class="tf-level-sub">子音・母音・尾音・字卡</span>' +
     '</button>' +
     levels.map(function(l){
-      return '<button class="tf-level-btn" onclick="TF.selectLevel('+l.id+')">' +
+      return '<button class="tf-level-btn tf-lvl-'+l.id+'" onclick="TF.selectLevel('+l.id+')">' +
         '<span class="tf-level-emoji">'+l.emoji+'</span>' +
         '<span class="tf-level-label">'+l.label+'</span>' +
         '<span class="tf-level-sub">'+l.sub+'</span>' +
       '</button>';
     }).join('') +
-    '<button class="tf-level-btn" onclick="TF.openAdvanced()" style="opacity:0.85;">' +
+    '<button class="tf-level-btn tf-lvl-adv" onclick="TF.openAdvanced()" style="opacity:0.85;">' +
       '<span class="tf-level-emoji">🌳</span>' +
       '<span class="tf-level-label">高級</span>' +
       '<span class="tf-level-sub">即將開放</span>' +
     '</button>' +
-    '<button class="tf-level-btn" onclick="TF.openSearch()">' +
+    '<button class="tf-level-btn tf-lvl-search" onclick="TF.openSearch()">' +
       '<span class="tf-level-emoji">🔎</span>' +
       '<span class="tf-level-label">自行搜尋</span>' +
       '<span class="tf-level-sub">自行輸入單字</span>' +
@@ -3225,7 +3292,7 @@ var WORD_SETS = {
   'คำขยาย': [['ร้อน','เย็น','อุ่น','แข็ง','นิ่ม'],['สว่าง','มืด','ดัง','เงียบ','เต็ม'],['ว่าง','สะอาด','สกปรก','ถูก','แพง'],['ดี','ใหญ่','เล็ก','สูง','ใหม่']],
   'คำนาม': [['น้ำ','ข้าว','หมา','แมว','บ้าน'],['รถ','พ่อ','แม่','ครู','เงิน'],['ฝน','ลม','ไฟ','ปลา','ไก่'],['หมู','นก','ตา','มือ','หัว']],
   'นามร่างกาย': [['ตา','หู','ปาก','ฟัน','ลิ้น'],['หน้า','ผม','คอ','เล็บ','ใจ'],['มือ','แขน','นิ้ว','อก','เลือด'],['หัว','ขา','เท้า','ท้อง','เข่า']],
-  'นามคน': [['พ่อ','แม่','ลูก','พี่','น้อง'],['ปู่','ย่า','ยาย','หลาน','ญาติ'],['ครู','หมอ','นาย','ท่าน','เจ้า'],['ชาย','เด็ก','แขก','ผัว','เมีย']],
+  'นามคน': [['พ่อ','แม่','ลูก','พี่','น้อง'],['ปู่','ย่า','ยาย','หลาน','ญาติ'],['ครู','หมอ','เด็ก','แขก','เขา'],['เรา','ผู้ชาย','ผู้หญิง','สามี','ภรรยา']],
   'นามอาหาร': [['ข้าว','น้ำ','ไข่','นม','ชา'],['หมู','ไก่','ปลา','กุ้ง','ปู'],['เนื้อ','ผัก','พริก','เกลือ','ขิง'],['เส้น','ซุป','แกง','โจ๊ก','กล้วย']],
   'นามของใช้': [['บ้าน','ร้าน','วัด','เมือง','นา'],['สวน','ไร่','เขา','เกาะ','ถุง'],['โต๊ะ','เตียง','แก้ว','ช้อน','ส้อม'],['มีด','หม้อ','พัด','รถ','เงิน']]
 };
@@ -3820,8 +3887,9 @@ function stepResult() {
     // Breakdown
     var bdRows = '';
     if (bd.init) bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;white-space:nowrap;">起首子音</td><td class="tf-bd-th" style="padding:6px 10px;">'+bd.init+'</td></tr>';
-    var vd = bd.vowelType === 'short' ? '短母音' : bd.vowelType === 'long' ? '長母音' : '—';
-    bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;">母音</td><td style="padding:6px 10px;">'+vd+'</td></tr>';
+    var vForm = vowelFormOh(sEntry.word);
+    var vd = vForm ? vForm : (bd.vowelType === 'short' ? '短母音' : bd.vowelType === 'long' ? '長母音' : '—');
+    bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;">母音</td><td class="tf-bd-th" style="padding:6px 10px;">'+vd+'</td></tr>';
     if (bd.finalCons) bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;">尾音</td><td class="tf-bd-th" style="padding:6px 10px;">'+bd.finalCons+'</td></tr>';
 
     sessionBlock =
@@ -4349,7 +4417,14 @@ var TF = {
   },
   back: function() {
     if (histPos > 0) { restoreState(histPos-1); return; }
-    if (selectedCategory) { S = { word:'', step:'set-select', path:[], tone:null }; hist=[S]; histPos=0; render(); }
+    // 全部（ทั้งหมด）沒有組別頁，返回時直接回主題選擇
+    if (selectedCategory && selectedCategory !== 'ทั้งหมด') {
+      S = { word:'', step:'set-select', path:[], tone:null }; hist=[S]; histPos=0; render();
+    } else if (selectedLevel) {
+      S = { word:'', step:'cat-select', path:[], tone:null }; hist=[S]; histPos=0; render();
+    } else {
+      S = { word:'', step:'level-select', path:[], tone:null }; hist=[S]; histPos=0; render();
+    }
   },
   forward: function() {
     if (histPos < hist.length-1) restoreState(histPos+1);
