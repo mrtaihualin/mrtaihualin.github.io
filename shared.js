@@ -47,7 +47,7 @@ window.goHome = function() {
         '<a href="javascript:void(0)" class="has-drop">資源分享</a>',
         '<div class="nav-drop">',
           '<span class="nav-drop-label">學習素材</span>',
-          '<a href="page4.html#videos">📺 泰語影片學習庫</a>',
+          '<a href="https://www.youtube.com/@mrtaihua" target="_blank" rel="noopener">📺 YouTube 影片頻道</a>',
           '<a href="page4.html#sharing">🚀 貼文分享區</a>',
           '<a href="page4.html#sharing">📖 自學專區</a>',
           '<a href="tone-finder.html">🎵 泰語聲調搜尋</a>',
@@ -444,7 +444,7 @@ if (typeof openYTVideoModal === 'undefined') {
 // ===== 🚀 FB Posts Modal =====
 if (typeof openFBPostModal === 'undefined') {
   var _fbDetailPostId = null;
-  var SITE_URL = 'https://mrtaihua.netlify.app';
+  var SITE_URL = 'https://mrtaihualin.github.io';
 
   window.openFBPostModal = function() { openModal('modal-fbposts'); showFBList(); };
 
@@ -642,7 +642,7 @@ if (typeof openSSModal === 'undefined') {
 // ===== 🔗 Share Popup =====
 if (typeof openSharePopup === 'undefined') {
   window.openSharePopup = function(title, preview) {
-    var SITE_URL = window.SITE_URL || 'https://mrtaihua.netlify.app';
+    var SITE_URL = window.SITE_URL || 'https://mrtaihualin.github.io';
     var text = '我在「泰華眼裡的泰語教學」發現了一個很實用的泰語學習資源！\n\n'
       + '📌 ' + title + '\n'
       + (preview ? preview + '\n\n' : '\n')
