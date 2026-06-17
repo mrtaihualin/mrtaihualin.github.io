@@ -27,19 +27,22 @@
   // ปิดทั้งหมดได้โดยตั้ง enabled:false
   var PACER = {
     enabled: true,
-    count: 5,
-    names: ['น้องมะนาว', '小美', 'Pimchanok', '阿明', 'โบ๊ทบางกอก', 'Nan_TH', '學泰文的阿宏', 'Ploy'],
-    // ตัวคูณคะแนนเทียบกับ "ผู้นำจริง" (ตัวแรกลอยเหนือสุด ไล่ลงมา)
-    factors: [1.06, 0.88, 0.7, 0.54, 0.4],
-    // ค่าฐานเมื่อยังไม่มีผู้เล่นจริง (กันกระดานว่าง)
-    floorWeek: 48, floorAll: 220
+    count: 4,
+    // ชื่อปลอม: ภาษาจีนล้วน (กลุ่มผู้เรียนชาวไต้หวัน) — เปลี่ยน/เพิ่มได้ตามใจ
+    names: ['小美', '阿明', '學泰文的小宇', '美玲', '阿華', '泰文初學者', '宥廷', '思妤'],
+    // ตัวคูณคะแนน "เทียบกับผู้นำจริง" — ทุกตัว < 1 จึงอยู่ "ใต้" ผู้เล่นจริงเสมอ (ไล่ตามอยู่ข้างหลัง)
+    factors: [0.85, 0.62, 0.42, 0.25],
+    // ค่าฐานเมื่อยังไม่มีผู้เล่นจริง (กันกระดานว่าง) — ตั้งต่ำให้เหมือนชุมชนเพิ่งเริ่ม
+    floorWeek: 18, floorAll: 70
   };
 
   function buildPacers(realRows) {
     if (!PACER.enabled) return [];
     var topReal = (realRows && realRows.length) ? (realRows[0].total_score || 0) : 0;
     var floor = (period === 'week') ? PACER.floorWeek : PACER.floorAll;
-    var anchor = Math.max(topReal + (period === 'week' ? 6 : 20), floor);
+    // ถ้ามีผู้เล่นจริง → ยึดคะแนนผู้นำจริงเป็นฐาน แล้ว pacer วิ่งตามอยู่ใต้เขา (ผู้เล่นจริงได้เป็นที่ 1)
+    // ถ้ายังไม่มีใคร → ใช้ค่าฐานเตี้ยๆ กันกระดานว่าง
+    var anchor = (topReal > 0) ? topReal : floor;
     var per = (period === 'week') ? 6 : 9; // คะแนนเฉลี่ยต่อรอบ (ใช้ประมาณจำนวนรอบ)
     return PACER.names.slice(0, PACER.count).map(function (nm, i) {
       var f = PACER.factors[i % PACER.factors.length];

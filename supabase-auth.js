@@ -26,6 +26,8 @@
   var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
   var currentUser = null;
   var authResolved = false;
+  var gateOpen = false;          // gate เด้งเฉพาะตอนผู้ใช้กด "เริ่มเล่น" จริง
+  var pendingAfterLogin = null;  // callback หลังล็อกอินสำเร็จในแท็บเดิม (เช่น OTP)
 
   var sessionMode = null;
   var wrongBuffer = [];
@@ -124,19 +126,25 @@
       'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);' +
       'font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
     gate.innerHTML =
-      '<div style="background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;' +
+      '<div id="tf-gate-card" style="position:relative;background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;' +
       'box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
+        '<button id="tf-gate-close" aria-label="ปิด / 關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;' +
+        'font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
         '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🎵</div>' +
         '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">เข้าสู่ระบบเพื่อเริ่มเล่น</h2>' +
         '<p style="margin:0 0 20px;font-size:14px;color:#8B7340;line-height:1.6;">登入後即可開始練習聲調並記錄你的成績<br>เข้าสู่ระบบเพื่อเริ่มฝึก และบันทึกคะแนนของคุณ</p>' +
         googleBtnHTML('tf-google') +
         '<button id="tf-email" style="margin-top:12px;border:none;background:none;color:#A07A1E;' +
         'cursor:pointer;font-size:13px;text-decoration:underline;">หรือใช้อีเมลแทน / 用 Email 登入</button>' +
-        '<p style="margin:18px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">เข้าสู่ระบบหมายถึงคุณยอมรับ<a href="terms.html" style="color:#A07A1E;">ข้อกำหนดและการเก็บข้อมูล</a></p>' +
+        '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">กดพื้นที่ว่างรอบๆ เพื่อกลับไปดูหน้าเว็บก่อนได้ · 點擊空白處可先返回瀏覽</p>' +
+        '<p style="margin:10px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">เข้าสู่ระบบหมายถึงคุณยอมรับ<a href="terms.html" style="color:#A07A1E;">ข้อกำหนดและการเก็บข้อมูล</a></p>' +
       '</div>';
     document.body.appendChild(gate);
     gate.querySelector('#tf-google').onclick = doGoogleLogin;
     gate.querySelector('#tf-email').onclick = doEmailLogin;
+    gate.querySelector('#tf-gate-close').onclick = hideGate;
+    // กดพื้นที่ว่างรอบการ์ด (backdrop) → ปิด gate กลับไปดูหน้าเว็บ
+    gate.addEventListener('click', function (e) { if (e.target === gate) hideGate(); });
   }
 
   function buildMiniBtn() {
@@ -150,7 +158,7 @@
       'background:#fff;color:#8B6310;border-radius:999px;padding:6px 13px;cursor:pointer;font-size:13px;font-weight:700;' +
       'box-shadow:0 2px 8px rgba(0,0,0,0.1);">เข้าสู่ระบบ / 登入</button>';
     document.body.appendChild(miniBtn);
-    miniBtn.querySelector('#tf-mini-login').onclick = doGoogleLogin;
+    miniBtn.querySelector('#tf-mini-login').onclick = function () { showGate(); };
   }
 
   function buildBadge() {
@@ -168,6 +176,7 @@
     if (!badge) buildBadge();
 
     if (currentUser) {
+      gateOpen = false;
       gate.style.display = 'none';
       miniBtn.style.display = 'none';
       var email = currentUser.email || 'ผู้ใช้';
@@ -185,15 +194,47 @@
       badge.querySelector('#tf-logout').onclick = doLogout;
     } else {
       badge.style.display = 'none';
-      if (requireLogin) {
-        gate.style.display = authResolved ? 'flex' : 'none';
-        miniBtn.style.display = 'none';
-      } else {
-        gate.style.display = 'none';
-        miniBtn.style.display = authResolved ? 'block' : 'none';
-      }
+      // หน้าเว็บมองเห็นได้เสมอ — ไม่บล็อกตอนโหลด
+      // gate เด้งเฉพาะเมื่อผู้ใช้กด "เริ่มเล่น" จริง (gateOpen) หรือกดปุ่มล็อกอินมุมขวา
+      gate.style.display = (gateOpen && authResolved) ? 'flex' : 'none';
+      // ปุ่มล็อกอินมุมขวาบนโชว์ทั้งสองโหมด (รู้ว่าล็อกอินได้ แต่ไม่บังคับให้ดูหน้า)
+      miniBtn.style.display = authResolved ? 'block' : 'none';
     }
   }
+
+  // ── เปิด/ปิด gate ตามคำขอ ───────────────────────────────────
+  function showGate() {
+    if (currentUser) { if (pendingAfterLogin) { var f = pendingAfterLogin; pendingAfterLogin = null; f(); } return; }
+    gateOpen = true;
+    render();
+  }
+  function hideGate() {
+    gateOpen = false;
+    pendingAfterLogin = null;
+    render();
+  }
+
+  // ── API ให้หน้าเกมเรียกตอนจะเริ่มเล่นจริง ───────────────────
+  // ใช้: if (window.TF_AUTH && !window.TF_AUTH.ensureLogin()) return;
+  //   - ล็อกอินแล้ว หรือไม่บังคับล็อกอิน → คืน true (เล่นต่อได้)
+  //   - ยังไม่ล็อกอิน + บังคับ → เด้ง gate แล้วคืน false (หยุดการเริ่มเกม)
+  window.TF_AUTH = {
+    loggedIn: function () { return !!currentUser; },
+    requireLogin: requireLogin,
+    ensureLogin: function (onOk) {
+      if (!requireLogin || currentUser) { if (onOk) onOk(); return true; }
+      pendingAfterLogin = onOk || null;
+      showGate();
+      return false;
+    },
+    showGate: showGate,
+    hideGate: hideGate
+  };
+
+  // กด Esc เพื่อปิด gate (กลับไปดูหน้าเว็บ)
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && gateOpen) hideGate();
+  });
 
   function boot() {
     render();
