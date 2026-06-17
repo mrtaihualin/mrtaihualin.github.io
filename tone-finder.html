@@ -2984,7 +2984,7 @@ function deriveText(word) {
 
 function buildReportInner() {
   var results = session.results;
-  var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞','ลักษณนาม':'量詞','คำนาม':'名詞',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','อื่นๆ':'其他','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
+  var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞','ลักษณนาม':'量詞','คำนาม':'名詞','สัตว์ธรรมชาติ':'動物・自然',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','ทักทาย':'招呼用語','เวลา':'時間','แนวคิด':'生活概念','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
   var dateStr = new Date().toLocaleDateString('zh-TW');
   var levelStr = ({1:'初級',2:'中級'})[selectedLevel] || '—';
   var catStr = catZh[selectedCategory] || selectedCategory || '全部';
@@ -3006,6 +3006,34 @@ function buildReportInner() {
     var nt = {}; wrong.forEach(function(r){ var t=r.tone!=null?r.tone:computeTone(r.entry.word); if(t) nt[t]=(nt[t]||0)+1; });
     needList = Object.keys(nt).sort(function(a,b){ return nt[b]-nt[a]; }).map(function(t){ return TONES[t]?TONES[t].zh:t; }).join('、');
   }
+  // ── จุดเด่น/จุดอ่อนรายวรรณยุกต์ (อัตราตอบถูกครั้งแรก) ──
+  var toneStat = {};
+  results.forEach(function(r){
+    var t = r.tone!=null?r.tone:computeTone(r.entry.word);
+    if(!t) return;
+    if(!toneStat[t]) toneStat[t]={appeared:0,firstTry:0};
+    toneStat[t].appeared++;
+    if(r.mistakes===0) toneStat[t].firstTry++;
+  });
+  var masteryRows = [], weakest=null, weakestRate=2;
+  for (var ti=1; ti<=5; ti++){
+    var st=toneStat[ti]; if(!st) continue;
+    var rate=st.firstTry/st.appeared, tl=TONES[ti]||{}, pct=Math.round(rate*100);
+    masteryRows.push('<div class="rp-mrow"><div class="rp-mlabel" style="color:'+(tl.color||'#666')+';">'+(tl.zh||('第'+ti+'聲'))+'</div>'+
+      '<div class="rp-mbar"><div class="rp-mfill" style="width:'+pct+'%;background:'+(tl.color||'#999')+';"></div></div>'+
+      '<div class="rp-mnum">'+st.firstTry+'/'+st.appeared+'（'+pct+'%）</div></div>');
+    if(rate<weakestRate){ weakestRate=rate; weakest=ti; }
+  }
+  var masteryHtml = masteryRows.length ? '<div class="rp-sub">🎯 聲調掌握度（一次答對率）</div>'+masteryRows.join('') : '';
+  // ── มักสับสนเสียงไหนกับเสียงไหน (จาก initialGuess) ──
+  var confusion={};
+  wrong.forEach(function(r){
+    var ct=r.tone!=null?r.tone:computeTone(r.entry.word), g=r.initialGuess;
+    if(ct&&g&&g!==0&&g!==ct){ var k=ct+'>'+g; confusion[k]=(confusion[k]||0)+1; }
+  });
+  var confKeys=Object.keys(confusion).sort(function(a,b){return confusion[b]-confusion[a];});
+  var confusionHtml = confKeys.length ? '<p>🔄 容易混淆：'+confKeys.map(function(k){var p=k.split('>'),a=TONES[p[0]]||{},b=TONES[p[1]]||{};return '把「'+(a.zh||p[0])+'」猜成「'+(b.zh||p[1])+'」('+confusion[k]+' 次)';}).join('、')+'</p>' : '';
+  var recHtml = weakest ? '<p>💡 建議：下次重點練習 <strong style="color:'+((TONES[weakest]||{}).color||'#8B6310')+'">'+((TONES[weakest]||{}).zh||('第'+weakest+'聲'))+'</strong>，這是你目前最不穩的聲調。</p>' : '<p>💡 建議：表現很穩，可以挑戰更難的主題！</p>';
   return '<style>'+
     '@page{margin:15mm;}'+
     'body{font-family:"Noto Sans TC","Sarabun",sans-serif;color:#3a2c10;margin:0;padding:22px;background:#fff;}'+
@@ -3023,6 +3051,12 @@ function buildReportInner() {
     '.rp-analysis{background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(139,99,16,0.2);border-left:4px solid var(--gold-bright);border-radius:10px;padding:14px 18px;margin-top:16px;}'+
     '.rp-analysis h3{color:#8B6310;margin:0 0 8px;font-size:15px;}'+
     '.rp-analysis p{margin:5px 0;font-size:13px;line-height:1.7;}'+
+    '.rp-sub{font-weight:700;color:#8B6310;font-size:13px;margin:12px 0 6px;}'+
+    '.rp-mrow{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;}'+
+    '.rp-mlabel{width:56px;font-weight:700;flex-shrink:0;}'+
+    '.rp-mbar{flex:1;height:11px;background:#eee4cc;border-radius:6px;overflow:hidden;}'+
+    '.rp-mfill{height:100%;}'+
+    '.rp-mnum{width:92px;text-align:right;color:#6a5320;flex-shrink:0;}'+
     '.rp-foot{text-align:center;color:#a08a5a;font-size:11px;margin-top:22px;}'+
     '</style>'+
     '<div class="rp-head"><div class="rp-title">🎵 泰語聲調練習報告</div>'+
@@ -3030,10 +3064,13 @@ function buildReportInner() {
     '<div class="rp-score">一次答對 '+correct.length+' / '+total+'</div></div>'+
     '<table><thead><tr><th>#</th><th>單字</th><th>泰文讀音</th><th>英文拼音</th><th>中文</th><th>拆解（子音／母音／尾音）</th><th>聲調推導</th><th>結果</th></tr></thead><tbody>'+rowsHtml+'</tbody></table>'+
     '<div class="rp-analysis"><h3>📊 練習分析</h3>'+
-    '<p>📝 共練習 <strong>'+total+'</strong> 個單字。</p>'+
-    '<p>✅ 已正確（一次答對）：'+correctList+'</p>'+
+    '<p>📝 共練習 <strong>'+total+'</strong> 個單字，一次答對 <strong>'+correct.length+'</strong> 個。</p>'+
+    masteryHtml +
+    confusionHtml +
+    '<p>✅ 一次答對：'+correctList+'</p>'+
     '<p>❌ 答錯的字：'+wrongList+'</p>'+
-    '<p>💪 需要加強：'+needList+'</p></div>'+
+    recHtml +
+    '</div>'+
     '<div class="rp-foot">泰華眼裡的泰語教學 ・ 自動產生於 '+dateStr+'</div>';
 }
 
