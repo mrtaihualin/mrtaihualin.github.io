@@ -3559,7 +3559,7 @@ function s2bDeadLow() {
 // NEW PAGE 1: SESSION GUESS  (before tone-inflection)
 // ════════════════════════════════════════════════════════════
 function stepSessionGuess() {
-  if (!session) return '';
+  if (!session) return step1(); // กันเหนียว: ถ้าหลุดมาที่ step นี้โดยไม่มี session ให้ใช้ flow วิเคราะห์อิสระแทนหน้าว่าง
   var entry = session.words[session.index];
   var word = S.word || entry.word;
   var bd = getBreakdown(word);
@@ -3747,7 +3747,9 @@ function stepOverview() {
     var capChosen = chosen;
     var analyzeAct = act(function() {
       hist = hist.slice(0, histPos+1);
-      var ns = { word: capChosen, step: 'session-guess', path: [capChosen], tone: null, syllables: syls, selectedSyl: capSel, sylResults: results, parentWord: S.word };
+      // ในเกม (มี session) ใช้ flow ทาย; ในโหมดเสิร์ช (ไม่มี session) ใช้ flow วิเคราะห์อิสระ s1 — กันหน้าว่าง
+      var sylStep = session ? 'session-guess' : 's1';
+      var ns = { word: capChosen, step: sylStep, path: [capChosen], tone: null, syllables: syls, selectedSyl: capSel, sylResults: results, parentWord: S.word };
       hist.push(ns); histPos++;
       S = ns;
       render();
@@ -4728,6 +4730,6 @@ render();
 </footer>
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
-<script src="shared.js?v=6"></script>
+<script src="shared.js?v=7"></script>
 </body>
 </html>
