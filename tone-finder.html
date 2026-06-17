@@ -2463,6 +2463,8 @@ var randomEntry = null;
 var selectedLevel = null;
 var selectedCategory = null;
 var session = null;
+var searchHistory = [];      // ประวัติคำที่เสิร์ชในโหมด 自行搜尋 (แยกจากเกม ไม่นับคะแนน)
+var _sessionsThisVisit = 0;  // นับ session ที่เล่นจบในรอบเข้าเว็บนี้ (สำหรับ popup โปรโมท)
 var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, flipped, back }
 
 function act(fn) {
@@ -2982,6 +2984,65 @@ function deriveText(word) {
   return parts.join(' + ') + ' → ' + (TONES[tone] ? TONES[tone].zh : '—');
 }
 
+// ── 自行搜尋: บันทึกประวัติการค้น (แยกจากเกม ไม่นับคะแนน) ──
+function recordSearch(w) {
+  if (!w) return;
+  var e = null;
+  for (var i=0;i<WORD_LIST.length;i++){ if(WORD_LIST[i].word===w){ e=WORD_LIST[i]; break; } }
+  var t = (typeof computeTone==='function') ? computeTone(w) : null;
+  var rec = { word:w, tone:t, readingTH:(e&&e.readingTH)||w, readingEN:(e&&e.readingEN)||'', zh:(e&&e.zh)||'' };
+  searchHistory = searchHistory.filter(function(x){ return x.word!==w; });
+  searchHistory.unshift(rec);
+  if (searchHistory.length>60) searchHistory = searchHistory.slice(0,60);
+}
+
+function buildSearchReportInner() {
+  var dateStr = new Date().toLocaleDateString('zh-TW');
+  var rows = searchHistory.map(function(r,i){
+    var tl = TONES[r.tone]||{};
+    var parts = WORD_PARTS[r.word]||[];
+    var bd = parts.map(function(p){ return '子音 '+p.c+' ／ 母音 '+vowelText(p.vn)+' ／ 尾音 '+(p.f||'—'); }).join('<br>') || '—';
+    return '<tr><td>'+(i+1)+'</td><td class="th big">'+r.word+'</td><td class="th">'+(r.readingTH||'—')+'</td><td>'+(r.zh||'—')+'</td><td class="bd">'+bd+'</td><td style="color:'+(tl.color||'#5a3e0a')+';font-weight:700;">'+(tl.zh||'—')+'</td></tr>';
+  }).join('');
+  return '<style>@page{margin:15mm;}body{font-family:"Noto Sans TC","Sarabun",sans-serif;color:#3a2c10;margin:0;padding:22px;background:#fff;}'+
+    '.rp-head{text-align:center;border-bottom:3px solid #C8973A;padding-bottom:14px;margin-bottom:18px;}'+
+    '.rp-title{font-size:25px;font-weight:700;color:#8B6310;letter-spacing:2px;}.rp-meta{font-size:13px;color:#7a6a4a;margin-top:8px;}'+
+    'table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12.5px;}th{background:#8B6310;color:#fff;padding:8px 6px;}'+
+    'td{border:1px solid #e0d2ad;padding:7px 6px;text-align:center;vertical-align:middle;}td.th{font-family:"Sarabun",sans-serif;}'+
+    'td.big{font-size:20px;font-weight:700;color:#5a3e0a;}td.bd{font-size:11px;color:#5a3e0a;text-align:left;}'+
+    '.rp-foot{text-align:center;color:#a08a5a;font-size:11px;margin-top:22px;}</style>'+
+    '<div class="rp-head"><div class="rp-title">🔎 泰語聲調搜尋紀錄</div>'+
+    '<div class="rp-meta">日期 '+dateStr+' ・ 共 '+searchHistory.length+' 個查詢</div></div>'+
+    '<table><thead><tr><th>#</th><th>單字</th><th>泰文讀音</th><th>中文</th><th>拆解（子音／母音／尾音）</th><th>聲調</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div class="rp-foot">泰華眼裡的泰語教學 ・ 自動產生於 '+dateStr+'</div>';
+}
+
+// ── Popup โปรโมทคอร์ส (เด้งวันละครั้ง จังหวะเล่นจบรอบที่ 2+) ──
+function maybeShowCoursePromo() {
+  _sessionsThisVisit++;
+  if (_sessionsThisVisit < 2) return;            // ไม่เด้งรอบแรก ให้เล่นเพลินก่อน
+  try {
+    var today = new Date().toISOString().slice(0,10);
+    if (localStorage.getItem('coursePromoDay') === today) return;  // วันละครั้งพอ
+    localStorage.setItem('coursePromoDay', today);
+  } catch(e) {}
+  showCoursePromoPopup();
+}
+function showCoursePromoPopup() {
+  if (document.getElementById('tf-course-promo')) return;
+  var d = document.createElement('div');
+  d.id = 'tf-course-promo';
+  d.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(140%);z-index:99998;max-width:360px;width:calc(100% - 24px);background:#fff;border:1px solid rgba(200,151,58,0.45);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.22);padding:16px 18px 16px;font-family:"Noto Sans TC",sans-serif;transition:transform .45s cubic-bezier(.2,.8,.2,1);';
+  d.innerHTML =
+    '<button onclick="this.parentNode.remove()" aria-label="關閉" style="position:absolute;top:7px;right:11px;border:none;background:none;font-size:16px;color:#c3b594;cursor:pointer;">✕</button>'+
+    '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想更快搞懂泰語聲調嗎？🎯</div>'+
+    '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出發音盲點。</div>'+
+    '<button onclick="var p=document.getElementById(\'tf-course-promo\');if(p)p.remove();if(typeof openModal===\'function\')openModal(\'modal-line-qr\')" style="width:100%;background:#C8973A;color:#fff;border:none;border-radius:10px;padding:11px;font-weight:700;font-size:14px;cursor:pointer;">預約免費體驗課 →</button>';
+  document.body.appendChild(d);
+  requestAnimationFrame(function(){ d.style.transform = 'translateX(-50%) translateY(0)'; });
+  setTimeout(function(){ var el=document.getElementById('tf-course-promo'); if(el){ el.style.transform='translateX(-50%) translateY(140%)'; setTimeout(function(){ if(el&&el.parentNode) el.remove(); },500); } }, 14000);
+}
+
 function buildReportInner() {
   var results = session.results;
   var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞','ลักษณนาม':'量詞','คำนาม':'名詞','สัตว์ธรรมชาติ':'動物・自然',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','ทักทาย':'招呼用語','เวลา':'時間','แนวคิด':'生活概念','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
@@ -3428,6 +3489,7 @@ function stepInput() {
       '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'en\')">🔡 English 讀音</button>' +
     '</div>' +
     '<div class="tf-word-info-box" id="tf-word-info-box" style="display:none;"></div>' +
+    (searchHistory.length ? '<div style="text-align:center;margin-top:14px;"><button class="tf-secondary-btn" type="button" onclick="TF.downloadSearchReport()">📄 下載搜尋紀錄 ('+searchHistory.length+')</button></div>' : '') +
     '<div style="text-align:center;margin-top:18px;">' +
       '<button class="tf-back-level-btn" onclick="TF.reset()">← 返回</button>' +
     '</div>' +
@@ -4414,6 +4476,7 @@ var TF = {
     }
     var warn = document.getElementById('tf-lang-warn');
     if (warn) warn.style.display = 'none';
+    recordSearch(w); // บันทึกประวัติการค้น (โหมดเสิร์ช ไม่นับคะแนนเกม)
     hist = []; histPos = -1;
     // Check if word is multi-syllable in WORD_LIST
     var entry = WORD_LIST.find ? WORD_LIST.find(function(e){ return e.word === w; }) : (function(){
@@ -4510,6 +4573,7 @@ var TF = {
     if (session.index >= session.words.length) {
       S = { word:'', step:'session-summary', path:[], tone:null };
       hist.push({ step:'session-summary' }); histPos++;
+      maybeShowCoursePromo();
       render();
     } else {
       var entry = session.words[session.index];
@@ -4641,6 +4705,7 @@ var TF = {
       if (session.index >= session.words.length) {
         S = { word:'', step:'session-summary', path:[], tone:null };
         hist.push({ step:'session-summary' }); histPos++;
+        maybeShowCoursePromo();
         render();
       } else {
         var entry = session.words[session.index];
@@ -4711,6 +4776,29 @@ var TF = {
     } else {
       wrap.remove();
       openReportPrint();
+    }
+  },
+  downloadSearchReport: function() {
+    if (!searchHistory.length) return;
+    var fname = '泰語聲調搜尋紀錄_' + new Date().toISOString().slice(0,10) + '.pdf';
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:760px;background:#fff;padding:6px;';
+    wrap.innerHTML = buildSearchReportInner();
+    document.body.appendChild(wrap);
+    if (window.html2pdf) {
+      window.html2pdf().set({
+        margin: [8,8,8,8], filename: fname,
+        image: { type:'jpeg', quality:0.96 },
+        html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
+        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+      }).from(wrap).save().then(function(){ wrap.remove(); }).catch(function(){
+        wrap.remove();
+        var win = window.open('', '_blank');
+        if (win) { win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'+buildSearchReportInner()+'</body></html>'); win.document.close(); setTimeout(function(){ try{win.print();}catch(e){} },500); }
+      });
+    } else {
+      var win = window.open('', '_blank');
+      if (win) { win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'+buildSearchReportInner()+'</body></html>'); win.document.close(); setTimeout(function(){ try{win.print();}catch(e){} },500); }
     }
   },
   backToLevelSelect: function() {
