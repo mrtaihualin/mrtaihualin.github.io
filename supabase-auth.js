@@ -81,12 +81,12 @@
       provider: 'google',
       options: { redirectTo: window.location.href }
     }).then(function (res) {
-      if (res.error) alert('เข้าสู่ระบบ Google ไม่สำเร็จ: ' + res.error.message);
+      if (res.error) alert('登入 Google 失敗：' + res.error.message);
     });
   }
 
   function doEmailLogin() {
-    var email = window.prompt('กรอกอีเมลเพื่อรับลิงก์เข้าสู่ระบบ\n請輸入 Email 以接收登入連結:');
+    var email = window.prompt('請輸入 Email 以接收登入連結：');
     if (!email) return;
     email = email.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -98,7 +98,7 @@
       options: { emailRedirectTo: window.location.href }
     }).then(function (res) {
       if (res.error) alert('ส่งลิงก์ไม่สำเร็จ: ' + res.error.message);
-      else alert('ส่งลิงก์เข้าสู่ระบบไปที่อีเมลแล้ว\n請到信箱點擊登入連結 ✉️\n(' + email + ')');
+      else alert('登入連結已寄出，請到信箱點擊 ✉️\n(' + email + ')');
     });
   }
 
@@ -114,7 +114,7 @@
       'border:1px solid #dadce0;background:#fff;color:#3c4043;border-radius:10px;padding:12px;cursor:pointer;' +
       'font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);">' +
         '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>' +
-        'เข้าสู่ระบบด้วย Google' +
+        '使用 Google 登入' +
       '</button>';
   }
 
@@ -131,13 +131,13 @@
         '<button id="tf-gate-close" aria-label="ปิด / 關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;' +
         'font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
         '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🎵</div>' +
-        '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">เข้าสู่ระบบเพื่อเริ่มเล่น</h2>' +
-        '<p style="margin:0 0 20px;font-size:14px;color:#8B7340;line-height:1.6;">登入後即可開始練習聲調並記錄你的成績<br>เข้าสู่ระบบเพื่อเริ่มฝึก และบันทึกคะแนนของคุณ</p>' +
+        '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入後開始練習</h2>' +
+        '<p style="margin:0 0 20px;font-size:14px;color:#8B7340;line-height:1.6;">登入後即可練習聲調並記錄你的成績</p>' +
         googleBtnHTML('tf-google') +
         '<button id="tf-email" style="margin-top:12px;border:none;background:none;color:#A07A1E;' +
-        'cursor:pointer;font-size:13px;text-decoration:underline;">หรือใช้อีเมลแทน / 用 Email 登入</button>' +
-        '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">กดพื้นที่ว่างรอบๆ เพื่อกลับไปดูหน้าเว็บก่อนได้ · 點擊空白處可先返回瀏覽</p>' +
-        '<p style="margin:10px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">เข้าสู่ระบบหมายถึงคุณยอมรับ<a href="terms.html" style="color:#A07A1E;">ข้อกำหนดและการเก็บข้อมูล</a></p>' +
+        'cursor:pointer;font-size:13px;text-decoration:underline;">用 Email 登入</button>' +
+        '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回瀏覽</p>' +
+        '<p style="margin:10px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">登入即表示同意<a href="terms.html" style="color:#A07A1E;">服務條款與資料收集</a></p>' +
       '</div>';
     document.body.appendChild(gate);
     gate.querySelector('#tf-google').onclick = doGoogleLogin;
@@ -156,7 +156,7 @@
     miniBtn.innerHTML =
       '<button id="tf-mini-login" style="display:flex;align-items:center;gap:7px;border:1px solid rgba(200,151,58,0.5);' +
       'background:#fff;color:#8B6310;border-radius:999px;padding:6px 13px;cursor:pointer;font-size:13px;font-weight:700;' +
-      'box-shadow:0 2px 8px rgba(0,0,0,0.1);">เข้าสู่ระบบ / 登入</button>';
+      'box-shadow:0 2px 8px rgba(0,0,0,0.1);">登入</button>';
     document.body.appendChild(miniBtn);
     miniBtn.querySelector('#tf-mini-login').onclick = function () { showGate(); };
   }
@@ -179,7 +179,7 @@
       gateOpen = false;
       gate.style.display = 'none';
       miniBtn.style.display = 'none';
-      var email = currentUser.email || 'ผู้ใช้';
+      var email = currentUser.email || '使用者';
       badge.style.display = 'block';
       badge.innerHTML =
         '<div style="display:flex;align-items:center;gap:8px;background:#fff;' +
@@ -189,7 +189,7 @@
         '<a href="my-progress.html" title="คะแนนของฉัน" style="text-decoration:none;color:#8B6310;font-size:15px;">📊</a>' +
         '<span style="color:#8B6310;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(email) + '</span>' +
         '<button id="tf-logout" style="border:none;background:#C8973A;color:#fff;' +
-        'border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px;">ออกจากระบบ</button>' +
+        'border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px;">登出</button>' +
         '</div>';
       badge.querySelector('#tf-logout').onclick = doLogout;
     } else {

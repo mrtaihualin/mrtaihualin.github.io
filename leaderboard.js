@@ -15,7 +15,7 @@
 
   var root = document.getElementById('lb-root');
   if (!root) return;
-  if (!ready) { root.innerHTML = box('⚙️', 'ระบบยังไม่พร้อม', 'ยังตั้งค่า Supabase ไม่เสร็จ'); return; }
+  if (!ready) { root.innerHTML = box('⚙️', '系統尚未就緒', 'Supabase 尚未設定完成'); return; }
 
   var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
   var currentUser = null;
@@ -73,13 +73,13 @@
   // ── การตั้งชื่อเล่น ─────────────────────────────────────────
   function promptNickname() {
     if (!currentUser) return;
-    var nm = window.prompt('ตั้งชื่อเล่นที่จะโชว์บนกระดานจัดอันดับ (1–20 ตัวอักษร)\n設定排行榜暱稱:', myNick || '');
+    var nm = window.prompt('設定排行榜暱稱（1–20 字）：', myNick || '');
     if (nm == null) return;
     nm = nm.trim().slice(0, 20);
-    if (!nm) { alert('ชื่อเล่นต้องไม่ว่าง'); return; }
+    if (!nm) { alert('暱稱不能空白'); return; }
     sb.from('profiles').upsert({ user_id: currentUser.id, nickname: nm }, { onConflict: 'user_id' })
       .then(function (res) {
-        if (res.error) { alert('บันทึกชื่อไม่สำเร็จ: ' + res.error.message); return; }
+        if (res.error) { alert('暱稱儲存失敗：' + res.error.message); return; }
         myNick = nm;
         load();
       });
@@ -98,8 +98,8 @@
         (on ? 'background:#C8973A;color:#fff;' : 'background:transparent;color:#8B7340;') + '">' + label + '</button>';
     }
     return '<div style="display:flex;gap:6px;background:#fff;border-radius:14px;padding:6px;margin-bottom:18px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">' +
-      t('week', '🔥 รายสัปดาห์ / 本週', period === 'week') +
-      t('all', '👑 ตลอดกาล / 總排行', period === 'all') + '</div>';
+      t('week', '🔥 本週', period === 'week') +
+      t('all', '👑 總排行', period === 'all') + '</div>';
   }
 
   function wireTabs() {
@@ -113,25 +113,25 @@
   function nickBar() {
     if (!currentUser) {
       return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">' +
-        'เข้าสู่ระบบที่หน้าเกมเพื่อเข้าร่วมการจัดอันดับ · <a href="tone-finder.html" style="color:#A07A1E;">ไปเล่น</a></div>';
+        '在遊戲頁登入即可參加排行 · <a href="tone-finder.html" style="color:#A07A1E;">前往遊戲</a></div>';
     }
     if (!myNick) {
       return '<div style="text-align:center;margin-bottom:16px;">' +
-        '<button id="lb-setnick" style="background:#C8973A;color:#fff;border:none;border-radius:999px;padding:9px 20px;cursor:pointer;font-weight:700;font-size:14px;">✏️ ตั้งชื่อเล่นเพื่อขึ้นกระดาน</button></div>';
+        '<button id="lb-setnick" style="background:#C8973A;color:#fff;border:none;border-radius:999px;padding:9px 20px;cursor:pointer;font-weight:700;font-size:14px;">✏️ 設定暱稱來上榜</button></div>';
     }
-    return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">ชื่อเล่นของคุณ: <b style="color:#5C4410;">' + esc(myNick) +
-      '</b> · <a id="lb-setnick" href="javascript:void(0)" style="color:#A07A1E;">เปลี่ยน</a></div>';
+    return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">你的暱稱：<b style="color:#5C4410;">' + esc(myNick) +
+      '</b> · <a id="lb-setnick" href="javascript:void(0)" style="color:#A07A1E;">更改</a></div>';
   }
 
   async function load() {
-    root.innerHTML = tabs() + nickBar() + box('⏳', 'กำลังโหลด...', '請稍候');
+    root.innerHTML = tabs() + nickBar() + box('⏳', '載入中...', '請稍候');
     wireTabs();
     var fn = (period === 'week') ? 'leaderboard_weekly' : 'leaderboard_alltime';
     var res = await sb.rpc(fn);
     if (res.error) {
       root.innerHTML = tabs() + nickBar() +
-        box('⚠️', 'โหลดกระดานไม่สำเร็จ', esc(res.error.message) +
-          '<br><span style="font-size:12px;color:#B0A080;">(อาจยังไม่ได้สร้างฟังก์ชัน leaderboard ใน Supabase)</span>');
+        box('⚠️', '排行榜載入失敗', esc(res.error.message) +
+          '<br><span style="font-size:12px;color:#B0A080;">(可能尚未在 Supabase 建立 leaderboard 函式)</span>');
       wireTabs();
       return;
     }
@@ -146,8 +146,8 @@
   function renderBoard(rows) {
     var html = tabs() + nickBar();
     if (!rows.length) {
-      html += box('🌱', 'ยังไม่มีใครบนกระดาน', period === 'week' ? 'สัปดาห์นี้ยังไม่มีคะแนน เป็นคนแรกเลย!' : 'ยังไม่มีข้อมูล ไปเล่นเพื่อขึ้นกระดานสิ',
-        '<a href="tone-finder.html" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">ไปเล่น tone-finder →</a>');
+      html += box('🌱', '排行榜還沒有人', period === 'week' ? '本週還沒有分數，當第一個吧！' : '還沒有資料，去玩一場上榜吧',
+        '<a href="tone-finder.html" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往 tone-finder →</a>');
       root.innerHTML = html; wireTabs(); return;
     }
     html += '<div style="background:#fff;border-radius:16px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">';
@@ -159,10 +159,10 @@
         (i ? 'border-top:1px solid #F4ECD8;' : '') + (mine ? 'background:#FBF3E2;' : '') + '">' +
           '<div style="font-size:17px;min-width:26px;text-align:center;">' + medal(rank) + '</div>' +
           '<div style="flex:1;min-width:0;font-weight:700;color:#5C4410;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
-            esc(r.nickname || '(ไม่มีชื่อ)') + (mine ? ' <span style="font-size:11px;color:#C8973A;">(คุณ)</span>' : '') + '</div>' +
+            esc(r.nickname || '(無暱稱)') + (mine ? ' <span style="font-size:11px;color:#C8973A;">(你)</span>' : '') + '</div>' +
           '<div style="text-align:right;white-space:nowrap;">' +
             '<span style="font-family:\'Playfair Display\',serif;font-weight:900;color:#C8973A;font-size:18px;">' + (r.total_score != null ? r.total_score : 0) + '</span>' +
-            '<span style="font-size:11px;color:#B0A080;margin-left:5px;">' + (r.games || 0) + ' รอบ</span>' +
+            '<span style="font-size:11px;color:#B0A080;margin-left:5px;">' + (r.games || 0) + ' 場</span>' +
           '</div>' +
         '</div>';
     });
