@@ -9,8 +9,15 @@
   gtag('js', new Date());
   gtag('config', 'G-DKVQE30982');
 </script>
+<!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script defer src="supabase-auth.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <title>泰語聲調搜尋 — 泰華眼裡的泰語教學</title>
 <meta name="description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
 <link rel="canonical" href="https://mrtaihualin.github.io/tone-finder.html">
@@ -26,7 +33,7 @@
 <meta name="twitter:description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
 <meta name="twitter:image" content="https://mrtaihualin.github.io/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=7">
+<link rel="stylesheet" href="shared.css?v=8">
 <style>
   body { background: #F5F0E8; color: #1C1C1C; }
 
@@ -90,7 +97,7 @@
   .tf-banner-counter {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 13px;
-    color: #C8973A;
+    color: var(--gold-bright);
     font-weight: 700;
     letter-spacing: 2px;
     margin-bottom: 12px;
@@ -378,7 +385,7 @@
     padding: 16px 20px;
     background: linear-gradient(180deg,#FBF5E7 0%,#FFFFFF 100%);
     border: 1px solid rgba(139,99,16,0.15);
-    border-left: 4px solid #C8973A;
+    border-left: 4px solid var(--gold-bright);
     border-radius: 12px;
     margin-bottom: 22px;
   }
@@ -1468,6 +1475,22 @@
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "泰華眼裡的泰語教學",
+  "alternateName": "Mr. Thai Hua",
+  "url": "https://mrtaihualin.github.io/",
+  "logo": "https://mrtaihualin.github.io/assets/apple-touch-icon.png",
+  "image": "https://mrtaihualin.github.io/assets/share-card.png",
+  "description": "專為台灣人設計的線上一對一泰語課程，中文授課，從聲調到對話真正開口說泰語。",
+  "sameAs": [
+    "https://www.youtube.com/@mrtaihua",
+    "https://www.facebook.com/mrtaihua"
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -1481,93 +1504,29 @@
 
 <!-- ── NAV ── -->
 <nav class="site-nav"></nav>
-<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>
 
 <!-- ── PAGE BOTTOM NAV ── -->
 <div class="page-strip">
   <span class="page-strip-label">頁面</span>
   <a href="index.html">老師・介紹</a>
   <a href="page2.html">課程・費用</a>
-  <a href="page3.html">須知・服務</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
   <a href="page4.html">泰語・分享</a>
   <a href="tone-finder.html" class="active">聲調・搜尋</a>
 </div>
 
 <!-- ── MINIMAL MODALS (for nav modal triggers) ── -->
-<div class="modal-overlay" id="modal-quiz" onclick="closeModalOutside(event,'modal-quiz')">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title">🎯 快速程度測驗</div>
-      <button class="modal-close" onclick="closeModal('modal-quiz')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="quiz-wrap" id="quiz-wrap">
-        <!-- Step 1 -->
-        <div class="quiz-step active" id="q1">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你目前的泰文程度是？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">🆕 完全零基礎，從來沒學過</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">📖 學過一點點（知道一些單字或發音）</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',1)">🗣️ 可以簡單對話，但常卡關</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',2)">✅ 能日常溝通，想精進特定部分</button>
-          </div>
-        </div>
-        <!-- Step 2 -->
-        <div class="quiz-step" id="q2">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你最大的學習困境是什麼？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">🔤 不了解聲調系統，不確定自己發音對不對</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">📝 看不懂泰文文字，不知如何開始</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',1)">🧱 單字認識不少，但說不出完整句子</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',2)">🎯 有特定溝通場景需要突破（工作/旅遊/追星）</button>
-          </div>
-        </div>
-        <!-- Step 3 -->
-        <div class="quiz-step" id="q3">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你希望多快開始說出第一句泰語？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">🚀 越快越好，第一堂就想開口</button>
-            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">📅 1–2 個月內穩定打好基礎</button>
-            <button class="quiz-opt" onclick="quizNext('q3','q4',1)">🧘 慢慢來，重視紮實理解</button>
-          </div>
-        </div>
-        <!-- Step 4 -->
-        <div class="quiz-step" id="q4">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div></div>
-          <div class="quiz-q-text">你每週大概可以投入多少學習時間？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizResult(0)">⏱️ 每週 1–2 小時（上課為主）</button>
-            <button class="quiz-opt" onclick="quizResult(1)">📚 每週 3–5 小時（上課＋課後複習）</button>
-            <button class="quiz-opt" onclick="quizResult(2)">🔥 每週 5 小時以上（密集學習）</button>
-          </div>
-        </div>
-        <!-- Results -->
-        <div class="quiz-result" id="result-basic">
-          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
-          <div class="quiz-result-title">建議從 Basic 開始</div>
-          <div class="quiz-result-desc">根據你的答案，目前最適合從零開始系統性建立發音與語感基礎。<br>Basic 課程會讓你在 10 堂內真正開口說出第一句完整的泰語。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，無任何壓力。</span></div>
-          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
-          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
-        </div>
-        <div class="quiz-result" id="result-standard">
-          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
-          <div class="quiz-result-title">建議選擇 Standard</div>
-          <div class="quiz-result-desc">你已有一定基礎，Standard 課程的客製化設計能精準鎖定你的弱點，突破目前的停滯期，讓進步更有效率。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，馬上確認你的程度。</span></div>
-          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
-          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 <!-- ── MAIN PAGE ── -->
 <div class="tf-page">
   <div class="tf-page-header">
     <div class="tf-page-title">🎵 泰語聲調搜尋</div>
     <div class="tf-page-hint" id="tf-hint">選擇等級與主題，開始練習聲調</div>
+  </div>
+
+  <div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:18px;font-family:'Noto Sans TC',sans-serif;">
+    <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;">🎁 免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
+    <span style="font-size:13px;background:var(--gold-bright,#C8973A);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
   </div>
 
   <div class="tf-card">
@@ -3050,7 +3009,7 @@ function buildReportInner() {
   return '<style>'+
     '@page{margin:15mm;}'+
     'body{font-family:"Noto Sans TC","Sarabun",sans-serif;color:#3a2c10;margin:0;padding:22px;background:#fff;}'+
-    '.rp-head{text-align:center;border-bottom:3px solid #C8973A;padding-bottom:14px;margin-bottom:18px;}'+
+    '.rp-head{text-align:center;border-bottom:3px solid var(--gold-bright);padding-bottom:14px;margin-bottom:18px;}'+
     '.rp-title{font-size:25px;font-weight:700;color:#8B6310;letter-spacing:2px;}'+
     '.rp-meta{font-size:13px;color:#7a6a4a;margin-top:8px;}'+
     '.rp-score{font-size:18px;color:#5a3e0a;margin-top:6px;font-weight:700;}'+
@@ -3061,7 +3020,7 @@ function buildReportInner() {
     'td.big{font-size:20px;font-weight:700;color:#5a3e0a;}'+
     'td.bd{font-size:11px;color:#5a3e0a;text-align:left;}'+
     'td.dv{font-size:11px;color:#6a5320;text-align:left;}'+
-    '.rp-analysis{background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(139,99,16,0.2);border-left:4px solid #C8973A;border-radius:10px;padding:14px 18px;margin-top:16px;}'+
+    '.rp-analysis{background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(139,99,16,0.2);border-left:4px solid var(--gold-bright);border-radius:10px;padding:14px 18px;margin-top:16px;}'+
     '.rp-analysis h3{color:#8B6310;margin:0 0 8px;font-size:15px;}'+
     '.rp-analysis p{margin:5px 0;font-size:13px;line-height:1.7;}'+
     '.rp-foot{text-align:center;color:#a08a5a;font-size:11px;margin-top:22px;}'+
@@ -3095,6 +3054,7 @@ function stepSessionSummary() {
   var results = session.results;
   var total = results.length;
   var perfectCount = results.filter(function(r){ return r.mistakes === 0; }).length;
+  gtag('event', 'tone_finder_complete', {score: perfectCount, total: total});
   var rows = results.map(function(r, i){
     var tone = r.tone != null ? r.tone : computeTone(r.entry.word);
     var tl = TONES[tone] || {};
@@ -3331,6 +3291,7 @@ function startSetSession(words) {
   if (!entries.length) return;
   entries = entries.slice().sort(function(){ return Math.random() - 0.5; });  // สุ่มลำดับใหม่ทุกครั้ง
   session = { words: entries, index: 0, results: [], currentWordMistakes: 0 };
+  gtag('event', 'tone_finder_start', {mode: selectedCategory || 'ทั้งหมด'});
   hist = []; histPos = -1;
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
   if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
@@ -3415,6 +3376,7 @@ function stepInput() {
       'placeholder="例：กา, ข้าว, ไทย…" ' +
       'oninput="TF.filterThai(this)" ' +
       'onkeydown="if(event.key===\'Enter\')TF.search()">' +
+    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12.5px;color:#8B6310;background:rgba(200,151,58,0.10);border:1px solid rgba(200,151,58,0.30);border-radius:6px;padding:9px 12px;margin-top:10px;line-height:1.6;text-align:left;">💡 目前「自行搜尋」僅支援<strong>單音節</strong>單字；多音節單字請改用上方主題練習。</div>' +
     '<div id="tf-lang-warn" style="display:none;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#ff6b6b;margin-top:8px;letter-spacing:0.5px;">⚠️ 請輸入泰文字符</div>' +
     '<div class="tf-input-actions">' +
       '<button class="tf-secondary-btn" type="button" onclick="TF.randomWord()">🎲 隨機取字</button>' +
@@ -3466,7 +3428,7 @@ function footer() {
 
 // ── Steps ──
 function step1() {
-  return qbox('1','這個字有<strong style="color:#D4A017;">聲調符號</strong>嗎？') +
+  return qbox('1','這個字有<strong style="color:var(--gold-bright);">聲調符號</strong>嗎？') +
     '<div class="tf-options">' +
       optRow('有聲調符號', act(function(){ tryNavigate('hasMark','有聲調符號','s2a'); }), ['toneMark']) +
       optRow('無聲調符號', act(function(){ tryNavigate('noMark','無聲調符號','s2b'); })) +
@@ -4612,10 +4574,21 @@ var TF = {
   },
   nextWord: function() {
     if (session) {
+      var _gaEntry = session.words[session.index];
+      var _gaTone = S.tone != null ? S.tone : computeTone(_gaEntry.word);
+      var _gaMistakes = session.currentWordMistakes || 0;
+      var _gaToneName = (TONES[_gaTone] && TONES[_gaTone].zh) || String(_gaTone);
+      if (_gaMistakes === 0) {
+        gtag('event', 'tone_answer_correct', {word: _gaEntry.word, tone: _gaToneName});
+      } else {
+        var _gaFinal = session.finalAnswer != null ? session.finalAnswer : session.initialGuess;
+        var _gaSelectedName = (TONES[_gaFinal] && TONES[_gaFinal].zh) || String(_gaFinal);
+        gtag('event', 'tone_answer_wrong', {word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName});
+      }
       session.results.push({
-        entry: session.words[session.index],
-        tone: S.tone != null ? S.tone : computeTone(session.words[session.index].word),
-        mistakes: session.currentWordMistakes || 0,
+        entry: _gaEntry,
+        tone: _gaTone,
+        mistakes: _gaMistakes,
         initialGuess: session.initialGuess,
         finalAnswer: session.finalAnswer
       });
@@ -4751,10 +4724,10 @@ render();
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
   專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
-  <a href="terms.html" style="color:rgba(255,255,255,0.5);text-decoration:underline;">使用條款與著作權聲明</a>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
-<script src="shared.js?v=3"></script>
+<script src="shared.js?v=6"></script>
 </body>
 </html>

@@ -11,6 +11,9 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <title>泰語・分享 — 泰華眼裡的泰語教學</title>
 <meta name="description" content="泰語學習影片、實用貼文與自學專區。跟著泰華老師學道地泰語、認識泰國文化，每週六晚上線上直播。">
 <link rel="canonical" href="https://mrtaihualin.github.io/page4.html">
@@ -26,7 +29,7 @@
 <meta name="twitter:description" content="泰語學習影片、實用貼文與自學專區。跟著泰華老師學道地泰語、認識泰國文化，每週六晚上線上直播。">
 <meta name="twitter:image" content="https://mrtaihualin.github.io/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=7">
+<link rel="stylesheet" href="shared.css?v=8">
 <style>
 
 /* ══════════════════════════════════════
@@ -50,7 +53,7 @@
 
 .p4-shuffle-btn {
   padding: 12px 26px;
-  background: #C8973A;
+  background: var(--gold-bright);
   color: #111;
   border: none;
   font-family: 'Noto Sans TC', sans-serif;
@@ -70,7 +73,34 @@
   gap: 14px;
 }
 @media (max-width: 860px) { .p4-video-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 520px) { .p4-video-grid { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .p4-video-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+
+/* 最新 badge (first card) */
+.p4-vc-badge {
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  background: var(--gold-bright); color: #111;
+  font-family: 'Noto Sans TC', sans-serif; font-size: 11px; font-weight: 900;
+  letter-spacing: 1px; padding: 3px 10px; border-radius: 4px;
+}
+/* YouTube link under inline player */
+.p4-vc-yt {
+  display: block; text-align: center; background: #c4302b; color: #fff;
+  font-family: 'Noto Sans TC', sans-serif; font-size: 13px; font-weight: 700;
+  padding: 9px; text-decoration: none; letter-spacing: 1px;
+}
+.p4-vc-yt:hover { background: #a82822; }
+/* Subscribe + see-all buttons */
+.p4-video-actions {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px;
+}
+.p4-vbtn {
+  font-family: 'Noto Sans TC', sans-serif; font-size: 14px; font-weight: 900;
+  letter-spacing: 1px; padding: 13px 28px; text-decoration: none; border-radius: 8px;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.p4-vbtn:hover { opacity: 0.88; transform: translateY(-1px); }
+.p4-vbtn-sub { background: #c4302b; color: #fff; }
+.p4-vbtn-all { background: var(--ink); color: var(--cream); }
 
 /* Video card */
 .p4-vc {
@@ -108,7 +138,7 @@
   pointer-events: none;
 }
 .p4-vc:hover .p4-vc-play {
-  background: #C8973A;
+  background: var(--gold-bright);
   transform: translate(-50%, -50%) scale(1.12);
 }
 .p4-vc-play span { color: #111; font-size: 18px; margin-left: 3px; line-height: 1; }
@@ -250,146 +280,30 @@
   font-size: 14px; color: var(--ink-muted); letter-spacing: 1px;
 }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "泰華眼裡的泰語教學",
+  "alternateName": "Mr. Thai Hua",
+  "url": "https://mrtaihualin.github.io/",
+  "logo": "https://mrtaihualin.github.io/assets/apple-touch-icon.png",
+  "image": "https://mrtaihualin.github.io/assets/share-card.png",
+  "description": "專為台灣人設計的線上一對一泰語課程，中文授課，從聲調到對話真正開口說泰語。",
+  "sameAs": [
+    "https://www.youtube.com/@mrtaihua",
+    "https://www.facebook.com/mrtaihua"
+  ]
+}
+</script>
 </head>
 <body>
 
 <!-- ════════════ MODALS ════════════ -->
 
-<!-- Quiz Modal -->
-<div class="modal-overlay" id="modal-quiz" onclick="closeModalOutside(event,'modal-quiz')">
-  <div class="modal-box">
-    <div class="modal-header"><div class="modal-title">🎯 快速程度測驗</div><button class="modal-close" onclick="closeModal('modal-quiz')">✕</button></div>
-    <div class="modal-body">
-      <div class="quiz-wrap" id="quiz-wrap">
-        <div class="quiz-step active" id="q1">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你目前的泰文程度是？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">🆕 完全零基礎，從來沒學過</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">📖 學過一點點（知道一些單字或發音）</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',1)">🗣️ 可以簡單對話，但常卡關</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',2)">✅ 能日常溝通，想精進特定部分</button>
-          </div>
-        </div>
-        <div class="quiz-step" id="q2">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你最大的學習困境是什麼？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">🔤 不了解聲調系統，不確定自己發音對不對</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">📝 看不懂泰文文字，不知如何開始</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',1)">🧱 單字認識不少，但說不出完整句子</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',2)">🎯 有特定溝通場景需要突破（工作/旅遊/追星）</button>
-          </div>
-        </div>
-        <div class="quiz-step" id="q3">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你希望多快開始說出第一句泰語？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">🚀 越快越好，第一堂就想開口</button>
-            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">📅 1–2 個月內穩定打好基礎</button>
-            <button class="quiz-opt" onclick="quizNext('q3','q4',1)">🧘 慢慢來，重視紮實理解</button>
-          </div>
-        </div>
-        <div class="quiz-step" id="q4">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div></div>
-          <div class="quiz-q-text">你每週大概可以投入多少學習時間？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizResult(0)">⏱️ 每週 1–2 小時（上課為主）</button>
-            <button class="quiz-opt" onclick="quizResult(1)">📚 每週 3–5 小時（上課＋課後複習）</button>
-            <button class="quiz-opt" onclick="quizResult(2)">🔥 每週 5 小時以上（密集學習）</button>
-          </div>
-        </div>
-        <div class="quiz-result" id="result-basic">
-          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
-          <div class="quiz-result-title">建議從 Basic 開始</div>
-          <div class="quiz-result-desc">根據你的答案，目前最適合從零開始系統性建立發音與語感基礎。<br>Basic 課程會讓你在 10 堂內真正開口說出第一句完整的泰語。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，無任何壓力。</span></div>
-          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
-          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
-        </div>
-        <div class="quiz-result" id="result-standard">
-          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
-          <div class="quiz-result-title">建議選擇 Standard</div>
-          <div class="quiz-result-desc">你已有一定基礎，Standard 課程的客製化設計能精準鎖定你的弱點，突破目前的停滯期，讓進步更有效率。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，馬上確認你的程度。</span></div>
-          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
-          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Videos Modal -->
-<div class="modal-overlay" id="modal-videos" onclick="closeModalOutside(event,'modal-videos');stopYTVideo();">
-  <div class="modal-box dark" style="max-width:720px;width:95vw;">
-    <div class="modal-header"><div class="modal-title" style="color:var(--white)">📺 泰語影片學習庫</div><button class="modal-close" onclick="stopYTVideo();closeModal('modal-videos')">✕</button></div>
-    <div class="modal-body" style="padding-top:0;">
-      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;background:#111;margin-bottom:16px;">
-        <iframe id="yt-player" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" frameborder="0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
-        <div id="yt-empty-state" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
-          <span style="font-size:48px;">📺</span>
-          <div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:rgba(255,255,255,0.5);text-align:center;">影片即將上線<br>敬請期待！</div>
-        </div>
-      </div>
-      <div id="yt-title" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:var(--white);font-weight:700;margin-bottom:4px;line-height:1.5;min-height:22px;"></div>
-      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#C8973A;letter-spacing:1px;margin-bottom:16px;">Mr. Thai Hua · 泰語老師</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button id="yt-shuffle-btn" onclick="shuffleYTVideo()" style="flex:1;min-width:130px;padding:12px 20px;background:#C8973A;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;">🔀 換一部影片</button>
-        <a href="https://www.youtube.com/@mrtaihua" target="_blank" style="flex:1;min-width:130px;padding:12px 20px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;">▶ 前往 YouTube 頻道</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- FB Posts Modal -->
-<div class="modal-overlay" id="modal-fbposts" onclick="closeModalOutside(event,'modal-fbposts')">
-  <div class="modal-box" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
-    <div class="modal-header" style="flex-shrink:0;padding:16px 22px;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div class="modal-title" style="color:var(--ink)">🚀 貼文分享區</div>
-      </div>
-      <button class="modal-close" onclick="closeModal('modal-fbposts')">✕</button>
-    </div>
-    <div id="fb-list-view" style="overflow-y:auto;flex:1;padding:8px 0 16px;"></div>
-    <div id="fb-detail-view" style="display:none;overflow-y:auto;flex:1;">
-      <div id="fb-detail-img-wrap" style="display:none;"><img id="fb-detail-img" src="" alt="" style="width:100%;display:block;max-height:340px;object-fit:cover;"></div>
-      <div style="padding:22px 28px 20px;border-bottom:1px solid rgba(200,151,58,0.2);">
-        <div id="fb-detail-date" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#C8973A;letter-spacing:2px;margin-bottom:14px;"></div>
-        <div id="fb-detail-text" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:2;color:var(--ink);white-space:pre-wrap;word-break:break-word;"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:16px 28px;border-bottom:1px solid var(--border);">
-        <button onclick="openLinkedSSFromPost()" style="padding:12px 8px;background:#C8973A;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📖 看文章學泰文</button>
-        <button onclick="shareFBPost()" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔗 分享本文</button>
-        <button onclick="closeModal('modal-fbposts');openModal('modal-line-qr')" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🙋 前往提問</button>
-      </div></div>
-  </div>
-</div>
-
-<!-- Self-Study Modal -->
-<div class="modal-overlay" id="modal-selfstudy" onclick="closeModalOutside(event,'modal-selfstudy')">
-  <div class="modal-box" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
-    <div class="modal-header" style="flex-shrink:0;padding:16px 22px;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div class="modal-title" style="color:var(--ink)">📖 自學專區</div>
-      </div>
-      <button class="modal-close" onclick="closeModal('modal-selfstudy')">✕</button>
-    </div>
-    <div id="ss-list-view" style="overflow-y:auto;flex:1;padding:8px 0 16px;"></div>
-    <div id="ss-detail-view" style="display:none;overflow-y:auto;flex:1;padding:22px 26px 28px;">
-      <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:3px;color:#C8973A;margin-bottom:16px;" id="ss-detail-label"></div>
-      <div id="ss-vocab-card" style="border-radius:12px;overflow:hidden;margin-bottom:20px;"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <button id="ss-read-btn" onclick="openLinkedFBPost(window._ssCurrentId)" style="padding:12px 8px;background:#C8973A;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📄 閱讀文章</button>
-        <button id="ss-share-btn" onclick="shareSSArticle()" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🔗 分享詞彙</button>
-        <button onclick="closeModal('modal-selfstudy');openModal('modal-line-qr')" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">🙋 前往提問</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Thai Q&A Modal -->
 <!-- Contact -->
 <!-- Social -->
-
 
 <!-- LINE QR Modal -->
 <!-- Floating QR -->
@@ -403,29 +317,59 @@
 <!-- Share Popup -->
 <div id="share-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;" onclick="closeSharePopup()"></div>
 <div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(200,151,58,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
-  <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#C8973A;letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
+  <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:var(--gold-bright);letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
   <textarea id="share-text-area" readonly rows="7" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.85);font-family:'Noto Sans TC',sans-serif;font-size:13px;line-height:1.8;padding:12px 14px;resize:none;outline:none;box-sizing:border-box;"></textarea>
   <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:rgba(255,255,255,0.25);margin:8px 0 14px;">⚠️ 請勿刪除連結，分享時請保留完整內容，感謝您🙏</div>
   <div style="display:flex;gap:8px;">
-    <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:#C8973A;color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">一鍵複製</button>
+    <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:var(--gold-bright);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">一鍵複製</button>
     <button onclick="closeSharePopup()" style="padding:12px 20px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;cursor:pointer;">取消</button>
   </div>
 </div>
 
 <!-- ════════════ NAV ════════════ -->
 <nav class="site-nav"></nav>
-<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>
 
 <!-- ════════════ BOTTOM PAGE NAV ════════════ -->
 <div class="page-strip">
   <span class="page-strip-label">頁面</span>
   <a href="index.html">老師・介紹</a>
   <a href="page2.html">課程・費用</a>
-  <a href="page3.html">須知・服務</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
   <a href="page4.html" class="active">泰語・分享</a>
   <a href="tone-finder.html">聲調・搜尋</a>
 </div>
 
+<!-- ════════════ SECTION 2 · TWO-COLUMN LIST ════════════ -->
+<div id="sharing" class="p4-sharing">
+  <div class="section-wrap" style="padding-top:72px;padding-bottom:80px;">
+    <div class="p4-two-col">
+
+      <!-- LEFT: 貼文分享區 -->
+      <div class="p4-col">
+        <div class="p4-col-header">
+          <span class="p4-col-eyebrow">貼文分享區</span>
+          <div class="p4-col-title">🚀 最新貼文</div>
+        </div>
+        <div class="p4-list" id="p4-post-list">
+          <div class="p4-list-empty">載入中…</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: 自學專區 -->
+      <div class="p4-col">
+        <div class="p4-col-header">
+          <span class="p4-col-eyebrow">自學專區</span>
+          <div class="p4-col-title">📖 學習資源</div>
+        </div>
+        <div class="p4-list" id="p4-study-list">
+          <div class="p4-list-empty">載入中…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <!-- ════════════ SECTION 1 · VIDEO GRID ════════════ -->
 <div id="videos" class="p4-videos">
@@ -462,36 +406,8 @@
         <div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- ════════════ SECTION 2 · TWO-COLUMN LIST ════════════ -->
-<div id="sharing" class="p4-sharing">
-  <div class="section-wrap" style="padding-top:72px;padding-bottom:80px;">
-    <div class="p4-two-col">
-
-      <!-- LEFT: 貼文分享區 -->
-      <div class="p4-col">
-        <div class="p4-col-header">
-          <span class="p4-col-eyebrow">貼文分享區</span>
-          <div class="p4-col-title">🚀 最新貼文</div>
-        </div>
-        <div class="p4-list" id="p4-post-list">
-          <div class="p4-list-empty">載入中…</div>
-        </div>
-      </div>
-
-      <!-- RIGHT: 自學專區 -->
-      <div class="p4-col">
-        <div class="p4-col-header">
-          <span class="p4-col-eyebrow">自學專區</span>
-          <div class="p4-col-title">📖 學習資源</div>
-        </div>
-        <div class="p4-list" id="p4-study-list">
-          <div class="p4-list-empty">載入中…</div>
-        </div>
-      </div>
-
+    <div class="p4-video-actions">
+      <a class="p4-vbtn p4-vbtn-sub" href="https://www.youtube.com/@mrtaihua?sub_confirmation=1" target="_blank" rel="noopener">🔔 訂閱頻道，掌握最新影片</a>
     </div>
   </div>
 </div>
@@ -511,7 +427,7 @@
 // P4  —  Page 4 logic (video grid + list renders)
 // ─────────────────────────────────────────────────────────────
 var P4 = (function () {
-  var API_KEY = 'AIzaSyAi2d7emgwWPo_KlDZOUs8v-3IUr16By2Y';
+  var API_KEY = 'AIzaSyBIY9Mg41RXLNkgDTq1ZyiJnCMrp_3BEeI';
   var CHANNEL = 'mrtaihua';
   var _all    = [];   // all fetched videos
   var _ready  = false;
@@ -528,6 +444,15 @@ var P4 = (function () {
     return result;
   }
 
+  // คลิปแรก = คลิปใหม่สุดเสมอ, ที่เหลือสุ่ม
+  function newestPlusPick(n) {
+    if (!_all.length) return [];
+    var rest = _all.slice(1), picked = [];
+    while (picked.length < n - 1 && rest.length > 0)
+      picked.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
+    return [_all[0]].concat(picked);
+  }
+
   // ── Video grid ───────────────────────────────────────────
   function renderGrid(videos) {
     var g = document.getElementById('p4-video-grid');
@@ -536,10 +461,11 @@ var P4 = (function () {
       g.innerHTML = '<div class="p4-grid-msg">📺 影片即將上線，敬請期待</div>';
       return;
     }
-    g.innerHTML = videos.map(function (v) {
+    g.innerHTML = videos.map(function (v, i) {
       return '<div class="p4-vc" data-id="' + esc(v.id) + '" onclick="P4.play(this)">' +
         '<div class="p4-vc-thumb">' +
           '<img src="https://img.youtube.com/vi/' + esc(v.id) + '/hqdefault.jpg" alt="' + esc(v.title) + '" loading="lazy">' +
+          (i === 0 ? '<div class="p4-vc-badge">最新</div>' : '') +
           '<div class="p4-vc-play"><span>▶</span></div>' +
         '</div>' +
         '<div class="p4-vc-title">' + esc(v.title) + '</div>' +
@@ -605,7 +531,7 @@ var P4 = (function () {
       _all = [];
     }
     _ready = true;
-    renderGrid(pick(6));
+    renderGrid(newestPlusPick(6));
     var btn = document.getElementById('p4-shuffle-btn');
     if (btn) { btn.textContent = '🔀 隨機換一換'; btn.disabled = false; }
   }
@@ -619,15 +545,18 @@ var P4 = (function () {
     },
     shuffle: function () {
       if (!_ready) return;
-      renderGrid(pick(6));
+      renderGrid(newestPlusPick(6));
     },
     play: function (card) {
       var id = card.getAttribute('data-id');
+      card.style.cursor = 'default';
+      card.onclick = null;
       card.innerHTML =
         '<div class="p4-vc-player">' +
           '<iframe src="https://www.youtube.com/embed/' + id + '?autoplay=1&rel=0" frameborder="0" ' +
             'allowfullscreen allow="autoplay;encrypted-media;picture-in-picture"></iframe>' +
-        '</div>';
+        '</div>' +
+        '<a class="p4-vc-yt" href="https://www.youtube.com/watch?v=' + id + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">▶ 在 YouTube 觀看</a>';
     },
     openPost: function (id) {
       if (window.openFBPostModal) openFBPostModal();
@@ -662,6 +591,6 @@ var P4 = (function () {
 document.addEventListener('DOMContentLoaded', function () { P4.init(); });
 </script>
 
-<script src="shared.js?v=3"></script>
+<script src="shared.js?v=6"></script>
 </body>
 </html>

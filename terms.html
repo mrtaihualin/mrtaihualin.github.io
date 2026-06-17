@@ -11,6 +11,9 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <title>使用條款與著作權聲明 — 泰華眼裡的泰語教學</title>
 <meta name="description" content="泰華眼裡的泰語教學使用條款與著作權聲明。了解網站內容使用規範、智慧財產權與課程相關條款。">
 <link rel="canonical" href="https://mrtaihualin.github.io/terms.html">
@@ -26,81 +29,25 @@
 <meta name="twitter:description" content="泰華眼裡的泰語教學使用條款與著作權聲明。了解網站內容使用規範、智慧財產權與課程相關條款。">
 <meta name="twitter:image" content="https://mrtaihualin.github.io/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=7">
+<link rel="stylesheet" href="shared.css?v=8">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "泰華眼裡的泰語教學",
+  "alternateName": "Mr. Thai Hua",
+  "url": "https://mrtaihualin.github.io/",
+  "logo": "https://mrtaihualin.github.io/assets/apple-touch-icon.png",
+  "image": "https://mrtaihualin.github.io/assets/share-card.png",
+  "description": "專為台灣人設計的線上一對一泰語課程，中文授課，從聲調到對話真正開口說泰語。",
+  "sameAs": [
+    "https://www.youtube.com/@mrtaihua",
+    "https://www.facebook.com/mrtaihua"
+  ]
+}
+</script>
 </head>
 <body>
-<!-- MODALS -->
-<!-- Quiz Modal -->
-<div class="modal-overlay" id="modal-quiz" onclick="closeModalOutside(event,'modal-quiz')">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title">🎯 快速程度測驗</div>
-      <button class="modal-close" onclick="closeModal('modal-quiz')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="quiz-wrap" id="quiz-wrap">
-        <!-- Step 1 -->
-        <div class="quiz-step active" id="q1">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你目前的泰文程度是？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">🆕 完全零基礎，從來沒學過</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">📖 學過一點點（知道一些單字或發音）</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',1)">🗣️ 可以簡單對話，但常卡關</button>
-            <button class="quiz-opt" onclick="quizNext('q1','q2',2)">✅ 能日常溝通，想精進特定部分</button>
-          </div>
-        </div>
-        <!-- Step 2 -->
-        <div class="quiz-step" id="q2">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你最大的學習困境是什麼？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">🔤 不了解聲調系統，不確定自己發音對不對</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">📝 看不懂泰文文字，不知如何開始</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',1)">🧱 單字認識不少，但說不出完整句子</button>
-            <button class="quiz-opt" onclick="quizNext('q2','q3',2)">🎯 有特定溝通場景需要突破（工作/旅遊/追星）</button>
-          </div>
-        </div>
-        <!-- Step 3 -->
-        <div class="quiz-step" id="q3">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div></div>
-          <div class="quiz-q-text">你希望多快開始說出第一句泰語？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">🚀 越快越好，第一堂就想開口</button>
-            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">📅 1–2 個月內穩定打好基礎</button>
-            <button class="quiz-opt" onclick="quizNext('q3','q4',1)">🧘 慢慢來，重視紮實理解</button>
-          </div>
-        </div>
-        <!-- Step 4 -->
-        <div class="quiz-step" id="q4">
-          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div></div>
-          <div class="quiz-q-text">你每週大概可以投入多少學習時間？</div>
-          <div class="quiz-options">
-            <button class="quiz-opt" onclick="quizResult(0)">⏱️ 每週 1–2 小時（上課為主）</button>
-            <button class="quiz-opt" onclick="quizResult(1)">📚 每週 3–5 小時（上課＋課後複習）</button>
-            <button class="quiz-opt" onclick="quizResult(2)">🔥 每週 5 小時以上（密集學習）</button>
-          </div>
-        </div>
-        <!-- Results -->
-        <div class="quiz-result" id="result-basic">
-          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
-          <div class="quiz-result-title">建議從 Basic 開始</div>
-          <div class="quiz-result-desc">根據你的答案，目前最適合從零開始系統性建立發音與語感基礎。<br>Basic 課程會讓你在 10 堂內真正開口說出第一句完整的泰語。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，無任何壓力。</span></div>
-          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
-          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
-        </div>
-        <div class="quiz-result" id="result-standard">
-          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
-          <div class="quiz-result-title">建議選擇 Standard</div>
-          <div class="quiz-result-desc">你已有一定基礎，Standard 課程的客製化設計能精準鎖定你的弱點，突破目前的停滯期，讓進步更有效率。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，馬上確認你的程度。</span></div>
-          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
-          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- FLOATING LINE QR WIDGET -->
 <div class="floating-qr" id="floating-qr">
   <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
@@ -113,14 +60,14 @@
 <nav class="site-nav"></nav>
 
 <!-- AVAILABILITY BAND -->
-<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>
 
 <!-- PAGE NAV STRIP -->
 <div class="page-strip">
   <span class="page-strip-label">頁面</span>
   <a href="index.html">老師・介紹</a>
   <a href="page2.html">課程・費用</a>
-  <a href="page3.html">須知・服務</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
   <a href="page4.html">泰語・分享</a>
   <a href="tone-finder.html">聲調・搜尋</a>
 </div>
@@ -190,6 +137,6 @@
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="shared.js?v=2"></script>
+<script src="shared.js?v=6"></script>
 </body>
 </html>
