@@ -646,6 +646,15 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
 (function injectSharedModals() {
   var modalsHTML = '';
 
+  // การ์ดลิงก์ SNS (ใช้ทั้งใน modal-sns และ 聯絡我們) — ขนาดกะทัดรัด
+  var _snsRow = function(url,bg,ic,name,sub,ch){
+    return '<a href="'+url+'" target="_blank" rel="noopener" onclick="window.gtag&&gtag(\'event\',\'sns_click\',{ch:\''+ch+'\'})" '+
+      'style="display:flex;align-items:center;gap:11px;text-decoration:none;background:var(--cream,#FBF5E7);border:1px solid rgba(200,151,58,0.28);border-radius:10px;padding:8px 11px;transition:background .15s;" onmouseover="this.style.background=\'rgba(200,151,58,0.12)\'" onmouseout="this.style.background=\'var(--cream,#FBF5E7)\'">'+
+      '<span style="width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;background:'+bg+';">'+ic+'</span>'+
+      '<span style="min-width:0;"><span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-weight:800;color:#5C4410;font-size:14px;line-height:1.2;">'+name+'</span>'+
+      '<span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-size:11.5px;color:#A0895A;margin-top:1px;">'+sub+'</span></span></a>';
+  };
+
   if (!document.getElementById('modal-contact')) {
     modalsHTML += `
 <!-- Contact -->
@@ -673,14 +682,14 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
         </div>
         <div class="contact-row">
           <span class="contact-icon">📲</span>
-          <div>
+          <div style="flex:1;min-width:0;">
             <span class="contact-label">社群媒體</span>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
-              <a href="https://www.instagram.com/mrtaihua" target="_blank" class="contact-link">Instagram</a>
-              <a href="https://www.tiktok.com/@mrtaihua" target="_blank" class="contact-link">TikTok</a>
-              <a href="https://www.youtube.com/@mrtaihua" target="_blank" class="contact-link">YouTube</a>
-              <a href="https://www.facebook.com/mrtaihua" target="_blank" class="contact-link">Facebook</a>
-              <a href="https://www.threads.com/@mrtaihua?invite=0" target="_blank" class="contact-link">Threads</a>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+              ${_snsRow('https://www.facebook.com/mrtaihua','#1877F2','f','Facebook','粉絲頁・每週直播教學','facebook')}
+              ${_snsRow('https://www.youtube.com/@mrtaihua','#FF0000','▶','YouTube','教學影片・聲調解析','youtube')}
+              ${_snsRow('https://www.instagram.com/mrtaihua','linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)','📷','Instagram','每日一字・學習花絮','instagram')}
+              ${_snsRow('https://www.tiktok.com/@mrtaihua','#000','🎵','TikTok','短影音・快速學泰語','tiktok')}
+              ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','#000','@','Threads','學習筆記・互動討論','threads')}
             </div>
           </div>
         </div>
@@ -713,24 +722,17 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
   }
 
   if (!document.getElementById('modal-sns')) {
-    var _snsRow = function(url,bg,ic,name,sub,ch){
-      return '<a href="'+url+'" target="_blank" rel="noopener" onclick="window.gtag&&gtag(\'event\',\'sns_click\',{ch:\''+ch+'\'})" '+
-        'style="display:flex;align-items:center;gap:13px;text-decoration:none;background:var(--cream,#FBF5E7);border:1px solid rgba(200,151,58,0.28);border-radius:12px;padding:11px 14px;transition:background .15s;" onmouseover="this.style.background=\'rgba(200,151,58,0.12)\'" onmouseout="this.style.background=\'var(--cream,#FBF5E7)\'">'+
-        '<span style="width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;background:'+bg+';">'+ic+'</span>'+
-        '<span style="min-width:0;"><span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-weight:800;color:#5C4410;font-size:15px;line-height:1.2;">'+name+'</span>'+
-        '<span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#A0895A;margin-top:2px;">'+sub+'</span></span></a>';
-    };
     modalsHTML += `
 <!-- SNS LIST -->
 <div class="modal-overlay" id="modal-sns" onclick="closeModalOutside(event,'modal-sns')">
-  <div class="modal-box" style="max-width:420px;">
+  <div class="modal-box" style="max-width:340px;">
     <div class="modal-header">
-      <div class="modal-title" style="color:var(--ink);">📲 追蹤我們</div>
+      <div class="modal-title" style="color:var(--ink);font-size:17px;">📲 追蹤我們</div>
       <button class="modal-close" onclick="closeModal('modal-sns')">✕</button>
     </div>
     <div class="modal-body">
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);line-height:1.7;margin:0 0 14px;">每天學一點泰語，第一時間收到新課程、教學影片與聲調小技巧 ✨</p>
-      <div style="display:flex;flex-direction:column;gap:10px;">
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:var(--ink-muted);line-height:1.6;margin:0 0 12px;">每天學一點泰語，第一時間收到新課程與聲調小技巧 ✨</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
         ${_snsRow('https://www.facebook.com/mrtaihua','#1877F2','f','Facebook','粉絲頁・每週直播教學','facebook')}
         ${_snsRow('https://www.youtube.com/@mrtaihua','#FF0000','▶','YouTube','教學影片・聲調解析','youtube')}
         ${_snsRow('https://www.instagram.com/mrtaihua','linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)','📷','Instagram','每日一字・學習花絮','instagram')}
