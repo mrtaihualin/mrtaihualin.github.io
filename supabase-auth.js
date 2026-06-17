@@ -176,6 +176,7 @@
         '<div style="display:flex;align-items:center;gap:8px;background:#fff;' +
         'border:1px solid rgba(200,151,58,0.4);border-radius:999px;padding:5px 10px;' +
         'box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
+        '<a href="leaderboard.html" title="อันดับผู้เล่น" style="text-decoration:none;font-size:15px;">🏆</a>' +
         '<a href="my-progress.html" title="คะแนนของฉัน" style="text-decoration:none;color:#8B6310;font-size:15px;">📊</a>' +
         '<span style="color:#8B6310;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(email) + '</span>' +
         '<button id="tf-logout" style="border:none;background:#C8973A;color:#fff;' +
