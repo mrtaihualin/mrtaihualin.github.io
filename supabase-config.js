@@ -13,5 +13,5 @@ window.SUPABASE_CONFIG = {
   //   false = เล่นได้เลย ล็อกอินเป็นออปชั่น (ค่าปัจจุบัน — ปลอดภัยตอน Google ยังตั้งไม่เสร็จ)
   //   true  = ต้องล็อกอินก่อนถึงเล่นได้
   // ⚠️ เปลี่ยนเป็น true ก็ต่อเมื่อ Google login ใน Supabase พร้อมใช้งานแล้วเท่านั้น
-  requireLogin: false
+  requireLogin: true   // ✅ เปิดบังคับล็อกอินแล้ว (Supabase + Google ตั้งค่าเสร็จ 17 มิ.ย.)
 };
