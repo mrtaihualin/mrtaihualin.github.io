@@ -665,6 +665,26 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
       '<span style="color:var(--gold-bright,#C8973A);font-size:18px;opacity:.5;flex-shrink:0;line-height:1;">›</span></a>';
   };
 
+  // ไอคอนทั่วไป (เส้นขาว) สำหรับการ์ดข้อมูลใน 聯絡我們
+  var _miscIcon = {
+    email: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="m3 6 9 6 9-6"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>',
+    gift: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>'
+  };
+  // การ์ดข้อมูลทั่วไป (เข้าธีมทอง) — href มี = คลิกได้, ไม่มี = แสดงเฉยๆ
+  var _infoCard = function(iconHtml, label, value, href){
+    var base = 'display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));border:1px solid rgba(200,151,58,0.32);border-radius:12px;padding:9px 13px;box-shadow:0 1px 4px rgba(140,100,20,0.05);';
+    var chip = '<span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(145deg,#DBB063,#C8973A);box-shadow:0 2px 7px rgba(200,151,58,0.4);">'+iconHtml+'</span>';
+    var txt = '<span style="min-width:0;flex:1;"><span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#A0895A;text-transform:uppercase;">'+label+'</span>'+
+      '<span style="display:block;font-family:\'Noto Serif TC\',serif;font-weight:700;color:#5C4410;font-size:14px;line-height:1.3;margin-top:1px;overflow-wrap:anywhere;">'+value+'</span></span>';
+    if (href) {
+      var hov = ' onmouseover="this.style.borderColor=\'rgba(200,151,58,0.75)\';this.style.boxShadow=\'0 5px 16px rgba(140,100,20,0.14)\';this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.borderColor=\'rgba(200,151,58,0.32)\';this.style.boxShadow=\'0 1px 4px rgba(140,100,20,0.05)\';this.style.transform=\'none\'"';
+      var tgt = href.indexOf('http')===0 ? ' target="_blank" rel="noopener"' : '';
+      return '<a href="'+href+'"'+tgt+' style="'+base+'transition:border-color .15s,box-shadow .15s,transform .15s;"'+hov+'>'+chip+txt+'<span style="color:var(--gold-bright,#C8973A);font-size:18px;opacity:.5;flex-shrink:0;line-height:1;">›</span></a>';
+    }
+    return '<div style="'+base+'">'+chip+txt+'</div>';
+  };
+
   if (!document.getElementById('modal-contact')) {
     modalsHTML += `
 <!-- Contact -->
@@ -675,48 +695,21 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
       <button class="modal-close" onclick="closeModal('modal-contact')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="contact-grid">
-        <div class="contact-row">
-          <span class="contact-icon">💬</span>
-          <div>
-            <span class="contact-label">LINE</span>
-            <a href="https://lin.ee/yVBgvywy" target="_blank" class="contact-link">點此加入 LINE 聯絡</a>
+      <div class="contact-grid" style="display:flex;flex-direction:column;gap:9px;">
+        ${_infoCard(_snsIcon.line, 'LINE', '點此加入 LINE 聯絡', 'https://lin.ee/yVBgvywy')}
+        ${_infoCard(_miscIcon.email, '電子郵件', 'mr.taihualin@gmail.com', 'mailto:mr.taihualin@gmail.com')}
+        <div>
+          <span style="display:block;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#A0895A;text-transform:uppercase;margin:7px 0 7px 2px;">📲 社群媒體</span>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${_snsRow('https://www.facebook.com/mrtaihua','','','Facebook','粉絲頁・每週直播教學','facebook')}
+            ${_snsRow('https://www.youtube.com/@mrtaihua','','','YouTube','教學影片・聲調解析','youtube')}
+            ${_snsRow('https://www.instagram.com/mrtaihua','','','Instagram','每日一字・學習花絮','instagram')}
+            ${_snsRow('https://www.tiktok.com/@mrtaihua','','','TikTok','短影音・快速學泰語','tiktok')}
+            ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','','','Threads','學習筆記・互動討論','threads')}
           </div>
         </div>
-        <div class="contact-row">
-          <span class="contact-icon">📧</span>
-          <div>
-            <span class="contact-label">電子郵件</span>
-            <a href="mailto:mr.taihualin@gmail.com" class="contact-link">mr.taihualin@gmail.com</a>
-          </div>
-        </div>
-        <div class="contact-row">
-          <span class="contact-icon">📲</span>
-          <div style="flex:1;min-width:0;">
-            <span class="contact-label">社群媒體</span>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
-              ${_snsRow('https://www.facebook.com/mrtaihua','#1877F2','f','Facebook','粉絲頁・每週直播教學','facebook')}
-              ${_snsRow('https://www.youtube.com/@mrtaihua','#FF0000','▶','YouTube','教學影片・聲調解析','youtube')}
-              ${_snsRow('https://www.instagram.com/mrtaihua','linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)','📷','Instagram','每日一字・學習花絮','instagram')}
-              ${_snsRow('https://www.tiktok.com/@mrtaihua','#000','🎵','TikTok','短影音・快速學泰語','tiktok')}
-              ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','#000','@','Threads','學習筆記・互動討論','threads')}
-            </div>
-          </div>
-        </div>
-        <div class="contact-row">
-          <span class="contact-icon">🕐</span>
-          <div>
-            <span class="contact-label">回覆時間</span>
-            <span class="contact-val">通常於 1–2 個工作天內回覆</span>
-          </div>
-        </div>
-        <div class="contact-row">
-          <span class="contact-icon">🆓</span>
-          <div>
-            <span class="contact-label">免費體驗</span>
-            <span class="contact-val">首堂體驗課 30 分鐘完全免費，無壓力</span>
-          </div>
-        </div>
+        ${_infoCard(_miscIcon.clock, '回覆時間', '通常於 1–2 個工作天內回覆')}
+        ${_infoCard(_miscIcon.gift, '免費體驗', '首堂體驗課 30 分鐘完全免費，無壓力')}
       </div>
       <div style="border-top:1px solid var(--warm-line);margin:18px 0 14px;padding-top:18px;">
         <div class="contact-label" style="margin-bottom:10px;display:block;">不方便加 LINE？直接留言給老師（寄到信箱）</div>
