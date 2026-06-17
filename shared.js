@@ -655,11 +655,13 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     threads: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.781 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.745-1.757-.51-.586-1.297-.883-2.34-.89h-.031c-.834 0-1.965.225-2.687 1.299l-1.689-1.135c.967-1.434 2.538-2.222 4.376-2.222h.048c3.071.02 4.9 1.92 5.081 5.237.103.044.205.09.305.138 1.44.677 2.493 1.704 3.044 2.972.766 1.764.836 4.642-1.5 6.929-1.785 1.748-3.951 2.546-7.011 2.567Zm1.043-9.7c-.213 0-.428.007-.646.02-1.835.103-2.977.946-2.912 2.149.069 1.262 1.461 1.848 2.8 1.775 1.231-.067 2.836-.546 3.106-3.671a10.27 10.27 0 0 0-2.348-.272Z"/></svg>',
     line: '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.07 9.436-6.971C23.176 14.393 24 12.458 24 10.314"/></svg>'
   };
-  // การ์ดลิงก์ SNS — เข้าธีมทอง/ครีม (พารามิเตอร์ bg,ic ไม่ใช้แล้ว แต่คงไว้เพื่อความเข้ากันได้)
+  // สีแบรนด์ของไอคอน (ตัดสีให้ไม่ทองจนโมโนโทน)
+  var _snsColor = { facebook:'#1877F2', youtube:'#FF0000', instagram:'#E1306C', tiktok:'#111111', threads:'#111111', line:'#06C755' };
+  // การ์ดลิงก์ SNS — ชิปขาวขอบทอง + ไอคอนสีแบรนด์ (ตัดสี แต่ยังเข้าธีม)
   var _snsRow = function(url,bg,ic,name,sub,ch){
     return '<a href="'+url+'" target="_blank" rel="noopener" onclick="window.gtag&&gtag(\'event\',\'sns_click\',{ch:\''+ch+'\'})" '+
       'style="display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));border:1px solid rgba(200,151,58,0.32);border-radius:12px;padding:9px 13px;box-shadow:0 1px 4px rgba(140,100,20,0.05);transition:border-color .15s,box-shadow .15s,transform .15s;" onmouseover="this.style.borderColor=\'rgba(200,151,58,0.75)\';this.style.boxShadow=\'0 5px 16px rgba(140,100,20,0.14)\';this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.borderColor=\'rgba(200,151,58,0.32)\';this.style.boxShadow=\'0 1px 4px rgba(140,100,20,0.05)\';this.style.transform=\'none\'">'+
-      '<span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(145deg,#DBB063,#C8973A);box-shadow:0 2px 7px rgba(200,151,58,0.4);">'+(_snsIcon[ch]||'')+'</span>'+
+      '<span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(200,151,58,0.35);box-shadow:0 1px 4px rgba(140,100,20,0.09);color:'+(_snsColor[ch]||'#C8973A')+';">'+(_snsIcon[ch]||'')+'</span>'+
       '<span style="min-width:0;flex:1;"><span style="display:block;font-family:\'Noto Serif TC\',serif;font-weight:700;color:#5C4410;font-size:14.5px;line-height:1.25;">'+name+'</span>'+
       '<span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-size:11.5px;color:#A0895A;margin-top:1px;">'+sub+'</span></span>'+
       '<span style="color:var(--gold-bright,#C8973A);font-size:18px;opacity:.5;flex-shrink:0;line-height:1;">›</span></a>';
@@ -672,9 +674,9 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     gift: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>'
   };
   // การ์ดข้อมูลทั่วไป (เข้าธีมทอง) — href มี = คลิกได้, ไม่มี = แสดงเฉยๆ
-  var _infoCard = function(iconHtml, label, value, href){
+  var _infoCard = function(iconHtml, label, value, href, iconColor){
     var base = 'display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));border:1px solid rgba(200,151,58,0.32);border-radius:12px;padding:9px 13px;box-shadow:0 1px 4px rgba(140,100,20,0.05);';
-    var chip = '<span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(145deg,#DBB063,#C8973A);box-shadow:0 2px 7px rgba(200,151,58,0.4);">'+iconHtml+'</span>';
+    var chip = '<span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(200,151,58,0.35);box-shadow:0 1px 4px rgba(140,100,20,0.09);color:'+(iconColor||'#C8973A')+';">'+iconHtml+'</span>';
     var txt = '<span style="min-width:0;flex:1;"><span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#A0895A;text-transform:uppercase;">'+label+'</span>'+
       '<span style="display:block;font-family:\'Noto Serif TC\',serif;font-weight:700;color:#5C4410;font-size:14px;line-height:1.3;margin-top:1px;overflow-wrap:anywhere;">'+value+'</span></span>';
     if (href) {
@@ -696,7 +698,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     </div>
     <div class="modal-body">
       <div class="contact-grid" style="display:flex;flex-direction:column;gap:9px;">
-        ${_infoCard(_snsIcon.line, 'LINE', '點此加入 LINE 聯絡', 'https://lin.ee/yVBgvywy')}
+        ${_infoCard(_snsIcon.line, 'LINE', '點此加入 LINE 聯絡', 'https://lin.ee/yVBgvywy', '#06C755')}
         ${_infoCard(_miscIcon.email, '電子郵件', 'mr.taihualin@gmail.com', 'mailto:mr.taihualin@gmail.com')}
         <div>
           <span style="display:block;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#A0895A;text-transform:uppercase;margin:7px 0 7px 2px;">📲 社群媒體</span>
