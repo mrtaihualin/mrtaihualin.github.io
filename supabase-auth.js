@@ -221,10 +221,11 @@
   window.TF_AUTH = {
     loggedIn: function () { return !!currentUser; },
     requireLogin: requireLogin,
-    ensureLogin: function (onOk) {
-      if (!requireLogin || currentUser) { if (onOk) onOk(); return true; }
-      pendingAfterLogin = onOk || null;
-      showGate();
+    ensureLogin: function () {
+      // อนุญาต → คืน true เฉยๆ ให้ caller (startSetSession) เล่นต่อเอง
+      // ห้ามเรียก callback ที่ re-run startSetSession ไม่งั้นจะ recursion ไม่รู้จบ
+      if (!requireLogin || currentUser) return true;
+      showGate();   // ยังไม่ล็อกอิน + บังคับ → เด้ง gate แล้วบล็อก
       return false;
     },
     showGate: showGate,
