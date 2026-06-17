@@ -7,7 +7,7 @@ var ANN = [
   { emoji:'📡', text:'每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
   { emoji:'🎉', text:'現正招收新學員！預約免費體驗課再折 100 元，名額有限', cta:'立即預約', modal:'modal-line-qr' },
   { emoji:'📝', text:'拼音規則練習區上線！可免費領「泰語聲調速查表」', cta:'前往練習', href:'tone-finder.html' },
-  { emoji:'🚀', text:'全新「造句遊戲」即將推出，敬請期待！', cta:'追蹤我們', href:'sns.html' }
+  { emoji:'🚀', text:'全新「造句遊戲」即將推出，敬請期待！', cta:'追蹤我們', modal:'modal-sns' }
 ];
 
 // ===================================================================
@@ -706,6 +706,37 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
         <textarea id="c-msg" rows="3" placeholder="想詢問的內容…" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;resize:vertical;margin-bottom:10px;"></textarea>
         <button class="contact-cta" style="background:var(--gold);" onclick="submitContact()">送出訊息 →</button>
         <span id="c-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-align:center;margin-top:10px;"></span>
+      </div>
+    </div>
+  </div>
+</div>`;
+  }
+
+  if (!document.getElementById('modal-sns')) {
+    var _snsRow = function(url,bg,ic,name,sub,ch){
+      return '<a href="'+url+'" target="_blank" rel="noopener" onclick="window.gtag&&gtag(\'event\',\'sns_click\',{ch:\''+ch+'\'})" '+
+        'style="display:flex;align-items:center;gap:13px;text-decoration:none;background:var(--cream,#FBF5E7);border:1px solid rgba(200,151,58,0.28);border-radius:12px;padding:11px 14px;transition:background .15s;" onmouseover="this.style.background=\'rgba(200,151,58,0.12)\'" onmouseout="this.style.background=\'var(--cream,#FBF5E7)\'">'+
+        '<span style="width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;background:'+bg+';">'+ic+'</span>'+
+        '<span style="min-width:0;"><span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-weight:800;color:#5C4410;font-size:15px;line-height:1.2;">'+name+'</span>'+
+        '<span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#A0895A;margin-top:2px;">'+sub+'</span></span></a>';
+    };
+    modalsHTML += `
+<!-- SNS LIST -->
+<div class="modal-overlay" id="modal-sns" onclick="closeModalOutside(event,'modal-sns')">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--ink);">📲 追蹤我們</div>
+      <button class="modal-close" onclick="closeModal('modal-sns')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);line-height:1.7;margin:0 0 14px;">每天學一點泰語，第一時間收到新課程、教學影片與聲調小技巧 ✨</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${_snsRow('https://www.facebook.com/mrtaihua','#1877F2','f','Facebook','粉絲頁・每週直播教學','facebook')}
+        ${_snsRow('https://www.youtube.com/@mrtaihua','#FF0000','▶','YouTube','教學影片・聲調解析','youtube')}
+        ${_snsRow('https://www.instagram.com/mrtaihua','linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)','📷','Instagram','每日一字・學習花絮','instagram')}
+        ${_snsRow('https://www.tiktok.com/@mrtaihua','#000','🎵','TikTok','短影音・快速學泰語','tiktok')}
+        ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','#000','@','Threads','學習筆記・互動討論','threads')}
+        ${_snsRow('https://lin.ee/yVBgvywy','#06C755','💬','LINE','預約免費體驗課・私訊諮詢','line')}
       </div>
     </div>
   </div>
