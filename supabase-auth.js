@@ -1,27 +1,32 @@
 // ════════════════════════════════════════════════════════════
-// supabase-auth.js — ล็อกอิน + เก็บคะแนน tone-finder ราย "หัว"
+// supabase-auth.js — ล็อกอิน (Google) + เก็บคะแนน tone-finder ราย "หัว"
 // ทำงานคู่กับ GA4 เดิม (ไม่แตะ ไม่แทนที่)
 // ต้องโหลดหลัง: supabase-js CDN และ supabase-config.js
+//
+// โหมดบังคับล็อกอิน: คุมด้วย window.SUPABASE_CONFIG.requireLogin
+//   - true  → มีฉากกั้นคลุมเกม ต้องล็อกอินก่อนถึงเล่นได้
+//   - false → ล็อกอินเป็นออปชั่น (โชว์ปุ่มเล็กมุมขวาบน) เล่นได้เลยไม่บังคับ
+//   - ถ้า Supabase ยังไม่ตั้งค่า / โหลดไม่ได้ → ไม่กั้น เล่นได้ปกติ (กันเว็บพัง)
 // ════════════════════════════════════════════════════════════
 (function () {
   'use strict';
 
   var cfg = window.SUPABASE_CONFIG || {};
+  var requireLogin = cfg.requireLogin === true;
   var ready = cfg.url && cfg.anonKey &&
               cfg.url.indexOf('YOUR_') === -1 &&
               cfg.anonKey.indexOf('YOUR_') === -1 &&
               window.supabase && window.supabase.createClient;
 
   if (!ready) {
-    // ยังไม่ตั้งค่า key → ไม่ทำอะไร เว็บทำงานปกติเหมือนเดิม
-    console.info('[tone-finder] Supabase ยังไม่ตั้งค่า — ข้ามระบบล็อกอิน');
+    console.info('[tone-finder] Supabase ยังไม่ตั้งค่า/โหลดไม่ได้ — ข้ามระบบล็อกอิน เล่นได้ปกติ');
     return;
   }
 
   var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
   var currentUser = null;
+  var authResolved = false;
 
-  // ── บัฟเฟอร์เก็บข้อมูลของรอบที่กำลังเล่น ────────────────────
   var sessionMode = null;
   var wrongBuffer = [];
 
@@ -41,11 +46,7 @@
       sessionMode = params.mode || null;
       wrongBuffer = [];
     } else if (name === 'tone_answer_wrong') {
-      wrongBuffer.push({
-        word: params.word,
-        selected: params.selected,
-        correct: params.correct
-      });
+      wrongBuffer.push({ word: params.word, selected: params.selected, correct: params.correct });
     } else if (name === 'tone_finder_complete') {
       saveSession(params.score, params.total);
     }
@@ -66,41 +67,23 @@
     });
   }
 
-  // ── UI ปุ่มล็อกอินลอยมุมขวาบน ──────────────────────────────
-  var box;
-  function buildUI() {
-    box = document.createElement('div');
-    box.id = 'tf-auth';
-    box.style.cssText =
-      'position:fixed;top:calc(var(--nav-h,56px) + 8px);right:12px;z-index:9999;' +
-      'font-family:"Noto Sans TC",sans-serif;font-size:13px;';
-    document.body.appendChild(box);
-    renderUI();
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
   }
 
-  function renderUI() {
-    if (!box) return;
-    if (currentUser) {
-      var email = (currentUser.email || 'ผู้ใช้');
-      box.innerHTML =
-        '<div style="display:flex;align-items:center;gap:8px;background:#fff;' +
-        'border:1px solid rgba(200,151,58,0.4);border-radius:999px;padding:5px 10px;' +
-        'box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
-        '<span style="color:#8B6310;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">👤 ' + esc(email) + '</span>' +
-        '<button id="tf-logout" style="border:none;background:#C8973A;color:#fff;' +
-        'border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px;">ออกจากระบบ</button>' +
-        '</div>';
-      document.getElementById('tf-logout').onclick = doLogout;
-    } else {
-      box.innerHTML =
-        '<button id="tf-login" style="border:none;background:#C8973A;color:#fff;' +
-        'border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:700;' +
-        'box-shadow:0 2px 8px rgba(0,0,0,0.12);">เข้าสู่ระบบ / 登入</button>';
-      document.getElementById('tf-login').onclick = doLogin;
-    }
+  // ── การเข้าสู่ระบบ ─────────────────────────────────────────
+  function doGoogleLogin() {
+    sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href }
+    }).then(function (res) {
+      if (res.error) alert('เข้าสู่ระบบ Google ไม่สำเร็จ: ' + res.error.message);
+    });
   }
 
-  function doLogin() {
+  function doEmailLogin() {
     var email = window.prompt('กรอกอีเมลเพื่อรับลิงก์เข้าสู่ระบบ\n請輸入 Email 以接收登入連結:');
     if (!email) return;
     email = email.trim();
@@ -118,31 +101,116 @@
   }
 
   function doLogout() {
-    sb.auth.signOut().then(function () {
-      currentUser = null;
-      renderUI();
-    });
+    sb.auth.signOut().then(function () { currentUser = null; render(); });
   }
 
-  function esc(s) {
-    return String(s).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-    });
+  // ── องค์ประกอบหน้าจอ ───────────────────────────────────────
+  var gate, badge, miniBtn;
+
+  function googleBtnHTML(id) {
+    return '<button id="' + id + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;' +
+      'border:1px solid #dadce0;background:#fff;color:#3c4043;border-radius:10px;padding:12px;cursor:pointer;' +
+      'font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);">' +
+        '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>' +
+        'เข้าสู่ระบบด้วย Google' +
+      '</button>';
   }
 
-  // ── เริ่มต้น: เช็คสถานะล็อกอินปัจจุบัน + ฟังการเปลี่ยนแปลง ──
-  sb.auth.getSession().then(function (res) {
-    currentUser = (res.data && res.data.session && res.data.session.user) || null;
-    renderUI();
-  });
-  sb.auth.onAuthStateChange(function (_event, session) {
-    currentUser = (session && session.user) || null;
-    renderUI();
-  });
+  function buildGate() {
+    gate = document.createElement('div');
+    gate.id = 'tf-gate';
+    gate.style.cssText =
+      'position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:20px;' +
+      'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);' +
+      'font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
+    gate.innerHTML =
+      '<div style="background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;' +
+      'box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
+        '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🎵</div>' +
+        '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">เข้าสู่ระบบเพื่อเริ่มเล่น</h2>' +
+        '<p style="margin:0 0 20px;font-size:14px;color:#8B7340;line-height:1.6;">登入後即可開始練習聲調並記錄你的成績<br>เข้าสู่ระบบเพื่อเริ่มฝึก และบันทึกคะแนนของคุณ</p>' +
+        googleBtnHTML('tf-google') +
+        '<button id="tf-email" style="margin-top:12px;border:none;background:none;color:#A07A1E;' +
+        'cursor:pointer;font-size:13px;text-decoration:underline;">หรือใช้อีเมลแทน / 用 Email 登入</button>' +
+        '<p style="margin:18px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">เข้าสู่ระบบหมายถึงคุณยอมรับ<a href="terms.html" style="color:#A07A1E;">ข้อกำหนดและการเก็บข้อมูล</a></p>' +
+      '</div>';
+    document.body.appendChild(gate);
+    gate.querySelector('#tf-google').onclick = doGoogleLogin;
+    gate.querySelector('#tf-email').onclick = doEmailLogin;
+  }
+
+  function buildMiniBtn() {
+    miniBtn = document.createElement('div');
+    miniBtn.id = 'tf-mini';
+    miniBtn.style.cssText =
+      'position:fixed;top:calc(var(--nav-h,56px) + 8px);right:12px;z-index:9999;display:none;' +
+      'font-family:"Noto Sans TC",sans-serif;';
+    miniBtn.innerHTML =
+      '<button id="tf-mini-login" style="display:flex;align-items:center;gap:7px;border:1px solid rgba(200,151,58,0.5);' +
+      'background:#fff;color:#8B6310;border-radius:999px;padding:6px 13px;cursor:pointer;font-size:13px;font-weight:700;' +
+      'box-shadow:0 2px 8px rgba(0,0,0,0.1);">เข้าสู่ระบบ / 登入</button>';
+    document.body.appendChild(miniBtn);
+    miniBtn.querySelector('#tf-mini-login').onclick = doGoogleLogin;
+  }
+
+  function buildBadge() {
+    badge = document.createElement('div');
+    badge.id = 'tf-auth';
+    badge.style.cssText =
+      'position:fixed;top:calc(var(--nav-h,56px) + 8px);right:12px;z-index:9999;display:none;' +
+      'font-family:"Noto Sans TC",sans-serif;font-size:13px;';
+    document.body.appendChild(badge);
+  }
+
+  function render() {
+    if (!gate) buildGate();
+    if (!miniBtn) buildMiniBtn();
+    if (!badge) buildBadge();
+
+    if (currentUser) {
+      gate.style.display = 'none';
+      miniBtn.style.display = 'none';
+      var email = currentUser.email || 'ผู้ใช้';
+      badge.style.display = 'block';
+      badge.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;background:#fff;' +
+        'border:1px solid rgba(200,151,58,0.4);border-radius:999px;padding:5px 10px;' +
+        'box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
+        '<a href="my-progress.html" title="คะแนนของฉัน" style="text-decoration:none;color:#8B6310;font-size:15px;">📊</a>' +
+        '<span style="color:#8B6310;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(email) + '</span>' +
+        '<button id="tf-logout" style="border:none;background:#C8973A;color:#fff;' +
+        'border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px;">ออกจากระบบ</button>' +
+        '</div>';
+      badge.querySelector('#tf-logout').onclick = doLogout;
+    } else {
+      badge.style.display = 'none';
+      if (requireLogin) {
+        gate.style.display = authResolved ? 'flex' : 'none';
+        miniBtn.style.display = 'none';
+      } else {
+        gate.style.display = 'none';
+        miniBtn.style.display = authResolved ? 'block' : 'none';
+      }
+    }
+  }
+
+  function boot() {
+    render();
+    sb.auth.getSession().then(function (res) {
+      currentUser = (res.data && res.data.session && res.data.session.user) || null;
+      authResolved = true;
+      render();
+    });
+    sb.auth.onAuthStateChange(function (_event, session) {
+      currentUser = (session && session.user) || null;
+      authResolved = true;
+      render();
+    });
+  }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', buildUI);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    buildUI();
+    boot();
   }
 })();

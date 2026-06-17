@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DKVQE30982');
+</script>
+<!-- Supabase + Chart.js (หน้าคะแนนสะสม) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="supabase-config.js?v=2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>我的進度・คะแนนของฉัน — 泰華眼裡的泰語教學</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=8">
+</head>
+<body>
+<!-- FLOATING LINE QR WIDGET -->
+<div class="floating-qr" id="floating-qr">
+  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
+  <span class="floating-qr-top">預約免費體驗課</span>
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR" loading="lazy">
+  <span class="floating-qr-label">掃碼加入 LINE</span>
+</div>
+
+<!-- NAV -->
+<nav class="site-nav"></nav>
+
+<!-- PAGE NAV STRIP -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="page2.html">課程・費用</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="page4.html">泰語・分享</a>
+  <a href="tone-finder.html">聲調・搜尋</a>
+</div>
+
+<!-- CONTENT -->
+<div class="section-wrap" style="padding-top:34px;padding-bottom:60px;">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+    <div>
+      <span class="eyebrow" style="color:var(--gold-bright);">我的學習紀錄</span>
+      <h2 class="section-heading" style="margin:6px 0 0;">คะแนนสะสม<br>ของฉัน</h2>
+    </div>
+    <div id="pg-userslot" style="display:flex;align-items:center;gap:8px;"></div>
+  </div>
+  <p style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-size:13px;line-height:1.8;margin:14px 0 30px;max-width:640px;">
+    สถิติฝึกวรรณยุกต์ของคุณจากเครื่องมือ tone-finder — เห็นพัฒนาการ จุดที่ต้องฝึกเพิ่ม และประวัติการเล่น<br>
+    以下是你在聲調練習工具的成績統計與進步紀錄。
+  </p>
+
+  <div id="progress-root"></div>
+
+  <div style="text-align:center;margin-top:34px;">
+    <a href="tone-finder.html" style="display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">← กลับไปเล่น tone-finder</a>
+  </div>
+</div>
+
+<div style="height:44px;background:var(--off-white);"></div>
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="shared.js?v=6"></script>
+<script src="progress.js"></script>
+</body>
+</html>

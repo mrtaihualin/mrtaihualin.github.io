@@ -111,17 +111,23 @@ window.goHome = function() {
           '<span class="avail-text">' + a.emoji + ' ' + a.text + '</span>' +
           cta +
         '</div>' +
-        (ANN.length > 1 ? '<div style="display:flex;justify-content:center;gap:6px;margin-top:4px;">' + dots + '</div>' : '') +
+        (ANN.length > 1 ? '<div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;">' +
+            '<button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;">‹</button>' +
+            '<div style="display:flex;align-items:center;gap:6px;">' + dots + '</div>' +
+            '<button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;">›</button>' +
+          '</div>' : '') +
         '<button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;">✕</button>';
     }
 
     function annStart() {
       if (ANN.length < 2) return;
       clearInterval(annTimer);
-      annTimer = setInterval(function() { annIdx = (annIdx + 1) % ANN.length; annRender(annIdx); }, 6000);
+      annTimer = setInterval(function() { annIdx = (annIdx + 1) % ANN.length; annRender(annIdx); }, 4000);
     }
 
     window.annGoTo = function(i) { annIdx = i; annRender(i); annStart(); };
+    window.annPrev = function() { annIdx = (annIdx - 1 + ANN.length) % ANN.length; annRender(annIdx); annStart(); };
+    window.annNext = function() { annIdx = (annIdx + 1) % ANN.length; annRender(annIdx); annStart(); };
     window.annDismiss = function() { try { sessionStorage.setItem('annDismissed', '1'); } catch(e){} band.remove(); };
 
     annRender(0);

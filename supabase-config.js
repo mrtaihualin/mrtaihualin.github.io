@@ -7,5 +7,11 @@
 // ════════════════════════════════════════════════════════════
 window.SUPABASE_CONFIG = {
   url:     'https://qzkxlhpcputsvbqmtqfi.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw'
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw',
+
+  // บังคับล็อกอินก่อนเล่นเกม tone-finder หรือไม่
+  //   false = เล่นได้เลย ล็อกอินเป็นออปชั่น (ค่าปัจจุบัน — ปลอดภัยตอน Google ยังตั้งไม่เสร็จ)
+  //   true  = ต้องล็อกอินก่อนถึงเล่นได้
+  // ⚠️ เปลี่ยนเป็น true ก็ต่อเมื่อ Google login ใน Supabase พร้อมใช้งานแล้วเท่านั้น
+  requireLogin: false
 };

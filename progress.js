@@ -1,0 +1,256 @@
+// ════════════════════════════════════════════════════════════
+// progress.js — หน้า "คะแนนสะสมของฉัน" (my-progress.html)
+// ต้องล็อกอินก่อน แล้วดึงข้อมูลจากตาราง tone_sessions มาสรุป
+// ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, Chart.js
+// ════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  var cfg = window.SUPABASE_CONFIG || {};
+  var ready = cfg.url && cfg.anonKey &&
+              cfg.url.indexOf('YOUR_') === -1 &&
+              cfg.anonKey.indexOf('YOUR_') === -1 &&
+              window.supabase && window.supabase.createClient;
+
+  var root = document.getElementById('progress-root');
+  if (!root) return;
+
+  if (!ready) {
+    root.innerHTML = msgBox('⚙️', 'ระบบยังไม่พร้อม', 'ยังตั้งค่า Supabase ไม่เสร็จ ลองใหม่ภายหลัง');
+    return;
+  }
+
+  var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
+  var currentUser = null;
+  var chartObj = null;
+
+  // ── helpers ────────────────────────────────────────────────
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function msgBox(icon, title, sub, extra) {
+    return '<div style="background:#fff;border-radius:18px;padding:40px 26px;text-align:center;' +
+      'box-shadow:0 8px 30px rgba(0,0,0,0.06);max-width:420px;margin:0 auto;">' +
+      '<div style="font-size:44px;margin-bottom:10px;">' + icon + '</div>' +
+      '<h2 style="margin:0 0 8px;font-size:20px;color:#5C4410;font-weight:800;">' + esc(title) + '</h2>' +
+      '<p style="margin:0;font-size:14px;color:#8B7340;line-height:1.7;">' + sub + '</p>' +
+      (extra || '') + '</div>';
+  }
+  function fmtDate(s) {
+    try {
+      var d = new Date(s);
+      var p = function (n) { return (n < 10 ? '0' : '') + n; };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    } catch (e) { return String(s || ''); }
+  }
+  function googleBtn(id) {
+    return '<button id="' + id + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;' +
+      'border:1px solid #dadce0;background:#fff;color:#3c4043;border-radius:10px;padding:12px;cursor:pointer;' +
+      'font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);">' +
+      '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>' +
+      'เข้าสู่ระบบด้วย Google</button>';
+  }
+
+  // ── auth actions ───────────────────────────────────────────
+  function doGoogleLogin() {
+    sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } })
+      .then(function (res) { if (res.error) alert('เข้าสู่ระบบ Google ไม่สำเร็จ: ' + res.error.message); });
+  }
+  function doEmailLogin() {
+    var email = window.prompt('กรอกอีเมลเพื่อรับลิงก์เข้าสู่ระบบ\n請輸入 Email:');
+    if (!email) return;
+    email = email.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('อีเมลไม่ถูกต้อง'); return; }
+    sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.href } })
+      .then(function (res) {
+        if (res.error) alert('ส่งลิงก์ไม่สำเร็จ: ' + res.error.message);
+        else alert('ส่งลิงก์เข้าสู่ระบบไปที่อีเมลแล้ว ✉️\n(' + email + ')');
+      });
+  }
+  function doLogout() { sb.auth.signOut().then(function () { currentUser = null; renderRoot(); }); }
+
+  // ── views ──────────────────────────────────────────────────
+  function renderGate() {
+    root.innerHTML =
+      '<div style="background:#fff;max-width:400px;margin:0 auto;border-radius:18px;padding:34px 28px;' +
+      'box-shadow:0 8px 30px rgba(0,0,0,0.08);text-align:center;">' +
+      '<div style="font-size:44px;margin-bottom:10px;">📊</div>' +
+      '<h2 style="margin:0 0 6px;font-size:21px;color:#5C4410;font-weight:800;">คะแนนสะสมของฉัน</h2>' +
+      '<p style="margin:0 0 20px;font-size:14px;color:#8B7340;line-height:1.6;">登入後即可查看你的練習成績與進步紀錄<br>เข้าสู่ระบบเพื่อดูสถิติและความคืบหน้าของคุณ</p>' +
+      googleBtn('pg-google') +
+      '<button id="pg-email" style="margin-top:12px;border:none;background:none;color:#A07A1E;cursor:pointer;font-size:13px;text-decoration:underline;">หรือใช้อีเมลแทน / 用 Email 登入</button>' +
+      '</div>';
+    document.getElementById('pg-google').onclick = doGoogleLogin;
+    document.getElementById('pg-email').onclick = doEmailLogin;
+  }
+
+  function renderLoading() {
+    root.innerHTML = msgBox('⏳', 'กำลังโหลดข้อมูล...', '請稍候');
+  }
+
+  async function renderData() {
+    renderLoading();
+    var res = await sb.from('tone_sessions').select('*').order('created_at', { ascending: true });
+    if (res.error) {
+      root.innerHTML = msgBox('⚠️', 'โหลดข้อมูลไม่สำเร็จ', esc(res.error.message) +
+        '<br><span style="font-size:12px;color:#B0A080;">(อาจยังไม่ได้ตั้ง RLS policy ให้อ่านข้อมูลตัวเอง)</span>');
+      return;
+    }
+    var rows = res.data || [];
+
+    if (!rows.length) {
+      root.innerHTML = msgBox('🌱', 'ยังไม่มีข้อมูล', 'คุณยังไม่เคยเล่นรอบที่บันทึกผล ลองไปเล่นสักรอบก่อนนะ',
+        '<a href="tone-finder.html" style="display:inline-block;margin-top:18px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">ไปเล่น tone-finder →</a>');
+      renderHeaderUser();
+      return;
+    }
+
+    // ── คำนวณสถิติ ──
+    var games = rows.length, totalQ = 0, totalCorrect = 0;
+    var missMap = {};
+    rows.forEach(function (r) {
+      totalQ += (r.total || 0);
+      totalCorrect += (r.score || 0);
+      (r.wrong_words || []).forEach(function (w) {
+        var key = (w && w.word) ? w.word : null;
+        if (key) missMap[key] = (missMap[key] || 0) + 1;
+      });
+    });
+    var accuracy = totalQ ? Math.round(totalCorrect / totalQ * 100) : 0;
+    var avgScore = games ? (totalCorrect / games).toFixed(1) : '0';
+
+    var missList = Object.keys(missMap).map(function (k) { return { word: k, n: missMap[k] }; })
+      .sort(function (a, b) { return b.n - a.n; }).slice(0, 12);
+
+    // ── การ์ดสรุป ──
+    function stat(num, label) {
+      return '<div style="background:#fff;border-radius:14px;padding:18px 10px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.05);">' +
+        '<div style="font-family:\'Playfair Display\',serif;font-size:30px;font-weight:900;color:#C8973A;line-height:1;">' + num + '</div>' +
+        '<div style="font-size:12px;color:#8B7340;margin-top:6px;">' + label + '</div></div>';
+    }
+    var statsHTML =
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:30px;">' +
+      stat(games, 'รอบที่เล่น<br>遊玩次數') +
+      stat(avgScore, 'คะแนนเฉลี่ย<br>平均分數') +
+      stat(accuracy + '%', 'ความแม่นยำ<br>正確率') +
+      stat(totalQ, 'ข้อที่ฝึกแล้ว<br>累積題數') +
+      '</div>';
+
+    // ── กราฟความแม่นยำตามเวลา ──
+    var chartHTML =
+      '<div style="background:#fff;border-radius:16px;padding:20px 18px;margin-bottom:30px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">' +
+      '<div style="font-family:\'Noto Serif TC\',serif;font-size:16px;font-weight:900;color:#5C4410;margin-bottom:14px;">📈 ความแม่นยำตามเวลา / 正確率走勢</div>' +
+      '<canvas id="pg-chart" height="220"></canvas></div>';
+
+    // ── คำที่ตอบผิดบ่อย ──
+    var missHTML =
+      '<div style="background:#fff;border-radius:16px;padding:20px 18px;margin-bottom:30px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">' +
+      '<div style="font-family:\'Noto Serif TC\',serif;font-size:16px;font-weight:900;color:#5C4410;margin-bottom:14px;">🎯 คำที่ตอบผิดบ่อย / 最常錯的字</div>';
+    if (!missList.length) {
+      missHTML += '<p style="font-size:14px;color:#8B7340;">ยังไม่มีคำที่ตอบผิด เก่งมาก! 👍</p>';
+    } else {
+      missHTML += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
+      missList.forEach(function (m) {
+        missHTML += '<span style="display:inline-flex;align-items:center;gap:6px;background:#FBF3E2;border:1px solid rgba(200,151,58,0.3);' +
+          'border-radius:999px;padding:6px 13px;font-size:15px;color:#5C4410;">' +
+          '<b style="font-family:\'Sarabun\',sans-serif;">' + esc(m.word) + '</b>' +
+          '<span style="background:#C8973A;color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;">' + m.n + '</span></span>';
+      });
+      missHTML += '</div>';
+    }
+    missHTML += '</div>';
+
+    // ── ประวัติการเล่น ──
+    var recent = rows.slice().reverse().slice(0, 15);
+    var histHTML =
+      '<div style="background:#fff;border-radius:16px;padding:20px 18px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">' +
+      '<div style="font-family:\'Noto Serif TC\',serif;font-size:16px;font-weight:900;color:#5C4410;margin-bottom:14px;">🕑 ประวัติการเล่นล่าสุด / 最近紀錄</div>' +
+      '<div style="display:flex;flex-direction:column;gap:0;">';
+    recent.forEach(function (r, i) {
+      var acc = r.total ? Math.round((r.score || 0) / r.total * 100) : 0;
+      histHTML +=
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 4px;' +
+        (i ? 'border-top:1px solid #F0E6CE;' : '') + '">' +
+        '<div style="min-width:0;"><div style="font-size:13px;color:#5C4410;font-weight:600;">' + esc(r.mode || 'ทั้งหมด') + '</div>' +
+        '<div style="font-size:11px;color:#B0A080;">' + fmtDate(r.created_at) + '</div></div>' +
+        '<div style="text-align:right;white-space:nowrap;"><span style="font-weight:800;color:#C8973A;font-size:15px;">' +
+        (r.score != null ? r.score : '–') + '/' + (r.total != null ? r.total : '–') + '</span>' +
+        '<span style="font-size:11px;color:#8B7340;margin-left:6px;">' + acc + '%</span></div>' +
+        '</div>';
+    });
+    histHTML += '</div></div>';
+
+    root.innerHTML = statsHTML + chartHTML + missHTML + histHTML;
+    renderHeaderUser();
+
+    // วาดกราฟ
+    drawChart(rows);
+  }
+
+  function drawChart(rows) {
+    if (!window.Chart) return;
+    var ctx = document.getElementById('pg-chart');
+    if (!ctx) return;
+    var labels = rows.map(function (r, i) { return fmtDate(r.created_at).slice(5, 10); });
+    var data = rows.map(function (r) { return r.total ? Math.round((r.score || 0) / r.total * 100) : 0; });
+    if (chartObj) { chartObj.destroy(); }
+    chartObj = new window.Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: '正確率 %',
+          data: data,
+          borderColor: '#C8973A',
+          backgroundColor: 'rgba(200,151,58,0.12)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: '#C8973A'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 100, ticks: { callback: function (v) { return v + '%'; } } },
+          x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } }
+        }
+      }
+    });
+  }
+
+  // แสดงอีเมล + ปุ่มออกจากระบบ ที่หัวมุมขวา (ถ้ามี element)
+  function renderHeaderUser() {
+    var slot = document.getElementById('pg-userslot');
+    if (!slot) return;
+    if (currentUser) {
+      slot.innerHTML =
+        '<span style="color:#8B6310;font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">👤 ' +
+        esc(currentUser.email || 'ผู้ใช้') + '</span>' +
+        '<button id="pg-logout" style="border:none;background:#C8973A;color:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;font-size:12px;">ออกจากระบบ</button>';
+      var b = document.getElementById('pg-logout');
+      if (b) b.onclick = doLogout;
+    } else {
+      slot.innerHTML = '';
+    }
+  }
+
+  function renderRoot() {
+    if (currentUser) renderData();
+    else { renderGate(); renderHeaderUser(); }
+  }
+
+  // ── init ───────────────────────────────────────────────────
+  sb.auth.getSession().then(function (res) {
+    currentUser = (res.data && res.data.session && res.data.session.user) || null;
+    renderRoot();
+  });
+  sb.auth.onAuthStateChange(function (_event, session) {
+    var was = currentUser;
+    currentUser = (session && session.user) || null;
+    if (!!was !== !!currentUser) renderRoot();
+  });
+})();
