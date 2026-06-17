@@ -700,16 +700,11 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
       <div class="contact-grid" style="display:flex;flex-direction:column;gap:9px;">
         ${_infoCard(_snsIcon.line, 'LINE', '點此加入 LINE 聯絡', 'https://lin.ee/yVBgvywy', '#06C755')}
         ${_infoCard(_miscIcon.email, '電子郵件', 'mr.taihualin@gmail.com', 'mailto:mr.taihualin@gmail.com')}
-        <div>
-          <span style="display:block;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#A0895A;text-transform:uppercase;margin:7px 0 7px 2px;">📲 社群媒體</span>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            ${_snsRow('https://www.facebook.com/mrtaihua','','','Facebook','粉絲頁・每週直播教學','facebook')}
-            ${_snsRow('https://www.youtube.com/@mrtaihua','','','YouTube','教學影片・聲調解析','youtube')}
-            ${_snsRow('https://www.instagram.com/mrtaihua','','','Instagram','每日一字・學習花絮','instagram')}
-            ${_snsRow('https://www.tiktok.com/@mrtaihua','','','TikTok','短影音・快速學泰語','tiktok')}
-            ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','','','Threads','學習筆記・互動討論','threads')}
-          </div>
-        </div>
+        ${_snsRow('https://www.facebook.com/mrtaihua','','','Facebook','粉絲頁・每週直播教學','facebook')}
+        ${_snsRow('https://www.youtube.com/@mrtaihua','','','YouTube','教學影片・聲調解析','youtube')}
+        ${_snsRow('https://www.instagram.com/mrtaihua','','','Instagram','每日一字・學習花絮','instagram')}
+        ${_snsRow('https://www.tiktok.com/@mrtaihua','','','TikTok','短影音・快速學泰語','tiktok')}
+        ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','','','Threads','學習筆記・互動討論','threads')}
         ${_infoCard(_miscIcon.clock, '回覆時間', '通常於 1–2 個工作天內回覆')}
         ${_infoCard(_miscIcon.gift, '免費體驗', '首堂體驗課 30 分鐘完全免費，無壓力')}
       </div>
