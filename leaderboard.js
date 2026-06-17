@@ -22,6 +22,38 @@
   var myNick = null;
   var period = 'week'; // 'week' | 'all'
 
+  // ── ตั้งค่า "คู่ซ้อม" (pacer / หน้าม้า) — ปรับได้ตรงนี้ ──────────
+  // ทำงานแบบยืดหยุ่น: คะแนนอิงกับ "ผู้นำจริง" เสมอ จึงมีเป้าให้ไล่ตลอด
+  // ปิดทั้งหมดได้โดยตั้ง enabled:false
+  var PACER = {
+    enabled: true,
+    count: 5,
+    names: ['น้องมะนาว', '小美', 'Pimchanok', '阿明', 'โบ๊ทบางกอก', 'Nan_TH', '學泰文的阿宏', 'Ploy'],
+    // ตัวคูณคะแนนเทียบกับ "ผู้นำจริง" (ตัวแรกลอยเหนือสุด ไล่ลงมา)
+    factors: [1.06, 0.88, 0.7, 0.54, 0.4],
+    // ค่าฐานเมื่อยังไม่มีผู้เล่นจริง (กันกระดานว่าง)
+    floorWeek: 48, floorAll: 220
+  };
+
+  function buildPacers(realRows) {
+    if (!PACER.enabled) return [];
+    var topReal = (realRows && realRows.length) ? (realRows[0].total_score || 0) : 0;
+    var floor = (period === 'week') ? PACER.floorWeek : PACER.floorAll;
+    var anchor = Math.max(topReal + (period === 'week' ? 6 : 20), floor);
+    var per = (period === 'week') ? 6 : 9; // คะแนนเฉลี่ยต่อรอบ (ใช้ประมาณจำนวนรอบ)
+    return PACER.names.slice(0, PACER.count).map(function (nm, i) {
+      var f = PACER.factors[i % PACER.factors.length];
+      var sc = Math.max(1, Math.round(anchor * f));
+      return { user_id: 'pacer-' + period + '-' + i, nickname: nm, total_score: sc, games: Math.max(2, Math.round(sc / per)), _bot: true };
+    });
+  }
+
+  function mergePacers(realRows) {
+    var merged = (realRows || []).concat(buildPacers(realRows));
+    merged.sort(function (a, b) { return (b.total_score || 0) - (a.total_score || 0); });
+    return merged.slice(0, 100);
+  }
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -100,7 +132,7 @@
       wireTabs();
       return;
     }
-    renderBoard(res.data || []);
+    renderBoard(mergePacers(res.data || []));
   }
 
   function medal(rank) {
