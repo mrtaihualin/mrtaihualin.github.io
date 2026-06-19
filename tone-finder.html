@@ -2841,12 +2841,13 @@ function render() {
 
   // \u2500\u2500 \u0e40\u0e25\u0e37\u0e48\u0e2d\u0e19\u0e02\u0e36\u0e49\u0e19\u0e1a\u0e19\u0e2a\u0e38\u0e14\u0e17\u0e38\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07\u0e17\u0e35\u0e48\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e2b\u0e19\u0e49\u0e32\u0e08\u0e2d \u0e43\u0e2b\u0e49\u0e40\u0e2b\u0e47\u0e19\u0e04\u0e33\u0e43\u0e2b\u0e21\u0e48/\u0e2b\u0e31\u0e27\u0e02\u0e49\u0e2d\u0e43\u0e2b\u0e21\u0e48\u0e17\u0e31\u0e19\u0e17\u0e35 (LIN 2026-06-18) \u2500\u2500
   // \u0e40\u0e14\u0e49\u0e07\u0e44\u0e1b\u0e1a\u0e19\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e2b\u0e19\u0e49\u0e32\u0e2b\u0e25\u0e31\u0e01\u0e02\u0e2d\u0e07\u0e40\u0e01\u0e21 \u0e44\u0e21\u0e48\u0e23\u0e1a\u0e01\u0e27\u0e19\u0e2b\u0e19\u0e49\u0e32 popup/overlay
+  // LIN 2026-06-19: เลื่อนขึ้น "บนสุดของหน้าเว็บ" (เห็นหัวเว็บ) ทุกครั้งที่เปลี่ยนหน้าจอ
+  // ไม่เลื่อนถ้ามี popup/overlay เปิดอยู่ (กันกระโดดตอนเปิดกล่องถามคำถาม ฯลฯ)
   try {
-    var tfCard = document.querySelector('.tf-card') || document.getElementById('tf-banner');
-    if (tfCard && tfCard.scrollIntoView) {
-      tfCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!document.getElementById('tf-ask-ov')) {
+      var sc = document.scrollingElement || document.documentElement || document.body;
+      if (window.scrollTo) { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
+      else if (sc) { sc.scrollTop = 0; }
     }
   } catch (e) {
     try { window.scrollTo(0, 0); } catch (e2) {}
@@ -3431,9 +3432,24 @@ function getSets(cat) {
   return out;
 }
 
+// ── เล่นฟรีก่อนบังคับล็อกอิน (LIN 2026-06-19) ───────────────────────────
+// ปรับจำนวนรอบฟรีได้ที่ตัวแปรเดียวนี้ (1 รอบ = 1 ชุดคำ = 5 คำ; หมวดสี/สัตว์ = 6)
+var TF_FREE_ROUNDS_LIMIT = 3;
+function tfFreeRoundsUsed() { try { return parseInt(localStorage.getItem('tf_free_rounds') || '0', 10) || 0; } catch (e) { return 0; } }
+function tfBumpFreeRounds() { try { localStorage.setItem('tf_free_rounds', String(tfFreeRoundsUsed() + 1)); } catch (e) {} }
+function tfFreeRoundsLeft() { return Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed()); }
+
 function startSetSession(words) {
-  // บังคับล็อกอินเฉพาะตอนจะเริ่มเล่นจริง — ถ้ายังไม่ล็อกอินจะเด้งหน้าล็อกอิน (กดข้างๆ ปิดได้)
-  if (window.TF_AUTH && !window.TF_AUTH.ensureLogin()) return;
+  // เล่นฟรี TF_FREE_ROUNDS_LIMIT รอบก่อน แล้วค่อยบังคับล็อกอิน (เก็บนับใน localStorage)
+  var _auth = window.TF_AUTH;
+  var _loggedIn = !!(_auth && _auth.loggedIn && _auth.loggedIn());
+  if (!_loggedIn && _auth && _auth.requireLogin) {
+    if (tfFreeRoundsUsed() >= TF_FREE_ROUNDS_LIMIT) {
+      if (_auth.showGate) _auth.showGate();   // หมดโควต้าเล่นฟรี → เด้งหน้าล็อกอิน
+      return;
+    }
+    tfBumpFreeRounds();   // ใช้โควต้าเล่นฟรีไป 1 รอบ
+  }
   var entries = words.map(function(wd){
     for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === wd) return WORD_LIST[i];
     return null;
@@ -4861,7 +4877,7 @@ var TF = {
     var email = (emailEl && emailEl.value || '').trim();
     if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '送出中…'; }
     var payload = {
-      access_key: 'b3bfdb97-5b14-4b72-b3cd-5c4e1d4846c2',
+      access_key: 'b3bfdb97-19dd-4910-bd15-89720be846c2',  // LIN 2026-06-19: ใช้คีย์เดียวกับฟอร์ม 學生回饋 (ตัวที่เมลเข้าจริง)
       subject: '【聲調工具】學生提問 / คำถามจากผู้เล่น',
       from_name: '聲調工具 提問',
       email: email || 'no-reply@mrtaihualin.github.io',
@@ -4883,59 +4899,20 @@ var TF = {
   },
   downloadReport: function() {
     if (!session) return;
-    // 📱 มือถือ: html2pdf (html2canvas) มัก "ค้าง"/หน่วยความจำไม่พอ และ .save() โหลดไฟล์ไม่ออกบนมือถือ
-    //    → ใช้หน้าต่าง print โดยตรง (ผู้ใช้กด "บันทึกเป็น PDF" ในกล่อง print ของระบบได้) เสถียรกว่ามาก
-    if (tfIsMobile()) { openReportPrint(); return; }
-    var fname = '泰語聲調練習_' + new Date().toISOString().slice(0,10) + '.pdf';
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:760px;background:#fff;padding:6px;';
-    wrap.innerHTML = buildReportInner();
-    document.body.appendChild(wrap);
-    if (window.html2pdf) {
-      var done = false;
-      var cleanup = function(){ if (wrap && wrap.parentNode) wrap.remove(); };
-      // ⏱️ watchdog กันค้าง: ถ้าเกิน 15 วิยังไม่เสร็จ → ล้มเลิกแล้วเปิด print แทน
-      var watchdog = setTimeout(function(){ if (!done){ done = true; cleanup(); openReportPrint(); } }, 15000);
-      window.html2pdf().set({
-        margin: [8,8,8,8],
-        filename: fname,
-        image: { type:'jpeg', quality:0.95 },
-        html2canvas: { scale:1.6, useCORS:true, backgroundColor:'#ffffff' },
-        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-      }).from(wrap).save()
-        .then(function(){ if (done) return; done = true; clearTimeout(watchdog); cleanup(); })
-        .catch(function(){ if (done) return; done = true; clearTimeout(watchdog); cleanup(); openReportPrint(); });
-    } else {
-      wrap.remove();
-      openReportPrint();
-    }
+    // LIN 2026-06-19: html2pdf (html2canvas) ออกไฟล์ "ว่างเปล่า" บนคอม (ปัญหา render นอกจอ) + ค้างบนมือถือ
+    //   → ใช้หน้าต่าง print ทั้งคอมและมือถือ (กด "บันทึกเป็น PDF" ในกล่อง print ของระบบ) เสถียร เห็นเนื้อหาจริงครบ
+    //   ถ้าอยากกลับไปดาวน์โหลดไฟล์ตรงๆ ด้วย html2pdf ค่อยเปิดบล็อกเดิมคืน (อยู่ใน backup_20260619)
+    openReportPrint();
   },
   downloadSearchReport: function() {
     if (!searchHistory.length) return;
-    var printSearch = function(){
-      var win = window.open('', '_blank');
-      if (win) { win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'+buildSearchReportInner()+'</body></html>'); win.document.close(); setTimeout(function(){ try{win.print();}catch(e){} },500); }
-      else { showComingSoon(); }
-    };
-    if (tfIsMobile()) { printSearch(); return; }   // 📱 มือถือ → print โดยตรง กันค้าง
-    var fname = '泰語聲調搜尋紀錄_' + new Date().toISOString().slice(0,10) + '.pdf';
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:760px;background:#fff;padding:6px;';
-    wrap.innerHTML = buildSearchReportInner();
-    document.body.appendChild(wrap);
-    if (window.html2pdf) {
-      var done = false;
-      var cleanup = function(){ if (wrap && wrap.parentNode) wrap.remove(); };
-      var watchdog = setTimeout(function(){ if (!done){ done = true; cleanup(); printSearch(); } }, 15000);
-      window.html2pdf().set({
-        margin: [8,8,8,8], filename: fname,
-        image: { type:'jpeg', quality:0.95 },
-        html2canvas: { scale:1.6, useCORS:true, backgroundColor:'#ffffff' },
-        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-      }).from(wrap).save()
-        .then(function(){ if (done) return; done = true; clearTimeout(watchdog); cleanup(); })
-        .catch(function(){ if (done) return; done = true; clearTimeout(watchdog); cleanup(); printSearch(); });
-    } else { wrap.remove(); printSearch(); }
+    // LIN 2026-06-19: ใช้หน้าต่าง print ทั้งคอม/มือถือ (กันไฟล์ว่างจาก html2canvas + กันค้าง)
+    var win = window.open('', '_blank');
+    if (win) { win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8">'+
+        '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet"></head><body>'+
+        buildSearchReportInner()+'</body></html>'); win.document.close(); win.focus();
+      setTimeout(function(){ try{win.print();}catch(e){} },600); }
+    else { showComingSoon(); }
   },
   backToLevelSelect: function() {
     selectedLevel = null;
