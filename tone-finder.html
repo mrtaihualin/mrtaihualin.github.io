@@ -32,7 +32,7 @@
 <meta name="twitter:title" content="泰語聲調搜尋練習 — 泰華眼裡的泰語教學">
 <meta name="twitter:description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
 <meta name="twitter:image" content="https://mrtaihualin.github.io/assets/share-card.png">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Noto+Sans+Thai:wght@400;500;700&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=8">
 <style>
   body { background: #F5F0E8; color: #1C1C1C; }
@@ -690,6 +690,42 @@
   .tf-session-result-badge.wrong   { color:#cc4444; background:rgba(204,68,68,0.1); }
   .tf-session-correction { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#666; margin-bottom:10px; }
   .tf-session-answer-word { font-family:'Sarabun',sans-serif; font-size:48px; color:#5a3e0a; margin:8px 0 4px; }
+  /* ⚠️ 暫時靜音（LIN 2026-06-18）：隱藏所有發音按鈕。恢復語音時刪掉這條規則即可。 */
+  .tf-speak-word-btn, .tf-speak-btn, .result-v2-speak-btn, .prc-audio-btn { display:none !important; }
+
+  /* ── แถบเครื่องมือในเกม (สลับฟอนต์ / ถามคำถาม) ── */
+  .tf-tools-row { display:flex; gap:8px; justify-content:flex-end; margin-bottom:10px; flex-wrap:wrap; }
+  .tf-tool-btn { font-family:'Noto Sans TC',sans-serif; font-size:12.5px; background:#fff; border:1.5px solid rgba(139,99,16,0.30); border-radius:20px; padding:6px 14px; cursor:pointer; color:#7a5510; transition:all .15s; }
+  .tf-tool-btn:hover { background:rgba(139,99,16,0.10); border-color:rgba(139,99,16,0.55); }
+  .tf-tool-btn.active { background:#C8973A; color:#fff; border-color:#C8973A; }
+
+  /* ── ฟอนต์โมเดิร์น (ไม่มีหัว) สลับได้ — เปลี่ยนชื่อฟอนต์ตรง 'Noto Sans Thai' จุดเดียว ── */
+  body.tf-modern-font .tf-banner-word,
+  body.tf-modern-font .result-v2-word,
+  body.tf-modern-font .syl-thai,
+  body.tf-modern-font .tf-syl-detail-word,
+  body.tf-modern-font .tf-sum-th,
+  body.tf-modern-font .tf-bd-th,
+  body.tf-modern-font .sg-bd-value,
+  body.tf-modern-font .result-v2-info-val.th,
+  body.tf-modern-font .tf-session-answer-word,
+  body.tf-modern-font .afc-front-char,
+  body.tf-modern-font .adv-sentence, body.tf-modern-font .adv-word,
+  body.tf-modern-font .th { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
+
+  /* ── กล่องถามคำถาม (ส่งเข้า Gmail ผ่าน Web3Forms) ── */
+  .tf-ask-overlay { position:fixed; inset:0; background:rgba(45,42,34,0.55); display:flex; align-items:center; justify-content:center; z-index:9999; padding:18px; }
+  .tf-ask-box { background:#fdfcf8; border-radius:16px; max-width:420px; width:100%; padding:22px 22px 18px; box-shadow:0 12px 40px rgba(0,0,0,0.25); font-family:'Noto Sans TC',sans-serif; }
+  .tf-ask-title { font-size:17px; font-weight:700; color:#5a3e0a; margin-bottom:4px; }
+  .tf-ask-sub { font-size:12.5px; color:#9a8a6a; margin-bottom:14px; line-height:1.5; }
+  .tf-ask-ctx { font-size:12px; background:rgba(200,151,58,0.12); border:1px solid rgba(200,151,58,0.30); border-radius:8px; padding:7px 11px; margin-bottom:12px; color:#7a5510; }
+  .tf-ask-input, .tf-ask-textarea { width:100%; border:1.5px solid rgba(139,99,16,0.25); border-radius:9px; padding:9px 11px; font-size:14px; font-family:'Noto Sans TC',sans-serif; margin-bottom:10px; background:#fff; }
+  .tf-ask-textarea { min-height:90px; resize:vertical; }
+  .tf-ask-actions { display:flex; gap:10px; justify-content:flex-end; }
+  .tf-ask-send { background:#C8973A; color:#fff; border:none; border-radius:9px; padding:9px 20px; font-size:14px; font-weight:700; cursor:pointer; }
+  .tf-ask-send:disabled { opacity:0.5; cursor:default; }
+  .tf-ask-cancel { background:none; border:1.5px solid rgba(139,99,16,0.30); border-radius:9px; padding:9px 16px; font-size:14px; cursor:pointer; color:#7a5510; }
+  .tf-ask-ok { text-align:center; padding:10px 0; color:#4a9a4a; font-size:15px; font-weight:700; }
   .tf-speak-word-btn { font-family:'Noto Sans TC',sans-serif; font-size:13px; background:rgba(139,99,16,0.08); border:1px solid rgba(139,99,16,0.25); border-radius:20px; padding:6px 16px; cursor:pointer; color:#7a5510; margin-bottom:14px; }
   .tf-speak-word-btn:hover { background:rgba(139,99,16,0.15); }
   .tf-session-info-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
@@ -1527,6 +1563,11 @@
   <div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:18px;font-family:'Noto Sans TC',sans-serif;">
     <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;">🎁 免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
     <span style="font-size:13px;background:var(--gold-bright,#C8973A);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
+  </div>
+
+  <div class="tf-tools-row">
+    <button class="tf-tool-btn" id="tf-font-btn" onclick="TF.toggleFont()" title="สลับฟอนต์มีหัว/ไม่มีหัว">🔤 換現代字體</button>
+    <button class="tf-tool-btn" onclick="TF.openAsk()" title="เล่นแล้วมีคำถาม ถามได้เลย">❓ 我有問題</button>
   </div>
 
   <div class="tf-card">
@@ -2474,17 +2515,10 @@ function act(fn) {
 }
 
 function navigate(nextStep, label, toneNum) {
-  // ── INTERCEPT: in session mode, redirect 'result' → 'pre-result-confirm' ──
-  if (nextStep === 'result' && session && session.initialGuess !== undefined && S.step !== 'pre-result-confirm') {
-    hist = hist.slice(0, histPos+1);
-    var newPath = label ? S.path.concat([label]) : S.path.slice();
-    var tone = (toneNum !== undefined) ? toneNum : null;
-    S = { word: S.word, step: 'pre-result-confirm', path: newPath, tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults };
-    hist.push({ step: 'pre-result-confirm', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults });
-    histPos = hist.length - 1;
-    render();
-    return;
-  }
+  // ── ถามวรรณยุกต์ "ครั้งเดียว" (LIN 2026-06-18) ──
+  // เดิม: พอ推導จบจะ redirect 'result' → 'pre-result-confirm' = ถามเสียงซ้ำอีกรอบ (คำถามที่ 2)
+  // ตอนนี้: ถามแค่ตอนเริ่ม (stepSessionGuess) ที่เดียว — ตอบผิดก็推導สอนแล้วเฉลยเลย ไม่ถามซ้ำ
+  // หมายเหตุ: stepPreResultConfirm() ยังนิยามไว้แต่ไม่ถูกเรียกแล้ว (เก็บไว้เผื่ออยากเปิดคืน)
   // Truncate forward history
   hist = hist.slice(0, histPos+1);
   // Apply new state
@@ -2804,6 +2838,19 @@ function render() {
   if (session && practiceSteps.indexOf(S.step) !== -1) {
     body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
   }
+
+  // \u2500\u2500 \u0e40\u0e25\u0e37\u0e48\u0e2d\u0e19\u0e02\u0e36\u0e49\u0e19\u0e1a\u0e19\u0e2a\u0e38\u0e14\u0e17\u0e38\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07\u0e17\u0e35\u0e48\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e2b\u0e19\u0e49\u0e32\u0e08\u0e2d \u0e43\u0e2b\u0e49\u0e40\u0e2b\u0e47\u0e19\u0e04\u0e33\u0e43\u0e2b\u0e21\u0e48/\u0e2b\u0e31\u0e27\u0e02\u0e49\u0e2d\u0e43\u0e2b\u0e21\u0e48\u0e17\u0e31\u0e19\u0e17\u0e35 (LIN 2026-06-18) \u2500\u2500
+  // \u0e40\u0e14\u0e49\u0e07\u0e44\u0e1b\u0e1a\u0e19\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e2b\u0e19\u0e49\u0e32\u0e2b\u0e25\u0e31\u0e01\u0e02\u0e2d\u0e07\u0e40\u0e01\u0e21 \u0e44\u0e21\u0e48\u0e23\u0e1a\u0e01\u0e27\u0e19\u0e2b\u0e19\u0e49\u0e32 popup/overlay
+  try {
+    var tfCard = document.querySelector('.tf-card') || document.getElementById('tf-banner');
+    if (tfCard && tfCard.scrollIntoView) {
+      tfCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  } catch (e) {
+    try { window.scrollTo(0, 0); } catch (e2) {}
+  }
 }
 
 function buildStep() {
@@ -2884,12 +2931,12 @@ function computeTone(word) {
   return null;
 }
 
+// ⚠️ 暫時全站靜音（依 LIN 指示 2026-06-18）：先不提供語音。
+// 之後要恢復發音時，把下面的 return 拿掉、還原原本的 Web Speech API 版本即可。
+var TF_MUTED = true;
 function speakThai(text) {
-  // 使用瀏覽器內建語音合成（Web Speech API）唸出泰文
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-    showComingSoon();
-    return;
-  }
+  if (TF_MUTED) return;   // 靜音模式：點擊不做任何事，也不報錯
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) { showComingSoon(); return; }
   try {
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(String(text));
@@ -2900,13 +2947,7 @@ function speakThai(text) {
       if (/^th/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
     }
     window.speechSynthesis.speak(u);
-  } catch (e) {
-    showComingSoon();
-  }
-}
-// 預先載入語音清單（部分瀏覽器首次為非同步）
-if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-  window.speechSynthesis.onvoiceschanged = function(){ window.speechSynthesis.getVoices(); };
+  } catch (e) { showComingSoon(); }
 }
 function showComingSoon() {
   var old = document.getElementById('tf-soon-toast');
@@ -3139,6 +3180,15 @@ function buildReportHTML() {
   return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>泰語聲調練習報告</title>'+
     '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet"></head><body>'+
     buildReportInner() + '</body></html>';
+}
+// ตรวจว่าเป็นมือถือ/แท็บเล็ตไหม (ใช้เลือกวิธีออก PDF ให้เสถียร)
+function tfIsMobile() {
+  try {
+    var ua = navigator.userAgent || '';
+    var byUA = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(ua);
+    var byTouch = (('ontouchstart' in window) && window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
+    return byUA || byTouch;
+  } catch (e) { return false; }
 }
 function openReportPrint() {
   var win = window.open('', '_blank');
@@ -3715,7 +3765,14 @@ function stepSessionGuess() {
     var captureN = n;
     var clickAct = act(function(){
       session.initialGuess = captureN;
-      showStartInflection(navigateToInflection);
+      // ── โหมดเร็ว (Approach A): ตอบถูกตั้งแต่แรก → ข้าม推導ไป result เลย; ผิด/คำนวณไม่ได้ → 推導สอนเหมือนเดิม ──
+      var correctTone = computeTone(word);              // computeTone คืน 1–5 (null ถ้าคำนวณไม่ได้)
+      if (correctTone && captureN === correctTone) {
+        S.tone = correctTone;                            // ⚠️ ต้องตั้งก่อน! goToResult ใช้ S.tone
+        goToResult(captureN);
+      } else {
+        showStartInflection(navigateToInflection);       // fail-safe: พฤติกรรมเดิม
+      }
     });
     return '<button class="sg-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="'+clickAct+'">'+n+'</button>';
   }).join('');
@@ -3732,7 +3789,7 @@ function stepSessionGuess() {
     '<div class="sg-divider"></div>'+
     '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
-    '<button class="sg-dontknow-btn" onclick="'+dontKnowAct+'">🤷 我不太確定</button>'+
+    '<button class="sg-dontknow-btn" onclick="'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>'+
   '</div>';
 }
 
@@ -4760,21 +4817,94 @@ var TF = {
     var a = document.createElement('a'); a.href=url; a.download='泰語聲調練習_'+new Date().toISOString().slice(0,10)+'.txt'; a.click();
     URL.revokeObjectURL(url);
   },
+  // ── สลับฟอนต์ มีหัว(Sarabun) ↔ โมเดิร์นไม่มีหัว(Noto Sans Thai) + จำค่าไว้ ──
+  toggleFont: function() {
+    var on = document.body.classList.toggle('tf-modern-font');
+    var btn = document.getElementById('tf-font-btn');
+    if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? '🔤 換回標準字體' : '🔤 換現代字體'; }
+    try { localStorage.setItem('tf_modern_font', on ? '1' : '0'); } catch(e){}
+  },
+  // ── ปุ่มถามคำถามในเกม → ส่งเข้า Gmail ของ LIN ผ่าน Web3Forms (ผู้เล่นพิมพ์เอง + แนบคำที่กำลังเล่น) ──
+  openAsk: function() {
+    var old = document.getElementById('tf-ask-ov'); if (old) old.remove();
+    var lvl = ({1:'初級',2:'中級',3:'高級'})[selectedLevel] || '—';
+    var ctxWord = (typeof S !== 'undefined' && S && S.word) ? S.word : '—';
+    var ctxCat = selectedCategory || '—';
+    var ctxStr = '目前題目：' + ctxWord + '　|　等級：' + lvl + '　|　主題：' + ctxCat;
+    var div = document.createElement('div');
+    div.id = 'tf-ask-ov'; div.className = 'tf-ask-overlay';
+    div.innerHTML =
+      '<div class="tf-ask-box">' +
+        '<div class="tf-ask-title">❓ 我有問題 / มีคำถาม</div>' +
+        '<div class="tf-ask-sub">在練習中卡住了嗎？把問題寫下來，老師會收到並回覆你 🙏</div>' +
+        '<div class="tf-ask-ctx" id="tf-ask-ctx">' + ctxStr + '</div>' +
+        '<input class="tf-ask-input" id="tf-ask-email" type="email" placeholder="你的 Email（方便老師回覆，可留空）">' +
+        '<textarea class="tf-ask-textarea" id="tf-ask-msg" placeholder="想問的問題…（例：這個字為什麼是第幾聲？）"></textarea>' +
+        '<div class="tf-ask-actions">' +
+          '<button class="tf-ask-cancel" onclick="TF.closeAsk()">取消</button>' +
+          '<button class="tf-ask-send" id="tf-ask-send" onclick="TF.submitAsk()">送出問題 →</button>' +
+        '</div>' +
+      '</div>';
+    div.addEventListener('click', function(e){ if (e.target === div) div.remove(); });
+    document.body.appendChild(div);
+    div.setAttribute('data-ctx', ctxStr);
+  },
+  closeAsk: function(){ var o=document.getElementById('tf-ask-ov'); if(o) o.remove(); },
+  submitAsk: function() {
+    var ov = document.getElementById('tf-ask-ov'); if (!ov) return;
+    var msgEl = document.getElementById('tf-ask-msg');
+    var emailEl = document.getElementById('tf-ask-email');
+    var sendBtn = document.getElementById('tf-ask-send');
+    var msg = (msgEl && msgEl.value || '').trim();
+    if (!msg) { if (msgEl) { msgEl.focus(); msgEl.style.borderColor = '#cc4444'; } return; }
+    var ctx = ov.getAttribute('data-ctx') || '';
+    var email = (emailEl && emailEl.value || '').trim();
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '送出中…'; }
+    var payload = {
+      access_key: 'b3bfdb97-5b14-4b72-b3cd-5c4e1d4846c2',
+      subject: '【聲調工具】學生提問 / คำถามจากผู้เล่น',
+      from_name: '聲調工具 提問',
+      email: email || 'no-reply@mrtaihualin.github.io',
+      message: '問題：\n' + msg + '\n\n— 情境 —\n' + ctx + '\n回覆信箱：' + (email || '（未填）')
+    };
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(d){
+      var box = ov.querySelector('.tf-ask-box');
+      if (box) box.innerHTML = '<div class="tf-ask-ok">✅ 已送出！老師收到後會回覆你 🙏</div>' +
+        '<div class="tf-ask-actions"><button class="tf-ask-send" onclick="TF.closeAsk()">關閉</button></div>';
+      setTimeout(function(){ TF.closeAsk(); }, 2200);
+    }).catch(function(){
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = '送出問題 →'; }
+      alert('送出失敗，請稍後再試或用 LINE 聯絡老師。');
+    });
+  },
   downloadReport: function() {
     if (!session) return;
+    // 📱 มือถือ: html2pdf (html2canvas) มัก "ค้าง"/หน่วยความจำไม่พอ และ .save() โหลดไฟล์ไม่ออกบนมือถือ
+    //    → ใช้หน้าต่าง print โดยตรง (ผู้ใช้กด "บันทึกเป็น PDF" ในกล่อง print ของระบบได้) เสถียรกว่ามาก
+    if (tfIsMobile()) { openReportPrint(); return; }
     var fname = '泰語聲調練習_' + new Date().toISOString().slice(0,10) + '.pdf';
     var wrap = document.createElement('div');
     wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:760px;background:#fff;padding:6px;';
     wrap.innerHTML = buildReportInner();
     document.body.appendChild(wrap);
     if (window.html2pdf) {
+      var done = false;
+      var cleanup = function(){ if (wrap && wrap.parentNode) wrap.remove(); };
+      // ⏱️ watchdog กันค้าง: ถ้าเกิน 15 วิยังไม่เสร็จ → ล้มเลิกแล้วเปิด print แทน
+      var watchdog = setTimeout(function(){ if (!done){ done = true; cleanup(); openReportPrint(); } }, 15000);
       window.html2pdf().set({
         margin: [8,8,8,8],
         filename: fname,
-        image: { type:'jpeg', quality:0.96 },
-        html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
+        image: { type:'jpeg', quality:0.95 },
+        html2canvas: { scale:1.6, useCORS:true, backgroundColor:'#ffffff' },
         jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-      }).from(wrap).save().then(function(){ wrap.remove(); }).catch(function(){ wrap.remove(); openReportPrint(); });
+      }).from(wrap).save()
+        .then(function(){ if (done) return; done = true; clearTimeout(watchdog); cleanup(); })
+        .catch(function(){ if (done) return; done = true; clearTimeout(watchdog); cleanup(); openReportPrint(); });
     } else {
       wrap.remove();
       openReportPrint();
@@ -4782,26 +4912,30 @@ var TF = {
   },
   downloadSearchReport: function() {
     if (!searchHistory.length) return;
+    var printSearch = function(){
+      var win = window.open('', '_blank');
+      if (win) { win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'+buildSearchReportInner()+'</body></html>'); win.document.close(); setTimeout(function(){ try{win.print();}catch(e){} },500); }
+      else { showComingSoon(); }
+    };
+    if (tfIsMobile()) { printSearch(); return; }   // 📱 มือถือ → print โดยตรง กันค้าง
     var fname = '泰語聲調搜尋紀錄_' + new Date().toISOString().slice(0,10) + '.pdf';
     var wrap = document.createElement('div');
     wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:760px;background:#fff;padding:6px;';
     wrap.innerHTML = buildSearchReportInner();
     document.body.appendChild(wrap);
     if (window.html2pdf) {
+      var done = false;
+      var cleanup = function(){ if (wrap && wrap.parentNode) wrap.remove(); };
+      var watchdog = setTimeout(function(){ if (!done){ done = true; cleanup(); printSearch(); } }, 15000);
       window.html2pdf().set({
         margin: [8,8,8,8], filename: fname,
-        image: { type:'jpeg', quality:0.96 },
-        html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
+        image: { type:'jpeg', quality:0.95 },
+        html2canvas: { scale:1.6, useCORS:true, backgroundColor:'#ffffff' },
         jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-      }).from(wrap).save().then(function(){ wrap.remove(); }).catch(function(){
-        wrap.remove();
-        var win = window.open('', '_blank');
-        if (win) { win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'+buildSearchReportInner()+'</body></html>'); win.document.close(); setTimeout(function(){ try{win.print();}catch(e){} },500); }
-      });
-    } else {
-      var win = window.open('', '_blank');
-      if (win) { win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'+buildSearchReportInner()+'</body></html>'); win.document.close(); setTimeout(function(){ try{win.print();}catch(e){} },500); }
-    }
+      }).from(wrap).save()
+        .then(function(){ if (done) return; done = true; clearTimeout(watchdog); cleanup(); })
+        .catch(function(){ if (done) return; done = true; clearTimeout(watchdog); cleanup(); printSearch(); });
+    } else { wrap.remove(); printSearch(); }
   },
   backToLevelSelect: function() {
     selectedLevel = null;
@@ -4850,6 +4984,14 @@ var TF = {
 // ════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════
+// คืนค่าฟอนต์โมเดิร์นที่ผู้ใช้เคยเลือก
+try {
+  if (localStorage.getItem('tf_modern_font') === '1') {
+    document.body.classList.add('tf-modern-font');
+    var _fb = document.getElementById('tf-font-btn');
+    if (_fb) { _fb.classList.add('active'); _fb.textContent = '🔤 換回標準字體'; }
+  }
+} catch(e){}
 render();
 </script>
 
