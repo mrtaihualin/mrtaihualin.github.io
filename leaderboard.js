@@ -154,6 +154,16 @@
     rows.forEach(function (r, i) {
       var rank = i + 1;
       var mine = currentUser && r.user_id === currentUser.id;
+      // "อีก X แต้มแซง [คนข้างบน]" — โชว์ใต้แถวของผู้เล่นเอง (ถ้ายังไม่ใช่ที่ 1)
+      var pacerHint = '';
+      if (mine && i > 0) {
+        var above = rows[i - 1];
+        var gap = (above.total_score || 0) - (r.total_score || 0);
+        if (gap > 0) {
+          pacerHint = '<div style="font-size:11.5px;color:#C8973A;padding:2px 12px 8px 50px;">再 <b>' + gap +
+            '</b> 分就超越 <b>' + esc(above.nickname || '(無暱稱)') + '</b> 囉！💪</div>';
+        }
+      }
       html +=
         '<div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;' +
         (i ? 'border-top:1px solid #F4ECD8;' : '') + (mine ? 'background:#FBF3E2;' : '') + '">' +
@@ -164,7 +174,7 @@
             '<span style="font-family:\'Playfair Display\',serif;font-weight:900;color:#C8973A;font-size:18px;">' + (r.total_score != null ? r.total_score : 0) + '</span>' +
             '<span style="font-size:11px;color:#B0A080;margin-left:5px;">' + (r.games || 0) + ' 場</span>' +
           '</div>' +
-        '</div>';
+        '</div>' + pacerHint;
     });
     html += '</div>';
     root.innerHTML = html;

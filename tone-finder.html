@@ -13,6 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=3"></script>
 <script defer src="supabase-auth.js?v=6"></script>
+<script defer src="adaptive.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -1509,6 +1510,174 @@
     flex-wrap: wrap;
     margin-top: 8px;
   }
+
+  /* ════ สเตจ 1: ระบบคะแนน — HUD / เด้งคะแนน / คอนเฟตติ / เฉลย ════ */
+  .tf-score-hud {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: rgba(139,99,16,0.12);
+    color: #8B6310;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: .3px;
+  }
+  .tf-combo-hud {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: rgba(255,124,124,0.16);
+    color: #e0552f;
+    font-weight: 800;
+    font-size: 12px;
+    animation: tf-combo-pulse .6s ease infinite alternate;
+  }
+  @keyframes tf-combo-pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
+
+  .tf-score-pop {
+    position: fixed;
+    left: 50%;
+    top: 32%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    pointer-events: none;
+    font-weight: 900;
+    color: #2e9a4a;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    animation: tf-score-float 1.3s ease-out forwards;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .tf-score-pop-num { font-size: 38px; }
+  .tf-score-pop-mult {
+    font-size: 22px;
+    color: #e0552f;
+    font-weight: 900;
+  }
+  .tf-score-pop-big .tf-score-pop-num { font-size: 52px; color: #d9a400; }
+  @keyframes tf-score-float {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(14px) scale(.7); }
+    18%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.12); }
+    35%  { transform: translateX(-50%) translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-60px) scale(1); }
+  }
+
+  .tf-confetti-wrap {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9998; overflow: hidden;
+  }
+  .tf-confetti {
+    position: absolute;
+    top: -12px;
+    width: 9px; height: 14px;
+    border-radius: 2px;
+    opacity: .95;
+    animation: tf-confetti-fall 1.6s linear forwards;
+  }
+  @keyframes tf-confetti-fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(105vh) rotate(540deg); opacity: 0; }
+  }
+
+  .tf-reveal-box { text-align: center; }
+  .tf-reveal-title { font-size: 18px; font-weight: 800; color: #c46a00; margin-bottom: 4px; }
+  .tf-reveal-sub { font-size: 13px; color: #7a6a4a; margin-bottom: 12px; line-height: 1.5; }
+  .tf-reveal-word { font-size: 40px; font-weight: 800; color: #2b2b2b; margin: 4px 0; font-family: 'Sarabun','Noto Sans Thai',sans-serif; }
+  .tf-reveal-zh { font-size: 14px; color: #555; margin-bottom: 12px; }
+  .tf-reveal-zh .th { color: #8B6310; }
+  .tf-reveal-answer {
+    display: inline-block;
+    padding: 8px 18px;
+    border: 2px solid;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+
+  .tf-score-summary { text-align: center; margin-bottom: 6px; }
+  .tf-score-summary-total {
+    font-size: 44px; font-weight: 900; color: #8B6310; line-height: 1;
+  }
+  .tf-score-summary-total span { font-size: 18px; font-weight: 700; }
+  .tf-score-summary-bonus {
+    display: inline-block; margin-top: 8px; padding: 4px 14px;
+    border-radius: 999px; background: rgba(217,164,0,0.16);
+    color: #b07d00; font-weight: 800; font-size: 14px;
+  }
+
+  /* ════ สเตจ 2: คำทอง + streak ════ */
+  .tf-golden-hud {
+    display:inline-block; margin-left:6px; padding:1px 9px; border-radius:999px;
+    background:linear-gradient(90deg,#ffe9a8,#ffcf5a); color:#8a5a00; font-weight:800; font-size:12px;
+    animation: tf-combo-pulse .7s ease infinite alternate;
+  }
+  .tf-banner-word-gold {
+    background:linear-gradient(90deg,#d9a400,#ffd24a,#d9a400);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    text-shadow:0 0 18px rgba(255,200,60,0.35);
+  }
+  .tf-score-pop-gold .tf-score-pop-num { color:#d9a400; }
+  .tf-streak-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:10px 0 4px; }
+  .tf-streak-chip {
+    font-size:13px; font-weight:800; padding:5px 13px; border-radius:999px;
+    background:rgba(139,99,16,0.10); color:#8B6310;
+  }
+  .tf-streak-chip.done { background:rgba(74,154,74,0.14); color:#3f8f3f; }
+
+  /* ════ สเตจ 3: น้องมีนา + แบดจ์ ════ */
+  .tf-mina { display:flex; align-items:flex-start; gap:10px; justify-content:center; margin:6px 0 12px; }
+  .tf-mina-big { margin:10px 0 16px; }
+  .tf-mina-face {
+    font-size:38px; line-height:1; flex-shrink:0;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.12));
+    animation: tf-mina-bob 2s ease-in-out infinite;
+  }
+  .tf-mina-big .tf-mina-face { font-size:50px; }
+  @keyframes tf-mina-bob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+  .tf-mina-bubble {
+    position:relative; background:#fff; border:1.5px solid #f0e2c2; border-radius:14px;
+    padding:10px 14px; font-size:14px; color:#5a4a2a; line-height:1.5; max-width:300px;
+    box-shadow:0 2px 8px rgba(139,99,16,.08); text-align:left;
+  }
+  .tf-mina-bubble::before {
+    content:''; position:absolute; left:-8px; top:16px; width:0; height:0;
+    border-top:7px solid transparent; border-bottom:7px solid transparent; border-right:9px solid #f0e2c2;
+  }
+  .tf-badge-unlock {
+    margin:8px 0 14px; padding:14px; border-radius:14px;
+    background:linear-gradient(135deg,#fbf3df,#fff8ec); border:1px solid #ecdfc4; text-align:center;
+  }
+  .tf-badge-unlock-title { font-size:15px; font-weight:800; color:#b07d00; margin-bottom:10px; }
+  .tf-badge-unlock-grid { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .tf-badge-card {
+    width:96px; padding:12px 8px; border-radius:14px; background:#fff;
+    border:1.5px solid #e6d3a0; box-shadow:0 3px 10px rgba(139,99,16,.10);
+    animation: tf-badge-pop .5s cubic-bezier(.2,1.2,.3,1) both;
+  }
+  @keyframes tf-badge-pop { 0%{transform:scale(.5);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+  .tf-badge-emoji { font-size:34px; line-height:1; }
+  .tf-badge-zh { font-size:13px; font-weight:800; color:#5C4410; margin-top:5px; }
+  .tf-badge-th { font-family:'Sarabun',sans-serif; font-size:12px; color:#8B7340; }
+  .tf-badge-need { font-size:10px; color:#b0a080; margin-top:4px; }
+
+  /* ════ สเตจ 4: ปุ่ม Adaptive ════ */
+  .tf-adaptive-btn {
+    display:block; width:100%; margin:0 0 14px; padding:13px 16px;
+    border:none; border-radius:14px; cursor:pointer;
+    background:linear-gradient(135deg,#8B6310,#C8973A); color:#fff;
+    font-size:15px; font-weight:800; letter-spacing:.5px;
+    box-shadow:0 4px 14px rgba(139,99,16,.25);
+  }
+  .tf-adaptive-btn:active { transform:scale(.98); }
+  .tf-home-streak { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 0 16px; }
+  .tf-badge-link { border:none; cursor:pointer; }
+  .tf-badge-link:active { transform:scale(.97); }
+  .tf-badge-tier-title { font-size:13px; font-weight:800; color:#8B6310; margin:14px 0 8px; }
+  .tf-badge-card.locked { opacity:.45; filter:grayscale(1); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script type="application/ld+json">
@@ -2508,6 +2677,546 @@ var searchHistory = [];      // ประวัติคำที่เสิร
 var _sessionsThisVisit = 0;  // นับ session ที่เล่นจบในรอบเข้าเว็บนี้ (สำหรับ popup โปรโมท)
 var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, flipped, back }
 
+// ════════════════════════════════════════════════════════════
+// ===== TF_SCORE ENGINE START =====  (สเตจ 1: ระบบคะแนนหลัก)
+// เครื่องคิดคะแนนแบบ "บริสุทธิ์" (ไม่แตะ DOM) — เทสต์ด้วย jsdom/node ได้
+// ทุกค่าปรับได้ที่ TF_SCORE_CFG ห้าม hardcode ในเกม
+// ════════════════════════════════════════════════════════════
+var TF_SCORE_CFG = {
+  SCORE_FIRST_TRY: 100,      // ถูกตั้งแต่ครั้งแรก = "รู้จริง"
+  SCORE_DEDUCE_BASE: 50,     // เข้า推導 ฐาน 50
+  DEDUCE_WRONG_LIMIT: 3,     // กดผิดครบ 3 ครั้งในคำเดียว → 0 แต้ม + เฉลย + คำใหม่
+  COMBO_TIERS: { 3: 1.5, 5: 2, 8: 3 },   // สตรีคตอบถูกครั้งแรกติดกัน → ตัวคูณ
+  SET_COMPLETE_BONUS: 200,   // เล่นจบ 1 ชุด
+  SET_PERFECT_BONUS: 500,    // จบชุดแบบ perfect (เพิ่มจากโบนัสจบชุด → perfect = 200+500 = 700)
+  LEVEL_WEIGHT: { 1: 1, 2: 1.5, 3: 2 },   // ถ่วงน้ำหนักคะแนนเข้ากระดาน: 初×1 / 中×1.5 / 高×2
+  // จำนวนตัวเลือกในแต่ละขั้น推導 → ใช้คำนวณการหัก = round(BASE / optionsInStep)
+  OPTIONS_IN_STEP: {
+    s1: 2, s2a: 2, s2a_low: 2, s2a_other: 3, s2a_mid: 4, s2a_hi: 2,
+    s2b: 2, s2b_live: 2, s2b_dead: 2, s2b_dl: 2
+  },
+  // ขั้นเครื่องมือช่วย (ไม่มีในตารางสเปค) → ใช้ค่า default
+  DEFAULT_OPTIONS: 2
+};
+
+var TF_SCORE = {
+  cfg: TF_SCORE_CFG,
+
+  // หักต่อการกดผิด 1 ครั้งในขั้นนั้น = round(BASE / จำนวนตัวเลือก)
+  deductPerWrong: function (step) {
+    var opts = this.cfg.OPTIONS_IN_STEP[step] || this.cfg.DEFAULT_OPTIONS;
+    return Math.round(this.cfg.SCORE_DEDUCE_BASE / opts);
+  },
+
+  // ตัวคูณคอมโบจากสตรีคตอบถูกครั้งแรกติดกัน (เลือก tier สูงสุดที่ถึง)
+  comboMultiplier: function (streak) {
+    var tiers = this.cfg.COMBO_TIERS, mult = 1;
+    Object.keys(tiers).map(Number).sort(function (a, b) { return a - b; }).forEach(function (k) {
+      if (streak >= k) mult = tiers[k];
+    });
+    return mult;
+  },
+
+  // คะแนนเมื่อตอบถูกครั้งแรก (รับ streak "หลังบวกแล้ว")
+  firstTryScore: function (streak) {
+    return Math.round(this.cfg.SCORE_FIRST_TRY * this.comboMultiplier(streak));
+  },
+
+  // คะแนนเมื่อผ่าน推導สำเร็จ = max(0, BASE - หักรวม)
+  deduceScore: function (totalDeduction) {
+    return Math.max(0, this.cfg.SCORE_DEDUCE_BASE - totalDeduction);
+  },
+
+  // กดผิดถึงเพดานหรือยัง (ครบ 3 → 0 แต้ม)
+  reachedWrongLimit: function (mistakes) {
+    return mistakes >= this.cfg.DEDUCE_WRONG_LIMIT;
+  },
+
+  // โบนัสจบชุด: จบ = +COMPLETE, ถ้า perfect (ถูกครั้งแรกทุกคำ) เพิ่ม +PERFECT
+  sessionBonus: function (total, perfectCount) {
+    var bonus = 0;
+    if (total > 0) bonus += this.cfg.SET_COMPLETE_BONUS;
+    if (total > 0 && perfectCount === total) bonus += this.cfg.SET_PERFECT_BONUS;
+    return bonus;
+  },
+
+  // คะแนนถ่วงน้ำหนักตามระดับ (ส่งเข้ากระดานอันดับ) — ในเกมยังโชว์คะแนนดิบ
+  weightedScore: function (rawScore, level) {
+    var w = this.cfg.LEVEL_WEIGHT[level] || 1;
+    return Math.round(rawScore * w);
+  }
+};
+// ===== TF_SCORE ENGINE END =====
+
+// ════════════════════════════════════════════════════════════
+// ===== TF_GAME ENGINE START =====  (สเตจ 2: streak/freeze/เป้า/คำทอง)
+// ════════════════════════════════════════════════════════════
+var TF_GAME_CFG = {
+  GOLDEN_WORD_CHANCE: 0.18,   // โอกาสคำทอง (~18%)
+  GOLDEN_WORD_MULT: 2,        // คำทองตอบได้ ×2
+  STREAK_FREEZE_EARN_EVERY: 7,// ได้ Streak Freeze +1 ทุก 7 วันติด
+  STREAK_FREEZE_MAX: 2,       // ถือ freeze สูงสุด
+  DAILY_GOAL_SETS: 1          // เป้ารายวัน: จบกี่ชุด/วัน
+};
+
+// เครื่องคิด Daily Streak (บริสุทธิ์ ไม่แตะ DOM/localStorage — เทสต์ได้)
+var TF_STREAK = {
+  // จำนวนวันห่างระหว่าง 'YYYY-MM-DD' สองวัน (b - a)
+  dayDiff: function (a, b) {
+    if (!a || !b) return null;
+    var pa = a.split('-'), pb = b.split('-');
+    var da = Date.UTC(+pa[0], +pa[1] - 1, +pa[2]);
+    var db = Date.UTC(+pb[0], +pb[1] - 1, +pb[2]);
+    return Math.round((db - da) / 86400000);
+  },
+
+  // เมื่อเล่นจบ 1 ชุด: อัปเดต state ตามวันนี้ คืน {state, events}
+  applySetComplete: function (state, today, cfg) {
+    state = state || {};
+    var s = {
+      lastGoalDay: state.lastGoalDay || null,
+      streak: state.streak || 0,
+      freezes: state.freezes || 0,
+      setsDay: state.setsDay || null,
+      setsToday: state.setsToday || 0
+    };
+    var ev = { goalMetToday: false, streakIncreased: false, freezeUsed: false, freezeEarned: 0 };
+
+    if (s.setsDay !== today) { s.setsDay = today; s.setsToday = 0; }
+    s.setsToday += 1;
+
+    // ทำเป้าครบ "พอดี" → ต่อสตรีค (นับครั้งเดียว/วัน)
+    if (s.setsToday === cfg.DAILY_GOAL_SETS && s.lastGoalDay !== today) {
+      ev.goalMetToday = true;
+      var gap = s.lastGoalDay ? this.dayDiff(s.lastGoalDay, today) : null;
+      if (gap === 1) { s.streak += 1; ev.streakIncreased = true; }
+      else if (gap === 2 && s.freezes > 0) { s.freezes -= 1; s.streak += 1; ev.freezeUsed = true; ev.streakIncreased = true; }
+      else { s.streak = 1; ev.streakIncreased = true; } // เริ่มใหม่ / ขาดเกิน freeze
+      s.lastGoalDay = today;
+      // สะสม freeze ทุก N วันติด
+      if (cfg.STREAK_FREEZE_EARN_EVERY > 0 && s.streak % cfg.STREAK_FREEZE_EARN_EVERY === 0 && s.freezes < cfg.STREAK_FREEZE_MAX) {
+        s.freezes += 1; ev.freezeEarned = 1;
+      }
+    }
+    return { state: s, events: ev };
+  },
+
+  // สตรีคยัง "มีชีวิต" ไหมเมื่อเทียบกับวันนี้ (ขาด >1 วัน และไม่มี freeze = ตาย)
+  isAlive: function (state, today) {
+    if (!state || !state.lastGoalDay) return false;
+    var gap = this.dayDiff(state.lastGoalDay, today);
+    if (gap == null) return false;
+    if (gap <= 1) return true;
+    if (gap === 2 && (state.freezes || 0) > 0) return true; // freeze ช่วยได้
+    return false;
+  }
+};
+// ===== TF_GAME ENGINE END =====
+
+// ════════════════════════════════════════════════════════════
+// ===== TF_MINA + BADGES START =====  (สเตจ 3: น้องมีนา + แบดจ์)
+// น้องมีนา 米娜 — ใช้ emoji ชั่วคราว (วาดตัวจริงทีหลัง)
+// ════════════════════════════════════════════════════════════
+var TF_MINA_EMOJI = '👧🏻';   // หน้าตาชั่วคราวของน้องมีนา
+var TF_MINA_LINES = {
+  perfect:   '全部一次答對！米娜給你拍拍手 👏',
+  greatSet:  '這組表現很棒，我們繼續加油！💪',
+  goodSet:   '完成囉！每天一點點，泰語會越來越好 🌱',
+  goalMet:   '今天達標囉！連續第 {n} 天 🔥 明天也要來找米娜喔',
+  freezeUsed:'米娜幫你保住連續紀錄了！用掉 1 個護盾 🛡️',
+  comeback:  '又見面啦！我們今天也一起練習吧 😊'
+};
+function tfMinaSay(key, vars) {
+  var t = TF_MINA_LINES[key] || '';
+  if (vars) Object.keys(vars).forEach(function (k) { t = t.replace('{' + k + '}', vars[k]); });
+  return t;
+}
+function tfMinaBubble(msg, size) {
+  if (!msg) return '';
+  return '<div class="tf-mina' + (size === 'big' ? ' tf-mina-big' : '') + '">' +
+    '<div class="tf-mina-face">' + TF_MINA_EMOJI + '</div>' +
+    '<div class="tf-mina-bubble">' + msg + '</div>' +
+  '</div>';
+}
+
+// ── ระบบแบดจ์ (ธีมข้าว/อาหารไทย) ──
+// เงื่อนไขปลดล็อกปรับได้ที่ cond · เนื้อหาการ์ดความรู้ (th/reading/desc) รอครูตรวจจากไฟล์ร่าง
+var TF_BADGES_DEF = [
+  // ชั้น 1 — ข้าวเติบโต (บันไดสตรีค)
+  { id: 'rice_seed',   tier: 1, emoji: '🌾', zh: '稻種',   th: 'เมล็ดข้าว',   reading: 'mét kâao',     need: '連續 3 天',   cond: function (st) { return st.streak >= 3; } },
+  { id: 'rice_sprout', tier: 1, emoji: '🌱', zh: '秧苗',   th: 'ต้นกล้า',     reading: 'tôn klâa',     need: '連續 7 天',   cond: function (st) { return st.streak >= 7; } },
+  { id: 'rice_ear',    tier: 1, emoji: '🌿', zh: '幼穗',   th: 'รวงอ่อน',     reading: 'ruang ɔ̀ɔn',    need: '連續 14 天',  cond: function (st) { return st.streak >= 14; } },
+  { id: 'rice_golden', tier: 1, emoji: '🌾', zh: '金穗',   th: 'รวงข้าวทอง',  reading: 'ruang kâao thɔɔng', need: '連續 30 天', cond: function (st) { return st.streak >= 30; } },
+  { id: 'rice_field',  tier: 1, emoji: '🏞️', zh: '金色稻田', th: 'ทุ่งนาทอง',  reading: 'thûng naa thɔɔng',  need: '連續 100 天', cond: function (st) { return st.streak >= 100; } },
+  // ชั้น 2 — สายพันธุ์ข้าว (ความสำเร็จ)
+  { id: 'hommali',   tier: 2, emoji: '🍚', zh: '茉莉香米',     th: 'ข้าวหอมมะลิ',  reading: 'kâao hɔ̌ɔm malí', need: '首次完美過關', cond: function (st) { return st.perfectSets >= 1; } },
+  { id: 'khaoniaw',  tier: 2, emoji: '🍙', zh: '糯米',         th: 'ข้าวเหนียว',   reading: 'kâao nǐaw',      need: '連續 7 天',    cond: function (st) { return st.streak >= 7; } },
+  { id: 'khaoklong', tier: 2, emoji: '🌾', zh: '糙米',         th: 'ข้าวกล้อง',    reading: 'kâao klɔ̂ɔng',   need: '累計 100 題',  cond: function (st) { return st.wordsTotal >= 100; } },
+  { id: 'riceberry', tier: 2, emoji: '🟣', zh: '紫米 Riceberry', th: 'ไรซ์เบอร์รี่', reading: 'ráai-bəə-rîi',  need: '連對 8 題 (×3)', cond: function (st) { return st.maxCombo >= 8; } }
+];
+
+// เครื่องเช็กแบดจ์ (บริสุทธิ์) — คืน id ที่ "เพิ่งปลด" จาก stats เทียบกับที่ปลดแล้ว
+var TF_BADGES = {
+  check: function (stats, unlocked, defs) {
+    defs = defs || TF_BADGES_DEF;
+    unlocked = unlocked || {};
+    var fresh = [];
+    defs.forEach(function (b) {
+      if (!unlocked[b.id]) { try { if (b.cond(stats)) fresh.push(b.id); } catch (e) {} }
+    });
+    return fresh;
+  },
+  byId: function (id, defs) {
+    defs = defs || TF_BADGES_DEF;
+    for (var i = 0; i < defs.length; i++) if (defs[i].id === id) return defs[i];
+    return null;
+  }
+};
+
+// ── badges: localStorage (stats + unlocked) ──
+var TF_BADGE_KEY = 'tf_badges_v1';
+function tfLoadBadges() {
+  try { var r = localStorage.getItem(TF_BADGE_KEY); return r ? JSON.parse(r) : { unlocked: {}, stats: {} }; }
+  catch (e) { return { unlocked: {}, stats: {} }; }
+}
+function tfSaveBadges(b) {
+  try { localStorage.setItem(TF_BADGE_KEY, JSON.stringify(b)); } catch (e) {}
+}
+// เรียกตอนจบชุด: อัปเดต stats สะสม + เช็กปลดแบดจ์ คืน array ของ badge def ที่เพิ่งปลด
+function tfUpdateBadgesOnSetComplete(info) {
+  var data = tfLoadBadges();
+  var st = data.stats || {};
+  st.wordsTotal = (st.wordsTotal || 0) + (info.words || 0);
+  st.perfectSets = (st.perfectSets || 0) + (info.isPerfect ? 1 : 0);
+  st.maxCombo = Math.max(st.maxCombo || 0, info.maxCombo || 0);
+  st.streak = info.streak || st.streak || 0;
+  data.stats = st;
+  var fresh = TF_BADGES.check(st, data.unlocked, TF_BADGES_DEF);
+  var today = todayStr();
+  fresh.forEach(function (id) { data.unlocked[id] = today; });
+  tfSaveBadges(data);
+  return fresh.map(function (id) { return TF_BADGES.byId(id); }).filter(Boolean);
+}
+// ===== TF_MINA + BADGES END =====
+
+// สุ่มว่าคำถัดไปเป็น "คำทอง" ไหม
+function tfRollGolden() {
+  return Math.random() < (TF_GAME_CFG.GOLDEN_WORD_CHANCE || 0);
+}
+
+// ── streak: โหลด/เซฟ localStorage ──
+var TF_STREAK_KEY = 'tf_streak_v1';
+function tfLoadStreak() {
+  try { var r = localStorage.getItem(TF_STREAK_KEY); return r ? JSON.parse(r) : {}; }
+  catch (e) { return {}; }
+}
+function tfSaveStreak(s) {
+  try { localStorage.setItem(TF_STREAK_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
+}
+// เรียกเมื่อเล่นจบ 1 ชุด → อัปเดต streak + คืน events ให้หน้าสรุปโชว์
+function tfApplyStreakOnSetComplete() {
+  var res = TF_STREAK.applySetComplete(tfLoadStreak(), todayStr(), TF_GAME_CFG);
+  tfSaveStreak(res.state);
+  return { state: res.state, events: res.events };
+}
+
+// ── สเตจ 1: ตัวเชื่อมคะแนนกับเกม (แตะ DOM/state) ──
+function tfResetWordScoring() {
+  if (!session) return;
+  session.currentWordMistakes = 0;
+  session.currentWordDeduction = 0;
+  session.currentWordScored = false;
+  session.currentWordFirstTry = false;
+  session.currentWordScore = 0;
+  // ── คำหลายพยางค์: คิดคะแนนรายพยางค์ ──
+  session.curWordAllFirstTry = true;   // จริงตราบที่ทุกพยางค์ยังถูกครั้งแรก
+  session.scoredSyls = {};             // กันให้คะแนนซ้ำเมื่อกด "วิเคราะห์ใหม่"
+  session.curWordWrongGuess = false;   // เคยเดาผิด/🤷 ในคำ/พยางค์นี้ไหม (กันโกง first-try)
+}
+
+// คำปัจจุบันเป็นหลายพยางค์ไหม (readingTH มี '-')
+function tfCurWordIsMulti() {
+  var e = session && session.words && session.words[session.index];
+  return !!(e && e.readingTH && e.readingTH.indexOf('-') !== -1);
+}
+
+// เด้งคะแนน +N ลอยขึ้น (+ คอนเฟตติเมื่อคอมโบ/perfect)
+function tfScorePop(points, opts) {
+  opts = opts || {};
+  try {
+    var host = document.getElementById('tf-card') || document.body;
+    var pop = document.createElement('div');
+    pop.className = 'tf-score-pop' + (opts.big ? ' tf-score-pop-big' : '') + (opts.gold ? ' tf-score-pop-gold' : '');
+    var sign = points >= 0 ? '+' : '';
+    var multTxt = (opts.mult && opts.mult > 1) ? '<span class="tf-score-pop-mult">×' + opts.mult + '</span>' : '';
+    var goldTxt = opts.gold ? '<span class="tf-score-pop-mult">✨</span>' : '';
+    pop.innerHTML = '<span class="tf-score-pop-num">' + sign + points + '</span>' + multTxt + goldTxt;
+    document.body.appendChild(pop);
+    setTimeout(function () { if (pop && pop.parentNode) pop.parentNode.removeChild(pop); }, 1300);
+  } catch (e) { /* ignore */ }
+  // อัปเดต HUD คะแนนรวม
+  tfUpdateScoreHud();
+  if (opts.confetti) tfConfetti();
+}
+
+// คอนเฟตติเบาๆ (ไม่ใช้ไลบรารีนอก)
+function tfConfetti() {
+  try {
+    var colors = ['#6cb8ff', '#7ec87e', '#ffb347', '#c39bff', '#ff7c7c', '#FFD24A'];
+    var wrap = document.createElement('div');
+    wrap.className = 'tf-confetti-wrap';
+    for (var i = 0; i < 28; i++) {
+      var p = document.createElement('span');
+      p.className = 'tf-confetti';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.background = colors[i % colors.length];
+      p.style.animationDelay = (Math.random() * 0.25) + 's';
+      p.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+      wrap.appendChild(p);
+    }
+    document.body.appendChild(wrap);
+    setTimeout(function () { if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 1800);
+  } catch (e) { /* ignore */ }
+}
+
+// อัปเดตตัวเลขคะแนนรวมบน HUD (ถ้ามี)
+function tfUpdateScoreHud() {
+  var el = document.getElementById('tf-score-hud');
+  if (el && session) el.textContent = '🏆 ' + session.score + ' 分';
+}
+
+// ตัวคูณคำทอง (สเตจ 2 จะเปิดใช้ — ตอนนี้คืน 1)
+function tfGoldenMult() {
+  return (session && session.currentWordGolden) ? (TF_GAME_CFG.GOLDEN_WORD_MULT || 2) : 1;
+}
+
+// ให้คะแนน "ถูกครั้งแรก" (เรียกตอน stepSessionGuess ตอบถูกเลย)
+// พยางค์เดียว: ×คอมโบ + นับสตรีคทันที · หลายพยางค์: คิดรายพยางค์ (ไม่ใช้คอมโบในพยางค์)
+function tfScoreFirstTry() {
+  if (!session) return;
+  var gold = tfGoldenMult();
+  if (tfCurWordIsMulti()) {
+    var k = S.selectedSyl;
+    if (session.scoredSyls && session.scoredSyls[k]) return;   // วิเคราะห์พยางค์เดิมซ้ำ → ไม่ให้ซ้ำ
+    session.scoredSyls[k] = true;
+    var sylPts = Math.round(TF_SCORE.cfg.SCORE_FIRST_TRY * gold);
+    session.score += sylPts;
+    session.currentWordScore = (session.currentWordScore || 0) + sylPts;
+    setTimeout(function () { tfScorePop(sylPts, { gold: gold > 1 }); }, 60);
+    return;
+  }
+  if (session.currentWordScored) return;
+  session.combo = (session.combo || 0) + 1;
+  if (session.combo > (session.maxCombo || 0)) session.maxCombo = session.combo;
+  var mult = TF_SCORE.comboMultiplier(session.combo);
+  var pts = Math.round(TF_SCORE.firstTryScore(session.combo) * gold);
+  session.score += pts;
+  session.currentWordScore = pts;
+  session.currentWordFirstTry = true;
+  session.currentWordScored = true;
+  var comboHit = (session.combo === 3 || session.combo === 5 || session.combo === 8);
+  setTimeout(function () {
+    tfScorePop(pts, { mult: mult, confetti: comboHit, big: comboHit, gold: gold > 1 });
+  }, 60);
+}
+
+// ให้คะแนน "ผ่าน推導สำเร็จ" (เรียกตอน navigate ไปถึง step 'result')
+function tfScoreDeduce() {
+  if (!session) return;
+  var gold = tfGoldenMult();
+  if (tfCurWordIsMulti()) {
+    var k = S.selectedSyl;
+    if (session.scoredSyls && session.scoredSyls[k]) return;
+    session.scoredSyls[k] = true;
+    var sylPts = Math.round(TF_SCORE.deduceScore(session.currentWordDeduction || 0) * gold);
+    session.score += sylPts;
+    session.currentWordScore = (session.currentWordScore || 0) + sylPts;
+    session.curWordAllFirstTry = false;
+    session.combo = 0;
+    setTimeout(function () { tfScorePop(sylPts, { gold: gold > 1 }); }, 60);
+    return;
+  }
+  if (session.currentWordScored) return;
+  var pts = Math.round(TF_SCORE.deduceScore(session.currentWordDeduction || 0) * gold);
+  session.score += pts;
+  session.currentWordScore = pts;
+  session.currentWordFirstTry = false;
+  session.currentWordScored = true;
+  session.combo = 0; // สตรีคขาด (ไม่ใช่ถูกครั้งแรก) — ไม่ริบของเก่า
+  setTimeout(function () { tfScorePop(pts, { gold: gold > 1 }); }, 60);
+}
+
+// จัดการกดผิดในขั้น推導: หักแต้ม + นับครั้ง + ถ้าครบเพดาน → เฉลย
+function tfHandleDeduceMistake(step, choiceLabel, errMsg) {
+  if (!session) { showError(errMsg); return; }   // โหมดค้นหาอิสระ: ไม่คิดคะแนน (พฤติกรรมเดิม)
+  recordMistake(choiceLabel, errMsg);             // นับ currentWordMistakes + log สถิติรายวัน
+  session.currentWordDeduction = (session.currentWordDeduction || 0) + TF_SCORE.deductPerWrong(step);
+  session.combo = 0;                              // คอมโบขาดทันทีที่กดผิด
+  if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
+  if (TF_SCORE.reachedWrongLimit(session.currentWordMistakes)) {
+    tfForceRevealZero();                          // ครบ 3 → 0 แต้ม + เฉลย
+  } else {
+    showError(errMsg);                            // ยังเล่นต่อได้
+  }
+}
+
+// ครบ 3 ครั้ง: 0 แต้ม + เฉลย · พยางค์เดียว→คำใหม่ · หลายพยางค์→กลับจอรวมพยางค์
+function tfForceRevealZero() {
+  var entry = session.words[session.index];
+  if (tfCurWordIsMulti()) {
+    var k = S.selectedSyl;
+    var syl = (S.syllables && S.syllables[k]) || entry.word;
+    if (session.scoredSyls) session.scoredSyls[k] = true;   // พยางค์นี้ 0 แต้ม
+    session.curWordAllFirstTry = false;
+    session.combo = 0;
+    var sct = computeTone(syl);
+    tfShowRevealOverlay({ word: syl, zh: entry.zh, readingTH: syl }, sct, { sylIdx: k, sylTone: sct });
+    return;
+  }
+  session.currentWordScore = 0;
+  session.currentWordFirstTry = false;
+  session.currentWordScored = true;
+  session.combo = 0;
+  var ct = computeTone(entry.word);
+  tfShowRevealOverlay(entry, ct, {});
+}
+
+// overlay เฉลยเมื่อกดมั่วครบ 3 ครั้ง (ข้อความน้องมีนา)
+function tfShowRevealOverlay(entry, correctTone, opts) {
+  opts = opts || {};
+  var old = document.getElementById('tf-reveal-ov');
+  if (old) old.remove();
+  var tl = (typeof TONES !== 'undefined' && TONES[correctTone]) ? TONES[correctTone] : {};
+  var toneTxt = tl.zh || ('第 ' + correctTone + ' 聲');
+  var toneColor = tl.color || '#8B6310';
+  var isSyl = (opts.sylIdx != null);
+  var div = document.createElement('div');
+  div.id = 'tf-reveal-ov';
+  div.className = 'tf-error-overlay';
+  div.innerHTML =
+    '<div class="tf-error-box tf-reveal-box">' +
+      '<div class="tf-reveal-title">💪 這個' + (isSyl ? '音節' : '字') + '有點挑戰，我們再加油！</div>' +
+      '<div class="tf-reveal-sub">米娜陪你看答案～先記起來，下次我們一起變厲害！</div>' +
+      '<div class="tf-reveal-word">' + entry.word + '</div>' +
+      '<div class="tf-reveal-zh">' + (entry.zh || '') + '　<span class="th">' + (entry.readingTH || '') + '</span></div>' +
+      '<div class="tf-reveal-answer" style="color:' + toneColor + ';border-color:' + toneColor + '55;background:' + toneColor + '14;">正確聲調：' + toneTxt + '</div>' +
+      '<button class="tf-error-close" id="tf-reveal-next">' + (isSyl ? '學會了，回音節總覽 →' : '學會了，我們去下一個 →') + '</button>' +
+    '</div>';
+  document.body.appendChild(div);
+  var btn = document.getElementById('tf-reveal-next');
+  if (btn) btn.addEventListener('click', function () {
+    div.remove();
+    if (isSyl) tfReturnToOverviewAfterSyl(opts.sylIdx, opts.sylTone);
+    else tfCommitWordAndAdvance({ forced: true });
+  });
+}
+
+// กลับจอรวมพยางค์ พร้อมบันทึกผลพยางค์ที่เพิ่งเฉลย
+function tfReturnToOverviewAfterSyl(idx, tone) {
+  var results = S.sylResults || {};
+  results[idx] = { tone: tone };
+  var parentWord = S.parentWord || (S.syllables ? S.syllables.join('') : S.word);
+  S = { word: parentWord, step: 'overview', path: [parentWord], tone: null, syllables: S.syllables, selectedSyl: idx, sylResults: results };
+  hist = hist.slice(0, histPos + 1);
+  hist.push(S); histPos++;
+  render();
+}
+
+// บันทึกผลคำปัจจุบันลง results แล้วไปคำถัดไป/สรุป
+function tfCommitWordAndAdvance(opts) {
+  opts = opts || {};
+  var entry = session.words[session.index];
+  var tone = (S && S.tone != null) ? S.tone : computeTone(entry.word);
+  var mistakes = session.currentWordMistakes || 0;
+  var isMulti = tfCurWordIsMulti();
+  // หลายพยางค์: นับ firstTry เฉพาะเมื่อทำครบทุกพยางค์ + ทุกพยางค์ถูกครั้งแรก (กันกด "ต่อ" ข้ามพยางค์แล้วได้ perfect ฟรี)
+  var sylCount = (S && S.syllables && S.syllables.length) || (entry.readingTH ? entry.readingTH.split('-').length : 1);
+  var scoredCount = session.scoredSyls ? Object.keys(session.scoredSyls).length : 0;
+  var allScored = scoredCount >= sylCount;
+  var firstTry = isMulti ? (!!session.curWordAllFirstTry && allScored) : !!session.currentWordFirstTry;
+  // คอมโบสำหรับคำหลายพยางค์: คิดตอนจบคำ (พยางค์เดียวคิดไปแล้วใน tfScoreFirstTry)
+  if (isMulti && !opts.forced) {
+    if (firstTry) { session.combo = (session.combo || 0) + 1; if (session.combo > (session.maxCombo || 0)) session.maxCombo = session.combo; }
+    else session.combo = 0;
+  }
+  session.results.push({
+    entry: entry,
+    tone: tone,
+    mistakes: mistakes,
+    initialGuess: session.initialGuess,
+    finalAnswer: session.finalAnswer,
+    // ── ฟิลด์คะแนน ──
+    score: session.currentWordScore || 0,
+    firstTry: firstTry,
+    golden: !!session.currentWordGolden,
+    forced: !!opts.forced,
+    needReview: !!opts.forced || mistakes > 0 || !firstTry
+  });
+  session.index++;
+  tfResetWordScoring();
+  session.initialGuess = undefined;
+  session.finalAnswer = undefined;
+  session.currentWordGolden = false;
+  if (session.index >= session.words.length) {
+    tfGoToSummary();
+  } else {
+    tfSetupNextWord();
+  }
+}
+
+// ตั้งค่าคำถัดไป (+ สุ่มคำทอง สเตจ 2)
+function tfSetupNextWord() {
+  var nx = session.words[session.index];
+  randomEntry = nx;
+  var w = nx.word;
+  session.currentWordGolden = tfRollGolden();
+  if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
+    S = { word: w, step: 'overview', path: [w], tone: null, syllables: nx.readingTH.split('-'), selectedSyl: null };
+  } else {
+    S = { word: w, step: 'session-guess', path: [w], tone: null };
+  }
+  hist.push(S); histPos++;
+  render();
+}
+
+// เข้าหน้าสรุป + คิดโบนัสจบชุด/perfect (ครั้งเดียว)
+function tfGoToSummary() {
+  tfApplySessionBonus();
+  S = { word: '', step: 'session-summary', path: [], tone: null };
+  hist.push({ step: 'session-summary' }); histPos++;
+  if (typeof maybeShowCoursePromo === 'function') maybeShowCoursePromo();
+  render();
+}
+
+// คิดโบนัสจบชุด + perfect + อัปเดต Daily Streak (กันคิดซ้ำด้วย sessionScored)
+function tfApplySessionBonus() {
+  if (!session || session.sessionScored) return;
+  var total = session.results.length;
+  var perfectCount = session.results.filter(function (r) { return r.firstTry; }).length;
+  var bonus = TF_SCORE.sessionBonus(total, perfectCount);
+  var isPerfect = (total > 0 && perfectCount === total && !session.hadSkip);
+  if (bonus > 0) {
+    session.score += bonus;
+    session.bonusAwarded = bonus;
+    session.isPerfect = isPerfect;
+    setTimeout(function () {
+      tfScorePop(bonus, { big: true, confetti: true });
+    }, 200);
+  }
+  // สเตจ 2: อัปเดต Daily Streak + เป้ารายวัน (เฉพาะรอบที่เล่นจบจริง มีคำ)
+  if (total > 0) {
+    try { session.streakResult = tfApplyStreakOnSetComplete(); } catch (e) { session.streakResult = null; }
+    // สเตจ 3: อัปเดต stats + เช็กปลดแบดจ์
+    try {
+      var streakNow = (session.streakResult && session.streakResult.state && session.streakResult.state.streak) || 0;
+      session.newBadges = tfUpdateBadgesOnSetComplete({
+        words: total, isPerfect: isPerfect, maxCombo: session.maxCombo || 0, streak: streakNow
+      });
+    } catch (e) { session.newBadges = []; }
+  }
+  session.sessionScored = true;
+}
+
 function act(fn) {
   var id = 'a'+(++_actId);
   _acts[id] = fn;
@@ -2528,6 +3237,10 @@ function navigate(nextStep, label, toneNum) {
   // Save to history
   hist.push({ step:S.step, path:S.path.slice(), tone:S.tone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults });
   histPos = hist.length-1;
+  // สเตจ 1: ผ่าน推導มาถึงผลลัพธ์ → ให้คะแนนฐาน 50 หักตามที่กดผิด (กันให้คะแนนซ้ำด้วย currentWordScored)
+  if (nextStep === 'result' && session && !session.currentWordScored) {
+    tfScoreDeduce();
+  }
   render();
 }
 
@@ -2696,7 +3409,7 @@ function validate(choiceKey, choiceLabel) {
   if (S.step === 's2a_low' || S.step === 's2a_mid' || S.step === 's2a_hi') {
     var actualMark = TH.getToneMark(w);
     if (actualMark && choiceKey !== actualMark) {
-      return '「'+w+'」上面的聲調符號是「'+actualMark+'」，好像選錯了喔～\n再看一下字上面的符號是哪個吧！';
+      return '「'+w+'」上面的聲調符號是「'+actualMark+'」喔～\n我們再看一下字上面的符號是哪個吧！';
     }
   }
 
@@ -2781,7 +3494,7 @@ function validate(choiceKey, choiceLabel) {
 
 function tryNavigate(choiceKey, choiceLabel, nextStep, toneNum) {
   var err = validate(choiceKey, choiceLabel);
-  if (err) { showError(err); return; }
+  if (err) { tfHandleDeduceMistake(S.step, choiceLabel, err); return; }
   if (toneNum !== undefined) navigate(nextStep, choiceLabel, toneNum);
   else navigate(nextStep, choiceLabel);
 }
@@ -2799,9 +3512,14 @@ function render() {
   if (S.word && S.step !== 'input' && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
     var counterHtml = (session && session.words && session.words.length)
-      ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字</div>'
+      ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字'
+        + '<span id="tf-score-hud" class="tf-score-hud">🏆 ' + (session.score || 0) + ' 分</span>'
+        + (session.combo >= 3 ? '<span class="tf-combo-hud">🔥 ×' + TF_SCORE.comboMultiplier(session.combo) + '</span>' : '')
+        + (session.currentWordGolden ? '<span class="tf-golden-hud">✨ 黃金題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
+        + '</div>'
       : '';
-    banner.innerHTML = counterHtml + '<div class="tf-banner-word">' + S.word + '</div>';
+    var goldWord = (session && session.currentWordGolden) ? ' tf-banner-word-gold' : '';
+    banner.innerHTML = counterHtml + '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>';
     document.getElementById('tf-hint').style.display = 'none';
   } else {
     banner.style.display = 'none';
@@ -3203,19 +3921,33 @@ function stepSessionSummary() {
   var results = session.results;
   var total = results.length;
   var perfectCount = results.filter(function(r){ return r.mistakes === 0; }).length;
-  gtag('event', 'tone_finder_complete', {score: perfectCount, total: total});
+  // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
+  var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
+  gtag('event', 'tone_finder_complete', {score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
   var rows = results.map(function(r, i){
     var tone = r.tone != null ? r.tone : computeTone(r.entry.word);
     var tl = TONES[tone] || {};
     var ok = r.mistakes === 0;
+    var resultTxt = r.forced ? '📌 再複習' : (ok ? '✓' : '💪 ×'+r.mistakes);
     return '<tr>' +
       '<td style="color:#bbb;font-size:12px;width:24px;">'+(i+1)+'</td>' +
       '<td class="tf-sum-th">'+r.entry.word+'</td>' +
       '<td>'+r.entry.zh+'</td>' +
       '<td style="color:'+(tl.color||'#666')+'">'+(tl.zh||'—')+'</td>' +
-      '<td style="color:'+(ok?'#7ec87e':'#ff7c7c')+';font-weight:700">'+(ok?'✓':'✗ ×'+r.mistakes)+'</td>' +
+      '<td style="color:'+(ok?'#7ec87e':'#ff7c7c')+';font-weight:700">'+resultTxt+'</td>' +
+      '<td style="color:#8B6310;font-weight:700;text-align:right;">'+(r.score||0)+'</td>' +
     '</tr>';
   }).join('');
+  // ── สเตจ 1: สรุปคะแนน ──
+  var totalScore = session.score || 0;
+  var bonusAwarded = session.bonusAwarded || 0;
+  var isPerfect = !!session.isPerfect;
+  var scoreSummary =
+    '<div class="tf-score-summary">' +
+      '<div class="tf-score-summary-total">🏆 ' + totalScore + ' <span>分</span></div>' +
+      (bonusAwarded ? '<div class="tf-score-summary-bonus">' +
+        (isPerfect ? '🎉 完美通關獎勵 ' : '✅ 完成獎勵 ') + '+' + bonusAwarded + '</div>' : '') +
+    '</div>';
   // analysis
   var wrongWords = results.filter(function(r){ return r.mistakes > 0; });
   var toneCounts = {};
@@ -3228,7 +3960,7 @@ function stepSessionSummary() {
   var analysisLines = [];
   analysisLines.push('<p>📝 共練習 <strong>'+total+'</strong> 個單字。</p>');
   analysisLines.push('<p>✅ 已正確（一次答對）：'+(correctWords.length ? correctWords.map(function(r){ return r.entry.word+'（'+r.entry.zh+'）'; }).join('、') : '—')+'</p>');
-  analysisLines.push('<p>❌ 答錯的字：'+(wrongWords.length ? wrongWords.map(function(r){ var ct=r.tone!=null?r.tone:computeTone(r.entry.word); return r.entry.word+'（'+r.entry.zh+'）→ 正確：'+(TONES[ct]?TONES[ct].zh:'—'); }).join('、') : '無，全部答對！🎉')+'</p>');
+  analysisLines.push('<p>📌 需要再複習的字：'+(wrongWords.length ? wrongWords.map(function(r){ var ct=r.tone!=null?r.tone:computeTone(r.entry.word); return r.entry.word+'（'+r.entry.zh+'）→ 正確：'+(TONES[ct]?TONES[ct].zh:'—'); }).join('、') : '無，全部答對！🎉')+'</p>');
   if (wrongWords.length) {
     var needTones = {};
     wrongWords.forEach(function(r){ var t=r.tone!=null?r.tone:computeTone(r.entry.word); if(t) needTones[t]=(needTones[t]||0)+1; });
@@ -3237,10 +3969,42 @@ function stepSessionSummary() {
   } else {
     analysisLines.push('<p>💪 需要加強：無，表現很好！</p>');
   }
+  // ── สเตจ 2/3: น้องมีนา + Daily Streak + เป้ารายวัน + แบดจ์ ──
+  var sr = session.streakResult || null;
+  var ev = sr && sr.events || {};
+  var stState = sr && sr.state || tfLoadStreak();
+  var minaKey = isPerfect ? 'perfect' : (perfectCount / Math.max(1,total) >= 0.6 ? 'greatSet' : 'goodSet');
+  var minaMsg = tfMinaSay(minaKey);
+  if (ev.goalMetToday) minaMsg = tfMinaSay('goalMet', { n: stState.streak });
+  if (ev.freezeUsed) minaMsg = tfMinaSay('freezeUsed');
+  var minaBlock = tfMinaBubble(minaMsg, 'big');
+
+  var streakBlock =
+    '<div class="tf-streak-row">' +
+      '<span class="tf-streak-chip">🔥 連續 ' + (stState.streak || 0) + ' 天</span>' +
+      '<span class="tf-streak-chip">🛡️ 護盾 ×' + (stState.freezes || 0) + '</span>' +
+      '<span class="tf-streak-chip ' + (ev.goalMetToday ? 'done' : '') + '">🎯 今日目標 ' + (ev.goalMetToday ? '✓ 達標' : ((stState.setsToday||0) + '/' + TF_GAME_CFG.DAILY_GOAL_SETS)) + '</span>' +
+    '</div>';
+
+  var badgeBlock = '';
+  if (session.newBadges && session.newBadges.length) {
+    badgeBlock = '<div class="tf-badge-unlock"><div class="tf-badge-unlock-title">🎖️ 解鎖新徽章！</div><div class="tf-badge-unlock-grid">' +
+      session.newBadges.map(function (b) {
+        return '<div class="tf-badge-card"><div class="tf-badge-emoji">' + b.emoji + '</div>' +
+          '<div class="tf-badge-zh">' + b.zh + '</div>' +
+          '<div class="tf-badge-th">' + b.th + '</div>' +
+          '<div class="tf-badge-need">' + b.need + '</div></div>';
+      }).join('') + '</div></div>';
+  }
+
   return '<div class="tf-session-summary">' +
+    minaBlock +
+    scoreSummary +
+    streakBlock +
+    badgeBlock +
     '<div class="tf-sum-score">'+perfectCount+' / '+total+'</div>' +
-    '<div class="tf-sum-score-label">'+(perfectCount===total?'全部一次答對！🎉':'繼續加油！')+'</div>' +
-    '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th></tr></thead>' +
+    '<div class="tf-sum-score-label">'+(perfectCount===total?'全部一次答對！太厲害了 🎉':'我們一起繼續加油！💪')+'</div>' +
+    '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
     '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
@@ -3378,8 +4142,19 @@ function stepLevelSelect() {
     { id:1, emoji:'🌱', label:'初級', sub:'單音節・聲調基礎' },
     { id:2, emoji:'🌿', label:'中級', sub:'多音節・日常用語' },
   ];
+  // แถบสตรีค + แบดจ์ (สเตจ 2/3)
+  var st = tfLoadStreak();
+  var alive = TF_STREAK.isAlive(st, todayStr());
+  var bdCount = Object.keys((tfLoadBadges().unlocked) || {}).length;
+  var streakBar =
+    '<div class="tf-home-streak">' +
+      '<span class="tf-streak-chip">🔥 連續 ' + (alive ? (st.streak || 0) : 0) + ' 天</span>' +
+      '<span class="tf-streak-chip">🛡️ ×' + (st.freezes || 0) + '</span>' +
+      '<button class="tf-streak-chip tf-badge-link" onclick="TF.showBadges()">🎖️ 我的徽章 ' + bdCount + '/' + TF_BADGES_DEF.length + '</button>' +
+    '</div>';
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">選擇等級</div>' +
+    streakBar +
     '<button class="tf-level-btn tf-alpha-entry" onclick="TF.openAlpha()">' +
       '<span class="tf-level-emoji">🔤</span>' +
       '<span class="tf-level-label">字母練習區</span>' +
@@ -3456,7 +4231,17 @@ function startSetSession(words) {
   }).filter(Boolean);
   if (!entries.length) return;
   entries = entries.slice().sort(function(){ return Math.random() - 0.5; });  // สุ่มลำดับใหม่ทุกครั้ง
-  session = { words: entries, index: 0, results: [], currentWordMistakes: 0 };
+  session = {
+    words: entries, index: 0, results: [], currentWordMistakes: 0,
+    // ── สเตจ 1: ฟิลด์คะแนน ──
+    score: 0, combo: 0,
+    currentWordDeduction: 0, currentWordScored: false,
+    currentWordFirstTry: false, currentWordScore: 0,
+    sessionScored: false,
+    // ── สเตจ 2 + หลายพยางค์ ──
+    curWordAllFirstTry: true, scoredSyls: {},
+    currentWordGolden: tfRollGolden()
+  };
   gtag('event', 'tone_finder_start', {mode: selectedCategory || 'ทั้งหมด'});
   hist = []; histPos = -1;
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
@@ -3530,6 +4315,7 @@ function stepCatSelect() {
   var levelLabel = {1:'初級',2:'中級'}[selectedLevel] || '';
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">'+levelLabel+' — 選擇主題</div>' +
+    '<button class="tf-adaptive-btn" onclick="TF.startAdaptive()">🎯 智慧複習（依你的弱點挑字）</button>' +
     '<div class="tf-cat-grid">' +
       cats.map(function(c){
         return '<button class="tf-cat-btn" onclick="TF.selectCategory(\''+c.th+'\')">'+c.zh+'</button>';
@@ -3785,8 +4571,12 @@ function stepSessionGuess() {
       var correctTone = computeTone(word);              // computeTone คืน 1–5 (null ถ้าคำนวณไม่ได้)
       if (correctTone && captureN === correctTone) {
         S.tone = correctTone;                            // ⚠️ ต้องตั้งก่อน! goToResult ใช้ S.tone
+        // กันโกง: ถ้าเคยเดาผิดในคำ/พยางค์นี้แล้ว (เช่นปิด popup แล้วเดาใหม่) → ไม่นับ "ถูกครั้งแรก" คิดแบบ推導
+        if (session && session.curWordWrongGuess) tfScoreDeduce();
+        else tfScoreFirstTry();                          // สเตจ 1: ถูกครั้งแรก +100 (×คอมโบ)
         goToResult(captureN);
       } else {
+        if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // เดาผิด → ตัดสิทธิ์ first-try + คอมโบขาด
         showStartInflection(navigateToInflection);       // fail-safe: พฤติกรรมเดิม
       }
     });
@@ -3795,6 +4585,7 @@ function stepSessionGuess() {
 
   var dontKnowAct = act(function(){
     session.initialGuess = 0;
+    if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // 🤷 = เข้า推導 ไม่นับ first-try
     showStartInflection(navigateToInflection);
   });
 
@@ -3924,6 +4715,8 @@ function stepOverview() {
     var capChosen = chosen;
     var analyzeAct = act(function() {
       hist = hist.slice(0, histPos+1);
+      // รีเซ็ตตัวนับกดผิดรายพยางค์ (เพดาน 3 ครั้ง + การหัก คิดแยกต่อพยางค์)
+      if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.curWordWrongGuess = false; }
       // ในเกม (มี session) ใช้ flow ทาย; ในโหมดเสิร์ช (ไม่มี session) ใช้ flow วิเคราะห์อิสระ s1 — กันหน้าว่าง
       var sylStep = session ? 'session-guess' : 's1';
       var ns = { word: capChosen, step: sylStep, path: [capChosen], tone: null, syllables: syls, selectedSyl: capSel, sylResults: results, parentWord: S.word };
@@ -3968,7 +4761,7 @@ function stepOverview() {
     detailHtml +
     summaryHtml +
     '<div style="text-align:center;margin-top:20px;">' +
-      '<button class="tf-result-restart" onclick="TF.nextWord()" style="margin-right:10px;">下一個字 →</button>' +
+      '<button class="tf-result-restart" onclick="TF.nextWord()" style="margin-right:10px;">太棒了，我們繼續 →</button>' +
       '<button class="tf-result-restart" onclick="TF.reselectTopic()">重新選主題</button>' +
     '</div>';
 }
@@ -4005,8 +4798,8 @@ function stepResult() {
 
     // Performance badge
     var badge = noMistakes
-      ? '<span class="result-v2-session-badge" style="color:#4a9a4a;background:rgba(74,154,74,0.12);">✓ 推導過程一次答對！</span>'
-      : '<span class="result-v2-session-badge" style="color:#cc4444;background:rgba(204,68,68,0.12);">✗ 推導過程選錯 '+session.currentWordMistakes+' 次</span>';
+      ? '<span class="result-v2-session-badge" style="color:#4a9a4a;background:rgba(74,154,74,0.12);">🎉 一次就推導成功，太強了！</span>'
+      : '<span class="result-v2-session-badge" style="color:#c46a00;background:rgba(196,106,0,0.12);">🎉 終於找到答案了，很棒喔捏！</span>';
 
     // Guess comparison row
     var igTone = initialGuess && initialGuess !== 0 ? TONES[initialGuess] : null;
@@ -4018,7 +4811,7 @@ function stepResult() {
 
     var guessRow = '<div class="result-v2-guess-row">'+
       '<div class="result-v2-guess-item">'+
-        '<div class="result-v2-guess-label">初始猜測</div>'+
+        '<div class="result-v2-guess-label">一開始的選擇</div>'+
         '<div class="result-v2-guess-val" style="color:'+(igTone ? igTone.color : '#aaa')+';">'+igLabel+'</div>'+
       '</div>'+
       '<div class="result-v2-guess-item">'+
@@ -4026,8 +4819,8 @@ function stepResult() {
         '<div class="result-v2-guess-val" style="color:'+(faTone ? faTone.color : '#aaa')+';">'+faLabel+'</div>'+
       '</div>'+
       '<div class="result-v2-guess-item">'+
-        '<div class="result-v2-guess-label">猜測結果</div>'+
-        '<div class="result-v2-guess-val" style="color:'+(guessCorrect?'#4a9a4a':'#cc4444')+'">'+(guessCorrect?'✓ 猜對了！':'✗ 猜錯了')+'</div>'+
+        '<div class="result-v2-guess-label">結果</div>'+
+        '<div class="result-v2-guess-val" style="color:'+(guessCorrect?'#4a9a4a':'#c46a00')+'">'+(guessCorrect?'🎉 答對了！':'💪 我們學起來了！')+'</div>'+
       '</div>'+
     '</div>';
 
@@ -4057,7 +4850,7 @@ function stepResult() {
   }
 
   var isLastSessionWord = session && (session.index + 1 >= session.words.length);
-  var nextBtnLabel = session ? (isLastSessionWord ? '查看成績 →' : '下一個字 →') : '分析新單字';
+  var nextBtnLabel = session ? (isLastSessionWord ? '來看看我們的成果吧 🎉' : '太棒了，我們繼續 →') : '分析新單字';
 
   return '<div class="result-v2">'+
     '<div class="result-v2-word">'+S.word+'</div>'+
@@ -4110,9 +4903,9 @@ function showError(msg) {
   div.className = 'tf-error-overlay';
   div.innerHTML =
     '<div class="tf-error-box">' +
-      '<div class="tf-error-title">🤔 好像選錯囉</div>' +
+      '<div class="tf-error-title">🤔 好像還不對喔，我們再確認一下</div>' +
       '<div class="tf-error-msg">' + msg.replace(/\n/g,'<br>') + '</div>' +
-      '<button class="tf-error-close" onclick="document.getElementById(\'tf-err\').remove()">確認，再試一次</button>' +
+      '<button class="tf-error-close" onclick="document.getElementById(\'tf-err\').remove()">好，我們再試一次 💪</button>' +
     '</div>';
   document.body.appendChild(div);
 }
@@ -4634,6 +5427,48 @@ var TF = {
     var sets = getSets(selectedCategory);
     startSetSession(sets[i] || sets[0] || []);
   },
+  // 🎖️ เปิดสมุดสะสมแบดจ์
+  showBadges: function() {
+    var old = document.getElementById('tf-badges-ov');
+    if (old) old.remove();
+    var data = tfLoadBadges();
+    var unlocked = data.unlocked || {};
+    var tierName = {1:'🌾 稻米成長（連續登入）', 2:'🍚 稻米品種（成就解鎖）'};
+    var byTier = {};
+    TF_BADGES_DEF.forEach(function(b){ (byTier[b.tier] = byTier[b.tier] || []).push(b); });
+    var body = Object.keys(byTier).map(function(t){
+      var cards = byTier[t].map(function(b){
+        var got = !!unlocked[b.id];
+        return '<div class="tf-badge-card' + (got ? '' : ' locked') + '">' +
+          '<div class="tf-badge-emoji">' + (got ? b.emoji : '🔒') + '</div>' +
+          '<div class="tf-badge-zh">' + b.zh + '</div>' +
+          '<div class="tf-badge-th">' + (got ? b.th : '———') + '</div>' +
+          '<div class="tf-badge-need">' + b.need + '</div></div>';
+      }).join('');
+      return '<div class="tf-badge-tier-title">' + (tierName[t]||'') + '</div><div class="tf-badge-unlock-grid">' + cards + '</div>';
+    }).join('');
+    var div = document.createElement('div');
+    div.id = 'tf-badges-ov';
+    div.className = 'tf-tip-overlay';
+    div.onclick = function(e){ if (e.target === div) div.remove(); };
+    div.innerHTML = '<div class="tf-tip-box" style="max-width:420px;">' +
+      '<div class="tf-tip-header"><span class="tf-tip-header-title" style="color:#000;">🎖️ 我的徽章</span>' +
+      '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-badges-ov\').remove()">✕</button></div>' +
+      body +
+      '<div style="font-size:11px;color:#a08a5a;margin-top:12px;line-height:1.6;">每枚徽章都有泰國米食文化小知識，集滿解鎖更多 🌾（圖示為暫定，之後會換成手繪版）</div>' +
+    '</div>';
+    document.body.appendChild(div);
+  },
+  // 🎯 โหมดฝึกแบบปรับระดับ (Adaptive 75/25) — เลือกคำจากจุดอ่อนผู้เล่น (ไม่พร้อม → สุ่ม)
+  startAdaptive: function() {
+    selectedCategory = 'ทั้งหมด';
+    var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
+    var n = (window.TF_ADAPTIVE && window.TF_ADAPTIVE.roundSize) || 5;
+    var words = (window.TF_ADAPTIVE && window.TF_ADAPTIVE.pickWords)
+      ? window.TF_ADAPTIVE.pickWords(pool, n)
+      : pool.sort(function(){ return Math.random()-0.5; }).slice(0, n);
+    startSetSession(words);
+  },
   selectNounSub: function(k) {
     selectedCategory = k;
     S = { word:'', step:'set-select', path:[], tone:null };
@@ -4641,24 +5476,16 @@ var TF = {
   },
   markKnown: function() {
     if (!session) return;
+    session.hadSkip = true;            // ข้ามคำ → รอบนี้ไม่นับ perfect
     session.index++;
-    session.currentWordMistakes = 0;
+    tfResetWordScoring();
     session.initialGuess = undefined;
     session.finalAnswer = undefined;
+    session.currentWordGolden = false;
     if (session.index >= session.words.length) {
-      S = { word:'', step:'session-summary', path:[], tone:null };
-      hist.push({ step:'session-summary' }); histPos++;
-      maybeShowCoursePromo();
-      render();
+      tfGoToSummary();
     } else {
-      var entry = session.words[session.index];
-      randomEntry = entry; var w = entry.word;
-      if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
-        S = { word:w, step:'overview', path:[w], tone:null, syllables:entry.readingTH.split('-'), selectedSyl:null };
-      } else {
-        S = { word:w, step:'session-guess', path:[w], tone:null };
-      }
-      hist.push(S); histPos++; render();
+      tfSetupNextWord();
     }
   },
   openAdvanced: function() {
@@ -4766,35 +5593,8 @@ var TF = {
         var _gaSelectedName = (TONES[_gaFinal] && TONES[_gaFinal].zh) || String(_gaFinal);
         gtag('event', 'tone_answer_wrong', {word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName});
       }
-      session.results.push({
-        entry: _gaEntry,
-        tone: _gaTone,
-        mistakes: _gaMistakes,
-        initialGuess: session.initialGuess,
-        finalAnswer: session.finalAnswer
-      });
-      session.index++;
-      session.currentWordMistakes = 0;
-      session.initialGuess = undefined;
-      session.finalAnswer = undefined;
-      if (session.index >= session.words.length) {
-        S = { word:'', step:'session-summary', path:[], tone:null };
-        hist.push({ step:'session-summary' }); histPos++;
-        maybeShowCoursePromo();
-        render();
-      } else {
-        var entry = session.words[session.index];
-        randomEntry = entry;
-        var w = entry.word;
-        if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
-          var syls = entry.readingTH.split('-');
-          S = { word:w, step:'overview', path:[w], tone:null, syllables:syls, selectedSyl:null };
-        } else {
-          S = { word:w, step:'session-guess', path:[w], tone:null };
-        }
-        hist.push(S); histPos++;
-        render();
-      }
+      // สเตจ 1: บันทึกผล (พร้อมคะแนน) + ไปคำถัดไป/สรุป + คิดโบนัสจบชุด
+      tfCommitWordAndAdvance({ forced: false });
     } else {
       TF.selectCategory(selectedCategory || 'ทั้งหมด');
     }
