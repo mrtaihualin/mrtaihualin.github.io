@@ -929,7 +929,7 @@ if (typeof openYTVideoModal === 'undefined') {
 // ===== 🚀 FB Posts Modal =====
 if (typeof openFBPostModal === 'undefined') {
   var _fbDetailPostId = null;
-  var SITE_URL = 'https://mrtaihualin.github.io';
+  var SITE_URL = 'https://mrtaihualin.com';
 
   window.openFBPostModal = function() { openModal('modal-fbposts'); showFBList(); };
 
@@ -1127,7 +1127,7 @@ if (typeof openSSModal === 'undefined') {
 // ===== 🔗 Share Popup =====
 if (typeof openSharePopup === 'undefined') {
   window.openSharePopup = function(title, preview) {
-    var SITE_URL = window.SITE_URL || 'https://mrtaihualin.github.io';
+    var SITE_URL = window.SITE_URL || 'https://mrtaihualin.com';
     var text = '我在「泰華眼裡的泰語教學」發現了一個很實用的泰語學習資源！\n\n'
       + '📌 ' + title + '\n'
       + (preview ? preview + '\n\n' : '\n')

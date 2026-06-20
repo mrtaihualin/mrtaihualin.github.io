@@ -12,7 +12,8 @@
 <!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=3"></script>
-<script defer src="supabase-auth.js?v=6"></script>
+<script defer src="supabase-auth.js?v=7"></script>
+<script defer src="progress-sync.js?v=1"></script>
 <script defer src="adaptive.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,18 +22,18 @@
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <title>泰語聲調搜尋 — 泰華眼裡的泰語教學</title>
 <meta name="description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
-<link rel="canonical" href="https://mrtaihualin.github.io/tone-finder.html">
+<link rel="canonical" href="https://mrtaihualin.com/tone-finder.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="泰華眼裡的泰語教學">
 <meta property="og:locale" content="zh_TW">
 <meta property="og:title" content="泰語聲調搜尋練習 — 泰華眼裡的泰語教學">
 <meta property="og:description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
-<meta property="og:url" content="https://mrtaihualin.github.io/tone-finder.html">
-<meta property="og:image" content="https://mrtaihualin.github.io/assets/share-card.png">
+<meta property="og:url" content="https://mrtaihualin.com/tone-finder.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="泰語聲調搜尋練習 — 泰華眼裡的泰語教學">
 <meta name="twitter:description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
-<meta name="twitter:image" content="https://mrtaihualin.github.io/assets/share-card.png">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Noto+Sans+Thai:wght@400;500;700&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=8">
 <style>
@@ -626,6 +627,77 @@
   /* 自行搜尋 search — neutral warm */
   .tf-lvl-search { background: linear-gradient(180deg,#E0D8C4 0%,#FFFFFF 100%); border-color: rgba(90,62,10,0.22); }
   .tf-lvl-search:hover { border-color: rgba(90,62,10,0.40); background: linear-gradient(180deg,#D4CAAE 0%,#FAF8F4 100%); }
+
+  /* ══ 高級 MODE CSS ══════════════════════════════════════════ */
+  /* หน้าเลือกหมวด */
+  .adv-cat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 16px;
+  }
+  .adv-cat-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; padding: 16px 8px; border: 1.5px solid rgba(216,90,48,0.35);
+    border-radius: 14px; background: linear-gradient(180deg,#FDF6F3,#fff);
+    cursor: pointer; transition: all 0.18s; font-family: 'Noto Sans TC', sans-serif;
+  }
+  .adv-cat-btn:hover { border-color: rgba(216,90,48,0.7); background: linear-gradient(180deg,#F4C8B0,#FDF6F3); }
+  .adv-cat-emoji { font-size: 26px; line-height: 1; }
+  .adv-cat-label { font-size: 14px; font-weight: 700; color: #993C1D; }
+  .adv-cat-sub   { font-size: 11px; color: #b05a3a; }
+  /* หัวข้อหมวด */
+  .adv-title { font-family:'Noto Sans TC',sans-serif; font-size:17px; font-weight:700; color:#993C1D; text-align:center; margin-bottom:4px; }
+  .adv-subtitle { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#b05a3a; text-align:center; margin-bottom:14px; }
+  /* การ์ดประโยค */
+  .adv-sent-list { display:flex; flex-direction:column; gap:8px; margin:0 0 14px; }
+  .adv-sent-btn {
+    display:flex; flex-direction:column; gap:3px; padding:13px 14px;
+    border:1.5px solid rgba(216,90,48,0.25); border-radius:12px;
+    background:#fff; cursor:pointer; text-align:left; transition:all 0.15s;
+  }
+  .adv-sent-btn:hover { border-color:rgba(216,90,48,0.6); background:#FDF6F3; }
+  .adv-sent-th  { font-family:'Sarabun',sans-serif; font-size:18px; color:#5a3e0a; font-weight:700; }
+  .adv-sent-zh  { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#8B6310; }
+  .adv-sent-words { font-size:11px; color:#b05a3a; font-family:'Sarabun',sans-serif; }
+  /* ปุ่มสุ่ม */
+  .adv-random-btn {
+    width:100%; padding:12px; border:2px dashed rgba(216,90,48,0.5);
+    border-radius:12px; background:linear-gradient(180deg,#FDF6F3,#fff);
+    color:#993C1D; font-family:'Noto Sans TC',sans-serif; font-weight:700; font-size:14px;
+    cursor:pointer; margin-bottom:10px; transition:all 0.15s;
+  }
+  .adv-random-btn:hover { background:linear-gradient(180deg,#F4C8B0,#FDF6F3); border-color:rgba(216,90,48,0.8); }
+  /* banner ประโยคด้านบนขณะเล่น */
+  .adv-sent-banner {
+    background:linear-gradient(180deg,#FDF0E8,#fff); border:1px solid rgba(216,90,48,0.25);
+    border-radius:12px; padding:10px 14px; margin:0 0 12px; text-align:center;
+  }
+  .adv-sent-banner-full { font-family:'Sarabun',sans-serif; font-size:16px; line-height:1.8; color:#5a3e0a; }
+  .adv-sent-banner-full .adv-word-chip {
+    display:inline-block; padding:1px 6px; border-radius:6px; margin:0 1px;
+    border: 1.5px solid transparent; transition:all 0.2s;
+  }
+  .adv-sent-banner-full .adv-word-active { border-color:#D85A30; background:#FDE8DC; font-weight:700; }
+  .adv-sent-banner-full .adv-word-done   { border-color:rgba(100,180,100,0.6); background:#F0FBF0; color:#3a7a3a; }
+  .adv-sent-banner-zh { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#8B6310; margin-top:4px; }
+  /* progress bar ประโยค */
+  .adv-progress-bar { height:4px; border-radius:2px; background:#eee4cc; margin:8px 0 14px; }
+  .adv-progress-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#D85A30,#F4A76A); transition:width 0.3s; }
+  /* หน้าสรุปประโยค */
+  .adv-summary-box {
+    background:linear-gradient(180deg,#FDF6F3,#fff); border:1.5px solid rgba(216,90,48,0.3);
+    border-radius:16px; padding:18px 16px; margin:0 0 14px;
+  }
+  .adv-summary-title { font-family:'Noto Sans TC',sans-serif; font-size:15px; font-weight:700; color:#993C1D; text-align:center; margin-bottom:12px; }
+  .adv-summary-word-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(216,90,48,0.12); }
+  .adv-summary-word-row:last-child { border-bottom:none; }
+  .adv-summary-thai { font-family:'Sarabun',sans-serif; font-size:20px; color:#5a3e0a; font-weight:700; min-width:80px; }
+  .adv-summary-tone { font-size:13px; font-weight:700; min-width:52px; }
+  .adv-summary-result { font-size:18px; }
+  .adv-summary-zh { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#8B6310; flex:1; }
+  /* มาสคอตช้าง */
+  .adv-mascot { text-align:center; font-size:42px; margin:10px 0 4px; }
+  .adv-mascot-msg { text-align:center; font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#993C1D; font-weight:600; margin-bottom:14px; }
+  .adv-score-bonus { text-align:center; font-family:'Noto Sans TC',sans-serif; font-size:16px; font-weight:700; color:#8B6310; margin-bottom:8px; }
+  /* ══ END 高級 CSS ══════════════════════════════════════════ */
 
   /* ── 字母字卡 (Flashcards) ── */
   .afc-scene { perspective: 1000px; display:flex; justify-content:center; margin: 6px 0 14px; }
@@ -1409,12 +1481,15 @@
   }
   .result-v2-session-badge {
     display: inline-block;
-    padding: 6px 18px;
+    padding: 6px 16px;
     border-radius: 20px;
     font-family: 'Noto Serif TC', serif;
-    font-size: 14px;
+    /* บรรทัดเดียวเสมอ ย่อขนาดอักษรอัตโนมัติบนจอแคบ ไม่ตัดบรรทัด — LIN 2026-06-20 */
+    font-size: clamp(11px, 3.3vw, 14px);
     font-weight: 700;
     margin-bottom: 14px;
+    white-space: nowrap;
+    max-width: 100%;
   }
   .result-v2-guess-row {
     display: flex;
@@ -1536,6 +1611,55 @@
   }
   @keyframes tf-combo-pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
 
+  /* แบนเนอร์เขียว "เล่นฟรี" หน้าเลือกระดับ — LIN 2026-06-20 */
+  .tf-free-banner {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:linear-gradient(180deg,#E9F9ED,#D2F0D9);
+    border:1.5px solid #4caf50; border-radius:12px;
+    padding:11px 14px; margin:0 0 14px;
+    font-family:'Noto Sans TC',sans-serif; font-size:13.5px; font-weight:700; color:#1d7a36;
+    box-shadow:0 2px 8px rgba(76,175,80,0.15);
+  }
+  .tf-free-banner b { color:#15692c; }
+
+  /* แบนเนอร์ชาเลนจ์รายสัปดาห์ — LIN 2026-06-20 */
+  .tf-challenge-banner {
+    background:linear-gradient(180deg,#FFF6E6,#FDEBC8);
+    border:1.5px solid #E0B84A; border-radius:14px; padding:11px 14px; margin:0 0 14px;
+    font-family:'Noto Sans TC',sans-serif;
+  }
+  .tf-challenge-banner.done { background:linear-gradient(180deg,#E9F9ED,#D2F0D9); border-color:#4caf50; }
+  .tf-ch-top { display:flex; align-items:center; gap:7px; margin-bottom:8px; }
+  .tf-ch-emoji { font-size:18px; line-height:1; }
+  .tf-ch-title { flex:1; font-size:13.5px; font-weight:800; color:#8a5a12; }
+  .tf-challenge-banner.done .tf-ch-title { color:#1d7a36; }
+  .tf-ch-left { font-size:11px; font-weight:700; color:#b07a1e; white-space:nowrap; }
+  .tf-ch-bar { height:7px; border-radius:4px; background:#f0e2c2; overflow:hidden; }
+  .tf-ch-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#E8973A,#F4C24A); transition:width .4s; }
+  .tf-challenge-banner.done .tf-ch-fill { background:linear-gradient(90deg,#4caf50,#7ed07e); }
+  .tf-ch-sub { font-size:11px; color:#a07a3a; margin-top:5px; }
+
+  /* toast แจ้งเตือน (เช่น กดชุดที่ล็อก) — LIN 2026-06-20 */
+  .tf-toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px);
+    background: rgba(45,42,34,0.96); color: #fff; padding: 12px 20px; border-radius: 24px;
+    font-family: 'Noto Sans TC', sans-serif; font-size: 14px; font-weight: 600;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.3); z-index: 10001; max-width: 88%; text-align: center;
+    opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none;
+  }
+  .tf-toast.tf-toast-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* การ์ดชุดที่ล็อก/精熟 (จางลง) */
+  .tf-set-btn.tf-set-locked, .tf-set-btn.tf-set-retired { filter: grayscale(1); opacity: 0.55; }
+  .tf-set-status { display:block; font-size:11px; font-weight:800; margin-top:4px; }
+  .tf-set-locked .tf-set-status { color:#8a7a5a; }
+  .tf-set-retired .tf-set-status { color:#3a7a3a; }
+  /* ปุ่มเข้าห้องคำพิเศษ ⭐ */
+  .tf-special-entry {
+    background: linear-gradient(180deg,#FFF6DC,#FDEEC0) !important;
+    border-color: #E0B84A !important;
+  }
+
+  /* เด้งคะแนน: ช้าลง+เด่นขึ้น เด้งใหญ่แบบสปริง แล้วป้ายตัวคูณค่อยจางเข้ามาทีหลัง 0.5s — LIN 2026-06-20 */
   .tf-score-pop {
     position: fixed;
     left: 50%;
@@ -1546,24 +1670,61 @@
     font-weight: 900;
     color: #2e9a4a;
     text-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    animation: tf-score-float 1.3s ease-out forwards;
+    animation: tf-score-float 1.9s cubic-bezier(.22,1,.36,1) forwards;
     display: flex;
     align-items: baseline;
     gap: 6px;
   }
-  .tf-score-pop-num { font-size: 38px; }
+  .tf-score-pop-num { font-size: 44px; }
   .tf-score-pop-mult {
-    font-size: 22px;
+    font-size: 24px;
     color: #e0552f;
     font-weight: 900;
+    opacity: 0;
+    animation: tf-score-label-in 0.45s ease-out 0.5s forwards;
   }
-  .tf-score-pop-big .tf-score-pop-num { font-size: 52px; color: #d9a400; }
+  .tf-score-pop-big .tf-score-pop-num { font-size: 62px; color: #d9a400; }
   @keyframes tf-score-float {
-    0%   { opacity: 0; transform: translateX(-50%) translateY(14px) scale(.7); }
-    18%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.12); }
-    35%  { transform: translateX(-50%) translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateX(-50%) translateY(-60px) scale(1); }
+    0%   { opacity: 0; transform: translateX(-50%) translateY(20px) scale(.5); }
+    20%  { opacity: 1; transform: translateX(-50%) translateY(-6px) scale(1.38); }
+    34%  { transform: translateX(-50%) translateY(2px) scale(1.02); }
+    46%  { transform: translateX(-50%) translateY(-3px) scale(1.14); }
+    60%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.05); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-72px) scale(1); }
   }
+  @keyframes tf-score-label-in {
+    from { opacity: 0; transform: translateY(5px) scale(.85); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  /* แบนเนอร์คอมโบเด้งใหญ่แบบเกมออนไลน์ — LIN 2026-06-20 */
+  .tf-combo-flash {
+    position: fixed; left: 50%; top: 38%; transform: translateX(-50%);
+    z-index: 10000; pointer-events: none; text-align: center;
+    animation: tf-combo-flash-anim 1.6s cubic-bezier(.18,.9,.3,1.3) forwards;
+  }
+  .tf-combo-flash-x {
+    font-size: 64px; font-weight: 900; line-height: 1;
+    color: #ff6a00; -webkit-text-stroke: 2px #fff;
+    text-shadow: 0 4px 18px rgba(255,106,0,0.55), 0 0 2px #fff;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .tf-combo-flash-main {
+    font-size: 26px; font-weight: 900; color: #d9343f; margin-top: 2px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.18); font-family: 'Noto Sans TC', sans-serif;
+  }
+  .tf-combo-flash-sub {
+    font-size: 15px; font-weight: 800; color: #8B6310; margin-top: 4px;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  @keyframes tf-combo-flash-anim {
+    0%   { opacity: 0; transform: translateX(-50%) scale(.3) rotate(-8deg); }
+    14%  { opacity: 1; transform: translateX(-50%) scale(1.25) rotate(3deg); }
+    26%  { transform: translateX(-50%) scale(.95) rotate(-2deg); }
+    38%  { transform: translateX(-50%) scale(1.08) rotate(0deg); }
+    50%  { opacity: 1; transform: translateX(-50%) scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-40px); }
+  }
+  .tf-combo-hud.tf-combo-bump { animation: tf-combo-pulse .26s ease-in-out 3 alternate; }
 
   .tf-confetti-wrap {
     position: fixed; inset: 0;
@@ -1686,9 +1847,9 @@
   "@type": "EducationalOrganization",
   "name": "泰華眼裡的泰語教學",
   "alternateName": "Mr. Thai Hua",
-  "url": "https://mrtaihualin.github.io/",
-  "logo": "https://mrtaihualin.github.io/assets/apple-touch-icon.png",
-  "image": "https://mrtaihualin.github.io/assets/share-card.png",
+  "url": "https://mrtaihualin.com/",
+  "logo": "https://mrtaihualin.com/assets/apple-touch-icon.png",
+  "image": "https://mrtaihualin.com/assets/share-card.png",
   "description": "專為台灣人設計的線上一對一泰語課程，中文授課，從聲調到對話真正開口說泰語。",
   "sameAs": [
     "https://www.youtube.com/@mrtaihua",
@@ -1778,6 +1939,13 @@ var DEFS = {
 // 資料來源：使用者提供的字母對照表圖片（注音／拼音為該教材自訂系統）
 // 每張卡片：ch=泰文字母, zh=注音, py=拼音, note=補充, tts=發音用文字(可選)
 // ════════════════════════════════════════════════════════════
+// เสียงครูอ่านจริงสำหรับ 字卡 (โหลด manifest แล้วเล่น mp3 ที่ trim เสียงเงียบ/ลมหายใจแล้ว) — LIN 2026-06-20
+var TF_FLASH_AUDIO = null;
+(function(){ try { fetch('assets/flashcard-audio/manifest.json')
+  .then(function(r){ return r.json(); })
+  .then(function(j){ TF_FLASH_AUDIO = j; })
+  .catch(function(){}); } catch(e){} })();
+
 var ALPHA = {
   consonant: {
     mid:  { zh:'中子音', sub:'7 個',
@@ -1908,8 +2076,7 @@ var TONES = {
 //   zh        → 中文（台灣）翻譯
 // ════════════════════════════════════════════════════════════
 var WORD_LIST = [
-  // ── 初級 Level 1：ตัวเลข（數字） ──
-  { word:'หนึ่ง', readingTH:'หนึ่ง', readingEN:'nèung', zh:'一', level:1, category:'ตัวเลข' },
+{ word:'หนึ่ง', readingTH:'หนึ่ง', readingEN:'nèung', zh:'一', level:1, category:'ตัวเลข' },
   { word:'สอง', readingTH:'สอง', readingEN:'sǒong', zh:'二', level:1, category:'ตัวเลข' },
   { word:'สาม', readingTH:'สาม', readingEN:'sǎam', zh:'三', level:1, category:'ตัวเลข' },
   { word:'สี่', readingTH:'สี่', readingEN:'sìi', zh:'四', level:1, category:'ตัวเลข' },
@@ -1919,64 +2086,53 @@ var WORD_LIST = [
   { word:'แปด', readingTH:'แปด', readingEN:'bpàet', zh:'八', level:1, category:'ตัวเลข' },
   { word:'เก้า', readingTH:'เก้า', readingEN:'gâo', zh:'九', level:1, category:'ตัวเลข' },
   { word:'สิบ', readingTH:'สิบ', readingEN:'sìp', zh:'十', level:1, category:'ตัวเลข' },
-  // ── 初級 Level 1：สี（顏色） ──
   { word:'ดำ', readingTH:'ดำ', readingEN:'dam', zh:'黑', level:1, category:'สี' },
   { word:'ขาว', readingTH:'ขาว', readingEN:'khǎao', zh:'白', level:1, category:'สี' },
   { word:'แดง', readingTH:'แดง', readingEN:'daeng', zh:'紅', level:1, category:'สี' },
   { word:'เหลือง', readingTH:'เหลือง', readingEN:'lʉ̌ang', zh:'黃', level:1, category:'สี' },
   { word:'ฟ้า', readingTH:'ฟ้า', readingEN:'fáa', zh:'藍', level:1, category:'สี' },
-  // ── 初級 Level 1：กริยา（動詞） ──
   { word:'กิน', readingTH:'กิน', readingEN:'gin', zh:'吃', level:1, category:'กริยา' },
   { word:'ดื่ม', readingTH:'ดื่ม', readingEN:'dèum', zh:'喝', level:1, category:'กริยา' },
   { word:'ไป', readingTH:'ไป', readingEN:'bpai', zh:'去', level:1, category:'กริยา' },
   { word:'มา', readingTH:'มา', readingEN:'maa', zh:'來', level:1, category:'กริยา' },
   { word:'ซื้อ', readingTH:'ซื้อ', readingEN:'séu', zh:'買', level:1, category:'กริยา' },
-  // ── 初級 Level 1：คำขยาย（形容詞） ──
   { word:'ดี', readingTH:'ดี', readingEN:'dii', zh:'好', level:1, category:'คำขยาย' },
   { word:'ใหญ่', readingTH:'ใหญ่', readingEN:'yài', zh:'大', level:1, category:'คำขยาย' },
   { word:'เล็ก', readingTH:'เล็ก', readingEN:'lék', zh:'小', level:1, category:'คำขยาย' },
-  { word:'ร้อน', readingTH:'ร้อน', readingEN:'róon', zh:'熱', level:1, category:'คำขยาย' },
+  { word:'ร้อน', readingTH:'ร้อน', readingEN:'róon', zh:'熱/燙', level:1, category:'คำขยาย' },
   { word:'แพง', readingTH:'แพง', readingEN:'phaeng', zh:'貴', level:1, category:'คำขยาย' },
-  // ── 中級 Level 2：ร้านอาหาร（餐廳） ──
   { word:'อาหาร', readingTH:'อา-หาน', readingEN:'aa-hǎan', zh:'食物/料理', level:2, category:'ร้านอาหาร' },
   { word:'ร้านอาหาร', readingTH:'ร้าน-อา-หาน', readingEN:'ráan-aa-hǎan', zh:'餐廳', level:2, category:'ร้านอาหาร' },
   { word:'เมนู', readingTH:'เม-นู', readingEN:'mee-nuu', zh:'菜單', level:2, category:'ร้านอาหาร' },
   { word:'ของหวาน', readingTH:'ของ-หวาน', readingEN:'khǒong-wǎan', zh:'甜點', level:2, category:'ร้านอาหาร' },
   { word:'น้ำแข็ง', readingTH:'น้ำ-แข็ง', readingEN:'náam-khǎeng', zh:'冰塊', level:2, category:'ร้านอาหาร' },
   { word:'ใบเสร็จ', readingTH:'ใบ-เส็ด', readingEN:'bai-sèt', zh:'收據/帳單', level:2, category:'ร้านอาหาร' },
-  // ── 中級 Level 2：การเดินทาง（交通） ──
   { word:'สนามบิน', readingTH:'สะ-หนาม-บิน', readingEN:'sa-nǎam-bin', zh:'機場', level:2, category:'การเดินทาง' },
   { word:'แท็กซี่', readingTH:'แท็ก-ซี่', readingEN:'tháek-sîi', zh:'計程車', level:2, category:'การเดินทาง' },
   { word:'รถไฟฟ้า', readingTH:'รด-ไฟ-ฟ้า', readingEN:'rót-fai-fáa', zh:'捷運/地鐵', level:2, category:'การเดินทาง' },
   { word:'แผนที่', readingTH:'แผน-ที่', readingEN:'phǎen-thîi', zh:'地圖', level:2, category:'การเดินทาง' },
   { word:'ทางออก', readingTH:'ทาง-ออก', readingEN:'thaang-òk', zh:'出口', level:2, category:'การเดินทาง' },
   { word:'ห้องน้ำ', readingTH:'ห้อง-น้ำ', readingEN:'hông-náam', zh:'洗手間', level:2, category:'การเดินทาง' },
-  // ── 中級 Level 2：โรงแรม（飯店） ──
   { word:'โรงแรม', readingTH:'โรง-แรม', readingEN:'roong-raem', zh:'飯店', level:2, category:'โรงแรม' },
   { word:'ห้องพัก', readingTH:'ห้อง-พัก', readingEN:'hông-phák', zh:'客房', level:2, category:'โรงแรม' },
-  { word:'เช็คอิน', readingTH:'เช็ค-อิน', readingEN:'chék-in', zh:'辦理入住', level:2, category:'โรงแรม' },
+  { word:'เช็คอิน', readingTH:'เช็ก-อิน', readingEN:'chék-in', zh:'辦理入住', level:2, category:'โรงแรม' },
   { word:'เช็คเอาท์', readingTH:'เช็ค-เอาท์', readingEN:'chék-áo', zh:'退房', level:2, category:'โรงแรม' },
   { word:'สระว่ายน้ำ', readingTH:'สะ-ว่าย-น้ำ', readingEN:'sà-wâai-náam', zh:'游泳池', level:2, category:'โรงแรม' },
-  // ── 中級 Level 2：งาน（工作） ──
   { word:'บริษัท', readingTH:'บอ-ริ-สัด', readingEN:'bor-rí-sàt', zh:'公司', level:2, category:'งาน' },
-  { word:'ประชุม', readingTH:'ปฺระ-ชุม', readingEN:'bprà-chum', zh:'開會', level:2, category:'งาน' },
+  { word:'ประชุม', readingTH:'ประ-ชุม', readingEN:'bprà-chum', zh:'開會', level:2, category:'งาน' },
   { word:'ลูกค้า', readingTH:'ลูก-ค้า', readingEN:'lûuk-kháa', zh:'客戶', level:2, category:'งาน' },
   { word:'นัดหมาย', readingTH:'นัด-หมาย', readingEN:'nát-mǎai', zh:'預約/約定', level:2, category:'งาน' },
   { word:'รายงาน', readingTH:'ราย-งาน', readingEN:'raai-ngaan', zh:'報告', level:2, category:'งาน' },
-  // ── 中級 Level 2：ช้อปปิ้ง（購物） ──
   { word:'ราคา', readingTH:'รา-คา', readingEN:'raa-khaa', zh:'價格', level:2, category:'ช้อปปิ้ง' },
   { word:'ลดราคา', readingTH:'ลด-รา-คา', readingEN:'lót-raa-khaa', zh:'打折', level:2, category:'ช้อปปิ้ง' },
   { word:'ต่อรอง', readingTH:'ต่อ-รอง', readingEN:'dtòr-rong', zh:'殺價', level:2, category:'ช้อปปิ้ง' },
   { word:'ชำระเงิน', readingTH:'ชำ-ระ-เงิน', readingEN:'cham-rá-ngoen', zh:'付款', level:2, category:'ช้อปปิ้ง' },
-  { word:'ห้างสรรพสินค้า', readingTH:'ห้าง-สับ-พะ-สิน-ค้า', readingEN:'hâang-sàp-phá-sǐn-kháa', zh:'百貨公司', level:2, category:'ช้อปปิ้ง' },
-  // ── 中級 Level 2：อื่นๆ（其他） ──
-  { word:'สวัสดี', readingTH:'สะ-หวัด-ดี', readingEN:'sà-wàt-dii', zh:'你好/再見', level:2, category:'ทักทาย' },
-  { word:'ขอบคุณ', readingTH:'ขอบ-คุณ', readingEN:'khòp-khun', zh:'謝謝', level:2, category:'ทักทาย' },
-  { word:'ขอโทษ', readingTH:'ขอ-โทด', readingEN:'khǒr-thôot', zh:'對不起', level:2, category:'ทักทาย' },
-  { word:'ไม่เป็นไร', readingTH:'ไม่-เป็น-ไร', readingEN:'mâi-bpen-rai', zh:'沒關係', level:2, category:'ทักทาย' },
-  { word:'ไม่เข้าใจ', readingTH:'ไม่-เข้า-ใจ', readingEN:'mâi-khâo-jai', zh:'我不懂', level:2, category:'ทักทาย' },
-  { word:'ช่วยด้วย', readingTH:'ช่วย-ด้วย', readingEN:'chûai-dûai', zh:'幫幫我', level:2, category:'ทักทาย' },
-  // ── 中級 Level 2：ร้านอาหาร（餐廳） ──
+  { word:'สวัสดี', readingTH:'สะ-หวัด-ดี', readingEN:'sà-wàt-dii', zh:'你好/再見', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'ขอบคุณ', readingTH:'ขอบ-คุน', readingEN:'khòp-khun', zh:'謝謝', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'ขอโทษ', readingTH:'ขอ-โทด', readingEN:'khǒr-thôot', zh:'對不起', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'ไม่เป็นไร', readingTH:'ไม่-เป็น-ไร', readingEN:'mâi-bpen-rai', zh:'沒關係', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'ไม่เข้าใจ', readingTH:'ไม่-เข้า-ใจ', readingEN:'mâi-khâo-jai', zh:'我不懂', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'ช่วยด้วย', readingTH:'ช่วย-ด้วย', readingEN:'chûai-dûai', zh:'救命', level:2, category:'ทักทาย/เวลา/แนวคิด' },
   { word:'ข้าวผัด', readingTH:'ข้าว-ผัด', readingEN:'khâao-phàt', zh:'炒飯', level:2, category:'ร้านอาหาร' },
   { word:'ต้มยำ', readingTH:'ต้ม-ยำ', readingEN:'dtôm-yam', zh:'冬陰湯', level:2, category:'ร้านอาหาร' },
   { word:'ผัดไทย', readingTH:'ผัด-ไท', readingEN:'phàt-thai', zh:'泰式炒麵', level:2, category:'ร้านอาหาร' },
@@ -1991,7 +2147,6 @@ var WORD_LIST = [
   { word:'ช้อนส้อม', readingTH:'ช้อน-ส้อม', readingEN:'chóon-sôom', zh:'餐具', level:2, category:'ร้านอาหาร' },
   { word:'ตะเกียบ', readingTH:'ตะ-เกียบ', readingEN:'dta-gìap', zh:'筷子', level:2, category:'ร้านอาหาร' },
   { word:'จานข้าว', readingTH:'จาน-ข้าว', readingEN:'jaan-khâao', zh:'飯盤', level:2, category:'ร้านอาหาร' },
-  // ── 中級 Level 2：การเดินทาง（交通） ──
   { word:'รถเมล์', readingTH:'รด-เม', readingEN:'rót-mee', zh:'公車', level:2, category:'การเดินทาง' },
   { word:'รถทัวร์', readingTH:'รด-ทัว', readingEN:'rót-thua', zh:'遊覽車', level:2, category:'การเดินทาง' },
   { word:'เครื่องบิน', readingTH:'เครื่อง-บิน', readingEN:'khrʉ̂ang-bin', zh:'飛機', level:2, category:'การเดินทาง' },
@@ -2000,13 +2155,12 @@ var WORD_LIST = [
   { word:'ถนน', readingTH:'ถะ-หนน', readingEN:'thà-nǒn', zh:'馬路', level:2, category:'การเดินทาง' },
   { word:'ทางด่วน', readingTH:'ทาง-ด่วน', readingEN:'thaang-dùan', zh:'高速公路', level:2, category:'การเดินทาง' },
   { word:'น้ำมัน', readingTH:'น้ำ-มัน', readingEN:'nám-man', zh:'油', level:2, category:'การเดินทาง' },
-  { word:'กระเป๋า', readingTH:'กฺระ-เป๋า', readingEN:'grà-bpǎo', zh:'包包', level:2, category:'การเดินทาง' },
+  { word:'กระเป๋า', readingTH:'กระ-เป๋า', readingEN:'grà-bpǎo', zh:'包包', level:2, category:'การเดินทาง' },
   { word:'ตำรวจ', readingTH:'ตำ-หรวด', readingEN:'dtam-rùat', zh:'警察', level:2, category:'การเดินทาง' },
   { word:'ที่จอดรถ', readingTH:'ที่-จอด-รด', readingEN:'thîi-jòot-rót', zh:'停車場', level:2, category:'การเดินทาง' },
   { word:'ทางม้าลาย', readingTH:'ทาง-ม้า-ลาย', readingEN:'thaang-máa-laai', zh:'斑馬線', level:2, category:'การเดินทาง' },
   { word:'ระยะทาง', readingTH:'ระ-ยะ-ทาง', readingEN:'rá-yá-thaang', zh:'距離', level:2, category:'การเดินทาง' },
   { word:'ป้ายรถ', readingTH:'ป้าย-รด', readingEN:'bpâai-rót', zh:'站牌', level:2, category:'การเดินทาง' },
-  // ── 中級 Level 2：โรงแรม（飯店） ──
   { word:'พนักงาน', readingTH:'พะ-นัก-งาน', readingEN:'phá-nák-ngaan', zh:'員工', level:2, category:'โรงแรม' },
   { word:'เตียงนอน', readingTH:'เตียง-นอน', readingEN:'dtiang-noon', zh:'床', level:2, category:'โรงแรม' },
   { word:'ผ้าเช็ดตัว', readingTH:'ผ้า-เช็ด-ตัว', readingEN:'phâa-chét-dtua', zh:'毛巾', level:2, category:'โรงแรม' },
@@ -2022,14 +2176,13 @@ var WORD_LIST = [
   { word:'ยาสีฟัน', readingTH:'ยา-สี-ฟัน', readingEN:'yaa-sǐi-fan', zh:'牙膏', level:2, category:'โรงแรม' },
   { word:'หมอน', readingTH:'หมอน', readingEN:'mǒon', zh:'枕頭', level:2, category:'โรงแรม' },
   { word:'ต้อนรับ', readingTH:'ต้อน-รับ', readingEN:'dtôon-ráp', zh:'接待', level:2, category:'โรงแรม' },
-  // ── 中級 Level 2：งาน（工作） ──
   { word:'เงินเดือน', readingTH:'เงิน-เดือน', readingEN:'ngern-dʉan', zh:'薪水', level:2, category:'งาน' },
   { word:'หัวหน้า', readingTH:'หัว-หน้า', readingEN:'hǔa-nâa', zh:'主管', level:2, category:'งาน' },
   { word:'โทรศัพท์', readingTH:'โท-ระ-สับ', readingEN:'thoo-rá-sàp', zh:'電話', level:2, category:'งาน' },
   { word:'เอกสาร', readingTH:'เอก-กะ-สาน', readingEN:'èek-gà-sǎan', zh:'文件', level:2, category:'งาน' },
   { word:'สัมภาษณ์', readingTH:'สำ-พาด', readingEN:'sǎm-phâat', zh:'面試', level:2, category:'งาน' },
   { word:'ตำแหน่ง', readingTH:'ตำ-แหน่ง', readingEN:'dtam-nàeng', zh:'職位', level:2, category:'งาน' },
-  { word:'ออฟฟิศ', readingTH:'ออฟ-ฟิด', readingEN:'óp-fít', zh:'辦公室', level:2, category:'งาน' },
+  { word:'ออฟฟิศ', readingTH:'ออบ-ฟิด', readingEN:'óp-fít', zh:'辦公室', level:2, category:'งาน' },
   { word:'งานเลี้ยง', readingTH:'งาน-เลี้ยง', readingEN:'ngaan-líang', zh:'聚會', level:2, category:'งาน' },
   { word:'อีเมล', readingTH:'อี-เมล', readingEN:'ii-meeo', zh:'電子郵件', level:2, category:'งาน' },
   { word:'โต๊ะทำงาน', readingTH:'โต๊ะ-ทำ-งาน', readingEN:'tó-tham-ngaan', zh:'辦公桌', level:2, category:'งาน' },
@@ -2038,7 +2191,6 @@ var WORD_LIST = [
   { word:'เลขา', readingTH:'เล-ขา', readingEN:'lee-khǎa', zh:'秘書', level:2, category:'งาน' },
   { word:'ประชุมงาน', readingTH:'ปฺระ-ชุม-งาน', readingEN:'bprà-chum-ngaan', zh:'工作會議', level:2, category:'งาน' },
   { word:'เวลางาน', readingTH:'เว-ลา-งาน', readingEN:'wee-laa-ngaan', zh:'上班時間', level:2, category:'งาน' },
-  // ── 中級 Level 2：ช้อปปิ้ง（購物） ──
   { word:'เสื้อผ้า', readingTH:'เสื้อ-ผ้า', readingEN:'sʉ̂a-phâa', zh:'衣服', level:2, category:'ช้อปปิ้ง' },
   { word:'รองเท้า', readingTH:'รอง-เท้า', readingEN:'roong-tháo', zh:'鞋子', level:2, category:'ช้อปปิ้ง' },
   { word:'กระเป๋าเงิน', readingTH:'กฺระ-เป๋า-เงิน', readingEN:'grà-bpǎo-ngern', zh:'錢包', level:2, category:'ช้อปปิ้ง' },
@@ -2054,22 +2206,20 @@ var WORD_LIST = [
   { word:'รองเท้าแตะ', readingTH:'รอง-เท้า-แตะ', readingEN:'roong-tháo-dtàe', zh:'拖鞋', level:2, category:'ช้อปปิ้ง' },
   { word:'เครื่องสำอาง', readingTH:'เครื่อง-สำ-อาง', readingEN:'khrʉ̂ang-sǎm-aang', zh:'化妝品', level:2, category:'ช้อปปิ้ง' },
   { word:'แว่นตา', readingTH:'แว่น-ตา', readingEN:'wâen-dtaa', zh:'眼鏡', level:2, category:'ช้อปปิ้ง' },
-  // ── 中級 Level 2：อื่นๆ（其他） ──
   { word:'เวลา', readingTH:'เว-ลา', readingEN:'wee-laa', zh:'時間', level:2, category:'เวลา' },
   { word:'นาฬิกา', readingTH:'นา-ลิ-กา', readingEN:'naa-lí-gaa', zh:'時鐘', level:2, category:'เวลา' },
-  { word:'อากาศ', readingTH:'อา-กาด', readingEN:'aa-gàat', zh:'天氣', level:2, category:'แนวคิด' },
-  { word:'ครอบครัว', readingTH:'คฺรอบ-คฺรัว', readingEN:'khrôop-khrua', zh:'家庭', level:2, category:'แนวคิด' },
-  { word:'ภาษา', readingTH:'พา-สา', readingEN:'phaa-sǎa', zh:'語言', level:2, category:'แนวคิด' },
-  { word:'ประเทศ', readingTH:'ปฺระ-เทด', readingEN:'bprà-thêet', zh:'國家', level:2, category:'แนวคิด' },
+  { word:'อากาศ', readingTH:'อา-กาด', readingEN:'aa-gàat', zh:'天氣', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'ครอบครัว', readingTH:'คฺรอบ-คฺรัว', readingEN:'khrôop-khrua', zh:'家庭', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'ภาษา', readingTH:'พา-สา', readingEN:'phaa-sǎa', zh:'語言', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'ประเทศ', readingTH:'ประ-เทด', readingEN:'bprà-thêet', zh:'國家', level:2, category:'ทักทาย/เวลา/แนวคิด' },
   { word:'เมืองไทย', readingTH:'เมือง-ไท', readingEN:'mʉang-thai', zh:'泰國', level:2, category:'แนวคิด' },
-  { word:'วันนี้', readingTH:'วัน-นี้', readingEN:'wan-níi', zh:'今天', level:2, category:'เวลา' },
-  { word:'พรุ่งนี้', readingTH:'พฺรุ่ง-นี้', readingEN:'phrûng-níi', zh:'明天', level:2, category:'เวลา' },
-  { word:'เมื่อวาน', readingTH:'เมื่อ-วาน', readingEN:'mʉ̂a-waan', zh:'昨天', level:2, category:'เวลา' },
+  { word:'วันนี้', readingTH:'วัน-นี้', readingEN:'wan-níi', zh:'今天', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'พรุ่งนี้', readingTH:'พฺรุ่ง-นี้', readingEN:'phrûng-níi', zh:'明天', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'เมื่อวาน', readingTH:'เมื่อ-วาน', readingEN:'mʉ̂a-waan', zh:'昨天', level:2, category:'ทักทาย/เวลา/แนวคิด' },
   { word:'ปัจจุบัน', readingTH:'ปัด-จุ-บัน', readingEN:'bpàt-jù-ban', zh:'現在', level:2, category:'เวลา' },
   { word:'อนาคต', readingTH:'อะ-นา-คด', readingEN:'à-naa-khót', zh:'未來', level:2, category:'เวลา' },
-  { word:'ดนตรี', readingTH:'ดน-ตรี', readingEN:'don-dtrii', zh:'音樂', level:2, category:'แนวคิด' },
-  { word:'อาชีพ', readingTH:'อา-ชีบ', readingEN:'aa-chîip', zh:'職業', level:2, category:'แนวคิด' },
-  // ── 初級 Level 1：นามร่างกาย（名詞·身體） ──
+  { word:'ดนตรี', readingTH:'ดน-ตรี', readingEN:'don-dtrii', zh:'音樂', level:2, category:'ทักทาย/เวลา/แนวคิด' },
+  { word:'อาชีพ', readingTH:'อา-ชีบ', readingEN:'aa-chîip', zh:'職業', level:2, category:'ทักทาย/เวลา/แนวคิด' },
   { word:'หู', readingTH:'หู', readingEN:'hǔu', zh:'耳朵', level:1, category:'นามร่างกาย' },
   { word:'ปาก', readingTH:'ปาก', readingEN:'bpàak', zh:'嘴', level:1, category:'นามร่างกาย' },
   { word:'ฟัน', readingTH:'ฟัน', readingEN:'fan', zh:'牙齒', level:1, category:'นามร่างกาย' },
@@ -2087,10 +2237,9 @@ var WORD_LIST = [
   { word:'เท้า', readingTH:'เท้า', readingEN:'tháo', zh:'腳', level:1, category:'นามร่างกาย' },
   { word:'ท้อง', readingTH:'ท้อง', readingEN:'thóong', zh:'肚子', level:1, category:'นามร่างกาย' },
   { word:'เข่า', readingTH:'เข่า', readingEN:'khào', zh:'膝蓋', level:1, category:'นามร่างกาย' },
-  // ── 初級 Level 1：นามคน（名詞·家庭與人） ──
   { word:'ลูก', readingTH:'ลูก', readingEN:'lûuk', zh:'孩子', level:1, category:'นามคน' },
-  { word:'พี่', readingTH:'พี่', readingEN:'phîi', zh:'哥哥／姊姊', level:1, category:'นามคน' },
-  { word:'น้อง', readingTH:'น้อง', readingEN:'nóong', zh:'弟弟／妹妹', level:1, category:'นามคน' },
+  { word:'พี่', readingTH:'พี่', readingEN:'phîi', zh:'哥/姊', level:1, category:'นามคน' },
+  { word:'น้อง', readingTH:'น้อง', readingEN:'nóong', zh:'弟/妹', level:1, category:'นามคน' },
   { word:'ปู่', readingTH:'ปู่', readingEN:'bpùu', zh:'爺爺', level:1, category:'นามคน' },
   { word:'ย่า', readingTH:'ย่า', readingEN:'yâa', zh:'奶奶', level:1, category:'นามคน' },
   { word:'ยาย', readingTH:'ยาย', readingEN:'yaai', zh:'外婆', level:1, category:'นามคน' },
@@ -2103,9 +2252,8 @@ var WORD_LIST = [
   { word:'ชาย', readingTH:'ชาย', readingEN:'chaai', zh:'男人', level:1, category:'นามคน' },
   { word:'เด็ก', readingTH:'เด็ก', readingEN:'dèk', zh:'小孩', level:1, category:'นามคน' },
   { word:'แขก', readingTH:'แขก', readingEN:'khàek', zh:'客人', level:1, category:'นามคน' },
-  { word:'ผัว', readingTH:'ผัว', readingEN:'phǔa', zh:'丈夫', level:1, category:'นามคน' },
-  { word:'เมีย', readingTH:'เมีย', readingEN:'mia', zh:'妻子', level:1, category:'นามคน' },
-  // ── 初級 Level 1：นามอาหาร（名詞·食物） ──
+  { word:'ผัว', readingTH:'ผัว', readingEN:'phǔa', zh:'老公', level:1, category:'นามคน' },
+  { word:'เมีย', readingTH:'เมีย', readingEN:'mia', zh:'老婆', level:1, category:'นามคน' },
   { word:'ไข่', readingTH:'ไข่', readingEN:'khài', zh:'蛋', level:1, category:'นามอาหาร' },
   { word:'นม', readingTH:'นม', readingEN:'nom', zh:'牛奶', level:1, category:'นามอาหาร' },
   { word:'ชา', readingTH:'ชา', readingEN:'chaa', zh:'茶', level:1, category:'นามอาหาร' },
@@ -2117,11 +2265,10 @@ var WORD_LIST = [
   { word:'เกลือ', readingTH:'เกลือ', readingEN:'glʉa', zh:'鹽', level:1, category:'นามอาหาร' },
   { word:'ขิง', readingTH:'ขิง', readingEN:'khǐng', zh:'薑', level:1, category:'นามอาหาร' },
   { word:'เส้น', readingTH:'เส้น', readingEN:'sên', zh:'麵條', level:1, category:'นามอาหาร' },
-  { word:'ซุป', readingTH:'ซุป', readingEN:'súp', zh:'湯', level:1, category:'นามอาหาร' },
-  { word:'แกง', readingTH:'แกง', readingEN:'gaeng', zh:'咖哩', level:1, category:'นามอาหาร' },
+  { word:'ซุป', readingTH:'ซุบ', readingEN:'súp', zh:'湯', level:1, category:'นามอาหาร' },
+  { word:'แกง', readingTH:'แกง', readingEN:'gaeng', zh:'湯', level:1, category:'นามอาหาร' },
   { word:'โจ๊ก', readingTH:'โจ๊ก', readingEN:'jóok', zh:'粥', level:1, category:'นามอาหาร' },
   { word:'กล้วย', readingTH:'กล้วย', readingEN:'glûay', zh:'香蕉', level:1, category:'นามอาหาร' },
-  // ── 初級 Level 1：นามของใช้（名詞·生活物品） ──
   { word:'ร้าน', readingTH:'ร้าน', readingEN:'ráan', zh:'店', level:1, category:'นามของใช้' },
   { word:'วัด', readingTH:'วัด', readingEN:'wát', zh:'寺廟', level:1, category:'นามของใช้' },
   { word:'เมือง', readingTH:'เมือง', readingEN:'mʉang', zh:'城市', level:1, category:'นามของใช้' },
@@ -2139,7 +2286,6 @@ var WORD_LIST = [
   { word:'มีด', readingTH:'มีด', readingEN:'mîit', zh:'刀子', level:1, category:'นามของใช้' },
   { word:'หม้อ', readingTH:'หม้อ', readingEN:'môo', zh:'鍋子', level:1, category:'นามของใช้' },
   { word:'พัด', readingTH:'พัด', readingEN:'phát', zh:'扇子', level:1, category:'นามของใช้' },
-  // ── 初級 Level 1：กริยา（動詞） ──
   { word:'ทำ', readingTH:'ทำ', readingEN:'tam', zh:'做', level:1, category:'กริยา' },
   { word:'พูด', readingTH:'พูด', readingEN:'phûut', zh:'說', level:1, category:'กริยา' },
   { word:'ดู', readingTH:'ดู', readingEN:'duu', zh:'看', level:1, category:'กริยา' },
@@ -2147,90 +2293,77 @@ var WORD_LIST = [
   { word:'อ่าน', readingTH:'อ่าน', readingEN:'àan', zh:'讀', level:1, category:'กริยา' },
   { word:'เขียน', readingTH:'เขียน', readingEN:'khǐan', zh:'寫', level:1, category:'กริยา' },
   { word:'รัก', readingTH:'รัก', readingEN:'rák', zh:'愛', level:1, category:'กริยา' },
-  // ── 初級 Level 1：คำขยาย（形容詞） ──
   { word:'สูง', readingTH:'สูง', readingEN:'sǔung', zh:'高', level:1, category:'คำขยาย' },
   { word:'ใหม่', readingTH:'ใหม่', readingEN:'mài', zh:'新', level:1, category:'คำขยาย' },
-  // ── 初級 Level 1：นามอาหาร（名詞·食物） ──
   { word:'น้ำ', readingTH:'น้ำ', readingEN:'náam', zh:'水', level:1, category:'นามอาหาร' },
   { word:'ข้าว', readingTH:'ข้าว', readingEN:'khâao', zh:'飯', level:1, category:'นามอาหาร' },
-  // ── 初級 Level 1：คำนาม（名詞(其他)） ──
-  { word:'หมา', readingTH:'หมา', readingEN:'mǎa', zh:'狗', level:1, category:'สัตว์ธรรมชาติ' },
-  { word:'แมว', readingTH:'แมว', readingEN:'maeo', zh:'貓', level:1, category:'สัตว์ธรรมชาติ' },
-  // ── 初級 Level 1：นามของใช้（名詞·生活物品） ──
+  { word:'หมา', readingTH:'หมา', readingEN:'mǎa', zh:'狗', level:1, category:'สัตว์/ธรรมชาติ' },
+  { word:'แมว', readingTH:'แมว', readingEN:'maeo', zh:'貓', level:1, category:'สัตว์/ธรรมชาติ' },
   { word:'บ้าน', readingTH:'บ้าน', readingEN:'bâan', zh:'家', level:1, category:'นามของใช้' },
-  { word:'รถ', readingTH:'รถ', readingEN:'rót', zh:'車', level:1, category:'นามของใช้' },
-  // ── 初級 Level 1：นามคน（名詞·家庭與人） ──
+  { word:'รถ', readingTH:'รด', readingEN:'rót', zh:'車', level:1, category:'นามของใช้' },
   { word:'พ่อ', readingTH:'พ่อ', readingEN:'phôo', zh:'爸爸', level:1, category:'นามคน' },
   { word:'แม่', readingTH:'แม่', readingEN:'mâe', zh:'媽媽', level:1, category:'นามคน' },
   { word:'ครู', readingTH:'ครู', readingEN:'khruu', zh:'老師', level:1, category:'นามคน' },
-  // ── 初級 Level 1：นามของใช้（名詞·生活物品） ──
   { word:'เงิน', readingTH:'เงิน', readingEN:'ngern', zh:'錢', level:1, category:'นามของใช้' },
-  // ── 初級 Level 1：คำนาม（名詞(其他)） ──
-  { word:'ฝน', readingTH:'ฝน', readingEN:'fǒn', zh:'雨', level:1, category:'สัตว์ธรรมชาติ' },
-  { word:'ลม', readingTH:'ลม', readingEN:'lom', zh:'風', level:1, category:'สัตว์ธรรมชาติ' },
-  { word:'ไฟ', readingTH:'ไฟ', readingEN:'fai', zh:'火', level:1, category:'สัตว์ธรรมชาติ' },
-  // ── 初級 Level 1：นามอาหาร（名詞·食物） ──
+  { word:'ฝน', readingTH:'ฝน', readingEN:'fǒn', zh:'雨', level:1, category:'สัตว์/ธรรมชาติ' },
+  { word:'ลม', readingTH:'ลม', readingEN:'lom', zh:'風', level:1, category:'สัตว์/ธรรมชาติ' },
+  { word:'ไฟ', readingTH:'ไฟ', readingEN:'fai', zh:'火', level:1, category:'สัตว์/ธรรมชาติ' },
   { word:'ปลา', readingTH:'ปลา', readingEN:'plaa', zh:'魚', level:1, category:'นามอาหาร' },
   { word:'ไก่', readingTH:'ไก่', readingEN:'gài', zh:'雞', level:1, category:'นามอาหาร' },
   { word:'หมู', readingTH:'หมู', readingEN:'mǔu', zh:'豬', level:1, category:'นามอาหาร' },
-  // ── 初級 Level 1：คำนาม（名詞(其他)） ──
-  { word:'นก', readingTH:'นก', readingEN:'nók', zh:'鳥', level:1, category:'สัตว์ธรรมชาติ' },
-  // ── 初級 Level 1：นามร่างกาย（名詞·身體） ──
+  { word:'นก', readingTH:'นก', readingEN:'nók', zh:'鳥', level:1, category:'สัตว์/ธรรมชาติ' },
   { word:'ตา', readingTH:'ตา', readingEN:'taa', zh:'眼睛', level:1, category:'นามร่างกาย' },
   { word:'มือ', readingTH:'มือ', readingEN:'mʉʉ', zh:'手', level:1, category:'นามร่างกาย' },
   { word:'หัว', readingTH:'หัว', readingEN:'hǔa', zh:'頭', level:1, category:'นามร่างกาย' },
-  // ── 初級 Level 1：สี（顏色） ──
   { word:'ส้ม', readingTH:'ส้ม', readingEN:'sôm', zh:'橙', level:1, category:'สี' },
   { word:'เขียว', readingTH:'เขียว', readingEN:'khǐao', zh:'綠', level:1, category:'สี' },
   { word:'น้ำเงิน', readingTH:'น้ำ-เงิน', readingEN:'nám-ngern', zh:'深藍', level:1, category:'สี' },
   { word:'ม่วง', readingTH:'ม่วง', readingEN:'mûang', zh:'紫', level:1, category:'สี' },
   { word:'ชมพู', readingTH:'ชม-พู', readingEN:'chom-phuu', zh:'粉紅', level:1, category:'สี' },
   { word:'เทา', readingTH:'เทา', readingEN:'thao', zh:'灰', level:1, category:'สี' },
-  { word:'น้ำตาล', readingTH:'น้ำ-ตาล', readingEN:'nám-taan', zh:'棕', level:1, category:'สี' },
-  // ── 初級 Level 1：ลักษณนาม（量詞） ──
-  { word:'คน', readingTH:'คน', readingEN:'khon', zh:'個／位', level:1, category:'ลักษณนาม' },
-  { word:'ตัว', readingTH:'ตัว', readingEN:'tua', zh:'隻／條', level:1, category:'ลักษณนาม' },
-  { word:'ใบ', readingTH:'ใบ', readingEN:'bai', zh:'張／片', level:1, category:'ลักษณนาม' },
-  { word:'อัน', readingTH:'อัน', readingEN:'an', zh:'個／件', level:1, category:'ลักษณนาม' },
-  { word:'ชิ้น', readingTH:'ชิ้น', readingEN:'chín', zh:'塊／片', level:1, category:'ลักษณนาม' },
-  { word:'แผ่น', readingTH:'แผ่น', readingEN:'phàen', zh:'片／張', level:1, category:'ลักษณนาม' },
+  { word:'น้ำตาล', readingTH:'น้ำ-ตาน', readingEN:'nám-taan', zh:'咖啡色', level:1, category:'สี' },
+  { word:'คน', readingTH:'คน', readingEN:'khon', zh:'個/位', level:1, category:'ลักษณนาม' },
+  { word:'ตัว', readingTH:'ตัว', readingEN:'tua', zh:'隻/條', level:1, category:'ลักษณนาม' },
+  { word:'ใบ', readingTH:'ใบ', readingEN:'bai', zh:'張/片', level:1, category:'ลักษณนาม' },
+  { word:'อัน', readingTH:'อัน', readingEN:'an', zh:'個/件', level:1, category:'ลักษณนาม' },
+  { word:'ชิ้น', readingTH:'ชิ้น', readingEN:'chín', zh:'塊/片', level:1, category:'ลักษณนาม' },
+  { word:'แผ่น', readingTH:'แผ่น', readingEN:'phàen', zh:'片/張', level:1, category:'ลักษณนาม' },
   { word:'เล่ม', readingTH:'เล่ม', readingEN:'lêm', zh:'本', level:1, category:'ลักษณนาม' },
-  { word:'ฉบับ', readingTH:'ฉะ-บับ', readingEN:'chà-bàp', zh:'份／冊', level:1, category:'ลักษณนาม' },
+  { word:'ฉบับ', readingTH:'ฉะ-บับ', readingEN:'chà-bàp', zh:'份/冊', level:1, category:'ลักษณนาม' },
   { word:'ขวด', readingTH:'ขวด', readingEN:'khùat', zh:'瓶', level:1, category:'ลักษณนาม' },
   { word:'ก้อน', readingTH:'ก้อน', readingEN:'gôon', zh:'塊', level:1, category:'ลักษณนาม' },
   { word:'คัน', readingTH:'คัน', readingEN:'khan', zh:'輛', level:1, category:'ลักษณนาม' },
-  { word:'ลำ', readingTH:'ลำ', readingEN:'lam', zh:'架／艘', level:1, category:'ลักษณนาม' },
+  { word:'ลำ', readingTH:'ลำ', readingEN:'lam', zh:'架/艘', level:1, category:'ลักษณนาม' },
   { word:'หลัง', readingTH:'หลัง', readingEN:'lǎng', zh:'棟', level:1, category:'ลักษณนาม' },
   { word:'ห้อง', readingTH:'ห้อง', readingEN:'hôong', zh:'間', level:1, category:'ลักษณนาม' },
   { word:'ชั้น', readingTH:'ชั้น', readingEN:'chán', zh:'層', level:1, category:'ลักษณนาม' },
   { word:'จาน', readingTH:'จาน', readingEN:'jaan', zh:'盤', level:1, category:'ลักษณนาม' },
-  { word:'ถ้วย', readingTH:'ถ้วย', readingEN:'thûay', zh:'碗／杯', level:1, category:'ลักษณนาม' },
+  { word:'ถ้วย', readingTH:'ถ้วย', readingEN:'thûay', zh:'碗/杯', level:1, category:'ลักษณนาม' },
   { word:'ต้น', readingTH:'ต้น', readingEN:'tôn', zh:'棵', level:1, category:'ลักษณนาม' },
-  { word:'ผล', readingTH:'ผล', readingEN:'phǒn', zh:'顆／個', level:1, category:'ลักษณนาม' },
+  { word:'ผล', readingTH:'ผน', readingEN:'phǒn', zh:'顆/個', level:1, category:'ลักษณนาม' },
   { word:'มื้อ', readingTH:'มื้อ', readingEN:'mʉ́ʉ', zh:'餐', level:1, category:'ลักษณนาม' },
-  // ── 初級 Level 1：กริยา（動詞） ──
   { word:'นอน', readingTH:'นอน', readingEN:'norn', zh:'睡', level:1, category:'กริยา' },
   { word:'ตื่น', readingTH:'ตื่น', readingEN:'tʉ̀ʉn', zh:'醒', level:1, category:'กริยา' },
-  { word:'อยู่', readingTH:'อยู่', readingEN:'yùu', zh:'住／在', level:1, category:'กริยา' },
+  { word:'อยู่', readingTH:'อยู่', readingEN:'yùu', zh:'住/在', level:1, category:'กริยา' },
   { word:'เรียก', readingTH:'เรียก', readingEN:'rîak', zh:'叫', level:1, category:'กริยา' },
-  { word:'ร้อง', readingTH:'ร้อง', readingEN:'róong', zh:'唱／哭', level:1, category:'กริยา' },
+  { word:'ร้อง', readingTH:'ร้อง', readingEN:'róong', zh:'唱/哭', level:1, category:'กริยา' },
   { word:'คุย', readingTH:'คุย', readingEN:'khui', zh:'聊天', level:1, category:'กริยา' },
   { word:'โกรธ', readingTH:'โกรด', readingEN:'gròot', zh:'生氣', level:1, category:'กริยา' },
   { word:'หัวเราะ', readingTH:'หัว-เราะ', readingEN:'hǔa-ró', zh:'笑', level:1, category:'กริยา' },
-  // ── 初級 Level 1：คำขยาย（形容詞） ──
-  { word:'เย็น', readingTH:'เย็น', readingEN:'yen', zh:'冷／冰', level:1, category:'คำขยาย' },
-  { word:'อุ่น', readingTH:'อุ่น', readingEN:'ùn', zh:'暖／溫', level:1, category:'คำขยาย' },
+  { word:'เย็น', readingTH:'เย็น', readingEN:'yen', zh:'冷/冰', level:1, category:'คำขยาย' },
+  { word:'อุ่น', readingTH:'อุ่น', readingEN:'ùn', zh:'暖/溫', level:1, category:'คำขยาย' },
   { word:'แข็ง', readingTH:'แข็ง', readingEN:'khǎeng', zh:'硬', level:1, category:'คำขยาย' },
   { word:'นิ่ม', readingTH:'นิ่ม', readingEN:'nîm', zh:'軟', level:1, category:'คำขยาย' },
   { word:'สว่าง', readingTH:'สะ-หว่าง', readingEN:'sà-wàang', zh:'亮', level:1, category:'คำขยาย' },
   { word:'มืด', readingTH:'มืด', readingEN:'mʉ̂ʉt', zh:'暗', level:1, category:'คำขยาย' },
-  { word:'ดัง', readingTH:'ดัง', readingEN:'dang', zh:'響／有名', level:1, category:'คำขยาย' },
+  { word:'ดัง', readingTH:'ดัง', readingEN:'dang', zh:'大聲/有名', level:1, category:'คำขยาย' },
   { word:'เงียบ', readingTH:'เงียบ', readingEN:'ngîap', zh:'靜', level:1, category:'คำขยาย' },
   { word:'เต็ม', readingTH:'เต็ม', readingEN:'tem', zh:'滿', level:1, category:'คำขยาย' },
-  { word:'ว่าง', readingTH:'ว่าง', readingEN:'wâang', zh:'空／有空', level:1, category:'คำขยาย' },
-  { word:'สะอาด', readingTH:'สะ-อาด', readingEN:'sà-àat', zh:'淨／乾淨', level:1, category:'คำขยาย' },
+  { word:'ว่าง', readingTH:'ว่าง', readingEN:'wâang', zh:'空/有空', level:1, category:'คำขยาย' },
+  { word:'สะอาด', readingTH:'สะ-อาด', readingEN:'sà-àat', zh:'乾淨', level:1, category:'คำขยาย' },
   { word:'สกปรก', readingTH:'สก-กะ-ปรก', readingEN:'sòk-gà-pròk', zh:'髒', level:1, category:'คำขยาย' },
-  { word:'ถูก', readingTH:'ถูก', readingEN:'thùuk', zh:'便宜／對', level:1, category:'คำขยาย' },
+  { word:'ถูก', readingTH:'ถูก', readingEN:'thùuk', zh:'便宜/對', level:1, category:'คำขยาย' },
+  { word:'ห้าง', readingTH:'ห้าง', readingEN:'hâang', zh:'百貨公司', level:2, category:'ช้อปปิ้ง' },
 ];
 
 // ════════════════════════════════════════════════════════════
@@ -2313,7 +2446,6 @@ var WORD_PARTS = {
   'ลดราคา':[{c:'ล',vn:'สระโอะ (ลดรูป)',vf:'โ◌ะ',f:'ด'},{c:'ร',vn:'สระอา',vf:'◌า',f:''},{c:'ค',vn:'สระอา',vf:'◌า',f:''}],
   'ต่อรอง':[{c:'ต',vn:'สระออ',vf:'◌อ',f:''},{c:'ร',vn:'สระออ',vf:'◌อ',f:'ง'}],
   'ชำระเงิน':[{c:'ช',vn:'สระอำ',vf:'◌ำ',f:''},{c:'ร',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ง',vn:'สระเออ',vf:'เิ',f:'น'}],
-  'ห้างสรรพสินค้า':[{c:'ห',vn:'สระอา',vf:'◌า',f:'ง'},{c:'ส',vn:'สระอะ (รร แทนเสียงอะ)',vf:'ั',f:'บ'},{c:'พ',vn:'สระอะ',vf:'◌ะ',f:''},{c:'ส',vn:'สระอิ',vf:'ิ',f:'น'},{c:'ค',vn:'สระอา',vf:'◌า',f:''}],
   'สวัสดี':[{c:'ส',vn:'สระอะ',vf:'◌ะ',f:''},{c:'สว',vn:'สระอะ (ไม้หันอากาศ)',vf:'ั',f:'ส'},{c:'ด',vn:'สระอี',vf:'ี',f:''}],
   'ขอบคุณ':[{c:'ข',vn:'สระออ',vf:'◌อ',f:'บ'},{c:'ค',vn:'สระอุ',vf:'ุ',f:'ณ'}],
   'ขอโทษ':[{c:'ข',vn:'สระออ',vf:'◌อ',f:''},{c:'ท',vn:'สระโอ',vf:'โ◌',f:'ษ'}],
@@ -2842,18 +2974,24 @@ function tfMinaBubble(msg, size) {
 // ── ระบบแบดจ์ (ธีมข้าว/อาหารไทย) ──
 // เงื่อนไขปลดล็อกปรับได้ที่ cond · เนื้อหาการ์ดความรู้ (th/reading/desc) รอครูตรวจจากไฟล์ร่าง
 var TF_BADGES_DEF = [
-  // ชั้น 1 — ข้าวเติบโต (บันไดสตรีค)
-  { id: 'rice_seed',   tier: 1, emoji: '🌾', zh: '稻種',   th: 'เมล็ดข้าว',   reading: 'mét kâao',     need: '連續 3 天',   cond: function (st) { return st.streak >= 3; } },
-  { id: 'rice_sprout', tier: 1, emoji: '🌱', zh: '秧苗',   th: 'ต้นกล้า',     reading: 'tôn klâa',     need: '連續 7 天',   cond: function (st) { return st.streak >= 7; } },
-  { id: 'rice_ear',    tier: 1, emoji: '🌿', zh: '幼穗',   th: 'รวงอ่อน',     reading: 'ruang ɔ̀ɔn',    need: '連續 14 天',  cond: function (st) { return st.streak >= 14; } },
-  { id: 'rice_golden', tier: 1, emoji: '🌾', zh: '金穗',   th: 'รวงข้าวทอง',  reading: 'ruang kâao thɔɔng', need: '連續 30 天', cond: function (st) { return st.streak >= 30; } },
-  { id: 'rice_field',  tier: 1, emoji: '🏞️', zh: '金色稻田', th: 'ทุ่งนาทอง',  reading: 'thûng naa thɔɔng',  need: '連續 100 天', cond: function (st) { return st.streak >= 100; } },
+  // ชั้น 1 — ข้าวเติบโต (บันไดสตรีค) — ใช้ภาพ SVG จริง assets/badges/<id>.svg (LIN 2026-06-20)
+  { id: 'rice_seed',   tier: 1, emoji: '🌾', img: 'assets/badges/rice_seed.svg',   zh: '稻種',   th: 'เมล็ดข้าว',   reading: 'mét kâao',     need: '連續 3 天',   cond: function (st) { return st.streak >= 3; } },
+  { id: 'rice_sprout', tier: 1, emoji: '🌱', img: 'assets/badges/rice_sprout.svg', zh: '秧苗',   th: 'ต้นกล้า',     reading: 'tôn klâa',     need: '連續 7 天',   cond: function (st) { return st.streak >= 7; } },
+  { id: 'rice_ear',    tier: 1, emoji: '🌿', img: 'assets/badges/rice_ear.svg',    zh: '幼穗',   th: 'รวงอ่อน',     reading: 'ruang ɔ̀ɔn',    need: '連續 14 天',  cond: function (st) { return st.streak >= 14; } },
+  { id: 'rice_golden', tier: 1, emoji: '🌾', img: 'assets/badges/rice_golden.svg', zh: '金穗',   th: 'รวงข้าวทอง',  reading: 'ruang kâao thɔɔng', need: '連續 30 天', cond: function (st) { return st.streak >= 30; } },
+  { id: 'rice_field',  tier: 1, emoji: '🏞️', img: 'assets/badges/rice_field.svg',  zh: '金色稻田', th: 'ทุ่งนาทอง',  reading: 'thûng naa thɔɔng',  need: '連續 100 天', cond: function (st) { return st.streak >= 100; } },
   // ชั้น 2 — สายพันธุ์ข้าว (ความสำเร็จ)
-  { id: 'hommali',   tier: 2, emoji: '🍚', zh: '茉莉香米',     th: 'ข้าวหอมมะลิ',  reading: 'kâao hɔ̌ɔm malí', need: '首次完美過關', cond: function (st) { return st.perfectSets >= 1; } },
-  { id: 'khaoniaw',  tier: 2, emoji: '🍙', zh: '糯米',         th: 'ข้าวเหนียว',   reading: 'kâao nǐaw',      need: '連續 7 天',    cond: function (st) { return st.streak >= 7; } },
-  { id: 'khaoklong', tier: 2, emoji: '🌾', zh: '糙米',         th: 'ข้าวกล้อง',    reading: 'kâao klɔ̂ɔng',   need: '累計 100 題',  cond: function (st) { return st.wordsTotal >= 100; } },
-  { id: 'riceberry', tier: 2, emoji: '🟣', zh: '紫米 Riceberry', th: 'ไรซ์เบอร์รี่', reading: 'ráai-bəə-rîi',  need: '連對 8 題 (×3)', cond: function (st) { return st.maxCombo >= 8; } }
+  { id: 'hommali',   tier: 2, emoji: '🍚', img: 'assets/badges/hommali.svg',   zh: '茉莉香米',     th: 'ข้าวหอมมะลิ',  reading: 'kâao hɔ̌ɔm malí', need: '首次完美過關', cond: function (st) { return st.perfectSets >= 1; } },
+  { id: 'khaoniaw',  tier: 2, emoji: '🍙', img: 'assets/badges/khaoniaw.svg',  zh: '糯米',         th: 'ข้าวเหนียว',   reading: 'kâao nǐaw',      need: '連續 7 天',    cond: function (st) { return st.streak >= 7; } },
+  { id: 'khaoklong', tier: 2, emoji: '🌾', img: 'assets/badges/khaoklong.svg', zh: '糙米',         th: 'ข้าวกล้อง',    reading: 'kâao klɔ̂ɔng',   need: '累計 100 題',  cond: function (st) { return st.wordsTotal >= 100; } },
+  { id: 'riceberry', tier: 2, emoji: '🟣', img: 'assets/badges/riceberry.svg', zh: '紫米 Riceberry', th: 'ไรซ์เบอร์รี่', reading: 'ráai-bəə-rîi',  need: '連對 8 題 (×3)', cond: function (st) { return st.maxCombo >= 8; } }
 ];
+// helper: คืน HTML ไอคอนแบดจ์ (ใช้ภาพ SVG ถ้ามี ไม่งั้น emoji) — LIN 2026-06-20
+function tfBadgeIcon(b, px) {
+  px = px || 46;
+  if (b && b.img) return '<img src="' + b.img + '" alt="' + (b.zh || '') + '" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;" onerror="this.replaceWith(document.createTextNode(\'' + (b.emoji || '🏅') + '\'))">';
+  return '<span style="font-size:' + Math.round(px * 0.8) + 'px;">' + ((b && b.emoji) || '🏅') + '</span>';
+}
 
 // เครื่องเช็กแบดจ์ (บริสุทธิ์) — คืน id ที่ "เพิ่งปลด" จาก stats เทียบกับที่ปลดแล้ว
 var TF_BADGES = {
@@ -2902,6 +3040,166 @@ function tfUpdateBadgesOnSetComplete(info) {
 // สุ่มว่าคำถัดไปเป็น "คำทอง" ไหม
 function tfRollGolden() {
   return Math.random() < (TF_GAME_CFG.GOLDEN_WORD_CHANCE || 0);
+}
+
+// ════════════════════════════════════════════════════════════
+// ระบบล็อกชุด + ห้องคำพิเศษ ⭐ + toast — LIN 2026-06-20
+//   ถูก >=4 คำ → ล็อกชุดวันนี้ (⏸ 今日已練) · ครบ 7 วันปลดเล่นได้ใหม่
+//   ปลดแล้วเล่นได้ >=4 อีก → เก่งจริง (✓ 精熟) ถาวร + เก็บคำที่ผิดเข้าห้องคำพิเศษ ⭐ (ตอบถูก ×2)
+// ════════════════════════════════════════════════════════════
+var TF_SET_STATE_KEY = 'tf_set_state_v1';
+var TF_SET_LOCK_DAYS = 7;       // ปรับได้
+var TF_SET_PASS_CORRECT = 4;    // ปรับได้
+var TF_SPECIAL_KEY = 'tf_special_words_v1';
+var TF_SPECIAL_MULT = 2;        // ห้องคำพิเศษ ตอบถูก ×2
+var currentSetId = null;        // ชุดที่กำลังเล่น (null = ไม่ผูกกับชุด เช่น 全部/搜尋/ห้องพิเศษ)
+var inSpecialRoom = false;      // กำลังเล่นห้องคำพิเศษอยู่ไหม
+
+function tfLoadSetStates() { try { return JSON.parse(localStorage.getItem(TF_SET_STATE_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function tfSaveSetStates(o) { try { localStorage.setItem(TF_SET_STATE_KEY, JSON.stringify(o)); } catch (e) {} }
+function tfSetId(level, cat, i) { return (level || '?') + '|' + (cat || '?') + '|' + i; }
+function tfDaysSince(dateStr) {
+  if (!dateStr) return 9999;
+  try { var d = new Date(dateStr + 'T00:00:00'), now = new Date(todayStr() + 'T00:00:00');
+    return Math.round((now - d) / 86400000); } catch (e) { return 9999; }
+}
+// สถานะใช้งานจริง: 'retired' | 'locked' (ยังไม่ครบ 7 วัน) | 'open' (เล่นได้ รวมที่ปลดแล้ว)
+function tfSetStatus(setId) {
+  var s = tfLoadSetStates()[setId];
+  if (!s) return 'open';
+  if (s.status === 'retired') return 'retired';
+  if (s.status === 'locked') return tfDaysSince(s.date) >= TF_SET_LOCK_DAYS ? 'open' : 'locked';
+  return 'open';
+}
+function tfRecordSetResult(setId, correctCount, wrongWords) {
+  if (!setId) return;
+  if (correctCount < TF_SET_PASS_CORRECT) return;
+  var all = tfLoadSetStates(), cur = all[setId];
+  if (cur && cur.status === 'retired') return; // 精熟 แล้ว ไม่เปลี่ยน
+  if (cur && cur.status === 'locked' && tfDaysSince(cur.date) >= TF_SET_LOCK_DAYS) {
+    all[setId] = { status: 'retired', date: todayStr() };   // ปลดแล้วผ่านอีก → 精熟
+    tfAddSpecialWords(wrongWords);
+  } else {
+    all[setId] = { status: 'locked', date: todayStr() };     // ครั้งแรกผ่าน → ล็อกวันนี้
+  }
+  tfSaveSetStates(all);
+}
+function tfLoadSpecialWords() { try { return JSON.parse(localStorage.getItem(TF_SPECIAL_KEY) || '[]') || []; } catch (e) { return []; } }
+function tfAddSpecialWords(words) {
+  if (!words || !words.length) return;
+  var cur = tfLoadSpecialWords();
+  words.forEach(function (w) { if (w && cur.indexOf(w) === -1) cur.push(w); });
+  try { localStorage.setItem(TF_SPECIAL_KEY, JSON.stringify(cur)); } catch (e) {}
+}
+// ห้องพิเศษ: จำกัดวันละ 2 คำ + ตอบถูกเกิน 2 ครั้ง (>2) → เอาออก (เก่งแล้ว) — LIN 2026-06-20
+var TF_SPECIAL_META_KEY = 'tf_special_meta_v1';
+var TF_SPECIAL_DAILY = 2;       // วันละ 2 คำ
+var TF_SPECIAL_GRADUATE = 2;    // ตอบถูกเกินจำนวนนี้ → เอาออก
+function tfLoadSpecialMeta() { try { return JSON.parse(localStorage.getItem(TF_SPECIAL_META_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function tfSaveSpecialMeta(m) { try { localStorage.setItem(TF_SPECIAL_META_KEY, JSON.stringify(m)); } catch (e) {} }
+function tfSpecialProcessResults(results) {
+  if (!results) return;
+  var words = tfLoadSpecialWords(), meta = tfLoadSpecialMeta(), changed = false;
+  results.forEach(function (r) {
+    if ((r.mistakes || 0) === 0 && !r.forced) {
+      var w = r.entry.word;
+      meta[w] = (meta[w] || 0) + 1;
+      if (meta[w] > TF_SPECIAL_GRADUATE) {           // ตอบถูกเกิน 2 ครั้ง → เก่งแล้ว เอาออก
+        var i = words.indexOf(w); if (i >= 0) words.splice(i, 1);
+        delete meta[w];
+      }
+      changed = true;
+    }
+  });
+  if (changed) {
+    try { localStorage.setItem(TF_SPECIAL_KEY, JSON.stringify(words)); } catch (e) {}
+    tfSaveSpecialMeta(meta);
+  }
+}
+
+// ── สถิติคำที่ตอบผิดรายคำ (localStorage) + หน้า 全部 แบบ 50/50 เน้นคำที่ยังไม่แม่น — LIN 2026-06-20 ──
+var TF_WORD_WRONG_KEY = 'tf_word_wrong_v1';
+function tfShuffleArr(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function tfLoadWordWrong() { try { return JSON.parse(localStorage.getItem(TF_WORD_WRONG_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function tfRecordWordWrong(results) {
+  if (!results) return;
+  var m = tfLoadWordWrong(), changed = false;
+  results.forEach(function (r) {
+    if ((r.mistakes || 0) > 0 || r.forced) { var w = r.entry.word; m[w] = (m[w] || 0) + 1; changed = true; }
+  });
+  if (changed) { try { localStorage.setItem(TF_WORD_WRONG_KEY, JSON.stringify(m)); } catch (e) {} }
+}
+// ════════════════════════════════════════════════════════════
+// ชาเลนจ์มีเวลาจำกัด (รายสัปดาห์ หมุนอัตโนมัติจากคลังโจทย์ — LIN แค่อนุมัติคลัง) — LIN 2026-06-20
+//   เพิ่ม/แก้โจทย์ได้ที่ TF_CHALLENGES · ระบบเลือกโจทย์ตามเลขสัปดาห์เอง ไม่ต้องตั้งมือ
+// ════════════════════════════════════════════════════════════
+var TF_CHALLENGE_KEY = 'tf_challenge_v1';
+var TF_CHALLENGES = [
+  { id: 'c_correct30', title: '答對 30 個字', sub: '本週累積答對 30 題', type: 'correct', target: 30, emoji: '🎯' },
+  { id: 'c_sets5',     title: '玩完 5 組',     sub: '本週完成 5 組練習',   type: 'sets',    target: 5,  emoji: '📚' },
+  { id: 'c_perfect3',  title: '3 次完美過關', sub: '本週完美過關 3 次',   type: 'perfect', target: 3,  emoji: '🌟' },
+  { id: 'c_combo5',    title: '連對 5 題',     sub: '本週達成一次連對 5',  type: 'combo',   target: 5,  emoji: '🔥' },
+  { id: 'c_correct60', title: '答對 60 個字', sub: '本週累積答對 60 題',  type: 'correct', target: 60, emoji: '💪' }
+];
+var TF_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+function tfWeekIndex() { return Math.floor(Date.now() / TF_WEEK_MS); }          // เลขสัปดาห์ (หมุนทุก 7 วัน)
+function tfWeekEndMs() { return (tfWeekIndex() + 1) * TF_WEEK_MS; }             // เวลาเริ่มสัปดาห์ถัดไป (เดดไลน์)
+function tfActiveChallenge() { return TF_CHALLENGES[tfWeekIndex() % TF_CHALLENGES.length]; }
+function tfLoadChallenge() {
+  try { var r = JSON.parse(localStorage.getItem(TF_CHALLENGE_KEY) || '{}') || {}; return r; } catch (e) { return {}; }
+}
+function tfChallengeState() {
+  var ch = tfActiveChallenge(), wk = tfWeekIndex(), saved = tfLoadChallenge();
+  if (saved.week !== wk || saved.id !== ch.id) saved = { week: wk, id: ch.id, progress: 0, done: false };
+  return { ch: ch, st: saved };
+}
+function tfSaveChallenge(st) { try { localStorage.setItem(TF_CHALLENGE_KEY, JSON.stringify(st)); } catch (e) {} }
+// เรียกตอนจบรอบ: บวกความคืบหน้าชาเลนจ์ + ฉลองถ้าครบ
+function tfChallengeBump(session) {
+  if (!session) return;
+  var pack = tfChallengeState(), ch = pack.ch, st = pack.st;
+  if (st.done) { tfSaveChallenge(st); return; }
+  var add = 0;
+  if (ch.type === 'correct') add = session.results.filter(function (r) { return (r.mistakes || 0) === 0 && !r.forced; }).length;
+  else if (ch.type === 'sets') add = 1;
+  else if (ch.type === 'perfect') add = session.isPerfect ? 1 : 0;
+  else if (ch.type === 'combo') add = (session.maxCombo || 0) >= ch.target ? ch.target : 0;
+  if (ch.type === 'combo') st.progress = Math.max(st.progress, add);
+  else st.progress += add;
+  if (st.progress >= ch.target && !st.done) {
+    st.done = true;
+    setTimeout(function () { try { tfToast('🎉 完成本週挑戰：' + ch.title + '！'); tfScorePop(300, { big: true, confetti: true }); } catch (e) {} }, 400);
+  }
+  tfSaveChallenge(st);
+}
+
+// 全部：ชุดฝึกโฟกัส = 50% คำที่เคยผิดบ่อย (จากสถิติ) + 50% สุ่ม — ถ้ายังไม่มีสถิติ = สุ่มทั้งหมดเหมือนเดิม
+var TF_ALL_MIX_CAP = 20;   // ขนาดชุด 全部 สูงสุด (ปรับได้)
+function tfBuildAllMix(pool) {
+  var wrong = tfLoadWordWrong();
+  var weak = pool.filter(function (w) { return wrong[w]; }).sort(function (a, b) { return (wrong[b] || 0) - (wrong[a] || 0); });
+  var strong = pool.filter(function (w) { return !wrong[w]; });
+  if (!weak.length) return tfShuffleArr(pool);                       // ยังไม่มีสถิติ → เล่นทั้งหมดเหมือนเดิม
+  var weakPick = weak.slice(0, Math.min(weak.length, Math.floor(TF_ALL_MIX_CAP / 2)));
+  var strongPick = tfShuffleArr(strong).slice(0, weakPick.length);  // จำนวนเท่ากัน = 50/50
+  var res = weakPick.concat(strongPick);
+  if (res.length < 8) {                                              // น้อยไป → เติมคำสุ่มให้พอเล่น
+    var more = tfShuffleArr(pool.filter(function (w) { return res.indexOf(w) < 0; })).slice(0, 8 - res.length);
+    res = res.concat(more);
+  }
+  return tfShuffleArr(res);
+}
+// toast แจ้งเตือนสั้นๆ
+function tfToast(msg) {
+  try {
+    var old = document.getElementById('tf-toast'); if (old) old.remove();
+    var d = document.createElement('div');
+    d.id = 'tf-toast'; d.className = 'tf-toast';
+    d.textContent = msg;
+    document.body.appendChild(d);
+    requestAnimationFrame(function(){ d.classList.add('tf-toast-show'); });
+    setTimeout(function(){ d.classList.remove('tf-toast-show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 350); }, 2600);
+  } catch (e) {}
 }
 
 // ── streak: โหลด/เซฟ localStorage ──
@@ -2992,6 +3290,24 @@ function tfGoldenMult() {
 
 // ให้คะแนน "ถูกครั้งแรก" (เรียกตอน stepSessionGuess ตอบถูกเลย)
 // พยางค์เดียว: ×คอมโบ + นับสตรีคทันที · หลายพยางค์: คิดรายพยางค์ (ไม่ใช้คอมโบในพยางค์)
+// แบนเนอร์คอมโบเด้งใหญ่ + HUD เด้ง — LIN 2026-06-20
+function tfComboFlash(combo, mult) {
+  try {
+    var old = document.getElementById('tf-combo-flash'); if (old) old.remove();
+    var msgs = { 3: '火力全開', 5: '停不下來', 8: '聲調高手 👑' };
+    var d = document.createElement('div');
+    d.id = 'tf-combo-flash'; d.className = 'tf-combo-flash';
+    d.innerHTML = '<div class="tf-combo-flash-x">×' + mult + '</div>' +
+      '<div class="tf-combo-flash-main">🔥 連對 ' + combo + ' 題</div>' +
+      '<div class="tf-combo-flash-sub">' + (msgs[combo] || '太厲害了') + '</div>';
+    document.body.appendChild(d);
+    setTimeout(function () { if (d && d.parentNode) d.parentNode.removeChild(d); }, 1600);
+    var hud = document.getElementById('tf-score-hud');
+    var chud = hud && hud.parentNode ? hud.parentNode.querySelector('.tf-combo-hud') : document.querySelector('.tf-combo-hud');
+    if (chud) { chud.classList.remove('tf-combo-bump'); void chud.offsetWidth; chud.classList.add('tf-combo-bump'); }
+  } catch (e) {}
+}
+
 function tfScoreFirstTry() {
   if (!session) return;
   var gold = tfGoldenMult();
@@ -3017,6 +3333,7 @@ function tfScoreFirstTry() {
   var comboHit = (session.combo === 3 || session.combo === 5 || session.combo === 8);
   setTimeout(function () {
     tfScorePop(pts, { mult: mult, confetti: comboHit, big: comboHit, gold: gold > 1 });
+    if (comboHit) tfComboFlash(session.combo, mult);
   }, 60);
 }
 
@@ -3136,7 +3453,13 @@ function tfCommitWordAndAdvance(opts) {
   var firstTry = isMulti ? (!!session.curWordAllFirstTry && allScored) : !!session.currentWordFirstTry;
   // คอมโบสำหรับคำหลายพยางค์: คิดตอนจบคำ (พยางค์เดียวคิดไปแล้วใน tfScoreFirstTry)
   if (isMulti && !opts.forced) {
-    if (firstTry) { session.combo = (session.combo || 0) + 1; if (session.combo > (session.maxCombo || 0)) session.maxCombo = session.combo; }
+    if (firstTry) {
+      session.combo = (session.combo || 0) + 1;
+      if (session.combo > (session.maxCombo || 0)) session.maxCombo = session.combo;
+      if (session.combo === 3 || session.combo === 5 || session.combo === 8) {
+        tfComboFlash(session.combo, TF_SCORE.comboMultiplier(session.combo));
+      }
+    }
     else session.combo = 0;
   }
   session.results.push({
@@ -3169,7 +3492,7 @@ function tfSetupNextWord() {
   var nx = session.words[session.index];
   randomEntry = nx;
   var w = nx.word;
-  session.currentWordGolden = tfRollGolden();
+  session.currentWordGolden = inSpecialRoom ? true : tfRollGolden();  // ห้องคำพิเศษ = ×2 ทุกคำ
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
     S = { word: w, step: 'overview', path: [w], tone: null, syllables: nx.readingTH.split('-'), selectedSyl: null };
   } else {
@@ -3192,6 +3515,16 @@ function tfGoToSummary() {
 function tfApplySessionBonus() {
   if (!session || session.sessionScored) return;
   var total = session.results.length;
+  // ── สถิติคำผิดรายคำ (ทุกโหมด) สำหรับหน้า 全部 50/50 ──
+  if (total > 0) tfRecordWordWrong(session.results);
+  // ── ห้องพิเศษ: นับตอบถูก/เก่งแล้วเอาออก ──
+  if (inSpecialRoom && total > 0) tfSpecialProcessResults(session.results);
+  // ── ระบบล็อกชุด: จบรอบแล้วถ้าถูก >=4 → ล็อก/精熟 + เก็บคำผิดเข้าห้องพิเศษ (เฉพาะรอบที่ผูกกับชุด) ──
+  if (currentSetId && total > 0) {
+    var _correct = session.results.filter(function (r) { return (r.mistakes || 0) === 0 && !r.forced; }).length;
+    var _wrong = session.results.filter(function (r) { return (r.mistakes || 0) > 0 || r.forced; }).map(function (r) { return r.entry.word; });
+    tfRecordSetResult(currentSetId, _correct, _wrong);
+  }
   var perfectCount = session.results.filter(function (r) { return r.firstTry; }).length;
   var bonus = TF_SCORE.sessionBonus(total, perfectCount);
   var isPerfect = (total > 0 && perfectCount === total && !session.hadSkip);
@@ -3214,7 +3547,12 @@ function tfApplySessionBonus() {
       });
     } catch (e) { session.newBadges = []; }
   }
+  session.isPerfect = isPerfect;
+  // ชาเลนจ์รายสัปดาห์: บวกความคืบหน้า — LIN 2026-06-20
+  try { tfChallengeBump(session); } catch (e) {}
   session.sessionScored = true;
+  // ซิงก์ความก้าวหน้าขึ้น Supabase (ถ้าล็อกอิน) — LIN 2026-06-20
+  try { if (window.TF_SYNC) window.TF_SYNC.push(); } catch (e) {}
 }
 
 function act(fn) {
@@ -3507,7 +3845,7 @@ function render() {
 
   // Word banner
   var banner = document.getElementById('tf-banner');
-  var isSelectScreen = (S.step === 'level-select' || S.step === 'cat-select' || S.step === 'set-select' || S.step === 'noun-subcat' || S.step === 'advanced' || S.step === 'session-summary' || S.step === 'alpha-home' || S.step === 'alpha-consonant' || S.step === 'alpha-vowel' || S.step === 'alpha-flashcard');
+  var isSelectScreen = (S.step === 'level-select' || S.step === 'cat-select' || S.step === 'set-select' || S.step === 'noun-subcat' || S.step === 'advanced' || S.step === 'adv-cat-select' || S.step === 'adv-sent-select' || S.step === 'adv-summary' || S.step === 'session-summary' || S.step === 'alpha-home' || S.step === 'alpha-consonant' || S.step === 'alpha-vowel' || S.step === 'alpha-flashcard');
   var noBannerSteps = ['result'];
   if (S.word && S.step !== 'input' && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
@@ -3515,7 +3853,7 @@ function render() {
       ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字'
         + '<span id="tf-score-hud" class="tf-score-hud">🏆 ' + (session.score || 0) + ' 分</span>'
         + (session.combo >= 3 ? '<span class="tf-combo-hud">🔥 ×' + TF_SCORE.comboMultiplier(session.combo) + '</span>' : '')
-        + (session.currentWordGolden ? '<span class="tf-golden-hud">✨ 黃金題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
+        + (session.currentWordGolden ? '<span class="tf-golden-hud">✨ 黃金米題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
         + '</div>'
       : '';
     var goldWord = (session && session.currentWordGolden) ? ' tf-banner-word-gold' : '';
@@ -3554,18 +3892,38 @@ function render() {
   body.innerHTML = buildStep();
   var practiceSteps = ['session-guess','overview'];
   if (session && practiceSteps.indexOf(S.step) !== -1) {
-    body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+    // \u0e2b\u0e25\u0e32\u0e22\u0e1e\u0e22\u0e32\u0e07\u0e04\u0e4c: \u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e04\u0e23\u0e1a\u0e17\u0e38\u0e01\u0e1e\u0e22\u0e32\u0e07\u0e04\u0e4c\u0e41\u0e25\u0e49\u0e27 \u2192 \u0e44\u0e21\u0e48\u0e42\u0e0a\u0e27\u0e4c "\u5df2\u8a18\u5f97" \u0e40\u0e2b\u0e25\u0e37\u0e2d\u0e41\u0e04\u0e48\u0e1b\u0e38\u0e48\u0e21\u0e44\u0e1b\u0e15\u0e48\u0e2d (LIN 2026-06-20)
+    var _hideKnown = false;
+    if (S.step === 'overview') {
+      var _sy = S.syllables || [], _r = S.sylResults || {};
+      _hideKnown = _sy.length > 0 && _sy.every(function(_, i){ return _r[i] != null; });
+    }
+    if (!_hideKnown) {
+      body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+    }
   }
 
   // \u2500\u2500 \u0e40\u0e25\u0e37\u0e48\u0e2d\u0e19\u0e02\u0e36\u0e49\u0e19\u0e1a\u0e19\u0e2a\u0e38\u0e14\u0e17\u0e38\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07\u0e17\u0e35\u0e48\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e2b\u0e19\u0e49\u0e32\u0e08\u0e2d \u0e43\u0e2b\u0e49\u0e40\u0e2b\u0e47\u0e19\u0e04\u0e33\u0e43\u0e2b\u0e21\u0e48/\u0e2b\u0e31\u0e27\u0e02\u0e49\u0e2d\u0e43\u0e2b\u0e21\u0e48\u0e17\u0e31\u0e19\u0e17\u0e35 (LIN 2026-06-18) \u2500\u2500
   // \u0e40\u0e14\u0e49\u0e07\u0e44\u0e1b\u0e1a\u0e19\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e2b\u0e19\u0e49\u0e32\u0e2b\u0e25\u0e31\u0e01\u0e02\u0e2d\u0e07\u0e40\u0e01\u0e21 \u0e44\u0e21\u0e48\u0e23\u0e1a\u0e01\u0e27\u0e19\u0e2b\u0e19\u0e49\u0e32 popup/overlay
   // LIN 2026-06-19: เลื่อนขึ้น "บนสุดของหน้าเว็บ" (เห็นหัวเว็บ) ทุกครั้งที่เปลี่ยนหน้าจอ
   // ไม่เลื่อนถ้ามี popup/overlay เปิดอยู่ (กันกระโดดตอนเปิดกล่องถามคำถาม ฯลฯ)
+  // LIN 2026-06-20: เลิก smooth-scroll ไปบนสุดทุกครั้ง (กระตุก/เด้งขึ้นลงตอนกดรัวๆ)
+  //   → เลื่อนแบบ "ทันที" ให้การ์ดเกมอยู่ใต้หัวเว็บ และเลื่อนเฉพาะตอนการ์ดหลุดเฟรมเท่านั้น (ถ้าเห็นอยู่แล้วไม่ขยับ = นิ่ง)
   try {
     if (!document.getElementById('tf-ask-ov')) {
-      var sc = document.scrollingElement || document.documentElement || document.body;
-      if (window.scrollTo) { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); }
-      else if (sc) { sc.scrollTop = 0; }
+      var _card = document.querySelector('.tf-card');
+      if (_card && _card.getBoundingClientRect) {
+        var _rect = _card.getBoundingClientRect();
+        var _offset = 70; // เผื่อหัวเว็บแบบ sticky
+        // เลื่อนเฉพาะเมื่อการ์ดถูกดันขึ้นเหนือจอ หรือต่ำเกินไป — อยู่ในกรอบสบายตาแล้วไม่ขยับ
+        if (_rect.top < 8 || _rect.top > 150) {
+          var _y = (window.pageYOffset || 0) + _rect.top - _offset;
+          if (_y < 0) _y = 0;
+          window.scrollTo({ top: _y, left: 0, behavior: 'auto' });
+        }
+      } else {
+        window.scrollTo(0, 0);
+      }
     }
   } catch (e) {
     try { window.scrollTo(0, 0); } catch (e2) {}
@@ -3583,6 +3941,9 @@ function buildStep() {
     case 'set-select':      return stepSetSelect();
     case 'noun-subcat':     return stepNounSubcat();
     case 'advanced':        return stepAdvanced();
+    case 'adv-cat-select':  return stepAdvCatSelect();
+    case 'adv-sent-select': return stepAdvSentSelect();
+    case 'adv-summary':     return stepAdvSummary();
     case 'session-summary': return stepSessionSummary();
     case 'input':     return stepInput();
     case 's1':        return step1();
@@ -3990,7 +4351,7 @@ function stepSessionSummary() {
   if (session.newBadges && session.newBadges.length) {
     badgeBlock = '<div class="tf-badge-unlock"><div class="tf-badge-unlock-title">🎖️ 解鎖新徽章！</div><div class="tf-badge-unlock-grid">' +
       session.newBadges.map(function (b) {
-        return '<div class="tf-badge-card"><div class="tf-badge-emoji">' + b.emoji + '</div>' +
+        return '<div class="tf-badge-card"><div class="tf-badge-emoji">' + tfBadgeIcon(b, 54) + '</div>' +
           '<div class="tf-badge-zh">' + b.zh + '</div>' +
           '<div class="tf-badge-th">' + b.th + '</div>' +
           '<div class="tf-badge-need">' + b.need + '</div></div>';
@@ -4152,8 +4513,27 @@ function stepLevelSelect() {
       '<span class="tf-streak-chip">🛡️ ×' + (st.freezes || 0) + '</span>' +
       '<button class="tf-streak-chip tf-badge-link" onclick="TF.showBadges()">🎖️ 我的徽章 ' + bdCount + '/' + TF_BADGES_DEF.length + '</button>' +
     '</div>';
+  // แบนเนอร์เขียว "เล่นฟรี" หน้าเลือกระดับ (โชว์เฉพาะตอนยังไม่ล็อกอิน) — LIN 2026-06-20
+  var _loggedIn = !!(window.TF_AUTH && window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn());
+  var _freeLeft = Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed());
+  var freeBanner = _loggedIn ? '' :
+    '<div class="tf-free-banner">🎉 <b>免費試玩中</b>・無需登入！還能玩 ' + _freeLeft + ' 回合</div>';
+  // แบนเนอร์ชาเลนจ์รายสัปดาห์ — LIN 2026-06-20
+  var _cp = tfChallengeState();
+  var _pct = Math.min(100, Math.round(_cp.st.progress / _cp.ch.target * 100));
+  var _daysLeft = Math.max(0, Math.ceil((tfWeekEndMs() - Date.now()) / 86400000));
+  var challengeBanner =
+    '<div class="tf-challenge-banner' + (_cp.st.done ? ' done' : '') + '">' +
+      '<div class="tf-ch-top"><span class="tf-ch-emoji">' + _cp.ch.emoji + '</span>' +
+        '<span class="tf-ch-title">本週挑戰：' + _cp.ch.title + (_cp.st.done ? ' ✅ 完成！' : '') + '</span>' +
+        '<span class="tf-ch-left">⏳ ' + _daysLeft + ' 天</span></div>' +
+      '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:' + _pct + '%;"></div></div>' +
+      '<div class="tf-ch-sub">' + _cp.ch.sub + '　' + _cp.st.progress + ' / ' + _cp.ch.target + '</div>' +
+    '</div>';
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">選擇等級</div>' +
+    freeBanner +
+    challengeBanner +
     streakBar +
     '<button class="tf-level-btn tf-alpha-entry" onclick="TF.openAlpha()">' +
       '<span class="tf-level-emoji">🔤</span>' +
@@ -4177,6 +4557,13 @@ function stepLevelSelect() {
       '<span class="tf-level-label">自行搜尋</span>' +
       '<span class="tf-level-sub">自行輸入單字</span>' +
     '</button>' +
+    (tfLoadSpecialWords().length
+      ? '<button class="tf-level-btn tf-special-entry" onclick="TF.openSpecial()">' +
+          '<span class="tf-level-emoji">⭐</span>' +
+          '<span class="tf-level-label">特訓區 ⭐</span>' +
+          '<span class="tf-level-sub">易錯字複習・答對 ×2（' + tfLoadSpecialWords().length + ' 字）</span>' +
+        '</button>'
+      : '') +
   '</div>';
 }
 
@@ -4240,7 +4627,7 @@ function startSetSession(words) {
     sessionScored: false,
     // ── สเตจ 2 + หลายพยางค์ ──
     curWordAllFirstTry: true, scoredSyls: {},
-    currentWordGolden: tfRollGolden()
+    currentWordGolden: inSpecialRoom ? true : tfRollGolden()
   };
   gtag('event', 'tone_finder_start', {mode: selectedCategory || 'ทั้งหมด'});
   hist = []; histPos = -1;
@@ -4275,13 +4662,26 @@ function stepSetSelect() {
   var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞','ลักษณนาม':'量詞',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','อื่นๆ':'其他','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
   var label = catZh[cat] || cat;
   var btns = sets.map(function(set, i){
-    return '<button class="tf-cat-btn tf-set-btn" onclick="TF.selectSet('+i+')">'+
+    var status = tfSetStatus(tfSetId(selectedLevel, cat, i));
+    var cls = status === 'retired' ? ' tf-set-retired' : (status === 'locked' ? ' tf-set-locked' : '');
+    var statusTag = status === 'retired' ? '<span class="tf-set-status">✓ 精熟</span>'
+                  : status === 'locked' ? '<span class="tf-set-status">⏸ 今日已練</span>' : '';
+    return '<button class="tf-cat-btn tf-set-btn'+cls+'" onclick="TF.selectSet('+i+')">'+
       '<span class="tf-set-num">'+(i+1)+' / '+sets.length+'</span>'+
       '<span class="tf-set-count">'+set.length+' 字</span>'+
+      statusTag+
     '</button>';
   }).join('');
+  var specialEntry = tfLoadSpecialWords().length
+    ? '<button class="tf-level-btn tf-special-entry" onclick="TF.openSpecial()">'+
+        '<span class="tf-level-emoji">⭐</span>'+
+        '<span class="tf-level-label">特訓區 ⭐</span>'+
+        '<span class="tf-level-sub">易錯字複習・答對 ×2（'+tfLoadSpecialWords().length+' 字）</span>'+
+      '</button>'
+    : '';
   return '<div class="tf-level-select">'+
     '<div class="tf-level-title">'+label+' — 選擇組別</div>'+
+    specialEntry+
     '<div class="tf-cat-grid">'+btns+'</div>'+
     '<button class="tf-back-level-btn" onclick="TF.selectLevel('+selectedLevel+')">← 返回主題</button>'+
   '</div>';
@@ -5241,6 +5641,36 @@ function downloadStats() {
 // ════════════════════════════════════════════════════════════
 // PUBLIC API
 // ════════════════════════════════════════════════════════════
+// ── เตือนออกเกมกลางคัน: คะแนนนับเฉพาะตอนเล่นจบรอบ ออกกลางคัน = รีเซ็ต ไม่นับ — LIN 2026-06-20 ──
+function tfSessionInProgress() {
+  return !!(session && !session.sessionScored && session.words && session.words.length && S && S.step !== 'session-summary');
+}
+function tfConfirmQuit(onYes) {
+  if (!tfSessionInProgress()) { onYes(); return; }
+  var old = document.getElementById('tf-quit-ov'); if (old) old.remove();
+  var div = document.createElement('div');
+  div.id = 'tf-quit-ov'; div.className = 'tf-ask-overlay';
+  div.innerHTML =
+    '<div class="tf-ask-box" style="text-align:center;">' +
+      '<div class="tf-ask-title">確定要離開嗎？ 🥺</div>' +
+      '<div class="tf-ask-sub">這回合還沒結束，離開的話<b>分數不會被計算</b>，要重新開始喔～</div>' +
+      '<div class="tf-ask-actions">' +
+        '<button class="tf-ask-cancel" onclick="(function(){var o=document.getElementById(\'tf-quit-ov\');if(o)o.remove();})()">繼續練習</button>' +
+        '<button class="tf-ask-send" id="tf-quit-yes" style="background:#c0552f;">離開不存分</button>' +
+      '</div>' +
+    '</div>';
+  div.addEventListener('click', function (e) { if (e.target === div) div.remove(); });
+  document.body.appendChild(div);
+  var yes = document.getElementById('tf-quit-yes');
+  if (yes) yes.addEventListener('click', function () { div.remove(); onYes(); });
+}
+// เตือนตอนปิดแท็บ/รีเฟรชระหว่างเล่น
+try {
+  window.addEventListener('beforeunload', function (e) {
+    if (tfSessionInProgress()) { e.preventDefault(); e.returnValue = ''; return ''; }
+  });
+} catch (e) {}
+
 var TF = {
   filterThai: function(inp) {
     var orig = inp.value;
@@ -5378,26 +5808,31 @@ var TF = {
     if (histPos < hist.length-1) restoreState(histPos+1);
   },
   reset: function() {
-    hist=[]; histPos=-1;
-    S = { word:'', step:'level-select', path:[], tone:null };
-    randomEntry = null;
-    selectedLevel = null;
-    selectedCategory = null;
-    session = null;
-    render();
+    var self = this;
+    tfConfirmQuit(function () {
+      hist=[]; histPos=-1;
+      S = { word:'', step:'level-select', path:[], tone:null };
+      randomEntry = null;
+      selectedLevel = null;
+      selectedCategory = null;
+      session = null;
+      render();
+    });
   },
   // Re-select TOPIC: keep the chosen level, go back to the 選擇主題 (category) page.
   reselectTopic: function() {
-    hist=[]; histPos=-1;
-    randomEntry = null;
-    selectedCategory = null;
-    session = null;
-    if (selectedLevel) {
-      S = { word:'', step:'cat-select', path:[], tone:null };
-    } else {
-      S = { word:'', step:'level-select', path:[], tone:null };
-    }
-    render();
+    tfConfirmQuit(function () {
+      hist=[]; histPos=-1;
+      randomEntry = null;
+      selectedCategory = null;
+      session = null;
+      if (selectedLevel) {
+        S = { word:'', step:'cat-select', path:[], tone:null };
+      } else {
+        S = { word:'', step:'level-select', path:[], tone:null };
+      }
+      render();
+    });
   },
   selectLevel: function(level) {
     selectedLevel = level;
@@ -5408,11 +5843,12 @@ var TF = {
   },
   selectCategory: function(cat) {
     selectedCategory = cat;
+    currentSetId = null; inSpecialRoom = false;   // ไม่ผูกกับชุด (จะตั้งใหม่ใน selectSet)
     if (cat === 'ทั้งหมด') {
       // 全部：รวมทุกคำในระดับนั้น (ไม่จำกัด 5)
       var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
-      pool = pool.sort(function(){ return Math.random() - 0.5; });
-      startSetSession(pool);
+      // 50% เน้นคำที่ยังไม่แม่น (จากสถิติ) + 50% สุ่ม — LIN 2026-06-20
+      startSetSession(tfBuildAllMix(pool));
       return;
     }
     if (cat === 'คำนาม') {
@@ -5425,7 +5861,21 @@ var TF = {
   },
   selectSet: function(i) {
     var sets = getSets(selectedCategory);
+    var setId = tfSetId(selectedLevel, selectedCategory, i);
+    var status = tfSetStatus(setId);
+    if (status === 'locked' || status === 'retired') {
+      tfToast(status === 'retired' ? '這組已經精熟囉，換別組挑戰看看吧 😊' : '這組今天練過囉，改天再來玩吧 😊');
+      return;
+    }
+    currentSetId = setId; inSpecialRoom = false;
     startSetSession(sets[i] || sets[0] || []);
+  },
+  // ⭐ ห้องคำพิเศษ: เอาคำที่เคยผิดจากชุด 精熟 มาฝึก ตอบถูก ×2
+  openSpecial: function() {
+    var words = tfLoadSpecialWords();
+    if (!words.length) { tfToast('目前還沒有特訓單字～先把組別練到「精熟」就會出現囉 ⭐'); return; }
+    currentSetId = null; inSpecialRoom = true;
+    startSetSession(words.slice(0, TF_SPECIAL_DAILY));   // 每天只練 2 個字
   },
   // 🎖️ เปิดสมุดสะสมแบดจ์
   showBadges: function() {
@@ -5440,7 +5890,7 @@ var TF = {
       var cards = byTier[t].map(function(b){
         var got = !!unlocked[b.id];
         return '<div class="tf-badge-card' + (got ? '' : ' locked') + '">' +
-          '<div class="tf-badge-emoji">' + (got ? b.emoji : '🔒') + '</div>' +
+          '<div class="tf-badge-emoji">' + (got ? tfBadgeIcon(b, 54) : '🔒') + '</div>' +
           '<div class="tf-badge-zh">' + b.zh + '</div>' +
           '<div class="tf-badge-th">' + (got ? b.th : '———') + '</div>' +
           '<div class="tf-badge-need">' + b.need + '</div></div>';
@@ -5549,7 +5999,20 @@ var TF = {
   flashSpeak: function() {
     if (!flash) return;
     var card = flash.cards[flash.order[flash.index]];
-    if (card) speakThai(card.tts || card.ch);
+    if (!card) return;
+    // เล่นเสียงครูอ่านจริง (子音/母音) ถ้ามีไฟล์ — ไม่งั้น fallback TTS (ปิดอยู่) — LIN 2026-06-20
+    var cat = flash.back === 'alpha-vowel' ? 'vowels' : (flash.back === 'alpha-consonant' ? 'consonants' : null);
+    var src = (cat && TF_FLASH_AUDIO && TF_FLASH_AUDIO[cat]) ? TF_FLASH_AUDIO[cat][card.ch] : null;
+    if (src) {
+      try {
+        if (TF._flashAudio) { try { TF._flashAudio.pause(); } catch(e){} }
+        var a = new Audio(src);
+        TF._flashAudio = a;
+        a.play().catch(function(){});
+        return;
+      } catch (e) {}
+    }
+    speakThai(card.tts || card.ch);
   },
   flashToggleExp: function() {
     if (!flash) return;
@@ -5680,7 +6143,7 @@ var TF = {
       access_key: 'b3bfdb97-19dd-4910-bd15-89720be846c2',  // LIN 2026-06-19: ใช้คีย์เดียวกับฟอร์ม 學生回饋 (ตัวที่เมลเข้าจริง)
       subject: '【聲調工具】學生提問 / คำถามจากผู้เล่น',
       from_name: '聲調工具 提問',
-      email: email || 'no-reply@mrtaihualin.github.io',
+      email: email || 'no-reply@mrtaihualin.com',
       message: '問題：\n' + msg + '\n\n— 情境 —\n' + ctx + '\n回覆信箱：' + (email || '（未填）')
     };
     fetch('https://api.web3forms.com/submit', {

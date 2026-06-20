@@ -131,8 +131,8 @@
         '<button id="tf-gate-close" aria-label="ปิด / 關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;' +
         'font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
         '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🎵</div>' +
-        '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入後開始練習</h2>' +
-        '<p style="margin:0 0 20px;font-size:14px;color:#8B7340;line-height:1.6;">登入後即可練習聲調並記錄你的成績</p>' +
+        '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入更好玩！🎉</h2>' +
+        '<p style="margin:0 0 20px;font-size:14px;color:#8B7340;line-height:1.6;">免費試玩結束囉～登入就能<b>把分數存起來</b>、上<b>排行榜跟大家一起比賽</b>，還能解鎖徽章收藏！</p>' +
         googleBtnHTML('tf-google') +
         '<button id="tf-email" style="margin-top:12px;border:none;background:none;color:#A07A1E;' +
         'cursor:pointer;font-size:13px;text-decoration:underline;">用 Email 登入</button>' +
