@@ -4387,6 +4387,11 @@ function stepSessionSummary() {
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
     '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
+    '<div style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
+      '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
+      '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
+      '<button class="tf-session-next-btn" style="background:#C8973A;color:#fff;" onclick="if(typeof openModal===\'function\')openModal(\'modal-line-qr\')">預約免費體驗課 →</button>' +
+    '</div>' +
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
       '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
       '<button class="tf-restart-btn" onclick="TF.reselectTopic()">重新選主題</button>' +
@@ -6035,12 +6040,11 @@ var TF = {
         var a = new Audio(src);
         a.volume = 1;
         TF._flashAudio = a;
-        a.play().catch(function(err) { console.error('[flashcard-audio] play failed:', src, err); speakThaiForce(card.tts || card.ch); });
+        a.play().catch(function(err) { console.error('[flashcard-audio] play failed:', src, err); });
         return;
       } catch(e) { console.error('[flashcard-audio] Audio() error:', src, e); }
     }
-    // ไม่มีไฟล์ → TTS fallback (ไม่สนใจ TF_MUTED)
-    speakThaiForce(card.tts || card.ch);
+    // ไม่มีไฟล์ → ไม่เล่นเสียง (ลบ TTS fallback แล้ว — LIN 2026-06-21)
   },
   flashToggleExp: function() {
     if (!flash) return;
