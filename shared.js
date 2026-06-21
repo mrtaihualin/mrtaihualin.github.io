@@ -801,18 +801,17 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
       </div>
       <button class="modal-close" onclick="closeModal('modal-line-qr')" style="position:static;color:rgba(255,255,255,0.5);font-size:22px;background:none;border:none;cursor:pointer;padding:4px 8px;">✕</button>
     </div>
-    <div id="cal-booking-view" style="height:520px;overflow-y:auto;background:#fff;">
-      <div id="cal-embed-container" style="width:100%;min-height:520px;"></div>
+    <div style="background:#fff;">
+      <iframe src="https://cal.com/mrtaihualin/trial?embed=true&embedType=inline&theme=light" style="width:100%;height:500px;border:none;display:block;" frameborder="0" loading="lazy" id="cal-iframe"></iframe>
     </div>
-    <div id="cal-success-view" style="display:none;background:var(--gold-light);padding:36px 32px;text-align:center;border-top:3px solid var(--gold-bright);">
-      <div style="font-size:44px;margin-bottom:12px;">✅</div>
-      <div style="font-family:'Noto Serif TC',serif;font-size:22px;font-weight:900;color:var(--ink);margin-bottom:10px;">預約成功！</div>
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);line-height:1.9;margin-bottom:24px;">請加老師 LINE 確認正式上課時間<br>老師會在 <strong style="color:var(--gold-deep);">24 小時內</strong> 與你聯絡</p>
-      <div style="background:var(--white);padding:14px;display:inline-block;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:150px;height:150px;display:block;">
+    <div style="background:var(--gold-light);padding:20px 28px;border-top:2px solid var(--gold-bright);text-align:center;">
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-soft);margin-bottom:14px;line-height:1.8;">📌 預約後請加老師 LINE，確認上課時間與 Google Meet 連結<br><span style="color:var(--gold-deep);font-weight:700;">老師會在 24 小時內回覆</span></p>
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;">
+        <div style="background:var(--white);padding:10px;display:inline-block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:100px;height:100px;display:block;" loading="lazy">
+        </div>
+        <a href="https://lin.ee/yVBgvywy" target="_blank" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 24px;text-decoration:none;letter-spacing:1px;">💬 加老師 LINE</a>
       </div>
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);margin-bottom:16px;">手機直接點下方按鈕・電腦請掃 QR Code</p>
-      <a href="https://lin.ee/yVBgvywy" target="_blank" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:14px 32px;text-decoration:none;letter-spacing:2px;">💬 開啟 LINE 聯絡老師</a>
     </div>
   </div>
 </div>`;
