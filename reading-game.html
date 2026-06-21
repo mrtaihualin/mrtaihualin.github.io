@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google tag -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-DKVQE30982');</script>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>泰語拼讀練習 — 泰華眼裡的泰語教學</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.rg-page { max-width:520px; margin:0 auto; padding:24px 16px 70px; display:flex; flex-direction:column; align-items:center; font-family:'Sarabun',sans-serif; }
+
+.page-header { text-align:center; margin-bottom:18px; }
+.page-title { font-family:'Noto Serif TC',serif; font-size:clamp(22px,4vw,30px); font-weight:900; color:#8B6310; letter-spacing:2px; }
+.page-sub { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#b08040; margin-top:4px; }
+
+.card { background:#fff; border-radius:18px; box-shadow:0 4px 24px rgba(90,62,10,0.10); width:100%; max-width:480px; padding:22px 22px 20px; }
+.hidden { display:none !important; }
+
+/* ════ MODE SELECT ════ */
+.mode-title { font-family:'Noto Serif TC',serif; font-size:17px; font-weight:700; color:#5a3e0a; text-align:center; margin:4px 0 2px; }
+.mode-desc { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#999; text-align:center; margin-bottom:16px; }
+.mode-list { display:flex; flex-direction:column; gap:11px; }
+.mode-btn { display:flex; align-items:center; gap:14px; padding:16px 18px; border:1.5px solid rgba(139,99,16,0.22); border-radius:14px; background:#fff; cursor:pointer; transition:border-color .15s, background .15s, transform .1s; text-align:left; width:100%; font-family:'Noto Sans TC',sans-serif; }
+.mode-btn:hover { transform:translateY(-2px); }
+.mode-emoji { font-size:30px; line-height:1; flex-shrink:0; }
+.mode-info { flex:1; }
+.mode-name { font-family:'Noto Serif TC',serif; font-size:18px; font-weight:700; }
+.mode-zh { font-size:12px; color:#888; margin-top:1px; }
+.mode-meta { font-size:11px; color:#bbb; margin-top:3px; }
+/* difficulty colour-grading (เหมือนเกมเสียง) */
+.m-easy { background:linear-gradient(180deg,#D4ECAC 0%,#fff 100%); border-color:rgba(99,153,34,0.35); }
+.m-easy:hover { border-color:rgba(99,153,34,0.6); }
+.m-easy .mode-name { color:#3B6D11; }
+.m-vowel { background:linear-gradient(180deg,#F0DBA0 0%,#fff 100%); border-color:rgba(186,117,23,0.38); }
+.m-vowel:hover { border-color:rgba(186,117,23,0.65); }
+.m-vowel .mode-name { color:#854F0B; }
+.m-hard { background:linear-gradient(180deg,#F4C8B0 0%,#fff 100%); border-color:rgba(216,90,48,0.35); }
+.m-hard:hover { border-color:rgba(216,90,48,0.6); }
+.m-hard .mode-name { color:#993C1D; }
+.m-sentence { background:linear-gradient(180deg,#E0D8C4 0%,#fff 100%); border-color:rgba(90,62,10,0.2); opacity:0.7; cursor:not-allowed; }
+.m-sentence .mode-name { color:#7a6a4a; }
+.soon-tag { font-size:10px; font-weight:700; color:#fff; background:#b0a080; border-radius:999px; padding:2px 8px; }
+
+/* ════ GAME ════ */
+.hud { display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:10px; gap:8px; }
+.hud-left { display:flex; gap:12px; font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#a08050; align-items:center; flex-wrap:wrap; }
+.hud-left b { color:#5a3e10; font-weight:700; }
+.hud-left a { color:#bbb; text-decoration:none; }
+.hud-score { font-family:'Noto Serif TC',serif; font-weight:900; font-size:22px; color:#8B6310; display:flex; align-items:baseline; gap:4px; }
+.hud-score small { font-size:11px; font-weight:400; color:#bbb; font-family:'Noto Sans TC',sans-serif; }
+.combo-badge { display:none; align-items:center; gap:4px; background:#fff3e0; border:1.5px solid #ffcc02; border-radius:999px; padding:3px 10px; font-size:13px; font-weight:700; color:#e65100; margin:0 0 8px auto; }
+.combo-badge.show { display:flex; }
+.progress-bar-wrap { width:100%; height:6px; background:#ede0c8; border-radius:3px; margin-bottom:18px; overflow:hidden; }
+.progress-bar-fill { height:100%; background:linear-gradient(90deg,#e8a020,#d85a30); border-radius:3px; transition:width .4s ease; }
+
+.word-area { text-align:center; margin-bottom:6px; }
+.word-th { font-size:50px; font-weight:700; color:#3a2a0a; line-height:1.15; }
+.word-zh { font-size:15px; color:#888; font-family:'Noto Sans TC',sans-serif; margin-top:4px; }
+.word-mode { font-size:11px; color:#c0a070; font-family:'Noto Sans TC',sans-serif; margin-top:2px; }
+
+.hint-btn-wrap { width:100%; display:flex; justify-content:center; margin:12px 0 4px; }
+.btn-hint { display:flex; align-items:center; gap:6px; padding:7px 18px; border-radius:999px; border:1.5px solid #d4b87a; background:#fdf5e6; color:#8b6310; font-size:14px; font-weight:600; cursor:pointer; font-family:'Sarabun',sans-serif; transition:background .15s,border-color .15s; }
+.btn-hint:hover { background:#ffeedd; border-color:#c07030; }
+.btn-hint.used { opacity:.45; pointer-events:none; }
+.btn-hint.used::after { content:' (已看過)'; font-size:11px; color:#c07030; }
+
+.note-area { font-size:13px; color:#7a5030; background:#fdf5e6; border-radius:10px; padding:10px 14px; width:100%; line-height:1.7; border-left:3px solid #d4a060; display:none; margin:8px 0; }
+.note-area.show { display:block; }
+.note-label { font-size:11px; font-weight:700; color:#c07030; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+.requeue-notice { font-size:12px; color:#888; background:#f5f0ea; border-radius:8px; padding:6px 12px; display:none; margin:8px 0; text-align:center; }
+.requeue-notice.show { display:block; }
+
+.slots-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:14px 0; }
+.slot-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.slot { min-width:72px; height:56px; border-radius:12px; border:2.5px dashed #d4b87a; background:#fdf5e6; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:#5a3e10; cursor:pointer; padding:0 12px; transition:border-color .2s,background .2s; position:relative; }
+.slot:hover { border-color:#c07030; }
+.slot.filled { border-style:solid; border-color:#c07030; background:#fff8ee; }
+.slot.correct { border-color:#4caf50; background:#e8f5e9; color:#2e7d32; }
+.slot.wrong { border-color:#f44336; background:#fdecea; color:#c62828; }
+.slot-num { position:absolute; top:3px; left:6px; font-size:10px; color:#c0a070; font-weight:400; }
+.slot-hint { font-size:12px; min-height:16px; color:#e53935; font-weight:600; }
+.slot-hint.ok { color:#388e3c; }
+
+.chips-area { width:100%; }
+.chips-label { font-size:12px; color:#a08050; margin-bottom:8px; text-align:center; font-family:'Noto Sans TC',sans-serif; }
+.chips-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.chip { padding:8px 18px; border-radius:999px; border:2px solid #d4b87a; background:#fff; color:#5a3e10; font-size:18px; font-weight:600; font-family:'Sarabun',sans-serif; cursor:pointer; user-select:none; transition:background .15s,transform .1s,border-color .15s,opacity .2s; }
+.chip:hover:not(.used) { background:#ffeedd; border-color:#c07030; transform:scale(1.06); }
+.chip.used { opacity:.22; pointer-events:none; }
+.chip.correct-chip { border-color:#4caf50; background:#e8f5e9; color:#2e7d32; }
+.chip.wrong-chip { border-color:#f44336; background:#fdecea; color:#c62828; }
+
+.result-banner { width:100%; padding:11px 16px; border-radius:12px; text-align:center; font-size:15px; font-weight:600; display:none; margin-top:14px; }
+.result-banner.show { display:block; }
+.result-banner.perfect { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; }
+.result-banner.partial { background:#fff8e1; color:#f57f17; border:1px solid #ffe082; }
+.result-banner.fail { background:#fdecea; color:#c62828; border:1px solid #ef9a9a; }
+
+.reading-reveal { font-size:13px; color:#999; text-align:center; display:none; margin-top:10px; }
+.reading-reveal.show { display:block; }
+.reading-full { font-size:24px; font-weight:700; color:#5a3e10; margin-top:3px; }
+.reading-en { font-size:19px; font-weight:600; color:#993C1D; margin-top:5px; font-family:'Noto Sans TC',sans-serif; letter-spacing:.5px; }
+.reading-en .en-label { display:block; font-size:11px; font-weight:400; color:#bbb; letter-spacing:1px; margin-bottom:1px; }
+
+.btn-row { display:flex; gap:10px; justify-content:center; width:100%; margin-top:16px; }
+.btn { padding:12px 26px; border-radius:999px; border:none; font-size:16px; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; transition:background .2s,transform .1s; }
+.btn:active { transform:scale(.97); }
+.btn-primary { background:linear-gradient(135deg,#e8a020,#d85a30); color:#fff; }
+.btn-primary:hover { background:linear-gradient(135deg,#d49010,#c04a20); }
+.btn-primary:disabled { opacity:.35; cursor:default; }
+.btn-secondary { background:#f0e8d8; color:#8b6310; }
+.btn-secondary:hover { background:#e8dcc8; }
+
+.score-pop { position:fixed; top:30%; left:50%; transform:translateX(-50%); font-family:'Noto Serif TC',serif; font-weight:900; color:#d9a400; pointer-events:none; z-index:50; opacity:0; font-size:44px; animation:pop-float 1.4s cubic-bezier(.22,1,.36,1) forwards; }
+.score-pop .mult { font-size:18px; color:#e65100; display:block; }
+@keyframes pop-float { 0%{opacity:0;transform:translate(-50%,10px) scale(.8);} 20%{opacity:1;transform:translate(-50%,-6px) scale(1.05);} 100%{opacity:0;transform:translate(-50%,-46px) scale(1);} }
+
+.end-wrap { text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px; }
+.end-wrap h2 { font-family:'Noto Serif TC',serif; font-size:24px; color:#5a3e10; }
+.big-score { font-family:'Noto Serif TC',serif; font-size:48px; font-weight:900; color:#d85a30; }
+.big-score small { font-size:16px; color:#bbb; font-weight:400; }
+.end-stats { display:flex; gap:20px; justify-content:center; font-size:13px; color:#888; font-family:'Noto Sans TC',sans-serif; }
+.end-stats b { color:#5a3e10; font-size:18px; display:block; }
+.end-msg { color:#888; font-size:14px; max-width:320px; line-height:1.6; }
+
+.soon-box { text-align:center; padding:24px 10px; }
+.soon-box .big { font-size:46px; }
+.soon-box h3 { font-family:'Noto Serif TC',serif; color:#7a6a4a; margin:10px 0 6px; }
+.soon-box p { font-size:13px; color:#999; line-height:1.7; font-family:'Noto Sans TC',sans-serif; }
+</style>
+</head>
+<body>
+<!-- FLOATING LINE QR -->
+<div class="floating-qr" id="floating-qr">
+  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
+  <span class="floating-qr-top">預約免費體驗課</span>
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR" loading="lazy">
+  <span class="floating-qr-label">掃碼加入 LINE</span>
+</div>
+
+<!-- NAV (injected by shared.js) -->
+<nav class="site-nav"></nav>
+
+<!-- PAGE NAV STRIP -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="page2.html">課程・費用</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="page4.html">泰語・分享</a>
+  <a href="tone-finder.html">聲調・搜尋</a>
+  <a href="reading-game.html" class="active">拼讀・練習</a>
+</div>
+
+<div class="rg-page">
+
+<div class="page-header">
+  <div class="page-title">泰語拼讀練習</div>
+  <div class="page-sub">เขียนคำอ่าน · 泰華眼裡的泰語教學</div>
+</div>
+
+<!-- ════ MODE SELECT ════ -->
+<div class="card" id="home-screen">
+  <div class="mode-title">選擇練習模式</div>
+  <div class="mode-desc">依「變化類型」分組 · 把音節拼成正確讀音</div>
+  <div class="mode-list" id="mode-list"></div>
+</div>
+
+<!-- ════ GAME ════ -->
+<div class="card hidden" id="game-card">
+  <div class="hud">
+    <div class="hud-left">
+      <a href="#" onclick="backToMenu();return false">← 選單</a>
+      <span>第 <b id="q-num">1</b>/<b id="q-total">?</b> 題</span>
+      <span>✓ <b id="score-ok">0</b></span>
+      <span>✗ <b id="score-bad">0</b></span>
+    </div>
+    <div class="hud-score"><span id="score-total">0</span><small>分</small></div>
+  </div>
+  <div class="combo-badge" id="combo-badge">🔥 連對 <span id="combo-num">0</span></div>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="word-area">
+    <div class="word-th" id="word-th">—</div>
+    <div class="word-zh" id="word-zh"></div>
+    <div class="word-mode" id="word-mode"></div>
+  </div>
+
+  <div class="hint-btn-wrap"><button class="btn-hint" id="btn-hint" onclick="showHint()">💡 看說明</button></div>
+  <div class="note-area" id="note-area"><div class="note-label" id="note-label">💡 讀音說明</div><div id="note-text"></div></div>
+  <div class="requeue-notice" id="requeue-notice">🔁 這個字稍後會再出現一次</div>
+  <div class="slots-row" id="slots-row"></div>
+  <div class="result-banner" id="result-banner"></div>
+  <div class="reading-reveal" id="reading-reveal">正確讀音<div class="reading-full" id="reading-full"></div><div class="reading-en" id="reading-en"><span class="en-label">聲調讀音 TONE</span></div></div>
+  <div class="chips-area"><div class="chips-label">依順序把音節填入空格</div><div class="chips-row" id="chips-row"></div></div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" id="btn-skip" onclick="skipWord()">跳過</button>
+    <button class="btn btn-primary" id="btn-check" onclick="checkAnswer()" disabled>檢查</button>
+    <button class="btn btn-primary" id="btn-next" onclick="nextWord()" style="display:none">下一題 →</button>
+  </div>
+</div>
+
+<!-- ════ SET COMPLETE / END ════ -->
+<div class="card hidden" id="end-screen">
+  <div class="end-wrap">
+    <div style="font-size:52px">🎉</div>
+    <h2 id="end-h2">完成一組！</h2>
+    <div class="big-score" id="end-score">—</div>
+    <div class="end-stats">
+      <div><b id="end-ok">0</b>答對</div>
+      <div><b id="end-streak">0</b>最高連對</div>
+      <div><b id="end-hint">0</b>看說明</div>
+    </div>
+    <p class="end-msg" id="end-msg"></p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="backToMenu()">換模式</button>
+      <button class="btn btn-primary" onclick="nextSet()">再來一組</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ COMING SOON (sentence) ════ -->
+<div class="card hidden" id="soon-screen">
+  <div class="soon-box">
+    <div class="big">📖</div>
+    <h3>造句拼讀 — 敬請期待</h3>
+    <p>真實生活句子・逐音節拆解練習<br>正在準備句子題庫，之後推出。</p>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="backToMenu()">← 返回選單</button></div>
+  </div>
+</div><!-- /rg-page -->
+
+<script>
+// ══════════ WORD DATA (288 คำ มี bucket: easy/vowel/hard) ══════════
+var WORDS = [
+  { th:"หนึ่ง", reading:"หนึ่ง", en:"nèung", zh:"一", b:"easy" },
+  { th:"สอง", reading:"สอง", en:"sǒong", zh:"二", b:"easy" },
+  { th:"สาม", reading:"สาม", en:"sǎam", zh:"三", b:"easy" },
+  { th:"สี่", reading:"สี่", en:"sìi", zh:"四", b:"easy" },
+  { th:"ห้า", reading:"ห้า", en:"hâa", zh:"五", b:"easy" },
+  { th:"หก", reading:"หก", en:"hòk", zh:"六", b:"vowel" },
+  { th:"เจ็ด", reading:"เจ็ด", en:"jèt", zh:"七", b:"vowel" },
+  { th:"แปด", reading:"แปด", en:"bpàet", zh:"八", b:"easy" },
+  { th:"เก้า", reading:"เก้า", en:"gâo", zh:"九", b:"easy" },
+  { th:"สิบ", reading:"สิบ", en:"sìp", zh:"十", b:"easy" },
+  { th:"ดำ", reading:"ดำ", en:"dam", zh:"黑", b:"easy" },
+  { th:"ขาว", reading:"ขาว", en:"khǎao", zh:"白", b:"easy" },
+  { th:"แดง", reading:"แดง", en:"daeng", zh:"紅", b:"easy" },
+  { th:"เหลือง", reading:"เหลือง", en:"lʉ̌ang", zh:"黃", b:"easy" },
+  { th:"ฟ้า", reading:"ฟ้า", en:"fáa", zh:"藍", b:"easy" },
+  { th:"กิน", reading:"กิน", en:"gin", zh:"吃", b:"easy" },
+  { th:"ดื่ม", reading:"ดื่ม", en:"dèum", zh:"喝", b:"easy" },
+  { th:"ไป", reading:"ไป", en:"bpai", zh:"去", b:"easy" },
+  { th:"มา", reading:"มา", en:"maa", zh:"來", b:"easy" },
+  { th:"ซื้อ", reading:"ซื้อ", en:"séu", zh:"買", b:"easy" },
+  { th:"ดี", reading:"ดี", en:"dii", zh:"好", b:"easy" },
+  { th:"ใหญ่", reading:"ใหญ่", en:"yài", zh:"大", b:"easy" },
+  { th:"เล็ก", reading:"เล็ก", en:"lék", zh:"小", b:"vowel" },
+  { th:"ร้อน", reading:"ร้อน", en:"róon", zh:"熱/燙", b:"easy" },
+  { th:"แพง", reading:"แพง", en:"phaeng", zh:"貴", b:"easy" },
+  { th:"อาหาร", reading:"อา-หาน", en:"aa-hǎan", zh:"食物/料理", b:"hard", note:"詞尾 ร 收 น 音(-n)→唸 อา-หาน" },
+  { th:"ร้านอาหาร", reading:"ร้าน-อา-หาน", en:"ráan-aa-hǎan", zh:"餐廳", b:"hard", note:"ร้าน+อาหาร 組成；詞尾 ร 收 น 音(-n)→唸 ร้าน-อา-หาน" },
+  { th:"เมนู", reading:"เม-นู", en:"mee-nuu", zh:"菜單", b:"easy", note:"外來語(menu)，照拼寫直接唸 เม-นู" },
+  { th:"ของหวาน", reading:"ของ-หวาน", en:"khǒong-wǎan", zh:"甜點", b:"easy", note:"ของ 收 -ng；หวาน 的 ห 為前引不發音、น 收 -n" },
+  { th:"น้ำแข็ง", reading:"น้ำ-แข็ง", en:"náam-khǎeng", zh:"冰塊", b:"vowel", note:"น้ำ 母音為 อำ(短-am)；แข็ง 收 -ng" },
+  { th:"ใบเสร็จ", reading:"ใบ-เส็ด", en:"bai-sèt", zh:"收據/帳單", b:"hard", note:"เสร็จ 中間 ร 不發音、詞尾 จ 收 ด 音(-t)→唸 เส็ด" },
+  { th:"สนามบิน", reading:"สะ-หนาม-บิน", en:"sa-nǎam-bin", zh:"機場", b:"easy", note:"สน 之間插短 อะ→唸 สะ-หนาม(ห 前引不發音)；บิน 收 -n" },
+  { th:"แท็กซี่", reading:"แท็ก-ซี่", en:"tháek-sîi", zh:"計程車", b:"vowel", note:"外來語(taxi)；แท็ก 的 ก 收入聲(-k)" },
+  { th:"รถไฟฟ้า", reading:"รด-ไฟ-ฟ้า", en:"rót-fai-fáa", zh:"捷運/地鐵", b:"hard", note:"รถ 的 ถ 收尾唸 ด 音(-t)→唸 รด；ไฟฟ้า 照拼寫唸" },
+  { th:"แผนที่", reading:"แผน-ที่", en:"phǎen-thîi", zh:"地圖", b:"easy", note:"แผน 收 -n；ที่ 直接唸" },
+  { th:"ทางออก", reading:"ทาง-ออก", en:"thaang-òk", zh:"出口", b:"easy", note:"ทาง 收 -ng；ออก 的 ก 收入聲(-k)" },
+  { th:"ห้องน้ำ", reading:"ห้อง-น้ำ", en:"hông-náam", zh:"洗手間", b:"easy", note:"ห้อง 收 -ng；น้ำ 母音為 อำ(-am)" },
+  { th:"โรงแรม", reading:"โรง-แรม", en:"roong-raem", zh:"飯店", b:"easy", note:"โรง 收 -ng；แรม 收 -m，照拼寫唸" },
+  { th:"ห้องพัก", reading:"ห้อง-พัก", en:"hông-phák", zh:"客房", b:"vowel", note:"ห้อง 收 -ng；พัก 的 ก 收入聲(-k)" },
+  { th:"เช็คอิน", reading:"เช็ก-อิน", en:"chék-in", zh:"辦理入住", b:"hard", note:"外來語(check-in)；เช็ค 的 ค 收入聲(-k)→唸 เช็ก" },
+  { th:"เช็คเอาท์", reading:"เช็ค-เอาท์", en:"chék-áo", zh:"退房", b:"hard", note:"外來語(check-out)；เอาท์ 詞尾 ท์ 為啞音不發" },
+  { th:"สระว่ายน้ำ", reading:"สะ-ว่าย-น้ำ", en:"sà-wâai-náam", zh:"游泳池", b:"hard", note:"สระ 在此唸短音 สะ；ว่าย 的 ย 作韻尾；น้ำ 母音為 อำ(-am)" },
+  { th:"บริษัท", reading:"บอ-ริ-สัด", en:"bor-rí-sàt", zh:"公司", b:"hard", note:"ษ 唸 ส(s)音；詞尾 ท 為啞音不發→唸 สัด(-t)；中間多 บอ-ริ 短音" },
+  { th:"ประชุม", reading:"ประ-ชุม", en:"bprà-chum", zh:"開會", b:"easy", note:"ปร 之間帶極短 อะ→唸 ปฺระ(輕帶過)；ชุม 收 -m" },
+  { th:"ลูกค้า", reading:"ลูก-ค้า", en:"lûuk-kháa", zh:"客戶", b:"easy", note:"ลูก 的 ก 收入聲(-k)；ลูก+ค้า 兩音節分明" },
+  { th:"นัดหมาย", reading:"นัด-หมาย", en:"nát-mǎai", zh:"預約/約定", b:"vowel", note:"นัด 的 ด 收 -t；หมาย 的  ห 前引不發音、ย 作韻尾(-i)" },
+  { th:"รายงาน", reading:"ราย-งาน", en:"raai-ngaan", zh:"報告", b:"easy", note:"ราย 的 ย 作韻尾(-i)；งาน 收 -ng" },
+  { th:"ราคา", reading:"รา-คา", en:"raa-khaa", zh:"價格", b:"easy", note:"照拼寫直接唸 รา-คา" },
+  { th:"ลดราคา", reading:"ลด-รา-คา", en:"lót-raa-khaa", zh:"打折", b:"easy", note:"ลด 的 ด 收 -t；ราคา 直接唸" },
+  { th:"ต่อรอง", reading:"ต่อ-รอง", en:"dtòr-rong", zh:"殺價", b:"easy", note:"ต่อ 直接唸；รอง 收 -ng" },
+  { th:"ชำระเงิน", reading:"ชำ-ระ-เงิน", en:"cham-rá-ngoen", zh:"付款", b:"vowel", note:"ชำ 為 อำ(-am)；ระ 為短音；เงิน 母音為 เ_ิ+น" },
+  { th:"สวัสดี", reading:"สะ-หวัด-ดี", en:"sà-wàt-dii", zh:"你好/再見", b:"hard", note:"สว 之間帶短 อะ→唸 สะ；หวัด 的 ห 前引不發音、ด 收 -t" },
+  { th:"ขอบคุณ", reading:"ขอบ-คุน", en:"khòp-khun", zh:"謝謝", b:"hard", note:"ขอบ 的 บ 收入聲(-p)；คุณ 的 ณ 收尾唸 น 音(-n)→唸 คุน" },
+  { th:"ขอโทษ", reading:"ขอ-โทด", en:"khǒr-thôot", zh:"對不起", b:"hard", note:"詞尾 ษ 收 ด 音(-t)→唸 โทด，ษ 不發 s 尾" },
+  { th:"ไม่เป็นไร", reading:"ไม่-เป็น-ไร", en:"mâi-bpen-rai", zh:"沒關係", b:"vowel", note:"เป็น 收 -n；ไร 為 สระไ(-ai)；照拼寫唸" },
+  { th:"ไม่เข้าใจ", reading:"ไม่-เข้า-ใจ", en:"mâi-khâo-jai", zh:"我不懂", b:"easy", note:"เข้า 的 ว 作韻尾；ใจ 為 สระใ(-ai)；照拼寫唸" },
+  { th:"ช่วยด้วย", reading:"ช่วย-ด้วย", en:"chûai-dûai", zh:"救命", b:"easy", note:"ช่วย、ด้วย 的 ย 皆作韻尾(-i)" },
+  { th:"ข้าวผัด", reading:"ข้าว-ผัด", en:"khâao-phàt", zh:"炒飯", b:"vowel", note:"ข้าว 的 ว 作韻尾；ผัด 的 ด 收 -t" },
+  { th:"ต้มยำ", reading:"ต้ม-ยำ", en:"dtôm-yam", zh:"冬陰湯", b:"easy", note:"ต้ม 收 -m；ยำ 母音為 อำ(-am)" },
+  { th:"ผัดไทย", reading:"ผัด-ไท", en:"phàt-thai", zh:"泰式炒麵", b:"hard", note:"ผัด 的 ด 收 -t；ไทย 詞尾 ย 不發音→唸 ไท" },
+  { th:"ส้มตำ", reading:"ส้ม-ตำ", en:"sôm-dtam", zh:"涼拌木瓜", b:"easy", note:"ส้ม 收 -m；ตำ 母音為 อำ(-am)" },
+  { th:"ข้าวต้ม", reading:"ข้าว-ต้ม", en:"khâao-dtôm", zh:"粥", b:"easy", note:"ข้าว 的 ว 作韻尾；ต้ม 收 -m" },
+  { th:"ไก่ทอด", reading:"ไก่-ทอด", en:"gài-thôot", zh:"炸雞", b:"easy", note:"ทอด 的 ด 收 -t；ไก่ 為 สระไ(-ai)" },
+  { th:"หมูปิ้ง", reading:"หมู-ปิ้ง", en:"mǔu-bpîng", zh:"烤豬肉", b:"easy", note:"หมู 的 ห 為前引不發音；ปิ้ง 收 -ng" },
+  { th:"กาแฟ", reading:"กา-แฟ", en:"gaa-fae", zh:"咖啡", b:"easy", note:"照拼寫直接唸 กา-แฟ" },
+  { th:"น้ำชา", reading:"น้ำ-ชา", en:"nám-chaa", zh:"茶", b:"easy", note:"น้ำ 母音為 อำ(-am)；ชา 直接唸" },
+  { th:"น้ำส้ม", reading:"น้ำ-ส้ม", en:"nám-sôm", zh:"柳橙汁", b:"easy", note:"น้ำ 母音為 อำ(-am)；ส้ม 收 -m" },
+  { th:"ขนมปัง", reading:"ขะ-หนม-ปัง", en:"khà-nǒm-bpang", zh:"麵包", b:"vowel", note:"ขน 之間插短 อะ→唸 ขะ-หน(ห 前引不發音)；ปัง 收 -ng" },
+  { th:"ช้อนส้อม", reading:"ช้อน-ส้อม", en:"chóon-sôom", zh:"餐具", b:"easy", note:"ช้อน 收 -n；ส้อม 收 -m" },
+  { th:"ตะเกียบ", reading:"ตะ-เกียบ", en:"dta-gìap", zh:"筷子", b:"easy", note:"ตะ 為短音；เกียบ 詞尾 บ 收入聲(-p)，雙唇閉合" },
+  { th:"จานข้าว", reading:"จาน-ข้าว", en:"jaan-khâao", zh:"飯盤", b:"easy", note:"จาน 收 -n；ข้าว 的 ว 作韻尾" },
+  { th:"รถเมล์", reading:"รด-เม", en:"rót-mee", zh:"公車", b:"hard", note:"รถ→รด(ถ 收 ด)；เมล์ 的 ล์ 為啞音不發→唸 เม" },
+  { th:"รถทัวร์", reading:"รด-ทัว", en:"rót-thua", zh:"遊覽車", b:"hard", note:"รถ→รด(ถ 收 ด)；ทัวร์ 詞尾 ร์ 為啞音→唸 ทัว" },
+  { th:"เครื่องบิน", reading:"เครื่อง-บิน", en:"khrʉ̂ang-bin", zh:"飛機", b:"easy", note:"คร 為複合子音(連著唸)；เครื่อง 收 -ng；บิน 收 -n" },
+  { th:"สถานี", reading:"สะ-ถา-นี", en:"sà-thǎa-nii", zh:"車站", b:"easy", note:"สถ 之間插短 อะ→唸 สะ-ถา；นี 直接唸" },
+  { th:"สะพาน", reading:"สะ-พาน", en:"sà-phaan", zh:"橋", b:"easy", note:"สะ 為短音；พาน 收 -n" },
+  { th:"ถนน", reading:"ถะ-หนน", en:"thà-nǒn", zh:"馬路", b:"vowel", note:"ถน 之間插短 อะ→唸 ถะ-หน(ห 前引不發音)；末音節 น 收 -n" },
+  { th:"ทางด่วน", reading:"ทาง-ด่วน", en:"thaang-dùan", zh:"高速公路", b:"easy", note:"ทาง 收 -ng；ด่วน 收 -n" },
+  { th:"น้ำมัน", reading:"น้ำ-มัน", en:"nám-man", zh:"油", b:"vowel", note:"น้ำ 母音為 อำ(-am)；มัน 收 -n" },
+  { th:"กระเป๋า", reading:"กระ-เป๋า", en:"grà-bpǎo", zh:"包包", b:"easy", note:"กร 之間帶極短 อะ→唸 กฺระ(輕快帶過)；เป๋า 直接唸" },
+  { th:"ตำรวจ", reading:"ตำ-หรวด", en:"dtam-rùat", zh:"警察", b:"hard", note:"ตำรวจ 唸 ตำ-หรวด；詞尾 จ 收 ด 音(-t)" },
+  { th:"ที่จอดรถ", reading:"ที่-จอด-รด", en:"thîi-jòot-rót", zh:"停車場", b:"hard", note:"จอด 的 ด 收 -t；รถ 的 ถ 收尾唸 ด(-t)→唸 รด" },
+  { th:"ทางม้าลาย", reading:"ทาง-ม้า-ลาย", en:"thaang-máa-laai", zh:"斑馬線", b:"easy", note:"ทาง 收 -ng；ลาย 的 ย 作韻尾(-i)" },
+  { th:"ระยะทาง", reading:"ระ-ยะ-ทาง", en:"rá-yá-thaang", zh:"距離", b:"easy", note:"ระ-ยะ 每個音節都是短促 อะ 音；ทาง 收 -ng" },
+  { th:"ป้ายรถ", reading:"ป้าย-รด", en:"bpâai-rót", zh:"站牌", b:"hard", note:"ป้าย 的 ย 作韻尾(-i)；รถ→รด(ถ 收 ด)" },
+  { th:"พนักงาน", reading:"พะ-นัก-งาน", en:"phá-nák-ngaan", zh:"員工", b:"vowel", note:"พน 之間插短 อะ→唸 พะ-น；นัก 的 ก 收入聲(-k)；งาน 收 -ng" },
+  { th:"เตียงนอน", reading:"เตียง-นอน", en:"dtiang-noon", zh:"床", b:"easy", note:"เตียง 收 -ng；นอน 收 -n" },
+  { th:"ผ้าเช็ดตัว", reading:"ผ้า-เช็ด-ตัว", en:"phâa-chét-dtua", zh:"毛巾", b:"vowel", note:"เช็ด 為短母音 เ_็+ด，ด 收 -t；ตัว 直接唸" },
+  { th:"กุญแจ", reading:"กุน-แจ", en:"gun-jae", zh:"鑰匙", b:"hard", note:"กุญ 的 ญ 收尾唸 น 音(-n)→唸 กุน；แจ 直接唸" },
+  { th:"ระเบียง", reading:"ระ-เบียง", en:"rá-biang", zh:"陽台", b:"easy", note:"ระ 為短音；เบียง 母音為 เ_ีย+ง(-ng)" },
+  { th:"ห้องอาหาร", reading:"ห้อง-อา-หาน", en:"hôong-aa-hǎan", zh:"餐廳", b:"hard", note:"ห้อง 收 -ng；อาหาร 詞尾 ร 收 น 音(-n)→唸 อา-หาน" },
+  { th:"ค่าห้อง", reading:"ค่า-ห้อง", en:"khâa-hôong", zh:"房費", b:"easy", note:"ค่า 直接唸；ห้อง 收 -ng" },
+  { th:"อาหารเช้า", reading:"อา-หาน-เช้า", en:"aa-hǎan-cháo", zh:"早餐", b:"hard", note:"อาหาร 詞尾 ร 收 น 音(-n)→唸 อา-หาน；เช้า 的 ว 作韻尾" },
+  { th:"สบู่", reading:"สะ-บู่", en:"sà-bùu", zh:"肥皂", b:"easy", note:"สะ 為短音→唸 สะ-บู่" },
+  { th:"ผ้าห่ม", reading:"ผ้า-ห่ม", en:"phâa-hòm", zh:"棉被", b:"easy", note:"ห่ม 的 ห 為前引不發音；ม 收 -m" },
+  { th:"ทีวี", reading:"ที-วี", en:"thii-wii", zh:"電視", b:"easy", note:"外來語(TV)，照拼寫唸 ที-วี" },
+  { th:"น้ำอุ่น", reading:"น้ำ-อุ่น", en:"nám-ùn", zh:"熱水", b:"easy", note:"น้ำ 母音為 อำ(-am)；อุ่น 收 -n" },
+  { th:"ยาสีฟัน", reading:"ยา-สี-ฟัน", en:"yaa-sǐi-fan", zh:"牙膏", b:"vowel", note:"三音節 ยา-สี-ฟัน 照拼寫直接唸；ฟัน 的 น 收 -n" },
+  { th:"หมอน", reading:"หมอน", en:"mǒon", zh:"枕頭", b:"easy" },
+  { th:"ต้อนรับ", reading:"ต้อน-รับ", en:"dtôon-ráp", zh:"接待", b:"vowel", note:"ต้อน 收 -n；รับ 的 บ 收入聲(-p)" },
+  { th:"เงินเดือน", reading:"เงิน-เดือน", en:"ngern-dʉan", zh:"薪水", b:"vowel", note:"เงิน 母音為 เ_ิ+น；เดือน 母音為 เ_ือ+น，皆收 -n" },
+  { th:"หัวหน้า", reading:"หัว-หน้า", en:"hǔa-nâa", zh:"主管", b:"easy", note:"หัว 的 ว 作韻尾；หน้า 的 ห 為前引不發音" },
+  { th:"โทรศัพท์", reading:"โท-ระ-สับ", en:"thoo-rá-sàp", zh:"電話", b:"hard", note:"ศ 唸 ส(s)；詞尾 พท์ 收 บ 音(-p)，ท+์ 為啞音；中間多 ระ 短音" },
+  { th:"เอกสาร", reading:"เอก-กะ-สาน", en:"èek-gà-sǎan", zh:"文件", b:"hard", note:"เอก 的 ก 收尾並牽出短音→唸 เอก-กะ；สาร 詞尾 ร 收 น 音(-n)→唸 สาน" },
+  { th:"สัมภาษณ์", reading:"สำ-พาด", en:"sǎm-phâat", zh:"面試", b:"hard", note:"สัมภ 唸 สำ-พ(ภ 唸 ph)；詞尾 ษณ์ 收 ด 音(-t)，์ 為啞音" },
+  { th:"ตำแหน่ง", reading:"ตำ-แหน่ง", en:"dtam-nàeng", zh:"職位", b:"easy", note:"แหน่ง 的 ห 為前引不發音；ง 收 -ng" },
+  { th:"ออฟฟิศ", reading:"ออบ-ฟิด", en:"óp-fít", zh:"辦公室", b:"hard", note:"ออฟ 的 ฟ 收尾唸 บ 音(-p)→唸 ออบ；詞尾 ศ 收 ด(-t)→唸 ฟิด" },
+  { th:"งานเลี้ยง", reading:"งาน-เลี้ยง", en:"ngaan-líang", zh:"聚會", b:"easy", note:"งาน 收 -ng；เลี้ยง 收 -ng" },
+  { th:"อีเมล", reading:"อี-เมล", en:"ii-meeo", zh:"電子郵件", b:"easy", note:"外來語(email)；เมล 的 ล 收尾唸 น 音(-n)" },
+  { th:"โต๊ะทำงาน", reading:"โต๊ะ-ทำ-งาน", en:"tó-tham-ngaan", zh:"辦公桌", b:"easy", note:"โต๊ะ 為短音(-o)；ทำ 母音為 อำ(-am)；งาน 收 -ng" },
+  { th:"วันหยุด", reading:"วัน-หยุด", en:"wan-yùt", zh:"假日", b:"vowel", note:"วัน 收 -n；หยุด 的 ห 前引不發音、ด 收 -t" },
+  { th:"นามบัตร", reading:"นาม-บัด", en:"naam-bàt", zh:"名片", b:"hard", note:"นาม 收 -m；บัตร 詞尾 ตร 收 ด 音(-t)，ร 不發音→唸 บัด" },
+  { th:"เลขา", reading:"เล-ขา", en:"lee-khǎa", zh:"秘書", b:"easy", note:"照拼寫直接唸 เล-ขา" },
+  { th:"ประชุมงาน", reading:"ปฺระ-ชุม-งาน", en:"bprà-chum-ngaan", zh:"工作會議", b:"easy", note:"ปร 帶極短 อะ→唸 ปฺระ；ชุม 收 -m；งาน 收 -ng" },
+  { th:"เวลางาน", reading:"เว-ลา-งาน", en:"wee-laa-ngaan", zh:"上班時間", b:"easy", note:"เวลา 照拼寫唸；งาน 收 -ng" },
+  { th:"เสื้อผ้า", reading:"เสื้อ-ผ้า", en:"sʉ̂a-phâa", zh:"衣服", b:"easy", note:"เสื้อ 母音為 เ_ื+อ；ผ้า 直接唸" },
+  { th:"รองเท้า", reading:"รอง-เท้า", en:"roong-tháo", zh:"鞋子", b:"easy", note:"รอง 收 -ng；เท้า 的 ว 作韻尾" },
+  { th:"กระเป๋าเงิน", reading:"กฺระ-เป๋า-เงิน", en:"grà-bpǎo-ngern", zh:"錢包", b:"vowel", note:"กร 帶極短 อะ→唸 กฺระ；เงิน 母音為 เ_ิ+น" },
+  { th:"ของขวัญ", reading:"ของ-ขวัน", en:"khǒong-khwǎn", zh:"禮物", b:"hard", note:"ของ 收 -ng；ขวัญ 的 ญ 收尾唸 น 音(-n)→唸 ขวัน" },
+  { th:"ตลาด", reading:"ตะ-หลาด", en:"dta-làat", zh:"市場", b:"easy", note:"ตล 之間插短 อะ→唸 ตะ-หล(ห 前引不發音)；詞尾 ด 收 -t" },
+  { th:"ร้านค้า", reading:"ร้าน-ค้า", en:"ráan-kháa", zh:"商店", b:"easy", note:"ร้าน 收 -n；ค้า 直接唸" },
+  { th:"สินค้า", reading:"สิน-ค้า", en:"sǐn-kháa", zh:"商品", b:"easy", note:"สิน 收 -n；ค้า 直接唸" },
+  { th:"คุณภาพ", reading:"คุน-นะ-พาบ", en:"khun-ná-phâap", zh:"品質", b:"hard", note:"คุณ 的 ณ 唸 น→唸 คุน；ภ 唸 ph；詞尾 พ 收 บ 音(-p)→唸 พาบ；中間牽出 นะ 短音" },
+  { th:"ส่วนลด", reading:"ส่วน-ลด", en:"sùan-lót", zh:"折扣", b:"easy", note:"ส่วน 收 -n；ลด 的 ด 收 -t" },
+  { th:"เงินสด", reading:"เงิน-สด", en:"ngern-sòt", zh:"現金", b:"vowel", note:"เงิน 母音為 เ_ิ+น；สด 的 ด 收 -t" },
+  { th:"เงินทอน", reading:"เงิน-ทอน", en:"ngern-thoon", zh:"找零", b:"vowel", note:"เงิน 母音為 เ_ิ+น；ทอน 收 -n" },
+  { th:"ขนาด", reading:"ขะ-หนาด", en:"khà-nàat", zh:"尺寸", b:"easy", note:"ขน 之間插短 อะ→唸 ขะ-หน(ห 前引不發音)；詞尾 ด 收 -t" },
+  { th:"รองเท้าแตะ", reading:"รอง-เท้า-แตะ", en:"roong-tháo-dtàe", zh:"拖鞋", b:"easy", note:"รอง 收 -ng；เท้า 的 ว 作韻尾；แตะ 為短音" },
+  { th:"เครื่องสำอาง", reading:"เครื่อง-สำ-อาง", en:"khrʉ̂ang-sǎm-aang", zh:"化妝品", b:"easy", note:"คร 為複合子音；เครื่อง 收 -ng；สำ 為 อำ(-am)；อาง 收 -ng" },
+  { th:"แว่นตา", reading:"แว่น-ตา", en:"wâen-dtaa", zh:"眼鏡", b:"easy", note:"แว่น 收 -n；ตา 直接唸" },
+  { th:"เวลา", reading:"เว-ลา", en:"wee-laa", zh:"時間", b:"easy", note:"照拼寫直接唸 เว-ลา" },
+  { th:"นาฬิกา", reading:"นา-ลิ-กา", en:"naa-lí-gaa", zh:"時鐘", b:"hard", note:"ฬ 唸 ล(l)音，與一般 ล 相同→唸 นา-ลิ-กา" },
+  { th:"อากาศ", reading:"อา-กาด", en:"aa-gàat", zh:"天氣", b:"hard", note:"詞尾 ศ 收 ด 音(-t)→唸 อา-กาด" },
+  { th:"ครอบครัว", reading:"คฺรอบ-คฺรัว", en:"khrôop-khrua", zh:"家庭", b:"easy", note:"คร 為複合子音(連著唸)；ครอบ 的 บ 收入聲(-p)；ครัว 的 ว 作韻尾" },
+  { th:"ภาษา", reading:"พา-สา", en:"phaa-sǎa", zh:"語言", b:"hard", note:"ภ 唸 ph(พ)；ษ 唸 ส(s)，皆與同發音字母相同" },
+  { th:"ประเทศ", reading:"ประ-เทด", en:"bprà-thêet", zh:"國家", b:"hard", note:"ปร 帶極短 อะ→唸 ปฺระ；詞尾 ศ 收 ด 音(-t)→唸 เทด" },
+  { th:"เมืองไทย", reading:"เมือง-ไท", en:"mʉang-thai", zh:"泰國", b:"hard", note:"เมือง 收 -ng；ไทย 詞尾 ย 不發音→唸 ไท" },
+  { th:"วันนี้", reading:"วัน-นี้", en:"wan-níi", zh:"今天", b:"vowel", note:"วัน 收 -n；นี้ 直接唸" },
+  { th:"พรุ่งนี้", reading:"พฺรุ่ง-นี้", en:"phrûng-níi", zh:"明天", b:"easy", note:"พร 為複合子音(連著唸)；พฺรุ่ง 收 -ng；นี้ 直接唸" },
+  { th:"เมื่อวาน", reading:"เมื่อ-วาน", en:"mʉ̂a-waan", zh:"昨天", b:"easy", note:"เมื่อ 母音為 เ_ื+อ；วาน 收 -n" },
+  { th:"ปัจจุบัน", reading:"ปัด-จุ-บัน", en:"bpàt-jù-ban", zh:"現在", b:"hard", note:"จจ 雙子音只發一次；ปัจ 的 จ 收尾唸 ด(-t)→唸 ปัด；บัน 收 -n" },
+  { th:"อนาคต", reading:"อะ-นา-คด", en:"à-naa-khót", zh:"未來", b:"hard", note:"อน 為短音 อะ-น；詞尾 ต 收 ด 音(-t)→唸 คด" },
+  { th:"ดนตรี", reading:"ดน-ตรี", en:"don-dtrii", zh:"音樂", b:"easy", note:"ดน 的 น 收 -n；ตรี 的 ตร 為複合子音" },
+  { th:"อาชีพ", reading:"อา-ชีบ", en:"aa-chîip", zh:"職業", b:"hard", note:"詞尾 พ 收 บ 音(-p)→唸 ชีบ，พ 不發 ph 尾" },
+  { th:"หู", reading:"หู", en:"hǔu", zh:"耳朵", b:"easy" },
+  { th:"ปาก", reading:"ปาก", en:"bpàak", zh:"嘴", b:"easy" },
+  { th:"ฟัน", reading:"ฟัน", en:"fan", zh:"牙齒", b:"vowel" },
+  { th:"ลิ้น", reading:"ลิ้น", en:"lín", zh:"舌頭", b:"easy" },
+  { th:"หน้า", reading:"หน้า", en:"nâa", zh:"臉", b:"easy" },
+  { th:"ผม", reading:"ผม", en:"phǒm", zh:"頭髮", b:"vowel" },
+  { th:"คอ", reading:"คอ", en:"khoo", zh:"脖子", b:"easy" },
+  { th:"เล็บ", reading:"เล็บ", en:"lép", zh:"指甲", b:"vowel" },
+  { th:"ใจ", reading:"ใจ", en:"jai", zh:"心", b:"easy" },
+  { th:"แขน", reading:"แขน", en:"khǎen", zh:"手臂", b:"easy" },
+  { th:"นิ้ว", reading:"นิ้ว", en:"níu", zh:"手指", b:"easy" },
+  { th:"อก", reading:"อก", en:"òk", zh:"胸", b:"easy" },
+  { th:"เลือด", reading:"เลือด", en:"lʉ̂at", zh:"血", b:"easy" },
+  { th:"ขา", reading:"ขา", en:"khǎa", zh:"腿", b:"easy" },
+  { th:"เท้า", reading:"เท้า", en:"tháo", zh:"腳", b:"easy" },
+  { th:"ท้อง", reading:"ท้อง", en:"thóong", zh:"肚子", b:"easy" },
+  { th:"เข่า", reading:"เข่า", en:"khào", zh:"膝蓋", b:"easy" },
+  { th:"ลูก", reading:"ลูก", en:"lûuk", zh:"孩子", b:"easy" },
+  { th:"พี่", reading:"พี่", en:"phîi", zh:"哥/姊", b:"easy" },
+  { th:"น้อง", reading:"น้อง", en:"nóong", zh:"弟/妹", b:"easy" },
+  { th:"ปู่", reading:"ปู่", en:"bpùu", zh:"爺爺", b:"easy" },
+  { th:"ย่า", reading:"ย่า", en:"yâa", zh:"奶奶", b:"easy" },
+  { th:"ยาย", reading:"ยาย", en:"yaai", zh:"外婆", b:"easy" },
+  { th:"หลาน", reading:"หลาน", en:"lǎan", zh:"孫子", b:"easy" },
+  { th:"ญาติ", reading:"ยาด", en:"yâat", zh:"親戚", b:"hard" },
+  { th:"หมอ", reading:"หมอ", en:"mǒo", zh:"醫生", b:"easy" },
+  { th:"นาย", reading:"นาย", en:"naai", zh:"先生", b:"easy" },
+  { th:"ท่าน", reading:"ท่าน", en:"thâan", zh:"您", b:"easy" },
+  { th:"เจ้า", reading:"เจ้า", en:"jâo", zh:"主人", b:"easy" },
+  { th:"ชาย", reading:"ชาย", en:"chaai", zh:"男人", b:"easy" },
+  { th:"เด็ก", reading:"เด็ก", en:"dèk", zh:"小孩", b:"vowel" },
+  { th:"แขก", reading:"แขก", en:"khàek", zh:"客人", b:"easy" },
+  { th:"ผัว", reading:"ผัว", en:"phǔa", zh:"老公", b:"easy" },
+  { th:"เมีย", reading:"เมีย", en:"mia", zh:"老婆", b:"easy" },
+  { th:"ไข่", reading:"ไข่", en:"khài", zh:"蛋", b:"easy" },
+  { th:"นม", reading:"นม", en:"nom", zh:"牛奶", b:"vowel" },
+  { th:"ชา", reading:"ชา", en:"chaa", zh:"茶", b:"easy" },
+  { th:"กุ้ง", reading:"กุ้ง", en:"gûng", zh:"蝦", b:"easy" },
+  { th:"ปู", reading:"ปู", en:"bpuu", zh:"螃蟹", b:"easy" },
+  { th:"เนื้อ", reading:"เนื้อ", en:"nʉ́a", zh:"肉", b:"easy" },
+  { th:"ผัก", reading:"ผัก", en:"phàk", zh:"蔬菜", b:"vowel" },
+  { th:"พริก", reading:"พริก", en:"phrík", zh:"辣椒", b:"easy" },
+  { th:"เกลือ", reading:"เกลือ", en:"glʉa", zh:"鹽", b:"easy" },
+  { th:"ขิง", reading:"ขิง", en:"khǐng", zh:"薑", b:"easy" },
+  { th:"เส้น", reading:"เส้น", en:"sên", zh:"麵條", b:"easy" },
+  { th:"ซุป", reading:"ซุบ", en:"súp", zh:"湯", b:"hard" },
+  { th:"แกง", reading:"แกง", en:"gaeng", zh:"湯", b:"easy" },
+  { th:"โจ๊ก", reading:"โจ๊ก", en:"jóok", zh:"粥", b:"easy" },
+  { th:"กล้วย", reading:"กล้วย", en:"glûay", zh:"香蕉", b:"easy" },
+  { th:"ร้าน", reading:"ร้าน", en:"ráan", zh:"店", b:"easy" },
+  { th:"วัด", reading:"วัด", en:"wát", zh:"寺廟", b:"vowel" },
+  { th:"เมือง", reading:"เมือง", en:"mʉang", zh:"城市", b:"easy" },
+  { th:"นา", reading:"นา", en:"naa", zh:"田", b:"easy" },
+  { th:"สวน", reading:"สวน", en:"sǔan", zh:"花園", b:"easy" },
+  { th:"ไร่", reading:"ไร่", en:"râi", zh:"農場", b:"easy" },
+  { th:"เขา", reading:"เขา", en:"khǎo", zh:"山", b:"easy" },
+  { th:"เกาะ", reading:"เกาะ", en:"gò", zh:"島", b:"easy" },
+  { th:"ถุง", reading:"ถุง", en:"thǔng", zh:"袋子", b:"easy" },
+  { th:"โต๊ะ", reading:"โต๊ะ", en:"tó", zh:"桌子", b:"easy" },
+  { th:"เตียง", reading:"เตียง", en:"tiang", zh:"床", b:"easy" },
+  { th:"แก้ว", reading:"แก้ว", en:"gâeo", zh:"杯子", b:"easy" },
+  { th:"ช้อน", reading:"ช้อน", en:"chóon", zh:"湯匙", b:"easy" },
+  { th:"ส้อม", reading:"ส้อม", en:"sôom", zh:"叉子", b:"easy" },
+  { th:"มีด", reading:"มีด", en:"mîit", zh:"刀子", b:"easy" },
+  { th:"หม้อ", reading:"หม้อ", en:"môo", zh:"鍋子", b:"easy" },
+  { th:"พัด", reading:"พัด", en:"phát", zh:"扇子", b:"vowel" },
+  { th:"ทำ", reading:"ทำ", en:"tam", zh:"做", b:"easy" },
+  { th:"พูด", reading:"พูด", en:"phûut", zh:"說", b:"easy" },
+  { th:"ดู", reading:"ดู", en:"duu", zh:"看", b:"easy" },
+  { th:"ฟัง", reading:"ฟัง", en:"fang", zh:"聽", b:"vowel" },
+  { th:"อ่าน", reading:"อ่าน", en:"àan", zh:"讀", b:"easy" },
+  { th:"เขียน", reading:"เขียน", en:"khǐan", zh:"寫", b:"easy" },
+  { th:"รัก", reading:"รัก", en:"rák", zh:"愛", b:"vowel" },
+  { th:"สูง", reading:"สูง", en:"sǔung", zh:"高", b:"easy" },
+  { th:"ใหม่", reading:"ใหม่", en:"mài", zh:"新", b:"easy" },
+  { th:"น้ำ", reading:"น้ำ", en:"náam", zh:"水", b:"easy" },
+  { th:"ข้าว", reading:"ข้าว", en:"khâao", zh:"飯", b:"easy" },
+  { th:"หมา", reading:"หมา", en:"mǎa", zh:"狗", b:"easy" },
+  { th:"แมว", reading:"แมว", en:"maeo", zh:"貓", b:"easy" },
+  { th:"บ้าน", reading:"บ้าน", en:"bâan", zh:"家", b:"easy" },
+  { th:"รถ", reading:"รด", en:"rót", zh:"車", b:"hard" },
+  { th:"พ่อ", reading:"พ่อ", en:"phôo", zh:"爸爸", b:"easy" },
+  { th:"แม่", reading:"แม่", en:"mâe", zh:"媽媽", b:"easy" },
+  { th:"ครู", reading:"ครู", en:"khruu", zh:"老師", b:"easy" },
+  { th:"เงิน", reading:"เงิน", en:"ngern", zh:"錢", b:"vowel" },
+  { th:"ฝน", reading:"ฝน", en:"fǒn", zh:"雨", b:"vowel" },
+  { th:"ลม", reading:"ลม", en:"lom", zh:"風", b:"vowel" },
+  { th:"ไฟ", reading:"ไฟ", en:"fai", zh:"火", b:"easy" },
+  { th:"ปลา", reading:"ปลา", en:"plaa", zh:"魚", b:"easy" },
+  { th:"ไก่", reading:"ไก่", en:"gài", zh:"雞", b:"easy" },
+  { th:"หมู", reading:"หมู", en:"mǔu", zh:"豬", b:"easy" },
+  { th:"นก", reading:"นก", en:"nók", zh:"鳥", b:"vowel" },
+  { th:"ตา", reading:"ตา", en:"taa", zh:"眼睛", b:"easy" },
+  { th:"มือ", reading:"มือ", en:"mʉʉ", zh:"手", b:"easy" },
+  { th:"หัว", reading:"หัว", en:"hǔa", zh:"頭", b:"easy" },
+  { th:"ส้ม", reading:"ส้ม", en:"sôm", zh:"橙", b:"vowel" },
+  { th:"เขียว", reading:"เขียว", en:"khǐao", zh:"綠", b:"easy" },
+  { th:"น้ำเงิน", reading:"น้ำ-เงิน", en:"nám-ngern", zh:"深藍", b:"vowel" },
+  { th:"ม่วง", reading:"ม่วง", en:"mûang", zh:"紫", b:"easy" },
+  { th:"ชมพู", reading:"ชม-พู", en:"chom-phuu", zh:"粉紅", b:"easy" },
+  { th:"เทา", reading:"เทา", en:"thao", zh:"灰", b:"easy" },
+  { th:"น้ำตาล", reading:"น้ำ-ตาน", en:"nám-taan", zh:"咖啡色", b:"hard" },
+  { th:"คน", reading:"คน", en:"khon", zh:"個/位", b:"vowel" },
+  { th:"ตัว", reading:"ตัว", en:"tua", zh:"隻/條", b:"easy" },
+  { th:"ใบ", reading:"ใบ", en:"bai", zh:"張/片", b:"easy" },
+  { th:"อัน", reading:"อัน", en:"an", zh:"個/件", b:"vowel" },
+  { th:"ชิ้น", reading:"ชิ้น", en:"chín", zh:"塊/片", b:"easy" },
+  { th:"แผ่น", reading:"แผ่น", en:"phàen", zh:"片/張", b:"easy" },
+  { th:"เล่ม", reading:"เล่ม", en:"lêm", zh:"本", b:"easy" },
+  { th:"ฉบับ", reading:"ฉะ-บับ", en:"chà-bàp", zh:"份/冊", b:"vowel" },
+  { th:"ขวด", reading:"ขวด", en:"khùat", zh:"瓶", b:"easy" },
+  { th:"ก้อน", reading:"ก้อน", en:"gôon", zh:"塊", b:"easy" },
+  { th:"คัน", reading:"คัน", en:"khan", zh:"輛", b:"vowel" },
+  { th:"ลำ", reading:"ลำ", en:"lam", zh:"架/艘", b:"easy" },
+  { th:"หลัง", reading:"หลัง", en:"lǎng", zh:"棟", b:"vowel" },
+  { th:"ห้อง", reading:"ห้อง", en:"hôong", zh:"間", b:"easy" },
+  { th:"ชั้น", reading:"ชั้น", en:"chán", zh:"層", b:"vowel" },
+  { th:"จาน", reading:"จาน", en:"jaan", zh:"盤", b:"easy" },
+  { th:"ถ้วย", reading:"ถ้วย", en:"thûay", zh:"碗/杯", b:"easy" },
+  { th:"ต้น", reading:"ต้น", en:"tôn", zh:"棵", b:"vowel" },
+  { th:"ผล", reading:"ผน", en:"phǒn", zh:"顆/個", b:"hard" },
+  { th:"มื้อ", reading:"มื้อ", en:"mʉ́ʉ", zh:"餐", b:"easy" },
+  { th:"นอน", reading:"นอน", en:"norn", zh:"睡", b:"easy" },
+  { th:"ตื่น", reading:"ตื่น", en:"tʉ̀ʉn", zh:"醒", b:"easy" },
+  { th:"อยู่", reading:"อยู่", en:"yùu", zh:"住/在", b:"easy" },
+  { th:"เรียก", reading:"เรียก", en:"rîak", zh:"叫", b:"easy" },
+  { th:"ร้อง", reading:"ร้อง", en:"róong", zh:"唱/哭", b:"easy" },
+  { th:"คุย", reading:"คุย", en:"khui", zh:"聊天", b:"easy" },
+  { th:"โกรธ", reading:"โกรด", en:"gròot", zh:"生氣", b:"hard" },
+  { th:"หัวเราะ", reading:"หัว-เราะ", en:"hǔa-ró", zh:"笑", b:"easy" },
+  { th:"เย็น", reading:"เย็น", en:"yen", zh:"冷/冰", b:"vowel" },
+  { th:"อุ่น", reading:"อุ่น", en:"ùn", zh:"暖/溫", b:"easy" },
+  { th:"แข็ง", reading:"แข็ง", en:"khǎeng", zh:"硬", b:"vowel" },
+  { th:"นิ่ม", reading:"นิ่ม", en:"nîm", zh:"軟", b:"easy" },
+  { th:"สว่าง", reading:"สะ-หว่าง", en:"sà-wàang", zh:"亮", b:"easy" },
+  { th:"มืด", reading:"มืด", en:"mʉ̂ʉt", zh:"暗", b:"easy" },
+  { th:"ดัง", reading:"ดัง", en:"dang", zh:"大聲/有名", b:"vowel" },
+  { th:"เงียบ", reading:"เงียบ", en:"ngîap", zh:"靜", b:"easy" },
+  { th:"เต็ม", reading:"เต็ม", en:"tem", zh:"滿", b:"vowel" },
+  { th:"ว่าง", reading:"ว่าง", en:"wâang", zh:"空/有空", b:"easy" },
+  { th:"สะอาด", reading:"สะ-อาด", en:"sà-àat", zh:"乾淨", b:"easy" },
+  { th:"สกปรก", reading:"สก-กะ-ปรก", en:"sòk-gà-pròk", zh:"髒", b:"vowel" },
+  { th:"ถูก", reading:"ถูก", en:"thùuk", zh:"便宜/對", b:"easy" },
+  { th:"ห้าง", reading:"ห้าง", en:"hâang", zh:"百貨公司", b:"easy" },
+];
+
+// ══════════ MODES ══════════
+var MODES = {
+  easy:     { emoji:'🌱', name:'背單字',   zh:'寫＝讀，完全無變化',           cls:'m-easy',  setSize:10 },
+  vowel:    { emoji:'🌿', name:'練母音',   zh:'母音變形/減形（台灣人最難記）', cls:'m-vowel', setSize:5  },
+  hard:     { emoji:'🌳', name:'難度挑戰', zh:'尾音/子音變音・啞音（最易混淆）', cls:'m-hard',  setSize:10 },
+  sentence: { emoji:'📖', name:'造句拼讀', zh:'真實句子・逐音節（敬請期待）',    cls:'m-sentence', setSize:0, soon:true }
+};
+
+var SCORE_CFG = { PER_SYLLABLE:10, COMBO_TIERS:{ 3:1.5, 5:2, 8:3 } };
+function comboMult(s){ var m=1; Object.keys(SCORE_CFG.COMBO_TIERS).map(Number).sort(function(a,b){return a-b;}).forEach(function(k){ if(s>=k) m=SCORE_CFG.COMBO_TIERS[k]; }); return m; }
+
+// ══════════ STATE ══════════
+var curMode=null, bucketPool=[], setWords=[], queue=[], current=0;
+var scoreOk=0, scoreBad=0, totalScore=0, streak=0, maxStreak=0;
+var hintUsedThisWord=false, totalHintUsed=0, totalRequeued=0;
+var checked=false, isRequeuedWord=false;
+var slots=[], chips=[], correctSyls=[];
+
+function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;} return a; }
+
+// ══════════ HOME ══════════
+function buildHome(){
+  var counts={easy:0,vowel:0,hard:0,sentence:0};
+  WORDS.forEach(function(w){ counts[w.b]++; });
+  var list=document.getElementById('mode-list'); list.innerHTML='';
+  Object.keys(MODES).forEach(function(key){
+    var M=MODES[key];
+    var btn=document.createElement('button');
+    btn.className='mode-btn '+M.cls;
+    btn.onclick=function(){ startMode(key); };
+    var meta = M.soon ? '<span class="soon-tag">敬請期待</span>'
+      : ('共 '+counts[key]+' 字 · 每組 '+M.setSize+' 字');
+    btn.innerHTML='<span class="mode-emoji">'+M.emoji+'</span>'+
+      '<span class="mode-info"><span class="mode-name">'+M.name+'</span>'+
+      '<span class="mode-zh">'+M.zh+'</span>'+
+      '<span class="mode-meta">'+meta+'</span></span>';
+    list.appendChild(btn);
+  });
+}
+
+function show(id){ ['home-screen','game-card','end-screen','soon-screen'].forEach(function(x){ document.getElementById(x).classList.toggle('hidden', x!==id); }); }
+
+function startMode(key){
+  curMode=key;
+  if(MODES[key].soon){ show('soon-screen'); return; }
+  bucketPool=WORDS.filter(function(w){ return w.b===key; });
+  totalScore=0; maxStreak=0; totalHintUsed=0;
+  newSet();
+}
+
+function newSet(){
+  var size=Math.min(MODES[curMode].setSize, bucketPool.length);
+  setWords=shuffle(bucketPool).slice(0,size);
+  queue=setWords.map(function(_,i){ return { i:i, req:false }; });
+  current=0; scoreOk=0; scoreBad=0; streak=0; totalRequeued=0;
+  document.getElementById('q-total').textContent=setWords.length;
+  show('game-card');
+  loadWord();
+}
+function nextSet(){ newSet(); }
+function backToMenu(){ buildHome(); show('home-screen'); }
+
+// ══════════ WORD ══════════
+function idxOf(c){ return queue[c].i; }
+function curWord(){ return setWords[idxOf(current)]; }
+
+function loadWord(){
+  checked=false; hintUsedThisWord=false; isRequeuedWord=!!queue[current].req;
+  var w=curWord(); correctSyls=w.reading.split('-');
+  var done=Math.min(scoreOk+scoreBad, setWords.length);
+  document.getElementById('progress-fill').style.width=(done/setWords.length*100)+'%';
+  document.getElementById('q-num').textContent=Math.min(done+1,setWords.length);
+  document.getElementById('score-ok').textContent=scoreOk;
+  document.getElementById('score-bad').textContent=scoreBad;
+  document.getElementById('score-total').textContent=totalScore;
+  updateCombo();
+  document.getElementById('word-th').textContent=w.th;
+  document.getElementById('word-zh').textContent=w.zh;
+  document.getElementById('word-mode').textContent=MODES[curMode].emoji+' '+MODES[curMode].name;
+  document.getElementById('result-banner').className='result-banner';
+  document.getElementById('reading-reveal').className='reading-reveal';
+  document.getElementById('reading-full').textContent='';
+  document.getElementById('requeue-notice').className='requeue-notice';
+  document.getElementById('note-area').className='note-area';
+  document.getElementById('note-text').textContent=w.note||'';
+  document.getElementById('note-label').textContent='💡 讀音說明';
+  document.getElementById('btn-hint').className='btn-hint';
+  document.getElementById('btn-hint').style.display=w.note?'':'none';
+  document.getElementById('btn-check').disabled=true;
+  document.getElementById('btn-check').style.display='';
+  document.getElementById('btn-next').style.display='none';
+  document.getElementById('btn-skip').style.display='';
+  buildSlots(); buildChips();
+}
+
+function setReadingEn(w){ document.getElementById('reading-en').innerHTML='<span class="en-label">聲調讀音 TONE</span>'+(w.en||''); }
+function updateCombo(){ var b=document.getElementById('combo-badge'); if(streak>=2){ b.classList.add('show'); document.getElementById('combo-num').textContent=streak; } else b.classList.remove('show'); }
+function showHint(){ if(hintUsedThisWord) return; hintUsedThisWord=true; totalHintUsed++; document.getElementById('btn-hint').classList.add('used'); document.getElementById('note-label').textContent='💡 讀音說明（作答前先看 — 不計分/combo）'; document.getElementById('note-area').classList.add('show'); }
+
+function buildSlots(){
+  var row=document.getElementById('slots-row'); row.innerHTML=''; slots=[];
+  correctSyls.forEach(function(syl,i){
+    var wrap=document.createElement('div'); wrap.className='slot-wrap';
+    var el=document.createElement('div'); el.className='slot';
+    var num=document.createElement('span'); num.className='slot-num'; num.textContent=i+1;
+    el.appendChild(num); el.onclick=function(){ slotClick(i); };
+    var hint=document.createElement('div'); hint.className='slot-hint';
+    wrap.appendChild(el); wrap.appendChild(hint); row.appendChild(wrap);
+    slots.push({ el:el, val:null, hintEl:hint });
+  });
+}
+function buildChips(){
+  var row=document.getElementById('chips-row'); row.innerHTML=''; chips=[];
+  var cur=curWord(); var pool=correctSyls.slice();
+  var others=shuffle(WORDS.filter(function(w){ return w.th!==cur.th; }));
+  var added=0, need=correctSyls.length*2+3;
+  for(var wi=0; wi<others.length&&added<need; wi++){
+    others[wi].reading.split('-').forEach(function(s){ if(pool.indexOf(s)===-1&&added<need){ pool.push(s); added++; } });
+  }
+  var maxChips=Math.min(correctSyls.length+5,12);
+  pool=shuffle(pool).slice(0,maxChips);
+  correctSyls.forEach(function(s){ if(pool.indexOf(s)===-1) pool.push(s); });
+  pool=shuffle(pool);
+  pool.forEach(function(syl,i){ var el=document.createElement('div'); el.className='chip'; el.textContent=syl; el.onclick=function(){ chipClick(i); }; row.appendChild(el); chips.push({el:el,syl:syl,used:false}); });
+}
+function chipClick(ci){
+  if(checked||chips[ci].used) return;
+  var t=-1; for(var i=0;i<slots.length;i++){ if(slots[i].val===null){ t=i; break; } } if(t===-1) return;
+  chips[ci].used=true; chips[ci].el.classList.add('used'); slots[t].val=ci;
+  var num=slots[t].el.querySelector('.slot-num'); slots[t].el.innerHTML=''; slots[t].el.appendChild(num);
+  slots[t].el.appendChild(document.createTextNode(chips[ci].syl)); slots[t].el.classList.add('filled');
+  document.getElementById('btn-check').disabled=slots.some(function(s){ return s.val===null; });
+}
+function slotClick(si){
+  if(checked) return; var slot=slots[si]; if(slot.val===null) return;
+  chips[slot.val].used=false; chips[slot.val].el.classList.remove('used'); slot.val=null;
+  var num=slot.el.querySelector('.slot-num'); slot.el.innerHTML=''; slot.el.appendChild(num); slot.el.classList.remove('filled');
+  document.getElementById('btn-check').disabled=true;
+}
+
+function checkAnswer(){
+  checked=true;
+  document.getElementById('btn-check').style.display='none';
+  document.getElementById('btn-skip').style.display='none';
+  document.getElementById('btn-next').style.display='';
+  var correctCount=0;
+  slots.forEach(function(slot,i){
+    var u=chips[slot.val].syl, e=correctSyls[i];
+    if(u===e){ slot.el.classList.add('correct'); slot.hintEl.textContent='✓'; slot.hintEl.className='slot-hint ok'; chips[slot.val].el.classList.add('correct-chip'); correctCount++; }
+    else { slot.el.classList.add('wrong'); slot.hintEl.textContent='→ '+e; slot.hintEl.className='slot-hint'; chips[slot.val].el.classList.add('wrong-chip'); }
+  });
+  var allCorrect=correctCount===correctSyls.length;
+  var banner=document.getElementById('result-banner');
+  if(allCorrect){
+    scoreOk++;
+    var earned=0, mult=1, clean=!hintUsedThisWord&&!isRequeuedWord;
+    if(clean){ streak++; maxStreak=Math.max(maxStreak,streak); mult=comboMult(streak); earned=Math.round(correctSyls.length*SCORE_CFG.PER_SYLLABLE*mult); totalScore+=earned; scorePop(earned,mult); }
+    var msgs=['答對了！🎉','太棒了！✨','非常好！🌟','完美！💯'];
+    var extra=clean?((streak>=3?' 🔥連對'+streak:'')+' +'+earned+'分'):'（看了說明/重複題 — 不計分）';
+    banner.textContent=msgs[Math.floor(Math.random()*msgs.length)]+extra; banner.className='result-banner show perfect';
+  } else {
+    streak=0; scoreBad++;
+    var got=correctCount+'/'+correctSyls.length+' 個音節正確';
+    banner.textContent=(correctCount===0?'還沒對 — ':'差一點！— ')+got;
+    banner.className='result-banner show '+(correctCount===0?'fail':'partial');
+    requeueCurrent();
+  }
+  document.getElementById('reading-reveal').className='reading-reveal show';
+  document.getElementById('reading-full').textContent=correctSyls.join(' · ');
+  setReadingEn(curWord());
+  var w=curWord();
+  if(w.note){ document.getElementById('note-area').classList.add('show'); if(!hintUsedThisWord) document.getElementById('note-label').textContent='💡 為什麼這樣唸？'; }
+  document.getElementById('score-ok').textContent=scoreOk;
+  document.getElementById('score-bad').textContent=scoreBad;
+  document.getElementById('score-total').textContent=totalScore;
+  updateCombo();
+}
+function scorePop(pts,mult){ var p=document.createElement('div'); p.className='score-pop'; p.innerHTML='+'+pts+'分'+(mult>1?'<span class="mult">×'+mult+' combo!</span>':''); document.body.appendChild(p); setTimeout(function(){ if(p.parentNode) p.parentNode.removeChild(p); },1400); }
+function requeueCurrent(){ var item={i:idxOf(current),req:true}; var at=current+1+Math.floor(Math.random()*3)+1; at=Math.min(at,queue.length); queue.splice(at,0,item); totalRequeued++; document.getElementById('requeue-notice').classList.add('show'); }
+function skipWord(){
+  checked=true; streak=0; scoreBad++; requeueCurrent();
+  document.getElementById('btn-check').style.display='none'; document.getElementById('btn-skip').style.display='none'; document.getElementById('btn-next').style.display='';
+  slots.forEach(function(slot){ if(slot.val!==null) chips[slot.val].el.classList.add('wrong-chip'); slot.el.classList.remove('filled'); });
+  document.getElementById('reading-reveal').className='reading-reveal show';
+  document.getElementById('reading-full').textContent=correctSyls.join(' · '); setReadingEn(curWord());
+  var w=curWord(); if(w.note){ document.getElementById('note-label').textContent='💡 讀音說明'; document.getElementById('note-area').classList.add('show'); }
+  var banner=document.getElementById('result-banner'); banner.textContent='已跳過 · 讀音：'+correctSyls.join('-'); banner.className='result-banner show partial';
+  document.getElementById('score-bad').textContent=scoreBad; updateCombo();
+}
+function nextWord(){ current++; if(scoreOk>=setWords.length||current>=queue.length){ showEnd(); return; } loadWord(); }
+function showEnd(){
+  show('end-screen');
+  document.getElementById('progress-fill').style.width='100%';
+  document.getElementById('end-h2').textContent='完成一組！（'+MODES[curMode].name+'）';
+  document.getElementById('end-score').innerHTML=totalScore+' <small>分</small>';
+  document.getElementById('end-ok').textContent=scoreOk+'/'+setWords.length;
+  document.getElementById('end-streak').textContent=maxStreak;
+  document.getElementById('end-hint').textContent=totalHintUsed;
+  var pct=scoreOk/setWords.length;
+  document.getElementById('end-msg').textContent= pct>=0.9?'太棒了！讀得很熟 🔥':pct>=0.7?'很好！再來一組會更準':pct>=0.5?'不錯！多練幾次會記得更牢':'繼續加油 — 持之以恆最重要';
+}
+
+buildHome();
+</script>
+<script src="shared.js?v=15"></script>
+</body>
+</html>
