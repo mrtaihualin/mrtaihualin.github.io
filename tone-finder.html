@@ -1941,10 +1941,11 @@ var DEFS = {
 // ════════════════════════════════════════════════════════════
 // เสียงครูอ่านจริงสำหรับ 字卡 (โหลด manifest แล้วเล่น mp3 ที่ trim เสียงเงียบ/ลมหายใจแล้ว) — LIN 2026-06-20
 var TF_FLASH_AUDIO = null;
-(function(){ try { fetch('assets/flashcard-audio/manifest.json')
+var TF_FLASH_AUDIO_READY = false; // true = โหลดเสร็จ (สำเร็จหรือล้มเหลว)
+var TF_FLASH_AUDIO_PROMISE = (function(){ try { return fetch('assets/flashcard-audio/manifest.json')
   .then(function(r){ return r.json(); })
-  .then(function(j){ TF_FLASH_AUDIO = j; })
-  .catch(function(){}); } catch(e){} })();
+  .then(function(j){ TF_FLASH_AUDIO = j; TF_FLASH_AUDIO_READY = true; })
+  .catch(function(e){ console.error('[flashcard-audio] manifest load failed:', e); TF_FLASH_AUDIO_READY = true; }); } catch(e){ console.error('[flashcard-audio] fetch error:', e); TF_FLASH_AUDIO_READY = true; return Promise.resolve(); } })();
 
 var ALPHA = {
   consonant: {
@@ -4022,6 +4023,8 @@ function speakThai(text) {
     var u = new SpeechSynthesisUtterance(String(text));
     u.lang = 'th-TH';
     u.rate = 0.75;
+    u.volume = 1;
+    u.pitch = 1;
     var voices = window.speechSynthesis.getVoices() || [];
     for (var i = 0; i < voices.length; i++) {
       if (/^th/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
@@ -4029,6 +4032,21 @@ function speakThai(text) {
     window.speechSynthesis.speak(u);
   } catch (e) { showComingSoon(); }
 }
+// TTS สำหรับ 字母練習區 — ไม่สนใจ TF_MUTED (fallback ตอนไม่มีไฟล์เสียง)
+function speakThaiForce(text) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(String(text));
+    u.lang = 'th-TH'; u.rate = 0.75; u.volume = 1; u.pitch = 1;
+    var voices = window.speechSynthesis.getVoices() || [];
+    for (var i = 0; i < voices.length; i++) {
+      if (/^th/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
+    }
+    window.speechSynthesis.speak(u);
+  } catch(e) {}
+}
+
 function showComingSoon() {
   var old = document.getElementById('tf-soon-toast');
   if (old) old.remove();
@@ -6000,19 +6018,28 @@ var TF = {
     if (!flash) return;
     var card = flash.cards[flash.order[flash.index]];
     if (!card) return;
-    // เล่นเสียงครูอ่านจริง (子音/母音) ถ้ามีไฟล์ — ไม่งั้น fallback TTS (ปิดอยู่) — LIN 2026-06-20
+    // เล่นเสียงครูอ่านจริง (子音/母音) ถ้ามีไฟล์ — LIN 2026-06-20
     var cat = flash.back === 'alpha-vowel' ? 'vowels' : (flash.back === 'alpha-consonant' ? 'consonants' : null);
     var src = (cat && TF_FLASH_AUDIO && TF_FLASH_AUDIO[cat]) ? TF_FLASH_AUDIO[cat][card.ch] : null;
+    if (!src && cat && !TF_FLASH_AUDIO_READY) {
+      // manifest ยังโหลดไม่เสร็จ — รอแล้ว retry ครั้งเดียว
+      var _card = card;
+      TF_FLASH_AUDIO_PROMISE && TF_FLASH_AUDIO_PROMISE.then(function(){ TF.flashSpeak(); });
+      return;
+    }
     if (src) {
       try {
-        if (TF._flashAudio) { try { TF._flashAudio.pause(); } catch(e){} }
+        if (TF._flashAudio) { try { TF._flashAudio.pause(); TF._flashAudio.currentTime = 0; } catch(e){} }
+        // ไม่ encodeURI — browser handle UTF-8 path ได้, encodeURI ทำให้ path ผิดบน GitHub Pages
         var a = new Audio(src);
+        a.volume = 1;
         TF._flashAudio = a;
-        a.play().catch(function(){});
+        a.play().catch(function(err) { console.error('[flashcard-audio] play failed:', src, err); speakThaiForce(card.tts || card.ch); });
         return;
-      } catch (e) {}
+      } catch(e) { console.error('[flashcard-audio] Audio() error:', src, e); }
     }
-    speakThai(card.tts || card.ch);
+    // ไม่มีไฟล์ → TTS fallback (ไม่สนใจ TF_MUTED)
+    speakThaiForce(card.tts || card.ch);
   },
   flashToggleExp: function() {
     if (!flash) return;
@@ -6243,5 +6270,48 @@ render();
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
 <script src="shared.js?v=14"></script>
+<script>
+// ── GA4 Extra Events: tone-finder.html ──────────────────────────────
+// (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)
+
+// [1] Lead magnet banner คลิก
+(function() {
+  var banner = document.querySelector('[onclick="openModal(\'modal-freebie\')"]');
+  if (banner) {
+    banner.addEventListener('click', function() {
+      gtag('event', 'lead_magnet_click', { source_page: 'tone_finder' });
+    });
+  }
+})();
+
+// [2] Scroll depth (50% / 90%)
+(function() {
+  var fired = {};
+  window.addEventListener('scroll', function() {
+    var h = document.body.scrollHeight - window.innerHeight;
+    if (h <= 0) return;
+    var pct = Math.round((window.scrollY / h) * 100);
+    [50, 90].forEach(function(m) {
+      if (pct >= m && !fired[m]) {
+        fired[m] = true;
+        gtag('event', 'scroll_depth', { depth_percent: m, page: 'tone_finder' });
+      }
+    });
+  }, { passive: true });
+})();
+
+// [3] Time on page (60s / 180s)
+(function() {
+  var t = 0;
+  var iv = setInterval(function() {
+    t += 30;
+    if (t === 60 || t === 180) {
+      gtag('event', 'time_on_page', { seconds: t, page: 'tone_finder' });
+    }
+    if (t >= 300) clearInterval(iv);
+  }, 30000);
+})();
+// ────────────────────────────────────────────────────────────────────
+</script>
 </body>
 </html>

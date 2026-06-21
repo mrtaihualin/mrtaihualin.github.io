@@ -536,14 +536,17 @@ window.goHome = function() {
     if(btn){ btn.disabled=true; btn.dataset._t=btn.textContent; btn.textContent='送出中…'; }
     try{
       var body = Object.assign({ access_key: WEB3FORMS_KEY }, opts.fields || {});
+      // web3forms ใช้ email (lowercase) เพื่อ validate spam — copy จาก 'Email' field ถ้ายังไม่มี
+      if(body['Email'] && !body['email']) body.email = body['Email'];
       var res = await fetch('https://api.web3forms.com/submit', {
         method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
         body: JSON.stringify(body)
       });
       var data = await res.json();
       if(data && data.success){ if(opts.onsuccess) opts.onsuccess(); show(opts.successMsg || '✅ 已送出，謝謝！', true); return true; }
+      console.error('[web3forms] 送出失敗:', data);
       show('⚠️ 送出失敗，請稍後再試，或改用 LINE 聯絡。', false); return false;
-    }catch(e){ show('⚠️ 網路問題，送出失敗，請稍後再試。', false); return false; }
+    }catch(e){ console.error('[web3forms] 網路錯誤:', e); show('⚠️ 網路問題，送出失敗，請稍後再試。', false); return false; }
     finally{ if(btn){ btn.disabled=false; if(btn.dataset._t) btn.textContent=btn.dataset._t; } }
   };
 

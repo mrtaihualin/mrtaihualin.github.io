@@ -71,5 +71,21 @@
 
 <script src="shared.js?v=14"></script>
 <script src="leaderboard.js?v=5"></script>
+<script>
+// ── GA4 Event Tracking: leaderboard.html ────────────────────────────
+
+// [1] คนเข้าดู leaderboard
+window.addEventListener('DOMContentLoaded', function() {
+  gtag('event', 'leaderboard_viewed', { source_page: 'leaderboard' });
+});
+
+// [2] คลิกปุ่มกลับไปเล่นเกม
+document.querySelectorAll('a[href*="tone-finder"], .play-again, [onclick*="tone-finder"]').forEach(function(el) {
+  el.addEventListener('click', function() {
+    gtag('event', 'play_again_click', { source: 'leaderboard' });
+  });
+});
+// ────────────────────────────────────────────────────────────────────
+</script>
 </body>
 </html>

@@ -82,15 +82,15 @@
   <button class="tf-float-x" aria-label="關閉" onclick="event.preventDefault();event.stopPropagation();var c=document.getElementById('tf-float-cta');if(c)c.style.display='none';">✕</button>
 </a>
 <style>
-  .tf-float-cta{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9990;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#D85A30,#E8973A);color:#fff;text-decoration:none;padding:11px 14px;border-radius:40px;box-shadow:0 8px 28px rgba(216,90,48,0.45);font-family:'Noto Sans TC',sans-serif;animation:tfFloatPulse 2.6s ease-in-out infinite;max-width:92vw;}
+  .tf-float-cta{position:fixed;right:16px;bottom:80px;left:auto;transform:none;z-index:9990;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;text-decoration:none;padding:11px 14px;border-radius:40px;box-shadow:0 8px 28px rgba(139,99,16,0.40);font-family:'Noto Sans TC',sans-serif;animation:tfFloatPulse 2.6s ease-in-out infinite;max-width:calc(100vw - 32px);}
   .tf-float-cta:hover{filter:brightness(1.06);}
   .tf-float-emoji{font-size:24px;line-height:1;}
   .tf-float-text{display:flex;flex-direction:column;line-height:1.18;}
   .tf-float-text b{font-size:15px;font-weight:800;}
   .tf-float-text small{font-size:11px;opacity:.95;}
   .tf-float-x{background:rgba(255,255,255,0.28);border:none;color:#fff;width:20px;height:20px;border-radius:50%;font-size:11px;cursor:pointer;line-height:1;margin-left:2px;flex:none;}
-  @keyframes tfFloatPulse{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-5px);}}
-  @media(max-width:600px){.tf-float-cta{bottom:12px;}.tf-float-text b{font-size:14px;}.tf-float-text small{font-size:10px;}}
+  @keyframes tfFloatPulse{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+  @media(max-width:600px){.tf-float-cta{right:12px;bottom:72px;}.tf-float-text b{font-size:14px;}.tf-float-text small{font-size:10px;}}
 </style>
 <!-- Videos -->
 <!-- Share Popup -->
@@ -204,6 +204,32 @@
     <div class="stat reveal"><div class="stat-num">1 對 1</div><div class="stat-label">線上 · 即時回饋</div></div>
   </div>
 </div>
+<!-- SOCIAL PROOF SECTION -->
+<div style="background:var(--white);border-top:3px solid var(--gold);border-bottom:3px solid var(--gold);padding:60px 32px;">
+  <div style="max-width:820px;margin:0 auto;">
+    <div class="reveal" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px;text-align:center;">真實回饋</div>
+    <p class="reveal" style="font-family:'Noto Serif TC',serif;font-size:clamp(20px,3.5vw,28px);font-weight:900;color:var(--ink);line-height:1.4;margin-bottom:32px;text-align:center;">「我終於能跟泰國人真正對話了」</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;">
+      <div class="reveal" style="background:var(--off-white);border-left:4px solid var(--gold-bright);padding:20px;border-radius:4px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink);line-height:1.8;margin-bottom:12px;">「老師用我在當地生活遇到的問題教導，能容易與當地人溝通及解決生活上不少問題。」</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);font-weight:700;">— 真實學生回饋</div>
+      </div>
+      <div class="reveal" style="background:var(--off-white);border-left:4px solid var(--gold-bright);padding:20px;border-radius:4px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink);line-height:1.8;margin-bottom:12px;">「扎實基礎後可完全客製化教學。會有語法與各種文化的探討，非常有趣！」</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);font-weight:700;">— 真實學生回饋</div>
+      </div>
+      <div class="reveal" style="background:var(--off-white);border-left:4px solid var(--gold-bright);padding:20px;border-radius:4px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink);line-height:1.8;margin-bottom:12px;">「從零基礎學了 2 年，老師非常有耐心，會不斷用例句說明直到我了解。」</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);font-weight:700;">— 真實學生回饋</div>
+      </div>
+    </div>
+    <p class="reveal" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink);font-weight:700;margin-top:32px;text-align:center;letter-spacing:1px;">📌 <span style="color:var(--gold);">已有 50+ 位學生</span> 從零開口說泰語</p>
+    <div class="reveal" style="text-align:center;margin-top:24px;">
+      <a href="page2.html#testimonials" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 28px;text-decoration:none;letter-spacing:1px;transition:background 0.2s;border-radius:6px;">查看所有學生回饋 →</a>
+    </div>
+  </div>
+
+
 <!-- FREEBIE / LEAD MAGNET BANNER -->
 <div style="background:var(--gold-light);border-top:3px solid var(--gold-bright);border-bottom:3px solid var(--gold-bright);padding:48px 32px;">
   <div style="max-width:680px;margin:0 auto;text-align:center;">
@@ -697,5 +723,62 @@ function deleteFBComment(postId, idx) {
 <script src="lessons-data.js"></script>
 <script src="tone-finder.js"></script>
 <script src="shared.js?v=14"></script>
+<script>
+// ── GA4 Event Tracking: index.html ──────────────────────────────────
+
+// [1] Scroll depth (25 / 50 / 75 / 90%)
+(function() {
+  var fired = {};
+  window.addEventListener('scroll', function() {
+    var h = document.body.scrollHeight - window.innerHeight;
+    if (h <= 0) return;
+    var pct = Math.round((window.scrollY / h) * 100);
+    [25, 50, 75, 90].forEach(function(m) {
+      if (pct >= m && !fired[m]) {
+        fired[m] = true;
+        gtag('event', 'scroll_depth', { depth_percent: m, page: 'index' });
+      }
+    });
+  }, { passive: true });
+})();
+
+// [2] ปุ่มจองทดลองเรียน (openModal modal-line-qr)
+(function() {
+  var _origOpen = window.openModal;
+  window.openModal = function(id) {
+    if (id === 'modal-line-qr') {
+      gtag('event', 'book_trial_click', { source_page: 'index' });
+    }
+    if (_origOpen) _origOpen.apply(this, arguments);
+  };
+})();
+
+// [3] คลิกลิงก์ไปหน้าเกม tone-finder
+document.querySelectorAll('a[href="tone-finder.html"]').forEach(function(el) {
+  el.addEventListener('click', function() {
+    gtag('event', 'game_link_click', { source_page: 'index' });
+  });
+});
+
+// [4] คลิกลิงก์ไปหน้าราคา page2
+document.querySelectorAll('a[href="page2.html"], a[href*="page2"]').forEach(function(el) {
+  el.addEventListener('click', function() {
+    gtag('event', 'pricing_page_click', { source_page: 'index' });
+  });
+});
+
+// [5] Time on page (60s / 180s / 300s)
+(function() {
+  var t = 0;
+  var iv = setInterval(function() {
+    t += 30;
+    if (t === 60 || t === 180 || t === 300) {
+      gtag('event', 'time_on_page', { seconds: t, page: 'index' });
+    }
+    if (t >= 300) clearInterval(iv);
+  }, 30000);
+})();
+// ────────────────────────────────────────────────────────────────────
+</script>
 </body>
 </html>

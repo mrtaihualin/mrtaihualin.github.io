@@ -54,8 +54,11 @@
     }
   }
 
+  var ADMIN_EMAIL = 'mr.taihualin@gmail.com';
+
   function saveSession(score, total) {
     if (!currentUser) return; // ยังไม่ล็อกอิน → ไม่บันทึก (GA4 ยังนับภาพรวมให้)
+    if (currentUser.email === ADMIN_EMAIL) return; // admin: ไม่นับคะแนนใน ranking
     var row = {
       user_id: currentUser.id,
       mode: sessionMode,
@@ -64,9 +67,50 @@
       wrong_words: wrongBuffer.slice()
     };
     sb.from('tone_sessions').insert(row).then(function (res) {
-      if (res.error) console.warn('[tone-finder] บันทึกไม่สำเร็จ:', res.error.message);
-      else console.info('[tone-finder] บันทึกผลแล้ว');
+      if (res.error) {
+        console.warn('[tone-finder] บันทึกไม่สำเร็จ:', res.error.message);
+        showScoreToast('⚠️ บันทึกคะแนนไม่สำเร็จ: ' + res.error.message, false);
+      } else {
+        console.info('[tone-finder] บันทึกผลแล้ว score=' + score);
+        showScoreToast('✅ บันทึกคะแนน ' + (score || 0) + ' 分 สำเร็จ', true);
+      }
     });
+  }
+
+  function showScoreToast(msg, ok) {
+    var old = document.getElementById('tf-score-toast');
+    if (old) old.remove();
+    var d = document.createElement('div');
+    d.id = 'tf-score-toast';
+    d.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:99999;' +
+      'background:' + (ok ? '#2d7a2d' : '#8b2020') + ';color:#fff;border-radius:20px;' +
+      'padding:8px 18px;font-size:13px;font-family:"Noto Sans TC",sans-serif;' +
+      'box-shadow:0 4px 16px rgba(0,0,0,0.25);white-space:nowrap;pointer-events:none;';
+    d.textContent = msg;
+    document.body.appendChild(d);
+    setTimeout(function () { if (d.parentNode) d.remove(); }, 3500);
+  }
+
+  // ── admin: ปลดล็อกทุก badge สำหรับ mr.taihualin@gmail.com ──
+  function adminUnlockAll(email) {
+    if (email !== 'mr.taihualin@gmail.com') return;
+    try {
+      var defs = window.TF_BADGES_DEF;
+      var load = window.tfLoadBadges;
+      var save = window.tfSaveBadges;
+      if (!defs || !load || !save) return;
+      var today = new Date().toISOString().slice(0, 10);
+      var data = load();
+      var added = 0;
+      defs.forEach(function (b) {
+        if (!data.unlocked[b.id]) { data.unlocked[b.id] = today; added++; }
+      });
+      if (added > 0) {
+        save(data);
+        console.info('[admin] ปลดล็อก ' + added + ' badge(s) สำหรับ ' + email);
+        if (typeof render === 'function') setTimeout(render, 200);
+      }
+    } catch (e) {}
   }
 
   function esc(s) {
@@ -180,6 +224,7 @@
       gate.style.display = 'none';
       miniBtn.style.display = 'none';
       var email = currentUser.email || '使用者';
+      adminUnlockAll(email);
       badge.style.display = 'block';
       badge.innerHTML =
         '<div style="display:flex;align-items:center;gap:8px;background:#fff;' +
