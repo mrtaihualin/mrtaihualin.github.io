@@ -390,7 +390,25 @@ window.goHome = function() {
   }
 
   function openModal(id){ document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden';
-    if(id==='modal-line-qr' && typeof gtag==='function'){ gtag('event','book_trial_click',{ source_page: location.pathname }); } }
+    if(id==='modal-line-qr'){
+      if(typeof gtag==='function'){ gtag('event','book_trial_click',{ source_page: location.pathname }); }
+      _initCalEmbed();
+    }
+  }
+  var _calEmbedLoaded = false;
+  function _initCalEmbed(){
+    if(_calEmbedLoaded) return;
+    _calEmbedLoaded = true;
+    (function(C,A,L){let p=function(a,ar){a.q.push(ar);};let d=C.document;C.Cal=C.Cal||function(){let cal=C.Cal;let ar=arguments;if(!cal.loaded){cal.ns={};cal.q=cal.q||[];d.head.appendChild(d.createElement('script')).src=A;cal.loaded=true;}if(ar[0]===L){const api=function(){p(api,arguments);};const ns=ar[1];api.q=api.q||[];typeof ns==='string'?(cal.ns[ns]=api)&&p(api,ar):p(cal,ar);return;}p(cal,ar);};})(window,'https://app.cal.com/embed/embed.js','init');
+    Cal('init',{origin:'https://cal.com'});
+    Cal('inline',{elementOrSelector:'#cal-embed-container',calLink:'mrtaihualin/trial',config:{layout:'month_view',theme:'light'}});
+    Cal('on',{action:'bookingSuccessful',callback:function(){
+      var bv=document.getElementById('cal-booking-view');
+      var sv=document.getElementById('cal-success-view');
+      if(bv) bv.style.display='none';
+      if(sv) sv.style.display='block';
+    }});
+  }
   function closeModal(id){ document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
   function closeModalOutside(e,id){ if(e.target===document.getElementById(id)) closeModal(id); }
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); document.body.style.overflow=''; if(typeof stopYTVideo==='function') stopYTVideo(); } });
@@ -773,24 +791,28 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
 
   if (!document.getElementById('modal-line-qr')) {
     modalsHTML += `
-<!-- LINE QR MODAL -->
+<!-- CAL.COM BOOKING MODAL -->
 <div class="modal-overlay" id="modal-line-qr" onclick="closeModalOutside(event,'modal-line-qr')">
-  <div class="modal-box" style="max-width:380px;overflow:hidden;border:3px solid var(--gold-bright);">
-    <div style="background:var(--ink);padding:28px 32px 22px;position:relative;text-align:center;">
-      <button class="modal-close" onclick="closeModal('modal-line-qr')" style="position:absolute;top:14px;right:16px;color:rgba(255,255,255,0.45);font-size:20px;">✕</button>
-      <span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);font-weight:700;display:block;margin-bottom:10px;">預約免費體驗課</span>
-      <div style="font-family:'Noto Serif TC',serif;font-size:23px;font-weight:900;color:var(--white);line-height:1.3;margin-bottom:8px;">首堂 30 分鐘<br><em style="font-style:normal;color:var(--gold-bright);">完全免費體驗</em></div>
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:rgba(255,255,255,0.72);line-height:1.7;margin-bottom:0;">填寫資料送出 → 老師會主動與你聯絡，確認上課時間</p>
+  <div class="modal-box" style="max-width:520px;overflow:hidden;border:3px solid var(--gold-bright);padding:0;">
+    <div style="background:var(--ink);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);font-weight:700;display:block;margin-bottom:4px;">預約免費體驗課</span>
+        <div style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--white);">首堂 30 分鐘・完全免費</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-line-qr')" style="position:static;color:rgba(255,255,255,0.5);font-size:22px;background:none;border:none;cursor:pointer;padding:4px 8px;">✕</button>
     </div>
-    <div style="background:var(--gold-light);padding:22px 32px 26px;border-top:3px solid var(--gold-bright);">
-      <input id="b-name" type="text" placeholder="你的名字" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--white);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
-      <input id="b-email" type="email" placeholder="你的 Email（老師會回覆這裡）" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--white);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
-      <input id="b-when" type="text" placeholder="方便上課的時段（例：平日晚上 / 週末）" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--white);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:12px;">
-      <button class="contact-cta" onclick="submitBooking()">送出預約申請 →</button>
-      <span id="b-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-align:center;margin-top:10px;"></span>
-      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;color:var(--ink-muted);font-family:'Noto Sans TC',sans-serif;font-size:12px;"><span style="flex:1;height:1px;background:var(--warm-line);"></span>想先聊聊？加 LINE<span style="flex:1;height:1px;background:var(--warm-line);"></span></div>
-      <div style="text-align:center;"><div style="background:var(--white);padding:12px;display:inline-block;margin-bottom:12px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR Code" style="width:130px;height:130px;display:block;" loading="lazy"></div>
-      <a href="https://lin.ee/yVBgvywy" target="_blank" style="display:block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 28px;text-decoration:none;letter-spacing:2px;text-align:center;">💬 開啟 LINE 聯絡老師</a></div>
+    <div id="cal-booking-view" style="height:520px;overflow-y:auto;background:#fff;">
+      <div id="cal-embed-container" style="width:100%;min-height:520px;"></div>
+    </div>
+    <div id="cal-success-view" style="display:none;background:var(--gold-light);padding:36px 32px;text-align:center;border-top:3px solid var(--gold-bright);">
+      <div style="font-size:44px;margin-bottom:12px;">✅</div>
+      <div style="font-family:'Noto Serif TC',serif;font-size:22px;font-weight:900;color:var(--ink);margin-bottom:10px;">預約成功！</div>
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);line-height:1.9;margin-bottom:24px;">請加老師 LINE 確認正式上課時間<br>老師會在 <strong style="color:var(--gold-deep);">24 小時內</strong> 與你聯絡</p>
+      <div style="background:var(--white);padding:14px;display:inline-block;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:150px;height:150px;display:block;">
+      </div>
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);margin-bottom:16px;">手機直接點下方按鈕・電腦請掃 QR Code</p>
+      <a href="https://lin.ee/yVBgvywy" target="_blank" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:14px 32px;text-decoration:none;letter-spacing:2px;">💬 開啟 LINE 聯絡老師</a>
     </div>
   </div>
 </div>`;
