@@ -793,7 +793,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     modalsHTML += `
 <!-- CAL.COM BOOKING MODAL -->
 <div class="modal-overlay" id="modal-line-qr" onclick="closeModalOutside(event,'modal-line-qr')">
-  <div class="modal-box" style="max-width:520px;overflow:hidden;border:3px solid var(--gold-bright);padding:0;">
+  <div class="modal-box" style="max-width:520px;overflow-y:auto;border:3px solid var(--gold-bright);padding:0;">
     <div style="background:var(--ink);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;">
       <div>
         <span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);font-weight:700;display:block;margin-bottom:4px;">預約免費體驗課</span>
