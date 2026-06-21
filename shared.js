@@ -801,17 +801,17 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
       </div>
       <button class="modal-close" onclick="closeModal('modal-line-qr')" style="position:static;color:rgba(255,255,255,0.5);font-size:22px;background:none;border:none;cursor:pointer;padding:4px 8px;">✕</button>
     </div>
-    <div style="background:#fff;">
-      <iframe src="https://cal.com/mrtaihualin/trial?embed=true&embedType=inline&theme=light" style="width:100%;height:500px;border:none;display:block;" frameborder="0" loading="lazy" id="cal-iframe"></iframe>
-    </div>
-    <div style="background:var(--gold-light);padding:20px 28px;border-top:2px solid var(--gold-bright);text-align:center;">
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-soft);margin-bottom:14px;line-height:1.8;">📌 預約後請加老師 LINE，確認上課時間與 Google Meet 連結<br><span style="color:var(--gold-deep);font-weight:700;">老師會在 24 小時內回覆</span></p>
-      <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;">
-        <div style="background:var(--white);padding:10px;display:inline-block;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:100px;height:100px;display:block;" loading="lazy">
+    <div style="background:var(--gold-light);padding:12px 20px;border-bottom:2px solid var(--gold-bright);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-soft);margin:0;line-height:1.7;">📌 預約後請加老師 LINE 確認時間<br><span style="color:var(--gold-deep);font-weight:700;">老師 24 小時內回覆</span></p>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <div style="background:var(--white);padding:6px;display:inline-block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:64px;height:64px;display:block;" loading="lazy">
         </div>
-        <a href="https://lin.ee/yVBgvywy" target="_blank" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 24px;text-decoration:none;letter-spacing:1px;">💬 加老師 LINE</a>
+        <a href="https://lin.ee/yVBgvywy" target="_blank" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:13px;padding:10px 16px;text-decoration:none;white-space:nowrap;">💬 加 LINE</a>
       </div>
+    </div>
+    <div style="background:#fff;">
+      <iframe src="https://cal.com/mrtaihualin/trial?embed=true&embedType=inline&theme=light" style="width:100%;height:480px;border:none;display:block;" frameborder="0" loading="lazy" id="cal-iframe"></iframe>
     </div>
   </div>
 </div>`;
