@@ -26,7 +26,21 @@
     "ว": "assets/flashcard-audio/consonants/ว.mp3",
     "ส": "assets/flashcard-audio/consonants/ส.mp3",
     "ห": "assets/flashcard-audio/consonants/ห.mp3",
-    "อ": "assets/flashcard-audio/consonants/อ.mp3"
+    "อ": "assets/flashcard-audio/consonants/อ.mp3",
+    "ฉ": "assets/flashcard-audio/consonants/ฉ.mp3",
+    "ฝ": "assets/flashcard-audio/consonants/ฝ.mp3",
+    "ฮ": "assets/flashcard-audio/consonants/ฮ.mp3",
+    "ฎ": "assets/flashcard-audio/consonants/ฎ.mp3",
+    "ฏ": "assets/flashcard-audio/consonants/ฏ.mp3",
+    "ฐ": "assets/flashcard-audio/consonants/ฐ.mp3",
+    "ศ": "assets/flashcard-audio/consonants/ศ.mp3",
+    "ษ": "assets/flashcard-audio/consonants/ษ.mp3",
+    "ฌ": "assets/flashcard-audio/consonants/ฌ.mp3",
+    "ญ": "assets/flashcard-audio/consonants/ญ.mp3",
+    "ฑ": "assets/flashcard-audio/consonants/ฑ.mp3",
+    "ฒ": "assets/flashcard-audio/consonants/ฒ.mp3",
+    "ณ": "assets/flashcard-audio/consonants/ณ.mp3",
+    "ฬ": "assets/flashcard-audio/consonants/ฬ.mp3"
   },
   "vowels": {
     "ออ": "assets/flashcard-audio/vowels/ออ.mp3",
