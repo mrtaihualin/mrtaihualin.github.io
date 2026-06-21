@@ -7,6 +7,7 @@ var ANN = [
   { emoji:'📡', text:'每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
   { emoji:'🎉', text:'現正招收新學員！預約免費體驗課再折 100 元，名額有限', cta:'立即預約', modal:'modal-line-qr' },
   { emoji:'📝', text:'拼音規則練習區上線！可免費領「泰語聲調速查表」', cta:'前往練習', href:'tone-finder.html' },
+  { emoji:'✍️', text:'全新「泰語拼讀練習」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
   { emoji:'🚀', text:'全新「造句遊戲」即將推出，敬請期待！', cta:'追蹤我們', modal:'modal-sns' }
 ];
 
@@ -63,6 +64,7 @@ window.goHome = function() {
           '<a href="page4.html#sharing">🚀 貼文分享區</a>',
           '<a href="page4.html#sharing">📖 自學專區</a>',
           '<a href="tone-finder.html">🎵 泰語聲調搜尋</a>',
+          '<a href="reading-game.html">✍️ 泰語拼讀練習</a>',
           '<a href="page-community.html">🇹🇭 泰語學習心聲與提問</a>',
         '</div>',
       '</li>',
@@ -388,7 +390,8 @@ window.goHome = function() {
     if(!open){btn.classList.add('open');a.classList.add('open');}
   }
 
-  function openModal(id){ document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+  function openModal(id){ document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden';
+    if(id==='modal-line-qr' && typeof gtag==='function'){ gtag('event','book_trial_click',{ source_page: location.pathname }); } }
   function closeModal(id){ document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
   function closeModalOutside(e,id){ if(e.target===document.getElementById(id)) closeModal(id); }
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); document.body.style.overflow=''; if(typeof stopYTVideo==='function') stopYTVideo(); } });
@@ -588,7 +591,7 @@ window.goHome = function() {
       statusEl: document.getElementById('hm-status'),
       successMsg: '✅ 謝謝！正在帶你前往下載頁面…',
       fields: { subject:'【索取】泰語聲調速查表（首頁）', from_name:'泰華網站・索取速查表', 'Email':v },
-      onsuccess: function(){ sheetLog({ email:v, source:'首頁橫幅・索取速查表' }); if(email)email.value=''; setTimeout(function(){ location.href='thank-you.html'; }, 700); }
+      onsuccess: function(){ if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{ source_page: location.pathname }); } sheetLog({ email:v, source:'首頁橫幅・索取速查表' }); if(email)email.value=''; setTimeout(function(){ location.href='thank-you.html'; }, 700); }
     });
   };
 
@@ -602,7 +605,7 @@ window.goHome = function() {
       statusEl: document.getElementById('b-status'),
       successMsg: '✅ 已收到你的預約！我們會盡快與你聯絡安排體驗課。',
       fields: { subject:'【預約體驗課】來自泰華網站', from_name:'泰華網站・預約體驗課', '姓名':v(name)||'未填', 'Email':v(email), '方便時段':v(when)||'未填' },
-      onsuccess: function(){ if(name)name.value=''; if(email)email.value=''; if(when)when.value=''; }
+      onsuccess: function(){ if(typeof gtag==='function'){ gtag('event','book_trial_submit',{ source_page: location.pathname }); } if(name)name.value=''; if(email)email.value=''; if(when)when.value=''; }
     });
   };
 

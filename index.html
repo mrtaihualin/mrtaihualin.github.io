@@ -133,6 +133,7 @@
   <a href="page-services.html">導遊・翻譯</a>
   <a href="page4.html">泰語・分享</a>
   <a href="tone-finder.html">聲調・搜尋</a>
+  <a href="reading-game.html">拼讀・練習</a>
 </div>
 <!-- HERO -->
 <section id="home">
@@ -722,7 +723,7 @@ function deleteFBComment(postId, idx) {
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
 <script src="tone-finder.js"></script>
-<script src="shared.js?v=14"></script>
+<script src="shared.js?v=15"></script>
 <script>
 // ── GA4 Event Tracking: index.html ──────────────────────────────────
 
@@ -742,16 +743,7 @@ function deleteFBComment(postId, idx) {
   }, { passive: true });
 })();
 
-// [2] ปุ่มจองทดลองเรียน (openModal modal-line-qr)
-(function() {
-  var _origOpen = window.openModal;
-  window.openModal = function(id) {
-    if (id === 'modal-line-qr') {
-      gtag('event', 'book_trial_click', { source_page: 'index' });
-    }
-    if (_origOpen) _origOpen.apply(this, arguments);
-  };
-})();
+// [2] ปุ่มจองทดลองเรียน — ย้ายไปรวมศูนย์ที่ shared.js (openModal) แล้ว เพื่อให้นับครบทุกหน้า
 
 // [3] คลิกลิงก์ไปหน้าเกม tone-finder
 document.querySelectorAll('a[href="tone-finder.html"]').forEach(function(el) {
