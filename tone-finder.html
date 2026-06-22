@@ -4314,6 +4314,14 @@ function stepSessionSummary() {
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event', 'tone_finder_complete', {score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
+  // LIN 2026-06-22: เล่นครบโควตาฟรีแล้ว → เด้งหน้าล็อกอินทันทีตอนจบรอบ (ไม่ต้องรอกดเริ่มรอบใหม่)
+  (function(){
+    var _a = window.TF_AUTH;
+    var _li = !!(_a && _a.loggedIn && _a.loggedIn());
+    if (!_li && _a && _a.requireLogin && tfFreeRoundsUsed() >= TF_FREE_ROUNDS_LIMIT) {
+      setTimeout(function(){ if (_a.showGate) _a.showGate(); }, 900); // โชว์คะแนนแวบนึงก่อนค่อยเด้ง
+    }
+  })();
   var rows = results.map(function(r, i){
     var tone = r.tone != null ? r.tone : computeTone(r.entry.word);
     var tl = TONES[tone] || {};

@@ -508,6 +508,53 @@ window.goHome = function() {
       }
     }catch(e){}
   };
+
+  // ════════════════════════════════════════════════════════════
+  // เก็บ lead ลง Supabase (ฐานข้อมูลหลัก) + Google Sheet (สำรอง)
+  //   - anonKey เปิดเผยในเว็บได้ เพราะตาราง public.leads เปิด RLS:
+  //     anon "insert" ได้อย่างเดียว "select" ไม่ได้ → ใครเปิด View Source ก็อ่านอีเมลคนอื่นไม่ได้
+  //   - ค่าเดียวกับ supabase-config.js (fallback เผื่อหน้าที่ไม่ได้โหลด config นั้น เช่น index)
+  //   - ทุกอย่าง best-effort: ไม่ throw ไม่บล็อกการพาไปหน้าดาวน์โหลด
+  // ════════════════════════════════════════════════════════════
+  var SB_LEAD_CFG = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url) ? window.SUPABASE_CONFIG : {
+    url:     'https://qzkxlhpcputsvbqmtqfi.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw'
+  };
+  var SB_LEAD_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  var _leadClient = null;
+  function getLeadClient(){
+    return new Promise(function(resolve){
+      try{
+        if(_leadClient){ resolve(_leadClient); return; }
+        if(!SB_LEAD_CFG.url || !SB_LEAD_CFG.anonKey){ resolve(null); return; }
+        var init = function(){
+          if(window.supabase && window.supabase.createClient){
+            _leadClient = window.supabase.createClient(SB_LEAD_CFG.url, SB_LEAD_CFG.anonKey);
+            resolve(_leadClient);
+          } else { resolve(null); }
+        };
+        if(window.supabase && window.supabase.createClient){ init(); return; }
+        var s = document.createElement('script');   // lazy-load เฉพาะตอนมีคนส่งฟอร์ม
+        s.src = SB_LEAD_CDN; s.async = true; s.onload = init; s.onerror = function(){ resolve(null); };
+        document.head.appendChild(s);
+      }catch(e){ resolve(null); }
+    });
+  }
+  // เก็บ lead: ยิงทั้ง Supabase + Google Sheet พร้อมกัน, ไม่บล็อก, ไม่ throw
+  window.saveLead = function(fields){
+    fields = fields || {};
+    try{
+      getLeadClient().then(function(sb){
+        if(!sb) return;
+        sb.from('leads').insert({
+          email: fields.email || '',
+          name:  fields.name  || null,
+          source:fields.source|| null
+        }).then(function(){}, function(){});
+      });
+    }catch(e){}
+    try{ if(typeof sheetLog==='function') sheetLog({ email:fields.email||'', name:fields.name||'', source:fields.source||'' }); }catch(e){}
+  };
   async function submitFeedback() {
     const nameEl = document.getElementById('fb-name');
     const textEl = document.getElementById('fb-text');
@@ -584,32 +631,38 @@ window.goHome = function() {
     });
   };
 
-  // 索取聲調速查表（lead magnet）
+  // 索取聲調速查表（lead magnet・彈窗）
+  // ลำดับใหม่: เก็บ lead ก่อนเสมอ → พาไปหน้าดาวน์โหลดทุกกรณี (ไม่ผูกกับ web3forms)
   window.submitFreebie = function(){
     var name=document.getElementById('lm-name'), email=document.getElementById('lm-email');
     var v=function(el){return el?el.value.trim():'';};
     if(!v(email)){ alert('請填寫 Email'); return; }
-    web3Send({
-      btn: document.querySelector('#modal-freebie button[onclick*="submitFreebie"]'),
-      statusEl: document.getElementById('lm-status'),
-      successMsg: '✅ 謝謝！正在帶你前往下載頁面…',
-      fields: { subject:'【索取】泰語聲調速查表', from_name:'泰華網站・索取速查表', '姓名':v(name)||'未填', 'Email':v(email) },
-      onsuccess: function(){ sheetLog({ email:v(email), name:v(name), source:'彈窗・索取速查表' }); if(name)name.value=''; if(email)email.value=''; setTimeout(function(){ location.href='thank-you.html'; }, 700); }
-    });
+    var nm=v(name), em=v(email);
+    var btn=document.querySelector('#modal-freebie button[onclick*="submitFreebie"]');
+    var statusEl=document.getElementById('lm-status');
+    if(btn){ btn.disabled=true; btn.textContent='處理中…'; }
+    if(statusEl){ statusEl.textContent='✅ 謝謝！正在帶你前往下載頁面…'; statusEl.style.display='block'; statusEl.style.color='var(--gold-deep)'; }
+    if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{ source_page: location.pathname }); }
+    saveLead({ email:em, name:nm, source:'彈窗・索取速查表' });                       // 1) เก็บ lead (Supabase + Sheet)
+    try{ web3Send({ fields:{ subject:'【索取】泰語聲調速查表', from_name:'泰華網站・索取速查表', '姓名':nm||'未填', 'Email':em } }); }catch(e){} // 2) แจ้งครู (best-effort)
+    if(name)name.value=''; if(email)email.value='';
+    setTimeout(function(){ location.href='thank-you.html'; }, 700);                  // 3) ไปดาวน์โหลดเสมอ
   };
 
   // 首頁速查表索取（inline 表單）
   window.submitHomeFreebie = function(){
     var email=document.getElementById('hm-email');
-    var v=email?email.value.trim():'';
-    if(!v){ alert('請填寫 Email'); return; }
-    web3Send({
-      btn: document.querySelector('button[onclick*="submitHomeFreebie"]'),
-      statusEl: document.getElementById('hm-status'),
-      successMsg: '✅ 謝謝！正在帶你前往下載頁面…',
-      fields: { subject:'【索取】泰語聲調速查表（首頁）', from_name:'泰華網站・索取速查表', 'Email':v },
-      onsuccess: function(){ if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{ source_page: location.pathname }); } sheetLog({ email:v, source:'首頁橫幅・索取速查表' }); if(email)email.value=''; setTimeout(function(){ location.href='thank-you.html'; }, 700); }
-    });
+    var em=email?email.value.trim():'';
+    if(!em){ alert('請填寫 Email'); return; }
+    var btn=document.querySelector('button[onclick*="submitHomeFreebie"]');
+    var statusEl=document.getElementById('hm-status');
+    if(btn){ btn.disabled=true; btn.textContent='處理中…'; }
+    if(statusEl){ statusEl.textContent='✅ 謝謝！正在帶你前往下載頁面…'; statusEl.style.display='block'; statusEl.style.color='var(--gold-deep)'; }
+    if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{ source_page: location.pathname }); }
+    saveLead({ email:em, source:'首頁橫幅・索取速查表' });
+    try{ web3Send({ fields:{ subject:'【索取】泰語聲調速查表（首頁）', from_name:'泰華網站・索取速查表', 'Email':em } }); }catch(e){}
+    if(email)email.value='';
+    setTimeout(function(){ location.href='thank-you.html'; }, 700);
   };
 
   // 預約體驗課（留言版）
@@ -778,10 +831,10 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
       <button class="modal-close" onclick="closeModal('modal-freebie')">✕</button>
     </div>
     <div class="modal-body">
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);line-height:1.9;margin-bottom:18px;">留下 Email，我們把「泰語聲調速查表」寄給你 — 用台灣人熟悉的中文聲調，一張表搞懂泰語五個聲調與判斷規則。</p>
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);line-height:1.9;margin-bottom:18px;">留下 Email，馬上免費下載「泰語聲調速查表」 — 用台灣人熟悉的中文聲調，一張表搞懂泰語五個聲調與判斷規則。</p>
       <input id="lm-name" type="text" placeholder="你的名字（可填暱稱）" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
       <input id="lm-email" type="email" placeholder="你的 Email" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:14px;">
-      <button class="contact-cta" onclick="submitFreebie()">把速查表寄給我 →</button>
+      <button class="contact-cta" onclick="submitFreebie()">馬上免費下載 →</button>
       <span id="lm-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-align:center;margin-top:12px;"></span>
       <p style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:var(--ink-muted);text-align:center;margin-top:14px;">我們不會寄垃圾信，隨時可取消。</p>
     </div>
