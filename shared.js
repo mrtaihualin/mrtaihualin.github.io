@@ -1,4 +1,20 @@
 // ===================================================================
+// ⚡ โหมดเบา (lite) สำหรับ in-app browser ที่อ่อน (LINE / FB / IG)
+//   ตรวจจาก User-Agent → ใส่ class "lite" ที่ <html>
+//   CSS จะปิด backdrop-filter + หยุด animation วิ่งวน "เฉพาะตอน lite" เท่านั้น
+//   → Safari / Chrome / desktop ยังได้เอฟเฟกต์ครบเหมือนเดิม
+// ===================================================================
+(function(){
+  try{
+    var ua = navigator.userAgent || '';
+    var inApp = /\bLine\//i.test(ua) ||          // LINE
+                /FBAN|FBAV|FB_IAB/i.test(ua) ||  // Facebook / Messenger
+                /Instagram/i.test(ua);           // Instagram
+    if(inApp) document.documentElement.classList.add('lite');
+  }catch(e){}
+})();
+
+// ===================================================================
 // 📢 แถบประกาศหมุนเวียน (rotating announcement) — โชว์ทุกหน้า, หมุนทุก 6 วิ
 //   เพิ่ม/แก้/ลบประกาศได้ที่ array ด้านล่างนี้ที่เดียว มีผลทุกหน้า
 //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล

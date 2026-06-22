@@ -138,7 +138,6 @@
       });
     });
     var accuracy = totalQ ? Math.round(totalCorrect / totalQ * 100) : 0;
-    var avgScore = games ? (totalScore / games).toFixed(1) : '0';
 
     var missList = Object.keys(missMap).map(function (k) { return { word: k, n: missMap[k] }; })
       .sort(function (a, b) { return b.n - a.n; }).slice(0, 12);
@@ -150,9 +149,8 @@
         '<div style="font-size:12px;color:#8B7340;margin-top:6px;">' + label + '</div></div>';
     }
     var statsHTML =
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:30px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:30px;">' +
       stat(games, '遊玩次數') +
-      stat(avgScore, '平均分數') +
       stat(accuracy + '%', '正確率') +
       stat(totalQ, '累積題數') +
       '</div>';

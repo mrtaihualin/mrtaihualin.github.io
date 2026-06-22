@@ -500,3 +500,15 @@
   .pricing-grid .plan-card:nth-child(1) .plan-tag { color:var(--d1); }
   .pricing-grid .plan-card:nth-child(2) .plan-tag { color:var(--d3); }
 
+  /* ============================================================
+     ⚡ โหมดเบา (lite) — มีผลเฉพาะ in-app browser LINE/FB/IG เท่านั้น
+        (class "lite" ถูกใส่ที่ <html> โดย shared.js)
+        Safari / Chrome / desktop ไม่โดน → เอฟเฟกต์ครบเหมือนเดิม
+     ============================================================ */
+  /* ปิด backdrop-filter ที่ nav (ตัวการกระตุกหลักตอนเลื่อนจอ) — พื้นหลังทึบแทน */
+  html.lite nav { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; background:rgba(17,17,17,0.98) !important; }
+  /* หยุด animation ที่วิ่งวนตลอดเวลา */
+  html.lite .avail-dot,
+  html.lite .scroll-hint .line,
+  html.lite .tf-float-cta { animation:none !important; }
+

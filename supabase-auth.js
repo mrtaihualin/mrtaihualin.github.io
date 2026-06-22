@@ -214,8 +214,8 @@
     document.body.appendChild(badge);
   }
 
-  // ── โปรไฟล์ผู้เล่น: ชื่อ (profiles.nickname, sync กับ leaderboard) + รูป/แบดจ์ (localStorage) LIN 2026-06-22 ──
-  var myNick = null;
+  // ── โปรไฟล์ผู้เล่น: ชื่อ+รูป+แบดจ์ เก็บใน profiles (sync ข้ามเครื่อง) + localStorage เป็นแคชสำรอง LIN 2026-06-22 ──
+  var myNick = null, myAvatar = null, myBadge = null;
   var nickPromptedFor = null;
   var PRESET_AVATARS = ['🐘','🐱','🐶','🐰','🦊','🐼','🐯','🐸','🐥','🦉','🐲','🥭'];
   var AVATAR_KEY = 'tf_avatar', PIN_BADGE_KEY = 'tf_pinned_badge';
@@ -224,29 +224,46 @@
   function tfGetPinBadge() { try { return localStorage.getItem(PIN_BADGE_KEY) || ''; } catch (e) { return ''; } }
   function tfSetPinBadge(v) { try { if (v) localStorage.setItem(PIN_BADGE_KEY, v); else localStorage.removeItem(PIN_BADGE_KEY); } catch (e) {} }
 
-  function fetchNick() {
-    if (!currentUser) { myNick = null; return; }
-    sb.from('profiles').select('nickname').eq('user_id', currentUser.id).maybeSingle()
+  // ดึงโปรไฟล์จาก Supabase (ชื่อ/รูป/แบดจ์) — ถ้าคอลัมน์ avatar/badge_id ยังไม่ถูกเพิ่ม จะ fallback ใช้แคชในเครื่อง (เว็บไม่พัง)
+  function fetchProfile() {
+    if (!currentUser) { myNick = myAvatar = myBadge = null; return; }
+    function afterProfile() {
+      render();
+      if (!myNick && currentUser.email !== ADMIN_EMAIL && nickPromptedFor !== currentUser.id) {
+        nickPromptedFor = currentUser.id;
+        setTimeout(openProfileEditor, 600);
+      }
+    }
+    sb.from('profiles').select('nickname, avatar, badge_id').eq('user_id', currentUser.id).maybeSingle()
       .then(function (res) {
-        myNick = (res.data && res.data.nickname) || null;
-        render();
-        // ล็อกอินครั้งแรกยังไม่มีชื่อ → ชวนตั้งโปรไฟล์ 1 ครั้ง (admin ข้าม)
-        if (!myNick && currentUser.email !== ADMIN_EMAIL && nickPromptedFor !== currentUser.id) {
-          nickPromptedFor = currentUser.id;
-          setTimeout(openProfileEditor, 600);
+        if (res.error) {
+          // คอลัมน์ avatar/badge_id ยังไม่มีใน Supabase → ใช้แค่ชื่อ + รูป/แบดจ์จากแคชเครื่อง
+          sb.from('profiles').select('nickname').eq('user_id', currentUser.id).maybeSingle().then(function (r2) {
+            myNick = (r2.data && r2.data.nickname) || null;
+            myAvatar = tfGetAvatar() || null;
+            myBadge = tfGetPinBadge() || null;
+            afterProfile();
+          });
+          return;
         }
+        var d = res.data || {};
+        myNick = d.nickname || null;
+        myAvatar = d.avatar || tfGetAvatar() || null;
+        myBadge = d.badge_id || tfGetPinBadge() || null;
+        if (d.avatar) tfSetAvatar(d.avatar);       // ซิงค์ลงแคชเครื่องนี้
+        if (d.badge_id) tfSetPinBadge(d.badge_id);
+        afterProfile();
       });
   }
 
-  // ป๊อปอัปแก้โปรไฟล์: ชื่อ + รูปสำเร็จรูป/รูป Google + เลือกแบดจ์ที่ปลดล็อกแล้ว
+  // ป๊อปอัปแก้โปรไฟล์: ชื่อ + รูปอิโมจิสำเร็จรูป + เลือกแบดจ์ที่ปลดล็อกแล้ว (sync ผ่าน profiles)
   var profileModal = null;
   function openProfileEditor() {
     if (!currentUser) return;
     var meta = currentUser.user_metadata || {};
-    var googlePic = meta.avatar_url || meta.picture || '';
     var curName = myNick || meta.full_name || meta.name || '';
-    var selAvatar = tfGetAvatar() || (googlePic ? 'google' : 'none');
-    var selBadge = tfGetPinBadge();
+    var selAvatar = myAvatar || tfGetAvatar() || 'none';   // ไม่ใช้รูป Google แล้ว (LIN 2026-06-22)
+    var selBadge = myBadge || tfGetPinBadge();
     var data = (window.tfLoadBadges ? window.tfLoadBadges() : { unlocked: {} });
     var unlocked = data.unlocked || {};
     var defs = window.TF_BADGES_DEF || [];
@@ -262,7 +279,6 @@
     }
 
     var avatarChoices = '';
-    if (googlePic) avatarChoices += avCell('google', '<img src="' + esc(googlePic) + '" referrerpolicy="no-referrer" style="width:34px;height:34px;border-radius:50%;object-fit:cover;">', selAvatar === 'google');
     PRESET_AVATARS.forEach(function (em) { avatarChoices += avCell(em, '<span style="font-size:26px;">' + em + '</span>', selAvatar === em); });
     avatarChoices += avCell('none', '<span style="font-size:13px;color:#A07A1E;">無</span>', selAvatar === 'none');
 
@@ -315,14 +331,16 @@
     });
     profileModal.querySelector('#tfp-save').onclick = function () {
       var nm = (profileModal.querySelector('#tfp-name').value || '').trim().slice(0, 20);
-      tfSetAvatar(selAvatar);
-      tfSetPinBadge(selBadge);
-      if (nm && nm !== myNick) {
-        sb.from('profiles').upsert({ user_id: currentUser.id, nickname: nm }, { onConflict: 'user_id' }).then(function (res) {
-          if (res.error) { alert('名稱儲存失敗：' + res.error.message); return; }
-          myNick = nm; closeModal(); render();
-        });
-      } else { closeModal(); render(); }
+      // เซฟแคชเครื่องนี้เสมอ (ใช้ได้ทันทีแม้ Supabase ยังไม่เพิ่มคอลัมน์)
+      tfSetAvatar(selAvatar); tfSetPinBadge(selBadge);
+      myAvatar = selAvatar; myBadge = selBadge;
+      var row = { user_id: currentUser.id, avatar: selAvatar, badge_id: selBadge };
+      if (nm) { row.nickname = nm; myNick = nm; }
+      sb.from('profiles').upsert(row, { onConflict: 'user_id' }).then(function (res) {
+        // ถ้าคอลัมน์ avatar/badge_id ยังไม่มี → เซฟเฉพาะชื่อ (รูป/แบดจ์ยังอยู่ในแคชเครื่อง)
+        if (res.error && nm) sb.from('profiles').upsert({ user_id: currentUser.id, nickname: nm }, { onConflict: 'user_id' });
+        closeModal(); render();
+      });
     };
   }
 
@@ -337,28 +355,22 @@
       miniBtn.style.display = 'none';
       var email = currentUser.email || '使用者';
       adminUnlockAll(email);
-      // ชื่อ = ที่ตั้งเอง (profiles.nickname) → fallback Google/อีเมล · รูป+แบดจ์ จาก localStorage (LIN 2026-06-22)
+      // ชื่อ = ที่ตั้งเอง (profiles.nickname) → fallback ชื่อ Google/อีเมล · รูป+แบดจ์ จาก localStorage (LIN 2026-06-22)
       var meta = currentUser.user_metadata || {};
-      var googlePic = meta.avatar_url || meta.picture || '';
       var displayName = myNick || meta.full_name || meta.name || meta.user_name || email;
-      // รูปโปรไฟล์ที่เลือก: '' (ยังไม่เลือก) → ใช้รูป Google ถ้ามี · 'google' → รูป Google · 'none' → ไม่มี · อื่นๆ = อิโมจิ
-      var selAvatar = tfGetAvatar() || (googlePic ? 'google' : '');
+      // รูปโปรไฟล์: อิโมจิสำเร็จรูป (sync จาก profiles, fallback แคช) · 'none'/ยังไม่เลือก = ไม่มีรูป
+      var selAvatar = myAvatar || tfGetAvatar();
       var avatarHTML = '';
-      if (selAvatar === 'google' && googlePic) {
-        avatarHTML = '<img src="' + esc(googlePic) + '" alt="" referrerpolicy="no-referrer" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;">';
-      } else if (selAvatar && selAvatar !== 'google' && selAvatar !== 'none') {
+      if (selAvatar && selAvatar !== 'none' && selAvatar !== 'google') {
         avatarHTML = '<span style="width:24px;height:24px;border-radius:50%;background:#FBF6EA;display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">' + esc(selAvatar) + '</span>';
       }
-      // แบดจ์ที่ปักหมุด (เฉพาะที่ปลดล็อกแล้ว) — โชว์ข้างชื่อ
+      // แบดจ์ที่ปักหมุด — โชว์ข้างชื่อ (เลือกได้เฉพาะที่ปลดล็อกแล้วตอนเลือก จึงไว้ใจค่า sync ได้)
       var pinHTML = '';
-      var pin = tfGetPinBadge();
-      if (pin && window.TF_BADGES_DEF && window.tfLoadBadges) {
-        var ud = (window.tfLoadBadges().unlocked) || {};
-        if (ud[pin]) {
-          var bdef = null;
-          window.TF_BADGES_DEF.forEach(function (b) { if (b.id === pin) bdef = b; });
-          if (bdef) pinHTML = '<span title="' + esc(bdef.zh) + '" style="display:inline-flex;align-items:center;flex-shrink:0;">' + window.tfBadgeIcon(bdef, 20) + '</span>';
-        }
+      var pin = myBadge || tfGetPinBadge();
+      if (pin && window.TF_BADGES_DEF) {
+        var bdef = null;
+        window.TF_BADGES_DEF.forEach(function (b) { if (b.id === pin) bdef = b; });
+        if (bdef) pinHTML = '<span title="' + esc(bdef.zh) + '" style="display:inline-flex;align-items:center;flex-shrink:0;">' + window.tfBadgeIcon(bdef, 20) + '</span>';
       }
       badge.style.display = 'block';
       badge.innerHTML =
@@ -428,14 +440,14 @@
       currentUser = (res.data && res.data.session && res.data.session.user) || null;
       authResolved = true;
       render();
-      fetchNick();
+      fetchProfile();
     });
     sb.auth.onAuthStateChange(function (_event, session) {
       currentUser = (session && session.user) || null;
       authResolved = true;
-      myNick = null;            // เคลียร์ชื่อเดิม แล้วดึงของ user ปัจจุบันใหม่
+      myNick = myAvatar = myBadge = null;   // เคลียร์โปรไฟล์เดิม แล้วดึงของ user ปัจจุบันใหม่
       render();
-      fetchNick();
+      fetchProfile();
     });
   }
 
