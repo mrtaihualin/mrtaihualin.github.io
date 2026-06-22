@@ -7,6 +7,20 @@
 (function () {
   'use strict';
 
+  // ── ตารางแบดจ์ (ก๊อปจาก tone-finder.html อ่านอย่างเดียว เพื่อวาดบนกระดาน) — LIN 2026-06-22 ──
+  var LB_BADGES = {
+    rice_seed:   { emoji: '🌾', img: 'assets/badges/rice_seed.svg',   zh: '稻種' },
+    rice_sprout: { emoji: '🌱', img: 'assets/badges/rice_sprout.svg', zh: '秧苗' },
+    rice_ear:    { emoji: '🌿', img: 'assets/badges/rice_ear.svg',    zh: '幼穗' },
+    rice_golden: { emoji: '🌾', img: 'assets/badges/rice_golden.svg', zh: '金穗' },
+    rice_field:  { emoji: '🏞️', img: 'assets/badges/rice_field.svg',  zh: '金色稻田' },
+    hommali:     { emoji: '🍚', img: 'assets/badges/hommali.svg',     zh: '茉莉香米' },
+    khaoniaw:    { emoji: '🍙', img: 'assets/badges/khaoniaw.svg',    zh: '糯米' },
+    khaoklong:   { emoji: '🌾', img: 'assets/badges/khaoklong.svg',   zh: '糙米' },
+    riceberry:   { emoji: '🟣', img: 'assets/badges/riceberry.svg',   zh: '紫米 Riceberry' }
+  };
+  var LB_PACER_AVATARS = ['🐱', '🦊', '🐼', '🐯', '🐸', '🐥', '🦉', '🐰'];
+
   var cfg = window.SUPABASE_CONFIG || {};
   var ready = cfg.url && cfg.anonKey &&
               cfg.url.indexOf('YOUR_') === -1 &&
@@ -47,7 +61,7 @@
     return PACER.names.slice(0, PACER.count).map(function (nm, i) {
       var f = PACER.factors[i % PACER.factors.length];
       var sc = Math.max(1, Math.round(anchor * f));
-      return { user_id: 'pacer-' + period + '-' + i, nickname: nm, total_score: sc, games: Math.max(2, Math.round(sc / per)), _bot: true };
+      return { user_id: 'pacer-' + period + '-' + i, nickname: nm, avatar: LB_PACER_AVATARS[i % LB_PACER_AVATARS.length], badge_id: '', total_score: sc, games: Math.max(2, Math.round(sc / per)), _bot: true };
     });
   }
 
@@ -62,6 +76,22 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
   }
+  // ไอคอนแบดจ์ (ใช้ SVG ถ้ามี ไม่งั้น emoji) — คืน '' ถ้าไม่รู้จัก id
+  function lbBadgeIcon(id, px) {
+    px = px || 18;
+    var b = LB_BADGES[id];
+    if (!b) return '';
+    return '<img src="' + b.img + '" alt="' + esc(b.zh) + '" title="' + esc(b.zh) +
+      '" style="width:' + px + 'px;height:' + px + 'px;object-fit:contain;flex-shrink:0;vertical-align:middle;"' +
+      ' onerror="this.replaceWith(document.createTextNode(\'' + b.emoji + '\'))">';
+  }
+  // วงกลม avatar (อิโมจิ) — คืน '' ถ้าไม่มี/none
+  function lbAvatar(av) {
+    if (!av || av === 'none') return '';
+    return '<span style="width:26px;height:26px;border-radius:50%;background:#FBF6EA;display:inline-flex;' +
+      'align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">' + esc(av) + '</span>';
+  }
+
   function box(icon, title, sub, extra) {
     return '<div style="background:#fff;border-radius:18px;padding:38px 26px;text-align:center;' +
       'box-shadow:0 8px 30px rgba(0,0,0,0.06);max-width:440px;margin:0 auto;">' +
@@ -168,8 +198,11 @@
         '<div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;' +
         (i ? 'border-top:1px solid #F4ECD8;' : '') + (mine ? 'background:#FBF3E2;' : '') + '">' +
           '<div style="font-size:17px;min-width:26px;text-align:center;">' + medal(rank) + '</div>' +
-          '<div style="flex:1;min-width:0;font-weight:700;color:#5C4410;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
-            esc(r.nickname || '(無暱稱)') + (mine ? ' <span style="font-size:11px;color:#C8973A;">(你)</span>' : '') + '</div>' +
+          lbAvatar(r.avatar) +
+          '<div style="flex:1;min-width:0;font-weight:700;color:#5C4410;display:flex;align-items:center;gap:5px;overflow:hidden;">' +
+            '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.nickname || '(無暱稱)') + '</span>' +
+            (r.badge_id ? lbBadgeIcon(r.badge_id, 18) : '') +
+            (mine ? '<span style="font-size:11px;color:#C8973A;flex-shrink:0;">(你)</span>' : '') + '</div>' +
           '<div style="text-align:right;white-space:nowrap;">' +
             '<span style="font-family:\'Playfair Display\',serif;font-weight:900;color:#C8973A;font-size:18px;">' + (r.total_score != null ? r.total_score : 0) + '</span>' +
             '<span style="font-size:11px;color:#B0A080;margin-left:5px;">' + (r.games || 0) + ' 場</span>' +

@@ -407,24 +407,56 @@ window.goHome = function() {
 
   function openModal(id){ document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden';
     if(id==='modal-line-qr'){
-      if(typeof gtag==='function'){ gtag('event','book_trial_click',{ source_page: location.pathname }); }
-      _initCalEmbed();
+      // book_trial_click: นับ "ครั้งเดียวต่อหน้า/เซสชัน" กันการเปิด modal ซ้ำทำตัวเลขพอง
+      if(typeof gtag==='function'){
+        try{
+          var _k='btc_'+location.pathname;
+          if(sessionStorage.getItem(_k)!=='1'){
+            gtag('event','book_trial_click',{ source_page: location.pathname });
+            sessionStorage.setItem(_k,'1');
+          }
+        }catch(e){ gtag('event','book_trial_click',{ source_page: location.pathname }); }
+      }
+      window.mountCalInline('#cal-embed-modal');
     }
   }
-  var _calEmbedLoaded = false;
-  function _initCalEmbed(){
-    if(_calEmbedLoaded) return;
-    _calEmbedLoaded = true;
+  // ── Cal.com inline embed (ทางการ) — ฝัง embed.js ครั้งเดียว แล้ว mount ตาม selector ──
+  //    สำคัญ: ต้องใช้ embed.js (ไม่ใช่ <iframe> ดิบ) เพื่อให้ event bookingSuccessful
+  //    ส่ง postMessage กลับมาที่หน้าแม่ → ยิง book_trial_submit ได้จริง (เดิม iframe ดิบจับไม่ได้)
+  var _calLibLoaded = false, _calBound = false, _calMounted = {};
+  function _loadCalLib(){
+    if(_calLibLoaded) return;
+    _calLibLoaded = true;
     (function(C,A,L){let p=function(a,ar){a.q.push(ar);};let d=C.document;C.Cal=C.Cal||function(){let cal=C.Cal;let ar=arguments;if(!cal.loaded){cal.ns={};cal.q=cal.q||[];d.head.appendChild(d.createElement('script')).src=A;cal.loaded=true;}if(ar[0]===L){const api=function(){p(api,arguments);};const ns=ar[1];api.q=api.q||[];typeof ns==='string'?(cal.ns[ns]=api)&&p(api,ar):p(cal,ar);return;}p(cal,ar);};})(window,'https://app.cal.com/embed/embed.js','init');
     Cal('init',{origin:'https://cal.com'});
-    Cal('inline',{elementOrSelector:'#cal-embed-container',calLink:'mrtaihualin/trial',config:{layout:'month_view',theme:'light'}});
+  }
+  function _bindCalSuccess(){
+    if(_calBound) return;
+    _calBound = true;
     Cal('on',{action:'bookingSuccessful',callback:function(){
+      // ✅ การจองสำเร็จจริง → ยิง GA4 (เดิมไม่เคยยิงเพราะใช้ iframe ดิบ)
+      if(typeof gtag==='function'){ gtag('event','book_trial_submit',{ source_page: location.pathname }); }
       var bv=document.getElementById('cal-booking-view');
       var sv=document.getElementById('cal-success-view');
       if(bv) bv.style.display='none';
       if(sv) sv.style.display='block';
     }});
   }
+  window.mountCalInline = function(selector){
+    selector = selector || '#cal-embed-modal';
+    var el = document.querySelector(selector);
+    if(!el || _calMounted[selector]) return;
+    _calMounted[selector] = true;
+    _loadCalLib();
+    _bindCalSuccess();
+    Cal('inline',{elementOrSelector:selector,calLink:'mrtaihualin/trial',config:{layout:'month_view',theme:'light'}});
+  };
+  // หน้า trial.html ฝังปฏิทินแบบ inline บนหน้า (#cal-embed-inline) → mount อัตโนมัติเมื่อโหลด
+  (function(){
+    function _autoMountInlineCal(){ if(window.mountCalInline) window.mountCalInline('#cal-embed-inline'); }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', _autoMountInlineCal); }
+    else { _autoMountInlineCal(); }
+  })();
   function closeModal(id){ document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
   function closeModalOutside(e,id){ if(e.target===document.getElementById(id)) closeModal(id); }
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); document.body.style.overflow=''; if(typeof stopYTVideo==='function') stopYTVideo(); } });
@@ -866,11 +898,11 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
         <div style="background:var(--white);padding:6px;display:inline-block;">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:64px;height:64px;display:block;" loading="lazy">
         </div>
-        <a href="https://lin.ee/yVBgvywy" target="_blank" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:13px;padding:10px 16px;text-decoration:none;white-space:nowrap;">💬 加 LINE</a>
+        <a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" onclick="window.gtag&&gtag('event','add_line',{source:'modal_line_qr'})" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:13px;padding:10px 16px;text-decoration:none;white-space:nowrap;">💬 加 LINE</a>
       </div>
     </div>
     <div style="background:#fff;">
-      <iframe src="https://cal.com/mrtaihualin/trial?embed=true&embedType=inline&theme=light" style="width:100%;height:480px;border:none;display:block;" frameborder="0" loading="lazy" id="cal-iframe"></iframe>
+      <div id="cal-embed-modal" style="width:100%;min-height:480px;"></div>
     </div>
   </div>
 </div>`;

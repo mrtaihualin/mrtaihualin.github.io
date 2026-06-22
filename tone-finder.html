@@ -4402,14 +4402,15 @@ function stepSessionSummary() {
     badgeBlock +
     '<div class="tf-sum-score">'+perfectCount+' / '+total+'</div>' +
     '<div class="tf-sum-score-label">'+(perfectCount===total?'全部一次答對！太厲害了 🎉':'我們一起繼續加油！💪')+'</div>' +
-    '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
-      '<tbody>'+rows+'</tbody></table>' +
-    '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
+    // ⭐ การ์ดชวนจอง — ดันขึ้นมาก่อนตารางคะแนน เพื่อให้ผู้เล่นเห็นก่อนปิดหน้า
     '<div style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
       '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
       '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
       '<button class="tf-session-next-btn" style="background:#C8973A;color:#fff;" onclick="if(typeof openModal===\'function\')openModal(\'modal-line-qr\')">預約免費體驗課 →</button>' +
     '</div>' +
+    '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
+      '<tbody>'+rows+'</tbody></table>' +
+    '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
       '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
       '<button class="tf-restart-btn" onclick="TF.reselectTopic()">重新選主題</button>' +
@@ -6292,7 +6293,7 @@ render();
 </footer>
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
-<script src="shared.js?v=18"></script>
+<script src="shared.js?v=19"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)

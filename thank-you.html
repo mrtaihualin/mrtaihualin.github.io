@@ -110,14 +110,41 @@
 </footer>
 
 <script>
-  // GA: 記錄下載速查表
+  // โหลด PDF ให้ชัวร์บน iOS / in-app browser (LINE/FB/IG) — fetch เป็น blob แล้วค่อยสั่งโหลด
+  // กัน iOS Safari "เปิดอ่าน" แทนที่จะ "โหลด" (LIN 2026-06-22)
   (function(){
+    var PDF='thai-tones-cheatsheet.pdf', FNAME='泰語聲調速查表.pdf';
+    var ua=navigator.userAgent||'';
+    var inApp=/\bLine\//i.test(ua)||/FBAN|FBAV|FB_IAB/.test(ua)||/Instagram/i.test(ua);
     var b=document.getElementById('dl-btn');
-    if(b) b.addEventListener('click',function(){
-      if(typeof gtag==='function') gtag('event','lead_magnet_download',{file:'thai-tones-cheatsheet.pdf'});
+    var hint=document.querySelector('.dl-hint');
+    if(inApp && hint){
+      hint.innerHTML='在 LINE／FB／IG 內若無法下載，請點右上角選單選「用其他瀏覽器開啟」，或到信箱收信。';
+    }
+    if(!b) return;
+    b.addEventListener('click',function(e){
+      // GA: 記錄下載速查表
+      if(typeof gtag==='function') gtag('event','lead_magnet_download',{file:PDF});
+      if(!window.fetch || !window.URL || !window.URL.createObjectURL) return; // เบราว์เซอร์เก่า → ปล่อยให้ <a download> ทำงานปกติ
+      e.preventDefault();
+      b.style.pointerEvents='none';
+      fetch(PDF).then(function(r){ if(!r.ok) throw new Error(r.status); return r.blob(); })
+        .then(function(blob){
+          var url=URL.createObjectURL(blob);
+          var a=document.createElement('a');
+          a.href=url; a.download=FNAME;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(url); },4000);
+        })
+        .catch(function(){
+          // fallback: เปิด PDF ตรงๆ (ผู้ใช้ยังเห็นไฟล์/เซฟเองได้)
+          window.open(PDF,'_blank');
+          if(hint) hint.innerHTML='若沒有自動下載，已為你開啟 PDF，請用右上角選單儲存；或到信箱收信。';
+        })
+        .then(function(){ b.style.pointerEvents=''; });
     });
   })();
 </script>
-<script src="shared.js?v=18"></script>
+<script src="shared.js?v=19"></script>
 </body>
 </html>
