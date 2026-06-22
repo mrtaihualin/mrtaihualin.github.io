@@ -214,6 +214,118 @@
     document.body.appendChild(badge);
   }
 
+  // ── โปรไฟล์ผู้เล่น: ชื่อ (profiles.nickname, sync กับ leaderboard) + รูป/แบดจ์ (localStorage) LIN 2026-06-22 ──
+  var myNick = null;
+  var nickPromptedFor = null;
+  var PRESET_AVATARS = ['🐘','🐱','🐶','🐰','🦊','🐼','🐯','🐸','🐥','🦉','🐲','🥭'];
+  var AVATAR_KEY = 'tf_avatar', PIN_BADGE_KEY = 'tf_pinned_badge';
+  function tfGetAvatar() { try { return localStorage.getItem(AVATAR_KEY) || ''; } catch (e) { return ''; } }
+  function tfSetAvatar(v) { try { if (v) localStorage.setItem(AVATAR_KEY, v); else localStorage.removeItem(AVATAR_KEY); } catch (e) {} }
+  function tfGetPinBadge() { try { return localStorage.getItem(PIN_BADGE_KEY) || ''; } catch (e) { return ''; } }
+  function tfSetPinBadge(v) { try { if (v) localStorage.setItem(PIN_BADGE_KEY, v); else localStorage.removeItem(PIN_BADGE_KEY); } catch (e) {} }
+
+  function fetchNick() {
+    if (!currentUser) { myNick = null; return; }
+    sb.from('profiles').select('nickname').eq('user_id', currentUser.id).maybeSingle()
+      .then(function (res) {
+        myNick = (res.data && res.data.nickname) || null;
+        render();
+        // ล็อกอินครั้งแรกยังไม่มีชื่อ → ชวนตั้งโปรไฟล์ 1 ครั้ง (admin ข้าม)
+        if (!myNick && currentUser.email !== ADMIN_EMAIL && nickPromptedFor !== currentUser.id) {
+          nickPromptedFor = currentUser.id;
+          setTimeout(openProfileEditor, 600);
+        }
+      });
+  }
+
+  // ป๊อปอัปแก้โปรไฟล์: ชื่อ + รูปสำเร็จรูป/รูป Google + เลือกแบดจ์ที่ปลดล็อกแล้ว
+  var profileModal = null;
+  function openProfileEditor() {
+    if (!currentUser) return;
+    var meta = currentUser.user_metadata || {};
+    var googlePic = meta.avatar_url || meta.picture || '';
+    var curName = myNick || meta.full_name || meta.name || '';
+    var selAvatar = tfGetAvatar() || (googlePic ? 'google' : 'none');
+    var selBadge = tfGetPinBadge();
+    var data = (window.tfLoadBadges ? window.tfLoadBadges() : { unlocked: {} });
+    var unlocked = data.unlocked || {};
+    var defs = window.TF_BADGES_DEF || [];
+    var unlockedDefs = defs.filter(function (b) { return unlocked[b.id]; });
+
+    function avCell(val, inner, on) {
+      return '<button class="tfp-av" data-v="' + esc(val) + '" style="width:46px;height:46px;border-radius:50%;display:flex;' +
+        'align-items:center;justify-content:center;cursor:pointer;background:#FBF6EA;border:2px solid ' + (on ? '#C8973A' : 'transparent') + ';">' + inner + '</button>';
+    }
+    function bgCell(val, inner, label, on) {
+      return '<button class="tfp-bg" data-v="' + esc(val) + '" title="' + esc(label || '') + '" style="min-width:46px;height:46px;padding:0 6px;' +
+        'border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#FBF6EA;border:2px solid ' + (on ? '#C8973A' : 'transparent') + ';">' + inner + '</button>';
+    }
+
+    var avatarChoices = '';
+    if (googlePic) avatarChoices += avCell('google', '<img src="' + esc(googlePic) + '" referrerpolicy="no-referrer" style="width:34px;height:34px;border-radius:50%;object-fit:cover;">', selAvatar === 'google');
+    PRESET_AVATARS.forEach(function (em) { avatarChoices += avCell(em, '<span style="font-size:26px;">' + em + '</span>', selAvatar === em); });
+    avatarChoices += avCell('none', '<span style="font-size:13px;color:#A07A1E;">無</span>', selAvatar === 'none');
+
+    var badgeChoices;
+    if (!unlockedDefs.length) {
+      badgeChoices = '<div style="font-size:12.5px;color:#A07A1E;padding:6px 2px;line-height:1.6;">還沒有解鎖徽章～玩遊戲解鎖後就能選來展示 🎖️</div>';
+    } else {
+      badgeChoices = unlockedDefs.map(function (b) { return bgCell(b.id, window.tfBadgeIcon(b, 30), b.zh, selBadge === b.id); }).join('') +
+        bgCell('', '<span style="font-size:13px;color:#A07A1E;">不顯示</span>', '', !selBadge);
+    }
+
+    if (profileModal) profileModal.remove();
+    profileModal = document.createElement('div');
+    profileModal.id = 'tf-profile-modal';
+    profileModal.style.cssText = 'position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:18px;' +
+      'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);font-family:"Noto Sans TC",sans-serif;';
+    profileModal.innerHTML =
+      '<div style="background:#fff;max-width:360px;width:100%;border-radius:18px;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,0.35);max-height:88vh;overflow:auto;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+          '<h2 style="margin:0;font-size:18px;color:#5C4410;font-weight:800;">編輯個人檔案</h2>' +
+          '<button id="tfp-close" style="border:none;background:none;font-size:20px;color:#C3B594;cursor:pointer;line-height:1;">✕</button>' +
+        '</div>' +
+        '<label style="font-size:13px;color:#8B7340;font-weight:700;">名稱（會顯示在這裡和排行榜）</label>' +
+        '<input id="tfp-name" maxlength="20" value="' + esc(curName) + '" placeholder="輸入暱稱（1–20 字）" ' +
+          'style="width:100%;box-sizing:border-box;margin:6px 0 16px;padding:10px 12px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;">' +
+        '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:8px;">頭像</div>' +
+        '<div id="tfp-avatars" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">' + avatarChoices + '</div>' +
+        '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:8px;">展示徽章（顯示在名稱旁）</div>' +
+        '<div id="tfp-badges" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' + badgeChoices + '</div>' +
+        '<button id="tfp-save" style="width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;">儲存</button>' +
+      '</div>';
+    document.body.appendChild(profileModal);
+
+    function closeModal() { if (profileModal) { profileModal.remove(); profileModal = null; } }
+    profileModal.querySelector('#tfp-close').onclick = closeModal;
+    profileModal.addEventListener('click', function (e) { if (e.target === profileModal) closeModal(); });
+    [].forEach.call(profileModal.querySelectorAll('.tfp-av'), function (btn) {
+      btn.onclick = function () {
+        selAvatar = btn.getAttribute('data-v');
+        [].forEach.call(profileModal.querySelectorAll('.tfp-av'), function (b) { b.style.borderColor = 'transparent'; });
+        btn.style.borderColor = '#C8973A';
+      };
+    });
+    [].forEach.call(profileModal.querySelectorAll('.tfp-bg'), function (btn) {
+      btn.onclick = function () {
+        selBadge = btn.getAttribute('data-v');
+        [].forEach.call(profileModal.querySelectorAll('.tfp-bg'), function (b) { b.style.borderColor = 'transparent'; });
+        btn.style.borderColor = '#C8973A';
+      };
+    });
+    profileModal.querySelector('#tfp-save').onclick = function () {
+      var nm = (profileModal.querySelector('#tfp-name').value || '').trim().slice(0, 20);
+      tfSetAvatar(selAvatar);
+      tfSetPinBadge(selBadge);
+      if (nm && nm !== myNick) {
+        sb.from('profiles').upsert({ user_id: currentUser.id, nickname: nm }, { onConflict: 'user_id' }).then(function (res) {
+          if (res.error) { alert('名稱儲存失敗：' + res.error.message); return; }
+          myNick = nm; closeModal(); render();
+        });
+      } else { closeModal(); render(); }
+    };
+  }
+
   function render() {
     if (!gate) buildGate();
     if (!miniBtn) buildMiniBtn();
@@ -225,18 +337,46 @@
       miniBtn.style.display = 'none';
       var email = currentUser.email || '使用者';
       adminUnlockAll(email);
+      // ชื่อ = ที่ตั้งเอง (profiles.nickname) → fallback Google/อีเมล · รูป+แบดจ์ จาก localStorage (LIN 2026-06-22)
+      var meta = currentUser.user_metadata || {};
+      var googlePic = meta.avatar_url || meta.picture || '';
+      var displayName = myNick || meta.full_name || meta.name || meta.user_name || email;
+      // รูปโปรไฟล์ที่เลือก: '' (ยังไม่เลือก) → ใช้รูป Google ถ้ามี · 'google' → รูป Google · 'none' → ไม่มี · อื่นๆ = อิโมจิ
+      var selAvatar = tfGetAvatar() || (googlePic ? 'google' : '');
+      var avatarHTML = '';
+      if (selAvatar === 'google' && googlePic) {
+        avatarHTML = '<img src="' + esc(googlePic) + '" alt="" referrerpolicy="no-referrer" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;">';
+      } else if (selAvatar && selAvatar !== 'google' && selAvatar !== 'none') {
+        avatarHTML = '<span style="width:24px;height:24px;border-radius:50%;background:#FBF6EA;display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">' + esc(selAvatar) + '</span>';
+      }
+      // แบดจ์ที่ปักหมุด (เฉพาะที่ปลดล็อกแล้ว) — โชว์ข้างชื่อ
+      var pinHTML = '';
+      var pin = tfGetPinBadge();
+      if (pin && window.TF_BADGES_DEF && window.tfLoadBadges) {
+        var ud = (window.tfLoadBadges().unlocked) || {};
+        if (ud[pin]) {
+          var bdef = null;
+          window.TF_BADGES_DEF.forEach(function (b) { if (b.id === pin) bdef = b; });
+          if (bdef) pinHTML = '<span title="' + esc(bdef.zh) + '" style="display:inline-flex;align-items:center;flex-shrink:0;">' + window.tfBadgeIcon(bdef, 20) + '</span>';
+        }
+      }
       badge.style.display = 'block';
       badge.innerHTML =
-        '<div style="display:flex;align-items:center;gap:8px;background:#fff;' +
+        '<div style="display:flex;align-items:center;gap:7px;background:#fff;' +
         'border:1px solid rgba(200,151,58,0.4);border-radius:999px;padding:5px 10px;' +
         'box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
         '<a href="leaderboard.html" title="อันดับผู้เล่น" style="text-decoration:none;font-size:15px;">🏆</a>' +
         '<a href="my-progress.html" title="คะแนนของฉัน" style="text-decoration:none;color:#8B6310;font-size:15px;">📊</a>' +
-        '<span style="color:#8B6310;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(email) + '</span>' +
+        avatarHTML +
+        '<span id="tf-nick" title="點此編輯個人檔案 / แก้โปรไฟล์" style="color:#8B6310;max-width:105px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">' + esc(displayName) + '</span>' +
+        pinHTML +
+        '<button id="tf-edit-nick" title="編輯個人檔案" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:13px;padding:0;line-height:1;">✏️</button>' +
         '<button id="tf-logout" style="border:none;background:#C8973A;color:#fff;' +
         'border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px;">登出</button>' +
         '</div>';
       badge.querySelector('#tf-logout').onclick = doLogout;
+      badge.querySelector('#tf-edit-nick').onclick = openProfileEditor;
+      badge.querySelector('#tf-nick').onclick = openProfileEditor;
     } else {
       badge.style.display = 'none';
       // หน้าเว็บมองเห็นได้เสมอ — ไม่บล็อกตอนโหลด
@@ -288,11 +428,14 @@
       currentUser = (res.data && res.data.session && res.data.session.user) || null;
       authResolved = true;
       render();
+      fetchNick();
     });
     sb.auth.onAuthStateChange(function (_event, session) {
       currentUser = (session && session.user) || null;
       authResolved = true;
+      myNick = null;            // เคลียร์ชื่อเดิม แล้วดึงของ user ปัจจุบันใหม่
       render();
+      fetchNick();
     });
   }
 

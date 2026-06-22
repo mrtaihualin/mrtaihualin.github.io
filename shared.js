@@ -520,39 +520,29 @@ window.goHome = function() {
     url:     'https://qzkxlhpcputsvbqmtqfi.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw'
   };
-  var SB_LEAD_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-  var _leadClient = null;
-  function getLeadClient(){
-    return new Promise(function(resolve){
-      try{
-        if(_leadClient){ resolve(_leadClient); return; }
-        if(!SB_LEAD_CFG.url || !SB_LEAD_CFG.anonKey){ resolve(null); return; }
-        var init = function(){
-          if(window.supabase && window.supabase.createClient){
-            _leadClient = window.supabase.createClient(SB_LEAD_CFG.url, SB_LEAD_CFG.anonKey);
-            resolve(_leadClient);
-          } else { resolve(null); }
-        };
-        if(window.supabase && window.supabase.createClient){ init(); return; }
-        var s = document.createElement('script');   // lazy-load เฉพาะตอนมีคนส่งฟอร์ม
-        s.src = SB_LEAD_CDN; s.async = true; s.onload = init; s.onerror = function(){ resolve(null); };
-        document.head.appendChild(s);
-      }catch(e){ resolve(null); }
-    });
-  }
   // เก็บ lead: ยิงทั้ง Supabase + Google Sheet พร้อมกัน, ไม่บล็อก, ไม่ throw
+  //   - ใช้ Supabase REST API ตรงๆ + fetch keepalive → insert ยิงทันที
+  //     และ "รอดแม้หน้าจะเปลี่ยนไป thank-you" (ไม่มี race กับ redirect)
+  //   - ไม่ต้องโหลด supabase-js SDK → เบากว่า + ไม่ต้องรอ CDN
   window.saveLead = function(fields){
     fields = fields || {};
+    // 1) Supabase (ฐานข้อมูลหลัก)
     try{
-      getLeadClient().then(function(sb){
-        if(!sb) return;
-        sb.from('leads').insert({
-          email: fields.email || '',
-          name:  fields.name  || null,
-          source:fields.source|| null
-        }).then(function(){}, function(){});
-      });
+      if(SB_LEAD_CFG.url && SB_LEAD_CFG.anonKey){
+        fetch(SB_LEAD_CFG.url + '/rest/v1/leads', {
+          method:'POST',
+          keepalive:true,
+          headers:{
+            'Content-Type':'application/json',
+            'apikey': SB_LEAD_CFG.anonKey,
+            'Authorization':'Bearer ' + SB_LEAD_CFG.anonKey,
+            'Prefer':'return=minimal'
+          },
+          body: JSON.stringify({ email:fields.email||'', name:fields.name||null, source:fields.source||null })
+        }).catch(function(){});
+      }
     }catch(e){}
+    // 2) Google Sheet (สำรอง) — sendBeacon รอดแม้หน้าเปลี่ยน
     try{ if(typeof sheetLog==='function') sheetLog({ email:fields.email||'', name:fields.name||'', source:fields.source||'' }); }catch(e){}
   };
   async function submitFeedback() {
