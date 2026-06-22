@@ -45,6 +45,22 @@
       return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
     } catch (e) { return String(s || ''); }
   }
+  // จำนวนข้อ "ตอบถูก" ของรอบนั้น = total - จำนวนคำที่เคยตอบผิด (นับไม่ซ้ำคำ)
+  function correctCount(r) {
+    var total = r.total || 0;
+    if (!total) return 0;
+    var seen = {};
+    (r.wrong_words || []).forEach(function (w) { if (w && w.word) seen[w.word] = 1; });
+    var c = total - Object.keys(seen).length;
+    if (c < 0) c = 0;
+    if (c > total) c = total;
+    return c;
+  }
+  // ความถูกต้องของรอบนั้น (0–100%)
+  function rowAcc(r) {
+    var t = r.total || 0;
+    return t ? Math.round(correctCount(r) / t * 100) : 0;
+  }
   function googleBtn(id) {
     return '<button id="' + id + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;' +
       'border:1px solid #dadce0;background:#fff;color:#3c4043;border-radius:10px;padding:12px;cursor:pointer;' +
@@ -108,18 +124,21 @@
     }
 
     // ── คำนวณสถิติ ──
-    var games = rows.length, totalQ = 0, totalCorrect = 0;
+    // ⚠️ r.score = "คะแนนรวม" (แต้ม เช่น 1400) ไม่ใช่ "จำนวนข้อถูก"
+    // ความถูกต้อง (正確率) ต้องคิดจาก "จำนวนข้อตอบถูก" = total - จำนวนคำที่ตอบผิด (ไม่ซ้ำ)
+    var games = rows.length, totalQ = 0, totalCorrect = 0, totalScore = 0;
     var missMap = {};
     rows.forEach(function (r) {
       totalQ += (r.total || 0);
-      totalCorrect += (r.score || 0);
+      totalScore += (r.score || 0);
+      totalCorrect += correctCount(r);
       (r.wrong_words || []).forEach(function (w) {
         var key = (w && w.word) ? w.word : null;
         if (key) missMap[key] = (missMap[key] || 0) + 1;
       });
     });
     var accuracy = totalQ ? Math.round(totalCorrect / totalQ * 100) : 0;
-    var avgScore = games ? (totalCorrect / games).toFixed(1) : '0';
+    var avgScore = games ? (totalScore / games).toFixed(1) : '0';
 
     var missList = Object.keys(missMap).map(function (k) { return { word: k, n: missMap[k] }; })
       .sort(function (a, b) { return b.n - a.n; }).slice(0, 12);
@@ -169,7 +188,7 @@
       '<div style="font-family:\'Noto Serif TC\',serif;font-size:16px;font-weight:900;color:#5C4410;margin-bottom:14px;">🕑 最近紀錄</div>' +
       '<div style="display:flex;flex-direction:column;gap:0;">';
     recent.forEach(function (r, i) {
-      var acc = r.total ? Math.round((r.score || 0) / r.total * 100) : 0;
+      var acc = rowAcc(r);
       histHTML +=
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 4px;' +
         (i ? 'border-top:1px solid #F0E6CE;' : '') + '">' +
@@ -194,7 +213,7 @@
     var ctx = document.getElementById('pg-chart');
     if (!ctx) return;
     var labels = rows.map(function (r, i) { return fmtDate(r.created_at).slice(5, 10); });
-    var data = rows.map(function (r) { return r.total ? Math.round((r.score || 0) / r.total * 100) : 0; });
+    var data = rows.map(function (r) { return rowAcc(r); });
     if (chartObj) { chartObj.destroy(); }
     chartObj = new window.Chart(ctx, {
       type: 'line',

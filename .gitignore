@@ -16,6 +16,9 @@ _backup_*/
 # ไฟล์ระบบ Mac
 .DS_Store
 
+# ไฟล์ขยะชั่วคราวจาก FUSE/mount (เกิดตอนแก้ไฟล์ขณะมี handle ค้าง) — ไม่ใช่ไฟล์เว็บจริง
+.fuse_hidden*
+
 # node_modules (ถ้ามี)
 node_modules/
 

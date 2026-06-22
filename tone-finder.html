@@ -1880,7 +1880,7 @@
   <a href="page-services.html">導遊・翻譯</a>
   <a href="page4.html">泰語・分享</a>
   <a href="tone-finder.html" class="active">聲調・搜尋</a>
-  <a href="reading-game.html">拼讀・練習</a>
+  <!-- ปิดชั่วคราว ยังไม่เปิดใช้: <a href="reading-game.html">拼讀・練習</a> -->
 </div>
 
 <!-- ── MINIMAL MODALS (for nav modal triggers) ── -->
@@ -2727,6 +2727,8 @@ var TH = (function() {
   var LONG_V  = new Set(['า','ี','ื','ู','เ','แ','โ']); // า ี ื ู เ แ โ
   // Tone mark characters
   var TONE_CHARS = new Set(['่','้','๊','๋']); // ่ ้ ๊ ๋
+  // สระพิเศษที่ลงท้ายด้วยเสียงก้อง (semivowel/นาสิก) = "คำเป็น" เสมอ: ไ(-ai) ใ(-ai) ำ(-am)
+  var LIVE_V = new Set(['ไ','ใ','ำ']);
 
   return {
     hasToneMark: function(word) {
@@ -2763,9 +2765,12 @@ var TH = (function() {
       for (var i=0; i<word.length; i++) if (CONS_SET.has(word[i])) cons.push(word[i]);
       if (cons.length >= 2) {
         var last = cons[cons.length-1];
+        // อ ตัวสุดท้าย = สระออ (เสียงยาว เปิด) ไม่ใช่ตัวสะกด → คำเป็น
+        if (last === 'อ' && word[word.length-1] === 'อ' && this.getInitChar(word) !== 'อ') return true;
         if (SHORT_TAIL.has(last)) return false;
         if (LONG_TAIL.has(last))  return true;
       }
+      for (var n=0; n<word.length; n++) if (LIVE_V.has(word[n])) return true; // ไ ใ ำ = คำเป็น
       for (var j=0; j<word.length; j++) if (SHORT_V.has(word[j])) return false;
       for (var k=0; k<word.length; k++) if (LONG_V.has(word[k]))  return true;
       return null;
@@ -2819,7 +2824,8 @@ var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, f
 var TF_SCORE_CFG = {
   SCORE_FIRST_TRY: 100,      // ถูกตั้งแต่ครั้งแรก = "รู้จริง"
   SCORE_DEDUCE_BASE: 50,     // เข้า推導 ฐาน 50
-  DEDUCE_WRONG_LIMIT: 3,     // กดผิดครบ 3 ครั้งในคำเดียว → 0 แต้ม + เฉลย + คำใหม่
+  SCORE_MIN_PER_WORD: 10,    // คะแนนขั้นต่ำต่อคำ — ไม่ว่าจะกดผิดกี่ครั้งก็ไม่เป็น 0
+  DEDUCE_WRONG_LIMIT: 3,     // กดผิดครบ 3 ครั้งในคำเดียว → ได้คะแนนขั้นต่ำ + เฉลย + คำใหม่
   COMBO_TIERS: { 3: 1.5, 5: 2, 8: 3 },   // สตรีคตอบถูกครั้งแรกติดกัน → ตัวคูณ
   SET_COMPLETE_BONUS: 200,   // เล่นจบ 1 ชุด
   SET_PERFECT_BONUS: 500,    // จบชุดแบบ perfect (เพิ่มจากโบนัสจบชุด → perfect = 200+500 = 700)
@@ -2856,9 +2862,9 @@ var TF_SCORE = {
     return Math.round(this.cfg.SCORE_FIRST_TRY * this.comboMultiplier(streak));
   },
 
-  // คะแนนเมื่อผ่าน推導สำเร็จ = max(0, BASE - หักรวม)
+  // คะแนนเมื่อผ่าน推導สำเร็จ = max(MIN, BASE - หักรวม) · ขั้นต่ำ 10 (ห้ามเป็น 0)
   deduceScore: function (totalDeduction) {
-    return Math.max(0, this.cfg.SCORE_DEDUCE_BASE - totalDeduction);
+    return Math.max(this.cfg.SCORE_MIN_PER_WORD, this.cfg.SCORE_DEDUCE_BASE - totalDeduction);
   },
 
   // กดผิดถึงเพดานหรือยัง (ครบ 3 → 0 แต้ม)
@@ -3392,7 +3398,7 @@ function tfForceRevealZero() {
     tfShowRevealOverlay({ word: syl, zh: entry.zh, readingTH: syl }, sct, { sylIdx: k, sylTone: sct });
     return;
   }
-  session.currentWordScore = 0;
+  session.currentWordScore = TF_SCORE_CFG.SCORE_MIN_PER_WORD; // ขั้นต่ำ 10 ไม่ใช่ 0
   session.currentWordFirstTry = false;
   session.currentWordScored = true;
   session.combo = 0;
@@ -3470,8 +3476,8 @@ function tfCommitWordAndAdvance(opts) {
     mistakes: mistakes,
     initialGuess: session.initialGuess,
     finalAnswer: session.finalAnswer,
-    // ── ฟิลด์คะแนน ──
-    score: session.currentWordScore || 0,
+    // ── ฟิลด์คะแนน ── (การันตีขั้นต่ำ 10 ต่อคำ ไม่มีทางเป็น 0)
+    score: Math.max(TF_SCORE_CFG.SCORE_MIN_PER_WORD, session.currentWordScore || 0),
     firstTry: firstTry,
     golden: !!session.currentWordGolden,
     forced: !!opts.forced,
@@ -3981,7 +3987,8 @@ var TONE_OVERRIDE = {
   'เอาท์': 4,  // เช็คเอาท์ → พยางค์ 2 เสียงตรี
   'คีย์':  1,  // คีย์การ์ด → พยางค์ 1 เสียงสามัญ
   'การ์ด': 4,  // คีย์การ์ด → พยางค์ 2 เสียงตรี
-  'ออฟ':  4   // ออฟฟิศ   → พยางค์ 1 เสียงตรี
+  'ออฟ':  4,  // ออฟฟิศ   → พยางค์ 1 เสียงตรี
+  'ญาติ': 3   // สะกดพิเศษ (ิ ไม่ออกเสียง) → ยา-ตา เสียงโท
 };
 
 function computeTone(word) {
@@ -4008,7 +4015,10 @@ function computeTone(word) {
   } else {
     if (live) return (e === 'high') ? 5 : 1;
     if (e === 'high' || e === 'mid') return 2;
-    return (vowel === 'short') ? 4 : 3;
+    // คำตาย+อักษรต่ำ: สระสั้น→ตรี(4) / สระยาว→โท(3)
+    // ไม่มีรูปสระ = สระแฝงสั้น (โอะ/อะ เช่น รถ นก) → นับเป็นสระสั้น
+    var isShort = (vowel === 'short') || (vowel == null);
+    return isShort ? 4 : 3;
   }
   return null;
 }
