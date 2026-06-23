@@ -29,7 +29,7 @@
 <meta name="twitter:description" content="泰語學習影片、實用貼文與自學專區。跟著泰華老師學道地泰語、認識泰國文化，每週六晚上線上直播。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=11">
+<link rel="stylesheet" href="shared.css?v=12">
 <style>
 
 /* ══════════════════════════════════════
@@ -309,9 +309,10 @@
 <!-- Floating QR -->
 <div class="floating-qr" id="floating-qr">
   <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
-  <span class="floating-qr-top">預約免費體驗課</span>
-  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://lin.ee/yVBgvywy" alt="LINE QR" loading="lazy">
-  <span class="floating-qr-label">掃碼加入 LINE</span>
+  <button class="floating-qr-book" onclick="openModal('modal-line-qr')">
+    <span class="fqb-icon">📅</span>
+    <span class="fqb-text"><b>預約免費體驗課</b><small>30 分鐘・線上一對一</small></span>
+  </button>
 </div>
 
 <!-- Share Popup -->
