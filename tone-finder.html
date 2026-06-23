@@ -12,7 +12,7 @@
 <!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=3"></script>
-<script defer src="supabase-auth.js?v=12"></script>
+<script defer src="supabase-auth.js?v=13"></script>
 <script defer src="progress-sync.js?v=1"></script>
 <script defer src="adaptive.js?v=1"></script>
 <meta charset="UTF-8">
@@ -4318,7 +4318,7 @@ function stepSessionSummary() {
   // LIN 2026-06-22: เล่นครบโควตาฟรีแล้ว → เด้งหน้าล็อกอินทันทีตอนจบรอบ (ไม่ต้องรอกดเริ่มรอบใหม่)
   (function(){
     var _a = window.TF_AUTH;
-    var _li = !!(_a && _a.loggedIn && _a.loggedIn());
+    var _li = !!(_a && ((_a.hasAccess && _a.hasAccess()) || (_a.loggedIn && _a.loggedIn())));
     if (!_li && _a && _a.requireLogin && tfFreeRoundsUsed() >= TF_FREE_ROUNDS_LIMIT) {
       setTimeout(function(){ if (_a.showGate) _a.showGate(); }, 900); // โชว์คะแนนแวบนึงก่อนค่อยเด้ง
     }
@@ -4557,8 +4557,8 @@ function stepLevelSelect() {
       '<span class="tf-streak-chip">🛡️ ×' + (st.freezes || 0) + '</span>' +
       '<button class="tf-streak-chip tf-badge-link" onclick="TF.showBadges()">🎖️ 我的徽章 ' + bdCount + '/' + TF_BADGES_DEF.length + '</button>' +
     '</div>';
-  // แบนเนอร์เขียว "เล่นฟรี" หน้าเลือกระดับ (โชว์เฉพาะตอนยังไม่ล็อกอิน) — LIN 2026-06-20
-  var _loggedIn = !!(window.TF_AUTH && window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn());
+  // แบนเนอร์เขียว "เล่นฟรี" หน้าเลือกระดับ (โชว์เฉพาะตอนยังไม่ปลดล็อก) — LIN 2026-06-20
+  var _loggedIn = !!(window.TF_AUTH && ((window.TF_AUTH.hasAccess && window.TF_AUTH.hasAccess()) || (window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn())));
   var _freeLeft = Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed());
   var freeBanner = _loggedIn ? '' :
     '<div class="tf-free-banner">🎉 <b>免費試玩中</b>・無需登入！還能玩 ' + _freeLeft + ' 回合</div>';
@@ -4640,7 +4640,7 @@ function getSets(cat) {
 
 // ── เล่นฟรีก่อนบังคับล็อกอิน (LIN 2026-06-19) ───────────────────────────
 // ปรับจำนวนรอบฟรีได้ที่ตัวแปรเดียวนี้ (1 รอบ = 1 ชุดคำ = 5 คำ; หมวดสี/สัตว์ = 6)
-var TF_FREE_ROUNDS_LIMIT = 3;
+var TF_FREE_ROUNDS_LIMIT = 2;
 function tfFreeRoundsUsed() { try { return parseInt(localStorage.getItem('tf_free_rounds') || '0', 10) || 0; } catch (e) { return 0; } }
 function tfBumpFreeRounds() { try { localStorage.setItem('tf_free_rounds', String(tfFreeRoundsUsed() + 1)); } catch (e) {} }
 function tfFreeRoundsLeft() { return Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed()); }
@@ -4648,7 +4648,7 @@ function tfFreeRoundsLeft() { return Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRo
 function startSetSession(words) {
   // เล่นฟรี TF_FREE_ROUNDS_LIMIT รอบก่อน แล้วค่อยบังคับล็อกอิน (เก็บนับใน localStorage)
   var _auth = window.TF_AUTH;
-  var _loggedIn = !!(_auth && _auth.loggedIn && _auth.loggedIn());
+  var _loggedIn = !!(_auth && ((_auth.hasAccess && _auth.hasAccess()) || (_auth.loggedIn && _auth.loggedIn())));
   if (!_loggedIn && _auth && _auth.requireLogin) {
     if (tfFreeRoundsUsed() >= TF_FREE_ROUNDS_LIMIT) {
       if (_auth.showGate) _auth.showGate();   // หมดโควต้าเล่นฟรี → เด้งหน้าล็อกอิน

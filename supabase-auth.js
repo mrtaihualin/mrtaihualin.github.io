@@ -32,6 +32,35 @@
   var sessionMode = null;
   var wrongBuffer = [];
 
+  // ── ตรวจเบราว์เซอร์ในแอป (Google ล็อกอินถูกบล็อกในเว็บวิวฝัง) LIN 2026-06-23 ──
+  // FB/IG/Threads/TikTok/LINE/小紅書 = เว็บวิว → ซ่อนปุ่ม Google โชว์อีเมลแทน
+  // YouTube/เบราว์เซอร์ปกติ = ไม่เข้าเงื่อนไข → โชว์ Google ได้
+  function isInAppBrowser() {
+    var ua = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
+    return /FBAN|FBAV|FB_IAB|Instagram|Threads|musical_ly|Bytedance|TikTok|\bLine\/|MicroMessenger|XiaoHongShu|\bRedApp/i.test(ua);
+  }
+
+  // ── เก็บอีเมลแบบไม่ยืนยัน (frictionless) → ตาราง leads → เล่นต่อได้เลย LIN 2026-06-23 ──
+  var LEAD_KEY = 'tf_lead_captured';
+  function leadCaptured() { try { return localStorage.getItem(LEAD_KEY) === '1'; } catch (e) { return false; } }
+  function markLeadCaptured() { try { localStorage.setItem(LEAD_KEY, '1'); } catch (e) {} }
+  function leadSource() {
+    try {
+      var p = new URLSearchParams(location.search);
+      var s = p.get('utm_source') || p.get('source');
+      if (s) return s;
+      var r = document.referrer || '';
+      if (/facebook|fb\./i.test(r)) return 'facebook';
+      if (/instagram/i.test(r)) return 'instagram';
+      if (/threads/i.test(r)) return 'threads';
+      if (/tiktok/i.test(r)) return 'tiktok';
+      if (/youtube/i.test(r)) return 'youtube';
+      if (/google/i.test(r)) return 'google';
+      if (r) return (r.split('/')[2] || 'referral');
+      return 'direct';
+    } catch (e) { return 'unknown'; }
+  }
+
   // ── ดักจับ GA4 events โดยห่อ gtag เดิม (ไม่กระทบการยิง GA4) ──
   var origGtag = window.gtag || function () {};
   window.gtag = function () {
@@ -129,21 +158,19 @@
     });
   }
 
-  function doEmailLogin() {
-    var email = window.prompt('請輸入 Email 以接收登入連結：');
-    if (!email) return;
-    email = email.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      alert('อีเมลไม่ถูกต้อง / Email 格式不正確');
-      return;
-    }
-    sb.auth.signInWithOtp({
-      email: email,
-      options: { emailRedirectTo: window.location.href }
-    }).then(function (res) {
-      if (res.error) alert('ส่งลิงก์ไม่สำเร็จ: ' + res.error.message);
-      else alert('登入連結已寄出，請到信箱點擊 ✉️\n(' + email + ')');
-    });
+  // เก็บอีเมลลง leads แล้วปลดล็อกเล่นต่อทันที (ไม่ต้องยืนยัน ไม่ต้องส่งอีเมล) LIN 2026-06-23
+  // คืนค่า: ข้อความ error (string) ถ้าอีเมลผิด · null = สำเร็จ
+  function submitLeadEmail(email, onDone) {
+    email = (email || '').trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return 'Email 格式不正確 / อีเมลไม่ถูกต้อง';
+    try {
+      sb.from('leads').insert({ email: email, source: leadSource(), consent: true })
+        .then(function (res) { if (res.error) console.warn('[tone-finder] เก็บ lead ไม่สำเร็จ:', res.error.message); });
+    } catch (e) {}
+    markLeadCaptured();
+    try { window.gtag('event', 'email_capture', { source: leadSource() }); } catch (e) {}
+    if (onDone) onDone();
+    return null;
   }
 
   function doLogout() {
@@ -169,26 +196,45 @@
       'position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:20px;' +
       'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);' +
       'font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
+    var showGoogle = !isInAppBrowser();   // ในแอป FB/IG/TikTok → ซ่อน Google (กดไม่ได้)
     gate.innerHTML =
       '<div id="tf-gate-card" style="position:relative;background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;' +
       'box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
         '<button id="tf-gate-close" aria-label="ปิด / 關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;' +
         'font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
         '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🎵</div>' +
-        '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入更好玩！🎉</h2>' +
-        '<p style="margin:0 0 20px;font-size:14px;color:#8B7340;line-height:1.6;">免費試玩結束囉～登入就能<b>把分數存起來</b>、上<b>排行榜跟大家一起比賽</b>，還能解鎖徽章收藏！</p>' +
-        googleBtnHTML('tf-google') +
-        '<button id="tf-email" style="margin-top:12px;border:none;background:none;color:#A07A1E;' +
-        'cursor:pointer;font-size:13px;text-decoration:underline;">用 Email 登入</button>' +
-        '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回瀏覽</p>' +
-        '<p style="margin:10px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">登入即表示同意<a href="terms.html" style="color:#A07A1E;">服務條款與資料收集</a></p>' +
+        '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">繼續玩，解鎖更多！🎉</h2>' +
+        '<p style="margin:0 0 18px;font-size:14px;color:#8B7340;line-height:1.6;">免費試玩結束囉～輸入 Email 就能<b>繼續玩</b>、<b>把分數存起來</b>、上<b>排行榜</b>，還能解鎖徽章收藏！</p>' +
+        '<input id="tf-email-input" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" ' +
+        'style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
+        '<div id="tf-email-err" style="display:none;color:#C0392B;font-size:12px;margin:6px 0 0;text-align:left;"></div>' +
+        '<button id="tf-email-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;' +
+        'border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">繼續玩 →</button>' +
+        (showGoogle
+          ? ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;">' +
+             '<span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' +
+             googleBtnHTML('tf-google'))
+          : '') +
+        '<p style="margin:16px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">輸入 Email 代表同意<a href="terms.html" style="color:#A07A1E;">服務條款與資料收集</a>，我們只用來寄學習資訊與通知，不會外流</p>' +
+        '<p style="margin:10px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回瀏覽</p>' +
       '</div>';
     document.body.appendChild(gate);
-    gate.querySelector('#tf-google').onclick = doGoogleLogin;
-    gate.querySelector('#tf-email').onclick = doEmailLogin;
-    gate.querySelector('#tf-gate-close').onclick = hideGate;
-    // กดพื้นที่ว่างรอบการ์ด (backdrop) → ปิด gate กลับไปดูหน้าเว็บ
-    gate.addEventListener('click', function (e) { if (e.target === gate) hideGate(); });
+    var _inp = gate.querySelector('#tf-email-input');
+    var _err = gate.querySelector('#tf-email-err');
+    function _trySubmit() {
+      var msg = submitLeadEmail(_inp.value, function () {
+        gateOpen = false; render();
+        showScoreToast('✅ 開始囉～繼續玩吧 🎵', true);
+        if (pendingAfterLogin) { var f = pendingAfterLogin; pendingAfterLogin = null; f(); }
+      });
+      if (msg) { _err.textContent = msg; _err.style.display = 'block'; }
+    }
+    gate.querySelector('#tf-email-go').onclick = _trySubmit;
+    _inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') _trySubmit(); });
+    if (showGoogle) { var _g = gate.querySelector('#tf-google'); if (_g) _g.onclick = doGoogleLogin; }
+    gate.querySelector('#tf-gate-close').onclick = requestCloseGate;
+    // กดพื้นที่ว่างรอบการ์ด (backdrop) → น้องมีนาเด้งถามก่อนปิด
+    gate.addEventListener('click', function (e) { if (e.target === gate) requestCloseGate(); });
   }
 
   function buildMiniBtn() {
@@ -400,9 +446,12 @@
   }
 
   // ── เปิด/ปิด gate ตามคำขอ ───────────────────────────────────
+  var gateShownFired = false;
   function showGate() {
     if (currentUser) { if (pendingAfterLogin) { var f = pendingAfterLogin; pendingAfterLogin = null; f(); } return; }
+    if (leadCaptured()) return;   // ให้อีเมลแล้ว = ปลดล็อก ไม่ต้องเด้งอีก
     gateOpen = true;
+    if (!gateShownFired) { gateShownFired = true; try { window.gtag('event', 'gate_shown', {}); } catch (e) {} }
     render();
   }
   function hideGate() {
@@ -411,27 +460,82 @@
     render();
   }
 
+  // ── น้องมีนา exit survey — เด้งถามตอนคนจะปิด gate โดยยังไม่ล็อกอิน/ไม่ให้อีเมล LIN 2026-06-23 ──
+  var exitSurveyShown = false;   // โชว์ครั้งเดียวต่อ session (ไม่กวน)
+  function requestCloseGate() {
+    if (currentUser || leadCaptured() || exitSurveyShown) { hideGate(); return; }
+    showExitSurvey();
+  }
+  function finishExitSurvey(choice) {
+    if (choice) { try { window.gtag('event', 'exit_survey_choice', { choice: choice }); } catch (e) {} }
+    var m = document.getElementById('tf-exit-survey');
+    if (m) m.remove();
+    hideGate();
+  }
+  function showExitSurvey() {
+    exitSurveyShown = true;
+    try { window.gtag('event', 'exit_survey_shown', {}); } catch (e) {}
+    var opts = [['no_login', '不想登入 / 註冊'], ['login_broken', '登入怪怪的、按不動'],
+                ['just_play', '只是想隨便玩玩'], ['no_email', '還不想留 Email'], ['other', '其他…']];
+    var btns = opts.map(function (o) {
+      return '<button class="tf-xs-opt" data-v="' + o[0] + '" style="display:block;width:100%;text-align:left;background:#fff;' +
+        'border:1px solid rgba(70,179,119,0.4);border-radius:12px;padding:11px 14px;margin:0 0 8px;font-size:14px;color:#2E7D4F;cursor:pointer;font-family:inherit;">' + o[1] + '</button>';
+    }).join('');
+    var wrap = document.createElement('div');
+    wrap.id = 'tf-exit-survey';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:100002;display:flex;align-items:center;justify-content:center;padding:20px;' +
+      'background:rgba(20,30,20,0.55);font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
+    wrap.innerHTML =
+      '<div style="position:relative;background:#FBF5E7;max-width:360px;width:100%;border-radius:20px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,0.35);">' +
+        '<button id="tf-xs-close" aria-label="關閉" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:18px;color:#5A3E0A;cursor:pointer;">✕</button>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin:2px 0 14px;">' +
+          '<div style="flex:none;width:56px;height:56px;border-radius:50%;background:#CDEBD6;display:flex;align-items:center;justify-content:center;font-size:34px;">👧🏻</div>' +
+          '<div style="flex:1;background:#fff;border:1px solid rgba(70,179,119,0.35);border-radius:14px;border-top-left-radius:4px;padding:10px 12px;font-size:14px;line-height:1.55;color:#2E7D4F;">咦～要走了嗎？想知道是哪裡卡住了，米娜下次改進！</div>' +
+        '</div>' + btns +
+        '<textarea id="tf-xs-text" rows="2" placeholder="想說的話…（可不填）" style="display:none;width:100%;box-sizing:border-box;margin:2px 0 8px;padding:9px 12px;border:1px solid rgba(70,179,119,0.4);border-radius:12px;font-size:13px;color:#2E7D4F;font-family:inherit;resize:none;"></textarea>' +
+        '<div style="border-top:1px dashed rgba(90,62,10,0.18);margin:12px 0 10px;"></div>' +
+        '<div style="text-align:center;font-size:13px;color:#5A3E0A;margin-bottom:9px;">沒關係～你也可以先看看課程喔 😊</div>' +
+        '<button id="tf-xs-book" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;background:#C8973A;color:#FBF5E7;border:none;border-radius:12px;padding:11px;font-size:15px;font-weight:800;cursor:pointer;">免費體驗課</button>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    wrap.querySelector('#tf-xs-close').onclick = function () { finishExitSurvey(null); };
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) finishExitSurvey(null); });
+    wrap.querySelector('#tf-xs-book').onclick = function () {
+      try { window.gtag('event', 'book_trial_click', { from: 'exit_survey' }); } catch (e) {}
+      finishExitSurvey('book_trial');
+      if (typeof window.openModal === 'function') window.openModal('modal-line-qr');
+    };
+    [].forEach.call(wrap.querySelectorAll('.tf-xs-opt'), function (b) {
+      b.onclick = function () {
+        var v = b.getAttribute('data-v');
+        if (v === 'other') {
+          var ta = wrap.querySelector('#tf-xs-text');
+          ta.style.display = 'block'; ta.focus();
+          b.textContent = '送出 →'; b.style.background = '#CDEBD6';
+          b.onclick = function () { finishExitSurvey('other:' + (ta.value || '').slice(0, 200)); };
+        } else { finishExitSurvey(v); }
+      };
+    });
+  }
+
   // ── API ให้หน้าเกมเรียกตอนจะเริ่มเล่นจริง ───────────────────
   // ใช้: if (window.TF_AUTH && !window.TF_AUTH.ensureLogin()) return;
-  //   - ล็อกอินแล้ว หรือไม่บังคับล็อกอิน → คืน true (เล่นต่อได้)
-  //   - ยังไม่ล็อกอิน + บังคับ → เด้ง gate แล้วคืน false (หยุดการเริ่มเกม)
   window.TF_AUTH = {
     loggedIn: function () { return !!currentUser; },
+    hasAccess: function () { return !!currentUser || leadCaptured(); },   // ล็อกอินแล้ว หรือให้อีเมลแล้ว = เล่นต่อได้
     requireLogin: requireLogin,
     ensureLogin: function () {
-      // อนุญาต → คืน true เฉยๆ ให้ caller (startSetSession) เล่นต่อเอง
-      // ห้ามเรียก callback ที่ re-run startSetSession ไม่งั้นจะ recursion ไม่รู้จบ
-      if (!requireLogin || currentUser) return true;
-      showGate();   // ยังไม่ล็อกอิน + บังคับ → เด้ง gate แล้วบล็อก
+      if (!requireLogin || currentUser || leadCaptured()) return true;
+      showGate();
       return false;
     },
     showGate: showGate,
     hideGate: hideGate
   };
 
-  // กด Esc เพื่อปิด gate (กลับไปดูหน้าเว็บ)
+  // กด Esc → น้องมีนาเด้งถามก่อนปิด
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && gateOpen) hideGate();
+    if (e.key === 'Escape' && gateOpen) requestCloseGate();
   });
 
   function boot() {
