@@ -12,7 +12,7 @@
 <!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=3"></script>
-<script defer src="supabase-auth.js?v=15"></script>
+<script defer src="supabase-auth.js?v=17"></script>
 <script defer src="progress-sync.js?v=1"></script>
 <script defer src="adaptive.js?v=1"></script>
 <meta charset="UTF-8">
@@ -4641,8 +4641,10 @@ function getSets(cat) {
 // ── เล่นฟรีก่อนบังคับล็อกอิน (LIN 2026-06-19) ───────────────────────────
 // ปรับจำนวนรอบฟรีได้ที่ตัวแปรเดียวนี้ (1 รอบ = 1 ชุดคำ = 5 คำ; หมวดสี/สัตว์ = 6)
 var TF_FREE_ROUNDS_LIMIT = 2;
-function tfFreeRoundsUsed() { try { return parseInt(localStorage.getItem('tf_free_rounds') || '0', 10) || 0; } catch (e) { return 0; } }
-function tfBumpFreeRounds() { try { localStorage.setItem('tf_free_rounds', String(tfFreeRoundsUsed() + 1)); } catch (e) {} }
+// นับรอบฟรี: ใช้ localStorage เป็นหลัก + fallback หน่วยความจำ (กันเว็บวิว LINE/FB ที่บล็อก storage แล้วนับพังเงียบ)
+var _tfMemRounds = 0;
+function tfFreeRoundsUsed() { try { var v = localStorage.getItem('tf_free_rounds'); if (v != null) return parseInt(v, 10) || 0; } catch (e) {} return _tfMemRounds; }
+function tfBumpFreeRounds() { var n = tfFreeRoundsUsed() + 1; _tfMemRounds = n; try { localStorage.setItem('tf_free_rounds', String(n)); } catch (e) {} }
 function tfFreeRoundsLeft() { return Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed()); }
 
 function startSetSession(words) {

@@ -42,8 +42,9 @@
 
   // ── เก็บอีเมลแบบไม่ยืนยัน (frictionless) → ตาราง leads → เล่นต่อได้เลย LIN 2026-06-23 ──
   var LEAD_KEY = 'tf_lead_captured';
-  function leadCaptured() { try { return localStorage.getItem(LEAD_KEY) === '1'; } catch (e) { return false; } }
-  function markLeadCaptured() { try { localStorage.setItem(LEAD_KEY, '1'); } catch (e) {} }
+  var _leadMem = false;   // fallback หน่วยความจำ กันเว็บวิวที่บล็อก localStorage (ให้อีเมลแล้วต้องไม่โดนกำแพงซ้ำ)
+  function leadCaptured() { if (_leadMem) return true; try { return localStorage.getItem(LEAD_KEY) === '1'; } catch (e) { return false; } }
+  function markLeadCaptured() { _leadMem = true; try { localStorage.setItem(LEAD_KEY, '1'); } catch (e) {} }
   function leadSource() {
     try {
       var p = new URLSearchParams(location.search);
@@ -192,6 +193,9 @@
       '</button>';
   }
 
+  // gate มี 2 โหมด: 'play' = เก็บอีเมลเล่นต่อ (auto หลังเล่นฟรีหมด) · 'login' = ล็อกอินจริงขึ้นกระดาน (กดปุ่ม 登入)
+  var gateMode = 'play';
+
   function buildGate() {
     gate = document.createElement('div');
     gate.id = 'tf-gate';
@@ -199,29 +203,49 @@
       'position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:20px;' +
       'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);' +
       'font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
-    var showGoogle = !isInAppBrowser();   // ในแอป FB/IG/TikTok → ซ่อน Google (กดไม่ได้)
-    gate.innerHTML =
-      '<div id="tf-gate-card" style="position:relative;background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;' +
-      'box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
-        '<button id="tf-gate-close" aria-label="ปิด / 關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;' +
-        'font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
+    document.body.appendChild(gate);
+    // กดพื้นที่ว่างรอบการ์ด (backdrop) → น้องมีนาเด้งถามก่อนปิด
+    gate.addEventListener('click', function (e) { if (e.target === gate) requestCloseGate(); });
+    renderGateContent();
+  }
+
+  function renderGateContent() {
+    if (!gate) return;
+    var inApp = isInAppBrowser();
+    var closeBtn = '<button id="tf-gate-close" aria-label="ปิด / 關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>';
+    var cardOpen = '<div id="tf-gate-card" style="position:relative;background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">';
+
+    if (gateMode === 'login') {
+      // ── โหมดล็อกอินจริง (ขึ้นกระดาน) — ตอนนี้รองรับ Google เท่านั้น ──
+      gate.innerHTML = cardOpen + closeBtn +
+        '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🏆</div>' +
+        '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入排行榜</h2>' +
+        '<p style="margin:0 0 18px;font-size:14px;color:#8B7340;line-height:1.6;">登入後分數會<b>同步保存</b>、上<b>排行榜跟大家比賽</b>，換手機也記得你！</p>' +
+        (inApp
+          ? '<div style="background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:12px 14px;font-size:13px;color:#8B6310;line-height:1.6;text-align:left;">⚠️ 在 App（FB／IG／LINE）內<b>無法用 Google 登入</b>。<br>請點畫面<b>右上角「⋯」或「分享」→ 用 Safari／Chrome 開啟</b>，再按一次登入即可 🙏<br><span style="color:#A07A1E;">（你的分數已經先幫你存著囉）</span></div>'
+          : googleBtnHTML('tf-google')) +
+        '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回</p>' +
+        '</div>';
+      gate.querySelector('#tf-gate-close').onclick = requestCloseGate;
+      if (!inApp) { var _g = gate.querySelector('#tf-google'); if (_g) _g.onclick = doGoogleLogin; }
+      return;
+    }
+
+    // ── โหมดเก็บอีเมลเล่นต่อ (default) ──
+    var showGoogle = !inApp;   // ในแอป FB/IG/TikTok → ซ่อน Google (กดไม่ได้)
+    gate.innerHTML = cardOpen + closeBtn +
         '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🎵</div>' +
         '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">繼續玩，解鎖更多！🎉</h2>' +
-        '<p style="margin:0 0 18px;font-size:14px;color:#8B7340;line-height:1.6;">免費試玩結束囉～輸入 Email 就能<b>繼續玩</b>、<b>把分數存起來</b>、上<b>排行榜</b>，還能解鎖徽章收藏！</p>' +
-        '<input id="tf-email-input" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" ' +
-        'style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
+        '<p style="margin:0 0 18px;font-size:14px;color:#8B7340;line-height:1.6;">免費試玩結束囉～留 Email 即可<b>繼續免費玩</b>，還會收到<b>老師的發音學習小技巧</b>！<br><span style="font-size:12px;color:#A07A1E;">（想存分數、上排行榜，點右上角登入帳號就行）</span></p>' +
+        '<input id="tf-email-input" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
         '<div id="tf-email-err" style="display:none;color:#C0392B;font-size:12px;margin:6px 0 0;text-align:left;"></div>' +
-        '<button id="tf-email-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;' +
-        'border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">繼續玩 →</button>' +
+        '<button id="tf-email-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">繼續玩 →</button>' +
         (showGoogle
-          ? ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;">' +
-             '<span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' +
-             googleBtnHTML('tf-google'))
+          ? ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' + googleBtnHTML('tf-google'))
           : '') +
         '<p style="margin:16px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">輸入 Email 代表同意<a href="terms.html" style="color:#A07A1E;">服務條款與資料收集</a>，我們只用來寄學習資訊與通知，不會外流</p>' +
         '<p style="margin:10px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回瀏覽</p>' +
       '</div>';
-    document.body.appendChild(gate);
     var _inp = gate.querySelector('#tf-email-input');
     var _err = gate.querySelector('#tf-email-err');
     function _trySubmit() {
@@ -234,10 +258,8 @@
     }
     gate.querySelector('#tf-email-go').onclick = _trySubmit;
     _inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') _trySubmit(); });
-    if (showGoogle) { var _g = gate.querySelector('#tf-google'); if (_g) _g.onclick = doGoogleLogin; }
+    if (showGoogle) { var _g2 = gate.querySelector('#tf-google'); if (_g2) _g2.onclick = doGoogleLogin; }
     gate.querySelector('#tf-gate-close').onclick = requestCloseGate;
-    // กดพื้นที่ว่างรอบการ์ด (backdrop) → น้องมีนาเด้งถามก่อนปิด
-    gate.addEventListener('click', function (e) { if (e.target === gate) requestCloseGate(); });
   }
 
   function buildMiniBtn() {
@@ -251,7 +273,7 @@
       'background:#fff;color:#8B6310;border-radius:999px;padding:6px 13px;cursor:pointer;font-size:13px;font-weight:700;' +
       'box-shadow:0 2px 8px rgba(0,0,0,0.1);">登入</button>';
     document.body.appendChild(miniBtn);
-    miniBtn.querySelector('#tf-mini-login').onclick = function () { showGate(); };
+    miniBtn.querySelector('#tf-mini-login').onclick = function () { showGate(true); };
   }
 
   function buildBadge() {
@@ -453,11 +475,13 @@
 
   // ── เปิด/ปิด gate ตามคำขอ ───────────────────────────────────
   var gateShownFired = false;
-  function showGate() {
+  function showGate(force) {
     if (currentUser) { if (pendingAfterLogin) { var f = pendingAfterLogin; pendingAfterLogin = null; f(); } return; }
-    if (leadCaptured()) return;   // ให้อีเมลแล้ว = ปลดล็อก ไม่ต้องเด้งอีก
+    if (leadCaptured() && !force) return;   // auto ไม่ nag คนที่ให้อีเมลแล้ว · ปุ่มกดเอง (force) เปิดได้เสมอ
+    gateMode = force ? 'login' : 'play';     // กดปุ่มเอง = โหมดล็อกอินจริง(ขึ้นกระดาน) · auto = โหมดเก็บอีเมล
+    if (!gate) buildGate(); else renderGateContent();
     gateOpen = true;
-    if (!gateShownFired) { gateShownFired = true; try { window.gtag('event', 'gate_shown', {}); } catch (e) {} }
+    if (!gateShownFired) { gateShownFired = true; try { window.gtag('event', 'gate_shown', { mode: gateMode }); } catch (e) {} }
     render();
   }
   function hideGate() {
