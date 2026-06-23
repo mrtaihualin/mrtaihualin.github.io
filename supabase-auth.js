@@ -180,6 +180,9 @@
   // ── องค์ประกอบหน้าจอ ───────────────────────────────────────
   var gate, badge, miniBtn;
 
+  // มี modal (จองเรียน/QR ฯลฯ) เปิดอยู่ไหม → ถ้าเปิด ซ่อนปุ่ม 登入/โปรไฟล์ กันทับปุ่มกากบาท LIN 2026-06-23
+  function anyModalOpen() { try { return !!document.querySelector('.modal-overlay.open'); } catch (e) { return false; } }
+
   function googleBtnHTML(id) {
     return '<button id="' + id + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;' +
       'border:1px solid #dadce0;background:#fff;color:#3c4043;border-radius:10px;padding:12px;cursor:pointer;' +
@@ -418,7 +421,7 @@
         window.TF_BADGES_DEF.forEach(function (b) { if (b.id === pin) bdef = b; });
         if (bdef) pinHTML = '<span title="' + esc(bdef.zh) + '" style="display:inline-flex;align-items:center;flex-shrink:0;">' + window.tfBadgeIcon(bdef, 20) + '</span>';
       }
-      badge.style.display = 'block';
+      badge.style.display = anyModalOpen() ? 'none' : 'block';
       badge.innerHTML =
         '<div style="display:flex;align-items:center;gap:7px;background:#fff;' +
         'border:1px solid rgba(200,151,58,0.4);border-radius:999px;padding:5px 10px;' +
@@ -440,8 +443,11 @@
       // หน้าเว็บมองเห็นได้เสมอ — ไม่บล็อกตอนโหลด
       // gate เด้งเฉพาะเมื่อผู้ใช้กด "เริ่มเล่น" จริง (gateOpen) หรือกดปุ่มล็อกอินมุมขวา
       gate.style.display = (gateOpen && authResolved) ? 'flex' : 'none';
-      // ปุ่มล็อกอินมุมขวาบนโชว์ทั้งสองโหมด (รู้ว่าล็อกอินได้ แต่ไม่บังคับให้ดูหน้า)
-      miniBtn.style.display = authResolved ? 'block' : 'none';
+      // ปุ่มล็อกอินมุมขวาบน — ซ่อนเมื่อมี modal เปิด (กันทับปุ่มกากบาท)
+      miniBtn.style.display = (authResolved && !anyModalOpen()) ? 'block' : 'none';
+      // ให้อีเมลแล้ว (ปลดล็อกแล้ว) → เปลี่ยนปุ่มเป็น "登入排行榜" ไม่ให้ดูเหมือนยังไม่ได้ทำอะไร
+      var _mb = miniBtn.querySelector('#tf-mini-login');
+      if (_mb) _mb.textContent = leadCaptured() ? '登入排行榜' : '登入';
     }
   }
 
@@ -553,6 +559,15 @@
       render();
       fetchProfile();
     });
+    // เฝ้าการเปิด/ปิด modal → ซ่อน/โชว์ปุ่ม 登入 ให้ถูก (กันทับปุ่มกากบาท) ครอบทุกวิธีปิด
+    try {
+      var _modalState = anyModalOpen();
+      var _mo = new MutationObserver(function () {
+        var s = anyModalOpen();
+        if (s !== _modalState) { _modalState = s; render(); }
+      });
+      _mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    } catch (e) {}
   }
 
   if (document.readyState === 'loading') {
