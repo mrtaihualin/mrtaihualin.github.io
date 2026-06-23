@@ -29,7 +29,7 @@
 <meta name="twitter:description" content="在泰國土生土長的台灣人，用中文教你真正開口說泰語。一對一線上課程，從聲調到對話，專為台灣人設計。免費體驗課 30 分鐘。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=9">
+<link rel="stylesheet" href="shared.css?v=10">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -142,7 +142,10 @@
   <h1 class="hero-title">懂泰文的人很多<br><span class="accent">能開口</span>的人不多</h1>
   <p class="hero-slogan">從今天起，<span class="slogan-accent">做那個能開口的人</span></p>
   <p class="hero-sub">問題不在你的天分<br>在於你還沒遇到真正能幫你突破的老師</p>
-  <button class="hero-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button>
+  <button class="hero-cta" onclick="openModal('modal-line-qr')">立即預約 30 分鐘免費體驗課 →</button>
+  <div style="margin-top:16px;opacity:0;animation:fadeUp 0.5s 1.0s forwards;display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);letter-spacing:0.5px;">✓ 完全免費・無須綁定・30 分鐘立即感受差異</p>
+  </div>
   <div class="scroll-hint"><span>往下看</span><div class="line"></div></div>
 </section>
 
@@ -287,11 +290,15 @@
 </div>
 
 <!-- NEXT PAGE CTA -->
-<div style="background:var(--off-white);border-top:3px solid var(--gold-bright);padding:60px 32px;text-align:center;">
-  <span style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);font-weight:700;display:block;margin-bottom:16px;">了解課程</span>
-  <p style="font-family:'Noto Serif TC',serif;font-size:clamp(20px,3vw,32px);font-weight:900;color:var(--ink);margin-bottom:8px;line-height:1.3;">想知道怎麼上課、費用多少？</p>
-  <p style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:var(--ink-muted);margin-bottom:32px;">上課方式・學費方案・學習進程・課堂預覽</p>
-  <a href="page2.html" style="display:inline-block;background:var(--gold-bright);color:#111111;font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:15px;padding:16px 48px;text-decoration:none;letter-spacing:1px;transition:background 0.2s;box-sizing:border-box;">前往課程詳情 →</a>
+<div style="background:var(--ink);border-top:4px solid #E8430A;padding:64px 32px;text-align:center;">
+  <span style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);font-weight:700;display:block;margin-bottom:16px;">課程費用 · 上課方式</span>
+  <p style="font-family:'Noto Serif TC',serif;font-size:clamp(22px,3.5vw,36px);font-weight:900;color:#fff;margin-bottom:10px;line-height:1.3;">體驗課免費・正式課程<span style="color:var(--gold-bright);">每堂約 NT$600 起</span></p>
+  <p style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:rgba(255,255,255,0.60);margin-bottom:14px;">一對一・彈性時間・8,000+ 小時教學經驗老師親自授課</p>
+  <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#ffaa77;font-weight:700;margin-bottom:32px;letter-spacing:0.5px;">⚡ 先免費體驗，滿意再報名 — 零風險開始學泰語</p>
+  <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+    <a href="page2.html" style="display:inline-block;background:#E8430A;color:#fff;font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:16px;padding:18px 48px;text-decoration:none;letter-spacing:1px;transition:all 0.2s;box-sizing:border-box;border-radius:4px;box-shadow:0 4px 20px rgba(232,67,10,0.45);">查看課程費用 →</a>
+    <button onclick="openModal('modal-line-qr')" style="display:inline-block;background:transparent;color:var(--gold-bright);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:16px;padding:18px 36px;text-decoration:none;letter-spacing:1px;transition:all 0.2s;box-sizing:border-box;border:2px solid var(--gold-bright);border-radius:4px;cursor:pointer;">預約免費體驗課</button>
+  </div>
 </div>
 <footer>
   專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
