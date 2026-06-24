@@ -241,14 +241,27 @@
   select.settings-input { cursor: pointer; }
 
   /* Attendance section */
-  .attend-card { background: linear-gradient(180deg,#fff 0%,#f0f9f4 100%); border: 1px solid rgba(45,106,79,0.2); border-radius: var(--radius); padding: 20px; }
-  .attend-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--green); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(45,106,79,0.15); padding-bottom: 10px; }
+  /* ── Today schedule ─────────────────────── */
+  .attend-card { background: linear-gradient(180deg,#fff 0%,#f0f9f4 100%); border: 1px solid rgba(45,106,79,0.2); border-top: 2px solid var(--green); border-radius: var(--radius); padding: 20px; }
+  .attend-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--green); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(45,106,79,0.15); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .attend-card h2::after { content: ''; flex: 1; height: 1px; background: rgba(45,106,79,0.15); }
   .attend-list { display: flex; flex-direction: column; gap: 7px; }
-  .attend-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #fff; border-radius: 8px; border: 1px solid rgba(45,106,79,0.12); font-family: 'Noto Sans TC', sans-serif; }
-  .attend-row .a-name { font-weight: 700; font-size: 0.88rem; }
-  .attend-row .a-date { font-size: 0.8rem; color: var(--ink-muted); }
-  .attend-row .a-count { background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
-  .attend-stat { display: flex; gap: 12px; margin-bottom: 14px; }
+  .today-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #fff; border-radius: 10px; border: 1px solid rgba(45,106,79,0.12); font-family: 'Noto Sans TC', sans-serif; gap: 10px; }
+  .today-row .t-name { font-weight: 700; font-size: 0.95rem; color: var(--ink-soft); flex: 1; }
+  .today-done { display: inline-flex; align-items: center; gap: 6px; background: #dcfce7; color: #15803d; border-radius: 20px; padding: 5px 12px; font-size: 0.78rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; border: none; transition: filter 0.15s; white-space: nowrap; }
+  .today-done:hover { filter: brightness(0.93); }
+  .today-count { font-size: 0.72rem; font-weight: 400; opacity: 0.8; }
+  .empty-attend { text-align: center; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; padding: 12px 0; }
+
+  /* ── Attendance history modal ────────────── */
+  .hist-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; margin: 14px 0; }
+  .hist-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #f9f9f9; border-radius: 8px; font-family: 'Noto Sans TC', sans-serif; }
+  .hist-num { font-size: 0.72rem; color: var(--ink-muted); min-width: 36px; }
+  .hist-date { flex: 1; font-size: 0.88rem; font-weight: 600; color: var(--ink-soft); }
+  .hist-today-tag { font-size: 0.7rem; background: var(--gold-light); color: var(--gold-deep); border-radius: 10px; padding: 2px 7px; font-weight: 700; }
+  .hist-del { background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 1rem; padding: 2px 6px; border-radius: 6px; transition: all 0.15s; }
+  .hist-del:hover { background: #fee2e2; color: #b91c1c; }
+  .hist-summary { font-family: 'Noto Sans TC', sans-serif; font-size: 0.8rem; color: var(--ink-muted); text-align: center; padding: 6px 0; border-top: 1px solid var(--border); margin-top: 4px; }
   .stat-box { flex: 1; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
   .stat-box .s-num { font-size: 1.5rem; font-weight: 900; color: var(--gold-deep); }
   .stat-box .s-lbl { font-size: 0.72rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; }
@@ -503,6 +516,18 @@
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeAddStudentModal()">取消</button>
       <button class="btn-gold" onclick="addStudent()">新增學生</button>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance History Modal -->
+<div class="modal-overlay" id="attendHistModal">
+  <div class="modal">
+    <h3 id="attendHistTitle">📅 上課記錄</h3>
+    <div class="hist-list" id="attendHistList"></div>
+    <div class="hist-summary" id="attendHistSummary"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="document.getElementById('attendHistModal').classList.remove('open')">關閉</button>
     </div>
   </div>
 </div>
@@ -773,6 +798,7 @@ function renderStudentListHTML() {
       '<div class="student-item-actions">' +
         '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + token + '\')">💳 收費</button>' +
         '<button class="btn-sm btn-sm-attend" id="attend-' + token + '" onclick="recordAttendance(\'' + token + '\')">✅ 今日上課</button>' +
+        '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + token + '\')">📅 記錄</button>' +
         '<button class="btn-sm btn-sm-copy" id="copy-' + token + '" onclick="copyStudentLink(\'' + token + '\',\'copy-' + token + '\')">🔗 連結</button>' +
         '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + token + '\')">👁 預覽</button>' +
         '<a class="btn-sm btn-sm-meet" href="' + s.meet + '" target="_blank" rel="noopener">🎥 Meet</a>' +
@@ -796,7 +822,7 @@ async function renderTeacherView() {
   initRecording();
   await refreshStudentList();
   await loadPendingSlips();
-  await loadTeacherAttendance();
+  await loadTodaySchedule();
 }
 
 function renderStudentView() {
@@ -1196,7 +1222,6 @@ async function recordAttendance(token) {
   const s = studentsCache[token];
   const name = s ? s.name : token;
   const today = new Date().toISOString().slice(0, 10);
-  if (!confirm('✅ 確定記錄「' + name + '」今日上課？\n（' + today + '）')) return;
   const btn = document.getElementById('attend-' + token);
   if (btn) { btn.disabled = true; btn.textContent = '記錄中…'; }
   const { error } = await sb.from('classroom_attendance').upsert({
@@ -1204,39 +1229,90 @@ async function recordAttendance(token) {
   }, { onConflict: 'token,lesson_date' });
   if (btn) { btn.disabled = false; }
   if (error) { alert('記錄失敗：' + error.message); if (btn) btn.textContent = '✅ 今日上課'; return; }
-  if (btn) { btn.textContent = '✅ 已記錄'; btn.style.background = '#bbf7d0'; }
-  setTimeout(function() { if (btn) { btn.textContent = '✅ 今日上課'; btn.style.background = ''; } }, 3000);
+  await loadTodaySchedule(); // refresh today section
+  openAttendanceHistory(token); // open history so Lin can verify & undo
 }
 
-async function loadTeacherAttendance() {
-  const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
-  const { data } = await sb.from('classroom_attendance')
-    .select('*').gte('lesson_date', sevenDaysAgo).order('lesson_date', { ascending: false });
+async function loadTodaySchedule() {
   const container = document.getElementById('attendanceSection');
   if (!container) return;
-  if (!data || data.length === 0) {
-    container.innerHTML = '<div class="attend-card"><h2>📋 近 7 日課堂記錄</h2><div class="empty-attend">本週尚無上課記錄</div></div>';
+  const today = new Date().toISOString().slice(0, 10);
+  const d = new Date(today + 'T12:00:00');
+  const dayZh = ['日','一','二','三','四','五','六'];
+  const dateLabel = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）';
+
+  // Fetch today's attendance
+  const { data: todayRecs } = await sb.from('classroom_attendance')
+    .select('token,id').eq('lesson_date', today);
+  const todaySet = new Set((todayRecs || []).map(function(r) { return r.token; }));
+
+  const students = Object.entries(studentsCache);
+  if (students.length === 0) {
+    container.innerHTML = '<div class="attend-card"><h2>📅 今日課表</h2><div class="empty-attend">尚未新增學生</div></div>';
     return;
   }
-  // Group by date
-  const byDate = {};
-  data.forEach(function(r) {
-    if (!byDate[r.lesson_date]) byDate[r.lesson_date] = [];
-    byDate[r.lesson_date].push(r.student_name);
-  });
-  const dayZh = ['日','一','二','三','四','五','六'];
-  const rows = Object.entries(byDate).map(function(entry) {
-    var date = entry[0], names = entry[1];
-    var d = new Date(date + 'T12:00:00');
-    var label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）';
-    return '<div class="attend-row">' +
-      '<span class="a-date" style="font-weight:700;min-width:120px;color:var(--gold-deep);">' + label + '</span>' +
-      '<span class="a-name" style="flex:1;">' + names.join('・') + '</span>' +
-      '<span class="a-count">' + names.length + '人</span>' +
+
+  // Fetch lesson count per student (all time)
+  const { data: allRecs } = await sb.from('classroom_attendance').select('token');
+  const countMap = {};
+  (allRecs || []).forEach(function(r) { countMap[r.token] = (countMap[r.token] || 0) + 1; });
+
+  const rows = students.map(function(entry) {
+    const token = entry[0], s = entry[1];
+    const marked = todaySet.has(token);
+    const total = countMap[token] || 0;
+    return '<div class="today-row">' +
+      '<span class="t-name">' + s.name + '</span>' +
+      (marked
+        ? '<button class="today-done" onclick="openAttendanceHistory(\'' + token + '\')">✅ 已上課 <span class="today-count">第 ' + total + ' 堂 · 查看記錄</span></button>'
+        : '<button class="btn-sm btn-sm-attend" id="attend-' + token + '" onclick="recordAttendance(\'' + token + '\')">✅ 今日上課</button>'
+      ) +
     '</div>';
   }).join('');
-  container.innerHTML = '<div class="attend-card"><h2>📋 近 7 日課堂記錄</h2>' +
+
+  container.innerHTML = '<div class="attend-card"><h2>📅 今日課表 — ' + dateLabel + '</h2>' +
     '<div class="attend-list">' + rows + '</div></div>';
+}
+
+async function openAttendanceHistory(token) {
+  const s = studentsCache[token];
+  const name = s ? s.name : token;
+  const today = new Date().toISOString().slice(0, 10);
+
+  document.getElementById('attendHistTitle').textContent = '📅 ' + name + ' 的上課記錄';
+  document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">載入中…</div>';
+  document.getElementById('attendHistModal').classList.add('open');
+
+  const { data } = await sb.from('classroom_attendance')
+    .select('id,lesson_date').eq('token', token).order('lesson_date', { ascending: true });
+
+  if (!data || data.length === 0) {
+    document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">尚無上課記錄</div>';
+    document.getElementById('attendHistSummary').textContent = '';
+    return;
+  }
+
+  const dayZh = ['日','一','二','三','四','五','六'];
+  const rows = data.map(function(r, i) {
+    const d = new Date(r.lesson_date + 'T12:00:00');
+    const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）';
+    const isToday = r.lesson_date === today;
+    return '<div class="hist-row">' +
+      '<span class="hist-num">第 ' + (i+1) + ' 堂</span>' +
+      '<span class="hist-date">' + dateStr + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
+      '<button class="hist-del" title="刪除此記錄" onclick="deleteAttendance(\'' + r.id + '\',\'' + token + '\')">🗑</button>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('attendHistList').innerHTML = rows;
+  document.getElementById('attendHistSummary').textContent = '共 ' + data.length + ' 堂';
+}
+
+async function deleteAttendance(id, token) {
+  if (!confirm('確定刪除此堂記錄？')) return;
+  await sb.from('classroom_attendance').delete().eq('id', id);
+  await loadTodaySchedule();
+  await openAttendanceHistory(token); // refresh modal
 }
 
 async function checkStudentSlipStatus(token) {
@@ -1359,9 +1435,9 @@ async function autoStartVideo(){
   await startVideo();
 }
 
-// 偵測瀏覽器支援的影片格式 (Safari → mp4, Chrome/Firefox → webm)
+// 偵測瀏覽器支援的影片格式 (優先 mp4)
 function detectMimeType(){
-  const types=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=avc1,mp4a.40.2','video/mp4'];
+  const types=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
   return types.find(t=>MediaRecorder.isTypeSupported(t))||'';
 }
 let videoMimeType='';
