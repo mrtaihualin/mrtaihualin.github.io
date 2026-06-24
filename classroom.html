@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>線上教室 — 泰華老師</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #8B6310; --gold-bright: #C8973A; --gold-light: #F3E4C2; --gold-deep: #5a3e0a;
+    --ink: #1C1C1C; --ink-soft: #333333; --ink-muted: #6b6b6b;
+    --bg: #EDE7D9; --cream: #FAF4E8; --border: rgba(139,99,16,0.18);
+    --green: #2d6a4f; --green-dark: #1b4332;
+    --amber: #b45309; --amber-dark: #78350f; --amber-muted: #92400e;
+    --slate: #7c6f61; --slate-dark: #5c5148;
+    --radius: 14px; --shadow: 0 4px 24px rgba(90,62,10,0.10), 0 1px 4px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse at 20% 0%, rgba(200,151,58,0.12) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 100%, rgba(139,99,16,0.08) 0%, transparent 60%);
+    color: var(--ink); font-family: 'Noto Serif TC', serif; min-height: 100vh; padding: 0 16px 56px;
+  }
+
+  /* ── Header ─────────────────────────────── */
+  header {
+    text-align: center; position: relative; padding: 36px 56px 28px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, transparent 100%);
+  }
+  header::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent 0%, var(--gold-bright) 30%, var(--gold) 50%, var(--gold-bright) 70%, transparent 100%);
+  }
+  header h1 { font-size: 2rem; font-weight: 900; color: var(--gold-deep); letter-spacing: 3px; text-shadow: 0 1px 0 rgba(255,255,255,0.8); }
+  header .subtitle { color: var(--ink-muted); margin-top: 6px; font-size: 0.82rem; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 0.05em; }
+  header .student-name { color: var(--gold-deep); font-size: 1.05rem; font-weight: 700; margin-top: 8px; font-family: 'Noto Sans TC', sans-serif; }
+
+  .settings-btn { position: absolute; top: 32px; right: 16px; background: rgba(255,255,255,0.7); border: 1px solid var(--border); color: var(--ink-muted); border-radius: 10px; padding: 7px 14px; cursor: pointer; font-size: 0.82rem; font-family: 'Noto Sans TC', sans-serif; transition: all 0.15s; backdrop-filter: blur(4px); }
+  .settings-btn:hover { background: var(--gold-light); color: var(--gold-deep); border-color: var(--gold-bright); }
+
+  .container { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── Cards ───────────────────────────────── */
+  .card {
+    background: linear-gradient(160deg, #ffffff 0%, var(--cream) 100%);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 28px;
+    box-shadow: var(--shadow);
+    border-top: 2px solid var(--gold-bright);
+  }
+  .card h2 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-bright); margin-bottom: 18px; font-family: 'Noto Sans TC', sans-serif; display: flex; align-items: center; gap: 8px; }
+  .card h2::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Meet button ─────────────────────────── */
+  .meet-btn {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%);
+    color: #fff; text-decoration: none; border-radius: 12px; padding: 18px 28px;
+    font-size: 1.1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif;
+    letter-spacing: 1px; box-shadow: 0 6px 24px rgba(139,99,16,0.35), 0 1px 4px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s; margin-bottom: 4px;
+  }
+  .meet-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(139,99,16,0.45); }
+  .meet-btn:active { transform: translateY(0); }
+  .meet-btn svg { width: 28px; height: 28px; flex-shrink: 0; }
+  .meet-link-text { margin-top: 10px; text-align: center; font-size: 0.77rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; }
+
+  /* ── Teacher panel ───────────────────────── */
+  .teacher-panel {
+    background: linear-gradient(160deg, #ffffff 0%, #fdf8f0 100%);
+    border: 1px solid var(--border); border-top: 2px solid var(--gold-bright);
+    border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow);
+  }
+  .teacher-panel h2 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-bright); margin-bottom: 18px; font-family: 'Noto Sans TC', sans-serif; display: flex; align-items: center; gap: 8px; }
+  .teacher-panel h2::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Student list ────────────────────────── */
+  .student-list { display: flex; flex-direction: column; gap: 10px; }
+  .student-item {
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; display: flex; align-items: flex-start; gap: 14px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  .student-item:hover { box-shadow: 0 4px 16px rgba(139,99,16,0.10); border-color: var(--gold-bright); }
+  .student-avatar {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+    color: #fff; font-size: 1.15rem; font-weight: 900; font-family: 'Noto Serif TC', serif;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(139,99,16,0.25);
+  }
+  .student-info { flex: 1; min-width: 0; }
+  .student-item-name { font-weight: 700; font-size: 1rem; color: var(--gold-deep); font-family: 'Noto Sans TC', sans-serif; }
+  .student-item-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+  /* Pill-style small buttons */
+  .btn-sm { display: inline-flex; align-items: center; gap: 4px; border: none; border-radius: 20px; padding: 5px 12px; font-size: 0.77rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .btn-sm:hover { transform: translateY(-1px); filter: brightness(0.94); }
+  .btn-sm-copy    { background: var(--gold-light); color: var(--gold-deep); }
+  .btn-sm-copy.copied { background: #dcfce7; color: #166534; }
+  .btn-sm-preview { background: #e0f2fe; color: #0369a1; }
+  .btn-sm-meet    { background: #dcfce7; color: #15803d; }
+  .btn-sm-edit    { background: #fef9c3; color: #854d0e; }
+  .btn-sm-delete  { background: #fee2e2; color: #b91c1c; }
+
+  .empty-state { text-align: center; padding: 28px 0 12px; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; font-size: 0.87rem; }
+
+  .btn-add-student {
+    width: 100%; margin-top: 16px;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+    color: #fff; border: none; border-radius: 10px; padding: 13px 18px;
+    font-size: 0.95rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(139,99,16,0.25);
+    transition: all 0.2s;
+  }
+  .btn-add-student:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(139,99,16,0.35); }
+
+  /* ── Student hero card ────────────────────── */
+  .student-hero {
+    text-align: center; padding: 28px 20px 20px;
+    background: linear-gradient(160deg, #fff 0%, #fdf8f0 100%);
+    border: 1px solid var(--border); border-top: 3px solid var(--gold-bright);
+    border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  .student-hero-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+    color: #fff; font-size: 1.6rem; font-weight: 900; font-family: 'Noto Serif TC', serif;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px; box-shadow: 0 4px 16px rgba(139,99,16,0.3);
+  }
+  .student-hero-name {
+    font-size: 1.3rem; font-weight: 900; color: var(--gold-deep);
+    font-family: 'Noto Serif TC', serif; letter-spacing: 1px;
+  }
+  .student-hero-sub { font-size: 0.8rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-top: 5px; }
+
+  /* ── Buttons ─────────────────────────────── */
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 9px; padding: 10px 18px; font-size: 0.9rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-record { background: var(--amber); color: #fff; box-shadow: 0 3px 10px rgba(180,83,9,0.25); }
+  .btn-record:hover:not(:disabled) { background: var(--amber-muted); transform: translateY(-1px); }
+  .btn-record.recording { background: var(--amber-dark); animation: pulse 1.2s infinite; }
+  .btn-stop { background: var(--slate); color: #fff; }
+  .btn-stop:hover:not(:disabled) { background: var(--slate-dark); }
+  .btn-download { background: var(--green); color: #fff; box-shadow: 0 3px 10px rgba(45,106,79,0.25); }
+  .btn-download:hover:not(:disabled) { background: var(--green-dark); transform: translateY(-1px); }
+  .btn-gold { background: linear-gradient(135deg, var(--gold-bright), var(--gold)); color: #fff; border: none; border-radius: 9px; padding: 9px 20px; cursor: pointer; font-size: 0.88rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; box-shadow: 0 3px 12px rgba(139,99,16,0.25); transition: all 0.15s; }
+  .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(139,99,16,0.35); }
+
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(180,83,9,0.35);} 50%{box-shadow:0 0 0 8px rgba(180,83,9,0);} }
+
+  .status { font-size: 0.8rem; color: var(--ink-muted); min-height: 16px; font-family: 'Noto Sans TC', sans-serif; }
+  .status.active { color: var(--amber); font-weight: 600; }
+  .status.done   { color: var(--green); font-weight: 600; }
+
+  .timer { font-family: monospace; font-size: 1rem; color: var(--gold-deep); font-weight: 700; display: none; }
+  .timer.visible { display: inline-block; }
+
+  .audio-section { margin-top: 12px; display: none; }
+  .audio-section.visible { display: block; }
+  audio { width: 100%; border-radius: 8px; margin-bottom: 6px; }
+  .video-section { margin-top: 12px; display: none; }
+  .video-section.visible { display: block; }
+  video { width: 100%; border-radius: 10px; background: #1a1210; max-height: 280px; margin-bottom: 6px; }
+
+  /* ── Recording section ───────────────────── */
+  .rec-mode-toggle { display: flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; margin-bottom: 14px; }
+  .rec-mode-opt { flex: 1; }
+  .rec-mode-opt input[type="radio"] { display: none; }
+  .rec-mode-opt span { display: block; padding: 9px 10px; text-align: center; cursor: pointer; font-size: 0.8rem; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-muted); transition: all 0.15s; border-right: 1px solid var(--border); }
+  .rec-mode-opt:last-child span { border-right: none; }
+  .rec-mode-opt input:checked + span { background: var(--gold-light); color: var(--gold-deep); font-weight: 700; }
+  .rec-hint { font-size: 0.76rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-bottom: 14px; line-height: 1.5; }
+  .rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rec-card { background: linear-gradient(160deg,#fff 0%,#fdf8f0 100%); border: 1px solid var(--border); border-top: 2px solid var(--gold-bright); border-radius: 11px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .rec-card-header { display: flex; align-items: center; gap: 8px; }
+  .rec-card-icon { font-size: 1.3rem; }
+  .rec-card-title { font-weight: 700; font-family: 'Noto Sans TC', sans-serif; font-size: 0.95rem; color: var(--ink-soft); flex: 1; }
+  .rec-card-btns { display: flex; gap: 7px; }
+  .rec-card-btns .btn-record { flex: 1; justify-content: center; font-size: 0.8rem; padding: 8px 6px; border-radius: 8px; }
+  @media(max-width:480px){ .rec-grid { grid-template-columns: 1fr; } }
+
+  .radio-group { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+  .radio-group label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 0.88rem; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-soft); }
+  .radio-group input[type="radio"] { accent-color: var(--gold); width: 16px; height: 16px; }
+  .hint { font-size: 0.78rem; color: var(--ink-muted); margin-top: 4px; line-height: 1.6; font-family: 'Noto Sans TC', sans-serif; }
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  .pref-badge { display: inline-block; font-size: 0.7rem; padding: 2px 7px; border-radius: 20px; margin-left: 8px; font-weight: 600; font-family: 'Noto Sans TC', sans-serif; vertical-align: middle; }
+  .pref-badge.never  { background: #e5e7eb; color: #6b7280; }
+  .pref-badge.always { background: #dcfce7; color: #166534; }
+  .pref-badge.ask    { background: var(--gold-light); color: var(--gold-deep); }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,28,0.6); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--cream); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; max-width: 420px; width: 100%; animation: slideUp 0.2s ease; box-shadow: 0 8px 40px rgba(139,99,16,0.15); }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0;} to{transform:translateY(0);opacity:1;} }
+  .modal h3 { font-size: 1.1rem; font-weight: 900; margin-bottom: 8px; color: var(--gold-deep); }
+  .modal p  { color: var(--ink-muted); font-size: 0.87rem; line-height: 1.7; margin-bottom: 18px; font-family: 'Noto Sans TC', sans-serif; }
+  .pref-options { display: flex; flex-direction: column; gap: 10px; }
+  .pref-btn { display: flex; align-items: flex-start; gap: 14px; background: #fff; border: 2px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s; color: var(--ink); width: 100%; font-family: 'Noto Sans TC', sans-serif; }
+  .pref-btn:hover { border-color: var(--gold-bright); background: var(--gold-light); }
+  .pref-btn.selected { border-color: var(--gold); background: var(--gold-light); }
+  .pref-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+  .pref-label { font-weight: 700; font-size: 0.9rem; }
+  .pref-desc  { font-size: 0.77rem; color: var(--ink-muted); margin-top: 2px; }
+  .modal-footer { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--ink-muted); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 0.87rem; font-family: 'Noto Sans TC', sans-serif; }
+  .btn-ghost:hover { background: var(--gold-light); color: var(--ink); }
+  .settings-input { width: 100%; background: #fff; border: 1px solid var(--border); color: var(--ink); border-radius: 8px; padding: 9px 12px; font-size: 0.87rem; font-family: 'Noto Sans TC', sans-serif; margin-bottom: 12px; }
+  .settings-input:focus { outline: none; border-color: var(--gold); }
+  .settings-label { font-size: 0.8rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-bottom: 5px; display: block; }
+
+  .tag { display: inline-block; background: var(--gold-light); color: var(--gold-deep); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; font-family: 'Noto Sans TC', sans-serif; margin-left: 6px; vertical-align: middle; }
+
+  /* Add student modal specifics */
+  .add-modal-hint { font-size: 0.78rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-top: -6px; margin-bottom: 14px; line-height: 1.6; }
+  .token-preview { background: var(--gold-light); border-radius: 7px; padding: 8px 12px; font-size: 0.78rem; font-family: monospace; color: var(--gold-deep); margin-top: 6px; display: none; }
+
+  /* Course cards */
+  .course-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .course-card { background: #fff; border: 2px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: left; font-family: 'Noto Sans TC', sans-serif; }
+  .course-card:hover { border-color: var(--gold-bright); background: var(--gold-light); }
+  .course-card.selected { border-color: var(--gold); background: var(--gold-light); }
+  .course-card .c-name { font-weight: 700; font-size: 0.88rem; color: var(--ink); }
+  .course-card .c-desc { font-size: 0.72rem; color: var(--ink-muted); margin-top: 2px; }
+  .course-card .c-price { font-size: 0.8rem; color: var(--gold-deep); font-weight: 700; margin-top: 4px; }
+
+  /* Payment total box */
+  .pay-total-box { background: var(--gold-light); border: 1px solid var(--gold-bright); border-radius: 10px; padding: 12px 16px; margin: 12px 0; display: none; }
+  .pay-total-box .big { font-size: 1.4rem; font-weight: 900; color: var(--gold-deep); }
+  .pay-total-box .sub { font-size: 0.78rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-top: 3px; }
+  .pay-form-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .pay-form-row .settings-input { margin-bottom: 0; }
+  select.settings-input { cursor: pointer; }
+
+  /* Attendance section */
+  .attend-card { background: linear-gradient(180deg,#fff 0%,#f0f9f4 100%); border: 1px solid rgba(45,106,79,0.2); border-radius: var(--radius); padding: 20px; }
+  .attend-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--green); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(45,106,79,0.15); padding-bottom: 10px; }
+  .attend-list { display: flex; flex-direction: column; gap: 7px; }
+  .attend-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #fff; border-radius: 8px; border: 1px solid rgba(45,106,79,0.12); font-family: 'Noto Sans TC', sans-serif; }
+  .attend-row .a-name { font-weight: 700; font-size: 0.88rem; }
+  .attend-row .a-date { font-size: 0.8rem; color: var(--ink-muted); }
+  .attend-row .a-count { background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+  .attend-stat { display: flex; gap: 12px; margin-bottom: 14px; }
+  .stat-box { flex: 1; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
+  .stat-box .s-num { font-size: 1.5rem; font-weight: 900; color: var(--gold-deep); }
+  .stat-box .s-lbl { font-size: 0.72rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; }
+  .empty-attend { text-align: center; color: var(--ink-muted); font-size: 0.85rem; font-family: 'Noto Sans TC', sans-serif; padding: 12px 0; }
+
+  /* Btn pay / attend on student card */
+  .btn-sm-pay    { background: #fef3c7; color: #92400e; }
+  .btn-sm-pay:hover { background: #fde68a; }
+  .btn-sm-attend { background: #dcfce7; color: #15803d; }
+  .btn-sm-attend:hover { background: #bbf7d0; }
+  .btn-sm-slip   { background: #ede9fe; color: #5b21b6; }
+  .btn-sm-slip:hover { background: #ddd6fe; }
+
+  /* Slip upload area */
+  .slip-upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; margin-bottom: 12px; transition: border-color 0.15s, background 0.15s; }
+  .slip-upload-area:hover { border-color: var(--gold-bright); background: var(--gold-light); }
+  .slip-upload-area.has-image { border-style: solid; border-color: var(--gold); }
+
+  /* Pending slips section */
+  .pending-card { background: linear-gradient(180deg,#fff 0%,#fefce8 100%); border: 1px solid rgba(202,138,4,0.3); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .pending-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-deep); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(202,138,4,0.2); padding-bottom: 10px; }
+  .slip-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #fff; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 8px; }
+  .slip-row .slip-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); flex-shrink: 0; }
+  .slip-row .slip-thumb-placeholder { width: 48px; height: 48px; background: var(--gold-light); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+  .slip-row .slip-info { flex: 1; font-family: 'Noto Sans TC', sans-serif; }
+  .slip-row .slip-name { font-weight: 700; font-size: 0.88rem; }
+  .slip-row .slip-course { font-size: 0.78rem; color: var(--ink-muted); margin-top: 2px; }
+  .slip-row .slip-actions { display: flex; gap: 6px; }
+  .btn-approve { background: #dcfce7; color: #15803d; border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; }
+  .btn-approve:hover { background: #bbf7d0; }
+  .btn-reject  { background: var(--gold-light); color: var(--slate-dark); border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; }
+  .btn-reject:hover { filter: brightness(0.93); }
+  .pending-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--amber); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; font-weight: 700; margin-left: 6px; }
+
+  /* Slip full-size viewer */
+  .slip-viewer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; align-items: center; justify-content: center; cursor: zoom-out; }
+  .slip-viewer-overlay.open { display: flex; }
+  .slip-viewer-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+</style>
+</head>
+<body>
+
+<!-- ======= PREF MODAL ======= -->
+<div class="modal-overlay" id="prefModal">
+  <div class="modal">
+    <h3>🎙️ 課程錄製提醒</h3>
+    <p>歡迎來到線上教室！請選擇您的錄製偏好，之後可在「設定」中隨時更改。</p>
+    <div class="pref-options">
+      <button class="pref-btn" id="pref-always" onclick="selectPref('always')">
+        <span class="pref-icon">🔴</span>
+        <div><div class="pref-label">自動錄製</div><div class="pref-desc">進入教室後立即開始錄影</div></div>
+      </button>
+      <button class="pref-btn" id="pref-ask" onclick="selectPref('ask')">
+        <span class="pref-icon">❓</span>
+        <div><div class="pref-label">每次詢問</div><div class="pref-desc">每次進入時顯示此提示</div></div>
+      </button>
+      <button class="pref-btn" id="pref-never" onclick="selectPref('never')">
+        <span class="pref-icon">🚫</span>
+        <div><div class="pref-label">不錄製</div><div class="pref-desc">關閉提示，可手動開始錄製</div></div>
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closePrefModal()">略過</button>
+      <button class="btn-gold" onclick="savePref()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= SETTINGS MODAL ======= -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h3>⚙️ 設定</h3>
+    <p>變更錄製偏好設定</p>
+    <div class="pref-options" style="margin-bottom:18px;">
+      <button class="pref-btn" id="s-pref-always" onclick="selectSettingsPref('always')">
+        <span class="pref-icon">🔴</span><div><div class="pref-label">自動錄製</div></div>
+      </button>
+      <button class="pref-btn" id="s-pref-ask" onclick="selectSettingsPref('ask')">
+        <span class="pref-icon">❓</span><div><div class="pref-label">每次詢問</div></div>
+      </button>
+      <button class="pref-btn" id="s-pref-never" onclick="selectSettingsPref('never')">
+        <span class="pref-icon">🚫</span><div><div class="pref-label">不錄製</div></div>
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeSettings()">取消</button>
+      <button class="btn-gold" onclick="saveSettings()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= SLIP VIEWER ======= -->
+<div class="slip-viewer-overlay" id="slipViewer" onclick="this.classList.remove('open')">
+  <img id="slipViewerImg" src="" alt="slip" />
+</div>
+
+<!-- ======= STUDENT: SLIP SUBMISSION MODAL ======= -->
+<div class="modal-overlay" id="slipModal">
+  <div class="modal" style="max-width:480px;">
+    <h3>💰 繳費通知</h3>
+    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
+      選課程 → 上傳匯款截圖 → 送出 → 等待老師確認 → 收到收據
+    </p>
+    <label class="settings-label">選擇課程方案</label>
+    <div class="course-grid" id="slipCourseGrid"></div>
+    <div class="pay-total-box" id="slipTotalBox">
+      <div class="big" id="slipTotalText"></div>
+      <div class="sub" id="slipCalcText"></div>
+    </div>
+    <label class="settings-label" style="margin-top:12px;">匯款截圖 <span style="color:var(--amber);">*</span></label>
+    <div class="slip-upload-area" id="slipUploadArea" onclick="document.getElementById('slipFileInput').click()">
+      <div id="slipUploadPlaceholder" style="color:var(--ink-muted);font-size:0.88rem;font-family:'Noto Sans TC',sans-serif;">
+        📎 點此上傳截圖
+      </div>
+      <img id="slipPreviewImg" style="max-width:100%;max-height:180px;display:none;border-radius:8px;margin-top:8px;" />
+    </div>
+    <input type="file" id="slipFileInput" accept="image/*" style="display:none" onchange="handleSlipImage(this.files[0])">
+    <label class="settings-label">備註（選填）</label>
+    <input class="settings-input" id="slipNoteInput" placeholder="例：已透過 PromptPay 匯款" />
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeSlipModal()">取消</button>
+      <button class="btn-gold" id="slipSubmitBtn" onclick="submitSlip()">📤 送出繳費通知</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= TEACHER: SLIP APPROVAL MODAL ======= -->
+<div class="modal-overlay" id="slipApprovalModal">
+  <div class="modal" style="max-width:500px;">
+    <h3>💳 確認收款</h3>
+    <div id="slipApprovalContent"></div>
+    <div class="pay-form-row" style="margin-top:12px;">
+      <div style="flex:1;">
+        <label class="settings-label">幣別</label>
+        <select class="settings-input" id="approvalCurrency" onchange="updateApprovalTotal()" style="margin-bottom:0;">
+          <option value="THB">THB 泰銖</option>
+          <option value="NTD">NTD 台幣</option>
+        </select>
+      </div>
+      <div style="flex:1;">
+        <label class="settings-label">每堂單價</label>
+        <input class="settings-input" id="approvalPricePer" type="number" oninput="updateApprovalTotal()" style="margin-bottom:0;" />
+      </div>
+    </div>
+    <div class="pay-form-row">
+      <div style="flex:1;">
+        <label class="settings-label">贈送堂數</label>
+        <input class="settings-input" id="approvalBonus" type="number" value="0" oninput="updateApprovalTotal()" style="margin-bottom:0;" />
+      </div>
+      <div style="flex:1;">
+        <label class="settings-label">堂數</label>
+        <input class="settings-input" id="approvalLessons" type="number" oninput="updateApprovalTotal()" style="margin-bottom:0;" />
+      </div>
+    </div>
+    <label class="settings-label">本輪起算</label>
+    <input class="settings-input" id="approvalStart" placeholder="例：接續上一輪，下一堂起算" />
+    <label class="settings-label">備註</label>
+    <input class="settings-input" id="approvalNote" />
+    <div class="pay-total-box" id="approvalTotalBox">
+      <div class="big" id="approvalTotalText"></div>
+      <div class="sub" id="approvalCalcText"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-reject" onclick="rejectSlip()">❌ 拒絕</button>
+      <button class="btn-approve" style="padding:9px 16px;font-size:0.87rem;" id="slipApproveBtn" onclick="approveSlip()">✅ 確認收款・開立收據</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= PAYMENT MODAL ======= -->
+<div class="modal-overlay" id="paymentModal">
+  <div class="modal" style="max-width:500px;">
+    <h3>💳 收費記錄</h3>
+    <p id="payStudentLabel" style="font-weight:700;color:var(--gold-deep);margin-bottom:12px;font-size:1rem;"></p>
+
+    <label class="settings-label">選擇課程方案</label>
+    <div class="course-grid" id="courseGrid"></div>
+
+    <div class="pay-form-row">
+      <div style="flex:1;">
+        <label class="settings-label">堂數</label>
+        <input class="settings-input" id="payLessons" type="number" min="1" placeholder="10" oninput="updatePayTotal()" style="margin-bottom:0;" />
+      </div>
+      <div style="flex:1;">
+        <label class="settings-label">贈送（堂）</label>
+        <input class="settings-input" id="payBonus" type="number" min="0" value="0" oninput="updatePayTotal()" style="margin-bottom:0;" />
+      </div>
+    </div>
+    <div class="pay-form-row">
+      <div style="flex:1;">
+        <label class="settings-label">幣別</label>
+        <select class="settings-input" id="payCurrency" onchange="updatePayTotal()" style="margin-bottom:0;">
+          <option value="THB">THB 泰銖</option>
+          <option value="NTD">NTD 台幣</option>
+        </select>
+      </div>
+      <div style="flex:1;">
+        <label class="settings-label">單價（每堂）</label>
+        <input class="settings-input" id="payPricePer" type="number" min="1" oninput="updatePayTotal()" style="margin-bottom:0;" />
+      </div>
+    </div>
+
+    <label class="settings-label">本輪起算（例：接續上輪第一堂起算）</label>
+    <input class="settings-input" id="payStart" placeholder="例：接續上一輪（5/24 起）滿 10 堂後之下一堂起算" />
+
+    <label class="settings-label">備註（選填）</label>
+    <input class="settings-input" id="payNote" placeholder="例：提前付款、換幣別…" />
+
+    <div class="pay-total-box" id="payTotalBox">
+      <div class="big" id="payTotalText"></div>
+      <div class="sub" id="payCalcText"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closePaymentModal()">取消</button>
+      <button class="btn-gold" id="paySubmitBtn" onclick="submitPayment()">確認收費</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= EDIT MEET MODAL ======= -->
+<div class="modal-overlay" id="editMeetModal">
+  <div class="modal">
+    <h3>✏️ 更改 Meet 連結</h3>
+    <p id="editMeetStudentName" style="font-weight:700;color:var(--gold-deep);margin-bottom:14px;font-size:1rem;"></p>
+
+    <label class="settings-label">新的 Google Meet 連結</label>
+    <input class="settings-input" id="editMeetInput" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
+    <div class="hint" style="margin-bottom:0;">原本的連結：<span id="editMeetOld" style="font-family:monospace;word-break:break-all;"></span></div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeEditMeetModal()">取消</button>
+      <button class="btn-gold" onclick="saveMeetLink()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= ADD STUDENT MODAL ======= -->
+<div class="modal-overlay" id="addStudentModal">
+  <div class="modal">
+    <h3>➕ 新增學生</h3>
+    <p class="add-modal-hint">填寫學生姓名與 Meet 連結，系統會自動產生專屬連結。</p>
+
+    <label class="settings-label">學生姓名 *</label>
+    <input class="settings-input" id="addName" placeholder="例：小明、Mei" oninput="previewToken()" />
+
+    <label class="settings-label">Google Meet 連結 *</label>
+    <input class="settings-input" id="addMeet" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
+
+    <div class="token-preview" id="tokenPreview"></div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeAddStudentModal()">取消</button>
+      <button class="btn-gold" onclick="addStudent()">新增學生</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= HEADER ======= -->
+<header>
+  <h1>🎓 泰華老師的線上教室</h1>
+  <p class="subtitle">泰華眼裡的泰語教學</p>
+  <p class="student-name" id="studentNameDisplay"></p>
+  <button class="settings-btn" onclick="openSettings()">⚙️ 設定</button>
+</header>
+
+<div class="container" id="mainContainer">
+  <!-- content injected by JS -->
+</div>
+
+<script>
+// Supabase config（支援 file:// 及 GitHub Pages）
+window.SUPABASE_CONFIG = {
+  url:          'https://qzkxlhpcputsvbqmtqfi.supabase.co',
+  anonKey:      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw',
+  requireLogin: true
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============================================================
+// SUPABASE + STUDENT DATA
+// ============================================================
+const sb = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+let studentsCache = {}; // { token: { name, meet } }
+
+function generateToken(name) {
+  const slug = name.replace(/[^a-zA-Z0-9一-鿿]/g, '').slice(0, 4) || 's';
+  const rand = Date.now().toString(36).slice(-4);
+  return slug + '-' + rand;
+}
+
+async function fetchStudents() {
+  const { data, error } = await sb.from('classroom_students').select('*').order('created_at');
+  if (error) { console.error(error); return; }
+  studentsCache = {};
+  (data || []).forEach(r => { studentsCache[r.token] = { name: r.name, meet: r.meet }; });
+}
+
+async function refreshStudentList() {
+  const el = document.getElementById('studentListContainer');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state">載入中…</div>';
+  await fetchStudents();
+  el.innerHTML = renderStudentListHTML();
+}
+
+// ============================================================
+// ROUTING
+// ============================================================
+const urlParams = new URLSearchParams(window.location.search);
+const studentToken = urlParams.get('s');
+const isTeacher = !studentToken;
+
+// ============================================================
+// 偏好設定（localStorage — 僅儲存個人設定）
+// ============================================================
+const PREF_KEY = 'cl_rec_pref';
+let selectedPref = null, settingsSelectedPref = null;
+function getPref() { return localStorage.getItem(PREF_KEY); }
+
+function updatePrefBadges() {
+  const pref = getPref();
+  const map = { always:['always','自動錄製'], never:['never','不錄製'], ask:['ask','每次詢問'] };
+  const [cls,label] = map[pref] || ['ask','每次詢問'];
+  document.querySelectorAll('.pref-badge').forEach(el => { el.className='pref-badge '+cls; el.textContent=label; });
+}
+function selectPref(val) {
+  selectedPref = val;
+  ['always','ask','never'].forEach(v => document.getElementById('pref-'+v).classList.toggle('selected',v===val));
+}
+function savePref() {
+  if (!selectedPref) { closePrefModal(); return; }
+  localStorage.setItem(PREF_KEY, selectedPref);
+  updatePrefBadges(); closePrefModal();
+  if (selectedPref === 'always') autoStartVideo();
+}
+function closePrefModal() { document.getElementById('prefModal').classList.remove('open'); }
+function showPrefModal() {
+  selectedPref = getPref() || 'ask'; selectPref(selectedPref);
+  document.getElementById('prefModal').classList.add('open');
+}
+function openSettings() {
+  settingsSelectedPref = getPref() || 'ask'; selectSettingsPref(settingsSelectedPref);
+  document.getElementById('settingsModal').classList.add('open');
+}
+function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
+function selectSettingsPref(val) {
+  settingsSelectedPref = val;
+  ['always','ask','never'].forEach(v => document.getElementById('s-pref-'+v).classList.toggle('selected',v===val));
+}
+function saveSettings() {
+  if (settingsSelectedPref) { localStorage.setItem(PREF_KEY, settingsSelectedPref); updatePrefBadges(); }
+  closeSettings();
+}
+
+// ============================================================
+// ADD STUDENT MODAL
+// ============================================================
+let pendingToken = '';
+
+function openAddStudentModal() {
+  document.getElementById('addName').value = '';
+  document.getElementById('addMeet').value = '';
+  document.getElementById('tokenPreview').style.display = 'none';
+  pendingToken = '';
+  document.getElementById('addStudentModal').classList.add('open');
+  setTimeout(() => document.getElementById('addName').focus(), 100);
+}
+function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('open'); }
+
+function previewToken() {
+  const name = document.getElementById('addName').value.trim();
+  if (!name) { document.getElementById('tokenPreview').style.display = 'none'; return; }
+  pendingToken = generateToken(name);
+  const baseUrl = window.location.origin + window.location.pathname;
+  document.getElementById('tokenPreview').textContent = '🔗 ' + baseUrl + '?s=' + pendingToken + '…';
+  document.getElementById('tokenPreview').style.display = 'block';
+}
+
+async function addStudent() {
+  const name = document.getElementById('addName').value.trim();
+  const meet = document.getElementById('addMeet').value.trim();
+  if (!name || !meet) { alert('請填寫學生姓名與 Meet 連結'); return; }
+  let token = pendingToken || generateToken(name);
+  while (studentsCache[token]) token = generateToken(name);
+
+  const saveBtn = document.querySelector('#addStudentModal .btn-gold');
+  saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
+  const { error } = await sb.from('classroom_students').insert({ token, name, meet });
+  saveBtn.disabled = false; saveBtn.textContent = '新增學生';
+  if (error) { alert('新增失敗：' + error.message); return; }
+  closeAddStudentModal();
+  await refreshStudentList();
+}
+
+// ============================================================
+// EDIT MEET LINK
+// ============================================================
+let editingToken = '';
+
+function openEditMeetModal(token) {
+  const s = studentsCache[token];
+  if (!s) return;
+  editingToken = token;
+  document.getElementById('editMeetStudentName').textContent = '學生：' + s.name;
+  document.getElementById('editMeetOld').textContent = s.meet;
+  document.getElementById('editMeetInput').value = s.meet;
+  document.getElementById('editMeetModal').classList.add('open');
+  setTimeout(() => document.getElementById('editMeetInput').select(), 100);
+}
+function closeEditMeetModal() { document.getElementById('editMeetModal').classList.remove('open'); }
+
+async function saveMeetLink() {
+  const newMeet = document.getElementById('editMeetInput').value.trim();
+  if (!newMeet) { alert('請填寫 Meet 連結'); return; }
+  const saveBtn = document.querySelector('#editMeetModal .btn-gold');
+  saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
+  const { error } = await sb.from('classroom_students').update({ meet: newMeet }).eq('token', editingToken);
+  saveBtn.disabled = false; saveBtn.textContent = '儲存';
+  if (error) { alert('更新失敗：' + error.message); return; }
+  closeEditMeetModal();
+  await refreshStudentList();
+}
+
+async function deleteStudent(token) {
+  const name = studentsCache[token]?.name || token;
+  if (!confirm('確定要刪除「' + name + '」嗎？')) return;
+  const { error } = await sb.from('classroom_students').delete().eq('token', token);
+  if (error) { alert('刪除失敗：' + error.message); return; }
+  await refreshStudentList();
+}
+
+// ============================================================
+// TEACHER ACTIONS
+// ============================================================
+function buildStudentUrl(token) {
+  const s = studentsCache[token];
+  if (!s) return null;
+  const baseUrl = window.location.origin + window.location.pathname;
+  return baseUrl + '?s=' + token + '&n=' + btoa(encodeURIComponent(s.name)) + '&m=' + btoa(encodeURIComponent(s.meet));
+}
+
+function copyStudentLink(token, btnId) {
+  const link = buildStudentUrl(token);
+  if (!link) return;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ 已複製'; btn.classList.add('copied');
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function previewStudent(token) {
+  const link = buildStudentUrl(token);
+  if (link) window.open(link, '_blank');
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function recordingHTML() {
+  return '<div class="card" style="margin-top:16px;">' +
+    '<h2>⏺ 課堂錄製</h2>' +
+    '<div class="rec-mode-toggle">' +
+      '<label class="rec-mode-opt"><input type="radio" name="audioMode" value="both" checked><span>🎤🔊 雙聲道（含 Meet 對方）</span></label>' +
+      '<label class="rec-mode-opt"><input type="radio" name="audioMode" value="teacher"><span>🎤 只收老師麥克風</span></label>' +
+    '</div>' +
+    '<p class="rec-hint" id="audioModeHint">🎤🔊 同時錄製麥克風 + 螢幕音訊（對方聲音也會錄進去）</p>' +
+    '<div class="rec-grid">' +
+      '<div class="rec-card">' +
+        '<div class="rec-card-header">' +
+          '<span class="rec-card-icon">🎙</span>' +
+          '<span class="rec-card-title">錄音</span>' +
+          '<span class="timer" id="audioTimer"></span>' +
+          '<span class="pref-badge" id="prefBadgeAudio"></span>' +
+        '</div>' +
+        '<div class="rec-card-btns">' +
+          '<button class="btn-record" id="audioRecordBtn" onclick="startAudio()">⏺ 開始</button>' +
+          '<button class="btn-record btn-stop" id="audioStopBtn" onclick="stopAudio()" disabled>⏹ 停止</button>' +
+        '</div>' +
+        '<div class="status" id="audioStatus"></div>' +
+        '<div class="audio-section" id="audioSection">' +
+          '<audio id="audioPlayer" controls></audio>' +
+          '<button class="btn btn-download" style="width:100%;justify-content:center;" onclick="downloadAudio()">⬇ 下載 WAV</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="rec-card">' +
+        '<div class="rec-card-header">' +
+          '<span class="rec-card-icon">🎥</span>' +
+          '<span class="rec-card-title">錄影</span>' +
+          '<span class="timer" id="videoTimer"></span>' +
+          '<span class="pref-badge" id="prefBadgeVideo"></span>' +
+        '</div>' +
+        '<div class="rec-card-btns">' +
+          '<button class="btn-record" id="videoRecordBtn" onclick="startVideo()">⏺ 開始</button>' +
+          '<button class="btn-record btn-stop" id="videoStopBtn" onclick="stopVideo()" disabled>⏹ 停止</button>' +
+        '</div>' +
+        '<div class="status" id="videoStatus"></div>' +
+        '<div class="video-section" id="videoSection">' +
+          '<video id="videoPlayer" controls playsinline></video>' +
+          '<button class="btn btn-download" style="width:100%;justify-content:center;" onclick="downloadVideo()">⬇ 下載影片</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+const meetSVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 6 4H14L20 10V18C20 19.1 19.1 20 18 20H6C4.9 20 4 19.1 4 18V6Z" fill="#34A853" opacity="0.25"/><path d="M14 4L20 10H14V4Z" fill="#34A853" opacity="0.5"/><circle cx="12" cy="14" r="3.5" fill="#fff"/><path d="M17 11.5L20 9.5V18.5L17 16.5V11.5Z" fill="#fff"/></svg>';
+
+function renderStudentListHTML() {
+  const entries = Object.entries(studentsCache);
+  if (entries.length === 0) return '<div class="empty-state">尚未新增學生<br>點擊下方按鈕新增第一位學生</div>';
+  return '<div class="student-list">' + entries.map(function(entry) {
+    const token = entry[0], s = entry[1];
+    var initial = s.name ? s.name.charAt(0) : '?';
+    return '<div class="student-item">' +
+      '<div class="student-avatar">' + initial + '</div>' +
+      '<div class="student-info"><div class="student-item-name">' + s.name + '</div>' +
+      '<div class="student-item-actions">' +
+        '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + token + '\')">💳 收費</button>' +
+        '<button class="btn-sm btn-sm-attend" id="attend-' + token + '" onclick="recordAttendance(\'' + token + '\')">✅ 今日上課</button>' +
+        '<button class="btn-sm btn-sm-copy" id="copy-' + token + '" onclick="copyStudentLink(\'' + token + '\',\'copy-' + token + '\')">🔗 連結</button>' +
+        '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + token + '\')">👁 預覽</button>' +
+        '<a class="btn-sm btn-sm-meet" href="' + s.meet + '" target="_blank" rel="noopener">🎥 Meet</a>' +
+        '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + token + '\')">✏️</button>' +
+        '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + token + '\')">🗑</button>' +
+      '</div></div></div>';
+  }).join('') + '</div>';
+}
+
+async function renderTeacherView() {
+  document.getElementById('studentNameDisplay').textContent = '👩‍🏫 教師管理頁面';
+  document.getElementById('mainContainer').innerHTML =
+    '<div class="teacher-panel">' +
+      '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
+      '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
+      '<button class="btn-add-student" onclick="openAddStudentModal()">➕ 新增學生</button>' +
+    '</div>' +
+    '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
+    '<div id="attendanceSection" style="margin-top:16px;"></div>' +
+    recordingHTML();
+  initRecording();
+  await refreshStudentList();
+  await loadPendingSlips();
+  await loadTeacherAttendance();
+}
+
+function renderStudentView() {
+  let student = null;
+  const nParam = urlParams.get('n');
+  const mParam = urlParams.get('m');
+  if (nParam && mParam) {
+    try { student = { name: decodeURIComponent(atob(nParam)), meet: decodeURIComponent(atob(mParam)) }; } catch(e) {}
+  }
+  if (!student) {
+    document.getElementById('mainContainer').innerHTML =
+      '<div class="card" style="text-align:center;padding:40px;">' +
+        '<p style="font-size:1.1rem;color:var(--ink-muted);">❌ 連結無效或已過期</p>' +
+        '<p style="font-size:0.85rem;color:var(--ink-muted);margin-top:8px;font-family:\'Noto Sans TC\',sans-serif;">請聯繫泰華老師取得正確的課堂連結</p>' +
+      '</div>';
+    return;
+  }
+  var sInitial = student.name ? student.name.charAt(0) : '?';
+  document.getElementById('studentNameDisplay').textContent = '';
+  const token = urlParams.get('s') || '';
+  document.getElementById('mainContainer').innerHTML =
+    // Hero banner
+    '<div class="student-hero">' +
+      '<div class="student-hero-avatar">' + sInitial + '</div>' +
+      '<div class="student-hero-name">' + student.name + ' 同學</div>' +
+      '<div class="student-hero-sub">歡迎回到課堂 ✨</div>' +
+    '</div>' +
+    // Meet card
+    '<div class="card">' +
+      '<h2>📹 進入課堂</h2>' +
+      '<a class="meet-btn" href="' + student.meet + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
+      '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>' +
+    '</div>' +
+    // Payment card
+    '<div class="card">' +
+      '<h2>💰 繳費通知</h2>' +
+      '<div id="slipStatusMsg"></div>' +
+      '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
+      '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
+    '</div>' +
+    recordingHTML();
+  initRecording();
+  checkStudentSlipStatus(token);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function initRecording() {
+  document.querySelectorAll('input[name="audioMode"]').forEach(function(r) {
+    r.addEventListener('change', function() {
+      document.getElementById('audioModeHint').textContent =
+        r.value === 'both' ? '🎤🔊 同時錄製麥克風與螢幕聲音（Meet 中對方的聲音）' : '🎤 只收老師麥克風，不錄對方聲音';
+    });
+  });
+  updatePrefBadges();
+  const pref = getPref();
+  if (pref === 'always') {
+    // 無法自動啟動 getDisplayMedia（瀏覽器需使用者手動觸發）
+    setTimeout(function(){
+      var el = document.getElementById('videoStatus');
+      if (el) { el.textContent = '⚠️ 設定為「自動錄影」，請按 ⏺ 開始錄影'; el.className = 'status'; }
+    }, 500);
+  }
+  else if (pref !== 'never') setTimeout(showPrefModal, 600);
+}
+
+// ============================================================
+// SLIP SYSTEM (student-initiated payment)
+// ============================================================
+let slipToken = null, slipCourse = null, slipImageData = null;
+let pendingSlipId = null;
+
+// — Student: open slip modal —
+function openSlipModal(token) {
+  slipToken = token; slipCourse = null; slipImageData = null;
+  document.getElementById('slipCourseGrid').innerHTML = COURSES.map(function(c) {
+    return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipCourse(\'' + c.id + '\')">' +
+      '<div class="c-name">' + c.label + '</div>' +
+      '<div class="c-desc">' + c.desc + '</div>' +
+    '</button>';
+  }).join('');
+  document.getElementById('slipTotalBox').style.display = 'none';
+  document.getElementById('slipPreviewImg').style.display = 'none';
+  document.getElementById('slipUploadPlaceholder').style.display = '';
+  document.getElementById('slipUploadArea').classList.remove('has-image');
+  document.getElementById('slipNoteInput').value = '';
+  document.getElementById('slipFileInput').value = '';
+  document.getElementById('slipModal').classList.add('open');
+}
+
+function selectSlipCourse(id) {
+  slipCourse = id;
+  document.querySelectorAll('.course-card').forEach(function(el) { el.classList.remove('selected'); });
+  var el = document.getElementById('sc-' + id);
+  if (el) el.classList.add('selected');
+  var c = COURSES.find(function(x) { return x.id === id; });
+  if (!c) return;
+  var box = document.getElementById('slipTotalBox');
+  if (c.lessons && c.priceTHB) {
+    box.style.display = 'block';
+    document.getElementById('slipTotalText').textContent = 'THB ' + (c.lessons * c.priceTHB).toLocaleString();
+    document.getElementById('slipCalcText').textContent = c.lessons + '堂 × THB ' + c.priceTHB + '/堂（標準價）';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function handleSlipImage(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 900, scale = Math.min(1, maxW / img.width);
+      canvas.width = img.width * scale; canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      slipImageData = canvas.toDataURL('image/jpeg', 0.75);
+      document.getElementById('slipPreviewImg').src = slipImageData;
+      document.getElementById('slipPreviewImg').style.display = 'block';
+      document.getElementById('slipUploadPlaceholder').style.display = 'none';
+      document.getElementById('slipUploadArea').classList.add('has-image');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function closeSlipModal() {
+  document.getElementById('slipModal').classList.remove('open');
+  slipToken = null; slipCourse = null; slipImageData = null;
+}
+
+async function submitSlip() {
+  if (!slipCourse) { alert('請先選擇課程'); return; }
+  if (!slipImageData) { alert('請先上傳匯款截圖'); return; }
+  var c = COURSES.find(function(x) { return x.id === slipCourse; }) || {};
+  var lessons = c.lessons || 10;
+  var note = document.getElementById('slipNoteInput').value.trim();
+  var btn = document.getElementById('slipSubmitBtn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  var payload = {
+    token: slipToken,
+    student_name: (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return slipToken; } })(),
+    course_id: slipCourse,
+    course_label: c.label || slipCourse,
+    lessons: lessons,
+    bonus_lessons: 0,
+    price_per: c.priceTHB || 800,
+    currency: 'THB',
+    total_amount: lessons * (c.priceTHB || 800),
+    note: note || null,
+    slip_data: slipImageData,
+    submitted_by: 'student',
+    submitted_at: new Date().toISOString(),
+    status: 'slip_submitted'
+  };
+  var res = await sb.from('classroom_payments').insert(payload);
+  btn.disabled = false; btn.textContent = '📤 送出繳費通知';
+  if (res.error) { alert('送出失敗：' + res.error.message); return; }
+  closeSlipModal();
+  // 顯示狀態於頁面，不用 alert
+  var statusEl = document.getElementById('slipStatusMsg');
+  if (statusEl) {
+    statusEl.innerHTML = '<div style="background:#fef3c7;border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:#92400e;font-weight:600;margin-bottom:12px;">⏳ 已送出，等待老師確認<br><span style="font-weight:400;font-size:0.78rem;">' + (c.label || slipCourse) + '</span></div>';
+  }
+}
+
+// — Teacher: load pending slips —
+async function loadPendingSlips() {
+  var container = document.getElementById('pendingSlipsSection');
+  if (!container) return;
+  var res = await sb.from('classroom_payments').select('*')
+    .eq('status', 'slip_submitted').order('submitted_at', { ascending: true });
+  var data = res.data || [];
+  if (data.length === 0) { container.innerHTML = ''; return; }
+  var rows = data.map(function(p) {
+    var thumbHtml = p.slip_data
+      ? '<img class="slip-thumb" src="' + p.slip_data + '" onclick="viewSlip(\'' + p.id + '\')" title="點擊查看原圖" />'
+      : '<div class="slip-thumb-placeholder">📄</div>';
+    return '<div class="slip-row" id="slip-row-' + p.id + '">' +
+      thumbHtml +
+      '<div class="slip-info">' +
+        '<div class="slip-name">' + p.student_name + '</div>' +
+        '<div class="slip-course">' + p.course_label + ' · ' + p.lessons + '堂 · ' + p.currency + ' ' + (p.total_amount || 0).toLocaleString() + '</div>' +
+        (p.note ? '<div class="slip-course" style="color:var(--gold-deep);">📝 ' + p.note + '</div>' : '') +
+      '</div>' +
+      '<div class="slip-actions">' +
+        '<button class="btn-approve" onclick="openSlipApproval(\'' + p.id + '\')">✅ 確認</button>' +
+        '<button class="btn-reject"  onclick="rejectSlip(\'' + p.id + '\')">❌</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  container.innerHTML = '<div class="pending-card">' +
+    '<h2>⏳ 待確認繳費 <span class="pending-badge">' + data.length + '</span></h2>' +
+    rows + '</div>';
+  // cache slip data for viewer
+  window._slipCache = {};
+  data.forEach(function(p) { window._slipCache[p.id] = p; });
+}
+
+function viewSlip(id) {
+  var p = (window._slipCache || {})[id];
+  if (!p || !p.slip_data) return;
+  document.getElementById('slipViewerImg').src = p.slip_data;
+  document.getElementById('slipViewer').classList.add('open');
+}
+
+function openSlipApproval(id) {
+  var p = (window._slipCache || {})[id];
+  if (!p) return;
+  pendingSlipId = id;
+  var slipHtml = p.slip_data
+    ? '<img src="' + p.slip_data + '" style="max-width:100%;border-radius:8px;margin-bottom:12px;cursor:zoom-in;" onclick="viewSlip(\'' + id + '\')" />'
+    : '';
+  document.getElementById('slipApprovalContent').innerHTML =
+    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;margin-bottom:8px;">' +
+      '<strong>' + p.student_name + '</strong> · ' + p.course_label + ' · ' + p.lessons + '堂' +
+      (p.note ? '<br>📝 ' + p.note : '') +
+    '</div>' + slipHtml;
+  document.getElementById('approvalCurrency').value = p.currency || 'THB';
+  document.getElementById('approvalPricePer').value  = p.price_per || 800;
+  document.getElementById('approvalLessons').value   = p.lessons || 10;
+  document.getElementById('approvalBonus').value     = p.bonus_lessons || 0;
+  document.getElementById('approvalStart').value     = p.start_note || '';
+  document.getElementById('approvalNote').value      = p.note || '';
+  updateApprovalTotal();
+  document.getElementById('slipApprovalModal').classList.add('open');
+}
+
+function updateApprovalTotal() {
+  var cur = document.getElementById('approvalCurrency').value;
+  var pp  = parseInt(document.getElementById('approvalPricePer').value) || 0;
+  var ls  = parseInt(document.getElementById('approvalLessons').value)  || 0;
+  var bn  = parseInt(document.getElementById('approvalBonus').value)    || 0;
+  if (!pp || !ls) { document.getElementById('approvalTotalBox').style.display = 'none'; return; }
+  var total = ls * pp;
+  document.getElementById('approvalTotalBox').style.display = 'block';
+  document.getElementById('approvalTotalText').textContent = cur + ' ' + total.toLocaleString();
+  document.getElementById('approvalCalcText').textContent  = ls + '堂 × ' + cur + ' ' + pp + '/堂' + (bn > 0 ? '（贈 ' + bn + ' 堂）' : '');
+}
+
+async function approveSlip() {
+  if (!pendingSlipId) return;
+  var cur   = document.getElementById('approvalCurrency').value;
+  var pp    = parseInt(document.getElementById('approvalPricePer').value);
+  var ls    = parseInt(document.getElementById('approvalLessons').value);
+  var bn    = parseInt(document.getElementById('approvalBonus').value)  || 0;
+  var start = document.getElementById('approvalStart').value.trim();
+  var note  = document.getElementById('approvalNote').value.trim();
+  if (!pp || !ls) { alert('請填寫單價與堂數'); return; }
+  var btn = document.getElementById('slipApproveBtn');
+  btn.disabled = true; btn.textContent = '確認中…';
+  var res = await sb.from('classroom_payments').update({
+    status: 'pending', currency: cur, price_per: pp,
+    lessons: ls, bonus_lessons: bn, total_amount: ls * pp,
+    start_note: start || null, note: note || null
+  }).eq('id', pendingSlipId);
+  btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據';
+  if (res.error) { alert('儲存失敗：' + res.error.message); return; }
+  document.getElementById('slipApprovalModal').classList.remove('open');
+  pendingSlipId = null;
+  alert('✅ 已確認！\n系統將自動產生收據並記錄');
+  await loadPendingSlips();
+}
+
+async function rejectSlip(id) {
+  var rid = id || pendingSlipId;
+  if (!rid) return;
+  var p = (window._slipCache || {})[rid] || {};
+  if (!confirm('確定拒絕 ' + (p.student_name || rid) + ' 的繳費通知？')) return;
+  await sb.from('classroom_payments').update({ status: 'rejected' }).eq('id', rid);
+  document.getElementById('slipApprovalModal').classList.remove('open');
+  await loadPendingSlips();
+}
+
+// ============================================================
+// PAYMENT SYSTEM
+// ============================================================
+const COURSES = [
+  { id:'basic', label:'入門 Basic',      lessons:10, priceTHB:800, priceNTD:700,  desc:'10堂 · 打好發音基礎' },
+  { id:'std1',  label:'進階 Standard ①', lessons:10, priceTHB:800, priceNTD:800,  desc:'10堂 · 客製主題會話' },
+  { id:'std2',  label:'進階 Standard ②', lessons:20, priceTHB:800, priceNTD:800,  desc:'20堂 · 動詞文法系統' },
+  { id:'std3',  label:'進階 Standard ③', lessons:30, priceTHB:800, priceNTD:800,  desc:'30堂 · 說得流利 ⭐' },
+  { id:'pair',  label:'雙人課',           lessons:10, priceTHB:null, priceNTD:1150, desc:'每人 · 兩人同學' },
+  { id:'custom',label:'自訂',             lessons:null, priceTHB:800, priceNTD:null, desc:'自行填寫堂數/單價' },
+];
+
+let payToken = null;
+let paySelectedCourse = null;
+
+function openPaymentModal(token) {
+  payToken = token;
+  paySelectedCourse = null;
+  const s = studentsCache[token];
+  document.getElementById('payStudentLabel').textContent = s ? '💳 ' + s.name : '';
+  // build course cards
+  document.getElementById('courseGrid').innerHTML = COURSES.map(function(c) {
+    return '<button class="course-card" id="cc-' + c.id + '" onclick="selectCourse(\'' + c.id + '\')">' +
+      '<div class="c-name">' + c.label + '</div>' +
+      '<div class="c-desc">' + c.desc + '</div>' +
+    '</button>';
+  }).join('');
+  document.getElementById('payLessons').value = '';
+  document.getElementById('payBonus').value = '0';
+  document.getElementById('payCurrency').value = 'THB';
+  document.getElementById('payPricePer').value = '800';
+  document.getElementById('payStart').value = '';
+  document.getElementById('payNote').value = '';
+  document.getElementById('payTotalBox').style.display = 'none';
+  document.getElementById('paymentModal').classList.add('open');
+}
+
+function selectCourse(id) {
+  paySelectedCourse = id;
+  document.querySelectorAll('.course-card').forEach(function(el) { el.classList.remove('selected'); });
+  document.getElementById('cc-' + id).classList.add('selected');
+  const c = COURSES.find(function(x) { return x.id === id; });
+  if (!c) return;
+  if (c.lessons) document.getElementById('payLessons').value = c.lessons;
+  const cur = document.getElementById('payCurrency').value;
+  if (c.id !== 'custom') {
+    const pp = cur === 'NTD' ? c.priceNTD : c.priceTHB;
+    if (pp) document.getElementById('payPricePer').value = pp;
+  }
+  updatePayTotal();
+}
+
+function updatePayTotal() {
+  const lessons = parseInt(document.getElementById('payLessons').value) || 0;
+  const bonus   = parseInt(document.getElementById('payBonus').value)   || 0;
+  const pricePer = parseInt(document.getElementById('payPricePer').value) || 0;
+  const cur = document.getElementById('payCurrency').value;
+  if (lessons <= 0 || pricePer <= 0) { document.getElementById('payTotalBox').style.display = 'none'; return; }
+  const total = lessons * pricePer;
+  const box = document.getElementById('payTotalBox');
+  box.style.display = 'block';
+  document.getElementById('payTotalText').textContent = cur + ' ' + total.toLocaleString();
+  let calcStr = lessons + '堂 × ' + cur + ' ' + pricePer + '/堂 = ' + cur + ' ' + total.toLocaleString();
+  if (bonus > 0) calcStr += '（另贈 ' + bonus + ' 堂）';
+  document.getElementById('payCalcText').textContent = calcStr;
+  // update price per if currency changed
+  if (paySelectedCourse) {
+    const c = COURSES.find(function(x) { return x.id === paySelectedCourse; });
+    if (c && c.id !== 'custom') {
+      const pp = cur === 'NTD' ? c.priceNTD : c.priceTHB;
+      if (pp) document.getElementById('payPricePer').value = pp;
+    }
+  }
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').classList.remove('open');
+  payToken = null; paySelectedCourse = null;
+}
+
+async function submitPayment() {
+  if (!payToken) return;
+  const s = studentsCache[payToken];
+  const lessons  = parseInt(document.getElementById('payLessons').value);
+  const bonus    = parseInt(document.getElementById('payBonus').value)   || 0;
+  const pricePer = parseInt(document.getElementById('payPricePer').value);
+  const cur      = document.getElementById('payCurrency').value;
+  const start    = document.getElementById('payStart').value.trim();
+  const note     = document.getElementById('payNote').value.trim();
+  if (!paySelectedCourse) { alert('請選擇課程方案'); return; }
+  if (!lessons || !pricePer) { alert('請填寫堂數和單價'); return; }
+  const c = COURSES.find(function(x) { return x.id === paySelectedCourse; }) || {};
+  const total = lessons * pricePer;
+  const btn = document.getElementById('paySubmitBtn');
+  btn.disabled = true; btn.textContent = '儲存中…';
+  const { error } = await sb.from('classroom_payments').insert({
+    token: payToken,
+    student_name: s ? s.name : payToken,
+    course_id: paySelectedCourse,
+    course_label: c.label || paySelectedCourse,
+    lessons: lessons,
+    bonus_lessons: bonus,
+    price_per: pricePer,
+    currency: cur,
+    total_amount: total,
+    start_note: start || null,
+    note: note || null,
+    status: 'pending'
+  });
+  btn.disabled = false; btn.textContent = '確認收費';
+  if (error) { alert('儲存失敗：' + error.message); return; }
+  closePaymentModal();
+  alert('✅ 已記錄！\n' + (s ? s.name : '') + ' · ' + c.label + ' · ' + cur + ' ' + total.toLocaleString() + '\n\n收據將由系統自動產生（稍後處理）');
+}
+
+// ============================================================
+// ATTENDANCE SYSTEM
+// ============================================================
+async function recordAttendance(token) {
+  const s = studentsCache[token];
+  const name = s ? s.name : token;
+  const today = new Date().toISOString().slice(0, 10);
+  if (!confirm('✅ 確定記錄「' + name + '」今日上課？\n（' + today + '）')) return;
+  const btn = document.getElementById('attend-' + token);
+  if (btn) { btn.disabled = true; btn.textContent = '記錄中…'; }
+  const { error } = await sb.from('classroom_attendance').upsert({
+    token: token, student_name: name, lesson_date: today
+  }, { onConflict: 'token,lesson_date' });
+  if (btn) { btn.disabled = false; }
+  if (error) { alert('記錄失敗：' + error.message); if (btn) btn.textContent = '✅ 今日上課'; return; }
+  if (btn) { btn.textContent = '✅ 已記錄'; btn.style.background = '#bbf7d0'; }
+  setTimeout(function() { if (btn) { btn.textContent = '✅ 今日上課'; btn.style.background = ''; } }, 3000);
+}
+
+async function loadTeacherAttendance() {
+  const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+  const { data } = await sb.from('classroom_attendance')
+    .select('*').gte('lesson_date', sevenDaysAgo).order('lesson_date', { ascending: false });
+  const container = document.getElementById('attendanceSection');
+  if (!container) return;
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="attend-card"><h2>📋 近 7 日課堂記錄</h2><div class="empty-attend">本週尚無上課記錄</div></div>';
+    return;
+  }
+  // Group by date
+  const byDate = {};
+  data.forEach(function(r) {
+    if (!byDate[r.lesson_date]) byDate[r.lesson_date] = [];
+    byDate[r.lesson_date].push(r.student_name);
+  });
+  const dayZh = ['日','一','二','三','四','五','六'];
+  const rows = Object.entries(byDate).map(function(entry) {
+    var date = entry[0], names = entry[1];
+    var d = new Date(date + 'T12:00:00');
+    var label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）';
+    return '<div class="attend-row">' +
+      '<span class="a-date" style="font-weight:700;min-width:120px;color:var(--gold-deep);">' + label + '</span>' +
+      '<span class="a-name" style="flex:1;">' + names.join('・') + '</span>' +
+      '<span class="a-count">' + names.length + '人</span>' +
+    '</div>';
+  }).join('');
+  container.innerHTML = '<div class="attend-card"><h2>📋 近 7 日課堂記錄</h2>' +
+    '<div class="attend-list">' + rows + '</div></div>';
+}
+
+async function checkStudentSlipStatus(token) {
+  if (!token) return;
+  var el = document.getElementById('slipStatusMsg');
+  if (!el) return;
+  var { data } = await sb.from('classroom_payments')
+    .select('status,course_label,created_at,receipt_no')
+    .eq('token', token).order('created_at', { ascending: false }).limit(1);
+  if (!data || data.length === 0) return;
+  var p = data[0];
+  var statusMap = {
+    'slip_submitted': '⏳ 已送出，等待老師確認',
+    'pending':        '✅ 老師已確認，收據製作中…',
+    'done':           '🧾 收據已開立！收據號碼：' + (p.receipt_no || '—'),
+    'rejected':       '❌ 本次付款未通過，請聯繫老師'
+  };
+  var msg = statusMap[p.status];
+  if (!msg) return;
+  var color = p.status === 'rejected' ? '#f5ece0' : p.status === 'done' ? '#dcfce7' : '#fef3c7';
+  var textColor = p.status === 'rejected' ? '#5c5148' : p.status === 'done' ? '#15803d' : '#92400e';
+  el.innerHTML = '<div style="background:' + color + ';border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + textColor + ';font-weight:600;margin-bottom:12px;">' + msg + '<br><span style="font-weight:400;font-size:0.78rem;">' + p.course_label + '</span></div>';
+}
+
+// Run routing — with visible error display
+window.onerror = function(msg, src, line) {
+  var el = document.getElementById('mainContainer');
+  if (el) el.innerHTML = '<div style="background:#fef3c7;border:1px solid #d97706;border-radius:12px;padding:20px;margin:20px 0;font-family:monospace;font-size:0.85rem;color:#78350f;">' +
+    '<strong>⚠️ JavaScript Error（請截圖傳給老師）</strong><br><br>' + msg + '<br><br>Line: ' + line + '<br>File: ' + src + '</div>';
+};
+try {
+  if (isTeacher) renderTeacherView();
+  else renderStudentView();
+} catch(e) {
+  var el = document.getElementById('mainContainer');
+  if (el) el.innerHTML = '<div style="background:#fef3c7;border:1px solid #d97706;border-radius:12px;padding:20px;margin:20px 0;font-family:monospace;font-size:0.85rem;color:#78350f;">' +
+    '<strong>⚠️ Error（請截圖傳給老師）</strong><br><br>' + e.message + '</div>';
+}
+
+// ============================================================
+// AUDIO — WAV
+// ============================================================
+let audioCtx=null,audioStream=null,audioChunks=[],audioTimerID=null,audioStartTime=0,wavBlob=null,audioSource=null,audioProcessor=null;
+
+function fmtTime(sec){ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
+
+async function startAudio(){
+  try{
+    audioStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    audioChunks=[];
+    audioSource=audioCtx.createMediaStreamSource(audioStream);
+    audioProcessor=audioCtx.createScriptProcessor(4096,1,1);
+    audioProcessor.onaudioprocess=e=>audioChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    audioSource.connect(audioProcessor); audioProcessor.connect(audioCtx.destination);
+    audioStartTime=Date.now();
+    document.getElementById('audioTimer').classList.add('visible');
+    audioTimerID=setInterval(()=>{ document.getElementById('audioTimer').textContent=fmtTime(Math.floor((Date.now()-audioStartTime)/1000)); },1000);
+    document.getElementById('audioRecordBtn').disabled=true;
+    document.getElementById('audioRecordBtn').classList.add('recording');
+    document.getElementById('audioStopBtn').disabled=false;
+    document.getElementById('audioStatus').textContent='🔴 錄音中…';
+    document.getElementById('audioStatus').className='status active';
+    document.getElementById('audioSection').classList.remove('visible');
+  }catch(err){ document.getElementById('audioStatus').textContent='❌ 無法取得麥克風：'+err.message; }
+}
+
+function stopAudio(){
+  clearInterval(audioTimerID);
+  document.getElementById('audioTimer').classList.remove('visible');
+  if(audioProcessor){audioProcessor.disconnect();audioProcessor=null;}
+  if(audioSource){audioSource.disconnect();audioSource=null;}
+  if(audioStream){audioStream.getTracks().forEach(t=>t.stop());audioStream=null;}
+  const totalLen=audioChunks.reduce((a,c)=>a+c.length,0);
+  const merged=new Float32Array(totalLen);
+  let off=0; audioChunks.forEach(c=>{merged.set(c,off);off+=c.length;});
+  const sr=audioCtx?audioCtx.sampleRate:44100;
+  if(audioCtx){audioCtx.close();audioCtx=null;}
+  wavBlob=encodeWAV(merged,sr);
+  document.getElementById('audioPlayer').src=URL.createObjectURL(wavBlob);
+  document.getElementById('audioSection').classList.add('visible');
+  document.getElementById('audioRecordBtn').disabled=false;
+  document.getElementById('audioRecordBtn').classList.remove('recording');
+  document.getElementById('audioStopBtn').disabled=true;
+  document.getElementById('audioStatus').textContent='✅ 錄音完成，可播放或下載';
+  document.getElementById('audioStatus').className='status done';
+}
+
+function downloadAudio(){
+  if(!wavBlob)return;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(wavBlob);
+  a.download='audio_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.wav';
+  a.click();
+}
+
+function encodeWAV(samples,sampleRate){
+  const buf=new ArrayBuffer(44+samples.length*2);
+  const v=new DataView(buf);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF');v.setUint32(4,36+samples.length*2,true);
+  ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);
+  v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sampleRate,true);v.setUint32(28,sampleRate*2,true);
+  v.setUint16(32,2,true);v.setUint16(34,16,true);
+  ws(36,'data');v.setUint32(40,samples.length*2,true);
+  let off=44;
+  for(let i=0;i<samples.length;i++){const s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(off,s<0?s*0x8000:s*0x7FFF,true);off+=2;}
+  return new Blob([buf],{type:'audio/wav'});
+}
+
+// ============================================================
+// VIDEO — MediaRecorder
+// ============================================================
+let videoMediaRecorder=null,videoChunks=[],videoBlob=null,videoTimerID=null,videoStartTime=0,allStreams=[];
+
+async function autoStartVideo(){
+  document.querySelector('input[name="audioMode"][value="both"]').checked=true;
+  document.getElementById('audioModeHint').textContent='🎤🔊 同時錄製麥克風與螢幕聲音（Meet 中對方的聲音）';
+  await startVideo();
+}
+
+// 偵測瀏覽器支援的影片格式 (Safari → mp4, Chrome/Firefox → webm)
+function detectMimeType(){
+  const types=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=avc1,mp4a.40.2','video/mp4'];
+  return types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+}
+let videoMimeType='';
+
+async function startVideo(){
+  videoMimeType=detectMimeType();
+  if(!videoMimeType){
+    document.getElementById('videoStatus').textContent='❌ 此瀏覽器不支援螢幕錄製，請改用 Chrome';
+    return;
+  }
+  try{
+    const mode=document.querySelector('input[name="audioMode"]:checked').value;
+    // 合併為單次 getDisplayMedia，避免失去使用者手勢
+    const displayStream=await navigator.mediaDevices.getDisplayMedia({
+      video:{frameRate:{ideal:30}}, audio: mode==='both'  // 同時請求系統音訊
+    });
+    let finalStream;
+    if(mode==='teacher'){
+      const micStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      allStreams=[displayStream,micStream];
+      finalStream=new MediaStream([...displayStream.getVideoTracks(),...micStream.getAudioTracks()]);
+    }else{
+      const micStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      allStreams=[displayStream,micStream];
+      const hasSysAudio=displayStream.getAudioTracks().length>0;
+      if(hasSysAudio){
+        const actx=new AudioContext();
+        const dest=actx.createMediaStreamDestination();
+        actx.createMediaStreamSource(micStream).connect(dest);
+        actx.createMediaStreamSource(new MediaStream(displayStream.getAudioTracks())).connect(dest);
+        finalStream=new MediaStream([...displayStream.getVideoTracks(),...dest.stream.getAudioTracks()]);
+      }else{
+        document.getElementById('videoStatus').textContent='⚠️ 未選擇分享系統音訊，僅錄麥克風';
+        finalStream=new MediaStream([...displayStream.getVideoTracks(),...micStream.getAudioTracks()]);
+      }
+    }
+    videoMediaRecorder=new MediaRecorder(finalStream,{mimeType:videoMimeType});
+    videoChunks=[];
+    videoMediaRecorder.ondataavailable=e=>{if(e.data.size)videoChunks.push(e.data);};
+    videoMediaRecorder.onstop=finalizeVideo;
+    displayStream.getVideoTracks()[0].onended=()=>{if(videoMediaRecorder?.state==='recording')stopVideo();};
+    videoMediaRecorder.start(1000);
+    videoStartTime=Date.now();
+    document.getElementById('videoTimer').classList.add('visible');
+    videoTimerID=setInterval(()=>{ document.getElementById('videoTimer').textContent=fmtTime(Math.floor((Date.now()-videoStartTime)/1000)); },1000);
+    document.getElementById('videoRecordBtn').disabled=true;
+    document.getElementById('videoRecordBtn').classList.add('recording');
+    document.getElementById('videoStopBtn').disabled=false;
+    document.getElementById('videoStatus').textContent='🔴 錄影中…';
+    document.getElementById('videoStatus').className='status active';
+    document.getElementById('videoSection').classList.remove('visible');
+  }catch(err){ document.getElementById('videoStatus').textContent='❌ '+err.message; }
+}
+
+function stopVideo(){
+  clearInterval(videoTimerID);
+  document.getElementById('videoTimer').classList.remove('visible');
+  if(videoMediaRecorder&&videoMediaRecorder.state!=='inactive')videoMediaRecorder.stop();
+  allStreams.forEach(s=>s.getTracks().forEach(t=>t.stop()));
+  allStreams=[];
+  document.getElementById('videoRecordBtn').disabled=false;
+  document.getElementById('videoRecordBtn').classList.remove('recording');
+  document.getElementById('videoStopBtn').disabled=true;
+}
+
+function finalizeVideo(){
+  const ext=videoMimeType.includes('mp4')?'mp4':'webm';
+  videoBlob=new Blob(videoChunks,{type:videoMimeType||'video/webm'});
+  document.getElementById('videoPlayer').src=URL.createObjectURL(videoBlob);
+  document.getElementById('videoSection').classList.add('visible');
+  document.getElementById('videoStatus').textContent=`✅ 錄影完成（${ext.toUpperCase()}），可預覽或下載`;
+  document.getElementById('videoStatus').className='status done';
+}
+
+function downloadVideo(){
+  if(!videoBlob)return;
+  const ext=videoMimeType.includes('mp4')?'mp4':'webm';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(videoBlob);
+  a.download='video_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.'+ext;
+  a.click();
+}
+</script>
+</body>
+</html>
