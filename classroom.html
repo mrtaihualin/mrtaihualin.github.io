@@ -304,54 +304,6 @@
 </head>
 <body>
 
-<!-- ======= PREF MODAL ======= -->
-<div class="modal-overlay" id="prefModal">
-  <div class="modal">
-    <h3>🎙️ 課程錄製提醒</h3>
-    <p>歡迎來到線上教室！請選擇您的錄製偏好，之後可在「設定」中隨時更改。</p>
-    <div class="pref-options">
-      <button class="pref-btn" id="pref-always" onclick="selectPref('always')">
-        <span class="pref-icon">🔴</span>
-        <div><div class="pref-label">自動錄製</div><div class="pref-desc">進入教室後立即開始錄影</div></div>
-      </button>
-      <button class="pref-btn" id="pref-ask" onclick="selectPref('ask')">
-        <span class="pref-icon">❓</span>
-        <div><div class="pref-label">每次詢問</div><div class="pref-desc">每次進入時顯示此提示</div></div>
-      </button>
-      <button class="pref-btn" id="pref-never" onclick="selectPref('never')">
-        <span class="pref-icon">🚫</span>
-        <div><div class="pref-label">不錄製</div><div class="pref-desc">關閉提示，可手動開始錄製</div></div>
-      </button>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closePrefModal()">略過</button>
-      <button class="btn-gold" onclick="savePref()">儲存</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======= SETTINGS MODAL ======= -->
-<div class="modal-overlay" id="settingsModal">
-  <div class="modal">
-    <h3>⚙️ 設定</h3>
-    <p>變更錄製偏好設定</p>
-    <div class="pref-options" style="margin-bottom:18px;">
-      <button class="pref-btn" id="s-pref-always" onclick="selectSettingsPref('always')">
-        <span class="pref-icon">🔴</span><div><div class="pref-label">自動錄製</div></div>
-      </button>
-      <button class="pref-btn" id="s-pref-ask" onclick="selectSettingsPref('ask')">
-        <span class="pref-icon">❓</span><div><div class="pref-label">每次詢問</div></div>
-      </button>
-      <button class="pref-btn" id="s-pref-never" onclick="selectSettingsPref('never')">
-        <span class="pref-icon">🚫</span><div><div class="pref-label">不錄製</div></div>
-      </button>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeSettings()">取消</button>
-      <button class="btn-gold" onclick="saveSettings()">儲存</button>
-    </div>
-  </div>
-</div>
 
 <!-- ======= SLIP VIEWER ======= -->
 <div class="slip-viewer-overlay" id="slipViewer" onclick="this.classList.remove('open')">
@@ -537,7 +489,6 @@
   <h1>🎓 泰華老師的線上教室</h1>
   <p class="subtitle">泰華眼裡的泰語教學</p>
   <p class="student-name" id="studentNameDisplay"></p>
-  <button class="settings-btn" onclick="openSettings()">⚙️ 設定</button>
 </header>
 
 <div class="container" id="mainContainer">
@@ -587,48 +538,6 @@ async function refreshStudentList() {
 const urlParams = new URLSearchParams(window.location.search);
 const studentToken = urlParams.get('s');
 const isTeacher = !studentToken;
-
-// ============================================================
-// 偏好設定（localStorage — 僅儲存個人設定）
-// ============================================================
-const PREF_KEY = 'cl_rec_pref';
-let selectedPref = null, settingsSelectedPref = null;
-function getPref() { return localStorage.getItem(PREF_KEY); }
-
-function updatePrefBadges() {
-  const pref = getPref();
-  const map = { always:['always','自動錄製'], never:['never','不錄製'], ask:['ask','每次詢問'] };
-  const [cls,label] = map[pref] || ['ask','每次詢問'];
-  document.querySelectorAll('.pref-badge').forEach(el => { el.className='pref-badge '+cls; el.textContent=label; });
-}
-function selectPref(val) {
-  selectedPref = val;
-  ['always','ask','never'].forEach(v => document.getElementById('pref-'+v).classList.toggle('selected',v===val));
-}
-function savePref() {
-  if (!selectedPref) { closePrefModal(); return; }
-  localStorage.setItem(PREF_KEY, selectedPref);
-  updatePrefBadges(); closePrefModal();
-  if (selectedPref === 'always') autoStartVideo();
-}
-function closePrefModal() { document.getElementById('prefModal').classList.remove('open'); }
-function showPrefModal() {
-  selectedPref = getPref() || 'ask'; selectPref(selectedPref);
-  document.getElementById('prefModal').classList.add('open');
-}
-function openSettings() {
-  settingsSelectedPref = getPref() || 'ask'; selectSettingsPref(settingsSelectedPref);
-  document.getElementById('settingsModal').classList.add('open');
-}
-function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
-function selectSettingsPref(val) {
-  settingsSelectedPref = val;
-  ['always','ask','never'].forEach(v => document.getElementById('s-pref-'+v).classList.toggle('selected',v===val));
-}
-function saveSettings() {
-  if (settingsSelectedPref) { localStorage.setItem(PREF_KEY, settingsSelectedPref); updatePrefBadges(); }
-  closeSettings();
-}
 
 // ============================================================
 // ADD STUDENT MODAL
@@ -740,45 +649,22 @@ function previewStudent(token) {
 function recordingHTML() {
   return '<div class="card" style="margin-top:16px;">' +
     '<h2>⏺ 課堂錄製</h2>' +
-    '<div class="rec-mode-toggle">' +
-      '<label class="rec-mode-opt"><input type="radio" name="audioMode" value="both" checked><span>🎤🔊 雙聲道（含 Meet 對方）</span></label>' +
-      '<label class="rec-mode-opt"><input type="radio" name="audioMode" value="teacher"><span>🎤 只收老師麥克風</span></label>' +
-    '</div>' +
-    '<p class="rec-hint" id="audioModeHint">🎤🔊 同時錄製麥克風 + 螢幕音訊（對方聲音也會錄進去）</p>' +
-    '<div class="rec-grid">' +
-      '<div class="rec-card">' +
-        '<div class="rec-card-header">' +
-          '<span class="rec-card-icon">🎙</span>' +
-          '<span class="rec-card-title">錄音</span>' +
-          '<span class="timer" id="audioTimer"></span>' +
-          '<span class="pref-badge" id="prefBadgeAudio"></span>' +
-        '</div>' +
-        '<div class="rec-card-btns">' +
-          '<button class="btn-record" id="audioRecordBtn" onclick="startAudio()">⏺ 開始</button>' +
-          '<button class="btn-record btn-stop" id="audioStopBtn" onclick="stopAudio()" disabled>⏹ 停止</button>' +
-        '</div>' +
-        '<div class="status" id="audioStatus"></div>' +
-        '<div class="audio-section" id="audioSection">' +
-          '<audio id="audioPlayer" controls></audio>' +
-          '<button class="btn btn-download" style="width:100%;justify-content:center;" onclick="downloadAudio()">⬇ 下載 WAV</button>' +
-        '</div>' +
+    '<p class="rec-hint">🎥 預設錄「影片」（畫面＋老師與學生聲音）。開始時請在跳出的視窗選 Meet 分頁並勾選「分享分頁音訊」。</p>' +
+    '<div class="rec-card">' +
+      '<div class="rec-card-header">' +
+        '<span class="rec-card-icon">⏺</span>' +
+        '<span class="rec-card-title">課堂錄製</span>' +
+        '<span class="timer" id="recTimer"></span>' +
       '</div>' +
-      '<div class="rec-card">' +
-        '<div class="rec-card-header">' +
-          '<span class="rec-card-icon">🎥</span>' +
-          '<span class="rec-card-title">錄影</span>' +
-          '<span class="timer" id="videoTimer"></span>' +
-          '<span class="pref-badge" id="prefBadgeVideo"></span>' +
-        '</div>' +
-        '<div class="rec-card-btns">' +
-          '<button class="btn-record" id="videoRecordBtn" onclick="startVideo()">⏺ 開始</button>' +
-          '<button class="btn-record btn-stop" id="videoStopBtn" onclick="stopVideo()" disabled>⏹ 停止</button>' +
-        '</div>' +
-        '<div class="status" id="videoStatus"></div>' +
-        '<div class="video-section" id="videoSection">' +
-          '<video id="videoPlayer" controls playsinline></video>' +
-          '<button class="btn btn-download" style="width:100%;justify-content:center;" onclick="downloadVideo()">⬇ 下載影片</button>' +
-        '</div>' +
+      '<div class="rec-card-btns">' +
+        '<button class="btn-record" id="recVideoBtn" onclick="startRec(\'video\')">🎥 錄影片（畫面＋雙人）</button>' +
+        '<button class="btn-record btn-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止</button>' +
+      '</div>' +
+      '<div class="status" id="recStatus"></div>' +
+      '<div class="audio-section" id="recOutSection">' +
+        '<audio id="recAudioPlayer" controls style="display:none;width:100%;"></audio>' +
+        '<video id="recVideoPlayer" controls playsinline style="display:none;width:100%;"></video>' +
+        '<div id="recDownloads"></div>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -796,6 +682,7 @@ function renderStudentListHTML() {
       '<div class="student-avatar">' + initial + '</div>' +
       '<div class="student-info"><div class="student-item-name">' + s.name + '</div>' +
       '<div class="student-item-actions">' +
+        '<button class="btn-sm" style="background:#b45309;color:#fff;font-weight:700;" onclick="startClassRec(\'' + token + '\')">▶️ 開始上課＋錄影</button>' +
         '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + token + '\')">💳 收費</button>' +
         '<button class="btn-sm btn-sm-attend" id="attend-' + token + '" onclick="recordAttendance(\'' + token + '\')">✅ 今日上課</button>' +
         '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + token + '\')">📅 記錄</button>' +
@@ -862,9 +749,8 @@ function renderStudentView() {
       '<div id="slipStatusMsg"></div>' +
       '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
       '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
-    '</div>' +
-    recordingHTML();
-  initRecording();
+    '</div>';
+  // 學生頁不提供錄製功能（錄製僅在老師頁）
   checkStudentSlipStatus(token);
 }
 
@@ -872,22 +758,7 @@ function renderStudentView() {
 // INIT
 // ============================================================
 function initRecording() {
-  document.querySelectorAll('input[name="audioMode"]').forEach(function(r) {
-    r.addEventListener('change', function() {
-      document.getElementById('audioModeHint').textContent =
-        r.value === 'both' ? '🎤🔊 同時錄製麥克風與螢幕聲音（Meet 中對方的聲音）' : '🎤 只收老師麥克風，不錄對方聲音';
-    });
-  });
-  updatePrefBadges();
-  const pref = getPref();
-  if (pref === 'always') {
-    // 無法自動啟動 getDisplayMedia（瀏覽器需使用者手動觸發）
-    setTimeout(function(){
-      var el = document.getElementById('videoStatus');
-      if (el) { el.textContent = '⚠️ 設定為「自動錄影」，請按 ⏺ 開始錄影'; el.className = 'status'; }
-    }, 500);
-  }
-  else if (pref !== 'never') setTimeout(showPrefModal, 600);
+  // 按鈕式錄製，無需初始化
 }
 
 // ============================================================
@@ -1353,172 +1224,155 @@ try {
 }
 
 // ============================================================
-// AUDIO — WAV
+// 課堂錄製引擎（統一：只錄聲音 / 雙人聲音 / 影片）
+//   - 聲音：Opus ~24kbps（約 11 MB/小時，最低可聽）
+//   - 影片：~80kbps，約 45–50 MB/小時；滿 1 小時自動切檔續錄
 // ============================================================
-let audioCtx=null,audioStream=null,audioChunks=[],audioTimerID=null,audioStartTime=0,wavBlob=null,audioSource=null,audioProcessor=null;
+const REC_AUDIO_BPS=24000;       // 聲音位元率（約 11 MB/小時）
+const REC_VIDEO_BPS=80000;       // 影片位元率（約 45–50 MB/小時）
+const REC_SPLIT_MS=60*60*1000;   // 滿 1 小時自動切檔
 
-function fmtTime(sec){ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
+let recMethod=null, recState='idle';
+let recDisplayStream=null, recMicStream=null, recAudioCtx=null;
+let recMR=null, recChunks=[], recMime='', recIsVideo=false, recNoSysAudio=false;
+let recTimerID=null, recSplitID=null, recStartTime=0, recPart=0, recPartCount=0;
 
-async function startAudio(){
+function recFmtTime(sec){ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
+function recSetStatus(t,cls){ const e=document.getElementById('recStatus'); if(e){ e.textContent=t; e.className='status'+(cls?' '+cls:''); } }
+function recToggleStartBtns(disabled){ ['recVideoBtn'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=disabled; }); }
+
+// 按鈕直接呼叫（點擊即為使用者手勢，可呼叫 getDisplayMedia）
+let recActiveStudent=null;
+function startRec(method){ if(recState!=='recording') beginRecording(method); }
+// 老師端：點某位學生 → 開該生 Meet + 開始錄影（recActiveStudent 供日後上傳到該生 Drive 資料夾使用）
+function startClassRec(token){
+  const s=(typeof studentsCache!=='undefined')?studentsCache[token]:null;
+  if(!s){ alert('找不到學生資料'); return; }
+  recActiveStudent=token;
+  if(s.meet) window.open(s.meet,'_blank','noopener');   // 先開 Meet 分頁（分享分頁音訊需分頁先存在）
+  startRec('video');                                    // 再開始錄影；若瀏覽器擋手勢，改按錄製卡片的 🎥 按鈕
+}
+
+// — 格式偵測（優先 mp4／m4a，相容 iPhone 播放）—
+function recPickVideoMime(){
+  const t=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  return t.find(x=>MediaRecorder.isTypeSupported(x))||'';
+}
+function recPickAudioMime(){
+  const t=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm'];
+  return t.find(x=>MediaRecorder.isTypeSupported(x))||'';
+}
+
+async function beginRecording(method){
+  recMethod=method; recPart=0; recPartCount=0; recNoSysAudio=false;
+  const dl=document.getElementById('recDownloads'); if(dl) dl.innerHTML='';
+  document.getElementById('recAudioPlayer').style.display='none';
+  document.getElementById('recVideoPlayer').style.display='none';
+  recSetStatus('準備中…');
   try{
-    audioStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    audioChunks=[];
-    audioSource=audioCtx.createMediaStreamSource(audioStream);
-    audioProcessor=audioCtx.createScriptProcessor(4096,1,1);
-    audioProcessor.onaudioprocess=e=>audioChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-    audioSource.connect(audioProcessor); audioProcessor.connect(audioCtx.destination);
-    audioStartTime=Date.now();
-    document.getElementById('audioTimer').classList.add('visible');
-    audioTimerID=setInterval(()=>{ document.getElementById('audioTimer').textContent=fmtTime(Math.floor((Date.now()-audioStartTime)/1000)); },1000);
-    document.getElementById('audioRecordBtn').disabled=true;
-    document.getElementById('audioRecordBtn').classList.add('recording');
-    document.getElementById('audioStopBtn').disabled=false;
-    document.getElementById('audioStatus').textContent='🔴 錄音中…';
-    document.getElementById('audioStatus').className='status active';
-    document.getElementById('audioSection').classList.remove('visible');
-  }catch(err){ document.getElementById('audioStatus').textContent='❌ 無法取得麥克風：'+err.message; }
-}
-
-function stopAudio(){
-  clearInterval(audioTimerID);
-  document.getElementById('audioTimer').classList.remove('visible');
-  if(audioProcessor){audioProcessor.disconnect();audioProcessor=null;}
-  if(audioSource){audioSource.disconnect();audioSource=null;}
-  if(audioStream){audioStream.getTracks().forEach(t=>t.stop());audioStream=null;}
-  const totalLen=audioChunks.reduce((a,c)=>a+c.length,0);
-  const merged=new Float32Array(totalLen);
-  let off=0; audioChunks.forEach(c=>{merged.set(c,off);off+=c.length;});
-  const sr=audioCtx?audioCtx.sampleRate:44100;
-  if(audioCtx){audioCtx.close();audioCtx=null;}
-  wavBlob=encodeWAV(merged,sr);
-  document.getElementById('audioPlayer').src=URL.createObjectURL(wavBlob);
-  document.getElementById('audioSection').classList.add('visible');
-  document.getElementById('audioRecordBtn').disabled=false;
-  document.getElementById('audioRecordBtn').classList.remove('recording');
-  document.getElementById('audioStopBtn').disabled=true;
-  document.getElementById('audioStatus').textContent='✅ 錄音完成，可播放或下載';
-  document.getElementById('audioStatus').className='status done';
-}
-
-function downloadAudio(){
-  if(!wavBlob)return;
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(wavBlob);
-  a.download='audio_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.wav';
-  a.click();
-}
-
-function encodeWAV(samples,sampleRate){
-  const buf=new ArrayBuffer(44+samples.length*2);
-  const v=new DataView(buf);
-  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
-  ws(0,'RIFF');v.setUint32(4,36+samples.length*2,true);
-  ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);
-  v.setUint16(20,1,true);v.setUint16(22,1,true);
-  v.setUint32(24,sampleRate,true);v.setUint32(28,sampleRate*2,true);
-  v.setUint16(32,2,true);v.setUint16(34,16,true);
-  ws(36,'data');v.setUint32(40,samples.length*2,true);
-  let off=44;
-  for(let i=0;i<samples.length;i++){const s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(off,s<0?s*0x8000:s*0x7FFF,true);off+=2;}
-  return new Blob([buf],{type:'audio/wav'});
-}
-
-// ============================================================
-// VIDEO — MediaRecorder
-// ============================================================
-let videoMediaRecorder=null,videoChunks=[],videoBlob=null,videoTimerID=null,videoStartTime=0,allStreams=[];
-
-async function autoStartVideo(){
-  document.querySelector('input[name="audioMode"][value="both"]').checked=true;
-  document.getElementById('audioModeHint').textContent='🎤🔊 同時錄製麥克風與螢幕聲音（Meet 中對方的聲音）';
-  await startVideo();
-}
-
-// 偵測瀏覽器支援的影片格式 (優先 mp4)
-function detectMimeType(){
-  const types=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
-  return types.find(t=>MediaRecorder.isTypeSupported(t))||'';
-}
-let videoMimeType='';
-
-async function startVideo(){
-  videoMimeType=detectMimeType();
-  if(!videoMimeType){
-    document.getElementById('videoStatus').textContent='❌ 此瀏覽器不支援螢幕錄製，請改用 Chrome';
-    return;
-  }
-  try{
-    const mode=document.querySelector('input[name="audioMode"]:checked').value;
-    // 合併為單次 getDisplayMedia，避免失去使用者手勢
-    const displayStream=await navigator.mediaDevices.getDisplayMedia({
-      video:{frameRate:{ideal:30}}, audio: mode==='both'  // 同時請求系統音訊
-    });
     let finalStream;
-    if(mode==='teacher'){
-      const micStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-      allStreams=[displayStream,micStream];
-      finalStream=new MediaStream([...displayStream.getVideoTracks(),...micStream.getAudioTracks()]);
+    if(method==='mic'){
+      recMicStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      finalStream=recMicStream; recIsVideo=false;
     }else{
-      const micStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-      allStreams=[displayStream,micStream];
-      const hasSysAudio=displayStream.getAudioTracks().length>0;
-      if(hasSysAudio){
-        const actx=new AudioContext();
-        const dest=actx.createMediaStreamDestination();
-        actx.createMediaStreamSource(micStream).connect(dest);
-        actx.createMediaStreamSource(new MediaStream(displayStream.getAudioTracks())).connect(dest);
-        finalStream=new MediaStream([...displayStream.getVideoTracks(),...dest.stream.getAudioTracks()]);
+      recIsVideo=(method==='video');
+      recDisplayStream=await navigator.mediaDevices.getDisplayMedia({
+        video: recIsVideo ? {frameRate:{ideal:10,max:15}} : true,
+        audio: true
+      });
+      recMicStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      const sysTracks=recDisplayStream.getAudioTracks();
+      recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      const dest=recAudioCtx.createMediaStreamDestination();
+      recAudioCtx.createMediaStreamSource(recMicStream).connect(dest);
+      const sysOK=sysTracks.length>0;
+      if(sysOK) recAudioCtx.createMediaStreamSource(new MediaStream(sysTracks)).connect(dest);
+      if(recIsVideo){
+        finalStream=new MediaStream([...recDisplayStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
       }else{
-        document.getElementById('videoStatus').textContent='⚠️ 未選擇分享系統音訊，僅錄麥克風';
-        finalStream=new MediaStream([...displayStream.getVideoTracks(),...micStream.getAudioTracks()]);
+        recDisplayStream.getVideoTracks().forEach(t=>t.stop());
+        finalStream=new MediaStream([...dest.stream.getAudioTracks()]);
       }
+      recNoSysAudio=!sysOK;
+      const vTrack=recDisplayStream.getVideoTracks()[0];
+      if(vTrack) vTrack.onended=()=>{ if(recState==='recording') stopRecording(); };
     }
-    videoMediaRecorder=new MediaRecorder(finalStream,{mimeType:videoMimeType});
-    videoChunks=[];
-    videoMediaRecorder.ondataavailable=e=>{if(e.data.size)videoChunks.push(e.data);};
-    videoMediaRecorder.onstop=finalizeVideo;
-    displayStream.getVideoTracks()[0].onended=()=>{if(videoMediaRecorder?.state==='recording')stopVideo();};
-    videoMediaRecorder.start(1000);
-    videoStartTime=Date.now();
-    document.getElementById('videoTimer').classList.add('visible');
-    videoTimerID=setInterval(()=>{ document.getElementById('videoTimer').textContent=fmtTime(Math.floor((Date.now()-videoStartTime)/1000)); },1000);
-    document.getElementById('videoRecordBtn').disabled=true;
-    document.getElementById('videoRecordBtn').classList.add('recording');
-    document.getElementById('videoStopBtn').disabled=false;
-    document.getElementById('videoStatus').textContent='🔴 錄影中…';
-    document.getElementById('videoStatus').className='status active';
-    document.getElementById('videoSection').classList.remove('visible');
-  }catch(err){ document.getElementById('videoStatus').textContent='❌ '+err.message; }
+    startSegment(finalStream);
+  }catch(err){
+    recSetStatus('❌ '+(err.message||err.name||'無法開始錄製'),'');
+    cleanupRecStreams();
+  }
 }
 
-function stopVideo(){
-  clearInterval(videoTimerID);
-  document.getElementById('videoTimer').classList.remove('visible');
-  if(videoMediaRecorder&&videoMediaRecorder.state!=='inactive')videoMediaRecorder.stop();
-  allStreams.forEach(s=>s.getTracks().forEach(t=>t.stop()));
-  allStreams=[];
-  document.getElementById('videoRecordBtn').disabled=false;
-  document.getElementById('videoRecordBtn').classList.remove('recording');
-  document.getElementById('videoStopBtn').disabled=true;
+function startSegment(stream){
+  recMime = recIsVideo ? recPickVideoMime() : recPickAudioMime();
+  if(recIsVideo && !recMime){ recSetStatus('❌ 此瀏覽器不支援影片錄製，請改用電腦版 Chrome',''); cleanupRecStreams(); return; }
+  const opts = recIsVideo
+    ? {mimeType:recMime||undefined, videoBitsPerSecond:REC_VIDEO_BPS, audioBitsPerSecond:REC_AUDIO_BPS}
+    : {mimeType:recMime||undefined, audioBitsPerSecond:REC_AUDIO_BPS};
+  recMR=new MediaRecorder(stream, opts);
+  recChunks=[]; recPart++;
+  recMR.ondataavailable=e=>{ if(e.data&&e.data.size) recChunks.push(e.data); };
+  recMR.onstop=()=>finalizeSegment();
+  recMR.start(1000);
+  recState='recording';
+  recStartTime=Date.now();
+  recToggleStartBtns(true);
+  document.getElementById('recStopBtn').disabled=false;
+  const tEl=document.getElementById('recTimer'); if(tEl) tEl.classList.add('visible');
+  clearInterval(recTimerID);
+  recTimerID=setInterval(()=>{ const e=document.getElementById('recTimer'); if(e) e.textContent=recFmtTime(Math.floor((Date.now()-recStartTime)/1000)); },1000);
+  recSetStatus('🔴 錄製中…'+(recIsVideo?'（影片）':'（聲音）')+(recPart>1?'　第'+recPart+'段':'')+(recNoSysAudio?'　⚠️未含對方聲音（沒勾「分享分頁音訊」）':''),'active');
+  if(recIsVideo){
+    clearTimeout(recSplitID);
+    recSplitID=setTimeout(()=>{ if(recState==='recording') splitSegment(stream); }, REC_SPLIT_MS);
+  }
 }
 
-function finalizeVideo(){
-  const ext=videoMimeType.includes('mp4')?'mp4':'webm';
-  videoBlob=new Blob(videoChunks,{type:videoMimeType||'video/webm'});
-  document.getElementById('videoPlayer').src=URL.createObjectURL(videoBlob);
-  document.getElementById('videoSection').classList.add('visible');
-  document.getElementById('videoStatus').textContent=`✅ 錄影完成（${ext.toUpperCase()}），可預覽或下載`;
-  document.getElementById('videoStatus').className='status done';
+// 滿 1 小時：結束目前片段，於同一串流續錄新檔（毋須重新授權）
+function splitSegment(stream){
+  if(!recMR||recMR.state==='inactive') return;
+  recMR.onstop=()=>{ finalizeSegment(); startSegment(stream); };
+  recMR.stop();
 }
 
-function downloadVideo(){
-  if(!videoBlob)return;
-  const ext=videoMimeType.includes('mp4')?'mp4':'webm';
+function finalizeSegment(){
+  const mime=recMime||(recIsVideo?'video/webm':'audio/webm');
+  const blob=new Blob(recChunks,{type:mime});
+  if(!blob.size) return;
+  recPartCount++;
+  const isVideo=recIsVideo;
+  const ext = isVideo ? (mime.includes('mp4')?'mp4':'webm')
+                      : (mime.includes('mp4')?'m4a':(mime.includes('ogg')?'ogg':'webm'));
+  const url=URL.createObjectURL(blob);
+  const player=document.getElementById(isVideo?'recVideoPlayer':'recAudioPlayer');
+  player.src=url; player.style.display='block';
+  document.getElementById('recOutSection').classList.add('visible');
+  const sizeMB=(blob.size/1048576).toFixed(1);
+  const name=(isVideo?'video':'audio')+'_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+(recPartCount>1?'_part'+recPartCount:'')+'.'+ext;
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(videoBlob);
-  a.download='video_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.'+ext;
-  a.click();
+  a.href=url; a.download=name; a.className='btn btn-download';
+  a.style.cssText='width:100%;justify-content:center;margin-top:8px;display:flex;';
+  a.textContent='⬇ 下載'+(isVideo?'影片':'聲音')+'（'+sizeMB+' MB）'+(recPartCount>1?'·第'+recPartCount+'段':'');
+  document.getElementById('recDownloads').appendChild(a);
+}
+
+function stopRecording(){
+  clearTimeout(recSplitID); recSplitID=null;
+  clearInterval(recTimerID); recTimerID=null;
+  const tEl=document.getElementById('recTimer'); if(tEl) tEl.classList.remove('visible');
+  recState='idle';
+  if(recMR && recMR.state!=='inactive'){ recMR.onstop=()=>finalizeSegment(); recMR.stop(); }
+  cleanupRecStreams();
+  recToggleStartBtns(false);
+  document.getElementById('recStopBtn').disabled=true;
+  recSetStatus('✅ 錄製完成，可預覽或下載','done');
+}
+
+function cleanupRecStreams(){
+  [recDisplayStream,recMicStream].forEach(s=>{ if(s) s.getTracks().forEach(t=>t.stop()); });
+  recDisplayStream=null; recMicStream=null;
+  if(recAudioCtx){ try{recAudioCtx.close();}catch(e){} recAudioCtx=null; }
 }
 </script>
 </body>
