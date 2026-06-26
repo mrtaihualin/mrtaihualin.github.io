@@ -696,7 +696,7 @@ function gdGetToken(forceConsent) {
     };
     // prompt '' = หลังกดอนุญาตครั้งแรกแล้ว Google จะจำไว้ ไม่เด้งจอขออนุญาตซ้ำ (ดึง token เงียบๆ)
     // forceConsent = true → บังคับเด้งจอขออนุญาตใหม่ (ใช้ตอน token จำสิทธิ์เก่าที่ยังไม่มี Calendar)
-    gdTokenClient.requestAccessToken({ prompt: forceConsent ? 'consent' : '' });
+    gdTokenClient.requestAccessToken({ prompt: forceConsent ? 'consent' : '', hint: 'mr.taihualin@gmail.com' });
   });
 }
 async function gdApi(path, opts) {
