@@ -457,10 +457,18 @@
     </p>
     <label class="settings-label">選擇課程方案</label>
     <div class="course-grid" id="slipCourseGrid"></div>
+    <div id="slipCurrencyWrap" style="display:none;margin-top:14px;">
+      <label class="settings-label">付款幣別</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="curBtn-NTD" onclick="selectSlipCurrency('NTD')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🇹🇼 NTD 台幣</button>
+        <button type="button" id="curBtn-THB" onclick="selectSlipCurrency('THB')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🇹🇭 THB 泰銖</button>
+      </div>
+    </div>
     <div class="pay-total-box" id="slipTotalBox">
       <div class="big" id="slipTotalText"></div>
       <div class="sub" id="slipCalcText"></div>
     </div>
+    <div id="slipBankBox" style="display:none;background:#f8f4ea;border:1px solid #e5d9b8;border-radius:10px;padding:12px 14px;margin-top:10px;font-family:'Noto Sans TC',sans-serif;font-size:0.84rem;line-height:1.75;color:var(--ink);"></div>
     <label class="settings-label" style="margin-top:12px;">匯款截圖 <span style="color:var(--amber);">*</span></label>
     <div class="slip-upload-area" id="slipUploadArea" onclick="document.getElementById('slipFileInput').click()">
       <div id="slipUploadPlaceholder" style="color:var(--ink-muted);font-size:0.88rem;font-family:'Noto Sans TC',sans-serif;">
@@ -926,11 +934,12 @@ async function addStudent() {
   if (error) { alert('新增失敗：' + error.message); return; }
   closeAddStudentModal();
   await refreshStudentList();
-  // 新增學生後自動建立 Drive 資料夾（學習內容／影片／收據）
+  // 新增學生後自動建立 Drive 資料夾（學習內容／影片／課表 & 收據）
   try {
     await gdGetStudentSubfolderId(name, '學習內容');
     await gdGetStudentSubfolderId(name, '影片');
-    await gdGetStudentSubfolderId(name, '收據');
+    var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
+    try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
   } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
 }
 
@@ -1075,9 +1084,11 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
-    '<button class="btn-open-note" onclick="openNotepad(\'' + t + '\')">📝 開啟課堂筆記</button>';
+    '<button class="btn-open-note" onclick="openNotepad(\'' + t + '\')">📝 開啟課堂筆記</button>' +
+    '<div id="stuInfo-' + t + '" style="margin-top:12px;"></div>';
 
   panel.classList.add('visible');
+  loadTeacherStudentInfo(token);
 
   // Auto-save to localStorage on input
   var editor = document.getElementById('note-' + t);
@@ -1160,9 +1171,60 @@ async function saveNote(token) {
   }
 }
 
+// 老師：頂部「快上完」提醒橫幅（一次掃全部學生，只用 2 個查詢）
+async function loadLowQuotaBanner() {
+  var el = document.getElementById('lowQuotaBanner');
+  if (!el) return;
+  try {
+    var pays = (await sb.from('classroom_payments').select('token,lessons,bonus_lessons,status').in('status', ['pending', 'done'])).data || [];
+    var atts = (await sb.from('classroom_attendance').select('token')).data || [];
+    var bought = {}, used = {};
+    pays.forEach(function(p) { bought[p.token] = (bought[p.token] || 0) + (p.lessons || 0) + (p.bonus_lessons || 0); });
+    atts.forEach(function(a) { used[a.token] = (used[a.token] || 0) + 1; });
+    var low = [];
+    Object.keys(bought).forEach(function(tk) {
+      var remain = bought[tk] - (used[tk] || 0);
+      if (remain <= 1) { var s = studentsCache[tk]; low.push((s ? s.name : tk) + '（剩 ' + (remain < 0 ? 0 : remain) + ' 堂）'); }
+    });
+    if (!low.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">⏰ 課程快上完提醒：' + low.join('、') + ' — 記得提醒續課</div>';
+  } catch (e) {}
+}
+
+// 老師：選到某學生時，顯示剩餘堂數 + 繳費記錄
+async function loadTeacherStudentInfo(token) {
+  var el = document.getElementById('stuInfo-' + token.replace(/'/g, ''));
+  if (!el) return;
+  try {
+    var pays = (await sb.from('classroom_payments').select('course_label,lessons,bonus_lessons,currency,total_amount,status,created_at').eq('token', token).order('created_at', { ascending: false })).data || [];
+    var bought = pays.filter(function(p) { return p.status === 'pending' || p.status === 'done'; }).reduce(function(s, p) { return s + (p.lessons || 0) + (p.bonus_lessons || 0); }, 0);
+    var used = ((await sb.from('classroom_attendance').select('lesson_date').eq('token', token)).data || []).length;
+    var remain = bought - used;
+    var quotaHtml = bought > 0
+      ? '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:8px 12px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + (remain <= 1 ? '#b45309' : 'var(--gold-deep)') + ';font-weight:700;">剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（已購 ' + bought + ' · 已上 ' + used + '）</span></div>'
+      : '';
+    var statusZh = { slip_submitted: '⏳ 待確認', pending: '✅ 已確認', done: '🧾 已開立收據', rejected: '❌ 未通過' };
+    var histHtml;
+    if (pays.length) {
+      histHtml = '<div style="font-weight:700;font-size:0.82rem;color:var(--ink);margin-bottom:2px;font-family:\'Noto Sans TC\',sans-serif;">📋 繳費記錄</div>' + pays.map(function(p) {
+        var d = p.created_at ? new Date(p.created_at) : null;
+        var ds = d ? (d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0')) : '';
+        return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.8rem;">' +
+          '<div><span style="font-weight:600;">' + (p.course_label || '-') + '</span><span style="color:var(--ink-muted);"> · ' + ds + ' · ' + (p.lessons || 0) + '堂' + (p.bonus_lessons ? '+' + p.bonus_lessons : '') + ' · ' + (p.currency || '') + ' ' + (p.total_amount || 0).toLocaleString() + '</span></div>' +
+          '<span style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + '</span>' +
+        '</div>';
+      }).join('');
+    } else {
+      histHtml = '<div style="color:var(--ink-muted);font-size:0.8rem;font-family:\'Noto Sans TC\',sans-serif;">尚無繳費記錄</div>';
+    }
+    el.innerHTML = quotaHtml + histHtml;
+  } catch (e) {}
+}
+
 async function renderTeacherView() {
   document.getElementById('studentNameDisplay').textContent = '👩‍🏫 教師管理頁面';
   document.getElementById('mainContainer').innerHTML =
+    '<div id="lowQuotaBanner"></div>' +
     '<div class="teacher-panel">' +
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
@@ -1175,6 +1237,7 @@ async function renderTeacherView() {
   await refreshStudentList();
   await loadPendingSlips();
   await loadTodaySchedule();
+  loadLowQuotaBanner();
   // auto-click "連接 Google Calendar" ถ้าเคย connect ไว้แล้ว (localStorage flag)
   if (localStorage.getItem('gdConnected')) {
     setTimeout(async function() {
@@ -1211,6 +1274,8 @@ function renderStudentView() {
       '<div class="student-hero-name">' + student.name + ' 同學</div>' +
       '<div class="student-hero-sub">歡迎回到課堂 ✨</div>' +
     '</div>' +
+    '<div id="quotaBanner"></div>' +
+    '<div id="receiptBtns"></div>' +
     '<div class="card">' +
       '<h2>📹 進入課堂</h2>' +
       '<a class="meet-btn" href="' + student.meet + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
@@ -1218,6 +1283,7 @@ function renderStudentView() {
     '</div>' +
     '<div class="card">' +
       '<h2>📅 我的課程記錄</h2>' +
+      '<div id="quotaSummary"></div>' +
       '<div id="scheduleList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
     '</div>' +
     '<div class="card">' +
@@ -1226,15 +1292,97 @@ function renderStudentView() {
       '<div id="driveFolderLink" style="margin-top:12px;"></div>' +
     '</div>' +
     '<div class="card">' +
-      '<h2>💰 繳費通知</h2>' +
+      '<h2>💰 繳費 & 收據</h2>' +
       '<div id="slipStatusMsg"></div>' +
       '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
-      '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
+      '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 選幣別 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
+      '<div id="payHistory" style="margin-top:14px;"></div>' +
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentSchedule(token);
   loadStudentFiles(token);
   loadStudentFolderLink(token);
+  loadStudentQuota(token);
+  loadStudentReceipts(token);
+  loadStudentPayments(token);
+}
+
+// 學生：剩餘堂數 + 課程起算日（接續上一輪）+ 快用完提醒
+async function loadStudentQuota(token) {
+  try {
+    var payRes = await sb.from('classroom_payments').select('lessons,bonus_lessons,status,start_note,created_at')
+      .eq('token', token).in('status', ['pending', 'done']);
+    var pays = payRes.data || [];
+    var totalBought = pays.reduce(function(s, p) { return s + (p.lessons || 0) + (p.bonus_lessons || 0); }, 0);
+    var attRes = await sb.from('classroom_attendance').select('lesson_date').eq('token', token);
+    var used = (attRes.data || []).length;
+    var remain = totalBought - used;
+    var sumEl = document.getElementById('quotaSummary');
+    if (totalBought > 0 && sumEl) {
+      var color = remain <= 1 ? '#b45309' : 'var(--gold-deep)';
+      sumEl.innerHTML = '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;color:' + color + ';font-weight:700;">剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（已購 ' + totalBought + ' · 已上 ' + used + '）</span></div>';
+    }
+    var banEl = document.getElementById('quotaBanner');
+    if (banEl && totalBought > 0 && remain <= 1) {
+      banEl.innerHTML = '<div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">⏰ 課程即將上完！目前剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂，記得提早續課喔～</div>';
+    }
+  } catch (e) {}
+}
+
+// 學生：收據下載按鈕（可按 X 關閉，記住已關閉）
+async function loadStudentReceipts(token) {
+  var el = document.getElementById('receiptBtns');
+  if (!el) return;
+  try {
+    var res = await sb.rpc('get_student_recordings', { p_token: token });
+    var data = res.data || [];
+    var receipts = data.filter(function(r) { return (r.name || '').indexOf('收據') !== -1; });
+    if (!receipts.length) { el.innerHTML = ''; return; }
+    var dismissed = {};
+    try { dismissed = JSON.parse(localStorage.getItem('dismissedReceipts_' + token) || '{}'); } catch (e) {}
+    var html = receipts.filter(function(r) { return !dismissed[r.url]; }).map(function(r) {
+      var safeUrl = (r.url || '').replace(/'/g, "\\'");
+      return '<div style="display:flex;align-items:center;gap:10px;background:#dcfce7;border:1px solid #86efac;border-radius:11px;padding:11px 14px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;">' +
+        '<span style="font-size:1.2rem;">🧾</span>' +
+        '<a href="' + r.url + '" target="_blank" rel="noopener" style="flex:1;color:#15803d;font-weight:700;font-size:0.88rem;text-decoration:none;">收據已開立，點此下載</a>' +
+        '<button onclick="dismissReceipt(\'' + token + '\',\'' + safeUrl + '\',this)" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.05rem;color:#15803d;opacity:0.6;padding:2px 6px;">✕</button>' +
+      '</div>';
+    }).join('');
+    el.innerHTML = html;
+  } catch (e) { el.innerHTML = ''; }
+}
+
+function dismissReceipt(token, url, btn) {
+  try {
+    var key = 'dismissedReceipts_' + token;
+    var dismissed = JSON.parse(localStorage.getItem(key) || '{}');
+    dismissed[url] = 1;
+    localStorage.setItem(key, JSON.stringify(dismissed));
+  } catch (e) {}
+  if (btn) { var row = btn.parentNode; if (row && row.parentNode) row.parentNode.removeChild(row); }
+}
+
+// 學生：繳費記錄列表
+async function loadStudentPayments(token) {
+  var el = document.getElementById('payHistory');
+  if (!el) return;
+  try {
+    var res = await sb.from('classroom_payments').select('course_label,lessons,bonus_lessons,currency,total_amount,status,created_at,receipt_no')
+      .eq('token', token).order('created_at', { ascending: false });
+    var data = res.data || [];
+    if (!data.length) { el.innerHTML = ''; return; }
+    var statusZh = { slip_submitted: '⏳ 待確認', pending: '✅ 已確認', done: '🧾 已開立收據', rejected: '❌ 未通過' };
+    var rows = data.map(function(p) {
+      var d = p.created_at ? new Date(p.created_at) : null;
+      var ds = d ? (d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0')) : '';
+      return '<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.83rem;">' +
+        '<div><div style="font-weight:600;color:var(--ink);">' + (p.course_label || '-') + '</div>' +
+          '<div style="color:var(--ink-muted);font-size:0.76rem;">' + ds + ' · ' + (p.lessons || 0) + '堂' + (p.bonus_lessons ? '+' + p.bonus_lessons : '') + ' · ' + (p.currency || '') + ' ' + (p.total_amount || 0).toLocaleString() + '</div></div>' +
+        '<div style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + '</div>' +
+      '</div>';
+    }).join('');
+    el.innerHTML = '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:4px;font-family:\'Noto Sans TC\',sans-serif;">📋 繳費記錄</div>' + rows;
+  } catch (e) { el.innerHTML = ''; }
 }
 
 async function loadStudentSchedule(token) {
@@ -1337,18 +1485,22 @@ function initRecording() {
 // ============================================================
 // SLIP SYSTEM (student-initiated payment)
 // ============================================================
-let slipToken = null, slipCourse = null, slipImageData = null;
+let slipToken = null, slipCourse = null, slipImageData = null, slipCurrency = null;
 let pendingSlipId = null;
 
 // — Student: open slip modal —
 function openSlipModal(token) {
-  slipToken = token; slipCourse = null; slipImageData = null;
+  slipToken = token; slipCourse = null; slipImageData = null; slipCurrency = null;
   document.getElementById('slipCourseGrid').innerHTML = COURSES.map(function(c) {
     return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipCourse(\'' + c.id + '\')">' +
       '<div class="c-name">' + c.label + '</div>' +
       '<div class="c-desc">' + c.desc + '</div>' +
     '</button>';
   }).join('');
+  document.getElementById('slipCurrencyWrap').style.display = 'none';
+  document.getElementById('slipBankBox').style.display = 'none';
+  document.getElementById('curBtn-NTD').style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
+  document.getElementById('curBtn-THB').style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
   document.getElementById('slipTotalBox').style.display = 'none';
   document.getElementById('slipPreviewImg').style.display = 'none';
   document.getElementById('slipUploadPlaceholder').style.display = '';
@@ -1363,16 +1515,39 @@ function selectSlipCourse(id) {
   document.querySelectorAll('.course-card').forEach(function(el) { el.classList.remove('selected'); });
   var el = document.getElementById('sc-' + id);
   if (el) el.classList.add('selected');
-  var c = COURSES.find(function(x) { return x.id === id; });
-  if (!c) return;
-  var box = document.getElementById('slipTotalBox');
-  if (c.lessons && c.priceTHB) {
-    box.style.display = 'block';
-    document.getElementById('slipTotalText').textContent = 'THB ' + (c.lessons * c.priceTHB).toLocaleString();
-    document.getElementById('slipCalcText').textContent = c.lessons + '堂 × THB ' + c.priceTHB + '/堂（標準價）';
+  document.getElementById('slipCurrencyWrap').style.display = 'block';
+  renderSlipTotalAndBank();
+}
+
+function selectSlipCurrency(cur) {
+  slipCurrency = cur;
+  var on  = 'flex:1;padding:9px;border-radius:9px;border:2px solid var(--gold-deep);background:#fdf6e3;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;font-weight:700;';
+  var off = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
+  document.getElementById('curBtn-NTD').style.cssText = cur === 'NTD' ? on : off;
+  document.getElementById('curBtn-THB').style.cssText = cur === 'THB' ? on : off;
+  renderSlipTotalAndBank();
+}
+
+function renderSlipTotalAndBank() {
+  var c = COURSES.find(function(x) { return x.id === slipCourse; });
+  var totalBox = document.getElementById('slipTotalBox');
+  var bankBox  = document.getElementById('slipBankBox');
+  if (!c || !slipCurrency) { totalBox.style.display = 'none'; bankBox.style.display = 'none'; return; }
+  var price = slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB;
+  totalBox.style.display = 'block';
+  if (c.lessons && price) {
+    document.getElementById('slipTotalText').textContent = slipCurrency + ' ' + (c.lessons * price).toLocaleString();
+    document.getElementById('slipCalcText').textContent  = c.lessons + '堂 × ' + slipCurrency + ' ' + price + '/堂' + (c.bonus ? '（贈 ' + c.bonus + ' 堂）' : '') + (c.note ? ' · ' + c.note : '');
   } else {
-    box.style.display = 'none';
+    document.getElementById('slipTotalText').textContent = slipCurrency + ' 金額請與老師確認';
+    document.getElementById('slipCalcText').textContent  = c.label;
   }
+  var b = BANK_INFO[slipCurrency];
+  var anyVal = b.lines.some(function(l) { return /[：:]\s*\S/.test(l); });
+  bankBox.style.display = 'block';
+  bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">' + b.title + '</div>'
+    + b.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
+    + (anyVal ? '' : '<div style="color:var(--amber);font-size:0.78rem;margin-top:6px;">（老師尚未填寫帳戶，請用 LINE 向老師索取匯款資訊）</div>');
 }
 
 function handleSlipImage(file) {
@@ -1403,22 +1578,26 @@ function closeSlipModal() {
 
 async function submitSlip() {
   if (!slipCourse) { alert('請先選擇課程'); return; }
+  if (!slipCurrency) { alert('請先選擇付款幣別'); return; }
   if (!slipImageData) { alert('請先上傳匯款截圖'); return; }
   var c = COURSES.find(function(x) { return x.id === slipCourse; }) || {};
   var lessons = c.lessons || 10;
+  var bonus = c.bonus || 0;
+  var price = (slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB) || 0;
   var note = document.getElementById('slipNoteInput').value.trim();
+  var studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return slipToken; } })();
   var btn = document.getElementById('slipSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
   var payload = {
     token: slipToken,
-    student_name: (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return slipToken; } })(),
+    student_name: studentName,
     course_id: slipCourse,
     course_label: c.label || slipCourse,
     lessons: lessons,
-    bonus_lessons: 0,
-    price_per: c.priceTHB || 800,
-    currency: 'THB',
-    total_amount: lessons * (c.priceTHB || 800),
+    bonus_lessons: bonus,
+    price_per: price,
+    currency: slipCurrency,
+    total_amount: lessons * price,
     note: note || null,
     slip_data: slipImageData,
     submitted_by: 'student',
@@ -1428,12 +1607,35 @@ async function submitSlip() {
   var res = await sb.from('classroom_payments').insert(payload);
   btn.disabled = false; btn.textContent = '📤 送出繳費通知';
   if (res.error) { alert('送出失敗：' + res.error.message); return; }
+  // 寄信通知老師（沿用全站既有的 Web3Forms，免後端）
+  notifyTeacherNewSlip({ name: studentName, course: c.label || slipCourse, lessons: lessons, bonus: bonus, currency: slipCurrency, total: lessons * price, note: note });
   closeSlipModal();
   // 顯示狀態於頁面，不用 alert
   var statusEl = document.getElementById('slipStatusMsg');
   if (statusEl) {
     statusEl.innerHTML = '<div style="background:#fef3c7;border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:#92400e;font-weight:600;margin-bottom:12px;">⏳ 已送出，等待老師確認<br><span style="font-weight:400;font-size:0.78rem;">' + (c.label || slipCourse) + '</span></div>';
   }
+}
+
+// 寄信通知老師有新的繳費通知（Web3Forms，與全站聯絡表單同一把 key）
+function notifyTeacherNewSlip(d) {
+  try {
+    var body = {
+      access_key: 'b3bfdb97-19dd-4910-bd15-89720be846c2',
+      subject: '💰 新繳費通知 — ' + (d.name || '學生'),
+      from_name: '線上教室系統',
+      message: '學生：' + (d.name || '-') + '\n課程：' + (d.course || '-')
+        + '\n堂數：' + (d.lessons || 0) + ' 堂' + (d.bonus ? '（贈 ' + d.bonus + ' 堂）' : '')
+        + '\n金額：' + (d.currency || '') + ' ' + (d.total || 0).toLocaleString()
+        + (d.note ? '\n備註：' + d.note : '')
+        + '\n\n請至老師頁「⏳ 待確認繳費」確認收款並開立收據。'
+    };
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body)
+    }).catch(function(){});
+  } catch (e) {}
 }
 
 // — Teacher: load pending slips —
@@ -1532,7 +1734,7 @@ async function generateAndUploadReceipt(p, v) {
     + '</table><hr style="margin-top:28px;border:none;border-top:1px solid #e5d9c0;">'
     + '<p style="color:#aaa;font-size:0.78rem;">泰華老師 · mrtaihualin.com</p></body></html>';
   const blob = new Blob([html], { type: 'text/html' });
-  const folderId = await gdGetStudentSubfolderId(name, '收據');
+  const folderId = await gdGetStudentSubfolderId(name, '課表 & 收據');
   const doc = await gdUploadSmall(blob, name + '_收據_' + receiptNo, 'application/vnd.google-apps.document', folderId);
   const link = doc.webViewLink || ('https://docs.google.com/document/d/' + doc.id + '/edit');
   try { await gdShareAnyone(doc.id); } catch (e) {}
@@ -1570,9 +1772,11 @@ async function approveSlip() {
   document.getElementById('slipApprovalModal').classList.remove('open');
   pendingSlipId = null;
   alert('✅ 已確認！' + (receipt
-    ? '\n收據已存到學生「收據」資料夾\n編號：' + receipt.receiptNo
+    ? '\n收據已存到學生「課表 & 收據」資料夾\n編號：' + receipt.receiptNo
     : '\n（收據檔產生失敗，請確認已用 Google 登入授權）'));
   await loadPendingSlips();
+  loadLowQuotaBanner();
+  if (slip.token) loadTeacherStudentInfo(slip.token);
 }
 
 async function rejectSlip(id) {
@@ -1588,13 +1792,32 @@ async function rejectSlip(id) {
 // ============================================================
 // PAYMENT SYSTEM
 // ============================================================
+// ⚠️ 老師填這裡：匯款帳戶（留空會顯示「待老師填寫」）。改完直接 push 即可
+// 注意：靜態網站 → 帳號會出現在網頁原始碼，任何人都看得到（與公開的聯絡 Email 同性質）
+const BANK_INFO = {
+  NTD: { title: '🇹🇼 台灣銀行帳戶（匯 NTD）', lines: [
+    '銀行：',        // 例：國泰世華銀行
+    '銀行代號：',    // 例：013
+    '帳號：',
+    '戶名：'
+  ] },
+  THB: { title: '🇹🇭 泰國銀行帳戶（匯 THB）', lines: [
+    'ธนาคาร 銀行：',
+    'เลขบัญชี 帳號：',
+    'ชื่อบัญชี 戶名：',
+    'PromptPay：'
+  ] }
+};
+
+// 課程方案：NTD 價依 page2.html#pricing（權威）；THB 沿用舊值，請老師確認
 const COURSES = [
-  { id:'basic', label:'入門 Basic',      lessons:10, priceTHB:800, priceNTD:700,  desc:'10堂 · 打好發音基礎' },
-  { id:'std1',  label:'進階 Standard ①', lessons:10, priceTHB:800, priceNTD:800,  desc:'10堂 · 客製主題會話' },
-  { id:'std2',  label:'進階 Standard ②', lessons:20, priceTHB:800, priceNTD:800,  desc:'20堂 · 動詞文法系統' },
-  { id:'std3',  label:'進階 Standard ③', lessons:30, priceTHB:800, priceNTD:800,  desc:'30堂 · 說得流利 ⭐' },
-  { id:'pair',  label:'雙人課',           lessons:10, priceTHB:null, priceNTD:1150, desc:'每人 · 兩人同學' },
-  { id:'custom',label:'自訂',             lessons:null, priceTHB:800, priceNTD:null, desc:'自行填寫堂數/單價' },
+  { id:'basic',    label:'入門 Basic',      lessons:10, bonus:0, priceNTD:700,  priceTHB:800,  note:'只限購買一期', desc:'10堂 · 打好發音基礎' },
+  { id:'std1',     label:'進階 Standard ①', lessons:10, bonus:0, priceNTD:800,  priceTHB:800,  desc:'10堂 · 客製主題會話' },
+  { id:'std2',     label:'進階 Standard ②', lessons:20, bonus:1, priceNTD:800,  priceTHB:800,  desc:'20堂 · 贈 1 堂' },
+  { id:'std3',     label:'進階 Standard ③', lessons:30, bonus:3, priceNTD:800,  priceTHB:800,  desc:'30堂 · 贈 3 堂 ⭐' },
+  { id:'pair_basic', label:'雙人 Basic',    lessons:10, bonus:0, priceNTD:1100, priceTHB:null, desc:'每人 · Basic 雙人共學' },
+  { id:'pair_std',   label:'雙人 Standard', lessons:10, bonus:0, priceNTD:1200, priceTHB:null, desc:'每人 · Standard 雙人共學' },
+  { id:'custom',   label:'自訂',            lessons:null, bonus:0, priceNTD:null, priceTHB:null, desc:'自行填寫堂數/單價' },
 ];
 
 let payToken = null;
@@ -1716,6 +1939,8 @@ async function recordAttendance(token) {
   if (error) { alert('記錄失敗：' + error.message); if (btn) btn.textContent = '✅ 今日上課'; return; }
   await loadTodaySchedule(); // refresh today section
   openAttendanceHistory(token); // open history so Lin can verify & undo
+  loadLowQuotaBanner();
+  loadTeacherStudentInfo(token);
 }
 
 async function loadTodaySchedule() {
