@@ -984,7 +984,7 @@ function recordingHTML() {
   // 錄製只透過學生清單的 ▶️ 開始上課＋錄影 啟動；此面板平時隱藏，開始錄影才顯示（含停止鈕／狀態／上傳結果）
   return '<div class="card" id="recCard" style="margin-top:16px;display:none;">' +
     '<h2>⏺ 課堂錄製</h2>' +
-    '<p class="rec-hint" style="color:var(--ink-muted);">🎥 錄製畫面＋師生雙聲。開始後請在跳出視窗選 Meet 分頁，並勾選「分享分頁音訊」。錄完會自動上傳到該學生的 Drive 資料夾。</p>' +
+    '<p class="rec-hint" style="color:var(--ink-muted);">🎥 錄製畫面＋師生雙聲。<b>步驟：①按下方開 Meet → ②切回「本分頁」→ ③按「🔴 開始錄影」→ ④在跳出視窗選 Meet 分頁並勾「分享分頁音訊」。</b>錄完會自動上傳到該學生的 Drive 資料夾。</p>' +
     '<div class="rec-card-gold">' +
       '<div class="rec-card-header">' +
         '<span class="rec-card-icon">⏺</span>' +
@@ -992,6 +992,7 @@ function recordingHTML() {
         '<span class="timer" id="recTimer"></span>' +
       '</div>' +
       '<div style="display:flex;gap:8px;">' +
+        '<button class="btn-start-class" id="recStartBtn" onclick="startRec(\'video\')" style="flex:1;display:none;">🔴 開始錄影</button>' +
         '<button class="btn-rec-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止</button>' +
       '</div>' +
       '<div class="status" id="recStatus"></div>' +
@@ -1865,7 +1866,7 @@ let recTimerID=null, recSplitID=null, recStartTime=0, recPart=0, recPartCount=0;
 
 function recFmtTime(sec){ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
 function recSetStatus(t,cls){ const e=document.getElementById('recStatus'); if(e){ e.textContent=t; e.className='status'+(cls?' '+cls:''); } }
-function recToggleStartBtns(disabled){ ['recVideoBtn'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=disabled; }); }
+function recToggleStartBtns(disabled){ ['recStartBtn'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=disabled; }); }
 
 // 按鈕直接呼叫（點擊即為使用者手勢，可呼叫 getDisplayMedia）
 let recActiveStudent=null;
@@ -1887,7 +1888,12 @@ function startClassRec(token){
   const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄製 — '+(s.name||token);
   if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
   if(s.meet) openTabReliably(s.meet);   // 先開 Meet 分頁（分享分頁音訊需分頁先存在）
-  startRec('video');                    // 再開始錄影
+  // ⚠️ 不可在這裡自動 startRec！Meet 剛開會搶走 focus → getDisplayMedia 的畫面分享會立刻結束（得到 00:00 空檔）
+  // 改為顯示「🔴 開始錄影」鈕，請老師切回本分頁後手動按（此時本分頁 focus = 分享可正常進行）
+  const startBtn=document.getElementById('recStartBtn');
+  if(startBtn){ startBtn.disabled=false; startBtn.style.display=''; }
+  const stopBtn=document.getElementById('recStopBtn'); if(stopBtn) stopBtn.disabled=true;
+  recSetStatus('👉 已開啟 Meet。請「切回本分頁」再按 🔴 開始錄影，並於跳出視窗選 Meet 分頁＋勾「分享分頁音訊」','');
 }
 
 // — 格式偵測（優先 mp4／m4a，相容 iPhone 播放）—
