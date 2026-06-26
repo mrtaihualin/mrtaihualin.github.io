@@ -1165,6 +1165,8 @@ async function renderTeacherView() {
   await refreshStudentList();
   await loadPendingSlips();
   await loadTodaySchedule();
+  // auto-connect Drive/Calendar silently (no popup if already authorized)
+  try { await gdGetToken(); } catch(e) {}
 }
 
 function renderStudentView() {
