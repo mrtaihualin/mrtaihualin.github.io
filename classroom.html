@@ -671,7 +671,8 @@ function gdGetToken() {
       gdTokenExp = Date.now() + (resp.expires_in || 3600) * 1000;
       resolve(gdToken);
     };
-    gdTokenClient.requestAccessToken({ prompt: gdToken ? '' : 'consent' });
+    // prompt '' = หลังกดอนุญาตครั้งแรกแล้ว Google จะจำไว้ ไม่เด้งจอขออนุญาตซ้ำ (ดึง token เงียบๆ)
+    gdTokenClient.requestAccessToken({ prompt: '' });
   });
 }
 async function gdApi(path, opts) {
@@ -742,19 +743,46 @@ async function gdGetStudentFolderId(studentName) {
   const rootId = await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
   return await gdEnsureFolder(studentName, rootId);
 }
-async function gdUploadSmall(blob, name, mimeType, folderId) {
+// 學生資料夾下再分子資料夾：學習內容（筆記）／影片（錄影）
+async function gdGetStudentSubfolderId(studentName, sub) {
+  const stuId = await gdGetStudentFolderId(studentName);
+  return await gdEnsureFolder(sub, stuId);
+}
+// 一鍵：為所有學生在 Drive 建立資料夾（由 App 建立，App 之後才能上傳；老師可把舊檔搬進去）
+async function createAllStudentFolders(btn) {
+  const entries = (typeof studentsCache !== 'undefined') ? Object.entries(studentsCache) : [];
+  if (!entries.length) { alert('目前沒有學生'); return; }
+  const orig = btn ? btn.textContent : '';
+  if (btn) btn.disabled = true;
+  let done = 0, fail = 0;
+  for (const pair of entries) {
+    const s = pair[1];
+    const nm = s.name || pair[0];
+    try {
+      await gdGetStudentSubfolderId(nm, '學習內容');   // 建學生資料夾 + 學習內容
+      await gdGetStudentSubfolderId(nm, '影片');        // + 影片
+      done++;
+    }
+    catch (e) { fail++; console.warn('建資料夾失敗：', nm, e); }
+    if (btn) btn.textContent = '📁 建立中… ' + (done + fail) + '/' + entries.length;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = orig; }
+  alert('完成！已建立 ' + done + ' 個學生資料夾' + (fail ? '（失敗 ' + fail + ' 個）' : '') +
+    '\n\n位置：Google Drive →「' + DRIVE_ROOT_FOLDER + '」\n可把舊的影片／筆記搬進對應學生資料夾。');
+}
+// targetMime = ใส่ 'application/vnd.google-apps.document' เพื่อให้ Drive แปลง HTML เป็น Google Doc (เปิดอ่าน/แก้ได้เลย ไม่โชว์โค้ดดิบ)
+async function gdUploadSmall(blob, name, targetMime, folderId) {
   const token = await gdGetToken();
-  const meta = JSON.stringify({ name: name, parents: [folderId] });
+  const meta = { name: name, parents: [folderId] };
+  if (targetMime) meta.mimeType = targetMime;
   const form = new FormData();
-  form.append('metadata', new Blob([meta], { type: 'application/json' }));
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
   form.append('file', blob);
-  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,webContentLink', {
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
     method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
   });
   if (!r.ok) throw new Error('上傳失敗 ' + r.status);
-  const fileData = await r.json();
-  await gdShareAnyone(fileData.id);
-  return fileData;
+  return await r.json();  // 老師私人筆記，不公開分享
 }
 
 async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
@@ -887,17 +915,17 @@ function previewStudent(token) {
 // RENDER
 // ============================================================
 function recordingHTML() {
-  return '<div class="card" style="margin-top:16px;">' +
+  // 錄製只透過學生清單的 ▶️ 開始上課＋錄影 啟動；此面板平時隱藏，開始錄影才顯示（含停止鈕／狀態／上傳結果）
+  return '<div class="card" id="recCard" style="margin-top:16px;display:none;">' +
     '<h2>⏺ 課堂錄製</h2>' +
     '<p class="rec-hint" style="color:var(--ink-muted);">🎥 錄製畫面＋師生雙聲。開始後請在跳出視窗選 Meet 分頁，並勾選「分享分頁音訊」。錄完會自動上傳到該學生的 Drive 資料夾。</p>' +
     '<div class="rec-card-gold">' +
       '<div class="rec-card-header">' +
         '<span class="rec-card-icon">⏺</span>' +
-        '<span class="rec-card-title" style="font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.95rem;color:var(--ink-soft);">課堂錄製</span>' +
+        '<span class="rec-card-title" id="recCardTitle" style="font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.95rem;color:var(--ink-soft);">課堂錄製</span>' +
         '<span class="timer" id="recTimer"></span>' +
       '</div>' +
       '<div style="display:flex;gap:8px;">' +
-        '<button class="btn-rec-start" id="recVideoBtn" onclick="startRecGeneric()">🎥 開始錄製</button>' +
         '<button class="btn-rec-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止</button>' +
       '</div>' +
       '<div class="status" id="recStatus"></div>' +
@@ -956,7 +984,6 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
       '<button class="btn-sm btn-sm-copy" id="copy-' + t + '" onclick="copyStudentLink(\'' + t + '\',\'copy-' + t + '\')">🔗 連結</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
-      '<a class="btn-sm btn-sm-meet" href="' + s.meet + '" target="_blank" rel="noopener">🎥 Meet</a>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
@@ -1018,7 +1045,7 @@ async function saveNote(token) {
   const s = studentsCache[token];
   const studentName = s ? s.name : token;
   const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  const fileName = studentName + '_筆記_' + today.replace(/\//g, '-') + '.html';
+  const fileName = studentName + '_筆記_' + today.replace(/\//g, '-');  // 不加 .html → 轉成 Google Doc
   const fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + studentName + ' 課堂筆記 ' + today + '</title>'
     + '<style>body{font-family:serif;max-width:740px;margin:40px auto;padding:0 24px;line-height:1.85;color:#1C1C1C;background:#FFFDF7;}'
     + 'h1{color:#8B6310;border-bottom:2px solid #C8973A;padding-bottom:8px;margin-bottom:4px;}'
@@ -1031,9 +1058,12 @@ async function saveNote(token) {
     + '</body></html>';
   const blob = new Blob([fullHtml], { type: 'text/html' });
   try {
-    const folderId = await gdGetStudentFolderId(studentName);
-    await gdUploadSmall(blob, fileName, 'text/html', folderId);
-    if (statusEl) { statusEl.textContent = '✅ 已儲存'; setTimeout(function(){ if(statusEl) statusEl.textContent=''; }, 3000); }
+    const folderId = await gdGetStudentSubfolderId(studentName, '學習內容');
+    const doc = await gdUploadSmall(blob, fileName, 'application/vnd.google-apps.document', folderId);
+    if (statusEl) {
+      const link = doc.webViewLink || '';
+      statusEl.innerHTML = '✅ 已儲存為 Google 文件' + (link ? '　<a href="' + link + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;">開啟</a>' : '');
+    }
   } catch(e) {
     if (statusEl) statusEl.textContent = '⚠️ ' + e.message;
   }
@@ -1046,6 +1076,7 @@ async function renderTeacherView() {
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
       '<button class="btn-add-student" onclick="openAddStudentModal()">➕ 新增學生</button>' +
+      '<button class="btn-add-student" style="background:#0f766e;margin-top:8px;" onclick="createAllStudentFolders(this)">📁 一鍵建立所有學生雲端資料夾</button>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
@@ -1716,12 +1747,21 @@ function startRec(method){ if(recState!=='recording') beginRecording(method); }
 // 一般錄影鈕：未綁定特定學生 → 清除綁定，避免自動上傳到上一位學生的資料夾
 function startRecGeneric(){ recActiveStudent=null; startRec('video'); }
 // 老師端：點某位學生 → 開該生 Meet + 開始錄影（recActiveStudent 供日後上傳到該生 Drive 資料夾使用）
+function openTabReliably(url){
+  // 用 <a> 觸發開新分頁（與可正常運作的 🎥 Meet 按鈕相同方式，避免 window.open 在本頁變空白頁）
+  const a=document.createElement('a');
+  a.href=url; a.target='_blank'; a.rel='noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+}
 function startClassRec(token){
   const s=(typeof studentsCache!=='undefined')?studentsCache[token]:null;
   if(!s){ alert('找不到學生資料'); return; }
   recActiveStudent=token;
-  if(s.meet) window.open(s.meet,'_blank','noopener');   // 先開 Meet 分頁（分享分頁音訊需分頁先存在）
-  startRec('video');                                    // 再開始錄影；若瀏覽器擋手勢，改按錄製卡片的 🎥 按鈕
+  const card=document.getElementById('recCard'); if(card) card.style.display='';   // 顯示錄製面板
+  const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄製 — '+(s.name||token);
+  if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
+  if(s.meet) openTabReliably(s.meet);   // 先開 Meet 分頁（分享分頁音訊需分頁先存在）
+  startRec('video');                    // 再開始錄影
 }
 
 // — 格式偵測（優先 mp4／m4a，相容 iPhone 播放）—
@@ -1841,9 +1881,8 @@ async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl
   const setMsg=(t)=>{ if(statusEl) statusEl.textContent=t; };
   try{
     setMsg('☁️ 連線 Google Drive…（首次會跳出 Google 授權）');
-    const rootId=await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
-    const folderName=(s.name||token)+'（'+token+'）';
-    const stuFolderId=await gdEnsureFolder(folderName, rootId);
+    // 影片 → mrtaihualin 課堂錄影 / 學生名 / 影片
+    const stuFolderId=await gdGetStudentSubfolderId(s.name||token, '影片');
     setMsg('☁️ 上傳中（'+sizeMB+' MB）…請勿關閉分頁');
     const up=await gdUpload(blob, fileName, stuFolderId);
     await gdShareAnyone(up.id);
