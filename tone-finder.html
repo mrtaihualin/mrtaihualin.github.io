@@ -3573,6 +3573,7 @@ function tfApplySessionBonus() {
   session.sessionScored = true;
   // ซิงก์ความก้าวหน้าขึ้น Supabase (ถ้าล็อกอิน) — LIN 2026-06-20
   try { if (window.TF_SYNC) window.TF_SYNC.push(); } catch (e) {}
+  try { if (window.TF_AUTH && window.TF_AUTH.syncAccount) window.TF_AUTH.syncAccount(); } catch (e) {}   // เฟส 2: sync ดาว/streak รวมขึ้นบัญชี
 }
 
 function act(fn) {

@@ -683,7 +683,9 @@
       return false;
     },
     showGate: showGate,
-    hideGate: hideGate
+    hideGate: hideGate,
+    // เฟส 2: sync บัญชีดาว/streak ขึ้น Supabase (เรียกจากหน้าเกมหลังเล่นจบ)
+    syncAccount: function () { try { if (currentUser && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) GAME_ACCOUNT.sync(sb, currentUser.id); } catch (e) {} }
   };
 
   // กด Esc → น้องมีนาเด้งถามก่อนปิด
@@ -699,6 +701,7 @@
       render();
       fetchProfile();
       if (currentUser && lastSession) saveSession(lastSession);   // คะแนนค้างจากก่อนล็อกอิน → บันทึกย้อนหลัง
+      try { if (currentUser && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) GAME_ACCOUNT.sync(sb, currentUser.id); } catch (e) {}   // เฟส 2: sync ดาว/streak ข้ามเครื่อง
     });
     sb.auth.onAuthStateChange(function (_event, session) {
       currentUser = (session && session.user) || null;
@@ -707,6 +710,7 @@
       render();
       fetchProfile();
       if (currentUser && lastSession) saveSession(lastSession);   // เพิ่งล็อกอิน (OTP/Google) → บันทึกคะแนนรอบที่เพิ่งเล่นขึ้นกระดาน
+      try { if (currentUser && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) GAME_ACCOUNT.sync(sb, currentUser.id); } catch (e) {}   // เฟส 2: เพิ่งล็อกอิน → ดึง/ดันดาวข้ามเครื่อง
     });
     // เฝ้าการเปิด/ปิด modal → ซ่อน/โชว์ปุ่ม 登入 ให้ถูก (กันทับปุ่มกากบาท) ครอบทุกวิธีปิด
     try {

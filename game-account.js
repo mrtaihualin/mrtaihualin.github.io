@@ -44,6 +44,28 @@
     starBadges: STAR_BADGES,
     earnedBadges: function () { var s = load().stars || 0; return STAR_BADGES.filter(function (b) { return s >= b.at; }); },
     // เผื่อย้ายข้อมูลเก่า: ถ้าบัญชียังว่าง แต่เกมมีดาวเดิมในเครื่อง → เก็บเข้าบัญชีครั้งเดียว
-    seedIfEmpty: function (oldStars) { var a = load(); if (!a.stars && oldStars > 0) { a.stars = oldStars; save(a); } return a.stars || 0; }
+    seedIfEmpty: function (oldStars) { var a = load(); if (!a.stars && oldStars > 0) { a.stars = oldStars; save(a); } return a.stars || 0; },
+
+    // ── เฟส 2: sync ขึ้น Supabase (ถาวร + ข้ามเครื่อง) เมื่อล็อกอิน — Lin 2026-06-27 ──
+    // merge แบบ "เอาค่ามากสุด" กันข้อมูลหายตอนสลับเครื่อง · ปลอดภัยถ้ายังไม่มีตาราง (no-op)
+    sync: function (client, userId) {
+      if (!client || !userId || !client.from) return;
+      try {
+        client.from('game_accounts').select('stars,streak,last_play').eq('user_id', userId).maybeSingle().then(function (r) {
+          var rem = (r && r.data) || {};
+          var la = load();
+          la.stars = Math.max(la.stars || 0, rem.stars || 0);
+          la.streak = Math.max(la.streak || 0, rem.streak || 0);
+          var lp = la.lastPlay || null;
+          if (rem.last_play && (!lp || rem.last_play > lp)) lp = rem.last_play;
+          if (lp) la.lastPlay = lp;
+          save(la);
+          client.from('game_accounts').upsert(
+            { user_id: userId, stars: la.stars, streak: la.streak, last_play: la.lastPlay || null, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id' }
+          ).then(function () {}, function () {});
+        }, function () {});
+      } catch (e) {}
+    }
   };
 })();
