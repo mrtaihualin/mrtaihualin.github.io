@@ -258,11 +258,31 @@
     explBtn.textContent = on ? '顯示說明' : '關閉說明';
     setTableNotes(on);
   }
+  /* ── ปุ่ม A+ ลอย (sync กับ bigBtn) ── */
+  var floatBtn = document.createElement('button');
+  floatBtn.id = 'btn-bigfont';
+  floatBtn.textContent = 'A＋';
+  floatBtn.style.cssText =
+    'position:fixed;top:14px;right:14px;z-index:9999;' +
+    'background:#4a6741;color:#fff;border:none;border-radius:8px;' +
+    'padding:6px 13px;font-size:15px;font-weight:600;cursor:pointer;' +
+    'box-shadow:0 2px 8px rgba(0,0,0,.18);font-family:inherit;';
+  document.body.appendChild(floatBtn);
+
   function applyBig(on) {
     document.body.classList.toggle('big-font', on);
     bigBtn.classList.toggle('active', on);
     bigBtn.textContent = on ? '正常字級' : '放大字級';
+    floatBtn.textContent = on ? 'A－' : 'A＋';
+    floatBtn.style.background = on ? '#8b5e3c' : '#4a6741';
   }
+
+  floatBtn.addEventListener('click', function () {
+    var on = !document.body.classList.contains('big-font');
+    applyBig(on);
+    lsSet('cui-big-font', on ? '1' : '0');
+    relayout();
+  });
 
   /* 還原已保存的偏好（換頁一致 + 載入後重排一次） */
   applyTrans(lsGet('cui-hide-tr') === '1');

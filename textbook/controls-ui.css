@@ -163,13 +163,13 @@ body.big-font .adj-th,
 body.big-font .realex-th,
 body.big-font .g-pattern,
 body.big-font .compare-example .tsent {
-  font-size: 25px !important;
+  font-size: 32px !important;
 }
-/* 中文對照／拼義行 → 對齊補充說明字級 */
+/* 中文對照／拼義行 */
 body.big-font [class$="-zh"],
 body.big-font [class~="zh"],
 body.big-font .gloss {
-  font-size: 18.5px !important;
+  font-size: 24px !important;
 }
 /* 補充說明／釋義／語意說明 */
 body.big-font .note,
@@ -187,16 +187,18 @@ body.big-font .time-mean,
 body.big-font .flow-desc,
 body.big-font .flow-state,
 body.big-font .sec-sub {
-  font-size: 19px !important;
+  font-size: 24px !important;
 }
 /* 拼音行 */
-body.big-font .roman-line { font-size: 16.5px !important; }
+body.big-font .roman-line { font-size: 21px !important; }
 /* 段落標題 */
-body.big-font .sec-title { font-size: 27px !important; }
+body.big-font .sec-title { font-size: 34px !important; }
 /* 大標題關鍵詞也放大 */
 body.big-font .time-kw,
 body.big-font .p-kw,
-body.big-font .compare-kw { font-size: 30px !important; }
+body.big-font .compare-kw { font-size: 38px !important; }
+/* body ฐาน */
+body.big-font { font-size: 22px; }
 
 @media (max-width: 640px) {
   .controls-bar {
