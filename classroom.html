@@ -504,6 +504,8 @@ window.SUPABASE_CONFIG = {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Google Identity Services（課堂錄影自動上傳 Drive 用）-->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 // ============================================================
 // SUPABASE + STUDENT DATA
@@ -522,6 +524,90 @@ async function fetchStudents() {
   if (error) { console.error(error); return; }
   studentsCache = {};
   (data || []).forEach(r => { studentsCache[r.token] = { name: r.name, meet: r.meet }; });
+}
+
+// ============================================================
+// GOOGLE DRIVE 自動上傳（課堂錄影 → 各學生資料夾）
+// drive.file scope：App 只看得到自己建立的檔案/資料夾
+// ============================================================
+const GOOGLE_CLIENT_ID = '912926837729-j8n8mojmrmngpha68pbasv9qslvgtvrn.apps.googleusercontent.com';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_ROOT_FOLDER = 'mrtaihualin 課堂錄影';
+let gdToken = null, gdTokenExp = 0, gdTokenClient = null;
+
+function gdInit() {
+  if (gdTokenClient) return true;
+  if (!(window.google && google.accounts && google.accounts.oauth2)) return false;
+  gdTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPE, callback: () => {}
+  });
+  return true;
+}
+function gdGetToken() {
+  return new Promise((resolve, reject) => {
+    if (!gdInit()) { reject(new Error('Google 登入元件尚未載入，請稍候再試')); return; }
+    if (gdToken && Date.now() < gdTokenExp - 60000) { resolve(gdToken); return; }
+    gdTokenClient.callback = (resp) => {
+      if (resp.error) { reject(new Error('Google 授權失敗：' + resp.error)); return; }
+      gdToken = resp.access_token;
+      gdTokenExp = Date.now() + (resp.expires_in || 3600) * 1000;
+      resolve(gdToken);
+    };
+    gdTokenClient.requestAccessToken({ prompt: gdToken ? '' : 'consent' });
+  });
+}
+async function gdApi(path, opts) {
+  const token = await gdGetToken();
+  const headers = Object.assign({ Authorization: 'Bearer ' + token }, (opts && opts.headers) || {});
+  const r = await fetch('https://www.googleapis.com/' + path, Object.assign({}, opts, { headers }));
+  if (!r.ok) throw new Error('Drive API ' + r.status + '：' + (await r.text()).slice(0, 200));
+  return r.json();
+}
+async function gdFindFolder(name, parentId) {
+  let q = "mimeType='application/vnd.google-apps.folder' and trashed=false and name='" + name.replace(/'/g, "\\'") + "'";
+  if (parentId) q += " and '" + parentId + "' in parents";
+  const res = await gdApi('drive/v3/files?spaces=drive&fields=files(id)&q=' + encodeURIComponent(q), { method: 'GET' });
+  return res.files && res.files[0] ? res.files[0].id : null;
+}
+async function gdEnsureFolder(name, parentId) {
+  const found = await gdFindFolder(name, parentId);
+  if (found) return found;
+  const body = { name, mimeType: 'application/vnd.google-apps.folder' };
+  if (parentId) body.parents = [parentId];
+  const res = await gdApi('drive/v3/files?fields=id', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  return res.id;
+}
+async function gdUpload(blob, name, parentId) {
+  const token = await gdGetToken();
+  const init = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,webViewLink', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      'Content-Type': 'application/json; charset=UTF-8',
+      'X-Upload-Content-Type': blob.type || 'video/mp4'
+    },
+    body: JSON.stringify({ name, parents: [parentId] })
+  });
+  if (!init.ok) throw new Error('上傳啟動失敗 ' + init.status);
+  const session = init.headers.get('Location');
+  if (!session) throw new Error('取不到上傳工作階段');
+  const put = await fetch(session, { method: 'PUT', headers: { 'Content-Type': blob.type || 'video/mp4' }, body: blob });
+  if (!(put.status === 200 || put.status === 201)) throw new Error('上傳失敗 ' + put.status);
+  return put.json();
+}
+async function gdShareAnyone(fileId) {
+  await gdApi('drive/v3/files/' + fileId + '/permissions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: 'reader', type: 'anyone' })
+  });
+}
+async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
+  const { error } = await sb.from('classroom_recordings').insert({
+    token, name, file_id: fileId, url, size_mb: sizeMB, part
+  });
+  if (error) console.warn('儲存錄影連結失敗：', error.message);
 }
 
 async function refreshStudentList() {
@@ -657,7 +743,7 @@ function recordingHTML() {
         '<span class="timer" id="recTimer"></span>' +
       '</div>' +
       '<div class="rec-card-btns">' +
-        '<button class="btn-record" id="recVideoBtn" onclick="startRec(\'video\')">🎥 錄影片（畫面＋雙人）</button>' +
+        '<button class="btn-record" id="recVideoBtn" onclick="startRecGeneric()">🎥 錄影片（畫面＋雙人）</button>' +
         '<button class="btn-record btn-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止</button>' +
       '</div>' +
       '<div class="status" id="recStatus"></div>' +
@@ -749,9 +835,31 @@ function renderStudentView() {
       '<div id="slipStatusMsg"></div>' +
       '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
       '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
+    '</div>' +
+    // Recording replay card（有錄影才顯示）
+    '<div class="card" id="recReplayCard" style="display:none;">' +
+      '<h2>🎬 課堂錄影回放</h2>' +
+      '<div id="recReplayList"></div>' +
     '</div>';
   // 學生頁不提供錄製功能（錄製僅在老師頁）
   checkStudentSlipStatus(token);
+  loadStudentRecordings(token);
+}
+
+async function loadStudentRecordings(token){
+  if(!token) return;
+  // อ่านผ่าน RPC (ต้องรู้ token ถึงดึงได้) — anon อ่านตารางตรงๆ ไม่ได้ กันกวาดลิงก์ทั้งหมด
+  const { data, error } = await sb.rpc('get_student_recordings', { p_token: token });
+  if(error || !data || !data.length) return;
+  const card=document.getElementById('recReplayCard');
+  const list=document.getElementById('recReplayList');
+  if(!card||!list) return;
+  list.innerHTML=data.map(function(r){
+    var d=r.created_at? new Date(r.created_at).toLocaleString('zh-TW',{dateStyle:'medium',timeStyle:'short'}) : '';
+    var sz=r.size_mb? ('（'+r.size_mb+' MB）') : '';
+    return '<a class="meet-btn" style="margin-bottom:8px;" href="'+r.url+'" target="_blank" rel="noopener">▶️ '+d+' 的課堂錄影 '+sz+'</a>';
+  }).join('');
+  card.style.display='';
 }
 
 // ============================================================
@@ -1244,6 +1352,8 @@ function recToggleStartBtns(disabled){ ['recVideoBtn'].forEach(id=>{ const b=doc
 // 按鈕直接呼叫（點擊即為使用者手勢，可呼叫 getDisplayMedia）
 let recActiveStudent=null;
 function startRec(method){ if(recState!=='recording') beginRecording(method); }
+// 一般錄影鈕：未綁定特定學生 → 清除綁定，避免自動上傳到上一位學生的資料夾
+function startRecGeneric(){ recActiveStudent=null; startRec('video'); }
 // 老師端：點某位學生 → 開該生 Meet + 開始錄影（recActiveStudent 供日後上傳到該生 Drive 資料夾使用）
 function startClassRec(token){
   const s=(typeof studentsCache!=='undefined')?studentsCache[token]:null;
@@ -1355,6 +1465,33 @@ function finalizeSegment(){
   a.style.cssText='width:100%;justify-content:center;margin-top:8px;display:flex;';
   a.textContent='⬇ 下載'+(isVideo?'影片':'聲音')+'（'+sizeMB+' MB）'+(recPartCount>1?'·第'+recPartCount+'段':'');
   document.getElementById('recDownloads').appendChild(a);
+  // 若此次錄影綁定了學生 → 自動上傳到該生的 Google Drive 資料夾
+  if(recActiveStudent){
+    const upRow=document.createElement('div');
+    upRow.style.cssText='font-size:0.8rem;color:var(--ink-muted);margin-top:6px;font-family:\'Noto Sans TC\',sans-serif;';
+    upRow.textContent='☁️ 準備上傳到雲端…';
+    document.getElementById('recDownloads').appendChild(upRow);
+    autoUploadRecording(blob, name, recActiveStudent, sizeMB, recPartCount, upRow);
+  }
+}
+
+async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl){
+  const s=(typeof studentsCache!=='undefined' && studentsCache[token])?studentsCache[token]:{name:token};
+  const setMsg=(t)=>{ if(statusEl) statusEl.textContent=t; };
+  try{
+    setMsg('☁️ 連線 Google Drive…（首次會跳出 Google 授權）');
+    const rootId=await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
+    const folderName=(s.name||token)+'（'+token+'）';
+    const stuFolderId=await gdEnsureFolder(folderName, rootId);
+    setMsg('☁️ 上傳中（'+sizeMB+' MB）…請勿關閉分頁');
+    const up=await gdUpload(blob, fileName, stuFolderId);
+    await gdShareAnyone(up.id);
+    const link=up.webViewLink||('https://drive.google.com/file/d/'+up.id+'/view');
+    await saveRecordingLink(token, s.name||token, up.id, link, sizeMB, part);
+    if(statusEl) statusEl.innerHTML='✅ 已上傳到「'+(s.name||token)+'」雲端資料夾　<a href="'+link+'" target="_blank" rel="noopener" style="color:var(--amber-dark);font-weight:700;">開啟</a>';
+  }catch(err){
+    setMsg('⚠️ 自動上傳失敗：'+(err.message||err)+'（已保留上方下載按鈕，可手動存檔）');
+  }
 }
 
 function stopRecording(){

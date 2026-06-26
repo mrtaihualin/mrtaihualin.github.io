@@ -55,6 +55,14 @@
 .word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px;}
 
 /* ── Slot row ── */
+.syl-strip{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:2px 0 8px;}
+.syl-chip{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 12px;border-radius:12px;border:2px solid #e3d4b0;background:#fffdf7;font-family:'Sarabun',sans-serif;min-width:46px;}
+.syl-chip .syl-th{font-size:22px;font-weight:700;color:#8a7a55;line-height:1.15;}
+.syl-chip .syl-n{font-size:10px;color:#bbb;font-family:'Noto Sans TC',sans-serif;}
+.syl-chip.cur{border-color:#e8a020;background:#fff3d8;}
+.syl-chip.cur .syl-th{color:#3a2a0a;}
+.syl-chip.done{border-color:#9ccc65;background:#eef7e3;}
+.syl-chip.done .syl-th{color:#3b6d11;}
 .slot-row{width:100%;display:flex;gap:8px;justify-content:center;margin:6px 0 2px;flex-wrap:wrap;}
 .slot-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:60px;}
 .slot-label{font-family:'Noto Sans TC',sans-serif;font-size:10px;color:#a08050;letter-spacing:.5px;}
@@ -150,6 +158,8 @@
 .rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
 
 .btn-row{display:flex;gap:7px;justify-content:center;width:100%;margin-top:12px;flex-wrap:wrap;}
+/* ปุ่มแอ็คชันในเกม: ลอยติดล่างจอเสมอ (เหนือแถบเมนูล่าง) กดง่าย ไม่ต้องเลื่อนหา */
+#game .btn-row{position:sticky;bottom:calc(46px + env(safe-area-inset-bottom,0));z-index:6;background:#fff;padding:9px 6px;border-radius:14px;box-shadow:0 -6px 14px rgba(255,253,247,.96);margin-top:8px;}
 .btn{padding:10px 18px;border-radius:999px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:transform .1s;}
 .btn:active{transform:scale(.96);}
 .btn-primary  {background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
@@ -268,6 +278,9 @@
     <div class="word-th" id="wth">—</div>
     <div class="word-zh" id="wzh"></div>
   </div>
+
+  <!-- แถบพยางค์ (中級 หลายพยางค์) — โชว์เฉพาะคำที่มีหลายพยางค์ -->
+  <div class="syl-strip" id="syl-strip" style="display:none"></div>
 
   <!-- Slot row (ทั้ง 初 และ 中) — ลำดับตามการเขียนจริง: พยัญชนะ → วรรณยุกต์ → สระ → ตัวสะกด -->
   <div class="slot-row" id="slot-row">
@@ -511,7 +524,85 @@ var WORDS=[
   {th:'ปลา', zh:'魚',   en:'bplaa', cons:'ป', vowel:'อา',  cluster:'ล',            tone_name:'สามัญ'},
   {th:'อย่า',zh:'別',   en:'yàa',   cons:'ย', vowel:'อา',  tone:'่', lead:'อ',     tone_name:'เอก'},
   {th:'ร้าน',zh:'店',   en:'ráan',  cons:'ร', vowel:'อา',  final:'น', tone:'้',    tone_name:'ตรี'},
-  {th:'ส้ม', zh:'橘子', en:'sôm',   cons:'ส', vowel:'โอะ', final:'ม', tone:'้',    tone_name:'โท'}
+  {th:'ส้ม', zh:'橘子', en:'sôm',   cons:'ส', vowel:'โอะ', final:'ม', tone:'้',    tone_name:'โท'},
+
+  // ───── 中級 หลายพยางค์ (เล่นทีละพยางค์) · เสียงวรรณยุกต์คำนวณตามกฎ — รอ Lin ตรวจคำทีเดียว ─────
+  {th:'อาหาร', zh:'食物', en:'aa-hǎan', level:'中', syls:[
+    {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา'},
+    {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาร'}
+  ]},
+  {th:'โรงแรม', zh:'飯店', en:'roong-raem', level:'中', syls:[
+    {cons:'ร', vowel:'โอ', final:'ง', tone_name:'สามัญ', th:'โรง'},
+    {cons:'ร', vowel:'แอ', final:'ม', tone_name:'สามัญ', th:'แรม'}
+  ]},
+  {th:'เมนู', zh:'菜單', en:'mee-nuu', level:'中', syls:[
+    {cons:'ม', vowel:'เอ', tone_name:'สามัญ', th:'เม'},
+    {cons:'น', vowel:'อู', tone_name:'สามัญ', th:'นู'}
+  ]},
+  {th:'กาแฟ', zh:'咖啡', en:'gaa-fae', level:'中', syls:[
+    {cons:'ก', vowel:'อา', tone_name:'สามัญ', th:'กา'},
+    {cons:'ฟ', vowel:'แอ', tone_name:'สามัญ', th:'แฟ'}
+  ]},
+  {th:'แผนที่', zh:'地圖', en:'phǎen-thîi', level:'中', syls:[
+    {cons:'ผ', vowel:'แอ', final:'น', tone_name:'จัตวา', th:'แผน'},
+    {cons:'ท', vowel:'อี', tone:'่', tone_name:'โท', th:'ที่'}
+  ]},
+  {th:'ทางออก', zh:'出口', en:'thaang-òk', level:'中', syls:[
+    {cons:'ท', vowel:'อา', final:'ง', tone_name:'สามัญ', th:'ทาง'},
+    {cons:'อ', vowel:'ออ', final:'ก', tone_name:'เอก', th:'ออก'}
+  ]},
+  {th:'ราคา', zh:'價格', en:'raa-khaa', level:'中', syls:[
+    {cons:'ร', vowel:'อา', tone_name:'สามัญ', th:'รา'},
+    {cons:'ค', vowel:'อา', tone_name:'สามัญ', th:'คา'}
+  ]},
+  {th:'เวลา', zh:'時間', en:'wee-laa', level:'中', syls:[
+    {cons:'ว', vowel:'เอ', tone_name:'สามัญ', th:'เว'},
+    {cons:'ล', vowel:'อา', tone_name:'สามัญ', th:'ลา'}
+  ]},
+  {th:'ภาษา', zh:'語言', en:'phaa-sǎa', level:'中', syls:[
+    {cons:'ภ', vowel:'อา', tone_name:'สามัญ', th:'ภา'},
+    {cons:'ษ', vowel:'อา', tone_name:'จัตวา', th:'ษา'}
+  ]},
+  {th:'มะนาว', zh:'檸檬', en:'má-naao', level:'中', syls:[
+    {cons:'ม', vowel:'อะ', tone_name:'ตรี', th:'มะ'},
+    {cons:'น', vowel:'อา', final:'ว', tone_name:'สามัญ', th:'นาว'}
+  ]},
+  {th:'ประตู', zh:'門', en:'bprà-dtuu', level:'中', syls:[
+    {cons:'ป', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'ประ'},
+    {cons:'ต', vowel:'อู', tone_name:'สามัญ', th:'ตู'}
+  ]},
+  {th:'กระเป๋า', zh:'包包', en:'grà-bpǎo', level:'中', syls:[
+    {cons:'ก', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'กระ'},
+    {cons:'ป', vowel:'เอา', tone:'๋', tone_name:'จัตวา', th:'เป๋า'}
+  ]},
+  {th:'ดอกไม้', zh:'花', en:'dòok-máai', level:'中', syls:[
+    {cons:'ด', vowel:'ออ', final:'ก', tone_name:'เอก', th:'ดอก'},
+    {cons:'ม', vowel:'ไอ', tone:'้', tone_name:'ตรี', th:'ไม้'}
+  ]},
+  {th:'ห้องน้ำ', zh:'洗手間', en:'hông-náam', level:'中', syls:[
+    {cons:'ห', vowel:'ออ', tone:'้', final:'ง', tone_name:'โท', th:'ห้อง'},
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'}
+  ]},
+  {th:'ขอบคุณ', zh:'謝謝', en:'khòp-khun', level:'中', syls:[
+    {cons:'ข', vowel:'ออ', final:'บ', tone_name:'เอก', th:'ขอบ'},
+    {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุณ'}
+  ]},
+  {th:'น้ำแข็ง', zh:'冰塊', en:'náam-khǎeng', level:'中', syls:[
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'},
+    {cons:'ข', vowel:'แอ็', final:'ง', tone_name:'จัตวา', th:'แข็ง'}
+  ]},
+  {th:'หนังสือ', zh:'書', en:'nǎng-sʉ̌ʉ', level:'中', syls:[
+    {cons:'น', lead:'ห', vowel:'อั', final:'ง', tone_name:'จัตวา', th:'หนัง'},
+    {cons:'ส', vowel:'อื', tone_name:'จัตวา', th:'สือ'}
+  ]},
+  {th:'เครื่องบิน', zh:'飛機', en:'khrʉ̂ang-bin', level:'中', syls:[
+    {cons:'ค', cluster:'ร', vowel:'เอือ', tone:'่', final:'ง', tone_name:'โท', th:'เครื่อง'},
+    {cons:'บ', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'บิน'}
+  ]},
+  {th:'สบาย', zh:'舒服', en:'sà-baai', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', tone_name:'เอก', th:'สะ'},
+    {cons:'บ', vowel:'อา', final:'ย', tone_name:'สามัญ', th:'บาย'}
+  ]}
 ];
 
 var BONUS_TONES=[
@@ -559,7 +650,11 @@ var REVIEW_MS=7*24*60*60*1000; // 7 วัน
 var rememberStep=0,rememberTimer=null;
 var totalStars=0,totalBadges=0;
 var W=null;
+var WORD=null,sylList=[],sylIdx=0,wordHadWrong=false,wordFailed=false; // 中級 หลายพยางค์
 var optTypes={};
+var optTiles=[],correctVal={}; // ระบบไทล์ผูกช่อง (กันบั๊ก "ค่าซ้ำข้ามช่อง" เช่น อ+ออ)
+function tileById(id){for(var i=0;i<optTiles.length;i++)if(optTiles[i].id===id)return optTiles[i];return null;}
+function allSlotsFilled(){return comps.every(function(c){return slotFills[c]!=null;});}
 var slotFills={};
 var bonusAnswered=false;
 var selectedBonus=null;  // tone name user picked before 檢查
@@ -627,15 +722,18 @@ function setLevel(lv){
 function initGame(){
   loadSave();
   var now=Date.now();
-  var pool=WORDS.map(function(_,i){return i;}).filter(function(i){
+  // กรองตามระดับ: 中 = คำหลายพยางค์ (มี syls) · 初 = พยางค์เดียว
+  var inLevel=function(i){return curLevel==='中'?!!WORDS[i].syls:!WORDS[i].syls;};
+  var allIdx=WORDS.map(function(_,i){return i;}).filter(inLevel);
+  var pool=allIdx.filter(function(i){
     if(masteredSet[i])return false;                          // เชี่ยวชาญแล้ว
     if(reviewDates[i]&&reviewDates[i]>now)return false;     // ยังอยู่ใน cooldown 7 วัน
     return true;
   });
   // ถ้าไม่มีคำพร้อม → เปิด cooldown words ก่อน (ยกเว้น mastered)
-  if(pool.length===0)pool=WORDS.map(function(_,i){return i;}).filter(function(i){return !masteredSet[i];});
-  // ถ้า mastered ทั้งหมด → reset
-  if(pool.length===0){masteredSet={};correctCountMap={};reviewDates={};doSave();pool=WORDS.map(function(_,i){return i;});}
+  if(pool.length===0)pool=allIdx.filter(function(i){return !masteredSet[i];});
+  // ถ้า mastered ทั้งหมดในระดับนี้ → reset เฉพาะระดับนี้
+  if(pool.length===0){allIdx.forEach(function(i){delete masteredSet[i];delete correctCountMap[i];delete reviewDates[i];});doSave();pool=allIdx.slice();}
   roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
   cur=0;okC=0;badC=0;streak=0;roundScore=0;
   document.getElementById('end').style.display='none';
@@ -644,12 +742,42 @@ function initGame(){
   loadWord();
 }
 
+// แตกคำเป็นอาเรย์พยางค์ (พยางค์เดียว = อาเรย์ 1 ตัว)
+function buildSyls(w){
+  if(w.syls&&w.syls.length)return w.syls.map(function(s){return {th:s.th,cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name};});
+  return [{th:w.th,cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name}];
+}
+// แถบบอกพยางค์ (โชว์เฉพาะคำหลายพยางค์)
+function renderSylStrip(){
+  var strip=document.getElementById('syl-strip');
+  if(!strip)return;
+  if(sylList.length<=1){strip.style.display='none';strip.innerHTML='';return;}
+  strip.style.display='flex';strip.innerHTML='';
+  sylList.forEach(function(s,i){
+    var done=(i<sylIdx)||(i===sylIdx&&checked);
+    var c=document.createElement('div');
+    c.className='syl-chip'+(done?' done':(i===sylIdx?' cur':''));
+    c.innerHTML='<span class="syl-th">'+s.th+'</span><span class="syl-n">'+(i+1)+'/'+sylList.length+'</span>';
+    strip.appendChild(c);
+  });
+}
 function loadWord(){
-  checked=false;wrongCount=0;picks=[];bonusAnswered=false;selectedBonus=null;
   rememberStep=0;clearTimeout(rememberTimer);
   var rb=document.getElementById('btn-remember');
   if(rb){rb.textContent='已記住 ✓';rb.style.cssText='';}
-  W=WORDS[roundQueue[cur]];
+  WORD=WORDS[roundQueue[cur]];
+  sylList=buildSyls(WORD);
+  sylIdx=0;wordHadWrong=false;wordFailed=false;
+  document.getElementById('qn').textContent=cur+1;
+  document.getElementById('wth').textContent=WORD.th;
+  document.getElementById('wzh').textContent=WORD.zh;
+  loadSyl();
+}
+// โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
+function loadSyl(){
+  var SY=sylList[sylIdx];
+  W={th:SY.th,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  checked=false;wrongCount=0;picks=[];bonusAnswered=false;selectedBonus=null;
   comps=['cons','vowel'];
   if(W.final)comps.push('final');
   if(W.tone) comps.push('tone');
@@ -666,12 +794,9 @@ function loadWord(){
   document.getElementById('banner').className='result-banner';
   document.getElementById('reveal').className='reveal';
   document.getElementById('bonus-result').textContent='';
-  document.getElementById('bonus-result').textContent='';
-  document.getElementById('qn').textContent=cur+1;
   document.getElementById('ok').textContent=okC;
   document.getElementById('bad').textContent=badC;
-  document.getElementById('wth').textContent=W.th;
-  document.getElementById('wzh').textContent=W.zh;
+  renderSylStrip();
   setGameBtns('normal');
   updateCombo();
 
@@ -689,41 +814,38 @@ function loadWord(){
   });
 
   // build optTypes + options
-  optTypes={};correctSet=[];
-  var allOpts=[];
+  // สร้างตัวเลือกเป็น "ไทล์ผูกช่อง" — แต่ละไทล์รู้ว่าเป็นของช่องไหน → ค่าซ้ำข้ามช่องได้ (อ + ออ)
+  optTiles=[];correctVal={};
   comps.forEach(function(comp){
     var ans,groups,pool2,ex=null;
     if     (comp==='cons' ){ans=W.cons;  groups=CONS_GROUPS;  pool2=CP; ex=W.lead||null;}
     else if(comp==='vowel'){ans=W.vowel; groups=VOWEL_GROUPS; pool2=VP;}
     else if(comp==='final'){ans=W.final; groups=FINAL_GROUPS; pool2=FP;}
     else                   {ans=W.tone;  groups=[TONE_POOL];  pool2=TONE_POOL;}
+    correctVal[comp]=dispOpt(comp,ans);
     var raw=buildOpts(ans,groups,pool2,oc[comp],ex);
-    var cd=dispOpt(comp,ans);
-    correctSet.push(cd);
-    raw.forEach(function(o){var dv=dispOpt(comp,o);allOpts.push(dv);if(!optTypes[dv])optTypes[dv]=comp;});
-    optTypes[cd]=comp; // correct always wins
+    raw.forEach(function(o){optTiles.push({type:comp,val:dispOpt(comp,o)});});
   });
+  optTiles=shuffle(optTiles);
+  optTiles.forEach(function(t,i){t.id=i;});
 
-  var seen={},uniq=[];
-  allOpts.forEach(function(v){if(!seen[v]){seen[v]=1;uniq.push(v);}});
-  correctSet.forEach(function(v){if(!seen[v]){seen[v]=1;uniq.push(v);}});
-  uniq=shuffle(uniq);
-
-  renderOptions(uniq);
+  renderOptions(optTiles);
   showBonus();   // show tone-guess section immediately on load
   refreshUI();
 }
 
 // ─── Render options ───
-function renderOptions(vals){
+function renderOptions(tiles){
   var pool=document.getElementById('pool');
   pool.innerHTML='';
-  vals.forEach(function(v,i){
+  tiles.forEach(function(t,i){
     var el=document.createElement('div');
     el.className='opt';
-    el.dataset.val=v;
+    el.dataset.id=t.id;
+    el.dataset.type=t.type;
+    el.dataset.val=t.val;
     // Use innerHTML for combining chars
-    el.innerHTML=dispHTML(v);
+    el.innerHTML=dispHTML(t.val);
 
     var jx=(Math.random()*22-11).toFixed(1)+'px';
     var jy=(Math.random()*18-9).toFixed(1)+'px';
@@ -740,31 +862,29 @@ function renderOptions(vals){
 
     el.onclick=function(){
       if(checked)return;
-      var k=picks.indexOf(v);
+      var tp=t.type;
+      var k=picks.indexOf(t.id);
       if(k>=0){
+        // เอาออก
         picks.splice(k,1);
         el.classList.remove('sel');
-        var tp=optTypes[v];
-        if(tp&&slotFills[tp]===v){slotFills[tp]=null;updateSlots();}
+        if(slotFills[tp]===t.id){slotFills[tp]=null;updateSlots();}
       } else {
-        if(picks.length>=needN)return;
-        var tp=optTypes[v];
-        // swap out existing in same slot
-        if(tp&&slotFills[tp]!==null){
-          var old=slotFills[tp];
-          var ki=picks.indexOf(old);
+        // ถ้าช่องประเภทนี้มีไทล์อยู่แล้ว → สลับออก
+        if(slotFills[tp]!=null){
+          var oldId=slotFills[tp];
+          var ki=picks.indexOf(oldId);
           if(ki>=0)picks.splice(ki,1);
-          var esc=old.replace(/([.*+?^=!:${}()|[\]\/\\])/g,'\\$1');
-          var oldEl=document.querySelector('#pool .opt[data-val="'+esc+'"]');
+          var oldEl=pool.querySelector('.opt[data-id="'+oldId+'"]');
           if(oldEl)oldEl.classList.remove('sel');
           slotFills[tp]=null;
         }
-        picks.push(v);
+        picks.push(t.id);
         el.classList.add('sel');
-        if(tp)slotFills[tp]=v;
+        slotFills[tp]=t.id;
         updateSlots();
       }
-      document.getElementById('btn-check').disabled=(picks.length!==needN);
+      document.getElementById('btn-check').disabled=!allSlotsFilled();
     };
     pool.appendChild(el);
   });
@@ -776,52 +896,67 @@ function updateSlots(){
     if(comps.indexOf(c)<0)return;
     var box=document.getElementById('sb-'+c);
     if(!box)return;
-    setSlotContent(box, slotFills[c]||null, slotFills[c]?'filled':null);
+    var id=slotFills[c];
+    var t=(id!=null)?tileById(id):null;
+    setSlotContent(box, t?t.val:null, t?'filled':null);
   });
 }
 
-function markSlots(cset){
-  comps.forEach(function(c,i){
+function markSlots(){
+  comps.forEach(function(c){
     var box=document.getElementById('sb-'+c);
     if(!box)return;
-    var cv=correctSet[i];
-    var uv=slotFills[c];
-    setSlotContent(box, cv, uv===cv?'correct':'wrong');
+    var id=slotFills[c];
+    var t=(id!=null)?tileById(id):null;
+    var uv=t?t.val:null;
+    setSlotContent(box, correctVal[c], uv===correctVal[c]?'correct':'wrong');
   });
 }
 
 // ─── Check answer ───
-function check(){
-  var cset={},pset={};
-  correctSet.forEach(function(v){cset[v]=1;});
-  picks.forEach(function(v){pset[v]=1;});
-  var allOk=picks.length===correctSet.length&&picks.every(function(v){return cset[v];});
-  var idx=roundQueue[cur];
-
-  if(allOk){
-    var pts=(wrongCount===0)?10:5;
+// คะแนน/มาสเตอร์ ทำตอน "จบทั้งคำ" (รองรับหลายพยางค์)
+function finalizeWord(){
+  var idx=roundQueue[cur];var b=document.getElementById('banner');
+  if(wordFailed){
+    roundQueue.push(idx);streak=0;          // คำนี้กลับมาใหม่
+    b.textContent='綠色才是正確答案 — 這個字稍後會再出現';b.className='result-banner show no';
+  } else {
+    var pts=wordHadWrong?5:10;
     roundScore+=pts;okC++;streak++;
     correctCountMap[idx]=(correctCountMap[idx]||0)+1;
-    if(correctCountMap[idx]>=3){masteredSet[idx]=1;}
-    else{reviewDates[idx]=Date.now()+REVIEW_MS;}  // cooldown 7 วัน
-    doSave();
-    checked=true;
-    markOpts(cset,pset);markSlots(cset);
-    var b=document.getElementById('banner');
-    if(pts===5){b.textContent='答對！（第二次）+'+pts+' 分';b.className='result-banner show half';}
-    else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'');b.className='result-banner show ok';}
+    if(correctCountMap[idx]>=3){masteredSet[idx]=1;}else{reviewDates[idx]=Date.now()+REVIEW_MS;}
+    if(pts===5){b.textContent='完成這個字！+'+pts+' 分';b.className='result-banner show half';}
+    else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+' +'+pts+' 分';b.className='result-banner show ok';}
     pop('+'+pts);
-    evaluateBonus();
-    showReveal();
-    setGameBtns('done');
+  }
+  doSave();
+}
+function check(){
+  var lastSyl=(sylIdx>=sylList.length-1);
+  var allOk=comps.every(function(c){var id=slotFills[c];if(id==null)return false;var t=tileById(id);return t&&t.val===correctVal[c];});
+
+  if(allOk){
+    checked=true;
+    markOpts();markSlots();
+    evaluateBonus();showReveal();renderSylStrip();
     document.getElementById('retry-hint').className='retry-hint';
+    setGameBtns('done');
+    if(lastSyl){
+      finalizeWord();
+      document.getElementById('btn-next').textContent='下一題 →';
+    } else {
+      var b=document.getElementById('banner');
+      b.textContent='音節 '+(sylIdx+1)+' 完成 ✓ 接著拼下一個音節';b.className='result-banner show ok';
+      document.getElementById('btn-next').textContent='下一個音節 →';
+    }
+    document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     refreshUI();
   } else {
-    wrongCount++;
+    wrongCount++;wordHadWrong=true;streak=0;badC++;
     if(wrongCount < 3){
-      // 1st / 2nd wrong → flash wrong options, clear, retry
+      // ผิดครั้งที่ 1/2 → กระพริบตัวที่ผิด, เคลียร์, ลองใหม่
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
-        if(pset[x.dataset.val]&&!cset[x.dataset.val])x.classList.add('wrong');
+        if(picks.indexOf(Number(x.dataset.id))>=0 && correctVal[x.dataset.type]!==x.dataset.val)x.classList.add('wrong');
       });
       setTimeout(function(){
         document.getElementById('pool').querySelectorAll('.opt.wrong').forEach(function(x){x.classList.remove('wrong');});
@@ -833,22 +968,24 @@ function check(){
       var hint=document.getElementById('retry-hint');
       hint.textContent=wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️';
       hint.className='retry-hint show';
-      streak=0;badC++;
       document.getElementById('ok').textContent=okC;
       document.getElementById('bad').textContent=badC;
       updateCombo();
     } else {
-      // 3rd wrong → reveal answer, 0 pt, recycle word to end of queue
-      roundQueue.push(roundQueue[cur]);
-      badC++;streak=0;checked=true;
-      markOpts(cset,pset);markSlots(cset);
-      var b=document.getElementById('banner');
-      b.textContent='有錯 — 綠色才是正確答案';
-      b.className='result-banner show no';
+      // ผิดครั้งที่ 3 → เฉลยพยางค์นี้ · คำนี้ถือว่าพลาด
+      wordFailed=true;checked=true;
+      markOpts();markSlots();
+      evaluateBonus();showReveal();renderSylStrip();
       document.getElementById('retry-hint').className='retry-hint';
-      evaluateBonus();
-      showReveal();
       setGameBtns('done');
+      if(lastSyl){
+        finalizeWord();
+        document.getElementById('btn-next').textContent='下一題 →';
+      } else {
+        var b=document.getElementById('banner');
+        b.textContent='這個音節再看一下 — 綠色才對，接著拼下一個音節';b.className='result-banner show no';
+        document.getElementById('btn-next').textContent='下一個音節 →';
+      }
       document.getElementById('ok').textContent=okC;
       document.getElementById('bad').textContent=badC;
       updateCombo();refreshUI();
@@ -941,7 +1078,10 @@ function remember(){
     nextWord();
   }
 }
-function next(){nextWord();}
+function next(){
+  if(sylIdx<sylList.length-1){sylIdx++;loadSyl();}  // ไปพยางค์ถัดไปของคำเดิม
+  else nextWord();                                   // จบคำ → คำถัดไป
+}
 
 function nextWord(){
   cur++;
@@ -1005,12 +1145,13 @@ function setGameBtns(mode){
   else               {sk.style.display='none';re.style.display='none';ch.style.display='none';nx.style.display='';}
 }
 
-function markOpts(cset,pset){
+function markOpts(){
+  var picked={};picks.forEach(function(id){picked[id]=1;});
   document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
     x.classList.add('locked');
-    var v=x.dataset.val;
-    if(cset[v])x.classList.add('correct');
-    else if(pset[v])x.classList.add('wrong');
+    var id=Number(x.dataset.id),type=x.dataset.type,val=x.dataset.val;
+    if(correctVal[type]===val)x.classList.add('correct');
+    else if(picked[id])x.classList.add('wrong');
   });
 }
 
