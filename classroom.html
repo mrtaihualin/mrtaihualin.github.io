@@ -1720,7 +1720,10 @@ async function loadTodaySchedule() {
     + '<div style="margin-top:8px;font-size:0.77rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">點擊後登入 Google 帳號即可顯示今日課表</div></div></div>';
 }
 
+let _calConnecting = false;
 async function connectCalendar() {
+  if (_calConnecting) return;
+  _calConnecting = true;
   const container = document.getElementById('attendanceSection');
   const now = new Date();
   const dayZh = ['日','一','二','三','四','五','六'];
@@ -1796,6 +1799,8 @@ async function connectCalendar() {
     if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>'
       + '<div class="empty-attend"><div style="color:var(--amber);font-size:0.82rem;margin-bottom:8px;">連接失敗：' + e.message + '</div>'
       + '<button class="btn-gold" onclick="connectCalendar()">🔄 重試</button></div></div>';
+  } finally {
+    _calConnecting = false;
   }
 }
 
