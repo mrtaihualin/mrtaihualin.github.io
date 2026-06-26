@@ -1211,10 +1211,10 @@ async function loadLowQuotaBanner() {
   if (!el) return;
   try {
     var pays = (await sb.from('classroom_payments').select('token,lessons,bonus_lessons,status').in('status', ['pending', 'done'])).data || [];
-    var atts = (await sb.from('classroom_attendance').select('token')).data || [];
+    var atts = (await sb.from('classroom_attendance').select('token,lessons')).data || [];
     var bought = {}, used = {};
     pays.forEach(function(p) { bought[p.token] = (bought[p.token] || 0) + (p.lessons || 0) + (p.bonus_lessons || 0); });
-    atts.forEach(function(a) { used[a.token] = (used[a.token] || 0) + 1; });
+    atts.forEach(function(a) { used[a.token] = (used[a.token] || 0) + (a.lessons || 1); });
     var low = [];
     Object.keys(bought).forEach(function(tk) {
       var remain = bought[tk] - (used[tk] || 0);
@@ -1232,7 +1232,7 @@ async function loadTeacherStudentInfo(token) {
   try {
     var pays = (await sb.from('classroom_payments').select('course_label,lessons,bonus_lessons,currency,total_amount,status,created_at').eq('token', token).order('created_at', { ascending: false })).data || [];
     var bought = pays.filter(function(p) { return p.status === 'pending' || p.status === 'done'; }).reduce(function(s, p) { return s + (p.lessons || 0) + (p.bonus_lessons || 0); }, 0);
-    var used = ((await sb.from('classroom_attendance').select('lesson_date').eq('token', token)).data || []).length;
+    var used = ((await sb.from('classroom_attendance').select('lessons').eq('token', token)).data || []).reduce(function(a, r) { return a + (r.lessons || 1); }, 0);
     var remain = bought - used;
     var quotaHtml = bought > 0
       ? '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:8px 12px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + (remain <= 1 ? '#b45309' : 'var(--gold-deep)') + ';font-weight:700;">剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（已購 ' + bought + ' · 已上 ' + used + '）</span></div>'
@@ -1348,8 +1348,8 @@ async function loadStudentQuota(token) {
       .eq('token', token).in('status', ['pending', 'done']);
     var pays = payRes.data || [];
     var totalBought = pays.reduce(function(s, p) { return s + (p.lessons || 0) + (p.bonus_lessons || 0); }, 0);
-    var attRes = await sb.from('classroom_attendance').select('lesson_date').eq('token', token);
-    var used = (attRes.data || []).length;
+    var attRes = await sb.from('classroom_attendance').select('lessons').eq('token', token);
+    var used = (attRes.data || []).reduce(function(a, r) { return a + (r.lessons || 1); }, 0);
     var remain = totalBought - used;
     var sumEl = document.getElementById('quotaSummary');
     if (sumEl) {
@@ -1432,16 +1432,20 @@ async function loadStudentSchedule(token) {
   if (!el) return;
   try {
     const { data, error } = await sb.from('classroom_attendance')
-      .select('lesson_date').eq('token', token).order('lesson_date', { ascending: true });
+      .select('lesson_date,lessons').eq('token', token).order('lesson_date', { ascending: true });
     if (error || !data || data.length === 0) {
       el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無上課記錄</div>';
       return;
     }
     const dayZh = ['日','一','二','三','四','五','六'];
-    const rows = data.map(function(r, i) {
+    let cum = 0;
+    const rows = data.map(function(r) {
+      const n = r.lessons || 1;
+      const start = cum + 1, end = cum + n; cum = end;
+      const badge = n > 1 ? ('第 ' + start + '–' + end + ' 堂') : ('第 ' + start + ' 堂');
       const d = new Date(r.lesson_date + 'T12:00:00');
-      const dateStr = d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '（週' + dayZh[d.getDay()] + '）';
-      return '<tr><td><span class="lesson-badge">第 ' + (i+1) + ' 堂</span></td><td>' + dateStr + '</td></tr>';
+      const dateStr = d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '（週' + dayZh[d.getDay()] + '）' + (n > 1 ? ' · ' + n + ' 堂' : '');
+      return '<tr><td><span class="lesson-badge">' + badge + '</span></td><td>' + dateStr + '</td></tr>';
     }).join('');
     el.innerHTML = '<table class="schedule-table"><thead><tr><th>堂次</th><th>上課日期</th></tr></thead><tbody>' + rows + '</tbody></table>';
   } catch(e) {
@@ -2199,7 +2203,7 @@ async function openAttendanceHistory(token) {
   document.getElementById('attendHistModal').classList.add('open');
 
   const { data } = await sb.from('classroom_attendance')
-    .select('id,lesson_date').eq('token', token).order('lesson_date', { ascending: true });
+    .select('id,lesson_date,lessons').eq('token', token).order('lesson_date', { ascending: true });
 
   if (!data || data.length === 0) {
     document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">尚無上課記錄</div>';
@@ -2208,20 +2212,38 @@ async function openAttendanceHistory(token) {
   }
 
   const dayZh = ['日','一','二','三','四','五','六'];
-  const rows = data.map(function(r, i) {
+  let cum = 0, totalLessons = 0;
+  const rows = data.map(function(r) {
+    const n = r.lessons || 1;
+    const start = cum + 1, end = cum + n; cum = end; totalLessons += n;
+    const numLabel = n > 1 ? ('第 ' + start + '–' + end + ' 堂') : ('第 ' + start + ' 堂');
     const d = new Date(r.lesson_date + 'T12:00:00');
-    const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）';
+    const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）' + (n > 1 ? ' · ' + n + ' 堂' : '');
     const isToday = r.lesson_date === today;
     return '<div class="hist-row">' +
-      '<span class="hist-num">第 ' + (i+1) + ' 堂</span>' +
+      '<span class="hist-num">' + numLabel + '</span>' +
       '<span class="hist-date" id="hist-date-' + r.id + '">' + dateStr + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
+      '<button class="hist-edit" title="改堂數（一天幾堂）" onclick="editAttendanceLessons(\'' + r.id + '\',' + n + ',\'' + token + '\')">' + n + '堂</button>' +
       '<button class="hist-edit" title="改日期" onclick="editAttendanceDate(\'' + r.id + '\',\'' + r.lesson_date + '\',\'' + token + '\')">✏️</button>' +
       '<button class="hist-del" title="刪除此記錄" onclick="deleteAttendance(\'' + r.id + '\',\'' + token + '\')">🗑</button>' +
     '</div>';
   }).join('');
 
   document.getElementById('attendHistList').innerHTML = rows;
-  document.getElementById('attendHistSummary').textContent = '共 ' + data.length + ' 堂';
+  document.getElementById('attendHistSummary').textContent = '共 ' + totalLessons + ' 堂（' + data.length + ' 天）';
+}
+
+// 改某一天的堂數（例如一天上 2 堂）
+async function editAttendanceLessons(id, current, token) {
+  var v = prompt('這一天上了幾堂課？', current);
+  if (v === null) return;
+  var n = parseInt(v);
+  if (!n || n < 1) { alert('請輸入 1 以上的數字'); return; }
+  var { error } = await sb.from('classroom_attendance').update({ lessons: n }).eq('id', id);
+  if (error) { alert('改不了：' + error.message); return; }
+  await openAttendanceHistory(token);
+  if (typeof loadLowQuotaBanner === 'function') loadLowQuotaBanner();
+  if (typeof loadTeacherStudentInfo === 'function') loadTeacherStudentInfo(token);
 }
 
 function editAttendanceDate(id, currentDate, token) {

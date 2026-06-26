@@ -12,6 +12,7 @@
 <title>泰語拼讀練習（組件版・預覽） — 泰華眼裡的泰語教學</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=12">
+<script src="game-account.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 .v3-page{font-family:'Sarabun',sans-serif;max-width:520px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 88px;}
@@ -1240,7 +1241,7 @@ function buildRevealRules(w){
 // ════════════════════════════════════════════
 var ROUND_SIZE=10;
 var curLevel='初';
-var roundQueue=[],cur=0,okC=0,badC=0,streak=0,roundScore=0;
+var roundQueue=[],cur=0,okC=0,badC=0,streak=0,roundScore=0,cleanC=0,roundTotal=0;
 var picks=[],comps=[],correctSet=[],needN=0;
 var checked=false,wrongCount=0;
 var masteredSet={},correctCountMap={},reviewDates={};
@@ -1321,6 +1322,8 @@ function setLevel(lv){
 // ════════════════════════════════════════════
 function initGame(){
   loadSave();
+  // ⭐ ดาวรวม: ใช้บัญชีกลาง (รวมกับเกมเสียง) · ย้ายดาวเดิมในเครื่องเข้าบัญชีครั้งเดียว — Lin 2026-06-27
+  if(window.GAME_ACCOUNT){ GAME_ACCOUNT.seedIfEmpty(totalStars); totalStars=GAME_ACCOUNT.getStars(); totalBadges=GAME_ACCOUNT.earnedBadges().length; }
   var now=Date.now();
   // กรองตามระดับ: 中 = คำหลายพยางค์ (มี syls) · 初 = พยางค์เดียว
   var inLevel=function(i){return curLevel==='中'?!!WORDS[i].syls:!WORDS[i].syls;};
@@ -1335,7 +1338,8 @@ function initGame(){
   // ถ้า mastered ทั้งหมดในระดับนี้ → reset เฉพาะระดับนี้
   if(pool.length===0){allIdx.forEach(function(i){delete masteredSet[i];delete correctCountMap[i];delete reviewDates[i];});doSave();pool=allIdx.slice();}
   roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
-  cur=0;okC=0;badC=0;streak=0;roundScore=0;
+  roundTotal=roundQueue.length;
+  cur=0;okC=0;badC=0;streak=0;roundScore=0;cleanC=0;
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
   refreshUI();
@@ -1522,6 +1526,7 @@ function finalizeWord(){
     b.textContent='綠色才是正確答案 — 這個字稍後會再出現';b.className='result-banner show no';
   } else {
     var pts=wordHadWrong?5:10;
+    if(pts===10)cleanC++;
     roundScore+=pts;okC++;streak++;
     correctCountMap[idx]=(correctCountMap[idx]||0)+1;
     if(correctCountMap[idx]>=3){masteredSet[idx]=1;}else{reviewDates[idx]=Date.now()+(correctCountMap[idx]>=2?REVIEW_MS:DAY_MS);}
@@ -1697,14 +1702,18 @@ function endRound(){
   var sc=roundScore;
   document.getElementById('end-score').textContent=sc+' 分';
   var detail='';
-  if(sc>=100){
-    totalStars++;if(totalStars%10===0)totalBadges++;doSave();
-    detail='完美！✨ 獲得 ⭐ 現在共 '+totalStars+' 顆星';
+  // ⭐ ดาว 1–3 ดวง/รอบ ตามความแม่น (สะอาด = ไม่พลาดเลย ได้ 10 分) → บัญชีกลางรวมกับเกมเสียง — Lin 2026-06-27
+  var _se=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starsForRound(cleanC,roundTotal):0;
+  if(window.GAME_ACCOUNT){ GAME_ACCOUNT.addStars(_se); GAME_ACCOUNT.bumpStreakToday(); totalStars=GAME_ACCOUNT.getStars(); totalBadges=GAME_ACCOUNT.earnedBadges().length; }
+  doSave();
+  if(_se>=3){
+    detail='完美！✨ 獲得 ⭐⭐⭐（'+cleanC+'/'+roundTotal+' 全對）· 累積共 '+totalStars+' 顆星';
     var sb=document.createElement('div');sb.className='star-burst';sb.textContent='⭐';
     document.body.appendChild(sb);
     setTimeout(function(){if(sb.parentNode)sb.parentNode.removeChild(sb);},2200);
-  } else if(sc>=70){doSave();detail='不錯！再試試看能不能得到⭐ (差'+(100-sc)+'分)';}
-  else detail='繼續加油！多練習就能進步 💪';
+  } else if(_se>=1){
+    detail='獲得 '+'⭐'.repeat(_se)+'（'+cleanC+'/'+roundTotal+' 全對）· 累積共 '+totalStars+' 顆星 · 全對拿 3 顆！';
+  } else detail='繼續加油！多練習就能進步 💪';
   document.getElementById('end-detail').textContent=detail;
   refreshUI();
 }

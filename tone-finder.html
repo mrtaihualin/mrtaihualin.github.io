@@ -12,6 +12,7 @@
 <!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=3"></script>
+<script src="game-account.js?v=1"></script>
 <script defer src="supabase-auth.js?v=18"></script>
 <script defer src="progress-sync.js?v=1"></script>
 <script defer src="adaptive.js?v=1"></script>
@@ -3036,7 +3037,6 @@ function tfUpdateBadgesOnSetComplete(info) {
   var st = data.stats || {};
   st.wordsTotal = (st.wordsTotal || 0) + (info.words || 0);
   st.perfectSets = (st.perfectSets || 0) + (info.isPerfect ? 1 : 0);
-  st.stars = (st.stars || 0) + (info.isPerfect ? 1 : 0);   // ⭐ ดาว: ถูกครบเซ็ต = +1 (หน่วยกลางเทียบเกมอ่าน) — Lin 2026-06-26
   st.maxCombo = Math.max(st.maxCombo || 0, info.maxCombo || 0);
   st.streak = info.streak || st.streak || 0;
   data.stats = st;
@@ -3557,12 +3557,13 @@ function tfApplySessionBonus() {
         words: total, isPerfect: isPerfect, maxCombo: session.maxCombo || 0, streak: streakNow
       });
     } catch (e) { session.newBadges = []; }
-    // ⭐ ดาว: อ่านยอดรวม + ได้ดาวรอบนี้ไหม — Lin 2026-06-26
+    // ⭐ ดาว 1–3 ดวง/รอบ ตามความแม่น (สะอาด = ถูกครั้งแรก) → บัญชีกลางรวม 2 เกม — Lin 2026-06-27
     try {
-      var _starData = tfLoadBadges();
-      session.totalStars = (_starData.stats && _starData.stats.stars) || 0;
-      session.gotStar = !!isPerfect;
-    } catch (e) { session.totalStars = 0; session.gotStar = false; }
+      var _se = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.starsForRound(perfectCount, total) : 0;
+      if (window.GAME_ACCOUNT) { GAME_ACCOUNT.addStars(_se); GAME_ACCOUNT.bumpStreakToday(); }
+      session.starsEarned = _se;
+      session.totalStars = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0;
+    } catch (e) { session.starsEarned = 0; session.totalStars = 0; }
   }
   session.isPerfect = isPerfect;
   // ชาเลนจ์รายสัปดาห์: บวกความคืบหน้า — LIN 2026-06-20
@@ -4405,14 +4406,12 @@ function stepSessionSummary() {
   }
 
   var starBlock = '';
-  var _stars = session.totalStars || 0;
-  if (session.gotStar) {
-    starBlock = '<div style="margin-top:14px;padding:12px;background:linear-gradient(180deg,#FFF8E6,#fff);border:1px solid #F0D480;border-radius:14px;text-align:center;">' +
-      '<div style="font-size:26px;line-height:1;">⭐</div>' +
-      '<div style="font-size:15px;font-weight:800;color:#B07D00;margin-top:4px;">獲得 1 顆星！</div>' +
-      '<div style="font-size:13px;color:#A08A5A;margin-top:2px;">目前共 ' + _stars + ' 顆星</div></div>';
-  } else if (total > 0) {
-    starBlock = '<div style="margin-top:14px;font-size:13px;color:#A08A5A;text-align:center;">⭐ 目前共 <b>' + _stars + '</b> 顆星 · 一組全對再 +1</div>';
+  var _se = session.starsEarned || 0, _stars = session.totalStars || 0;
+  if (total > 0) {
+    starBlock = '<div style="margin-top:14px;padding:12px;background:#FFF8E6;border:1px solid #F0D480;border-radius:14px;text-align:center;">' +
+      '<div style="font-size:24px;line-height:1.2;letter-spacing:2px;">' + (_se >= 1 ? '⭐'.repeat(_se) : '—') + '</div>' +
+      '<div style="font-size:14px;font-weight:800;color:#B07D00;margin-top:2px;">獲得 ' + _se + ' 顆星' + (_se < 3 ? '（全對拿 3 顆）' : '！') + '</div>' +
+      '<div style="font-size:12px;color:#A08A5A;margin-top:2px;">累積共 ' + _stars + ' 顆星（兩個遊戲共用）</div></div>';
   }
 
   return '<div class="tf-session-summary">' +
