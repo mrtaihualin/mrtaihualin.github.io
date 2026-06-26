@@ -366,24 +366,34 @@
   function buildMiniBtn() {
     miniBtn = document.createElement('div');
     miniBtn.id = 'tf-mini';
-    miniBtn.style.cssText =
-      'position:fixed;top:calc(var(--nav-h,56px) + 8px);right:12px;z-index:9999;display:none;' +
-      'font-family:"Noto Sans TC",sans-serif;';
     miniBtn.innerHTML =
-      '<button id="tf-mini-login" style="display:flex;align-items:center;gap:7px;border:1px solid rgba(200,151,58,0.5);' +
-      'background:#fff;color:#8B6310;border-radius:999px;padding:6px 13px;cursor:pointer;font-size:13px;font-weight:700;' +
-      'box-shadow:0 2px 8px rgba(0,0,0,0.1);">登入</button>';
-    document.body.appendChild(miniBtn);
+      '<button id="tf-mini-login" style="display:flex;align-items:center;gap:6px;' +
+      'background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;border:none;border-radius:20px;' +
+      'padding:6px 16px;cursor:pointer;font-size:12.5px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;' +
+      'box-shadow:0 2px 8px rgba(139,99,16,0.28);letter-spacing:0.3px;transition:filter .15s;"' +
+      ' onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">🔑 登入</button>';
+    var _mSlot = document.getElementById('tf-login-slot');
+    if (_mSlot) {
+      miniBtn.style.cssText = 'font-family:"Noto Sans TC",sans-serif;white-space:nowrap;display:none;';
+      _mSlot.appendChild(miniBtn);
+    } else {
+      miniBtn.style.cssText = 'position:fixed;top:calc(var(--nav-h,56px)+14px);left:50%;transform:translateX(-50%);z-index:9999;display:none;font-family:"Noto Sans TC",sans-serif;white-space:nowrap;';
+      document.body.appendChild(miniBtn);
+    }
     miniBtn.querySelector('#tf-mini-login').onclick = function () { showGate(true); };
   }
 
   function buildBadge() {
     badge = document.createElement('div');
     badge.id = 'tf-auth';
-    badge.style.cssText =
-      'position:fixed;top:calc(var(--nav-h,56px) + 8px);right:12px;z-index:9999;display:none;' +
-      'font-family:"Noto Sans TC",sans-serif;font-size:13px;';
-    document.body.appendChild(badge);
+    var _bSlot = document.getElementById('tf-login-slot');
+    if (_bSlot) {
+      badge.style.cssText = 'font-family:"Noto Sans TC",sans-serif;font-size:14px;white-space:nowrap;display:none;';
+      _bSlot.appendChild(badge);
+    } else {
+      badge.style.cssText = 'position:fixed;top:calc(var(--nav-h,56px)+14px);left:50%;transform:translateX(-50%);z-index:9999;display:none;font-family:"Noto Sans TC",sans-serif;font-size:14px;white-space:nowrap;';
+      document.body.appendChild(badge);
+    }
   }
 
   // ── โปรไฟล์ผู้เล่น: ชื่อ+รูป+แบดจ์ เก็บใน profiles (sync ข้ามเครื่อง) + localStorage เป็นแคชสำรอง LIN 2026-06-22 ──
@@ -547,16 +557,16 @@
       badge.style.display = anyModalOpen() ? 'none' : 'block';
       badge.innerHTML =
         '<div style="display:flex;align-items:center;gap:7px;background:#fff;' +
-        'border:1px solid rgba(200,151,58,0.4);border-radius:999px;padding:5px 10px;' +
-        'box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
-        '<a href="leaderboard.html" title="อันดับผู้เล่น" style="text-decoration:none;font-size:15px;">🏆</a>' +
-        '<a href="my-progress.html" title="คะแนนของฉัน" style="text-decoration:none;color:#8B6310;font-size:15px;">📊</a>' +
-        avatarHTML +
-        '<span id="tf-nick" title="點此編輯個人檔案 / แก้โปรไฟล์" style="color:#8B6310;max-width:105px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">' + esc(displayName) + '</span>' +
+        'border:1.5px solid rgba(200,151,58,0.45);border-radius:20px;padding:5px 12px 5px 8px;' +
+        'box-shadow:0 2px 8px rgba(139,99,16,0.12);font-family:\'Noto Sans TC\',sans-serif;">' +
+        (avatarHTML || '<span style="font-size:15px;flex-shrink:0;">👤</span>') +
+        '<span id="tf-nick" title="點此編輯個人檔案" style="color:#5C4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">' + esc(displayName) + '</span>' +
         pinHTML +
-        '<button id="tf-edit-nick" title="編輯個人檔案" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:13px;padding:0;line-height:1;">✏️</button>' +
-        '<button id="tf-logout" style="border:none;background:#C8973A;color:#fff;' +
-        'border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px;">登出</button>' +
+        '<button id="tf-edit-nick" title="編輯" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>' +
+        '<a href="leaderboard.html" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
+        '<a href="my-progress.html" title="進度" style="text-decoration:none;font-size:13px;">📊</a>' +
+        '<button id="tf-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
+        'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>' +
         '</div>';
       badge.querySelector('#tf-logout').onclick = doLogout;
       badge.querySelector('#tf-edit-nick').onclick = openProfileEditor;

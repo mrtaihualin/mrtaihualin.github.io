@@ -767,7 +767,7 @@
   .tf-speak-word-btn, .tf-speak-btn, .result-v2-speak-btn, .prc-audio-btn { display:none !important; }
 
   /* ── แถบเครื่องมือในเกม (สลับฟอนต์ / ถามคำถาม) ── */
-  .tf-tools-row { display:flex; gap:8px; justify-content:flex-end; margin-bottom:10px; flex-wrap:wrap; }
+  .tf-tools-row { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:10px; flex-wrap:wrap; }
   .tf-tool-btn { font-family:'Noto Sans TC',sans-serif; font-size:12.5px; background:#fff; border:1.5px solid rgba(139,99,16,0.30); border-radius:20px; padding:6px 14px; cursor:pointer; color:#7a5510; transition:all .15s; }
   .tf-tool-btn:hover { background:rgba(139,99,16,0.10); border-color:rgba(139,99,16,0.55); }
   .tf-tool-btn.active { background:#C8973A; color:#fff; border-color:#C8973A; }
@@ -1898,6 +1898,7 @@
   </div>
 
   <div class="tf-tools-row">
+    <div id="tf-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
     <button class="tf-tool-btn" id="tf-font-btn" onclick="TF.toggleFont()" title="สลับฟอนต์มีหัว/ไม่มีหัว">🔤 換現代字體</button>
     <button class="tf-tool-btn" onclick="TF.openAsk()" title="เล่นแล้วมีคำถาม ถามได้เลย">❓ 我有問題</button>
   </div>
@@ -4414,7 +4415,7 @@ function stepSessionSummary() {
     '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
       '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
-      '<button class="tf-restart-btn" onclick="TF.reselectTopic()">重新選主題</button>' +
+      '<button class="tf-restart-btn" onclick="TF.reselectTopic()">🎲 再來 5 字</button>' +
     '</div>' +
   '</div>';
 }
@@ -4608,6 +4609,15 @@ function stepLevelSelect() {
           '<span class="tf-level-sub">易錯字複習・答對 ×2（' + tfLoadSpecialWords().length + ' 字）</span>' +
         '</button>'
       : '') +
+    (function(){
+      var today = new Date().toISOString().slice(0,10);
+      var used = 0; try { used = parseInt(localStorage.getItem('tf_adaptive_'+today)||'0',10); } catch(e){}
+      var remain = Math.max(0, 2 - used);
+      return '<button class="tf-adaptive-btn" onclick="TF.startAdaptive()" style="margin-top:12px;">' +
+        '🎯 智慧複習（依你的弱點挑字）' +
+        '<span style="font-size:11px;opacity:0.75;margin-left:6px;">今日剩餘 ' + remain + ' / 2 字</span>' +
+      '</button>';
+    })() +
   '</div>';
 }
 
@@ -4825,7 +4835,7 @@ function markRow(mark, onclickStr) {
 }
 
 function footer() {
-  return '<div class="tf-footer"><button class="tf-restart-btn" onclick="TF.reselectTopic()">↺ 重新選主題</button></div>';
+  return '<div class="tf-footer"><button class="tf-restart-btn" onclick="TF.reselectTopic()">🎲 再來 5 字</button></div>';
 }
 
 // ── Steps ──
@@ -5208,7 +5218,7 @@ function stepOverview() {
     summaryHtml +
     '<div style="text-align:center;margin-top:20px;">' +
       '<button class="tf-result-restart" onclick="TF.nextWord()" style="margin-right:10px;">太棒了，我們繼續 →</button>' +
-      '<button class="tf-result-restart" onclick="TF.reselectTopic()">重新選主題</button>' +
+      '<button class="tf-result-restart" onclick="TF.reselectTopic()">🎲 再來 5 字</button>' +
     '</div>';
 }
 
@@ -5333,7 +5343,7 @@ function stepResult() {
     '<div class="result-v2-actions">'+
       '<button class="tf-session-next-btn" onclick="TF.nextWord()">'+nextBtnLabel+'</button>'+
       (session ? '' : '<button class="tf-result-secondary" onclick="'+againAct+'">↺ 重新分析</button>')+
-      '<button class="tf-result-restart" onclick="TF.reselectTopic()" style="margin-top:0;">重新選主題</button>'+
+      '<button class="tf-result-restart" onclick="TF.reselectTopic()" style="margin-top:0;">🎲 再來 5 字</button>'+
     '</div>'+
   '</div>';
 }
@@ -5869,23 +5879,29 @@ var TF = {
   reselectTopic: function() {
     tfConfirmQuit(function () {
       hist=[]; histPos=-1;
-      randomEntry = null;
-      selectedCategory = null;
-      session = null;
+      randomEntry = null; session = null;
       if (selectedLevel) {
-        S = { word:'', step:'cat-select', path:[], tone:null };
+        TF._startRandom5();
       } else {
+        selectedCategory = null;
         S = { word:'', step:'level-select', path:[], tone:null };
+        render();
       }
-      render();
     });
   },
   selectLevel: function(level) {
     selectedLevel = level;
-    selectedCategory = null;
-    S = { word:'', step:'cat-select', path:[], tone:null };
-    hist=[S]; histPos=0;
-    render();
+    selectedCategory = 'ทั้งหมด';
+    randomEntry = null; session = null;
+    hist=[]; histPos=-1;
+    TF._startRandom5();
+  },
+  // สุ่ม 5 คำจาก level ที่เลือก แล้ว loop ต่อเนื่อง
+  _startRandom5: function() {
+    var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
+    if (!pool.length) { tfToast('找不到單字，請試試其他等級'); return; }
+    var words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
+    startSetSession(words);
   },
   selectCategory: function(cat) {
     selectedCategory = cat;
@@ -5957,12 +5973,23 @@ var TF = {
   },
   // 🎯 โหมดฝึกแบบปรับระดับ (Adaptive 75/25) — เลือกคำจากจุดอ่อนผู้เล่น (ไม่พร้อม → สุ่ม)
   startAdaptive: function() {
+    // ── daily limit: free = 2 คำ/วัน ──────────────────────────
+    var today = new Date().toISOString().slice(0,10);
+    var _key = 'tf_adaptive_' + today;
+    var _used = 0; try { _used = parseInt(localStorage.getItem(_key)||'0', 10); } catch(e){}
+    var FREE_LIMIT = 2;
+    if (_used >= FREE_LIMIT) {
+      tfToast('智慧複習今日 2 字額度已用完 🌱 明天再來！');
+      return;
+    }
+    var n = FREE_LIMIT - _used;   // 剩餘字數 (最多 2)
+    try { localStorage.setItem(_key, String(_used + n)); } catch(e){}
+    // ────────────────────────────────────────────────────────────
     selectedCategory = 'ทั้งหมด';
     var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
-    var n = (window.TF_ADAPTIVE && window.TF_ADAPTIVE.roundSize) || 5;
     var words = (window.TF_ADAPTIVE && window.TF_ADAPTIVE.pickWords)
       ? window.TF_ADAPTIVE.pickWords(pool, n)
-      : pool.sort(function(){ return Math.random()-0.5; }).slice(0, n);
+      : pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, n);
     startSetSession(words);
   },
   selectNounSub: function(k) {
