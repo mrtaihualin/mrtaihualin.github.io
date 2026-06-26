@@ -31,6 +31,7 @@
 
   var sessionMode = null;
   var wrongBuffer = [];
+  var lastSession = null;   // snapshot รอบล่าสุด เผื่อ login ทีหลัง → บันทึกขึ้นกระดานย้อนหลัง LIN 2026-06-26
 
   // ── ตรวจเบราว์เซอร์ในแอป (Google ล็อกอินถูกบล็อกในเว็บวิวฝัง) LIN 2026-06-23 ──
   // FB/IG/Threads/TikTok/LINE/小紅書 = เว็บวิว → ซ่อนปุ่ม Google โชว์อีเมลแทน
@@ -80,29 +81,40 @@
     } else if (name === 'tone_answer_wrong') {
       wrongBuffer.push({ word: params.word, selected: params.selected, correct: params.correct });
     } else if (name === 'tone_finder_complete') {
-      saveSession(params.score, params.total);
+      // เก็บ snapshot รอบนี้ไว้เสมอ → ถ้ายังไม่ล็อกอิน เก็บค้างไว้ พอ login (OTP/Google) ค่อยบันทึกย้อนหลัง
+      lastSession = {
+        mode: sessionMode,
+        score: typeof params.score === 'number' ? params.score : null,
+        total: typeof params.total === 'number' ? params.total : null,
+        wrong_words: wrongBuffer.slice()
+      };
+      saveSession(lastSession);
     }
   }
 
   var ADMIN_EMAIL = 'mr.taihualin@gmail.com';
 
-  function saveSession(score, total) {
-    if (!currentUser) return; // ยังไม่ล็อกอิน → ไม่บันทึก (GA4 ยังนับภาพรวมให้)
-    if (currentUser.email === ADMIN_EMAIL) return; // admin: ไม่นับคะแนนใน ranking
+  // บันทึก snapshot รอบล่าสุดลง tone_sessions · ยังไม่ล็อกอิน = เก็บค้างไว้ใน lastSession (บันทึกตอน login)
+  function saveSession(s) {
+    s = s || lastSession;
+    if (!s) return;
+    if (!currentUser) return; // ยังไม่ล็อกอิน → คะแนนค้างใน lastSession รอ login มาบันทึกย้อนหลัง (GA4 ยังนับภาพรวมให้)
+    if (currentUser.email === ADMIN_EMAIL) { lastSession = null; return; } // admin: ไม่นับคะแนนใน ranking
     var row = {
       user_id: currentUser.id,
-      mode: sessionMode,
-      score: typeof score === 'number' ? score : null,
-      total: typeof total === 'number' ? total : null,
-      wrong_words: wrongBuffer.slice()
+      mode: s.mode,
+      score: typeof s.score === 'number' ? s.score : null,
+      total: typeof s.total === 'number' ? s.total : null,
+      wrong_words: s.wrong_words || []
     };
     sb.from('tone_sessions').insert(row).then(function (res) {
       if (res.error) {
         console.warn('[tone-finder] บันทึกไม่สำเร็จ:', res.error.message);
         showScoreToast('⚠️ บันทึกคะแนนไม่สำเร็จ: ' + res.error.message, false);
       } else {
-        console.info('[tone-finder] บันทึกผลแล้ว score=' + score);
-        showScoreToast('✅ บันทึกคะแนน ' + (score || 0) + ' 分 สำเร็จ', true);
+        console.info('[tone-finder] บันทึกผลแล้ว score=' + s.score);
+        if (lastSession === s) lastSession = null;   // บันทึกสำเร็จ → เคลียร์ค้าง กันบันทึกซ้ำ
+        showScoreToast('✅ บันทึกคะแนน ' + (s.score || 0) + ' 分 สำเร็จ', true);
       }
     });
   }
@@ -686,6 +698,7 @@
       authResolved = true;
       render();
       fetchProfile();
+      if (currentUser && lastSession) saveSession(lastSession);   // คะแนนค้างจากก่อนล็อกอิน → บันทึกย้อนหลัง
     });
     sb.auth.onAuthStateChange(function (_event, session) {
       currentUser = (session && session.user) || null;
@@ -693,6 +706,7 @@
       myNick = myAvatar = myBadge = null;   // เคลียร์โปรไฟล์เดิม แล้วดึงของ user ปัจจุบันใหม่
       render();
       fetchProfile();
+      if (currentUser && lastSession) saveSession(lastSession);   // เพิ่งล็อกอิน (OTP/Google) → บันทึกคะแนนรอบที่เพิ่งเล่นขึ้นกระดาน
     });
     // เฝ้าการเปิด/ปิด modal → ซ่อน/โชว์ปุ่ม 登入 ให้ถูก (กันทับปุ่มกากบาท) ครอบทุกวิธีปิด
     try {

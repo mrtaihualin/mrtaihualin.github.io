@@ -12,7 +12,7 @@
 <!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=3"></script>
-<script defer src="supabase-auth.js?v=17"></script>
+<script defer src="supabase-auth.js?v=18"></script>
 <script defer src="progress-sync.js?v=1"></script>
 <script defer src="adaptive.js?v=1"></script>
 <meta charset="UTF-8">
@@ -5851,14 +5851,9 @@ var TF = {
   },
   back: function() {
     if (histPos > 0) { restoreState(histPos-1); return; }
-    // 全部（ทั้งหมด）沒有組別頁，返回時直接回主題選擇
-    if (selectedCategory && selectedCategory !== 'ทั้งหมด') {
-      S = { word:'', step:'set-select', path:[], tone:null }; hist=[S]; histPos=0; render();
-    } else if (selectedLevel) {
-      S = { word:'', step:'cat-select', path:[], tone:null }; hist=[S]; histPos=0; render();
-    } else {
-      S = { word:'', step:'level-select', path:[], tone:null }; hist=[S]; histPos=0; render();
-    }
+    // ลบหน้า cat-select แล้ว → back กลับไป level-select เสมอ
+    selectedCategory = null; session = null; randomEntry = null;
+    S = { word:'', step:'level-select', path:[], tone:null }; hist=[S]; histPos=0; render();
   },
   forward: function() {
     if (histPos < hist.length-1) restoreState(histPos+1);
