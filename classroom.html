@@ -687,7 +687,10 @@ function gdGetToken(forceConsent) {
   return new Promise((resolve, reject) => {
     if (!gdInit()) { reject(new Error('Google 登入元件尚未載入，請稍候再試')); return; }
     if (!forceConsent && gdToken && Date.now() < gdTokenExp - 60000) { resolve(gdToken); return; }
+    // timeout 6 วินาที → ถ้าไม่มี user gesture popup ถูกบล็อก → reject เพื่อ release lock
+    const timer = setTimeout(() => reject(new Error('timeout')), 6000);
     gdTokenClient.callback = (resp) => {
+      clearTimeout(timer);
       if (resp.error) { reject(new Error('Google 授權失敗：' + resp.error)); return; }
       gdToken = resp.access_token;
       gdTokenScopes = resp.scope || '';
@@ -1174,10 +1177,13 @@ async function renderTeacherView() {
   await loadTodaySchedule();
   // auto-click "連接 Google Calendar" ถ้าเคย connect ไว้แล้ว (localStorage flag)
   if (localStorage.getItem('gdConnected')) {
-    setTimeout(function() {
+    setTimeout(async function() {
       const btn = document.getElementById('calConnectBtn');
-      if (btn) btn.click();
-    }, 800);
+      if (!btn) return;
+      // ลอง silent connect — ถ้า timeout (ไม่มี user gesture) จะ reject และ reset lock อัตโนมัติ
+      // แล้วปุ่มยังคงอยู่ให้ Lin กดเองได้
+      btn.click();
+    }, 1000);
   }
 }
 
