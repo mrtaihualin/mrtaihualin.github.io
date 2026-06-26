@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語文法 第四頁 — 否定表達</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="nav-ui.css">
+<link rel="stylesheet" href="controls-ui.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-zh-sans);
+    font-size: 18px;
+    line-height: 1.85;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--paper);
+    border-bottom: 2px solid var(--border2);
+    padding: 52px 60px 40px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: ''; position: absolute; border-radius: 50%; opacity: 0.07; background: var(--step);
+  }
+  .hero::before { width: 320px; height: 320px; top: -80px; left: -60px; }
+  .hero::after  { width: 240px; height: 240px; bottom: -60px; right: -40px; }
+  .hero-tag {
+    display: inline-block;
+    background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+    padding: 4px 14px; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: var(--font-zh-serif);
+    font-size: clamp(22px, 4.5vw, 42px);
+    font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 10px;
+  }
+  .hero h1 em { font-style: normal; color: var(--step); border-bottom: 3px solid #c8b882; }
+  .hero-desc { font-size: 15px; color: var(--ink-mid); white-space: nowrap; }
+
+  /* ── MAIN ── */
+  .main {
+    max-width: 880px; margin: 0 auto;
+    padding: 38px 22px 80px;
+    display: flex; flex-direction: column; gap: 46px;
+  }
+
+  /* ── SECTION HEADER ── */
+  .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sec-badge {
+    background: var(--step); color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; padding: 3px 10px; border-radius: 5px; white-space: nowrap;
+  }
+  .sec-badge.red { background: var(--c-aux); }
+  .sec-title { font-family: var(--font-zh-serif); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .sec-sub { font-size: 13.5px; color: var(--ink-light); margin-top: 2px; }
+
+  /* ── GRAMMAR TABLE ── */
+  .gram-table {
+    width: 100%; border-collapse: collapse; font-size: 15px;
+    border-radius: 14px; overflow: hidden;
+    border: 1.5px solid var(--border2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .gram-table thead tr { background: var(--step); color: #fff; }
+  .gram-table th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+  .gram-table tbody tr:nth-child(odd)  { background: var(--paper); }
+  .gram-table tbody tr:nth-child(even) { background: var(--bg2); }
+  .gram-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .gram-table tbody tr:last-child td { border-bottom: none; }
+  .g-pattern { font-size: 18px; font-weight: 700; color: var(--step); line-height: 1.55; white-space: nowrap; }
+  .g-pattern.red { color: var(--c-aux); }
+  .g-mean { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 3px; }
+  .g-note-cell { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .g-ex-th {
+    font-size: 17px; color: var(--step); font-weight: 700;
+    display: block; line-height: 1.6; margin-top: 20px;
+  }
+  .g-ex-th.red { color: var(--c-aux); }
+  .g-ex-th:first-child { margin-top: 0; }
+  .g-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 4px; margin-top: 2px; }
+  .gram-table td { padding-top: 15px; padding-bottom: 15px; }
+
+  /* ── CALLOUTS ── */
+  .note {
+    border-left: 3px solid #c8b882; background: var(--amber-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--ink-mid); line-height: 1.75; margin-top: 14px;
+  }
+  .note strong { color: var(--amber); }
+  .warn {
+    border-left: 3px solid var(--c-aux); background: var(--c-aux-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--c-aux); line-height: 1.75; margin-top: 14px;
+  }
+  .warn strong { color: var(--c-aux); }
+
+  /* ── COMPARE BOX ── */
+  .compare-box {
+    background: var(--paper); border: 2px solid var(--step);
+    border-radius: 14px; padding: 20px 24px; margin-top: 18px;
+  }
+  .compare-box-title {
+    font-family: var(--font-zh-serif); font-size: 16px; font-weight: 700;
+    color: var(--step); margin-bottom: 12px;
+  }
+  .compare-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .compare-cell {
+    background: var(--bg2); border-radius: 10px; padding: 13px 15px; border: 1px solid var(--border);
+  }
+  .compare-kw { font-size: 20px; font-weight: 700; color: var(--step); margin-bottom: 4px; }
+  .compare-kw.red { color: var(--c-aux); }
+  .compare-desc { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .compare-example {
+    font-size: 14px; color: var(--ink-mid); line-height: 1.8;
+    border-top: 1px solid var(--border); padding-top: 12px;
+  }
+  .compare-example span.tsent { font-size: 16px; color: var(--step); font-weight: 700; display: block; }
+  .compare-example span.tsent.red { color: var(--c-aux); }
+  .compare-example .zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+
+  /* ── SENTENCE LIST ── */
+  .sent-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .sent-item { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 15px 18px; }
+  .sent-th { font-size: 18px; color: var(--step); font-weight: 700; display: block; line-height: 1.55; }
+  .sent-th.red { color: var(--c-aux); }
+  .sent-zh { font-size: 13.5px; color: var(--ink-mid); display: block; margin-top: 3px; }
+
+  /* ── ROMAN LINE ── */
+  .roman-line { font-size: 12.5px; color: var(--ink-light); display: none; margin-top: 2px; font-style: italic; }
+  body.show-roman .roman-line { display: block; }
+
+  /* ── ADJ SECTION (suffix toggle) ── */
+  .suffix-btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+  .suffix-btn {
+    padding: 5px 12px; font-size: 12.5px; font-weight: 700;
+    border: 1.5px solid var(--step); border-radius: 18px;
+    background: var(--paper); color: var(--step);
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+    font-family: var(--font-zh-sans); white-space: nowrap;
+  }
+  .suffix-btn.active { background: var(--step); color: #fff; }
+  .suffix-btn:hover:not(.active) { background: var(--step-pale); }
+  .neg-lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink-light); align-self: center; }
+  /* §① 否定詞切換鈕：隨頁面捲動黏在控制列下方 */
+  .neg-toggle-sticky {
+    position: sticky;
+    top: 54px; /* JS 會依控制列高度調整 */
+    z-index: 850;
+    margin: 0 0 18px 0;
+    padding: 9px 16px;
+    justify-content: center;
+    background: var(--paper);
+    border: 1px solid var(--border2);
+    border-radius: 30px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.10);
+  }
+
+  .adj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .adj-card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .adj-th { font-size: 20px; font-weight: 700; color: var(--step); display: block; line-height: 1.5; }
+  .adj-suffix { color: var(--c-aux); }
+  .adj-zh { font-size: 13.5px; color: var(--ink-mid); display: block; margin-top: 4px; }
+
+  /* ── ไม่ได้ GRID ── */
+  .maidai-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .maidai-card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .maidai-kw { font-size: 19px; font-weight: 700; color: var(--c-aux); display: block; line-height: 1.5; margin-bottom: 2px; }
+  .maidai-mean { font-size: 13px; color: var(--amber); font-weight: 600; display: block; margin-bottom: 8px; }
+  .maidai-ex-th { font-size: 15.5px; color: var(--step); font-weight: 700; display: block; line-height: 1.55; }
+  .maidai-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+
+  /* ── FLOW ── */
+  .flow-wrap {
+    background: var(--paper); border: 1.5px solid var(--border2);
+    border-radius: 14px; padding: 24px 24px 20px;
+  }
+  .flow-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink-light); text-transform: uppercase; margin-bottom: 4px; }
+  .flow-desc { font-size: 15px; color: var(--ink-mid); margin-bottom: 18px; line-height: 1.7; }
+
+  .hr { height: 1px; background: var(--border); }
+
+  /* ── 字體切換 ── */
+  body.modern-font .g-pattern,
+  body.modern-font .tsent,
+  body.modern-font .g-ex-th,
+  body.modern-font .adj-th,
+  body.modern-font .sent-th,
+  body.modern-font .maidai-kw,
+  body.modern-font .maidai-ex-th {
+    font-family: var(--font-thai-modern), sans-serif;
+  }
+
+  @media (max-width: 640px) {
+    .compare-row { grid-template-columns: 1fr; }
+    .adj-grid, .maidai-grid { grid-template-columns: 1fr; }
+    .suffix-btn-group { margin-left: 0; margin-top: 8px; width: 100%; }
+    .sec-header { flex-direction: column; align-items: flex-start; }
+    .hero { padding: 40px 50px 32px 20px; }
+    .hero-desc { white-space: normal; }
+  }
+
+  /* ── 例句單行加寬 ── */
+  .gram-table .g-ex-th { white-space: nowrap; }
+  @media (max-width: 640px) { .gram-table .g-ex-th { white-space: normal; } }
+  /* ── 程度語氣詞分頁 ── */
+  .mod-panel { display: none; }
+  .mod-panel.active { display: block; }
+
+  /* ── 控制列下拉選單 ── */
+  .cui-select {
+    padding: 5px 10px; border-radius: 18px; font-size: 13px; font-weight: 700;
+    border: 1.5px solid var(--step); background: var(--paper); color: var(--step);
+    font-family: var(--font-zh-sans); cursor: pointer;
+  }
+  .cui-select.on { background: var(--step); color: #fff; }
+  /* 本頁專屬控制集中成一組，與主控制鈕區隔 */
+  .controls-bar .p4-wrap {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 7px 14px;
+    padding: 5px 12px; background: var(--paper2);
+    border: 1px solid var(--border2); border-radius: 14px;
+  }
+
+  /* ── 實戰例句 ── */
+  .realex-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .realex-item { background: var(--paper); border: 1px solid var(--border); border-left: 4px solid var(--step); border-radius: 10px; padding: 13px 16px; }
+  .realex-th { font-size: 17px; color: var(--step); font-weight: 700; display: block; line-height: 1.6; }
+  .realex-zh { font-size: 13.5px; color: var(--ink-mid); display: block; margin-top: 4px; }
+  .realex-tag { font-size: 11px; color: var(--amber); font-weight: 700; letter-spacing: 0.04em; }
+
+  /* ── 對話框（可開合） ── */
+  .dialog-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; font-size: 15px; font-weight: 700;
+    border: 1.5px solid var(--step); border-radius: 24px;
+    background: var(--paper); color: var(--step); cursor: pointer;
+    font-family: var(--font-zh-sans); transition: background 0.15s, color 0.15s;
+  }
+  .dialog-toggle:hover { background: var(--step-pale); }
+  .dialog-toggle.open { background: var(--step); color: #fff; }
+  .dialog-box { display: none; margin-top: 16px; }
+  .dialog-box.open { display: block; }
+  .dlg-line { display: flex; gap: 11px; margin-bottom: 13px; align-items: flex-start; }
+  .dlg-line.b { flex-direction: row-reverse; }
+  .dlg-who {
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px;
+  }
+  .dlg-line.a .dlg-who { background: var(--step); }
+  .dlg-line.b .dlg-who { background: var(--c-aux); }
+  .dlg-bubble { max-width: 80%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 11px 15px; }
+  .dlg-line.b .dlg-bubble { background: var(--c-aux-pale); border-color: #e2cdb8; }
+  .dlg-th { font-size: 17px; color: var(--ink); font-weight: 700; display: block; line-height: 1.6; }
+  .dlg-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-top: 3px; }
+  body.modern-font .realex-th, body.modern-font .dlg-th { font-family: var(--font-thai-modern), sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<div class="hero">
+  <div class="hero-tag">第四頁 · PAGE 4</div>
+  <h1>否定表達：<em>ไม่</em> 與 <em>ไม่ได้</em></h1>
+  <div class="hero-desc">不做 · 不怎樣 · 語序 · 程度語氣詞 · ไม่ได้ 專屬用法</div>
+</div>
+
+<div id="ctrl-anchor"></div>
+
+<main class="main">
+
+  <!-- ══ ① ไม่ + 動詞 基本否定 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">① 基本否定</span>
+      <div>
+        <div class="sec-title">ไม่ ＋ 動詞 — 不做</div>
+        <div class="sec-sub">放在動詞前表示「不」；用上方控制列的「否定」「想做」下拉切換 ไม่↔ไม่ได้、อยาก↔อยากจะ</div>
+      </div>
+    </div>
+    <table class="gram-table" id="neg-basic-table">
+      <thead><tr><th>結構</th><th>說明</th><th>例句</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="g-pattern">ไม่ไป</span><div class="g-mean" data-d="沒有去（過去）">不去</div></td>
+          <td class="g-note-cell" data-d="ไม่ได้ 放動詞前，否定過去「沒有發生」該動作。">ไม่ 直接放動詞前，否定該動作。</td>
+          <td>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="act" data-base="เราไม่ไป" data-syl="เรา·ไม่·ไป">เราไม่ไป</span>
+            <span class="roman-line" data-roman="rao mâi pai">rao mâi pai</span>
+            <span class="g-ex-zh" data-d="我（過去）沒有去">我不去</span>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="act" data-base="เราไม่กิน" data-syl="เรา·ไม่·กิน">เราไม่กิน</span>
+            <span class="roman-line" data-roman="rao mâi kin">rao mâi kin</span>
+            <span class="g-ex-zh" data-d="我（過去）沒有吃">我不吃</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ไม่ชอบ ＋ 動詞／名詞</span><div class="g-mean" data-d="並沒有喜歡（澄清）">不喜歡（做）</div></td>
+          <td class="g-note-cell" data-d="ชอบ 加 ไม่ได้，帶澄清語氣「並沒有喜歡」。">ชอบ 是情感動詞，後面可接「動詞」（不喜歡做某事）或「名詞」（不喜歡某物），加 ไม่ 即「不喜歡」。</td>
+          <td>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="stat" data-base="เราไม่ชอบกิน" data-syl="เรา·ไม่·ชอบ·กิน">เราไม่ชอบกิน</span>
+            <span class="roman-line" data-roman="rao mâi chôp kin">rao mâi chôp kin</span>
+            <span class="g-ex-zh" data-d="我並沒有喜歡吃">我不喜歡吃（＋動詞）</span>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="stat" data-base="เราไม่ชอบผักชี" data-syl="เรา·ไม่·ชอบ·ผัก·ชี">เราไม่ชอบผักชี</span>
+            <span class="roman-line" data-roman="rao mâi chôp phàk chii">rao mâi chôp phàk chii</span>
+            <span class="g-ex-zh" data-d="我並沒有喜歡香菜">我不喜歡香菜（＋名詞）</span>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="stat" data-base="เราไม่ชอบกาแฟ" data-syl="เรา·ไม่·ชอบ·กา·แฟ">เราไม่ชอบกาแฟ</span>
+            <span class="roman-line" data-roman="rao mâi chôp kaa-fɛɛ">rao mâi chôp kaa-fɛɛ</span>
+            <span class="g-ex-zh" data-d="我並沒有喜歡咖啡">我不喜歡咖啡（＋名詞）</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ไม่อยาก ／ ไม่อยากจะ</span><div class="g-mean" data-d="並沒有想（做）">不想要（做）</div></td>
+          <td class="g-note-cell" data-d="อยาก 加 ไม่ได้，澄清「並沒有想做」。<br>ไม่ได้อยาก ＝ ไม่ได้อยากจะ，意思相同。">อยาก 表「想做」，加 ไม่ 即「不想做」。<br>ไม่อยาก ＝ ไม่อยากจะ，意思完全相同。</td>
+          <td>
+            <span class="g-ex-th tsent" data-neg="1" data-yaak="1" data-pos="stat" data-base="เราไม่อยากไป" data-syl="เรา·ไม่·อยาก·ไป">เราไม่อยากไป</span>
+            <span class="roman-line" data-roman="rao mâi yàak pai">rao mâi yàak pai</span>
+            <span class="g-ex-zh" data-d="我並沒有想去">我不想去</span>
+            <span class="g-ex-th tsent" data-neg="1" data-yaak="1" data-pos="stat" data-base="เราไม่อยากพูด" data-syl="เรา·ไม่·อยาก·พูด">เราไม่อยากพูด</span>
+            <span class="roman-line" data-roman="rao mâi yàak phûut">rao mâi yàak phûut</span>
+            <span class="g-ex-zh" data-d="我並沒有想說">我不想說（話）</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ไม่ต้อง</span><div class="g-mean" data-d="根本沒有必要（做）">不用做</div></td>
+          <td class="g-note-cell" data-d="ต้อง 加 ไม่ได้，強調「根本沒有必要」（澄清語氣）。">ต้อง 表「必須」，加 ไม่ 即「不用」（非「禁止」）。</td>
+          <td>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="stat" data-base="ไม่ต้องมา" data-syl="ไม่·ต้อง·มา">ไม่ต้องมา</span>
+            <span class="roman-line" data-roman="mâi tông maa">mâi tông maa</span>
+            <span class="g-ex-zh" data-d="根本沒必要來">不用來</span>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="stat" data-base="เราไม่ต้องพูดเยอะ" data-syl="เรา·ไม่·ต้อง·พูด·เยอะ">เราไม่ต้องพูดเยอะ</span>
+            <span class="roman-line" data-roman="rao mâi tông phûut yə̂">rao mâi tông phûut yə̂</span>
+            <span class="g-ex-zh" data-d="我根本沒必要說很多">我不用說很多</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ไม่อยากได้ ＋ 名詞</span><div class="g-mean" data-d="並沒有想要（某物）">不想要（某樣東西）</div></td>
+          <td class="g-note-cell" data-d="อยากได้ 後接「名詞」，加 ไม่ได้ 即澄清「並沒有想要某物」。對照：ไม่ได้อยาก＋動詞、ไม่ได้อยากได้＋名詞。">อยากได้ 後接「名詞」（想要某物），加 ไม่ 即「不想要某物」。對照：ไม่อยาก＋動詞、ไม่อยากได้＋名詞。</td>
+          <td>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="stat" data-base="เราไม่อยากได้เงิน" data-syl="เรา·ไม่·อยาก·ได้·เงิน">เราไม่อยากได้เงิน</span>
+            <span class="roman-line" data-roman="rao mâi yàak dâai ngən">rao mâi yàak dâai ngən</span>
+            <span class="g-ex-zh" data-d="我並沒有想要錢">我不想要錢</span>
+            <span class="g-ex-th tsent" data-neg="1" data-pos="stat" data-base="เขาไม่อยากได้ของขวัญ" data-syl="เขา·ไม่·อยาก·ได้·ของ·ขวัญ">เขาไม่อยากได้ของขวัญ</span>
+            <span class="roman-line" data-roman="khǎo mâi yàak dâai khɔ̌ɔng-khwǎn">khǎo mâi yàak dâai khɔ̌ɔng-khwǎn</span>
+            <span class="g-ex-zh" data-d="他並沒有想要禮物">他不想要禮物</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ② ไม่／ไม่ได้ ＋ 形容詞・情感動詞 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">②</span>
+      <div>
+        <div class="sec-title">ไม่／ไม่ได้ ＋ 形容詞・情感動詞 — 不怎樣／並沒有</div>
+        <div class="sec-sub">否定狀態與情感。用上方「否定」下拉切到 ไม่ได้，會變成「並沒有…（反駁、澄清）」</div>
+      </div>
+    </div>
+    <div class="adj-grid" id="adj-section">
+      <div class="adj-card"><span class="adj-th tsent" data-neg="1" data-pos="adj" data-base="ไม่สวย" data-syl="ไม่·สวย">ไม่สวย</span><span class="roman-line" data-roman="mâi sǔay">mâi sǔay</span><span class="adj-zh" data-d="並沒有漂亮（反駁）">不漂亮</span></div>
+      <div class="adj-card"><span class="adj-th tsent" data-neg="1" data-pos="adj" data-base="ไม่เก่ง" data-syl="ไม่·เก่ง">ไม่เก่ง</span><span class="roman-line" data-roman="mâi kèng">mâi kèng</span><span class="adj-zh" data-d="並沒有厲害（反駁）">不厲害</span></div>
+      <div class="adj-card"><span class="adj-th tsent" data-neg="1" data-pos="adj" data-base="ไม่แพง" data-syl="ไม่·แพง">ไม่แพง</span><span class="roman-line" data-roman="mâi phɛɛng">mâi phɛɛng</span><span class="adj-zh" data-d="並沒有貴（反駁）">不貴</span></div>
+      <div class="adj-card"><span class="adj-th tsent" data-neg="1" data-pos="adj" data-base="ไม่อร่อย" data-syl="ไม่·อร่อย">ไม่อร่อย</span><span class="roman-line" data-roman="mâi a-ròi">mâi a-ròi</span><span class="adj-zh" data-d="並沒有好吃（反駁）">不好吃</span></div>
+      <div class="adj-card"><span class="adj-th tsent" data-neg="1" data-pos="adj" data-base="ไม่เหนื่อย" data-syl="ไม่·เหนื่อย">ไม่เหนื่อย</span><span class="roman-line" data-roman="mâi nùeai">mâi nùeai</span><span class="adj-zh" data-d="並沒有累（反駁）">不累</span></div>
+      <div class="adj-card"><span class="adj-th tsent" data-neg="1" data-pos="adj" data-base="ไม่ดี" data-syl="ไม่·ดี">ไม่ดี</span><span class="roman-line" data-roman="mâi dii">mâi dii</span><span class="adj-zh" data-d="並沒有好（反駁）">不好</span></div>
+      <div class="adj-card"><span class="adj-th tsent" data-neg="1" data-pos="stat" data-base="เราไม่ชอบเขา" data-syl="เรา·ไม่·ชอบ·เขา">เราไม่ชอบเขา</span><span class="roman-line" data-roman="rao mâi chôp khǎo">rao mâi chôp khǎo</span><span class="adj-zh" data-d="我並沒有喜歡他（反駁）">我不喜歡他</span></div>
+      <div class="adj-card"><span class="adj-th tsent" data-neg="1" data-yaak="1" data-pos="stat" data-base="เราไม่อยากไป" data-syl="เรา·ไม่·อยาก·ไป">เราไม่อยากไป</span><span class="roman-line" data-roman="rao mâi yàak pai">rao mâi yàak pai</span><span class="adj-zh" data-d="我並沒有想去（反駁）">我不想去</span></div>
+    </div>
+
+    <div class="note" style="margin-top:14px">
+      <strong>💡 ไม่ชอบ vs ไม่ได้ชอบ：</strong>「ไม่ชอบ」直接否定（不喜歡）；「ไม่ได้ชอบ」帶反駁語氣，像在說「我並沒有喜歡他（你誤會了）」。形容詞同理：ไม่ได้สวย＝並沒有多漂亮（常用來謙虛回應稱讚）。
+      <br><br>
+      <span class="tsent" style="color:var(--c-aux);font-weight:700" data-base="เราไม่ได้ชอบเขา" data-syl="เรา·ไม่·ได้·ชอบ·เขา">เราไม่ได้ชอบเขา</span>
+      <span class="roman-line" data-roman="rao mâi dâai chôp khǎo">rao mâi dâai chôp khǎo</span>
+      <span style="font-size:13px;color:var(--ink-mid)">我並沒有喜歡他（澄清，反駁誤會）</span>
+      <br>
+      <span class="tsent" style="color:var(--c-aux);font-weight:700" data-base="เราไม่ได้อยากไป" data-syl="เรา·ไม่·ได้·อยาก·ไป">เราไม่ได้อยากไป</span>
+      <span class="roman-line" data-roman="rao mâi dâai yàak pai">rao mâi dâai yàak pai</span>
+      <span style="font-size:13px;color:var(--ink-mid)">我並沒有想去（澄清，反駁誤會）</span>
+    </div>
+  </section>
+
+  <!-- ══ ③ 語序：助詞 ＋ ไม่ vs ไม่ ＋ 助詞 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">③ 語序</span>
+      <div>
+        <div class="sec-title">助詞 ＋ ไม่ ＋ 動詞 vs ไม่ ＋ 助詞 ＋ 動詞</div>
+        <div class="sec-sub">否定詞 ไม่ 放在助詞前或後，意思完全不同</div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:0">
+      <strong>🔑 位置決定意思：</strong>ไม่ 放在助詞「前」還是「後」，意思整個改變，互換就變另一句。要把整組一起記，不能拆開背。
+    </div>
+    <div class="compare-box">
+      <div class="compare-box-title">⚡ 互換位置，意思相反</div>
+      <div class="compare-desc" style="font-size:14px; line-height:1.85; margin-bottom:14px;">
+        <span style="color:var(--step);font-weight:700">助詞 ＋ ไม่</span>（助詞在前）＝助詞「決定／規定」要不做：<span style="color:var(--step)">จะไม่</span>＝決定不、<span style="color:var(--step)">ต้องไม่</span>＝必須不（禁止）。<br>
+        <span style="color:var(--c-aux);font-weight:700">ไม่ ＋ 助詞</span>（ไม่ 在前）＝直接否定那個助詞：<span style="color:var(--c-aux)">ไม่ต้อง</span>＝不用、<span style="color:var(--c-aux)">ไม่อยาก</span>＝不想。
+      </div>
+      <div class="compare-example">
+        <span class="tsent" data-base="ต้องไม่บอกใคร" data-syl="ต้อง·ไม่·บอก·ใคร">ต้องไม่บอกใคร</span>
+        <span class="roman-line" data-roman="tông mâi bòk khrai">tông mâi bòk khrai</span>
+        <span class="zh">絕對不能告訴任何人（禁止）</span>
+        <span class="tsent red" data-base="ไม่ต้องบอก" data-syl="ไม่·ต้อง·บอก">ไม่ต้องบอก</span>
+        <span class="roman-line" data-roman="mâi tông bòk">mâi tông bòk</span>
+        <span class="zh">不用說（說不說都可以）</span>
+        <span class="tsent" data-base="จะไม่ไป" data-syl="จะ·ไม่·ไป">จะไม่ไป</span>
+        <span class="roman-line" data-roman="jà mâi pai">jà mâi pai</span>
+        <span class="zh">決定不去</span>
+        <span class="tsent red" data-base="ไม่อยากไป" data-syl="ไม่·อยาก·ไป">ไม่อยากไป</span>
+        <span class="roman-line" data-roman="mâi yàak pai">mâi yàak pai</span>
+        <span class="zh">不想去</span>
+      </div>
+    </div>
+    <div class="warn"><strong>⚠ 最要記的一組：</strong>ต้องไม่＝必須不（禁止）　↔　ไม่ต้อง＝不用（不必要）。只是把 ไม่ 換邊，意思就從「禁止」變「隨意」！</div>
+
+    <div class="note" style="margin-top:18px">
+      <strong>哪些助詞能放在 ไม่ 前面？</strong><br>
+      只有 <strong style="color:var(--step)">จะ</strong>、<strong style="color:var(--step)">ต้อง</strong> 能放在 ไม่ 前面（จะไม่＝決定不、ต้องไม่＝禁止）。其餘助詞 <span style="color:var(--c-aux)">อยาก、อยากได้、กำลัง、กำลังจะ</span> 只能 ไม่ 在前（ไม่อยาก、ไม่อยากได้）；要否定它們的「進行／意圖」狀態時改用 ไม่ได้（見 ⑤）。
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ④ 程度與語氣詞（คำขยาย）══ -->
+  <section id="mod-section">
+    <div class="sec-header">
+      <span class="sec-badge">④ 程度語氣</span>
+      <div>
+        <div class="sec-title">คำขยาย — 程度與語氣詞</div>
+        <div class="sec-sub">用上方控制列的「程度語氣」下拉選一個詞，會套用到 ①、② 與本區所有能用的句子（不適用的句子會自動略過）</div>
+      </div>
+    </div>
+    <div class="note" id="mod-explain" style="margin-top:0">
+      從上方「程度語氣」下拉選一個詞，下面的例句就會加上它；不合適的句子（例如動詞接 เท่าไหร่）會保持原樣。
+    </div>
+    <table class="gram-table" id="mod-examples" style="margin-top:14px">
+      <thead><tr><th>例句</th><th>中文（原句）</th></tr></thead>
+      <tbody>
+        <tr><td><span class="g-ex-th tsent" data-pos="act" data-base="เราไม่ไป" data-syl="เรา·ไม่·ไป">เราไม่ไป</span><span class="roman-line" data-roman="rao mâi pai">rao mâi pai</span></td><td class="g-note-cell">我不去（ไม่＋動詞）</td></tr>
+        <tr><td><span class="g-ex-th tsent" data-pos="adj" data-base="เธอไม่สวย" data-syl="เธอ·ไม่·สวย">เธอไม่สวย</span><span class="roman-line" data-roman="thəə mâi sǔay">thəə mâi sǔay</span></td><td class="g-note-cell">她不漂亮（ไม่＋形容詞）</td></tr>
+        <tr><td><span class="g-ex-th tsent" data-pos="adj" data-base="หนังไม่สนุก" data-syl="หนัง·ไม่·สนุก">หนังไม่สนุก</span><span class="roman-line" data-roman="nǎng mâi sa-nùk">nǎng mâi sa-nùk</span></td><td class="g-note-cell">電影不好看（ไม่＋形容詞）</td></tr>
+        <tr><td><span class="g-ex-th tsent" data-pos="stat" data-base="เราไม่ชอบทำงาน" data-syl="เรา·ไม่·ชอบ·ทำ·งาน">เราไม่ชอบทำงาน</span><span class="roman-line" data-roman="rao mâi chôp tham-ngaan">rao mâi chôp tham-ngaan</span></td><td class="g-note-cell">我不喜歡工作（ชอบ＋動詞）</td></tr>
+        <tr><td><span class="g-ex-th tsent" data-pos="stat" data-base="เราไม่อยากนอน" data-syl="เรา·ไม่·อยาก·นอน">เราไม่อยากนอน</span><span class="roman-line" data-roman="rao mâi yàak nɔɔn">rao mâi yàak nɔɔn</span></td><td class="g-note-cell">我不想睡（อยาก＋動詞）</td></tr>
+        <tr><td><span class="g-ex-th tsent" data-pos="stat" data-base="เราไม่อยากได้เงิน" data-syl="เรา·ไม่·อยาก·ได้·เงิน">เราไม่อยากได้เงิน</span><span class="roman-line" data-roman="rao mâi yàak dâai ngən">rao mâi yàak dâai ngən</span></td><td class="g-note-cell">我不想要錢（อยากได้＋名詞）</td></tr>
+        <tr><td><span class="g-ex-th tsent" data-pos="stat" data-base="เราไม่ต้องรีบ" data-syl="เรา·ไม่·ต้อง·รีบ">เราไม่ต้องรีบ</span><span class="roman-line" data-roman="rao mâi tông rîip">rao mâi tông rîip</span></td><td class="g-note-cell">我不用趕（ต้อง＋動詞）</td></tr>
+        <tr><td><span class="g-ex-th tsent" data-pos="cmpd" data-base="เราจะไม่บอกใคร" data-syl="เรา·จะ·ไม่·บอก·ใคร">เราจะไม่บอกใคร</span><span class="roman-line" data-roman="rao jà mâi bòk khrai">rao jà mâi bòk khrai</span></td><td class="g-note-cell">我決定不告訴任何人（จะไม่＋動詞，只接 …เลย）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note" style="margin-top:14px">
+      <strong>📍 ขนาดนี้ vs ขนาดนั้น：</strong>兩個都是「到…程度」。<span style="color:var(--step);font-weight:700">ขนาดนั้น</span>（到那種程度）最常用，所以放在上面的選單裡。<span style="color:var(--c-aux);font-weight:700">ขนาดนี้</span>（到這種程度）只在「東西或人就在眼前、近在身邊」時才用，例如指著對方說 ไม่สวยขนาดนี้（沒漂亮到這種程度）；不在眼前就要用 ขนาดนั้น。
+    </div>
+  </section>
+
+  <!-- ══ ⑤ ไม่ได้ ＋ 文法助詞 ＋ 動詞 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge red">⑤ 助詞否定</span>
+      <div>
+        <div class="sec-title">ไม่ได้ ＋ 文法助詞 ＋ 動詞</div>
+        <div class="sec-sub">這些組合也專用 ไม่ได้：否定情態助詞所描述的狀態</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr>
+        <th>結構</th><th>說明</th><th>例句</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="g-pattern red">ไม่ได้จะ</span>
+            <div class="g-mean">沒有要（去做）</div>
+          </td>
+          <td class="g-note-cell">否定「จะ（決定要做）」：澄清「我並沒有打算要做那件事」。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราไม่ได้จะไป" data-syl="เรา·ไม่·ได้·จะ·ไป">เราไม่ได้จะไป</span>
+            <span class="roman-line" data-roman="rao mâi dâai jà pai">rao mâi dâai jà pai</span>
+            <span class="g-ex-zh">我並沒有要去</span>
+            <span class="g-ex-th tsent" data-base="เราไม่ได้จะบอกใคร" data-syl="เรา·ไม่·ได้·จะ·บอก·ใคร">เราไม่ได้จะบอกใคร</span>
+            <span class="roman-line" data-roman="rao mâi dâai jà bòk khrai">rao mâi dâai jà bòk khrai</span>
+            <span class="g-ex-zh">我並沒有要告訴誰</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern red">จะไม่ได้</span>
+            <div class="g-mean">將不會（發生）／到時候就不能</div>
+          </td>
+          <td class="g-note-cell">จะ ＋ ไม่ได้＝未來的事「將不會、到時候就辦不到」。與 ไม่ได้จะ（沒有要做）順序相反、意思不同，所以放在一起對照。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เดี๋ยวจะไม่ได้ไป" data-syl="เดี๋ยว·จะ·ไม่·ได้·ไป">เดี๋ยวจะไม่ได้ไป</span>
+            <span class="roman-line" data-roman="dǐao jà mâi dâai pai">dǐao jà mâi dâai pai</span>
+            <span class="g-ex-zh">待會就不能去了</span>
+            <span class="g-ex-th tsent" data-base="ถ้าไม่รีบจะไม่ได้กิน" data-syl="ถ้า·ไม่·รีบ·จะ·ไม่·ได้·กิน">ถ้าไม่รีบจะไม่ได้กิน</span>
+            <span class="roman-line" data-roman="thâa mâi rîip jà mâi dâai kin">thâa mâi rîip jà mâi dâai kin</span>
+            <span class="g-ex-zh">不快點就沒得吃了</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern red">ไม่ได้กำลังจะ</span>
+            <div class="g-mean">沒有正要（去做）</div>
+          </td>
+          <td class="g-note-cell">否定「กำลังจะ（正要去做）」：澄清「我並沒有正準備要做」。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราไม่ได้กำลังจะออกไป" data-syl="เรา·ไม่·ได้·กำ·ลัง·จะ·ออก·ไป">เราไม่ได้กำลังจะออกไป</span>
+            <span class="roman-line" data-roman="rao mâi dâai kam-lang jà ɔ̀ɔk pai">rao mâi dâai kam-lang jà ɔ̀ɔk pai</span>
+            <span class="g-ex-zh">我並沒有正要出去</span>
+            <span class="g-ex-th tsent" data-base="เขาไม่ได้กำลังจะไป" data-syl="เขา·ไม่·ได้·กำ·ลัง·จะ·ไป">เขาไม่ได้กำลังจะไป</span>
+            <span class="roman-line" data-roman="khǎo mâi dâai kam-lang jà pai">khǎo mâi dâai kam-lang jà pai</span>
+            <span class="g-ex-zh">他並沒有正要走</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern red">ไม่ได้กำลัง…อยู่</span>
+            <div class="g-mean">沒有正在做</div>
+          </td>
+          <td class="g-note-cell">否定「กำลัง…อยู่（正在進行）」：澄清「我並沒有正在做」。อยู่ 可省略（用上方「進行」切換）。</td>
+          <td>
+            <span class="g-ex-th tsent p4-prog" data-base="เราไม่ได้กำลังกินอยู่" data-syl="เรา·ไม่·ได้·กำ·ลัง·กิน·อยู่">เราไม่ได้กำลังกินอยู่</span>
+            <span class="roman-line" data-roman="rao mâi dâai kam-lang kin yùu">rao mâi dâai kam-lang kin yùu</span>
+            <span class="g-ex-zh">我並沒有正在吃</span>
+            <span class="g-ex-th tsent p4-prog" data-base="เราไม่ได้กำลังดูอยู่" data-syl="เรา·ไม่·ได้·กำ·ลัง·ดู·อยู่">เราไม่ได้กำลังดูอยู่</span>
+            <span class="roman-line" data-roman="rao mâi dâai kam-lang duu yùu">rao mâi dâai kam-lang duu yùu</span>
+            <span class="g-ex-zh">我並沒有正在看</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern red">ไม่ได้ต้อง</span>
+            <div class="g-mean">並不是一定要（做）</div>
+          </td>
+          <td class="g-note-cell">否定「ต้อง（必須）」：澄清「並不是非得這樣不可」，比 ไม่ต้อง 更帶反駁語氣。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราไม่ได้ต้องรีบ" data-syl="เรา·ไม่·ได้·ต้อง·รีบ">เราไม่ได้ต้องรีบ</span>
+            <span class="roman-line" data-roman="rao mâi dâai tông rîip">rao mâi dâai tông rîip</span>
+            <span class="g-ex-zh">我並不是非趕不可（你想多了）</span>
+            <span class="g-ex-th tsent" data-base="เราไม่ได้ต้องไป" data-syl="เรา·ไม่·ได้·ต้อง·ไป">เราไม่ได้ต้องไป</span>
+            <span class="roman-line" data-roman="rao mâi dâai tông pai">rao mâi dâai tông pai</span>
+            <span class="g-ex-zh">我並不是非去不可</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note" style="margin-top:14px">
+      <strong>💡 使用場合：</strong>ไม่ได้ ＋ 文法助詞 通常用於澄清或反駁別人的誤解，有「根本沒有」「哪有」的語感；จะไม่ได้ 則指未來「將辦不到」。
+      <br><br>
+      <strong>🧠 最好記的口訣：</strong>ไม่ ＝ 中文的「<span style="color:var(--step);font-weight:700">不</span>」，ไม่ได้ ＝ 中文的「<span style="color:var(--c-aux);font-weight:700">沒有</span>」。
+      <br><br>
+      <strong>🔑 ไม่ vs ไม่ได้ 最關鍵差別：</strong>ไม่ 否定現在或未來的動作（ไม่ไป＝不去，往後）；ไม่ได้ 強調過去「沒有發生」或澄清當下的誤解（ไม่ได้ไป＝沒有去，過去的事）。用上方「否定」下拉可直接切換比較。
+    </div>
+    <div class="warn" style="margin-top:14px">
+      <strong>⚠ 別把兩種「沒有」搞混：ไม่มี ＋ 名詞　vs　ไม่ได้ ＋ 動詞</strong><br>
+      中文一個「沒有」，泰語其實是兩個不同的詞：<br>
+      ・<span style="color:var(--c-aux);font-weight:700">ไม่มี ＋ 名詞</span>＝沒有（某樣<strong>東西</strong>）。例：<span style="color:var(--c-aux);font-weight:700">ไม่มีเงิน</span>＝沒有錢、<span style="color:var(--c-aux);font-weight:700">ไม่มีโต๊ะ</span>＝沒有位子。<br>
+      ・<span style="color:var(--c-aux);font-weight:700">ไม่ได้ ＋ 動詞</span>＝沒有（<strong>做</strong>某件事）。例：<span style="color:var(--c-aux);font-weight:700">ไม่ได้ไป</span>＝沒有去、<span style="color:var(--c-aux);font-weight:700">ไม่ได้กิน</span>＝沒有吃。<br>
+      一句話記：沒有「<strong>東西</strong>」用 ไม่มี，沒有「<strong>做事</strong>」用 ไม่ได้。
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ⭐ 實戰例句 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">⭐ 實戰例句</span>
+      <div>
+        <div class="sec-title">真實情境完整句</div>
+        <div class="sec-sub">把否定用法放進日常真的會說的完整句子裡</div>
+      </div>
+    </div>
+    <ul class="realex-list">
+      <li class="realex-item">
+        <span class="realex-tag">ไม่ได้จะ</span>
+        <span class="realex-th tsent" data-base="วันนี้เราไม่ได้จะไปไหน แค่อยากอยู่บ้านเฉย ๆ">วันนี้เราไม่ได้จะไปไหน แค่อยากอยู่บ้านเฉย ๆ</span>
+        <span class="roman-line" data-roman="wan-níi rao mâi dâai jà pai nǎi, khɛ̂ɛ yàak yùu bâan chə̌əi chə̌əi">wan-níi rao mâi dâai jà pai nǎi, khɛ̂ɛ yàak yùu bâan chə̌əi chə̌əi</span>
+        <span class="realex-zh">今天我並沒有要去哪，只是想待在家而已。</span>
+      </li>
+      <li class="realex-item">
+        <span class="realex-tag">ไม่ต้อง</span>
+        <span class="realex-th tsent" data-base="ไม่ต้องรีบนะ เดี๋ยวค่อยไปก็ได้">ไม่ต้องรีบนะ เดี๋ยวค่อยไปก็ได้</span>
+        <span class="roman-line" data-roman="mâi tông rîip ná, dǐao khɔ̂i pai kɔ̂ɔ dâai">mâi tông rîip ná, dǐao khɔ̂i pai kɔ̂ɔ dâai</span>
+        <span class="realex-zh">不用趕啦，待會再去也行。</span>
+      </li>
+      <li class="realex-item">
+        <span class="realex-tag">ไม่ค่อย…เท่าไหร่</span>
+        <span class="realex-th tsent" data-base="เราไม่ค่อยชอบกินผักชีเท่าไหร่">เราไม่ค่อยชอบกินผักชีเท่าไหร่</span>
+        <span class="roman-line" data-roman="rao mâi khôi chôp kin phàk-chii thâo-rài">rao mâi khôi chôp kin phàk-chii thâo-rài</span>
+        <span class="realex-zh">我不太喜歡吃香菜。</span>
+      </li>
+      <li class="realex-item">
+        <span class="realex-tag">ไม่ได้กำลัง</span>
+        <span class="realex-th tsent" data-base="เขาไม่ได้กำลังโกรธ แค่เหนื่อยเฉย ๆ">เขาไม่ได้กำลังโกรธ แค่เหนื่อยเฉย ๆ</span>
+        <span class="roman-line" data-roman="khǎo mâi dâai kam-lang gròot, khɛ̂ɛ nùeai chə̌əi chə̌əi">khǎo mâi dâai kam-lang gròot, khɛ̂ɛ nùeai chə̌əi chə̌əi</span>
+        <span class="realex-zh">他並不是在生氣，只是累而已。</span>
+      </li>
+      <li class="realex-item">
+        <span class="realex-tag">จะไม่ได้</span>
+        <span class="realex-th tsent" data-base="ถ้าไม่รีบ เดี๋ยวจะไม่ได้กินข้าว">ถ้าไม่รีบ เดี๋ยวจะไม่ได้กินข้าว</span>
+        <span class="roman-line" data-roman="thâa mâi rîip, dǐao jà mâi dâai kin khâao">thâa mâi rîip, dǐao jà mâi dâai kin khâao</span>
+        <span class="realex-zh">不快點的話，待會就沒得吃飯了。</span>
+      </li>
+      <li class="realex-item">
+        <span class="realex-tag">ไม่อยากได้</span>
+        <span class="realex-th tsent" data-base="เราไม่อยากได้อะไรหรอก ขอแค่เวลาว่างก็พอ">เราไม่อยากได้อะไรหรอก ขอแค่เวลาว่างก็พอ</span>
+        <span class="roman-line" data-roman="rao mâi yàak dâai a-rai rɔ̀ɔk, khɔ̌ɔ khɛ̂ɛ wee-laa wâang kɔ̂ɔ phɔɔ">rao mâi yàak dâai a-rai rɔ̀ɔk, khɔ̌ɔ khɛ̂ɛ wee-laa wâang kɔ̂ɔ phɔɔ</span>
+        <span class="realex-zh">我不想要什麼啦，只要有空閒時間就夠了。</span>
+      </li>
+    </ul>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ 💬 情境對話 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">💬 บทสนทนา</span>
+      <div>
+        <div class="sec-title">情境對話 — 約吃飯</div>
+        <div class="sec-sub">一段約吃飯的對話，幾乎用上本頁所有否定句型（點按開合）</div>
+      </div>
+    </div>
+    <button class="dialog-toggle" id="dlgBtn" type="button">▶ 展開對話</button>
+    <div class="dialog-box" id="dlgBox">
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="เย็นนี้ว่างไหม อยากชวนไปกินข้าว">เย็นนี้ว่างไหม อยากชวนไปกินข้าว</span>
+        <span class="roman-line" data-roman="yen-níi wâang mǎi, yàak chuan pai kin khâao">yen-níi wâang mǎi, yàak chuan pai kin khâao</span>
+        <span class="dlg-zh">今晚有空嗎？想約你去吃飯。</span></div></div>
+      <div class="dlg-line b"><span class="dlg-who">B</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="เราไม่ได้จะไปไหนนะ แต่วันนี้ไม่ค่อยอยากออกไปข้างนอกเท่าไหร่">เราไม่ได้จะไปไหนนะ แต่วันนี้ไม่ค่อยอยากออกไปข้างนอกเท่าไหร่</span>
+        <span class="roman-line" data-roman="rao mâi dâai jà pai nǎi ná, tɛ̀ɛ wan-níi mâi khôi yàak ɔ̀ɔk pai khâang-nɔ̂ɔk thâo-rài">rao mâi dâai jà pai nǎi ná, tɛ̀ɛ wan-níi mâi khôi yàak ɔ̀ɔk pai khâang-nɔ̂ɔk thâo-rài</span>
+        <span class="dlg-zh">我並沒有要去哪，但今天不太想出門。</span></div></div>
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="ถ้าเหนื่อยก็ไม่เป็นไร">ถ้าเหนื่อยก็ไม่เป็นไร</span>
+        <span class="roman-line" data-roman="thâa nùeai kɔ̂ɔ mâi pen rai">thâa nùeai kɔ̂ɔ mâi pen rai</span>
+        <span class="dlg-zh">如果累的話也沒關係。</span></div></div>
+      <div class="dlg-line b"><span class="dlg-who">B</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="จริง ๆ เราไม่ได้เหนื่อยขนาดนั้น แค่ไม่อยากเจอคนเยอะ ๆ">จริง ๆ เราไม่ได้เหนื่อยขนาดนั้น แค่ไม่อยากเจอคนเยอะ ๆ</span>
+        <span class="roman-line" data-roman="jing jing, rao mâi dâai nùeai khà-nàat nán, khɛ̂ɛ mâi yàak jəə khon yə́ yə́">jing jing, rao mâi dâai nùeai khà-nàat nán, khɛ̂ɛ mâi yàak jəə khon yə́ yə́</span>
+        <span class="dlg-zh">其實我並沒有那麼累，只是不想見很多人。</span></div></div>
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="ถ้างั้นเราไปร้านเงียบ ๆ กัน">ถ้างั้นเราไปร้านเงียบ ๆ กัน</span>
+        <span class="roman-line" data-roman="thâa-ngán rao pai ráan ngîap ngîap gan">thâa-ngán rao pai ráan ngîap ngîap gan</span>
+        <span class="dlg-zh">那我們去安靜的店吧。</span></div></div>
+      <div class="dlg-line b"><span class="dlg-who">B</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="เราไม่ได้ไม่ชอบร้านที่เสียงดังนะ แต่เสียงดังแล้วคุยกันไม่รู้เรื่อง">เราไม่ได้ไม่ชอบร้านที่เสียงดังนะ แต่เสียงดังแล้วคุยกันไม่รู้เรื่อง</span>
+        <span class="roman-line" data-roman="rao mâi dâai mâi chôp ráan thîi sǐang dang ná, tɛ̀ɛ sǐang dang lɛ́ɛo khui gan mâi rúu rûeang">rao mâi dâai mâi chôp ráan thîi sǐang dang ná, tɛ̀ɛ sǐang dang lɛ́ɛo khui gan mâi rúu rûeang</span>
+        <span class="dlg-zh">我並不是不喜歡吵的店，只是太吵聊天聽不清。</span></div></div>
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="เราก็ไม่อยากไปร้านที่เสียงดังเหมือนกัน">เราก็ไม่อยากไปร้านที่เสียงดังเหมือนกัน</span>
+        <span class="roman-line" data-roman="rao kɔ̂ɔ mâi yàak pai ráan thîi sǐang dang mʉ̌an gan">rao kɔ̂ɔ mâi yàak pai ráan thîi sǐang dang mʉ̌an gan</span>
+        <span class="dlg-zh">我也不想去吵的店。</span></div></div>
+      <div class="dlg-line b"><span class="dlg-who">B</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="ดีเลย แต่บอกก่อนนะ วันนี้เราไม่กินอาหารญี่ปุ่นนะ">ดีเลย แต่บอกก่อนนะ วันนี้เราไม่กินอาหารญี่ปุ่นนะ</span>
+        <span class="roman-line" data-roman="dii ləəi, tɛ̀ɛ bɔ̀ɔk gɔ̀ɔn ná, wan-níi rao mâi kin aa-hǎan yîi-pùn ná">dii ləəi, tɛ̀ɛ bɔ̀ɔk gɔ̀ɔn ná, wan-níi rao mâi kin aa-hǎan yîi-pùn ná</span>
+        <span class="dlg-zh">太好了，但先說喔，今天我不吃日本料理。</span></div></div>
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="ได้ รีบไปกันเถอะ เดี๋ยวไม่มีโต๊ะ">ได้ รีบไปกันเถอะ เดี๋ยวไม่มีโต๊ะ</span>
+        <span class="roman-line" data-roman="dâai, rîip pai gan thə̀, dǐao mâi mii tó">dâai, rîip pai gan thə̀, dǐao mâi mii tó</span>
+        <span class="dlg-zh">好，快走吧，待會就沒位子了。</span></div></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- PAGE_NOTES：教師說明已移至頁面內嵌區（#teacher-notes），此處留空 -->
+<script>
+window.PAGE_NOTES = '';
+</script>
+
+
+
+<script src="controls-ui.js"></script>
+<script src="nav-ui.js"></script>
+
+<!-- ═══ 第四頁控制器：下拉選單（否定／想做／คำขยาย），全頁套用 ═══ -->
+<script>
+(function () {
+  'use strict';
+  var neg='mai', yaak='yaak', mod='none', prog='both';
+
+  var SUF={
+    loei:    {th:'เลย',      syl:'·เลย',       ro:' ləəi'},
+    thaorai: {th:'เท่าไหร่',  syl:'·เท่า·ไหร่',  ro:' thâo-rài'},
+    khannan: {th:'ขนาดนั้น',  syl:'·ข·นาด·นั้น', ro:' khà-nàat nán'}
+  };
+  var EXPLAIN={
+    none:'從上方「程度語氣」下拉選一個詞，下面的例句就會加上它；不合適的句子（例如動詞接 เท่าไหร่）會保持原樣。',
+    loei:'<strong>เลย — 完全、根本（加強否定）</strong><br>接在句尾，把否定推到最強：「完全不、一點也不」。動詞、形容詞都能用。例：ไม่ไปเลย＝完全不去。',
+    thaorai:'<strong>เท่าไหร่ — 也沒有多…（淡化）</strong><br>只接在形容詞／狀態後：「也沒有多…、不怎麼」。動詞不適用。例：ไม่แพงเท่าไหร่＝也沒有多貴。',
+    khannan:'<strong>ขนาดนั้น — 到那種程度</strong><br>只接形容詞／狀態：「沒有…到那種程度」；切到 ไม่ได้ 時 ไม่ได้ชอบ／อยาก／อยากได้ 也能接。例：ไม่เก่งขนาดนั้น＝沒厲害到那種程度。',
+    maikhoi:'<strong>ไม่ค่อย — 不太、不怎麼</strong><br>動詞用「ไม่ค่อยได้＋動詞」（很少做）；形容詞／情感用「ไม่ค่อย＋詞」。例：ไม่ค่อยได้ไป＝很少去；ไม่ค่อยสวย＝不太漂亮。',
+    maikhoi_thaorai:'<strong>ไม่ค่อย…เท่าไหร่ — 不太…（更口語）</strong><br>兩個一起用，語氣更自然。例：ไม่ค่อยสวยเท่าไหร่＝不太漂亮；ไม่ค่อยได้ไปเท่าไหร่＝不太常去。'
+  };
+
+  function allowed(m,pos){
+    if(pos==='cmpd') return m==='loei';       /* จะไม่… 只接 …เลย */
+    if(m==='loei'||m==='maikhoi'||m==='maikhoi_thaorai') return true;
+    if(m==='thaorai') return pos==='adj'||pos==='stat';
+    if(m==='khannan') return pos==='adj'||pos==='stat';
+    return false;
+  }
+
+  /* 控制列加入本頁專屬下拉（與主控制鈕分開，集中成一組） */
+  var shared=document.querySelector('.controls-bar');
+  if(shared){
+    shared.insertAdjacentHTML('beforeend',
+      '<div class="ctrl-sep"></div>'+
+      '<div class="p4-wrap">'+
+      '<div class="ctrl-group"><span class="ctrl-label">否定</span>'+
+        '<select class="cui-select" id="selNeg"><option value="mai">ไม่</option><option value="maidai">ไม่ได้</option></select></div>'+
+      '<div class="ctrl-group"><span class="ctrl-label">想做</span>'+
+        '<select class="cui-select" id="selYaak"><option value="yaak">อยาก</option><option value="yaakja">อยากจะ</option></select></div>'+
+      '<div class="ctrl-group"><span class="ctrl-label">進行</span>'+
+        '<select class="cui-select" id="selProg">'+
+          '<option value="both">กำลัง＋อยู่</option>'+
+          '<option value="kam">只 กำลัง</option>'+
+          '<option value="yuu">只 อยู่</option>'+
+        '</select></div>'+
+      '<div class="ctrl-group"><span class="ctrl-label">程度語氣</span>'+
+        '<select class="cui-select" id="selMod">'+
+          '<option value="none">（無）</option>'+
+          '<option value="loei">…เลย</option>'+
+          '<option value="thaorai">…เท่าไหร่</option>'+
+          '<option value="khannan">…ขนาดนั้น</option>'+
+          '<option value="maikhoi">ไม่ค่อย…</option>'+
+          '<option value="maikhoi_thaorai">ไม่ค่อย…เท่าไหร่</option>'+
+        '</select></div>'+
+      '</div>');
+  }
+
+  /* 快照所有句子 */
+  var items=Array.prototype.map.call(document.querySelectorAll('.tsent'), function(el){
+    var r=el.nextElementSibling;
+    if(!r||!r.classList||!r.classList.contains('roman-line')) r=null;
+    return {el:el, b0:el.getAttribute('data-base')||el.innerHTML,
+            s0:el.getAttribute('data-syl')||el.getAttribute('data-base')||el.innerHTML,
+            rEl:r, r0:r?(r.getAttribute('data-roman')||r.textContent.trim()):''};
+  });
+  function snap(sel){ return Array.prototype.map.call(document.querySelectorAll(sel), function(e){ return {el:e, html:e.innerHTML, d:e.getAttribute('data-d')}; }); }
+  var negPats =snap('#neg-basic-table .g-pattern');
+  var negMeans=snap('#neg-basic-table .g-mean');
+  var negNotes=snap('#neg-basic-table .g-note-cell');
+  var negZhs  =snap('#neg-basic-table .g-ex-zh');
+  var adjZhs  =snap('#adj-section .adj-zh');
+
+  function compose(){
+    var maidai=(neg==='maidai');
+    items.forEach(function(it){
+      var d=it.el.dataset, b=it.b0, sy=it.s0, r=it.r0;
+      if(d.yaak && yaak==='yaakja'){ b=b.replace(/อยาก(?!ได้)/g,'อยากจะ'); sy=sy.replace(/อยาก(?!·?ได้)/g,'อยาก·จะ'); r=r.replace(/yàak(?! dâai)/g,'yàak jà'); }
+      var prefixMod=(mod==='maikhoi'||mod==='maikhoi_thaorai');
+      var modOK=(mod!=='none' && d.pos && allowed(mod,d.pos));
+      if(d.neg && maidai && !(modOK && prefixMod)){
+        b=b.replace(/ไม่(?!ได้)/g,'ไม่ได้'); sy=sy.replace(/ไม่(?!·?ได้)/g,'ไม่·ได้'); r=r.replace(/mâi(?! dâai)/g,'mâi dâai');
+      }
+      if(modOK){
+        if(prefixMod){
+          var act=(d.pos==='act');
+          b=b.replace('ไม่', act?'ไม่ค่อยได้':'ไม่ค่อย');
+          sy=sy.replace('ไม่', act?'ไม่·ค่อย·ได้':'ไม่·ค่อย');
+          r=r.replace('mâi', act?'mâi khôi dâai':'mâi khôi');
+          if(mod==='maikhoi_thaorai'){ b+='เท่าไหร่'; sy+='·เท่า·ไหร่'; if(r) r+=' thâo-rài'; }
+        } else {
+          var M=SUF[mod]; b+=M.th; sy+=M.syl; if(r) r+=M.ro;
+        }
+      }
+      /* 進行式拆解：僅作用於 ⑤ 的 .p4-prog 句子（กำลัง…อยู่） */
+      if(it.el.classList.contains('p4-prog') && prog!=='both'){
+        if(prog==='kam'){            /* 只留 กำลัง，去掉 อยู่ */
+          b=b.replace(/อยู่$/,''); sy=sy.replace(/·อยู่$/,''); r=r.replace(/\s*yùu$/,'');
+        } else if(prog==='yuu'){     /* 只留 อยู่，去掉 กำลัง */
+          b=b.replace('กำลัง',''); sy=sy.replace('กำ·ลัง·',''); r=r.replace('kam-lang ','');
+        }
+      }
+      it.el.setAttribute('data-base',b); it.el.setAttribute('data-syl',sy);
+      if(it.rEl) it.rEl.setAttribute('data-roman',r);
+    });
+    negPats.forEach(function(p){ p.el.innerHTML = maidai ? p.html.replace(/ไม่(?!ได้)/g,'ไม่ได้') : p.html; });
+    negMeans.forEach(function(m){ m.el.innerHTML=(maidai&&m.d)?m.d:m.html; });
+    negNotes.forEach(function(n){ n.el.innerHTML=(maidai&&n.d)?n.d:n.html; });
+    negZhs.forEach(function(z){ z.el.innerHTML=(maidai&&z.d)?z.d:z.html; });
+    adjZhs.forEach(function(z){ z.el.innerHTML=(maidai&&z.d)?z.d:z.html; });
+    if(typeof window.CUIRender==='function') window.CUIRender();
+    else window.dispatchEvent(new Event('cui:rerender'));
+  }
+
+  var selNeg=document.getElementById('selNeg');
+  var selYaak=document.getElementById('selYaak');
+  var selProg=document.getElementById('selProg');
+  var selMod=document.getElementById('selMod');
+  var explain=document.getElementById('mod-explain');
+  if(selNeg) selNeg.addEventListener('change',function(){ neg=this.value; this.classList.toggle('on',neg!=='mai'); compose(); });
+  if(selYaak) selYaak.addEventListener('change',function(){ yaak=this.value; this.classList.toggle('on',yaak!=='yaak'); compose(); });
+  if(selProg) selProg.addEventListener('change',function(){ prog=this.value; this.classList.toggle('on',prog!=='both'); compose(); });
+  if(selMod) selMod.addEventListener('change',function(){ mod=this.value; this.classList.toggle('on',mod!=='none'); if(explain&&EXPLAIN[mod]) explain.innerHTML=EXPLAIN[mod]; compose(); });
+})();
+</script>
+
+<!-- ═══ 情境對話 開合 ═══ -->
+<script>
+(function(){
+  var btn=document.getElementById('dlgBtn'), box=document.getElementById('dlgBox');
+  if(btn&&box) btn.addEventListener('click',function(){
+    var open=box.classList.toggle('open');
+    btn.classList.toggle('open',open);
+    btn.textContent=open?'▼ 收合對話':'▶ 展開對話';
+  });
+})();
+</script>
+</body>
+</html>

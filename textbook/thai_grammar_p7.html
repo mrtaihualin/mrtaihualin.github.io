@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語文法 第七頁 — 疑問詞</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="nav-ui.css">
+<link rel="stylesheet" href="controls-ui.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-zh-sans);
+    font-size: 18px;
+    line-height: 1.85;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--paper);
+    border-bottom: 2px solid var(--border2);
+    padding: 52px 60px 40px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: ''; position: absolute; border-radius: 50%; opacity: 0.07; background: var(--step);
+  }
+  .hero::before { width: 320px; height: 320px; top: -80px; left: -60px; }
+  .hero::after  { width: 240px; height: 240px; bottom: -60px; right: -40px; }
+  .hero-tag {
+    display: inline-block;
+    background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+    padding: 4px 14px; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: var(--font-zh-serif);
+    font-size: clamp(22px, 4.5vw, 42px);
+    font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 10px;
+  }
+  .hero h1 em { font-style: normal; color: var(--step); border-bottom: 3px solid #c8b882; }
+  .hero-desc { font-size: 15px; color: var(--ink-mid); }
+
+  /* ── MAIN ── */
+  .main {
+    max-width: 880px; margin: 0 auto;
+    padding: 38px 22px 80px;
+    display: flex; flex-direction: column; gap: 46px;
+  }
+
+  /* ── SECTION HEADER ── */
+  .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sec-badge {
+    background: var(--step); color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; padding: 3px 10px; border-radius: 5px; white-space: nowrap;
+  }
+  .sec-title { font-family: var(--font-zh-serif); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .sec-sub { font-size: 13.5px; color: var(--ink-light); margin-top: 2px; }
+
+  /* ── QW OVERVIEW GRID ── */
+  .qw-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;
+    margin-top: 4px;
+  }
+  .qw-card {
+    background: var(--paper); border: 1.5px solid var(--border2); border-radius: 12px;
+    padding: 14px 16px; text-align: center;
+  }
+  .qw-th { font-size: 22px; font-weight: 700; color: var(--step); display: block; line-height: 1.3; }
+  .qw-rom { font-size: 12px; color: var(--ink-light); font-style: italic; display: none; margin: 2px 0; }
+  body.show-roman .qw-rom { display: block; }
+  .qw-zh { font-size: 14px; color: var(--ink); font-weight: 600; display: block; }
+
+  /* ── GRAMMAR TABLE ── */
+  .gram-table {
+    width: 100%; border-collapse: collapse; font-size: 15px;
+    border-radius: 14px; overflow: hidden;
+    border: 1.5px solid var(--border2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .gram-table thead tr { background: var(--step); color: #fff; }
+  .gram-table th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+  .gram-table tbody tr:nth-child(odd)  { background: var(--paper); }
+  .gram-table tbody tr:nth-child(even) { background: var(--bg2); }
+  .gram-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .gram-table tbody tr:last-child td { border-bottom: none; }
+  .g-pattern { font-size: 18px; font-weight: 700; color: var(--step); line-height: 1.55; }
+  .g-mean { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 3px; }
+  .g-note-cell { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .g-ex-th {
+    font-size: 17px; color: var(--step); font-weight: 700;
+    display: block; line-height: 1.55; margin-top: 6px;
+  }
+  .g-ex-th:first-child { margin-top: 0; }
+  .g-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+  .hl-q { color: var(--c-aux); }
+
+  /* ── CALLOUTS ── */
+  .note {
+    border-left: 3px solid #c8b882; background: var(--amber-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--ink-mid); line-height: 1.75; margin-top: 14px;
+  }
+  .note strong { color: var(--amber); }
+
+  /* ── ROMAN LINE ── */
+  .roman-line { font-size: 12.5px; color: var(--ink-light); display: none; margin-top: 2px; font-style: italic; }
+  body.show-roman .roman-line { display: block; }
+
+  .hr { height: 1px; background: var(--border); }
+
+  /* ── 字體切換 ── */
+  body.modern-font .g-pattern,
+  body.modern-font .tsent,
+  body.modern-font .g-ex-th,
+  body.modern-font .qw-th {
+    font-family: var(--font-thai-modern), sans-serif;
+  }
+
+  @media (max-width: 640px) {
+    .qw-grid { grid-template-columns: repeat(2, 1fr); }
+    .sec-header { flex-direction: column; align-items: flex-start; }
+    .hero { padding: 40px 50px 32px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-tag">第七頁 · PAGE 7</div>
+  <h1>疑問詞：<em>อะไร</em>・<em>ใคร</em>・<em>ที่ไหน</em>⋯</h1>
+  <div class="hero-desc">什麼・誰・哪裡・什麼時候・為什麼・怎麼・多少</div>
+</div>
+
+<div id="ctrl-anchor"></div>
+
+<main class="main">
+
+  <!-- ══ ① 疑問詞總覽 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">① 總覽</span>
+      <div>
+        <div class="sec-title">泰語疑問詞一覽</div>
+        <div class="sec-sub">泰文疑問詞放在句子中被問的位置，不像中文移到句首</div>
+      </div>
+    </div>
+    <div class="qw-grid">
+      <div class="qw-card">
+        <span class="qw-th tsent" data-base="อะไร" data-syl="อะ·ไร">อะไร</span>
+        <span class="qw-rom">à-rai</span>
+        <span class="qw-zh">什麼</span>
+      </div>
+      <div class="qw-card">
+        <span class="qw-th tsent" data-base="ใคร" data-syl="ใคร">ใคร</span>
+        <span class="qw-rom">khrai</span>
+        <span class="qw-zh">誰</span>
+      </div>
+      <div class="qw-card">
+        <span class="qw-th tsent" data-base="ที่ไหน" data-syl="ที่·ไหน">ที่ไหน</span>
+        <span class="qw-rom">thîi-nǎi</span>
+        <span class="qw-zh">哪裡</span>
+      </div>
+      <div class="qw-card">
+        <span class="qw-th tsent" data-base="เมื่อไร" data-syl="เมื่อ·ไร">เมื่อไร</span>
+        <span class="qw-rom">mûuea-rai</span>
+        <span class="qw-zh">什麼時候</span>
+      </div>
+      <div class="qw-card">
+        <span class="qw-th tsent" data-base="ทำไม" data-syl="ทำ·ไม">ทำไม</span>
+        <span class="qw-rom">tham-mai</span>
+        <span class="qw-zh">為什麼</span>
+      </div>
+      <div class="qw-card">
+        <span class="qw-th tsent" data-base="อย่างไร" data-syl="อย่าง·ไร">อย่างไร</span>
+        <span class="qw-rom">yàang-rai</span>
+        <span class="qw-zh">怎麼様</span>
+      </div>
+      <div class="qw-card">
+        <span class="qw-th tsent" data-base="เท่าไร" data-syl="เท่า·ไร">เท่าไร</span>
+        <span class="qw-rom">thâo-rai</span>
+        <span class="qw-zh">多少（錢）</span>
+      </div>
+      <div class="qw-card">
+        <span class="qw-th tsent" data-base="กี่" data-syl="กี่">กี่</span>
+        <span class="qw-rom">gìi</span>
+        <span class="qw-zh">幾（個）</span>
+      </div>
+    </div>
+    <div class="note">
+      <strong>💡 語序關鍵：</strong>泰文疑問詞留在原來的位置，不需要移到句首。「你叫什麼名字？」→ คุณชื่ออะไร（你 ＋ 叫 ＋ 什麼），語序與中文相同。
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ② 各疑問詞用法 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">② 各詞用法</span>
+      <div>
+        <div class="sec-title">疑問詞句型與例句</div>
+        <div class="sec-sub">疑問詞直接取代句中被問的部分</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr>
+        <th>疑問詞</th><th>句型</th><th>例句</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="g-pattern">อะไร</span>
+            <div class="g-mean">什麼</div>
+          </td>
+          <td class="g-note-cell">放在動詞後，取代受詞位置。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="คุณชื่ออะไร" data-syl="คุณ·ชื่อ·อะ·ไร">คุณชื่อ<span class="hl-q">อะไร</span></span>
+            <span class="roman-line">khun chûue à-rai</span>
+            <span class="g-ex-zh">你叫什麼名字？</span>
+            <span class="g-ex-th tsent" data-base="อยากกินอะไร" data-syl="อยาก·กิน·อะ·ไร">อยากกิน<span class="hl-q">อะไร</span></span>
+            <span class="roman-line">yàak gin à-rai</span>
+            <span class="g-ex-zh">想吃什麼？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">ใคร</span>
+            <div class="g-mean">誰</div>
+          </td>
+          <td class="g-note-cell">可作主語或受詞。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ใครโทรมา" data-syl="ใคร·โทร·มา"><span class="hl-q">ใคร</span>โทรมา</span>
+            <span class="roman-line">khrai thoo maa</span>
+            <span class="g-ex-zh">誰打電話來？</span>
+            <span class="g-ex-th tsent" data-base="คุณไปกับใคร" data-syl="คุณ·ไป·กับ·ใคร">คุณไปกับ<span class="hl-q">ใคร</span></span>
+            <span class="roman-line">khun pai gàp khrai</span>
+            <span class="g-ex-zh">你跟誰去？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">ที่ไหน</span>
+            <div class="g-mean">哪裡</div>
+          </td>
+          <td class="g-note-cell">問地點；放在動詞或 ที่ 後面。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="คุณอยู่ที่ไหน" data-syl="คุณ·อยู่·ที่·ไหน">คุณอยู่<span class="hl-q">ที่ไหน</span></span>
+            <span class="roman-line">khun yùu thîi-nǎi</span>
+            <span class="g-ex-zh">你在哪裡？</span>
+            <span class="g-ex-th tsent" data-base="จะไปที่ไหน" data-syl="จะ·ไป·ที่·ไหน">จะไป<span class="hl-q">ที่ไหน</span></span>
+            <span class="roman-line">jà pai thîi-nǎi</span>
+            <span class="g-ex-zh">要去哪裡？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">เมื่อไร</span>
+            <div class="g-mean">什麼時候</div>
+          </td>
+          <td class="g-note-cell">問時間；可放句首或句尾。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="จะกลับเมื่อไร" data-syl="จะ·กลับ·เมื่อ·ไร">จะกลับ<span class="hl-q">เมื่อไร</span></span>
+            <span class="roman-line">jà glàp mûuea-rai</span>
+            <span class="g-ex-zh">什麼時候回來？</span>
+            <span class="g-ex-th tsent" data-base="เมื่อไรจะเสร็จ" data-syl="เมื่อ·ไร·จะ·เสร็จ"><span class="hl-q">เมื่อไร</span>จะเสร็จ</span>
+            <span class="roman-line">mûuea-rai jà sèt</span>
+            <span class="g-ex-zh">什麼時候會好（完成）？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">ทำไม</span>
+            <div class="g-mean">為什麼</div>
+          </td>
+          <td class="g-note-cell">通常放句首；問原因。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ทำไมไม่ไป" data-syl="ทำ·ไม·ไม่·ไป"><span class="hl-q">ทำไม</span>ไม่ไป</span>
+            <span class="roman-line">tham-mai mâi pai</span>
+            <span class="g-ex-zh">為什麼不去？</span>
+            <span class="g-ex-th tsent" data-base="ทำไมถึงเลือกที่นี่" data-syl="ทำ·ไม·ถึง·เลือก·ที่·นี่"><span class="hl-q">ทำไม</span>ถึงเลือกที่นี่</span>
+            <span class="roman-line">tham-mai thǔeng lûueak thîi-nîi</span>
+            <span class="g-ex-zh">為什麼選這裡？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">อย่างไร<br>ยังไง</span>
+            <div class="g-mean">怎麼様（口語：ยังไง）</div>
+          </td>
+          <td class="g-note-cell">問方式或狀態；ยังไง 為口語常用形。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ทำอย่างไร" data-syl="ทำ·อย่าง·ไร">ทำ<span class="hl-q">อย่างไร</span></span>
+            <span class="roman-line">tham yàang-rai</span>
+            <span class="g-ex-zh">怎麼做？</span>
+            <span class="g-ex-th tsent" data-base="เป็นยังไงบ้าง" data-syl="เป็น·ยัง·ไง·บ้าง">เป็น<span class="hl-q">ยังไง</span>บ้าง</span>
+            <span class="roman-line">pen yang-ngai bâang</span>
+            <span class="g-ex-zh">怎麼樣了？（近況如何？）</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">เท่าไร</span>
+            <div class="g-mean">多少（錢）</div>
+          </td>
+          <td class="g-note-cell">問價格或數量；放句尾。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ราคาเท่าไร" data-syl="รา·คา·เท่า·ไร">ราคา<span class="hl-q">เท่าไร</span></span>
+            <span class="roman-line">raa-khaa thâo-rai</span>
+            <span class="g-ex-zh">價格多少？</span>
+            <span class="g-ex-th tsent" data-base="อันนี้เท่าไร" data-syl="อัน·นี้·เท่า·ไร">อันนี้<span class="hl-q">เท่าไร</span></span>
+            <span class="roman-line">an-níi thâo-rai</span>
+            <span class="g-ex-zh">這個多少錢？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">กี่ ＋ 量詞</span>
+            <div class="g-mean">幾個 ／ 幾⋯</div>
+          </td>
+          <td class="g-note-cell">กี่ 後接量詞，問數量；量詞不可省略。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="มีกี่คน" data-syl="มี·กี่·คน">มี<span class="hl-q">กี่</span>คน</span>
+            <span class="roman-line">mii gìi khon</span>
+            <span class="g-ex-zh">有幾個人？</span>
+            <span class="g-ex-th tsent" data-base="อยากได้กี่อัน" data-syl="อยาก·ได้·กี่·อัน">อยากได้<span class="hl-q">กี่</span>อัน</span>
+            <span class="roman-line">yàak dâai gìi an</span>
+            <span class="g-ex-zh">想要幾個？</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>💡 ยังไง vs อย่างไร：</strong>兩者意思相同，ยังไง 是口語縮寫，日常對話更常用；อย่างไร 較正式，適合書面或鄭重場合。
+    </div>
+  </section>
+
+</main>
+
+<footer>第七頁 · 泰語教材 · 疑問詞</footer>
+
+<script>
+window.PAGE_NOTES = '';
+</script>
+<script src="controls-ui.js"></script>
+<script src="nav-ui.js"></script>
+</body>
+</html>

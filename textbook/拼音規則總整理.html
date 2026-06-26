@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拼音規則 總整理｜泰語拼音規則</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    padding:40px 16px 80px;
+    background:var(--bg);
+    font-family:var(--font-zh-sans);
+    color:var(--ink);
+    line-height:1.85;
+    font-size:18px;
+  }
+  .page{
+    max-width:920px;
+    margin:0 auto;
+  }
+
+  /* ---- Header ---- */
+  .hero{
+    border:1px solid var(--border2);
+    border-radius:4px;
+    background:var(--paper);
+    padding:42px 32px 36px;
+    text-align:center;
+    margin-bottom:28px;
+  }
+  .hero h1{
+    font-family:var(--font-zh-serif);
+    font-weight:900;
+    font-size:clamp(34px,6vw,52px);
+    margin:0 0 10px;
+    color:var(--ink);
+    letter-spacing:.18em;
+  }
+  .hero .tags{
+    margin-top:18px;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+  }
+  .hero .tag{
+    border:1px solid var(--step-pale);
+    color:var(--step);
+    border-radius:999px;
+    padding:5px 16px;
+    font-size:14px;
+    letter-spacing:.05em;
+    background:var(--step-pale);
+  }
+
+  /* ---- 跨頁導覽連結 ---- */
+  .page-link-row{
+    display:flex;
+    justify-content:center;
+    margin-bottom:14px;
+  }
+  .page-link{
+    text-decoration:none;
+    padding:6px 18px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:500;
+    border:1.5px dashed var(--border2);
+    color:var(--ink-mid);
+    background:var(--paper);
+    transition:all 0.15s;
+  }
+  .page-link:hover{ filter:brightness(0.96); }
+
+  /* ---- Section card ---- */
+  .section{
+    border:1px solid var(--border2);
+    border-radius:4px;
+    background:var(--paper);
+    padding:28px 28px 30px;
+    margin-bottom:24px;
+  }
+  .section h2{
+    font-family:var(--font-zh-serif);
+    font-weight:900;
+    font-size:clamp(26px,4.5vw,34px);
+    color:var(--ink);
+    text-align:center;
+    margin:0 0 22px;
+    letter-spacing:.18em;
+  }
+  h3.sub-head{
+    font-family:var(--font-zh-serif);
+    font-weight:700;
+    font-size:21px;
+    color:var(--ink);
+    margin:26px 0 12px;
+    padding-bottom:6px;
+    border-bottom:1.5px solid var(--border2);
+  }
+  h3.sub-head:first-of-type{ margin-top:6px; }
+
+  /* ---- bullet item with mandala icon ---- */
+  .item{
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+    margin-bottom:14px;
+  }
+  .icon{
+    flex:none;
+    width:30px;
+    height:30px;
+    margin-top:2px;
+  }
+  .icon svg{ width:100%; height:100%; display:block; }
+  .item-text{
+    font-size:18.5px;
+    color:var(--step);
+    font-weight:500;
+  }
+  .item-text .dark{ color:var(--ink); font-weight:700; }
+  .item-text small{
+    display:block;
+    color:var(--ink-mid);
+    font-size:16px;
+    font-weight:400;
+    margin-top:2px;
+  }
+
+  /* ---- two-column comparison ---- */
+  .cols2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+  }
+  @media (max-width:620px){ .cols2{grid-template-columns:1fr;} }
+  .colcard{
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:18px 18px;
+    background:var(--bg2);
+  }
+  .colcard h4{
+    font-family:var(--font-zh-serif);
+    font-size:20px;
+    color:var(--step);
+    margin:0 0 10px;
+    border-bottom:1px dashed var(--border2);
+    padding-bottom:8px;
+  }
+  .colcard p{ margin:6px 0; font-size:16.5px; }
+  .colcard .rule{ color:var(--ink); font-weight:700; }
+
+  /* ---- tone comparison table ---- */
+  table.tone{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:6px;
+    font-size:16px;
+    table-layout:fixed;
+  }
+  table.tone th, table.tone td{
+    border:1px solid var(--border);
+    padding:10px 6px;
+    text-align:center;
+    width:16.66%;
+  }
+  table.tone th{
+    background:var(--bg2);
+    color:var(--step);
+    font-weight:700;
+  }
+  table.tone td{ color:var(--ink); font-weight:700; font-size:19px; }
+  table.tone tr:nth-child(2) td, table.tone tr:nth-child(2) th{ font-size:21px; }
+  table.tone td.thai-mark{ font-family:var(--font-zh-sans); font-size:26px; color:var(--step); }
+
+  /* ---- overview grid ---- */
+  .overview-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+    margin-top:18px;
+  }
+  @media (max-width:680px){ .overview-grid{grid-template-columns:repeat(2,1fr);} }
+  .overview-card{
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:20px 10px;
+    background:var(--bg2);
+    text-align:center;
+  }
+  .overview-card .big{
+    font-family:var(--font-zh-serif);
+    font-weight:900;
+    font-size:26px;
+    color:var(--ink);
+    margin-bottom:4px;
+    letter-spacing:.1em;
+  }
+  .overview-card .small{
+    font-family:var(--font-zh-sans);
+    font-size:15px;
+    color:var(--step);
+  }
+
+  /* ---- stat row ---- */
+  .stat-row{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin:16px 0 22px;
+  }
+  @media (max-width:680px){ .stat-row{grid-template-columns:1fr;} }
+  .stat-box{
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:14px;
+    background:var(--bg2);
+    text-align:center;
+  }
+  .stat-box .label{ color:var(--ink); font-weight:700; font-size:17px; margin-bottom:4px;}
+  .stat-box .num{ color:var(--step); font-size:19px; font-weight:700; }
+
+  /* ---- data tables ---- */
+  table.data{
+    width:100%;
+    border-collapse:collapse;
+    font-size:17px;
+    margin-bottom:6px;
+  }
+  table.data th, table.data td{
+    border:1px solid var(--border);
+    padding:10px 8px;
+    text-align:center;
+  }
+  table.data th{
+    background:var(--bg2);
+    color:var(--step);
+    font-weight:700;
+    font-size:15.5px;
+  }
+  table.data td.thai{
+    font-family:var(--font-zh-sans);
+    font-size:23px;
+    color:var(--ink);
+    font-weight:700;
+  }
+  table.data td.sound{ font-size:20px; font-weight:700; color:var(--ink); }
+  table.data td.note{ font-size:14px; color:var(--ink-mid); }
+  table.data td.zh{ font-size:17px; color:var(--ink); }
+  table.data td.thai .gloss{ display:block; font-size:13px; font-weight:400; color:var(--ink-mid); margin-top:2px; }
+  table.data tr.hl td{ background: var(--bg2); }
+
+  /* ---- flow steps ---- */
+  .flow{
+    border:1px dashed var(--border2);
+    border-radius:6px;
+    padding:18px 18px;
+    background:var(--bg2);
+    margin-bottom:16px;
+  }
+  .flow .step-label{
+    display:inline-block;
+    background:var(--frame);
+    color:var(--paper);
+    font-size:14px;
+    font-weight:700;
+    border-radius:999px;
+    padding:3px 14px;
+    margin-bottom:10px;
+    letter-spacing:.1em;
+  }
+  .flow ul{ margin:8px 0 0; padding-left:1.4em; }
+  .flow li{ margin-bottom:6px; font-size:17px; }
+  .flow li b{ color:var(--step); }
+  .flow li.dark-li{ color:var(--ink); font-weight:700; }
+  .flow .branch{
+    margin-top:10px;
+    padding:10px 14px;
+    border-left:3px solid var(--border2);
+    background:var(--paper);
+    border-radius:0 4px 4px 0;
+  }
+  .flow .branch + .branch{ margin-top:8px; }
+  .flow .branch .head{ font-weight:700; color:var(--ink); margin-bottom:4px; font-size:17px; }
+  .flow .branch .head u{ text-decoration-color:var(--amber); }
+  .flow .branch p{ margin:2px 0; font-size:16.5px; }
+  .flow .branch .res{
+    color:var(--frame);
+    font-weight:900;
+    text-decoration:underline;
+    text-decoration-color:var(--amber);
+  }
+
+  /* ---- pair boxes ---- */
+  .pairs{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-top:14px;
+  }
+  .pair{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .box{
+    border:1px solid var(--frame);
+    border-radius:4px;
+    padding:10px 22px;
+    min-width:120px;
+    text-align:center;
+    background:var(--paper);
+    font-weight:700;
+    color:var(--step);
+  }
+  .box.thai{ font-family:var(--font-zh-sans); font-size:23px; }
+  .box.zh{ font-family:var(--font-zh-serif); color:var(--ink); font-size:19px; }
+  .arrow-icon{ flex:none; width:26px; height:26px; }
+
+  .note-box{
+    margin-top:14px;
+    background:var(--amber-pale);
+    border:1px dashed var(--border2);
+    border-radius:6px;
+    padding:12px 16px;
+    font-size:15.5px;
+    color:var(--ink-mid);
+  }
+
+  .footer-mark{
+    text-align:center;
+    color:var(--ink-light);
+    font-size:13px;
+    margin-top:30px;
+    letter-spacing:.2em;
+  }
+
+  /* ── 顯示設定控制列 ── */
+  .control-wrap{
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border2);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    padding: 0 24px;
+    margin-bottom: 28px;
+  }
+  .control-box{
+    max-width:920px;
+    margin: 0 auto;
+    padding:14px 0;
+  }
+  .control-title{
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-mid); font-weight:700; margin-bottom:12px;
+  }
+  .control-row{ display:flex; flex-wrap:wrap; gap:18px 22px; }
+  .control-switch{
+    display:flex; align-items:center; gap:9px;
+    font-size:15px; color:var(--ink-mid); cursor:pointer; user-select:none;
+  }
+  .control-switch input{
+    width:18px; height:18px; cursor:pointer; accent-color:var(--step);
+  }
+
+  /* 英文拼音（預設隱藏） */
+  .roman{ display:none; font-size:.7em; color:var(--ink-mid); font-style:italic; font-weight:400; line-height:1.2; }
+  body.show-roman .roman{ display:block; margin-top:3px; }
+
+  /* 切換現代字體 */
+  body.modern-font .thai,
+  body.modern-font table.data td.thai,
+  body.modern-font .box.thai,
+  body.modern-font .thai-mark,
+  body.modern-font .s-th,
+  body.modern-font .lead-th {
+    font-family: var(--font-thai-modern);
+  }
+  /* 切換手寫字體 */
+  body.handwriting-font .thai,
+  body.handwriting-font table.data td.thai,
+  body.handwriting-font .box.thai,
+  body.handwriting-font .thai-mark,
+  body.handwriting-font .s-th,
+  body.handwriting-font .lead-th {
+    font-family: var(--font-thai-hand);
+    font-weight: 700;
+  }
+
+  /* ---- 前引字範例 grid ---- */
+  .lead-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-top:14px;
+  }
+  @media(max-width:560px){ .lead-grid{grid-template-columns:1fr;} }
+  .lead-card{
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:16px 18px;
+    background:var(--bg2);
+  }
+  .lead-card h4{
+    font-family:var(--font-zh-serif);
+    font-size:18px;
+    color:var(--step);
+    margin:0 0 12px;
+    border-bottom:1px dashed var(--border2);
+    padding-bottom:6px;
+  }
+  .lead-ex{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-bottom:8px;
+    font-size:16px;
+  }
+  .lead-th{
+    font-family:var(--font-zh-sans);
+    font-size:22px;
+    font-weight:700;
+    color:var(--ink);
+    min-width:90px;
+  }
+  .lead-meaning{ color:var(--ink-mid); font-size:15px; }
+
+  /* ---- 不發音的子音 beautified ---- */
+  .silent-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-top:16px;
+  }
+  @media(max-width:560px){ .silent-grid{grid-template-columns:1fr;} }
+  .silent-card{
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:18px 20px;
+    background:var(--bg2);
+  }
+  .silent-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  .s-th{
+    font-family:var(--font-zh-sans);
+    font-size:21px;
+    font-weight:700;
+    color:var(--ink);
+    background:var(--paper);
+    border:1px solid var(--frame);
+    border-radius:4px;
+    padding:7px 12px;
+  }
+  .s-arrow{ color:var(--step); font-size:18px; font-weight:700; }
+  .s-read{
+    font-family:var(--font-zh-sans);
+    font-size:21px;
+    color:var(--step);
+    font-weight:700;
+  }
+  .silent-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-top:1px solid var(--border);
+    padding-top:10px;
+    margin-top:4px;
+  }
+  .silent-meaning{ font-size:15px; color:var(--ink-mid); }
+  .silent-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:40px; height:40px;
+    border-radius:50%;
+    border:2px solid var(--ink);
+    color:var(--ink);
+    font-family:var(--font-zh-sans);
+    font-size:18px;
+    font-weight:700;
+    background:var(--paper);
+    position:relative;
+    flex:none;
+  }
+  .silent-badge::after{
+    content:"";
+    position:absolute;
+    width:130%; height:2px;
+    background:var(--ink);
+    transform:rotate(-45deg);
+  }
+
+  /* ── 浮動按鈕（補充說明 + QR） ── */
+  .note-save-status{ font-size:14px; color:var(--ink-light); transition:opacity 0.3s ease; }
+
+  /* ── QR 彈出視窗（從按鈕彈出） ── */
+  .qr-pop{
+    position:fixed;
+    right:22px;
+    bottom:152px;
+    width:240px;
+    background:var(--paper);
+    border:1px solid var(--border2);
+    border-radius:14px;
+    box-shadow:0 10px 40px rgba(0,0,0,0.3);
+    padding:18px 18px 16px;
+    z-index:1001;
+    text-align:center;
+    transform:translateY(12px) scale(0.92);
+    opacity:0;
+    pointer-events:none;
+    transform-origin:bottom right;
+    transition:transform 0.2s ease, opacity 0.2s ease;
+  }
+  .qr-pop.open{
+    transform:translateY(0) scale(1);
+    opacity:1;
+    pointer-events:auto;
+  }
+  .qr-pop img{ width:200px; height:200px; display:block; margin:0 auto 10px; border-radius:6px; }
+  .qr-pop .qr-title{
+    font-family:var(--font-zh-serif);
+    font-weight:700;
+    font-size:16px;
+    color:var(--ink);
+    margin-bottom:4px;
+  }
+  .qr-pop .qr-link{
+    font-size:11.5px;
+    color:var(--step);
+    word-break:break-all;
+    text-decoration:none;
+  }
+  .qr-pop .qr-link:hover{ text-decoration:underline; }
+  .qr-pop .qr-close{
+    position:absolute;
+    top:8px; right:10px;
+    background:none; border:none;
+    font-size:16px; color:var(--ink-light);
+    cursor:pointer; line-height:1;
+  }
+
+  /* ── 列印 / 另存 PDF 版面 ── */
+  /* 舊版「只印 print-area」機制已停用，改用 theme.css 的整頁列印系統 */
+  .print-area{ display:none !important; }
+
+  .fab-qr{
+    position:fixed;
+    right:16px;
+    bottom:82px;
+    z-index:990;
+    width:52px;
+    height:52px;
+    border-radius:50%;
+    background:var(--step);
+    border:none;
+    box-shadow:0 4px 14px rgba(0,0,0,0.25);
+    font-size:22px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:transform 0.15s, box-shadow 0.15s;
+  }
+  .fab-qr:hover{ transform:scale(1.08); box-shadow:0 6px 20px rgba(0,0,0,0.3); }
+
+  @media (max-width:580px){
+    .fab-qr{ right:16px; bottom:82px; width:52px; height:52px; font-size:22px; }
+    .qr-pop{ right:16px; bottom:150px; }
+  }
+</style>
+<link rel="stylesheet" href="nav-ui.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="page-link-row">
+    <a class="page-link" href="thai_grammar_zh.html">下一頁：句子結構五步驟 →</a>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>拼音規則　總整理</h1>
+    <div class="tags">
+      <span class="tag">子音</span>
+      <span class="tag">母音</span>
+      <span class="tag">尾音</span>
+      <span class="tag">聲調</span>
+      <span class="tag">拼音規則</span>
+    </div>
+  </div>
+
+  <!-- 顯示設定控制列 -->
+  <div class="control-wrap">
+    <div class="control-box">
+      <div class="control-title">顯示設定</div>
+      <div class="control-row">
+        <label class="control-switch">
+          <input type="checkbox" onchange="document.body.classList.toggle('show-roman', this.checked)">
+          <span>顯示英文拼音</span>
+        </label>
+        <label class="control-switch">
+          <input type="checkbox" onchange="document.body.classList.toggle('modern-font', this.checked)">
+          <span>切換現代字體（較難辨識）</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 0. 泰文總覽 ============ -->
+  <div class="section">
+    <h2>泰文總覽</h2>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">泰文由<span class="dark">子音、母音、尾音、聲調</span>四個部分組成</span>
+    </div>
+    <div class="overview-grid">
+      <div class="overview-card"><div class="big">子音</div><div class="small">พยัญชนะ<span class="roman">phá-yan-chá-ná</span></div></div>
+      <div class="overview-card"><div class="big">母音</div><div class="small">สระ<span class="roman">sà-rà</span></div></div>
+      <div class="overview-card"><div class="big">尾音</div><div class="small">ตัวสะกด<span class="roman">tua-sà-kòt</span></div></div>
+      <div class="overview-card"><div class="big">聲調</div><div class="small">วรรณยุกต์<span class="roman">wan-ná-yúk</span></div></div>
+    </div>
+  </div>
+
+  <!-- ============ 1. 子音 ============ -->
+  <div class="section">
+    <h2>子音</h2>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">泰文子音<span class="dark">共 42 個字</span></span>
+    </div>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">依發音可分成<span class="dark">3 組發音方式</span></span>
+    </div>
+    <div class="stat-row">
+      <div class="stat-box"><div class="label">中文第一聲調</div><div class="num">27 個字・17 個音</div></div>
+      <div class="stat-box"><div class="label">中文第二聲調</div><div class="num">10 個字・7 個音</div></div>
+      <div class="stat-box"><div class="label">中文沒有的音</div><div class="num">5 個字・4 個音</div></div>
+    </div>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">依聲調又可分成<span class="dark">中子音・高子音・低子音</span> 3 類</span>
+    </div>
+
+    <h3 class="sub-head">中子音　共 9 個</h3>
+    <table class="data">
+      <tr><th>字母</th><th>注音</th><th>拼音</th></tr>
+      <tr><td class="thai">ก</td><td class="sound">ㄍˉ</td><td class="sound">gˉ</td></tr>
+      <tr><td class="thai">จ</td><td class="sound">ㄗˉ</td><td class="sound">zˉ</td></tr>
+      <tr><td class="thai">ด・ต</td><td class="sound">ㄉˉ</td><td class="sound">dˉ</td></tr>
+      <tr><td class="thai">อ</td><td class="sound">ㄛˉ</td><td class="sound">oˉ</td></tr>
+      <tr><td class="thai">บ・ป</td><td class="sound">ㄅˉ</td><td class="sound">bˉ</td></tr>
+      <tr><td class="thai">ฎ・ฏ</td><td class="sound">—</td><td class="sound">—</td></tr>
+    </table>
+    <div class="note-box">
+      記法：鴿子的阿爸＋บด（ก จ ด ต อ บ ป，常用 7 個）。加上較少用的 ฎ・ฏ，中子音共 9 個。其中 ด／ต 與 บ／ป 發音相近：ด・บ 是「模糊音」，ต・ป 是「清楚音」。
+    </div>
+
+    <h3 class="sub-head">高子音　共 10 個</h3>
+    <table class="data">
+      <tr><th>字母</th><th>注音</th><th>拼音</th></tr>
+      <tr><td class="thai">ข</td><td class="sound">ㄎˊ</td><td class="sound">kˊ</td></tr>
+      <tr><td class="thai">ถ</td><td class="sound">ㄊˊ</td><td class="sound">tˊ</td></tr>
+      <tr><td class="thai">ผ</td><td class="sound">ㄆˊ</td><td class="sound">pˊ</td></tr>
+      <tr><td class="thai">ส</td><td class="sound">ㄙˊ</td><td class="sound">sˊ</td></tr>
+      <tr><td class="thai">ห</td><td class="sound">ㄏˊ</td><td class="sound">hˊ</td></tr>
+      <tr><td class="thai">ฉ・ฐ・ฝ・ศ・ษ</td><td class="note">－</td><td class="note">－</td></tr>
+    </table>
+    <div class="note-box">高子音共 10 個字，對應中文第二聲調。</div>
+
+    <h3 class="sub-head">低子音　共 23 個</h3>
+    <table class="data">
+      <tr><th>字母</th><th>注音</th><th>拼音</th></tr>
+      <tr><td class="thai">ค</td><td class="sound">ㄎˉ</td><td class="sound">kˉ</td></tr>
+      <tr><td class="thai">ง</td><td class="sound">ㄫˉ</td><td class="sound">ngˉ</td></tr>
+      <tr><td class="thai">ช</td><td class="sound">ㄘˉ</td><td class="sound">cˉ</td></tr>
+      <tr><td class="thai">ซ</td><td class="sound">ㄙˉ</td><td class="sound">sˉ</td></tr>
+      <tr><td class="thai">ท</td><td class="sound">ㄊˉ</td><td class="sound">tˉ</td></tr>
+      <tr><td class="thai">น</td><td class="sound">ㄋˉ</td><td class="sound">nˉ</td></tr>
+      <tr><td class="thai">พ</td><td class="sound">ㄆˉ</td><td class="sound">pˉ</td></tr>
+      <tr><td class="thai">ม</td><td class="sound">ㄇˉ</td><td class="sound">mˉ</td></tr>
+      <tr><td class="thai">ย</td><td class="sound">ㄖˉ</td><td class="sound">rˉ</td></tr>
+      <tr><td class="thai">ร</td><td class="sound">ㄌˉ</td><td class="sound">lˉ</td></tr>
+      <tr><td class="thai">ล</td><td class="sound">ㄌˉ</td><td class="sound">lˉ</td></tr>
+      <tr><td class="thai">ว</td><td class="sound">窩</td><td class="sound">－</td></tr>
+      <tr><td class="thai">ฆ・ฌ・ญ・ฑ・ฒ・ณ・ธ・ฟ・ภ・ฬ・ฮ</td><td class="note">－</td><td class="note">－</td></tr>
+    </table>
+    <div class="note-box">低子音＝<span style="color:var(--ink);font-weight:700;">不是中子音、也不是高子音</span>的其餘子音。</div>
+    <div class="note-box" style="margin-top:14px"><strong>💡 常見混淆：ร 和 ล：</strong>ร 捲舌（類似 r），ล 不捲（類似 l）。口語中很多泰國人把 ร 讀成 ล，但正式發音要區分，影響聽力辨別。</div>
+    <div class="note-box" style="margin-top:14px"><strong>💡 ง 的發音：</strong>ง 是「ng」鼻音（像英文 sing 的 ng），但在泰文可以放在字首。中文不用 ng 當聲母，注音借用罕用的「ㄫ」表示。</div>
+  </div>
+
+  <!-- ============ 2. 母音 ============ -->
+  <div class="section">
+    <h2>母音</h2>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">泰文母音<span class="dark">共 32 個</span>，實際常用約 <span class="dark">21 個</span></span>
+    </div>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">可分成<span class="dark">長母音／短母音</span>
+        <small>長母音 → 發中文第一聲調　／　短母音 → 發中文第三聲調</small>
+      </span>
+    </div>
+
+    <h3 class="sub-head">短母音・長母音對照</h3>
+    <table class="data">
+      <tr><th>短母音</th><th>注音</th><th>拼音</th><th>長母音</th><th>注音</th><th>拼音</th></tr>
+      <tr><td class="thai">อะ</td><td class="sound">ㄚˇ</td><td class="sound">ǎ</td><td class="thai">อา</td><td class="sound">ㄚˉ</td><td class="sound">ā</td></tr>
+      <tr><td class="thai">อุ</td><td class="sound">ㄨˇ</td><td class="sound">ǔ</td><td class="thai">อู</td><td class="sound">ㄨˉ</td><td class="sound">ū</td></tr>
+      <tr><td class="thai">อิ</td><td class="sound">ㄧˇ</td><td class="sound">ǐ</td><td class="thai">อี</td><td class="sound">ㄧˉ</td><td class="sound">ī</td></tr>
+      <tr><td class="thai">อึ</td><td class="sound">－</td><td class="sound">ueˇ</td><td class="thai">อื</td><td class="sound">－</td><td class="sound">ueˉ</td></tr>
+      <tr><td class="thai">เอะ</td><td class="sound">ㄟˇ</td><td class="sound">eǐ</td><td class="thai">เอ</td><td class="sound">ㄟˉ</td><td class="sound">eī</td></tr>
+      <tr><td class="thai">แอะ</td><td class="sound">－</td><td class="sound">Aeˇ</td><td class="thai">แอ</td><td class="sound">－</td><td class="sound">Aeˉ</td></tr>
+      <tr><td class="thai" colspan="6" style="font-size:18px;border-top:1px dashed var(--border2);color:var(--ink-mid)">โอะ・เอาะ・เออะ　<span style="font-size:13px;font-weight:400;color:var(--ink-light)">罕見母音（較少使用）</span></td></tr>
+    </table>
+
+    <h3 class="sub-head">其他長母音</h3>
+    <table class="data">
+      <tr><th>母音</th><th>注音</th><th>拼音</th><th>補充</th></tr>
+      <tr><td class="thai">โอ</td><td class="sound">ㄡˉ</td><td class="sound">ōu</td><td class="note">－</td></tr>
+      <tr><td class="thai">ออ</td><td class="sound">ㄛˉ</td><td class="sound">ō</td><td class="note">－</td></tr>
+      <tr><td class="thai">เออ</td><td class="sound">ㄜˉ</td><td class="sound">ē</td><td class="note">－</td></tr>
+      <tr><td class="thai">เอีย</td><td class="sound">ㄧㄚˉ</td><td class="sound">iā</td><td class="note">－</td></tr>
+      <tr><td class="thai">เอือ</td><td class="sound">－</td><td class="sound">Ueaˉ</td><td class="note">－</td></tr>
+      <tr><td class="thai">อัว</td><td class="sound">ㄨㄚˉ</td><td class="sound">uā</td><td class="note">－</td></tr>
+      <tr><td class="thai">อำ</td><td class="sound">－</td><td class="sound">amˉ</td><td class="note">อำ = อัม</td></tr>
+      <tr><td class="thai">เอา</td><td class="sound">ㄠˉ</td><td class="sound">āo</td><td class="note">เอา = อะ + ว</td></tr>
+      <tr><td class="thai">ไอ・ใอ</td><td class="sound">ㄞˉ</td><td class="sound">āi</td><td class="note">ไอ・ใอ = อัย</td></tr>
+    </table>
+  </div>
+
+    <div class="note-box" style="margin-top:14px"><strong>💡 長短母音意思不同：</strong>母音長短在泰文是意義區分，不可混用。<span style="color:var(--step);font-weight:700;">กา</span>（烏鴉）vs <span style="color:var(--step);font-weight:700;">กะ</span>（約莫、大概）；<span style="color:var(--step);font-weight:700;">การ</span>（工作、動作）— 長短不同，意思完全不同！</div>
+
+  <!-- ============ 3. 變形母音 ============ -->
+  <div class="section">
+    <h2>變形母音</h2>
+    <table class="data">
+      <tr><th>母音類型</th><th>原字</th><th>讀法</th><th>意思</th></tr>
+      <tr><td class="thai" rowspan="3">อะ</td><td class="thai">จะ<span class="roman">jà</span></td><td class="thai">จะ<span class="roman">jà</span></td><td class="zh">要</td></tr>
+      <tr class="hl"><td class="thai">วัน<span class="roman">wan</span></td><td class="thai">วัน<span class="roman">wan</span></td><td class="zh">日</td></tr>
+      <tr class="hl"><td class="thai">สบาย<span class="roman">sà-baai</span></td><td class="thai">สะ-บาย<span class="roman">sà-baai</span></td><td class="zh">舒服</td></tr>
+      <tr><td class="thai" rowspan="2">อือ</td><td class="thai">มือ<span class="roman">muue</span></td><td class="thai">มือ<span class="roman">muue</span></td><td class="zh">手</td></tr>
+      <tr class="hl"><td class="thai">ดื่ม<span class="roman">dùuem</span></td><td class="thai">ดื่ม<span class="roman">dùuem</span></td><td class="zh">喝</td></tr>
+      <tr><td class="thai" rowspan="2">เอะ</td><td class="thai">เตะ<span class="roman">tè</span></td><td class="thai">เตะ<span class="roman">tè</span></td><td class="zh">踢</td></tr>
+      <tr class="hl"><td class="thai">เจ็บ<span class="roman">jèp</span></td><td class="thai">เจ็บ<span class="roman">jèp</span></td><td class="zh">痛</td></tr>
+      <tr><td class="thai" rowspan="2">แอะ</td><td class="thai">และ<span class="roman">láe</span></td><td class="thai">และ<span class="roman">láe</span></td><td class="zh">和</td></tr>
+      <tr class="hl"><td class="thai">แข็ง<span class="roman">khǎeng</span></td><td class="thai">แข็ง<span class="roman">khǎeng</span></td><td class="zh">硬</td></tr>
+      <tr><td class="thai" rowspan="2">โอะ</td><td class="thai">โต๊ะ<span class="roman">tó</span></td><td class="thai">โต๊ะ<span class="roman">tó</span></td><td class="zh">桌子</td></tr>
+      <tr class="hl"><td class="thai">หก<span class="roman">hòk</span></td><td class="thai">หก<span class="roman">hòk</span></td><td class="zh">六</td></tr>
+      <tr><td class="thai" rowspan="2">อัว</td><td class="thai">หัว<span class="roman">hǔa</span></td><td class="thai">หัว<span class="roman">hǔa</span></td><td class="zh">頭</td></tr>
+      <tr class="hl"><td class="thai">ขวด<span class="roman">khùat</span></td><td class="thai">ขวด<span class="roman">khùat</span></td><td class="zh">瓶子</td></tr>
+      <tr><td class="thai" rowspan="3">เออ</td><td class="thai">เธอ<span class="roman">thoe</span></td><td class="thai">เทอ<span class="roman">thoe</span></td><td class="zh">你</td></tr>
+      <tr class="hl"><td class="thai">เลย<span class="roman">loei</span></td><td class="thai">เลย<span class="roman">loei</span></td><td class="zh">強調詞</td></tr>
+      <tr class="hl"><td class="thai">เดิน<span class="roman">doen</span></td><td class="thai">เดิน<span class="roman">doen</span></td><td class="zh">走路</td></tr>
+    </table>
+    <div class="note-box">
+      變形母音：母音在不同字形（有無尾音）時，寫法會跟著改變，但讀音規則不變。
+    </div>
+  </div>
+
+  <!-- ============ 4. 尾音 ============ -->
+  <div class="section">
+    <h2>尾音</h2>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">尾音用來<span class="dark">收單詞最後的音</span>，分成兩組</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat-box"><div class="label">長尾音</div><div class="num">5 個音</div></div>
+      <div class="stat-box"><div class="label">短尾音</div><div class="num">3 個音</div></div>
+      <div class="stat-box"><div class="label">活音／死音</div><div class="num">長＝活音・短＝死音</div></div>
+    </div>
+
+    <h3 class="sub-head">長尾音（5 個）</h3>
+    <table class="data">
+      <tr><th>尾音</th><th>收尾方式</th><th>例①</th><th>例②</th><th>例③</th></tr>
+      <tr>
+        <td class="thai">ม</td>
+        <td class="note">「m」收尾・嘴巴閉起來</td>
+        <td class="thai">ผม<span class="roman">phǒm</span><span class="gloss">頭髮／我（男）</span></td>
+        <td class="thai">สาม<span class="roman">sǎam</span><span class="gloss">三</span></td>
+        <td class="thai">เริ่ม<span class="roman">rôem</span><span class="gloss">開始</span></td>
+      </tr>
+      <tr>
+        <td class="thai">น</td>
+        <td class="note">「n」收尾</td>
+        <td class="thai">วัน<span class="roman">wan</span><span class="gloss">日／天</span></td>
+        <td class="thai">กิน<span class="roman">gin</span><span class="gloss">吃</span></td>
+        <td class="thai">หวาน<span class="roman">wǎan</span><span class="gloss">甜</span></td>
+      </tr>
+      <tr>
+        <td class="thai">ง</td>
+        <td class="note">「ng」收尾・鼻音</td>
+        <td class="thai">ส่ง<span class="roman">sòng</span><span class="gloss">寄／送</span></td>
+        <td class="thai">หนึ่ง<span class="roman">nèung</span><span class="gloss">一</span></td>
+        <td class="thai">สอง<span class="roman">sǒong</span><span class="gloss">二</span></td>
+      </tr>
+      <tr>
+        <td class="thai">ย</td>
+        <td class="note">「一」收尾</td>
+        <td class="thai">คอย<span class="roman">khoy</span><span class="gloss">等候</span></td>
+        <td class="thai">สวย<span class="roman">sǔay</span><span class="gloss">漂亮</span></td>
+        <td class="thai">นาย<span class="roman">naay</span><span class="gloss">先生／老闆</span></td>
+      </tr>
+      <tr>
+        <td class="thai">ว</td>
+        <td class="note">「嗚」收尾</td>
+        <td class="thai">แก้ว<span class="roman">gâew</span><span class="gloss">玻璃杯</span></td>
+        <td class="thai">แล้ว<span class="roman">láew</span><span class="gloss">已經／了</span></td>
+        <td class="thai">ข้าว<span class="roman">khâao</span><span class="gloss">米飯</span></td>
+      </tr>
+    </table>
+
+    <h3 class="sub-head">短尾音（3 個）</h3>
+    <table class="data">
+      <tr><th>尾音</th><th>收尾方式</th><th>例①</th><th>例②</th><th>例③</th></tr>
+      <tr>
+        <td class="thai">ก</td>
+        <td class="note">「k」收尾</td>
+        <td class="thai">บอก<span class="roman">bòok</span><span class="gloss">說／告訴</span></td>
+        <td class="thai">รัก<span class="roman">rák</span><span class="gloss">愛</span></td>
+        <td class="thai">ปาก<span class="roman">pàak</span><span class="gloss">嘴巴</span></td>
+      </tr>
+      <tr>
+        <td class="thai">บ</td>
+        <td class="note">「p」收尾・嘴巴閉起來</td>
+        <td class="thai">กบ<span class="roman">gòp</span><span class="gloss">青蛙</span></td>
+        <td class="thai">กับ<span class="roman">gàp</span><span class="gloss">和／跟</span></td>
+        <td class="thai">เจ็บ<span class="roman">jèp</span><span class="gloss">痛</span></td>
+      </tr>
+      <tr>
+        <td class="thai">ด</td>
+        <td class="note">「t/d」收尾・舌頭貼上顎</td>
+        <td class="thai">กด<span class="roman">gòt</span><span class="gloss">按／壓</span></td>
+        <td class="thai">ติด<span class="roman">tìt</span><span class="gloss">黏／卡住</span></td>
+        <td class="thai">รถ<span class="roman">rót</span><span class="gloss">車</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ============ 5. 前引字 ============ -->
+  <div class="section">
+    <h2>前引字</h2>
+    <div class="flow">
+      <ul>
+        <li>由 <b>ห</b> 或 <b>อ</b> 放在「低子音」前面組成</li>
+        <li>母音 / 聲調符號會寫在後面的低子音上</li>
+        <li>前引字<u>不改變發音</u>，但會<u>改變聲調</u></li>
+        <li class="dark-li"><b>前引字＝視為高子音</b>　→　整個音節依「高子音」規則判斷聲調</li>
+      </ul>
+    </div>
+    <div class="lead-grid">
+      <div class="lead-card">
+        <h4>ห นำ　範例</h4>
+        <div class="lead-ex"><span class="lead-th">หนู<span class="roman">nǔu</span></span><span class="lead-meaning">老鼠</span></div>
+        <div class="lead-ex"><span class="lead-th">หนาว<span class="roman">nǎao</span></span><span class="lead-meaning">冷</span></div>
+        <div class="lead-ex"><span class="lead-th">หนัก<span class="roman">nàk</span></span><span class="lead-meaning">重</span></div>
+      </div>
+      <div class="lead-card">
+        <h4>อ นำ　範例</h4>
+        <div class="lead-ex"><span class="lead-th">อย่า<span class="roman">yàa</span></span><span class="lead-meaning">不要</span></div>
+        <div class="lead-ex"><span class="lead-th">อยู่<span class="roman">yùu</span></span><span class="lead-meaning">在／住</span></div>
+        <div class="lead-ex"><span class="lead-th">อย่าง<span class="roman">yàang</span></span><span class="lead-meaning">方式／樣子</span></div>
+        <div class="lead-ex"><span class="lead-th">อยาก<span class="roman">yàak</span></span><span class="lead-meaning">想要</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 6. 活音和死音分辨 ============ -->
+  <div class="section">
+    <h2>活音和死音分辨</h2>
+    <div class="cols2">
+      <div class="colcard">
+        <h4>① 有尾音 → 用尾音分辨</h4>
+        <p class="rule">長尾音 = 活音</p>
+        <p>例：ม・น・ง・ย・ว 收尾</p>
+        <p class="rule">短尾音 = 死音</p>
+        <p>例：ก・ด・บ 收尾</p>
+      </div>
+      <div class="colcard">
+        <h4>② 沒尾音 → 用母音分辨</h4>
+        <p class="rule">長母音 = 活音</p>
+        <p>例：อา・อี・อู・เอ・โอ 等長母音</p>
+        <p class="rule">短母音 = 死音</p>
+        <p>例：อะ・อิ・อุ 等短母音</p>
+      </div>
+    </div>
+    <div class="note-box">
+      判斷順序：先看「有沒有尾音」。有尾音就看尾音長短；沒有尾音才看母音長短。
+    </div>
+  </div>
+
+  <!-- ============ 7. 泰中聲調對比表 ============ -->
+  <div class="section">
+    <h2>泰中聲調對比表</h2>
+    <table class="tone">
+      <tr>
+        <th>泰文聲調</th>
+        <td>1</td><td>2</td><td>3</td><td>4</td><td>5</td>
+      </tr>
+      <tr>
+        <th>聲調符號</th>
+        <td>（無）</td><td class="thai-mark">◌่</td><td class="thai-mark">◌้</td><td class="thai-mark">◌๊</td><td class="thai-mark">◌๋</td>
+      </tr>
+      <tr>
+        <th>中文聲調</th>
+        <td>一</td><td>三</td><td>四</td><td>〜</td><td>二</td>
+      </tr>
+      <tr>
+        <th>聲調發音</th>
+        <td>一</td><td>以</td><td>億</td><td>〜</td><td>移</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ============ 8. 拼音規則：聲調判斷 ============ -->
+  <div class="section">
+    <h2>拼音規則：聲調怎麼判斷？</h2>
+    <div class="flow">
+      <span class="step-label">STEP 1　有聲調符號</span>
+      <div class="branch">
+        <div class="head">中子音・高子音</div>
+        <p>聲調符號 → <span class="res">對照「聲調對比表」正常對應</span></p>
+      </div>
+      <div class="branch">
+        <div class="head"><u>注意</u>：低子音</div>
+        <p>聲調符號 → <span class="res">聲調往後移一位</span>（對照表中往右移一格）</p>
+      </div>
+    </div>
+    <div class="flow">
+      <span class="step-label">STEP 2　沒有聲調符號</span>
+      <div class="branch">
+        <div class="head">活音</div>
+        <p>單詞的聲調 <span class="res">跟著子音本身的聲調</span></p>
+      </div>
+      <div class="branch">
+        <div class="head">死音</div>
+        <p>中子音・高子音　→　<span class="res">第 2 聲（以）</span></p>
+        <p>低子音 ＋ 長母音　→　<span class="res">第 3 聲（億）</span></p>
+        <p>低子音 ＋ 短母音　→　<span class="res">第 4 聲（〜）</span></p>
+      </div>
+    </div>
+    <div class="note-box">
+      口訣：先判斷子音是中／高／低子音（前引字算高子音）→ 再判斷音節是活音／死音 → 最後依「有無聲調符號」對照上面兩個 STEP，就能找到正確聲調。
+    </div>
+    <div class="note-box" style="margin-top:14px"><strong>💡 聲調記憶口訣：</strong>先掌握<strong>中音類字</strong>（ก ข จ ต ป）的聲調，再延伸高音、低音類。中音類最規律，是所有聲調的基準。</div>
+  </div>
+
+  <!-- ============ 9. 連音 ============ -->
+  <div class="section">
+    <h2>連音</h2>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">連音是由<span class="dark">兩個子音</span>拼出來的頭音</span>
+    </div>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">母音 / 聲調符號會寫在<span class="dark">連音</span>上</span>
+    </div>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">連音<span class="dark">改變發音</span>，但<span class="dark">不改變聲調</span></span>
+    </div>
+    <div class="flow" style="margin-top:18px;">
+      <span class="step-label">ก ข ค ต ป พ ผ ＋ ร ล ว 的連音</span>
+      <div class="pairs">
+        <div class="pair">
+          <span class="box thai">เพราะ<span class="roman"> phrɔ́ː</span></span>
+          <span class="arrow-icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="6"/><circle cx="26" cy="14" r="6"/><circle cx="14" cy="26" r="6"/><circle cx="26" cy="26" r="6"/></g></svg></span>
+          <span class="box zh">因為</span>
+        </div>
+        <div class="pair">
+          <span class="box thai">เปลี่ยน<span class="roman"> plìan</span></span>
+          <span class="arrow-icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="6"/><circle cx="26" cy="14" r="6"/><circle cx="14" cy="26" r="6"/><circle cx="26" cy="26" r="6"/></g></svg></span>
+          <span class="box zh">換</span>
+        </div>
+        <div class="pair">
+          <span class="box thai">ควาย<span class="roman"> kwaai</span></span>
+          <span class="arrow-icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="6"/><circle cx="26" cy="14" r="6"/><circle cx="14" cy="26" r="6"/><circle cx="26" cy="26" r="6"/></g></svg></span>
+          <span class="box zh">水牛</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 10. 不發音的子音 ============ -->
+  <div class="section">
+    <h2>不發音的子音</h2>
+    <div class="item">
+      <span class="icon"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="var(--step)" stroke-width="2"><circle cx="14" cy="14" r="8"/><circle cx="26" cy="14" r="8"/><circle cx="14" cy="26" r="8"/><circle cx="26" cy="26" r="8"/><line x1="20" y1="2" x2="20" y2="38"/><line x1="2" y1="20" x2="38" y2="20"/></g></svg></span>
+      <span class="item-text">字母上標著 <span class="dark" style="font-family:var(--font-zh-sans);font-size:20px;">◌์</span> 符號的子音，<span class="dark">不發音</span></span>
+    </div>
+    <div class="silent-grid">
+      <div class="silent-card">
+        <div class="silent-row">
+          <span class="s-th">สัตว์<span class="roman">sàt</span></span>
+          <span class="s-arrow">→</span>
+          <span class="s-read">สัด<span class="roman">sàt</span></span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+          <span style="font-size:15px;color:var(--ink-mid);">動物</span>
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;border:2px solid var(--ink);color:var(--ink);font-family:var(--font-zh-sans);font-size:18px;font-weight:700;background:var(--paper);position:relative;flex:none;">
+            ว
+            <span style="position:absolute;width:130%;height:2px;background:var(--ink);transform:rotate(-45deg);left:-15%;"></span>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--ink-light);text-align:center;margin-top:8px;letter-spacing:.08em;">ว์ 不發音</div>
+      </div>
+      <div class="silent-card">
+        <div class="silent-row">
+          <span class="s-th">วันอาทิตย์<span class="roman">wan-aa-thít</span></span>
+          <span class="s-arrow">→</span>
+          <span class="s-read">วัน-อา-ทิด<span class="roman">wan-aa-thít</span></span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+          <span style="font-size:15px;color:var(--ink-mid);">禮拜日</span>
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;border:2px solid var(--ink);color:var(--ink);font-family:var(--font-zh-sans);font-size:18px;font-weight:700;background:var(--paper);position:relative;flex:none;">
+            ย
+            <span style="position:absolute;width:130%;height:2px;background:var(--ink);transform:rotate(-45deg);left:-15%;"></span>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--ink-light);text-align:center;margin-top:8px;letter-spacing:.08em;">ย์ 不發音</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-link-row" style="margin-top:28px;">
+    <a class="page-link" href="thai_grammar_zh.html">下一頁：句子結構五步驟 →</a>
+  </div>
+
+  <div class="footer-mark">2026　泰語拼音規則　總整理</div>
+
+</div>
+
+<!-- 浮動按鈕：QR code -->
+<button class="fab-qr" id="qrFab" aria-label="QR code" title="掃描 QR code">📱</button>
+
+<!-- QR 彈出視窗 -->
+<div class="qr-pop" id="qrPop">
+  <button class="qr-close" id="qrClose" aria-label="關閉">✕</button>
+  <img src="data:image/png;base64,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" alt="QR code">
+  <div class="qr-title">掃描開啟教材網站</div>
+  <a class="qr-link" href="https://mrtaihualin.github.io/tone-finder.html" target="_blank" rel="noopener">mrtaihualin.github.io/tone-finder.html</a>
+</div>
+
+
+
+
+<!-- QR 浮動按鈕邏輯 -->
+<script>
+  (function () {
+    var qrFab = document.getElementById('qrFab');
+    var qrPop = document.getElementById('qrPop');
+    var qrClose = document.getElementById('qrClose');
+    qrFab.addEventListener('click', function (e) {
+      e.stopPropagation();
+      qrPop.classList.toggle('open');
+    });
+    qrClose.addEventListener('click', function () { qrPop.classList.remove('open'); });
+    document.addEventListener('click', function (e) {
+      if (qrPop.classList.contains('open') && !qrPop.contains(e.target) && e.target !== qrFab) {
+        qrPop.classList.remove('open');
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') qrPop.classList.remove('open');
+    });
+  })();
+</script>
+
+<script src="nav-ui.js"></script>
+</body>
+</html>

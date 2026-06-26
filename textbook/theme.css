@@ -1,0 +1,210 @@
+/* =====================================================================
+   共用主題檔 — 顏色 ＋ 字體（所有頁面共用，集中編輯）
+   theme.css  ·  泰語教材
+   ---------------------------------------------------------------------
+   想一次改變所有頁面的顏色或字體，只要改這個檔案即可。
+   ===================================================================== */
+
+/* ── 載入字體 ───────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@300;400;500;600&family=Kanit:wght@400;600&family=Mali:wght@400;700&family=Charmonman:wght@400;700&display=swap');
+
+:root{
+  /* ═══════ 主色盤（在這裡改顏色，全站生效）═══════ */
+  --bg:        #f5f0e8;   /* 頁面底色（米色）   */
+  --bg2:       #ede7d9;   /* 次底色            */
+  --paper:     #faf7f2;   /* 卡片底色（近白）   */
+  --paper2:    #f0ebe0;   /* 次卡片底色         */
+
+  --ink:       #2d2a22;   /* 主要文字（深）     */
+  --ink-mid:   #5c5648;   /* 次要文字          */
+  --ink-light: #9a9080;   /* 淺灰文字          */
+
+  --border:    #d8d0c0;   /* 細邊線            */
+  --border2:   #c8bfac;   /* 較深細邊線         */
+  --frame:     #3d5536;   /* 粗外框（深綠）     */
+
+  --step:      #4a6741;   /* 主題綠（主色強調） */
+  --step-pale: #dce8d8;   /* 主題綠（淡填色）   */
+
+  --c-aux:      #8b5e3c;  /* 輔色：棕          */
+  --c-aux-pale: #f0dfd0;
+  --c-ext:      #5a4a7a;  /* 輔色：紫          */
+  --c-ext-pale: #e3dff0;
+
+  --amber:      #a07830;  /* 強調：琥珀／底線   */
+  --amber-pale: #f5e8c0;
+
+  /* ═══════ 拼音頁的別名（對映到上面的主色盤）═══════ */
+  --cream:      var(--bg);
+  --cream-soft: var(--paper);
+  --gold:       var(--step);     /* 拼音頁主色 → 綠 */
+  --gold-soft:  #a9bea0;         /* 柔和的綠邊／標籤 */
+  --dark:       var(--ink);
+  --dark2:      var(--ink-mid);
+  --underline:  var(--amber);    /* 底線強調 → 琥珀 */
+  --accent:     var(--step);     /* SVG 圖示線條色 */
+
+  /* ═══════ 字體（在這裡改字體，全站生效）═══════ */
+  --font-zh-sans:     'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;
+  --font-zh-serif:    'Noto Serif TC','Georgia',serif;
+  --font-thai-modern: 'Kanit',sans-serif;     /* 現代字體切換 */
+  --font-thai-hand:   'Charmonman',cursive;   /* 手寫字體切換 */
+
+  --hl:      #fff1a8;   /* 螢光標記底色（補充說明用） */
+}
+
+/* =====================================================================
+   補充說明（note / warn / note-box…）文字格式
+   ---------------------------------------------------------------------
+   寫內容時可直接用語意標籤：
+     底線   → <u>…</u>
+     粗體   → <strong>…</strong> 或 <b>…</b>
+     螢光   → <mark>…</mark>
+   或用通用類別（任何元素皆可）：
+     .fmt-u（底線） .fmt-b（粗體） .fmt-hl（螢光標記）
+   ===================================================================== */
+.note u, .warn u, .note-box u, .g-note-cell u, .fmt-u {
+  text-decoration: underline;
+  text-decoration-color: var(--amber);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.note b, .warn b, .note-box b, .g-note-cell b,
+.fmt-b { font-weight: 700; }
+
+.note mark, .warn mark, .note-box mark, .g-note-cell mark, .fmt-hl {
+  background: var(--hl);
+  color: var(--ink);
+  padding: 0 .18em;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* 只在列印 / 存 PDF 時顯示的元素（例如文件抬頭） */
+.print-only { display: none !important; }
+
+/* =====================================================================
+   列印 / 下載整頁 PDF 的版面系統（所有頁面共用）
+   ---------------------------------------------------------------------
+   按下「⬇ PDF」＝直接列印「目前這一頁」。
+   body 上的顯示狀態（hide-tr／hide-ex／big-font…）會原樣保留，
+   所以 PDF＝目前螢幕上看到的內容，再套用底下這套專為 A4 調好的排版。
+   ===================================================================== */
+@media print {
+
+  /* ── ① 隱藏所有互動介面，只留教材內容 ── */
+  .controls-bar,
+  .fnav-btn, .fnav-menu,
+  .fnotes-btn, .fnotes-overlay,
+  .fpdf-btn,
+  .fab-qr, .qr-pop,
+  .control-wrap, .control-box, .dialog-toggle,
+  .roman-toggle-row, .roman-switch,
+  .fab-note, .note-modal, .note-overlay,
+  .page-link-row,
+  .no-print {
+    display: none !important;
+  }
+
+  /* ── ② 紙張與全域 ── */
+  @page { size: A4; margin: 14mm 12mm; }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-shadow: none !important;            /* 去除陰影，乾淨省墨 */
+  }
+  html, body { background: #fff !important; }
+  body { font-size: 12pt; }
+  /* .main 原本是 flex/grid 欄容器；列印引擎無法把 flex/grid 跨頁切割，
+     會讓整個段落被推到下一頁而留下大空白。改成一般 block 流就會逐段自然分頁。 */
+  .main {
+    display: block !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+  .main > section, .main > div { margin-bottom: 22px !important; }
+  a { color: inherit !important; text-decoration: none !important; }
+
+  /* ── ③ 文件抬頭（由 nav-ui.js 注入，只在列印顯示） ── */
+  .print-only { display: block !important; }
+  .print-doc-header {
+    border-bottom: 2.5px solid var(--step);
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+  .print-doc-header .pdh-brand {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    color: var(--step); text-transform: uppercase;
+  }
+  .print-doc-header .pdh-title {
+    font-family: var(--font-zh-serif);
+    font-size: 24px; font-weight: 700; color: var(--ink); margin-top: 4px;
+  }
+
+  /* ── ④ 壓縮頁面頂部留白，讓內容從抬頭下方緊接開始 ── */
+  .hero, header {
+    padding: 0 0 6px !important;
+    margin-bottom: 10px !important;
+    background: transparent !important;
+  }
+
+  /* ── ⑤ 分頁控制 ──
+     標題黏住後面的內容；只讓「小單元」（卡片／色塊／表格列）整塊不被切斷，
+     大型容器（整張表格、流程框、對照框、section）允許跨頁，
+     避免整塊被推到下一頁而留下大片空白。 */
+  .sec-header, .sec-title, .sec-badge,
+  .flow-title, .compare-box-title, .prac-card-head,
+  .time-kw, .p-kw, h1, h2, h3 {
+    break-after: avoid; page-break-after: avoid;
+  }
+  .note, .warn, .note-box, .tip-card,
+  .prac-card, .time-card, .particle-card, .qw-card, .adj-card,
+  .conn-card, .lead-card, .overview-card, .silent-card, .qa-card,
+  .compare-cell, .flow-item, .dlg-bubble,
+  .gram-table tr, .prac-list li, .time-ex-list li, .p-ex-list li {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  .gram-table, table, .flow-wrap, .compare-box, section {
+    break-inside: auto; page-break-inside: auto;
+  }
+
+  /* ── ⑥ 卡片格線 → 改用 inline-block 兩欄 ──
+     列印引擎普遍無法把 CSS grid 跨頁切割（整塊會被推到下一頁留下大空白）。
+     改成 inline-block 兩欄後，會一列一列自然分頁，乾淨不留空白、不溢出。 */
+  .qw-grid, .prac-grid, .time-grid, .particle-grid, .adj-grid,
+  .maidai-grid, .conn-grid, .lead-grid, .overview-grid, .silent-grid,
+  .cols2, .qa-answers {
+    display: block !important;
+  }
+  .qw-grid > *, .prac-grid > *, .time-grid > *, .particle-grid > *,
+  .adj-grid > *, .maidai-grid > *, .conn-grid > *, .lead-grid > *,
+  .overview-grid > *, .silent-grid > *, .cols2 > *, .qa-answers > * {
+    display: inline-block !important;
+    width: 48% !important;
+    vertical-align: top;
+    box-sizing: border-box;
+    margin: 0 0 10px !important;
+  }
+  .qw-grid > *:nth-child(odd), .prac-grid > *:nth-child(odd),
+  .time-grid > *:nth-child(odd), .particle-grid > *:nth-child(odd),
+  .adj-grid > *:nth-child(odd), .maidai-grid > *:nth-child(odd),
+  .conn-grid > *:nth-child(odd), .lead-grid > *:nth-child(odd),
+  .overview-grid > *:nth-child(odd), .silent-grid > *:nth-child(odd),
+  .cols2 > *:nth-child(odd), .qa-answers > *:nth-child(odd) {
+    margin-right: 3% !important;
+  }
+
+  /* ── ⑦ 表格：滿版；長句允許換行，避免被切到頁面外 ── */
+  .gram-table { font-size: 11pt !important; width: 100% !important; }
+  .gram-table th, .gram-table td { padding: 8px 10px !important; }
+  .g-pattern, .g-ex-th, .hero-desc, .tsent {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .hr { margin: 14px 0 !important; }
+}

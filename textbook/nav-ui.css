@@ -1,0 +1,262 @@
+/* =====================================================================
+   nav-ui.css — 浮動目錄 & 補充說明按鈕
+   共用 UI 元件：修改這裡，全部頁面同步更新
+   ===================================================================== */
+
+/* 隱藏各頁原有的頁面切換列（已由漢堡選單取代） */
+.page-link-row,
+.top-nav { display: none !important; }
+
+/* ══ 浮動漢堡選單按鈕 ══ */
+.fnav-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--step);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.22);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.fnav-btn:hover { transform: scale(1.07); box-shadow: 0 4px 16px rgba(0,0,0,0.28); }
+.fnav-btn .bar { width: 18px; height: 2px; background: #fff; border-radius: 2px; display: block; }
+
+/* ══ 目錄下拉選單 ══ */
+.fnav-menu {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 999;
+  background: var(--paper);
+  border: 1.5px solid var(--border2);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  min-width: 210px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.fnav-menu.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.fnav-menu-title {
+  padding: 10px 16px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ink-light);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-zh-sans);
+}
+.fnav-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-mid);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s, color 0.1s;
+  font-family: var(--font-zh-sans);
+}
+.fnav-menu a:last-child { border-bottom: none; }
+.fnav-menu a:hover { background: var(--step-pale); color: var(--step); }
+.fnav-menu a.current { color: var(--step); font-weight: 700; background: var(--step-pale); }
+.fnav-menu a .pg-num {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--step);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+.fnav-menu a.current .pg-num { background: var(--step); }
+
+/* ══ 補充說明浮動按鈕 ══ */
+.fnotes-btn {
+  position: fixed;
+  right: 16px;
+  bottom: 20px;
+  z-index: 990;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--step);
+  color: #fff;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: var(--font-zh-sans);
+}
+.fnotes-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+.fnotes-btn .btn-icon { font-size: 18px; line-height: 1; }
+.fnotes-btn .btn-label { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; line-height: 1; }
+
+/* ══ 補充說明彈出視窗 ══ */
+.fnotes-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1100;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.fnotes-overlay.open { display: flex; }
+.fnotes-modal {
+  background: var(--paper);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 26px 28px 28px;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  font-family: var(--font-zh-sans);
+}
+.fnotes-close {
+  position: absolute;
+  top: 14px; right: 16px;
+  background: none; border: none;
+  font-size: 20px; color: var(--ink-light);
+  cursor: pointer; line-height: 1;
+}
+.fnotes-close:hover { color: var(--ink); }
+.fnotes-title {
+  font-family: var(--font-zh-serif);
+  font-size: 19px; font-weight: 700;
+  color: var(--step); margin-bottom: 14px;
+}
+.fnotes-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink-light);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.fnotes-hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 18px 0 16px;
+}
+.fnotes-body {
+  font-size: 15px; line-height: 1.85;
+  color: var(--ink-mid);
+  margin-bottom: 6px;
+}
+.fnotes-body p { margin-bottom: 10px; }
+.fnotes-body p:last-child { margin-bottom: 0; }
+.fnotes-body strong { color: var(--step); }
+.fnotes-body .fex {
+  font-size: 17px;
+  color: var(--step);
+  display: block;
+  margin: 4px 0 2px;
+}
+.fnotes-body .fzh {
+  font-size: 13px;
+  color: var(--ink-mid);
+  display: block;
+  margin-bottom: 6px;
+}
+/* 學生筆記 */
+.fnotes-textarea {
+  width: 100%;
+  min-height: 300px;
+  border: 1.5px solid var(--border2);
+  border-radius: 10px;
+  padding: 18px 20px;
+  font-size: 29px;
+  font-family: var(--font-zh-sans);
+  color: var(--ink);
+  background: var(--bg2);
+  resize: vertical;
+  outline: none;
+  line-height: 1.7;
+  transition: border-color 0.15s;
+  margin-bottom: 12px;
+  display: block;
+}
+.fnotes-textarea:focus { border-color: var(--step); background: var(--paper); }
+.fnotes-textarea::placeholder { color: var(--ink-light); }
+.fnotes-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fnotes-hint { font-size: 12px; color: var(--ink-light); font-style: italic; }
+.fnotes-dl-btn {
+  padding: 6px 16px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1.5px solid var(--step);
+  background: var(--step-pale);
+  color: var(--step);
+  cursor: pointer;
+  font-family: var(--font-zh-sans);
+  transition: background 0.14s, color 0.14s;
+  white-space: nowrap;
+}
+.fnotes-dl-btn:hover { background: var(--step); color: #fff; }
+
+/* ── 下載整頁 PDF 浮動按鈕（左下角，避開右側選單／QR） ── */
+.fpdf-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 20px;
+  z-index: 990;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--amber);
+  color: #fff;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: var(--font-zh-sans);
+}
+.fpdf-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+.fpdf-btn .btn-icon { font-size: 18px; line-height: 1; }
+.fpdf-btn .btn-label { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; line-height: 1; }
+
+@media (max-width: 480px) {
+  .fnav-btn { top: 10px; right: 10px; width: 38px; height: 38px; }
+  .fnav-menu { top: 54px; right: 10px; }
+  .fnotes-btn { right: 10px; bottom: 14px; }
+  .fpdf-btn { left: 10px; bottom: 14px; width: 46px; height: 46px; }
+}
