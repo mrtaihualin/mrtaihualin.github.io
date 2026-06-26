@@ -79,7 +79,7 @@ window.goHome = function() {
           '<a href="page4.html#sharing">🚀 貼文分享區</a>',
           '<a href="page4.html#sharing">📖 自學專區</a>',
           '<a href="tone-finder.html">🎵 泰語聲調搜尋</a>',
-          '<a href="reading-game-v3-preview.html">✍️ 泰語拼讀練習</a>',
+          '<a href="reading-game.html">✍️ 泰語拼讀練習</a>',
           // ปิดชั่วคราว ยังไม่เปิดใช้ — '<a href="reading-game.html">✍️ 泰語拼讀練習</a>',
           '<a href="page-community.html">🇹🇭 泰語學習心聲與提問</a>',
         '</div>',

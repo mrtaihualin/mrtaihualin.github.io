@@ -1881,7 +1881,7 @@
   <a href="page-services.html">導遊・翻譯</a>
   <a href="page4.html">泰語・分享</a>
   <a href="tone-finder.html" class="active">聲調・搜尋</a>
-  <a href="reading-game-v3-preview.html">拼讀・練習</a>
+  <a href="reading-game.html">拼讀・練習</a>
 </div>
 
 <!-- ── MINIMAL MODALS (for nav modal triggers) ── -->
@@ -4413,9 +4413,15 @@ function stepSessionSummary() {
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
     '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
+    ((window.TF_AUTH && window.TF_AUTH.loggedIn()) ? '' :
+      '<div style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
+        '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +
+        '<button onclick="if(window.TF_AUTH)window.TF_AUTH.showGate(true)" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
+      '</div>') +
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
       '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
       '<button class="tf-restart-btn" onclick="TF.reselectTopic()">🎲 再來 5 字</button>' +
+      '<a class="tf-restart-btn" href="reading-game.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{target:\'reading_game\',from:\'tone_finder\'})}catch(e){}">✍️ 玩拼讀遊戲</a>' +
     '</div>' +
   '</div>';
 }

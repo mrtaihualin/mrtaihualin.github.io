@@ -995,7 +995,7 @@ function recordingHTML() {
   // 錄製只透過學生清單的 ▶️ 開始上課＋錄影 啟動；此面板平時隱藏，開始錄影才顯示（含停止鈕／狀態／上傳結果）
   return '<div class="card" id="recCard" style="margin-top:16px;display:none;">' +
     '<h2>⏺ 課堂錄製</h2>' +
-    '<p class="rec-hint" style="color:var(--ink-muted);">🎥 錄製畫面＋師生雙聲。<b>步驟：①按下方開 Meet → ②切回「本分頁」→ ③按「🔴 開始錄影」→ ④在跳出視窗選 Meet 分頁並勾「分享分頁音訊」。</b>錄完會自動上傳到該學生的 Drive 資料夾。</p>' +
+    '<p class="rec-hint" style="color:var(--ink-muted);">🎥 一鍵錄製畫面＋師生雙聲。按下後在跳出視窗請選「<b>整個畫面</b>」並勾「<b>分享系統音訊</b>」即可（之後會自動開啟 Meet 並開始錄影）。錄完自動上傳到該學生的 Drive 資料夾。</p>' +
     '<div class="rec-card-gold">' +
       '<div class="rec-card-header">' +
         '<span class="rec-card-icon">⏺</span>' +
@@ -1003,7 +1003,6 @@ function recordingHTML() {
         '<span class="timer" id="recTimer"></span>' +
       '</div>' +
       '<div style="display:flex;gap:8px;">' +
-        '<button class="btn-start-class" id="recStartBtn" onclick="startRec(\'video\')" style="flex:1;display:none;">🔴 開始錄影</button>' +
         '<button class="btn-rec-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止</button>' +
       '</div>' +
       '<div class="status" id="recStatus"></div>' +
@@ -1736,8 +1735,10 @@ async function connectCalendar() {
             ? new Date(ev.end.dateTime).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
             : '';
           const dayKey = startDate.getFullYear() + '-' + (startDate.getMonth()+1) + '-' + startDate.getDate();
+          const pad2 = function(n){ return String(n).padStart(2,'0'); };
+          const isoDate = startDate.getFullYear() + '-' + pad2(startDate.getMonth()+1) + '-' + pad2(startDate.getDate());
           const dayLabel = (startDate.getMonth()+1) + '月' + startDate.getDate() + '日（週' + dayZh[startDate.getDay()] + '）';
-          matched.push({ token, s, startTime, endTime, dayKey, dayLabel, isToday: dayKey === todayKey });
+          matched.push({ token, s, startTime, endTime, dayKey, isoDate, dayLabel, isToday: dayKey === todayKey });
         }
       });
     });
@@ -1776,11 +1777,27 @@ async function connectCalendar() {
     }
 
     if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>' + content + '</div>';
+    syncScheduleToSupabase(matched);  // ซิงค์คาบล่วงหน้าลงฐานข้อมูล → นักเรียนเห็นในหน้าตัวเอง
   } catch(e) {
     if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>'
       + '<div class="empty-attend"><div style="color:var(--amber);font-size:0.82rem;margin-bottom:8px;">連接失敗：' + e.message + '</div>'
       + '<button class="btn-gold" onclick="connectCalendar()">🔄 重試</button></div></div>';
   }
+}
+
+// ซิงค์คาบล่วงหน้า (จาก Calendar) ลง Supabase → หน้านักเรียนดึงไปแสดง
+async function syncScheduleToSupabase(matched) {
+  try {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    // ล้างคาบอนาคตเดิมทิ้งก่อน (กันคาบที่ยกเลิก/เลื่อนค้าง) แล้วเขียนชุดใหม่
+    await sb.from('classroom_schedule').delete().gte('lesson_date', todayIso);
+    if (!matched || !matched.length) return;
+    const rows = matched.map(function(m) {
+      return { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.s.name };
+    });
+    const { error } = await sb.from('classroom_schedule').insert(rows);
+    if (error) console.warn('ซิงค์ตารางลง Supabase ไม่สำเร็จ:', error.message);
+  } catch (e) { console.warn('syncScheduleToSupabase error:', e); }
 }
 
 async function openAttendanceHistory(token) {
@@ -1904,10 +1921,11 @@ let recTimerID=null, recSplitID=null, recStartTime=0, recPart=0, recPartCount=0;
 
 function recFmtTime(sec){ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
 function recSetStatus(t,cls){ const e=document.getElementById('recStatus'); if(e){ e.textContent=t; e.className='status'+(cls?' '+cls:''); } }
-function recToggleStartBtns(disabled){ ['recStartBtn'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=disabled; }); }
+function recToggleStartBtns(disabled){ /* 一鍵錄製：開始鈕在學生面板（startClassRec 內已用 recState 防重複），此處無需切換 */ }
 
 // 按鈕直接呼叫（點擊即為使用者手勢，可呼叫 getDisplayMedia）
 let recActiveStudent=null;
+let recPendingMeet=null;  // 取得螢幕分享後才開的 Meet 連結（避免先開 Meet 搶 focus 導致錄影 00:00）
 function startRec(method){ if(recState!=='recording') beginRecording(method); }
 // 一般錄影鈕：未綁定特定學生 → 清除綁定，避免自動上傳到上一位學生的資料夾
 function startRecGeneric(){ recActiveStudent=null; startRec('video'); }
@@ -1925,13 +1943,10 @@ function startClassRec(token){
   const card=document.getElementById('recCard'); if(card) card.style.display='';   // 顯示錄製面板
   const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄製 — '+(s.name||token);
   if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
-  if(s.meet) openTabReliably(s.meet);   // 先開 Meet 分頁（分享分頁音訊需分頁先存在）
-  // ⚠️ 不可在這裡自動 startRec！Meet 剛開會搶走 focus → getDisplayMedia 的畫面分享會立刻結束（得到 00:00 空檔）
-  // 改為顯示「🔴 開始錄影」鈕，請老師切回本分頁後手動按（此時本分頁 focus = 分享可正常進行）
-  const startBtn=document.getElementById('recStartBtn');
-  if(startBtn){ startBtn.disabled=false; startBtn.style.display=''; }
-  const stopBtn=document.getElementById('recStopBtn'); if(stopBtn) stopBtn.disabled=true;
-  recSetStatus('👉 已開啟 Meet。請「切回本分頁」再按 🔴 開始錄影，並於跳出視窗選 Meet 分頁＋勾「分享分頁音訊」','');
+  // 一鍵錄製：先在「本分頁 focus」狀態下啟動螢幕分享（穩定、不會 00:00），
+  // 取得畫面後才由 beginRecording 自動開 Meet（見該函式）。
+  recPendingMeet = s.meet || null;
+  startRec('video');
 }
 
 // — 格式偵測（優先 mp4／m4a，相容 iPhone 播放）—
@@ -1959,8 +1974,10 @@ async function beginRecording(method){
       recIsVideo=(method==='video');
       recDisplayStream=await navigator.mediaDevices.getDisplayMedia({
         video: recIsVideo ? {frameRate:{ideal:10,max:15}} : true,
-        audio: true
+        audio: { systemAudio: 'include', echoCancellation: false, noiseSuppression: false }
       });
+      // ✅ 已取得螢幕分享 → 現在才開 Meet（先開會搶 focus 導致分享立刻結束 = 00:00）
+      if(recPendingMeet){ openTabReliably(recPendingMeet); recPendingMeet=null; }
       recMicStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       const sysTracks=recDisplayStream.getAudioTracks();
       recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -2003,7 +2020,7 @@ function startSegment(stream){
   const tEl=document.getElementById('recTimer'); if(tEl) tEl.classList.add('visible');
   clearInterval(recTimerID);
   recTimerID=setInterval(()=>{ const e=document.getElementById('recTimer'); if(e) e.textContent=recFmtTime(Math.floor((Date.now()-recStartTime)/1000)); },1000);
-  recSetStatus('🔴 錄製中…'+(recIsVideo?'（影片）':'（聲音）')+(recPart>1?'　第'+recPart+'段':'')+(recNoSysAudio?'　⚠️未含對方聲音（沒勾「分享分頁音訊」）':''),'active');
+  recSetStatus('🔴 錄製中…'+(recIsVideo?'（影片）':'（聲音）')+(recPart>1?'　第'+recPart+'段':'')+(recNoSysAudio?'　⚠️未含對方聲音（請重錄並勾「分享系統音訊」；若沒此選項請更新 Chrome 至 141+）':''),'active');
   if(recIsVideo){
     clearTimeout(recSplitID);
     recSplitID=setTimeout(()=>{ if(recState==='recording') splitSegment(stream); }, REC_SPLIT_MS);
