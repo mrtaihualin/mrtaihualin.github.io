@@ -3036,6 +3036,7 @@ function tfUpdateBadgesOnSetComplete(info) {
   var st = data.stats || {};
   st.wordsTotal = (st.wordsTotal || 0) + (info.words || 0);
   st.perfectSets = (st.perfectSets || 0) + (info.isPerfect ? 1 : 0);
+  st.stars = (st.stars || 0) + (info.isPerfect ? 1 : 0);   // ⭐ ดาว: ถูกครบเซ็ต = +1 (หน่วยกลางเทียบเกมอ่าน) — Lin 2026-06-26
   st.maxCombo = Math.max(st.maxCombo || 0, info.maxCombo || 0);
   st.streak = info.streak || st.streak || 0;
   data.stats = st;
@@ -3556,6 +3557,12 @@ function tfApplySessionBonus() {
         words: total, isPerfect: isPerfect, maxCombo: session.maxCombo || 0, streak: streakNow
       });
     } catch (e) { session.newBadges = []; }
+    // ⭐ ดาว: อ่านยอดรวม + ได้ดาวรอบนี้ไหม — Lin 2026-06-26
+    try {
+      var _starData = tfLoadBadges();
+      session.totalStars = (_starData.stats && _starData.stats.stars) || 0;
+      session.gotStar = !!isPerfect;
+    } catch (e) { session.totalStars = 0; session.gotStar = false; }
   }
   session.isPerfect = isPerfect;
   // ชาเลนจ์รายสัปดาห์: บวกความคืบหน้า — LIN 2026-06-20
@@ -4397,11 +4404,23 @@ function stepSessionSummary() {
       }).join('') + '</div></div>';
   }
 
+  var starBlock = '';
+  var _stars = session.totalStars || 0;
+  if (session.gotStar) {
+    starBlock = '<div style="margin-top:14px;padding:12px;background:linear-gradient(180deg,#FFF8E6,#fff);border:1px solid #F0D480;border-radius:14px;text-align:center;">' +
+      '<div style="font-size:26px;line-height:1;">⭐</div>' +
+      '<div style="font-size:15px;font-weight:800;color:#B07D00;margin-top:4px;">獲得 1 顆星！</div>' +
+      '<div style="font-size:13px;color:#A08A5A;margin-top:2px;">目前共 ' + _stars + ' 顆星</div></div>';
+  } else if (total > 0) {
+    starBlock = '<div style="margin-top:14px;font-size:13px;color:#A08A5A;text-align:center;">⭐ 目前共 <b>' + _stars + '</b> 顆星 · 一組全對再 +1</div>';
+  }
+
   return '<div class="tf-session-summary">' +
     minaBlock +
     scoreSummary +
     streakBlock +
     badgeBlock +
+    starBlock +
     '<div class="tf-sum-score">'+perfectCount+' / '+total+'</div>' +
     '<div class="tf-sum-score-label">'+(perfectCount===total?'全部一次答對！太厲害了 🎉':'我們一起繼續加油！💪')+'</div>' +
     // ⭐ การ์ดชวนจอง — ดันขึ้นมาก่อนตารางคะแนน เพื่อให้ผู้เล่นเห็นก่อนปิดหน้า

@@ -692,6 +692,13 @@ function gdGetToken(forceConsent) {
       gdToken = resp.access_token;
       gdTokenScopes = resp.scope || '';
       gdTokenExp = Date.now() + (resp.expires_in || 3600) * 1000;
+      localStorage.setItem('gdConnected', '1');
+      // auto-refresh ทุก 50 นาที ไม่ต้องกดซ้ำ
+      if (!window._gdRefreshTimer) {
+        window._gdRefreshTimer = setInterval(function() {
+          gdTokenClient.requestAccessToken({ prompt: '', hint: 'mr.taihualin@gmail.com' });
+        }, 50 * 60 * 1000);
+      }
       resolve(gdToken);
     };
     // prompt '' = หลังกดอนุญาตครั้งแรกแล้ว Google จะจำไว้ ไม่เด้งจอขออนุญาตซ้ำ (ดึง token เงียบๆ)
@@ -1165,8 +1172,13 @@ async function renderTeacherView() {
   await refreshStudentList();
   await loadPendingSlips();
   await loadTodaySchedule();
-  // auto-connect Drive/Calendar silently (no popup if already authorized)
-  try { await gdGetToken(); } catch(e) {}
+  // auto-click "連接 Google Calendar" ถ้าเคย connect ไว้แล้ว (localStorage flag)
+  if (localStorage.getItem('gdConnected')) {
+    setTimeout(function() {
+      const btn = document.getElementById('calConnectBtn');
+      if (btn) btn.click();
+    }, 800);
+  }
 }
 
 function renderStudentView() {
@@ -1704,7 +1716,7 @@ async function loadTodaySchedule() {
   const container = document.getElementById('attendanceSection');
   if (!container) return;
   container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>'
-    + '<div class="empty-attend"><button class="btn-gold" onclick="connectCalendar()">📅 連接 Google Calendar</button>'
+    + '<div class="empty-attend"><button class="btn-gold" id="calConnectBtn" onclick="connectCalendar()">📅 連接 Google Calendar</button>'
     + '<div style="margin-top:8px;font-size:0.77rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">點擊後登入 Google 帳號即可顯示今日課表</div></div></div>';
 }
 
