@@ -1802,15 +1802,23 @@ var BADGE_STAGES=[
 ];
 function badgeEmoji(n){var e='🌱';BADGE_STAGES.forEach(function(s){if(n>=s.min)e=s.emoji;});return e;}
 function openBadge(){
-  var n=totalBadges,s=totalStars;
-  var stage=BADGE_STAGES[0];
-  BADGE_STAGES.forEach(function(st){if(n>=st.min)stage=st;});
-  document.getElementById('tree-area').textContent=stage.emoji;
-  document.getElementById('tree-caption').textContent=stage.label+' · '+n+' 枚勳章';
-  var sb=s%10;var row='';
-  for(var j=0;j<10;j++)row+=(j<sb?'⭐':'☆');
-  document.getElementById('star-prog').textContent=row;
-  document.getElementById('star-prog-label').textContent=sb+'/10 顆星 → 下一枚勳章'+(sb===0&&n>0?' (剛獲得！)':'');
+  // ⭐ แบดจ์พันธุ์ข้าว ตามดาวรวม (รวมกับเกมเสียง) — Lin 2026-06-27
+  var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
+  var badges=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starBadges:[];
+  document.getElementById('tree-area').textContent='⭐ '+s;
+  document.getElementById('tree-caption').textContent='累積星星（兩個遊戲共用）';
+  var html='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px;">';
+  badges.forEach(function(b){
+    var got=s>=b.at;
+    html+='<div style="text-align:center;width:74px;opacity:'+(got?'1':'0.35')+';">'+
+      '<img src="'+b.img+'" alt="'+b.zh+'" style="width:44px;height:44px;object-fit:contain;" onerror="this.replaceWith(document.createTextNode(\''+b.emoji+'\'))">'+
+      '<div style="font-size:11px;color:#5a3e10;margin-top:2px;">'+b.zh+'</div>'+
+      '<div style="font-size:10px;color:#a08050;">'+(got?'已解鎖':b.at+' 顆星')+'</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('star-prog').innerHTML=html;
+  var next=badges.filter(function(b){return s<b.at;})[0];
+  document.getElementById('star-prog-label').textContent=next?('再 '+(next.at-s)+' 顆星解鎖「'+next.zh+'」'):'全部稻米品種已解鎖！🎉';
   document.getElementById('badge-modal').classList.add('show');
 }
 

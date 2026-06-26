@@ -518,8 +518,8 @@
         <input class="settings-input" id="approvalLessons" type="number" oninput="updateApprovalTotal()" style="margin-bottom:0;" />
       </div>
     </div>
-    <label class="settings-label">本輪起算</label>
-    <input class="settings-input" id="approvalStart" placeholder="例：接續上一輪，下一堂起算" />
+    <label class="settings-label">本輪起算日（這期課程從哪天開始算）</label>
+    <input class="settings-input" id="approvalStart" type="date" />
     <label class="settings-label">備註</label>
     <input class="settings-input" id="approvalNote" />
     <div class="pay-total-box" id="approvalTotalBox">
@@ -581,8 +581,8 @@
       </div>
     </div>
 
-    <label class="settings-label">本輪起算（例：接續上輪第一堂起算）</label>
-    <input class="settings-input" id="payStart" placeholder="例：接續上一輪（5/24 起）滿 10 堂後之下一堂起算" />
+    <label class="settings-label">本輪起算日（這期課程從哪天開始算）</label>
+    <input class="settings-input" id="payStart" type="date" />
 
     <label class="settings-label">備註（選填）</label>
     <input class="settings-input" id="payNote" placeholder="例：提前付款、換幣別…" />
@@ -784,7 +784,7 @@ async function gdShareAnyone(fileId) {
   });
 }
 // ── Google Calendar: fetch today's events ──────────────────────
-const SCHEDULE_DAYS = 7; // แสดงตารางล่วงหน้ากี่วัน (วันนี้ + อีก 6 วัน)
+const SCHEDULE_DAYS = 3; // แสดงตารางล่วงหน้ากี่วัน (วันนี้ + อีก 2 วัน)
 async function calFetchUpcomingEvents() {
   let token = await gdGetToken();
   // ถ้า token ที่จำไว้ยังไม่มีสิทธิ์ Calendar (เพราะ scope เพิ่งถูกเพิ่มทีหลัง) → ขอ consent ใหม่ครั้งเดียว
@@ -1210,15 +1210,15 @@ async function loadLowQuotaBanner() {
   var el = document.getElementById('lowQuotaBanner');
   if (!el) return;
   try {
-    var pays = (await sb.from('classroom_payments').select('token,lessons,bonus_lessons,status').in('status', ['pending', 'done'])).data || [];
-    var atts = (await sb.from('classroom_attendance').select('token,lessons')).data || [];
-    var bought = {}, used = {};
-    pays.forEach(function(p) { bought[p.token] = (bought[p.token] || 0) + (p.lessons || 0) + (p.bonus_lessons || 0); });
-    atts.forEach(function(a) { used[a.token] = (used[a.token] || 0) + (a.lessons || 1); });
+    var pays = (await sb.from('classroom_payments').select('token,lessons,bonus_lessons,status,start_date').in('status', ['pending', 'done'])).data || [];
+    var atts = (await sb.from('classroom_attendance').select('token,lesson_date,lessons')).data || [];
+    var byP = {}, byA = {};
+    pays.forEach(function(p) { (byP[p.token] = byP[p.token] || []).push(p); });
+    atts.forEach(function(a) { (byA[a.token] = byA[a.token] || []).push(a); });
     var low = [];
-    Object.keys(bought).forEach(function(tk) {
-      var remain = bought[tk] - (used[tk] || 0);
-      if (remain <= 1) { var s = studentsCache[tk]; low.push((s ? s.name : tk) + '（剩 ' + (remain < 0 ? 0 : remain) + ' 堂）'); }
+    Object.keys(byP).forEach(function(tk) {
+      var q = computeCurrentCourse(byP[tk], byA[tk] || []);
+      if (q.hasCourse && q.remain <= 1) { var s = studentsCache[tk]; low.push((s ? s.name : tk) + '（剩 ' + (q.remain < 0 ? 0 : q.remain) + ' 堂）'); }
     });
     if (!low.length) { el.innerHTML = ''; return; }
     el.innerHTML = '<div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">⏰ 課程快上完提醒：' + low.join('、') + ' — 記得提醒續課</div>';
@@ -1230,12 +1230,11 @@ async function loadTeacherStudentInfo(token) {
   var el = document.getElementById('stuInfo-' + token.replace(/'/g, ''));
   if (!el) return;
   try {
-    var pays = (await sb.from('classroom_payments').select('course_label,lessons,bonus_lessons,currency,total_amount,status,created_at').eq('token', token).order('created_at', { ascending: false })).data || [];
-    var bought = pays.filter(function(p) { return p.status === 'pending' || p.status === 'done'; }).reduce(function(s, p) { return s + (p.lessons || 0) + (p.bonus_lessons || 0); }, 0);
-    var used = ((await sb.from('classroom_attendance').select('lessons').eq('token', token)).data || []).reduce(function(a, r) { return a + (r.lessons || 1); }, 0);
-    var remain = bought - used;
-    var quotaHtml = bought > 0
-      ? '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:8px 12px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + (remain <= 1 ? '#b45309' : 'var(--gold-deep)') + ';font-weight:700;">剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（已購 ' + bought + ' · 已上 ' + used + '）</span></div>'
+    var pays = (await sb.from('classroom_payments').select('course_label,lessons,bonus_lessons,currency,total_amount,status,start_date,created_at').eq('token', token).order('created_at', { ascending: false })).data || [];
+    var atts = (await sb.from('classroom_attendance').select('lesson_date,lessons').eq('token', token)).data || [];
+    var q = computeCurrentCourse(pays, atts);
+    var quotaHtml = q.hasCourse
+      ? '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:8px 12px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + (q.remain <= 1 ? '#b45309' : 'var(--gold-deep)') + ';font-weight:700;">本輪剩餘 ' + (q.remain < 0 ? 0 : q.remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（本輪 ' + q.bought + ' · 已上 ' + q.used + (q.start ? ' · 起算 ' + q.start : '') + '）</span></div>'
       : '';
     var statusZh = { slip_submitted: '⏳ 待確認', pending: '✅ 已確認', done: '🧾 已開立收據', rejected: '❌ 未通過' };
     var histHtml;
@@ -1341,28 +1340,43 @@ function renderStudentView() {
   loadStudentPayments(token);
 }
 
-// 學生：剩餘堂數 + 課程起算日（接續上一輪）+ 快用完提醒
+// 依「本輪起算日」計算當期課程剩餘堂數（起算日前=舊課，不計入）
+// pays: [{lessons,bonus_lessons,status,start_date}]　atts: [{lesson_date,lessons}]
+function computeCurrentCourse(pays, atts) {
+  var active = (pays || []).filter(function(p) { return p.status === 'pending' || p.status === 'done'; });
+  var withDate = active.filter(function(p) { return p.start_date; });
+  if (withDate.length) {
+    withDate.sort(function(a, b) { return a.start_date < b.start_date ? 1 : -1; }); // 新→舊
+    var cur = withDate[0];
+    var bought = (cur.lessons || 0) + (cur.bonus_lessons || 0);
+    var used = (atts || []).filter(function(a) { return a.lesson_date >= cur.start_date; })
+      .reduce(function(s, a) { return s + (a.lessons || 1); }, 0);
+    return { hasCourse: true, bought: bought, used: used, remain: bought - used, start: cur.start_date };
+  }
+  var b = active.reduce(function(s, p) { return s + (p.lessons || 0) + (p.bonus_lessons || 0); }, 0);
+  var u = (atts || []).reduce(function(s, a) { return s + (a.lessons || 1); }, 0);
+  return { hasCourse: b > 0, bought: b, used: u, remain: b - u, start: null };
+}
+
+// 學生：本輪剩餘堂數 + 快用完提醒
 async function loadStudentQuota(token) {
   try {
-    var payRes = await sb.from('classroom_payments').select('lessons,bonus_lessons,status,start_note,created_at')
-      .eq('token', token).in('status', ['pending', 'done']);
-    var pays = payRes.data || [];
-    var totalBought = pays.reduce(function(s, p) { return s + (p.lessons || 0) + (p.bonus_lessons || 0); }, 0);
-    var attRes = await sb.from('classroom_attendance').select('lessons').eq('token', token);
-    var used = (attRes.data || []).reduce(function(a, r) { return a + (r.lessons || 1); }, 0);
-    var remain = totalBought - used;
+    var pays = (await sb.from('classroom_payments').select('lessons,bonus_lessons,status,start_date').eq('token', token).in('status', ['pending', 'done'])).data || [];
+    var atts = (await sb.from('classroom_attendance').select('lesson_date,lessons').eq('token', token)).data || [];
+    var q = computeCurrentCourse(pays, atts);
+    var remain = q.remain < 0 ? 0 : q.remain;
     var sumEl = document.getElementById('quotaSummary');
     if (sumEl) {
-      if (totalBought > 0) {
-        var color = remain <= 1 ? '#b45309' : 'var(--gold-deep)';
-        sumEl.innerHTML = '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;color:' + color + ';font-weight:700;">剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（已購 ' + totalBought + ' · 已上 ' + used + '）</span></div>';
+      if (q.hasCourse) {
+        var color = q.remain <= 1 ? '#b45309' : 'var(--gold-deep)';
+        sumEl.innerHTML = '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;color:' + color + ';font-weight:700;">本輪剩餘 ' + remain + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（本輪 ' + q.bought + ' · 已上 ' + q.used + '）</span></div>';
       } else {
         sumEl.innerHTML = '<div style="background:#faf7f0;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--ink-muted);">剩餘堂數：尚未購課（老師確認繳費後顯示）</div>';
       }
     }
     var banEl = document.getElementById('quotaBanner');
-    if (banEl && totalBought > 0 && remain <= 1) {
-      banEl.innerHTML = '<div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">⏰ 課程即將上完！目前剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂，記得提早續課喔～</div>';
+    if (banEl && q.hasCourse && q.remain <= 1) {
+      banEl.innerHTML = '<div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">⏰ 課程即將上完！本輪剩餘 ' + remain + ' 堂，記得提早續課喔～</div>';
     }
   } catch (e) {}
 }
@@ -1841,7 +1855,7 @@ async function approveSlip() {
   var res = await sb.from('classroom_payments').update({
     status: 'pending', currency: cur, price_per: pp,
     lessons: ls, bonus_lessons: bn, total_amount: ls * pp,
-    start_note: start || null, note: note || null
+    start_note: start || null, start_date: start || null, note: note || null
   }).eq('id', slipId);
   if (res.error) { btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據'; alert('儲存失敗：' + res.error.message); return; }
   // 產生收據檔到學生「收據」資料夾
@@ -2054,6 +2068,7 @@ async function submitPayment() {
     currency: cur,
     total_amount: total,
     start_note: start || null,
+    start_date: start || null,
     note: note || null,
     status: 'pending'
   });
@@ -2089,7 +2104,7 @@ async function recordAttendance(token) {
 async function loadTodaySchedule() {
   const container = document.getElementById('attendanceSection');
   if (!container) return;
-  container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>'
+  container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（3天）</h2>'
     + '<div class="empty-attend"><button class="btn-gold" id="calConnectBtn" onclick="connectCalendar()">📅 連接 Google Calendar</button>'
     + '<div style="margin-top:8px;font-size:0.77rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">點擊後登入 Google 帳號即可顯示今日課表</div></div></div>';
 }
@@ -2104,7 +2119,7 @@ async function connectCalendar() {
 
   if (container) {
     const inner = container.querySelector('.attend-card');
-    if (inner) inner.innerHTML = '<h2>📅 近期課表（7天）</h2><div class="empty-attend">連接中…</div>';
+    if (inner) inner.innerHTML = '<h2>📅 近期課表（3天）</h2><div class="empty-attend">連接中…</div>';
   }
 
   try {
@@ -2167,10 +2182,10 @@ async function connectCalendar() {
       }).join('');
     }
 
-    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>' + content + '</div>';
+    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（3天）</h2>' + content + '</div>';
     syncScheduleToSupabase(matched);  // ซิงค์คาบล่วงหน้าลงฐานข้อมูล → นักเรียนเห็นในหน้าตัวเอง
   } catch(e) {
-    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>'
+    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（3天）</h2>'
       + '<div class="empty-attend"><div style="color:var(--amber);font-size:0.82rem;margin-bottom:8px;">連接失敗：' + e.message + '</div>'
       + '<button class="btn-gold" onclick="connectCalendar()">🔄 重試</button></div></div>';
   } finally {

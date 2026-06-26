@@ -2991,11 +2991,12 @@ var TF_BADGES_DEF = [
   { id: 'rice_ear',    tier: 1, emoji: '🌿', img: 'assets/badges/rice_ear.svg',    zh: '幼穗',   th: 'รวงอ่อน',     reading: 'ruang ɔ̀ɔn',    need: '連續 14 天',  cond: function (st) { return st.streak >= 14; } },
   { id: 'rice_golden', tier: 1, emoji: '🌾', img: 'assets/badges/rice_golden.svg', zh: '金穗',   th: 'รวงข้าวทอง',  reading: 'ruang kâao thɔɔng', need: '連續 30 天', cond: function (st) { return st.streak >= 30; } },
   { id: 'rice_field',  tier: 1, emoji: '🏞️', img: 'assets/badges/rice_field.svg',  zh: '金色稻田', th: 'ทุ่งนาทอง',  reading: 'thûng naa thɔɔng',  need: '連續 100 天', cond: function (st) { return st.streak >= 100; } },
-  // ชั้น 2 — สายพันธุ์ข้าว (ความสำเร็จ)
-  { id: 'hommali',   tier: 2, emoji: '🍚', img: 'assets/badges/hommali.svg',   zh: '茉莉香米',     th: 'ข้าวหอมมะลิ',  reading: 'kâao hɔ̌ɔm malí', need: '首次完美過關', cond: function (st) { return st.perfectSets >= 1; } },
-  { id: 'khaoniaw',  tier: 2, emoji: '🍙', img: 'assets/badges/khaoniaw.svg',  zh: '糯米',         th: 'ข้าวเหนียว',   reading: 'kâao nǐaw',      need: '連續 7 天',    cond: function (st) { return st.streak >= 7; } },
-  { id: 'khaoklong', tier: 2, emoji: '🌾', img: 'assets/badges/khaoklong.svg', zh: '糙米',         th: 'ข้าวกล้อง',    reading: 'kâao klɔ̂ɔng',   need: '累計 100 題',  cond: function (st) { return st.wordsTotal >= 100; } },
-  { id: 'riceberry', tier: 2, emoji: '🟣', img: 'assets/badges/riceberry.svg', zh: '紫米 Riceberry', th: 'ไรซ์เบอร์รี่', reading: 'ráai-bəə-rîi',  need: '連對 8 題 (×3)', cond: function (st) { return st.maxCombo >= 8; } }
+  // ชั้น 2 — สายพันธุ์ข้าว (ปลดด้วย "ดาวรวม" จาก 2 เกม) — Lin 2026-06-27
+  { id: 'hommali',   tier: 2, emoji: '🍚', img: 'assets/badges/hommali.svg',   zh: '茉莉香米',     th: 'ข้าวหอมมะลิ',  reading: 'kâao hɔ̌ɔm malí', need: '累積 10 顆星',  cond: function (st) { return (st.starsTotal||0) >= 10; } },
+  { id: 'khaoniaw',  tier: 2, emoji: '🍙', img: 'assets/badges/khaoniaw.svg',  zh: '糯米',         th: 'ข้าวเหนียว',   reading: 'kâao nǐaw',      need: '累積 20 顆星',  cond: function (st) { return (st.starsTotal||0) >= 20; } },
+  { id: 'riceberry', tier: 2, emoji: '🟣', img: 'assets/badges/riceberry.svg', zh: '紫米 Riceberry', th: 'ไรซ์เบอร์รี่', reading: 'ráai-bəə-rîi',  need: '累積 40 顆星',  cond: function (st) { return (st.starsTotal||0) >= 40; } },
+  { id: 'homnin',    tier: 2, emoji: '⚫', img: 'assets/badges/homnin.svg',    zh: '香黑米',       th: 'ข้าวหอมนิล',   reading: 'kâao hɔ̌ɔm nín', need: '累積 60 顆星',  cond: function (st) { return (st.starsTotal||0) >= 60; } },
+  { id: 'sangyod',   tier: 2, emoji: '🔴', img: 'assets/badges/sangyod.svg',   zh: '紅米',         th: 'ข้าวสังข์หยด', reading: 'kâao sǎngyòt',   need: '累積 100 顆星', cond: function (st) { return (st.starsTotal||0) >= 100; } }
 ];
 // helper: คืน HTML ไอคอนแบดจ์ (ใช้ภาพ SVG ถ้ามี ไม่งั้น emoji) — LIN 2026-06-20
 function tfBadgeIcon(b, px) {
@@ -3038,7 +3039,8 @@ function tfUpdateBadgesOnSetComplete(info) {
   st.wordsTotal = (st.wordsTotal || 0) + (info.words || 0);
   st.perfectSets = (st.perfectSets || 0) + (info.isPerfect ? 1 : 0);
   st.maxCombo = Math.max(st.maxCombo || 0, info.maxCombo || 0);
-  st.streak = info.streak || st.streak || 0;
+  st.streak = (window.GAME_ACCOUNT) ? Math.max(GAME_ACCOUNT.getStreak(), info.streak || 0, st.streak || 0) : (info.streak || st.streak || 0);   // streak รวม 2 เกม → ปลดแบดจ์ต้นข้าว
+  st.starsTotal = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : (st.starsTotal || 0);   // ดาวรวม 2 เกม → ปลดแบดจ์พันธุ์ข้าว
   data.stats = st;
   var fresh = TF_BADGES.check(st, data.unlocked, TF_BADGES_DEF);
   var today = todayStr();
@@ -3550,20 +3552,20 @@ function tfApplySessionBonus() {
   // สเตจ 2: อัปเดต Daily Streak + เป้ารายวัน (เฉพาะรอบที่เล่นจบจริง มีคำ)
   if (total > 0) {
     try { session.streakResult = tfApplyStreakOnSetComplete(); } catch (e) { session.streakResult = null; }
-    // สเตจ 3: อัปเดต stats + เช็กปลดแบดจ์
-    try {
-      var streakNow = (session.streakResult && session.streakResult.state && session.streakResult.state.streak) || 0;
-      session.newBadges = tfUpdateBadgesOnSetComplete({
-        words: total, isPerfect: isPerfect, maxCombo: session.maxCombo || 0, streak: streakNow
-      });
-    } catch (e) { session.newBadges = []; }
-    // ⭐ ดาว 1–3 ดวง/รอบ ตามความแม่น (สะอาด = ถูกครั้งแรก) → บัญชีกลางรวม 2 เกม — Lin 2026-06-27
+    // ⭐ ดาว 1–3 ดวง/รอบ ตามความแม่น → บัญชีกลาง (ก่อนเช็กแบดจ์ เพื่อให้แบดจ์พันธุ์ข้าวปลดทันรอบ) — Lin 2026-06-27
     try {
       var _se = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.starsForRound(perfectCount, total) : 0;
       if (window.GAME_ACCOUNT) { GAME_ACCOUNT.addStars(_se); GAME_ACCOUNT.bumpStreakToday(); }
       session.starsEarned = _se;
       session.totalStars = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0;
     } catch (e) { session.starsEarned = 0; session.totalStars = 0; }
+    // สเตจ 3: อัปเดต stats + เช็กปลดแบดจ์ (รวมแบดจ์พันธุ์ข้าวจากดาวรวม)
+    try {
+      var streakNow = (session.streakResult && session.streakResult.state && session.streakResult.state.streak) || 0;
+      session.newBadges = tfUpdateBadgesOnSetComplete({
+        words: total, isPerfect: isPerfect, maxCombo: session.maxCombo || 0, streak: streakNow
+      });
+    } catch (e) { session.newBadges = []; }
   }
   session.isPerfect = isPerfect;
   // ชาเลนจ์รายสัปดาห์: บวกความคืบหน้า — LIN 2026-06-20
@@ -5964,7 +5966,7 @@ var TF = {
     if (old) old.remove();
     var data = tfLoadBadges();
     var unlocked = data.unlocked || {};
-    var tierName = {1:'🌾 稻米成長（連續遊玩）', 2:'🍚 稻米品種（成就解鎖）'};
+    var tierName = {1:'🌾 稻米成長（連續遊玩）', 2:'🍚 稻米品種（星星解鎖・兩遊戲共用）'};
     var byTier = {};
     TF_BADGES_DEF.forEach(function(b){ (byTier[b.tier] = byTier[b.tier] || []).push(b); });
     var body = Object.keys(byTier).map(function(t){
