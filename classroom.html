@@ -261,6 +261,8 @@
   .hist-today-tag { font-size: 0.7rem; background: var(--gold-light); color: var(--gold-deep); border-radius: 10px; padding: 2px 7px; font-weight: 700; }
   .hist-del { background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 1rem; padding: 2px 6px; border-radius: 6px; transition: all 0.15s; }
   .hist-del:hover { background: #fee2e2; color: #b91c1c; }
+  .hist-edit { background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 0.9rem; padding: 2px 6px; border-radius: 6px; transition: all 0.15s; }
+  .hist-edit:hover { background: var(--gold-light); color: var(--gold-deep); }
   .hist-summary { font-family: 'Noto Sans TC', sans-serif; font-size: 0.8rem; color: var(--ink-muted); text-align: center; padding: 6px 0; border-top: 1px solid var(--border); margin-top: 4px; }
   .stat-box { flex: 1; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
   .stat-box .s-num { font-size: 1.5rem; font-weight: 900; color: var(--gold-deep); }
@@ -300,10 +302,124 @@
   .slip-viewer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; align-items: center; justify-content: center; cursor: zoom-out; }
   .slip-viewer-overlay.open { display: flex; }
   .slip-viewer-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+
+  /* ── Student dropdown selector ──────────── */
+  .stu-selector-wrap { margin-bottom: 14px; }
+  .stu-selector { width: 100%; background: #fff; border: 2px solid var(--gold-bright); color: var(--gold-deep); border-radius: 10px; padding: 11px 14px; font-size: 1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23C8973A' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  .stu-selector:focus { outline: none; border-color: var(--gold-deep); }
+  .stu-panel { background: linear-gradient(160deg,#fff 0%,#fdf8f0 100%); border: 1px solid var(--border); border-top: 2px solid var(--gold-bright); border-radius: 12px; padding: 18px; display: none; }
+  .stu-panel.visible { display: block; }
+  .stu-panel-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .stu-acc-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep)); color: #fff; font-size: 1.1rem; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+  .stu-panel-name { font-weight: 900; font-size: 1.1rem; color: var(--gold-deep); font-family: 'Noto Serif TC', serif; }
+  .stu-acc-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .btn-start-class { display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep)); color: #fff; border: none; border-radius: 10px; padding: 12px 18px; font-size: 0.95rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; box-shadow: 0 3px 12px rgba(139,99,16,0.3); transition: all 0.15s; width: 100%; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .btn-start-class:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(139,99,16,0.4); }
+
+  /* ── Notepad popup modal ─────────────────── */
+  .notepad-overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,28,0.65); z-index: 150; align-items: center; justify-content: center; padding: 16px; }
+  .notepad-overlay.open { display: flex; }
+  .notepad-modal { background: var(--cream); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 860px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 12px 48px rgba(90,62,10,0.22); animation: slideUp 0.2s ease; overflow: hidden; }
+  .notepad-modal-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg,#fff 0%,#fdf8f0 100%); flex-shrink: 0; }
+  .notepad-modal-title { font-size: 1rem; font-weight: 900; color: var(--gold-deep); font-family: 'Noto Serif TC', serif; flex: 1; }
+  .notepad-modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--ink-muted); padding: 4px 8px; border-radius: 8px; transition: all 0.15s; }
+  .notepad-modal-close:hover { background: var(--gold-light); color: var(--gold-deep); }
+  .notepad-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 14px; background: var(--gold-light); border-bottom: 1px solid var(--border); align-items: center; flex-shrink: 0; }
+  .tb-btn { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 0.83rem; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-soft); transition: all 0.12s; min-width: 32px; text-align: center; }
+  .tb-btn:hover { background: var(--gold-light); border-color: var(--gold-bright); color: var(--gold-deep); }
+  .tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 3px; flex-shrink: 0; }
+  .tb-color-btn { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 0 0 1px var(--border); transition: transform 0.12s; flex-shrink: 0; }
+  .tb-color-btn:hover { transform: scale(1.25); }
+  .tb-label { font-size: 0.72rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; white-space: nowrap; }
+  .tb-select { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 4px 7px; font-size: 0.8rem; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-soft); cursor: pointer; }
+  .tb-select:focus { outline: none; border-color: var(--gold); }
+  .notepad-editor { flex: 1; overflow-y: auto; background: #fffdf7; padding: 20px 24px; font-size: 1.05rem; font-family: 'Noto Serif TC', serif; color: var(--ink); line-height: 1.9; outline: none; min-height: 200px; }
+  .notepad-editor:empty::before { content: attr(data-placeholder); color: var(--ink-muted); pointer-events: none; }
+  .notepad-modal-footer { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--border); background: linear-gradient(0deg,#fff 0%,#fdf8f0 100%); flex-shrink: 0; }
+  .btn-save-note { background: var(--green); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 0.9rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; }
+  .btn-save-note:hover { background: var(--green-dark); }
+  .note-save-status { font-size: 0.82rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; flex: 1; }
+  .btn-open-note { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 0.85rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; color: var(--gold-deep); cursor: pointer; transition: all 0.15s; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); width: 100%; justify-content: center; }
+  .btn-open-note:hover { background: var(--gold-light); border-color: var(--gold-bright); }
+
+  /* ── 課堂錄製 gold theme ───────────────────── */
+  .rec-card-gold { background: linear-gradient(160deg, #fff 0%, #fdf8f0 100%); border: 1px solid var(--border); border-top: 2px solid var(--gold-bright); border-radius: 11px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .btn-rec-start { background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep)); color: #fff; border: none; border-radius: 9px; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; box-shadow: 0 3px 10px rgba(139,99,16,0.3); transition: all 0.2s; flex: 1; }
+  .btn-rec-start:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(139,99,16,0.4); }
+  .btn-rec-start:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-rec-stop { background: var(--slate); color: #fff; border: none; border-radius: 9px; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; flex: 1; }
+  .btn-rec-stop:hover:not(:disabled) { background: var(--slate-dark); }
+  .btn-rec-stop:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Course schedule (student page) ─────── */
+  .schedule-table { width: 100%; border-collapse: collapse; font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; }
+  .schedule-table th { text-align: left; padding: 8px 10px; color: var(--gold-bright); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); }
+  .schedule-table td { padding: 9px 10px; border-bottom: 1px solid rgba(139,99,16,0.07); color: var(--ink-soft); }
+  .schedule-table tr:last-child td { border-bottom: none; }
+  .lesson-badge { display: inline-block; background: var(--gold-light); color: var(--gold-deep); border-radius: 20px; padding: 2px 9px; font-size: 0.75rem; font-weight: 700; }
+
+  /* ── Drive files (student page) ─────────── */
+  .drive-file-list { display: flex; flex-direction: column; gap: 8px; }
+  .drive-file-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #fff; border: 1px solid var(--border); border-radius: 9px; font-family: 'Noto Sans TC', sans-serif; }
+  .drive-file-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .drive-file-name { flex: 1; font-size: 0.85rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drive-file-dl { background: var(--gold-light); color: var(--gold-deep); border: none; border-radius: 7px; padding: 5px 11px; font-size: 0.77rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-block; }
 </style>
 </head>
 <body>
 
+
+<!-- ======= NOTEPAD POPUP ======= -->
+<div class="notepad-overlay" id="notepadOverlay" onclick="if(event.target===this)closeNotepad()">
+  <div class="notepad-modal">
+    <div class="notepad-modal-header">
+      <span class="notepad-modal-title" id="notepadTitle">📝 課堂筆記</span>
+      <button class="notepad-modal-close" onclick="closeNotepad()">✕</button>
+    </div>
+    <div class="notepad-toolbar" id="notepadToolbar">
+      <button class="tb-btn" title="粗體" onclick="noteCmd('bold')"><b>B</b></button>
+      <button class="tb-btn" title="斜體" onclick="noteCmd('italic')"><i>I</i></button>
+      <button class="tb-btn" title="底線" onclick="noteCmd('underline')"><u>U</u></button>
+      <button class="tb-btn" title="刪除線" onclick="noteCmd('strikeThrough')" style="text-decoration:line-through;">S</button>
+      <div class="tb-sep"></div>
+      <span class="tb-label">大小</span>
+      <select class="tb-select" onchange="noteFontSize(this.value)">
+        <option value="2">小</option>
+        <option value="3">中小</option>
+        <option value="4" selected>中</option>
+        <option value="5">大</option>
+        <option value="6">特大</option>
+        <option value="7">超大</option>
+      </select>
+      <div class="tb-sep"></div>
+      <span class="tb-label">字色</span>
+      <button class="tb-color-btn" style="background:#1C1C1C;" onclick="noteCmd('foreColor','#1C1C1C')"></button>
+      <button class="tb-color-btn" style="background:#dc2626;" onclick="noteCmd('foreColor','#dc2626')"></button>
+      <button class="tb-color-btn" style="background:#b45309;" onclick="noteCmd('foreColor','#b45309')"></button>
+      <button class="tb-color-btn" style="background:#15803d;" onclick="noteCmd('foreColor','#15803d')"></button>
+      <button class="tb-color-btn" style="background:#1d4ed8;" onclick="noteCmd('foreColor','#1d4ed8')"></button>
+      <button class="tb-color-btn" style="background:#7c3aed;" onclick="noteCmd('foreColor','#7c3aed')"></button>
+      <button class="tb-color-btn" style="background:#be185d;" onclick="noteCmd('foreColor','#be185d')"></button>
+      <div class="tb-sep"></div>
+      <span class="tb-label">螢光</span>
+      <button class="tb-color-btn" style="background:#fef08a;" onclick="noteCmd('hiliteColor','#fef08a')"></button>
+      <button class="tb-color-btn" style="background:#bbf7d0;" onclick="noteCmd('hiliteColor','#bbf7d0')"></button>
+      <button class="tb-color-btn" style="background:#bfdbfe;" onclick="noteCmd('hiliteColor','#bfdbfe')"></button>
+      <button class="tb-color-btn" style="background:#f5d0fe;" onclick="noteCmd('hiliteColor','#f5d0fe')"></button>
+      <button class="tb-color-btn" style="background:#fed7aa;" onclick="noteCmd('hiliteColor','#fed7aa')"></button>
+      <button class="tb-color-btn" style="background:#fecaca;" onclick="noteCmd('hiliteColor','#fecaca')"></button>
+      <button class="tb-color-btn" style="background:#fff;border:1px solid #ccc;font-size:0.72rem;display:flex;align-items:center;justify-content:center;border-radius:6px;width:28px;height:26px;" onclick="noteCmd('hiliteColor','transparent')">✕</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="noteCmd('removeFormat')">✕ 格式</button>
+    </div>
+    <div class="notepad-editor" id="notepadEditor" contenteditable="true" data-placeholder="寫下這堂課的重點、作業、備注…"></div>
+    <div class="notepad-modal-footer">
+      <button class="btn-save-note" onclick="saveNote(currentNoteToken)">💾 存到 Drive</button>
+      <span class="note-save-status" id="notepadStatus"></span>
+      <button class="btn-ghost" onclick="closeNotepad()">關閉</button>
+    </div>
+  </div>
+</div>
 
 <!-- ======= SLIP VIEWER ======= -->
 <div class="slip-viewer-overlay" id="slipViewer" onclick="this.classList.remove('open')">
@@ -510,7 +626,9 @@ window.SUPABASE_CONFIG = {
 // ============================================================
 // SUPABASE + STUDENT DATA
 // ============================================================
-const sb = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+const sb = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+});
 let studentsCache = {}; // { token: { name, meet } }
 
 function generateToken(name) {
@@ -531,7 +649,7 @@ async function fetchStudents() {
 // drive.file scope：App 只看得到自己建立的檔案/資料夾
 // ============================================================
 const GOOGLE_CLIENT_ID = '912926837729-j8n8mojmrmngpha68pbasv9qslvgtvrn.apps.googleusercontent.com';
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly';
 const DRIVE_ROOT_FOLDER = 'mrtaihualin 課堂錄影';
 let gdToken = null, gdTokenExp = 0, gdTokenClient = null;
 
@@ -603,6 +721,42 @@ async function gdShareAnyone(fileId) {
     body: JSON.stringify({ role: 'reader', type: 'anyone' })
   });
 }
+// ── Google Calendar: fetch today's events ──────────────────────
+async function calFetchTodayEvents() {
+  const token = await gdGetToken();
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+  const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+    + '?timeMin=' + encodeURIComponent(start)
+    + '&timeMax=' + encodeURIComponent(end)
+    + '&singleEvents=true&orderBy=startTime&maxResults=20';
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) throw new Error('Calendar API ' + r.status);
+  const data = await r.json();
+  return data.items || [];
+}
+
+// ── Drive: get/create student folder + small-file upload ───────
+async function gdGetStudentFolderId(studentName) {
+  const rootId = await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
+  return await gdEnsureFolder(studentName, rootId);
+}
+async function gdUploadSmall(blob, name, mimeType, folderId) {
+  const token = await gdGetToken();
+  const meta = JSON.stringify({ name: name, parents: [folderId] });
+  const form = new FormData();
+  form.append('metadata', new Blob([meta], { type: 'application/json' }));
+  form.append('file', blob);
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,webContentLink', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
+  });
+  if (!r.ok) throw new Error('上傳失敗 ' + r.status);
+  const fileData = await r.json();
+  await gdShareAnyone(fileData.id);
+  return fileData;
+}
+
 async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
   const { error } = await sb.from('classroom_recordings').insert({
     token, name, file_id: fileId, url, size_mb: sizeMB, part
@@ -735,16 +889,16 @@ function previewStudent(token) {
 function recordingHTML() {
   return '<div class="card" style="margin-top:16px;">' +
     '<h2>⏺ 課堂錄製</h2>' +
-    '<p class="rec-hint">🎥 預設錄「影片」（畫面＋老師與學生聲音）。開始時請在跳出的視窗選 Meet 分頁並勾選「分享分頁音訊」。</p>' +
-    '<div class="rec-card">' +
+    '<p class="rec-hint" style="color:var(--ink-muted);">🎥 錄製畫面＋師生雙聲。開始後請在跳出視窗選 Meet 分頁，並勾選「分享分頁音訊」。錄完會自動上傳到該學生的 Drive 資料夾。</p>' +
+    '<div class="rec-card-gold">' +
       '<div class="rec-card-header">' +
         '<span class="rec-card-icon">⏺</span>' +
-        '<span class="rec-card-title">課堂錄製</span>' +
+        '<span class="rec-card-title" style="font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.95rem;color:var(--ink-soft);">課堂錄製</span>' +
         '<span class="timer" id="recTimer"></span>' +
       '</div>' +
-      '<div class="rec-card-btns">' +
-        '<button class="btn-record" id="recVideoBtn" onclick="startRecGeneric()">🎥 錄影片（畫面＋雙人）</button>' +
-        '<button class="btn-record btn-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止</button>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="btn-rec-start" id="recVideoBtn" onclick="startRecGeneric()">🎥 開始錄製</button>' +
+        '<button class="btn-rec-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止</button>' +
       '</div>' +
       '<div class="status" id="recStatus"></div>' +
       '<div class="audio-section" id="recOutSection">' +
@@ -758,27 +912,131 @@ function recordingHTML() {
 
 const meetSVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 6 4H14L20 10V18C20 19.1 19.1 20 18 20H6C4.9 20 4 19.1 4 18V6Z" fill="#34A853" opacity="0.25"/><path d="M14 4L20 10H14V4Z" fill="#34A853" opacity="0.5"/><circle cx="12" cy="14" r="3.5" fill="#fff"/><path d="M17 11.5L20 9.5V18.5L17 16.5V11.5Z" fill="#fff"/></svg>';
 
+// ── Text colors / highlight presets ────────────────────────────
+const TEXT_COLORS  = ['#1C1C1C','#b45309','#15803d','#1d4ed8','#7c3aed','#be185d','#dc2626'];
+const HL_COLORS    = ['#fef08a','#bbf7d0','#bfdbfe','#f5d0fe','#fed7aa','#fecaca','transparent'];
+
 function renderStudentListHTML() {
   const entries = Object.entries(studentsCache);
   if (entries.length === 0) return '<div class="empty-state">尚未新增學生<br>點擊下方按鈕新增第一位學生</div>';
-  return '<div class="student-list">' + entries.map(function(entry) {
+
+  const options = entries.map(function(entry) {
     const token = entry[0], s = entry[1];
-    var initial = s.name ? s.name.charAt(0) : '?';
-    return '<div class="student-item">' +
-      '<div class="student-avatar">' + initial + '</div>' +
-      '<div class="student-info"><div class="student-item-name">' + s.name + '</div>' +
-      '<div class="student-item-actions">' +
-        '<button class="btn-sm" style="background:#b45309;color:#fff;font-weight:700;" onclick="startClassRec(\'' + token + '\')">▶️ 開始上課＋錄影</button>' +
-        '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + token + '\')">💳 收費</button>' +
-        '<button class="btn-sm btn-sm-attend" id="attend-' + token + '" onclick="recordAttendance(\'' + token + '\')">✅ 今日上課</button>' +
-        '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + token + '\')">📅 記錄</button>' +
-        '<button class="btn-sm btn-sm-copy" id="copy-' + token + '" onclick="copyStudentLink(\'' + token + '\',\'copy-' + token + '\')">🔗 連結</button>' +
-        '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + token + '\')">👁 預覽</button>' +
-        '<a class="btn-sm btn-sm-meet" href="' + s.meet + '" target="_blank" rel="noopener">🎥 Meet</a>' +
-        '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + token + '\')">✏️</button>' +
-        '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + token + '\')">🗑</button>' +
-      '</div></div></div>';
-  }).join('') + '</div>';
+    return '<option value="' + token.replace(/"/g,'') + '">' + s.name + '</option>';
+  }).join('');
+
+  return '<div class="stu-selector-wrap">' +
+    '<select class="stu-selector" id="stuDropdown" onchange="selectStudent(this.value)">' +
+      '<option value="">— 選擇學生 —</option>' +
+      options +
+    '</select>' +
+  '</div>' +
+  '<div class="stu-panel" id="stuPanel"></div>';
+}
+
+function selectStudent(token) {
+  const panel = document.getElementById('stuPanel');
+  if (!panel) return;
+  if (!token) { panel.classList.remove('visible'); panel.innerHTML = ''; return; }
+
+  const s = studentsCache[token];
+  if (!s) return;
+  const t = token.replace(/'/g, '');
+  const initial = s.name ? s.name.charAt(0) : '?';
+
+
+  panel.innerHTML =
+    '<div class="stu-panel-header">' +
+      '<div class="stu-acc-avatar">' + initial + '</div>' +
+      '<span class="stu-panel-name">' + s.name + '</span>' +
+    '</div>' +
+    '<button class="btn-start-class" onclick="startClassRec(\'' + t + '\')">▶️ 開始上課＋錄影</button>' +
+    '<div class="stu-acc-actions">' +
+      '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
+      '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
+      '<button class="btn-sm btn-sm-copy" id="copy-' + t + '" onclick="copyStudentLink(\'' + t + '\',\'copy-' + t + '\')">🔗 連結</button>' +
+      '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
+      '<a class="btn-sm btn-sm-meet" href="' + s.meet + '" target="_blank" rel="noopener">🎥 Meet</a>' +
+      '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
+      '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
+    '</div>' +
+    '<button class="btn-open-note" onclick="openNotepad(\'' + t + '\')">📝 開啟課堂筆記</button>';
+
+  panel.classList.add('visible');
+
+  // Auto-save to localStorage on input
+  var editor = document.getElementById('note-' + t);
+  if (editor) {
+    editor.addEventListener('input', function() {
+      localStorage.setItem('notehtml_' + t, editor.innerHTML);
+    });
+    editor.focus();
+  }
+}
+
+let currentNoteToken = '';
+
+function openNotepad(token) {
+  const s = studentsCache[token];
+  currentNoteToken = token;
+  const title = document.getElementById('notepadTitle');
+  if (title) title.textContent = '📝 ' + (s ? s.name : '') + ' — 課堂筆記';
+  const editor = document.getElementById('notepadEditor');
+  if (editor) {
+    editor.innerHTML = localStorage.getItem('notehtml_' + token) || '';
+    editor.addEventListener('input', function() {
+      localStorage.setItem('notehtml_' + token, editor.innerHTML);
+    });
+  }
+  const statusEl = document.getElementById('notepadStatus');
+  if (statusEl) statusEl.textContent = '';
+  document.getElementById('notepadOverlay').classList.add('open');
+  setTimeout(function() { if (editor) editor.focus(); }, 150);
+}
+
+function closeNotepad() {
+  document.getElementById('notepadOverlay').classList.remove('open');
+}
+
+function noteCmd(cmd, val) {
+  document.getElementById('notepadEditor').focus();
+  document.execCommand(cmd, false, val || null);
+}
+
+function noteFontSize(val) {
+  document.getElementById('notepadEditor').focus();
+  document.execCommand('fontSize', false, val);
+}
+
+async function saveNote(token) {
+  const editor = document.getElementById('notepadEditor');
+  const statusEl = document.getElementById('notepadStatus');
+  if (!editor || !token) return;
+  const htmlContent = editor.innerHTML;
+  localStorage.setItem('notehtml_' + token, htmlContent);
+  if (statusEl) statusEl.textContent = '⏳ 上傳中…';
+  const s = studentsCache[token];
+  const studentName = s ? s.name : token;
+  const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const fileName = studentName + '_筆記_' + today.replace(/\//g, '-') + '.html';
+  const fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + studentName + ' 課堂筆記 ' + today + '</title>'
+    + '<style>body{font-family:serif;max-width:740px;margin:40px auto;padding:0 24px;line-height:1.85;color:#1C1C1C;background:#FFFDF7;}'
+    + 'h1{color:#8B6310;border-bottom:2px solid #C8973A;padding-bottom:8px;margin-bottom:4px;}'
+    + '.content{font-size:1rem;}</style></head>'
+    + '<body><h1>📝 ' + studentName + ' — 課堂筆記</h1>'
+    + '<p style="color:#6b6b6b;font-size:0.88rem;margin-top:0;margin-bottom:20px;">日期：' + today + '</p>'
+    + '<div class="content">' + htmlContent + '</div>'
+    + '<hr style="margin-top:32px;border:none;border-top:1px solid #e5d9c0;">'
+    + '<p style="color:#aaa;font-size:0.78rem;">泰華老師課堂筆記 · mrtaihualin.com</p>'
+    + '</body></html>';
+  const blob = new Blob([fullHtml], { type: 'text/html' });
+  try {
+    const folderId = await gdGetStudentFolderId(studentName);
+    await gdUploadSmall(blob, fileName, 'text/html', folderId);
+    if (statusEl) { statusEl.textContent = '✅ 已儲存'; setTimeout(function(){ if(statusEl) statusEl.textContent=''; }, 3000); }
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '⚠️ ' + e.message;
+  }
 }
 
 async function renderTeacherView() {
@@ -817,33 +1075,82 @@ function renderStudentView() {
   document.getElementById('studentNameDisplay').textContent = '';
   const token = urlParams.get('s') || '';
   document.getElementById('mainContainer').innerHTML =
-    // Hero banner
     '<div class="student-hero">' +
       '<div class="student-hero-avatar">' + sInitial + '</div>' +
       '<div class="student-hero-name">' + student.name + ' 同學</div>' +
       '<div class="student-hero-sub">歡迎回到課堂 ✨</div>' +
     '</div>' +
-    // Meet card
     '<div class="card">' +
       '<h2>📹 進入課堂</h2>' +
       '<a class="meet-btn" href="' + student.meet + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
       '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>' +
     '</div>' +
-    // Payment card
+    '<div class="card">' +
+      '<h2>📅 我的課程記錄</h2>' +
+      '<div id="scheduleList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h2>📂 課堂資料下載</h2>' +
+      '<div id="filesList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+    '</div>' +
     '<div class="card">' +
       '<h2>💰 繳費通知</h2>' +
       '<div id="slipStatusMsg"></div>' +
       '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
       '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
-    '</div>' +
-    // Recording replay card（有錄影才顯示）
-    '<div class="card" id="recReplayCard" style="display:none;">' +
-      '<h2>🎬 課堂錄影回放</h2>' +
-      '<div id="recReplayList"></div>' +
     '</div>';
-  // 學生頁不提供錄製功能（錄製僅在老師頁）
   checkStudentSlipStatus(token);
-  loadStudentRecordings(token);
+  loadStudentSchedule(token);
+  loadStudentFiles(token);
+}
+
+async function loadStudentSchedule(token) {
+  const el = document.getElementById('scheduleList');
+  if (!el) return;
+  try {
+    const { data, error } = await sb.from('classroom_attendance')
+      .select('lesson_date').eq('token', token).order('lesson_date', { ascending: true });
+    if (error || !data || data.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無上課記錄</div>';
+      return;
+    }
+    const dayZh = ['日','一','二','三','四','五','六'];
+    const rows = data.map(function(r, i) {
+      const d = new Date(r.lesson_date + 'T12:00:00');
+      const dateStr = d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '（週' + dayZh[d.getDay()] + '）';
+      return '<tr><td><span class="lesson-badge">第 ' + (i+1) + ' 堂</span></td><td>' + dateStr + '</td></tr>';
+    }).join('');
+    el.innerHTML = '<table class="schedule-table"><thead><tr><th>堂次</th><th>上課日期</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
+  }
+}
+
+async function loadStudentFiles(token) {
+  const el = document.getElementById('filesList');
+  if (!el) return;
+  try {
+    const { data, error } = await sb.rpc('get_student_recordings', { p_token: token });
+    if (error || !data || !data.length) {
+      el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無課堂資料<br><span style="font-size:0.78rem;">課後老師上傳後即可在此下載</span></div>';
+      return;
+    }
+    const items = data.map(function(r) {
+      const name = r.name || '';
+      const icon = name.includes('筆記') || name.includes('note') ? '📝' : '🎬';
+      var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
+      var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
+      var label = name || (d + ' 課堂錄影' + sz);
+      return '<div class="drive-file-row">' +
+        '<span class="drive-file-icon">' + icon + '</span>' +
+        '<span class="drive-file-name">' + label + '</span>' +
+        '<a class="drive-file-dl" href="' + r.url + '" target="_blank" rel="noopener">⬇ 下載</a>' +
+      '</div>';
+    }).join('');
+    el.innerHTML = '<div class="drive-file-list">' + items + '</div>';
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
+  }
 }
 
 async function loadStudentRecordings(token){
@@ -1215,42 +1522,69 @@ async function recordAttendance(token) {
 async function loadTodaySchedule() {
   const container = document.getElementById('attendanceSection');
   if (!container) return;
-  const today = new Date().toISOString().slice(0, 10);
-  const d = new Date(today + 'T12:00:00');
+  const now = new Date();
   const dayZh = ['日','一','二','三','四','五','六'];
-  const dateLabel = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）';
+  const dateLabel = (now.getMonth()+1) + '月' + now.getDate() + '日（週' + dayZh[now.getDay()] + '）';
 
-  // Fetch today's attendance
-  const { data: todayRecs } = await sb.from('classroom_attendance')
-    .select('token,id').eq('lesson_date', today);
-  const todaySet = new Set((todayRecs || []).map(function(r) { return r.token; }));
+  container.innerHTML = '<div class="attend-card"><h2>📅 今日課表 — ' + dateLabel + '</h2>'
+    + '<div class="empty-attend"><button class="btn-gold" onclick="connectCalendar()">📅 連接 Google Calendar</button>'
+    + '<div style="margin-top:8px;font-size:0.77rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">點擊後登入 Google 帳號即可顯示今日課表</div></div></div>';
+}
 
-  const students = Object.entries(studentsCache);
-  if (students.length === 0) {
-    container.innerHTML = '<div class="attend-card"><h2>📅 今日課表</h2><div class="empty-attend">尚未新增學生</div></div>';
-    return;
+async function connectCalendar() {
+  const container = document.getElementById('attendanceSection');
+  const now = new Date();
+  const dayZh = ['日','一','二','三','四','五','六'];
+  const dateLabel = (now.getMonth()+1) + '月' + now.getDate() + '日（週' + dayZh[now.getDay()] + '）';
+
+  if (container) {
+    const inner = container.querySelector('.attend-card');
+    if (inner) inner.innerHTML = '<h2>📅 今日課表 — ' + dateLabel + '</h2><div class="empty-attend">連接中…</div>';
   }
 
-  // Fetch lesson count per student (all time)
-  const { data: allRecs } = await sb.from('classroom_attendance').select('token');
-  const countMap = {};
-  (allRecs || []).forEach(function(r) { countMap[r.token] = (countMap[r.token] || 0) + 1; });
+  try {
+    const events = await calFetchTodayEvents();
+    const studentNames = Object.entries(studentsCache);
+    const matched = [];
+    events.forEach(function(ev) {
+      const title = (ev.summary || '').toLowerCase();
+      studentNames.forEach(function(entry) {
+        const token = entry[0], s = entry[1];
+        if (title.includes(s.name.toLowerCase())) {
+          const startTime = ev.start && ev.start.dateTime
+            ? new Date(ev.start.dateTime).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+            : ev.start && ev.start.date ? '全天' : '';
+          const endTime = ev.end && ev.end.dateTime
+            ? new Date(ev.end.dateTime).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+            : '';
+          matched.push({ token, s, startTime, endTime, title: ev.summary || s.name });
+        }
+      });
+    });
 
-  const rows = students.map(function(entry) {
-    const token = entry[0], s = entry[1];
-    const marked = todaySet.has(token);
-    const total = countMap[token] || 0;
-    return '<div class="today-row">' +
-      '<span class="t-name">' + s.name + '</span>' +
-      (marked
-        ? '<button class="today-done" onclick="openAttendanceHistory(\'' + token + '\')">✅ 已上課 <span class="today-count">第 ' + total + ' 堂 · 查看記錄</span></button>'
-        : '<button class="btn-sm btn-sm-attend" id="attend-' + token + '" onclick="recordAttendance(\'' + token + '\')">✅ 今日上課</button>'
-      ) +
-    '</div>';
-  }).join('');
+    let content;
+    if (matched.length === 0) {
+      content = '<div class="empty-attend">今天沒有排課</div>';
+    } else {
+      const rows = matched.map(function(item) {
+        const timeStr = item.startTime + (item.endTime ? '–' + item.endTime : '');
+        return '<div class="today-row">' +
+          '<div style="flex:1;">' +
+            '<span class="t-name">' + item.s.name + '</span>' +
+            (timeStr ? '<div style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">' + timeStr + '</div>' : '') +
+          '</div>' +
+          '<button class="today-done" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="startClassRec(\'' + item.token + '\')">▶️ 開始上課</button>' +
+        '</div>';
+      }).join('');
+      content = '<div class="attend-list">' + rows + '</div>';
+    }
 
-  container.innerHTML = '<div class="attend-card"><h2>📅 今日課表 — ' + dateLabel + '</h2>' +
-    '<div class="attend-list">' + rows + '</div></div>';
+    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 今日課表 — ' + dateLabel + '</h2>' + content + '</div>';
+  } catch(e) {
+    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 今日課表 — ' + dateLabel + '</h2>'
+      + '<div class="empty-attend"><div style="color:var(--amber);font-size:0.82rem;margin-bottom:8px;">連接失敗：' + e.message + '</div>'
+      + '<button class="btn-gold" onclick="connectCalendar()">🔄 重試</button></div></div>';
+  }
 }
 
 async function openAttendanceHistory(token) {
@@ -1278,13 +1612,40 @@ async function openAttendanceHistory(token) {
     const isToday = r.lesson_date === today;
     return '<div class="hist-row">' +
       '<span class="hist-num">第 ' + (i+1) + ' 堂</span>' +
-      '<span class="hist-date">' + dateStr + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
+      '<span class="hist-date" id="hist-date-' + r.id + '">' + dateStr + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
+      '<button class="hist-edit" title="改日期" onclick="editAttendanceDate(\'' + r.id + '\',\'' + r.lesson_date + '\',\'' + token + '\')">✏️</button>' +
       '<button class="hist-del" title="刪除此記錄" onclick="deleteAttendance(\'' + r.id + '\',\'' + token + '\')">🗑</button>' +
     '</div>';
   }).join('');
 
   document.getElementById('attendHistList').innerHTML = rows;
   document.getElementById('attendHistSummary').textContent = '共 ' + data.length + ' 堂';
+}
+
+function editAttendanceDate(id, currentDate, token) {
+  // inject a temporary date-picker input next to the row
+  const span = document.getElementById('hist-date-' + id);
+  if (!span) return;
+  if (document.getElementById('date-picker-' + id)) return; // already open
+  const inp = document.createElement('input');
+  inp.type = 'date';
+  inp.value = currentDate;
+  inp.id = 'date-picker-' + id;
+  inp.style.cssText = 'border:1.5px solid var(--gold);border-radius:6px;padding:3px 7px;font-size:0.85rem;font-family:sans-serif;color:var(--ink);background:#fff;margin-left:6px;';
+  span.after(inp);
+  inp.focus();
+  inp.showPicker && inp.showPicker();
+
+  async function applyEdit() {
+    const newDate = inp.value;
+    inp.remove();
+    if (!newDate || newDate === currentDate) return;
+    const { error } = await sb.from('classroom_attendance').update({ lesson_date: newDate }).eq('id', id);
+    if (error) { alert('แก้ไม่ได้: ' + error.message); return; }
+    await openAttendanceHistory(token);
+  }
+  inp.addEventListener('change', applyEdit);
+  inp.addEventListener('blur', function() { setTimeout(function(){ if(inp.parentNode) inp.remove(); }, 200); });
 }
 
 async function deleteAttendance(id, token) {

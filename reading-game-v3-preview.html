@@ -512,36 +512,207 @@ var VOWEL_READ={
 // ════════════════════════════════════════════
 // 5 tones: สามัญ เอก โท ตรี จัตวา
 var WORDS=[
-  {th:'ไก่', zh:'雞',   en:'gài',   cons:'ก', vowel:'ไอ',  tone:'่',               tone_name:'เอก'},
-  {th:'ไข่', zh:'蛋',   en:'kài',   cons:'ข', vowel:'ไอ',  tone:'่',               tone_name:'เอก'},
-  {th:'ตา',  zh:'眼睛', en:'dtaa',  cons:'ต', vowel:'อา',                          tone_name:'สามัญ'},
-  {th:'ดี',  zh:'好',   en:'dii',   cons:'ด', vowel:'อี',                          tone_name:'สามัญ'},
-  {th:'กิน', zh:'吃',   en:'gin',   cons:'ก', vowel:'อิ',  final:'น',              tone_name:'สามัญ'},
-  {th:'แมว', zh:'貓',   en:'maew',  cons:'ม', vowel:'แอ',  final:'ว',              tone_name:'สามัญ'},
-  {th:'น้ำ', zh:'水',   en:'náam',  cons:'น', vowel:'อำ',  tone:'้',               tone_name:'ตรี'},
-  {th:'โต๊ะ',zh:'桌子', en:'dtó',   cons:'ต', vowel:'โอะ', tone:'๊',               tone_name:'ตรี'},
-  {th:'หมา', zh:'狗',   en:'mǎa',   cons:'ม', vowel:'อา',  lead:'ห',               tone_name:'จัตวา'},
-  {th:'ปลา', zh:'魚',   en:'bplaa', cons:'ป', vowel:'อา',  cluster:'ล',            tone_name:'สามัญ'},
-  {th:'อย่า',zh:'別',   en:'yàa',   cons:'ย', vowel:'อา',  tone:'่', lead:'อ',     tone_name:'เอก'},
-  {th:'ร้าน',zh:'店',   en:'ráan',  cons:'ร', vowel:'อา',  final:'น', tone:'้',    tone_name:'ตรี'},
-  {th:'ส้ม', zh:'橘子', en:'sôm',   cons:'ส', vowel:'โอะ', final:'ม', tone:'้',    tone_name:'โท'},
+  {th:'หนึ่ง', zh:'一', en:'nèung', level:'初', cons:'น', lead:'ห', vowel:'อึ', tone:'่', final:'ง', tone_name:'เอก'},
+  {th:'สอง', zh:'二', en:'sǒong', level:'初', cons:'ส', vowel:'ออ', final:'ง', tone_name:'จัตวา'},
+  {th:'สาม', zh:'三', en:'sǎam', level:'初', cons:'ส', vowel:'อา', final:'ม', tone_name:'จัตวา'},
+  {th:'สี่', zh:'四', en:'sìi', level:'初', cons:'ส', vowel:'อี', tone:'่', tone_name:'เอก'},
+  {th:'ห้า', zh:'五', en:'hâa', level:'初', cons:'ห', vowel:'อา', tone:'้', tone_name:'โท'},
+  {th:'หก', zh:'六', en:'hòk', level:'初', cons:'ห', vowel:'โอะ', final:'ก', tone_name:'เอก'},
+  {th:'เจ็ด', zh:'七', en:'jèt', level:'初', cons:'จ', vowel:'เอะ', final:'ด', tone_name:'เอก'},
+  {th:'แปด', zh:'八', en:'bpàet', level:'初', cons:'ป', vowel:'แอ', final:'ด', tone_name:'เอก'},
+  {th:'เก้า', zh:'九', en:'gâo', level:'初', cons:'ก', vowel:'เอา', tone:'้', tone_name:'โท'},
+  {th:'สิบ', zh:'十', en:'sìp', level:'初', cons:'ส', vowel:'อิ', final:'บ', tone_name:'เอก'},
+  {th:'ดำ', zh:'黑', en:'dam', level:'初', cons:'ด', vowel:'อำ', tone_name:'สามัญ'},
+  {th:'ขาว', zh:'白', en:'khǎao', level:'初', cons:'ข', vowel:'อา', final:'ว', tone_name:'จัตวา'},
+  {th:'แดง', zh:'紅', en:'daeng', level:'初', cons:'ด', vowel:'แอ', final:'ง', tone_name:'สามัญ'},
+  {th:'เหลือง', zh:'黃', en:'lʉ̌ang', level:'初', cons:'ล', lead:'ห', vowel:'เอือ', final:'ง', tone_name:'จัตวา'},
+  {th:'ฟ้า', zh:'藍', en:'fáa', level:'初', cons:'ฟ', vowel:'อา', tone:'้', tone_name:'ตรี'},
+  {th:'กิน', zh:'吃', en:'gin', level:'初', cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ'},
+  {th:'ดื่ม', zh:'喝', en:'dèum', level:'初', cons:'ด', vowel:'อื', tone:'่', final:'ม', tone_name:'เอก'},
+  {th:'ไป', zh:'去', en:'bpai', level:'初', cons:'ป', vowel:'ไอ', tone_name:'สามัญ'},
+  {th:'มา', zh:'來', en:'maa', level:'初', cons:'ม', vowel:'อา', tone_name:'สามัญ'},
+  {th:'ซื้อ', zh:'買', en:'séu', level:'初', cons:'ซ', vowel:'อื', tone:'้', tone_name:'ตรี'},
+  {th:'ดี', zh:'好', en:'dii', level:'初', cons:'ด', vowel:'อี', tone_name:'สามัญ'},
+  {th:'ใหญ่', zh:'大', en:'yài', level:'初', cons:'ญ', lead:'ห', vowel:'ใอ', tone:'่', tone_name:'เอก'},
+  {th:'เล็ก', zh:'小', en:'lék', level:'初', cons:'ล', vowel:'เอะ', final:'ก', tone_name:'ตรี'},
+  {th:'ร้อน', zh:'熱/燙', en:'róon', level:'初', cons:'ร', vowel:'ออ', tone:'้', final:'น', tone_name:'ตรี'},
+  {th:'แพง', zh:'貴', en:'phaeng', level:'初', cons:'พ', vowel:'แอ', final:'ง', tone_name:'สามัญ'},
+  {th:'หมอน', zh:'枕頭', en:'mǒon', level:'初', cons:'ม', lead:'ห', vowel:'ออ', final:'น', tone_name:'จัตวา'},
+  {th:'หู', zh:'耳朵', en:'hǔu', level:'初', cons:'ห', vowel:'อู', tone_name:'จัตวา'},
+  {th:'ปาก', zh:'嘴', en:'bpàak', level:'初', cons:'ป', vowel:'อา', final:'ก', tone_name:'เอก'},
+  {th:'ฟัน', zh:'牙齒', en:'fan', level:'初', cons:'ฟ', vowel:'อะ', final:'น', tone_name:'สามัญ'},
+  {th:'ลิ้น', zh:'舌頭', en:'lín', level:'初', cons:'ล', vowel:'อิ', tone:'้', final:'น', tone_name:'ตรี'},
+  {th:'หน้า', zh:'臉', en:'nâa', level:'初', cons:'น', lead:'ห', vowel:'อา', tone:'้', tone_name:'โท'},
+  {th:'ผม', zh:'頭髮', en:'phǒm', level:'初', cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา'},
+  {th:'คอ', zh:'脖子', en:'khoo', level:'初', cons:'ค', vowel:'ออ', tone_name:'สามัญ'},
+  {th:'เล็บ', zh:'指甲', en:'lép', level:'初', cons:'ล', vowel:'เอะ', final:'บ', tone_name:'ตรี'},
+  {th:'ใจ', zh:'心', en:'jai', level:'初', cons:'จ', vowel:'ใอ', tone_name:'สามัญ'},
+  {th:'แขน', zh:'手臂', en:'khǎen', level:'初', cons:'ข', vowel:'แอ', final:'น', tone_name:'จัตวา'},
+  {th:'นิ้ว', zh:'手指', en:'níu', level:'初', cons:'น', vowel:'อิ', tone:'้', final:'ว', tone_name:'ตรี'},
+  {th:'อก', zh:'胸', en:'òk', level:'初', cons:'อ', vowel:'โอะ', final:'ก', tone_name:'เอก'},
+  {th:'เลือด', zh:'血', en:'lʉ̂at', level:'初', cons:'ล', vowel:'เอือ', final:'ด', tone_name:'โท'},
+  {th:'ขา', zh:'腿', en:'khǎa', level:'初', cons:'ข', vowel:'อา', tone_name:'จัตวา'},
+  {th:'เท้า', zh:'腳', en:'tháo', level:'初', cons:'ท', vowel:'เอา', tone:'้', tone_name:'ตรี'},
+  {th:'ท้อง', zh:'肚子', en:'thóong', level:'初', cons:'ท', vowel:'ออ', tone:'้', final:'ง', tone_name:'ตรี'},
+  {th:'เข่า', zh:'膝蓋', en:'khào', level:'初', cons:'ข', vowel:'เอา', tone:'่', tone_name:'เอก'},
+  {th:'ลูก', zh:'孩子', en:'lûuk', level:'初', cons:'ล', vowel:'อู', final:'ก', tone_name:'โท'},
+  {th:'พี่', zh:'哥/姊', en:'phîi', level:'初', cons:'พ', vowel:'อี', tone:'่', tone_name:'โท'},
+  {th:'น้อง', zh:'弟/妹', en:'nóong', level:'初', cons:'น', vowel:'ออ', tone:'้', final:'ง', tone_name:'ตรี'},
+  {th:'ปู่', zh:'爺爺', en:'bpùu', level:'初', cons:'ป', vowel:'อู', tone:'่', tone_name:'เอก'},
+  {th:'ย่า', zh:'奶奶', en:'yâa', level:'初', cons:'ย', vowel:'อา', tone:'่', tone_name:'โท'},
+  {th:'ยาย', zh:'外婆', en:'yaai', level:'初', cons:'ย', vowel:'อา', final:'ย', tone_name:'สามัญ'},
+  {th:'หลาน', zh:'孫子', en:'lǎan', level:'初', cons:'ล', lead:'ห', vowel:'อา', final:'น', tone_name:'จัตวา'},
+  {th:'ญาติ', zh:'親戚', en:'yâat', level:'初', cons:'ญ', vowel:'อา', final:'ติ', tone_name:'โท'},
+  {th:'หมอ', zh:'醫生', en:'mǒo', level:'初', cons:'ม', lead:'ห', vowel:'ออ', tone_name:'จัตวา'},
+  {th:'นาย', zh:'先生', en:'naai', level:'初', cons:'น', vowel:'อา', final:'ย', tone_name:'สามัญ'},
+  {th:'ท่าน', zh:'您', en:'thâan', level:'初', cons:'ท', vowel:'อา', tone:'่', final:'น', tone_name:'โท'},
+  {th:'เจ้า', zh:'主人', en:'jâo', level:'初', cons:'จ', vowel:'เอา', tone:'้', tone_name:'โท'},
+  {th:'ชาย', zh:'男人', en:'chaai', level:'初', cons:'ช', vowel:'อา', final:'ย', tone_name:'สามัญ'},
+  {th:'เด็ก', zh:'小孩', en:'dèk', level:'初', cons:'ด', vowel:'เอะ', final:'ก', tone_name:'เอก'},
+  {th:'แขก', zh:'客人', en:'khàek', level:'初', cons:'ข', vowel:'แอ', final:'ก', tone_name:'เอก'},
+  {th:'ผัว', zh:'老公', en:'phǔa', level:'初', cons:'ผ', vowel:'อัว', tone_name:'จัตวา'},
+  {th:'เมีย', zh:'老婆', en:'mia', level:'初', cons:'ม', vowel:'เอีย', tone_name:'สามัญ'},
+  {th:'ไข่', zh:'蛋', en:'khài', level:'初', cons:'ข', vowel:'ไอ', tone:'่', tone_name:'เอก'},
+  {th:'นม', zh:'牛奶', en:'nom', level:'初', cons:'น', vowel:'โอะ', final:'ม', tone_name:'สามัญ'},
+  {th:'ชา', zh:'茶', en:'chaa', level:'初', cons:'ช', vowel:'อา', tone_name:'สามัญ'},
+  {th:'กุ้ง', zh:'蝦', en:'gûng', level:'初', cons:'ก', vowel:'อุ', tone:'้', final:'ง', tone_name:'โท'},
+  {th:'ปู', zh:'螃蟹', en:'bpuu', level:'初', cons:'ป', vowel:'อู', tone_name:'สามัญ'},
+  {th:'เนื้อ', zh:'肉', en:'nʉ́a', level:'初', cons:'น', vowel:'เอือ', tone:'้', tone_name:'ตรี'},
+  {th:'ผัก', zh:'蔬菜', en:'phàk', level:'初', cons:'ผ', vowel:'อะ', final:'ก', tone_name:'เอก'},
+  {th:'พริก', zh:'辣椒', en:'phrík', level:'初', cons:'พ', cluster:'ร', vowel:'อิ', final:'ก', tone_name:'ตรี'},
+  {th:'เกลือ', zh:'鹽', en:'glʉa', level:'初', cons:'ก', cluster:'ล', vowel:'เอือ', tone_name:'สามัญ'},
+  {th:'ขิง', zh:'薑', en:'khǐng', level:'初', cons:'ข', vowel:'อิ', final:'ง', tone_name:'จัตวา'},
+  {th:'เส้น', zh:'麵條', en:'sên', level:'初', cons:'ส', vowel:'เอ', tone:'้', final:'น', tone_name:'โท'},
+  {th:'ซุป', zh:'湯', en:'súp', level:'初', cons:'ซ', vowel:'อุ', final:'ป', tone_name:'ตรี'},
+  {th:'แกง', zh:'湯', en:'gaeng', level:'初', cons:'ก', vowel:'แอ', final:'ง', tone_name:'สามัญ'},
+  {th:'โจ๊ก', zh:'粥', en:'jóok', level:'初', cons:'จ', vowel:'โอ', tone:'๊', final:'ก', tone_name:'ตรี'},
+  {th:'กล้วย', zh:'香蕉', en:'glûay', level:'初', cons:'ก', cluster:'ล', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท'},
+  {th:'ร้าน', zh:'店', en:'ráan', level:'初', cons:'ร', vowel:'อา', tone:'้', final:'น', tone_name:'ตรี'},
+  {th:'วัด', zh:'寺廟', en:'wát', level:'初', cons:'ว', vowel:'อะ', final:'ด', tone_name:'ตรี'},
+  {th:'เมือง', zh:'城市', en:'mʉang', level:'初', cons:'ม', vowel:'เอือ', final:'ง', tone_name:'สามัญ'},
+  {th:'นา', zh:'田', en:'naa', level:'初', cons:'น', vowel:'อา', tone_name:'สามัญ'},
+  {th:'สวน', zh:'花園', en:'sǔan', level:'初', cons:'ส', vowel:'อัว', final:'น', tone_name:'จัตวา'},
+  {th:'ไร่', zh:'農場', en:'râi', level:'初', cons:'ร', vowel:'ไอ', tone:'่', tone_name:'โท'},
+  {th:'เขา', zh:'山', en:'khǎo', level:'初', cons:'ข', vowel:'เอา', tone_name:'จัตวา'},
+  {th:'เกาะ', zh:'島', en:'gò', level:'初', cons:'ก', vowel:'เอาะ', tone_name:'เอก'},
+  {th:'ถุง', zh:'袋子', en:'thǔng', level:'初', cons:'ถ', vowel:'อุ', final:'ง', tone_name:'จัตวา'},
+  {th:'โต๊ะ', zh:'桌子', en:'tó', level:'初', cons:'ต', vowel:'โอะ', tone:'๊', tone_name:'ตรี'},
+  {th:'เตียง', zh:'床', en:'tiang', level:'初', cons:'ต', vowel:'เอีย', final:'ง', tone_name:'สามัญ'},
+  {th:'แก้ว', zh:'杯子', en:'gâeo', level:'初', cons:'ก', vowel:'แอ', tone:'้', final:'ว', tone_name:'โท'},
+  {th:'ช้อน', zh:'湯匙', en:'chóon', level:'初', cons:'ช', vowel:'ออ', tone:'้', final:'น', tone_name:'ตรี'},
+  {th:'ส้อม', zh:'叉子', en:'sôom', level:'初', cons:'ส', vowel:'ออ', tone:'้', final:'ม', tone_name:'โท'},
+  {th:'มีด', zh:'刀子', en:'mîit', level:'初', cons:'ม', vowel:'อี', final:'ด', tone_name:'โท'},
+  {th:'หม้อ', zh:'鍋子', en:'môo', level:'初', cons:'ม', lead:'ห', vowel:'ออ', tone:'้', tone_name:'โท'},
+  {th:'พัด', zh:'扇子', en:'phát', level:'初', cons:'พ', vowel:'อะ', final:'ด', tone_name:'ตรี'},
+  {th:'ทำ', zh:'做', en:'tam', level:'初', cons:'ท', vowel:'อำ', tone_name:'สามัญ'},
+  {th:'พูด', zh:'說', en:'phûut', level:'初', cons:'พ', vowel:'อู', final:'ด', tone_name:'โท'},
+  {th:'ดู', zh:'看', en:'duu', level:'初', cons:'ด', vowel:'อู', tone_name:'สามัญ'},
+  {th:'ฟัง', zh:'聽', en:'fang', level:'初', cons:'ฟ', vowel:'อะ', final:'ง', tone_name:'สามัญ'},
+  {th:'อ่าน', zh:'讀', en:'àan', level:'初', cons:'อ', vowel:'อา', tone:'่', final:'น', tone_name:'เอก'},
+  {th:'เขียน', zh:'寫', en:'khǐan', level:'初', cons:'ข', vowel:'เอีย', final:'น', tone_name:'จัตวา'},
+  {th:'รัก', zh:'愛', en:'rák', level:'初', cons:'ร', vowel:'อะ', final:'ก', tone_name:'ตรี'},
+  {th:'สูง', zh:'高', en:'sǔung', level:'初', cons:'ส', vowel:'อู', final:'ง', tone_name:'จัตวา'},
+  {th:'ใหม่', zh:'新', en:'mài', level:'初', cons:'ม', lead:'ห', vowel:'ใอ', tone:'่', tone_name:'เอก'},
+  {th:'น้ำ', zh:'水', en:'náam', level:'初', cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี'},
+  {th:'ข้าว', zh:'飯', en:'khâao', level:'初', cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท'},
+  {th:'หมา', zh:'狗', en:'mǎa', level:'初', cons:'ม', lead:'ห', vowel:'อา', tone_name:'จัตวา'},
+  {th:'แมว', zh:'貓', en:'maeo', level:'初', cons:'ม', vowel:'แอ', final:'ว', tone_name:'สามัญ'},
+  {th:'บ้าน', zh:'家', en:'bâan', level:'初', cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท'},
+  {th:'รถ', zh:'車', en:'rót', level:'初', cons:'ร', vowel:'โอะ', final:'ถ', tone_name:'ตรี'},
+  {th:'พ่อ', zh:'爸爸', en:'phôo', level:'初', cons:'พ', vowel:'ออ', tone:'่', tone_name:'โท'},
+  {th:'แม่', zh:'媽媽', en:'mâe', level:'初', cons:'ม', vowel:'แอ', tone:'่', tone_name:'โท'},
+  {th:'ครู', zh:'老師', en:'khruu', level:'初', cons:'ค', cluster:'ร', vowel:'อู', tone_name:'สามัญ'},
+  {th:'เงิน', zh:'錢', en:'ngern', level:'初', cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ'},
+  {th:'ฝน', zh:'雨', en:'fǒn', level:'初', cons:'ฝ', vowel:'โอะ', final:'น', tone_name:'จัตวา'},
+  {th:'ลม', zh:'風', en:'lom', level:'初', cons:'ล', vowel:'โอะ', final:'ม', tone_name:'สามัญ'},
+  {th:'ไฟ', zh:'火', en:'fai', level:'初', cons:'ฟ', vowel:'ไอ', tone_name:'สามัญ'},
+  {th:'ปลา', zh:'魚', en:'plaa', level:'初', cons:'ป', cluster:'ล', vowel:'อา', tone_name:'สามัญ'},
+  {th:'ไก่', zh:'雞', en:'gài', level:'初', cons:'ก', vowel:'ไอ', tone:'่', tone_name:'เอก'},
+  {th:'หมู', zh:'豬', en:'mǔu', level:'初', cons:'ม', lead:'ห', vowel:'อู', tone_name:'จัตวา'},
+  {th:'นก', zh:'鳥', en:'nók', level:'初', cons:'น', vowel:'โอะ', final:'ก', tone_name:'ตรี'},
+  {th:'ตา', zh:'眼睛', en:'taa', level:'初', cons:'ต', vowel:'อา', tone_name:'สามัญ'},
+  {th:'มือ', zh:'手', en:'mʉʉ', level:'初', cons:'ม', vowel:'อื', tone_name:'สามัญ'},
+  {th:'หัว', zh:'頭', en:'hǔa', level:'初', cons:'ห', vowel:'อัว', tone_name:'จัตวา'},
+  {th:'ส้ม', zh:'橙', en:'sôm', level:'初', cons:'ส', vowel:'โอะ', tone:'้', final:'ม', tone_name:'โท'},
+  {th:'เขียว', zh:'綠', en:'khǐao', level:'初', cons:'ข', vowel:'เอีย', final:'ว', tone_name:'จัตวา'},
+  {th:'ม่วง', zh:'紫', en:'mûang', level:'初', cons:'ม', vowel:'อัว', tone:'่', final:'ง', tone_name:'โท'},
+  {th:'เทา', zh:'灰', en:'thao', level:'初', cons:'ท', vowel:'เอา', tone_name:'สามัญ'},
+  {th:'คน', zh:'個/位', en:'khon', level:'初', cons:'ค', vowel:'โอะ', final:'น', tone_name:'สามัญ'},
+  {th:'ตัว', zh:'隻/條', en:'tua', level:'初', cons:'ต', vowel:'อัว', tone_name:'สามัญ'},
+  {th:'ใบ', zh:'張/片', en:'bai', level:'初', cons:'บ', vowel:'ใอ', tone_name:'สามัญ'},
+  {th:'อัน', zh:'個/件', en:'an', level:'初', cons:'อ', vowel:'อะ', final:'น', tone_name:'สามัญ'},
+  {th:'ชิ้น', zh:'塊/片', en:'chín', level:'初', cons:'ช', vowel:'อิ', tone:'้', final:'น', tone_name:'ตรี'},
+  {th:'แผ่น', zh:'片/張', en:'phàen', level:'初', cons:'ผ', vowel:'แอ', tone:'่', final:'น', tone_name:'เอก'},
+  {th:'เล่ม', zh:'本', en:'lêm', level:'初', cons:'ล', vowel:'เอ', tone:'่', final:'ม', tone_name:'โท'},
+  {th:'ขวด', zh:'瓶', en:'khùat', level:'初', cons:'ข', vowel:'อัว', final:'ด', tone_name:'เอก'},
+  {th:'ก้อน', zh:'塊', en:'gôon', level:'初', cons:'ก', vowel:'ออ', tone:'้', final:'น', tone_name:'โท'},
+  {th:'คัน', zh:'輛', en:'khan', level:'初', cons:'ค', vowel:'อะ', final:'น', tone_name:'สามัญ'},
+  {th:'ลำ', zh:'架/艘', en:'lam', level:'初', cons:'ล', vowel:'อำ', tone_name:'สามัญ'},
+  {th:'หลัง', zh:'棟', en:'lǎng', level:'初', cons:'ล', lead:'ห', vowel:'อะ', final:'ง', tone_name:'จัตวา'},
+  {th:'ห้อง', zh:'間', en:'hôong', level:'初', cons:'ห', vowel:'ออ', tone:'้', final:'ง', tone_name:'โท'},
+  {th:'ชั้น', zh:'層', en:'chán', level:'初', cons:'ช', vowel:'อะ', tone:'้', final:'น', tone_name:'ตรี'},
+  {th:'จาน', zh:'盤', en:'jaan', level:'初', cons:'จ', vowel:'อา', final:'น', tone_name:'สามัญ'},
+  {th:'ถ้วย', zh:'碗/杯', en:'thûay', level:'初', cons:'ถ', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท'},
+  {th:'ต้น', zh:'棵', en:'tôn', level:'初', cons:'ต', vowel:'โอะ', tone:'้', final:'น', tone_name:'โท'},
+  {th:'ผล', zh:'顆/個', en:'phǒn', level:'初', cons:'ผ', vowel:'โอะ', final:'ล', tone_name:'จัตวา'},
+  {th:'มื้อ', zh:'餐', en:'mʉ́ʉ', level:'初', cons:'ม', vowel:'อื', tone:'้', tone_name:'ตรี'},
+  {th:'นอน', zh:'睡', en:'norn', level:'初', cons:'น', vowel:'ออ', final:'น', tone_name:'สามัญ'},
+  {th:'ตื่น', zh:'醒', en:'tʉ̀ʉn', level:'初', cons:'ต', vowel:'อื', tone:'่', final:'น', tone_name:'เอก'},
+  {th:'อยู่', zh:'住/在', en:'yùu', level:'初', cons:'ย', lead:'อ', vowel:'อู', tone:'่', tone_name:'เอก'},
+  {th:'เรียก', zh:'叫', en:'rîak', level:'初', cons:'ร', vowel:'เอีย', final:'ก', tone_name:'โท'},
+  {th:'ร้อง', zh:'唱/哭', en:'róong', level:'初', cons:'ร', vowel:'ออ', tone:'้', final:'ง', tone_name:'ตรี'},
+  {th:'คุย', zh:'聊天', en:'khui', level:'初', cons:'ค', vowel:'อุ', final:'ย', tone_name:'สามัญ'},
+  {th:'โกรธ', zh:'生氣', en:'gròot', level:'初', cons:'ก', cluster:'ร', vowel:'โอ', final:'ธ', tone_name:'เอก'},
+  {th:'เย็น', zh:'冷/冰', en:'yen', level:'初', cons:'ย', vowel:'เอะ', final:'น', tone_name:'สามัญ'},
+  {th:'อุ่น', zh:'暖/溫', en:'ùn', level:'初', cons:'อ', vowel:'อุ', tone:'่', final:'น', tone_name:'เอก'},
+  {th:'แข็ง', zh:'硬', en:'khǎeng', level:'初', cons:'ข', vowel:'แอะ', final:'ง', tone_name:'จัตวา'},
+  {th:'นิ่ม', zh:'軟', en:'nîm', level:'初', cons:'น', vowel:'อิ', tone:'่', final:'ม', tone_name:'โท'},
+  {th:'มืด', zh:'暗', en:'mʉ̂ʉt', level:'初', cons:'ม', vowel:'อื', final:'ด', tone_name:'โท'},
+  {th:'ดัง', zh:'大聲/有名', en:'dang', level:'初', cons:'ด', vowel:'อะ', final:'ง', tone_name:'สามัญ'},
+  {th:'เงียบ', zh:'靜', en:'ngîap', level:'初', cons:'ง', vowel:'เอีย', final:'บ', tone_name:'โท'},
+  {th:'เต็ม', zh:'滿', en:'tem', level:'初', cons:'ต', vowel:'เอะ', final:'ม', tone_name:'สามัญ'},
+  {th:'ว่าง', zh:'空/有空', en:'wâang', level:'初', cons:'ว', vowel:'อา', tone:'่', final:'ง', tone_name:'โท'},
+  {th:'ถูก', zh:'便宜/對', en:'thùuk', level:'初', cons:'ถ', vowel:'อู', final:'ก', tone_name:'เอก'},
 
-  // ───── 中級 หลายพยางค์ (เล่นทีละพยางค์) · เสียงวรรณยุกต์คำนวณตามกฎ — รอ Lin ตรวจคำทีเดียว ─────
-  {th:'อาหาร', zh:'食物', en:'aa-hǎan', level:'中', syls:[
+  // ───── 中級 หลายพยางค์ ─────
+  {th:'อาหาร', zh:'食物/料理', en:'aa-hǎan', level:'中', syls:[
     {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา'},
-    {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาร'}
+    {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาน'}
   ]},
-  {th:'โรงแรม', zh:'飯店', en:'roong-raem', level:'中', syls:[
-    {cons:'ร', vowel:'โอ', final:'ง', tone_name:'สามัญ', th:'โรง'},
-    {cons:'ร', vowel:'แอ', final:'ม', tone_name:'สามัญ', th:'แรม'}
+  {th:'ร้านอาหาร', zh:'餐廳', en:'ráan-aa-hǎan', level:'中', syls:[
+    {cons:'ร', vowel:'อา', tone:'้', final:'น', tone_name:'ตรี', th:'ร้าน'},
+    {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา'},
+    {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาน'}
   ]},
   {th:'เมนู', zh:'菜單', en:'mee-nuu', level:'中', syls:[
     {cons:'ม', vowel:'เอ', tone_name:'สามัญ', th:'เม'},
     {cons:'น', vowel:'อู', tone_name:'สามัญ', th:'นู'}
   ]},
-  {th:'กาแฟ', zh:'咖啡', en:'gaa-fae', level:'中', syls:[
-    {cons:'ก', vowel:'อา', tone_name:'สามัญ', th:'กา'},
-    {cons:'ฟ', vowel:'แอ', tone_name:'สามัญ', th:'แฟ'}
+  {th:'ของหวาน', zh:'甜點', en:'khǒong-wǎan', level:'中', syls:[
+    {cons:'ข', vowel:'ออ', final:'ง', tone_name:'จัตวา', th:'ของ'},
+    {cons:'ว', lead:'ห', vowel:'อา', final:'น', tone_name:'จัตวา', th:'หวาน'}
+  ]},
+  {th:'น้ำแข็ง', zh:'冰塊', en:'náam-khǎeng', level:'中', syls:[
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'},
+    {cons:'ข', vowel:'แอะ', final:'ง', tone_name:'จัตวา', th:'แข็ง'}
+  ]},
+  {th:'ใบเสร็จ', zh:'收據/帳單', en:'bai-sèt', level:'中', syls:[
+    {cons:'บ', vowel:'ใอ', tone_name:'สามัญ', th:'ใบ'},
+    {cons:'ส', vowel:'เอะ', final:'จ', tone_name:'เอก', th:'เส็ด'}
+  ]},
+  {th:'สนามบิน', zh:'機場', en:'sa-nǎam-bin', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', tone_name:'เอก', th:'สะ'},
+    {cons:'ส', vowel:'อา', final:'ม', tone_name:'จัตวา', th:'หนาม'},
+    {cons:'บ', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'บิน'}
+  ]},
+  {th:'แท็กซี่', zh:'計程車', en:'tháek-sîi', level:'中', syls:[
+    {cons:'ท', vowel:'แอะ', final:'ก', tone_name:'ตรี', th:'แท็ก'},
+    {cons:'ซ', vowel:'อี', tone:'่', tone_name:'โท', th:'ซี่'}
+  ]},
+  {th:'รถไฟฟ้า', zh:'捷運/地鐵', en:'rót-fai-fáa', level:'中', syls:[
+    {cons:'ร', vowel:'โอะ', final:'ถ', tone_name:'ตรี', th:'รด'},
+    {cons:'ฟ', vowel:'ไอ', tone_name:'สามัญ', th:'ไฟ'},
+    {cons:'ฟ', vowel:'อา', tone:'้', tone_name:'ตรี', th:'ฟ้า'}
   ]},
   {th:'แผนที่', zh:'地圖', en:'phǎen-thîi', level:'中', syls:[
     {cons:'ผ', vowel:'แอ', final:'น', tone_name:'จัตวา', th:'แผน'},
@@ -551,57 +722,496 @@ var WORDS=[
     {cons:'ท', vowel:'อา', final:'ง', tone_name:'สามัญ', th:'ทาง'},
     {cons:'อ', vowel:'ออ', final:'ก', tone_name:'เอก', th:'ออก'}
   ]},
-  {th:'ราคา', zh:'價格', en:'raa-khaa', level:'中', syls:[
-    {cons:'ร', vowel:'อา', tone_name:'สามัญ', th:'รา'},
-    {cons:'ค', vowel:'อา', tone_name:'สามัญ', th:'คา'}
-  ]},
-  {th:'เวลา', zh:'時間', en:'wee-laa', level:'中', syls:[
-    {cons:'ว', vowel:'เอ', tone_name:'สามัญ', th:'เว'},
-    {cons:'ล', vowel:'อา', tone_name:'สามัญ', th:'ลา'}
-  ]},
-  {th:'ภาษา', zh:'語言', en:'phaa-sǎa', level:'中', syls:[
-    {cons:'ภ', vowel:'อา', tone_name:'สามัญ', th:'ภา'},
-    {cons:'ษ', vowel:'อา', tone_name:'จัตวา', th:'ษา'}
-  ]},
-  {th:'มะนาว', zh:'檸檬', en:'má-naao', level:'中', syls:[
-    {cons:'ม', vowel:'อะ', tone_name:'ตรี', th:'มะ'},
-    {cons:'น', vowel:'อา', final:'ว', tone_name:'สามัญ', th:'นาว'}
-  ]},
-  {th:'ประตู', zh:'門', en:'bprà-dtuu', level:'中', syls:[
-    {cons:'ป', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'ประ'},
-    {cons:'ต', vowel:'อู', tone_name:'สามัญ', th:'ตู'}
-  ]},
-  {th:'กระเป๋า', zh:'包包', en:'grà-bpǎo', level:'中', syls:[
-    {cons:'ก', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'กระ'},
-    {cons:'ป', vowel:'เอา', tone:'๋', tone_name:'จัตวา', th:'เป๋า'}
-  ]},
-  {th:'ดอกไม้', zh:'花', en:'dòok-máai', level:'中', syls:[
-    {cons:'ด', vowel:'ออ', final:'ก', tone_name:'เอก', th:'ดอก'},
-    {cons:'ม', vowel:'ไอ', tone:'้', tone_name:'ตรี', th:'ไม้'}
-  ]},
   {th:'ห้องน้ำ', zh:'洗手間', en:'hông-náam', level:'中', syls:[
     {cons:'ห', vowel:'ออ', tone:'้', final:'ง', tone_name:'โท', th:'ห้อง'},
     {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'}
   ]},
+  {th:'โรงแรม', zh:'飯店', en:'roong-raem', level:'中', syls:[
+    {cons:'ร', vowel:'โอ', final:'ง', tone_name:'สามัญ', th:'โรง'},
+    {cons:'ร', vowel:'แอ', final:'ม', tone_name:'สามัญ', th:'แรม'}
+  ]},
+  {th:'ห้องพัก', zh:'客房', en:'hông-phák', level:'中', syls:[
+    {cons:'ห', vowel:'ออ', tone:'้', final:'ง', tone_name:'โท', th:'ห้อง'},
+    {cons:'พ', vowel:'อะ', final:'ก', tone_name:'ตรี', th:'พัก'}
+  ]},
+  {th:'เช็คอิน', zh:'辦理入住', en:'chék-in', level:'中', syls:[
+    {cons:'ช', vowel:'เอะ', final:'ค', tone_name:'ตรี', th:'เช็ก'},
+    {cons:'อ', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'อิน'}
+  ]},
+  {th:'เช็คเอาท์', zh:'退房', en:'chék-áo', level:'中', syls:[
+    {cons:'ช', vowel:'เอะ', final:'ค', tone_name:'ตรี', th:'เช็ค'},
+    {cons:'อ', vowel:'เอา', final:'ท์ (การันต์)', tone_name:'เอก', th:'เอาท์'}
+  ]},
+  {th:'สระว่ายน้ำ', zh:'游泳池', en:'sà-wâai-náam', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', tone:'่', tone_name:'เอก', th:'สะ'},
+    {cons:'ส', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'ว่าย'},
+    {cons:'ว', vowel:'อา', tone:'่', final:'ย', tone_name:'โท', th:'น้ำ'},
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น'}
+  ]},
+  {th:'บริษัท', zh:'公司', en:'bor-rí-sàt', level:'中', syls:[
+    {cons:'บ', vowel:'ออ', tone_name:'สามัญ', th:'บอ'},
+    {cons:'ร', vowel:'อิ', tone_name:'ตรี', th:'ริ'},
+    {cons:'ษ', vowel:'อะ', final:'ท', tone_name:'เอก', th:'สัด'}
+  ]},
+  {th:'ประชุม', zh:'開會', en:'bprà-chum', level:'中', syls:[
+    {cons:'ป', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'ประ'},
+    {cons:'ช', vowel:'อุ', final:'ม', tone_name:'สามัญ', th:'ชุม'}
+  ]},
+  {th:'ลูกค้า', zh:'客戶', en:'lûuk-kháa', level:'中', syls:[
+    {cons:'ล', vowel:'อู', final:'ก', tone_name:'โท', th:'ลูก'},
+    {cons:'ค', vowel:'อา', tone:'้', tone_name:'ตรี', th:'ค้า'}
+  ]},
+  {th:'นัดหมาย', zh:'預約/約定', en:'nát-mǎai', level:'中', syls:[
+    {cons:'น', vowel:'อะ', final:'ด', tone_name:'ตรี', th:'นัด'},
+    {cons:'ม', lead:'ห', vowel:'อา', final:'ย', tone_name:'จัตวา', th:'หมาย'}
+  ]},
+  {th:'รายงาน', zh:'報告', en:'raai-ngaan', level:'中', syls:[
+    {cons:'ร', vowel:'อา', final:'ย', tone_name:'สามัญ', th:'ราย'},
+    {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน'}
+  ]},
+  {th:'ราคา', zh:'價格', en:'raa-khaa', level:'中', syls:[
+    {cons:'ร', vowel:'อา', tone_name:'สามัญ', th:'รา'},
+    {cons:'ค', vowel:'อา', tone_name:'สามัญ', th:'คา'}
+  ]},
+  {th:'ลดราคา', zh:'打折', en:'lót-raa-khaa', level:'中', syls:[
+    {cons:'ล', vowel:'โอะ', final:'ด', tone_name:'ตรี', th:'ลด'},
+    {cons:'ร', vowel:'อา', tone_name:'สามัญ', th:'รา'},
+    {cons:'ค', vowel:'อา', tone_name:'สามัญ', th:'คา'}
+  ]},
+  {th:'ต่อรอง', zh:'殺價', en:'dtòr-rong', level:'中', syls:[
+    {cons:'ต', vowel:'ออ', tone:'่', tone_name:'เอก', th:'ต่อ'},
+    {cons:'ร', vowel:'ออ', final:'ง', tone_name:'สามัญ', th:'รอง'}
+  ]},
+  {th:'ชำระเงิน', zh:'付款', en:'cham-rá-ngoen', level:'中', syls:[
+    {cons:'ช', vowel:'อำ', tone_name:'สามัญ', th:'ชำ'},
+    {cons:'ร', vowel:'อะ', tone_name:'ตรี', th:'ระ'},
+    {cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน'}
+  ]},
+  {th:'สวัสดี', zh:'你好/再見', en:'sà-wàt-dii', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', tone_name:'เอก', th:'สะ'},
+    {cons:'ส', cluster:'ว', vowel:'อะ', final:'ส', tone_name:'เอก', th:'หวัด'},
+    {cons:'ด', vowel:'อี', tone_name:'สามัญ', th:'ดี'}
+  ]},
   {th:'ขอบคุณ', zh:'謝謝', en:'khòp-khun', level:'中', syls:[
     {cons:'ข', vowel:'ออ', final:'บ', tone_name:'เอก', th:'ขอบ'},
-    {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุณ'}
+    {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุน'}
   ]},
-  {th:'น้ำแข็ง', zh:'冰塊', en:'náam-khǎeng', level:'中', syls:[
+  {th:'ขอโทษ', zh:'對不起', en:'khǒr-thôot', level:'中', syls:[
+    {cons:'ข', vowel:'ออ', tone_name:'จัตวา', th:'ขอ'},
+    {cons:'ท', vowel:'โอ', final:'ษ', tone_name:'โท', th:'โทด'}
+  ]},
+  {th:'ไม่เป็นไร', zh:'沒關係', en:'mâi-bpen-rai', level:'中', syls:[
+    {cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่'},
+    {cons:'ป', vowel:'เอะ', final:'น', tone_name:'สามัญ', th:'เป็น'},
+    {cons:'ร', vowel:'ไอ', tone_name:'สามัญ', th:'ไร'}
+  ]},
+  {th:'ไม่เข้าใจ', zh:'我不懂', en:'mâi-khâo-jai', level:'中', syls:[
+    {cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่'},
+    {cons:'ข', vowel:'เอา', tone:'้', tone_name:'โท', th:'เข้า'},
+    {cons:'จ', vowel:'ใอ', tone_name:'สามัญ', th:'ใจ'}
+  ]},
+  {th:'ช่วยด้วย', zh:'救命', en:'chûai-dûai', level:'中', syls:[
+    {cons:'ช', vowel:'อัว', tone:'่', final:'ย', tone_name:'โท', th:'ช่วย'},
+    {cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย'}
+  ]},
+  {th:'ข้าวผัด', zh:'炒飯', en:'khâao-phàt', level:'中', syls:[
+    {cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว'},
+    {cons:'ผ', vowel:'อะ', final:'ด', tone_name:'เอก', th:'ผัด'}
+  ]},
+  {th:'ต้มยำ', zh:'冬陰湯', en:'dtôm-yam', level:'中', syls:[
+    {cons:'ต', vowel:'โอะ', tone:'้', final:'ม', tone_name:'โท', th:'ต้ม'},
+    {cons:'ย', vowel:'อำ', tone_name:'สามัญ', th:'ยำ'}
+  ]},
+  {th:'ผัดไทย', zh:'泰式炒麵', en:'phàt-thai', level:'中', syls:[
+    {cons:'ผ', vowel:'อะ', final:'ด', tone_name:'เอก', th:'ผัด'},
+    {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไท'}
+  ]},
+  {th:'ส้มตำ', zh:'涼拌木瓜', en:'sôm-dtam', level:'中', syls:[
+    {cons:'ส', vowel:'โอะ', tone:'้', final:'ม', tone_name:'โท', th:'ส้ม'},
+    {cons:'ต', vowel:'อำ', tone_name:'สามัญ', th:'ตำ'}
+  ]},
+  {th:'ข้าวต้ม', zh:'粥', en:'khâao-dtôm', level:'中', syls:[
+    {cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว'},
+    {cons:'ต', vowel:'โอะ', tone:'้', final:'ม', tone_name:'โท', th:'ต้ม'}
+  ]},
+  {th:'ไก่ทอด', zh:'炸雞', en:'gài-thôot', level:'中', syls:[
+    {cons:'ก', vowel:'ไอ', tone:'่', tone_name:'เอก', th:'ไก่'},
+    {cons:'ท', vowel:'ออ', final:'ด', tone_name:'โท', th:'ทอด'}
+  ]},
+  {th:'หมูปิ้ง', zh:'烤豬肉', en:'mǔu-bpîng', level:'中', syls:[
+    {cons:'ม', lead:'ห', vowel:'อู', tone_name:'จัตวา', th:'หมู'},
+    {cons:'ป', vowel:'อิ', tone:'้', final:'ง', tone_name:'โท', th:'ปิ้ง'}
+  ]},
+  {th:'กาแฟ', zh:'咖啡', en:'gaa-fae', level:'中', syls:[
+    {cons:'ก', vowel:'อา', tone_name:'สามัญ', th:'กา'},
+    {cons:'ฟ', vowel:'แอ', tone_name:'สามัญ', th:'แฟ'}
+  ]},
+  {th:'น้ำชา', zh:'茶', en:'nám-chaa', level:'中', syls:[
     {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'},
-    {cons:'ข', vowel:'แอ็', final:'ง', tone_name:'จัตวา', th:'แข็ง'}
+    {cons:'ช', vowel:'อา', tone_name:'สามัญ', th:'ชา'}
   ]},
-  {th:'หนังสือ', zh:'書', en:'nǎng-sʉ̌ʉ', level:'中', syls:[
-    {cons:'น', lead:'ห', vowel:'อั', final:'ง', tone_name:'จัตวา', th:'หนัง'},
-    {cons:'ส', vowel:'อื', tone_name:'จัตวา', th:'สือ'}
+  {th:'น้ำส้ม', zh:'柳橙汁', en:'nám-sôm', level:'中', syls:[
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'},
+    {cons:'ส', vowel:'โอะ', tone:'้', final:'ม', tone_name:'โท', th:'ส้ม'}
+  ]},
+  {th:'ขนมปัง', zh:'麵包', en:'khà-nǒm-bpang', level:'中', syls:[
+    {cons:'ข', vowel:'อะ', tone_name:'เอก', th:'ขะ'},
+    {cons:'น', lead:'ห', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'หนม'},
+    {cons:'ป', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ปัง'}
+  ]},
+  {th:'ช้อนส้อม', zh:'餐具', en:'chóon-sôom', level:'中', syls:[
+    {cons:'ช', vowel:'ออ', tone:'้', final:'น', tone_name:'ตรี', th:'ช้อน'},
+    {cons:'ส', vowel:'ออ', tone:'้', final:'ม', tone_name:'โท', th:'ส้อม'}
+  ]},
+  {th:'ตะเกียบ', zh:'筷子', en:'dta-gìap', level:'中', syls:[
+    {cons:'ต', vowel:'อะ', tone_name:'เอก', th:'ตะ'},
+    {cons:'ก', vowel:'เอีย', final:'บ', tone_name:'เอก', th:'เกียบ'}
+  ]},
+  {th:'จานข้าว', zh:'飯盤', en:'jaan-khâao', level:'中', syls:[
+    {cons:'จ', vowel:'อา', final:'น', tone_name:'สามัญ', th:'จาน'},
+    {cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว'}
+  ]},
+  {th:'รถเมล์', zh:'公車', en:'rót-mee', level:'中', syls:[
+    {cons:'ร', vowel:'โอะ', final:'ถ', tone_name:'ตรี', th:'รด'},
+    {cons:'ม', vowel:'เอ', tone_name:'สามัญ', th:'เม'}
+  ]},
+  {th:'รถทัวร์', zh:'遊覽車', en:'rót-thua', level:'中', syls:[
+    {cons:'ร', vowel:'โอะ', final:'ถ', tone_name:'ตรี', th:'รด'},
+    {cons:'ท', vowel:'อัว', tone_name:'สามัญ', th:'ทัว'}
   ]},
   {th:'เครื่องบิน', zh:'飛機', en:'khrʉ̂ang-bin', level:'中', syls:[
     {cons:'ค', cluster:'ร', vowel:'เอือ', tone:'่', final:'ง', tone_name:'โท', th:'เครื่อง'},
     {cons:'บ', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'บิน'}
   ]},
-  {th:'สบาย', zh:'舒服', en:'sà-baai', level:'中', syls:[
+  {th:'สถานี', zh:'車站', en:'sà-thǎa-nii', level:'中', syls:[
     {cons:'ส', vowel:'อะ', tone_name:'เอก', th:'สะ'},
-    {cons:'บ', vowel:'อา', final:'ย', tone_name:'สามัญ', th:'บาย'}
+    {cons:'ถ', vowel:'อา', final:'น', tone_name:'จัตวา', th:'ถา'},
+    {cons:'น', vowel:'อี', tone_name:'สามัญ', th:'นี'}
+  ]},
+  {th:'สะพาน', zh:'橋', en:'sà-phaan', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', tone_name:'เอก', th:'สะ'},
+    {cons:'พ', vowel:'อา', final:'น', tone_name:'สามัญ', th:'พาน'}
+  ]},
+  {th:'ถนน', zh:'馬路', en:'thà-nǒn', level:'中', syls:[
+    {cons:'ถ', vowel:'อะ', tone_name:'เอก', th:'ถะ'},
+    {cons:'น', lead:'ห', vowel:'โอะ', final:'น', tone_name:'จัตวา', th:'หนน'}
+  ]},
+  {th:'ทางด่วน', zh:'高速公路', en:'thaang-dùan', level:'中', syls:[
+    {cons:'ท', vowel:'อา', final:'ง', tone_name:'สามัญ', th:'ทาง'},
+    {cons:'ด', vowel:'อัว', tone:'่', final:'น', tone_name:'เอก', th:'ด่วน'}
+  ]},
+  {th:'น้ำมัน', zh:'油', en:'nám-man', level:'中', syls:[
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'},
+    {cons:'ม', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'มัน'}
+  ]},
+  {th:'กระเป๋า', zh:'包包', en:'grà-bpǎo', level:'中', syls:[
+    {cons:'ก', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'กระ'},
+    {cons:'ป', vowel:'เอา', tone:'๋', tone_name:'จัตวา', th:'เป๋า'}
+  ]},
+  {th:'ตำรวจ', zh:'警察', en:'dtam-rùat', level:'中', syls:[
+    {cons:'ต', vowel:'อำ', tone_name:'สามัญ', th:'ตำ'},
+    {cons:'ร', lead:'ห', vowel:'อัว', final:'จ', tone_name:'เอก', th:'หรวด'}
+  ]},
+  {th:'ที่จอดรถ', zh:'停車場', en:'thîi-jòot-rót', level:'中', syls:[
+    {cons:'ท', vowel:'อี', tone:'่', tone_name:'โท', th:'ที่'},
+    {cons:'จ', vowel:'ออ', final:'ด', tone_name:'เอก', th:'จอด'},
+    {cons:'ร', vowel:'โอะ', final:'ถ', tone_name:'ตรี', th:'รด'}
+  ]},
+  {th:'ทางม้าลาย', zh:'斑馬線', en:'thaang-máa-laai', level:'中', syls:[
+    {cons:'ท', vowel:'อา', final:'ง', tone_name:'สามัญ', th:'ทาง'},
+    {cons:'ม', vowel:'อา', tone:'้', tone_name:'ตรี', th:'ม้า'},
+    {cons:'ล', vowel:'อา', final:'ย', tone_name:'สามัญ', th:'ลาย'}
+  ]},
+  {th:'ระยะทาง', zh:'距離', en:'rá-yá-thaang', level:'中', syls:[
+    {cons:'ร', vowel:'อะ', tone_name:'ตรี', th:'ระ'},
+    {cons:'ย', vowel:'อะ', tone_name:'ตรี', th:'ยะ'},
+    {cons:'ท', vowel:'อา', final:'ง', tone_name:'สามัญ', th:'ทาง'}
+  ]},
+  {th:'ป้ายรถ', zh:'站牌', en:'bpâai-rót', level:'中', syls:[
+    {cons:'ป', vowel:'อา', tone:'้', final:'ย', tone_name:'โท', th:'ป้าย'},
+    {cons:'ร', vowel:'โอะ', final:'ถ', tone_name:'ตรี', th:'รด'}
+  ]},
+  {th:'พนักงาน', zh:'員工', en:'phá-nák-ngaan', level:'中', syls:[
+    {cons:'พ', vowel:'อะ', tone_name:'ตรี', th:'พะ'},
+    {cons:'น', vowel:'อะ', final:'ก', tone_name:'ตรี', th:'นัก'},
+    {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน'}
+  ]},
+  {th:'เตียงนอน', zh:'床', en:'dtiang-noon', level:'中', syls:[
+    {cons:'ต', vowel:'เอีย', final:'ง', tone_name:'สามัญ', th:'เตียง'},
+    {cons:'น', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'นอน'}
+  ]},
+  {th:'ผ้าเช็ดตัว', zh:'毛巾', en:'phâa-chét-dtua', level:'中', syls:[
+    {cons:'ผ', vowel:'อา', tone:'้', tone_name:'โท', th:'ผ้า'},
+    {cons:'ช', vowel:'เอะ', final:'ด', tone_name:'ตรี', th:'เช็ด'},
+    {cons:'ต', vowel:'อัว', tone_name:'สามัญ', th:'ตัว'}
+  ]},
+  {th:'กุญแจ', zh:'鑰匙', en:'gun-jae', level:'中', syls:[
+    {cons:'ก', vowel:'อุ', final:'ญ', tone_name:'สามัญ', th:'กุน'},
+    {cons:'จ', vowel:'แอ', tone_name:'สามัญ', th:'แจ'}
+  ]},
+  {th:'ระเบียง', zh:'陽台', en:'rá-biang', level:'中', syls:[
+    {cons:'ร', vowel:'อะ', tone_name:'ตรี', th:'ระ'},
+    {cons:'บ', vowel:'เอีย', final:'ง', tone_name:'สามัญ', th:'เบียง'}
+  ]},
+  {th:'ห้องอาหาร', zh:'餐廳', en:'hôong-aa-hǎan', level:'中', syls:[
+    {cons:'ห', vowel:'ออ', tone:'้', final:'ง', tone_name:'โท', th:'ห้อง'},
+    {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา'},
+    {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาน'}
+  ]},
+  {th:'ค่าห้อง', zh:'房費', en:'khâa-hôong', level:'中', syls:[
+    {cons:'ค', vowel:'อา', tone:'่', tone_name:'โท', th:'ค่า'},
+    {cons:'ห', vowel:'ออ', tone:'้', final:'ง', tone_name:'โท', th:'ห้อง'}
+  ]},
+  {th:'อาหารเช้า', zh:'早餐', en:'aa-hǎan-cháo', level:'中', syls:[
+    {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา'},
+    {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาน'},
+    {cons:'ช', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เช้า'}
+  ]},
+  {th:'สบู่', zh:'肥皂', en:'sà-bùu', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', tone_name:'เอก', th:'สะ'},
+    {cons:'บ', vowel:'อู', tone:'่', tone_name:'เอก', th:'บู่'}
+  ]},
+  {th:'ผ้าห่ม', zh:'棉被', en:'phâa-hòm', level:'中', syls:[
+    {cons:'ผ', vowel:'อา', tone:'้', tone_name:'โท', th:'ผ้า'},
+    {cons:'ห', vowel:'โอะ', tone:'่', final:'ม', tone_name:'เอก', th:'ห่ม'}
+  ]},
+  {th:'ทีวี', zh:'電視', en:'thii-wii', level:'中', syls:[
+    {cons:'ท', vowel:'อี', tone_name:'สามัญ', th:'ที'},
+    {cons:'ว', vowel:'อี', tone_name:'สามัญ', th:'วี'}
+  ]},
+  {th:'น้ำอุ่น', zh:'熱水', en:'nám-ùn', level:'中', syls:[
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'},
+    {cons:'อ', vowel:'อุ', tone:'่', final:'น', tone_name:'เอก', th:'อุ่น'}
+  ]},
+  {th:'ยาสีฟัน', zh:'牙膏', en:'yaa-sǐi-fan', level:'中', syls:[
+    {cons:'ย', vowel:'อา', tone_name:'สามัญ', th:'ยา'},
+    {cons:'ส', vowel:'อี', tone_name:'จัตวา', th:'สี'},
+    {cons:'ฟ', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'ฟัน'}
+  ]},
+  {th:'ต้อนรับ', zh:'接待', en:'dtôon-ráp', level:'中', syls:[
+    {cons:'ต', vowel:'ออ', tone:'้', final:'น', tone_name:'โท', th:'ต้อน'},
+    {cons:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'รับ'}
+  ]},
+  {th:'เงินเดือน', zh:'薪水', en:'ngern-dʉan', level:'中', syls:[
+    {cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน'},
+    {cons:'ด', vowel:'เอือ', final:'น', tone_name:'สามัญ', th:'เดือน'}
+  ]},
+  {th:'หัวหน้า', zh:'主管', en:'hǔa-nâa', level:'中', syls:[
+    {cons:'ห', vowel:'อัว', tone_name:'จัตวา', th:'หัว'},
+    {cons:'น', lead:'ห', vowel:'อา', tone:'้', tone_name:'โท', th:'หน้า'}
+  ]},
+  {th:'โทรศัพท์', zh:'電話', en:'thoo-rá-sàp', level:'中', syls:[
+    {cons:'ท', vowel:'โอ', tone_name:'สามัญ', th:'โท'},
+    {cons:'ร', vowel:'อะ', tone_name:'ตรี', th:'ระ'},
+    {cons:'ส', vowel:'อะ', final:'บ', tone_name:'เอก', th:'สับ'}
+  ]},
+  {th:'เอกสาร', zh:'文件', en:'èek-gà-sǎan', level:'中', syls:[
+    {cons:'อ', vowel:'เอ', final:'ก', tone_name:'เอก', th:'เอก'},
+    {cons:'ก', vowel:'อะ', tone_name:'เอก', th:'กะ'},
+    {cons:'ส', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'สาน'}
+  ]},
+  {th:'สัมภาษณ์', zh:'面試', en:'sǎm-phâat', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', final:'ม', tone_name:'จัตวา', th:'สำ'},
+    {cons:'พ', vowel:'อา', final:'ษ', tone_name:'โท', th:'พาด'}
+  ]},
+  {th:'ตำแหน่ง', zh:'職位', en:'dtam-nàeng', level:'中', syls:[
+    {cons:'ต', vowel:'อำ', tone_name:'สามัญ', th:'ตำ'},
+    {cons:'น', lead:'ห', vowel:'แอ', tone:'่', final:'ง', tone_name:'เอก', th:'แหน่ง'}
+  ]},
+  {th:'ออฟฟิศ', zh:'辦公室', en:'óp-fít', level:'中', syls:[
+    {cons:'อ', vowel:'ออ', final:'ฟ', tone_name:'เอก', th:'ออบ'},
+    {cons:'ฟ', vowel:'อิ', final:'ศ', tone_name:'ตรี', th:'ฟิด'}
+  ]},
+  {th:'งานเลี้ยง', zh:'聚會', en:'ngaan-líang', level:'中', syls:[
+    {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน'},
+    {cons:'ล', vowel:'เอีย', tone:'้', final:'ง', tone_name:'ตรี', th:'เลี้ยง'}
+  ]},
+  {th:'อีเมล', zh:'電子郵件', en:'ii-meeo', level:'中', syls:[
+    {cons:'อ', vowel:'อี', tone_name:'สามัญ', th:'อี'},
+    {cons:'ม', vowel:'เอ', final:'ล', tone_name:'สามัญ', th:'เมล'}
+  ]},
+  {th:'โต๊ะทำงาน', zh:'辦公桌', en:'tó-tham-ngaan', level:'中', syls:[
+    {cons:'ต', vowel:'โอะ', tone:'๊', tone_name:'ตรี', th:'โต๊ะ'},
+    {cons:'ท', vowel:'อำ', tone_name:'สามัญ', th:'ทำ'},
+    {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน'}
+  ]},
+  {th:'วันหยุด', zh:'假日', en:'wan-yùt', level:'中', syls:[
+    {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'},
+    {cons:'ย', lead:'ห', vowel:'อุ', final:'ด', tone_name:'เอก', th:'หยุด'}
+  ]},
+  {th:'นามบัตร', zh:'名片', en:'naam-bàt', level:'中', syls:[
+    {cons:'น', vowel:'อา', final:'ม', tone_name:'สามัญ', th:'นาม'},
+    {cons:'บ', vowel:'อะ', final:'ตร', tone_name:'เอก', th:'บัด'}
+  ]},
+  {th:'เลขา', zh:'秘書', en:'lee-khǎa', level:'中', syls:[
+    {cons:'ล', vowel:'เอ', tone_name:'สามัญ', th:'เล'},
+    {cons:'ข', vowel:'อา', tone_name:'จัตวา', th:'ขา'}
+  ]},
+  {th:'ประชุมงาน', zh:'工作會議', en:'bprà-chum-ngaan', level:'中', syls:[
+    {cons:'ป', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'ปฺระ'},
+    {cons:'ช', vowel:'อุ', final:'ม', tone_name:'สามัญ', th:'ชุม'},
+    {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน'}
+  ]},
+  {th:'เวลางาน', zh:'上班時間', en:'wee-laa-ngaan', level:'中', syls:[
+    {cons:'ว', vowel:'เอ', tone_name:'สามัญ', th:'เว'},
+    {cons:'ล', vowel:'อา', tone_name:'สามัญ', th:'ลา'},
+    {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน'}
+  ]},
+  {th:'เสื้อผ้า', zh:'衣服', en:'sʉ̂a-phâa', level:'中', syls:[
+    {cons:'ส', vowel:'เอือ', tone:'้', tone_name:'โท', th:'เสื้อ'},
+    {cons:'ผ', vowel:'อา', tone:'้', tone_name:'โท', th:'ผ้า'}
+  ]},
+  {th:'รองเท้า', zh:'鞋子', en:'roong-tháo', level:'中', syls:[
+    {cons:'ร', vowel:'ออ', final:'ง', tone_name:'สามัญ', th:'รอง'},
+    {cons:'ท', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เท้า'}
+  ]},
+  {th:'กระเป๋าเงิน', zh:'錢包', en:'grà-bpǎo-ngern', level:'中', syls:[
+    {cons:'ก', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'กฺระ'},
+    {cons:'ป', vowel:'เอา', tone:'๋', tone_name:'จัตวา', th:'เป๋า'},
+    {cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน'}
+  ]},
+  {th:'ของขวัญ', zh:'禮物', en:'khǒong-khwǎn', level:'中', syls:[
+    {cons:'ข', vowel:'ออ', final:'ง', tone_name:'จัตวา', th:'ของ'},
+    {cons:'ข', cluster:'ว', vowel:'อะ', final:'น', tone_name:'จัตวา', th:'ขวัน'}
+  ]},
+  {th:'ตลาด', zh:'市場', en:'dta-làat', level:'中', syls:[
+    {cons:'ต', vowel:'อะ', tone_name:'เอก', th:'ตะ'},
+    {cons:'ล', lead:'ห', vowel:'อา', final:'ด', tone_name:'เอก', th:'หลาด'}
+  ]},
+  {th:'ร้านค้า', zh:'商店', en:'ráan-kháa', level:'中', syls:[
+    {cons:'ร', vowel:'อา', tone:'้', final:'น', tone_name:'ตรี', th:'ร้าน'},
+    {cons:'ค', vowel:'อา', tone:'้', tone_name:'ตรี', th:'ค้า'}
+  ]},
+  {th:'สินค้า', zh:'商品', en:'sǐn-kháa', level:'中', syls:[
+    {cons:'ส', vowel:'อิ', final:'น', tone_name:'จัตวา', th:'สิน'},
+    {cons:'ค', vowel:'อา', tone:'้', tone_name:'ตรี', th:'ค้า'}
+  ]},
+  {th:'คุณภาพ', zh:'品質', en:'khun-ná-phâap', level:'中', syls:[
+    {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุน'},
+    {cons:'น', vowel:'อะ', tone_name:'ตรี', th:'นะ'},
+    {cons:'พ', vowel:'อา', final:'พ', tone_name:'โท', th:'พาบ'}
+  ]},
+  {th:'ส่วนลด', zh:'折扣', en:'sùan-lót', level:'中', syls:[
+    {cons:'ส', vowel:'อัว', tone:'่', final:'น', tone_name:'เอก', th:'ส่วน'},
+    {cons:'ล', vowel:'โอะ', final:'ด', tone_name:'ตรี', th:'ลด'}
+  ]},
+  {th:'เงินสด', zh:'現金', en:'ngern-sòt', level:'中', syls:[
+    {cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน'},
+    {cons:'ส', vowel:'โอะ', final:'ด', tone_name:'เอก', th:'สด'}
+  ]},
+  {th:'เงินทอน', zh:'找零', en:'ngern-thoon', level:'中', syls:[
+    {cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน'},
+    {cons:'ท', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'ทอน'}
+  ]},
+  {th:'ขนาด', zh:'尺寸', en:'khà-nàat', level:'中', syls:[
+    {cons:'ข', vowel:'อะ', tone_name:'เอก', th:'ขะ'},
+    {cons:'น', lead:'ห', vowel:'อา', final:'ด', tone_name:'เอก', th:'หนาด'}
+  ]},
+  {th:'รองเท้าแตะ', zh:'拖鞋', en:'roong-tháo-dtàe', level:'中', syls:[
+    {cons:'ร', vowel:'ออ', final:'ง', tone_name:'สามัญ', th:'รอง'},
+    {cons:'ท', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เท้า'},
+    {cons:'ต', vowel:'แอะ', tone_name:'เอก', th:'แตะ'}
+  ]},
+  {th:'เครื่องสำอาง', zh:'化妝品', en:'khrʉ̂ang-sǎm-aang', level:'中', syls:[
+    {cons:'ค', cluster:'ร', vowel:'เอือ', tone:'่', final:'ง', tone_name:'โท', th:'เครื่อง'},
+    {cons:'ส', vowel:'อะ', final:'ม', tone_name:'จัตวา', th:'สำ'},
+    {cons:'อ', vowel:'อา', final:'ง', tone_name:'สามัญ', th:'อาง'}
+  ]},
+  {th:'แว่นตา', zh:'眼鏡', en:'wâen-dtaa', level:'中', syls:[
+    {cons:'ว', vowel:'แอ', tone:'่', final:'น', tone_name:'โท', th:'แว่น'},
+    {cons:'ต', vowel:'อา', tone_name:'สามัญ', th:'ตา'}
+  ]},
+  {th:'เวลา', zh:'時間', en:'wee-laa', level:'中', syls:[
+    {cons:'ว', vowel:'เอ', tone_name:'สามัญ', th:'เว'},
+    {cons:'ล', vowel:'อา', tone_name:'สามัญ', th:'ลา'}
+  ]},
+  {th:'นาฬิกา', zh:'時鐘', en:'naa-lí-gaa', level:'中', syls:[
+    {cons:'น', vowel:'อา', tone_name:'สามัญ', th:'นา'},
+    {cons:'ล', vowel:'อิ', tone_name:'ตรี', th:'ลิ'},
+    {cons:'ก', vowel:'อา', tone_name:'สามัญ', th:'กา'}
+  ]},
+  {th:'อากาศ', zh:'天氣', en:'aa-gàat', level:'中', syls:[
+    {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา'},
+    {cons:'ก', vowel:'อา', final:'ศ', tone_name:'เอก', th:'กาด'}
+  ]},
+  {th:'ครอบครัว', zh:'家庭', en:'khrôop-khrua', level:'中', syls:[
+    {cons:'ค', cluster:'ร', vowel:'ออ', final:'บ', tone_name:'โท', th:'คฺรอบ'},
+    {cons:'ค', cluster:'ร', vowel:'อัว', tone_name:'สามัญ', th:'คฺรัว'}
+  ]},
+  {th:'ภาษา', zh:'語言', en:'phaa-sǎa', level:'中', syls:[
+    {cons:'พ', vowel:'อา', tone_name:'สามัญ', th:'พา'},
+    {cons:'ส', vowel:'อา', tone_name:'จัตวา', th:'สา'}
+  ]},
+  {th:'ประเทศ', zh:'國家', en:'bprà-thêet', level:'中', syls:[
+    {cons:'ป', cluster:'ร', vowel:'อะ', tone_name:'เอก', th:'ประ'},
+    {cons:'ท', vowel:'เอ', final:'ศ', tone_name:'โท', th:'เทด'}
+  ]},
+  {th:'เมืองไทย', zh:'泰國', en:'mʉang-thai', level:'中', syls:[
+    {cons:'ม', vowel:'เอือ', final:'ง', tone_name:'สามัญ', th:'เมือง'},
+    {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไท'}
+  ]},
+  {th:'วันนี้', zh:'今天', en:'wan-níi', level:'中', syls:[
+    {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'},
+    {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้'}
+  ]},
+  {th:'พรุ่งนี้', zh:'明天', en:'phrûng-níi', level:'中', syls:[
+    {cons:'พ', cluster:'ร', vowel:'อุ', tone:'่', final:'ง', tone_name:'โท', th:'พฺรุ่ง'},
+    {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้'}
+  ]},
+  {th:'เมื่อวาน', zh:'昨天', en:'mʉ̂a-waan', level:'中', syls:[
+    {cons:'ม', vowel:'เอือ', tone:'่', tone_name:'โท', th:'เมื่อ'},
+    {cons:'ว', vowel:'อา', final:'น', tone_name:'สามัญ', th:'วาน'}
+  ]},
+  {th:'ปัจจุบัน', zh:'現在', en:'bpàt-jù-ban', level:'中', syls:[
+    {cons:'ป', vowel:'อะ', final:'จ', tone_name:'เอก', th:'ปัด'},
+    {cons:'จ', vowel:'อุ', tone_name:'เอก', th:'จุ'},
+    {cons:'บ', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'บัน'}
+  ]},
+  {th:'อนาคต', zh:'未來', en:'à-naa-khót', level:'中', syls:[
+    {cons:'อ', vowel:'อะ', tone_name:'เอก', th:'อะ'},
+    {cons:'น', vowel:'อา', tone_name:'สามัญ', th:'นา'},
+    {cons:'ค', vowel:'โอะ', final:'ต', tone_name:'ตรี', th:'คด'}
+  ]},
+  {th:'ดนตรี', zh:'音樂', en:'don-dtrii', level:'中', syls:[
+    {cons:'ด', vowel:'โอะ', final:'น', tone_name:'สามัญ', th:'ดน'},
+    {cons:'ต', cluster:'ร', vowel:'อี', tone_name:'สามัญ', th:'ตรี'}
+  ]},
+  {th:'อาชีพ', zh:'職業', en:'aa-chîip', level:'中', syls:[
+    {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา'},
+    {cons:'ช', vowel:'อี', final:'พ', tone_name:'โท', th:'ชีบ'}
+  ]},
+  {th:'น้ำเงิน', zh:'深藍', en:'nám-ngern', level:'中', syls:[
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'},
+    {cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน'}
+  ]},
+  {th:'ชมพู', zh:'粉紅', en:'chom-phuu', level:'中', syls:[
+    {cons:'ช', vowel:'โอะ', final:'ม', tone_name:'สามัญ', th:'ชม'},
+    {cons:'พ', vowel:'อู', tone_name:'สามัญ', th:'พู'}
+  ]},
+  {th:'น้ำตาล', zh:'咖啡色', en:'nám-taan', level:'中', syls:[
+    {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'},
+    {cons:'ต', vowel:'อา', final:'ล', tone_name:'สามัญ', th:'ตาน'}
+  ]},
+  {th:'ฉบับ', zh:'份/冊', en:'chà-bàp', level:'中', syls:[
+    {cons:'ฉ', vowel:'อะ', tone_name:'เอก', th:'ฉะ'},
+    {cons:'บ', vowel:'อะ', final:'บ', tone_name:'เอก', th:'บับ'}
+  ]},
+  {th:'หัวเราะ', zh:'笑', en:'hǔa-ró', level:'中', syls:[
+    {cons:'ห', vowel:'อัว', tone_name:'จัตวา', th:'หัว'},
+    {cons:'ร', vowel:'เอาะ', tone_name:'ตรี', th:'เราะ'}
+  ]},
+  {th:'สว่าง', zh:'亮', en:'sà-wàang', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', tone:'่', tone_name:'เอก', th:'สะ'},
+    {cons:'ส', cluster:'ว', vowel:'อา', final:'ง', tone_name:'จัตวา', th:'หว่าง'}
+  ]},
+  {th:'สะอาด', zh:'乾淨', en:'sà-àat', level:'中', syls:[
+    {cons:'ส', vowel:'อะ', tone_name:'เอก', th:'สะ'},
+    {cons:'อ', vowel:'อา', final:'ด', tone_name:'เอก', th:'อาด'}
+  ]},
+  {th:'สกปรก', zh:'髒', en:'sòk-gà-pròk', level:'中', syls:[
+    {cons:'ส', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'สก'},
+    {cons:'ก', vowel:'อะ', tone_name:'เอก', th:'กะ'},
+    {cons:'ป', cluster:'ร', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ปรก'}
   ]}
 ];
 
