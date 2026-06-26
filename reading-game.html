@@ -548,6 +548,7 @@ var scoreOk=0, scoreBad=0, totalScore=0, streak=0, maxStreak=0;
 var hintUsedThisWord=false, totalHintUsed=0, totalRequeued=0;
 var checked=false, isRequeuedWord=false;
 var slots=[], chips=[], correctSyls=[];
+var failCount=[]; var MAX_REQUEUE=2; // คำหนึ่งวนกลับมาได้มากสุด 2 ครั้ง แล้วปล่อยผ่าน เพื่อให้เซ็ตจบได้เสมอ
 
 function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;} return a; }
 
@@ -585,6 +586,7 @@ function newSet(){
   var size=Math.min(MODES[curMode].setSize, bucketPool.length);
   setWords=shuffle(bucketPool).slice(0,size);
   queue=setWords.map(function(_,i){ return { i:i, req:false }; });
+  failCount=setWords.map(function(){ return 0; });
   current=0; scoreOk=0; scoreBad=0; streak=0; totalRequeued=0;
   document.getElementById('q-total').textContent=setWords.length;
   show('game-card');
@@ -600,9 +602,8 @@ function curWord(){ return setWords[idxOf(current)]; }
 function loadWord(){
   checked=false; hintUsedThisWord=false; isRequeuedWord=!!queue[current].req;
   var w=curWord(); correctSyls=w.reading.split('-');
-  var done=Math.min(scoreOk+scoreBad, setWords.length);
-  document.getElementById('progress-fill').style.width=(done/setWords.length*100)+'%';
-  document.getElementById('q-num').textContent=Math.min(done+1,setWords.length);
+  document.getElementById('progress-fill').style.width=(scoreOk/setWords.length*100)+'%';
+  document.getElementById('q-num').textContent=Math.min(scoreOk+1,setWords.length);
   document.getElementById('score-ok').textContent=scoreOk;
   document.getElementById('score-bad').textContent=scoreBad;
   document.getElementById('score-total').textContent=totalScore;
@@ -709,11 +710,21 @@ function checkAnswer(){
   updateCombo();
 }
 function scorePop(pts,mult){ var p=document.createElement('div'); p.className='score-pop'; p.innerHTML='+'+pts+'分'+(mult>1?'<span class="mult">×'+mult+' combo!</span>':''); document.body.appendChild(p); setTimeout(function(){ if(p.parentNode) p.parentNode.removeChild(p); },1400); }
-function requeueCurrent(){ var item={i:idxOf(current),req:true}; var at=current+1+Math.floor(Math.random()*3)+1; at=Math.min(at,queue.length); queue.splice(at,0,item); totalRequeued++; document.getElementById('requeue-notice').classList.add('show'); }
+function requeueCurrent(){
+  var idx=idxOf(current); failCount[idx]=(failCount[idx]||0)+1;
+  if(failCount[idx]>MAX_REQUEUE) return false; // ติดเกินกำหนด → ไม่วนกลับ ปล่อยผ่านเพื่อให้เซ็ตจบ
+  var item={i:idx,req:true}; var at=current+1+Math.floor(Math.random()*3)+1; at=Math.min(at,queue.length);
+  queue.splice(at,0,item); totalRequeued++; document.getElementById('requeue-notice').classList.add('show'); return true;
+}
 function skipWord(){
-  checked=true; streak=0; scoreBad++; requeueCurrent();
+  checked=true; streak=0; scoreBad++;
   document.getElementById('btn-check').style.display='none'; document.getElementById('btn-skip').style.display='none'; document.getElementById('btn-next').style.display='';
-  slots.forEach(function(slot){ if(slot.val!==null) chips[slot.val].el.classList.add('wrong-chip'); slot.el.classList.remove('filled'); });
+  slots.forEach(function(slot,i){
+    if(slot.val!==null) chips[slot.val].el.classList.add('wrong-chip');
+    slot.el.classList.remove('filled'); slot.el.classList.add('wrong');
+    slot.hintEl.textContent='→ '+correctSyls[i]; slot.hintEl.className='slot-hint';
+  });
+  requeueCurrent();
   document.getElementById('reading-reveal').className='reading-reveal show';
   document.getElementById('reading-full').textContent=correctSyls.join(' · '); setReadingEn(curWord());
   var w=curWord(); if(w.note){ document.getElementById('note-label').textContent='💡 讀音說明'; document.getElementById('note-area').classList.add('show'); }

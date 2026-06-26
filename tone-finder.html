@@ -4189,7 +4189,7 @@ function showCoursePromoPopup() {
     '<button onclick="this.parentNode.remove()" aria-label="關閉" style="position:absolute;top:7px;right:11px;border:none;background:none;font-size:16px;color:#c3b594;cursor:pointer;">✕</button>'+
     '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想更快搞懂泰語聲調嗎？🎯</div>'+
     '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出發音盲點。</div>'+
-    '<button onclick="var p=document.getElementById(\'tf-course-promo\');if(p)p.remove();if(typeof openModal===\'function\')openModal(\'modal-line-qr\')" style="width:100%;background:#C8973A;color:#fff;border:none;border-radius:10px;padding:11px;font-weight:700;font-size:14px;cursor:pointer;">預約免費體驗課 →</button>';
+    '<button onclick="var p=document.getElementById(\'tf-course-promo\');if(p)p.remove();if(typeof bookFromGame===\'function\'){bookFromGame(\'tone_finder\',\'course_promo\')}else if(typeof openModal===\'function\'){openModal(\'modal-line-qr\')}" style="width:100%;background:#C8973A;color:#fff;border:none;border-radius:10px;padding:11px;font-weight:700;font-size:14px;cursor:pointer;">預約免費體驗課 →</button>';
   document.body.appendChild(d);
   requestAnimationFrame(function(){ d.style.transform = 'translateX(-50%) translateY(0)'; });
   setTimeout(function(){ var el=document.getElementById('tf-course-promo'); if(el){ el.style.transform='translateX(-50%) translateY(140%)'; setTimeout(function(){ if(el&&el.parentNode) el.remove(); },500); } }, 14000);
@@ -4408,7 +4408,7 @@ function stepSessionSummary() {
     '<div style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
       '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
       '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
-      '<button class="tf-session-next-btn" style="background:#C8973A;color:#fff;" onclick="if(typeof openModal===\'function\')openModal(\'modal-line-qr\')">預約免費體驗課 →</button>' +
+      '<button class="tf-session-next-btn" style="background:#C8973A;color:#fff;" onclick="if(typeof bookFromGame===\'function\'){bookFromGame(\'tone_finder\',\'session_end\')}else if(typeof openModal===\'function\'){openModal(\'modal-line-qr\')}">預約免費體驗課 →</button>' +
     '</div>' +
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
@@ -4650,7 +4650,7 @@ function getSets(cat) {
 
 // ── เล่นฟรีก่อนบังคับล็อกอิน (LIN 2026-06-19) ───────────────────────────
 // ปรับจำนวนรอบฟรีได้ที่ตัวแปรเดียวนี้ (1 รอบ = 1 ชุดคำ = 5 คำ; หมวดสี/สัตว์ = 6)
-var TF_FREE_ROUNDS_LIMIT = 2;
+var TF_FREE_ROUNDS_LIMIT = 5;
 // นับรอบฟรี: ใช้ localStorage เป็นหลัก + fallback หน่วยความจำ (กันเว็บวิว LINE/FB ที่บล็อก storage แล้วนับพังเงียบ)
 var _tfMemRounds = 0;
 function tfFreeRoundsUsed() { try { var v = localStorage.getItem('tf_free_rounds'); if (v != null) return parseInt(v, 10) || 0; } catch (e) {} return _tfMemRounds; }

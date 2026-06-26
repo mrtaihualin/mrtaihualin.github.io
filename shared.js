@@ -420,6 +420,13 @@ window.goHome = function() {
       window.mountCalInline('#cal-embed-modal');
     }
   }
+  // ── ปุ่มจองจาก "การ์ดในเกม" → ยิง event ละเอียด (game + placement) แล้วเปิด modal จอง ──
+  //    book_trial_click (source_page) ยังยิงตามปกติใน openModal → ดูได้ว่าจองมาจากหน้าไหน
+  //    book_cta_click เพิ่มให้รู้ลึกว่า "การ์ดในเกมไหน/ตำแหน่งไหน" เป็นตัวพาไปจอง
+  window.bookFromGame = function(game, placement){
+    try{ if(typeof gtag==='function') gtag('event','book_cta_click',{ game:game, placement:placement }); }catch(e){}
+    openModal('modal-line-qr');
+  };
   // ── Cal.com inline embed (ทางการ) — ฝัง embed.js ครั้งเดียว แล้ว mount ตาม selector ──
   //    สำคัญ: ต้องใช้ embed.js (ไม่ใช่ <iframe> ดิบ) เพื่อให้ event bookingSuccessful
   //    ส่ง postMessage กลับมาที่หน้าแม่ → ยิง book_trial_submit ได้จริง (เดิม iframe ดิบจับไม่ได้)
