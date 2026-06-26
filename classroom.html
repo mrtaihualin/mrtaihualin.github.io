@@ -800,34 +800,16 @@ async function doUploadFiles() {
     let n = 0;
     for (const f of input.files) {
       status.textContent = '☁️ 上傳中… ' + (n + 1) + '/' + input.files.length + '：' + f.name;
-      await gdUpload(f, f.name, folderId);
+      const up = await gdUpload(f, f.name, folderId);
+      // 分享 + 記錄 → 學生在「課堂資料下載」看得到並可下載
+      try { await gdShareAnyone(up.id); } catch(e) {}
+      const ulink = up.webViewLink || ('https://drive.google.com/file/d/' + up.id + '/view');
+      try { await saveRecordingLink(uploadToken, f.name, up.id, ulink, (f.size / 1048576).toFixed(1), null); } catch(e) {}
       n++;
     }
     status.textContent = '✅ 已上傳 ' + n + ' 個檔案到「' + name + ' / ' + uploadDest + '」';
     input.value = '';
   } catch (e) { status.textContent = '⚠️ 上傳失敗：' + (e.message || e); }
-}
-// 一鍵：為所有學生在 Drive 建立資料夾（由 App 建立，App 之後才能上傳；老師可把舊檔搬進去）
-async function createAllStudentFolders(btn) {
-  const entries = (typeof studentsCache !== 'undefined') ? Object.entries(studentsCache) : [];
-  if (!entries.length) { alert('目前沒有學生'); return; }
-  const orig = btn ? btn.textContent : '';
-  if (btn) btn.disabled = true;
-  let done = 0, fail = 0;
-  for (const pair of entries) {
-    const s = pair[1];
-    const nm = s.name || pair[0];
-    try {
-      await gdGetStudentSubfolderId(nm, '學習內容');   // 建學生資料夾 + 學習內容
-      await gdGetStudentSubfolderId(nm, '影片');        // + 影片
-      done++;
-    }
-    catch (e) { fail++; console.warn('建資料夾失敗：', nm, e); }
-    if (btn) btn.textContent = '📁 建立中… ' + (done + fail) + '/' + entries.length;
-  }
-  if (btn) { btn.disabled = false; btn.textContent = orig; }
-  alert('完成！已建立 ' + done + ' 個學生資料夾' + (fail ? '（失敗 ' + fail + ' 個）' : '') +
-    '\n\n位置：Google Drive →「' + DRIVE_ROOT_FOLDER + '」\n可把舊的影片／筆記搬進對應學生資料夾。');
 }
 // targetMime = ใส่ 'application/vnd.google-apps.document' เพื่อให้ Drive แปลง HTML เป็น Google Doc (เปิดอ่าน/แก้ได้เลย ไม่โชว์โค้ดดิบ)
 async function gdUploadSmall(blob, name, targetMime, folderId) {
@@ -904,6 +886,12 @@ async function addStudent() {
   if (error) { alert('新增失敗：' + error.message); return; }
   closeAddStudentModal();
   await refreshStudentList();
+  // 新增學生後自動建立 Drive 資料夾（學習內容／影片／收據）
+  try {
+    await gdGetStudentSubfolderId(name, '學習內容');
+    await gdGetStudentSubfolderId(name, '影片');
+    await gdGetStudentSubfolderId(name, '收據');
+  } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
 }
 
 // ============================================================
@@ -1120,9 +1108,12 @@ async function saveNote(token) {
   try {
     const folderId = await gdGetStudentSubfolderId(studentName, '學習內容');
     const doc = await gdUploadSmall(blob, fileName, 'application/vnd.google-apps.document', folderId);
+    const link = doc.webViewLink || ('https://docs.google.com/document/d/' + doc.id + '/edit');
+    // 分享 + 記錄 → 讓學生在「課堂資料下載」看得到並可開啟
+    try { await gdShareAnyone(doc.id); } catch(e) {}
+    try { await saveRecordingLink(token, fileName + '（筆記）', doc.id, link, '', null); } catch(e) {}
     if (statusEl) {
-      const link = doc.webViewLink || '';
-      statusEl.innerHTML = '✅ 已儲存為 Google 文件' + (link ? '　<a href="' + link + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;">開啟</a>' : '');
+      statusEl.innerHTML = '✅ 已儲存為 Google 文件　<a href="' + link + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;">開啟</a>';
     }
   } catch(e) {
     if (statusEl) statusEl.textContent = '⚠️ ' + e.message;
@@ -1136,7 +1127,6 @@ async function renderTeacherView() {
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
       '<button class="btn-add-student" onclick="openAddStudentModal()">➕ 新增學生</button>' +
-      '<button class="btn-add-student" style="background:#0f766e;margin-top:8px;" onclick="createAllStudentFolders(this)">📁 一鍵建立所有學生雲端資料夾</button>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
@@ -1443,8 +1433,40 @@ function updateApprovalTotal() {
   document.getElementById('approvalCalcText').textContent  = ls + '堂 × ' + cur + ' ' + pp + '/堂' + (bn > 0 ? '（贈 ' + bn + ' 堂）' : '');
 }
 
+// 產生收據檔（Google Doc）→ 上傳到學生「收據」資料夾，並記錄讓學生可下載
+async function generateAndUploadReceipt(p, v) {
+  const name = p.student_name || p.token || '學生';
+  const receiptNo = 'R' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (p.id || '');
+  const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const total = v.ls * v.pp;
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>收據 ' + receiptNo + '</title>'
+    + '<style>body{font-family:serif;max-width:640px;margin:40px auto;padding:0 24px;color:#1C1C1C;}'
+    + 'h1{color:#8B6310;border-bottom:2px solid #C8973A;padding-bottom:8px;}'
+    + 'table{width:100%;border-collapse:collapse;margin-top:16px;}td{padding:8px 4px;border-bottom:1px solid #eee;}'
+    + '.r{text-align:right;}.tot{font-size:1.2rem;font-weight:700;color:#8B6310;}</style></head><body>'
+    + '<h1>📄 課堂收據</h1>'
+    + '<p>收據編號：' + receiptNo + '<br>日期：' + today + '</p><table>'
+    + '<tr><td>學生</td><td class="r">' + name + '</td></tr>'
+    + '<tr><td>課程</td><td class="r">' + (p.course_label || '') + '</td></tr>'
+    + '<tr><td>堂數</td><td class="r">' + v.ls + ' 堂' + (v.bn > 0 ? '（贈 ' + v.bn + ' 堂）' : '') + '</td></tr>'
+    + '<tr><td>單價</td><td class="r">' + v.cur + ' ' + v.pp + ' / 堂</td></tr>'
+    + (v.start ? '<tr><td>開始</td><td class="r">' + v.start + '</td></tr>' : '')
+    + '<tr><td>合計</td><td class="r tot">' + v.cur + ' ' + total.toLocaleString() + '</td></tr>'
+    + '</table><hr style="margin-top:28px;border:none;border-top:1px solid #e5d9c0;">'
+    + '<p style="color:#aaa;font-size:0.78rem;">泰華老師 · mrtaihualin.com</p></body></html>';
+  const blob = new Blob([html], { type: 'text/html' });
+  const folderId = await gdGetStudentSubfolderId(name, '收據');
+  const doc = await gdUploadSmall(blob, name + '_收據_' + receiptNo, 'application/vnd.google-apps.document', folderId);
+  const link = doc.webViewLink || ('https://docs.google.com/document/d/' + doc.id + '/edit');
+  try { await gdShareAnyone(doc.id); } catch (e) {}
+  if (p.token) { try { await saveRecordingLink(p.token, name + '_收據_' + receiptNo, doc.id, link, '', null); } catch (e) {} }
+  return { receiptNo: receiptNo, link: link };
+}
+
 async function approveSlip() {
   if (!pendingSlipId) return;
+  var slipId = pendingSlipId;
+  var slip   = (window._slipCache || {})[slipId] || {};
   var cur   = document.getElementById('approvalCurrency').value;
   var pp    = parseInt(document.getElementById('approvalPricePer').value);
   var ls    = parseInt(document.getElementById('approvalLessons').value);
@@ -1458,12 +1480,21 @@ async function approveSlip() {
     status: 'pending', currency: cur, price_per: pp,
     lessons: ls, bonus_lessons: bn, total_amount: ls * pp,
     start_note: start || null, note: note || null
-  }).eq('id', pendingSlipId);
+  }).eq('id', slipId);
+  if (res.error) { btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據'; alert('儲存失敗：' + res.error.message); return; }
+  // 產生收據檔到學生「收據」資料夾
+  var receipt = null;
+  btn.textContent = '產生收據中…';
+  try {
+    receipt = await generateAndUploadReceipt(slip, { cur: cur, pp: pp, ls: ls, bn: bn, start: start, note: note });
+    if (receipt) await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo }).eq('id', slipId);
+  } catch (e) { console.warn('收據產生失敗：', e); }
   btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據';
-  if (res.error) { alert('儲存失敗：' + res.error.message); return; }
   document.getElementById('slipApprovalModal').classList.remove('open');
   pendingSlipId = null;
-  alert('✅ 已確認！\n系統將自動產生收據並記錄');
+  alert('✅ 已確認！' + (receipt
+    ? '\n收據已存到學生「收據」資料夾\n編號：' + receipt.receiptNo
+    : '\n（收據檔產生失敗，請確認已用 Google 登入授權）'));
   await loadPendingSlips();
 }
 
