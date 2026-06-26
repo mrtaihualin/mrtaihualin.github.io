@@ -1860,7 +1860,8 @@
 </head>
 <body>
 
-<!-- FLOATING LINE QR WIDGET -->
+<!-- FLOATING LINE QR WIDGET — ซ่อนบน desktop ตามคำสั่ง Lin 2026-06-26 -->
+<style>@media(min-width:769px){#floating-qr{display:none!important;}}</style>
 <div class="floating-qr" id="floating-qr">
   <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
   <button class="floating-qr-book" onclick="openModal('modal-line-qr')">

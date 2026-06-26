@@ -82,7 +82,7 @@
   <button class="tf-float-x" aria-label="關閉" onclick="event.preventDefault();event.stopPropagation();var c=document.getElementById('tf-float-cta');if(c)c.style.display='none';">✕</button>
 </a>
 <style>
-  .tf-float-cta{position:fixed;right:16px;bottom:80px;left:auto;transform:none;z-index:9990;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;text-decoration:none;padding:11px 14px;border-radius:40px;box-shadow:0 8px 28px rgba(139,99,16,0.40);font-family:'Noto Sans TC',sans-serif;animation:tfFloatPulse 2.6s ease-in-out infinite;max-width:calc(100vw - 32px);}
+  .tf-float-cta{position:fixed;right:16px;top:78px;left:auto;transform:none;z-index:9990;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;text-decoration:none;padding:11px 14px;border-radius:40px;box-shadow:0 8px 28px rgba(139,99,16,0.40);font-family:'Noto Sans TC',sans-serif;animation:tfFloatPulse 2.6s ease-in-out infinite;max-width:calc(100vw - 32px);}
   .tf-float-cta:hover{filter:brightness(1.06);}
   .tf-float-emoji{font-size:24px;line-height:1;}
   .tf-float-text{display:flex;flex-direction:column;line-height:1.18;}
@@ -90,7 +90,7 @@
   .tf-float-text small{font-size:11px;opacity:.95;}
   .tf-float-x{background:rgba(255,255,255,0.28);border:none;color:#fff;width:20px;height:20px;border-radius:50%;font-size:11px;cursor:pointer;line-height:1;margin-left:2px;flex:none;}
   @keyframes tfFloatPulse{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
-  @media(max-width:600px){.tf-float-cta{right:12px;bottom:72px;}.tf-float-text b{font-size:14px;}.tf-float-text small{font-size:10px;}}
+  @media(max-width:600px){.tf-float-cta{right:12px;top:66px;}.tf-float-text b{font-size:14px;}.tf-float-text small{font-size:10px;}}
 </style>
 <!-- Videos -->
 <!-- Share Popup -->
@@ -111,14 +111,7 @@
 <!-- Contact -->
 <!-- SOCIAL MODAL -->
 <!-- LINE QR MODAL -->
-<!-- FLOATING<!-- FLOATING LINE QR WIDGET -->
-<div class="floating-qr" id="floating-qr">
-  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
-  <button class="floating-qr-book" onclick="openModal('modal-line-qr')">
-    <span class="fqb-icon">📅</span>
-    <span class="fqb-text"><b>預約免費體驗課</b><small>30 分鐘・線上一對一</small></span>
-  </button>
-</div>
+<!-- floating-qr ถูกลบออกจาก homepage ตามคำสั่ง Lin 2026-06-26 -->
 
 <!-- NAV -->
 <nav class="site-nav"></nav>
@@ -297,7 +290,7 @@
   <p style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:rgba(255,255,255,0.60);margin-bottom:14px;">一對一・彈性時間・8,000+ 小時教學經驗老師親自授課</p>
   <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--gold-bright);font-weight:700;margin-bottom:32px;letter-spacing:0.5px;">⚡ 先免費體驗，滿意再報名 — 零風險開始學泰語</p>
   <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
-    <a href="page2.html" style="display:inline-block;background:var(--gold-bright);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:16px;padding:18px 48px;text-decoration:none;letter-spacing:1px;transition:all 0.2s;box-sizing:border-box;border-radius:4px;box-shadow:0 4px 20px rgba(139,99,16,0.40);">查看課程費用 →</a>
+    <a href="page2.html#pricing" style="display:inline-block;background:var(--gold-bright);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:16px;padding:18px 48px;text-decoration:none;letter-spacing:1px;transition:all 0.2s;box-sizing:border-box;border-radius:4px;box-shadow:0 4px 20px rgba(139,99,16,0.40);">查看課程費用 →</a>
     <button onclick="openModal('modal-line-qr')" style="display:inline-block;background:transparent;color:var(--gold-bright);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:16px;padding:18px 36px;text-decoration:none;letter-spacing:1px;transition:all 0.2s;box-sizing:border-box;border:2px solid var(--gold-bright);border-radius:4px;cursor:pointer;">預約免費體驗課</button>
   </div>
 </div>

@@ -20,7 +20,7 @@
 //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล
 // ===================================================================
 var ANN = [
-  { emoji:'📡', text:'每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
+  { emoji:'📡', text:'每週六 19:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
   { emoji:'📝', text:'拼音規則練習區上線！可免費領「泰語聲調速查表」', cta:'前往練習', href:'tone-finder.html' },
   // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
   { emoji:'🚀', text:'全新「造句遊戲」即將推出，敬請期待！', cta:'追蹤我們', modal:'modal-sns' }
@@ -75,7 +75,7 @@ window.goHome = function() {
         '<a href="javascript:void(0)" class="has-drop">資源分享</a>',
         '<div class="nav-drop">',
           '<span class="nav-drop-label">學習素材</span>',
-          '<a href="https://www.youtube.com/@mrtaihua" target="_blank" rel="noopener">📺 YouTube 影片頻道</a>',
+          '<a href="page4.html#videos">📺 YouTube 影片頻道</a>',
           '<a href="page4.html#sharing">🚀 貼文分享區</a>',
           '<a href="page4.html#sharing">📖 自學專區</a>',
           '<a href="tone-finder.html">🎵 泰語聲調搜尋</a>',
@@ -88,7 +88,7 @@ window.goHome = function() {
         '<div class="nav-drop">',
           '<span class="nav-drop-label">專業服務</span>',
           '<a href="page-services.html#tour-guide">🗺️ 導遊服務</a>',
-          '<a href="page-services.html#subtitle">🎬 字幕翻譯</a>',
+          '<a href="page-services.html#drama">🎬 字幕翻譯</a>',
           '<a href="page-services.html#interpret">🎙️ 口譯服務</a>',
           '<div class="nav-drop-divider"></div>',
           '<a href="page-services.html#quote-form">📋 索取報價</a>',
@@ -623,6 +623,7 @@ window.goHome = function() {
       if(data && data.success){
         if(nameEl) nameEl.value=''; if(textEl) textEl.value='';
         show('✅ 感謝你的回饋，已成功送出給老師！');
+        if(typeof _showSentPopup==='function') _showSentPopup();
       } else {
         show('⚠️ 送出失敗，請稍後再試，或透過 LINE 與我們聯絡。');
       }
@@ -665,7 +666,7 @@ window.goHome = function() {
       statusEl: document.getElementById('c-status'),
       successMsg: '✅ 已送出！我們會於 1–2 個工作天內回覆你的信箱。',
       fields: { subject:'【網站聯絡】來自泰華網站', from_name:'泰華網站・聯絡表單', '姓名':v(name)||'未填', 'Email':v(email), '訊息':v(msg) },
-      onsuccess: function(){ if(name)name.value=''; if(email)email.value=''; if(msg)msg.value=''; }
+      onsuccess: function(){ if(name)name.value=''; if(email)email.value=''; if(msg)msg.value=''; _showSentPopup(); }
     });
   };
 
@@ -744,6 +745,20 @@ window.goHome = function() {
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeLightbox();
   });
+  // ===== 🎉 Sent popup (ส่งแล้วนะ) =====
+  window._showSentPopup = function() {
+    var el = document.getElementById('_sent-popup');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '_sent-popup';
+      el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.85);z-index:19999;background:#fff;border:2px solid var(--gold-bright);border-radius:16px;padding:36px 40px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.22);font-family:\'Noto Sans TC\',sans-serif;opacity:0;transition:opacity 0.2s,transform 0.2s;min-width:240px;';
+      el.innerHTML = '<div style="font-size:40px;margin-bottom:10px;">✅</div><div style="font-size:22px;font-weight:900;color:var(--ink);margin-bottom:6px;">ส่งแล้วนะ</div><div style="font-size:13px;color:var(--ink-muted);margin-bottom:20px;">已成功送出，謝謝你！</div><button onclick="document.getElementById(\'_sent-popup\').style.opacity=\'0\';setTimeout(function(){var e=document.getElementById(\'_sent-popup\');if(e)e.remove();},200);" style="background:var(--gold);color:#fff;border:none;border-radius:8px;padding:10px 28px;font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">確認</button>';
+      document.body.appendChild(el);
+    }
+    requestAnimationFrame(function(){ el.style.opacity='1'; el.style.transform='translate(-50%,-50%) scale(1)'; });
+    setTimeout(function(){ if(el){ el.style.opacity='0'; el.style.transform='translate(-50%,-50%) scale(0.85)'; setTimeout(function(){if(el)el.remove();},200); } }, 4000);
+  };
+
   // Floating QR scroll logic
   var _qrDismissed = false;
   function hideFLoatingQr() { _qrDismissed = true; var el = document.getElementById('floating-qr'); if(el) el.classList.remove('visible'); }
@@ -754,7 +769,7 @@ window.goHome = function() {
     if(window.scrollY > 200) { el.classList.add('visible'); } else { el.classList.remove('visible'); }
   }, {passive:true});
 
-document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>'; });
+document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 19:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>'; });
 
 // ===== 📬 Contact / LINE QR / Social Modal Injection =====
 (function injectSharedModals() {
@@ -813,14 +828,17 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     <div class="modal-body">
       <div class="contact-grid" style="display:flex;flex-direction:column;gap:9px;">
         ${_infoCard(_snsIcon.line, 'LINE', '點此加入 LINE 聯絡', 'https://lin.ee/yVBgvywy', '#06C755')}
-        ${_infoCard(_miscIcon.email, '電子郵件', 'mr.taihualin@gmail.com', 'mailto:mr.taihualin@gmail.com')}
+        <div style="display:flex;align-items:stretch;gap:8px;">
+          <div style="flex:1;">${_infoCard(_miscIcon.email, '電子郵件', 'mr.taihualin@gmail.com', 'mailto:mr.taihualin@gmail.com')}</div>
+          <button onclick="navigator.clipboard.writeText('mr.taihualin@gmail.com').then(function(){var b=document.getElementById('copy-email-btn');if(b){b.textContent='✅ 已複製';setTimeout(function(){b.textContent='複製';},2000);}}).catch(function(){prompt('複製此 Email：','mr.taihualin@gmail.com');})" id="copy-email-btn" style="flex-shrink:0;padding:0 14px;background:var(--gold);color:#fff;border:none;border-radius:12px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">複製</button>
+        </div>
         ${_snsRow('https://www.facebook.com/mrtaihua','','','Facebook','粉絲頁・每週直播教學','facebook')}
         ${_snsRow('https://www.youtube.com/@mrtaihua','','','YouTube','教學影片・聲調解析','youtube')}
         ${_snsRow('https://www.instagram.com/mrtaihua','','','Instagram','每日一字・學習花絮','instagram')}
         ${_snsRow('https://www.tiktok.com/@mrtaihua','','','TikTok','短影音・快速學泰語','tiktok')}
         ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','','','Threads','學習筆記・互動討論','threads')}
         ${_infoCard(_miscIcon.clock, '回覆時間', '通常於 1–2 個工作天內回覆')}
-        ${_infoCard(_miscIcon.gift, '免費體驗', '首堂體驗課 30 分鐘完全免費，無壓力')}
+        <a href="javascript:void(0)" onclick="closeModal('modal-contact');openModal('modal-line-qr');" style="display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));border:1px solid rgba(200,151,58,0.32);border-radius:12px;padding:9px 13px;box-shadow:0 1px 4px rgba(140,100,20,0.05);transition:border-color .15s,box-shadow .15s,transform .15s;" onmouseover="this.style.borderColor='rgba(200,151,58,0.75)';this.style.boxShadow='0 5px 16px rgba(140,100,20,0.14)';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='rgba(200,151,58,0.32)';this.style.boxShadow='0 1px 4px rgba(140,100,20,0.05)';this.style.transform='none'"><span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(200,151,58,0.35);box-shadow:0 1px 4px rgba(140,100,20,0.09);color:#C8973A;">${_miscIcon.gift}</span><span style="min-width:0;flex:1;"><span style="display:block;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#A0895A;text-transform:uppercase;">免費體驗</span><span style="display:block;font-family:'Noto Serif TC',serif;font-weight:700;color:#5C4410;font-size:14px;line-height:1.3;margin-top:1px;">首堂體驗課 30 分鐘完全免費，無壓力</span></span><span style="color:var(--gold-bright,#C8973A);font-size:18px;opacity:.5;flex-shrink:0;line-height:1;">›</span></a>
       </div>
       <div style="border-top:1px solid var(--warm-line);margin:18px 0 14px;padding-top:18px;">
         <div class="contact-label" style="margin-bottom:10px;display:block;">不方便加 LINE？直接留言給老師（寄到信箱）</div>
