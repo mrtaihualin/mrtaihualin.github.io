@@ -542,27 +542,42 @@
     <label class="settings-label">選擇課程方案</label>
     <div class="course-grid" id="courseGrid"></div>
 
-    <div class="pay-form-row">
-      <div style="flex:1;">
-        <label class="settings-label">堂數</label>
-        <input class="settings-input" id="payLessons" type="number" min="1" placeholder="10" oninput="updatePayTotal()" style="margin-bottom:0;" />
-      </div>
-      <div style="flex:1;">
-        <label class="settings-label">贈送（堂）</label>
-        <input class="settings-input" id="payBonus" type="number" min="0" value="0" oninput="updatePayTotal()" style="margin-bottom:0;" />
+    <div id="payPackWrap" style="display:none;margin-top:14px;">
+      <label class="settings-label">選擇堂數</label>
+      <div id="payPackGrid" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+
+    <div id="payCurrencyWrap" style="display:none;margin-top:14px;">
+      <label class="settings-label">付款幣別</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="curPay-NTD" onclick="selectPayCurrency('NTD')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🇹🇼 NTD 台幣</button>
+        <button type="button" id="curPay-THB" onclick="selectPayCurrency('THB')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🇹🇭 THB 泰銖</button>
       </div>
     </div>
-    <div class="pay-form-row">
-      <div style="flex:1;">
-        <label class="settings-label">幣別</label>
-        <select class="settings-input" id="payCurrency" onchange="updatePayTotal()" style="margin-bottom:0;">
-          <option value="THB">THB 泰銖</option>
-          <option value="NTD">NTD 台幣</option>
-        </select>
+
+    <div id="payCustomWrap" style="display:none;margin-top:6px;">
+      <div class="pay-form-row">
+        <div style="flex:1;">
+          <label class="settings-label">堂數</label>
+          <input class="settings-input" id="payLessons" type="number" min="1" placeholder="10" oninput="updatePayTotal()" style="margin-bottom:0;" />
+        </div>
+        <div style="flex:1;">
+          <label class="settings-label">贈送（堂）</label>
+          <input class="settings-input" id="payBonus" type="number" min="0" value="0" oninput="updatePayTotal()" style="margin-bottom:0;" />
+        </div>
       </div>
-      <div style="flex:1;">
-        <label class="settings-label">單價（每堂）</label>
-        <input class="settings-input" id="payPricePer" type="number" min="1" oninput="updatePayTotal()" style="margin-bottom:0;" />
+      <div class="pay-form-row">
+        <div style="flex:1;">
+          <label class="settings-label">幣別</label>
+          <select class="settings-input" id="payCurrency" onchange="updatePayTotal()" style="margin-bottom:0;">
+            <option value="THB">THB 泰銖</option>
+            <option value="NTD">NTD 台幣</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label class="settings-label">單價（每堂）</label>
+          <input class="settings-input" id="payPricePer" type="number" min="1" oninput="updatePayTotal()" style="margin-bottom:0;" />
+        </div>
       </div>
     </div>
 
@@ -885,6 +900,20 @@ async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
   if (error) console.warn('儲存錄影連結失敗：', error.message);
 }
 
+// 新生：建立一份空白「上課時刻表」Google Sheet（範本 課次/日期/次數）→ 分享 + 記錄，學生頁可見
+async function createBlankTimetable(name, token, folderId) {
+  if (!folderId) folderId = await gdGetStudentSubfolderId(name, '課表 & 收據');
+  var csv = name + ' 上課時刻表\n學費：\n本輪起算：\n\n課次,日期,次數\n,,\n,,\n,,\n,,\n,,';
+  var blob = new Blob(['\ufeff' + csv], { type: 'text/csv' });
+  var fname = name + ' 上課時刻表';
+  var doc = await gdUploadSmall(blob, fname, 'application/vnd.google-apps.spreadsheet', folderId);
+  if (!doc || !doc.id) return null;
+  try { await gdShareAnyone(doc.id); } catch (e) {}
+  var link = doc.webViewLink || ('https://docs.google.com/spreadsheets/d/' + doc.id + '/edit');
+  try { await saveRecordingLink(token, fname, doc.id, link, '', null); } catch (e) {}
+  return { id: doc.id, link: link };
+}
+
 async function refreshStudentList() {
   const el = document.getElementById('studentListContainer');
   if (!el) return;
@@ -938,12 +967,13 @@ async function addStudent() {
   if (error) { alert('新增失敗：' + error.message); return; }
   closeAddStudentModal();
   await refreshStudentList();
-  // 新增學生後自動建立 Drive 資料夾（學習內容／影片／課表 & 收據）
+  // 新增學生後自動建立 Drive 資料夾（學習內容／影片／課表 & 收據）+ 空白課表
   try {
     await gdGetStudentSubfolderId(name, '學習內容');
     await gdGetStudentSubfolderId(name, '影片');
     var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
     try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
+    try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
   } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
 }
 
@@ -1887,35 +1917,81 @@ function openPaymentModal(token) {
   paySelectedCourse = null;
   const s = studentsCache[token];
   document.getElementById('payStudentLabel').textContent = s ? '💳 ' + s.name : '';
-  // build course cards
-  document.getElementById('courseGrid').innerHTML = COURSES.map(function(c) {
-    return '<button class="course-card" id="cc-' + c.id + '" onclick="selectCourse(\'' + c.id + '\')">' +
+  // build course cards（同學生：類型→堂數→幣別；另保留「自訂」手動輸入）
+  var payCards = COURSE_TYPES.concat([{ id:'custom', label:'自訂', desc:'自行填寫堂數/單價' }]);
+  document.getElementById('courseGrid').innerHTML = payCards.map(function(c) {
+    return '<button class="course-card" id="cc-' + c.id + '" onclick="selectPayType(\'' + c.id + '\')">' +
       '<div class="c-name">' + c.label + '</div>' +
       '<div class="c-desc">' + c.desc + '</div>' +
     '</button>';
   }).join('');
+  document.getElementById('payPackWrap').style.display = 'none';
+  document.getElementById('payPackGrid').innerHTML = '';
+  document.getElementById('payCurrencyWrap').style.display = 'none';
+  document.getElementById('payCustomWrap').style.display = 'none';
+  document.getElementById('curPay-NTD').style.cssText = OFF_CUR;
+  document.getElementById('curPay-THB').style.cssText = OFF_CUR;
   document.getElementById('payLessons').value = '';
   document.getElementById('payBonus').value = '0';
   document.getElementById('payCurrency').value = 'THB';
-  document.getElementById('payPricePer').value = '800';
+  document.getElementById('payPricePer').value = '';
   document.getElementById('payStart').value = '';
   document.getElementById('payNote').value = '';
   document.getElementById('payTotalBox').style.display = 'none';
   document.getElementById('paymentModal').classList.add('open');
 }
 
-function selectCourse(id) {
+function selectPayType(id) {
   paySelectedCourse = id;
-  document.querySelectorAll('.course-card').forEach(function(el) { el.classList.remove('selected'); });
-  document.getElementById('cc-' + id).classList.add('selected');
-  const c = COURSES.find(function(x) { return x.id === id; });
-  if (!c) return;
-  if (c.lessons) document.getElementById('payLessons').value = c.lessons;
-  const cur = document.getElementById('payCurrency').value;
-  if (c.id !== 'custom') {
-    const pp = cur === 'NTD' ? c.priceNTD : c.priceTHB;
-    if (pp) document.getElementById('payPricePer').value = pp;
+  document.querySelectorAll('#courseGrid .course-card').forEach(function(el) { el.classList.remove('selected'); });
+  var card = document.getElementById('cc-' + id);
+  if (card) card.classList.add('selected');
+  if (id === 'custom') {
+    document.getElementById('payPackWrap').style.display = 'none';
+    document.getElementById('payCurrencyWrap').style.display = 'none';
+    document.getElementById('payCustomWrap').style.display = 'block';
+    document.getElementById('payLessons').value = '';
+    document.getElementById('payPricePer').value = '';
+    updatePayTotal();
+    return;
   }
+  document.getElementById('payCustomWrap').style.display = 'none';
+  var c = COURSE_TYPES.find(function(x) { return x.id === id; });
+  if (!c) return;
+  document.getElementById('payPackGrid').innerHTML = c.packs.map(function(n) {
+    var bonus = slipBonusFor(n);
+    return '<button type="button" id="ppk-' + n + '" onclick="selectPayPack(' + n + ')" style="' + OFF_PACK + '">' +
+      '<div style="font-weight:700;">' + n + ' 堂</div>' +
+      (bonus ? '<div style="font-size:0.72rem;color:var(--gold-deep);">贈 ' + bonus + ' 堂</div>' : (c.note ? '<div style="font-size:0.72rem;color:var(--ink-muted);">' + c.note + '</div>' : '')) +
+    '</button>';
+  }).join('');
+  document.getElementById('payPackWrap').style.display = 'block';
+  document.getElementById('payCurrencyWrap').style.display = 'none';
+  document.getElementById('curPay-NTD').style.cssText = OFF_CUR;
+  document.getElementById('curPay-THB').style.cssText = OFF_CUR;
+  document.getElementById('payLessons').value = '';
+  document.getElementById('payBonus').value = '0';
+  document.getElementById('payPricePer').value = '';
+  document.getElementById('payTotalBox').style.display = 'none';
+  if (c.packs.length === 1) selectPayPack(c.packs[0]);
+}
+
+function selectPayPack(n) {
+  document.getElementById('payLessons').value = n;
+  document.getElementById('payBonus').value = slipBonusFor(n);
+  document.querySelectorAll('#payPackGrid button').forEach(function(b) { b.style.cssText = OFF_PACK; });
+  var b = document.getElementById('ppk-' + n);
+  if (b) b.style.cssText = ON_PACK;
+  document.getElementById('payCurrencyWrap').style.display = 'block';
+  updatePayTotal();
+}
+
+function selectPayCurrency(cur) {
+  document.getElementById('payCurrency').value = cur;
+  document.getElementById('curPay-NTD').style.cssText = cur === 'NTD' ? ON_CUR : OFF_CUR;
+  document.getElementById('curPay-THB').style.cssText = cur === 'THB' ? ON_CUR : OFF_CUR;
+  var c = COURSE_TYPES.find(function(x) { return x.id === paySelectedCourse; });
+  if (c) { var pp = cur === 'NTD' ? c.priceNTD : c.priceTHB; document.getElementById('payPricePer').value = pp || ''; }
   updatePayTotal();
 }
 
@@ -1932,10 +2008,10 @@ function updatePayTotal() {
   let calcStr = lessons + '堂 × ' + cur + ' ' + pricePer + '/堂 = ' + cur + ' ' + total.toLocaleString();
   if (bonus > 0) calcStr += '（另贈 ' + bonus + ' 堂）';
   document.getElementById('payCalcText').textContent = calcStr;
-  // update price per if currency changed
-  if (paySelectedCourse) {
-    const c = COURSES.find(function(x) { return x.id === paySelectedCourse; });
-    if (c && c.id !== 'custom') {
+  // update price per if currency changed（自訂模式不覆蓋老師填的單價）
+  if (paySelectedCourse && paySelectedCourse !== 'custom') {
+    const c = COURSE_TYPES.find(function(x) { return x.id === paySelectedCourse; });
+    if (c) {
       const pp = cur === 'NTD' ? c.priceNTD : c.priceTHB;
       if (pp) document.getElementById('payPricePer').value = pp;
     }
@@ -1958,7 +2034,8 @@ async function submitPayment() {
   const note     = document.getElementById('payNote').value.trim();
   if (!paySelectedCourse) { alert('請選擇課程方案'); return; }
   if (!lessons || !pricePer) { alert('請填寫堂數和單價'); return; }
-  const c = COURSES.find(function(x) { return x.id === paySelectedCourse; }) || {};
+  const c = COURSE_TYPES.concat([{ id:'custom', label:'自訂' }]).find(function(x) { return x.id === paySelectedCourse; }) || {};
+  const courseLabel = (c.label || paySelectedCourse) + ' ' + lessons + '堂' + (bonus ? '（贈' + bonus + '）' : '');
   const total = lessons * pricePer;
   const btn = document.getElementById('paySubmitBtn');
   btn.disabled = true; btn.textContent = '儲存中…';
@@ -1966,7 +2043,7 @@ async function submitPayment() {
     token: payToken,
     student_name: s ? s.name : payToken,
     course_id: paySelectedCourse,
-    course_label: c.label || paySelectedCourse,
+    course_label: courseLabel,
     lessons: lessons,
     bonus_lessons: bonus,
     price_per: pricePer,
@@ -1978,8 +2055,11 @@ async function submitPayment() {
   });
   btn.disabled = false; btn.textContent = '確認收費';
   if (error) { alert('儲存失敗：' + error.message); return; }
+  var tkRefresh = payToken;
   closePaymentModal();
-  alert('✅ 已記錄！\n' + (s ? s.name : '') + ' · ' + c.label + ' · ' + cur + ' ' + total.toLocaleString() + '\n\n收據將由系統自動產生（稍後處理）');
+  if (typeof loadLowQuotaBanner === 'function') loadLowQuotaBanner();
+  if (typeof loadTeacherStudentInfo === 'function' && tkRefresh) loadTeacherStudentInfo(tkRefresh);
+  alert('✅ 已記錄！\n' + (s ? s.name : '') + ' · ' + courseLabel + ' · ' + cur + ' ' + total.toLocaleString() + '\n\n收據將由系統自動產生（稍後處理）');
 }
 
 // ============================================================

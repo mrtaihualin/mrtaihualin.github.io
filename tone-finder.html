@@ -5965,7 +5965,7 @@ var TF = {
     if (old) old.remove();
     var data = tfLoadBadges();
     var unlocked = data.unlocked || {};
-    var tierName = {1:'🌾 稻米成長（連續登入）', 2:'🍚 稻米品種（成就解鎖）'};
+    var tierName = {1:'🌾 稻米成長（連續遊玩）', 2:'🍚 稻米品種（成就解鎖）'};
     var byTier = {};
     TF_BADGES_DEF.forEach(function(b){ (byTier[b.tier] = byTier[b.tier] || []).push(b); });
     var body = Object.keys(byTier).map(function(t){

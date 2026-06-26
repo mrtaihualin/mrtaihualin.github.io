@@ -1245,7 +1245,8 @@ var picks=[],comps=[],correctSet=[],needN=0;
 var checked=false,wrongCount=0;
 var masteredSet={},correctCountMap={},reviewDates={};
 var SAVE_KEY='rgv3_save';
-var REVIEW_MS=7*24*60*60*1000; // 7 วัน
+var REVIEW_MS=7*24*60*60*1000; // ทบทวนรอบ 2 (ถูกครั้งที่ 2) = 7 วัน
+var DAY_MS=24*60*60*1000;      // ทบทวนรอบ 1 (ถูกครั้งที่ 1) = 1 วัน (อิงวิจัย spaced repetition)
 var rememberStep=0,rememberTimer=null;
 var totalStars=0,totalBadges=0;
 var W=null;
@@ -1523,7 +1524,7 @@ function finalizeWord(){
     var pts=wordHadWrong?5:10;
     roundScore+=pts;okC++;streak++;
     correctCountMap[idx]=(correctCountMap[idx]||0)+1;
-    if(correctCountMap[idx]>=3){masteredSet[idx]=1;}else{reviewDates[idx]=Date.now()+REVIEW_MS;}
+    if(correctCountMap[idx]>=3){masteredSet[idx]=1;}else{reviewDates[idx]=Date.now()+(correctCountMap[idx]>=2?REVIEW_MS:DAY_MS);}
     if(pts===5){b.textContent='完成這個字！+'+pts+' 分';b.className='result-banner show half';}
     else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+' +'+pts+' 分';b.className='result-banner show ok';}
     pop('+'+pts);
