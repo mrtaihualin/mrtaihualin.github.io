@@ -747,19 +747,21 @@ async function gdShareAnyone(fileId) {
   });
 }
 // ── Google Calendar: fetch today's events ──────────────────────
-async function calFetchTodayEvents() {
+const SCHEDULE_DAYS = 7; // แสดงตารางล่วงหน้ากี่วัน (วันนี้ + อีก 6 วัน)
+async function calFetchUpcomingEvents() {
   let token = await gdGetToken();
   // ถ้า token ที่จำไว้ยังไม่มีสิทธิ์ Calendar (เพราะ scope เพิ่งถูกเพิ่มทีหลัง) → ขอ consent ใหม่ครั้งเดียว
   if (gdTokenScopes && gdTokenScopes.indexOf('calendar') === -1) {
     token = await gdGetToken(true);
   }
   const now = new Date();
+  // start = ต้นวันนี้ → พอข้ามไปวันใหม่ วันเก่าหลุดเอง (ตารางเลื่อนขึ้นมาเรื่อยๆ)
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+  const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + SCHEDULE_DAYS - 1, 23, 59, 59).toISOString();
   const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
     + '?timeMin=' + encodeURIComponent(start)
     + '&timeMax=' + encodeURIComponent(end)
-    + '&singleEvents=true&orderBy=startTime&maxResults=20';
+    + '&singleEvents=true&orderBy=startTime&maxResults=100';
   let r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
   // 403 ที่เกิดจากสิทธิ์ไม่พอ → ขอ consent ใหม่แล้วลองอีกครั้ง (จัดการเคส token จำสิทธิ์เก่า)
   if (r.status === 403) {
@@ -1661,11 +1663,7 @@ async function recordAttendance(token) {
 async function loadTodaySchedule() {
   const container = document.getElementById('attendanceSection');
   if (!container) return;
-  const now = new Date();
-  const dayZh = ['日','一','二','三','四','五','六'];
-  const dateLabel = (now.getMonth()+1) + '月' + now.getDate() + '日（週' + dayZh[now.getDay()] + '）';
-
-  container.innerHTML = '<div class="attend-card"><h2>📅 今日課表 — ' + dateLabel + '</h2>'
+  container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>'
     + '<div class="empty-attend"><button class="btn-gold" onclick="connectCalendar()">📅 連接 Google Calendar</button>'
     + '<div style="margin-top:8px;font-size:0.77rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">點擊後登入 Google 帳號即可顯示今日課表</div></div></div>';
 }
@@ -1674,53 +1672,73 @@ async function connectCalendar() {
   const container = document.getElementById('attendanceSection');
   const now = new Date();
   const dayZh = ['日','一','二','三','四','五','六'];
-  const dateLabel = (now.getMonth()+1) + '月' + now.getDate() + '日（週' + dayZh[now.getDay()] + '）';
 
   if (container) {
     const inner = container.querySelector('.attend-card');
-    if (inner) inner.innerHTML = '<h2>📅 今日課表 — ' + dateLabel + '</h2><div class="empty-attend">連接中…</div>';
+    if (inner) inner.innerHTML = '<h2>📅 近期課表（7天）</h2><div class="empty-attend">連接中…</div>';
   }
 
   try {
-    const events = await calFetchTodayEvents();
+    const events = await calFetchUpcomingEvents();
     const studentNames = Object.entries(studentsCache);
+    const todayKey = now.getFullYear() + '-' + (now.getMonth()+1) + '-' + now.getDate();
     const matched = [];
     events.forEach(function(ev) {
       const title = (ev.summary || '').toLowerCase();
       studentNames.forEach(function(entry) {
         const token = entry[0], s = entry[1];
         if (title.includes(s.name.toLowerCase())) {
+          const startDate = ev.start && ev.start.dateTime ? new Date(ev.start.dateTime)
+            : ev.start && ev.start.date ? new Date(ev.start.date + 'T00:00:00') : now;
           const startTime = ev.start && ev.start.dateTime
-            ? new Date(ev.start.dateTime).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+            ? startDate.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
             : ev.start && ev.start.date ? '全天' : '';
           const endTime = ev.end && ev.end.dateTime
             ? new Date(ev.end.dateTime).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
             : '';
-          matched.push({ token, s, startTime, endTime, title: ev.summary || s.name });
+          const dayKey = startDate.getFullYear() + '-' + (startDate.getMonth()+1) + '-' + startDate.getDate();
+          const dayLabel = (startDate.getMonth()+1) + '月' + startDate.getDate() + '日（週' + dayZh[startDate.getDay()] + '）';
+          matched.push({ token, s, startTime, endTime, dayKey, dayLabel, isToday: dayKey === todayKey });
         }
       });
     });
 
     let content;
     if (matched.length === 0) {
-      content = '<div class="empty-attend">今天沒有排課</div>';
+      content = '<div class="empty-attend">未來七天沒有排課</div>';
     } else {
-      const rows = matched.map(function(item) {
-        const timeStr = item.startTime + (item.endTime ? '–' + item.endTime : '');
-        return '<div class="today-row">' +
-          '<div style="flex:1;">' +
-            '<span class="t-name">' + item.s.name + '</span>' +
-            (timeStr ? '<div style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">' + timeStr + '</div>' : '') +
-          '</div>' +
-          '<button class="today-done" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="startClassRec(\'' + item.token + '\')">▶️ 開始上課</button>' +
-        '</div>';
+      // จัดกลุ่มตามวัน (events เรียงตามเวลามาแล้ว → ลำดับวันถูกต้อง)
+      const order = []; const groups = {};
+      matched.forEach(function(item) {
+        if (!groups[item.dayKey]) { groups[item.dayKey] = []; order.push(item.dayKey); }
+        groups[item.dayKey].push(item);
+      });
+      content = order.map(function(key) {
+        const list = groups[key];
+        const head = list[0];
+        const todayTag = head.isToday
+          ? '<span style="margin-left:8px;font-size:0.7rem;background:var(--gold-deep);color:#fff;padding:1px 8px;border-radius:10px;vertical-align:middle;">今日</span>'
+          : '';
+        const dayHead = '<div style="margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(0,0,0,0.08);font-weight:700;font-size:0.9rem;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink);">' + head.dayLabel + todayTag + '</div>';
+        const rows = list.map(function(item) {
+          const timeStr = item.startTime + (item.endTime ? '–' + item.endTime : '');
+          const action = item.isToday
+            ? '<button class="today-done" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="startClassRec(\'' + item.token + '\')">▶️ 開始上課</button>'
+            : '<span style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;align-self:center;">即將到來</span>';
+          return '<div class="today-row">' +
+            '<div style="flex:1;">' +
+              '<span class="t-name">' + item.s.name + '</span>' +
+              (timeStr ? '<div style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">' + timeStr + '</div>' : '') +
+            '</div>' + action +
+          '</div>';
+        }).join('');
+        return dayHead + '<div class="attend-list">' + rows + '</div>';
       }).join('');
-      content = '<div class="attend-list">' + rows + '</div>';
     }
 
-    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 今日課表 — ' + dateLabel + '</h2>' + content + '</div>';
+    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>' + content + '</div>';
   } catch(e) {
-    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 今日課表 — ' + dateLabel + '</h2>'
+    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（7天）</h2>'
       + '<div class="empty-attend"><div style="color:var(--amber);font-size:0.82rem;margin-bottom:8px;">連接失敗：' + e.message + '</div>'
       + '<button class="btn-gold" onclick="connectCalendar()">🔄 重試</button></div></div>';
   }
