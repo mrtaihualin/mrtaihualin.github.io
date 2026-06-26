@@ -82,15 +82,15 @@
   <button class="tf-float-x" aria-label="關閉" onclick="event.preventDefault();event.stopPropagation();var c=document.getElementById('tf-float-cta');if(c)c.style.display='none';">✕</button>
 </a>
 <style>
-  .tf-float-cta{position:fixed;right:16px;top:78px;left:auto;transform:none;z-index:9990;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;text-decoration:none;padding:11px 14px;border-radius:40px;box-shadow:0 8px 28px rgba(139,99,16,0.40);font-family:'Noto Sans TC',sans-serif;animation:tfFloatPulse 2.6s ease-in-out infinite;max-width:calc(100vw - 32px);}
+  .tf-float-cta{position:fixed;right:16px;top:168px;left:auto;transform:none;z-index:9990;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff !important;text-decoration:none;padding:11px 14px;border-radius:40px;box-shadow:0 8px 28px rgba(139,99,16,0.40);font-family:'Noto Sans TC',sans-serif;animation:tfFloatPulse 2.6s ease-in-out infinite;max-width:calc(100vw - 32px);}
   .tf-float-cta:hover{filter:brightness(1.06);}
   .tf-float-emoji{font-size:24px;line-height:1;}
   .tf-float-text{display:flex;flex-direction:column;line-height:1.18;}
-  .tf-float-text b{font-size:15px;font-weight:800;}
-  .tf-float-text small{font-size:11px;opacity:.95;}
+  .tf-float-text b{font-size:15px;font-weight:800;color:#fff !important;}
+  .tf-float-text small{font-size:11px;opacity:.95;color:#fff !important;}
   .tf-float-x{background:rgba(255,255,255,0.28);border:none;color:#fff;width:20px;height:20px;border-radius:50%;font-size:11px;cursor:pointer;line-height:1;margin-left:2px;flex:none;}
   @keyframes tfFloatPulse{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
-  @media(max-width:600px){.tf-float-cta{right:12px;top:66px;}.tf-float-text b{font-size:14px;}.tf-float-text small{font-size:10px;}}
+  @media(max-width:600px){.tf-float-cta{right:12px;top:148px;}.tf-float-text b{font-size:14px;}.tf-float-text small{font-size:10px;}}
 </style>
 <!-- Videos -->
 <!-- Share Popup -->
@@ -111,7 +111,8 @@
 <!-- Contact -->
 <!-- SOCIAL MODAL -->
 <!-- LINE QR MODAL -->
-<!-- floating-qr ถูกลบออกจาก homepage ตามคำสั่ง Lin 2026-06-26 -->
+<!-- ไม่มี floating-qr บน homepage -->
+
 
 <!-- NAV -->
 <nav class="site-nav"></nav>
@@ -137,8 +138,9 @@
   <p class="hero-slogan">從今天起，<span class="slogan-accent">做那個能開口的人</span></p>
   <p class="hero-sub">問題不在你的天分<br>在於你還沒遇到真正能幫你突破的老師</p>
   <button class="hero-cta" onclick="openModal('modal-line-qr')">立即預約 30 分鐘免費體驗課 →</button>
-  <div style="margin-top:16px;opacity:0;animation:fadeUp 0.5s 1.0s forwards;display:flex;flex-direction:column;align-items:center;gap:6px;">
+  <div style="margin-top:14px;opacity:0;animation:fadeUp 0.5s 1.0s forwards;display:flex;flex-direction:column;align-items:center;gap:10px;">
     <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);letter-spacing:0.5px;">✓ 完全免費・無須綁定・30 分鐘立即感受差異</p>
+    <a href="tone-finder.html" style="display:inline-flex;align-items:center;gap:8px;background:rgba(200,151,58,0.12);border:1.5px solid var(--gold-bright);color:var(--gold-deep,#8B6310);font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;padding:10px 24px;border-radius:40px;text-decoration:none;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(200,151,58,0.22)'" onmouseout="this.style.background='rgba(200,151,58,0.12)'">🎵 先免費玩聲調遊戲</a>
   </div>
   <div class="scroll-hint"><span>往下看</span><div class="line"></div></div>
 </section>
@@ -228,17 +230,36 @@
 </div>
 
 
-<!-- FREEBIE / LEAD MAGNET BANNER -->
-<div style="background:var(--gold-light);border-top:3px solid var(--gold-bright);border-bottom:3px solid var(--gold-bright);padding:48px 32px;">
-  <div style="max-width:680px;margin:0 auto;text-align:center;">
-    <div class="reveal" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:14px;">免費學習資源</div>
-    <h2 class="reveal" style="font-family:'Noto Serif TC',serif;font-size:clamp(24px,3.6vw,34px);font-weight:900;color:var(--ink);line-height:1.35;margin-bottom:14px;">🎁 免費領取「泰語聲調速查表」</h2>
-    <p class="reveal" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:var(--ink-soft);line-height:1.9;margin-bottom:26px;">用台灣人熟悉的中文聲調，一張表搞懂泰語五個聲調與判斷規則。<br>留下 Email，馬上免費下載。</p>
-    <div class="reveal" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;max-width:480px;margin:0 auto;">
-      <input id="hm-email" type="email" placeholder="輸入你的 Email" style="flex:1;min-width:220px;font-family:'Noto Sans TC',sans-serif;font-size:15px;padding:14px 16px;border:1.5px solid var(--gold-bright);border-radius:8px;background:var(--white);color:var(--ink);box-sizing:border-box;">
-      <button onclick="submitHomeFreebie()" style="background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:15px;padding:14px 30px;border:none;border-radius:8px;letter-spacing:1px;cursor:pointer;white-space:nowrap;">免費下載 →</button>
+<!-- FREE RESOURCES COMBINED SECTION -->
+<div style="background:var(--gold-light,#FBF5E7);border-top:3px solid var(--gold-bright);border-bottom:3px solid var(--gold-bright);padding:56px 32px;">
+  <div style="max-width:860px;margin:0 auto;">
+    <div class="reveal" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px;text-align:center;">免費學習資源</div>
+    <p class="reveal" style="font-family:'Noto Serif TC',serif;font-size:clamp(22px,3.2vw,30px);font-weight:900;color:var(--ink);text-align:center;margin-bottom:36px;line-height:1.35;">免費開始你的泰語學習</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
+
+      <!-- 卡片 1: 遊戲 -->
+      <div class="reveal" style="background:var(--white,#fff);border:1.5px solid rgba(200,151,58,0.35);border-radius:16px;padding:32px 28px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(139,99,16,0.08);">
+        <div style="font-size:40px;line-height:1;">🎵</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:3px;font-weight:700;color:var(--gold);text-transform:uppercase;">免費互動小遊戲</div>
+        <p style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--ink);margin:0;line-height:1.35;">你能分辨泰語聲調嗎？</p>
+        <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-soft,#666);margin:0;line-height:1.7;">不需任何基礎，馬上挑戰</p>
+        <a href="tone-finder.html" style="margin-top:8px;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 28px;text-decoration:none;border-radius:40px;box-shadow:0 4px 16px rgba(139,99,16,0.35);letter-spacing:0.5px;transition:filter 0.2s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">玩聲調遊戲 →</a>
+      </div>
+
+      <!-- 卡片 2: 速查表 -->
+      <div class="reveal" style="background:var(--white,#fff);border:1.5px solid rgba(200,151,58,0.35);border-radius:16px;padding:32px 28px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(139,99,16,0.08);">
+        <div style="font-size:40px;line-height:1;">🎁</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:3px;font-weight:700;color:var(--gold);text-transform:uppercase;">免費學習資源</div>
+        <p style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--ink);margin:0;line-height:1.35;">免費領取「泰語聲調速查表」</p>
+        <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-soft,#666);margin:0;line-height:1.7;">一張表搞懂五個聲調判斷規則</p>
+        <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+          <input id="hm-email" type="email" placeholder="輸入你的 Email" style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:12px 14px;border:1.5px solid var(--gold-bright);border-radius:8px;background:var(--off-white,#F9F3E6);color:var(--ink);box-sizing:border-box;">
+          <button onclick="submitHomeFreebie()" style="background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 20px;border:none;border-radius:8px;letter-spacing:1px;cursor:pointer;box-shadow:0 4px 14px rgba(139,99,16,0.30);">免費下載 →</button>
+        </div>
+        <span id="hm-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;"></span>
+      </div>
+
     </div>
-    <span id="hm-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;margin-top:14px;"></span>
   </div>
 </div>
 <!-- TEACHER STORY -->
