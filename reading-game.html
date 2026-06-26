@@ -12,7 +12,10 @@
 <title>泰語拼讀練習（組件版・預覽） — 泰華眼裡的泰語教學</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=12">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=3"></script>
 <script src="game-account.js?v=1"></script>
+<script src="reading-auth.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 .v3-page{font-family:'Sarabun',sans-serif;max-width:520px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 88px;}
@@ -253,6 +256,7 @@
     <span class="badge-emoji" id="badge-emoji">🌱</span>
     <span id="badge-count">0</span> 枚勳章
   </div>
+  <div id="rg-login-slot" style="flex-basis:100%;text-align:center;margin-top:6px;"></div>
 </div>
 
 <div class="card" id="game">
@@ -1715,6 +1719,7 @@ function endRound(){
     detail='獲得 '+'⭐'.repeat(_se)+'（'+cleanC+'/'+roundTotal+' 全對）· 累積共 '+totalStars+' 顆星 · 全對拿 3 顆！';
   } else detail='繼續加油！多練習就能進步 💪';
   document.getElementById('end-detail').textContent=detail;
+  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(roundScore,1); }catch(e){}   // เฟส 2: เซฟแต้มขึ้นลีกเกมอ่าน (ถ้าล็อกอิน)
   refreshUI();
 }
 

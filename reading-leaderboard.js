@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-// leaderboard.js — กระดานจัดอันดับ (leaderboard.html)
+// reading-leaderboard.js — กระดานเกมอ่าน (reading-board.html) · mirror ของ leaderboard.js
 // จัดอันดับด้วย "คะแนนสะสมรวม" 2 แท็บ: รายสัปดาห์ / ตลอดกาล
 // ดึงผ่าน RPC (security definer) — เห็นเฉพาะชื่อเล่น+คะแนน ไม่เห็นอีเมล
 // ต้องโหลดหลัง: supabase-js CDN, supabase-config.js
@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  // ── ตารางแบดจ์ (ก๊อปจาก tone-finder.html อ่านอย่างเดียว เพื่อวาดบนกระดาน) — LIN 2026-06-22 ──
+  // ── ตารางแบดจ์ (ก๊อปจาก reading-game.html อ่านอย่างเดียว เพื่อวาดบนกระดาน) — LIN 2026-06-22 ──
   var LB_BADGES = {
     rice_seed:   { emoji: '🌾', img: 'assets/badges/rice_seed.svg',   zh: '稻種' },
     rice_sprout: { emoji: '🌱', img: 'assets/badges/rice_sprout.svg', zh: '秧苗' },
@@ -145,7 +145,7 @@
   function nickBar() {
     if (!currentUser) {
       return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">' +
-        '在遊戲頁登入即可參加排行 · <a href="tone-finder.html" style="color:#A07A1E;">前往遊戲</a></div>';
+        '在遊戲頁登入即可參加排行 · <a href="reading-game.html" style="color:#A07A1E;">前往拼讀遊戲</a></div>';
     }
     if (!myNick) {
       return '<div style="text-align:center;margin-bottom:16px;">' +
@@ -158,7 +158,7 @@
   async function load() {
     root.innerHTML = tabs() + nickBar() + box('⏳', '載入中...', '請稍候');
     wireTabs();
-    var fn = (period === 'week') ? 'leaderboard_weekly' : 'leaderboard_alltime';
+    var fn = (period === 'week') ? 'reading_leaderboard_weekly' : 'reading_leaderboard_alltime';
     var res = await sb.rpc(fn);
     if (res.error) {
       root.innerHTML = tabs() + nickBar() +
@@ -179,7 +179,7 @@
     var html = tabs() + nickBar();
     if (!rows.length) {
       html += box('🌱', '排行榜還沒有人', period === 'week' ? '本週還沒有分數，當第一個吧！' : '還沒有資料，去玩一場上榜吧',
-        '<a href="tone-finder.html" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往 tone-finder →</a>');
+        '<a href="reading-game.html" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往 tone-finder →</a>');
       root.innerHTML = html; wireTabs(); return;
     }
     html += '<div style="background:#fff;border-radius:16px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">';

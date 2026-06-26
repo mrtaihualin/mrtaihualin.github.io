@@ -580,6 +580,21 @@
     .fab-qr{ right:16px; bottom:82px; width:52px; height:52px; font-size:22px; }
     .qr-pop{ right:16px; bottom:150px; }
   }
+  /* 放大字級 */
+  body.big-font { font-size: 22px; }
+  body.big-font .thai, body.big-font .s-th, body.big-font .lead-th,
+  body.big-font .box.thai { font-size: 24px !important; }
+  body.big-font .zh, body.big-font .gloss { font-size: 20px !important; }
+
+  #btn-bigfont {
+    position: fixed; top: 14px; right: 14px; z-index: 9999;
+    background: var(--step); color: #fff;
+    border: none; border-radius: 8px;
+    padding: 6px 13px; font-size: 15px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    font-family: var(--font-zh-sans);
+  }
+  body.big-font #btn-bigfont { background: var(--c-aux); }
 </style>
 <link rel="stylesheet" href="nav-ui.css">
 </head>
@@ -1084,5 +1099,19 @@
 </script>
 
 <script src="nav-ui.js"></script>
+<button id="btn-bigfont">A＋</button>
+<script>
+(function(){
+  var btn = document.getElementById('btn-bigfont');
+  var LS = window.localStorage;
+  function apply(on){ document.body.classList.toggle('big-font',on); btn.textContent = on ? 'A－' : 'A＋'; }
+  try{ apply(LS.getItem('cui-big-font')==='1'); }catch(e){}
+  btn.addEventListener('click',function(){
+    var on = !document.body.classList.contains('big-font');
+    apply(on);
+    try{ LS.setItem('cui-big-font', on?'1':'0'); }catch(e){}
+  });
+})();
+</script>
 </body>
 </html>

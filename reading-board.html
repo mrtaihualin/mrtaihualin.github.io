@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DKVQE30982');
+</script>
+<!-- Supabase (กระดานจัดอันดับ) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=3"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>拼讀排行榜 — 泰華眼裡的泰語教學</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=12">
+</head>
+<body>
+<!-- FLOATING LINE QR WIDGET -->
+<div class="floating-qr" id="floating-qr">
+  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
+  <button class="floating-qr-book" onclick="openModal('modal-line-qr')">
+    <span class="fqb-icon">📅</span>
+    <span class="fqb-text"><b>預約免費體驗課</b><small>30 分鐘・線上一對一</small></span>
+  </button>
+</div>
+
+<!-- NAV -->
+<nav class="site-nav"></nav>
+
+<!-- PAGE NAV STRIP -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="page2.html">課程・費用</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="page4.html">泰語・分享</a>
+  <a href="tone-finder.html">聲調・搜尋</a>
+  <a href="reading-game.html">拼讀・練習</a>
+</div>
+
+<!-- CONTENT -->
+<div class="section-wrap" style="padding-top:34px;padding-bottom:60px;">
+  <div style="text-align:center;margin-bottom:8px;">
+    <span class="eyebrow" style="color:var(--gold-bright);">拼讀玩家排行榜</span>
+    <h2 class="section-heading" style="margin:6px 0 0;">🏆 拼讀排行榜</h2>
+  </div>
+  <p style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-size:13px;line-height:1.8;margin:14px auto 30px;max-width:600px;text-align:center;">
+    依「累積總分」排名，每週一重置。練得越多，排名越高！
+  </p>
+
+  <div id="lb-root" style="max-width:560px;margin:0 auto;"></div>
+
+  <div style="text-align:center;margin-top:30px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="reading-game.html" style="display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">✍️ 前往拼讀遊戲累積分數</a>
+    <a href="my-progress.html" style="display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">📊 我的成績</a>
+  </div>
+</div>
+
+<div style="height:44px;background:var(--off-white);"></div>
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="shared.js?v=20"></script>
+<script src="reading-leaderboard.js?v=1"></script>
+<script>
+// ── GA4 Event Tracking: leaderboard.html ────────────────────────────
+
+// [1] คนเข้าดู leaderboard
+window.addEventListener('DOMContentLoaded', function() {
+  gtag('event', 'leaderboard_viewed', { source_page: 'reading_leaderboard' });
+});
+
+// [2] คลิกปุ่มกลับไปเล่นเกม
+document.querySelectorAll('a[href*="tone-finder"], .play-again, [onclick*="tone-finder"]').forEach(function(el) {
+  el.addEventListener('click', function() {
+    gtag('event', 'play_again_click', { source: 'leaderboard' });
+  });
+});
+// ────────────────────────────────────────────────────────────────────
+</script>
+</body>
+</html>
