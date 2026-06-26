@@ -457,6 +457,10 @@
     </p>
     <label class="settings-label">選擇課程方案</label>
     <div class="course-grid" id="slipCourseGrid"></div>
+    <div id="slipPackWrap" style="display:none;margin-top:14px;">
+      <label class="settings-label">選擇堂數</label>
+      <div id="slipPackGrid" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
     <div id="slipCurrencyWrap" style="display:none;margin-top:14px;">
       <label class="settings-label">付款幣別</label>
       <div style="display:flex;gap:8px;">
@@ -1318,9 +1322,13 @@ async function loadStudentQuota(token) {
     var used = (attRes.data || []).length;
     var remain = totalBought - used;
     var sumEl = document.getElementById('quotaSummary');
-    if (totalBought > 0 && sumEl) {
-      var color = remain <= 1 ? '#b45309' : 'var(--gold-deep)';
-      sumEl.innerHTML = '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;color:' + color + ';font-weight:700;">剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（已購 ' + totalBought + ' · 已上 ' + used + '）</span></div>';
+    if (sumEl) {
+      if (totalBought > 0) {
+        var color = remain <= 1 ? '#b45309' : 'var(--gold-deep)';
+        sumEl.innerHTML = '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;color:' + color + ';font-weight:700;">剩餘 ' + (remain < 0 ? 0 : remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（已購 ' + totalBought + ' · 已上 ' + used + '）</span></div>';
+      } else {
+        sumEl.innerHTML = '<div style="background:#faf7f0;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--ink-muted);">剩餘堂數：尚未購課（老師確認繳費後顯示）</div>';
+      }
     }
     var banEl = document.getElementById('quotaBanner');
     if (banEl && totalBought > 0 && remain <= 1) {
@@ -1370,7 +1378,11 @@ async function loadStudentPayments(token) {
     var res = await sb.from('classroom_payments').select('course_label,lessons,bonus_lessons,currency,total_amount,status,created_at,receipt_no')
       .eq('token', token).order('created_at', { ascending: false });
     var data = res.data || [];
-    if (!data.length) { el.innerHTML = ''; return; }
+    var head = '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:4px;font-family:\'Noto Sans TC\',sans-serif;">📋 繳費記錄</div>';
+    if (!data.length) {
+      el.innerHTML = head + '<div style="color:var(--ink-muted);font-size:0.82rem;font-family:\'Noto Sans TC\',sans-serif;padding:4px 0;">尚無繳費記錄</div>';
+      return;
+    }
     var statusZh = { slip_submitted: '⏳ 待確認', pending: '✅ 已確認', done: '🧾 已開立收據', rejected: '❌ 未通過' };
     var rows = data.map(function(p) {
       var d = p.created_at ? new Date(p.created_at) : null;
@@ -1381,7 +1393,7 @@ async function loadStudentPayments(token) {
         '<div style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + '</div>' +
       '</div>';
     }).join('');
-    el.innerHTML = '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:4px;font-family:\'Noto Sans TC\',sans-serif;">📋 繳費記錄</div>' + rows;
+    el.innerHTML = head + rows;
   } catch (e) { el.innerHTML = ''; }
 }
 
@@ -1485,22 +1497,30 @@ function initRecording() {
 // ============================================================
 // SLIP SYSTEM (student-initiated payment)
 // ============================================================
-let slipToken = null, slipCourse = null, slipImageData = null, slipCurrency = null;
+let slipToken = null, slipType = null, slipLessons = null, slipBonus = 0, slipImageData = null, slipCurrency = null;
 let pendingSlipId = null;
+
+// 共用按鈕樣式
+var OFF_CUR  = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
+var ON_CUR   = 'flex:1;padding:9px;border-radius:9px;border:2px solid var(--gold-deep);background:#fdf6e3;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;font-weight:700;';
+var OFF_PACK = 'min-width:88px;flex:1;padding:9px 6px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;text-align:center;';
+var ON_PACK  = 'min-width:88px;flex:1;padding:9px 6px;border-radius:9px;border:2px solid var(--gold-deep);background:#fdf6e3;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;text-align:center;';
 
 // — Student: open slip modal —
 function openSlipModal(token) {
-  slipToken = token; slipCourse = null; slipImageData = null; slipCurrency = null;
-  document.getElementById('slipCourseGrid').innerHTML = COURSES.map(function(c) {
-    return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipCourse(\'' + c.id + '\')">' +
+  slipToken = token; slipType = null; slipLessons = null; slipBonus = 0; slipImageData = null; slipCurrency = null;
+  document.getElementById('slipCourseGrid').innerHTML = COURSE_TYPES.map(function(c) {
+    return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipType(\'' + c.id + '\')">' +
       '<div class="c-name">' + c.label + '</div>' +
       '<div class="c-desc">' + c.desc + '</div>' +
     '</button>';
   }).join('');
+  document.getElementById('slipPackWrap').style.display = 'none';
+  document.getElementById('slipPackGrid').innerHTML = '';
   document.getElementById('slipCurrencyWrap').style.display = 'none';
   document.getElementById('slipBankBox').style.display = 'none';
-  document.getElementById('curBtn-NTD').style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
-  document.getElementById('curBtn-THB').style.cssText = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
+  document.getElementById('curBtn-NTD').style.cssText = OFF_CUR;
+  document.getElementById('curBtn-THB').style.cssText = OFF_CUR;
   document.getElementById('slipTotalBox').style.display = 'none';
   document.getElementById('slipPreviewImg').style.display = 'none';
   document.getElementById('slipUploadPlaceholder').style.display = '';
@@ -1510,37 +1530,62 @@ function openSlipModal(token) {
   document.getElementById('slipModal').classList.add('open');
 }
 
-function selectSlipCourse(id) {
-  slipCourse = id;
-  document.querySelectorAll('.course-card').forEach(function(el) { el.classList.remove('selected'); });
+// 1) 選課程類型 → 顯示堂數選項
+function selectSlipType(id) {
+  slipType = id; slipLessons = null; slipBonus = 0; slipCurrency = null;
+  document.querySelectorAll('#slipCourseGrid .course-card').forEach(function(el) { el.classList.remove('selected'); });
   var el = document.getElementById('sc-' + id);
   if (el) el.classList.add('selected');
+  var c = COURSE_TYPES.find(function(x) { return x.id === id; });
+  if (!c) return;
+  document.getElementById('slipPackGrid').innerHTML = c.packs.map(function(n) {
+    var bonus = slipBonusFor(n);
+    return '<button type="button" id="pk-' + n + '" onclick="selectSlipPack(' + n + ')" style="' + OFF_PACK + '">' +
+      '<div style="font-weight:700;">' + n + ' 堂</div>' +
+      (bonus ? '<div style="font-size:0.72rem;color:var(--gold-deep);">贈 ' + bonus + ' 堂</div>'
+             : (c.note ? '<div style="font-size:0.72rem;color:var(--ink-muted);">' + c.note + '</div>' : '')) +
+    '</button>';
+  }).join('');
+  document.getElementById('slipPackWrap').style.display = 'block';
+  document.getElementById('slipCurrencyWrap').style.display = 'none';
+  document.getElementById('curBtn-NTD').style.cssText = OFF_CUR;
+  document.getElementById('curBtn-THB').style.cssText = OFF_CUR;
+  document.getElementById('slipTotalBox').style.display = 'none';
+  document.getElementById('slipBankBox').style.display = 'none';
+  if (c.packs.length === 1) selectSlipPack(c.packs[0]);
+}
+
+// 2) 選堂數 → 顯示幣別
+function selectSlipPack(n) {
+  slipLessons = n; slipBonus = slipBonusFor(n);
+  document.querySelectorAll('#slipPackGrid button').forEach(function(b) { b.style.cssText = OFF_PACK; });
+  var b = document.getElementById('pk-' + n);
+  if (b) b.style.cssText = ON_PACK;
   document.getElementById('slipCurrencyWrap').style.display = 'block';
   renderSlipTotalAndBank();
 }
 
+// 3) 選幣別 → 顯示金額 + 帳戶
 function selectSlipCurrency(cur) {
   slipCurrency = cur;
-  var on  = 'flex:1;padding:9px;border-radius:9px;border:2px solid var(--gold-deep);background:#fdf6e3;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;font-weight:700;';
-  var off = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
-  document.getElementById('curBtn-NTD').style.cssText = cur === 'NTD' ? on : off;
-  document.getElementById('curBtn-THB').style.cssText = cur === 'THB' ? on : off;
+  document.getElementById('curBtn-NTD').style.cssText = cur === 'NTD' ? ON_CUR : OFF_CUR;
+  document.getElementById('curBtn-THB').style.cssText = cur === 'THB' ? ON_CUR : OFF_CUR;
   renderSlipTotalAndBank();
 }
 
 function renderSlipTotalAndBank() {
-  var c = COURSES.find(function(x) { return x.id === slipCourse; });
+  var c = COURSE_TYPES.find(function(x) { return x.id === slipType; });
   var totalBox = document.getElementById('slipTotalBox');
   var bankBox  = document.getElementById('slipBankBox');
-  if (!c || !slipCurrency) { totalBox.style.display = 'none'; bankBox.style.display = 'none'; return; }
+  if (!c || !slipLessons || !slipCurrency) { totalBox.style.display = 'none'; bankBox.style.display = 'none'; return; }
   var price = slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB;
   totalBox.style.display = 'block';
-  if (c.lessons && price) {
-    document.getElementById('slipTotalText').textContent = slipCurrency + ' ' + (c.lessons * price).toLocaleString();
-    document.getElementById('slipCalcText').textContent  = c.lessons + '堂 × ' + slipCurrency + ' ' + price + '/堂' + (c.bonus ? '（贈 ' + c.bonus + ' 堂）' : '') + (c.note ? ' · ' + c.note : '');
+  if (price) {
+    document.getElementById('slipTotalText').textContent = slipCurrency + ' ' + (slipLessons * price).toLocaleString();
+    document.getElementById('slipCalcText').textContent  = slipLessons + '堂 × ' + slipCurrency + ' ' + price + '/堂' + (slipBonus ? '（贈 ' + slipBonus + ' 堂）' : '') + (c.note ? ' · ' + c.note : '');
   } else {
     document.getElementById('slipTotalText').textContent = slipCurrency + ' 金額請與老師確認';
-    document.getElementById('slipCalcText').textContent  = c.label;
+    document.getElementById('slipCalcText').textContent  = c.label + ' · ' + slipLessons + ' 堂';
   }
   var b = BANK_INFO[slipCurrency];
   var anyVal = b.lines.some(function(l) { return /[：:]\s*\S/.test(l); });
@@ -1573,17 +1618,19 @@ function handleSlipImage(file) {
 
 function closeSlipModal() {
   document.getElementById('slipModal').classList.remove('open');
-  slipToken = null; slipCourse = null; slipImageData = null;
+  slipToken = null; slipType = null; slipLessons = null; slipBonus = 0; slipImageData = null; slipCurrency = null;
 }
 
 async function submitSlip() {
-  if (!slipCourse) { alert('請先選擇課程'); return; }
+  if (!slipType) { alert('請先選擇課程'); return; }
+  if (!slipLessons) { alert('請先選擇堂數'); return; }
   if (!slipCurrency) { alert('請先選擇付款幣別'); return; }
   if (!slipImageData) { alert('請先上傳匯款截圖'); return; }
-  var c = COURSES.find(function(x) { return x.id === slipCourse; }) || {};
-  var lessons = c.lessons || 10;
-  var bonus = c.bonus || 0;
+  var c = COURSE_TYPES.find(function(x) { return x.id === slipType; }) || {};
+  var lessons = slipLessons;
+  var bonus = slipBonus;
   var price = (slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB) || 0;
+  var courseLabel = (c.label || slipType) + ' ' + lessons + '堂' + (bonus ? '（贈' + bonus + '）' : '');
   var note = document.getElementById('slipNoteInput').value.trim();
   var studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return slipToken; } })();
   var btn = document.getElementById('slipSubmitBtn');
@@ -1591,8 +1638,8 @@ async function submitSlip() {
   var payload = {
     token: slipToken,
     student_name: studentName,
-    course_id: slipCourse,
-    course_label: c.label || slipCourse,
+    course_id: slipType,
+    course_label: courseLabel,
     lessons: lessons,
     bonus_lessons: bonus,
     price_per: price,
@@ -1608,13 +1655,15 @@ async function submitSlip() {
   btn.disabled = false; btn.textContent = '📤 送出繳費通知';
   if (res.error) { alert('送出失敗：' + res.error.message); return; }
   // 寄信通知老師（沿用全站既有的 Web3Forms，免後端）
-  notifyTeacherNewSlip({ name: studentName, course: c.label || slipCourse, lessons: lessons, bonus: bonus, currency: slipCurrency, total: lessons * price, note: note });
+  notifyTeacherNewSlip({ name: studentName, course: courseLabel, lessons: lessons, bonus: bonus, currency: slipCurrency, total: lessons * price, note: note });
   closeSlipModal();
   // 顯示狀態於頁面，不用 alert
   var statusEl = document.getElementById('slipStatusMsg');
   if (statusEl) {
-    statusEl.innerHTML = '<div style="background:#fef3c7;border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:#92400e;font-weight:600;margin-bottom:12px;">⏳ 已送出，等待老師確認<br><span style="font-weight:400;font-size:0.78rem;">' + (c.label || slipCourse) + '</span></div>';
+    statusEl.innerHTML = '<div style="background:#fef3c7;border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:#92400e;font-weight:600;margin-bottom:12px;">⏳ 已送出，等待老師確認<br><span style="font-weight:400;font-size:0.78rem;">' + courseLabel + '</span></div>';
   }
+  loadStudentPayments(slipToken);
+  loadStudentQuota(slipToken);
 }
 
 // 寄信通知老師有新的繳費通知（Web3Forms，與全站聯絡表單同一把 key）
@@ -1819,6 +1868,16 @@ const COURSES = [
   { id:'pair_std',   label:'雙人 Standard', lessons:10, bonus:0, priceNTD:1200, priceTHB:null, desc:'每人 · Standard 雙人共學' },
   { id:'custom',   label:'自訂',            lessons:null, bonus:0, priceNTD:null, priceTHB:null, desc:'自行填寫堂數/單價' },
 ];
+
+// 學生繳費表單用：先選課程類型 → 再選堂數(10/20/30，含贈送) → 再選幣別
+// （老師頁收費 modal 仍用上面的 COURSES；學生面價格改這裡）
+const COURSE_TYPES = [
+  { id:'basic',      label:'入門 Basic',    priceNTD:700,  priceTHB:800,  packs:[10],       note:'只限購買一期', desc:'打好發音基礎' },
+  { id:'std',        label:'進階 Standard', priceNTD:800,  priceTHB:800,  packs:[10,20,30], desc:'客製主題會話' },
+  { id:'pair_basic', label:'雙人 Basic',    priceNTD:1100, priceTHB:null, packs:[10,20,30], desc:'Basic 雙人共學・每人' },
+  { id:'pair_std',   label:'雙人 Standard', priceNTD:1200, priceTHB:null, packs:[10,20,30], desc:'Standard 雙人共學・每人' },
+];
+function slipBonusFor(n) { return n >= 30 ? 3 : n >= 20 ? 1 : 0; }
 
 let payToken = null;
 let paySelectedCourse = null;
