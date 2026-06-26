@@ -421,6 +421,28 @@
   </div>
 </div>
 
+<!-- ======= UPLOAD FILE TO STUDENT FOLDER ======= -->
+<div class="notepad-overlay" id="uploadOverlay" onclick="if(event.target===this)closeUploadModal()">
+  <div class="notepad-modal" style="max-width:440px;">
+    <div class="notepad-modal-header">
+      <span class="notepad-modal-title" id="uploadTitle">⬆️ 上傳檔案</span>
+      <button class="notepad-modal-close" onclick="closeUploadModal()">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px;font-family:'Noto Sans TC',sans-serif;">
+      <div>
+        <div style="font-weight:700;margin-bottom:8px;">放到哪個資料夾？</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" id="upDest-study" style="flex:1;" onclick="selectUploadDest('學習內容')">📚 學習內容</button>
+          <button class="btn-sm" id="upDest-video" style="flex:1;" onclick="selectUploadDest('影片')">🎬 影片</button>
+        </div>
+      </div>
+      <input type="file" id="uploadFileInput" multiple style="font-size:0.9rem;">
+      <button class="btn-add-student" style="margin-top:0;" onclick="doUploadFiles()">⬆️ 開始上傳</button>
+      <div id="uploadStatus" style="font-size:0.85rem;color:var(--ink-muted);line-height:1.6;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ======= SLIP VIEWER ======= -->
 <div class="slip-viewer-overlay" id="slipViewer" onclick="this.classList.remove('open')">
   <img id="slipViewerImg" src="" alt="slip" />
@@ -748,6 +770,43 @@ async function gdGetStudentSubfolderId(studentName, sub) {
   const stuId = await gdGetStudentFolderId(studentName);
   return await gdEnsureFolder(sub, stuId);
 }
+// ── 手動上傳檔案到學生資料夾（透過 App，App 才看得到）──────────
+let uploadToken = null, uploadDest = '學習內容';
+function openUploadModal(token) {
+  uploadToken = token; uploadDest = '學習內容';
+  const s = (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
+  document.getElementById('uploadTitle').textContent = '⬆️ 上傳檔案 — ' + (s ? s.name : token);
+  const inp = document.getElementById('uploadFileInput'); if (inp) inp.value = '';
+  document.getElementById('uploadStatus').textContent = '';
+  selectUploadDest('學習內容');
+  document.getElementById('uploadOverlay').classList.add('open');
+}
+function closeUploadModal() { document.getElementById('uploadOverlay').classList.remove('open'); }
+function selectUploadDest(d) {
+  uploadDest = d;
+  const study = document.getElementById('upDest-study'), video = document.getElementById('upDest-video');
+  if (study) study.style.outline = (d === '學習內容') ? '3px solid var(--gold-deep)' : 'none';
+  if (video) video.style.outline = (d === '影片') ? '3px solid var(--gold-deep)' : 'none';
+}
+async function doUploadFiles() {
+  const input = document.getElementById('uploadFileInput');
+  const status = document.getElementById('uploadStatus');
+  if (!input || !input.files.length) { alert('請先選擇檔案'); return; }
+  const s = (typeof studentsCache !== 'undefined') ? studentsCache[uploadToken] : null;
+  const name = s ? s.name : uploadToken;
+  try {
+    status.textContent = '☁️ 連線 Google Drive…（首次會跳出授權）';
+    const folderId = await gdGetStudentSubfolderId(name, uploadDest);
+    let n = 0;
+    for (const f of input.files) {
+      status.textContent = '☁️ 上傳中… ' + (n + 1) + '/' + input.files.length + '：' + f.name;
+      await gdUpload(f, f.name, folderId);
+      n++;
+    }
+    status.textContent = '✅ 已上傳 ' + n + ' 個檔案到「' + name + ' / ' + uploadDest + '」';
+    input.value = '';
+  } catch (e) { status.textContent = '⚠️ 上傳失敗：' + (e.message || e); }
+}
 // 一鍵：為所有學生在 Drive 建立資料夾（由 App 建立，App 之後才能上傳；老師可把舊檔搬進去）
 async function createAllStudentFolders(btn) {
   const entries = (typeof studentsCache !== 'undefined') ? Object.entries(studentsCache) : [];
@@ -984,6 +1043,7 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
       '<button class="btn-sm btn-sm-copy" id="copy-' + t + '" onclick="copyStudentLink(\'' + t + '\',\'copy-' + t + '\')">🔗 連結</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
+      '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
