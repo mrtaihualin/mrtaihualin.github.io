@@ -75,14 +75,22 @@
       .then(function (res) { if (res.error) alert('登入 Google 失敗：' + res.error.message); });
   }
   function doEmailLogin() {
-    var email = window.prompt('請輸入 Email 以接收登入連結：');
+    var email = window.prompt('請輸入 Email 以接收 6 位數驗證碼：');
     if (!email) return;
     email = email.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Email 格式不正確'); return; }
-    sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.href } })
+    sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } })
       .then(function (res) {
-        if (res.error) alert('連結寄送失敗：' + res.error.message);
-        else alert('登入連結已寄出，請到信箱點擊 ✉️\n(' + email + ')');
+        if (res.error) { alert('驗證碼寄送失敗：' + res.error.message); return; }
+        var code = window.prompt('驗證碼已寄到 ' + email + ' ✉️（含垃圾信匣）\n請輸入信中的 6 位數驗證碼：');
+        if (!code) return;
+        code = code.trim();
+        if (!/^\d{6}$/.test(code)) { alert('請輸入 6 位數字'); return; }
+        sb.auth.verifyOtp({ email: email, token: code, type: 'email' })
+          .then(function (r2) {
+            if (r2.error) alert('驗證碼錯誤或已過期，請重新登入');
+            // สำเร็จ → onAuthStateChange จะ render หน้าให้เอง
+          });
       });
   }
   function doLogout() { sb.auth.signOut().then(function () { currentUser = null; renderRoot(); }); }

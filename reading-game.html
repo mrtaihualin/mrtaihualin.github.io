@@ -163,11 +163,34 @@
 .rg-tool-btn{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);border-radius:20px;padding:6px 14px;cursor:pointer;color:#7a5510;transition:all .15s;}
 .rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
 .rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
-/* ── ฟอนต์โมเดิร์น (ไม่มีหัว) ── */
+/* ── Weekly challenge banner (เหมือน tone-finder) ── */
+.tf-challenge-banner{background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;margin:0 0 10px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:480px;box-sizing:border-box;}
+.tf-challenge-banner.done{background:linear-gradient(180deg,#E9F9ED,#D2F0D9);border-color:#4caf50;}
+.tf-ch-top{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.tf-ch-emoji{font-size:18px;line-height:1;}
+.tf-ch-title{flex:1;font-size:13.5px;font-weight:800;color:#8a5a12;}
+.tf-challenge-banner.done .tf-ch-title{color:#1d7a36;}
+.tf-ch-left{font-size:11px;font-weight:700;color:#b07a1e;white-space:nowrap;}
+.tf-ch-bar{height:7px;border-radius:4px;background:#f0e2c2;overflow:hidden;}
+.tf-ch-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#E8973A,#F4C24A);transition:width .4s;}
+.tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
+.tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
+/* ── Streak chips ── */
+.rg-home-streak{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 10px;width:100%;max-width:480px;}
+.tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:#7a5510;border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;}
+.tf-streak-chip.done{background:rgba(74,154,74,0.14);color:#3f8f3f;}
+/* ── Toast ── */
+.rg-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:rgba(45,42,34,0.96);color:#fff;padding:12px 20px;border-radius:24px;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,0.3);z-index:10001;max-width:88%;text-align:center;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
+.rg-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
+.rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
+/* ── ฟอนต์โมเดิร์น (ไม่มีหัว) — ครอบทุก element ที่เป็น Thai text ── */
 body.rg-modern-font .word-th,
 body.rg-modern-font .syl-chip,
 body.rg-modern-font .slot-box,
-body.rg-modern-font .chip-item { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
+body.rg-modern-font .chip-item,
+body.rg-modern-font .opt,
+body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
 
 .btn-row{display:flex;gap:7px;justify-content:center;width:100%;margin-top:12px;flex-wrap:wrap;}
 /* ปุ่มแอ็คชันในเกม: ลอยติดล่างจอเสมอ (เหนือแถบเมนูล่าง) กดง่าย ไม่ต้องเลื่อนหา */
@@ -265,6 +288,15 @@ body.rg-modern-font .chip-item { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <button class="ltab"        id="ltab-高" onclick="setLevel('高')">高級</button>
 </div>
 
+<div class="rg-tools-row">
+  <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
+  <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">abc 換現代字體</button>
+  <button class="rg-tool-btn" onclick="rgOpenAsk()">❓ 我有問題</button>
+</div>
+
+<div id="rg-challenge-banner"></div>
+<div class="rg-home-streak" id="rg-streak-bar"></div>
+
 <div class="bars-wrap" id="bars-wrap">
   <div class="bar-row">
     <span>進度</span>
@@ -284,12 +316,6 @@ body.rg-modern-font .chip-item { font-family:'Noto Sans Thai','Sarabun',sans-ser
     <span class="badge-emoji" id="badge-emoji">🌱</span>
     <span id="badge-count">0</span> 枚勳章
   </div>
-</div>
-
-<div class="rg-tools-row">
-  <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
-  <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">abc 換現代字體</button>
-  <button class="rg-tool-btn" onclick="rgOpenAsk()">？ 我有問題</button>
 </div>
 
 <div class="card" id="game">
@@ -1278,7 +1304,7 @@ function buildRevealRules(w){
 // ════════════════════════════════════════════
 var ROUND_SIZE=10;
 var curLevel='初';
-var roundQueue=[],cur=0,okC=0,badC=0,streak=0,roundScore=0,cleanC=0,roundTotal=0;
+var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,roundTotal=0;
 var picks=[],comps=[],correctSet=[],needN=0;
 var checked=false,wrongCount=0;
 var masteredSet={},correctCountMap={},reviewDates={};
@@ -1376,7 +1402,7 @@ function initGame(){
   if(pool.length===0){allIdx.forEach(function(i){delete masteredSet[i];delete correctCountMap[i];delete reviewDates[i];});doSave();pool=allIdx.slice();}
   roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
   roundTotal=roundQueue.length;
-  cur=0;okC=0;badC=0;streak=0;roundScore=0;cleanC=0;
+  cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
   refreshUI();
@@ -1564,7 +1590,7 @@ function finalizeWord(){
   } else {
     var pts=wordHadWrong?5:10;
     if(pts===10)cleanC++;
-    roundScore+=pts;okC++;streak++;
+    roundScore+=pts;okC++;streak++;if(streak>maxStreak)maxStreak=streak;
     correctCountMap[idx]=(correctCountMap[idx]||0)+1;
     if(correctCountMap[idx]>=3){masteredSet[idx]=1;}else{reviewDates[idx]=Date.now()+(correctCountMap[idx]>=2?REVIEW_MS:DAY_MS);}
     if(pts===5){b.textContent='完成這個字！+'+pts+' 分';b.className='result-banner show half';}
@@ -1753,6 +1779,12 @@ function endRound(){
   } else detail='繼續加油！多練習就能進步 💪';
   document.getElementById('end-detail').textContent=detail;
   try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(roundScore,1); }catch(e){}   // เฟส 2: เซฟแต้มขึ้นลีกเกมอ่าน (ถ้าล็อกอิน)
+  // ── weekly challenge + streak freeze ──
+  var _isPerfect = (cleanC === roundTotal && roundTotal > 0);
+  var _maxCombo = maxStreak; // max combo ที่ทำได้ในรอบนี้
+  try { rgChallengeBump(_maxCombo, _isPerfect); } catch(e){}
+  try { var _sv = rgApplyStreak(); if(_sv.events.freezeUsed) rgToast('護盾幫你保住連續紀錄！🛡️'); if(_sv.events.freezeEarned) rgToast('獲得新護盾 🛡️ ×1！連續'+_sv.state.streak+'天'); } catch(e){}
+  try { rgRenderGameBar(); } catch(e){}
   refreshUI();
 }
 
@@ -1863,8 +1895,115 @@ function openBadge(){
 // ════════════════════════════════════════════
 // START
 // ════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// WEEKLY CHALLENGE + STREAK FREEZE (เหมือนเกมเสียง)
+// share TF_STREAK_KEY → streak/freeze ข้ามเกมได้
+// ════════════════════════════════════════════════
+var TF_STREAK_KEY = 'tf_streak_v1';   // key เดียวกับ tone-finder
+var RG_GAME_CFG = {
+  DAILY_GOAL_SETS: 3,
+  STREAK_FREEZE_EARN_EVERY: 7,
+  STREAK_FREEZE_MAX: 2
+};
+var RG_CHALLENGES = [
+  { id: 'c_correct30', title: '答對 30 個字', sub: '本週累積全對 30 字', type: 'correct', target: 30, emoji: '🎯' },
+  { id: 'c_sets5',     title: '玩完 5 組',     sub: '本週完成 5 組練習',  type: 'sets',    target: 5,  emoji: '📚' },
+  { id: 'c_perfect3',  title: '3 次完美過關', sub: '本週完美過關 3 次',  type: 'perfect', target: 3,  emoji: '🌟' },
+  { id: 'c_combo5',    title: '連對 5 題',     sub: '本週達成連對 5',    type: 'combo',   target: 5,  emoji: '🔥' },
+  { id: 'c_correct60', title: '答對 60 個字', sub: '本週累積全對 60 字', type: 'correct', target: 60, emoji: '💪' }
+];
+var RG_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+function rgWeekIndex() { return Math.floor(Date.now() / RG_WEEK_MS); }
+function rgWeekEndMs() { return (rgWeekIndex() + 1) * RG_WEEK_MS; }
+function rgActiveChallenge() { return RG_CHALLENGES[rgWeekIndex() % RG_CHALLENGES.length]; }
+var RG_CH_KEY = 'rg_challenge_v1';
+function rgLoadChallenge() { try { return JSON.parse(localStorage.getItem(RG_CH_KEY) || '{}') || {}; } catch(e) { return {}; } }
+function rgChallengeState() {
+  var ch = rgActiveChallenge(), wk = rgWeekIndex(), saved = rgLoadChallenge();
+  if (saved.week !== wk || saved.id !== ch.id) saved = { week: wk, id: ch.id, progress: 0, done: false };
+  return { ch: ch, st: saved };
+}
+function rgSaveChallenge(st) { try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
+
+// streak+freeze — share key กับเกมเสียง
+function rgLoadStreak() { try { return JSON.parse(localStorage.getItem(TF_STREAK_KEY) || '{}') || {}; } catch(e) { return {}; } }
+function rgSaveStreak(s) { try { localStorage.setItem(TF_STREAK_KEY, JSON.stringify(s)); } catch(e) {} }
+function rgTodayStr() { var d = new Date(); return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
+function rgApplyStreak() {
+  var s = rgLoadStreak(), cfg = RG_GAME_CFG, today = rgTodayStr();
+  var yest = (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
+  s.setsToday = (s.lastPlay === today) ? ((s.setsToday || 0) + 1) : 1;
+  var goalMet = s.setsToday >= cfg.DAILY_GOAL_SETS;
+  var streakEv = { goalMetToday: goalMet, freezeUsed: false, freezeEarned: 0 };
+  if (s.lastPlay !== today) {
+    if (s.lastPlay === yest) { s.streak = (s.streak || 0) + 1; }
+    else if (s.lastPlay && (s.freezes || 0) > 0) { s.freezes -= 1; s.streak = (s.streak || 0) + 1; streakEv.freezeUsed = true; }
+    else { s.streak = 1; }
+    if (cfg.STREAK_FREEZE_EARN_EVERY > 0 && s.streak % cfg.STREAK_FREEZE_EARN_EVERY === 0 && (s.freezes || 0) < cfg.STREAK_FREEZE_MAX) {
+      s.freezes = (s.freezes || 0) + 1; streakEv.freezeEarned = 1;
+    }
+    s.lastPlay = today;
+  }
+  rgSaveStreak(s);
+  return { state: s, events: streakEv };
+}
+
+// bump challenge ตอนจบรอบ
+function rgChallengeBump(maxCombo, isPerfect) {
+  var pack = rgChallengeState(), ch = pack.ch, st = pack.st;
+  if (st.done) { rgSaveChallenge(st); return; }
+  var add = 0;
+  if (ch.type === 'correct') add = cleanC;
+  else if (ch.type === 'sets') add = 1;
+  else if (ch.type === 'perfect') add = isPerfect ? 1 : 0;
+  else if (ch.type === 'combo') add = (maxCombo || 0) >= ch.target ? ch.target : 0;
+  if (ch.type === 'combo') st.progress = Math.max(st.progress, add);
+  else st.progress += add;
+  if (st.progress >= ch.target && !st.done) {
+    st.done = true;
+    rgToast('🎉 完成本週挑戰：' + ch.title + '！');
+  }
+  rgSaveChallenge(st);
+}
+
+// render challenge banner + streak chips
+function rgRenderGameBar() {
+  var cp = rgChallengeState(), st = rgLoadStreak();
+  var pct = Math.min(100, Math.round(cp.st.progress / cp.ch.target * 100));
+  var daysLeft = Math.max(0, Math.ceil((rgWeekEndMs() - Date.now()) / 86400000));
+  var alive = st.streak > 0 && (st.lastPlay === rgTodayStr() || (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })() === st.lastPlay);
+  var ban = document.getElementById('rg-challenge-banner');
+  if (ban) ban.innerHTML =
+    '<div class="tf-challenge-banner' + (cp.st.done ? ' done' : '') + '">' +
+      '<div class="tf-ch-top">' +
+        '<span class="tf-ch-emoji">' + cp.ch.emoji + '</span>' +
+        '<span class="tf-ch-title">本週挑戰：' + cp.ch.title + (cp.st.done ? ' ✅ 完成！' : '') + '</span>' +
+        '<span class="tf-ch-left">⏳ ' + daysLeft + ' 天</span>' +
+      '</div>' +
+      '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:' + pct + '%;"></div></div>' +
+      '<div class="tf-ch-sub">' + cp.ch.sub + '　' + cp.st.progress + ' / ' + cp.ch.target + '</div>' +
+    '</div>';
+  var sb = document.getElementById('rg-streak-bar');
+  if (sb) sb.innerHTML =
+    '<span class="tf-streak-chip">🔥 連續 ' + (alive ? (st.streak || 0) : 0) + ' 天</span>' +
+    '<span class="tf-streak-chip">🛡️ ×' + (st.freezes || 0) + '</span>';
+}
+
+function rgToast(msg) {
+  try {
+    var old = document.getElementById('rg-toast-el'); if (old) old.remove();
+    var d = document.createElement('div');
+    d.id = 'rg-toast-el'; d.className = 'rg-toast';
+    d.textContent = msg;
+    document.body.appendChild(d);
+    requestAnimationFrame(function(){ d.classList.add('show'); });
+    setTimeout(function(){ d.classList.remove('show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 350); }, 2800);
+  } catch(e) {}
+}
+
 loadSave();
 initGame();
+try { rgRenderGameBar(); } catch(e){}
 
 // ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──
 function rgToggleFont() {

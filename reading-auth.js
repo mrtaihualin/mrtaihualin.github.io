@@ -34,12 +34,23 @@
         'box-shadow:0 2px 8px rgba(139,99,16,0.12);font-family:\'Noto Sans TC\',sans-serif;">' +
         '<span style="font-size:15px;flex-shrink:0;">👤</span>' +
         '<span style="color:#5C4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName) + '</span>' +
+        '<button id="rg-edit-nick" title="編輯名稱" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>' +
         '<a href="reading-board.html" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
+        '<a href="my-progress.html" title="進度" style="text-decoration:none;font-size:13px;">📊</a>' +
         '<button id="rg-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
         'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;">登出</button>' +
         '</div>';
       var lo = document.getElementById('rg-logout');
       if (lo) lo.onclick = function () { try { sb.auth.signOut().then(function () { setUser(null); }); } catch (e) {} };
+      var en = document.getElementById('rg-edit-nick');
+      if (en) en.onclick = function () {
+        var n = prompt('輸入顯示名稱（會出現在排行榜）', _nick || '');
+        if (n === null) return;
+        n = n.trim().slice(0, 20);
+        if (!n) return;
+        _nick = n; render();
+        try { sb.from('profiles').upsert({ id: API.user.id, nickname: n }, { onConflict: 'id' }).then(function(){},function(){}); } catch(e){}
+      };
     } else {
       el.innerHTML =
         '<button id="rg-login-btn" style="display:flex;align-items:center;gap:6px;' +
@@ -54,7 +65,7 @@
 
   function doLogin() {
     if (isInApp()) {
-      alert('在 App 內請至「聲調遊戲」用 Email 登入連結登入，登入後回來即可（同一帳號）');
+      alert('在 App 內請至「聲調遊戲」用 Email 驗證碼登入，登入後回來即可（同一帳號）');
       location.href = 'tone-finder.html';
       return;
     }

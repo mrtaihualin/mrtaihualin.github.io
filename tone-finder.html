@@ -1917,6 +1917,17 @@
     <button class="tf-tool-btn" onclick="TF.openAsk()" title="เล่นแล้วมีคำถาม ถามได้เลย">❓ 我有問題</button>
   </div>
 
+  <div id="tf-challenge-banner"></div>
+  <div class="tf-home-streak" id="tf-streak-bar-ext"></div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:640px;margin:0 0 10px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;" id="tf-meta-row">
+    <div>⭐ <span style="font-weight:700;color:#d9a400;" id="tf-star-count">0</span> 顆星</div>
+    <div style="cursor:pointer;display:flex;align-items:center;gap:4px;transition:transform .12s;" onclick="TF.showBadges()" id="tf-badge-row">
+      <span style="font-size:22px;" id="tf-badge-emoji">🌱</span>
+      <span id="tf-badge-count">0</span> 枚勳章
+    </div>
+  </div>
+
   <div class="tf-card">
     <div class="tf-word-banner" id="tf-banner"></div>
     <div class="tf-bc" id="tf-bc"></div>
@@ -3584,6 +3595,8 @@ function tfApplySessionBonus() {
   // ชาเลนจ์รายสัปดาห์: บวกความคืบหน้า — LIN 2026-06-20
   try { tfChallengeBump(session); } catch (e) {}
   session.sessionScored = true;
+  // อัปเดตแถบนอก tf-card (challenge + streak + ⭐/🌱)
+  try { tfRenderExtBar(); } catch (e) {}
   // ซิงก์ความก้าวหน้าขึ้น Supabase (ถ้าล็อกอิน) — LIN 2026-06-20
   try { if (window.TF_SYNC) window.TF_SYNC.push(); } catch (e) {}
   try { if (window.TF_AUTH && window.TF_AUTH.syncAccount) window.TF_AUTH.syncAccount(); } catch (e) {}   // เฟส 2: sync ดาว/streak รวมขึ้นบัญชี
@@ -4588,38 +4601,14 @@ function stepLevelSelect() {
     { id:1, emoji:'🌱', label:'初級', sub:'單音節・聲調基礎' },
     { id:2, emoji:'🌿', label:'中級', sub:'多音節・日常用語' },
   ];
-  // แถบสตรีค + แบดจ์ (สเตจ 2/3)
-  var st = tfLoadStreak();
-  var alive = TF_STREAK.isAlive(st, todayStr());
-  var bdCount = Object.keys((tfLoadBadges().unlocked) || {}).length;
-  var streakBar =
-    '<div class="tf-home-streak">' +
-      '<span class="tf-streak-chip">🔥 連續 ' + (alive ? (st.streak || 0) : 0) + ' 天</span>' +
-      '<span class="tf-streak-chip">🛡️ ×' + (st.freezes || 0) + '</span>' +
-      '<button class="tf-streak-chip tf-badge-link" onclick="TF.showBadges()">🎖️ 我的徽章 ' + bdCount + '/' + TF_BADGES_DEF.length + '</button>' +
-    '</div>';
   // แบนเนอร์เขียว "เล่นฟรี" หน้าเลือกระดับ (โชว์เฉพาะตอนยังไม่ปลดล็อก) — LIN 2026-06-20
   var _loggedIn = !!(window.TF_AUTH && ((window.TF_AUTH.hasAccess && window.TF_AUTH.hasAccess()) || (window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn())));
   var _freeLeft = Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed());
   var freeBanner = _loggedIn ? '' :
     '<div class="tf-free-banner">🎉 <b>免費試玩中</b>・無需登入！還能玩 ' + _freeLeft + ' 回合</div>';
-  // แบนเนอร์ชาเลนจ์รายสัปดาห์ — LIN 2026-06-20
-  var _cp = tfChallengeState();
-  var _pct = Math.min(100, Math.round(_cp.st.progress / _cp.ch.target * 100));
-  var _daysLeft = Math.max(0, Math.ceil((tfWeekEndMs() - Date.now()) / 86400000));
-  var challengeBanner =
-    '<div class="tf-challenge-banner' + (_cp.st.done ? ' done' : '') + '">' +
-      '<div class="tf-ch-top"><span class="tf-ch-emoji">' + _cp.ch.emoji + '</span>' +
-        '<span class="tf-ch-title">本週挑戰：' + _cp.ch.title + (_cp.st.done ? ' ✅ 完成！' : '') + '</span>' +
-        '<span class="tf-ch-left">⏳ ' + _daysLeft + ' 天</span></div>' +
-      '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:' + _pct + '%;"></div></div>' +
-      '<div class="tf-ch-sub">' + _cp.ch.sub + '　' + _cp.st.progress + ' / ' + _cp.ch.target + '</div>' +
-    '</div>';
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">選擇等級</div>' +
     freeBanner +
-    challengeBanner +
-    streakBar +
     '<button class="tf-level-btn tf-alpha-entry" onclick="TF.openAlpha()">' +
       '<span class="tf-level-emoji">🔤</span>' +
       '<span class="tf-level-label">字母練習區</span>' +
@@ -6338,7 +6327,44 @@ try {
     if (_fb) { _fb.classList.add('active'); _fb.textContent = '🔤 換回標準字體'; }
   }
 } catch(e){}
+// ── render challenge banner + streak chips + ⭐/🌱 ในแถบนอก tf-card ──
+function tfRenderExtBar() {
+  try {
+    // challenge banner
+    var cp = tfChallengeState();
+    var pct = Math.min(100, Math.round(cp.st.progress / cp.ch.target * 100));
+    var daysLeft = Math.max(0, Math.ceil((tfWeekEndMs() - Date.now()) / 86400000));
+    var ban = document.getElementById('tf-challenge-banner');
+    if (ban) ban.innerHTML =
+      '<div class="tf-challenge-banner' + (cp.st.done ? ' done' : '') + '" style="margin-bottom:0;">' +
+        '<div class="tf-ch-top"><span class="tf-ch-emoji">' + cp.ch.emoji + '</span>' +
+          '<span class="tf-ch-title">本週挑戰：' + cp.ch.title + (cp.st.done ? ' ✅ 完成！' : '') + '</span>' +
+          '<span class="tf-ch-left">⏳ ' + daysLeft + ' 天</span></div>' +
+        '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:' + pct + '%;"></div></div>' +
+        '<div class="tf-ch-sub">' + cp.ch.sub + '　' + cp.st.progress + ' / ' + cp.ch.target + '</div>' +
+      '</div>';
+    // streak chips
+    var st = tfLoadStreak();
+    var alive = TF_STREAK.isAlive(st, todayStr());
+    var sb = document.getElementById('tf-streak-bar-ext');
+    if (sb) sb.innerHTML =
+      '<span class="tf-streak-chip">🔥 連續 ' + (alive ? (st.streak || 0) : 0) + ' 天</span>' +
+      '<span class="tf-streak-chip">🛡️ ×' + (st.freezes || 0) + '</span>';
+    // ⭐ ดาว + 🌱 แบดจ์
+    var stars = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0;
+    var badges = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.earnedBadges() : [];
+    var sc = document.getElementById('tf-star-count'); if (sc) sc.textContent = stars;
+    var bc = document.getElementById('tf-badge-count'); if (bc) bc.textContent = badges.length;
+    var be = document.getElementById('tf-badge-emoji');
+    if (be) {
+      var lastBadge = badges.length ? badges[badges.length - 1] : null;
+      be.textContent = lastBadge ? (lastBadge.emoji || '🌱') : '🌱';
+    }
+  } catch(e) {}
+}
+
 render();
+setTimeout(tfRenderExtBar, 0);
 </script>
 
 <div style="height:44px;background:#0A0804;"></div>
