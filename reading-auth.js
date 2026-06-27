@@ -182,6 +182,7 @@
   function setUser(u) {
     API.user = u || null;
     _nick = null;
+    if (API.user) closeGate();   // เพิ่งล็อกอินสำเร็จ → ปิด modal
     render();
     if (API.user) {
       fetchNick(API.user.id);
