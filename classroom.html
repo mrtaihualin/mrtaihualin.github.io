@@ -448,6 +448,19 @@
   <img id="slipViewerImg" src="" alt="slip" />
 </div>
 
+<!-- ======= 忘了錄影提醒 ======= -->
+<div class="modal-overlay" id="recReminderOverlay">
+  <div class="modal" style="max-width:380px;text-align:center;">
+    <div style="font-size:2.2rem;margin-bottom:6px;">🔴</div>
+    <h3 style="color:#dc2626;">還沒開始錄影喔！</h3>
+    <p style="margin-bottom:20px;">已進入課堂，但還沒按「開始錄影」。要現在開始錄這堂課嗎？</p>
+    <div class="modal-footer" style="justify-content:center;">
+      <button class="btn-ghost" onclick="recReminderDismiss()">這次不錄</button>
+      <button class="btn-start-class" style="width:auto;margin-bottom:0;background:linear-gradient(135deg,#dc2626,#b91c1c);padding:9px 18px;" onclick="recReminderStartNow()">🔴 現在開始錄影</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= STUDENT: SLIP SUBMISSION MODAL ======= -->
 <div class="modal-overlay" id="slipModal">
   <div class="modal" style="max-width:480px;">
@@ -2573,6 +2586,7 @@ function startSegment(stream){
   recMR.onstop=()=>finalizeSegment();
   recMR.start(1000);
   recState='recording';
+  clearTimeout(recReminderID); hideRecReminder();   // 已開始錄影 → 取消提醒
   recStartTime=Date.now();
   recToggleStartBtns(true);
   document.getElementById('recStopBtn').disabled=false;
