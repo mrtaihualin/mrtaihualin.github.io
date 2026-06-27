@@ -1118,7 +1118,8 @@ function selectStudent(token) {
       '<div class="stu-acc-avatar">' + initial + '</div>' +
       '<span class="stu-panel-name">' + s.name + '</span>' +
     '</div>' +
-    '<button class="btn-start-class" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
+    '<button class="btn-start-class" onclick="window.open(\'' + (s.meet || '').replace(/'/g, "\\'") + '\',\'_blank\',\'noopener\')">▶️ 進入課堂（Google Meet）</button>' +
+    '<button class="btn-start-class" style="background:linear-gradient(135deg,#3a8f6f,#2d6a4f);" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
     '<div class="stu-acc-actions">' +
       '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
