@@ -21,7 +21,7 @@
 // ===================================================================
 var ANN = [
   { emoji:'📡', text:'每週六 19:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
-  { emoji:'📝', text:'拼音規則練習區上線！可免費領「泰語聲調速查表」', cta:'前往練習', href:'tone-finder.html' },
+  { emoji:'🎮', text:'免費泰語小遊戲上線！聲調・拼讀・造句，邊玩邊學', cta:'前往遊戲', href:'games.html' },
   // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
   { emoji:'🚀', text:'全新「造句遊戲」即將推出，敬請期待！', cta:'追蹤我們', modal:'modal-sns' }
 ];

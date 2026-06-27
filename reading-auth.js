@@ -38,7 +38,7 @@
 
   function doLogin() {
     if (isInApp()) {
-      alert('在 App 內請至「聲調遊戲」用 Email 驗證碼登入，登入後回來即可（同一帳號）');
+      alert('在 App 內請至「聲調遊戲」用 Email 登入連結登入，登入後回來即可（同一帳號）');
       location.href = 'tone-finder.html';
       return;
     }

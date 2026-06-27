@@ -187,40 +187,23 @@
     return null;
   }
 
-  // ── ขอรหัส OTP 6 หลัก (passwordless · ไม่ส่งลิงก์เพราะไม่ใส่ emailRedirectTo) LIN 2026-06-26 ──
+  // ── ส่ง Magic Link (Supabase ส่งลิงก์ในเมล ผู้ใช้คลิกแล้วกลับมาล็อกอินอัตโนมัติ) LIN 2026-06-27 ──
   function doStartOtp(email, isResend) {
     email = (email || '').trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setOtpMsg('Email 格式不正確', true); return; }
     otpEmail = email;
     setOtpMsg('寄送中…⏳', false);
     try { window.gtag('event', 'login_otp_start', { resend: !!isResend }); } catch (e) {}
-    sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } })
+    var redirectTo = location.origin + location.pathname;
+    sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true, emailRedirectTo: redirectTo } })
       .then(function (res) {
         if (res.error) {
           setOtpMsg('寄送失敗：' + res.error.message, true);
           try { window.gtag('event', 'login_fail', { stage: 'otp_send', msg: res.error.message }); } catch (e) {}
           return;
         }
-        showOtpStep2();              // โชว์ช่องกรอกรหัส + เริ่มนับถอยหลัง
-        setOtpMsg('驗證碼已寄到 ' + esc(email) + '，請查看信箱（含垃圾信匣）', false);
-      });
-  }
-
-  // ── ยืนยันรหัส → กลายเป็นบัญชี verified (onAuthStateChange จะปิด gate ให้เอง) ──
-  function doVerifyOtp(code) {
-    code = (code || '').trim();
-    if (!/^\d{6}$/.test(code)) { setOtpMsg('請輸入 6 位數字', true); return; }
-    setOtpMsg('驗證中…⏳', false);
-    sb.auth.verifyOtp({ email: otpEmail, token: code, type: 'email' })
-      .then(function (res) {
-        if (res.error) {
-          setOtpMsg('驗證碼錯誤或已過期，請重新輸入', true);
-          try { window.gtag('event', 'login_fail', { stage: 'otp_verify' }); } catch (e) {}
-          return;
-        }
-        try { window.gtag('event', 'otp_success', {}); } catch (e) {}
-        markLeadCaptured();          // verified แล้ว = มีสิทธิ์เล่นต่อด้วย (กันโดนกำแพงซ้ำ)
-        // currentUser ถูกตั้งโดย onAuthStateChange → render() ปิด gate + ดึงโปรไฟล์
+        showOtpStep2();   // โชว์ข้อความรอคลิกลิงก์
+        setOtpMsg('登入連結已寄到 ' + esc(email) + '，請點擊信中的連結即可登入（含垃圾信匣）', false);
       });
   }
 
@@ -233,15 +216,15 @@
     el.innerHTML = msg;
   }
 
-  // เผยช่องกรอกรหัส + เริ่มนับถอยหลังปุ่มส่งอีกครั้ง 60 วิ
+  // โชว์ข้อความ "รอคลิกลิงก์ในเมล" + เริ่มนับถอยหลังปุ่มส่งอีกครั้ง 60 วิ
   function showOtpStep2() {
     var step2 = gate && gate.querySelector('#tf-otp-step2');
     if (step2) step2.style.display = 'block';
     var sendBtn = gate && gate.querySelector('#tf-otp-send');
     if (sendBtn) sendBtn.style.display = 'none';
+    var emailInput = gate && gate.querySelector('#tf-otp-email');
+    if (emailInput) emailInput.disabled = true;
     startOtpCooldown();
-    var codeInput = gate && gate.querySelector('#tf-otp-code');
-    if (codeInput) codeInput.focus();
   }
 
   function startOtpCooldown() {
@@ -257,7 +240,7 @@
       } else {
         clearInterval(otpTimer); otpTimer = null;
         b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer';
-        b.textContent = '重新寄送驗證碼';
+        b.textContent = '重新寄送登入連結';
       }
     }
     tick();
@@ -317,15 +300,15 @@
         '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入排行榜</h2>' +
         '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">登入後分數<b>同步保存</b>、上<b>排行榜</b>，換手機也記得你！</p>' +
         '<input id="tf-otp-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
-        '<button id="tf-otp-send" style="margin-top:10px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">寄送驗證碼 →</button>' +
-        '<div id="tf-otp-step2" style="display:none;margin-top:12px;">' +
-          '<input id="tf-otp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="輸入 6 位數驗證碼" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:18px;letter-spacing:4px;text-align:center;color:#5C4410;outline:none;">' +
-          '<button id="tf-otp-verify" style="margin-top:10px;width:100%;border:none;background:#2E7D4F;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">確認登入</button>' +
-          '<button id="tf-otp-resend" style="margin-top:8px;width:100%;border:1px solid #E5D9B8;background:#fff;color:#8B7340;border-radius:10px;padding:9px;cursor:pointer;font-size:13px;">重新寄送驗證碼</button>' +
+        '<button id="tf-otp-send" style="margin-top:10px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">寄送登入連結 →</button>' +
+        '<div id="tf-otp-step2" style="display:none;margin-top:14px;background:#F0FAF4;border:1.5px solid #A8D5B5;border-radius:12px;padding:14px 16px;text-align:left;">' +
+          '<p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#2E7D4F;">📬 登入連結已寄出！</p>' +
+          '<p style="margin:0 0 10px;font-size:13px;color:#4A7A5A;line-height:1.6;">請開啟信箱，點擊「<b>Sign in</b>」連結即可自動登入。<br><span style="font-size:12px;color:#6B8A73;">連結只能用一次，過期請重新寄送</span></p>' +
+          '<button id="tf-otp-resend" style="width:100%;border:1px solid #A8D5B5;background:#fff;color:#2E7D4F;border-radius:10px;padding:9px;cursor:pointer;font-size:13px;font-weight:600;">重新寄送 (60)</button>' +
         '</div>' +
         '<div id="tf-otp-msg" style="display:none;font-size:12.5px;margin:10px 0 0;text-align:left;line-height:1.5;"></div>' +
         (inApp
-          ? '<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內就用上面的 <b>Email 驗證碼</b>登入即可（Google 在 App 內無法使用）</div>'
+          ? '<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內請用 <b>Email 登入連結</b>（Google 在 App 內無法使用）</div>'
           : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' + googleBtnHTML('tf-google'))) +
         '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回</p>' +
         '</div>';
@@ -334,10 +317,6 @@
       var _sBtn = gate.querySelector('#tf-otp-send');
       if (_sBtn) _sBtn.onclick = function () { doStartOtp(_se.value, false); };
       if (_se) _se.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') doStartOtp(_se.value, false); });
-      var _ci = gate.querySelector('#tf-otp-code');
-      var _vBtn = gate.querySelector('#tf-otp-verify');
-      if (_vBtn) _vBtn.onclick = function () { doVerifyOtp(_ci.value); };
-      if (_ci) _ci.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') doVerifyOtp(_ci.value); });
       var _rBtn = gate.querySelector('#tf-otp-resend');
       if (_rBtn) _rBtn.onclick = function () { if (otpCooldown <= 0) doStartOtp(otpEmail || _se.value, true); };
       if (!inApp) { var _g = gate.querySelector('#tf-google'); if (_g) _g.onclick = doGoogleLogin; }
