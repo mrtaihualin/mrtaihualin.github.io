@@ -97,7 +97,7 @@
 <div id="share-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;" onclick="closeSharePopup()"></div>
 <div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(200,151,58,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
   <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
-  <textarea id="share-text-area" readonly rows="7" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.85);font-family:'Noto Sans TC',sans-serif;font-size:13px;line-height:1.8;padding:12px 14px;resize:none;outline:none;box-sizing:border-box;"></textarea>
+  <textarea id="share-text-area" aria-label="分享文字內容" readonly rows="7" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.85);font-family:'Noto Sans TC',sans-serif;font-size:13px;line-height:1.8;padding:12px 14px;resize:none;outline:none;box-sizing:border-box;"></textarea>
   <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:rgba(255,255,255,0.25);margin:8px 0 14px;">⚠️ 請勿刪除連結，分享時請保留完整內容，感謝您🙏</div>
   <div style="display:flex;gap:8px;">
     <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">一鍵複製</button>
@@ -252,7 +252,7 @@
         <p style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--ink);margin:0;line-height:1.35;">免費領取「泰語聲調速查表」</p>
         <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-soft,#666);margin:0;line-height:1.7;">一張表搞懂五個聲調判斷規則</p>
         <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-          <input id="hm-email" type="email" placeholder="輸入你的 Email" style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:12px 14px;border:1.5px solid var(--gold-bright);border-radius:8px;background:var(--off-white,#F9F3E6);color:var(--ink);box-sizing:border-box;">
+          <input id="hm-email" type="email" aria-label="輸入你的 Email 領取聲調速查表" placeholder="輸入你的 Email" style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:12px 14px;border:1.5px solid var(--gold-bright);border-radius:8px;background:var(--off-white,#F9F3E6);color:var(--ink);box-sizing:border-box;">
           <button onclick="submitHomeFreebie()" style="background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 20px;border:none;border-radius:8px;letter-spacing:1px;cursor:pointer;box-shadow:0 4px 14px rgba(139,99,16,0.30);">免費下載 →</button>
         </div>
         <span id="hm-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;"></span>

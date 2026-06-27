@@ -119,8 +119,10 @@
 
   async function fetchMyNick() {
     if (!currentUser) { myNick = null; return; }
-    var res = await sb.from('profiles').select('nickname').eq('user_id', currentUser.id).maybeSingle();
-    myNick = (res.data && res.data.nickname) || null;
+    try {
+      var res = await sb.from('profiles').select('nickname').eq('user_id', currentUser.id).maybeSingle();
+      myNick = (res.data && res.data.nickname) || null;
+    } catch (e) { myNick = null; }
   }
 
   // ── โหลด + แสดงกระดาน ───────────────────────────────────────
@@ -159,7 +161,15 @@
     root.innerHTML = tabs() + nickBar() + box('⏳', '載入中...', '請稍候');
     wireTabs();
     var fn = (period === 'week') ? 'leaderboard_weekly' : 'leaderboard_alltime';
-    var res = await sb.rpc(fn);
+    var res;
+    try {
+      res = await sb.rpc(fn);
+    } catch (e) {
+      root.innerHTML = tabs() + nickBar() +
+        box('📡', '連線失敗', '無法連上伺服器，請檢查網路後重新整理');
+      wireTabs();
+      return;
+    }
     if (res.error) {
       root.innerHTML = tabs() + nickBar() +
         box('⚠️', '排行榜載入失敗', esc(res.error.message) +
@@ -218,9 +228,11 @@
 
   // ── init ───────────────────────────────────────────────────
   async function boot() {
-    var s = await sb.auth.getSession();
-    currentUser = (s.data && s.data.session && s.data.session.user) || null;
-    await fetchMyNick();
+    try {
+      var s = await sb.auth.getSession();
+      currentUser = (s.data && s.data.session && s.data.session.user) || null;
+      await fetchMyNick();
+    } catch (e) { currentUser = null; }
     load();
   }
   sb.auth.onAuthStateChange(function (_e, session) {

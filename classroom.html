@@ -943,6 +943,10 @@ const urlParams = new URLSearchParams(window.location.search);
 const studentToken = urlParams.get('s');
 const isTeacher = !studentToken;
 
+// --- security helpers: escape HTML + whitelist URL scheme (กัน XSS) ---
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function safeHref(u){var s=String(u==null?'':u).trim();return /^https:\/\//i.test(s)?s:'#';}
+
 // ============================================================
 // ADD STUDENT MODAL
 // ============================================================
@@ -1222,7 +1226,7 @@ async function saveNote(token) {
     try { await gdShareAnyone(doc.id); } catch(e) {}
     try { await saveRecordingLink(token, fileName + '（筆記）', doc.id, link, '', null); } catch(e) {}
     if (statusEl) {
-      statusEl.innerHTML = '✅ 已儲存為 Google 文件　<a href="' + link + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;">開啟</a>';
+      statusEl.innerHTML = '✅ 已儲存為 Google 文件　<a href="' + escHtml(safeHref(link)) + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;">開啟</a>';
     }
   } catch(e) {
     if (statusEl) statusEl.textContent = '⚠️ ' + e.message;
@@ -1327,15 +1331,15 @@ function renderStudentView() {
   const token = urlParams.get('s') || '';
   document.getElementById('mainContainer').innerHTML =
     '<div class="student-hero">' +
-      '<div class="student-hero-avatar">' + sInitial + '</div>' +
-      '<div class="student-hero-name">' + student.name + ' 同學</div>' +
+      '<div class="student-hero-avatar">' + escHtml(sInitial) + '</div>' +
+      '<div class="student-hero-name">' + escHtml(student.name) + ' 同學</div>' +
       '<div class="student-hero-sub">歡迎回到課堂 ✨</div>' +
     '</div>' +
     '<div id="quotaBanner"></div>' +
     '<div id="receiptBtns"></div>' +
     '<div class="card">' +
       '<h2>📹 進入課堂</h2>' +
-      '<a class="meet-btn" href="' + student.meet + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
+      '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
       '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>' +
     '</div>' +
     '<div class="card">' +
@@ -1420,7 +1424,7 @@ async function loadStudentReceipts(token) {
       var safeUrl = (r.url || '').replace(/'/g, "\\'");
       return '<div style="display:flex;align-items:center;gap:10px;background:#dcfce7;border:1px solid #86efac;border-radius:11px;padding:11px 14px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;">' +
         '<span style="font-size:1.2rem;">🧾</span>' +
-        '<a href="' + r.url + '" target="_blank" rel="noopener" style="flex:1;color:#15803d;font-weight:700;font-size:0.88rem;text-decoration:none;">收據已開立，點此下載</a>' +
+        '<a href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener" style="flex:1;color:#15803d;font-weight:700;font-size:0.88rem;text-decoration:none;">收據已開立，點此下載</a>' +
         '<button onclick="dismissReceipt(\'' + token + '\',\'' + safeUrl + '\',this)" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.05rem;color:#15803d;opacity:0.6;padding:2px 6px;">✕</button>' +
       '</div>';
     }).join('');
@@ -1534,7 +1538,7 @@ async function loadStudentFiles(token) {
       return '<div class="drive-file-row">' +
         '<span class="drive-file-icon">' + icon + '</span>' +
         '<span class="drive-file-name">' + label + '</span>' +
-        '<a class="drive-file-dl" href="' + r.url + '" target="_blank" rel="noopener">⬇ 下載</a>' +
+        '<a class="drive-file-dl" href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener">⬇ 下載</a>' +
         '<button onclick="deleteStudentFile(\'' + token + '\',\'' + safeUrl + '\',this)" title="從清單移除" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;margin-left:4px;opacity:0.55;">🗑</button>' +
       '</div>';
     }).join('');
@@ -1562,7 +1566,7 @@ async function loadStudentFolderLink(token) {
   try {
     const { data, error } = await sb.rpc('get_student_folder', { p_token: token });
     if (error || !data) { el.innerHTML = ''; return; }
-    el.innerHTML = '<a class="meet-btn" href="' + data + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));">📁 開啟我的 Google Drive 資料夾</a>' +
+    el.innerHTML = '<a class="meet-btn" href="' + escHtml(safeHref(data)) + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));">📁 開啟我的 Google Drive 資料夾</a>' +
       '<p class="meet-link-text" style="margin-top:6px;">這裡有老師上傳的所有課堂資料</p>';
   } catch(e) { el.innerHTML = ''; }
 }
@@ -1578,7 +1582,7 @@ async function loadStudentRecordings(token){
   list.innerHTML=data.map(function(r){
     var d=r.created_at? new Date(r.created_at).toLocaleString('zh-TW',{dateStyle:'medium',timeStyle:'short'}) : '';
     var sz=r.size_mb? ('（'+r.size_mb+' MB）') : '';
-    return '<a class="meet-btn" style="margin-bottom:8px;" href="'+r.url+'" target="_blank" rel="noopener">▶️ '+d+' 的課堂錄影 '+sz+'</a>';
+    return '<a class="meet-btn" style="margin-bottom:8px;" href="'+escHtml(safeHref(r.url))+'" target="_blank" rel="noopener">▶️ '+escHtml(d)+' 的課堂錄影 '+escHtml(sz)+'</a>';
   }).join('');
   card.style.display='';
 }
@@ -2649,7 +2653,7 @@ async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl
     const link=up.webViewLink||('https://drive.google.com/file/d/'+up.id+'/view');
     await saveRecordingLink(token, s.name||token, up.id, link, sizeMB, part);
     try { await ensureStudentFolderShared(s.name||token, token); } catch(e) {}
-    if(statusEl) statusEl.innerHTML='✅ 已上傳到「'+(s.name||token)+'」雲端資料夾　<a href="'+link+'" target="_blank" rel="noopener" style="color:var(--amber-dark);font-weight:700;">開啟</a>';
+    if(statusEl) statusEl.innerHTML='✅ 已上傳到「'+escHtml(s.name||token)+'」雲端資料夾　<a href="'+escHtml(safeHref(link))+'" target="_blank" rel="noopener" style="color:var(--amber-dark);font-weight:700;">開啟</a>';
   }catch(err){
     setMsg('⚠️ 自動上傳失敗：'+(err.message||err)+'（已保留上方下載按鈕，可手動存檔）');
   }
