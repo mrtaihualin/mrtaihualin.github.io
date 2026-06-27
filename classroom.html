@@ -199,7 +199,7 @@
   /* Modal */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,28,0.6); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
   .modal-overlay.open { display: flex; }
-  .modal { background: var(--cream); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; max-width: 420px; width: 100%; animation: slideUp 0.2s ease; box-shadow: 0 8px 40px rgba(139,99,16,0.15); }
+  .modal { background: var(--cream); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; max-width: 420px; width: 100%; max-height: calc(100vh - 32px); overflow-y: auto; animation: slideUp 0.2s ease; box-shadow: 0 8px 40px rgba(139,99,16,0.15); -webkit-overflow-scrolling: touch; }
   @keyframes slideUp { from{transform:translateY(20px);opacity:0;} to{transform:translateY(0);opacity:1;} }
   .modal h3 { font-size: 1.1rem; font-weight: 900; margin-bottom: 8px; color: var(--gold-deep); }
   .modal p  { color: var(--ink-muted); font-size: 0.87rem; line-height: 1.7; margin-bottom: 18px; font-family: 'Noto Sans TC', sans-serif; }
@@ -2066,7 +2066,7 @@ async function submitPayment() {
   const total = lessons * pricePer;
   const btn = document.getElementById('paySubmitBtn');
   btn.disabled = true; btn.textContent = '儲存中…';
-  const { error } = await sb.from('classroom_payments').insert({
+  const ins = await sb.from('classroom_payments').insert({
     token: payToken,
     student_name: s ? s.name : payToken,
     course_id: paySelectedCourse,
@@ -2080,14 +2080,23 @@ async function submitPayment() {
     start_date: start || null,
     note: note || null,
     status: 'pending'
-  });
+  }).select().single();
+  if (ins.error) { btn.disabled = false; btn.textContent = '確認收費'; alert('儲存失敗：' + ins.error.message); return; }
+  const row = ins.data;
+  // 用既有的收據系統產生收據 → 存進該學生「課表 & 收據」資料夾，並讓學生頁出現下載鈕
+  btn.textContent = '產生收據中…';
+  var receipt = null;
+  try {
+    receipt = await generateAndUploadReceipt(row, { cur: cur, pp: pricePer, ls: lessons, bn: bonus, start: start });
+    if (receipt) await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo, status: 'done' }).eq('id', row.id);
+  } catch (e) { console.warn('收據產生失敗：', e); }
   btn.disabled = false; btn.textContent = '確認收費';
-  if (error) { alert('儲存失敗：' + error.message); return; }
   var tkRefresh = payToken;
   closePaymentModal();
   if (typeof loadLowQuotaBanner === 'function') loadLowQuotaBanner();
   if (typeof loadTeacherStudentInfo === 'function' && tkRefresh) loadTeacherStudentInfo(tkRefresh);
-  alert('✅ 已記錄！\n' + (s ? s.name : '') + ' · ' + courseLabel + ' · ' + cur + ' ' + total.toLocaleString() + '\n\n收據將由系統自動產生（稍後處理）');
+  alert('✅ 已記錄！\n' + (s ? s.name : '') + ' · ' + courseLabel + ' · ' + cur + ' ' + total.toLocaleString()
+    + (receipt ? '\n\n🧾 收據已存到學生「課表 & 收據」資料夾\n編號：' + receipt.receiptNo : '\n\n（收據產生失敗，請確認已用 Google 登入授權後再試）'));
 }
 
 // ============================================================
