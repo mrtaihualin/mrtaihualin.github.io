@@ -1044,21 +1044,18 @@ function previewStudent(token) {
 // ============================================================
 // RENDER
 // ============================================================
+// 錄音控制面板（無大標題；按「進入課堂」後才顯示，含停止鈕／狀態／上傳結果）
 function recordingHTML() {
-  return ''; // 課堂錄製功能已移除（不再使用）
-}
-function _recordingHTML_unused() {
   return '<div class="card" id="recCard" style="margin-top:16px;display:none;">' +
-    '<h2>⏺ 課堂錄製</h2>' +
-    '<p class="rec-hint" style="color:var(--ink-muted);">🎥 一鍵錄製畫面＋師生雙聲。按下後在跳出視窗請選「<b>整個畫面</b>」並勾「<b>分享系統音訊</b>」即可（之後會自動開啟 Meet 並開始錄影）。錄完自動上傳到該學生的 Drive 資料夾。</p>' +
     '<div class="rec-card-gold">' +
       '<div class="rec-card-header">' +
         '<span class="rec-card-icon">⏺</span>' +
-        '<span class="rec-card-title" id="recCardTitle" style="font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.95rem;color:var(--ink-soft);">課堂錄製</span>' +
+        '<span class="rec-card-title" id="recCardTitle" style="font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.95rem;color:var(--ink-soft);">課堂錄影</span>' +
         '<span class="timer" id="recTimer"></span>' +
       '</div>' +
+      '<p class="rec-hint" style="color:var(--ink-muted);font-size:0.78rem;margin:6px 0;">跳出視窗請選「<b>整個畫面</b>」並勾「<b>分享系統音訊</b>」才錄得到畫面＋師生雙聲。停止後自動上傳到該學生 Drive。</p>' +
       '<div style="display:flex;gap:8px;">' +
-        '<button class="btn-rec-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止</button>' +
+        '<button class="btn-rec-stop" id="recStopBtn" onclick="stopRecording()" disabled>⏹ 停止錄影</button>' +
       '</div>' +
       '<div class="status" id="recStatus"></div>' +
       '<div class="audio-section" id="recOutSection">' +
@@ -1118,14 +1115,14 @@ function selectStudent(token) {
       '<div class="stu-acc-avatar">' + initial + '</div>' +
       '<span class="stu-panel-name">' + s.name + '</span>' +
     '</div>' +
-    '<button class="btn-start-class" onclick="window.open(\'' + (s.meet || '').replace(/'/g, "\\'") + '\',\'_blank\',\'noopener\')">▶️ 進入課堂（Google Meet）</button>' +
-    '<button class="btn-start-class" style="background:linear-gradient(135deg,#3a8f6f,#2d6a4f);" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
+    '<button class="btn-start-class" onclick="startClassRec(\'' + t + '\')">▶️ 進入課堂＋錄影（Google Meet）</button>' +
+    '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
     '<div class="stu-acc-actions">' +
       '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
       '<button class="btn-sm btn-sm-copy" id="copy-' + t + '" onclick="copyStudentLink(\'' + t + '\',\'copy-' + t + '\')">🔗 連結</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
-      '<button class="btn-sm" style="background:#2d6a4f;color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
+      '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
@@ -1526,7 +1523,7 @@ async function loadStudentFolderLink(token) {
   try {
     const { data, error } = await sb.rpc('get_student_folder', { p_token: token });
     if (error || !data) { el.innerHTML = ''; return; }
-    el.innerHTML = '<a class="meet-btn" href="' + data + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,#3a8f6f,#2d6a4f);">📁 開啟我的 Google Drive 資料夾</a>' +
+    el.innerHTML = '<a class="meet-btn" href="' + data + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));">📁 開啟我的 Google Drive 資料夾</a>' +
       '<p class="meet-link-text" style="margin-top:6px;">這裡有老師上傳的所有課堂資料</p>';
   } catch(e) { el.innerHTML = ''; }
 }
@@ -2379,10 +2376,9 @@ function startClassRec(token){
   if(!s){ alert('找不到學生資料'); return; }
   recActiveStudent=token;
   const card=document.getElementById('recCard'); if(card) card.style.display='';   // 顯示錄製面板
-  const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄製 — '+(s.name||token);
+  const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄影 — '+(s.name||token);
   if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
-  // 一鍵錄製：先在「本分頁 focus」狀態下啟動螢幕分享（穩定、不會 00:00），
-  // 取得畫面後才由 beginRecording 自動開 Meet（見該函式）。
+  // 進入課堂：先啟動螢幕分享（畫面＋系統音訊），取得後 beginRecording 自動開 Meet；錄影＋師生雙聲。
   recPendingMeet = s.meet || null;
   startRec('video');
 }
