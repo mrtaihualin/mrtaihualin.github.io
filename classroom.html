@@ -2471,12 +2471,15 @@ function openTabReliably(url){
 function startClassRec(token){
   const s=(typeof studentsCache!=='undefined')?studentsCache[token]:null;
   if(!s){ alert('找不到學生資料'); return; }
+  if(!s.meet){ alert('此學生尚未設定 Meet 連結，請先在設定中新增'); return; }
   recActiveStudent=token;
   const card=document.getElementById('recCard'); if(card) card.style.display='';   // 顯示錄製面板
   const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄影 — '+(s.name||token);
   if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
-  // 進入課堂：先啟動螢幕分享（畫面＋系統音訊），取得後 beginRecording 自動開 Meet；錄影＋師生雙聲。
-  recPendingMeet = s.meet || null;
+  // 在 user gesture context 內（onclick 同步路徑）開 Meet → browser 不會擋 popup
+  // 必須在 await getDisplayMedia() 之前呼叫，否則 Chrome 視 user activation 已過期而封鎖
+  recPendingMeet = null;
+  openTabReliably(s.meet);
   startRec('video');
 }
 
@@ -2507,8 +2510,7 @@ async function beginRecording(method){
         video: recIsVideo ? {frameRate:{ideal:10,max:15}} : true,
         audio: { systemAudio: 'include', echoCancellation: false, noiseSuppression: false }
       });
-      // ✅ 已取得螢幕分享 → 現在才開 Meet（先開會搶 focus 導致分享立刻結束 = 00:00）
-      if(recPendingMeet){ openTabReliably(recPendingMeet); recPendingMeet=null; }
+      // Meet 已在 startClassRec（user gesture 同步路徑）開啟，此處不需再呼叫
       recMicStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
       const sysTracks=recDisplayStream.getAudioTracks();
       recAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
