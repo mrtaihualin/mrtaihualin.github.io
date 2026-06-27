@@ -393,7 +393,7 @@
     #interpreter .section-wrap > div[style*="grid-template-columns:1fr 1fr"] > div:first-child{border-right:none!important;border-bottom:2px solid rgba(255,255,255,0.12);}
   }
   /* FLOATING LINE QR — หน้าตาเหมือน tf-float-cta (pill ทอง) */
-  .floating-qr { position:fixed; top:78px; right:16px; z-index:9990; display:flex; flex-direction:row; align-items:center; background:linear-gradient(135deg,#8B6310,#C8973A); border-radius:40px; box-shadow:0 8px 28px rgba(139,99,16,0.40); opacity:0; pointer-events:none; transition:opacity 0.3s ease; animation:fqrPulse 2.6s ease-in-out infinite; max-width:calc(100vw - 32px); }
+  .floating-qr { position:fixed; top:78px; right:16px; z-index:9990; display:flex; flex-direction:row; align-items:center; background:linear-gradient(135deg,#8B6310,#C8973A); border-radius:40px; box-shadow:0 8px 28px rgba(139,99,16,0.40); opacity:0; pointer-events:none; transition:opacity 0.3s ease; max-width:calc(100vw - 32px); }
   .floating-qr.visible { opacity:1; pointer-events:auto; }
   .floating-qr-book { display:flex; align-items:center; gap:10px; background:none; border:none; color:#fff; cursor:pointer; padding:11px 14px; font-family:'Noto Sans TC',sans-serif; }
   .floating-qr-book:hover { filter:brightness(1.06); }

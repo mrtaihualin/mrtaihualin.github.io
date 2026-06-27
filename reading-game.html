@@ -18,18 +18,18 @@
 <script defer src="reading-auth.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-.v3-page{font-family:'Sarabun',sans-serif;max-width:520px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 88px;}
+.v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
 
 .page-header{text-align:center;margin-bottom:10px;}
 .page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
 .page-sub{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#b08040;margin-top:3px;}
 
-.level-tabs{display:flex;gap:8px;margin-bottom:12px;width:100%;max-width:480px;}
+.level-tabs{display:flex;gap:8px;margin-bottom:12px;width:100%;max-width:640px;}
 .ltab{flex:1;padding:10px 8px;border-radius:999px;border:2px solid #d4b87a;background:#fff;color:#8b6310;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:all .15s;}
 .ltab:hover{background:#fff8ee;border-color:#c07030;}
 .ltab.active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;border-color:transparent;}
 
-.bars-wrap{width:100%;max-width:480px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
+.bars-wrap{width:100%;max-width:640px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
 .bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
 .bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
@@ -37,13 +37,13 @@
 .bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047);}
 .bar-label{min-width:52px;text-align:right;font-size:11px;}
 
-.meta-row{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;}
+.meta-row{width:100%;max-width:640px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;}
 .stars-txt{font-weight:700;color:#d9a400;font-size:14px;}
 .badge-btn{cursor:pointer;font-size:13px;transition:transform .12s;display:flex;align-items:center;gap:4px;}
 .badge-btn:hover{transform:scale(1.1);}
 .badge-emoji{font-size:22px;}
 
-.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:480px;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:640px;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:6px;}
 
 .top-bar{display:flex;align-items:center;justify-content:space-between;width:100%;}
 .score-bar{display:flex;gap:12px;font-size:13px;color:#a08050;font-family:'Noto Sans TC',sans-serif;}
@@ -159,12 +159,12 @@
 .rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
 
 /* ── tools-row (เหมือน tone-finder) ── */
-.rg-tools-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap;width:100%;max-width:480px;}
+.rg-tools-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap;width:100%;max-width:640px;}
 .rg-tool-btn{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);border-radius:20px;padding:6px 14px;cursor:pointer;color:#7a5510;transition:all .15s;}
 .rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
 .rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
 /* ── Weekly challenge banner (เหมือน tone-finder) ── */
-.tf-challenge-banner{background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;margin:0 0 12px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:480px;box-sizing:border-box;}
+.tf-challenge-banner{background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;margin:0;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;}
 .tf-challenge-banner.done{background:linear-gradient(180deg,#E9F9ED,#D2F0D9);border-color:#4caf50;}
 .tf-ch-top{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
 .tf-ch-emoji{font-size:18px;line-height:1;}
@@ -176,7 +176,10 @@
 .tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
 .tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
 /* ── Streak chips ── */
-.rg-home-streak{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 12px;width:100%;max-width:480px;}
+.rg-home-streak{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 12px;width:100%;max-width:640px;}
+.rg-stat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0 14px;width:100%;max-width:640px;}
+.rg-stat-row .tf-streak-chip{font-size:12.5px;padding:6px 14px;}
+.rg-stat-row .tf-streak-chip b{font-weight:800;color:#5a3e0a;}
 .tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:#7a5510;border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;}
 .tf-streak-chip.done{background:rgba(74,154,74,0.14);color:#3f8f3f;}
 /* ── Toast ── */
@@ -262,7 +265,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <div class="page-header">
   <div class="page-title">泰語拼讀練習</div>
   <div class="page-sub">看字選出正確的組件</div>
-  <button onclick="document.getElementById('rg-howto-modal').style.display='flex'" style="margin-top:8px;padding:4px 14px;font-size:12px;font-family:'Noto Sans TC',sans-serif;color:#8B6310;background:transparent;border:1px solid rgba(139,99,16,0.35);border-radius:20px;cursor:pointer;">？ 怎麼玩</button>
 </div>
 
 <!-- How-to modal: เกมอ่าน -->
@@ -282,14 +284,26 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<div class="rg-tools-row">
-  <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
-  <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">abc 換現代字體</button>
-  <button class="rg-tool-btn" onclick="rgOpenAsk()">❓ 我有問題</button>
+<div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;">
+  <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;">🎁 免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
+  <span style="font-size:13px;background:var(--gold-bright,#C8973A);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
 </div>
 
-<div id="rg-challenge-banner"></div>
-<div class="rg-home-streak" id="rg-streak-bar"></div>
+<div class="rg-tools-row">
+  <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
+  <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">✍️ 換現代字體</button>
+  <button class="rg-tool-btn" onclick="rgOpenAsk()">💬 我有問題</button>
+  <button class="rg-tool-btn" onclick="document.getElementById('rg-howto-modal').style.display='flex'">📖 怎麼玩</button>
+</div>
+
+<div id="rg-challenge-banner" style="width:100%;max-width:640px;"></div>
+
+<div class="rg-stat-row" id="rg-stat-row">
+  <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
+  <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
+  <span class="tf-streak-chip">⭐ <b id="star-count">0</b> 顆星</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+</div>
 
 <div class="bars-wrap" id="bars-wrap">
   <div class="bar-row">
@@ -301,14 +315,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <span>⚡</span>
     <div class="bar-bg"><div class="bar-fill power" id="powerf" style="width:0%"></div></div>
     <span class="bar-label"><span id="power-num">0</span>/100</span>
-  </div>
-</div>
-
-<div class="meta-row" id="meta-row">
-  <div>⭐ <span class="stars-txt" id="star-count">0</span> 顆星</div>
-  <div class="badge-btn" onclick="openBadge()">
-    <span class="badge-emoji" id="badge-emoji">🌱</span>
-    <span id="badge-count">0</span> 枚勳章
   </div>
 </div>
 
@@ -1371,7 +1377,7 @@ function setLevel(lv){
   document.getElementById('end').style.display='none';
   document.getElementById('advanced-soon').style.display=showAdvanced?'flex':'none';
   document.getElementById('bars-wrap').style.display=showAdvanced?'none':'flex';
-  document.getElementById('meta-row').style.display=showAdvanced?'none':'flex';
+  document.getElementById('rg-stat-row').style.display=showAdvanced?'none':'flex';
   if(!showAdvanced){
     document.getElementById('game').style.display='flex';
     initGame();
@@ -1983,10 +1989,8 @@ function rgRenderGameBar() {
       '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:' + pct + '%;"></div></div>' +
       '<div class="tf-ch-sub">' + cp.ch.sub + '　' + cp.st.progress + ' / ' + cp.ch.target + '</div>' +
     '</div>';
-  var sb = document.getElementById('rg-streak-bar');
-  if (sb) sb.innerHTML =
-    '<span class="tf-streak-chip">🔥 連續 ' + (alive ? (st.streak || 0) : 0) + ' 天</span>' +
-    '<span class="tf-streak-chip">🛡️ ×' + (st.freezes || 0) + '</span>';
+  var sn = document.getElementById('rg-streak-num'); if (sn) sn.textContent = (alive ? (st.streak || 0) : 0);
+  var fn = document.getElementById('rg-freeze-num'); if (fn) fn.textContent = (st.freezes || 0);
 }
 
 function rgToast(msg) {
@@ -2009,10 +2013,10 @@ try { rgRenderGameBar(); } catch(e){}
 function rgToggleFont() {
   var on = document.body.classList.toggle('rg-modern-font');
   var btn = document.getElementById('rg-font-btn');
-  if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? 'abc 換回標準字體' : 'abc 換現代字體'; }
+  if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? '✍️ 換回標準字體' : '✍️ 換現代字體'; }
   try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
 }
-(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); var b=document.getElementById('rg-font-btn'); if(b){b.classList.add('active');b.textContent='abc 換回標準字體';} } } catch(e){} })();
+(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); var b=document.getElementById('rg-font-btn'); if(b){b.classList.add('active');b.textContent='✍️ 換回標準字體';} } } catch(e){} })();
 
 // ── 我有問題 ──
 function rgOpenAsk() {
@@ -2050,7 +2054,7 @@ function rgOpenAsk() {
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
-#game-switcher{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;overflow:hidden;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+#game-switcher{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;overflow:hidden;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
 .gs-tab{padding:9px 22px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;}
 .gs-tab:hover{background:rgba(139,99,16,0.08);}
 .gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
