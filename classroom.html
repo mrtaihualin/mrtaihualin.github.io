@@ -1045,7 +1045,9 @@ function previewStudent(token) {
 // RENDER
 // ============================================================
 function recordingHTML() {
-  // 錄製只透過學生清單的 ▶️ 開始上課＋錄影 啟動；此面板平時隱藏，開始錄影才顯示（含停止鈕／狀態／上傳結果）
+  return ''; // 課堂錄製功能已移除（不再使用）
+}
+function _recordingHTML_unused() {
   return '<div class="card" id="recCard" style="margin-top:16px;display:none;">' +
     '<h2>⏺ 課堂錄製</h2>' +
     '<p class="rec-hint" style="color:var(--ink-muted);">🎥 一鍵錄製畫面＋師生雙聲。按下後在跳出視窗請選「<b>整個畫面</b>」並勾「<b>分享系統音訊</b>」即可（之後會自動開啟 Meet 並開始錄影）。錄完自動上傳到該學生的 Drive 資料夾。</p>' +
@@ -1092,6 +1094,14 @@ function renderStudentListHTML() {
   '<div class="stu-panel" id="stuPanel"></div>';
 }
 
+// 老師：開啟某學生的 Drive 資料夾（用老師的 Google 權限解析資料夾）
+async function openStudentDriveFolder(name) {
+  try {
+    var id = await gdGetStudentFolderId(name);
+    window.open('https://drive.google.com/drive/folders/' + id, '_blank');
+  } catch (e) { alert('開啟失敗，請先連接 Google：' + (e.message || e)); }
+}
+
 function selectStudent(token) {
   const panel = document.getElementById('stuPanel');
   if (!panel) return;
@@ -1108,12 +1118,13 @@ function selectStudent(token) {
       '<div class="stu-acc-avatar">' + initial + '</div>' +
       '<span class="stu-panel-name">' + s.name + '</span>' +
     '</div>' +
-    '<button class="btn-start-class" onclick="startClassRec(\'' + t + '\')">▶️ 開始上課＋錄影</button>' +
+    '<button class="btn-start-class" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
     '<div class="stu-acc-actions">' +
       '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
       '<button class="btn-sm btn-sm-copy" id="copy-' + t + '" onclick="copyStudentLink(\'' + t + '\',\'copy-' + t + '\')">🔗 連結</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
+      '<button class="btn-sm" style="background:#1a73e8;color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
@@ -1920,10 +1931,10 @@ const COURSES = [
 // 學生繳費表單用：先選課程類型 → 再選堂數(10/20/30，含贈送) → 再選幣別
 // （老師頁收費 modal 仍用上面的 COURSES；學生面價格改這裡）
 const COURSE_TYPES = [
-  { id:'basic',      label:'入門 Basic',    priceNTD:700,  priceTHB:800,  packs:[10],       note:'只限購買一期', desc:'打好發音基礎' },
+  { id:'basic',      label:'入門 Basic',    priceNTD:700,  priceTHB:700,  packs:[10],       note:'只限購買一期', desc:'打好發音基礎' },
   { id:'std',        label:'進階 Standard', priceNTD:800,  priceTHB:800,  packs:[10,20,30], desc:'客製主題會話' },
-  { id:'pair_basic', label:'雙人 Basic',    priceNTD:1100, priceTHB:null, packs:[10,20,30], desc:'Basic 雙人共學・每人' },
-  { id:'pair_std',   label:'雙人 Standard', priceNTD:1200, priceTHB:null, packs:[10,20,30], desc:'Standard 雙人共學・每人' },
+  { id:'pair_basic', label:'雙人 Basic',    priceNTD:1100, priceTHB:1100, packs:[10,20,30], desc:'Basic 雙人共學・每人' },
+  { id:'pair_std',   label:'雙人 Standard', priceNTD:1200, priceTHB:1200, packs:[10,20,30], desc:'Standard 雙人共學・每人' },
 ];
 function slipBonusFor(n) { return n >= 30 ? 3 : n >= 20 ? 1 : 0; }
 
@@ -2169,7 +2180,7 @@ async function connectCalendar() {
         const rows = list.map(function(item) {
           const timeStr = item.startTime + (item.endTime ? '–' + item.endTime : '');
           const action = item.isToday
-            ? '<button class="today-done" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="startClassRec(\'' + item.token + '\')">▶️ 開始上課</button>'
+            ? '<button class="today-done" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="recordAttendance(\'' + item.token + '\')">✅ 今日上課</button>'
             : '<span style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;align-self:center;">即將到來</span>';
           return '<div class="today-row">' +
             '<div style="flex:1;">' +
