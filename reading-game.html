@@ -24,12 +24,12 @@
 .page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
 .page-sub{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#b08040;margin-top:3px;}
 
-.level-tabs{display:flex;gap:8px;margin-bottom:12px;}
-.ltab{padding:7px 20px;border-radius:999px;border:2px solid #d4b87a;background:#fff;color:#8b6310;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:all .15s;}
+.level-tabs{display:flex;gap:8px;margin-bottom:12px;width:100%;max-width:480px;}
+.ltab{flex:1;padding:10px 8px;border-radius:999px;border:2px solid #d4b87a;background:#fff;color:#8b6310;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:all .15s;}
 .ltab:hover{background:#fff8ee;border-color:#c07030;}
 .ltab.active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;border-color:transparent;}
 
-.bars-wrap{width:100%;max-width:480px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px;}
+.bars-wrap{width:100%;max-width:480px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
 .bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
 .bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
@@ -37,7 +37,7 @@
 .bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047);}
 .bar-label{min-width:52px;text-align:right;font-size:11px;}
 
-.meta-row{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;}
+.meta-row{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;}
 .stars-txt{font-weight:700;color:#d9a400;font-size:14px;}
 .badge-btn{cursor:pointer;font-size:13px;transition:transform .12s;display:flex;align-items:center;gap:4px;}
 .badge-btn:hover{transform:scale(1.1);}
@@ -159,12 +159,12 @@
 .rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
 
 /* ── tools-row (เหมือน tone-finder) ── */
-.rg-tools-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:10px;flex-wrap:wrap;width:100%;max-width:480px;}
+.rg-tools-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap;width:100%;max-width:480px;}
 .rg-tool-btn{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);border-radius:20px;padding:6px 14px;cursor:pointer;color:#7a5510;transition:all .15s;}
 .rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
 .rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
 /* ── Weekly challenge banner (เหมือน tone-finder) ── */
-.tf-challenge-banner{background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;margin:0 0 10px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:480px;box-sizing:border-box;}
+.tf-challenge-banner{background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;margin:0 0 12px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:480px;box-sizing:border-box;}
 .tf-challenge-banner.done{background:linear-gradient(180deg,#E9F9ED,#D2F0D9);border-color:#4caf50;}
 .tf-ch-top{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
 .tf-ch-emoji{font-size:18px;line-height:1;}
@@ -176,7 +176,7 @@
 .tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
 .tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
 /* ── Streak chips ── */
-.rg-home-streak{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 10px;width:100%;max-width:480px;}
+.rg-home-streak{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 12px;width:100%;max-width:480px;}
 .tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:#7a5510;border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;}
 .tf-streak-chip.done{background:rgba(74,154,74,0.14);color:#3f8f3f;}
 /* ── Toast ── */
@@ -282,12 +282,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<div class="level-tabs">
-  <button class="ltab active" id="ltab-初" onclick="setLevel('初')">初級</button>
-  <button class="ltab"        id="ltab-中" onclick="setLevel('中')">中級</button>
-  <button class="ltab"        id="ltab-高" onclick="setLevel('高')">高級</button>
-</div>
-
 <div class="rg-tools-row">
   <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
   <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">abc 換現代字體</button>
@@ -316,6 +310,12 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <span class="badge-emoji" id="badge-emoji">🌱</span>
     <span id="badge-count">0</span> 枚勳章
   </div>
+</div>
+
+<div class="level-tabs">
+  <button class="ltab active" id="ltab-初" onclick="setLevel('初')">初級</button>
+  <button class="ltab"        id="ltab-中" onclick="setLevel('中')">中級</button>
+  <button class="ltab"        id="ltab-高" onclick="setLevel('高')">高級</button>
 </div>
 
 <div class="card" id="game">
