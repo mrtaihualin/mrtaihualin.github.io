@@ -511,11 +511,20 @@
   }
 
   /* 放大字級 */
-  body.big-font { font-size: 22px; }
-  body.big-font .ex-th, body.big-font .conn-kw, body.big-font .td-kw,
-  body.big-font .sent-th, body.big-font .hl, body.big-font .hl-obj,
+  body.big-font { font-size: 22px !important; }
+  body.big-font .ex-th,
+  body.big-font .td-ex .ex-th,
+  body.big-font .conn-ex-list .ex-th,
+  body.big-font .conn-kw,
+  body.big-font .td-kw,
+  body.big-font .sent-th,
+  body.big-font .hl,
+  body.big-font .hl-obj,
   body.big-font .hl-aux { font-size: 32px !important; }
-  body.big-font .ex-zh, body.big-font .conn-mean { font-size: 24px !important; }
+  body.big-font .ex-zh,
+  body.big-font .td-ex .ex-zh,
+  body.big-font .conn-ex-list .ex-zh,
+  body.big-font .conn-mean { font-size: 22px !important; }
 </style>
 <link rel="stylesheet" href="nav-ui.css">
 </head>

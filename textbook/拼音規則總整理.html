@@ -581,10 +581,20 @@
     .qr-pop{ right:16px; bottom:150px; }
   }
   /* 放大字級 */
-  body.big-font { font-size: 22px; }
-  body.big-font .thai, body.big-font .s-th, body.big-font .lead-th,
+  body.big-font { font-size: 22px !important; }
+  body.big-font .thai,
+  body.big-font table.data td.thai,
+  body.big-font .s-th,
+  body.big-font .lead-th,
+  body.big-font .lead-ex,
   body.big-font .box.thai { font-size: 32px !important; }
-  body.big-font .zh, body.big-font .gloss { font-size: 24px !important; }
+  body.big-font .zh,
+  body.big-font table.data td.zh,
+  body.big-font .gloss,
+  body.big-font .box.zh { font-size: 24px !important; }
+  body.big-font .item-text,
+  body.big-font .note,
+  body.big-font .rule { font-size: 22px !important; }
 
 </style>
 <link rel="stylesheet" href="nav-ui.css">
