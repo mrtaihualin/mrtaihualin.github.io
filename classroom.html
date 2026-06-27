@@ -1646,10 +1646,18 @@ function renderSlipTotalAndBank() {
   }
   var b = BANK_INFO[slipCurrency];
   var anyVal = b.lines.some(function(l) { return /[：:]\s*\S/.test(l); });
+  var qrImg = function(src, cap) {
+    return '<div style="text-align:center;margin-top:8px;">'
+      + '<img src="' + src + '" alt="QR" style="max-width:170px;width:62%;border-radius:8px;display:inline-block;" onerror="this.parentNode.style.display=\'none\'">'
+      + (cap ? '<div style="font-size:0.74rem;color:var(--ink-muted);margin-top:2px;">' + cap + '</div>' : '')
+      + '</div>';
+  };
   bankBox.style.display = 'block';
   bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">' + b.title + '</div>'
     + b.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
-    + (anyVal ? '' : '<div style="color:var(--amber);font-size:0.78rem;margin-top:6px;">（老師尚未填寫帳戶，請用 LINE 向老師索取匯款資訊）</div>');
+    + (b.qr ? qrImg(b.qr, '掃 QR 轉帳') : '')
+    + (anyVal ? '' : '<div style="color:var(--amber);font-size:0.78rem;margin-top:6px;">（老師尚未填寫帳戶，請用 LINE 向老師索取匯款資訊）</div>')
+    + (typeof WISE_INFO !== 'undefined' ? '<div style="border-top:1px dashed #d8c89c;margin-top:10px;padding-top:8px;"><div style="font-weight:700;">🌍 Wise（國際匯款）' + WISE_INFO.tag + '</div>' + qrImg(WISE_INFO.qr, 'Wise ' + WISE_INFO.tag) + '</div>' : '');
 }
 
 function handleSlipImage(file) {
@@ -1913,13 +1921,13 @@ async function rejectSlip(id) {
 // 注意：靜態網站 → 帳號會出現在網頁原始碼，任何人都看得到（與公開的聯絡 Email 同性質）
 // QR 圖片：放在 assets/pay-qr/（檔名見該資料夾 README）。沒放檔也不會壞，會自動隱藏
 const BANK_INFO = {
-  NTD: { title: '🇹🇼 台灣銀行帳戶（匯 NTD）', qr: 'assets/pay-qr/ntd-ctbc.png', lines: [
+  NTD: { title: '🇹🇼 台灣銀行帳戶（匯 NTD）', qr: 'assets/pay-qr/ntd-ctbc.jpg', lines: [
     '銀行：中國信託 (822)',
     '分行：城中分行 (0107)',
     '帳號：107540587096',
     '戶名：林泰華'
   ] },
-  THB: { title: '🇹🇭 PromptPay（匯 THB）', qr: 'assets/pay-qr/thb-promptpay.png', lines: [
+  THB: { title: '🇹🇭 PromptPay（匯 THB）', qr: 'assets/pay-qr/thb-promptpay.jpg', lines: [
     'PromptPay：掃下方 QR 轉帳',
     '戶名：นาย ไท่หัว หลิน（林泰華）',
     '帳號：xxx-x-x7358-x',
@@ -1927,7 +1935,7 @@ const BANK_INFO = {
   ] }
 };
 // Wise（國際匯款，兩種幣別都可用）
-const WISE_INFO = { tag: '@taihual7', qr: 'assets/pay-qr/wise.png' };
+const WISE_INFO = { tag: '@taihual7', qr: 'assets/pay-qr/wise.jpg' };
 
 // 課程方案：NTD 價依 page2.html#pricing（權威）；THB 沿用舊值，請老師確認
 const COURSES = [
