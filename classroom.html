@@ -1124,7 +1124,7 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
       '<button class="btn-sm btn-sm-copy" id="copy-' + t + '" onclick="copyStudentLink(\'' + t + '\',\'copy-' + t + '\')">🔗 連結</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
-      '<button class="btn-sm" style="background:#1a73e8;color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
+      '<button class="btn-sm" style="background:#2d6a4f;color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
@@ -1525,7 +1525,7 @@ async function loadStudentFolderLink(token) {
   try {
     const { data, error } = await sb.rpc('get_student_folder', { p_token: token });
     if (error || !data) { el.innerHTML = ''; return; }
-    el.innerHTML = '<a class="meet-btn" href="' + data + '" target="_blank" rel="noopener" style="background:#1a73e8;">📁 開啟我的 Google Drive 資料夾</a>' +
+    el.innerHTML = '<a class="meet-btn" href="' + data + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,#3a8f6f,#2d6a4f);">📁 開啟我的 Google Drive 資料夾</a>' +
       '<p class="meet-link-text" style="margin-top:6px;">這裡有老師上傳的所有課堂資料</p>';
   } catch(e) { el.innerHTML = ''; }
 }
@@ -1874,7 +1874,7 @@ async function approveSlip() {
   btn.textContent = '產生收據中…';
   try {
     receipt = await generateAndUploadReceipt(slip, { cur: cur, pp: pp, ls: ls, bn: bn, start: start, note: note });
-    if (receipt) await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo }).eq('id', slipId);
+    if (receipt) await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo, status: 'done' }).eq('id', slipId);
   } catch (e) { console.warn('收據產生失敗：', e); }
   btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據';
   document.getElementById('slipApprovalModal').classList.remove('open');
@@ -2316,7 +2316,7 @@ async function checkStudentSlipStatus(token) {
   var p = data[0];
   var statusMap = {
     'slip_submitted': '⏳ 已送出，等待老師確認',
-    'pending':        '✅ 老師已確認，收據製作中…',
+    'pending':        '✅ 老師已確認收款',
     'done':           '🧾 收據已開立！收據號碼：' + (p.receipt_no || '—'),
     'rejected':       '❌ 本次付款未通過，請聯繫老師'
   };
