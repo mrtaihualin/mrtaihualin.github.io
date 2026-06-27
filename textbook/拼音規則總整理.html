@@ -587,7 +587,6 @@
   body.big-font .zh, body.big-font .gloss { font-size: 24px !important; }
 
 </style>
-<link rel="stylesheet" href="controls-ui.css">
 <link rel="stylesheet" href="nav-ui.css">
 </head>
 <body>
@@ -608,7 +607,6 @@
       <span class="tag">拼音規則</span>
     </div>
   </div>
-  <div id="ctrl-anchor"></div>
 
   <!-- 顯示設定控制列 -->
   <div class="control-wrap">
@@ -622,6 +620,10 @@
         <label class="control-switch">
           <input type="checkbox" onchange="document.body.classList.toggle('modern-font', this.checked)">
           <span>切換現代字體（較難辨識）</span>
+        </label>
+        <label class="control-switch">
+          <input type="checkbox" id="bigFontToggle" onchange="document.body.classList.toggle('big-font',this.checked);try{localStorage.setItem('cui-big-font',this.checked?'1':'0')}catch(e){}">
+          <span>放大字級</span>
         </label>
       </div>
     </div>
@@ -1092,6 +1094,8 @@
 </script>
 
 <script src="nav-ui.js"></script>
-<script src="controls-ui.js"></script>
+<script>
+try{var v=localStorage.getItem('cui-big-font');if(v==='1'){document.body.classList.add('big-font');var el=document.getElementById('bigFontToggle');if(el)el.checked=true;}}catch(e){}
+</script>
 </body>
 </html>
