@@ -1890,6 +1890,20 @@
   <div class="tf-page-header">
     <div class="tf-page-title">🎵 泰語聲調搜尋</div>
     <div class="tf-page-hint" id="tf-hint">選擇等級與主題，開始練習聲調</div>
+    <button onclick="document.getElementById('tf-howto-modal').style.display='flex'" style="margin-top:8px;padding:4px 14px;font-size:12px;font-family:'Noto Sans TC',sans-serif;color:#8B6310;background:transparent;border:1px solid rgba(139,99,16,0.35);border-radius:20px;cursor:pointer;">？ 怎麼玩</button>
+  </div>
+
+  <!-- How-to modal: เกมเสียง -->
+  <div id="tf-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+      <button onclick="document.getElementById('tf-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+      <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🎵 怎麼玩？</div>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">背單字好無聊？玩遊戲就記得住了，而且還更好玩 😊</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">泰語有 5 個聲調，同一個字聲調不一樣，意思就完全不同喔！看到泰文單字，題目問什麼就回答什麼就好了 😊 不確定也沒關係，先猜猜看，玩多了自然就會有感覺的 💛</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">連續答對會出現 🔥，分數還會加乘，越答越起勁！答錯不扣分，輕鬆玩就好～</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，分數和進度都會幫你存起來，還可以在排行榜上看到自己進步了多少喔 ⭐</p>
+      <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">聲調其實是有規律的呢～想真正搞懂，<a href="page2.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
+    </div>
   </div>
 
   <div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:18px;font-family:'Noto Sans TC',sans-serif;">
@@ -4635,15 +4649,6 @@ function stepLevelSelect() {
           '<span class="tf-level-sub">易錯字複習・答對 ×2（' + tfLoadSpecialWords().length + ' 字）</span>' +
         '</button>'
       : '') +
-    (function(){
-      var today = new Date().toISOString().slice(0,10);
-      var used = 0; try { used = parseInt(localStorage.getItem('tf_adaptive_'+today)||'0',10); } catch(e){}
-      var remain = Math.max(0, 2 - used);
-      return '<button class="tf-adaptive-btn" onclick="TF.startAdaptive()" style="margin-top:12px;">' +
-        '🎯 智慧複習（依你的弱點挑字）' +
-        '<span style="font-size:11px;opacity:0.75;margin-left:6px;">今日剩餘 ' + remain + ' / 2 字</span>' +
-      '</button>';
-    })() +
   '</div>';
 }
 
@@ -4797,7 +4802,6 @@ function stepCatSelect() {
   var levelLabel = {1:'初級',2:'中級'}[selectedLevel] || '';
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">'+levelLabel+' — 選擇主題</div>' +
-    '<button class="tf-adaptive-btn" onclick="TF.startAdaptive()">🎯 智慧複習（依你的弱點挑字）</button>' +
     '<div class="tf-cat-grid">' +
       cats.map(function(c){
         return '<button class="tf-cat-btn" onclick="TF.selectCategory(\''+c.th+'\')">'+c.zh+'</button>';

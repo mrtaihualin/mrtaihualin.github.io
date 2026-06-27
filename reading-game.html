@@ -158,6 +158,17 @@
 .rule-txt{color:#5a3e10;line-height:1.5;}
 .rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
 
+/* ── tools-row (เหมือน tone-finder) ── */
+.rg-tools-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:10px;flex-wrap:wrap;width:100%;max-width:480px;}
+.rg-tool-btn{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);border-radius:20px;padding:6px 14px;cursor:pointer;color:#7a5510;transition:all .15s;}
+.rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
+.rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
+/* ── ฟอนต์โมเดิร์น (ไม่มีหัว) ── */
+body.rg-modern-font .word-th,
+body.rg-modern-font .syl-chip,
+body.rg-modern-font .slot-box,
+body.rg-modern-font .chip-item { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
+
 .btn-row{display:flex;gap:7px;justify-content:center;width:100%;margin-top:12px;flex-wrap:wrap;}
 /* ปุ่มแอ็คชันในเกม: ลอยติดล่างจอเสมอ (เหนือแถบเมนูล่าง) กดง่าย ไม่ต้องเลื่อนหา */
 #game .btn-row{position:sticky;bottom:calc(46px + env(safe-area-inset-bottom,0));z-index:6;background:#fff;padding:9px 6px;border-radius:14px;box-shadow:0 -6px 14px rgba(255,253,247,.96);margin-top:8px;}
@@ -228,6 +239,24 @@
 <div class="page-header">
   <div class="page-title">泰語拼讀練習</div>
   <div class="page-sub">看字選出正確的組件</div>
+  <button onclick="document.getElementById('rg-howto-modal').style.display='flex'" style="margin-top:8px;padding:4px 14px;font-size:12px;font-family:'Noto Sans TC',sans-serif;color:#8B6310;background:transparent;border:1px solid rgba(139,99,16,0.35);border-radius:20px;cursor:pointer;">？ 怎麼玩</button>
+</div>
+
+<!-- How-to modal: เกมอ่าน -->
+<div id="rg-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+    <button onclick="document.getElementById('rg-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+    <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">📝 怎麼玩？</div>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">背單字好無聊？來玩遊戲吧，玩著玩著就記住了 😊</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">泰文的每個字，都是由「子音＋母音＋聲調＋尾音」組合起來的喔！把這些零件拖進正確的格子，親手把字「拼」出來 🧩 拼幾次之後就記住了，不是死背，是用手感記住的感覺～</p>
+    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:2;">
+      第一次就全對 → <strong>+10 分</strong><br>
+      中途選錯，最後還是拼對 → <strong>+5 分</strong><br>
+      拼完還可以猜聲調，答對再拿 <strong>+3 分</strong>（答錯不扣喔）
+    </div>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐</p>
+    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">母音的種類有點多呢～想知道每個怎麼發音，<a href="page2.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
+  </div>
 </div>
 
 <div class="level-tabs">
@@ -255,7 +284,12 @@
     <span class="badge-emoji" id="badge-emoji">🌱</span>
     <span id="badge-count">0</span> 枚勳章
   </div>
-  <div id="rg-login-slot" style="flex-basis:100%;text-align:center;margin-top:6px;"></div>
+</div>
+
+<div class="rg-tools-row">
+  <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
+  <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">abc 換現代字體</button>
+  <button class="rg-tool-btn" onclick="rgOpenAsk()">？ 我有問題</button>
 </div>
 
 <div class="card" id="game">
@@ -1831,6 +1865,46 @@ function openBadge(){
 // ════════════════════════════════════════════
 loadSave();
 initGame();
+
+// ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──
+function rgToggleFont() {
+  var on = document.body.classList.toggle('rg-modern-font');
+  var btn = document.getElementById('rg-font-btn');
+  if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? 'abc 換回標準字體' : 'abc 換現代字體'; }
+  try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
+}
+(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); var b=document.getElementById('rg-font-btn'); if(b){b.classList.add('active');b.textContent='abc 換回標準字體';} } } catch(e){} })();
+
+// ── 我有問題 ──
+function rgOpenAsk() {
+  var old = document.getElementById('rg-ask-ov'); if (old) old.remove();
+  var div = document.createElement('div');
+  div.id = 'rg-ask-ov';
+  div.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.48);font-family:"Noto Sans TC",sans-serif;';
+  div.innerHTML =
+    '<div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:28px 24px;position:relative;">' +
+    '<button onclick="document.getElementById(\'rg-ask-ov\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>' +
+    '<div style="font-size:20px;font-weight:900;color:#8B6310;margin-bottom:10px;">？ 我有問題</div>' +
+    '<div style="font-size:13px;color:#888;margin-bottom:14px;">在練習中卡住了嗎？把問題寫下來，老師會收到並回覆你 🙏</div>' +
+    '<input id="rg-ask-email" type="email" placeholder="你的 Email（方便老師回覆，可留空）" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px;font-family:inherit;">' +
+    '<textarea id="rg-ask-msg" placeholder="想問的問題…" rows="4" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;resize:none;font-family:inherit;margin-bottom:14px;"></textarea>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+    '<button onclick="document.getElementById(\'rg-ask-ov\').remove()" style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>' +
+    '<button id="rg-ask-send" style="padding:9px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">送出問題 →</button>' +
+    '</div></div>';
+  document.body.appendChild(div);
+  div.querySelector('#rg-ask-send').onclick = function() {
+    var email = (document.getElementById('rg-ask-email')||{}).value || '';
+    var msg   = (document.getElementById('rg-ask-msg')||{}).value || '';
+    if (!msg.trim()) { alert('請寫下您的問題'); return; }
+    var btn = div.querySelector('#rg-ask-send'); btn.disabled = true; btn.textContent = '送出中…';
+    fetch('https://api.web3forms.com/submit', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ access_key:'b0b4c37b-6fad-4e64-9a16-81c5ab2ff4c3', subject:'[拼讀遊戲] 學生問題', from_name:'拼讀遊戲', email: email||'anonymous@game', message: msg }) })
+    .then(function(r){ return r.json(); })
+    .then(function(){ btn.textContent = '✅ 已送出！'; setTimeout(function(){ div.remove(); }, 1200); })
+    .catch(function(){ btn.disabled=false; btn.textContent='送出問題 →'; alert('送出失敗，請稍後再試'); });
+  };
+}
 </script>
 </div><!-- /.v3-page -->
 <script src="shared.js?v=20"></script>

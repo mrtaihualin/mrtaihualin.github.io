@@ -362,7 +362,7 @@
       'background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;border:none;border-radius:20px;' +
       'padding:6px 16px;cursor:pointer;font-size:12.5px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;' +
       'box-shadow:0 2px 8px rgba(139,99,16,0.28);letter-spacing:0.3px;transition:filter .15s;"' +
-      ' onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">🔑 登入</button>';
+      ' onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">🔑 登入保存分數</button>';
     var _mSlot = document.getElementById('tf-login-slot');
     if (_mSlot) {
       miniBtn.style.cssText = 'font-family:"Noto Sans TC",sans-serif;white-space:nowrap;display:none;';
@@ -571,7 +571,7 @@
       miniBtn.style.display = (authResolved && !anyModalOpen()) ? 'block' : 'none';
       // ให้อีเมลแล้ว (ปลดล็อกแล้ว) → เปลี่ยนปุ่มเป็น "登入排行榜" ไม่ให้ดูเหมือนยังไม่ได้ทำอะไร
       var _mb = miniBtn.querySelector('#tf-mini-login');
-      if (_mb) _mb.textContent = leadCaptured() ? '登入排行榜' : '登入';
+      if (_mb) _mb.textContent = '🔑 登入保存分數';
     }
   }
 
