@@ -1839,12 +1839,23 @@ async function generateAndUploadReceipt(p, v) {
     + '<tr><td>合計</td><td class="r tot">' + v.cur + ' ' + total.toLocaleString() + '</td></tr>'
     + '</table><hr style="margin-top:28px;border:none;border-top:1px solid #e5d9c0;">'
     + '<p style="color:#aaa;font-size:0.78rem;">泰華老師 · mrtaihualin.com</p></body></html>';
+  const token = await gdGetToken();
   const blob = new Blob([html], { type: 'text/html' });
   const folderId = await gdGetStudentSubfolderId(name, '課表 & 收據');
-  const doc = await gdUploadSmall(blob, name + '_收據_' + receiptNo, 'application/vnd.google-apps.document', folderId);
-  const link = doc.webViewLink || ('https://docs.google.com/document/d/' + doc.id + '/edit');
+  // 1) 先轉成 Google Doc（暫存，讓中文排版正確）
+  const tmpDoc = await gdUploadSmall(blob, name + '_收據暫存_' + receiptNo, 'application/vnd.google-apps.document', folderId);
+  // 2) 匯出成 PDF
+  const pdfResp = await fetch('https://www.googleapis.com/drive/v3/files/' + tmpDoc.id + '/export?mimeType=application/pdf', { headers: { Authorization: 'Bearer ' + token } });
+  if (!pdfResp.ok) throw new Error('匯出 PDF 失敗 ' + pdfResp.status);
+  const pdfBlob = new Blob([await pdfResp.arrayBuffer()], { type: 'application/pdf' });
+  // 3) 上傳 PDF 到學生「課表 & 收據」資料夾
+  const pdfName = name + '_收據_' + receiptNo + '.pdf';
+  const doc = await gdUploadSmall(pdfBlob, pdfName, null, folderId);
+  // 4) 刪掉暫存 Doc
+  try { await fetch('https://www.googleapis.com/drive/v3/files/' + tmpDoc.id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } }); } catch (e) {}
+  const link = doc.webViewLink || ('https://drive.google.com/file/d/' + doc.id + '/view');
   try { await gdShareAnyone(doc.id); } catch (e) {}
-  if (p.token) { try { await saveRecordingLink(p.token, name + '_收據_' + receiptNo, doc.id, link, '', null); } catch (e) {} }
+  if (p.token) { try { await saveRecordingLink(p.token, pdfName, doc.id, link, '', null); } catch (e) {} }
   return { receiptNo: receiptNo, link: link };
 }
 
@@ -1900,20 +1911,23 @@ async function rejectSlip(id) {
 // ============================================================
 // ⚠️ 老師填這裡：匯款帳戶（留空會顯示「待老師填寫」）。改完直接 push 即可
 // 注意：靜態網站 → 帳號會出現在網頁原始碼，任何人都看得到（與公開的聯絡 Email 同性質）
+// QR 圖片：放在 assets/pay-qr/（檔名見該資料夾 README）。沒放檔也不會壞，會自動隱藏
 const BANK_INFO = {
-  NTD: { title: '🇹🇼 台灣銀行帳戶（匯 NTD）', lines: [
-    '銀行：',        // 例：國泰世華銀行
-    '銀行代號：',    // 例：013
-    '帳號：',
-    '戶名：'
+  NTD: { title: '🇹🇼 台灣銀行帳戶（匯 NTD）', qr: 'assets/pay-qr/ntd-ctbc.png', lines: [
+    '銀行：中國信託 (822)',
+    '分行：城中分行 (0107)',
+    '帳號：107540587096',
+    '戶名：林泰華'
   ] },
-  THB: { title: '🇹🇭 泰國銀行帳戶（匯 THB）', lines: [
-    'ธนาคาร 銀行：',
-    'เลขบัญชี 帳號：',
-    'ชื่อบัญชี 戶名：',
-    'PromptPay：'
+  THB: { title: '🇹🇭 PromptPay（匯 THB）', qr: 'assets/pay-qr/thb-promptpay.png', lines: [
+    'PromptPay：掃下方 QR 轉帳',
+    '戶名：นาย ไท่หัว หลิน（林泰華）',
+    '帳號：xxx-x-x7358-x',
+    '參考編號：004999017326389'
   ] }
 };
+// Wise（國際匯款，兩種幣別都可用）
+const WISE_INFO = { tag: '@taihual7', qr: 'assets/pay-qr/wise.png' };
 
 // 課程方案：NTD 價依 page2.html#pricing（權威）；THB 沿用舊值，請老師確認
 const COURSES = [
