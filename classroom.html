@@ -2293,8 +2293,9 @@ async function openAttendanceHistory(token) {
   document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">載入中…</div>';
   document.getElementById('attendHistModal').classList.add('open');
 
-  const { data } = await sb.from('classroom_attendance')
+  const attRes = await sb.from('classroom_attendance')
     .select('id,lesson_date,lessons').eq('token', token).order('lesson_date', { ascending: true });
+  const data = attRes.data;
 
   if (!data || data.length === 0) {
     document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">尚無上課記錄</div>';
@@ -2302,26 +2303,47 @@ async function openAttendanceHistory(token) {
     return;
   }
 
-  const dayZh = ['日','一','二','三','四','五','六'];
-  let cum = 0, totalLessons = 0;
-  const rows = data.map(function(r) {
-    const n = r.lessons || 1;
-    const start = cum + 1, end = cum + n; cum = end; totalLessons += n;
-    const numLabel = n > 1 ? ('第 ' + start + '–' + end + ' 堂') : ('第 ' + start + ' 堂');
-    const d = new Date(r.lesson_date + 'T12:00:00');
-    const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）' + (n > 1 ? ' · ' + n + ' 堂' : '');
-    const isToday = r.lesson_date === today;
-    return '<div class="hist-row">' +
-      '<span class="hist-num">' + numLabel + '</span>' +
-      '<span class="hist-date" id="hist-date-' + r.id + '">' + dateStr + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
-      '<button class="hist-edit" title="改堂數（一天幾堂）" onclick="editAttendanceLessons(\'' + r.id + '\',' + n + ',\'' + token + '\')">' + n + '堂</button>' +
-      '<button class="hist-edit" title="改日期" onclick="editAttendanceDate(\'' + r.id + '\',\'' + r.lesson_date + '\',\'' + token + '\')">✏️</button>' +
-      '<button class="hist-del" title="刪除此記錄" onclick="deleteAttendance(\'' + r.id + '\',\'' + token + '\')">🗑</button>' +
-    '</div>';
-  }).join('');
+  // 依「本輪起算日」分流：起算日前=過往課程（收進摺疊區，仍可編輯/刪除）
+  const payRes = await sb.from('classroom_payments')
+    .select('lessons,bonus_lessons,status,start_date').eq('token', token).in('status', ['pending', 'done']);
+  const q = computeCurrentCourse(payRes.data || [], data);
+  const startDay = q.start || null;
+  const current = startDay ? data.filter(function(r){ return r.lesson_date >= startDay; }) : data;
+  const history = startDay ? data.filter(function(r){ return r.lesson_date < startDay; }) : [];
 
-  document.getElementById('attendHistList').innerHTML = rows;
-  document.getElementById('attendHistSummary').textContent = '共 ' + totalLessons + ' 堂（' + data.length + ' 天）';
+  const dayZh = ['日','一','二','三','四','五','六'];
+  function rowsHtml(list) {
+    let cum = 0, tot = 0;
+    const html = list.map(function(r) {
+      const n = r.lessons || 1;
+      const start = cum + 1, end = cum + n; cum = end; tot += n;
+      const numLabel = n > 1 ? ('第 ' + start + '–' + end + ' 堂') : ('第 ' + start + ' 堂');
+      const d = new Date(r.lesson_date + 'T12:00:00');
+      const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）' + (n > 1 ? ' · ' + n + ' 堂' : '');
+      const isToday = r.lesson_date === today;
+      return '<div class="hist-row">' +
+        '<span class="hist-num">' + numLabel + '</span>' +
+        '<span class="hist-date" id="hist-date-' + r.id + '">' + dateStr + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
+        '<button class="hist-edit" title="改堂數（一天幾堂）" onclick="editAttendanceLessons(\'' + r.id + '\',' + n + ',\'' + token + '\')">' + n + '堂</button>' +
+        '<button class="hist-edit" title="改日期" onclick="editAttendanceDate(\'' + r.id + '\',\'' + r.lesson_date + '\',\'' + token + '\')">✏️</button>' +
+        '<button class="hist-del" title="刪除此記錄" onclick="deleteAttendance(\'' + r.id + '\',\'' + token + '\')">🗑</button>' +
+      '</div>';
+    }).join('');
+    return { html: html, lessons: tot, count: list.length };
+  }
+
+  const cur = rowsHtml(current);
+  let listHtml = current.length ? cur.html : '<div class="empty-attend">本輪課程尚無上課記錄</div>';
+  if (history.length) {
+    const his = rowsHtml(history);
+    listHtml += '<details style="margin-top:10px;">' +
+      '<summary style="cursor:pointer;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:6px 0;">📜 過往課程記錄（' + his.count + ' 天，點此展開）</summary>' +
+      '<div style="margin-top:6px;opacity:0.8;">' + his.html + '</div>' +
+    '</details>';
+  }
+
+  document.getElementById('attendHistList').innerHTML = listHtml;
+  document.getElementById('attendHistSummary').textContent = '本輪共 ' + cur.lessons + ' 堂（' + cur.count + ' 天）';
 }
 
 // 改某一天的堂數（例如一天上 2 堂）
