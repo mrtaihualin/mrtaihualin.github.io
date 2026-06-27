@@ -2392,6 +2392,14 @@ async function checkStudentSlipStatus(token) {
   el.innerHTML = '<div style="background:' + color + ';border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + textColor + ';font-weight:600;margin-bottom:12px;">' + msg + '<br><span style="font-weight:400;font-size:0.78rem;">' + p.course_label + '</span></div>';
 }
 
+// 點 popup 外的暗色背景 → 關閉該 popup
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  if (t && t.classList && (t.classList.contains('modal-overlay') || t.classList.contains('slip-viewer-overlay') || t.classList.contains('notepad-overlay'))) {
+    t.classList.remove('open');
+  }
+});
+
 // Run routing — with visible error display
 window.onerror = function(msg, src, line) {
   var el = document.getElementById('mainContainer');
