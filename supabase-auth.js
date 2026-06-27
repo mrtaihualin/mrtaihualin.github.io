@@ -209,7 +209,7 @@
   // ── ยืนยันรหัส → กลายเป็นบัญชี verified (onAuthStateChange จะปิด gate ให้เอง) ──
   function doVerifyOtp(code) {
     code = (code || '').trim();
-    if (!/^\d{6}$/.test(code)) { setOtpMsg('請輸入 6 位數字', true); return; }
+    if (!/^\d{6,10}$/.test(code)) { setOtpMsg('請輸入信中的驗證碼（純數字）', true); return; }
     setOtpMsg('驗證中…⏳', false);
     sb.auth.verifyOtp({ email: otpEmail, token: code, type: 'email' })
       .then(function (res) {
@@ -319,7 +319,7 @@
         '<input id="tf-otp-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
         '<button id="tf-otp-send" style="margin-top:10px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">寄送驗證碼 →</button>' +
         '<div id="tf-otp-step2" style="display:none;margin-top:12px;">' +
-          '<input id="tf-otp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="輸入 6 位數驗證碼" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:18px;letter-spacing:4px;text-align:center;color:#5C4410;outline:none;">' +
+          '<input id="tf-otp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="輸入信中的驗證碼" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:18px;letter-spacing:4px;text-align:center;color:#5C4410;outline:none;">' +
           '<button id="tf-otp-verify" style="margin-top:10px;width:100%;border:none;background:#2E7D4F;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">確認登入</button>' +
           '<button id="tf-otp-resend" style="margin-top:8px;width:100%;border:1px solid #E5D9B8;background:#fff;color:#8B7340;border-radius:10px;padding:9px;cursor:pointer;font-size:13px;">重新寄送驗證碼</button>' +
         '</div>' +

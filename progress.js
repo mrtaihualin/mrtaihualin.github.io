@@ -82,10 +82,10 @@
     sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } })
       .then(function (res) {
         if (res.error) { alert('驗證碼寄送失敗：' + res.error.message); return; }
-        var code = window.prompt('驗證碼已寄到 ' + email + ' ✉️（含垃圾信匣）\n請輸入信中的 6 位數驗證碼：');
+        var code = window.prompt('驗證碼已寄到 ' + email + ' ✉️（含垃圾信匣）\n請輸入信中的驗證碼：');
         if (!code) return;
         code = code.trim();
-        if (!/^\d{6}$/.test(code)) { alert('請輸入 6 位數字'); return; }
+        if (!/^\d{6,10}$/.test(code)) { alert('請輸入信中的驗證碼（純數字）'); return; }
         sb.auth.verifyOtp({ email: email, token: code, type: 'email' })
           .then(function (r2) {
             if (r2.error) alert('驗證碼錯誤或已過期，請重新登入');
