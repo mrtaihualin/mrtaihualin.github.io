@@ -118,7 +118,7 @@
 
     if (!rows.length) {
       root.innerHTML = msgBox('🌱', '還沒有資料', '你還沒有完成任何記錄成績的練習，先去玩一場吧',
-        '<a href="tone-finder.html" style="display:inline-block;margin-top:18px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往 tone-finder →</a>');
+        '<a href="games.html" style="display:inline-block;margin-top:18px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往 tone-finder →</a>');
       renderHeaderUser();
       return;
     }

@@ -76,7 +76,7 @@
 </head>
 <body>
 <!-- 🎵 ปุ่มโฆษณาลอย Tone Finder + ของแถมตารางวรรณยุกต์ฟรี — LIN 2026-06-20 -->
-<a href="tone-finder.html" class="tf-float-cta" id="tf-float-cta">
+<a href="games.html" class="tf-float-cta" id="tf-float-cta">
   <span class="tf-float-emoji">🎵</span>
   <span class="tf-float-text"><b>玩聲調遊戲</b><small>免費玩・還送「聲調速查表」🎁</small></span>
   <button class="tf-float-x" aria-label="關閉" onclick="event.preventDefault();event.stopPropagation();var c=document.getElementById('tf-float-cta');if(c)c.style.display='none';">✕</button>
@@ -127,8 +127,7 @@
   <a href="page3.html">須知・分享</a>
   <a href="page-services.html">導遊・翻譯</a>
   <a href="page4.html">泰語・分享</a>
-  <a href="tone-finder.html">聲調・搜尋</a>
-  <a href="reading-game.html">拼讀・練習</a>
+  <a href="games.html">免費遊戲</a>
 </div>
 <!-- HERO -->
 <section id="home">
@@ -140,7 +139,7 @@
   <button class="hero-cta" onclick="openModal('modal-line-qr')">立即預約 30 分鐘免費體驗課 →</button>
   <div style="margin-top:14px;opacity:0;animation:fadeUp 0.5s 1.0s forwards;display:flex;flex-direction:column;align-items:center;gap:10px;">
     <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);letter-spacing:0.5px;">✓ 完全免費・無須綁定・30 分鐘立即感受差異</p>
-    <a href="tone-finder.html" style="display:inline-flex;align-items:center;gap:8px;background:rgba(200,151,58,0.12);border:1.5px solid var(--gold-bright);color:var(--gold-deep,#8B6310);font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;padding:10px 24px;border-radius:40px;text-decoration:none;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(200,151,58,0.22)'" onmouseout="this.style.background='rgba(200,151,58,0.12)'">🎵 先免費玩聲調遊戲</a>
+    <a href="games.html" style="display:inline-flex;align-items:center;gap:8px;background:rgba(200,151,58,0.12);border:1.5px solid var(--gold-bright);color:var(--gold-deep,#8B6310);font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;padding:10px 24px;border-radius:40px;text-decoration:none;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(200,151,58,0.22)'" onmouseout="this.style.background='rgba(200,151,58,0.12)'">🎮 先免費玩遊戲</a>
   </div>
   <div class="scroll-hint"><span>往下看</span><div class="line"></div></div>
 </section>
@@ -243,7 +242,7 @@
         <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:3px;font-weight:700;color:var(--gold);text-transform:uppercase;">免費互動小遊戲</div>
         <p style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--ink);margin:0;line-height:1.35;">你能分辨泰語聲調嗎？</p>
         <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-soft,#666);margin:0;line-height:1.7;">不需任何基礎，馬上挑戰</p>
-        <a href="tone-finder.html" style="margin-top:8px;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 28px;text-decoration:none;border-radius:40px;box-shadow:0 4px 16px rgba(139,99,16,0.35);letter-spacing:0.5px;transition:filter 0.2s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">玩聲調遊戲 →</a>
+        <a href="games.html" style="margin-top:8px;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:14px;padding:13px 28px;text-decoration:none;border-radius:40px;box-shadow:0 4px 16px rgba(139,99,16,0.35);letter-spacing:0.5px;transition:filter 0.2s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">玩聲調遊戲 →</a>
       </div>
 
       <!-- 卡片 2: 速查表 -->
@@ -768,7 +767,7 @@ function deleteFBComment(postId, idx) {
 // [2] ปุ่มจองทดลองเรียน — ย้ายไปรวมศูนย์ที่ shared.js (openModal) แล้ว เพื่อให้นับครบทุกหน้า
 
 // [3] คลิกลิงก์ไปหน้าเกม tone-finder
-document.querySelectorAll('a[href="tone-finder.html"]').forEach(function(el) {
+document.querySelectorAll('a[href="games.html"]').forEach(function(el) {
   el.addEventListener('click', function() {
     gtag('event', 'game_link_click', { source_page: 'index' });
   });
