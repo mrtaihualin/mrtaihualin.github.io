@@ -1116,7 +1116,8 @@ function selectStudent(token) {
       '<div class="stu-acc-avatar">' + initial + '</div>' +
       '<span class="stu-panel-name">' + s.name + '</span>' +
     '</div>' +
-    '<button class="btn-start-class" onclick="startClassRec(\'' + t + '\')">▶️ 進入課堂＋錄影（Google Meet）</button>' +
+    '<button class="btn-start-class" onclick="enterClass(\'' + t + '\')">📹 進入課堂（Google Meet）</button>' +
+    '<button class="btn-start-class" style="background:linear-gradient(135deg,#dc2626,#b91c1c);" onclick="recordClass(\'' + t + '\')">🔴 開始錄影</button>' +
     '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
     '<div class="stu-acc-actions">' +
       '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
@@ -2468,7 +2469,12 @@ function openTabReliably(url){
   a.href=url; a.target='_blank'; a.rel='noopener';
   document.body.appendChild(a); a.click(); a.remove();
 }
-function startClassRec(token){
+// ── 進入課堂與錄影拆成兩鍵：避免「開 Meet」與「開螢幕分享」在同一手勢互相搶 → Meet 被擋 ──
+let recReminderID=null;
+const REC_REMIND_MS=60000;   // 進入課堂後 60 秒仍未錄影 → 跳提醒
+
+// 步驟 1：純連結開 Meet（與學生端可用的 🎥 按鈕相同方式，穩定）＋ 啟動「忘了錄影」提醒
+function enterClass(token){
   const s=(typeof studentsCache!=='undefined')?studentsCache[token]:null;
   if(!s){ alert('找不到學生資料'); return; }
   if(!s.meet){ alert('此學生尚未設定 Meet 連結，請先在設定中新增'); return; }
@@ -2476,12 +2482,32 @@ function startClassRec(token){
   const card=document.getElementById('recCard'); if(card) card.style.display='';   // 顯示錄製面板
   const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄影 — '+(s.name||token);
   if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
-  // 在 user gesture context 內（onclick 同步路徑）開 Meet → browser 不會擋 popup
-  // 必須在 await getDisplayMedia() 之前呼叫，否則 Chrome 視 user activation 已過期而封鎖
   recPendingMeet = null;
   openTabReliably(s.meet);
+  // 啟動提醒：時間到還沒按錄影就跳視窗
+  clearTimeout(recReminderID);
+  recReminderID=setTimeout(function(){ if(recState!=='recording') showRecReminder(); }, REC_REMIND_MS);
+}
+
+// 步驟 2：開始錄影（此時 Meet 已開，選 Meet 分頁即可；獨立手勢→螢幕分享不會擋）
+function recordClass(token){
+  const s=(typeof studentsCache!=='undefined')?studentsCache[token]:null;
+  if(!s){ alert('找不到學生資料'); return; }
+  recActiveStudent=token;
+  clearTimeout(recReminderID); hideRecReminder();
+  const card=document.getElementById('recCard'); if(card) card.style.display='';
+  const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄影 — '+(s.name||token);
   startRec('video');
 }
+
+// 相容舊呼叫
+function startClassRec(token){ enterClass(token); }
+
+// ── 忘了錄影提醒視窗 ──
+function showRecReminder(){ const ov=document.getElementById('recReminderOverlay'); if(ov) ov.classList.add('open'); }
+function hideRecReminder(){ const ov=document.getElementById('recReminderOverlay'); if(ov) ov.classList.remove('open'); }
+function recReminderStartNow(){ hideRecReminder(); if(recActiveStudent) recordClass(recActiveStudent); }  // 點擊＝使用者手勢，可開螢幕分享
+function recReminderDismiss(){ clearTimeout(recReminderID); hideRecReminder(); }
 
 // — 格式偵測（優先 mp4／m4a，相容 iPhone 播放）—
 function recPickVideoMime(){
