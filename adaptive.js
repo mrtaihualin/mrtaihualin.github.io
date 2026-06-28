@@ -17,7 +17,7 @@
            String(cfg.url).indexOf('YOUR_') === -1 &&
            String(cfg.anonKey).indexOf('YOUR_') === -1 &&
            window.supabase && window.supabase.createClient;
-  var sb = ok ? window.supabase.createClient(cfg.url, cfg.anonKey) : null;
+  var sb = ok ? (window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey)) : null;
 
   var currentUser = null;
   var wrongCounts = {};   // { word: จำนวนครั้งที่พลาด }

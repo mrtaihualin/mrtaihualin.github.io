@@ -23,7 +23,7 @@
     return;
   }
 
-  var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
+  var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
   var currentUser = null;
   var authResolved = false;
   var gateOpen = false;          // gate เด้งเฉพาะตอนผู้ใช้กด "เริ่มเล่น" จริง

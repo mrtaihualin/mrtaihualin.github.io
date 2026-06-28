@@ -422,7 +422,7 @@
 </div>
 
 <!-- ======= UPLOAD FILE TO STUDENT FOLDER ======= -->
-<div class="notepad-overlay" id="uploadOverlay" onclick="if(event.target===this)closeUploadModal()">
+<div class="notepad-overlay" id="uploadOverlay">
   <div class="notepad-modal" style="max-width:440px;">
     <div class="notepad-modal-header">
       <span class="notepad-modal-title" id="uploadTitle">⬆️ 上傳檔案</span>
@@ -436,12 +436,39 @@
           <button class="btn-sm" id="upDest-video" style="flex:1;" onclick="selectUploadDest('影片')">🎬 影片</button>
         </div>
       </div>
-      <input type="file" id="uploadFileInput" multiple style="font-size:0.9rem;">
+      <div style="display:flex;gap:8px;">
+        <button class="btn-sm" style="flex:1;" onclick="document.getElementById('uploadFileInput').click()">📄 選擇多個檔案</button>
+        <button class="btn-sm" style="flex:1;" onclick="document.getElementById('uploadFolderInput').click()">📁 選擇整個資料夾</button>
+      </div>
+      <input type="file" id="uploadFileInput" multiple style="display:none;" onchange="updateUploadPick()">
+      <input type="file" id="uploadFolderInput" webkitdirectory multiple style="display:none;" onchange="updateUploadPick()">
+      <div id="uploadPickInfo" style="font-size:0.82rem;color:var(--ink-soft);line-height:1.6;"></div>
       <button class="btn-add-student" style="margin-top:0;" onclick="doUploadFiles()">⬆️ 開始上傳</button>
       <div id="uploadStatus" style="font-size:0.85rem;color:var(--ink-muted);line-height:1.6;"></div>
     </div>
   </div>
 </div>
+
+<!-- ======= 上傳完成 popup ======= -->
+<div class="modal-overlay" id="uploadDoneModal">
+  <div class="modal" style="max-width:380px;text-align:center;">
+    <div style="font-size:2.4rem;margin-bottom:6px;">✅</div>
+    <h3 style="color:var(--gold-deep);">上傳完成！</h3>
+    <p id="uploadDoneMsg" style="margin-bottom:20px;"></p>
+    <div class="modal-footer" style="justify-content:center;">
+      <button class="btn-ghost" onclick="document.getElementById('uploadDoneModal').classList.remove('open')">關閉</button>
+      <a id="uploadDoneDriveBtn" href="#" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border-radius:9px;padding:9px 18px;font-size:0.85rem;font-weight:700;font-family:'Noto Sans TC',sans-serif;text-decoration:none;display:inline-block;">📁 到 Drive 查看</a>
+    </div>
+  </div>
+</div>
+
+<!-- ======= 上傳進度浮動條（關掉視窗也看得到，上傳中請勿關閉分頁）======= -->
+<div id="uploadFloat" style="display:none;position:fixed;right:16px;bottom:16px;z-index:200;background:var(--cream,#fdf8f0);border:1px solid var(--border,#e9dcb8);border-radius:12px;box-shadow:0 8px 28px rgba(90,62,10,0.22);padding:12px 16px;max-width:300px;font-family:'Noto Sans TC',sans-serif;font-size:0.83rem;color:var(--ink-soft,#5a4a2a);line-height:1.5;">
+  <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:var(--gold-deep,#8b6310);margin-bottom:4px;"><span class="upload-spin" style="display:inline-block;">⏳</span> 檔案上傳中</div>
+  <div id="uploadFloatText">準備中…</div>
+  <div style="font-size:0.74rem;color:var(--ink-muted,#9a8a6a);margin-top:4px;">可繼續操作其他功能，但上傳完成前請勿關閉這個分頁</div>
+</div>
+<style>@keyframes upspin{to{transform:rotate(360deg)}} .upload-spin{animation:upspin 1.2s linear infinite}</style>
 
 <!-- ======= SLIP VIEWER ======= -->
 <div class="slip-viewer-overlay" id="slipViewer" onclick="this.classList.remove('open')">
@@ -704,7 +731,7 @@ async function fetchStudents() {
   const { data, error } = await sb.from('classroom_students').select('*').order('created_at');
   if (error) { console.error(error); return; }
   studentsCache = {};
-  (data || []).forEach(r => { studentsCache[r.token] = { name: r.name, meet: r.meet }; });
+  (data || []).forEach(r => { studentsCache[r.token] = { name: r.name, meet: normalizeMeet(r.meet) }; });
 }
 
 // ============================================================
@@ -857,11 +884,35 @@ function openUploadModal(token) {
   const s = (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
   document.getElementById('uploadTitle').textContent = '⬆️ 上傳檔案 — ' + (s ? s.name : token);
   const inp = document.getElementById('uploadFileInput'); if (inp) inp.value = '';
+  const fol = document.getElementById('uploadFolderInput'); if (fol) fol.value = '';
+  document.getElementById('uploadPickInfo').textContent = '';
   document.getElementById('uploadStatus').textContent = '';
   selectUploadDest('學習內容');
   document.getElementById('uploadOverlay').classList.add('open');
 }
 function closeUploadModal() { document.getElementById('uploadOverlay').classList.remove('open'); }
+function getUploadFiles() {
+  const a = document.getElementById('uploadFileInput');
+  const b = document.getElementById('uploadFolderInput');
+  return [...(a && a.files ? a.files : []), ...(b && b.files ? b.files : [])];
+}
+function updateUploadPick() {
+  const files = getUploadFiles();
+  const info = document.getElementById('uploadPickInfo');
+  info.textContent = files.length ? ('已選 ' + files.length + ' 個檔案') : '';
+}
+// ── 上傳進度狀態：popup 內 + 右下角浮動條（關掉 popup 也看得到）──
+let uploadInProgress = false;
+function setUploadStatus(text) {
+  const s = document.getElementById('uploadStatus'); if (s) s.textContent = text;
+  const f = document.getElementById('uploadFloatText'); if (f) f.textContent = text;
+}
+function showUploadFloat() { const el = document.getElementById('uploadFloat'); if (el) el.style.display = 'block'; }
+function hideUploadFloat() { const el = document.getElementById('uploadFloat'); if (el) el.style.display = 'none'; }
+// 上傳途中若要關分頁／跳頁 → 跳出瀏覽器原生警告，避免半途中斷
+window.addEventListener('beforeunload', function (e) {
+  if (uploadInProgress) { e.preventDefault(); e.returnValue = ''; return ''; }
+});
 function selectUploadDest(d) {
   uploadDest = d;
   const study = document.getElementById('upDest-study'), video = document.getElementById('upDest-video');
@@ -869,28 +920,60 @@ function selectUploadDest(d) {
   if (video) video.style.outline = (d === '影片') ? '3px solid var(--gold-deep)' : 'none';
 }
 async function doUploadFiles() {
-  const input = document.getElementById('uploadFileInput');
-  const status = document.getElementById('uploadStatus');
-  if (!input || !input.files.length) { alert('請先選擇檔案'); return; }
-  const s = (typeof studentsCache !== 'undefined') ? studentsCache[uploadToken] : null;
-  const name = s ? s.name : uploadToken;
+  if (uploadInProgress) { alert('已有一批檔案正在上傳，請等它完成'); return; }
+  const files = getUploadFiles();
+  if (!files.length) { alert('請先選擇檔案或資料夾'); return; }
+  // 一開始就把當下的對象「鎖住」成區域變數 → 即使中途關 popup 或開別位學生，也不會傳錯資料夾
+  const token = uploadToken, dest = uploadDest;
+  const s = (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
+  const name = s ? s.name : token;
+  // 立刻清掉已選清單並顯示浮動進度條（之後關掉 popup 也看得到、上傳照跑）
+  document.getElementById('uploadFileInput').value = '';
+  document.getElementById('uploadFolderInput').value = '';
+  document.getElementById('uploadPickInfo').textContent = '';
+  uploadInProgress = true;
+  showUploadFloat();
   try {
-    status.textContent = '☁️ 連線 Google Drive…（首次會跳出授權）';
-    const folderId = await gdGetStudentSubfolderId(name, uploadDest);
+    setUploadStatus('☁️ 連線 Google Drive…（首次會跳出授權）');
+    const folderId = await gdGetStudentSubfolderId(name, dest);
+    const folderCache = {};   // 相對路徑 → Drive 資料夾 id（同一次上傳共用，避免重複建立）
+    async function ensureSubPath(parts) {
+      let parent = folderId, key = '';
+      for (const p of parts) {
+        key += '/' + p;
+        if (!folderCache[key]) folderCache[key] = await gdEnsureFolder(p, parent);
+        parent = folderCache[key];
+      }
+      return parent;
+    }
     let n = 0;
-    for (const f of input.files) {
-      status.textContent = '☁️ 上傳中… ' + (n + 1) + '/' + input.files.length + '：' + f.name;
-      const up = await gdUpload(f, f.name, folderId);
+    for (const f of files) {
+      // 選「整個資料夾」時 webkitRelativePath = "資料夾/子層/檔名" → 在 Drive 重建一樣的資料夾結構
+      const rel = (f.webkitRelativePath || f.name).split('/');
+      const baseName = rel.pop();
+      const targetFolder = rel.length ? await ensureSubPath(rel) : folderId;
+      const showName = f.webkitRelativePath || f.name;
+      setUploadStatus('☁️ 上傳中… ' + (n + 1) + '/' + files.length + '：' + showName);
+      const up = await gdUpload(f, baseName, targetFolder);
       // 分享 + 記錄 → 學生在「課堂資料下載」看得到並可下載
       try { await gdShareAnyone(up.id); } catch(e) {}
       const ulink = up.webViewLink || ('https://drive.google.com/file/d/' + up.id + '/view');
-      try { await saveRecordingLink(uploadToken, f.name, up.id, ulink, (f.size / 1048576).toFixed(1), null); } catch(e) {}
+      try { await saveRecordingLink(token, showName, up.id, ulink, (f.size / 1048576).toFixed(1), null); } catch(e) {}
       n++;
     }
-    try { await ensureStudentFolderShared(name, uploadToken); } catch(e) {}
-    status.textContent = '✅ 已上傳 ' + n + ' 個檔案到「' + name + ' / ' + uploadDest + '」';
-    input.value = '';
-  } catch (e) { status.textContent = '⚠️ 上傳失敗：' + (e.message || e); }
+    try { await ensureStudentFolderShared(name, token); } catch(e) {}
+    setUploadStatus('✅ 已上傳 ' + n + ' 個檔案到「' + name + ' / ' + dest + '」');
+    // 完成 popup：顯示結果 + 到 Drive 查看
+    document.getElementById('uploadDoneMsg').innerHTML = '已上傳 <b>' + n + '</b> 個檔案到<br>「' + name + ' / ' + dest + '」';
+    document.getElementById('uploadDoneDriveBtn').href = 'https://drive.google.com/drive/folders/' + folderId;
+    document.getElementById('uploadDoneModal').classList.add('open');
+  } catch (e) {
+    setUploadStatus('⚠️ 上傳失敗：' + (e.message || e));
+    alert('上傳失敗：' + (e.message || e));
+  } finally {
+    uploadInProgress = false;
+    hideUploadFloat();
+  }
 }
 // targetMime = ใส่ 'application/vnd.google-apps.document' เพื่อให้ Drive แปลง HTML เป็น Google Doc (เปิดอ่าน/แก้ได้เลย ไม่โชว์โค้ดดิบ)
 async function gdUploadSmall(blob, name, targetMime, folderId) {
@@ -905,6 +988,15 @@ async function gdUploadSmall(blob, name, targetMime, folderId) {
   });
   if (!r.ok) throw new Error('上傳失敗 ' + r.status);
   return await r.json();  // 老師私人筆記，不公開分享
+}
+// 用新 HTML「覆蓋」同一份 Google 文件內容（給筆記自動儲存用 → 不會一直產生新檔）
+async function gdUpdateDocHtml(fileId, blob) {
+  const token = await gdGetToken();
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files/' + fileId + '?uploadType=media&fields=id,webViewLink', {
+    method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/html' }, body: blob
+  });
+  if (!r.ok) throw new Error('更新失敗 ' + r.status);
+  return await r.json();
 }
 
 async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
@@ -946,6 +1038,16 @@ const isTeacher = !studentToken;
 // --- security helpers: escape HTML + whitelist URL scheme (กัน XSS) ---
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function safeHref(u){var s=String(u==null?'':u).trim();return /^https:\/\//i.test(s)?s:'#';}
+// 把 Meet 連結補成可用的 https:// 形式（避免老師貼成沒有 https 的連結 → 學生按了進不去）
+function normalizeMeet(u){
+  var s=String(u==null?'':u).trim();
+  if(!s) return '';
+  if(/^https:\/\//i.test(s)) return s;                                  // 已正確
+  if(/^http:\/\//i.test(s)) return s.replace(/^http:\/\//i,'https://'); // http → https
+  if(/^(www\.)?meet\.google\.com\//i.test(s)) return 'https://'+s.replace(/^www\./i,''); // 少了 https://
+  if(/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/i.test(s)) return 'https://meet.google.com/'+s;        // 只貼了會議代碼
+  return s; // 其他情況原樣回傳（仍由 safeHref 把關，非 https 會擋掉）
+}
 
 // ============================================================
 // ADD STUDENT MODAL
@@ -973,7 +1075,7 @@ function previewToken() {
 
 async function addStudent() {
   const name = document.getElementById('addName').value.trim();
-  const meet = document.getElementById('addMeet').value.trim();
+  const meet = normalizeMeet(document.getElementById('addMeet').value);
   if (!name || !meet) { alert('請填寫學生姓名與 Meet 連結'); return; }
   let token = pendingToken || generateToken(name);
   while (studentsCache[token]) token = generateToken(name);
@@ -1013,7 +1115,7 @@ function openEditMeetModal(token) {
 function closeEditMeetModal() { document.getElementById('editMeetModal').classList.remove('open'); }
 
 async function saveMeetLink() {
-  const newMeet = document.getElementById('editMeetInput').value.trim();
+  const newMeet = normalizeMeet(document.getElementById('editMeetInput').value);
   if (!newMeet) { alert('請填寫 Meet 連結'); return; }
   const saveBtn = document.querySelector('#editMeetModal .btn-gold');
   saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
@@ -1146,7 +1248,7 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
-    '<button class="btn-open-note" onclick="openNotepad(\'' + t + '\')">📝 開啟課堂筆記</button>' +
+    '<button class="btn-open-note" onclick="openStudentNotesDoc(\'' + t + '\')">📝 開啟課堂筆記（Google 文件）</button>' +
     '<div id="stuInfo-' + t + '" style="margin-top:12px;"></div>';
 
   panel.classList.add('visible');
@@ -1164,6 +1266,61 @@ function selectStudent(token) {
 
 let currentNoteToken = '';
 
+let noteAutosaveTimer = null;   // 停手後延遲自動存
+let noteSaving = false;         // 是否正在上傳中（避免同時送多次）
+let noteDirtyAgain = false;     // 上傳中又有新編輯 → 存完再存一次
+
+function noteSetStatus(html) { const el = document.getElementById('notepadStatus'); if (el) el.innerHTML = html; }
+// 每位學生每天一份文件 → 同一天的編輯都覆蓋同一份，不會洗版
+function noteDocKey(token) { return 'notedocid_' + token + '_' + new Date().toISOString().slice(0, 10); }
+
+// ============================================================
+// 課堂筆記 = 直接開該生 Google 文件來打字（Docs 原生即時自動儲存，最穩）
+//   每位學生固定一份「學生名 — 課堂筆記」文件，放在該生 學習內容 資料夾，
+//   分享給學生可看，並記錄到「課堂資料下載」。
+// ============================================================
+async function ensureStudentNotesDoc(studentName, token) {
+  // 每天一份，檔名帶當天日期；同一天再開 → 開同一份
+  const d = new Date();
+  const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const key = 'notesdocid_' + token + '_' + ymd;
+  const docName = studentName + ' — 課堂筆記 ' + ymd;
+  let docId = localStorage.getItem(key);
+  if (docId) {
+    try {
+      const meta = await gdApi('drive/v3/files/' + docId + '?fields=id,trashed', { method: 'GET' });
+      if (meta.trashed) { docId = null; localStorage.removeItem(key); }   // 被丟到垃圾桶 → 重建
+    } catch (e) { docId = null; localStorage.removeItem(key); }            // 找不到（被刪）→ 重建
+  }
+  if (docId) return docId;
+  const folderId = await gdGetStudentSubfolderId(studentName, '學習內容');
+  const seed = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>'
+    + '<h1>📝 ' + studentName + ' — 課堂筆記（' + ymd + '）</h1>'
+    + '<p>在這裡打字，Google 文件會自動即時儲存。</p></body></html>';
+  const blob = new Blob([seed], { type: 'text/html' });
+  const doc = await gdUploadSmall(blob, docName, 'application/vnd.google-apps.document', folderId);
+  docId = doc.id;
+  localStorage.setItem(key, docId);
+  const link = doc.webViewLink || ('https://docs.google.com/document/d/' + docId + '/edit');
+  try { await gdShareAnyone(docId); } catch (e) {}
+  try { await saveRecordingLink(token, docName, docId, link, '', null); } catch (e) {}
+  return docId;
+}
+async function openStudentNotesDoc(token) {
+  // 先同步開一個空白分頁，保住「使用者點擊」這個手勢 → 之後再導向 Docs，才不會被當彈出視窗擋掉
+  const win = window.open('about:blank', '_blank');
+  const s = studentsCache[token];
+  const studentName = s ? s.name : token;
+  try {
+    const docId = await ensureStudentNotesDoc(studentName, token);
+    const url = 'https://docs.google.com/document/d/' + docId + '/edit';
+    if (win) win.location = url; else openTabReliably(url);   // 萬一被擋 → 用穩定的開分頁方式
+  } catch (e) {
+    if (win) win.close();
+    alert('開啟筆記文件失敗：' + (e.message || e) + '（請先確認已連接 Google）');
+  }
+}
+
 function openNotepad(token) {
   const s = studentsCache[token];
   currentNoteToken = token;
@@ -1172,37 +1329,57 @@ function openNotepad(token) {
   const editor = document.getElementById('notepadEditor');
   if (editor) {
     editor.innerHTML = localStorage.getItem('notehtml_' + token) || '';
-    editor.addEventListener('input', function() {
+    editor.oninput = function() {                       // 指派 oninput（非 addEventListener）→ 重開不會疊加監聽
       localStorage.setItem('notehtml_' + token, editor.innerHTML);
-    });
+      scheduleNoteAutosave(token);                      // 邊打邊自動存
+    };
   }
-  const statusEl = document.getElementById('notepadStatus');
-  if (statusEl) statusEl.textContent = '';
+  noteSetStatus(localStorage.getItem('gdConnected')
+    ? '✏️ 編輯中…停手約 2.5 秒會自動儲存'
+    : '⚠️ 尚未連接 Google，請先按一次「💾 存到 Drive」授權，之後就會自動儲存');
   document.getElementById('notepadOverlay').classList.add('open');
   setTimeout(function() { if (editor) editor.focus(); }, 150);
 }
 
 function closeNotepad() {
+  clearTimeout(noteAutosaveTimer);
+  // 關閉前再存一次（只有已連 Google 才做，避免突然彈授權視窗）
+  if (currentNoteToken && localStorage.getItem('gdConnected')) persistNote(currentNoteToken, true);
   document.getElementById('notepadOverlay').classList.remove('open');
 }
 
 function noteCmd(cmd, val) {
   document.getElementById('notepadEditor').focus();
   document.execCommand(cmd, false, val || null);
+  if (currentNoteToken) { localStorage.setItem('notehtml_' + currentNoteToken, document.getElementById('notepadEditor').innerHTML); scheduleNoteAutosave(currentNoteToken); }
 }
 
 function noteFontSize(val) {
   document.getElementById('notepadEditor').focus();
   document.execCommand('fontSize', false, val);
+  if (currentNoteToken) scheduleNoteAutosave(currentNoteToken);
 }
 
-async function saveNote(token) {
+// 手動按鈕：立刻存（未連 Google 時這一步會跳授權）
+function saveNote(token) { persistNote(token, false); }
+
+// 邊打邊存：停手 2.5 秒後自動上傳（只有已連 Google 才自動，避免打字打到一半彈授權）
+function scheduleNoteAutosave(token) {
+  if (!localStorage.getItem('gdConnected')) return;
+  clearTimeout(noteAutosaveTimer);
+  noteSetStatus('✏️ 編輯中…');
+  noteAutosaveTimer = setTimeout(function() { persistNote(token, true); }, 2500);
+}
+
+// 核心：建立或「覆蓋同一份」Google 文件（silent=true → 自動儲存，提示較低調）
+async function persistNote(token, silent) {
   const editor = document.getElementById('notepadEditor');
-  const statusEl = document.getElementById('notepadStatus');
   if (!editor || !token) return;
+  if (noteSaving) { noteDirtyAgain = true; return; }   // 正在上傳 → 記住，等存完再存一次
+  noteSaving = true;
   const htmlContent = editor.innerHTML;
   localStorage.setItem('notehtml_' + token, htmlContent);
-  if (statusEl) statusEl.textContent = '⏳ 上傳中…';
+  noteSetStatus(silent ? '💾 自動儲存中…' : '⏳ 上傳中…');
   const s = studentsCache[token];
   const studentName = s ? s.name : token;
   const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -1218,18 +1395,34 @@ async function saveNote(token) {
     + '<p style="color:#aaa;font-size:0.78rem;">泰華老師課堂筆記 · mrtaihualin.com</p>'
     + '</body></html>';
   const blob = new Blob([fullHtml], { type: 'text/html' });
+  const docKey = noteDocKey(token);
   try {
-    const folderId = await gdGetStudentSubfolderId(studentName, '學習內容');
-    const doc = await gdUploadSmall(blob, fileName, 'application/vnd.google-apps.document', folderId);
-    const link = doc.webViewLink || ('https://docs.google.com/document/d/' + doc.id + '/edit');
-    // 分享 + 記錄 → 讓學生在「課堂資料下載」看得到並可開啟
-    try { await gdShareAnyone(doc.id); } catch(e) {}
-    try { await saveRecordingLink(token, fileName + '（筆記）', doc.id, link, '', null); } catch(e) {}
-    if (statusEl) {
-      statusEl.innerHTML = '✅ 已儲存為 Google 文件　<a href="' + escHtml(safeHref(link)) + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;">開啟</a>';
+    let docId = localStorage.getItem(docKey);
+    if (docId) {
+      // 覆蓋同一份文件（不產生新檔、不重複記錄到學生下載清單）
+      try { await gdUpdateDocHtml(docId, blob); }
+      catch (e) {
+        if (/ 40[34]/.test(' ' + (e.message || ''))) { localStorage.removeItem(docKey); docId = null; }  // 檔案被刪/沒權限 → 改建新檔
+        else throw e;
+      }
     }
+    if (!docId) {
+      const folderId = await gdGetStudentSubfolderId(studentName, '學習內容');
+      const doc = await gdUploadSmall(blob, fileName, 'application/vnd.google-apps.document', folderId);
+      docId = doc.id;
+      localStorage.setItem(docKey, docId);
+      const link = doc.webViewLink || ('https://docs.google.com/document/d/' + docId + '/edit');
+      try { await gdShareAnyone(docId); } catch(e) {}
+      try { await saveRecordingLink(token, fileName + '（筆記）', docId, link, '', null); } catch(e) {}  // 只在第一次建立時記錄
+    }
+    const link = 'https://docs.google.com/document/d/' + docId + '/edit';
+    const tt = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    noteSetStatus('✅ 已自動儲存 ' + tt + '　<a href="' + escHtml(safeHref(link)) + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;">開啟文件</a>');
   } catch(e) {
-    if (statusEl) statusEl.textContent = '⚠️ ' + e.message;
+    noteSetStatus('⚠️ ' + (e.message || e));
+  } finally {
+    noteSaving = false;
+    if (noteDirtyAgain) { noteDirtyAgain = false; scheduleNoteAutosave(token); }  // 存的途中又改了 → 再排一次
   }
 }
 
@@ -1316,7 +1509,7 @@ function renderStudentView() {
   const nParam = urlParams.get('n');
   const mParam = urlParams.get('m');
   if (nParam && mParam) {
-    try { student = { name: decodeURIComponent(atob(nParam)), meet: decodeURIComponent(atob(mParam)) }; } catch(e) {}
+    try { student = { name: decodeURIComponent(atob(nParam)), meet: normalizeMeet(decodeURIComponent(atob(mParam))) }; } catch(e) {}
   }
   if (!student) {
     document.getElementById('mainContainer').innerHTML =
@@ -2428,6 +2621,7 @@ async function checkStudentSlipStatus(token) {
 document.addEventListener('click', function(e) {
   var t = e.target;
   if (t && t.classList && (t.classList.contains('modal-overlay') || t.classList.contains('slip-viewer-overlay') || t.classList.contains('notepad-overlay'))) {
+    if (t.id === 'uploadOverlay' || t.id === 'uploadDoneModal') return; // 上傳視窗：點外面不關
     t.classList.remove('open');
   }
 });
@@ -2553,7 +2747,7 @@ function enterClass(token){
   recActiveStudent=token;
   const card=document.getElementById('recCard'); if(card) card.style.display='';   // 顯示錄製面板
   const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄影 — '+(s.name||token);
-  if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
+  if(card) card.scrollIntoView({block:'nearest'});  // 只在面板不在畫面內才捲動，避免畫面突然往下彈
   recPendingMeet = null;
   openTabReliably(s.meet);
   // 啟動提醒：時間到還沒按錄影就跳視窗
@@ -2666,10 +2860,204 @@ function splitSegment(stream){
   recMR.stop();
 }
 
-function finalizeSegment(){
+// ============================================================
+// fix-webm-duration v1.0.6 (MIT, Yan Senotrusov) — 內嵌版
+// 來源 https://github.com/yusitnikov/fix-webm-duration
+// 作用：webm 錄影檔常常沒寫入「時長」→ 播放器/Google Drive 顯示 00:00 且不能拖動。
+//       我們已知道實際秒數（計時器），用這支把時長補回檔頭，存下來/上雲端就能正常播放與拖動。
+// ============================================================
+(function (name, definition) {
+    if (typeof define === 'function' && define.amd) { define(definition); }
+    else if (typeof module !== 'undefined' && module.exports) { module.exports = definition(); }
+    else { window.ysFixWebmDuration = definition(); }
+})('fix-webm-duration', function () {
+    var sections = {
+        0xa45dfa3: { name: 'EBML', type: 'Container' },
+        0x286: { name: 'EBMLVersion', type: 'Uint' },
+        0x2f7: { name: 'EBMLReadVersion', type: 'Uint' },
+        0x2f2: { name: 'EBMLMaxIDLength', type: 'Uint' },
+        0x2f3: { name: 'EBMLMaxSizeLength', type: 'Uint' },
+        0x282: { name: 'DocType', type: 'String' },
+        0x287: { name: 'DocTypeVersion', type: 'Uint' },
+        0x285: { name: 'DocTypeReadVersion', type: 'Uint' },
+        0x6c: { name: 'Void', type: 'Binary' },
+        0x3f: { name: 'CRC-32', type: 'Binary' },
+        0x8538067: { name: 'Segment', type: 'Container' },
+        0x14d9b74: { name: 'SeekHead', type: 'Container' },
+        0xdbb: { name: 'Seek', type: 'Container' },
+        0x13ab: { name: 'SeekID', type: 'Binary' },
+        0x13ac: { name: 'SeekPosition', type: 'Uint' },
+        0x549a966: { name: 'Info', type: 'Container' },
+        0x33a4: { name: 'SegmentUID', type: 'Binary' },
+        0x3384: { name: 'SegmentFilename', type: 'String' },
+        0xad7b1: { name: 'TimecodeScale', type: 'Uint' },
+        0x489: { name: 'Duration', type: 'Float' },
+        0x461: { name: 'DateUTC', type: 'Date' },
+        0x3ba9: { name: 'Title', type: 'String' },
+        0xd80: { name: 'MuxingApp', type: 'String' },
+        0x1741: { name: 'WritingApp', type: 'String' },
+        0x654ae6b: { name: 'Tracks', type: 'Container' },
+        0x2e: { name: 'TrackEntry', type: 'Container' },
+        0x60: { name: 'Video', type: 'Container' },
+        0x61: { name: 'Audio', type: 'Container' }
+    };
+
+    function doInherit(newClass, baseClass) {
+        newClass.prototype = Object.create(baseClass.prototype);
+        newClass.prototype.constructor = newClass;
+    }
+    function WebmBase(name, type) { this.name = name || 'Unknown'; this.type = type || 'Unknown'; }
+    WebmBase.prototype.updateBySource = function() { };
+    WebmBase.prototype.setSource = function(source) { this.source = source; this.updateBySource(); };
+    WebmBase.prototype.updateByData = function() { };
+    WebmBase.prototype.setData = function(data) { this.data = data; this.updateByData(); };
+
+    function WebmUint(name, type) { WebmBase.call(this, name, type || 'Uint'); }
+    doInherit(WebmUint, WebmBase);
+    function padHex(hex) { return hex.length % 2 === 1 ? '0' + hex : hex; }
+    WebmUint.prototype.updateBySource = function() {
+        this.data = '';
+        for (var i = 0; i < this.source.length; i++) { var hex = this.source[i].toString(16); this.data += padHex(hex); }
+    };
+    WebmUint.prototype.updateByData = function() {
+        var length = this.data.length / 2;
+        this.source = new Uint8Array(length);
+        for (var i = 0; i < length; i++) { var hex = this.data.substr(i * 2, 2); this.source[i] = parseInt(hex, 16); }
+    };
+    WebmUint.prototype.getValue = function() { return parseInt(this.data, 16); };
+    WebmUint.prototype.setValue = function(value) { this.setData(padHex(value.toString(16))); };
+
+    function WebmFloat(name, type) { WebmBase.call(this, name, type || 'Float'); }
+    doInherit(WebmFloat, WebmBase);
+    WebmFloat.prototype.getFloatArrayType = function() { return this.source && this.source.length === 4 ? Float32Array : Float64Array; };
+    WebmFloat.prototype.updateBySource = function() {
+        var byteArray = this.source.reverse();
+        var floatArrayType = this.getFloatArrayType();
+        var floatArray = new floatArrayType(byteArray.buffer);
+        this.data = floatArray[0];
+    };
+    WebmFloat.prototype.updateByData = function() {
+        var floatArrayType = this.getFloatArrayType();
+        var floatArray = new floatArrayType([ this.data ]);
+        var byteArray = new Uint8Array(floatArray.buffer);
+        this.source = byteArray.reverse();
+    };
+    WebmFloat.prototype.getValue = function() { return this.data; };
+    WebmFloat.prototype.setValue = function(value) { this.setData(value); };
+
+    function WebmContainer(name, type) { WebmBase.call(this, name, type || 'Container'); }
+    doInherit(WebmContainer, WebmBase);
+    WebmContainer.prototype.readByte = function() { return this.source[this.offset++]; };
+    WebmContainer.prototype.readUint = function() {
+        var firstByte = this.readByte();
+        var bytes = 8 - firstByte.toString(2).length;
+        var value = firstByte - (1 << (7 - bytes));
+        for (var i = 0; i < bytes; i++) { value *= 256; value += this.readByte(); }
+        return value;
+    };
+    WebmContainer.prototype.updateBySource = function() {
+        this.data = [];
+        for (this.offset = 0; this.offset < this.source.length; this.offset = end) {
+            var id = this.readUint();
+            var len = this.readUint();
+            var end = Math.min(this.offset + len, this.source.length);
+            var data = this.source.slice(this.offset, end);
+            var info = sections[id] || { name: 'Unknown', type: 'Unknown' };
+            var ctr = WebmBase;
+            switch (info.type) {
+                case 'Container': ctr = WebmContainer; break;
+                case 'Uint': ctr = WebmUint; break;
+                case 'Float': ctr = WebmFloat; break;
+            }
+            var section = new ctr(info.name, info.type);
+            section.setSource(data);
+            this.data.push({ id: id, idHex: id.toString(16), data: section });
+        }
+    };
+    WebmContainer.prototype.writeUint = function(x, draft) {
+        for (var bytes = 1, flag = 0x80; x >= flag && bytes < 8; bytes++, flag *= 0x80) { }
+        if (!draft) {
+            var value = flag + x;
+            for (var i = bytes - 1; i >= 0; i--) { var c = value % 256; this.source[this.offset + i] = c; value = (value - c) / 256; }
+        }
+        this.offset += bytes;
+    };
+    WebmContainer.prototype.writeSections = function(draft) {
+        this.offset = 0;
+        for (var i = 0; i < this.data.length; i++) {
+            var section = this.data[i], content = section.data.source, contentLength = content.length;
+            this.writeUint(section.id, draft);
+            this.writeUint(contentLength, draft);
+            if (!draft) { this.source.set(content, this.offset); }
+            this.offset += contentLength;
+        }
+        return this.offset;
+    };
+    WebmContainer.prototype.updateByData = function() {
+        var length = this.writeSections('draft');
+        this.source = new Uint8Array(length);
+        this.writeSections();
+    };
+    WebmContainer.prototype.getSectionById = function(id) {
+        for (var i = 0; i < this.data.length; i++) { var section = this.data[i]; if (section.id === id) { return section.data; } }
+        return null;
+    };
+
+    function WebmFile(source) { WebmContainer.call(this, 'File', 'File'); this.setSource(source); }
+    doInherit(WebmFile, WebmContainer);
+    WebmFile.prototype.fixDuration = function(duration, options) {
+        var logger = (options && options.logger) || function() { };
+        var segmentSection = this.getSectionById(0x8538067);
+        if (!segmentSection) { logger('[fix-webm-duration] Segment section is missing'); return false; }
+        var infoSection = segmentSection.getSectionById(0x549a966);
+        if (!infoSection) { logger('[fix-webm-duration] Info section is missing'); return false; }
+        var timeScaleSection = infoSection.getSectionById(0xad7b1);
+        if (!timeScaleSection) { logger('[fix-webm-duration] TimecodeScale section is missing'); return false; }
+        var durationSection = infoSection.getSectionById(0x489);
+        if (durationSection) {
+            if (durationSection.getValue() <= 0) { durationSection.setValue(duration); }
+            else { return false; }
+        } else {
+            durationSection = new WebmFloat('Duration', 'Float');
+            durationSection.setValue(duration);
+            infoSection.data.push({ id: 0x489, data: durationSection });
+        }
+        timeScaleSection.setValue(1000000);
+        infoSection.updateByData();
+        segmentSection.updateByData();
+        this.updateByData();
+        return true;
+    };
+    WebmFile.prototype.toBlob = function(mimeType) { return new Blob([ this.source.buffer ], { type: mimeType || 'video/webm' }); };
+
+    function fixWebmDuration(blob, duration, callback, options) {
+        if (typeof callback === "object") { options = callback; callback = undefined; }
+        if (!callback) { return new Promise(function(resolve) { fixWebmDuration(blob, duration, resolve, options); }); }
+        try {
+            var reader = new FileReader();
+            reader.onloadend = function() {
+                try {
+                    var file = new WebmFile(new Uint8Array(reader.result));
+                    if (file.fixDuration(duration, options)) { blob = file.toBlob(blob.type); }
+                } catch (ex) { }
+                callback(blob);
+            };
+            reader.readAsArrayBuffer(blob);
+        } catch (ex) { callback(blob); }
+    }
+    fixWebmDuration.default = fixWebmDuration;
+    return fixWebmDuration;
+});
+
+async function finalizeSegment(){
+  const durMs = Math.max(0, Date.now() - recStartTime);  // 必須先算（split 會重設 recStartTime）
   const mime=recMime||(recIsVideo?'video/webm':'audio/webm');
-  const blob=new Blob(recChunks,{type:mime});
+  let blob=new Blob(recChunks,{type:mime});
   if(!blob.size) return;
+  // webm 補時長 → 存檔/上雲端後可正常顯示長度並拖動（mp4 不需要）
+  if(/webm/i.test(blob.type) && window.ysFixWebmDuration && durMs>0){
+    try { blob = await window.ysFixWebmDuration(blob, durMs, { logger:false }); } catch(e){}
+  }
   recPartCount++;
   const isVideo=recIsVideo;
   const ext = isVideo ? (mime.includes('mp4')?'mp4':'webm')

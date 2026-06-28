@@ -5,7 +5,7 @@
   'use strict';
   var cfg = window.SUPABASE_CONFIG || {};
   var canInit = cfg.url && cfg.anonKey && window.supabase && window.supabase.createClient;
-  var sb = canInit ? window.supabase.createClient(cfg.url, cfg.anonKey) : null;
+  var sb = canInit ? (window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey)) : null;
   var user = null;
   var pulled = false;
 

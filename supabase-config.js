@@ -15,3 +15,20 @@ window.SUPABASE_CONFIG = {
   // ⚠️ เปลี่ยนเป็น true ก็ต่อเมื่อ Google login ใน Supabase พร้อมใช้งานแล้วเท่านั้น
   requireLogin: false  // เปิดเล่นได้เลย ไม่บังคับล็อกอิน · ล็อกอินเป็นออปชั่น (สะสมคะแนน/ขึ้นกระดาน) — Lin 2026-06-26
 };
+
+// ════════════════════════════════════════════════════════════
+// Shared Supabase client (singleton) — กัน warning "Multiple GoTrueClient instances"
+// ทุกไฟล์ควรเรียก window.getSupabaseClient() แทนการ createClient เอง
+// คืน client ตัวเดิมเสมอ (สร้างครั้งเดียวต่อหน้า) · คืน null ถ้ายังตั้งค่าไม่พร้อม
+// ════════════════════════════════════════════════════════════
+window.getSupabaseClient = function () {
+  if (window.__SB_CLIENT) return window.__SB_CLIENT;
+  var c = window.SUPABASE_CONFIG || {};
+  var ok = c.url && c.anonKey &&
+           String(c.url).indexOf('YOUR_') === -1 &&
+           String(c.anonKey).indexOf('YOUR_') === -1 &&
+           window.supabase && window.supabase.createClient;
+  if (!ok) return null;
+  window.__SB_CLIENT = window.supabase.createClient(c.url, c.anonKey);
+  return window.__SB_CLIENT;
+};
