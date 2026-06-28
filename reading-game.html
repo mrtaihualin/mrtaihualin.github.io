@@ -1792,6 +1792,8 @@ function endRound(){
   try { var _sv = rgApplyStreak(); if(_sv.events.freezeUsed) rgToast('護盾幫你保住連續紀錄！🛡️'); if(_sv.events.freezeEarned) rgToast('獲得新護盾 🛡️ ×1！連續'+_sv.state.streak+'天'); } catch(e){}
   try { rgRenderGameBar(); } catch(e){}
   refreshUI();
+  // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมเสียง)
+  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
 }
 
 function restart(){initGame();}

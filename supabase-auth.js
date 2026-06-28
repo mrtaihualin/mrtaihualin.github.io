@@ -349,7 +349,7 @@
     gate.innerHTML = cardOpen + closeBtn +
         '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🎵</div>' +
         '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">繼續玩，解鎖更多！🎉</h2>' +
-        '<p style="margin:0 0 18px;font-size:14px;color:#8B7340;line-height:1.6;">免費試玩結束囉～留 Email 即可<b>繼續免費玩</b>，還會收到<b>老師的發音學習小技巧</b>！<br><span style="font-size:12px;color:#A07A1E;">（想存分數、上排行榜，點右上角登入帳號就行）</span></p>' +
+        '<p style="margin:0 0 18px;font-size:14px;color:#8B7340;line-height:1.6;">免費試玩結束囉～留 Email 即可<b>繼續免費玩</b>，還會收到<b>老師精選的泰語單字速查表</b>！<br><span style="font-size:12px;color:#A07A1E;">（想存分數、上排行榜，點右上角登入帳號就行）</span></p>' +
         '<input id="tf-email-input" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
         '<div id="tf-email-err" style="display:none;color:#C0392B;font-size:12px;margin:6px 0 0;text-align:left;"></div>' +
         '<button id="tf-email-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">繼續玩 →</button>' +

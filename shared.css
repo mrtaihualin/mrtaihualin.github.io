@@ -408,12 +408,15 @@
   @media(max-width:768px){ .floating-qr { right:12px; top:66px; } }
 
   /* ── BOTTOM PAGE NAV STRIP ── */
+  /* กันแถบล่างทับเนื้อหา: เพิ่ม padding-bottom เฉพาะหน้าที่มี .page-strip (หน้าอื่นไม่มีช่องว่าง) */
+  body:has(.page-strip){padding-bottom:calc(44px + env(safe-area-inset-bottom,0));}
   .page-strip{position:fixed;bottom:0;left:0;right:0;z-index:990;background:rgba(17,17,17,0.97);border-top:1px solid rgba(200,151,58,0.3);display:flex;justify-content:center;align-items:center;height:44px;padding-bottom:env(safe-area-inset-bottom,0);}
   .page-strip-label{font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);margin-right:16px;text-transform:uppercase;}
   .page-strip a{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:6px 18px;border:1px solid rgba(255,255,255,0.3);margin:0 4px;white-space:nowrap;transition:color 0.2s ease,border-color 0.2s ease;}
   .page-strip a:hover{color:var(--white);border-color:rgba(255,255,255,0.6);}
   .page-strip a.active{font-weight:900;color:#C8973A;border-color:rgba(200,151,58,0.5);background:rgba(200,151,58,0.1);}
   @media(max-width:600px){
+    body:has(.page-strip){padding-bottom:calc(48px + env(safe-area-inset-bottom,0));}
     .page-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;padding:0 5px env(safe-area-inset-bottom,0);height:48px;align-content:center;}
     .page-strip-label{display:none;}
     .page-strip a{margin:0;padding:8px 1px;text-align:center;font-size:clamp(9px,2.6vw,11px);letter-spacing:0;}

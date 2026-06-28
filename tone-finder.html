@@ -4360,6 +4360,9 @@ function stepSessionSummary() {
     var _li = !!(_a && ((_a.hasAccess && _a.hasAccess()) || (_a.loggedIn && _a.loggedIn())));
     if (!_li && _a && _a.requireLogin && tfFreeRoundsUsed() >= TF_FREE_ROUNDS_LIMIT) {
       setTimeout(function(){ if (_a.showGate) _a.showGate(); }, 900); // โชว์คะแนนแวบนึงก่อนค่อยเด้ง
+    } else {
+      // เกมฟรี (requireLogin=false): นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ)
+      setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
     }
   })();
   var rows = results.map(function(r, i){

@@ -599,6 +599,63 @@ window.goHome = function() {
     // 2) Google Sheet (สำรอง) — sendBeacon รอดแม้หน้าเปลี่ยน
     try{ if(typeof sheetLog==='function') sheetLog({ email:fields.email||'', name:fields.name||'', source:fields.source||'' }); }catch(e){}
   };
+
+  // ── 單字速查表 邀請彈窗（兩個遊戲共用・玩約 5 回合後出現「一次」・可關閉繼續玩・免費）LIN 2026-06-27 ──
+  // เกมยังเล่นฟรีไม่จำกัด — popup เป็นแค่คำเชิญ ปิดได้เล่นต่อ · เกมเรียก window.VocabPopup.maybe() ตอนจบรอบ
+  // ใช้ key 'tf_lead_captured' ตัวเดียวกับ supabase-auth.js → ถ้าให้อีเมลที่ใดที่หนึ่งแล้วจะไม่กวนซ้ำ
+  (function(){
+    var ROUNDS_KEY='vocab_popup_rounds', SHOWN_KEY='vocab_popup_shown', LEAD_KEY='tf_lead_captured', TRIGGER=5;
+    function getRounds(){ try{ return parseInt(localStorage.getItem(ROUNDS_KEY)||'0',10)||0; }catch(e){ return 0; } }
+    function bumpRounds(){ var n=getRounds()+1; try{ localStorage.setItem(ROUNDS_KEY,String(n)); }catch(e){} return n; }
+    function alreadyShown(){ try{ return localStorage.getItem(SHOWN_KEY)==='1'; }catch(e){ return false; } }
+    function markShown(){ try{ localStorage.setItem(SHOWN_KEY,'1'); }catch(e){} }
+    function leadCaptured(){ try{ return localStorage.getItem(LEAD_KEY)==='1'; }catch(e){ return false; } }
+    function show(){
+      if(document.getElementById('vp-pop')) return;
+      markShown();
+      try{ if(typeof gtag==='function') gtag('event','vocab_popup_show',{}); }catch(e){}
+      var ov=document.createElement('div');
+      ov.id='vp-pop';
+      ov.style.cssText='position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(40,30,10,0.45);font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
+      ov.innerHTML=
+        '<div style="position:relative;background:#fff;max-width:360px;width:100%;border-radius:18px;padding:28px 24px 22px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">'+
+          '<button id="vp-x" aria-label="關閉 / ปิด" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>'+
+          '<div style="font-size:40px;line-height:1;margin-bottom:10px;">📖</div>'+
+          '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">玩得不錯！送你單字速查表 🎁</h2>'+
+          '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">老師精選 <b>60 個常用泰語單字</b>（含子音・母音・尾音・拼音・中文對照）。留 Email 免費領取，<b>關掉也能繼續玩</b>～</p>'+
+          '<input id="vp-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">'+
+          '<div id="vp-err" style="display:none;color:#C0392B;font-size:12px;margin:6px 0 0;text-align:left;"></div>'+
+          '<button id="vp-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">免費領取 →</button>'+
+          '<p style="margin:12px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">輸入 Email 代表同意<a href="terms.html" style="color:#A07A1E;">服務條款與資料收集</a>，只用來寄學習資訊，不會外流</p>'+
+          '<p style="margin:8px 0 0;font-size:12px;color:#A07A1E;">點右上角 ✕ 可關閉繼續玩</p>'+
+        '</div>';
+      document.body.appendChild(ov);
+      function close(){ try{ ov.remove(); }catch(e){} try{ if(typeof gtag==='function') gtag('event','vocab_popup_close',{}); }catch(e){} }
+      ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+      ov.querySelector('#vp-x').onclick=close;
+      var inp=ov.querySelector('#vp-email'), err=ov.querySelector('#vp-err');
+      function submit(){
+        var em=(inp.value||'').trim();
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ err.textContent='Email 格式不正確 / อีเมลไม่ถูกต้อง'; err.style.display='block'; return; }
+        try{ if(window.saveLead) saveLead({ email:em, source:'遊戲・單字表' }); }catch(e){}
+        try{ localStorage.setItem(LEAD_KEY,'1'); }catch(e){}
+        try{ if(typeof gtag==='function') gtag('event','lead_magnet_submit',{ source:'遊戲・單字表' }); }catch(e){}
+        location.href='vocab-thank-you.html';
+      }
+      ov.querySelector('#vp-go').onclick=submit;
+      inp.addEventListener('keydown',function(ev){ if(ev.key==='Enter') submit(); });
+    }
+    // เรียกตอนจบรอบ: นับ +1 ครบ TRIGGER และยังไม่เคยโชว์ + ยังไม่เคยให้อีเมล → เด้งครั้งเดียว
+    window.VocabPopup={
+      maybe:function(){
+        var n=bumpRounds();
+        if(alreadyShown()) return;
+        if(leadCaptured()){ markShown(); return; }
+        if(n<TRIGGER) return;
+        show();
+      }
+    };
+  })();
   async function submitFeedback() {
     const nameEl = document.getElementById('fb-name');
     const textEl = document.getElementById('fb-text');

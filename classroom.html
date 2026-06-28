@@ -690,7 +690,7 @@ window.SUPABASE_CONFIG = {
 // SUPABASE + STUDENT DATA
 // ============================================================
 const sb = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey, {
-  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
 let studentsCache = {}; // { token: { name, meet } }
 
@@ -1389,8 +1389,8 @@ function computeCurrentCourse(pays, atts) {
 // 學生：本輪剩餘堂數 + 快用完提醒
 async function loadStudentQuota(token) {
   try {
-    var pays = (await sb.from('classroom_payments').select('lessons,bonus_lessons,status,start_date').eq('token', token).in('status', ['pending', 'done'])).data || [];
-    var atts = (await sb.from('classroom_attendance').select('lesson_date,lessons').eq('token', token)).data || [];
+    var pays = (await sb.rpc('get_student_payments', { p_token: token })).data || [];
+    var atts = (await sb.rpc('get_student_attendance', { p_token: token })).data || [];
     var q = computeCurrentCourse(pays, atts);
     var remain = q.remain < 0 ? 0 : q.remain;
     var sumEl = document.getElementById('quotaSummary');
@@ -1447,8 +1447,7 @@ async function loadStudentPayments(token) {
   var el = document.getElementById('payHistory');
   if (!el) return;
   try {
-    var res = await sb.from('classroom_payments').select('course_label,lessons,bonus_lessons,currency,total_amount,status,created_at,receipt_no')
-      .eq('token', token).order('created_at', { ascending: false });
+    var res = await sb.rpc('get_student_payments', { p_token: token });
     var data = res.data || [];
     var head = '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:4px;font-family:\'Noto Sans TC\',sans-serif;">📋 繳費記錄</div>';
     if (!data.length) {
@@ -1473,16 +1472,14 @@ async function loadStudentSchedule(token) {
   const el = document.getElementById('scheduleList');
   if (!el) return;
   try {
-    const attRes = await sb.from('classroom_attendance')
-      .select('lesson_date,lessons').eq('token', token).order('lesson_date', { ascending: true });
+    const attRes = await sb.rpc('get_student_attendance', { p_token: token });
     const data = attRes.data;
     if (attRes.error || !data || data.length === 0) {
       el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無上課記錄</div>';
       return;
     }
     // 取「本輪起算日」（與剩餘堂數同一基準）→ 起算日前=舊課程，收進「過往記錄」摺疊區
-    const payRes = await sb.from('classroom_payments')
-      .select('lessons,bonus_lessons,status,start_date').eq('token', token).in('status', ['pending', 'done']);
+    const payRes = await sb.rpc('get_student_payments', { p_token: token });
     const q = computeCurrentCourse(payRes.data || [], data);
     const startDay = q.start || null;
     const current = startDay ? data.filter(function(r){ return r.lesson_date >= startDay; }) : data;
@@ -1754,23 +1751,20 @@ async function submitSlip() {
   var studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return slipToken; } })();
   var btn = document.getElementById('slipSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
-  var payload = {
-    token: slipToken,
-    student_name: studentName,
-    course_id: slipType,
-    course_label: courseLabel,
-    lessons: lessons,
-    bonus_lessons: bonus,
-    price_per: price,
-    currency: payCur,
-    total_amount: lessons * price,
-    note: note || null,
-    slip_data: slipImageData,
-    submitted_by: 'student',
-    submitted_at: new Date().toISOString(),
-    status: 'slip_submitted'
-  };
-  var res = await sb.from('classroom_payments').insert(payload);
+  // ผ่าน RPC security-definer → บังคับ status='slip_submitted' ฝั่ง DB (anon เขียนตรงตารางไม่ได้แล้ว)
+  var res = await sb.rpc('submit_payment_slip', {
+    p_token: slipToken,
+    p_student_name: studentName,
+    p_course_id: slipType,
+    p_course_label: courseLabel,
+    p_lessons: lessons,
+    p_bonus_lessons: bonus,
+    p_price_per: price,
+    p_currency: payCur,
+    p_total_amount: lessons * price,
+    p_note: note || null,
+    p_slip_data: slipImageData
+  });
   btn.disabled = false; btn.textContent = '📤 送出繳費通知';
   if (res.error) { alert('送出失敗：' + res.error.message); return; }
   // 寄信通知老師（沿用全站既有的 Web3Forms，免後端）
@@ -2414,9 +2408,7 @@ async function checkStudentSlipStatus(token) {
   if (!token) return;
   var el = document.getElementById('slipStatusMsg');
   if (!el) return;
-  var { data } = await sb.from('classroom_payments')
-    .select('status,course_label,created_at,receipt_no')
-    .eq('token', token).order('created_at', { ascending: false }).limit(1);
+  var { data } = await sb.rpc('get_student_payments', { p_token: token });
   if (!data || data.length === 0) return;
   var p = data[0];
   var statusMap = {
@@ -2440,6 +2432,69 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// ============================================================
+// 教師登入閘門（只有老師本人能看管理頁）— Supabase email OTP
+// 學生頁（?s=token）走匿名 RPC，不受此閘門影響
+// ============================================================
+const TEACHER_EMAIL = 'mr.taihualin@gmail.com';
+
+async function isTeacherAuthed() {
+  try {
+    const { data } = await sb.auth.getSession();
+    const email = data && data.session && data.session.user && data.session.user.email;
+    return (email || '').toLowerCase() === TEACHER_EMAIL;
+  } catch (e) { return false; }
+}
+
+function setTeacherLoginMsg(msg, isErr) {
+  var el = document.getElementById('tLoginMsg');
+  if (el) { el.style.display = 'block'; el.style.color = isErr ? '#C0392B' : '#8B7340'; el.innerHTML = msg; }
+}
+
+function renderTeacherLogin() {
+  document.getElementById('studentNameDisplay').textContent = '';
+  document.getElementById('mainContainer').innerHTML =
+    '<div class="card" style="max-width:380px;margin:30px auto;padding:28px 24px;">' +
+      '<h2 style="margin-top:0;">🔒 教師登入</h2>' +
+      '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">此頁面僅限老師本人。請以註冊信箱收取驗證碼登入（每台裝置登入一次即可，之後自動保持登入）。</p>' +
+      '<div id="tLoginStep1">' +
+        '<input id="tLoginEmail" type="email" autocomplete="email" placeholder="老師信箱" value="' + TEACHER_EMAIL + '" style="width:100%;padding:11px;border:1px solid #e9dcb8;border-radius:9px;margin:10px 0;font-size:0.95rem;box-sizing:border-box;" />' +
+        '<button class="btn-add-student" style="width:100%;" onclick="teacherSendOtp()">寄送驗證碼</button>' +
+      '</div>' +
+      '<div id="tLoginStep2" style="display:none;">' +
+        '<input id="tLoginCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="輸入信中的驗證碼" style="width:100%;padding:11px;border:1px solid #e9dcb8;border-radius:9px;margin:10px 0;font-size:1.05rem;letter-spacing:3px;text-align:center;box-sizing:border-box;" />' +
+        '<button class="btn-add-student" style="width:100%;" onclick="teacherVerifyOtp()">登入</button>' +
+      '</div>' +
+      '<div id="tLoginMsg" style="display:none;margin-top:12px;font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;"></div>' +
+    '</div>';
+}
+
+async function teacherSendOtp() {
+  var email = (document.getElementById('tLoginEmail').value || '').trim();
+  if (email.toLowerCase() !== TEACHER_EMAIL) { setTeacherLoginMsg('此信箱無權限登入', true); return; }
+  setTeacherLoginMsg('寄送中…⏳', false);
+  var res = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
+  if (res.error) { setTeacherLoginMsg('寄送失敗：' + res.error.message, true); return; }
+  document.getElementById('tLoginStep1').style.display = 'none';
+  document.getElementById('tLoginStep2').style.display = 'block';
+  setTeacherLoginMsg('驗證碼已寄到信箱（含垃圾信匣），請輸入', false);
+}
+
+async function teacherVerifyOtp() {
+  var code = (document.getElementById('tLoginCode').value || '').trim();
+  if (!/^\d{6,10}$/.test(code)) { setTeacherLoginMsg('請輸入信中的驗證碼（純數字）', true); return; }
+  setTeacherLoginMsg('驗證中…⏳', false);
+  var res = await sb.auth.verifyOtp({ email: TEACHER_EMAIL, token: code, type: 'email' });
+  if (res.error) { setTeacherLoginMsg('驗證碼錯誤或已過期，請重新輸入', true); return; }
+  if (await isTeacherAuthed()) renderTeacherView();
+  else setTeacherLoginMsg('此帳號無權限', true);
+}
+
+async function bootTeacher() {
+  if (await isTeacherAuthed()) renderTeacherView();
+  else renderTeacherLogin();
+}
+
 // Run routing — with visible error display
 window.onerror = function(msg, src, line) {
   var el = document.getElementById('mainContainer');
@@ -2447,7 +2502,7 @@ window.onerror = function(msg, src, line) {
     '<strong>⚠️ JavaScript Error（請截圖傳給老師）</strong><br><br>' + msg + '<br><br>Line: ' + line + '<br>File: ' + src + '</div>';
 };
 try {
-  if (isTeacher) renderTeacherView();
+  if (isTeacher) bootTeacher();
   else renderStudentView();
 } catch(e) {
   var el = document.getElementById('mainContainer');
