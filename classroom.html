@@ -2802,12 +2802,13 @@ async function teacherVerifyOtp() {
   setTeacherLoginMsg('驗證中…⏳', false);
   var res = await sb.auth.verifyOtp({ email: TEACHER_EMAIL, token: code, type: 'email' });
   if (res.error) { setTeacherLoginMsg('驗證碼錯誤或已過期，請重新輸入', true); return; }
-  if (await isTeacherAuthed()) renderTeacherView();
+  if (await isTeacherAuthed()) { localStorage.setItem('teacherAuthed', '1'); renderTeacherView(); }
   else setTeacherLoginMsg('此帳號無權限', true);
 }
 
 async function bootTeacher() {
-  if (await isTeacherAuthed()) renderTeacherView();
+  if (localStorage.getItem('teacherAuthed') === '1') { renderTeacherView(); return; }
+  if (await isTeacherAuthed()) { localStorage.setItem('teacherAuthed', '1'); renderTeacherView(); }
   else renderTeacherLogin();
 }
 
