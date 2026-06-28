@@ -431,17 +431,22 @@
     <div style="padding:20px;display:flex;flex-direction:column;gap:14px;font-family:'Noto Sans TC',sans-serif;">
       <div>
         <div style="font-weight:700;margin-bottom:8px;">放到哪個資料夾？</div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn-sm" id="upDest-study" style="flex:1;" onclick="selectUploadDest('學習內容')">📚 學習內容</button>
-          <button class="btn-sm" id="upDest-video" style="flex:1;" onclick="selectUploadDest('影片')">🎬 影片</button>
-        </div>
+        <select id="upDestSelect" onchange="uploadDest=this.value" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);font-size:0.88rem;font-family:'Noto Sans TC',sans-serif;background:#fff;color:var(--ink);cursor:pointer;">
+          <option value="學習內容">📚 學習內容</option>
+          <option value="影片">🎬 影片</option>
+        </select>
       </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn-sm" style="flex:1;" onclick="document.getElementById('uploadFileInput').click()">📄 選擇多個檔案</button>
-        <button class="btn-sm" style="flex:1;" onclick="document.getElementById('uploadFolderInput').click()">📁 選擇整個資料夾</button>
+      <div id="uploadDropZone" onclick="document.getElementById('uploadFileInput').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--gold-deep)';this.style.background='var(--gold-light)'"
+           ondragleave="this.style.borderColor='';this.style.background=''"
+           ondrop="handleDropZone(event)"
+           style="border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color 0.15s,background 0.15s;">
+        <div style="font-size:2rem;margin-bottom:6px;">📂</div>
+        <div style="font-weight:700;color:var(--ink-soft);font-size:0.88rem;">拖曳檔案到這裡，或點擊選擇</div>
+        <div style="font-size:0.76rem;color:var(--ink-muted);margin-top:6px;">選整個資料夾 → <span style="text-decoration:underline;" onclick="event.stopPropagation();document.getElementById('uploadFolderInput').click()">點這裡</span></div>
       </div>
-      <input type="file" id="uploadFileInput" multiple style="display:none;" onchange="updateUploadPick()">
-      <input type="file" id="uploadFolderInput" webkitdirectory multiple style="display:none;" onchange="updateUploadPick()">
+      <input type="file" id="uploadFileInput" multiple style="display:none;" onchange="droppedFiles=null;updateUploadPick()">
+      <input type="file" id="uploadFolderInput" webkitdirectory multiple style="display:none;" onchange="droppedFiles=null;updateUploadPick()">
       <div id="uploadPickInfo" style="font-size:0.82rem;color:var(--ink-soft);line-height:1.6;"></div>
       <button class="btn-add-student" style="margin-top:0;" onclick="doUploadFiles()">⬆️ 開始上傳</button>
       <div id="uploadStatus" style="font-size:0.85rem;color:var(--ink-muted);line-height:1.6;"></div>
@@ -878,20 +883,29 @@ async function ensureStudentFolderShared(studentName, token) {
   } catch(e) { return null; }
 }
 // ── 手動上傳檔案到學生資料夾（透過 App，App 才看得到）──────────
-let uploadToken = null, uploadDest = '學習內容';
+let uploadToken = null, uploadDest = '學習內容', droppedFiles = null;
 function openUploadModal(token) {
-  uploadToken = token; uploadDest = '學習內容';
+  uploadToken = token; uploadDest = '學習內容'; droppedFiles = null;
   const s = (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
   document.getElementById('uploadTitle').textContent = '⬆️ 上傳檔案 — ' + (s ? s.name : token);
   const inp = document.getElementById('uploadFileInput'); if (inp) inp.value = '';
   const fol = document.getElementById('uploadFolderInput'); if (fol) fol.value = '';
+  const sel = document.getElementById('upDestSelect'); if (sel) sel.value = '學習內容';
+  const zone = document.getElementById('uploadDropZone'); if (zone) { zone.style.borderColor = ''; zone.style.background = ''; }
   document.getElementById('uploadPickInfo').textContent = '';
   document.getElementById('uploadStatus').textContent = '';
-  selectUploadDest('學習內容');
   document.getElementById('uploadOverlay').classList.add('open');
 }
 function closeUploadModal() { document.getElementById('uploadOverlay').classList.remove('open'); }
+function handleDropZone(event) {
+  event.preventDefault();
+  const zone = document.getElementById('uploadDropZone');
+  if (zone) { zone.style.borderColor = 'var(--gold-deep)'; zone.style.background = ''; }
+  droppedFiles = event.dataTransfer.files;
+  updateUploadPick();
+}
 function getUploadFiles() {
+  if (droppedFiles && droppedFiles.length) return [...droppedFiles];
   const a = document.getElementById('uploadFileInput');
   const b = document.getElementById('uploadFolderInput');
   return [...(a && a.files ? a.files : []), ...(b && b.files ? b.files : [])];
@@ -913,12 +927,7 @@ function hideUploadFloat() { const el = document.getElementById('uploadFloat'); 
 window.addEventListener('beforeunload', function (e) {
   if (uploadInProgress) { e.preventDefault(); e.returnValue = ''; return ''; }
 });
-function selectUploadDest(d) {
-  uploadDest = d;
-  const study = document.getElementById('upDest-study'), video = document.getElementById('upDest-video');
-  if (study) study.style.outline = (d === '學習內容') ? '3px solid var(--gold-deep)' : 'none';
-  if (video) video.style.outline = (d === '影片') ? '3px solid var(--gold-deep)' : 'none';
-}
+function selectUploadDest(d) { uploadDest = d; }
 async function doUploadFiles() {
   if (uploadInProgress) { alert('已有一批檔案正在上傳，請等它完成'); return; }
   const files = getUploadFiles();
@@ -1709,33 +1718,101 @@ async function loadStudentSchedule(token) {
   }
 }
 
+var studentFilesData = {};
+
 async function loadStudentFiles(token) {
   const el = document.getElementById('filesList');
   if (!el) return;
   try {
     const { data, error } = await sb.rpc('get_student_recordings', { p_token: token });
     if (error || !data || !data.length) {
+      studentFilesData[token] = [];
       el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無課堂資料<br><span style="font-size:0.78rem;">課後老師上傳後即可在此下載</span></div>';
       return;
     }
-    const items = data.map(function(r) {
-      const name = r.name || '';
-      const icon = name.includes('筆記') || name.includes('note') ? '📝' : '🎬';
-      var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
-      var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
-      var label = name || (d + ' 課堂錄影' + sz);
-      var safeUrl = (r.url || '').replace(/'/g, "\\'");
-      return '<div class="drive-file-row">' +
-        '<span class="drive-file-icon">' + icon + '</span>' +
-        '<span class="drive-file-name">' + label + '</span>' +
-        '<a class="drive-file-dl" href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener">⬇ 下載</a>' +
-        '<button onclick="deleteStudentFile(\'' + token + '\',\'' + safeUrl + '\',this)" title="從清單移除" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;margin-left:4px;opacity:0.55;">🗑</button>' +
-      '</div>';
-    }).join('');
-    el.innerHTML = '<div class="drive-file-list">' + items + '</div>';
+    studentFilesData[token] = data;
+    renderStudentFiles(token);
   } catch(e) {
     el.innerHTML = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
   }
+}
+
+function renderStudentFiles(token) {
+  const el = document.getElementById('filesList');
+  if (!el) return;
+  const data = studentFilesData[token] || [];
+  const rows = data.map(function(r, i) {
+    const name = r.name || '';
+    const icon = name.includes('筆記') || name.includes('note') ? '📝' : '🎬';
+    var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
+    var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
+    var label = name || (d + ' 課堂錄影' + sz);
+    var safeUrl = (r.url || '').replace(/'/g, "\\'");
+    var tid = token.replace(/'/g, '');
+    return '<div class="drive-file-row">' +
+      '<input type="checkbox" class="file-cb" data-token="' + tid + '" data-idx="' + i + '" onchange="onFileCbChange(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--gold-deep);">' +
+      '<span class="drive-file-icon">' + icon + '</span>' +
+      '<span class="drive-file-name">' + label + '</span>' +
+      '<a class="drive-file-dl" href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener">⬇ 下載</a>' +
+      '<button onclick="deleteStudentFile(\'' + tid + '\',\'' + safeUrl + '\',this)" title="從清單移除" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;margin-left:4px;opacity:0.55;">🗑</button>' +
+    '</div>';
+  }).join('');
+  var tid = token.replace(/'/g, '');
+  el.innerHTML =
+    '<div id="fileBulkBar_' + tid + '" style="display:none;align-items:center;gap:8px;padding:7px 10px;background:var(--gold-light);border:1px solid var(--border);border-radius:9px;margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.82rem;">' +
+      '<input type="checkbox" id="fileSelectAll_' + tid + '" onchange="toggleSelectAll(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold-deep);" title="全選">' +
+      '<span id="fileSelCount_' + tid + '" style="flex:1;color:var(--gold-deep);font-weight:700;"></span>' +
+      '<button onclick="bulkDownloadFiles(\'' + tid + '\')" style="background:var(--gold-deep);color:#fff;border:none;border-radius:7px;padding:5px 11px;cursor:pointer;font-size:0.77rem;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;">⬇ 下載</button>' +
+      '<button onclick="bulkDeleteFiles(\'' + tid + '\')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:5px 11px;cursor:pointer;font-size:0.77rem;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;">🗑 移除</button>' +
+    '</div>' +
+    '<div class="drive-file-list">' + rows + '</div>';
+}
+
+function onFileCbChange(token) {
+  var checked = document.querySelectorAll('.file-cb[data-token="' + token + '"]:checked');
+  var total   = document.querySelectorAll('.file-cb[data-token="' + token + '"]');
+  var bar     = document.getElementById('fileBulkBar_' + token);
+  var countEl = document.getElementById('fileSelCount_' + token);
+  var allCb   = document.getElementById('fileSelectAll_' + token);
+  if (bar)     bar.style.display = checked.length ? 'flex' : 'none';
+  if (countEl) countEl.textContent = '已選 ' + checked.length + ' 個';
+  if (allCb)   allCb.checked = checked.length > 0 && checked.length === total.length;
+  if (allCb)   allCb.indeterminate = checked.length > 0 && checked.length < total.length;
+}
+
+function toggleSelectAll(token) {
+  var allCb = document.getElementById('fileSelectAll_' + token);
+  var cbs   = document.querySelectorAll('.file-cb[data-token="' + token + '"]');
+  cbs.forEach(function(cb) { cb.checked = allCb.checked; });
+  onFileCbChange(token);
+}
+
+function bulkDownloadFiles(token) {
+  var checked = document.querySelectorAll('.file-cb[data-token="' + token + '"]:checked');
+  var data = studentFilesData[token] || [];
+  checked.forEach(function(cb) {
+    var r = data[parseInt(cb.dataset.idx)];
+    if (r && r.url) window.open(safeHref(r.url), '_blank', 'noopener');
+  });
+}
+
+async function bulkDeleteFiles(token) {
+  var checked = document.querySelectorAll('.file-cb[data-token="' + token + '"]:checked');
+  if (!checked.length) return;
+  if (!confirm('確定要從清單移除這 ' + checked.length + ' 個檔案嗎？\n（Google 雲端硬碟原始檔不刪）')) return;
+  var data = studentFilesData[token] || [];
+  var indices = Array.from(checked).map(function(cb) { return parseInt(cb.dataset.idx); });
+  var failed = 0;
+  for (var i = 0; i < indices.length; i++) {
+    var r = data[indices[i]];
+    if (!r || !r.url) continue;
+    try {
+      var res = await sb.rpc('delete_student_recording', { p_token: token, p_url: r.url });
+      if (res.error) failed++;
+    } catch(e) { failed++; }
+  }
+  if (failed) alert(failed + ' 個移除失敗');
+  loadStudentFiles(token);
 }
 
 // 學生：從清單移除某筆檔案（雲端硬碟原檔不刪，老師仍可救回）
@@ -2612,9 +2689,18 @@ async function checkStudentSlipStatus(token) {
   };
   var msg = statusMap[p.status];
   if (!msg) return;
+  var dismissKey = 'dismissedStatus_' + token + '_' + p.status + '_' + (p.receipt_no || '');
+  try { if (localStorage.getItem(dismissKey)) return; } catch(e) {}
   var color = p.status === 'rejected' ? '#f5ece0' : p.status === 'done' ? '#dcfce7' : '#fef3c7';
   var textColor = p.status === 'rejected' ? '#5c5148' : p.status === 'done' ? '#15803d' : '#92400e';
-  el.innerHTML = '<div style="background:' + color + ';border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + textColor + ';font-weight:600;margin-bottom:12px;">' + msg + '<br><span style="font-weight:400;font-size:0.78rem;">' + p.course_label + '</span></div>';
+  el.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;background:' + color + ';border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + textColor + ';font-weight:600;margin-bottom:12px;">' +
+    '<div style="flex:1;">' + msg + '<br><span style="font-weight:400;font-size:0.78rem;">' + p.course_label + '</span></div>' +
+    '<button onclick="dismissSlipStatus(\'' + dismissKey + '\')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1rem;color:' + textColor + ';opacity:0.5;padding:0 2px;line-height:1;flex-shrink:0;">✕</button>' +
+    '</div>';
+}
+function dismissSlipStatus(key) {
+  try { localStorage.setItem(key, '1'); } catch(e) {}
+  var el = document.getElementById('slipStatusMsg'); if (el) el.innerHTML = '';
 }
 
 // 點 popup 外的暗色背景 → 關閉該 popup
