@@ -808,7 +808,8 @@ async function gdEnsureFolder(name, parentId) {
 async function gdUpload(blob, name, parentId, onProgress) {
   const token = await gdGetToken();
   const mime = blob.type || 'application/octet-stream';
-  const CHUNK = 1 * 1024 * 1024; // 1 MB per chunk — safe for low-memory mobile devices
+  const CHUNK = 1 * 1024 * 1024; // 1 MB chunks
+  // Step 1: start resumable session (small JSON body, fetch is fine here)
   const init = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,webViewLink', {
     method: 'POST',
     headers: {
@@ -823,23 +824,34 @@ async function gdUpload(blob, name, parentId, onProgress) {
   const session = init.headers.get('Location');
   if (!session) throw new Error('取不到上傳工作階段');
   if (onProgress) onProgress(0);
+  // Step 2: upload chunks via XHR — fetch() with Blob body fails on iOS Safari (WebKit bug)
+  function xhrPut(url, chunk, contentType, contentRange) {
+    return new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('PUT', url, true);
+      xhr.setRequestHeader('Content-Type', contentType);
+      xhr.setRequestHeader('Content-Range', contentRange);
+      xhr.onload = function() { resolve({ status: xhr.status, body: xhr.responseText, headers: xhr.getAllResponseHeaders() }); };
+      xhr.onerror = function() { reject(new Error('網路錯誤，請確認連線後重試')); };
+      xhr.ontimeout = function() { reject(new Error('上傳逾時，請重試')); };
+      xhr.timeout = 120000; // 2 min per chunk
+      xhr.send(chunk);
+    });
+  }
   let start = 0, result = null;
   while (start < blob.size) {
     const end = Math.min(start + CHUNK, blob.size);
     const chunk = blob.slice(start, end);
-    const put = await fetch(session, {
-      method: 'PUT',
-      headers: { 'Content-Type': mime, 'Content-Range': 'bytes ' + start + '-' + (end - 1) + '/' + blob.size },
-      body: chunk
-    });
-    if (put.status === 200 || put.status === 201) {
-      result = await put.json(); break;
-    } else if (put.status === 308) {
-      const range = put.headers.get('Range');
-      start = range ? parseInt(range.split('-')[1]) + 1 : end;
+    const range = 'bytes ' + start + '-' + (end - 1) + '/' + blob.size;
+    const res = await xhrPut(session, chunk, mime, range);
+    if (res.status === 200 || res.status === 201) {
+      result = JSON.parse(res.body); break;
+    } else if (res.status === 308) {
+      const m = (res.headers.match(/range:\s*bytes=0-(\d+)/i));
+      start = m ? parseInt(m[1]) + 1 : end;
       if (onProgress) onProgress(Math.round(start / blob.size * 100));
     } else {
-      throw new Error('上傳失敗 ' + put.status);
+      throw new Error('上傳失敗 ' + res.status);
     }
   }
   if (!result) throw new Error('上傳未完成');
