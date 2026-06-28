@@ -805,23 +805,45 @@ async function gdEnsureFolder(name, parentId) {
   });
   return res.id;
 }
-async function gdUpload(blob, name, parentId) {
+async function gdUpload(blob, name, parentId, onProgress) {
   const token = await gdGetToken();
+  const mime = blob.type || 'application/octet-stream';
+  const CHUNK = 2 * 1024 * 1024; // 2 MB per chunk — safe for mobile
   const init = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,webViewLink', {
     method: 'POST',
     headers: {
       Authorization: 'Bearer ' + token,
       'Content-Type': 'application/json; charset=UTF-8',
-      'X-Upload-Content-Type': blob.type || 'video/mp4'
+      'X-Upload-Content-Type': mime,
+      'X-Upload-Content-Length': blob.size
     },
     body: JSON.stringify({ name, parents: [parentId] })
   });
   if (!init.ok) throw new Error('上傳啟動失敗 ' + init.status);
   const session = init.headers.get('Location');
   if (!session) throw new Error('取不到上傳工作階段');
-  const put = await fetch(session, { method: 'PUT', headers: { 'Content-Type': blob.type || 'video/mp4' }, body: blob });
-  if (!(put.status === 200 || put.status === 201)) throw new Error('上傳失敗 ' + put.status);
-  return put.json();
+  if (onProgress) onProgress(0);
+  let start = 0, result = null;
+  while (start < blob.size) {
+    const end = Math.min(start + CHUNK, blob.size);
+    const chunk = blob.slice(start, end);
+    const put = await fetch(session, {
+      method: 'PUT',
+      headers: { 'Content-Type': mime, 'Content-Range': 'bytes ' + start + '-' + (end - 1) + '/' + blob.size },
+      body: chunk
+    });
+    if (put.status === 200 || put.status === 201) {
+      result = await put.json(); break;
+    } else if (put.status === 308) {
+      const range = put.headers.get('Range');
+      start = range ? parseInt(range.split('-')[1]) + 1 : end;
+      if (onProgress) onProgress(Math.round(start / blob.size * 100));
+    } else {
+      throw new Error('上傳失敗 ' + put.status);
+    }
+  }
+  if (!result) throw new Error('上傳未完成');
+  return result;
 }
 async function gdShareAnyone(fileId) {
   await gdApi('drive/v3/files/' + fileId + '/permissions', {
@@ -963,7 +985,9 @@ async function doUploadFiles() {
       const targetFolder = rel.length ? await ensureSubPath(rel) : folderId;
       const showName = f.webkitRelativePath || f.name;
       setUploadStatus('☁️ 上傳中… ' + (n + 1) + '/' + files.length + '：' + showName);
-      const up = await gdUpload(f, baseName, targetFolder);
+      const up = await gdUpload(f, baseName, targetFolder, function(pct) {
+        setUploadStatus('☁️ 上傳中… ' + (n + 1) + '/' + files.length + '：' + showName + (pct > 0 && pct < 100 ? ' (' + pct + '%)' : ''));
+      });
       // 分享 + 記錄 → 學生在「課堂資料下載」看得到並可下載
       try { await gdShareAnyone(up.id); } catch(e) {}
       const ulink = up.webViewLink || ('https://drive.google.com/file/d/' + up.id + '/view');
