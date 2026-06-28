@@ -808,7 +808,7 @@ async function gdEnsureFolder(name, parentId) {
 async function gdUpload(blob, name, parentId, onProgress) {
   const token = await gdGetToken();
   const mime = blob.type || 'application/octet-stream';
-  const CHUNK = 2 * 1024 * 1024; // 2 MB per chunk — safe for mobile
+  const CHUNK = 1 * 1024 * 1024; // 1 MB per chunk — safe for low-memory mobile devices
   const init = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,webViewLink', {
     method: 'POST',
     headers: {
