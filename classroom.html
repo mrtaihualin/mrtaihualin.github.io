@@ -2484,9 +2484,17 @@ async function recordAttendance(token) {
   const today = new Date().toISOString().slice(0, 10);
   const btn = document.getElementById('attend-' + token);
   if (btn) { btn.disabled = true; btn.textContent = '記錄中…'; }
-  const { error } = await sb.from('classroom_attendance').upsert({
-    token: token, student_name: name, lesson_date: today
-  }, { onConflict: 'token,lesson_date' });
+  // Check if already recorded today → increment lessons; otherwise insert new row
+  const { data: existing } = await sb.from('classroom_attendance')
+    .select('id,lessons').eq('token', token).eq('lesson_date', today).maybeSingle();
+  let error;
+  if (existing) {
+    ({ error } = await sb.from('classroom_attendance')
+      .update({ lessons: (existing.lessons || 1) + 1 }).eq('id', existing.id));
+  } else {
+    ({ error } = await sb.from('classroom_attendance')
+      .insert({ token: token, student_name: name, lesson_date: today, lessons: 1 }));
+  }
   if (btn) { btn.disabled = false; }
   if (error) { alert('記錄失敗：' + error.message); if (btn) btn.textContent = '✅ 今日上課'; return; }
   await loadTodaySchedule(); // refresh today section
