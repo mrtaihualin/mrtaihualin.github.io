@@ -2762,6 +2762,21 @@ document.addEventListener('click', function(e) {
 // ============================================================
 const TEACHER_EMAIL = 'mr.taihualin@gmail.com';
 
+// ── cookie helpers (1 year, path=/) ──
+function setTeacherCookie() {
+  document.cookie = 'teacherAuthed=1; max-age=' + (365*24*3600) + '; path=/; SameSite=Strict';
+}
+function hasTeacherCookie() {
+  return document.cookie.split(';').some(function(c){ return c.trim().startsWith('teacherAuthed=1'); });
+}
+function markTeacherAuthed() {
+  localStorage.setItem('teacherAuthed', '1');
+  setTeacherCookie();
+}
+function isTeacherMarked() {
+  return localStorage.getItem('teacherAuthed') === '1' || hasTeacherCookie();
+}
+
 async function isTeacherAuthed() {
   try {
     const { data } = await sb.auth.getSession();
@@ -2810,13 +2825,13 @@ async function teacherVerifyOtp() {
   setTeacherLoginMsg('驗證中…⏳', false);
   var res = await sb.auth.verifyOtp({ email: TEACHER_EMAIL, token: code, type: 'email' });
   if (res.error) { setTeacherLoginMsg('驗證碼錯誤或已過期，請重新輸入', true); return; }
-  if (await isTeacherAuthed()) { localStorage.setItem('teacherAuthed', '1'); renderTeacherView(); }
+  if (await isTeacherAuthed()) { markTeacherAuthed(); renderTeacherView(); }
   else setTeacherLoginMsg('此帳號無權限', true);
 }
 
 async function bootTeacher() {
-  if (localStorage.getItem('teacherAuthed') === '1') { renderTeacherView(); return; }
-  if (await isTeacherAuthed()) { localStorage.setItem('teacherAuthed', '1'); renderTeacherView(); }
+  if (isTeacherMarked()) { renderTeacherView(); return; }
+  if (await isTeacherAuthed()) { markTeacherAuthed(); renderTeacherView(); }
   else renderTeacherLogin();
 }
 
