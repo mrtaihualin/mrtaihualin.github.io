@@ -16,6 +16,7 @@
 <script defer src="supabase-auth.js?v=19"></script>
 <script defer src="progress-sync.js?v=2"></script>
 <script defer src="adaptive.js?v=2"></script>
+<script src="word-vault.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -1915,6 +1916,7 @@
 
   <div class="tf-tools-row">
     <div id="tf-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
+    <div id="tf-vault-badge-slot" style="display:flex;align-items:center;"></div>
     <button class="tf-tool-btn" id="tf-font-btn" onclick="TF.toggleFont()" title="สลับฟอนต์มีหัว/ไม่มีหัว">✍️ 換現代字體</button>
     <button class="tf-tool-btn" onclick="TF.openAsk()" title="เล่นแล้วมีคำถาม ถามได้เลย">💬 我有問題</button>
     <button class="tf-tool-btn" onclick="document.getElementById('tf-howto-modal').style.display='flex'">📖 怎麼玩</button>
@@ -3905,7 +3907,17 @@ function render() {
         + '</div>'
       : '';
     var goldWord = (session && session.currentWordGolden) ? ' tf-banner-word-gold' : '';
-    banner.innerHTML = counterHtml + '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>';
+    banner.innerHTML = counterHtml + '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>';
+    // inject vault save button
+    if (window.WordVault && S.word) {
+      WordVault.injectStyles();
+      var slot = document.getElementById('tf-vault-btn-slot');
+      if (slot) {
+        slot.innerHTML = '';
+        var meta = { zh: S.zh || '', en: S.readingEN || '', source: 'tone-finder' };
+        slot.appendChild(WordVault.createSaveBtn(S.word, meta));
+      }
+    }
     document.getElementById('tf-hint').style.display = 'none';
   } else {
     banner.style.display = 'none';
@@ -5330,8 +5342,21 @@ function stepResult() {
   var isLastSessionWord = session && (session.index + 1 >= session.words.length);
   var nextBtnLabel = session ? (isLastSessionWord ? '來看看我們的成果吧 🎉' : '太棒了，我們繼續 →') : '分析新單字';
 
+  var vaultBtnHtml = '';
+  if (window.WordVault && S.word) {
+    WordVault.injectStyles();
+    var _vaultSaved = WordVault.has(S.word);
+    vaultBtnHtml = '<button id="tf-result-vault-btn" class="vault-save-btn" style="font-size:18px;opacity:'+(_vaultSaved?'1':'0.4')+'" title="'+(_vaultSaved?'ลบออกจากคลัง':'บันทึกลงคลัง')+'" onclick="(function(){'+
+      'var th=\''+S.word.replace(/'/g,"\\'") +'\';'+
+      'var meta={zh:\''+(S.zh||'').replace(/'/g,"\\'")+'\',en:\''+(S.readingEN||'').replace(/'/g,"\\'")+'\',source:\'tone-finder\'};'+
+      'if(WordVault.has(th)){WordVault.removeWord(th);this.style.opacity=\'0.4\';this.title=\'บันทึกลงคลัง\';}'+
+      'else{WordVault.addWord(th,meta);this.style.opacity=\'1\';this.title=\'ลบออกจากคลัง\';}'+
+      'var b=document.querySelectorAll(\'.vault-badge\');b.forEach(function(x){x.textContent=\'🔖 คลัง \'+WordVault.count()+\' คำ\';});'+
+    '}).call(this)">🔖</button>';
+  }
+
   return '<div class="result-v2">'+
-    '<div class="result-v2-word">'+S.word+'</div>'+
+    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+vaultBtnHtml+'</div>'+
     '<button class="result-v2-speak-btn" onclick="speakThai(\''+S.word+'\')">🔊 聽發音</button>'+
 
     '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+
@@ -6430,5 +6455,21 @@ setTimeout(tfRenderExtBar, 0);
   <div class="gs-divider"></div>
   <a class="gs-tab" href="reading-game.html">📝 拼讀練習</a>
 </div>
+<script>
+  // vault badge init
+  document.addEventListener('DOMContentLoaded', function() {
+    if (!window.WordVault) return;
+    WordVault.injectStyles();
+    var slot = document.getElementById('tf-vault-badge-slot');
+    if (slot && WordVault.count() > 0) {
+      var badge = document.createElement('a');
+      badge.href = 'vault.html';
+      badge.className = 'vault-badge';
+      badge.id = 'vault-badge-tf';
+      badge.textContent = '🔖 คลัง ' + WordVault.count() + ' คำ';
+      slot.appendChild(badge);
+    }
+  });
+</script>
 </body>
 </html>

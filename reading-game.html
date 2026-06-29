@@ -16,6 +16,7 @@
 <script defer src="supabase-config.js?v=4"></script>
 <script defer src="game-account.js?v=1"></script>
 <script defer src="reading-auth.js?v=1"></script>
+<script src="word-vault.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 .v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
@@ -291,6 +292,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 <div class="rg-tools-row">
   <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
+  <div id="rg-vault-badge-slot" style="display:flex;align-items:center;"></div>
   <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">✍️ 換現代字體</button>
   <button class="rg-tool-btn" onclick="rgOpenAsk()">💬 我有問題</button>
   <button class="rg-tool-btn" onclick="document.getElementById('rg-howto-modal').style.display='flex'">📖 怎麼玩</button>
@@ -335,7 +337,10 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 
   <div class="word-area">
-    <div class="word-th" id="wth">—</div>
+    <div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
+      <div class="word-th" id="wth">—</div>
+      <span id="rg-vault-btn-slot"></span>
+    </div>
     <div class="word-zh" id="wzh"></div>
   </div>
 
@@ -1445,6 +1450,16 @@ function loadWord(){
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
+  // vault save button
+  var vslot=document.getElementById('rg-vault-btn-slot');
+  if(vslot && window.WordVault){
+    WordVault.injectStyles();
+    vslot.innerHTML='';
+    vslot.appendChild(WordVault.createSaveBtn(WORD.th,{zh:WORD.zh,en:WORD.en,source:'reading-game'},{}));
+    // refresh badge
+    var badges=document.querySelectorAll('.vault-badge');
+    badges.forEach(function(b){b.textContent='🔖 คลัง '+WordVault.count()+' คำ';});
+  }
   loadSyl();
 }
 // โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
@@ -2069,5 +2084,20 @@ function rgOpenAsk() {
   <div class="gs-divider"></div>
   <span class="gs-tab gs-active">📝 拼讀練習</span>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (!window.WordVault) return;
+    WordVault.injectStyles();
+    var slot = document.getElementById('rg-vault-badge-slot');
+    if (slot && WordVault.count() > 0) {
+      var badge = document.createElement('a');
+      badge.href = 'vault.html';
+      badge.className = 'vault-badge';
+      badge.id = 'vault-badge-rg';
+      badge.textContent = '🔖 คลัง ' + WordVault.count() + ' คำ';
+      slot.appendChild(badge);
+    }
+  });
+</script>
 </body>
 </html>
