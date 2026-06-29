@@ -2183,55 +2183,74 @@ function updateApprovalTotal() {
   document.getElementById('approvalCalcText').textContent  = ls + '堂 × ' + cur + ' ' + pp + '/堂' + (bn > 0 ? '（贈 ' + bn + ' 堂）' : '');
 }
 
-// 產生收據檔（Google Doc → PDF）→ 上傳到學生「課表 & 收據」資料夾
+// โหลด script ครั้งเดียว (ถ้าโหลดแล้วข้ามได้เลย)
+function _loadScript(url) {
+  return new Promise(function(resolve, reject) {
+    if (document.querySelector('script[src="' + url + '"]')) { resolve(); return; }
+    var s = document.createElement('script'); s.src = url;
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// 產生收據 PDF ใน browser โดยตรง (html2canvas + jsPDF) → ไม่ผ่าน Google Doc แล้ว
 async function generateAndUploadReceipt(p, v) {
   const name = p.student_name || p.token || '學生';
   const receiptNo = 'R' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (p.id || '');
   const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
   const total = v.ls * v.pp;
-  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>課堂收據</title>'
-    + '<style>'
-    + 'body{font-family:"Noto Serif TC",serif;max-width:600px;margin:48px auto;padding:0 40px;color:#1C1C1C;background:#fff;}'
-    + 'h1{font-size:2rem;font-weight:900;color:#8B6310;margin:0 0 4px 0;letter-spacing:2px;}'
-    + 'hr.top{border:none;border-top:1.5px solid #ccc;margin:16px 0 14px;}'
-    + '.meta{font-size:0.82rem;color:#444;line-height:1.8;margin-bottom:24px;}'
-    + 'table{width:100%;border-collapse:collapse;}'
-    + 'td{padding:11px 6px;border-bottom:1px solid #eee;font-size:0.95rem;vertical-align:middle;}'
-    + 'td:last-child{text-align:right;}'
-    + '.lbl{color:#1C1C1C;}'
-    + '.tot-lbl{font-weight:700;}'
-    + '.tot-val{font-size:1.1rem;font-weight:900;color:#8B6310;}'
-    + 'hr.bot{border:none;border-top:1px solid #ddd;margin:32px 0 10px;}'
-    + '.footer{font-size:0.75rem;color:#aaa;}'
-    + '</style></head><body>'
-    + '<h1>課堂收據</h1>'
-    + '<hr class="top">'
-    + '<div class="meta">收據編號：' + receiptNo + '<br>日期：' + today + '</div>'
-    + '<table>'
-    + '<tr><td class="lbl">學生</td><td>' + name + '</td></tr>'
-    + '<tr><td class="lbl">課程</td><td>' + (p.course_label || '') + '</td></tr>'
-    + '<tr><td class="lbl">堂數</td><td>' + v.ls + ' 堂' + (v.bn > 0 ? '（贈 ' + v.bn + ' 堂）' : '') + '</td></tr>'
-    + '<tr><td class="lbl">單價</td><td>' + v.cur + ' ' + v.pp + ' / 堂</td></tr>'
-    + (v.start ? '<tr><td class="lbl">開始</td><td>' + v.start + '</td></tr>' : '')
-    + '<tr><td class="lbl tot-lbl">合計</td><td class="tot-val">' + v.cur + ' ' + total.toLocaleString() + '</td></tr>'
-    + '</table>'
-    + '<hr class="bot">'
-    + '<div class="footer">泰華老師 · mrtaihualin.com</div>'
-    + '</body></html>';
-  const token = await gdGetToken();
-  const blob = new Blob([html], { type: 'text/html' });
-  const folderId = await gdGetStudentSubfolderId(name, '課表 & 收據');
-  // 1) 先轉成 Google Doc（暫存，讓中文排版正確）
-  const tmpDoc = await gdUploadSmall(blob, name + '_收據暫存_' + receiptNo, 'application/vnd.google-apps.document', folderId);
-  // 2) 匯出成 PDF
-  const pdfResp = await fetch('https://www.googleapis.com/drive/v3/files/' + tmpDoc.id + '/export?mimeType=application/pdf', { headers: { Authorization: 'Bearer ' + token } });
-  if (!pdfResp.ok) throw new Error('匯出 PDF 失敗 ' + pdfResp.status);
-  const pdfBlob = new Blob([await pdfResp.arrayBuffer()], { type: 'application/pdf' });
-  // 3) 上傳 PDF 到學生「課表 & 收據」資料夾
+
+  // โหลด library (โหลดครั้งแรกเท่านั้น ~500KB รวม)
+  await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+
+  // สร้าง receipt HTML div ซ่อนไว้นอกจอ
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;padding:48px 40px;background:#fff;box-sizing:border-box;';
+  const rows = [
+    ['學生', name],
+    ['課程', p.course_label || ''],
+    ['堂數', v.ls + ' 堂' + (v.bn > 0 ? '（贈 ' + v.bn + ' 堂）' : '')],
+    ['單價', v.cur + ' ' + v.pp + ' / 堂'],
+  ];
+  if (v.start) rows.push(['開始', v.start]);
+  const trRows = rows.map(function(r) {
+    return '<tr><td style="padding:12px 8px;border-bottom:1px solid #eee;color:#1C1C1C;">' + r[0] + '</td>'
+         + '<td style="padding:12px 8px;border-bottom:1px solid #eee;text-align:right;">' + r[1] + '</td></tr>';
+  }).join('');
+  wrap.innerHTML =
+    '<h1 style="font-family:\'Noto Serif TC\',\'PingFang TC\',serif;font-size:32px;font-weight:900;color:#8B6310;margin:0 0 16px;letter-spacing:2px;">課堂收據</h1>'
+  + '<hr style="border:none;border-top:1.5px solid #ccc;margin:0 0 16px;">'
+  + '<p style="font-family:\'Noto Sans TC\',\'PingFang TC\',sans-serif;font-size:13px;color:#444;line-height:2;margin:0 0 24px;">'
+  +   '收據編號：' + receiptNo + '<br>日期：' + today
+  + '</p>'
+  + '<table style="width:100%;border-collapse:collapse;font-family:\'Noto Sans TC\',\'PingFang TC\',sans-serif;font-size:15px;">'
+  + trRows
+  + '<tr><td style="padding:12px 8px;font-weight:700;font-family:\'Noto Serif TC\',\'PingFang TC\',serif;">合計</td>'
+  + '<td style="padding:12px 8px;text-align:right;font-size:17px;font-weight:900;color:#8B6310;font-family:\'Noto Serif TC\',\'PingFang TC\',serif;">'
+  + v.cur + ' ' + total.toLocaleString() + '</td></tr>'
+  + '</table>'
+  + '<hr style="border:none;border-top:1px solid #ddd;margin:32px 0 12px;">'
+  + '<p style="font-family:\'Noto Sans TC\',\'PingFang TC\',sans-serif;font-size:12px;color:#aaa;margin:0;">泰華老師 · mrtaihualin.com</p>';
+  document.body.appendChild(wrap);
+
+  // รอ font โหลดเสร็จ แล้ว render เป็น canvas
+  await document.fonts.ready;
+  const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+  document.body.removeChild(wrap);
+
+  // แปลง canvas → PDF blob
+  const { jsPDF } = window.jspdf;
+  const imgW = canvas.width / 2;
+  const imgH = canvas.height / 2;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [imgW, imgH] });
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, imgW, imgH);
+  const pdfBlob = pdf.output('blob');
+
+  // อัปโหลด PDF ขึ้น Drive ตรงๆ (ไม่ผ่าน Google Doc แล้ว)
   const pdfName = name + '_收據_' + receiptNo + '.pdf';
-  const doc = await gdUploadSmall(pdfBlob, pdfName, null, folderId);
-  // 4) 刪掉暫存 Doc
-  try { await fetch('https://www.googleapis.com/drive/v3/files/' + tmpDoc.id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } }); } catch (e) {}
+  const folderId = await gdGetStudentSubfolderId(name, '課表 & 收據');
+  const doc = await gdUploadSmall(pdfBlob, pdfName, 'application/pdf', folderId);
   const link = doc.webViewLink || ('https://drive.google.com/file/d/' + doc.id + '/view');
   try { await gdShareAnyone(doc.id); } catch (e) {}
   if (p.token) { try { await saveRecordingLink(p.token, pdfName, doc.id, link, '', null); } catch (e) {} }
