@@ -2830,9 +2830,12 @@ async function teacherVerifyOtp() {
 }
 
 async function bootTeacher() {
-  if (isTeacherMarked()) { renderTeacherView(); return; }
-  if (await isTeacherAuthed()) { markTeacherAuthed(); renderTeacherView(); }
-  else renderTeacherLogin();
+  // Always verify actual Supabase session (auto-refreshes token if expired)
+  if (await isTeacherAuthed()) { markTeacherAuthed(); renderTeacherView(); return; }
+  // No valid session → clear stale cookie/localStorage → show OTP login
+  localStorage.removeItem('teacherAuthed');
+  document.cookie = 'teacherAuthed=; max-age=0; path=/;';
+  renderTeacherLogin();
 }
 
 // Run routing — with visible error display
