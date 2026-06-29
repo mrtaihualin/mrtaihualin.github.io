@@ -1496,7 +1496,7 @@ async function loadTeacherStudentInfo(token) {
   var el = document.getElementById('stuInfo-' + token.replace(/'/g, ''));
   if (!el) return;
   try {
-    var pays = (await sb.from('classroom_payments').select('id,course_label,lessons,bonus_lessons,currency,total_amount,status,start_date,created_at,price_per,start_note').eq('token', token).order('created_at', { ascending: false })).data || [];
+    var pays = (await sb.from('classroom_payments').select('id,course_label,lessons,bonus_lessons,currency,total_amount,status,start_date,created_at').eq('token', token).order('created_at', { ascending: false })).data || [];
     var atts = (await sb.from('classroom_attendance').select('lesson_date,lessons').eq('token', token)).data || [];
     var q = computeCurrentCourse(pays, atts);
     var quotaHtml = q.hasCourse
