@@ -1496,7 +1496,7 @@ async function loadTeacherStudentInfo(token) {
   var el = document.getElementById('stuInfo-' + token.replace(/'/g, ''));
   if (!el) return;
   try {
-    var pays = (await sb.from('classroom_payments').select('course_label,lessons,bonus_lessons,currency,total_amount,status,start_date,created_at').eq('token', token).order('created_at', { ascending: false })).data || [];
+    var pays = (await sb.from('classroom_payments').select('id,course_label,lessons,bonus_lessons,currency,total_amount,status,start_date,created_at,price_per,start_note').eq('token', token).order('created_at', { ascending: false })).data || [];
     var atts = (await sb.from('classroom_attendance').select('lesson_date,lessons').eq('token', token)).data || [];
     var q = computeCurrentCourse(pays, atts);
     var quotaHtml = q.hasCourse
@@ -1509,11 +1509,12 @@ async function loadTeacherStudentInfo(token) {
         var d = p.created_at ? new Date(p.created_at) : null;
         var ds = d ? (d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0')) : '';
         var regenBtn = p.status === 'done'
-          ? ' <button onclick="regenReceipt(\'' + p.id + '\')" title="重新開立收據" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0 2px;opacity:0.6;" >🔄</button>'
+          ? ' <button onclick="regenReceipt(\'' + p.id + '\')" title="重新開立收據" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0 2px;opacity:0.6;">🔄</button>'
           : '';
+        var delBtn = '<button onclick="deletePayment(\'' + p.id + '\',\'' + token + '\')" title="刪除此筆記錄" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0 2px;opacity:0.4;margin-left:4px;">🗑️</button>';
         return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.8rem;">' +
           '<div><span style="font-weight:600;">' + (p.course_label || '-') + '</span><span style="color:var(--ink-muted);"> · ' + ds + ' · ' + (p.lessons || 0) + '堂' + (p.bonus_lessons ? '+' + p.bonus_lessons : '') + ' · ' + (p.currency || '') + ' ' + (p.total_amount || 0).toLocaleString() + '</span></div>' +
-          '<span style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + regenBtn + '</span>' +
+          '<span style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + regenBtn + delBtn + '</span>' +
         '</div>';
       }).join('');
     } else {
@@ -2292,6 +2293,15 @@ async function approveSlip() {
   await loadPendingSlips();
   loadLowQuotaBanner();
   if (slip.token) loadTeacherStudentInfo(slip.token);
+}
+
+// ลบรายการชำระเงิน
+async function deletePayment(paymentId, token) {
+  if (!confirm('確定刪除此筆繳費記錄？（無法復原）')) return;
+  var res = await sb.from('classroom_payments').delete().eq('id', paymentId);
+  if (res.error) { alert('刪除失敗：' + res.error.message); return; }
+  loadTeacherStudentInfo(token);
+  loadLowQuotaBanner();
 }
 
 // 重新開立收據（用於補開或替換格式不對的舊收據）
