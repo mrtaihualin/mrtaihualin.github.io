@@ -1508,9 +1508,12 @@ async function loadTeacherStudentInfo(token) {
       histHtml = '<div style="font-weight:700;font-size:0.82rem;color:var(--ink);margin-bottom:2px;font-family:\'Noto Sans TC\',sans-serif;">📋 繳費記錄</div>' + pays.map(function(p) {
         var d = p.created_at ? new Date(p.created_at) : null;
         var ds = d ? (d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0')) : '';
+        var regenBtn = p.status === 'done'
+          ? ' <button onclick="regenReceipt(\'' + p.id + '\')" title="重新開立收據" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0 2px;opacity:0.6;" >🔄</button>'
+          : '';
         return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.8rem;">' +
           '<div><span style="font-weight:600;">' + (p.course_label || '-') + '</span><span style="color:var(--ink-muted);"> · ' + ds + ' · ' + (p.lessons || 0) + '堂' + (p.bonus_lessons ? '+' + p.bonus_lessons : '') + ' · ' + (p.currency || '') + ' ' + (p.total_amount || 0).toLocaleString() + '</span></div>' +
-          '<span style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + '</span>' +
+          '<span style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + regenBtn + '</span>' +
         '</div>';
       }).join('');
     } else {
@@ -2180,27 +2183,41 @@ function updateApprovalTotal() {
   document.getElementById('approvalCalcText').textContent  = ls + '堂 × ' + cur + ' ' + pp + '/堂' + (bn > 0 ? '（贈 ' + bn + ' 堂）' : '');
 }
 
-// 產生收據檔（Google Doc）→ 上傳到學生「收據」資料夾，並記錄讓學生可下載
+// 產生收據檔（Google Doc → PDF）→ 上傳到學生「課表 & 收據」資料夾
 async function generateAndUploadReceipt(p, v) {
   const name = p.student_name || p.token || '學生';
   const receiptNo = 'R' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (p.id || '');
   const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
   const total = v.ls * v.pp;
-  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>收據 ' + receiptNo + '</title>'
-    + '<style>body{font-family:serif;max-width:640px;margin:40px auto;padding:0 24px;color:#1C1C1C;}'
-    + 'h1{color:#8B6310;border-bottom:2px solid #C8973A;padding-bottom:8px;}'
-    + 'table{width:100%;border-collapse:collapse;margin-top:16px;}td{padding:8px 4px;border-bottom:1px solid #eee;}'
-    + '.r{text-align:right;}.tot{font-size:1.2rem;font-weight:700;color:#8B6310;}</style></head><body>'
-    + '<h1>📄 課堂收據</h1>'
-    + '<p>收據編號：' + receiptNo + '<br>日期：' + today + '</p><table>'
-    + '<tr><td>學生</td><td class="r">' + name + '</td></tr>'
-    + '<tr><td>課程</td><td class="r">' + (p.course_label || '') + '</td></tr>'
-    + '<tr><td>堂數</td><td class="r">' + v.ls + ' 堂' + (v.bn > 0 ? '（贈 ' + v.bn + ' 堂）' : '') + '</td></tr>'
-    + '<tr><td>單價</td><td class="r">' + v.cur + ' ' + v.pp + ' / 堂</td></tr>'
-    + (v.start ? '<tr><td>開始</td><td class="r">' + v.start + '</td></tr>' : '')
-    + '<tr><td>合計</td><td class="r tot">' + v.cur + ' ' + total.toLocaleString() + '</td></tr>'
-    + '</table><hr style="margin-top:28px;border:none;border-top:1px solid #e5d9c0;">'
-    + '<p style="color:#aaa;font-size:0.78rem;">泰華老師 · mrtaihualin.com</p></body></html>';
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>課堂收據</title>'
+    + '<style>'
+    + 'body{font-family:"Noto Serif TC",serif;max-width:600px;margin:48px auto;padding:0 40px;color:#1C1C1C;background:#fff;}'
+    + 'h1{font-size:2rem;font-weight:900;color:#8B6310;margin:0 0 4px 0;letter-spacing:2px;}'
+    + 'hr.top{border:none;border-top:1.5px solid #ccc;margin:16px 0 14px;}'
+    + '.meta{font-size:0.82rem;color:#444;line-height:1.8;margin-bottom:24px;}'
+    + 'table{width:100%;border-collapse:collapse;}'
+    + 'td{padding:11px 6px;border-bottom:1px solid #eee;font-size:0.95rem;vertical-align:middle;}'
+    + 'td:last-child{text-align:right;}'
+    + '.lbl{color:#1C1C1C;}'
+    + '.tot-lbl{font-weight:700;}'
+    + '.tot-val{font-size:1.1rem;font-weight:900;color:#8B6310;}'
+    + 'hr.bot{border:none;border-top:1px solid #ddd;margin:32px 0 10px;}'
+    + '.footer{font-size:0.75rem;color:#aaa;}'
+    + '</style></head><body>'
+    + '<h1>課堂收據</h1>'
+    + '<hr class="top">'
+    + '<div class="meta">收據編號：' + receiptNo + '<br>日期：' + today + '</div>'
+    + '<table>'
+    + '<tr><td class="lbl">學生</td><td>' + name + '</td></tr>'
+    + '<tr><td class="lbl">課程</td><td>' + (p.course_label || '') + '</td></tr>'
+    + '<tr><td class="lbl">堂數</td><td>' + v.ls + ' 堂' + (v.bn > 0 ? '（贈 ' + v.bn + ' 堂）' : '') + '</td></tr>'
+    + '<tr><td class="lbl">單價</td><td>' + v.cur + ' ' + v.pp + ' / 堂</td></tr>'
+    + (v.start ? '<tr><td class="lbl">開始</td><td>' + v.start + '</td></tr>' : '')
+    + '<tr><td class="lbl tot-lbl">合計</td><td class="tot-val">' + v.cur + ' ' + total.toLocaleString() + '</td></tr>'
+    + '</table>'
+    + '<hr class="bot">'
+    + '<div class="footer">泰華老師 · mrtaihualin.com</div>'
+    + '</body></html>';
   const token = await gdGetToken();
   const blob = new Blob([html], { type: 'text/html' });
   const folderId = await gdGetStudentSubfolderId(name, '課表 & 收據');
@@ -2256,6 +2273,30 @@ async function approveSlip() {
   await loadPendingSlips();
   loadLowQuotaBanner();
   if (slip.token) loadTeacherStudentInfo(slip.token);
+}
+
+// 重新開立收據（用於補開或替換格式不對的舊收據）
+async function regenReceipt(paymentId) {
+  if (!confirm('重新開立收據？（舊收據不會自動刪除，會新增一份到 Drive）')) return;
+  try {
+    var res = await sb.from('classroom_payments').select('*').eq('id', paymentId).single();
+    var p = res.data;
+    if (!p) { alert('找不到繳費記錄'); return; }
+    var v = {
+      cur: p.currency || 'THB',
+      pp:  p.price_per || Math.round((p.total_amount || 0) / (p.lessons || 1)),
+      ls:  p.lessons || 0,
+      bn:  p.bonus_lessons || 0,
+      start: p.start_note || p.start_date || ''
+    };
+    alert('開始產生 PDF 收據，請稍候…');
+    var receipt = await generateAndUploadReceipt(p, v);
+    await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo }).eq('id', paymentId);
+    alert('✅ 收據已重新開立！\n編號：' + receipt.receiptNo + '\n已存到學生「課表 & 收據」資料夾');
+    if (p.token) loadTeacherStudentInfo(p.token);
+  } catch (e) {
+    alert('失敗：' + (e.message || e) + '\n請確認已連接 Google Drive 授權');
+  }
 }
 
 async function rejectSlip(id) {
