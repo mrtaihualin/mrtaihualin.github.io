@@ -2206,33 +2206,63 @@ async function generateAndUploadReceipt(p, v) {
   await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
 
   // สร้าง receipt HTML div ซ่อนไว้นอกจอ
+  // ── ประกอบค่าจริงจากฟอร์ม ──
+  var terms = (v.ls && v.ls % 10 === 0) ? (v.ls / 10) : 0;
+  var lessonTxt = terms > 0 ? (terms + ' 期（' + v.ls + ' 堂）') : (v.ls + ' 堂');
+  if (v.bn > 0) lessonTxt += '＋贈 ' + v.bn + ' 堂';
+  var itemVal  = (p.course_label || '泰語 1對1 課程') + '　' + lessonTxt;
+  var startVal = v.start || '依行事曆繼續';
+  var perVal   = v.pp + ' ' + v.cur;
+  var totalVal = total.toLocaleString() + ' ' + v.cur;
+  var noteVal  = v.note || '課程依既有時間表繼續上課，上滿 10 堂為一期。';
+  var SERIF = '\'Noto Serif TC\',\'PingFang TC\',serif';
+  var SANS  = '\'Noto Sans TC\',\'PingFang TC\',sans-serif';
+
+  function fieldRow(label, value) {
+    return '<tr>'
+      + '<td style="width:37%;font-family:' + SANS + ';font-size:11px;letter-spacing:0.12em;color:#8B6310;padding:10px 0;vertical-align:top;">' + label + '</td>'
+      + '<td style="font-size:16px;color:#1C1C1C;padding:10px 0;">' + value + '</td></tr>';
+  }
+
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;padding:48px 40px;background:#fff;box-sizing:border-box;';
-  const rows = [
-    ['學生', name],
-    ['課程', p.course_label || ''],
-    ['堂數', v.ls + ' 堂' + (v.bn > 0 ? '（贈 ' + v.bn + ' 堂）' : '')],
-    ['單價', v.cur + ' ' + v.pp + ' / 堂'],
-  ];
-  if (v.start) rows.push(['開始', v.start]);
-  const trRows = rows.map(function(r) {
-    return '<tr><td style="padding:12px 8px;border-bottom:1px solid #eee;color:#1C1C1C;">' + r[0] + '</td>'
-         + '<td style="padding:12px 8px;border-bottom:1px solid #eee;text-align:right;">' + r[1] + '</td></tr>';
-  }).join('');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;padding:24px;background:#FBF5E7;box-sizing:border-box;font-family:' + SERIF + ';color:#1C1C1C;';
   wrap.innerHTML =
-    '<h1 style="font-family:\'Noto Serif TC\',\'PingFang TC\',serif;font-size:32px;font-weight:900;color:#8B6310;margin:0 0 16px;letter-spacing:2px;">課堂收據</h1>'
-  + '<hr style="border:none;border-top:1.5px solid #ccc;margin:0 0 16px;">'
-  + '<p style="font-family:\'Noto Sans TC\',\'PingFang TC\',sans-serif;font-size:13px;color:#444;line-height:2;margin:0 0 24px;">'
-  +   '收據編號：' + receiptNo + '<br>日期：' + today
-  + '</p>'
-  + '<table style="width:100%;border-collapse:collapse;font-family:\'Noto Sans TC\',\'PingFang TC\',sans-serif;font-size:15px;">'
-  + trRows
-  + '<tr><td style="padding:12px 8px;font-weight:700;font-family:\'Noto Serif TC\',\'PingFang TC\',serif;">合計</td>'
-  + '<td style="padding:12px 8px;text-align:right;font-size:17px;font-weight:900;color:#8B6310;font-family:\'Noto Serif TC\',\'PingFang TC\',serif;">'
-  + v.cur + ' ' + total.toLocaleString() + '</td></tr>'
-  + '</table>'
-  + '<hr style="border:none;border-top:1px solid #ddd;margin:32px 0 12px;">'
-  + '<p style="font-family:\'Noto Sans TC\',\'PingFang TC\',sans-serif;font-size:12px;color:#aaa;margin:0;">泰華老師 · mrtaihualin.com</p>';
+    '<div style="background:#fff;border:1px solid #C8973A;">'
+    + '<table style="width:100%;background:#1C1C1C;border-bottom:3px solid #C8973A;border-collapse:collapse;"><tr>'
+    +   '<td style="padding:26px 30px;vertical-align:top;">'
+    +     '<div style="color:#fff;font-size:23px;font-weight:700;line-height:1.15;font-family:' + SERIF + ';">泰華眼裡的泰語教學</div>'
+    +     '<div style="font-family:' + SANS + ';font-size:9px;letter-spacing:0.28em;color:#C8973A;font-weight:700;margin-top:6px;">THAI 1-ON-1 ONLINE　·　mrtaihualin.com</div>'
+    +   '</td>'
+    +   '<td style="padding:26px 30px;vertical-align:top;text-align:right;color:#C8973A;white-space:nowrap;">'
+    +     '<div style="font-size:17px;font-weight:700;letter-spacing:0.15em;font-family:' + SERIF + ';">收　據</div>'
+    +     '<div style="font-family:' + SANS + ';font-size:8px;letter-spacing:0.32em;margin-top:3px;">RECEIPT</div>'
+    +   '</td>'
+    + '</tr></table>'
+    + '<div style="padding:26px 30px;">'
+    +   '<table style="width:100%;font-family:' + SANS + ';font-size:11px;color:#8B6310;letter-spacing:0.04em;"><tr>'
+    +     '<td style="text-align:left;">收據編號 No.　' + escHtml(receiptNo) + '</td>'
+    +     '<td style="text-align:right;">開立日期　' + today + '</td>'
+    +   '</tr></table>'
+    +   '<hr style="border:none;border-top:1px solid rgba(139,99,16,0.28);margin:18px 0;">'
+    +   '<table style="width:100%;border-collapse:collapse;">'
+    +     fieldRow('學生姓名 STUDENT', escHtml(name))
+    +     fieldRow('課程項目 ITEM', escHtml(itemVal))
+    +     fieldRow('本輪起算 START', escHtml(startVal))
+    +     fieldRow('單堂學費 PER LESSON', escHtml(perVal))
+    +   '</table>'
+    +   '<hr style="border:none;border-top:1px solid rgba(139,99,16,0.16);margin:18px 0 14px;">'
+    +   '<table style="width:100%;"><tr>'
+    +     '<td style="font-family:' + SANS + ';font-size:13px;letter-spacing:0.12em;color:#8B6310;">合計金額 TOTAL</td>'
+    +     '<td style="text-align:right;font-size:26px;font-weight:700;color:#5a3e0a;font-family:' + SERIF + ';">' + escHtml(totalVal) + '</td>'
+    +   '</tr></table>'
+    +   '<table style="width:100%;margin-top:18px;"><tr>'
+    +     '<td style="width:1%;white-space:nowrap;font-family:' + SANS + ';font-size:12px;letter-spacing:0.12em;color:#8B6310;padding-right:16px;">付款狀態</td>'
+    +     '<td><span style="display:inline-block;background:#F3E4C2;border:1px solid #8B6310;color:#5a3e0a;font-family:' + SANS + ';font-size:12px;font-weight:700;letter-spacing:0.12em;padding:7px 24px;">已付款 PAID</span></td>'
+    +   '</tr></table>'
+    +   '<div style="margin-top:18px;padding-top:13px;border-top:1px solid rgba(139,99,16,0.16);font-size:11px;color:#666;line-height:1.75;font-family:' + SANS + ';">' + escHtml(noteVal) + '</div>'
+    + '</div>'
+    + '</div>'
+    + '<div style="text-align:center;font-family:' + SANS + ';font-size:9.5px;letter-spacing:0.18em;color:#8B6310;padding:18px 30px 4px;">泰語 1對1 線上課程　·　1 期 = 10 堂　·　mrtaihualin.com　·　mr.taihualin@gmail.com</div>';
   document.body.appendChild(wrap);
 
   // รอ font โหลดเสร็จ แล้ว render เป็น canvas
