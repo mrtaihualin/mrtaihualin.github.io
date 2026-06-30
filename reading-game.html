@@ -73,9 +73,10 @@
   border:2px dashed #d4b87a;border-radius:12px;background:#fffdf7;
   display:flex;align-items:center;justify-content:center;
   font-size:28px;font-weight:700;color:#3a2a0a;font-family:'Sarabun',sans-serif;
-  transition:all .2s;padding:4px 8px;overflow:visible;
+  transition:all .2s;padding:4px 8px;overflow:visible;cursor:pointer;
 }
 /* tone mark rendered via ::before trick → no ◌ visible */
+.slot-box.active{border-color:#e8a020;border-style:dashed;background:#fff6e3;box-shadow:0 0 0 3px rgba(232,160,32,.28);}
 .slot-box.filled{border-style:solid;border-color:#e8a020;background:#fff8ee;}
 .slot-box.correct{border-color:#4caf50 !important;border-style:solid !important;background:#e8f5e9 !important;}
 .slot-box.wrong{border-color:#f44336 !important;border-style:solid !important;background:#fdecea !important;}
@@ -1332,6 +1333,17 @@ var optTiles=[],correctVal={}; // ระบบไทล์ผูกช่อง 
 function tileById(id){for(var i=0;i<optTiles.length;i++)if(optTiles[i].id===id)return optTiles[i];return null;}
 function allSlotsFilled(){return comps.every(function(c){return slotFills[c]!=null;});}
 var slotFills={};
+// ── ช่องที่กำลังเล็ง (วางตัวอักษรลงช่องนี้) — แก้ปัญหาตัวอักษรหน้าตาซ้ำกัน ──
+var activeSlot=null, slotSeq=[];
+function slotOfTile(id){for(var i=0;i<slotSeq.length;i++){if(slotFills[slotSeq[i]]===id)return slotSeq[i];}return null;}
+function nextEmptySlot(){for(var i=0;i<slotSeq.length;i++){if(slotFills[slotSeq[i]]==null)return slotSeq[i];}return null;}
+function setActiveSlot(c){activeSlot=c;updateActiveSlot();}
+function updateActiveSlot(){
+  slotSeq.forEach(function(c){
+    var box=document.getElementById('sb-'+c);if(!box)return;
+    box.classList.toggle('active', c===activeSlot && !checked);
+  });
+}
 var bonusAnswered=false;
 var selectedBonus=null;  // tone name user picked before 檢查
 
@@ -1495,15 +1507,18 @@ function loadSyl(){
     var box=document.getElementById('sb-'+c);
     col.style.display=comps.indexOf(c)>=0?'flex':'none';
     setSlotContent(box,null,null);
+    box.onclick=function(){ if(checked)return; setActiveSlot(c); };
   });
   var slotRow=document.getElementById('slot-row');
-  getSlotOrder(W.vowel,W.final).forEach(function(c){
+  slotSeq=getSlotOrder(W.vowel,W.final).filter(function(c){return comps.indexOf(c)>=0;});
+  slotSeq.forEach(function(c){
     var col=document.getElementById('slotcol-'+c);
     if(col)slotRow.appendChild(col); // re-append = เลื่อนไปท้าย → reorder DOM
   });
+  activeSlot=nextEmptySlot();updateActiveSlot();
 
   // build optTypes + options
-  // สร้างตัวเลือกเป็น "ไทล์ผูกช่อง" — แต่ละไทล์รู้ว่าเป็นของช่องไหน → ค่าซ้ำข้ามช่องได้ (อ + ออ)
+  // ไทล์ไม่ผูกช่องแล้ว — type ใช้แค่สร้างตัวลวง · การวางตัดสินจาก "ช่องที่เล็ง" (activeSlot) → ตัวหน้าตาซ้ำไม่งง
   optTiles=[];correctVal={};
   comps.forEach(function(comp){
     var ans,groups,pool2,ex=null;
@@ -1551,26 +1566,28 @@ function renderOptions(tiles){
 
     el.onclick=function(){
       if(checked)return;
-      var tp=t.type;
-      var k=picks.indexOf(t.id);
-      if(k>=0){
-        // เอาออก
-        picks.splice(k,1);
+      // ไทล์ไม่ผูกช่องแล้ว → กดแล้วลง "ช่องที่กำลังเล็ง" (แก้ปัญหาตัวอักษรหน้าตาซ้ำกัน)
+      var placed=slotOfTile(t.id);
+      if(placed){
+        // กดซ้ำตัวที่วางอยู่ → เอาออก แล้วเล็งช่องนั้นต่อ
+        slotFills[placed]=null;
+        var k=picks.indexOf(t.id);if(k>=0)picks.splice(k,1);
         el.classList.remove('sel');
-        if(slotFills[tp]===t.id){slotFills[tp]=null;updateSlots();}
+        setActiveSlot(placed);
+        updateSlots();
       } else {
-        // ถ้าช่องประเภทนี้มีไทล์อยู่แล้ว → สลับออก
-        if(slotFills[tp]!=null){
-          var oldId=slotFills[tp];
-          var ki=picks.indexOf(oldId);
-          if(ki>=0)picks.splice(ki,1);
+        var c=activeSlot||nextEmptySlot();
+        if(!c)return; // ไม่มีช่องว่าง
+        if(slotFills[c]!=null){
+          // ช่องที่เล็งมีตัวอยู่แล้ว → เอาตัวเก่าออกก่อน
+          var oldId=slotFills[c];
+          var ki=picks.indexOf(oldId);if(ki>=0)picks.splice(ki,1);
           var oldEl=pool.querySelector('.opt[data-id="'+oldId+'"]');
           if(oldEl)oldEl.classList.remove('sel');
-          slotFills[tp]=null;
+          slotFills[c]=null;
         }
-        picks.push(t.id);
-        el.classList.add('sel');
-        slotFills[tp]=t.id;
+        slotFills[c]=t.id;picks.push(t.id);el.classList.add('sel');
+        setActiveSlot(nextEmptySlot());
         updateSlots();
       }
       document.getElementById('btn-check').disabled=!allSlotsFilled();
@@ -1589,6 +1606,7 @@ function updateSlots(){
     var t=(id!=null)?tileById(id):null;
     setSlotContent(box, t?t.val:null, t?'filled':null);
   });
+  updateActiveSlot(); // setSlotContent ล้าง class → ทาไฮไลต์ช่องที่เล็งใหม่
 }
 
 function markSlots(){
@@ -1600,6 +1618,7 @@ function markSlots(){
     var uv=t?t.val:null;
     setSlotContent(box, correctVal[c], uv===correctVal[c]?'correct':'wrong');
   });
+  updateActiveSlot(); // ปลดไฮไลต์ช่องที่เล็งเมื่อเฉลยแล้ว
 }
 
 // ─── Check answer ───
@@ -1646,12 +1665,14 @@ function check(){
     if(wrongCount < 3){
       // ผิดครั้งที่ 1/2 → กระพริบตัวที่ผิด, เคลียร์, ลองใหม่
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
-        if(picks.indexOf(Number(x.dataset.id))>=0 && correctVal[x.dataset.type]!==x.dataset.val)x.classList.add('wrong');
+        var c=slotOfTile(Number(x.dataset.id));
+        if(c && correctVal[c]!==x.dataset.val)x.classList.add('wrong');
       });
       setTimeout(function(){
         document.getElementById('pool').querySelectorAll('.opt.wrong').forEach(function(x){x.classList.remove('wrong');});
       },750);
       picks=[];slotFills={cons:null,vowel:null,final:null,tone:null};
+      activeSlot=nextEmptySlot();updateActiveSlot();
       updateSlots();
       document.getElementById('pool').querySelectorAll('.opt.sel').forEach(function(x){x.classList.remove('sel');});
       document.getElementById('btn-check').disabled=true;
@@ -1849,12 +1870,11 @@ function setGameBtns(mode){
 }
 
 function markOpts(){
-  var picked={};picks.forEach(function(id){picked[id]=1;});
   document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
     x.classList.add('locked');
-    var id=Number(x.dataset.id),type=x.dataset.type,val=x.dataset.val;
-    if(correctVal[type]===val)x.classList.add('correct');
-    else if(picked[id])x.classList.add('wrong');
+    var id=Number(x.dataset.id),val=x.dataset.val;
+    var c=slotOfTile(id); // ตัดสินถูก/ผิดตาม "ช่องที่วาง" ไม่ใช่ชนิดไทล์
+    if(c)x.classList.add(correctVal[c]===val?'correct':'wrong');
   });
 }
 
