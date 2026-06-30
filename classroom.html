@@ -2197,7 +2197,15 @@ function _loadScript(url) {
 // 產生收據 PDF ใน browser โดยตรง (html2canvas + jsPDF) → ไม่ผ่าน Google Doc แล้ว
 async function generateAndUploadReceipt(p, v) {
   const name = p.student_name || p.token || '學生';
-  const receiptNo = 'R' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (p.id || '');
+  // เลขที่ใบเสร็จ = วันที่รับเงิน + ลำดับของวันนั้น เช่น 2026-0630-01
+  const _d = new Date();
+  const datePart = _d.getFullYear() + '-' + String(_d.getMonth() + 1).padStart(2, '0') + String(_d.getDate()).padStart(2, '0');
+  let _seq = 1;
+  try {
+    const _r = await sb.from('classroom_payments').select('receipt_no').like('receipt_no', datePart + '-%');
+    if (_r && _r.data) _seq = _r.data.length + 1;
+  } catch (e) { console.warn('收據序號查詢失敗：', e); }
+  const receiptNo = datePart + '-' + String(_seq).padStart(2, '0');
   const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
   const total = v.ls * v.pp;
 
