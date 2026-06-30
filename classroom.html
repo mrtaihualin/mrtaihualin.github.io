@@ -1898,7 +1898,8 @@ async function loadStudentRecordings(token){
 // INIT
 // ============================================================
 function initRecording() {
-  // 按鈕式錄製，無需初始化
+  // 開頁面就檢查上次有沒有沒存完的錄影（崩潰防護救回）
+  try { recCheckLeftover(); } catch(e) {}
 }
 
 // ============================================================
@@ -2974,6 +2975,11 @@ let recMethod=null, recState='idle';
 let recDisplayStream=null, recMicStream=null, recAudioCtx=null;
 let recMR=null, recChunks=[], recMime='', recIsVideo=false, recNoSysAudio=false;
 let recTimerID=null, recSplitID=null, recStartTime=0, recPart=0, recPartCount=0;
+let recHadData=false;                 // 這次到底有沒有錄到資料（防止「假成功」訊息）
+let recSessionStart=0;                // 整段錄影開始時間（救援補時長用）
+// 崩潰防護：邊錄邊備份進 IndexedDB；意外關閉/當機/0 位元組也救得回
+let recDB=null, recBackupId=null, recBackupSeq=0;
+const REC_DB='classroomRecDB', REC_STORE='recChunks';
 
 function recFmtTime(sec){ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
 function recSetStatus(t,cls){ const e=document.getElementById('recStatus'); if(e){ e.textContent=t; e.className='status'+(cls?' '+cls:''); } }
@@ -3042,8 +3048,110 @@ function recPickAudioMime(){
   return t.find(x=>MediaRecorder.isTypeSupported(x))||'';
 }
 
+// ============================================================
+// 崩潰防護：邊錄邊把每個片段存進 IndexedDB（寫進磁碟、跨重整/當機仍在）
+//   - 任何錯誤都吞掉，絕不影響錄影本身
+//   - 正常停止且有檔案 → 清掉備份；意外關閉 → 下次開頁面跳「救回」按鈕
+// ============================================================
+function recOpenDB(){
+  return new Promise((res,rej)=>{
+    if(recDB) return res(recDB);
+    let r; try{ r=indexedDB.open(REC_DB,1); }catch(e){ return rej(e); }
+    r.onupgradeneeded=()=>{ const db=r.result; if(!db.objectStoreNames.contains(REC_STORE)) db.createObjectStore(REC_STORE,{keyPath:'k'}); };
+    r.onsuccess=()=>{ recDB=r.result; res(recDB); };
+    r.onerror=()=>rej(r.error);
+  });
+}
+function recDBPut(obj){
+  return new Promise((res,rej)=>{
+    try{ const tx=recDB.transaction(REC_STORE,'readwrite'); tx.objectStore(REC_STORE).put(obj); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }
+    catch(e){ rej(e); }
+  });
+}
+async function recBackupStart(meta){
+  try{
+    await recOpenDB();
+    recBackupId='rec_'+Date.now(); recBackupSeq=0;
+    await recDBPut({ k:recBackupId+'__meta', meta:meta });
+    localStorage.setItem('recPendingBackup', recBackupId);
+    localStorage.setItem('recPendingMeta', JSON.stringify(meta||{}));
+  }catch(e){ recBackupId=null; }   // 備份失敗 → 照常錄影（只是少了崩潰防護）
+}
+async function recBackupChunk(blob){
+  if(!recBackupId) return;
+  try{ await recDBPut({ k:recBackupId+'__'+String(recBackupSeq++).padStart(6,'0'), blob:blob }); }catch(e){}
+}
+async function recBackupClear(id){
+  id=id||recBackupId; if(!id) return;
+  try{
+    await recOpenDB();
+    await new Promise((res)=>{
+      const tx=recDB.transaction(REC_STORE,'readwrite'); const st=tx.objectStore(REC_STORE);
+      const rq=st.getAllKeys();
+      rq.onsuccess=()=>{ (rq.result||[]).forEach(k=>{ if(String(k).indexOf(id)===0) st.delete(k); }); };
+      tx.oncomplete=()=>res(); tx.onerror=()=>res();
+    });
+  }catch(e){}
+  if((localStorage.getItem('recPendingBackup')||'')===id){ localStorage.removeItem('recPendingBackup'); localStorage.removeItem('recPendingMeta'); }
+  if(id===recBackupId){ recBackupId=null; }
+}
+// 開頁面時檢查有沒有上次沒存成功的錄影 → 跳救回橫幅
+async function recCheckLeftover(){
+  const id=localStorage.getItem('recPendingBackup'); if(!id) return;
+  let meta={}; try{ meta=JSON.parse(localStorage.getItem('recPendingMeta')||'{}')||{}; }catch(e){}
+  try{
+    await recOpenDB();
+    const keys=await new Promise((res)=>{
+      const tx=recDB.transaction(REC_STORE,'readonly'); const rq=tx.objectStore(REC_STORE).getAllKeys();
+      rq.onsuccess=()=>res((rq.result||[]).filter(k=>String(k).indexOf(id+'__')===0 && String(k).indexOf('__meta')<0).sort());
+      rq.onerror=()=>res([]);
+    });
+    if(!keys.length){ recBackupClear(id); return; }
+    recShowRecoverBanner(id, meta, keys);
+  }catch(e){}
+}
+function recShowRecoverBanner(id, meta, keys){
+  const host=document.getElementById('mainContainer'); if(!host) return;
+  const div=document.createElement('div');
+  div.id='recRecoverBanner';
+  div.style.cssText='background:#fef3c7;border:1px solid #d97706;border-radius:12px;padding:14px 16px;margin:0 0 16px;font-family:\'Noto Sans TC\',sans-serif;color:#78350f;';
+  div.innerHTML='<b>⚠️ 偵測到上次有一段錄影沒存完</b>（可能中途關掉了視窗）。共 '+keys.length+' 個片段，點下面救回成檔案：'
+    +'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
+    +'<button id="recRecoverBtn" style="background:#b45309;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;">⬇ 救回並下載</button>'
+    +'<button id="recRecoverDismiss" style="background:#fff;color:#78350f;border:1px solid #d97706;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;">刪除這段備份</button>'
+    +'</div><div id="recRecoverMsg" style="margin-top:8px;font-size:0.85rem;"></div>';
+  host.insertBefore(div, host.firstChild);
+  document.getElementById('recRecoverBtn').onclick=()=>recRecoverDownload(id, meta, keys);
+  document.getElementById('recRecoverDismiss').onclick=()=>{ recBackupClear(id); div.remove(); };
+}
+async function recRecoverDownload(id, meta, keys){
+  const msg=document.getElementById('recRecoverMsg'); if(msg) msg.textContent='讀取中…';
+  try{
+    await recOpenDB();
+    const parts=[];
+    for(const k of keys){
+      const rec=await new Promise((res)=>{ const tx=recDB.transaction(REC_STORE,'readonly'); const rq=tx.objectStore(REC_STORE).get(k); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(null); });
+      if(rec&&rec.blob) parts.push(rec.blob);
+    }
+    if(!parts.length){ if(msg) msg.textContent='找不到可救回的資料，已清除。'; recBackupClear(id); return; }
+    const isVideo=!!(meta&&meta.isVideo);
+    const mime=(meta&&meta.mime)||(isVideo?'video/webm':'audio/webm');
+    let blob=new Blob(parts,{type:mime});
+    // webm 補時長（用片段數×1秒估算）→ 才能正常播放/拖動
+    if(/webm/i.test(mime) && window.ysFixWebmDuration){
+      try{ blob=await window.ysFixWebmDuration(blob, keys.length*1000, {logger:false}); }catch(e){}
+    }
+    const ext = isVideo ? (mime.includes('mp4')?'mp4':'webm') : (mime.includes('mp4')?'m4a':(mime.includes('ogg')?'ogg':'webm'));
+    const name='救回_'+(isVideo?'video':'audio')+'_'+new Date(meta&&meta.startTs||Date.now()).toISOString().slice(0,19).replace(/[:T]/g,'-')+'.'+ext;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    if(msg) msg.innerHTML='✅ 已救回（'+(blob.size/1048576).toFixed(1)+' MB）並開始下載。下載確認沒問題後可按「刪除這段備份」清空。';
+  }catch(e){ if(msg) msg.textContent='救回失敗：'+(e.message||e); }
+}
+
 async function beginRecording(method){
   recMethod=method; recPart=0; recPartCount=0; recNoSysAudio=false;
+  recHadData=false; recSessionStart=Date.now();
   const dl=document.getElementById('recDownloads'); if(dl) dl.innerHTML='';
   document.getElementById('recAudioPlayer').style.display='none';
   document.getElementById('recVideoPlayer').style.display='none';
@@ -3077,6 +3185,8 @@ async function beginRecording(method){
       const vTrack=recDisplayStream.getVideoTracks()[0];
       if(vTrack) vTrack.onended=()=>{ if(recState==='recording') stopRecording(); };
     }
+    // 開始崩潰備份（非阻塞；失敗也不擋錄影）
+    recBackupStart({ isVideo: recIsVideo, mime: (recIsVideo?recPickVideoMime():recPickAudioMime()), startTs: recSessionStart, student: recActiveStudent||'' });
     startSegment(finalStream);
   }catch(err){
     recSetStatus('❌ '+(err.message||err.name||'無法開始錄製'),'');
@@ -3092,7 +3202,8 @@ function startSegment(stream){
     : {mimeType:recMime||undefined, audioBitsPerSecond:REC_AUDIO_BPS};
   recMR=new MediaRecorder(stream, opts);
   recChunks=[]; recPart++;
-  recMR.ondataavailable=e=>{ if(e.data&&e.data.size) recChunks.push(e.data); };
+  recMR.ondataavailable=e=>{ if(e.data&&e.data.size){ recChunks.push(e.data); recHadData=true; recBackupChunk(e.data); } };
+  recMR.onerror=ev=>{ recSetStatus('❌ 錄影發生錯誤：'+((ev&&ev.error&&ev.error.name)||'未知')+'　請按停止後重新錄影（已備份的片段仍可救回）',''); };
   recMR.onstop=()=>finalizeSegment();
   recMR.start(1000);
   recState='recording';
@@ -3364,11 +3475,20 @@ function stopRecording(){
   clearInterval(recTimerID); recTimerID=null;
   const tEl=document.getElementById('recTimer'); if(tEl) tEl.classList.remove('visible');
   recState='idle';
-  if(recMR && recMR.state!=='inactive'){ recMR.onstop=()=>finalizeSegment(); recMR.stop(); }
+  if(recMR && recMR.state!=='inactive'){ recMR.onstop=async ()=>{ await finalizeSegment(); recAfterStop(); }; recMR.stop(); }
+  else { recAfterStop(); }
   cleanupRecStreams();
   recToggleStartBtns(false);
   document.getElementById('recStopBtn').disabled=true;
-  recSetStatus('✅ 錄製完成，可預覽或下載','done');
+}
+// 停止後才判斷成敗 —— 真的有錄到才說「完成」，0 位元組大聲示警，絕不假裝成功
+function recAfterStop(){
+  if(recHadData){
+    recSetStatus('✅ 錄製完成，可預覽或下載','done');
+    recBackupClear();   // 已有可下載檔＋自動上傳雲端 → 清掉崩潰備份
+  }else{
+    recSetStatus('❌ 這次完全沒有錄到內容（0 位元組）！請立即重新錄影。','');
+  }
 }
 
 function cleanupRecStreams(){
