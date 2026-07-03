@@ -10,13 +10,54 @@
   function save(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }
   function dstr(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 
-  // ดาว 1–3 ดวง/รอบ ตามความแม่น: เล่นจบ=1 · สะอาด≥80%=2 · สะอาด100%=3
+  // ── สเปก 2026-07-03: ดาวเงิน (hard currency) เปลี่ยนแหล่งที่มา ──
+  // เดิม: ดาว 1–3 ดวง/รอบ ตามความแม่น (starsForRound) → ปั๊มได้ ไม่ตรงสเปกใหม่
+  // ใหม่: ดาวเงินแจกเฉพาะตอน "จำได้จริง" (คำ/ประโยคถูกตัดออกจาก SRS เพราะจำได้แล้ว)
+  //   ให้ tone-finder.html (TF_SRS) เป็นคนคำนวณจำนวนดาว/คำแล้วเรียก addHardStars(n, level) เข้ามา
+  //   ฟังก์ชันนี้ (starsForRound) ยังเก็บไว้เผื่อโค้ดเก่าเรียกใช้ แต่ "ไม่ใช่แหล่งดาวเงินอีกต่อไป" — คืนค่า 0 เสมอ
+  //   (กันพังเงียบ: ถ้ามีจุดอื่นเรียกอยู่ จะไม่ทำให้ดาวเพิ่มมั่วๆ)
   function starsForRound(cleanCount, total) {
-    if (!total || total <= 0) return 0;
-    var r = cleanCount / total;
-    if (r >= 1) return 3;
-    if (r >= 0.8) return 2;
-    return 1;
+    return 0; // DEPRECATED สเปก 2026-07-03 — ห้ามใช้แจกดาวเงินอีก ดูหมายเหตุด้านบน
+  }
+
+  // ── สเปก 2026-07-03 ข้อ 4: เพดานดาวเงินตลอดชีพต่อระดับ (ล็อกกันปั๊ม) ──
+  // Hard cap ต่อระดับ = min(10% ของจำนวนคำในระดับ, hard cap ในตาราง) — ตัวเลข hard cap คงที่ตามสเปก
+  var HARD_CAPS = { 1: 200, 2: 300, 3: 200 };        // 初級/中級/高級 → จำนวน "คำ" สูงสุดที่นับดาวได้ตลอดชีพ
+  var LEVEL_MULT = { 1: 1, 2: 1.5, 3: 2 };            // ตัวคูณระดับ
+  var BASE_CLEAN = 3, BASE_RECOVERED = 1;             // ฐาน/คำ: จำเอง=3 · กู้กลับมาได้=1
+
+  // นับ "คำที่เคยได้ดาวแล้ว" ต่อระดับ (เพื่อคุมเพดาน 200/300/200) — เก็บถาวรในบัญชีเดียวกัน ไม่รีเซ็ตเอง
+  function wordsCounted(a, level) {
+    var wc = a.hardWordsByLevel || {};
+    return wc[level] || 0;
+  }
+  function bumpWordsCounted(a, level) {
+    a.hardWordsByLevel = a.hardWordsByLevel || {};
+    a.hardWordsByLevel[level] = (a.hardWordsByLevel[level] || 0) + 1;
+    return a.hardWordsByLevel[level];
+  }
+
+  // ── สเปก 2026-07-03 ข้อ 4: แจกดาวเงินตอนคำ/ประโยคถูก "ตัด" ออกจาก SRS (mastered) ──
+  // clean = จำได้เองไม่เคยแอบดู/ผิดเลยตลอดเส้นทาง SRS ของคำนี้ · recovered = เคยผิด/แอบดูระหว่างทาง แต่สุดท้ายจำได้
+  // level: 1=初級×1 · 2=中級×1.5 · 3=高級×2
+  // คืนค่า {stars, capped} — capped=true ถ้าคำนี้ชนเพดานระดับแล้ว (ตัดออกจาก SRS ปกติ แต่ไม่ได้ดาว)
+  function addHardStars(clean, level) {
+    var a = load();
+    var cap = HARD_CAPS[level] || 0;
+    var used = wordsCounted(a, level);
+    if (used >= cap) { save(a); return { stars: 0, capped: true }; }
+    bumpWordsCounted(a, level);
+    var base = clean ? BASE_CLEAN : BASE_RECOVERED;
+    var mult = LEVEL_MULT[level] || 1;
+    var n = Math.round(base * mult);
+    a.stars = (a.stars || 0) + n;
+    save(a);
+    return { stars: n, capped: false };
+  }
+  // เช็กว่าระดับนี้ชนเพดานดาวเงินหรือยัง (ไม่นับดาว แต่คำยัง mastered/ตัดออกจาก SRS ได้ตามปกติ)
+  function hardCapReached(level) {
+    var a = load();
+    return wordsCounted(a, level) >= (HARD_CAPS[level] || 0);
   }
 
   // แบดจ์พันธุ์ข้าว ตามดาวรวมสะสม (รูป SVG จริงใน assets/badges/)
@@ -45,6 +86,12 @@
     earnedBadges: function () { var s = load().stars || 0; return STAR_BADGES.filter(function (b) { return s >= b.at; }); },
     // เผื่อย้ายข้อมูลเก่า: ถ้าบัญชียังว่าง แต่เกมมีดาวเดิมในเครื่อง → เก็บเข้าบัญชีครั้งเดียว
     seedIfEmpty: function (oldStars) { var a = load(); if (!a.stars && oldStars > 0) { a.stars = oldStars; save(a); } return a.stars || 0; },
+
+    // ── สเปก 2026-07-03: ดาวเงิน (hard currency) จาก SRS mastery เท่านั้น ──
+    addHardStars: addHardStars,        // (clean:boolean, level:1|2|3) → {stars, capped}
+    hardCapReached: hardCapReached,    // (level) → true ถ้าระดับนี้ชนเพดานตลอดชีพแล้ว
+    getHardWordsCounted: function (level) { return wordsCounted(load(), level); },
+    hardCaps: HARD_CAPS,
 
     // ── เฟส 2: sync ขึ้น Supabase (ถาวร + ข้ามเครื่อง) เมื่อล็อกอิน — Lin 2026-06-27 ──
     // merge แบบ "เอาค่ามากสุด" กันข้อมูลหายตอนสลับเครื่อง · ปลอดภัยถ้ายังไม่มีตาราง (no-op)

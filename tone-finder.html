@@ -12,7 +12,7 @@
 <!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="supabase-config.js?v=4"></script>
-<script defer src="game-account.js?v=1"></script>
+<script defer src="game-account.js?v=2"></script><!-- v2: สเปก 2026-07-03 ดาวเงินเปลี่ยนแหล่งที่มา (SRS mastery) -->
 <script defer src="auth-widget.js?v=1"></script>
 <script defer src="supabase-auth.js?v=20"></script>
 <script defer src="progress-sync.js?v=2"></script>
@@ -2930,6 +2930,94 @@ var TF_SCORE = {
 // ===== TF_SCORE ENGINE END =====
 
 // ════════════════════════════════════════════════════════════
+// ===== TF_SRS ENGINE START ===== (สเปก 2026-07-03 ข้อ 2.5 + 3 + 4 + 5)
+// วนทบทวนแบบ SRS ต่อ "หน่วย" (ทั้งคำ/ทั้งประโยค) + แจกดาวเงินตอนจำได้จริง
+// หน่วย = key คือ entry.word (level 1/2 = คำ, level 3 = ประโยคเต็ม) + level
+// ทำงานเฉพาะตอนล็อกอิน (เช็กที่จุดเรียกใช้ ไม่ใช่ในเอนจิ้นนี้ — เอนจิ้นนี้ pure logic เทสต์ได้)
+// ════════════════════════════════════════════════════════════
+var TF_SRS_CFG = {
+  INTERVALS: [1, 7, 16],   // วัน: รอบ1=+1วัน · รอบ2=+7วัน · รอบ3(day16)=make-sure check → mastered
+  CLEAN_ROUNDS_TO_MASTER: 3
+};
+
+var TF_SRS = {
+  cfg: TF_SRS_CFG,
+  // สร้าง key เฉพาะคำ/ประโยค + ระดับ (คำเดียวกันคนละระดับ = คนละรายการ)
+  keyFor: function (word, level) { return (level || 0) + '|' + word; },
+
+  // สร้าง record เริ่มต้นของคำใหม่ที่ยังไม่เคยเข้า SRS
+  blank: function () {
+    return {
+      stage: 0,            // ผ่านรอบสะอาดติดกันกี่รอบแล้ว (0,1,2 → ครบ 3 = mastered)
+      dueAt: 0,             // timestamp วันที่ครบกำหนดทบทวนรอบถัดไป (0 = พร้อมเล่นได้ทันที)
+      everFailed: false,    // เคยผิด/แอบดูระหว่างเส้นทางนี้ไหม (คุมว่าจะได้ "จำเอง"=3 หรือ "กู้กลับมาได้"=1)
+      mastered: false,      // ตัดออกจาก SRS แล้ว (ถาวร ไม่โผล่ซ้ำ)
+      firstPassSoftAwarded: false  // เคยได้ "แต้มเกม" รอบแรกของ loop นี้แล้วหรือยัง (กันฟาร์มคะแนนซ้ำ)
+    };
+  },
+
+  // วันนี้ถึงกำหนดทบทวนคำนี้หรือยัง (true = ยังไม่เคยเล่น หรือครบกำหนดแล้ว)
+  isDue: function (rec, nowMs) {
+    if (!rec || rec.mastered) return false;
+    return (rec.dueAt || 0) <= (nowMs || Date.now());
+  },
+
+  // นี่คือรอบ "day 16" (การเช็คครั้งสุดท้ายก่อน mastered) ไหม — stage 2 คือรอบที่ 3 (0-based)
+  isFinalCheck: function (rec) {
+    return !!rec && rec.stage === (this.cfg.CLEAN_ROUNDS_TO_MASTER - 1);
+  },
+
+  // ตอบถูก "สะอาด" (ไม่แอบดู ไม่ผิดในรอบนี้) → เลื่อนขั้นถัดไป หรือ mastered ถ้าครบ 3 รอบ
+  // คืน { rec, justMastered, clean } — clean = mastered แบบไม่เคย fail/peek เลยตลอดเส้นทาง (จำเอง)
+  // หมายเหตุ index: รอบที่เพิ่งผ่าน (stage ก่อนบวก) กำหนดว่ารออีกกี่วันถึงรอบถัดไป
+  //   stage 0 ผ่าน (รอบ1) → รออีก INTERVALS[0]=1 วัน ก่อนรอบ2 · stage 1 ผ่าน (รอบ2) → รออีก INTERVALS[1]=7 วัน ก่อนรอบ3(day16)
+  //   stage 2 ผ่าน (รอบ3/day16 final check) → mastered ทันที ไม่ต้องรอ
+  advanceOnClean: function (rec, nowMs) {
+    rec = rec || this.blank();
+    nowMs = nowMs || Date.now();
+    var justPassedStage = rec.stage;   // stage ก่อนบวก = รอบที่เพิ่งผ่านสำเร็จ
+    rec.stage += 1;
+    if (rec.stage >= this.cfg.CLEAN_ROUNDS_TO_MASTER) {
+      rec.mastered = true;
+      return { rec: rec, justMastered: true, clean: !rec.everFailed };
+    }
+    var days = this.cfg.INTERVALS[justPassedStage] || this.cfg.INTERVALS[this.cfg.INTERVALS.length - 1];
+    rec.dueAt = nowMs + days * 86400000;
+    return { rec: rec, justMastered: false, clean: !rec.everFailed };
+  },
+
+  // ตอบผิด (หรือแอบดู/day16 พลาด) → รีเซ็ตกลับ stage 0 (day 1) เข้าคิว SRS ใหม่ + จำว่าเคยพลาด (กู้กลับมาได้ ไม่ใช่จำเอง)
+  resetOnFail: function (rec) {
+    rec = rec || this.blank();
+    rec.stage = 0;
+    rec.dueAt = 0;   // พร้อมทบทวนใหม่ได้ทันที (เข้าคิว)
+    rec.everFailed = true;
+    return rec;
+  }
+};
+
+// ── localStorage: state SRS ต่อคำ (แยกจาก game-account.js เพราะผูกกับเกมเสียงเท่านั้น) ──
+var TF_SRS_KEY = 'tf_srs_v1';
+function tfLoadSrs() { try { return JSON.parse(localStorage.getItem(TF_SRS_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function tfSaveSrs(o) { try { localStorage.setItem(TF_SRS_KEY, JSON.stringify(o)); } catch (e) {} }
+function tfGetSrsRecord(word, level) {
+  var all = tfLoadSrs();
+  var k = TF_SRS.keyFor(word, level);
+  return all[k] || null;
+}
+function tfSetSrsRecord(word, level, rec) {
+  var all = tfLoadSrs();
+  all[TF_SRS.keyFor(word, level)] = rec;
+  tfSaveSrs(all);
+}
+// เช็กว่าล็อกอินอยู่ไหม (ระบบคะแนน/ดาวเงิน/SRS ทำงานเฉพาะตอนล็อกอินตามสเปกข้อ 0)
+function tfSrsLoggedIn() {
+  var a = window.TF_AUTH;
+  return !!(a && ((a.hasAccess && a.hasAccess()) || (a.loggedIn && a.loggedIn())));
+}
+// ===== TF_SRS ENGINE END =====
+
+// ════════════════════════════════════════════════════════════
 // ===== TF_GAME ENGINE START =====  (สเตจ 2: streak/freeze/เป้า/คำทอง)
 // ════════════════════════════════════════════════════════════
 var TF_GAME_CFG = {
@@ -3284,6 +3372,9 @@ function tfResetWordScoring() {
   session.curWordAllFirstTry = true;   // จริงตราบที่ทุกพยางค์ยังถูกครั้งแรก
   session.scoredSyls = {};             // กันให้คะแนนซ้ำเมื่อกด "วิเคราะห์ใหม่"
   session.curWordWrongGuess = false;   // เคยเดาผิด/🤷 ในคำ/พยางค์นี้ไหม (กันโกง first-try)
+  // ── สเปก 2026-07-03 ข้อ 2.5: สถานะ "แอบดู" ต่อคำ/ประโยคนี้ ──
+  session.peekUsed = false;      // กดแอบดูไปแล้วหรือยังในคำนี้ (ใช้ได้ครั้งเดียว/คำ)
+  session.peekBrokeClean = false; // แอบดูแล้ว = คำนี้ "ไม่สะอาด" เสมอ (ไม่ได้ดาวเงินรอบนี้ + รีเซ็ต SRS)
 }
 
 // คำปัจจุบันเป็นหลายพยางค์ไหม (readingTH มี '-')
@@ -3397,8 +3488,25 @@ function tfComboFlash(combo, mult) {
   } catch (e) {}
 }
 
+// ── สเปก 2026-07-03 ข้อ 3: "แต้มเกม (soft) ให้เฉพาะรอบแรกที่ผ่าน loop นี้สำเร็จ" — กันฟาร์มคะแนนจากคำที่วนซ้ำ ──
+// คำที่ mastered แล้ว (ตัดออกจาก SRS ถาวร) ไม่ควรโผล่ให้เล่นซ้ำอีก แต่เผื่อกรณีคำอยู่ในชุด/ห้องพิเศษอื่นที่ไม่ผ่าน SRS
+// (เช่น 全部/ห้องพิเศษ) → กันไว้อีกชั้น: ถ้าคำนี้ mastered แล้วในบัญชีผู้เล่น ไม่ให้แต้มเกมซ้ำอีก
+function tfSoftPointsAllowed(entry) {
+  if (!tfSrsLoggedIn()) return true; // ไม่ล็อกอิน = ไม่มี SRS อยู่แล้ว ให้แต้มปกติตามเดิม
+  var rec = tfGetSrsRecord(entry && entry.word, selectedLevel);
+  return !(rec && rec.mastered); // mastered แล้ว → ห้ามแจกแต้มเกมซ้ำอีก (กันฟาร์ม)
+}
+
 function tfScoreFirstTry() {
   if (!session) return;
+  // ── สเปก 2026-07-03 ข้อ 2.5+3: day16 final check / คำ mastered แล้ว = ไม่ให้แต้มเกม (แต่ยังต้องนับว่า "วิเคราะห์แล้ว" กันคำหลายพยางค์ค้าง) ──
+  var noSoftPoints = session.curWordIsFinalSrsCheck || !tfSoftPointsAllowed(session.words[session.index]);
+  if (noSoftPoints) {
+    if (tfCurWordIsMulti()) { if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true; }
+    else { session.currentWordScored = true; }
+    session.currentWordFirstTry = true;
+    return;
+  }
   var gold = tfGoldenMult();
   if (tfCurWordIsMulti()) {
     var k = S.selectedSyl;
@@ -3429,6 +3537,15 @@ function tfScoreFirstTry() {
 // ให้คะแนน "ผ่าน推導สำเร็จ" (เรียกตอน navigate ไปถึง step 'result')
 function tfScoreDeduce() {
   if (!session) return;
+  // ── สเปก 2026-07-03 ข้อ 2.5+3: day16 final check / คำ mastered แล้ว = ไม่ให้แต้มเกม (แต่ยังต้องนับว่า "วิเคราะห์แล้ว" กันคำหลายพยางค์ค้าง) ──
+  var noSoftPoints = session.curWordIsFinalSrsCheck || !tfSoftPointsAllowed(session.words[session.index]);
+  if (noSoftPoints) {
+    if (tfCurWordIsMulti()) { if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true; session.curWordAllFirstTry = false; }
+    else { session.currentWordScored = true; }
+    session.currentWordFirstTry = false;
+    session.combo = 0;
+    return;
+  }
   var gold = tfGoldenMult();
   if (tfCurWordIsMulti()) {
     var k = S.selectedSyl;
@@ -3450,6 +3567,41 @@ function tfScoreDeduce() {
   session.currentWordScored = true;
   session.combo = 0; // สตรีคขาด (ไม่ใช่ถูกครั้งแรก) — ไม่ริบของเก่า
   setTimeout(function () { tfScorePop(pts, { gold: gold > 1 }); }, 60);
+}
+
+// ── สเปก 2026-07-03 ข้อ 2.5: ปุ่ม "แอบดู" (peek) ──
+// กติกา: แอบดู = นับเป็นกดผิด 1 ครั้ง (หักแต้มแบบเดียวกับกดผิดในขั้นนั้น) + นับเข้าโควตา "ผิดครบ 3 = 0 แต้ม+SRS"
+//   - ถ้ายังไม่เคยผิดในคำนี้เลย ก่อนแอบดู → แอบดู = ผิดครั้งที่ 1 (เสียแต้ม)
+//   - ถ้าเคยผิดมาก่อนแล้วอย่างน้อย 1 ครั้ง → แอบดูฟรี (ไม่หักซ้ำ เพราะ "จ่ายค่าพลาด" ไปแล้ว)
+// แอบดู = ทำลาย "สะอาด" เสมอ (ไม่ได้ดาวเงินคำนี้รอบนี้ + รีเซ็ตตัวนับ 3 รอบสะอาดติดกันของ SRS กลับเป็น 0)
+// วันเช็ค day 16 (final check) ต้องปิดปุ่มนี้ทั้งหมด — เช็กที่จุดเรียก render ปุ่ม (stepSessionGuess) ไม่ใช่ในนี้
+function tfPeekWord(step) {
+  if (!session) return;
+  var entry = session.words[session.index];
+  session.peekUsed = true;
+  session.peekBrokeClean = true;       // แอบดู = ไม่สะอาดเสมอ (ตามสเปก)
+  session.curWordWrongGuess = true;    // ตัดสิทธิ์ "ถูกครั้งแรก"
+  if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
+  session.combo = 0;
+  var alreadyWrongBefore = (session.currentWordMistakes || 0) > 0;
+  if (!alreadyWrongBefore) {
+    // แอบดูก่อนเคยผิด → นับเป็นผิดครั้งที่ 1 (เสียแต้มเหมือนกดผิดในขั้นนี้)
+    session.currentWordMistakes = (session.currentWordMistakes || 0) + 1;
+    session.currentWordDeduction = (session.currentWordDeduction || 0) + TF_SCORE.deductPerWrong(step || 's1');
+  }
+  // เฉลยคำตอบเต็ม (reuse overlay เดิม) แล้วจบคำนี้แบบ forced (0 แต้มถ้าครบ 3 ผิด, ไม่งั้นคิดแบบ推導ปกติ)
+  if (TF_SCORE.reachedWrongLimit(session.currentWordMistakes)) {
+    tfForceRevealZero();
+  } else if (tfCurWordIsMulti()) {
+    // หลายพยางค์: เฉลยเฉพาะพยางค์ที่กำลังวิเคราะห์อยู่ (เหมือน tfForceRevealZero ทำ) ไม่ใช่ทั้งคำ
+    var k = S.selectedSyl;
+    var syl = (S.syllables && S.syllables[k]) || entry.word;
+    var sct = computeTone(syl);
+    tfShowRevealOverlay({ word: syl, zh: entry.zh, readingTH: syl }, sct, { sylIdx: k, sylTone: sct, peek: true });
+  } else {
+    var ct = computeTone(entry.word);
+    tfShowRevealOverlay(entry, ct, { peek: true });
+  }
 }
 
 // จัดการกดผิดในขั้น推導: หักแต้ม + นับครั้ง + ถ้าครบเพดาน → เฉลย
@@ -3512,8 +3664,11 @@ function tfShowRevealOverlay(entry, correctTone, opts) {
   var btn = document.getElementById('tf-reveal-next');
   if (btn) btn.addEventListener('click', function () {
     div.remove();
+    // ── สเปก 2026-07-03: แอบดูแบบยังไม่ครบ 3 ผิด → คิดคะแนนแบบ推導ปกติ (ไม่ใช่ forced/0 แต้ม) ──
+    var isPeekNotForced = !!opts.peek && !session.currentWordScored;
+    if (isPeekNotForced) { S.tone = correctTone; tfScoreDeduce(); }
     if (isSyl) tfReturnToOverviewAfterSyl(opts.sylIdx, opts.sylTone);
-    else tfCommitWordAndAdvance({ forced: true });
+    else tfCommitWordAndAdvance({ forced: !isPeekNotForced });
   });
 }
 
@@ -3564,6 +3719,9 @@ function tfCommitWordAndAdvance(opts) {
     forced: !!opts.forced,
     needReview: !!opts.forced || mistakes > 0 || !firstTry
   });
+  // ── สเปก 2026-07-03 ข้อ 3+4: อัปเดต SRS ต่อคำ/ประโยค + แจกดาวเงินตอน mastered ──
+  // ทำงานเฉพาะตอนล็อกอิน (ข้อ 0) · หน่วย SRS = ทั้งคำ/ประโยค ไม่ใช่รายพยางค์ → ใช้ entry.word ทั้งก้อน
+  try { if (tfSrsLoggedIn()) tfProcessSrsOnWordCommit(entry, mistakes, firstTry, !!opts.forced); } catch (e) {}
   session.index++;
   tfResetWordScoring();
   session.initialGuess = undefined;
@@ -3576,12 +3734,59 @@ function tfCommitWordAndAdvance(opts) {
   }
 }
 
+// ── สเปก 2026-07-03 ข้อ 3+4+5: อัปเดต SRS ของคำ/ประโยคนี้ตอนจบ (เรียกจาก tfCommitWordAndAdvance) ──
+// "สะอาด" ต้องถูกครั้งแรกทั้งหน่วย (ทุกพยางค์/ทุกคำในประโยค) + ไม่แอบดู + ไม่นับ forced (เฉลยเพราะผิดครบ 3)
+// clean round → เลื่อนขั้น SRS (1→7→16 วัน) → ครบ 3 รอบติด = mastered ตัดออกจาก SRS ถาวร + แจกดาวเงิน
+// ไม่ clean (ผิด/แอบดู/forced) → รีเซ็ตกลับ day 1 เข้าคิวใหม่ (กันโกงข้อ 5: ห้ามเร่งขั้นเร็วกว่ากำหนด)
+function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
+  if (!entry || !entry.word) return;
+  var wasFinalCheck = !!(session && session.curWordIsFinalSrsCheck);
+  var peeked = !!(session && session.peekBrokeClean);
+  var cleanThisRound = !!firstTry && !forced && (mistakes || 0) === 0 && !peeked;
+
+  var rec = tfGetSrsRecord(entry.word, selectedLevel);
+  if (!rec) rec = TF_SRS.blank();
+
+  if (cleanThisRound) {
+    var res = TF_SRS.advanceOnClean(rec, Date.now());
+    rec = res.rec;
+    if (res.justMastered) {
+      // ── ข้อ 4: แจกดาวเงินตอน mastered จริง (ฐาน×ตัวคูณระดับ, ชนเพดานแล้ว = 0 แต้ม แต่ยัง mastered ปกติ) ──
+      try {
+        if (window.GAME_ACCOUNT && window.GAME_ACCOUNT.addHardStars) {
+          var hr = window.GAME_ACCOUNT.addHardStars(res.clean, selectedLevel || 1);
+          session.hardStarsEarned = (session.hardStarsEarned || 0) + (hr.stars || 0);
+        }
+      } catch (e) {}
+    }
+  } else {
+    // ผิด/แอบดู/forced (รวมถึงตอบผิดใน day16 final check) → กลับ day 1 เข้าคิวใหม่
+    rec = TF_SRS.resetOnFail(rec);
+  }
+  tfSetSrsRecord(entry.word, selectedLevel, rec);
+  // เคลียร์ flag เช็ก final ของ "รอบนี้" ไว้ตรงนี้ (รอบถัดไปจะเช็กใหม่ตอน setup คำถัดไป)
+  if (session) { session.curWordIsFinalSrsCheck = false; session.peekBrokeClean = false; }
+}
+
+// ── สเปก 2026-07-03 ข้อ 2.5+3: เช็กว่าคำที่กำลังจะเล่นเป็น "day 16 final check" ไหม ──
+// day16 final check = SRS record ของคำนี้อยู่ stage สุดท้ายก่อน mastered (ผ่านมาแล้ว 2 รอบสะอาดติดกัน)
+// ผลตอนเช็ก: ปิดปุ่มแอบดู + ไม่ให้แต้มเกม (soft) ไม่ว่าถูกหรือผิด — ดูจุดใช้งานที่ tfScoreFirstTry/tfScoreDeduce/stepSessionGuess
+function tfSetupSrsFlagsForCurrentWord() {
+  session.curWordIsFinalSrsCheck = false;
+  if (!session || !tfSrsLoggedIn()) return;
+  var entry = session.words[session.index];
+  if (!entry) return;
+  var rec = tfGetSrsRecord(entry.word, selectedLevel);
+  session.curWordIsFinalSrsCheck = !!(rec && TF_SRS.isFinalCheck(rec));
+}
+
 // ตั้งค่าคำถัดไป (+ สุ่มคำทอง สเตจ 2)
 function tfSetupNextWord() {
   var nx = session.words[session.index];
   randomEntry = nx;
   var w = nx.word;
   session.currentWordGolden = inSpecialRoom ? true : tfRollGolden();  // ห้องคำพิเศษ = ×2 ทุกคำ
+  tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check ก่อนตั้งคำถัดไป
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
     S = { word: w, step: 'overview', path: [w], tone: null, syllables: nx.readingTH.split('-'), selectedSyl: null };
   } else {
@@ -3628,11 +3833,13 @@ function tfApplySessionBonus() {
   // สเตจ 2: อัปเดต Daily Streak + เป้ารายวัน (เฉพาะรอบที่เล่นจบจริง มีคำ)
   if (total > 0) {
     try { session.streakResult = tfApplyStreakOnSetComplete(); } catch (e) { session.streakResult = null; }
-    // ⭐ ดาว 1–3 ดวง/รอบ ตามความแม่น → บัญชีกลาง (ก่อนเช็กแบดจ์ เพื่อให้แบดจ์พันธุ์ข้าวปลดทันรอบ) — Lin 2026-06-27
+    // ── สเปก 2026-07-03: ดาวเงินไม่ได้แจกตอนจบรอบตามความแม่นแล้ว (starsForRound ถูก deprecate → คืน 0 เสมอ) ──
+    // ดาวเงินจริงถูกแจกไปแล้วระหว่างเล่น ตอนคำ/ประโยคแต่ละอันถูก mastered (ดู tfProcessSrsOnWordCommit)
+    // ตรงนี้ยังคงเรียก bumpStreakToday() ไว้ (นับวันเล่นต่อเนื่อง ไม่เกี่ยวกับดาว)
     try {
-      var _se = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.starsForRound(perfectCount, total) : 0;
-      if (window.GAME_ACCOUNT) { GAME_ACCOUNT.addStars(_se); GAME_ACCOUNT.bumpStreakToday(); }
-      session.starsEarned = _se;
+      var _se = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.starsForRound(perfectCount, total) : 0; // = 0 เสมอ (deprecated)
+      if (window.GAME_ACCOUNT) { GAME_ACCOUNT.addStars(_se); GAME_ACCOUNT.bumpStreakToday(); } // addStars(0) = no-op
+      session.starsEarned = session.hardStarsEarned || 0;   // ดาวเงินจริงที่ได้ "รอบนี้" มาจาก SRS mastery เท่านั้น
       session.totalStars = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0;
     } catch (e) { session.starsEarned = 0; session.totalStars = 0; }
     // สเตจ 3: อัปเดต stats + เช็กปลดแบดจ์ (รวมแบดจ์พันธุ์ข้าวจากดาวรวม)
@@ -4507,13 +4714,14 @@ function stepSessionSummary() {
       }).join('') + '</div></div>';
   }
 
+  // ── สเปก 2026-07-03: ดาวเงิน (⭐) มาจาก "จำได้จริง" (SRS mastery) เท่านั้น ไม่ใช่ความแม่นในรอบนี้แล้ว ──
   var starBlock = '';
   var _se = session.starsEarned || 0, _stars = session.totalStars || 0;
   if (total > 0) {
     starBlock = '<div style="margin-top:14px;padding:12px;background:#FFF8E6;border:1px solid #F0D480;border-radius:14px;text-align:center;">' +
-      '<div style="font-size:24px;line-height:1.2;letter-spacing:2px;">' + (_se >= 1 ? '⭐'.repeat(_se) : '—') + '</div>' +
-      '<div style="font-size:14px;font-weight:800;color:#B07D00;margin-top:2px;">獲得 ' + _se + ' 顆星' + (_se < 3 ? '（全對拿 3 顆）' : '！') + '</div>' +
-      '<div style="font-size:12px;color:#A08A5A;margin-top:2px;">累積共 ' + _stars + ' 顆星（全部遊戲共用）</div></div>';
+      '<div style="font-size:24px;line-height:1.2;letter-spacing:2px;">' + (_se >= 1 ? '⭐'.repeat(Math.min(_se, 20)) : '—') + '</div>' +
+      '<div style="font-size:14px;font-weight:800;color:#B07D00;margin-top:2px;">' + (_se >= 1 ? '獲得 ' + _se + ' 顆星（真正記住的字/句）' : '這次還沒有字通過長期記憶檢驗') + '</div>' +
+      '<div style="font-size:12px;color:#A08A5A;margin-top:2px;">累積共 ' + _stars + ' 顆星（全部遊戲共用・私人，不上排行榜）</div></div>';
   }
 
   return '<div class="tf-session-summary">' +
@@ -4781,6 +4989,10 @@ function startSetSession(words, opts) {
   if (!(opts && opts.keepOrder)) {
     entries = entries.slice().sort(function(){ return Math.random() - 0.5; });  // สุ่มลำดับใหม่ทุกครั้ง (高級句子 ข้ามขั้นนี้ ต้องเรียงตามประโยคจริง)
   }
+  // ── สเปก 2026-07-03 ข้อ 3: คำที่ครบกำหนดทบทวน SRS แล้ว → ดันขึ้นหน้าคิว (ไม่ทับ 75/25 เดิม แค่จัดลำดับก่อนเริ่ม) ──
+  if (!(opts && opts.keepOrder) && tfSrsLoggedIn()) {
+    entries = tfPrioritizeDueSrs(entries);
+  }
   session = {
     words: entries, index: 0, results: [], currentWordMistakes: 0,
     // ── สเตจ 1: ฟิลด์คะแนน ──
@@ -4790,10 +5002,13 @@ function startSetSession(words, opts) {
     sessionScored: false,
     // ── สเตจ 2 + หลายพยางค์ ──
     curWordAllFirstTry: true, scoredSyls: {},
-    currentWordGolden: inSpecialRoom ? true : tfRollGolden()
+    currentWordGolden: inSpecialRoom ? true : tfRollGolden(),
+    // ── สเปก 2026-07-03: ดาวเงินที่ได้จริงรอบนี้ (สะสมจากคำที่ mastered ระหว่างเล่น) ──
+    hardStarsEarned: 0
   };
   gtag('event', 'tone_finder_start', {mode: selectedCategory || 'ทั้งหมด'});
   hist = []; histPos = -1;
+  tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check สำหรับคำแรกของ session
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
   if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
     S = { word:w, step:'overview', path:[w], tone:null, syllables:entry.readingTH.split('-'), selectedSyl:null };
@@ -4802,6 +5017,19 @@ function startSetSession(words, opts) {
   }
   hist.push(S); histPos = 0;
   render();
+}
+
+// ── สเปก 2026-07-03 ข้อ 3: จัดลำดับ entries ให้คำที่ครบกำหนดทบทวน SRS ("due") มาก่อน ──
+// ไม่ยุ่งกับการเลือกคำ 75/25 เดิม (tfBuildAllMix) แค่จัดลำดับ "ก่อน-หลัง" ในชุดที่เลือกมาแล้ว
+function tfPrioritizeDueSrs(entries) {
+  var now = Date.now();
+  var due = [], notDue = [];
+  entries.forEach(function (e) {
+    var rec = tfGetSrsRecord(e.word, selectedLevel);
+    if (rec && !rec.mastered && TF_SRS.isDue(rec, now)) due.push(e);
+    else notDue.push(e);
+  });
+  return due.length ? due.concat(notDue) : entries;
 }
 
 function stepNounSubcat() {
@@ -5151,6 +5379,17 @@ function stepSessionGuess() {
     showStartInflection(navigateToInflection);
   });
 
+  // ── สเปก 2026-07-03 ข้อ 2.5: ปุ่ม "แอบดู" — ใช้ได้ครั้งเดียว/คำ, ปิดทั้งหมดในวันเช็ค day16 (final check) ──
+  // เงื่อนไขซ่อนปุ่ม: เล่นวัน day16 final check (ต้อง pure recall ห้ามพึ่งพา) หรือแอบดูไปแล้วในคำนี้
+  var peekHtml = '';
+  var showPeek = !session.curWordIsFinalSrsCheck && !session.peekUsed;
+  if (showPeek) {
+    var peekAct = act(function(){ tfPeekWord('s1'); });
+    peekHtml = '<button class="sg-dontknow-btn" style="margin-top:6px;background:#FBF0DA;border-color:#EAC36B;color:#8B6310;" onclick="'+peekAct+'">👀 แอบดูคำตอบ</button>';
+  } else if (session.curWordIsFinalSrsCheck) {
+    peekHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 รอบตรวจสอบสุดท้าย (Day 16) — ห้ามแอบดู ต้องนึกเองล้วนๆ</div>';
+  }
+
   return '<div style="text-align:center;padding:4px 0 8px;">'+
     wordHtml+
     breakdownHtml+
@@ -5159,6 +5398,7 @@ function stepSessionGuess() {
     '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
     '<button class="sg-dontknow-btn" onclick="'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>'+
+    peekHtml+
   '</div>';
 }
 
