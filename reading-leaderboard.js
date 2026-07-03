@@ -1,11 +1,24 @@
 // ════════════════════════════════════════════════════════════
-// reading-leaderboard.js — กระดานเกมอ่าน (reading-board.html) · mirror ของ leaderboard.js
-// จัดอันดับด้วย "คะแนนสะสมรวม" 2 แท็บ: รายสัปดาห์ / ตลอดกาล
+// reading-leaderboard.js — กระดานเกมอ่าน+เกมพิมพ์ (reading-board.html / typing-board.html)
+// mirror ของ leaderboard.js · จัดอันดับด้วย "คะแนนสะสมรวม" 2 แท็บ: รายสัปดาห์ / ตลอดกาล
 // ดึงผ่าน RPC (security definer) — เห็นเฉพาะชื่อเล่น+คะแนน ไม่เห็นอีเมล
+// v2 (LIN 2026-07-02): แยกกระดานตามเกม — หน้า typing-board ตั้ง
+//   window.READING_BOARD_GAME='typing' ก่อนโหลดไฟล์นี้ (ไม่ตั้ง = 'reading')
+//   เรียก RPC พร้อม p_game · ถ้า RPC เก่ายังไม่รับ p_game (Lin ยังไม่รัน SQL):
+//   reading → fallback แบบเดิม (ไม่กรอง) · typing → โชว์ "排行榜準備中"
 // ต้องโหลดหลัง: supabase-js CDN, supabase-config.js
 // ════════════════════════════════════════════════════════════
 (function () {
   'use strict';
+
+  // ── เกมของกระดานนี้ ──
+  // v3 (LIN 2026-07-03): เพิ่ม 'word_order' (語序遊戲) — เดิมรองรับแค่ typing/reading
+  // v4 (LIN 2026-07-03): เพิ่ม 'lego' (造句遊戲) — คนละเกมกับ word_order ห้ามใช้ key ปนกัน
+  var BOARD_GAME = (window.READING_BOARD_GAME === 'typing') ? 'typing'
+    : (window.READING_BOARD_GAME === 'word_order') ? 'word_order'
+    : (window.READING_BOARD_GAME === 'lego') ? 'lego' : 'reading';
+  var BOARD_GAME_ZH = (BOARD_GAME === 'typing') ? '打字' : (BOARD_GAME === 'word_order') ? '語序' : (BOARD_GAME === 'lego') ? '造句' : '拼讀';
+  var BOARD_GAME_PAGE = (BOARD_GAME === 'typing') ? 'typing-game.html' : (BOARD_GAME === 'word_order') ? 'word-order.html' : (BOARD_GAME === 'lego') ? 'lego.html' : 'reading-game.html';
 
   // ── ตารางแบดจ์ (ก๊อปจาก reading-game.html อ่านอย่างเดียว เพื่อวาดบนกระดาน) — LIN 2026-06-22 ──
   var LB_BADGES = {
@@ -147,7 +160,7 @@
   function nickBar() {
     if (!currentUser) {
       return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">' +
-        '在遊戲頁登入即可參加排行 · <a href="reading-game.html" style="color:#A07A1E;">前往拼讀遊戲</a></div>';
+        '在遊戲頁登入即可參加排行 · <a href="' + BOARD_GAME_PAGE + '" style="color:#A07A1E;">前往' + BOARD_GAME_ZH + '遊戲</a></div>';
     }
     if (!myNick) {
       return '<div style="text-align:center;margin-bottom:16px;">' +
@@ -157,13 +170,35 @@
       '</b> · <a id="lb-setnick" href="javascript:void(0)" style="color:#A07A1E;">更改</a></div>';
   }
 
+  // error ที่แปลว่า RPC ตัวเก่า (ยังไม่มี p_game) — จับกว้าง: PGRST202 = ไม่พบฟังก์ชันตาม signature
+  function isOldRpc(err) {
+    if (!err) return false;
+    if (err.code === 'PGRST202') return true;
+    var m = String(err.message || '');
+    return /p_game/i.test(m) || (/function/i.test(m) && /(schema cache|does not exist|find)/i.test(m));
+  }
+
   async function load() {
     root.innerHTML = tabs() + nickBar() + box('⏳', '載入中...', '請稍候');
     wireTabs();
     var fn = (period === 'week') ? 'reading_leaderboard_weekly' : 'reading_leaderboard_alltime';
     var res;
     try {
-      res = await sb.rpc(fn);
+      // v2: ส่ง p_game ให้ RPC กรองตามเกม
+      res = await sb.rpc(fn, { p_game: BOARD_GAME });
+      if (res.error && isOldRpc(res.error)) {
+        // RPC เวอร์ชันเก่ายังไม่รับ p_game (Lin ยังไม่รัน SQL อัปเดต)
+        console.warn('[board] RPC ยังไม่รองรับ p_game — fallback (' + BOARD_GAME + ')');
+        if (BOARD_GAME === 'reading') {
+          res = await sb.rpc(fn); // พฤติกรรมเดิม: ไม่กรอง (แถวเก่าทั้งหมดคือเกมอ่านอยู่แล้ว)
+        } else {
+          root.innerHTML = tabs() + nickBar() +
+            box('🛠️', '排行榜準備中', BOARD_GAME_ZH + '排行榜即將開放，敬請期待！<br>你的分數都有記錄，開放後就會看到囉',
+              '<a href="' + BOARD_GAME_PAGE + '" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">先去' + BOARD_GAME_ZH + '練習累積分數 →</a>');
+          wireTabs();
+          return;
+        }
+      }
     } catch (e) {
       root.innerHTML = tabs() + nickBar() +
         box('📡', '連線失敗', '無法連上伺服器，請檢查網路後重新整理');
@@ -189,7 +224,7 @@
     var html = tabs() + nickBar();
     if (!rows.length) {
       html += box('🌱', '排行榜還沒有人', period === 'week' ? '本週還沒有分數，當第一個吧！' : '還沒有資料，去玩一場上榜吧',
-        '<a href="reading-game.html" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往 tone-finder →</a>');
+        '<a href="' + BOARD_GAME_PAGE + '" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往' + BOARD_GAME_ZH + '練習 →</a>');
       root.innerHTML = html; wireTabs(); return;
     }
     html += '<div style="background:#fff;border-radius:16px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">';

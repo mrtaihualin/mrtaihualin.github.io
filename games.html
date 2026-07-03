@@ -15,28 +15,30 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <title>泰語小遊戲 — 邊玩邊學泰文 | 泰華眼裡的泰語教學</title>
-<meta name="description" content="用遊戲學泰文！泰語聲調搜尋＋泰語拼讀練習，邊玩邊練發音與拼讀，免費試玩。">
+<meta name="description" content="用遊戲學泰文！泰語聲調搜尋＋拼讀練習＋打字練習＋造句＋語序，5 款免費遊戲邊玩邊練，免費試玩。">
 <link rel="canonical" href="https://mrtaihualin.com/games.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="泰華眼裡的泰語教學">
 <meta property="og:locale" content="zh_TW">
 <meta property="og:title" content="泰語小遊戲 — 邊玩邊學泰文">
-<meta property="og:description" content="泰語聲調搜尋＋泰語拼讀練習，邊玩邊練，免費試玩。">
+<meta property="og:description" content="泰語聲調搜尋＋拼讀練習＋打字練習＋造句＋語序，5 款免費遊戲邊玩邊練，免費試玩。">
 <meta property="og:url" content="https://mrtaihualin.com/games.html">
 <meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=12">
 <style>
-  .gh-wrap{max-width:760px;margin:0 auto;padding:44px 22px 72px;font-family:'Noto Sans TC',sans-serif;text-align:center;}
+  .gh-wrap{max-width:960px;margin:0 auto;padding:44px 22px 72px;font-family:'Noto Sans TC',sans-serif;text-align:center;}
   .gh-wrap h1{font-family:'Noto Serif TC',serif;font-size:clamp(26px,5vw,38px);font-weight:900;color:#2d2a22;margin:0 0 8px;}
   .gh-sub{font-size:16px;color:#5c5648;margin-bottom:30px;}
-  .gh-grid{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;}
-  .gh-card{flex:1;min-width:260px;max-width:340px;background:#fff;border:1.5px solid #e0d2a8;border-radius:20px;padding:28px 24px;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(90,62,10,.08);transition:transform .15s,box-shadow .15s;}
+  .gh-grid{display:grid;grid-template-columns:repeat(1,1fr);gap:14px;}
+  @media(min-width:640px){.gh-grid{grid-template-columns:repeat(3,1fr);}}
+  .gh-card{background:#fff;border:1.5px solid #e0d2a8;border-radius:18px;padding:18px 16px;text-decoration:none;color:inherit;display:flex;flex-direction:row;align-items:center;text-align:left;gap:14px;box-shadow:0 4px 20px rgba(90,62,10,.08);transition:transform .15s,box-shadow .15s;}
   .gh-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(90,62,10,.16);}
-  .gh-emoji{font-size:54px;line-height:1;}
-  .gh-title{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:900;color:#5a3e10;}
-  .gh-desc{font-size:14.5px;color:#8b6310;line-height:1.7;}
-  .gh-go{margin-top:6px;background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;font-weight:700;font-size:15px;padding:10px 26px;border-radius:999px;}
+  .gh-emoji{font-size:40px;line-height:1;flex-shrink:0;}
+  .gh-title{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:900;color:#5a3e10;}
+  .gh-desc{font-size:12.5px;color:#8b6310;line-height:1.5;}
+  .gh-go{margin-top:4px;background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;font-weight:700;font-size:13px;padding:7px 18px;border-radius:999px;display:inline-block;}
+  .gh-body{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
   .gh-soon{opacity:.55;}
   .gh-soon .gh-go{background:#d8d0c0;}
 </style>
@@ -45,32 +47,93 @@
 
 <nav class="site-nav"></nav>
 
+<!-- PAGE NAV STRIP -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="page2.html">課程・費用</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html" class="active">泰語・遊戲</a>
+</div>
+
 <main class="gh-wrap">
   <h1>🎮 泰語小遊戲</h1>
-  <p class="gh-sub">邊玩邊學泰文！選一個遊戲開始，免費試玩。</p>
+  <p class="gh-sub">邊玩邊學泰文！選一個遊戲開始。</p>
 
   <div class="gh-grid">
     <a class="gh-card" href="tone-finder.html" onclick="if(window.gtag)gtag('event','game_link_click',{target:'tone_finder',from:'games_hub'})">
       <div class="gh-emoji">🎵</div>
-      <div class="gh-title">泰語聲調搜尋</div>
-      <div class="gh-desc">看泰文字，判斷它是第幾個聲調。<br>練耳朵、練發音，五個聲調不再混。</div>
-      <span class="gh-go">開始玩 →</span>
+      <div class="gh-body">
+        <div class="gh-title">泰語聲調搜尋</div>
+        <div class="gh-desc">看泰文字，判斷它是第幾個聲調。<br>練耳朵、練發音，五個聲調不再混。</div>
+        <span class="gh-go">開始玩 →</span>
+      </div>
     </a>
 
     <a class="gh-card" href="reading-game.html" onclick="if(window.gtag)gtag('event','game_link_click',{target:'reading_game',from:'games_hub'})">
       <div class="gh-emoji">✍️</div>
-      <div class="gh-title">泰語拼讀練習</div>
-      <div class="gh-desc">把音節拼起來，讀對每個字。<br>用分組練習，慢慢熟悉拼讀規則。</div>
-      <span class="gh-go">開始玩 →</span>
+      <div class="gh-body">
+        <div class="gh-title">泰語拼讀練習</div>
+        <div class="gh-desc">把音節拼起來，讀對每個字。<br>用分組練習，慢慢熟悉拼讀規則。</div>
+        <span class="gh-go">開始玩 →</span>
+      </div>
     </a>
 
-    <div class="gh-card gh-soon">
+    <a class="gh-card" href="typing-game.html" onclick="if(window.gtag)gtag('event','game_link_click',{target:'typing_game',from:'games_hub'})">
+      <div class="gh-emoji">⌨️</div>
+      <div class="gh-body">
+        <div class="gh-title">泰語打字練習</div>
+        <div class="gh-desc">照泰文鍵盤打出正確拼寫。<br>練打字也練拼字，手感練出記憶。</div>
+        <span class="gh-go">開始玩 →</span>
+      </div>
+    </a>
+
+    <a class="gh-card" href="lego.html" onclick="if(window.gtag)gtag('event','game_link_click',{target:'lego',from:'games_hub'})">
+      <div class="gh-emoji">🧱</div>
+      <div class="gh-body">
+        <div class="gh-title">造句遊戲</div>
+        <div class="gh-desc">像積木一樣挑詞組成句子。<br>還能拆句測驗，檢查自己排得對不對。</div>
+        <span class="gh-go">開始玩 →</span>
+      </div>
+    </a>
+
+    <a class="gh-card" href="word-order.html" onclick="if(window.gtag)gtag('event','game_link_click',{target:'word_order',from:'games_hub'})">
       <div class="gh-emoji">🧩</div>
-      <div class="gh-title">造句遊戲</div>
-      <div class="gh-desc">把詞語排成正確的泰語句子。<br>即將推出，敬請期待！</div>
-      <span class="gh-go">即將推出</span>
+      <div class="gh-body">
+        <div class="gh-title">泰語語序遊戲</div>
+        <div class="gh-desc">把打散的詞語，點回正確順序。<br>專攻高級句型的語序邏輯。</div>
+        <span class="gh-go">開始玩 →</span>
+      </div>
+    </a>
+
+    <!-- ▼ 預約體驗課卡片（遊戲 → 預約 橋樑）— LIN 2026-07-02，併入六格 2026-07-03 ▼ -->
+    <div class="gh-card" style="background:linear-gradient(135deg,#fff6e9,#ffe9d6);border-color:#f0c89a;">
+      <div class="gh-emoji">🗣️</div>
+      <div class="gh-body">
+        <div class="gh-title">想真正開口說泰語？</div>
+        <div class="gh-desc">一對一中文授課，量身安排進度。<br>30 分鐘免費體驗課，先聊聊再決定。</div>
+        <a class="gh-go" href="page2.html?from=games_hub#pricing" style="text-decoration:none;" onclick="if(window.bookFromGame){bookFromGame('games_hub','hub_card');return false;}">預約免費體驗課 →</a>
+      </div>
     </div>
+    <!-- ▲ CTA ▲ -->
   </div>
+
+  <p style="margin:28px 0 0;font-size:15px;color:#8b6310;font-weight:700;">🏆
+    <a href="leaderboard.html" style="color:#8b6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="if(window.gtag)gtag('event','game_link_click',{target:'leaderboard',from:'games_hub'})">聲調排行榜</a>
+    ·
+    <a href="reading-board.html" style="color:#8b6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="if(window.gtag)gtag('event','game_link_click',{target:'reading_board',from:'games_hub'})">拼讀排行榜</a>
+    ·
+    <a href="typing-board.html" style="color:#8b6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="if(window.gtag)gtag('event','game_link_click',{target:'typing_board',from:'games_hub'})">打字排行榜</a>
+    ·
+    <a href="lego-board.html" style="color:#8b6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="if(window.gtag)gtag('event','game_link_click',{target:'lego_board',from:'games_hub'})">造句排行榜</a>
+    ·
+    <a href="word-order-board.html" style="color:#8b6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="if(window.gtag)gtag('event','game_link_click',{target:'word_order_board',from:'games_hub'})">語序排行榜</a>
+  </p>
+  <p style="margin:12px 0 0;font-size:13.5px;">
+    <a href="vault.html" style="color:#8b6310;text-decoration:underline;text-underline-offset:3px;" onclick="if(window.gtag)gtag('event','game_link_click',{target:'vault',from:'games_hub'})">🔖 我的單字庫 — 遊戲裡收藏的單字都在這</a>
+  </p>
 </main>
 
 <footer>
@@ -78,6 +141,6 @@
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="shared.js?v=20"></script>
+<script src="shared.js?v=21"></script>
 </body>
 </html>

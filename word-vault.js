@@ -1,6 +1,6 @@
 /**
  * word-vault.js — คลังคำร่วม (Shared Word Vault)
- * ใช้ร่วมกันทุกเกม: tone-finder, reading-game, lego-game (อนาคต)
+ * ใช้ร่วมกันทุกเกม: tone-finder, reading-game, typing-game, lego-game (อนาคต)
  * เก็บข้อมูลใน localStorage ภายใต้ key "linvault_v1"
  */
 
@@ -8,6 +8,7 @@
   'use strict';
 
   var STORAGE_KEY = 'linvault_v1';
+  var MAX_WORDS = 30;
 
   // ── โหลด/บันทึก ──────────────────────────────────────────────
   function load() {
@@ -28,11 +29,12 @@
   function addWord(th, meta) {
     var list = load();
     if (list.some(function(w){ return w.th === th; })) return false;
+    if (list.length >= MAX_WORDS) { _showFullToast(); return false; } // เต็ม 30/30 — บล็อก ห้าม auto-delete
     list.push({
       th: th,
       zh: (meta && meta.zh) || '',
       en: (meta && meta.en) || '',
-      source: (meta && meta.source) || '',   // 'tone-finder' | 'reading-game' | ...
+      source: (meta && meta.source) || '',   // 'tone-finder' | 'reading-game' | 'typing-game' | ...
       saved_at: Date.now(),
       tags: []
     });
@@ -53,6 +55,9 @@
 
   /** จำนวนคำในคลัง */
   function count() { return load().length; }
+
+  /** เต็ม 30/30 หรือยัง */
+  function isFull() { return load().length >= MAX_WORDS; }
 
   /** เพิ่ม/ลบ tag ในคำ
    * @param {string} th
@@ -92,7 +97,7 @@
     opts = opts || {};
     var btn = document.createElement('button');
     btn.className = 'vault-save-btn';
-    btn.title = 'บันทึกคำนี้ลงคลัง';
+    btn.title = '儲存到單字庫';
     _updateBtnState(btn, has(th));
 
     btn.addEventListener('click', function(e) {
@@ -102,12 +107,14 @@
         _updateBtnState(btn, false);
         _notifyBadges();
         if (opts.onRemove) opts.onRemove(th);
+        _showToast('已移除「' + th + '」');  // popup ตอนเอาออก เหมือนตอนบันทึก (Lin 2026-07-02)
       } else {
+        if (isFull()) { _showFullToast(); return; } // เต็ม 30/30 — บล็อก ไม่บันทึก ไม่ auto-delete
         addWord(th, meta);
         _updateBtnState(btn, true);
         _notifyBadges();
         if (opts.onSave) opts.onSave(th);
-        _showToast('บันทึก "' + th + '" แล้ว');
+        _showToast('已儲存「' + th + '」');
       }
     });
     return btn;
@@ -116,8 +123,8 @@
   function _updateBtnState(btn, saved) {
     btn.setAttribute('data-saved', saved ? '1' : '0');
     btn.textContent = saved ? '🔖' : '🔖';
-    btn.style.opacity = saved ? '1' : '0.4';
-    btn.setAttribute('aria-label', saved ? 'ลบออกจากคลัง' : 'บันทึกลงคลัง');
+    btn.style.opacity = '1'; // ใช้สีพื้นหลัง (ดู CSS [data-saved]) แยกสถานะแทน ไม่ทำให้จางจนดูไม่ออกว่าเป็นปุ่ม
+    btn.setAttribute('aria-label', saved ? '從單字庫移除' : '儲存到單字庫');
   }
 
   /** แสดง toast แจ้งเตือนเล็กๆ */
@@ -140,6 +147,28 @@
     t._timer = setTimeout(function(){ t.style.opacity = '0'; }, 2000);
   }
 
+  /** แสดง toast ตอนคลังเต็ม 30/30 — คลิกได้ ไปหน้า vault.html */
+  function _showFullToast() {
+    var t = document.getElementById('vault-toast-full');
+    if (!t) {
+      t = document.createElement('a');
+      t.id = 'vault-toast-full';
+      t.href = 'vault.html';
+      t.style.cssText = [
+        'position:fixed','bottom:80px','left:50%','transform:translateX(-50%)',
+        'background:rgba(180,40,30,0.92)','color:#fff','padding:8px 18px',
+        'border-radius:20px','font-size:14px','font-family:Sarabun,sans-serif',
+        'z-index:9999','pointer-events:auto','transition:opacity .3s','opacity:0',
+        'text-decoration:underline','cursor:pointer'
+      ].join(';');
+      document.body.appendChild(t);
+    }
+    t.textContent = '單字庫已滿（30/30）請先刪除舊單字';
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.style.opacity = '0'; }, 3000);
+  }
+
   /**
    * สร้าง/อัปเดต badge "คลัง X คำ" ที่ element ที่ระบุ
    * @param {string} containerId  id ของ element ที่จะวาง badge
@@ -153,15 +182,14 @@
       badge.id = 'vault-badge-' + containerId;
       badge.href = 'vault.html';
       badge.className = 'vault-badge';
-      badge.title = 'ไปยังคลังคำของฉัน';
+      badge.title = '前往我的單字庫';
       el.appendChild(badge);
     }
     _refreshBadge(badge);
   }
 
   function _refreshBadge(badge) {
-    var n = count();
-    badge.textContent = n > 0 ? '🔖 คลัง ' + n + ' คำ' : '🔖 คลัง';
+    badge.textContent = '🔖 單字庫';
     badge.style.display = '';
   }
 
@@ -177,16 +205,18 @@
     var s = document.createElement('style');
     s.id = 'vault-styles';
     s.textContent = [
-      '.vault-save-btn{background:none;border:none;cursor:pointer;font-size:20px;',
-        'padding:2px 6px;border-radius:8px;line-height:1;vertical-align:middle;',
-        'transition:opacity .2s,transform .15s;}',
-      '.vault-save-btn:hover{transform:scale(1.2);}',
+      '.vault-save-btn{background:#fff;border:1.5px solid rgba(139,99,16,0.30);cursor:pointer;font-size:18px;',
+        'width:32px;height:32px;border-radius:50%;line-height:1;vertical-align:middle;',
+        'display:inline-flex;align-items:center;justify-content:center;',
+        'transition:opacity .2s,transform .15s,background .15s;}',
+      '.vault-save-btn:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}',
+      '.vault-save-btn[data-saved="1"]{background:#fff3d8;border-color:#C8973A;}',
       '.vault-badge{display:inline-flex;align-items:center;gap:4px;',
-        'font-size:12px;font-family:Sarabun,sans-serif;color:#8B6310;',
-        'background:rgba(139,99,16,0.1);border:1px solid rgba(139,99,16,0.25);',
-        'border-radius:16px;padding:3px 10px;text-decoration:none;',
-        'white-space:nowrap;transition:background .2s;}',
-      '.vault-badge:hover{background:rgba(139,99,16,0.2);}'
+        'font-size:12.5px;font-family:"Noto Sans TC",Sarabun,sans-serif;color:#7a5510;',
+        'background:#fff;border:1.5px solid rgba(139,99,16,0.30);',
+        'border-radius:20px;padding:6px 14px;text-decoration:none;',
+        'white-space:nowrap;transition:background .15s,border-color .15s;}',
+      '.vault-badge:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -198,6 +228,8 @@
     getAll: getAll,
     has: has,
     count: count,
+    isFull: isFull,
+    notifyFull: _showFullToast,
     setTag: setTag,
     filterByTag: filterByTag,
     clear: clear,

@@ -202,3 +202,9 @@ var SELFSTUDY_ARTICLES = [
   }
   // เพิ่มบทเรียนใหม่ได้ที่นี่...
 ];
+
+// ===== 📝 完整部落格文章列表（自學專區右側卡片）=====
+// คนละชุดข้อมูลกับ SELFSTUDY_ARTICLES ด้านบน (นั่นคือ interactive vocab quiz) — อันนี้คือลิงก์บทความเต็มธรรมดา
+var FULL_ARTICLES = [
+  { id:'tone-guide', date:'2025年5月', title:'📝 泰文聲調怎麼學？5 個聲調快速搞懂', href:'blog-tone-guide.html' }
+];

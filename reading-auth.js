@@ -1,9 +1,14 @@
 // ============================================================
-// reading-auth.js — ล็อกอิน + เซฟแต้มเกมอ่าน (ลีกรายสัปดาห์)
+// reading-auth.js — ล็อกอิน + เซฟแต้มเกมอ่าน/เกมพิมพ์/เกมเรียงประโยค (ลีกรายสัปดาห์)
 // ใช้ session ร่วมกับเกมเสียง (same-origin) → ล็อกอินที่เกมไหนก็รู้จักกัน
 // guard เต็ม: ถ้า Supabase/ตารางยังไม่พร้อม → เกมเล่นได้ปกติ ไม่พัง
-// ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, game-account.js
+// ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, game-account.js, auth-widget.js
 // Lin 2026-06-27 (v2: badge เหมือนเกมเสียง + ปุ่ม 登入保存分數)
+// Lin 2026-07-02 (v3: แยกเกม reading/typing + กัน email แอดมิน + retry ถ้าคอลัมน์ game ยังไม่มี)
+// Lin 2026-07-03 (v4: badge (ชื่อ/✏️/🏆/📊/登出) เปลี่ยนไปใช้ window.SITE_AUTH ตัวกลาง
+//   — เดิมมี client + session listener แยกของตัวเอง + editor เป็น prompt() ธรรมดา
+//   ตอนนี้ใช้ client เดียว + editor แบบเดียวกับทุกหน้า (มีรูป/แบดจ์/sync ข้ามหน้า)
+//   มี fallback: ถ้า SITE_AUTH โหลดไม่ทัน ยังมี client+listener สำรองของตัวเอง เกมไม่พัง)
 // ============================================================
 (function () {
   var cfg = window.SUPABASE_CONFIG || {};
@@ -14,43 +19,45 @@
   // ถ้า Supabase ไม่พร้อม → คืน API เปล่า (เกมยังเล่นได้)
   if (!ready) { window.READING_AUTH = { ready: false, user: null, saveScore: function () {}, render: function () {} }; return; }
 
-  var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
+  var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
   var API = { ready: true, user: null, saveScore: saveScore, render: render };
   window.READING_AUTH = API;
-
-  var _nick = null;
 
   function slot() { return document.getElementById('rg-login-slot'); }
   function isInApp() { return /FBAN|FBAV|Instagram|Line|Messenger/i.test(navigator.userAgent || ''); }
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  // เกมของหน้าปัจจุบัน — ใช้ตัดสินใจว่า 🏆 ต้องพาไปกระดานไหน + บันทึกคะแนนเป็นเกมอะไร
+  // v4 (LIN 2026-07-03): เพิ่ม 'word_order' (เกมเรียงประโยค/語序遊戲) — เดิมมีแค่ typing/reading
+  // v5 (LIN 2026-07-03): เพิ่ม 'lego' (造句遊戲/樂高式造句) — เกมนี้กับ word_order เป็นคนละเกม ห้ามใช้ key เดียวกัน
+  function pageGame() {
+    var p = location.pathname || '';
+    if (/typing-game/i.test(p)) return 'typing';
+    if (/word-order/i.test(p)) return 'word_order';
+    if (/lego/i.test(p)) return 'lego';
+    return 'reading';
+  }
+  function boardHref() {
+    var g = pageGame();
+    if (g === 'typing') return 'typing-board.html';
+    if (g === 'word_order') return 'word-order-board.html';
+    if (g === 'lego') return 'lego-board.html';
+    return 'reading-board.html';
+  }
+
+  // ── badge (ล็อกอินแล้ว): ให้ window.SITE_AUTH (auth-widget.js) วาดให้ — เหมือนกับทุกหน้า ──
+  // ── ยังไม่ล็อกอิน: ปุ่ม "🔑 登入保存分數" ของหน้านี้เอง (เปิด modal OTP/Google ด้านล่าง) ──
   function render() {
     var el = slot(); if (!el) return;
     if (API.user) {
-      var displayName = _nick || (API.user.email || '').split('@')[0] || '玩家';
-      el.innerHTML =
-        '<div style="display:flex;align-items:center;gap:7px;background:#fff;' +
-        'border:1.5px solid rgba(200,151,58,0.45);border-radius:20px;padding:5px 12px 5px 10px;' +
-        'box-shadow:0 2px 8px rgba(139,99,16,0.12);font-family:\'Noto Sans TC\',sans-serif;">' +
-        '<span style="font-size:15px;flex-shrink:0;">👤</span>' +
-        '<span style="color:#5C4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName) + '</span>' +
-        '<button id="rg-edit-nick" title="編輯名稱" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>' +
-        '<a href="reading-board.html" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
-        '<a href="my-progress.html" title="進度" style="text-decoration:none;font-size:13px;">📊</a>' +
-        '<button id="rg-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
-        'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;">登出</button>' +
-        '</div>';
-      var lo = document.getElementById('rg-logout');
-      if (lo) lo.onclick = function () { try { sb.auth.signOut().then(function () { setUser(null); }); } catch (e) {} };
-      var en = document.getElementById('rg-edit-nick');
-      if (en) en.onclick = function () {
-        var n = prompt('輸入顯示名稱（會出現在排行榜）', _nick || '');
-        if (n === null) return;
-        n = n.trim().slice(0, 20);
-        if (!n) return;
-        _nick = n; render();
-        try { sb.from('profiles').upsert({ id: API.user.id, nickname: n }, { onConflict: 'id' }).then(function(){},function(){}); } catch(e){}
-      };
+      // ล้างปุ่ม "🔑 登入保存分數" เดิม (ถ้ายังค้างจากตอนยังไม่ล็อกอิน) ก่อน — เหลือแค่ badge ของ SITE_AUTH
+      // (กันโชว์ซ้อนกันสองอัน: ปุ่มเดิม + badge ใหม่) LIN 2026-07-03
+      Array.prototype.slice.call(el.children).forEach(function (child) {
+        if (child.id !== 'sa-badge-rg-login-slot') child.remove();
+      });
+      if (window.SITE_AUTH && window.SITE_AUTH.ready) {
+        window.SITE_AUTH.renderBadge('rg-login-slot', { leaderboardHref: boardHref(), progressHref: 'my-progress.html' });
+      }
     } else {
       el.innerHTML =
         '<button id="rg-login-btn" style="display:flex;align-items:center;gap:6px;' +
@@ -170,41 +177,84 @@
     otpTimer = setInterval(tick, 1000);
   }
 
-  function fetchNick(uid) {
-    try {
-      sb.from('profiles').select('nickname').eq('id', uid).single()
-        .then(function (r) {
-          if (r && r.data && r.data.nickname) { _nick = r.data.nickname; render(); }
-        }, function () {});
-    } catch (e) {}
-  }
-
   function setUser(u) {
     API.user = u || null;
-    _nick = null;
     if (API.user) closeGate();   // เพิ่งล็อกอินสำเร็จ → ปิด modal
     render();
-    if (API.user) {
-      fetchNick(API.user.id);
-      if (window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
-        try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}
-      }
+    if (API.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
+      try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}
     }
   }
 
-  // เซฟแต้มรอบนี้ขึ้นลีกเกมอ่าน (เฉพาะตอนล็อกอิน) + sync ดาว/streak
-  function saveScore(score, games) {
-    if (!API.user) return;
+  // ── เซฟแต้มรอบนี้ขึ้นลีก (เฉพาะตอนล็อกอิน) + sync ดาว/streak ──
+  // v3 (LIN 2026-07-02): ระบุเกม 'reading'/'typing' ต่อแถว · กัน email แอดมิน ·
+  // ถ้าคอลัมน์ game ยังไม่ถูกสร้างใน Supabase → ลองเซฟใหม่แบบไม่มี game (พฤติกรรมเดิม)
+  // RELIABILITY: โชว์ผลจริงเสมอ (toast) — สำเร็จจริงค่อยขึ้น ✅, พังต้องเตือน ห้ามเงียบ
+  var ADMIN_EMAIL = 'mr.taihualin@gmail.com';
+
+  function saveToast(msg, ok) {
     try {
-      sb.from('reading_sessions').insert({ user_id: API.user.id, score: (score || 0) | 0, games: (games || 1) | 0 })
-        .then(function () {}, function () {});
+      var old = document.getElementById('rg-score-toast');
+      if (old) old.remove();
+      var d = document.createElement('div');
+      d.id = 'rg-score-toast';
+      d.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:99999;' +
+        'background:' + (ok ? '#2d7a2d' : '#8b2020') + ';color:#fff;border-radius:20px;' +
+        'padding:8px 18px;font-size:13px;font-family:"Noto Sans TC",sans-serif;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,0.25);white-space:nowrap;pointer-events:none;';
+      d.textContent = msg;
+      document.body.appendChild(d);
+      setTimeout(function () { if (d.parentNode) d.remove(); }, 3500);
     } catch (e) {}
+  }
+
+  // error จาก PostgREST ที่แปลว่า "คอลัมน์ game ยังไม่มีใน schema" — จับกว้างไว้ก่อน
+  function isMissingGameColumn(err) {
+    if (!err) return false;
+    if (err.code === 'PGRST204') return true; // Could not find the 'game' column ... in the schema cache
+    var m = String(err.message || '');
+    return /game/i.test(m) && /(column|schema|cache|find)/i.test(m);
+  }
+
+  function saveScore(score, games, game) {
+    if (!API.user) return; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
+    if ((API.user.email || '').toLowerCase() === ADMIN_EMAIL) {
+      console.info('[board] admin account — score not saved (excluded from leaderboard)');
+      return;
+    }
+    var gm = (game === 'typing' || game === 'reading' || game === 'word_order' || game === 'lego') ? game : pageGame();
+    var base = { user_id: API.user.id, score: (score || 0) | 0, games: (games || 1) | 0 };
+    var row = { user_id: base.user_id, score: base.score, games: base.games, game: gm };
+    function onFail(msg) {
+      console.warn('[board] save failed:', msg);
+      saveToast('⚠️ 分數儲存失敗：' + msg, false);
+      try { if (window.gtag) gtag('event', 'score_save_fail', { reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
+    }
+    try {
+      sb.from('reading_sessions').insert(row).then(function (res) {
+        if (!res.error) { saveToast('✅ 分數已儲存 +' + base.score + ' 分', true); return; }
+        if (isMissingGameColumn(res.error)) {
+          // Lin ยังไม่รัน SQL เพิ่มคอลัมน์ game → เซฟแบบเดิม (ไม่มี game) ให้คะแนนไม่หาย
+          console.warn('[board] game column not ready — saved without game');
+          sb.from('reading_sessions').insert(base).then(function (res2) {
+            if (res2.error) onFail(res2.error.message);
+            else saveToast('✅ 分數已儲存 +' + base.score + ' 分', true);
+          }, function (e2) { onFail(e2 && e2.message || '網路錯誤'); });
+        } else onFail(res.error.message);
+      }, function (e) { onFail(e && e.message || '網路錯誤'); });
+    } catch (e) { onFail(e && e.message || String(e)); }
     if (window.GAME_ACCOUNT && GAME_ACCOUNT.sync) { try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {} }
   }
 
+  // ── session กลาง: ใช้ window.SITE_AUTH (auth-widget.js) ถ้ามี — client เดียวกับทุกหน้า ──
+  // มี fallback (client+listener ของตัวเอง) เผื่อ auth-widget.js โหลดไม่ทัน/พลาด กันเกมพัง LIN 2026-07-03
   try {
-    sb.auth.getSession().then(function (r) { setUser(r && r.data && r.data.session && r.data.session.user); }, function () {});
-    sb.auth.onAuthStateChange(function (_e, s) { setUser(s && s.user); });
+    if (window.SITE_AUTH) {
+      window.SITE_AUTH.onChange(setUser);
+    } else {
+      sb.auth.getSession().then(function (r) { setUser(r && r.data && r.data.session && r.data.session.user); }, function () {});
+      sb.auth.onAuthStateChange(function (_e, s) { setUser(s && s.user); });
+    }
   } catch (e) {}
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
 })();

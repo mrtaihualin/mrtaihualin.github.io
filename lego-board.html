@@ -18,7 +18,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<title>拼讀排行榜 — 泰華眼裡的泰語教學</title>
+<title>造句排行榜 — 泰華眼裡的泰語教學</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=12">
 </head>
@@ -49,35 +49,33 @@
 <!-- CONTENT -->
 <div class="section-wrap" style="padding-top:34px;padding-bottom:60px;">
   <div style="text-align:center;margin-bottom:8px;">
-    <span class="eyebrow" style="color:var(--gold-bright);">拼讀玩家排行榜</span>
-    <h2 class="section-heading" style="margin:6px 0 0;">🏆 拼讀排行榜</h2>
+    <span class="eyebrow" style="color:var(--gold-bright);">造句玩家排行榜</span>
+    <h2 class="section-heading" style="margin:6px 0 0;">🧱 造句排行榜</h2>
   </div>
-  <!-- 登入 widget（ชื่อ/✏️/🏆/📊/登出）— LIN 2026-07-03 -->
-  <div id="lb-userslot" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 0 0;"></div>
   <p style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-size:13px;line-height:1.8;margin:14px auto 30px;max-width:600px;text-align:center;">
-    依「累積總分」排名，每週一重置。練得越多，排名越高！
+    依「累積總分」排名，每週一重置。拆句測驗過關越多，排名越高！
   </p>
 
   <div id="lb-root" style="max-width:560px;margin:0 auto;"></div>
 
   <div style="text-align:center;margin-top:30px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-    <a href="games.html" style="display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">✍️ 前往拼讀遊戲累積分數</a>
+    <a href="lego.html" style="display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">🧱 前往造句遊戲累積分數</a>
     <a href="my-progress.html" style="display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">📊 我的成績</a>
   </div>
 
-  <!-- 🎯 soft CTA — LIN 2026-07-03 -->
-  <div id="soft-cta-lb-reading" style="max-width:560px;margin:0 auto;"></div>
+  <!-- 🎯 soft CTA -->
+  <div id="soft-cta-lb-lego" style="max-width:560px;margin:0 auto;"></div>
 
-  <!-- 其他排行榜 cross-link — LIN 2026-07-02 -->
+  <!-- 其他排行榜 cross-link -->
   <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);text-align:center;margin:22px 0 0;">
     其他排行榜：
-    <a href="leaderboard.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'leaderboard',from:'reading_board'})}catch(e){}">🎵 聲調排行榜</a>
+    <a href="leaderboard.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'leaderboard',from:'lego_board'})}catch(e){}">🎵 聲調排行榜</a>
     ·
-    <a href="typing-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'typing_board',from:'reading_board'})}catch(e){}">⌨️ 打字排行榜</a>
+    <a href="reading-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'reading_board',from:'lego_board'})}catch(e){}">✍️ 拼讀排行榜</a>
     ·
-    <a href="lego-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'lego_board',from:'reading_board'})}catch(e){}">🧱 造句排行榜</a>
+    <a href="typing-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'typing_board',from:'lego_board'})}catch(e){}">⌨️ 打字排行榜</a>
     ·
-    <a href="word-order-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'word_order_board',from:'reading_board'})}catch(e){}">🔀 語序排行榜</a>
+    <a href="word-order-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'word_order_board',from:'lego_board'})}catch(e){}">🔀 語序排行榜</a>
   </p>
 </div>
 
@@ -88,28 +86,22 @@
 </footer>
 
 <script src="shared.js?v=21"></script>
-<script src="auth-widget.js?v=1"></script>
+<script>window.READING_BOARD_GAME = 'lego';</script>
 <script src="reading-leaderboard.js?v=2"></script>
 <script>
-window.addEventListener('DOMContentLoaded', function () {
-  if (window.SITE_AUTH) SITE_AUTH.renderBadge('lb-userslot', { leaderboardHref: 'reading-board.html', progressHref: 'my-progress.html' });
-});
-</script>
-<script>
-// ── GA4 Event Tracking: leaderboard.html ────────────────────────────
+// ── GA4 Event Tracking: lego-board.html ───────────────────────────
 
 // [1] คนเข้าดู leaderboard
 window.addEventListener('DOMContentLoaded', function() {
-  gtag('event', 'leaderboard_viewed', { source_page: 'reading_leaderboard' });
-  if(window.renderSoftCTA) renderSoftCTA('soft-cta-lb-reading','lb_reading','想更快衝上排行榜？很多學生會搭配真人課練習拼讀');
+  gtag('event', 'leaderboard_viewed', { source_page: 'lego_leaderboard' });
+  if(window.renderSoftCTA) renderSoftCTA('soft-cta-lb-lego','lb_lego','想更快衝上排行榜？很多學生會搭配真人課加強聽說');
 });
 
 // [2] คลิกปุ่มกลับไปเล่นเกม — ใช้ delegation เพราะลิงก์ในกระดาน (#lb-root) ถูก JS สร้างทีหลัง
-//    (เดิมจับ a[href*="tone-finder"] ซึ่งไม่มีอยู่ในหน้านี้ → event ไม่เคยยิง — แก้ 2026-07-02)
 document.addEventListener('click', function(e) {
-  var a = e.target && e.target.closest ? e.target.closest('a[href*="games.html"], a[href*="tone-finder"], a[href*="reading-game"], a[href*="typing-game"]') : null;
+  var a = e.target && e.target.closest ? e.target.closest('a[href*="games.html"], a[href*="tone-finder"], a[href*="reading-game"], a[href*="typing-game"], a[href*="word-order"], a[href*="lego"]') : null;
   if (!a || !a.closest('.section-wrap')) return; // นับเฉพาะปุ่มในเนื้อหา ไม่นับเมนูบน
-  gtag('event', 'play_again_click', { source: 'reading_leaderboard' });
+  gtag('event', 'play_again_click', { source: 'lego_leaderboard' });
 });
 // ────────────────────────────────────────────────────────────────────
 </script>

@@ -51,6 +51,25 @@
 
 .p4-section-head .section-heading { margin-bottom: 0; }
 
+/* ── ดร็อปดาวน์ยุบ/ขยายแต่ละหมวด (Lin 2026-07-03) ── */
+.p4-acc { border: none; }
+.p4-acc-sum { display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer; list-style: none; padding: 6px 0; }
+.p4-acc-sum::-webkit-details-marker { display: none; }
+.p4-acc-sum:hover .p4-acc-chev { color: var(--gold-bright); }
+.p4-acc-head { flex: 1; min-width: 0; }
+.p4-acc-chev { flex-shrink: 0; font-size: 24px; line-height: 1; color: var(--gold); transition: transform .22s; }
+details[open] > .p4-acc-sum .p4-acc-chev { transform: rotate(180deg); }
+.p4-acc-body { padding-top: 22px; animation: p4accfade .25s ease; }
+@keyframes p4accfade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* กะทัดรัด: ลดช่องว่างหัวข้อยุบให้พอดีตัวอักษร (Lin 2026-07-03) */
+#songs > .section-wrap, #videos > .section-wrap, #playlists > .section-wrap { padding-top: 20px; padding-bottom: 20px; }
+.p4-acc-sum .eyebrow { margin-bottom: 3px; }
+.p4-acc-sum .section-heading { font-size: clamp(19px, 3vw, 23px); line-height: 1.25; margin: 0; }
+.p4-acc-chev { font-size: 20px; }
+/* เส้นคั่นหมวดหนาเท่ากันทุกเส้น 2px (Lin 2026-07-03) — กัน border เดิม 3px ซ้อนกันเป็น 6px */
+#songs, #videos, #playlists { border-top: 2px solid var(--ink) !important; border-bottom: none !important; }
+#playlists { border-bottom: 2px solid var(--ink) !important; }
+
 .p4-shuffle-btn {
   padding: 12px 26px;
   background: var(--gold-bright);
@@ -89,6 +108,13 @@
   padding: 9px; text-decoration: none; letter-spacing: 1px;
 }
 .p4-vc-yt:hover { background: #a82822; }
+/* ปุ่ม "記筆記" ใต้วิดีโอ (ส่งคลิปเข้าโน้ต) */
+.p4-vc-note {
+  background: var(--gold-bright, #C8973A); color: #1a1a1a; border: none; cursor: pointer;
+  font-family: 'Noto Sans TC', sans-serif; font-size: 13px; font-weight: 700;
+  padding: 9px 12px; border-radius: 4px; letter-spacing: 1px; white-space: nowrap;
+}
+.p4-vc-note:hover { filter: brightness(1.08); }
 /* Subscribe + see-all buttons */
 .p4-video-actions {
   display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px;
@@ -99,8 +125,8 @@
   transition: opacity 0.2s, transform 0.15s;
 }
 .p4-vbtn:hover { opacity: 0.88; transform: translateY(-1px); }
-.p4-vbtn-sub { background: #c4302b; color: #fff; }
-.p4-vbtn-all { background: var(--ink); color: var(--cream); }
+.p4-vbtn-sub { background: var(--gold-bright); color: var(--ink); }
+.p4-vbtn-all { background: var(--gold-bright); color: var(--ink); }
 
 /* Video card */
 .p4-vc {
@@ -201,8 +227,8 @@
 
 .p4-col-header {
   padding: 20px 26px 16px;
-  background: var(--gold-light);
-  border-bottom: 2px solid var(--ink);
+  background: var(--cream-soft);
+  border-bottom: 2px solid var(--gold-bright);
   flex-shrink: 0;
 }
 .p4-col-eyebrow {
@@ -279,6 +305,62 @@
   font-family: 'Noto Sans TC', sans-serif;
   font-size: 14px; color: var(--ink-muted); letter-spacing: 1px;
 }
+
+/* ══════════════════════════════════════
+   PLAYLIST SECTION
+══════════════════════════════════════ */
+.p4-playlists { background:var(--white); border-top:3px solid var(--ink); border-bottom:3px solid var(--ink); }
+.p4-playlist-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+@media(max-width:860px){ .p4-playlist-grid{ grid-template-columns:repeat(2,1fr); } }
+@media(max-width:520px){ .p4-playlist-grid{ grid-template-columns:1fr; } }
+.p4-pl-card { display:block; text-decoration:none; color:inherit; border:1.5px solid var(--border); overflow:hidden; background:var(--cream); transition:border-color 0.18s,transform 0.18s,box-shadow 0.18s; }
+.p4-pl-card:hover { border-color:rgba(200,151,58,0.55); transform:translateY(-3px); box-shadow:0 8px 22px rgba(139,99,16,0.12); }
+.p4-pl-thumb { position:relative; padding-bottom:56.25%; background:#111; overflow:hidden; }
+.p4-pl-thumb img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; }
+.p4-pl-count { position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.72); color:#fff; font-family:'Noto Sans TC',sans-serif; font-size:11px; font-weight:700; padding:3px 8px; border-radius:3px; }
+.p4-pl-info { padding:12px 14px 14px; }
+.p4-pl-title { font-family:'Noto Sans TC',sans-serif; font-size:13px; font-weight:700; color:var(--ink); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:40px; }
+
+/* ══════════════════════════════════════
+   SONGS SECTION
+══════════════════════════════════════ */
+.p4-songs { background:linear-gradient(180deg,#FBF5E7 0%,#F5F0E8 100%); border-top:3px solid var(--ink); }
+.p4-song-tabs { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+.p4-song-select-wrap { margin-bottom:26px; }
+.p4-song-select { width:100%; max-width:820px; font-family:'Noto Sans TC',sans-serif; font-size:16px; font-weight:700; color:var(--ink); background:var(--cream-soft); border:2px solid var(--gold-bright); border-radius:12px; padding:22px 16px; cursor:pointer; }
+.p4-song-tab { font-family:'Noto Sans TC',sans-serif; font-size:15px; font-weight:700; padding:11px 20px; background:var(--cream-soft); border:2px solid var(--gold-bright); border-radius:12px; color:var(--ink); cursor:pointer; transition:background .15s,color .15s; }
+.p4-song-tab:hover { background:var(--gold-light); }
+.p4-song-tab.active { background:var(--gold-bright); color:#111; }
+.p4-song-tab-lv { font-size:11px; color:var(--gold-deep); margin-left:7px; font-weight:900; }
+.p4-song-tab.active .p4-song-tab-lv { color:var(--gold-deep); }
+.p4-song-embed-wrap { position:relative; padding-bottom:56.25%; overflow:hidden; margin-bottom:32px; border-radius:14px; }
+#p4-song-player { position:absolute; top:0; left:0; width:100%; height:100%; background:var(--ink); }
+#p4-song-player > div { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cream); }
+#p4-song-player iframe { width:100%; height:100%; border:none; display:block; }
+.p4-songs-2col { display:grid; grid-template-columns:1fr 1fr; gap:32px; align-items:start; }
+@media(max-width:860px){ .p4-songs-2col{ grid-template-columns:1fr; gap:24px; } }
+.p4-lyrics-box { background:var(--cream-soft); border:2px solid var(--gold-bright); border-radius:14px; padding:30px 30px 34px; min-height:340px; }
+.p4-lyrics-title { font-family:'Noto Serif TC',serif; font-size:17px; font-weight:900; color:var(--ink); border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:18px; }
+.p4-lyric-line { margin-bottom:16px; }
+.p4-lyric-th { font-family:'Sarabun',sans-serif; font-size:17px; color:var(--ink); font-weight:700; line-height:1.5; }
+.p4-lyric-ph { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:var(--gold); font-style:italic; line-height:1.5; }
+.p4-lyric-zh { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:var(--ink-soft); line-height:1.5; }
+.p4-article-box { background:var(--cream-soft); border:2px solid var(--gold-bright); border-radius:14px; padding:32px 32px 36px; min-height:340px; }
+.p4-article-eyebrow { font-family:'Noto Sans TC',sans-serif; font-size:10px; letter-spacing:4px; color:var(--gold-deep); font-weight:700; text-transform:uppercase; display:block; margin-bottom:8px; }
+.p4-article-h { font-family:'Noto Serif TC',serif; font-size:19px; font-weight:900; color:var(--ink); line-height:1.4; margin-bottom:16px; }
+.p4-article-body { font-family:'Noto Sans TC',sans-serif; font-size:13.5px; color:var(--ink-soft); line-height:1.9; }
+.p4-article-body h3 { font-family:'Noto Serif TC',serif; font-size:14px; font-weight:900; color:var(--ink); margin:18px 0 10px; }
+.p4-article-body p { margin:0 0 12px; }
+.p4-article-body .p4-th { font-family:'Sarabun',sans-serif; font-size:16px; color:var(--ink); font-weight:700; }
+.p4-article-body .p4-ph { color:var(--gold); font-style:italic; }
+
+.p4-articles-box { background:var(--cream-soft); border:2px solid var(--gold-bright); border-radius:14px; padding:16px 20px; margin-bottom:14px; }
+.p4-articles-box a { display:block; color:var(--gold,#C8973A); text-decoration:none; font-weight:700; font-size:14px; padding:6px 0; }
+.p4-articles-box a + a { border-top:1px solid rgba(200,151,58,0.25); }
+.p4-vocab-tbl { width:100%; border-collapse:collapse; margin:0 0 16px; font-size:13px; }
+.p4-vocab-tbl th { background:var(--gold-light); border:1px solid var(--border); padding:7px 10px; font-family:'Noto Sans TC',sans-serif; font-weight:700; color:var(--gold-deep); text-align:left; }
+.p4-vocab-tbl td { border:1px solid var(--border); padding:7px 10px; color:var(--ink-soft); }
+.p4-vocab-tbl td:first-child { font-family:'Sarabun',sans-serif; font-size:16px; color:var(--ink); font-weight:700; }
 </style>
 <script type="application/ld+json">
 {
@@ -337,50 +419,70 @@
   <a href="page2.html">課程・費用</a>
   <a href="page3.html">須知・分享</a>
   <a href="page-services.html">導遊・翻譯</a>
-  <a href="page4.html" class="active">泰語・分享</a>
+  <a href="content.html" class="active">泰語・分享</a>
   <a href="games.html">泰語・遊戲</a>
 </div>
 
 <!-- ════════════ SECTION 2 · TWO-COLUMN LIST ════════════ -->
-<div id="sharing" class="p4-sharing">
-  <div class="section-wrap" style="padding-top:72px;padding-bottom:80px;">
-    <div class="p4-two-col">
+<!-- 貼文分享區 + 自學專區 ย้ายไปที่ blog.html (📝 泰語學習文章) แล้ว — Lin 2026-07-03 -->
 
-      <!-- LEFT: 貼文分享區 -->
-      <div class="p4-col">
-        <div class="p4-col-header">
-          <span class="p4-col-eyebrow">貼文分享區</span>
-          <div class="p4-col-title">🚀 最新貼文</div>
-        </div>
-        <div class="p4-list" id="p4-post-list">
-          <div class="p4-list-empty">載入中…</div>
-        </div>
+<!-- ════════════ SECTION · THAI SONGS (ย้ายขึ้นบนสุด — Lin 2026-07-03) ════════════ -->
+<div id="songs" class="p4-songs">
+  <div class="section-wrap">
+   <details class="p4-acc" open>
+    <summary class="p4-acc-sum">
+      <div class="p4-acc-head">
+        <span class="eyebrow reveal" style="color:var(--gold);">泰語歌曲・學習</span>
+        <h2 class="section-heading reveal" style="margin:0;">🎵 用歌曲學泰語</h2>
       </div>
-
-      <!-- RIGHT: 自學專區 -->
-      <div class="p4-col">
-        <div class="p4-col-header">
-          <span class="p4-col-eyebrow">自學專區</span>
-          <div class="p4-col-title">📖 學習資源</div>
-        </div>
-        <div style="margin:0 0 10px;font-size:14px;">
-          <a href="blog-tone-guide.html" style="color:var(--gold,#C8973A);text-decoration:none;font-weight:700;">📝 泰文聲調怎麼學？5 個聲調快速搞懂 →</a>
-        </div>
-        <div class="p4-list" id="p4-study-list">
-          <div class="p4-list-empty">載入中…</div>
-        </div>
-      </div>
-
+      <span class="p4-acc-chev" aria-hidden="true">▾</span>
+    </summary>
+    <div class="p4-acc-body">
+    <!-- Song selector: level tabs → song dropdown (populated from songs-data.js) -->
+    <div id="p4-song-tabs" class="p4-song-tabs"></div>
+    <div class="p4-song-select-wrap">
+      <select id="p4-song-select" class="p4-song-select" onchange="P4.selectSong(this.value)"></select>
     </div>
+    <!-- YouTube embed (youtubeId/playlistId set in songs-data.js) -->
+    <div class="p4-song-embed-wrap">
+      <div id="p4-song-player">
+        <div>
+          <div style="font-size:36px;margin-bottom:10px;">🎵</div>
+          <div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;">泰語歌曲</div>
+          <a href="https://www.youtube.com/@mrtaihua" target="_blank" rel="noopener"
+            style="margin-top:14px;padding:11px 26px;background:var(--gold-bright);color:#111;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:900;text-decoration:none;letter-spacing:1px;">
+            前往 YouTube 頻道 →
+          </a>
+        </div>
+      </div>
+    </div>
+    <!-- Lyrics + Article (populated from songs-data.js) -->
+    <div class="p4-songs-2col">
+      <div id="p4-song-lyrics" class="p4-lyrics-box">
+        <div class="p4-grid-msg" style="padding:32px 0;">載入中…</div>
+      </div>
+      <div id="p4-song-article" class="p4-article-box">
+        <div class="p4-grid-msg" style="padding:32px 0;">載入中…</div>
+      </div>
+    </div>
+    </div><!-- /p4-acc-body -->
+   </details>
   </div>
 </div>
 
-<!-- ════════════ SECTION 1 · VIDEO GRID ════════════ -->
+<!-- ════════════ SECTION · VIDEO GRID ════════════ -->
 <div id="videos" class="p4-videos">
   <div class="section-wrap">
-    <span class="eyebrow reveal" style="color:var(--gold);">泰語影片學習庫</span>
-    <div class="p4-section-head">
-      <h2 class="section-heading section-heading-white reveal">📺 泰語教學影片</h2>
+   <details class="p4-acc">
+    <summary class="p4-acc-sum">
+      <div class="p4-acc-head">
+        <span class="eyebrow reveal" style="color:var(--gold);">泰語影片學習庫</span>
+        <h2 class="section-heading section-heading-white reveal" style="margin:0;">📺 泰語教學影片</h2>
+      </div>
+      <span class="p4-acc-chev" aria-hidden="true">▾</span>
+    </summary>
+    <div class="p4-acc-body">
+    <div class="p4-section-head" style="justify-content:flex-end;margin-bottom:18px;">
       <button class="p4-shuffle-btn" id="p4-shuffle-btn" onclick="P4.shuffle()" disabled>⏳ 載入中…</button>
     </div>
     <div class="p4-video-grid" id="p4-video-grid">
@@ -413,8 +515,38 @@
     <div class="p4-video-actions">
       <a class="p4-vbtn p4-vbtn-sub" href="https://www.youtube.com/@mrtaihua?sub_confirmation=1" target="_blank" rel="noopener">🔔 訂閱頻道，掌握最新影片</a>
     </div>
+    </div><!-- /p4-acc-body -->
+   </details>
   </div>
 </div>
+
+
+<!-- ════════════ SECTION · PLAYLISTS ════════════ -->
+<div id="playlists" class="p4-playlists">
+  <div class="section-wrap">
+   <details class="p4-acc">
+    <summary class="p4-acc-sum">
+      <div class="p4-acc-head">
+        <span class="eyebrow reveal" style="color:var(--gold);">頻道播放清單</span>
+        <h2 class="section-heading reveal" style="margin:0;">📋 全部播放清單</h2>
+      </div>
+      <span class="p4-acc-chev" aria-hidden="true">▾</span>
+    </summary>
+    <div class="p4-acc-body">
+    <div class="p4-playlist-grid" id="p4-playlist-grid">
+      <div class="p4-vc" style="pointer-events:none;"><div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div><div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div></div>
+      <div class="p4-vc" style="pointer-events:none;"><div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div><div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div></div>
+      <div class="p4-vc" style="pointer-events:none;"><div class="p4-vc-thumb" style="background:rgba(0,0,0,0.06);"></div><div class="p4-vc-title" style="background:rgba(0,0,0,0.06);color:transparent;">　</div></div>
+    </div>
+    <div class="p4-video-actions">
+      <a class="p4-vbtn p4-vbtn-all" href="https://www.youtube.com/@mrtaihua/playlists" target="_blank" rel="noopener">📋 查看全部播放清單 →</a>
+    </div>
+    </div><!-- /p4-acc-body -->
+   </details>
+  </div>
+</div>
+
+<!-- SECTION · THAI SONGS ย้ายขึ้นไปบนสุดแล้ว — Lin 2026-07-03 -->
 
 <div style="height:44px;background:var(--off-white);"></div>
 <footer>
@@ -423,8 +555,8 @@
 </footer>
 
 <!-- ════════════ SCRIPTS ════════════ -->
-<script src="posts-data.js"></script>
-<script src="lessons-data.js"></script>
+<!-- posts-data.js / lessons-data.js ย้ายไปโหลดที่ blog.html แล้ว — Lin 2026-07-03 -->
+<script src="songs-data.js"></script>
 
 <script>
 // ─────────────────────────────────────────────────────────────
@@ -435,6 +567,7 @@ var P4 = (function () {
   var CHANNEL = 'mrtaihua';
   var _all    = [];   // all fetched videos
   var _ready  = false;
+  var SONGS_PLAYLIST_ID = ''; // Lin: ใส่ playlist ID เพลงไทย เช่น 'PLxxxxxxxxx' (ใช้แทน songs-data.js)
 
   // ── Helpers ──────────────────────────────────────────────
   function esc(s) {
@@ -455,6 +588,34 @@ var P4 = (function () {
     while (picked.length < n - 1 && rest.length > 0)
       picked.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
     return [_all[0]].concat(picked);
+  }
+
+  // แปลงความยาว ISO8601 (PT#H#M#S) → วินาที
+  function parseDur(iso) {
+    var m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || '');
+    if (!m) return 0;
+    return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+  }
+  var LONG_SEC = 1200; // ≥ 20 นาที ถือว่าเป็น "คลิปยาว/ไลฟ์"
+
+  // หา index ของ "ไลฟ์/คลิปยาว ที่ใหม่สุด" (ข้ามคลิปล่าสุดสุด _all[0])
+  function findLiveIdx() {
+    for (var i = 1; i < _all.length; i++)
+      if (_all[i].wasLive || (_all[i].seconds || 0) >= LONG_SEC) return i;
+    return _all.length > 1 ? 1 : -1; // fallback: คลิปที่สอง
+  }
+
+  // ช่อง1 = คลิปล่าสุด · ช่อง2 = ไลฟ์/คลิปยาวล่าสุด · ที่เหลือสุ่ม
+  function newestPlusLivePick(n) {
+    if (!_all.length) return [];
+    var out = [_all[0]], used = { 0: 1 };
+    var li = findLiveIdx();
+    if (li > 0) { out.push(_all[li]); used[li] = 1; }
+    var rest = [];
+    for (var i = 0; i < _all.length; i++) if (!used[i]) rest.push(_all[i]);
+    while (out.length < n && rest.length > 0)
+      out.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
+    return out;
   }
 
   // ── Video grid ───────────────────────────────────────────
@@ -512,6 +673,15 @@ var P4 = (function () {
     }).join('');
   }
 
+  function renderFullArticles() {
+    var box = document.getElementById('p4-full-articles');
+    if (box && typeof FULL_ARTICLES !== 'undefined') {
+      box.innerHTML = FULL_ARTICLES.map(function (a) {
+        return '<a href="' + a.href + '">' + a.title + ' →</a>';
+      }).join('');
+    }
+  }
+
   // ── API fetch ─────────────────────────────────────────────
   async function loadVideos() {
     try {
@@ -530,29 +700,194 @@ var P4 = (function () {
       _all = (d2.items || [])
         .map(function (item) { return { id: item.snippet.resourceId.videoId, title: item.snippet.title }; })
         .filter(function (v) { return v.id; });
+      // ดึงรายละเอียด (ความยาว + เป็นไลฟ์ไหม) เพื่อจัด "ช่อง 2 = ไลฟ์/คลิปยาวล่าสุด"
+      try {
+        var ids = _all.slice(0, 50).map(function (v) { return v.id; }).join(',');
+        if (ids) {
+          var r3 = await fetch(
+            'https://www.googleapis.com/youtube/v3/videos?key=' + API_KEY +
+            '&id=' + ids + '&part=contentDetails,liveStreamingDetails&maxResults=50'
+          );
+          var d3 = await r3.json();
+          var meta = {};
+          (d3.items || []).forEach(function (it) { meta[it.id] = it; });
+          _all.forEach(function (v) {
+            var it = meta[v.id];
+            v.seconds = it && it.contentDetails ? parseDur(it.contentDetails.duration) : 0;
+            v.wasLive = !!(it && it.liveStreamingDetails);
+          });
+        }
+      } catch (e3) { console.warn('[P4] video details:', e3.message); }
     } catch (e) {
       console.warn('[P4] YouTube API:', e.message);
       _all = [];
     }
     _ready = true;
-    renderGrid(newestPlusPick(6));
+    renderGrid(newestPlusLivePick(6));
     var btn = document.getElementById('p4-shuffle-btn');
     if (btn) { btn.textContent = '🔀 隨機換一換'; btn.disabled = false; }
+  }
+
+  // ── Playlists ─────────────────────────────────────────────
+  function renderPlaylists(playlists) {
+    var g = document.getElementById('p4-playlist-grid');
+    if (!g) return;
+    if (!playlists.length) {
+      g.innerHTML = '<div class="p4-grid-msg"><a href="https://www.youtube.com/@mrtaihua/playlists" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;">📋 前往 YouTube 查看播放清單 →</a></div>';
+      return;
+    }
+    g.innerHTML = playlists.map(function (pl) {
+      var thumb = (pl.snippet.thumbnails.medium || pl.snippet.thumbnails.default || {}).url || '';
+      var count = (pl.contentDetails || {}).itemCount || 0;
+      var url = 'https://www.youtube.com/playlist?list=' + pl.id;
+      return '<a class="p4-pl-card" href="' + esc(url) + '" target="_blank" rel="noopener">' +
+        '<div class="p4-pl-thumb">' +
+          (thumb ? '<img src="' + esc(thumb) + '" alt="' + esc(pl.snippet.title) + '" loading="lazy">' : '') +
+          '<div class="p4-pl-count">▶ ' + count + ' 支</div>' +
+        '</div>' +
+        '<div class="p4-pl-info"><div class="p4-pl-title">' + esc(pl.snippet.title) + '</div></div>' +
+      '</a>';
+    }).join('');
+  }
+
+  async function loadPlaylists() {
+    var g = document.getElementById('p4-playlist-grid');
+    try {
+      var r1 = await fetch(
+        'https://www.googleapis.com/youtube/v3/channels?key=' + API_KEY +
+        '&forHandle=' + CHANNEL + '&part=id&maxResults=1'
+      );
+      var d1 = await r1.json();
+      if (!d1.items || !d1.items[0]) throw new Error('no channel');
+      var channelId = d1.items[0].id;
+      var r2 = await fetch(
+        'https://www.googleapis.com/youtube/v3/playlists?key=' + API_KEY +
+        '&channelId=' + channelId + '&part=snippet,contentDetails&maxResults=12'
+      );
+      var d2 = await r2.json();
+      renderPlaylists((d2.items || []).filter(function (pl) { return pl.snippet && pl.id; }));
+    } catch (e) {
+      console.warn('[P4] Playlists:', e.message);
+      if (g) g.innerHTML = '<div class="p4-grid-msg"><a href="https://www.youtube.com/@mrtaihua/playlists" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;">📋 前往 YouTube 查看播放清單 →</a></div>';
+    }
+  }
+
+  // ── Songs ─────────────────────────────────────────────────
+  var SONG_LEVELS = [
+    { key: 'beginner', label: '初級' },
+    { key: 'intermediate', label: '中級' },
+    { key: 'advanced', label: '高級' }
+  ];
+  var _songLevel = 'beginner';
+
+  function renderSongTabs() {
+    var el = document.getElementById('p4-song-tabs');
+    if (!el) return;
+    var songs = (typeof THAI_SONGS !== 'undefined') ? THAI_SONGS : [];
+    el.innerHTML = SONG_LEVELS.map(function (lv) {
+      var count = songs.filter(function (s) { return s.level === lv.key; }).length;
+      if (!count) return '';
+      return '<button type="button" class="p4-song-tab' + (lv.key === _songLevel ? ' active' : '') + '" onclick="P4.selectLevel(\'' + lv.key + '\')">' +
+        lv.label + '<span class="p4-song-tab-lv">' + count + ' 首</span></button>';
+    }).join('');
+  }
+
+  function renderSongSelect(activeIdx) {
+    var sel = document.getElementById('p4-song-select');
+    if (!sel) return;
+    var songs = (typeof THAI_SONGS !== 'undefined') ? THAI_SONGS : [];
+    sel.innerHTML = songs.map(function (s, i) {
+      if (s.level !== _songLevel) return '';
+      return '<option value="' + i + '"' + (i === activeIdx ? ' selected' : '') + '>🎵 ' + esc(s.title) + '</option>';
+    }).join('');
+  }
+
+  function firstSongOfLevel() {
+    var songs = (typeof THAI_SONGS !== 'undefined') ? THAI_SONGS : [];
+    for (var i = 0; i < songs.length; i++) {
+      if (songs[i].level === _songLevel) return i;
+    }
+    return 0;
+  }
+
+  function renderSong(idx) {
+    var songs = (typeof THAI_SONGS !== 'undefined') ? THAI_SONGS : [];
+    var s = songs[idx || 0];
+    if (!s) return;
+
+    var player = document.getElementById('p4-song-player');
+    if (player) {
+      if (s.youtubeId) {
+        player.innerHTML = '<iframe src="https://www.youtube.com/embed/' + esc(s.youtubeId) + '?rel=0" frameborder="0" allowfullscreen allow="autoplay;encrypted-media;picture-in-picture"></iframe>';
+      } else if (s.playlistId) {
+        player.innerHTML = '<iframe src="https://www.youtube.com/embed/videoseries?list=' + esc(s.playlistId) + '&rel=0" frameborder="0" allowfullscreen allow="autoplay;encrypted-media;picture-in-picture"></iframe>';
+      }
+    }
+
+    var lyricsEl = document.getElementById('p4-song-lyrics');
+    if (lyricsEl) {
+      lyricsEl.innerHTML =
+        '<div class="p4-lyrics-title">🎶 ' + esc(s.title) + '</div>' +
+        (s.lyrics || []).map(function (l) {
+          return '<div class="p4-lyric-line">' +
+            '<div class="p4-lyric-th">' + esc(l.thai) + '</div>' +
+            '<div class="p4-lyric-ph">' + esc(l.phonetic) + '</div>' +
+            '<div class="p4-lyric-zh">' + esc(l.zh) + '</div>' +
+          '</div>';
+        }).join('');
+    }
+
+    var articleEl = document.getElementById('p4-song-article');
+    if (articleEl && s.article) {
+      var vocabRows = (s.vocabulary || []).map(function (v) {
+        return '<tr><td>' + esc(v.thai) + '</td><td>' + esc(v.phonetic) + '</td><td>' + esc(v.meaning) + '</td></tr>';
+      }).join('');
+      var bodyHtml = (s.article.body || []).map(function (b) {
+        if (b.type === 'h3') return '<h3>' + esc(b.text) + '</h3>';
+        return '<p>' + b.text + '</p>'; // allow HTML spans in 'p' blocks
+      }).join('');
+      articleEl.innerHTML =
+        '<span class="p4-article-eyebrow">' + esc(s.article.eyebrow) + '</span>' +
+        '<div class="p4-article-h">' + esc(s.article.title) + '</div>' +
+        '<div class="p4-article-body">' +
+          '<h3>🔑 本曲關鍵詞彙</h3>' +
+          '<table class="p4-vocab-tbl"><thead><tr><th>泰文</th><th>發音</th><th>中文</th></tr></thead><tbody>' +
+          vocabRows + '</tbody></table>' +
+          bodyHtml +
+        '</div>';
+    }
   }
 
   // ── Public API ────────────────────────────────────────────
   return {
     init: function () {
-      renderPosts();
-      renderStudy();
+      // renderPosts/renderStudy/renderFullArticles ย้ายไป blog.html แล้ว — Lin 2026-07-03
       loadVideos();
+      loadPlaylists();
+      renderSongTabs();
+      var idx0 = firstSongOfLevel();
+      renderSongSelect(idx0);
+      renderSong(idx0);
+    },
+    selectLevel: function (lv) {
+      _songLevel = lv;
+      renderSongTabs();
+      var idx = firstSongOfLevel();
+      renderSongSelect(idx);
+      renderSong(idx);
+    },
+    selectSong: function (i) {
+      renderSong(parseInt(i, 10) || 0);
     },
     shuffle: function () {
       if (!_ready) return;
-      renderGrid(newestPlusPick(6));
+      renderGrid(newestPlusLivePick(6)); // ช่อง1+ช่อง2 คงที่ สุ่มเฉพาะที่เหลือ
     },
     play: function (card) {
       var id = card.getAttribute('data-id');
+      var titleEl = card.querySelector('.p4-vc-title');
+      var title = titleEl ? titleEl.textContent.trim() : '影片';
+      var url = 'https://www.youtube.com/watch?v=' + id;
       card.style.cursor = 'default';
       card.onclick = null;
       card.innerHTML =
@@ -560,7 +895,11 @@ var P4 = (function () {
           '<iframe src="https://www.youtube.com/embed/' + id + '?autoplay=1&rel=0" frameborder="0" ' +
             'allowfullscreen allow="autoplay;encrypted-media;picture-in-picture"></iframe>' +
         '</div>' +
-        '<a class="p4-vc-yt" href="https://www.youtube.com/watch?v=' + id + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">▶ 在 YouTube 觀看</a>';
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+          '<a class="p4-vc-yt" href="' + url + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">▶ 在 YouTube 觀看</a>' +
+          '<button class="p4-vc-note" data-t="' + esc(title) + '" data-u="' + url + '" ' +
+            'onclick="event.stopPropagation();if(window.NOTES)window.NOTES.insertClip(this.getAttribute(\'data-t\'),this.getAttribute(\'data-u\'))">📝 記筆記</button>' +
+        '</div>';
     },
     openPost: function (id) {
       if (window.openFBPostModal) openFBPostModal();
@@ -595,6 +934,8 @@ var P4 = (function () {
 document.addEventListener('DOMContentLoaded', function () { P4.init(); });
 </script>
 
-<script src="shared.js?v=20"></script>
+<script src="shared.js?v=21"></script>
+<!-- ปุ่มลอย "學習筆記" — จดโน้ตขณะดูคลิป + เซฟอัตโนมัติ + ดาวน์โหลด PDF (ลายน้ำ) · Lin 2026-07-03 -->
+<script defer src="notes-tool.js"></script>
 </body>
 </html>

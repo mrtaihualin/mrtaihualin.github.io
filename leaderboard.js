@@ -189,7 +189,7 @@
     var html = tabs() + nickBar();
     if (!rows.length) {
       html += box('🌱', '排行榜還沒有人', period === 'week' ? '本週還沒有分數，當第一個吧！' : '還沒有資料，去玩一場上榜吧',
-        '<a href="games.html" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往 tone-finder →</a>');
+        '<a href="games.html" style="display:inline-block;margin-top:16px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往遊戲頁 →</a>');
       root.innerHTML = html; wireTabs(); return;
     }
     html += '<div style="background:#fff;border-radius:16px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">';

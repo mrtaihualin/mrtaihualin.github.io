@@ -164,10 +164,13 @@
   /* PRICING */
   #pricing { background:var(--off-white); border-bottom:3px solid var(--ink); }
   .pricing-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:2px solid var(--ink); align-items:stretch; }
-  .plan-card { display:flex; flex-direction:column; padding:40px 32px; border-right:2px solid var(--ink); background:var(--white); position:relative; }
+  .plan-card { display:flex; flex-direction:column; padding:40px 32px; border-right:2px solid var(--ink); background:#FBF5E7; position:relative; transition:background 0.25s, box-shadow 0.25s; }
   .plan-card:last-child { border-right:none; }
+  .plan-card:not(.featured):hover, .plan-card:not(.featured):active { background:linear-gradient(180deg,#F3E4C2 0%,#EAD09A 100%); box-shadow:0 12px 28px rgba(139,99,16,0.15); }
   .plan-card.featured { background:linear-gradient(180deg,#FBF5E7 0%,#F3E4C2 100%); color:var(--ink); }
-  .plan-card.pair-card { background:var(--card-bg); }
+  /* กล่อง Standard (featured) แตะ/hover แล้วต้องเน้นด้วย — เดิมถูก :not(.featured) ตัดออก (Lin 2026-07-02) */
+  .plan-card.featured:hover, .plan-card.featured:active { background:linear-gradient(180deg,#F3E4C2 0%,#E2C27C 100%); box-shadow:0 12px 28px rgba(139,99,16,0.22); }
+  .plan-card.pair-card { background:#FBF5E7; }
   .plan-tag { font-family:'Noto Sans TC',sans-serif; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); font-weight:700; margin-bottom:6px; }
   .plan-card.featured .plan-tag { color:var(--gold); }
   .plan-name { font-family:'Noto Serif TC',serif; font-size:28px; font-weight:900; margin-bottom:4px; }
@@ -278,7 +281,9 @@
   .progress-section { background:var(--off-white); border-top:3px solid var(--ink); border-bottom:3px solid var(--ink); }
   .progress-section .section-wrap { padding-bottom:80px; }
   .progress-timeline { display:grid; grid-template-columns:repeat(4,1fr); gap:0; border:2px solid var(--ink); margin-top:48px; position:relative; background:var(--white); }
-  .prog-step { padding:32px 24px 28px; border-right:2px solid var(--ink); text-align:center; position:relative; z-index:1; }
+  .prog-step { padding:32px 24px 28px; border-right:2px solid var(--ink); text-align:center; position:relative; z-index:1; transition:background 0.25s, box-shadow 0.25s; }
+  .prog-step:hover { background:var(--gold-light); }
+
   .prog-step:last-child { border-right:none; }
   .prog-circle { width:52px; height:52px; border-radius:50%; background:var(--gold); border:3px solid var(--gold); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-family:'Playfair Display',serif; font-size:20px; font-weight:900; color:#fff; }
   .prog-hours { font-family:'Noto Serif TC',serif; font-size:22px; font-weight:900; color:var(--gold); margin-bottom:6px; }
@@ -289,8 +294,9 @@
   /* LESSON PREVIEW */
   .lesson-preview { background:var(--white); border-bottom:3px solid var(--ink); }
   .lesson-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:2px solid var(--ink); margin-top:48px; }
-  .lesson-card { padding:32px 28px; border-right:2px solid var(--ink); }
+  .lesson-card { padding:32px 28px; border-right:2px solid var(--ink); transition:background 0.25s; }
   .lesson-card:last-child { border-right:none; }
+  .lesson-card:hover { background:var(--gold-light); }
   .lesson-card-tag { font-family:'Noto Sans TC',sans-serif; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); font-weight:700; margin-bottom:8px; }
   .lesson-card-title { font-family:'Noto Serif TC',serif; font-size:17px; font-weight:900; color:var(--ink); margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid var(--ink); }
   .lesson-sample { background:var(--card-bg); padding:16px 18px; border-left:3px solid var(--gold-bright); margin-bottom:14px; }
@@ -412,9 +418,9 @@
   body:has(.page-strip){padding-bottom:calc(44px + env(safe-area-inset-bottom,0));}
   .page-strip{position:fixed;bottom:0;left:0;right:0;z-index:990;background:rgba(17,17,17,0.97);border-top:1px solid rgba(200,151,58,0.3);display:flex;justify-content:center;align-items:center;height:44px;padding-bottom:env(safe-area-inset-bottom,0);}
   .page-strip-label{font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);margin-right:16px;text-transform:uppercase;}
-  .page-strip a{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:6px 18px;border:1px solid rgba(255,255,255,0.3);margin:0 4px;white-space:nowrap;transition:color 0.2s ease,border-color 0.2s ease;}
-  .page-strip a:hover{color:var(--white);border-color:rgba(255,255,255,0.6);}
-  .page-strip a.active{font-weight:900;color:#C8973A;border-color:rgba(200,151,58,0.5);background:rgba(200,151,58,0.1);}
+  .page-strip a{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);text-decoration:none;padding:6px 18px;border:1px solid rgba(255,255,255,0.3);border-bottom:2px solid transparent;margin:0 4px;white-space:nowrap;transition:color 0.2s ease,border-color 0.2s ease;}
+  .page-strip a:hover{color:var(--white);border-color:rgba(255,255,255,0.6);border-bottom-color:rgba(200,151,58,0.5);}
+  .page-strip a.active{font-weight:900;color:#C8973A;border-color:rgba(200,151,58,0.5);border-bottom:2px solid #C8973A;background:rgba(200,151,58,0.1);}
   @media(max-width:600px){
     body:has(.page-strip){padding-bottom:calc(48px + env(safe-area-inset-bottom,0));}
     .page-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;padding:0 5px env(safe-area-inset-bottom,0);height:48px;align-content:center;}
@@ -455,16 +461,19 @@
   }
 
   /* Cream → gold feature-card gradients (echoes the 字母練習區 entry card) */
-  .problem-card { background:linear-gradient(180deg,#FFFFFF 0%,#FBF5E7 100%); transition:background 0.25s, box-shadow 0.25s, transform 0.2s; }
-  .problem-card:hover { background:linear-gradient(180deg,#FBF5E7 0%,#F3E4C2 100%); box-shadow:0 12px 28px rgba(139,99,16,0.12); transform:translateY(-2px); }
-  .how-card { transition:background 0.25s, box-shadow 0.25s; }
-  .how-card:nth-child(even) { background:linear-gradient(180deg,#FBF5E7 0%,#F4E8CF 100%); }
-  .how-card:hover { background:linear-gradient(180deg,#FBF5E7 0%,#F3E4C2 100%); box-shadow:0 12px 28px rgba(139,99,16,0.10); }
-  .lesson-card { background:linear-gradient(180deg,#FFFFFF 0%,#FBF5E7 100%); transition:background 0.25s, box-shadow 0.25s; }
-  .lesson-card:hover { box-shadow:0 12px 28px rgba(139,99,16,0.10); }
+  .problem-card { background:linear-gradient(180deg,#FFFFFF 0%,#FBF5E7 100%); transition:background 0.25s, box-shadow 0.25s; }
+  .problem-card:hover { background:linear-gradient(180deg,#FBF5E7 0%,#F3E4C2 100%); box-shadow:0 12px 28px rgba(139,99,16,0.12); }
+  .how-card, .how-card:nth-child(even) { background:#FBF5E7; transition:background 0.25s, box-shadow 0.25s; }
+  .how-card:hover { background:linear-gradient(180deg,#F3E4C2 0%,#EAD09A 100%); box-shadow:0 12px 28px rgba(139,99,16,0.15); }
+  .prog-step { background:#FBF5E7; }
+  .prog-step:hover { background:linear-gradient(180deg,#F3E4C2 0%,#EAD09A 100%); box-shadow:0 12px 28px rgba(139,99,16,0.15); }
+  .lesson-card { background:#FBF5E7; transition:background 0.25s, box-shadow 0.25s; }
+  .lesson-card:hover { background:linear-gradient(180deg,#F3E4C2 0%,#EAD09A 100%); box-shadow:0 12px 28px rgba(139,99,16,0.15); }
   .rule-card { background:linear-gradient(180deg,#FFFFFF 0%,#FBF5E7 100%); transition:background 0.25s, box-shadow 0.25s; }
   .rule-card:hover { background:linear-gradient(180deg,#FBF5E7 0%,#F3E4C2 100%); box-shadow:0 12px 28px rgba(139,99,16,0.10); }
-  .plan-card { background:linear-gradient(180deg,#FFFFFF 0%,#FCF7EC 100%); }
+  .plan-card { background:#FBF5E7; transition:background 0.25s, box-shadow 0.25s; }
+  .plan-card:not(.featured):hover, .plan-card:not(.featured):active { background:linear-gradient(180deg,#F3E4C2 0%,#EAD09A 100%); box-shadow:0 12px 28px rgba(139,99,16,0.15); }
+  .plan-card.featured:hover, .plan-card.featured:active { background:linear-gradient(180deg,#F3E4C2 0%,#E2C27C 100%); box-shadow:0 12px 28px rgba(139,99,16,0.22); }
 
   /* Subtle gradient depth on the warm bands */
   .stats-band { background:linear-gradient(180deg,#F8EFD6 0%,#F1E0BA 100%); }
@@ -494,10 +503,21 @@
   .prog-step:nth-child(3) .prog-title, .prog-step:nth-child(3) .prog-hours { color:var(--d3); -webkit-text-fill-color:var(--d3); }
   .prog-step:nth-child(4) .prog-title, .prog-step:nth-child(4) .prog-hours { color:var(--d4); -webkit-text-fill-color:var(--d4); }
 
+  /* — Progress hover (must come after nth-child rules to win) — */
+  .prog-step:nth-child(1):hover,
+  .prog-step:nth-child(2):hover,
+  .prog-step:nth-child(3):hover,
+  .prog-step:nth-child(4):hover { background:linear-gradient(180deg,#F3E4C2 0%,#EAD09A 100%); box-shadow:0 12px 28px rgba(139,99,16,0.15); }
+
   /* — Lesson preview cards: 1→3 green→amber→coral — */
   .lesson-card:nth-child(1) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d1-bg) 100%); }
   .lesson-card:nth-child(2) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d2-bg) 100%); }
   .lesson-card:nth-child(3) { background:linear-gradient(180deg,#FFFFFF 0%,var(--d3-bg) 100%); }
+  /* — Lesson hover (must come after nth-child rules to win) — */
+  .lesson-card:nth-child(1):hover,
+  .lesson-card:nth-child(2):hover,
+  .lesson-card:nth-child(3):hover { background:linear-gradient(180deg,#F3E4C2 0%,#EAD09A 100%); box-shadow:0 12px 28px rgba(139,99,16,0.15); }
+
   .lesson-card:nth-child(1) .lesson-card-tag { color:var(--d1); }
   .lesson-card:nth-child(2) .lesson-card-tag { color:var(--d2); }
   .lesson-card:nth-child(3) .lesson-card-tag { color:var(--d3); }

@@ -111,10 +111,12 @@
       if (res.error) {
         console.warn('[tone-finder] บันทึกไม่สำเร็จ:', res.error.message);
         showScoreToast('⚠️ บันทึกคะแนนไม่สำเร็จ: ' + res.error.message, false);
+        try { if (window.gtag) gtag('event', 'score_save_fail', { reason: res.error.message, mode: s.mode || '' }); } catch (e) {}
       } else {
         console.info('[tone-finder] บันทึกผลแล้ว score=' + s.score);
         if (lastSession === s) lastSession = null;   // บันทึกสำเร็จ → เคลียร์ค้าง กันบันทึกซ้ำ
         showScoreToast('✅ บันทึกคะแนน ' + (s.score || 0) + ' 分 สำเร็จ', true);
+        try { if (window.gtag) gtag('event', 'score_saved', { score: s.score || 0, mode: s.mode || '' }); } catch (e) {}
       }
     });
   }
@@ -264,12 +266,11 @@
     otpTimer = setInterval(tick, 1000);
   }
 
-  function doLogout() {
-    sb.auth.signOut().then(function () { currentUser = null; render(); });
-  }
+  // doLogout เดิมอยู่ที่นี่ — ย้ายไปรวมที่ auth-widget.js แล้ว (window.SITE_AUTH.doLogout)
+  // เหลือไว้ไม่ได้ใช้แล้วเพราะ badge (ปุ่ม 登出) ย้ายไปให้ SITE_AUTH คุมทั้งหมด LIN 2026-07-03
 
   // ── องค์ประกอบหน้าจอ ───────────────────────────────────────
-  var gate, badge, miniBtn;
+  var gate, miniBtn;
 
   // มี modal (จองเรียน/QR ฯลฯ) เปิดอยู่ไหม → ถ้าเปิด ซ่อนปุ่ม 登入/โปรไฟล์ กันทับปุ่มกากบาท LIN 2026-06-23
   function anyModalOpen() { try { return !!document.querySelector('.modal-overlay.open'); } catch (e) { return false; } }
@@ -395,196 +396,22 @@
     miniBtn.querySelector('#tf-mini-login').onclick = function () { showGate(true); };
   }
 
-  function buildBadge() {
-    badge = document.createElement('div');
-    badge.id = 'tf-auth';
-    var _bSlot = document.getElementById('tf-login-slot');
-    if (_bSlot) {
-      badge.style.cssText = 'font-family:"Noto Sans TC",sans-serif;font-size:14px;white-space:nowrap;display:none;';
-      _bSlot.appendChild(badge);
-    } else {
-      badge.style.cssText = 'position:fixed;top:calc(var(--nav-h,56px)+14px);left:50%;transform:translateX(-50%);z-index:9999;display:none;font-family:"Noto Sans TC",sans-serif;font-size:14px;white-space:nowrap;';
-      document.body.appendChild(badge);
-    }
-  }
-
-  // ── โปรไฟล์ผู้เล่น: ชื่อ+รูป+แบดจ์ เก็บใน profiles (sync ข้ามเครื่อง) + localStorage เป็นแคชสำรอง LIN 2026-06-22 ──
-  var myNick = null, myAvatar = null, myBadge = null;
-  var nickPromptedFor = null;
-  var PRESET_AVATARS = ['🐘','🐱','🐶','🐰','🦊','🐼','🐯','🐸','🐥','🦉','🐲','🥭'];
-  var AVATAR_KEY = 'tf_avatar', PIN_BADGE_KEY = 'tf_pinned_badge';
-  function tfGetAvatar() { try { return localStorage.getItem(AVATAR_KEY) || ''; } catch (e) { return ''; } }
-  function tfSetAvatar(v) { try { if (v) localStorage.setItem(AVATAR_KEY, v); else localStorage.removeItem(AVATAR_KEY); } catch (e) {} }
-  function tfGetPinBadge() { try { return localStorage.getItem(PIN_BADGE_KEY) || ''; } catch (e) { return ''; } }
-  function tfSetPinBadge(v) { try { if (v) localStorage.setItem(PIN_BADGE_KEY, v); else localStorage.removeItem(PIN_BADGE_KEY); } catch (e) {} }
-
-  // ดึงโปรไฟล์จาก Supabase (ชื่อ/รูป/แบดจ์) — ถ้าคอลัมน์ avatar/badge_id ยังไม่ถูกเพิ่ม จะ fallback ใช้แคชในเครื่อง (เว็บไม่พัง)
-  function fetchProfile() {
-    if (!currentUser) { myNick = myAvatar = myBadge = null; return; }
-    function afterProfile() {
-      render();
-      if (!myNick && currentUser.email !== ADMIN_EMAIL && nickPromptedFor !== currentUser.id) {
-        nickPromptedFor = currentUser.id;
-        setTimeout(openProfileEditor, 600);
-      }
-    }
-    sb.from('profiles').select('nickname, avatar, badge_id').eq('user_id', currentUser.id).maybeSingle()
-      .then(function (res) {
-        if (res.error) {
-          // คอลัมน์ avatar/badge_id ยังไม่มีใน Supabase → ใช้แค่ชื่อ + รูป/แบดจ์จากแคชเครื่อง
-          sb.from('profiles').select('nickname').eq('user_id', currentUser.id).maybeSingle().then(function (r2) {
-            myNick = (r2.data && r2.data.nickname) || null;
-            myAvatar = tfGetAvatar() || null;
-            myBadge = tfGetPinBadge() || null;
-            afterProfile();
-          });
-          return;
-        }
-        var d = res.data || {};
-        myNick = d.nickname || null;
-        myAvatar = d.avatar || tfGetAvatar() || null;
-        myBadge = d.badge_id || tfGetPinBadge() || null;
-        if (d.avatar) tfSetAvatar(d.avatar);       // ซิงค์ลงแคชเครื่องนี้
-        if (d.badge_id) tfSetPinBadge(d.badge_id);
-        afterProfile();
-      });
-  }
-
-  // ป๊อปอัปแก้โปรไฟล์: ชื่อ + รูปอิโมจิสำเร็จรูป + เลือกแบดจ์ที่ปลดล็อกแล้ว (sync ผ่าน profiles)
-  var profileModal = null;
-  function openProfileEditor() {
-    if (!currentUser) return;
-    var meta = currentUser.user_metadata || {};
-    var curName = myNick || meta.full_name || meta.name || '';
-    var selAvatar = myAvatar || tfGetAvatar() || 'none';   // ไม่ใช้รูป Google แล้ว (LIN 2026-06-22)
-    var selBadge = myBadge || tfGetPinBadge();
-    var data = (window.tfLoadBadges ? window.tfLoadBadges() : { unlocked: {} });
-    var unlocked = data.unlocked || {};
-    var defs = window.TF_BADGES_DEF || [];
-    var unlockedDefs = defs.filter(function (b) { return unlocked[b.id]; });
-
-    function avCell(val, inner, on) {
-      return '<button class="tfp-av" data-v="' + esc(val) + '" style="width:46px;height:46px;border-radius:50%;display:flex;' +
-        'align-items:center;justify-content:center;cursor:pointer;background:#FBF6EA;border:2px solid ' + (on ? '#C8973A' : 'transparent') + ';">' + inner + '</button>';
-    }
-    function bgCell(val, inner, label, on) {
-      return '<button class="tfp-bg" data-v="' + esc(val) + '" title="' + esc(label || '') + '" style="min-width:46px;height:46px;padding:0 6px;' +
-        'border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#FBF6EA;border:2px solid ' + (on ? '#C8973A' : 'transparent') + ';">' + inner + '</button>';
-    }
-
-    var avatarChoices = '';
-    PRESET_AVATARS.forEach(function (em) { avatarChoices += avCell(em, '<span style="font-size:26px;">' + em + '</span>', selAvatar === em); });
-    avatarChoices += avCell('none', '<span style="font-size:13px;color:#A07A1E;">無</span>', selAvatar === 'none');
-
-    var badgeChoices;
-    if (!unlockedDefs.length) {
-      badgeChoices = '<div style="font-size:12.5px;color:#A07A1E;padding:6px 2px;line-height:1.6;">還沒有解鎖徽章～玩遊戲解鎖後就能選來展示 🎖️</div>';
-    } else {
-      badgeChoices = unlockedDefs.map(function (b) { return bgCell(b.id, window.tfBadgeIcon(b, 30), b.zh, selBadge === b.id); }).join('') +
-        bgCell('', '<span style="font-size:13px;color:#A07A1E;">不顯示</span>', '', !selBadge);
-    }
-
-    if (profileModal) profileModal.remove();
-    profileModal = document.createElement('div');
-    profileModal.id = 'tf-profile-modal';
-    profileModal.style.cssText = 'position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:18px;' +
-      'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);font-family:"Noto Sans TC",sans-serif;';
-    profileModal.innerHTML =
-      '<div style="background:#fff;max-width:360px;width:100%;border-radius:18px;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,0.35);max-height:88vh;overflow:auto;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
-          '<h2 style="margin:0;font-size:18px;color:#5C4410;font-weight:800;">編輯個人檔案</h2>' +
-          '<button id="tfp-close" style="border:none;background:none;font-size:20px;color:#C3B594;cursor:pointer;line-height:1;">✕</button>' +
-        '</div>' +
-        '<label style="font-size:13px;color:#8B7340;font-weight:700;">名稱（會顯示在這裡和排行榜）</label>' +
-        '<input id="tfp-name" maxlength="20" value="' + esc(curName) + '" placeholder="輸入暱稱（1–20 字）" ' +
-          'style="width:100%;box-sizing:border-box;margin:6px 0 16px;padding:10px 12px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;">' +
-        '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:8px;">頭像</div>' +
-        '<div id="tfp-avatars" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">' + avatarChoices + '</div>' +
-        '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:8px;">展示徽章（顯示在名稱旁）</div>' +
-        '<div id="tfp-badges" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' + badgeChoices + '</div>' +
-        '<button id="tfp-save" style="width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;">儲存</button>' +
-      '</div>';
-    document.body.appendChild(profileModal);
-
-    function closeModal() { if (profileModal) { profileModal.remove(); profileModal = null; } }
-    profileModal.querySelector('#tfp-close').onclick = closeModal;
-    profileModal.addEventListener('click', function (e) { if (e.target === profileModal) closeModal(); });
-    [].forEach.call(profileModal.querySelectorAll('.tfp-av'), function (btn) {
-      btn.onclick = function () {
-        selAvatar = btn.getAttribute('data-v');
-        [].forEach.call(profileModal.querySelectorAll('.tfp-av'), function (b) { b.style.borderColor = 'transparent'; });
-        btn.style.borderColor = '#C8973A';
-      };
-    });
-    [].forEach.call(profileModal.querySelectorAll('.tfp-bg'), function (btn) {
-      btn.onclick = function () {
-        selBadge = btn.getAttribute('data-v');
-        [].forEach.call(profileModal.querySelectorAll('.tfp-bg'), function (b) { b.style.borderColor = 'transparent'; });
-        btn.style.borderColor = '#C8973A';
-      };
-    });
-    profileModal.querySelector('#tfp-save').onclick = function () {
-      var nm = (profileModal.querySelector('#tfp-name').value || '').trim().slice(0, 20);
-      // เซฟแคชเครื่องนี้เสมอ (ใช้ได้ทันทีแม้ Supabase ยังไม่เพิ่มคอลัมน์)
-      tfSetAvatar(selAvatar); tfSetPinBadge(selBadge);
-      myAvatar = selAvatar; myBadge = selBadge;
-      var row = { user_id: currentUser.id, avatar: selAvatar, badge_id: selBadge };
-      if (nm) { row.nickname = nm; myNick = nm; }
-      sb.from('profiles').upsert(row, { onConflict: 'user_id' }).then(function (res) {
-        // ถ้าคอลัมน์ avatar/badge_id ยังไม่มี → เซฟเฉพาะชื่อ (รูป/แบดจ์ยังอยู่ในแคชเครื่อง)
-        if (res.error && nm) sb.from('profiles').upsert({ user_id: currentUser.id, nickname: nm }, { onConflict: 'user_id' });
-        closeModal(); render();
-      });
-    };
-  }
+  // buildBadge() / โปรไฟล์ (ชื่อ+รูป+แบดจ์) / openProfileEditor() เดิมอยู่ที่นี่ —
+  // ย้ายไปรวมที่ auth-widget.js แล้ว ใช้ร่วมกับทุกหน้า (window.SITE_AUTH.openProfileEditor)
+  // LIN 2026-07-03: รวม widget ล็อกอินให้เหมือนกันทุกหน้า กัน currentUser/badge แยกกันหลายจุด
 
   function render() {
     if (!gate) buildGate();
     if (!miniBtn) buildMiniBtn();
-    if (!badge) buildBadge();
+    // badge (ชื่อ/✏️/🏆/📊/登出) ไม่ได้สร้างที่นี่แล้ว — window.SITE_AUTH (auth-widget.js) คุมให้
+    // ทั้งหมด (ลงทะเบียนไว้ครั้งเดียวใน boot() ด้านล่าง) render() นี้เหลือแค่ gate/miniBtn
 
     if (currentUser) {
       gateOpen = false;
       gate.style.display = 'none';
       miniBtn.style.display = 'none';
-      var email = currentUser.email || '使用者';
-      adminUnlockAll(email);
-      // ชื่อ = ที่ตั้งเอง (profiles.nickname) → fallback ชื่อ Google/อีเมล · รูป+แบดจ์ จาก localStorage (LIN 2026-06-22)
-      var meta = currentUser.user_metadata || {};
-      var displayName = myNick || meta.full_name || meta.name || meta.user_name || email;
-      // รูปโปรไฟล์: อิโมจิสำเร็จรูป (sync จาก profiles, fallback แคช) · 'none'/ยังไม่เลือก = ไม่มีรูป
-      var selAvatar = myAvatar || tfGetAvatar();
-      var avatarHTML = '';
-      if (selAvatar && selAvatar !== 'none' && selAvatar !== 'google') {
-        avatarHTML = '<span style="width:24px;height:24px;border-radius:50%;background:#FBF6EA;display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">' + esc(selAvatar) + '</span>';
-      }
-      // แบดจ์ที่ปักหมุด — โชว์ข้างชื่อ (เลือกได้เฉพาะที่ปลดล็อกแล้วตอนเลือก จึงไว้ใจค่า sync ได้)
-      var pinHTML = '';
-      var pin = myBadge || tfGetPinBadge();
-      if (pin && window.TF_BADGES_DEF) {
-        var bdef = null;
-        window.TF_BADGES_DEF.forEach(function (b) { if (b.id === pin) bdef = b; });
-        if (bdef) pinHTML = '<span title="' + esc(bdef.zh) + '" style="display:inline-flex;align-items:center;flex-shrink:0;">' + window.tfBadgeIcon(bdef, 20) + '</span>';
-      }
-      badge.style.display = anyModalOpen() ? 'none' : 'block';
-      badge.innerHTML =
-        '<div style="display:flex;align-items:center;gap:7px;background:#fff;' +
-        'border:1.5px solid rgba(200,151,58,0.45);border-radius:20px;padding:5px 12px 5px 8px;' +
-        'box-shadow:0 2px 8px rgba(139,99,16,0.12);font-family:\'Noto Sans TC\',sans-serif;">' +
-        (avatarHTML || '<span style="font-size:15px;flex-shrink:0;">👤</span>') +
-        '<span id="tf-nick" title="點此編輯個人檔案" style="color:#5C4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">' + esc(displayName) + '</span>' +
-        pinHTML +
-        '<button id="tf-edit-nick" title="編輯" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>' +
-        '<a href="leaderboard.html" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
-        '<a href="my-progress.html" title="進度" style="text-decoration:none;font-size:13px;">📊</a>' +
-        '<button id="tf-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
-        'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>' +
-        '</div>';
-      badge.querySelector('#tf-logout').onclick = doLogout;
-      badge.querySelector('#tf-edit-nick').onclick = openProfileEditor;
-      badge.querySelector('#tf-nick').onclick = openProfileEditor;
+      adminUnlockAll(currentUser.email || '');
     } else {
-      badge.style.display = 'none';
       // หน้าเว็บมองเห็นได้เสมอ — ไม่บล็อกตอนโหลด
       // gate เด้งเฉพาะเมื่อผู้ใช้กด "เริ่มเล่น" จริง (gateOpen) หรือกดปุ่มล็อกอินมุมขวา
       gate.style.display = (gateOpen && authResolved) ? 'flex' : 'none';
@@ -695,23 +522,35 @@
 
   function boot() {
     render();
-    sb.auth.getSession().then(function (res) {
-      currentUser = (res.data && res.data.session && res.data.session.user) || null;
-      authResolved = true;
-      render();
-      fetchProfile();
-      if (currentUser && lastSession) saveSession(lastSession);   // คะแนนค้างจากก่อนล็อกอิน → บันทึกย้อนหลัง
-      try { if (currentUser && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) GAME_ACCOUNT.sync(sb, currentUser.id); } catch (e) {}   // เฟส 2: sync ดาว/streak ข้ามเครื่อง
-    });
-    sb.auth.onAuthStateChange(function (_event, session) {
-      currentUser = (session && session.user) || null;
-      authResolved = true;
-      myNick = myAvatar = myBadge = null;   // เคลียร์โปรไฟล์เดิม แล้วดึงของ user ปัจจุบันใหม่
-      render();
-      fetchProfile();
-      if (currentUser && lastSession) saveSession(lastSession);   // เพิ่งล็อกอิน (OTP/Google) → บันทึกคะแนนรอบที่เพิ่งเล่นขึ้นกระดาน
-      try { if (currentUser && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) GAME_ACCOUNT.sync(sb, currentUser.id); } catch (e) {}   // เฟส 2: เพิ่งล็อกอิน → ดึง/ดันดาวข้ามเครื่อง
-    });
+
+    // ── session/badge กลาง: ใช้ window.SITE_AUTH (auth-widget.js) ถ้ามี ──
+    // กัน currentUser/listener แยกกันหลายจุด — ทุกหน้าที่โหลด auth-widget.js เห็น session เดียวกัน
+    // มี fallback เผื่อ auth-widget.js โหลดไม่ทัน/พลาด (เกมยังเล่นได้ปกติ แค่ badge จะไม่โชว์) LIN 2026-07-03
+    if (window.SITE_AUTH) {
+      SITE_AUTH.renderBadge('tf-login-slot', { leaderboardHref: 'leaderboard.html', progressHref: 'my-progress.html' });
+      SITE_AUTH.onChange(function (user) {
+        currentUser = user;
+        authResolved = true;
+        render();
+        if (currentUser && lastSession) saveSession(lastSession);   // คะแนนค้างจากก่อนล็อกอิน → บันทึกย้อนหลัง
+        try { if (currentUser && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) GAME_ACCOUNT.sync(sb, currentUser.id); } catch (e) {}   // เฟส 2: sync ดาว/streak ข้ามเครื่อง
+      });
+    } else {
+      sb.auth.getSession().then(function (res) {
+        currentUser = (res.data && res.data.session && res.data.session.user) || null;
+        authResolved = true;
+        render();
+        if (currentUser && lastSession) saveSession(lastSession);
+        try { if (currentUser && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) GAME_ACCOUNT.sync(sb, currentUser.id); } catch (e) {}
+      });
+      sb.auth.onAuthStateChange(function (_event, session) {
+        currentUser = (session && session.user) || null;
+        authResolved = true;
+        render();
+        if (currentUser && lastSession) saveSession(lastSession);
+        try { if (currentUser && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) GAME_ACCOUNT.sync(sb, currentUser.id); } catch (e) {}
+      });
+    }
     // เฝ้าการเปิด/ปิด modal → ซ่อน/โชว์ปุ่ม 登入 ให้ถูก (กันทับปุ่มกากบาท) ครอบทุกวิธีปิด
     try {
       var _modalState = anyModalOpen();

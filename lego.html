@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google tag -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");</script>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>泰語造句遊戲 — 樂高式組句 | 泰華眼裡的泰語教學</title>
+<meta name="description" content="免費泰語造句遊戲：像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對，邊玩邊練泰語語序。專為台灣人設計的泰語學習遊戲。">
+<link rel="canonical" href="https://mrtaihualin.com/lego.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="泰華眼裡的泰語教學">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="泰語造句遊戲 — 樂高式組句 | 泰華眼裡的泰語教學">
+<meta property="og:description" content="像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對。">
+<meta property="og:url" content="https://mrtaihualin.com/lego.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="泰語造句遊戲 — 樂高式組句 | 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對。">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@400;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=12">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="supabase-config.js?v=4"></script>
+<script defer src="game-account.js?v=1"></script>
+<script defer src="reading-auth.js?v=2"></script>
+<style>
+:root{
+  --gold:#8B6310; --gold-deep:#5a3e0a; --gold-bright:#C8973A; --gold-light:#F3E4C2;
+  --ink:#1C1C1C; --ink-soft:#333333; --ink-muted:#666666;
+  --white:#FFFFFF; --cream:#FBF5E7; --cream2:#F9F6F0;
+  --bg1:#F5F0E8; --bg2:#F5F0E8;
+  --c-time:#3b87a8;  --t-time:#e8f2f7;
+  --c-subj:#5a8a4e;  --t-subj:#ebf3e7;
+  --c-neg:#c4574f;   --t-neg:#fbeceb;
+  --c-modal:#cf982f; --t-modal:#fbf1d8;
+  --c-verb:#3f9c74;  --t-verb:#e7f4ee;
+  --c-obj:#9a8338;   --t-obj:#f5f0dd;
+  --c-prog:#cf982f;  --t-prog:#fbf1d8; /* 文法(อยู่) 與 文法(กำลัง) 同色 */
+  --c-place:#3f9aae; --t-place:#e6f3f5;
+  --c-comp:#a368a3;  --t-comp:#f4ebf4;
+  --c-end:#c0744d;   --t-end:#f9ece3;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-serif;line-height:1.7;min-height:100vh;}
+.th{font-family:'Sarabun','Noto Sans Thai',sans-serif;}
+.page{max-width:820px;margin:0 auto;padding:34px 16px 90px;}
+
+/* ── HEADER ── */
+.head{text-align:center;margin-bottom:22px;}
+.head .eyebrow{font-size:11px;letter-spacing:5px;color:var(--gold);font-weight:700;text-transform:uppercase;display:block;margin-bottom:12px;}
+.head h1{font-family:'Noto Serif TC',serif;font-size:clamp(24px,4.6vw,38px);font-weight:900;color:var(--gold-deep);letter-spacing:2px;margin-bottom:8px;}
+.head p{font-size:clamp(13px,2vw,15px);color:var(--ink-muted);letter-spacing:.5px;max-width:480px;margin:0 auto;}
+
+/* ── LEVEL TABS ── */
+.levels{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:18px;}
+.lv-pill{font-family:'Noto Sans TC',sans-serif;font-weight:700;font-size:14px;letter-spacing:.5px;
+  padding:11px 20px;border-radius:999px;cursor:pointer;border:2px solid transparent;
+  background:var(--white);color:var(--ink-soft);box-shadow:0 3px 10px rgba(124,86,16,.08);
+  transition:all .18s;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.25;}
+.lv-pill small{font-size:10.5px;font-weight:500;color:var(--ink-muted);letter-spacing:0;}
+.lv-pill:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(124,86,16,.14);}
+.lv-pill.active{background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:#fff;box-shadow:0 6px 18px rgba(184,134,44,.4);}
+.lv-pill.active small{color:rgba(255,255,255,.85);}
+.lv-pill.locked{opacity:.5;cursor:not-allowed;}
+.lv-pill.locked:hover{transform:none;box-shadow:0 3px 10px rgba(124,86,16,.08);}
+.lv-pill.locked small{color:var(--gold);font-weight:700;}
+
+/* ── LEVEL INTRO ── */
+.lv-intro{text-align:center;font-size:13.5px;color:var(--ink-soft);background:rgba(255,255,255,.6);
+  border:1.5px solid var(--border,rgba(184,134,44,.2));border-radius:16px;padding:11px 18px;margin-bottom:24px;letter-spacing:.4px;}
+.lv-intro b{color:var(--gold-deep);}
+
+/* ── CARD ── */
+.card{background:var(--white);border-radius:22px;box-shadow:0 10px 30px rgba(124,86,16,.10);overflow:hidden;}
+
+/* ── OUTPUT ── */
+.out{margin-bottom:24px;}
+.out-banner{padding:24px 24px 20px;text-align:center;background:linear-gradient(180deg,#F7E6BE 0%,#FCF3DD 100%);}
+.out-th{font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:clamp(22px,4.4vw,34px);font-weight:700;color:var(--gold-deep);letter-spacing:1px;line-height:1.6;min-height:46px;word-break:break-word;}
+.out-th .ph{font-family:'Noto Sans TC',sans-serif;font-size:15px;font-weight:400;color:rgba(124,86,16,.4);letter-spacing:1px;}
+.out-zh{font-size:14px;color:var(--ink-muted);margin-top:8px;min-height:20px;letter-spacing:.5px;}
+.out-zh-full{font-size:15px;font-weight:500;color:var(--ink-soft);margin-top:4px;letter-spacing:.5px;}
+.out-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:16px 20px;}
+.btn{font-family:'Noto Sans TC',sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;padding:11px 24px;border:none;cursor:pointer;border-radius:999px;transition:all .18s;}
+.btn-gold{background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:#fff;box-shadow:0 4px 12px rgba(184,134,44,.32);}
+.btn-gold:hover{filter:brightness(1.05);transform:translateY(-1px);}
+.btn-line{background:var(--cream);color:var(--gold-deep);border:1.5px solid rgba(184,134,44,.35);}
+.btn-line:hover{background:var(--gold-light);}
+
+/* ── BASEPLATE ── */
+.bp-title{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:700;color:var(--gold-deep);letter-spacing:1px;margin-bottom:4px;}
+.bp-hint{font-size:12.5px;color:var(--ink-muted);margin-bottom:16px;letter-spacing:.5px;}
+.baseplate{background:var(--cream);border-radius:22px;box-shadow:inset 0 2px 8px rgba(124,86,16,.06);
+  border:1.5px solid rgba(184,134,44,.16);padding:22px 18px;display:flex;flex-wrap:wrap;gap:13px;align-items:flex-end;}
+
+/* ── SLOT ── */
+.slot{position:relative;display:flex;flex-direction:column;}
+.slot-label{font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:7px;text-align:center;display:block;color:var(--sc);}
+.slot-btn{min-width:76px;min-height:58px;padding:9px 14px;border-radius:15px;
+  background:var(--st);border:2px solid transparent;cursor:pointer;transition:all .15s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+.slot-btn:hover{border-color:var(--sc);transform:translateY(-1px);}
+.slot-btn.filled{background:var(--white);border-color:var(--sc);box-shadow:0 4px 12px rgba(124,86,16,.12),inset 0 -3px 0 var(--sc);}
+.slot-btn.open{border-color:var(--sc);box-shadow:0 0 0 4px color-mix(in srgb,var(--sc) 25%,transparent);}
+.slot-btn .sth{font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:20px;font-weight:700;color:var(--sc);line-height:1.2;}
+.slot-btn .szh{font-size:11px;color:var(--ink-muted);letter-spacing:.5px;}
+.slot-btn .splus{font-size:22px;color:var(--sc);opacity:.5;line-height:1;}
+
+/* ── DEPENDENCY LOCKED ── */
+.slot-btn.dep-locked{opacity:.35;border:2px dashed var(--sc);background:transparent;}
+.slot-btn.dep-locked:hover{opacity:.6;transform:none;border-style:dashed;}
+.slot-btn.dep-locked .splus{font-size:13px;opacity:.7;}
+
+/* slot pair: visually connect adv→advObj */
+.slot-pair{display:flex;align-items:flex-end;gap:4px;}
+.slot-pair-arrow{font-size:14px;color:var(--ink-muted);opacity:.4;margin-bottom:10px;flex:none;align-self:center;margin-top:18px;}
+
+/* ── DROPDOWN ── */
+.slot-menu{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:8px;
+  min-width:176px;max-height:264px;overflow-y:auto;background:var(--white);
+  border:2px solid var(--sc);border-radius:16px;box-shadow:0 14px 32px rgba(124,86,16,.22);z-index:50;}
+.slot.menu-open .slot-menu{display:block;}
+.slot-menu::-webkit-scrollbar{width:9px;}
+.slot-menu::-webkit-scrollbar-thumb{background:rgba(184,134,44,.4);border-radius:10px;}
+.slot-menu::-webkit-scrollbar-track{background:rgba(184,134,44,.08);}
+.pool-badge{padding:5px 14px 4px;font-size:10.5px;color:var(--ink-muted);text-align:center;letter-spacing:.8px;border-bottom:1px solid rgba(184,134,44,.1);background:rgba(0,0,0,.015);}
+.opt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 16px;cursor:pointer;border-bottom:1px solid rgba(184,134,44,.12);transition:background .12s;}
+.opt:last-child{border-bottom:none;}
+.opt:hover{background:var(--st);}
+.opt.sel{background:var(--sc);}
+.opt.sel .oth,.opt.sel .ozh{color:#fff;}
+.opt .oth{font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:19px;font-weight:700;color:var(--sc);}
+.opt .ozh{font-size:12.5px;color:var(--ink-muted);letter-spacing:.5px;}
+.opt-clear{padding:10px 16px;font-size:12px;color:var(--ink-muted);cursor:pointer;text-align:center;background:rgba(0,0,0,.025);border-bottom:1px solid rgba(184,134,44,.12);letter-spacing:1px;}
+.opt-clear:hover{background:rgba(196,87,79,.1);color:#c4574f;}
+.opt.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
+.opt-custom{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid rgba(184,134,44,.12);background:rgba(0,0,0,.02);}
+.opt-custom input{flex:1;min-width:0;border:1.5px solid rgba(154,131,56,.35);border-radius:10px;padding:6px 8px;font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:15px;color:var(--ink);}
+.opt-custom button{border:none;border-radius:10px;padding:0 12px;background:var(--sc);color:#fff;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.dep-hint{padding:14px 16px;text-align:center;font-size:13px;color:var(--ink-muted);font-style:italic;}
+
+/* ── PRE / TEACHING ── */
+.teach{padding:0;}
+.teach-banner{padding:26px 26px 22px;text-align:center;background:linear-gradient(180deg,#F7E6BE 0%,#FCF3DD 100%);}
+.teach-step-no{display:inline-block;font-family:'Noto Serif TC',serif;font-weight:900;font-size:13px;letter-spacing:3px;color:var(--gold);background:#fff;border-radius:999px;padding:5px 18px;box-shadow:0 3px 8px rgba(139,99,16,.18);margin-bottom:12px;}
+.teach-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,3.6vw,26px);font-weight:900;color:var(--gold-deep);letter-spacing:1px;margin-bottom:4px;}
+.teach-sub{font-size:14px;color:#8a6a2f;letter-spacing:.5px;}
+.teach-body{padding:24px 24px 8px;}
+.teach-sent{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-bottom:18px;}
+.tpiece{display:flex;flex-direction:column;align-items:center;gap:2px;padding:11px 15px;border-radius:14px;background:var(--cream2);border:2px solid transparent;transition:all .3s;}
+.tpiece.isnew{background:#fff;border-color:var(--gold-bright);box-shadow:0 5px 14px rgba(200,151,58,.3);transform:translateY(-2px);}
+.tpiece .pth{font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:21px;font-weight:700;color:var(--gold-deep);}
+.tpiece.isnew .pth{color:var(--gold-deep);}
+.tpiece .pzh{font-size:11px;color:var(--ink-muted);}
+.teach-note{background:var(--cream);border:1.5px solid #ecd9b0;border-radius:14px;padding:13px 18px;font-size:14px;color:#6b5222;line-height:1.8;letter-spacing:.3px;}
+.teach-note b{color:var(--gold-deep);}
+.teach-full{text-align:center;font-size:13px;color:var(--ink-muted);margin-top:14px;}
+.teach-full .th{font-size:17px;color:var(--gold-deep);font-weight:700;display:block;margin-top:3px;}
+.teach-actions{display:flex;gap:10px;align-items:center;justify-content:center;padding:18px 20px 22px;}
+.teach-prog{display:flex;gap:7px;justify-content:center;padding-bottom:6px;}
+.teach-prog i{width:9px;height:9px;border-radius:50%;background:rgba(184,134,44,.25);transition:all .2s;}
+.teach-prog i.on{background:var(--gold-bright);transform:scale(1.25);}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:22px;left:50%;transform:translateX(-50%);background:var(--gold);color:#fff;
+  padding:12px 26px;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;
+  z-index:2000;border-radius:999px;box-shadow:0 8px 24px rgba(124,86,16,.3);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.toast.err{background:#c4574f;}
+.hidden{display:none !important;}
+
+/* ── TEST MODAL (拆句測驗，測試通過才給分) ── */
+.test-overlay{display:none;position:fixed;inset:0;background:rgba(28,20,6,.55);z-index:500;align-items:center;justify-content:center;padding:16px;}
+.test-overlay.show{display:flex;}
+.test-box{background:var(--white);border-radius:22px;max-width:520px;width:100%;padding:26px 22px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;}
+.test-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:var(--ink-muted);cursor:pointer;}
+.test-title{font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--gold-deep);text-align:center;margin-bottom:4px;}
+.test-sub{font-size:12.5px;color:var(--ink-muted);text-align:center;margin-bottom:16px;}
+.test-slots{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;min-height:56px;padding:10px;border-radius:14px;background:var(--cream);border:1.5px dashed rgba(184,134,44,.35);margin-bottom:14px;}
+.test-slot{min-width:60px;min-height:44px;border-radius:12px;border:2px solid rgba(184,134,44,.25);background:var(--white);display:flex;align-items:center;justify-content:center;font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:19px;font-weight:700;color:var(--ink);padding:4px 10px;cursor:pointer;transition:all .15s;}
+.test-slot.empty{border-style:dashed;background:transparent;cursor:default;}
+.test-slot.correct{border-color:#4caf50;background:#e8f5e9;color:#2e7d32;cursor:default;}
+.test-slot.wrong{border-color:#c4574f;background:#fbeceb;animation:tshake .35s;}
+@keyframes tshake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+.test-bank{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-bottom:8px;}
+.test-tile{min-width:56px;padding:9px 15px;border-radius:14px;border:2px solid var(--gold-bright);background:var(--white);color:var(--gold-deep);font-size:18px;font-weight:700;cursor:pointer;font-family:'Sarabun','Noto Sans Thai',sans-serif;text-align:center;user-select:none;transition:transform .1s,opacity .15s;}
+.test-tile:hover{background:var(--gold-light);}
+.test-tile.used{opacity:0;pointer-events:none;transform:scale(.6);}
+.test-banner{text-align:center;font-size:13.5px;font-weight:700;padding:8px 10px;border-radius:10px;margin-top:6px;min-height:18px;}
+.test-banner.ok{background:#e8f5e9;color:#2e7d32;}
+.test-banner.no{background:#fbeceb;color:#c4574f;}
+.test-actions{display:flex;gap:10px;justify-content:center;margin-top:16px;}
+
+@media(max-width:560px){
+  .slot-btn{min-width:60px;min-height:52px;padding:7px 8px;}
+  .slot-btn .sth{font-size:17px;}
+  .baseplate{gap:8px;padding:14px 10px;}
+  .lv-pill{padding:9px 14px;font-size:13px;}
+}
+/* 進度/⚡ bars — เพิ่ม 2026-07-03, สไตล์เดียวกับ reading-game.html/typing-game.html */
+.bars-wrap{width:100%;max-width:640px;margin:0 auto 14px;display:flex;flex-direction:column;gap:6px;}
+.bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
+.bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
+.bar-fill.prog{background:linear-gradient(90deg,#e8a020,#d85a30);}
+.bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047);}
+.bar-label{min-width:52px;text-align:right;font-size:11px;}
+
+/* ── 共用進度系統：星星／勳章／連續天數／每週挑戰（跟其他遊戲共用同一套帳號＋同一個 streak key）── */
+.rg-top-row{display:flex;align-items:center;justify-content:flex-start;max-width:640px;margin:0 auto 10px;}
+.rg-stat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;max-width:640px;margin:0 auto 14px;}
+.tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:#7a5510;border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;}
+.tf-streak-chip b{font-weight:800;color:var(--gold-deep);}
+
+.tf-challenge-banner{max-width:640px;margin:0 auto 14px;background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;font-family:'Noto Sans TC',sans-serif;}
+.tf-challenge-banner.done{background:linear-gradient(180deg,#E9F9ED,#D2F0D9);border-color:#4caf50;}
+.tf-ch-top{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.tf-ch-emoji{font-size:18px;line-height:1;}
+.tf-ch-title{flex:1;font-size:13.5px;font-weight:800;color:#8a5a12;}
+.tf-challenge-banner.done .tf-ch-title{color:#1d7a36;}
+.tf-ch-left{font-size:11px;font-weight:700;color:#b07a1e;white-space:nowrap;}
+.tf-ch-bar{height:7px;border-radius:4px;background:#f0e2c2;overflow:hidden;}
+.tf-ch-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#E8973A,#F4C24A);transition:width .4s;}
+.tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
+.tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
+
+.v3-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:600;align-items:center;justify-content:center;}
+.v3-modal.show{display:flex;}
+.v3-modal-box{background:#fff;border-radius:24px;padding:28px 22px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.22);}
+.v3-modal-box h3{font-family:'Noto Serif TC',serif;font-size:19px;color:var(--gold-deep);margin-bottom:12px;}
+.tree-area{font-size:88px;line-height:1;margin:6px 0;}
+.tree-caption{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-top:6px;}
+.star-progress{font-size:16px;letter-spacing:2px;margin:10px 0 4px;}
+.star-prog-label{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);}
+</style>
+</head>
+<body>
+
+<!-- FLOATING LINE QR -->
+<div class="floating-qr" id="floating-qr">
+  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
+  <button class="floating-qr-book" onclick="openModal('modal-line-qr')">
+    <span class="fqb-icon">📅</span>
+    <span class="fqb-text"><b>預約免費體驗課</b><small>30 分鐘・線上一對一</small></span>
+  </button>
+</div>
+
+<nav class="site-nav"></nav>
+
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="page2.html">課程・費用</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
+<div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light);border:1.5px solid var(--gold-bright);border-radius:10px;padding:13px 18px;margin:0 auto 14px;max-width:640px;font-family:'Noto Sans TC',sans-serif;box-sizing:border-box;">
+  <span style="font-size:14px;color:var(--gold-deep);font-weight:700;">🎁 免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
+  <span style="font-size:13px;background:var(--gold-bright);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
+</div>
+
+<div class="rg-top-row">
+  <div id="rg-login-slot" style="display:flex;align-items:center;flex-shrink:0;"></div>
+</div>
+
+<div id="rg-challenge-banner"></div>
+
+<div class="rg-stat-row">
+  <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
+  <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
+  <span class="tf-streak-chip">⭐ <b id="star-count">0</b> 顆星</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+</div>
+
+<div class="page">
+
+  <header class="head">
+    <span class="eyebrow">泰語句子結構 · 樂高式造句</span>
+    <h1>泰語句子組裝台</h1>
+    <p>分級學習：從句子結構，到情態與否定，一步步組出完整的泰語句子。</p>
+  </header>
+
+  <div class="bars-wrap" id="lego-bars-wrap">
+    <div class="bar-row">
+      <span>進度</span>
+      <div class="bar-bg"><div class="bar-fill prog" id="lego-pf" style="width:0%"></div></div>
+      <span class="bar-label" id="lego-prog-txt">0/5</span>
+    </div>
+    <div class="bar-row">
+      <span>⚡</span>
+      <div class="bar-bg"><div class="bar-fill power" id="lego-powerf" style="width:0%"></div></div>
+      <span class="bar-label"><span id="lego-power-num">0</span>/100</span>
+    </div>
+  </div>
+
+  <div class="levels" id="levels"></div>
+  <div class="lv-intro" id="lvIntro"></div>
+
+  <!-- PRE / TEACHING PANEL -->
+  <div class="card teach hidden" id="teachPanel">
+    <div class="teach-banner">
+      <span class="teach-step-no" id="tStepNo">STEP 01 / 05</span>
+      <div class="teach-title" id="tTitle"></div>
+      <div class="teach-sub" id="tSub"></div>
+    </div>
+    <div class="teach-body">
+      <div class="teach-sent" id="tSent"></div>
+      <div class="teach-note" id="tNote"></div>
+      <div class="teach-full" id="tFull"></div>
+    </div>
+    <div class="teach-prog" id="tProg"></div>
+    <div class="teach-actions">
+      <button class="btn btn-line" onclick="teachPrev()">‹ 上一步</button>
+      <button class="btn btn-gold" id="tNextBtn" onclick="teachNext()">下一步 ›</button>
+    </div>
+  </div>
+
+  <!-- BUILDER PANEL -->
+  <div id="buildPanel" class="hidden">
+    <div class="card out">
+      <div class="out-banner">
+        <div class="out-th th" id="sentTh"><span class="ph">從下方底板開始挑詞 ⌄</span></div>
+        <div class="out-zh" id="sentZh"></div>
+        <div class="out-zh-full" id="sentZhFull"></div>
+      </div>
+      <div class="out-actions">
+        <button class="btn btn-gold" onclick="startTest()">🧪 測試（拿分）</button>
+        <button class="btn btn-line" onclick="copySentence()">複製句子</button>
+        <button class="btn btn-line" onclick="loadExample()">看範例</button>
+        <button class="btn btn-line" onclick="clearAll()">清空</button>
+      </div>
+    </div>
+
+    <div class="bp-title">🧱 句子底板</div>
+    <div class="bp-hint">必填：主語、動詞</div>
+    <div class="baseplate" id="baseplate"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 拆句測驗（測試通過才給分） -->
+<div class="test-overlay" id="testOverlay">
+  <div class="test-box">
+    <button class="test-close" onclick="closeTest()">✕</button>
+    <div class="test-title">🧪 拆句測驗</div>
+    <div class="test-sub">把打散的詞塊，點回正確順序</div>
+    <div class="test-slots" id="testSlots"></div>
+    <div class="test-bank" id="testBank"></div>
+    <div class="test-banner" id="testBanner"></div>
+    <div class="test-actions" id="testActions">
+      <button class="btn btn-line" onclick="resetTestAttempt()">↺ 重排</button>
+    </div>
+    <div id="soft-cta-lego"></div>
+  </div>
+</div>
+
+<!-- 成就（星星累積勳章）modal — 跟其他遊戲共用同一套 GAME_ACCOUNT 資料 -->
+<div class="v3-modal" id="badge-modal" onclick="this.classList.remove('show')">
+  <div class="v3-modal-box" onclick="event.stopPropagation()">
+    <h3>我的成就</h3>
+    <div class="tree-area" id="tree-area">🌱</div>
+    <div class="tree-caption" id="tree-caption"></div>
+    <div class="star-progress" id="star-prog"></div>
+    <div class="star-prog-label" id="star-prog-label"></div>
+    <button class="btn btn-line" style="margin-top:16px" onclick="document.getElementById('badge-modal').classList.remove('show')">關閉</button>
+  </div>
+</div>
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="shared.js?v=21"></script>
+<script>
+// ════════ SLOTS ════════
+// adv (副詞: ที่/กับ) + advObj (跟著變：ที่→地點、กับ→誰) 配對
+const SLOTS=[
+  {id:'time',  label:'時間', opt:true,  c:'time'},
+  {id:'subj',  label:'主語', opt:false, c:'subj'},
+  {id:'neg',   label:'否定', opt:true,  c:'neg'},
+  {id:'modal', label:'文法', opt:true,  c:'modal'},
+  {id:'verb',  label:'動詞', opt:false, c:'verb'},
+  {id:'obj',   label:'受詞', opt:true,  c:'obj'},
+  {id:'prog',  label:'文法', opt:true,  c:'prog'},
+  {id:'adv',   label:'副詞', opt:true,  c:'place'},
+  {id:'advObj',label:'地點／誰', opt:true, c:'place', dep:'adv'},
+  {id:'end',   label:'句尾', opt:true,  c:'end'},
+];
+
+// 動詞本身帶方向，不需要 ที่
+const NO_PLACE_VERBS=['ไป','มา','เที่ยว'];
+
+// 副詞選什麼 → 下一格出現什麼
+const ADV_OBJ={
+  'ที่':[{th:'ห้าง',zh:'商場'},{th:'บ้านเพื่อน',zh:'朋友家'}],
+  'กับ':[{th:'แม่',zh:'媽媽'},{th:'เพื่อน',zh:'朋友'}],
+};
+
+// ════════ WORDS (with semantic tags) ════════
+const WORDS={
+  time:[
+    {th:'ตอนนี้',  zh:'現在'},
+    {th:'วันนี้',  zh:'今天'},
+    {th:'พรุ่งนี้', zh:'明天'},
+    {th:'เมื่อวาน', zh:'昨天'},
+    {th:'เดี๋ยว',  zh:'待會'},
+    {th:'เดี๋ยวนี้',zh:'馬上'},
+    {th:'วันเสาร์', zh:'星期六'},
+    {th:'เย็นนี้', zh:'今晚'},
+    {th:'ตอนเช้า', zh:'早上'},
+    {th:'ตอนเย็น', zh:'傍晚'},
+  ],
+  subj:[
+    {th:'เรา',  zh:'我／我們'},
+    {th:'ผม',  zh:'我（男）'},
+    {th:'พี่',  zh:'我（哥姐）'},
+  ],
+  neg:[
+    {th:'ไม่',     zh:'不'},
+    {th:'ไม่ได้',  zh:'並沒有'},
+    {th:'ไม่ค่อย', zh:'不太'},
+  ],
+  modal:[
+    {th:'จะ',      zh:'要'},
+    {th:'อยาก',    zh:'想'},
+    {th:'กำลัง',   zh:'正在'},
+    {th:'อยากจะ',  zh:'想要'},
+    {th:'ชอบ',     zh:'喜歡'},
+    {th:'กำลังจะ', zh:'正要'},
+    {th:'ต้อง',    zh:'必須'},
+    {th:'อยากได้', zh:'想要（東西）'},
+  ],
+  verb:[
+    // objTags: [] = 不帶受詞, null/undefined = 無限制
+    {th:'กิน',      zh:'吃',      objTags:['food','drink']},
+    {th:'ไป',       zh:'去',      objTags:[]},
+    {th:'นอน',      zh:'睡',      objTags:[]},
+    {th:'ดื่ม',     zh:'喝',      objTags:['drink']},
+    {th:'มา',       zh:'來',      objTags:[]},
+    {th:'ดู',       zh:'看',      objTags:['media']},
+    {th:'ซื้อ',     zh:'買',      objTags:['food','drink','thing','game']},
+    {th:'อ่าน',     zh:'讀',      objTags:['reading']},
+    {th:'เล่น',     zh:'玩',      objTags:['game','activity']},
+    {th:'วิ่ง',     zh:'跑',      objTags:[]},
+    {th:'ทำงาน',   zh:'工作',     objTags:[]},
+    {th:'โทรหา',   zh:'打給',     objTags:['person']},
+    {th:'เที่ยว',  zh:'玩／旅行',  objTags:[]},
+    {th:'เริ่ม',    zh:'開始',    objTags:['activity']},
+    {th:'ฟัง',      zh:'聽',      objTags:['audio']},
+    {th:'กลับบ้าน', zh:'回家',    objTags:[]},
+  ],
+  obj:[
+    {th:'ข้าว',        zh:'飯',  tags:['food']},
+    {th:'น้ำ',         zh:'水',  tags:['drink','food']},
+    {th:'กาแฟ',        zh:'咖啡', tags:['drink']},
+    {th:'หนัง',        zh:'電影', tags:['media']},
+    {th:'เพลง',        zh:'歌',  tags:['audio']},
+    {th:'หนังสือ',     zh:'書',  tags:['reading']},
+    {th:'เกม',         zh:'遊戲', tags:['game','activity']},
+    {th:'ของขวัญ',     zh:'禮物', tags:['thing']},
+    {th:'เงิน',        zh:'錢',  tags:['thing']},
+    {th:'รองเท้าใหม่', zh:'新鞋', tags:['thing']},
+    {th:'ผลไม้',       zh:'水果', tags:['food']},
+    {th:'เธอ',         zh:'你',  tags:['person']},
+  ],
+  prog:[
+    {th:'อยู่', zh:'（進行中）'},
+  ],
+  adv:[
+    {th:'ที่',  zh:'在・at'},
+    {th:'กับ', zh:'和・with'},
+  ],
+  end:[
+    {th:'ครับ', zh:'（男敬）'},
+    {th:'ค่ะ',  zh:'（女敬）'},
+    {th:'แล้ว', zh:'了'},
+    {th:'นะ',   zh:'（柔和）'},
+    {th:'เลย',  zh:'（馬上）'},
+  ],
+};
+
+// ════════ SESSION POOL: 每輪每類最多 3 詞 ════════
+const POOL_SIZE=3;
+let sessionPool={};
+
+function createSessionPool(){
+  sessionPool={};
+  // แสดงแค่ 3 คำแรกต่อหมวด (fixed, ไม่ random) คำที่เหลือซ่อนไว้ · 句尾ตอนนี้โชว์แค่ ครับ/ค่ะ
+  Object.keys(WORDS).forEach(cat=>{
+    const n=(cat==='end')?2:POOL_SIZE;
+    sessionPool[cat]=WORDS[cat].slice(0,n);
+  });
+}
+
+// ════════ COMPATIBILITY: obj ←→ verb ════════
+function getAllowedObjTags(){
+  const v=state.verb;
+  if(!v) return null; // no verb selected → no restriction
+  const def=WORDS.verb.find(x=>x.th===v.th);
+  if(!def||def.objTags===undefined) return null;
+  return def.objTags; // [] = no obj, [...] = restricted
+}
+
+function isObjCompatible(word){
+  const allowed=getAllowedObjTags();
+  if(allowed===null) return true;
+  if(allowed.length===0) return false;
+  return (word.tags||[]).some(t=>allowed.includes(t));
+}
+
+// ════════ EXAMPLES (updated for new slot structure) ════════
+const SUBJ_EXTRA=[
+  {th:'เขา',      zh:'他／她'},
+  {th:'น้อง',     zh:'弟弟妹妹'},
+  {th:'พ่อของเรา',zh:'我爸爸'},
+];
+
+function findWord(slotId,th){
+  if(slotId==='advObj'){
+    for(const k in ADV_OBJ){const w=ADV_OBJ[k].find(x=>x.th===th);if(w)return w;}
+    return null;
+  }
+  let w=(WORDS[slotId]||[]).find(x=>x.th===th);
+  if(!w&&slotId==='subj') w=SUBJ_EXTRA.find(x=>x.th===th);
+  return w;
+}
+
+const EXAMPLES=[
+  {zh:'現在我正在商場吃飯',
+   parts:[['time','ตอนนี้'],['subj','ผม'],['modal','กำลัง'],['verb','กิน'],['obj','ข้าว'],['prog','อยู่'],['adv','ที่'],['advObj','ห้าง'],['end','ครับ']],tag:'p3'},
+];
+
+// ════════ LEVELS ════════
+const LEVELS={
+  pre:{name:'預備級',sub:'P2 · 句子結構',type:'teach',
+       intro:'看一句話如何<b>從三個詞長成完整句子</b>——這就是泰語的語序基礎。'},
+  lv1:{name:'第一級',sub:'P3 · 情態助動詞',type:'build',hideNeg:true,exTags:['p2','p3'],
+       intro:''},
+  lv2:{name:'第二級',sub:'即將推出',type:'build',hideNeg:false,exTags:['p4'],locked:true,
+       intro:'用 <b>ไม่／ไม่ได้／ไม่ค่อย</b> 把句子變成否定——注意它放的位置。'},
+  lv3:{name:'第三級',sub:'即將推出',type:'build',hideNeg:false,exTags:['p2','p3','p4'],locked:true,
+       intro:'情態與否定一起用，自由挑戰各種完整句子。'},
+};
+const LV_ORDER=['pre','lv1','lv2','lv3'];
+
+// ════════ TEACH STEPS ════════
+const STEPS=[
+  {title:'基本句子結構',sub:'主語 ＋ 動詞 ＋ 受詞',
+   pieces:[{th:'พ่อ',zh:'爸爸'},{th:'กิน',zh:'吃'},{th:'ข้าว',zh:'飯'}],newTh:['พ่อ','กิน','ข้าว'],
+   note:'泰語最核心的骨架：<b>誰 ＋ 做什麼 ＋ 對象</b>，語序和中文一樣。'},
+  {title:'加入助動詞「正在」',sub:'＋ กำลัง … อยู่',
+   pieces:[{th:'พ่อ',zh:'爸爸'},{th:'กำลัง',zh:'正在'},{th:'กิน',zh:'吃'},{th:'ข้าว',zh:'飯'},{th:'อยู่',zh:'進行'}],newTh:['กำลัง','อยู่'],
+   note:'助動詞 <b>กำลัง</b> 放在動作的前面，<b>อยู่</b> 放在「動作＋受詞」的後面，表示「正在進行」。'},
+  {title:'主語加修飾「我的」',sub:'พ่อ ＋ ของเรา',
+   pieces:[{th:'พ่อ',zh:'爸爸'},{th:'ของเรา',zh:'我的'},{th:'กำลัง',zh:'正在'},{th:'กิน',zh:'吃'},{th:'ข้าว',zh:'飯'},{th:'อยู่',zh:'進行'}],newTh:['ของเรา'],
+   note:'泰語修飾語放在<b>被修飾詞的後面</b>：爸爸＋我的 → 我的爸爸。'},
+  {title:'加入地點與對象',sub:'＋ ที่บ้าน ＋ กับแม่',
+   pieces:[{th:'พ่อ',zh:'爸爸'},{th:'ของเรา',zh:'我的'},{th:'กำลัง',zh:'正在'},{th:'กิน',zh:'吃'},{th:'ข้าว',zh:'飯'},{th:'อยู่',zh:'進行'},{th:'ที่บ้าน',zh:'在家'},{th:'กับแม่',zh:'和媽媽'}],newTh:['ที่บ้าน','กับแม่'],
+   note:'地點用介詞 <b>ที่ ＋ 地方</b>；對象用 <b>กับ ＋ 人</b>，放在句子後段。'},
+  {title:'加入時間',sub:'ตอนนี้ ＋ …（也可放句尾）',
+   pieces:[{th:'ตอนนี้',zh:'現在'},{th:'พ่อ',zh:'爸爸'},{th:'ของเรา',zh:'我的'},{th:'กำลัง',zh:'正在'},{th:'กิน',zh:'吃'},{th:'ข้าว',zh:'飯'},{th:'อยู่',zh:'進行'},{th:'ที่บ้าน',zh:'在家'},{th:'กับแม่',zh:'和媽媽'}],newTh:['ตอนนี้'],
+   note:'時間可以放<b>句首或句尾</b>：放句首，強調「什麼時間」發生這件事（強調時間）；放句尾，強調這件事「發生在什麼時間」（強調動作）。'},
+];
+
+// ════════ STATE ════════
+let curLevel='pre', teachStep=0;
+const state={}; SLOTS.forEach(s=>state[s.id]=null);
+let openSlot=null, exIdx=0;
+
+// ════════ LEVEL SWITCHING ════════
+function renderLevels(){
+  document.getElementById('levels').innerHTML=LV_ORDER.map(k=>{
+    const L=LEVELS[k];
+    const locked=!!L.locked;
+    const click=locked?`toast('${L.name}即將推出，敬請期待')`:`setLevel('${k}')`;
+    return `<div class="lv-pill ${k==='pre'?'pre':''} ${k===curLevel?'active':''} ${locked?'locked':''}" onclick="${click}">
+      ${L.name}<small>${L.sub}</small></div>`;
+  }).join('');
+}
+
+function setLevel(k){
+  if(LEVELS[k].locked) return;
+  curLevel=k; openSlot=null;
+  const intro=document.getElementById('lvIntro');
+  intro.innerHTML=LEVELS[k].intro||'';
+  intro.classList.toggle('hidden',!LEVELS[k].intro);
+  renderLevels();
+  if(LEVELS[k].type==='teach'){
+    document.getElementById('teachPanel').classList.remove('hidden');
+    document.getElementById('buildPanel').classList.add('hidden');
+    teachStep=0; renderTeach();
+  }else{
+    document.getElementById('teachPanel').classList.add('hidden');
+    document.getElementById('buildPanel').classList.remove('hidden');
+    SLOTS.forEach(s=>state[s.id]=null);
+    exIdx=0;
+    createSessionPool();
+    render();
+  }
+}
+
+function activeSlots(){
+  return SLOTS.filter(s=>!(s.id==='neg'&&LEVELS[curLevel].hideNeg));
+}
+
+// ════════ CSS VARS HELPER ════════
+function cssVars(c){return `--sc:var(--c-${c});--st:var(--t-${c})`;}
+
+// ════════ RENDER BASEPLATE ════════
+function renderBaseplate(){
+  const bp=document.getElementById('baseplate');
+  bp.innerHTML=activeSlots().map(s=>{
+    const w=state[s.id];
+    const depUnmet=s.dep&&!state[s.dep];
+    // 動詞不帶受詞 → 受詞格整格鎖住
+    const allowedTags=(s.id==='obj')?getAllowedObjTags():null;
+    const objLocked=(s.id==='obj')&&allowedTags!==null&&allowedTags.length===0;
+
+    // ── label（advObj 跟著副詞變）──
+    let label=s.label;
+    if(s.id==='advObj') label=state.adv?(state.adv.th==='กับ'?'誰':'地點'):'地點／誰';
+
+    // ── slot button ──
+    let btn;
+    if(objLocked){
+      btn=`<div class="slot-btn dep-locked" onclick="toast('「${state.verb.th}」不需要受詞')">
+        <span class="splus" style="font-size:13px">不需受詞</span></div>`;
+    }else if(w){
+      btn=`<div class="slot-btn filled" onclick="toggleMenu('${s.id}')">
+        <span class="sth">${w.th}</span><span class="szh">${w.zh}</span></div>`;
+    }else if(depUnmet){
+      // clicking dep-locked slot → open parent slot's menu
+      btn=`<div class="slot-btn dep-locked" onclick="toggleMenu('${s.dep}')">
+        <span class="splus" style="font-size:13px">先選↑</span></div>`;
+    }else{
+      btn=`<div class="slot-btn" onclick="toggleMenu('${s.id}')"><span class="splus">＋</span></div>`;
+    }
+
+    // ── dropdown content ──
+    const pool=(s.id==='advObj')
+      ?(state.adv?(ADV_OBJ[state.adv.th]||[]):[])
+      :(sessionPool[s.id]||[]);
+    let opts=`<div class="pool-badge">本輪 ${pool.length} 詞</div>`;
+
+    if(depUnmet){
+      const depLabel=SLOTS.find(x=>x.id===s.dep).label;
+      opts+=`<div class="dep-hint">先選「${depLabel}」</div>`;
+    }else{
+      if(s.id==='subj'){
+        opts+=`<div class="opt-custom"><input type="text" id="subjNameInput" maxlength="10"
+          placeholder="輸入自己的名字…"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomSubj();}">
+          <button onclick="addCustomSubj()">加入</button></div>`;
+      }
+      if(s.opt){
+        opts+=`<div class="opt-clear" onclick="clearSlot('${s.id}')">— 清除 —</div>`;
+      }
+      pool.forEach(o=>{
+        const sel=(w&&w.th===o.th)?' sel':'';
+        let disabled=false, label2=o.zh;
+        if(s.id==='obj'&&allowedTags!==null){
+          const ok=allowedTags.length>0&&(o.tags||[]).some(t=>allowedTags.includes(t));
+          if(!ok){disabled=true;label2=o.zh+'・不符';}
+        }
+        // ไป/มา/เที่ยว 自帶方向 → ที่ 用不到
+        if(s.id==='adv'&&o.th==='ที่'&&state.verb&&NO_PLACE_VERBS.includes(state.verb.th)){
+          disabled=true;label2=o.zh+'・此動詞不用';
+        }
+        opts+=`<div class="opt${sel}${disabled?' disabled':''}" ${disabled?'':`onclick="pickWord('${s.id}','${o.th}')"`}>
+          <span class="oth">${o.th}</span><span class="ozh">${label2}</span></div>`;
+      });
+    }
+
+    return `<div class="slot" data-id="${s.id}" style="${cssVars(s.c)}">
+      <div class="slot-label">${label}</div>
+      ${btn}<div class="slot-menu">${opts}</div></div>`;
+  }).join('');
+  applyOpen();
+}
+
+function applyOpen(){
+  document.querySelectorAll('.slot').forEach(el=>{
+    const on=el.dataset.id===openSlot;
+    el.classList.toggle('menu-open',on);
+    const b=el.querySelector('.slot-btn');if(b)b.classList.toggle('open',on);
+  });
+}
+
+// ════════ FULL CHINESE SENTENCE (中文語序重排) ════════
+function cleanZh(z){return (z||'').replace(/（[^）]*）/g,'').split('／')[0];}
+const END_ZH={'แล้ว':'了','นะ':'喔','เลย':'','ครับ':'','ค่ะ':''};
+
+function buildZhFull(){
+  if(!state.subj&&!state.verb) return '';
+  let s='';
+  if(state.time) s+=cleanZh(state.time.zh);
+  if(state.subj) s+=cleanZh(state.subj.zh);
+  if(state.neg)  s+=cleanZh(state.neg.zh);
+  let modalZh=state.modal?cleanZh(state.modal.zh):'';
+  if(!modalZh&&state.prog) modalZh='正在'; // มีแค่ อยู่ ก็แปลว่ากำลังทำ
+  s+=modalZh;
+  if(state.adv&&state.advObj) s+=(state.adv.th==='กับ'?'和':'在')+cleanZh(state.advObj.zh);
+  if(state.verb) s+=cleanZh(state.verb.zh);
+  if(state.obj)  s+=cleanZh(state.obj.zh);
+  if(state.end)  s+=(END_ZH[state.end.th]!==undefined?END_ZH[state.end.th]:cleanZh(state.end.zh));
+  return s.replace('正在在','正在');
+}
+
+// ════════ RENDER OUTPUT ════════
+function renderOut(){
+  const active=activeSlots();
+  const elTh=document.getElementById('sentTh');
+  const elZh=document.getElementById('sentZh');
+  const elZhFull=document.getElementById('sentZhFull');
+  const skip=new Set();
+  const thParts=[], zhParts=[];
+
+  active.forEach(s=>{
+    if(skip.has(s.id)) return;
+    const w=state[s.id];
+    if(!w) return;
+    if(s.id==='adv'){
+      if(state.advObj){
+        thParts.push(w.th+state.advObj.th);
+        zhParts.push(w.zh+'・'+state.advObj.zh);
+        skip.add('advObj');
+      }else{
+        thParts.push(w.th); zhParts.push(w.zh);
+      }
+    }else{
+      thParts.push(w.th); zhParts.push(w.zh);
+    }
+  });
+
+  if(!thParts.length){
+    elTh.innerHTML='<span class="ph">從下方底板開始挑詞 ⌄</span>';
+    elZh.textContent='';
+    elZhFull.textContent='';
+    return;
+  }
+  elTh.textContent=thParts.join('');
+  elZh.textContent=zhParts.join('・');
+  elZhFull.textContent=buildZhFull();
+}
+
+function render(){renderBaseplate();renderOut();}
+
+// ════════ ACTIONS ════════
+function toggleMenu(id){openSlot=openSlot===id?null:id;applyOpen();}
+
+function pickWord(id,th){
+  let word;
+  if(id==='advObj') word=state.adv?(ADV_OBJ[state.adv.th]||[]).find(w=>w.th===th):null;
+  else word=(sessionPool[id]||WORDS[id]||[]).find(w=>w.th===th);
+  if(!word) return;
+  state[id]=word;
+  // cascade clear on parent change（副詞換了 → 後面那格清掉）
+  if(id==='adv') state.advObj=null;
+  if(id==='verb'){
+    // clear obj if incompatible with new verb
+    if(state.obj&&!isObjCompatible(state.obj)){
+      state.obj=null;
+      toast('受詞與動詞不符，已自動清除');
+    }
+    // ไป/มา/เที่ยว 不需要 ที่ → 已選的 ที่+地點 清掉
+    if(NO_PLACE_VERBS.includes(word.th)&&state.adv&&state.adv.th==='ที่'){
+      state.adv=null; state.advObj=null;
+      toast('「'+word.th+'」不需要 ที่，已自動清除');
+    }
+  }
+  openSlot=null;
+  render();
+}
+
+function clearSlot(id){
+  state[id]=null;
+  if(id==='adv') state.advObj=null;
+  openSlot=null;
+  render();
+}
+
+function addCustomSubj(){
+  const inp=document.getElementById('subjNameInput');
+  const name=(inp&&inp.value||'').trim();
+  if(!name){toast('請先輸入名字',true);return;}
+  if(name.length>10){toast('名字太長囉',true);return;}
+  let w=WORDS.subj.find(o=>o.th===name);
+  if(!w){w={th:name,zh:'（自己的名字）'};WORDS.subj.push(w);}
+  if(!sessionPool.subj) sessionPool.subj=[];
+  if(!sessionPool.subj.find(x=>x.th===name)){
+    if(sessionPool.subj.length>=POOL_SIZE) sessionPool.subj.shift();
+    sessionPool.subj.push(w);
+  }
+  state.subj=w;openSlot=null;render();toast('已加入：'+name);
+}
+
+function clearAll(){
+  SLOTS.forEach(s=>state[s.id]=null);
+  openSlot=null;render();toast('已清空');
+}
+
+function newSession(){
+  SLOTS.forEach(s=>state[s.id]=null);
+  openSlot=null;
+  createSessionPool();
+  render();
+  toast('🔀 新一輪！詞庫已重新抽取');
+}
+
+function loadExample(){
+  const pool=EXAMPLES.filter(e=>(LEVELS[curLevel].exTags||[]).includes(e.tag));
+  if(!pool.length) return;
+  const ex=pool[exIdx%pool.length];exIdx++;
+  SLOTS.forEach(s=>state[s.id]=null);
+  ex.parts.forEach(([sl,th])=>{const w=findWord(sl,th);if(w)state[sl]=w;});
+  openSlot=null;render();toast('範例：'+ex.zh);
+}
+
+// ════════ STARS: 每「測試通過」SENTENCES_PER_ROUND 句 → 結算一次（與其他遊戲共用星星） ════════
+// 2026-07-03 改版：以前是「複製句子」就給分，現在改成一定要按🧪測試、把打散的詞排對，才算數
+const SENTENCES_PER_ROUND=5;
+let sentencesThisRound=0;
+// ⚡ คะแนนสะสมของรอบนี้ — เพิ่ม 2026-07-03 เพื่อโชว์หลอด 進度/⚡ เหมือนเกมอื่น
+// ใช้ pts จริงที่ checkTestAnswer() คำนวณต่อการทดสอบผ่านแต่ละครั้ง (5 หรือ 10) ไม่ได้เดา/ให้คะแนนลอยๆ
+let roundScoreLego=0;
+
+// อัปเดตหลอด 進度/⚡ บนหน้าเกม (ไม่แตะ logic ดาว/streak เดิมเลย แค่โชว์ผลลัพธ์เพิ่ม)
+function legoRefreshBars(){
+  const pf=document.getElementById('lego-pf');
+  if(pf) pf.style.width=Math.min(100,(sentencesThisRound/SENTENCES_PER_ROUND)*100)+'%';
+  const pt=document.getElementById('lego-prog-txt');
+  if(pt) pt.textContent=sentencesThisRound+'/'+SENTENCES_PER_ROUND;
+  const pw=document.getElementById('lego-powerf');
+  if(pw) pw.style.width=Math.min(100,roundScoreLego)+'%';
+  const pn=document.getElementById('lego-power-num');
+  if(pn) pn.textContent=roundScoreLego;
+}
+
+function awardLegoStars(){
+  sentencesThisRound++;
+  if(sentencesThisRound<SENTENCES_PER_ROUND){legoRefreshBars();return null;}
+  const count=sentencesThisRound;
+  const cleanCount=legoCleanThisRound;
+  const comboSnapshot=legoMaxCombo;
+  const roundScoreSnapshot=roundScoreLego;
+  sentencesThisRound=0;
+  roundScoreLego=0;
+  legoCleanThisRound=0;
+  legoMaxCombo=0;
+  legoRefreshBars();
+  const _se=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starsForRound(count,count):0;
+  if(window.GAME_ACCOUNT){GAME_ACCOUNT.addStars(_se);GAME_ACCOUNT.bumpStreakToday();}
+  try{ legoChallengeBump(cleanCount,count,comboSnapshot); }catch(e){}
+  // 存分數到共用排行榜（'lego' key 已在 reading-auth.js 註冊，跟 word_order 分開算，不會混榜）
+  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(roundScoreSnapshot,1,'lego'); }catch(e){}
+  try{
+    const _sv=legoApplyStreak();
+    if(_sv.events.freezeUsed) setTimeout(()=>toast('護盾幫你保住連續紀錄！🛡️'),900);
+    if(_sv.events.freezeEarned) setTimeout(()=>toast('獲得新護盾 🛡️ ×1！連續'+_sv.state.streak+'天'),900);
+  }catch(e){}
+  try{ legoRenderGameBar(); }catch(e){}
+  refreshLegoAcctUI();
+  if(_se<=0) return null;
+  const totalStars=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():0;
+  return '⭐'.repeat(_se)+' 獲得 '+_se+' 顆星（累積共 '+totalStars+' 顆・全部遊戲共用）';
+}
+
+function copySentence(){
+  if(!state.subj||!state.verb){toast('至少要有「主語」和「動詞」',true);return;}
+  const active=activeSlots();
+  const skip=new Set();
+  let sentence='';
+  active.forEach(s=>{
+    if(skip.has(s.id)) return;
+    const w=state[s.id];if(!w) return;
+    if(s.id==='adv'&&state.advObj){sentence+=w.th+state.advObj.th;skip.add('advObj');}
+    else sentence+=w.th;
+  });
+  if(navigator.clipboard) navigator.clipboard.writeText(sentence);
+  toast('已複製：'+sentence);
+}
+
+// ════════ 帳號 UI：星星／勳章／連續天數／每週挑戰（跟其他遊戲共用同一套 GAME_ACCOUNT＋streak）════════
+let legoCleanThisRound=0, legoCurCombo=0, legoMaxCombo=0;
+
+const BADGE_STAGES=[
+  {min:0,emoji:'🌱',label:'種下第一棵樹'},
+  {min:1,emoji:'🌿',label:'開始成長了！'},
+  {min:2,emoji:'🌲',label:'茁壯成長中'},
+  {min:4,emoji:'🌴',label:'長成棕櫚樹！'},
+  {min:6,emoji:'🌸',label:'盛開中！🌸'},
+  {min:9,emoji:'🌻',label:'向陽生長！'},
+  {min:12,emoji:'🌈',label:'彩虹般的成就！'},
+  {min:16,emoji:'🏆',label:'泰語拼讀大師！'},
+  {min:20,emoji:'💎',label:'鑽石等級！'},
+  {min:30,emoji:'👑',label:'泰語之王！'}
+];
+function badgeEmoji(n){let e='🌱';BADGE_STAGES.forEach(s=>{if(n>=s.min)e=s.emoji;});return e;}
+
+function refreshLegoAcctUI(){
+  const stars=window.GAME_ACCOUNT?GAME_ACCOUNT.getStars():0;
+  const badges=window.GAME_ACCOUNT?GAME_ACCOUNT.earnedBadges().length:0;
+  const sc=document.getElementById('star-count'); if(sc) sc.textContent=stars;
+  const bc=document.getElementById('badge-count'); if(bc) bc.textContent=badges;
+  const be=document.getElementById('badge-emoji'); if(be) be.textContent=badgeEmoji(badges);
+}
+
+function openBadge(){
+  const s=window.GAME_ACCOUNT?GAME_ACCOUNT.getStars():0;
+  const badges=window.GAME_ACCOUNT?GAME_ACCOUNT.starBadges:[];
+  document.getElementById('tree-area').textContent='⭐ '+s;
+  document.getElementById('tree-caption').textContent='累積星星（全部遊戲共用）';
+  let html='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px;">';
+  badges.forEach(b=>{
+    const got=s>=b.at;
+    html+='<div style="text-align:center;width:74px;opacity:'+(got?'1':'0.35')+';">'+
+      '<img src="'+b.img+'" alt="'+b.zh+'" style="width:44px;height:44px;object-fit:contain;" onerror="this.replaceWith(document.createTextNode(\''+b.emoji+'\'))">'+
+      '<div style="font-size:11px;color:var(--gold-deep);margin-top:2px;">'+b.zh+'</div>'+
+      '<div style="font-size:10px;color:var(--ink-muted);">'+(got?'已解鎖':b.at+' 顆星')+'</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('star-prog').innerHTML=html;
+  const next=badges.filter(b=>s<b.at)[0];
+  document.getElementById('star-prog-label').textContent=next?('再 '+(next.at-s)+' 顆星解鎖「'+next.zh+'」'):'全部稻米品種已解鎖！🎉';
+  document.getElementById('badge-modal').classList.add('show');
+}
+
+// 連續天數／護盾：跟聲調・拼讀・打字・語序遊戲共用同一個 key，練哪個遊戲都算連續天數
+const TF_STREAK_KEY='tf_streak_v1';
+const LEGO_GAME_CFG={STREAK_FREEZE_EARN_EVERY:7,STREAK_FREEZE_MAX:2};
+const LEGO_CHALLENGES=[
+  {id:'lego_correct15',title:'測驗過關 15 句',sub:'本週拆句測驗累積過關 15 句',type:'correct',target:15,emoji:'🎯'},
+  {id:'lego_rounds3',  title:'完成 3 輪測驗', sub:'本週完成 3 輪（每輪 '+SENTENCES_PER_ROUND+' 句）拆句測驗',type:'sets',target:3,emoji:'📚'},
+  {id:'lego_perfect2', title:'2 輪全對過關',  sub:'本週有 2 輪測驗，'+SENTENCES_PER_ROUND+' 句都第一次就排對',type:'perfect',target:2,emoji:'🌟'},
+  {id:'lego_combo5',   title:'連續排對 5 句', sub:'本週連續一次就測驗排對達 5 句',type:'combo',target:5,emoji:'🔥'},
+  {id:'lego_correct30',title:'測驗過關 30 句',sub:'本週拆句測驗累積過關 30 句',type:'correct',target:30,emoji:'💪'}
+];
+const LEGO_WEEK_MS=7*24*60*60*1000;
+function legoWeekIndex(){return Math.floor(Date.now()/LEGO_WEEK_MS);}
+function legoWeekEndMs(){return (legoWeekIndex()+1)*LEGO_WEEK_MS;}
+function legoActiveChallenge(){return LEGO_CHALLENGES[legoWeekIndex()%LEGO_CHALLENGES.length];}
+const LEGO_CH_KEY='lego_challenge_v1';
+function legoLoadChallenge(){try{return JSON.parse(localStorage.getItem(LEGO_CH_KEY)||'{}')||{};}catch(e){return {};}}
+function legoChallengeState(){
+  const ch=legoActiveChallenge(), wk=legoWeekIndex();
+  let saved=legoLoadChallenge();
+  if(saved.week!==wk||saved.id!==ch.id) saved={week:wk,id:ch.id,progress:0,done:false};
+  return {ch,st:saved};
+}
+function legoSaveChallenge(st){try{localStorage.setItem(LEGO_CH_KEY,JSON.stringify(st));}catch(e){}}
+
+function legoLoadStreak(){try{return JSON.parse(localStorage.getItem(TF_STREAK_KEY)||'{}')||{};}catch(e){return {};}}
+function legoSaveStreak(s){try{localStorage.setItem(TF_STREAK_KEY,JSON.stringify(s));}catch(e){}}
+function legoTodayStr(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function legoYestStr(){const d=new Date();d.setDate(d.getDate()-1);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+
+function legoApplyStreak(){
+  const s=legoLoadStreak(), cfg=LEGO_GAME_CFG, today=legoTodayStr(), yest=legoYestStr();
+  const streakEv={freezeUsed:false,freezeEarned:0};
+  if(s.lastPlay!==today){
+    if(s.lastPlay===yest){ s.streak=(s.streak||0)+1; }
+    else if(s.lastPlay&&(s.freezes||0)>0){ s.freezes-=1; s.streak=(s.streak||0)+1; streakEv.freezeUsed=true; }
+    else{ s.streak=1; }
+    if(cfg.STREAK_FREEZE_EARN_EVERY>0&&s.streak%cfg.STREAK_FREEZE_EARN_EVERY===0&&(s.freezes||0)<cfg.STREAK_FREEZE_MAX){
+      s.freezes=(s.freezes||0)+1; streakEv.freezeEarned=1;
+    }
+    s.lastPlay=today;
+  }
+  legoSaveStreak(s);
+  return {state:s, events:streakEv};
+}
+
+function legoChallengeBump(cleanCount,totalCount,comboSnapshot){
+  const pack=legoChallengeState(), ch=pack.ch, st=pack.st;
+  if(st.done){legoSaveChallenge(st);return;}
+  let add=0;
+  if(ch.type==='correct') add=cleanCount;
+  else if(ch.type==='sets') add=1;
+  else if(ch.type==='perfect') add=(cleanCount===totalCount)?1:0;
+  else if(ch.type==='combo') add=(comboSnapshot||0)>=ch.target?ch.target:0;
+  if(ch.type==='combo') st.progress=Math.max(st.progress,add);
+  else st.progress+=add;
+  if(st.progress>=ch.target&&!st.done){
+    st.done=true;
+    toast('🎉 完成本週挑戰：'+ch.title+'！');
+  }
+  legoSaveChallenge(st);
+}
+
+function legoRenderGameBar(){
+  const cp=legoChallengeState(), st=legoLoadStreak();
+  const pct=Math.min(100,Math.round(cp.st.progress/cp.ch.target*100));
+  const daysLeft=Math.max(0,Math.ceil((legoWeekEndMs()-Date.now())/86400000));
+  const alive=st.streak>0&&(st.lastPlay===legoTodayStr()||legoYestStr()===st.lastPlay);
+  const ban=document.getElementById('rg-challenge-banner');
+  if(ban) ban.innerHTML=
+    '<div class="tf-challenge-banner'+(cp.st.done?' done':'')+'">'+
+      '<div class="tf-ch-top">'+
+        '<span class="tf-ch-emoji">'+cp.ch.emoji+'</span>'+
+        '<span class="tf-ch-title">本週挑戰：'+cp.ch.title+(cp.st.done?' ✅ 完成！':'')+'</span>'+
+        '<span class="tf-ch-left">⏳ '+daysLeft+' 天</span>'+
+      '</div>'+
+      '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:'+pct+'%;"></div></div>'+
+      '<div class="tf-ch-sub">'+cp.ch.sub+'　'+cp.st.progress+' / '+cp.ch.target+'</div>'+
+    '</div>';
+  const sn=document.getElementById('rg-streak-num'); if(sn) sn.textContent=(alive?(st.streak||0):0);
+  const fn=document.getElementById('rg-freeze-num'); if(fn) fn.textContent=(st.freezes||0);
+}
+
+// ════════ TEST: 拆句測驗（點打散的詞塊排回原順序，通過才計入 SENTENCES_PER_ROUND） ════════
+let testWords=[], testOrder=[], testAnswer=[], testUsed={}, testWrong=false, testLocked=false;
+
+function shuffleArr(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+function getSentenceWords(){
+  const active=activeSlots();
+  const skip=new Set();
+  const words=[];
+  active.forEach(s=>{
+    if(skip.has(s.id)) return;
+    const w=state[s.id]; if(!w) return;
+    if(s.id==='adv'&&state.advObj){
+      words.push({th:w.th+state.advObj.th, zh:w.zh+'・'+state.advObj.zh});
+      skip.add('advObj');
+    }else{
+      words.push({th:w.th, zh:w.zh});
+    }
+  });
+  return words;
+}
+
+function startTest(){
+  if(!state.subj||!state.verb){toast('至少要有「主語」和「動詞」',true);return;}
+  testWords=getSentenceWords();
+  if(testWords.length<2){toast('句子太短，多加一點詞再測試吧',true);return;}
+  testWrong=false; testLocked=false;
+  document.getElementById('testActions').innerHTML='<button class="btn btn-line" onclick="resetTestAttempt()">↺ 重排</button>';
+  scrambleTest();
+  document.getElementById('testBanner').className='test-banner';
+  document.getElementById('testBanner').textContent='';
+  document.getElementById('testOverlay').classList.add('show');
+}
+
+function scrambleTest(){
+  testAnswer=[]; testUsed={};
+  do{
+    testOrder=shuffleArr(testWords.map((_,i)=>i));
+  }while(testWords.length>1 && testOrder.every((v,i)=>v===i));
+  renderTestUI();
+}
+
+function renderTestUI(){
+  const slotsEl=document.getElementById('testSlots');
+  slotsEl.innerHTML=testWords.map((_,i)=>{
+    const orig=testAnswer[i];
+    if(orig===undefined) return '<div class="test-slot empty"></div>';
+    return `<div class="test-slot" onclick="${testLocked?'':`removeTestTile(${i})`}">${testWords[orig].th}</div>`;
+  }).join('');
+  const bankEl=document.getElementById('testBank');
+  bankEl.innerHTML=testOrder.map(orig=>{
+    const used=!!testUsed[orig];
+    return `<div class="test-tile${used?' used':''}" onclick="${(testLocked||used)?'':`addTestTile(${orig})`}">${testWords[orig].th}</div>`;
+  }).join('');
+}
+
+function addTestTile(orig){
+  if(testLocked||testAnswer.length>=testWords.length) return;
+  testAnswer.push(orig);
+  testUsed[orig]=true;
+  renderTestUI();
+  if(testAnswer.length===testWords.length) checkTestAnswer();
+}
+
+function removeTestTile(slotIndex){
+  if(testLocked) return;
+  const orig=testAnswer[slotIndex];
+  if(orig===undefined) return;
+  testAnswer.splice(slotIndex,1);
+  delete testUsed[orig];
+  document.getElementById('testBanner').className='test-banner';
+  document.getElementById('testBanner').textContent='';
+  renderTestUI();
+}
+
+function resetTestAttempt(){
+  if(testLocked) return;
+  testAnswer=[]; testUsed={};
+  document.getElementById('testBanner').className='test-banner';
+  document.getElementById('testBanner').textContent='';
+  renderTestUI();
+}
+
+function checkTestAnswer(){
+  const isCorrect=testAnswer.every((v,i)=>v===i);
+  const banner=document.getElementById('testBanner');
+  if(isCorrect){
+    testLocked=true;
+    const pts=testWrong?5:10;
+    roundScoreLego+=pts;
+    if(!testWrong){ legoCurCombo++; if(legoCurCombo>legoMaxCombo) legoMaxCombo=legoCurCombo; legoCleanThisRound++; }
+    else { legoCurCombo=0; }
+    banner.className='test-banner ok';
+    banner.textContent='✅ 排對了！+'+pts+' 分';
+    renderTestUI();
+    document.querySelectorAll('#testSlots .test-slot').forEach(el=>el.classList.add('correct'));
+    document.getElementById('testActions').innerHTML='<button class="btn btn-gold" onclick="closeTest()">繼續 →</button>';
+    const starMsg=awardLegoStars();
+    if(starMsg) setTimeout(()=>toast(starMsg),400);
+    // soft-CTA: โชว์เฉพาะตอนจบรอบ (ทุก SENTENCES_PER_ROUND ประโยค) ไม่ใช่ทุกครั้งที่ผ่านทดสอบ
+    if(starMsg && window.renderSoftCTA) renderSoftCTA('soft-cta-lego','lego_session','會自己造句了！想知道這句話聽起來自然嗎？讓老師幫你聽聽看。');
+  }else{
+    testWrong=true;
+    banner.className='test-banner no';
+    banner.textContent='還沒對喔，點格子裡的詞塊移回去，再排排看';
+    document.querySelectorAll('#testSlots .test-slot').forEach(el=>{
+      if(!el.classList.contains('empty')) el.classList.add('wrong');
+    });
+    setTimeout(()=>{document.querySelectorAll('#testSlots .test-slot.wrong').forEach(el=>el.classList.remove('wrong'));},400);
+  }
+}
+
+function closeTest(){
+  document.getElementById('testOverlay').classList.remove('show');
+}
+
+// ════════ TEACHING ════════
+function renderTeach(){
+  const st=STEPS[teachStep];
+  document.getElementById('tStepNo').textContent=`STEP 0${teachStep+1} / 0${STEPS.length}`;
+  document.getElementById('tTitle').textContent=st.title;
+  document.getElementById('tSub').textContent=st.sub;
+  document.getElementById('tSent').innerHTML=st.pieces.map(p=>{
+    const isNew=st.newTh.includes(p.th);
+    return `<div class="tpiece ${isNew?'isnew':''}"><span class="pth th">${p.th}</span><span class="pzh">${p.zh}</span></div>`;
+  }).join('');
+  document.getElementById('tNote').innerHTML=st.note;
+  document.getElementById('tFull').innerHTML='完整句子：<span class="th">'+st.pieces.map(p=>p.th).join('')+'</span>';
+  document.getElementById('tProg').innerHTML=STEPS.map((_,i)=>`<i class="${i<=teachStep?'on':''}"></i>`).join('');
+  document.getElementById('tNextBtn').textContent=teachStep===STEPS.length-1?'完成 ✓':'下一步 ›';
+}
+function teachNext(){
+  if(teachStep<STEPS.length-1){teachStep++;renderTeach();}
+  else{toast('完成！試試第一級造句吧');setLevel('lv1');}
+}
+function teachPrev(){if(teachStep>0){teachStep--;renderTeach();}}
+
+// ════════ CLOSE ON OUTSIDE CLICK ════════
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.slot')&&openSlot){openSlot=null;applyOpen();}
+});
+
+// ════════ TOAST ════════
+let tT=null;
+function toast(msg,err){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(err?' err':'')+' show';
+  clearTimeout(tT);tT=setTimeout(()=>{t.className='toast'+(err?' err':'');},1700);
+}
+
+// ── INIT ──
+renderLevels();
+setLevel('pre');
+refreshLegoAcctUI();
+try{ legoRenderGameBar(); }catch(e){}
+</script>
+</body>
+</html>

@@ -43,7 +43,7 @@
   <a href="page2.html">課程・費用</a>
   <a href="page3.html">須知・分享</a>
   <a href="page-services.html">導遊・翻譯</a>
-  <a href="page4.html">泰語・分享</a>
+  <a href="content.html">泰語・分享</a>
   <a href="games.html">泰語・遊戲</a>
 </div>
 
@@ -57,7 +57,11 @@
     <div id="pg-userslot" style="display:flex;align-items:center;gap:8px;"></div>
   </div>
   <p style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-size:13px;line-height:1.8;margin:14px 0 30px;max-width:640px;">
-    以下是你在 tone-finder 聲調練習工具的成績統計與進步紀錄 — 看見進步、需要加強的地方與練習紀錄。
+    這裡是「聲調遊戲」的成績統計與進步紀錄 — 看見進步、需要加強的地方與練習紀錄。<br>
+    拼讀與打字遊戲的排名請看：
+    <a href="reading-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'reading_board',from:'my_progress'})}catch(e){}">✍️ 拼讀排行榜</a>
+    ·
+    <a href="typing-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{target:'typing_board',from:'my_progress'})}catch(e){}">⌨️ 打字排行榜</a>
   </p>
 
   <div id="progress-root"></div>
@@ -66,6 +70,9 @@
     <a href="leaderboard.html" style="display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">🏆 查看排行榜</a>
     <a href="games.html" style="display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">← 返回遊戲</a>
   </div>
+
+  <!-- 🎯 soft CTA — LIN 2026-07-03 -->
+  <div id="soft-cta-progress" style="max-width:640px;margin:0 auto;"></div>
 </div>
 
 <div style="height:44px;background:var(--off-white);"></div>
@@ -74,7 +81,13 @@
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="shared.js?v=20"></script>
-<script src="progress.js?v=3"></script>
+<script src="shared.js?v=21"></script>
+<script src="auth-widget.js?v=1"></script>
+<script src="progress.js?v=4"></script>
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  if(window.renderSoftCTA) renderSoftCTA('soft-cta-progress','my_progress','進步得很不錯！想找老師聊聊下一步怎麼練嗎？');
+});
+</script>
 </body>
 </html>

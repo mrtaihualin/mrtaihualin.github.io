@@ -105,7 +105,7 @@
   <a href="page2.html" class="active">課程・費用</a>
   <a href="page3.html">須知・分享</a>
   <a href="page-services.html">導遊・翻譯</a>
-  <a href="page4.html">泰語・分享</a>
+  <a href="content.html">泰語・分享</a>
   <a href="games.html">泰語・遊戲</a>
 </div>
 <div style="height:44px;"></div>
@@ -169,8 +169,8 @@
     <div class="how-grid">
       <div class="how-card reveal">
         <div class="how-num">01</div>
-        <div class="how-title">🖥️ Google Meet 線上授課</div>
-        <p class="how-desc">無需安裝額外軟體，不受地點限制，在任何有網路的地方都能上課。無需自備教材，帶著學習的意願來就足夠了。</p>
+        <div class="how-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🖥️ 線上授課・課堂留存</div>
+        <p class="how-desc">無需安裝軟體，不受地點限制。課中自動錄影上傳 Drive、分享學習連結、課堂筆記雲端同步，每堂內容隨時複習。</p>
       </div>
       <div class="how-card reveal">
         <div class="how-num">02</div>
@@ -380,7 +380,8 @@
       </div>
 
     </div>
-    <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-top:16px;text-align:center;letter-spacing:0.5px;">※ 學費支援新台幣及泰銖兩種幣別，可透過台灣或泰國銀行帳戶直接匯款，歡迎聯絡確認付款方式</p>
+    <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-top:16px;text-align:center;letter-spacing:0.5px;">※ 單堂購買（不買課程包）：一對一 <strong>1,000 NT</strong> / 50 分鐘・雙人共學 <strong>1,500 NT</strong> / 50 分鐘</p>
+    <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-top:8px;text-align:center;letter-spacing:0.5px;">※ 學費支援新台幣及泰銖兩種幣別，可透過台灣或泰國銀行帳戶直接匯款，歡迎聯絡確認付款方式</p>
   </div>
 </div>
 
@@ -586,10 +587,74 @@
       @media(max-width:620px) {
         .testimonials-masonry { columns:2; }
       }
+      /* ── Text-based testimonials (from classroom feedback) ── */
+      .t-text-item {
+        background:#FFFDF7;
+        border:1.5px solid rgba(200,151,58,0.28);
+        border-radius:6px;
+        transition:transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+        break-inside:avoid;
+        margin-bottom:10px;
+        position:relative;
+        overflow:hidden;
+      }
+      .t-text-item:hover {
+        transform:translateY(-3px);
+        box-shadow:0 8px 22px rgba(184,134,11,0.18);
+        border-color:rgba(200,151,58,0.55);
+      }
+      .t-text-body {
+        padding:18px 16px 14px;
+      }
+      .t-text-quote {
+        font-family:'Noto Serif TC',serif;
+        font-size:0.94rem;
+        font-style:italic;
+        line-height:1.8;
+        color:#1C1C1C;
+        margin:0 0 12px;
+      }
+      .t-text-quote::before { content:'「'; }
+      .t-text-quote::after  { content:'」'; }
+      .t-text-name {
+        font-family:'Noto Sans TC',sans-serif;
+        font-size:0.78rem;
+        font-weight:700;
+        color:var(--gold);
+        letter-spacing:1px;
+      }
+      .t-text-name::before { content:'— '; }
     </style>
 
   </div>
 </div>
+
+<script>
+// ── 從 Supabase 載入已核准的文字學生回饋，插入 testimonial 展示區 ──
+(function(){
+  var SB_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
+  var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw';
+  function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  fetch(SB_URL + '/rest/v1/classroom_feedback?approved=eq.true&select=content,display_name,created_at&order=created_at.desc', {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+  }).then(function(r){ return r.ok ? r.json() : []; }).then(function(data){
+    if (!data || !data.length) return;
+    var masonry = document.getElementById('t-masonry');
+    if (!masonry) return;
+    var html = data.map(function(f){
+      var name = f.display_name || '匿名學員';
+      return '<div class="t-text-item">' +
+        '<div class="t-img-bar"></div>' +
+        '<div class="t-text-body">' +
+          '<p class="t-text-quote">' + escHtml(f.content) + '</p>' +
+          '<div class="t-text-name">' + escHtml(name) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    masonry.insertAdjacentHTML('afterbegin', html);
+  }).catch(function(){});
+})();
+</script>
 
 <!-- CTA -->
 <div id="cta">
@@ -687,7 +752,7 @@
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
 <script src="tone-finder.js"></script>
-<script src="shared.js?v=20"></script>
+<script src="shared.js?v=21"></script>
 <script>
 // ── ปุ่มกรองหมวด 學生回饋 ──────────────────────────────────────────
 (function() {

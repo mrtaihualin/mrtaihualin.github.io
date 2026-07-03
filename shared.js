@@ -21,9 +21,14 @@
 // ===================================================================
 var ANN = [
   { emoji:'📡', text:'每週六 19:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
-  { emoji:'🎮', text:'免費泰語小遊戲上線！聲調・拼讀・造句，邊玩邊學', cta:'前往遊戲', href:'games.html' },
+  { emoji:'🎁', text:'首堂 30 分鐘體驗課免費・中文授課', cta:'立即預約', modal:'modal-line-qr' },
+  { emoji:'🎮', text:'5 款免費泰語遊戲上線！聲調・拼讀・打字・造句・語序，每款都有排行榜可以比賽', cta:'前往遊戲', href:'games.html' },
+  { emoji:'🎵', text:'用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta:'去聽歌學泰語', href:'page4.html#songs' },
+  { emoji:'📖', text:'免費泰語學習文章上線！生活情境單字、聲調技巧，隨看隨學', cta:'去讀文章', href:'blog.html#sharing' },
+  { emoji:'📺', text:'YouTube 播放清單整理好了！依主題分類，找教學影片更方便', cta:'去看播放清單', href:'page4.html#playlists' }
   // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
-  { emoji:'🚀', text:'全新「造句遊戲」即將推出，敬請期待！', cta:'追蹤我們', modal:'modal-sns' }
+  // LIN 2026-07-03: ลบสไลด์ "造句遊戲即將推出" ออกแล้ว (เกมเลโก้ออกจริงแล้ว ไม่ใช่ coming-soon อีกต่อไป)
+  // LIN 2026-07-03 (รอบ 4): เพิ่ม 3 สไลด์ประกาศ — เพลง/บทความ/เพลลิสต์ยูทูป ตามที่ Lin สั่ง
 ];
 
 // ===================================================================
@@ -75,11 +80,9 @@ window.goHome = function() {
         '<a href="javascript:void(0)" class="has-drop">資源分享</a>',
         '<div class="nav-drop">',
           '<span class="nav-drop-label">學習素材</span>',
-          '<a href="page4.html#videos">📺 YouTube 影片頻道</a>',
-          '<a href="page4.html#sharing">🚀 貼文分享區</a>',
-          '<a href="page4.html#sharing">📖 自學專區</a>',
+          '<a href="content.html">📚 影片與文章</a>',
           '<a href="games.html">🎮 泰語小遊戲</a>',
-          '<a href="page-community.html">🇹🇭 泰語學習心聲與提問</a>',
+          '<a href="community.html">🇹🇭 泰語學習心聲與提問</a>',
         '</div>',
       '</li>',
       '<li>',
@@ -390,6 +393,26 @@ window.goHome = function() {
   while (wrap.firstChild) document.body.appendChild(wrap.firstChild);
 })();
 
+// ===================================================================
+// 🎯 SOFT CTA CARD — การ์ดชวนจองคาบเรียนแบบนุ่มนวล ไม่รบกวน
+//   ใช้ตอนจบรอบ/บนหน้ารายการ・ปิดได้ (✕) → จำไว้ 7 วันไม่โชว์ซ้ำ (ต่อหน้า ผ่าน pageKey)
+//   เรียกใช้: renderSoftCTA('container-id', 'page_key', 'ข้อความเฉพาะหน้านั้น')
+// ===================================================================
+window.renderSoftCTA = function(containerId, pageKey, message){
+  var KEY = 'cta_dismissed_' + pageKey;
+  var last = parseInt(localStorage.getItem(KEY) || '0', 10);
+  if (Date.now() - last < 7*24*60*60*1000) return; // เพิ่งปิดไปไม่นาน → เงียบไว้
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML =
+    '<div class="soft-cta-card" style="background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:12px;padding:14px 16px;margin:16px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+      '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:var(--gold-deep,#5a3e0a);font-weight:700;line-height:1.5;">' + message + '</span>' +
+      '<span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">' +
+        '<button onclick="window.gtag&&gtag(\'event\',\'soft_cta_click\',{source:\'' + pageKey + '\'});openModal(\'modal-line-qr\')" style="background:var(--gold-bright,#C8973A);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:\'Noto Sans TC\',sans-serif;font-weight:900;font-size:12.5px;cursor:pointer;white-space:nowrap;">預約免費體驗課</button>' +
+        '<button onclick="localStorage.setItem(\'' + KEY + '\',Date.now());document.getElementById(\'' + containerId + '\').innerHTML=\'\';" aria-label="關閉" style="background:none;border:none;color:var(--gold-deep,#5a3e0a);opacity:0.6;font-size:16px;cursor:pointer;padding:2px 4px;">✕</button>' +
+      '</span>' +
+    '</div>';
+};
 
 // ===================================================================
 
@@ -965,7 +988,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     modalsHTML += `
 <!-- CAL.COM BOOKING MODAL -->
 <div class="modal-overlay" id="modal-line-qr" onclick="closeModalOutside(event,'modal-line-qr')">
-  <div class="modal-box" style="max-width:520px;overflow-y:auto;border:3px solid var(--gold-bright);padding:0;">
+  <div class="modal-box" style="max-width:520px;overflow-y:auto;overflow-x:hidden;border:3px solid var(--gold-bright);border-radius:16px;padding:0;">
     <div style="background:var(--ink);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;">
       <div>
         <span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);font-weight:700;display:block;margin-bottom:4px;">預約免費體驗課</span>
@@ -976,10 +999,10 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     <div style="background:var(--gold-light);padding:12px 20px;border-bottom:2px solid var(--gold-bright);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
       <p style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-soft);margin:0;line-height:1.7;">📌 預約後請加老師 LINE 確認時間<br><span style="color:var(--gold-deep);font-weight:700;">老師 24 小時內回覆</span></p>
       <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <div style="background:var(--white);padding:6px;display:inline-block;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:64px;height:64px;display:block;" loading="lazy">
+        <div style="background:var(--white);padding:6px;display:inline-block;border-radius:8px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:64px;height:64px;display:block;border-radius:4px;" loading="lazy">
         </div>
-        <a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" onclick="window.gtag&&gtag('event','add_line',{source:'modal_line_qr'})" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:13px;padding:10px 16px;text-decoration:none;white-space:nowrap;">💬 加 LINE</a>
+        <a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" onclick="window.gtag&&gtag('event','add_line',{source:'modal_line_qr'})" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:13px;padding:10px 16px;text-decoration:none;white-space:nowrap;border-radius:8px;">💬 加 LINE</a>
       </div>
     </div>
     <div style="background:#fff;">

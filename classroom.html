@@ -433,7 +433,8 @@
         <div style="font-weight:700;margin-bottom:8px;">放到哪個資料夾？</div>
         <select id="upDestSelect" onchange="uploadDest=this.value" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);font-size:0.88rem;font-family:'Noto Sans TC',sans-serif;background:#fff;color:var(--ink);cursor:pointer;">
           <option value="學習內容">📚 學習內容</option>
-          <option value="影片">🎬 影片</option>
+          <option value="影片">🎬 影片（課堂錄影）</option>
+          <option value="教材影片">🎓 教材影片（自製教材）</option>
         </select>
       </div>
       <div id="uploadDropZone" onclick="document.getElementById('uploadFileInput').click()"
@@ -1136,6 +1137,7 @@ async function addStudent() {
   try {
     await gdGetStudentSubfolderId(name, '學習內容');
     await gdGetStudentSubfolderId(name, '影片');
+    await gdGetStudentSubfolderId(name, '教材影片');
     var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
     try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
     try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
@@ -1282,6 +1284,7 @@ function selectStudent(token) {
     '</div>' +
     '<button class="btn-start-class" onclick="enterClass(\'' + t + '\')">📹 進入課堂（Google Meet）</button>' +
     '<button class="btn-start-class" onclick="recordClass(\'' + t + '\')">🔴 開始錄影</button>' +
+    '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordTeachingMaterial(\'' + t + '\')">🎬 錄製教材（高畫質）</button>' +
     '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
     '<div class="stu-acc-actions">' +
       '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
@@ -1520,7 +1523,35 @@ async function loadTeacherStudentInfo(token) {
     } else {
       histHtml = '<div style="color:var(--ink-muted);font-size:0.8rem;font-family:\'Noto Sans TC\',sans-serif;">尚無繳費記錄</div>';
     }
-    el.innerHTML = quotaHtml + histHtml;
+    // ── 學生感想（最近 5 筆）+ 核准刊登按鈕 ──
+    var fbHtml = '';
+    try {
+      var fbRes = await sb.from('classroom_feedback').select('id,content,approved,display_name,created_at').eq('token', token).order('created_at', { ascending: false }).limit(5);
+      var fbs = fbRes.data || [];
+      if (fbs.length) {
+        fbHtml = '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">' +
+          '<div style="font-weight:700;font-size:0.82rem;color:var(--ink);margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">💬 學生感想（最近 ' + fbs.length + ' 筆）</div>' +
+          fbs.map(function(f) {
+            var d = f.created_at ? new Date(f.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+            var fid = (f.id || '').replace(/'/g, '');
+            var approvedBadge = f.approved ? ' <span style="background:#dcfce7;color:#15803d;border-radius:10px;padding:1px 7px;font-weight:700;font-size:0.7rem;">✅ 已刊登</span>' : '';
+            var actionRow = f.approved
+              ? '<div style="font-size:0.78rem;color:var(--green);margin-top:5px;">公開名稱：' + escHtml(f.display_name || '匿名學員') +
+                  ' <button onclick="unapproveTestimonial(\'' + fid + '\',\'' + token.replace(/'/g,'') + '\')" style="background:none;border:none;cursor:pointer;font-size:0.75rem;color:#b91c1c;padding:0 4px;font-family:\'Noto Sans TC\',sans-serif;">撤銷刊登</button></div>'
+              : '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;">' +
+                  '<input id="dn-' + fid + '" placeholder="公開名稱（例：小明同學）" value="' + escHtml(f.display_name || '') + '" style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--border);font-size:0.78rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);">' +
+                  '<button onclick="approveTestimonial(\'' + fid + '\',\'' + token.replace(/'/g,'') + '\')" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;white-space:nowrap;">✅ 核准刊登</button>' +
+                '</div>';
+            return '<div style="background:#f9f7f2;border-radius:8px;padding:9px 10px;margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">' +
+              '<div style="font-size:0.76rem;color:var(--ink-muted);margin-bottom:3px;">' + d + approvedBadge + '</div>' +
+              '<div style="font-size:0.85rem;color:var(--ink);white-space:pre-wrap;word-break:break-word;">' + escHtml(f.content) + '</div>' +
+              actionRow +
+            '</div>';
+          }).join('') +
+        '</div>';
+      }
+    } catch(e) {}
+    el.innerHTML = quotaHtml + histHtml + fbHtml;
   } catch (e) {}
 }
 
@@ -1583,6 +1614,13 @@ function renderStudentView() {
       '<h2>📹 進入課堂</h2>' +
       '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
       '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h2>💬 今日學習感想</h2>' +
+      '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">今天學了什麼？寫下你的感想讓老師知道 ✨</p>' +
+      '<textarea id="feedbackText" placeholder="例：今天學了聲調，สวัสดี 的用法還不太確定…" style="width:100%;min-height:88px;border-radius:9px;border:1px solid var(--border);padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;"></textarea>' +
+      '<button onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:#fff;border:none;border-radius:9px;padding:12px;font-size:0.95rem;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;cursor:pointer;letter-spacing:0.5px;">送出感想 ✉️</button>' +
+      '<div id="feedbackStatus" style="margin-top:8px;font-size:0.82rem;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);min-height:18px;"></div>' +
     '</div>' +
     '<div class="card">' +
       '<h2>📅 我的課程記錄</h2>' +
@@ -1684,6 +1722,42 @@ function dismissReceipt(token, url, btn) {
   if (btn) { var row = btn.parentNode; if (row && row.parentNode) row.parentNode.removeChild(row); }
 }
 
+// ── 老師：核准 / 撤銷 testimonial 刊登 ─────────────────────────────────────
+async function approveTestimonial(id, token) {
+  var nameEl = document.getElementById('dn-' + id);
+  var displayName = (nameEl ? nameEl.value.trim() : '') || '匿名學員';
+  try {
+    var { error } = await sb.from('classroom_feedback').update({ approved: true, display_name: displayName }).eq('id', id);
+    if (error) throw error;
+    if (token) loadTeacherStudentInfo(token);
+  } catch(e) { alert('核准失敗：' + (e.message || e)); }
+}
+async function unapproveTestimonial(id, token) {
+  try {
+    var { error } = await sb.from('classroom_feedback').update({ approved: false }).eq('id', id);
+    if (error) throw error;
+    if (token) loadTeacherStudentInfo(token);
+  } catch(e) { alert('撤銷失敗：' + (e.message || e)); }
+}
+
+// ── 學生送出今日學習感想 → 寫進 classroom_feedback ────────────────────────
+async function submitFeedback(token) {
+  var ta = document.getElementById('feedbackText');
+  var el = document.getElementById('feedbackStatus');
+  var text = (ta ? ta.value : '').trim();
+  if (!text) { if (el) el.textContent = '請寫點什麼再送出 🙏'; return; }
+  if (el) el.textContent = '送出中…';
+  try {
+    var { error } = await sb.from('classroom_feedback').insert({ token: token, content: text });
+    if (error) throw error;
+    if (ta) ta.value = '';
+    if (el) { el.style.color = 'var(--green)'; el.textContent = '✅ 已送出，謝謝你的感想！'; }
+    setTimeout(function() { if (el) { el.style.color = ''; el.textContent = ''; } }, 6000);
+  } catch (e) {
+    if (el) { el.style.color = 'var(--amber)'; el.textContent = '⚠️ 送出失敗：' + (e.message || e); }
+  }
+}
+
 // 學生：繳費記錄列表
 async function loadStudentPayments(token) {
   var el = document.getElementById('payHistory');
@@ -1783,7 +1857,9 @@ function renderStudentFiles(token) {
   const data = studentFilesData[token] || [];
   const rows = data.map(function(r, i) {
     const name = r.name || '';
-    const icon = name.includes('筆記') || name.includes('note') ? '📝' : '🎬';
+    const icon = (name.includes('筆記') || name.includes('note')) ? '📝'
+               : (name.startsWith('教材_') || name.startsWith('教材')) ? '📚'
+               : '🎬';
     var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
     var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
     var label = name || (d + ' 課堂錄影' + sz);
@@ -2969,6 +3045,7 @@ try {
 // ============================================================
 const REC_AUDIO_BPS=24000;       // 聲音位元率（約 11 MB/小時）
 const REC_VIDEO_BPS=180000;      // 影片位元率（約 100 MB/小時，畫面更清楚）
+const REC_MATERIAL_BPS=2500000;  // 教材錄製高畫質位元率（約 1.4 GB/小時，供後期剪輯用）
 const REC_SPLIT_MS=60*60*1000;   // 滿 1 小時自動切檔
 
 let recMethod=null, recState='idle';
@@ -2977,6 +3054,8 @@ let recMR=null, recChunks=[], recMime='', recIsVideo=false, recNoSysAudio=false;
 let recTimerID=null, recSplitID=null, recStartTime=0, recPart=0, recPartCount=0;
 let recHadData=false;                 // 這次到底有沒有錄到資料（防止「假成功」訊息）
 let recSessionStart=0;                // 整段錄影開始時間（救援補時長用）
+let recActiveFolder='影片';           // 上傳目標子資料夾（課堂錄影=影片 / 教材=教材影片）
+let recMaterialMode=false;            // true = 教材錄製模式（高畫質，無需開 Meet）
 // 崩潰防護：邊錄邊備份進 IndexedDB；意外關閉/當機/0 位元組也救得回
 let recDB=null, recBackupId=null, recBackupSeq=0;
 const REC_DB='classroomRecDB', REC_STORE='recChunks';
@@ -2990,7 +3069,7 @@ let recActiveStudent=null;
 let recPendingMeet=null;  // 取得螢幕分享後才開的 Meet 連結（避免先開 Meet 搶 focus 導致錄影 00:00）
 function startRec(method){ if(recState!=='recording') beginRecording(method); }
 // 一般錄影鈕：未綁定特定學生 → 清除綁定，避免自動上傳到上一位學生的資料夾
-function startRecGeneric(){ recActiveStudent=null; startRec('video'); }
+function startRecGeneric(){ recActiveStudent=null; recActiveFolder='影片'; recMaterialMode=false; startRec('video'); }
 // 老師端：點某位學生 → 開該生 Meet + 開始錄影（recActiveStudent 供日後上傳到該生 Drive 資料夾使用）
 function openTabReliably(url){
   // 用 <a> 觸發開新分頁（與可正常運作的 🎥 Meet 按鈕相同方式，避免 window.open 在本頁變空白頁）
@@ -3022,10 +3101,21 @@ function enterClass(token){
 function recordClass(token){
   const s=(typeof studentsCache!=='undefined')?studentsCache[token]:null;
   if(!s){ alert('找不到學生資料'); return; }
-  recActiveStudent=token;
+  recActiveStudent=token; recActiveFolder='影片'; recMaterialMode=false;
   clearTimeout(recReminderID); hideRecReminder();
   const card=document.getElementById('recCard'); if(card) card.style.display='';
   const title=document.getElementById('recCardTitle'); if(title) title.textContent='課堂錄影 — '+(s.name||token);
+  startRec('video');
+}
+
+// ── 教材錄製（高畫質，不需開 Meet，上傳到 教材影片 資料夾）────────────────
+function recordTeachingMaterial(token){
+  const s=(typeof studentsCache!=='undefined')?studentsCache[token]:null;
+  if(!s){ alert('找不到學生資料'); return; }
+  recActiveStudent=token; recActiveFolder='教材影片'; recMaterialMode=true;
+  const card=document.getElementById('recCard'); if(card) card.style.display='';
+  const title=document.getElementById('recCardTitle'); if(title) title.textContent='教材錄製（高畫質）— '+(s.name||token);
+  if(card) card.scrollIntoView({block:'nearest'});
   startRec('video');
 }
 
@@ -3197,8 +3287,9 @@ async function beginRecording(method){
 function startSegment(stream){
   recMime = recIsVideo ? recPickVideoMime() : recPickAudioMime();
   if(recIsVideo && !recMime){ recSetStatus('❌ 此瀏覽器不支援影片錄製，請改用電腦版 Chrome',''); cleanupRecStreams(); return; }
+  const videoBps = recMaterialMode ? REC_MATERIAL_BPS : REC_VIDEO_BPS;
   const opts = recIsVideo
-    ? {mimeType:recMime||undefined, videoBitsPerSecond:REC_VIDEO_BPS, audioBitsPerSecond:REC_AUDIO_BPS}
+    ? {mimeType:recMime||undefined, videoBitsPerSecond:videoBps, audioBitsPerSecond:REC_AUDIO_BPS}
     : {mimeType:recMime||undefined, audioBitsPerSecond:REC_AUDIO_BPS};
   recMR=new MediaRecorder(stream, opts);
   recChunks=[]; recPart++;
@@ -3214,7 +3305,7 @@ function startSegment(stream){
   const tEl=document.getElementById('recTimer'); if(tEl) tEl.classList.add('visible');
   clearInterval(recTimerID);
   recTimerID=setInterval(()=>{ const e=document.getElementById('recTimer'); if(e) e.textContent=recFmtTime(Math.floor((Date.now()-recStartTime)/1000)); },1000);
-  recSetStatus('🔴 錄製中…'+(recIsVideo?'（影片）':'（聲音）')+(recPart>1?'　第'+recPart+'段':'')+(recNoSysAudio?'　⚠️未含對方聲音（請重錄並勾「分享系統音訊」；若沒此選項請更新 Chrome 至 141+）':''),'active');
+  recSetStatus('🔴 錄製中…'+(recMaterialMode?'（教材高畫質）':(recIsVideo?'（影片）':'（聲音）'))+(recPart>1?'　第'+recPart+'段':'')+(recNoSysAudio?'　⚠️未含對方聲音（請重錄並勾「分享系統音訊」；若沒此選項請更新 Chrome 至 141+）':''),'active');
   if(recIsVideo){
     clearTimeout(recSplitID);
     recSplitID=setTimeout(()=>{ if(recState==='recording') splitSegment(stream); }, REC_SPLIT_MS);
@@ -3435,7 +3526,8 @@ async function finalizeSegment(){
   player.src=url; player.style.display='block';
   document.getElementById('recOutSection').classList.add('visible');
   const sizeMB=(blob.size/1048576).toFixed(1);
-  const name=(isVideo?'video':'audio')+'_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+(recPartCount>1?'_part'+recPartCount:'')+'.'+ext;
+  const prefix = recMaterialMode ? '教材' : (isVideo?'video':'audio');
+  const name=prefix+'_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+(recPartCount>1?'_part'+recPartCount:'')+'.'+ext;
   const a=document.createElement('a');
   a.href=url; a.download=name; a.className='btn btn-download';
   a.style.cssText='width:100%;justify-content:center;margin-top:8px;display:flex;';
@@ -3447,26 +3539,29 @@ async function finalizeSegment(){
     upRow.style.cssText='font-size:0.8rem;color:var(--ink-muted);margin-top:6px;font-family:\'Noto Sans TC\',sans-serif;';
     upRow.textContent='☁️ 準備上傳到雲端…';
     document.getElementById('recDownloads').appendChild(upRow);
-    autoUploadRecording(blob, name, recActiveStudent, sizeMB, recPartCount, upRow);
+    autoUploadRecording(blob, name, recActiveStudent, sizeMB, recPartCount, upRow, recActiveFolder||'影片');
   }
 }
 
-async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl){
+async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl, folder){
+  folder = folder || '影片';
   const s=(typeof studentsCache!=='undefined' && studentsCache[token])?studentsCache[token]:{name:token};
   const setMsg=(t)=>{ if(statusEl) statusEl.textContent=t; };
   try{
     setMsg('☁️ 連線 Google Drive…（首次會跳出 Google 授權）');
-    // 影片 → mrtaihualin 課堂錄影 / 學生名 / 影片
-    const stuFolderId=await gdGetStudentSubfolderId(s.name||token, '影片');
+    const stuFolderId=await gdGetStudentSubfolderId(s.name||token, folder);
     setMsg('☁️ 上傳中（'+sizeMB+' MB）…請勿關閉分頁');
     const up=await gdUpload(blob, fileName, stuFolderId);
     await gdShareAnyone(up.id);
     const link=up.webViewLink||('https://drive.google.com/file/d/'+up.id+'/view');
-    await saveRecordingLink(token, s.name||token, up.id, link, sizeMB, part);
+    await saveRecordingLink(token, fileName, up.id, link, sizeMB, part);
     try { await ensureStudentFolderShared(s.name||token, token); } catch(e) {}
-    if(statusEl) statusEl.innerHTML='✅ 已上傳到「'+escHtml(s.name||token)+'」雲端資料夾　<a href="'+escHtml(safeHref(link))+'" target="_blank" rel="noopener" style="color:var(--amber-dark);font-weight:700;">開啟</a>';
+    if(statusEl) statusEl.innerHTML='✅ 已上傳到「'+escHtml(s.name||token)+' / '+escHtml(folder)+'」　<a href="'+escHtml(safeHref(link))+'" target="_blank" rel="noopener" style="color:var(--amber-dark);font-weight:700;">開啟</a>';
+    // Drive 上傳成功 → 現在才安全清掉 IDB 崩潰備份（有備份 = 有學生時才需要）
+    try { await recBackupClear(); } catch(e) {}
   }catch(err){
     setMsg('⚠️ 自動上傳失敗：'+(err.message||err)+'（已保留上方下載按鈕，可手動存檔）');
+    // ⚠️ 不清 IDB → 讓使用者下次開頁面仍可從「救回」banner 救回
   }
 }
 
@@ -3485,7 +3580,9 @@ function stopRecording(){
 function recAfterStop(){
   if(recHadData){
     recSetStatus('✅ 錄製完成，可預覽或下載','done');
-    recBackupClear();   // 已有可下載檔＋自動上傳雲端 → 清掉崩潰備份
+    // 無綁定學生 → 手動下載即備份，立即清掉 IDB
+    // 有綁定學生 → 等 Drive 上傳成功後才清（由 autoUploadRecording 負責）
+    if(!recActiveStudent) recBackupClear();
   }else{
     recSetStatus('❌ 這次完全沒有錄到內容（0 位元組）！請立即重新錄影。','');
   }

@@ -9,19 +9,19 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<title>泰語拼讀練習 — 泰華眼裡的泰語教學</title>
-<meta name="description" content="免費泰語拼讀練習：把子音、母音、聲調、尾音一格一格拼成正確的字，邊玩邊學泰文拼讀規則。專為台灣人設計的泰語學習遊戲。">
-<link rel="canonical" href="https://mrtaihualin.com/reading-game.html">
+<title>泰語打字練習 — 泰華眼裡的泰語教學</title>
+<meta name="description" content="免費泰語打字練習：照泰文鍵盤（Kedmanee）打出單字，邊打字邊記住拼寫與鍵盤位置。專為台灣人設計的泰語學習遊戲。">
+<link rel="canonical" href="https://mrtaihualin.com/typing-game.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="泰華眼裡的泰語教學">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:title" content="泰語拼讀練習 — 泰華眼裡的泰語教學">
-<meta property="og:description" content="免費泰語拼讀練習：把子音、母音、聲調、尾音一格一格拼成正確的字，邊玩邊學泰文拼讀規則。專為台灣人設計的泰語學習遊戲。">
-<meta property="og:url" content="https://mrtaihualin.com/reading-game.html">
+<meta property="og:title" content="泰語打字練習 — 泰華眼裡的泰語教學">
+<meta property="og:description" content="免費泰語打字練習：照泰文鍵盤（Kedmanee）打出單字，邊打字邊記住拼寫與鍵盤位置。專為台灣人設計的泰語學習遊戲。">
+<meta property="og:url" content="https://mrtaihualin.com/typing-game.html">
 <meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="泰語拼讀練習 — 泰華眼裡的泰語教學">
-<meta name="twitter:description" content="免費泰語拼讀練習：把子音、母音、聲調、尾音一格一格拼成正確的字，邊玩邊學泰文拼讀規則。">
+<meta name="twitter:title" content="泰語打字練習 — 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="免費泰語打字練習：照泰文鍵盤（Kedmanee）打出單字，邊打字邊記住拼寫與鍵盤位置。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=12">
@@ -133,7 +133,6 @@
 .opt.correct{border-color:#4caf50;background:#e8f5e9;color:#2e7d32;animation:none;}
 .opt.wrong{border-color:#f44336;background:#fdecea;color:#c62828;animation:none;}
 .opt.locked{pointer-events:none;}
-.opt.hint{border-color:#e8a020;background:#fff3d8;box-shadow:0 0 0 2px rgba(232,160,32,.35);}
 
 
 .retry-hint{width:100%;padding:7px 14px;border-radius:10px;text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#e65100;background:#fff3e0;border:1px solid #ffcc80;display:none;margin-top:2px;}
@@ -241,6 +240,10 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .end-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px;}
 .end-actions .btn{text-decoration:none;}
 
+#advanced-soon{display:none;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:36px 22px;}
+#advanced-soon h2{font-family:'Noto Serif TC',serif;font-size:20px;color:#5a3e10;}
+#advanced-soon p{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;line-height:1.7;max-width:300px;}
+
 .v3-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:200;align-items:center;justify-content:center;}
 .v3-modal.show{display:flex;}
 .v3-modal-box{background:#fff;border-radius:24px;padding:28px 22px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.22);}
@@ -250,6 +253,28 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .star-progress{font-size:16px;letter-spacing:2px;margin:10px 0 4px;}
 .star-prog-label{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
 
+/* ── 打字模式（真實鍵盤 Kedmanee 泰文鍵位） ── */
+.type-panel{width:100%;flex-direction:column;align-items:center;gap:10px;margin:6px 0 4px;}
+.type-target{font-family:'Sarabun',sans-serif;font-size:34px;font-weight:700;min-height:48px;letter-spacing:1px;text-align:center;padding:6px 14px;border-radius:12px;background:#fffdf7;border:2px dashed #d4b87a;word-break:break-all;display:flex;align-items:center;justify-content:center;width:fit-content;max-width:92%;margin:0 auto;}
+.type-target.shake{animation:tkshake .35s;}
+@keyframes tkshake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+.rg-typed-ok{color:#2e7d32;}
+.rg-typed-rest{color:#c9b78a;}
+.type-hint{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;text-align:center;}
+.tkbd{display:flex;flex-direction:column;gap:4px;width:100%;max-width:520px;}
+.tk-row{display:flex;gap:3px;justify-content:center;}
+.tk-key{flex:1;max-width:38px;min-width:20px;height:40px;border:1.5px solid #d4b87a;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;cursor:pointer;user-select:none;transition:all .1s;overflow:hidden;}
+.tk-key:active{transform:scale(.92);background:#fff3d8;}
+.tk-key .tk-shift{font-size:9px;color:#b89860;line-height:1;}
+.tk-key .tk-base{font-size:15px;color:#3a2a0a;font-weight:700;line-height:1.15;}
+.tk-key.hint{border-color:#e8a020;background:#fff3d8;box-shadow:0 0 0 2px rgba(232,160,32,.35);}
+.tk-key.tk-wide{flex:1.6;max-width:70px;font-size:10.5px;color:#7a5510;text-align:center;}
+.tk-key.tk-space{flex:4;max-width:180px;font-size:10.5px;color:#7a5510;}
+.tk-key.active,#rg-shift-key.active{background:#e8a020;color:#fff;border-color:#e8a020;}
+#rg-shift-key.need,#adv-shift-key.need{border-color:#d85a30;box-shadow:0 0 0 2px rgba(216,90,48,.3);background:#ffe8dd;}
+@media(max-width:420px){.tk-key{height:34px;}.tk-key .tk-base{font-size:13px;}.type-target{font-size:28px;}}
+.retry-hint.good{color:#2e7d32;background:#e8f5e9;border-color:#a5d6a7;}
+.retry-hint.wrong3{color:#c62828;background:#ffebee;border-color:#ef9a9a;}
 </style>
 </head>
 <body>
@@ -279,24 +304,24 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <div class="v3-page">
 
 <div class="page-header">
-  <div class="page-title">泰語拼讀練習</div>
-  <div class="page-sub">看字選出正確的組件</div>
+  <div class="page-title">泰語打字練習</div>
+  <div class="page-sub">照泰文鍵盤打出正確拼寫</div>
 </div>
 
-<!-- How-to modal: เกมอ่าน -->
+<!-- How-to modal: เกมพิมพ์ -->
 <div id="rg-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
   <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
     <button onclick="document.getElementById('rg-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
-    <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">📝 怎麼玩？</div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">背單字好無聊？來玩遊戲吧，玩著玩著就記住了 😊</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">泰文的每個字，都是由「子音＋母音＋聲調＋尾音」組合起來的喔！點一下零件，把它放進正確的格子，親手把字「拼」出來 🧩 拼幾次之後就記住了，不是死背，是用手感記住的感覺～</p>
+    <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">⌨️ 怎麼玩？</div>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">練打字順便練拼字！鍵盤已經照泰文鍵盤（Kedmanee）排好位置了 😊</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">看著上面的泰文字，照樣打出來，打對會自動跳下一個字母。手機也能用螢幕上的虛擬鍵盤打 📱</p>
     <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:2;">
       第一次就全對 → <strong>+10 分</strong><br>
-      中途選錯，最後還是拼對 → <strong>+5 分</strong><br>
-      拼完還可以猜聲調，答對再拿 <strong>+3 分</strong>（答錯不扣喔）
+      中途打錯，最後還是打對 → <strong>+5 分</strong><br>
+      打完還可以猜聲調，答對再拿 <strong>+3 分</strong>（答錯不扣喔）
     </div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐</p>
-    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">母音的種類有點多呢～想知道每個怎麼發音，<a href="page2.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐（跟拼讀練習共用進度）</p>
+    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">還不熟鍵盤位置也沒關係，照著螢幕上的鍵盤打就行，<a href="page2.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔 😄</a></p>
   </div>
 </div>
 
@@ -331,7 +356,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="bar-row">
     <span>⚡</span>
     <div class="bar-bg"><div class="bar-fill power" id="powerf" style="width:0%"></div></div>
-    <span class="bar-label"><span id="power-num">0</span>/100</span>
+    <span class="bar-label"><span id="power-num">0</span>/<span id="power-max">100</span></span>
   </div>
 </div>
 
@@ -363,12 +388,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <!-- แถบพยางค์ (中級 หลายพยางค์) — โชว์เฉพาะคำที่มีหลายพยางค์ -->
   <div class="syl-strip" id="syl-strip" style="display:none"></div>
 
-  <!-- ปุ่มเปิด/ปิดคำใบ้ (ว่าต้องเลือกช่องไหนต่อ) — เลียนแบบ typing-game.html -->
-  <div style="display:flex;gap:6px;justify-content:center;margin:0 0 8px;">
-    <button id="rg-guide-on" class="btn btn-primary" style="font-size:12px;padding:6px 14px;" onclick="setRgGuideMode(true)">💡 有提示</button>
-    <button id="rg-guide-off" class="btn btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="setRgGuideMode(false)">🔥 無提示（挑戰）</button>
-  </div>
-
   <!-- Slot row (ทั้ง 初 และ 中) — ลำดับตามการเขียนจริง: พยัญชนะ → วรรณยุกต์ → สระ → ตัวสะกด -->
   <div class="slot-row" id="slot-row">
     <div class="slot-col" id="slotcol-cons">
@@ -389,10 +408,18 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     </div>
   </div>
 
-  <div class="opts-wrap"><div class="opts" id="pool"></div></div>
+  <div class="type-panel" id="type-panel" style="display:none">
+    <div class="type-target" id="rg-type-target"></div>
+    <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤（Kedmanee）排好位置了，打對會自動跳下一步 👇</div>
+    <!-- ปุ่มเลือกโหมดไกด์ไลน์ — ใช้ร่วมทุกระดับ (Lin 2026-07-02) -->
+    <div style="display:flex;gap:8px;justify-content:center;margin:4px 0;">
+      <button id="guide-on" class="btn btn-primary" style="font-size:12px;padding:6px 14px;" onclick="setGuideMode(true)">💡 有提示</button>
+      <button id="guide-off" class="btn btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="setGuideMode(false)">🔥 無提示（挑戰）</button>
+    </div>
+    <div class="tkbd" id="rg-kbd"></div>
+  </div>
 
-  <!-- ปุ่มข้ามไปพยางค์ถัดไปแบบง่ายๆ (中級หลายพยางค์) — วางตรงกลางกดง่ายกว่าไปหาแถบ syl-strip เล็กๆ -->
-  <button class="btn btn-secondary" id="btn-next-syl" onclick="rgGotoSyl(sylIdx+1)" style="display:none;margin:2px 0 6px;">下一個音節 →</button>
+  <div class="opts-wrap"><div class="opts" id="pool"></div></div>
 
   <!-- Bonus tone — shown at load, user picks before pressing 檢查 -->
   <div class="bonus-section" id="bonus-section">
@@ -431,17 +458,25 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="book-cta">
     <div class="book-cta-title">想把泰文唸得標準嗎？🇹🇭</div>
     <div class="book-cta-sub">跟 Lin 老師 1 對 1，聲調發音一次到位</div>
-    <a class="btn btn-book" href="page2.html?from=reading_game#pricing" onclick="if(window.bookFromGame){bookFromGame('reading_game','end_screen');return false;}trackBookCTA()">預約免費體驗課 →</a>
+    <a class="btn btn-book" href="page2.html?from=typing_game#pricing" onclick="if(window.bookFromGame){bookFromGame('typing_game','end_screen');return false;}trackBookCTA()">預約免費體驗課 →</a>
   </div>
   <!-- ▲ CTA ▲ -->
 
   <div class="end-actions">
     <button class="btn btn-primary" onclick="restart()">再玩一次</button>
-    <a class="btn btn-secondary" href="reading-board.html" onclick="try{gtag('event','game_link_click',{target:'reading_board',from:'reading_game'})}catch(e){}">🏆 看排行榜</a>
+    <a class="btn btn-secondary" href="typing-board.html" onclick="try{gtag('event','game_link_click',{target:'typing_board',from:'typing_game'})}catch(e){}">🏆 看排行榜</a>
     <a class="btn btn-secondary" href="games.html" onclick="trackToneLink()">看其他遊戲 🎮</a>
   </div>
 </div>
 
+<div class="card" id="advanced-soon" style="display:none">
+  <div style="font-size:48px">🚧</div>
+  <h2>高級模式開發中</h2>
+  <p>即將推出完整句子練習！<br>目前請使用 初級 或 中級 練習單字打字 😊</p>
+  <button class="btn btn-secondary" onclick="setLevel('初')">回到初級</button>
+</div>
+
+<!-- ════ 高級 MODE — ประโยค ════ -->
 <div class="card" id="adv-game" style="display:none;flex-direction:column;align-items:center;gap:6px;">
   <div class="top-bar">
     <div class="score-bar">
@@ -451,26 +486,32 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     </div>
   </div>
   <div id="adv-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;">✨ 黃金句 ×2</div>
+  <!-- ปุ่มเลือกโหมดไกด์ไลน์ (Lin 2026-07-02) -->
+  <div style="display:flex;gap:8px;justify-content:center;">
+    <button id="adv-guide-on" class="btn btn-primary" style="font-size:12px;padding:6px 14px;" onclick="setGuideMode(true)">💡 有提示</button>
+    <button id="adv-guide-off" class="btn btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="setGuideMode(false)">🔥 無提示（挑戰）</button>
+  </div>
   <!-- ประโยค + คำแปล -->
   <div class="word-area" style="text-align:center;width:100%;margin:4px 0;">
-    <div id="adv-sentence" style="font-family:'Sarabun',sans-serif;font-size:clamp(20px,4.2vw,30px);font-weight:700;color:#3a2a0a;line-height:1.8;padding:6px 8px;"></div>
+    <div id="adv-sentence" style="font-family:'Sarabun',sans-serif;font-size:clamp(24px,5vw,40px);font-weight:700;color:#3a2a0a;line-height:1.7;padding:6px 8px;"></div>
     <div id="adv-zh" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#888;margin-top:2px;"></div>
-    <div id="adv-word-progress" style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;margin-top:6px;"></div>
   </div>
+  <!-- พิมพ์แถว -->
+  <div class="type-target" id="adv-type-target" style="width:fit-content;max-width:92%;margin:0 auto;"></div>
   <!-- ชีวิต -->
   <div id="adv-lives" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;text-align:center;min-height:20px;"></div>
-  <!-- ช่องเรียงคำอ่านทีละพยางค์ -->
-  <div class="slot-row" id="adv-slot-row"></div>
-  <div class="opts-wrap"><div class="opts" id="adv-pool"></div></div>
-  <!-- ปุ่มถัดไปตรงกลาง — แพทเทินเดียวกับเกมอ่าน中級 กดง่ายกว่ารอปุ่มล่างสุด (สถานะซิงค์กับ adv-next-btn ผ่าน advSetNextBtn) -->
-  <button class="btn btn-primary" id="adv-next-btn-mid" onclick="advNext()" style="display:none;margin:2px 0 6px;">下一個 →</button>
+  <!-- hint -->
+  <div id="adv-type-hint" class="type-hint">照著打出上面這個句子，打對會自動前進 👇</div>
+  <!-- Result -->
   <div class="result-banner" id="adv-banner"></div>
   <!-- ปุ่มเก็บคำจากประโยคนี้เข้าคลัง (โชว์หลังตอบ) -->
   <div id="adv-vault-chips" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:4px;"></div>
-  <div class="btn-row">
+  <!-- Keyboard -->
+  <div class="tkbd" id="adv-kbd"></div>
+  <!-- Buttons -->
+  <div class="btn-row" style="position:sticky;bottom:calc(46px + env(safe-area-inset-bottom,0));z-index:6;background:#fff;padding:9px 6px;border-radius:14px;box-shadow:0 -6px 14px rgba(255,253,247,.96);margin-top:8px;">
     <button class="btn btn-secondary" onclick="advSkip()">跳過</button>
-    <button class="btn btn-primary" id="adv-check-btn" onclick="advCheck()" disabled>檢查</button>
-    <button class="btn btn-primary" id="adv-next-btn" onclick="advNext()" style="display:none">下一個 →</button>
+    <button class="btn btn-primary" id="adv-next-btn" onclick="advNext()" style="display:none">下一句 →</button>
   </div>
 </div>
 
@@ -1367,12 +1408,12 @@ function buildRevealRules(w){
 // ════════════════════════════════════════════
 var ROUND_SIZE=10;
 // ── ระบบคะแนนกลาง (Lin 2026-07-03 ล็อกสเปกแล้ว): ถ่วงน้ำหนักระดับ + โบนัสจบรอบ + คำทอง ──
-var LEVEL_WEIGHT={'初':1,'中':1.5,'高':2};
+var LEVEL_WEIGHT={'初':1,'中':1.5,'高':2};     // พิมพ์ = เท่าเกมอ่าน (Lin ยืนยัน 2026-07-03)
 var ROUND_COMPLETE_BONUS=20;                   // จบรอบ +20
 var ROUND_PERFECT_BONUS=50;                    // จบรอบแบบ perfect เพิ่มอีก +50 (รวม 70)
 var GOLDEN_WORD_CHANCE=0.18;                   // โอกาสคำทอง ~18%/คำ (สเปกเดียวกับเกมเสียง)
 var GOLDEN_WORD_MULT=2;                        // คำทองตอบถูกครั้งแรก ×2
-var ADV_PTS_PER_SYL=2;                         // 高級: +2 แต้ม/พยางค์ที่อ่านถูก (คำทอง ×2 → +4)
+var ADV_PTS_PER_SYL=2;                         // 高級: +2 แต้ม/พยางค์ที่พิมพ์ถูก (คำทอง ×2 → +4)
 var curLevel='初';
 var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,roundTotal=0;
 var picks=[],comps=[],correctSet=[],needN=0;
@@ -1386,13 +1427,6 @@ var totalStars=0,totalBadges=0;
 var W=null;
 var WORD=null,sylList=[],sylIdx=0,wordHadWrong=false,wordFailed=false; // 中級 หลายพยางค์
 var wordGolden=false; // คำทอง (18%/คำ) — ตอบถูกครั้งแรกล้วน (ไม่มีผิดเลยทั้งคำ) = ×2
-// ── 高級: state (Lin 2026-07-03) ──
-var advModeActive=false;
-var advQueue=[],advCur=0,advWordIdx=0;
-var advWrongBudget=0,advWrongUsed=0,advHadWrong=false,advChecked=false,advSentenceEnded=false;
-var advOkC=0,advBadC=0,advRoundScore=0,advSentenceScore=0,advPerfectC=0,advMaxScore=0;
-var advGoldenSentence=false,advCurWordWrong=false;
-var advSlots=[],advTiles=[],advActiveSlot=0;
 var optTypes={};
 var optTiles=[],correctVal={}; // ระบบไทล์ผูกช่อง (กันบั๊ก "ค่าซ้ำข้ามช่อง" เช่น อ+ออ)
 function tileById(id){for(var i=0;i<optTiles.length;i++)if(optTiles[i].id===id)return optTiles[i];return null;}
@@ -1403,40 +1437,12 @@ var activeSlot=null, slotSeq=[];
 function slotOfTile(id){for(var i=0;i<slotSeq.length;i++){if(slotFills[slotSeq[i]]===id)return slotSeq[i];}return null;}
 function nextEmptySlot(){for(var i=0;i<slotSeq.length;i++){if(slotFills[slotSeq[i]]==null)return slotSeq[i];}return null;}
 function setActiveSlot(c){activeSlot=c;updateActiveSlot();}
-// ── โหมดคำใบ้ (ว่าต้องเลือกช่องไหนต่อ) — เปิด/ปิดได้ จำค่าไว้ใน localStorage เหมือน typing-game.html ──
-var rgGuideMode=(function(){try{return localStorage.getItem('rg_guide_mode')!=='0';}catch(e){return true;}})();
-function setRgGuideMode(on){
-  rgGuideMode=!!on;
-  try{localStorage.setItem('rg_guide_mode',rgGuideMode?'1':'0');}catch(e){}
-  var a=document.getElementById('rg-guide-on'),b=document.getElementById('rg-guide-off');
-  if(a)a.className='btn '+(rgGuideMode?'btn-primary':'btn-secondary');
-  if(b)b.className='btn '+(rgGuideMode?'btn-secondary':'btn-primary');
-  updateActiveSlot();
-}
 function updateActiveSlot(){
   slotSeq.forEach(function(c){
     var box=document.getElementById('sb-'+c);if(!box)return;
-    box.classList.toggle('active', rgGuideMode && c===activeSlot && !checked);
+    box.classList.toggle('active', c===activeSlot && !checked);
   });
-  updateOptHint();
 }
-// ── 提示 = บอกว่า "ตัวเลือกไหน" ในกองไทล์ที่ถูกต้อง (ไม่ใช่แค่บอกลำดับช่อง) ──
-function updateOptHint(){
-  var pool=document.getElementById('pool');
-  if(!pool)return;
-  pool.querySelectorAll('.opt.hint').forEach(function(x){x.classList.remove('hint');});
-  if(!rgGuideMode||checked||!activeSlot)return;
-  var want=correctVal[activeSlot];
-  for(var i=0;i<optTiles.length;i++){
-    var t=optTiles[i];
-    if(t.type===activeSlot && t.val===want){
-      var el=pool.querySelector('.opt[data-id="'+t.id+'"]');
-      if(el)el.classList.add('hint');
-      break;
-    }
-  }
-}
-setRgGuideMode(rgGuideMode); // ตั้งสถานะปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 var bonusAnswered=false;
 var selectedBonus=null;  // tone name user picked before 檢查
 
@@ -1459,25 +1465,14 @@ function doSave(){
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
 
-// avoid = ค่าที่ "แสดงผลจริง" (dispOpt แล้ว) ของคำตอบจริงช่องอื่นๆ — กันตัวลวงปลอมไปหน้าตาซ้ำกับคำตอบจริงช่องอื่น
-// (ถ้าค่านั้นดันเป็นคำตอบจริงของช่องนี้เองพอดี ไม่ถือว่าปลอม ไม่กัน)
-function buildOpts(ans,comp,groups,pool2,count,exclude,avoid){
-  avoid=avoid||[];
+function buildOpts(ans,groups,pool2,count,exclude){
   var grp=null;
   for(var i=0;i<groups.length;i++){if(groups[i].indexOf(ans)>=0){grp=groups[i].slice();break;}}
   if(!grp)grp=[ans];
   if(exclude)grp=grp.filter(function(x){return x!==exclude;});
-  grp=grp.filter(function(x){return x===ans || avoid.indexOf(dispOpt(comp,x))<0;});
   var opts=grp.slice();
   if(opts.length>count){opts=opts.filter(function(x){return x!==ans;});opts=shuffle(opts).slice(0,count-1);opts.push(ans);}
-  var guard=0;
-  while(opts.length<count && guard<500){
-    guard++;
-    var r=rnd(pool2);
-    if(r!==exclude && opts.indexOf(r)<0 && (r===ans || avoid.indexOf(dispOpt(comp,r))<0)) opts.push(r);
-  }
-  // กันหลุด (pool2 เล็กเกินจนหาตัวลวงไม่ครบเพราะกันซ้ำ) — เติมจาก pool2 แบบไม่กัน avoid ให้ครบจำนวนแทนที่จะค้างไม่ครบ
-  while(opts.length<count){var r2=rnd(pool2);if(r2!==exclude&&opts.indexOf(r2)<0)opts.push(r2);}
+  while(opts.length<count){var r=rnd(pool2);if(r!==exclude&&opts.indexOf(r)<0)opts.push(r);}
   return shuffle(opts);
 }
 
@@ -1495,20 +1490,22 @@ function setLevel(lv){
   curLevel=lv;
   document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
   document.getElementById('ltab-'+lv).classList.add('active');
-  var showAdvanced=(lv==='高');
   document.getElementById('end').style.display='none';
+  document.getElementById('advanced-soon').style.display='none';
+  // ซ่อน adv-game ถ้ากำลังเล่นอยู่
   var advG=document.getElementById('adv-game');
   if(advG)advG.style.display='none';
   advModeActive=false;
-  // 高級 ก็ต้องเห็นแถบสถิติ + หลอดความคืบหน้าเหมือนระดับอื่น (Lin 2026-07-03)
+  var isAdv=(lv==='高');
+  // 高級 ก็ต้องเห็นแถบสถิติ + หลอดความคืบหน้าเหมือนระดับอื่น (เมนูเคยหายหมด) — Lin 2026-07-02
   document.getElementById('bars-wrap').style.display='flex';
   document.getElementById('rg-stat-row').style.display='flex';
-  if(!showAdvanced){
-    document.getElementById('game').style.display='flex';
-    initGame();
-  } else {
+  if(isAdv){
     document.getElementById('game').style.display='none';
     advInit();
+  } else {
+    document.getElementById('game').style.display='flex';
+    initGame();
   }
 }
 
@@ -1563,7 +1560,7 @@ function buildSyls(w){
 function renderSylStrip(){
   var strip=document.getElementById('syl-strip');
   if(!strip)return;
-  if(sylList.length<=1){strip.style.display='none';strip.innerHTML='';updateNextSylBtn();return;}
+  if(sylList.length<=1){strip.style.display='none';strip.innerHTML='';return;}
   strip.style.display='flex';strip.innerHTML='';
   sylList.forEach(function(s,i){
     var filled;
@@ -1577,15 +1574,6 @@ function renderSylStrip(){
     c.onclick=function(){ if(typeof RG_TYPE!=='undefined' && RG_TYPE.on)return; rgGotoSyl(i); }; // โหมดพิมพ์ให้พิมพ์ต่อเนื่องไปเลย ไม่ต้องคลิกสลับ
     strip.appendChild(c);
   });
-  updateNextSylBtn();
-}
-// ปุ่ม「下一個音節」ตรงกลาง — ทางลัดเท่ากับกดแถบ syl-strip ของพยางค์ถัดไป กดง่ายกว่า ไม่ต้องหา
-function updateNextSylBtn(){
-  var b=document.getElementById('btn-next-syl');
-  if(!b)return;
-  var typingMode=(typeof RG_TYPE!=='undefined' && RG_TYPE.on); // โหมดพิมพ์ต่อเนื่อง ไม่ให้กระโดดเอง
-  var show=sylList.length>1 && !typingMode && !checked && sylIdx<sylList.length-1;
-  b.style.display=show?'':'none';
 }
 function loadWord(){
   rememberStep=0;clearTimeout(rememberTimer);
@@ -1605,7 +1593,7 @@ function loadWord(){
   if(vslot && window.WordVault){
     WordVault.injectStyles();
     vslot.innerHTML='';
-    vslot.appendChild(WordVault.createSaveBtn(WORD.th,{zh:WORD.zh,en:WORD.en,source:'reading-game'},{}));
+    vslot.appendChild(WordVault.createSaveBtn(WORD.th,{zh:WORD.zh,en:WORD.en,source:'typing-game'},{}));
     // refresh badge
     var badges=document.querySelectorAll('.vault-badge');
     badges.forEach(function(b){b.textContent='🔖 單字庫';});
@@ -1658,22 +1646,14 @@ function loadSyl(){
   // build optTypes + options
   // ไทล์ไม่ผูกช่องแล้ว — type ใช้แค่สร้างตัวลวง · การวางตัดสินจาก "ช่องที่เล็ง" (activeSlot) → ตัวหน้าตาซ้ำไม่งง
   optTiles=[];correctVal={};
-  var compDef={};
-  // รอบ 1: หาคำตอบจริงของทุกช่องก่อน (correctVal) — ต้องรู้ครบก่อนถึงจะกันตัวลวงปลอมไม่ให้ไปซ้ำหน้าตากับคำตอบจริงช่องอื่นได้
   comps.forEach(function(comp){
     var ans,groups,pool2,ex=null;
     if     (comp==='cons' ){ans=W.cons;  groups=CONS_GROUPS;  pool2=CP; ex=W.lead||null;}
     else if(comp==='vowel'){ans=W.vowel; groups=VOWEL_GROUPS; pool2=VP;}
     else if(comp==='final'){ans=W.final; groups=FINAL_GROUPS; pool2=FP;}
     else                   {ans=W.tone;  groups=[TONE_POOL];  pool2=TONE_POOL;}
-    compDef[comp]={ans:ans,groups:groups,pool2:pool2,ex:ex};
     correctVal[comp]=dispOpt(comp,ans);
-  });
-  // รอบ 2: สร้างตัวเลือกจริงจริง (ให้ avoid = คำตอบจริงของช่องอื่นทั้งหมด กันตัวลวงปลอมไปหน้าตาซ้ำ)
-  comps.forEach(function(comp){
-    var d=compDef[comp];
-    var avoid=comps.filter(function(c){return c!==comp;}).map(function(c){return correctVal[c];});
-    var raw=buildOpts(d.ans,comp,d.groups,d.pool2,oc[comp],d.ex,avoid);
+    var raw=buildOpts(ans,groups,pool2,oc[comp],ex);
     raw.forEach(function(o){optTiles.push({type:comp,val:dispOpt(comp,o)});});
   });
   optTiles=shuffle(optTiles);
@@ -1741,7 +1721,6 @@ function renderOptions(tiles){
     };
     pool.appendChild(el);
   });
-  updateOptHint(); // ทาไฮไลต์ตัวเลือกที่ถูกทันทีที่ pool เพิ่งสร้างใหม่ (ถ้าเปิดคำใบ้)
 }
 
 // ─── Slot boxes ───
@@ -1775,7 +1754,8 @@ function finalizeWord(){
   var idx=roundQueue[cur];var b=document.getElementById('banner');
   if(wordFailed){
     roundQueue.push(idx);streak=0;          // คำนี้กลับมาใหม่
-    b.textContent='綠色才是正確答案 — 這個字稍後會再出現';b.className='result-banner show no';
+    // เดิมข้อความนี้พูดถึง "綠色" (สีเขียว) ซึ่งเป็นของ UI แบบเลือกไทล์เก่า ไม่มีในโหมดพิมพ์แล้ว — เปลี่ยนเป็นข้อความนุ่มนวล ไม่ทำให้รู้สึกผิด — Lin 2026-07-03 v3
+    b.textContent='沒關係，多打幾次就會了 — 這個字晚點會再出現一次 🙂';b.className='result-banner show no';
   } else {
     var pts=wordHadWrong?5:10;
     if(pts===10)cleanC++;
@@ -1956,7 +1936,7 @@ function endRound(){
   document.getElementById('end').style.display='flex';
   document.getElementById('pf').style.width='100%';
   document.getElementById('prog-txt').textContent=roundQueue.length+'/'+roundQueue.length;
-  // โบนัสจบรอบ: +20 ทุกครั้งที่จบ · +50 เพิ่มถ้า perfect (cleanC===roundTotal) — ทุกระดับ (Lin 2026-07-03)
+  // โบนัสจบรอบ: +20 ทุกครั้งที่จบ · +50 เพิ่มถ้า perfect (คือ cleanC===roundTotal) — ทุกระดับ (Lin 2026-07-03)
   var roundBonus=0;
   if(roundTotal>0){
     roundBonus+=ROUND_COMPLETE_BONUS;
@@ -1981,7 +1961,7 @@ function endRound(){
   } else detail='繼續加油！多練習就能進步 💪';
   if(roundBonus)detail+='・含完成獎勵 +'+roundBonus;
   document.getElementById('end-detail').textContent=detail;
-  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'reading'); }catch(e){}   // เฟส 2: เซฟแต้มขึ้นลีกเกมอ่าน (ถ้าล็อกอิน) · ระบุเกมชัดเจน — 2026-07-02
+  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'typing'); }catch(e){}   // เซฟแต้มขึ้นลีกเกมพิมพ์ (ถ้าล็อกอิน) · ระบุเกมชัดเจน — 2026-07-02
   // ── weekly challenge + streak freeze ──
   var _isPerfect = (cleanC === roundTotal && roundTotal > 0);
   var _maxCombo = maxStreak; // max combo ที่ทำได้ในรอบนี้
@@ -1993,313 +1973,14 @@ function endRound(){
   setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
 }
 
-function restart(){if(curLevel==='高'){advInit();}else{initGame();}}
+function restart(){
+  if(curLevel==='高'){advInit();}
+  else{initGame();}
+}
 
 // ── GA: 遊戲結束 → 預約 / 聲調遊戲 追蹤（標準模式才會記錄）──
-function trackBookCTA(){try{if(typeof gtag==='function')gtag('event','book_trial_click',{method:'reading_game_end'});}catch(e){}}
-function trackToneLink(){try{if(typeof gtag==='function')gtag('event','game_link_click',{target:'games_hub',from:'reading_game'});}catch(e){}} // ปุ่มนี้ลิงก์ไป games.html จริง → target ต้องเป็น games_hub — แก้ 2026-07-02
-
-// ════════════════════════════════════════════
-// 高級 — ประโยคเต็ม + เรียงคำอ่านทีละคำ (words[].syl มาจาก adv-sentences.js) — Lin 2026-07-03
-// โหมด "อ่าน": ให้ประโยค+ความหมายจีน แล้วให้ผู้เล่นแตะพยางค์คำอ่านเรียงตามลำดับของแต่ละคำ
-// คะแนน: +2/พยางค์ที่ถูก ให้ทันทีเมื่อคำนั้นผ่าน (เก็บสะสมจริง ไม่ล้างศูนย์) · โควต้าผิด = ceil(wc/2) ทั้งประโยค
-// ผิดครบโควต้า → จบประโยค เก็บแต้มที่ได้แล้วไว้ ประโยคนี้กลับไปท้าย queue ให้เล่นซ้ำภายหลัง
-// ════════════════════════════════════════════
-// ปุ่ม「下一個」มี 2 ตัว (บนกลาง + ล่างสุด btn-row) โชว์/ข้อความต้องตรงกันเสมอ — ตั้งพร้อมกันที่ฟังก์ชันเดียว
-function advSetNextBtn(show,text){
-  ['adv-next-btn','adv-next-btn-mid'].forEach(function(id){
-    var b=document.getElementById(id);
-    if(!b)return;
-    b.style.display=show?'':'none';
-    if(text!=null)b.textContent=text;
-  });
-}
-function advInit(){
-  advModeActive=true;
-  advQueue=shuffle(ADV_SENTENCES.map(function(_,i){return i;})).slice(0,Math.min(ROUND_SIZE,ADV_SENTENCES.length));
-  advCur=0;advOkC=0;advBadC=0;advRoundScore=0;advPerfectC=0;
-  advMaxScore=advQueue.reduce(function(acc,i){return acc+(ADV_SENTENCES[i].wc*ADV_PTS_PER_SYL);},0)||1;
-  document.getElementById('adv-qt').textContent=advQueue.length;
-  document.getElementById('adv-ok').textContent=0;
-  document.getElementById('adv-bad').textContent=0;
-  var g=document.getElementById('adv-game');
-  if(g)g.style.display='flex';
-  advLoadSentence();
-  advRefreshBars();
-}
-function advLoadSentence(){
-  advSentenceEnded=false;
-  var s=ADV_SENTENCES[advQueue[advCur]];
-  advWrongBudget=Math.ceil(s.wc/2); // โควต้าผิด = จำนวนพยางค์ทั้งประโยค ÷ 2 ปัดขึ้น
-  advWrongUsed=0;advHadWrong=false;advSentenceScore=0;
-  advGoldenSentence=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มประโยคทองใหม่ทุกประโยค
-  document.getElementById('adv-sentence').textContent=s.th;
-  document.getElementById('adv-zh').textContent=s.zh;
-  document.getElementById('adv-qn').textContent=advCur+1;
-  advSetNextBtn(false);
-  document.getElementById('adv-check-btn').style.display='';
-  document.getElementById('adv-banner').className='result-banner';
-  var _gb=document.getElementById('adv-golden-badge');
-  if(_gb)_gb.style.display=advGoldenSentence?'':'none';
-  var _vc=document.getElementById('adv-vault-chips');
-  if(_vc)_vc.innerHTML='';
-  advRenderLives();
-  advLoadWord(0);
-}
-function advLoadWord(wordIdx){
-  advWordIdx=wordIdx;
-  advCurWordWrong=false;
-  advChecked=false;
-  var s=ADV_SENTENCES[advQueue[advCur]];
-  var w=s.words[wordIdx];
-  document.getElementById('adv-word-progress').innerHTML='第 '+(wordIdx+1)+'/'+s.words.length+' 個詞：<span style="color:#c07030;font-weight:700;">'+w.th+'</span>（'+w.zh+'）　請依序選出讀音';
-  advSlots=w.syl.map(function(){return null;});
-  advActiveSlot=0;
-  advRenderSlots(w.syl.length);
-  // ตัวเลือก = พยางค์ถูกของคำนี้ + ตัวลวงจากพยางค์คำอื่นทั้งชุดประโยค (กันซ้ำกับคำตอบ)
-  var correct=w.syl.slice();
-  var distractPool=[];
-  ADV_SENTENCES.forEach(function(sent){
-    sent.words.forEach(function(ww){
-      ww.syl.forEach(function(sy){ if(correct.indexOf(sy)<0)distractPool.push(sy); });
-    });
-  });
-  distractPool=shuffle(distractPool);
-  var needDistract=Math.max(2,Math.min(4,correct.length+2));
-  var distract=[],seen={};
-  for(var i=0;i<distractPool.length && distract.length<needDistract;i++){
-    if(!seen[distractPool[i]]){seen[distractPool[i]]=1;distract.push(distractPool[i]);}
-  }
-  var tiles=shuffle(correct.concat(distract));
-  advTiles=tiles.map(function(v,i){return {id:i,val:v};});
-  advRenderPool();
-  document.getElementById('adv-check-btn').disabled=true;
-  document.getElementById('adv-check-btn').style.display='';
-  advSetNextBtn(false);
-}
-function advTileById(id){for(var i=0;i<advTiles.length;i++)if(advTiles[i].id===id)return advTiles[i];return null;}
-function advRenderSlots(n){
-  var row=document.getElementById('adv-slot-row');
-  row.innerHTML='';
-  for(var i=0;i<n;i++){
-    var col=document.createElement('div');col.className='slot-col';
-    var lbl=document.createElement('div');lbl.className='slot-label';lbl.textContent=(i+1);
-    var box=document.createElement('div');box.className='slot-box empty-slot';box.id='adv-sb-'+i;box.textContent='◌';
-    (function(ix){box.onclick=function(){if(advChecked)return;advActiveSlot=ix;advUpdateActiveSlot();};})(i);
-    col.appendChild(lbl);col.appendChild(box);row.appendChild(col);
-  }
-  advUpdateActiveSlot();
-}
-function advUpdateActiveSlot(){
-  for(var i=0;i<advSlots.length;i++){
-    var box=document.getElementById('adv-sb-'+i);
-    if(box)box.classList.toggle('active', i===advActiveSlot && !advChecked);
-  }
-}
-function advRenderSlotContents(){
-  advSlots.forEach(function(id,i){
-    var box=document.getElementById('adv-sb-'+i);
-    if(!box)return;
-    if(id==null){box.textContent='◌';box.classList.add('empty-slot');}
-    else{var t=advTileById(id);box.textContent=t?t.val:'';box.classList.remove('empty-slot');}
-  });
-}
-function advRenderPool(){
-  var pool=document.getElementById('adv-pool');
-  pool.innerHTML='';
-  advTiles.forEach(function(t){
-    var el=document.createElement('div');
-    el.className='opt';
-    el.dataset.id=t.id;
-    el.textContent=t.val;
-    el.onclick=function(){
-      if(advChecked)return;
-      var placedAt=advSlots.indexOf(t.id);
-      if(placedAt>=0){
-        advSlots[placedAt]=null;
-        el.classList.remove('sel');
-        advActiveSlot=placedAt;
-        advUpdateActiveSlot();
-        advRenderSlotContents();
-      } else {
-        var target=advActiveSlot;
-        if(target==null||target>=advSlots.length)target=advSlots.indexOf(null);
-        if(target<0||target==null)return;
-        if(advSlots[target]!=null){
-          var oldId=advSlots[target];
-          var oldEl=pool.querySelector('.opt[data-id="'+oldId+'"]');
-          if(oldEl)oldEl.classList.remove('sel');
-        }
-        advSlots[target]=t.id;
-        el.classList.add('sel');
-        var nextEmpty=advSlots.indexOf(null);
-        advActiveSlot=nextEmpty>=0?nextEmpty:target;
-        advUpdateActiveSlot();
-        advRenderSlotContents();
-      }
-      document.getElementById('adv-check-btn').disabled=advSlots.some(function(x){return x==null;});
-    };
-    pool.appendChild(el);
-  });
-}
-function advRenderLives(){
-  var el=document.getElementById('adv-lives');
-  if(!el)return;
-  var html='容錯：';
-  for(var i=0;i<advWrongBudget;i++){
-    html+='<span style="font-size:15px;color:'+(i<advWrongUsed?'#f44336':'#9ccc65')+';">'+(i<advWrongUsed?'✗':'●')+'</span>';
-  }
-  el.innerHTML=html;
-}
-// ให้แต้มทันทีตอนคำนี้ผ่าน: +2/พยางค์ · ประโยคทอง+คำนี้ไม่มีผิดเลย = ×2 (Lin 2026-07-03)
-function advAwardWord(idx){
-  var s=ADV_SENTENCES[advQueue[advCur]];
-  var w=s.words[idx];
-  if(!w)return;
-  var syl=(w.syl&&w.syl.length)?w.syl.length:1;
-  var golden=advGoldenSentence && !advCurWordWrong;
-  var pts=ADV_PTS_PER_SYL*syl*(golden?GOLDEN_WORD_MULT:1);
-  advRoundScore+=pts;
-  advSentenceScore+=pts;
-  pop('+'+pts+(golden?' ✨':''));
-  advRefreshBars();
-}
-function advCheck(){
-  if(!advModeActive||advChecked)return;
-  var s=ADV_SENTENCES[advQueue[advCur]];
-  var w=s.words[advWordIdx];
-  var allOk=advSlots.every(function(id,i){
-    if(id==null)return false;
-    var t=advTileById(id);
-    return t && t.val===w.syl[i];
-  });
-  advChecked=true;
-  advSlots.forEach(function(id,i){
-    var box=document.getElementById('adv-sb-'+i);
-    var t=id!=null?advTileById(id):null;
-    if(!box)return;
-    box.classList.toggle('correct', !!(t&&t.val===w.syl[i]));
-    box.classList.toggle('wrong', !!(t&&t.val!==w.syl[i]));
-  });
-  var b=document.getElementById('adv-banner');
-  if(allOk){
-    advAwardWord(advWordIdx);
-    b.textContent=(advCurWordWrong?'完成！':'完美！🎉')+'　「'+w.th+'」讀作「'+w.syl.join('-')+'」';
-    b.className='result-banner show '+(advCurWordWrong?'half':'ok');
-    document.getElementById('adv-check-btn').style.display='none';
-    advSetNextBtn(true,(advWordIdx+1>=s.words.length)?'完成本句 →':'下一個詞 →');
-  } else {
-    advWrongUsed++;advHadWrong=true;advCurWordWrong=true;advBadC++;
-    document.getElementById('adv-bad').textContent=advBadC;
-    advRenderLives();
-    if(advWrongUsed>=advWrongBudget){
-      advFailSentence();
-      return;
-    }
-    b.textContent='不對喔，再試一次 🔁　（容錯剩 '+(advWrongBudget-advWrongUsed)+' 次）';
-    b.className='result-banner show no';
-    setTimeout(function(){
-      advChecked=false;
-      advSlots=advSlots.map(function(){return null;});
-      document.querySelectorAll('#adv-pool .opt').forEach(function(x){x.classList.remove('sel');});
-      advRenderSlotContents();
-      for(var i=0;i<advSlots.length;i++){var box=document.getElementById('adv-sb-'+i);if(box){box.classList.remove('correct');box.classList.remove('wrong');}}
-      advActiveSlot=0;advUpdateActiveSlot();
-      document.getElementById('adv-check-btn').disabled=true;
-      document.getElementById('adv-banner').className='result-banner';
-    },900);
-  }
-}
-function advFailSentence(){
-  var s=ADV_SENTENCES[advQueue[advCur]];
-  var w=s.words[advWordIdx];
-  var b=document.getElementById('adv-banner');
-  b.textContent='超過容錯次數 😅　「'+w.th+'」讀作「'+w.syl.join('-')+'」　已保留 +'+advSentenceScore+' 分（本句稍後會再出現）';
-  b.className='result-banner show no';
-  advQueue.push(advQueue[advCur]);
-  document.getElementById('adv-qt').textContent=advQueue.length;
-  advSentenceEnded=true;
-  advShowVaultChips();
-  document.getElementById('adv-check-btn').style.display='none';
-  advSetNextBtn(true,'下一句 →');
-  advRefreshBars();
-}
-function advNext(){
-  if(advSentenceEnded){
-    advCur++;
-    if(advCur>=advQueue.length){advEnd();return;}
-    advLoadSentence();
-    return;
-  }
-  var s=ADV_SENTENCES[advQueue[advCur]];
-  if(advWordIdx+1<s.words.length){
-    document.getElementById('adv-banner').className='result-banner';
-    advLoadWord(advWordIdx+1);
-  } else {
-    advOkC++;
-    if(!advHadWrong)advPerfectC++;
-    document.getElementById('adv-ok').textContent=advOkC;
-    var b2=document.getElementById('adv-banner');
-    b2.textContent=(advHadWrong?'本句完成！+'+advSentenceScore+' 分':'本句完美！🎉 +'+advSentenceScore+' 分');
-    b2.className='result-banner show '+(advHadWrong?'half':'ok');
-    advShowVaultChips();
-    advSentenceEnded=true;
-    document.getElementById('adv-check-btn').style.display='none';
-    advSetNextBtn(true,'下一句 →');
-  }
-}
-function advSkip(){
-  advCur++;
-  if(advCur>=advQueue.length){advEnd();return;}
-  advLoadSentence();
-}
-// ปุ่ม 🔖 เก็บคำจากประโยคนี้เข้าคลัง — โชว์ทุกคำหลังตอบ (Lin 2026-07-03)
-function advShowVaultChips(){
-  var vc=document.getElementById('adv-vault-chips');
-  if(!vc||!window.WordVault)return;
-  WordVault.injectStyles();
-  vc.innerHTML='';
-  var s=ADV_SENTENCES[advQueue[advCur]];
-  s.words.forEach(function(w){
-    var chip=document.createElement('span');
-    chip.style.cssText='display:inline-flex;align-items:center;gap:4px;font-size:12px;background:#FBF5E7;border:1px solid rgba(139,99,16,0.20);border-radius:14px;padding:2px 8px 2px 2px;';
-    var btn=WordVault.createSaveBtn(w.th,{zh:w.zh,source:'reading-game'},{});
-    btn.style.width='24px';btn.style.height='24px';btn.style.fontSize='13px';
-    chip.appendChild(btn);
-    var lbl=document.createElement('span');
-    lbl.textContent=w.th+'（'+w.zh+'）';
-    chip.appendChild(lbl);
-    vc.appendChild(chip);
-  });
-  var badges=document.querySelectorAll('.vault-badge');
-  badges.forEach(function(b){b.textContent='🔖 單字庫';});
-}
-function advRefreshBars(){
-  var total=advQueue.length||1;
-  var maxScore=advMaxScore||1;
-  var pf=document.getElementById('pf'); if(pf)pf.style.width=Math.min(100,advCur/total*100)+'%';
-  var pt=document.getElementById('prog-txt'); if(pt)pt.textContent=advCur+'/'+total;
-  var pw=document.getElementById('powerf'); if(pw)pw.style.width=Math.min(100,advRoundScore/maxScore*100)+'%';
-  var pn=document.getElementById('power-num'); if(pn)pn.textContent=advRoundScore;
-}
-function advEnd(){
-  advCur=advQueue.length;advRefreshBars();
-  advModeActive=false;
-  document.getElementById('adv-game').style.display='none';
-  document.getElementById('end').style.display='flex';
-  // โบนัสจบรอบ: +20 จบ · +50 เพิ่มถ้า perfect (ทุกประโยคผ่านแบบไม่มีผิดเลย) — Lin 2026-07-03
-  var roundBonus=0;
-  if(advOkC>0){
-    roundBonus+=ROUND_COMPLETE_BONUS;
-    if(advPerfectC===advOkC)roundBonus+=ROUND_PERFECT_BONUS;
-  }
-  advRoundScore+=roundBonus;
-  var levelWeight=LEVEL_WEIGHT['高']||1;
-  var weightedScore=Math.round(advRoundScore*levelWeight);
-  document.getElementById('end-score').textContent=weightedScore+' 分（高級 ×'+levelWeight+'）';
-  document.getElementById('end-detail').textContent='完成 '+advQueue.length+' 句！正確 '+advOkC+' 句'+(roundBonus?'・含完成獎勵 +'+roundBonus:'');
-  try{if(window.READING_AUTH&&READING_AUTH.saveScore)READING_AUTH.saveScore(weightedScore,1,'reading');}catch(e){}
-}
+function trackBookCTA(){try{if(typeof gtag==='function')gtag('event','book_trial_click',{method:'typing_game_end'});}catch(e){}}
+function trackToneLink(){try{if(typeof gtag==='function')gtag('event','game_link_click',{target:'games_hub',from:'typing_game'});}catch(e){}} // ปุ่มนี้ลิงก์ไป games.html จริง → target ต้องเป็น games_hub — แก้ 2026-07-02
 
 // ════════════════════════════════════════════
 // UI HELPERS
@@ -2308,6 +1989,7 @@ function refreshUI(){
   var pct=Math.min(100,roundScore);
   document.getElementById('powerf').style.width=pct+'%';
   document.getElementById('power-num').textContent=roundScore;
+  document.getElementById('power-max').textContent='100'; // กลับจาก 高級 ต้องคืนเพดานเป็น 100 — Lin 2026-07-02
   document.getElementById('pf').style.width=(cur/Math.max(1,roundQueue.length)*100)+'%';
   document.getElementById('prog-txt').textContent=cur+'/'+roundQueue.length;
   document.getElementById('qt').textContent=roundQueue.length;
@@ -2372,7 +2054,7 @@ var BADGE_STAGES=[
   {min:6,emoji:'🌸',label:'盛開中！🌸'},
   {min:9,emoji:'🌻',label:'向陽生長！'},
   {min:12,emoji:'🌈',label:'彩虹般的成就！'},
-  {min:16,emoji:'🏆',label:'泰語拼讀大師！'},
+  {min:16,emoji:'🏆',label:'泰語打字大師！'},
   {min:20,emoji:'💎',label:'鑽石等級！'},
   {min:30,emoji:'👑',label:'泰語之王！'}
 ];
@@ -2504,6 +2186,464 @@ function rgToast(msg) {
     setTimeout(function(){ d.classList.remove('show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 350); }, 2800);
   } catch(e) {}
 }
+
+// ════════════════════════════════════════════
+// 打字模式（Kedmanee 泰文鍵盤）— Lin 2026-07-02
+// 用真實鍵盤鍵位打出音節，答對自動跳下一步；答錯 3 次視同原本「3 次沒選對」規則
+// 只是「多一種輸入方式」，不影響/取代原本點選版
+// ════════════════════════════════════════════
+var RG_BASE_MAP={ // 沒按 Shift 的鍵位
+  Backquote:'_',Digit1:'ๅ',Digit2:'/',Digit3:'-',Digit4:'ภ',Digit5:'ถ',Digit6:'ุ',Digit7:'ึ',Digit8:'ค',Digit9:'ต',Digit0:'จ',Minus:'ข',Equal:'ช',
+  KeyQ:'ๆ',KeyW:'ไ',KeyE:'ำ',KeyR:'พ',KeyT:'ะ',KeyY:'ั',KeyU:'ี',KeyI:'ร',KeyO:'น',KeyP:'ย',BracketLeft:'บ',BracketRight:'ล',
+  KeyA:'ฟ',KeyS:'ห',KeyD:'ก',KeyF:'ด',KeyG:'เ',KeyH:'้',KeyJ:'่',KeyK:'า',KeyL:'ส',Semicolon:'ว',Quote:'ง',Backslash:'ฃ',
+  KeyZ:'ผ',KeyX:'ป',KeyC:'แ',KeyV:'อ',KeyB:'ิ',KeyN:'ื',KeyM:'ท',Comma:'ม',Period:'ใ',Slash:'ฝ'
+};
+var RG_SHIFT_MAP={ // กด Shift ค้าง
+  Backquote:'%',Digit1:'+',Digit2:'๑',Digit3:'๒',Digit4:'๓',Digit5:'๔',Digit6:'ู',Digit7:'฿',Digit8:'๕',Digit9:'๖',Digit0:'๗',Minus:'๘',Equal:'๙',
+  KeyQ:'๐',KeyW:'"',KeyE:'ฎ',KeyR:'ฑ',KeyT:'ธ',KeyY:'ํ',KeyU:'๊',KeyI:'ณ',KeyO:'ฯ',KeyP:'ญ',BracketLeft:'ฐ',BracketRight:',',
+  KeyA:'ฤ',KeyS:'ฆ',KeyD:'ฏ',KeyF:'โ',KeyG:'ฌ',KeyH:'็',KeyJ:'๋',KeyK:'ษ',KeyL:'ศ',Semicolon:'ซ',Quote:'.',Backslash:'ฅ',
+  KeyZ:'(',KeyX:')',KeyC:'ฉ',KeyV:'ฮ',KeyB:'ฺ',KeyN:'์',KeyM:'?',Comma:'ฒ',Period:'ฬ',Slash:'ฦ'
+};
+var RG_REVERSE={}; // ตัวอักษร → {code, shift} ใช้ชี้ปุ่มถัดไปที่ต้องกด
+(function(){
+  Object.keys(RG_BASE_MAP).forEach(function(c){ RG_REVERSE[RG_BASE_MAP[c]]={code:c,shift:false}; });
+  Object.keys(RG_SHIFT_MAP).forEach(function(c){ if(!(RG_SHIFT_MAP[c] in RG_REVERSE)) RG_REVERSE[RG_SHIFT_MAP[c]]={code:c,shift:true}; });
+})();
+
+var RG_TYPE={on:true,target:'',pos:0,wrong:0,shiftOn:false}; // หน้านี้เป็นโหมดพิมพ์ล้วน แยกออกมาเป็นเกมใหม่แล้ว ไม่ต้องมีปุ่มสลับ — Lin 2026-07-02
+
+// ── โหมดพิมพ์ต่อเนื่องทั้งคำ สำหรับคำหลายพยางค์ (2 พยางค์ขึ้นไป, 初/中) — พิมพ์รวดเดียวจริงๆ ไม่คั่นเลยจนกว่าจะพิมพ์ครบทั้งคำ — Lin 2026-07-03 v2 ──
+// (v1 ถามวรรณยุกต์ทันทีตอนจบแต่ละพยางค์ — Lin แจ้งว่ายังรู้สึกไม่ต่อเนื่อง จึงเปลี่ยนเป็น v2: พิมพ์ยาวจนจบคำก่อน แล้วค่อยถามวรรณยุกต์ทีเดียวรวดหลังพิมพ์เสร็จ)
+// แยกเป็น path คู่ขนานทั้งหมด ไม่แตะ logic เดิมของคำพยางค์เดียว (初級) เลย (RG_CONT_ON เป็น false เสมอสำหรับคำเหล่านั้น) · 高級 ไม่ผ่าน loadSyl() อยู่แล้วจึงไม่เกี่ยว
+var RG_CONT_ON=false;        // true = คำปัจจุบันกำลังพิมพ์ต่อเนื่องทั้งคำ (sylList.length>1)
+var RG_CONT_BOUNDS=[];       // ตำแหน่งจบของแต่ละพยางค์ใน RG_TYPE.target (สะสม) เช่น [1,4,7]
+var RG_CONT_SEG=0;           // พยางค์ที่กำลังพิมพ์อยู่ตอนนี้ (0-based)
+var RG_CONT_WRONG=0;         // จำนวนพิมพ์ผิดสะสม "เฉพาะพยางค์ปัจจุบัน" (รีเซ็ตทุกครั้งที่ข้ามพยางค์)
+var RG_CONT_PAUSED=false;    // true = กำลังอยู่ในขั้นถามวรรณยุกต์ท้ายคำ (พิมพ์/backspace ไม่ได้ชั่วคราว — ตอนนี้พิมพ์ครบคำแล้วอยู่แล้ว)
+var RG_CONT_TOKEN=0;         // กันเคส setTimeout ค้างข้ามคำ (ผู้เล่นกด skip/next ระหว่างรอ) — เทียบ token ก่อนทำงานทุกครั้ง
+var RG_CONT_TONE_Q=[];       // คิวพยางค์ที่ต้องถามวรรณยุกต์ตอนท้ายคำ (index เข้า sylList) — สร้างหลังพิมพ์ครบคำแบบไม่มีผิดครบ 3 เลย
+var RG_CONT_TONE_IDX=0;      // ตำแหน่งปัจจุบันในคิว RG_CONT_TONE_Q
+
+// ── โหมดไกด์ไลน์ ใช้ร่วมทุกระดับ 初/中/高 (Lin 2026-07-02) ──
+// true = highlight ปุ่มถัดไปบนคีย์บอร์ด + โชว์ need บน shift · false = ปิดหมด · จำค่าไว้ใน localStorage
+var guideMode=(function(){try{return localStorage.getItem('tg_guide_mode')!=='0';}catch(e){return true;}})();
+function setGuideMode(on){
+  guideMode=!!on;
+  try{localStorage.setItem('tg_guide_mode',guideMode?'1':'0');}catch(e){}
+  [['guide-on','guide-off'],['adv-guide-on','adv-guide-off']].forEach(function(p){
+    var a=document.getElementById(p[0]),b=document.getElementById(p[1]);
+    if(a)a.className='btn '+(guideMode?'btn-primary':'btn-secondary');
+    if(b)b.className='btn '+(guideMode?'btn-secondary':'btn-primary');
+  });
+  try{rgTypeHighlightNextKey();}catch(e){}
+  try{if(advModeActive)advHighlightNext();}catch(e){} // adv อยู่บล็อกถัดไป — try กันพังตอนยังไม่โหลด
+}
+setGuideMode(guideMode); // ตั้งสถานะปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
+
+function rgBuildKeyboard(){
+  var box=document.getElementById('rg-kbd');
+  if(!box)return;
+  var rows=[
+    ['Backquote','Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9','Digit0','Minus','Equal'],
+    ['KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP','BracketLeft','BracketRight'],
+    ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','Quote','Backslash'],
+    ['KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN','KeyM','Comma','Period','Slash']
+  ];
+  box.innerHTML='';
+  rows.forEach(function(codes){
+    var rowEl=document.createElement('div');rowEl.className='tk-row';
+    codes.forEach(function(code){
+      var k=document.createElement('div');
+      k.className='tk-key';k.dataset.code=code;
+      var sh=RG_SHIFT_MAP[code]||'';var un=RG_BASE_MAP[code]||'';
+      k.innerHTML='<span class="tk-shift">'+sh+'</span><span class="tk-base">'+un+'</span>';
+      k.onclick=function(){ rgVirtualPress(code); };
+      rowEl.appendChild(k);
+    });
+    box.appendChild(rowEl);
+  });
+  var lastRow=document.createElement('div');lastRow.className='tk-row';
+  var shiftKey=document.createElement('div');shiftKey.className='tk-key tk-wide';shiftKey.id='rg-shift-key';shiftKey.textContent='⇧ Shift';
+  shiftKey.onclick=function(){ RG_TYPE.shiftOn=!RG_TYPE.shiftOn; shiftKey.classList.toggle('active',RG_TYPE.shiftOn); };
+  // ปุ่มเว้นวรรค: ไม่มีคำไหนในเกมมีช่องว่าง → ทำเป็นปุ่มโชว์เฉยๆ (inert) กันกดแล้วโดนนับผิด — Lin 2026-07-02
+  var spaceKey=document.createElement('div');spaceKey.className='tk-key tk-space';spaceKey.textContent='空白鍵';
+  spaceKey.style.opacity='.45';spaceKey.style.cursor='default';
+  var backKey=document.createElement('div');backKey.className='tk-key tk-wide';backKey.textContent='⌫ 退格';
+  backKey.onclick=function(){ rgTypeBackspace(); };
+  lastRow.appendChild(shiftKey);lastRow.appendChild(spaceKey);lastRow.appendChild(backKey);
+  box.appendChild(lastRow);
+}
+function rgVirtualPress(code){
+  var ch=RG_TYPE.shiftOn?(RG_SHIFT_MAP[code]||''):(RG_BASE_MAP[code]||'');
+  // Shift จอปล่อยเองหลังพิมพ์ 1 ตัว (เหมือนคีย์บอร์ดมือถือ) — กัน Shift ค้างแล้วตัวถัดไปพิมพ์ผิด — Lin 2026-07-02
+  if(RG_TYPE.shiftOn){
+    RG_TYPE.shiftOn=false;
+    var sk=document.getElementById('rg-shift-key');
+    if(sk)sk.classList.remove('active');
+  }
+  if(ch)rgTypeChar(ch);
+}
+
+function rgApplyTypeModeUI(){
+  var btn=document.getElementById('rg-type-toggle');
+  var panel=document.getElementById('type-panel');
+  var slotRow=document.getElementById('slot-row');
+  var optsWrap=document.querySelector('.opts-wrap');
+  var chBtn=document.getElementById('btn-check');
+  if(RG_TYPE.on){
+    if(btn){btn.classList.add('active');btn.textContent='⌨️ 打字模式';}
+    if(panel)panel.style.display='flex';
+    if(slotRow)slotRow.style.display='none';
+    if(optsWrap)optsWrap.style.display='none';
+    if(chBtn && !checked)chBtn.style.display='none';
+  } else {
+    if(btn){btn.classList.remove('active');btn.textContent='⌨️ 打字模式';}
+    if(panel)panel.style.display='none';
+    if(slotRow)slotRow.style.display='';
+    if(optsWrap)optsWrap.style.display='';
+    if(chBtn && !checked)chBtn.style.display='';
+  }
+}
+function rgTypeRenderTarget(){
+  var el=document.getElementById('rg-type-target');
+  if(!el)return;
+  var t=RG_TYPE.target;
+  var done=t.slice(0,RG_TYPE.pos),rest=t.slice(RG_TYPE.pos);
+  el.innerHTML='<span class="rg-typed-ok">'+done+'</span><span class="rg-typed-rest">'+rest+'</span>';
+}
+function rgTypeHighlightNextKey(){
+  var box=document.getElementById('rg-kbd');
+  if(!box)return;
+  box.querySelectorAll('.tk-key.hint').forEach(function(k){k.classList.remove('hint');});
+  var expected=RG_TYPE.target.charAt(RG_TYPE.pos);
+  var shiftKey=document.getElementById('rg-shift-key');
+  if(!guideMode){ if(shiftKey)shiftKey.classList.remove('need'); return; } // โหมดไม่มีไกด์ไลน์
+  if(!expected){ if(shiftKey)shiftKey.classList.remove('need'); return; }
+  var info=RG_REVERSE[expected];
+  if(!info){ if(shiftKey)shiftKey.classList.remove('need'); return; }
+  var keyEl=box.querySelector('.tk-key[data-code="'+info.code+'"]');
+  if(keyEl)keyEl.classList.add('hint');
+  if(shiftKey)shiftKey.classList.toggle('need',!!info.shift);
+}
+function rgTypeFlashWrong(){
+  var el=document.getElementById('rg-type-target');
+  if(!el)return;
+  el.classList.add('shake');
+  setTimeout(function(){el.classList.remove('shake');},400);
+}
+function rgTypeLoadSyl(){
+  var SY=(typeof sylList!=='undefined' && sylList[sylIdx])?sylList[sylIdx]:null;
+  RG_TYPE.target=SY?SY.th:'';
+  RG_TYPE.pos=0;RG_TYPE.wrong=0;
+  rgTypeRenderTarget();
+  rgTypeHighlightNextKey();
+  var chBtn=document.getElementById('btn-check');
+  if(chBtn)chBtn.style.display='none'; // โหมดพิมพ์ตรวจให้อัตโนมัติทีละตัว ไม่ต้องกด 檢查
+  var hintEl=document.getElementById('rg-type-hint');
+  if(hintEl){hintEl.textContent='照著打出上面這個音節，鍵盤已經照泰文鍵盤（Kedmanee）排好位置了，打對會自動跳下一步 👇';hintEl.className='type-hint';}
+}
+// สาขา "ถูกทั้งพยางค์ + (ถ้ามี) เลือกวรรณยุกต์แล้ว" — ทำตามรูปแบบเดียวกับ check() ฝั่งกดเลือก (ใช้ finalizeWord/คะแนน/badge ชุดเดียวกัน)
+function rgTypeSuccessBranch(){
+  checked=true;
+  evaluateBonus();showReveal();renderSylStrip();
+  document.getElementById('retry-hint').className='retry-hint';
+  setGameBtns('done');
+  var lastSyl=(sylIdx>=sylList.length-1);
+  if(lastSyl){
+    finalizeWord();
+    document.getElementById('btn-next').textContent='下一題 →';
+  } else {
+    var b=document.getElementById('banner');
+    b.textContent='✓';b.className='result-banner show ok'; // LIN 2026-07-03: ย่อข้อความ+ลดเวลาหน่วง ให้พิมพ์ยาวๆ ต่อเนื่องมากขึ้น ไม่รู้สึกเหมือนถูกตัดแบ่งพยางค์
+    document.getElementById('btn-next').textContent='下一個音節 →';
+    if(RG_TYPE.on){ setTimeout(function(){ next(); }, 220); } // โหมดพิมพ์: พิมพ์ต่อเนื่องทุกพยางค์ ไม่ต้องกดปุ่ม
+  }
+  document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
+  updateCombo();refreshUI();
+}
+// สาขา "ผิดครบ 3 ครั้ง" — เฉลยให้เลย เหมือน check() ฝั่งกดเลือก
+function rgTypeFailBranch(){
+  wordFailed=true;checked=true;
+  evaluateBonus();showReveal();renderSylStrip();
+  document.getElementById('retry-hint').className='retry-hint';
+  setGameBtns('done');
+  var lastSyl=(sylIdx>=sylList.length-1);
+  if(lastSyl){
+    finalizeWord();
+    document.getElementById('btn-next').textContent='下一題 →';
+  } else {
+    var b=document.getElementById('banner');
+    b.textContent='這個音節再看一下 — 接著打下一個音節';b.className='result-banner show no';
+    document.getElementById('btn-next').textContent='下一個音節 →';
+    if(RG_TYPE.on){ setTimeout(function(){ next(); }, 900); }
+  }
+  document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
+  updateCombo();refreshUI();
+}
+// พิมพ์ครบพยางค์แล้ว: ถ้าพยางค์นี้มีให้ทายวรรณยุกต์ (W.tone_name) → รอให้กดเลือกก่อน ยังไม่ปิดจบ
+function rgTypeOnFullyTyped(){
+  if(W && W.tone_name && !bonusAnswered){
+    var hintEl=document.getElementById('rg-type-hint');
+    if(hintEl){hintEl.textContent='打完了！選一下聲調再繼續 👇';hintEl.className='type-hint good';}
+    return; // รอกดปุ่มวรรณยุกต์ก่อน — ดู listener ที่ #bonus-opts
+  }
+  rgTypeSuccessBranch();
+}
+function rgTypeChar(ch){
+  if(RG_CONT_ON)return rgContChar(ch); // คำหลายพยางค์ (初/中) → พิมพ์ต่อเนื่องทั้งคำ แยก path (ดูบล็อกก่อน document.addEventListener('keydown'...))
+  if(!RG_TYPE.on || checked)return;
+  if(RG_TYPE.pos>=RG_TYPE.target.length)return; // พิมพ์ครบแล้ว รอเลือกวรรณยุกต์อยู่ ไม่รับตัวอักษรเพิ่ม
+  var expected=RG_TYPE.target.charAt(RG_TYPE.pos);
+  if(!expected)return;
+  if(ch===expected){
+    RG_TYPE.pos++;
+    rgTypeRenderTarget();
+    if(RG_TYPE.pos>=RG_TYPE.target.length){
+      rgTypeOnFullyTyped();
+    } else {
+      rgTypeHighlightNextKey();
+    }
+  } else {
+    RG_TYPE.wrong++;wordHadWrong=true;streak=0;badC++;
+    document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
+    updateCombo();
+    rgTypeFlashWrong();
+    if(RG_TYPE.wrong>=3){
+      var hint=document.getElementById('retry-hint');
+      hint.textContent='沒關係，打錯太多次了，直接公佈答案給你看 🙂'; // ข้อความนุ่มนวลขึ้น ให้เหมือนกับโหมดพิมพ์ต่อเนื่องหลายพยางค์ — Lin 2026-07-03 v3
+      hint.className='retry-hint show wrong3';
+      setTimeout(function(){
+        RG_TYPE.pos=RG_TYPE.target.length; // เฉลยส่วนที่เหลือ
+        rgTypeRenderTarget();
+        rgTypeFailBranch();
+      }, 900);
+    } else {
+      var hint2=document.getElementById('retry-hint');
+      hint2.textContent=RG_TYPE.wrong===1?'打錯了，沒關係，再試一次 🙂':'再錯一次就會直接公佈答案囉，慢慢來沒關係 😊';
+      hint2.className='retry-hint show';
+    }
+  }
+}
+// ผูกกับปุ่มทายวรรณยุกต์เดิม (showBonus() ในเกม) — แค่ "ฟัง" เพิ่ม ไม่แก้โค้ดเดิม
+// ถ้าพิมพ์ครบพยางค์แล้ว กำลังรอเลือกวรรณยุกต์อยู่ พอกดปุ่มไหนก็ตาม → ปิดจบพยางค์นี้ทันที
+function rgHookBonusOpts(){
+  var box=document.getElementById('bonus-opts');
+  if(!box)return;
+  box.addEventListener('click', function(e){
+    if(RG_CONT_ON)return; // โหมดพิมพ์ต่อเนื่องทั้งคำมี handler ของตัวเอง (rgContAskTone) — กันชนกัน/นับแต้มซ้ำ
+    if(!RG_TYPE.on || checked)return;
+    var btn=e.target && e.target.closest ? e.target.closest('.bonus-btn') : null;
+    if(!btn)return;
+    if(RG_TYPE.pos < RG_TYPE.target.length)return; // ยังพิมพ์ไม่ครบ ปุ่มนี้ยังไม่เกี่ยว
+    // พิมพ์ครบแล้ว = ปุ่มที่กดคือ "คำตอบยืนยัน" เสมอ — กันเคสกดปุ่มเดิมซ้ำแล้ว toggle เด้งค่าที่เลือกไว้หลุด (กลายเป็น 未作答) — Lin 2026-07-02
+    if(!bonusAnswered && btn.dataset && btn.dataset.tone){
+      selectedBonus=btn.dataset.tone;
+      box.querySelectorAll('.bonus-btn').forEach(function(b){b.classList.toggle('sel',b===btn);});
+    }
+    rgTypeSuccessBranch();
+  });
+}
+function rgTypeBackspace(){
+  if(RG_CONT_ON)return rgContBackspace();
+  if(!RG_TYPE.on || checked || RG_TYPE.pos<=0)return;
+  RG_TYPE.pos--;rgTypeRenderTarget();rgTypeHighlightNextKey();
+}
+
+// ════════════════════════════════════════════
+// โหมดพิมพ์ต่อเนื่องทั้งคำ (sylList.length>1, 初/中 เท่านั้น) — Lin 2026-07-03 v2
+// target = คำเต็มทุกพยางค์ต่อกัน พิมพ์รวดเดียวจน "จบทั้งคำ" จริงๆ ไม่คั่นระหว่างพยางค์เลยแม้แต่ครั้งเดียว (ไม่มี banner/ไม่มีถามวรรณยุกต์กลางคัน)
+// วรรณยุกต์: เก็บคิวไว้ระหว่างพิมพ์ (พยางค์ไหนมี tone_name และไม่ได้ถูกเฉลยเพราะพิมพ์ผิดครบ) แล้วมาถาม "ทีเดียวรวด" ทีละพยางค์ หลังพิมพ์ครบทั้งคำแล้วเท่านั้น
+// ผิดครบ 3 ครั้งในพยางค์ไหน = เฉลยเฉพาะพยางค์นั้น (หน่วง 900ms) แล้วพิมพ์ต่อพยางค์ถัดไปทันที — พยางค์นั้นจะไม่ถูกถามวรรณยุกต์ตอนท้าย
+// finalizeWord() ถูกเรียกครั้งเดียวตอนจบคำ (ใน rgContFinish) เหมือนเดิมทุกประการ ไม่กระทบ masteredSet/correctCountMap/หลอดคะแนน
+// ════════════════════════════════════════════
+function rgContStart(){
+  RG_CONT_ON=true;RG_CONT_TOKEN++;
+  RG_CONT_SEG=0;RG_CONT_WRONG=0;RG_CONT_PAUSED=false; // RG_CONT_WRONG นับสะสม "ทั้งคำ" ตั้งแต่ตรงนี้ ไม่รีเซ็ตข้ามพยางค์แล้ว (Lin 2026-07-03 v3)
+  RG_CONT_BOUNDS=[];RG_CONT_TONE_Q=[];RG_CONT_TONE_IDX=0;
+  var acc=0;
+  sylList.forEach(function(s){acc+=s.th.length;RG_CONT_BOUNDS.push(acc);});
+  RG_TYPE.target=sylList.map(function(s){return s.th;}).join('');
+  RG_TYPE.pos=0;RG_TYPE.wrong=0;
+  rgTypeRenderTarget();
+  rgTypeHighlightNextKey();
+  var chBtn=document.getElementById('btn-check');
+  if(chBtn)chBtn.style.display='none';
+  var hintEl=document.getElementById('rg-type-hint');
+  if(hintEl){hintEl.textContent='照著打出整個字（連續打完 '+sylList.length+' 個音節，打完才選聲調），鍵盤已經照泰文鍵盤（Kedmanee）排好位置了，打對會自動跳下一步 👇';hintEl.className='type-hint';}
+  // loadSyl() เดิม (ที่เพิ่งรันไปก่อนหน้านี้) ทำ showBonus() ของพยางค์แรกไปแล้ว → ซ่อนไว้ก่อน รอพิมพ์ครบทั้งคำค่อยโชว์
+  var sec=document.getElementById('bonus-section');
+  if(sec)sec.className='bonus-section';
+  var box=document.getElementById('bonus-opts');
+  if(box)box.innerHTML='';
+  var res=document.getElementById('bonus-result');
+  if(res)res.textContent='';
+}
+function rgContChar(ch){
+  if(!RG_TYPE.on || !RG_CONT_ON || checked || RG_CONT_PAUSED)return;
+  if(RG_TYPE.pos>=RG_TYPE.target.length)return;
+  var expected=RG_TYPE.target.charAt(RG_TYPE.pos);
+  if(!expected)return;
+  if(ch===expected){
+    RG_TYPE.pos++;
+    rgTypeRenderTarget();
+    if(RG_CONT_SEG<RG_CONT_BOUNDS.length && RG_TYPE.pos>=RG_CONT_BOUNDS[RG_CONT_SEG]){
+      document.getElementById('retry-hint').className='retry-hint';
+      rgContAdvanceSegment(RG_CONT_SEG>=sylList.length-1); // ข้ามไปพยางค์ถัดไปทันที ไม่ถามวรรณยุกต์ตรงนี้ (ถามรวมทีเดียวตอนท้าย)
+    } else {
+      rgTypeHighlightNextKey();
+    }
+  } else {
+    // นับผิดรวมทั้งคำ (ไม่แยกนับทีละพยางค์แล้ว) — Lin 2026-07-03 v3: ผิดครบ 3 ครั้งไม่ว่าจะพยางค์ไหน = จบคำทันที ไม่พิมพ์ต่อ ไม่ถามวรรณยุกต์ต่อ
+    RG_CONT_WRONG++;wordHadWrong=true;streak=0;badC++;
+    document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
+    updateCombo();
+    rgTypeFlashWrong();
+    if(RG_CONT_WRONG>=3){
+      var hint=document.getElementById('retry-hint');
+      hint.textContent='沒關係，打錯太多次了，直接公佈答案給你看 🙂';
+      hint.className='retry-hint show wrong3';
+      var _tok=RG_CONT_TOKEN;
+      setTimeout(function(){
+        if(!RG_CONT_ON || RG_CONT_TOKEN!==_tok)return; // ผู้เล่นกด skip/next เปลี่ยนคำไปแล้วระหว่างรอ — ไม่ทำอะไรกับคำใหม่
+        wordFailed=true;
+        RG_TYPE.pos=RG_TYPE.target.length; // เฉลยทั้งคำที่เหลือทันที (ไม่ใช่แค่พยางค์นี้)
+        rgTypeRenderTarget();
+        document.getElementById('retry-hint').className='retry-hint';
+        rgContFinish(); // จบคำทันที ไม่พิมพ์พยางค์ที่เหลือต่อ ไม่ถามวรรณยุกต์ต่อ (ตามที่ Lin ขอ)
+      }, 900);
+    } else {
+      var hint2=document.getElementById('retry-hint');
+      hint2.textContent=RG_CONT_WRONG===1?'打錯了，沒關係，再試一次 🙂':'再錯一次就會直接公佈答案囉，慢慢來沒關係 😊';
+      hint2.className='retry-hint show';
+    }
+  }
+}
+function rgContAdvanceSegment(isLast){
+  if(isLast){ rgContStartToneQuizzes(); return; } // พิมพ์ครบทั้งคำแล้ว (ไม่เคยผิดครบ 3 เลย) → ค่อยถามวรรณยุกต์
+  RG_CONT_SEG++; // RG_CONT_WRONG ไม่รีเซ็ตแล้ว — นับสะสมทั้งคำตั้งแต่ rgContStart()
+  sylIdx=RG_CONT_SEG; // แค่ให้แถบ syl-strip ไล่ตามพยางค์ที่พิมพ์อยู่ (cosmetic เท่านั้น ไม่กระทบ finalize/คะแนน)
+  renderSylStrip();
+  rgTypeHighlightNextKey(); // ไม่มี banner/หน่วง — พิมพ์พยางค์ถัดไปต่อได้ทันที
+}
+// พิมพ์ครบทุกพยางค์ของคำแล้วแบบไม่มีผิดครบ 3 เลยสักครั้ง (ถ้าผิดครบ 3 คำจะจบทันทีที่ rgContChar ไปแล้ว ไม่มาถึงจุดนี้) → ถามวรรณยุกต์ทุกพยางค์ที่มี ทีละพยางค์รวดเดียว
+function rgContStartToneQuizzes(){
+  RG_CONT_TONE_Q=[];
+  sylList.forEach(function(s,i){ if(s.tone_name) RG_CONT_TONE_Q.push(i); });
+  RG_CONT_TONE_IDX=0;
+  rgContAskNextTone();
+}
+// ถามวรรณยุกต์พยางค์ถัดไปในคิว — ใช้ UI เดิม (#bonus-section/#bonus-opts) แต่ handler แยกของตัวเอง ไม่ยุ่งกับ W/bonusAnswered/selectedBonus เดิม
+function rgContAskNextTone(){
+  if(RG_CONT_TONE_IDX>=RG_CONT_TONE_Q.length){ rgContFinish(); return; } // ถามครบคิวแล้ว → ปิดจบคำ
+  var seg=RG_CONT_TONE_Q[RG_CONT_TONE_IDX];
+  var SY=sylList[seg];
+  RG_CONT_PAUSED=true;
+  var _tok=RG_CONT_TOKEN,answered=false;
+  var sec=document.getElementById('bonus-section');
+  sec.className='bonus-section show';
+  var box=document.getElementById('bonus-opts');
+  box.innerHTML='';
+  document.getElementById('bonus-result').textContent='';
+  var hintEl=document.getElementById('rg-type-hint');
+  if(hintEl){hintEl.textContent='打完整個字了！選一下「'+SY.th+'」的聲調（'+(RG_CONT_TONE_IDX+1)+'/'+RG_CONT_TONE_Q.length+'）👇';hintEl.className='type-hint good';}
+  BONUS_TONES.forEach(function(t){
+    var btn=document.createElement('button');
+    btn.className='bonus-btn';
+    btn.dataset.tone=t.name;
+    btn.innerHTML=t.num;
+    btn.onclick=function(e){
+      if(answered)return;answered=true;
+      if(e&&e.stopPropagation)e.stopPropagation(); // กัน listener เดิมของ #bonus-opts (rgHookBonusOpts) ทำงานซ้ำ/นับแต้มซ้ำ
+      box.querySelectorAll('.bonus-btn').forEach(function(b){b.classList.add('locked');});
+      var res=document.getElementById('bonus-result');
+      var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
+      if(t.name===SY.tone_name){
+        roundScore+=3;pop('+3 ✨');
+        btn.classList.add('correct');
+        res.textContent='正確！是'+tZH+' 🎉 +3 分';res.style.color='#2e7d32';
+        refreshUI();
+      } else {
+        btn.classList.add('wrong');
+        var correctBtn=box.querySelector('[data-tone="'+SY.tone_name+'"]');
+        if(correctBtn)correctBtn.classList.add('correct');
+        res.textContent='不對，是'+tZH+'，沒扣分，繼續加油！';res.style.color='#b06020';
+      }
+      setTimeout(function(){
+        if(RG_CONT_TOKEN!==_tok)return; // เปลี่ยนคำไปแล้วระหว่างรอ — ไม่ต้องไปต่อคิวของคำเก่า
+        RG_CONT_TONE_IDX++;
+        box.innerHTML='';
+        document.getElementById('bonus-result').textContent='';
+        rgContAskNextTone();
+      },220); // 220ms ให้เห็นผลถูก/ผิดก่อนไปวรรณยุกต์พยางค์ถัดไป (เท่ากับ pause เดิมของโหมดต่อ-พยางค์)
+    };
+    box.appendChild(btn);
+  });
+}
+// คำพิมพ์ครบทุกพยางค์ + ถามวรรณยุกต์ครบคิวแล้ว → ปิดจบเหมือน rgTypeSuccessBranch/rgTypeFailBranch ตอน lastSyl ทุกประการ
+// (ตั้ง W ให้ตรงพยางค์สุดท้ายก่อน เพราะ loadSyl() ถูกเรียกแค่ครั้งเดียวตอน sylIdx=0 — showReveal()/buildRevealRules ต้องใช้ W ของพยางค์ที่เพิ่งพิมพ์จบจริง)
+function rgContFinish(){
+  checked=true;
+  RG_CONT_ON=false;RG_CONT_PAUSED=false;
+  sylIdx=sylList.length-1;
+  var SY=sylList[sylIdx];
+  W={th:SY.th,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  var sec=document.getElementById('bonus-section');
+  if(sec)sec.className='bonus-section'; // ซ่อนแผงถามวรรณยุกต์ ก่อนโชว์การ์ดเฉลยท้ายคำ
+  renderSylStrip();
+  showReveal();
+  document.getElementById('retry-hint').className='retry-hint';
+  setGameBtns('done');
+  finalizeWord();
+  document.getElementById('btn-next').textContent='下一題 →';
+  document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
+  updateCombo();refreshUI();
+}
+function rgContBackspace(){
+  if(checked || RG_CONT_PAUSED)return;
+  var segStart=RG_CONT_SEG===0?0:RG_CONT_BOUNDS[RG_CONT_SEG-1];
+  if(RG_TYPE.pos<=segStart)return;
+  RG_TYPE.pos--;rgTypeRenderTarget();rgTypeHighlightNextKey();
+}
+
+document.addEventListener('keydown',function(e){
+  if(!RG_TYPE.on)return;
+  var gameEl=document.getElementById('game');
+  if(!gameEl || gameEl.style.display==='none')return;
+  var ae=document.activeElement;
+  if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))return;
+  // โมดัลเปิดอยู่ (怎麼玩 / 我有問題 / 成就) → อย่าให้พิมพ์ทะลุไปโดนเกม — Lin 2026-07-02
+  var _hm=document.getElementById('rg-howto-modal');
+  if(_hm && _hm.style.display==='flex')return;
+  if(document.getElementById('rg-ask-ov'))return;
+  var _bm=document.getElementById('badge-modal');
+  if(_bm && _bm.classList.contains('show'))return;
+  if(e.key==='Backspace'){ rgTypeBackspace(); e.preventDefault(); return; }
+  // Space: ไม่มีคำไหนมีช่องว่าง → กันหน้าเลื่อนเฉยๆ ไม่นับผิด — Lin 2026-07-02
+  if(e.code==='Space'){ e.preventDefault(); return; }
+  var map=e.shiftKey?RG_SHIFT_MAP:RG_BASE_MAP;
+  var ch=map[e.code];
+  if(ch){ rgTypeChar(ch); e.preventDefault(); }
+});
+// ผูก loadSyl() เดิม — ทุกครั้งที่ขึ้นพยางค์ใหม่ ถ้าเปิดโหมดพิมพ์อยู่ ให้ตั้งเป้าหมาย/keyboard ใหม่ด้วย
+(function(){
+  var _origLoadSyl=loadSyl;
+  loadSyl=function(){
+    _origLoadSyl();
+    if(!RG_TYPE.on)return;
+    // คำหลายพยางค์ (2 พยางค์ขึ้นไป, 初/中 เท่านั้น — 高級 ไม่ผ่าน loadSyl() เลย) → เข้าโหมดพิมพ์ต่อเนื่องทั้งคำ ที่ sylIdx===0 ครั้งเดียว
+    // ขยายจาก "≥3 พยางค์" เป็น "≥2 พยางค์" ตามที่ Lin ขอ 2026-07-03 (หลังทดสอบคำ 2 พยางค์แล้วอยากให้พิมพ์ต่อเนื่องด้วย)
+    // คำพยางค์เดียว (初級ทั้งหมด): ลง else เหมือนเดิมทุกครั้ง (RG_CONT_ON=false ไม่เคยถูกอ่านที่ไหนสำหรับคำเหล่านี้) = พฤติกรรมเดิม 100%
+    if(sylIdx===0 && sylList.length>1 && curLevel!=='高'){
+      rgContStart();
+    } else {
+      RG_CONT_ON=false;
+      rgTypeLoadSyl();
+    }
+  };
+})();
+rgBuildKeyboard();
+rgApplyTypeModeUI();
+rgHookBonusOpts();
 
 // ════════════════════════════════════════════
 // เลือกพยางค์เองได้อิสระ (คำหลายพยางค์) — Lin 2026-07-02
@@ -2715,12 +2855,294 @@ function rgOpenAsk() {
     if (!msg.trim()) { alert('請寫下您的問題'); return; }
     var btn = div.querySelector('#rg-ask-send'); btn.disabled = true; btn.textContent = '送出中…';
     fetch('https://api.web3forms.com/submit', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ access_key:'b0b4c37b-6fad-4e64-9a16-81c5ab2ff4c3', subject:'[拼讀遊戲] 學生問題', from_name:'拼讀遊戲', email: email||'anonymous@game', message: msg }) })
+      body: JSON.stringify({ access_key:'b0b4c37b-6fad-4e64-9a16-81c5ab2ff4c3', subject:'[打字遊戲] 學生問題', from_name:'打字遊戲', email: email||'anonymous@game', message: msg }) })
     .then(function(r){ return r.json(); })
     .then(function(){ btn.textContent = '✅ 已送出！'; setTimeout(function(){ div.remove(); }, 1200); })
     .catch(function(){ btn.disabled=false; btn.textContent='送出問題 →'; alert('送出失敗，請稍後再試'); });
   };
 }
+
+// ════════════════════════════════════════════
+// 高級 MODE — ประโยค (sentence typing) — Lin 2026-07-02
+// quota ผิดได้รวม = จำนวนพยางค์ (s.wc) หารสอง ปัดขึ้น — ไม่สนว่าพยางค์ไหน (Lin 2026-07-02)
+// พิมพ์ผิดไม่บันทึก shake แล้วต้องพิมพ์ใหม่ — quota หมด → fail + เพิ่มกลับ queue ท้ายรอบ
+// ════════════════════════════════════════════
+// ADV_SENTENCES ย้ายไปไฟล์ shared: adv-sentences.js (โหลดใน <head>) — ทุกเกมใช้ร่วมกัน (Lin 2026-07-02)
+// wc = จำนวนพยางค์ทั้งประโยค · โควต้าผิด = wc ÷ 2 ปัดขึ้น
+
+var advModeActive=false;
+// โหมดไกด์ไลน์: ใช้ guideMode + setGuideMode ตัวเดียวร่วมทุกระดับ (นิยามไว้บนบล็อกหลัก)
+var advQueue=[],advCur=0;
+var advPos=0,advWrongBudget=0,advWrongUsed=0;
+var advHadWrong=false,advTarget='',advChecked=false;
+var advOkC=0,advBadC=0,advRoundScore=0;
+var advShiftOn=false;
+// ── คะแนน 高級 สเปกใหม่ (Lin 2026-07-03): +2/พยางค์ที่พิมพ์ถูก เก็บสะสมจริง ไม่ล้างศูนย์ ──
+var advWordBoundaries=[],advWordIdx=0,advCurWordWrong=false,advGoldenSentence=false;
+var advSentenceScore=0,advMaxScore=0,advPerfectC=0;
+
+function advInit(){
+  advModeActive=true;
+  advQueue=shuffle(ADV_SENTENCES.map(function(_,i){return i;})).slice(0,Math.min(ROUND_SIZE,ADV_SENTENCES.length));
+  advCur=0;advOkC=0;advBadC=0;advRoundScore=0;advPerfectC=0;
+  advMaxScore=advQueue.reduce(function(acc,i){return acc+(ADV_SENTENCES[i].wc*ADV_PTS_PER_SYL);},0)||1; // เพดานหลอด⚡ตามพยางค์จริงของรอบนี้
+  var g=document.getElementById('adv-game');
+  if(g){g.style.display='flex';}
+  document.getElementById('adv-qt').textContent=advQueue.length;
+  advBuildKbd();
+  setGuideMode(guideMode); // อัปเดตปุ่ม+highlight ตามค่าที่จำไว้ (ใช้ร่วมทุกระดับ)
+  advLoadSentence();
+}
+// ── อัปเดตหลอด 進度/⚡ ให้ตรงกับโหมด 高級 (แถบไม่ซ่อนแล้ว ต้องโชว์เลขจริง ห้ามค้างค่าเก่า) — Lin 2026-07-02 ──
+function advRefreshBars(){
+  var total=advQueue.length||1;
+  var maxScore=advMaxScore||1; // เพดานจริงตามพยางค์ทั้งรอบ (Lin 2026-07-03)
+  var pf=document.getElementById('pf'); if(pf)pf.style.width=Math.min(100,advCur/total*100)+'%';
+  var pt=document.getElementById('prog-txt'); if(pt)pt.textContent=advCur+'/'+total;
+  var pw=document.getElementById('powerf'); if(pw)pw.style.width=Math.min(100,advRoundScore/maxScore*100)+'%';
+  var pn=document.getElementById('power-num'); if(pn)pn.textContent=advRoundScore;
+  var pm=document.getElementById('power-max'); if(pm)pm.textContent=maxScore;
+}
+// ปุ่มเลือกโหมดไกด์ไลน์: ย้ายไปใช้ setGuideMode ตัวเดียวร่วมทุกระดับ (นิยามในบล็อกหลัก)
+function advLoadSentence(){
+  advChecked=false;
+  var s=ADV_SENTENCES[advQueue[advCur]];
+  advTarget=s.th;
+  advWrongBudget=Math.ceil(s.wc/2); // โควต้าผิด = จำนวนพยางค์ ÷ 2 ปัดขึ้น (Lin 2026-07-02)
+  advWrongUsed=0;
+  advHadWrong=false;
+  advPos=0;
+  // ── ขอบเขตแต่ละคำ (จาก words[].th) ใช้ตัดสินว่าพิมพ์ครบ "คำ" หนึ่งแล้วหรือยัง เพื่อให้แต้มทันที (Lin 2026-07-03) ──
+  advWordIdx=0;advCurWordWrong=false;advSentenceScore=0;
+  advWordBoundaries=[];
+  var _acc=0;
+  s.words.forEach(function(w){_acc+=w.th.length;advWordBoundaries.push(_acc);});
+  advGoldenSentence=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มประโยคทองใหม่ทุกประโยค
+  document.getElementById('adv-sentence').textContent=s.th;
+  document.getElementById('adv-zh').textContent=s.zh;
+  document.getElementById('adv-qn').textContent=advCur+1;
+  document.getElementById('adv-next-btn').style.display='none';
+  document.getElementById('adv-banner').className='result-banner';
+  document.getElementById('adv-type-hint').textContent='照著打出上面這個句子，打對會自動前進 👇';
+  document.getElementById('adv-type-hint').className='type-hint';
+  var _gb=document.getElementById('adv-golden-badge');
+  if(_gb)_gb.style.display=advGoldenSentence?'':'none';
+  var _vc=document.getElementById('adv-vault-chips');
+  if(_vc)_vc.innerHTML='';
+  advRenderTarget();
+  advRenderLives();
+  advHighlightNext();
+  advRefreshBars();
+}
+function advRenderTarget(){
+  var el=document.getElementById('adv-type-target');
+  if(!el)return;
+  var done=advTarget.slice(0,advPos);
+  var rest=advTarget.slice(advPos);
+  if(advChecked && advPos<advTarget.length){
+    // เฉลยที่เหลือ = สีแดง
+    el.innerHTML='<span class="rg-typed-ok">'+done+'</span><span style="color:#f44336">'+rest+'</span>';
+  } else {
+    el.innerHTML='<span class="rg-typed-ok">'+done+'</span><span class="rg-typed-rest">'+rest+'</span>';
+  }
+}
+function advRenderLives(){
+  var el=document.getElementById('adv-lives');
+  if(!el)return;
+  var html='容錯：';
+  for(var i=0;i<advWrongBudget;i++){
+    html+='<span style="font-size:15px;color:'+(i<advWrongUsed?'#f44336':'#9ccc65')+';">'+(i<advWrongUsed?'✗':'●')+'</span>';
+  }
+  el.innerHTML=html;
+}
+function advHandleChar(ch){
+  if(!advModeActive||advChecked)return;
+  if(advPos>=advTarget.length)return;
+  var expected=advTarget.charAt(advPos);
+  if(ch===expected){
+    advPos++;
+    advRenderTarget();
+    // พิมพ์ครบ "คำ" นี้แล้วหรือยัง (ขอบเขตจาก words[].th) → ให้แต้มทันที +2/พยางค์ (Lin 2026-07-03)
+    if(advWordIdx<advWordBoundaries.length && advPos>=advWordBoundaries[advWordIdx]){
+      advAwardWord(advWordIdx);
+      advWordIdx++;
+      advCurWordWrong=false;
+    }
+    if(advPos>=advTarget.length){
+      advSuccess();
+    } else {
+      advHighlightNext();
+    }
+  } else {
+    advWrongUsed++;advHadWrong=true;advBadC++;advCurWordWrong=true;
+    document.getElementById('adv-bad').textContent=advBadC;
+    var tgt=document.getElementById('adv-type-target');
+    if(tgt){tgt.classList.add('shake');setTimeout(function(){tgt.classList.remove('shake');},400);}
+    advRenderLives();
+    if(advWrongUsed>=advWrongBudget){
+      advFail();
+    }
+  }
+}
+// ให้แต้มทันทีตอนพิมพ์ครบ 1 คำ: +2/พยางค์ · ประโยคทอง+พิมพ์คำนี้ไม่มีผิดเลย = ×2 (Lin 2026-07-03)
+function advAwardWord(idx){
+  var s=ADV_SENTENCES[advQueue[advCur]];
+  var w=s.words[idx];
+  if(!w)return;
+  var syl=(w.syl&&w.syl.length)?w.syl.length:1;
+  var golden=advGoldenSentence && !advCurWordWrong;
+  var pts=ADV_PTS_PER_SYL*syl*(golden?GOLDEN_WORD_MULT:1);
+  advRoundScore+=pts;
+  advSentenceScore+=pts;
+  pop('+'+pts+(golden?' ✨':''));
+  advRefreshBars();
+}
+function advSuccess(){
+  advChecked=true;
+  advOkC++;
+  if(!advHadWrong)advPerfectC++;
+  document.getElementById('adv-ok').textContent=advOkC;
+  var b=document.getElementById('adv-banner');
+  b.textContent=(advHadWrong?'完成！+'+advSentenceScore+' 分':'完美！🎉 +'+advSentenceScore+' 分');
+  b.className='result-banner show '+(advHadWrong?'half':'ok');
+  document.getElementById('adv-next-btn').style.display='';
+  advHighlightNext();
+  advRefreshBars();
+  advShowVaultChips();
+}
+function advFail(){
+  advChecked=true;
+  advPos=advTarget.length; // เฉลยทั้งหมด
+  advRenderTarget();
+  // ผิดครบ quota → จบประโยคนี้ แต่ "แต้มที่ได้ไปแล้วยังอยู่" ไม่ล้างศูนย์ (Lin 2026-07-03)
+  // เพิ่มประโยคนี้กลับท้าย queue เพื่อเล่นซ้ำ
+  advQueue.push(advQueue[advCur]);
+  document.getElementById('adv-qt').textContent=advQueue.length;
+  var b=document.getElementById('adv-banner');
+  b.textContent='超過容錯次數 😅　已保留 +'+advSentenceScore+' 分　正確：'+advTarget+'　（稍後會再出現）';
+  b.className='result-banner show no';
+  document.getElementById('adv-next-btn').style.display='';
+  advHighlightNext();
+  advRefreshBars();
+  advShowVaultChips();
+}
+// ปุ่ม 🔖 เก็บคำจากประโยคนี้เข้าคลัง — โชว์ทุกคำหลังตอบ (ไม่ว่าผ่านหรือหมดโควต้า) (Lin 2026-07-03)
+function advShowVaultChips(){
+  var vc=document.getElementById('adv-vault-chips');
+  if(!vc||!window.WordVault)return;
+  WordVault.injectStyles();
+  vc.innerHTML='';
+  var s=ADV_SENTENCES[advQueue[advCur]];
+  s.words.forEach(function(w){
+    var chip=document.createElement('span');
+    chip.style.cssText='display:inline-flex;align-items:center;gap:4px;font-size:12px;background:#FBF5E7;border:1px solid rgba(139,99,16,0.20);border-radius:14px;padding:2px 8px 2px 2px;';
+    var btn=WordVault.createSaveBtn(w.th,{zh:w.zh,source:'typing-game'},{});
+    btn.style.width='24px';btn.style.height='24px';btn.style.fontSize='13px';
+    chip.appendChild(btn);
+    var lbl=document.createElement('span');
+    lbl.textContent=w.th+'（'+w.zh+'）';
+    chip.appendChild(lbl);
+    vc.appendChild(chip);
+  });
+  var badges=document.querySelectorAll('.vault-badge');
+  badges.forEach(function(b){b.textContent='🔖 單字庫';});
+}
+function advNext(){
+  advCur++;
+  if(advCur>=advQueue.length){advEnd();return;}
+  advLoadSentence();
+}
+function advSkip(){
+  advCur++;
+  if(advCur>=advQueue.length){advEnd();return;}
+  advLoadSentence();
+}
+function advEnd(){
+  advCur=advQueue.length; advRefreshBars(); // ให้หลอด 進度 เต็มตอนจบรอบ — Lin 2026-07-02
+  advModeActive=false;
+  document.getElementById('adv-game').style.display='none';
+  document.getElementById('end').style.display='flex';
+  // โบนัสจบรอบ: +20 จบ · +50 เพิ่มถ้า perfect (ทุกประโยคผ่านแบบไม่มีผิดเลย) — Lin 2026-07-03
+  var roundBonus=0;
+  if(advOkC>0){
+    roundBonus+=ROUND_COMPLETE_BONUS;
+    if(advPerfectC===advOkC)roundBonus+=ROUND_PERFECT_BONUS;
+  }
+  advRoundScore+=roundBonus;
+  var levelWeight=LEVEL_WEIGHT['高']||1;
+  var weightedScore=Math.round(advRoundScore*levelWeight);
+  document.getElementById('end-score').textContent=weightedScore+' 分（高級 ×'+levelWeight+'）';
+  document.getElementById('end-detail').textContent='完成 '+advQueue.length+' 句！正確 '+advOkC+' 句'+(roundBonus?'・含完成獎勵 +'+roundBonus:'');
+  try{if(window.READING_AUTH&&READING_AUTH.saveScore)READING_AUTH.saveScore(weightedScore,1,'typing');}catch(e){}
+}
+function advHighlightNext(){
+  var box=document.getElementById('adv-kbd');
+  if(!box)return;
+  box.querySelectorAll('.tk-key.hint').forEach(function(k){k.classList.remove('hint');});
+  var shKey=document.getElementById('adv-shift-key');
+  if(!guideMode){ // โหมดไม่มีไกด์ไลน์: ไม่ highlight คีย์ ไม่โชว์ need บน shift
+    if(shKey)shKey.classList.remove('need');
+    return;
+  }
+  if(!advChecked && advPos<advTarget.length){
+    var expected=advTarget.charAt(advPos);
+    var info=RG_REVERSE[expected];
+    if(info){
+      var keyEl=box.querySelector('.tk-key[data-code="'+info.code+'"]');
+      if(keyEl)keyEl.classList.add('hint');
+      if(shKey)shKey.classList.toggle('need',!!info.shift);
+    }
+  } else {
+    if(shKey)shKey.classList.remove('need');
+  }
+}
+function advBuildKbd(){
+  var box=document.getElementById('adv-kbd');
+  if(!box)return;
+  var rows=[
+    ['Backquote','Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9','Digit0','Minus','Equal'],
+    ['KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP','BracketLeft','BracketRight'],
+    ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','Quote','Backslash'],
+    ['KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN','KeyM','Comma','Period','Slash']
+  ];
+  box.innerHTML='';
+  rows.forEach(function(codes){
+    var rowEl=document.createElement('div');rowEl.className='tk-row';
+    codes.forEach(function(code){
+      var k=document.createElement('div');k.className='tk-key';k.dataset.code=code;
+      k.innerHTML='<span class="tk-shift">'+(RG_SHIFT_MAP[code]||'')+'</span><span class="tk-base">'+(RG_BASE_MAP[code]||'')+'</span>';
+      k.onclick=(function(c){return function(){
+        var ch=advShiftOn?(RG_SHIFT_MAP[c]||''):(RG_BASE_MAP[c]||'');
+        if(advShiftOn){advShiftOn=false;var sk=document.getElementById('adv-shift-key');if(sk)sk.classList.remove('active');}
+        if(ch)advHandleChar(ch);
+      };})(code);
+      rowEl.appendChild(k);
+    });
+    box.appendChild(rowEl);
+  });
+  var lastRow=document.createElement('div');lastRow.className='tk-row';
+  var shiftKey=document.createElement('div');shiftKey.className='tk-key tk-wide';shiftKey.id='adv-shift-key';shiftKey.textContent='⇧ Shift';
+  shiftKey.onclick=function(){advShiftOn=!advShiftOn;shiftKey.classList.toggle('active',advShiftOn);};
+  var spaceKey=document.createElement('div');spaceKey.className='tk-key tk-space';spaceKey.textContent='空白鍵';spaceKey.style.opacity='.45';spaceKey.style.cursor='default';
+  var backKey=document.createElement('div');backKey.className='tk-key tk-wide';backKey.textContent='⌫ 退格';
+  backKey.onclick=function(){if(!advChecked&&advPos>0){advPos--;advRenderTarget();advHighlightNext();}};
+  lastRow.appendChild(shiftKey);lastRow.appendChild(spaceKey);lastRow.appendChild(backKey);
+  box.appendChild(lastRow);
+}
+// ── รับ keydown สำหรับ 高級 ── (ผูกก่อน listener เดิม)
+document.addEventListener('keydown',function(e){
+  if(!advModeActive)return;
+  var ae=document.activeElement;
+  if(ae&&/^(INPUT|TEXTAREA)$/.test(ae.tagName))return;
+  if(e.key==='Backspace'){
+    if(!advChecked&&advPos>0){advPos--;advRenderTarget();advHighlightNext();}
+    e.preventDefault();return;
+  }
+  if(e.code==='Space'){e.preventDefault();return;}
+  var map=e.shiftKey?RG_SHIFT_MAP:RG_BASE_MAP;
+  var ch=map[e.code];
+  if(ch){advHandleChar(ch);e.preventDefault();}
+},true); // capture phase → รันก่อน listener เดิม
 </script>
 </div><!-- /.v3-page -->
 <script src="shared.js?v=21"></script>
@@ -2737,9 +3159,9 @@ function rgOpenAsk() {
 <div id="game-switcher">
   <a class="gs-tab" href="tone-finder.html">🎵 聲調搜尋</a>
   <div class="gs-divider"></div>
-  <span class="gs-tab gs-active">📝 拼讀練習</span>
+  <a class="gs-tab" href="reading-game.html">📝 拼讀練習</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="typing-game.html">⌨️ 打字練習</a>
+  <span class="gs-tab gs-active">⌨️ 打字練習</span>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
   <div class="gs-divider"></div>

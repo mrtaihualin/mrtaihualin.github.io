@@ -1,7 +1,10 @@
 // ════════════════════════════════════════════════════════════
 // progress.js — หน้า "คะแนนสะสมของฉัน" (my-progress.html)
 // ต้องล็อกอินก่อน แล้วดึงข้อมูลจากตาราง tone_sessions มาสรุป
-// ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, Chart.js
+// ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, Chart.js, auth-widget.js
+// Lin 2026-07-03 (v4): header badge (👤 ชื่อ/✏️/🏆/📊/登出) เปลี่ยนไปใช้ window.SITE_AUTH
+//   ตัวกลาง — เดิมโชว์แค่อีเมล+登出 เฉยๆ (ไม่มี✏️🏆📊) ตอนนี้ครบเหมือนหน้าอื่นแล้ว
+//   มี fallback: ถ้า SITE_AUTH โหลดไม่ทัน ยังมี client+listener สำรองของตัวเอง หน้าไม่พัง
 // ════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -20,7 +23,7 @@
     return;
   }
 
-  var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
+  var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
   var currentUser = null;
   var chartObj = null;
 
@@ -93,7 +96,10 @@
           });
       });
   }
-  function doLogout() { sb.auth.signOut().then(function () { currentUser = null; renderRoot(); }); }
+  function doLogout() {
+    if (window.SITE_AUTH && window.SITE_AUTH.ready) { window.SITE_AUTH.doLogout(); }
+    else { sb.auth.signOut().then(function () { currentUser = null; renderRoot(); }); }
+  }
 
   // ── views ──────────────────────────────────────────────────
   function renderGate() {
@@ -126,7 +132,7 @@
 
     if (!rows.length) {
       root.innerHTML = msgBox('🌱', '還沒有資料', '你還沒有完成任何記錄成績的練習，先去玩一場吧',
-        '<a href="games.html" style="display:inline-block;margin-top:18px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往 tone-finder →</a>');
+        '<a href="games.html" style="display:inline-block;margin-top:18px;background:#C8973A;color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">前往遊戲頁 →</a>');
       renderHeaderUser();
       return;
     }
@@ -247,18 +253,14 @@
     });
   }
 
-  // แสดงอีเมล + ปุ่มออกจากระบบ ที่หัวมุมขวา (ถ้ามี element)
+  // ── header badge มุมขวา: 👤ชื่อ/✏️/🏆/📊/登出 — ให้ window.SITE_AUTH วาดให้เหมือนหน้าอื่น ──
+  // (เดิมโชว์แค่อีเมล+登出 เฉยๆ ไม่มี✏️🏆📊 — ตอนนี้ครบเหมือนกันทุกหน้าแล้ว LIN 2026-07-03)
   function renderHeaderUser() {
     var slot = document.getElementById('pg-userslot');
     if (!slot) return;
-    if (currentUser) {
-      slot.innerHTML =
-        '<span style="color:#8B6310;font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">👤 ' +
-        esc(currentUser.email || '使用者') + '</span>' +
-        '<button id="pg-logout" style="border:none;background:#C8973A;color:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;font-size:12px;">登出</button>';
-      var b = document.getElementById('pg-logout');
-      if (b) b.onclick = doLogout;
-    } else {
+    if (currentUser && window.SITE_AUTH && window.SITE_AUTH.ready) {
+      window.SITE_AUTH.renderBadge('pg-userslot', { leaderboardHref: 'leaderboard.html', progressHref: 'my-progress.html' });
+    } else if (!currentUser) {
       slot.innerHTML = '';
     }
   }
@@ -268,14 +270,23 @@
     else { renderGate(); renderHeaderUser(); }
   }
 
-  // ── init ───────────────────────────────────────────────────
-  sb.auth.getSession().then(function (res) {
-    currentUser = (res.data && res.data.session && res.data.session.user) || null;
-    renderRoot();
-  });
-  sb.auth.onAuthStateChange(function (_event, session) {
-    var was = currentUser;
-    currentUser = (session && session.user) || null;
-    if (!!was !== !!currentUser) renderRoot();
-  });
+  // ── init: session กลาง (window.SITE_AUTH) ถ้ามี — client เดียวกับทุกหน้า ──
+  // มี fallback (client+listener ของตัวเอง) เผื่อ auth-widget.js โหลดไม่ทัน/พลาด กันหน้าพัง LIN 2026-07-03
+  if (window.SITE_AUTH) {
+    window.SITE_AUTH.onChange(function (user) {
+      var was = currentUser;
+      currentUser = user;
+      if (!!was !== !!currentUser) renderRoot();
+    });
+  } else {
+    sb.auth.getSession().then(function (res) {
+      currentUser = (res.data && res.data.session && res.data.session.user) || null;
+      renderRoot();
+    });
+    sb.auth.onAuthStateChange(function (_event, session) {
+      var was = currentUser;
+      currentUser = (session && session.user) || null;
+      if (!!was !== !!currentUser) renderRoot();
+    });
+  }
 })();

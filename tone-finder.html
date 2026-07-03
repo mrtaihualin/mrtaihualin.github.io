@@ -13,10 +13,12 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="supabase-config.js?v=4"></script>
 <script defer src="game-account.js?v=1"></script>
-<script defer src="supabase-auth.js?v=19"></script>
+<script defer src="auth-widget.js?v=1"></script>
+<script defer src="supabase-auth.js?v=20"></script>
 <script defer src="progress-sync.js?v=2"></script>
 <script defer src="adaptive.js?v=2"></script>
 <script src="word-vault.js"></script>
+<script src="adv-sentences.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -1844,6 +1846,15 @@
   .tf-badge-link:active { transform:scale(.97); }
   .tf-badge-tier-title { font-size:13px; font-weight:800; color:#8B6310; margin:14px 0 8px; }
   .tf-badge-card.locked { opacity:.45; filter:grayscale(1); }
+  /* 進度/⚡ bars — เพิ่ม 2026-07-03, สไตล์เดียวกับ reading-game.html/typing-game.html (bars-wrap/bar-row/bar-fill) */
+  /* หมายเหตุ: scope ด้วย #tf-banner (ตัว element จริงคือ id="tf-banner" class="tf-word-banner" — ใช้ id ให้ชัวร์ที่สุด) */
+  #tf-banner .bars-wrap { width:100%; max-width:640px; margin:6px 0 4px; display:flex; flex-direction:column; gap:6px; }
+  #tf-banner .bar-row { display:flex; align-items:center; gap:8px; font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#a08050; }
+  #tf-banner .bar-bg { flex:1; height:7px; background:#ede0c8; border-radius:4px; overflow:hidden; }
+  #tf-banner .bar-fill { height:100%; border-radius:4px; transition:width .4s ease; }
+  #tf-banner .bar-fill.prog { background:linear-gradient(90deg,#e8a020,#d85a30); }
+  #tf-banner .bar-fill.power { background:linear-gradient(90deg,#66bb6a,#43a047); }
+  #tf-banner .bar-label { min-width:52px; text-align:right; font-size:11px; }
 </style>
 <!-- html2pdf ถอดออก 2026-06-27: เลิกใช้แล้ว (เปลี่ยนไปใช้หน้าต่าง print) ลดการโหลดที่ไม่จำเป็น -->
 <script type="application/ld+json">
@@ -1884,7 +1895,7 @@
   <a href="page2.html">課程・費用</a>
   <a href="page3.html">須知・分享</a>
   <a href="page-services.html">導遊・翻譯</a>
-  <a href="page4.html">泰語・分享</a>
+  <a href="content.html">泰語・分享</a>
   <a href="games.html">泰語・遊戲</a>
 </div>
 
@@ -1917,8 +1928,8 @@
   <div class="tf-tools-row">
     <div id="tf-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
     <div id="tf-vault-badge-slot" style="display:flex;align-items:center;"></div>
-    <button class="tf-tool-btn" id="tf-font-btn" onclick="TF.toggleFont()" title="สลับฟอนต์มีหัว/ไม่มีหัว">✍️ 換現代字體</button>
-    <button class="tf-tool-btn" onclick="TF.openAsk()" title="เล่นแล้วมีคำถาม ถามได้เลย">💬 我有問題</button>
+    <button class="tf-tool-btn" id="tf-font-btn" onclick="TF.toggleFont()" title="切換有頭字體/現代字體">✍️ 換現代字體</button>
+    <button class="tf-tool-btn" onclick="TF.openAsk()" title="玩的時候有問題，隨時問">💬 我有問題</button>
     <button class="tf-tool-btn" onclick="document.getElementById('tf-howto-modal').style.display='flex'">📖 怎麼玩</button>
   </div>
 
@@ -2852,14 +2863,14 @@ var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, f
 // ทุกค่าปรับได้ที่ TF_SCORE_CFG ห้าม hardcode ในเกม
 // ════════════════════════════════════════════════════════════
 var TF_SCORE_CFG = {
-  SCORE_FIRST_TRY: 100,      // ถูกตั้งแต่ครั้งแรก = "รู้จริง"
-  SCORE_DEDUCE_BASE: 50,     // เข้า推導 ฐาน 50
-  SCORE_MIN_PER_WORD: 10,    // คะแนนขั้นต่ำต่อคำ — ไม่ว่าจะกดผิดกี่ครั้งก็ไม่เป็น 0
+  SCORE_FIRST_TRY: 10,       // ถูกตั้งแต่ครั้งแรก (เดิม 100 → ลดให้ใกล้ reading-game ที่ให้ 10/คำ)
+  SCORE_DEDUCE_BASE: 5,      // เข้า推導 ฐาน (เดิม 50)
+  SCORE_MIN_PER_WORD: 0,     // คะแนนขั้นต่ำต่อคำ (เดิม 10 → 1 → 0: ผิดครบ 3 ครั้ง = 0 pt, Lin 2026-07-02)
   DEDUCE_WRONG_LIMIT: 3,     // กดผิดครบ 3 ครั้งในคำเดียว → ได้คะแนนขั้นต่ำ + เฉลย + คำใหม่
   COMBO_TIERS: { 3: 1.5, 5: 2, 8: 3 },   // สตรีคตอบถูกครั้งแรกติดกัน → ตัวคูณ
-  SET_COMPLETE_BONUS: 200,   // เล่นจบ 1 ชุด
-  SET_PERFECT_BONUS: 500,    // จบชุดแบบ perfect (เพิ่มจากโบนัสจบชุด → perfect = 200+500 = 700)
-  LEVEL_WEIGHT: { 1: 1, 2: 1.5, 3: 2 },   // ถ่วงน้ำหนักคะแนนเข้ากระดาน: 初×1 / 中×1.5 / 高×2
+  SET_COMPLETE_BONUS: 20,    // เล่นจบ 1 ชุด (เดิม 200)
+  SET_PERFECT_BONUS: 50,     // จบชุดแบบ perfect (เดิม 500) → perfect = 20+50 = 70
+  LEVEL_WEIGHT: { 1: 1.5, 2: 2.25, 3: 3 },   // ถ่วงน้ำหนักคะแนนเข้ากระดาน (Lin 2026-07-03 อัปเดตสเกล): เสียง初×1.5 / เสียง中×2.25 / เสียง高×3 (เกมเสียง = ฐาน×1.5 ให้ เสียง初≈อ่าน中)
   // จำนวนตัวเลือกในแต่ละขั้น推導 → ใช้คำนวณการหัก = round(BASE / optionsInStep)
   OPTIONS_IN_STEP: {
     s1: 2, s2a: 2, s2a_low: 2, s2a_other: 3, s2a_mid: 4, s2a_hi: 2,
@@ -3094,6 +3105,9 @@ var TF_SPECIAL_KEY = 'tf_special_words_v1';
 var TF_SPECIAL_MULT = 2;        // ห้องคำพิเศษ ตอบถูก ×2
 var currentSetId = null;        // ชุดที่กำลังเล่น (null = ไม่ผูกกับชุด เช่น 全部/搜尋/ห้องพิเศษ)
 var inSpecialRoom = false;      // กำลังเล่นห้องคำพิเศษอยู่ไหม
+// ── 高級: ประโยคเต็ม (Lin 2026-07-03) ──
+var advSentenceCtx = null;      // {th, zh} ของประโยคที่กำลังเล่น (null = ไม่ได้เล่นโหมด高級句子) — ใช้โชว์บนแบนเนอร์
+var advSentIdx = -1;            // index ของประโยคปัจจุบันใน ADV_SENTENCES
 
 function tfLoadSetStates() { try { return JSON.parse(localStorage.getItem(TF_SET_STATE_KEY) || '{}') || {}; } catch (e) { return {}; } }
 function tfSaveSetStates(o) { try { localStorage.setItem(TF_SET_STATE_KEY, JSON.stringify(o)); } catch (e) {} }
@@ -3294,6 +3308,7 @@ function tfScorePop(points, opts) {
   } catch (e) { /* ignore */ }
   // อัปเดต HUD คะแนนรวม
   tfUpdateScoreHud();
+  tfUpdateBarsHud();
   if (opts.confetti) tfConfetti();
 }
 
@@ -3321,6 +3336,40 @@ function tfConfetti() {
 function tfUpdateScoreHud() {
   var el = document.getElementById('tf-score-hud');
   if (el && session) el.textContent = '🏆 ' + session.score + ' 分';
+}
+
+// ════════════════════════════════════════════════════════════
+// 進度/⚡ bars — เพิ่ม 2026-07-03 (ไม่แตะ scoring/streak/badge/star logic เดิม แค่โชว์ผลลัพธ์เพิ่ม)
+// 進度 = session.index/session.words.length (คำตอบที่ตอบแล้ว/จำนวนคำในชุดนี้ — ชุดยาวไม่คงที่ อ่านจาก session.words.length สดทุกครั้ง)
+// ⚡ = session.score ของชุดนี้ (แคปที่ 100 ตอนวาดหลอด เหมือน reading-game/typing-game ที่ clamp roundScore ไว้ที่ 100 ไม่ normalize)
+// ════════════════════════════════════════════════════════════
+function tfBarsHtml() {
+  if (!session || !session.words || !session.words.length) return '';
+  var total = session.words.length;
+  var idx = Math.min(session.index || 0, total);
+  var score = session.score || 0;
+  var progPct = Math.min(100, (idx / total) * 100);
+  var powerPct = Math.min(100, score);
+  return '<div class="bars-wrap" id="tf-bars-wrap">'
+    + '<div class="bar-row"><span>進度</span><div class="bar-bg"><div class="bar-fill prog" id="tf-pf" style="width:' + progPct + '%"></div></div><span class="bar-label" id="tf-prog-txt">' + idx + '/' + total + '</span></div>'
+    + '<div class="bar-row"><span>⚡</span><div class="bar-bg"><div class="bar-fill power" id="tf-powerf" style="width:' + powerPct + '%"></div></div><span class="bar-label"><span id="tf-power-num">' + score + '</span>/100</span></div>'
+    + '</div>';
+}
+
+// อัปเดตหลอด 進度/⚡ สดระหว่างคำถาม (ไม่ต้องรอ render() รอบใหม่) — เรียกคู่กับ tfUpdateScoreHud()
+function tfUpdateBarsHud() {
+  if (!session || !session.words) return;
+  var total = session.words.length || 0;
+  var idx = Math.min(session.index || 0, total);
+  var score = session.score || 0;
+  var pf = document.getElementById('tf-pf');
+  if (pf) pf.style.width = (total ? Math.min(100, (idx / total) * 100) : 0) + '%';
+  var pt = document.getElementById('tf-prog-txt');
+  if (pt) pt.textContent = idx + '/' + total;
+  var pw = document.getElementById('tf-powerf');
+  if (pw) pw.style.width = Math.min(100, score) + '%';
+  var pn = document.getElementById('tf-power-num');
+  if (pn) pn.textContent = score;
 }
 
 // ตัวคูณคำทอง (สเตจ 2 จะเปิดใช้ — ตอนนี้คืน 1)
@@ -3430,7 +3479,7 @@ function tfForceRevealZero() {
     tfShowRevealOverlay({ word: syl, zh: entry.zh, readingTH: syl }, sct, { sylIdx: k, sylTone: sct });
     return;
   }
-  session.currentWordScore = TF_SCORE_CFG.SCORE_MIN_PER_WORD; // ขั้นต่ำ 10 ไม่ใช่ 0
+  session.currentWordScore = TF_SCORE_CFG.SCORE_MIN_PER_WORD; // ผิดครบ 3 ครั้ง = 0 pt
   session.currentWordFirstTry = false;
   session.currentWordScored = true;
   session.combo = 0;
@@ -3508,7 +3557,7 @@ function tfCommitWordAndAdvance(opts) {
     mistakes: mistakes,
     initialGuess: session.initialGuess,
     finalAnswer: session.finalAnswer,
-    // ── ฟิลด์คะแนน ── (การันตีขั้นต่ำ 10 ต่อคำ ไม่มีทางเป็น 0)
+    // ── ฟิลด์คะแนน ── (ขั้นต่ำ = SCORE_MIN_PER_WORD = 0)
     score: Math.max(TF_SCORE_CFG.SCORE_MIN_PER_WORD, session.currentWordScore || 0),
     firstTry: firstTry,
     golden: !!session.currentWordGolden,
@@ -3905,9 +3954,14 @@ function render() {
         + (session.combo >= 3 ? '<span class="tf-combo-hud">🔥 ×' + TF_SCORE.comboMultiplier(session.combo) + '</span>' : '')
         + (session.currentWordGolden ? '<span class="tf-golden-hud">✨ 黃金米題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
         + '</div>'
+        + tfBarsHtml()
       : '';
     var goldWord = (session && session.currentWordGolden) ? ' tf-banner-word-gold' : '';
-    banner.innerHTML = counterHtml + '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>';
+    // 高級句子: โชว์ context ประโยคเต็ม+ความหมายจีนไว้เหนือคำ ให้รู้ว่ากำลังอ่านคำไหนของประโยคไหน (Lin 2026-07-03)
+    var sentCtxHtml = advSentenceCtx
+      ? '<div class="tf-adv-sent-ctx" style="font-family:\'Sarabun\',sans-serif;font-size:14px;color:#8B7340;background:#FBF5E7;border:1px solid rgba(200,151,58,0.3);border-radius:10px;padding:6px 10px;margin-bottom:6px;line-height:1.6;">📖 ' + advSentenceCtx.th + '<br><span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08a5a;">' + advSentenceCtx.zh + '</span></div>'
+      : '';
+    banner.innerHTML = sentCtxHtml + counterHtml + '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>';
     // inject vault save button
     if (window.WordVault && S.word) {
       WordVault.injectStyles();
@@ -4249,7 +4303,7 @@ function buildReportInner() {
   var results = session.results;
   var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞','ลักษณนาม':'量詞','คำนาม':'名詞','สัตว์ธรรมชาติ':'動物・自然',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','ทักทาย':'招呼用語','เวลา':'時間','แนวคิด':'生活概念','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
   var dateStr = new Date().toLocaleDateString('zh-TW');
-  var levelStr = ({1:'初級',2:'中級'})[selectedLevel] || '—';
+  var levelStr = ({1:'初級',2:'中級',3:'高級'})[selectedLevel] || '—';
   var catStr = catZh[selectedCategory] || selectedCategory || '全部';
   var total = results.length;
   var correct = results.filter(function(r){ return r.mistakes===0; });
@@ -4260,7 +4314,7 @@ function buildReportInner() {
     var bd = parts.map(function(p){ return '子音 '+p.c+' ／ 母音 '+vowelText(p.vn)+' ／ 尾音 '+(p.f||'—'); }).join('<br>');
     var tone = r.tone!=null ? r.tone : computeTone(w);
     var ok = r.mistakes===0;
-    return '<tr><td>'+(i+1)+'</td><td class="th big">'+w+'</td><td class="th">'+r.entry.readingTH+'</td><td>'+r.entry.readingEN+'</td><td>'+r.entry.zh+'</td><td class="bd">'+bd+'</td><td class="dv">'+deriveText(w)+'</td><td style="color:'+(ok?'#3f7a3f':'#cc4444')+';font-weight:700;">'+(ok?'✓':'✗')+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td class="th big">'+w+'</td><td class="th">'+r.entry.readingTH+'</td><td>'+(r.entry.readingEN||'—')+'</td><td>'+r.entry.zh+'</td><td class="bd">'+bd+'</td><td class="dv">'+deriveText(w)+'</td><td style="color:'+(ok?'#3f7a3f':'#cc4444')+';font-weight:700;">'+(ok?'✓':'✗')+'</td></tr>';
   }).join('');
   var correctList = correct.length ? correct.map(function(r){ return r.entry.word+'（'+r.entry.zh+'）'; }).join('、') : '—';
   var wrongList = wrong.length ? wrong.map(function(r){ var ct=r.tone!=null?r.tone:computeTone(r.entry.word); return r.entry.word+'（'+r.entry.zh+'）→ 正確：'+(TONES[ct]?TONES[ct].zh:'—'); }).join('、') : '無，全部答對！';
@@ -4395,9 +4449,12 @@ function stepSessionSummary() {
   var totalScore = session.score || 0;
   var bonusAwarded = session.bonusAwarded || 0;
   var isPerfect = !!session.isPerfect;
+  // แสดงคะแนนถ่วงน้ำหนักตามระดับบนหน้าจอ (Lin 2026-07-03): 初×1.5 / 中×2.25 / 高×3
+  var levelWeightShown = TF_SCORE_CFG.LEVEL_WEIGHT[selectedLevel] || 1;
   var scoreSummary =
     '<div class="tf-score-summary">' +
-      '<div class="tf-score-summary-total">🏆 ' + totalScore + ' <span>分</span></div>' +
+      '<div class="tf-score-summary-total">🏆 ' + weightedScore + ' <span>分</span></div>' +
+      (levelWeightShown !== 1 ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08a5a;margin-top:-2px;">（原始 ' + totalScore + ' 分 × 等級加成 ' + levelWeightShown + '）</div>' : '') +
       (bonusAwarded ? '<div class="tf-score-summary-bonus">' +
         (isPerfect ? '🎉 完美通關獎勵 ' : '✅ 完成獎勵 ') + '+' + bonusAwarded + '</div>' : '') +
     '</div>';
@@ -4456,7 +4513,7 @@ function stepSessionSummary() {
     starBlock = '<div style="margin-top:14px;padding:12px;background:#FFF8E6;border:1px solid #F0D480;border-radius:14px;text-align:center;">' +
       '<div style="font-size:24px;line-height:1.2;letter-spacing:2px;">' + (_se >= 1 ? '⭐'.repeat(_se) : '—') + '</div>' +
       '<div style="font-size:14px;font-weight:800;color:#B07D00;margin-top:2px;">獲得 ' + _se + ' 顆星' + (_se < 3 ? '（全對拿 3 顆）' : '！') + '</div>' +
-      '<div style="font-size:12px;color:#A08A5A;margin-top:2px;">累積共 ' + _stars + ' 顆星（兩個遊戲共用）</div></div>';
+      '<div style="font-size:12px;color:#A08A5A;margin-top:2px;">累積共 ' + _stars + ' 顆星（全部遊戲共用）</div></div>';
   }
 
   return '<div class="tf-session-summary">' +
@@ -4483,16 +4540,27 @@ function stepSessionSummary() {
       '</div>') +
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
       '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
-      '<button class="tf-restart-btn" onclick="TF.reselectTopic()">🎲 再來 5 字</button>' +
-      '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{target:\'reading_game\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
+      '<button class="tf-restart-btn" onclick="TF.reselectTopic()">' + (selectedLevel === 3 ? '🎲 再來一句' : '🎲 再來 5 字') + '</button>' +
+      (selectedLevel === 3 ? '<button class="tf-restart-btn" onclick="TF.openAdvanced()">📖 選其他句子</button>' : '') +
+      '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
+      '<a class="tf-restart-btn" href="leaderboard.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{target:\'leaderboard\',from:\'tone_finder\'})}catch(e){}">🏆 看排行榜</a>' +
     '</div>' +
   '</div>';
 }
 
 function stepAdvanced() {
+  // \u9ad8\u7d1a\uff1a\u9078\u4e00\u53e5\u5b8c\u6574\u53e5\u5b50\uff0c\u4f9d\u5e8f\u5538\u51fa\u6bcf\u500b\u8a5e\u7684\u8b80\u97f3\uff08\u542b\u8072\u8abf\uff09\u2014 Lin 2026-07-03
+  var cards = ADV_SENTENCES.map(function(s, i){
+    return '<button class="tf-level-btn tf-lvl-adv" onclick="TF.startAdvSentence('+i+')" style="text-align:left;">' +
+      '<span class="tf-level-emoji">\ud83d\udcd6</span>' +
+      '<span class="tf-level-label" style="font-family:\'Sarabun\',sans-serif;">'+s.th+'</span>' +
+      '<span class="tf-level-sub">'+s.zh+'</span>' +
+    '</button>';
+  }).join('');
   return '<div class="tf-level-select">'+
-    '<div class="tf-level-title">\u9ad8\u7d1a</div>'+
-    '<div class="tf-soon-card">\ud83d\udea7 \u5373\u5c07\u958b\u653e</div>'+
+    '<div class="tf-level-title">\u9ad8\u7d1a\uff1a\u5b8c\u6574\u53e5\u5b50</div>'+
+    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12.5px;color:#a08a5a;text-align:center;margin:-4px 0 8px;">\u9078\u4e00\u53e5\uff0c\u4f9d\u5e8f\u5538\u51fa\u6bcf\u500b\u8a5e\u7684\u8b80\u97f3\uff08\u542b\u8072\u8abf\uff09</div>'+
+    cards +
     '<button class="tf-back-level-btn" onclick="TF.reset()">\u2190 \u8fd4\u56de</button>'+
   '</div>';
 }
@@ -4636,10 +4704,10 @@ function stepLevelSelect() {
         '<span class="tf-level-sub">'+l.sub+'</span>' +
       '</button>';
     }).join('') +
-    '<button class="tf-level-btn tf-lvl-adv" onclick="TF.openAdvanced()" style="opacity:0.85;">' +
+    '<button class="tf-level-btn tf-lvl-adv" onclick="TF.openAdvanced()">' +
       '<span class="tf-level-emoji">🌳</span>' +
       '<span class="tf-level-label">高級</span>' +
-      '<span class="tf-level-sub">即將開放</span>' +
+      '<span class="tf-level-sub">完整句子・聲調精通</span>' +
     '</button>' +
     '<button class="tf-level-btn tf-lvl-search" onclick="TF.openSearch()">' +
       '<span class="tf-level-emoji">🔎</span>' +
@@ -4692,7 +4760,7 @@ function tfFreeRoundsUsed() { try { var v = localStorage.getItem('tf_free_rounds
 function tfBumpFreeRounds() { var n = tfFreeRoundsUsed() + 1; _tfMemRounds = n; try { localStorage.setItem('tf_free_rounds', String(n)); } catch (e) {} }
 function tfFreeRoundsLeft() { return Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed()); }
 
-function startSetSession(words) {
+function startSetSession(words, opts) {
   // เล่นฟรี TF_FREE_ROUNDS_LIMIT รอบก่อน แล้วค่อยบังคับล็อกอิน (เก็บนับใน localStorage)
   var _auth = window.TF_AUTH;
   var _loggedIn = !!(_auth && ((_auth.hasAccess && _auth.hasAccess()) || (_auth.loggedIn && _auth.loggedIn())));
@@ -4703,12 +4771,16 @@ function startSetSession(words) {
     }
     tfBumpFreeRounds();   // ใช้โควต้าเล่นฟรีไป 1 รอบ
   }
+  advSentenceCtx = null; // ล้าง context ประโยค 高級 ทุกครั้งที่เริ่ม session ใหม่ (TF.startAdvSentence จะตั้งใหม่เองถ้าใช่)
   var entries = words.map(function(wd){
+    if (wd && typeof wd === 'object') return wd; // 高級句子: ส่ง entry object มาตรงๆ (ข้าม lookup WORD_LIST) — Lin 2026-07-03
     for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === wd) return WORD_LIST[i];
     return null;
   }).filter(Boolean);
   if (!entries.length) return;
-  entries = entries.slice().sort(function(){ return Math.random() - 0.5; });  // สุ่มลำดับใหม่ทุกครั้ง
+  if (!(opts && opts.keepOrder)) {
+    entries = entries.slice().sort(function(){ return Math.random() - 0.5; });  // สุ่มลำดับใหม่ทุกครั้ง (高級句子 ข้ามขั้นนี้ ต้องเรียงตามประโยคจริง)
+  }
   session = {
     words: entries, index: 0, results: [], currentWordMistakes: 0,
     // ── สเตจ 1: ฟิลด์คะแนน ──
@@ -5346,12 +5418,13 @@ function stepResult() {
   if (window.WordVault && S.word) {
     WordVault.injectStyles();
     var _vaultSaved = WordVault.has(S.word);
-    vaultBtnHtml = '<button id="tf-result-vault-btn" class="vault-save-btn" style="font-size:18px;opacity:'+(_vaultSaved?'1':'0.4')+'" title="'+(_vaultSaved?'ลบออกจากคลัง':'บันทึกลงคลัง')+'" onclick="(function(){'+
+    vaultBtnHtml = '<button id="tf-result-vault-btn" class="vault-save-btn" data-saved="'+(_vaultSaved?'1':'0')+'" title="'+(_vaultSaved?'從單字庫移除':'儲存到單字庫')+'" onclick="(function(){'+
       'var th=\''+S.word.replace(/'/g,"\\'") +'\';'+
       'var meta={zh:\''+(S.zh||'').replace(/'/g,"\\'")+'\',en:\''+(S.readingEN||'').replace(/'/g,"\\'")+'\',source:\'tone-finder\'};'+
-      'if(WordVault.has(th)){WordVault.removeWord(th);this.style.opacity=\'0.4\';this.title=\'บันทึกลงคลัง\';}'+
-      'else{WordVault.addWord(th,meta);this.style.opacity=\'1\';this.title=\'ลบออกจากคลัง\';}'+
-      'var b=document.querySelectorAll(\'.vault-badge\');b.forEach(function(x){x.textContent=\'🔖 คลัง \'+WordVault.count()+\' คำ\';});'+
+      'if(WordVault.has(th)){WordVault.removeWord(th);this.setAttribute(\'data-saved\',\'0\');this.title=\'儲存到單字庫\';}'+
+      'else if(WordVault.isFull()){WordVault.notifyFull();return;}'+
+      'else{WordVault.addWord(th,meta);this.setAttribute(\'data-saved\',\'1\');this.title=\'從單字庫移除\';}'+
+      'var b=document.querySelectorAll(\'.vault-badge\');b.forEach(function(x){x.textContent=\'🔖 單字庫\';});'+
     '}).call(this)">🔖</button>';
   }
 
@@ -5910,6 +5983,7 @@ var TF = {
       selectedLevel = null;
       selectedCategory = null;
       session = null;
+      advSentenceCtx = null; advSentIdx = -1;
       render();
     });
   },
@@ -5936,6 +6010,10 @@ var TF = {
   },
   // สุ่ม 5 คำจาก level ที่เลือก แล้ว loop ต่อเนื่อง
   _startRandom5: function() {
+    if (selectedLevel === 3) { // 高級 ไม่มีคำใน WORD_LIST → สุ่มประโยคใหม่แทน (Lin 2026-07-03)
+      TF.startAdvSentence(Math.floor(Math.random() * ADV_SENTENCES.length));
+      return;
+    }
     var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
     if (!pool.length) { tfToast('找不到單字，請試試其他等級'); return; }
     var words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
@@ -6053,6 +6131,21 @@ var TF = {
     S = { word:'', step:'advanced', path:[], tone:null };
     hist = [S]; histPos = 0;
     render();
+  },
+  // 高級：เริ่มเล่นประโยคเต็ม 1 ประโยค — words[] ของประโยคกลายเป็น session เดียว (Lin 2026-07-03)
+  // ใช้ startSetSession เดิมทุกอย่าง (คำทอง/คอมโบ/โบนัสจบชุด) แค่ส่ง entry object ตรงๆ ไม่ query WORD_LIST + ห้ามสลับลำดับคำ
+  startAdvSentence: function(idx) {
+    var s = ADV_SENTENCES[idx];
+    if (!s) return;
+    var entries = s.words.map(function(w){
+      return { word: w.th, readingTH: w.syl.join('-'), zh: w.zh, level: 3, category: '高級句子' };
+    });
+    selectedLevel = 3;
+    selectedCategory = '高級句子';
+    currentSetId = null; inSpecialRoom = false; // ไม่ผูกกับระบบล็อกชุด/ห้องพิเศษ
+    advSentIdx = idx;
+    startSetSession(entries, { keepOrder: true });
+    advSentenceCtx = { th: s.th, zh: s.zh }; // ตั้งหลัง startSetSession (ฟังก์ชันนั้นจะล้างค่านี้ก่อนเสมอ)
   },
   openSearch: function() {
     selectedLevel = null; selectedCategory = null; session = null; randomEntry = null;
@@ -6189,7 +6282,7 @@ var TF = {
       '泰語聲調練習報告',
       '==================',
       '日期：' + new Date().toLocaleDateString('zh-TW'),
-      '等級：' + ({1:'初級',2:'中級'}[selectedLevel]||'—'),
+      '等級：' + ({1:'初級',2:'中級',3:'高級'}[selectedLevel]||'—'),
       '主題：' + (catZh[selectedCategory]||selectedCategory||'全部'),
       '練習字數：' + results.length,
       '', '練習記錄：', '----------'
@@ -6387,6 +6480,17 @@ function tfRenderExtBar() {
 
 render();
 setTimeout(tfRenderExtBar, 0);
+// มาจากคลัง (?word=) → เปิดหน้าค้นหา + ใส่คำนี้ + วิเคราะห์ให้เลยทันที — Lin 2026-07-02
+(function(){
+  try{
+    var m=location.search.match(/[?&]word=([^&]+)/);
+    if(!m)return;
+    var w=decodeURIComponent(m[1]);
+    TF.openSearch();
+    var inp=document.getElementById('tf-inp');
+    if(inp){ inp.value=w; TF.search(); }
+  }catch(e){}
+})();
 </script>
 
 <div style="height:44px;background:#0A0804;"></div>
@@ -6396,7 +6500,7 @@ setTimeout(tfRenderExtBar, 0);
 </footer>
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
-<script src="shared.js?v=20"></script>
+<script src="shared.js?v=21"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)
@@ -6443,17 +6547,25 @@ setTimeout(tfRenderExtBar, 0);
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
-#game-switcher{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;overflow:hidden;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
-.gs-tab{padding:9px 22px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;}
+#game-switcher{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+.gs-tab{padding:9px 18px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;flex-shrink:0;}
 .gs-tab:hover{background:rgba(139,99,16,0.08);}
 .gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
-.gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;}
-@media(max-width:768px){#game-switcher{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}}
+.gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
+@media(max-width:768px){#game-switcher{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
   <span class="gs-tab gs-active">🎵 聲調搜尋</span>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="reading-game.html">📝 拼讀練習</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="typing-game.html">⌨️ 打字練習</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="word-order.html">🔀 語序遊戲</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="vault.html">🔖 單字庫</a>
 </div>
 <script>
   // vault badge init
@@ -6466,7 +6578,7 @@ setTimeout(tfRenderExtBar, 0);
       badge.href = 'vault.html';
       badge.className = 'vault-badge';
       badge.id = 'vault-badge-tf';
-      badge.textContent = '🔖 คลัง ' + WordVault.count() + ' คำ';
+      badge.textContent = '🔖 單字庫';
       slot.appendChild(badge);
     }
   });

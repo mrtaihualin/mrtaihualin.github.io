@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>คลังคำของฉัน · mrtaihualin.com</title>
+<title>我的單字庫 · mrtaihualin.com</title>
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="shared.css?v=12">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 /* header */
 .vault-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
 .vault-title{font-size:22px;font-weight:700;color:#5a3e0a;font-family:'Noto Sans TC',sans-serif;}
-.vault-count-chip{font-size:13px;background:rgba(139,99,16,0.12);color:#8B6310;border-radius:20px;padding:3px 12px;}
+.vault-count-chip{font-size:13px;background:rgba(139,99,16,0.12);color:#8B6310;border-radius:20px;padding:3px 12px;display:none;}
 .vault-back{font-size:13px;color:#8B6310;text-decoration:none;display:flex;align-items:center;gap:4px;margin-right:auto;}
 .vault-back:hover{text-decoration:underline;}
 
@@ -24,26 +24,32 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 .vault-filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
 .vtag-btn{font-size:12px;font-family:'Sarabun',sans-serif;padding:5px 14px;border-radius:20px;border:1.5px solid rgba(139,99,16,0.3);background:#fff;color:#5a3e0a;cursor:pointer;transition:all .15s;}
 .vtag-btn.active,.vtag-btn:hover{background:#8B6310;color:#fff;border-color:#8B6310;}
+.vtag-count{font-size:11px;opacity:0.75;}
 
 /* word cards */
 .vault-list{display:flex;flex-direction:column;gap:10px;}
-.vault-card{background:#fff;border:1.5px solid rgba(139,99,16,0.15);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(90,62,10,0.06);}
+.vault-card{background:#fff;border:1.5px solid var(--gold-bright,#C8973A);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(90,62,10,0.06);}
 .vault-card-word{font-size:32px;font-weight:700;color:#3a2a0a;min-width:56px;text-align:center;line-height:1.3;}
 .vault-card-info{flex:1;}
 .vault-card-zh{font-size:13px;color:#888;font-family:'Noto Sans TC',sans-serif;}
 .vault-card-en{font-size:12px;color:#aaa;margin-top:2px;}
-.vault-card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
-.vault-tag-chip{font-size:11px;padding:2px 10px;border-radius:12px;cursor:pointer;border:1.5px solid;transition:all .15s;}
+.vault-card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;justify-content:flex-end;}
+.vault-tag-chip{font-size:11px;padding:2px 10px;border-radius:12px;cursor:pointer;border:1.5px solid;background:var(--cream-soft,#FBF5E7);transition:all .15s;}
 .vault-tag-chip.active{color:#fff;}
-.vault-tag-chip[data-tag="อยากฝึก"]{border-color:#e07a30;color:#e07a30;}
-.vault-tag-chip[data-tag="อยากฝึก"].active{background:#e07a30;}
-.vault-tag-chip[data-tag="เป็นแล้ว"]{border-color:#3aaa6a;color:#3aaa6a;}
-.vault-tag-chip[data-tag="เป็นแล้ว"].active{background:#3aaa6a;}
-.vault-tag-chip[data-tag="ชอบ"]{border-color:#e05080;color:#e05080;}
-.vault-tag-chip[data-tag="ชอบ"].active{background:#e05080;}
+.vault-tag-chip[data-tag="อยากฝึก"]{border-color:#C8973A;color:#C8973A;}
+.vault-tag-chip[data-tag="อยากฝึก"].active{background:#C8973A;}
+.vault-tag-chip[data-tag="เป็นแล้ว"]{border-color:#5a3e0a;color:#5a3e0a;}
+.vault-tag-chip[data-tag="เป็นแล้ว"].active{background:#5a3e0a;}
+.vault-tag-chip[data-tag="ชอบ"]{border-color:#A8780F;color:#A8780F;}
+.vault-tag-chip[data-tag="ชอบ"].active{background:#A8780F;}
 .vault-card-delete{font-size:18px;cursor:pointer;color:#ccc;padding:4px;border:none;background:none;border-radius:6px;transition:color .15s;}
 .vault-card-delete:hover{color:#e05050;}
 .vault-card-source{font-size:10px;color:#bbb;margin-top:3px;}
+.vault-practice-btns{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;justify-content:flex-end;}
+.vault-practice-btn{font-size:11px;font-family:'Sarabun',sans-serif;padding:4px 10px;border-radius:14px;
+  background:#fff;border:1.5px solid rgba(139,99,16,0.30);color:#7a5510;text-decoration:none;
+  cursor:pointer;transition:all .15s;white-space:nowrap;}
+.vault-practice-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
 
 /* empty */
 .vault-empty{text-align:center;padding:60px 20px;color:#aaa;}
@@ -51,43 +57,33 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 .vault-empty-text{font-size:15px;line-height:1.7;}
 .vault-empty a{color:#8B6310;text-decoration:underline;}
 
-/* game links */
-.vault-game-btns{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
-.vault-game-btn{flex:1;min-width:140px;display:flex;align-items:center;justify-content:center;gap:6px;
-  padding:10px 16px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;
-  background:#fff;border:1.5px solid rgba(139,99,16,0.3);color:#5a3e0a;transition:all .15s;}
-.vault-game-btn:hover{background:#f3e4c2;border-color:#C8973A;}
-
 /* bottom nav */
-#game-switcher{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;overflow:hidden;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
-.gs-tab{display:flex;align-items:center;padding:10px 18px;font-size:13px;color:#8B6310;text-decoration:none;white-space:nowrap;transition:background .15s;}
+#game-switcher{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+.gs-tab{display:flex;align-items:center;padding:10px 16px;font-size:13px;color:#8B6310;text-decoration:none;white-space:nowrap;transition:background .15s;flex-shrink:0;}
 .gs-tab:hover,.gs-tab.gs-active{background:rgba(139,99,16,0.1);}
-.gs-divider{width:1px;background:#d4b87a;margin:8px 0;}
-@media(max-width:768px){#game-switcher{bottom:calc(8px + env(safe-area-inset-bottom,0px));}}
+.gs-divider{width:1px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
+@media(max-width:768px){#game-switcher{bottom:calc(8px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:9px 12px;font-size:12px;}}
 </style>
 </head>
 <body>
 <div class="vault-page">
 
   <div class="vault-header">
-    <a class="vault-back" href="javascript:history.back()">← กลับ</a>
-    <span class="vault-title">🔖 คลังคำของฉัน</span>
+    <!-- ปุ่มกลับ: ถ้ามีประวัติให้ back ปกติ · เปิดหน้านี้ตรงๆ (ไม่มีประวัติ) → ไป games.html กันติดตัน — LIN 2026-07-02 -->
+    <a class="vault-back" href="games.html" onclick="if(document.referrer&&history.length>1){history.back();return false;}">← 返回</a>
+    <span class="vault-title">🔖 我的單字庫</span>
     <span class="vault-count-chip" id="vault-total-count"></span>
   </div>
 
-  <div class="vault-game-btns">
-    <a class="vault-game-btn" href="tone-finder.html">🎵 เกมเสียง</a>
-    <a class="vault-game-btn" href="reading-game.html">📝 เกมอ่าน</a>
-  </div>
-
   <div class="vault-filter-bar" id="vault-filter-bar">
-    <button class="vtag-btn active" data-filter="all" onclick="setFilter('all',this)">ทั้งหมด</button>
-    <button class="vtag-btn" data-filter="อยากฝึก" onclick="setFilter('อยากฝึก',this)">🟠 อยากฝึก</button>
-    <button class="vtag-btn" data-filter="เป็นแล้ว" onclick="setFilter('เป็นแล้ว',this)">✅ เป็นแล้ว</button>
-    <button class="vtag-btn" data-filter="ชอบ" onclick="setFilter('ชอบ',this)">❤️ ชอบ</button>
+    <button class="vtag-btn active" data-filter="all" onclick="setFilter('all',this)">全部 <span class="vtag-count" id="vtag-count-all"></span></button>
+    <button class="vtag-btn" data-filter="อยากฝึก" onclick="setFilter('อยากฝึก',this)">🟠 想練習 <span class="vtag-count" id="vtag-count-อยากฝึก"></span></button>
+    <button class="vtag-btn" data-filter="เป็นแล้ว" onclick="setFilter('เป็นแล้ว',this)">✅ 已學會 <span class="vtag-count" id="vtag-count-เป็นแล้ว"></span></button>
+    <button class="vtag-btn" data-filter="ชอบ" onclick="setFilter('ชอบ',this)">❤️ 喜歡 <span class="vtag-count" id="vtag-count-ชอบ"></span></button>
   </div>
 
   <div class="vault-list" id="vault-list"></div>
+  <div id="soft-cta-vault"></div>
 
 </div>
 
@@ -96,18 +92,50 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
   <div class="gs-divider"></div>
   <a class="gs-tab" href="reading-game.html">📝 拼讀練習</a>
   <div class="gs-divider"></div>
-  <span class="gs-tab gs-active">🔖 คลัง</span>
+  <a class="gs-tab" href="typing-game.html">⌨️ 打字練習</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="word-order.html">🔀 語序遊戲</a>
+  <div class="gs-divider"></div>
+  <span class="gs-tab gs-active">🔖 單字庫</span>
 </div>
 
+<script src="shared.js?v=21"></script>
 <script>
 var TAGS = ['อยากฝึก','เป็นแล้ว','ชอบ'];
-var TAG_COLORS = {'อยากฝึก':'#e07a30','เป็นแล้ว':'#3aaa6a','ชอบ':'#e05080'};
+var TAG_COLORS = {'อยากฝึก':'#C8973A','เป็นแล้ว':'#5a3e0a','ชอบ':'#A8780F'};
+// ป้ายที่โชว์ให้ผู้ใช้เห็นเป็นจีน — คีย์เก็บข้อมูลจริงยังเป็นไทยเหมือนเดิม กันข้อมูลเก่าที่เซฟไว้ในเครื่อง user พัง — Lin 2026-07-02
+var TAG_LABELS_ZH = {'อยากฝึก':'🟠 想練習','เป็นแล้ว':'✅ 已學會','ชอบ':'❤️ 喜歡'};
 var currentFilter = 'all';
 
+// หมายเหตุ: ตอนนี้การ์ดคำไม่ได้โชว์ "ที่มา" แล้ว (แทนที่ด้วยปุ่มฝึก) — เก็บ mapping นี้ไว้เผื่ออนาคต
 function sourceLabel(s){
-  if(s==='tone-finder') return '🎵 เกมเสียง';
-  if(s==='reading-game') return '📝 เกมอ่าน';
+  if(s==='tone-finder') return '🎵 聲調搜尋';
+  if(s==='reading-game') return '📝 拼讀練習';
+  if(s==='typing-game') return '⌨️ 打字練習';
   return s || '';
+}
+// ปุ่มเลือกว่าจะเอาคำนี้ไปฝึกในเกมไหน (แทนที่ป้าย "ที่มา" เดิม) — Lin 2026-07-02
+function practiceBtnsHtml(th){
+  var q='?word='+encodeURIComponent(th);
+  return '<div class="vault-practice-btns">'+
+    '<a class="vault-practice-btn" href="reading-game.html'+q+'">📝 拼讀練習</a>'+
+    '<a class="vault-practice-btn" href="tone-finder.html'+q+'">🎵 聲調搜尋</a>'+
+    '<a class="vault-practice-btn" href="typing-game.html'+q+'">⌨️ 打字練習</a>'+
+    '<a class="vault-practice-btn" href="lego.html'+q+'">🧩 造句遊戲</a>'+
+  '</div>';
+}
+
+function updateTabCounts(words){
+  var elAll = document.getElementById('vtag-count-all');
+  if(elAll) elAll.textContent = '(' + words.length + ')';
+  TAGS.forEach(function(tag){
+    var el = document.getElementById('vtag-count-'+tag);
+    if(!el) return;
+    var n = words.filter(function(w){ return w.tags && w.tags.indexOf(tag) !== -1; }).length;
+    el.textContent = '(' + n + ')';
+  });
 }
 
 function renderList(){
@@ -118,8 +146,12 @@ function renderList(){
   var filtered = currentFilter === 'all' ? words
     : words.filter(function(w){ return w.tags && w.tags.indexOf(currentFilter) !== -1; });
 
-  var count = document.getElementById('vault-total-count');
-  count.textContent = words.length + ' คำ';
+  updateTabCounts(words);
+
+  // soft-CTA: โชว์ต่อเมื่อเก็บคำไว้ครบ 5 คำขึ้นไป (นับจากทั้งหมด ไม่ใช่แค่ตัวกรองที่เลือกอยู่)
+  if(words.length >= 5 && window.renderSoftCTA){
+    renderSoftCTA('soft-cta-vault','vault_list','收藏不少單字了！想知道怎麼真正用在對話裡嗎？');
+  }
 
   var list = document.getElementById('vault-list');
   if(!filtered.length){
@@ -127,8 +159,8 @@ function renderList(){
       '<div class="vault-empty-icon">🔖</div>' +
       '<div class="vault-empty-text">' +
         (currentFilter==='all'
-          ? 'ยังไม่มีคำในคลัง<br>ไปเล่น <a href="tone-finder.html">เกมเสียง</a> หรือ <a href="reading-game.html">เกมอ่าน</a> แล้วกด 🔖 เซฟคำได้เลย'
-          : 'ไม่มีคำในหมวดนี้') +
+          ? '單字庫還沒有字<br>去玩 <a href="tone-finder.html">聲調搜尋</a>、<a href="reading-game.html">拼讀練習</a> 或 <a href="typing-game.html">打字練習</a>，按 🔖 就能儲存了'
+          : '這個分類還沒有字') +
       '</div></div>';
     return;
   }
@@ -144,7 +176,7 @@ function renderList(){
       var on = w.tags && w.tags.indexOf(tag) !== -1;
       tagHtml += '<button class="vault-tag-chip'+(on?' active':'')+'" data-tag="'+tag+'" '+
         'style="'+(on?'background:'+TAG_COLORS[tag]+';color:#fff;border-color:'+TAG_COLORS[tag]+';':'')+'" '+
-        'onclick="toggleTag(\''+w.th+'\',\''+tag+'\',this)">'+tag+'</button>';
+        'onclick="toggleTag(\''+w.th+'\',\''+tag+'\',this)">'+(TAG_LABELS_ZH[tag]||tag)+'</button>';
     });
     tagHtml += '</div>';
 
@@ -153,10 +185,10 @@ function renderList(){
       '<div class="vault-card-info">'+
         '<div class="vault-card-zh">'+(w.zh||'')+'</div>'+
         '<div class="vault-card-en">'+(w.en||'')+'</div>'+
-        (w.source?'<div class="vault-card-source">'+sourceLabel(w.source)+'</div>':'')+
+        practiceBtnsHtml(w.th)+
         tagHtml+
       '</div>'+
-      '<button class="vault-card-delete" title="ลบออกจากคลัง" onclick="deleteWord(\''+w.th+'\')">✕</button>';
+      '<button class="vault-card-delete" title="從單字庫移除" onclick="deleteWord(\''+w.th+'\')">✕</button>';
 
     list.appendChild(card);
   });

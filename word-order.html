@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google tag -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");</script>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>泰語語序遊戲 — 泰華眼裡的泰語教學</title>
+<meta name="description" content="免費泰語語序練習：把打散的詞語點回正確順序，練習泰語高級句型的語序邏輯。專為台灣人設計的泰語學習遊戲。">
+<link rel="canonical" href="https://mrtaihualin.com/word-order.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="泰華眼裡的泰語教學">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="泰語語序遊戲 — 泰華眼裡的泰語教學">
+<meta property="og:description" content="把打散的詞語點回正確順序，練習泰語高級句型的語序邏輯。">
+<meta property="og:url" content="https://mrtaihualin.com/word-order.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="泰語語序遊戲 — 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="把打散的詞語點回正確順序，練習泰語高級句型的語序邏輯。">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=12">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="supabase-config.js?v=4"></script>
+<script defer src="game-account.js?v=1"></script>
+<script defer src="auth-widget.js?v=1"></script>
+<script defer src="reading-auth.js?v=4"></script>
+<script src="word-vault.js"></script>
+<script src="adv-sentences.js?v=1"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+.v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
+
+.page-header{text-align:center;margin-bottom:10px;}
+.page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
+.page-sub{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#b08040;margin-top:3px;}
+
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:640px;padding:22px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+
+.top-bar{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:6px;}
+.score-bar{display:flex;gap:12px;font-size:13px;color:#a08050;font-family:'Noto Sans TC',sans-serif;}
+.score-bar span{font-weight:700;color:#5a3e10;}
+
+.zh-hint{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#888;margin:2px 0 14px;text-align:center;min-height:20px;}
+.zh-hint b{color:#5a3e10;}
+
+/* ── answer strip (slots) ── */
+.wo-slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;min-height:64px;width:100%;margin-bottom:16px;padding:8px;border-radius:14px;background:#fffdf7;border:1.5px dashed #d4b87a;}
+.wo-slot{min-width:64px;min-height:48px;border-radius:12px;border:2px solid #e3d4b0;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;font-size:24px;font-weight:700;color:#3a2a0a;padding:4px 10px;cursor:pointer;transition:all .15s;}
+.wo-slot.empty{border-style:dashed;background:transparent;}
+.wo-slot.filled:hover{border-color:#d85a30;background:#fff3e0;}
+.wo-slot.correct{border-color:#4caf50;background:#e8f5e9;color:#2e7d32;cursor:default;}
+.wo-slot.wrong{border-color:#f44336;background:#fdecea;animation:woshake .35s;}
+@keyframes woshake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+
+/* ── word bank (tap to place) ── */
+.wo-bank{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;width:100%;margin-bottom:4px;}
+.wo-tile{min-width:56px;padding:10px 16px;border-radius:14px;border:2px solid #d4b87a;background:#fff;color:#5a3e10;font-size:22px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;text-align:center;user-select:none;transition:transform .1s,opacity .15s;}
+.wo-tile:hover{background:#ffeedd;border-color:#c07030;transform:translateY(-2px);}
+.wo-tile.used{opacity:0;pointer-events:none;transform:scale(.6);}
+
+.result-banner{width:100%;padding:9px 14px;border-radius:11px;text-align:center;font-size:14px;font-weight:600;font-family:'Noto Sans TC',sans-serif;display:none;margin-top:6px;}
+.result-banner.show{display:block;}
+.result-banner.ok{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;}
+.result-banner.no{background:#fdecea;color:#c62828;border:1px solid #ef9a9a;}
+
+.btn-row{display:flex;gap:8px;justify-content:center;width:100%;margin-top:14px;flex-wrap:wrap;}
+.btn{padding:10px 20px;border-radius:999px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:transform .1s;}
+.btn:active{transform:scale(.96);}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn-primary{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
+.btn-secondary{background:#f0e8d8;color:#8b6310;}
+
+.wo-progress{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;margin-bottom:10px;}
+
+/* ── 工具列（跟其他遊戲共用同一套按鈕樣式，不要留大空白）── */
+.rg-tools-row{display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:640px;padding-bottom:2px;}
+.rg-tool-btn{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);border-radius:20px;padding:6px 14px;cursor:pointer;color:#7a5510;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
+@media(max-width:480px){.rg-tool-btn{font-size:11.5px;padding:5px 11px;}}
+.rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
+
+/* ── 換現代字體（跟其他遊戲共用同一個 localStorage 設定，切一次全部遊戲都套用）── */
+body.rg-modern-font .wo-slot,
+body.rg-modern-font .wo-tile,
+body.rg-modern-font .zh-hint,
+body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
+
+.score-pop{position:fixed;top:26%;left:50%;transform:translateX(-50%);font-family:'Noto Serif TC',serif;font-weight:900;color:#d9a400;pointer-events:none;z-index:60;opacity:0;font-size:40px;animation:wospop 1.2s cubic-bezier(.22,1,.36,1) forwards;}
+@keyframes wospop{0%{opacity:0;transform:translate(-50%,10px) scale(.8);}20%{opacity:1;transform:translate(-50%,-8px) scale(1.08);}100%{opacity:0;transform:translate(-50%,-46px) scale(1);}}
+
+#end{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:26px 20px;}
+#end h2{font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10;}
+.end-score-big{font-family:'Noto Serif TC',serif;font-size:50px;font-weight:900;color:#d85a30;}
+.end-detail{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#a08050;}
+.book-cta{width:100%;background:linear-gradient(135deg,#fff6e9,#ffe9d6);border:1.5px solid #f0c89a;border-radius:16px;padding:14px 16px 16px;margin-top:6px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.book-cta-title{font-family:'Noto Serif TC',serif;font-size:16px;font-weight:900;color:#5a3e10;}
+.book-cta-sub{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:#a06a30;line-height:1.5;}
+.btn-book{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;text-decoration:none;margin-top:4px;box-shadow:0 3px 10px rgba(216,90,48,.3);}
+.end-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px;}
+.end-actions .btn{text-decoration:none;}
+
+/* ── 共用進度系統：星星／勳章／連續天數／每週挑戰（跟其他遊戲共用同一套帳號＋同一個 streak key）── */
+.rg-stat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0 14px;width:100%;max-width:640px;}
+.tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:#7a5510;border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;}
+.tf-streak-chip.done{background:rgba(74,154,74,0.14);color:#3f8f3f;}
+.tf-streak-chip b{font-weight:800;color:#5a3e0a;}
+
+.bars-wrap{width:100%;max-width:640px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
+.bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
+.bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
+.bar-fill.prog{background:linear-gradient(90deg,#e8a020,#d85a30);}
+.bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047);}
+.bar-label{min-width:52px;text-align:right;font-size:11px;}
+
+.tf-challenge-banner{background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;margin:0 0 12px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;}
+.tf-challenge-banner.done{background:linear-gradient(180deg,#E9F9ED,#D2F0D9);border-color:#4caf50;}
+.tf-ch-top{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.tf-ch-emoji{font-size:18px;line-height:1;}
+.tf-ch-title{flex:1;font-size:13.5px;font-weight:800;color:#8a5a12;}
+.tf-challenge-banner.done .tf-ch-title{color:#1d7a36;}
+.tf-ch-left{font-size:11px;font-weight:700;color:#b07a1e;white-space:nowrap;}
+.tf-ch-bar{height:7px;border-radius:4px;background:#f0e2c2;overflow:hidden;}
+.tf-ch-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#E8973A,#F4C24A);transition:width .4s;}
+.tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
+.tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
+
+.rg-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:rgba(45,42,34,0.96);color:#fff;padding:12px 20px;border-radius:24px;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,0.3);z-index:10001;max-width:88%;text-align:center;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
+.rg-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.star-burst{position:fixed;top:50%;left:50%;pointer-events:none;z-index:70;opacity:0;font-size:90px;animation:sburst 2s ease forwards;}
+@keyframes sburst{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-20deg);}30%{opacity:1;transform:translate(-50%,-50%) scale(1.25) rotate(5deg);}60%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0deg);}100%{opacity:0;transform:translate(-50%,-70%) scale(.9);}}
+
+.v3-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:200;align-items:center;justify-content:center;}
+.v3-modal.show{display:flex;}
+.v3-modal-box{background:#fff;border-radius:24px;padding:28px 22px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.22);}
+.v3-modal-box h3{font-family:'Noto Serif TC',serif;font-size:19px;color:#5a3e10;margin-bottom:12px;}
+.tree-area{font-size:88px;line-height:1;margin:6px 0;}
+.tree-caption{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;margin-top:6px;}
+.star-progress{font-size:16px;letter-spacing:2px;margin:10px 0 4px;}
+.star-prog-label{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
+</style>
+</head>
+<body>
+
+<!-- FLOATING LINE QR -->
+<div class="floating-qr" id="floating-qr">
+  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
+  <button class="floating-qr-book" onclick="openModal('modal-line-qr')">
+    <span class="fqb-icon">📅</span>
+    <span class="fqb-text"><b>預約免費體驗課</b><small>30 分鐘・線上一對一</small></span>
+  </button>
+</div>
+
+<nav class="site-nav"></nav>
+
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="page2.html">課程・費用</a>
+  <a href="page3.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
+<div class="v3-page">
+
+<div class="page-header">
+  <div class="page-title">🔀 泰語語序遊戲</div>
+  <div class="page-sub">把打散的詞語，點回正確的句子順序（高級句型）</div>
+</div>
+
+<!-- How-to modal -->
+<div id="wo-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+    <button onclick="document.getElementById('wo-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+    <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🔀 怎麼玩？</div>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">每一句泰文都被拆成好幾個詞、順序打散了。點下面的詞塊，依照正確順序點回上面的空格裡，組成完整句子。</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">點錯了嗎？點一下上面已經填的詞塊，就可以把它放回去重排。</p>
+    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:2;">
+      第一次就排對 → <strong>+10 分</strong><br>
+      排錯幾次才對 → <strong>+5 分</strong><br>
+      用「提示」按鈕 → 每次 <strong>-2 分</strong>
+    </div>
+    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">泰語跟中文語序不一樣，多練幾次就會抓到感覺 😄 <a href="page2.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔</a></p>
+  </div>
+</div>
+
+<div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;">
+  <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;">🎁 免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
+  <span style="font-size:13px;background:var(--gold-bright,#C8973A);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
+</div>
+
+<div class="rg-tools-row">
+  <div id="rg-login-slot" style="display:flex;align-items:center;flex-shrink:0;margin-right:auto;"></div>
+  <div id="rg-vault-badge-slot" style="display:flex;align-items:center;flex-shrink:0;"></div>
+  <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">✍️ 換現代字體</button>
+  <button class="rg-tool-btn" onclick="rgOpenAsk()">💬 我有問題</button>
+  <button class="rg-tool-btn" onclick="document.getElementById('wo-howto-modal').style.display='flex'">❓ 怎麼玩</button>
+</div>
+
+<!-- 每週挑戰 banner（跟其他遊戲共用同一套邏輯，各遊戲各自的挑戰進度）-->
+<div id="rg-challenge-banner" style="width:100%;max-width:640px;"></div>
+
+<!-- 連續天數／護盾／星星／勳章（跟聲調・拼讀・打字遊戲共用同一個帳號＋同一個 streak，練哪個遊戲都算數）-->
+<div class="rg-stat-row" id="rg-stat-row">
+  <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
+  <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
+  <span class="tf-streak-chip">⭐ <b id="star-count">0</b> 顆星</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+</div>
+
+<!-- 這局進度／即時力量條 -->
+<div class="bars-wrap" id="bars-wrap">
+  <div class="bar-row">
+    <span>進度</span>
+    <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
+    <span class="bar-label" id="prog-txt">0/10</span>
+  </div>
+  <div class="bar-row">
+    <span>⚡</span>
+    <div class="bar-bg"><div class="bar-fill power" id="powerf" style="width:0%"></div></div>
+    <span class="bar-label" id="power-num">0/0</span>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" class="card">
+  <div class="top-bar">
+    <div class="score-bar">
+      <div>分數：<span id="wo-score">0</span></div>
+    </div>
+    <button class="btn btn-secondary" id="wo-hint-btn" onclick="woHint()" style="padding:6px 14px;font-size:12.5px;">💡 提示 (-2)</button>
+  </div>
+
+  <div class="wo-slots" id="wo-slots"></div>
+
+  <div class="zh-hint" id="wo-zh"></div>
+
+  <div class="wo-bank" id="wo-bank"></div>
+
+  <div class="result-banner" id="wo-banner"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="woResetSentence()">↺ 重排這句</button>
+    <button class="btn btn-primary" id="wo-next-btn" onclick="woNext()" disabled>下一句 →</button>
+  </div>
+</div>
+
+<!-- END SCREEN -->
+<div id="end" class="card">
+  <h2>🎉 全部完成！</h2>
+  <div class="end-score-big" id="wo-end-score">0</div>
+  <div class="end-detail" id="wo-end-detail"></div>
+
+  <div class="book-cta">
+    <div class="book-cta-title">語序抓到感覺了嗎？</div>
+    <div class="book-cta-sub">一對一中文授課，直接針對你常排錯的句型練習</div>
+    <a class="btn btn-book" href="page2.html?from=word_order#pricing" onclick="if(window.bookFromGame){bookFromGame('word_order','end_screen');return false;}">預約免費體驗課 →</a>
+  </div>
+
+  <div class="end-actions">
+    <button class="btn btn-primary" onclick="woRestart()">🔁 再玩一次</button>
+    <a class="btn btn-secondary" href="games.html">🎮 回遊戲總覽</a>
+  </div>
+</div>
+
+<!-- 成就（星星累積勳章）modal — 跟其他遊戲共用同一套 GAME_ACCOUNT 資料 -->
+<div class="v3-modal" id="badge-modal" onclick="this.classList.remove('show')">
+  <div class="v3-modal-box" onclick="event.stopPropagation()">
+    <h3>我的成就</h3>
+    <div class="tree-area" id="tree-area">🌱</div>
+    <div class="tree-caption" id="tree-caption"></div>
+    <div class="star-progress" id="star-prog"></div>
+    <div class="star-prog-label" id="star-prog-label"></div>
+    <button class="btn btn-secondary" style="margin-top:16px" onclick="document.getElementById('badge-modal').classList.remove('show')">關閉</button>
+  </div>
+</div>
+
+</div><!-- /v3-page -->
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="shared.js?v=21"></script>
+<script>
+// ════════════════════════════════════════════════════════════════
+// 泰語語序遊戲 (word-order.html) — Lin 2026-07-03
+// 資料來源：adv-sentences.js（跟打字/拼讀/聲調遊戲共用「高級」句庫，共 10 句）
+// 玩法：點詞塊依序放入空格，湊出跟原句一樣的詞語順序
+// ════════════════════════════════════════════════════════════════
+(function(){
+  'use strict';
+
+  var SET = [];          // 這次遊戲的句子順序（洗牌過的 ADV_SENTENCES）
+  var idx = 0;            // 目前第幾句 (0-based)
+  var score = 0;
+  var correctFirstTry = 0;
+  var bank = [];          // 目前這句的詞塊（洗牌過），每個是 {th, zh, syl, orig}
+  var answer = [];        // 玩家已放入格子的 orig index 順序
+  var used = {};          // orig index -> true 表示已被放進格子
+  var attemptedWrongThisSentence = false;
+  var hintUsedThisSentence = false;
+  var locked = false;     // 這句已經答對，鎖住不能再改
+
+  // ── 共用進度系統的這局統計：只在 finish() 時彙整一次，跟其他遊戲的「一輪結束才結算」邏輯一致 ──
+  var cleanC = 0;      // 這局「乾淨」過關的句數（沒放錯過、也沒用提示）
+  var curCombo = 0;     // 目前連續乾淨過關的句數
+  var maxCombo = 0;     // 這局最高連續乾淨過關數
+  var totalStars = 0;   // 帳號累積星星（跨遊戲共用）
+  var totalBadges = 0;  // 帳號累積勳章數（跨遊戲共用）
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // 勳章（跟聲調／拼讀／打字遊戲同一套「種樹」造型，資料來自 GAME_ACCOUNT 累積星星）
+  // ════════════════════════════════════════════════════════════
+  var BADGE_STAGES=[
+    {min:0,emoji:'🌱',label:'種下第一棵樹'},
+    {min:1,emoji:'🌿',label:'開始成長了！'},
+    {min:2,emoji:'🌲',label:'茁壯成長中'},
+    {min:4,emoji:'🌴',label:'長成棕櫚樹！'},
+    {min:6,emoji:'🌸',label:'盛開中！🌸'},
+    {min:9,emoji:'🌻',label:'向陽生長！'},
+    {min:12,emoji:'🌈',label:'彩虹般的成就！'},
+    {min:16,emoji:'🏆',label:'泰語拼讀大師！'},
+    {min:20,emoji:'💎',label:'鑽石等級！'},
+    {min:30,emoji:'👑',label:'泰語之王！'}
+  ];
+  function badgeEmoji(n){var e='🌱';BADGE_STAGES.forEach(function(s){if(n>=s.min)e=s.emoji;});return e;}
+  window.openBadge = function(){
+    var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
+    var badges=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starBadges:[];
+    document.getElementById('tree-area').textContent='⭐ '+s;
+    document.getElementById('tree-caption').textContent='累積星星（全部遊戲共用）';
+    var html='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px;">';
+    badges.forEach(function(b){
+      var got=s>=b.at;
+      html+='<div style="text-align:center;width:74px;opacity:'+(got?'1':'0.35')+';">'+
+        '<img src="'+b.img+'" alt="'+b.zh+'" style="width:44px;height:44px;object-fit:contain;" onerror="this.replaceWith(document.createTextNode(\''+b.emoji+'\'))">'+
+        '<div style="font-size:11px;color:#5a3e10;margin-top:2px;">'+b.zh+'</div>'+
+        '<div style="font-size:10px;color:#a08050;">'+(got?'已解鎖':b.at+' 顆星')+'</div></div>';
+    });
+    html+='</div>';
+    document.getElementById('star-prog').innerHTML=html;
+    var next=badges.filter(function(b){return s<b.at;})[0];
+    document.getElementById('star-prog-label').textContent=next?('再 '+(next.at-s)+' 顆星解鎖「'+next.zh+'」'):'全部稻米品種已解鎖！🎉';
+    document.getElementById('badge-modal').classList.add('show');
+  };
+
+  function refreshUI(){
+    var sc=document.getElementById('star-count'); if(sc) sc.textContent=totalStars;
+    var bc=document.getElementById('badge-count'); if(bc) bc.textContent=totalBadges;
+    var be=document.getElementById('badge-emoji'); if(be) be.textContent=badgeEmoji(totalBadges);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // 每週挑戰 + 連續天數／護盾（streak/freeze 用同一把 key，
+  // 跟聲調・拼讀・打字遊戲共用 → 練哪個遊戲都算連續天數）
+  // ════════════════════════════════════════════════════════════
+  var TF_STREAK_KEY = 'tf_streak_v1';   // 跟其他遊戲共用同一個 key
+  var RG_GAME_CFG = { DAILY_GOAL_SETS: 3, STREAK_FREEZE_EARN_EVERY: 7, STREAK_FREEZE_MAX: 2 };
+  var RG_CHALLENGES = [
+    { id:'wo_correct30', title:'排對 30 句',     sub:'本週累積排對 30 句（第一次就對）', type:'correct', target:30, emoji:'🎯' },
+    { id:'wo_sets5',     title:'玩完 5 組',       sub:'本週完成 5 組語序遊戲',            type:'sets',    target:5,  emoji:'📚' },
+    { id:'wo_perfect3',  title:'3 次完美過關',   sub:'本週完美過關（10 句全對不用提示）3 次', type:'perfect', target:3, emoji:'🌟' },
+    { id:'wo_combo5',    title:'連續排對 5 句',  sub:'本週連續一次就排對達 5 句',        type:'combo',   target:5,  emoji:'🔥' },
+    { id:'wo_correct60', title:'排對 60 句',     sub:'本週累積排對 60 句（第一次就對）', type:'correct', target:60, emoji:'💪' }
+  ];
+  var RG_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  function rgWeekIndex() { return Math.floor(Date.now() / RG_WEEK_MS); }
+  function rgWeekEndMs() { return (rgWeekIndex() + 1) * RG_WEEK_MS; }
+  function rgActiveChallenge() { return RG_CHALLENGES[rgWeekIndex() % RG_CHALLENGES.length]; }
+  var RG_CH_KEY = 'wo_challenge_v1';   // 這個遊戲自己的每週挑戰進度（跟其他遊戲分開算）
+  function rgLoadChallenge() { try { return JSON.parse(localStorage.getItem(RG_CH_KEY) || '{}') || {}; } catch(e) { return {}; } }
+  function rgChallengeState() {
+    var ch = rgActiveChallenge(), wk = rgWeekIndex(), saved = rgLoadChallenge();
+    if (saved.week !== wk || saved.id !== ch.id) saved = { week: wk, id: ch.id, progress: 0, done: false };
+    return { ch: ch, st: saved };
+  }
+  function rgSaveChallenge(st) { try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
+
+  function rgLoadStreak() { try { return JSON.parse(localStorage.getItem(TF_STREAK_KEY) || '{}') || {}; } catch(e) { return {}; } }
+  function rgSaveStreak(s) { try { localStorage.setItem(TF_STREAK_KEY, JSON.stringify(s)); } catch(e) {} }
+  function rgTodayStr() { var d = new Date(); return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
+  function rgApplyStreak() {
+    var s = rgLoadStreak(), cfg = RG_GAME_CFG, today = rgTodayStr();
+    var yest = (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
+    s.setsToday = (s.lastPlay === today) ? ((s.setsToday || 0) + 1) : 1;
+    var goalMet = s.setsToday >= cfg.DAILY_GOAL_SETS;
+    var streakEv = { goalMetToday: goalMet, freezeUsed: false, freezeEarned: 0 };
+    if (s.lastPlay !== today) {
+      if (s.lastPlay === yest) { s.streak = (s.streak || 0) + 1; }
+      else if (s.lastPlay && (s.freezes || 0) > 0) { s.freezes -= 1; s.streak = (s.streak || 0) + 1; streakEv.freezeUsed = true; }
+      else { s.streak = 1; }
+      if (cfg.STREAK_FREEZE_EARN_EVERY > 0 && s.streak % cfg.STREAK_FREEZE_EARN_EVERY === 0 && (s.freezes || 0) < cfg.STREAK_FREEZE_MAX) {
+        s.freezes = (s.freezes || 0) + 1; streakEv.freezeEarned = 1;
+      }
+      s.lastPlay = today;
+    }
+    rgSaveStreak(s);
+    return { state: s, events: streakEv };
+  }
+  function rgChallengeBump(maxComboArg, isPerfect) {
+    var pack = rgChallengeState(), ch = pack.ch, st = pack.st;
+    if (st.done) { rgSaveChallenge(st); return; }
+    var add = 0;
+    if (ch.type === 'correct') add = cleanC;
+    else if (ch.type === 'sets') add = 1;
+    else if (ch.type === 'perfect') add = isPerfect ? 1 : 0;
+    else if (ch.type === 'combo') add = (maxComboArg || 0) >= ch.target ? ch.target : 0;
+    if (ch.type === 'combo') st.progress = Math.max(st.progress, add);
+    else st.progress += add;
+    if (st.progress >= ch.target && !st.done) {
+      st.done = true;
+      rgToast('🎉 完成本週挑戰：' + ch.title + '！');
+    }
+    rgSaveChallenge(st);
+  }
+  function rgRenderGameBar() {
+    var cp = rgChallengeState(), st = rgLoadStreak();
+    var pct = Math.min(100, Math.round(cp.st.progress / cp.ch.target * 100));
+    var daysLeft = Math.max(0, Math.ceil((rgWeekEndMs() - Date.now()) / 86400000));
+    var alive = st.streak > 0 && (st.lastPlay === rgTodayStr() || (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })() === st.lastPlay);
+    var ban = document.getElementById('rg-challenge-banner');
+    if (ban) ban.innerHTML =
+      '<div class="tf-challenge-banner' + (cp.st.done ? ' done' : '') + '">' +
+        '<div class="tf-ch-top">' +
+          '<span class="tf-ch-emoji">' + cp.ch.emoji + '</span>' +
+          '<span class="tf-ch-title">本週挑戰：' + cp.ch.title + (cp.st.done ? ' ✅ 完成！' : '') + '</span>' +
+          '<span class="tf-ch-left">⏳ ' + daysLeft + ' 天</span>' +
+        '</div>' +
+        '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:' + pct + '%;"></div></div>' +
+        '<div class="tf-ch-sub">' + cp.ch.sub + '　' + cp.st.progress + ' / ' + cp.ch.target + '</div>' +
+      '</div>';
+    var sn = document.getElementById('rg-streak-num'); if (sn) sn.textContent = (alive ? (st.streak || 0) : 0);
+    var fn = document.getElementById('rg-freeze-num'); if (fn) fn.textContent = (st.freezes || 0);
+  }
+  function rgToast(msg) {
+    try {
+      var old = document.getElementById('rg-toast-el'); if (old) old.remove();
+      var d = document.createElement('div');
+      d.id = 'rg-toast-el'; d.className = 'rg-toast';
+      d.textContent = msg;
+      document.body.appendChild(d);
+      requestAnimationFrame(function(){ d.classList.add('show'); });
+      setTimeout(function(){ d.classList.remove('show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 350); }, 2800);
+    } catch(e) {}
+  }
+
+  function init(){
+    if (!window.ADV_SENTENCES || !ADV_SENTENCES.length) {
+      document.getElementById('game').innerHTML = '<p style="font-family:\'Noto Sans TC\',sans-serif;color:#c62828;">句庫載入失敗，請重新整理頁面。</p>';
+      return;
+    }
+    SET = shuffle(ADV_SENTENCES);
+    idx = 0; score = 0; correctFirstTry = 0;
+    cleanC = 0; curCombo = 0; maxCombo = 0;
+    if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
+    refreshUI();
+    try { rgRenderGameBar(); } catch(e){}
+    document.getElementById('end').style.display = 'none';
+    document.getElementById('game').style.display = 'flex';
+    try{ if(window.gtag) gtag('event','game_start',{game:'word_order'}); }catch(e){}
+    loadSentence();
+  }
+
+  function loadSentence(){
+    var s = SET[idx];
+    answer = []; used = {};
+    attemptedWrongThisSentence = false;
+    hintUsedThisSentence = false;
+    locked = false;
+
+    // 洗牌詞塊，若剛好洗成正確順序就重洗一次（句子長度 > 1 時才需要）
+    var order;
+    do {
+      order = shuffle(s.words.map(function(w, i){ return i; }));
+    } while (s.words.length > 1 && order.every(function(v, i){ return v === i; }));
+    bank = order.map(function(orig){
+      return { th: s.words[orig].th, orig: orig };
+    });
+
+    document.getElementById('wo-score').textContent = score;
+    document.getElementById('wo-zh').innerHTML = '';
+    document.getElementById('wo-banner').className = 'result-banner';
+    document.getElementById('wo-banner').textContent = '';
+    document.getElementById('wo-next-btn').disabled = true;
+    document.getElementById('wo-hint-btn').disabled = false;
+
+    // 進度條：目前已完成幾句／全部幾句
+    document.getElementById('pf').style.width = (idx / SET.length * 100) + '%';
+    document.getElementById('prog-txt').textContent = idx + '/' + SET.length;
+    updatePowerBar(s);
+
+    renderSlots(s);
+    renderBank();
+  }
+
+  function updatePowerBar(s){
+    var pct = s.words.length ? Math.round(answer.length / s.words.length * 100) : 0;
+    var pw = document.getElementById('powerf'); if (pw) pw.style.width = pct + '%';
+    var pn = document.getElementById('power-num'); if (pn) pn.textContent = answer.length + '/' + s.words.length;
+  }
+
+  function renderSlots(s){
+    var wrap = document.getElementById('wo-slots');
+    wrap.innerHTML = '';
+    for (var i = 0; i < s.words.length; i++) {
+      var slot = document.createElement('div');
+      var filledOrig = answer[i];
+      if (filledOrig === undefined) {
+        slot.className = 'wo-slot empty';
+        slot.textContent = '';
+      } else {
+        slot.className = 'wo-slot filled';
+        slot.textContent = s.words[filledOrig].th;
+        slot.title = '點一下移回下面';
+        (function(slotIndex){
+          slot.onclick = function(){ if (!locked) removeFromAnswer(slotIndex); };
+        })(i);
+      }
+      wrap.appendChild(slot);
+    }
+  }
+
+  function renderBank(){
+    var wrap = document.getElementById('wo-bank');
+    wrap.innerHTML = '';
+    bank.forEach(function(tile){
+      var el = document.createElement('div');
+      el.className = 'wo-tile' + (used[tile.orig] ? ' used' : '');
+      el.textContent = tile.th;
+      el.onclick = function(){ if (!locked && !used[tile.orig]) addToAnswer(tile.orig); };
+      wrap.appendChild(el);
+    });
+  }
+
+  function addToAnswer(orig){
+    var s = SET[idx];
+    if (answer.length >= s.words.length) return;
+    answer.push(orig);
+    used[orig] = true;
+    renderSlots(s);
+    renderBank();
+    updatePowerBar(s);
+    if (answer.length === s.words.length) checkAnswer();
+  }
+
+  function removeFromAnswer(slotIndex){
+    var orig = answer[slotIndex];
+    if (orig === undefined) return;
+    answer.splice(slotIndex, 1);
+    delete used[orig];
+    var s = SET[idx];
+    document.getElementById('wo-banner').className = 'result-banner';
+    renderSlots(s);
+    renderBank();
+    updatePowerBar(s);
+  }
+
+  function checkAnswer(){
+    var s = SET[idx];
+    var isCorrect = answer.every(function(v, i){ return v === i; });
+    var banner = document.getElementById('wo-banner');
+
+    if (isCorrect) {
+      locked = true;
+      var pts;
+      if (!attemptedWrongThisSentence) { pts = 10; correctFirstTry++; }
+      else { pts = 5; }
+      if (hintUsedThisSentence) pts = Math.max(0, pts - 2);
+      score += pts;
+      document.getElementById('wo-score').textContent = score;
+
+      // 「乾淨」過關（沒放錯過、沒用提示）才算連續紀錄，跟其他遊戲的 combo 邏輯一致
+      if (!attemptedWrongThisSentence && !hintUsedThisSentence) {
+        cleanC++; curCombo++; if (curCombo > maxCombo) maxCombo = curCombo;
+      } else {
+        curCombo = 0;
+      }
+
+      banner.className = 'result-banner ok show';
+      banner.textContent = '✅ 排對了！+' + pts + ' 分';
+      document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
+      document.getElementById('wo-next-btn').disabled = false;
+      document.getElementById('wo-hint-btn').disabled = true;
+      popScore('+' + pts);
+      // 標記格子為已答對樣式
+      Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){
+        el.classList.add('correct');
+      });
+      try{ if(window.gtag) gtag('event','word_order_correct',{sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
+    } else {
+      attemptedWrongThisSentence = true;
+      banner.className = 'result-banner no show';
+      banner.textContent = '👧🏻 還沒對喔，別擔心～點一下格子裡的詞塊，我們再排排看 💕';
+      Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot.filled'), function(el){
+        el.classList.add('wrong');
+        setTimeout(function(){ el.classList.remove('wrong'); }, 400);
+      });
+      try{ if(window.gtag) gtag('event','word_order_wrong',{sentence:s.th}); }catch(e){}
+    }
+  }
+
+  function popScore(text){
+    var pop = document.createElement('div');
+    pop.className = 'score-pop';
+    pop.textContent = text;
+    document.body.appendChild(pop);
+    setTimeout(function(){ pop.remove(); }, 1300);
+  }
+
+  window.woHint = function(){
+    if (locked) return;
+    var s = SET[idx];
+    if (answer.length >= s.words.length) return;
+    // 找出目前「從頭開始連續正確」的長度，超過這段的（放錯的）詞塊都退回下面
+    var correctPrefixLen = 0;
+    while (correctPrefixLen < answer.length && answer[correctPrefixLen] === correctPrefixLen) correctPrefixLen++;
+    for (var i = answer.length - 1; i >= correctPrefixLen; i--) delete used[answer[i]];
+    answer = answer.slice(0, correctPrefixLen);
+    // 在正確位置放上下一個正確的詞塊
+    answer.push(correctPrefixLen);
+    used[correctPrefixLen] = true;
+    hintUsedThisSentence = true;
+    renderSlots(s);
+    renderBank();
+    updatePowerBar(s);
+    if (answer.length === s.words.length) checkAnswer();
+  };
+
+  window.woResetSentence = function(){
+    if (locked) return;
+    answer = []; used = {};
+    document.getElementById('wo-banner').className = 'result-banner';
+    renderSlots(SET[idx]);
+    renderBank();
+    updatePowerBar(SET[idx]);
+  };
+
+  window.woNext = function(){
+    if (idx < SET.length - 1) {
+      idx++;
+      loadSentence();
+    } else {
+      finish();
+    }
+  };
+
+  function finish(){
+    document.getElementById('game').style.display = 'none';
+    document.getElementById('end').style.display = 'flex';
+    document.getElementById('pf').style.width = '100%';
+    document.getElementById('prog-txt').textContent = SET.length + '/' + SET.length;
+    document.getElementById('wo-end-score').textContent = score;
+
+    var isPerfect = (cleanC === SET.length && SET.length > 0);
+    var detail = SET.length + ' 句中，第一次就排對 ' + correctFirstTry + ' 句（乾淨過關 ' + cleanC + ' 句）';
+
+    // ⭐ 星星：1–3 顆／局，跟聲調・拼讀・打字遊戲共用同一個帳號（GAME_ACCOUNT）
+    var _se = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.starsForRound(cleanC, SET.length) : 0;
+    if (window.GAME_ACCOUNT) {
+      GAME_ACCOUNT.addStars(_se);
+      GAME_ACCOUNT.bumpStreakToday();
+      totalStars = GAME_ACCOUNT.getStars();
+      totalBadges = GAME_ACCOUNT.earnedBadges().length;
+    }
+    if (_se >= 3) {
+      detail += ' · 完美！✨ 獲得 ⭐⭐⭐ · 累積共 ' + totalStars + ' 顆星';
+      var sb = document.createElement('div'); sb.className = 'star-burst'; sb.textContent = '⭐';
+      document.body.appendChild(sb);
+      setTimeout(function(){ if (sb.parentNode) sb.parentNode.removeChild(sb); }, 2200);
+    } else if (_se >= 1) {
+      detail += ' · 獲得 ' + '⭐'.repeat(_se) + ' · 累積共 ' + totalStars + ' 顆星';
+    }
+    document.getElementById('wo-end-detail').textContent = detail;
+
+    try{ if(window.gtag) gtag('event','game_complete',{game:'word_order', score: score}); }catch(e){}
+    // 嘗試存分數到共用排行榜系統（若後端還沒開放 'word_order' 這個 game key，
+    // 這行會安全地無效果，不會讓遊戲壞掉 — 之後要接排行榜要請 Lin 到 Supabase 確認）
+    try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(score,1,'word_order'); }catch(e){}
+
+    // 每週挑戰 + 連續天數／護盾（跟其他遊戲共用同一套邏輯）
+    try { rgChallengeBump(maxCombo, isPerfect); } catch(e){}
+    try {
+      var _sv = rgApplyStreak();
+      if (_sv.events.freezeUsed) rgToast('護盾幫你保住連續紀錄！🛡️');
+      if (_sv.events.freezeEarned) rgToast('獲得新護盾 🛡️ ×1！連續' + _sv.state.streak + '天');
+    } catch(e){}
+    try { rgRenderGameBar(); } catch(e){}
+    refreshUI();
+  }
+
+  window.woRestart = function(){ init(); };
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+
+// ── 換現代字體（跟其他遊戲共用同一個 localStorage key，切一次全站都套用）──
+function rgToggleFont() {
+  var on = document.body.classList.toggle('rg-modern-font');
+  var btn = document.getElementById('rg-font-btn');
+  if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? '✍️ 換回標準字體' : '✍️ 換現代字體'; }
+  try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
+}
+(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); var b=document.getElementById('rg-font-btn'); if(b){b.classList.add('active');b.textContent='✍️ 換回標準字體';} } } catch(e){} })();
+
+// ── 我有問題 ──
+function rgOpenAsk() {
+  var old = document.getElementById('rg-ask-ov'); if (old) old.remove();
+  var div = document.createElement('div');
+  div.id = 'rg-ask-ov';
+  div.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.48);font-family:"Noto Sans TC",sans-serif;';
+  div.innerHTML =
+    '<div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:28px 24px;position:relative;">' +
+    '<button onclick="document.getElementById(\'rg-ask-ov\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>' +
+    '<div style="font-size:20px;font-weight:900;color:#8B6310;margin-bottom:10px;">？ 我有問題</div>' +
+    '<div style="font-size:13px;color:#888;margin-bottom:14px;">在練習中卡住了嗎？把問題寫下來，老師會收到並回覆你 🙏</div>' +
+    '<input id="rg-ask-email" type="email" placeholder="你的 Email（方便老師回覆，可留空）" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px;font-family:inherit;">' +
+    '<textarea id="rg-ask-msg" placeholder="想問的問題…" rows="4" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;resize:none;font-family:inherit;margin-bottom:14px;"></textarea>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+    '<button onclick="document.getElementById(\'rg-ask-ov\').remove()" style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>' +
+    '<button id="rg-ask-send" style="padding:9px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">送出問題 →</button>' +
+    '</div></div>';
+  document.body.appendChild(div);
+  div.querySelector('#rg-ask-send').onclick = function() {
+    var email = (document.getElementById('rg-ask-email')||{}).value || '';
+    var msg   = (document.getElementById('rg-ask-msg')||{}).value || '';
+    if (!msg.trim()) { alert('請寫下您的問題'); return; }
+    var btn = div.querySelector('#rg-ask-send'); btn.disabled = true; btn.textContent = '送出中…';
+    fetch('https://api.web3forms.com/submit', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ access_key:'b0b4c37b-6fad-4e64-9a16-81c5ab2ff4c3', subject:'[語序遊戲] 學生問題', from_name:'語序遊戲', email: email||'anonymous@game', message: msg }) })
+    .then(function(r){ return r.json(); })
+    .then(function(){ btn.textContent = '✅ 已送出！'; setTimeout(function(){ div.remove(); }, 1200); })
+    .catch(function(){ btn.disabled=false; btn.textContent='送出問題 →'; alert('送出失敗，請稍後再試'); });
+  };
+}
+
+// ── 單字庫徽章（如果之前在別的遊戲存過單字，這裡也看得到）──
+document.addEventListener('DOMContentLoaded', function() {
+  if (!window.WordVault) return;
+  WordVault.injectStyles();
+  var slot = document.getElementById('rg-vault-badge-slot');
+  if (slot && WordVault.count() > 0) {
+    var badge = document.createElement('a');
+    badge.href = 'vault.html';
+    badge.className = 'vault-badge';
+    badge.id = 'vault-badge-rg';
+    badge.textContent = '🔖 單字庫';
+    slot.appendChild(badge);
+  }
+});
+</script>
+
+<!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
+<style>
+#game-switcher{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+.gs-tab{padding:9px 18px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.gs-tab:hover{background:rgba(139,99,16,0.08);}
+.gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
+.gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
+@media(max-width:768px){#game-switcher{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}.gs-tab{padding:8px 13px;font-size:12px;}}
+</style>
+<div id="game-switcher">
+  <a class="gs-tab" href="tone-finder.html">🎵 聲調搜尋</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="reading-game.html">📝 拼讀練習</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="typing-game.html">⌨️ 打字練習</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
+  <div class="gs-divider"></div>
+  <span class="gs-tab gs-active">🔀 語序遊戲</span>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="vault.html">🔖 單字庫</a>
+</div>
+</body>
+</html>
