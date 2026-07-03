@@ -338,7 +338,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <div class="level-tabs">
   <button class="ltab active" id="ltab-初" onclick="setLevel('初')">初級</button>
   <button class="ltab"        id="ltab-中" onclick="setLevel('中')">中級</button>
-  <button class="ltab"        id="ltab-高" onclick="setLevel('高')">高級</button>
+  <!-- ปิดระดับ 高級 ชั่วคราว — Lin สั่ง 2026-07-03 (เอากลับมาเปิด: ลบ style display:none) -->
+  <button class="ltab"        id="ltab-高" onclick="setLevel('高')" style="display:none">高級</button>
 </div>
 
 <div class="card" id="game">
