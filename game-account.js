@@ -95,10 +95,14 @@
 
     // ── เฟส 2: sync ขึ้น Supabase (ถาวร + ข้ามเครื่อง) เมื่อล็อกอิน — Lin 2026-06-27 ──
     // merge แบบ "เอาค่ามากสุด" กันข้อมูลหายตอนสลับเครื่อง · ปลอดภัยถ้ายังไม่มีตาราง (no-op)
+    // ── Lin 2026-07-04: เพิ่ม sync "hardWordsByLevel" (ตัวนับเพดานดาวเงินตลอดชีพต่อระดับ) ด้วย ──
+    // เดิม sync แค่ stars/streak/last_play → ตัวนับเพดานเป็น local-only ทำให้เล่นคนละเครื่อง/เบราว์เซอร์
+    // แล้วได้ดาวเงินเกินเพดานจริงได้ (เครื่องใหม่นับ 0 ใหม่ ไม่รู้ว่าเครื่องอื่นนับไปถึงไหนแล้ว) — ตอนนี้ merge แบบเอาค่ามากสุดเหมือนกัน
+    // ⚠️ ต้องมีคอลัมน์ "hard_words_by_level" (jsonb) ในตาราง game_accounts ที่ Supabase ก่อน ไม่งั้น query จะพังเงียบ (ห่อ try/catch ไว้แล้ว = ไม่ทำให้เกมพัง แต่จะไม่ sync จนกว่าจะเพิ่มคอลัมน์)
     sync: function (client, userId) {
       if (!client || !userId || !client.from) return;
       try {
-        client.from('game_accounts').select('stars,streak,last_play').eq('user_id', userId).maybeSingle().then(function (r) {
+        client.from('game_accounts').select('stars,streak,last_play,hard_words_by_level').eq('user_id', userId).maybeSingle().then(function (r) {
           var rem = (r && r.data) || {};
           var la = load();
           la.stars = Math.max(la.stars || 0, rem.stars || 0);
@@ -106,9 +110,17 @@
           var lp = la.lastPlay || null;
           if (rem.last_play && (!lp || rem.last_play > lp)) lp = rem.last_play;
           if (lp) la.lastPlay = lp;
+          // เพดานดาวเงินตลอดชีพต่อระดับ: เอาค่ามากสุดต่อระดับ (ล็อกอิน = ลิงค์ข้ามทุกเครื่อง มีประวัติตามไป)
+          var remHw = rem.hard_words_by_level || {};
+          var locHw = la.hardWordsByLevel || {};
+          var mergedHw = {};
+          [1, 2, 3].forEach(function (lvl) {
+            mergedHw[lvl] = Math.max(locHw[lvl] || 0, remHw[lvl] || 0);
+          });
+          la.hardWordsByLevel = mergedHw;
           save(la);
           client.from('game_accounts').upsert(
-            { user_id: userId, stars: la.stars, streak: la.streak, last_play: la.lastPlay || null, updated_at: new Date().toISOString() },
+            { user_id: userId, stars: la.stars, streak: la.streak, last_play: la.lastPlay || null, hard_words_by_level: la.hardWordsByLevel, updated_at: new Date().toISOString() },
             { onConflict: 'user_id' }
           ).then(function () {}, function () {});
         }, function () {});
