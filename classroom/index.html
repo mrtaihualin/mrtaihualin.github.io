@@ -1962,19 +1962,21 @@ function renderStudentFiles(token) {
   const data = studentFilesData[token] || [];
   const rows = data.map(function(r, i) {
     const name = r.name || '';
+    const isLink = name.startsWith('教材_') || name.startsWith('教材');
     const icon = (name.includes('筆記') || name.includes('note') || name.includes('補充說明')) ? '📝'
-               : (name.startsWith('教材_') || name.startsWith('教材')) ? '📚'
+               : isLink ? '📚'
                : '🎬';
     var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
     var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
-    var label = name || (d + ' 課堂錄影' + sz);
+    var label = isLink ? name.replace(/^教材_/, '') : (name || (d + ' 課堂錄影' + sz));
     var safeUrl = (r.url || '').replace(/'/g, "\\'");
     var tid = token.replace(/'/g, '');
+    var actionLabel = isLink ? '🔗 開啟' : '⬇ 下載';
     return '<div class="drive-file-row">' +
       '<input type="checkbox" class="file-cb" data-token="' + tid + '" data-idx="' + i + '" onchange="onFileCbChange(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--gold-deep);">' +
       '<span class="drive-file-icon">' + icon + '</span>' +
       '<span class="drive-file-name">' + label + '</span>' +
-      '<a class="drive-file-dl" href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener">⬇ 下載</a>' +
+      '<a class="drive-file-dl" href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener">' + actionLabel + '</a>' +
       '<button onclick="deleteStudentFile(\'' + tid + '\',\'' + safeUrl + '\',this)" title="從清單移除" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;margin-left:4px;opacity:0.55;">🗑</button>' +
     '</div>';
   }).join('');
