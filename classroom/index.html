@@ -1066,19 +1066,12 @@ function personalizeMaterialUrl(url, token, teacherPreview) {
     if (!s) return url;
     u.searchParams.set('s', token);
     u.searchParams.set('n', btoa(encodeURIComponent(s.name)));
-    // tp = teacher preview only：ติดเฉพาะตอนครูกด "開啟預覽" เอง
-    // ไม่ติดตอนบันทึกลิงก์ให้นักเรียน (saveMaterialLink) → นักเรียนจะไม่เห็นปุ่ม 存入 Google Drive
+    // tp = teacher only：ติดเฉพาะตอนครูกดปุ่ม "🔗 開啟" ในลิสต์教材ของครู (loadMaterialLinks)
+    // ลิงก์ที่บันทึกให้นักเรียน (saveMaterialLink) ไม่มี tp → นักเรียนจะไม่เห็นปุ่ม 存入 Google Drive
+    // → ปุ่มเซฟลงไดฟ์โผล่เฉพาะตอนครูเปิดจากหน้า Dashboard เท่านั้น
     if (teacherPreview) u.searchParams.set('tp', '1');
     return u.toString();
   } catch (e) { return url; }
-}
-
-function openMaterialLinkDraft(token) {
-  const t = token.replace(/'/g, '');
-  const el = document.getElementById('matUrl-' + t);
-  const url = (el && el.value || '').trim();
-  if (!/^https:\/\//i.test(url)) { alert('請先貼上正確的連結（需以 https:// 開頭）'); return; }
-  window.open(personalizeMaterialUrl(url, token, true), '_blank', 'noopener');
 }
 
 async function saveMaterialLink(token) {
@@ -1110,7 +1103,7 @@ async function loadMaterialLinks(token) {
       const safeUrl = (r.url || '').replace(/'/g, "\\'");
       return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.8rem;">' +
         '<span style="flex:1;">📚 ' + escHtml(label) + '</span>' +
-        '<a href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:none;">🔗 開啟</a>' +
+        '<a href="' + escHtml(safeHref(personalizeMaterialUrl(r.url, token, true))) + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:none;">🔗 開啟</a>' +
         '<button onclick="deleteMaterialLink(\'' + t + '\',\'' + safeUrl + '\')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;opacity:0.5;">🗑</button>' +
       '</div>';
     }).join('');
@@ -1376,7 +1369,6 @@ function selectStudent(token) {
       '<input id="matUrl-' + t + '" placeholder="貼上連結 URL（https://…）" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);margin-bottom:8px;box-sizing:border-box;">' +
       '<div style="display:flex;gap:8px;">' +
         '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;flex:1;" onclick="saveMaterialLink(\'' + t + '\')">💾 儲存連結</button>' +
-        '<button class="btn-sm btn-sm-preview" onclick="openMaterialLinkDraft(\'' + t + '\')">🔗 開啟預覽</button>' +
       '</div>' +
       '<div id="matList-' + t + '" style="margin-top:10px;"></div>' +
     '</div>' +
@@ -1942,34 +1934,58 @@ function openFileRow(e, url) {
   if (/^https:\/\//i.test(u)) window.open(u, '_blank', 'noopener');
 }
 
+// สร้าง 1 แถวไฟล์ (ใช้ index เดิมของ data → checkbox / bulk ทำงานถูกทุกกลุ่ม)
+function fileRowHTML(r, i, tid) {
+  var name = r.name || '';
+  var isLink = name.startsWith('教材_') || name.startsWith('教材');
+  var icon = (name.includes('筆記') || name.includes('note') || name.includes('補充說明')) ? '📝'
+           : isLink ? '📖'
+           : '🎬';
+  var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
+  var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
+  var label = isLink ? name.replace(/^教材_/, '') : (name || (d + ' 課堂錄影' + sz));
+  var safeUrl = (r.url || '').replace(/'/g, "\\'");
+  var actionLabel = isLink ? '🔗 開啟' : '⬇ 下載';
+  var rowClickAttr = safeHref(r.url) !== '#'
+    ? ' style="cursor:pointer;" onclick="openFileRow(event,\'' + safeUrl + '\')"'
+    : '';
+  return '<div class="drive-file-row"' + rowClickAttr + '>' +
+    '<input type="checkbox" class="file-cb" data-token="' + tid + '" data-idx="' + i + '" onchange="onFileCbChange(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--gold-deep);">' +
+    '<span class="drive-file-icon">' + icon + '</span>' +
+    '<span class="drive-file-name">' + label + '</span>' +
+    '<a class="drive-file-dl" href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener">' + actionLabel + '</a>' +
+    '<button onclick="deleteStudentFile(\'' + tid + '\',\'' + safeUrl + '\',this)" title="從清單移除" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;margin-left:4px;opacity:0.55;">🗑</button>' +
+  '</div>';
+}
+
+function fileSectionHead(txt) {
+  return '<div style="font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:0.82rem;color:var(--gold-deep);letter-spacing:0.5px;margin:2px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">' + txt + '</div>';
+}
+
 function renderStudentFiles(token) {
   const el = document.getElementById('filesList');
   if (!el) return;
   const data = studentFilesData[token] || [];
-  const rows = data.map(function(r, i) {
-    const name = r.name || '';
-    const isLink = name.startsWith('教材_') || name.startsWith('教材');
-    const icon = (name.includes('筆記') || name.includes('note') || name.includes('補充說明')) ? '📝'
-               : isLink ? '📚'
-               : '🎬';
-    var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
-    var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
-    var label = isLink ? name.replace(/^教材_/, '') : (name || (d + ' 課堂錄影' + sz));
-    var safeUrl = (r.url || '').replace(/'/g, "\\'");
-    var tid = token.replace(/'/g, '');
-    var actionLabel = isLink ? '🔗 開啟' : '⬇ 下載';
-    var rowClickAttr = safeHref(r.url) !== '#'
-      ? ' style="cursor:pointer;" onclick="openFileRow(event,\'' + safeUrl + '\')"'
-      : '';
-    return '<div class="drive-file-row"' + rowClickAttr + '>' +
-      '<input type="checkbox" class="file-cb" data-token="' + tid + '" data-idx="' + i + '" onchange="onFileCbChange(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--gold-deep);">' +
-      '<span class="drive-file-icon">' + icon + '</span>' +
-      '<span class="drive-file-name">' + label + '</span>' +
-      '<a class="drive-file-dl" href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener">' + actionLabel + '</a>' +
-      '<button onclick="deleteStudentFile(\'' + tid + '\',\'' + safeUrl + '\',this)" title="從清單移除" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;margin-left:4px;opacity:0.55;">🗑</button>' +
-    '</div>';
-  }).join('');
   var tid = token.replace(/'/g, '');
+
+  // แยกเป็น 2 หมวด: 教科書 (ลิงค์教材) กับ ไฟล์อื่น ๆ
+  var bookRows = [], otherRows = [];
+  data.forEach(function(r, i) {
+    var name = r.name || '';
+    var isLink = name.startsWith('教材_') || name.startsWith('教材');
+    (isLink ? bookRows : otherRows).push(fileRowHTML(r, i, tid));
+  });
+
+  var body = '';
+  if (bookRows.length) {
+    body += fileSectionHead('📖 教科書') +
+      '<div class="drive-file-list" style="margin-bottom:16px;">' + bookRows.join('') + '</div>';
+  }
+  if (otherRows.length) {
+    body += fileSectionHead('🎬 上課錄影 & 資料') +
+      '<div class="drive-file-list">' + otherRows.join('') + '</div>';
+  }
+
   el.innerHTML =
     '<div id="fileBulkBar_' + tid + '" style="display:none;align-items:center;gap:8px;padding:7px 10px;background:var(--gold-light);border:1px solid var(--border);border-radius:9px;margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.82rem;">' +
       '<input type="checkbox" id="fileSelectAll_' + tid + '" onchange="toggleSelectAll(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold-deep);" title="全選">' +
@@ -1977,7 +1993,7 @@ function renderStudentFiles(token) {
       '<button onclick="bulkDownloadFiles(\'' + tid + '\')" style="background:var(--gold-deep);color:#fff;border:none;border-radius:7px;padding:5px 11px;cursor:pointer;font-size:0.77rem;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;">⬇ 下載</button>' +
       '<button onclick="bulkDeleteFiles(\'' + tid + '\')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:5px 11px;cursor:pointer;font-size:0.77rem;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;">🗑 移除</button>' +
     '</div>' +
-    '<div class="drive-file-list">' + rows + '</div>';
+    body;
 }
 
 function onFileCbChange(token) {
