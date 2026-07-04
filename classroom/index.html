@@ -1124,41 +1124,6 @@ async function deleteMaterialLink(token, url) {
   loadMaterialLinks(token);
 }
 
-// ============================================================
-// 補充說明（老師輸入 → 存成 Google 文件到該學生 Drive「學習內容」資料夾）
-// ============================================================
-async function saveSupplementNote(token) {
-  const t = token.replace(/'/g, '');
-  const s = (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
-  const ta = document.getElementById('suppNotes-' + t);
-  const statusEl = document.getElementById('suppStatus-' + t);
-  const content = (ta && ta.value || '').trim();
-  if (!s) { alert('找不到這位學生'); return; }
-  if (!content) { alert('請先輸入補充說明內容'); return; }
-  if (statusEl) statusEl.textContent = '☁️ 連線 Google Drive…（首次會跳出授權）';
-  try {
-    const now = new Date();
-    const ymd = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-    const docName = '補充說明_' + s.name + '_' + ymd;
-    const folderId = await gdGetStudentSubfolderId(s.name, '學習內容');
-    const bodyHtml = content.split(/\n{2,}/).map(function(p) {
-      return '<p>' + p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + '</p>';
-    }).join('');
-    const seed = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
-      '<h1>📝 ' + docName + '</h1>' + bodyHtml + '</body></html>';
-    const blob = new Blob([seed], { type: 'text/html' });
-    if (statusEl) statusEl.textContent = '☁️ 上傳中…';
-    const doc = await gdUploadSmall(blob, docName, 'application/vnd.google-apps.document', folderId);
-    await gdShareAnyone(doc.id);
-    const link = doc.webViewLink || ('https://docs.google.com/document/d/' + doc.id + '/edit');
-    await saveRecordingLink(token, docName, doc.id, link, '', null);
-    if (statusEl) statusEl.innerHTML = '✅ 已存入「' + escHtml(s.name) + '」的 Drive，學生「課堂資料下載」也看得到了';
-    if (ta) ta.value = '';
-  } catch (e) {
-    if (statusEl) statusEl.textContent = '❌ 存檔失敗：' + (e.message || e) + '（請先按其他 Drive 功能授權連接 Google，再重試）';
-  }
-}
-
 // 新生：建立一份空白「上課時刻表」Google Sheet（範本 課次/日期/次數）→ 分享 + 記錄，學生頁可見
 async function createBlankTimetable(name, token, folderId) {
   if (!folderId) folderId = await gdGetStudentSubfolderId(name, '課表 & 收據');
@@ -1411,12 +1376,6 @@ function selectStudent(token) {
         '<button class="btn-sm btn-sm-preview" onclick="openMaterialLinkDraft(\'' + t + '\')">🔗 開啟預覽</button>' +
       '</div>' +
       '<div id="matList-' + t + '" style="margin-top:10px;"></div>' +
-    '</div>' +
-    '<div class="card" style="margin-top:12px;padding:14px;">' +
-      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📝 補充說明（存成 Google 文件到學生 Drive）</div>' +
-      '<textarea id="suppNotes-' + t + '" placeholder="輸入這位學生的補充說明⋯" style="width:100%;min-height:80px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);resize:vertical;box-sizing:border-box;margin-bottom:8px;"></textarea>' +
-      '<button class="btn-sm" style="background:#0f766e;color:#fff;width:100%;" onclick="saveSupplementNote(\'' + t + '\')">☁️ 存入學生 Drive</button>' +
-      '<div id="suppStatus-' + t + '" style="margin-top:6px;font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;"></div>' +
     '</div>' +
     '<div id="stuInfo-' + t + '" style="margin-top:12px;"></div>';
 

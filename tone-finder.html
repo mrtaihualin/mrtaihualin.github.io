@@ -2865,7 +2865,8 @@ var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, f
 var TF_SCORE_CFG = {
   SCORE_FIRST_TRY: 10,       // ถูกตั้งแต่ครั้งแรก (เดิม 100 → ลดให้ใกล้ reading-game ที่ให้ 10/คำ)
   SCORE_DEDUCE_BASE: 5,      // เข้า推導 ฐาน (เดิม 50)
-  SCORE_MIN_PER_WORD: 0,     // คะแนนขั้นต่ำต่อคำ (เดิม 10 → 1 → 0: ผิดครบ 3 ครั้ง = 0 pt, Lin 2026-07-02)
+  SCORE_MIN_PER_WORD: 1,     // คะแนนขั้นต่ำต่อคำเมื่อ "โดนหักจนต่ำแต่ยังไม่ fail" = 1 (Lin 2026-07-04) · หมายเหตุ: ผิดครบ 3 ครั้ง = 0 (fail) คุมแยกที่ SCORE_FAIL_ZERO ด้านล่าง
+  SCORE_FAIL_ZERO: 0,        // ผิดครบ 3 ครั้ง (fail) = 0 pt เสมอ (แยกจาก floor 1 ข้างบน — floor 1 ใช้เฉพาะตอนยังไม่ fail แต่โดนหักจนต่ำ)
   DEDUCE_WRONG_LIMIT: 3,     // กดผิดครบ 3 ครั้งในคำเดียว → ได้คะแนนขั้นต่ำ + เฉลย + คำใหม่
   COMBO_TIERS: { 3: 1.5, 5: 2, 8: 3 },   // สตรีคตอบถูกครั้งแรกติดกัน → ตัวคูณ
   SET_COMPLETE_BONUS: 20,    // เล่นจบ 1 ชุด (เดิม 200)
@@ -2903,7 +2904,7 @@ var TF_SCORE = {
     return Math.round(this.cfg.SCORE_FIRST_TRY * this.comboMultiplier(streak));
   },
 
-  // คะแนนเมื่อผ่าน推導สำเร็จ = max(MIN, BASE - หักรวม) · ขั้นต่ำ 10 (ห้ามเป็น 0)
+  // คะแนนเมื่อผ่าน推導สำเร็จ = max(MIN, BASE - หักรวม) · floor = SCORE_MIN_PER_WORD = 1 (โดนหักจนต่ำแต่ผ่านได้ ยังได้อย่างน้อย 1)
   deduceScore: function (totalDeduction) {
     return Math.max(this.cfg.SCORE_MIN_PER_WORD, this.cfg.SCORE_DEDUCE_BASE - totalDeduction);
   },
@@ -3287,6 +3288,10 @@ function tfResetWordScoring() {
   // ── คำหลายพยางค์: คิดคะแนนรายพยางค์ ──
   session.curWordAllFirstTry = true;   // จริงตราบที่ทุกพยางค์ยังถูกครั้งแรก
   session.scoredSyls = {};             // กันให้คะแนนซ้ำเมื่อกด "วิเคราะห์ใหม่"
+  // ── Lin 2026-07-04: คำหลายพยางค์ = เฉลี่ยคะแนนต่อพยางค์ (กันปั๊มด้วยคำยาว) ──
+  //   สะสม "คะแนนฐานต่อพยางค์ (ยังไม่คูณทอง/คอมโบ)" ไว้ก่อน แล้วไปเฉลี่ย + คูณทอง/คอมโบ "ครั้งเดียวตอนจบคำ" ที่ tfCommitWordAndAdvance
+    session.curWordSylRawSum = 0;        // ผลรวมคะแนนฐานทุกพยางค์ (ก่อนเฉลี่ย, ก่อนคูณ)
+  session.curWordSylScoredCount = 0;   // จำนวนพยางค์ที่คิดคะแนนแล้ว (ตัวหารเฉลี่ย)
   session.curWordWrongGuess = false;   // เคยเดาผิด/🤷 ในคำ/พยางค์นี้ไหม (กันโกง first-try)
   // ── Lin 2026-07-04: สถานะปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ต่อคำ/ประโยคนี้ ──
   session.hintUsed = false;      // กด ? ไปแล้วหรือยังในคำนี้ (ครั้งแรกนับผิด 1 ครั้ง, ครั้งถัดไปฟรี — ดู tfUseHint)
@@ -3444,10 +3449,12 @@ function tfScoreFirstTry() {
     var k = S.selectedSyl;
     if (session.scoredSyls && session.scoredSyls[k]) return;   // วิเคราะห์พยางค์เดิมซ้ำ → ไม่ให้ซ้ำ
     session.scoredSyls[k] = true;
-    var sylPts = Math.round(TF_SCORE.cfg.SCORE_FIRST_TRY * gold);
-    session.score += sylPts;
-    session.currentWordScore = (session.currentWordScore || 0) + sylPts;
-    setTimeout(function () { tfScorePop(sylPts, { gold: gold > 1 }); }, 60);
+    // ── Lin 2026-07-04: สะสมคะแนน "ฐาน" ต่อพยางค์ (ยังไม่คูณทอง/คอมโบ) — ไปเฉลี่ย+คูณครั้งเดียวตอนจบคำ ──
+    var sylBase = TF_SCORE.cfg.SCORE_FIRST_TRY;
+    session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
+    session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
+    // เด้งฟีดแบ็กรายพยางค์ (คะแนนฐาน) แต่ "ยังไม่บวกเข้า session.score" — คะแนนจริงบวกทีเดียวตอนจบคำ
+    setTimeout(function () { tfScorePop(sylBase, { gold: gold > 1 }); }, 60);
     return;
   }
   if (session.currentWordScored) return;
@@ -3483,12 +3490,13 @@ function tfScoreDeduce() {
     var k = S.selectedSyl;
     if (session.scoredSyls && session.scoredSyls[k]) return;
     session.scoredSyls[k] = true;
-    var sylPts = Math.round(TF_SCORE.deduceScore(session.currentWordDeduction || 0) * gold);
-    session.score += sylPts;
-    session.currentWordScore = (session.currentWordScore || 0) + sylPts;
+    // ── Lin 2026-07-04: สะสมคะแนน "ฐาน" ต่อพยางค์ (deduce, ยังไม่คูณทอง) — เฉลี่ย+คูณครั้งเดียวตอนจบคำ ──
+    var sylBase = TF_SCORE.deduceScore(session.currentWordDeduction || 0);
+    session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
+    session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     session.curWordAllFirstTry = false;
     session.combo = 0;
-    setTimeout(function () { tfScorePop(sylPts, { gold: gold > 1 }); }, 60);
+    setTimeout(function () { tfScorePop(sylBase, { gold: gold > 1 }); }, 60);
     return;
   }
   if (session.currentWordScored) return;
@@ -3546,13 +3554,16 @@ function tfForceRevealZero() {
     var k = S.selectedSyl;
     var syl = (S.syllables && S.syllables[k]) || entry.word;
     if (session.scoredSyls) session.scoredSyls[k] = true;   // พยางค์นี้ 0 แต้ม
+    // ── Lin 2026-07-04: พยางค์ fail = 0 คะแนน แต่ยังนับเป็น 1 พยางค์ในตัวหารเฉลี่ย (บวก 0 เข้า rawSum) ──
+    session.curWordSylRawSum = (session.curWordSylRawSum || 0) + 0;
+    session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     session.curWordAllFirstTry = false;
     session.combo = 0;
     var sct = computeTone(syl);
     tfShowRevealOverlay({ word: syl, zh: entry.zh, readingTH: syl }, sct, { sylIdx: k, sylTone: sct });
     return;
   }
-  session.currentWordScore = TF_SCORE_CFG.SCORE_MIN_PER_WORD; // ผิดครบ 3 ครั้ง = 0 pt
+  session.currentWordScore = TF_SCORE_CFG.SCORE_FAIL_ZERO; // ผิดครบ 3 ครั้ง (fail) = 0 pt
   session.currentWordFirstTry = false;
   session.currentWordScored = true;
   session.combo = 0;
@@ -3624,14 +3635,27 @@ function tfCommitWordAndAdvance(opts) {
     }
     else session.combo = 0;
   }
+  // ── Lin 2026-07-04: คำหลายพยางค์ = เฉลี่ยคะแนนต่อพยางค์ แล้วคูณ "ทอง + คอมโบ" ครั้งเดียวที่ระดับคำ ──
+  //   (คำสั้น/ยาวได้สเกลเดียวกัน · คำ 2 พยางค์ถูกหมด = 10 ไม่ใช่ 20 · กันปั๊มด้วยคำยาว)
+  //   หมายเหตุ: พยางค์เดียวคิด+คูณครบไปแล้วใน tfScoreFirstTry/tfScoreDeduce ไม่ต้องแตะซ้ำ
+  if (isMulti) {
+    var divisor = session.curWordSylScoredCount || sylCount || 1;
+    var avgBase = (session.curWordSylRawSum || 0) / divisor;      // เฉลี่ยต่อพยางค์
+    var goldM = session.currentWordGolden ? (TF_GAME_CFG.GOLDEN_WORD_MULT || 2) : 1;
+    var comboM = (!opts.forced && firstTry) ? TF_SCORE.comboMultiplier(session.combo) : 1; // คอมโบใช้เฉพาะตอนถูกครั้งแรกทั้งคำ
+    var wordScore = Math.round(avgBase * goldM * comboM);
+    session.currentWordScore = wordScore;
+    session.score += wordScore;                                   // บวกเข้าคะแนนรวมครั้งเดียว (รายพยางค์ไม่บวกแล้ว)
+    tfUpdateScoreHud(); tfUpdateBarsHud();
+  }
   session.results.push({
     entry: entry,
     tone: tone,
     mistakes: mistakes,
     initialGuess: session.initialGuess,
     finalAnswer: session.finalAnswer,
-    // ── ฟิลด์คะแนน ── (ขั้นต่ำ = SCORE_MIN_PER_WORD = 0)
-    score: Math.max(TF_SCORE_CFG.SCORE_MIN_PER_WORD, session.currentWordScore || 0),
+    // ── ฟิลด์คะแนน ── (clamp ล่าง = SCORE_FAIL_ZERO = 0 เท่านั้น กันติดลบ · ไม่ยัด floor 1 ให้คำที่ fail 0)
+    score: Math.max(TF_SCORE_CFG.SCORE_FAIL_ZERO, session.currentWordScore || 0),
     firstTry: firstTry,
     golden: !!session.currentWordGolden,
     forced: !!opts.forced,
@@ -3650,6 +3674,21 @@ function tfCommitWordAndAdvance(opts) {
   } else {
     tfSetupNextWord();
   }
+}
+
+// ── Lin 2026-07-04: จำนวน "คำ/หน่วยทั้งหมด" ในระดับ (ใช้คิดเพดานดาวเงิน = 10% ของจำนวนคำในระดับ) ──
+//   level 1/2 = นับจาก WORD_LIST ตาม level · level 3 = จำนวนประโยคใน ADV_SENTENCES (หน่วย SRS ของ高級คือทั้งประโยค)
+//   หาไม่ได้/ไม่รู้จริง → คืน 0 เพื่อให้ game-account.js fallback ไปใช้ HARD_CAPS เดิม (ห้ามให้เพดานกลายเป็น 0)
+function tfLevelWordCount(level) {
+  try {
+    if (level === 3) {
+      return (typeof ADV_SENTENCES !== 'undefined' && ADV_SENTENCES.length) ? ADV_SENTENCES.length : 0;
+    }
+    if (typeof WORD_LIST !== 'undefined' && WORD_LIST.length) {
+      return WORD_LIST.filter(function (w) { return w.level === level; }).length;
+    }
+  } catch (e) {}
+  return 0; // ไม่รู้จำนวนจริง → ให้ addHardStars fallback เป็น cap เดิม
 }
 
 // ── สเปก 2026-07-03 ข้อ 3+4+5: อัปเดต SRS ของคำ/ประโยคนี้ตอนจบ (เรียกจาก tfCommitWordAndAdvance) ──
@@ -3672,7 +3711,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
       // ── ข้อ 4: แจกดาวเงินตอน mastered จริง (ฐาน×ตัวคูณระดับ, ชนเพดานแล้ว = 0 แต้ม แต่ยัง mastered ปกติ) ──
       try {
         if (window.GAME_ACCOUNT && window.GAME_ACCOUNT.addHardStars) {
-          var hr = window.GAME_ACCOUNT.addHardStars(res.clean, selectedLevel || 1);
+          var hr = window.GAME_ACCOUNT.addHardStars(res.clean, selectedLevel || 1, tfLevelWordCount(selectedLevel || 1));
           session.hardStarsEarned = (session.hardStarsEarned || 0) + (hr.stars || 0);
         }
       } catch (e) {}

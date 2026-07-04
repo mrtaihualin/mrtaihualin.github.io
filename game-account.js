@@ -8,7 +8,12 @@
   var KEY = 'thai_game_acct_v1';
   function load() { try { var r = localStorage.getItem(KEY); return r ? JSON.parse(r) : {}; } catch (e) { return {}; } }
   function save(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }
-  function dstr(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  // Lin 2026-07-04: ผูกเวลาไต้หวัน (Asia/Taipei, UTC+8) เสมอ — ไม่อิงนาฬิกาเครื่องผู้เล่น (กันขึ้นวันใหม่/streak เพี้ยนตาม timezone เครื่อง)
+  function dstr(ts) {
+    var d = (ts == null) ? new Date() : new Date(ts);
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); } // 'YYYY-MM-DD' ตามเวลาไต้หวัน
+    catch (e) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); } // fallback: เครื่อง (เบราว์เซอร์เก่ามาก)
+  }
 
   // ── สเปก 2026-07-03: ดาวเงิน (hard currency) เปลี่ยนแหล่งที่มา ──
   // เดิม: ดาว 1–3 ดวง/รอบ ตามความแม่น (starsForRound) → ปั๊มได้ ไม่ตรงสเปกใหม่
@@ -21,8 +26,19 @@
   }
 
   // ── สเปก 2026-07-03 ข้อ 4: เพดานดาวเงินตลอดชีพต่อระดับ (ล็อกกันปั๊ม) ──
-  // Hard cap ต่อระดับ = min(10% ของจำนวนคำในระดับ, hard cap ในตาราง) — ตัวเลข hard cap คงที่ตามสเปก
-  var HARD_CAPS = { 1: 200, 2: 300, 3: 200 };        // 初級/中級/高級 → จำนวน "คำ" สูงสุดที่นับดาวได้ตลอดชีพ
+  // เพดานจริง = min( floor(10% ของจำนวนคำทั้งหมดในระดับ), HARD_CAPS[level] )
+  //   HARD_CAPS = เพดานสูงสุดคงที่ตามสเปก · ครึ่ง "10% ของคำในระดับ" ส่งเข้ามาเป็น argument จาก tone-finder.html
+  //   (ถ้าไม่รู้จำนวนคำ = ไม่ส่ง/ส่ง 0 → fallback เป็น HARD_CAPS เดิม กันเพดานกลายเป็น 0 แล้วไม่มีใครได้ดาว) — Lin 2026-07-04
+  var HARD_CAPS = { 1: 200, 2: 300, 3: 200 };        // 初級/中級/高級 → เพดานสูงสุดคงที่ (จำนวน "คำ" ที่นับดาวได้ตลอดชีพ)
+  // คำนวณเพดานจริงต่อระดับ = min( floor(0.10 × จำนวนคำในระดับ), HARD_CAPS[level] )
+  // levelWordCount ไม่ใช่เลขบวก (undefined/0/NaN) → fallback = HARD_CAPS[level] (ไม่ปล่อยให้เป็น 0)
+  function effectiveCap(level, levelWordCount) {
+    var hardCap = HARD_CAPS[level] || 0;
+    var wc = Number(levelWordCount);
+    if (!(wc > 0)) return hardCap;                    // ไม่รู้จำนวนคำจริง → ใช้ cap เดิม (กันเพดาน 0)
+    var tenPct = Math.floor(0.10 * wc);
+    return Math.min(tenPct, hardCap);
+  }
   var LEVEL_MULT = { 1: 1, 2: 1.5, 3: 2 };            // ตัวคูณระดับ
   var BASE_CLEAN = 3, BASE_RECOVERED = 1;             // ฐาน/คำ: จำเอง=3 · กู้กลับมาได้=1
 
@@ -41,9 +57,9 @@
   // clean = จำได้เองไม่เคยแอบดู/ผิดเลยตลอดเส้นทาง SRS ของคำนี้ · recovered = เคยผิด/แอบดูระหว่างทาง แต่สุดท้ายจำได้
   // level: 1=初級×1 · 2=中級×1.5 · 3=高級×2
   // คืนค่า {stars, capped} — capped=true ถ้าคำนี้ชนเพดานระดับแล้ว (ตัดออกจาก SRS ปกติ แต่ไม่ได้ดาว)
-  function addHardStars(clean, level) {
+  function addHardStars(clean, level, levelWordCount) {
     var a = load();
-    var cap = HARD_CAPS[level] || 0;
+    var cap = effectiveCap(level, levelWordCount);   // เพดานจริง = min(10% ของคำในระดับ, HARD_CAPS)
     var used = wordsCounted(a, level);
     if (used >= cap) { save(a); return { stars: 0, capped: true }; }
     bumpWordsCounted(a, level);
@@ -55,9 +71,9 @@
     return { stars: n, capped: false };
   }
   // เช็กว่าระดับนี้ชนเพดานดาวเงินหรือยัง (ไม่นับดาว แต่คำยัง mastered/ตัดออกจาก SRS ได้ตามปกติ)
-  function hardCapReached(level) {
+  function hardCapReached(level, levelWordCount) {
     var a = load();
-    return wordsCounted(a, level) >= (HARD_CAPS[level] || 0);
+    return wordsCounted(a, level) >= effectiveCap(level, levelWordCount);
   }
 
   // แบดจ์พันธุ์ข้าว ตามดาวรวมสะสม (รูป SVG จริงใน assets/badges/)
