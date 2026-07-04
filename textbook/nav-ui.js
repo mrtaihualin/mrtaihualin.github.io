@@ -8,12 +8,12 @@
   /* ── 頁面清單（拼音規則=1，句子結構=2，情態助詞=3；新增頁面在這裡加） ── */
   var PAGES = [
     { file: '拼音規則總整理.html', label: '拼音規則', num: '1' },
-    { file: 'thai_grammar_p2.html', label: '句子結構', num: '2' },
-    { file: 'thai_grammar_p3.html', label: '情態助詞', num: '3' },
-    { file: 'thai_grammar_p4.html', label: '否定表達', num: '4' },
-    { file: 'thai_grammar_p5.html', label: '過去式',   num: '5' },
-    { file: 'thai_grammar_p6.html', label: '是非問句', num: '6' },
-    { file: 'thai_grammar_p7.html', label: '疑問詞',   num: '7' },
+    { file: '句子結構五步驟.html', label: '句子結構', num: '2' },
+    { file: '情態助詞.html', label: '情態助詞', num: '3' },
+    { file: '否定表達.html', label: '否定表達', num: '4' },
+    { file: '過去式.html',   label: '過去式',   num: '5' },
+    { file: '是非問句.html', label: '是非問句', num: '6' },
+    { file: '疑問詞.html',   label: '疑問詞',   num: '7' },
   ];
 
   var currentFile = location.pathname.split('/').pop() || '';
