@@ -66,9 +66,8 @@
   }
 
   var driveRow = canSaveToDrive
-    ? ('<div class="fnotes-actions" style="margin-top:6px;">' +
-        '<span class="fnotes-hint">存入「' + escapeHtml(studentName) + '」的 Google Drive（僅限老師本人使用）</span>' +
-        '<button class="fnotes-dl-btn fnotes-drive-btn" style="background:#0f766e;">☁️ 存入 Google Drive</button>' +
+    ? ('<div class="fnotes-actions" style="margin-top:6px;justify-content:flex-end;">' +
+        '<button class="fnotes-dl-btn fnotes-drive-btn">☁️ 存入 Google Drive</button>' +
       '</div>' +
       '<div class="fnotes-drive-status" style="font-size:0.8rem;color:var(--ink-mid,#8a8370);margin-top:4px;"></div>')
     : '';
