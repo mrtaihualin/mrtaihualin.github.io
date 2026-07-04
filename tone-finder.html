@@ -5172,13 +5172,27 @@ function footer() {
   return '<div class="tf-footer"><button class="tf-restart-btn" onclick="TF.reselectTopic()">🎲 再來 5 字</button></div>';
 }
 
+// ── สเปก 2026-07-03 ข้อ 2.5 (แก้ตาม feedback ของ Lin): ปุ่ม "แอบดู" ต้องอยู่ใน "ทุกขั้น" ของ推導
+// (เดิมใส่แค่หน้าจอ session-guess หน้าแรก ยังไม่ครบ) — ใช้ฟังก์ชันกลางนี้แทรกในทุกขั้น推導ที่ให้คะแนน
+// (s1, s2a, s2a_low, s2a_other, s2a_mid, s2a_hi, s2b, s2b_live, s2b_dead, s2b_dl — ตรงกับ TF_SCORE_CFG.OPTIONS_IN_STEP)
+// เงื่อนไขเดิมทุกอย่าง: ใช้ได้ครั้งเดียว/คำ (ทุกขั้นรวมกัน), ปิดในวันเช็ค day16 final check, ไม่โชว์นอกโหมด session (freeplay ไม่คิดคะแนน)
+function peekBtnHtml(step) {
+  if (!session) return ''; // โหมดค้นหาอิสระ ไม่มีคะแนน/SRS ไม่ต้องมีปุ่มนี้
+  if (session.curWordIsFinalSrsCheck) {
+    return '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 16) — ห้ามแอบดู ต้องนึกเองล้วนๆ</div>';
+  }
+  if (session.peekUsed) return '';
+  var peekAct = act(function(){ tfPeekWord(step); });
+  return '<div style="margin-top:8px;"><button class="sg-dontknow-btn" style="background:#FBF0DA;border-color:#EAC36B;color:#8B6310;" onclick="'+peekAct+'">👀 แอบดูคำตอบ</button></div>';
+}
+
 // ── Steps ──
 function step1() {
   return qbox('1','這個字有<strong style="color:var(--gold-bright);">聲調符號</strong>嗎？') +
     '<div class="tf-options">' +
       optRow('有聲調符號', act(function(){ tryNavigate('hasMark','有聲調符號','s2a'); }), ['toneMark']) +
       optRow('無聲調符號', act(function(){ tryNavigate('noMark','無聲調符號','s2b'); })) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s1') + footer();
 }
 
 function step2a() {
@@ -5186,7 +5200,7 @@ function step2a() {
     '<div class="tf-options">' +
       optRow('低子音', act(function(){ tryNavigate('low','低子音','s2a_low'); }), ['low']) +
       optRow('其他子音（中子音 ／ 高子音 ／ 前引字）', act(function(){ tryNavigate('other','其他子音','s2a_other'); }), ['other']) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2a') + footer();
 }
 
 function step2aLow() {
@@ -5194,7 +5208,7 @@ function step2aLow() {
     '<div class="tf-mark-opts">' +
       markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result',3); })) +
       markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',4); })) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2a_low') + footer();
 }
 
 function step2aOther() {
@@ -5203,7 +5217,7 @@ function step2aOther() {
       optRow('中子音', act(function(){ tryNavigate('mid','中子音','s2a_mid'); }), ['mid']) +
       optRow('高子音', act(function(){ tryNavigate('high','高子音','s2a_hi'); }), ['high']) +
       optRow('前引字', act(function(){ tryNavigate('lead','前引字','s2a_hi'); }), ['lead']) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2a_other') + footer();
 }
 
 function step2aMid() {
@@ -5213,7 +5227,7 @@ function step2aMid() {
       markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',3); })) +
       markRow('๊', act(function(){ tryNavigate('๊','๊ 第四聲符號','result',4); })) +
       markRow('๋', act(function(){ tryNavigate('๋','๋ 第五聲符號','result',5); })) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2a_mid') + footer();
 }
 
 function step2aHi() {
@@ -5221,7 +5235,7 @@ function step2aHi() {
     '<div class="tf-mark-opts">' +
       markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result',2); })) +
       markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',3); })) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2a_hi') + footer();
 }
 
 function step2b() {
@@ -5230,7 +5244,7 @@ function step2b() {
     '<div class="tf-options">' +
       optRow('活音', act(function(){ tryNavigate('live','活音','s2b_live'); }), ['live']) +
       optRow('死音', act(function(){ tryNavigate('dead','死音','s2b_dead'); }), ['dead']) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2b') + footer();
 }
 
 function helperBannerHTML() {
@@ -5282,7 +5296,7 @@ function s2bLive() {
     '<div class="tf-options">' +
       optRow('中子音 ／ 低子音', act(function(){ tryNavigate('mid_low','中子音/低子音','result',1); }), ['mid','low']) +
       optRow('高子音 ／ 前引字', act(function(){ tryNavigate('high_lead','高子音/前引字','result',5); }), ['high','lead']) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2b_live') + footer();
 }
 
 function s2bDead() {
@@ -5290,7 +5304,7 @@ function s2bDead() {
     '<div class="tf-options">' +
       optRow('高子音 ／ 前引字 ／ 中子音', act(function(){ tryNavigate('high_lead_mid','高子音/前引字/中子音','result',2); }), ['high','lead','mid']) +
       optRow('低子音', act(function(){ tryNavigate('low_dead','低子音','s2b_dl'); }), ['low']) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2b_dead') + footer();
 }
 
 function s2bDeadLow() {
@@ -5298,7 +5312,7 @@ function s2bDeadLow() {
     '<div class="tf-options">' +
       optRow('長母音', act(function(){ tryNavigate('long_vowel','長母音','result',3); }), ['longVowel']) +
       optRow('短母音', act(function(){ tryNavigate('short_vowel','短母音','result',4); }), ['shortVowel']) +
-    '</div>' + footer();
+    '</div>' + peekBtnHtml('s2b_dl') + footer();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -5379,16 +5393,9 @@ function stepSessionGuess() {
     showStartInflection(navigateToInflection);
   });
 
-  // ── สเปก 2026-07-03 ข้อ 2.5: ปุ่ม "แอบดู" — ใช้ได้ครั้งเดียว/คำ, ปิดทั้งหมดในวันเช็ค day16 (final check) ──
-  // เงื่อนไขซ่อนปุ่ม: เล่นวัน day16 final check (ต้อง pure recall ห้ามพึ่งพา) หรือแอบดูไปแล้วในคำนี้
-  var peekHtml = '';
-  var showPeek = !session.curWordIsFinalSrsCheck && !session.peekUsed;
-  if (showPeek) {
-    var peekAct = act(function(){ tfPeekWord('s1'); });
-    peekHtml = '<button class="sg-dontknow-btn" style="margin-top:6px;background:#FBF0DA;border-color:#EAC36B;color:#8B6310;" onclick="'+peekAct+'">👀 แอบดูคำตอบ</button>';
-  } else if (session.curWordIsFinalSrsCheck) {
-    peekHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 รอบตรวจสอบสุดท้าย (Day 16) — ห้ามแอบดู ต้องนึกเองล้วนๆ</div>';
-  }
+  // ── Lin 2026-07-04: ตัดปุ่ม "แอบดู" ออกจากหน้าเดาแรกนี้ (session-guess) ──
+  // หน้านี้เป็นแค่เดามั่ว/ท้าทายตรงๆ ยังไม่เข้า推導 ให้แอบดูตรงนี้ = ข้ามการฝึกคิดทั้งหมดไปเลย
+  // ปุ่มแอบดูยังอยู่ครบใน 10 ขั้นย่อยของ推導 (step1..s2bDeadLow ผ่าน peekBtnHtml()) ตามที่ Lin ยืนยัน
 
   return '<div style="text-align:center;padding:4px 0 8px;">'+
     wordHtml+
@@ -5398,7 +5405,6 @@ function stepSessionGuess() {
     '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
     '<button class="sg-dontknow-btn" onclick="'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>'+
-    peekHtml+
   '</div>';
 }
 
