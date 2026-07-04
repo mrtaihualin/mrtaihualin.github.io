@@ -1051,6 +1051,97 @@ async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
   if (error) console.warn('儲存錄影連結失敗：', error.message);
 }
 
+// ============================================================
+// 教材連結（老師貼連結 → 存進 classroom_recordings → 學生「課堂資料下載」自動出現）
+// ============================================================
+function openMaterialLinkDraft(token) {
+  const t = token.replace(/'/g, '');
+  const el = document.getElementById('matUrl-' + t);
+  const url = (el && el.value || '').trim();
+  if (!/^https:\/\//i.test(url)) { alert('請先貼上正確的連結（需以 https:// 開頭）'); return; }
+  window.open(url, '_blank', 'noopener');
+}
+
+async function saveMaterialLink(token) {
+  const t = token.replace(/'/g, '');
+  const labelEl = document.getElementById('matLabel-' + t);
+  const urlEl = document.getElementById('matUrl-' + t);
+  const label = (labelEl && labelEl.value || '').trim();
+  const url = (urlEl && urlEl.value || '').trim();
+  if (!label) { alert('請輸入教材名稱'); return; }
+  if (!/^https:\/\//i.test(url)) { alert('請貼上正確的連結（需以 https:// 開頭）'); return; }
+  await saveRecordingLink(token, '教材_' + label, null, url, '', null);
+  if (labelEl) labelEl.value = '';
+  if (urlEl) urlEl.value = '';
+  loadMaterialLinks(token);
+}
+
+async function loadMaterialLinks(token) {
+  const t = token.replace(/'/g, '');
+  const el = document.getElementById('matList-' + t);
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:0.78rem;color:var(--ink-muted);">載入中…</div>';
+  try {
+    const { data, error } = await sb.rpc('get_student_recordings', { p_token: token });
+    const items = (error || !data) ? [] : data.filter(function(r) { return (r.name || '').indexOf('教材_') === 0; });
+    if (!items.length) { el.innerHTML = '<div style="font-size:0.78rem;color:var(--ink-muted);">尚未儲存教材連結</div>'; return; }
+    el.innerHTML = items.map(function(r) {
+      const label = (r.name || '').replace(/^教材_/, '');
+      const safeUrl = (r.url || '').replace(/'/g, "\\'");
+      return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.8rem;">' +
+        '<span style="flex:1;">📚 ' + escHtml(label) + '</span>' +
+        '<a href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:none;">🔗 開啟</a>' +
+        '<button onclick="deleteMaterialLink(\'' + t + '\',\'' + safeUrl + '\')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;opacity:0.5;">🗑</button>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="font-size:0.78rem;color:var(--ink-muted);">載入失敗</div>';
+  }
+}
+
+async function deleteMaterialLink(token, url) {
+  if (!confirm('確定要移除這個教材連結嗎？（不會刪掉原本的網頁，只是從清單移除）')) return;
+  try {
+    await sb.rpc('delete_student_recording', { p_token: token, p_url: url });
+  } catch (e) {}
+  loadMaterialLinks(token);
+}
+
+// ============================================================
+// 補充說明（老師輸入 → 存成 Google 文件到該學生 Drive「學習內容」資料夾）
+// ============================================================
+async function saveSupplementNote(token) {
+  const t = token.replace(/'/g, '');
+  const s = (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
+  const ta = document.getElementById('suppNotes-' + t);
+  const statusEl = document.getElementById('suppStatus-' + t);
+  const content = (ta && ta.value || '').trim();
+  if (!s) { alert('找不到這位學生'); return; }
+  if (!content) { alert('請先輸入補充說明內容'); return; }
+  if (statusEl) statusEl.textContent = '☁️ 連線 Google Drive…（首次會跳出授權）';
+  try {
+    const now = new Date();
+    const ymd = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const docName = '補充說明_' + s.name + '_' + ymd;
+    const folderId = await gdGetStudentSubfolderId(s.name, '學習內容');
+    const bodyHtml = content.split(/\n{2,}/).map(function(p) {
+      return '<p>' + p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+    const seed = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
+      '<h1>📝 ' + docName + '</h1>' + bodyHtml + '</body></html>';
+    const blob = new Blob([seed], { type: 'text/html' });
+    if (statusEl) statusEl.textContent = '☁️ 上傳中…';
+    const doc = await gdUploadSmall(blob, docName, 'application/vnd.google-apps.document', folderId);
+    await gdShareAnyone(doc.id);
+    const link = doc.webViewLink || ('https://docs.google.com/document/d/' + doc.id + '/edit');
+    await saveRecordingLink(token, docName, doc.id, link, '', null);
+    if (statusEl) statusEl.innerHTML = '✅ 已存入「' + escHtml(s.name) + '」的 Drive，學生「課堂資料下載」也看得到了';
+    if (ta) ta.value = '';
+  } catch (e) {
+    if (statusEl) statusEl.textContent = '❌ 存檔失敗：' + (e.message || e) + '（請先按其他 Drive 功能授權連接 Google，再重試）';
+  }
+}
+
 // 新生：建立一份空白「上課時刻表」Google Sheet（範本 課次/日期/次數）→ 分享 + 記錄，學生頁可見
 async function createBlankTimetable(name, token, folderId) {
   if (!folderId) folderId = await gdGetStudentSubfolderId(name, '課表 & 收據');
@@ -1294,10 +1385,27 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
     '<button class="btn-open-note" onclick="openStudentNotesDoc(\'' + t + '\')">📝 開啟課堂筆記（Google 文件）</button>' +
+    '<div class="card" style="margin-top:12px;padding:14px;">' +
+      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📚 教材連結（存到學生「課堂資料下載」）</div>' +
+      '<input id="matLabel-' + t + '" placeholder="教材名稱（例：拼音規則）" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);margin-bottom:6px;box-sizing:border-box;">' +
+      '<input id="matUrl-' + t + '" placeholder="貼上連結 URL（https://…）" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);margin-bottom:8px;box-sizing:border-box;">' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;flex:1;" onclick="saveMaterialLink(\'' + t + '\')">💾 儲存連結</button>' +
+        '<button class="btn-sm btn-sm-preview" onclick="openMaterialLinkDraft(\'' + t + '\')">🔗 開啟預覽</button>' +
+      '</div>' +
+      '<div id="matList-' + t + '" style="margin-top:10px;"></div>' +
+    '</div>' +
+    '<div class="card" style="margin-top:12px;padding:14px;">' +
+      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📝 補充說明（存成 Google 文件到學生 Drive）</div>' +
+      '<textarea id="suppNotes-' + t + '" placeholder="輸入這位學生的補充說明⋯" style="width:100%;min-height:80px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);resize:vertical;box-sizing:border-box;margin-bottom:8px;"></textarea>' +
+      '<button class="btn-sm" style="background:#0f766e;color:#fff;width:100%;" onclick="saveSupplementNote(\'' + t + '\')">☁️ 存入學生 Drive</button>' +
+      '<div id="suppStatus-' + t + '" style="margin-top:6px;font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;"></div>' +
+    '</div>' +
     '<div id="stuInfo-' + t + '" style="margin-top:12px;"></div>';
 
   panel.classList.add('visible');
   loadTeacherStudentInfo(token);
+  loadMaterialLinks(token);
 
   // Auto-save to localStorage on input
   var editor = document.getElementById('note-' + t);
@@ -1854,7 +1962,7 @@ function renderStudentFiles(token) {
   const data = studentFilesData[token] || [];
   const rows = data.map(function(r, i) {
     const name = r.name || '';
-    const icon = (name.includes('筆記') || name.includes('note')) ? '📝'
+    const icon = (name.includes('筆記') || name.includes('note') || name.includes('補充說明')) ? '📝'
                : (name.startsWith('教材_') || name.startsWith('教材')) ? '📚'
                : '🎬';
     var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
