@@ -3323,6 +3323,13 @@ function tfCurWordIsMulti() {
   return !!(e && e.readingTH && e.readingTH.indexOf('-') !== -1);
 }
 
+// ── Lin 2026-07-04: คำปัจจุบัน "ห้ามใช้เครื่องมือช่วย + ห้ามให้แต้ม" ไหม ──
+// จริงเมื่อ: (ก) day16 final check  หรือ  (ข) กดปุ่ม "✓ 已記得" แล้วเข้าโหมดพิสูจน์ 1 ครั้ง (known-check)
+// ทั้งสองกรณีใช้ UI/กติกาเดียวกัน (ไม่มี推導 ไม่มีใบ้ ไม่มีแต้ม ผิดปุ๊บ fail) ต่างกันแค่ตอน commit SRS
+function tfCurWordNoTools() {
+  return !!(session && (session.curWordIsFinalSrsCheck || session.curWordIsKnownCheck));
+}
+
 // เด้งคะแนน +N ลอยขึ้น (+ คอนเฟตติเมื่อคอมโบ/perfect)
 function tfScorePop(points, opts) {
   opts = opts || {};
@@ -3456,8 +3463,8 @@ function tfExcludeMasteredWords(words, minKeep) {
 
 function tfScoreFirstTry() {
   if (!session) return;
-  // ── สเปก 2026-07-03 ข้อ 2.5+3: day16 final check / คำ mastered แล้ว = ไม่ให้แต้มเกม (แต่ยังต้องนับว่า "วิเคราะห์แล้ว" กันคำหลายพยางค์ค้าง) ──
-  var noSoftPoints = session.curWordIsFinalSrsCheck || !tfSoftPointsAllowed(session.words[session.index]);
+  // ── สเปก 2026-07-03 ข้อ 2.5+3: day16 final check / known-check / คำ mastered แล้ว = ไม่ให้แต้มเกม (แต่ยังต้องนับว่า "วิเคราะห์แล้ว" กันคำหลายพยางค์ค้าง) ──
+  var noSoftPoints = tfCurWordNoTools() || !tfSoftPointsAllowed(session.words[session.index]);
   if (noSoftPoints) {
     if (tfCurWordIsMulti()) { if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true; }
     else { session.currentWordScored = true; }
@@ -3496,8 +3503,8 @@ function tfScoreFirstTry() {
 // ให้คะแนน "ผ่าน推導สำเร็จ" (เรียกตอน navigate ไปถึง step 'result')
 function tfScoreDeduce() {
   if (!session) return;
-  // ── สเปก 2026-07-03 ข้อ 2.5+3: day16 final check / คำ mastered แล้ว = ไม่ให้แต้มเกม (แต่ยังต้องนับว่า "วิเคราะห์แล้ว" กันคำหลายพยางค์ค้าง) ──
-  var noSoftPoints = session.curWordIsFinalSrsCheck || !tfSoftPointsAllowed(session.words[session.index]);
+  // ── สเปก 2026-07-03 ข้อ 2.5+3: day16 final check / known-check / คำ mastered แล้ว = ไม่ให้แต้มเกม (แต่ยังต้องนับว่า "วิเคราะห์แล้ว" กันคำหลายพยางค์ค้าง) ──
+  var noSoftPoints = tfCurWordNoTools() || !tfSoftPointsAllowed(session.words[session.index]);
   if (noSoftPoints) {
     if (tfCurWordIsMulti()) { if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true; session.curWordAllFirstTry = false; }
     else { session.currentWordScored = true; }
@@ -3718,11 +3725,26 @@ function tfLevelWordCount(level) {
 function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (!entry || !entry.word) return;
   var wasFinalCheck = !!(session && session.curWordIsFinalSrsCheck);
+  var wasKnownCheck = !!(session && session.curWordIsKnownCheck);
   // หมายเหตุ: ปุ่ม "?" (= แอบดู) ไม่มี flag แยกแล้ว (Lin 2026-07-04 แก้ให้ใช้หลักตอบผิดตรงๆ) — mistakes>0 จาก tfUseHint ครอบคลุมอยู่แล้ว
   var cleanThisRound = !!firstTry && !forced && (mistakes || 0) === 0;
 
   var rec = tfGetSrsRecord(entry.word, selectedLevel);
   if (!rec) rec = TF_SRS.blank();
+
+  // ── Lin 2026-07-04: known-check (กดปุ่ม "✓ 已記得") = พิสูจน์ 1 ครั้ง แบบ day16 ──
+  //   ตอบถูกสะอาดครั้งเดียว → ตัดคำออกถาวร (mastered) แต่ "ห้ามแจกดาวเงิน/แต้ม/bump เพดาน" (ต่างจาก mastered จริงที่ผ่านครบ 3 รอบ)
+  //   ตอบผิด/แอบดู/forced → resetOnFail กลับ day1 เข้าคิว SRS ปกติ (ไม่ตัดคำ)
+  if (wasKnownCheck) {
+    if (cleanThisRound) {
+      rec.mastered = true;   // ตัดออกจาก SRS ถาวร — ไม่เรียก advanceOnClean/addHardStars จึงไม่ได้ดาว ไม่ bump เพดาน
+    } else {
+      rec = TF_SRS.resetOnFail(rec);
+    }
+    tfSetSrsRecord(entry.word, selectedLevel, rec);
+    if (session) { session.curWordIsKnownCheck = false; session.curWordIsFinalSrsCheck = false; }
+    return;
+  }
 
   if (cleanThisRound) {
     var res = TF_SRS.advanceOnClean(rec, Date.now());
@@ -3750,6 +3772,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
 // ผลตอนเช็ก: ปิดปุ่มแอบดู + ไม่ให้แต้มเกม (soft) ไม่ว่าถูกหรือผิด — ดูจุดใช้งานที่ tfScoreFirstTry/tfScoreDeduce/stepSessionGuess
 function tfSetupSrsFlagsForCurrentWord() {
   session.curWordIsFinalSrsCheck = false;
+  session.curWordIsKnownCheck = false;   // known-check เป็นของ "เฉพาะคำที่กดปุ่ม" เท่านั้น — คำถัดไปต้องเริ่มใหม่เสมอ
   if (!session || !tfSrsLoggedIn()) return;
   var entry = session.words[session.index];
   if (!entry) return;
@@ -4191,6 +4214,8 @@ function render() {
       var _sy = S.syllables || [], _r = S.sylResults || {};
       _hideKnown = _sy.length > 0 && _sy.every(function(_, i){ return _r[i] != null; });
     }
+    // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
+    if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
       body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
     }
@@ -5227,9 +5252,9 @@ function stepSessionGuess() {
         goToResult(captureN);
       } else {
         if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // เดาผิด → ตัดสิทธิ์ first-try + คอมโบขาด
-        // ── Lin 2026-07-04: วันที่ 16 (day16 final check) = ไม่มี推導ให้เลย ผิดปุ๊บนับ fail ทันที รีเซ็ต SRS กลับ day1 ──
-        // (เดิมทุกคำ ผิด/ไม่มั่นใจ จะเข้า推導สอนทีละขั้น แต่ day16 ต้องนึกเองล้วนๆ ไม่มีเครื่องมือช่วยใดๆ)
-        if (session && session.curWordIsFinalSrsCheck) tfForceRevealZero();
+        // ── Lin 2026-07-04: วันที่ 16 (day16 final check) หรือ known-check (กด "✓ 已記得") = ไม่มี推導ให้เลย ผิดปุ๊บนับ fail ทันที รีเซ็ต SRS กลับ day1 ──
+        // (เดิมทุกคำ ผิด/ไม่มั่นใจ จะเข้า推導สอนทีละขั้น แต่ day16/known-check ต้องนึกเองล้วนๆ ไม่มีเครื่องมือช่วยใดๆ)
+        if (tfCurWordNoTools()) tfForceRevealZero();
         else showStartInflection(navigateToInflection);  // ปกติ (ไม่ใช่ day16): เข้า推導สอนเหมือนเดิม
       }
     });
@@ -5247,9 +5272,14 @@ function stepSessionGuess() {
 
   // ── Lin 2026-07-04: day16 final check = ไม่มีตัวเลือก "ไม่มั่นใจ/ท้าทาย" (推導) ให้กด — มีแต่เดาวรรณยุกต์ตรงๆ 5 ปุ่มเท่านั้น ──
   // ผิด/ไม่รู้ = ต้องเดา แล้วถ้าผิดก็ fail ทันที (ดูตัน clickAct ข้างบน) ไม่ใช่มีทางลัดไปเข้า推導 อีกทาง
-  var dontKnowHtml = session.curWordIsFinalSrsCheck
-    ? '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 16) — ห้ามใช้เครื่องมือช่วยใดๆ ต้องนึกเองล้วนๆ</div>'
-    : '<button class="sg-dontknow-btn" onclick="'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>';
+  var dontKnowHtml;
+  if (session.curWordIsKnownCheck) {
+    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✓ 記憶確認 — 答對一次即可移除這個字（不給獎勵）· ห้ามใช้เครื่องมือช่วย ต้องนึกเองครั้งเดียว</div>';
+  } else if (session.curWordIsFinalSrsCheck) {
+    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 16) — ห้ามใช้เครื่องมือช่วยใดๆ ต้องนึกเองล้วนๆ</div>';
+  } else {
+    dontKnowHtml = '<button class="sg-dontknow-btn" onclick="'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>';
+  }
 
   return '<div style="text-align:center;padding:4px 0 8px;">'+
     wordHtml+
@@ -6175,19 +6205,30 @@ var TF = {
       : pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, n);
     startSetSession(words);
   },
+  // ── Lin 2026-07-04: "✓ 已記得這個字" แบบเข้ม (กันปั๊ม) ──
+  //   เดิม: กดแล้วข้ามคำเฉยๆ (ไม่ตัดคำ ไม่ได้ดาว)
+  //   ใหม่: กดแล้ว "ไม่ตัดคำทันที" → เข้าโหมดพิสูจน์คำนี้ 1 ครั้ง แบบ day16 (ไม่มี推導 ไม่มีใบ้ ตอบครั้งเดียว)
+  //     ถูกสะอาด → ตัดคำออกถาวร (mastered) แต่ "ไม่แจกดาว/แต้ม/bump เพดาน" (ดู tfProcessSrsOnWordCommit)
+  //     ผิด → resetOnFail กลับ day1 เข้าคิว SRS ปกติ แล้วไปคำถัดไป
   markKnown: function() {
     if (!session) return;
-    session.hadSkip = true;            // ข้ามคำ → รอบนี้ไม่นับ perfect
-    session.index++;
-    tfResetWordScoring();
+    session.hadSkip = true;                     // มีการ "อ้างว่ารู้แล้ว" ในรอบนี้ → ไม่นับ perfect (กันได้ perfect ฟรีจากการข้าม)
+    tfResetWordScoring();                        // ล้างคะแนน/สถานะคำนี้ให้เริ่มพิสูจน์ใหม่หมด
     session.initialGuess = undefined;
     session.finalAnswer = undefined;
-    session.currentWordGolden = false;
-    if (session.index >= session.words.length) {
-      tfGoToSummary();
+    session.currentWordGolden = false;           // ปิดคำทอง — โหมดพิสูจน์ไม่มีแต้ม/ตัวคูณอยู่แล้ว
+    session.curWordIsKnownCheck = true;          // ⚑ เข้าโหมดพิสูจน์ (ไม่มี推導/ใบ้/แต้ม ผิดปุ๊บ fail — ผ่าน tfCurWordNoTools)
+    // ตั้งจอคำ "เดิม" (ไม่ index++) ให้ทายใหม่ — ห้ามเรียก tfSetupSrsFlagsForCurrentWord (จะล้าง flag known ทิ้ง)
+    var nx = session.words[session.index];
+    randomEntry = nx;
+    var w = nx.word;
+    if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
+      S = { word: w, step: 'overview', path: [w], tone: null, syllables: nx.readingTH.split('-'), selectedSyl: null };
     } else {
-      tfSetupNextWord();
+      S = { word: w, step: 'session-guess', path: [w], tone: null };
     }
+    hist.push(S); histPos++;
+    render();
   },
   openAdvanced: function() {
     S = { word:'', step:'advanced', path:[], tone:null };
