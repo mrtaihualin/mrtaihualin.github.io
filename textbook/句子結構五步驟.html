@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語句子結構 — 五步驟學習法</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-zh-sans);
+    font-size: 18px;
+    line-height: 1.85;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--paper);
+    border-bottom: 2px solid var(--border2);
+    padding: 64px 28px 52px;
+    text-align: center;
+    position: relative;
+  }
+  .hero-leaf {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .hero-leaf::before,
+  .hero-leaf::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.07;
+    background: var(--step);
+  }
+  .hero-leaf::before { width: 320px; height: 320px; top: -80px; left: -60px; }
+  .hero-leaf::after  { width: 240px; height: 240px; bottom: -60px; right: -40px; }
+
+  .hero-tag {
+    display: inline-block;
+    background: var(--step-pale);
+    color: var(--step);
+    border: 1px solid var(--step-pale);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    padding: 4px 14px;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: var(--font-zh-serif);
+    font-size: clamp(28px, 5.5vw, 50px);
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.25;
+    margin-bottom: 14px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--step);
+    border-bottom: 3px solid #c8b882;
+  }
+  .hero-desc {
+    font-size: 17px;
+    color: var(--ink-mid);
+    max-width: 520px;
+    margin: 0 auto 32px;
+    line-height: 1.75;
+  }
+
+  /* Step nav pills */
+  .step-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  .step-nav a {
+    text-decoration: none;
+    padding: 7px 18px;
+    border-radius: 22px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1.5px solid var(--step);
+    color: var(--step);
+    background: var(--step-pale);
+    transition: all 0.15s;
+  }
+  .step-nav a:hover { filter: brightness(0.94); }
+
+  /* 跨頁導覽連結 */
+  .page-link-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+  .page-link {
+    text-decoration: none;
+    padding: 6px 18px;
+    border-radius: 22px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1.5px dashed var(--ink-light);
+    color: var(--ink-mid);
+    background: var(--paper2);
+    transition: all 0.15s;
+  }
+  .page-link:hover { filter: brightness(0.96); }
+
+  /* ── LEGEND ── */
+  .legend-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .legend-box {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 14px 0;
+  }
+  .legend-title {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .legend-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .legend-note {
+    font-size: 13px;
+    color: var(--ink-light);
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+
+  /* ── TAGS ── */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 11px;
+    border-radius: 5px;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .t-sub, .t-v, .t-obj { background: var(--step-pale); color: var(--step); border: 1px solid var(--step); }
+  .t-aux  { background: var(--c-aux-pale); color: var(--c-aux); border: 1px solid var(--c-aux); }
+  .t-mod, .t-adv, .t-time { background: var(--c-ext-pale); color: var(--c-ext); border: 1px solid var(--c-ext); }
+
+  /* ── ROMANIZATION / 分音節 / 字體 TOGGLES ── */
+  .roman-toggle-row {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .roman-switch {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 14px;
+    color: var(--ink-mid);
+    cursor: pointer;
+  }
+  .roman-switch input {
+    width: 18px; height: 18px;
+    cursor: pointer;
+    accent-color: var(--step);
+  }
+  .roman {
+    display: none;
+    font-size: 0.78em;
+    color: var(--ink-light);
+    font-style: italic;
+    letter-spacing: 0.01em;
+  }
+  body.show-roman .roman { display: block; }
+  body.show-roman .conn-ex-list .roman,
+  body.show-roman .td-ex .roman { display: block; margin: 1px 0; }
+
+  /* 切換為現代字體（無圈頭、較難閱讀） */
+  body.modern-font .ex-th,
+  body.modern-font .sent-th,
+  body.modern-font .hl-obj,
+  body.modern-font .hl-aux,
+  body.modern-font .hl,
+  body.modern-font .td-kw,
+  body.modern-font .conn-kw,
+  body.modern-font .tip-card code,
+  body.modern-font .tip-card .wrong {
+    font-family: var(--font-thai-modern);
+  }
+
+  /* 切換為泰國人手寫字體（無圈頭、好辨識的手寫風格） */
+  body.handwriting-font .ex-th,
+  body.handwriting-font .sent-th,
+  body.handwriting-font .hl-obj,
+  body.handwriting-font .hl-aux,
+  body.handwriting-font .hl,
+  body.handwriting-font .td-kw,
+  body.handwriting-font .conn-kw,
+  body.handwriting-font .tip-card code,
+  body.handwriting-font .tip-card .wrong {
+    font-family: var(--font-thai-hand);
+    font-weight: 700;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+
+  /* ── STEP BLOCK ── */
+  .step-block {
+    scroll-margin-top: 24px;
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    margin-bottom: 16px;
+  }
+  .step-num {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; flex-shrink: 0;
+    border: 2px solid var(--step);
+    background: var(--step-pale);
+    color: var(--step);
+  }
+
+  .step-title-wrap { flex: 1; }
+  .step-eyebrow { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-light); font-weight: 600; }
+  .step-title {
+    font-family: var(--font-zh-serif);
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+
+  /* card */
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 14px;
+  }
+  .card:last-child { margin-bottom: 0; }
+
+  /* formula */
+  .formula {
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .f-plus { color: var(--ink-light); font-size: 14px; font-weight: 400; }
+  .f-bracket { color: var(--ink-light); font-size: 16px; }
+
+  /* note / warn */
+  .note {
+    border-left: 3px solid #c8b882;
+    background: var(--amber-pale);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    font-size: 15px;
+    color: var(--ink-mid);
+    margin-top: 12px;
+    line-height: 1.75;
+  }
+  .note strong { color: var(--amber); }
+
+  .warn {
+    border-left: 3px solid var(--c-aux);
+    background: var(--c-aux-pale);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    font-size: 15px;
+    color: var(--c-aux);
+    margin-top: 12px;
+    line-height: 1.75;
+  }
+  .warn strong { color: var(--c-aux); }
+
+  /* example list */
+  .ex-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .ex-list li {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 11px 16px;
+    background: var(--bg2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    align-items: center;
+  }
+  .ex-th { font-size: 18px; color: var(--step); font-weight: 600; }
+  .ex-zh { font-size: 15px; color: var(--ink-mid); }
+  .ex-tagline { font-size: 12.5px; color: var(--ink-light); margin-top: 2px; }
+
+  /* big sentence demo */
+  .sent-demo {
+    background: var(--paper2);
+    border: 1.5px solid var(--border2);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-top: 14px;
+  }
+  .sent-demo-label {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .sent-th {
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--step);
+    margin-bottom: 4px;
+    letter-spacing: 0.01em;
+    line-height: 1.5;
+  }
+  .sent-zh {
+    font-size: 15px;
+    color: var(--ink-mid);
+    margin-bottom: 14px;
+  }
+  .sent-demo .roman { margin-bottom: 8px; }
+  .sent-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  /* modifier table */
+  .mod-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    margin-top: 14px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .mod-table th {
+    background: var(--bg2);
+    color: var(--ink-light);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .mod-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    background: var(--paper);
+  }
+  .mod-table tr:last-child td { border-bottom: none; }
+  .td-method { color: var(--step); font-weight: 700; font-size: 16px; }
+  .td-kw { color: var(--step); font-weight: 700; font-size: 16px; }
+  .td-mean { color: var(--amber); font-size: 14.5px; }
+  .td-ex .ex-item { margin-bottom: 10px; }
+  .td-ex .ex-item:last-child { margin-bottom: 0; }
+  .td-ex .ex-th { font-size: 16px; display: block; }
+  .td-ex .ex-zh { font-size: 13.5px; color: var(--ink-mid); display: block; }
+  .td-ex .hl { color: var(--c-aux); font-weight: 700; }
+
+  /* connector grid */
+  .conn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .conn-card {
+    background: var(--paper2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .conn-kw { font-size: 22px; font-weight: 700; color: var(--step); margin-bottom: 3px; }
+  .conn-mean { font-size: 13px; color: var(--amber); font-weight: 600; margin-bottom: 8px; }
+  .conn-ex-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .conn-ex-list .ex-th { font-size: 16px; display: block; }
+  .conn-ex-list .ex-zh { font-size: 13.5px; color: var(--ink-mid); display: block; }
+
+  /* ── TIPS SECTION ── */
+  .tips-wrap {
+    background: var(--paper);
+    border-top: 2px solid var(--border2);
+    padding: 52px 24px 60px;
+  }
+  .tips-inner { max-width: 800px; margin: 0 auto; }
+  .tips-heading {
+    font-family: var(--font-zh-serif);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--step);
+    margin-bottom: 4px;
+  }
+  .tips-sub { font-size: 15px; color: var(--ink-light); margin-bottom: 28px; }
+  .tips-grid {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .tip-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px 24px;
+    position: relative;
+    overflow: hidden;
+    max-width: 420px;
+  }
+  .tip-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--step);
+    opacity: 0.5;
+  }
+  .tip-card h3 { font-size: 16px; font-weight: 700; color: var(--step); margin-bottom: 8px; }
+  .tip-card p { font-size: 15px; color: var(--ink-mid); line-height: 1.75; }
+  .tip-card code {
+    display: inline-block;
+    background: var(--paper);
+    color: var(--step);
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    font-family: var(--font-zh-sans);
+    margin: 1px 0;
+  }
+  .tip-card .wrong { color: var(--c-aux); }
+  .tip-card .right { color: var(--step); }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 14px;
+    color: var(--ink-light);
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+  }
+
+  /* ── DIVIDER ── */
+  .hr { height: 1px; background: var(--border); margin: 4px 0 0; }
+
+  /* ── HIGHLIGHT SPECIAL PARTICLE ── */
+  .hl-aux  { color: var(--c-aux); font-weight: 700; }
+  .hl-obj  { color: var(--step); font-weight: 700; }
+
+  @media (max-width: 580px) {
+    body { font-size: 17px; }
+    .ex-list li { grid-template-columns: 1fr; gap: 2px; }
+    .conn-grid { grid-template-columns: 1fr; }
+    .card { padding: 18px 16px; }
+    .sent-th { font-size: 18px; }
+    .ex-th { font-size: 17px; }
+  }
+
+  /* ── 列印 / 另存為 PDF 用的版面 ── */
+  /* 舊版「只印 print-area」機制已停用，改用 theme.css 的整頁列印系統 */
+  .print-area { display: none !important; }
+
+  @media (max-width: 580px) {
+    .fab-note { right: 16px; bottom: 16px; width: 50px; height: 50px; font-size: 20px; }
+    .note-modal { padding: 22px 18px; max-height: 90vh; }
+  }
+
+  /* 放大字級 */
+  body.big-font { font-size: 22px !important; }
+  body.big-font .ex-th,
+  body.big-font .td-ex .ex-th,
+  body.big-font .conn-ex-list .ex-th,
+  body.big-font .conn-kw,
+  body.big-font .td-kw,
+  body.big-font .sent-th,
+  body.big-font .hl,
+  body.big-font .hl-obj,
+  body.big-font .hl-aux { font-size: 32px !important; }
+  body.big-font .ex-zh,
+  body.big-font .td-ex .ex-zh,
+  body.big-font .conn-ex-list .ex-zh,
+  body.big-font .conn-mean { font-size: 22px !important; }
+</style>
+<link rel="stylesheet" href="nav-ui.css">
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-leaf"></div>
+  <div class="page-link-row">
+    <a class="page-link" href="拼音規則總整理.html">← 上一頁：拼音規則總整理</a>
+  </div>
+  <div class="hero-tag">泰語學習 · 台灣學習者</div>
+  <h1>泰語<em>句子結構</em>五步驟</h1>
+  <p class="hero-desc">從最簡單的主詞＋動詞＋受詞，一步一步擴充成含有時間、地點、修飾語的完整句子。</p>
+  <nav class="step-nav">
+    <a href="#s1">第一步　基本結構</a>
+    <a href="#s2">第二步　助動詞</a>
+    <a href="#s3">第三步　修飾語</a>
+    <a href="#s4">第四步　副詞</a>
+    <a href="#s5">第五步　時間</a>
+  </nav>
+</header>
+
+<!-- LEGEND -->
+<div class="legend-wrap">
+  <div class="legend-box">
+    <div class="legend-title">顏色說明</div>
+    <div class="legend-tags">
+      <span class="tag t-sub">主語（主詞）</span>
+      <span class="tag t-v">動詞</span>
+      <span class="tag t-obj">受詞（賓語）</span>
+      <span class="tag t-aux">助動詞</span>
+      <span class="tag t-mod">修飾語</span>
+      <span class="tag t-adv">副詞</span>
+      <span class="tag t-time">時間</span>
+    </div>
+    <div class="legend-note">主語、動詞、受詞是句子核心成分，共用同一個顏色；助動詞另外標示一個顏色；修飾語、副詞、時間是附加資訊，共用第三個顏色。</div>
+    <div class="roman-toggle-row">
+      <label class="roman-switch">
+        <input type="checkbox" onchange="document.body.classList.toggle('show-roman', this.checked)">
+        <span>顯示英文拼音</span>
+      </label>
+      <label class="roman-switch">
+        <input type="checkbox" onchange="toggleSyllableSpacing(this.checked)">
+        <span>泰文分詞／分音節</span>
+      </label>
+      <label class="roman-switch">
+        <input type="checkbox" onchange="document.body.classList.toggle('modern-font', this.checked)">
+        <span>切換現代字體（較難辨識）</span>
+      </label>
+      <label class="roman-switch">
+        <input type="checkbox" id="bigFontToggle" onchange="document.body.classList.toggle('big-font',this.checked);try{localStorage.setItem('cui-big-font',this.checked?'1':'0')}catch(e){}">
+        <span>放大字級</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ══════════════ STEP 1 ══════════════ -->
+<section id="s1" class="step-block">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <div class="step-title-wrap">
+      <div class="step-eyebrow">Step 01</div>
+      <div class="step-title">基本句子結構</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="formula">
+      <span class="tag t-sub">主語</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-v">動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-obj">受詞</span>
+    </div>
+    <div class="warn">
+      <strong>⚠ 重要：</strong>受詞放在動詞後面，和中文語序相同。
+    </div>
+    <ul class="ex-list">
+      <li>
+        <div>
+          <span class="ex-th">เรากินข้าว</span>
+          <span class="roman">rao gin khâao</span>
+        </div>
+        <span class="ex-zh">我吃飯</span>
+      </li>
+      <li>
+        <div>
+          <span class="ex-th">เขาดูหนัง</span>
+          <span class="roman">khǎo duu nǎng</span>
+        </div>
+        <span class="ex-zh">他看電影</span>
+      </li>
+      <li>
+        <div>
+          <span class="ex-th">แม่ซื้อของ</span>
+          <span class="roman">mâe súue khǒong</span>
+        </div>
+        <span class="ex-zh">媽媽買東西</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ STEP 2 ══════════════ -->
+<section id="s2" class="step-block">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <div class="step-title-wrap">
+      <div class="step-eyebrow">Step 02</div>
+      <div class="step-title">加入助動詞</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="formula">
+      <span class="tag t-sub">主語</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-aux">助動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-v">動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-obj">受詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-aux">助動詞</span>
+    </div>
+    <div class="note">
+      <strong>助動詞</strong>表達意願、否定、能力、進行等語意，可以放在動詞前面或後面。在泰語的完整句子裡，幾乎都會出現至少一個助動詞，這是泰語的文法特色。
+    </div>
+    <ul class="ex-list" style="margin-top:16px;">
+      <li>
+        <div>
+          <span class="ex-th">เรา<span class="hl-aux">จะ</span>กินข้าว</span>
+          <span class="roman">rao jà gin khâao</span>
+        </div>
+        <span class="ex-zh">我「要」吃飯</span>
+      </li>
+      <li>
+        <div>
+          <span class="ex-th">เรา<span class="hl-aux">ชอบ</span>กินข้าว</span>
+          <span class="roman">rao chôop gin khâao</span>
+        </div>
+        <span class="ex-zh">我「喜歡」吃飯</span>
+      </li>
+      <li>
+        <div>
+          <span class="ex-th">เรา<span class="hl-aux">ต้อง</span>กินข้าว</span>
+          <span class="roman">rao tông gin khâao</span>
+        </div>
+        <span class="ex-zh">我「必須」吃飯</span>
+      </li>
+    </ul>
+
+    <div class="hr" style="margin-top:20px; margin-bottom:16px;"></div>
+
+    <div style="font-weight:600; font-size:16px; color:var(--ink); margin-bottom:8px;">
+      正在進行：กำลัง 與 อยู่
+    </div>
+    <div class="note">
+      <strong>กำลัง</strong> 和 <strong>อยู่</strong> 都表示「正在」進行中。兩個可以只用一個，也可以兩個一起用（語氣更強調）。
+    </div>
+
+    <ul class="ex-list" style="margin-top:14px;">
+      <li>
+        <div>
+          <span class="ex-th">เรา<span class="hl-aux">กำลัง</span>กินข้าว</span>
+          <span class="roman">rao gam-lang gin khâao</span>
+        </div>
+        <span class="ex-zh">我正在吃飯</span>
+      </li>
+      <li>
+        <div>
+          <span class="ex-th">เรากินข้าว<span class="hl-aux">อยู่</span></span>
+          <span class="roman">rao gin khâao yùu</span>
+        </div>
+        <span class="ex-zh">我正在吃飯</span>
+      </li>
+      <li>
+        <div>
+          <span class="ex-th">เรา<span class="hl-aux">กำลัง</span>กินข้าว<span class="hl-aux">อยู่</span></span>
+          <span class="roman">rao gam-lang gin khâao yùu</span>
+        </div>
+        <span class="ex-zh">我正在吃飯</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ STEP 3 ══════════════ -->
+<section id="s3" class="step-block">
+  <div class="step-header">
+    <div class="step-num">3</div>
+    <div class="step-title-wrap">
+      <div class="step-eyebrow">Step 03</div>
+      <div class="step-title">加入修飾語</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="formula">
+      <span class="f-bracket">『</span>
+      <span class="tag t-sub">主語</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-mod">修飾</span>
+      <span class="f-bracket">』</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-aux">助動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-v">動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="f-bracket">『</span>
+      <span class="tag t-obj">受詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-mod">修飾</span>
+      <span class="f-bracket">』</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-aux">助動詞</span>
+    </div>
+    <div class="warn">
+      <strong>⚠ 注意：</strong>修飾語放在名詞<u>後面</u>，和中文順序相反。
+    </div>
+
+    <div style="margin-top:18px; font-weight:600; font-size:16px; color:var(--ink); margin-bottom:2px;">修飾名詞的三種方式</div>
+    <table class="mod-table">
+      <thead>
+        <tr>
+          <th>方式</th>
+          <th>連接詞</th>
+          <th>用法</th>
+          <th>範例</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-method">① 直接接</td>
+          <td class="td-kw">—</td>
+          <td class="td-mean">形容詞直接放在名詞後面</td>
+          <td class="td-ex">
+            <div class="ex-item">
+              <span class="ex-th">เสื้อ<span class="hl">สีขาว</span></span>
+              <span class="roman">sûea sǐi-khǎao</span>
+              <span class="ex-zh">白色的衣服</span>
+            </div>
+            <div class="ex-item">
+              <span class="ex-th">ข้าว<span class="hl">อร่อยมาก</span></span>
+              <span class="roman">khâao a-ròi mâak</span>
+              <span class="ex-zh">很好吃的飯</span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="td-method">② ของ</td>
+          <td class="td-kw">ของ</td>
+          <td class="td-mean">描述「誰」的</td>
+          <td class="td-ex">
+            <div class="ex-item">
+              <span class="ex-th">พ่อ<span class="hl">ของ</span>เรา</span>
+              <span class="roman">phôo khǒong rao</span>
+              <span class="ex-zh">我的爸爸（人）</span>
+            </div>
+            <div class="ex-item">
+              <span class="ex-th">รถ<span class="hl">ของ</span>พ่อ</span>
+              <span class="roman">rót khǒong phôo</span>
+              <span class="ex-zh">爸爸的車（物品）</span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="td-method">③ ที่</td>
+          <td class="td-kw">ที่</td>
+          <td class="td-mean">描述特徵或來源，類似關係子句</td>
+          <td class="td-ex">
+            <div class="ex-item">
+              <span class="ex-th">ข้าว<span class="hl">ที่</span>อร่อยมาก</span>
+              <span class="roman">khâao thîi a-ròi mâak</span>
+              <span class="ex-zh">很好吃的飯</span>
+            </div>
+            <div class="ex-item">
+              <span class="ex-th">ข้าว<span class="hl">ที่</span>ซื้อมาวันนี้</span>
+              <span class="roman">khâao thîi súue maa wan-níi</span>
+              <span class="ex-zh">今天買來的飯</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="sent-demo" style="margin-top:14px;">
+      <div class="sent-demo-label">基本範例</div>
+      <div class="sent-th">พ่อของเรากำลังกินข้าวอยู่</div>
+      <div class="roman">phôo khǒong rao gam-lang gin khâao yùu</div>
+      <div class="sent-zh">我的爸爸正在吃飯</div>
+      <div class="sent-tags">
+        <span class="tag t-sub">พ่อ</span>
+        <span class="tag t-mod">ของเรา</span>
+        <span class="tag t-aux">กำลัง</span>
+        <span class="tag t-v">กิน</span>
+        <span class="tag t-obj">ข้าว</span>
+        <span class="tag t-aux">อยู่</span>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:12px;">
+      <strong>進階練習：</strong>我正在吃熱呼呼又好吃的飯<br>
+      <span class="hl-obj">เรากำลังกินข้าวร้อน ๆ ที่อร่อยอยู่</span>
+      <span class="roman">rao gam-lang gin khâao róon róon thîi a-ròi yùu</span>
+      <span style="font-size:13.5px; color:var(--ink-light); display:block; margin-top:4px;">兩個修飾語都疊加在「ข้าว」後面：先直接接「ร้อน ๆ」，再用「ที่อร่อย」。</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ STEP 4 ══════════════ -->
+<section id="s4" class="step-block">
+  <div class="step-header">
+    <div class="step-num">4</div>
+    <div class="step-title-wrap">
+      <div class="step-eyebrow">Step 04</div>
+      <div class="step-title">加入副詞</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="formula">
+      <span class="f-bracket">『主語＋修飾』</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-aux">助動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-v">動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="f-bracket">『受詞＋修飾』</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-aux">助動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-adv">副詞</span>
+    </div>
+    <div class="note">
+      <strong>副詞</strong>修飾動詞，放在句子最後面。常用的有以下兩種：
+    </div>
+
+    <div class="conn-grid">
+      <div class="conn-card">
+        <div class="conn-kw">ที่ ＋ 地點</div>
+        <div class="conn-mean">表示「在」哪裡</div>
+        <ul class="conn-ex-list">
+          <li>
+            <span class="ex-th">ที่บ้าน</span>
+            <span class="roman">thîi bâan</span>
+            <span class="ex-zh">在家</span>
+          </li>
+          <li>
+            <span class="ex-th">ที่โรงเรียน</span>
+            <span class="roman">thîi roong-rian</span>
+            <span class="ex-zh">在學校</span>
+          </li>
+          <li>
+            <span class="ex-th">ที่ร้านอาหาร</span>
+            <span class="roman">thîi ráan-aa-hǎan</span>
+            <span class="ex-zh">在餐廳</span>
+          </li>
+        </ul>
+      </div>
+      <div class="conn-card">
+        <div class="conn-kw">กับ ＋ 人</div>
+        <div class="conn-mean">表示「和」誰一起</div>
+        <ul class="conn-ex-list">
+          <li>
+            <span class="ex-th">กับแม่</span>
+            <span class="roman">gàp mâe</span>
+            <span class="ex-zh">和媽媽</span>
+          </li>
+          <li>
+            <span class="ex-th">กับเพื่อน</span>
+            <span class="roman">gàp phûean</span>
+            <span class="ex-zh">和朋友</span>
+          </li>
+          <li>
+            <span class="ex-th">กับน้อง</span>
+            <span class="roman">gàp nóong</span>
+            <span class="ex-zh">和弟弟/妹妹</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sent-demo" style="margin-top:14px;">
+      <div class="sent-demo-label">範例句子</div>
+      <div class="sent-th">พ่อของเรากำลังกินข้าวอยู่ที่บ้านกับแม่</div>
+      <div class="roman">phôo khǒong rao gam-lang gin khâao yùu thîi bâan gàp mâe</div>
+      <div class="sent-zh">我的爸爸正在家裡跟媽媽吃飯</div>
+      <div class="sent-tags">
+        <span class="tag t-sub">พ่อ</span>
+        <span class="tag t-mod">ของเรา</span>
+        <span class="tag t-aux">กำลัง</span>
+        <span class="tag t-v">กิน</span>
+        <span class="tag t-obj">ข้าว</span>
+        <span class="tag t-aux">อยู่</span>
+        <span class="tag t-adv">ที่บ้าน</span>
+        <span class="tag t-adv">กับแม่</span>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:12px;">
+      <strong>✦ 副詞可以互換位置：</strong>意思不變。<br>
+      <span class="hl-obj">…อยู่ที่บ้านกับแม่</span> ＝ <span class="hl-obj">…อยู่กับแม่ที่บ้าน</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ STEP 5 ══════════════ -->
+<section id="s5" class="step-block">
+  <div class="step-header">
+    <div class="step-num">5</div>
+    <div class="step-title-wrap">
+      <div class="step-eyebrow">Step 05</div>
+      <div class="step-title">加入時間</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="formula">
+      <span class="tag t-time">時間</span>
+      <span class="f-plus">＋</span>
+      <span class="f-bracket">『主語＋修飾』</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-aux">助動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-v">動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="f-bracket">『受詞＋修飾』</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-aux">助動詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-adv">副詞</span>
+      <span class="f-plus">＋</span>
+      <span class="tag t-time">時間</span>
+    </div>
+    <div class="note">
+      <strong>時間</strong>可以放在句子最前面或最後面，兩種都正確、意思相同。
+    </div>
+
+    <div style="margin-top:18px; display:flex; flex-direction:column; gap:14px;">
+      <div>
+        <div style="font-size:12.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); font-weight:600; margin-bottom:8px;">放在句首（強調時間）</div>
+        <div class="sent-demo">
+          <div class="sent-th">ตอนนี้พ่อของเรากำลังกินข้าวอยู่ที่บ้านกับแม่</div>
+          <div class="roman">toon-níi phôo khǒong rao gam-lang gin khâao yùu thîi bâan gàp mâe</div>
+          <div class="sent-zh">現在，我的爸爸正在家裡跟媽媽吃飯</div>
+          <div class="sent-tags">
+            <span class="tag t-time">ตอนนี้</span>
+            <span class="tag t-sub">พ่อ</span>
+            <span class="tag t-mod">ของเรา</span>
+            <span class="tag t-aux">กำลัง</span>
+            <span class="tag t-v">กิน</span>
+            <span class="tag t-obj">ข้าว</span>
+            <span class="tag t-aux">อยู่</span>
+            <span class="tag t-adv">ที่บ้าน</span>
+            <span class="tag t-adv">กับแม่</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); font-weight:600; margin-bottom:8px;">放在句尾（語氣較自然）</div>
+        <div class="sent-demo" style="border-color:var(--step); background:var(--step-pale);">
+          <div class="sent-th" style="color:var(--step);">พ่อของเรากำลังกินข้าวอยู่ที่บ้านกับแม่ตอนนี้</div>
+          <div class="roman">phôo khǒong rao gam-lang gin khâao yùu thîi bâan gàp mâe toon-níi</div>
+          <div class="sent-zh">我的爸爸正在家裡跟媽媽吃飯（現在）</div>
+          <div class="sent-tags">
+            <span class="tag t-sub">พ่อ</span>
+            <span class="tag t-mod">ของเรา</span>
+            <span class="tag t-aux">กำลัง</span>
+            <span class="tag t-v">กิน</span>
+            <span class="tag t-obj">ข้าว</span>
+            <span class="tag t-aux">อยู่</span>
+            <span class="tag t-adv">ที่บ้าน</span>
+            <span class="tag t-adv">กับแม่</span>
+            <span class="tag t-time">ตอนนี้</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- TIPS -->
+<section class="tips-wrap">
+  <div class="tips-inner">
+    <div class="tips-heading">💡 台灣學習者常犯的錯誤</div>
+    <div class="tips-sub">特別注意這兩點</div>
+    <div class="tips-grid">
+      <div class="tip-card">
+        <h3>受詞不能提前</h3>
+        <p>泰語沒有像中文「把」字句的用法，受詞必須放在動詞後面。<br>
+        <code class="right">เรากินข้าว</code> ✓<br>
+        <span class="wrong">ข้าวเรากิน</span> ✗（意思會改變）</p>
+      </div>
+      <div class="tip-card">
+        <h3>先說做什麼，再說跟誰、在哪裡</h3>
+        <p>泰語的順序是「誰做什麼」在前，「跟誰、在哪裡」在後；台灣人常會說反，把「跟誰、在哪裡」放到前面。<br>
+        <code class="right">เรากินข้าวกับแม่ที่บ้าน</code> ✓<br>
+        <span class="wrong">เรากับแม่ที่บ้านกินข้าว</span> ✗（順序錯誤）</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page-link-row" style="margin:36px auto 8px;">
+  <a class="page-link" href="拼音規則總整理.html">← 上一頁：拼音規則總整理</a>
+</div>
+
+<footer>
+  泰語句子結構學習講義　·　專為台灣學習者設計
+</footer>
+
+<!-- 列印 / 另存為 PDF 用的內容（平時隱藏，只在列印時顯示） -->
+<div class="print-area" id="printArea"></div>
+
+<!-- 泰文分詞／分音節 -->
+<script>
+  (function () {
+    // 依長度由長到短排列，確保最長匹配優先（例如「มาก」優先於「มา」）
+    var THAI_DICT = [
+      'เพื่อน',
+      'กำลัง', 'อาหาร', 'อร่อย', 'เสื้อ', 'เรียน',
+      'ข้าว', 'ต้อง', 'น้อง', 'บ้าน', 'ร้าน', 'ร้อน', 'หนัง', 'ซื้อ', 'อยู่',
+      'ขาว', 'ชอบ', 'กับ', 'เรา', 'เขา', 'แม่', 'ของ', 'พ่อ', 'ที่', 'วัน', 'นี้', 'ตอน', 'มาก', 'โรง', 'กิน',
+      'รถ', 'ดู', 'จะ', 'สี', 'มา',
+      'ๆ'
+    ];
+
+    function segmentThai(text) {
+      text = text.replace(/\s+/g, '');
+      if (!text) return '';
+      var words = [];
+      var unknownBuf = '';
+      var i = 0;
+      while (i < text.length) {
+        var matched = null;
+        for (var j = 0; j < THAI_DICT.length; j++) {
+          var w = THAI_DICT[j];
+          if (text.substr(i, w.length) === w) { matched = w; break; }
+        }
+        if (matched) {
+          if (unknownBuf) { words.push(unknownBuf); unknownBuf = ''; }
+          words.push(matched);
+          i += matched.length;
+        } else {
+          unknownBuf += text[i];
+          i += 1;
+        }
+      }
+      if (unknownBuf) words.push(unknownBuf);
+      return words.join(' ');
+    }
+
+    // 遞迴處理元素的子節點：文字節點分詞，子元素保留標籤但內部文字也分詞
+    function buildSpacedHTML(el) {
+      var parts = [];
+      Array.prototype.forEach.call(el.childNodes, function (node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          var seg = segmentThai(node.textContent);
+          if (seg) parts.push(seg);
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          var clone = node.cloneNode(false);
+          clone.innerHTML = buildSpacedHTML(node);
+          parts.push(clone.outerHTML);
+        }
+      });
+      return parts.join(' ');
+    }
+
+    var SYL_SELECTOR = '.ex-th, .sent-th, .hl-obj, .tip-card code, .tip-card .wrong';
+
+    window.toggleSyllableSpacing = function (on) {
+      document.body.classList.toggle('show-syllables', on);
+      document.querySelectorAll(SYL_SELECTOR).forEach(function (el) {
+        if (el.dataset.origHtml === undefined) {
+          el.dataset.origHtml = el.innerHTML;
+        }
+        if (on) {
+          if (el.dataset.spacedHtml === undefined) {
+            el.dataset.spacedHtml = buildSpacedHTML(el);
+          }
+          el.innerHTML = el.dataset.spacedHtml;
+        } else {
+          el.innerHTML = el.dataset.origHtml;
+        }
+      });
+    };
+  })();
+</script>
+
+<script src="nav-ui.js"></script>
+<script>
+try{var v=localStorage.getItem('cui-big-font');if(v==='1'){document.body.classList.add('big-font');var el=document.getElementById('bigFontToggle');if(el)el.checked=true;}}catch(e){}
+</script>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語文法 第六頁 — 是非問句</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="nav-ui.css">
+<link rel="stylesheet" href="controls-ui.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-zh-sans);
+    font-size: 18px;
+    line-height: 1.85;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--paper);
+    border-bottom: 2px solid var(--border2);
+    padding: 52px 60px 40px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: ''; position: absolute; border-radius: 50%; opacity: 0.07; background: var(--step);
+  }
+  .hero::before { width: 320px; height: 320px; top: -80px; left: -60px; }
+  .hero::after  { width: 240px; height: 240px; bottom: -60px; right: -40px; }
+  .hero-tag {
+    display: inline-block;
+    background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+    padding: 4px 14px; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: var(--font-zh-serif);
+    font-size: clamp(22px, 4.5vw, 42px);
+    font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 10px;
+  }
+  .hero h1 em { font-style: normal; color: var(--step); border-bottom: 3px solid #c8b882; }
+  .hero-desc { font-size: 15px; color: var(--ink-mid); }
+
+  /* ── MAIN ── */
+  .main {
+    max-width: 880px; margin: 0 auto;
+    padding: 38px 22px 80px;
+    display: flex; flex-direction: column; gap: 46px;
+  }
+
+  /* ── SECTION HEADER ── */
+  .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sec-badge {
+    background: var(--step); color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; padding: 3px 10px; border-radius: 5px; white-space: nowrap;
+  }
+  .sec-title { font-family: var(--font-zh-serif); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .sec-sub { font-size: 13.5px; color: var(--ink-light); margin-top: 2px; }
+
+  /* ── GRAMMAR TABLE ── */
+  .gram-table {
+    width: 100%; border-collapse: collapse; font-size: 15px;
+    border-radius: 14px; overflow: hidden;
+    border: 1.5px solid var(--border2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .gram-table thead tr { background: var(--step); color: #fff; }
+  .gram-table th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+  .gram-table tbody tr:nth-child(odd)  { background: var(--paper); }
+  .gram-table tbody tr:nth-child(even) { background: var(--bg2); }
+  .gram-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .gram-table tbody tr:last-child td { border-bottom: none; }
+  .g-pattern { font-size: 18px; font-weight: 700; color: var(--step); line-height: 1.55; }
+  .g-mean { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 3px; }
+  .g-note-cell { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .g-ex-th {
+    font-size: 17px; color: var(--step); font-weight: 700;
+    display: block; line-height: 1.55; margin-top: 6px;
+  }
+  .g-ex-th:first-child { margin-top: 0; }
+  .g-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+
+  /* ── CALLOUTS ── */
+  .note {
+    border-left: 3px solid #c8b882; background: var(--amber-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--ink-mid); line-height: 1.75; margin-top: 14px;
+  }
+  .note strong { color: var(--amber); }
+
+  /* ── Q&A BOX ── */
+  .qa-wrap { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+  .qa-card {
+    background: var(--paper); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden;
+  }
+  .qa-q {
+    background: var(--step); color: #fff;
+    padding: 12px 18px; font-size: 17px; font-weight: 700; font-family: var(--font-zh-sans);
+  }
+  .qa-q-rom { font-size: 12px; font-style: italic; font-weight: 400; opacity: 0.85; display: none; }
+  body.show-roman .qa-q-rom { display: block; }
+  .qa-answers { display: grid; grid-template-columns: 1fr 1fr; }
+  .qa-ans {
+    padding: 13px 17px; border-top: 1px solid var(--border);
+    font-size: 15px; line-height: 1.65;
+  }
+  .qa-ans:nth-child(2) { border-left: 1px solid var(--border); }
+  .qa-kw { font-size: 19px; font-weight: 700; color: var(--step); display: block; margin-bottom: 3px; }
+  .qa-kw.red { color: var(--c-aux); }
+  .qa-rom { font-size: 12px; color: var(--ink-light); font-style: italic; display: none; }
+  body.show-roman .qa-rom { display: block; }
+  .qa-zh { font-size: 13.5px; color: var(--ink-mid); display: block; }
+
+  /* ── COMPARE BOX ── */
+  .compare-box {
+    background: var(--paper); border: 2px solid var(--step);
+    border-radius: 14px; padding: 20px 24px; margin-top: 18px;
+  }
+  .compare-box-title {
+    font-family: var(--font-zh-serif); font-size: 16px; font-weight: 700;
+    color: var(--step); margin-bottom: 12px;
+  }
+  .compare-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .compare-cell {
+    background: var(--bg2); border-radius: 10px; padding: 13px 15px; border: 1px solid var(--border);
+  }
+  .compare-kw { font-size: 20px; font-weight: 700; color: var(--step); margin-bottom: 4px; }
+  .compare-desc { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+
+  /* ── ROMAN LINE ── */
+  .roman-line { font-size: 12.5px; color: var(--ink-light); display: none; margin-top: 2px; font-style: italic; }
+  body.show-roman .roman-line { display: block; }
+
+  .hr { height: 1px; background: var(--border); }
+
+  /* ── 字體切換 ── */
+  body.modern-font .g-pattern,
+  body.modern-font .tsent,
+  body.modern-font .g-ex-th,
+  body.modern-font .qa-q,
+  body.modern-font .qa-kw {
+    font-family: var(--font-thai-modern), sans-serif;
+  }
+
+  @media (max-width: 640px) {
+    .compare-row { grid-template-columns: 1fr; }
+    .qa-answers { grid-template-columns: 1fr; }
+    .qa-ans:nth-child(2) { border-left: none; }
+    .sec-header { flex-direction: column; align-items: flex-start; }
+    .hero { padding: 40px 50px 32px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-tag">第六頁 · PAGE 6</div>
+  <h1>是非問句：<em>ไหม</em> ／ <em>หรือเปล่า</em></h1>
+  <div class="hero-desc">是嗎 · 對嗎 · 有沒有 · 要不要</div>
+</div>
+
+<div id="ctrl-anchor"></div>
+
+<main class="main">
+
+  <!-- ══ ① ไหม 一般疑問 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">① 標準問法</span>
+      <div>
+        <div class="sec-title">句子 ＋ ไหม — 嗎？</div>
+        <div class="sec-sub">最常用的是非問句；加在句尾，語調上揚；不改變語序</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr>
+        <th>結構</th><th>說明</th><th>例句</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="g-pattern">V ＋ ไหม</span>
+            <div class="g-mean">⋯嗎？</div>
+          </td>
+          <td class="g-note-cell">句尾加 ไหม，即可將陳述句變成疑問句。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เขาไปไหม" data-syl="เขา·ไป·ไหม">เขาไปไหม</span>
+            <span class="roman-line">khǎo pai mǎi</span>
+            <span class="g-ex-zh">他去嗎？</span>
+            <span class="g-ex-th tsent" data-base="อยากไปไหม" data-syl="อยาก·ไป·ไหม">อยากไปไหม</span>
+            <span class="roman-line">yàak pai mǎi</span>
+            <span class="g-ex-zh">想去嗎？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">ชอบ ＋ N ＋ ไหม</span>
+            <div class="g-mean">喜歡⋯嗎？</div>
+          </td>
+          <td class="g-note-cell">動詞直接加 ไหม，疑問結構固定。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ชอบอาหารไทยไหม" data-syl="ชอบ·อา·หาร·ไทย·ไหม">ชอบอาหารไทยไหม</span>
+            <span class="roman-line">chôp aa-hǎan thai mǎi</span>
+            <span class="g-ex-zh">喜歡泰國料理嗎？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">มี ＋ N ＋ ไหม</span>
+            <div class="g-mean">有⋯嗎？</div>
+          </td>
+          <td class="g-note-cell">มี 表示「有」，加 ไหม 詢問是否存在。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="มีเวลาไหม" data-syl="มี·เว·ลา·ไหม">มีเวลาไหม</span>
+            <span class="roman-line">mii wee-laa mǎi</span>
+            <span class="g-ex-zh">有時間嗎？</span>
+            <span class="g-ex-th tsent" data-base="ร้านนี้มีเมนูภาษาจีนไหม" data-syl="ร้าน·นี้·มี·เม·นู·ภา·ษา·จีน·ไหม">ร้านนี้มีเมนูภาษาจีนไหม</span>
+            <span class="roman-line">ráan níi mii mee-nuu phaa-sǎa jiine mǎi</span>
+            <span class="g-ex-zh">這家店有中文菜單嗎？</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Q&A -->
+    <div style="margin-top:20px">
+      <div class="sec-sub" style="font-weight:700;color:var(--ink-mid);margin-bottom:12px">回答方式</div>
+      <div class="qa-wrap">
+        <div class="qa-card">
+          <div class="qa-q tsent" data-base="อยากไปไหม" data-syl="อยาก·ไป·ไหม">
+            อยากไปไหม　<span class="qa-q-rom">yàak pai mǎi</span>
+          </div>
+          <div class="qa-answers">
+            <div class="qa-ans">
+              <span class="qa-kw tsent" data-base="อยาก" data-syl="อยาก">อยาก</span>
+              <span class="qa-rom">yàak</span>
+              <span class="qa-zh">想。（肯定）</span>
+            </div>
+            <div class="qa-ans">
+              <span class="qa-kw red tsent" data-base="ไม่อยาก" data-syl="ไม่·อยาก">ไม่อยาก</span>
+              <span class="qa-rom">mâi yàak</span>
+              <span class="qa-zh">不想。（否定）</span>
+            </div>
+          </div>
+        </div>
+        <div class="qa-card">
+          <div class="qa-q tsent" data-base="มีเวลาไหม" data-syl="มี·เว·ลา·ไหม">
+            มีเวลาไหม　<span class="qa-q-rom">mii wee-laa mǎi</span>
+          </div>
+          <div class="qa-answers">
+            <div class="qa-ans">
+              <span class="qa-kw tsent" data-base="มี" data-syl="มี">มี</span>
+              <span class="qa-rom">mii</span>
+              <span class="qa-zh">有。</span>
+            </div>
+            <div class="qa-ans">
+              <span class="qa-kw red tsent" data-base="ไม่มี" data-syl="ไม่·มี">ไม่มี</span>
+              <span class="qa-rom">mâi mii</span>
+              <span class="qa-zh">沒有。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <strong>💡 回答規則：</strong>泰文是非問句的回答，直接重複動詞（肯定）或加 ไม่（否定），不說「是／不是」。問 ชอบไหม → 答 ชอบ / ไม่ชอบ。
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ② หรือเปล่า 較軟問法 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">② 委婉問法</span>
+      <div>
+        <div class="sec-title">句子 ＋ หรือเปล่า — 有沒有⋯？</div>
+        <div class="sec-sub">語氣比 ไหม 更委婉、不確定；常用於不確定對方是否會做某事</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr>
+        <th>結構</th><th>說明</th><th>例句</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="g-pattern">V ＋ หรือเปล่า</span>
+            <div class="g-mean">有⋯嗎？（不確定）</div>
+          </td>
+          <td class="g-note-cell">語氣較 ไหม 輕柔；帶有「我不確定，所以問你」的感覺。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เขาไปหรือเปล่า" data-syl="เขา·ไป·หรือ·เปล่า">เขาไปหรือเปล่า</span>
+            <span class="roman-line">khǎo pai rǔue plào</span>
+            <span class="g-ex-zh">他有去嗎？（我不確定）</span>
+            <span class="g-ex-th tsent" data-base="หิวหรือเปล่า" data-syl="หิว·หรือ·เปล่า">หิวหรือเปล่า</span>
+            <span class="roman-line">hǐu rǔue plào</span>
+            <span class="g-ex-zh">餓了嗎？</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="compare-box">
+      <div class="compare-box-title">ไหม vs หรือเปล่า — 語氣比較</div>
+      <div class="compare-row">
+        <div class="compare-cell">
+          <div class="compare-kw">⋯ ไหม</div>
+          <div class="compare-desc">直接詢問，語氣中性<br>日常最常用</div>
+        </div>
+        <div class="compare-cell">
+          <div class="compare-kw">⋯ หรือเปล่า</div>
+          <div class="compare-desc">委婉、不確定的語氣<br>「我猜可能⋯，是嗎？」</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ③ ใช่ไหม 確認問句 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">③ 確認問句</span>
+      <div>
+        <div class="sec-title">句子 ＋ ใช่ไหม — 對嗎？／是吧？</div>
+        <div class="sec-sub">用於確認自己的理解是否正確；相當於中文的「對吧？」「是嗎？」</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr>
+        <th>結構</th><th>說明</th><th>例句</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="g-pattern">句子 ＋ ใช่ไหม</span>
+            <div class="g-mean">⋯對嗎？是嗎？</div>
+          </td>
+          <td class="g-note-cell">說話者已有假設，請對方確認。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เขาเป็นคนไทยใช่ไหม" data-syl="เขา·เป็น·คน·ไทย·ใช่·ไหม">เขาเป็นคนไทยใช่ไหม</span>
+            <span class="roman-line">khǎo pen khon thai châi mǎi</span>
+            <span class="g-ex-zh">他是泰國人，對嗎？</span>
+            <span class="g-ex-th tsent" data-base="นัดกันพรุ่งนี้ใช่ไหม" data-syl="นัด·กัน·พรุ่ง·นี้·ใช่·ไหม">นัดกันพรุ่งนี้ใช่ไหม</span>
+            <span class="roman-line">nát-gan phrûng-níi châi mǎi</span>
+            <span class="g-ex-zh">我們約好明天，對吧？</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">ใช่ ／ ไม่ใช่</span>
+            <div class="g-mean">對 ／ 不對</div>
+          </td>
+          <td class="g-note-cell">ใช่ไหม 的回答用 ใช่ / ไม่ใช่，不能只說動詞。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ใช่" data-syl="ใช่">ใช่</span>
+            <span class="roman-line">châi</span>
+            <span class="g-ex-zh">對。</span>
+            <span class="g-ex-th tsent" data-base="ไม่ใช่" data-syl="ไม่·ใช่">ไม่ใช่</span>
+            <span class="roman-line">mâi châi</span>
+            <span class="g-ex-zh">不對。／不是。</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>💡 ใช่ไหม 特別提醒：</strong>ใช่ไหม 只用來確認事實（名詞句、狀態），不用來確認動作完成。確認動作請用 V ＋ แล้วใช่ไหม（做了對嗎？）。
+    </div>
+  </section>
+
+</main>
+
+<footer>第六頁 · 泰語教材 · 是非問句</footer>
+
+<script>
+window.PAGE_NOTES = '';
+</script>
+<script src="controls-ui.js"></script>
+<script src="nav-ui.js"></script>
+</body>
+</html>

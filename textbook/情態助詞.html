@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語文法 第三頁 — 情態助詞</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="nav-ui.css">
+<link rel="stylesheet" href="controls-ui.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-zh-sans);
+    font-size: 18px;
+    line-height: 1.85;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--paper);
+    border-bottom: 2px solid var(--border2);
+    padding: 52px 60px 40px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: ''; position: absolute; border-radius: 50%; opacity: 0.07; background: var(--step);
+  }
+  .hero::before { width: 320px; height: 320px; top: -80px; left: -60px; }
+  .hero::after  { width: 240px; height: 240px; bottom: -60px; right: -40px; }
+  .hero-tag {
+    display: inline-block;
+    background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+    padding: 4px 14px; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: var(--font-zh-serif);
+    font-size: clamp(22px, 4.5vw, 42px);
+    font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 10px;
+  }
+  .hero h1 em { font-style: normal; color: var(--step); border-bottom: 3px solid #c8b882; }
+  .hero-desc {
+    font-size: 15px; color: var(--ink-mid);
+    white-space: nowrap;
+  }
+
+  /* ── MAIN ── */
+  .main {
+    max-width: 880px; margin: 0 auto;
+    padding: 38px 22px 80px;
+    display: flex; flex-direction: column; gap: 46px;
+  }
+
+  /* ── SECTION HEADER ── */
+  .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .sec-badge {
+    background: var(--step); color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; padding: 3px 10px; border-radius: 5px; white-space: nowrap;
+  }
+  .sec-title { font-family: var(--font-zh-serif); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .sec-sub { font-size: 13.5px; color: var(--ink-light); margin-top: 2px; }
+
+  /* ── GRAMMAR TABLE ── */
+  .gram-table {
+    width: 100%; border-collapse: collapse; font-size: 15px;
+    border-radius: 14px; overflow: hidden;
+    border: 1.5px solid var(--border2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .gram-table thead tr { background: var(--step); color: #fff; }
+  .gram-table th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+  .gram-table tbody tr:nth-child(odd)  { background: var(--paper); }
+  .gram-table tbody tr:nth-child(even) { background: var(--bg2); }
+  .gram-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .gram-table tbody tr:last-child td { border-bottom: none; }
+
+  .g-pattern { font-size: 18px; font-weight: 700; color: var(--step); line-height: 1.55; white-space: nowrap; }
+  .g-mean { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 3px; }
+  .g-note-cell { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+
+  /* Thai sentence elements — no explicit font-family (system Thai, same as pages 1 & 2) */
+  .tsent { }
+  .g-ex-th {
+    font-size: 17px; color: var(--step); font-weight: 700;
+    display: block; line-height: 1.55; margin-top: 6px;
+  }
+  .g-ex-th:first-child { margin-top: 0; }
+  .g-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+  .g-ex-zh:last-child { margin-bottom: 0; }
+
+  /* ── CALLOUTS ── */
+  .note {
+    border-left: 3px solid #c8b882; background: var(--amber-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--ink-mid); line-height: 1.75; margin-top: 14px;
+  }
+  .note strong { color: var(--amber); }
+  .warn {
+    border-left: 3px solid var(--c-aux); background: var(--c-aux-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--c-aux); line-height: 1.75; margin-top: 14px;
+  }
+  .warn strong { color: var(--c-aux); }
+
+  /* จะ vs ต้อง compare box */
+  .compare-box {
+    background: var(--paper); border: 2px solid var(--step);
+    border-radius: 14px; padding: 20px 24px; margin-top: 18px;
+  }
+  .compare-box-title {
+    font-family: var(--font-zh-serif); font-size: 16px; font-weight: 700;
+    color: var(--step); margin-bottom: 12px;
+  }
+  .compare-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .compare-cell {
+    background: var(--bg2); border-radius: 10px; padding: 13px 15px; border: 1px solid var(--border);
+  }
+  .compare-kw { font-size: 22px; font-weight: 700; color: var(--step); margin-bottom: 4px; }
+  .compare-kw.red { color: var(--c-aux); }
+  .compare-desc { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .compare-example {
+    font-size: 14px; color: var(--ink-mid); line-height: 1.8;
+    border-top: 1px solid var(--border); padding-top: 12px;
+  }
+  .compare-example .tsent { font-size: 16px; color: var(--step); font-weight: 700; display: block; }
+  .compare-example .tsent.red { color: var(--c-aux); }
+  .compare-example .zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+
+  /* ── FLOW ── */
+  .flow-wrap {
+    background: var(--paper); border: 1.5px solid var(--border2);
+    border-radius: 14px; padding: 24px 24px 20px;
+  }
+  .flow-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink-light); text-transform: uppercase; margin-bottom: 4px; }
+  .flow-desc { font-size: 15px; color: var(--ink-mid); margin-bottom: 18px; line-height: 1.7; }
+  .flow-steps { display: flex; flex-direction: column; gap: 8px; }
+  .flow-item { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; }
+  .flow-num {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--step); color: #fff;
+    font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 4px;
+  }
+  .flow-num.out { background: var(--c-ext); }
+  .flow-th { font-size: 19px; font-weight: 700; color: var(--step); line-height: 1.5; display: block; }
+  .flow-th.out { color: var(--c-ext); }
+  .flow-zh { font-size: 14px; color: var(--ink-mid); }
+  .flow-state { font-size: 12.5px; color: var(--ink-light); font-style: italic; }
+  .flow-arrow { text-align: center; font-size: 18px; color: var(--border2); margin: -2px 0 -2px 17px; }
+
+  /* ── PRACTICE ── */
+  .prac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .prac-card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 17px 19px; }
+  .prac-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; }
+  .prac-tag {
+    display: inline-block; background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 5px; font-size: 12.5px; font-weight: 700; padding: 2px 8px;
+  }
+  .prac-tag.aux { background: var(--c-aux-pale); color: var(--c-aux); border-color: var(--c-aux); }
+  .prac-tag.ext { background: var(--c-ext-pale); color: var(--c-ext); border-color: var(--c-ext); }
+  .prac-label { font-size: 12.5px; color: var(--ink-light); font-weight: 600; }
+  .prac-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .prac-th { font-size: 16px; color: var(--step); font-weight: 700; display: block; line-height: 1.5; }
+  .prac-th.aux { color: var(--c-aux); }
+  .prac-th.ext { color: var(--c-ext); }
+  .prac-zh { font-size: 13px; color: var(--ink-mid); display: block; }
+
+  /* ── TIME WORDS ── */
+  .time-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .time-card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 19px 21px; }
+  .time-kw { font-size: 24px; font-weight: 700; color: var(--step); margin-bottom: 2px; }
+  .time-mean { font-size: 13.5px; color: var(--amber); font-weight: 600; margin-bottom: 11px; }
+  .time-ex-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .tex-th { font-size: 15.5px; color: var(--step); font-weight: 700; display: block; line-height: 1.5; }
+  .hl-time { color: var(--amber); font-weight: 700; }
+  .tex-zh { font-size: 13px; color: var(--ink-mid); display: block; }
+
+  /* ── กับ / ที่ ── */
+  .particle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .particle-card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 20px 21px; }
+  .p-kw { font-size: 28px; font-weight: 700; color: var(--step); line-height: 1.3; }
+  .p-mean { font-size: 13.5px; color: var(--amber); font-weight: 600; }
+  .p-pattern { font-size: 13px; color: var(--ink-mid); margin: 4px 0 13px; }
+  .p-ex-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .p-ex-th { font-size: 16px; color: var(--step); font-weight: 700; display: block; line-height: 1.55; }
+  .hl-p { color: var(--c-ext); font-weight: 700; }
+  .p-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; }
+
+  .hr { height: 1px; background: var(--border); }
+
+  /* ── 字體切換（Kanit 藝術字體） ── */
+  body.modern-font .g-pattern,
+  body.modern-font .tsent,
+  body.modern-font .g-ex-th,
+  body.modern-font .flow-th,
+  body.modern-font .prac-th,
+  body.modern-font .tex-th,
+  body.modern-font .p-ex-th,
+  body.modern-font .time-kw,
+  body.modern-font .p-kw,
+  body.modern-font .compare-example .tsent {
+    font-family: var(--font-thai-modern);
+  }
+
+  footer { text-align: center; padding: 20px; font-size: 14px; color: var(--ink-light); border-top: 1px solid var(--border); background: var(--bg2); }
+
+  @media (max-width: 640px) {
+    .hero-desc { white-space: normal; }
+    .gram-table, .gram-table thead, .gram-table tbody, .gram-table th, .gram-table td, .gram-table tr { display: block; }
+    .gram-table thead tr { display: none; }
+    .gram-table td { padding: 10px 13px 4px; border-bottom: none; }
+    .gram-table tr { border-bottom: 1px solid var(--border2); padding: 8px 0; }
+    .prac-grid, .time-grid { grid-template-columns: 1fr; }
+    .particle-grid { grid-template-columns: 1fr; }
+    .compare-row { grid-template-columns: 1fr; }
+  }
+
+  /* ── 對話框（可開合） ── */
+  .dialog-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; font-size: 15px; font-weight: 700;
+    border: 1.5px solid var(--step); border-radius: 24px;
+    background: var(--paper); color: var(--step); cursor: pointer;
+    font-family: var(--font-zh-sans); transition: background 0.15s, color 0.15s;
+  }
+  .dialog-toggle:hover { background: var(--step-pale); }
+  .dialog-toggle.open { background: var(--step); color: #fff; }
+  .dialog-box { display: none; margin-top: 16px; }
+  .dialog-box.open { display: block; }
+  .dlg-line { display: flex; gap: 11px; margin-bottom: 13px; align-items: flex-start; }
+  .dlg-line.b { flex-direction: row-reverse; }
+  .dlg-who {
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px;
+  }
+  .dlg-line.a .dlg-who { background: var(--step); }
+  .dlg-line.b .dlg-who { background: var(--c-aux); }
+  .dlg-bubble { max-width: 80%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 11px 15px; }
+  .dlg-line.b .dlg-bubble { background: var(--c-aux-pale); border-color: #e2cdb8; }
+  .dlg-th { font-size: 17px; color: var(--ink); font-weight: 700; display: block; line-height: 1.6; }
+  .dlg-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-top: 3px; }
+  body.modern-font .dlg-th { font-family: var(--font-thai-modern), sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- ── HERO ── -->
+<header class="hero">
+  <div class="hero-tag">第三頁 · PAGE 3</div>
+  <h1>情態助詞：<em>想做 → 即將 → 正在 → 必須</em></h1>
+  <p class="hero-desc">七個助詞，表達從「有念頭」到「即將」到「正在」的層次，以及「必須」與「喜歡」。</p>
+</header>
+
+<!-- ── 控制列（由 controls-ui.js 注入此處） ── -->
+<div id="ctrl-anchor"></div>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <!-- ═══ SECTION 1 — 文法總表 ═══ -->
+  <section id="gram-table">
+    <div class="sec-header">
+      <span class="sec-badge">文法總表</span>
+      <div>
+        <div class="sec-title">七個助詞一次看清楚</div>
+        <div class="sec-sub">想法 → 決定 → 即將 → 正在 ／ 必須 ／ 想要得到 ／ 喜歡</div>
+      </div>
+    </div>
+
+    <table class="gram-table">
+      <thead><tr>
+        <th style="width:21%">句型</th>
+        <th style="width:19%">意思</th>
+        <th style="width:34%">例句</th>
+        <th style="width:26%">說明</th>
+      </tr></thead>
+      <tbody>
+
+        <!-- อยาก / อยากจะ -->
+        <tr>
+          <td>
+            <div class="g-pattern">อยาก ／ อยากจะ<br>+ 動詞</div>
+            <div class="g-mean">想要做⋯（有念頭）</div>
+          </td>
+          <td class="g-note-cell" style="color:var(--step);font-weight:600">想要做某事<br><span style="color:var(--ink-mid);font-weight:400">不一定會做</span></td>
+          <td>
+            <span class="tsent g-ex-th"
+              data-base="เขา<span style='color:var(--c-aux)'>อยาก</span>ไปเที่ยวญี่ปุ่น"
+              data-syl="เขา <span style='color:var(--c-aux)'>อยาก</span> ไป เที่ยว ญี่·ปุ่น"
+            >เขา<span style="color:var(--c-aux)">อยาก</span>ไปเที่ยวญี่ปุ่น</span>
+            <span class="roman-line">khǎo yàak pai thîao yîi-pùn</span>
+            <span class="g-ex-zh">他想去日本玩。</span>
+            <span class="tsent g-ex-th"
+              data-base="เรา<span style='color:var(--c-aux)'>อยาก</span>เรียนภาษาไทย"
+              data-syl="เรา <span style='color:var(--c-aux)'>อยาก</span> เรียน ภา·ษา ไทย"
+            >เรา<span style="color:var(--c-aux)">อยาก</span>เรียนภาษาไทย</span>
+            <span class="roman-line">rao yàak rian phaa-sǎa thai</span>
+            <span class="g-ex-zh">我想學泰語。</span>
+          </td>
+          <td class="g-note-cell">
+            อยาก ＝ อยากจะ，意思相同。<br><br>
+            <span style="color:var(--amber);font-weight:600">เราอยากนอน<br>＝ เราอยากจะนอน</span><br>
+            <span style="font-size:12px">我想睡覺。（完全相同）</span>
+          </td>
+        </tr>
+
+        <!-- ชอบ -->
+        <tr>
+          <td>
+            <div class="g-pattern">ชอบ + 動詞 ／ 名詞</div>
+            <div class="g-mean">喜歡做 ／ 經常做</div>
+          </td>
+          <td class="g-note-cell" style="color:var(--step);font-weight:600">喜歡、經常<br><span style="color:var(--ink-mid);font-weight:400">表達喜好或習慣</span></td>
+          <td>
+            <span class="tsent g-ex-th"
+              data-base="เรา<span style='color:var(--c-aux)'>ชอบ</span>ดูหนัง"
+              data-syl="เรา <span style='color:var(--c-aux)'>ชอบ</span> ดู หนัง"
+            >เรา<span style="color:var(--c-aux)">ชอบ</span>ดูหนัง</span>
+            <span class="roman-line">rao chôop duu nǎng</span>
+            <span class="g-ex-zh">我喜歡看電影。（＋動詞）</span>
+            <span class="tsent g-ex-th"
+              data-base="เขา<span style='color:var(--c-aux)'>ชอบ</span>มาสาย"
+              data-syl="เขา <span style='color:var(--c-aux)'>ชอบ</span> มา สาย"
+            >เขา<span style="color:var(--c-aux)">ชอบ</span>มาสาย</span>
+            <span class="roman-line">khǎo chôop maa-sǎai</span>
+            <span class="g-ex-zh">他經常遲到。（＝經常）</span>
+            <span class="tsent g-ex-th"
+              data-base="เรา<span style='color:var(--c-aux)'>ชอบ</span>แมว"
+              data-syl="เรา <span style='color:var(--c-aux)'>ชอบ</span> แมว"
+            >เรา<span style="color:var(--c-aux)">ชอบ</span>แมว</span>
+            <span class="roman-line">rao chôop maaeo</span>
+            <span class="g-ex-zh">我喜歡貓。（＋名詞）</span>
+          </td>
+          <td class="g-note-cell">
+            ชอบ + <strong>動詞</strong> ＝ 喜歡做某事，也可指「經常、總是」這樣。<br><br>
+            ชอบ + <strong>名詞</strong> ＝ 喜歡某樣東西。
+          </td>
+        </tr>
+
+        <!-- จะ -->
+        <tr>
+          <td>
+            <div class="g-pattern">จะ + 動詞</div>
+            <div class="g-mean">決定要做 ／ 未來會發生</div>
+          </td>
+          <td class="g-note-cell" style="color:var(--step);font-weight:600">①自己決定<br>②未來事件<br><span style="color:var(--ink-mid);font-weight:400">不代表「即將」</span></td>
+          <td>
+            <span class="tsent g-ex-th"
+              data-base="เรา<span style='color:var(--c-aux)'>จะ</span>ไปตลาด"
+              data-syl="เรา <span style='color:var(--c-aux)'>จะ</span> ไป ตลาด"
+            >เรา<span style="color:var(--c-aux)">จะ</span>ไปตลาด</span>
+            <span class="roman-line">rao jà pai ta-làat</span>
+            <span class="g-ex-zh">我要去市場。</span>
+            <span class="tsent g-ex-th"
+              data-base="เขา<span style='color:var(--c-aux)'>จะ</span>เปลี่ยนงาน"
+              data-syl="เขา <span style='color:var(--c-aux)'>จะ</span> เปลี่ยน งาน"
+            >เขา<span style="color:var(--c-aux)">จะ</span>เปลี่ยนงาน</span>
+            <span class="roman-line">khǎo jà plìan ngaan</span>
+            <span class="g-ex-zh">他要換工作。</span>
+            <span class="tsent g-ex-th"
+              data-base="พรุ่งนี้ฝน<span style='color:var(--c-aux)'>จะ</span>ตก"
+              data-syl="พรุ่ง·นี้ ฝน <span style='color:var(--c-aux)'>จะ</span> ตก"
+            >พรุ่งนี้ฝน<span style="color:var(--c-aux)">จะ</span>ตก</span>
+            <span class="roman-line">phrûng-níi fǒn jà tòk</span>
+            <span class="g-ex-zh">明天會下雨。（未來事件）</span>
+          </td>
+          <td class="g-note-cell">
+            จะ 是自己決定的事。<br><br>
+            <span style="color:var(--amber);font-weight:700">⚠ 常見誤解</span><br>
+            จะ 不代表「即將」！沒有時間詞時，只知道未來某時會做。<br><br>
+            「即將」→ 用 <strong style="color:var(--step)">กำลังจะ</strong>
+          </td>
+        </tr>
+
+        <!-- กำลังจะ -->
+        <tr>
+          <td>
+            <div class="g-pattern">กำลังจะ + 動詞</div>
+            <div class="g-mean">即將要做 ／ 正在準備做</div>
+          </td>
+          <td class="g-note-cell" style="color:var(--step);font-weight:600">即將、正要<br><span style="color:var(--ink-mid);font-weight:400">正在準備要做的事情</span></td>
+          <td>
+            <span class="tsent g-ex-th"
+              data-base="เรา<span style='color:var(--c-aux)'>กำลังจะ</span>ออกจากบ้าน"
+              data-syl="เรา <span style='color:var(--c-aux)'>กำ·ลัง·จะ</span> ออก จาก บ้าน"
+            >เรา<span style="color:var(--c-aux)">กำลังจะ</span>ออกจากบ้าน</span>
+            <span class="roman-line">rao gam-lang jà òok jàak bâan</span>
+            <span class="g-ex-zh">我正要出門。</span>
+            <span class="tsent g-ex-th"
+              data-base="เรา<span style='color:var(--c-aux)'>กำลังจะ</span>กลับบ้าน"
+              data-syl="เรา <span style='color:var(--c-aux)'>กำ·ลัง·จะ</span> กลับ บ้าน"
+            >เรา<span style="color:var(--c-aux)">กำลังจะ</span>กลับบ้าน</span>
+            <span class="roman-line">rao gam-lang jà glàp bâan</span>
+            <span class="g-ex-zh">我正要回家。</span>
+          </td>
+          <td class="g-note-cell">正在準備要做的事情。正在預備的動作。</td>
+        </tr>
+
+        <!-- กำลัง...อยู่ -->
+        <tr>
+          <td>
+            <div class="g-pattern">กำลัง + 動詞 + อยู่</div>
+            <div class="g-mean">正在做⋯（進行式）</div>
+          </td>
+          <td class="g-note-cell" style="color:var(--step);font-weight:600">正在進行<br><span style="color:var(--ink-mid);font-weight:400">此刻動作持續中</span></td>
+          <td>
+            <span class="tsent g-ex-th p3-prog"
+              data-base="เขา<span style='color:var(--c-aux)'>กำลัง</span>ทำงาน<span style='color:var(--c-aux)'>อยู่</span>"
+              data-syl="เขา <span style='color:var(--c-aux)'>กำ·ลัง</span> ทำ·งาน <span style='color:var(--c-aux)'>อยู่</span>"
+            >เขา<span style="color:var(--c-aux)">กำลัง</span>ทำงาน<span style="color:var(--c-aux)">อยู่</span></span>
+            <span class="roman-line">khǎo gam-lang tham-ngaan yùu</span>
+            <span class="g-ex-zh">他正在工作。</span>
+            <span class="tsent g-ex-th p3-prog"
+              data-base="หมา<span style='color:var(--c-aux)'>กำลัง</span>นอน<span style='color:var(--c-aux)'>อยู่</span>"
+              data-syl="หมา <span style='color:var(--c-aux)'>กำ·ลัง</span> นอน <span style='color:var(--c-aux)'>อยู่</span>"
+            >หมา<span style="color:var(--c-aux)">กำลัง</span>นอน<span style="color:var(--c-aux)">อยู่</span></span>
+            <span class="roman-line">mǎa gam-lang noon yùu</span>
+            <span class="g-ex-zh">狗正在睡覺。</span>
+          </td>
+          <td class="g-note-cell">
+            กำลัง 和 อยู่ 可分開用。<br>
+            口語更常只用 <strong style="color:var(--step)">อยู่</strong>：<br>
+            <span style="color:var(--step)">ทำงานอยู่</span> ＝ 正在工作。<br><br>
+            กำลัง 也可以單獨使用（省略 อยู่）。
+          </td>
+        </tr>
+
+        <!-- ต้อง -->
+        <tr>
+          <td>
+            <div class="g-pattern">ต้อง + 動詞</div>
+            <div class="g-mean">必須要做⋯</div>
+          </td>
+          <td class="g-note-cell" style="color:var(--step);font-weight:600">必須、得要<br><span style="color:var(--ink-mid);font-weight:400">非自己能決定的事</span></td>
+          <td>
+            <span class="tsent g-ex-th"
+              data-base="เขา<span style='color:var(--c-aux)'>ต้อง</span>ไปโรงพยาบาล"
+              data-syl="เขา <span style='color:var(--c-aux)'>ต้อง</span> ไป โรง·พยา·บาล"
+            >เขา<span style="color:var(--c-aux)">ต้อง</span>ไปโรงพยาบาล</span>
+            <span class="roman-line">khǎo tông pai roong-pha-yaa-baan</span>
+            <span class="g-ex-zh">他必須去醫院。</span>
+            <span class="tsent g-ex-th"
+              data-base="เรา<span style='color:var(--c-aux)'>ต้อง</span>ตื่นเช้า"
+              data-syl="เรา <span style='color:var(--c-aux)'>ต้อง</span> ตื่น เช้า"
+            >เรา<span style="color:var(--c-aux)">ต้อง</span>ตื่นเช้า</span>
+            <span class="roman-line">rao tông tùen cháao</span>
+            <span class="g-ex-zh">我必須早起。</span>
+          </td>
+          <td class="g-note-cell">
+            因規定、約定或健康，不得不做。<br><br>
+            ≠ จะ（自己決定）<br>
+            ต้อง ＝ 外部原因<br><br>
+            <span style="color:var(--amber);font-weight:600">延伸：推斷用法</span><br>
+            ต้อง 也可以表示「一定是⋯」（推斷）。<br>
+            <span style="color:var(--step)">เขาต้องอยู่บ้าน</span><br>
+            <span style="font-size:12px">他一定在家。</span>
+          </td>
+        </tr>
+
+        <!-- อยากได้ -->
+        <tr>
+          <td>
+            <div class="g-pattern">อยากได้ + 名詞</div>
+            <div class="g-mean">想要得到某樣東西</div>
+          </td>
+          <td class="g-note-cell" style="color:var(--step);font-weight:600">想要（物品）<br><span style="color:var(--ink-mid);font-weight:400">不限取得方式</span></td>
+          <td>
+            <span class="tsent g-ex-th"
+              data-base="เรา<span style='color:var(--c-aux)'>อยากได้</span>โทรศัพท์ใหม่"
+              data-syl="เรา <span style='color:var(--c-aux)'>อยาก·ได้</span> โทร·ศัพท์ ใหม่"
+            >เรา<span style="color:var(--c-aux)">อยากได้</span>โทรศัพท์ใหม่</span>
+            <span class="roman-line">rao yàak dâai too-ra-sàp mài</span>
+            <span class="g-ex-zh">我想要新手機。</span>
+            <span class="tsent g-ex-th"
+              data-base="เขา<span style='color:var(--c-aux)'>อยากได้</span>เงิน"
+              data-syl="เขา <span style='color:var(--c-aux)'>อยาก·ได้</span> เงิน"
+            >เขา<span style="color:var(--c-aux)">อยากได้</span>เงิน</span>
+            <span class="roman-line">khǎo yàak dâai ngoen</span>
+            <span class="g-ex-zh">他想要錢。</span>
+          </td>
+          <td class="g-note-cell">後面接「名詞」，不是動詞。<br><br>อยากจะ + <strong>動詞</strong><br>อยากได้ + <strong>名詞</strong></td>
+        </tr>
+
+      </tbody>
+    </table>
+
+    <!-- จะ vs ต้อง -->
+    <div class="compare-box">
+      <div class="compare-box-title">⚡ จะ vs ต้อง — 中文都說「我要」，泰文要選哪個？</div>
+      <div class="compare-row">
+        <div class="compare-cell">
+          <div class="compare-kw">จะ</div>
+          <div class="compare-desc">自己選擇、決定要做的事。沒有人強迫你。</div>
+        </div>
+        <div class="compare-cell">
+          <div class="compare-kw red">ต้อง</div>
+          <div class="compare-desc">外部壓力、規定、義務。不做不行，不是自己決定的。</div>
+        </div>
+      </div>
+      <div class="compare-example">
+        中文都可以說「我要去市場」，但在泰文要想清楚是哪種：<br>
+        <span class="tsent"
+          data-base="เราจะไปตลาด"
+          data-syl="เรา จะ ไป ตลาด"
+        >เราจะไปตลาด</span>
+        <span class="roman-line">rao jà pai ta-làat</span>
+        <span class="zh">我（自己決定）要去市場。</span>
+        <span class="tsent red"
+          data-base="เราต้องไปตลาด"
+          data-syl="เรา ต้อง ไป ตลาด"
+        >เราต้องไปตลาด</span>
+        <span class="roman-line">rao tông pai ta-làat</span>
+        <span class="zh">我（因為某原因）必須去市場。</span>
+      </div>
+    </div>
+
+    <!-- ── 補充說明（內嵌）：จะ 的誤解 ── -->
+    <div class="note" style="margin-top:14px">
+      <strong>จะ 最常見誤解：「จะ ＝ 即將」？</strong><br>
+      中文學生常把 จะ 譯成「馬上就要做」，但 จะ 只表示「未來某時會做」，不知道是幾分鐘後還是幾年後。<br>
+      真正的「即將、馬上」→ 要用 <span style="color:var(--step);font-weight:700">กำลังจะ</span> 或加上 <span style="color:var(--amber);font-weight:700">เดี๋ยว</span>（待會兒）。
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ═══ SECTION 2 — 概念流程 ═══ -->
+  <section id="concept-flow">
+    <div class="sec-header">
+      <span class="sec-badge">概念流程</span>
+      <div>
+        <div class="sec-title">從「有念頭」到「正在跑」</div>
+        <div class="sec-sub">用「去跑步」展示各助詞的時間層次</div>
+      </div>
+    </div>
+
+    <div class="flow-wrap">
+      <div class="flow-title">情境：今天想去跑步</div>
+      <div class="flow-desc">突然覺得想運動，下面是從「念頭」到「跑完」的完整流程。</div>
+      <div class="flow-steps">
+
+        <div class="flow-item">
+          <div class="flow-num">1</div>
+          <div class="flow-body">
+            <span class="tsent flow-th" data-base="เราอยากไปวิ่ง" data-syl="เรา อยาก ไป วิ่ง">เราอยากไปวิ่ง</span>
+            <span class="roman-line">rao yàak pai wîng</span>
+            <div class="flow-zh">我想去跑步。<span class="flow-state">（有想法）</span></div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-item">
+          <div class="flow-num">2</div>
+          <div class="flow-body">
+            <span class="tsent flow-th" data-base="เราจะไปวิ่ง" data-syl="เรา จะ ไป วิ่ง">เราจะไปวิ่ง</span>
+            <span class="roman-line">rao jà pai wîng</span>
+            <div class="flow-zh">我要去跑步。<span class="flow-state">（決定了）</span></div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-item">
+          <div class="flow-num">3</div>
+          <div class="flow-body">
+            <span class="tsent flow-th" data-base="เรากำลังจะวิ่ง" data-syl="เรา กำ·ลัง·จะ วิ่ง">เรากำลังจะวิ่ง</span>
+            <span class="roman-line">rao gam-lang jà wîng</span>
+            <div class="flow-zh">我正要去跑步。<span class="flow-state">（換衣服／暖身，馬上開始）</span></div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-item">
+          <div class="flow-num">4</div>
+          <div class="flow-body">
+            <span class="tsent flow-th p3-prog" data-base="เรากำลังวิ่งอยู่" data-syl="เรา กำ·ลัง วิ่ง อยู่">เรากำลังวิ่งอยู่</span>
+            <span class="roman-line">rao gam-lang wîng yùu</span>
+            <div class="flow-zh">我正在跑步。<span class="flow-state">（此刻進行中）</span></div>
+          </div>
+        </div>
+        <div class="flow-arrow" style="color:var(--c-ext)">↕</div>
+        <div class="flow-item">
+          <div class="flow-num out">5</div>
+          <div class="flow-body">
+            <span class="tsent flow-th out" data-base="เราต้องไปวิ่ง" data-syl="เรา ต้อง ไป วิ่ง">เราต้องไปวิ่ง</span>
+            <span class="roman-line">rao tông pai wîng</span>
+            <div class="flow-zh">我必須去跑步。<span class="flow-state">（為了健康／約好了）</span></div>
+          </div>
+        </div>
+        <div class="flow-arrow" style="color:var(--c-ext)">↕</div>
+        <div class="flow-item">
+          <div class="flow-num out">6</div>
+          <div class="flow-body">
+            <span class="tsent flow-th out" data-base="เราอยากได้รองเท้าใหม่" data-syl="เรา อยาก·ได้ รอง·เท้า ใหม่">เราอยากได้รองเท้าใหม่</span>
+            <span class="roman-line">rao yàak dâai roong-táao mài</span>
+            <div class="flow-zh">我想要新鞋子。<span class="flow-state">（跑完覺得鞋舊了）</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="warn">
+      <strong>⑤ ต้อง</strong> 和 <strong>⑥ อยากได้</strong> 不在時間軸上：ต้อง 是被外部推著做；อยากได้ 後接名詞（想要「得到」某東西）。
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ═══ SECTION 3 — 練習例句 ═══ -->
+  <section id="practice">
+    <div class="sec-header">
+      <span class="sec-badge">練習例句</span>
+      <div>
+        <div class="sec-title">各助詞三句練習</div>
+        <div class="sec-sub">看泰文猜中文，再對答案</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">อยาก／อยากจะ</span><span class="prac-label">想要做</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th" data-base="เราอยากกินข้าวมันไก่" data-syl="เรา อยาก กิน ข้าว·มัน·ไก่">เราอยากกินข้าวมันไก่</span>
+            <span class="roman-line">rao yàak gin khâao man gài</span>
+            <span class="prac-zh">我想吃海南雞飯。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เขาอยากนอนเร็ว" data-syl="เขา อยาก นอน เร็ว">เขาอยากนอนเร็ว</span>
+            <span class="roman-line">khǎo yàak noon reo</span>
+            <span class="prac-zh">他想早點睡。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เราอยากไปเที่ยวทะเล" data-syl="เรา อยาก ไป เที่ยว ทะ·เล">เราอยากไปเที่ยวทะเล</span>
+            <span class="roman-line">rao yàak pai thîao tha-lee</span>
+            <span class="prac-zh">我想去海邊玩。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">ชอบ</span><span class="prac-label">喜歡／經常</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th" data-base="เราชอบกินผลไม้" data-syl="เรา ชอบ กิน ผล·ไม้">เราชอบกินผลไม้</span>
+            <span class="roman-line">rao chôop gin phǒn-lá-máai</span>
+            <span class="prac-zh">我喜歡吃水果。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เขาชอบฟังเพลง" data-syl="เขา ชอบ ฟัง เพลง">เขาชอบฟังเพลง</span>
+            <span class="roman-line">khǎo chôop fang phleeng</span>
+            <span class="prac-zh">他喜歡聽音樂。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="ฝนชอบตกตอนเย็น" data-syl="ฝน ชอบ ตก ตอน·เย็น">ฝนชอบตกตอนเย็น</span>
+            <span class="roman-line">fǒn chôop tòk toon-yen</span>
+            <span class="prac-zh">傍晚經常下雨。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">จะ</span><span class="prac-label">決定要做</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th" data-base="วันเสาร์เราจะไปตัดผม" data-syl="วัน·เสาร์ เรา จะ ไป ตัด·ผม">วันเสาร์เราจะไปตัดผม</span>
+            <span class="roman-line">wan-sǎo rao jà pai tàt phǒm</span>
+            <span class="prac-zh">週六我要去剪頭髮。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เขาจะซื้อรถใหม่" data-syl="เขา จะ ซื้อ รถ ใหม่">เขาจะซื้อรถใหม่</span>
+            <span class="roman-line">khǎo jà súue rót mài</span>
+            <span class="prac-zh">他要買新車。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เราจะทำอาหารเย็นด้วยกัน" data-syl="เรา จะ ทำ อา·หาร เย็น ด้วย·กัน">เราจะทำอาหารเย็นด้วยกัน</span>
+            <span class="roman-line">rao jà tham aa-hǎan yen dûay gan</span>
+            <span class="prac-zh">我們要一起做晚餐。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">กำลังจะ</span><span class="prac-label">即將要做</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th" data-base="เรากำลังจะโทรหาเธอ" data-syl="เรา กำ·ลัง·จะ โทร หา เธอ">เรากำลังจะโทรหาเธอ</span>
+            <span class="roman-line">rao gam-lang jà thoo hǎa thoe</span>
+            <span class="prac-zh">我正要打電話給你。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="หนังกำลังจะเริ่ม" data-syl="หนัง กำ·ลัง·จะ เริ่ม">หนังกำลังจะเริ่ม</span>
+            <span class="roman-line">nǎng gam-lang jà rôem</span>
+            <span class="prac-zh">電影即將開始。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เขากำลังจะออกไปข้างนอก" data-syl="เขา กำ·ลัง·จะ ออก ไป ข้าง·นอก">เขากำลังจะออกไปข้างนอก</span>
+            <span class="roman-line">khǎo gam-lang jà òok pai khâang-nôok</span>
+            <span class="prac-zh">他正要出去外面。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">กำลัง…อยู่</span><span class="prac-label">正在做</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th p3-prog" data-base="เรากำลังอ่านหนังสืออยู่" data-syl="เรา กำ·ลัง อ่าน หนัง·สือ อยู่">เรากำลังอ่านหนังสืออยู่</span>
+            <span class="roman-line">rao gam-lang àan nǎng-sǔue yùu</span>
+            <span class="prac-zh">我正在看書。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th p3-prog" data-base="แม่กำลังทำอาหารอยู่" data-syl="แม่ กำ·ลัง ทำ อา·หาร อยู่">แม่กำลังทำอาหารอยู่</span>
+            <span class="roman-line">mâe gam-lang tham aa-hǎan yùu</span>
+            <span class="prac-zh">媽媽正在做菜。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th p3-prog" data-base="น้องกำลังเล่นเกมอยู่" data-syl="น้อง กำ·ลัง เล่น เกม อยู่">น้องกำลังเล่นเกมอยู่</span>
+            <span class="roman-line">nóong gam-lang lên geem yùu</span>
+            <span class="prac-zh">弟弟／妹妹正在打遊戲。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag aux">ต้อง</span><span class="prac-label">必須要做</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th aux" data-base="เขาต้องไปโรงเรียน" data-syl="เขา ต้อง ไป โรง·เรียน">เขาต้องไปโรงเรียน</span>
+            <span class="roman-line">khǎo tông pai roong-rian</span>
+            <span class="prac-zh">他必須去學校。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th aux" data-base="พรุ่งนี้เราต้องไปหาเพื่อน" data-syl="พรุ่ง·นี้ เรา ต้อง ไป หา เพื่อน">พรุ่งนี้เราต้องไปหาเพื่อน</span>
+            <span class="roman-line">phrûng-níi rao tông pai hǎa phûean</span>
+            <span class="prac-zh">明天我們必須去找朋友。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th aux" data-base="เราต้องจ่ายเงินก่อนเข้า" data-syl="เรา ต้อง จ่าย เงิน ก่อน เข้า">เราต้องจ่ายเงินก่อนเข้า</span>
+            <span class="roman-line">rao tông jàai ngoen gòon khâo</span>
+            <span class="prac-zh">我們必須先付錢才能進入。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag ext">อยากได้</span><span class="prac-label">想要（東西）</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th ext" data-base="เราอยากได้กระเป๋าใบใหม่" data-syl="เรา อยาก·ได้ กระ·เป๋า ใบ ใหม่">เราอยากได้กระเป๋าใบใหม่</span>
+            <span class="roman-line">rao yàak dâai gra-pǎo bai mài</span>
+            <span class="prac-zh">我想要一個新包包。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th ext" data-base="เขาอยากได้เวลาพัก" data-syl="เขา อยาก·ได้ เว·ลา พัก">เขาอยากได้เวลาพัก</span>
+            <span class="roman-line">khǎo yàak dâai wee-laa phák</span>
+            <span class="prac-zh">他想要休息時間。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th ext" data-base="น้องอยากได้ของขวัญ" data-syl="น้อง อยาก·ได้ ของ·ขวัญ">น้องอยากได้ของขวัญ</span>
+            <span class="roman-line">nóong yàak dâai khǒong khwǎn</span>
+            <span class="prac-zh">弟弟／妹妹想要禮物。</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ── 補充說明（內嵌）：อยู่ 單獨使用 ── -->
+    <div class="note" style="margin-top:18px">
+      <strong>อยู่ 口語常單獨使用</strong><br>
+      泰國人口語中更常省略 กำลัง，只在句尾加 <span style="color:var(--step)">อยู่</span> 來表示「正在進行」。<br>
+      <span style="color:var(--step)">ทำงานอยู่</span>　正在工作。
+      <span style="color:var(--step)">กินข้าวอยู่</span>　正在吃飯。
+      <span style="color:var(--step)">นอนอยู่</span>　正在睡覺。
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ═══ SECTION 4 — 時間詞 ═══ -->
+  <section id="time-words">
+    <div class="sec-header">
+      <span class="sec-badge">時間詞</span>
+      <div>
+        <div class="sec-title">三個常用時間單字</div>
+        <div class="sec-sub">放在句首或句尾，讓句子更完整</div>
+      </div>
+    </div>
+    <div class="time-grid">
+
+      <div class="time-card">
+        <div class="time-kw">วันนี้</div>
+        <div class="time-mean">今天</div>
+        <ul class="time-ex-list">
+          <li>
+            <span class="tsent tex-th"
+              data-base="<span class='hl-time'>วันนี้</span>เราจะไปซื้อของ"
+              data-syl="<span class='hl-time'>วัน·นี้</span> เรา จะ ไป ซื้อ·ของ"
+            ><span class="hl-time">วันนี้</span>เราจะไปซื้อของ</span>
+            <span class="roman-line">wan-níi rao jà pai súue khǒong</span>
+            <span class="tex-zh">今天我要去買東西。</span>
+          </li>
+          <li>
+            <span class="tsent tex-th"
+              data-base="เขาอยากกินส้มตำ<span class='hl-time'>วันนี้</span>"
+              data-syl="เขา อยาก กิน ส้ม·ตำ <span class='hl-time'>วัน·นี้</span>"
+            >เขาอยากกินส้มตำ<span class="hl-time">วันนี้</span></span>
+            <span class="roman-line">khǎo yàak gin sôm-tam wan-níi</span>
+            <span class="tex-zh">他今天想吃青木瓜沙拉。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="time-card">
+        <div class="time-kw">พรุ่งนี้</div>
+        <div class="time-mean">明天</div>
+        <ul class="time-ex-list">
+          <li>
+            <span class="tsent tex-th"
+              data-base="<span class='hl-time'>พรุ่งนี้</span>เราต้องตื่นแต่เช้า"
+              data-syl="<span class='hl-time'>พรุ่ง·นี้</span> เรา ต้อง ตื่น แต่·เช้า"
+            ><span class="hl-time">พรุ่งนี้</span>เราต้องตื่นแต่เช้า</span>
+            <span class="roman-line">phrûng-níi rao tông tùen tàe cháao</span>
+            <span class="tex-zh">明天我們必須早起。</span>
+          </li>
+          <li>
+            <span class="tsent tex-th"
+              data-base="เราจะไปพบหมอ<span class='hl-time'>พรุ่งนี้</span>"
+              data-syl="เรา จะ ไป พบ หมอ <span class='hl-time'>พรุ่ง·นี้</span>"
+            >เราจะไปพบหมอ<span class="hl-time">พรุ่งนี้</span></span>
+            <span class="roman-line">rao jà pai phóp mǒo phrûng-níi</span>
+            <span class="tex-zh">我明天要去看醫生。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="time-card">
+        <div class="time-kw">เดี๋ยว</div>
+        <div class="time-mean">現在做 ／ 待會兒 ／ 不知道什麼時候</div>
+        <ul class="time-ex-list">
+          <li>
+            <span class="tsent tex-th"
+              data-base="<span class='hl-time'>เดี๋ยว</span>เราจะโทรหาเธอ"
+              data-syl="<span class='hl-time'>เดี๋ยว</span> เรา จะ โทร หา เธอ"
+            ><span class="hl-time">เดี๋ยว</span>เราจะโทรหาเธอ</span>
+            <span class="roman-line">dǐao rao jà thoo hǎa thoe</span>
+            <span class="tex-zh">待會兒我要打電話給你。</span>
+          </li>
+          <li>
+            <span class="tsent tex-th"
+              data-base="เขาอยากกิน<span class='hl-time'>เดี๋ยวนี้</span>เลย"
+              data-syl="เขา อยาก กิน <span class='hl-time'>เดี๋ยว·นี้</span> เลย"
+            >เขาอยากกิน<span class="hl-time">เดี๋ยวนี้</span>เลย</span>
+            <span class="roman-line">khǎo yàak gin dǐao-níi loei</span>
+            <span class="tex-zh">他想要現在馬上吃。</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ── 補充說明（內嵌）：เดี๋ยว 的語感 ── -->
+    <div class="note">
+      <strong>เดี๋ยว 的兩種語感：</strong><br>
+      ① 放在 จะ 前 → 「很快就要做」：<span style="color:var(--step)">เดี๋ยวเราจะกลับบ้าน</span>　待會兒我要回家。<br>
+      ② 口語中也常帶婉轉、拖延的語氣：<span style="color:var(--step)">เดี๋ยวจะทำ</span>　之後會做（不確定什麼時候）。
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ═══ SECTION 5 — กับ / ที่ ═══ -->
+  <section id="particles">
+    <div class="sec-header">
+      <span class="sec-badge">介詞擴充</span>
+      <div>
+        <div class="sec-title">กับ（跟誰）＋ ที่（在哪裡）</div>
+        <div class="sec-sub">加在句子後面，讓內容更豐富</div>
+        <div class="sec-sub" style="margin-top:4px">泰文先說「誰做了什麼」，再補充「跟誰、在哪裡、怎麼做」等細節。</div>
+      </div>
+    </div>
+    <div class="particle-grid">
+
+      <div class="particle-card">
+        <div class="p-kw">กับ</div>
+        <div class="p-mean">和⋯一起 ／ 跟誰</div>
+        <div class="p-pattern">句子 ＋ กับ ＋ 人</div>
+        <ul class="p-ex-list">
+          <li>
+            <span class="tsent p-ex-th"
+              data-base="เราอยากไปเที่ยว<span class='hl-p'>กับ</span>เพื่อน"
+              data-syl="เรา อยาก ไป เที่ยว <span class='hl-p'>กับ</span> เพื่อน"
+            >เราอยากไปเที่ยว<span class="hl-p">กับ</span>เพื่อน</span>
+            <span class="roman-line">rao yàak pai thîao gàp phûean</span>
+            <span class="p-ex-zh">我想和朋友去玩。</span>
+          </li>
+          <li>
+            <span class="tsent p-ex-th"
+              data-base="เขาจะกิน<span class='hl-p'>กับ</span>แม่"
+              data-syl="เขา จะ กิน <span class='hl-p'>กับ</span> แม่"
+            >เขาจะกิน<span class="hl-p">กับ</span>แม่</span>
+            <span class="roman-line">khǎo jà gin gàp mâe</span>
+            <span class="p-ex-zh">他要和媽媽一起吃。</span>
+          </li>
+          <li>
+            <span class="tsent p-ex-th p3-prog"
+              data-base="เรากำลังดูหนัง<span class='hl-p'>กับ</span>น้องอยู่"
+              data-syl="เรา กำ·ลัง ดู หนัง <span class='hl-p'>กับ</span> น้อง อยู่"
+            >เรากำลังดูหนัง<span class="hl-p">กับ</span>น้องอยู่</span>
+            <span class="roman-line">rao gam-lang duu nǎng gàp nóong yùu</span>
+            <span class="p-ex-zh">我們正在和弟妹一起看電影。</span>
+          </li>
+          <li>
+            <span class="tsent p-ex-th"
+              data-base="เราต้องคุย<span class='hl-p'>กับ</span>เจ้านาย"
+              data-syl="เรา ต้อง คุย <span class='hl-p'>กับ</span> เจ้า·นาย"
+            >เราต้องคุย<span class="hl-p">กับ</span>เจ้านาย</span>
+            <span class="roman-line">rao tông khui gàp jâo-naai</span>
+            <span class="p-ex-zh">我必須和老闆談談。</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="particle-card">
+        <div class="p-kw">ที่</div>
+        <div class="p-mean">在⋯（地點）</div>
+        <div class="p-pattern">句子 ＋ ที่ ＋ 地點</div>
+        <ul class="p-ex-list">
+          <li>
+            <span class="tsent p-ex-th"
+              data-base="เขาอยากกิน<span class='hl-p'>ที่</span>ร้านนั้น"
+              data-syl="เขา อยาก กิน <span class='hl-p'>ที่</span> ร้าน นั้น"
+            >เขาอยากกิน<span class="hl-p">ที่</span>ร้านนั้น</span>
+            <span class="roman-line">khǎo yàak gin thîi ráan nán</span>
+            <span class="p-ex-zh">他想在那家店吃。</span>
+          </li>
+          <li>
+            <span class="tsent p-ex-th"
+              data-base="เราจะรอเธอ<span class='hl-p'>ที่</span>สถานีรถไฟ"
+              data-syl="เรา จะ รอ เธอ <span class='hl-p'>ที่</span> สถา·นี รถ·ไฟ"
+            >เราจะรอเธอ<span class="hl-p">ที่</span>สถานีรถไฟ</span>
+            <span class="roman-line">rao jà roo thoe thîi sa-thǎa-níi rót-fai</span>
+            <span class="p-ex-zh">我要在火車站等你。</span>
+          </li>
+          <li>
+            <span class="tsent p-ex-th"
+              data-base="เราต้องประชุม<span class='hl-p'>ที่</span>ออฟฟิศ"
+              data-syl="เรา ต้อง ประ·ชุม <span class='hl-p'>ที่</span> ออฟ·ฟิศ"
+            >เราต้องประชุม<span class="hl-p">ที่</span>ออฟฟิศ</span>
+            <span class="roman-line">rao tông pra-chum thîi of-fít</span>
+            <span class="p-ex-zh">我們必須在辦公室開會。</span>
+          </li>
+          <li>
+            <span class="tsent p-ex-th p3-prog"
+              data-base="น้องกำลังเล่น<span class='hl-p'>ที่</span>สนามอยู่"
+              data-syl="น้อง กำ·ลัง เล่น <span class='hl-p'>ที่</span> สนาม อยู่"
+            >น้องกำลังเล่น<span class="hl-p">ที่</span>สนามอยู่</span>
+            <span class="roman-line">nóong gam-lang lên thîi sa-nǎam yùu</span>
+            <span class="p-ex-zh">弟妹正在操場玩。</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- กับ + ที่ combined -->
+    <div style="margin-top:18px">
+      <div style="font-size:14px;font-weight:700;color:var(--ink-mid);margin-bottom:6px">กับ ＋ ที่ 合用</div>
+      <div style="font-size:13px;color:var(--ink-light);margin-bottom:12px">當 กับ 與 ที่ 同時作為副詞使用時，兩者的前後順序可以互換。</div>
+      <div class="flow-wrap">
+        <div class="flow-steps" style="gap:11px">
+          <div class="flow-item">
+            <div class="flow-num" style="background:var(--c-ext)">★</div>
+            <div class="flow-body">
+              <span class="tsent flow-th" style="color:var(--c-ext)"
+                data-base="เราอยากกินข้าว<span style='color:var(--step)'>กับ</span>เพื่อน<span style='color:var(--step)'>ที่</span>ร้านอาหารร้านนั้น"
+                data-syl="เรา อยาก กิน ข้าว <span style='color:var(--step)'>กับ</span> เพื่อน <span style='color:var(--step)'>ที่</span> ร้าน อา·หาร ร้าน นั้น"
+              >เราอยากกินข้าว<span style="color:var(--step)">กับ</span>เพื่อน<span style="color:var(--step)">ที่</span>ร้านอาหารร้านนั้น</span>
+              <span class="roman-line">rao yàak gin khâao gàp phûean thîi ráan aa-hǎan ráan nán</span>
+              <div class="flow-zh">我想和朋友在那家餐廳吃飯。</div>
+            </div>
+          </div>
+          <div class="flow-item">
+            <div class="flow-num" style="background:var(--c-ext)">★</div>
+            <div class="flow-body">
+              <span class="tsent flow-th" style="color:var(--c-ext)"
+                data-base="พรุ่งนี้เราจะนัดกัน<span style='color:var(--step)'>กับ</span>ทีม<span style='color:var(--step)'>ที่</span>คาเฟ่"
+                data-syl="พรุ่ง·นี้ เรา จะ นัด·กัน <span style='color:var(--step)'>กับ</span> ทีม <span style='color:var(--step)'>ที่</span> คา·เฟ่"
+              >พรุ่งนี้เราจะนัดกัน<span style="color:var(--step)">กับ</span>ทีม<span style="color:var(--step)">ที่</span>คาเฟ่</span>
+              <span class="roman-line">phrûng-níi rao jà nát-gan gàp thiim thîi khaa-fêe</span>
+              <div class="flow-zh">明天我們要和團隊約在咖啡廳。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ⭐ 銜接：助詞 ＋ แล้ว（狀態變化「…了」）══ -->
+  <section id="laeo-bridge">
+    <div class="sec-header">
+      <span class="sec-badge">⭐ 銜接</span>
+      <div>
+        <div class="sec-title">助詞 ＋ แล้ว — 「現在要⋯了」狀態變化</div>
+        <div class="sec-sub">情態助詞句尾加 แล้ว，表示「狀態改變了、現在才要」；是從「未來打算」通往「已完成」的橋樑</div>
+      </div>
+      <div style="display:flex;gap:7px;align-items:center;margin-left:auto;flex-wrap:wrap">
+        <span class="sec-sub" style="margin:0;font-weight:700;color:var(--step)">แล้ว</span>
+        <button class="ctrl-btn active" id="p3LaeoOn">มี แล้ว</button>
+        <button class="ctrl-btn" id="p3LaeoOff">ไม่มี</button>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr>
+        <th>結構</th><th>說明</th><th>例句</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="g-pattern">อยาก ／ อยากจะ ＋ V ＋ แล้ว</span>
+            <div class="g-mean" data-d="想⋯（純粹的念頭）">現在想⋯了（之前沒有）</div>
+          </td>
+          <td class="g-note-cell">加 แล้ว 表示「念頭出現了、現在才想」的轉變。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราอยากกลับบ้านแล้ว" data-syl="เรา·อยาก·กลับ·บ้าน·แล้ว">เราอยากกลับบ้านแล้ว</span>
+            <span class="roman-line">rao yàak glàp bâan láeo</span>
+            <span class="g-ex-zh" data-d="我想回家。">我現在想回家了。</span>
+            <span class="g-ex-th tsent" data-base="เราอยากนอนแล้ว" data-syl="เรา·อยาก·นอน·แล้ว">เราอยากนอนแล้ว</span>
+            <span class="roman-line">rao yàak noon láeo</span>
+            <span class="g-ex-zh" data-d="我想睡。">我現在想睡了。</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">จะ ＋ V ＋ แล้ว</span>
+            <div class="g-mean" data-d="要⋯（決定）">要⋯了（即將）</div>
+          </td>
+          <td class="g-note-cell">決定 ＋ แล้ว＝「就要做了」，比單純 จะ 更接近當下。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราจะไปแล้ว" data-syl="เรา·จะ·ไป·แล้ว">เราจะไปแล้ว</span>
+            <span class="roman-line">rao jà pai láeo</span>
+            <span class="g-ex-zh" data-d="我要走。">我要走了。</span>
+            <span class="g-ex-th tsent" data-base="ฝนจะตกแล้ว" data-syl="ฝน·จะ·ตก·แล้ว">ฝนจะตกแล้ว</span>
+            <span class="roman-line">fǒn jà tòk láeo</span>
+            <span class="g-ex-zh" data-d="會下雨。">要下雨了。</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">กำลังจะ ＋ V ＋ แล้ว</span>
+            <div class="g-mean" data-d="正要⋯（即將）">馬上就要⋯了</div>
+          </td>
+          <td class="g-note-cell">即將 ＋ แล้ว，強調「就在這一刻、馬上發生」。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="หนังกำลังจะเริ่มแล้ว" data-syl="หนัง·กำ·ลัง·จะ·เริ่ม·แล้ว">หนังกำลังจะเริ่มแล้ว</span>
+            <span class="roman-line">nǎng gam-lang jà rôəm láeo</span>
+            <span class="g-ex-zh" data-d="電影正要開始。">電影馬上就要開始了。</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">กำลัง ＋ V ＋ แล้ว</span>
+            <div class="g-mean" data-d="正在⋯（進行中）">已經在⋯了（動作已展開）</div>
+          </td>
+          <td class="g-note-cell">進行 ＋ แล้ว＝「（已經）正在做了」，表示動作已開始進行。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เรากำลังไปแล้ว" data-syl="เรา·กำ·ลัง·ไป·แล้ว">เรากำลังไปแล้ว</span>
+            <span class="roman-line">rao gam-lang pai láeo</span>
+            <span class="g-ex-zh" data-d="我正在去。">我已經在路上了。</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">ต้อง ＋ V ＋ แล้ว</span>
+            <div class="g-mean" data-d="必須⋯（得做）">該⋯了／得⋯了</div>
+          </td>
+          <td class="g-note-cell">必須 ＋ แล้ว＝「（時候到了）該做了」。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราต้องไปแล้ว" data-syl="เรา·ต้อง·ไป·แล้ว">เราต้องไปแล้ว</span>
+            <span class="roman-line">rao tông pai láeo</span>
+            <span class="g-ex-zh" data-d="我必須走。">我得走了。</span>
+            <span class="g-ex-th tsent" data-base="ต้องนอนแล้ว" data-syl="ต้อง·นอน·แล้ว">ต้องนอนแล้ว</span>
+            <span class="roman-line">tông noon láeo</span>
+            <span class="g-ex-zh" data-d="必須睡覺。">該睡了。</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">อยากได้ ＋ 名詞 ＋ แล้ว</span>
+            <div class="g-mean" data-d="想要（某物）">現在就想要（某物）了</div>
+          </td>
+          <td class="g-note-cell">想要某物 ＋ แล้ว，表示「現在心情上升、想要了」。後接名詞。</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราอยากได้มันแล้ว" data-syl="เรา·อยาก·ได้·มัน·แล้ว">เราอยากได้มันแล้ว</span>
+            <span class="roman-line">rao yàak dâai man láeo</span>
+            <span class="g-ex-zh" data-d="我想要它。">我現在就想要它了。</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>💡 แล้ว 的核心是「狀態改變」：</strong>不管接在情態助詞還是動詞後，แล้ว 都在說「和之前不一樣了」。接助詞時偏「現在才要、就要了」；接動詞時偏「已經做完了」（完成式「做完了」詳見第五頁）。
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ 💬 情境對話 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">💬 บทสนทนา</span>
+      <div>
+        <div class="sec-title">情境對話 — 約去海邊</div>
+        <div class="sec-sub">一段約出遊的對話，把七個情態助詞都用上（點按開合；可搭配上方「อยาก／進行式」切換）</div>
+      </div>
+    </div>
+    <button class="dialog-toggle" id="dlgBtn" type="button">▶ 展開對話</button>
+    <div class="dialog-box" id="dlgBox">
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="นี่ ๆ เสาร์นี้เธอจะทำอะไร">นี่ ๆ เสาร์นี้เธอจะทำอะไร</span>
+        <span class="roman-line" data-roman="nîi nîi, sǎo-níi thəə jà tham a-rai">nîi nîi, sǎo-níi thəə jà tham a-rai</span>
+        <span class="dlg-zh">欸欸，這週六你要做什麼？（จะ）</span></div></div>
+      <div class="dlg-line b"><span class="dlg-who">B</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="เรากำลังจะโทรหาเธอพอดีเลย เราอยากไปเที่ยวทะเล">เรากำลังจะโทรหาเธอพอดีเลย เราอยากไปเที่ยวทะเล</span>
+        <span class="roman-line" data-roman="rao kam-lang jà thoo hǎa thəə phɔɔ-dii ləəi, rao yàak pai thîao thá-lee">rao kam-lang jà thoo hǎa thəə phɔɔ-dii ləəi, rao yàak pai thîao thá-lee</span>
+        <span class="dlg-zh">我正要打給你呢，我想去海邊玩。（กำลังจะ／อยาก）</span></div></div>
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="เราชอบทะเลมากเลย แต่เสาร์นี้เราต้องทำงานก่อน">เราชอบทะเลมากเลย แต่เสาร์นี้เราต้องทำงานก่อน</span>
+        <span class="roman-line" data-roman="rao chôp thá-lee mâak ləəi, tɛ̀ɛ sǎo-níi rao tông tham-ngaan gɔ̀ɔn">rao chôp thá-lee mâak ləəi, tɛ̀ɛ sǎo-níi rao tông tham-ngaan gɔ̀ɔn</span>
+        <span class="dlg-zh">我超喜歡海，但這週六我得先工作。（ชอบ／ต้อง）</span></div></div>
+      <div class="dlg-line b"><span class="dlg-who">B</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="ตอนนี้เธอกำลังทำอะไรอยู่">ตอนนี้เธอกำลังทำอะไรอยู่</span>
+        <span class="roman-line" data-roman="tɔɔn-níi thəə kam-lang tham a-rai yùu">tɔɔn-níi thəə kam-lang tham a-rai yùu</span>
+        <span class="dlg-zh">你現在正在做什麼？（กำลัง…อยู่）</span></div></div>
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="กำลังกินข้าวอยู่ เดี๋ยวกินเสร็จจะโทรกลับ">กำลังกินข้าวอยู่ เดี๋ยวกินเสร็จจะโทรกลับ</span>
+        <span class="roman-line" data-roman="kam-lang kin khâao yùu, dǐao kin sèt jà thoo glàp">kam-lang kin khâao yùu, dǐao kin sèt jà thoo glàp</span>
+        <span class="dlg-zh">正在吃飯，等下吃完會回電。（กำลัง…อยู่／จะ）</span></div></div>
+      <div class="dlg-line b"><span class="dlg-who">B</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="ได้ ๆ จริง ๆ เราอยากได้กล้องใหม่ไว้ถ่ายรูปทะเลด้วย">ได้ ๆ จริง ๆ เราอยากได้กล้องใหม่ไว้ถ่ายรูปทะเลด้วย</span>
+        <span class="roman-line" data-roman="dâai dâai, jing jing rao yàak dâai glɔ̂ng mài wái thàai rûup thá-lee dûai">dâai dâai, jing jing rao yàak dâai glɔ̂ng mài wái thàai rûup thá-lee dûai</span>
+        <span class="dlg-zh">好好，其實我想要一台新相機拍海。（อยากได้）</span></div></div>
+      <div class="dlg-line a"><span class="dlg-who">A</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="เธอจะซื้อเลยเหรอ">เธอจะซื้อเลยเหรอ</span>
+        <span class="roman-line" data-roman="thəə jà súe ləəi rə̌ə">thəə jà súe ləəi rə̌ə</span>
+        <span class="dlg-zh">你要直接買喔？（จะ）</span></div></div>
+      <div class="dlg-line b"><span class="dlg-who">B</span><div class="dlg-bubble">
+        <span class="dlg-th tsent" data-base="ยัง ช่วงนี้เราต้องเก็บเงิน">ยัง ช่วงนี้เราต้องเก็บเงิน</span>
+        <span class="roman-line" data-roman="yang, chûang-níi rao tông gèp ngən">yang, chûang-níi rao tông gèp ngən</span>
+        <span class="dlg-zh">還沒，這陣子我得存錢。（ต้อง）</span></div></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>第三頁 · 泰語教材 · 情態助詞</footer>
+
+<!-- PAGE_NOTES：教師說明已移至頁面內嵌區（#teacher-notes），此處留空 -->
+<script>
+window.PAGE_NOTES = '';
+</script>
+
+<script src="controls-ui.js"></script>
+<script src="nav-ui.js"></script>
+
+<!-- ═══ 第三頁專屬控制：อยาก↔อยากจะ ／ กำลัง…อยู่ 拆解 ═══ -->
+<script>
+(function () {
+  'use strict';
+
+  var jaaMode  = false;   /* false: อยาก（預設）   true: อยากจะ */
+  var progMode = 'both';  /* 'both'（預設） | 'kam'（只 กำลัง） | 'yuu'（只 อยู่） */
+  var laeoOff  = false;   /* false: 顯示 แล้ว（預設）   true: 去掉 แล้ว */
+
+  /* ── 在共用控制列尾端加入本頁專屬按鈕 ── */
+  var shared = document.querySelector('.controls-bar');
+  if (shared) {
+    shared.insertAdjacentHTML('beforeend',
+      '<div class="ctrl-sep"></div>' +
+      '<div class="ctrl-group">' +
+        '<span class="ctrl-label">อยาก</span>' +
+        '<button class="ctrl-btn active" id="p3Yaak">อยาก</button>' +
+        '<button class="ctrl-btn" id="p3YaakJa">อยากจะ</button>' +
+      '</div>' +
+      '<div class="ctrl-sep"></div>' +
+      '<div class="ctrl-group">' +
+        '<span class="ctrl-label">進行式</span>' +
+        '<button class="ctrl-btn active" id="p3Both">กำลัง＋อยู่</button>' +
+        '<button class="ctrl-btn" id="p3Kam">只 กำลัง</button>' +
+        '<button class="ctrl-btn" id="p3Yuu">只 อยู่</button>' +
+      '</div>');
+  }
+
+  /* ── 快照原始（預設）資料：อยาก ＋ กำลัง…อยู่ 雙詞 ── */
+  var snap = Array.prototype.map.call(document.querySelectorAll('.tsent'), function (el) {
+    var roman = el.nextElementSibling;
+    if (!roman || !roman.classList || !roman.classList.contains('roman-line')) roman = null;
+    return {
+      el: el,
+      prog: el.classList.contains('p3-prog'),
+      laeo: !!el.closest('#laeo-bridge'),
+      base: el.getAttribute('data-base') || el.innerHTML,
+      syl:  el.getAttribute('data-syl') || el.getAttribute('data-base') || el.innerHTML,
+      romanEl: roman,
+      roman: roman ? (roman.getAttribute('data-roman') || roman.textContent.trim()) : ''
+    };
+  });
+
+  /* ── แล้ว 區塊的非 .tsent 元素（結構標籤／意思／中譯）── */
+  var laeoSec   = document.getElementById('laeo-bridge');
+  var laeoPats  = [], laeoMeans = [], laeoZhs = [];
+  if (laeoSec) {
+    laeoPats  = Array.prototype.map.call(laeoSec.querySelectorAll('.g-pattern'), function (e) { return { el: e, html: e.innerHTML }; });
+    laeoMeans = Array.prototype.map.call(laeoSec.querySelectorAll('.g-mean'),    function (e) { return { el: e, html: e.innerHTML, d: e.getAttribute('data-d') }; });
+    laeoZhs   = Array.prototype.map.call(laeoSec.querySelectorAll('.g-ex-zh'),   function (e) { return { el: e, html: e.innerHTML, d: e.getAttribute('data-d') }; });
+  }
+
+  function transform(s) {
+    var base = s.base, syl = s.syl, roman = s.roman;
+
+    /* อยาก → อยากจะ（排除 อยากได้） */
+    if (jaaMode) {
+      base  = base.replace(/อยาก(?!ได้)/g, 'อยากจะ');
+      syl   = syl.replace(/อยาก(?!·?ได้)/g, 'อยาก·จะ');
+      roman = roman.replace(/yàak(?! dâai)/g, 'yàak jà');
+    }
+
+    /* 進行式拆解（僅作用於 .p3-prog 句子） */
+    if (s.prog && progMode !== 'both') {
+      if (progMode === 'kam') {            /* 只留 กำลัง，去掉 อยู่ */
+        base  = base.replace(/(<span[^>]*>)?อยู่(<\/span>)?/, '');
+        syl   = syl.replace(/\s*(<span[^>]*>)?อยู่(<\/span>)?/, '');
+        roman = roman.replace(/\s*yùu/, '');
+      } else if (progMode === 'yuu') {     /* 只留 อยู่，去掉 กำลัง */
+        base  = base.replace(/(<span[^>]*>)?กำลัง(<\/span>)?/, '');
+        syl   = syl.replace(/(<span[^>]*>)?กำ·ลัง(<\/span>)?\s*/, '');
+        roman = roman.replace(/gam-lang\s*/, '');
+      }
+    }
+
+    /* แล้ว 開關（僅作用於 #laeo-bridge 句子，句尾 แล้ว） */
+    if (s.laeo && laeoOff) {
+      base  = base.replace(/แล้ว$/, '');
+      syl   = syl.replace(/·?แล้ว$/, '');
+      roman = roman.replace(/\s*láeo$/, '');
+    }
+    return { base: base, syl: syl, roman: roman };
+  }
+
+  function applyP3() {
+    snap.forEach(function (s) {
+      var r = transform(s);
+      s.el.setAttribute('data-base', r.base);
+      s.el.setAttribute('data-syl', r.syl);
+      if (s.romanEl) s.romanEl.setAttribute('data-roman', r.roman);
+    });
+    /* แล้ว 區塊的結構標籤／意思／中譯同步切換 */
+    laeoPats.forEach(function (p) { p.el.innerHTML = laeoOff ? p.html.replace(/\s*＋\s*แล้ว$/, '') : p.html; });
+    laeoMeans.forEach(function (m) { m.el.innerHTML = (laeoOff && m.d) ? m.d : m.html; });
+    laeoZhs.forEach(function (z) { z.el.innerHTML = (laeoOff && z.d) ? z.d : z.html; });
+    /* 交回共用渲染管線（套用拼音／分音節／代詞等狀態） */
+    if (typeof window.CUIRender === 'function') window.CUIRender();
+    else window.dispatchEvent(new Event('cui:rerender'));
+  }
+
+  function setActive(ids, activeId) {
+    ids.forEach(function (id) { document.getElementById(id).classList.remove('active'); });
+    document.getElementById(activeId).classList.add('active');
+  }
+
+  var yaakIds = ['p3Yaak', 'p3YaakJa'];
+  document.getElementById('p3Yaak').addEventListener('click', function () {
+    jaaMode = false; setActive(yaakIds, 'p3Yaak'); applyP3();
+  });
+  document.getElementById('p3YaakJa').addEventListener('click', function () {
+    jaaMode = true; setActive(yaakIds, 'p3YaakJa'); applyP3();
+  });
+
+  var progIds = ['p3Both', 'p3Kam', 'p3Yuu'];
+  document.getElementById('p3Both').addEventListener('click', function () {
+    progMode = 'both'; setActive(progIds, 'p3Both'); applyP3();
+  });
+  document.getElementById('p3Kam').addEventListener('click', function () {
+    progMode = 'kam'; setActive(progIds, 'p3Kam'); applyP3();
+  });
+  document.getElementById('p3Yuu').addEventListener('click', function () {
+    progMode = 'yuu'; setActive(progIds, 'p3Yuu'); applyP3();
+  });
+
+  var laeoIds = ['p3LaeoOn', 'p3LaeoOff'];
+  document.getElementById('p3LaeoOn').addEventListener('click', function () {
+    laeoOff = false; setActive(laeoIds, 'p3LaeoOn'); applyP3();
+  });
+  document.getElementById('p3LaeoOff').addEventListener('click', function () {
+    laeoOff = true; setActive(laeoIds, 'p3LaeoOff'); applyP3();
+  });
+})();
+</script>
+
+<!-- ═══ 情境對話 開合 ═══ -->
+<script>
+(function(){
+  var btn=document.getElementById('dlgBtn'), box=document.getElementById('dlgBox');
+  if(btn&&box) btn.addEventListener('click',function(){
+    var open=box.classList.toggle('open');
+    btn.classList.toggle('open',open);
+    btn.textContent=open?'▼ 收合對話':'▶ 展開對話';
+  });
+})();
+</script>
+</body>
+</html>
