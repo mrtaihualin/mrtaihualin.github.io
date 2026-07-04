@@ -3182,82 +3182,13 @@ function tfRollGolden() {
 }
 
 // ════════════════════════════════════════════════════════════
-// ระบบล็อกชุด + ห้องคำพิเศษ ⭐ + toast — LIN 2026-06-20
-//   ถูก >=4 คำ → ล็อกชุดวันนี้ (⏸ 今日已練) · ครบ 7 วันปลดเล่นได้ใหม่
-//   ปลดแล้วเล่นได้ >=4 อีก → เก่งจริง (✓ 精熟) ถาวร + เก็บคำที่ผิดเข้าห้องคำพิเศษ ⭐ (ตอบถูก ×2)
-// ════════════════════════════════════════════════════════════
-var TF_SET_STATE_KEY = 'tf_set_state_v1';
-var TF_SET_LOCK_DAYS = 7;       // ปรับได้
-var TF_SET_PASS_CORRECT = 4;    // ปรับได้
-var TF_SPECIAL_KEY = 'tf_special_words_v1';
-var TF_SPECIAL_MULT = 2;        // ห้องคำพิเศษ ตอบถูก ×2
-var currentSetId = null;        // ชุดที่กำลังเล่น (null = ไม่ผูกกับชุด เช่น 全部/搜尋/ห้องพิเศษ)
-var inSpecialRoom = false;      // กำลังเล่นห้องคำพิเศษอยู่ไหม
+// Lin 2026-07-04: ตัดระบบ "ล็อกชุด + ห้องคำพิเศษ ⭐" ทิ้งทั้งระบบแล้ว — ไม่ใช้แล้ว
+// (เดิม LIN 2026-06-20 สร้างไว้ แต่ตอนนี้กด 初級/中級 ข้ามหน้าเลือกหมวด/ชุดไปเลย
+//  ระบบนี้ไม่มีทางเข้าถึงในเส้นทางหลักอีกแล้ว — เอา tfSetStatus/tfRecordSetResult/
+//  tfLoadSpecialWords/tfAddSpecialWords/tfSpecialProcessResults ออกทั้งหมด)
 // ── 高級: ประโยคเต็ม (Lin 2026-07-03) ──
 var advSentenceCtx = null;      // {th, zh} ของประโยคที่กำลังเล่น (null = ไม่ได้เล่นโหมด高級句子) — ใช้โชว์บนแบนเนอร์
 var advSentIdx = -1;            // index ของประโยคปัจจุบันใน ADV_SENTENCES
-
-function tfLoadSetStates() { try { return JSON.parse(localStorage.getItem(TF_SET_STATE_KEY) || '{}') || {}; } catch (e) { return {}; } }
-function tfSaveSetStates(o) { try { localStorage.setItem(TF_SET_STATE_KEY, JSON.stringify(o)); } catch (e) {} }
-function tfSetId(level, cat, i) { return (level || '?') + '|' + (cat || '?') + '|' + i; }
-function tfDaysSince(dateStr) {
-  if (!dateStr) return 9999;
-  try { var d = new Date(dateStr + 'T00:00:00'), now = new Date(todayStr() + 'T00:00:00');
-    return Math.round((now - d) / 86400000); } catch (e) { return 9999; }
-}
-// สถานะใช้งานจริง: 'retired' | 'locked' (ยังไม่ครบ 7 วัน) | 'open' (เล่นได้ รวมที่ปลดแล้ว)
-function tfSetStatus(setId) {
-  var s = tfLoadSetStates()[setId];
-  if (!s) return 'open';
-  if (s.status === 'retired') return 'retired';
-  if (s.status === 'locked') return tfDaysSince(s.date) >= TF_SET_LOCK_DAYS ? 'open' : 'locked';
-  return 'open';
-}
-function tfRecordSetResult(setId, correctCount, wrongWords) {
-  if (!setId) return;
-  if (correctCount < TF_SET_PASS_CORRECT) return;
-  var all = tfLoadSetStates(), cur = all[setId];
-  if (cur && cur.status === 'retired') return; // 精熟 แล้ว ไม่เปลี่ยน
-  if (cur && cur.status === 'locked' && tfDaysSince(cur.date) >= TF_SET_LOCK_DAYS) {
-    all[setId] = { status: 'retired', date: todayStr() };   // ปลดแล้วผ่านอีก → 精熟
-    tfAddSpecialWords(wrongWords);
-  } else {
-    all[setId] = { status: 'locked', date: todayStr() };     // ครั้งแรกผ่าน → ล็อกวันนี้
-  }
-  tfSaveSetStates(all);
-}
-function tfLoadSpecialWords() { try { return JSON.parse(localStorage.getItem(TF_SPECIAL_KEY) || '[]') || []; } catch (e) { return []; } }
-function tfAddSpecialWords(words) {
-  if (!words || !words.length) return;
-  var cur = tfLoadSpecialWords();
-  words.forEach(function (w) { if (w && cur.indexOf(w) === -1) cur.push(w); });
-  try { localStorage.setItem(TF_SPECIAL_KEY, JSON.stringify(cur)); } catch (e) {}
-}
-// ห้องพิเศษ: จำกัดวันละ 2 คำ + ตอบถูกเกิน 2 ครั้ง (>2) → เอาออก (เก่งแล้ว) — LIN 2026-06-20
-var TF_SPECIAL_META_KEY = 'tf_special_meta_v1';
-var TF_SPECIAL_DAILY = 2;       // วันละ 2 คำ
-var TF_SPECIAL_GRADUATE = 2;    // ตอบถูกเกินจำนวนนี้ → เอาออก
-function tfLoadSpecialMeta() { try { return JSON.parse(localStorage.getItem(TF_SPECIAL_META_KEY) || '{}') || {}; } catch (e) { return {}; } }
-function tfSaveSpecialMeta(m) { try { localStorage.setItem(TF_SPECIAL_META_KEY, JSON.stringify(m)); } catch (e) {} }
-function tfSpecialProcessResults(results) {
-  if (!results) return;
-  var words = tfLoadSpecialWords(), meta = tfLoadSpecialMeta(), changed = false;
-  results.forEach(function (r) {
-    if ((r.mistakes || 0) === 0 && !r.forced) {
-      var w = r.entry.word;
-      meta[w] = (meta[w] || 0) + 1;
-      if (meta[w] > TF_SPECIAL_GRADUATE) {           // ตอบถูกเกิน 2 ครั้ง → เก่งแล้ว เอาออก
-        var i = words.indexOf(w); if (i >= 0) words.splice(i, 1);
-        delete meta[w];
-      }
-      changed = true;
-    }
-  });
-  if (changed) {
-    try { localStorage.setItem(TF_SPECIAL_KEY, JSON.stringify(words)); } catch (e) {}
-    tfSaveSpecialMeta(meta);
-  }
-}
 
 // ── สถิติคำที่ตอบผิดรายคำ (localStorage) + หน้า 全部 แบบ 50/50 เน้นคำที่ยังไม่แม่น — LIN 2026-06-20 ──
 var TF_WORD_WRONG_KEY = 'tf_word_wrong_v1';
@@ -3315,22 +3246,7 @@ function tfChallengeBump(session) {
   tfSaveChallenge(st);
 }
 
-// 全部：ชุดฝึกโฟกัส = 50% คำที่เคยผิดบ่อย (จากสถิติ) + 50% สุ่ม — ถ้ายังไม่มีสถิติ = สุ่มทั้งหมดเหมือนเดิม
-var TF_ALL_MIX_CAP = 20;   // ขนาดชุด 全部 สูงสุด (ปรับได้)
-function tfBuildAllMix(pool) {
-  var wrong = tfLoadWordWrong();
-  var weak = pool.filter(function (w) { return wrong[w]; }).sort(function (a, b) { return (wrong[b] || 0) - (wrong[a] || 0); });
-  var strong = pool.filter(function (w) { return !wrong[w]; });
-  if (!weak.length) return tfShuffleArr(pool);                       // ยังไม่มีสถิติ → เล่นทั้งหมดเหมือนเดิม
-  var weakPick = weak.slice(0, Math.min(weak.length, Math.floor(TF_ALL_MIX_CAP / 2)));
-  var strongPick = tfShuffleArr(strong).slice(0, weakPick.length);  // จำนวนเท่ากัน = 50/50
-  var res = weakPick.concat(strongPick);
-  if (res.length < 8) {                                              // น้อยไป → เติมคำสุ่มให้พอเล่น
-    var more = tfShuffleArr(pool.filter(function (w) { return res.indexOf(w) < 0; })).slice(0, 8 - res.length);
-    res = res.concat(more);
-  }
-  return tfShuffleArr(res);
-}
+// Lin 2026-07-04: ตัด tfBuildAllMix (ระบบ 全部 50/50 เก่า) ทิ้งแล้ว — ผูกกับหน้าเลือกหมวดที่ลบไปแล้ว ไม่มีทางเข้าถึงอีก
 // toast แจ้งเตือนสั้นๆ
 function tfToast(msg) {
   try {
@@ -3494,6 +3410,23 @@ function tfSoftPointsAllowed(entry) {
   if (!tfSrsLoggedIn()) return true; // ไม่ล็อกอิน = ไม่มี SRS อยู่แล้ว ให้แต้มปกติตามเดิม
   var rec = tfGetSrsRecord(entry && entry.word, selectedLevel);
   return !(rec && rec.mastered); // mastered แล้ว → ห้ามแจกแต้มเกมซ้ำอีก (กันฟาร์ม)
+}
+
+// ── Lin 2026-07-04: กันคำที่ mastered แล้ว (ตัดออกจาก SRS ถาวร) ไม่ให้โผล่ซ้ำในโหมด 全部/ห้องพิเศษ/สุ่ม 5 คำ ──
+// เดิมคะแนน/ดาวเงินกันไว้แล้วที่ tfSoftPointsAllowed (ได้ 0 เพิ่มถูกต้อง) แต่ยังเสียเวลาผู้เล่นเจอคำที่จำได้แล้วซ้ำ
+// จุดนี้กรองออกตั้งแต่ตอนสร้างพูลคำเลย (ไม่ใช่แค่กันคะแนนตอนเล่น) — ทำงานเฉพาะล็อกอิน (ไม่งั้นไม่มี SRS record ให้เช็ก)
+// กันพูลว่าง: ถ้ากรองแล้วเหลือน้อยกว่า minKeep (เช่น mastered ไปเกือบหมดแล้ว) → คืนของเดิมไม่กรอง ดีกว่าเจอ "หาไม่พบ"
+function tfWordLevel(word) {
+  for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === word) return WORD_LIST[i].level;
+  return selectedLevel || 1;
+}
+function tfExcludeMasteredWords(words, minKeep) {
+  if (!words || !words.length || !tfSrsLoggedIn()) return words;
+  var filtered = words.filter(function (w) {
+    var rec = tfGetSrsRecord(w, tfWordLevel(w));
+    return !(rec && rec.mastered);
+  });
+  return (filtered.length >= (minKeep || 1)) ? filtered : words;
 }
 
 function tfScoreFirstTry() {
@@ -3770,7 +3703,7 @@ function tfSetupNextWord() {
   var nx = session.words[session.index];
   randomEntry = nx;
   var w = nx.word;
-  session.currentWordGolden = inSpecialRoom ? true : tfRollGolden();  // ห้องคำพิเศษ = ×2 ทุกคำ
+  session.currentWordGolden = tfRollGolden();
   tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check ก่อนตั้งคำถัดไป
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
     S = { word: w, step: 'overview', path: [w], tone: null, syllables: nx.readingTH.split('-'), selectedSyl: null };
@@ -3794,16 +3727,8 @@ function tfGoToSummary() {
 function tfApplySessionBonus() {
   if (!session || session.sessionScored) return;
   var total = session.results.length;
-  // ── สถิติคำผิดรายคำ (ทุกโหมด) สำหรับหน้า 全部 50/50 ──
+  // ── สถิติคำผิดรายคำ (ทุกโหมด) ──
   if (total > 0) tfRecordWordWrong(session.results);
-  // ── ห้องพิเศษ: นับตอบถูก/เก่งแล้วเอาออก ──
-  if (inSpecialRoom && total > 0) tfSpecialProcessResults(session.results);
-  // ── ระบบล็อกชุด: จบรอบแล้วถ้าถูก >=4 → ล็อก/精熟 + เก็บคำผิดเข้าห้องพิเศษ (เฉพาะรอบที่ผูกกับชุด) ──
-  if (currentSetId && total > 0) {
-    var _correct = session.results.filter(function (r) { return (r.mistakes || 0) === 0 && !r.forced; }).length;
-    var _wrong = session.results.filter(function (r) { return (r.mistakes || 0) > 0 || r.forced; }).map(function (r) { return r.entry.word; });
-    tfRecordSetResult(currentSetId, _correct, _wrong);
-  }
   var perfectCount = session.results.filter(function (r) { return r.firstTry; }).length;
   var bonus = TF_SCORE.sessionBonus(total, perfectCount);
   var isPerfect = (total > 0 && perfectCount === total && !session.hadSkip);
@@ -4136,7 +4061,7 @@ function render() {
 
   // Word banner
   var banner = document.getElementById('tf-banner');
-  var isSelectScreen = (S.step === 'level-select' || S.step === 'cat-select' || S.step === 'set-select' || S.step === 'noun-subcat' || S.step === 'advanced' || S.step === 'adv-cat-select' || S.step === 'adv-sent-select' || S.step === 'adv-summary' || S.step === 'session-summary' || S.step === 'alpha-home' || S.step === 'alpha-consonant' || S.step === 'alpha-vowel' || S.step === 'alpha-flashcard');
+  var isSelectScreen = (S.step === 'level-select' || S.step === 'advanced' || S.step === 'adv-cat-select' || S.step === 'adv-sent-select' || S.step === 'adv-summary' || S.step === 'session-summary' || S.step === 'alpha-home' || S.step === 'alpha-consonant' || S.step === 'alpha-vowel' || S.step === 'alpha-flashcard');
   var noBannerSteps = ['result'];
   if (S.word && S.step !== 'input' && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
@@ -4243,9 +4168,6 @@ function buildStep() {
     case 'alpha-consonant': return stepAlphaConsonant();
     case 'alpha-vowel':     return stepAlphaVowel();
     case 'alpha-flashcard': return stepAlphaFlashcard();
-    case 'cat-select':      return stepCatSelect();
-    case 'set-select':      return stepSetSelect();
-    case 'noun-subcat':     return stepNounSubcat();
     case 'advanced':        return stepAdvanced();
     case 'adv-cat-select':  return stepAdvCatSelect();
     case 'adv-sent-select': return stepAdvSentSelect();
@@ -4907,43 +4829,10 @@ function stepLevelSelect() {
       '<span class="tf-level-label">自行搜尋</span>' +
       '<span class="tf-level-sub">自行輸入單字</span>' +
     '</button>' +
-    (tfLoadSpecialWords().length
-      ? '<button class="tf-level-btn tf-special-entry" onclick="TF.openSpecial()">' +
-          '<span class="tf-level-emoji">⭐</span>' +
-          '<span class="tf-level-label">特訓區 ⭐</span>' +
-          '<span class="tf-level-sub">易錯字複習・答對 ×2（' + tfLoadSpecialWords().length + ' 字）</span>' +
-        '</button>'
-      : '') +
   '</div>';
 }
 
-// แบ่ง "ชุด" (set) ของแต่ละหมวด — ลำดับตามที่ส่งมา; สี = ชุดละ 6, หมวดอื่น = ชุดละ 5
-var WORD_SETS = {
-  'ตัวเลข': [['หนึ่ง','สอง','สาม','สี่','ห้า'],['หก','เจ็ด','แปด','เก้า','สิบ']],
-  'สี': [['แดง','ส้ม','เหลือง','เขียว','ฟ้า','น้ำเงิน'],['ม่วง','ชมพู','ขาว','ดำ','เทา','น้ำตาล']],
-  'ลักษณนาม': [['คน','ตัว','ใบ','อัน','ชิ้น'],['แผ่น','เล่ม','ฉบับ','ขวด','ก้อน'],['คัน','ลำ','หลัง','ห้อง','ชั้น'],['จาน','ถ้วย','ต้น','ผล','มื้อ']],
-  'กริยา': [['กิน','ดื่ม','นอน','ตื่น','อยู่'],['ไป','มา','ซื้อ','เรียก','ร้อง'],['คุย','โกรธ','หัวเราะ','ทำ','พูด'],['ดู','ฟัง','อ่าน','เขียน','รัก']],
-  'คำขยาย': [['ร้อน','เย็น','อุ่น','แข็ง','นิ่ม'],['สว่าง','มืด','ดัง','เงียบ','เต็ม'],['ว่าง','สะอาด','สกปรก','ถูก','แพง'],['ดี','ใหญ่','เล็ก','สูง','ใหม่']],
-  'คำนาม': [['น้ำ','ข้าว','หมา','แมว','บ้าน'],['รถ','พ่อ','แม่','ครู','เงิน'],['ฝน','ลม','ไฟ','ปลา','ไก่'],['หมู','นก','ตา','มือ','หัว']],
-  'นามร่างกาย': [['ตา','หู','ปาก','ฟัน','ลิ้น'],['หน้า','ผม','คอ','เล็บ','ใจ'],['มือ','แขน','นิ้ว','อก','เลือด'],['หัว','ขา','เท้า','ท้อง','เข่า']],
-  'นามคน': [['พ่อ','แม่','ลูก','พี่','น้อง'],['ปู่','ย่า','ยาย','หลาน','ญาติ'],['ครู','หมอ','เด็ก','แขก','เขา'],['เรา','ผู้ชาย','ผู้หญิง','สามี','ภรรยา']],
-  'นามอาหาร': [['ข้าว','น้ำ','ไข่','นม','ชา'],['หมู','ไก่','ปลา','กุ้ง','ปู'],['เนื้อ','ผัก','พริก','เกลือ','ขิง'],['เส้น','ซุป','แกง','โจ๊ก','กล้วย']],
-  'นามของใช้': [['บ้าน','ร้าน','วัด','เมือง','นา'],['สวน','ไร่','เขา','เกาะ','ถุง'],['โต๊ะ','เตียง','แก้ว','ช้อน','ส้อม'],['มีด','หม้อ','พัด','รถ','เงิน']]
-};
-
-function getSets(cat) {
-  if (WORD_SETS[cat]) return WORD_SETS[cat];
-  var pool = WORD_LIST.filter(function(w){
-    if (selectedLevel && w.level !== selectedLevel) return false;
-    if (cat && cat !== 'ทั้งหมด' && w.category !== cat) return false;
-    return true;
-  }).map(function(w){ return w.word; });
-  var size = (cat === 'สี' || cat === 'สัตว์ธรรมชาติ') ? 6 : 5;
-  var out = [];
-  for (var i = 0; i < pool.length; i += size) out.push(pool.slice(i, i + size));
-  return out;
-}
-
+// Lin 2026-07-04: ตัด WORD_SETS/getSets ทิ้งแล้ว — ใช้แค่กับหน้าเลือกชุด/หมวดที่ลบไปแล้ว ไม่มีทางเข้าถึงอีก
 // ── เล่นฟรีก่อนบังคับล็อกอิน (LIN 2026-06-19) ───────────────────────────
 // ปรับจำนวนรอบฟรีได้ที่ตัวแปรเดียวนี้ (1 รอบ = 1 ชุดคำ = 5 คำ; หมวดสี/สัตว์ = 6)
 var TF_FREE_ROUNDS_LIMIT = 5;
@@ -4987,7 +4876,7 @@ function startSetSession(words, opts) {
     sessionScored: false,
     // ── สเตจ 2 + หลายพยางค์ ──
     curWordAllFirstTry: true, scoredSyls: {},
-    currentWordGolden: inSpecialRoom ? true : tfRollGolden(),
+    currentWordGolden: tfRollGolden(),
     // ── สเปก 2026-07-03: ดาวเงินที่ได้จริงรอบนี้ (สะสมจากคำที่ mastered ระหว่างเล่น) ──
     hardStarsEarned: 0
   };
@@ -5017,89 +4906,7 @@ function tfPrioritizeDueSrs(entries) {
   return due.length ? due.concat(notDue) : entries;
 }
 
-function stepNounSubcat() {
-  var subs = [
-    {k:'นามร่างกาย', zh:'身體'},
-    {k:'นามคน', zh:'家庭與人'},
-    {k:'นามอาหาร', zh:'食物'},
-    {k:'นามของใช้', zh:'生活物品'}
-  ];
-  var btns = subs.map(function(c){ return '<button class="tf-cat-btn" onclick="TF.selectNounSub(\''+c.k+'\')">'+c.zh+'</button>'; }).join('');
-  return '<div class="tf-level-select">'+
-    '<div class="tf-level-title">名詞 — 選擇分類</div>'+
-    '<div class="tf-cat-grid">'+btns+'</div>'+
-    '<button class="tf-back-level-btn" onclick="TF.selectLevel('+selectedLevel+')">← 返回主題</button>'+
-  '</div>';
-}
-
-function stepSetSelect() {
-  var cat = selectedCategory;
-  var sets = getSets(cat);
-  var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞','ลักษณนาม':'量詞',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','อื่นๆ':'其他','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
-  var label = catZh[cat] || cat;
-  var btns = sets.map(function(set, i){
-    var status = tfSetStatus(tfSetId(selectedLevel, cat, i));
-    var cls = status === 'retired' ? ' tf-set-retired' : (status === 'locked' ? ' tf-set-locked' : '');
-    var statusTag = status === 'retired' ? '<span class="tf-set-status">✓ 精熟</span>'
-                  : status === 'locked' ? '<span class="tf-set-status">⏸ 今日已練</span>' : '';
-    return '<button class="tf-cat-btn tf-set-btn'+cls+'" onclick="TF.selectSet('+i+')">'+
-      '<span class="tf-set-num">'+(i+1)+' / '+sets.length+'</span>'+
-      '<span class="tf-set-count">'+set.length+' 字</span>'+
-      statusTag+
-    '</button>';
-  }).join('');
-  var specialEntry = tfLoadSpecialWords().length
-    ? '<button class="tf-level-btn tf-special-entry" onclick="TF.openSpecial()">'+
-        '<span class="tf-level-emoji">⭐</span>'+
-        '<span class="tf-level-label">特訓區 ⭐</span>'+
-        '<span class="tf-level-sub">易錯字複習・答對 ×2（'+tfLoadSpecialWords().length+' 字）</span>'+
-      '</button>'
-    : '';
-  return '<div class="tf-level-select">'+
-    '<div class="tf-level-title">'+label+' — 選擇組別</div>'+
-    specialEntry+
-    '<div class="tf-cat-grid">'+btns+'</div>'+
-    '<button class="tf-back-level-btn" onclick="TF.selectLevel('+selectedLevel+')">← 返回主題</button>'+
-  '</div>';
-}
-
-function stepCatSelect() {
-  var catMap = {
-    1: [
-      {th:'ทั้งหมด', zh:'全部'},
-      {th:'ตัวเลข',  zh:'數字'},
-      {th:'สี',      zh:'顏色'},
-      {th:'กริยา',   zh:'動詞'},
-      {th:'คำขยาย', zh:'形容詞'},
-      {th:'ลักษณนาม', zh:'量詞'},
-      {th:'คำนาม', zh:'名詞'},
-      {th:'สัตว์ธรรมชาติ', zh:'動物・自然'}
-    ],
-    2: [
-      {th:'ทั้งหมด',      zh:'全部'},
-      {th:'ร้านอาหาร',   zh:'餐廳'},
-      {th:'การเดินทาง',  zh:'交通'},
-      {th:'โรงแรม',      zh:'住宿'},
-      {th:'งาน',          zh:'工作'},
-      {th:'ช้อปปิ้ง',    zh:'購物'},
-      {th:'ทักทาย',      zh:'招呼用語'},
-      {th:'เวลา',         zh:'時間'},
-      {th:'แนวคิด',       zh:'生活概念'}
-    ]
-  };
-  var cats = catMap[selectedLevel] || [];
-  var levelLabel = {1:'初級',2:'中級'}[selectedLevel] || '';
-  return '<div class="tf-level-select">' +
-    '<div class="tf-level-title">'+levelLabel+' — 選擇主題</div>' +
-    '<div class="tf-cat-grid">' +
-      cats.map(function(c){
-        return '<button class="tf-cat-btn" onclick="TF.selectCategory(\''+c.th+'\')">'+c.zh+'</button>';
-      }).join('') +
-    '</div>' +
-    '<button class="tf-back-level-btn" onclick="TF.backToLevelSelect()">← 返回等級選擇</button>' +
-  '</div>';
-}
-
+// Lin 2026-07-04: ตัด stepNounSubcat/stepSetSelect/stepCatSelect ทิ้งแล้ว — หน้าเลือกหมวด/ชุดไม่มีทางเข้าถึงอีก
 function stepInput() {
   return '<div class="tf-input-wrap">' +
     '<input id="tf-inp" class="tf-input" type="text" autocomplete="off" spellcheck="false" ' +
@@ -6248,45 +6055,11 @@ var TF = {
     }
     var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
     if (!pool.length) { tfToast('找不到單字，請試試其他等級'); return; }
+    pool = tfExcludeMasteredWords(pool, 5); // Lin 2026-07-04: กันคำที่จำได้แล้ว (mastered) โผล่ซ้ำในสุ่ม 5 คำ
     var words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
     startSetSession(words);
   },
-  selectCategory: function(cat) {
-    selectedCategory = cat;
-    currentSetId = null; inSpecialRoom = false;   // ไม่ผูกกับชุด (จะตั้งใหม่ใน selectSet)
-    if (cat === 'ทั้งหมด') {
-      // 全部：รวมทุกคำในระดับนั้น (ไม่จำกัด 5)
-      var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
-      // 50% เน้นคำที่ยังไม่แม่น (จากสถิติ) + 50% สุ่ม — LIN 2026-06-20
-      startSetSession(tfBuildAllMix(pool));
-      return;
-    }
-    if (cat === 'คำนาม') {
-      S = { word:'', step:'noun-subcat', path:[], tone:null };
-      hist = [S]; histPos = 0; render(); return;
-    }
-    S = { word:'', step:'set-select', path:[], tone:null };
-    hist = [S]; histPos = 0;
-    render();
-  },
-  selectSet: function(i) {
-    var sets = getSets(selectedCategory);
-    var setId = tfSetId(selectedLevel, selectedCategory, i);
-    var status = tfSetStatus(setId);
-    if (status === 'locked' || status === 'retired') {
-      tfToast(status === 'retired' ? '這組已經精熟囉，換別組挑戰看看吧 😊' : '這組今天練過囉，改天再來玩吧 😊');
-      return;
-    }
-    currentSetId = setId; inSpecialRoom = false;
-    startSetSession(sets[i] || sets[0] || []);
-  },
-  // ⭐ ห้องคำพิเศษ: เอาคำที่เคยผิดจากชุด 精熟 มาฝึก ตอบถูก ×2
-  openSpecial: function() {
-    var words = tfLoadSpecialWords();
-    if (!words.length) { tfToast('目前還沒有特訓單字～先把組別練到「精熟」就會出現囉 ⭐'); return; }
-    currentSetId = null; inSpecialRoom = true;
-    startSetSession(words.slice(0, TF_SPECIAL_DAILY));   // 每天只練 2 個字
-  },
+  // Lin 2026-07-04: ตัด selectCategory/selectSet/openSpecial ทิ้งแล้ว — หน้าเลือกหมวด/ชุด + 特訓區 ไม่ใช้แล้ว
   // 🎖️ เปิดสมุดสะสมแบดจ์
   showBadges: function() {
     var old = document.getElementById('tf-badges-ov');
@@ -6340,11 +6113,6 @@ var TF = {
       : pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, n);
     startSetSession(words);
   },
-  selectNounSub: function(k) {
-    selectedCategory = k;
-    S = { word:'', step:'set-select', path:[], tone:null };
-    hist = [S]; histPos = 0; render();
-  },
   markKnown: function() {
     if (!session) return;
     session.hadSkip = true;            // ข้ามคำ → รอบนี้ไม่นับ perfect
@@ -6374,7 +6142,6 @@ var TF = {
     });
     selectedLevel = 3;
     selectedCategory = '高級句子';
-    currentSetId = null; inSpecialRoom = false; // ไม่ผูกกับระบบล็อกชุด/ห้องพิเศษ
     advSentIdx = idx;
     startSetSession(entries, { keepOrder: true });
     advSentenceCtx = { th: s.th, zh: s.zh }; // ตั้งหลัง startSetSession (ฟังก์ชันนั้นจะล้างค่านี้ก่อนเสมอ)
@@ -6503,7 +6270,7 @@ var TF = {
       // สเตจ 1: บันทึกผล (พร้อมคะแนน) + ไปคำถัดไป/สรุป + คิดโบนัสจบชุด
       tfCommitWordAndAdvance({ forced: false });
     } else {
-      TF.selectCategory(selectedCategory || 'ทั้งหมด');
+      TF._startRandom5(); // Lin 2026-07-04: เดิมเรียก selectCategory (ลบไปแล้ว) — fallback กรณี session หลุด
     }
   },
   downloadSummary: function() {
