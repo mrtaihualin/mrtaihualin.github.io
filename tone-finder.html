@@ -90,6 +90,8 @@
     border: 1.5px solid rgba(139,99,16,0.15);
     border-radius: 0;
     overflow: hidden;
+    /* LIN 2026-07-04: กันแถบสลับเกม (#game-switcher = fixed อยู่ล่างจอ) บังปุ่มตอบล่างสุด */
+    padding-bottom: 104px;
   }
 
   /* ── Word banner ── */
@@ -4235,8 +4237,12 @@ function render() {
       if (_card && _card.getBoundingClientRect) {
         var _rect = _card.getBoundingClientRect();
         var _offset = 70; // เผื่อหัวเว็บแบบ sticky
-        // เลื่อนเฉพาะเมื่อการ์ดถูกดันขึ้นเหนือจอ หรือต่ำเกินไป — อยู่ในกรอบสบายตาแล้วไม่ขยับ
-        if (_rect.top < 8 || _rect.top > 150) {
+        // LIN 2026-07-04: กันจอ "เด้งขึ้นบน" ทุกครั้งที่กดเปลี่ยนหน้า (กดยาก)
+        //   → เลื่อนเฉพาะตอน "จำเป็นจริง" เท่านั้น: การ์ดถูกตัดหายเหนือหัวเว็บ (top < 0)
+        //     หรือถูกดันลงเกินเกือบครึ่งจอจนมองไม่เห็นคำ (top > 45% ของความสูงจอ)
+        //   ถ้าการ์ดยังอยู่ในกรอบสบายตา = ไม่ขยับเลย → กันกระชากตอนกดปุ่มรัวๆ
+        var _vh = window.innerHeight || document.documentElement.clientHeight || 700;
+        if (_rect.top < 0 || _rect.top > _vh * 0.45) {
           var _y = (window.pageYOffset || 0) + _rect.top - _offset;
           if (_y < 0) _y = 0;
           window.scrollTo({ top: _y, left: 0, behavior: 'auto' });
@@ -6657,7 +6663,9 @@ setTimeout(tfRenderExtBar, 0);
 .gs-tab:hover{background:rgba(139,99,16,0.08);}
 .gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
 .gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
-@media(max-width:768px){#game-switcher{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}.gs-tab{padding:8px 13px;font-size:12px;}}
+@media(max-width:768px){#game-switcher{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}.gs-tab{padding:8px 13px;font-size:12px;}
+/* LIN 2026-07-04: มือถือแถบสลับเกมลอยสูงกว่า → เพิ่มที่ว่างล่างการ์ดกันบังปุ่มตอบ */
+.tf-card{padding-bottom:132px;}}
 </style>
 <div id="game-switcher">
   <span class="gs-tab gs-active">🎵 聲調搜尋</span>
