@@ -415,7 +415,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <div class="btn-row">
     <button class="btn btn-secondary" id="btn-skip"     onclick="skip()">跳過</button>
-    <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記住 ✓</button>
+    <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
     <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
     <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一字 →</button>
   </div>
@@ -1460,21 +1460,59 @@ function buildRevealRules(w){
 // STATE
 // ════════════════════════════════════════════
 var ROUND_SIZE=10;
-// ── ระบบคะแนนกลาง (Lin 2026-07-03 ล็อกสเปกแล้ว): ถ่วงน้ำหนักระดับ + โบนัสจบรอบ + คำทอง ──
-var LEVEL_WEIGHT={'初':1,'中':1.5,'高':2};
+// ── ระบบคะแนนกลาง (Lin 2026-07-04 แก้ตามสเปกใหม่ — คำสั่ง_แก้เกมอ่าน_รอบแกน_2026-07-04.md งานที่2) ──
+// ⚠️ นี่คือตัวคูณ "แต้มเกม (soft)" เท่านั้น — คนละตัวกับ LEVEL_MULT (ตัวคูณดาวเงิน hard) ใน game-account.js
+var LEVEL_WEIGHT={'初':1,'中':1.2,'高':1.4};
 var ROUND_COMPLETE_BONUS=20;                   // จบรอบ +20
 var ROUND_PERFECT_BONUS=50;                    // จบรอบแบบ perfect เพิ่มอีก +50 (รวม 70)
 var GOLDEN_WORD_CHANCE=0.18;                   // โอกาสคำทอง ~18%/คำ (สเปกเดียวกับเกมเสียง)
 var GOLDEN_WORD_MULT=2;                        // คำทองตอบถูกครั้งแรก ×2
 var ADV_PTS_PER_SYL=2;                         // 高級: +2 แต้ม/พยางค์ที่อ่านถูก (คำทอง ×2 → +4)
+// ── งานที่1+2 (2026-07-04): คะแนนต่อพยางค์ 0/1/2/3ผิด → 10/7/4/1 (floor1) · ครบ4=fail(0) ──
+var SYL_SCORE=[10,7,4,1];
+function rgSyllableScore(wc){return SYL_SCORE[Math.min(wc||0,3)];}
+var HIGH_RAW_START_IDX=7;      // 0-based → พยางค์ที่ 8 เป็นต้นไป (เฉพาะ高／ประโยคยาว) ไม่เอาเข้าเฉลี่ย ไม่คูณ weight
+var HIGH_RAW_BONUS_PER_SYL=2;  // +2 ดิบ/พยางค์ (ถ้าพยางค์นั้นถูกในที่สุด — ไม่สเกลตามจำนวนผิด)
+var RG_LEVEL_TO_NUM={'初':1,'中':2,'高':3}; // map ให้ตรงกับ GAME_ACCOUNT.addHardStars(clean, level:1|2|3)
 var curLevel='初';
 var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,roundTotal=0;
 var picks=[],comps=[],correctSet=[],needN=0;
 var checked=false,wrongCount=0;
-var masteredSet={},correctCountMap={},reviewDates={};
+var sylWrongCount=[];          // งานที่1: จำนวนครั้งที่ผิดก่อนถูก แยกรายพยางค์ (index ตรงกับ sylList)
+var wordUsedGuide=false;       // งานที่3: เปิดคำใบ้ระหว่างเช็คคำตอบหน่วยนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS)
+var curWordIsKnownCheck=false; // งานที่7: กำลังอยู่ในด่านพิสูจน์ "已記得" ของคำนี้ไหม (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
+function rgLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
+// ── SRS ใหม่ (งานที่4 — ลอกจาก TF_SRS ในเกมเสียง tone-finder.html ~2939-3018 ทุกจุด) ──
+// แทนที่ masteredSet/correctCountMap/reviewDates เดิม (นับถูกติดกันธรรมดา ไม่รีเซ็ตเมื่อผิด) ด้วย stage-based 1→7→16 วัน
+var RG_SRS_CFG={INTERVALS:[1,7,16],CLEAN_ROUNDS_TO_MASTER:3};
+var RG_SRS={
+  cfg:RG_SRS_CFG,
+  twDate:function(ms){var d=(ms==null)?new Date():new Date(ms);try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(d);}catch(e){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}},
+  twDatePlusDays:function(ms,days){return this.twDate((ms==null?Date.now():ms)+(days||0)*86400000);},
+  blank:function(){return {stage:0,dueDate:'',dueAt:0,everFailed:false,mastered:false};},
+  isDue:function(rec,nowMs){
+    if(!rec||rec.mastered)return false;
+    var today=this.twDate(nowMs||Date.now());
+    if(rec.dueDate)return rec.dueDate<=today;
+    if(rec.dueAt)return this.twDate(rec.dueAt)<=today;
+    return true;
+  },
+  isFinalCheck:function(rec){return !!rec && rec.stage===(this.cfg.CLEAN_ROUNDS_TO_MASTER-1);},
+  advanceOnClean:function(rec,nowMs){
+    rec=rec||this.blank();nowMs=nowMs||Date.now();
+    var justPassedStage=rec.stage;
+    rec.stage+=1;
+    if(rec.stage>=this.cfg.CLEAN_ROUNDS_TO_MASTER){rec.mastered=true;return {rec:rec,justMastered:true,clean:!rec.everFailed};}
+    var days=this.cfg.INTERVALS[justPassedStage]||this.cfg.INTERVALS[this.cfg.INTERVALS.length-1];
+    rec.dueDate=this.twDatePlusDays(nowMs,days);rec.dueAt=nowMs+days*86400000;
+    return {rec:rec,justMastered:false,clean:!rec.everFailed};
+  },
+  resetOnFail:function(rec){rec=rec||this.blank();rec.stage=0;rec.dueDate='';rec.dueAt=0;rec.everFailed=true;return rec;}
+};
+var srsRecords={}; // idx (index ใน WORDS) → SRS record — Lin ยืนยัน 2026-07-04: ยังไม่มีคนเล่นจริง ล้างของเก่าได้เลย ไม่ต้องย้ายข้อมูล
+function rgSrsGet(idx){return srsRecords[idx]||null;}
+function rgSrsSet(idx,rec){srsRecords[idx]=rec;}
 var SAVE_KEY='rgv3_save';
-var REVIEW_MS=7*24*60*60*1000; // ทบทวนรอบ 2 (ถูกครั้งที่ 2) = 7 วัน
-var DAY_MS=24*60*60*1000;      // ทบทวนรอบ 1 (ถูกครั้งที่ 1) = 1 วัน (อิงวิจัย spaced repetition)
 var rememberStep=0,rememberTimer=null;
 var totalStars=0,totalBadges=0;
 var W=null;
@@ -1510,7 +1548,7 @@ function setRgGuideMode(on){
 function updateActiveSlot(){
   slotSeq.forEach(function(c){
     var box=document.getElementById('sb-'+c);if(!box)return;
-    box.classList.toggle('active', rgGuideMode && c===activeSlot && !checked);
+    box.classList.toggle('active', rgGuideMode && c===activeSlot && !checked && !curWordIsKnownCheck);
   });
   updateOptHint();
 }
@@ -1519,7 +1557,7 @@ function updateOptHint(){
   var pool=document.getElementById('pool');
   if(!pool)return;
   pool.querySelectorAll('.opt.hint').forEach(function(x){x.classList.remove('hint');});
-  if(!rgGuideMode||checked||!activeSlot)return;
+  if(!rgGuideMode||checked||!activeSlot||curWordIsKnownCheck)return; // งานที่7: ด่านพิสูจน์ 已記得 ห้ามมีคำใบ้เด็ดขาด
   var want=correctVal[activeSlot];
   for(var i=0;i<optTiles.length;i++){
     var t=optTiles[i];
@@ -1540,11 +1578,11 @@ var selectedBonus=null;  // tone name user picked before 檢查
 function loadSave(){
   try{
     var raw=localStorage.getItem(SAVE_KEY);
-    if(raw){var d=JSON.parse(raw);masteredSet=d.masteredSet||{};correctCountMap=d.correctCountMap||{};reviewDates=d.reviewDates||{};totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
+    if(raw){var d=JSON.parse(raw);srsRecords=d.srsRecords||{};totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
   }catch(e){}
 }
 function doSave(){
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify({masteredSet,correctCountMap,reviewDates,totalStars,totalBadges}));}catch(e){}
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify({srsRecords,totalStars,totalBadges}));}catch(e){}
 }
 
 // ════════════════════════════════════════════
@@ -1627,15 +1665,23 @@ function initGame(){
       return !w.syls;
     };
     var allIdx=WORDS.map(function(_,i){return i;}).filter(inLevel);
-    var pool=allIdx.filter(function(i){
-      if(masteredSet[i])return false;                          // เชี่ยวชาญแล้ว
-      if(reviewDates[i]&&reviewDates[i]>now)return false;     // ยังอยู่ใน cooldown 7 วัน
-      return true;
-    });
-    // ถ้าไม่มีคำพร้อม → เปิด cooldown words ก่อน (ยกเว้น mastered)
-    if(pool.length===0)pool=allIdx.filter(function(i){return !masteredSet[i];});
-    // ถ้า mastered ทั้งหมดในระดับนี้ → reset เฉพาะระดับนี้
-    if(pool.length===0){allIdx.forEach(function(i){delete masteredSet[i];delete correctCountMap[i];delete reviewDates[i];});doSave();pool=allIdx.slice();}
+    // งานที่4: กรองด้วย SRS ใหม่ (stage-based) — เฉพาะตอนล็อกอินเท่านั้น (ลอกกฎเกมเสียง: SRS ทำงานเฉพาะล็อกอิน)
+    // ไม่ล็อกอิน = เล่นได้ทุกคำเสมอ ไม่มีการจำ mastered/cooldown ในเครื่อง (ตรงสเปกข้อ0 ทั้งสองเกม)
+    var pool;
+    if(rgLoggedIn()){
+      pool=allIdx.filter(function(i){
+        var rec=srsRecords[i];
+        if(rec&&rec.mastered)return false;      // เชี่ยวชาญแล้ว (ตัดออกถาวร)
+        if(rec&&!RG_SRS.isDue(rec,now))return false; // ยังไม่ครบกำหนดทบทวน
+        return true;
+      });
+      // ถ้าไม่มีคำพร้อม → เปิด cooldown words ก่อน (ยกเว้น mastered)
+      if(pool.length===0)pool=allIdx.filter(function(i){var rec=srsRecords[i];return !(rec&&rec.mastered);});
+      // ถ้า mastered ทั้งหมดในระดับนี้ → reset เฉพาะระดับนี้
+      if(pool.length===0){allIdx.forEach(function(i){delete srsRecords[i];});doSave();pool=allIdx.slice();}
+    } else {
+      pool=allIdx.slice();
+    }
     roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
   }
   roundTotal=roundQueue.length;
@@ -1682,10 +1728,12 @@ function updateNextSylBtn(){
 function loadWord(){
   rememberStep=0;clearTimeout(rememberTimer);
   var rb=document.getElementById('btn-remember');
-  if(rb){rb.textContent='已記住 ✓';rb.style.cssText='';}
+  if(rb){rb.textContent='已記得';rb.style.cssText='';rb.style.display='';}
   WORD=WORDS[roundQueue[cur]];
   sylList=buildSyls(WORD);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;sylCache=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
+  sylWrongCount=new Array(sylList.length).fill(0); // งานที่1: ตัวนับผิดแยกรายพยางค์ (คำใหม่ = ล้าง)
+  wordUsedGuide=false;curWordIsKnownCheck=false;    // งานที่3+7: ล้างสถานะต่อคำใหม่
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
@@ -1867,24 +1915,97 @@ function markSlots(){
 // คะแนน/มาสเตอร์ ทำตอน "จบทั้งคำ" (รองรับหลายพยางค์)
 function finalizeWord(){
   var idx=roundQueue[cur];var b=document.getElementById('banner');
+  var loggedIn=rgLoggedIn();
+
+  // ── ผิดครบ 4 ครั้ง (fail) — งานที่1: เฉลย + เข้าคิว SRS ใหม่ ไม่ recycle ในรอบเดียวกันอีกต่อไป ──
   if(wordFailed){
-    roundQueue.push(idx);streak=0;          // คำนี้กลับมาใหม่
-    b.textContent='綠色才是正確答案 — 這個字稍後會再出現';b.className='result-banner show no';
-  } else {
-    var pts=wordHadWrong?5:10;
-    if(pts===10)cleanC++;
-    var golden=(pts===10 && wordGolden); // คำทอง: ตอบถูกครั้งแรกล้วนเท่านั้น
-    if(golden)pts=pts*GOLDEN_WORD_MULT;
-    roundScore+=pts;okC++;streak++;if(streak>maxStreak)maxStreak=streak;
-    correctCountMap[idx]=(correctCountMap[idx]||0)+1;
-    if(correctCountMap[idx]>=3){masteredSet[idx]=1;}else{reviewDates[idx]=Date.now()+(correctCountMap[idx]>=2?REVIEW_MS:DAY_MS);}
-    if(wordHadWrong){b.textContent='完成這個字！+'+pts+' 分';b.className='result-banner show half';}
-    else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+(golden?' ✨黃金字':'')+' +'+pts+' 分';b.className='result-banner show ok';}
-    pop('+'+pts+(golden?' ✨':''));
+    streak=0;
+    if(loggedIn){
+      var recF=RG_SRS.resetOnFail(rgSrsGet(idx));
+      rgSrsSet(idx,recF);
+    }
+    if(curWordIsKnownCheck){
+      curWordIsKnownCheck=false;
+      b.textContent='看來還沒完全記熟，這個字先留在複習清單裡 🔁';b.className='result-banner show no';
+    } else {
+      b.textContent='綠色才是正確答案 — 這個字之後會再複習到';b.className='result-banner show no';
+    }
+    doSave();
+    return;
   }
+
+  // ── งานที่7: ด่านพิสูจน์ "已記得" — ต้องสะอาดจริง (ไม่มีพลาดแม้ครั้งเดียว + ไม่ใช้คำใบ้) ──
+  if(curWordIsKnownCheck){
+    var passedClean=!wordHadWrong && !wordUsedGuide;
+    if(loggedIn){
+      if(passedClean){
+        var recM=rgSrsGet(idx)||RG_SRS.blank();
+        recM.mastered=true;
+        rgSrsSet(idx,recM);
+      } else {
+        rgSrsSet(idx,RG_SRS.resetOnFail(rgSrsGet(idx)));
+      }
+    }
+    curWordIsKnownCheck=false;
+    if(passedClean){ b.textContent='真的記得！這個字標記為熟練 ✓（不計分、不加幣）';b.className='result-banner show ok'; }
+    else{ b.textContent='中途有出錯/用了提示，這個字先留在複習清單裡 🔁';b.className='result-banner show no'; }
+    doSave();
+    return;
+  }
+
+  // ── งานที่3: เปิดคำใบ้ระหว่างเช็คคำตอบ (พยางค์ใดก็ตาม) → 0 คะแนน + ไม่แตะ SRS เลย เหมือนยังไม่ได้ทำ ──
+  if(wordUsedGuide){
+    okC++;
+    b.textContent='這次用了提示，先不計分（下次試試看不看提示！）';b.className='result-banner show half';
+    doSave();
+    return;
+  }
+
+  // ── งานที่1+2: คะแนนต่อพยางค์เฉลี่ย × ตัวคูณแต้มเกม(soft) + 高 พยางค์ 8+ บวกดิบ ──
+  var n=sylWrongCount.length;
+  var avgCount=Math.min(n,HIGH_RAW_START_IDX);
+  var sum=0,i;
+  for(i=0;i<avgCount;i++) sum+=rgSyllableScore(sylWrongCount[i]);
+  var avg=sum/avgCount;
+  var weight=LEVEL_WEIGHT[curLevel]||1;
+  var rawBonus=0;
+  for(i=HIGH_RAW_START_IDX;i<n;i++) rawBonus+=HIGH_RAW_BONUS_PER_SYL;
+  var pts=Math.max(1,Math.round(avg*weight+rawBonus));
+
+  var clean=!wordHadWrong; // "สะอาด" ของ SRS = ไม่พลาดแม้ครั้งเดียวทั้งหน่วย (ตรงเกมเสียง) — ต่างจากคะแนนที่ยังให้บางส่วนได้แม้พลาด
+  if(clean)cleanC++;
+  var golden=(clean && wordGolden); // คำทอง: ตอบถูกครั้งแรกล้วนเท่านั้น
+  if(golden)pts=pts*GOLDEN_WORD_MULT;
+  roundScore+=pts;okC++;streak++;if(streak>maxStreak)maxStreak=streak;
+
+  // ── งานที่4+5: SRS เลื่อนขั้น/รีเซ็ต + แจกดาวเงินตอน mastered จริง (เฉพาะล็อกอิน) ──
+  if(loggedIn){
+    var rec=rgSrsGet(idx)||RG_SRS.blank();
+    if(clean){
+      var res=RG_SRS.advanceOnClean(rec,Date.now());
+      rec=res.rec;
+      if(res.justMastered){
+        try{
+          if(window.GAME_ACCOUNT && window.GAME_ACCOUNT.addHardStars){
+            var lvNum=RG_LEVEL_TO_NUM[curLevel]||1;
+            GAME_ACCOUNT.addHardStars(res.clean,lvNum);
+            totalStars=GAME_ACCOUNT.getStars();
+          }
+        }catch(e){}
+      }
+    } else {
+      rec=RG_SRS.resetOnFail(rec); // ผิดแม้ครั้งเดียว (ไม่ใช่แค่ fail เต็ม) = กลับวันแรกเสมอ ตรงเกมเสียง
+    }
+    rgSrsSet(idx,rec);
+  }
+
+  if(wordHadWrong){b.textContent='完成這個字！+'+pts+' 分';b.className='result-banner show half';}
+  else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+(golden?' ✨黃金字':'')+' +'+pts+' 分';b.className='result-banner show ok';}
+  pop('+'+pts+(golden?' ✨':''));
   doSave();
 }
 function check(){
+  if(rgGuideMode)wordUsedGuide=true; // งานที่3: จับตั้งแต่ก่อนแยกพาธ ครอบคลุมทั้งพยางค์เดียวและหลายพยางค์
   if(sylList.length>1) return rgCheckWholeWord(); // หลายพยางค์ → ตรวจทั้งคำทีเดียว (เลือกพยางค์เองได้อิสระ)
   var lastSyl=(sylIdx>=sylList.length-1);
   var allOk=comps.every(function(c){var id=slotFills[c];if(id==null)return false;var t=tileById(id);return t&&t.val===correctVal[c];});
@@ -1907,8 +2028,9 @@ function check(){
     refreshUI();
   } else {
     wrongCount++;wordHadWrong=true;streak=0;badC++;
-    if(wrongCount < 3){
-      // ผิดครั้งที่ 1/2 → กระพริบตัวที่ผิด, เคลียร์, ลองใหม่
+    sylWrongCount[0]=wrongCount; // งานที่1: sylList.length===1 เสมอในพาธนี้ → พยางค์เดียว = sylIdx 0
+    if(wrongCount < 4){
+      // ผิดครั้งที่ 1/2/3 → กระพริบตัวที่ผิด, เคลียร์, ลองใหม่ (งานที่1: เพิ่มจาก 3→4 ครั้งก่อน fail)
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
         var c=slotOfTile(Number(x.dataset.id));
         if(c && correctVal[c]!==x.dataset.val)x.classList.add('wrong');
@@ -1922,13 +2044,13 @@ function check(){
       document.getElementById('pool').querySelectorAll('.opt.sel').forEach(function(x){x.classList.remove('sel');});
       document.getElementById('btn-check').disabled=true;
       var hint=document.getElementById('retry-hint');
-      hint.textContent=wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️';
+      hint.textContent=wrongCount>=3?'最後一次機會！⚠️':'選錯了！再試一次 🔁';
       hint.className='retry-hint show';
       document.getElementById('ok').textContent=okC;
       document.getElementById('bad').textContent=badC;
       updateCombo();
     } else {
-      // ผิดครั้งที่ 3 → เฉลยพยางค์นี้ · คำนี้ถือว่าพลาด
+      // ผิดครั้งที่ 4 → เฉลยพยางค์นี้ · คำนี้ถือว่าพลาด (งานที่1: เดิม 3 ครั้ง)
       wordFailed=true;checked=true;
       markOpts();markSlots();
       evaluateBonus();showReveal();renderSylStrip();
@@ -2010,12 +2132,15 @@ function evaluateBonus(){
 }
 
 function skip(){roundQueue.push(roundQueue[cur]);streak=0;updateCombo();nextWord();}
-// กดครั้งเดียว = ล็อค cooldown 7 วัน + ข้ามไปคำถัดไปทันที (เอาการกดยืนยันซ้ำ+รอ 1.8 วิ ออก — Lin 2026-07-04)
+// งานที่7 (2026-07-04 แบบเข้ม ลอกเกมเสียง markKnown()): กดแล้ว "ไม่ตัดคำทันที" —
+// ต้องตอบคำนี้ต่อให้ผ่านแบบสะอาด (ไม่ผิดเลย ไม่ใช้คำใบ้) 1 ครั้งก่อน ถึงจะตัดคำออก (ดู finalizeWord curWordIsKnownCheck)
 function remember(){
-  var idx=roundQueue[cur];
-  reviewDates[idx]=Date.now()+REVIEW_MS;
-  doSave();
-  nextWord();
+  curWordIsKnownCheck=true;
+  updateActiveSlot();updateOptHint(); // ซ่อนคำใบ้ที่อาจค้างอยู่ทันที
+  var b=document.getElementById('banner');
+  if(b){b.textContent='證明你真的記得：接下來不會有提示，答對才會標記熟練 ✓';b.className='result-banner show';}
+  var rb=document.getElementById('btn-remember');
+  if(rb)rb.style.display='none';
 }
 function next(){
   if(sylIdx<sylList.length-1){sylIdx++;loadSyl();}  // ไปพยางค์ถัดไปของคำเดิม
@@ -2040,9 +2165,11 @@ function endRound(){
     if(cleanC===roundTotal)roundBonus+=ROUND_PERFECT_BONUS;
   }
   roundScore+=roundBonus;
+  // งานที่2 (2026-07-04): คูณ weight ต่อคำไปแล้วใน finalizeWord() ตรงนี้เหลือแค่โชว์ label ไม่คูณซ้ำ
+  // (เดิมคูณทีเดียวตอนจบรอบ — เปลี่ยนเพราะ 高 พยางค์8+ ต้องบวกดิบไม่ถูกคูณ weight ซ้ำ)
   var levelWeight=LEVEL_WEIGHT[curLevel]||1;
-  var weightedScore=Math.round(roundScore*levelWeight);
-  document.getElementById('end-score').textContent=weightedScore+' 分'+(levelWeight!==1?'（'+curLevel+'級 ×'+levelWeight+'）':'');
+  var weightedScore=Math.round(roundScore);
+  document.getElementById('end-score').textContent=weightedScore+' 分'+(levelWeight!==1?'（'+curLevel+'級 已計入 ×'+levelWeight+' 加權）':'');
   var detail='';
   // ⭐ ดาว 1–3 ดวง/รอบ ตามความแม่น (สะอาด = ไม่พลาดเลย ได้ 10 分) → บัญชีกลางรวมกับเกมเสียง — Lin 2026-06-27
   var _se=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starsForRound(cleanC,roundTotal):0;
@@ -2511,10 +2638,11 @@ function rgSaveChallenge(st) { try { localStorage.setItem(RG_CH_KEY, JSON.string
 // streak+freeze — share key กับเกมเสียง
 function rgLoadStreak() { try { return JSON.parse(localStorage.getItem(TF_STREAK_KEY) || '{}') || {}; } catch(e) { return {}; } }
 function rgSaveStreak(s) { try { localStorage.setItem(TF_STREAK_KEY, JSON.stringify(s)); } catch(e) {} }
-function rgTodayStr() { var d = new Date(); return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
+// งานที่8 (2026-07-04): ล็อก timezone ไต้หวัน (Asia/Taipei) ทุกจุดที่ตัดสินวัน — เดิมใช้เวลาเครื่องผู้เล่นตรงๆ (ผิดสเปกข้อ0)
+function rgTodayStr() { try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date()); }catch(e){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); } }
 function rgApplyStreak() {
   var s = rgLoadStreak(), cfg = RG_GAME_CFG, today = rgTodayStr();
-  var yest = (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
+  var yest = RG_SRS.twDatePlusDays(Date.now(),-1);
   s.setsToday = (s.lastPlay === today) ? ((s.setsToday || 0) + 1) : 1;
   var goalMet = s.setsToday >= cfg.DAILY_GOAL_SETS;
   var streakEv = { goalMetToday: goalMet, freezeUsed: false, freezeEarned: 0 };
@@ -2554,7 +2682,7 @@ function rgRenderGameBar() {
   var cp = rgChallengeState(), st = rgLoadStreak();
   var pct = Math.min(100, Math.round(cp.st.progress / cp.ch.target * 100));
   var daysLeft = Math.max(0, Math.ceil((rgWeekEndMs() - Date.now()) / 86400000));
-  var alive = st.streak > 0 && (st.lastPlay === rgTodayStr() || (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })() === st.lastPlay);
+  var alive = st.streak > 0 && (st.lastPlay === rgTodayStr() || RG_SRS.twDatePlusDays(Date.now(),-1) === st.lastPlay);
   var ban = document.getElementById('rg-challenge-banner');
   if (ban) ban.innerHTML =
     '<div class="tf-challenge-banner' + (cp.st.done ? ' done' : '') + '">' +
@@ -2694,9 +2822,12 @@ function rgCheckWholeWord(){
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     refreshUI();
   } else {
-    wrongCount++;wordHadWrong=true;streak=0;badC++;
+    wordHadWrong=true;streak=0;badC++;
+    // งานที่1: นับผิดแยกรายพยางค์ (พยางค์ไหนโผล่มาว่าผิด ก็ +1 เฉพาะพยางค์นั้น) แทนนับรวมทั้งคำแบบเดิม
+    sylWrongCount[wrongIdx]=(sylWrongCount[wrongIdx]||0)+1;
+    wrongCount=sylWrongCount[wrongIdx]; // ให้ retry-hint อ้างอิงจำนวนผิดของพยางค์นี้เอง
     rgJumpForCheck(wrongIdx);
-    if(wrongCount<3){
+    if(wrongCount<4){
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
         var c=slotOfTile(Number(x.dataset.id));
         if(c && correctVal[c]!==x.dataset.val)x.classList.add('wrong');
@@ -2707,7 +2838,7 @@ function rgCheckWholeWord(){
       document.getElementById('pool').querySelectorAll('.opt.sel').forEach(function(x){x.classList.remove('sel');});
       document.getElementById('btn-check').disabled=true;
       var hint=document.getElementById('retry-hint');
-      hint.textContent=(wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️')+'（音節 '+(wrongIdx+1)+' 錯了）';
+      hint.textContent=(wrongCount>=3?'最後一次機會！⚠️':'選錯了！再試一次 🔁')+'（音節 '+(wrongIdx+1)+' 錯了）';
       hint.className='retry-hint show';
       document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
       updateCombo();

@@ -1419,6 +1419,7 @@ var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,
 var picks=[],comps=[],correctSet=[],needN=0;
 var checked=false,wrongCount=0;
 var masteredSet={},correctCountMap={},reviewDates={};
+var dirtyMap={}; // Lin 2026-07-04: จำคำที่เคยพิมพ์ผิดระหว่างทางไปสู่ mastery (ใช้ตัดสิน clean=3 ดาว / กู้=1 ดาว ตอนแจกดาวเงิน)
 var SAVE_KEY='rgv3_save';
 var REVIEW_MS=7*24*60*60*1000; // ทบทวนรอบ 2 (ถูกครั้งที่ 2) = 7 วัน
 var DAY_MS=24*60*60*1000;      // ทบทวนรอบ 1 (ถูกครั้งที่ 1) = 1 วัน (อิงวิจัย spaced repetition)
@@ -1452,11 +1453,11 @@ var selectedBonus=null;  // tone name user picked before 檢查
 function loadSave(){
   try{
     var raw=localStorage.getItem(SAVE_KEY);
-    if(raw){var d=JSON.parse(raw);masteredSet=d.masteredSet||{};correctCountMap=d.correctCountMap||{};reviewDates=d.reviewDates||{};totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
+    if(raw){var d=JSON.parse(raw);masteredSet=d.masteredSet||{};correctCountMap=d.correctCountMap||{};reviewDates=d.reviewDates||{};dirtyMap=d.dirtyMap||{};totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
   }catch(e){}
 }
 function doSave(){
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify({masteredSet,correctCountMap,reviewDates,totalStars,totalBadges}));}catch(e){}
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify({masteredSet,correctCountMap,reviewDates,dirtyMap,totalStars,totalBadges}));}catch(e){}
 }
 
 // ════════════════════════════════════════════
@@ -1540,7 +1541,7 @@ function initGame(){
     // ถ้าไม่มีคำพร้อม → เปิด cooldown words ก่อน (ยกเว้น mastered)
     if(pool.length===0)pool=allIdx.filter(function(i){return !masteredSet[i];});
     // ถ้า mastered ทั้งหมดในระดับนี้ → reset เฉพาะระดับนี้
-    if(pool.length===0){allIdx.forEach(function(i){delete masteredSet[i];delete correctCountMap[i];delete reviewDates[i];});doSave();pool=allIdx.slice();}
+    if(pool.length===0){allIdx.forEach(function(i){delete masteredSet[i];delete correctCountMap[i];delete reviewDates[i];delete dirtyMap[i];});doSave();pool=allIdx.slice();}
     roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
   }
   roundTotal=roundQueue.length;
@@ -1762,8 +1763,19 @@ function finalizeWord(){
     var golden=(pts===10 && wordGolden); // คำทอง: ตอบถูกครั้งแรกล้วนเท่านั้น
     if(golden)pts=pts*GOLDEN_WORD_MULT;
     roundScore+=pts;okC++;streak++;if(streak>maxStreak)maxStreak=streak;
+    if(wordHadWrong)dirtyMap[idx]=1; // เคยพิมพ์ผิดระหว่างทาง → ตอน mastered จะได้ "กู้"(1) ไม่ใช่ "จำเอง"(3)
     correctCountMap[idx]=(correctCountMap[idx]||0)+1;
-    if(correctCountMap[idx]>=3){masteredSet[idx]=1;}else{reviewDates[idx]=Date.now()+(correctCountMap[idx]>=2?REVIEW_MS:DAY_MS);}
+    if(correctCountMap[idx]>=3){
+      masteredSet[idx]=1;
+      // ── Lin 2026-07-04: แจกดาวเงินตอนคำถูก "ตัด" ออกจาก SRS จริง (ใช้ระบบกลาง game-account.js ตัวเดียวกับเกมเสียง) ──
+      if(window.GAME_ACCOUNT){
+        var _clean=!dirtyMap[idx];
+        var _lvlNum=(curLevel==='中')?2:1; // finalizeWord ใช้เฉพาะ 初/中 (高 แยกไปเส้นทาง advXxx ไม่มี SRS)
+        var _hs=GAME_ACCOUNT.addHardStars(_clean,_lvlNum);
+        if(_hs&&_hs.stars>0){totalStars=GAME_ACCOUNT.getStars();}
+      }
+      delete dirtyMap[idx];
+    }else{reviewDates[idx]=Date.now()+(correctCountMap[idx]>=2?REVIEW_MS:DAY_MS);}
     if(wordHadWrong){b.textContent='完成這個字！+'+pts+' 分';b.className='result-banner show half';}
     else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+(golden?' ✨黃金字':'')+' +'+pts+' 分';b.className='result-banner show ok';}
     pop('+'+pts+(golden?' ✨':''));
