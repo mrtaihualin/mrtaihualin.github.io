@@ -12,6 +12,17 @@
   var pageLabel   = document.title || '泰語學習講義';
 
   /* ─────────────────────────────
+     個人化連結參數（?s=token&n=base64姓名）
+     由老師在「課堂教室」貼教材連結時自動加上，用來辨認「這是哪位學生的頁面」
+     沒有這兩個參數 → 只是一般公開連結，不顯示「存入 Google Drive」按鈕
+  ───────────────────────────── */
+  var qp = new URLSearchParams(location.search);
+  var studentToken = qp.get('s') || '';
+  var studentName  = '';
+  try { if (qp.get('n')) studentName = decodeURIComponent(atob(qp.get('n'))); } catch (e) {}
+  var canSaveToDrive = !!(studentToken && studentName);
+
+  /* ─────────────────────────────
      下載整頁 PDF 按鈕
   ───────────────────────────── */
   var pdfBtn = document.createElement('button');
@@ -54,6 +65,14 @@
       '<hr class="fnotes-hr">';
   }
 
+  var driveRow = canSaveToDrive
+    ? ('<div class="fnotes-actions" style="margin-top:6px;">' +
+        '<span class="fnotes-hint">存入「' + escapeHtml(studentName) + '」的 Google Drive（僅限老師本人使用）</span>' +
+        '<button class="fnotes-dl-btn fnotes-drive-btn" style="background:#0f766e;">☁️ 存入 Google Drive</button>' +
+      '</div>' +
+      '<div class="fnotes-drive-status" style="font-size:0.8rem;color:var(--ink-mid,#8a8370);margin-top:4px;"></div>')
+    : '';
+
   var overlay = document.createElement('div');
   overlay.className = 'fnotes-overlay';
   overlay.innerHTML =
@@ -66,6 +85,7 @@
         '<span class="fnotes-hint">筆記會自動儲存在這個瀏覽器</span>' +
         '<button class="fnotes-dl-btn">⬇ 下載 PDF</button>' +
       '</div>' +
+      driveRow +
     '</div>';
 
   var textarea = overlay.querySelector('.fnotes-textarea');
@@ -155,6 +175,139 @@
   }
 
   overlay.querySelector('.fnotes-dl-btn').addEventListener('click', downloadPDF);
+
+  /* ─────────────────────────────
+     存入 Google Drive（只有帶 ?s=&n= 個人化連結才會出現這顆按鈕）
+     跟「課堂教室」用同一組 Google 帳號授權（drive.file scope，只能動到 App 自己建立的檔案）
+     ⚠️ 只有老師本人登入 Google 才有寫入權限；學生自己點只會授權寫進自己的 Drive，不會出錯但也存不進老師的資料夾
+  ───────────────────────────── */
+  if (canSaveToDrive) {
+    var GOOGLE_CLIENT_ID = '912926837729-j8n8mojmrmngpha68pbasv9qslvgtvrn.apps.googleusercontent.com';
+    var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+    var DRIVE_ROOT_FOLDER = 'mrtaihualin 課堂錄影';
+    var gdToken = null, gdTokenExp = 0, gdTokenClient = null;
+
+    function loadGsiScript() {
+      return new Promise(function (resolve, reject) {
+        if (window.google && google.accounts && google.accounts.oauth2) { resolve(); return; }
+        var s = document.createElement('script');
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.async = true; s.defer = true;
+        s.onload = function () { resolve(); };
+        s.onerror = function () { reject(new Error('Google 登入元件載入失敗')); };
+        document.head.appendChild(s);
+      });
+    }
+
+    function gdGetToken(forceConsent) {
+      return loadGsiScript().then(function () {
+        return new Promise(function (resolve, reject) {
+          if (!gdTokenClient) {
+            gdTokenClient = google.accounts.oauth2.initTokenClient({
+              client_id: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPE, callback: function () {}
+            });
+          }
+          if (!forceConsent && gdToken && Date.now() < gdTokenExp - 60000) { resolve(gdToken); return; }
+          var timer = setTimeout(function () { reject(new Error('等候授權逾時，請再按一次')); }, 15000);
+          gdTokenClient.callback = function (resp) {
+            clearTimeout(timer);
+            if (resp.error) { reject(new Error('Google 授權失敗：' + resp.error)); return; }
+            gdToken = resp.access_token;
+            gdTokenExp = Date.now() + (resp.expires_in || 3600) * 1000;
+            resolve(gdToken);
+          };
+          gdTokenClient.requestAccessToken({ prompt: forceConsent ? 'consent' : '', hint: 'mr.taihualin@gmail.com' });
+        });
+      });
+    }
+
+    function gdApi(path, opts) {
+      return gdGetToken().then(function (token) {
+        var headers = Object.assign({ Authorization: 'Bearer ' + token }, (opts && opts.headers) || {});
+        return fetch('https://www.googleapis.com/' + path, Object.assign({}, opts, { headers })).then(function (r) {
+          if (!r.ok) return r.text().then(function (t) { throw new Error('Drive API ' + r.status + '：' + t.slice(0, 200)); });
+          return r.json();
+        });
+      });
+    }
+
+    function gdFindFolder(name, parentId) {
+      var q = "mimeType='application/vnd.google-apps.folder' and trashed=false and name='" + name.replace(/'/g, "\\'") + "'";
+      if (parentId) q += " and '" + parentId + "' in parents";
+      return gdApi('drive/v3/files?spaces=drive&fields=files(id)&q=' + encodeURIComponent(q), { method: 'GET' })
+        .then(function (res) { return (res.files && res.files[0]) ? res.files[0].id : null; });
+    }
+
+    function gdEnsureFolder(name, parentId) {
+      return gdFindFolder(name, parentId).then(function (found) {
+        if (found) return found;
+        var body = { name: name, mimeType: 'application/vnd.google-apps.folder' };
+        if (parentId) body.parents = [parentId];
+        return gdApi('drive/v3/files?fields=id', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        }).then(function (res) { return res.id; });
+      });
+    }
+
+    function gdGetStudentSubfolderId(name, sub) {
+      return gdEnsureFolder(DRIVE_ROOT_FOLDER, null)
+        .then(function (rootId) { return gdEnsureFolder(name, rootId); })
+        .then(function (stuId) { return gdEnsureFolder(sub, stuId); });
+    }
+
+    function gdUploadSmall(blob, name, targetMime, folderId) {
+      return gdGetToken().then(function (token) {
+        var meta = { name: name, parents: [folderId] };
+        if (targetMime) meta.mimeType = targetMime;
+        var form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+        form.append('file', blob);
+        return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form
+        }).then(function (r) {
+          if (!r.ok) throw new Error('上傳失敗 ' + r.status);
+          return r.json();
+        });
+      });
+    }
+
+    function gdShareAnyone(fileId) {
+      return gdApi('drive/v3/files/' + fileId + '/permissions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+    }
+
+    var driveBtn = overlay.querySelector('.fnotes-drive-btn');
+    var driveStatusEl = overlay.querySelector('.fnotes-drive-status');
+
+    driveBtn.addEventListener('click', function () {
+      var content = textarea.value.trim();
+      if (!content) { alert('請先輸入內容再存入 Drive'); return; }
+      driveStatusEl.textContent = '☁️ 連線 Google（第一次會跳出授權視窗）…';
+      var now = new Date();
+      var ymd = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      var docName = '補充說明_' + studentName + '_' + ymd + '（' + pageLabel + '）';
+      var bodyHtml = escapeHtml(content).split(/\n{2,}/).map(function (p) {
+        return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+      }).join('');
+      var seed = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
+        '<h1>📝 ' + docName + '</h1>' + bodyHtml + '</body></html>';
+      var blob = new Blob([seed], { type: 'text/html' });
+
+      gdGetStudentSubfolderId(studentName, '學習內容').then(function (folderId) {
+        driveStatusEl.textContent = '☁️ 上傳中…';
+        return gdUploadSmall(blob, docName, 'application/vnd.google-apps.document', folderId);
+      }).then(function (doc) {
+        return gdShareAnyone(doc.id).catch(function () {}).then(function () { return doc; });
+      }).then(function (doc) {
+        driveStatusEl.innerHTML = '✅ 已存入「' + escapeHtml(studentName) + '」的 Drive（學習內容資料夾）';
+        unsavedSincePDF = false;
+      }).catch(function (e) {
+        driveStatusEl.textContent = '❌ 存檔失敗：' + (e.message || e) + '（請確認是用老師的 Google 帳號登入這台瀏覽器）';
+      });
+    });
+  }
 
   /* 關閉頁面時，若筆記還沒存成 PDF，跳出瀏覽器原生「確定離開？」提醒先下載 */
   window.addEventListener('beforeunload', function (e) {

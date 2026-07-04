@@ -1053,13 +1053,29 @@ async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
 
 // ============================================================
 // 教材連結（老師貼連結 → 存進 classroom_recordings → 學生「課堂資料下載」自動出現）
+// 如果是自己網站的頁面（mrtaihualin.com／mrtaihualin.github.io）→ 自動加上
+// ?s=token&n=學生姓名（base64），讓 拼音規則上課用.html 那類頁面知道「這是哪位學生」
+// 才會顯示「☁️ 存入 Google Drive」按鈕（只有自己網站的頁面才加，外部連結不動）
 // ============================================================
+function personalizeMaterialUrl(url, token) {
+  try {
+    const u = new URL(url);
+    const isOwnSite = /(^|\.)mrtaihualin\.com$/i.test(u.hostname) || /(^|\.)mrtaihualin\.github\.io$/i.test(u.hostname);
+    if (!isOwnSite) return url;
+    const s = studentsCache[token];
+    if (!s) return url;
+    u.searchParams.set('s', token);
+    u.searchParams.set('n', btoa(encodeURIComponent(s.name)));
+    return u.toString();
+  } catch (e) { return url; }
+}
+
 function openMaterialLinkDraft(token) {
   const t = token.replace(/'/g, '');
   const el = document.getElementById('matUrl-' + t);
   const url = (el && el.value || '').trim();
   if (!/^https:\/\//i.test(url)) { alert('請先貼上正確的連結（需以 https:// 開頭）'); return; }
-  window.open(url, '_blank', 'noopener');
+  window.open(personalizeMaterialUrl(url, token), '_blank', 'noopener');
 }
 
 async function saveMaterialLink(token) {
@@ -1070,7 +1086,8 @@ async function saveMaterialLink(token) {
   const url = (urlEl && urlEl.value || '').trim();
   if (!label) { alert('請輸入教材名稱'); return; }
   if (!/^https:\/\//i.test(url)) { alert('請貼上正確的連結（需以 https:// 開頭）'); return; }
-  await saveRecordingLink(token, '教材_' + label, null, url, '', null);
+  const finalUrl = personalizeMaterialUrl(url, token);
+  await saveRecordingLink(token, '教材_' + label, null, finalUrl, '', null);
   if (labelEl) labelEl.value = '';
   if (urlEl) urlEl.value = '';
   loadMaterialLinks(token);
