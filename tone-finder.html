@@ -2946,21 +2946,38 @@ var TF_SRS = {
   // สร้าง key เฉพาะคำ/ประโยค + ระดับ (คำเดียวกันคนละระดับ = คนละรายการ)
   keyFor: function (word, level) { return (level || 0) + '|' + word; },
 
+  // ── Lin 2026-07-04: วันที่แบบไต้หวัน (Asia/Taipei) สำหรับตัด "ครบวันหรือยัง" ของ SRS ให้สม่ำเสมอ ──
+  //   twDate(ms) → 'YYYY-MM-DD' เวลาไต้หวัน · twDatePlusDays(ms, n) → วันที่ไต้หวันของ ms บวก n วัน
+  //   ใช้วันที่ (ไม่ใช่ ms ดิบ) ตัดกำหนดทบทวน → คนเล่นคนละ timezone เห็น "ขึ้นวันใหม่" ตรงกันเสมอ
+  twDate: function (ms) {
+    var d = (ms == null) ? new Date() : new Date(ms);
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); }
+    catch (e) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  },
+  twDatePlusDays: function (ms, days) {
+    return this.twDate((ms == null ? Date.now() : ms) + (days || 0) * 86400000);
+  },
+
   // สร้าง record เริ่มต้นของคำใหม่ที่ยังไม่เคยเข้า SRS
   blank: function () {
     return {
       stage: 0,            // ผ่านรอบสะอาดติดกันกี่รอบแล้ว (0,1,2 → ครบ 3 = mastered)
-      dueAt: 0,             // timestamp วันที่ครบกำหนดทบทวนรอบถัดไป (0 = พร้อมเล่นได้ทันที)
+      dueDate: '',         // Lin 2026-07-04: วันครบกำหนดทบทวน 'YYYY-MM-DD' เวลาไต้หวัน ('' = พร้อมเล่นได้ทันที)
+      dueAt: 0,             // (เดิม/สำรอง) timestamp ms — เก็บไว้เผื่อ record เก่าที่ยังไม่มี dueDate
       everFailed: false,    // เคยผิด/แอบดูระหว่างเส้นทางนี้ไหม (คุมว่าจะได้ "จำเอง"=3 หรือ "กู้กลับมาได้"=1)
       mastered: false,      // ตัดออกจาก SRS แล้ว (ถาวร ไม่โผล่ซ้ำ)
       firstPassSoftAwarded: false  // เคยได้ "แต้มเกม" รอบแรกของ loop นี้แล้วหรือยัง (กันฟาร์มคะแนนซ้ำ)
     };
   },
 
-  // วันนี้ถึงกำหนดทบทวนคำนี้หรือยัง (true = ยังไม่เคยเล่น หรือครบกำหนดแล้ว)
+  // วันนี้ (เวลาไต้หวัน) ถึงกำหนดทบทวนคำนี้หรือยัง (true = ยังไม่เคยเล่น หรือครบกำหนดแล้ว)
+  // Lin 2026-07-04: ตัดด้วย "วันที่ไต้หวัน" — dueDate (string) ก่อน · ถ้าเป็น record เก่าที่มีแต่ dueAt (ms) ก็ยังรองรับ
   isDue: function (rec, nowMs) {
     if (!rec || rec.mastered) return false;
-    return (rec.dueAt || 0) <= (nowMs || Date.now());
+    var today = this.twDate(nowMs || Date.now());
+    if (rec.dueDate) return rec.dueDate <= today;          // ครบกำหนดเมื่อวันไต้หวันวันนี้ >= วันครบกำหนด
+    if (rec.dueAt) return this.twDate(rec.dueAt) <= today; // fallback record เก่า (มีแต่ ms)
+    return true;                                           // ยังไม่เคยตั้งกำหนด = พร้อมเล่นทันที
   },
 
   // นี่คือรอบ "day 16" (การเช็คครั้งสุดท้ายก่อน mastered) ไหม — stage 2 คือรอบที่ 3 (0-based)
@@ -2983,6 +3000,8 @@ var TF_SRS = {
       return { rec: rec, justMastered: true, clean: !rec.everFailed };
     }
     var days = this.cfg.INTERVALS[justPassedStage] || this.cfg.INTERVALS[this.cfg.INTERVALS.length - 1];
+    // Lin 2026-07-04: กำหนดวันครบเป็น "วันที่ไต้หวัน" (dueDate) + คง dueAt (ms) ไว้สำรอง
+    rec.dueDate = this.twDatePlusDays(nowMs, days);
     rec.dueAt = nowMs + days * 86400000;
     return { rec: rec, justMastered: false, clean: !rec.everFailed };
   },
@@ -2991,7 +3010,8 @@ var TF_SRS = {
   resetOnFail: function (rec) {
     rec = rec || this.blank();
     rec.stage = 0;
-    rec.dueAt = 0;   // พร้อมทบทวนใหม่ได้ทันที (เข้าคิว)
+    rec.dueDate = '';   // Lin 2026-07-04: พร้อมทบทวนใหม่ได้ทันที (เข้าคิว)
+    rec.dueAt = 0;
     rec.everFailed = true;
     return rec;
   }
@@ -3885,9 +3905,12 @@ var LESSON_TIPS = {
 
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
+// Lin 2026-07-04: วันที่แบบไต้หวัน (Asia/Taipei, UTC+8) เสมอ — ใช้ตัด "วันนี้/ขึ้นวันใหม่" ของ streak + SRS ให้ตรงกันทั้งไฟล์
+//   ไม่อิงนาฬิกาเครื่องผู้เล่น (คนเล่นอยู่คนละ timezone จะไม่ทำให้วันเพี้ยน)
 function todayStr() {
   var d = new Date();
-  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+  try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); } // 'YYYY-MM-DD' เวลาไต้หวัน
+  catch (e) { return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); } // fallback เครื่อง
 }
 
 function timeStr() {
