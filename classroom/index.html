@@ -1057,7 +1057,7 @@ async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
 // ?s=token&n=學生姓名（base64），讓 拼音規則上課用.html 那類頁面知道「這是哪位學生」
 // 才會顯示「☁️ 存入 Google Drive」按鈕（只有自己網站的頁面才加，外部連結不動）
 // ============================================================
-function personalizeMaterialUrl(url, token) {
+function personalizeMaterialUrl(url, token, teacherPreview) {
   try {
     const u = new URL(url);
     const isOwnSite = /(^|\.)mrtaihualin\.com$/i.test(u.hostname) || /(^|\.)mrtaihualin\.github\.io$/i.test(u.hostname);
@@ -1066,6 +1066,9 @@ function personalizeMaterialUrl(url, token) {
     if (!s) return url;
     u.searchParams.set('s', token);
     u.searchParams.set('n', btoa(encodeURIComponent(s.name)));
+    // tp = teacher preview only：ติดเฉพาะตอนครูกด "開啟預覽" เอง
+    // ไม่ติดตอนบันทึกลิงก์ให้นักเรียน (saveMaterialLink) → นักเรียนจะไม่เห็นปุ่ม 存入 Google Drive
+    if (teacherPreview) u.searchParams.set('tp', '1');
     return u.toString();
   } catch (e) { return url; }
 }
@@ -1075,7 +1078,7 @@ function openMaterialLinkDraft(token) {
   const el = document.getElementById('matUrl-' + t);
   const url = (el && el.value || '').trim();
   if (!/^https:\/\//i.test(url)) { alert('請先貼上正確的連結（需以 https:// 開頭）'); return; }
-  window.open(personalizeMaterialUrl(url, token), '_blank', 'noopener');
+  window.open(personalizeMaterialUrl(url, token, true), '_blank', 'noopener');
 }
 
 async function saveMaterialLink(token) {
@@ -1932,6 +1935,13 @@ async function loadStudentFiles(token) {
   }
 }
 
+// กดที่ไหนในแถวก็เปิดลิงก์ได้เลย ยกเว้นกดโดนช่องติ๊ก / ปุ่มลบ / ปุ่ม 開啟 เอง (ให้อันนั้นทำงานของตัวเองตามปกติ ไม่เปิดซ้ำ)
+function openFileRow(e, url) {
+  if (e.target.closest('a,button,input')) return;
+  var u = String(url || '').trim();
+  if (/^https:\/\//i.test(u)) window.open(u, '_blank', 'noopener');
+}
+
 function renderStudentFiles(token) {
   const el = document.getElementById('filesList');
   if (!el) return;
@@ -1948,7 +1958,10 @@ function renderStudentFiles(token) {
     var safeUrl = (r.url || '').replace(/'/g, "\\'");
     var tid = token.replace(/'/g, '');
     var actionLabel = isLink ? '🔗 開啟' : '⬇ 下載';
-    return '<div class="drive-file-row">' +
+    var rowClickAttr = safeHref(r.url) !== '#'
+      ? ' style="cursor:pointer;" onclick="openFileRow(event,\'' + safeUrl + '\')"'
+      : '';
+    return '<div class="drive-file-row"' + rowClickAttr + '>' +
       '<input type="checkbox" class="file-cb" data-token="' + tid + '" data-idx="' + i + '" onchange="onFileCbChange(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--gold-deep);">' +
       '<span class="drive-file-icon">' + icon + '</span>' +
       '<span class="drive-file-name">' + label + '</span>' +

@@ -12,15 +12,18 @@
   var pageLabel   = document.title || '泰語學習講義';
 
   /* ─────────────────────────────
-     個人化連結參數（?s=token&n=base64姓名）
-     由老師在「課堂教室」貼教材連結時自動加上，用來辨認「這是哪位學生的頁面」
-     沒有這兩個參數 → 只是一般公開連結，不顯示「存入 Google Drive」按鈕
+     個人化連結參數（?s=token&n=base64姓名&tp=1）
+     由老師在「課堂教室」按「🔗 開啟預覽」時自動加上（含 tp=1）
+     存給學生看的連結（儲存連結／課堂資料下載）只有 s 和 n，沒有 tp
+     → 只有老師自己按「開啟預覽」那個連結才會顯示「存入 Google Drive」按鈕，
+       學生從自己的連結打開不會看到這顆按鈕
   ───────────────────────────── */
   var qp = new URLSearchParams(location.search);
   var studentToken = qp.get('s') || '';
   var studentName  = '';
   try { if (qp.get('n')) studentName = decodeURIComponent(atob(qp.get('n'))); } catch (e) {}
-  var canSaveToDrive = !!(studentToken && studentName);
+  var isTeacherPreview = qp.get('tp') === '1';
+  var canSaveToDrive = !!(studentToken && studentName && isTeacherPreview);
 
   /* ─────────────────────────────
      下載整頁 PDF 按鈕
@@ -111,8 +114,10 @@
     var pad  = function (n) { return String(n).padStart(2, '0'); };
     var dateStr = now.getFullYear() + '/' + pad(now.getMonth() + 1) + '/' + pad(now.getDate()) +
                   ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    var shortDate = now.getFullYear() + '/' + pad(now.getMonth() + 1) + '/' + pad(now.getDate());
     var fileTitle = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
                     '_' + pad(now.getHours()) + '-' + pad(now.getMinutes());
+    var wmText = 'mrtaihualin.com' + (studentName ? (' · ' + studentName) : '') + ' · ' + shortDate;
 
     var bodyHtml = escapeHtml(content)
       .split(/\n{2,}/)
@@ -130,8 +135,14 @@
           "font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;" +
           '-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
         '.page{width:210mm;min-height:297mm;margin:14px auto;background:#faf7f2;' +
-          'padding:24mm 22mm 20mm;position:relative;display:flex;flex-direction:column;' +
+          'padding:24mm 22mm 20mm;position:relative;' +
           'box-shadow:0 6px 26px rgba(0,0,0,0.14);}' +
+        '.wm-single{position:absolute;top:50%;left:50%;' +
+          'transform:translate(-50%,-50%) rotate(-30deg);' +
+          'font-size:46px;font-weight:700;color:#8a7d5c;opacity:0.16;' +
+          'white-space:nowrap;z-index:0;pointer-events:none;text-align:center;' +
+          "font-family:'Noto Sans TC',sans-serif;}" +
+        '.content-layer{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;}' +
         '.hd{border-bottom:2.5px solid #4a6741;padding-bottom:14px;margin-bottom:26px;' +
           'display:flex;justify-content:space-between;align-items:flex-end;gap:16px;}' +
         '.hd-l{min-width:0;}' +
@@ -150,15 +161,18 @@
           '.page{width:auto;min-height:auto;margin:0;box-shadow:none;padding:18mm 17mm;}}' +
       '</style></head><body>' +
         '<div class="page">' +
-          '<div class="hd">' +
-            '<div class="hd-l">' +
-              '<div class="brand">泰語學習 · 我的筆記</div>' +
-              '<div class="title">' + escapeHtml(pageLabel) + '</div>' +
+          '<div class="wm-single">' + escapeHtml(wmText) + '</div>' +
+          '<div class="content-layer">' +
+            '<div class="hd">' +
+              '<div class="hd-l">' +
+                '<div class="brand">泰語學習 · 我的筆記</div>' +
+                '<div class="title">' + escapeHtml(pageLabel) + '</div>' +
+              '</div>' +
+              '<div class="meta">' + dateStr + '</div>' +
             '</div>' +
-            '<div class="meta">' + dateStr + '</div>' +
+            '<div class="notes">' + bodyHtml + '</div>' +
+            '<div class="ft"><span>泰語教材 · 學習筆記</span><span>' + escapeHtml(pageLabel) + '</span></div>' +
           '</div>' +
-          '<div class="notes">' + bodyHtml + '</div>' +
-          '<div class="ft"><span>泰語教材 · 學習筆記</span><span>' + escapeHtml(pageLabel) + '</span></div>' +
         '</div>' +
       '</body></html>';
 

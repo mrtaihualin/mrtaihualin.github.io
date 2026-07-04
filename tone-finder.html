@@ -3753,7 +3753,9 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
       // ── ข้อ 4: แจกดาวเงินตอน mastered จริง (ฐาน×ตัวคูณระดับ, ชนเพดานแล้ว = 0 แต้ม แต่ยัง mastered ปกติ) ──
       try {
         if (window.GAME_ACCOUNT && window.GAME_ACCOUNT.addHardStars) {
-          var hr = window.GAME_ACCOUNT.addHardStars(res.clean, selectedLevel || 1, tfLevelWordCount(selectedLevel || 1));
+          // Lin 2026-07-04: เพดานดาวเงินอิง LEVEL_TOTAL_WORDS (เลขรวมทุกเกม) ใน game-account.js แล้ว
+          //   → ไม่ต้องส่ง per-game count มาอีก (arg ที่ 3 ถูกเมิน) ทั้งเกมเสียง+เกมอ่านใช้ฐานรวมชุดเดียวกัน
+          var hr = window.GAME_ACCOUNT.addHardStars(res.clean, selectedLevel || 1);
           session.hardStarsEarned = (session.hardStarsEarned || 0) + (hr.stars || 0);
         }
       } catch (e) {}

@@ -30,11 +30,22 @@
   //   HARD_CAPS = เพดานสูงสุดคงที่ตามสเปก · ครึ่ง "10% ของคำในระดับ" ส่งเข้ามาเป็น argument จาก tone-finder.html
   //   (ถ้าไม่รู้จำนวนคำ = ไม่ส่ง/ส่ง 0 → fallback เป็น HARD_CAPS เดิม กันเพดานกลายเป็น 0 แล้วไม่มีใครได้ดาว) — Lin 2026-07-04
   var HARD_CAPS = { 1: 200, 2: 300, 3: 200 };        // 初級/中級/高級 → เพดานสูงสุดคงที่ (จำนวน "คำ" ที่นับดาวได้ตลอดชีพ)
-  // คำนวณเพดานจริงต่อระดับ = min( floor(0.10 × จำนวนคำในระดับ), HARD_CAPS[level] )
-  // levelWordCount ไม่ใช่เลขบวก (undefined/0/NaN) → fallback = HARD_CAPS[level] (ไม่ปล่อยให้เป็น 0)
+
+  // ── สเปก 2026-07-04 (Lin เคาะ): จำนวนคำต่อระดับ = "ผลรวมทุกเกม" (เกมเสียง + เกมอ่าน) ──
+  //   ฐานเดียวกันทั้ง 2 เกม → เพดานดาวเงิน = 10% ของเลขรวมชุดนี้ (ทุกเกมนับรวมกัน ไม่แยกเกม)
+  //   นับจากโค้ดจริง (Lin 2026-07-04):
+  //     初級(1): เกมเสียง WORD_LIST level1 = 168 + เกมอ่าน WORDS 初 = 162 → 330
+  //     中級(2): เกมเสียง WORD_LIST level2 = 120 + เกมอ่าน WORDS 中 = 126 → 246
+  //     高級(3): เกมเสียงกับเกมอ่านใช้ "10 ประโยคชุดเดียวกัน" (ADV_SENTENCES / WORDS_HIGH เนื้อหาตรงกัน)
+  //             → หน่วยที่ไม่ซ้ำจริง = 10 (ไม่บวกซ้ำเป็น 20) ⚠️ Lin ช่วยยืนยันจุดนี้
+  var LEVEL_TOTAL_WORDS = { 1: 330, 2: 246, 3: 10 };
+
+  // คำนวณเพดานจริงต่อระดับ = min( floor(0.10 × LEVEL_TOTAL_WORDS[level]), HARD_CAPS[level] )
+  //   ใช้ LEVEL_TOTAL_WORDS เป็นฐานเสมอ (เลขรวมทุกเกม) — ไม่รับ per-game count จากภายนอกแล้ว
+  //   levelWordCount ที่ส่งเข้ามาถูกเมิน (คงพารามิเตอร์ไว้กันโค้ดเดิมพัง) — Lin 2026-07-04
   function effectiveCap(level, levelWordCount) {
     var hardCap = HARD_CAPS[level] || 0;
-    var wc = Number(levelWordCount);
+    var wc = LEVEL_TOTAL_WORDS[level] || 0;
     if (!(wc > 0)) return hardCap;                    // ไม่รู้จำนวนคำจริง → ใช้ cap เดิม (กันเพดาน 0)
     var tenPct = Math.floor(0.10 * wc);
     return Math.min(tenPct, hardCap);
@@ -108,6 +119,8 @@
     hardCapReached: hardCapReached,    // (level) → true ถ้าระดับนี้ชนเพดานตลอดชีพแล้ว
     getHardWordsCounted: function (level) { return wordsCounted(load(), level); },
     hardCaps: HARD_CAPS,
+    levelTotalWords: LEVEL_TOTAL_WORDS,   // Lin 2026-07-04: จำนวนคำรวมทุกเกมต่อระดับ (ฐานคิดเพดาน 10%)
+    effectiveCap: function (level) { return effectiveCap(level); },  // เพดานจริงต่อระดับ (min(10%, HARD_CAPS))
 
     // ── เฟส 2: sync ขึ้น Supabase (ถาวร + ข้ามเครื่อง) เมื่อล็อกอิน — Lin 2026-06-27 ──
     // merge แบบ "เอาค่ามากสุด" กันข้อมูลหายตอนสลับเครื่อง · ปลอดภัยถ้ายังไม่มีตาราง (no-op)
