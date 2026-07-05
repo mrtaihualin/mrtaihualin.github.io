@@ -2772,6 +2772,41 @@ var TH = (function() {
   var TONE_CHARS = new Set(['่','้','๊','๋']); // ่ ้ ๊ ๋
   // สระพิเศษที่ลงท้ายด้วยเสียงก้อง (semivowel/นาสิก) = "คำเป็น" เสมอ: ไ(-ai) ใ(-ai) ำ(-am)
   var LIVE_V = new Set(['ไ','ใ','ำ']);
+  // Lin 2026-07-04: รองรับอักษรควบกล้ำ (ปร กร คร ฯลฯ) + สระออ (อ ทำหน้าที่สระยาว)
+  var CLUSTER2 = new Set('รลว'.split(''));            // ตัวที่สองของควบกล้ำ
+  var CLUSTER_INIT = new Set('กขคฆปผพภตบดฟ'.split('')); // ตัวนำที่ควบได้
+  function _initChar(word){
+    for (var i=0;i<LEAD_PATS.length;i++){ if (word.indexOf(LEAD_PATS[i])===0) return LEAD_PATS[i]; }
+    for (var j=0;j<word.length;j++){ if (CONS_SET.has(word[j])) return word[j]; }
+    return null;
+  }
+  // สระออ: มี อ ที่ไม่ใช่พยัญชนะต้น และมีพยัญชนะนำหน้ามัน (เช่น ทอด คฺรอบ = เสียงยาว)
+  function _hasSaraOr(word){
+    var ic=_initChar(word), firstOr=word.indexOf('อ');
+    for (var i=0;i<word.length;i++){
+      if (word[i]==='อ' && i>0){
+        var hasConsBefore=false;
+        for (var k=0;k<i;k++){ if (CONS_SET.has(word[k])){ hasConsBefore=true; break; } }
+        if (hasConsBefore && !(ic==='อ' && firstOr===i)) return true;
+      }
+    }
+    return false;
+  }
+  // รายชื่อพยัญชนะสำหรับหา "ตัวสะกด" — ตัดตัวที่สองของควบกล้ำออก (ปร กร คร) ถ้าตามด้วยสระ/พยางค์
+  function _codaCons(word){
+    var cons=[]; for (var i=0;i<word.length;i++){ if (CONS_SET.has(word[i])) cons.push(word[i]); }
+    if (cons.length>=2 && CLUSTER_INIT.has(cons[0]) && CLUSTER2.has(cons[1])){
+      var idx0=word.indexOf(cons[0]);
+      var idx2=word.indexOf(cons[1], idx0+1);
+      var after=word.slice(idx2+1), clusterOK=false;
+      for (var a=0;a<after.length;a++){
+        var ch=after[a];
+        if (SHORT_V.has(ch)||LONG_V.has(ch)||ch==='อ'||CONS_SET.has(ch)||LIVE_V.has(ch)){ clusterOK=true; break; }
+      }
+      if (clusterOK) cons=[cons[0]].concat(cons.slice(2));
+    }
+    return cons;
+  }
 
   return {
     hasToneMark: function(word) {
@@ -2804,8 +2839,7 @@ var TH = (function() {
       return null;
     },
     isLiveWord: function(word) {
-      var cons = [];
-      for (var i=0; i<word.length; i++) if (CONS_SET.has(word[i])) cons.push(word[i]);
+      var cons = _codaCons(word);
       if (cons.length >= 2) {
         var last = cons[cons.length-1];
         // อ ตัวสุดท้าย = สระออ (เสียงยาว เปิด) ไม่ใช่ตัวสะกด → คำเป็น
@@ -2816,6 +2850,7 @@ var TH = (function() {
       for (var n=0; n<word.length; n++) if (LIVE_V.has(word[n])) return true; // ไ ใ ำ = คำเป็น
       for (var j=0; j<word.length; j++) if (SHORT_V.has(word[j])) return false;
       for (var k=0; k<word.length; k++) if (LONG_V.has(word[k]))  return true;
+      if (_hasSaraOr(word)) return true; // สระออ ไม่มีตัวสะกด = คำเป็น
       return null;
     },
     classLabel: function(cls) {
@@ -2824,16 +2859,14 @@ var TH = (function() {
     getVowelType: function(word) {
       for (var i=0; i<word.length; i++) if (SHORT_V.has(word[i])) return 'short';
       for (var j=0; j<word.length; j++) if (LONG_V.has(word[j]))  return 'long';
+      if (_hasSaraOr(word)) return 'long'; // สระออ = สระยาว
       return null;
     },
     hasTailCons: function(word) {
-      var cons = [];
-      for (var i=0; i<word.length; i++) if (CONS_SET.has(word[i])) cons.push(word[i]);
-      return cons.length >= 2;
+      return _codaCons(word).length >= 2;
     },
     getEndConsType: function(word) {
-      var cons = [];
-      for (var i=0; i<word.length; i++) if (CONS_SET.has(word[i])) cons.push(word[i]);
+      var cons = _codaCons(word);
       if (cons.length >= 2) {
         var last = cons[cons.length-1];
         if (SHORT_TAIL.has(last)) return 'short';
@@ -4303,6 +4336,7 @@ var TONE_OVERRIDE = {
   'คีย์':  1,  // คีย์การ์ด → พยางค์ 1 เสียงสามัญ
   'การ์ด': 4,  // คีย์การ์ด → พยางค์ 2 เสียงตรี
   'ออฟ':  4,  // ออฟฟิศ   → พยางค์ 1 เสียงตรี
+  'ออบ':  4,  // ออฟฟิศ (คำอ่าน ออบ) → พยางค์ 1 เสียงตรี (Lin 2026-07-04)
   'ญาติ': 3   // สะกดพิเศษ (ิ ไม่ออกเสียง) → ยา-ตา เสียงโท
 };
 
