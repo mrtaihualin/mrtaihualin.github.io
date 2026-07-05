@@ -2898,15 +2898,20 @@ var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, f
 // ทุกค่าปรับได้ที่ TF_SCORE_CFG ห้าม hardcode ในเกม
 // ════════════════════════════════════════════════════════════
 var TF_SCORE_CFG = {
-  SCORE_FIRST_TRY: 10,       // ถูกตั้งแต่ครั้งแรก (เดิม 100 → ลดให้ใกล้ reading-game ที่ให้ 10/คำ)
-  SCORE_DEDUCE_BASE: 5,      // เข้า推導 ฐาน (เดิม 50)
-  SCORE_MIN_PER_WORD: 1,     // คะแนนขั้นต่ำต่อคำเมื่อ "โดนหักจนต่ำแต่ยังไม่ fail" = 1 (Lin 2026-07-04) · หมายเหตุ: ผิดครบ 3 ครั้ง = 0 (fail) คุมแยกที่ SCORE_FAIL_ZERO ด้านล่าง
-  SCORE_FAIL_ZERO: 0,        // ผิดครบ 3 ครั้ง (fail) = 0 pt เสมอ (แยกจาก floor 1 ข้างบน — floor 1 ใช้เฉพาะตอนยังไม่ fail แต่โดนหักจนต่ำ)
-  DEDUCE_WRONG_LIMIT: 3,     // กดผิดครบ 3 ครั้งในคำเดียว → ได้คะแนนขั้นต่ำ + เฉลย + คำใหม่
+  SCORE_FIRST_TRY: 10,       // ถูกตั้งแต่ครั้งแรก = 10 (= WRONG_LADDER[0])
+  // ── Lin 2026-07-04: คะแนนต่อคำ/พยางค์ "นับตามจำนวนครั้งที่กดผิด" เหมือนเกมอ่าน ──
+  //   ทุกคนเริ่ม 10 เท่ากัน · ผิด 1=7 · 2=4 · 3=1 · 4=0(fail เฉลย+SRS รีเซ็ต day1)
+  //   "กดผิด" = เดาวรรณยุกต์ผิดตอนแรก + กดผิดในทุกขั้น推導 + กดปุ่มแอบดู(?) · กด "🤷 ไม่มั่นใจ" ไม่นับผิด
+  WRONG_LADDER: [10, 7, 4, 1, 0],
+  SRS_REVIEW_BONUS: [3, 2, 1],  // Lin 2026-07-04: โบนัสตอนผ่านรอบทบทวน SRS สะอาด — รอบ1(day1)+3 · รอบ2(day7)+2 · รอบ3(day16)+1
+  SCORE_DEDUCE_BASE: 5,      // (เลิกใช้แล้ว — เก็บไว้กันโค้ดเก่าอ้างถึง)
+  SCORE_MIN_PER_WORD: 1,     // (เลิกใช้แล้ว)
+  SCORE_FAIL_ZERO: 0,        // ผิดครบเพดาน (fail) = 0 pt เสมอ
+  DEDUCE_WRONG_LIMIT: 4,     // Lin 2026-07-04: กดผิดครบ 4 ครั้งในคำเดียว → 0 แต้ม (fail) + เฉลย + คำใหม่ (เดิม 3)
   COMBO_TIERS: { 3: 1.5, 5: 2, 8: 3 },   // สตรีคตอบถูกครั้งแรกติดกัน → ตัวคูณ
   SET_COMPLETE_BONUS: 20,    // เล่นจบ 1 ชุด (เดิม 200)
   SET_PERFECT_BONUS: 50,     // จบชุดแบบ perfect (เดิม 500) → perfect = 20+50 = 70
-  LEVEL_WEIGHT: { 1: 1.5, 2: 2.25, 3: 3 },   // ถ่วงน้ำหนักคะแนนเข้ากระดาน (Lin 2026-07-03 อัปเดตสเกล): เสียง初×1.5 / เสียง中×2.25 / เสียง高×3 (เกมเสียง = ฐาน×1.5 ให้ เสียง初≈อ่าน中)
+  LEVEL_WEIGHT: { 1: 1, 2: 1.5, 3: 2 },   // กฎ MASTER 2026-07-05: ตัวคูณระดับชุดเดียวทั้งระบบ (初1/中1.5/高2) = ตรงเกมอ่าน + ตรงตัวคูณดาวเงิน → ลีกยุติธรรมข้ามเกม
   // จำนวนตัวเลือกในแต่ละขั้น推導 → ใช้คำนวณการหัก = round(BASE / optionsInStep)
   OPTIONS_IN_STEP: {
     s1: 2, s2a: 2, s2a_low: 2, s2a_other: 3, s2a_mid: 4, s2a_hi: 2,
@@ -2939,7 +2944,12 @@ var TF_SCORE = {
     return Math.round(this.cfg.SCORE_FIRST_TRY * this.comboMultiplier(streak));
   },
 
-  // คะแนนเมื่อผ่าน推導สำเร็จ = max(MIN, BASE - หักรวม) · floor = SCORE_MIN_PER_WORD = 1 (โดนหักจนต่ำแต่ผ่านได้ ยังได้อย่างน้อย 1)
+  // Lin 2026-07-04: คะแนนต่อคำ/พยางค์ ตาม "จำนวนครั้งที่กดผิด" → บันได [10,7,4,1,0]
+  ladderScore: function (wrongCount) {
+    var L = this.cfg.WRONG_LADDER;
+    return L[Math.min(wrongCount || 0, L.length - 1)];
+  },
+  // (เลิกใช้แล้ว — แทนที่ด้วย ladderScore · เก็บไว้กันโค้ดเก่าอ้างถึง)
   deduceScore: function (totalDeduction) {
     return Math.max(this.cfg.SCORE_MIN_PER_WORD, this.cfg.SCORE_DEDUCE_BASE - totalDeduction);
   },
@@ -2964,6 +2974,63 @@ var TF_SCORE = {
   }
 };
 // ===== TF_SCORE ENGINE END =====
+
+// ===== TF_WORDSCORE (Lin 2026-07-04) — state คะแนนต่อคำ บันได [10,7,4,1,0] · pure logic ทดสอบได้จริง =====
+//  ทำงานบน object ที่มีฟิลด์: currentWordDeduct (ขั้นบันได), stepWrong, stepFreePeekUsed
+//  กติกา (ยืนยันกับ Lin ผ่านหลอดคะแนน 2026-07-04):
+//   • เดาวรรณยุกต์ผิด/กด "ไม่มั่นใจ" ตอนแรก (ก่อน推導) = ฟรี ไม่เรียกที่นี่ (เสียแค่คอมโบ)
+//   • กดผิดในขั้น推導 (onWrong) = หัก 1 ขั้น + ได้สิทธิ์ "แอบดูฟรี 1 ครั้ง" ในขั้นนั้น
+//   • แอบดู(?) หลังเพิ่งผิดในขั้นนี้ (ครั้งแรก) = ฟรี · แอบดูอื่นๆ = หัก 1 (ไม่นับ "กดผิดจริง")
+//   • หักครบ 4 (แต้มเหลือ 0) = ตาย → เฉลย + SRS รีเซ็ต day1
+var TF_WORDSCORE = {
+  LADDER: [10, 7, 4, 1, 0],
+  FAIL_AT: 4,
+  score: function (s) { return this.LADDER[Math.min((s && s.currentWordDeduct) || 0, this.FAIL_AT)]; },
+  isDead: function (s) { return ((s && s.currentWordDeduct) || 0) >= this.FAIL_AT; },
+  // กดผิดในขั้น推導 → หัก 1 ขั้น + เปิดสิทธิ์แอบดูฟรีของขั้นนี้ (การนับ "กดผิดจริง" อยู่ที่ recordMistake แยกกัน)
+  onWrong: function (s) {
+    s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
+    s.stepWrong = true;
+    return s;
+  },
+  // แอบดู(?) → ฟรีถ้าเพิ่งผิดในขั้นนี้ + ยังไม่เคยใช้สิทธิ์ฟรี · ไม่งั้นหัก 1 · คืน true = ถูกหัก
+  onPeek: function (s) {
+    if (s.stepWrong && !s.stepFreePeekUsed) { s.stepFreePeekUsed = true; return false; }
+    s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
+    return true;
+  },
+  // ไปขั้น推導ถัดไป → รีเซ็ตสิทธิ์รายขั้น
+  onNextStep: function (s) { s.stepWrong = false; s.stepFreePeekUsed = false; return s; }
+};
+
+// Lin 2026-07-04: หลอดคะแนนต่อคำ (โชว์ในขั้น推導) — แท่งไล่สีเหมือนหลอด 進度/⚡ ในเกม · 本題分數 10→0
+function tfWordScoreGaugeHtml() {
+  if (!session) return '';
+  var max = TF_WORDSCORE.LADDER[0] || 10;
+  var sc = TF_WORDSCORE.score(session);
+  var pct = Math.max(0, Math.min(100, (sc / max) * 100));
+  var dead = (sc === 0);
+  var fill = dead ? '#c0392b' : 'linear-gradient(90deg,#e8a020,#d85a30)';
+  return '<div style="display:flex;align-items:center;gap:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08050;margin:0 0 12px;">'
+    + '<span style="min-width:56px;">本題分數</span>'
+    + '<div style="flex:1;height:9px;background:#ede0c8;border-radius:5px;overflow:hidden;">'
+    +   '<div id="tf-ws-fill" style="height:100%;border-radius:5px;width:' + pct + '%;background:' + fill + ';transition:width .35s ease;"></div>'
+    + '</div>'
+    + '<span id="tf-ws-lab" style="min-width:44px;text-align:right;font-weight:800;font-size:14px;color:' + (dead ? '#c0392b' : '#5a3e0a') + ';"><span id="tf-ws-num">' + sc + '</span>/10</span>'
+    + '</div>';
+}
+
+// อัปเดตหลอดคะแนนต่อคำ "สด" ระหว่างขั้น推導 (กดผิด/แอบดู) โดยไม่ต้อง re-render — Lin 2026-07-04 (กันบั๊ก "กดผิดแล้วหลอดไม่ลด")
+function tfUpdateWordScoreGauge() {
+  if (!session) return;
+  var max = TF_WORDSCORE.LADDER[0] || 10;
+  var sc = TF_WORDSCORE.score(session);
+  var dead = (sc === 0);
+  var f = document.getElementById('tf-ws-fill');
+  if (f) { f.style.width = Math.max(0, Math.min(100, (sc / max) * 100)) + '%'; f.style.background = dead ? '#c0392b' : 'linear-gradient(90deg,#e8a020,#d85a30)'; }
+  var n = document.getElementById('tf-ws-num'); if (n) n.textContent = sc;
+  var lab = document.getElementById('tf-ws-lab'); if (lab) lab.style.color = dead ? '#c0392b' : '#5a3e0a';
+}
 
 // ════════════════════════════════════════════════════════════
 // ===== TF_SRS ENGINE START ===== (สเปก 2026-07-03 ข้อ 2.5 + 3 + 4 + 5)
@@ -3337,6 +3404,9 @@ function tfResetWordScoring() {
   if (!session) return;
   session.currentWordMistakes = 0;
   session.currentWordDeduction = 0;
+  session.currentWordDeduct = 0;      // Lin 2026-07-04: ขั้นบันไดคะแนน (กดผิด+แอบดูที่โดนหัก)
+  session.stepWrong = false;          // เพิ่งผิดในขั้น推導ปัจจุบันไหม (คุมสิทธิ์ free peek)
+  session.stepFreePeekUsed = false;
   session.currentWordScored = false;
   session.currentWordFirstTry = false;
   session.currentWordScore = 0;
@@ -3498,8 +3568,9 @@ function tfExcludeMasteredWords(words, minKeep) {
 
 function tfScoreFirstTry() {
   if (!session) return;
-  // ── สเปก 2026-07-03 ข้อ 2.5+3: day16 final check / known-check / คำ mastered แล้ว = ไม่ให้แต้มเกม (แต่ยังต้องนับว่า "วิเคราะห์แล้ว" กันคำหลายพยางค์ค้าง) ──
-  var noSoftPoints = tfCurWordNoTools() || !tfSoftPointsAllowed(session.words[session.index]);
+  // ── Lin 2026-07-05: แยกกฎ day16 ออกจาก known-check แล้ว — day16 (curWordIsFinalSrsCheck) ได้คะแนนฐานตามปกติ (ไหลเข้า pipeline คะแนนปกติด้านล่าง)
+  //    ส่วน known-check (curWordIsKnownCheck = กด "已記得") ยังคงไม่ได้แต้มเลย ตามกฎ MASTER ข้อ10 (ไม่ได้ดาว/แต้ม/bump เพดาน แม้ผ่านสะอาด) · คำ mastered ที่เอามาทบทวนซ้ำก็ยังไม่ได้แต้ม (กันฟาร์ม)
+  var noSoftPoints = !!(session.curWordIsKnownCheck) || !tfSoftPointsAllowed(session.words[session.index]);
   if (noSoftPoints) {
     if (tfCurWordIsMulti()) { if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true; }
     else { session.currentWordScored = true; }
@@ -3538,8 +3609,8 @@ function tfScoreFirstTry() {
 // ให้คะแนน "ผ่าน推導สำเร็จ" (เรียกตอน navigate ไปถึง step 'result')
 function tfScoreDeduce() {
   if (!session) return;
-  // ── สเปก 2026-07-03 ข้อ 2.5+3: day16 final check / known-check / คำ mastered แล้ว = ไม่ให้แต้มเกม (แต่ยังต้องนับว่า "วิเคราะห์แล้ว" กันคำหลายพยางค์ค้าง) ──
-  var noSoftPoints = tfCurWordNoTools() || !tfSoftPointsAllowed(session.words[session.index]);
+  // ── Lin 2026-07-05: แยกกฎ day16 ออกจาก known-check แล้ว (เหมือน tfScoreFirstTry ด้านบน) — day16 ไม่มี推導ให้เข้าอยู่แล้วปกติ แต่กันไว้เผื่อ edge case คำหลายพยางค์ ──
+  var noSoftPoints = !!(session.curWordIsKnownCheck) || !tfSoftPointsAllowed(session.words[session.index]);
   if (noSoftPoints) {
     if (tfCurWordIsMulti()) { if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true; session.curWordAllFirstTry = false; }
     else { session.currentWordScored = true; }
@@ -3552,8 +3623,8 @@ function tfScoreDeduce() {
     var k = S.selectedSyl;
     if (session.scoredSyls && session.scoredSyls[k]) return;
     session.scoredSyls[k] = true;
-    // ── Lin 2026-07-04: สะสมคะแนน "ฐาน" ต่อพยางค์ (deduce, ยังไม่คูณทอง) — เฉลี่ย+คูณครั้งเดียวตอนจบคำ ──
-    var sylBase = TF_SCORE.deduceScore(session.currentWordDeduction || 0);
+    // ── Lin 2026-07-04: คะแนนฐานต่อพยางค์ = บันได [10,7,4,1,0] ตาม "หักรวม" (กดผิด+แอบดูที่โดนหัก) — เฉลี่ย+คูณทอง/คอมโบครั้งเดียวตอนจบคำ ──
+    var sylBase = TF_WORDSCORE.score(session);
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     session.curWordAllFirstTry = false;
@@ -3562,7 +3633,8 @@ function tfScoreDeduce() {
     return;
   }
   if (session.currentWordScored) return;
-  var pts = Math.round(TF_SCORE.deduceScore(session.currentWordDeduction || 0) * gold);
+  // Lin 2026-07-04: คะแนน = บันได [10,7,4,1,0] ตาม "หักรวม" ในคำนี้ (กดผิด + แอบดูที่โดนหัก) × ทอง
+  var pts = Math.round(TF_WORDSCORE.score(session) * gold);
   session.score += pts;
   session.currentWordScore = pts;
   session.currentWordFirstTry = false;
@@ -3580,16 +3652,19 @@ function tfScoreDeduce() {
 //   - เปิดซ้ำในคำเดียวกัน (ครั้งที่ 2 ขึ้นไป) → ฟรี ไม่หักซ้ำ ไม่นับผิดเพิ่ม (เช็ก session.hintUsed กันไว้)
 //   - โหมดค้นหาอิสระ (ไม่มี session) → ฟรีเสมอ ไม่มีคะแนน/ดาวเงินให้ป้องกันอยู่แล้ว
 function tfUseHint(keys) {
-  if (session && !session.hintUsed) {
-    session.hintUsed = true;
-    recordMistake('👀 เปิดดูคำใบ้ (?)', '(เปิดดูตารางคำใบ้)'); // นับ currentWordMistakes + log สถิติ เหมือนกดผิดจริง
-    session.currentWordDeduction = (session.currentWordDeduction || 0) + TF_SCORE.deductPerWrong(S.step || 's1');
-    session.combo = 0;
-    if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
-    if (TF_SCORE.reachedWrongLimit(session.currentWordMistakes)) {
-      showTip(keys);       // โชว์ตารางที่เขากดขอดูก่อน แล้วค่อยเฉลย+จบคำ (ผิดครบ 3 พอดี)
-      tfForceRevealZero();
-      return;
+  // Lin 2026-07-04: แอบดู(?) = ฟรีถ้าเพิ่งผิดในขั้นนี้ (free peek 1 ครั้ง/ขั้น) · ไม่งั้นหัก 1 ขั้นบันได (ไม่นับ "กดผิดจริง")
+  if (session) {
+    var charged = TF_WORDSCORE.onPeek(session);
+    if (charged) {
+      session.combo = 0;
+      session.hintUsed = true;
+      if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
+      tfUpdateWordScoreGauge();   // หลอดลดสดทันที
+      if (TF_WORDSCORE.isDead(session)) {
+        showTip(keys);       // โชว์ตารางที่กดขอดูก่อน แล้วค่อยเฉลย+จบคำ (แต้มเหลือ 0)
+        tfForceRevealZero();
+        return;
+      }
     }
   }
   showTip(keys);
@@ -3598,12 +3673,13 @@ function tfUseHint(keys) {
 // จัดการกดผิดในขั้น推導: หักแต้ม + นับครั้ง + ถ้าครบเพดาน → เฉลย
 function tfHandleDeduceMistake(step, choiceLabel, errMsg) {
   if (!session) { showError(errMsg); return; }   // โหมดค้นหาอิสระ: ไม่คิดคะแนน (พฤติกรรมเดิม)
-  recordMistake(choiceLabel, errMsg);             // นับ currentWordMistakes + log สถิติรายวัน
-  session.currentWordDeduction = (session.currentWordDeduction || 0) + TF_SCORE.deductPerWrong(step);
+  recordMistake(choiceLabel, errMsg);             // นับ "กดผิดจริง" (currentWordMistakes) + log สถิติรายวัน
+  TF_WORDSCORE.onWrong(session);                  // Lin 2026-07-04: หัก 1 ขั้นบันได + เปิดสิทธิ์ free peek ของขั้นนี้
   session.combo = 0;                              // คอมโบขาดทันทีที่กดผิด
   if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
-  if (TF_SCORE.reachedWrongLimit(session.currentWordMistakes)) {
-    tfForceRevealZero();                          // ครบ 3 → 0 แต้ม + เฉลย
+  tfUpdateWordScoreGauge();                        // หลอดลดสดทันทีที่กดผิด (กันบั๊ก "ไม่ลด")
+  if (TF_WORDSCORE.isDead(session)) {
+    tfForceRevealZero();                          // หักครบ 4 → 0 แต้ม + เฉลย
   } else {
     showError(errMsg);                            // ยังเล่นต่อได้
   }
@@ -3782,8 +3858,19 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   }
 
   if (cleanThisRound) {
+    var passedStage = rec.stage;   // Lin 2026-07-04: stage ก่อนเลื่อน (0/1/2) = รอบทบทวนที่เพิ่งผ่าน
     var res = TF_SRS.advanceOnClean(rec, Date.now());
     rec = res.rec;
+    // ── Lin 2026-07-04: โบนัสผ่านรอบทบทวน SRS สะอาด (+3 รอบ1/day1 · +2 รอบ2/day7 · +1 รอบ3/day16) — ให้รางวัลคนกลับมาทบทวนตามนัด ──
+    try {
+      var rb = (TF_SCORE.cfg.SRS_REVIEW_BONUS || [])[passedStage] || 0;
+      if (rb > 0 && session) {
+        session.score += rb;
+        session.srsReviewBonus = (session.srsReviewBonus || 0) + rb;
+        if (typeof tfUpdateScoreHud === 'function') tfUpdateScoreHud();
+        setTimeout(function () { tfScorePop(rb, {}); }, 140);
+      }
+    } catch (e) {}
     if (res.justMastered) {
       // ── ข้อ 4: แจกดาวเงินตอน mastered จริง (ฐาน×ตัวคูณระดับ, ชนเพดานแล้ว = 0 แต้ม แต่ยัง mastered ปกติ) ──
       try {
@@ -3907,6 +3994,8 @@ function navigate(nextStep, label, toneNum) {
   var newPath = label ? S.path.concat([label]) : S.path.slice();
   var newTone = (toneNum !== undefined) ? toneNum : null;
   S = { word:S.word, step:nextStep, path:newPath, tone:newTone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults };
+  // Lin 2026-07-04: เข้าขั้น推導ใหม่ (s1/s2*) = รีเซ็ตสิทธิ์ free peek รายขั้น (กดผิด/แอบดูในขั้นก่อนไม่ติดมา)
+  if (session && /^s[12]/.test(nextStep)) TF_WORDSCORE.onNextStep(session);
   // Save to history
   hist.push({ step:S.step, path:S.path.slice(), tone:S.tone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults });
   histPos = hist.length-1;
@@ -4243,6 +4332,8 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
+  // Lin 2026-07-04: หลอดคะแนนต่อคำ (10→7→4→1→0) — โชว์เฉพาะตอนอยู่ในขั้น推導 ให้ผู้เล่นเห็นว่าเหลือกี่แต้ม
+  if (session && /^s[12]/.test(S.step)) body.innerHTML = tfWordScoreGaugeHtml() + body.innerHTML;
   var practiceSteps = ['session-guess','overview'];
   if (session && practiceSteps.indexOf(S.step) !== -1) {
     // \u0e2b\u0e25\u0e32\u0e22\u0e1e\u0e22\u0e32\u0e07\u0e04\u0e4c: \u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e04\u0e23\u0e1a\u0e17\u0e38\u0e01\u0e1e\u0e22\u0e32\u0e07\u0e04\u0e4c\u0e41\u0e25\u0e49\u0e27 \u2192 \u0e44\u0e21\u0e48\u0e42\u0e0a\u0e27\u0e4c "\u5df2\u8a18\u5f97" \u0e40\u0e2b\u0e25\u0e37\u0e2d\u0e41\u0e04\u0e48\u0e1b\u0e38\u0e48\u0e21\u0e44\u0e1b\u0e15\u0e48\u0e2d (LIN 2026-06-20)
@@ -4933,8 +5024,27 @@ function stepLevelSelect() {
   var _loggedIn = !!(window.TF_AUTH && ((window.TF_AUTH.hasAccess && window.TF_AUTH.hasAccess()) || (window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn())));
   var _freeLeft = Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed());
   var freeBanner = '';
+  // Lin 2026-07-04: แจ้งเตือน "มีคำศัพท์ใหม่" — เทียบจำนวนคำปัจจุบันกับ "จำนวนที่เคยจำครบ" (全部精通)
+  function _newN(level){ try { return (window.GAME_ACCOUNT) ? GAME_ACCOUNT.newWordsCount('tone', level, tfLevelWordCount(level)) : 0; } catch(e){ return 0; } }
+  function _newBadge(level){ var n=_newN(level); return n>0 ? '<span style="margin-left:8px;background:#e24b4a;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;vertical-align:middle;white-space:nowrap;">🆕 +'+n+'</span>' : ''; }
+  var _newTotal = _newN(1)+_newN(2)+_newN(3);
+  var newBanner = _newTotal>0 ? '<div style="background:#fdecea;border:1px solid #e24b4a;border-radius:10px;padding:10px 14px;margin:0 0 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:#a32d2d;text-align:center;font-weight:700;">🆕 有新單字上架囉！快來練習吧 ✨</div>' : '';
+  // CTA ล็อกอิน (กฎ13 MASTER) — โชว์เฉพาะยังไม่ล็อกอิน · สั้น + ปุ่ม 更多福利 กางดูสิทธิพิเศษ
+  var ctaBanner = _loggedIn ? '' : (
+    '<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;margin:0 0 12px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;text-align:left;">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:170px;">🔒 尚未登入 = 只能練習，沒有記錄</span>' +
+        '<button onclick="if(window.TF_AUTH)window.TF_AUTH.showGate(true)" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>' +
+        '<button onclick="var d=document.getElementById(\'tf-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>' +
+      '</div>' +
+      '<div id="tf-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">' +
+        '✅ 登入後可以：<br>⭐ 累積星星＋泰國米勳章或其他禮物<br>🧠 智慧複習：記住你哪些字學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你學習你的弱點' +
+      '</div>' +
+    '</div>');
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">選擇等級</div>' +
+    newBanner +
+    ctaBanner +
     freeBanner +
     '<button class="tf-level-btn tf-alpha-entry" onclick="TF.openAlpha()">' +
       '<span class="tf-level-emoji">🔤</span>' +
@@ -4944,13 +5054,13 @@ function stepLevelSelect() {
     levels.map(function(l){
       return '<button class="tf-level-btn tf-lvl-'+l.id+'" onclick="TF.selectLevel('+l.id+')">' +
         '<span class="tf-level-emoji">'+l.emoji+'</span>' +
-        '<span class="tf-level-label">'+l.label+'</span>' +
+        '<span class="tf-level-label">'+l.label+_newBadge(l.id)+'</span>' +
         '<span class="tf-level-sub">'+l.sub+'</span>' +
       '</button>';
     }).join('') +
     '<button class="tf-level-btn tf-lvl-adv" onclick="TF.openAdvanced()">' +
       '<span class="tf-level-emoji">🌳</span>' +
-      '<span class="tf-level-label">高級</span>' +
+      '<span class="tf-level-label">高級'+_newBadge(3)+'</span>' +
       '<span class="tf-level-sub">完整句子・聲調精通</span>' +
     '</button>' +
     '<button class="tf-level-btn tf-lvl-search" onclick="TF.openSearch()">' +
@@ -4997,7 +5107,7 @@ function startSetSession(words, opts) {
     entries = tfPrioritizeDueSrs(entries);
   }
   session = {
-    words: entries, index: 0, results: [], currentWordMistakes: 0,
+    words: entries, index: 0, results: [], currentWordMistakes: 0, currentWordDeduct: 0, stepWrong: false, stepFreePeekUsed: false,
     // ── สเตจ 1: ฟิลด์คะแนน ──
     score: 0, combo: 0,
     currentWordDeduction: 0, currentWordScored: false,
@@ -5293,6 +5403,7 @@ function stepSessionGuess() {
         else tfScoreFirstTry();                          // สเตจ 1: ถูกครั้งแรก +100 (×คอมโบ)
         goToResult(captureN);
       } else {
+        // Lin 2026-07-04: เดาวรรณยุกต์ผิดตอนแรก + กด "🤷 ไม่มั่นใจ" = "ไม่นับกดผิด" (ฟรี) — เสียแค่คอมโบ · คะแนนหักเฉพาะกดผิดในขั้น推導 + ปุ่มแอบดู
         if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // เดาผิด → ตัดสิทธิ์ first-try + คอมโบขาด
         // ── Lin 2026-07-04: วันที่ 16 (day16 final check) หรือ known-check (กด "✓ 已記得") = ไม่มี推導ให้เลย ผิดปุ๊บนับ fail ทันที รีเซ็ต SRS กลับ day1 ──
         // (เดิมทุกคำ ผิด/ไม่มั่นใจ จะเข้า推導สอนทีละขั้น แต่ day16/known-check ต้องนึกเองล้วนๆ ไม่มีเครื่องมือช่วยใดๆ)
@@ -5451,7 +5562,7 @@ function stepOverview() {
       hist = hist.slice(0, histPos+1);
       // รีเซ็ตตัวนับกดผิดรายพยางค์ (เพดาน 3 ครั้ง + การหัก คิดแยกต่อพยางค์)
       // Lin 2026-07-04: ปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ก็ใช้หลักเดียวกัน — รีเซ็ตให้กดได้ใหม่ทุกพยางค์ (ไม่ใช่ใช้ได้ครั้งเดียวทั้งประโยค)
-      if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.curWordWrongGuess = false; session.hintUsed = false; }
+      if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
       // ในเกม (มี session) ใช้ flow ทาย; ในโหมดเสิร์ช (ไม่มี session) ใช้ flow วิเคราะห์อิสระ s1 — กันหน้าว่าง
       var sylStep = session ? 'session-guess' : 's1';
       var ns = { word: capChosen, step: sylStep, path: [capChosen], tone: null, syllables: syls, selectedSyl: capSel, sylResults: results, parentWord: S.word };
@@ -5994,6 +6105,35 @@ function downloadStats() {
 function tfSessionInProgress() {
   return !!(session && !session.sessionScored && session.words && session.words.length && S && S.step !== 'session-summary');
 }
+// ── Lin 2026-07-04: หน้าฉลอง "全部精通！" — เด้งตอนจำได้ครบทุกคำในระดับ (เกิดจริงจาก _startRandom5) ──
+function tfShowAllMastered(pool) {
+  var old = document.getElementById('tf-allmaster-ov'); if (old) old.remove();
+  var div = document.createElement('div');
+  div.id = 'tf-allmaster-ov'; div.className = 'tf-ask-overlay';
+  div.innerHTML =
+    '<div class="tf-ask-box" style="text-align:center;">' +
+      '<div style="font-size:46px;line-height:1;margin-bottom:8px;">🏆🌾</div>' +
+      '<div class="tf-ask-title">全部精通！</div>' +
+      '<div class="tf-ask-sub">這個等級的單字，你<b>全部都記住了</b>，太厲害了！🎉<br>星星已經收進你的收藏囉～</div>' +
+      '<div class="tf-ask-actions" style="flex-direction:column;gap:8px;">' +
+        '<button class="tf-ask-send" id="tf-am-review">繼續複習（不計分）</button>' +
+        '<button class="tf-ask-cancel" id="tf-am-level">挑戰其他等級</button>' +
+      '</div>' +
+    '</div>';
+  div.addEventListener('click', function (e) { if (e.target === div) div.remove(); });
+  document.body.appendChild(div);
+  document.getElementById('tf-am-review').onclick = function () {
+    div.remove();
+    // ทบทวน: คำ mastered เล่นได้แต่ 0 แต้ม (via tfSoftPointsAllowed) — เอากองเดิมมาสุ่ม 5
+    var words = (pool || []).slice().sort(function () { return Math.random() - 0.5; }).slice(0, 5);
+    if (words.length) startSetSession(words); else if (TF && TF.backToLevelSelect) TF.backToLevelSelect();
+  };
+  document.getElementById('tf-am-level').onclick = function () {
+    div.remove();
+    if (TF && TF.backToLevelSelect) TF.backToLevelSelect();
+  };
+}
+
 function tfConfirmQuit(onYes) {
   if (!tfSessionInProgress()) { onYes(); return; }
   var old = document.getElementById('tf-quit-ov'); if (old) old.remove();
@@ -6189,6 +6329,15 @@ var TF = {
     }
     var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
     if (!pool.length) { tfToast('找不到單字，請試試其他等級'); return; }
+    // Lin 2026-07-04: ถ้าจำได้ครบทุกคำในระดับนี้ (全部精通) → เด้งหน้าฉลองก่อน (ไม่เริ่มชุดอัตโนมัติให้เล่นวนเปล่าๆ)
+    if (tfSrsLoggedIn()) {
+      var fresh = pool.filter(function(w){ var r = tfGetSrsRecord(w, tfWordLevel(w)); return !(r && r.mastered); });
+      if (fresh.length === 0) {
+        // Lin 2026-07-04: จำได้ครบระดับนี้ → บันทึกว่า "เห็นครบ N คำแล้ว" (ไว้เทียบตอนเพิ่มคำใหม่ทีหลัง → เด้งแจ้งเตือน)
+        try { if (window.GAME_ACCOUNT) GAME_ACCOUNT.markLevelSeen('tone', selectedLevel, pool.length); } catch (e) {}
+        tfShowAllMastered(pool); return;
+      }
+    }
     pool = tfExcludeMasteredWords(pool, 5); // Lin 2026-07-04: กันคำที่จำได้แล้ว (mastered) โผล่ซ้ำในสุ่ม 5 คำ
     var words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
     startSetSession(words);

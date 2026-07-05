@@ -114,6 +114,24 @@
     // เผื่อย้ายข้อมูลเก่า: ถ้าบัญชียังว่าง แต่เกมมีดาวเดิมในเครื่อง → เก็บเข้าบัญชีครั้งเดียว
     seedIfEmpty: function (oldStars) { var a = load(); if (!a.stars && oldStars > 0) { a.stars = oldStars; save(a); } return a.stars || 0; },
 
+    // ── Lin 2026-07-04: แจ้งเตือน "มีคำศัพท์ใหม่" ข้ามเกม (ใช้ร่วมทุกเกม) ──
+    //  หลักคิด: จำ "จำนวนคำที่ผู้เล่นเคยเห็นครบแล้ว" ต่อ (เกม+ระดับ) — ตั้งค่าตอนจำได้ครบทั้งระดับ (全部精通)
+    //  ถ้าภายหลังเพิ่มคำใหม่ (count ปัจจุบัน > seen) = มีคำใหม่ยังไม่ได้เล่น → เกมเอาไปเด้งแจ้งเตือน
+    //  ผู้เล่นใหม่/ยังเล่นไม่ครบระดับ = ไม่มี seen = คืน 0 = ไม่เด้ง (กันสแปม)
+    //  หมายเหตุ: เก็บใน localStorage ต่อเครื่อง (ข้ามเครื่องต้องเพิ่มคอลัมน์ Supabase ทีหลัง)
+    markLevelSeen: function (game, level, totalCount) {
+      if (!game) return 0;
+      var a = load(); a.seen = a.seen || {}; a.seen[game] = a.seen[game] || {};
+      a.seen[game][level] = totalCount || 0; save(a); return a.seen[game][level];
+    },
+    // คืนจำนวน "คำใหม่ที่ยังไม่ได้เล่น" ของเกม+ระดับนี้ (0 = ไม่มี / ยังไม่เคยจำครบ)
+    newWordsCount: function (game, level, currentCount) {
+      var a = load(); var g = a.seen && a.seen[game];
+      var seen = g && (g[level] != null ? g[level] : undefined);
+      if (seen == null) return 0;                       // ยังไม่เคยจำครบระดับนี้ → ไม่ถือว่ามีคำใหม่
+      return Math.max(0, (currentCount || 0) - seen);
+    },
+
     // ── สเปก 2026-07-03: ดาวเงิน (hard currency) จาก SRS mastery เท่านั้น ──
     addHardStars: addHardStars,        // (clean:boolean, level:1|2|3) → {stars, capped}
     hardCapReached: hardCapReached,    // (level) → true ถ้าระดับนี้ชนเพดานตลอดชีพแล้ว

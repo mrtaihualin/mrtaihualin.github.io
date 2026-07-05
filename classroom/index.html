@@ -745,7 +745,10 @@ async function fetchStudents() {
 // drive.file scope：App 只看得到自己建立的檔案/資料夾
 // ============================================================
 const GOOGLE_CLIENT_ID = '912926837729-j8n8mojmrmngpha68pbasv9qslvgtvrn.apps.googleusercontent.com';
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly';
+// 2026-07-05 加入 documents scope：課堂筆記要用 Docs API 做「橫向頁面 + 頁首頁尾浮水印」
+// （drive.file 只能整份覆蓋內容，做不到頁首頁尾／橫向；documents scope 才能精準改版面）
+// 第一次會多跳一次 Google 同意畫面（多一項權限），之後照舊不用再按
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/documents';
 const DRIVE_ROOT_FOLDER = 'mrtaihualin 課堂錄影';
 let gdToken = null, gdTokenExp = 0, gdTokenClient = null, gdTokenScopes = '';
 
@@ -790,6 +793,78 @@ async function gdApi(path, opts) {
   if (!r.ok) throw new Error('Drive API ' + r.status + '：' + (await r.text()).slice(0, 200));
   return r.json();
 }
+
+// ============================================================
+// Google Docs API（做 drive.file 做不到的事：橫向頁面／頁首頁尾浮水印）
+// 2026-07-05 新增，配合「課堂筆記」新格式（Lin 要求）
+// ============================================================
+async function gdDocsApi(path, opts) {
+  let token = await gdGetToken();
+  // 舊的授權沒有 documents scope（第一次加這功能時）→ 跳一次同意畫面補權限
+  if (gdTokenScopes && gdTokenScopes.indexOf('documents') === -1) {
+    token = await gdGetToken(true);
+  }
+  const headers = Object.assign({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, (opts && opts.headers) || {});
+  const r = await fetch('https://docs.googleapis.com/v1/' + path, Object.assign({}, opts, { headers }));
+  if (!r.ok) throw new Error('Docs API ' + r.status + '：' + (await r.text()).slice(0, 300));
+  return r.json();
+}
+
+const NOTE_WATERMARK = '泰華老師課堂筆記 · mrtaihualin.com';
+
+function noteWatermarkRequests(segmentId) {
+  const len = NOTE_WATERMARK.length;
+  return [
+    { insertText: { location: { segmentId: segmentId, index: 0 }, text: NOTE_WATERMARK } },
+    { updateParagraphStyle: {
+        range: { segmentId: segmentId, startIndex: 0, endIndex: len },
+        paragraphStyle: { alignment: 'CENTER' }, fields: 'alignment'
+    } },
+    { updateTextStyle: {
+        range: { segmentId: segmentId, startIndex: 0, endIndex: len },
+        textStyle: {
+          fontSize: { magnitude: 9, unit: 'PT' },
+          foregroundColor: { color: { rgbColor: { red: 0.6, green: 0.6, blue: 0.6 } } },
+          italic: true
+        },
+        fields: 'fontSize,foregroundColor,italic'
+    } }
+  ];
+}
+
+// 套用「橫向頁面 + 頁首頁尾浮水印」到指定的 Google 文件（可重複呼叫、不會重複寫入）
+// 做法：先讀目前文件狀態，缺什麼才補什麼 → 不會跟已存在的頭尾衝突（400），也不會浮水印重複疊字
+// ⚠️ 每次「課堂筆記」內容用 Drive 覆蓋上傳後，頭尾／橫向設定可能會被整份覆蓋掉，
+//    所以 persistNote() 每次存檔後都會重新呼叫這裡一次，確保頭尾一直都在
+async function applyNoteDocFormat(docId) {
+  const doc = await gdDocsApi('documents/' + docId + '?fields=documentStyle(flipPageOrientation,defaultHeaderId,defaultFooterId)', { method: 'GET' });
+  const ds = doc.documentStyle || {};
+  const requests = [];
+  if (!ds.flipPageOrientation) {
+    requests.push({ updateDocumentStyle: { documentStyle: { flipPageOrientation: true }, fields: 'flipPageOrientation' } });
+  }
+  const needHeader = !ds.defaultHeaderId;
+  const needFooter = !ds.defaultFooterId;
+  if (needHeader) requests.push({ createHeader: { type: 'DEFAULT' } });
+  if (needFooter) requests.push({ createFooter: { type: 'DEFAULT' } });
+
+  let headerId = ds.defaultHeaderId, footerId = ds.defaultFooterId;
+  if (requests.length) {
+    const res = await gdDocsApi('documents/' + docId + ':batchUpdate', { method: 'POST', body: JSON.stringify({ requests }) });
+    (res.replies || []).forEach(function(r) {
+      if (r.createHeader) headerId = r.createHeader.headerId;
+      if (r.createFooter) footerId = r.createFooter.footerId;
+    });
+  }
+
+  const wmRequests = [];
+  if (needHeader && headerId) wmRequests.push.apply(wmRequests, noteWatermarkRequests(headerId));
+  if (needFooter && footerId) wmRequests.push.apply(wmRequests, noteWatermarkRequests(footerId));
+  if (wmRequests.length) {
+    await gdDocsApi('documents/' + docId + ':batchUpdate', { method: 'POST', body: JSON.stringify({ requests: wmRequests }) });
+  }
+}
+
 async function gdFindFolder(name, parentId) {
   let q = "mimeType='application/vnd.google-apps.folder' and trashed=false and name='" + name.replace(/'/g, "\\'") + "'";
   if (parentId) q += " and '" + parentId + "' in parents";
@@ -1298,8 +1373,38 @@ function recordingHTML() {
         '<video id="recVideoPlayer" controls playsinline style="display:none;width:100%;"></video>' +
         '<div id="recDownloads"></div>' +
       '</div>' +
+      '<div style="margin-top:8px;">' +
+        '<button type="button" onclick="recToggleIssuesPanel()" style="background:none;border:none;color:var(--ink-muted);font-size:0.78rem;text-decoration:underline;cursor:pointer;padding:0;">🔧 查看最近的錄影問題紀錄</button>' +
+        '<div id="recIssuesPanel" style="display:none;margin-top:8px;max-height:260px;overflow:auto;background:#fff8ec;border:1px solid #e9dcb8;border-radius:8px;padding:8px 10px;font-size:0.78rem;"></div>' +
+      '</div>' +
     '</div>' +
   '</div>';
+}
+
+// ── 錄影問題紀錄面板：從 classroom_recording_issues 撈最近 20 筆給老師自己查 ──
+let recIssuesPanelOpen=false;
+async function recToggleIssuesPanel(){
+  const panel=document.getElementById('recIssuesPanel'); if(!panel) return;
+  recIssuesPanelOpen=!recIssuesPanelOpen;
+  panel.style.display=recIssuesPanelOpen?'block':'none';
+  if(!recIssuesPanelOpen) return;
+  panel.innerHTML='讀取中…';
+  try{
+    const { data, error } = await sb.from('classroom_recording_issues').select('*').order('created_at',{ascending:false}).limit(20);
+    if(error){ panel.innerHTML='讀取失敗：'+escHtml(error.message)+'（可能是還沒建立 classroom_recording_issues 這張表，請照說明先建立）'; return; }
+    if(!data || !data.length){ panel.innerHTML='目前沒有任何紀錄（表示最近錄影都很順利 👍）'; return; }
+    const typeLabel={ encoding_error_fallback:'⚠️ 格式失敗已自動切換', encoding_error_fatal:'❌ 格式全部失敗', zero_bytes:'❌ 0 位元組', stall:'⚠️ 疑似卡住', upload_fail:'⚠️ 上傳失敗' };
+    panel.innerHTML=data.map(function(r){
+      const name=(typeof studentsCache!=='undefined' && r.token && studentsCache[r.token]) ? studentsCache[r.token].name : (r.token||'（未綁定學生）');
+      return '<div style="padding:6px 0;border-bottom:1px solid #e9dcb8;">'
+        +'<b>'+escHtml(typeLabel[r.event_type]||r.event_type)+'</b>　'
+        +escHtml(new Date(r.created_at).toLocaleString('zh-TW'))+'　'
+        +escHtml(name)
+        +'<br>'+escHtml(r.detail||'')
+        +(r.mime?'　<span style="color:var(--ink-muted);">格式：'+escHtml(r.mime)+'</span>':'')
+        +'</div>';
+    }).join('');
+  }catch(e){ panel.innerHTML='讀取失敗：'+escHtml(e.message||String(e)); }
 }
 
 const meetSVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 6 4H14L20 10V18C20 19.1 19.1 20 18 20H6C4.9 20 4 19.1 4 18V6Z" fill="#34A853" opacity="0.25"/><path d="M14 4L20 10H14V4Z" fill="#34A853" opacity="0.5"/><circle cx="12" cy="14" r="3.5" fill="#fff"/><path d="M17 11.5L20 9.5V18.5L17 16.5V11.5Z" fill="#fff"/></svg>';
@@ -1419,7 +1524,8 @@ async function ensureStudentNotesDoc(studentName, token) {
   }
   if (docId) return docId;
   const folderId = await gdGetStudentSubfolderId(studentName, '學習內容');
-  const seed = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>'
+  // 字體預設 36pt（Lin 指定）：<body> 設 36pt，Google 文件轉檔會沿用這個當「打字起始字級」
+  const seed = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-size:36pt;}</style></head><body>'
     + '<h1>📝 ' + studentName + ' — 課堂筆記（' + ymd + '）</h1>'
     + '<p>在這裡打字，Google 文件會自動即時儲存。</p></body></html>';
   const blob = new Blob([seed], { type: 'text/html' });
@@ -1429,6 +1535,8 @@ async function ensureStudentNotesDoc(studentName, token) {
   const link = doc.webViewLink || ('https://docs.google.com/document/d/' + docId + '/edit');
   try { await gdShareAnyone(docId); } catch (e) {}
   try { await saveRecordingLink(token, docName, docId, link, '', null); } catch (e) {}
+  // 橫向頁面 + 頁首頁尾浮水印（失敗不擋開啟筆記，只是這次沒套到格式，下次存檔會再補）
+  try { await applyNoteDocFormat(docId); } catch (e) { console.warn('套用筆記格式失敗：', e.message || e); }
   return docId;
 }
 async function openStudentNotesDoc(token) {
@@ -1512,7 +1620,7 @@ async function persistNote(token, silent) {
   const fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + studentName + ' 課堂筆記 ' + today + '</title>'
     + '<style>body{font-family:serif;max-width:740px;margin:40px auto;padding:0 24px;line-height:1.85;color:#1C1C1C;background:#FFFDF7;}'
     + 'h1{color:#8B6310;border-bottom:2px solid #C8973A;padding-bottom:8px;margin-bottom:4px;}'
-    + '.content{font-size:1rem;}</style></head>'
+    + '.content{font-size:36pt;}</style></head>'
     + '<body><h1>📝 ' + studentName + ' — 課堂筆記</h1>'
     + '<p style="color:#6b6b6b;font-size:0.88rem;margin-top:0;margin-bottom:20px;">日期：' + today + '</p>'
     + '<div class="content">' + htmlContent + '</div>'
@@ -1540,6 +1648,11 @@ async function persistNote(token, silent) {
       try { await gdShareAnyone(docId); } catch(e) {}
       try { await saveRecordingLink(token, fileName + '（筆記）', docId, link, '', null); } catch(e) {}  // 只在第一次建立時記錄
     }
+    // 橫向頁面 + 頁首頁尾浮水印：每次存檔都重新套一次
+    // 原因：上面覆蓋文件內容用的是「整份轉檔上傳」，頁面設定／頭尾很可能每次都被洗掉，
+    // 所以務必每次存完都重補一次，不然打幾個字之後版面就會跳回直向、頭尾也不見了
+    try { await applyNoteDocFormat(docId); }
+    catch (e) { console.warn('套用筆記格式失敗（不影響筆記內容已存檔）：', e.message || e); }
     const link = 'https://docs.google.com/document/d/' + docId + '/edit';
     const tt = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
     noteSetStatus('✅ 已自動儲存 ' + tt + '　<a href="' + escHtml(safeHref(link)) + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;">開啟文件</a>');
@@ -1715,6 +1828,13 @@ function renderStudentView() {
       '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
       '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 選幣別 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
       '<div id="payHistory" style="margin-top:14px;"></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h2>📚 更多學習資源</h2>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+        '<a href="../content.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">📚 影片與文章</a>' +
+        '<a href="../games.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🎮 泰語小遊戲</a>' +
+      '</div>' +
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentSchedule(token);
@@ -3173,13 +3293,30 @@ const REC_DB='classroomRecDB', REC_STORE='recChunks';
 
 // ── 錄影監控：分頁被切走/被瀏覽器關掉/卡住沒資料 → 一律大聲警告（畫面閃紅字＋聲音） ──
 let recAlertCtx=null, recWakeLock=null;
-let recLastDataTs=0, recWatchdogID=null, recHiddenSince=0, recHiddenWarned=false;
+let recLastDataTs=0, recWatchdogID=null, recHiddenSince=0, recHiddenWarned=false, recStallLogged=false;
 const REC_STALL_MS=15000;    // 超過15秒沒收到任何錄影資料 → 判定卡住
 const REC_HIDDEN_WARN_MS=180000;  // 分頁被切到背景超過3分鐘 → 提醒（怕被 Chrome 關掉分頁）
 
 function recFmtTime(sec){ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
 function recSetStatus(t,cls){ const e=document.getElementById('recStatus'); if(e){ e.textContent=t; e.className='status'+(cls?' '+cls:''); } }
 function recToggleStartBtns(disabled){ /* 一鍵錄製：開始鈕在學生面板（startClassRec 內已用 recState 防重複），此處無需切換 */ }
+
+// ── 錄影問題紀錄：每次遇到異常都存一筆進 Supabase（classroom_recording_issues），
+//    這樣以後回頭查「上次為什麼失敗」不用只靠當下那個轉瞬即逝的紅色警告條 ──
+//    需要 Lin 先在 Supabase 執行一次建表 SQL（見 recIssueTableSql 註解），不然這裡會 fail-safe 安靜跳過，不影響錄影本身
+async function recLogIssue(eventType, detail, extra){
+  try{
+    if(typeof sb==='undefined' || !sb) return;
+    await sb.from('classroom_recording_issues').insert({
+      token: recActiveStudent || null,
+      event_type: eventType,
+      detail: String(detail==null?'':detail).slice(0,500),
+      mime: (extra&&extra.mime)||recMime||null,
+      part: (extra&&extra.part!=null)?extra.part:(recPart||null),
+      browser_info: (navigator.userAgent||'').slice(0,300)
+    });
+  }catch(e){ /* 記錄失敗也絕不能擋住錄影本身，安靜跳過就好 */ }
+}
 
 // ── 警報聲：用 Web Audio 直接產生嗶嗶聲，不需要外部音檔 ──
 // 一定要在 beginRecording() 一開始（還在使用者點擊的手勢裡）就建立好 AudioContext，
@@ -3305,12 +3442,13 @@ document.addEventListener('visibilitychange', async ()=>{
 // ── 監控：每5秒檢查一次「真的還在收到錄影資料嗎」＋「分頁是否被切走太久」，異常就大聲警告 ──
 function recStartWatchdog(){
   clearInterval(recWatchdogID);
-  recLastDataTs=Date.now(); recHiddenSince=0; recHiddenWarned=false;
+  recLastDataTs=Date.now(); recHiddenSince=0; recHiddenWarned=false; recStallLogged=false;
   recHideStallWarning();
   recWatchdogID=setInterval(()=>{
     if(recState!=='recording') return;
     const silentMs=Date.now()-recLastDataTs;
     if(silentMs>REC_STALL_MS){
+      if(!recStallLogged){ recStallLogged=true; recLogIssue('stall', '超過 '+Math.round(REC_STALL_MS/1000)+' 秒沒收到任何錄影資料'); }
       recSetStatus('❌ 已經 '+Math.round(silentMs/1000)+' 秒沒收到任何錄影資料，可能已經停止運作！','');
       recShowStallWarning('錄影疑似卡住／已經停止（超過 '+Math.round(REC_STALL_MS/1000)+' 秒沒有新資料），請檢查分頁還在不在，必要時按停止後重新錄影！');
       recPlayAlert(3);
@@ -3377,15 +3515,25 @@ function hideRecReminder(){ const ov=document.getElementById('recReminderOverlay
 function recReminderStartNow(){ hideRecReminder(); if(recActiveStudent) recordClass(recActiveStudent); }  // 點擊＝使用者手勢，可開螢幕分享
 function recReminderDismiss(){ clearTimeout(recReminderID); hideRecReminder(); }
 
-// — 格式偵測（優先 mp4／m4a，相容 iPhone 播放）—
-function recPickVideoMime(){
-  const t=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
-  return t.find(x=>MediaRecorder.isTypeSupported(x))||'';
-}
-function recPickAudioMime(){
-  const t=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm'];
-  return t.find(x=>MediaRecorder.isTypeSupported(x))||'';
-}
+// — 格式偵測（2026-07-05 改為預設優先 webm/vp8，可靠度優先於 iPhone 原生播放相容）—
+// 原本預設優先 mp4/H.264 是為了 iPhone 播放相容，但這正是造成「阿姨錄影一直失敗」的root cause：
+// isTypeSupported()=true 不代表這台電腦的硬體編碼器當下真的能用，Chrome 已知問題是
+// mp4/H.264 常在 start() 之後才非同步丟 EncodingError（尤其筆電/沒有獨立顯卡的機器更常見）。
+// vp8（webm）是 Chromium 最老牌、幾乎保證有純軟體編碼路徑可用的格式，不吃硬體編碼器，
+// 這才是真正把「硬體編碼器不給力」這整類失敗徹底排除掉的做法，而不是靠事後自動重試補救。
+// iPhone 播放的部分：我們錄影檔是透過 Google Drive 連結分享（autoUploadRecording → webViewLink），
+// 學生點的是 Drive 網頁版預覽，Drive 預覽一律會先在伺服器端轉檔成串流格式再播放，不是瀏覽器原生解碼，
+// 所以理論上就算來源檔是 webm，iPhone 開 Drive 連結預覽應該還是能看 —— 但這點沒辦法在這裡實機測試，
+// 建議 push 後找一支 iPhone 實際點開一次 Drive 錄影連結確認一下。
+// mp4 保留在清單最後一位，當 webm 全部候選都真的不支援時才會用到（機率非常低，等於保底）。
+// 備援 webm 格式故意把 vp8 排在 vp9 前面：多份第三方報告指出 Google Drive 對 vp9 webm 的處理/預覽較不穩定，
+// vp8 webm 相容性最廣（我們錄影檔會自動上傳到 Google Drive，這點很重要）
+const REC_VIDEO_MIMES=['video/webm;codecs=vp8,opus','video/webm','video/webm;codecs=vp9,opus','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'];
+const REC_AUDIO_MIMES=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm'];
+function recSupportedVideoMimes(){ return REC_VIDEO_MIMES.filter(x=>MediaRecorder.isTypeSupported(x)); }
+function recSupportedAudioMimes(){ return REC_AUDIO_MIMES.filter(x=>MediaRecorder.isTypeSupported(x)); }
+function recPickVideoMime(){ return recSupportedVideoMimes()[0]||''; }
+function recPickAudioMime(){ return recSupportedAudioMimes()[0]||''; }
 
 // ============================================================
 // 崩潰防護：邊錄邊把每個片段存進 IndexedDB（寫進磁碟、跨重整/當機仍在）
@@ -3415,6 +3563,25 @@ async function recBackupStart(meta){
     localStorage.setItem('recPendingBackup', recBackupId);
     localStorage.setItem('recPendingMeta', JSON.stringify(meta||{}));
   }catch(e){ recBackupId=null; }   // 備份失敗 → 照常錄影（只是少了崩潰防護）
+}
+// 中途自動切換編碼格式（EncodingError fallback）時呼叫：更新備份的 mime 標記，
+// 否則萬一切換格式後才當機，救回時會照舊標記（例如 mp4）去重建檔案，但裡面其實是換過的格式（例如 webm）的位元組 → 存出來的檔案打不開
+let recBackupMimeQueue=Promise.resolve();   // 序列化佇列：萬一短時間內連續切換格式（連續 fallback），讀改寫不會互相插隊蓋掉彼此
+function recBackupUpdateMime(newMime){
+  if(!recBackupId) return recBackupMimeQueue;
+  const myBackupId=recBackupId;
+  recBackupMimeQueue = recBackupMimeQueue.then(async ()=>{
+    if(myBackupId!==recBackupId) return;   // 這段排隊的時候整段錄影已經重新開始（新的 backup id），這筆過期了就不寫
+    try{
+      await recOpenDB();
+      const rec = await new Promise((res)=>{ const tx=recDB.transaction(REC_STORE,'readonly'); const rq=tx.objectStore(REC_STORE).get(myBackupId+'__meta'); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(null); });
+      const meta = (rec&&rec.meta)||{};
+      meta.mime = newMime;
+      await recDBPut({ k:myBackupId+'__meta', meta:meta });
+      localStorage.setItem('recPendingMeta', JSON.stringify(meta));
+    }catch(e){}
+  });
+  return recBackupMimeQueue;
 }
 async function recBackupChunk(blob){
   if(!recBackupId) return;
@@ -3535,28 +3702,47 @@ async function beginRecording(method){
   }
 }
 
-function startSegment(stream){
-  recMime = recIsVideo ? recPickVideoMime() : recPickAudioMime();
-  if(recIsVideo && !recMime){ recSetStatus('❌ 此瀏覽器不支援影片錄製，請改用電腦版 Chrome',''); cleanupRecStreams(); return; }
+function startSegment(stream, mimeIdx){
+  mimeIdx = mimeIdx||0;
+  // 依優先順序取出「這台電腦目前真的支援」的格式清單，這次片段用第 mimeIdx 個
+  const recMimeCandidates = recIsVideo ? recSupportedVideoMimes() : recSupportedAudioMimes();
+  const segMime = recMimeCandidates[mimeIdx] || '';   // 這個片段專用（closure），避免下面 fallback 重啟時被下一段覆蓋掉造成資料/標籤錯亂
+  recMime = segMime;   // 仍同步一份全域值，給其他地方（例如崩潰備份標記）讀最新狀態用
+  if(recIsVideo && !segMime){ recSetStatus('❌ 此瀏覽器不支援影片錄製，請改用電腦版 Chrome',''); cleanupRecStreams(); return; }
+  recBackupUpdateMime(segMime);   // 崩潰備份的格式標記要跟著這次實際使用的格式走，不然萬一中途切換格式後當機，救回的檔案會標錯格式打不開
   const videoBps = REC_VIDEO_BPS;
   const opts = recIsVideo
-    ? {mimeType:recMime||undefined, videoBitsPerSecond:videoBps, audioBitsPerSecond:REC_AUDIO_BPS}
-    : {mimeType:recMime||undefined, audioBitsPerSecond:REC_AUDIO_BPS};
+    ? {mimeType:segMime||undefined, videoBitsPerSecond:videoBps, audioBitsPerSecond:REC_AUDIO_BPS}
+    : {mimeType:segMime||undefined, audioBitsPerSecond:REC_AUDIO_BPS};
   recMR=new MediaRecorder(stream, opts);
-  recChunks=[]; recPart++;
-  recMR.ondataavailable=e=>{ if(e.data&&e.data.size){ recChunks.push(e.data); recHadData=true; recBackupChunk(e.data); recLastDataTs=Date.now(); } };
+  const segChunks=[];   // 這個片段專用的陣列（closure），不是共用全域，才不會被下一段的 startSegment 清空
+  let segStartTime;     // 這個片段專用的開始時間（closure），理由同上 —— 算時長要用「這段自己的」開始時間
+  recChunks=segChunks; recPart++;
+  recMR.ondataavailable=e=>{ if(e.data&&e.data.size){ segChunks.push(e.data); recHadData=true; recBackupChunk(e.data); recLastDataTs=Date.now(); recStallLogged=false; } };
   recMR.onerror=ev=>{
-    recSetStatus('❌ 錄影發生錯誤：'+((ev&&ev.error&&ev.error.name)||'未知')+'　請按停止後重新錄影（已備份的片段仍可救回）','');
-    recShowStallWarning('錄影發生錯誤：'+((ev&&ev.error&&ev.error.name)||'未知')+'，請按停止後重新錄影！');
+    const errName=(ev&&ev.error&&ev.error.name)||'未知';
+    // 這個格式的硬體編碼器在這台電腦上啟動失敗（mp4/H.264 常見的已知問題）
+    // → 自動換下一個更保險的格式，接著錄下去（已錄到的片段先存檔，不會整堂課黑掉）
+    if(errName==='EncodingError' && mimeIdx+1<recMimeCandidates.length){
+      const nextMime=recMimeCandidates[mimeIdx+1];
+      recSetStatus('⚠️ 錄影格式啟動失敗，已自動切換備用格式繼續錄製'+(nextMime.indexOf('webm')>-1?'（注意：webm 格式 iPhone 無法直接播放，需先下載轉檔）':'')+'','active');
+      recLogIssue('encoding_error_fallback', segMime+' 啟動失敗，自動切換到 '+nextMime, {mime:segMime, part:recPart});
+      try{ if(recMR.state!=='inactive') recMR.stop(); }catch(e){}
+      setTimeout(()=>{ if(recState==='recording') startSegment(stream, mimeIdx+1); }, 300);
+      return;
+    }
+    recLogIssue('encoding_error_fatal', errName+'（'+segMime+'，已無其他備援格式可換）', {mime:segMime, part:recPart});
+    recSetStatus('❌ 錄影發生錯誤：'+errName+'　請按停止後重新錄影（已備份的片段仍可救回）','');
+    recShowStallWarning('錄影發生錯誤：'+errName+'，請按停止後重新錄影！');
     recPlayAlert(3);
   };
-  recMR.onstop=()=>finalizeSegment();
+  recMR.onstop=()=>finalizeSegment(segChunks, segMime, segStartTime);
   recMR.start(1000);
   recState='recording';
   recAcquireWakeLock();     // 防止電腦自動休眠中斷錄影
   recStartWatchdog();       // 開始監控：沒資料/分頁被切走太久 → 大聲警告
   clearTimeout(recReminderID); hideRecReminder();   // 已開始錄影 → 取消提醒
-  recStartTime=Date.now();
+  recStartTime=Date.now(); segStartTime=recStartTime;
   recToggleStartBtns(true);
   document.getElementById('recStopBtn').disabled=false;
   const tEl=document.getElementById('recTimer'); if(tEl) tEl.classList.add('visible');
@@ -3765,10 +3951,14 @@ function splitSegment(stream){
     return fixWebmDuration;
 });
 
-async function finalizeSegment(){
-  const durMs = Math.max(0, Date.now() - recStartTime);  // 必須先算（split 會重設 recStartTime）
-  const mime=recMime||(recIsVideo?'video/webm':'audio/webm');
-  let blob=new Blob(recChunks,{type:mime});
+async function finalizeSegment(chunksArg, mimeArg, startTimeArg){
+  // 用呼叫端傳進來的 chunks/mime/開始時間（該片段自己的 closure），不要讀共用全域變數 ——
+  // 因為格式自動切換是非同步重啟下一段，全域 recChunks/recMime/recStartTime 這時可能已經被下一段覆寫掉了，
+  // 讀共用全域會有把「這段」的資料/格式標籤/時長跟「下一段」搞混、甚至存到空陣列（資料憑空消失）的風險
+  const chunks = chunksArg || recChunks;
+  const durMs = Math.max(0, Date.now() - (startTimeArg||recStartTime));  // 必須先算（split 會重設 recStartTime）
+  const mime = mimeArg || recMime || (recIsVideo?'video/webm':'audio/webm');
+  let blob=new Blob(chunks,{type:mime});
   if(!blob.size) return;
   // webm 補時長 → 存檔/上雲端後可正常顯示長度並拖動（mp4 不需要）
   if(/webm/i.test(blob.type) && window.ysFixWebmDuration && durMs>0){
@@ -3817,6 +4007,7 @@ async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl
     // Drive 上傳成功 → 現在才安全清掉 IDB 崩潰備份（有備份 = 有學生時才需要）
     try { await recBackupClear(); } catch(e) {}
   }catch(err){
+    recLogIssue('upload_fail', (err&&(err.message||err))||'未知錯誤', {part:part});
     setMsg('⚠️ 自動上傳失敗：'+(err.message||err)+'（已保留上方下載按鈕，可手動存檔）');
     recShowStallWarning('自動上傳到雲端失敗：'+(err.message||err)+'（檔案還在，可用上方下載按鈕手動存檔）');
     recPlayAlert(2);
@@ -3845,6 +4036,7 @@ function recAfterStop(){
     // 有綁定學生 → 等 Drive 上傳成功後才清（由 autoUploadRecording 負責）
     if(!recActiveStudent) recBackupClear();
   }else{
+    recLogIssue('zero_bytes', '整堂錄影結束後完全沒有任何資料（0 位元組）');
     recSetStatus('❌ 這次完全沒有錄到內容（0 位元組）！請立即重新錄影。','');
     recShowStallWarning('這次完全沒有錄到內容（0 位元組），請立即重新錄影！');
     recPlayAlert(3);

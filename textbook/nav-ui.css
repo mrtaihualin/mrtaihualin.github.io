@@ -254,9 +254,66 @@
 .fpdf-btn .btn-icon { font-size: 18px; line-height: 1; }
 .fpdf-btn .btn-label { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; line-height: 1; }
 
+/* ── 左下角小按鈕：回主網站（只有「上課專用」單頁 nav-ui-solo.js 會用到） ── */
+.fsite-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 84px;
+  z-index: 990;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--slate, #7c6f61);
+  color: #fff;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: var(--font-zh-sans);
+}
+.fsite-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+.fsite-btn .btn-icon { font-size: 18px; line-height: 1; }
+.fsite-btn .btn-label { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; line-height: 1; }
+.fsite-menu {
+  position: fixed;
+  left: 16px;
+  bottom: 142px;
+  z-index: 989;
+  background: var(--paper);
+  border: 1.5px solid var(--border2);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  min-width: 170px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.fsite-menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.fsite-menu a {
+  display: block;
+  padding: 12px 16px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-mid);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-zh-sans);
+}
+.fsite-menu a:last-child { border-bottom: none; }
+.fsite-menu a:hover { background: var(--step-pale); color: var(--step); }
+
 @media (max-width: 480px) {
   .fnav-btn { top: 10px; right: 10px; width: 38px; height: 38px; }
   .fnav-menu { top: 54px; right: 10px; }
   .fnotes-btn { right: 10px; bottom: 14px; }
   .fpdf-btn { left: 10px; bottom: 14px; width: 46px; height: 46px; }
+  .fsite-btn { left: 10px; bottom: 68px; width: 46px; height: 46px; }
+  .fsite-menu { left: 10px; bottom: 122px; }
 }

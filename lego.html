@@ -196,7 +196,9 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .test-banner{text-align:center;font-size:13.5px;font-weight:700;padding:8px 10px;border-radius:10px;margin-top:6px;min-height:18px;}
 .test-banner.ok{background:#e8f5e9;color:#2e7d32;}
 .test-banner.no{background:#fbeceb;color:#c4574f;}
-.test-actions{display:flex;gap:10px;justify-content:center;margin-top:16px;}
+.test-actions{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+.test-golden-badge{text-align:center;font-size:12px;color:var(--gold-bright);font-weight:800;margin-bottom:6px;}
+.test-hint-warn{color:#c4574f;font-size:12px;font-weight:700;text-align:center;margin-top:6px;background:#fbeceb;border:1px solid rgba(196,87,79,.35);border-radius:8px;padding:6px 10px;}
 
 @media(max-width:560px){
   .slot-btn{min-width:60px;min-height:52px;padding:7px 8px;}
@@ -356,6 +358,8 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
     <button class="test-close" onclick="closeTest()">✕</button>
     <div class="test-title">🧪 拆句測驗</div>
     <div class="test-sub">把打散的詞塊，點回正確順序</div>
+    <div id="testGoldenBadge" class="test-golden-badge" style="display:none;">✨ 黃金句 ×2</div>
+    <div id="testHintWarn" class="test-hint-warn" style="display:none;">⚠️ 用「提示」會扣到 0 分，這句會直接失敗！</div>
     <div class="test-slots" id="testSlots"></div>
     <div class="test-bank" id="testBank"></div>
     <div class="test-banner" id="testBanner"></div>
@@ -829,12 +833,19 @@ function loadExample(){
   openSlot=null;render();toast('範例：'+ex.zh);
 }
 
-// ════════ STARS: 每「測試通過」SENTENCES_PER_ROUND 句 → 結算一次（與其他遊戲共用星星） ════════
+// ════════ 拆句測驗คะแนน (高級 formula — ก็อปสูตรจาก word-order.html เป๊ะ ตาม Lin ยืนยัน 2026-07-05) ════════
+// ⚠️ 2026-07-05: เกมนี้ "ไม่เข้าระบบดาวเงิน" (ตัด GAME_ACCOUNT.starsForRound/addStars ที่เดิมก็เป็น no-op อยู่แล้วออกไปเลย
+//   กันสับสน) เหลือแค่คะแนนสกุลอ่อน (soft score) — ให้ตรงกับที่ Lin สั่ง "ไม่ต้องมีดาว แต่ได้คะแนนสกุลอ่อน"
+const ROUND_COMPLETE_BONUS=20, ROUND_PERFECT_BONUS=50; // จบรอบ(5句) +20 · perfect(ทุกประโยคสะอาด) +50 เพิ่ม
+const LEVEL_WEIGHT=2; // นับเป็น高級ทั้งเกม (Lin ยืนยัน 2026-07-05) → ×2 คงที่ คูณ "ทั้งรอบ" ตอนจบ
+// ⚠️ 2026-07-05 (แก้ตาม Lin ยืนยันรอบ2): ไม่มีคอมโบคูณคะแนนเลย (ตัด legoComboMult ออก) — เหลือแค่คำทองอย่างเดียว
+// legoCurCombo/legoMaxCombo ยังเก็บไว้ (ใช้แค่กับชาเลนจ์รายสัปดาห์ lego_combo5 เดิม ไม่เกี่ยวกับคะแนน)
+
 // 2026-07-03 改版：以前是「複製句子」就給分，現在改成一定要按🧪測試、把打散的詞排對，才算數
 const SENTENCES_PER_ROUND=5;
 let sentencesThisRound=0;
 // ⚡ คะแนนสะสมของรอบนี้ — เพิ่ม 2026-07-03 เพื่อโชว์หลอด 進度/⚡ เหมือนเกมอื่น
-// ใช้ pts จริงที่ checkTestAnswer() คำนวณต่อการทดสอบผ่านแต่ละครั้ง (5 หรือ 10) ไม่ได้เดา/ให้คะแนนลอยๆ
+// ใช้ pts จริงที่ checkTestAnswer() คำนวณต่อการทดสอบผ่านแต่ละครั้ง ไม่ได้เดา/ให้คะแนนลอยๆ
 let roundScoreLego=0;
 
 // อัปเดตหลอด 進度/⚡ บนหน้าเกม (ไม่แตะ logic ดาว/streak เดิมเลย แค่โชว์ผลลัพธ์เพิ่ม)
@@ -849,23 +860,28 @@ function legoRefreshBars(){
   if(pn) pn.textContent=roundScoreLego;
 }
 
-function awardLegoStars(){
+// จบรอบ (ทุก SENTENCES_PER_ROUND ประโยคที่ "ผ่าน") → +20/+50 perfect + ×2 高級倍率 แล้วเซฟลงลีก
+// ไม่มีดาวเงินอีกต่อไป (ตามที่ Lin สั่ง 2026-07-05) — GAME_ACCOUNT.getStars()/badges ที่โชว์อยู่คือดาวจากเกมอื่นที่มี SRS เท่านั้น
+function finishLegoRound(){
   sentencesThisRound++;
   if(sentencesThisRound<SENTENCES_PER_ROUND){legoRefreshBars();return null;}
   const count=sentencesThisRound;
   const cleanCount=legoCleanThisRound;
   const comboSnapshot=legoMaxCombo;
-  const roundScoreSnapshot=roundScoreLego;
+  const isPerfect=(cleanCount===count && count>0);
+  const roundBonus=ROUND_COMPLETE_BONUS+(isPerfect?ROUND_PERFECT_BONUS:0);
+  roundScoreLego+=roundBonus;
+  const weightedScore=Math.round(roundScoreLego*LEVEL_WEIGHT);
   sentencesThisRound=0;
   roundScoreLego=0;
   legoCleanThisRound=0;
   legoMaxCombo=0;
+  legoNextTestGolden=true; // กฎ2026-07-05: ทดสอบผ่านครบรอบแล้ว → ประโยคถัดไป (ที่6) การันตีคำทอง ×2
   legoRefreshBars();
-  const _se=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starsForRound(count,count):0;
-  if(window.GAME_ACCOUNT){GAME_ACCOUNT.addStars(_se);GAME_ACCOUNT.bumpStreakToday();}
+  if(window.GAME_ACCOUNT){GAME_ACCOUNT.bumpStreakToday();}
   try{ legoChallengeBump(cleanCount,count,comboSnapshot); }catch(e){}
   // 存分數到共用排行榜（'lego' key 已在 reading-auth.js 註冊，跟 word_order 分開算，不會混榜）
-  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(roundScoreSnapshot,1,'lego'); }catch(e){}
+  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'lego'); }catch(e){}
   try{
     const _sv=legoApplyStreak();
     if(_sv.events.freezeUsed) setTimeout(()=>toast('護盾幫你保住連續紀錄！🛡️'),900);
@@ -873,9 +889,7 @@ function awardLegoStars(){
   }catch(e){}
   try{ legoRenderGameBar(); }catch(e){}
   refreshLegoAcctUI();
-  if(_se<=0) return null;
-  const totalStars=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():0;
-  return '⭐'.repeat(_se)+' 獲得 '+_se+' 顆星（累積共 '+totalStars+' 顆・全部遊戲共用）';
+  return '🎉 完成一輪（'+count+' 句）！本輪 +'+weightedScore+' 分'+(isPerfect?'・全部乾淨過關 ✨':'')+'（已含 ×'+LEVEL_WEIGHT+' 高級倍率）· 下一句是 ✨黃金句 ×2，記得測試！';
 }
 
 function copySentence(){
@@ -1021,12 +1035,31 @@ function legoRenderGameBar(){
 }
 
 // ════════ TEST: 拆句測驗（點打散的詞塊排回原順序，通過才計入 SENTENCES_PER_ROUND） ════════
-let testWords=[], testOrder=[], testAnswer=[], testUsed={}, testWrong=false, testLocked=false;
+// กฎ 2026-07-05 (ก็อปสูตร word-order.html เป๊ะ ตาม Lin ยืนยัน): "ชีวิต" เริ่ม 10 · เรียงผิดครั้งที่1/2/3/4 หัก 3/3/3/1
+// (รวม=10 พอดี → ผิดครบ4=ตายพอดี ตรงตาราง 10,7,4,1,0) · 提示 หักครั้งละ 2 จากพูลเดียวกัน ไม่จำกัดจำนวนครั้ง
+// ชีวิตถึง 0 เมื่อไหร่ (ไม่ว่าจากผิดหรือจาก提示) = ตายทันที เฉลย 0 แต้ม
+const SENTENCE_LIFE_START=10;
+const WRONG_DEDUCT=[3,3,3,1];
+const HINT_DEDUCT=2;
+// ⚠️ 2026-07-05 (แก้ตาม Lin ยืนยันรอบ2): คำทองไม่ใช่สุ่มแล้ว — เป็นแบบกำหนดแน่: ทดสอบผ่านครบ 5 ประโยค (1 รอบ)
+// แล้ว "ประโยคถัดไป" (ที่ 6) จะเป็นคำทองการันตี ×2 เสมอ (เงื่อนไข = ต้องกดทดสอบผ่านครบทุกประโยคของรอบก่อนหน้าจริง
+// ซึ่งบังคับอยู่แล้วเพราะ sentencesThisRound นับเฉพาะตอนทดสอบผ่านเท่านั้น — ดู finishLegoRound())
+const GOLDEN_SENTENCE_MULT=2;
+let legoNextTestGolden=false; // ตั้งเป็น true ตอนจบรอบ (finishLegoRound) แล้วถูก "ใช้" ครั้งเดียวตอน startTest() ครั้งถัดไป
+let testWords=[], testOrder=[], testAnswer=[], testUsed={}, testLocked=false;
+let testWrongCount=0, testLife=SENTENCE_LIFE_START, testHintUsed=false, testGolden=false, testFailed=false;
 
 function shuffleArr(arr){
   const a=arr.slice();
   for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
   return a;
+}
+
+function updateTestHintWarning(){
+  const w=document.getElementById('testHintWarn');
+  if(!w) return;
+  const wouldKill=!testLocked && (testLife-HINT_DEDUCT)<=0;
+  w.style.display=wouldKill?'':'none';
 }
 
 function getSentenceWords(){
@@ -1050,11 +1083,14 @@ function startTest(){
   if(!state.subj||!state.verb){toast('至少要有「主語」和「動詞」',true);return;}
   testWords=getSentenceWords();
   if(testWords.length<2){toast('句子太短，多加一點詞再測試吧',true);return;}
-  testWrong=false; testLocked=false;
-  document.getElementById('testActions').innerHTML='<button class="btn btn-line" onclick="resetTestAttempt()">↺ 重排</button>';
+  testWrongCount=0; testLife=SENTENCE_LIFE_START; testHintUsed=false; testFailed=false; testLocked=false;
+  testGolden=legoNextTestGolden; legoNextTestGolden=false; // ใช้ครั้งเดียว — คำทองการันตีหลังจบรอบก่อนหน้าเท่านั้น (ไม่สุ่มแล้ว)
+  const gb=document.getElementById('testGoldenBadge'); if(gb) gb.style.display=testGolden?'':'none';
+  document.getElementById('testActions').innerHTML='<button class="btn btn-line" id="testHintBtn" onclick="hintTest()">💡 提示 (-2)</button><button class="btn btn-line" onclick="resetTestAttempt()">↺ 重排</button>';
   scrambleTest();
   document.getElementById('testBanner').className='test-banner';
   document.getElementById('testBanner').textContent='';
+  updateTestHintWarning();
   document.getElementById('testOverlay').classList.add('show');
 }
 
@@ -1112,28 +1148,75 @@ function checkTestAnswer(){
   const banner=document.getElementById('testBanner');
   if(isCorrect){
     testLocked=true;
-    const pts=testWrong?5:10;
+    const clean=(testWrongCount===0 && !testHintUsed);
+    let pts=Math.max(0,testLife); // "ชีวิต" ที่เหลือตอนตอบถูก (หักไปแล้วทั้งจากผิด+提示 พูลเดียวกัน)
+    const golden=clean&&testGolden;
+    if(golden) pts*=GOLDEN_SENTENCE_MULT;
+    if(clean){ legoCleanThisRound++; }
+    // legoCurCombo/legoMaxCombo: เก็บไว้แค่ให้ชาเลนจ์รายสัปดาห์ lego_combo5 ใช้ — ไม่มีผลกับคะแนนแล้ว (ตัดคอมโบคูณคะแนนออกตาม Lin ยืนยัน 2026-07-05)
+    legoCurCombo=clean?legoCurCombo+1:0;
+    if(legoCurCombo>legoMaxCombo) legoMaxCombo=legoCurCombo;
     roundScoreLego+=pts;
-    if(!testWrong){ legoCurCombo++; if(legoCurCombo>legoMaxCombo) legoMaxCombo=legoCurCombo; legoCleanThisRound++; }
-    else { legoCurCombo=0; }
     banner.className='test-banner ok';
-    banner.textContent='✅ 排對了！+'+pts+' 分';
+    banner.textContent='✅ 排對了！+'+pts+' 分'+(golden?' ✨黃金句':'')+(testHintUsed?'（用了提示）':'');
     renderTestUI();
     document.querySelectorAll('#testSlots .test-slot').forEach(el=>el.classList.add('correct'));
     document.getElementById('testActions').innerHTML='<button class="btn btn-gold" onclick="closeTest()">繼續 →</button>';
-    const starMsg=awardLegoStars();
-    if(starMsg) setTimeout(()=>toast(starMsg),400);
+    updateTestHintWarning();
+    const roundMsg=finishLegoRound();
+    if(roundMsg) setTimeout(()=>toast(roundMsg),400);
     // soft-CTA: โชว์เฉพาะตอนจบรอบ (ทุก SENTENCES_PER_ROUND ประโยค) ไม่ใช่ทุกครั้งที่ผ่านทดสอบ
-    if(starMsg && window.renderSoftCTA) renderSoftCTA('soft-cta-lego','lego_session','會自己造句了！想知道這句話聽起來自然嗎？讓老師幫你聽聽看。');
+    if(roundMsg && window.renderSoftCTA) renderSoftCTA('soft-cta-lego','lego_session','會自己造句了！想知道這句話聽起來自然嗎？讓老師幫你聽聽看。');
   }else{
-    testWrong=true;
-    banner.className='test-banner no';
-    banner.textContent='還沒對喔，點格子裡的詞塊移回去，再排排看';
-    document.querySelectorAll('#testSlots .test-slot').forEach(el=>{
-      if(!el.classList.contains('empty')) el.classList.add('wrong');
-    });
-    setTimeout(()=>{document.querySelectorAll('#testSlots .test-slot.wrong').forEach(el=>el.classList.remove('wrong'));},400);
+    const deduct=WRONG_DEDUCT[Math.min(testWrongCount,3)];
+    testWrongCount++;
+    testLife-=deduct;
+    legoCurCombo=0;
+    if(testLife<=0){
+      failTest();
+    }else{
+      banner.className='test-banner no';
+      banner.textContent='還沒對喔，點格子裡的詞塊移回去，再排排看';
+      document.querySelectorAll('#testSlots .test-slot').forEach(el=>{
+        if(!el.classList.contains('empty')) el.classList.add('wrong');
+      });
+      setTimeout(()=>{document.querySelectorAll('#testSlots .test-slot.wrong').forEach(el=>el.classList.remove('wrong'));},400);
+      updateTestHintWarning();
+    }
   }
+}
+
+// ตายแล้ว (ไม่ว่าจากผิดหรือจาก提示) — เฉลยคำตอบ + 0 แต้ม + ไม่นับเป็นรอบ (ต้องลองใหม่ถึงจะได้แต้ม)
+function failTest(){
+  testFailed=true; testLocked=true;
+  testAnswer=testWords.map((_,i)=>i); testUsed={};
+  testAnswer.forEach(o=>testUsed[o]=true);
+  renderTestUI();
+  document.querySelectorAll('#testSlots .test-slot').forEach(el=>el.classList.add('correct'));
+  const banner=document.getElementById('testBanner');
+  banner.className='test-banner no';
+  banner.textContent='這句先看答案～綠色就是正確順序，重排一次再挑戰看看吧 💪（本句不計分）';
+  document.getElementById('testActions').innerHTML='<button class="btn btn-gold" onclick="closeTest()">繼續 →</button>';
+  updateTestHintWarning();
+  legoCurCombo=0;
+}
+
+// 提示：自動把「目前從頭開始連續正確」之後的下一個詞塊放到正確位置，跟 word-order.html 同一套邏輯
+function hintTest(){
+  if(testLocked) return;
+  if(testAnswer.length>=testWords.length) return;
+  let correctPrefixLen=0;
+  while(correctPrefixLen<testAnswer.length && testAnswer[correctPrefixLen]===correctPrefixLen) correctPrefixLen++;
+  for(let i=testAnswer.length-1;i>=correctPrefixLen;i--) delete testUsed[testAnswer[i]];
+  testAnswer=testAnswer.slice(0,correctPrefixLen);
+  testAnswer.push(correctPrefixLen);
+  testUsed[correctPrefixLen]=true;
+  testHintUsed=true;
+  testLife-=HINT_DEDUCT;
+  renderTestUI();
+  if(testLife<=0){ failTest(); return; }
+  updateTestHintWarning();
+  if(testAnswer.length===testWords.length) checkTestAnswer();
 }
 
 function closeTest(){
