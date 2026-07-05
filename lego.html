@@ -27,8 +27,9 @@
 <link rel="stylesheet" href="shared.css?v=12">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="supabase-config.js?v=4"></script>
+<script defer src="auth-widget.js?v=1"></script>
 <script defer src="game-account.js?v=1"></script>
-<script defer src="reading-auth.js?v=2"></script>
+<script defer src="reading-auth.js?v=4"></script>
 <style>
 :root{
   --gold:#8B6310; --gold-deep:#5a3e0a; --gold-bright:#C8973A; --gold-light:#F3E4C2;
@@ -280,9 +281,13 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 <div class="rg-stat-row">
   <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
   <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
-  <span class="tf-streak-chip">⭐ <b id="star-count">0</b> 顆星</span>
+  <!-- Lin 2026-07-06: เลโก้ไม่แจกดาวเงิน (คนละระบบ) → ซ่อนป้ายดาว ไม่ให้คนเล่นสับสน -->
+  <span class="tf-streak-chip" style="display:none;">⭐ <b id="star-count">0</b> 顆星</span>
   <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
 </div>
+
+<!-- Lin 2026-07-06: CTA ชวนล็อกอิน (MASTER ข้อ13) — เดิมเลโก้ไม่มี เพิ่มให้เหมือนเกมอื่น -->
+<div id="rg-cta-login" style="max-width:640px;margin:8px auto 0;padding:0 12px;box-sizing:border-box;"></div>
 
 <div class="page">
 
@@ -299,9 +304,9 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
       <span class="bar-label" id="lego-prog-txt">0/5</span>
     </div>
     <div class="bar-row">
-      <span>⚡</span>
-      <div class="bar-bg"><div class="bar-fill power" id="lego-powerf" style="width:0%"></div></div>
-      <span class="bar-label"><span id="lego-power-num">0</span>/100</span>
+      <span>本題分數</span>
+      <div class="bar-bg"><div class="bar-fill power" id="lego-ws-fill" style="width:100%"></div></div>
+      <span class="bar-label"><span id="lego-ws-num">10</span>/10</span>
     </div>
   </div>
 
@@ -360,6 +365,11 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
     <div class="test-sub">把打散的詞塊，點回正確順序</div>
     <div id="testGoldenBadge" class="test-golden-badge" style="display:none;">✨ 黃金句 ×2</div>
     <div id="testHintWarn" class="test-hint-warn" style="display:none;">⚠️ 用「提示」會扣到 0 分，這句會直接失敗！</div>
+    <div class="bar-row" style="margin:2px 0 10px;">
+      <span>本題分數</span>
+      <div class="bar-bg" style="flex:1;height:9px;background:#ede0c8;border-radius:5px;overflow:hidden;"><div class="bar-fill" id="lego-test-ws-fill" style="width:100%;height:100%;border-radius:5px;transition:width .35s ease;"></div></div>
+      <span class="bar-label" style="font-weight:800;color:#5a3e0a;"><span id="lego-test-ws-num">10</span>/10</span>
+    </div>
     <div class="test-slots" id="testSlots"></div>
     <div class="test-bank" id="testBank"></div>
     <div class="test-banner" id="testBanner"></div>
@@ -553,9 +563,9 @@ const LEVELS={
        intro:'看一句話如何<b>從三個詞長成完整句子</b>——這就是泰語的語序基礎。'},
   lv1:{name:'第一級',sub:'P3 · 情態助動詞',type:'build',hideNeg:true,exTags:['p2','p3'],
        intro:''},
-  lv2:{name:'第二級',sub:'即將推出',type:'build',hideNeg:false,exTags:['p4'],locked:true,
+  lv2:{name:'第二級',sub:'單字持續增加中',type:'build',hideNeg:false,exTags:['p4'],locked:true,
        intro:'用 <b>ไม่／ไม่ได้／ไม่ค่อย</b> 把句子變成否定——注意它放的位置。'},
-  lv3:{name:'第三級',sub:'即將推出',type:'build',hideNeg:false,exTags:['p2','p3','p4'],locked:true,
+  lv3:{name:'第三級',sub:'單字持續增加中',type:'build',hideNeg:false,exTags:['p2','p3','p4'],locked:true,
        intro:'情態與否定一起用，自由挑戰各種完整句子。'},
 };
 const LV_ORDER=['pre','lv1','lv2','lv3'];
@@ -589,7 +599,7 @@ function renderLevels(){
   document.getElementById('levels').innerHTML=LV_ORDER.map(k=>{
     const L=LEVELS[k];
     const locked=!!L.locked;
-    const click=locked?`toast('${L.name}即將推出，敬請期待')`:`setLevel('${k}')`;
+    const click=locked?`toast('👧🏻 米娜：新單字一直在加喔～先玩前面的關卡，很快回來看看吧！')`:`setLevel('${k}')`;
     return `<div class="lv-pill ${k==='pre'?'pre':''} ${k===curLevel?'active':''} ${locked?'locked':''}" onclick="${click}">
       ${L.name}<small>${L.sub}</small></div>`;
   }).join('');
@@ -848,16 +858,17 @@ let sentencesThisRound=0;
 // ใช้ pts จริงที่ checkTestAnswer() คำนวณต่อการทดสอบผ่านแต่ละครั้ง ไม่ได้เดา/ให้คะแนนลอยๆ
 let roundScoreLego=0;
 
-// อัปเดตหลอด 進度/⚡ บนหน้าเกม (ไม่แตะ logic ดาว/streak เดิมเลย แค่โชว์ผลลัพธ์เพิ่ม)
+// Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
+function legoScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
+// 本題分數: โชว์ "ชีวิต" ที่เหลือของข้อทดสอบนี้ 10→0 ไล่สีทอง→แดง (sc ว่าง = ข้อใหม่ เต็ม 10)
+function updateLegoScoreBar(sc){ var max=SENTENCE_LIFE_START||10; if(sc==null)sc=max; sc=Math.max(0,sc); var col=legoScoreBarColor(sc,max), w=Math.max(0,Math.min(100,sc/max*100))+'%'; ['lego-ws-fill','lego-test-ws-fill'].forEach(function(id){var pw=document.getElementById(id); if(pw){pw.style.width=w; pw.style.background=col;}}); ['lego-ws-num','lego-test-ws-num'].forEach(function(id){var pn=document.getElementById(id); if(pn)pn.textContent=sc;}); }
+// อัปเดตหลอด 進度 + 本題分數 บนหน้าเกม (ไม่แตะ logic ดาว/streak เดิม)
 function legoRefreshBars(){
   const pf=document.getElementById('lego-pf');
   if(pf) pf.style.width=Math.min(100,(sentencesThisRound/SENTENCES_PER_ROUND)*100)+'%';
   const pt=document.getElementById('lego-prog-txt');
   if(pt) pt.textContent=sentencesThisRound+'/'+SENTENCES_PER_ROUND;
-  const pw=document.getElementById('lego-powerf');
-  if(pw) pw.style.width=Math.min(100,roundScoreLego)+'%';
-  const pn=document.getElementById('lego-power-num');
-  if(pn) pn.textContent=roundScoreLego;
+  try{ updateLegoScoreBar(typeof testLife==='number'?testLife:null); }catch(e){ updateLegoScoreBar(null); }
 }
 
 // จบรอบ (ทุก SENTENCES_PER_ROUND ประโยคที่ "ผ่าน") → +20/+50 perfect + ×2 高級倍率 แล้วเซฟลงลีก
@@ -930,7 +941,25 @@ function refreshLegoAcctUI(){
   const sc=document.getElementById('star-count'); if(sc) sc.textContent=stars;
   const bc=document.getElementById('badge-count'); if(bc) bc.textContent=badges;
   const be=document.getElementById('badge-emoji'); if(be) be.textContent=badgeEmoji(badges);
+  legoRenderLoginCTA();
 }
+
+// Lin 2026-07-06: CTA ชวนล็อกอิน (MASTER ข้อ13) — เดิมเลโก้ไม่มี · ก็อปแพทเทิร์นจากเกมเรียงคำ + เสียงมีนา
+function legoLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
+function legoRenderLoginCTA(){
+  var el=document.getElementById('rg-cta-login'); if(!el) return;
+  if(legoLoggedIn()){ el.innerHTML=''; return; }
+  el.innerHTML='<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;">'+
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
+      '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:180px;">👧🏻 米娜：登入後才能幫你把進度存起來喔！</span>'+
+      '<button onclick="legoCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>'+
+      '<button onclick="var d=document.getElementById(\'lego-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>'+
+    '</div>'+
+    '<div id="lego-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">'+
+      '✅ 登入後可以：<br>💾 把你的進度和連續紀錄存起來<br>🧠 智慧複習，記住你學會了哪些句子<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接練你的弱點' +
+    '</div></div>';
+}
+function legoCtaLogin(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} if(window.READING_AUTH&&READING_AUTH.openLogin)READING_AUTH.openLogin(); }
 
 function openBadge(){
   const s=window.GAME_ACCOUNT?GAME_ACCOUNT.getStars():0;
@@ -1114,6 +1143,7 @@ function renderTestUI(){
     const used=!!testUsed[orig];
     return `<div class="test-tile${used?' used':''}" onclick="${(testLocked||used)?'':`addTestTile(${orig})`}">${testWords[orig].th}</div>`;
   }).join('');
+  updateLegoScoreBar(testFailed?0:testLife); // Lin 2026-07-06: หลอด 本題分數 ในกล่องทดสอบ ไล่สีทอง→แดง
 }
 
 function addTestTile(orig){
@@ -1182,6 +1212,7 @@ function checkTestAnswer(){
       });
       setTimeout(()=>{document.querySelectorAll('#testSlots .test-slot.wrong').forEach(el=>el.classList.remove('wrong'));},400);
       updateTestHintWarning();
+      updateLegoScoreBar(testLife); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนเรียงผิด
     }
   }
 }

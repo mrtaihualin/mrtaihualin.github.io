@@ -351,9 +351,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <span class="bar-label" id="prog-txt">0/10</span>
   </div>
   <div class="bar-row">
-    <span>⚡</span>
-    <div class="bar-bg"><div class="bar-fill power" id="powerf" style="width:0%"></div></div>
-    <span class="bar-label"><span id="power-num">0</span>/<span id="power-max">100</span></span>
+    <span>本題分數</span>
+    <div class="bar-bg"><div class="bar-fill power" id="tg-ws-fill" style="width:100%"></div></div>
+    <span class="bar-label"><span id="tg-ws-num">10</span>/10</span>
   </div>
 </div>
 
@@ -1461,6 +1461,11 @@ var GOLDEN_WORD_MULT=2;                        // คำทองตอบถู
 // ── กฎ Lin 2026-07-05: คะแนนต่อคำ/ประโยค (เฉพาะเกมพิม ต่างจากเกมอ่าน) ──
 // นับ "จำนวนผิดสะสมทั้งคำ/ประโยค" (ไม่แยกทีละพยางค์) เทียบกับโควต้าที่ขยายตามจำนวนพยางค์ 1-4=4 / 5=5 / ... / 9+=9 (เพดาน)
 // คะแนนแบ่งขั้นเท่ากันจาก 10 ลงไป 0 ตามจำนวนขั้น=โควต้า · ผิดครบโควต้า = fail (0 คะแนน + เฉลย + เข้า SRS วันถัดไป)
+// Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
+function tgScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
+// 本題分數: คะแนนที่จะได้ของคำนี้ตอนนี้ ตามจำนวนครั้งที่ผิดสะสม · ตาย/ใช้คำใบ้=0
+function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide))return 0; var sc=(typeof sylList!=='undefined'&&sylList)?sylList.length:1; return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
+function tgUpdateScoreBar(){ var max=10, sc=Math.max(0,Math.min(10,tgCurWordScore())); var pw=document.getElementById('tg-ws-fill'); if(pw){pw.style.width=Math.max(0,Math.min(100,sc/max*100))+'%'; pw.style.background=tgScoreBarColor(sc,max);} var pn=document.getElementById('tg-ws-num'); if(pn)pn.textContent=sc; }
 function rgQuotaFor(sylCount){return Math.min(4+Math.max(0,(sylCount||1)-4),9);}
 function rgWrongScore(sylCount,wrongN){
   var quota=rgQuotaFor(sylCount);
@@ -1620,8 +1625,8 @@ function initGame(){
       });
       // ถ้าไม่มีคำพร้อม → เปิด cooldown words ก่อน (ยกเว้น mastered)
       if(pool.length===0)pool=allIdx.filter(function(i){var rec=srsRecords[i];return !(rec&&rec.mastered);});
-      // ถ้า mastered ทั้งหมดในระดับนี้ → เล่นซ้ำได้ (ฝึกอย่างเดียว ไม่ได้แต้ม — กันฟาร์ม)
-      if(pool.length===0)pool=allIdx.slice();
+      // ถ้า mastered ทั้งหมดในระดับนี้ → เด้ง 全部精通 (ครั้งเดียว) แล้วเล่นซ้ำได้ (ฝึกอย่างเดียว 0 แต้ม กันฟาร์ม) — Lin 2026-07-06
+      if(pool.length===0){ try{ if(!window.tgAllMasteredShown){ window.tgAllMasteredShown=true; setTimeout(tgShowAllMastered,350); } }catch(e){} pool=allIdx.slice(); }
     } else {
       pool=allIdx.slice();
     }
@@ -1884,6 +1889,9 @@ function finalizeWord(){
     return;
   }
 
+  // ── Lin 2026-07-06: กันฟาร์ม — คำที่ "精通"(mastered) แล้ว เอามาเล่นซ้ำ (ตอนคำใหม่หมดทั้งระดับ) = 0 แต้ม ไม่แตะ SRS/ดาว/ลีก (กฎ MASTER ข้อ7/15) ──
+  if(loggedIn){ var _recM=rgSrsGet(idx); if(_recM&&_recM.mastered){ okC++; streak=0; b.textContent='這個字你已經精通了，複習不計分 ✨';b.className='result-banner show ok'; doSave(); return; } }
+
   // ── คะแนน: แบ่งขั้นตามโควต้าที่ขยายตามความยาวคำ/ประโยค (กฎ Lin 2026-07-05, นับผิดรวมทั้งคำ ไม่แยกพยางค์) ──
   var pts=rgWrongScore(sylCount,wordWrongTotal);
   var clean=(wordWrongTotal===0); // "สะอาด" ของ SRS/ดาวเงิน = ไม่พลาดแม้ครั้งเดียวทั้งคำ
@@ -2052,6 +2060,26 @@ function evaluateBonus(){
   }
 }
 
+// Lin 2026-07-06: เด้ง 全部精通！ ให้เหมือนเกมอ่าน (ตอนจำครบทั้งระดับ) — เสียงมีนา
+function tgShowAllMastered(){
+  var old=document.getElementById('tg-allmaster-ov'); if(old)old.remove();
+  var div=document.createElement('div');
+  div.id='tg-allmaster-ov';
+  div.style.cssText='position:fixed;inset:0;background:rgba(45,42,34,0.5);display:flex;align-items:center;justify-content:center;z-index:10050;padding:20px;';
+  div.innerHTML='<div style="background:#fff;border-radius:18px;max-width:340px;width:100%;padding:28px 24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;">'+
+    '<div style="font-size:46px;line-height:1;margin-bottom:8px;">🏆🌾</div>'+
+    '<div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:6px;">全部精通！</div>'+
+    '<div style="font-size:14px;color:#555;line-height:1.7;margin-bottom:16px;">👧🏻 米娜：這個等級的字，你<b>全部都記住了</b>，好厲害呀！🎉<br>星星都收進你的收藏囉～</div>'+
+    '<div style="display:flex;flex-direction:column;gap:8px;">'+
+      '<button class="btn btn-primary" id="tg-am-review">繼續複習（不計分）</button>'+
+      '<button class="btn btn-secondary" id="tg-am-level">挑戰其他等級</button>'+
+    '</div></div>';
+  div.addEventListener('click',function(e){if(e.target===div)div.remove();});
+  document.body.appendChild(div);
+  document.getElementById('tg-am-review').onclick=function(){div.remove();};
+  document.getElementById('tg-am-level').onclick=function(){div.remove();var el=document.getElementById('end');if(el)el.style.display='none';var g=document.getElementById('game');if(g)g.style.display='none';window.scrollTo(0,0);};
+}
+
 function skip(){nextWord();} // (เลิกใช้ — ปุ่ม 跳過 ถูกลบแล้ว ตามกฎ MASTER ข้อ11) เก็บฟังก์ชันไว้กันโค้ดเดิมอ้างถึง
 // กฎ MASTER ข้อ10 (ลอกเกมอ่านเป๊ะ 2026-07-05): กดแล้ว "ไม่ตัดคำทันที" — ต้องพิมพ์คำนี้ต่อให้ผ่านแบบสะอาด (ไม่มีคำใบ้) 1 ครั้งก่อน ถึงจะตัดคำออก (ดู finalizeWord curWordIsKnownCheck)
 function remember(){
@@ -2129,10 +2157,7 @@ function trackToneLink(){try{if(typeof gtag==='function')gtag('event','game_link
 // UI HELPERS
 // ════════════════════════════════════════════
 function refreshUI(){
-  var pct=Math.min(100,roundScore);
-  document.getElementById('powerf').style.width=pct+'%';
-  document.getElementById('power-num').textContent=roundScore;
-  document.getElementById('power-max').textContent='100'; // กลับจาก 高級 ต้องคืนเพดานเป็น 100 — Lin 2026-07-02
+  tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 (แทนหลอด ⚡ เดิม) ไล่สีทอง→แดง
   document.getElementById('pf').style.width=(cur/Math.max(1,roundQueue.length)*100)+'%';
   document.getElementById('prog-txt').textContent=cur+'/'+roundQueue.length;
   document.getElementById('qt').textContent=roundQueue.length;
@@ -2572,6 +2597,7 @@ function rgTypeChar(ch){
     }
   } else {
     RG_TYPE.wrong++;wordWrongTotal++;wordHadWrong=true;streak=0;badC++;
+    tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนพิมพ์ผิด
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     updateCombo();
     rgTypeFlashWrong();
@@ -2662,6 +2688,7 @@ function rgContChar(ch){
   } else {
     // นับผิดรวมทั้งคำ (ไม่แยกนับทีละพยางค์แล้ว) — Lin 2026-07-03 v3: ผิดครบ 3 ครั้งไม่ว่าจะพยางค์ไหน = จบคำทันที ไม่พิมพ์ต่อ ไม่ถามวรรณยุกต์ต่อ
     RG_CONT_WRONG++;wordWrongTotal++;wordHadWrong=true;streak=0;badC++;
+    tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนพิมพ์ผิด
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     updateCombo();
     rgTypeFlashWrong();

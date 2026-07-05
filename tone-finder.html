@@ -3003,14 +3003,23 @@ var TF_WORDSCORE = {
   onNextStep: function (s) { s.stepWrong = false; s.stepFreePeekUsed = false; return s; }
 };
 
-// Lin 2026-07-04: หลอดคะแนนต่อคำ (โชว์ในขั้น推導) — แท่งไล่สีเหมือนหลอด 進度/⚡ ในเกม · 本題分數 10→0
+// Lin 2026-07-06: สีหลอดคะแนนต่อข้อ — ทองเข้มตอนเต็ม ไล่ลงเป็น "แดง" ตอนใกล้ตาย · ใช้ชุดเดียวกันทุกเกม (กฎ Lin: หลอดต้องมีทุกเกมทุกระดับ ไล่สีสวยๆ)
+function tfScoreBarColor(sc, max) {
+  if (sc <= 0) return '#b83227';
+  var f = Math.max(0, Math.min(1, sc / (max || 10)));
+  var hue = f >= 0.4 ? 40 : Math.round(40 * (f / 0.4));  // 40=ทองเข้ม → 0=แดง (เริ่มแดงช่วงท้ายเท่านั้น)
+  var light = f >= 0.4 ? 42 : 38;
+  return 'hsl(' + hue + ',78%,' + light + '%)';
+}
+
+// Lin 2026-07-04: หลอดคะแนนต่อคำ (โชว์ในขั้น推導) — 本題分數 10→0 · สีทอง→แดง (Lin 2026-07-06)
 function tfWordScoreGaugeHtml() {
   if (!session) return '';
   var max = TF_WORDSCORE.LADDER[0] || 10;
   var sc = TF_WORDSCORE.score(session);
   var pct = Math.max(0, Math.min(100, (sc / max) * 100));
   var dead = (sc === 0);
-  var fill = dead ? '#c0392b' : 'linear-gradient(90deg,#e8a020,#d85a30)';
+  var fill = tfScoreBarColor(sc, max);
   return '<div style="display:flex;align-items:center;gap:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08050;margin:0 0 12px;">'
     + '<span style="min-width:56px;">本題分數</span>'
     + '<div style="flex:1;height:9px;background:#ede0c8;border-radius:5px;overflow:hidden;">'
@@ -3027,7 +3036,7 @@ function tfUpdateWordScoreGauge() {
   var sc = TF_WORDSCORE.score(session);
   var dead = (sc === 0);
   var f = document.getElementById('tf-ws-fill');
-  if (f) { f.style.width = Math.max(0, Math.min(100, (sc / max) * 100)) + '%'; f.style.background = dead ? '#c0392b' : 'linear-gradient(90deg,#e8a020,#d85a30)'; }
+  if (f) { f.style.width = Math.max(0, Math.min(100, (sc / max) * 100)) + '%'; f.style.background = tfScoreBarColor(sc, max); }
   var n = document.getElementById('tf-ws-num'); if (n) n.textContent = sc;
   var lab = document.getElementById('tf-ws-lab'); if (lab) lab.style.color = dead ? '#c0392b' : '#5a3e0a';
 }
@@ -3495,7 +3504,6 @@ function tfBarsHtml() {
   var powerPct = Math.min(100, score);
   return '<div class="bars-wrap" id="tf-bars-wrap">'
     + '<div class="bar-row"><span>進度</span><div class="bar-bg"><div class="bar-fill prog" id="tf-pf" style="width:' + progPct + '%"></div></div><span class="bar-label" id="tf-prog-txt">' + idx + '/' + total + '</span></div>'
-    + '<div class="bar-row"><span>⚡</span><div class="bar-bg"><div class="bar-fill power" id="tf-powerf" style="width:' + powerPct + '%"></div></div><span class="bar-label"><span id="tf-power-num">' + score + '</span>/100</span></div>'
     + '</div>';
 }
 
@@ -3509,10 +3517,6 @@ function tfUpdateBarsHud() {
   if (pf) pf.style.width = (total ? Math.min(100, (idx / total) * 100) : 0) + '%';
   var pt = document.getElementById('tf-prog-txt');
   if (pt) pt.textContent = idx + '/' + total;
-  var pw = document.getElementById('tf-powerf');
-  if (pw) pw.style.width = Math.min(100, score) + '%';
-  var pn = document.getElementById('tf-power-num');
-  if (pn) pn.textContent = score;
 }
 
 // ตัวคูณคำทอง (สเตจ 2 จะเปิดใช้ — ตอนนี้คืน 1)

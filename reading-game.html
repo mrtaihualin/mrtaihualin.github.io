@@ -331,9 +331,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <span class="bar-label" id="prog-txt">0/10</span>
   </div>
   <div class="bar-row">
-    <span>⚡</span>
-    <div class="bar-bg"><div class="bar-fill power" id="powerf" style="width:0%"></div></div>
-    <span class="bar-label"><span id="power-num">0</span>/100</span>
+    <span>本題分數</span>
+    <div class="bar-bg"><div class="bar-fill power" id="rg-ws-fill" style="width:100%"></div></div>
+    <span class="bar-label"><span id="rg-ws-num">10</span>/10</span>
   </div>
 </div>
 
@@ -1445,6 +1445,10 @@ var ADV_PTS_PER_SYL=2;                         // 高級: +2 แต้ม/พย
 // ── งานที่1+2 (2026-07-04): คะแนนต่อพยางค์ 0/1/2/3ผิด → 10/7/4/1 (floor1) · ครบ4=fail(0) ──
 var SYL_SCORE=[10,7,4,1];
 function rgSyllableScore(wc){return SYL_SCORE[Math.min(wc||0,3)];}
+// Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
+function rgScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
+// 本題分數: คะแนนของ "พยางค์ที่กำลังทำ" ตามจำนวนครั้งที่ผิด (บันได 10/7/4/1) · ตาย(fail)=0
+function rgCurSyllableScore(){ try{ if(typeof wordFailed!=='undefined'&&wordFailed)return 0; var wc=(sylWrongCount&&sylWrongCount.length)?(sylWrongCount[(typeof sylIdx!=='undefined'?sylIdx:0)]||0):(typeof wrongCount!=='undefined'?wrongCount:0); return rgSyllableScore(wc);}catch(e){return 10;} }
 var HIGH_RAW_START_IDX=7;      // 0-based → พยางค์ที่ 8 เป็นต้นไป (เฉพาะ高／ประโยคยาว) ไม่เอาเข้าเฉลี่ย ไม่คูณ weight
 var HIGH_RAW_BONUS_PER_SYL=2;  // +2 ดิบ/พยางค์ (ถ้าพยางค์นั้นถูกในที่สุด — ไม่สเกลตามจำนวนผิด)
 var RG_LEVEL_TO_NUM={'初':1,'中':2,'高':3}; // map ให้ตรงกับ GAME_ACCOUNT.addHardStars(clean, level:1|2|3)
@@ -2029,6 +2033,7 @@ function check(){
   } else {
     wrongCount++;wordHadWrong=true;streak=0;badC++;
     sylWrongCount[0]=wrongCount; // งานที่1: sylList.length===1 เสมอในพาธนี้ → พยางค์เดียว = sylIdx 0
+    refreshUI(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนกดผิด
     if(wrongCount < 4){
       // ผิดครั้งที่ 1/2/3 → กระพริบตัวที่ผิด, เคลียร์, ลองใหม่ (งานที่1: เพิ่มจาก 3→4 ครั้งก่อน fail)
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
@@ -2248,9 +2253,10 @@ function trackToneLink(){try{if(typeof gtag==='function')gtag('event','game_link
 // UI HELPERS
 // ════════════════════════════════════════════
 function refreshUI(){
-  var pct=Math.min(100,roundScore);
-  document.getElementById('powerf').style.width=pct+'%';
-  document.getElementById('power-num').textContent=roundScore;
+  var wsMax=SYL_SCORE[0]||10, wsSc=wordUsedGuide?0:rgCurSyllableScore();
+  var wsFill=document.getElementById('rg-ws-fill');
+  if(wsFill){ wsFill.style.width=Math.max(0,Math.min(100,wsSc/wsMax*100))+'%'; wsFill.style.background=rgScoreBarColor(wsSc,wsMax); }
+  var wsNum=document.getElementById('rg-ws-num'); if(wsNum)wsNum.textContent=wsSc;
   document.getElementById('pf').style.width=(cur/Math.max(1,roundQueue.length)*100)+'%';
   document.getElementById('prog-txt').textContent=cur+'/'+roundQueue.length;
   document.getElementById('qt').textContent=roundQueue.length;
@@ -2590,6 +2596,7 @@ function rgCheckWholeWord(){
     sylWrongCount[wrongIdx]=(sylWrongCount[wrongIdx]||0)+1;
     wrongCount=sylWrongCount[wrongIdx]; // ให้ retry-hint อ้างอิงจำนวนผิดของพยางค์นี้เอง
     rgJumpForCheck(wrongIdx);
+    refreshUI(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนกดผิด (พยางค์ปัจจุบัน)
     if(wrongCount<4){
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
         var c=slotOfTile(Number(x.dataset.id));

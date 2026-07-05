@@ -56,6 +56,9 @@
     依「累積總分」排名，每週一重置。練得越多，排名越高！
   </p>
 
+  <!-- Lin 2026-07-06: เพิ่ม widget ล็อกอิน (เดิม 2 กระดานนี้ไม่มี) ให้เหมือนกระดานอื่น -->
+  <div id="lb-userslot" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 18px;"></div>
+
   <div id="lb-root" style="max-width:560px;margin:0 auto;"></div>
 
   <div style="text-align:center;margin-top:30px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -86,6 +89,8 @@
 </footer>
 
 <script src="shared.js?v=21"></script>
+<script src="auth-widget.js?v=1"></script>
+<script>try{ if(window.SITE_AUTH) SITE_AUTH.renderBadge('lb-userslot', { leaderboardHref:'word-order-board.html', progressHref:'my-progress.html' }); }catch(e){}</script>
 <script>window.READING_BOARD_GAME = 'word_order';</script>
 <script src="reading-leaderboard.js?v=2"></script>
 <script>

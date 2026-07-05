@@ -230,9 +230,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <span class="bar-label" id="prog-txt">0/10</span>
   </div>
   <div class="bar-row">
-    <span>⚡</span>
-    <div class="bar-bg"><div class="bar-fill power" id="powerf" style="width:0%"></div></div>
-    <span class="bar-label" id="power-num">0/0</span>
+    <span>本題分數</span>
+    <div class="bar-bg"><div class="bar-fill power" id="wo-ws-fill" style="width:100%"></div></div>
+    <span class="bar-label"><span id="wo-ws-num">10</span>/10</span>
   </div>
 </div>
 
@@ -603,11 +603,23 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     renderBank();
   }
 
-  function updatePowerBar(s){
-    var pct = s.words.length ? Math.round(answer.length / s.words.length * 100) : 0;
-    var pw = document.getElementById('powerf'); if (pw) pw.style.width = pct + '%';
-    var pn = document.getElementById('power-num'); if (pn) pn.textContent = answer.length + '/' + s.words.length;
+  // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ — ทองเข้มตอนเต็ม ไล่ลงเป็นแดงตอนใกล้ตาย (ชุดเดียวทุกเกม)
+  function woScoreBarColor(sc, max){
+    if (sc <= 0) return '#b83227';
+    var f = Math.max(0, Math.min(1, sc / (max || 10)));
+    var hue = f >= 0.4 ? 40 : Math.round(40 * (f / 0.4));
+    var light = f >= 0.4 ? 42 : 38;
+    return 'hsl(' + hue + ',78%,' + light + '%)';
   }
+  // 本題分數: โชว์ "ชีวิต" (life) ที่เหลือของประโยคนี้ 10→0 · ไล่สีทอง→แดง · อัปเดตสดตอนเรียงผิด/กด提示
+  function updateScoreBar(){
+    var max = SENTENCE_LIFE_START || 10;
+    var sc = Math.max(0, life);
+    var pw = document.getElementById('wo-ws-fill');
+    if (pw) { pw.style.width = Math.max(0, Math.min(100, sc / max * 100)) + '%'; pw.style.background = woScoreBarColor(sc, max); }
+    var pn = document.getElementById('wo-ws-num'); if (pn) pn.textContent = sc;
+  }
+  function updatePowerBar(s){ updateScoreBar(); }
 
   function renderSlots(s){
     var wrap = document.getElementById('wo-slots');
@@ -805,6 +817,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
           setTimeout(function(){ el.classList.remove('wrong'); }, 400);
         });
         updateHintWarning();
+        updateScoreBar();  // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนเรียงผิด
         try{ if(window.gtag) gtag('event','word_order_wrong',{sentence:s.th, wrongs:wrongCount}); }catch(e){}
       }
     }
