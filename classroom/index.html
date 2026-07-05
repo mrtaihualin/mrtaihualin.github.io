@@ -3505,7 +3505,7 @@ async function beginRecording(method){
     }else{
       recIsVideo=(method==='video');
       recDisplayStream=await navigator.mediaDevices.getDisplayMedia({
-        video: recIsVideo ? {frameRate:{ideal:10,max:15}} : true,
+        video: recIsVideo ? {frameRate:{ideal:10,max:15}, width:{ideal:1920,max:1920}, height:{ideal:1080,max:1080}} : true,
         audio: { systemAudio: 'include', echoCancellation: false, noiseSuppression: false }
       });
       // Meet 已在 startClassRec（user gesture 同步路徑）開啟，此處不需再呼叫
