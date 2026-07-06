@@ -20,7 +20,7 @@
 //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล
 // ===================================================================
 var ANN = [
-  { emoji:'📡', text:'每週六 19:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
+  { emoji:'📡', text:'每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
   { emoji:'🎁', text:'首堂 30 分鐘體驗課免費・中文授課', cta:'立即預約', modal:'modal-line-qr' },
   { emoji:'🎮', text:'5 款免費泰語遊戲上線！聲調・拼讀・打字・造句・語序，每款都有排行榜可以比賽', cta:'前往遊戲', href:'games.html' },
   { emoji:'🎵', text:'用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta:'去聽歌學泰語', href:'resources.html#songs' },
@@ -855,7 +855,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     if(window.scrollY > 200) { el.classList.add('visible'); } else { el.classList.remove('visible'); }
   }, {passive:true});
 
-document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 19:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>'; });
+document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>'; });
 
 // ===== 📬 Contact / LINE QR / Social Modal Injection =====
 (function injectSharedModals() {
