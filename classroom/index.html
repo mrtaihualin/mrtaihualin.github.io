@@ -646,19 +646,22 @@
   </div>
 </div>
 
-<!-- ======= EDIT MEET MODAL ======= -->
+<!-- ======= EDIT STUDENT MODAL（原「更改 Meet 連結」，2026-07-06 擴充成可改姓名＋Meet） ======= -->
 <div class="modal-overlay" id="editMeetModal">
   <div class="modal">
-    <h3>✏️ 更改 Meet 連結</h3>
-    <p id="editMeetStudentName" style="font-weight:700;color:var(--gold-deep);margin-bottom:14px;font-size:1rem;"></p>
+    <h3>✏️ 編輯學生資料</h3>
 
-    <label class="settings-label">新的 Google Meet 連結</label>
+    <label class="settings-label">學生姓名</label>
+    <input class="settings-input" id="editNameInput" placeholder="學生姓名" />
+    <div class="hint" style="margin-bottom:14px;">⚠️ 改名會自動同步改 Google Drive 資料夾名稱，過去的筆記／影片／收據都不會不見。</div>
+
+    <label class="settings-label">Google Meet 連結</label>
     <input class="settings-input" id="editMeetInput" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
     <div class="hint" style="margin-bottom:0;">原本的連結：<span id="editMeetOld" style="font-family:monospace;word-break:break-all;"></span></div>
 
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeEditMeetModal()">取消</button>
-      <button class="btn-gold" onclick="saveMeetLink()">儲存</button>
+      <button class="btn-gold" onclick="saveStudentEdit()">儲存</button>
     </div>
   </div>
 </div>
@@ -880,6 +883,12 @@ async function gdEnsureFolder(name, parentId) {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
   return res.id;
+}
+// 改資料夾「名字」屬性，folder id 不變 → 裡面舊檔案原封不動（改學生姓名時用這個，絕對不能改成「新建資料夾」）
+async function gdRenameFolder(folderId, newName) {
+  return await gdApi('drive/v3/files/' + folderId + '?fields=id,name', {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName })
+  });
 }
 async function gdUpload(blob, name, parentId, onProgress) {
   const token = await gdGetToken();
@@ -1296,24 +1305,60 @@ function openEditMeetModal(token) {
   const s = studentsCache[token];
   if (!s) return;
   editingToken = token;
-  document.getElementById('editMeetStudentName').textContent = '學生：' + s.name;
+  document.getElementById('editNameInput').value = s.name;
   document.getElementById('editMeetOld').textContent = s.meet;
   document.getElementById('editMeetInput').value = s.meet;
   document.getElementById('editMeetModal').classList.add('open');
-  setTimeout(() => document.getElementById('editMeetInput').select(), 100);
+  setTimeout(() => document.getElementById('editNameInput').select(), 100);
 }
 function closeEditMeetModal() { document.getElementById('editMeetModal').classList.remove('open'); }
 
-async function saveMeetLink() {
+// 改學生姓名／Meet 連結（2026-07-06 新增改名功能，Lin 要求要安全，不能讓舊檔案不見）
+// 安全流程：
+//   1) 姓名有改 → 先把 Google Drive 學生資料夾「改名」（同一個 folder id，只改 name，舊檔案都還在同一個資料夾裡，不是新建）
+//   2) Drive 改名成功後，才更新 Supabase classroom_students.name
+//   3) 任何一步失敗都要跳出明顯警告＋停手，不能悄悄改一半，避免 Drive 跟資料庫的名字對不起來（RELIABILITY FIRST）
+async function saveStudentEdit() {
+  const newName = document.getElementById('editNameInput').value.trim();
   const newMeet = normalizeMeet(document.getElementById('editMeetInput').value);
+  if (!newName) { alert('請填寫學生姓名'); return; }
   if (!newMeet) { alert('請填寫 Meet 連結'); return; }
+
+  const s = studentsCache[editingToken];
+  const oldName = s ? s.name : null;
+  const nameChanged = !!(oldName && newName !== oldName);
+
   const saveBtn = document.querySelector('#editMeetModal .btn-gold');
   saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
-  const { error } = await sb.from('classroom_students').update({ meet: newMeet }).eq('token', editingToken);
+
+  // Step 1：姓名有改 → 先同步改 Google Drive 資料夾名稱（用舊名找到「現有」資料夾再改名，不會新建）
+  if (nameChanged) {
+    try {
+      const folderId = await gdGetStudentFolderId(oldName);
+      await gdRenameFolder(folderId, newName);
+    } catch (e) {
+      saveBtn.disabled = false; saveBtn.textContent = '儲存';
+      alert('❌ 改名失敗：Google Drive 資料夾改名沒有成功，姓名還沒有更新（避免資料夾跟資料庫對不上）。\n錯誤訊息：' + (e.message || e) + '\n請確認 Google 授權還有效後再試一次。');
+      return; // 停手，不繼續改 Supabase
+    }
+  }
+
+  // Step 2：Drive 那邊沒問題了（或姓名根本沒改）→ 才更新 Supabase
+  const { error } = await sb.from('classroom_students').update({ name: newName, meet: newMeet }).eq('token', editingToken);
   saveBtn.disabled = false; saveBtn.textContent = '儲存';
-  if (error) { alert('更新失敗：' + error.message); return; }
+  if (error) {
+    if (nameChanged) {
+      alert('⚠️ 注意：Google Drive 資料夾已經改名成功，但資料庫更新失敗！\n請重新整理頁面後再按一次「儲存」，否則姓名會顯示不一致。\n錯誤訊息：' + error.message);
+    } else {
+      alert('更新失敗：' + error.message);
+    }
+    return;
+  }
   closeEditMeetModal();
   await refreshStudentList();
+  const dd = document.getElementById('stuDropdown');
+  if (dd) dd.value = editingToken;
+  selectStudent(editingToken); // 改完馬上刷新右邊的學生面板，姓名/連結立刻顯示新的
 }
 
 async function deleteStudent(token) {
