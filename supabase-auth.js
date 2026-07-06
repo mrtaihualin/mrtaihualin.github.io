@@ -192,7 +192,7 @@
   // ── ขอรหัส OTP 6 หลัก (passwordless · ไม่ส่งลิงก์เพราะไม่ใส่ emailRedirectTo) LIN 2026-06-27 ──
   function doStartOtp(email, isResend) {
     email = (email || '').trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setOtpMsg('Email 格式不正確', true); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setOtpMsg('Email 格式不正確', true); try { window.gtag('event', 'login_fail', { stage: 'email_format' }); } catch (e) {} return; }
     otpEmail = email;
     setOtpMsg('寄送中…⏳', false);
     try { window.gtag('event', 'login_otp_start', { resend: !!isResend }); } catch (e) {}
@@ -204,6 +204,7 @@
           return;
         }
         showOtpStep2();              // โชว์ช่องกรอกรหัส + เริ่มนับถอยหลัง
+        try { window.gtag('event', 'otp_sent', {}); } catch (e) {}   // ⭐ รหัสส่งออกสำเร็จ — แยก "ส่งไม่ออก" ออกจาก "ออกแล้วแต่คนไม่กรอก"
         setOtpMsg('驗證碼已寄到 ' + esc(email) + '，請查看信箱（含垃圾信匣）', false);
       });
   }
@@ -211,13 +212,14 @@
   // ── ยืนยันรหัส → กลายเป็นบัญชี verified (onAuthStateChange จะปิด gate ให้เอง) ──
   function doVerifyOtp(code) {
     code = (code || '').trim();
-    if (!/^\d{6,10}$/.test(code)) { setOtpMsg('請輸入信中的驗證碼（純數字）', true); return; }
+    if (!/^\d{6,10}$/.test(code)) { setOtpMsg('請輸入信中的驗證碼（純數字）', true); try { window.gtag('event', 'login_fail', { stage: 'code_format' }); } catch (e) {} return; }
     setOtpMsg('驗證中…⏳', false);
+    try { window.gtag('event', 'otp_verify_attempt', {}); } catch (e) {}   // คนกดยืนยันรหัสจริง
     sb.auth.verifyOtp({ email: otpEmail, token: code, type: 'email' })
       .then(function (res) {
         if (res.error) {
           setOtpMsg('驗證碼錯誤或已過期，請重新輸入', true);
-          try { window.gtag('event', 'login_fail', { stage: 'otp_verify' }); } catch (e) {}
+          try { window.gtag('event', 'login_fail', { stage: 'otp_verify', msg: res.error.message }); } catch (e) {}
           return;
         }
         try { window.gtag('event', 'otp_success', {}); } catch (e) {}
@@ -447,14 +449,17 @@
     showExitSurvey();
   }
   function finishExitSurvey(choice) {
-    if (choice) { try { window.gtag('event', 'exit_survey_choice', { choice: choice }); } catch (e) {} }
+    if (choice) {
+      try { window.gtag('event', 'exit_survey_choice', { choice: choice, surface: 'modal' }); } catch (e) {}
+      exitSurveyEmail(choice, choice.indexOf('other:') === 0 ? choice.slice(6) : '', 'modal');
+    }
     var m = document.getElementById('tf-exit-survey');
     if (m) m.remove();
     hideGate();
   }
   function showExitSurvey() {
     exitSurveyShown = true;
-    try { window.gtag('event', 'exit_survey_shown', {}); } catch (e) {}
+    try { window.gtag('event', 'exit_survey_shown', { surface: 'modal' }); } catch (e) {}
     var opts = [['no_login', '不想登入 / 註冊'], ['login_broken', '登入怪怪的、按不動'],
                 ['just_play', '只是想隨便玩玩'], ['no_email', '還不想留 Email'], ['other', '其他…']];
     var btns = opts.map(function (o) {
@@ -496,6 +501,95 @@
         } else { finishExitSurvey(v); }
       };
     });
+  }
+
+  // ══ Exit survey แถบล่าง (ไม่เต็มจอ) — desktop จับเมาส์ออกขอบบน / มือถือ idle 45 วิ → GA4 + เมล Lin  LIN 2026-07-05 ══
+  var PUBLIC_W3F_KEY = 'b3bfdb97-19dd-4910-bd15-89720be846c2';   // public submit-only key (โชว์ในเว็บได้)
+  function exitSurveyEmail(choice, text, surface) {
+    try {
+      var fields = {
+        subject: '【離開問卷】遊戲頁 exit survey',
+        from_name: '泰華遊戲・exit survey',
+        '原因': choice || '(未選)',
+        '留言': text || '',
+        '觸發方式': surface || '',
+        '頁面': location.pathname
+      };
+      if (typeof window.web3Send === 'function') { window.web3Send({ fields: fields }); return; }
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, keepalive: true,
+        body: JSON.stringify(Object.assign({ access_key: PUBLIC_W3F_KEY }, fields))
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  function maybeShowExitBar(trigger) {
+    if (currentUser || leadCaptured() || exitSurveyShown) return;   // ล็อกอิน/ให้อีเมล/เคยเห็นแล้ว = ไม่กวน
+    if (gateOpen) return;                                           // กำแพงล็อกอินเปิดอยู่ = ไม่เด้งทับ
+    try { if (typeof anyModalOpen === 'function' && anyModalOpen()) return; } catch (e) {}   // มี modal เปิด = ไม่เด้งทับ
+    showExitBar(trigger);
+  }
+  function showExitBar(trigger) {
+    exitSurveyShown = true;   // flag เดียวกับ popup กำแพง → โชว์แค่อันเดียวต่อ session ไม่ซ้อน
+    try { window.gtag('event', 'exit_survey_shown', { surface: 'bar', trigger: trigger || '' }); } catch (e) {}
+    var opts = [['no_login', '不想登入'], ['login_broken', '登入怪怪的'], ['just_play', '隨便玩玩'], ['no_email', '還不想留 Email'], ['other', '其他…']];
+    var chips = opts.map(function (o) {
+      return '<button class="tf-eb-opt" data-v="' + o[0] + '" style="flex:0 0 auto;background:#fff;border:1px solid rgba(70,179,119,0.4);border-radius:20px;padding:7px 13px;font-size:13px;color:#2E7D4F;cursor:pointer;font-family:inherit;white-space:nowrap;">' + o[1] + '</button>';
+    }).join('');
+    var bar = document.createElement('div');
+    bar.id = 'tf-exit-bar';
+    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:100001;background:#FBF5E7;border-top:1px solid rgba(70,179,119,0.35);box-shadow:0 -8px 24px rgba(0,0,0,0.14);padding:12px 14px calc(12px + env(safe-area-inset-bottom));font-family:\'Noto Sans TC\',\'Noto Sans Thai\',sans-serif;transform:translateY(115%);transition:transform .32s ease;';
+    bar.innerHTML =
+      '<div style="max-width:680px;margin:0 auto;position:relative;">' +
+        '<button id="tf-eb-close" aria-label="關閉" style="position:absolute;top:-2px;right:0;border:none;background:none;font-size:18px;color:#5A3E0A;cursor:pointer;line-height:1;">✕</button>' +
+        '<div style="display:flex;align-items:center;gap:8px;margin:0 26px 9px 0;font-size:14px;color:#2E7D4F;"><span style="font-size:22px;">👧🏻</span><b>要走了嗎？是哪裡卡住了？告訴米娜一下 🙏</b></div>' +
+        '<div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;">' + chips + '</div>' +
+        '<textarea id="tf-eb-text" rows="1" placeholder="想說的話…（可不填）" style="display:none;width:100%;box-sizing:border-box;margin-top:8px;padding:8px 11px;border:1px solid rgba(70,179,119,0.4);border-radius:10px;font-size:13px;color:#2E7D4F;font-family:inherit;resize:none;"></textarea>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-top:9px;">' +
+          '<span style="font-size:12px;color:#5A3E0A;">先看看課程也可以喔 😊</span>' +
+          '<button id="tf-eb-book" style="margin-left:auto;background:#C8973A;color:#FBF5E7;border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;">免費體驗課</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(bar);
+    requestAnimationFrame(function () { bar.style.transform = 'translateY(0)'; });
+    function done(choice, text) {
+      if (choice) {
+        try { window.gtag('event', 'exit_survey_choice', { choice: choice, surface: 'bar', trigger: trigger || '' }); } catch (e) {}
+        exitSurveyEmail(choice, text || '', trigger || 'bar');
+      }
+      bar.style.transform = 'translateY(115%)';
+      setTimeout(function () { if (bar.parentNode) bar.remove(); }, 320);
+    }
+    bar.querySelector('#tf-eb-close').onclick = function () { done(null); };
+    bar.querySelector('#tf-eb-book').onclick = function () {
+      try { window.gtag('event', 'book_trial_click', { from: 'exit_bar' }); } catch (e) {}
+      done('book_trial');
+      if (typeof window.openModal === 'function') window.openModal('modal-line-qr');
+    };
+    [].forEach.call(bar.querySelectorAll('.tf-eb-opt'), function (b) {
+      b.onclick = function () {
+        var v = b.getAttribute('data-v');
+        if (v === 'other') {
+          var ta = bar.querySelector('#tf-eb-text');
+          ta.style.display = 'block'; ta.focus();
+          b.textContent = '送出 →'; b.style.background = '#CDEBD6';
+          b.onclick = function () { done('other:' + (ta.value || '').slice(0, 200), (ta.value || '').slice(0, 200)); };
+        } else { done(v); }
+      };
+    });
+  }
+  function setupExitTriggers() {
+    var isTouch = false;
+    try { isTouch = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
+    if (isTouch) {
+      var idleT;
+      var arm = function () { clearTimeout(idleT); idleT = setTimeout(function () { maybeShowExitBar('idle'); }, 45000); };
+      ['touchstart', 'scroll', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, arm, { passive: true }); });
+      arm();
+    } else {
+      document.addEventListener('mouseout', function (e) {
+        if (e.clientY <= 0 && !e.relatedTarget && !e.toElement) maybeShowExitBar('exit_intent');   // เมาส์ออกทางขอบบนเท่านั้น
+      });
+    }
   }
 
   // ── API ให้หน้าเกมเรียกตอนจะเริ่มเล่นจริง ───────────────────
@@ -560,6 +654,7 @@
       });
       _mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
     } catch (e) {}
+    setupExitTriggers();   // เปิดตัวจับ exit-intent (desktop) + idle (มือถือ)
   }
 
   if (document.readyState === 'loading') {

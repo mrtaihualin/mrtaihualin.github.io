@@ -1399,3 +1399,244 @@ window.deleteFBComment = function(postId, idx) {
   if (window._renderFBComments) _renderFBComments(postId);
   if (window._renderFBList) _renderFBList();
 };
+
+// ════════════════════════════════════════════════════════════════════
+// 📋 Exit-intent survey — ทุกหน้า ยกเว้นหน้าเกม 5 ไฟล์ + หน้าดาวน์โหลดชีต (LIN 2026-07-07)
+//   Desktop: mouseout ขอบบน (exit-intent มาตรฐาน)
+//   มือถือ/สำรอง: idle timer 45 วิ (จับ exit-intent มือถือไม่ได้จริง)
+//   โชว์เป็นแถบเล็กด้านล่าง ไม่บล็อกจอ · โชว์ครั้งเดียวตลอดไปต่อเบราว์เซอร์ (localStorage)
+//   ส่งคำตอบ: web3forms (เข้าอีเมล Lin) + GA4 — ไม่ต้องสร้างตาราง Supabase (ตามที่ Lin เคาะ)
+// ════════════════════════════════════════════════════════════════════
+(function(){
+  var SHOWN_KEY = 'exit_survey_shown_v1';
+  var EXCLUDE = ['tone-finder.html','reading-game.html','typing-game.html','word-order.html','lego.html',
+                 'vocab-thank-you.html','thank-you.html','vocab-cheatsheet.html'];
+  var page = (location.pathname.split('/').pop() || 'index.html');
+  if (EXCLUDE.indexOf(page) !== -1) return;
+
+  function shown(){ try{ return localStorage.getItem(SHOWN_KEY)==='1'; }catch(e){ return false; } }
+  function markShown(){ try{ localStorage.setItem(SHOWN_KEY,'1'); }catch(e){} }
+  if (shown()) return;
+
+  var ES_WEB3FORMS_KEY = 'b3bfdb97-19dd-4910-bd15-89720be846c2'; // key เดียวกับ WEB3FORMS_KEY ด้านบน
+  var armed = false, triggered = false;
+
+  function showBar(){
+    if (triggered || shown() || document.getElementById('exit-survey-bar')) return;
+    triggered = true; markShown();
+    try{ if (typeof gtag === 'function') gtag('event','exit_survey_show',{ source_page: location.pathname }); }catch(e){}
+
+    var bar = document.createElement('div');
+    bar.id = 'exit-survey-bar';
+    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#fff;border-top:2px solid #C8973A;box-shadow:0 -6px 24px rgba(0,0,0,.14);padding:14px 18px;font-family:"Noto Sans TC",sans-serif;transform:translateY(110%);transition:transform .3s ease;';
+    var opts = ['還在比較','時間喬不攏','想先自己練習','價格考量','其他'];
+    var optsHTML = opts.map(function(t){
+      return '<button class="es-opt" data-v="'+t+'" style="background:#FBF6EA;border:1px solid #EADFBF;border-radius:999px;padding:6px 13px;font-size:12.5px;color:#5C4410;cursor:pointer;">'+t+'</button>';
+    }).join('');
+    bar.innerHTML =
+      '<div style="max-width:720px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">'+
+        '<button id="es-x" aria-label="關閉" style="order:9;margin-left:auto;border:none;background:none;font-size:16px;color:#B0A080;cursor:pointer;line-height:1;">✕</button>'+
+        '<span style="font-size:13.5px;font-weight:700;color:#5C4410;flex:1 1 100%;">要離開了嗎？花 3 秒告訴老師為什麼 🙏</span>'+
+        '<div id="es-opts" style="display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%;">'+optsHTML+'</div>'+
+      '</div>';
+    document.body.appendChild(bar);
+    requestAnimationFrame(function(){ bar.style.transform='translateY(0)'; });
+
+    function closeBar(){ bar.style.transform='translateY(110%)'; setTimeout(function(){ try{ bar.remove(); }catch(e){} }, 320); }
+
+    var xBtn = bar.querySelector('#es-x');
+    if (xBtn) xBtn.onclick = function(){
+      try{ if (typeof gtag === 'function') gtag('event','exit_survey_dismiss',{ source_page: location.pathname }); }catch(e){}
+      closeBar();
+    };
+    bar.querySelectorAll('.es-opt').forEach(function(btn){
+      btn.onclick = function(){
+        var val = btn.getAttribute('data-v');
+        try{ if (typeof gtag === 'function') gtag('event','exit_survey_submit',{ reason: val, source_page: location.pathname }); }catch(e){}
+        try{
+          fetch('https://api.web3forms.com/submit', {
+            method:'POST', keepalive:true,
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify({ access_key: ES_WEB3FORMS_KEY, subject:'【離站調查】來自泰華網站', from_name:'泰華網站・離站調查', '原因':val, '頁面':location.pathname })
+          }).catch(function(){});
+        }catch(e){}
+        bar.innerHTML = '<div style="max-width:720px;margin:0 auto;text-align:center;font-size:13.5px;color:#5C4410;padding:4px 0;">✅ 謝謝你的回饋！</div>';
+        setTimeout(closeBar, 1600);
+      };
+    });
+  }
+
+  function armTriggers(){
+    if (armed) return;
+    armed = true;
+    // Desktop: exit-intent — เมาส์ออกทางขอบบนจอ (มาตรฐาน exit-intent)
+    document.addEventListener('mouseout', function(e){
+      if (e.clientY <= 0 && !e.relatedTarget && !e.toElement) showBar();
+    });
+    // สำรอง/มือถือ: idle timer (จับ mouse-leave บนมือถือไม่ได้จริง)
+    var idleTimer;
+    function resetIdle(){ clearTimeout(idleTimer); idleTimer = setTimeout(showBar, 45000); }
+    ['scroll','touchstart','click','keydown'].forEach(function(ev){
+      window.addEventListener(ev, resetIdle, {passive:true});
+    });
+    resetIdle();
+  }
+
+  // รอ engagement ขั้นต่ำ 8 วิ ก่อนเริ่มจับ (กัน bounce ไว โชว์ทันทีจนน่ารำคาญ)
+  setTimeout(armTriggers, 8000);
+})();
+
+// ════════════════════════════════════════════════════════════════════
+// 📊 GA4: Scroll depth + time-on-page tracking — เฉพาะหน้าบทความ (LIN 2026-07-07)
+//   ยิง article_scroll_depth (25/50/75/100%) + article_time_on_page (15/30/60/120 วิ)
+// ════════════════════════════════════════════════════════════════════
+(function(){
+  var ARTICLE_PAGES = ['blog.html','blog-tone-guide.html','content.html','resources.html'];
+  var page = (location.pathname.split('/').pop() || 'index.html');
+  if (ARTICLE_PAGES.indexOf(page) === -1) return;
+
+  var startTime = Date.now();
+  var scrollFlags = {}, timeFlags = {};
+  var TIME_MARKS = [15, 30, 60, 120];
+
+  function pctScrolled(){
+    var doc = document.documentElement;
+    var scrollTop = window.scrollY || doc.scrollTop || 0;
+    var height = (doc.scrollHeight - doc.clientHeight) || 1;
+    return Math.min(100, Math.round((scrollTop / height) * 100));
+  }
+  function checkScroll(){
+    var pct = pctScrolled();
+    [25,50,75,100].forEach(function(p){
+      if (pct >= p && !scrollFlags[p]) {
+        scrollFlags[p] = true;
+        try{ if (typeof gtag === 'function') gtag('event','article_scroll_depth',{ percent_scrolled:p, source_page: location.pathname }); }catch(e){}
+      }
+    });
+  }
+  window.addEventListener('scroll', function(){ try{ checkScroll(); }catch(e){} }, {passive:true});
+
+  function checkTime(){
+    var sec = Math.round((Date.now() - startTime) / 1000);
+    TIME_MARKS.forEach(function(t){
+      if (sec >= t && !timeFlags[t]) {
+        timeFlags[t] = true;
+        try{ if (typeof gtag === 'function') gtag('event','article_time_on_page',{ seconds:t, source_page: location.pathname }); }catch(e){}
+      }
+    });
+  }
+  setInterval(function(){ try{ checkTime(); }catch(e){} }, 5000);
+
+  window.addEventListener('pagehide', function(){
+    try{ if (typeof gtag === 'function') gtag('event','article_time_final',{ seconds: Math.round((Date.now()-startTime)/1000), source_page: location.pathname, transport_type:'beacon' }); }catch(e){}
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════════
+// 📊 GA4: YouTube 影片互動 tracking — ต่อยอด modal-videos เดิม (LIN 2026-07-07)
+//   ไม่แก้ openYTVideoModal/loadRandomYTVideo/shuffleYTVideo เดิม แค่ "ห่อทับ" (wrap) เพื่อความปลอดภัย
+//   ยิงตามธรรมเนียม GA4 enhanced-measurement: youtube_play / youtube_progress(25/50/75%) / youtube_complete
+// ════════════════════════════════════════════════════════════════════
+(function(){
+  var _ytApiInjected = false, _ytPlayerObj = null;
+  var _ytFlags = {}, _ytPollTimer = null, _ytCurVideoId = null;
+
+  function ensureYTApi(cb){
+    if (window.YT && window.YT.Player) { cb(); return; }
+    if (!_ytApiInjected) {
+      _ytApiInjected = true;
+      try{
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      }catch(e){}
+    }
+    var prevReady = window.onYouTubeIframeAPIReady;
+    var called = false;
+    window.onYouTubeIframeAPIReady = function(){
+      try{ if (typeof prevReady === 'function') prevReady(); }catch(e){}
+      if (!called) { called = true; cb(); }
+    };
+    var tries = 0;
+    var iv = setInterval(function(){
+      tries++;
+      if (window.YT && window.YT.Player) { clearInterval(iv); if (!called) { called = true; cb(); } }
+      if (tries > 100) clearInterval(iv); // เลิกรอหลัง ~20 วิ
+    }, 200);
+  }
+
+  function clearPoll(){ if (_ytPollTimer) { clearInterval(_ytPollTimer); _ytPollTimer = null; } }
+
+  function fireMilestones(){
+    try{
+      if (!_ytPlayerObj || typeof _ytPlayerObj.getDuration !== 'function') return;
+      var dur = _ytPlayerObj.getDuration() || 0;
+      var cur = _ytPlayerObj.getCurrentTime ? _ytPlayerObj.getCurrentTime() : 0;
+      if (!dur) return;
+      var pct = (cur / dur) * 100;
+      [25,50,75].forEach(function(p){
+        if (pct >= p && !_ytFlags[p]) {
+          _ytFlags[p] = true;
+          if (typeof gtag === 'function') gtag('event','youtube_progress',{ percent_progress:p, video_id:_ytCurVideoId, source_page: location.pathname });
+        }
+      });
+    }catch(e){}
+  }
+
+  function onPlayerStateChange(e){
+    try{
+      var YTState = window.YT ? window.YT.PlayerState : {};
+      if (e.data === YTState.PLAYING) {
+        if (!_ytFlags.started) {
+          _ytFlags.started = true;
+          if (typeof gtag === 'function') gtag('event','youtube_play',{ video_id:_ytCurVideoId, source_page: location.pathname });
+        }
+        clearPoll();
+        _ytPollTimer = setInterval(fireMilestones, 2000);
+      } else if (e.data === YTState.ENDED) {
+        clearPoll();
+        if (!_ytFlags[100]) {
+          _ytFlags[100] = true;
+          if (typeof gtag === 'function') gtag('event','youtube_complete',{ video_id:_ytCurVideoId, source_page: location.pathname });
+        }
+      } else if (e.data === YTState.PAUSED) {
+        clearPoll();
+      }
+    }catch(e2){}
+  }
+
+  function initTrackingForCurrentVideo(){
+    try{
+      var iframe = document.getElementById('yt-player');
+      if (!iframe || !iframe.src) return;
+      if (iframe.src.indexOf('enablejsapi=1') === -1) {
+        iframe.src = iframe.src + (iframe.src.indexOf('?') > -1 ? '&' : '?') + 'enablejsapi=1';
+      }
+      var m = iframe.src.match(/embed\/([^?&]+)/);
+      _ytCurVideoId = m ? m[1] : null;
+      _ytFlags = {};
+      clearPoll();
+      ensureYTApi(function(){
+        try{
+          if (_ytPlayerObj && _ytPlayerObj.destroy) { try{ _ytPlayerObj.destroy(); }catch(e){} }
+          _ytPlayerObj = new YT.Player('yt-player', { events: { onStateChange: onPlayerStateChange } });
+        }catch(e){}
+      });
+    }catch(e3){}
+  }
+
+  ['loadRandomYTVideo','shuffleYTVideo'].forEach(function(fnName){
+    var orig = window[fnName];
+    if (typeof orig !== 'function') return;
+    window[fnName] = function(){
+      var r = orig.apply(this, arguments);
+      setTimeout(initTrackingForCurrentVideo, 300); // รอ src ของ iframe เซ็ตเสร็จก่อนค่อยผูก tracking
+      return r;
+    };
+  });
+
+  var origStopYT = window.stopYTVideo;
+  if (typeof origStopYT === 'function') {
+    window.stopYTVideo = function(){ clearPoll(); return origStopYT.apply(this, arguments); };
+  }
+})();

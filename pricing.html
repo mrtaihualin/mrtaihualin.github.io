@@ -635,7 +635,7 @@
   var SB_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw';
   function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-  fetch(SB_URL + '/rest/v1/classroom_feedback?approved=eq.true&select=content,display_name,created_at&order=created_at.desc', {
+  fetch(SB_URL + '/rest/v1/approved_testimonials?select=content,display_name,created_at&order=created_at.desc', {
     headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
   }).then(function(r){ return r.ok ? r.json() : []; }).then(function(data){
     if (!data || !data.length) return;
