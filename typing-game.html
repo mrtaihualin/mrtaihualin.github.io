@@ -256,6 +256,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .rg-typed-ok{color:#2e7d32;}
 .rg-typed-rest{color:#c9b78a;}
 .type-hint{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;text-align:center;}
+.mobile-kbd-input{width:100%;max-width:320px;text-align:center;font-size:16px;padding:10px 14px;border-radius:10px;border:2px dashed #d4b87a;background:#fffdf7;font-family:'Noto Sans Thai','Sarabun',sans-serif;color:#5a3e10;margin:2px 0 4px;}
+.mobile-kbd-input:focus{outline:none;border-style:solid;border-color:#e8a020;background:#fff6e3;box-shadow:0 0 0 3px rgba(232,160,32,.28);}
+.mobile-kbd-input::placeholder{font-family:'Noto Sans TC',sans-serif;color:#b89860;font-size:13px;}
 .tkbd{display:flex;flex-direction:column;gap:4px;width:100%;max-width:520px;}
 .tk-row{display:flex;gap:3px;justify-content:center;}
 .tk-key{flex:1;max-width:38px;min-width:20px;height:40px;border:1.5px solid #d4b87a;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;cursor:pointer;user-select:none;transition:all .1s;overflow:hidden;}
@@ -408,6 +411,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="type-panel" id="type-panel" style="display:none">
     <div class="type-target" id="rg-type-target"></div>
     <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤（Kedmanee）排好位置了，打對會自動跳下一步 👇</div>
+    <!-- ช่องพิมพ์จริง — แตะแล้วเด้งคีย์บอร์ดของมือถือเอง (Gboard/คีย์บอร์ด iOS ไทย) ขึ้นมาพิมพ์ได้ตรงๆ ไม่ต้องกดปุ่มเสมือนด้านล่างก็ได้ — Lin 2026-07-06 -->
+    <input type="text" id="rg-mobile-input" class="mobile-kbd-input" placeholder="📱 點這裡，用手機自己的鍵盤打字" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" lang="th">
     <!-- ปุ่มเลือกโหมดไกด์ไลน์ — ใช้ร่วมทุกระดับ (Lin 2026-07-02) -->
     <div style="display:flex;gap:8px;justify-content:center;margin:4px 0;">
       <button id="guide-on" class="btn btn-primary" style="font-size:12px;padding:6px 14px;" onclick="setGuideMode(true)">💡 有提示</button>
@@ -2834,6 +2839,23 @@ document.addEventListener('keydown',function(e){
       rgTypeLoadSyl();
     }
   };
+})();
+// ช่องพิมพ์จริงสำหรับคีย์บอร์ดมือถือของผู้ใช้เอง (Gboard/คีย์บอร์ด iOS ไทย ฯลฯ)
+// เดิมเกมนี้ดักเฉพาะ document keydown (e.code) → ใช้ได้แค่คีย์บอร์ดจริง/เสมือนบนจอเท่านั้น
+// คีย์บอร์ดมือถือจริงไม่ส่ง e.code แบบนั้น ต้องอ่านจาก input event แทน — Lin 2026-07-06
+(function(){
+  var mi=document.getElementById('rg-mobile-input');
+  if(!mi)return;
+  mi.addEventListener('keydown',function(e){
+    if(e.key==='Backspace'){ rgTypeBackspace(); e.preventDefault(); mi.value=''; }
+  });
+  mi.addEventListener('input',function(){
+    var val=mi.value;
+    if(val){
+      for(var i=0;i<val.length;i++){ rgTypeChar(val[i]); }
+    }
+    mi.value='';
+  });
 })();
 rgBuildKeyboard();
 rgApplyTypeModeUI();
