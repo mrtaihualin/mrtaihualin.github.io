@@ -537,6 +537,26 @@
   </div>
 </div>
 
+<!-- ======= STUDENT: 申請改期 MODAL（2026-07-06 新增）======= -->
+<div class="modal-overlay" id="classRequestModal">
+  <div class="modal" style="max-width:440px;">
+    <h3>🔄 申請改期</h3>
+    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
+      送出後老師會收到通知，實際是否能改期由老師確認後回覆你喔！
+    </p>
+    <label class="settings-label">想改到哪一天？</label>
+    <input class="settings-input" id="reqDateInput" type="date" />
+    <label class="settings-label">想改到幾點？（選填）</label>
+    <input class="settings-input" id="reqTimeInput" type="time" />
+    <label class="settings-label">備註（選填）</label>
+    <input class="settings-input" id="reqNoteInput" placeholder="例：那天下午比較方便" />
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeClassRequestModal()">取消</button>
+      <button class="btn-gold" id="reqSubmitBtn" onclick="submitClassRequest()">📤 送出申請</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= TEACHER: SLIP APPROVAL MODAL ======= -->
 <div class="modal-overlay" id="slipApprovalModal">
   <div class="modal" style="max-width:500px;">
@@ -1001,6 +1021,24 @@ async function ensureStudentFolderShared(studentName, token) {
     return link;
   } catch(e) { return null; }
 }
+// 2026-07-06 新增：手動補分享（給舊學生用，例如「lulu」加進系統時還沒有自動分享，
+// 學生自己頁面的「📁 開啟我的 Google Drive 資料夾」按鈕就不會出現，一直要等到老師第一次上傳檔案才會補上）
+// 按這顆「🔗 補分享」不用等上傳，馬上補分享 + 補 folder_url，學生重新整理頁面就會看到按鈕了
+async function repairStudentFolderShare(token) {
+  const s = studentsCache[token];
+  if (!s) return;
+  const btn = document.getElementById('repair-' + token);
+  if (btn) { btn.disabled = true; btn.textContent = '補分享中…'; }
+  try {
+    const link = await ensureStudentFolderShared(s.name, token);
+    if (btn) { btn.disabled = false; btn.textContent = '🔗 補分享'; }
+    if (link) alert('✅ 補分享成功！請叫學生重新整理自己的頁面，「📁 開啟我的 Google Drive 資料夾」按鈕就會出現了。');
+    else alert('❌ 補分享失敗，請確認已連接 Google（右上角）後再試一次。');
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '🔗 補分享'; }
+    alert('❌ 補分享失敗：' + (e.message || e));
+  }
+}
 // ── 手動上傳檔案到學生資料夾（透過 App，App 才看得到）──────────
 let uploadToken = null, uploadDest = '學習內容', droppedFiles = null;
 function openUploadModal(token) {
@@ -1293,6 +1331,11 @@ async function addStudent() {
     var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
     try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
     try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
+    // 2026-07-06 修正：以前這裡沒有分享「學生資料夾本體」也沒寫 folder_url 進 Supabase，
+    // 要等到「第一次上傳檔案」才會補（見 ensureStudentFolderShared 在上傳流程裡的呼叫）。
+    // 這段期間學生自己的頁面「📁 開啟我的 Google Drive 資料夾」按鈕會因為抓不到 folder_url 而不出現（lulu 就是卡在這）。
+    // 現在新增學生當下就直接分享＋寫入，之後新加的學生一開始就會有這顆按鈕。
+    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（可用「🔗 補分享」按鈕補）：', e); }
   } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
 }
 
@@ -1510,6 +1553,7 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
       '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
+      '<button class="btn-sm" id="repair-' + t + '" style="background:#7c3aed;color:#fff;" onclick="repairStudentFolderShare(\'' + t + '\')" title="舊學生沒有自動分享到，補一次分享 + 補學生頁的 Drive 按鈕">🔗 補分享</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
@@ -1850,6 +1894,11 @@ function renderStudentView() {
       '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
       '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>' +
     '</div>' +
+    '<div class="card" id="nextClassCard">' +
+      '<h2>📅 下一堂課</h2>' +
+      '<div id="nextClassInfo"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+      '<a href="line-link.html?s=' + encodeURIComponent(token) + '" style="display:inline-block;margin-top:12px;font-size:0.8rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">🔔 連結 LINE，上課前會自動提醒你</a>' +
+    '</div>' +
     '<div class="card">' +
       '<h2>💬 今日學習感想</h2>' +
       '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">今天學了什麼？寫下你的感想讓老師知道 ✨</p>' +
@@ -1882,6 +1931,7 @@ function renderStudentView() {
       '</div>' +
     '</div>';
   checkStudentSlipStatus(token);
+  loadStudentNextClass(token);
   loadStudentSchedule(token);
   loadStudentFiles(token);
   loadStudentFolderLink(token);
@@ -2230,6 +2280,148 @@ async function loadStudentFolderLink(token) {
     el.innerHTML = '<a class="meet-btn" href="' + escHtml(safeHref(data)) + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));">📁 開啟我的 Google Drive 資料夾</a>' +
       '<p class="meet-link-text" style="margin-top:6px;">這裡有老師上傳的所有課堂資料</p>';
   } catch(e) { el.innerHTML = ''; }
+}
+
+// ============================================================
+// 學生：下一堂課（唯讀，資料來自老師端同步的 Google Calendar）
+// 2026-07-06 新增：只顯示，學生不能自己改課表本身；要改期/取消 → 送「申請」給老師，
+// 老師收到通知後自己去 Google Calendar 手動調整（系統不會自動改老師的行事曆）
+// ============================================================
+const LINE_OA_URL = 'https://lin.ee/yVBgvywy'; // 全站統一用這個 LINE 官方帳號當「聯絡老師」入口
+let nextClassCtx = null; // 目前顯示中的下一堂課資訊，給申請改期/取消用
+
+function classRequestSameWarn() {
+  return '<p style="font-size:0.76rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:6px;">此為「唯讀」課表，直接參考老師的行事曆，無法在這裡直接修改。</p>';
+}
+
+async function loadStudentNextClass(token) {
+  const el = document.getElementById('nextClassInfo');
+  if (!el) return;
+  try {
+    const { data, error } = await sb.rpc('get_student_schedule', { p_token: token });
+    if (error) { el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前無法讀取課表（' + error.message + '）</div>'; return; }
+    if (!data || !data.length) {
+      el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前沒有排定下一堂課，如需安排請聯絡老師。</div>' +
+        '<a class="meet-btn" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="margin-top:10px;background:#06C755;">💬 聯絡老師</a>';
+      nextClassCtx = null;
+      return;
+    }
+    const next = data[0];
+    const d = new Date(next.lesson_date + 'T' + (next.start_time && /^\d{1,2}:\d{2}/.test(next.start_time) ? next.start_time : '00:00') + ':00');
+    const dayZh = ['日','一','二','三','四','五','六'];
+    const dayLabel = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）';
+    const timeStr = (next.start_time && /^\d{1,2}:\d{2}/.test(next.start_time))
+      ? next.start_time + (next.end_time ? '–' + next.end_time : '')
+      : (next.start_time || '');
+    const hoursUntil = (d.getTime() - Date.now()) / 3600000;
+    const canCancel = hoursUntil >= 24;
+    nextClassCtx = { token: token, isoDate: next.lesson_date };
+
+    el.innerHTML =
+      '<div style="background:#f8f4ea;border:1px solid #e5d9b8;border-radius:10px;padding:12px 14px;font-family:\'Noto Sans TC\',sans-serif;">' +
+        '<div style="font-weight:700;font-size:1rem;color:var(--ink);">' + escHtml(dayLabel) + '</div>' +
+        (timeStr ? '<div style="font-size:0.9rem;color:var(--ink-soft);margin-top:2px;">' + escHtml(timeStr) + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+        (canCancel
+          ? '<button class="btn-sm" style="background:#dc2626;color:#fff;" onclick="requestCancelClass()">❌ 申請取消這堂課</button>'
+          : '<span style="font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;align-self:center;">⚠️ 距離上課不到 24 小時，無法線上取消，請直接聯絡老師</span>') +
+        '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;" onclick="openClassRequestModal()">🔄 申請改期</button>' +
+        '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:#06C755;color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
+      '</div>' +
+      classRequestSameWarn();
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">載入失敗：' + (e.message || e) + '</div>';
+  }
+}
+
+async function requestCancelClass() {
+  if (!nextClassCtx) return;
+  if (!confirm('確定要送出「申請取消這堂課」給老師嗎？\n（老師確認後才算真的取消，請耐心等候回覆）')) return;
+  const studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return nextClassCtx.token; } })();
+  const res = await sb.rpc('submit_class_request', {
+    p_token: nextClassCtx.token,
+    p_student_name: studentName,
+    p_request_type: 'cancel',
+    p_original_date: nextClassCtx.isoDate,
+    p_requested_date: null,
+    p_requested_time: null,
+    p_note: null
+  });
+  if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  notifyTeacherClassRequest({ type: 'cancel', name: studentName, originalDate: nextClassCtx.isoDate });
+  alert('✅ 已送出取消申請，老師確認後會回覆你。');
+}
+
+function openClassRequestModal() {
+  if (!nextClassCtx) return;
+  document.getElementById('reqDateInput').value = '';
+  document.getElementById('reqTimeInput').value = '';
+  document.getElementById('reqNoteInput').value = '';
+  document.getElementById('classRequestModal').classList.add('open');
+}
+function closeClassRequestModal() { document.getElementById('classRequestModal').classList.remove('open'); }
+
+async function submitClassRequest() {
+  if (!nextClassCtx) { closeClassRequestModal(); return; }
+  const newDate = document.getElementById('reqDateInput').value;
+  const newTime = document.getElementById('reqTimeInput').value;
+  const note = document.getElementById('reqNoteInput').value.trim();
+  if (!newDate) { alert('請選擇想改到哪一天'); return; }
+  const studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return nextClassCtx.token; } })();
+  const btn = document.getElementById('reqSubmitBtn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  const res = await sb.rpc('submit_class_request', {
+    p_token: nextClassCtx.token,
+    p_student_name: studentName,
+    p_request_type: 'reschedule',
+    p_original_date: nextClassCtx.isoDate,
+    p_requested_date: newDate,
+    p_requested_time: newTime || null,
+    p_note: note || null
+  });
+  btn.disabled = false; btn.textContent = '📤 送出申請';
+  if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, originalDate: nextClassCtx.isoDate, requestedDate: newDate, requestedTime: newTime, note: note });
+  closeClassRequestModal();
+  alert('✅ 已送出改期申請，老師確認後會回覆你。');
+}
+
+// 通知老師「有學生申請取消/改期」
+// 2026-07-06 設計成「LINE 優先、email 保底」，一次涵蓋現在跟未來：
+//   - 現在：LINE Edge Function 還沒 deploy → 呼叫會失敗 → 自動 fallback 寄 email（Web3Forms，跟繳費通知同一把 key，已驗證能用）
+//   - 之後：Lin 把 supabase_functions_notify-line_index.ts 部署好、設定好 secret 之後
+//     → 同一段程式碼會自動改成走 LINE 通知，完全不用再改這裡的程式
+const LINE_NOTIFY_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/notify-line';
+
+function notifyTeacherClassRequest(d) {
+  try {
+    var isCancel = d.type === 'cancel';
+    var subject = (isCancel ? '❌ 學生申請取消課程 — ' : '🔄 學生申請改期 — ') + (d.name || '學生');
+    var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : '申請改期')
+      + '\n原本課堂日期：' + (d.originalDate || '-')
+      + (isCancel ? '' : ('\n想改到：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')))
+      + (d.note ? '\n備註：' + d.note : '')
+      + '\n\n請至 Supabase → classroom_requests 資料表查看，並自行調整 Google Calendar（系統不會自動改行事曆）。';
+
+    function sendEmailFallback() {
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ access_key: 'b3bfdb97-19dd-4910-bd15-89720be846c2', subject: subject, from_name: '線上教室系統', message: message })
+      }).catch(function(){});
+    }
+
+    fetch(LINE_NOTIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: 'teacher', message: subject + '\n\n' + message })
+    }).then(function(r) {
+      if (!r.ok) sendEmailFallback(); // Edge Function 還沒部署好／回錯誤 → 改寄 email，不會漏通知
+    }).catch(function() {
+      sendEmailFallback(); // 連不到 Edge Function（例如還沒部署）→ 改寄 email
+    });
+  } catch (e) {}
 }
 
 async function loadStudentRecordings(token){
@@ -2960,10 +3152,21 @@ async function recordAttendance(token) {
   }
   if (btn) { btn.disabled = false; }
   if (error) { alert('記錄失敗：' + error.message); if (btn) btn.textContent = '✅ 今日上課'; return; }
-  await loadTodaySchedule(); // refresh today section
+  await refreshTodayScheduleSection(); // refresh today section（2026-07-06 修正：原本呼叫 loadTodaySchedule() 會把整塊課表重置成「尚未連接」的初始畫面，卡片跟按鈕就整個消失，要重新連接才會再出現）
   openAttendanceHistory(token); // open history so Lin can verify & undo
   loadLowQuotaBanner();
   loadTeacherStudentInfo(token);
+}
+
+// 2026-07-06 新增：記錄/取消出席後，用這個來刷新「近期課表」區塊
+//   已經連接過 Google Calendar（有 localStorage flag）→ 直接重新抓真正的課表（跟按「連接 Google Calendar」效果一樣）
+//   還沒連接過 → 維持原本顯示「連接 Google Calendar」按鈕，不會平白多打一次 Google API
+async function refreshTodayScheduleSection() {
+  if (localStorage.getItem('gdConnected')) {
+    await connectCalendar();
+  } else {
+    await loadTodaySchedule();
+  }
 }
 
 async function loadTodaySchedule() {
@@ -3177,7 +3380,7 @@ function editAttendanceDate(id, currentDate, token) {
 async function deleteAttendance(id, token) {
   if (!confirm('確定刪除此堂記錄？')) return;
   await sb.from('classroom_attendance').delete().eq('id', id);
-  await loadTodaySchedule();
+  await refreshTodayScheduleSection(); // 2026-07-06 修正：同上，避免課表整塊消失
   await openAttendanceHistory(token); // refresh modal
 }
 
