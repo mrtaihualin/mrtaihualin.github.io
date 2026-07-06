@@ -969,7 +969,9 @@ async function gdShareAnyone(fileId) {
   });
 }
 // ── Google Calendar: fetch today's events ──────────────────────
-const SCHEDULE_DAYS = 3; // แสดงตารางล่วงหน้ากี่วัน (วันนี้ + อีก 2 วัน)
+// 2026-07-06 แก้จาก 3 → 9 วัน: เดิม 3 วันแคบไปสำหรับนักเรียนที่เรียนสัปดาห์ละครั้ง
+// (คาบถัดไปอาจอยู่ไกลกว่า 3 วัน) ทำให้การ์ด "คลาสต่อไป" ฝั่งนักเรียนขึ้นว่าง ๆ ทั้งที่จริงมีคาบแล้ว
+const SCHEDULE_DAYS = 9; // แสดง/ซิงค์ตารางล่วงหน้ากี่วัน (วันนี้ + อีก 8 วัน ครอบคลุมรอบสัปดาห์ละครั้งชัวร์ๆ)
 async function calFetchUpcomingEvents() {
   let token = await gdGetToken();
   // ถ้า token ที่จำไว้ยังไม่มีสิทธิ์ Calendar (เพราะ scope เพิ่งถูกเพิ่มทีหลัง) → ขอ consent ใหม่ครั้งเดียว
@@ -3172,7 +3174,7 @@ async function refreshTodayScheduleSection() {
 async function loadTodaySchedule() {
   const container = document.getElementById('attendanceSection');
   if (!container) return;
-  container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（3天）</h2>'
+  container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（' + SCHEDULE_DAYS + '天）</h2>'
     + '<div class="empty-attend"><button class="btn-gold" id="calConnectBtn" onclick="connectCalendar()">📅 連接 Google Calendar</button>'
     + '<div style="margin-top:8px;font-size:0.77rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">點擊後登入 Google 帳號即可顯示今日課表</div></div></div>';
 }
@@ -3187,7 +3189,7 @@ async function connectCalendar() {
 
   if (container) {
     const inner = container.querySelector('.attend-card');
-    if (inner) inner.innerHTML = '<h2>📅 近期課表（3天）</h2><div class="empty-attend">連接中…</div>';
+    if (inner) inner.innerHTML = '<h2>📅 近期課表（' + SCHEDULE_DAYS + '天）</h2><div class="empty-attend">連接中…</div>';
   }
 
   try {
@@ -3250,10 +3252,10 @@ async function connectCalendar() {
       }).join('');
     }
 
-    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（3天）</h2>' + content + '</div>';
+    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（' + SCHEDULE_DAYS + '天）</h2>' + content + '</div>';
     syncScheduleToSupabase(matched);  // ซิงค์คาบล่วงหน้าลงฐานข้อมูล → นักเรียนเห็นในหน้าตัวเอง
   } catch(e) {
-    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（3天）</h2>'
+    if (container) container.innerHTML = '<div class="attend-card"><h2>📅 近期課表（' + SCHEDULE_DAYS + '天）</h2>'
       + '<div class="empty-attend"><div style="color:var(--amber);font-size:0.82rem;margin-bottom:8px;">連接失敗：' + e.message + '</div>'
       + '<button class="btn-gold" onclick="connectCalendar()">🔄 重試</button></div></div>';
   } finally {
