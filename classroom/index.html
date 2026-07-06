@@ -2397,7 +2397,12 @@ function notifyTeacherClassRequest(d) {
 
     fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // 2026-07-06 修正：Supabase Edge Function 預設一定要帶 anon key，不然還沒進到我們的程式碼就先被擋 401
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': window.SUPABASE_CONFIG.anonKey,
+        'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey
+      },
       body: JSON.stringify({ to: 'teacher', message: subject + '\n\n' + message })
     }).then(function(r) {
       if (!r.ok) sendEmailFallback(); // Edge Function 還沒部署好／回錯誤 → 改寄 email，不會漏通知

@@ -64,6 +64,9 @@
 
     // 這個 Edge Function 網址跟 notify-line 同一個 Supabase 專案，只是不同 function 名稱
     var LINK_LINE_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/link-line';
+    // 2026-07-06 修正 401：Supabase Edge Function 預設一定要帶 anon key 才能呼叫，不然還沒進到我們自己的程式碼就先被擋 401
+    // 這把 anon key 是公開用的（跟 classroom/index.html 裡用的同一把），本來就設計成可以放在前端網頁裡，安全性由後端 RLS 把關，不是這裡的密鑰外洩
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw';
 
     async function main() {
       if (!studentToken) {
@@ -96,7 +99,11 @@
       try {
         var res = await fetch(LINK_LINE_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+          },
           body: JSON.stringify({ token: studentToken, idToken: idToken })
         });
         var data = await res.json().catch(function(){ return {}; });
