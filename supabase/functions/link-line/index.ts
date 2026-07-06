@@ -7,7 +7,11 @@
 //      classroom_students.line_user_id (ด้วย service role key ฝั่ง server เท่านั้น)
 //
 // วิธี deploy (ทำต่อจาก notify-line ได้เลย ใช้ secret ชุดเดียวกันบางส่วน):
-//   1. supabase secrets set LIFF_CHANNEL_ID=xxxxxxxx   (ตัวเลข channel ID ของ Messaging API channel ที่สร้าง LIFF ไว้)
+//   1. supabase secrets set LIFF_CHANNEL_ID=xxxxxxxx
+//      ⚠️ 2026-07-06 แก้ไข: LINE เปลี่ยนกฎ ใส่ LIFF ใน Messaging API channel ตรงๆ ไม่ได้แล้ว
+//      ต้องสร้าง channel แยกแบบ "LINE Login" ต่างหาก (อยู่ Provider เดียวกัน) แล้วสร้าง LIFF ในนั้น
+//      → LIFF_CHANNEL_ID ที่ต้องใส่ตรงนี้ คือ Channel ID ของ channel "LINE Login" ตัวนั้น
+//      (สังเกตง่ายๆ: ตัวเลขก่อนขีด "-" ใน LIFF ID เช่น "2010620934-5MFOEYBX" ก็คือค่านี้เลย ไม่ต้องไปหาที่อื่น)
 //   2. supabase functions deploy link-line
 //   (ไม่ต้องตั้ง SUPABASE_SERVICE_ROLE_KEY เอง — Supabase ใส่ให้อัตโนมัติทุก Edge Function อยู่แล้ว)
 // ════════════════════════════════════════════════════════════
