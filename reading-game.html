@@ -491,12 +491,14 @@ function dispHTML(v){
   return v;
 }
 // Set slot box content correctly
-function setSlotContent(box, v, stateClass){
+// comp='vowel' → v คือ "เสียงอ่านเต็มคำ" (VOWEL_READ ผ่าน dispOpt แล้ว) เป็นข้อความสมบูรณ์อยู่แล้ว
+//   ไม่ต้องแทรก base ก แบบสระสัญลักษณ์เดิม (ไม่งั้นจะเพี้ยน เช่น "โอ" จะกลายเป็น "โกอ")
+function setSlotContent(box, v, stateClass, comp){
   if(!v){
     box.textContent='◌';
     box.className='slot-box empty-slot';
   } else {
-    box.innerHTML=dispHTML(v);
+    box.innerHTML=(comp==='vowel')?v:dispHTML(v);
     box.className='slot-box '+(stateClass||'filled');
   }
 }
@@ -1578,31 +1580,44 @@ function rnd(a){return a[Math.floor(Math.random()*a.length)];}
 
 // avoid = ค่าที่ "แสดงผลจริง" (dispOpt แล้ว) ของคำตอบจริงช่องอื่นๆ — กันตัวลวงปลอมไปหน้าตาซ้ำกับคำตอบจริงช่องอื่น
 // (ถ้าค่านั้นดันเป็นคำตอบจริงของช่องนี้เองพอดี ไม่ถือว่าปลอม ไม่กัน)
+// กฎ Lin 2026-07-07 (MASTER ข้อ12): "คำตอบที่ถูกห้ามซ้ำในตัวเลือก แต่ตัวลวงเสียงซ้ำกันเองได้"
+//   → ตัวเลือกอื่นๆ ห้าม "เสียงอ่าน" ตรงกับคำตอบที่ถูกพอดี (จะดูเหมือนมี 2 คำตอบถูก) แต่ตัวลวงจะเสียงซ้ำกันเอง (ไม่ตรงกับคำตอบ) ได้ปกติ เพราะเป็นจุดสอนจริง (เช่น ซ/ศ/ษ/ส อ่าน "ส" เหมือนกันหมด)
 function buildOpts(ans,comp,groups,pool2,count,exclude,avoid){
   avoid=avoid||[];
+  var ansDisp=dispOpt(comp,ans);
   var grp=null;
   for(var i=0;i<groups.length;i++){if(groups[i].indexOf(ans)>=0){grp=groups[i].slice();break;}}
   if(!grp)grp=[ans];
   if(exclude)grp=grp.filter(function(x){return x!==exclude;});
-  grp=grp.filter(function(x){return x===ans || avoid.indexOf(dispOpt(comp,x))<0;});
+  grp=grp.filter(function(x){return x===ans || (dispOpt(comp,x)!==ansDisp && avoid.indexOf(dispOpt(comp,x))<0);});
   var opts=grp.slice();
   if(opts.length>count){opts=opts.filter(function(x){return x!==ans;});opts=shuffle(opts).slice(0,count-1);opts.push(ans);}
   var guard=0;
   while(opts.length<count && guard<500){
     guard++;
     var r=rnd(pool2);
-    if(r!==exclude && opts.indexOf(r)<0 && (r===ans || avoid.indexOf(dispOpt(comp,r))<0)) opts.push(r);
+    if(r!==exclude && opts.indexOf(r)<0 && (r===ans || (dispOpt(comp,r)!==ansDisp && avoid.indexOf(dispOpt(comp,r))<0))) opts.push(r);
   }
-  // กันหลุด (pool2 เล็กเกินจนหาตัวลวงไม่ครบเพราะกันซ้ำ) — เติมจาก pool2 แบบไม่กัน avoid ให้ครบจำนวนแทนที่จะค้างไม่ครบ
-  while(opts.length<count){var r2=rnd(pool2);if(r2!==exclude&&opts.indexOf(r2)<0)opts.push(r2);}
+  // กันหลุด (pool2 เล็กเกินจนหาตัวลวงไม่ครบเพราะกันซ้ำ) — พยายามกันไม่ให้ซ้ำคำตอบที่ถูกก่อน ถ้าหาไม่ได้จริงๆ ค่อยยอมเติมแบบไม่กันเพื่อไม่ให้ค้าง
+  while(opts.length<count){
+    var strict=pool2.filter(function(r2){return r2!==exclude && opts.indexOf(r2)<0 && dispOpt(comp,r2)!==ansDisp;});
+    var loose=pool2.filter(function(r2){return r2!==exclude && opts.indexOf(r2)<0;});
+    var pick=strict.length?rnd(strict):(loose.length?rnd(loose):null);
+    if(!pick)break; // pool2 หมดจริงๆ กันลูปค้าง
+    opts.push(pick);
+  }
   return shuffle(opts);
 }
 
+// เดิม dispOpt โชว์ "ตัวเขียน" — เปลี่ยนเป็น "เสียงอ่านจริง" ตามกฎ MASTER ข้อ12 (Lin 2026-07-07)
+//   - cons: ตัดตัวนำ (ห/อ) ออกเพราะไม่ออกเสียงแยก แค่ยกวรรณยุกต์ · เก็บ cluster (複合音) ไว้เพราะออกเสียงจริงทั้งคู่
+//   - vowel/final: ใช้ตารางเสียงจริง (VOWEL_READ/FINAL_SOUND) เดียวกับที่ใช้เฉลยด้านล่าง แล้วตัดวงเล็บอธิบาย(ภาษาจีน)ออก เหลือแต่รูปอ่านไทยล้วนๆ บนไทล์
+function stripAnnotation(s){return String(s).replace(/（[^）]*）/g,'').replace(/\([^)]*\)/g,'').trim();}
 function dispOpt(comp,x){
-  if(comp==='cons'){if(W.lead)return W.lead+x;if(W.cluster)return x+W.cluster;return x;}
+  if(comp==='cons'){var snd=CONS_SOUND[x]||x;return W.cluster?snd+W.cluster:snd;}
   if(comp==='tone')return x;
-  if(comp==='vowel')return VOWEL_SYMBOL[x]||x;
-  return x;
+  if(comp==='vowel'){var vr=stripAnnotation(VOWEL_READ[x]||VOWEL_SYMBOL[x]||x);return vr||x;}
+  var fs=stripAnnotation(FINAL_SOUND[x]||x);return fs||x;
 }
 
 // ════════════════════════════════════════════
@@ -1827,7 +1842,8 @@ function renderOptions(tiles){
     el.dataset.type=t.type;
     el.dataset.val=t.val;
     // Use innerHTML for combining chars
-    el.innerHTML=dispHTML(t.val);
+    // t.val สระ = เสียงอ่านเต็มคำอยู่แล้ว (VOWEL_READ) ไม่ต้องแทรก base ก แบบสระสัญลักษณ์เดิม
+    el.innerHTML=(t.type==='vowel')?t.val:dispHTML(t.val);
 
     var jx=(Math.random()*22-11).toFixed(1)+'px';
     var jy=(Math.random()*18-9).toFixed(1)+'px';
@@ -1884,7 +1900,7 @@ function updateSlots(){
     if(!box)return;
     var id=slotFills[c];
     var t=(id!=null)?tileById(id):null;
-    setSlotContent(box, t?t.val:null, t?'filled':null);
+    setSlotContent(box, t?t.val:null, t?'filled':null, c);
   });
   updateActiveSlot(); // setSlotContent ล้าง class → ทาไฮไลต์ช่องที่เล็งใหม่
 }
@@ -1896,7 +1912,7 @@ function markSlots(){
     var id=slotFills[c];
     var t=(id!=null)?tileById(id):null;
     var uv=t?t.val:null;
-    setSlotContent(box, correctVal[c], uv===correctVal[c]?'correct':'wrong');
+    setSlotContent(box, correctVal[c], uv===correctVal[c]?'correct':'wrong', c);
   });
   updateActiveSlot(); // ปลดไฮไลต์ช่องที่เล็งเมื่อเฉลยแล้ว
 }

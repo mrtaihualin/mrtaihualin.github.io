@@ -922,6 +922,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       } catch(e){}
       try { rgRenderGameBar(); } catch(e){}
       refreshUI();
+      setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
       return;
     }
 
@@ -966,6 +967,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     } catch(e){}
     try { rgRenderGameBar(); } catch(e){}
     refreshUI();
+    // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมอื่น)
+    setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   }
 
   window.woRestart = function(){ init(); };

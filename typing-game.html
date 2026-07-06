@@ -258,6 +258,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .type-hint{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;text-align:center;}
 /* ซ่อนช่อง input จริงไว้ (มองไม่เห็น แต่ยังโฟกัสได้) — ห้ามใช้ display:none/visibility:hidden เพราะมือถือจะไม่เด้งคีย์บอร์ดให้ */
 .mobile-kbd-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;border:0;opacity:0;overflow:hidden;font-size:16px;}
+/* 電腦版本不需要「用手機鍵盤打字」這個按鈕 — 用滑鼠的裝置(有滑鼠指標)才隱藏，觸控裝置照常顯示 — Lin 2026-07-07 */
+@media (hover:hover) and (pointer:fine){ #rg-mobile-kbd-btn{display:none !important;} }
 .tkbd{display:flex;flex-direction:column;gap:4px;width:100%;max-width:520px;}
 .tk-row{display:flex;gap:3px;justify-content:center;}
 .tk-key{flex:1;max-width:38px;min-width:20px;height:40px;border:1.5px solid #d4b87a;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;cursor:pointer;user-select:none;transition:all .1s;overflow:hidden;}
@@ -310,7 +312,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
     <button onclick="document.getElementById('rg-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
     <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">⌨️ 怎麼玩？</div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">練打字順便練拼字！鍵盤已經照泰文鍵盤（Kedmanee）排好位置了 😊</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">練打字順便練拼字！鍵盤已經照泰文鍵盤排好位置了 😊</p>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">看著上面的泰文字，照樣打出來，打對會自動跳下一個字母。手機也能用螢幕上的虛擬鍵盤打 📱</p>
     <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:2;">
       第一次就全對 → <strong>+10 分</strong><br>
@@ -409,14 +411,15 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <div class="type-panel" id="type-panel" style="display:none">
     <div class="type-target" id="rg-type-target"></div>
-    <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤（Kedmanee）排好位置了，打對會自動跳下一步 👇</div>
+    <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤排好位置了，打對會自動跳下一步 👇</div>
     <!-- ปุ่มกด → เด้งคีย์บอร์ดของมือถือเอง (Gboard/คีย์บอร์ด iOS ไทย) ขึ้นมาพิมพ์ได้ตรงๆ ไม่ต้องใช้ปุ่มเสมือนด้านล่างก็ได้ — ตัว input จริงซ่อนไว้ (โฟกัสได้แต่มองไม่เห็น) เพราะมือถือต้องมี input จริงถึงจะเด้งคีย์บอร์ด — Lin 2026-07-06 -->
     <button type="button" id="rg-mobile-kbd-btn" class="btn btn-secondary" style="font-size:13px;padding:8px 16px;" onclick="document.getElementById('rg-mobile-input').focus()">📱 用手機鍵盤打字</button>
     <input type="text" id="rg-mobile-input" class="mobile-kbd-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" lang="th">
-    <!-- ปุ่มเลือกโหมดไกด์ไลน์ — ใช้ร่วมทุกระดับ (Lin 2026-07-02) -->
-    <div style="display:flex;gap:8px;justify-content:center;margin:4px 0;">
+    <!-- ปุ่มเลือกโหมดไกด์ไลน์ — ใช้ร่วมทุกระดับ (Lin 2026-07-02) · ปุ่ม "ไม่เลือกวรรณยุกต์ ข้ามไปเลย" ย้ายมาอยู่แถวเดียวกัน (Lin 2026-07-07) -->
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0;">
       <button id="guide-on" class="btn btn-primary" style="font-size:12px;padding:6px 14px;" onclick="setGuideMode(true)">💡 有提示</button>
       <button id="guide-off" class="btn btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="setGuideMode(false)">🔥 無提示（挑戰）</button>
+      <button type="button" id="rg-tone-skip-btn" class="btn btn-secondary" style="display:none;font-size:12px;padding:6px 14px;" onclick="rgSkipTone()">⏭️ 不選，直接下一個</button>
     </div>
     <div id="tg-guide-note" style="text-align:center;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;margin:0 0 6px;"></div>
     <div class="tkbd" id="rg-kbd"></div>
@@ -427,10 +430,11 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <!-- Bonus tone — shown at load, user picks before pressing 檢查 -->
   <div class="bonus-section" id="bonus-section">
     <div class="bonus-header">猜聲調！答對 <span class="bonus-pts">+1</span> 分 ✨ 答錯不扣分（不選也可以，按 Enter 或下面的按鈕直接跳過）</div>
+    <!-- 選聲調的字要有讀音（不是泰文字，是拼音讀法）方便對照 1-5 選 — Lin 2026-07-07 -->
+    <div class="bonus-reading" id="bonus-reading" style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;color:#8B6310;margin:2px 0 6px;"></div>
     <div class="bonus-opts" id="bonus-opts"></div>
     <div class="bonus-result" id="bonus-result"></div>
-    <!-- ปุ่มข้าม — วรรณยุกต์เป็นแค่ตัวเลือกเพิ่ม ไม่ตอบก็ไปต่อได้ กด Enter ก็ข้ามได้เหมือนกัน — Lin 2026-07-06 -->
-    <button type="button" id="rg-tone-skip-btn" class="btn btn-secondary" style="display:none;font-size:12px;padding:5px 14px;margin-top:8px;" onclick="rgSkipTone()">⏭️ 不選，直接下一個</button>
+    <!-- ปุ่มข้าม (⏭️ 不選，直接下一個) ย้ายขึ้นไปอยู่แถวเดียวกับปุ่มไกด์ไลน์ด้านบนแล้ว (id="rg-tone-skip-btn") — Lin 2026-07-07 -->
   </div>
 
   <div class="retry-hint" id="retry-hint">選錯了！再試一次 🔁</div>
@@ -1121,9 +1125,8 @@ var WORDS=[
     {cons:'ส', vowel:'อะ', final:'บ', tone_name:'เอก', th:'ศัพท์'}
   ]},
   {th:'เอกสาร', zh:'文件', en:'èek-gà-sǎan', level:'中', syls:[
-    {cons:'อ', vowel:'เอ', final:'ก', tone_name:'เอก', th:'เอก'},
-    {cons:'ก', vowel:'อะ', tone_name:'เอก', th:'กะ'},
-    {cons:'ส', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'สาร'}
+    {cons:'อ', vowel:'เอ', final:'ก', tone_name:'เอก', th:'เอก', en:'èek'},
+    {cons:'ส', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'สาร', en:'sǎan'}
   ]},
   {th:'สัมภาษณ์', zh:'面試', en:'sǎm-phâat', level:'中', syls:[
     {cons:'ส', vowel:'อะ', final:'ม', tone_name:'จัตวา', th:'สัม'},
@@ -1202,9 +1205,8 @@ var WORDS=[
     {cons:'ค', vowel:'อา', tone:'้', tone_name:'ตรี', th:'ค้า'}
   ]},
   {th:'คุณภาพ', zh:'品質', en:'khun-ná-phâap', level:'中', syls:[
-    {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุณ'},
-    {cons:'น', vowel:'อะ', tone_name:'ตรี', th:'นะ'},
-    {cons:'พ', vowel:'อา', final:'พ', tone_name:'โท', th:'ภาพ'}
+    {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุณ', en:'khun'},
+    {cons:'พ', vowel:'อา', final:'พ', tone_name:'โท', th:'ภาพ', en:'phâap'}
   ]},
   {th:'ส่วนลด', zh:'折扣', en:'sùan-lót', level:'中', syls:[
     {cons:'ส', vowel:'อัว', tone:'่', final:'น', tone_name:'เอก', th:'ส่วน'},
@@ -1324,9 +1326,8 @@ var WORDS=[
     {cons:'อ', vowel:'อา', final:'ด', tone_name:'เอก', th:'อาด'}
   ]},
   {th:'สกปรก', zh:'髒', en:'sòk-gà-pròk', level:'中', syls:[
-    {cons:'ส', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'สก'},
-    {cons:'ก', vowel:'อะ', tone_name:'เอก', th:'กะ'},
-    {cons:'ป', cluster:'ร', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ปรก'}
+    {cons:'ส', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'สก', en:'sòk'},
+    {cons:'ป', cluster:'ร', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ปรก', en:'pròk'}
   ]}
 ];
 
@@ -1335,88 +1336,88 @@ var WORDS=[
 // (แตกทั้งประโยคเป็นพยางค์ต่อเนื่อง ใช้ syls[] เหมือนคำหลายพยางค์ปกติ) — ลอกชุดข้อมูลจาก reading-game.html เป๊ะ (Lin 2026-07-05) เพื่อให้ 2 เกมสอดคล้องกัน
 // ⚠️ cons/vowel/tone/final ของแต่ละพยางค์ตรวจตามกฎวรรณยุกต์ไทยมาตรฐาน (thai-language.com/ref/tone-rules) — Lin ตรวจแล้วตอนใช้ในเกมอ่าน
 var WORDS_HIGH=[
-  {th:'ผมกินข้าวอยู่ที่บ้าน', zh:'我在家吃飯', level:'高', syls:[
-    {cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม'},
-    {cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน'},
-    {cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว'},
-    {cons:'ย', lead:'ห', vowel:'อู', tone:'่', tone_name:'เอก', th:'หยู่'},
-    {cons:'ท', vowel:'อี', tone:'่', tone_name:'โท', th:'ที่'},
-    {cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน'}
+  {th:'ผมกินข้าวอยู่ที่บ้าน', zh:'我在家吃飯', en:'phǎm-gin-khâao-yùu-thîi-bâan', level:'高', syls:[
+    {cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'},
+    {cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'},
+    {cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว', en:'khâao'},
+    {cons:'ย', lead:'อ', vowel:'อู', tone:'่', tone_name:'เอก', th:'อยู่', en:'yùu'},
+    {cons:'ท', vowel:'อี', tone:'่', tone_name:'โท', th:'ที่', en:'thîi'},
+    {cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'}
   ]},
-  {th:'เขาไม่ค่อยกินผักเลย', zh:'他不太吃蔬菜', level:'高', syls:[
-    {cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา'},
-    {cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่'},
-    {cons:'ค', vowel:'ออ', final:'ย', tone:'่', tone_name:'โท', th:'ค่อย'},
-    {cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน'},
-    {cons:'ผ', vowel:'อะ', final:'ก', tone_name:'เอก', th:'ผัก'},
-    {cons:'ล', vowel:'เออ', final:'ย', tone_name:'สามัญ', th:'เลย'}
+  {th:'เขาไม่ค่อยกินผักเลย', zh:'他不太吃蔬菜', en:'khǎo-mâi-khôy-gin-phàk-loei', level:'高', syls:[
+    {cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'},
+    {cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'},
+    {cons:'ค', vowel:'ออ', final:'ย', tone:'่', tone_name:'โท', th:'ค่อย', en:'khôy'},
+    {cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'},
+    {cons:'ผ', vowel:'อะ', final:'ก', tone_name:'เอก', th:'ผัก', en:'phàk'},
+    {cons:'ล', vowel:'เออ', final:'ย', tone_name:'สามัญ', th:'เลย', en:'loei'}
   ]},
-  {th:'คุณไปไหนมา', zh:'你去哪裡了？', level:'高', syls:[
-    {cons:'ค', vowel:'อุ', final:'น', tone_name:'สามัญ', th:'คุน'},
-    {cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป'},
-    {cons:'น', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหน'},
-    {cons:'ม', vowel:'อา', tone_name:'สามัญ', th:'มา'}
+  {th:'คุณไปไหนมา', zh:'你去哪裡了？', en:'khun-bpai-nǎi-maa', level:'高', syls:[
+    {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุณ', en:'khun'},
+    {cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'},
+    {cons:'น', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหน', en:'nǎi'},
+    {cons:'ม', vowel:'อา', tone_name:'สามัญ', th:'มา', en:'maa'}
   ]},
-  {th:'ผมอยากเรียนภาษาไทย', zh:'我想學泰語', level:'高', syls:[
-    {cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม'},
-    {cons:'ย', lead:'ห', vowel:'อา', final:'ก', tone_name:'เอก', th:'หยาก'},
-    {cons:'ร', vowel:'เอีย', final:'น', tone_name:'สามัญ', th:'เรียน'},
-    {cons:'พ', vowel:'อา', tone_name:'สามัญ', th:'พา'},
-    {cons:'ส', vowel:'อา', tone_name:'จัตวา', th:'สา'},
-    {cons:'ท', vowel:'ไอ', tone_name:'สามัญ', th:'ไท'}
+  {th:'ผมอยากเรียนภาษาไทย', zh:'我想學泰語', en:'phǎm-yàak-rian-phaa-sǎa-thai', level:'高', syls:[
+    {cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'},
+    {cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'},
+    {cons:'ร', vowel:'เอีย', final:'น', tone_name:'สามัญ', th:'เรียน', en:'rian'},
+    {cons:'ภ', vowel:'อา', tone_name:'สามัญ', th:'ภา', en:'phaa'},
+    {cons:'ษ', vowel:'อา', tone_name:'จัตวา', th:'ษา', en:'sǎa'},
+    {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไทย', en:'thai'}
   ]},
-  {th:'วันนี้อากาศร้อนมากเลย', zh:'今天天氣很熱', level:'高', syls:[
-    {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'},
-    {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้'},
-    {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา'},
-    {cons:'ก', vowel:'อา', final:'ด', tone_name:'เอก', th:'กาด'},
-    {cons:'ร', vowel:'ออ', tone:'้', final:'น', tone_name:'ตรี', th:'ร้อน'},
-    {cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก'},
-    {cons:'ล', vowel:'เออ', final:'ย', tone_name:'สามัญ', th:'เลย'}
+  {th:'วันนี้อากาศร้อนมากเลย', zh:'今天天氣很熱', en:'wan-níi-aa-gàat-rón-mâak-loei', level:'高', syls:[
+    {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'},
+    {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'},
+    {cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'},
+    {cons:'ก', vowel:'อา', final:'ศ', tone_name:'เอก', th:'กาศ', en:'gàat'},
+    {cons:'ร', vowel:'ออ', tone:'้', final:'น', tone_name:'ตรี', th:'ร้อน', en:'rón'},
+    {cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'},
+    {cons:'ล', vowel:'เออ', final:'ย', tone_name:'สามัญ', th:'เลย', en:'loei'}
   ]},
-  {th:'เขาพูดภาษาไทยได้', zh:'他會說泰語', level:'高', syls:[
-    {cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา'},
-    {cons:'พ', vowel:'อู', final:'ด', tone_name:'โท', th:'พูด'},
-    {cons:'พ', vowel:'อา', tone_name:'สามัญ', th:'พา'},
-    {cons:'ส', vowel:'อา', tone_name:'จัตวา', th:'สา'},
-    {cons:'ท', vowel:'ไอ', tone_name:'สามัญ', th:'ไท'},
-    {cons:'ด', vowel:'อา', tone:'้', final:'ย', tone_name:'โท', th:'ด้าย'}
+  {th:'เขาพูดภาษาไทยได้', zh:'他會說泰語', en:'khǎo-phûut-phaa-sǎa-thai-dâi', level:'高', syls:[
+    {cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'},
+    {cons:'พ', vowel:'อู', final:'ด', tone_name:'โท', th:'พูด', en:'phûut'},
+    {cons:'ภ', vowel:'อา', tone_name:'สามัญ', th:'ภา', en:'phaa'},
+    {cons:'ษ', vowel:'อา', tone_name:'จัตวา', th:'ษา', en:'sǎa'},
+    {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไทย', en:'thai'},
+    {cons:'ด', vowel:'ไอ', tone:'้', tone_name:'โท', th:'ได้', en:'dâi'}
   ]},
-  {th:'ผมไม่รู้จะทำยังไง', zh:'我不知道該怎麼辦', level:'高', syls:[
-    {cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม'},
-    {cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่'},
-    {cons:'ร', vowel:'อู', tone:'้', tone_name:'ตรี', th:'รู้'},
-    {cons:'จ', vowel:'อะ', tone_name:'เอก', th:'จะ'},
-    {cons:'ท', vowel:'อำ', tone_name:'สามัญ', th:'ทำ'},
-    {cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง'},
-    {cons:'ง', vowel:'ไอ', tone_name:'สามัญ', th:'ไง'}
+  {th:'ผมไม่รู้จะทำยังไง', zh:'我不知道該怎麼辦', en:'phǎm-mâi-rúu-jà-tham-yang-ngai', level:'高', syls:[
+    {cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'},
+    {cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'},
+    {cons:'ร', vowel:'อู', tone:'้', tone_name:'ตรี', th:'รู้', en:'rúu'},
+    {cons:'จ', vowel:'อะ', tone_name:'เอก', th:'จะ', en:'jà'},
+    {cons:'ท', vowel:'อำ', tone_name:'สามัญ', th:'ทำ', en:'tham'},
+    {cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง', en:'yang'},
+    {cons:'ง', vowel:'ไอ', tone_name:'สามัญ', th:'ไง', en:'ngai'}
   ]},
-  {th:'พรุ่งนี้เราไปด้วยกันนะ', zh:'明天我們一起去吧', level:'高', syls:[
-    {cons:'พ', cluster:'ร', vowel:'อุ', tone:'่', final:'ง', tone_name:'โท', th:'พรุ่ง'},
-    {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้'},
-    {cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา'},
-    {cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป'},
-    {cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย'},
-    {cons:'ก', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'กัน'},
-    {cons:'น', vowel:'อะ', tone_name:'ตรี', th:'นะ'}
+  {th:'พรุ่งนี้เราไปด้วยกันนะ', zh:'明天我們一起去吧', en:'phrûng-níi-rao-bpai-dûay-gan-ná', level:'高', syls:[
+    {cons:'พ', cluster:'ร', vowel:'อุ', tone:'่', final:'ง', tone_name:'โท', th:'พรุ่ง', en:'phrûng'},
+    {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'},
+    {cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'},
+    {cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'},
+    {cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย', en:'dûay'},
+    {cons:'ก', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'กัน', en:'gan'},
+    {cons:'น', vowel:'อะ', tone_name:'ตรี', th:'นะ', en:'ná'}
   ]},
-  {th:'แกกำลังทำอะไรอยู่', zh:'你在做什麼？', level:'高', syls:[
-    {cons:'ก', vowel:'แอ', tone_name:'สามัญ', th:'แก'},
-    {cons:'ก', vowel:'อำ', tone_name:'สามัญ', th:'กำ'},
-    {cons:'ล', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ลัง'},
-    {cons:'ท', vowel:'อำ', tone_name:'สามัญ', th:'ทำ'},
-    {cons:'อ', vowel:'อะ', tone_name:'เอก', th:'อะ'},
-    {cons:'ร', vowel:'ไอ', tone_name:'สามัญ', th:'ไร'},
-    {cons:'ย', lead:'ห', vowel:'อู', tone:'่', tone_name:'เอก', th:'หยู่'}
+  {th:'แกกำลังทำอะไรอยู่', zh:'你在做什麼？', en:'gae-gam-lang-tham-à-rai-yùu', level:'高', syls:[
+    {cons:'ก', vowel:'แอ', tone_name:'สามัญ', th:'แก', en:'gae'},
+    {cons:'ก', vowel:'อำ', tone_name:'สามัญ', th:'กำ', en:'gam'},
+    {cons:'ล', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ลัง', en:'lang'},
+    {cons:'ท', vowel:'อำ', tone_name:'สามัญ', th:'ทำ', en:'tham'},
+    {cons:'อ', vowel:'อะ', tone_name:'เอก', th:'อะ', en:'à'},
+    {cons:'ร', vowel:'ไอ', tone_name:'สามัญ', th:'ไร', en:'rai'},
+    {cons:'ย', lead:'อ', vowel:'อู', tone:'่', tone_name:'เอก', th:'อยู่', en:'yùu'}
   ]},
-  {th:'เธอยังไม่กลับบ้านเลยหรอ', zh:'她還沒回家嗎？', level:'高', syls:[
-    {cons:'ท', vowel:'เออ', tone_name:'สามัญ', th:'เทอ'},
-    {cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง'},
-    {cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่'},
-    {cons:'ก', cluster:'ล', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กลับ'},
-    {cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน'},
-    {cons:'ล', vowel:'เออ', final:'ย', tone_name:'สามัญ', th:'เลย'},
-    {cons:'ร', lead:'ห', vowel:'ออ', tone_name:'จัตวา', th:'หรอ'}
+  {th:'เธอยังไม่กลับบ้านเลยหรอ', zh:'她還沒回家嗎？', en:'thoe-yang-mâi-glàp-bâan-loei-rǒ', level:'高', syls:[
+    {cons:'ธ', vowel:'เออ', tone_name:'สามัญ', th:'เธอ', en:'thoe'},
+    {cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง', en:'yang'},
+    {cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'},
+    {cons:'ก', cluster:'ล', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กลับ', en:'glàp'},
+    {cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'},
+    {cons:'ล', vowel:'เออ', final:'ย', tone_name:'สามัญ', th:'เลย', en:'loei'},
+    {cons:'ร', lead:'ห', vowel:'ออ', tone_name:'จัตวา', th:'หรอ', en:'rǒ'}
   ]}
 ];
 WORDS = WORDS.concat(WORDS_HIGH);
@@ -1484,6 +1485,7 @@ var curLevel='初';
 var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,roundTotal=0,roundHadGuide=false;
 var picks=[],comps=[],correctSet=[],needN=0;
 var checked=false,wrongCount=0;
+var wordToneBonus=0; // รวมแต้มโบนัสวรรณยุกต์ (+1 ต่อพยางค์) ของ "คำนี้" ทั้งคำ — เอาไว้บวกรวมกับคะแนนหลักตอนแสดงแบนเนอร์ตอนจบคำ ไม่ให้แยกโชว์คนละที่จนบวกเลขไม่ลง — Lin 2026-07-07
 // ── SRS ใหม่ (กฎ MASTER ข้อ 7, ลอกเกมอ่าน 2026-07-05): stage-based 1→7→16 วัน แทน masteredSet/correctCountMap/reviewDates/dirtyMap เดิม ──
 var RG_SRS_CFG={INTERVALS:[1,7,16],CLEAN_ROUNDS_TO_MASTER:3};
 var RG_SRS={
@@ -1649,8 +1651,10 @@ function initGame(){
 
 // แตกคำเป็นอาเรย์พยางค์ (พยางค์เดียว = อาเรย์ 1 ตัว)
 function buildSyls(w){
-  if(w.syls&&w.syls.length)return w.syls.map(function(s){return {th:s.th,cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name};});
-  return [{th:w.th,cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name}];
+  // เพิ่ม en (คำอ่าน/拼音) ต่อพยางค์ด้วย — เอาไว้โชว์ตรงจุดเลือกวรรณยุกต์ (bonus-reading) — Lin 2026-07-07
+  // พยางค์เดียวไม่มี en ของตัวเอง → ใช้ en ของทั้งคำ (w.en) แทน
+  if(w.syls&&w.syls.length)return w.syls.map(function(s){return {th:s.th,cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name,en:s.en||w.en};});
+  return [{th:w.th,cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name,en:w.en}];
 }
 // แถบบอกพยางค์ (โชว์เฉพาะคำหลายพยางค์)
 function renderSylStrip(){
@@ -1672,6 +1676,7 @@ function renderSylStrip(){
   });
 }
 function loadWord(){
+  wordToneBonus=0; // คำใหม่ = ล้างโบนัสวรรณยุกต์สะสมของคำก่อนหน้า — Lin 2026-07-07
   rememberStep=0;clearTimeout(rememberTimer);curWordIsKnownCheck=false;
   var rb=document.getElementById('btn-remember');
   if(rb){rb.textContent='已記得';rb.style.cssText='';rb.style.display='';}
@@ -1699,7 +1704,7 @@ function loadWord(){
 // โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
 function loadSyl(){
   var SY=sylList[sylIdx];
-  W={th:SY.th,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  W={th:SY.th,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
   checked=false;picks=[];bonusAnswered=false;selectedBonus=null; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
   comps=['cons','vowel'];
   if(W.final)comps.push('final');
@@ -1861,8 +1866,10 @@ function finalizeWord(){
     if(curWordIsKnownCheck){
       curWordIsKnownCheck=false;
       b.textContent='沒關係，這個字先留在複習清單裡 🔁';b.className='result-banner show no';
+      rgToast('沒關係，這個字先留在複習清單裡 🔁'); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
     } else {
       b.textContent='沒關係，多打幾次就會了 — 這個字之後會再複習到 🙂';b.className='result-banner show no';
+      rgToast('沒關係，多打幾次就會了 — 這個字之後會再複習到 🙂'); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
     }
     doSave();
     return;
@@ -1912,6 +1919,7 @@ function finalizeWord(){
   // ── กฎ MASTER ข้อ7 (แก้ 2026-07-05 ตาม Lin ยืนยัน): วันที่16 (ด่านตัดสินสุดท้ายของ SRS นำไปสู่ดาวเงินจริง) ได้คะแนนฐานตามปกติ ไม่ zero — ต่างจาก 已記得 (known-check) ที่ยังคง 0 แต้มเสมอ (ดูจุด curWordIsKnownCheck ด้านบน) ──
   var basePtsAwarded=pts;
   roundScore+=basePtsAwarded;okC++;
+  var srsBonusAwarded=0; // เก็บโบนัสรอบทบทวน SRS ไว้รวมกับแบนเนอร์ตอนจบคำ (ดูด้านล่าง) — Lin 2026-07-07
 
   // ── SRS เลื่อนขั้น/รีเซ็ต + โบนัสรอบทบทวน + แจกดาวเงินตอน mastered จริง (เฉพาะล็อกอิน) ──
   if(loggedIn){
@@ -1921,7 +1929,7 @@ function finalizeWord(){
       var res=RG_SRS.advanceOnClean(rec,Date.now());
       rec=res.rec;
       var _rb=SRS_REVIEW_BONUS[passedStage]||0; // โบนัสรอบทบทวนสะอาด — เฉพาะ "ลูปแรกที่ผ่าน"
-      if(_rb>0){ roundScore+=_rb; pop('+'+_rb+' 🔁'); }
+      if(_rb>0){ roundScore+=_rb; srsBonusAwarded=_rb; pop('+'+_rb+' 🔁'); }
       if(res.justMastered){
         try{
           if(window.GAME_ACCOUNT && window.GAME_ACCOUNT.addHardStars){
@@ -1937,9 +1945,14 @@ function finalizeWord(){
     rgSrsSet(idx,rec);
   }
 
-  if(wordHadWrong){b.textContent='完成這個字！+'+basePtsAwarded+' 分';b.className='result-banner show half';}
-  else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+(golden?' ✨黃金字':'')+' +'+basePtsAwarded+' 分';b.className='result-banner show ok';}
-  pop('+'+basePtsAwarded+(golden?' ✨':''));
+  // ── รวมโบนัสทั้งหมดของ "คำนี้" (คะแนนหลัก + วรรณยุกต์ + SRS) เป็นก้อนเดียวตอนแสดงแบนเนอร์ตอนจบคำ ──
+  // เดิม: แบนเนอร์โชว์แค่ basePtsAwarded (เช่น +10) ส่วนโบนัสวรรณยุกต์ (+1) โชว์แยกคนละที่ตอนเลือกวรรณยุกต์
+  // ทำให้ Lin งงว่าทำไมรวมแล้วไม่ครบ (เช่น ตอบวรรณยุกต์ถูก+ตอบคำถูก ควรเป็น 11 ไม่ใช่เห็นแค่ 10) — Lin ยืนยัน 2026-07-07 ให้รวมเป็นก้อนเดียว
+  var dispPtsAwarded=basePtsAwarded+wordToneBonus+srsBonusAwarded;
+
+  if(wordHadWrong){b.textContent='完成這個字！+'+dispPtsAwarded+' 分';b.className='result-banner show half';}
+  else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+(golden?' ✨黃金字':'')+' +'+dispPtsAwarded+' 分';b.className='result-banner show ok';}
+  pop('+'+dispPtsAwarded+(golden?' ✨':''));
   doSave();
 }
 function check(){
@@ -1980,8 +1993,10 @@ function check(){
       document.getElementById('pool').querySelectorAll('.opt.sel').forEach(function(x){x.classList.remove('sel');});
       document.getElementById('btn-check').disabled=true;
       var hint=document.getElementById('retry-hint');
-      hint.textContent=wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️';
+      var _msg1985=wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️';
+      hint.textContent=_msg1985;
       hint.className='retry-hint show';
+      rgToast(_msg1985); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
       document.getElementById('ok').textContent=okC;
       document.getElementById('bad').textContent=badC;
       updateCombo();
@@ -2018,6 +2033,8 @@ function showBonus(){
   var box=document.getElementById('bonus-opts');
   box.innerHTML='';
   document.getElementById('bonus-result').textContent='';
+  var _rd0=document.getElementById('bonus-reading');
+  if(_rd0)_rd0.textContent=W.en?('讀音：'+W.en):''; // โชว์คำอ่าน (拼音) ตรงจุดเลือกวรรณยุกต์ — Lin 2026-07-07
   var skipBtn0=document.getElementById('rg-tone-skip-btn');
   if(skipBtn0)skipBtn0.style.display='none'; // ยังไม่ถึงตอนที่พิมพ์ครบ ยังไม่ให้กดข้าม
   BONUS_TONES.forEach(function(t){
@@ -2054,6 +2071,7 @@ function evaluateBonus(){
   var tZH=TONE_ZH[W.tone_name]||W.tone_name;
   if(selectedBonus===W.tone_name){
     roundScore+=1;
+    wordToneBonus+=1; // เก็บสะสมไว้บวกรวมกับคะแนนหลักตอนแสดงแบนเนอร์ตอนจบคำ — Lin 2026-07-07
     pop('+1 ✨');
     res.textContent='正確！是'+tZH+' 🎉 +1 分';
     res.style.color='#2e7d32';
@@ -2209,6 +2227,29 @@ function showReveal(){
     var tag=document.createElement('span');tag.className='rule-tag'+(r.sp?' sp':'');tag.textContent=r.tag;
     var txt=document.createElement('span');txt.className='rule-txt';txt.innerHTML=r.text;
     row.appendChild(tag);row.appendChild(txt);box.appendChild(row);
+  });
+  document.getElementById('reveal').className='reveal show';
+}
+// 打完整句（多音節連續打字模式）— 顯示「整句」的子音/母音/尾音分析＋泰文讀法，不是只顯示最後一個音節而已
+// 每個字/音節各自一段分析，答對答錯都會顯示（rgContFinish 不管成功/失敗都會呼叫這個）— Lin 2026-07-07
+function showRevealMulti(){
+  document.getElementById('rev-word').textContent=WORD.th;
+  document.getElementById('rev-pron').textContent=WORD.en?('🔊 '+WORD.en):'';
+  var box=document.getElementById('reveal-rules');
+  box.innerHTML='';
+  sylList.forEach(function(SY,i){
+    var head=document.createElement('div');
+    head.className='rule-row';
+    head.style.cssText='margin-top:'+(i===0?'0':'6px')+';font-weight:800;color:#8B6310;';
+    head.textContent='📍 '+SY.th+(SY.tone_name?'（'+(TONE_ZH[SY.tone_name]||SY.tone_name)+'）':'');
+    box.appendChild(head);
+    var rules=buildRevealRules(SY);
+    rules.forEach(function(r){
+      var row=document.createElement('div');row.className='rule-row';
+      var tag=document.createElement('span');tag.className='rule-tag'+(r.sp?' sp':'');tag.textContent=r.tag;
+      var txt=document.createElement('span');txt.className='rule-txt';txt.innerHTML=r.text;
+      row.appendChild(tag);row.appendChild(txt);box.appendChild(row);
+    });
   });
   document.getElementById('reveal').className='reveal show';
 }
@@ -2542,7 +2583,7 @@ function rgTypeLoadSyl(){
   var chBtn=document.getElementById('btn-check');
   if(chBtn)chBtn.style.display='none'; // โหมดพิมพ์ตรวจให้อัตโนมัติทีละตัว ไม่ต้องกด 檢查
   var hintEl=document.getElementById('rg-type-hint');
-  if(hintEl){hintEl.textContent='照著打出上面這個音節，鍵盤已經照泰文鍵盤（Kedmanee）排好位置了，打對會自動跳下一步 👇';hintEl.className='type-hint';}
+  if(hintEl){hintEl.textContent='照著打出上面這個音節，鍵盤已經照泰文鍵盤排好位置了，打對會自動跳下一步 👇';hintEl.className='type-hint';}
 }
 // สาขา "ถูกทั้งพยางค์ + (ถ้ามี) เลือกวรรณยุกต์แล้ว" — ทำตามรูปแบบเดียวกับ check() ฝั่งกดเลือก (ใช้ finalizeWord/คะแนน/badge ชุดเดียวกัน)
 function rgTypeSuccessBranch(){
@@ -2618,8 +2659,10 @@ function rgTypeChar(ch){
     rgTypeFlashWrong();
     if(RG_TYPE.wrong>=rgQuotaFor(sylList.length)){
       var hint=document.getElementById('retry-hint');
-      hint.textContent='沒關係，打錯太多次了，直接公佈答案給你看 🙂'; // ข้อความนุ่มนวลขึ้น ให้เหมือนกับโหมดพิมพ์ต่อเนื่องหลายพยางค์ — Lin 2026-07-03 v3
+      var _msg2627='沒關係，打錯太多次了，直接公佈答案給你看 🙂'; // ข้อความนุ่มนวลขึ้น ให้เหมือนกับโหมดพิมพ์ต่อเนื่องหลายพยางค์ — Lin 2026-07-03 v3
+      hint.textContent=_msg2627;
       hint.className='retry-hint show wrong3';
+      rgToast(_msg2627); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
       setTimeout(function(){
         RG_TYPE.pos=RG_TYPE.target.length; // เฉลยส่วนที่เหลือ
         rgTypeRenderTarget();
@@ -2627,8 +2670,10 @@ function rgTypeChar(ch){
       }, 900);
     } else {
       var hint2=document.getElementById('retry-hint');
-      hint2.textContent=RG_TYPE.wrong===1?'打錯了，沒關係，再試一次 🙂':'再錯一次就會直接公佈答案囉，慢慢來沒關係 😊';
+      var _msg2636=RG_TYPE.wrong===1?'打錯了，沒關係，再試一次 🙂':'再錯一次就會直接公佈答案囉，慢慢來沒關係 😊';
+      hint2.textContent=_msg2636;
       hint2.className='retry-hint show';
+      rgToast(_msg2636); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
     }
   }
 }
@@ -2703,7 +2748,7 @@ function rgContStart(){
   var chBtn=document.getElementById('btn-check');
   if(chBtn)chBtn.style.display='none';
   var hintEl=document.getElementById('rg-type-hint');
-  if(hintEl){hintEl.textContent='照著打出整個字（連續打完 '+sylList.length+' 個音節，打完才選聲調），鍵盤已經照泰文鍵盤（Kedmanee）排好位置了，打對會自動跳下一步 👇';hintEl.className='type-hint';}
+  if(hintEl){hintEl.textContent='照著打出整個字（連續打完 '+sylList.length+' 個音節，打完才選聲調），鍵盤已經照泰文鍵盤排好位置了，打對會自動跳下一步 👇';hintEl.className='type-hint';}
   // loadSyl() เดิม (ที่เพิ่งรันไปก่อนหน้านี้) ทำ showBonus() ของพยางค์แรกไปแล้ว → ซ่อนไว้ก่อน รอพิมพ์ครบทั้งคำค่อยโชว์
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section';
@@ -2737,6 +2782,7 @@ function rgContChar(ch){
       var hint=document.getElementById('retry-hint');
       hint.textContent='沒關係，打錯太多次了，直接公佈答案給你看 🙂';
       hint.className='retry-hint show wrong3';
+      rgToast('沒關係，打錯太多次了，直接公佈答案給你看 🙂'); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
       var _tok=RG_CONT_TOKEN;
       setTimeout(function(){
         if(!RG_CONT_ON || RG_CONT_TOKEN!==_tok)return; // ผู้เล่นกด skip/next เปลี่ยนคำไปแล้วระหว่างรอ — ไม่ทำอะไรกับคำใหม่
@@ -2748,8 +2794,10 @@ function rgContChar(ch){
       }, 900);
     } else {
       var hint2=document.getElementById('retry-hint');
-      hint2.textContent=RG_CONT_WRONG===1?'打錯了，沒關係，再試一次 🙂':'再錯一次就會直接公佈答案囉，慢慢來沒關係 😊';
+      var _msg2761=RG_CONT_WRONG===1?'打錯了，沒關係，再試一次 🙂':'再錯一次就會直接公佈答案囉，慢慢來沒關係 😊';
+      hint2.textContent=_msg2761;
       hint2.className='retry-hint show';
+      rgToast(_msg2761); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
     }
   }
 }
@@ -2780,6 +2828,8 @@ function rgContAskNextTone(){
   var box=document.getElementById('bonus-opts');
   box.innerHTML='';
   document.getElementById('bonus-result').textContent='';
+  var _rd=document.getElementById('bonus-reading');
+  if(_rd)_rd.textContent=SY.en?('讀音：'+SY.en):''; // โชว์คำอ่าน (拼音) ของพยางค์ที่กำลังถามวรรณยุกต์อยู่ — Lin 2026-07-07
   var hintEl=document.getElementById('rg-type-hint');
   if(hintEl){hintEl.textContent='打完整個字了！選一下「'+SY.th+'」的聲調也可以（'+(RG_CONT_TONE_IDX+1)+'/'+RG_CONT_TONE_Q.length+'），不選按 Enter 或下面按鈕直接跳過 👇';hintEl.className='type-hint good';}
   var skipBtn=document.getElementById('rg-tone-skip-btn');
@@ -2798,7 +2848,7 @@ function rgContAskNextTone(){
       var res=document.getElementById('bonus-result');
       var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
       if(t.name===SY.tone_name){
-        roundScore+=1;pop('+1 ✨');
+        roundScore+=1;wordToneBonus+=1;pop('+1 ✨'); // wordToneBonus: บวกรวมกับคะแนนหลักตอนแสดงแบนเนอร์ตอนจบทั้งประโยค — Lin 2026-07-07
         btn.classList.add('correct');
         res.textContent='正確！是'+tZH+' 🎉 +1 分';res.style.color='#2e7d32';
         refreshUI();
@@ -2851,11 +2901,12 @@ function rgContFinish(){
   RG_CONT_ON=false;RG_CONT_PAUSED=false;
   sylIdx=sylList.length-1;
   var SY=sylList[sylIdx];
-  W={th:SY.th,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  W={th:SY.th,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section'; // ซ่อนแผงถามวรรณยุกต์ ก่อนโชว์การ์ดเฉลยท้ายคำ
   renderSylStrip();
-  showReveal();
+  // ทั้งประโยค (หลายพยางค์/หลายคำ) → โชว์วิเคราะห์ทุกคำ + คำอ่านเต็มประโยค ไม่ใช่แค่คำสุดท้าย ไม่ว่าตอบถูกหรือผิด — Lin 2026-07-07
+  showRevealMulti();
   document.getElementById('retry-hint').className='retry-hint';
   setGameBtns('done');
   finalizeWord();
@@ -2896,10 +2947,11 @@ document.addEventListener('keydown',function(e){
   loadSyl=function(){
     _origLoadSyl();
     if(!RG_TYPE.on)return;
-    // คำหลายพยางค์ (2 พยางค์ขึ้นไป, 初/中 เท่านั้น — 高級 ไม่ผ่าน loadSyl() เลย) → เข้าโหมดพิมพ์ต่อเนื่องทั้งคำ ที่ sylIdx===0 ครั้งเดียว
+    // คำ/ประโยคหลายพยางค์ (2 พยางค์ขึ้นไป ทุกระดับ รวม 高) → เข้าโหมดพิมพ์ต่อเนื่องทั้งคำ ที่ sylIdx===0 ครั้งเดียว
     // ขยายจาก "≥3 พยางค์" เป็น "≥2 พยางค์" ตามที่ Lin ขอ 2026-07-03 (หลังทดสอบคำ 2 พยางค์แล้วอยากให้พิมพ์ต่อเนื่องด้วย)
+    // เดิม 高級 ถูกกันไว้ไม่ให้พิมพ์ต่อเนื่อง (ต้องกดสลับพยางค์เอง) — Lin แจ้ง 2026-07-07 ว่า 高級 ก็ต้องพิมพ์ต่อเนื่องได้เหมือน 中級ทุกประการ จึงเอาเงื่อนไขกัน 高級 ออก
     // คำพยางค์เดียว (初級ทั้งหมด): ลง else เหมือนเดิมทุกครั้ง (RG_CONT_ON=false ไม่เคยถูกอ่านที่ไหนสำหรับคำเหล่านี้) = พฤติกรรมเดิม 100%
-    if(sylIdx===0 && sylList.length>1 && curLevel!=='高'){
+    if(sylIdx===0 && sylList.length>1){
       rgContStart();
     } else {
       RG_CONT_ON=false;
@@ -3081,8 +3133,10 @@ function rgCheckWholeWord(){
       document.getElementById('pool').querySelectorAll('.opt.sel').forEach(function(x){x.classList.remove('sel');});
       document.getElementById('btn-check').disabled=true;
       var hint=document.getElementById('retry-hint');
-      hint.textContent=(wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️')+'（音節 '+(wrongIdx+1)+' 錯了）';
+      var _msg3097=(wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️')+'（音節 '+(wrongIdx+1)+' 錯了）';
+      hint.textContent=_msg3097;
       hint.className='retry-hint show';
+      rgToast(_msg3097); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
       document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
       updateCombo();
       renderSylStrip();

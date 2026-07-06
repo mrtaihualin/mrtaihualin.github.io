@@ -30,6 +30,7 @@
 <script defer src="auth-widget.js?v=1"></script>
 <script defer src="game-account.js?v=1"></script>
 <script defer src="reading-auth.js?v=4"></script>
+<script defer src="lego-vault.js?v=1"></script>
 <style>
 :root{
   --gold:#8B6310; --gold-deep:#5a3e0a; --gold-bright:#C8973A; --gold-light:#F3E4C2;
@@ -139,6 +140,9 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .opt.sel .oth,.opt.sel .ozh{color:#fff;}
 .opt .oth{font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:19px;font-weight:700;color:var(--sc);}
 .opt .ozh{font-size:12.5px;color:var(--ink-muted);letter-spacing:.5px;}
+.lego-vault-save{font-size:15px;cursor:pointer;opacity:.55;transition:opacity .15s,transform .15s;flex-shrink:0;}
+.lego-vault-save:hover{opacity:1;transform:scale(1.15);}
+.opt.sel .lego-vault-save{opacity:.85;}
 .opt-clear{padding:10px 16px;font-size:12px;color:var(--ink-muted);cursor:pointer;text-align:center;background:rgba(0,0,0,.025);border-bottom:1px solid rgba(184,134,44,.12);letter-spacing:1px;}
 .opt-clear:hover{background:rgba(196,87,79,.1);color:#c4574f;}
 .opt.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
@@ -284,6 +288,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <!-- Lin 2026-07-06: เลโก้ไม่แจกดาวเงิน (คนละระบบ) → ซ่อนป้ายดาว ไม่ให้คนเล่นสับสน -->
   <span class="tf-streak-chip" style="display:none;">⭐ <b id="star-count">0</b> 顆星</span>
   <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" onclick="legoVaultOpen()">📑 <b id="lego-vault-count">0</b>/15 單字庫</span>
 </div>
 
 <!-- Lin 2026-07-06: CTA ชวนล็อกอิน (MASTER ข้อ13) — เดิมเลโก้ไม่มี เพิ่มให้เหมือนเกมอื่น -->
@@ -694,7 +699,8 @@ function renderBaseplate(){
           disabled=true;label2=o.zh+'・此動詞不用';
         }
         opts+=`<div class="opt${sel}${disabled?' disabled':''}" ${disabled?'':`onclick="pickWord('${s.id}','${o.th}')"`}>
-          <span class="oth">${o.th}</span><span class="ozh">${label2}</span></div>`;
+          <span class="oth">${o.th}</span><span class="ozh">${label2}</span>
+          <span class="lego-vault-save" onclick="event.stopPropagation();legoVaultSave('${o.th}','${o.zh}')" title="加入我的造句單字庫（最多15個）">${(window.LegoVault&&LegoVault.has(o.th))?'🔖':'📑'}</span></div>`;
       });
     }
 
@@ -900,6 +906,8 @@ function finishLegoRound(){
   }catch(e){}
   try{ legoRenderGameBar(); }catch(e){}
   refreshLegoAcctUI();
+  // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมอื่น)
+  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   return '🎉 完成一輪（'+count+' 句）！本輪 +'+weightedScore+' 分'+(isPerfect?'・全部乾淨過關 ✨':'')+'（已含 ×'+LEVEL_WEIGHT+' 高級倍率）· 下一句是 ✨黃金句 ×2，記得測試！';
 }
 
@@ -941,6 +949,7 @@ function refreshLegoAcctUI(){
   const sc=document.getElementById('star-count'); if(sc) sc.textContent=stars;
   const bc=document.getElementById('badge-count'); if(bc) bc.textContent=badges;
   const be=document.getElementById('badge-emoji'); if(be) be.textContent=badgeEmoji(badges);
+  const vc=document.getElementById('lego-vault-count'); if(vc) vc.textContent=window.LegoVault?LegoVault.count():0;
   legoRenderLoginCTA();
 }
 
@@ -960,6 +969,43 @@ function legoRenderLoginCTA(){
     '</div></div>';
 }
 function legoCtaLogin(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} if(window.READING_AUTH&&READING_AUTH.openLogin)READING_AUTH.openLogin(); }
+
+// Lin 2026-07-07 (4.4): 造句單字庫 — คลังคำเฉพาะเลโก้ 15 คำ (แยกจาก word-vault ปกติ) · ต้องล็อกอินก่อน
+function legoVaultSave(th, zh){
+  if(!window.LegoVault) return;
+  if(!legoLoggedIn()){ toast('登入後才能存進「造句單字庫」喔 👧🏻'); legoCtaLogin(); return; }
+  if(LegoVault.has(th)){
+    LegoVault.removeWord(th);
+    toast('已從造句單字庫移除「'+th+'」');
+  } else {
+    if(LegoVault.isFull()){ toast('造句單字庫已滿（'+LegoVault.MAX_WORDS+'/'+LegoVault.MAX_WORDS+'），先移除舊的再存新的喔',true); return; }
+    LegoVault.addWord(th, {zh: zh});
+    toast('已加入造句單字庫「'+th+'」（'+LegoVault.count()+'/'+LegoVault.MAX_WORDS+'）');
+  }
+  try{ renderBaseplate(); }catch(e){}
+  var vc=document.getElementById('lego-vault-count'); if(vc) vc.textContent=LegoVault.count();
+}
+
+function legoVaultOpen(){
+  if(!window.LegoVault) return;
+  var old=document.getElementById('lego-vault-modal'); if(old) old.remove();
+  var list=LegoVault.getAll();
+  var ov=document.createElement('div');
+  ov.id='lego-vault-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  var rows = list.length ? list.map(function(w){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(139,99,16,.15);">'+
+      '<div><span style="font-family:Sarabun,sans-serif;font-weight:700;color:var(--gold-deep);font-size:16px;">'+w.th+'</span> <span style="color:var(--ink-muted);font-size:12.5px;">'+w.zh+'</span></div>'+
+      '<button onclick="LegoVault.removeWord(\''+w.th+'\');legoVaultOpen();try{renderBaseplate();}catch(e){}" style="border:none;background:none;color:#c4574f;cursor:pointer;font-size:13px;">移除</button></div>';
+  }).join('') : '<div style="color:var(--ink-muted);font-size:13px;text-align:center;padding:20px 0;">還沒有存任何單字，去下拉選單點📑試試看！</div>';
+  ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:340px;width:100%;max-height:70vh;overflow:auto;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.3);box-sizing:border-box;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
+      '<h3 style="margin:0;font-family:\'Noto Serif TC\',serif;font-size:17px;color:var(--gold-deep);">📑 造句單字庫（'+list.length+'/'+LegoVault.MAX_WORDS+'）</h3>'+
+      '<button onclick="document.getElementById(\'lego-vault-modal\').remove()" style="border:none;background:none;font-size:20px;color:#B0A080;cursor:pointer;">✕</button>'+
+    '</div>'+rows+'</div>';
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
 
 function openBadge(){
   const s=window.GAME_ACCOUNT?GAME_ACCOUNT.getStars():0;
