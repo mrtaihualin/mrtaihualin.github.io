@@ -2672,6 +2672,25 @@ function rgOpenAsk() {
     .catch(function(){ btn.disabled=false; btn.textContent='送出問題 →'; alert('送出失敗，請稍後再試'); });
   };
 }
+
+// กด Enter: ต่อคำ/พยางค์ถัดไปถ้าเช็คจบแล้ว (ปุ่ม 下一字/下一個音節 โผล่อยู่) หรือกดเช็คคำตอบเลยถ้าใส่ครบแล้ว
+// วรรณยุกต์เป็นแค่ตัวเลือกเพิ่ม ไม่ต้องเลือกก็เช็ค/ไปต่อได้ปกติ — Lin 2026-07-06
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter')return;
+  var ae=document.activeElement;
+  if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))return; // เผื่อกำลังพิมพ์ในช่อง 我有問題 อยู่ ไม่ให้ไปชนกัน
+  var gameEl=document.getElementById('game');
+  if(!gameEl || gameEl.style.display==='none')return;
+  var _hm=document.getElementById('rg-howto-modal');
+  if(_hm && _hm.style.display==='flex')return;
+  if(document.getElementById('rg-ask-ov'))return;
+  var _bm=document.getElementById('badge-modal');
+  if(_bm && _bm.classList.contains('show'))return;
+  var nextBtn=document.getElementById('btn-next');
+  if(nextBtn && nextBtn.style.display!=='none' && nextBtn.offsetParent!==null){ nextBtn.click(); e.preventDefault(); return; }
+  var checkBtn=document.getElementById('btn-check');
+  if(checkBtn && checkBtn.style.display!=='none' && !checkBtn.disabled){ checkBtn.click(); e.preventDefault(); }
+});
 </script>
 </div><!-- /.v3-page -->
 <script src="shared.js?v=21"></script>
