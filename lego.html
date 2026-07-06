@@ -965,7 +965,7 @@ function legoRenderLoginCTA(){
       '<button onclick="var d=document.getElementById(\'lego-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>'+
     '</div>'+
     '<div id="lego-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">'+
-      '✅ 登入後可以：<br>💾 把你的進度和連續紀錄存起來<br>🧠 智慧複習，記住你學會了哪些句子<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接練你的弱點' +
+      '✅ 登入後可以：<br>💾 把你的進度和連續紀錄存起來<br>🔖 造句單字庫：把喜歡的單字存起來（最多15個）<br>🧠 智慧複習，記住你學會了哪些句子<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接練你的弱點' +
     '</div></div>';
 }
 function legoCtaLogin(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} if(window.READING_AUTH&&READING_AUTH.openLogin)READING_AUTH.openLogin(); }

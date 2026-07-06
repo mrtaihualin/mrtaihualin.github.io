@@ -222,8 +222,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .btn-secondary{background:#f0e8d8;color:#8b6310;}
 .btn-remember {background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;}
 
-.score-pop{position:fixed;top:26%;left:50%;transform:translateX(-50%);font-family:'Noto Serif TC',serif;font-weight:900;color:#d9a400;pointer-events:none;z-index:60;opacity:0;font-size:44px;animation:spop 1.3s cubic-bezier(.22,1,.36,1) forwards;}
-@keyframes spop{0%{opacity:0;transform:translate(-50%,10px) scale(.8);}20%{opacity:1;transform:translate(-50%,-8px) scale(1.08);}100%{opacity:0;transform:translate(-50%,-48px) scale(1);}}
+.score-pop{position:fixed;top:26%;left:50%;transform:translateX(-50%);font-family:'Noto Serif TC',serif;font-weight:900;color:#d9a400;pointer-events:none;z-index:60;opacity:0;font-size:44px;animation:spop 1.8s cubic-bezier(.22,1,.36,1) forwards;}
+/* ยืดเวลาเห็นคะแนนชัดๆ ให้นานพอ — เดิม fade ต่อเนื่องตลอดจนแทบไม่ทันอ่าน (Lin 2026-07-07): เพิ่มช่วง "ค้างเต็มดวง" 15%-65% ก่อนค่อยจางหาย */
+@keyframes spop{0%{opacity:0;transform:translate(-50%,10px) scale(.8);}15%{opacity:1;transform:translate(-50%,-8px) scale(1.08);}65%{opacity:1;transform:translate(-50%,-20px) scale(1.04);}100%{opacity:0;transform:translate(-50%,-48px) scale(1);}}
 
 .star-burst{position:fixed;top:50%;left:50%;pointer-events:none;z-index:70;opacity:0;font-size:90px;animation:sburst 2s ease forwards;}
 @keyframes sburst{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-20deg);}30%{opacity:1;transform:translate(-50%,-50%) scale(1.25) rotate(5deg);}60%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0deg);}100%{opacity:0;transform:translate(-50%,-70%) scale(.9);}}
@@ -2257,7 +2258,7 @@ function showRevealMulti(){
 function pop(t){
   var p=document.createElement('div');p.className='score-pop';p.textContent=t;
   document.body.appendChild(p);
-  setTimeout(function(){if(p.parentNode)p.parentNode.removeChild(p);},1350);
+  setTimeout(function(){if(p.parentNode)p.parentNode.removeChild(p);},1850);
 }
 
 // ════════════════════════════════════════════
@@ -2811,7 +2812,10 @@ function rgContAdvanceSegment(isLast){
 // พิมพ์ครบทุกพยางค์ของคำแล้วแบบไม่มีผิดครบ 3 เลยสักครั้ง (ถ้าผิดครบ 3 คำจะจบทันทีที่ rgContChar ไปแล้ว ไม่มาถึงจุดนี้) → ถามวรรณยุกต์ทุกพยางค์ที่มี ทีละพยางค์รวดเดียว
 function rgContStartToneQuizzes(){
   RG_CONT_TONE_Q=[];
-  sylList.forEach(function(s,i){ if(s.tone_name) RG_CONT_TONE_Q.push(i); });
+  // ระดับ 高級ไม่ต้องถามวรรณยุกต์ต่อท้ายแล้ว (เอาฟีเจอร์猜聲調ออกทั้งระดับ ตามที่ Lin ยืนยัน 2026-07-07) — ปล่อยคิวว่างไว้ ข้ามไปจบคำเลย
+  if(curLevel!=='高'){
+    sylList.forEach(function(s,i){ if(s.tone_name) RG_CONT_TONE_Q.push(i); });
+  }
   RG_CONT_TONE_IDX=0;
   rgContAskNextTone();
 }
@@ -3220,9 +3224,9 @@ function rgOpenAsk() {
   <div class="gs-divider"></div>
   <span class="gs-tab gs-active">⌨️ 打字練習</span>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
-  <div class="gs-divider"></div>
   <a class="gs-tab" href="word-order.html">🔀 語序遊戲</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="vault.html">🔖 單字庫</a>
 </div>

@@ -91,8 +91,9 @@ body.rg-modern-font .wo-tile,
 body.rg-modern-font .zh-hint,
 body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
 
-.score-pop{position:fixed;top:26%;left:50%;transform:translateX(-50%);font-family:'Noto Serif TC',serif;font-weight:900;color:#d9a400;pointer-events:none;z-index:60;opacity:0;font-size:40px;animation:wospop 1.2s cubic-bezier(.22,1,.36,1) forwards;}
-@keyframes wospop{0%{opacity:0;transform:translate(-50%,10px) scale(.8);}20%{opacity:1;transform:translate(-50%,-8px) scale(1.08);}100%{opacity:0;transform:translate(-50%,-46px) scale(1);}}
+.score-pop{position:fixed;top:26%;left:50%;transform:translateX(-50%);font-family:'Noto Serif TC',serif;font-weight:900;color:#d9a400;pointer-events:none;z-index:60;opacity:0;font-size:40px;animation:wospop 1.8s cubic-bezier(.22,1,.36,1) forwards;}
+/* ยืดเวลาเห็นคะแนนชัดๆ ให้นานพอ (Lin 2026-07-07): เพิ่มช่วง "ค้างเต็มดวง" ก่อนค่อยจางหาย */
+@keyframes wospop{0%{opacity:0;transform:translate(-50%,10px) scale(.8);}15%{opacity:1;transform:translate(-50%,-8px) scale(1.08);}65%{opacity:1;transform:translate(-50%,-20px) scale(1.04);}100%{opacity:0;transform:translate(-50%,-46px) scale(1);}}
 
 #end{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:26px 20px;}
 #end h2{font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10;}
@@ -828,7 +829,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     pop.className = 'score-pop';
     pop.textContent = text;
     document.body.appendChild(pop);
-    setTimeout(function(){ pop.remove(); }, 1300);
+    setTimeout(function(){ pop.remove(); }, 1850);
   }
 
   window.woHint = function(){
@@ -1048,9 +1049,9 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="gs-divider"></div>
   <a class="gs-tab" href="typing-game.html">⌨️ 打字練習</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
-  <div class="gs-divider"></div>
   <span class="gs-tab gs-active">🔀 語序遊戲</span>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="vault.html">🔖 單字庫</a>
 </div>
