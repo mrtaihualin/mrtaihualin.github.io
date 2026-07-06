@@ -47,8 +47,16 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="liff-config.js"></script>
   <script>
+    // 2026-07-06 修正：liff.login() 導回來後，網址上自己加的 ?s=token 不保證還在
+    // （LINE 官方自己也承認這個行為）→ 改成先把 token 存 localStorage 備份，
+    // 導回來後网址掉了就從 localStorage 撈回來，不會再變成「網址缺少學生代碼」
     var urlParams = new URLSearchParams(window.location.search);
     var studentToken = urlParams.get('s') || '';
+    if (studentToken) {
+      localStorage.setItem('clsLineLinkToken', studentToken);
+    } else {
+      studentToken = localStorage.getItem('clsLineLinkToken') || '';
+    }
     var statusEl = document.getElementById('statusText');
     var actionEl = document.getElementById('actionArea');
 
@@ -74,7 +82,8 @@
       }
       if (!liff.isLoggedIn()) {
         setStatus('請登入 LINE 以繼續…', 'wait');
-        liff.login({ redirectUri: window.location.href });
+        // 用不帶 query 的網址當 redirectUri（token 已經備份在 localStorage 了，不用靠網址帶回來）
+        liff.login({ redirectUri: window.location.origin + window.location.pathname });
         return; // 登入後 LINE 會導回這頁，重新執行 main()
       }
       setStatus('取得 LINE 身分中…', 'wait');
@@ -98,6 +107,7 @@
         document.getElementById('titleText').textContent = '✅ 連結成功！';
         document.getElementById('descText').textContent = '之後上課前 / 下課後，會自動收到這個 LINE 帳號的提醒訊息。';
         setStatus('可以關閉這個頁面了', 'ok');
+        localStorage.removeItem('clsLineLinkToken'); // 連結成功後清掉，避免殘留
       } catch (e) {
         setStatus('❌ 連結失敗：' + (e.message || e) + '（請檢查網路後重試）', 'err');
       }
