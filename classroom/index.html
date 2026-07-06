@@ -1023,24 +1023,6 @@ async function ensureStudentFolderShared(studentName, token) {
     return link;
   } catch(e) { return null; }
 }
-// 2026-07-06 新增：手動補分享（給舊學生用，例如「lulu」加進系統時還沒有自動分享，
-// 學生自己頁面的「📁 開啟我的 Google Drive 資料夾」按鈕就不會出現，一直要等到老師第一次上傳檔案才會補上）
-// 按這顆「🔗 補分享」不用等上傳，馬上補分享 + 補 folder_url，學生重新整理頁面就會看到按鈕了
-async function repairStudentFolderShare(token) {
-  const s = studentsCache[token];
-  if (!s) return;
-  const btn = document.getElementById('repair-' + token);
-  if (btn) { btn.disabled = true; btn.textContent = '補分享中…'; }
-  try {
-    const link = await ensureStudentFolderShared(s.name, token);
-    if (btn) { btn.disabled = false; btn.textContent = '🔗 補分享'; }
-    if (link) alert('✅ 補分享成功！請叫學生重新整理自己的頁面，「📁 開啟我的 Google Drive 資料夾」按鈕就會出現了。');
-    else alert('❌ 補分享失敗，請確認已連接 Google（右上角）後再試一次。');
-  } catch (e) {
-    if (btn) { btn.disabled = false; btn.textContent = '🔗 補分享'; }
-    alert('❌ 補分享失敗：' + (e.message || e));
-  }
-}
 // ── 手動上傳檔案到學生資料夾（透過 App，App 才看得到）──────────
 let uploadToken = null, uploadDest = '學習內容', droppedFiles = null;
 function openUploadModal(token) {
@@ -1337,7 +1319,7 @@ async function addStudent() {
     // 要等到「第一次上傳檔案」才會補（見 ensureStudentFolderShared 在上傳流程裡的呼叫）。
     // 這段期間學生自己的頁面「📁 開啟我的 Google Drive 資料夾」按鈕會因為抓不到 folder_url 而不出現（lulu 就是卡在這）。
     // 現在新增學生當下就直接分享＋寫入，之後新加的學生一開始就會有這顆按鈕。
-    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（可用「🔗 補分享」按鈕補）：', e); }
+    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
   } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
 }
 
@@ -1555,7 +1537,6 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
       '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
-      '<button class="btn-sm" id="repair-' + t + '" style="background:#7c3aed;color:#fff;" onclick="repairStudentFolderShare(\'' + t + '\')" title="舊學生沒有自動分享到，補一次分享 + 補學生頁的 Drive 按鈕">🔗 補分享</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
