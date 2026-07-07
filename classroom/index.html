@@ -1289,6 +1289,26 @@ async function saveMaterialLink(token) {
   loadMaterialLinks(token);
 }
 
+// 上課進度筆記（教師專用）— 存在 classroom_students.lesson_progress，學生頁面不會顯示
+async function saveLessonProgress(token) {
+  const t = token.replace(/'/g, '');
+  const ta = document.getElementById('progress-' + t);
+  const statusEl = document.getElementById('progressStatus-' + t);
+  if (!ta) return;
+  const val = ta.value;
+  if (statusEl) statusEl.textContent = '儲存中…';
+  const { error } = await sb.from('classroom_students').update({ lesson_progress: val }).eq('token', t);
+  if (error) {
+    if (statusEl) statusEl.textContent = '❌ 儲存失敗：' + error.message;
+    return;
+  }
+  if (studentsCache[t]) studentsCache[t].lesson_progress = val;
+  if (statusEl) {
+    statusEl.textContent = '✅ 已儲存';
+    setTimeout(function() { if (statusEl) statusEl.textContent = ''; }, 2500);
+  }
+}
+
 async function loadMaterialLinks(token) {
   const t = token.replace(/'/g, '');
   const el = document.getElementById('matList-' + t);
@@ -1642,6 +1662,14 @@ function selectStudent(token) {
         '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;flex:1;" onclick="saveMaterialLink(\'' + t + '\')">💾 儲存連結</button>' +
       '</div>' +
       '<div id="matList-' + t + '" style="margin-top:10px;"></div>' +
+    '</div>' +
+    '<div class="card" style="margin-top:12px;padding:14px;">' +
+      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📖 上課進度（教師專用，學生看不到）</div>' +
+      '<textarea id="progress-' + t + '" placeholder="例：拼音規則上到第3課，下次繼續聲調練習…" style="width:100%;min-height:70px;border-radius:8px;border:1px solid var(--border);padding:8px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;">' + escHtml(s.lesson_progress || '') + '</textarea>' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-top:8px;">' +
+        '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;" onclick="saveLessonProgress(\'' + t + '\')">💾 儲存進度</button>' +
+        '<span id="progressStatus-' + t + '" style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;"></span>' +
+      '</div>' +
     '</div>' +
     '<div id="stuInfo-' + t + '" style="margin-top:12px;"></div>';
 
