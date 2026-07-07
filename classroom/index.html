@@ -1159,6 +1159,99 @@ async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
 }
 
 // ============================================================
+// 同步舊檔案：掃描 Google Drive 學生資料夾，把「不是透過本網站上傳」的舊檔案
+// 補登記進 classroom_recordings，學生頁面「課堂資料下載」才看得到
+// 2026-07-07 新增（Lin 要求）：之前老師直接拖檔案進 Drive（沒有經過網站上傳按鈕）
+// 的舊筆記/資料，網站的學生頁面只讀 classroom_recordings 這張表，不會直接列 Drive
+// 資料夾內容，所以永遠不會出現 → 造成「Ling 看不到舊檔案」
+// ============================================================
+
+// 遞迴列出資料夾底下所有「檔案」(不含資料夾本身)，回傳 [{id,name,mimeType,webViewLink,size}]
+async function gdListFilesRecursive(folderId) {
+  let files = [];
+  let pageToken = '';
+  do {
+    const q = "'" + folderId + "' in parents and trashed=false";
+    const url = 'drive/v3/files?q=' + encodeURIComponent(q)
+      + '&fields=' + encodeURIComponent('nextPageToken,files(id,name,mimeType,webViewLink,size)')
+      + '&pageSize=1000'
+      + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : '');
+    const res = await gdApi(url, { method: 'GET' });
+    for (const f of (res.files || [])) {
+      if (f.mimeType === 'application/vnd.google-apps.folder') {
+        const sub = await gdListFilesRecursive(f.id);
+        files = files.concat(sub);
+      } else {
+        files.push(f);
+      }
+    }
+    pageToken = res.nextPageToken || '';
+  } while (pageToken);
+  return files;
+}
+
+// 同步單一學生：掃 Drive → 補登記進資料庫（已登記過的 file_id 不會重複加）→ 回傳新增幾筆
+async function syncDriveFilesForStudent(token) {
+  const s = studentsCache[token];
+  const name = s ? s.name : token;
+  const stuId = await gdGetStudentFolderId(name);
+  const driveFiles = await gdListFilesRecursive(stuId);
+  const { data: existing, error: exErr } = await sb.from('classroom_recordings').select('file_id').eq('token', token);
+  if (exErr) throw new Error('讀取現有紀錄失敗：' + exErr.message);
+  const existingIds = new Set((existing || []).map(function(r) { return r.file_id; }).filter(Boolean));
+  let added = 0;
+  for (const f of driveFiles) {
+    if (existingIds.has(f.id)) continue; // 已經登記過，跳過，不會重複
+    try { await gdShareAnyone(f.id); } catch (e) {} // 舊檔案可能還沒分享過，補分享一次確保學生打得開
+    const url = f.webViewLink || ('https://drive.google.com/file/d/' + f.id + '/view');
+    const sizeMB = f.size ? (f.size / 1048576).toFixed(1) : '';
+    await saveRecordingLink(token, f.name, f.id, url, sizeMB, null);
+    added++;
+  }
+  try { await ensureStudentFolderShared(name, token); } catch (e) {}
+  return added;
+}
+
+// 老師點單一學生的「🔄 同步舊檔」按鈕
+async function syncOneStudentClick(token, btn) {
+  const oldText = btn ? btn.textContent : '';
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '同步中…'; }
+    const added = await syncDriveFilesForStudent(token);
+    alert(added ? ('✅ 補登記了 ' + added + ' 個舊檔案，學生現在看得到了') : 'ℹ️ 沒有需要補登記的檔案（Drive 裡的檔案都已經在清單裡了）');
+  } catch (e) {
+    alert('⚠️ 同步失敗：' + (e.message || e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = oldText || '🔄 同步舊檔'; }
+  }
+}
+
+// 老師點「🔄 同步全部學生」按鈕：逐一掃描每位學生的 Drive 資料夾
+async function syncDriveFilesForAllStudents() {
+  const tokens = Object.keys(studentsCache);
+  if (!tokens.length) { alert('目前沒有學生資料'); return; }
+  if (!confirm('要掃描全部 ' + tokens.length + ' 位學生的 Google Drive 資料夾，補登記舊檔案嗎？\n（依檔案數量可能要一點時間，過程中請不要關閉頁面）')) return;
+  showUploadFloat();
+  let totalAdded = 0;
+  const failedNames = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const s = studentsCache[token];
+    const name = s ? s.name : token;
+    setUploadStatus('🔄 同步中 (' + (i + 1) + '/' + tokens.length + ')：' + name + '…');
+    try {
+      totalAdded += await syncDriveFilesForStudent(token);
+    } catch (e) {
+      failedNames.push(name + '（' + (e.message || e) + '）');
+    }
+  }
+  hideUploadFloat();
+  let msg = '✅ 同步完成，共補登記 ' + totalAdded + ' 個檔案';
+  if (failedNames.length) msg += '\n\n⚠️ 以下學生同步失敗：\n' + failedNames.join('\n');
+  alert(msg);
+}
+
+// ============================================================
 // 教材連結（老師貼連結 → 存進 classroom_recordings → 學生「課堂資料下載」自動出現）
 // 如果是自己網站的頁面（mrtaihualin.com／mrtaihualin.github.io）→ 自動加上
 // ?s=token&n=學生姓名（base64），讓 拼音規則上課用.html 那類頁面知道「這是哪位學生」
@@ -1537,6 +1630,7 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
       '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
+      '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="syncOneStudentClick(\'' + t + '\', this)">🔄 同步舊檔</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
@@ -1825,6 +1919,7 @@ async function renderTeacherView() {
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
       '<button class="btn-add-student" onclick="openAddStudentModal()">➕ 新增學生</button>' +
+      '<button class="btn-add-student" style="background:#0f766e;margin-top:8px;" onclick="syncDriveFilesForAllStudents()">🔄 同步全部學生的 Drive 舊檔案</button>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
