@@ -2070,10 +2070,10 @@ async function loadStudentReceipts(token) {
     try { dismissed = JSON.parse(localStorage.getItem('dismissedReceipts_' + token) || '{}'); } catch (e) {}
     var html = receipts.filter(function(r) { return !dismissed[r.url]; }).map(function(r) {
       var safeUrl = (r.url || '').replace(/'/g, "\\'");
-      return '<div style="display:flex;align-items:center;gap:10px;background:#dcfce7;border:1px solid #86efac;border-radius:11px;padding:11px 14px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;">' +
+      return '<div style="display:flex;align-items:center;gap:10px;background:var(--gold-light);border:1px solid var(--gold-bright);border-radius:11px;padding:11px 14px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;">' +
         '<span style="font-size:1.2rem;">🧾</span>' +
-        '<a href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener" style="flex:1;color:#15803d;font-weight:700;font-size:0.88rem;text-decoration:none;">收據已開立，點此下載</a>' +
-        '<button onclick="dismissReceipt(\'' + token + '\',\'' + safeUrl + '\',this)" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.05rem;color:#15803d;opacity:0.6;padding:2px 6px;">✕</button>' +
+        '<a href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener" style="flex:1;color:var(--gold-deep);font-weight:700;font-size:0.88rem;text-decoration:none;">收據已開立，點此下載</a>' +
+        '<button onclick="dismissReceipt(\'' + token + '\',\'' + safeUrl + '\',this)" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.05rem;color:var(--gold-deep);opacity:0.6;padding:2px 6px;">✕</button>' +
       '</div>';
     }).join('');
     el.innerHTML = html;
@@ -2378,7 +2378,7 @@ async function loadStudentNextClass(token) {
     if (error) { el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前無法讀取課表（' + error.message + '）</div>'; return; }
     if (!data || !data.length) {
       el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前沒有排定下一堂課，如需安排請聯絡老師。</div>' +
-        '<a class="meet-btn" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="margin-top:10px;background:#06C755;">💬 聯絡老師</a>';
+        '<a class="meet-btn" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="margin-top:10px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));">💬 聯絡老師</a>';
       nextClassCtx = null;
       return;
     }
@@ -2403,7 +2403,7 @@ async function loadStudentNextClass(token) {
           ? '<button class="btn-sm" style="background:#dc2626;color:#fff;" onclick="requestCancelClass()">❌ 申請取消這堂課</button>'
           : '<span style="font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;align-self:center;">⚠️ 距離上課不到 24 小時，無法線上取消，請直接聯絡老師</span>') +
         '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;" onclick="openClassRequestModal()">🔄 申請改期</button>' +
-        '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:#06C755;color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
+        '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
       '</div>' +
       classRequestSameWarn();
   } catch (e) {
@@ -3482,8 +3482,8 @@ async function checkStudentSlipStatus(token) {
   if (!msg) return;
   var dismissKey = 'dismissedStatus_' + token + '_' + p.status + '_' + (p.receipt_no || '');
   try { if (localStorage.getItem(dismissKey)) return; } catch(e) {}
-  var color = p.status === 'rejected' ? '#f5ece0' : p.status === 'done' ? '#dcfce7' : '#fef3c7';
-  var textColor = p.status === 'rejected' ? '#5c5148' : p.status === 'done' ? '#15803d' : '#92400e';
+  var color = p.status === 'rejected' ? '#f5ece0' : p.status === 'done' ? 'var(--gold-light)' : '#fef3c7';
+  var textColor = p.status === 'rejected' ? '#5c5148' : p.status === 'done' ? 'var(--gold-deep)' : '#92400e';
   el.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;background:' + color + ';border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + textColor + ';font-weight:600;margin-bottom:12px;">' +
     '<div style="flex:1;">' + msg + '<br><span style="font-weight:400;font-size:0.78rem;">' + p.course_label + '</span></div>' +
     '<button onclick="dismissSlipStatus(\'' + dismissKey + '\')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1rem;color:' + textColor + ';opacity:0.5;padding:0 2px;line-height:1;flex-shrink:0;">✕</button>' +

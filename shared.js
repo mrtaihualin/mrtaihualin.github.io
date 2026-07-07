@@ -871,7 +871,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     line: '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.07 9.436-6.971C23.176 14.393 24 12.458 24 10.314"/></svg>'
   };
   // สีแบรนด์ของไอคอน (ตัดสีให้ไม่ทองจนโมโนโทน)
-  var _snsColor = { facebook:'#1877F2', youtube:'#FF0000', instagram:'#E1306C', tiktok:'#111111', threads:'#111111', line:'#06C755' };
+  var _snsColor = { facebook:'#1877F2', youtube:'#FF0000', instagram:'#E1306C', tiktok:'#111111', threads:'#111111', line:'#C8973A' };
   // การ์ดลิงก์ SNS — ชิปขาวขอบทอง + ไอคอนสีแบรนด์ (ตัดสี แต่ยังเข้าธีม)
   var _snsRow = function(url,bg,ic,name,sub,ch){
     return '<a href="'+url+'" target="_blank" rel="noopener" onclick="window.gtag&&gtag(\'event\',\'sns_click\',{ch:\''+ch+'\'})" '+
@@ -913,7 +913,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     </div>
     <div class="modal-body">
       <div class="contact-grid" style="display:flex;flex-direction:column;gap:9px;">
-        ${_infoCard(_snsIcon.line, 'LINE', '點此加入 LINE 聯絡', 'https://lin.ee/yVBgvywy', '#06C755')}
+        ${_infoCard(_snsIcon.line, 'LINE', '點此加入 LINE 聯絡', 'https://lin.ee/yVBgvywy', '#C8973A')}
         <div style="display:flex;align-items:stretch;gap:8px;">
           <div style="flex:1;">${_infoCard(_miscIcon.email, '電子郵件', 'mr.taihualin@gmail.com', 'mailto:mr.taihualin@gmail.com')}</div>
           <button onclick="navigator.clipboard.writeText('mr.taihualin@gmail.com').then(function(){var b=document.getElementById('copy-email-btn');if(b){b.textContent='✅ 已複製';setTimeout(function(){b.textContent='複製';},2000);}}).catch(function(){prompt('複製此 Email：','mr.taihualin@gmail.com');})" id="copy-email-btn" style="flex-shrink:0;padding:0 14px;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));color:#5C4410;border:1px solid rgba(200,151,58,0.32);border-radius:12px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 4px rgba(140,100,20,0.05);">複製</button>
@@ -956,7 +956,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
         ${_snsRow('https://www.instagram.com/mrtaihua','linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)','📷','Instagram','每日一字・學習花絮','instagram')}
         ${_snsRow('https://www.tiktok.com/@mrtaihua','#000','🎵','TikTok','短影音・快速學泰語','tiktok')}
         ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','#000','@','Threads','學習筆記・互動討論','threads')}
-        ${_snsRow('https://lin.ee/yVBgvywy','#06C755','💬','LINE','預約免費體驗課・私訊諮詢','line')}
+        ${_snsRow('https://lin.ee/yVBgvywy','#C8973A','💬','LINE','預約免費體驗課・私訊諮詢','line')}
       </div>
     </div>
   </div>
