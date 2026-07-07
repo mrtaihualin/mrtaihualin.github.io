@@ -1640,7 +1640,7 @@ function selectStudent(token) {
       '<div class="stu-acc-avatar">' + initial + '</div>' +
       '<span class="stu-panel-name">' + s.name + '</span>' +
     '</div>' +
-    '<button class="btn-start-class" onclick="enterClass(\'' + t + '\')">📹 進入課堂（Google Meet）</button>' +
+    '<button class="btn-start-class" onclick="enterClass(\'' + t + '\')">📹 進入課堂</button>' +
     '<button class="btn-start-class" onclick="recordClass(\'' + t + '\')">🔴 開始錄影</button>' +
     '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
     '<div class="stu-acc-actions">' +
@@ -1653,9 +1653,9 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
-    '<button class="btn-open-note" onclick="openStudentNotesDoc(\'' + t + '\')">📝 開啟課堂筆記（Google 文件）</button>' +
+    '<button class="btn-open-note" onclick="openStudentNotesDoc(\'' + t + '\')">📝 開啟課堂筆記</button>' +
     '<div class="card" style="margin-top:12px;padding:14px;">' +
-      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📚 教材連結（存到學生「課堂資料下載」）</div>' +
+      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📚 教材連結</div>' +
       '<input id="matLabel-' + t + '" placeholder="教材名稱（例：拼音規則）" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);margin-bottom:6px;box-sizing:border-box;">' +
       '<input id="matUrl-' + t + '" placeholder="貼上連結 URL（https://…）" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);margin-bottom:8px;box-sizing:border-box;">' +
       '<div style="display:flex;gap:8px;">' +
@@ -1664,7 +1664,7 @@ function selectStudent(token) {
       '<div id="matList-' + t + '" style="margin-top:10px;"></div>' +
     '</div>' +
     '<div class="card" style="margin-top:12px;padding:14px;">' +
-      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📖 上課進度（教師專用，學生看不到）</div>' +
+      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📖 上課進度</div>' +
       '<textarea id="progress-' + t + '" placeholder="例：拼音規則上到第3課，下次繼續聲調練習…" style="width:100%;min-height:70px;border-radius:8px;border:1px solid var(--border);padding:8px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;">' + escHtml(s.lesson_progress || '') + '</textarea>' +
       '<div style="display:flex;align-items:center;gap:10px;margin-top:8px;">' +
         '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;" onclick="saveLessonProgress(\'' + t + '\')">💾 儲存進度</button>' +
