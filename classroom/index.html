@@ -760,7 +760,7 @@ async function fetchStudents() {
   const { data, error } = await sb.from('classroom_students').select('*').order('created_at');
   if (error) { console.error(error); return; }
   studentsCache = {};
-  (data || []).forEach(r => { studentsCache[r.token] = { name: r.name, meet: normalizeMeet(r.meet) }; });
+  (data || []).forEach(r => { studentsCache[r.token] = { name: r.name, meet: normalizeMeet(r.meet), lesson_progress: r.lesson_progress || '' }; });
 }
 
 // ============================================================
