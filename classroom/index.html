@@ -1858,6 +1858,16 @@ async function persistNote(token, silent) {
 }
 
 // 老師：頂部「快上完」提醒橫幅（一次掃全部學生，只用 2 個查詢）
+// 課程快上完提醒：多位學生時每張輪流顯示（自動切換），每張都可按 ✕ 個別關閉
+// 關閉後記住當時的剩餘堂數；之後堂數有變動（續課或又用掉）才會重新跳出來提醒
+var lowQuotaList = [];
+var lowQuotaIdx = 0;
+var lowQuotaRotateTimer = null;
+
+function getDismissedLowQuota() {
+  try { return JSON.parse(localStorage.getItem('dismissedLowQuota') || '{}'); } catch (e) { return {}; }
+}
+
 async function loadLowQuotaBanner() {
   var el = document.getElementById('lowQuotaBanner');
   if (!el) return;
@@ -1867,14 +1877,52 @@ async function loadLowQuotaBanner() {
     var byP = {}, byA = {};
     pays.forEach(function(p) { (byP[p.token] = byP[p.token] || []).push(p); });
     atts.forEach(function(a) { (byA[a.token] = byA[a.token] || []).push(a); });
+    var dismissed = getDismissedLowQuota();
     var low = [];
     Object.keys(byP).forEach(function(tk) {
       var q = computeCurrentCourse(byP[tk], byA[tk] || []);
-      if (q.hasCourse && q.remain <= 1) { var s = studentsCache[tk]; low.push((s ? s.name : tk) + '（剩 ' + (q.remain < 0 ? 0 : q.remain) + ' 堂）'); }
+      if (q.hasCourse && q.remain <= 1) {
+        var remain = q.remain < 0 ? 0 : q.remain;
+        if (dismissed[tk] === remain) return; // 這個堂數已經關過提醒了，狀況沒變就不再顯示
+        var s = studentsCache[tk];
+        low.push({ token: tk, name: s ? s.name : tk, remain: remain });
+      }
     });
-    if (!low.length) { el.innerHTML = ''; return; }
-    el.innerHTML = '<div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">⏰ 課程快上完提醒：' + low.join('、') + ' — 記得提醒續課</div>';
+    lowQuotaList = low;
+    lowQuotaIdx = 0;
+    renderLowQuotaBanner();
   } catch (e) {}
+}
+
+function renderLowQuotaBanner() {
+  var el = document.getElementById('lowQuotaBanner');
+  if (!el) return;
+  if (lowQuotaRotateTimer) { clearInterval(lowQuotaRotateTimer); lowQuotaRotateTimer = null; }
+  if (!lowQuotaList.length) { el.innerHTML = ''; return; }
+  if (lowQuotaIdx >= lowQuotaList.length) lowQuotaIdx = 0;
+  var item = lowQuotaList[lowQuotaIdx];
+  var counter = lowQuotaList.length > 1 ? ' <span style="opacity:0.65;font-weight:400;">(' + (lowQuotaIdx + 1) + '/' + lowQuotaList.length + ')</span>' : '';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">' +
+    '<span style="flex:1;">⏰ 課程快上完提醒：' + escHtml(item.name) + '（剩 ' + item.remain + ' 堂） — 記得提醒續課' + counter + '</span>' +
+    '<button onclick="dismissLowQuota(\'' + item.token + '\',' + item.remain + ')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#b45309;opacity:0.6;padding:2px 6px;flex-shrink:0;">✕</button>' +
+  '</div>';
+  if (lowQuotaList.length > 1) {
+    lowQuotaRotateTimer = setInterval(function() {
+      lowQuotaIdx = (lowQuotaIdx + 1) % lowQuotaList.length;
+      renderLowQuotaBanner();
+    }, 5000);
+  }
+}
+
+function dismissLowQuota(token, remain) {
+  try {
+    var dismissed = getDismissedLowQuota();
+    dismissed[token] = remain;
+    localStorage.setItem('dismissedLowQuota', JSON.stringify(dismissed));
+  } catch (e) {}
+  lowQuotaList = lowQuotaList.filter(function(x) { return x.token !== token; });
+  if (lowQuotaIdx >= lowQuotaList.length) lowQuotaIdx = 0;
+  renderLowQuotaBanner();
 }
 
 // 老師：選到某學生時，顯示剩餘堂數 + 繳費記錄
