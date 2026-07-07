@@ -1630,7 +1630,6 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-preview" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
       '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
-      '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="syncOneStudentClick(\'' + t + '\', this)">🔄 同步舊檔</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
@@ -1919,7 +1918,6 @@ async function renderTeacherView() {
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
       '<button class="btn-add-student" onclick="openAddStudentModal()">➕ 新增學生</button>' +
-      '<button class="btn-add-student" style="background:#0f766e;margin-top:8px;" onclick="syncDriveFilesForAllStudents()">🔄 同步全部學生的 Drive 舊檔案</button>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
@@ -3013,13 +3011,13 @@ async function rejectSlip(id) {
 // 注意：靜態網站 → 帳號會出現在網頁原始碼，任何人都看得到（與公開的聯絡 Email 同性質）
 // QR 圖片：放在 assets/pay-qr/（檔名見該資料夾 README）。沒放檔也不會壞，會自動隱藏
 const BANK_INFO = {
-  NTD: { title: '🇹🇼 台灣銀行帳戶（匯 NTD）', qr: 'assets/pay-qr/ntd-ctbc.jpg', lines: [
+  NTD: { title: '🇹🇼 台灣銀行帳戶（匯 NTD）', qr: '../assets/pay-qr/ntd-ctbc.jpg', lines: [
     '銀行：中國信託 (822)',
     '分行：城中分行 (0107)',
     '帳號：107540587096',
     '戶名：林泰華'
   ] },
-  THB: { title: '🇹🇭 PromptPay（匯 THB）', qr: 'assets/pay-qr/thb-promptpay.jpg', lines: [
+  THB: { title: '🇹🇭 PromptPay（匯 THB）', qr: '../assets/pay-qr/thb-promptpay.jpg', lines: [
     'PromptPay：掃下方 QR 轉帳',
     '戶名：นาย ไท่หัว หลิน（林泰華）',
     '帳號：xxx-x-x7358-x',
@@ -3027,7 +3025,7 @@ const BANK_INFO = {
   ] }
 };
 // Wise（國際匯款，兩種幣別都可用）
-const WISE_INFO = { tag: '@taihual7', qr: 'assets/pay-qr/wise.jpg' };
+const WISE_INFO = { tag: '@taihual7', qr: '../assets/pay-qr/wise.jpg' };
 
 // 課程方案：NTD 價依 pricing.html#pricing（權威）；THB 沿用舊值，請老師確認
 const COURSES = [
