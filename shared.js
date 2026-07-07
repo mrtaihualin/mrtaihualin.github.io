@@ -1640,3 +1640,60 @@ window.deleteFBComment = function(postId, idx) {
     window.stopYTVideo = function(){ clearPoll(); return origStopYT.apply(this, arguments); };
   }
 })();
+
+// ===================================================================
+// 📱 โหมด "เหมือน fullscreen" เฉพาะหน้าเกม — Lin 2026-07-07
+// ปัญหา: หน้าเกม (typing-game/reading-game/tone-finder/word-order/vault) มี nav บนสุด (.site-nav)
+// + หัวข้อหน้า (.page-header) + แถบหมวดหมู่ (.page-strip) + แถบสลับเกม (#game-switcher) ล้อมรอบเกม
+// บนมือถือจอเล็กกินพื้นที่เยอะ ดูอึดอัด ทับกัน (ตามภาพที่ Lin ส่งมา)
+// เบราว์เซอร์มือถือไม่ให้เว็บสั่ง fullscreen จริงเองอัตโนมัติได้ (ต้องมาจากผู้ใช้กด) และ iPhone/Safari
+// ไม่รองรับ fullscreen API กับ div ทั่วไปเลย (รองรับแค่วิดีโอ) — ทางแก้คือ "ปลอมเป็น fullscreen" ด้วย CSS:
+// กดปุ่มแล้วซ่อนทุกอย่างที่ไม่ใช่ตัวเกม เหลือแต่การ์ดเกม+คีย์บอร์ด เต็มจอ ใช้ได้ทั้งแนวตั้ง/แนวนอน ทุกเบราว์เซอร์รวม iPhone
+// ทำงานเฉพาะหน้าที่มี #game-switcher เท่านั้น (หน้าอื่นในเว็บไม่กระทบ) — จำสถานะไว้ด้วย localStorage
+// ===================================================================
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      var gs = document.getElementById('game-switcher');
+      if (!gs) return; // เอาแค่หน้าเกมจริงๆ (มี #game-switcher) — หน้าอื่นในเว็บไม่กระทบ
+
+      var KEY = 'rg_fake_fullscreen';
+      var on = false;
+      try { on = localStorage.getItem(KEY) === '1'; } catch (e) {}
+
+      var style = document.createElement('style');
+      style.textContent =
+        '.rg-fs-fab{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0));z-index:100000;width:42px;height:42px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;}' +
+        '.rg-fs-fab:active{transform:scale(.92);}' +
+        /* โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม — ใช้ !important เพราะบางอันมี inline style ล็อกไว้ */
+        'body.rg-fake-fullscreen .site-nav,' +
+        'body.rg-fake-fullscreen .page-strip,' +
+        'body.rg-fake-fullscreen .page-header,' +
+        'body.rg-fake-fullscreen #game-switcher,' +
+        'body.rg-fake-fullscreen .floating-qr,' +
+        'body.rg-fake-fullscreen #vault-hero' +
+        '{display:none !important;}' +
+        'body.rg-fake-fullscreen{padding-bottom:0 !important;overflow-y:auto;}' +
+        'body.rg-fake-fullscreen .v3-page{padding-top:6px !important;}';
+      document.head.appendChild(style);
+
+      var fab = document.createElement('button');
+      fab.type = 'button';
+      fab.className = 'rg-fs-fab';
+      fab.setAttribute('aria-label', '全螢幕模式');
+      function renderFab() { fab.textContent = on ? '✕' : '⛶'; fab.title = on ? '離開全螢幕模式' : '全螢幕模式（隱藏其他選單）'; }
+      function applyState() {
+        document.body.classList.toggle('rg-fake-fullscreen', on);
+        renderFab();
+        try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
+      }
+      fab.onclick = function () { on = !on; applyState(); };
+      document.body.appendChild(fab);
+      applyState();
+    } catch (e) {}
+  });
+})();
