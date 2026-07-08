@@ -873,6 +873,16 @@ function gdGetToken(forceConsent) {
     gdTokenClient.requestAccessToken({ prompt: forceConsent ? 'consent' : '', hint: 'mr.taihualin@gmail.com' });
   });
 }
+// 2026-07-08：在「使用者剛點擊」的當下就把 Google 授權（含 calendar.events / drive.file / documents 三個 scope）
+// 一次補齊，避免之後在 async 深處才 forceConsent 時彈窗被瀏覽器當成「非使用者操作」而封鎖。
+// 這是「確認收款卻卡住」的根本原因之一（舊 token 只有 calendar.readonly）。
+async function ensureGoogleReady() {
+  await gdGetToken(); // 先取一次（靜默或首次同意）
+  var sc = gdTokenScopes || '';
+  var missing = !sc || sc.indexOf('calendar') === -1 || sc.indexOf('drive') === -1 || sc.indexOf('documents') === -1;
+  if (missing) { await gdGetToken(true); } // 缺 scope（含舊 token 不知道 scope 的情況）→ 趁點擊手勢還在，強制補權限
+  return true;
+}
 async function gdApi(path, opts) {
   const token = await gdGetToken();
   const headers = Object.assign({ Authorization: 'Bearer ' + token }, (opts && opts.headers) || {});
@@ -1814,7 +1824,9 @@ async function saveStudentEdit() {
   }
 
   // Step 2：Drive 那邊沒問題了（或姓名根本沒改）→ 才更新 Supabase
-  const { error } = await sb.from('classroom_students').update({ name: newName, meet: newMeet }).eq('token', editingToken);
+  // 2026-07-08：老師手動填了 Meet 連結 = 等於確認開通 → 一併把 setup_status 設成 confirmed，
+  // 否則學生頁的閘門（只看 confirmed）會讓學生還是進不去（這是之前卡住的第二個原因）。
+  const { error } = await sb.from('classroom_students').update({ name: newName, meet: newMeet, setup_status: 'confirmed' }).eq('token', editingToken);
   saveBtn.disabled = false; saveBtn.textContent = '儲存';
   if (error) {
     if (nameChanged) {
@@ -1829,6 +1841,37 @@ async function saveStudentEdit() {
   const dd = document.getElementById('stuDropdown');
   if (dd) dd.value = editingToken;
   selectStudent(editingToken); // 改完馬上刷新右邊的學生面板，姓名/連結立刻顯示新的
+}
+
+// 2026-07-08：一鍵補上「已付款、已確認，但 Meet 連結還沒建好」的學生的課堂連結。
+// 用於 Meet 自動建立失敗（例如 Google 授權過期）後的補救，讓學生頁的「課堂連結準備中」變成可用連結。
+async function repairMeet(token) {
+  var s = studentsCache[token];
+  if (!s) return;
+  if (!confirm('要為「' + s.name + '」建立課堂 Meet 連結嗎？（會同時把學生設為已開通）')) return;
+  try {
+    await ensureGoogleReady();
+    var meet = await createMeetLinkForStudent(s.name, {
+      startDate: s.pending_start_date, classTime: s.pending_class_time, recurring: !!s.pending_recurring
+    });
+    var res = await sb.from('classroom_students').update({ meet: meet, setup_status: 'confirmed' }).eq('token', token);
+    if (res.error) { alert('⚠️ Meet 建好了但寫入資料庫失敗：' + res.error.message); return; }
+    s.meet = meet; s.setup_status = 'confirmed';
+    // Drive 資料夾 best-effort（跟確認收款時一樣，缺就補）
+    try {
+      await gdGetStudentSubfolderId(s.name, '學習內容');
+      await gdGetStudentSubfolderId(s.name, '影片');
+      var rf = await gdGetStudentSubfolderId(s.name, '課表 & 收據');
+      try { await gdShareAnyone(rf); } catch (e) {}
+      try { await createBlankTimetable(s.name, token, rf); } catch (e) {}
+      try { await ensureStudentFolderShared(s.name, token); } catch (e) {}
+    } catch (e) { console.warn('補建資料夾失敗（可日後補）：', e); }
+    alert('✅ 已建立課堂連結，學生頁已開通！');
+    await refreshStudentList();
+    selectStudent(token);
+  } catch (e) {
+    alert('❌ 建立失敗：' + (e.message || e) + '\n請確認已用 Google 登入授權後再試一次。');
+  }
 }
 
 async function deleteStudent(token) {
@@ -1986,6 +2029,7 @@ function selectStudent(token) {
       '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
+      (!s.meet ? '<button class="btn-sm" style="background:#b45309;color:#fff;" onclick="repairMeet(\'' + t + '\')">🔧 補課堂連結</button>' : '') +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
     '</div>' +
     '<button class="btn-open-note" onclick="openStudentNotesDoc(\'' + t + '\')">📝 開啟課堂筆記</button>' +
@@ -2434,7 +2478,9 @@ async function renderStudentView() {
   if (token) studentsCache[token] = student; // 讓 openSlipModalLocked() 等函式能透過 studentsCache 拿到 pending_* 資料
   var sInitial = student.name ? student.name.charAt(0) : '?';
   document.getElementById('studentNameDisplay').textContent = '';
-  const isPending = student.setup_status === 'pending' || !student.meet;
+  // 2026-07-08：閘門只看「老師是否已確認收款」(setup_status === 'confirmed')，不再用 meet 是否存在判斷。
+  // 這樣付款已確認的學生「一定」看得到完整課堂頁，就算 Meet 連結還沒建好也不會被鎖回繳費頁（RELIABILITY FIRST）。
+  const isPending = student.setup_status !== 'confirmed';
 
   if (isPending) {
     renderBeforeJoiningView(token, student, sInitial);
@@ -2455,8 +2501,11 @@ async function renderStudentView() {
     buildCourseSummaryCard(student) +
     '<div class="card">' +
       '<h2>📹 進入課堂</h2>' +
-      '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
-      '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>' +
+      (student.meet
+        ? '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
+          '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>'
+        : '<div class="meet-btn" style="opacity:1;cursor:default;background:var(--gold-light);color:var(--gold-deep);">' + meetSVG + ' 課堂連結準備中…</div>' +
+          '<p class="meet-link-text">老師正在整理你的課堂連結，稍後重新整理就會看到（太久沒出現可用 LINE 提醒老師）</p>') +
     '</div>' +
     '<div class="card" id="nextClassCard">' +
       '<h2>📅 下一堂課</h2>' +
@@ -3489,23 +3538,33 @@ async function generateAndUploadReceipt(p, v) {
 // 學生付款前老師「入班連結」建立的學生 setup_status = 'pending'、meet 是空的，
 // 完全沒有建立 Drive 資料夾／Google Meet／行事曆。這裡在老師第一次「確認收款」時才補做這一切
 // （只做一次；已經 confirmed 過的學生不會重複建立），重用跟「新增學生」完全一樣的既有邏輯。
+// 2026-07-08 重寫（RELIABILITY FIRST）：
+// 「解鎖學生」= 寫一行資料庫（setup_status='confirmed'），這一步幾乎不可能失敗，且不依賴 Google。
+// 「建立 Meet 連結」= 依賴 Google，可能失敗 → 但★絕不能因此讓已付款的學生卡在繳費頁。
+// 所以：不論 Meet 成功與否，都一定把 setup_status 設成 confirmed；Meet 失敗只是 meet 先留空，
+// 學生頁會顯示「課堂連結準備中」，老師再用「🔧 補課堂連結」一鍵補上即可。
+// 回傳 { ok, meet, meetError, dbError }
 async function runDeferredStudentSetup(token, name) {
-  var s = studentsCache[token];
-  if (!s || s.setup_status !== 'pending') return; // 已經 confirmed 過了，不用再做一次
+  var s = studentsCache[token] || {};
+  if (s.setup_status === 'confirmed' && s.meet) return { ok: true, already: true };
 
-  var meet;
-  try {
-    meet = await createMeetLinkForStudent(name, {
-      startDate: s.pending_start_date, classTime: s.pending_class_time, recurring: !!s.pending_recurring
-    });
-  } catch (e) {
-    alert('⚠️ 確認收款成功，但自動建立 Google Meet 連結失敗：' + (e.message || e) + '\n請稍後到學生列表手動「✏️」補上 Meet 連結，或再確認一次。');
-    return;
+  var meet = s.meet || null, meetError = null;
+  if (!meet) {
+    try {
+      meet = await createMeetLinkForStudent(name, {
+        startDate: s.pending_start_date, classTime: s.pending_class_time, recurring: !!s.pending_recurring
+      });
+    } catch (e) { meetError = e; }
   }
-  var { error } = await sb.from('classroom_students').update({ meet: meet, setup_status: 'confirmed' }).eq('token', token);
-  if (error) { alert('⚠️ Meet 連結建立成功，但寫入資料庫失敗：' + error.message); return; }
 
-  // 跟「新增學生」一模一樣的 Drive 資料夾建立流程（學習內容／影片／課表 & 收據 + 空白課表 + 分享）
+  // ★ 一定解鎖：不論 Meet 有沒有建成功，都把學生設為 confirmed（Meet 有就一起寫）
+  var upd = { setup_status: 'confirmed' };
+  if (meet) upd.meet = meet;
+  var res = await sb.from('classroom_students').update(upd).eq('token', token);
+  if (res.error) return { ok: false, dbError: res.error, meetError: meetError };
+  if (studentsCache[token]) { studentsCache[token].setup_status = 'confirmed'; if (meet) studentsCache[token].meet = meet; }
+
+  // Drive 資料夾（best-effort，任何一步失敗都不影響「已解鎖」這個結果）
   try {
     await gdGetStudentSubfolderId(name, '學習內容');
     await gdGetStudentSubfolderId(name, '影片');
@@ -3514,6 +3573,8 @@ async function runDeferredStudentSetup(token, name) {
     try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
     try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
   } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
+
+  return { ok: true, meet: meet, meetError: meetError };
 }
 
 async function approveSlip() {
@@ -3536,10 +3597,16 @@ async function approveSlip() {
   }).eq('id', slipId);
   if (res.error) { btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據'; alert('儲存失敗：' + res.error.message); return; }
 
-  // 這位學生如果還是「入班前 / 未建立資源」狀態 → 這是第一次確認收款，先把 Meet／Drive 補齊
+  // 第一次確認收款 → 建立 Meet／Drive 並解鎖學生。
+  // runDeferredStudentSetup 已保證「不論 Meet 成敗都會把學生設成 confirmed（解鎖）」，
+  // 所以這裡不會再出現「開了收據卻卡在繳費頁」的情況。Meet 失敗只需之後一鍵補上。
+  var setupResult = null;
   if (slip.token && slip.student_name) {
     btn.textContent = '建立課堂資源中…';
-    try { await runDeferredStudentSetup(slip.token, slip.student_name); } catch (e) { console.warn('補建課堂資源失敗：', e); }
+    try { await ensureGoogleReady(); } catch (e) { /* 授權沒完成也照樣往下：學生仍會被解鎖，只是 meet 先留空 */ }
+    try {
+      setupResult = await runDeferredStudentSetup(slip.token, slip.student_name);
+    } catch (e) { console.warn('補建課堂資源失敗：', e); setupResult = { ok: false, meetError: e }; }
   }
 
   // 產生收據檔到學生「收據」資料夾
@@ -3552,9 +3619,12 @@ async function approveSlip() {
   btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據';
   document.getElementById('slipApprovalModal').classList.remove('open');
   pendingSlipId = null;
+  var meetWarn = (setupResult && setupResult.meetError)
+    ? '\n\n⚠️ 課堂 Meet 連結自動建立失敗，但學生已解鎖（連結先留空）。\n請在學生面板按「🔧 補課堂連結」補上（學生頁目前顯示「課堂連結準備中」）。'
+    : '';
   alert('✅ 已確認！' + (receipt
     ? '\n收據已存到學生「課表 & 收據」資料夾\n編號：' + receipt.receiptNo
-    : '\n（收據檔產生失敗，請確認已用 Google 登入授權）'));
+    : '\n（收據檔產生失敗，請確認已用 Google 登入授權）') + meetWarn);
   await loadPendingSlips();
   loadLowQuotaBanner();
   await refreshStudentList();
