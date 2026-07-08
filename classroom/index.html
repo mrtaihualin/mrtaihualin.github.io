@@ -694,39 +694,18 @@
   </div>
 </div>
 
-<!-- ======= ADD STUDENT MODAL（原本的新增學生，維持原樣：只填姓名+Meet）======= -->
-<div class="modal-overlay" id="addStudentModal">
-  <div class="modal">
-    <h3>➕ 新增學生</h3>
-    <p class="add-modal-hint">填寫學生姓名，系統會自動建立 Google Meet 連結 + 產生專屬連結，不用自己貼 Meet 連結。</p>
-
-    <label class="settings-label">學生姓名 *</label>
-    <input class="settings-input" id="addName" placeholder="例：小明、Mei" oninput="previewToken()" />
-
-    <div class="token-preview" id="tokenPreview"></div>
-    <div style="font-size:0.78rem;color:var(--ink-muted);font-family:'Noto Sans TC',sans-serif;margin-top:4px;">🎥 Meet 連結：按下方按鈕時會自動建立（第一次要登入 Google 授權一次）</div>
-
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeAddStudentModal()">取消</button>
-      <button class="btn-gold" onclick="addStudent()">新增學生</button>
-    </div>
-  </div>
-</div>
-
 <!-- ======= GEN LINK MODAL（入班連結：姓名+Meet+課程資訊，產生給新生的專屬連結）======= -->
 <div class="modal-overlay" id="genLinkModal">
   <div class="modal">
-    <h3>🔗 產生入班連結</h3>
-    <p class="add-modal-hint">填寫學生姓名，並可加上課程資訊，系統會自動建立 Google Meet 連結，並產生一個附課程摘要的專屬連結給新生。</p>
+    <h3>🔗 入班連結</h3>
 
     <label class="settings-label">學生姓名 *</label>
     <input class="settings-input" id="genName" placeholder="例：小明、Mei" oninput="previewGenToken()" />
 
     <div class="token-preview" id="genTokenPreview"></div>
-    <div style="font-size:0.78rem;color:var(--ink-muted);font-family:'Noto Sans TC',sans-serif;margin-top:4px;">🎥 Meet 連結：按下方按鈕時會自動建立（第一次要登入 Google 授權一次）</div>
 
     <div style="margin:16px 0 4px;padding-top:14px;border-top:1px dashed var(--border);">
-      <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold-bright);font-family:'Noto Sans TC',sans-serif;">課程資訊（選填・會顯示在新生連結上）</div>
+      <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold-bright);font-family:'Noto Sans TC',sans-serif;">課程資訊</div>
     </div>
 
     <label class="settings-label">課程方案</label>
@@ -744,17 +723,17 @@
         <input class="settings-input" type="date" id="genStartDate" onchange="onGenScheduleChange()" />
       </div>
       <div style="flex:1;">
-        <label class="settings-label">上課時間（老師自己的時間）</label>
+        <label class="settings-label">上課時間</label>
         <input class="settings-input" type="time" id="genClassTime" onchange="onGenScheduleChange()" />
       </div>
     </div>
 
-    <label class="settings-label">學生所在時區（連結上會自動換算成學生當地時間，避免搞混）</label>
+    <label class="settings-label">學生所在時區</label>
     <select class="settings-input" id="genStudentTz" onchange="onGenScheduleChange()"></select>
 
     <label class="settings-checkbox-row" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-family:'Noto Sans TC',sans-serif;font-size:0.85rem;color:var(--ink);">
       <input type="checkbox" id="genWeeklyRecurring" checked style="width:16px;height:16px;" />
-      🔁 每週同一天同一時間固定上課（自動排入下週課表，不用每週手動加）
+      🔁 每週固定上課
     </label>
     <div id="genScheduleHint" style="font-size:0.78rem;color:var(--ink-muted);font-family:'Noto Sans TC',sans-serif;margin-top:4px;display:none;"></div>
 
@@ -768,7 +747,7 @@
 
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeGenLinkModal()" id="genModalCancelBtn">取消</button>
-      <button class="btn-gold" onclick="genLinkAddStudent()" id="genModalSubmitBtn">產生入班連結</button>
+      <button class="btn-gold" onclick="genLinkAddStudent()" id="genModalSubmitBtn">入班連結</button>
     </div>
   </div>
 </div>
@@ -1098,7 +1077,8 @@ async function createMeetLinkForStudent(studentName, opts) {
   // 用瀏覽器目前所在時區（老師填表單當下的時區）最準，不用猜死某一國。
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Bangkok';
   const body = {
-    summary: '泰語課 - ' + studentName,
+    summary: studentName,
+    colorId: '6', // Google Calendar 橘色（Tangerine），方便老師在自己行事曆一眼認出上課活動
     description: opts.startDate && opts.classTime
       ? '系統自動建立，用於產生固定的 Google Meet 連結' + (opts.recurring ? '（每週固定時間上課）' : '（單次課程）')
       : '系統自動建立，用於產生固定的 Google Meet 連結（實際上課時間依老師安排的課表為主）',
@@ -1519,89 +1499,17 @@ function normalizeMeet(u){
 }
 
 // ============================================================
-// ADD STUDENT MODAL
-// ============================================================
-let pendingToken = '';
-
-function openAddStudentModal() {
-  document.getElementById('addName').value = '';
-  document.getElementById('tokenPreview').style.display = 'none';
-  pendingToken = '';
-  document.getElementById('addStudentModal').classList.add('open');
-  setTimeout(() => document.getElementById('addName').focus(), 100);
-}
-function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('open'); }
-
-function previewToken() {
-  const name = document.getElementById('addName').value.trim();
-  if (!name) { document.getElementById('tokenPreview').style.display = 'none'; return; }
-  pendingToken = generateToken(name);
-  const baseUrl = window.location.origin + window.location.pathname;
-  document.getElementById('tokenPreview').textContent = '🔗 ' + baseUrl + '?s=' + pendingToken + '…';
-  document.getElementById('tokenPreview').style.display = 'block';
-}
-
-async function addStudent() {
-  const name = document.getElementById('addName').value.trim();
-  if (!name) { alert('請填寫學生姓名'); return; }
-  let token = pendingToken || generateToken(name);
-  while (studentsCache[token]) token = generateToken(name);
-
-  const saveBtn = document.querySelector('#addStudentModal .btn-gold');
-  saveBtn.disabled = true; saveBtn.textContent = '建立 Meet 連結中…';
-  let meet;
-  try {
-    meet = await createMeetLinkForStudent(name);
-  } catch (e) {
-    saveBtn.disabled = false; saveBtn.textContent = '新增學生';
-    alert('❌ 自動建立 Google Meet 連結失敗：' + (e.message || e) + '\n請確認已授權 Google 存取權限後再試一次。');
-    return;
-  }
-  saveBtn.textContent = '儲存中…';
-  const { error } = await sb.from('classroom_students').insert({ token, name, meet });
-  saveBtn.disabled = false; saveBtn.textContent = '新增學生';
-  if (error) { alert('新增失敗：' + error.message); return; }
-  closeAddStudentModal();
-  await refreshStudentList();
-  // 新增學生後自動建立 Drive 資料夾（學習內容／影片／課表 & 收據）+ 空白課表
-  try {
-    await gdGetStudentSubfolderId(name, '學習內容');
-    await gdGetStudentSubfolderId(name, '影片');
-    var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
-    try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
-    try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
-    // 2026-07-06 修正：以前這裡沒有分享「學生資料夾本體」也沒寫 folder_url 進 Supabase，
-    // 要等到「第一次上傳檔案」才會補（見 ensureStudentFolderShared 在上傳流程裡的呼叫）。
-    // 這段期間學生自己的頁面「📁 開啟我的 Google Drive 資料夾」按鈕會因為抓不到 folder_url 而不出現（lulu 就是卡在這）。
-    // 現在新增學生當下就直接分享＋寫入，之後新加的學生一開始就會有這顆按鈕。
-    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
-  } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
-}
-
-// ============================================================
 // GEN LINK MODAL（入班連結：姓名+Meet+課程資訊 → 建立學生 + 產生附課程摘要的連結）
 // ============================================================
 let genPendingToken = '';
 
 // 常用時區清單（給「學生所在時區」下拉選單用）── 空值 = 不轉換，照老師自己的時間顯示（跟舊版行為一致）
 const TZ_OPTIONS = [
-  { v: '',                    label: '— 不轉換（顯示跟老師一樣的時間）—' },
-  { v: 'Asia/Bangkok',        label: '🇹🇭 泰國曼谷' },
-  { v: 'Asia/Taipei',         label: '🇹🇼 台灣台北' },
-  { v: 'Asia/Hong_Kong',      label: '🇭🇰 香港' },
-  { v: 'Asia/Shanghai',       label: '🇨🇳 中國' },
-  { v: 'Asia/Singapore',      label: '🇸🇬 新加坡' },
-  { v: 'Asia/Kuala_Lumpur',   label: '🇲🇾 馬來西亞' },
-  { v: 'Asia/Jakarta',        label: '🇮🇩 印尼（雅加達）' },
-  { v: 'Asia/Ho_Chi_Minh',    label: '🇻🇳 越南' },
-  { v: 'Asia/Manila',         label: '🇵🇭 菲律賓' },
-  { v: 'Asia/Tokyo',          label: '🇯🇵 日本' },
-  { v: 'Asia/Seoul',          label: '🇰🇷 韓國' },
-  { v: 'Australia/Sydney',    label: '🇦🇺 澳洲（雪梨）' },
-  { v: 'Europe/London',       label: '🇬🇧 英國' },
-  { v: 'America/New_York',    label: '🇺🇸 美國東岸' },
-  { v: 'America/Los_Angeles', label: '🇺🇸 美國西岸' },
-  { v: 'UTC',                 label: 'UTC' }
+  { v: '',                  label: '— 不轉換 —' },
+  { v: 'Asia/Taipei',       label: '🇹🇼 台灣' },
+  { v: 'Asia/Hong_Kong',    label: '🇭🇰 香港' },
+  { v: 'Asia/Kuala_Lumpur', label: '🇲🇾 馬來西亞' },
+  { v: 'Asia/Bangkok',      label: '🇹🇭 泰國' }
 ];
 function populateGenStudentTzDropdown() {
   document.getElementById('genStudentTz').innerHTML =
@@ -1637,7 +1545,7 @@ function openGenLinkModal() {
   populateGenCourseDropdown();
   genPendingToken = '';
   const submitBtn = document.getElementById('genModalSubmitBtn');
-  submitBtn.disabled = false; submitBtn.textContent = '產生入班連結';
+  submitBtn.disabled = false; submitBtn.textContent = '入班連結';
   document.getElementById('genModalCancelBtn').textContent = '取消';
   document.getElementById('genLinkModal').classList.add('open');
   setTimeout(() => document.getElementById('genName').focus(), 100);
@@ -1746,13 +1654,13 @@ async function genLinkAddStudent() {
     // Google Calendar 一律用「老師輸入當下的原始日期/時間」建立（老師瀏覽器時區自動處理，最準）
     meet = await createMeetLinkForStudent(name, { startDate: startDate, classTime: classTime, recurring: recurring });
   } catch (e) {
-    saveBtn.disabled = false; saveBtn.textContent = '產生入班連結';
+    saveBtn.disabled = false; saveBtn.textContent = '入班連結';
     alert('❌ 自動建立 Google Meet 連結失敗：' + (e.message || e) + '\n請確認已授權 Google 存取權限後再試一次。');
     return;
   }
   saveBtn.textContent = '儲存中…';
   const { error } = await sb.from('classroom_students').insert({ token, name, meet });
-  saveBtn.disabled = false; saveBtn.textContent = '產生入班連結';
+  saveBtn.disabled = false; saveBtn.textContent = '入班連結';
   if (error) { alert('新增失敗：' + error.message); return; }
 
   // 給學生看的連結：如果有選「學生所在時區」，把日期/時間換算成學生當地時間再放進連結，
@@ -2344,10 +2252,7 @@ async function renderTeacherView() {
     '<div class="teacher-panel">' +
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
-      '<div style="display:flex;gap:10px;margin-top:16px;">' +
-        '<button class="btn-add-student" style="margin-top:0;" onclick="openAddStudentModal()">➕ 新增學生</button>' +
-        '<button class="btn-add-student" style="margin-top:0;" onclick="openGenLinkModal()">🔗 入班連結</button>' +
-      '</div>' +
+      '<button class="btn-add-student" onclick="openGenLinkModal()">🔗 入班連結</button>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
@@ -2369,7 +2274,7 @@ async function renderTeacherView() {
   }
 }
 
-// 課程摘要卡（只有老師在「新增學生/產生入班連結」時有填課程資訊，連結裡才會有 c/p/d/ct 參數）
+// 課程摘要卡（只有老師在「入班連結」時有填課程資訊，連結裡才會有 c/p/d/ct 參數）
 function buildCourseSummaryCard() {
   const decode = function(key) { try { return decodeURIComponent(atob(urlParams.get(key) || '')); } catch(e) { return ''; } };
   const courseId = decode('c');
@@ -2434,6 +2339,16 @@ function renderStudentView() {
       '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
       '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>' +
     '</div>' +
+    '<div class="card">' +
+      '<h2>💰 繳費 & 收據</h2>' +
+      '<div id="slipStatusMsg"></div>' +
+      '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
+      '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 選幣別 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
+      '<div id="payHistory" style="margin-top:14px;"></div>' +
+    '</div>' +
+    '<div style="text-align:center;padding:0 0 4px;">' +
+      '<a href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
+    '</div>' +
     '<div class="card" id="nextClassCard">' +
       '<h2>📅 下一堂課</h2>' +
       '<div id="nextClassInfo"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
@@ -2457,22 +2372,12 @@ function renderStudentView() {
       '<div id="driveFolderLink" style="margin-top:12px;"></div>' +
     '</div>' +
     '<div class="card">' +
-      '<h2>💰 繳費 & 收據</h2>' +
-      '<div id="slipStatusMsg"></div>' +
-      '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
-      '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 選幣別 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
-      '<div id="payHistory" style="margin-top:14px;"></div>' +
-    '</div>' +
-    '<div class="card">' +
       '<h2>📚 更多學習資源</h2>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
         '<a href="../content.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">📚 影片與文章</a>' +
         '<a href="../games.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🎮 泰語小遊戲</a>' +
         '<a href="https://mrtaihualin.com/" target="_blank" rel="noopener" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🏠 回官網首頁</a>' +
       '</div>' +
-    '</div>' +
-    '<div style="text-align:center;padding:4px 0 8px;">' +
-      '<a href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentNextClass(token);
