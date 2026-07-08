@@ -317,6 +317,14 @@
   .btn-start-class { display: flex; align-items: center; justify-content: center; gap: 14px; background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%); color: #fff; border: none; border-radius: 12px; padding: 18px 28px; font-size: 1.1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; box-shadow: 0 6px 24px rgba(139,99,16,0.35), 0 1px 4px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; width: 100%; letter-spacing: 1px; margin-bottom: 12px; }
   .btn-start-class:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(139,99,16,0.45); }
 
+  /* ── Class actions row (3 buttons side-by-side) ─── */
+  .class-actions-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .class-actions-row .btn-start-class { width: auto; flex: 1 1 0; margin-bottom: 0; padding: 14px 12px; font-size: 0.92rem; gap: 6px; white-space: nowrap; }
+  @media (max-width: 480px) {
+    .class-actions-row { flex-direction: column; }
+    .class-actions-row .btn-start-class { flex: initial; }
+  }
+
   /* ── Notepad popup modal ─────────────────── */
   .notepad-overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,28,0.65); z-index: 150; align-items: center; justify-content: center; padding: 16px; }
   .notepad-overlay.open { display: flex; }
@@ -1640,9 +1648,11 @@ function selectStudent(token) {
       '<div class="stu-acc-avatar">' + initial + '</div>' +
       '<span class="stu-panel-name">' + s.name + '</span>' +
     '</div>' +
-    '<button class="btn-start-class" onclick="enterClass(\'' + t + '\')">📹 進入課堂</button>' +
-    '<button class="btn-start-class" onclick="recordClass(\'' + t + '\')">🔴 開始錄影</button>' +
-    '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
+    '<div class="class-actions-row">' +
+      '<button class="btn-start-class" onclick="enterClass(\'' + t + '\')">📹 進入課堂</button>' +
+      '<button class="btn-start-class" onclick="recordClass(\'' + t + '\')">🔴 開始錄影</button>' +
+      '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
+    '</div>' +
     '<div class="stu-acc-actions">' +
       '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
