@@ -698,15 +698,13 @@
 <div class="modal-overlay" id="addStudentModal">
   <div class="modal">
     <h3>➕ 新增學生</h3>
-    <p class="add-modal-hint">填寫學生姓名與 Meet 連結，系統會自動產生專屬連結。</p>
+    <p class="add-modal-hint">填寫學生姓名，系統會自動建立 Google Meet 連結 + 產生專屬連結，不用自己貼 Meet 連結。</p>
 
     <label class="settings-label">學生姓名 *</label>
     <input class="settings-input" id="addName" placeholder="例：小明、Mei" oninput="previewToken()" />
 
-    <label class="settings-label">Google Meet 連結 *</label>
-    <input class="settings-input" id="addMeet" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
-
     <div class="token-preview" id="tokenPreview"></div>
+    <div style="font-size:0.78rem;color:var(--ink-muted);font-family:'Noto Sans TC',sans-serif;margin-top:4px;">🎥 Meet 連結：按下方按鈕時會自動建立（第一次要登入 Google 授權一次）</div>
 
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeAddStudentModal()">取消</button>
@@ -719,15 +717,13 @@
 <div class="modal-overlay" id="genLinkModal">
   <div class="modal">
     <h3>🔗 產生入班連結</h3>
-    <p class="add-modal-hint">填寫學生姓名與 Meet 連結，並可加上課程資訊，系統會產生一個附課程摘要的專屬連結給新生。</p>
+    <p class="add-modal-hint">填寫學生姓名，並可加上課程資訊，系統會自動建立 Google Meet 連結，並產生一個附課程摘要的專屬連結給新生。</p>
 
     <label class="settings-label">學生姓名 *</label>
     <input class="settings-input" id="genName" placeholder="例：小明、Mei" oninput="previewGenToken()" />
 
-    <label class="settings-label">Google Meet 連結 *</label>
-    <input class="settings-input" id="genMeet" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
-
     <div class="token-preview" id="genTokenPreview"></div>
+    <div style="font-size:0.78rem;color:var(--ink-muted);font-family:'Noto Sans TC',sans-serif;margin-top:4px;">🎥 Meet 連結：按下方按鈕時會自動建立（第一次要登入 Google 授權一次）</div>
 
     <div style="margin:16px 0 4px;padding-top:14px;border-top:1px dashed var(--border);">
       <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold-bright);font-family:'Noto Sans TC',sans-serif;">課程資訊（選填・會顯示在新生連結上）</div>
@@ -745,13 +741,19 @@
     <div style="display:flex;gap:10px;">
       <div style="flex:1;">
         <label class="settings-label">開課日期</label>
-        <input class="settings-input" type="date" id="genStartDate" />
+        <input class="settings-input" type="date" id="genStartDate" onchange="onGenScheduleChange()" />
       </div>
       <div style="flex:1;">
         <label class="settings-label">上課時間</label>
-        <input class="settings-input" type="text" id="genClassTime" placeholder="例：每週二 19:00" />
+        <input class="settings-input" type="time" id="genClassTime" onchange="onGenScheduleChange()" />
       </div>
     </div>
+
+    <label class="settings-checkbox-row" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-family:'Noto Sans TC',sans-serif;font-size:0.85rem;color:var(--ink);">
+      <input type="checkbox" id="genWeeklyRecurring" checked style="width:16px;height:16px;" />
+      🔁 每週同一天同一時間固定上課（自動排入下週課表，不用每週手動加）
+    </label>
+    <div id="genScheduleHint" style="font-size:0.78rem;color:var(--ink-muted);font-family:'Noto Sans TC',sans-serif;margin-top:4px;display:none;"></div>
 
     <div id="genLinkResult" style="display:none;margin-top:16px;padding-top:14px;border-top:1px dashed var(--border);">
       <label class="settings-label">✅ 專屬連結已產生，複製傳給學生：</label>
@@ -832,7 +834,10 @@ const GOOGLE_CLIENT_ID = '912926837729-j8n8mojmrmngpha68pbasv9qslvgtvrn.apps.goo
 // 2026-07-05 加入 documents scope：課堂筆記要用 Docs API 做「橫向頁面 + 頁首頁尾浮水印」
 // （drive.file 只能整份覆蓋內容，做不到頁首頁尾／橫向；documents scope 才能精準改版面）
 // 第一次會多跳一次 Google 同意畫面（多一項權限），之後照舊不用再按
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/documents';
+// 2026-07-08 calendar.readonly → calendar.events：改成可讀寫，才能用 Calendar API 自動建立
+// 「新增學生／入班連結」時的 Google Meet 連結（不用老師手動貼），calendar.events 本身也涵蓋讀取，
+// 所以 calFetchUpcomingEvents() 讀近期課表不受影響
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/documents';
 const DRIVE_ROOT_FOLDER = 'mrtaihualin 課堂錄影';
 let gdToken = null, gdTokenExp = 0, gdTokenClient = null, gdTokenScopes = '';
 
@@ -1062,6 +1067,68 @@ async function calFetchUpcomingEvents() {
   }
   const data = await r.json();
   return data.items || [];
+}
+
+// ── Google Calendar：自動建立一個帶 Google Meet 的行事曆活動，回傳 Meet 連結 ──
+// 用於「新增學生／入班連結」時自動生成 Meet，老師不用自己去 Google Meet 建立再貼連結。
+// opts.startDate + opts.classTime（有填的話）→ 用這個日期時間當第一堂課時間；
+// opts.recurring = true → 加上「每週重複」規則（RRULE:FREQ=WEEKLY），之後每週會自動出現在
+// 「近期課表」，不用老師每週手動加一次。opts.recurring = false（或沒給時間）→ 只建立單次活動，
+// 純粹拿來掛 Meet 連結用（連結本身不會因為活動時間過了就失效，任何時間都能用）。
+async function createMeetLinkForStudent(studentName, opts) {
+  opts = opts || {};
+  let token = await gdGetToken();
+  if (gdTokenScopes && gdTokenScopes.indexOf('calendar') === -1) {
+    token = await gdGetToken(true); // 舊 token 還沒有 calendar 權限（例如舊使用者剛升級這個功能）→ 重新跳同意畫面
+  }
+  let start;
+  if (opts.startDate && opts.classTime) {
+    start = new Date(opts.startDate + 'T' + opts.classTime + ':00');
+  } else {
+    start = new Date();
+    start.setDate(start.getDate() + 1);
+    start.setHours(20, 0, 0, 0);
+  }
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const body = {
+    summary: '泰語課 - ' + studentName,
+    description: opts.startDate && opts.classTime
+      ? '系統自動建立，用於產生固定的 Google Meet 連結' + (opts.recurring ? '（每週固定時間上課）' : '（單次課程）')
+      : '系統自動建立，用於產生固定的 Google Meet 連結（實際上課時間依老師安排的課表為主）',
+    start: { dateTime: start.toISOString() },
+    end: { dateTime: end.toISOString() },
+    recurrence: opts.recurring ? ['RRULE:FREQ=WEEKLY'] : undefined,
+    conferenceData: {
+      createRequest: {
+        requestId: 'meet-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+        conferenceSolutionKey: { type: 'hangoutsMeet' }
+      }
+    }
+  };
+  let r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (r.status === 403) {
+    const errBody = await r.text();
+    if (/insufficient|scope|PERMISSION_DENIED/i.test(errBody)) {
+      token = await gdGetToken(true);
+      r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      throw new Error('建立 Meet 連結失敗（' + r.status + '）：' + errBody.slice(0, 200));
+    }
+  }
+  if (!r.ok) throw new Error('建立 Meet 連結失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
+  const data = await r.json();
+  const videoEntry = data.conferenceData && data.conferenceData.entryPoints && data.conferenceData.entryPoints.find(function(e) { return e.entryPointType === 'video'; });
+  const link = data.hangoutLink || (videoEntry && videoEntry.uri);
+  if (!link) throw new Error('Google 沒有回傳 Meet 連結，請重試一次');
+  return link;
 }
 
 // ── Drive: get/create student folder + small-file upload ───────
@@ -1451,7 +1518,6 @@ let pendingToken = '';
 
 function openAddStudentModal() {
   document.getElementById('addName').value = '';
-  document.getElementById('addMeet').value = '';
   document.getElementById('tokenPreview').style.display = 'none';
   pendingToken = '';
   document.getElementById('addStudentModal').classList.add('open');
@@ -1470,13 +1536,21 @@ function previewToken() {
 
 async function addStudent() {
   const name = document.getElementById('addName').value.trim();
-  const meet = normalizeMeet(document.getElementById('addMeet').value);
-  if (!name || !meet) { alert('請填寫學生姓名與 Meet 連結'); return; }
+  if (!name) { alert('請填寫學生姓名'); return; }
   let token = pendingToken || generateToken(name);
   while (studentsCache[token]) token = generateToken(name);
 
   const saveBtn = document.querySelector('#addStudentModal .btn-gold');
-  saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
+  saveBtn.disabled = true; saveBtn.textContent = '建立 Meet 連結中…';
+  let meet;
+  try {
+    meet = await createMeetLinkForStudent(name);
+  } catch (e) {
+    saveBtn.disabled = false; saveBtn.textContent = '新增學生';
+    alert('❌ 自動建立 Google Meet 連結失敗：' + (e.message || e) + '\n請確認已授權 Google 存取權限後再試一次。');
+    return;
+  }
+  saveBtn.textContent = '儲存中…';
   const { error } = await sb.from('classroom_students').insert({ token, name, meet });
   saveBtn.disabled = false; saveBtn.textContent = '新增學生';
   if (error) { alert('新增失敗：' + error.message); return; }
@@ -1504,10 +1578,11 @@ let genPendingToken = '';
 
 function openGenLinkModal() {
   document.getElementById('genName').value = '';
-  document.getElementById('genMeet').value = '';
   document.getElementById('genTokenPreview').style.display = 'none';
   document.getElementById('genStartDate').value = '';
   document.getElementById('genClassTime').value = '';
+  document.getElementById('genWeeklyRecurring').checked = true;
+  document.getElementById('genScheduleHint').style.display = 'none';
   document.getElementById('genLinkResult').style.display = 'none';
   document.getElementById('genLinkOutput').value = '';
   populateGenCourseDropdown();
@@ -1527,6 +1602,18 @@ function previewGenToken() {
   const baseUrl = window.location.origin + window.location.pathname;
   document.getElementById('genTokenPreview').textContent = '🔗 ' + baseUrl + '?s=' + genPendingToken + '…';
   document.getElementById('genTokenPreview').style.display = 'block';
+}
+
+const WEEKDAY_ZH = ['日','一','二','三','四','五','六'];
+function onGenScheduleChange() {
+  const dateVal = document.getElementById('genStartDate').value;
+  const timeVal = document.getElementById('genClassTime').value;
+  const hint = document.getElementById('genScheduleHint');
+  if (!dateVal || !timeVal) { hint.style.display = 'none'; return; }
+  const d = new Date(dateVal + 'T00:00:00');
+  hint.style.display = 'block';
+  hint.textContent = '📅 第一堂：' + (d.getMonth()+1) + '月' + d.getDate() + '日（週' + WEEKDAY_ZH[d.getDay()] + '）' + timeVal +
+    '　→　勾選「每週固定時間上課」的話，之後每週' + WEEKDAY_ZH[d.getDay()] + ' ' + timeVal + ' 都會自動排入課表';
 }
 
 // ── 課程方案下拉（沿用付款流程用的 COURSE_TYPES，避免另外維護一份課程資料）──
@@ -1567,6 +1654,7 @@ function buildOnboardingUrl(token, name, meet, extra) {
   if (extra.lessons)  url += '&p=' + btoa(encodeURIComponent(String(extra.lessons)));
   if (extra.startDate) url += '&d=' + btoa(encodeURIComponent(extra.startDate));
   if (extra.classTime) url += '&ct=' + btoa(encodeURIComponent(extra.classTime));
+  if (extra.recurring) url += '&r=1';
   return url;
 }
 
@@ -1583,24 +1671,33 @@ function copyGeneratedLink() {
 
 async function genLinkAddStudent() {
   const name = document.getElementById('genName').value.trim();
-  const meet = normalizeMeet(document.getElementById('genMeet').value);
-  if (!name || !meet) { alert('請填寫學生姓名與 Meet 連結'); return; }
+  if (!name) { alert('請填寫學生姓名'); return; }
   let token = genPendingToken || generateToken(name);
   while (studentsCache[token]) token = generateToken(name);
 
   const courseId   = document.getElementById('genCourse').value;
   const lessons    = document.getElementById('genPack').value;
   const startDate  = document.getElementById('genStartDate').value;
-  const classTime  = document.getElementById('genClassTime').value.trim();
+  const classTime  = document.getElementById('genClassTime').value;
+  const recurring  = document.getElementById('genWeeklyRecurring').checked && !!(startDate && classTime);
 
   const saveBtn = document.getElementById('genModalSubmitBtn');
-  saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
+  saveBtn.disabled = true; saveBtn.textContent = '建立 Meet 連結中…';
+  let meet;
+  try {
+    meet = await createMeetLinkForStudent(name, { startDate: startDate, classTime: classTime, recurring: recurring });
+  } catch (e) {
+    saveBtn.disabled = false; saveBtn.textContent = '產生入班連結';
+    alert('❌ 自動建立 Google Meet 連結失敗：' + (e.message || e) + '\n請確認已授權 Google 存取權限後再試一次。');
+    return;
+  }
+  saveBtn.textContent = '儲存中…';
   const { error } = await sb.from('classroom_students').insert({ token, name, meet });
   saveBtn.disabled = false; saveBtn.textContent = '產生入班連結';
   if (error) { alert('新增失敗：' + error.message); return; }
 
   // 產生專屬連結並顯示複製欄，先不關視窗，讓老師可以馬上複製傳給學生
-  const link = buildOnboardingUrl(token, name, meet, { courseId: courseId, lessons: lessons, startDate: startDate, classTime: classTime });
+  const link = buildOnboardingUrl(token, name, meet, { courseId: courseId, lessons: lessons, startDate: startDate, classTime: classTime, recurring: recurring });
   document.getElementById('genLinkOutput').value = link;
   document.getElementById('genLinkResult').style.display = 'block';
   document.getElementById('genModalCancelBtn').textContent = '關閉';
@@ -2212,10 +2309,16 @@ function buildCourseSummaryCard() {
   const lessons  = parseInt(decode('p'), 10) || 0;
   const startDate = decode('d');
   const classTime = decode('ct');
+  const recurring = urlParams.get('r') === '1';
   const bonus = lessons && typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0;
   const totalNTD = lessons * (c.priceNTD || 0);
   const totalTHB = lessons * (c.priceTHB || 0);
-  const startDateLabel = startDate ? new Date(startDate + 'T00:00:00').toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'short' }) : '';
+  const weekdayZh = ['日','一','二','三','四','五','六'];
+  const startDateObj = startDate ? new Date(startDate + 'T00:00:00') : null;
+  const startDateLabel = startDateObj ? startDateObj.toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'short' }) : '';
+  const classTimeLabel = classTime && startDateObj
+    ? (recurring ? '每週' + weekdayZh[startDateObj.getDay()] + ' ' + classTime : classTime + '（單次）')
+    : classTime;
   return '<div class="card" style="border-top:2px solid var(--gold-bright);">' +
     '<h2>📋 課程摘要</h2>' +
     '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:0.92rem;color:var(--ink);line-height:2;">' +
@@ -2223,7 +2326,7 @@ function buildCourseSummaryCard() {
       (lessons ? '<div>堂數：' + lessons + ' 堂' + (bonus ? '（贈 ' + bonus + ' 堂）' : '') + '</div>' : '') +
       (lessons ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
       (startDateLabel ? '<div>開課日期：' + startDateLabel + '</div>' : '') +
-      (classTime ? '<div>上課時間：' + escHtml(classTime) + '</div>' : '') +
+      (classTimeLabel ? '<div>上課時間：' + escHtml(classTimeLabel) + '</div>' : '') +
     '</div>' +
   '</div>';
 }
@@ -2929,9 +3032,16 @@ function renderSlipTotalAndBank() {
   };
   bankBox.style.display = 'block';
   if (slipCurrency === 'WISE') {
-    bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">🌍 Wise（國際匯款）</div>'
-      + WISE_INFO.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
-      + qrImg(WISE_INFO.qr, '掃 QR 用 Wise 付款');
+    bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:10px;">🌍 Wise（國際匯款）</div>'
+      + '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">'
+        + '<div style="font-weight:700;font-size:0.85rem;color:var(--gold-deep);margin-bottom:6px;">方式一・網站轉帳</div>'
+        + '<div>前往：<a href="' + WISE_INFO.siteUrl + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:underline;">' + WISE_INFO.siteUrl + '</a></div>'
+        + WISE_INFO.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
+      + '</div>'
+      + '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;">'
+        + '<div style="font-weight:700;font-size:0.85rem;color:var(--gold-deep);margin-bottom:2px;">方式二・掃 QR（用 Wise App）</div>'
+        + qrImg(WISE_INFO.qr, '打開 Wise App 掃這個 QR 付款')
+      + '</div>';
   } else {
     var b = BANK_INFO[slipCurrency];
     var anyVal = b.lines.some(function(l) { return /[：:]\s*\S/.test(l); });
@@ -3318,11 +3428,11 @@ const BANK_INFO = {
     '參考編號：004999017326389'
   ] }
 };
-// Wise（國際匯款，兩種幣別都可用）
+// Wise（國際匯款，兩種幣別都可用）— 網站轉帳 跟 掃 QR 是兩種「各自獨立可選」的付款方式，不是同一套步驟
 const WISE_INFO = {
   tag: '@taihual7', qr: '../assets/pay-qr/wise.jpg',
+  siteUrl: 'https://wise.com',
   lines: [
-    '匯款平台：wise.com',
     '收款人姓名：Taihua Lin',
     '銀行名稱：Kasikorn Bank',
     '銀行地址：Lotus Petchkasem 81',
