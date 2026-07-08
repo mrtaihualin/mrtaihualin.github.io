@@ -1694,6 +1694,40 @@ window.deleteFBComment = function(postId, idx) {
       fab.onclick = function () { on = !on; applyState(); };
       document.body.appendChild(fab);
       applyState();
+
+      // ▾ ปุ่มย่อแถบสลับเกม (#game-switcher) ให้เหลือไอคอนเล็ก — แยกจากปุ่ม fullscreen ด้านบน
+      // (fullscreen = ซ่อนทุกอย่างรวมเกม, อันนี้ = แค่ย่อแถบเมนูล่างเวลาเล่นปกติ ไม่ต้องเข้าโหมด fullscreen) — Lin 2026-07-08
+      try {
+        var GS_KEY = 'rg_gs_collapsed';
+        var gsCollapsed = false;
+        try { gsCollapsed = localStorage.getItem(GS_KEY) === '1'; } catch (e) {}
+
+        var gsStyle = document.createElement('style');
+        gsStyle.textContent =
+          '#game-switcher.gs-collapsed{padding:0 !important;overflow:visible !important;background:transparent !important;border:none !important;box-shadow:none !important;backdrop-filter:none !important;max-width:none !important;}' +
+          '#game-switcher.gs-collapsed > *:not(.gs-mini-toggle){display:none !important;}' +
+          '.gs-mini-toggle{width:38px;height:38px;border-radius:50%;background:rgba(17,17,17,0.92);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:16px;display:flex !important;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;user-select:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);}' +
+          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle{background:transparent;border:none;box-shadow:none;color:#8b6310;font-size:13px;width:24px;height:auto;opacity:.6;}' +
+          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle:hover{opacity:1;}';
+        document.head.appendChild(gsStyle);
+
+        var miniBtn = document.createElement('span');
+        miniBtn.className = 'gs-mini-toggle';
+        function renderMini() {
+          miniBtn.textContent = gsCollapsed ? '🎮' : '▾';
+          miniBtn.title = gsCollapsed ? '展開遊戲選單' : '收合選單為小圖示';
+        }
+        miniBtn.onclick = function (e) {
+          e.stopPropagation();
+          gsCollapsed = !gsCollapsed;
+          gs.classList.toggle('gs-collapsed', gsCollapsed);
+          try { localStorage.setItem(GS_KEY, gsCollapsed ? '1' : '0'); } catch (e2) {}
+          renderMini();
+        };
+        gs.appendChild(miniBtn);
+        renderMini();
+        if (gsCollapsed) gs.classList.add('gs-collapsed');
+      } catch (e) {}
     } catch (e) {}
   });
 })();

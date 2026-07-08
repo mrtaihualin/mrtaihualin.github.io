@@ -620,7 +620,7 @@ var FINAL_SOUND={
 var VOWEL_READ={
   'อะ':'อะ（短母音）','อา':'อา（長母音）','ออ':'ออ',
   'เอาะ':'เอาะ','เออะ':'เอะ',
-  'โอ':'โอ','ไอ':'ไ-ย（同音）','ใอ':'ไ-ย（同音）',
+  'โอ':'โอ','ไอ':'ไ','ใอ':'ใ',
   'โอะ':'โอะ（短母音）',
   'อุ':'อุ（短母音）','อู':'อู（長母音）',
   'อิ':'อิ（短母音）','อี':'อี（長母音）',
@@ -2594,6 +2594,22 @@ function setGuideMode(on){
   try{localStorage.setItem('tg_guide_mode',guideMode?'1':'0');}catch(e){}
   // มือถือ + 有提示(有引導模式): ปิดคีย์บอร์ดจริงของเครื่อง บังคับใช้แต่คีย์บอร์ดในเกมเท่านั้น (ให้เห็นตัวอักษรที่ต้องกดชัดๆ ไม่งง) — Lin 2026-07-07
   try{ document.body.classList.toggle('tg-guide-hint', guideMode); }catch(e){}
+  // แก้ 2026-07-08 ตาม audit: เดิมแค่ซ่อนปุ่ม 📱 ไม่ได้ block คีย์บอร์ดจริงจริง — ถ้า input ยังโฟกัสอยู่/ถูกโฟกัสทางอื่น (เช่น Tab, คีย์บอร์ดบลูทูธ) คีย์บอร์ดเนทีฟยังโผล่ได้อยู่ดี
+  // ตอนนี้ตั้ง readonly+inputmode=none บนมือถือจริงตอนมีคำใบ้ เพื่อบล็อกคีย์บอร์ดเนทีฟจริงๆ ไม่ใช่แค่ซ่อนปุ่มเรียก
+  try{
+    var isTouchDevice = !window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+    var mi2=document.getElementById('rg-mobile-input');
+    if(mi2){
+      if(isTouchDevice && guideMode){
+        mi2.setAttribute('readonly','readonly');
+        mi2.setAttribute('inputmode','none');
+        mi2.blur();
+      } else {
+        mi2.removeAttribute('readonly');
+        mi2.setAttribute('inputmode','text');
+      }
+    }
+  }catch(e){}
   [['guide-on','guide-off']].forEach(function(p){
     var a=document.getElementById(p[0]),b=document.getElementById(p[1]);
     if(a)a.className='btn '+(guideMode?'btn-primary':'btn-secondary');

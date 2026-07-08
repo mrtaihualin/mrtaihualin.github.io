@@ -2065,7 +2065,7 @@ function renderStudentView() {
       '<h2>💬 今日學習感想</h2>' +
       '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">今天學了什麼？寫下你的感想讓老師知道 ✨</p>' +
       '<textarea id="feedbackText" placeholder="例：今天學了聲調，สวัสดี 的用法還不太確定…" style="width:100%;min-height:88px;border-radius:9px;border:1px solid var(--border);padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;"></textarea>' +
-      '<button onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;background:linear-gradient(135deg,var(--gold-bright),var(--gold));color:#fff;border:none;border-radius:9px;padding:12px;font-size:0.95rem;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;cursor:pointer;letter-spacing:0.5px;">送出感想 ✉️</button>' +
+      '<button class="btn-gold" onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;">送出感想 ✉️</button>' +
       '<div id="feedbackStatus" style="margin-top:8px;font-size:0.82rem;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);min-height:18px;"></div>' +
     '</div>' +
     '<div class="card">' +
@@ -2486,10 +2486,10 @@ async function loadStudentNextClass(token) {
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
         (canCancel
-          ? '<button class="btn-sm" style="background:#dc2626;color:#fff;" onclick="requestCancelClass()">❌ 申請取消這堂課</button>'
+          ? '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="requestCancelClass()">❌ 申請取消這堂課</button>'
           : '<span style="font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;align-self:center;">⚠️ 距離上課不到 24 小時，無法線上取消，請直接聯絡老師</span>') +
-        '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;" onclick="openClassRequestModal()">🔄 申請改期</button>' +
-        '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
+        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openClassRequestModal()">🔄 申請改期</button>' +
+        '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
       '</div>' +
       classRequestSameWarn();
   } catch (e) {
