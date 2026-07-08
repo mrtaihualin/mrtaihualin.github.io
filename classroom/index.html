@@ -763,8 +763,7 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeGenLinkModal()" id="genModalCancelBtn">取消</button>
-      <button class="btn-gold" onclick="genLinkAddStudent()" id="genModalSubmitBtn">入班連結</button>
+      <button class="btn-gold" onclick="genModalSubmitClick()" id="genModalSubmitBtn">入班連結</button>
     </div>
   </div>
 </div>
@@ -959,14 +958,22 @@ async function gdFindFolder(name, parentId) {
   const res = await gdApi('drive/v3/files?spaces=drive&fields=files(id)&q=' + encodeURIComponent(q), { method: 'GET' });
   return res.files && res.files[0] ? res.files[0].id : null;
 }
+// 2026-07-08 修 bug：Google Drive 搜尋 API 剛建立完資料夾後，短時間內搜尋不到（eventual consistency），
+// 連續呼叫好幾次 gdEnsureFolder(同一個 parent+name) 會誤判「找不到」而重複建立好幾個同名資料夾，
+// 導致「學習內容」「影片」「課表 & 收據」分散建在不同的重複資料夾裡，看起來像「檔案沒建完整」。
+// 用一個 session 內的快取記住已經找到/建立過的資料夾 id，同一個 parent+name 不會再重找一次。
+let _gdFolderCache = {};
 async function gdEnsureFolder(name, parentId) {
+  const cacheKey = (parentId || 'root') + '::' + name;
+  if (_gdFolderCache[cacheKey]) return _gdFolderCache[cacheKey];
   const found = await gdFindFolder(name, parentId);
-  if (found) return found;
+  if (found) { _gdFolderCache[cacheKey] = found; return found; }
   const body = { name, mimeType: 'application/vnd.google-apps.folder' };
   if (parentId) body.parents = [parentId];
   const res = await gdApi('drive/v3/files?fields=id', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
+  _gdFolderCache[cacheKey] = res.id;
   return res.id;
 }
 // 改資料夾「名字」屬性，folder id 不變 → 裡面舊檔案原封不動（改學生姓名時用這個，絕對不能改成「新建資料夾」）
@@ -1604,6 +1611,8 @@ function formatInTz(date, tz) {
   };
 }
 
+let genLinkGenerated = false; // true = 連結已產生，按鈕變成「關閉」
+
 function openGenLinkModal() {
   document.getElementById('genName').value = '';
   document.getElementById('genTokenPreview').style.display = 'none';
@@ -1617,13 +1626,19 @@ function openGenLinkModal() {
   document.getElementById('genLinkOutput').value = '';
   populateGenCourseDropdown();
   genPendingToken = '';
+  genLinkGenerated = false;
   const submitBtn = document.getElementById('genModalSubmitBtn');
   submitBtn.disabled = false; submitBtn.textContent = '入班連結';
-  document.getElementById('genModalCancelBtn').textContent = '取消';
   document.getElementById('genLinkModal').classList.add('open');
   setTimeout(() => document.getElementById('genName').focus(), 100);
 }
 function closeGenLinkModal() { document.getElementById('genLinkModal').classList.remove('open'); }
+
+// 只有一顆按鈕：還沒產生連結 → 執行「入班連結」；已經產生了 → 直接關視窗
+function genModalSubmitClick() {
+  if (genLinkGenerated) { closeGenLinkModal(); return; }
+  genLinkAddStudent();
+}
 
 function previewGenToken() {
   const name = document.getElementById('genName').value.trim();
@@ -1731,8 +1746,8 @@ async function genLinkAddStudent() {
   const link = baseUrl + '?s=' + token;
   document.getElementById('genLinkOutput').value = link;
   document.getElementById('genLinkResult').style.display = 'block';
-  document.getElementById('genModalCancelBtn').textContent = '關閉';
-  saveBtn.disabled = true; saveBtn.textContent = '✅ 已產生';
+  genLinkGenerated = true;
+  saveBtn.disabled = false; saveBtn.textContent = '✅ 已產生（按此關閉）';
 
   await refreshStudentList();
 }
@@ -2341,28 +2356,34 @@ function buildCourseSummaryCard(s) {
   const totalNTD = lessons * (c.priceNTD || 0);
   const totalTHB = lessons * (c.priceTHB || 0);
   const weekdayZh = ['日','一','二','三','四','五','六'];
-  // 換算成學生當地時間（如果老師有選時區的話）給學生看
-  let dateForDisplay = startDate, timeForDisplay = classTime, tzLabel = '';
+  const shortDate = function(d) { return (d.getMonth()+1) + '月' + d.getDate() + '日（週' + weekdayZh[d.getDay()] + '）'; };
+
+  // 老師時間（老師輸入的原始日期/時間，未經換算）
+  let teacherLine = '';
+  const teacherDateObj = startDate ? new Date(startDate + 'T00:00:00') : null;
+  if (teacherDateObj && classTime) {
+    teacherLine = '老師時間：' + shortDate(teacherDateObj) + ' ' + classTime;
+  }
+
+  // 學生時間（換算成學生所在時區，只有老師有選時區才會有這行）
+  let studentLine = '';
   if (startDate && classTime && studentTz) {
     const startAbs = new Date(startDate + 'T' + classTime + ':00');
     const conv = formatInTz(startAbs, studentTz);
-    dateForDisplay = conv.dateStr;
-    timeForDisplay = conv.timeStr;
-    tzLabel = (TZ_OPTIONS.find(function(t) { return t.v === studentTz; }) || {}).label || studentTz;
+    const studentDateObj = new Date(conv.dateStr + 'T00:00:00');
+    const tzLabel = (TZ_OPTIONS.find(function(t) { return t.v === studentTz; }) || {}).label || studentTz;
+    studentLine = '學生時間：' + shortDate(studentDateObj) + ' ' + conv.timeStr + '（' + tzLabel + '時間）';
   }
-  const startDateObj = dateForDisplay ? new Date(dateForDisplay + 'T00:00:00') : null;
-  const startDateLabel = startDateObj ? startDateObj.toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'short' }) : '';
-  const classTimeLabel = timeForDisplay && startDateObj
-    ? (recurring ? '每週' + weekdayZh[startDateObj.getDay()] + ' ' + timeForDisplay : timeForDisplay + '（單次）') + (tzLabel ? '　' + tzLabel : '')
-    : timeForDisplay;
+
   return '<div class="card" style="border-top:2px solid var(--gold-bright);">' +
     '<h2>📋 課程摘要</h2>' +
     '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:0.92rem;color:var(--ink);line-height:2;">' +
       '<div><strong style="color:var(--gold-deep);">' + escHtml(c.label) + '</strong>' + (c.desc ? '　·　' + escHtml(c.desc) : '') + '</div>' +
       (lessons ? '<div>堂數：' + lessons + ' 堂' + (bonus ? '（贈 ' + bonus + ' 堂）' : '') + '</div>' : '') +
       (lessons ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
-      (startDateLabel ? '<div>開課日期：' + startDateLabel + '</div>' : '') +
-      (classTimeLabel ? '<div>上課時間：' + escHtml(classTimeLabel) + '</div>' : '') +
+      (teacherLine ? '<div>' + escHtml(teacherLine) + '</div>' : '') +
+      (studentLine ? '<div>' + escHtml(studentLine) + '</div>' : '') +
+      (recurring ? '<div style="color:var(--ink-muted);font-size:0.82rem;">🔁 每週固定上課</div>' : '') +
     '</div>' +
   '</div>';
 }
@@ -3149,34 +3170,29 @@ function renderSlipTotalAndBank() {
     document.getElementById('slipTotalText').textContent = amtCur + ' 金額請與老師確認';
     document.getElementById('slipCalcText').textContent  = c.label + ' · ' + slipLessons + ' 堂';
   }
-  // 資訊＋QR 並排（水平排版），QR 固定在右側，手機窄螢幕自動換行堆疊
-  var payRow = function(infoHtml, qrSrc, qrCap) {
-    return '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">'
-      + '<div style="flex:1;min-width:160px;">' + infoHtml + '</div>'
-      + (qrSrc ? '<div style="text-align:center;flex-shrink:0;margin:0 auto;">'
-          + '<img src="' + qrSrc + '" alt="QR" style="width:120px;height:120px;border-radius:8px;display:block;" onerror="this.parentNode.style.display=\'none\'">'
-          + (qrCap ? '<div style="font-size:0.7rem;color:var(--ink-muted);margin-top:4px;max-width:120px;">' + qrCap + '</div>' : '')
-        + '</div>' : '')
+  // 2026-07-08 簡化：QR 裡本身就印了轉帳資訊（PromptPay QR 上面就有戶名/帳號/參考編號），
+  // 不用再重複打一次文字，塞太多東西版面反而爆版。有 QR 就只放大顯示 QR，沒有 QR 才顯示文字帳戶資訊。
+  var qrOnly = function(title, qrSrc, qrCap) {
+    return '<div style="font-weight:700;margin-bottom:10px;">' + title + '</div>'
+      + '<div style="text-align:center;">'
+        + '<img src="' + qrSrc + '" alt="QR" style="width:170px;max-width:100%;border-radius:10px;display:inline-block;" onerror="this.parentNode.style.display=\'none\'">'
+        + (qrCap ? '<div style="font-size:0.76rem;color:var(--ink-muted);margin-top:6px;">' + qrCap + '</div>' : '')
       + '</div>';
   };
   bankBox.style.display = 'block';
   if (slipCurrency === 'WISE') {
-    var wiseInfo = '<div style="font-weight:700;font-size:0.85rem;color:var(--gold-deep);margin-bottom:6px;">方式一・網站轉帳</div>'
-      + '<div>前往：<a href="' + WISE_INFO.siteUrl + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:underline;">' + WISE_INFO.siteUrl + '</a></div>'
-      + WISE_INFO.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('');
-    bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:10px;">🌍 Wise（國際匯款）</div>'
-      + '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">' + payRow(wiseInfo, null, null) + '</div>'
-      + '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;">'
-        + '<div style="font-weight:700;font-size:0.85rem;color:var(--gold-deep);margin-bottom:6px;">方式二・掃 QR（用 Wise App）</div>'
-        + payRow('<div style="color:var(--ink-muted);font-size:0.82rem;">打開 Wise App 掃右邊的 QR 碼付款</div>', WISE_INFO.qr, '掃描付款')
-      + '</div>';
+    bankBox.innerHTML = qrOnly('🌍 Wise（國際匯款）', WISE_INFO.qr, '打開 Wise App 掃這個 QR 付款') +
+      '<div style="text-align:center;margin-top:8px;font-size:0.78rem;">或前往 <a href="' + WISE_INFO.siteUrl + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:underline;">' + WISE_INFO.siteUrl + '</a> 網站轉帳</div>';
   } else {
     var b = BANK_INFO[slipCurrency];
-    var anyVal = b.lines.some(function(l) { return /[：:]\s*\S/.test(l); });
-    var bInfo = '<div style="font-weight:700;margin-bottom:6px;">' + b.title + '</div>'
-      + b.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
-      + (anyVal ? '' : '<div style="color:var(--amber);font-size:0.78rem;margin-top:6px;">（老師尚未填寫帳戶，請用 LINE 向老師索取匯款資訊）</div>');
-    bankBox.innerHTML = payRow(bInfo, b.qr || null, '掃 QR 轉帳');
+    if (b.qr) {
+      bankBox.innerHTML = qrOnly(b.title, b.qr, '掃 QR 轉帳');
+    } else {
+      var anyVal = b.lines.some(function(l) { return /[：:]\s*\S/.test(l); });
+      bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">' + b.title + '</div>'
+        + b.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
+        + (anyVal ? '' : '<div style="color:var(--amber);font-size:0.78rem;margin-top:6px;">（老師尚未填寫帳戶，請用 LINE 向老師索取匯款資訊）</div>');
+    }
   }
 }
 
