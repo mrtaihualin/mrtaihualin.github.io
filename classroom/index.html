@@ -2721,8 +2721,8 @@ function renderSlipTotalAndBank() {
   };
   bankBox.style.display = 'block';
   if (slipCurrency === 'WISE') {
-    bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">🌍 Wise（國際匯款）' + WISE_INFO.tag + '</div>'
-      + '<div>Wise 標籤：' + WISE_INFO.tag + '</div>'
+    bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">🌍 Wise（國際匯款）</div>'
+      + WISE_INFO.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
       + qrImg(WISE_INFO.qr, '掃 QR 用 Wise 付款');
   } else {
     var b = BANK_INFO[slipCurrency];
@@ -3111,7 +3111,18 @@ const BANK_INFO = {
   ] }
 };
 // Wise（國際匯款，兩種幣別都可用）
-const WISE_INFO = { tag: '@taihual7', qr: '../assets/pay-qr/wise.jpg' };
+const WISE_INFO = {
+  tag: '@taihual7', qr: '../assets/pay-qr/wise.jpg',
+  lines: [
+    '匯款平台：wise.com',
+    '收款人姓名：Taihua Lin',
+    '銀行名稱：Kasikorn Bank',
+    '銀行地址：Lotus Petchkasem 81',
+    'Swift Code：KASITHBK',
+    '帳號：0208373587',
+    '收款人地址：Nongkhaem, Bangkok, Thailand 10160'
+  ]
+};
 
 // 課程方案：NTD 價依 pricing.html#pricing（權威）；THB 沿用舊值，請老師確認
 const COURSES = [
