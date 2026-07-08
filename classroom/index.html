@@ -744,10 +744,13 @@
         <input class="settings-input" type="date" id="genStartDate" onchange="onGenScheduleChange()" />
       </div>
       <div style="flex:1;">
-        <label class="settings-label">上課時間</label>
+        <label class="settings-label">上課時間（老師自己的時間）</label>
         <input class="settings-input" type="time" id="genClassTime" onchange="onGenScheduleChange()" />
       </div>
     </div>
+
+    <label class="settings-label">學生所在時區（連結上會自動換算成學生當地時間，避免搞混）</label>
+    <select class="settings-input" id="genStudentTz" onchange="onGenScheduleChange()"></select>
 
     <label class="settings-checkbox-row" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-family:'Noto Sans TC',sans-serif;font-size:0.85rem;color:var(--ink);">
       <input type="checkbox" id="genWeeklyRecurring" checked style="width:16px;height:16px;" />
@@ -1090,13 +1093,17 @@ async function createMeetLinkForStudent(studentName, opts) {
     start.setHours(20, 0, 0, 0);
   }
   const end = new Date(start.getTime() + 60 * 60 * 1000);
+  // Google Calendar 規定：有 recurrence（每週重複）時，start/end 一定要帶明確的 IANA 時區名稱，
+  // 不能只靠 dateTime 的 UTC 偏移量（不然會回 400 Missing time zone definition）。
+  // 用瀏覽器目前所在時區（老師填表單當下的時區）最準，不用猜死某一國。
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Bangkok';
   const body = {
     summary: '泰語課 - ' + studentName,
     description: opts.startDate && opts.classTime
       ? '系統自動建立，用於產生固定的 Google Meet 連結' + (opts.recurring ? '（每週固定時間上課）' : '（單次課程）')
       : '系統自動建立，用於產生固定的 Google Meet 連結（實際上課時間依老師安排的課表為主）',
-    start: { dateTime: start.toISOString() },
-    end: { dateTime: end.toISOString() },
+    start: { dateTime: start.toISOString(), timeZone: tz },
+    end: { dateTime: end.toISOString(), timeZone: tz },
     recurrence: opts.recurring ? ['RRULE:FREQ=WEEKLY'] : undefined,
     conferenceData: {
       createRequest: {
@@ -1576,11 +1583,53 @@ async function addStudent() {
 // ============================================================
 let genPendingToken = '';
 
+// 常用時區清單（給「學生所在時區」下拉選單用）── 空值 = 不轉換，照老師自己的時間顯示（跟舊版行為一致）
+const TZ_OPTIONS = [
+  { v: '',                    label: '— 不轉換（顯示跟老師一樣的時間）—' },
+  { v: 'Asia/Bangkok',        label: '🇹🇭 泰國曼谷' },
+  { v: 'Asia/Taipei',         label: '🇹🇼 台灣台北' },
+  { v: 'Asia/Hong_Kong',      label: '🇭🇰 香港' },
+  { v: 'Asia/Shanghai',       label: '🇨🇳 中國' },
+  { v: 'Asia/Singapore',      label: '🇸🇬 新加坡' },
+  { v: 'Asia/Kuala_Lumpur',   label: '🇲🇾 馬來西亞' },
+  { v: 'Asia/Jakarta',        label: '🇮🇩 印尼（雅加達）' },
+  { v: 'Asia/Ho_Chi_Minh',    label: '🇻🇳 越南' },
+  { v: 'Asia/Manila',         label: '🇵🇭 菲律賓' },
+  { v: 'Asia/Tokyo',          label: '🇯🇵 日本' },
+  { v: 'Asia/Seoul',          label: '🇰🇷 韓國' },
+  { v: 'Australia/Sydney',    label: '🇦🇺 澳洲（雪梨）' },
+  { v: 'Europe/London',       label: '🇬🇧 英國' },
+  { v: 'America/New_York',    label: '🇺🇸 美國東岸' },
+  { v: 'America/Los_Angeles', label: '🇺🇸 美國西岸' },
+  { v: 'UTC',                 label: 'UTC' }
+];
+function populateGenStudentTzDropdown() {
+  document.getElementById('genStudentTz').innerHTML =
+    TZ_OPTIONS.map(function(t) { return '<option value="' + t.v + '">' + t.label + '</option>'; }).join('');
+}
+// 把一個絕對時間點（Date 物件）換算成某個時區當地的日期／時間／星期幾
+function formatInTz(date, tz) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'short'
+  }).formatToParts(date);
+  const get = function(t) { const p = parts.find(function(x) { return x.type === t; }); return p ? p.value : ''; };
+  let hour = get('hour'); if (hour === '24') hour = '00'; // 某些瀏覽器午夜會給 24:xx
+  const weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+  return {
+    dateStr: get('year') + '-' + get('month') + '-' + get('day'),
+    timeStr: hour + ':' + get('minute'),
+    weekday: weekdayMap[get('weekday')] !== undefined ? weekdayMap[get('weekday')] : new Date(date).getDay()
+  };
+}
+
 function openGenLinkModal() {
   document.getElementById('genName').value = '';
   document.getElementById('genTokenPreview').style.display = 'none';
   document.getElementById('genStartDate').value = '';
   document.getElementById('genClassTime').value = '';
+  populateGenStudentTzDropdown();
+  document.getElementById('genStudentTz').value = '';
   document.getElementById('genWeeklyRecurring').checked = true;
   document.getElementById('genScheduleHint').style.display = 'none';
   document.getElementById('genLinkResult').style.display = 'none';
@@ -1608,12 +1657,19 @@ const WEEKDAY_ZH = ['日','一','二','三','四','五','六'];
 function onGenScheduleChange() {
   const dateVal = document.getElementById('genStartDate').value;
   const timeVal = document.getElementById('genClassTime').value;
+  const tzVal = document.getElementById('genStudentTz') ? document.getElementById('genStudentTz').value : '';
   const hint = document.getElementById('genScheduleHint');
   if (!dateVal || !timeVal) { hint.style.display = 'none'; return; }
-  const d = new Date(dateVal + 'T00:00:00');
+  const start = new Date(dateVal + 'T' + timeVal + ':00'); // 依老師瀏覽器當下時區解讀（老師自己的時間）
   hint.style.display = 'block';
-  hint.textContent = '📅 第一堂：' + (d.getMonth()+1) + '月' + d.getDate() + '日（週' + WEEKDAY_ZH[d.getDay()] + '）' + timeVal +
-    '　→　勾選「每週固定時間上課」的話，之後每週' + WEEKDAY_ZH[d.getDay()] + ' ' + timeVal + ' 都會自動排入課表';
+  let text = '📅 第一堂（老師時間）：' + (start.getMonth()+1) + '月' + start.getDate() + '日（週' + WEEKDAY_ZH[start.getDay()] + '）' + timeVal +
+    '　→　勾選「每週固定時間上課」的話，之後每週' + WEEKDAY_ZH[start.getDay()] + ' ' + timeVal + ' 都會自動排入課表';
+  if (tzVal) {
+    const conv = formatInTz(start, tzVal);
+    const tzLabel = (TZ_OPTIONS.find(function(t) { return t.v === tzVal; }) || {}).label || tzVal;
+    text += '　｜　學生看到的時間（' + tzLabel + '）：週' + WEEKDAY_ZH[conv.weekday] + ' ' + conv.timeStr;
+  }
+  hint.textContent = text;
 }
 
 // ── 課程方案下拉（沿用付款流程用的 COURSE_TYPES，避免另外維護一份課程資料）──
@@ -1655,6 +1711,7 @@ function buildOnboardingUrl(token, name, meet, extra) {
   if (extra.startDate) url += '&d=' + btoa(encodeURIComponent(extra.startDate));
   if (extra.classTime) url += '&ct=' + btoa(encodeURIComponent(extra.classTime));
   if (extra.recurring) url += '&r=1';
+  if (extra.tzLabel)  url += '&tzl=' + btoa(encodeURIComponent(extra.tzLabel));
   return url;
 }
 
@@ -1677,14 +1734,16 @@ async function genLinkAddStudent() {
 
   const courseId   = document.getElementById('genCourse').value;
   const lessons    = document.getElementById('genPack').value;
-  const startDate  = document.getElementById('genStartDate').value;
-  const classTime  = document.getElementById('genClassTime').value;
+  const startDate  = document.getElementById('genStartDate').value; // 老師自己時區的日期
+  const classTime  = document.getElementById('genClassTime').value; // 老師自己時區的時間
+  const studentTz  = document.getElementById('genStudentTz').value;
   const recurring  = document.getElementById('genWeeklyRecurring').checked && !!(startDate && classTime);
 
   const saveBtn = document.getElementById('genModalSubmitBtn');
   saveBtn.disabled = true; saveBtn.textContent = '建立 Meet 連結中…';
   let meet;
   try {
+    // Google Calendar 一律用「老師輸入當下的原始日期/時間」建立（老師瀏覽器時區自動處理，最準）
     meet = await createMeetLinkForStudent(name, { startDate: startDate, classTime: classTime, recurring: recurring });
   } catch (e) {
     saveBtn.disabled = false; saveBtn.textContent = '產生入班連結';
@@ -1696,8 +1755,19 @@ async function genLinkAddStudent() {
   saveBtn.disabled = false; saveBtn.textContent = '產生入班連結';
   if (error) { alert('新增失敗：' + error.message); return; }
 
+  // 給學生看的連結：如果有選「學生所在時區」，把日期/時間換算成學生當地時間再放進連結，
+  // 這樣學生打開連結看到的就是自己當地的時間，不用自己心算時差
+  let linkStartDate = startDate, linkClassTime = classTime, tzLabel = '';
+  if (startDate && classTime && studentTz) {
+    const startAbs = new Date(startDate + 'T' + classTime + ':00');
+    const conv = formatInTz(startAbs, studentTz);
+    linkStartDate = conv.dateStr;
+    linkClassTime = conv.timeStr;
+    tzLabel = (TZ_OPTIONS.find(function(t) { return t.v === studentTz; }) || {}).label || studentTz;
+  }
+
   // 產生專屬連結並顯示複製欄，先不關視窗，讓老師可以馬上複製傳給學生
-  const link = buildOnboardingUrl(token, name, meet, { courseId: courseId, lessons: lessons, startDate: startDate, classTime: classTime, recurring: recurring });
+  const link = buildOnboardingUrl(token, name, meet, { courseId: courseId, lessons: lessons, startDate: linkStartDate, classTime: linkClassTime, recurring: recurring, tzLabel: tzLabel });
   document.getElementById('genLinkOutput').value = link;
   document.getElementById('genLinkResult').style.display = 'block';
   document.getElementById('genModalCancelBtn').textContent = '關閉';
@@ -2307,8 +2377,9 @@ function buildCourseSummaryCard() {
   const c = (typeof COURSE_TYPES !== 'undefined') ? COURSE_TYPES.find(function(x) { return x.id === courseId; }) : null;
   if (!c) return '';
   const lessons  = parseInt(decode('p'), 10) || 0;
-  const startDate = decode('d');
-  const classTime = decode('ct');
+  const startDate = decode('d'); // 若老師有選「學生時區」，這裡已經是換算成學生當地的日期
+  const classTime = decode('ct'); // 同上，已換算成學生當地時間
+  const tzLabel = decode('tzl');
   const recurring = urlParams.get('r') === '1';
   const bonus = lessons && typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0;
   const totalNTD = lessons * (c.priceNTD || 0);
@@ -2317,7 +2388,7 @@ function buildCourseSummaryCard() {
   const startDateObj = startDate ? new Date(startDate + 'T00:00:00') : null;
   const startDateLabel = startDateObj ? startDateObj.toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'short' }) : '';
   const classTimeLabel = classTime && startDateObj
-    ? (recurring ? '每週' + weekdayZh[startDateObj.getDay()] + ' ' + classTime : classTime + '（單次）')
+    ? (recurring ? '每週' + weekdayZh[startDateObj.getDay()] + ' ' + classTime : classTime + '（單次）') + (tzLabel ? '　' + tzLabel : '')
     : classTime;
   return '<div class="card" style="border-top:2px solid var(--gold-bright);">' +
     '<h2>📋 課程摘要</h2>' +
