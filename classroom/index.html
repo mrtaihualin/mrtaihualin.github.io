@@ -694,7 +694,7 @@
   </div>
 </div>
 
-<!-- ======= ADD STUDENT MODAL ======= -->
+<!-- ======= ADD STUDENT MODAL（原本的新增學生，維持原樣：只填姓名+Meet）======= -->
 <div class="modal-overlay" id="addStudentModal">
   <div class="modal">
     <h3>➕ 新增學生</h3>
@@ -711,6 +711,59 @@
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeAddStudentModal()">取消</button>
       <button class="btn-gold" onclick="addStudent()">新增學生</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= GEN LINK MODAL（入班連結：姓名+Meet+課程資訊，產生給新生的專屬連結）======= -->
+<div class="modal-overlay" id="genLinkModal">
+  <div class="modal">
+    <h3>🔗 產生入班連結</h3>
+    <p class="add-modal-hint">填寫學生姓名與 Meet 連結，並可加上課程資訊，系統會產生一個附課程摘要的專屬連結給新生。</p>
+
+    <label class="settings-label">學生姓名 *</label>
+    <input class="settings-input" id="genName" placeholder="例：小明、Mei" oninput="previewGenToken()" />
+
+    <label class="settings-label">Google Meet 連結 *</label>
+    <input class="settings-input" id="genMeet" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
+
+    <div class="token-preview" id="genTokenPreview"></div>
+
+    <div style="margin:16px 0 4px;padding-top:14px;border-top:1px dashed var(--border);">
+      <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold-bright);font-family:'Noto Sans TC',sans-serif;">課程資訊（選填・會顯示在新生連結上）</div>
+    </div>
+
+    <label class="settings-label">課程方案</label>
+    <select class="settings-input" id="genCourse" onchange="onGenCourseChange()">
+      <option value="">— 不指定 —</option>
+    </select>
+
+    <label class="settings-label">堂數方案</label>
+    <select class="settings-input" id="genPack" onchange="onGenPackChange()"></select>
+    <div class="token-preview" id="genCoursePreview" style="display:none;"></div>
+
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;">
+        <label class="settings-label">開課日期</label>
+        <input class="settings-input" type="date" id="genStartDate" />
+      </div>
+      <div style="flex:1;">
+        <label class="settings-label">上課時間</label>
+        <input class="settings-input" type="text" id="genClassTime" placeholder="例：每週二 19:00" />
+      </div>
+    </div>
+
+    <div id="genLinkResult" style="display:none;margin-top:16px;padding-top:14px;border-top:1px dashed var(--border);">
+      <label class="settings-label">✅ 專屬連結已產生，複製傳給學生：</label>
+      <div style="display:flex;gap:8px;">
+        <input class="settings-input" id="genLinkOutput" readonly style="flex:1;font-size:0.78rem;" onclick="this.select()" />
+        <button class="btn-sm btn-sm-copy" id="genLinkCopyBtn" style="flex-shrink:0;" onclick="copyGeneratedLink()">🔗 複製</button>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeGenLinkModal()" id="genModalCancelBtn">取消</button>
+      <button class="btn-gold" onclick="genLinkAddStudent()" id="genModalSubmitBtn">產生入班連結</button>
     </div>
   </div>
 </div>
@@ -1445,6 +1498,127 @@ async function addStudent() {
 }
 
 // ============================================================
+// GEN LINK MODAL（入班連結：姓名+Meet+課程資訊 → 建立學生 + 產生附課程摘要的連結）
+// ============================================================
+let genPendingToken = '';
+
+function openGenLinkModal() {
+  document.getElementById('genName').value = '';
+  document.getElementById('genMeet').value = '';
+  document.getElementById('genTokenPreview').style.display = 'none';
+  document.getElementById('genStartDate').value = '';
+  document.getElementById('genClassTime').value = '';
+  document.getElementById('genLinkResult').style.display = 'none';
+  document.getElementById('genLinkOutput').value = '';
+  populateGenCourseDropdown();
+  genPendingToken = '';
+  const submitBtn = document.getElementById('genModalSubmitBtn');
+  submitBtn.disabled = false; submitBtn.textContent = '產生入班連結';
+  document.getElementById('genModalCancelBtn').textContent = '取消';
+  document.getElementById('genLinkModal').classList.add('open');
+  setTimeout(() => document.getElementById('genName').focus(), 100);
+}
+function closeGenLinkModal() { document.getElementById('genLinkModal').classList.remove('open'); }
+
+function previewGenToken() {
+  const name = document.getElementById('genName').value.trim();
+  if (!name) { document.getElementById('genTokenPreview').style.display = 'none'; return; }
+  genPendingToken = generateToken(name);
+  const baseUrl = window.location.origin + window.location.pathname;
+  document.getElementById('genTokenPreview').textContent = '🔗 ' + baseUrl + '?s=' + genPendingToken + '…';
+  document.getElementById('genTokenPreview').style.display = 'block';
+}
+
+// ── 課程方案下拉（沿用付款流程用的 COURSE_TYPES，避免另外維護一份課程資料）──
+function populateGenCourseDropdown() {
+  const sel = document.getElementById('genCourse');
+  sel.innerHTML = '<option value="">— 不指定 —</option>' +
+    COURSE_TYPES.map(function(c) { return '<option value="' + c.id + '">' + c.label + '</option>'; }).join('');
+  document.getElementById('genPack').innerHTML = '';
+  document.getElementById('genCoursePreview').style.display = 'none';
+}
+function onGenCourseChange() {
+  const courseId = document.getElementById('genCourse').value;
+  const packSel = document.getElementById('genPack');
+  const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
+  if (!c) { packSel.innerHTML = ''; document.getElementById('genCoursePreview').style.display = 'none'; return; }
+  packSel.innerHTML = c.packs.map(function(n) { return '<option value="' + n + '">' + n + ' 堂</option>'; }).join('');
+  onGenPackChange();
+}
+function onGenPackChange() {
+  const courseId = document.getElementById('genCourse').value;
+  const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
+  const preview = document.getElementById('genCoursePreview');
+  if (!c) { preview.style.display = 'none'; return; }
+  const lessons = parseInt(document.getElementById('genPack').value, 10) || 0;
+  const bonus = typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0;
+  const total = lessons * (c.priceNTD || 0);
+  preview.style.display = 'block';
+  preview.textContent = '💰 NTD ' + total.toLocaleString() + '（THB ' + (lessons * (c.priceTHB || 0)).toLocaleString() + '）' +
+    (bonus ? '・贈 ' + bonus + ' 堂' : '');
+}
+
+// ── 產生新生「入班／繳費」專屬連結（課程資訊直接編碼在連結參數裡，不寫進資料庫，
+//    做法沿用 buildStudentUrl() 既有的 n / m base64 編碼慣例，避免另開資料表欄位）──
+function buildOnboardingUrl(token, name, meet, extra) {
+  const baseUrl = window.location.origin + window.location.pathname;
+  let url = baseUrl + '?s=' + token + '&n=' + btoa(encodeURIComponent(name)) + '&m=' + btoa(encodeURIComponent(meet));
+  if (extra.courseId) url += '&c=' + btoa(encodeURIComponent(extra.courseId));
+  if (extra.lessons)  url += '&p=' + btoa(encodeURIComponent(String(extra.lessons)));
+  if (extra.startDate) url += '&d=' + btoa(encodeURIComponent(extra.startDate));
+  if (extra.classTime) url += '&ct=' + btoa(encodeURIComponent(extra.classTime));
+  return url;
+}
+
+function copyGeneratedLink() {
+  const input = document.getElementById('genLinkOutput');
+  if (!input.value) return;
+  navigator.clipboard.writeText(input.value).then(function() {
+    const btn = document.getElementById('genLinkCopyBtn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ 已複製'; btn.classList.add('copied');
+    setTimeout(function() { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+async function genLinkAddStudent() {
+  const name = document.getElementById('genName').value.trim();
+  const meet = normalizeMeet(document.getElementById('genMeet').value);
+  if (!name || !meet) { alert('請填寫學生姓名與 Meet 連結'); return; }
+  let token = genPendingToken || generateToken(name);
+  while (studentsCache[token]) token = generateToken(name);
+
+  const courseId   = document.getElementById('genCourse').value;
+  const lessons    = document.getElementById('genPack').value;
+  const startDate  = document.getElementById('genStartDate').value;
+  const classTime  = document.getElementById('genClassTime').value.trim();
+
+  const saveBtn = document.getElementById('genModalSubmitBtn');
+  saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
+  const { error } = await sb.from('classroom_students').insert({ token, name, meet });
+  saveBtn.disabled = false; saveBtn.textContent = '產生入班連結';
+  if (error) { alert('新增失敗：' + error.message); return; }
+
+  // 產生專屬連結並顯示複製欄，先不關視窗，讓老師可以馬上複製傳給學生
+  const link = buildOnboardingUrl(token, name, meet, { courseId: courseId, lessons: lessons, startDate: startDate, classTime: classTime });
+  document.getElementById('genLinkOutput').value = link;
+  document.getElementById('genLinkResult').style.display = 'block';
+  document.getElementById('genModalCancelBtn').textContent = '關閉';
+  saveBtn.disabled = true; saveBtn.textContent = '✅ 已產生';
+
+  await refreshStudentList();
+  // 建立學生後自動建立 Drive 資料夾（學習內容／影片／課表 & 收據）+ 空白課表（跟「新增學生」一致）
+  try {
+    await gdGetStudentSubfolderId(name, '學習內容');
+    await gdGetStudentSubfolderId(name, '影片');
+    var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
+    try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
+    try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
+    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
+  } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
+}
+
+// ============================================================
 // EDIT MEET LINK
 // ============================================================
 let editingToken = '';
@@ -2003,7 +2177,10 @@ async function renderTeacherView() {
     '<div class="teacher-panel">' +
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
-      '<button class="btn-add-student" onclick="openAddStudentModal()">➕ 新增學生</button>' +
+      '<div style="display:flex;gap:10px;margin-top:16px;">' +
+        '<button class="btn-add-student" style="margin-top:0;" onclick="openAddStudentModal()">➕ 新增學生</button>' +
+        '<button class="btn-add-student" style="margin-top:0;" onclick="openGenLinkModal()">🔗 入班連結</button>' +
+      '</div>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
@@ -2023,6 +2200,32 @@ async function renderTeacherView() {
       btn.click();
     }, 1000);
   }
+}
+
+// 課程摘要卡（只有老師在「新增學生/產生入班連結」時有填課程資訊，連結裡才會有 c/p/d/ct 參數）
+function buildCourseSummaryCard() {
+  const decode = function(key) { try { return decodeURIComponent(atob(urlParams.get(key) || '')); } catch(e) { return ''; } };
+  const courseId = decode('c');
+  if (!courseId) return '';
+  const c = (typeof COURSE_TYPES !== 'undefined') ? COURSE_TYPES.find(function(x) { return x.id === courseId; }) : null;
+  if (!c) return '';
+  const lessons  = parseInt(decode('p'), 10) || 0;
+  const startDate = decode('d');
+  const classTime = decode('ct');
+  const bonus = lessons && typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0;
+  const totalNTD = lessons * (c.priceNTD || 0);
+  const totalTHB = lessons * (c.priceTHB || 0);
+  const startDateLabel = startDate ? new Date(startDate + 'T00:00:00').toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'short' }) : '';
+  return '<div class="card" style="border-top:2px solid var(--gold-bright);">' +
+    '<h2>📋 課程摘要</h2>' +
+    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:0.92rem;color:var(--ink);line-height:2;">' +
+      '<div><strong style="color:var(--gold-deep);">' + escHtml(c.label) + '</strong>' + (c.desc ? '　·　' + escHtml(c.desc) : '') + '</div>' +
+      (lessons ? '<div>堂數：' + lessons + ' 堂' + (bonus ? '（贈 ' + bonus + ' 堂）' : '') + '</div>' : '') +
+      (lessons ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
+      (startDateLabel ? '<div>開課日期：' + startDateLabel + '</div>' : '') +
+      (classTime ? '<div>上課時間：' + escHtml(classTime) + '</div>' : '') +
+    '</div>' +
+  '</div>';
 }
 
 function renderStudentView() {
@@ -2051,6 +2254,7 @@ function renderStudentView() {
     '</div>' +
     '<div id="quotaBanner"></div>' +
     '<div id="receiptBtns"></div>' +
+    buildCourseSummaryCard() +
     '<div class="card">' +
       '<h2>📹 進入課堂</h2>' +
       '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
@@ -2090,7 +2294,11 @@ function renderStudentView() {
       '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
         '<a href="../content.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">📚 影片與文章</a>' +
         '<a href="../games.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🎮 泰語小遊戲</a>' +
+        '<a href="https://mrtaihualin.com/" target="_blank" rel="noopener" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🏠 回官網首頁</a>' +
       '</div>' +
+    '</div>' +
+    '<div style="text-align:center;padding:4px 0 8px;">' +
+      '<a href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentNextClass(token);
