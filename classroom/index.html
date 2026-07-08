@@ -2416,21 +2416,16 @@ function buildCourseSummaryCard(s) {
   const weekdayZh = ['日','一','二','三','四','五','六'];
   const shortDate = function(d) { return (d.getMonth()+1) + '月' + d.getDate() + '日（週' + weekdayZh[d.getDay()] + '）'; };
 
-  // 老師時間（老師輸入的原始日期/時間，未經換算）
-  let teacherLine = '';
-  const teacherDateObj = startDate ? new Date(startDate + 'T00:00:00') : null;
-  if (teacherDateObj && classTime) {
-    teacherLine = '老師時間：' + shortDate(teacherDateObj) + ' ' + classTime;
-  }
-
-  // 學生時間（換算成學生所在時區，只有老師有選時區才會有這行）
-  let studentLine = '';
+  // 2026-07-08 Lin 指定：學生只看「自己的時間」，不顯示老師的時間。
+  let timeLine = '';
+  const startDateObj = startDate ? new Date(startDate + 'T00:00:00') : null;
   if (startDate && classTime && studentTz) {
     const startAbs = new Date(startDate + 'T' + classTime + ':00');
     const conv = formatInTz(startAbs, studentTz);
     const studentDateObj = new Date(conv.dateStr + 'T00:00:00');
-    const tzLabel = (TZ_OPTIONS.find(function(t) { return t.v === studentTz; }) || {}).label || studentTz;
-    studentLine = '學生時間：' + shortDate(studentDateObj) + ' ' + conv.timeStr + '（' + tzLabel + '時間）';
+    timeLine = '上課時間：' + shortDate(studentDateObj) + ' ' + conv.timeStr;
+  } else if (startDateObj && classTime) {
+    timeLine = '上課時間：' + shortDate(startDateObj) + ' ' + classTime;
   }
 
   return '<div class="card" style="border-top:2px solid var(--gold-bright);">' +
@@ -2439,8 +2434,7 @@ function buildCourseSummaryCard(s) {
       '<div><strong style="color:var(--gold-deep);">' + escHtml(c.label) + '</strong>' + (c.desc ? '　·　' + escHtml(c.desc) : '') + '</div>' +
       (lessons ? '<div>堂數：' + lessons + ' 堂' + (bonus ? '（贈 ' + bonus + ' 堂）' : '') + '</div>' : '') +
       (lessons ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
-      (teacherLine ? '<div>' + escHtml(teacherLine) + '</div>' : '') +
-      (studentLine ? '<div>' + escHtml(studentLine) + '</div>' : '') +
+      (timeLine ? '<div>' + escHtml(timeLine) + '</div>' : '') +
       (recurring ? '<div style="color:var(--ink-muted);font-size:0.82rem;">🔁 每週固定上課</div>' : '') +
     '</div>' +
   '</div>';
@@ -2498,7 +2492,6 @@ async function renderStudentView() {
     '</div>' +
     '<div id="quotaBanner"></div>' +
     '<div id="receiptBtns"></div>' +
-    buildCourseSummaryCard(student) +
     '<div class="card">' +
       '<h2>📹 進入課堂</h2>' +
       (student.meet
