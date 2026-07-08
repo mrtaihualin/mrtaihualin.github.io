@@ -694,6 +694,23 @@
   </div>
 </div>
 
+<!-- ======= ADD STUDENT MODAL（原本的新增學生：只填姓名，自動建 Meet，立即建立）======= -->
+<div class="modal-overlay" id="addStudentModal">
+  <div class="modal">
+    <h3>➕ 新增學生</h3>
+
+    <label class="settings-label">學生姓名 *</label>
+    <input class="settings-input" id="addName" placeholder="例：小明、Mei" oninput="previewToken()" />
+
+    <div class="token-preview" id="tokenPreview"></div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeAddStudentModal()">取消</button>
+      <button class="btn-gold" onclick="addStudent()">新增學生</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= GEN LINK MODAL（入班連結：姓名+Meet+課程資訊，產生給新生的專屬連結）======= -->
 <div class="modal-overlay" id="genLinkModal">
   <div class="modal">
@@ -1499,6 +1516,62 @@ function normalizeMeet(u){
 }
 
 // ============================================================
+// ADD STUDENT MODAL（原本的新增學生：只填姓名，自動建 Meet，立即建立完整資源）
+// ============================================================
+let pendingToken = '';
+
+function openAddStudentModal() {
+  document.getElementById('addName').value = '';
+  document.getElementById('tokenPreview').style.display = 'none';
+  pendingToken = '';
+  document.getElementById('addStudentModal').classList.add('open');
+  setTimeout(() => document.getElementById('addName').focus(), 100);
+}
+function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('open'); }
+
+function previewToken() {
+  const name = document.getElementById('addName').value.trim();
+  if (!name) { document.getElementById('tokenPreview').style.display = 'none'; return; }
+  pendingToken = generateToken(name);
+  const baseUrl = window.location.origin + window.location.pathname;
+  document.getElementById('tokenPreview').textContent = '🔗 ' + baseUrl + '?s=' + pendingToken + '…';
+  document.getElementById('tokenPreview').style.display = 'block';
+}
+
+async function addStudent() {
+  const name = document.getElementById('addName').value.trim();
+  if (!name) { alert('請填寫學生姓名'); return; }
+  let token = pendingToken || generateToken(name);
+  while (studentsCache[token]) token = generateToken(name);
+
+  const saveBtn = document.querySelector('#addStudentModal .btn-gold');
+  saveBtn.disabled = true; saveBtn.textContent = '建立 Meet 連結中…';
+  let meet;
+  try {
+    meet = await createMeetLinkForStudent(name);
+  } catch (e) {
+    saveBtn.disabled = false; saveBtn.textContent = '新增學生';
+    alert('❌ 自動建立 Google Meet 連結失敗：' + (e.message || e) + '\n請確認已授權 Google 存取權限後再試一次。');
+    return;
+  }
+  saveBtn.textContent = '儲存中…';
+  const { error } = await sb.from('classroom_students').insert({ token, name, meet, setup_status: 'confirmed' });
+  saveBtn.disabled = false; saveBtn.textContent = '新增學生';
+  if (error) { alert('新增失敗：' + error.message); return; }
+  closeAddStudentModal();
+  await refreshStudentList();
+  // 新增學生後自動建立 Drive 資料夾（學習內容／影片／課表 & 收據）+ 空白課表
+  try {
+    await gdGetStudentSubfolderId(name, '學習內容');
+    await gdGetStudentSubfolderId(name, '影片');
+    var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
+    try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
+    try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
+    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
+  } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
+}
+
+// ============================================================
 // GEN LINK MODAL（入班連結：姓名+Meet+課程資訊 → 建立學生 + 產生附課程摘要的連結）
 // ============================================================
 let genPendingToken = '';
@@ -1609,20 +1682,6 @@ function onGenPackChange() {
     (bonus ? '・贈 ' + bonus + ' 堂' : '');
 }
 
-// ── 產生新生「入班／繳費」專屬連結（課程資訊直接編碼在連結參數裡，不寫進資料庫，
-//    做法沿用 buildStudentUrl() 既有的 n / m base64 編碼慣例，避免另開資料表欄位）──
-function buildOnboardingUrl(token, name, meet, extra) {
-  const baseUrl = window.location.origin + window.location.pathname;
-  let url = baseUrl + '?s=' + token + '&n=' + btoa(encodeURIComponent(name)) + '&m=' + btoa(encodeURIComponent(meet));
-  if (extra.courseId) url += '&c=' + btoa(encodeURIComponent(extra.courseId));
-  if (extra.lessons)  url += '&p=' + btoa(encodeURIComponent(String(extra.lessons)));
-  if (extra.startDate) url += '&d=' + btoa(encodeURIComponent(extra.startDate));
-  if (extra.classTime) url += '&ct=' + btoa(encodeURIComponent(extra.classTime));
-  if (extra.recurring) url += '&r=1';
-  if (extra.tzLabel)  url += '&tzl=' + btoa(encodeURIComponent(extra.tzLabel));
-  return url;
-}
-
 function copyGeneratedLink() {
   const input = document.getElementById('genLinkOutput');
   if (!input.value) return;
@@ -1634,6 +1693,11 @@ function copyGeneratedLink() {
   });
 }
 
+// 2026-07-08 改版：入班連結不再馬上建 Meet／Drive。
+// 只先把「老師預先設定的課程/課表」存進 classroom_students 的 pending_* 欄位，
+// setup_status = 'pending'，meet 留空。真正建立 Meet/Drive 的動作延後到
+// 老師在「待審核繳費」按下「✅ 確認收款」時才觸發（見 approveSlip()），
+// 這樣才符合「學生付款前不建立任何資源」的要求。
 async function genLinkAddStudent() {
   const name = document.getElementById('genName').value.trim();
   if (!name) { alert('請填寫學生姓名'); return; }
@@ -1641,56 +1705,36 @@ async function genLinkAddStudent() {
   while (studentsCache[token]) token = generateToken(name);
 
   const courseId   = document.getElementById('genCourse').value;
-  const lessons    = document.getElementById('genPack').value;
-  const startDate  = document.getElementById('genStartDate').value; // 老師自己時區的日期
-  const classTime  = document.getElementById('genClassTime').value; // 老師自己時區的時間
-  const studentTz  = document.getElementById('genStudentTz').value;
+  const lessons    = parseInt(document.getElementById('genPack').value, 10) || null;
+  const startDate  = document.getElementById('genStartDate').value || null; // 老師自己時區的日期
+  const classTime  = document.getElementById('genClassTime').value || null; // 老師自己時區的時間
+  const studentTz  = document.getElementById('genStudentTz').value || null;
   const recurring  = document.getElementById('genWeeklyRecurring').checked && !!(startDate && classTime);
 
   const saveBtn = document.getElementById('genModalSubmitBtn');
-  saveBtn.disabled = true; saveBtn.textContent = '建立 Meet 連結中…';
-  let meet;
-  try {
-    // Google Calendar 一律用「老師輸入當下的原始日期/時間」建立（老師瀏覽器時區自動處理，最準）
-    meet = await createMeetLinkForStudent(name, { startDate: startDate, classTime: classTime, recurring: recurring });
-  } catch (e) {
-    saveBtn.disabled = false; saveBtn.textContent = '入班連結';
-    alert('❌ 自動建立 Google Meet 連結失敗：' + (e.message || e) + '\n請確認已授權 Google 存取權限後再試一次。');
-    return;
-  }
-  saveBtn.textContent = '儲存中…';
-  const { error } = await sb.from('classroom_students').insert({ token, name, meet });
+  saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
+  const { error } = await sb.from('classroom_students').insert({
+    token, name, meet: null, setup_status: 'pending',
+    pending_course_id: courseId || null,
+    pending_lessons: lessons,
+    pending_start_date: startDate,
+    pending_class_time: classTime,
+    pending_student_tz: studentTz,
+    pending_recurring: recurring
+  });
   saveBtn.disabled = false; saveBtn.textContent = '入班連結';
-  if (error) { alert('新增失敗：' + error.message); return; }
+  if (error) { alert('新增失敗：' + error.message + '\n（如果錯誤訊息提到 pending_ 開頭的欄位不存在，代表 Supabase 資料庫還沒加新欄位，要先請 Lin 執行 SQL）'); return; }
 
-  // 給學生看的連結：如果有選「學生所在時區」，把日期/時間換算成學生當地時間再放進連結，
-  // 這樣學生打開連結看到的就是自己當地的時間，不用自己心算時差
-  let linkStartDate = startDate, linkClassTime = classTime, tzLabel = '';
-  if (startDate && classTime && studentTz) {
-    const startAbs = new Date(startDate + 'T' + classTime + ':00');
-    const conv = formatInTz(startAbs, studentTz);
-    linkStartDate = conv.dateStr;
-    linkClassTime = conv.timeStr;
-    tzLabel = (TZ_OPTIONS.find(function(t) { return t.v === studentTz; }) || {}).label || studentTz;
-  }
-
-  // 產生專屬連結並顯示複製欄，先不關視窗，讓老師可以馬上複製傳給學生
-  const link = buildOnboardingUrl(token, name, meet, { courseId: courseId, lessons: lessons, startDate: linkStartDate, classTime: linkClassTime, recurring: recurring, tzLabel: tzLabel });
+  // 給學生的連結就是 token 本身，學生頁面每次都會即時去資料庫抓最新狀態，
+  // 不用像以前把姓名/課程資訊冻結編碼在網址裡（那樣老師確認付款後資料就對不起來了）
+  const baseUrl = window.location.origin + window.location.pathname;
+  const link = baseUrl + '?s=' + token;
   document.getElementById('genLinkOutput').value = link;
   document.getElementById('genLinkResult').style.display = 'block';
   document.getElementById('genModalCancelBtn').textContent = '關閉';
   saveBtn.disabled = true; saveBtn.textContent = '✅ 已產生';
 
   await refreshStudentList();
-  // 建立學生後自動建立 Drive 資料夾（學習內容／影片／課表 & 收據）+ 空白課表（跟「新增學生」一致）
-  try {
-    await gdGetStudentSubfolderId(name, '學習內容');
-    await gdGetStudentSubfolderId(name, '影片');
-    var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
-    try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
-    try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
-    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
-  } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
 }
 
 // ============================================================
@@ -1773,6 +1817,9 @@ function buildStudentUrl(token) {
   const s = studentsCache[token];
   if (!s) return null;
   const baseUrl = window.location.origin + window.location.pathname;
+  // 還沒確認收款、meet 是空的（入班前狀態）→ 連結只帶 token 就好，
+  // 學生頁面本來就會即時去資料庫抓最新狀態，不用凍結 name/meet 在網址裡
+  if (!s.meet) return baseUrl + '?s=' + token;
   return baseUrl + '?s=' + token + '&n=' + btoa(encodeURIComponent(s.name)) + '&m=' + btoa(encodeURIComponent(s.meet));
 }
 
@@ -2252,7 +2299,10 @@ async function renderTeacherView() {
     '<div class="teacher-panel">' +
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
-      '<button class="btn-add-student" onclick="openGenLinkModal()">🔗 入班連結</button>' +
+      '<div style="display:flex;gap:10px;margin-top:16px;">' +
+        '<button class="btn-add-student" style="margin-top:0;" onclick="openAddStudentModal()">➕ 新增學生</button>' +
+        '<button class="btn-add-student" style="margin-top:0;" onclick="openGenLinkModal()">🔗 入班連結</button>' +
+      '</div>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
@@ -2275,26 +2325,36 @@ async function renderTeacherView() {
 }
 
 // 課程摘要卡（只有老師在「入班連結」時有填課程資訊，連結裡才會有 c/p/d/ct 參數）
-function buildCourseSummaryCard() {
-  const decode = function(key) { try { return decodeURIComponent(atob(urlParams.get(key) || '')); } catch(e) { return ''; } };
-  const courseId = decode('c');
+// 2026-07-08 改版：課程資訊改成從資料庫的學生列（pending_* 欄位）讀，不再靠網址參數。
+// 這樣老師確認收款後，同一個連結重新整理就能看到最新狀態，不會有網址上凍結的舊資料對不起來的問題。
+function buildCourseSummaryCard(s) {
+  const courseId = s && s.pending_course_id;
   if (!courseId) return '';
   const c = (typeof COURSE_TYPES !== 'undefined') ? COURSE_TYPES.find(function(x) { return x.id === courseId; }) : null;
   if (!c) return '';
-  const lessons  = parseInt(decode('p'), 10) || 0;
-  const startDate = decode('d'); // 若老師有選「學生時區」，這裡已經是換算成學生當地的日期
-  const classTime = decode('ct'); // 同上，已換算成學生當地時間
-  const tzLabel = decode('tzl');
-  const recurring = urlParams.get('r') === '1';
+  const lessons = s.pending_lessons || 0;
+  const startDate = s.pending_start_date;   // 老師自己時區的日期
+  const classTime = s.pending_class_time;   // 老師自己時區的時間
+  const studentTz = s.pending_student_tz;
+  const recurring = !!s.pending_recurring;
   const bonus = lessons && typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0;
   const totalNTD = lessons * (c.priceNTD || 0);
   const totalTHB = lessons * (c.priceTHB || 0);
   const weekdayZh = ['日','一','二','三','四','五','六'];
-  const startDateObj = startDate ? new Date(startDate + 'T00:00:00') : null;
+  // 換算成學生當地時間（如果老師有選時區的話）給學生看
+  let dateForDisplay = startDate, timeForDisplay = classTime, tzLabel = '';
+  if (startDate && classTime && studentTz) {
+    const startAbs = new Date(startDate + 'T' + classTime + ':00');
+    const conv = formatInTz(startAbs, studentTz);
+    dateForDisplay = conv.dateStr;
+    timeForDisplay = conv.timeStr;
+    tzLabel = (TZ_OPTIONS.find(function(t) { return t.v === studentTz; }) || {}).label || studentTz;
+  }
+  const startDateObj = dateForDisplay ? new Date(dateForDisplay + 'T00:00:00') : null;
   const startDateLabel = startDateObj ? startDateObj.toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'short' }) : '';
-  const classTimeLabel = classTime && startDateObj
-    ? (recurring ? '每週' + weekdayZh[startDateObj.getDay()] + ' ' + classTime : classTime + '（單次）') + (tzLabel ? '　' + tzLabel : '')
-    : classTime;
+  const classTimeLabel = timeForDisplay && startDateObj
+    ? (recurring ? '每週' + weekdayZh[startDateObj.getDay()] + ' ' + timeForDisplay : timeForDisplay + '（單次）') + (tzLabel ? '　' + tzLabel : '')
+    : timeForDisplay;
   return '<div class="card" style="border-top:2px solid var(--gold-bright);">' +
     '<h2>📋 課程摘要</h2>' +
     '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:0.92rem;color:var(--ink);line-height:2;">' +
@@ -2307,12 +2367,25 @@ function buildCourseSummaryCard() {
   '</div>';
 }
 
-function renderStudentView() {
+// 2026-07-08 改版：改成即時去 Supabase 抓這個 token 的最新資料（不再只信網址上凍結的 n/m 參數），
+// 因為現在「入班連結」在老師確認收款前 meet 是空的，收款確認後才會補上，
+// 學生用同一個連結重新整理，一定要看到當下最新狀態（confirmed 才有完整課堂功能，pending 只看到繳費頁）。
+async function renderStudentView() {
+  const token = urlParams.get('s') || '';
   let student = null;
-  const nParam = urlParams.get('n');
-  const mParam = urlParams.get('m');
-  if (nParam && mParam) {
-    try { student = { name: decodeURIComponent(atob(nParam)), meet: normalizeMeet(decodeURIComponent(atob(mParam))) }; } catch(e) {}
+  if (token) {
+    try {
+      const { data } = await sb.from('classroom_students').select('*').eq('token', token).single();
+      if (data) student = data;
+    } catch (e) {}
+  }
+  // 舊格式連結（升級前發出去、還沒被打開過的）沒有資料庫紀錄可能還帶著 n/m 參數 → 相容 fallback
+  if (!student) {
+    const nParam = urlParams.get('n');
+    const mParam = urlParams.get('m');
+    if (nParam && mParam) {
+      try { student = { name: decodeURIComponent(atob(nParam)), meet: normalizeMeet(decodeURIComponent(atob(mParam))), setup_status: 'confirmed' }; } catch(e) {}
+    }
   }
   if (!student) {
     document.getElementById('mainContainer').innerHTML =
@@ -2322,9 +2395,20 @@ function renderStudentView() {
       '</div>';
     return;
   }
+  student.meet = normalizeMeet(student.meet || '');
+  if (token) studentsCache[token] = student; // 讓 openSlipModalLocked() 等函式能透過 studentsCache 拿到 pending_* 資料
   var sInitial = student.name ? student.name.charAt(0) : '?';
   document.getElementById('studentNameDisplay').textContent = '';
-  const token = urlParams.get('s') || '';
+  const isPending = student.setup_status === 'pending' || !student.meet;
+
+  if (isPending) {
+    renderBeforeJoiningView(token, student, sInitial);
+    return;
+  }
+
+  // ── 已確認 / 完整課堂資料頁（跟改版前完全一樣，功能沒有變）──
+  var header = document.querySelector('header');
+  if (header) header.style.display = '';
   document.getElementById('mainContainer').innerHTML =
     '<div class="student-hero">' +
       '<div class="student-hero-avatar">' + escHtml(sInitial) + '</div>' +
@@ -2333,21 +2417,11 @@ function renderStudentView() {
     '</div>' +
     '<div id="quotaBanner"></div>' +
     '<div id="receiptBtns"></div>' +
-    buildCourseSummaryCard() +
+    buildCourseSummaryCard(student) +
     '<div class="card">' +
       '<h2>📹 進入課堂</h2>' +
       '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
       '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>' +
-    '</div>' +
-    '<div class="card">' +
-      '<h2>💰 繳費 & 收據</h2>' +
-      '<div id="slipStatusMsg"></div>' +
-      '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
-      '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 選幣別 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
-      '<div id="payHistory" style="margin-top:14px;"></div>' +
-    '</div>' +
-    '<div style="text-align:center;padding:0 0 4px;">' +
-      '<a href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
     '</div>' +
     '<div class="card" id="nextClassCard">' +
       '<h2>📅 下一堂課</h2>' +
@@ -2372,12 +2446,22 @@ function renderStudentView() {
       '<div id="driveFolderLink" style="margin-top:12px;"></div>' +
     '</div>' +
     '<div class="card">' +
+      '<h2>💰 繳費 & 收據</h2>' +
+      '<div id="slipStatusMsg"></div>' +
+      '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
+      '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 選幣別 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
+      '<div id="payHistory" style="margin-top:14px;"></div>' +
+    '</div>' +
+    '<div class="card">' +
       '<h2>📚 更多學習資源</h2>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
         '<a href="../content.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">📚 影片與文章</a>' +
         '<a href="../games.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🎮 泰語小遊戲</a>' +
         '<a href="https://mrtaihualin.com/" target="_blank" rel="noopener" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🏠 回官網首頁</a>' +
       '</div>' +
+    '</div>' +
+    '<div style="text-align:center;padding:4px 0 8px;">' +
+      '<a href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentNextClass(token);
@@ -2387,6 +2471,48 @@ function renderStudentView() {
   loadStudentQuota(token);
   loadStudentReceipts(token);
   loadStudentPayments(token);
+}
+
+// ── 「入班前 / 等待老師確認收款」頁面 ──────────────────────
+// 學生付款前看到的就是這個縮減版頁面：課程摘要 + 鎖住的（灰色）課堂連結 + 繳費 + 上課須知。
+// 不顯示上方 header（要離開了嗎？那個大標題列），也不顯示下一堂課／學習感想／課程記錄／檔案下載／
+// 更多學習資源這些「已經是學生」才需要的功能卡片 —— 這些只有 setup_status = 'confirmed' 之後才會出現。
+function renderBeforeJoiningView(token, student, sInitial) {
+  var header = document.querySelector('header');
+  if (header) header.style.display = 'none'; // 入班前頁面：拿掉最上面的老師招牌 header，做成獨立頁面
+
+  document.getElementById('mainContainer').innerHTML =
+    '<div class="student-hero">' +
+      '<div class="student-hero-avatar">' + escHtml(sInitial) + '</div>' +
+      '<div class="student-hero-name">' + escHtml(student.name) + ' 同學</div>' +
+      '<div class="student-hero-sub">歡迎加入！入班前請先完成繳費 🙏</div>' +
+    '</div>' +
+    buildCourseSummaryCard(student) +
+    '<div class="card">' +
+      '<h2>📹 課堂連結</h2>' +
+      '<a class="meet-btn" href="javascript:void(0)" onclick="alert(\'⏳ 等待老師確認收款中，老師確認收款後這個按鈕就會開通，可以直接點進去上課。\')" style="opacity:0.45;filter:grayscale(0.4);cursor:not-allowed;">' + meetSVG + ' 尚未開通（等待老師確認收款）</a>' +
+      '<p class="meet-link-text">完成繳費、老師確認收款後，這裡會自動開通課堂連結</p>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h2>💰 繳費</h2>' +
+      '<div id="slipStatusMsg"></div>' +
+      '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModalLocked(\'' + token + '\')">💰 繳費通知</button>' +
+      '<p class="meet-link-text" style="margin-top:8px;">上傳匯款截圖 → 老師確認收款後自動開通課堂連結</p>' +
+      '<div id="payHistory" style="margin-top:14px;"></div>' +
+    '</div>' +
+    '<div style="text-align:center;padding:4px 0 8px;">' +
+      '<a href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
+    '</div>';
+  checkStudentSlipStatus(token);
+  loadStudentPayments(token);
+}
+
+// 從「入班前」頁面打開繳費視窗：鎖住課程/堂數（老師在產生入班連結時已經指定好），
+// 學生不能自己改成別的方案，避免跟老師談好的價錢對不起來
+function openSlipModalLocked(token) {
+  var s = studentsCache[token];
+  var lock = (s && s.pending_course_id && s.pending_lessons) ? { courseId: s.pending_course_id, lessons: s.pending_lessons } : null;
+  openSlipModal(token, lock);
 }
 
 // 依「本輪起算日」計算當期課程剩餘堂數（起算日前=舊課，不計入）
@@ -2907,6 +3033,7 @@ function initRecording() {
 // ============================================================
 let slipToken = null, slipType = null, slipLessons = null, slipBonus = 0, slipImageData = null, slipCurrency = null;
 let pendingSlipId = null;
+let slipLocked = false; // true = 老師已指定方案（入班前頁面），學生不能自己改選別的課程/堂數
 
 // 共用按鈕樣式
 var OFF_CUR  = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
@@ -2915,17 +3042,39 @@ var OFF_PACK = 'min-width:88px;flex:1;padding:9px 6px;border-radius:9px;border:1
 var ON_PACK  = 'min-width:88px;flex:1;padding:9px 6px;border-radius:9px;border:2px solid var(--gold-deep);background:#fdf6e3;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;text-align:center;';
 
 // — Student: open slip modal —
-function openSlipModal(token) {
+// lock = { courseId, lessons } — 有給的話（入班前頁面）就只顯示老師指定的那個方案，
+// 學生不能自己換成別的課程/堂數，避免跟老師談好的價錢對不起來
+function openSlipModal(token, lock) {
   slipToken = token; slipType = null; slipLessons = null; slipBonus = 0; slipImageData = null; slipCurrency = null;
-  document.getElementById('slipCourseGrid').innerHTML = COURSE_TYPES.map(function(c) {
-    return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipType(\'' + c.id + '\')">' +
-      '<div class="c-name">' + c.label + '</div>' +
-      '<div class="c-desc">' + c.desc + '</div>' +
-    '</button>';
-  }).join('');
-  document.getElementById('slipPackWrap').style.display = 'none';
-  document.getElementById('slipPackGrid').innerHTML = '';
-  document.getElementById('slipCurrencyWrap').style.display = 'none';
+  slipLocked = !!(lock && lock.courseId && lock.lessons);
+  var lockedCourse = slipLocked ? COURSE_TYPES.find(function(x) { return x.id === lock.courseId; }) : null;
+
+  if (slipLocked && lockedCourse) {
+    document.getElementById('slipCourseGrid').innerHTML =
+      '<div class="course-card selected" style="cursor:default;grid-column:1 / -1;">' +
+        '<div class="c-name">' + lockedCourse.label + '</div>' +
+        '<div class="c-desc">' + lockedCourse.desc + '　·　老師已指定此方案</div>' +
+      '</div>';
+    var bonus = slipBonusFor(lock.lessons);
+    document.getElementById('slipPackGrid').innerHTML =
+      '<div class="course-card selected" style="cursor:default;min-width:88px;text-align:center;">' +
+        '<div style="font-weight:700;">' + lock.lessons + ' 堂</div>' +
+        (bonus ? '<div style="font-size:0.72rem;color:var(--gold-deep);">贈 ' + bonus + ' 堂</div>' : '') +
+      '</div>';
+    document.getElementById('slipPackWrap').style.display = 'block';
+    document.getElementById('slipCurrencyWrap').style.display = 'block';
+    slipType = lock.courseId; slipLessons = lock.lessons; slipBonus = bonus;
+  } else {
+    document.getElementById('slipCourseGrid').innerHTML = COURSE_TYPES.map(function(c) {
+      return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipType(\'' + c.id + '\')">' +
+        '<div class="c-name">' + c.label + '</div>' +
+        '<div class="c-desc">' + c.desc + '</div>' +
+      '</button>';
+    }).join('');
+    document.getElementById('slipPackWrap').style.display = 'none';
+    document.getElementById('slipPackGrid').innerHTML = '';
+    document.getElementById('slipCurrencyWrap').style.display = 'none';
+  }
   document.getElementById('slipBankBox').style.display = 'none';
   document.getElementById('curBtn-NTD').style.cssText = OFF_CUR;
   document.getElementById('curBtn-THB').style.cssText = OFF_CUR;
@@ -3000,31 +3149,34 @@ function renderSlipTotalAndBank() {
     document.getElementById('slipTotalText').textContent = amtCur + ' 金額請與老師確認';
     document.getElementById('slipCalcText').textContent  = c.label + ' · ' + slipLessons + ' 堂';
   }
-  var qrImg = function(src, cap) {
-    return '<div style="text-align:center;margin-top:8px;">'
-      + '<img src="' + src + '" alt="QR" style="max-width:170px;width:62%;border-radius:8px;display:inline-block;" onerror="this.parentNode.style.display=\'none\'">'
-      + (cap ? '<div style="font-size:0.74rem;color:var(--ink-muted);margin-top:2px;">' + cap + '</div>' : '')
+  // 資訊＋QR 並排（水平排版），QR 固定在右側，手機窄螢幕自動換行堆疊
+  var payRow = function(infoHtml, qrSrc, qrCap) {
+    return '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:160px;">' + infoHtml + '</div>'
+      + (qrSrc ? '<div style="text-align:center;flex-shrink:0;margin:0 auto;">'
+          + '<img src="' + qrSrc + '" alt="QR" style="width:120px;height:120px;border-radius:8px;display:block;" onerror="this.parentNode.style.display=\'none\'">'
+          + (qrCap ? '<div style="font-size:0.7rem;color:var(--ink-muted);margin-top:4px;max-width:120px;">' + qrCap + '</div>' : '')
+        + '</div>' : '')
       + '</div>';
   };
   bankBox.style.display = 'block';
   if (slipCurrency === 'WISE') {
+    var wiseInfo = '<div style="font-weight:700;font-size:0.85rem;color:var(--gold-deep);margin-bottom:6px;">方式一・網站轉帳</div>'
+      + '<div>前往：<a href="' + WISE_INFO.siteUrl + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:underline;">' + WISE_INFO.siteUrl + '</a></div>'
+      + WISE_INFO.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('');
     bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:10px;">🌍 Wise（國際匯款）</div>'
-      + '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">'
-        + '<div style="font-weight:700;font-size:0.85rem;color:var(--gold-deep);margin-bottom:6px;">方式一・網站轉帳</div>'
-        + '<div>前往：<a href="' + WISE_INFO.siteUrl + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:underline;">' + WISE_INFO.siteUrl + '</a></div>'
-        + WISE_INFO.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
-      + '</div>'
+      + '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">' + payRow(wiseInfo, null, null) + '</div>'
       + '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;">'
-        + '<div style="font-weight:700;font-size:0.85rem;color:var(--gold-deep);margin-bottom:2px;">方式二・掃 QR（用 Wise App）</div>'
-        + qrImg(WISE_INFO.qr, '打開 Wise App 掃這個 QR 付款')
+        + '<div style="font-weight:700;font-size:0.85rem;color:var(--gold-deep);margin-bottom:6px;">方式二・掃 QR（用 Wise App）</div>'
+        + payRow('<div style="color:var(--ink-muted);font-size:0.82rem;">打開 Wise App 掃右邊的 QR 碼付款</div>', WISE_INFO.qr, '掃描付款')
       + '</div>';
   } else {
     var b = BANK_INFO[slipCurrency];
     var anyVal = b.lines.some(function(l) { return /[：:]\s*\S/.test(l); });
-    bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">' + b.title + '</div>'
+    var bInfo = '<div style="font-weight:700;margin-bottom:6px;">' + b.title + '</div>'
       + b.lines.map(function(l) { return '<div>' + l + '</div>'; }).join('')
-      + (b.qr ? qrImg(b.qr, '掃 QR 轉帳') : '')
       + (anyVal ? '' : '<div style="color:var(--amber);font-size:0.78rem;margin-top:6px;">（老師尚未填寫帳戶，請用 LINE 向老師索取匯款資訊）</div>');
+    bankBox.innerHTML = payRow(bInfo, b.qr || null, '掃 QR 轉帳');
   }
 }
 
@@ -3304,6 +3456,36 @@ async function generateAndUploadReceipt(p, v) {
   return { receiptNo: receiptNo, link: link };
 }
 
+// 學生付款前老師「入班連結」建立的學生 setup_status = 'pending'、meet 是空的，
+// 完全沒有建立 Drive 資料夾／Google Meet／行事曆。這裡在老師第一次「確認收款」時才補做這一切
+// （只做一次；已經 confirmed 過的學生不會重複建立），重用跟「新增學生」完全一樣的既有邏輯。
+async function runDeferredStudentSetup(token, name) {
+  var s = studentsCache[token];
+  if (!s || s.setup_status !== 'pending') return; // 已經 confirmed 過了，不用再做一次
+
+  var meet;
+  try {
+    meet = await createMeetLinkForStudent(name, {
+      startDate: s.pending_start_date, classTime: s.pending_class_time, recurring: !!s.pending_recurring
+    });
+  } catch (e) {
+    alert('⚠️ 確認收款成功，但自動建立 Google Meet 連結失敗：' + (e.message || e) + '\n請稍後到學生列表手動「✏️」補上 Meet 連結，或再確認一次。');
+    return;
+  }
+  var { error } = await sb.from('classroom_students').update({ meet: meet, setup_status: 'confirmed' }).eq('token', token);
+  if (error) { alert('⚠️ Meet 連結建立成功，但寫入資料庫失敗：' + error.message); return; }
+
+  // 跟「新增學生」一模一樣的 Drive 資料夾建立流程（學習內容／影片／課表 & 收據 + 空白課表 + 分享）
+  try {
+    await gdGetStudentSubfolderId(name, '學習內容');
+    await gdGetStudentSubfolderId(name, '影片');
+    var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
+    try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
+    try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
+    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
+  } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
+}
+
 async function approveSlip() {
   if (!pendingSlipId) return;
   var slipId = pendingSlipId;
@@ -3323,6 +3505,13 @@ async function approveSlip() {
     start_note: start || null, start_date: start || null, note: note || null
   }).eq('id', slipId);
   if (res.error) { btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據'; alert('儲存失敗：' + res.error.message); return; }
+
+  // 這位學生如果還是「入班前 / 未建立資源」狀態 → 這是第一次確認收款，先把 Meet／Drive 補齊
+  if (slip.token && slip.student_name) {
+    btn.textContent = '建立課堂資源中…';
+    try { await runDeferredStudentSetup(slip.token, slip.student_name); } catch (e) { console.warn('補建課堂資源失敗：', e); }
+  }
+
   // 產生收據檔到學生「收據」資料夾
   var receipt = null;
   btn.textContent = '產生收據中…';
@@ -3338,6 +3527,7 @@ async function approveSlip() {
     : '\n（收據檔產生失敗，請確認已用 Google 登入授權）'));
   await loadPendingSlips();
   loadLowQuotaBanner();
+  await refreshStudentList();
   if (slip.token) loadTeacherStudentInfo(slip.token);
 }
 
