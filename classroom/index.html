@@ -1511,6 +1511,19 @@ const isTeacher = !studentToken;
 // --- security helpers: escape HTML + whitelist URL scheme (กัน XSS) ---
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function safeHref(u){var s=String(u==null?'':u).trim();return /^https:\/\//i.test(s)?s:'#';}
+// 2026-07-08 修 bug：以前學生姓名都是從網址 ?n=base64 這個參數解出來的，
+// 但「入班連結」現在已經改成只給 ?s=token（不再帶 n），如果還照舊去解 n 會拿到空字串，
+// 導致送出繳費通知/請假申請時老師那邊看到的學生姓名是空的，甚至讓「確認收款」以為姓名是空的而跳過建立 Meet/Drive。
+// 一律優先用 studentsCache[token].name（真正從資料庫抓到的資料），沒有才退回舊版 n 參數解法。
+function currentStudentName(token) {
+  var s = token && (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
+  if (s && s.name) return s.name;
+  try {
+    var n = decodeURIComponent(atob(urlParams.get('n') || ''));
+    if (n) return n;
+  } catch (e) {}
+  return token || '';
+}
 // 把 Meet 連結補成可用的 https:// 形式（避免老師貼成沒有 https 的連結 → 學生按了進不去）
 function normalizeMeet(u){
   var s=String(u==null?'':u).trim();
@@ -1740,10 +1753,11 @@ async function genLinkAddStudent() {
   saveBtn.disabled = false; saveBtn.textContent = '入班連結';
   if (error) { alert('新增失敗：' + error.message + '\n（如果錯誤訊息提到 pending_ 開頭的欄位不存在，代表 Supabase 資料庫還沒加新欄位，要先請 Lin 執行 SQL）'); return; }
 
-  // 給學生的連結就是 token 本身，學生頁面每次都會即時去資料庫抓最新狀態，
-  // 不用像以前把姓名/課程資訊冻結編碼在網址裡（那樣老師確認付款後資料就對不起來了）
-  const baseUrl = window.location.origin + window.location.pathname;
-  const link = baseUrl + '?s=' + token;
+  // 2026-07-08：老師傳給學生的連結改成「繳費・入班頁」pay.html（付款方式＋課程＋上課連結都在裡面）。
+  // 學生在 pay.html 繳費 → 老師確認收款後，pay.html 裡的上課連結（?s=token）才開通。
+  // token 一樣走資料庫即時狀態，不把資訊凍結在網址裡。
+  const payBase = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'pay.html';
+  const link = payBase + '?s=' + token;
   document.getElementById('genLinkOutput').value = link;
   document.getElementById('genLinkResult').style.display = 'block';
   genLinkGenerated = true;

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>繳費・入班 | 泰華眼裡的泰語教學</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#8B6310; --gold-bright:#C8973A; --gold-light:#F3E4C2; --gold-deep:#5a3e0a;
+  --ink:#1C1C1C; --ink-soft:#333333; --ink-muted:#6b6b6b;
+  --bg:#EDE7D9; --cream:#FAF4E8; --border:rgba(139,99,16,0.18);
+  --green:#2d6a4f; --green-dark:#1b4332;
+  --amber:#b45309; --amber-dark:#78350f; --amber-muted:#92400e;
+  --radius:14px;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans TC',sans-serif;-webkit-font-smoothing:antialiased;}
+h1,h2,h3{font-family:'Noto Serif TC',serif;}
+.wrap{max-width:480px;margin:0 auto;padding:20px 16px 60px;}
+.student-hero{background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));border-radius:var(--radius);padding:26px 20px;text-align:center;color:#fff;margin-bottom:16px;box-shadow:0 6px 20px rgba(139,99,16,0.25);}
+.student-hero-avatar{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;margin:0 auto 10px;font-family:'Noto Serif TC',serif;}
+.student-hero-name{font-size:1.25rem;font-weight:700;font-family:'Noto Serif TC',serif;}
+.student-hero-sub{font-size:0.85rem;opacity:0.92;margin-top:4px;}
+.card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;}
+.card h2{font-size:0.98rem;font-weight:700;margin:0 0 12px;color:var(--gold-deep);border-bottom:1px solid var(--border);padding-bottom:9px;}
+.summary{font-size:0.92rem;line-height:2;}
+.summary strong{color:var(--gold-deep);}
+.pay-method{border:1px solid var(--border);border-radius:10px;padding:11px 13px;margin-bottom:9px;background:#fff;font-size:0.85rem;line-height:1.7;}
+.pay-method .pm-title{font-weight:700;color:var(--gold-deep);margin-bottom:2px;}
+.pm-qr{text-align:center;margin-top:9px;}
+.pm-qr img{width:160px;max-width:66%;border-radius:10px;display:inline-block;}
+.pm-cap{font-size:0.75rem;color:var(--ink-muted);margin-top:5px;}
+.linkbox{display:flex;gap:8px;margin-top:6px;}
+.linkbox input{flex:1;border:1.5px solid #e5d9b8;border-radius:9px;padding:9px 11px;font-size:0.78rem;font-family:'Noto Sans TC',sans-serif;color:var(--ink-soft);background:#fff;}
+.note{font-size:0.8rem;color:var(--ink-muted);line-height:1.7;margin-top:8px;}
+.btn-gold{background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border:none;border-radius:11px;padding:13px 18px;font-size:0.95rem;font-weight:700;font-family:'Noto Sans TC',sans-serif;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(139,99,16,0.22);}
+.btn-gold:disabled{opacity:0.55;cursor:default;}
+.btn-copy{flex-shrink:0;background:var(--gold-light);color:var(--gold-deep);border:1.5px solid var(--border);border-radius:9px;padding:0 14px;font-weight:700;font-family:'Noto Sans TC',sans-serif;font-size:0.82rem;cursor:pointer;}
+.btn-copy.copied{background:var(--green);color:#fff;border-color:var(--green);}
+.meet-btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;border-radius:11px;padding:14px;font-weight:700;font-size:0.95rem;font-family:'Noto Sans TC',sans-serif;}
+.meet-locked{display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;color:var(--ink-muted);border:1.5px dashed #d8c9a0;border-radius:11px;padding:14px;font-weight:700;font-size:0.9rem;cursor:not-allowed;}
+.ghost-link{display:inline-block;font-size:0.8rem;color:var(--ink-muted);text-decoration:underline;font-family:'Noto Sans TC',sans-serif;}
+/* course cards */
+.course-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.course-card{border:1.5px solid #e5d9b8;border-radius:10px;padding:10px;background:#fff;cursor:pointer;text-align:left;font-family:'Noto Sans TC',sans-serif;}
+.course-card.selected{border:2px solid var(--gold-deep);background:#fdf6e3;}
+.course-card .c-name{font-weight:700;font-size:0.88rem;color:var(--ink);}
+.course-card .c-desc{font-size:0.75rem;color:var(--ink-muted);margin-top:2px;}
+.settings-label{display:block;font-size:0.8rem;font-weight:700;color:var(--gold-deep);margin:12px 0 5px;font-family:'Noto Sans TC',sans-serif;}
+.settings-input{width:100%;border:1.5px solid #e5d9b8;border-radius:9px;padding:10px 12px;font-family:'Noto Sans TC',sans-serif;font-size:0.9rem;color:var(--ink);background:#fff;}
+.pay-total-box{display:none;background:var(--gold-light);border-radius:10px;padding:12px 14px;margin-top:12px;text-align:center;}
+.pay-total-box .big{font-size:1.15rem;font-weight:700;color:var(--gold-deep);font-family:'Noto Serif TC',serif;}
+.pay-total-box .sub{font-size:0.78rem;color:var(--ink-muted);margin-top:3px;}
+.slip-upload-area{border:1.5px dashed #d8c9a0;border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:#fff;margin-top:4px;}
+.slip-upload-area.has-image{padding:10px;}
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(28,28,28,0.55);display:none;align-items:flex-start;justify-content:center;padding:24px 14px;overflow-y:auto;z-index:100;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--cream);border-radius:var(--radius);padding:22px;max-width:480px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.3);}
+.modal h3{margin:0 0 4px;font-size:1.05rem;color:var(--gold-deep);}
+.modal-footer{display:flex;gap:10px;margin-top:18px;}
+.btn-ghost{flex-shrink:0;background:#fff;color:var(--ink-soft);border:1.5px solid var(--border);border-radius:11px;padding:13px 18px;font-weight:700;font-family:'Noto Sans TC',sans-serif;cursor:pointer;}
+.state-msg{text-align:center;padding:40px 20px;color:var(--ink-muted);}
+.footer-note{text-align:center;font-size:0.78rem;color:var(--ink-muted);margin-top:8px;line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="state-msg" id="loadingMsg">載入中…</div>
+</div>
+
+<!-- ======= 繳費通知 MODAL ======= -->
+<div class="modal-overlay" id="slipModal">
+  <div class="modal">
+    <h3>💰 繳費</h3>
+    <p class="note" style="margin-top:2px;margin-bottom:6px;">選課程 → 選幣別 → 上傳匯款截圖 → 送出 → 等待老師確認</p>
+    <label class="settings-label">課程方案</label>
+    <div class="course-grid" id="slipCourseGrid"></div>
+    <div id="slipPackWrap" style="display:none;margin-top:12px;">
+      <label class="settings-label">堂數</label>
+      <div id="slipPackGrid" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div id="slipCurrencyWrap" style="display:none;margin-top:12px;">
+      <label class="settings-label">付款幣別</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="curBtn-NTD" onclick="selectSlipCurrency('NTD')">🇹🇼 NTD</button>
+        <button type="button" id="curBtn-THB" onclick="selectSlipCurrency('THB')">🇹🇭 THB</button>
+        <button type="button" id="curBtn-WISE" onclick="selectSlipCurrency('WISE')">🌍 Wise</button>
+      </div>
+    </div>
+    <div class="pay-total-box" id="slipTotalBox">
+      <div class="big" id="slipTotalText"></div>
+      <div class="sub" id="slipCalcText"></div>
+    </div>
+    <div id="slipBankBox" style="display:none;background:#f8f4ea;border:1px solid #e5d9b8;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:0.84rem;line-height:1.75;color:var(--ink);"></div>
+    <label class="settings-label">匯款截圖 <span style="color:var(--amber);">*</span></label>
+    <div class="slip-upload-area" id="slipUploadArea" onclick="document.getElementById('slipFileInput').click()">
+      <div id="slipUploadPlaceholder" style="color:var(--ink-muted);font-size:0.88rem;">📎 點此上傳截圖</div>
+      <img id="slipPreviewImg" style="max-width:100%;max-height:180px;display:none;border-radius:8px;margin-top:8px;" />
+    </div>
+    <input type="file" id="slipFileInput" accept="image/*" style="display:none" onchange="handleSlipImage(this.files[0])">
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeSlipModal()">取消</button>
+      <button class="btn-gold" id="slipSubmitBtn" onclick="submitSlip()">📤 送出繳費</button>
+    </div>
+  </div>
+</div>
+
+<script src="../supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ════════════════════════════════════════════════════════════
+// 繳費・入班頁（老師把這個連結傳給新生）
+// 資料來源：classroom_students（token 由「入班連結」產生，帶 pending_* 課程/課表資訊）
+// 送出繳費：sb.rpc('submit_payment_slip')（跟主教室頁同一支 anon 安全 RPC）
+// ⚠️ 下面 COURSE_TYPES / BANK_INFO / WISE_INFO 要跟 classroom/index.html 保持一致
+// ════════════════════════════════════════════════════════════
+var sb = (window.getSupabaseClient && window.getSupabaseClient()) ||
+  (window.supabase && window.SUPABASE_CONFIG ? window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey) : null);
+
+var urlParams = new URLSearchParams(window.location.search);
+var token = urlParams.get('s') || '';
+
+// ── 課程/價格（與 classroom/index.html 的 COURSE_TYPES 同步）──
+var COURSE_TYPES = [
+  { id:'basic',      label:'入門 Basic',    priceNTD:700,  priceTHB:700,  packs:[10],       note:'只限購買一期', desc:'打好發音基礎' },
+  { id:'std',        label:'進階 Standard', priceNTD:800,  priceTHB:800,  packs:[10,20,30], desc:'客製主題會話' },
+  { id:'pair_basic', label:'雙人 Basic',    priceNTD:1100, priceTHB:1100, packs:[10,20,30], desc:'Basic 雙人共學・每人' },
+  { id:'pair_std',   label:'雙人 Standard', priceNTD:1200, priceTHB:1200, packs:[10,20,30], desc:'Standard 雙人共學・每人' },
+];
+function slipBonusFor(n){ return n >= 30 ? 3 : n >= 20 ? 1 : 0; }
+
+var BANK_INFO = {
+  NTD: { title:'🇹🇼 台灣銀行帳戶（匯 NTD）', qr:'../assets/pay-qr/ntd-ctbc.jpg', lines:[
+    '銀行：中國信託 (822)','分行：城中分行 (0107)','帳號：107540587096','戶名：林泰華' ] },
+  THB: { title:'🇹🇭 PromptPay（匯 THB）', qr:'../assets/pay-qr/thb-promptpay.jpg', lines:[
+    'PromptPay：掃下方 QR 轉帳','戶名：นาย ไท่หัว หลิน（林泰華）','帳號：xxx-x-x7358-x','參考編號：004999017326389' ] }
+};
+var WISE_INFO = { qr:'../assets/pay-qr/wise.jpg', siteUrl:'https://wise.com', lines:[
+  '收款人姓名：Taihua Lin','銀行名稱：Kasikorn Bank','Swift Code：KASITHBK','帳號：0208373587' ] };
+
+var OFF_CUR = 'flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;';
+var ON_CUR  = 'flex:1;padding:9px;border-radius:9px;border:2px solid var(--gold-deep);background:#fdf6e3;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;font-weight:700;';
+var OFF_PACK = 'min-width:80px;flex:1;padding:9px 6px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;text-align:center;';
+var ON_PACK  = 'min-width:80px;flex:1;padding:9px 6px;border-radius:9px;border:2px solid var(--gold-deep);background:#fdf6e3;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;text-align:center;';
+
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function safeHref(u){var s=String(u==null?'':u).trim();return /^https:\/\//i.test(s)?s:'#';}
+
+// 這位學生的「上課頁」連結（confirm 前打開會看到『等待老師確認』頁，confirm 後就是完整教室頁）
+function classroomLink(t){
+  return window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + '?s=' + encodeURIComponent(t);
+}
+
+var currentStudent = null;
+
+// ════════════════════════ 載入 & 畫面 ════════════════════════
+async function init(){
+  if (!token){ renderInvalid('沒有帶入班代碼'); return; }
+  if (!sb){ renderInvalid('系統連線失敗，請稍後再試或聯繫老師'); return; }
+  var student = null;
+  try {
+    var res = await sb.from('classroom_students').select('*').eq('token', token).single();
+    if (res.data) student = res.data;
+  } catch(e){}
+  if (!student){ renderInvalid('連結無效或已過期，請聯繫泰華老師取得正確連結'); return; }
+  currentStudent = student;
+  render(student);
+  checkSlipStatus();
+}
+
+function renderInvalid(msg){
+  document.getElementById('wrap').innerHTML =
+    '<div class="card"><div class="state-msg">❌ ' + escHtml(msg) + '</div></div>';
+}
+
+function courseInfo(s){
+  var c = COURSE_TYPES.find(function(x){ return x.id === s.pending_course_id; });
+  var lessons = s.pending_lessons || 0;
+  return { c:c, lessons:lessons };
+}
+
+function render(s){
+  var initial = s.name ? s.name.charAt(0) : '?';
+  var confirmed = s.setup_status === 'confirmed' && s.meet;
+  var html = '<div class="student-hero">' +
+      '<div class="student-hero-avatar">' + escHtml(initial) + '</div>' +
+      '<div class="student-hero-name">' + escHtml(s.name || '') + ' 同學</div>' +
+      '<div class="student-hero-sub">' + (confirmed ? '已開通，歡迎進入課堂 ✨' : '歡迎加入！入班前請先完成繳費 🙏') + '</div>' +
+    '</div>';
+
+  html += courseSummaryCard(s);
+  html += '<div id="slipStatusMsg"></div>';
+
+  if (confirmed){
+    // 老師已確認 → 上課連結開通
+    html += '<div class="card"><h2>📹 進入課堂</h2>' +
+      '<a class="meet-btn" href="' + escHtml(safeHref(s.meet)) + '" target="_blank" rel="noopener">📹 點此進入課堂</a>' +
+      '<p class="note">完整課堂功能（課表・收據・學習紀錄）請開啟你的上課頁：</p>' +
+      linkRow(classroomLink(token)) +
+      '</div>';
+  } else {
+    // 付款方式（QR 直接顯示）
+    html += '<div class="card"><h2>💳 付款方式（三選一）</h2>' +
+      // 台灣轉帳
+      '<div class="pay-method"><div class="pm-title">🇹🇼 台灣銀行轉帳（NTD）</div>' +
+        '中國信託 (822) 城中分行 (0107)<br>帳號 107540587096・戶名 林泰華' +
+        '<div class="pm-qr"><img src="../assets/pay-qr/ntd-ctbc.jpg" alt="NTD QR" onerror="this.parentNode.style.display=\'none\'"><div class="pm-cap">掃 QR 轉帳</div></div></div>' +
+      // 泰國 PromptPay
+      '<div class="pay-method"><div class="pm-title">🇹🇭 PromptPay（THB）</div>' +
+        '戶名 นาย ไท่หัว หลิน（林泰華）' +
+        '<div class="pm-qr"><img src="../assets/pay-qr/thb-promptpay.jpg" alt="PromptPay QR" onerror="this.parentNode.style.display=\'none\'"><div class="pm-cap">打開泰國銀行 App 掃 QR 轉帳（QR 內含帳號/參考編號）</div></div></div>' +
+      // Wise ① 掃 QR
+      '<div class="pay-method"><div class="pm-title">🌍 Wise ①・掃 QR 付款</div>' +
+        '打開 Wise App 掃這個 QR' +
+        '<div class="pm-qr"><img src="../assets/pay-qr/wise.jpg" alt="Wise QR" onerror="this.parentNode.style.display=\'none\'"><div class="pm-cap">Wise App 掃碼付款</div></div></div>' +
+      // Wise ② 網站轉帳＋填資料
+      '<div class="pay-method"><div class="pm-title">🌍 Wise ②・網站轉帳（自行填資料）</div>' +
+        '前往 <a href="https://wise.com" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:underline;">wise.com</a>，填入以下收款資料：<br>' +
+        '收款人：Taihua Lin<br>銀行：Kasikorn Bank<br>Swift Code：KASITHBK<br>帳號：0208373587<br>地址：Nongkhaem, Bangkok, Thailand 10160</div>' +
+      '<p class="note">💡 匯款後，按下方「💰 繳費」上傳截圖即可。</p>' +
+      '</div>';
+
+    // 上課連結（先給，但要老師確認才進得去）
+    html += '<div class="card"><h2>🔗 你的上課連結</h2>' +
+      '<div class="meet-locked">🔒 尚未開通（等老師確認收款）</div>' +
+      linkRow(classroomLink(token)) +
+      '<p class="note">先存起來！老師 <b>確認收款</b> 後這個連結就會開通，點進去就能上課、看課表和收據。現在點進去會顯示「等待老師確認」。</p>' +
+      '</div>';
+
+    // 繳費按鈕
+    html += '<div class="card"><h2>💰 已匯款了嗎？</h2>' +
+      '<button class="btn-gold" onclick="openSlipModal()">💰 繳費（上傳匯款截圖）</button>' +
+      '<p class="note">上傳截圖 → 送出 → 老師確認收款後自動開通上課連結、開立收據。</p>' +
+      '</div>';
+  }
+
+  html += '<div class="footer-note">泰華眼裡的泰語教學 · <a class="ghost-link" href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener">上課規則 & 常見問題</a></div>';
+  document.getElementById('wrap').innerHTML = html;
+}
+
+function linkRow(url){
+  return '<div class="linkbox">' +
+    '<input id="clsLinkInput" readonly value="' + escHtml(url) + '" onclick="this.select()">' +
+    '<button class="btn-copy" id="clsLinkCopyBtn" onclick="copyClsLink()">複製</button></div>';
+}
+function copyClsLink(){
+  var input = document.getElementById('clsLinkInput');
+  if (!input) return;
+  var done = function(){ var b=document.getElementById('clsLinkCopyBtn'); if(!b)return; b.textContent='✅ 已複製'; b.classList.add('copied'); setTimeout(function(){b.textContent='複製';b.classList.remove('copied');},2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(input.value).then(done, function(){ input.select(); document.execCommand&&document.execCommand('copy'); done(); }); }
+  else { input.select(); try{document.execCommand('copy');}catch(e){} done(); }
+}
+
+function courseSummaryCard(s){
+  var info = courseInfo(s);
+  if (!info.c) return '';
+  var c = info.c, lessons = info.lessons;
+  var bonus = lessons ? slipBonusFor(lessons) : 0;
+  var totalNTD = lessons * (c.priceNTD || 0);
+  var totalTHB = lessons * (c.priceTHB || 0);
+  var wk = ['日','一','二','三','四','五','六'];
+  var line = '';
+  if (s.pending_start_date && s.pending_class_time){
+    var d = new Date(s.pending_start_date + 'T00:00:00');
+    line = '開課：' + (d.getMonth()+1) + '月' + d.getDate() + '日（週' + wk[d.getDay()] + '）' + s.pending_class_time;
+  }
+  return '<div class="card" style="border-top:2px solid var(--gold-bright);"><h2>📋 課程資訊</h2>' +
+    '<div class="summary">' +
+      '<div><strong>' + escHtml(c.label) + '</strong>' + (c.desc ? '　·　' + escHtml(c.desc) : '') + '</div>' +
+      (lessons ? '<div>堂數：' + lessons + ' 堂' + (bonus ? '（贈 ' + bonus + ' 堂）' : '') + '</div>' : '') +
+      (lessons ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
+      (line ? '<div>' + escHtml(line) + '</div>' : '') +
+      (s.pending_recurring ? '<div style="color:var(--ink-muted);font-size:0.82rem;">🔁 每週固定上課</div>' : '') +
+    '</div></div>';
+}
+
+async function checkSlipStatus(){
+  var el = document.getElementById('slipStatusMsg');
+  if (!el || !sb) return;
+  var data;
+  try { data = (await sb.rpc('get_student_payments', { p_token: token })).data; } catch(e){ return; }
+  if (!data || !data.length) return;
+  var p = data[0];
+  var map = { 'slip_submitted':'⏳ 已送出，等待老師確認', 'pending':'✅ 老師已確認收款', 'done':'🧾 收據已開立（號碼：' + (p.receipt_no||'—') + '）', 'rejected':'❌ 本次付款未通過，請聯繫老師' };
+  var msg = map[p.status]; if (!msg) return;
+  var bg = p.status==='rejected' ? '#f5ece0' : (p.status==='done'||p.status==='pending') ? 'var(--gold-light)' : '#fef3c7';
+  var col = p.status==='rejected' ? '#5c5148' : (p.status==='done'||p.status==='pending') ? 'var(--gold-deep)' : '#92400e';
+  el.innerHTML = '<div style="background:' + bg + ';border-radius:10px;padding:11px 14px;font-size:0.85rem;color:' + col + ';font-weight:600;margin-bottom:16px;">' + msg + '<br><span style="font-weight:400;font-size:0.78rem;">' + escHtml(p.course_label||'') + '</span></div>';
+}
+
+// ════════════════════════ 繳費 MODAL ════════════════════════
+var slipType=null, slipLessons=null, slipBonus=0, slipCurrency=null, slipImageData=null, slipLocked=false;
+
+function openSlipModal(){
+  slipType=null; slipLessons=null; slipBonus=0; slipCurrency=null; slipImageData=null;
+  var s = currentStudent || {};
+  var lock = (s.pending_course_id && s.pending_lessons) ? { courseId:s.pending_course_id, lessons:s.pending_lessons } : null;
+  slipLocked = !!lock;
+  var lockedCourse = lock ? COURSE_TYPES.find(function(x){ return x.id===lock.courseId; }) : null;
+
+  if (lock && lockedCourse){
+    document.getElementById('slipCourseGrid').innerHTML =
+      '<div class="course-card selected" style="cursor:default;grid-column:1 / -1;"><div class="c-name">' + escHtml(lockedCourse.label) + '</div><div class="c-desc">' + escHtml(lockedCourse.desc||'') + '　·　老師已指定此方案</div></div>';
+    var bonus = slipBonusFor(lock.lessons);
+    document.getElementById('slipPackGrid').innerHTML =
+      '<div class="course-card selected" style="cursor:default;min-width:88px;text-align:center;"><div style="font-weight:700;">' + lock.lessons + ' 堂</div>' + (bonus?'<div style="font-size:0.72rem;color:var(--gold-deep);">贈 ' + bonus + ' 堂</div>':'') + '</div>';
+    document.getElementById('slipPackWrap').style.display='block';
+    document.getElementById('slipCurrencyWrap').style.display='block';
+    slipType = lock.courseId; slipLessons = lock.lessons; slipBonus = bonus;
+  } else {
+    document.getElementById('slipCourseGrid').innerHTML = COURSE_TYPES.map(function(c){
+      return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipType(\'' + c.id + '\')"><div class="c-name">' + escHtml(c.label) + '</div><div class="c-desc">' + escHtml(c.desc||'') + '</div></button>';
+    }).join('');
+    document.getElementById('slipPackWrap').style.display='none';
+    document.getElementById('slipPackGrid').innerHTML='';
+    document.getElementById('slipCurrencyWrap').style.display='none';
+  }
+  document.getElementById('slipBankBox').style.display='none';
+  document.getElementById('curBtn-NTD').style.cssText=OFF_CUR;
+  document.getElementById('curBtn-THB').style.cssText=OFF_CUR;
+  document.getElementById('curBtn-WISE').style.cssText=OFF_CUR;
+  document.getElementById('slipTotalBox').style.display='none';
+  document.getElementById('slipPreviewImg').style.display='none';
+  document.getElementById('slipUploadPlaceholder').style.display='';
+  document.getElementById('slipUploadArea').classList.remove('has-image');
+  document.getElementById('slipFileInput').value='';
+  document.getElementById('slipModal').classList.add('open');
+}
+function closeSlipModal(){ document.getElementById('slipModal').classList.remove('open'); }
+
+function selectSlipType(id){
+  slipType=id; slipLessons=null; slipBonus=0; slipCurrency=null;
+  document.querySelectorAll('#slipCourseGrid .course-card').forEach(function(el){ el.classList.remove('selected'); });
+  var el=document.getElementById('sc-'+id); if(el) el.classList.add('selected');
+  var c=COURSE_TYPES.find(function(x){return x.id===id;}); if(!c) return;
+  document.getElementById('slipPackGrid').innerHTML = c.packs.map(function(n){
+    var bonus=slipBonusFor(n);
+    return '<button type="button" id="pk-'+n+'" onclick="selectSlipPack('+n+')" style="'+OFF_PACK+'"><div style="font-weight:700;">'+n+' 堂</div>'+(bonus?'<div style="font-size:0.72rem;color:var(--gold-deep);">贈 '+bonus+' 堂</div>':(c.note?'<div style="font-size:0.72rem;color:var(--ink-muted);">'+escHtml(c.note)+'</div>':''))+'</button>';
+  }).join('');
+  document.getElementById('slipPackWrap').style.display='block';
+  document.getElementById('slipCurrencyWrap').style.display='none';
+  document.getElementById('curBtn-NTD').style.cssText=OFF_CUR;
+  document.getElementById('curBtn-THB').style.cssText=OFF_CUR;
+  document.getElementById('curBtn-WISE').style.cssText=OFF_CUR;
+  document.getElementById('slipTotalBox').style.display='none';
+  document.getElementById('slipBankBox').style.display='none';
+  if (c.packs.length===1) selectSlipPack(c.packs[0]);
+}
+function selectSlipPack(n){
+  slipLessons=n; slipBonus=slipBonusFor(n);
+  document.querySelectorAll('#slipPackGrid button').forEach(function(b){ b.style.cssText=OFF_PACK; });
+  var b=document.getElementById('pk-'+n); if(b) b.style.cssText=ON_PACK;
+  document.getElementById('slipCurrencyWrap').style.display='block';
+  renderSlipTotalAndBank();
+}
+function selectSlipCurrency(cur){
+  slipCurrency=cur;
+  document.getElementById('curBtn-NTD').style.cssText = cur==='NTD'?ON_CUR:OFF_CUR;
+  document.getElementById('curBtn-THB').style.cssText = cur==='THB'?ON_CUR:OFF_CUR;
+  document.getElementById('curBtn-WISE').style.cssText = cur==='WISE'?ON_CUR:OFF_CUR;
+  renderSlipTotalAndBank();
+}
+function renderSlipTotalAndBank(){
+  var c=COURSE_TYPES.find(function(x){return x.id===slipType;});
+  var totalBox=document.getElementById('slipTotalBox');
+  var bankBox=document.getElementById('slipBankBox');
+  if(!c||!slipLessons||!slipCurrency){ totalBox.style.display='none'; bankBox.style.display='none'; return; }
+  var price = slipCurrency==='NTD'?c.priceNTD:c.priceTHB;
+  var amtCur = slipCurrency==='WISE'?'THB':slipCurrency;
+  totalBox.style.display='block';
+  if (price){
+    document.getElementById('slipTotalText').textContent = amtCur+' '+(slipLessons*price).toLocaleString()+(slipCurrency==='WISE'?'（透過 Wise）':'');
+    document.getElementById('slipCalcText').textContent  = slipLessons+'堂 × '+amtCur+' '+price+'/堂'+(slipBonus?'（贈 '+slipBonus+' 堂）':'')+(c.note?' · '+c.note:'');
+  } else {
+    document.getElementById('slipTotalText').textContent = amtCur+' 金額請與老師確認';
+    document.getElementById('slipCalcText').textContent  = c.label+' · '+slipLessons+' 堂';
+  }
+  var qrOnly=function(title,qrSrc,cap){
+    return '<div style="font-weight:700;margin-bottom:10px;">'+title+'</div><div style="text-align:center;"><img src="'+qrSrc+'" alt="QR" style="width:170px;max-width:100%;border-radius:10px;display:inline-block;" onerror="this.parentNode.style.display=\'none\'">'+(cap?'<div style="font-size:0.76rem;color:var(--ink-muted);margin-top:6px;">'+cap+'</div>':'')+'</div>';
+  };
+  bankBox.style.display='block';
+  if (slipCurrency==='WISE'){
+    bankBox.innerHTML = qrOnly('🌍 Wise（國際匯款）', WISE_INFO.qr, '打開 Wise App 掃這個 QR 付款') +
+      '<div style="text-align:center;margin-top:8px;font-size:0.78rem;">或前往 <a href="'+WISE_INFO.siteUrl+'" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:underline;">'+WISE_INFO.siteUrl+'</a> 網站轉帳</div>';
+  } else {
+    var b=BANK_INFO[slipCurrency];
+    if (b.qr){ bankBox.innerHTML = qrOnly(b.title, b.qr, '掃 QR 轉帳'); }
+    else { bankBox.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">'+b.title+'</div>'+b.lines.map(function(l){return '<div>'+escHtml(l)+'</div>';}).join(''); }
+  }
+}
+function handleSlipImage(file){
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      var maxW=900, scale=Math.min(1,maxW/img.width);
+      canvas.width=img.width*scale; canvas.height=img.height*scale;
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      slipImageData=canvas.toDataURL('image/jpeg',0.75);
+      document.getElementById('slipPreviewImg').src=slipImageData;
+      document.getElementById('slipPreviewImg').style.display='block';
+      document.getElementById('slipUploadPlaceholder').style.display='none';
+      document.getElementById('slipUploadArea').classList.add('has-image');
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitSlip(){
+  if(!slipType){ alert('請先選擇課程'); return; }
+  if(!slipLessons){ alert('請先選擇堂數'); return; }
+  if(!slipCurrency){ alert('請先選擇付款幣別'); return; }
+  if(!slipImageData){ alert('請先上傳匯款截圖'); return; }
+  var c=COURSE_TYPES.find(function(x){return x.id===slipType;})||{};
+  var price=(slipCurrency==='NTD'?c.priceNTD:c.priceTHB)||0;
+  var payCur=slipCurrency==='WISE'?'THB':slipCurrency;
+  var courseLabel=(c.label||slipType)+' '+slipLessons+'堂'+(slipBonus?'（贈'+slipBonus+'）':'')+(slipCurrency==='WISE'?'・Wise':'');
+  var note='';
+  var studentName=(currentStudent&&currentStudent.name)?currentStudent.name:token;
+  var btn=document.getElementById('slipSubmitBtn');
+  btn.disabled=true; btn.textContent='送出中…';
+  var res;
+  try {
+    res = await sb.rpc('submit_payment_slip', {
+      p_token: token, p_student_name: studentName, p_course_id: slipType,
+      p_course_label: courseLabel, p_lessons: slipLessons, p_bonus_lessons: slipBonus,
+      p_price_per: price, p_currency: payCur, p_total_amount: slipLessons*price,
+      p_note: note||null, p_slip_data: slipImageData
+    });
+  } catch(e){ res={ error:{ message:(e&&e.message)||String(e) } }; }
+  btn.disabled=false; btn.textContent='📤 送出繳費';
+  if (res && res.error){ alert('送出失敗：'+res.error.message); return; }
+  notifyTeacherNewSlip({ name:studentName, course:courseLabel, lessons:slipLessons, bonus:slipBonus, currency:payCur, total:slipLessons*price, note:note });
+  closeSlipModal();
+  var statusEl=document.getElementById('slipStatusMsg');
+  if (statusEl){ statusEl.innerHTML='<div style="background:#fef3c7;border-radius:10px;padding:11px 14px;font-size:0.85rem;color:#92400e;font-weight:600;margin-bottom:16px;">⏳ 已送出，等待老師確認<br><span style="font-weight:400;font-size:0.78rem;">'+escHtml(courseLabel)+'</span></div>'; }
+  alert('✅ 繳費已送出！老師確認收款後，你的上課連結就會自動開通。');
+}
+
+function notifyTeacherNewSlip(d){
+  try {
+    var body={ access_key:'b3bfdb97-19dd-4910-bd15-89720be846c2', subject:'💰 新繳費通知 — '+(d.name||'學生'), from_name:'繳費入班頁',
+      message:'學生：'+(d.name||'-')+'\n課程：'+(d.course||'-')+'\n堂數：'+(d.lessons||0)+' 堂'+(d.bonus?'（贈 '+d.bonus+' 堂）':'')+'\n金額：'+(d.currency||'')+' '+(d.total||0).toLocaleString()+(d.note?'\n備註：'+d.note:'')+'\n\n請至老師頁「⏳ 待確認繳費」確認收款並開立收據。' };
+    fetch('https://api.web3forms.com/submit',{ method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(body) }).catch(function(){});
+  } catch(e){}
+}
+
+// 點暗色背景關 modal
+document.addEventListener('click', function(e){
+  var t=e.target;
+  if (t && t.classList && t.classList.contains('modal-overlay')) t.classList.remove('open');
+});
+
+init();
+</script>
+</body>
+</html>
