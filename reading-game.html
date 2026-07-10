@@ -33,6 +33,9 @@
 <script src="word-vault.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
+/* Lin 2026-07-10 อนุมัติ: หน้าเกมนี้ไม่ล็อกแถบ page-strip ติดจอ ให้เลื่อนไปกับเนื้อหาปกติ (หน้าอื่นในเว็บยังล็อกเหมือนเดิม — ไม่แก้ shared.css ตรงๆ) */
+.page-strip{position:static;}
+body:has(.page-strip){padding-bottom:0;}
 .v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
 
 .page-header{text-align:center;margin-bottom:10px;}
@@ -218,8 +221,7 @@ body.rg-modern-font .opt,
 body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
 
 .btn-row{display:flex;gap:7px;justify-content:center;width:100%;margin-top:12px;flex-wrap:wrap;}
-/* ปุ่มแอ็คชันในเกม: ลอยติดล่างจอเสมอ (เหนือแถบเมนูล่าง) กดง่าย ไม่ต้องเลื่อนหา */
-#game .btn-row{position:sticky;bottom:calc(46px + env(safe-area-inset-bottom,0));z-index:6;background:#fff;padding:9px 6px;border-radius:14px;box-shadow:0 -6px 14px rgba(255,253,247,.96);margin-top:8px;}
+/* Lin 2026-07-10: เลิกใช้ position:sticky (ทำให้ปุ่มลอยหลุดกรอบการ์ดตอนการ์ดสั้น) — ย้ายปุ่มขึ้นไปอยู่เหนือกล่อง猜聲調ในโค้ด HTML แทน กดง่ายไม่ต้องเลื่อนหา และไม่มีทางล้นกรอบเพราะเป็น flow ปกติ */
 .btn{padding:10px 18px;border-radius:999px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:transform .1s;}
 .btn:active{transform:scale(.96);}
 .btn-primary  {background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
@@ -400,6 +402,13 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <div class="opts-wrap"><div class="opts" id="pool"></div></div>
 
+  <!-- ปุ่มแอ็คชัน — ย้ายขึ้นมาอยู่เหนือกล่อง猜聲調แทนการใช้ position:sticky (Lin 2026-07-10) -->
+  <div class="btn-row">
+    <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
+    <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
+    <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一字 →</button>
+  </div>
+
   <!-- ปุ่มข้ามไปพยางค์ถัดไปแบบง่ายๆ (中級หลายพยางค์) — วางตรงกลางกดง่ายกว่าไปหาแถบ syl-strip เล็กๆ -->
   <button class="btn btn-secondary" id="btn-next-syl" onclick="rgGotoSyl(sylIdx+1)" style="display:none;margin:2px 0 6px;">下一個音節 →</button>
 
@@ -423,12 +432,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <div class="rev-pron" id="rev-pron"></div>
     </div>
     <div class="reveal-rules" id="reveal-rules"></div>
-  </div>
-
-  <div class="btn-row">
-    <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
-    <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
-    <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一字 →</button>
   </div>
 </div>
 
@@ -2129,7 +2132,7 @@ function finalizeWord(){
       rec=res.rec;
       // โบนัสผ่านรอบทบทวน SRS สะอาด (+3/+2/+1) — เฉพาะ "ลูปแรกที่ผ่าน" (advanceOnClean เกิดครั้งเดียว/วัน) — day16 ยังได้ตามกฎข้อ6 แม้ฐานเป็น 0 (กฎข้อ7)
       var _rb=SRS_REVIEW_BONUS[passedStage]||0;
-      if(_rb>0){ roundScore+=_rb; srsBonusAwarded=_rb; pop('+'+_rb+' 🔁'); }
+      if(_rb>0){ roundScore+=_rb; srsBonusAwarded=_rb; } // Lin 2026-07-10: เลิกยิง pop() แยก — รวมไปโชว์ก้อนเดียวกับคะแนนหลักด้านล่าง (เลือกแบบ C: ไม่มีไอคอน 🔁)
       if(res.justMastered){
         try{
           if(window.GAME_ACCOUNT && window.GAME_ACCOUNT.addHardStars){

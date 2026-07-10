@@ -32,6 +32,9 @@
 <script defer src="reading-auth.js?v=4"></script>
 <script defer src="lego-vault.js?v=1"></script>
 <style>
+/* Lin 2026-07-10 อนุมัติ: หน้าเกมนี้ไม่ล็อกแถบ page-strip ติดจอ ให้เลื่อนไปกับเนื้อหาปกติ (หน้าอื่นในเว็บยังล็อกเหมือนเดิม — ไม่แก้ shared.css ตรงๆ) */
+.page-strip{position:static;}
+body:has(.page-strip){padding-bottom:0;}
 :root{
   --gold:#8B6310; --gold-deep:#5a3e0a; --gold-bright:#C8973A; --gold-light:#F3E4C2;
   --ink:#1C1C1C; --ink-soft:#333333; --ink-muted:#666666;
