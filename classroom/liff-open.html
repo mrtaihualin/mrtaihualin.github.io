@@ -42,8 +42,9 @@
     // goto → ปลายทางที่ยอมให้พาไป (whitelist กันคนยัด query แปลกๆ มาเปิดหน้าอื่นที่ไม่ตั้งใจ)
     var GOTO_MAP = {
       classroom: 'index.html',
-      pay: 'pay.html'
-      // 2026-07-10: เกม/ระบบคำศัพท์วันละคำ ยังไม่ทำตอนนี้ — ไว้เพิ่ม key ในนี้ทีหลังตอนทำจริง (ดูแผนอนาคต)
+      pay: 'pay.html',
+      games: '../games.html' // 2026-07-10 เพิ่ม: เปิดหน้าเกมใน LINE ได้เลย (games.html อยู่นอก classroom/ เลยต้อง ../)
+      // ระบบคำศัพท์วันละคำ (คนเล่นเกมทั่วไป ไม่ใช่นักเรียน) ยังไม่ทำ — ดูแผนอนาคต
     };
 
     var urlParams = new URLSearchParams(window.location.search);
