@@ -3578,9 +3578,24 @@ function tfBarsHtml() {
   var score = session.score || 0;
   var progPct = Math.min(100, (idx / total) * 100);
   var powerPct = Math.min(100, score);
+  // Lin 2026-07-11: หลอด本題分數 ย้ายเข้ามาไว้ในการ์ดทอง (#tf-banner) เหมือนอีก 3 เกม — โชว์เฉพาะช่วงขั้น推導 (s1/s2) เหมือนของเดิม
+  var wsHtml = '';
+  if (/^s[12]/.test(S.step)) wsHtml = tfWordScoreBarRowHtml();
   return '<div class="bars-wrap" id="tf-bars-wrap">'
     + '<div class="bar-row"><span>進度</span><div class="bar-bg"><div class="bar-fill prog" id="tf-pf" style="width:' + progPct + '%"></div></div><span class="bar-label" id="tf-prog-txt">' + idx + '/' + total + '</span></div>'
+    + wsHtml
     + '</div>';
+}
+
+// Lin 2026-07-11: หลอด本題分數 แบบ bar-row เดียวกับ進度 (ย้ายมาจาก tfWordScoreGaugeHtml เดิมที่โชว์แยกอยู่ใน body) — คงไอดี tf-ws-fill/tf-ws-num/tf-ws-lab เดิมไว้ ไม่กระทบ tfUpdateWordScoreGauge()
+function tfWordScoreBarRowHtml() {
+  if (!session) return '';
+  var max = TF_WORDSCORE.LADDER[0] || 10;
+  var sc = TF_WORDSCORE.score(session);
+  var pct = Math.max(0, Math.min(100, (sc / max) * 100));
+  var dead = (sc === 0);
+  var fill = tfScoreBarColor(sc, max);
+  return '<div class="bar-row"><span>本題分數</span><div class="bar-bg"><div class="bar-fill power" id="tf-ws-fill" style="width:' + pct + '%;background:' + fill + ';"></div></div><span class="bar-label" id="tf-ws-lab" style="color:' + (dead ? '#c0392b' : '#5a3e0a') + ';"><span id="tf-ws-num">' + sc + '</span>/10</span></div>';
 }
 
 // อัปเดตหลอด 進度/⚡ สดระหว่างคำถาม (ไม่ต้องรอ render() รอบใหม่) — เรียกคู่กับ tfUpdateScoreHud()
@@ -4423,8 +4438,7 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
-  // Lin 2026-07-04: หลอดคะแนนต่อคำ (10→7→4→1→0) — โชว์เฉพาะตอนอยู่ในขั้น推導 ให้ผู้เล่นเห็นว่าเหลือกี่แต้ม
-  if (session && /^s[12]/.test(S.step)) body.innerHTML = tfWordScoreGaugeHtml() + body.innerHTML;
+  // Lin 2026-07-11: หลอด本題分數 ย้ายไปโชว์ในการ์ดทอง (#tf-banner) แล้ว — เลิก prepend ซ้ำเข้า body ตรงนี้ (กันโชว์ซ้อน 2 หลอด)
   var practiceSteps = ['session-guess','overview'];
   if (session && practiceSteps.indexOf(S.step) !== -1) {
     // \u0e2b\u0e25\u0e32\u0e22\u0e1e\u0e22\u0e32\u0e07\u0e04\u0e4c: \u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e04\u0e23\u0e1a\u0e17\u0e38\u0e01\u0e1e\u0e22\u0e32\u0e07\u0e04\u0e4c\u0e41\u0e25\u0e49\u0e27 \u2192 \u0e44\u0e21\u0e48\u0e42\u0e0a\u0e27\u0e4c "\u5df2\u8a18\u5f97" \u0e40\u0e2b\u0e25\u0e37\u0e2d\u0e41\u0e04\u0e48\u0e1b\u0e38\u0e48\u0e21\u0e44\u0e1b\u0e15\u0e48\u0e2d (LIN 2026-06-20)
