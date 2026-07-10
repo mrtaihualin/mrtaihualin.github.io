@@ -515,6 +515,18 @@
       <label class="settings-label">選擇堂數</label>
       <div id="slipPackGrid" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
     </div>
+    <div id="slipCustomWrap" style="display:none;margin-top:14px;">
+      <label class="settings-label">教學類型（單堂購買，不買課程包）</label>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button type="button" id="ctBtn-1on1" onclick="selectSlipCustomType('1on1')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">👤 一對一</button>
+        <button type="button" id="ctBtn-pair" onclick="selectSlipCustomType('pair')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">👥 雙人共學</button>
+      </div>
+      <label class="settings-label">堂數</label>
+      <input class="settings-input" id="slipCustomLessons" type="number" min="1" step="1" value="1" oninput="renderSlipTotalAndBank()">
+      <label class="settings-label" style="margin-top:10px;">單價（每堂・可自行修改，例如特殊優惠價）</label>
+      <input class="settings-input" id="slipCustomPricePer" type="number" min="0" placeholder="請輸入每堂單價" oninput="renderSlipTotalAndBank()">
+      <div style="font-size:0.76rem;color:var(--ink-muted);margin-top:4px;font-family:'Noto Sans TC',sans-serif;">參考價：一對一 NT 1,000 / 50分鐘・雙人共學 NT 1,500 / 50分鐘（泰銖或特殊價可自行修改單價）</div>
+    </div>
     <div id="slipCurrencyWrap" style="display:none;margin-top:14px;">
       <label class="settings-label">付款幣別</label>
       <div style="display:flex;gap:8px;">
@@ -526,6 +538,13 @@
     <div class="pay-total-box" id="slipTotalBox">
       <div class="big" id="slipTotalText"></div>
       <div class="sub" id="slipCalcText"></div>
+    </div>
+    <div id="slipActualAmountWrap" style="display:none;margin-top:12px;">
+      <label class="settings-label">實際匯款金額 <span style="color:var(--amber);">*</span></label>
+      <input class="settings-input" id="slipActualAmountInput" type="number" min="0" placeholder="請輸入實際轉帳金額" oninput="checkSlipAmountMatch()">
+      <div id="slipAmountWarning" style="display:none;background:#fef3c7;border:1px solid #f5d78e;border-radius:9px;padding:9px 12px;margin-top:8px;font-family:'Noto Sans TC',sans-serif;font-size:0.82rem;color:#92400e;">
+        ⚠️ 金額與方案不符（方案應為 <span id="slipExpectedAmountText"></span>）。如果是分期付款或非整包付款，請改選上方「自訂」。
+      </div>
     </div>
     <div id="slipBankBox" style="display:none;background:#f8f4ea;border:1px solid #e5d9b8;border-radius:10px;padding:12px 14px;margin-top:10px;font-family:'Noto Sans TC',sans-serif;font-size:0.84rem;line-height:1.75;color:var(--ink);"></div>
     <label class="settings-label" style="margin-top:12px;">匯款截圖 <span style="color:var(--amber);">*</span></label>
@@ -809,7 +828,7 @@ window.SUPABASE_CONFIG = {
 const sb = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
-let studentsCache = {}; // { token: { name, meet } }
+let studentsCache = {}; // { token: <ทุกคอลัมน์ของแถวนักเรียนจาก classroom_students, ไม่ใช่แค่ name/meet> }
 
 function generateToken(name) {
   const slug = name.replace(/[^a-zA-Z0-9一-鿿]/g, '').slice(0, 4) || 's';
@@ -817,11 +836,18 @@ function generateToken(name) {
   return slug + '-' + rand;
 }
 
+// 2026-07-10 แก้บั๊กใหญ่: เดิมโค้ดนี้ select('*') ดึงมาครบทุกคอลัมน์ แต่ตอนเก็บเข้า studentsCache
+// กลับเลือกเก็บแค่ 3 ฟิลด์ (name/meet/lesson_progress) ทิ้งฟิลด์อื่นทั้งหมดไป — รวมถึง
+// pending_start_date / pending_class_time / pending_recurring / pending_student_tz / pending_course_id /
+// setup_status ด้วย! ทำให้ทุกฟังก์ชันฝั่งครูที่อ่านจาก studentsCache[token] (เช่น runDeferredStudentSetup,
+// repairMeet ตอนสร้าง Meet/Calendar) เห็นค่าพวกนี้เป็น undefined เสมอ ทั้งที่ในฐานข้อมูลมีค่าถูกต้องอยู่แล้ว
+// (สาเหตุจริงที่ event ปฏิทินไม่ทุกสัปดาห์ ทั้งที่ pending_recurring=true ในฐานข้อมูล)
+// แก้โดยเก็บทุกคอลัมน์จาก r ไว้ทั้งหมด แล้วค่อย override เฉพาะ meet/lesson_progress ที่ต้องแปลงค่า
 async function fetchStudents() {
   const { data, error } = await sb.from('classroom_students').select('*').order('created_at');
   if (error) { console.error(error); return; }
   studentsCache = {};
-  (data || []).forEach(r => { studentsCache[r.token] = { name: r.name, meet: normalizeMeet(r.meet), lesson_progress: r.lesson_progress || '' }; });
+  (data || []).forEach(r => { studentsCache[r.token] = Object.assign({}, r, { meet: normalizeMeet(r.meet), lesson_progress: r.lesson_progress || '' }); });
 }
 
 // ============================================================
@@ -1075,10 +1101,13 @@ async function calFetchUpcomingEvents() {
   if (gdTokenScopes && gdTokenScopes.indexOf('calendar') === -1) {
     token = await gdGetToken(true);
   }
-  const now = new Date();
-  // start = ต้นวันนี้ → พอข้ามไปวันใหม่ วันเก่าหลุดเอง (ตารางเลื่อนขึ้นมาเรื่อยๆ)
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + SCHEDULE_DAYS - 1, 23, 59, 59).toISOString();
+  // 2026-07-10 修正：เดิมใช้ now.getFullYear()/getMonth()/getDate() (timezone เครื่องที่รันโค้ด)
+  // มาคำนวณช่วงวันที่ดึงตาราง → ถ้าเครื่องไม่ได้ตั้งเวลาไทย ช่วงวันที่ที่ดึงมาจะเพี้ยนได้ 1 วัน
+  // เปลี่ยนมายึด "วันนี้ตามเวลาไทย" (teacherToday) แล้วบวกเป็นมิลลิวินาทีตรงๆ (ไทยไม่มี DST ปลอดภัย)
+  const todayIso = teacherToday();
+  const dayMs = 24 * 3600 * 1000;
+  const start = teacherTimeToDate(todayIso, '00:00').toISOString();
+  const end   = new Date(teacherTimeToDate(todayIso, '00:00').getTime() + SCHEDULE_DAYS * dayMs - 1000).toISOString();
   const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
     + '?timeMin=' + encodeURIComponent(start)
     + '&timeMax=' + encodeURIComponent(end)
@@ -1130,7 +1159,11 @@ async function createMeetLinkForStudent(studentName, opts) {
   const tz = TEACHER_TZ;
   const body = {
     summary: studentName,
-    colorId: '6', // Google Calendar 橘色（Tangerine），方便老師在自己行事曆一眼認出上課活動
+    // 2026-07-10：Lin 要สีมะม่วง (Mango) แต่ colorId ของ REST API (classic 1-11) ไม่มีชื่อ "Mango" ตรงๆ —
+    // ทดสอบจริงแล้วพบว่า colorId '6' = "Tangerine" (ส้มแดง) ไม่ใช่ Mango ตามที่ Google Calendar UI ใหม่เรียก
+    // เทียบตำแหน่งสี/เฉดสีในตัวเลือกแล้ว "Mango" ในหน้า UI ใหม่ น่าจะตรงกับ colorId '5' (ชื่อเดิม "Banana"
+    // สีเหลืองทอง อยู่ถัดจาก Tangerine พอดี) — ยังไม่ชัวร์ 100% ต้องให้ Lin ช่วยเช็คอีกทีหลัง push
+    colorId: '5',
     description: opts.startDate && opts.classTime
       ? '系統自動建立，用於產生固定的 Google Meet 連結' + (opts.recurring ? '（每週固定時間上課）' : '（單次課程）')
       : '系統自動建立，用於產生固定的 Google Meet 連結（實際上課時間依老師安排的課表為主）',
@@ -2104,8 +2137,9 @@ function noteDocKey(token) { return 'notedocid_' + token + '_' + teacherToday();
 // ============================================================
 async function ensureStudentNotesDoc(studentName, token) {
   // 每天一份，檔名帶當天日期；同一天再開 → 開同一份
-  const d = new Date();
-  const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  // 2026-07-10 修正：改用 teacherToday()（泰國時間）取代瀏覽器本地時區的 getFullYear/getMonth/getDate，
+  // 這裡才是真正接到 UI 的路徑（原本 noteDocKey() 已經修過，但那支沒有任何地方呼叫，白修了）
+  const ymd = teacherToday();
   const key = 'notesdocid_' + token + '_' + ymd;
   const docName = studentName + ' — 課堂筆記 ' + ymd;
   let docId = localStorage.getItem(key);
@@ -3208,7 +3242,7 @@ function openSlipModal(token, lock) {
     document.getElementById('slipCurrencyWrap').style.display = 'block';
     slipType = lock.courseId; slipLessons = lock.lessons; slipBonus = bonus;
   } else {
-    document.getElementById('slipCourseGrid').innerHTML = COURSE_TYPES.map(function(c) {
+    document.getElementById('slipCourseGrid').innerHTML = COURSE_TYPES.concat([{ id:'custom', label:'自訂（單堂購買）', desc:'不買課程包，單堂購買' }]).map(function(c) {
       return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipType(\'' + c.id + '\')">' +
         '<div class="c-name">' + c.label + '</div>' +
         '<div class="c-desc">' + c.desc + '</div>' +
@@ -3216,12 +3250,17 @@ function openSlipModal(token, lock) {
     }).join('');
     document.getElementById('slipPackWrap').style.display = 'none';
     document.getElementById('slipPackGrid').innerHTML = '';
+    document.getElementById('slipCustomWrap').style.display = 'none';
     document.getElementById('slipCurrencyWrap').style.display = 'none';
   }
   document.getElementById('slipBankBox').style.display = 'none';
+  document.getElementById('slipActualAmountWrap').style.display = 'none';
+  document.getElementById('slipAmountWarning').style.display = 'none';
   document.getElementById('curBtn-NTD').style.cssText = OFF_CUR;
   document.getElementById('curBtn-THB').style.cssText = OFF_CUR;
   document.getElementById('curBtn-WISE').style.cssText = OFF_CUR;
+  document.getElementById('ctBtn-1on1').style.cssText = OFF_CUR;
+  document.getElementById('ctBtn-pair').style.cssText = OFF_CUR;
   document.getElementById('slipTotalBox').style.display = 'none';
   document.getElementById('slipPreviewImg').style.display = 'none';
   document.getElementById('slipUploadPlaceholder').style.display = '';
@@ -3231,12 +3270,31 @@ function openSlipModal(token, lock) {
   document.getElementById('slipModal').classList.add('open');
 }
 
-// 1) 選課程類型 → 顯示堂數選項
+// 1) 選課程類型 → 顯示堂數選項（或「自訂」單堂購買）
 function selectSlipType(id) {
   slipType = id; slipLessons = null; slipBonus = 0; slipCurrency = null;
   document.querySelectorAll('#slipCourseGrid .course-card').forEach(function(el) { el.classList.remove('selected'); });
   var el = document.getElementById('sc-' + id);
   if (el) el.classList.add('selected');
+  document.getElementById('curBtn-NTD').style.cssText = OFF_CUR;
+  document.getElementById('curBtn-THB').style.cssText = OFF_CUR;
+  document.getElementById('curBtn-WISE').style.cssText = OFF_CUR;
+  document.getElementById('slipTotalBox').style.display = 'none';
+  document.getElementById('slipBankBox').style.display = 'none';
+  document.getElementById('slipActualAmountWrap').style.display = 'none';
+  document.getElementById('slipAmountWarning').style.display = 'none';
+  if (id === 'custom') {
+    document.getElementById('slipPackWrap').style.display = 'none';
+    document.getElementById('slipPackGrid').innerHTML = '';
+    document.getElementById('slipCustomWrap').style.display = 'block';
+    document.getElementById('ctBtn-1on1').style.cssText = OFF_CUR;
+    document.getElementById('ctBtn-pair').style.cssText = OFF_CUR;
+    document.getElementById('slipCustomLessons').value = 1;
+    document.getElementById('slipCustomPricePer').value = '';
+    document.getElementById('slipCurrencyWrap').style.display = 'block';
+    return;
+  }
+  document.getElementById('slipCustomWrap').style.display = 'none';
   var c = COURSE_TYPES.find(function(x) { return x.id === id; });
   if (!c) return;
   document.getElementById('slipPackGrid').innerHTML = c.packs.map(function(n) {
@@ -3249,12 +3307,17 @@ function selectSlipType(id) {
   }).join('');
   document.getElementById('slipPackWrap').style.display = 'block';
   document.getElementById('slipCurrencyWrap').style.display = 'none';
-  document.getElementById('curBtn-NTD').style.cssText = OFF_CUR;
-  document.getElementById('curBtn-THB').style.cssText = OFF_CUR;
-  document.getElementById('curBtn-WISE').style.cssText = OFF_CUR;
-  document.getElementById('slipTotalBox').style.display = 'none';
-  document.getElementById('slipBankBox').style.display = 'none';
   if (c.packs.length === 1) selectSlipPack(c.packs[0]);
+}
+
+// 選「自訂」的教學類型 → 帶入參考單價（NTD 才自動帶，THB/Wise 留給老師手動填）
+function selectSlipCustomType(t) {
+  document.getElementById('ctBtn-1on1').style.cssText = t === '1on1' ? ON_CUR : OFF_CUR;
+  document.getElementById('ctBtn-pair').style.cssText = t === 'pair' ? ON_CUR : OFF_CUR;
+  if (slipCurrency === 'NTD') {
+    document.getElementById('slipCustomPricePer').value = t === 'pair' ? 1500 : 1000;
+  }
+  renderSlipTotalAndBank();
 }
 
 // 2) 選堂數 → 顯示幣別
@@ -3273,24 +3336,69 @@ function selectSlipCurrency(cur) {
   document.getElementById('curBtn-NTD').style.cssText = cur === 'NTD' ? ON_CUR : OFF_CUR;
   document.getElementById('curBtn-THB').style.cssText = cur === 'THB' ? ON_CUR : OFF_CUR;
   document.getElementById('curBtn-WISE').style.cssText = cur === 'WISE' ? ON_CUR : OFF_CUR;
+  if (slipType === 'custom' && cur === 'NTD') {
+    var pricePerInput = document.getElementById('slipCustomPricePer');
+    if (!pricePerInput.value) {
+      var is1on1 = document.getElementById('ctBtn-1on1').style.cssText.indexOf('gold-deep') !== -1;
+      var isPair = document.getElementById('ctBtn-pair').style.cssText.indexOf('gold-deep') !== -1;
+      if (is1on1 || isPair) pricePerInput.value = isPair ? 1500 : 1000;
+    }
+  }
   renderSlipTotalAndBank();
 }
 
-function renderSlipTotalAndBank() {
+// 只對「選現成方案」有效：比對學生填的「實際匯款金額」跟方案計算出來的金額是否一致
+// 不一致不會擋送出（避免 OCR/計算誤判卡到真的付對錢的學生），只顯示黃色提醒讓老師確認時多留意
+function checkSlipAmountMatch() {
+  var warnBox = document.getElementById('slipAmountWarning');
+  var input = document.getElementById('slipActualAmountInput');
+  if (slipType === 'custom' || !slipType) { warnBox.style.display = 'none'; return; }
   var c = COURSE_TYPES.find(function(x) { return x.id === slipType; });
+  if (!c || !slipLessons || !slipCurrency || !input || !input.value) { warnBox.style.display = 'none'; return; }
+  var price = slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB;
+  if (!price) { warnBox.style.display = 'none'; return; }
+  var amtCur = slipCurrency === 'WISE' ? 'THB' : slipCurrency;
+  var expected = slipLessons * price;
+  var actual = parseFloat(input.value) || 0;
+  if (Math.round(actual) !== Math.round(expected)) {
+    document.getElementById('slipExpectedAmountText').textContent = amtCur + ' ' + expected.toLocaleString();
+    warnBox.style.display = 'block';
+  } else {
+    warnBox.style.display = 'none';
+  }
+}
+
+function renderSlipTotalAndBank() {
   var totalBox = document.getElementById('slipTotalBox');
   var bankBox  = document.getElementById('slipBankBox');
-  if (!c || !slipLessons || !slipCurrency) { totalBox.style.display = 'none'; bankBox.style.display = 'none'; return; }
-  // Wise 用 THB 基準金額；NTD 用台幣價
-  var price = slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB;
-  var amtCur = slipCurrency === 'WISE' ? 'THB' : slipCurrency; // Wise 金額以 THB 計
-  totalBox.style.display = 'block';
-  if (price) {
-    document.getElementById('slipTotalText').textContent = amtCur + ' ' + (slipLessons * price).toLocaleString() + (slipCurrency === 'WISE' ? '（透過 Wise）' : '');
-    document.getElementById('slipCalcText').textContent  = slipLessons + '堂 × ' + amtCur + ' ' + price + '/堂' + (slipBonus ? '（贈 ' + slipBonus + ' 堂）' : '') + (c.note ? ' · ' + c.note : '');
+  var actualWrap = document.getElementById('slipActualAmountWrap');
+  var amtCur = slipCurrency === 'WISE' ? 'THB' : slipCurrency;
+
+  if (slipType === 'custom') {
+    actualWrap.style.display = 'none';
+    var cLessons = parseInt(document.getElementById('slipCustomLessons').value, 10) || 0;
+    var cPricePer = parseFloat(document.getElementById('slipCustomPricePer').value) || 0;
+    if (!slipCurrency || !cLessons || !cPricePer) { totalBox.style.display = 'none'; bankBox.style.display = 'none'; return; }
+    totalBox.style.display = 'block';
+    document.getElementById('slipTotalText').textContent = amtCur + ' ' + (cLessons * cPricePer).toLocaleString() + (slipCurrency === 'WISE' ? '（透過 Wise）' : '');
+    document.getElementById('slipCalcText').textContent  = cLessons + '堂 × ' + amtCur + ' ' + cPricePer + '/堂（自訂單堂購買）';
   } else {
-    document.getElementById('slipTotalText').textContent = amtCur + ' 金額請與老師確認';
-    document.getElementById('slipCalcText').textContent  = c.label + ' · ' + slipLessons + ' 堂';
+    var c = COURSE_TYPES.find(function(x) { return x.id === slipType; });
+    if (!c || !slipLessons || !slipCurrency) { totalBox.style.display = 'none'; bankBox.style.display = 'none'; actualWrap.style.display = 'none'; return; }
+    // Wise 用 THB 基準金額；NTD 用台幣價
+    var price = slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB;
+    totalBox.style.display = 'block';
+    if (price) {
+      document.getElementById('slipTotalText').textContent = amtCur + ' ' + (slipLessons * price).toLocaleString() + (slipCurrency === 'WISE' ? '（透過 Wise）' : '');
+      document.getElementById('slipCalcText').textContent  = slipLessons + '堂 × ' + amtCur + ' ' + price + '/堂' + (slipBonus ? '（贈 ' + slipBonus + ' 堂）' : '') + (c.note ? ' · ' + c.note : '');
+      actualWrap.style.display = 'block';
+      document.getElementById('slipActualAmountInput').value = '';
+      document.getElementById('slipAmountWarning').style.display = 'none';
+    } else {
+      document.getElementById('slipTotalText').textContent = amtCur + ' 金額請與老師確認';
+      document.getElementById('slipCalcText').textContent  = c.label + ' · ' + slipLessons + ' 堂';
+      actualWrap.style.display = 'none';
+    }
   }
   // 2026-07-08 簡化：QR 裡本身就印了轉帳資訊（PromptPay QR 上面就有戶名/帳號/參考編號），
   // 不用再重複打一次文字，塞太多東西版面反而爆版。有 QR 就只放大顯示 QR，沒有 QR 才顯示文字帳戶資訊。
@@ -3346,16 +3454,37 @@ function closeSlipModal() {
 
 async function submitSlip() {
   if (!slipType) { alert('請先選擇課程'); return; }
-  if (!slipLessons) { alert('請先選擇堂數'); return; }
+  var lessons, bonus, price, courseLabel;
+  if (slipType === 'custom') {
+    lessons = parseInt(document.getElementById('slipCustomLessons').value, 10) || 0;
+    price = parseFloat(document.getElementById('slipCustomPricePer').value) || 0;
+    bonus = 0;
+    if (!lessons || !price) { alert('請填寫堂數和單價'); return; }
+    var typeLabel = document.getElementById('ctBtn-pair').style.cssText.indexOf('gold-deep') !== -1 ? '雙人共學' : '一對一';
+    courseLabel = '自訂・' + typeLabel + ' ' + lessons + '堂';
+  } else {
+    if (!slipLessons) { alert('請先選擇堂數'); return; }
+    var c = COURSE_TYPES.find(function(x) { return x.id === slipType; }) || {};
+    lessons = slipLessons;
+    bonus = slipBonus;
+    price = (slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB) || 0;
+    courseLabel = (c.label || slipType) + ' ' + lessons + '堂' + (bonus ? '（贈' + bonus + '）' : '');
+  }
   if (!slipCurrency) { alert('請先選擇付款幣別'); return; }
   if (!slipImageData) { alert('請先上傳匯款截圖'); return; }
-  var c = COURSE_TYPES.find(function(x) { return x.id === slipType; }) || {};
-  var lessons = slipLessons;
-  var bonus = slipBonus;
-  var price = (slipCurrency === 'NTD' ? c.priceNTD : c.priceTHB) || 0;
   var payCur = slipCurrency === 'WISE' ? 'THB' : slipCurrency; // Wise 金額以 THB 計
-  var courseLabel = (c.label || slipType) + ' ' + lessons + '堂' + (bonus ? '（贈' + bonus + '）' : '') + (slipCurrency === 'WISE' ? '・Wise' : '');
+  courseLabel += (slipCurrency === 'WISE' ? '・Wise' : '');
+  var total = lessons * price;
   var note = document.getElementById('slipNoteInput').value.trim();
+  // 選現成方案時，如果學生填的「實際匯款金額」跟方案算出來的金額不同，寫進備註讓老師確認時看得到
+  // （自訂模式不用檢查，因為金額本來就是學生自己填的單價 × 堂數，不會有「方案金額」這種東西可比對）
+  if (slipType !== 'custom') {
+    var actualInput = document.getElementById('slipActualAmountInput');
+    var actualVal = actualInput ? parseFloat(actualInput.value) : NaN;
+    if (!isNaN(actualVal) && Math.round(actualVal) !== Math.round(total)) {
+      note = (note ? note + '\n' : '') + '⚠️ 學生填寫實際匯款金額為 ' + payCur + ' ' + actualVal.toLocaleString() + '（與方案金額 ' + payCur + ' ' + total.toLocaleString() + ' 不同，請確認）';
+    }
+  }
   var studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return slipToken; } })();
   var btn = document.getElementById('slipSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
@@ -3369,14 +3498,14 @@ async function submitSlip() {
     p_bonus_lessons: bonus,
     p_price_per: price,
     p_currency: payCur,
-    p_total_amount: lessons * price,
+    p_total_amount: total,
     p_note: note || null,
     p_slip_data: slipImageData
   });
   btn.disabled = false; btn.textContent = '📤 送出繳費通知';
   if (res.error) { alert('送出失敗：' + res.error.message); return; }
   // 寄信通知老師（沿用全站既有的 Web3Forms，免後端）
-  notifyTeacherNewSlip({ name: studentName, course: courseLabel, lessons: lessons, bonus: bonus, currency: payCur, total: lessons * price, note: note });
+  notifyTeacherNewSlip({ name: studentName, course: courseLabel, lessons: lessons, bonus: bonus, currency: payCur, total: total, note: note });
   closeSlipModal();
   // 顯示狀態於頁面，不用 alert
   var statusEl = document.getElementById('slipStatusMsg');
@@ -3496,15 +3625,17 @@ function _loadScript(url) {
 async function generateAndUploadReceipt(p, v) {
   const name = p.student_name || p.token || '學生';
   // เลขที่ใบเสร็จ = วันที่รับเงิน + ลำดับของวันนั้น เช่น 2026-0630-01
-  const _d = new Date();
-  const datePart = _d.getFullYear() + '-' + String(_d.getMonth() + 1).padStart(2, '0') + String(_d.getDate()).padStart(2, '0');
+  // 2026-07-10 修正：改用 teacherToday()（泰國時間）取代瀏覽器本地時區，避免午夜到早上 7 點這段
+  // 收據日期算錯天，連帶編號序號跟著撞號/跳號。
+  const _todayParts = teacherToday().split('-'); // [YYYY, MM, DD]
+  const datePart = _todayParts[0] + '-' + _todayParts[1] + _todayParts[2];
   let _seq = 1;
   try {
     const _r = await sb.from('classroom_payments').select('receipt_no').like('receipt_no', datePart + '-%');
     if (_r && _r.data) _seq = _r.data.length + 1;
   } catch (e) { console.warn('收據序號查詢失敗：', e); }
   const receiptNo = datePart + '-' + String(_seq).padStart(2, '0');
-  const today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const today = _todayParts.join('/');
   const total = v.ls * v.pp;
 
   // โหลด library (โหลดครั้งแรกเท่านั้น ~500KB รวม)

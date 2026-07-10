@@ -84,6 +84,18 @@ h1,h2,h3{font-family:'Noto Serif TC',serif;}
       <label class="settings-label">堂數</label>
       <div id="slipPackGrid" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
     </div>
+    <div id="slipCustomWrap" style="display:none;margin-top:12px;">
+      <label class="settings-label">教學類型（單堂購買，不買課程包）</label>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button type="button" id="ctBtn-1on1" onclick="selectSlipCustomType('1on1')">👤 一對一</button>
+        <button type="button" id="ctBtn-pair" onclick="selectSlipCustomType('pair')">👥 雙人共學</button>
+      </div>
+      <label class="settings-label">堂數</label>
+      <input class="settings-input" id="slipCustomLessons" type="number" min="1" step="1" value="1" oninput="renderSlipTotalAndBank()">
+      <label class="settings-label" style="margin-top:10px;">單價（每堂・可自行修改，例如特殊優惠價）</label>
+      <input class="settings-input" id="slipCustomPricePer" type="number" min="0" placeholder="請輸入每堂單價" oninput="renderSlipTotalAndBank()">
+      <div class="note" style="margin-top:4px;">參考價：一對一 NT 1,000 / 50分鐘・雙人共學 NT 1,500 / 50分鐘（泰銖或特殊價可自行修改單價）</div>
+    </div>
     <div id="slipCurrencyWrap" style="display:none;margin-top:12px;">
       <label class="settings-label">付款幣別</label>
       <div style="display:flex;gap:8px;">
@@ -95,6 +107,13 @@ h1,h2,h3{font-family:'Noto Serif TC',serif;}
     <div class="pay-total-box" id="slipTotalBox">
       <div class="big" id="slipTotalText"></div>
       <div class="sub" id="slipCalcText"></div>
+    </div>
+    <div id="slipActualAmountWrap" style="display:none;margin-top:12px;">
+      <label class="settings-label">實際匯款金額 <span style="color:var(--amber);">*</span></label>
+      <input class="settings-input" id="slipActualAmountInput" type="number" min="0" placeholder="請輸入實際轉帳金額" oninput="checkSlipAmountMatch()">
+      <div id="slipAmountWarning" style="display:none;background:#fef3c7;border:1px solid #f5d78e;border-radius:9px;padding:9px 12px;margin-top:8px;font-size:0.82rem;color:#92400e;">
+        ⚠️ 金額與方案不符（方案應為 <span id="slipExpectedAmountText"></span>）。如果是分期付款或非整包付款，請改選上方「自訂」。
+      </div>
     </div>
     <div id="slipBankBox" style="display:none;background:#f8f4ea;border:1px solid #e5d9b8;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:0.84rem;line-height:1.75;color:var(--ink);"></div>
     <label class="settings-label">匯款截圖 <span style="color:var(--amber);">*</span></label>
@@ -351,17 +370,22 @@ function openSlipModal(){
     document.getElementById('slipCurrencyWrap').style.display='block';
     slipType = lock.courseId; slipLessons = lock.lessons; slipBonus = bonus;
   } else {
-    document.getElementById('slipCourseGrid').innerHTML = COURSE_TYPES.map(function(c){
+    document.getElementById('slipCourseGrid').innerHTML = COURSE_TYPES.concat([{ id:'custom', label:'自訂（單堂購買）', desc:'不買課程包，單堂購買' }]).map(function(c){
       return '<button class="course-card" id="sc-' + c.id + '" onclick="selectSlipType(\'' + c.id + '\')"><div class="c-name">' + escHtml(c.label) + '</div><div class="c-desc">' + escHtml(c.desc||'') + '</div></button>';
     }).join('');
     document.getElementById('slipPackWrap').style.display='none';
     document.getElementById('slipPackGrid').innerHTML='';
+    document.getElementById('slipCustomWrap').style.display='none';
     document.getElementById('slipCurrencyWrap').style.display='none';
   }
   document.getElementById('slipBankBox').style.display='none';
+  document.getElementById('slipActualAmountWrap').style.display='none';
+  document.getElementById('slipAmountWarning').style.display='none';
   document.getElementById('curBtn-NTD').style.cssText=OFF_CUR;
   document.getElementById('curBtn-THB').style.cssText=OFF_CUR;
   document.getElementById('curBtn-WISE').style.cssText=OFF_CUR;
+  document.getElementById('ctBtn-1on1').style.cssText=OFF_CUR;
+  document.getElementById('ctBtn-pair').style.cssText=OFF_CUR;
   document.getElementById('slipTotalBox').style.display='none';
   document.getElementById('slipPreviewImg').style.display='none';
   document.getElementById('slipUploadPlaceholder').style.display='';
@@ -375,6 +399,25 @@ function selectSlipType(id){
   slipType=id; slipLessons=null; slipBonus=0; slipCurrency=null;
   document.querySelectorAll('#slipCourseGrid .course-card').forEach(function(el){ el.classList.remove('selected'); });
   var el=document.getElementById('sc-'+id); if(el) el.classList.add('selected');
+  document.getElementById('curBtn-NTD').style.cssText=OFF_CUR;
+  document.getElementById('curBtn-THB').style.cssText=OFF_CUR;
+  document.getElementById('curBtn-WISE').style.cssText=OFF_CUR;
+  document.getElementById('slipTotalBox').style.display='none';
+  document.getElementById('slipBankBox').style.display='none';
+  document.getElementById('slipActualAmountWrap').style.display='none';
+  document.getElementById('slipAmountWarning').style.display='none';
+  if (id === 'custom'){
+    document.getElementById('slipPackWrap').style.display='none';
+    document.getElementById('slipPackGrid').innerHTML='';
+    document.getElementById('slipCustomWrap').style.display='block';
+    document.getElementById('ctBtn-1on1').style.cssText=OFF_CUR;
+    document.getElementById('ctBtn-pair').style.cssText=OFF_CUR;
+    document.getElementById('slipCustomLessons').value=1;
+    document.getElementById('slipCustomPricePer').value='';
+    document.getElementById('slipCurrencyWrap').style.display='block';
+    return;
+  }
+  document.getElementById('slipCustomWrap').style.display='none';
   var c=COURSE_TYPES.find(function(x){return x.id===id;}); if(!c) return;
   document.getElementById('slipPackGrid').innerHTML = c.packs.map(function(n){
     var bonus=slipBonusFor(n);
@@ -382,12 +425,15 @@ function selectSlipType(id){
   }).join('');
   document.getElementById('slipPackWrap').style.display='block';
   document.getElementById('slipCurrencyWrap').style.display='none';
-  document.getElementById('curBtn-NTD').style.cssText=OFF_CUR;
-  document.getElementById('curBtn-THB').style.cssText=OFF_CUR;
-  document.getElementById('curBtn-WISE').style.cssText=OFF_CUR;
-  document.getElementById('slipTotalBox').style.display='none';
-  document.getElementById('slipBankBox').style.display='none';
   if (c.packs.length===1) selectSlipPack(c.packs[0]);
+}
+function selectSlipCustomType(t){
+  document.getElementById('ctBtn-1on1').style.cssText = t==='1on1'?ON_CUR:OFF_CUR;
+  document.getElementById('ctBtn-pair').style.cssText = t==='pair'?ON_CUR:OFF_CUR;
+  if (slipCurrency==='NTD'){
+    document.getElementById('slipCustomPricePer').value = t==='pair'?1500:1000;
+  }
+  renderSlipTotalAndBank();
 }
 function selectSlipPack(n){
   slipLessons=n; slipBonus=slipBonusFor(n);
@@ -401,22 +447,65 @@ function selectSlipCurrency(cur){
   document.getElementById('curBtn-NTD').style.cssText = cur==='NTD'?ON_CUR:OFF_CUR;
   document.getElementById('curBtn-THB').style.cssText = cur==='THB'?ON_CUR:OFF_CUR;
   document.getElementById('curBtn-WISE').style.cssText = cur==='WISE'?ON_CUR:OFF_CUR;
+  if (slipType==='custom' && cur==='NTD'){
+    var pricePerInput = document.getElementById('slipCustomPricePer');
+    if (!pricePerInput.value){
+      var is1on1 = document.getElementById('ctBtn-1on1').style.cssText.indexOf('gold-deep') !== -1;
+      var isPair = document.getElementById('ctBtn-pair').style.cssText.indexOf('gold-deep') !== -1;
+      if (is1on1 || isPair) pricePerInput.value = isPair ? 1500 : 1000;
+    }
+  }
   renderSlipTotalAndBank();
 }
+// 只對「選現成方案」有效：比對學生填的「實際匯款金額」跟方案計算出來的金額是否一致
+// 不一致不會擋送出（避免計算誤判卡到真的付對錢的學生），只顯示黃色提醒讓老師確認時多留意
+function checkSlipAmountMatch(){
+  var warnBox = document.getElementById('slipAmountWarning');
+  var input = document.getElementById('slipActualAmountInput');
+  if (slipType==='custom' || !slipType){ warnBox.style.display='none'; return; }
+  var c = COURSE_TYPES.find(function(x){ return x.id===slipType; });
+  if (!c || !slipLessons || !slipCurrency || !input || !input.value){ warnBox.style.display='none'; return; }
+  var price = slipCurrency==='NTD'?c.priceNTD:c.priceTHB;
+  if (!price){ warnBox.style.display='none'; return; }
+  var amtCur = slipCurrency==='WISE'?'THB':slipCurrency;
+  var expected = slipLessons*price;
+  var actual = parseFloat(input.value) || 0;
+  if (Math.round(actual) !== Math.round(expected)){
+    document.getElementById('slipExpectedAmountText').textContent = amtCur+' '+expected.toLocaleString();
+    warnBox.style.display='block';
+  } else {
+    warnBox.style.display='none';
+  }
+}
 function renderSlipTotalAndBank(){
-  var c=COURSE_TYPES.find(function(x){return x.id===slipType;});
   var totalBox=document.getElementById('slipTotalBox');
   var bankBox=document.getElementById('slipBankBox');
-  if(!c||!slipLessons||!slipCurrency){ totalBox.style.display='none'; bankBox.style.display='none'; return; }
-  var price = slipCurrency==='NTD'?c.priceNTD:c.priceTHB;
+  var actualWrap=document.getElementById('slipActualAmountWrap');
   var amtCur = slipCurrency==='WISE'?'THB':slipCurrency;
-  totalBox.style.display='block';
-  if (price){
-    document.getElementById('slipTotalText').textContent = amtCur+' '+(slipLessons*price).toLocaleString()+(slipCurrency==='WISE'?'（透過 Wise）':'');
-    document.getElementById('slipCalcText').textContent  = slipLessons+'堂 × '+amtCur+' '+price+'/堂'+(slipBonus?'（贈 '+slipBonus+' 堂）':'')+(c.note?' · '+c.note:'');
+  if (slipType==='custom'){
+    actualWrap.style.display='none';
+    var cLessons = parseInt(document.getElementById('slipCustomLessons').value,10) || 0;
+    var cPricePer = parseFloat(document.getElementById('slipCustomPricePer').value) || 0;
+    if (!slipCurrency||!cLessons||!cPricePer){ totalBox.style.display='none'; bankBox.style.display='none'; return; }
+    totalBox.style.display='block';
+    document.getElementById('slipTotalText').textContent = amtCur+' '+(cLessons*cPricePer).toLocaleString()+(slipCurrency==='WISE'?'（透過 Wise）':'');
+    document.getElementById('slipCalcText').textContent  = cLessons+'堂 × '+amtCur+' '+cPricePer+'/堂（自訂單堂購買）';
   } else {
-    document.getElementById('slipTotalText').textContent = amtCur+' 金額請與老師確認';
-    document.getElementById('slipCalcText').textContent  = c.label+' · '+slipLessons+' 堂';
+    var c=COURSE_TYPES.find(function(x){return x.id===slipType;});
+    if(!c||!slipLessons||!slipCurrency){ totalBox.style.display='none'; bankBox.style.display='none'; actualWrap.style.display='none'; return; }
+    var price = slipCurrency==='NTD'?c.priceNTD:c.priceTHB;
+    totalBox.style.display='block';
+    if (price){
+      document.getElementById('slipTotalText').textContent = amtCur+' '+(slipLessons*price).toLocaleString()+(slipCurrency==='WISE'?'（透過 Wise）':'');
+      document.getElementById('slipCalcText').textContent  = slipLessons+'堂 × '+amtCur+' '+price+'/堂'+(slipBonus?'（贈 '+slipBonus+' 堂）':'')+(c.note?' · '+c.note:'');
+      actualWrap.style.display='block';
+      document.getElementById('slipActualAmountInput').value='';
+      document.getElementById('slipAmountWarning').style.display='none';
+    } else {
+      document.getElementById('slipTotalText').textContent = amtCur+' 金額請與老師確認';
+      document.getElementById('slipCalcText').textContent  = c.label+' · '+slipLessons+' 堂';
+      actualWrap.style.display='none';
+    }
   }
   var qrOnly=function(title,qrSrc,cap){
     return '<div style="font-weight:700;margin-bottom:10px;">'+title+'</div><div style="text-align:center;"><img src="'+qrSrc+'" alt="QR" style="width:170px;max-width:100%;border-radius:10px;display:inline-block;" onerror="this.parentNode.style.display=\'none\'">'+(cap?'<div style="font-size:0.76rem;color:var(--ink-muted);margin-top:6px;">'+cap+'</div>':'')+'</div>';
@@ -454,14 +543,35 @@ function handleSlipImage(file){
 
 async function submitSlip(){
   if(!slipType){ alert('請先選擇課程'); return; }
-  if(!slipLessons){ alert('請先選擇堂數'); return; }
+  var lessons, bonus, price, courseLabel;
+  if (slipType === 'custom'){
+    lessons = parseInt(document.getElementById('slipCustomLessons').value,10) || 0;
+    price = parseFloat(document.getElementById('slipCustomPricePer').value) || 0;
+    bonus = 0;
+    if (!lessons || !price){ alert('請填寫堂數和單價'); return; }
+    var typeLabel = document.getElementById('ctBtn-pair').style.cssText.indexOf('gold-deep') !== -1 ? '雙人共學' : '一對一';
+    courseLabel = '自訂・'+typeLabel+' '+lessons+'堂';
+  } else {
+    if(!slipLessons){ alert('請先選擇堂數'); return; }
+    var c=COURSE_TYPES.find(function(x){return x.id===slipType;})||{};
+    lessons = slipLessons;
+    bonus = slipBonus;
+    price=(slipCurrency==='NTD'?c.priceNTD:c.priceTHB)||0;
+    courseLabel=(c.label||slipType)+' '+lessons+'堂'+(bonus?'（贈'+bonus+'）':'');
+  }
   if(!slipCurrency){ alert('請先選擇付款幣別'); return; }
   if(!slipImageData){ alert('請先上傳匯款截圖'); return; }
-  var c=COURSE_TYPES.find(function(x){return x.id===slipType;})||{};
-  var price=(slipCurrency==='NTD'?c.priceNTD:c.priceTHB)||0;
   var payCur=slipCurrency==='WISE'?'THB':slipCurrency;
-  var courseLabel=(c.label||slipType)+' '+slipLessons+'堂'+(slipBonus?'（贈'+slipBonus+'）':'')+(slipCurrency==='WISE'?'・Wise':'');
+  courseLabel += (slipCurrency==='WISE'?'・Wise':'');
+  var total = lessons*price;
   var note='';
+  if (slipType !== 'custom'){
+    var actualInput = document.getElementById('slipActualAmountInput');
+    var actualVal = actualInput ? parseFloat(actualInput.value) : NaN;
+    if (!isNaN(actualVal) && Math.round(actualVal) !== Math.round(total)){
+      note = '⚠️ 學生填寫實際匯款金額為 '+payCur+' '+actualVal.toLocaleString()+'（與方案金額 '+payCur+' '+total.toLocaleString()+' 不同，請確認）';
+    }
+  }
   var studentName=(currentStudent&&currentStudent.name)?currentStudent.name:token;
   var btn=document.getElementById('slipSubmitBtn');
   btn.disabled=true; btn.textContent='送出中…';
@@ -469,14 +579,14 @@ async function submitSlip(){
   try {
     res = await sb.rpc('submit_payment_slip', {
       p_token: token, p_student_name: studentName, p_course_id: slipType,
-      p_course_label: courseLabel, p_lessons: slipLessons, p_bonus_lessons: slipBonus,
-      p_price_per: price, p_currency: payCur, p_total_amount: slipLessons*price,
+      p_course_label: courseLabel, p_lessons: lessons, p_bonus_lessons: bonus,
+      p_price_per: price, p_currency: payCur, p_total_amount: total,
       p_note: note||null, p_slip_data: slipImageData
     });
   } catch(e){ res={ error:{ message:(e&&e.message)||String(e) } }; }
   btn.disabled=false; btn.textContent='📤 送出繳費';
   if (res && res.error){ alert('送出失敗：'+res.error.message); return; }
-  notifyTeacherNewSlip({ name:studentName, course:courseLabel, lessons:slipLessons, bonus:slipBonus, currency:payCur, total:slipLessons*price, note:note });
+  notifyTeacherNewSlip({ name:studentName, course:courseLabel, lessons:lessons, bonus:bonus, currency:payCur, total:total, note:note });
   closeSlipModal();
   var statusEl=document.getElementById('slipStatusMsg');
   if (statusEl){ statusEl.innerHTML='<div style="background:#fef3c7;border-radius:10px;padding:11px 14px;font-size:0.85rem;color:#92400e;font-weight:600;margin-bottom:16px;">⏳ 已送出，等待老師確認<br><span style="font-weight:400;font-size:0.78rem;">'+escHtml(courseLabel)+'</span></div>'; }
