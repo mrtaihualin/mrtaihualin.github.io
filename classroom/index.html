@@ -1152,11 +1152,11 @@ async function createMeetLinkForStudent(studentName, opts) {
   const tz = TEACHER_TZ;
   const body = {
     summary: studentName,
-    // 2026-07-10：Lin 要สีมะม่วง (Mango) แต่ colorId ของ REST API (classic 1-11) ไม่มีชื่อ "Mango" ตรงๆ —
-    // ทดสอบจริงแล้วพบว่า colorId '6' = "Tangerine" (ส้มแดง) ไม่ใช่ Mango ตามที่ Google Calendar UI ใหม่เรียก
-    // เทียบตำแหน่งสี/เฉดสีในตัวเลือกแล้ว "Mango" ในหน้า UI ใหม่ น่าจะตรงกับ colorId '5' (ชื่อเดิม "Banana"
-    // สีเหลืองทอง อยู่ถัดจาก Tangerine พอดี) — ยังไม่ชัวร์ 100% ต้องให้ Lin ช่วยเช็คอีกทีหลัง push
-    colorId: '5',
+    // 2026-07-10：ยืนยันแล้วจาก Google Calendar API อย่างเป็นทางการ — event colorId มีแค่ 11 สี (1-11)
+    // ไม่มีสีชื่อ "Mango" เลย (Mango อยู่ในจานสี "สีปฏิทิน" 24 สีคนละระบบ ใช้กับ event เดี่ยวไม่ได้)
+    // เทียบ RGB จริงจาก Google API แล้ว "Tangerine" (colorId '6', #ffb878) คือสีที่ Lin เลือกเอง
+    // ใกล้เคียง Mango (#ffad46) ที่สุดในบรรดา 11 สีที่ใช้ได้จริง — ยืนยันกับ Lin แล้ว 2026-07-10
+    colorId: '6',
     description: opts.startDate && opts.classTime
       ? '系統自動建立，用於產生固定的 Google Meet 連結' + (opts.recurring ? '（每週固定時間上課）' : '（單次課程）')
       : '系統自動建立，用於產生固定的 Google Meet 連結（實際上課時間依老師安排的課表為主）',
@@ -2384,8 +2384,10 @@ async function loadTeacherStudentInfo(token) {
     // ── 學生感想（最近 5 筆）+ 核准刊登按鈕 ──
     var fbHtml = '';
     try {
-      var fbRes = await sb.from('classroom_feedback').select('id,content,approved,display_name,created_at').eq('token', token).order('created_at', { ascending: false }).limit(5);
+      var fbRes = await sb.from('classroom_feedback').select('id,content,approved,display_name,created_at,category').eq('token', token).order('created_at', { ascending: false }).limit(5);
       var fbs = fbRes.data || [];
+      // หมวดหมู่รีวิว — key ต้องตรงกับตัวกรองใน pricing.html (CATS array) ห้ามเปลี่ยนตามใจ — Lin 2026-07-10
+      var FB_CATS = [['發音','發音'],['文法','文法・文化'],['基礎','初學者・打基礎'],['客製','客製化教學'],['口說','口說・生活'],['綜合','綜合推薦']];
       if (fbs.length) {
         fbHtml = '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">' +
           '<div style="font-weight:700;font-size:0.82rem;color:var(--ink);margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">💬 學生感想（最近 ' + fbs.length + ' 筆）</div>' +
@@ -2393,13 +2395,21 @@ async function loadTeacherStudentInfo(token) {
             var d = f.created_at ? new Date(f.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
             var fid = (f.id || '').replace(/'/g, '');
             var approvedBadge = f.approved ? ' <span style="background:#dcfce7;color:#15803d;border-radius:10px;padding:1px 7px;font-weight:700;font-size:0.7rem;">✅ 已刊登</span>' : '';
+            var curCats = (f.category || '').split(' ').filter(Boolean);
+            var catLabel = curCats.length ? FB_CATS.filter(function(c){ return curCats.indexOf(c[0]) > -1; }).map(function(c){ return c[1]; }).join('、') : '（未分類）';
+            var checkboxRow = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:0.76rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">' +
+              FB_CATS.map(function(c) {
+                var checked = curCats.indexOf(c[0]) > -1 ? ' checked' : '';
+                return '<label style="display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" data-fid="' + fid + '" value="' + c[0] + '"' + checked + '>' + c[1] + '</label>';
+              }).join('') +
+              '</div>';
             var actionRow = f.approved
-              ? '<div style="font-size:0.78rem;color:var(--green);margin-top:5px;">公開名稱：' + escHtml(f.display_name || '匿名學員') +
+              ? '<div style="font-size:0.78rem;color:var(--green);margin-top:5px;">公開名稱：' + escHtml(f.display_name || '匿名學員') + '　分類：' + catLabel +
                   ' <button onclick="unapproveTestimonial(\'' + fid + '\',\'' + token.replace(/'/g,'') + '\')" style="background:none;border:none;cursor:pointer;font-size:0.75rem;color:#b91c1c;padding:0 4px;font-family:\'Noto Sans TC\',sans-serif;">撤銷刊登</button></div>'
               : '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;">' +
                   '<input id="dn-' + fid + '" placeholder="公開名稱（例：小明同學）" value="' + escHtml(f.display_name || '') + '" style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--border);font-size:0.78rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);">' +
                   '<button onclick="approveTestimonial(\'' + fid + '\',\'' + token.replace(/'/g,'') + '\')" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;white-space:nowrap;">✅ 核准刊登</button>' +
-                '</div>';
+                '</div>' + checkboxRow;
             return '<div style="background:#f9f7f2;border-radius:8px;padding:9px 10px;margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">' +
               '<div style="font-size:0.76rem;color:var(--ink-muted);margin-bottom:3px;">' + d + approvedBadge + '</div>' +
               '<div style="font-size:0.85rem;color:var(--ink);white-space:pre-wrap;word-break:break-word;">' + escHtml(f.content) + '</div>' +
@@ -2723,8 +2733,11 @@ function dismissReceipt(token, url, btn) {
 async function approveTestimonial(id, token) {
   var nameEl = document.getElementById('dn-' + id);
   var displayName = (nameEl ? nameEl.value.trim() : '') || '匿名學員';
+  var catBoxes = document.querySelectorAll('input[data-fid="' + id + '"]:checked');
+  var category = Array.prototype.map.call(catBoxes, function(b){ return b.value; }).join(' ');
+  if (!category) { alert('請至少勾選一個分類，才能核准刊登喔'); return; }
   try {
-    var { error } = await sb.from('classroom_feedback').update({ approved: true, display_name: displayName }).eq('id', id);
+    var { error } = await sb.from('classroom_feedback').update({ approved: true, display_name: displayName, category: category }).eq('id', id);
     if (error) throw error;
     if (token) loadTeacherStudentInfo(token);
   } catch(e) { alert('核准失敗：' + (e.message || e)); }

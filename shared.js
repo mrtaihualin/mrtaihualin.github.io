@@ -1707,11 +1707,13 @@ window.deleteFBComment = function(postId, idx) {
 
         var gsStyle = document.createElement('style');
         gsStyle.textContent =
-          '#game-switcher.gs-collapsed{padding:0 !important;overflow:visible !important;background:transparent !important;border:none !important;box-shadow:none !important;backdrop-filter:none !important;max-width:none !important;}' +
+          // ย่อ (collapsed) = เลิกอยู่กลางจอ ย้ายไปฝั่งขวาแทน ให้ซ้อนอยู่เหนือปุ่ม ⛶ fullscreen — Lin 2026-07-10
+          '#game-switcher.gs-collapsed{padding:0 !important;overflow:visible !important;background:transparent !important;border:none !important;box-shadow:none !important;backdrop-filter:none !important;max-width:none !important;left:auto !important;right:12px !important;transform:none !important;}' +
           '#game-switcher.gs-collapsed > *:not(.gs-mini-toggle){display:none !important;}' +
           '.gs-mini-toggle{width:38px;height:38px;border-radius:50%;background:rgba(17,17,17,0.92);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:16px;display:flex !important;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;user-select:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);}' +
-          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle{background:transparent;border:none;box-shadow:none;color:#8b6310;font-size:13px;width:24px;height:auto;opacity:.6;}' +
-          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle:hover{opacity:1;}';
+          // ปุ่มย่อตอนแถบยังกาง (▾) — เดิมเล็ก 24px จางมาก (opacity .6) Lin บอกดูไม่ออกว่ากดได้ → ขยายให้ใหญ่ขึ้น+ชัดขึ้น
+          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle{background:rgba(139,99,16,0.12);border:1px solid rgba(139,99,16,0.3);color:#8b6310;font-size:17px;width:32px;height:32px;opacity:.95;margin-left:2px;}' +
+          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle:hover{opacity:1;background:rgba(139,99,16,0.2);}';
         document.head.appendChild(gsStyle);
 
         var miniBtn = document.createElement('span');

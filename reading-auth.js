@@ -59,8 +59,13 @@
         window.SITE_AUTH.renderBadge('rg-login-slot', { leaderboardHref: boardHref(), progressHref: 'my-progress.html' });
       }
     } else {
+      // v2 (Lin 2026-07-10): หน้าเกม (reading/typing/word-order/lego) มีแบนเนอร์เหลือง "先玩玩看...登入解鎖"
+      // อยู่เหนือแถบนี้แล้ว ซึ่งกดแล้ว proxy-click ปุ่มนี้อยู่ดี (ดู rgCtaLogin/woCtaLogin/legoCtaLogin)
+      // → โชว์ปุ่มนี้ซ้ำสองอันดูรก จึงซ่อนด้วย display:none แต่ยังคงอยู่ใน DOM ให้ปุ่มแบนเนอร์กดผ่านได้เหมือนเดิม
+      // หน้าที่ไม่มีแบนเนอร์เหลือง (เช่น tone-finder) จะไม่โดนผลกระทบ เพราะปุ่มนี้จะเป็นทางเข้าล็อกอินเดียวอยู่แล้ว
+      var hideDup = !!document.getElementById('rg-cta-login');
       el.innerHTML =
-        '<button id="rg-login-btn" style="display:flex;align-items:center;gap:6px;' +
+        '<button id="rg-login-btn" style="display:' + (hideDup ? 'none' : 'flex') + ';align-items:center;gap:6px;' +
         'background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;border:none;border-radius:20px;' +
         'padding:6px 16px;cursor:pointer;font-size:12.5px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;' +
         'box-shadow:0 2px 8px rgba(139,99,16,0.28);letter-spacing:0.3px;transition:filter .15s;"' +

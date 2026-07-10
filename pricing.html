@@ -9,6 +9,14 @@
   gtag('js', new Date());
   gtag('config', 'G-DKVQE30982');
 </script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -631,11 +639,14 @@
 
 <script>
 // ── 從 Supabase 載入已核准的文字學生回饋，插入 testimonial 展示區 ──
-(function(){
+// v2 (Lin 2026-07-10): เพิ่ม category → data-cats + class t-item เพื่อให้เข้าตัวกรองหมวดหมู่ได้จริง
+// (เดิมไม่มีทั้งคู่ → รีวิวพวกนี้โผล่ทุกหมวดปนกันหมด ไม่ตรงตัวกรอง)
+// window.__tFetchP = promise ให้สคริปต์ตัวกรองด้านล่างรอให้ fetch เสร็จก่อนค่อยนับ/สร้างปุ่ม
+window.__tFetchP = (function(){
   var SB_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw';
   function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-  fetch(SB_URL + '/rest/v1/approved_testimonials?select=content,display_name,created_at&order=created_at.desc', {
+  return fetch(SB_URL + '/rest/v1/approved_testimonials?select=content,display_name,created_at,category&order=created_at.desc', {
     headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
   }).then(function(r){ return r.ok ? r.json() : []; }).then(function(data){
     if (!data || !data.length) return;
@@ -643,7 +654,8 @@
     if (!masonry) return;
     var html = data.map(function(f){
       var name = f.display_name || '匿名學員';
-      return '<div class="t-text-item">' +
+      var cats = escHtml(f.category || '');
+      return '<div class="t-item t-text-item" data-cats="' + cats + '">' +
         '<div class="t-img-bar"></div>' +
         '<div class="t-text-body">' +
           '<p class="t-text-quote">' + escHtml(f.content) + '</p>' +
@@ -755,37 +767,43 @@
 <script src="shared.js?v=21"></script>
 <script>
 // ── ปุ่มกรองหมวด 學生回饋 ──────────────────────────────────────────
+// v2 (Lin 2026-07-10): เดิมสร้างปุ่ม+นับจำนวนทันที ก่อนรีวิวจาก Supabase (async) จะโหลดมาทัน
+// → รีวิวจาก classroom โผล่ทุกหมวดปนกันหมด ไม่ตรงตัวกรอง → แก้ด้วยรอ window.__tFetchP ให้เสร็จก่อนค่อยสร้างปุ่ม/นับ
 (function() {
   var CATS = [['all','全部'],['發音','發音'],['文法','文法・文化'],['基礎','初學者・打基礎'],['客製','客製化教學'],['口說','口說・生活'],['綜合','綜合推薦']];
   var fwrap = document.getElementById('t-filters');
   if (!fwrap) return;
-  var items = document.querySelectorAll('#t-masonry .t-item');
-  function countCat(key) {
-    if (key === 'all') return items.length;
-    var n = 0;
-    items.forEach(function(it){ if ((' '+(it.dataset.cats||'')+' ').indexOf(' '+key+' ') > -1) n++; });
-    return n;
-  }
-  CATS.forEach(function(c, idx) {
-    var key = c[0], label = c[1], cnt = countCat(key);
-    if (cnt === 0) return;
-    var b = document.createElement('button');
-    b.className = 'chip' + (idx === 0 ? ' active' : '');
-    b.innerHTML = label + '<span class="c">' + cnt + '</span>';
-    b.addEventListener('click', function() {
-      fwrap.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('active'); });
-      b.classList.add('active');
-      var shown = 0;
-      items.forEach(function(it) {
-        var ok = key === 'all' || (' '+(it.dataset.cats||'')+' ').indexOf(' '+key+' ') > -1;
-        it.style.display = ok ? '' : 'none';
-        if (ok) shown++;
+  function build() {
+    var items = document.querySelectorAll('#t-masonry .t-item');
+    function countCat(key) {
+      if (key === 'all') return items.length;
+      var n = 0;
+      items.forEach(function(it){ if ((' '+(it.dataset.cats||'')+' ').indexOf(' '+key+' ') > -1) n++; });
+      return n;
+    }
+    CATS.forEach(function(c, idx) {
+      var key = c[0], label = c[1], cnt = countCat(key);
+      if (cnt === 0) return;
+      var b = document.createElement('button');
+      b.className = 'chip' + (idx === 0 ? ' active' : '');
+      b.innerHTML = label + '<span class="c">' + cnt + '</span>';
+      b.addEventListener('click', function() {
+        fwrap.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        var shown = 0;
+        items.forEach(function(it) {
+          var ok = key === 'all' || (' '+(it.dataset.cats||'')+' ').indexOf(' '+key+' ') > -1;
+          it.style.display = ok ? '' : 'none';
+          if (ok) shown++;
+        });
+        var em = document.getElementById('t-empty');
+        if (em) em.style.display = shown ? 'none' : 'block';
       });
-      var em = document.getElementById('t-empty');
-      if (em) em.style.display = shown ? 'none' : 'block';
+      fwrap.appendChild(b);
     });
-    fwrap.appendChild(b);
-  });
+  }
+  if (window.__tFetchP && window.__tFetchP.then) { window.__tFetchP.then(build, build); }
+  else { build(); }
 })();
 
 // ── GA4 Event Tracking: pricing.html ──────────────────────────────────
