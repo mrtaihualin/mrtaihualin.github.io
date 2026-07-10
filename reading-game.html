@@ -41,9 +41,7 @@
 <script src="word-vault.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-/* Lin 2026-07-10 อนุมัติ: หน้าเกมนี้ไม่ล็อกแถบ page-strip ติดจอ ให้เลื่อนไปกับเนื้อหาปกติ (หน้าอื่นในเว็บยังล็อกเหมือนเดิม — ไม่แก้ shared.css ตรงๆ) */
-.page-strip{position:static;}
-body:has(.page-strip){padding-bottom:0;}
+/* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
 .v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
 
 .page-header{text-align:center;margin-bottom:10px;}
@@ -69,15 +67,18 @@ body:has(.page-strip){padding-bottom:0;}
 .badge-btn:hover{transform:scale(1.1);}
 .badge-emoji{font-size:22px;}
 
-.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:640px;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:640px;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden;}
 
-.top-bar{display:flex;align-items:center;justify-content:space-between;width:100%;}
-.score-bar{display:flex;gap:12px;font-size:13px;color:#a08050;font-family:'Noto Sans TC',sans-serif;}
+/* Lin 2026-07-11: การ์ดหัวเกมสีทอง เหมือน tone-finder.html (.tf-word-banner) — รวม 第X/Y字 + 進度/本題分數 + คำ ไว้ในการ์ดเดียว */
+.gold-banner{width:calc(100% + 40px);margin:-20px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,#EFDDB4 0%,#F8F0DE 100%);border-bottom:2px solid rgba(184,134,40,.5);}
+.gold-banner .bars-wrap{margin-bottom:0;}
+.top-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;width:100%;margin-bottom:10px;}
+.score-bar{display:flex;gap:12px;font-size:13px;color:#8B6310;font-family:'Noto Sans TC',sans-serif;}
 .score-bar span{font-weight:700;color:#5a3e10;}
 .combo-badge{display:none;align-items:center;gap:4px;background:#fff3e0;border:1.5px solid #ffcc02;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;color:#e65100;}
 .combo-badge.show{display:flex;}
 
-.word-area{text-align:center;margin:4px 0;}
+.word-area{text-align:center;margin:4px 0 0;}
 .word-th{font-size:62px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px;}
 .word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px;}
 
@@ -339,19 +340,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
 </div>
 
-<div class="bars-wrap" id="bars-wrap">
-  <div class="bar-row">
-    <span>進度</span>
-    <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
-    <span class="bar-label" id="prog-txt">0/10</span>
-  </div>
-  <div class="bar-row">
-    <span>本題分數</span>
-    <div class="bar-bg"><div class="bar-fill power" id="rg-ws-fill" style="width:100%"></div></div>
-    <span class="bar-label"><span id="rg-ws-num">10</span>/10</span>
-  </div>
-</div>
-
 <div class="level-tabs">
   <button class="ltab active" id="ltab-初" onclick="setLevel('初')">初級</button>
   <button class="ltab"        id="ltab-中" onclick="setLevel('中')">中級</button>
@@ -359,22 +347,35 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </div>
 
 <div class="card" id="game">
-  <div class="top-bar">
-    <div class="score-bar">
-      <div>第 <span id="qn">1</span>/<span id="qt">10</span> 字</div>
-      <div>✓ <span id="ok">0</span></div>
-      <div>✗ <span id="bad">0</span></div>
+  <div class="gold-banner">
+    <div class="top-bar">
+      <div class="score-bar">
+        <div>第 <span id="qn">1</span>/<span id="qt">10</span> 字</div>
+        <div>✓ <span id="ok">0</span></div>
+        <div>✗ <span id="bad">0</span></div>
+      </div>
+      <div class="combo-badge" id="cb">🔥 <span id="cn">0</span></div>
     </div>
-    <div class="combo-badge" id="cb">🔥 <span id="cn">0</span></div>
-  </div>
-
-  <div class="word-area">
-    <div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
-      <div class="word-th" id="wth">—</div>
-      <span id="rg-vault-btn-slot"></span>
+    <div class="bars-wrap" id="bars-wrap">
+      <div class="bar-row">
+        <span>進度</span>
+        <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
+        <span class="bar-label" id="prog-txt">0/10</span>
+      </div>
+      <div class="bar-row">
+        <span>本題分數</span>
+        <div class="bar-bg"><div class="bar-fill power" id="rg-ws-fill" style="width:100%"></div></div>
+        <span class="bar-label"><span id="rg-ws-num">10</span>/10</span>
+      </div>
     </div>
-    <div class="word-zh" id="wzh"></div>
-    <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;">✨ 黃金字 ×2</div>
+    <div class="word-area">
+      <div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
+        <div class="word-th" id="wth">—</div>
+        <span id="rg-vault-btn-slot"></span>
+      </div>
+      <div class="word-zh" id="wzh"></div>
+      <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;">✨ 黃金字 ×2</div>
+    </div>
   </div>
 
   <!-- แถบพยางค์ (中級 หลายพยางค์) — โชว์เฉพาะคำที่มีหลายพยางค์ -->

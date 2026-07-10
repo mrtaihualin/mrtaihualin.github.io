@@ -40,9 +40,7 @@
 <script defer src="reading-auth.js?v=4"></script>
 <script defer src="lego-vault.js?v=1"></script>
 <style>
-/* Lin 2026-07-10 อนุมัติ: หน้าเกมนี้ไม่ล็อกแถบ page-strip ติดจอ ให้เลื่อนไปกับเนื้อหาปกติ (หน้าอื่นในเว็บยังล็อกเหมือนเดิม — ไม่แก้ shared.css ตรงๆ) */
-.page-strip{position:static;}
-body:has(.page-strip){padding-bottom:0;}
+/* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
 :root{
   --gold:#8B6310; --gold-deep:#5a3e0a; --gold-bright:#C8973A; --gold-light:#F3E4C2;
   --ink:#1C1C1C; --ink-soft:#333333; --ink-muted:#666666;
@@ -223,6 +221,9 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   .lv-pill{padding:9px 14px;font-size:13px;}
 }
 /* 進度/⚡ bars — เพิ่ม 2026-07-03, สไตล์เดียวกับ reading-game.html/typing-game.html */
+/* Lin 2026-07-11: การ์ดหัวเกมสีทอง เหมือน tone-finder.html (.tf-word-banner) — ครอบหลอด進度บนหน้าหลัก (本題分數 ยังอยู่ในป๊อปอัพทดสอบเหมือนเดิม) */
+.gold-banner{width:100%;max-width:640px;margin:0 auto 14px;padding:14px 20px 12px;background:linear-gradient(180deg,#EFDDB4 0%,#F8F0DE 100%);border:1.5px solid rgba(139,99,16,0.15);border-radius:16px;box-sizing:border-box;}
+.gold-banner .bars-wrap{margin:0 auto;}
 .bars-wrap{width:100%;max-width:640px;margin:0 auto 14px;display:flex;flex-direction:column;gap:6px;}
 .bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
 .bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden;}
@@ -313,16 +314,13 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
     <p>分級學習：從句子結構，到情態與否定，一步步組出完整的泰語句子。</p>
   </header>
 
-  <div class="bars-wrap" id="lego-bars-wrap">
-    <div class="bar-row">
-      <span>進度</span>
-      <div class="bar-bg"><div class="bar-fill prog" id="lego-pf" style="width:0%"></div></div>
-      <span class="bar-label" id="lego-prog-txt">0/5</span>
-    </div>
-    <div class="bar-row">
-      <span>本題分數</span>
-      <div class="bar-bg"><div class="bar-fill power" id="lego-ws-fill" style="width:100%"></div></div>
-      <span class="bar-label"><span id="lego-ws-num">10</span>/10</span>
+  <div class="gold-banner">
+    <div class="bars-wrap" id="lego-bars-wrap">
+      <div class="bar-row">
+        <span>進度</span>
+        <div class="bar-bg"><div class="bar-fill prog" id="lego-pf" style="width:0%"></div></div>
+        <span class="bar-label" id="lego-prog-txt">0/5</span>
+      </div>
     </div>
   </div>
 

@@ -42,19 +42,20 @@
 <script src="adv-sentences.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-/* Lin 2026-07-10 อนุมัติ: หน้าเกมนี้ไม่ล็อกแถบ page-strip ติดจอ ให้เลื่อนไปกับเนื้อหาปกติ (หน้าอื่นในเว็บยังล็อกเหมือนเดิม — ไม่แก้ shared.css ตรงๆ) */
-.page-strip{position:static;}
-body:has(.page-strip){padding-bottom:0;}
+/* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
 .v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
 
 .page-header{text-align:center;margin-bottom:10px;}
 .page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
 .page-sub{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#b08040;margin-top:3px;}
 
-.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:640px;padding:22px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:640px;padding:22px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden;}
 
-.top-bar{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:6px;}
-.score-bar{display:flex;gap:12px;font-size:13px;color:#a08050;font-family:'Noto Sans TC',sans-serif;}
+/* Lin 2026-07-11: การ์ดหัวเกมสีทอง เหมือน tone-finder.html (.tf-word-banner) — รวมคะแนน + 進度/本題分數 ไว้ในการ์ดเดียว */
+.gold-banner{width:calc(100% + 40px);margin:-22px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,#EFDDB4 0%,#F8F0DE 100%);border-bottom:2px solid rgba(184,134,40,.5);}
+.gold-banner .bars-wrap{margin-bottom:0;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:10px;}
+.score-bar{display:flex;gap:12px;font-size:13px;color:#8B6310;font-family:'Noto Sans TC',sans-serif;}
 .score-bar span{font-weight:700;color:#5a3e10;}
 
 .zh-hint{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#888;margin:2px 0 14px;text-align:center;min-height:20px;}
@@ -234,27 +235,27 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
 </div>
 
-<!-- 這局進度／即時力量條 -->
-<div class="bars-wrap" id="bars-wrap">
-  <div class="bar-row">
-    <span>進度</span>
-    <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
-    <span class="bar-label" id="prog-txt">0/10</span>
-  </div>
-  <div class="bar-row">
-    <span>本題分數</span>
-    <div class="bar-bg"><div class="bar-fill power" id="wo-ws-fill" style="width:100%"></div></div>
-    <span class="bar-label"><span id="wo-ws-num">10</span>/10</span>
-  </div>
-</div>
-
 <!-- GAME -->
 <div id="game" class="card">
-  <div class="top-bar">
-    <div class="score-bar">
-      <div>分數：<span id="wo-score">0</span></div>
+  <div class="gold-banner">
+    <div class="top-bar">
+      <div class="score-bar">
+        <div>分數：<span id="wo-score">0</span></div>
+      </div>
+      <button class="btn btn-secondary" id="wo-hint-btn" onclick="woHint()" style="padding:6px 14px;font-size:12.5px;">💡 提示 (-2)</button>
     </div>
-    <button class="btn btn-secondary" id="wo-hint-btn" onclick="woHint()" style="padding:6px 14px;font-size:12.5px;">💡 提示 (-2)</button>
+    <div class="bars-wrap" id="bars-wrap">
+      <div class="bar-row">
+        <span>進度</span>
+        <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
+        <span class="bar-label" id="prog-txt">0/10</span>
+      </div>
+      <div class="bar-row">
+        <span>本題分數</span>
+        <div class="bar-bg"><div class="bar-fill power" id="wo-ws-fill" style="width:100%"></div></div>
+        <span class="bar-label"><span id="wo-ws-num">10</span>/10</span>
+      </div>
+    </div>
   </div>
 
   <div id="wo-golden-badge" style="display:none;width:100%;text-align:center;font-size:12px;color:#C8973A;font-weight:800;margin-bottom:4px;">✨ 黃金句 ×2</div>
