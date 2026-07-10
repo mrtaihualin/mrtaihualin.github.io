@@ -247,7 +247,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 
   <div id="wo-golden-badge" style="display:none;width:100%;text-align:center;font-size:12px;color:#C8973A;font-weight:800;margin-bottom:4px;">✨ 黃金句 ×2</div>
-  <div id="wo-hint-warn" class="wo-hint-warn" style="display:none;">⚠️ 用「提示」會扣到 0 分，這句會直接失敗！</div>
+  <div id="wo-hint-warn" class="wo-hint-warn" style="display:none;">💡 再用一次提示分數就會歸零囉～這句之後會再複習到，別擔心 🌱</div>
 
   <div class="wo-slots" id="wo-slots"></div>
 
@@ -539,6 +539,43 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     } catch(e) {}
   }
 
+  // ── น้องมีนา 米娜: บทพูด + ป๊อปพูดสด (โทนจีนไต้หวันอุ่นๆ ไกด์อ่อนโยน) — Lin 2026-07-10 ──
+  var MINA_EMOJI='👧🏻';
+  var MINA_LINES={
+    welcome:['哈囉～我是米娜 🌾 我們一起把泰文語序變厲害，好不好？','嗨嗨～我是米娜，今天也一起慢慢排句子吧 😊'],
+    correct:['唉唷～排對了呢，你做得很好 ✨','對了對了！語序就是這樣 🌾','很好喔～你越來越有語感了 😊'],
+    combo:['哇～連續排對，米娜都替你開心 🔥','停不下來了呢，好厲害 ⚡'],
+    golden:['這句…裡面有可以吃的字喔！米娜最喜歡了 😋 分數加倍！'],
+    wrong:['沒關係的…這句米娜以前也排錯過，我們再看一次好嗎？','再試一次就好，米娜陪你 💛','慢慢來，先想想第一個詞是哪個 🌱']
+  };
+  function minaSay(key,vars){
+    var t=MINA_LINES[key];
+    if(Array.isArray(t))t=t[Math.floor(Math.random()*t.length)]||'';
+    t=t||'';
+    if(vars)Object.keys(vars).forEach(function(k){t=t.replace('{'+k+'}',vars[k]);});
+    return t;
+  }
+  var _minaToastTimer=null;
+  function minaToast(key,opts){
+    opts=opts||{};
+    if(opts.throttle && Math.random()>(opts.chance||0.34))return;
+    var msg=minaSay(key,opts.vars); if(!msg)return;
+    try{
+      var el=document.getElementById('mina-toast');
+      if(!el){
+        el=document.createElement('div'); el.id='mina-toast';
+        el.style.cssText='position:fixed;left:14px;bottom:18px;z-index:10002;max-width:min(300px,78vw);display:flex;align-items:flex-end;gap:8px;pointer-events:none;opacity:0;transform:translateY(14px);transition:opacity .32s,transform .32s;';
+        el.innerHTML='<div style="font-size:34px;line-height:1;flex-shrink:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.12));">'+MINA_EMOJI+'</div>'+
+                     '<div class="mina-bubble" style="background:#FAF4E8;border:1.5px solid #F3E4C2;border-radius:14px;padding:9px 13px;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:#5a4a2a;line-height:1.5;box-shadow:0 4px 14px rgba(139,99,16,.14);"></div>';
+        document.body.appendChild(el);
+      }
+      el.querySelector('.mina-bubble').innerHTML=msg;
+      void el.offsetWidth; el.style.opacity='1'; el.style.transform='translateY(0)';
+      if(_minaToastTimer)clearTimeout(_minaToastTimer);
+      _minaToastTimer=setTimeout(function(){el.style.opacity='0';el.style.transform='translateY(14px)';},opts.dur||2600);
+    }catch(e){}
+  }
+
   function init(){
     if (!window.ADV_SENTENCES || !ADV_SENTENCES.length) {
       document.getElementById('game').innerHTML = '<p style="font-family:\'Noto Sans TC\',sans-serif;color:#c62828;">句庫載入失敗，請重新整理頁面。</p>';
@@ -573,6 +610,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     document.getElementById('game').style.display = 'flex';
     try{ if(window.gtag) gtag('event','game_start',{game:'word_order'}); }catch(e){}
     loadSentence();
+    if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
   }
 
   function loadSentence(){
@@ -807,6 +845,11 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       document.getElementById('wo-hint-btn').disabled = true;
       updateHintWarning();
       if (pts > 0) popScore('+' + pts);
+      // น้องมีนาพูด: คำทอง > คอมโบ > มีผิด(ปลอบ) > ถูก(สุ่ม) — Lin 2026-07-10
+      if(golden) minaToast('golden');
+      else if(curCombo===3||curCombo===5||curCombo===8) minaToast('combo');
+      else if(attemptedWrongThisSentence) minaToast('wrong',{throttle:true,chance:0.5});
+      else minaToast('correct',{throttle:true});
       // 標記格子為已答對樣式
       Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){
         el.classList.add('correct');
@@ -908,7 +951,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     if (woLoggedIn()) { el.innerHTML = ''; return; }
     el.innerHTML = '<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:180px;">🔒 尚未登入 = 只能練習，沒有記錄</span>' +
+        '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:180px;">😊 先玩玩看也可以喔～登入後米娜才幫你把進度記起來 🌾</span>' +
         '<button onclick="woCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>' +
         '<button onclick="var d=document.getElementById(\'wo-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>' +
       '</div>' +

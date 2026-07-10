@@ -160,6 +160,8 @@
 .bonus-btn.wrong  {background:#fdecea;color:#c62828;border-color:#f44336;}
 .bonus-btn.locked {pointer-events:none;opacity:.85;}
 .bonus-result{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#8b6310;text-align:center;margin-top:6px;}
+.bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:6px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
+.bonus-reason.show{display:block;}
 
 /* ── Enhanced reveal ── */
 .reveal{text-align:left;margin-top:4px;display:none;width:100%;}
@@ -439,10 +441,11 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <div class="bonus-reading" id="bonus-reading" style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;color:#8B6310;margin:2px 0 6px;"></div>
     <div class="bonus-opts" id="bonus-opts"></div>
     <div class="bonus-result" id="bonus-result"></div>
+    <div class="bonus-reason" id="bonus-reason"></div>
     <!-- ปุ่มข้าม (⏭️ 不選，直接下一個) ย้ายขึ้นไปอยู่แถวเดียวกับปุ่มไกด์ไลน์ด้านบนแล้ว (id="rg-tone-skip-btn") — Lin 2026-07-07 -->
   </div>
 
-  <div class="retry-hint" id="retry-hint">選錯了！再試一次 🔁</div>
+  <div class="retry-hint" id="retry-hint">沒關係～再看看，換一個試試 🌱</div>
   <div class="result-banner" id="banner"></div>
 
   <!-- Reveal -->
@@ -1451,12 +1454,95 @@ function buildRevealRules(w){
     rows.push({tag:'尾音',sp:false,
       text:w.final+(fsnd!==w.final?' <span class="rule-arrow">→</span> 發音「'+fsnd+'」':' 發音「'+fsnd+'」')});
   }
-  var toneNames={'่':'低調符（เอก）','้':'降調符（โท）','๊':'高調符（ตรี）','๋':'升調符（จัตวา）','์':'消音符（不發音）'};
-  if(w.tone&&toneNames[w.tone])rows.push({tag:'聲調符',sp:false,text:dispHTML(w.tone)+' = '+toneNames[w.tone]});
+  if(w.tone){
+    if(w.tone==='์'){
+      rows.push({tag:'聲調符',sp:false,text:dispHTML(w.tone)+' = 消音符（不發音）'});
+    } else {
+      var _cls=w.th?TH_ENGINE.getInitClass(w.th):null;
+      var _clsZh=TONE_CLASS_ZH[_cls==='lead'?'high':_cls]||'';
+      var _toneZh=(TONE_ZH[w.tone_name]||w.tone_name)+'（'+w.tone_name+'）';
+      var _markLabel=_clsZh
+        ? (dispHTML(w.tone)+' + '+_clsZh+' <span class="rule-arrow">→</span> '+_toneZh)
+        : (dispHTML(w.tone)+' <span class="rule-arrow">→</span> '+_toneZh);
+      rows.push({tag:'聲調符',sp:false,text:_markLabel});
+    }
+  }
   if(w.lead==='ห')rows.push({tag:'前導 ห',sp:true,text:'ห 置於 '+w.cons+' 前 → 提高聲調'});
   if(w.lead==='อ')rows.push({tag:'前導 อ',sp:true,text:'อ 置於 '+w.cons+' 前 → 提高聲調'});
   if(w.cluster)rows.push({tag:'複合音',sp:true,text:w.cons+w.cluster+'（兩個子音一起發音）'});
   return rows;
+}
+
+// Lin 2026-07-10: 泰語聲調規則引擎（從 tone-finder.html 的 TH 物件移植過來，同一套驗證過的規則，跟 reading-game.html 一致）
+// 用來：(1) 修正上面聲調符標籤原本不分子音種類的問題 (2) 產生「猜聲調」小遊戲答完後的推導句
+var TH_ENGINE=(function(){
+  var LOW_SET=new Set('คฅฆงชซฌญฑฒณทธนพฟภมยรลวฬฮ'.split(''));
+  var HIGH_SET=new Set('ขฃฉฐถผฝศษสห'.split(''));
+  var MID_SET=new Set('กจดตบปอฎฏ'.split(''));
+  var SHORT_TAIL=new Set('กขคฆบปพฟภจชซฎฏฐฑฒดตถทธศษส'.split(''));
+  var LONG_TAIL=new Set('นณญรลฬมยวง'.split(''));
+  var CONS_SET=new Set('กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ'.split(''));
+  var LEAD_PATS=['หน','หม','หล','หว','หย','หร','หญ','หง','อย'];
+  var SHORT_V=new Set(['ะ','ั','ิ','ึ','ุ','็']);
+  var LONG_V=new Set(['า','ี','ื','ู','เ','แ','โ']);
+  var TONE_CHARS=new Set(['่','้','๊','๋']);
+  var LIVE_V=new Set(['ไ','ใ','ำ']);
+  var CLUSTER2=new Set('รลว'.split(''));
+  var CLUSTER_INIT=new Set('กขคฆปผพภตบดฟ'.split(''));
+  function _initChar(word){for(var i=0;i<LEAD_PATS.length;i++){if(word.indexOf(LEAD_PATS[i])===0)return LEAD_PATS[i];}for(var j=0;j<word.length;j++){if(CONS_SET.has(word[j]))return word[j];}return null;}
+  function _hasSaraOr(word){var ic=_initChar(word),firstOr=word.indexOf('อ');for(var i=0;i<word.length;i++){if(word[i]==='อ'&&i>0){var hasConsBefore=false;for(var k=0;k<i;k++){if(CONS_SET.has(word[k])){hasConsBefore=true;break;}}if(hasConsBefore&&!(ic==='อ'&&firstOr===i))return true;}}return false;}
+  function _codaCons(word){var cons=[];for(var i=0;i<word.length;i++){if(CONS_SET.has(word[i]))cons.push(word[i]);}if(cons.length>=2&&CLUSTER_INIT.has(cons[0])&&CLUSTER2.has(cons[1])){var idx0=word.indexOf(cons[0]),idx2=word.indexOf(cons[1],idx0+1),after=word.slice(idx2+1),clusterOK=false;for(var a=0;a<after.length;a++){var ch=after[a];if(SHORT_V.has(ch)||LONG_V.has(ch)||ch==='อ'||CONS_SET.has(ch)||LIVE_V.has(ch)){clusterOK=true;break;}}if(clusterOK)cons=[cons[0]].concat(cons.slice(2));}return cons;}
+  return {
+    getToneMark:function(word){for(var i=0;i<word.length;i++)if(TONE_CHARS.has(word[i]))return word[i];return null;},
+    getInitClass:function(word){for(var i=0;i<LEAD_PATS.length;i++){if(word.indexOf(LEAD_PATS[i])===0)return 'lead';}for(var j=0;j<word.length;j++){var c=word[j];if(LOW_SET.has(c))return 'low';if(HIGH_SET.has(c))return 'high';if(MID_SET.has(c))return 'mid';}return null;},
+    getInitChar:function(word){for(var i=0;i<LEAD_PATS.length;i++){if(word.indexOf(LEAD_PATS[i])===0)return LEAD_PATS[i];}for(var j=0;j<word.length;j++){if(CONS_SET.has(word[j]))return word[j];}return null;},
+    isLiveWord:function(word){var cons=_codaCons(word);if(cons.length>=2){var last=cons[cons.length-1];if(last==='อ'&&word[word.length-1]==='อ'&&this.getInitChar(word)!=='อ')return true;if(SHORT_TAIL.has(last))return false;if(LONG_TAIL.has(last))return true;}for(var n=0;n<word.length;n++)if(LIVE_V.has(word[n]))return true;for(var j=0;j<word.length;j++)if(SHORT_V.has(word[j]))return false;for(var k=0;k<word.length;k++)if(LONG_V.has(word[k]))return true;if(_hasSaraOr(word))return true;return null;},
+    getVowelType:function(word){for(var i=0;i<word.length;i++)if(SHORT_V.has(word[i]))return 'short';for(var j=0;j<word.length;j++)if(LONG_V.has(word[j]))return 'long';if(_hasSaraOr(word))return 'long';return null;}
+  };
+})();
+var TONE_CLASS_ZH={low:'低子音',high:'高子音',mid:'中子音',lead:'前引字'};
+var TONE_MARK_NAME={'่':'ไม้เอก','้':'ไม้โท','๊':'ไม้ตรี','๋':'ไม้จัตวา'};
+var TONE_NUM_NAME=['','สามัญ','เอก','โท','ตรี','จัตวา'];
+function computeToneFromSpelling(word){
+  var cls=TH_ENGINE.getInitClass(word),mark=TH_ENGINE.getToneMark(word),live=TH_ENGINE.isLiveWord(word),vowel=TH_ENGINE.getVowelType(word);
+  if(!cls)return null;
+  var e=(cls==='lead')?'high':cls;
+  if(mark){
+    if(e==='low'){if(mark==='่')return 3;if(mark==='้')return 4;}
+    else if(e==='mid'){if(mark==='่')return 2;if(mark==='้')return 3;if(mark==='๊')return 4;if(mark==='๋')return 5;}
+    else{if(mark==='่')return 2;if(mark==='้')return 3;}
+  } else {
+    if(live)return(e==='high')?5:1;
+    if(e==='high'||e==='mid')return 2;
+    var isShort=(vowel==='short')||(vowel==null);
+    return isShort?4:3;
+  }
+  return null;
+}
+// 猜聲調小遊戲答完後的「為什麼是這個聲調」推導句 — 用單字真正的拼字(th)算一次規則，
+// 如果算出來的聲調跟遊戲原本標的答案對不上（通常是外來語/特殊念法，例如 ออฟ ว่าง 這種字）
+// 就回傳 null，不顯示推導句，只顯示聲調名稱本身，避免把規則講錯 — Lin 2026-07-10 確認過測試器
+function buildToneReason(w){
+  if(!w||!w.th||!w.tone_name)return null;
+  var expectedNum={'สามัญ':1,'เอก':2,'โท':3,'ตรี':4,'จัตวา':5}[w.tone_name];
+  var computed=computeToneFromSpelling(w.th);
+  if(computed!==expectedNum)return null;
+  var cls=TH_ENGINE.getInitClass(w.th),mark=TH_ENGINE.getToneMark(w.th),live=TH_ENGINE.isLiveWord(w.th),vowel=TH_ENGINE.getVowelType(w.th);
+  var e=(cls==='lead')?'high':cls;
+  var initCh=TH_ENGINE.getInitChar(w.th)||w.cons;
+  var classLabel=TONE_CLASS_ZH[cls]||cls;
+  var toneZh=(TONE_ZH[w.tone_name]||w.tone_name)+'（'+w.tone_name+'）';
+  if(mark){
+    return '「'+initCh+'」是'+classLabel+'，加上聲調符「'+mark+'」（'+TONE_MARK_NAME[mark]+'）→ 組合成'+toneZh;
+  }
+  if(live){
+    return '「'+initCh+'」是'+classLabel+'，這個音節是活音節（長母音或有濁尾音），沒有聲調符 → 固定念'+toneZh;
+  }
+  if(e==='high'||e==='mid'){
+    return '「'+initCh+'」是'+classLabel+'，這個音節是死音節（短母音或清塞音尾），沒有聲調符 → 固定念'+toneZh;
+  }
+  var isShort=(vowel==='short')||(vowel==null);
+  return '「'+initCh+'」是低子音，死音節+'+(isShort?'短母音':'長母音')+' → 念'+toneZh;
 }
 
 // ════════════════════════════════════════════
@@ -1664,6 +1750,7 @@ function initGame(){
   document.getElementById('game').style.display='flex';
   refreshUI();
   loadWord();
+  if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
 }
 
 // แตกคำเป็นอาเรย์พยางค์ (พยางค์เดียว = อาเรย์ 1 ตัว)
@@ -1973,6 +2060,11 @@ function finalizeWord(){
   if(wordHadWrong){b.textContent='完成這個字！+'+dispPtsAwarded+' 分';b.className='result-banner show half';}
   else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+(golden?' ✨黃金字':'')+' +'+dispPtsAwarded+' 分';b.className='result-banner show ok';}
   pop('+'+dispPtsAwarded+(golden?' ✨':''));
+  // น้องมีนาพูด: คำทอง > คอมโบ > มีผิด(ปลอบ) > ถูก(สุ่ม) — Lin 2026-07-10
+  if(golden) minaToast('golden');
+  else if(streak===3||streak===5||streak===8) minaToast('combo');
+  else if(wordHadWrong) minaToast('wrong',{throttle:true,chance:0.5});
+  else minaToast('correct',{throttle:true});
   rgLogWord({failed:false,pts:dispPtsAwarded,srsDue:(typeof rec!=='undefined'&&rec)?(rec.dueDate||''):'',mastered:(typeof rec!=='undefined'&&rec)?!!rec.mastered:false});
   doSave();
 }
@@ -2014,7 +2106,7 @@ function check(){
       document.getElementById('pool').querySelectorAll('.opt.sel').forEach(function(x){x.classList.remove('sel');});
       document.getElementById('btn-check').disabled=true;
       var hint=document.getElementById('retry-hint');
-      var _msg1985=wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️';
+      var _msg1985=wrongCount===1?'沒關係～再看看，換一個試試 🌱':'再一次就好，米娜相信你 💛';
       hint.textContent=_msg1985;
       hint.className='retry-hint show';
       rgToast(_msg1985); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07
@@ -2054,6 +2146,7 @@ function showBonus(){
   var box=document.getElementById('bonus-opts');
   box.innerHTML='';
   document.getElementById('bonus-result').textContent='';
+  document.getElementById('bonus-reason').className='bonus-reason';
   var _rd0=document.getElementById('bonus-reading');
   if(_rd0)_rd0.textContent=W.en?('讀音：'+W.en):''; // โชว์คำอ่าน (拼音) ตรงจุดเลือกวรรณยุกต์ — Lin 2026-07-07
   var skipBtn0=document.getElementById('rg-tone-skip-btn');
@@ -2105,6 +2198,12 @@ function evaluateBonus(){
   } else {
     res.textContent='（未作答）正確答案是'+tZH;
     res.style.color='#888';
+  }
+  var reasonEl=document.getElementById('bonus-reason');
+  var reason=buildToneReason(W);
+  if(reasonEl){
+    if(reason){ reasonEl.textContent='💡 '+reason; reasonEl.className='bonus-reason show'; }
+    else { reasonEl.className='bonus-reason'; }
   }
 }
 
@@ -2503,7 +2602,7 @@ function rgRenderLoginCTA(){
   if(rgLoggedIn()){ el.innerHTML=''; return; }
   el.innerHTML='<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;">'+
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
-      '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:180px;">🔒 尚未登入 = 只能練習，沒有記錄</span>'+
+      '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:180px;">😊 先玩玩看也可以喔～登入後米娜才幫你把進度記起來 🌾</span>'+
       '<button onclick="rgCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>'+
       '<button onclick="var d=document.getElementById(\'rg-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>'+
     '</div>'+
@@ -2546,6 +2645,47 @@ function rgToast(msg) {
     requestAnimationFrame(function(){ d.classList.add('show'); });
     setTimeout(function(){ d.classList.remove('show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 350); }, 2800);
   } catch(e) {}
+}
+
+// ════════════════════════════════════════════
+// น้องมีนา 米娜 — บทพูด + ป๊อปพูดสด (โทนจีนไต้หวันอุ่นๆ ไกด์อ่อนโยน วิญญาณเซริกะ) — Lin 2026-07-10
+// ⚠️ ใช้ emoji 👧🏻 ชั่วคราว · ห้ามโคลนเสียงคนจริง (นี่คือบทข้อความ ไม่ใช่ TTS)
+// ════════════════════════════════════════════
+var MINA_EMOJI='👧🏻';
+var MINA_LINES={
+  welcome:['哈囉～我是米娜 🌾 我們一起把泰文打字變厲害，好不好？','嗨嗨～我是米娜，今天也一起慢慢打吧 😊'],
+  correct:['唉唷～打對了呢，你做得很好 ✨','對了對了！就是這樣打 🌾','很好喔～鍵位越來越熟了 😊'],
+  combo:['哇～連續打對，米娜都替你開心 🔥','停不下來了呢，好厲害 ⚡'],
+  golden:['這個字…是可以吃的喔！米娜最喜歡了 😋 分數加倍！'],
+  wrong:['沒關係的…這個字米娜以前也打錯過，我們再看一次好嗎？','再試一次就好，米娜陪你 💛','慢慢來，看清楚鍵位就好 🌱'],
+  perfect:['全部一次就打對！你比自己想的還厲害喔 🌾 米娜給你拍拍手 👏','一題都沒錯～好棒，米娜好開心 ✨']
+};
+function minaSay(key,vars){
+  var t=MINA_LINES[key];
+  if(Array.isArray(t))t=t[Math.floor(Math.random()*t.length)]||'';
+  t=t||'';
+  if(vars)Object.keys(vars).forEach(function(k){t=t.replace('{'+k+'}',vars[k]);});
+  return t;
+}
+var _minaToastTimer=null;
+function minaToast(key,opts){
+  opts=opts||{};
+  if(opts.throttle && Math.random()>(opts.chance||0.34))return;
+  var msg=minaSay(key,opts.vars); if(!msg)return;
+  try{
+    var el=document.getElementById('mina-toast');
+    if(!el){
+      el=document.createElement('div'); el.id='mina-toast';
+      el.style.cssText='position:fixed;left:14px;bottom:18px;z-index:10002;max-width:min(300px,78vw);display:flex;align-items:flex-end;gap:8px;pointer-events:none;opacity:0;transform:translateY(14px);transition:opacity .32s,transform .32s;';
+      el.innerHTML='<div style="font-size:34px;line-height:1;flex-shrink:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.12));">'+MINA_EMOJI+'</div>'+
+                   '<div class="mina-bubble" style="background:#FAF4E8;border:1.5px solid #F3E4C2;border-radius:14px;padding:9px 13px;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:#5a4a2a;line-height:1.5;box-shadow:0 4px 14px rgba(139,99,16,.14);"></div>';
+      document.body.appendChild(el);
+    }
+    el.querySelector('.mina-bubble').innerHTML=msg;
+    void el.offsetWidth; el.style.opacity='1'; el.style.transform='translateY(0)';
+    if(_minaToastTimer)clearTimeout(_minaToastTimer);
+    _minaToastTimer=setTimeout(function(){el.style.opacity='0';el.style.transform='translateY(14px)';},opts.dur||2600);
+  }catch(e){}
 }
 
 // ════════════════════════════════════════════
@@ -2900,6 +3040,8 @@ function rgContStart(){
   if(box)box.innerHTML='';
   var res=document.getElementById('bonus-result');
   if(res)res.textContent='';
+  var reasonEl=document.getElementById('bonus-reason');
+  if(reasonEl)reasonEl.className='bonus-reason';
 }
 function rgContChar(ch){
   if(!RG_TYPE.on || !RG_CONT_ON || checked || RG_CONT_PAUSED)return;
@@ -2975,6 +3117,7 @@ function rgContAskNextTone(){
   var box=document.getElementById('bonus-opts');
   box.innerHTML='';
   document.getElementById('bonus-result').textContent='';
+  document.getElementById('bonus-reason').className='bonus-reason';
   var _rd=document.getElementById('bonus-reading');
   if(_rd)_rd.textContent=SY.en?('讀音：'+SY.en):''; // โชว์คำอ่าน (拼音) ของพยางค์ที่กำลังถามวรรณยุกต์อยู่ — Lin 2026-07-07
   var hintEl=document.getElementById('rg-type-hint');
@@ -3005,13 +3148,19 @@ function rgContAskNextTone(){
         if(correctBtn)correctBtn.classList.add('correct');
         res.textContent='不對，是'+tZH+'，沒扣分，繼續加油！';res.style.color='#b06020';
       }
+      var reasonEl=document.getElementById('bonus-reason');
+      var reason=buildToneReason(SY);
+      if(reasonEl){
+        if(reason){ reasonEl.textContent='💡 '+reason; reasonEl.className='bonus-reason show'; }
+        else { reasonEl.className='bonus-reason'; }
+      }
       setTimeout(function(){
         if(RG_CONT_TOKEN!==_tok)return; // เปลี่ยนคำไปแล้วระหว่างรอ — ไม่ต้องไปต่อคิวของคำเก่า
         RG_CONT_TONE_IDX++;
         box.innerHTML='';
         document.getElementById('bonus-result').textContent='';
         rgContAskNextTone();
-      },220); // 220ms ให้เห็นผลถูก/ผิดก่อนไปวรรณยุกต์พยางค์ถัดไป (เท่ากับ pause เดิมของโหมดต่อ-พยางค์)
+      },reason?2600:900); // Lin 2026-07-10: เดิม 220ms อ่านคำอธิบายไม่ทัน มีคำอธิบายให้เวลานานขึ้น
     };
     box.appendChild(btn);
   });
@@ -3032,6 +3181,12 @@ function rgContSkipTone(){
   }
   var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
   if(res){res.textContent='（未作答）正確答案是'+tZH;res.style.color='#888';}
+  var reasonEl=document.getElementById('bonus-reason');
+  var reason=buildToneReason(SY);
+  if(reasonEl){
+    if(reason){ reasonEl.textContent='💡 '+reason; reasonEl.className='bonus-reason show'; }
+    else { reasonEl.className='bonus-reason'; }
+  }
   var _tok=RG_CONT_TOKEN;
   setTimeout(function(){
     if(RG_CONT_TOKEN!==_tok)return;
@@ -3039,7 +3194,7 @@ function rgContSkipTone(){
     if(box)box.innerHTML='';
     if(res)res.textContent='';
     rgContAskNextTone();
-  },220);
+  },reason?2200:700); // Lin 2026-07-10: เดิม 220ms อ่านคำอธิบายไม่ทัน มีคำอธิบายให้เวลานานขึ้น
 }
 // คำพิมพ์ครบทุกพยางค์ + ถามวรรณยุกต์ครบคิวแล้ว → ปิดจบเหมือน rgTypeSuccessBranch/rgTypeFailBranch ตอน lastSyl ทุกประการ
 // (ตั้ง W ให้ตรงพยางค์สุดท้ายก่อน เพราะ loadSyl() ถูกเรียกแค่ครั้งเดียวตอน sylIdx=0 — showReveal()/buildRevealRules ต้องใช้ W ของพยางค์ที่เพิ่งพิมพ์จบจริง)
@@ -3182,11 +3337,19 @@ function rgRenderBonusForSyl(cachedAnswered,cachedSelected){
     };
     box.appendChild(btn);
   });
+  var reasonEl=document.getElementById('bonus-reason');
   if(bonusAnswered){
     var tZH=TONE_ZH[W.tone_name]||W.tone_name;
     if(selectedBonus===W.tone_name){res.textContent='正確！是'+tZH+' 🎉 +1 分';res.style.color='#2e7d32';}
     else if(selectedBonus){res.textContent='不對，是'+tZH+'，沒扣分，繼續加油！';res.style.color='#b06020';}
     else{res.textContent='（未作答）正確答案是'+tZH;res.style.color='#888';}
+    if(reasonEl){
+      var reason=buildToneReason(W);
+      if(reason){ reasonEl.textContent='💡 '+reason; reasonEl.className='bonus-reason show'; }
+      else { reasonEl.className='bonus-reason'; }
+    }
+  } else if(reasonEl){
+    reasonEl.className='bonus-reason';
   }
 }
 function rgRestoreSylState(st){
@@ -3280,7 +3443,7 @@ function rgCheckWholeWord(){
       document.getElementById('pool').querySelectorAll('.opt.sel').forEach(function(x){x.classList.remove('sel');});
       document.getElementById('btn-check').disabled=true;
       var hint=document.getElementById('retry-hint');
-      var _msg3097=(wrongCount===1?'選錯了！再試一次 🔁':'最後一次機會！⚠️')+'（音節 '+(wrongIdx+1)+' 錯了）';
+      var _msg3097=(wrongCount===1?'沒關係～再看看這個音節 🌱':'再一次就好，米娜相信你 💛')+'（音節 '+(wrongIdx+1)+'）';
       hint.textContent=_msg3097;
       hint.className='retry-hint show';
       rgToast(_msg3097); // 改成 pop up，自動消失，不用手動關 — Lin 2026-07-07

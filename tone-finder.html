@@ -1684,7 +1684,7 @@
   .tf-score-pop-num { font-size: 44px; }
   .tf-score-pop-mult {
     font-size: 24px;
-    color: #e0552f;
+    color: #B07820;
     font-weight: 900;
     opacity: 0;
     animation: tf-score-label-in 0.45s ease-out 0.5s forwards;
@@ -1703,19 +1703,20 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
   /* แบนเนอร์คอมโบเด้งใหญ่แบบเกมออนไลน์ — LIN 2026-06-20 */
+  /* คอมโบเด้ง: ย้ายลงล่าง (top 52%) กันทับป๊อปคะแนน +N ที่ลอยขึ้นจาก 32% — Lin 2026-07-10 */
   .tf-combo-flash {
-    position: fixed; left: 50%; top: 38%; transform: translateX(-50%);
+    position: fixed; left: 50%; top: 52%; transform: translateX(-50%);
     z-index: 10000; pointer-events: none; text-align: center;
     animation: tf-combo-flash-anim 1.6s cubic-bezier(.18,.9,.3,1.3) forwards;
   }
   .tf-combo-flash-x {
     font-size: 64px; font-weight: 900; line-height: 1;
-    color: #ff6a00; -webkit-text-stroke: 2px #fff;
-    text-shadow: 0 4px 18px rgba(255,106,0,0.55), 0 0 2px #fff;
+    color: #C8973A; -webkit-text-stroke: 2px #fff;
+    text-shadow: 0 4px 18px rgba(176,120,32,0.55), 0 0 2px #fff;
     font-family: 'Noto Sans TC', sans-serif;
   }
   .tf-combo-flash-main {
-    font-size: 26px; font-weight: 900; color: #d9343f; margin-top: 2px;
+    font-size: 26px; font-weight: 900; color: #B07820; margin-top: 2px;
     text-shadow: 0 2px 8px rgba(0,0,0,0.18); font-family: 'Noto Sans TC', sans-serif;
   }
   .tf-combo-flash-sub {
@@ -1813,6 +1814,19 @@
   .tf-mina-bubble::before {
     content:''; position:absolute; left:-8px; top:16px; width:0; height:0;
     border-top:7px solid transparent; border-bottom:7px solid transparent; border-right:9px solid #f0e2c2;
+  }
+  /* น้องมีนา — ป๊อปพูดสดระหว่างเล่น (มุมล่างซ้าย ไม่ทับคะแนนกลางจอ) — Lin 2026-07-10 */
+  .tf-mina-toast {
+    position:fixed; left:14px; bottom:18px; z-index:10002; max-width:min(300px,78vw);
+    display:flex; align-items:flex-end; gap:8px; pointer-events:none;
+    opacity:0; transform:translateY(14px); transition:opacity .32s, transform .32s;
+  }
+  .tf-mina-toast.show { opacity:1; transform:translateY(0); }
+  .tf-mina-toast-face { font-size:34px; line-height:1; flex-shrink:0; filter:drop-shadow(0 2px 4px rgba(0,0,0,.12)); }
+  .tf-mina-toast-bubble {
+    background:#FAF4E8; border:1.5px solid var(--gold-light,#F3E4C2); border-radius:14px;
+    padding:9px 13px; font-family:'Noto Sans TC',sans-serif; font-size:13.5px; color:#5a4a2a; line-height:1.5;
+    box-shadow:0 4px 14px rgba(139,99,16,.14);
   }
   .tf-badge-unlock {
     margin:8px 0 14px; padding:14px; border-radius:14px;
@@ -3248,6 +3262,28 @@ function tfMinaBubble(msg, size) {
     '<div class="tf-mina-bubble">' + msg + '</div>' +
   '</div>';
 }
+// ── น้องมีนา: ป๊อปพูดสดระหว่างเล่น (โทสต์มุมล่างซ้าย) — Lin 2026-07-10 ──
+// throttle=true → สุ่มโชว์บางครั้ง (กันน่าเบื่อ ตามหลัก variable-ratio) · false → โชว์เสมอ (ผิด/คำทอง/ทักทาย/คอมโบ)
+var _tfMinaToastTimer = null;
+function tfMinaToast(key, opts) {
+  opts = opts || {};
+  if (opts.throttle && Math.random() > (opts.chance || 0.34)) return;
+  var msg = tfMinaSay(key, opts.vars);
+  if (!msg) return;
+  var el = document.getElementById('tf-mina-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tf-mina-toast'; el.className = 'tf-mina-toast';
+    el.innerHTML = '<div class="tf-mina-toast-face">' + TF_MINA_EMOJI + '</div>' +
+                   '<div class="tf-mina-toast-bubble"></div>';
+    document.body.appendChild(el);
+  }
+  el.querySelector('.tf-mina-toast-bubble').innerHTML = msg;
+  void el.offsetWidth;
+  el.classList.add('show');
+  if (_tfMinaToastTimer) clearTimeout(_tfMinaToastTimer);
+  _tfMinaToastTimer = setTimeout(function () { el.classList.remove('show'); }, opts.dur || 2600);
+}
 
 // ── ระบบแบดจ์ (ธีมข้าว/อาหารไทย) ──
 // เงื่อนไขปลดล็อกปรับได้ที่ cond · เนื้อหาการ์ดความรู้ (th/reading/desc) รอครูตรวจจากไฟล์ร่าง
@@ -3617,6 +3653,12 @@ function tfScoreFirstTry() {
     tfScorePop(pts, { mult: mult, confetti: comboHit, big: comboHit, gold: gold > 1 });
     if (comboHit) tfComboFlash(session.combo, mult);
   }, 60);
+  // น้องมีนาพูด: คำทอง > คอมโบ > ตอบถูก (คำทอง/คอมโบโชว์เสมอ, ตอบถูกสุ่มโชว์) — Lin 2026-07-10
+  setTimeout(function () {
+    if (gold > 1) tfMinaToast('golden');
+    else if (comboHit) tfMinaToast('combo');
+    else tfMinaToast('correct', { throttle: true });
+  }, 520);
 }
 
 // ให้คะแนน "ผ่าน推導สำเร็จ" (เรียกตอน navigate ไปถึง step 'result')
@@ -3693,8 +3735,10 @@ function tfHandleDeduceMistake(step, choiceLabel, errMsg) {
   tfUpdateWordScoreGauge();                        // หลอดลดสดทันทีที่กดผิด (กันบั๊ก "ไม่ลด")
   if (TF_WORDSCORE.isDead(session)) {
     tfForceRevealZero();                          // หักครบ 4 → 0 แต้ม + เฉลย
+    tfMinaToast('wrong');                         // มีนาปลอบ (ไม่ดุ) — Lin 2026-07-10
   } else {
     showError(errMsg);                            // ยังเล่นต่อได้
+    tfMinaToast('wrong', { throttle: true, chance: 0.5 });  // ปลอบเป็นบางครั้ง กันรกจอ
   }
 }
 
@@ -5046,7 +5090,7 @@ function stepLevelSelect() {
   var ctaBanner = _loggedIn ? '' : (
     '<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;margin:0 0 12px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;text-align:left;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:170px;">🔒 尚未登入 = 只能練習，沒有記錄</span>' +
+        '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:170px;">😊 先玩玩看也可以喔～登入後米娜才幫你把進度記起來 🌾</span>' +
         '<button onclick="if(window.TF_AUTH)window.TF_AUTH.showGate(true)" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>' +
         '<button onclick="var d=document.getElementById(\'tf-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>' +
       '</div>' +
@@ -5143,6 +5187,8 @@ function startSetSession(words, opts) {
   }
   hist.push(S); histPos = 0;
   render();
+  // น้องมีนาทักทายตอนเริ่มเล่น (เฉพาะรอบแรกของหน้า กันทักซ้ำทุกชุด) — Lin 2026-07-10
+  if (!window._tfMinaWelcomed) { window._tfMinaWelcomed = true; setTimeout(function () { tfMinaToast('welcome', { dur: 3400 }); }, 700); }
 }
 
 // ── สเปก 2026-07-03 ข้อ 3: จัดลำดับ entries ให้คำที่ครบกำหนดทบทวน SRS ("due") มาก่อน ──
