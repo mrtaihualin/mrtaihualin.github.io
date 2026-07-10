@@ -1669,6 +1669,8 @@ window.deleteFBComment = function(postId, idx) {
       style.textContent =
         '.rg-fs-fab{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0));z-index:100000;width:42px;height:42px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;}' +
         '.rg-fs-fab:active{transform:scale(.92);}' +
+        /* Lin 2026-07-10: มือถือมีแถบดำ #bottom-nav สูง 60px+safe-area อยู่ล่างสุด — ปุ่มนี้ต้องขยับขึ้นมาไม่ให้จมใต้แถบดำ */
+        '@media(max-width:768px){.rg-fs-fab{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}}' +
         /* โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม — ใช้ !important เพราะบางอันมี inline style ล็อกไว้ */
         'body.rg-fake-fullscreen .site-nav,' +
         'body.rg-fake-fullscreen .page-strip,' +

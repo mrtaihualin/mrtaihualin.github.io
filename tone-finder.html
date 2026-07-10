@@ -6900,12 +6900,12 @@ setTimeout(tfRenderExtBar, 0);
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
-#game-switcher{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+#game-switcher{position:fixed;bottom:64px;right:12px;left:auto;transform:none;display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
 .gs-tab{padding:9px 18px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;flex-shrink:0;}
 .gs-tab:hover{background:rgba(139,99,16,0.08);}
 .gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
 .gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
-@media(max-width:768px){#game-switcher{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}.gs-tab{padding:8px 13px;font-size:12px;}
+@media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}
 /* LIN 2026-07-04: มือถือแถบสลับเกมลอยสูงกว่า → เพิ่มที่ว่างล่างการ์ดกันบังปุ่มตอบ */
 .tf-card{padding-bottom:132px;}}
 </style>

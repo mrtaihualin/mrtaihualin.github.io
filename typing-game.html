@@ -162,6 +162,8 @@
 .bonus-result{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#8b6310;text-align:center;margin-top:6px;}
 .bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:6px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
 .bonus-reason.show{display:block;}
+.bonus-reason-why{margin-bottom:6px;}
+.bonus-reason-rules{display:flex;flex-direction:column;gap:5px;}
 
 /* ── Enhanced reveal ── */
 .reveal{text-align:left;margin-top:4px;display:none;width:100%;}
@@ -1432,11 +1434,11 @@ var WORDS_HIGH=[
 WORDS = WORDS.concat(WORDS_HIGH);
 
 var BONUS_TONES=[
-  {name:'สามัญ', zh:'中調', num:1},
-  {name:'เอก',   zh:'低調', num:2},
-  {name:'โท',    zh:'降調', num:3},
-  {name:'ตรี',   zh:'高調', num:4},
-  {name:'จัตวา', zh:'升調', num:5}
+  {name:'สามัญ', zh:'第一聲', num:1},
+  {name:'เอก',   zh:'第二聲', num:2},
+  {name:'โท',    zh:'第三聲', num:3},
+  {name:'ตรี',   zh:'第四聲', num:4},
+  {name:'จัตวา', zh:'第五聲', num:5}
 ];
 
 function buildRevealRules(w){
@@ -1460,7 +1462,7 @@ function buildRevealRules(w){
     } else {
       var _cls=w.th?TH_ENGINE.getInitClass(w.th):null;
       var _clsZh=TONE_CLASS_ZH[_cls==='lead'?'high':_cls]||'';
-      var _toneZh=(TONE_ZH[w.tone_name]||w.tone_name)+'（'+w.tone_name+'）';
+      var _toneZh=(TONE_ZH[w.tone_name]||w.tone_name);
       var _markLabel=_clsZh
         ? (dispHTML(w.tone)+' + '+_clsZh+' <span class="rule-arrow">→</span> '+_toneZh)
         : (dispHTML(w.tone)+' <span class="rule-arrow">→</span> '+_toneZh);
@@ -1531,7 +1533,7 @@ function buildToneReason(w){
   var e=(cls==='lead')?'high':cls;
   var initCh=TH_ENGINE.getInitChar(w.th)||w.cons;
   var classLabel=TONE_CLASS_ZH[cls]||cls;
-  var toneZh=(TONE_ZH[w.tone_name]||w.tone_name)+'（'+w.tone_name+'）';
+  var toneZh=(TONE_ZH[w.tone_name]||w.tone_name);
   if(mark){
     return '「'+initCh+'」是'+classLabel+'，加上聲調符「'+mark+'」（'+TONE_MARK_NAME[mark]+'）→ 組合成'+toneZh;
   }
@@ -1543,6 +1545,25 @@ function buildToneReason(w){
   }
   var isShort=(vowel==='short')||(vowel==null);
   return '「'+initCh+'」是低子音，死音節+'+(isShort?'短母音':'長母音')+' → 念'+toneZh;
+}
+
+// Lin 2026-07-10: 猜聲調答完後，把「為什麼」推導句 + 子音/母音/尾音（含前引字/複合音）拆解一起顯示在 #bonus-reason
+// buildRevealRules() 本身一律安全可顯示（純拆字），只有 buildToneReason() 對不上時才跳過那句推導句
+function renderBonusReason(w){
+  var el=document.getElementById('bonus-reason');
+  if(!el)return;
+  if(!w||!w.th){ el.className='bonus-reason'; return; }
+  var reason=buildToneReason(w);
+  var rules=buildRevealRules(w);
+  var html='';
+  if(reason)html+='<div class="bonus-reason-why">💡 '+reason+'</div>';
+  if(rules&&rules.length){
+    html+='<div class="bonus-reason-rules">'+rules.map(function(r){
+      return '<div class="rule-row"><span class="rule-tag'+(r.sp?' sp':'')+'">'+r.tag+'</span><span class="rule-txt">'+r.text+'</span></div>';
+    }).join('')+'</div>';
+  }
+  if(html){ el.innerHTML=html; el.className='bonus-reason show'; }
+  else { el.className='bonus-reason'; }
 }
 
 // ════════════════════════════════════════════
@@ -2136,7 +2157,7 @@ function check(){
 }
 
 // ─── Bonus tone question ───
-var TONE_ZH={'สามัญ':'中調','เอก':'低調','โท':'降調','ตรี':'高調','จัตวา':'升調'};
+var TONE_ZH={'สามัญ':'第一聲','เอก':'第二聲','โท':'第三聲','ตรี':'第四聲','จัตวา':'第五聲'};
 
 function showBonus(){
   if(!W.tone_name)return;
@@ -2148,7 +2169,7 @@ function showBonus(){
   document.getElementById('bonus-result').textContent='';
   document.getElementById('bonus-reason').className='bonus-reason';
   var _rd0=document.getElementById('bonus-reading');
-  if(_rd0)_rd0.textContent=W.en?('讀音：'+W.en):''; // โชว์คำอ่าน (拼音) ตรงจุดเลือกวรรณยุกต์ — Lin 2026-07-07
+  if(_rd0)_rd0.textContent=W.th?('讀音：'+W.th):''; // Lin 2026-07-10: เปลี่ยนจากอ่านอังกฤษ (náam) เป็นสะกดไทยจริงของพยางค์นี้
   var skipBtn0=document.getElementById('rg-tone-skip-btn');
   if(skipBtn0)skipBtn0.style.display='none'; // ยังไม่ถึงตอนที่พิมพ์ครบ ยังไม่ให้กดข้าม
   BONUS_TONES.forEach(function(t){
@@ -2199,12 +2220,7 @@ function evaluateBonus(){
     res.textContent='（未作答）正確答案是'+tZH;
     res.style.color='#888';
   }
-  var reasonEl=document.getElementById('bonus-reason');
-  var reason=buildToneReason(W);
-  if(reasonEl){
-    if(reason){ reasonEl.textContent='💡 '+reason; reasonEl.className='bonus-reason show'; }
-    else { reasonEl.className='bonus-reason'; }
-  }
+  renderBonusReason(W);
 }
 
 // Lin 2026-07-06: เด้ง 全部精通！ ให้เหมือนเกมอ่าน (ตอนจำครบทั้งระดับ) — เสียงมีนา
@@ -2441,9 +2457,15 @@ function markOpts(){
   });
 }
 
+// Lin 2026-07-10: เปลี่ยนคำอ่านจากอังกฤษ (náam) เป็นสะกดไทยจริง — คำหลายพยางค์ (มี WORD.syls) ต่อเป็น "ผม-กิน-ข้าว" ให้เห็นจุดแบ่งพยางค์
+function buildThaiPron(){
+  if(WORD&&WORD.syls&&WORD.syls.length)return WORD.syls.map(function(s){return s.th;}).join('-');
+  return W?W.th:'';
+}
 function showReveal(){
   document.getElementById('rev-word').textContent=W.th;
-  document.getElementById('rev-pron').textContent='🔊 '+W.en;
+  var _pron=buildThaiPron();
+  document.getElementById('rev-pron').textContent=_pron?('🔊 '+_pron):'';
   var rules=buildRevealRules(W);
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
@@ -2459,7 +2481,8 @@ function showReveal(){
 // 每個字/音節各自一段分析，答對答錯都會顯示（rgContFinish 不管成功/失敗都會呼叫這個）— Lin 2026-07-07
 function showRevealMulti(){
   document.getElementById('rev-word').textContent=WORD.th;
-  document.getElementById('rev-pron').textContent=WORD.en?('🔊 '+WORD.en):'';
+  var _pronM=buildThaiPron();
+  document.getElementById('rev-pron').textContent=_pronM?('🔊 '+_pronM):'';
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
   sylList.forEach(function(SY,i){
@@ -3119,7 +3142,7 @@ function rgContAskNextTone(){
   document.getElementById('bonus-result').textContent='';
   document.getElementById('bonus-reason').className='bonus-reason';
   var _rd=document.getElementById('bonus-reading');
-  if(_rd)_rd.textContent=SY.en?('讀音：'+SY.en):''; // โชว์คำอ่าน (拼音) ของพยางค์ที่กำลังถามวรรณยุกต์อยู่ — Lin 2026-07-07
+  if(_rd)_rd.textContent=SY.th?('讀音：'+SY.th):''; // Lin 2026-07-10: เปลี่ยนจากอ่านอังกฤษ (náam) เป็นสะกดไทยจริงของพยางค์นี้
   var hintEl=document.getElementById('rg-type-hint');
   if(hintEl){hintEl.textContent='打完整個字了！選一下「'+SY.th+'」的聲調也可以（'+(RG_CONT_TONE_IDX+1)+'/'+RG_CONT_TONE_Q.length+'），不選按 Enter 或下面按鈕直接跳過 👇';hintEl.className='type-hint good';}
   var skipBtn=document.getElementById('rg-tone-skip-btn');
@@ -3148,19 +3171,14 @@ function rgContAskNextTone(){
         if(correctBtn)correctBtn.classList.add('correct');
         res.textContent='不對，是'+tZH+'，沒扣分，繼續加油！';res.style.color='#b06020';
       }
-      var reasonEl=document.getElementById('bonus-reason');
-      var reason=buildToneReason(SY);
-      if(reasonEl){
-        if(reason){ reasonEl.textContent='💡 '+reason; reasonEl.className='bonus-reason show'; }
-        else { reasonEl.className='bonus-reason'; }
-      }
+      renderBonusReason(SY);
       setTimeout(function(){
         if(RG_CONT_TOKEN!==_tok)return; // เปลี่ยนคำไปแล้วระหว่างรอ — ไม่ต้องไปต่อคิวของคำเก่า
         RG_CONT_TONE_IDX++;
         box.innerHTML='';
         document.getElementById('bonus-result').textContent='';
         rgContAskNextTone();
-      },reason?2600:900); // Lin 2026-07-10: เดิม 220ms อ่านคำอธิบายไม่ทัน มีคำอธิบายให้เวลานานขึ้น
+      },2600); // Lin 2026-07-10: เดิม 220ms อ่านคำอธิบายไม่ทัน ตอนนี้มีคำอธิบาย+ตารางแยกเสียงให้อ่านเสมอ ต้องหน่วงนานขึ้น
     };
     box.appendChild(btn);
   });
@@ -3181,12 +3199,7 @@ function rgContSkipTone(){
   }
   var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
   if(res){res.textContent='（未作答）正確答案是'+tZH;res.style.color='#888';}
-  var reasonEl=document.getElementById('bonus-reason');
-  var reason=buildToneReason(SY);
-  if(reasonEl){
-    if(reason){ reasonEl.textContent='💡 '+reason; reasonEl.className='bonus-reason show'; }
-    else { reasonEl.className='bonus-reason'; }
-  }
+  renderBonusReason(SY);
   var _tok=RG_CONT_TOKEN;
   setTimeout(function(){
     if(RG_CONT_TOKEN!==_tok)return;
@@ -3194,7 +3207,7 @@ function rgContSkipTone(){
     if(box)box.innerHTML='';
     if(res)res.textContent='';
     rgContAskNextTone();
-  },reason?2200:700); // Lin 2026-07-10: เดิม 220ms อ่านคำอธิบายไม่ทัน มีคำอธิบายให้เวลานานขึ้น
+  },2200); // Lin 2026-07-10: เดิม 220ms อ่านคำอธิบายไม่ทัน ตอนนี้มีคำอธิบาย+ตารางแยกเสียงให้อ่านเสมอ ต้องหน่วงนานขึ้น
 }
 // คำพิมพ์ครบทุกพยางค์ + ถามวรรณยุกต์ครบคิวแล้ว → ปิดจบเหมือน rgTypeSuccessBranch/rgTypeFailBranch ตอน lastSyl ทุกประการ
 // (ตั้ง W ให้ตรงพยางค์สุดท้ายก่อน เพราะ loadSyl() ถูกเรียกแค่ครั้งเดียวตอน sylIdx=0 — showReveal()/buildRevealRules ต้องใช้ W ของพยางค์ที่เพิ่งพิมพ์จบจริง)
@@ -3337,19 +3350,15 @@ function rgRenderBonusForSyl(cachedAnswered,cachedSelected){
     };
     box.appendChild(btn);
   });
-  var reasonEl=document.getElementById('bonus-reason');
   if(bonusAnswered){
     var tZH=TONE_ZH[W.tone_name]||W.tone_name;
     if(selectedBonus===W.tone_name){res.textContent='正確！是'+tZH+' 🎉 +1 分';res.style.color='#2e7d32';}
     else if(selectedBonus){res.textContent='不對，是'+tZH+'，沒扣分，繼續加油！';res.style.color='#b06020';}
     else{res.textContent='（未作答）正確答案是'+tZH;res.style.color='#888';}
-    if(reasonEl){
-      var reason=buildToneReason(W);
-      if(reason){ reasonEl.textContent='💡 '+reason; reasonEl.className='bonus-reason show'; }
-      else { reasonEl.className='bonus-reason'; }
-    }
-  } else if(reasonEl){
-    reasonEl.className='bonus-reason';
+    renderBonusReason(W);
+  } else {
+    var reasonEl=document.getElementById('bonus-reason');
+    if(reasonEl)reasonEl.className='bonus-reason';
   }
 }
 function rgRestoreSylState(st){
@@ -3516,12 +3525,12 @@ function rgOpenAsk() {
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
-#game-switcher{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+#game-switcher{position:fixed;bottom:64px;right:12px;left:auto;transform:none;display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
 .gs-tab{padding:9px 18px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;flex-shrink:0;}
 .gs-tab:hover{background:rgba(139,99,16,0.08);}
 .gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
 .gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
-@media(max-width:768px){#game-switcher{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}.gs-tab{padding:8px 13px;font-size:12px;}}
+@media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
   <a class="gs-tab" href="tone-finder.html">🎵 聲調搜尋</a>
