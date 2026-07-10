@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!-- 2026-07-10 新增：LIFF 入口/路由頁
+     หน้าที่: เปิดหน้าไหนของเว็บ "อยู่ใน LINE" (ไม่เด้งออกเบราว์เซอร์) โดยไม่ต้องสร้าง LIFF app ใหม่ทุกครั้ง —
+     ใช้ LIFF app เดิม (ตัวเดียวกับ line-link.html) ตัวเดียว แล้วเปลี่ยนหน้าปลายทางด้วย query param "goto"
+     ตัวอย่างลิงก์ที่ส่งใน LINE: https://liff.line.me/<LIFF_ID>?goto=classroom&s=TOKEN
+     ไม่แตะ/ไม่กระทบ line-link.html เดิม (หน้าผูกบัญชี) เลย แยกไฟล์กันคนละหน้าที่ -->
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>正在開啟…</title>
+<style>
+  :root {
+    --gold: #8B6310; --gold-bright: #C8973A; --gold-deep: #5a3e0a;
+    --ink: #1C1C1C; --ink-muted: #6b6b6b; --bg: #EDE7D9; --cream: #FAF4E8;
+    --border: rgba(139,99,16,0.18); --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .card {
+    background: var(--cream); border-radius: var(--radius); padding: 32px 24px;
+    max-width: 420px; width: 100%; text-align: center;
+    box-shadow: 0 4px 24px rgba(90,62,10,0.10), 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .icon { font-size: 2.2rem; margin-bottom: 10px; }
+  p { font-size: 0.9rem; color: var(--ink-muted); line-height: 1.7; }
+  .err { color: var(--amber-dark, #78350f); font-weight: 600; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">⏳</div>
+    <p id="statusText">正在開啟頁面…</p>
+  </div>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="liff-config.js"></script>
+  <script>
+    // goto → ปลายทางที่ยอมให้พาไป (whitelist กันคนยัด query แปลกๆ มาเปิดหน้าอื่นที่ไม่ตั้งใจ)
+    var GOTO_MAP = {
+      classroom: 'index.html',
+      pay: 'pay.html'
+      // 2026-07-10: เกม/ระบบคำศัพท์วันละคำ ยังไม่ทำตอนนี้ — ไว้เพิ่ม key ในนี้ทีหลังตอนทำจริง (ดูแผนอนาคต)
+    };
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var goto = urlParams.get('goto') || 'classroom';
+    var token = urlParams.get('s') || '';
+    var statusEl = document.getElementById('statusText');
+
+    function fail(msg) {
+      statusEl.textContent = '❌ ' + msg;
+      statusEl.className = 'err';
+    }
+
+    function buildTarget() {
+      var file = GOTO_MAP[goto];
+      if (!file) return null;
+      var qs = token ? ('?s=' + encodeURIComponent(token)) : '';
+      return file + qs;
+    }
+
+    async function main() {
+      var target = buildTarget();
+      if (!target) { fail('ลิงก์ไม่ถูกต้อง'); return; }
+
+      // token หาย (เช่น LINE ตัด query ทิ้งตอน redirect) → สำรองไว้ใน localStorage เหมือน line-link.html เดิม
+      if (token) {
+        localStorage.setItem('clsLiffOpenToken_' + goto, token);
+      } else {
+        var saved = localStorage.getItem('clsLiffOpenToken_' + goto);
+        if (saved) { token = saved; target = buildTarget(); }
+      }
+
+      if (!window.LIFF_CONFIG || !window.LIFF_CONFIG.liffId) {
+        // ไม่มี LIFF config ก็ยังเปิดหน้าปลายทางแบบเว็บปกติได้ ไม่ต้อง block คนดู
+        window.location.replace(target);
+        return;
+      }
+      try {
+        await liff.init({ liffId: window.LIFF_CONFIG.liffId });
+      } catch (e) {
+        // LIFF init พังก็ยังพาไปหน้าปลายทางได้ตามปกติ (แค่ไม่ได้อยู่ใน LIFF context เฉยๆ ไม่ใช่ error ที่ block ผู้ใช้)
+        window.location.replace(target);
+        return;
+      }
+      window.location.replace(target);
+    }
+    main();
+  </script>
+</body>
+</html>

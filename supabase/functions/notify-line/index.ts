@@ -12,6 +12,11 @@
 //   (ระบบแจ้งเตือนก่อน/หลังเรียนอัตโนมัติจริงๆ อยู่ใน class-reminder-cron แยกต่างหาก
 //    เพราะรันเป็น cron ไม่ได้ถูกเรียกจากเว็บ แต่ใช้หลักการเดียวกัน)
 //
+// 2026-07-10 เพิ่ม: body.flex = { title, bodyText, buttons: [{label, uri}|{label, postbackData, style}] }
+//   → ส่งเป็นข้อความมีปุ่มกดแทนข้อความธรรมดา ปุ่ม postback ต้องมี line-webhook (ดูไฟล์ supabase/functions/line-webhook)
+//   คอยรับ event แล้วอัปเดตฐานข้อมูล — ถ้าไม่ deploy line-webhook ปุ่ม postback จะกดได้แต่ไม่มีอะไรเกิดขึ้น
+//   (ปุ่ม uri เช่นลิงก์ Google Calendar ใช้ได้เลยไม่ต้องพึ่ง line-webhook)
+//
 // วิธี deploy (Lin ต้องทำเอง เพราะ AI ไม่มีสิทธิ์ล็อกอิน Supabase ของ Lin):
 //   1. ติดตั้ง Supabase CLI (ครั้งเดียว): npm install -g supabase
 //   2. supabase login
@@ -44,16 +49,52 @@ function corsHeaders() {
   };
 }
 
-async function pushLine(channelToken, targetUserId, message) {
+async function pushLineMessages(channelToken, targetUserId, messages) {
   const res = await fetch(LINE_PUSH_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
-    body: JSON.stringify({ to: targetUserId, messages: [{ type: 'text', text: String(message).slice(0, 4900) }] }),
+    body: JSON.stringify({ to: targetUserId, messages }),
   });
   if (!res.ok) {
     const errText = await res.text();
     throw new Error('LINE API ' + res.status + ': ' + errText);
   }
+}
+
+async function pushLine(channelToken, targetUserId, message) {
+  return pushLineMessages(channelToken, targetUserId, [{ type: 'text', text: String(message).slice(0, 4900) }]);
+}
+
+// 2026-07-10 เพิ่ม: ข้อความแบบมีปุ่มกด (Flex Message) ให้ครูกดตอบจากใน LINE ได้เลย
+// ใช้กับ "แจ้งเตือนคำขอเปลี่ยน/ยกเลิกคาบ" — ปุ่ม uri = เปิดลิงก์ (เช่น Google Calendar)
+// ปุ่ม postback = ส่งข้อมูลกลับมาที่ line-webhook (ไม่เปิดหน้าเว็บใดๆ) ให้ไปอัปเดตฐานข้อมูลแทน
+// buttons: [{ label, uri }] หรือ [{ label, postbackData }]
+function buildFlexMessage(title, bodyText, buttons) {
+  const footerContents = (buttons || []).map((b) => ({
+    type: 'button',
+    style: b.style || 'secondary',
+    height: 'sm',
+    action: b.uri
+      ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
+      : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },
+  }));
+  return {
+    type: 'flex',
+    altText: title.slice(0, 400),
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'md',
+        contents: [
+          { type: 'text', text: title, weight: 'bold', size: 'md', wrap: true },
+          { type: 'text', text: bodyText, size: 'sm', color: '#666666', wrap: true },
+        ],
+      },
+      footer: footerContents.length
+        ? { type: 'box', layout: 'vertical', spacing: 'sm', contents: footerContents }
+        : undefined,
+    },
+  };
 }
 
 serve(async (req) => {
@@ -111,7 +152,16 @@ serve(async (req) => {
       });
     }
 
-    await pushLine(channelToken, targetUserId, message);
+    // 2026-07-10 เพิ่ม: ถ้า client ส่ง body.flex มาด้วย (title/bodyText/buttons) → ส่งเป็นข้อความมีปุ่มกด
+    // แทนข้อความธรรมดา (ใช้กับ "แจ้งเตือนคำขอเปลี่ยน/ยกเลิกคาบ" ให้ครูกดตอบจากใน LINE ได้เลย)
+    // ไม่ส่ง body.flex มา → พฤติกรรมเดิมทุกอย่าง (ข้อความธรรมดา) ไม่กระทบของเดิม
+    const flex = body?.flex;
+    if (flex && flex.title && flex.bodyText) {
+      const flexMsg = buildFlexMessage(flex.title, flex.bodyText, flex.buttons || []);
+      await pushLineMessages(channelToken, targetUserId, [flexMsg]);
+    } else {
+      await pushLine(channelToken, targetUserId, message);
+    }
     return new Response(JSON.stringify({ ok: true }), {
       status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     });

@@ -1673,6 +1673,7 @@ window.deleteFBComment = function(postId, idx) {
         '@media(max-width:768px){.rg-fs-fab{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}}' +
         /* โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม — ใช้ !important เพราะบางอันมี inline style ล็อกไว้ */
         'body.rg-fake-fullscreen .site-nav,' +
+        'body.rg-fake-fullscreen .avail-band,' + /* Lin 2026-07-10: ซ่อนแถบโปรโมทบนสุดด้วยตอนเปิดเกมเต็มจอ */
         'body.rg-fake-fullscreen .page-strip,' +
         'body.rg-fake-fullscreen .page-header,' +
         'body.rg-fake-fullscreen #game-switcher,' +

@@ -34,6 +34,9 @@
 <script src="adv-sentences.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
+/* Lin 2026-07-10 อนุมัติ: หน้าเกมนี้ไม่ล็อกแถบ page-strip ติดจอ ให้เลื่อนไปกับเนื้อหาปกติ (หน้าอื่นในเว็บยังล็อกเหมือนเดิม — ไม่แก้ shared.css ตรงๆ) */
+.page-strip{position:static;}
+body:has(.page-strip){padding-bottom:0;}
 .v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
 
 .page-header{text-align:center;margin-bottom:10px;}

@@ -555,8 +555,6 @@
       <img id="slipPreviewImg" style="max-width:100%;max-height:180px;display:none;border-radius:8px;margin-top:8px;" />
     </div>
     <input type="file" id="slipFileInput" accept="image/*" style="display:none" onchange="handleSlipImage(this.files[0])">
-    <label class="settings-label">備註（選填）</label>
-    <input class="settings-input" id="slipNoteInput" placeholder="例：已透過 PromptPay 匯款" />
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeSlipModal()">取消</button>
       <button class="btn-gold" id="slipSubmitBtn" onclick="submitSlip()">📤 送出繳費通知</button>
@@ -575,8 +573,6 @@
     <input class="settings-input" id="reqDateInput" type="date" />
     <label class="settings-label">想改到幾點？（選填）</label>
     <input class="settings-input" id="reqTimeInput" type="time" />
-    <label class="settings-label">備註（選填）</label>
-    <input class="settings-input" id="reqNoteInput" placeholder="例：那天下午比較方便" />
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeClassRequestModal()">取消</button>
       <button class="btn-gold" id="reqSubmitBtn" onclick="submitClassRequest()">📤 送出申請</button>
@@ -677,9 +673,6 @@
 
     <label class="settings-label">本輪起算日（這期課程從哪天開始算）</label>
     <input class="settings-input" id="payStart" type="date" />
-
-    <label class="settings-label">備註（選填）</label>
-    <input class="settings-input" id="payNote" placeholder="例：提前付款、換幣別…" />
 
     <div class="pay-total-box" id="payTotalBox">
       <div class="big" id="payTotalText"></div>
@@ -2433,11 +2426,13 @@ async function renderTeacherView() {
       '</div>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
+    '<div id="pendingRequestsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
     recordingHTML();
   initRecording();
   await refreshStudentList();
   await loadPendingSlips();
+  await loadPendingClassRequests();
   await loadTodaySchedule();
   loadLowQuotaBanner();
   // auto-click "連接 Google Calendar" ถ้าเคย connect ไว้แล้ว (localStorage flag)
@@ -3101,7 +3096,7 @@ async function requestCancelClass() {
     p_note: null
   });
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
-  notifyTeacherClassRequest({ type: 'cancel', name: studentName, originalDate: nextClassCtx.isoDate });
+  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: nextClassCtx.isoDate });
   alert('✅ 已送出取消申請，老師確認後會回覆你。');
 }
 
@@ -3109,7 +3104,6 @@ function openClassRequestModal() {
   if (!nextClassCtx) return;
   document.getElementById('reqDateInput').value = '';
   document.getElementById('reqTimeInput').value = '';
-  document.getElementById('reqNoteInput').value = '';
   document.getElementById('classRequestModal').classList.add('open');
 }
 function closeClassRequestModal() { document.getElementById('classRequestModal').classList.remove('open'); }
@@ -3118,7 +3112,7 @@ async function submitClassRequest() {
   if (!nextClassCtx) { closeClassRequestModal(); return; }
   const newDate = document.getElementById('reqDateInput').value;
   const newTime = document.getElementById('reqTimeInput').value;
-  const note = document.getElementById('reqNoteInput').value.trim();
+  const note = '';
   if (!newDate) { alert('請選擇想改到哪一天'); return; }
   const studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return nextClassCtx.token; } })();
   const btn = document.getElementById('reqSubmitBtn');
@@ -3134,7 +3128,7 @@ async function submitClassRequest() {
   });
   btn.disabled = false; btn.textContent = '📤 送出申請';
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
-  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, originalDate: nextClassCtx.isoDate, requestedDate: newDate, requestedTime: newTime, note: note });
+  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: nextClassCtx.isoDate, requestedDate: newDate, requestedTime: newTime, note: note });
   closeClassRequestModal();
   alert('✅ 已送出改期申請，老師確認後會回覆你。');
 }
@@ -3150,11 +3144,20 @@ function notifyTeacherClassRequest(d) {
   try {
     var isCancel = d.type === 'cancel';
     var subject = (isCancel ? '❌ 學生申請取消課程 — ' : '🔄 學生申請改期 — ') + (d.name || '學生');
+    // 2026-07-10 加：直接附 Google Calendar 那一天的連結，點了就直接開到正確日期（在 LINE 裡點也會開）
+    // isCancel → 開原本那天；改期 → 開「想改到」那天（老師比較可能需要去那天新增/調整）
+    var calDateStr = isCancel ? d.originalDate : (d.requestedDate || d.originalDate);
+    var calLink = null;
+    if (calDateStr && /^\d{4}-\d{2}-\d{2}/.test(calDateStr)) {
+      var _p = calDateStr.split('-');
+      calLink = 'https://calendar.google.com/calendar/r/day/' + parseInt(_p[0],10) + '/' + parseInt(_p[1],10) + '/' + parseInt(_p[2],10);
+    }
     var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : '申請改期')
       + '\n原本課堂日期：' + (d.originalDate || '-')
       + (isCancel ? '' : ('\n想改到：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')))
       + (d.note ? '\n備註：' + d.note : '')
-      + '\n\n請至 Supabase → classroom_requests 資料表查看，並自行調整 Google Calendar（系統不會自動改行事曆）。';
+      + (calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
+      + '\n\n處理完後，到老師頁「📋 學生申請改期/取消」按「已處理」就可以了。';
 
     function sendEmailFallback() {
       fetch('https://api.web3forms.com/submit', {
@@ -3164,6 +3167,15 @@ function notifyTeacherClassRequest(d) {
       }).catch(function(){});
     }
 
+    // 2026-07-10 加：ปุ่มกดในข้อความ LINE (ถ้า notify-line/line-webhook รุ่นใหม่ deploy แล้วจะกดได้เลย —
+    // ถ้ายังไม่ deploy ฟังก์ชันรุ่นเก่าจะเมิน flex field นี้ไปเฉยๆ ยังส่งข้อความธรรมดาแบบเดิมได้ปกติ)
+    var postbackBase = 'action=%ACTION%&token=' + encodeURIComponent(d.token || '') +
+      '&type=' + encodeURIComponent(d.type) + '&odate=' + encodeURIComponent(d.originalDate || '');
+    var flexButtons = [];
+    if (calLink) flexButtons.push({ label: '🔗 開行事曆', uri: calLink });
+    flexButtons.push({ label: '✅ 已處理', postbackData: postbackBase.replace('%ACTION%', 'approve'), style: 'primary' });
+    flexButtons.push({ label: '❌ 婉拒', postbackData: postbackBase.replace('%ACTION%', 'deny') });
+
     fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
       // 2026-07-06 修正：Supabase Edge Function 預設一定要帶 anon key，不然還沒進到我們的程式碼就先被擋 401
@@ -3172,7 +3184,11 @@ function notifyTeacherClassRequest(d) {
         'apikey': window.SUPABASE_CONFIG.anonKey,
         'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey
       },
-      body: JSON.stringify({ to: 'teacher', message: subject + '\n\n' + message })
+      body: JSON.stringify({
+        to: 'teacher',
+        message: subject + '\n\n' + message,
+        flex: { title: subject, bodyText: message, buttons: flexButtons }
+      })
     }).then(function(r) {
       if (!r.ok) sendEmailFallback(); // Edge Function 還沒部署好／回錯誤 → 改寄 email，不會漏通知
     }).catch(function() {
@@ -3265,7 +3281,6 @@ function openSlipModal(token, lock) {
   document.getElementById('slipPreviewImg').style.display = 'none';
   document.getElementById('slipUploadPlaceholder').style.display = '';
   document.getElementById('slipUploadArea').classList.remove('has-image');
-  document.getElementById('slipNoteInput').value = '';
   document.getElementById('slipFileInput').value = '';
   document.getElementById('slipModal').classList.add('open');
 }
@@ -3475,7 +3490,7 @@ async function submitSlip() {
   var payCur = slipCurrency === 'WISE' ? 'THB' : slipCurrency; // Wise 金額以 THB 計
   courseLabel += (slipCurrency === 'WISE' ? '・Wise' : '');
   var total = lessons * price;
-  var note = document.getElementById('slipNoteInput').value.trim();
+  var note = '';
   // 選現成方案時，如果學生填的「實際匯款金額」跟方案算出來的金額不同，寫進備註讓老師確認時看得到
   // （自訂模式不用檢查，因為金額本來就是學生自己填的單價 × 堂數，不會有「方案金額」這種東西可比對）
   if (slipType !== 'custom') {
@@ -3568,6 +3583,64 @@ async function loadPendingSlips() {
   // cache slip data for viewer
   window._slipCache = {};
   data.forEach(function(p) { window._slipCache[p.id] = p; });
+}
+
+// 2026-07-10 新增：學生「申請改期/取消」清單（老師端）
+// 設計成 2 顆按鈕分開（RELIABILITY FIRST — 不能一開 Calendar 就自動標記完成，萬一老師開了忘記改，
+// 系統卻顯示「已處理」就糟了）：
+//   🔗 開 Calendar → 只是開連結到正確的那一天，完全不改資料庫任何東西
+//   ✅ 已處理     → 老師自己在 Calendar 裡真的調整完之後，回來手動按這顆才算數
+//   ❌ 婉拒       → 不處理這個申請，單純關掉（不動 Calendar）
+async function loadPendingClassRequests() {
+  var container = document.getElementById('pendingRequestsSection');
+  if (!container) return;
+  var res = await sb.from('classroom_requests').select('*')
+    .eq('status', 'pending').order('created_at', { ascending: true });
+  var data = res.data || [];
+  if (res.error) { container.innerHTML = ''; console.warn('讀取學生申請失敗：', res.error.message); return; }
+  if (data.length === 0) { container.innerHTML = ''; return; }
+  window._classRequestCache = {};
+  data.forEach(function(r) { window._classRequestCache[r.id] = r; });
+
+  function calendarDayUrl(dateStr) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return null;
+    var p = dateStr.split('-');
+    return 'https://calendar.google.com/calendar/r/day/' + parseInt(p[0], 10) + '/' + parseInt(p[1], 10) + '/' + parseInt(p[2], 10);
+  }
+
+  var rows = data.map(function(r) {
+    var isCancel = r.request_type === 'cancel';
+    var calDate = isCancel ? r.original_date : (r.requested_date || r.original_date);
+    var calUrl = calendarDayUrl(calDate);
+    var detail = isCancel
+      ? ('原本課堂：' + (r.original_date || '-'))
+      : ('原本課堂：' + (r.original_date || '-') + '　→　想改到：' + (r.requested_date || '-') + (r.requested_time ? ' ' + r.requested_time : ''));
+    return '<div class="slip-row" id="req-row-' + r.id + '">' +
+      '<div class="slip-thumb-placeholder">' + (isCancel ? '❌' : '🔄') + '</div>' +
+      '<div class="slip-info">' +
+        '<div class="slip-name">' + escHtml(r.student_name || '-') + '　' + (isCancel ? '申請取消' : '申請改期') + '</div>' +
+        '<div class="slip-course">' + escHtml(detail) + '</div>' +
+        (r.note ? '<div class="slip-course" style="color:var(--gold-deep);">📝 ' + escHtml(r.note) + '</div>' : '') +
+      '</div>' +
+      '<div class="slip-actions" style="flex-direction:column;gap:6px;">' +
+        (calUrl ? '<a class="btn-approve" style="text-decoration:none;text-align:center;" href="' + calUrl + '" target="_blank" rel="noopener">🔗 開 Calendar</a>' : '') +
+        '<button class="btn-approve" onclick="markClassRequestHandled(\'' + r.id + '\',\'approved\')">✅ 已處理</button>' +
+        '<button class="btn-reject" onclick="markClassRequestHandled(\'' + r.id + '\',\'denied\')">❌ 婉拒</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  container.innerHTML = '<div class="pending-card">' +
+    '<h2>📋 學生申請改期/取消 <span class="pending-badge">' + data.length + '</span></h2>' +
+    rows + '</div>';
+}
+
+async function markClassRequestHandled(id, status) {
+  var r = (window._classRequestCache || {})[id];
+  var label = status === 'approved' ? '已處理' : '婉拒';
+  if (!confirm('確定要標記「' + label + '」嗎？' + (status === 'approved' ? '\n（請確認你已經在 Google Calendar 調整完成再按這個）' : ''))) return;
+  var res = await sb.from('classroom_requests').update({ status: status }).eq('id', id);
+  if (res.error) { alert('更新失敗：' + res.error.message); return; }
+  await loadPendingClassRequests();
 }
 
 function viewSlip(id) {
@@ -3946,7 +4019,6 @@ function openPaymentModal(token) {
   document.getElementById('payCurrency').value = 'THB';
   document.getElementById('payPricePer').value = '';
   document.getElementById('payStart').value = '';
-  document.getElementById('payNote').value = '';
   document.getElementById('payTotalBox').style.display = 'none';
   document.getElementById('paymentModal').classList.add('open');
 }
@@ -4041,7 +4113,7 @@ async function submitPayment() {
   const pricePer = parseInt(document.getElementById('payPricePer').value);
   const cur      = document.getElementById('payCurrency').value;
   const start    = document.getElementById('payStart').value.trim();
-  const note     = document.getElementById('payNote').value.trim();
+  const note     = '';
   if (!paySelectedCourse) { alert('請選擇課程方案'); return; }
   if (!lessons || !pricePer) { alert('請填寫堂數和單價'); return; }
   const c = COURSE_TYPES.concat([{ id:'custom', label:'自訂' }]).find(function(x) { return x.id === paySelectedCourse; }) || {};

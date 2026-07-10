@@ -14,8 +14,10 @@
 //
 // วิธี deploy:
 //   1. supabase secrets set CLASS_TIMEZONE=Asia/Bangkok   (หรือ Asia/Taipei ถ้าเวลาที่จริงคือเวลาไต้หวัน — เลือกให้ตรง!)
-//   2. supabase functions deploy class-reminder-cron
-//   3. ตั้ง pg_cron ให้เรียกทุก 5 นาที (ดู SQL_pg_cron_class-reminder_2026-07-06.sql)
+//   2. supabase secrets set LIFF_ID=xxxxxxxx   (2026-07-10 เพิ่ม: LIFF ID เดิมตัวเดียวกับที่ liff-config.js ใช้
+//      — เอาไปแปะลิงก์ "查看課表/申請改期" ในข้อความเตือนก่อนเข้าเรียน ถ้าไม่ตั้ง secret นี้ก็แค่ไม่มีลิงก์นี้ต่อท้าย ไม่ error)
+//   3. supabase functions deploy class-reminder-cron
+//   4. ตั้ง pg_cron ให้เรียกทุก 5 นาที (ดู SQL_pg_cron_class-reminder_2026-07-06.sql)
 // ════════════════════════════════════════════════════════════
 
 // deno-lint-ignore-file
@@ -104,9 +106,16 @@ serve(async (req) => {
         if (minutesToStart <= REMINDER_BEFORE_MIN && minutesToStart >= -CATCH_WINDOW_MIN) {
           try {
             const timeLabel = row.start_time + (row.end_time ? '–' + row.end_time : '');
+            // 2026-07-10 加：帶課堂頁連結（用 LIFF 開，在 LINE 裡面直接開，不用跳出瀏覽器）
+            // 學生點進去可以看到自己的課表，也能在裡面申請改期/取消
+            const liffId = Deno.env.get('LIFF_ID');
+            const classroomLink = liffId
+              ? 'https://liff.line.me/' + liffId + '?goto=classroom&s=' + encodeURIComponent(row.token)
+              : null;
             await pushLine(channelToken, s.line_user_id,
               '📢 提醒：等一下 ' + timeLabel + ' 有泰語課囉！' +
               (s.meet ? '\n進入課堂：' + s.meet : '') +
+              (classroomLink ? '\n查看課表 / 申請改期：' + classroomLink : '') +
               '\n老師等你 ✨');
             await supabase.from('classroom_schedule').update({ line_reminder_sent: true }).eq('id', row.id);
             sentCount++;
