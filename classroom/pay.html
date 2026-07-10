@@ -151,6 +151,30 @@ var ON_PACK  = 'min-width:80px;flex:1;padding:9px 6px;border-radius:9px;border:2
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function safeHref(u){var s=String(u==null?'':u).trim();return /^https:\/\//i.test(s)?s:'#';}
 
+// 2026-07-10 加入：跟 classroom/index.html 完全同一套邏輯（保持全站一致，只在一個地方維護規則）
+// 老師設定上課時間一律當「泰國時間」(Asia/Bangkok, UTC+7 固定、無日光節約) 解讀，
+// 絕對不能用 new Date(dateStr+'T'+timeStr) 直接 parse —— 那樣會被「執行這段程式的瀏覽器」自己的
+// 時區誤判，這支頁面是學生自己打開的，瀏覽器時區跟老師（泰國）不一定一樣，會算錯。
+var TEACHER_TZ = 'Asia/Bangkok';
+function teacherTimeToDate(dateStr, timeStr) {
+  return new Date(dateStr + 'T' + timeStr + ':00+07:00');
+}
+// 把一個絕對時間點（Date 物件）換算成某個時區當地的日期／時間／星期幾
+function formatInTz(date, tz) {
+  var parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'short'
+  }).formatToParts(date);
+  var get = function(t) { var p = parts.find(function(x) { return x.type === t; }); return p ? p.value : ''; };
+  var hour = get('hour'); if (hour === '24') hour = '00';
+  var weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+  return {
+    dateStr: get('year') + '-' + get('month') + '-' + get('day'),
+    timeStr: hour + ':' + get('minute'),
+    weekday: weekdayMap[get('weekday')] !== undefined ? weekdayMap[get('weekday')] : new Date(date).getDay()
+  };
+}
+
 // 這位學生的「上課頁」連結（confirm 前打開會看到『等待老師確認』頁，confirm 後就是完整教室頁）
 // 邏輯跟 index.html 的 buildStudentUrl() 保持一致：沒有 meet → 只帶 token；有 meet → 帶 token + base64(name) + base64(meet)
 // 注意：pay.html 是獨立頁面（跟 index.html 不同 JS 環境），不能讀 index.html 的 studentsCache，
@@ -261,6 +285,10 @@ function copyClsLink(){
   else { input.select(); try{document.execCommand('copy');}catch(e){} done(); }
 }
 
+// 2026-07-10 修正：這裡以前直接印 s.pending_class_time（老師輸入的泰國時間原始字串），
+// 沒有轉換成學生自己的時區，跟 index.html 的 buildCourseSummaryCard() 邏輯對不起來。
+// 現在改成跟 index.html 完全一致：有選學生時區（pending_student_tz）→ 換算成學生的時間顯示；
+// 沒選（舊資料）→ 照舊顯示泰國時間，維持原本行為。
 function courseSummaryCard(s){
   var info = courseInfo(s);
   if (!info.c) return '';
@@ -270,9 +298,14 @@ function courseSummaryCard(s){
   var totalTHB = lessons * (c.priceTHB || 0);
   var wk = ['日','一','二','三','四','五','六'];
   var line = '';
-  if (s.pending_start_date && s.pending_class_time){
-    var d = new Date(s.pending_start_date + 'T00:00:00');
-    line = '開課：' + (d.getMonth()+1) + '月' + d.getDate() + '日（週' + wk[d.getDay()] + '）' + s.pending_class_time;
+  var startDateObj = s.pending_start_date ? new Date(s.pending_start_date + 'T00:00:00') : null;
+  if (s.pending_start_date && s.pending_class_time && s.pending_student_tz){
+    var startAbs = teacherTimeToDate(s.pending_start_date, s.pending_class_time);
+    var conv = formatInTz(startAbs, s.pending_student_tz);
+    var studentDateObj = new Date(conv.dateStr + 'T00:00:00');
+    line = '開課：' + (studentDateObj.getMonth()+1) + '月' + studentDateObj.getDate() + '日（週' + wk[studentDateObj.getDay()] + '）' + conv.timeStr;
+  } else if (startDateObj && s.pending_class_time){
+    line = '開課：' + (startDateObj.getMonth()+1) + '月' + startDateObj.getDate() + '日（週' + wk[startDateObj.getDay()] + '）' + s.pending_class_time;
   }
   return '<div class="card" style="border-top:2px solid var(--gold-bright);"><h2>📋 課程資訊</h2>' +
     '<div class="summary">' +
