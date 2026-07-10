@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語文法 第九頁 — 能力表達</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="nav-ui.css?v=20260705">
+<link rel="stylesheet" href="controls-ui.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-zh-sans);
+    font-size: 18px;
+    line-height: 1.85;
+  }
+  .hero {
+    background: var(--paper);
+    border-bottom: 2px solid var(--border2);
+    padding: 52px 60px 40px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: ''; position: absolute; border-radius: 50%; opacity: 0.07; background: var(--step);
+  }
+  .hero::before { width: 320px; height: 320px; top: -80px; left: -60px; }
+  .hero::after  { width: 240px; height: 240px; bottom: -60px; right: -40px; }
+  .hero-tag {
+    display: inline-block;
+    background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+    padding: 4px 14px; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: var(--font-zh-serif);
+    font-size: clamp(22px, 4.5vw, 42px);
+    font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 10px;
+  }
+  .hero h1 em { font-style: normal; color: var(--step); border-bottom: 3px solid #c8b882; }
+  .hero-desc { font-size: 15px; color: var(--ink-mid); }
+  .main {
+    max-width: 880px; margin: 0 auto;
+    padding: 38px 22px 80px;
+    display: flex; flex-direction: column; gap: 46px;
+  }
+  .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sec-badge {
+    background: var(--step); color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; padding: 3px 10px; border-radius: 5px; white-space: nowrap;
+  }
+  .sec-title { font-family: var(--font-zh-serif); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .sec-sub { font-size: 13.5px; color: var(--ink-light); margin-top: 2px; }
+  .gram-table {
+    width: 100%; border-collapse: collapse; font-size: 15px;
+    border-radius: 14px; overflow: hidden;
+    border: 1.5px solid var(--border2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .gram-table thead tr { background: var(--step); color: #fff; }
+  .gram-table th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+  .gram-table tbody tr:nth-child(odd)  { background: var(--paper); }
+  .gram-table tbody tr:nth-child(even) { background: var(--bg2); }
+  .gram-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .gram-table tbody tr:last-child td { border-bottom: none; }
+  .g-pattern { font-size: 18px; font-weight: 700; color: var(--step); line-height: 1.55; }
+  .g-mean { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 3px; }
+  .g-note-cell { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .g-ex-th {
+    font-size: 17px; color: var(--step); font-weight: 700;
+    display: block; line-height: 1.55; margin-top: 6px;
+  }
+  .g-ex-th:first-child { margin-top: 0; }
+  .g-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+  .note {
+    border-left: 3px solid #c8b882; background: var(--amber-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--ink-mid); line-height: 1.75; margin-top: 14px;
+  }
+  .note strong { color: var(--amber); }
+  .warn {
+    border-left: 3px solid var(--c-aux); background: var(--c-aux-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--c-aux); line-height: 1.75; margin-top: 14px;
+  }
+  .cite {
+    border-left: 3px solid var(--ink-light); background: var(--bg2);
+    border-radius: 0 8px 8px 0; padding: 11px 18px;
+    font-size: 12.5px; color: var(--ink-light); line-height: 1.7; margin-top: 10px;
+  }
+  .cite strong { color: var(--ink-mid); }
+  .prac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 4px; }
+  .prac-card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 17px 19px; }
+  .prac-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; }
+  .prac-tag {
+    display: inline-block; background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 5px; font-size: 12.5px; font-weight: 700; padding: 2px 8px;
+  }
+  .prac-label { font-size: 12.5px; color: var(--ink-light); font-weight: 600; }
+  .prac-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .prac-th { font-size: 16px; color: var(--step); font-weight: 700; display: block; line-height: 1.5; }
+  .prac-zh { font-size: 13px; color: var(--ink-mid); display: block; }
+  .roman-line { font-size: 12.5px; color: var(--ink-light); display: none; margin-top: 2px; font-style: italic; }
+  body.show-roman .roman-line { display: block; }
+  .hr { height: 1px; background: var(--border); }
+  .compare-box {
+    background: var(--paper); border: 2px solid var(--step);
+    border-radius: 14px; padding: 20px 24px; margin-top: 18px;
+  }
+  .compare-box-title { font-family: var(--font-zh-serif); font-size: 16px; font-weight: 700; color: var(--step); margin-bottom: 12px; }
+  .compare-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .compare-cell { background: var(--bg2); border-radius: 10px; padding: 13px 15px; border: 1px solid var(--border); }
+  .compare-kw { font-size: 20px; font-weight: 700; color: var(--step); margin-bottom: 4px; }
+  .compare-desc { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  /* 決策流程 */
+  .flow-wrap {
+    background: var(--paper); border: 1.5px solid var(--border2);
+    border-radius: 14px; padding: 22px 24px 18px;
+  }
+  .flow-q { font-size: 15px; color: var(--ink-mid); line-height: 1.8; margin-bottom: 6px; }
+  .flow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .flow-q-badge { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13.5px; color: var(--ink-mid); flex: 1; min-width: 200px; }
+  .flow-arrow2 { color: var(--ink-light); font-size: 16px; }
+  .flow-ans { background: var(--step); color: #fff; border-radius: 8px; padding: 8px 14px; font-size: 15px; font-weight: 700; white-space: nowrap; }
+  /* 對話框 */
+  .dialog-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; font-size: 15px; font-weight: 700;
+    border: 1.5px solid var(--step); border-radius: 24px;
+    background: var(--paper); color: var(--step); cursor: pointer;
+    font-family: var(--font-zh-sans); transition: background 0.15s, color 0.15s;
+  }
+  .dialog-toggle:hover { background: var(--step-pale); }
+  .dialog-toggle.open { background: var(--step); color: #fff; }
+  .dialog-box { display: none; margin-top: 16px; }
+  .dialog-box.open { display: block; }
+  .dlg-line { display: flex; gap: 11px; margin-bottom: 13px; align-items: flex-start; }
+  .dlg-line.b { flex-direction: row-reverse; }
+  .dlg-who {
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px;
+  }
+  .dlg-line.a .dlg-who { background: var(--step); }
+  .dlg-line.b .dlg-who { background: var(--c-aux); }
+  .dlg-bubble { max-width: 80%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 11px 15px; }
+  .dlg-line.b .dlg-bubble { background: var(--c-aux-pale); border-color: #e2cdb8; }
+  .dlg-th { font-size: 17px; color: var(--ink); font-weight: 700; display: block; line-height: 1.6; }
+  .dlg-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-top: 3px; }
+  body.modern-font .g-pattern, body.modern-font .tsent, body.modern-font .g-ex-th, body.modern-font .prac-th, body.modern-font .dlg-th {
+    font-family: var(--font-thai-modern), sans-serif;
+  }
+  footer { text-align: center; padding: 20px; font-size: 14px; color: var(--ink-light); border-top: 1px solid var(--border); background: var(--bg2); }
+  @media (max-width: 640px) {
+    .prac-grid { grid-template-columns: 1fr; }
+    .compare-row { grid-template-columns: 1fr; }
+    .sec-header { flex-direction: column; align-items: flex-start; }
+    .hero { padding: 40px 50px 32px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-tag">第九頁 · PAGE 9</div>
+  <h1>能力表達：<em>ได้／เป็น／ออก／ไหว／รู้เรื่อง／ถูก</em></h1>
+  <div class="hero-desc">六種「能不能、會不會」，各自用在不同情境，選錯字聽起來會很奇怪</div>
+</div>
+
+<div id="ctrl-anchor"></div>
+
+<main class="main">
+
+  <!-- ══ 總覽 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">總覽</span>
+      <div>
+        <div class="sec-title">六個字，六種「能力」</div>
+        <div class="sec-sub">中文都可以說「不行、不會」，但泰文要看情境選對字</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr><th>句型</th><th>用在什麼情境</th></tr></thead>
+      <tbody>
+        <tr><td><span class="g-pattern">V ＋ ได้／ไม่ได้</span></td><td class="g-note-cell">方便、設備、規矩允不允許（外在條件）</td></tr>
+        <tr><td><span class="g-pattern">V ＋ เป็น／ไม่เป็น</span></td><td class="g-note-cell">能力（需要學過、訓練、練習過的技能）</td></tr>
+        <tr><td><span class="g-pattern">V ＋ ออก／ไม่ออก</span></td><td class="g-note-cell">特殊動作：อ่าน／ฟัง／คิด／นึก／พูด／มอง／ดู／เดา（卡住做不出來）</td></tr>
+        <tr><td><span class="g-pattern">V ＋ ไหว／ไม่ไหว</span></td><td class="g-note-cell">身體或設備的極限（撐不撐得住）</td></tr>
+        <tr><td><span class="g-pattern">V ＋ รู้เรื่อง／ไม่รู้เรื่อง</span></td><td class="g-note-cell">懂不懂內容：ฟัง／พูด／อธิบาย／อ่าน／เขียน／ดู／เล่า／คุย</td></tr>
+        <tr><td><span class="g-pattern">V ＋ ถูก／ไม่ถูก</span></td><td class="g-note-cell">知不知道正確的方法／方向：ไป／ทาย／พูด／อธิบาย</td></tr>
+      </tbody>
+    </table>
+
+    <div class="flow-wrap" style="margin-top:16px">
+      <div class="flow-q" style="font-weight:700;color:var(--ink-mid);margin-bottom:10px">🧭 快速判斷：該用哪個字？</div>
+      <div class="flow-row">
+        <div class="flow-q-badge">是規矩／設備允不允許？（不是問會不會）</div>
+        <span class="flow-arrow2">→</span>
+        <div class="flow-ans">ได้</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-q-badge">是需要學過、練過才有的技能？</div>
+        <span class="flow-arrow2">→</span>
+        <div class="flow-ans">เป็น</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-q-badge">是特定的「想／看／說」卡住做不出來？</div>
+        <span class="flow-arrow2">→</span>
+        <div class="flow-ans">ออก</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-q-badge">是身體或機器快撐不住、超出負荷？</div>
+        <span class="flow-arrow2">→</span>
+        <div class="flow-ans">ไหว</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-q-badge">聽得到／看得到，但懂不懂內容？</div>
+        <span class="flow-arrow2">→</span>
+        <div class="flow-ans">รู้เรื่อง</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-q-badge">知不知道正確的方法、方向？</div>
+        <span class="flow-arrow2">→</span>
+        <div class="flow-ans">ถูก</div>
+      </div>
+    </div>
+    <div class="cite"><strong>參考來源：</strong>PickupThai《How to Express Ability in Thai》教學影片（<a href="https://pickup-thai.com/how-to-express-ability-in-thai/" target="_blank" rel="noopener">pickup-thai.com</a>）確認 เป็น／ได้／ไหว／ออก 四個核心能力字的基本分類與常見誤用；BananaThai Language School〈Colloquial "Can/Cannot" in Thai〉（<a href="https://www.bananathaischool.com/blog/can-cannot-in-thai-verb-phrases/" target="_blank" rel="noopener">bananathaischool.com</a>）證實 V＋ออก／V＋ไหว 這類「動詞＋補語動詞」是泰文日常對話、故事、歌曲裡都很常見的自然說法，並列出 ฟังไม่ออก／พูดไม่ออก／ทนไม่ไหว／นอนไม่หลับ 等高頻率例句，與本頁教學方向一致。รู้เรื่อง 與 ถูก 兩組的細節、以及六字之間的判斷流程，公開資源整理較少，是老師依教學經驗歸納，屬於「經驗判斷」而非逐字引用，實際語感仍以母語者口語為準。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ① ได้／ไม่ได้ ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">① 允許</span>
+      <div>
+        <div class="sec-title">V ＋ ได้／ไม่ได้ — 方便、設備、規矩允不允許</div>
+        <div class="sec-sub">不是講「會不會」，是講「條件上行不行、准不准」；也是最泛用、口語最常見的一個字</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">ได้</span><span class="prac-label">允許・方便</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="ที่นี่จอดรถได้" data-syl="ที่·นี่·จอด·รถ·ได้">ที่นี่จอดรถได้</span><span class="roman-line">thîi-nîi jɔɔt rót dâai</span><span class="prac-zh">這裡可以停車。</span></li>
+          <li><span class="tsent prac-th" data-base="ห้องนี้สูบบุหรี่ไม่ได้" data-syl="ห้อง·นี้·สูบ·บุหรี่·ไม่ได้">ห้องนี้สูบบุหรี่ไม่ได้</span><span class="roman-line">hɔ̂ng níi sùup bù-rìi mâi dâai</span><span class="prac-zh">這房間不能抽菸。</span></li>
+          <li><span class="tsent prac-th" data-base="บัตรนี้ใช้ได้ถึงสิ้นเดือน" data-syl="บัตร·นี้·ใช้·ได้·ถึง·สิ้น·เดือน">บัตรนี้ใช้ได้ถึงสิ้นเดือน</span><span class="roman-line">bàt níi chái dâai thǔeng sîn duuean</span><span class="prac-zh">這張卡可以用到月底。</span></li>
+          <li><span class="tsent prac-th" data-base="ร้านนี้จ่ายบัตรเครดิตได้ไหม" data-syl="ร้าน·นี้·จ่าย·บัตร·เครดิต·ได้·ไหม">ร้านนี้จ่ายบัตรเครดิตได้ไหม</span><span class="roman-line">ráan níi jàai bàt khree-dìt dâai mǎi</span><span class="prac-zh">這間店可以刷卡嗎？</span></li>
+          <li><span class="tsent prac-th" data-base="วันนี้แดดแรง ออกไปข้างนอกไม่ได้" data-syl="วัน·นี้·แดด·แรง·ออก·ไป·ข้าง·นอก·ไม่ได้">วันนี้แดดแรง ออกไปข้างนอกไม่ได้</span><span class="roman-line">wan-níi dàet raeng, ɔ̀ɔk pai khâang-nɔ̂ɔk mâi dâai</span><span class="prac-zh">今天太陽太大，不能出門（條件不允許）。</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ② เป็น／ไม่เป็น ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">② 技能</span>
+      <div>
+        <div class="sec-title">V ＋ เป็น／ไม่เป็น — 能力（訓練過、練習過）</div>
+        <div class="sec-sub">強調「學過、練過」才會的技能，不是天生方便不方便；PickupThai 教學影片將此列為表達能力最核心的四個字之一</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">เป็น</span><span class="prac-label">會、有練過</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="เราว่ายน้ำเป็น" data-syl="เรา·ว่าย·น้ำ·เป็น">เราว่ายน้ำเป็น</span><span class="roman-line">rao wâai náam pen</span><span class="prac-zh">我會游泳。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาขับรถไม่เป็น" data-syl="เขา·ขับ·รถ·ไม่·เป็น">เขาขับรถไม่เป็น</span><span class="roman-line">khǎo khàp rót mâi pen</span><span class="prac-zh">他不會開車。</span></li>
+          <li><span class="tsent prac-th" data-base="น้องเล่นเปียโนเป็น" data-syl="น้อง·เล่น·เปีย·โน·เป็น">น้องเล่นเปียโนเป็น</span><span class="roman-line">nóong lên pia-noo pen</span><span class="prac-zh">弟弟／妹妹會彈鋼琴。</span></li>
+          <li><span class="tsent prac-th" data-base="เราทำอาหารไทยเป็น" data-syl="เรา·ทำ·อา·หาร·ไทย·เป็น">เราทำอาหารไทยเป็น</span><span class="roman-line">rao tham aa-hǎan thai pen</span><span class="prac-zh">我會做泰國菜。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาพูดภาษาอังกฤษเป็นไหม" data-syl="เขา·พูด·ภา·ษา·อัง·กฤษ·เป็น·ไหม">เขาพูดภาษาอังกฤษเป็นไหม</span><span class="roman-line">khǎo phûut phaa-sǎa ang-krìt pen mǎi</span><span class="prac-zh">他會說英文嗎？</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><strong>💡 ได้ vs เป็น：</strong>「這裡能不能停車」用 ได้（規矩允許）；「我會不會游泳」用 เป็น（技能）——問「行不行」用 ได้，問「會不會（技能）」用 เป็น。這是初學者最常混用的一組。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ③ ออก／ไม่ออก ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">③ 特殊動作</span>
+      <div>
+        <div class="sec-title">V ＋ ออก／ไม่ออก — 只用在特定一組動詞</div>
+        <div class="sec-sub">อ่าน／ฟัง／คิด／นึก／พูด／มอง／ดู／เดา，表示「卡住做不出來」，語感偏向「腦袋／感官卡住了」</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">ออก</span><span class="prac-label">想／看／說得出來</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="เราคิดไม่ออก" data-syl="เรา·คิด·ไม่·ออก">เราคิดไม่ออก</span><span class="roman-line">rao khít mâi ɔ̀ɔk</span><span class="prac-zh">我想不出來。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาพูดไม่ออก" data-syl="เขา·พูด·ไม่·ออก">เขาพูดไม่ออก</span><span class="roman-line">khǎo phûut mâi ɔ̀ɔk</span><span class="prac-zh">他說不出話來（太震驚／太感動）。</span></li>
+          <li><span class="tsent prac-th" data-base="เรามองไม่ออกว่าใครเป็นใคร" data-syl="เรา·มอง·ไม่·ออก·ว่า·ใคร·เป็น·ใคร">เรามองไม่ออกว่าใครเป็นใคร</span><span class="roman-line">rao mɔɔng mâi ɔ̀ɔk wâa khrai pen khrai</span><span class="prac-zh">我看不出誰是誰。</span></li>
+          <li><span class="tsent prac-th" data-base="เรานึกชื่อเขาไม่ออก" data-syl="เรา·นึก·ชื่อ·เขา·ไม่·ออก">เรานึกชื่อเขาไม่ออก</span><span class="roman-line">rao núek chûue khǎo mâi ɔ̀ɔk</span><span class="prac-zh">我想不起來他的名字。</span></li>
+          <li><span class="tsent prac-th" data-base="เราเดาไม่ออกว่าเขาจะทำอะไรต่อ" data-syl="เรา·เดา·ไม่·ออก·ว่า·เขา·จะ·ทำ·อะ·ไร·ต่อ">เราเดาไม่ออกว่าเขาจะทำอะไรต่อ</span><span class="roman-line">rao dao mâi ɔ̀ɔk wâa khǎo jà tham à-rai tɔ̀ɔ</span><span class="prac-zh">我猜不出來他接下來要做什麼。</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ④ ไหว／ไม่ไหว ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">④ 極限</span>
+      <div>
+        <div class="sec-title">V ＋ ไหว／ไม่ไหว — 身體或設備的極限</div>
+        <div class="sec-sub">不是不會，是撐不住、超出負荷；日常口語常單獨當感嘆詞用：「ไม่ไหวแล้ว」（受不了了）</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">ไหว</span><span class="prac-label">撐得住・負荷得了</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="เราเดินไม่ไหวแล้ว" data-syl="เรา·เดิน·ไม่·ไหว·แล้ว">เราเดินไม่ไหวแล้ว</span><span class="roman-line">rao dəən mâi wǎi láeo</span><span class="prac-zh">我走不動了。</span></li>
+          <li><span class="tsent prac-th" data-base="เขายกของหนักนี้ไม่ไหว" data-syl="เขา·ยก·ของ·หนัก·นี้·ไม่·ไหว">เขายกของหนักนี้ไม่ไหว</span><span class="roman-line">khǎo yók khɔ̌ɔng nàk níi mâi wǎi</span><span class="prac-zh">他扛不動這個重物。</span></li>
+          <li><span class="tsent prac-th" data-base="เครื่องนี้รับน้ำหนักไม่ไหว" data-syl="เครื่อง·นี้·รับ·น้ำ·หนัก·ไม่·ไหว">เครื่องนี้รับน้ำหนักไม่ไหว</span><span class="roman-line">khrûeang níi ráp náam-nàk mâi wǎi</span><span class="prac-zh">這台機器承受不了這個重量。</span></li>
+          <li><span class="tsent prac-th" data-base="วันนี้ร้อนมาก เราทนไม่ไหว" data-syl="วัน·นี้·ร้อน·มาก·เรา·ทน·ไม่·ไหว">วันนี้ร้อนมาก เราทนไม่ไหว</span><span class="roman-line">wan-níi rɔ́ɔn mâak, rao thon mâi wǎi</span><span class="prac-zh">今天太熱了，我受不了。</span></li>
+          <li><span class="tsent prac-th" data-base="กินเผ็ดขนาดนี้ยังไหวอยู่ไหม" data-syl="กิน·เผ็ด·ขนาด·นี้·ยัง·ไหว·อยู่·ไหม">กินเผ็ดขนาดนี้ยังไหวอยู่ไหม</span><span class="roman-line">gin phèt khà-nàat níi yang wǎi yùu mǎi</span><span class="prac-zh">吃這麼辣還撐得住嗎？</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ⑤ รู้เรื่อง／ไม่รู้เรื่อง ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">⑤ 理解內容</span>
+      <div>
+        <div class="sec-title">V ＋ รู้เรื่อง／ไม่รู้เรื่อง — 懂不懂內容</div>
+        <div class="sec-sub">ฟัง／พูด／อธิบาย／อ่าน／เขียน／ดู／เล่า／คุย，強調「聽／看得懂內容」，跟聲音／文字本身清不清楚無關</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">รู้เรื่อง</span><span class="prac-label">聽／看得懂內容</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="เราฟังไม่รู้เรื่อง" data-syl="เรา·ฟัง·ไม่·รู้·เรื่อง">เราฟังไม่รู้เรื่อง</span><span class="roman-line">rao fang mâi rúu-rûeang</span><span class="prac-zh">我聽不懂（內容）。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาอธิบายรู้เรื่องมาก" data-syl="เขา·อธิ·บาย·รู้·เรื่อง·มาก">เขาอธิบายรู้เรื่องมาก</span><span class="roman-line">khǎo à-thí-baai rúu-rûeang mâak</span><span class="prac-zh">他解釋得很清楚易懂。</span></li>
+          <li><span class="tsent prac-th" data-base="หนังเรื่องนี้ดูไม่รู้เรื่องเลย" data-syl="หนัง·เรื่อง·นี้·ดู·ไม่·รู้·เรื่อง·เลย">หนังเรื่องนี้ดูไม่รู้เรื่องเลย</span><span class="roman-line">nǎng rûeang níi duu mâi rúu-rûeang ləəi</span><span class="prac-zh">這部電影完全看不懂在演什麼。</span></li>
+          <li><span class="tsent prac-th" data-base="เราอ่านสัญญานี้ไม่รู้เรื่อง" data-syl="เรา·อ่าน·สัญ·ญา·นี้·ไม่·รู้·เรื่อง">เราอ่านสัญญานี้ไม่รู้เรื่อง</span><span class="roman-line">rao àan sǎn-yaa níi mâi rúu-rûeang</span><span class="prac-zh">我看不懂這份合約在寫什麼。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาเล่าเรื่องนี้รู้เรื่องดี" data-syl="เขา·เล่า·เรื่อง·นี้·รู้·เรื่อง·ดี">เขาเล่าเรื่องนี้รู้เรื่องดี</span><span class="roman-line">khǎo lâo rûeang níi rúu-rûeang dii</span><span class="prac-zh">他把這件事說得很清楚，一聽就懂。</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><strong>💡 ออก vs รู้เรื่อง：</strong>ฟังไม่ออก＝聽不出來（聲音層次，例如聽不出口音、聽不清楚音節）；ฟังไม่รู้เรื่อง＝聽得到聲音，但不懂內容（理解層次）。可以「聽得出來但不懂」，也可以「聽不出來所以更不懂」，兩者常一起出現。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ⑥ ถูก／ไม่ถูก ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">⑥ 知道方法</span>
+      <div>
+        <div class="sec-title">V ＋ ถูก／ไม่ถูก — 知不知道怎麼做</div>
+        <div class="sec-sub">ไป／ทาย／พูด／อธิบาย，強調「有沒有掌握正確的方法／方向」；ถูก 本身也是「對、正確」的意思，這裡是引申用法</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">ถูก</span><span class="prac-label">知道怎麼做</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="เราไปไม่ถูก" data-syl="เรา·ไป·ไม่·ถูก">เราไปไม่ถูก</span><span class="roman-line">rao pai mâi thùuk</span><span class="prac-zh">我不知道怎麼去（會迷路）。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาทายไม่ถูกสักที" data-syl="เขา·ทาย·ไม่·ถูก·สัก·ที">เขาทายไม่ถูกสักที</span><span class="roman-line">khǎo thaai mâi thùuk sàk thii</span><span class="prac-zh">他一次都猜不對。</span></li>
+          <li><span class="tsent prac-th" data-base="เราพูดไม่ถูกว่าจะอธิบายยังไง" data-syl="เรา·พูด·ไม่·ถูก·ว่า·จะ·อธิ·บาย·ยัง·ไง">เราพูดไม่ถูกว่าจะอธิบายยังไง</span><span class="roman-line">rao phûut mâi thùuk wâa jà à-thí-baai yang-ngai</span><span class="prac-zh">我不知道該怎麼說才能解釋清楚。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาทำถูกทุกขั้นตอน" data-syl="เขา·ทำ·ถูก·ทุก·ขั้น·ตอน">เขาทำถูกทุกขั้นตอน</span><span class="roman-line">khǎo tham thùuk thúk khân-tɔɔn</span><span class="prac-zh">他每個步驟都做對了（知道正確方法）。</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ 書面語 สามารถ ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">書面語</span>
+      <div>
+        <div class="sec-title">สามารถ ＋ V ＋ ได้／ไม่สามารถ ＋ V ＋ ได้</div>
+        <div class="sec-sub">ได้ 跟 เป็น 的正式書面說法，公告、新聞、正式文件常用</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr><th>結構</th><th>例句</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="g-pattern">สามารถ ＋ V ＋ ได้</span><div class="g-mean">可以⋯（書面）</div></td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ผู้เรียนสามารถสมัครออนไลน์ได้" data-syl="ผู้·เรียน·สามารถ·สมัคร·ออน·ไลน์·ได้">ผู้เรียนสามารถสมัครออนไลน์ได้</span>
+            <span class="roman-line">phûu-rian sǎa-mâat sà-màk ɔɔn-lai dâai</span>
+            <span class="g-ex-zh">學員可以線上報名。</span>
+            <span class="g-ex-th tsent" data-base="เด็กสามารถว่ายน้ำได้ตั้งแต่อายุห้าขวบ" data-syl="เด็ก·สามารถ·ว่าย·น้ำ·ได้·ตั้ง·แต่·อายุ·ห้า·ขวบ">เด็กสามารถว่ายน้ำได้ตั้งแต่อายุห้าขวบ</span>
+            <span class="roman-line">dèk sǎa-mâat wâai náam dâai tâng-tàe aa-yú hâa khùap</span>
+            <span class="g-ex-zh">孩子從五歲起就會游泳了。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ไม่สามารถ ＋ V ＋ ได้</span><div class="g-mean">不能⋯（書面）</div></td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ผู้เข้าร่วมไม่สามารถขอคืนเงินได้" data-syl="ผู้·เข้า·ร่วม·ไม่·สามารถ·ขอ·คืน·เงิน·ได้">ผู้เข้าร่วมไม่สามารถขอคืนเงินได้</span>
+            <span class="roman-line">phûu-khâo-rûam mâi sǎa-mâat khǎo khuuen ngoen dâai</span>
+            <span class="g-ex-zh">參加者不能要求退款。</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>💡 口語 vs 書面：</strong>口語直接用「V ＋ ได้」或「V ＋ เป็น」就好；สามารถ...ได้ 是正式場合、公告用語，日常對話用太多反而顯得生硬。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ 搭配情態助詞 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">搭配</span>
+      <div>
+        <div class="sec-title">能力 ＋ 情態助詞 ＋ ยัง／แล้ว</div>
+        <div class="sec-sub">ไม่ได้／ไม่เป็น 可以搭配 เคย 或 ยัง／แล้ว，表達更細的狀態；用法邏輯與第三頁「情態助詞」一致</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr><th>結構</th><th>意思</th><th>例句</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="g-pattern">เคย ＋ V ＋ เป็น</span></td>
+          <td class="g-note-cell">以前曾經會（現在可能生疏了）</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราเคยว่ายน้ำเป็น" data-syl="เรา·เคย·ว่าย·น้ำ·เป็น">เราเคยว่ายน้ำเป็น</span>
+            <span class="g-ex-zh">我以前會游泳（現在不確定還會不會）。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">เคย ＋ V ＋ ได้</span></td>
+          <td class="g-note-cell">以前有機會／有資格做過</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราเคยเข้าไปได้" data-syl="เรา·เคย·เข้า·ไป·ได้">เราเคยเข้าไปได้</span>
+            <span class="g-ex-zh">我以前有辦法／有資格進去過。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ยัง ＋ V ＋ ไม่เป็น</span></td>
+          <td class="g-note-cell">還不會（正在學）</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เรายังขับรถไม่เป็น" data-syl="เรา·ยัง·ขับ·รถ·ไม่·เป็น">เรายังขับรถไม่เป็น</span>
+            <span class="g-ex-zh">我還不會開車。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">V ＋ เป็น ＋ แล้ว</span></td>
+          <td class="g-note-cell">已經會了（學成了）</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ตอนนี้เราขับรถเป็นแล้ว" data-syl="ตอน·นี้·เรา·ขับ·รถ·เป็น·แล้ว">ตอนนี้เราขับรถเป็นแล้ว</span>
+            <span class="g-ex-zh">現在我已經會開車了。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">จะ ＋ V ＋ ให้เป็น</span></td>
+          <td class="g-note-cell">要練到會為止（決心）</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราจะฝึกจนขับรถให้เป็น" data-syl="เรา·จะ·ฝึก·จน·ขับ·รถ·ให้·เป็น">เราจะฝึกจนขับรถให้เป็น</span>
+            <span class="g-ex-zh">我要練到會開車為止。</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 對話示範 -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">情境練習</span>
+      <div>
+        <div class="sec-title">六個字一次用在同一段對話裡</div>
+        <div class="sec-sub">看看不同能力字怎麼在真實對話中交替出現</div>
+      </div>
+    </div>
+    <button class="dialog-toggle" id="dlgToggle09">💬 看情境對話</button>
+    <div class="dialog-box" id="dlgBox09">
+      <div class="dlg-line a">
+        <div class="dlg-who">A</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="ที่นี่ว่ายน้ำได้ไหม" data-syl="ที่·นี่·ว่าย·น้ำ·ได้·ไหม">ที่นี่ว่ายน้ำได้ไหม</span>
+          <span class="roman-line">thîi-nîi wâai náam dâai mǎi</span>
+          <span class="dlg-zh">這裡可以游泳嗎？</span>
+        </div>
+      </div>
+      <div class="dlg-line b">
+        <div class="dlg-who">B</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="ได้ แต่เธอว่ายน้ำเป็นหรือเปล่า" data-syl="ได้·แต่·เธอ·ว่าย·น้ำ·เป็น·หรือ·เปล่า">ได้ แต่เธอว่ายน้ำเป็นหรือเปล่า</span>
+          <span class="roman-line">dâai, tàe thəə wâai náam pen rǔe plàao</span>
+          <span class="dlg-zh">可以，但你會游泳嗎？</span>
+        </div>
+      </div>
+      <div class="dlg-line a">
+        <div class="dlg-who">A</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="ว่ายเป็นนิดหน่อย แต่ว่ายไกลไม่ไหว" data-syl="ว่าย·เป็น·นิด·หน่อย·แต่·ว่าย·ไกล·ไม่·ไหว">ว่ายเป็นนิดหน่อย แต่ว่ายไกลไม่ไหว</span>
+          <span class="roman-line">wâai pen nít-nɔ̀i, tàe wâai glai mâi wǎi</span>
+          <span class="dlg-zh">會一點，但游太遠會撐不住。</span>
+        </div>
+      </div>
+      <div class="dlg-line b">
+        <div class="dlg-who">B</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="ไม่เป็นไร ฉันอธิบายให้ฟังก่อน เธอฟังรู้เรื่องไหม" data-syl="ไม่·เป็น·ไร·ฉัน·อธิ·บาย·ให้·ฟัง·ก่อน·เธอ·ฟัง·รู้·เรื่อง·ไหม">ไม่เป็นไร ฉันอธิบายให้ฟังก่อน เธอฟังรู้เรื่องไหม</span>
+          <span class="roman-line">mâi pen rai, chán à-thí-baai hâi fang gòon, thəə fang rúu-rûeang mǎi</span>
+          <span class="dlg-zh">沒關係，我先解釋給你聽，你聽得懂嗎？</span>
+        </div>
+      </div>
+      <div class="dlg-line a">
+        <div class="dlg-who">A</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="รู้เรื่อง แต่ไปสระตรงนั้นเราไปไม่ถูก" data-syl="รู้·เรื่อง·แต่·ไป·สระ·ตรง·นั้น·เรา·ไป·ไม่·ถูก">รู้เรื่อง แต่ไปสระตรงนั้นเราไปไม่ถูก</span>
+          <span class="roman-line">rúu-rûeang, tàe pai sà trong-nán rao pai mâi thùuk</span>
+          <span class="dlg-zh">聽得懂，但要去那個游泳池我不知道怎麼走。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>第九頁 · 泰語教材 · 能力表達</footer>
+
+<script>
+window.PAGE_NOTES = '';
+document.addEventListener('DOMContentLoaded', function () {
+  var t = document.getElementById('dlgToggle09');
+  var b = document.getElementById('dlgBox09');
+  if (t && b) {
+    t.addEventListener('click', function () {
+      t.classList.toggle('open');
+      b.classList.toggle('open');
+    });
+  }
+});
+</script>
+<script src="controls-ui.js"></script>
+<script src="nav-ui.js?v=20260705"></script>
+</body>
+</html>

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語文法 第八頁 — 過去式進階</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="nav-ui.css?v=20260705">
+<link rel="stylesheet" href="controls-ui.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-zh-sans);
+    font-size: 18px;
+    line-height: 1.85;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--paper);
+    border-bottom: 2px solid var(--border2);
+    padding: 52px 60px 40px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: ''; position: absolute; border-radius: 50%; opacity: 0.07; background: var(--step);
+  }
+  .hero::before { width: 320px; height: 320px; top: -80px; left: -60px; }
+  .hero::after  { width: 240px; height: 240px; bottom: -60px; right: -40px; }
+  .hero-tag {
+    display: inline-block;
+    background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+    padding: 4px 14px; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: var(--font-zh-serif);
+    font-size: clamp(22px, 4.5vw, 42px);
+    font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 10px;
+  }
+  .hero h1 em { font-style: normal; color: var(--step); border-bottom: 3px solid #c8b882; }
+  .hero-desc { font-size: 15px; color: var(--ink-mid); }
+
+  /* ── MAIN ── */
+  .main {
+    max-width: 880px; margin: 0 auto;
+    padding: 38px 22px 80px;
+    display: flex; flex-direction: column; gap: 46px;
+  }
+
+  /* ── SECTION HEADER ── */
+  .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sec-badge {
+    background: var(--step); color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; padding: 3px 10px; border-radius: 5px; white-space: nowrap;
+  }
+  .sec-title { font-family: var(--font-zh-serif); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .sec-sub { font-size: 13.5px; color: var(--ink-light); margin-top: 2px; }
+
+  /* ── GRAMMAR TABLE ── */
+  .gram-table {
+    width: 100%; border-collapse: collapse; font-size: 15px;
+    border-radius: 14px; overflow: hidden;
+    border: 1.5px solid var(--border2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .gram-table thead tr { background: var(--step); color: #fff; }
+  .gram-table th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+  .gram-table tbody tr:nth-child(odd)  { background: var(--paper); }
+  .gram-table tbody tr:nth-child(even) { background: var(--bg2); }
+  .gram-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .gram-table tbody tr:last-child td { border-bottom: none; }
+  .g-pattern { font-size: 18px; font-weight: 700; color: var(--step); line-height: 1.55; }
+  .g-mean { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 3px; }
+  .g-note-cell { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .g-ex-th {
+    font-size: 17px; color: var(--step); font-weight: 700;
+    display: block; line-height: 1.55; margin-top: 6px;
+  }
+  .g-ex-th:first-child { margin-top: 0; }
+  .g-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+
+  /* ── CALLOUTS ── */
+  .note {
+    border-left: 3px solid #c8b882; background: var(--amber-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--ink-mid); line-height: 1.75; margin-top: 14px;
+  }
+  .note strong { color: var(--amber); }
+  .warn {
+    border-left: 3px solid var(--c-aux); background: var(--c-aux-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--c-aux); line-height: 1.75; margin-top: 14px;
+  }
+  .cite {
+    border-left: 3px solid var(--ink-light); background: var(--bg2);
+    border-radius: 0 8px 8px 0; padding: 11px 18px;
+    font-size: 12.5px; color: var(--ink-light); line-height: 1.7; margin-top: 10px;
+  }
+  .cite strong { color: var(--ink-mid); }
+
+  /* ── COMPARE BOX (3欄) ── */
+  .compare-box {
+    background: var(--paper); border: 2px solid var(--step);
+    border-radius: 14px; padding: 20px 24px; margin-top: 18px;
+  }
+  .compare-box-title {
+    font-family: var(--font-zh-serif); font-size: 16px; font-weight: 700;
+    color: var(--step); margin-bottom: 12px;
+  }
+  .compare-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .compare-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .compare-cell {
+    background: var(--bg2); border-radius: 10px; padding: 13px 15px; border: 1px solid var(--border);
+  }
+  .compare-kw { font-size: 19px; font-weight: 700; color: var(--step); margin-bottom: 4px; }
+  .compare-desc { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .compare-th { font-size: 15.5px; color: var(--step); font-weight: 700; display: block; margin-top: 8px; }
+  .compare-zh { font-size: 12.5px; color: var(--ink-mid); display: block; }
+
+  /* ── PRACTICE GRID ── */
+  .prac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 4px; }
+  .prac-card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 17px 19px; }
+  .prac-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; }
+  .prac-tag {
+    display: inline-block; background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 5px; font-size: 12.5px; font-weight: 700; padding: 2px 8px;
+  }
+  .prac-label { font-size: 12.5px; color: var(--ink-light); font-weight: 600; }
+  .prac-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .prac-th { font-size: 16px; color: var(--step); font-weight: 700; display: block; line-height: 1.5; }
+  .prac-zh { font-size: 13px; color: var(--ink-mid); display: block; }
+
+  /* ── 對話框 ── */
+  .dialog-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; font-size: 15px; font-weight: 700;
+    border: 1.5px solid var(--step); border-radius: 24px;
+    background: var(--paper); color: var(--step); cursor: pointer;
+    font-family: var(--font-zh-sans); transition: background 0.15s, color 0.15s;
+  }
+  .dialog-toggle:hover { background: var(--step-pale); }
+  .dialog-toggle.open { background: var(--step); color: #fff; }
+  .dialog-box { display: none; margin-top: 16px; }
+  .dialog-box.open { display: block; }
+  .dlg-line { display: flex; gap: 11px; margin-bottom: 13px; align-items: flex-start; }
+  .dlg-line.b { flex-direction: row-reverse; }
+  .dlg-who {
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px;
+  }
+  .dlg-line.a .dlg-who { background: var(--step); }
+  .dlg-line.b .dlg-who { background: var(--c-aux); }
+  .dlg-bubble { max-width: 80%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 11px 15px; }
+  .dlg-line.b .dlg-bubble { background: var(--c-aux-pale); border-color: #e2cdb8; }
+  .dlg-th { font-size: 17px; color: var(--ink); font-weight: 700; display: block; line-height: 1.6; }
+  .dlg-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-top: 3px; }
+
+  /* ── ROMAN LINE ── */
+  .roman-line { font-size: 12.5px; color: var(--ink-light); display: none; margin-top: 2px; font-style: italic; }
+  body.show-roman .roman-line { display: block; }
+
+  .hr { height: 1px; background: var(--border); }
+
+  body.modern-font .g-pattern,
+  body.modern-font .tsent,
+  body.modern-font .g-ex-th,
+  body.modern-font .compare-th,
+  body.modern-font .prac-th,
+  body.modern-font .dlg-th {
+    font-family: var(--font-thai-modern), sans-serif;
+  }
+
+  footer { text-align: center; padding: 20px; font-size: 14px; color: var(--ink-light); border-top: 1px solid var(--border); background: var(--bg2); }
+
+  @media (max-width: 640px) {
+    .compare-row, .compare-row3 { grid-template-columns: 1fr; }
+    .prac-grid { grid-template-columns: 1fr; }
+    .sec-header { flex-direction: column; align-items: flex-start; }
+    .hero { padding: 40px 50px 32px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-tag">第八頁 · PAGE 8</div>
+  <h1>過去式進階：<em>แล้ว</em> vs <em>ไป</em> vs <em>มา</em> 深度比較</h1>
+  <div class="hero-desc">同一件事，三種說法、三種語感 · ได้ 問答系統 · ได้ vs เคย 的時間焦點 · 否定與疑問的完整搭配</div>
+</div>
+
+<div id="ctrl-anchor"></div>
+
+<main class="main">
+
+  <!-- ══ ① 三種完成感的差別 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">① 核心差異</span>
+      <div>
+        <div class="sec-title">แล้ว／ไป／มา — 都是「已經⋯了」，但語感不同</div>
+        <div class="sec-sub">แล้ว 純粹表示做完了；ไป 強調跟現在沒關係；มา 強調維持到現在</div>
+      </div>
+    </div>
+
+    <div class="compare-box">
+      <div class="compare-box-title">⚡ 三個字各自強調什麼</div>
+      <div class="compare-row3">
+        <div class="compare-cell">
+          <div class="compare-kw">V ＋ แล้ว</div>
+          <div class="compare-desc">強調<strong>動作已經結束了</strong><br>純粹表示動作完畢，不多不少，是最中性、最常用的說法</div>
+        </div>
+        <div class="compare-cell">
+          <div class="compare-kw">V ＋ ไป（แล้ว）</div>
+          <div class="compare-desc">強調<strong>完成跟現在沒有任何關係</strong><br>比 แล้ว 更強烈，動作在過去發生、結束，跟現在切開；也常帶「東西被處理掉、脫離自己」的語感</div>
+        </div>
+        <div class="compare-cell">
+          <div class="compare-kw">V ＋ มา（แล้ว）</div>
+          <div class="compare-desc">強調<strong>那個動作的效果維持到現在</strong><br>先做了準備，或動作是朝著說話者方向完成的，此刻還感受得到</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="gram-table" style="margin-top:18px">
+      <thead><tr><th>情境</th><th>三種說法</th><th>語感差別</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="g-note-cell"><strong>單純吃飯</strong></td>
+          <td>
+            <span class="g-ex-th tsent" data-base="กินข้าวแล้ว" data-syl="กิน·ข้าว·แล้ว">กินข้าวแล้ว</span>
+            <span class="roman-line">gin kâao láeo</span>
+            <span class="g-ex-zh">已經吃飯了（純粹說動作完畢）</span>
+            <span class="g-ex-th tsent" data-base="กินข้าวไปแล้ว" data-syl="กิน·ข้าว·ไป·แล้ว">กินข้าวไปแล้ว</span>
+            <span class="roman-line">gin kâao pai láeo</span>
+            <span class="g-ex-zh">已經吃飯了（沒特別準備，時間到就吃了，吃完就結束了）</span>
+            <span class="g-ex-th tsent" data-base="กินข้าวมาแล้ว" data-syl="กิน·ข้าว·มา·แล้ว">กินข้าวมาแล้ว</span>
+            <span class="roman-line">gin kâao maa láeo</span>
+            <span class="g-ex-zh">已經吃飯了（先準備好，為了接下來的事而吃，現在還飽著）</span>
+          </td>
+          <td class="g-note-cell">同一句「已經吃飯了」，中文分不出來，但泰文三種說法語感不同。</td>
+        </tr>
+        <tr>
+          <td class="g-note-cell"><strong>準備考試</strong><br>對象不同、語氣不同</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="อ่านหนังสือแล้ว" data-syl="อ่าน·หนัง·สือ·แล้ว">อ่านหนังสือแล้ว</span>
+            <span class="roman-line">àan nǎng-sǔue láeo</span>
+            <span class="g-ex-zh">跟媽媽說：已經看書了（純粹說動作完畢了）</span>
+            <span class="g-ex-th tsent" data-base="อ่านหนังสือไปแล้ว" data-syl="อ่าน·หนัง·สือ·ไป·แล้ว">อ่านหนังสือไปแล้ว</span>
+            <span class="roman-line">àan nǎng-sǔue pai láeo</span>
+            <span class="g-ex-zh">強調：已經看了，沒什麼好再看的了（就這樣了）</span>
+            <span class="g-ex-th tsent" data-base="อ่านหนังสือมาแล้ว" data-syl="อ่าน·หนัง·สือ·มา·แล้ว">อ่านหนังสือมาแล้ว</span>
+            <span class="roman-line">àan nǎng-sǔue maa láeo</span>
+            <span class="g-ex-zh">跟朋友說：我有先看好了，現在考試沒問題（狀態延續到現在）</span>
+          </td>
+          <td class="g-note-cell">มา 版本最帶「有備而來」的語氣，適合安慰／保證的場合；ไป 版本比較像是「交代完畢、不用再問」。</td>
+        </tr>
+        <tr>
+          <td class="g-note-cell"><strong>睡覺</strong></td>
+          <td>
+            <span class="g-ex-th tsent" data-base="นอนแล้ว" data-syl="นอน·แล้ว">นอนแล้ว</span>
+            <span class="roman-line">noon láeo</span>
+            <span class="g-ex-zh">純粹說：睡了</span>
+            <span class="g-ex-th tsent" data-base="นอนไปแล้ว" data-syl="นอน·ไป·แล้ว">นอนไปแล้ว</span>
+            <span class="roman-line">noon pai láeo</span>
+            <span class="g-ex-zh">強調：已經睡了一段時間了（別吵，這件事已經跟你沒關係了）</span>
+            <span class="g-ex-th tsent" data-base="นอนมาแล้ว" data-syl="นอน·มา·แล้ว">นอนมาแล้ว</span>
+            <span class="roman-line">noon maa láeo</span>
+            <span class="g-ex-zh">已經睡飽、準備好了（可以起來做事，精神延續到現在）</span>
+          </td>
+          <td class="g-note-cell">三種都成立，但語氣不同：แล้ว 平述、ไป 強調時間過去且與現在無關、มา 強調「準備好了」的狀態延續。</td>
+        </tr>
+        <tr>
+          <td class="g-note-cell"><strong>忘記</strong></td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ลืมแล้ว" data-syl="ลืม·แล้ว">ลืมแล้ว</span>
+            <span class="roman-line">luuem láeo</span>
+            <span class="g-ex-zh">純粹說：忘記了</span>
+            <span class="g-ex-th tsent" data-base="ลืมไปแล้ว" data-syl="ลืม·ไป·แล้ว">ลืมไปแล้ว</span>
+            <span class="roman-line">luuem pai láeo</span>
+            <span class="g-ex-zh">強調：完完全全忘記了，一點印象都沒有</span>
+          </td>
+          <td class="g-note-cell"><strong>ลืมมาแล้ว 不成立</strong>——因為「忘記」是「東西消失、離開記憶」的動作，不會有「維持到現在」的延續感，跟 มา 的語感衝突。</td>
+        </tr>
+        <tr>
+          <td class="g-note-cell"><strong>鎖門</strong><br>官方範例</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เขาล็อกประตูไปแล้ว" data-syl="เขา·ล็อก·ประ·ตู·ไป·แล้ว">เขาล็อกประตูไปแล้ว</span>
+            <span class="roman-line">khǎo lɔ́k pra-tuu pai láeo</span>
+            <span class="g-ex-zh">他已經把門鎖上了（東西在裡面的話，你現在拿不到了——太遲了）</span>
+          </td>
+          <td class="g-note-cell">ไป 在這裡加強「已成定局、無法挽回」的語感，是 thai-language.com 論壇整理的經典例句。</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="cite"><strong>參考來源：</strong>thai-language.com 對 แล้ว／ไปแล้ว／มาแล้ว 的辭條說明（<a href="http://www.thai-language.com/id/131239" target="_blank" rel="noopener">id/131239</a>、<a href="http://thai-language.com/id/209824" target="_blank" rel="noopener">id/209824</a>）——แล้ว 是最常見、最中性的完成標記；ไปแล้ว 帶有「已成定局」的加強語氣；มาแล้ว 表示動作起於過去、效果延續到現在。表格中「กินข้าว／อ่านหนังสือ／นอน／ลืม」四組例句與語境說明為老師教學經驗整理，方便學生記憶語感差異。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ② ได้+動詞 疑問／回答系統 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">② 疑問・回答</span>
+      <div>
+        <div class="sec-title">ได้ ＋ 動詞 — 常用在問句，配不同句尾意思不同</div>
+        <div class="sec-sub">從答案回推文法：不同的問法，對應不同的回答方式</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr><th>問句</th><th>正面回答</th><th>反面回答</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="g-pattern">ได้ ＋ V ＋ หรือเปล่า</span>
+            <div class="g-mean">有做嗎？有機會做嗎？</div>
+          </td>
+          <td class="g-note-cell">
+            <span class="g-ex-th tsent" data-base="ไปแล้ว" data-syl="ไป·แล้ว">ไปแล้ว</span>
+            <span class="g-ex-zh">去了（不回答成 ได้ไป）</span>
+          </td>
+          <td class="g-note-cell">
+            <span class="g-ex-th tsent" data-base="ไม่ได้ไป" data-syl="ไม่ได้·ไป">ไม่ได้ไป</span>
+            <span class="g-ex-zh">沒有去</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span class="g-pattern">ได้ ＋ V ＋ หรือยัง</span>
+            <div class="g-mean">有做了嗎？完成了沒？</div>
+          </td>
+          <td class="g-note-cell">
+            <span class="g-ex-th tsent" data-base="ได้แล้ว" data-syl="ได้·แล้ว">ได้แล้ว</span>
+            <span class="g-ex-zh">做了、好了</span>
+          </td>
+          <td class="g-note-cell">
+            <span class="g-ex-th tsent" data-base="ยังไม่ได้เลย" data-syl="ยัง·ไม่ได้·เลย">ยังไม่ได้เลย</span>
+            <span class="g-ex-zh">還沒有（完全沒做）</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="prac-grid" style="margin-top:16px">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">หรือเปล่า</span><span class="prac-label">有沒有這件事</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th" data-base="ได้กินหรือเปล่า" data-syl="ได้·กิน·หรือ·เปล่า">ได้กินหรือเปล่า</span>
+            <span class="roman-line">dâai gin rǔe plàao</span>
+            <span class="prac-zh">到底有沒有吃？</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="ได้โทรหาเขาหรือเปล่า" data-syl="ได้·โทร·หา·เขา·หรือ·เปล่า">ได้โทรหาเขาหรือเปล่า</span>
+            <span class="roman-line">dâai thoo hǎa khǎo rǔe plàao</span>
+            <span class="prac-zh">有沒有打電話給他？</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="ได้บอกเขาหรือเปล่า" data-syl="ได้·บอก·เขา·หรือ·เปล่า">ได้บอกเขาหรือเปล่า</span>
+            <span class="roman-line">dâai bòok khǎo rǔe plàao</span>
+            <span class="prac-zh">有沒有跟他說？</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="ได้ปิดแอร์หรือเปล่า" data-syl="ได้·ปิด·แอร์·หรือ·เปล่า">ได้ปิดแอร์หรือเปล่า</span>
+            <span class="roman-line">dâai pìt aeer rǔe plàao</span>
+            <span class="prac-zh">冷氣有沒有關？</span>
+          </li>
+        </ul>
+      </div>
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">หรือยัง</span><span class="prac-label">完成了沒</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th" data-base="ทำการบ้านได้หรือยัง" data-syl="ทำ·การ·บ้าน·ได้·หรือ·ยัง">ทำการบ้านได้หรือยัง</span>
+            <span class="roman-line">tham gaan-bâan dâai rǔe yang</span>
+            <span class="prac-zh">作業做完了沒？</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="ได้อาบน้ำหรือยัง" data-syl="ได้·อาบ·น้ำ·หรือ·ยัง">ได้อาบน้ำหรือยัง</span>
+            <span class="roman-line">dâai àap náam rǔe yang</span>
+            <span class="prac-zh">洗澡了沒？</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="ได้จองตั๋วหรือยัง" data-syl="ได้·จอง·ตั๋ว·หรือ·ยัง">ได้จองตั๋วหรือยัง</span>
+            <span class="roman-line">dâai jɔɔng tǔa rǔe yang</span>
+            <span class="prac-zh">訂票了沒？</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="ได้แพ็คกระเป๋าหรือยัง" data-syl="ได้·แพ็ค·กระ·เป๋า·หรือ·ยัง">ได้แพ็คกระเป๋าหรือยัง</span>
+            <span class="roman-line">dâai pháek gra-pǎo rǔe yang</span>
+            <span class="prac-zh">行李打包了沒？</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="note">
+      <strong>💡 記住這組否定：</strong>ได้ ＋ V ＋ หรือยัง 的否定回答是 <strong>ยังไม่ได้（เลย）</strong>，不是 ไม่ได้ 而已 —— ยัง 表示「還」，加強「到現在都還沒」的語氣。
+    </div>
+
+    <!-- 對話示範 -->
+    <button class="dialog-toggle" id="dlgToggle08">💬 看情境對話</button>
+    <div class="dialog-box" id="dlgBox08">
+      <div class="dlg-line a">
+        <div class="dlg-who">A</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="ได้ทำการบ้านหรือยัง" data-syl="ได้·ทำ·การ·บ้าน·หรือ·ยัง">ได้ทำการบ้านหรือยัง</span>
+          <span class="roman-line">dâai tham gaan-bâan rǔe yang</span>
+          <span class="dlg-zh">作業做了沒？</span>
+        </div>
+      </div>
+      <div class="dlg-line b">
+        <div class="dlg-who">B</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="ยังไม่ได้เลย เดี๋ยวจะทำ" data-syl="ยัง·ไม่ได้·เลย·เดี๋ยว·จะ·ทำ">ยังไม่ได้เลย เดี๋ยวจะทำ</span>
+          <span class="roman-line">yang mâi dâai ləəi, dǐao jà tham</span>
+          <span class="dlg-zh">還沒有，等一下就會做。</span>
+        </div>
+      </div>
+      <div class="dlg-line a">
+        <div class="dlg-who">A</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="แล้วได้อ่านหนังสือมาหรือเปล่า" data-syl="แล้ว·ได้·อ่าน·หนัง·สือ·มา·หรือ·เปล่า">แล้วได้อ่านหนังสือมาหรือเปล่า</span>
+          <span class="roman-line">láeo dâai àan nǎng-sǔue maa rǔe plàao</span>
+          <span class="dlg-zh">那有先看書了沒？</span>
+        </div>
+      </div>
+      <div class="dlg-line b">
+        <div class="dlg-who">B</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="อ่านหนังสือมาแล้ว พรุ่งนี้สอบไม่มีปัญหา" data-syl="อ่าน·หนัง·สือ·มา·แล้ว·พรุ่ง·นี้·สอบ·ไม่·มี·ปัญ·หา">อ่านหนังสือมาแล้ว พรุ่งนี้สอบไม่มีปัญหา</span>
+          <span class="roman-line">àan nǎng-sǔue maa láeo, phrûng-níi sɔ̀ɔp mâi mii pan-hǎa</span>
+          <span class="dlg-zh">有先看書了，明天考試沒問題。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ③ เคย vs ได้ 時間焦點 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">③ 時間焦點</span>
+      <div>
+        <div class="sec-title">เคย ＋ 動詞 vs ได้ ＋ 動詞 — 差在「時間範圍」</div>
+        <div class="sec-sub">ได้ 指過去某個時間點；เคย 指整個人生的經歷</div>
+      </div>
+    </div>
+    <div class="compare-box">
+      <div class="compare-box-title">⚡ ได้ vs เคย</div>
+      <div class="compare-row">
+        <div class="compare-cell">
+          <div class="compare-kw">ได้ ＋ V</div>
+          <div class="compare-desc">指<strong>過去某個時間點</strong>發生的事<br>例：昨天早上、上禮拜</div>
+          <span class="compare-th tsent" data-base="เมื่อวานเราได้ไปหาหมอ" data-syl="เมื่อ·วาน·เรา·ได้·ไป·หา·หมอ">เมื่อวานเราได้ไปหาหมอ</span>
+          <span class="compare-zh">昨天我去了醫生（那一天發生的事）</span>
+        </div>
+        <div class="compare-cell">
+          <div class="compare-kw">เคย ＋ V</div>
+          <div class="compare-desc">指<strong>一整個人生</strong>的經歷<br>不指定是哪一天</div>
+          <span class="compare-th tsent" data-base="เราเคยไปหาหมอที่นั่น" data-syl="เรา·เคย·ไป·หา·หมอ·ที่·นั่น">เราเคยไปหาหมอที่นั่น</span>
+          <span class="compare-zh">我曾經在那裡看過醫生（人生中至少一次）</span>
+        </div>
+      </div>
+    </div>
+    <div class="warn" style="margin-top:14px">
+      <strong>⚠ 常見誤解：</strong>ได้ ＋ V 不是在講「能力」！那個是 V ＋ ได้（動詞在前）。位置不一樣，意思完全不同：<br>
+      ได้กิน（有吃到、有機會吃）　vs　กินได้（可以吃、吃得下）——第九頁「能力表達」會詳細講這一組。
+    </div>
+    <div class="prac-grid" style="margin-top:16px">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">ได้＋V</span><span class="prac-label">特定時間點</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th" data-base="เมื่อเช้าเราได้คุยกับเขา" data-syl="เมื่อ·เช้า·เรา·ได้·คุย·กับ·เขา">เมื่อเช้าเราได้คุยกับเขา</span>
+            <span class="roman-line">mûuea-cháao rao dâai khui gàp khǎo</span>
+            <span class="prac-zh">今天早上我有跟他聊到。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="อาทิตย์ที่แล้วเราได้ไปเที่ยว" data-syl="อา·ทิตย์·ที่·แล้ว·เรา·ได้·ไป·เที่ยว">อาทิตย์ที่แล้วเราได้ไปเที่ยว</span>
+            <span class="roman-line">aa-thít thîi láeo rao dâai pai thîao</span>
+            <span class="prac-zh">上禮拜我有機會去玩了。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เมื่อกี้เราได้ยินเสียงนั้น" data-syl="เมื่อ·กี้·เรา·ได้·ยิน·เสียง·นั้น">เมื่อกี้เราได้ยินเสียงนั้น</span>
+            <span class="roman-line">mûuea-gîi rao dâai yin sǐang nán</span>
+            <span class="prac-zh">剛才我有聽到那個聲音。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="ปีที่แล้วเราได้เจอเขาครั้งหนึ่ง" data-syl="ปี·ที่·แล้ว·เรา·ได้·เจอ·เขา·ครั้ง·หนึ่ง">ปีที่แล้วเราได้เจอเขาครั้งหนึ่ง</span>
+            <span class="roman-line">pii thîi láeo rao dâai jəə khǎo khráng nùeng</span>
+            <span class="prac-zh">去年我有見到他一次。</span>
+          </li>
+        </ul>
+      </div>
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">เคย＋V</span><span class="prac-label">人生經歷</span></div>
+        <ul class="prac-list">
+          <li>
+            <span class="tsent prac-th" data-base="เราเคยขึ้นเครื่องบิน" data-syl="เรา·เคย·ขึ้น·เครื่อง·บิน">เราเคยขึ้นเครื่องบิน</span>
+            <span class="roman-line">rao khooei khûen khrûeang-bin</span>
+            <span class="prac-zh">我曾經搭過飛機。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เขาเคยทำงานที่ไทย" data-syl="เขา·เคย·ทำ·งาน·ที่·ไทย">เขาเคยทำงานที่ไทย</span>
+            <span class="roman-line">khǎo khooei tham-ngaan thîi thai</span>
+            <span class="prac-zh">他曾經在泰國工作過。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เราไม่เคยเห็นหิมะ" data-syl="เรา·ไม่เคย·เห็น·หิมะ">เราไม่เคยเห็นหิมะ</span>
+            <span class="roman-line">rao mâi khooei hěn hì-má</span>
+            <span class="prac-zh">我從來沒看過雪。</span>
+          </li>
+          <li>
+            <span class="tsent prac-th" data-base="เขาเคยไปญี่ปุ่นมาสามครั้งแล้ว" data-syl="เขา·เคย·ไป·ญี่·ปุ่น·มา·สาม·ครั้ง·แล้ว">เขาเคยไปญี่ปุ่นมาสามครั้งแล้ว</span>
+            <span class="roman-line">khǎo khooei pai yîi-pùn maa sǎam khráng láeo</span>
+            <span class="prac-zh">他人生中已經去過日本三次了。</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ④ ยัง 否定完成式總整理 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">④ 否定總整理</span>
+      <div>
+        <div class="sec-title">ยัง 家族 — 「還沒」的各種說法</div>
+        <div class="sec-sub">跟 ไม่ได้／ไม่เคย 一起使用，強度、對象各不同</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr><th>結構</th><th>意思</th><th>例句</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="g-pattern">ยัง ＋ ไม่ ＋ V</span></td>
+          <td class="g-note-cell">還沒（單純未發生）</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ยังไม่กิน" data-syl="ยัง·ไม่·กิน">ยังไม่กิน</span>
+            <span class="g-ex-zh">還沒吃。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ยัง ＋ V ＋ ไม่ได้</span></td>
+          <td class="g-note-cell">還做不到／還沒完成（強調條件未到）</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ยังกินข้าวไม่ได้" data-syl="ยัง·กิน·ข้าว·ไม่ได้">ยังกินข้าวไม่ได้</span>
+            <span class="g-ex-zh">還沒吃飯（還不能吃，例如還在忙）。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ยัง ＋ ไม่ได้ ＋ V</span></td>
+          <td class="g-note-cell">還沒做這件事（單純未做）</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="ยังไม่ได้ทำการบ้าน" data-syl="ยัง·ไม่ได้·ทำ·การ·บ้าน">ยังไม่ได้ทำการบ้าน</span>
+            <span class="g-ex-zh">還沒做作業。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ไม่เคย ＋ V ＋ เลย</span></td>
+          <td class="g-note-cell">一次都沒有過（人生層級，語氣最強）</td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราไม่เคยไปเกาหลีเลย" data-syl="เรา·ไม่เคย·ไป·เกา·หลี·เลย">เราไม่เคยไปเกาหลีเลย</span>
+            <span class="g-ex-zh">我一次都沒去過韓國。</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>💡 強度排序（弱→強）：</strong>ยังไม่ + V（單純還沒）→ ยัง + V + ไม่ได้（還不到條件）→ ไม่ได้ + V（那次沒發生）→ ไม่เคย + V + เลย（人生中一次都沒有，語氣最重）。</div>
+  </section>
+
+</main>
+
+<footer>第八頁 · 泰語教材 · 過去式進階</footer>
+
+<script>
+window.PAGE_NOTES = '';
+document.addEventListener('DOMContentLoaded', function () {
+  var t = document.getElementById('dlgToggle08');
+  var b = document.getElementById('dlgBox08');
+  if (t && b) {
+    t.addEventListener('click', function () {
+      t.classList.toggle('open');
+      b.classList.toggle('open');
+    });
+  }
+});
+</script>
+<script src="controls-ui.js"></script>
+<script src="nav-ui.js?v=20260705"></script>
+</body>
+</html>

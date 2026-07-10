@@ -14,6 +14,9 @@
     { file: '過去式.html',   label: '過去式',   num: '5' },
     { file: '是非問句.html', label: '是非問句', num: '6' },
     { file: '疑問詞.html',   label: '疑問詞',   num: '7' },
+    { file: '過去式進階.html', label: '過去式進階', num: '8' },
+    { file: '能力.html',     label: '能力表達', num: '9' },
+    { file: '完成.html',     label: '完成表達', num: '10' },
   ];
 
   var currentFile = location.pathname.split('/').pop() || '';

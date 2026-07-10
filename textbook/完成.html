@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰語文法 第十頁 — 完成表達</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="nav-ui.css?v=20260705">
+<link rel="stylesheet" href="controls-ui.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-zh-sans);
+    font-size: 18px;
+    line-height: 1.85;
+  }
+  .hero {
+    background: var(--paper);
+    border-bottom: 2px solid var(--border2);
+    padding: 52px 60px 40px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: ''; position: absolute; border-radius: 50%; opacity: 0.07; background: var(--step);
+  }
+  .hero::before { width: 320px; height: 320px; top: -80px; left: -60px; }
+  .hero::after  { width: 240px; height: 240px; bottom: -60px; right: -40px; }
+  .hero-tag {
+    display: inline-block;
+    background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.12em;
+    padding: 4px 14px; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-family: var(--font-zh-serif);
+    font-size: clamp(22px, 4.5vw, 42px);
+    font-weight: 700; color: var(--ink); line-height: 1.3; margin-bottom: 10px;
+  }
+  .hero h1 em { font-style: normal; color: var(--step); border-bottom: 3px solid #c8b882; }
+  .hero-desc { font-size: 15px; color: var(--ink-mid); }
+  .main {
+    max-width: 880px; margin: 0 auto;
+    padding: 38px 22px 80px;
+    display: flex; flex-direction: column; gap: 46px;
+  }
+  .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sec-badge {
+    background: var(--step); color: #fff; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; padding: 3px 10px; border-radius: 5px; white-space: nowrap;
+  }
+  .sec-title { font-family: var(--font-zh-serif); font-size: 20px; font-weight: 700; color: var(--ink); }
+  .sec-sub { font-size: 13.5px; color: var(--ink-light); margin-top: 2px; }
+  .gram-table {
+    width: 100%; border-collapse: collapse; font-size: 15px;
+    border-radius: 14px; overflow: hidden;
+    border: 1.5px solid var(--border2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .gram-table thead tr { background: var(--step); color: #fff; }
+  .gram-table th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+  .gram-table tbody tr:nth-child(odd)  { background: var(--paper); }
+  .gram-table tbody tr:nth-child(even) { background: var(--bg2); }
+  .gram-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .gram-table tbody tr:last-child td { border-bottom: none; }
+  .g-pattern { font-size: 18px; font-weight: 700; color: var(--step); line-height: 1.55; }
+  .g-mean { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 3px; }
+  .g-note-cell { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  .g-ex-th {
+    font-size: 17px; color: var(--step); font-weight: 700;
+    display: block; line-height: 1.55; margin-top: 6px;
+  }
+  .g-ex-th:first-child { margin-top: 0; }
+  .g-ex-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-bottom: 6px; }
+  .note {
+    border-left: 3px solid #c8b882; background: var(--amber-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--ink-mid); line-height: 1.75; margin-top: 14px;
+  }
+  .note strong { color: var(--amber); }
+  .warn {
+    border-left: 3px solid var(--c-aux); background: var(--c-aux-pale);
+    border-radius: 0 8px 8px 0; padding: 13px 18px;
+    font-size: 15px; color: var(--c-aux); line-height: 1.75; margin-top: 14px;
+  }
+  .cite {
+    border-left: 3px solid var(--ink-light); background: var(--bg2);
+    border-radius: 0 8px 8px 0; padding: 11px 18px;
+    font-size: 12.5px; color: var(--ink-light); line-height: 1.7; margin-top: 10px;
+  }
+  .cite strong { color: var(--ink-mid); }
+  .prac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 4px; }
+  .prac-card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 17px 19px; }
+  .prac-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; }
+  .prac-tag {
+    display: inline-block; background: var(--step-pale); color: var(--step); border: 1px solid var(--step);
+    border-radius: 5px; font-size: 12.5px; font-weight: 700; padding: 2px 8px;
+  }
+  .prac-label { font-size: 12.5px; color: var(--ink-light); font-weight: 600; }
+  .prac-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .prac-th { font-size: 16px; color: var(--step); font-weight: 700; display: block; line-height: 1.5; }
+  .prac-zh { font-size: 13px; color: var(--ink-mid); display: block; }
+  .roman-line { font-size: 12.5px; color: var(--ink-light); display: none; margin-top: 2px; font-style: italic; }
+  body.show-roman .roman-line { display: block; }
+  .hr { height: 1px; background: var(--border); }
+  .compare-box {
+    background: var(--paper); border: 2px solid var(--step);
+    border-radius: 14px; padding: 20px 24px; margin-top: 18px;
+  }
+  .compare-box-title { font-family: var(--font-zh-serif); font-size: 16px; font-weight: 700; color: var(--step); margin-bottom: 12px; }
+  .compare-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .compare-cell { background: var(--bg2); border-radius: 10px; padding: 13px 15px; border: 1px solid var(--border); }
+  .compare-kw { font-size: 19px; font-weight: 700; color: var(--step); margin-bottom: 4px; }
+  .compare-desc { font-size: 13.5px; color: var(--ink-mid); line-height: 1.65; }
+  /* 對話框 */
+  .dialog-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; font-size: 15px; font-weight: 700;
+    border: 1.5px solid var(--step); border-radius: 24px;
+    background: var(--paper); color: var(--step); cursor: pointer;
+    font-family: var(--font-zh-sans); transition: background 0.15s, color 0.15s;
+  }
+  .dialog-toggle:hover { background: var(--step-pale); }
+  .dialog-toggle.open { background: var(--step); color: #fff; }
+  .dialog-box { display: none; margin-top: 16px; }
+  .dialog-box.open { display: block; }
+  .dlg-line { display: flex; gap: 11px; margin-bottom: 13px; align-items: flex-start; }
+  .dlg-line.b { flex-direction: row-reverse; }
+  .dlg-who {
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px;
+  }
+  .dlg-line.a .dlg-who { background: var(--step); }
+  .dlg-line.b .dlg-who { background: var(--c-aux); }
+  .dlg-bubble { max-width: 80%; background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 11px 15px; }
+  .dlg-line.b .dlg-bubble { background: var(--c-aux-pale); border-color: #e2cdb8; }
+  .dlg-th { font-size: 17px; color: var(--ink); font-weight: 700; display: block; line-height: 1.6; }
+  .dlg-zh { font-size: 13px; color: var(--ink-mid); display: block; margin-top: 3px; }
+  body.modern-font .g-pattern, body.modern-font .tsent, body.modern-font .g-ex-th, body.modern-font .prac-th, body.modern-font .dlg-th {
+    font-family: var(--font-thai-modern), sans-serif;
+  }
+  footer { text-align: center; padding: 20px; font-size: 14px; color: var(--ink-light); border-top: 1px solid var(--border); background: var(--bg2); }
+  @media (max-width: 640px) {
+    .prac-grid { grid-template-columns: 1fr; }
+    .compare-row3 { grid-template-columns: 1fr; }
+    .sec-header { flex-direction: column; align-items: flex-start; }
+    .hero { padding: 40px 50px 32px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-tag">第十頁 · PAGE 10</div>
+  <h1>完成表達：<em>เสร็จ／หมด／จบ</em></h1>
+  <div class="hero-desc">三種「完成」，看你完成的是「目標」「數量」還是「固定的一段」</div>
+</div>
+
+<div id="ctrl-anchor"></div>
+
+<main class="main">
+
+  <!-- ══ 總覽 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">總覽</span>
+      <div>
+        <div class="sec-title">เสร็จ vs หมด vs จบ — 完成的是什麼？</div>
+        <div class="sec-sub">中文都可能翻成「做完了」，但泰文要分清楚完成的對象</div>
+      </div>
+    </div>
+    <div class="compare-box">
+      <div class="compare-box-title">⚡ 三個字的完成對象不同</div>
+      <div class="compare-row3">
+        <div class="compare-cell">
+          <div class="compare-kw">V ＋ เสร็จ</div>
+          <div class="compare-desc">完成<strong>設定好的目標</strong>，告一段落<br>最泛用的「做完了」，不一定整件事全部做完，只是這階段的目標完成了。是動作類任務最常用的完成詞。</div>
+        </div>
+        <div class="compare-cell">
+          <div class="compare-kw">V ＋ หมด</div>
+          <div class="compare-desc">完成<strong>全部的量</strong><br>東西／內容被「用完、吃完、看完」，強調數量歸零、一點不剩。</div>
+        </div>
+        <div class="compare-cell">
+          <div class="compare-kw">V ＋ จบ</div>
+          <div class="compare-desc">完成<strong>有明確頭尾範圍</strong>的動作或事件<br>用在 อ่านหนังสือ／ดูหนัง／ฟังเพลง／พูด／เรียน 這類「有開頭有結尾」的事；也可以不接動詞，直接說「事情本身結束了」，例如 หนังจบแล้ว（電影演完了）。</div>
+        </div>
+      </div>
+    </div>
+    <div class="cite"><strong>參考來源：</strong>HiNative 母語者問答〈จบ vs เสร็จ 差在哪〉整理（<a href="https://hinative.com/questions/15601868" target="_blank" rel="noopener">hinative.com/questions/15601868</a>）指出：เสร็จ 專門用在「完成一個動作」（例：การบ้านเสร็จแล้ว 作業做完了）；จบ 則可以用在「事情本身結束」，不一定要是自己做的動作（例：หนังจบแล้ว 電影播完了）——這也解釋了為什麼 จบ 可以不接受詞單獨使用，เสร็จ 通常需要接在具體動作後面。หมด 的分類、以及三字搭配情態助詞的用法，是老師依教學經驗整理，屬於「經驗判斷」。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ① เสร็จ ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">① 目標完成</span>
+      <div>
+        <div class="sec-title">V ＋ เสร็จ／ไม่เสร็จ — 這階段的目標做完了</div>
+        <div class="sec-sub">最常用、最泛用的「做完了」，日常對話首選，幾乎任何動作都能配</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">เสร็จ</span><span class="prac-label">告一段落</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="เราทำการบ้านเสร็จแล้ว" data-syl="เรา·ทำ·การ·บ้าน·เสร็จ·แล้ว">เราทำการบ้านเสร็จแล้ว</span><span class="roman-line">rao tham gaan-bâan sèt láeo</span><span class="prac-zh">我作業做完了。</span></li>
+          <li><span class="tsent prac-th" data-base="งานนี้ยังทำไม่เสร็จ" data-syl="งาน·นี้·ยัง·ทำ·ไม่·เสร็จ">งานนี้ยังทำไม่เสร็จ</span><span class="roman-line">ngaan níi yang tham mâi sèt</span><span class="prac-zh">這件工作還沒做完。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาซักผ้าเสร็จหรือยัง" data-syl="เขา·ซัก·ผ้า·เสร็จ·หรือ·ยัง">เขาซักผ้าเสร็จหรือยัง</span><span class="roman-line">khǎo sák phâa sèt rǔe yang</span><span class="prac-zh">他洗好衣服了沒？</span></li>
+          <li><span class="tsent prac-th" data-base="ประชุมเสร็จกี่โมง" data-syl="ประ·ชุม·เสร็จ·กี่·โมง">ประชุมเสร็จกี่โมง</span><span class="roman-line">pra-chum sèt gìi moong</span><span class="prac-zh">會議幾點結束？</span></li>
+          <li><span class="tsent prac-th" data-base="พอทำเสร็จแล้วโทรบอกเราด้วย" data-syl="พอ·ทำ·เสร็จ·แล้ว·โทร·บอก·เรา·ด้วย">พอทำเสร็จแล้วโทรบอกเราด้วย</span><span class="roman-line">phɔɔ tham sèt láeo thoo bɔ̀ɔk rao dûai</span><span class="prac-zh">做完之後打電話跟我說一聲。</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><strong>💡 เสร็จ 不代表全部結束：</strong>เราทำเสร็จ 可能只是完成了「今天要做的部分」，明天可能還要繼續，重點是「這階段的目標」達成了，不強調數量或範圍。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ② หมด ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">② 量完了</span>
+      <div>
+        <div class="sec-title">V ＋ หมด／ไม่หมด — 全部的量用完了</div>
+        <div class="sec-sub">強調「一點不剩」，常用在吃、喝、花錢、用東西；หมด 本身也可以單獨當形容詞用，「沒了、空了」</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">หมด</span><span class="prac-label">全部用完・一點不剩</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="เรากินข้าวหมดแล้ว" data-syl="เรา·กิน·ข้าว·หมด·แล้ว">เรากินข้าวหมดแล้ว</span><span class="roman-line">rao gin kâao mòt láeo</span><span class="prac-zh">我把飯吃完了（一粒不剩）。</span></li>
+          <li><span class="tsent prac-th" data-base="เงินเราใช้หมดแล้ว" data-syl="เงิน·เรา·ใช้·หมด·แล้ว">เงินเราใช้หมดแล้ว</span><span class="roman-line">ngoen rao chái mòt láeo</span><span class="prac-zh">我的錢花光了。</span></li>
+          <li><span class="tsent prac-th" data-base="น้ำในขวดยังไม่หมด" data-syl="น้ำ·ใน·ขวด·ยัง·ไม่·หมด">น้ำในขวดยังไม่หมด</span><span class="roman-line">náam nai khùuat yang mâi mòt</span><span class="prac-zh">瓶子裡的水還沒用完。</span></li>
+          <li><span class="tsent prac-th" data-base="ตั๋วรอบนี้ขายหมดแล้ว" data-syl="ตั๋ว·รอบ·นี้·ขาย·หมด·แล้ว">ตั๋วรอบนี้ขายหมดแล้ว</span><span class="roman-line">tǔa rɔ̂ɔp níi khǎai mòt láeo</span><span class="prac-zh">這場的票賣完了。</span></li>
+          <li><span class="tsent prac-th" data-base="แบตมือถือใกล้จะหมดแล้ว" data-syl="แบต·มือ·ถือ·ใกล้·จะ·หมด·แล้ว">แบตมือถือใกล้จะหมดแล้ว</span><span class="roman-line">bàet mue-thǔe glâi jà mòt láeo</span><span class="prac-zh">手機快沒電了。</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><strong>💡 เสร็จ vs หมด：</strong>เรากินข้าวเสร็จ（這一餐吃完了，可能還有剩菜）vs เรากินข้าวหมด（把碗裡的飯全部吃光，一粒不剩）——หมด 更強調「數量歸零」。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ ③ จบ ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">③ 固定範圍</span>
+      <div>
+        <div class="sec-title">V ＋ จบ／ไม่จบ — 有明確固定時間範圍的動作</div>
+        <div class="sec-sub">อ่านหนังสือ／ดูหนัง／ฟังเพลง／พูด／เรียน 這種「有開頭有結尾」的事才用 จบ；也可以省略動詞，直接說事情本身結束了</div>
+      </div>
+    </div>
+    <div class="prac-grid">
+      <div class="prac-card">
+        <div class="prac-card-head"><span class="prac-tag">จบ</span><span class="prac-label">從頭到尾看完・讀完</span></div>
+        <ul class="prac-list">
+          <li><span class="tsent prac-th" data-base="เราดูหนังเรื่องนี้จบแล้ว" data-syl="เรา·ดู·หนัง·เรื่อง·นี้·จบ·แล้ว">เราดูหนังเรื่องนี้จบแล้ว</span><span class="roman-line">rao duu nǎng rûeang níi jòp láeo</span><span class="prac-zh">我把這部電影看完了。</span></li>
+          <li><span class="tsent prac-th" data-base="เขาอ่านหนังสือเล่มนี้ยังไม่จบ" data-syl="เขา·อ่าน·หนัง·สือ·เล่ม·นี้·ยัง·ไม่·จบ">เขาอ่านหนังสือเล่มนี้ยังไม่จบ</span><span class="roman-line">khǎo àan nǎng-sǔue lêm níi yang mâi jòp</span><span class="prac-zh">他這本書還沒看完。</span></li>
+          <li><span class="tsent prac-th" data-base="น้องเรียนจบแล้ว" data-syl="น้อง·เรียน·จบ·แล้ว">น้องเรียนจบแล้ว</span><span class="roman-line">nóong rian jòp láeo</span><span class="prac-zh">弟弟／妹妹畢業了（學業告一段落）。</span></li>
+          <li><span class="tsent prac-th" data-base="หนังจบแล้ว ออกไปกันเถอะ" data-syl="หนัง·จบ·แล้ว·ออก·ไป·กัน·เถอะ">หนังจบแล้ว ออกไปกันเถอะ</span><span class="roman-line">nǎng jòp láeo, ɔ̀ɔk pai gan thə̀</span><span class="prac-zh">電影演完了，我們出去吧（จบ 單獨用，不接動詞）。</span></li>
+          <li><span class="tsent prac-th" data-base="เพลงนี้ฟังจบแล้วรู้สึกดีมาก" data-syl="เพลง·นี้·ฟัง·จบ·แล้ว·รู้·สึก·ดี·มาก">เพลงนี้ฟังจบแล้วรู้สึกดีมาก</span><span class="roman-line">phleeng níi fang jòp láeo rúu-sùek dii mâak</span><span class="prac-zh">這首歌聽完之後感覺很好。</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><strong>💡 เสร็จ vs จบ：</strong>ดูหนังเสร็จ（看完這件事完成了，可能中途停過、分好幾次看）vs ดูหนังจบ（從頭到尾整部看完，強調「走到片尾、走到終點」）——จบ 更強調「到達終點」這個時間點本身。</div>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ 書面語 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">書面語</span>
+      <div>
+        <div class="sec-title">V ＋ เรียบร้อยแล้ว／เสร็จเรียบร้อยแล้ว — 處理好了</div>
+        <div class="sec-sub">正式、書面的說法，公告、報告、客服常用</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr><th>結構</th><th>例句</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="g-pattern">V ＋ เรียบร้อยแล้ว</span><div class="g-mean">處理好了（書面）</div></td>
+          <td>
+            <span class="g-ex-th tsent" data-base="เราส่งเอกสารเรียบร้อยแล้ว" data-syl="เรา·ส่ง·เอก·สาร·เรียบ·ร้อย·แล้ว">เราส่งเอกสารเรียบร้อยแล้ว</span>
+            <span class="roman-line">rao sòng èek-kà-sǎan rîap-rɔ́ɔi láeo</span>
+            <span class="g-ex-zh">我們文件已經送出去了。</span>
+            <span class="g-ex-th tsent" data-base="เราบันทึกข้อมูลเรียบร้อยแล้ว" data-syl="เรา·บัน·ทึก·ข้อ·มูล·เรียบ·ร้อย·แล้ว">เราบันทึกข้อมูลเรียบร้อยแล้ว</span>
+            <span class="roman-line">rao ban-thúek khɔ̂ɔ-muun rîap-rɔ́ɔi láeo</span>
+            <span class="g-ex-zh">資料已經儲存好了。</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">V ＋ เสร็จเรียบร้อยแล้ว</span><div class="g-mean">完成、處理妥當了（書面，更正式）</div></td>
+          <td>
+            <span class="g-ex-th tsent" data-base="งานซ่อมเสร็จเรียบร้อยแล้ว" data-syl="งาน·ซ่อม·เสร็จ·เรียบ·ร้อย·แล้ว">งานซ่อมเสร็จเรียบร้อยแล้ว</span>
+            <span class="roman-line">ngaan sɔ̂m sèt rîap-rɔ́ɔi láeo</span>
+            <span class="g-ex-zh">維修工作已經完成妥當了。</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="hr"></div>
+
+  <!-- ══ 搭配情態助詞 ══ -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">搭配</span>
+      <div>
+        <div class="sec-title">完成 ＋ ยัง／แล้ว／ให้เสร็จ／ให้จบ ＋ 情態助詞</div>
+        <div class="sec-sub">跟疑問詞、情態助詞混合使用，表達「催促、要求做完」；邏輯與第三頁「情態助詞」一致</div>
+      </div>
+    </div>
+    <table class="gram-table">
+      <thead><tr><th>結構</th><th>意思</th><th>例句</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="g-pattern">V ＋ เสร็จ ＋ หรือยัง</span></td>
+          <td class="g-note-cell">完成了沒？</td>
+          <td><span class="g-ex-th tsent" data-base="ทำเสร็จหรือยัง" data-syl="ทำ·เสร็จ·หรือ·ยัง">ทำเสร็จหรือยัง</span><span class="g-ex-zh">做完了沒？</span></td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ต้อง ＋ V ＋ ให้เสร็จ</span></td>
+          <td class="g-note-cell">必須做到完成為止</td>
+          <td><span class="g-ex-th tsent" data-base="ต้องทำให้เสร็จวันนี้" data-syl="ต้อง·ทำ·ให้·เสร็จ·วัน·นี้">ต้องทำให้เสร็จวันนี้</span><span class="g-ex-zh">今天必須做完。</span></td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ต้อง ＋ V ＋ ให้จบ</span></td>
+          <td class="g-note-cell">必須從頭做到結尾</td>
+          <td><span class="g-ex-th tsent" data-base="ต้องดูให้จบก่อนไปนอน" data-syl="ต้อง·ดู·ให้·จบ·ก่อน·ไป·นอน">ต้องดูให้จบก่อนไปนอน</span><span class="g-ex-zh">要看完（整部）才能去睡。</span></td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">ยัง ＋ V ＋ ไม่หมด</span></td>
+          <td class="g-note-cell">還沒用完／吃完</td>
+          <td><span class="g-ex-th tsent" data-base="ยังกินข้าวไม่หมด" data-syl="ยัง·กิน·ข้าว·ไม่·หมด">ยังกินข้าวไม่หมด</span><span class="g-ex-zh">飯還沒吃完。</span></td>
+        </tr>
+        <tr>
+          <td><span class="g-pattern">กำลังจะ ＋ V ＋ ให้เสร็จ</span></td>
+          <td class="g-note-cell">正要把它做完（即將完成）</td>
+          <td><span class="g-ex-th tsent" data-base="เรากำลังจะทำให้เสร็จอยู่พอดี" data-syl="เรา·กำ·ลัง·จะ·ทำ·ให้·เสร็จ·อยู่·พอ·ดี">เรากำลังจะทำให้เสร็จอยู่พอดี</span><span class="g-ex-zh">我正要把它做完。</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 對話示範 -->
+  <section>
+    <div class="sec-header">
+      <span class="sec-badge">情境練習</span>
+      <div>
+        <div class="sec-title">三個完成字放在同一段對話裡</div>
+        <div class="sec-sub">感受 เสร็จ／หมด／จบ 在真實對話中的差別</div>
+      </div>
+    </div>
+    <button class="dialog-toggle" id="dlgToggle10">💬 看情境對話</button>
+    <div class="dialog-box" id="dlgBox10">
+      <div class="dlg-line a">
+        <div class="dlg-who">A</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="ทำการบ้านเสร็จหรือยัง" data-syl="ทำ·การ·บ้าน·เสร็จ·หรือ·ยัง">ทำการบ้านเสร็จหรือยัง</span>
+          <span class="roman-line">tham gaan-bâan sèt rǔe yang</span>
+          <span class="dlg-zh">作業做完了沒？</span>
+        </div>
+      </div>
+      <div class="dlg-line b">
+        <div class="dlg-who">B</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="เกือบเสร็จแล้ว เหลืออ่านหนังสืออีกนิดเดียว" data-syl="เกือบ·เสร็จ·แล้ว·เหลือ·อ่าน·หนัง·สือ·อีก·นิด·เดียว">เกือบเสร็จแล้ว เหลืออ่านหนังสืออีกนิดเดียว</span>
+          <span class="roman-line">gùuap sèt láeo, lǔea àan nǎng-sǔue ìik nít-diao</span>
+          <span class="dlg-zh">快做完了，剩一點點書要看。</span>
+        </div>
+      </div>
+      <div class="dlg-line a">
+        <div class="dlg-who">A</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="อ่านจบหรือยัง" data-syl="อ่าน·จบ·หรือ·ยัง">อ่านจบหรือยัง</span>
+          <span class="roman-line">àan jòp rǔe yang</span>
+          <span class="dlg-zh">看完了沒？</span>
+        </div>
+      </div>
+      <div class="dlg-line b">
+        <div class="dlg-who">B</div>
+        <div class="dlg-bubble">
+          <span class="tsent dlg-th" data-base="ยังไม่จบ เหลือสองหน้าสุดท้าย ขนมก็กินหมดแล้วด้วย หิวอีกละ" data-syl="ยัง·ไม่·จบ·เหลือ·สอง·หน้า·สุด·ท้าย·ขนม·ก็·กิน·หมด·แล้ว·ด้วย·หิว·อีก·ละ">ยังไม่จบ เหลือสองหน้าสุดท้าย ขนมก็กินหมดแล้วด้วย หิวอีกละ</span>
+          <span class="roman-line">yang mâi jòp, lǔea sɔ̌ɔng nâa sùt-tháai, khà-nǒm gɔ̂ɔ gin mòt láeo dûai, hǐu ìik lá</span>
+          <span class="dlg-zh">還沒看完，剩最後兩頁，餅乾也吃光了，又餓了。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>第十頁 · 泰語教材 · 完成表達</footer>
+
+<script>
+window.PAGE_NOTES = '';
+document.addEventListener('DOMContentLoaded', function () {
+  var t = document.getElementById('dlgToggle10');
+  var b = document.getElementById('dlgBox10');
+  if (t && b) {
+    t.addEventListener('click', function () {
+      t.classList.toggle('open');
+      b.classList.toggle('open');
+    });
+  }
+});
+</script>
+<script src="controls-ui.js"></script>
+<script src="nav-ui.js?v=20260705"></script>
+</body>
+</html>
