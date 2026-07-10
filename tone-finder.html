@@ -49,9 +49,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Noto+Sans+Thai:wght@400;500;700&family=Playfair+Display:ital,wght@0,900;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css?v=12">
 <style>
-  /* Lin 2026-07-10 อนุมัติ: หน้าเกมนี้ไม่ล็อกแถบ page-strip ติดจอ ให้เลื่อนไปกับเนื้อหาปกติ (หน้าอื่นในเว็บยังล็อกเหมือนเดิม — ไม่แก้ shared.css ตรงๆ) */
-  .page-strip{position:static;}
-  body:has(.page-strip){padding-bottom:0;}
+  /* Lin 2026-07-10: กลับมาล็อกแถบ page-strip ติดจอล่างเหมือนเดิม (ยกเลิกที่เคยปลดล็อกไว้ก่อนหน้านี้ในวันเดียวกัน) */
+  /* ซ่อนเฉพาะตอนเบราว์เซอร์เข้าโหมดเต็มจอจริง (Fullscreen API) — ดู JS ท้ายไฟล์ */
+  body.tf-is-fullscreen .page-strip{display:none;}
+  body.tf-is-fullscreen{padding-bottom:0;}
   body { background: #F5F0E8; color: #1C1C1C; }
 
   /* ── Page wrapper ── */
@@ -4844,17 +4845,8 @@ function stepSessionSummary() {
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event', 'tone_finder_complete', {score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
-  // LIN 2026-06-22: เล่นครบโควตาฟรีแล้ว → เด้งหน้าล็อกอินทันทีตอนจบรอบ (ไม่ต้องรอกดเริ่มรอบใหม่)
-  (function(){
-    var _a = window.TF_AUTH;
-    var _li = !!(_a && ((_a.hasAccess && _a.hasAccess()) || (_a.loggedIn && _a.loggedIn())));
-    if (!_li && _a && _a.requireLogin && tfFreeRoundsUsed() >= TF_FREE_ROUNDS_LIMIT) {
-      setTimeout(function(){ if (_a.showGate) _a.showGate(); }, 900); // โชว์คะแนนแวบนึงก่อนค่อยเด้ง
-    } else {
-      // เกมฟรี (requireLogin=false): นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ)
-      setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
-    }
-  })();
+  // Lin 2026-07-10: ลบ branch บังคับล็อกอินทิ้ง (requireLogin=false ตายอยู่แล้ว ไม่เคยทำงานจริง) — เหลือแค่คำเชิญ "ขอ單字速查表" หลังเล่นจบรอบ
+  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   var rows = results.map(function(r, i){
     var tone = r.tone != null ? r.tone : computeTone(r.entry.word);
     var tl = TONES[tone] || {};
@@ -5144,26 +5136,10 @@ function tfSyncLevelTabs() {
 }
 
 // Lin 2026-07-04: ตัด WORD_SETS/getSets ทิ้งแล้ว — ใช้แค่กับหน้าเลือกชุด/หมวดที่ลบไปแล้ว ไม่มีทางเข้าถึงอีก
-// ── เล่นฟรีก่อนบังคับล็อกอิน (LIN 2026-06-19) ───────────────────────────
-// ปรับจำนวนรอบฟรีได้ที่ตัวแปรเดียวนี้ (1 รอบ = 1 ชุดคำ = 5 คำ; หมวดสี/สัตว์ = 6)
-var TF_FREE_ROUNDS_LIMIT = 5;
-// นับรอบฟรี: ใช้ localStorage เป็นหลัก + fallback หน่วยความจำ (กันเว็บวิว LINE/FB ที่บล็อก storage แล้วนับพังเงียบ)
-var _tfMemRounds = 0;
-function tfFreeRoundsUsed() { try { var v = localStorage.getItem('tf_free_rounds'); if (v != null) return parseInt(v, 10) || 0; } catch (e) {} return _tfMemRounds; }
-function tfBumpFreeRounds() { var n = tfFreeRoundsUsed() + 1; _tfMemRounds = n; try { localStorage.setItem('tf_free_rounds', String(n)); } catch (e) {} }
-function tfFreeRoundsLeft() { return Math.max(0, TF_FREE_ROUNDS_LIMIT - tfFreeRoundsUsed()); }
+// Lin 2026-07-10: ลบระบบ "เล่นฟรี N รอบแล้วบังคับล็อกอิน" ทิ้งทั้งหมด (TF_FREE_ROUNDS_LIMIT/tfFreeRoundsUsed/tfBumpFreeRounds/tfFreeRoundsLeft)
+// เพราะ requireLogin=false ใน supabase-config.js มาตลอด → โค้ดนี้ไม่เคยทำงานจริง เกมเสียงเล่นฟรีไม่จำกัดเหมือนเกมอื่นทุกเกม
 
 function startSetSession(words, opts) {
-  // เล่นฟรี TF_FREE_ROUNDS_LIMIT รอบก่อน แล้วค่อยบังคับล็อกอิน (เก็บนับใน localStorage)
-  var _auth = window.TF_AUTH;
-  var _loggedIn = !!(_auth && ((_auth.hasAccess && _auth.hasAccess()) || (_auth.loggedIn && _auth.loggedIn())));
-  if (!_loggedIn && _auth && _auth.requireLogin) {
-    if (tfFreeRoundsUsed() >= TF_FREE_ROUNDS_LIMIT) {
-      if (_auth.showGate) _auth.showGate();   // หมดโควต้าเล่นฟรี → เด้งหน้าล็อกอิน
-      return;
-    }
-    tfBumpFreeRounds();   // ใช้โควต้าเล่นฟรีไป 1 รอบ
-  }
   advSentenceCtx = null; // ล้าง context ประโยค 高級 ทุกครั้งที่เริ่ม session ใหม่ (TF.startAdvSentence จะตั้งใหม่เองถ้าใช่)
   var entries = words.map(function(wd){
     if (wd && typeof wd === 'object') return wd; // 高級句子: ส่ง entry object มาตรงๆ (ข้าม lookup WORD_LIST) — Lin 2026-07-03
@@ -6846,8 +6822,21 @@ function tfRenderExtBar() {
   } catch(e) {}
 }
 
-render();
+// Lin 2026-07-10: เข้าเกมมาให้เริ่มเล่น 初級 คำแรกทันทีเหมือนเกมอื่น (ไม่ต้องกดเลือกระดับก่อน)
+TF.selectLevel(1);
 setTimeout(tfRenderExtBar, 0);
+
+// Lin 2026-07-10: ซ่อนแถบ page-strip ล่างจอเฉพาะตอนเบราว์เซอร์เข้าโหมดเต็มจอจริง (Fullscreen API)
+(function () {
+  function _syncFs() {
+    var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    document.body.classList.toggle('tf-is-fullscreen', isFs);
+  }
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
+    document.addEventListener(ev, _syncFs);
+  });
+  _syncFs();
+})();
 // มาจากคลัง (?word=) → เปิดหน้าค้นหา + ใส่คำนี้ + วิเคราะห์ให้เลยทันที — Lin 2026-07-02
 (function(){
   try{
