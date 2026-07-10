@@ -152,8 +152,14 @@ function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){r
 function safeHref(u){var s=String(u==null?'':u).trim();return /^https:\/\//i.test(s)?s:'#';}
 
 // 這位學生的「上課頁」連結（confirm 前打開會看到『等待老師確認』頁，confirm 後就是完整教室頁）
-function classroomLink(t){
-  return window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + '?s=' + encodeURIComponent(t);
+// 邏輯跟 index.html 的 buildStudentUrl() 保持一致：沒有 meet → 只帶 token；有 meet → 帶 token + base64(name) + base64(meet)
+// 注意：pay.html 是獨立頁面（跟 index.html 不同 JS 環境），不能讀 index.html 的 studentsCache，
+// 改用 pay.html 自己從 Supabase 撈回來的學生資料（render(s) 傳進來的 s）當資料來源
+function classroomLink(s){
+  var baseUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+  var t = (s && s.token) || token;
+  if (!s || !s.meet) return baseUrl + '?s=' + encodeURIComponent(t);
+  return baseUrl + '?s=' + encodeURIComponent(t) + '&n=' + btoa(encodeURIComponent(s.name)) + '&m=' + btoa(encodeURIComponent(s.meet));
 }
 
 var currentStudent = null;
@@ -201,7 +207,7 @@ function render(s){
     html += '<div class="card"><h2>📹 進入課堂</h2>' +
       '<a class="meet-btn" href="' + escHtml(safeHref(s.meet)) + '" target="_blank" rel="noopener">📹 點此進入課堂</a>' +
       '<p class="note">完整課堂功能（課表・收據・學習紀錄）請開啟你的上課頁：</p>' +
-      linkRow(classroomLink(token)) +
+      linkRow(classroomLink(s)) +
       '</div>';
   } else {
     // 付款方式（QR 直接顯示）
@@ -227,7 +233,7 @@ function render(s){
 
     // 上課連結（先給，但要老師確認才進得去）
     html += '<div class="card"><h2>🔗 你的上課連結</h2>' +
-      linkRow(classroomLink(token)) +
+      linkRow(classroomLink(s)) +
       '<p class="note">先存起來！老師 <b>確認收款</b> 後點進去就能上課、看課表和收據。</p>' +
       '</div>';
 
