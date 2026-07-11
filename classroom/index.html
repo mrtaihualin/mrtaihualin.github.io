@@ -3099,7 +3099,9 @@ function buildLineActionBtn(token, student) {
     var openUrl = 'https://liff.line.me/' + LIFF_ID + '?goto=classroom&s=' + encodeURIComponent(token);
     return '<a class="meet-btn" href="' + openUrl + '" style="margin-top:12px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));font-size:0.95rem;padding:12px 20px;">📲 在 LINE 中開啟</a>';
   }
-  var linkUrl = 'line-link.html?s=' + encodeURIComponent(token);
+  // 2026-07-11：改用 LIFF 連結（liff.line.me）而不是直接連 line-link.html —
+  // 學生在 LINE 裡點開會用「已登入的 LINE 身分」自動連結，完全不用打 email／密碼／驗證碼
+  var linkUrl = 'https://liff.line.me/' + LIFF_ID + '?goto=linkline&s=' + encodeURIComponent(token);
   return '<a class="meet-btn" href="' + linkUrl + '" style="margin-top:12px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));font-size:0.95rem;padding:12px 20px;">🔔 連結 LINE 帳號，上課前自動提醒</a>';
 }
 

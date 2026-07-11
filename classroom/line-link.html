@@ -84,12 +84,23 @@
         return;
       }
       if (!liff.isLoggedIn()) {
+        // 2026-07-11 讓學生「免輸入帳密／驗證碼自動登入」：
+        // 只要不是在 LINE App 內開啟（isInClient=false，例如在 LINE 聊天室點一般網址、或被丟到 ChatGPT/FB 的內建瀏覽器），
+        // 就把頁面導到 LIFF 連結（liff.line.me），改由 LINE App 開啟 →
+        // 已登入的 LINE 身分會自動帶入，完全不用打 email / 密碼 / 驗證碼。
+        // 用 sessionStorage 記一次，避免電腦版沒裝 LINE 時無限重導。
+        if (!liff.isInClient() && !sessionStorage.getItem('clsLiffAutoRedirect')) {
+          sessionStorage.setItem('clsLiffAutoRedirect', '1');
+          setStatus('正在用 LINE 開啟，請稍候…', 'wait');
+          window.location.replace('https://liff.line.me/' + window.LIFF_CONFIG.liffId + '?goto=linkline&s=' + encodeURIComponent(studentToken));
+          return;
+        }
+        // 已在 LINE App 內卻仍未登入（極少見），或已導過一次仍失敗（多半是電腦版沒裝 LINE）→ 走一般 LIFF 登入
         setStatus('請登入 LINE 以繼續…', 'wait');
-        // 2026-07-11 修正 400 Bad Request：redirectUri 一定要「以 Endpoint URL 開頭」才會過（LINE 官方規定），
-        // 現在這個 LIFF app 的 Endpoint URL 是 liff-open.html，所以不能直接指回 line-link.html 自己，
-        // 改成先繞回 liff-open.html?goto=linkline，它會再導回這裡（token 已經備份在 localStorage 了，不會遺失）
+        // redirectUri 一定要「以 Endpoint URL 開頭」才會過（LINE 官方規定），Endpoint URL 是 liff-open.html，
+        // 先繞回 liff-open.html?goto=linkline，它會再導回這裡（token 已備份在 localStorage，不會遺失）
         liff.login({ redirectUri: window.location.origin + '/classroom/liff-open.html?goto=linkline&s=' + encodeURIComponent(studentToken) });
-        return; // 登入後 LINE 會導回 liff-open.html，再自動轉回這頁，重新執行 main()
+        return;
       }
       setStatus('取得 LINE 身分中…', 'wait');
       var idToken = liff.getIDToken();
@@ -117,6 +128,7 @@
         document.getElementById('descText').textContent = '之後上課前 / 下課後，會自動收到這個 LINE 帳號的提醒訊息。';
         setStatus('可以關閉這個頁面了', 'ok');
         localStorage.removeItem('clsLineLinkToken'); // 連結成功後清掉，避免殘留
+        sessionStorage.removeItem('clsLiffAutoRedirect'); // 清掉自動重導旗標
       } catch (e) {
         setStatus('❌ 連結失敗：' + (e.message || e) + '（請檢查網路後重試）', 'err');
       }
