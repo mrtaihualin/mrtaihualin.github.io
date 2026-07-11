@@ -42,19 +42,18 @@
   .bk-head .eyebrow{display:block;font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);margin-bottom:6px;}
   .bk-head h1{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4.5vw,26px);font-weight:900;color:var(--white);margin:0;line-height:1.3;}
 
-  /* แถบ LINE */
-  .bk-line{background:var(--gold-light);padding:14px 22px;border-bottom:2px solid var(--gold-bright);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
-  .bk-line p{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:var(--ink-soft);margin:0;line-height:1.7;}
-  .bk-line p b{color:var(--gold-deep);font-weight:700;}
-  .bk-line .r{display:flex;align-items:center;gap:12px;flex-shrink:0;}
-  .bk-line .qr{background:var(--white);padding:6px;display:inline-block;}
-  .bk-line .qr img{width:66px;height:66px;display:block;}
-  .bk-line .line-btn{display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:13px;padding:11px 18px;text-decoration:none;white-space:nowrap;transition:filter .2s;}
-  .bk-line .line-btn:hover{filter:brightness(1.25);}
-
   /* iframe Cal.com */
-  .bk-frame{background:#fff;}
+  .bk-frame{background:#fff;position:relative;}
   .bk-frame iframe{width:100%;height:680px;border:none;display:block;}
+  .bk-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#fff;z-index:1;}
+  .bk-loading .spin{width:34px;height:34px;border:3px solid var(--gold-light);border-top-color:var(--gold-bright);border-radius:50%;animation:bk-spin .8s linear infinite;}
+  .bk-loading span{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);}
+  @keyframes bk-spin{to{transform:rotate(360deg)}}
+
+  /* แถบ LINE รอง (ย้ายไปไว้ใต้ปฏิทินแล้ว ไม่แข่งกับปุ่มจอง) */
+  .bk-line-secondary{padding:14px 20px 22px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;}
+  .bk-line-secondary img{width:38px;height:38px;border-radius:4px;opacity:.8;}
+  .bk-line-secondary a{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:var(--ink-muted);text-decoration:underline;}
 
   .bk-back{display:block;text-align:center;margin-top:26px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);text-decoration:none;}
   .bk-back:hover{color:var(--gold-bright);}
@@ -62,7 +61,6 @@
   @media(max-width:560px){
     .bk-wrap{padding:24px 12px 60px;}
     .bk-head{padding:18px 18px;}
-    .bk-line{padding:12px 16px;}
     .bk-frame iframe{height:760px;}
   }
 </style>
@@ -88,18 +86,17 @@
       <h1>首堂 30 分鐘・完全免費</h1>
     </div>
 
-    <div class="bk-line">
-      <p>📌 預約後請加老師 LINE 確認時間<br><b>老師 24 小時內回覆</b></p>
-      <div class="r">
-        <div class="qr">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://lin.ee/yVBgvywy" alt="LINE QR" loading="lazy">
-        </div>
-        <a class="line-btn" id="bk-line-btn" href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener">💬 加 LINE</a>
+    <div class="bk-frame">
+      <div class="bk-loading" id="cal-embed-inline-loading">
+        <div class="spin"></div>
+        <span>正在載入預約日曆⋯</span>
       </div>
+      <div id="cal-embed-inline" style="width:100%;min-height:680px;position:relative;z-index:0;"></div>
     </div>
 
-    <div class="bk-frame">
-      <div id="cal-embed-inline" style="width:100%;min-height:680px;"></div>
+    <div class="bk-line-secondary">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=https://lin.ee/yVBgvywy" alt="LINE QR" loading="lazy">
+      <a id="bk-line-btn" href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener">或先加 LINE 問老師 →</a>
     </div>
   </div>
 
@@ -122,6 +119,6 @@
     });
   })();
 </script>
-<script src="shared.js?v=21"></script>
+<script src="shared.js?v=22"></script>
 </body>
 </html>

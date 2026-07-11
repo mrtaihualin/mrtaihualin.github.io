@@ -98,11 +98,12 @@ h1,h2,h3{font-family:'Noto Serif TC',serif;}
     </div>
     <div id="slipCurrencyWrap" style="display:none;margin-top:12px;">
       <label class="settings-label">付款幣別</label>
-      <div style="display:flex;gap:8px;">
-        <button type="button" id="curBtn-NTD" onclick="selectSlipCurrency('NTD')">🇹🇼 NTD</button>
-        <button type="button" id="curBtn-THB" onclick="selectSlipCurrency('THB')">🇹🇭 THB</button>
-        <button type="button" id="curBtn-WISE" onclick="selectSlipCurrency('WISE')">🌍 Wise</button>
-      </div>
+      <select class="settings-input" id="curSelect" onchange="selectSlipCurrency(this.value)">
+        <option value="">— 請選擇 —</option>
+        <option value="NTD">🇹🇼 NTD 台幣（銀行轉帳）</option>
+        <option value="THB">🇹🇭 THB 泰銖（PromptPay）</option>
+        <option value="WISE">🌍 Wise（國際匯款）</option>
+      </select>
     </div>
     <div class="pay-total-box" id="slipTotalBox">
       <div class="big" id="slipTotalText"></div>
@@ -381,9 +382,7 @@ function openSlipModal(){
   document.getElementById('slipBankBox').style.display='none';
   document.getElementById('slipActualAmountWrap').style.display='none';
   document.getElementById('slipAmountWarning').style.display='none';
-  document.getElementById('curBtn-NTD').style.cssText=OFF_CUR;
-  document.getElementById('curBtn-THB').style.cssText=OFF_CUR;
-  document.getElementById('curBtn-WISE').style.cssText=OFF_CUR;
+  document.getElementById('curSelect').value='';
   document.getElementById('ctBtn-1on1').style.cssText=OFF_CUR;
   document.getElementById('ctBtn-pair').style.cssText=OFF_CUR;
   document.getElementById('slipTotalBox').style.display='none';
@@ -399,9 +398,7 @@ function selectSlipType(id){
   slipType=id; slipLessons=null; slipBonus=0; slipCurrency=null;
   document.querySelectorAll('#slipCourseGrid .course-card').forEach(function(el){ el.classList.remove('selected'); });
   var el=document.getElementById('sc-'+id); if(el) el.classList.add('selected');
-  document.getElementById('curBtn-NTD').style.cssText=OFF_CUR;
-  document.getElementById('curBtn-THB').style.cssText=OFF_CUR;
-  document.getElementById('curBtn-WISE').style.cssText=OFF_CUR;
+  document.getElementById('curSelect').value='';
   document.getElementById('slipTotalBox').style.display='none';
   document.getElementById('slipBankBox').style.display='none';
   document.getElementById('slipActualAmountWrap').style.display='none';
@@ -444,9 +441,7 @@ function selectSlipPack(n){
 }
 function selectSlipCurrency(cur){
   slipCurrency=cur;
-  document.getElementById('curBtn-NTD').style.cssText = cur==='NTD'?ON_CUR:OFF_CUR;
-  document.getElementById('curBtn-THB').style.cssText = cur==='THB'?ON_CUR:OFF_CUR;
-  document.getElementById('curBtn-WISE').style.cssText = cur==='WISE'?ON_CUR:OFF_CUR;
+  document.getElementById('curSelect').value = cur;
   if (slipType==='custom' && cur==='NTD'){
     var pricePerInput = document.getElementById('slipCustomPricePer');
     if (!pricePerInput.value){

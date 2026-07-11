@@ -459,12 +459,22 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     (function(C,A,L){let p=function(a,ar){a.q.push(ar);};let d=C.document;C.Cal=C.Cal||function(){let cal=C.Cal;let ar=arguments;if(!cal.loaded){cal.ns={};cal.q=cal.q||[];d.head.appendChild(d.createElement('script')).src=A;cal.loaded=true;}if(ar[0]===L){const api=function(){p(api,arguments);};const ns=ar[1];api.q=api.q||[];typeof ns==='string'?(cal.ns[ns]=api)&&p(api,ar):p(cal,ar);return;}p(cal,ar);};})(window,'https://app.cal.com/embed/embed.js','init');
     Cal('init',{origin:'https://cal.com'});
   }
+  // ── ซ่อน loading spinner ตอนปฏิทิน Cal.com พร้อมโชว์แล้ว (เพิ่ม 2026-07-11 กัน modal ค้างขาวว่าง) ──
+  function _hideCalLoading(){
+    ['cal-embed-modal-loading','cal-embed-inline-loading'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.style.display='none';
+    });
+  }
   function _bindCalSuccess(){
     if(_calBound) return;
     _calBound = true;
+    // linkReady = ปฏิทินโหลดเสร็จพร้อมโชว์แล้ว (event ทางการของ Cal.com embed)
+    Cal('on',{action:'linkReady',callback:_hideCalLoading});
     Cal('on',{action:'bookingSuccessful',callback:function(){
       // ✅ การจองสำเร็จจริง → ยิง GA4 (เดิมไม่เคยยิงเพราะใช้ iframe ดิบ)
       if(typeof gtag==='function'){ gtag('event','book_trial_submit',{ source_page: location.pathname }); }
+      _hideCalLoading();
       var bv=document.getElementById('cal-booking-view');
       var sv=document.getElementById('cal-success-view');
       if(bv) bv.style.display='none';
@@ -479,6 +489,8 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     _loadCalLib();
     _bindCalSuccess();
     Cal('inline',{elementOrSelector:selector,calLink:'mrtaihualin/trial',config:{layout:'month_view',theme:'light'}});
+    // กันเหนียว: บั๊กที่รู้กันของ Cal.com คือบางทีไม่ยิง linkReady ให้ → ซ่อน loading เองหลัง 5 วิ กันโชว์ค้างตลอดไป
+    setTimeout(_hideCalLoading, 5000);
   };
   // หน้า trial.html ฝังปฏิทินแบบ inline บนหน้า (#cal-embed-inline) → mount อัตโนมัติเมื่อโหลด
   (function(){
@@ -996,20 +1008,20 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
       </div>
       <button class="modal-close" onclick="closeModal('modal-line-qr')" style="position:static;color:rgba(255,255,255,0.5);font-size:22px;background:none;border:none;cursor:pointer;padding:4px 8px;">✕</button>
     </div>
-    <div style="background:var(--gold-light);padding:12px 20px;border-bottom:2px solid var(--gold-bright);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-soft);margin:0;line-height:1.7;">📌 預約後請加老師 LINE 確認時間<br><span style="color:var(--gold-deep);font-weight:700;">老師 24 小時內回覆</span></p>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <div style="background:var(--white);padding:6px;display:inline-block;border-radius:8px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:64px;height:64px;display:block;border-radius:4px;" loading="lazy">
-        </div>
-        <a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" onclick="window.gtag&&gtag('event','add_line',{source:'modal_line_qr'})" style="display:inline-block;background:var(--ink);color:var(--white);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:13px;padding:10px 16px;text-decoration:none;white-space:nowrap;border-radius:8px;">💬 加 LINE</a>
+    <div style="background:#fff;position:relative;">
+      <div id="cal-embed-modal-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#fff;z-index:1;">
+        <div style="width:34px;height:34px;border:3px solid var(--gold-light,#F3E4C2);border-top-color:var(--gold-bright,#C8973A);border-radius:50%;animation:cal-spin .8s linear infinite;"></div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted,#6b6b6b);">正在載入預約日曆⋯</div>
       </div>
+      <div id="cal-embed-modal" style="width:100%;min-height:480px;position:relative;z-index:0;"></div>
     </div>
-    <div style="background:#fff;">
-      <div id="cal-embed-modal" style="width:100%;min-height:480px;"></div>
+    <div style="padding:14px 20px 18px;border-top:1px solid var(--border,rgba(139,99,16,0.18));display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:38px;height:38px;border-radius:4px;opacity:.8;" loading="lazy">
+      <a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" onclick="window.gtag&&gtag('event','add_line',{source:'modal_line_qr'})" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted,#6b6b6b);text-decoration:underline;">或先加 LINE 問老師 →</a>
     </div>
   </div>
-</div>`;
+</div>
+<style>@keyframes cal-spin{to{transform:rotate(360deg)}}</style>`;
   }
 
   if (!document.getElementById('modal-social')) {

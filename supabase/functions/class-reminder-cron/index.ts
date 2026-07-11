@@ -137,27 +137,46 @@ serve(async (req) => {
     const studentMap = {};
     (students || []).forEach(s => { studentMap[s.token] = s; });
 
+    // 2026-07-11 加：มีบั๊กอีกจุดในระบบ sync ปฏิทิน (ฝั่งเว็บครู) ทำให้บางทีมีแถวซ้ำหลายอันใน
+    // classroom_schedule สำหรับคาบเดียวกันจริง (token+วันที่เดียวกัน) — กำลังตามแก้ต้นตอแยกอยู่
+    // แต่ตรงนี้ป้องกันไว้ก่อนไม่ให้นักเรียนโดนส่งแจ้งเตือนคาบเดียวกันซ้ำๆ หลายรอบจากแถวซ้ำพวกนั้น
+    // วิธี: จัดกลุ่มตาม token+lesson_date ก่อน ส่งแค่ 1 ครั้งต่อกลุ่ม แล้วมาร์ค "ส่งแล้ว" ทุกแถวในกลุ่มพร้อมกัน
+    const groups = {};
+    for (const row of rows) {
+      const key = row.token + '|' + row.lesson_date;
+      (groups[key] = groups[key] || []).push(row);
+    }
+
     let sentCount = 0, skipCount = 0, errCount = 0;
 
-    for (const row of rows) {
-      const s = studentMap[row.token];
-      if (!s || !s.line_user_id) { skipCount++; continue; } // ยังไม่เชื่อม LINE → ข้าม ไม่ error
+    for (const key in groups) {
+      const groupRows = groups[key];
+      const s = studentMap[groupRows[0].token];
+      if (!s || !s.line_user_id) { skipCount += groupRows.length; continue; } // ยังไม่เชื่อม LINE → ข้าม ไม่ error
 
-      const startMs = localToUtcMs(row.lesson_date, row.start_time, tz);
-      if (startMs == null) { skipCount++; continue; } // ไม่รู้เวลาแน่ชัด (เช่น all-day) → ข้าม กันเตือนผิดเวลา
+      // หาแถวตัวแทนกลุ่ม：แถวแรกที่อ่านเวลาออก (เผื่อในกลุ่มมีทั้งแถวรูปแบบเก่า/ใหม่ปนกัน)
+      let repRow = null, startMs = null;
+      for (const r of groupRows) {
+        const ms = localToUtcMs(r.lesson_date, r.start_time, tz);
+        if (ms != null) { repRow = r; startMs = ms; break; }
+      }
+      if (!repRow) { skipCount += groupRows.length; continue; } // ไม่รู้เวลาแน่ชัดสักแถวเลย → ข้าม กันเตือนผิดเวลา
 
-      const normalizedEndTime = normalizeTimeStr(row.end_time);
+      const normalizedEndTime = normalizeTimeStr(repRow.end_time);
       const endMs = normalizedEndTime
-        ? localToUtcMs(row.lesson_date, row.end_time, tz)
+        ? localToUtcMs(repRow.lesson_date, repRow.end_time, tz)
         : startMs + FOLLOWUP_AFTER_MIN * 60000;
 
-      // 1) เตือนก่อนเรียน：อยู่ในหน้าต่าง [start - 30min, start] และยังไม่เคยส่ง
-      if (!row.line_reminder_sent) {
+      const idsNeedReminder = groupRows.filter(r => !r.line_reminder_sent).map(r => r.id);
+      const idsNeedFollowup = groupRows.filter(r => !r.line_followup_sent).map(r => r.id);
+
+      // 1) เตือนก่อนเรียน：อยู่ในหน้าต่าง [start - 30min, start] และยังไม่เคยส่ง (สักแถวในกลุ่ม)
+      if (idsNeedReminder.length) {
         const minutesToStart = (startMs - nowMs) / 60000;
         if (minutesToStart <= REMINDER_BEFORE_MIN && minutesToStart >= -CATCH_WINDOW_MIN) {
           try {
             // ใช้เวลาที่ normalize แล้ว (24 ชม.ล้วน) ตอนโชว์ให้นักเรียนเห็นในข้อความ LINE เสมอ กันโชว์ปนกัน
-            const timeLabel = (normalizeTimeStr(row.start_time) || row.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
+            const timeLabel = (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
             if (s.meet) {
               // 2026-07-11 改：Flex Message + 一顆「進入 Google Meet」按鈕（金色主題）
               await pushLineMessages(channelToken, s.line_user_id, [buildReminderFlex(timeLabel, s.meet)]);
@@ -166,20 +185,21 @@ serve(async (req) => {
               await pushLine(channelToken, s.line_user_id,
                 '📢 提醒：等一下 ' + timeLabel + ' 有泰語課囉！\n老師還在準備課堂連結，請直接聯絡老師 ✨');
             }
-            await supabase.from('classroom_schedule').update({ line_reminder_sent: true }).eq('id', row.id);
+            // มาร์คว่าส่งแล้ว "ทุกแถวในกลุ่ม" กันแถวซ้ำที่เหลือมาส่งซ้ำอีกในรอบถัดไป
+            await supabase.from('classroom_schedule').update({ line_reminder_sent: true }).in('id', idsNeedReminder);
             sentCount++;
           } catch (e) { errCount++; }
         }
       }
 
-      // 2) 下課後訊息：過了下課時間，且還沒發過
-      if (!row.line_followup_sent) {
+      // 2) 下課後訊息：過了下課時間，且還沒發過（分組裡任一筆）
+      if (idsNeedFollowup.length) {
         const minutesSinceEnd = (nowMs - endMs) / 60000;
         if (minutesSinceEnd >= 0 && minutesSinceEnd <= CATCH_WINDOW_MIN) {
           try {
             await pushLine(channelToken, s.line_user_id,
               '🎉 今天的泰語課辛苦了！\n記得複習今天學的內容，有問題歡迎回來問老師喔 💬');
-            await supabase.from('classroom_schedule').update({ line_followup_sent: true }).eq('id', row.id);
+            await supabase.from('classroom_schedule').update({ line_followup_sent: true }).in('id', idsNeedFollowup);
             sentCount++;
           } catch (e) { errCount++; }
         }

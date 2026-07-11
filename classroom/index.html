@@ -529,11 +529,12 @@
     </div>
     <div id="slipCurrencyWrap" style="display:none;margin-top:14px;">
       <label class="settings-label">付款幣別</label>
-      <div style="display:flex;gap:8px;">
-        <button type="button" id="curBtn-NTD" onclick="selectSlipCurrency('NTD')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🇹🇼 NTD</button>
-        <button type="button" id="curBtn-THB" onclick="selectSlipCurrency('THB')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🇹🇭 THB</button>
-        <button type="button" id="curBtn-WISE" onclick="selectSlipCurrency('WISE')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🌍 Wise</button>
-      </div>
+      <select class="settings-input" id="curSelect" onchange="selectSlipCurrency(this.value)">
+        <option value="">— 請選擇 —</option>
+        <option value="NTD">🇹🇼 NTD 台幣（銀行轉帳）</option>
+        <option value="THB">🇹🇭 THB 泰銖（PromptPay）</option>
+        <option value="WISE">🌍 Wise（國際匯款）</option>
+      </select>
     </div>
     <div class="pay-total-box" id="slipTotalBox">
       <div class="big" id="slipTotalText"></div>
@@ -639,10 +640,14 @@
 
     <div id="payCurrencyWrap" style="display:none;margin-top:14px;">
       <label class="settings-label">付款幣別</label>
-      <div style="display:flex;gap:8px;">
-        <button type="button" id="curPay-NTD" onclick="selectPayCurrency('NTD')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🇹🇼 NTD 台幣</button>
-        <button type="button" id="curPay-THB" onclick="selectPayCurrency('THB')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #e5d9b8;background:#fff;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:0.86rem;">🇹🇭 THB 泰銖</button>
-      </div>
+      <!-- 2026-07-11：id 故意跟下面「自訂」流程的 id="payCurrency" 分開（payCurrencySelect），
+           避免同一頁面出現兩個一樣的 id（selectPayCurrency() 裡面本來就會把值同步寫回
+           id="payCurrency" 那個 select，兩邊流程共用同一份實際資料，只是各自有自己的下拉選單）。 -->
+      <select class="settings-input" id="payCurrencySelect" onchange="selectPayCurrency(this.value)">
+        <option value="">— 請選擇 —</option>
+        <option value="NTD">🇹🇼 NTD 台幣</option>
+        <option value="THB">🇹🇭 THB 泰銖</option>
+      </select>
     </div>
 
     <div id="payCustomWrap" style="display:none;margin-top:6px;">
@@ -757,7 +762,7 @@
       </div>
       <div style="flex:1;">
         <label class="settings-label">上課時間</label>
-        <input class="settings-input" type="time" id="genClassTime" step="1800" onchange="onGenScheduleChange()" />
+        <input class="settings-input" type="time" id="genClassTime" step="60" onchange="onGenScheduleChange()" />
       </div>
     </div>
 
@@ -1762,14 +1767,24 @@ function populateGenCourseDropdown() {
 }
 function onGenCourseChange() {
   const courseId = document.getElementById('genCourse').value;
-  const packSel = document.getElementById('genPack');
+  let packSel = document.getElementById('genPack');
   const preview = document.getElementById('genCoursePreview');
   if (courseId === 'custom') {
-    // 自訂單堂購買沒有固定堂數方案，不用選「堂數方案」——學生會在繳費頁自己填堂數＋單價。
-    packSel.innerHTML = '';
+    // 2026-07-11 改（Lin 要求）：自訂方案的堂數以前完全不填，留給學生自己在繳費頁決定；
+    // 現在改成老師這裡就直接「輸入堂數」（換成數字輸入框，跟原本的堂數下拉共用 id="genPack"，
+    // 這樣 genLinkAddStudent() 讀 .value 的地方完全不用改）。
+    if (packSel.tagName !== 'INPUT') {
+      packSel.outerHTML = '<input class="settings-input" type="number" id="genPack" min="1" step="1" placeholder="輸入堂數" oninput="onGenPackChange()" />';
+    } else {
+      packSel.value = '';
+    }
     preview.style.display = 'block';
-    preview.textContent = '💡 不鎖定堂數，學生會在繳費頁自行選擇單堂購買（一對一／雙人共學）＋填堂數與單價。';
+    preview.textContent = '💡 自訂方案：請直接輸入這期共幾堂課（單價／一對一或雙人共學，學生會在繳費頁自己選）。';
     return;
+  }
+  if (packSel.tagName !== 'SELECT') {
+    packSel.outerHTML = '<select class="settings-input" id="genPack" onchange="onGenPackChange()"></select>';
+    packSel = document.getElementById('genPack');
   }
   const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
   if (!c) { packSel.innerHTML = ''; preview.style.display = 'none'; return; }
@@ -1778,7 +1793,7 @@ function onGenCourseChange() {
 }
 function onGenPackChange() {
   const courseId = document.getElementById('genCourse').value;
-  if (courseId === 'custom') return; // 自訂沒有堂數方案，預覽文字已在 onGenCourseChange 設定過
+  if (courseId === 'custom') return; // 自訂堂數：老師自己輸入，不用算價格預覽（單價未知，留給學生繳費頁決定）
   const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
   const preview = document.getElementById('genCoursePreview');
   if (!c) { preview.style.display = 'none'; return; }
@@ -1817,7 +1832,18 @@ async function genLinkAddStudent() {
   const startDate  = document.getElementById('genStartDate').value || null; // 老師自己時區的日期
   const classTime  = document.getElementById('genClassTime').value || null; // 老師自己時區的時間
   const studentTz  = document.getElementById('genStudentTz').value || null;
-  const recurring  = document.getElementById('genWeeklyRecurring').checked && !!(startDate && classTime);
+  const recurringChecked = document.getElementById('genWeeklyRecurring').checked;
+  // 2026-07-11 修 bug（Lin 回報：明明有勾「每週固定上課」，Google Calendar 卻沒有每週重複）：
+  // 真正原因查到了——之前這裡只要「開課日期」或「上課時間」有一個沒填，就會悄悄把 recurring
+  // 改成 false，完全不會提醒老師。結果 Lin 只填了日期、忘了填時間，勾勾照樣打勾，
+  // 但存進資料庫的 pending_recurring 卻默默變成 false，老師完全不知道。
+  // 改法：勾了「每週固定上課」卻沒把日期+時間兩個都填齊 → 直接擋下來、跳出明確提醒，
+  // 不讓它悄悄退化成「不重複」（RELIABILITY FIRST：失敗要吵，不能默默吞掉）。
+  if (recurringChecked && (!startDate || !classTime)) {
+    alert('⚠️ 已勾選「🔁 每週固定上課」，但「開課日期」或「上課時間」還沒填齊。\n兩個都要填，系統才能真的設定成每週重複；否則請取消勾選「每週固定上課」再送出。');
+    return;
+  }
+  const recurring  = recurringChecked && !!(startDate && classTime);
 
   const saveBtn = document.getElementById('genModalSubmitBtn');
   saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
@@ -3354,9 +3380,7 @@ function openSlipModal(token, lock) {
   document.getElementById('slipBankBox').style.display = 'none';
   document.getElementById('slipActualAmountWrap').style.display = 'none';
   document.getElementById('slipAmountWarning').style.display = 'none';
-  document.getElementById('curBtn-NTD').style.cssText = OFF_CUR;
-  document.getElementById('curBtn-THB').style.cssText = OFF_CUR;
-  document.getElementById('curBtn-WISE').style.cssText = OFF_CUR;
+  document.getElementById('curSelect').value = '';
   document.getElementById('ctBtn-1on1').style.cssText = OFF_CUR;
   document.getElementById('ctBtn-pair').style.cssText = OFF_CUR;
   document.getElementById('slipTotalBox').style.display = 'none';
@@ -3373,9 +3397,7 @@ function selectSlipType(id) {
   document.querySelectorAll('#slipCourseGrid .course-card').forEach(function(el) { el.classList.remove('selected'); });
   var el = document.getElementById('sc-' + id);
   if (el) el.classList.add('selected');
-  document.getElementById('curBtn-NTD').style.cssText = OFF_CUR;
-  document.getElementById('curBtn-THB').style.cssText = OFF_CUR;
-  document.getElementById('curBtn-WISE').style.cssText = OFF_CUR;
+  document.getElementById('curSelect').value = '';
   document.getElementById('slipTotalBox').style.display = 'none';
   document.getElementById('slipBankBox').style.display = 'none';
   document.getElementById('slipActualAmountWrap').style.display = 'none';
@@ -3430,9 +3452,7 @@ function selectSlipPack(n) {
 // 3) 選幣別 → 顯示金額 + 帳戶
 function selectSlipCurrency(cur) {
   slipCurrency = cur;
-  document.getElementById('curBtn-NTD').style.cssText = cur === 'NTD' ? ON_CUR : OFF_CUR;
-  document.getElementById('curBtn-THB').style.cssText = cur === 'THB' ? ON_CUR : OFF_CUR;
-  document.getElementById('curBtn-WISE').style.cssText = cur === 'WISE' ? ON_CUR : OFF_CUR;
+  document.getElementById('curSelect').value = cur;
   if (slipType === 'custom' && cur === 'NTD') {
     var pricePerInput = document.getElementById('slipCustomPricePer');
     if (!pricePerInput.value) {
@@ -4129,8 +4149,7 @@ function openPaymentModal(token) {
   document.getElementById('payPackGrid').innerHTML = '';
   document.getElementById('payCurrencyWrap').style.display = 'none';
   document.getElementById('payCustomWrap').style.display = 'none';
-  document.getElementById('curPay-NTD').style.cssText = OFF_CUR;
-  document.getElementById('curPay-THB').style.cssText = OFF_CUR;
+  document.getElementById('payCurrencySelect').value = '';
   document.getElementById('payLessons').value = '';
   document.getElementById('payBonus').value = '0';
   document.getElementById('payCurrency').value = 'THB';
@@ -4166,8 +4185,7 @@ function selectPayType(id) {
   }).join('');
   document.getElementById('payPackWrap').style.display = 'block';
   document.getElementById('payCurrencyWrap').style.display = 'none';
-  document.getElementById('curPay-NTD').style.cssText = OFF_CUR;
-  document.getElementById('curPay-THB').style.cssText = OFF_CUR;
+  document.getElementById('payCurrencySelect').value = '';
   document.getElementById('payLessons').value = '';
   document.getElementById('payBonus').value = '0';
   document.getElementById('payPricePer').value = '';
@@ -4187,8 +4205,7 @@ function selectPayPack(n) {
 
 function selectPayCurrency(cur) {
   document.getElementById('payCurrency').value = cur;
-  document.getElementById('curPay-NTD').style.cssText = cur === 'NTD' ? ON_CUR : OFF_CUR;
-  document.getElementById('curPay-THB').style.cssText = cur === 'THB' ? ON_CUR : OFF_CUR;
+  document.getElementById('payCurrencySelect').value = cur;
   var c = COURSE_TYPES.find(function(x) { return x.id === paySelectedCourse; });
   if (c) { var pp = cur === 'NTD' ? c.priceNTD : c.priceTHB; document.getElementById('payPricePer').value = pp || ''; }
   updatePayTotal();
@@ -4420,14 +4437,29 @@ async function syncScheduleToSupabase(matched) {
   try {
     const todayIso = teacherToday();
     // ล้างคาบอนาคตเดิมทิ้งก่อน (กันคาบที่ยกเลิก/เลื่อนค้าง) แล้วเขียนชุดใหม่
-    await sb.from('classroom_schedule').delete().gte('lesson_date', todayIso);
+    // 2026-07-11 แก้：ต้องเช็ค error ของการลบด้วยเสมอ — ก่อนหน้านี้ไม่เช็ค ถ้าโดน RLS บล็อกการลบ
+    // จะ "ลบได้ 0 แถว" แบบเงียบๆ ไม่มี error โผล่ แล้วทุกครั้งที่ sync จะเขียนซ้ำทับถมเพิ่มเรื่อยๆ
+    // จนคาบเดียวกันมีหลายแถวในฐานข้อมูล ทำให้ระบบแจ้งเตือน LINE ส่งซ้ำหลายรอบให้นักเรียนคนเดียว
+    // (RELIABILITY FIRST：ห้ามล้มเหลวแบบเงียบๆ เด็ดขาด)
+    const { error: delError } = await sb.from('classroom_schedule').delete({ count: 'exact' }).gte('lesson_date', todayIso);
+    if (delError) {
+      console.error('ล้างตารางเก่าไม่สำเร็จ:', delError.message);
+      alert('⚠️ ซิงค์ตารางไม่สำเร็จ：ล้างข้อมูลเก่าไม่ได้ (' + delError.message + ')\nรอบนี้จะไม่เขียนข้อมูลใหม่ กันคาบซ้ำเพิ่ม กรุณาแคปหน้าจอนี้แจ้ง Lin/AI ให้ตรวจสอบ');
+      return; // ลบไม่สำเร็จ → ไม่ insert ต่อ กันข้อมูลซ้ำเพิ่มอีก
+    }
     if (!matched || !matched.length) return;
     const rows = matched.map(function(m) {
       return { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.s.name };
     });
     const { error } = await sb.from('classroom_schedule').insert(rows);
-    if (error) console.warn('ซิงค์ตารางลง Supabase ไม่สำเร็จ:', error.message);
-  } catch (e) { console.warn('syncScheduleToSupabase error:', e); }
+    if (error) {
+      console.warn('ซิงค์ตารางลง Supabase ไม่สำเร็จ:', error.message);
+      alert('⚠️ ซิงค์ตารางไม่สำเร็จ（เขียนข้อมูลใหม่ไม่ได้）：' + error.message);
+    }
+  } catch (e) {
+    console.warn('syncScheduleToSupabase error:', e);
+    alert('⚠️ ซิงค์ตารางเกิดข้อผิดพลาด：' + (e.message || e));
+  }
 }
 
 async function openAttendanceHistory(token) {
