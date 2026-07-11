@@ -73,8 +73,25 @@ function buildReminderFlex(timeLabel, meetUrl) {
   };
 }
 
+// 2026-07-11 加：มีบั๊กที่อื่นในระบบ (ฝั่ง sync ปฏิทิน) ทำให้บางแถวใน classroom_schedule.start_time
+// หลุดมาเป็นรูปแบบ "上午10:00" / "下午02:00" (12 ชม. + คำนำหน้าเช้า/บ่าย) แทนที่จะเป็น "10:00" ตรงๆ —
+// ยังหาสาเหตุต้นตอไม่เจอ 100% แต่เพื่อความชัวร์ที่สุด (RELIABILITY FIRST) ฟังก์ชันนี้ต้องอ่านได้ทั้ง 2 แบบ
+// ไม่งั้นถ้าเจอรูปแบบเก่าอีกจากสาเหตุไหนก็ตาม จะข้ามคาบนั้นไปเงียบๆ ไม่ส่งแจ้งเตือนเลย
+function normalizeTimeStr(timeStr) {
+  if (!timeStr) return null;
+  const m = String(timeStr).trim().match(/^(上午|下午)?\s*(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const period = m[1];
+  let hour = parseInt(m[2], 10);
+  const min = m[3];
+  if (period === '上午' && hour === 12) hour = 0;       // 上午12:00 = เที่ยงคืน
+  else if (period === '下午' && hour !== 12) hour += 12; // 下午1:00–11:00 = 13:00–23:00 (下午12:00 = เที่ยง ไม่บวก)
+  return String(hour).padStart(2, '0') + ':' + min;
+}
+
 // แปลง lesson_date + "HH:MM" ให้เป็นเวลาจริง (UTC) โดยตีความว่า HH:MM คือเวลาท้องถิ่นตาม tz ที่กำหนด
-function localToUtcMs(dateStr, timeStr, tz) {
+function localToUtcMs(dateStr, rawTimeStr, tz) {
+  const timeStr = normalizeTimeStr(rawTimeStr);
   if (!timeStr || !/^\d{1,2}:\d{2}/.test(timeStr)) return null;
   // หา offset ของ timezone นั้น ณ วันที่นี้ (กัน DST เพี้ยน แม้ Asia/Bangkok, Asia/Taipei จะไม่มี DST ก็ตาม เผื่ออนาคตเปลี่ยน tz)
   const probe = new Date(dateStr + 'T' + timeStr + ':00Z');
@@ -129,7 +146,8 @@ serve(async (req) => {
       const startMs = localToUtcMs(row.lesson_date, row.start_time, tz);
       if (startMs == null) { skipCount++; continue; } // ไม่รู้เวลาแน่ชัด (เช่น all-day) → ข้าม กันเตือนผิดเวลา
 
-      const endMs = (row.end_time && /^\d{1,2}:\d{2}/.test(row.end_time))
+      const normalizedEndTime = normalizeTimeStr(row.end_time);
+      const endMs = normalizedEndTime
         ? localToUtcMs(row.lesson_date, row.end_time, tz)
         : startMs + FOLLOWUP_AFTER_MIN * 60000;
 
@@ -138,7 +156,8 @@ serve(async (req) => {
         const minutesToStart = (startMs - nowMs) / 60000;
         if (minutesToStart <= REMINDER_BEFORE_MIN && minutesToStart >= -CATCH_WINDOW_MIN) {
           try {
-            const timeLabel = row.start_time + (row.end_time ? '–' + row.end_time : '');
+            // ใช้เวลาที่ normalize แล้ว (24 ชม.ล้วน) ตอนโชว์ให้นักเรียนเห็นในข้อความ LINE เสมอ กันโชว์ปนกัน
+            const timeLabel = (normalizeTimeStr(row.start_time) || row.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
             if (s.meet) {
               // 2026-07-11 改：Flex Message + 一顆「進入 Google Meet」按鈕（金色主題）
               await pushLineMessages(channelToken, s.line_user_id, [buildReminderFlex(timeLabel, s.meet)]);
