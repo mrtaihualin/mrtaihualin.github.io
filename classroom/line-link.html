@@ -84,22 +84,22 @@
         return;
       }
       if (!liff.isLoggedIn()) {
-        // 2026-07-11 讓學生「免輸入帳密／驗證碼自動登入」：
-        // 只要不是在 LINE App 內開啟（isInClient=false，例如在 LINE 聊天室點一般網址、或被丟到 ChatGPT/FB 的內建瀏覽器），
-        // 就把頁面導到 LIFF 連結（liff.line.me），改由 LINE App 開啟 →
-        // 已登入的 LINE 身分會自動帶入，完全不用打 email / 密碼 / 驗證碼。
-        // 用 sessionStorage 記一次，避免電腦版沒裝 LINE 時無限重導。
-        if (!liff.isInClient() && !sessionStorage.getItem('clsLiffAutoRedirect')) {
+        // 2026-07-11 關鍵修正 400 Bad Request：
+        //   400 / email 錯誤 / 驗證碼都只會出現在「access.line.me 網頁登入」那一頁，
+        //   而那頁只有在「不是用 LINE App 開這個 LIFF」時（liff.login 網頁流程）才會跑到。
+        //   → 所以只要還沒登入，就一律先把頁面導去 liff 連結，改由「LINE App」開啟，
+        //     用手機裡已經登入的 LINE 身分自動帶入，完全不用打帳號 / 密碼 / 驗證碼，也永遠碰不到 access.line.me。
+        //   完全不再呼叫 liff.login()（網頁登入）——那正是會 400 的來源。
+        //   sessionStorage 記一次，避免電腦版 / 沒裝 App 時無限重導。
+        if (!sessionStorage.getItem('clsLiffAutoRedirect')) {
           sessionStorage.setItem('clsLiffAutoRedirect', '1');
           setStatus('正在用 LINE 開啟，請稍候…', 'wait');
           window.location.replace('https://liff.line.me/' + window.LIFF_CONFIG.liffId + '?goto=linkline&s=' + encodeURIComponent(studentToken));
           return;
         }
-        // 已在 LINE App 內卻仍未登入（極少見），或已導過一次仍失敗（多半是電腦版沒裝 LINE）→ 走一般 LIFF 登入
-        setStatus('請登入 LINE 以繼續…', 'wait');
-        // redirectUri 一定要「以 Endpoint URL 開頭」才會過（LINE 官方規定），Endpoint URL 是 liff-open.html，
-        // 先繞回 liff-open.html?goto=linkline，它會再導回這裡（token 已備份在 localStorage，不會遺失）
-        liff.login({ redirectUri: window.location.origin + '/classroom/liff-open.html?goto=linkline&s=' + encodeURIComponent(studentToken) });
+        // 已導過一次仍未登入（多半是電腦版、或手機沒裝 LINE App）→ 不走網頁登入，改給按鈕請他用手機 LINE App 開，最穩不會壞。
+        actionEl.innerHTML = '<a class="btn" href="https://liff.line.me/' + window.LIFF_CONFIG.liffId + '?goto=linkline&s=' + encodeURIComponent(studentToken) + '">📲 用手機 LINE App 開啟</a>';
+        setStatus('請用手機的 LINE App 打開這個連結來完成連結（完全不用打帳號密碼）', 'err');
         return;
       }
       setStatus('取得 LINE 身分中…', 'wait');
