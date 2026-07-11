@@ -103,9 +103,12 @@
         return;
       }
       setStatus('取得 LINE 身分中…', 'wait');
-      var idToken = liff.getIDToken();
-      if (!idToken) {
-        setStatus('❌ 拿不到 LINE 身分資訊，請確認 LIFF 有開啟 openid scope', 'err');
+      // 2026-07-11 改用 access token（不用 idToken）：
+      //   LINE 官方限制 idToken 1 小時就過期、且重新登入也不會換新 → 常常 "IdToken expired"。
+      //   access token 由 LIFF SDK 自動維護，後端再拿去跟 LINE 驗證身分，穩定不會過期壞掉。
+      var accessToken = liff.getAccessToken();
+      if (!accessToken) {
+        setStatus('❌ 拿不到 LINE 身分資訊，請重新從課堂頁面點一次連結', 'err');
         return;
       }
       setStatus('連結中…', 'wait');
@@ -117,7 +120,7 @@
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
           },
-          body: JSON.stringify({ token: studentToken, idToken: idToken })
+          body: JSON.stringify({ token: studentToken, accessToken: accessToken })
         });
         var data = await res.json().catch(function(){ return {}; });
         if (!res.ok || !data.ok) {

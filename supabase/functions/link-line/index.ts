@@ -39,9 +39,9 @@ serve(async (req) => {
   }
 
   try {
-    const { token, idToken } = await req.json();
-    if (!token || !idToken) {
-      return new Response(JSON.stringify({ error: 'missing token/idToken' }), {
+    const { token, accessToken } = await req.json();
+    if (!token || !accessToken) {
+      return new Response(JSON.stringify({ error: 'missing token/accessToken' }), {
         status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
       });
     }
@@ -53,22 +53,40 @@ serve(async (req) => {
       });
     }
 
-    // 1) ยืนยัน idToken กับ LINE เอง — ห้ามเชื่อ userId ที่ browser ส่งมาตรงๆ เด็ดขาด
-    const verifyRes = await fetch('https://api.line.me/oauth2/v2.1/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ id_token: idToken, client_id: liffChannelId }),
-    });
+    // 2026-07-11 改用 access token（不用 idToken）：idToken 1 小時就過期常壞（"IdToken expired"），
+    //   access token 由 LIFF SDK 自動維護。安全性一樣：browser 無法偽造有效的 LINE token。
+    // 1) 先跟 LINE 驗證這個 access token「是不是發給我們這個 channel 的、還沒過期」
+    const verifyRes = await fetch(
+      'https://api.line.me/oauth2/v2.1/verify?access_token=' + encodeURIComponent(accessToken)
+    );
     if (!verifyRes.ok) {
       const errText = await verifyRes.text();
-      return new Response(JSON.stringify({ error: 'LINE idToken verify failed', detail: errText }), {
+      return new Response(JSON.stringify({ error: 'LINE access token verify failed', detail: errText }), {
         status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
       });
     }
     const verified = await verifyRes.json();
-    const lineUserId = verified.sub; // "sub" claim = LINE userId ที่ยืนยันแล้วจริง
+    // client_id 一定要等於我們自己的 channel ID，否則是別的 channel 的 token 偷拿來用
+    if (String(verified.client_id) !== String(liffChannelId)) {
+      return new Response(JSON.stringify({ error: 'channel mismatch', detail: 'token client_id=' + verified.client_id }), {
+        status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    }
+
+    // 2) 用已驗證的 access token 跟 LINE 拿「真正的 userId」（browser 無法偽造）
+    const profRes = await fetch('https://api.line.me/v2/profile', {
+      headers: { Authorization: 'Bearer ' + accessToken },
+    });
+    if (!profRes.ok) {
+      const errText = await profRes.text();
+      return new Response(JSON.stringify({ error: 'LINE profile fetch failed', detail: errText }), {
+        status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    }
+    const prof = await profRes.json();
+    const lineUserId = prof.userId; // LINE 驗證過的真正 userId
     if (!lineUserId) {
-      return new Response(JSON.stringify({ error: 'no sub claim in verified token' }), {
+      return new Response(JSON.stringify({ error: 'no userId from LINE profile' }), {
         status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
       });
     }
