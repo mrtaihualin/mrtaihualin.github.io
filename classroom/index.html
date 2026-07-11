@@ -1930,7 +1930,24 @@ async function repairMeet(token) {
   var s = studentsCache[token];
   if (!s) return;
   if (!confirm('要為「' + s.name + '」建立課堂 Meet 連結嗎？（會同時把學生設為已開通）')) return;
+  // 2026-07-11：跟「確認收款」共用同一把鎖（_studentSetupLocks），避免 Lin 同時點這顆按鈕
+  // 和「確認收款」（或開兩個分頁各點一次）→ 兩邊各自建一份 Meet + 時刻表，變成重複資料。
+  if (_studentSetupLocks.has(token)) { alert('這位學生正在建立課堂連結中，請稍等一下再試一次。'); return; }
+  _studentSetupLocks.add(token);
   try {
+    // 動手前先問資料庫最新狀態，如果剛好已經有別的地方建好了（例如同時點了確認收款），
+    // 就直接沿用，不要再建第二次。
+    try {
+      var freshRes = await sb.from('classroom_students').select('setup_status,meet').eq('token', token).single();
+      if (!freshRes.error && freshRes.data && freshRes.data.setup_status === 'confirmed' && freshRes.data.meet) {
+        s.meet = freshRes.data.meet; s.setup_status = 'confirmed';
+        alert('✅ 課堂連結已經建立好了（剛剛已由其他操作建立），不用重複建立。');
+        await refreshStudentList();
+        selectStudent(token);
+        return;
+      }
+    } catch (e) { /* 查詢失敗就照舊往下走，不擋主流程 */ }
+
     await ensureGoogleReady();
     var meet = await createMeetLinkForStudent(s.name, {
       startDate: s.pending_start_date, classTime: s.pending_class_time, recurring: !!s.pending_recurring
@@ -1952,6 +1969,8 @@ async function repairMeet(token) {
     selectStudent(token);
   } catch (e) {
     alert('❌ 建立失敗：' + (e.message || e) + '\n請確認已用 Google 登入授權後再試一次。');
+  } finally {
+    _studentSetupLocks.delete(token);
   }
 }
 
@@ -3878,38 +3897,64 @@ async function generateAndUploadReceipt(p, v) {
 // 「建立 Meet 連結」= 依賴 Google，可能失敗 → 但★絕不能因此讓已付款的學生卡在繳費頁。
 // 所以：不論 Meet 成功與否，都一定把 setup_status 設成 confirmed；Meet 失敗只是 meet 先留空，
 // 學生頁會顯示「課堂連結準備中」，老師再用「🔧 補課堂連結」一鍵補上即可。
-// 回傳 { ok, meet, meetError, dbError }
+// 2026-07-11 修 bug（Lin 回報：新增一個學生卻得到 2 個行事曆活動 + 2 份上課時刻表）：
+// 原本只靠瀏覽器記憶體裡的 studentsCache 判斷「是否已經建立過」，如果 Lin 開兩個分頁、
+// 或在同一分頁很快點兩次「確認收款」/「補課堂連結」，兩次呼叫都會讀到同一份「還沒 confirmed」的
+// 舊快取，於是各自建立一次 Meet + 一份時刻表，最後寫回同一列資料庫 → 資料庫只有 1 個學生，
+// 但 Google Calendar／Drive 卻多了一份孤兒資料。修法兩層：
+// (1) _studentSetupLocks：同一個 token 正在跑的時候，第二個呼叫直接擋掉，不會重複建立
+//     （擋得住同分頁快速點兩下，也擋得住同一支手機/電腦同分頁重疊呼叫）。
+// (2) 動手建立 Meet 前，先重新向資料庫（不是快取）確認目前狀態，如果別的分頁已經先建好了，
+//     這裡就直接沿用，不再建第二次（擋得住開兩個分頁各點一次的情況）。
+// 回傳 { ok, meet, meetError, dbError, already }
+var _studentSetupLocks = new Set();
 async function runDeferredStudentSetup(token, name) {
-  var s = studentsCache[token] || {};
-  if (s.setup_status === 'confirmed' && s.meet) return { ok: true, already: true };
-
-  var meet = s.meet || null, meetError = null;
-  if (!meet) {
-    try {
-      meet = await createMeetLinkForStudent(name, {
-        startDate: s.pending_start_date, classTime: s.pending_class_time, recurring: !!s.pending_recurring
-      });
-    } catch (e) { meetError = e; }
-  }
-
-  // ★ 一定解鎖：不論 Meet 有沒有建成功，都把學生設為 confirmed（Meet 有就一起寫）
-  var upd = { setup_status: 'confirmed' };
-  if (meet) upd.meet = meet;
-  var res = await sb.from('classroom_students').update(upd).eq('token', token);
-  if (res.error) return { ok: false, dbError: res.error, meetError: meetError };
-  if (studentsCache[token]) { studentsCache[token].setup_status = 'confirmed'; if (meet) studentsCache[token].meet = meet; }
-
-  // Drive 資料夾（best-effort，任何一步失敗都不影響「已解鎖」這個結果）
+  if (_studentSetupLocks.has(token)) return { ok: false, already: true, locked: true };
+  _studentSetupLocks.add(token);
   try {
-    await gdGetStudentSubfolderId(name, '學習內容');
-    await gdGetStudentSubfolderId(name, '影片');
-    var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
-    try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
-    try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
-    try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
-  } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
+    // 先問資料庫最新狀態（不信任本地快取，快取可能是別的分頁還沒同步過的舊資料）
+    var fresh = null;
+    try {
+      var freshRes = await sb.from('classroom_students').select('setup_status,meet').eq('token', token).single();
+      if (!freshRes.error) fresh = freshRes.data;
+    } catch (e) { /* 查詢失敗就退回用本地快取，不擋主流程 */ }
+    var s = fresh || studentsCache[token] || {};
+    if (s.setup_status === 'confirmed' && s.meet) {
+      if (studentsCache[token]) { studentsCache[token].setup_status = 'confirmed'; studentsCache[token].meet = s.meet; }
+      return { ok: true, already: true };
+    }
 
-  return { ok: true, meet: meet, meetError: meetError };
+    var meet = s.meet || null, meetError = null;
+    if (!meet) {
+      var p = studentsCache[token] || {};
+      try {
+        meet = await createMeetLinkForStudent(name, {
+          startDate: p.pending_start_date, classTime: p.pending_class_time, recurring: !!p.pending_recurring
+        });
+      } catch (e) { meetError = e; }
+    }
+
+    // ★ 一定解鎖：不論 Meet 有沒有建成功，都把學生設為 confirmed（Meet 有就一起寫）
+    var upd = { setup_status: 'confirmed' };
+    if (meet) upd.meet = meet;
+    var res = await sb.from('classroom_students').update(upd).eq('token', token);
+    if (res.error) return { ok: false, dbError: res.error, meetError: meetError };
+    if (studentsCache[token]) { studentsCache[token].setup_status = 'confirmed'; if (meet) studentsCache[token].meet = meet; }
+
+    // Drive 資料夾（best-effort，任何一步失敗都不影響「已解鎖」這個結果）
+    try {
+      await gdGetStudentSubfolderId(name, '學習內容');
+      await gdGetStudentSubfolderId(name, '影片');
+      var newStuReceiptFolder = await gdGetStudentSubfolderId(name, '課表 & 收據');
+      try { await gdShareAnyone(newStuReceiptFolder); } catch (e) {}
+      try { await createBlankTimetable(name, token, newStuReceiptFolder); } catch (e) { console.warn('建立空白課表失敗：', e); }
+      try { await ensureStudentFolderShared(name, token); } catch (e) { console.warn('分享學生資料夾失敗（下次上傳檔案時會自動再補一次）：', e); }
+    } catch (e) { console.warn('自動建立學生資料夾失敗（可日後上傳時自動補建）：', e); }
+
+    return { ok: true, meet: meet, meetError: meetError };
+  } finally {
+    _studentSetupLocks.delete(token);
+  }
 }
 
 async function approveSlip() {
