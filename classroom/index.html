@@ -2602,7 +2602,7 @@ async function renderStudentView() {
     '<div class="card" id="nextClassCard">' +
       '<h2>📅 下一堂課</h2>' +
       '<div id="nextClassInfo"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
-      '<a href="line-link.html?s=' + encodeURIComponent(token) + '" style="display:inline-block;margin-top:12px;font-size:0.8rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">🔔 連結 LINE，上課前會自動提醒你</a>' +
+      buildLineActionBtn(token, student) +
     '</div>' +
     '<div class="card">' +
       '<h2>💬 今日學習感想</h2>' +
@@ -3042,7 +3042,21 @@ async function loadStudentFolderLink(token) {
 // 老師收到通知後自己去 Google Calendar 手動調整（系統不會自動改老師的行事曆）
 // ============================================================
 const LINE_OA_URL = 'https://lin.ee/yVBgvywy'; // 全站統一用這個 LINE 官方帳號當「聯絡老師」入口
+const LIFF_ID = '2010620934-5MFOEYBX'; // 跟 classroom/liff-config.js 同一個 LIFF app，用來在 LINE 裡直接開課堂頁
 let nextClassCtx = null; // 目前顯示中的下一堂課資訊，給申請改期/取消用
+
+// 2026-07-11 加：「下一堂課」卡片下方的 LINE 按鈕 —
+//   已連結 LINE（student.line_user_id 有值）→ 顯示「在 LINE 中開啟」，用 LIFF 在 LINE 裡開這個課堂頁
+//   還沒連結 LINE → 顯示「連結 LINE 帳號」，帶去 line-link.html 做第一次連結
+//   兩顆都用網站統一金色按鈕樣式（跟 meet-btn 同一套），不是只有一行小字連結而已
+function buildLineActionBtn(token, student) {
+  if (student && student.line_user_id) {
+    var openUrl = 'https://liff.line.me/' + LIFF_ID + '?goto=classroom&s=' + encodeURIComponent(token);
+    return '<a class="meet-btn" href="' + openUrl + '" style="margin-top:12px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));font-size:0.95rem;padding:12px 20px;">📲 在 LINE 中開啟</a>';
+  }
+  var linkUrl = 'line-link.html?s=' + encodeURIComponent(token);
+  return '<a class="meet-btn" href="' + linkUrl + '" style="margin-top:12px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));font-size:0.95rem;padding:12px 20px;">🔔 連結 LINE 帳號，上課前自動提醒</a>';
+}
 
 function classRequestSameWarn() {
   return '<p style="font-size:0.76rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:6px;">此為「唯讀」課表，直接參考老師的行事曆，無法在這裡直接修改。</p>';
@@ -4278,6 +4292,16 @@ async function connectCalendar() {
     const events = await calFetchUpcomingEvents();
     const studentNames = Object.entries(studentsCache);
     const todayKey = nowParts.dateStr;
+    // 2026-07-11 修 bug：按「今日上課」畫面上卡片會馬上被移除，但這裡是整段重新用 Google Calendar
+    // 資料重建近期課表——行事曆的活動不會因為記錄出席就消失，所以重建後同一堂課又跑回來了
+    // （Lin 回報「กดไปแล้ว เด้งกลับมาใหม่อยู่ดี」）。
+    // 修法：先查今天已經記錄出席的 token，重建列表時把「今天 + 已記錄出席」的課直接排除，不再顯示。
+    let attendedTodayTokens = new Set();
+    try {
+      const { data: attendedRows, error: attendedErr } = await sb.from('classroom_attendance')
+        .select('token').eq('lesson_date', todayKey);
+      if (!attendedErr && attendedRows) attendedTodayTokens = new Set(attendedRows.map(function(r){ return r.token; }));
+    } catch(attendErrCatch) { /* 查不到就當作沒人記錄過，不影響原本流程 */ }
     const matched = [];
     events.forEach(function(ev) {
       const title = (ev.summary || '').toLowerCase();
@@ -4295,7 +4319,9 @@ async function connectCalendar() {
           const dayKey = startParts.dateStr;
           const isoDate = startParts.dateStr;
           const dayLabel = parseInt(startParts.dateStr.slice(5,7),10) + '月' + parseInt(startParts.dateStr.slice(8,10),10) + '日（週' + dayZh[startParts.weekday] + '）';
-          matched.push({ token, s, startTime, endTime, dayKey, isoDate, dayLabel, isToday: dayKey === todayKey });
+          const isToday = dayKey === todayKey;
+          if (isToday && attendedTodayTokens.has(token)) return; // 今天已記錄出席過 → 不再顯示這張卡
+          matched.push({ token, s, startTime, endTime, dayKey, isoDate, dayLabel, isToday });
         }
       });
     });

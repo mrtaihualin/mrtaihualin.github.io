@@ -14,10 +14,13 @@
 //
 // วิธี deploy:
 //   1. supabase secrets set CLASS_TIMEZONE=Asia/Bangkok   (หรือ Asia/Taipei ถ้าเวลาที่จริงคือเวลาไต้หวัน — เลือกให้ตรง!)
-//   2. supabase secrets set LIFF_ID=xxxxxxxx   (2026-07-10 เพิ่ม: LIFF ID เดิมตัวเดียวกับที่ liff-config.js ใช้
-//      — เอาไปแปะลิงก์ "查看課表/申請改期" ในข้อความเตือนก่อนเข้าเรียน ถ้าไม่ตั้ง secret นี้ก็แค่ไม่มีลิงก์นี้ต่อท้าย ไม่ error)
-//   3. supabase functions deploy class-reminder-cron
-//   4. ตั้ง pg_cron ให้เรียกทุก 5 นาที (ดู SQL_pg_cron_class-reminder_2026-07-06.sql)
+//   2. supabase functions deploy class-reminder-cron
+//   3. ตั้ง pg_cron ให้เรียกทุก 5 นาที (ดู SQL_pg_cron_class-reminder_2026-07-06.sql)
+//
+// 2026-07-11 แก้: ข้อความเตือนก่อนเข้าเรียนเปลี่ยนเป็น Flex Message มีปุ่มเดียว "進入 Google Meet"
+//   (สีทองตามธีมเว็บ) — เอาลิงก์ "查看課表/申請改期" ออกจากข้อความ LINE แล้ว (ย้ายไปเป็นปุ่ม
+//   "在 LINE 中開啟" ที่หน้าคาบเรียนต่อไปในเว็บแทน ดู classroom/index.html) → ไม่ต้องตั้ง secret LIFF_ID
+//   ให้ฟังก์ชันนี้อีกต่อไป (เอาออกจาก deploy steps แล้ว)
 // ════════════════════════════════════════════════════════════
 
 // deno-lint-ignore-file
@@ -31,13 +34,43 @@ const REMINDER_BEFORE_MIN = 30; // เตือนล่วงหน้ากี
 const FOLLOWUP_AFTER_MIN = 60;  // ถ้าไม่มี end_time ให้สมมติคาบยาวกี่นาที (ไว้คำนวณเวลา "จบแล้ว")
 const CATCH_WINDOW_MIN = 20;    // หน้าต่างจับเวลาหลังจุดที่ควรส่ง (กันพลาดถ้า cron รันไม่ตรงเป๊ะ)
 
-async function pushLine(channelToken, targetUserId, message) {
+async function pushLineMessages(channelToken, targetUserId, messages) {
   const res = await fetch(LINE_PUSH_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
-    body: JSON.stringify({ to: targetUserId, messages: [{ type: 'text', text: String(message).slice(0, 4900) }] }),
+    body: JSON.stringify({ to: targetUserId, messages }),
   });
   if (!res.ok) throw new Error('LINE API ' + res.status + ': ' + (await res.text()));
+}
+
+async function pushLine(channelToken, targetUserId, message) {
+  return pushLineMessages(channelToken, targetUserId, [{ type: 'text', text: String(message).slice(0, 4900) }]);
+}
+
+// 2026-07-11 加：上課前提醒改用 Flex Message，只留一顆按鈕「進入 Google Meet」（金色，跟網站同一套主題色）
+// 查看課表／申請改期的入口移到網站「下一堂課」卡片裡的「在 LINE 中開啟」按鈕，這裡不重複放
+function buildReminderFlex(timeLabel, meetUrl) {
+  return {
+    type: 'flex',
+    altText: '📢 再過 30 分鐘就要上課囉！',
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'md',
+        contents: [
+          { type: 'text', text: '📢 再過 30 分鐘就要上課囉！', weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
+          { type: 'text', text: timeLabel + ' 泰語課\n點下方按鈕直接進入 Google Meet', size: 'sm', color: '#6b6b6b', wrap: true },
+        ],
+      },
+      footer: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: [
+          { type: 'button', style: 'primary', height: 'sm', color: '#8B6310',
+            action: { type: 'uri', label: '進入 Google Meet', uri: meetUrl } },
+        ],
+      },
+    },
+  };
 }
 
 // แปลง lesson_date + "HH:MM" ให้เป็นเวลาจริง (UTC) โดยตีความว่า HH:MM คือเวลาท้องถิ่นตาม tz ที่กำหนด
@@ -106,17 +139,14 @@ serve(async (req) => {
         if (minutesToStart <= REMINDER_BEFORE_MIN && minutesToStart >= -CATCH_WINDOW_MIN) {
           try {
             const timeLabel = row.start_time + (row.end_time ? '–' + row.end_time : '');
-            // 2026-07-10 加：帶課堂頁連結（用 LIFF 開，在 LINE 裡面直接開，不用跳出瀏覽器）
-            // 學生點進去可以看到自己的課表，也能在裡面申請改期/取消
-            const liffId = Deno.env.get('LIFF_ID');
-            const classroomLink = liffId
-              ? 'https://liff.line.me/' + liffId + '?goto=classroom&s=' + encodeURIComponent(row.token)
-              : null;
-            await pushLine(channelToken, s.line_user_id,
-              '📢 提醒：等一下 ' + timeLabel + ' 有泰語課囉！' +
-              (s.meet ? '\n進入課堂：' + s.meet : '') +
-              (classroomLink ? '\n查看課表 / 申請改期：' + classroomLink : '') +
-              '\n老師等你 ✨');
+            if (s.meet) {
+              // 2026-07-11 改：Flex Message + 一顆「進入 Google Meet」按鈕（金色主題）
+              await pushLineMessages(channelToken, s.line_user_id, [buildReminderFlex(timeLabel, s.meet)]);
+            } else {
+              // 還沒有 Meet 連結（老師還沒補上）→ 照舊發純文字，不放按鈕，避免按鈕連到空連結
+              await pushLine(channelToken, s.line_user_id,
+                '📢 提醒：等一下 ' + timeLabel + ' 有泰語課囉！\n老師還在準備課堂連結，請直接聯絡老師 ✨');
+            }
             await supabase.from('classroom_schedule').update({ line_reminder_sent: true }).eq('id', row.id);
             sentCount++;
           } catch (e) { errCount++; }
