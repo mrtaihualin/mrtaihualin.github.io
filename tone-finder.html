@@ -23,6 +23,7 @@
 <script defer src="game-account.js?v=2"></script><!-- v2: สเปก 2026-07-03 ดาวเงินเปลี่ยนแหล่งที่มา (SRS mastery) -->
 <script defer src="auth-widget.js?v=1"></script>
 <script defer src="supabase-auth.js?v=20"></script>
+<script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="progress-sync.js?v=2"></script>
 <script defer src="adaptive.js?v=2"></script>
 <script src="word-vault.js"></script>
@@ -3505,6 +3506,7 @@ function tfResetWordScoring() {
   session.curWordWrongGuess = false;   // เคยเดาผิด/🤷 ในคำ/พยางค์นี้ไหม (กันโกง first-try)
   // ── Lin 2026-07-04: สถานะปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ต่อคำ/ประโยคนี้ ──
   session.hintUsed = false;      // กด ? ไปแล้วหรือยังในคำนี้ (ครั้งแรกนับผิด 1 ครั้ง, ครั้งถัดไปฟรี — ดู tfUseHint)
+  session.curWordGuesses = {};   // Phase 4: เก็บ "คำเดาวรรณยุกต์" รายพยางค์ (index → 1-5/0) ส่งให้เซิร์ฟเวอร์ตรวจ
 }
 
 // คำปัจจุบันเป็นหลายพยางค์ไหม (readingTH มี '-')
@@ -3942,6 +3944,30 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   var wasKnownCheck = !!(session && session.curWordIsKnownCheck);
   // หมายเหตุ: ปุ่ม "?" (= แอบดู) ไม่มี flag แยกแล้ว (Lin 2026-07-04 แก้ให้ใช้หลักตอบผิดตรงๆ) — mistakes>0 จาก tfUseHint ครอบคลุมอยู่แล้ว
   var cleanThisRound = !!firstTry && !forced && (mistakes || 0) === 0;
+
+  // ── Phase 4 (กันโกงดาว): ให้ "เซิร์ฟเวอร์" เป็นคนตัดสิน+แจกดาวจริง (ล็อกอินเท่านั้น) ──
+  //   เพิ่มเข้ามาคู่ขนาน ไม่รื้อ logic local ด้านล่าง (เน็ตล่ม/ไม่ล็อกอิน → เกมทำงานเหมือนเดิมทุกอย่าง)
+  //   ดาวที่ "แลกเงินได้" = ที่เซิร์ฟเวอร์เขียนเท่านั้น · ดาว local = ตัวโชว์เฉยๆ (หลังล็อก RLS จะ sync ขึ้นไม่ได้)
+  try {
+    if (window.TONE_SERVER && TONE_SERVER.available()) {
+      var _sv = { word: entry.word, level: selectedLevel || 1, knownCheck: wasKnownCheck };
+      var _syls = (entry.readingTH && entry.readingTH.indexOf('-') > -1) ? entry.readingTH.split('-') : null;
+      if (_syls && _syls.length > 1) {
+        _sv.syllables = _syls;
+        _sv.guesses = _syls.map(function (_s, _i) { return (session.curWordGuesses && session.curWordGuesses[_i] != null) ? session.curWordGuesses[_i] : -1; });
+      } else {
+        _sv.initialGuess = (session.curWordGuesses && session.curWordGuesses[0] != null) ? session.curWordGuesses[0] : session.initialGuess;
+      }
+      TONE_SERVER.finishRound(_sv).then(function (r) {
+        try {
+          if (r && r.ok) {
+            // เซิร์ฟเวอร์ยืนยัน → ตัวเลขดาว "จริง" = r.totalStars (ซิงก์ลงมาโชว์ตอน sync ถัดไป)
+            if (r.justMastered && r.stars > 0 && window.console) console.log('[P4] ⭐ server award', r.stars, '→ total', r.totalStars);
+          } else if (r && window.console) { console.log('[P4] server not-ok:', r.reason); }
+        } catch (e) {}
+      });
+    }
+  } catch (e) {}
 
   var rec = tfGetSrsRecord(entry.word, selectedLevel);
   if (!rec) rec = TF_SRS.blank();
@@ -5458,6 +5484,7 @@ function stepSessionGuess() {
     var captureN = n;
     var clickAct = act(function(){
       session.initialGuess = captureN;
+      try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = captureN; } catch(e){}  // Phase 4: จำคำเดารายพยางค์
       // ── โหมดเร็ว (Approach A): ตอบถูกตั้งแต่แรก → ข้าม推導ไป result เลย; ผิด/คำนวณไม่ได้ → 推導สอนเหมือนเดิม ──
       var correctTone = computeTone(word);              // computeTone คืน 1–5 (null ถ้าคำนวณไม่ได้)
       if (correctTone && captureN === correctTone) {
@@ -5480,6 +5507,7 @@ function stepSessionGuess() {
 
   var dontKnowAct = act(function(){
     session.initialGuess = 0;
+    try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = 0; } catch(e){}  // Phase 4: จำ "ไม่มั่นใจ" รายพยางค์
     if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // 🤷 = เข้า推導 ไม่นับ first-try
     showStartInflection(navigateToInflection);
   });
