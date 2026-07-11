@@ -85,9 +85,11 @@
       }
       if (!liff.isLoggedIn()) {
         setStatus('請登入 LINE 以繼續…', 'wait');
-        // 用不帶 query 的網址當 redirectUri（token 已經備份在 localStorage 了，不用靠網址帶回來）
-        liff.login({ redirectUri: window.location.origin + window.location.pathname });
-        return; // 登入後 LINE 會導回這頁，重新執行 main()
+        // 2026-07-11 修正 400 Bad Request：redirectUri 一定要「以 Endpoint URL 開頭」才會過（LINE 官方規定），
+        // 現在這個 LIFF app 的 Endpoint URL 是 liff-open.html，所以不能直接指回 line-link.html 自己，
+        // 改成先繞回 liff-open.html?goto=linkline，它會再導回這裡（token 已經備份在 localStorage 了，不會遺失）
+        liff.login({ redirectUri: window.location.origin + '/classroom/liff-open.html?goto=linkline&s=' + encodeURIComponent(studentToken) });
+        return; // 登入後 LINE 會導回 liff-open.html，再自動轉回這頁，重新執行 main()
       }
       setStatus('取得 LINE 身分中…', 'wait');
       var idToken = liff.getIDToken();
