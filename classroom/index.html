@@ -101,9 +101,9 @@
   .btn-sm { display: inline-flex; align-items: center; gap: 4px; border: none; border-radius: 20px; padding: 5px 12px; font-size: 0.77rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .btn-sm:hover { transform: translateY(-1px); filter: brightness(0.94); }
   .btn-sm-copy    { background: var(--gold-light); color: var(--gold-deep); }
-  .btn-sm-copy.copied { background: #dcfce7; color: #166534; }
+  .btn-sm-copy.copied { background: var(--gold-light); color: var(--gold-deep); }
   .btn-sm-preview { background: #e0f2fe; color: #0369a1; }
-  .btn-sm-meet    { background: #dcfce7; color: #15803d; }
+  .btn-sm-meet    { background: var(--gold-light); color: var(--gold-deep); }
   .btn-sm-edit    { background: #fef9c3; color: #854d0e; }
   .btn-sm-delete  { background: #fee2e2; color: #b91c1c; }
 
@@ -194,7 +194,7 @@
 
   .pref-badge { display: inline-block; font-size: 0.7rem; padding: 2px 7px; border-radius: 20px; margin-left: 8px; font-weight: 600; font-family: 'Noto Sans TC', sans-serif; vertical-align: middle; }
   .pref-badge.never  { background: #e5e7eb; color: #6b7280; }
-  .pref-badge.always { background: #dcfce7; color: #166534; }
+  .pref-badge.always { background: var(--gold-light); color: var(--gold-deep); }
   .pref-badge.ask    { background: var(--gold-light); color: var(--gold-deep); }
 
   /* Modal */
@@ -247,9 +247,9 @@
   .attend-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--green); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(45,106,79,0.15); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
   .attend-card h2::after { content: ''; flex: 1; height: 1px; background: rgba(45,106,79,0.15); }
   .attend-list { display: flex; flex-direction: column; gap: 7px; }
-  .today-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #fff; border-radius: 10px; border: 1px solid rgba(45,106,79,0.12); font-family: 'Noto Sans TC', sans-serif; gap: 10px; }
+  .today-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #fff; border-radius: 10px; border: 1px solid var(--border); font-family: 'Noto Sans TC', sans-serif; gap: 10px; }
   .today-row .t-name { font-weight: 700; font-size: 0.95rem; color: var(--ink-soft); flex: 1; }
-  .today-done { display: inline-flex; align-items: center; gap: 6px; background: #dcfce7; color: #15803d; border-radius: 20px; padding: 5px 12px; font-size: 0.78rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; border: none; transition: filter 0.15s; white-space: nowrap; }
+  .today-done { display: inline-flex; align-items: center; gap: 6px; background: var(--gold-light); color: var(--gold-deep); border-radius: 20px; padding: 5px 12px; font-size: 0.78rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; border: none; transition: filter 0.15s; white-space: nowrap; }
   .today-done:hover { filter: brightness(0.93); }
   .today-count { font-size: 0.72rem; font-weight: 400; opacity: 0.8; }
   .empty-attend { text-align: center; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; padding: 12px 0; }
@@ -273,8 +273,8 @@
   /* Btn pay / attend on student card */
   .btn-sm-pay    { background: #fef3c7; color: #92400e; }
   .btn-sm-pay:hover { background: #fde68a; }
-  .btn-sm-attend { background: #dcfce7; color: #15803d; }
-  .btn-sm-attend:hover { background: #bbf7d0; }
+  .btn-sm-attend { background: var(--gold-light); color: var(--gold-deep); }
+  .btn-sm-attend:hover { background: var(--gold-bright); color: #fff; }
   .btn-sm-slip   { background: #ede9fe; color: #5b21b6; }
   .btn-sm-slip:hover { background: #ddd6fe; }
 
@@ -293,8 +293,8 @@
   .slip-row .slip-name { font-weight: 700; font-size: 0.88rem; }
   .slip-row .slip-course { font-size: 0.78rem; color: var(--ink-muted); margin-top: 2px; }
   .slip-row .slip-actions { display: flex; gap: 6px; }
-  .btn-approve { background: #dcfce7; color: #15803d; border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; }
-  .btn-approve:hover { background: #bbf7d0; }
+  .btn-approve { background: var(--gold-light); color: var(--gold-deep); border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; }
+  .btn-approve:hover { background: var(--gold-bright); color: #fff; }
   .btn-reject  { background: var(--gold-light); color: var(--slate-dark); border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; }
   .btn-reject:hover { filter: brightness(0.93); }
   .pending-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--amber); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; font-weight: 700; margin-left: 6px; }
@@ -697,7 +697,11 @@
 
     <label class="settings-label">Google Meet 連結</label>
     <input class="settings-input" id="editMeetInput" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
-    <div class="hint" style="margin-bottom:0;">原本的連結：<span id="editMeetOld" style="font-family:monospace;word-break:break-all;"></span></div>
+    <div class="hint" style="margin-bottom:14px;">原本的連結：<span id="editMeetOld" style="font-family:monospace;word-break:break-all;"></span></div>
+
+    <label class="settings-label">🔗 入班連結（選填，自訂）</label>
+    <input class="settings-input" id="editEntryLinkInput" placeholder="留空 = 用系統自動產生的連結" />
+    <div class="hint" style="margin-bottom:0;">填了就會用這個連結取代系統自動產生的入班連結，複製連結／通知學生時都會用這個。</div>
 
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeEditMeetModal()">取消</button>
@@ -753,7 +757,7 @@
       </div>
       <div style="flex:1;">
         <label class="settings-label">上課時間</label>
-        <input class="settings-input" type="time" id="genClassTime" onchange="onGenScheduleChange()" />
+        <input class="settings-input" type="time" id="genClassTime" step="1800" onchange="onGenScheduleChange()" />
       </div>
     </div>
 
@@ -1258,8 +1262,14 @@ function setUploadStatus(text) {
 function showUploadFloat() { const el = document.getElementById('uploadFloat'); if (el) el.style.display = 'block'; }
 function hideUploadFloat() { const el = document.getElementById('uploadFloat'); if (el) el.style.display = 'none'; }
 // 上傳途中若要關分頁／跳頁 → 跳出瀏覽器原生警告，避免半途中斷
+// 2026-07-11：也涵蓋錄影自動上傳（recUploadInProgress，見 autoUploadRecording），
+// 兩種上傳只要有一個還在進行中，就要擋關閉分頁
 window.addEventListener('beforeunload', function (e) {
-  if (uploadInProgress) { e.preventDefault(); e.returnValue = ''; return ''; }
+  if (uploadInProgress || recUploadInProgress) {
+    e.preventDefault();
+    e.returnValue = 'Video is currently uploading. If you close this page now, the upload will be lost.';
+    return e.returnValue;
+  }
 });
 function selectUploadDest(d) { uploadDest = d; }
 async function doUploadFiles() {
@@ -1728,12 +1738,13 @@ function onGenScheduleChange() {
   const start = teacherTimeToDate(dateVal, timeVal);
   const teacherParts = formatInTz(start, TEACHER_TZ);
   hint.style.display = 'block';
-  let text = '📅 第一堂（老師時間）：' + parseInt(teacherParts.dateStr.slice(5,7),10) + '月' + parseInt(teacherParts.dateStr.slice(8,10),10) + '日（週' + WEEKDAY_ZH[teacherParts.weekday] + '）' + timeVal +
-    '　→　勾選「每週固定時間上課」的話，之後每週' + WEEKDAY_ZH[teacherParts.weekday] + ' ' + timeVal + ' 都會自動排入課表';
+  // 2026-07-11 簡化：只留兩個事實 — 老師幾點教、學生幾點上課
+  let text = '👩‍🏫 老師上課時間：週' + WEEKDAY_ZH[teacherParts.weekday] + ' ' + timeVal;
   if (tzVal) {
     const conv = formatInTz(start, tzVal);
-    const tzLabel = (TZ_OPTIONS.find(function(t) { return t.v === tzVal; }) || {}).label || tzVal;
-    text += '　｜　學生看到的時間（' + tzLabel + '）：週' + WEEKDAY_ZH[conv.weekday] + ' ' + conv.timeStr;
+    text += '　｜　🧑‍🎓 學生上課時間：週' + WEEKDAY_ZH[conv.weekday] + ' ' + conv.timeStr;
+  } else {
+    text += '　｜　🧑‍🎓 學生上課時間：同上（未選學生時區）';
   }
   hint.textContent = text;
 }
@@ -1741,21 +1752,33 @@ function onGenScheduleChange() {
 // ── 課程方案下拉（沿用付款流程用的 COURSE_TYPES，避免另外維護一份課程資料）──
 function populateGenCourseDropdown() {
   const sel = document.getElementById('genCourse');
+  // 2026-07-11：加「自訂（單堂購買）」選項，跟 pay.html 繳費頁的自訂單堂購買同一種概念——
+  // 不鎖定堂數方案，學生會在繳費頁自己填單堂購買的堂數／單價。
   sel.innerHTML = '<option value="">— 不指定 —</option>' +
-    COURSE_TYPES.map(function(c) { return '<option value="' + c.id + '">' + c.label + '</option>'; }).join('');
+    COURSE_TYPES.map(function(c) { return '<option value="' + c.id + '">' + c.label + '</option>'; }).join('') +
+    '<option value="custom">自訂（單堂購買）</option>';
   document.getElementById('genPack').innerHTML = '';
   document.getElementById('genCoursePreview').style.display = 'none';
 }
 function onGenCourseChange() {
   const courseId = document.getElementById('genCourse').value;
   const packSel = document.getElementById('genPack');
+  const preview = document.getElementById('genCoursePreview');
+  if (courseId === 'custom') {
+    // 自訂單堂購買沒有固定堂數方案，不用選「堂數方案」——學生會在繳費頁自己填堂數＋單價。
+    packSel.innerHTML = '';
+    preview.style.display = 'block';
+    preview.textContent = '💡 不鎖定堂數，學生會在繳費頁自行選擇單堂購買（一對一／雙人共學）＋填堂數與單價。';
+    return;
+  }
   const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
-  if (!c) { packSel.innerHTML = ''; document.getElementById('genCoursePreview').style.display = 'none'; return; }
+  if (!c) { packSel.innerHTML = ''; preview.style.display = 'none'; return; }
   packSel.innerHTML = c.packs.map(function(n) { return '<option value="' + n + '">' + n + ' 堂</option>'; }).join('');
   onGenPackChange();
 }
 function onGenPackChange() {
   const courseId = document.getElementById('genCourse').value;
+  if (courseId === 'custom') return; // 自訂沒有堂數方案，預覽文字已在 onGenCourseChange 設定過
   const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
   const preview = document.getElementById('genCoursePreview');
   if (!c) { preview.style.display = 'none'; return; }
@@ -1835,6 +1858,7 @@ function openEditMeetModal(token) {
   document.getElementById('editNameInput').value = s.name;
   document.getElementById('editMeetOld').textContent = s.meet;
   document.getElementById('editMeetInput').value = s.meet;
+  document.getElementById('editEntryLinkInput').value = s.custom_entry_link || '';
   document.getElementById('editMeetModal').classList.add('open');
   setTimeout(() => document.getElementById('editNameInput').select(), 100);
 }
@@ -1848,6 +1872,7 @@ function closeEditMeetModal() { document.getElementById('editMeetModal').classLi
 async function saveStudentEdit() {
   const newName = document.getElementById('editNameInput').value.trim();
   const newMeet = normalizeMeet(document.getElementById('editMeetInput').value);
+  const newEntryLink = document.getElementById('editEntryLinkInput').value.trim();
   if (!newName) { alert('請填寫學生姓名'); return; }
   if (!newMeet) { alert('請填寫 Meet 連結'); return; }
 
@@ -1873,7 +1898,16 @@ async function saveStudentEdit() {
   // Step 2：Drive 那邊沒問題了（或姓名根本沒改）→ 才更新 Supabase
   // 2026-07-08：老師手動填了 Meet 連結 = 等於確認開通 → 一併把 setup_status 設成 confirmed，
   // 否則學生頁的閘門（只看 confirmed）會讓學生還是進不去（這是之前卡住的第二個原因）。
-  const { error } = await sb.from('classroom_students').update({ name: newName, meet: newMeet, setup_status: 'confirmed' }).eq('token', editingToken);
+  // 2026-07-11：新增 custom_entry_link（老師自訂入班連結，留空就用系統自動產生的），
+  // 跟其他學生欄位一樣直接寫進 classroom_students，走同一個 update。
+  let { error } = await sb.from('classroom_students').update({ name: newName, meet: newMeet, setup_status: 'confirmed', custom_entry_link: newEntryLink || null }).eq('token', editingToken);
+  if (error && /custom_entry_link/.test(error.message || '')) {
+    // Supabase 資料庫還沒加這個欄位 → 先不帶這欄位重存一次，姓名/Meet 還是要能正常存
+    console.warn('custom_entry_link 欄位可能還沒建立，改用不含此欄位的方式儲存：', error.message);
+    const retry = await sb.from('classroom_students').update({ name: newName, meet: newMeet, setup_status: 'confirmed' }).eq('token', editingToken);
+    error = retry.error;
+    if (!error) alert('⚠️ 姓名／Meet 連結已儲存，但「自訂入班連結」還沒存成功——資料庫缺少 custom_entry_link 欄位，請先請 Lin 在 Supabase 執行對應的 SQL 再重試一次。');
+  }
   saveBtn.disabled = false; saveBtn.textContent = '儲存';
   if (error) {
     if (nameChanged) {
@@ -1935,6 +1969,8 @@ async function deleteStudent(token) {
 function buildStudentUrl(token) {
   const s = studentsCache[token];
   if (!s) return null;
+  // 2026-07-11：老師有填「自訂入班連結」的話，一律優先用這個，取代系統自動產生的連結
+  if (s.custom_entry_link) return s.custom_entry_link;
   const baseUrl = window.location.origin + window.location.pathname;
   // 還沒確認收款、meet 是空的（入班前狀態）→ 連結只帶 token 就好，
   // 學生頁面本來就會即時去資料庫抓最新狀態，不用凍結 name/meet 在網址裡
@@ -2374,7 +2410,7 @@ async function loadTeacherStudentInfo(token) {
           : '';
         var delBtn = '<button onclick="deletePayment(\'' + p.id + '\',\'' + token + '\')" title="刪除此筆記錄" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0 2px;opacity:0.4;margin-left:4px;">🗑️</button>';
         return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.8rem;">' +
-          '<div><span style="font-weight:600;">' + (p.course_label || '-') + '</span><span style="color:var(--ink-muted);"> · ' + ds + ' · ' + (p.lessons || 0) + '堂' + (p.bonus_lessons ? '+' + p.bonus_lessons : '') + ' · ' + (p.currency || '') + ' ' + (p.total_amount || 0).toLocaleString() + '</span></div>' +
+          '<div><span style="font-weight:700;">' + (p.course_label || '-') + '</span><span style="color:var(--ink-muted);"> · ' + ds + ' · ' + (p.lessons || 0) + '堂' + (p.bonus_lessons ? '+' + p.bonus_lessons : '') + ' · ' + (p.currency || '') + ' ' + (p.total_amount || 0).toLocaleString() + '</span></div>' +
           '<span style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + regenBtn + delBtn + '</span>' +
         '</div>';
       }).join('');
@@ -2394,7 +2430,7 @@ async function loadTeacherStudentInfo(token) {
           fbs.map(function(f) {
             var d = f.created_at ? new Date(f.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
             var fid = (f.id || '').replace(/'/g, '');
-            var approvedBadge = f.approved ? ' <span style="background:#dcfce7;color:#15803d;border-radius:10px;padding:1px 7px;font-weight:700;font-size:0.7rem;">✅ 已刊登</span>' : '';
+            var approvedBadge = f.approved ? ' <span style="background:var(--gold-light);color:var(--gold-deep);border-radius:10px;padding:1px 7px;font-weight:700;font-size:0.7rem;">✅ 已刊登</span>' : '';
             var curCats = (f.category || '').split(' ').filter(Boolean);
             var catLabel = curCats.length ? FB_CATS.filter(function(c){ return curCats.indexOf(c[0]) > -1; }).map(function(c){ return c[1]; }).join('、') : '（未分類）';
             var checkboxRow = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:0.76rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">' +
@@ -2785,7 +2821,7 @@ async function loadStudentPayments(token) {
       var d = p.created_at ? new Date(p.created_at) : null;
       var ds = d ? (d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0')) : '';
       return '<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.83rem;">' +
-        '<div><div style="font-weight:600;color:var(--ink);">' + (p.course_label || '-') + '</div>' +
+        '<div><div style="font-weight:700;color:var(--ink);">' + (p.course_label || '-') + '</div>' +
           '<div style="color:var(--ink-muted);font-size:0.76rem;">' + ds + ' · ' + (p.lessons || 0) + '堂' + (p.bonus_lessons ? '+' + p.bonus_lessons : '') + ' · ' + (p.currency || '') + ' ' + (p.total_amount || 0).toLocaleString() + '</div></div>' +
         '<div style="white-space:nowrap;color:var(--gold-deep);font-weight:600;">' + (statusZh[p.status] || p.status) + '</div>' +
       '</div>';
@@ -3581,7 +3617,7 @@ async function loadPendingSlips() {
       thumbHtml +
       '<div class="slip-info">' +
         '<div class="slip-name">' + p.student_name + '</div>' +
-        '<div class="slip-course">' + p.course_label + ' · ' + p.lessons + '堂 · ' + p.currency + ' ' + (p.total_amount || 0).toLocaleString() + '</div>' +
+        '<div class="slip-course"><strong style="color:var(--ink);">' + p.course_label + '</strong> · ' + p.lessons + '堂 · ' + p.currency + ' ' + (p.total_amount || 0).toLocaleString() + '</div>' +
         (p.note ? '<div class="slip-course" style="color:var(--gold-deep);">📝 ' + p.note + '</div>' : '') +
       '</div>' +
       '<div class="slip-actions">' +
@@ -3651,8 +3687,11 @@ async function markClassRequestHandled(id, status) {
   var r = (window._classRequestCache || {})[id];
   var label = status === 'approved' ? '已處理' : '婉拒';
   if (!confirm('確定要標記「' + label + '」嗎？' + (status === 'approved' ? '\n（請確認你已經在 Google Calendar 調整完成再按這個）' : ''))) return;
+  // 2026-07-11：先讓這個項目立刻從畫面消失（不用等 reload），資料庫仍照舊更新
+  var rowEl = document.getElementById('req-row-' + id);
+  if (rowEl) rowEl.remove();
   var res = await sb.from('classroom_requests').update({ status: status }).eq('id', id);
-  if (res.error) { alert('更新失敗：' + res.error.message); return; }
+  if (res.error) { alert('更新失敗：' + res.error.message); await loadPendingClassRequests(); return; }
   await loadPendingClassRequests();
 }
 
@@ -3672,7 +3711,7 @@ function openSlipApproval(id) {
     : '';
   document.getElementById('slipApprovalContent').innerHTML =
     '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;margin-bottom:8px;">' +
-      '<strong>' + p.student_name + '</strong> · ' + p.course_label + ' · ' + p.lessons + '堂' +
+      '<strong>' + p.student_name + '</strong> · <strong>' + p.course_label + '</strong> · ' + p.lessons + '堂' +
       (p.note ? '<br>📝 ' + p.note : '') +
     '</div>' + slipHtml;
   document.getElementById('approvalCurrency').value = p.currency || 'THB';
@@ -3709,7 +3748,13 @@ function _loadScript(url) {
 
 // 產生收據 PDF ใน browser โดยตรง (html2canvas + jsPDF) → ไม่ผ่าน Google Doc แล้ว
 async function generateAndUploadReceipt(p, v) {
-  const name = p.student_name || p.token || '學生';
+  // 2026-07-11 修 bug：以前這裡直接用 p.student_name（繳費記錄當初存的姓名快照），
+  // 如果老師後來幫學生改名（改名同時會把 Drive 資料夾也改名，見 saveStudentEdit），
+  // 這裡卻還在用舊名字去找/建資料夾 → gdGetStudentSubfolderId 找不到已改名的資料夾，
+  // 於是又生出一個「舊名字」的新資料夾，收據就跟目前的學生資料夾（例如「ABG」）對不起來。
+  // 一律優先用 studentsCache[token].name（目前最新的真實姓名），沒有 token 或查無資料才退回快照的 student_name。
+  const curName = (p.token && typeof studentsCache !== 'undefined' && studentsCache[p.token]) ? studentsCache[p.token].name : null;
+  const name = curName || p.student_name || p.token || '學生';
   // เลขที่ใบเสร็จ = วันที่รับเงิน + ลำดับของวันนั้น เช่น 2026-0630-01
   // 2026-07-10 修正：改用 teacherToday()（泰國時間）取代瀏覽器本地時區，避免午夜到早上 7 點這段
   // 收據日期算錯天，連帶編號序號跟著撞號/跳號。
@@ -3733,7 +3778,7 @@ async function generateAndUploadReceipt(p, v) {
   var terms = (v.ls && v.ls % 10 === 0) ? (v.ls / 10) : 0;
   var lessonTxt = terms > 0 ? (terms + ' 期（' + v.ls + ' 堂）') : (v.ls + ' 堂');
   if (v.bn > 0) lessonTxt += '＋贈 ' + v.bn + ' 堂';
-  var itemVal  = (p.course_label || '泰語 1對1 課程') + '　' + lessonTxt;
+  var itemVal  = '<strong>' + (p.course_label || '泰語 1對1 課程') + '</strong>　' + lessonTxt;
   var startVal = v.start || '依行事曆繼續';
   var perVal   = v.pp + ' ' + v.cur;
   var totalVal = total.toLocaleString() + ' ' + v.cur;
@@ -4275,9 +4320,9 @@ async function connectCalendar() {
         const rows = list.map(function(item) {
           const timeStr = item.startTime + (item.endTime ? '–' + item.endTime : '');
           const action = item.isToday
-            ? '<button class="today-done" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="recordAttendance(\'' + item.token + '\')">✅ 今日上課</button>'
+            ? '<button class="today-done" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="recordAttendance(\'' + item.token + '\');this.closest(\'.class-card\').remove()">✅ 今日上課</button>'
             : '<span style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;align-self:center;">即將到來</span>';
-          return '<div class="today-row">' +
+          return '<div class="today-row class-card">' +
             '<div style="flex:1;">' +
               '<span class="t-name">' + item.s.name + '</span>' +
               (timeStr ? '<div style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">' + timeStr + '</div>' : '') +
@@ -4442,7 +4487,7 @@ async function checkStudentSlipStatus(token) {
   var color = p.status === 'rejected' ? '#f5ece0' : p.status === 'done' ? 'var(--gold-light)' : '#fef3c7';
   var textColor = p.status === 'rejected' ? '#5c5148' : p.status === 'done' ? 'var(--gold-deep)' : '#92400e';
   el.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;background:' + color + ';border-radius:9px;padding:10px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + textColor + ';font-weight:600;margin-bottom:12px;">' +
-    '<div style="flex:1;">' + msg + '<br><span style="font-weight:400;font-size:0.78rem;">' + p.course_label + '</span></div>' +
+    '<div style="flex:1;">' + msg + '<br><span style="font-weight:700;font-size:0.78rem;">' + p.course_label + '</span></div>' +
     '<button onclick="dismissSlipStatus(\'' + dismissKey + '\')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1rem;color:' + textColor + ';opacity:0.5;padding:0 2px;line-height:1;flex-shrink:0;">✕</button>' +
     '</div>';
 }
@@ -5276,10 +5321,14 @@ async function finalizeSegment(chunksArg, mimeArg, startTimeArg){
   }
 }
 
+// 2026-07-11：錄影上傳中的旗標，跟 beforeunload 掛勾（見上方 uploadInProgress 的同一顆監聽器），
+// 上傳影片途中關分頁一樣要跳出警告，避免整堂錄影傳到一半就不見（RELIABILITY FIRST）
+let recUploadInProgress = false;
 async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl, folder){
   folder = folder || '影片';
   const s=(typeof studentsCache!=='undefined' && studentsCache[token])?studentsCache[token]:{name:token};
   const setMsg=(t)=>{ if(statusEl) statusEl.textContent=t; };
+  recUploadInProgress = true;
   try{
     setMsg('☁️ 連線 Google Drive…（首次會跳出 Google 授權）');
     const stuFolderId=await gdGetStudentSubfolderId(s.name||token, folder);
@@ -5298,6 +5347,8 @@ async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl
     recShowStallWarning('自動上傳到雲端失敗：'+(err.message||err)+'（檔案還在，可用上方下載按鈕手動存檔）');
     recPlayAlert(2);
     // ⚠️ 不清 IDB → 讓使用者下次開頁面仍可從「救回」banner 救回
+  }finally{
+    recUploadInProgress = false;
   }
 }
 

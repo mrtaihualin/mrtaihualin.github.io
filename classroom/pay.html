@@ -20,7 +20,7 @@
 *{box-sizing:border-box;}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans TC',sans-serif;-webkit-font-smoothing:antialiased;}
 h1,h2,h3{font-family:'Noto Serif TC',serif;}
-.wrap{max-width:480px;margin:0 auto;padding:20px 16px 60px;}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 60px;}
 .student-hero{background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));border-radius:var(--radius);padding:26px 20px;text-align:center;color:#fff;margin-bottom:16px;box-shadow:0 6px 20px rgba(139,99,16,0.25);}
 .student-hero-avatar{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;margin:0 auto 10px;font-family:'Noto Serif TC',serif;}
 .student-hero-name{font-size:1.25rem;font-weight:700;font-family:'Noto Serif TC',serif;}
@@ -40,8 +40,8 @@ h1,h2,h3{font-family:'Noto Serif TC',serif;}
 .btn-gold{background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border:none;border-radius:11px;padding:13px 18px;font-size:0.95rem;font-weight:700;font-family:'Noto Sans TC',sans-serif;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(139,99,16,0.22);}
 .btn-gold:disabled{opacity:0.55;cursor:default;}
 .btn-copy{flex-shrink:0;background:var(--gold-light);color:var(--gold-deep);border:1.5px solid var(--border);border-radius:9px;padding:0 14px;font-weight:700;font-family:'Noto Sans TC',sans-serif;font-size:0.82rem;cursor:pointer;}
-.btn-copy.copied{background:var(--green);color:#fff;border-color:var(--green);}
-.meet-btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;border-radius:11px;padding:14px;font-weight:700;font-size:0.95rem;font-family:'Noto Sans TC',sans-serif;}
+.btn-copy.copied{background:var(--gold-deep);color:#fff;border-color:var(--gold-deep);}
+.meet-btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border-radius:11px;padding:14px;font-weight:700;font-size:0.95rem;font-family:'Noto Sans TC',sans-serif;}
 .meet-locked{display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;color:var(--ink-muted);border:1.5px dashed #d8c9a0;border-radius:11px;padding:14px;font-weight:700;font-size:0.9rem;cursor:not-allowed;}
 .ghost-link{display:inline-block;font-size:0.8rem;color:var(--ink-muted);text-decoration:underline;font-family:'Noto Sans TC',sans-serif;}
 /* course cards */
@@ -347,7 +347,7 @@ async function checkSlipStatus(){
   var msg = map[p.status]; if (!msg) return;
   var bg = p.status==='rejected' ? '#f5ece0' : (p.status==='done'||p.status==='pending') ? 'var(--gold-light)' : '#fef3c7';
   var col = p.status==='rejected' ? '#5c5148' : (p.status==='done'||p.status==='pending') ? 'var(--gold-deep)' : '#92400e';
-  el.innerHTML = '<div style="background:' + bg + ';border-radius:10px;padding:11px 14px;font-size:0.85rem;color:' + col + ';font-weight:600;margin-bottom:16px;">' + msg + '<br><span style="font-weight:400;font-size:0.78rem;">' + escHtml(p.course_label||'') + '</span></div>';
+  el.innerHTML = '<div style="background:' + bg + ';border-radius:10px;padding:11px 14px;font-size:0.85rem;color:' + col + ';font-weight:600;margin-bottom:16px;">' + msg + '<br><span style="font-weight:700;font-size:0.78rem;">' + escHtml(p.course_label||'') + '</span></div>';
 }
 
 // ════════════════════════ 繳費 MODAL ════════════════════════
@@ -589,7 +589,7 @@ async function submitSlip(){
   notifyTeacherNewSlip({ name:studentName, course:courseLabel, lessons:lessons, bonus:bonus, currency:payCur, total:total, note:note });
   closeSlipModal();
   var statusEl=document.getElementById('slipStatusMsg');
-  if (statusEl){ statusEl.innerHTML='<div style="background:#fef3c7;border-radius:10px;padding:11px 14px;font-size:0.85rem;color:#92400e;font-weight:600;margin-bottom:16px;">⏳ 已送出，等待老師確認<br><span style="font-weight:400;font-size:0.78rem;">'+escHtml(courseLabel)+'</span></div>'; }
+  if (statusEl){ statusEl.innerHTML='<div style="background:#fef3c7;border-radius:10px;padding:11px 14px;font-size:0.85rem;color:#92400e;font-weight:600;margin-bottom:16px;">⏳ 已送出，等待老師確認<br><span style="font-weight:700;font-size:0.78rem;">'+escHtml(courseLabel)+'</span></div>'; }
   alert('✅ 繳費已送出！老師確認收款後，你的上課連結就會自動開通。');
 }
 
