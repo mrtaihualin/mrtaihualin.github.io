@@ -19,7 +19,9 @@
         body: {
           word: args.word,
           level: args.level,
-          initialGuess: args.initialGuess,   // คำพยางค์เดียว
+          game: args.game,                    // 'tone'(default)/'reading'/'typing' — แยก SRS ต่อเกม
+          clean: args.clean,                  // เกมสะกด (อ่าน/พิมพ์): รอบนี้สะอาดไหม
+          initialGuess: args.initialGuess,   // คำพยางค์เดียว (เกมเสียง)
           syllables: args.syllables,          // คำหลายพยางค์ (ถ้ามี)
           guesses: args.guesses,              // คำเดารายพยางค์ (ถ้ามี)
           knownCheck: !!args.knownCheck
@@ -31,10 +33,18 @@
       return { ok: false, reason: 'exception', detail: String(e) };
     }
   }
+  // ล็อกอินไหม — รองรับหลายเกม: เกมเสียงใช้ TF_AUTH · เกมอ่าน/พิมพ์ใช้ READING_AUTH
+  function loggedIn() {
+    try {
+      if (window.TF_AUTH && window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn()) return true;
+      if (window.READING_AUTH && window.READING_AUTH.user) return true;
+    } catch (e) {}
+    return false;
+  }
   // มีเซิร์ฟเวอร์ + ล็อกอินไหม (ไม่ล็อกอิน = ไม่มีดาวจริงอยู่แล้ว → เกมใช้ local เดิม)
   function available() {
     var sb = client();
-    return !!(sb && sb.functions && window.TF_AUTH && window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn());
+    return !!(sb && sb.functions && loggedIn());
   }
   window.TONE_SERVER = { finishRound: finishRound, available: available };
 })();
