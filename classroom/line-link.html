@@ -121,7 +121,8 @@
         });
         var data = await res.json().catch(function(){ return {}; });
         if (!res.ok || !data.ok) {
-          setStatus('❌ 連結失敗：' + (data.error || res.status), 'err');
+          // 2026-07-11 debug：把 LINE 回傳的真正原因 (detail) 也顯示出來，才不用瞎猜為什麼 verify 失敗
+          setStatus('❌ 連結失敗：' + (data.error || res.status) + (data.detail ? ' — ' + data.detail : ''), 'err');
           return;
         }
         document.getElementById('titleText').textContent = '✅ 連結成功！';
