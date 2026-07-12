@@ -214,7 +214,7 @@ async function init(){
   if (!sb){ renderInvalid('系統連線失敗，請稍後再試或聯繫老師'); return; }
   var student = null;
   try {
-    var res = await sb.from('classroom_students').select('*').eq('token', token).single();
+    var res = await sb.rpc('get_student_by_token', { p_token: token });
     if (res.data) student = res.data;
   } catch(e){}
   if (!student){ renderInvalid('連結無效或已過期，請聯繫泰華老師取得正確連結'); return; }

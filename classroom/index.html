@@ -2592,7 +2592,7 @@ async function renderStudentView() {
   let student = null;
   if (token) {
     try {
-      const { data } = await sb.from('classroom_students').select('*').eq('token', token).single();
+      const { data } = await sb.rpc('get_student_by_token', { p_token: token });
       if (data) student = data;
     } catch (e) {}
   }
