@@ -82,7 +82,7 @@
 .combo-badge.show{display:flex;}
 
 .word-area{text-align:center;margin:4px 0 0;}
-.word-th{font-size:62px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px;}
+.word-th{font-size:38px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px;}/* Lin 2026-07-12: ย่อให้เท่าเกมเสียง (เดิม 62px ใหญ่ไป) */
 .word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px;}
 /* มือถือแนวนอน (landscape): ตรึงเฉพาะโซนคำศัพท์ไว้บนสุด ไม่ต้องเลื่อนตามหน้า — ปุ่ม/ช่อง/คีย์บอร์ดด้านล่างเลื่อนปกติ — Lin 2026-07-12 */
 @media (orientation:landscape) and (hover:none) and (pointer:coarse){
@@ -1060,8 +1060,10 @@ function initGame(){
 
 // แตกคำเป็นอาเรย์พยางค์ (พยางค์เดียว = อาเรย์ 1 ตัว)
 function buildSyls(w){
-  if(w.syls&&w.syls.length)return w.syls.map(function(s){return {th:s.th,cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name};});
-  return [{th:w.th,cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name}];
+  // Lin 2026-07-12: เพิ่ม read = คำอ่านของพยางค์ (จาก readingTH) ให้讀音โชว์คำอ่าน ไม่ใช่ตัวเขียน (แก้บั๊กเดียวกับเกมพิมพ์)
+  var _reads=(w.readingTH?String(w.readingTH).split('-'):[]);
+  if(w.syls&&w.syls.length)return w.syls.map(function(s,i){return {th:s.th,read:(_reads[i]||s.th),cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name};});
+  return [{th:w.th,read:(w.readingTH||w.th),cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name}];
 }
 // แถบบอกพยางค์ (โชว์เฉพาะคำหลายพยางค์)
 function renderSylStrip(){
@@ -1805,8 +1807,9 @@ function markOpts(){
 
 // Lin 2026-07-10: เปลี่ยนคำอ่านจากอังกฤษ (náam) เป็นสะกดไทยจริง — คำหลายพยางค์ (มี WORD.syls) ต่อเป็น "ผม-กิน-ข้าว" ให้เห็นจุดแบ่งพยางค์
 function buildThaiPron(){
+  if(WORD&&WORD.readingTH)return WORD.readingTH; // Lin 2026-07-12: คำอ่านจริง (สะ-หนาม-บิน) ไม่ใช่ตัวเขียน
   if(WORD&&WORD.syls&&WORD.syls.length)return WORD.syls.map(function(s){return s.th;}).join('-');
-  return W?W.th:'';
+  return W?(W.read||W.th):'';
 }
 function showReveal(){
   var _pron=buildThaiPron();
@@ -2440,7 +2443,7 @@ document.addEventListener('keydown',function(e){
 });
 </script>
 </div><!-- /.v3-page -->
-<script src="shared.js?v=26"></script>
+<script src="shared.js?v=27"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

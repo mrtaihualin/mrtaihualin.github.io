@@ -82,7 +82,7 @@
 .combo-badge.show{display:flex;}
 
 .word-area{text-align:center;margin:4px 0 0;}
-.word-th{font-size:62px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px;}
+.word-th{font-size:38px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px;}/* Lin 2026-07-12: ย่อให้เท่าเกมเสียง (เดิม 62px ใหญ่ไป) */
 .word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px;}
 /* มือถือแนวนอน (landscape): ตรึงเฉพาะโซนคำศัพท์ไว้บนสุด ไม่ต้องเลื่อนตามหน้า — ปุ่ม/ช่อง/คีย์บอร์ดด้านล่างเลื่อนปกติ — Lin 2026-07-12 */
 @media (orientation:landscape) and (hover:none) and (pointer:coarse){
@@ -280,7 +280,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 /* ── 打字模式（真實鍵盤 Kedmanee 泰文鍵位） ── */
 .type-panel{width:100%;flex-direction:column;align-items:center;gap:10px;margin:6px 0 4px;}
-.type-target{font-family:'Sarabun',sans-serif;font-size:34px;font-weight:700;min-height:48px;letter-spacing:1px;text-align:center;padding:6px 14px;border-radius:12px;background:#fffdf7;border:2px dashed #d4b87a;word-break:break-all;display:flex;align-items:center;justify-content:center;width:fit-content;max-width:92%;margin:0 auto;}
+/* Lin 2026-07-12: ประโยคยาวเคยแตกเป็นชิ้น (word-break:break-all ตัดกลางพยางค์ไทย + letter-spacing เว้นห่าง) → แก้ให้ตัดคำเป็นธรรมชาติ + ฟอนต์ย่อ-ขยายตามจอ (clamp) ไม่ล้น */
+.type-target{font-family:'Sarabun',sans-serif;font-size:clamp(20px,5vw,30px);font-weight:700;min-height:48px;letter-spacing:0;line-height:1.45;text-align:center;padding:8px 14px;border-radius:12px;background:#fffdf7;border:2px dashed #d4b87a;word-break:normal;overflow-wrap:break-word;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0 2px;width:auto;max-width:96%;margin:0 auto;}
 .type-target.shake{animation:tkshake .35s;}
 @keyframes tkshake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
 .rg-typed-ok{color:#2e7d32;}
@@ -291,7 +292,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 /* Lin 2026-07-12: มือถือ無顯示 → แตะกล่องคำเรียกคีย์บอร์ดเครื่องเอง */
 .type-target{cursor:pointer;}
 /* Lin 2026-07-12: ตอนคีย์บอร์ดเครื่องขึ้นมาพิมพ์ → ซ่อนหัวเว็บ/แถบชื่อ ไม่ให้กินพื้นที่จอ */
-body.tg-kbd-typing .page-header,body.tg-kbd-typing .page-strip{display:none !important;}
+body.tg-kbd-typing .page-header,body.tg-kbd-typing .page-strip,body.tg-kbd-typing .site-nav,body.tg-kbd-typing .avail-band{display:none !important;}
+body.tg-kbd-typing{padding-top:0 !important;}
 /* 電腦版本不需要「用手機鍵盤打字」這個按鈕 — 用滑鼠的裝置(有滑鼠指標)才隱藏，觸控裝置照常顯示 — Lin 2026-07-07 */
 @media (hover:hover) and (pointer:fine){ #rg-mobile-kbd-btn{display:none !important;} }
 /* มือถือ + 有提示(引導)模式: ปิดปุ่มเรียกคีย์บอร์ดจริงของเครื่อง บังคับใช้คีย์บอร์ดในเกมอย่างเดียว (เห็นตัวที่ต้องกดชัดเจน) — Lin 2026-07-07 */
@@ -309,7 +311,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 .tk-key.tk-space{flex:4;max-width:180px;font-size:10.5px;color:#7a5510;}
 .tk-key.active,#rg-shift-key.active{background:#e8a020;color:#fff;border-color:#e8a020;}
 #rg-shift-key.need{border-color:#d85a30;box-shadow:0 0 0 2px rgba(216,90,48,.3);background:#ffe8dd;}
-@media(max-width:420px){.tk-key{height:34px;}.tk-key .tk-base{font-size:13px;}.type-target{font-size:28px;}}
+@media(max-width:420px){.tk-key{height:34px;}.tk-key .tk-base{font-size:13px;}}
 .retry-hint.good{color:#2e7d32;background:#e8f5e9;border-color:#a5d6a7;}
 .retry-hint.wrong3{color:#c62828;background:#ffebee;border-color:#ef9a9a;}
 </style>
@@ -452,7 +454,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     <div class="type-target" id="rg-type-target" onclick="try{document.getElementById('rg-mobile-input').focus();}catch(e){}" title="點一下用鍵盤打字"></div>
     <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤排好位置了，打對會自動跳下一步 👇</div>
     <!-- ปุ่มกด → เด้งคีย์บอร์ดของมือถือเอง (Gboard/คีย์บอร์ด iOS ไทย) ขึ้นมาพิมพ์ได้ตรงๆ ไม่ต้องใช้ปุ่มเสมือนด้านล่างก็ได้ — ตัว input จริงซ่อนไว้ (โฟกัสได้แต่มองไม่เห็น) เพราะมือถือต้องมี input จริงถึงจะเด้งคีย์บอร์ด — Lin 2026-07-06 -->
-    <button type="button" id="rg-mobile-kbd-btn" class="btn btn-secondary" style="font-size:13px;padding:8px 16px;" onclick="document.getElementById('rg-mobile-input').focus()">📱 用手機鍵盤打字</button>
+    <!-- Lin 2026-07-12: ลบปุ่ม 📱 用手機鍵盤打字 ออก — แตะที่กล่องคำ (rg-type-target) เรียกคีย์บอร์ดเครื่องได้เลย ไม่ต้องมีปุ่ม -->
     <!-- 無提示(挑戰)模式預設用自己的鍵盤(手機/電腦)打字，不強制用遊戲內鍵盤 → 這顆讓玩家自己選要不要開螢幕鍵盤看 — Lin 2026-07-12 -->
     <button type="button" id="rg-webkbd-toggle" class="btn btn-secondary" style="font-size:13px;padding:8px 16px;display:none;" onclick="rgToggleWebKbd()">⌨️ 開啟螢幕鍵盤</button>
     <input type="text" id="rg-mobile-input" class="mobile-kbd-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" lang="th">
@@ -1025,8 +1027,10 @@ function initGame(){
 function buildSyls(w){
   // เพิ่ม en (คำอ่าน/拼音) ต่อพยางค์ด้วย — เอาไว้โชว์ตรงจุดเลือกวรรณยุกต์ (bonus-reading) — Lin 2026-07-07
   // พยางค์เดียวไม่มี en ของตัวเอง → ใช้ en ของทั้งคำ (w.en) แทน
-  if(w.syls&&w.syls.length)return w.syls.map(function(s){return {th:s.th,cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name,en:s.en||w.en};});
-  return [{th:w.th,cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name,en:w.en}];
+  // Lin 2026-07-12: เพิ่ม read = คำอ่านของพยางค์ (จาก readingTH ตัดด้วย -) ให้ช่อง讀音โชว์ "คำอ่าน" ไม่ใช่ "ตัวเขียน" (แก้บั๊ก สนามบิน โชว์ นาม แทน สะ-หนาม-บิน)
+  var _reads=(w.readingTH?String(w.readingTH).split('-'):[]);
+  if(w.syls&&w.syls.length)return w.syls.map(function(s,i){return {th:s.th,read:(_reads[i]||s.th),cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name,en:s.en||w.en};});
+  return [{th:w.th,read:(w.readingTH||w.th),cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name,en:w.en}];
 }
 // แถบบอกพยางค์ (โชว์เฉพาะคำหลายพยางค์)
 function renderSylStrip(){
@@ -1435,7 +1439,7 @@ function showBonus(){
   document.getElementById('bonus-result').textContent='';
   document.getElementById('bonus-reason').className='bonus-reason';
   var _rd0=document.getElementById('bonus-reading');
-  if(_rd0)_rd0.textContent=W.th?('讀音：'+W.th):''; // Lin 2026-07-10: เปลี่ยนจากอ่านอังกฤษ (náam) เป็นสะกดไทยจริงของพยางค์นี้
+  if(_rd0)_rd0.textContent=W.th?('讀音：'+(W.read||W.th)):''; // Lin 2026-07-12: ช่อง讀音ต้องเป็น "คำอ่าน" (read) ไม่ใช่ตัวเขียน (th)
   var skipBtn0=document.getElementById('rg-tone-skip-btn');
   if(skipBtn0)skipBtn0.style.display='none'; // ยังไม่ถึงตอนที่พิมพ์ครบ ยังไม่ให้กดข้าม
   BONUS_TONES.forEach(function(t){
@@ -1725,8 +1729,9 @@ function markOpts(){
 
 // Lin 2026-07-10: เปลี่ยนคำอ่านจากอังกฤษ (náam) เป็นสะกดไทยจริง — คำหลายพยางค์ (มี WORD.syls) ต่อเป็น "ผม-กิน-ข้าว" ให้เห็นจุดแบ่งพยางค์
 function buildThaiPron(){
+  if(WORD&&WORD.readingTH)return WORD.readingTH; // Lin 2026-07-12: คำอ่านจริง (สะ-หนาม-บิน) ไม่ใช่ตัวเขียน
   if(WORD&&WORD.syls&&WORD.syls.length)return WORD.syls.map(function(s){return s.th;}).join('-');
-  return W?W.th:'';
+  return W?(W.read||W.th):'';
 }
 function showReveal(){
   var _pron=buildThaiPron();
@@ -2477,7 +2482,7 @@ function rgContAskNextTone(){
   document.getElementById('bonus-result').textContent='';
   document.getElementById('bonus-reason').className='bonus-reason';
   var _rd=document.getElementById('bonus-reading');
-  if(_rd)_rd.textContent=SY.th?('讀音：'+SY.th):''; // Lin 2026-07-10: เปลี่ยนจากอ่านอังกฤษ (náam) เป็นสะกดไทยจริงของพยางค์นี้
+  if(_rd)_rd.textContent=SY.th?('讀音：'+(SY.read||SY.th)):''; // Lin 2026-07-12: ช่อง讀音ต้องเป็น "คำอ่าน" (read) ไม่ใช่ตัวเขียน (th)
   var hintEl=document.getElementById('rg-type-hint');
   if(hintEl){hintEl.textContent='打完整個字了！選一下「'+SY.th+'」的聲調也可以（'+(RG_CONT_TONE_IDX+1)+'/'+RG_CONT_TONE_Q.length+'），不選按 Enter 或下面按鈕直接跳過 👇';hintEl.className='type-hint good';}
   var skipBtn=document.getElementById('rg-tone-skip-btn');
@@ -2572,12 +2577,16 @@ function rgContBackspace(){
   RG_TYPE.pos--;rgTypeRenderTarget();rgTypeHighlightNextKey();
 }
 
+// Lin 2026-07-12 (Smart Tone Input): อ่านเลข 1-5 จาก e.code (Digit/Numpad) → ใช้ได้แม้คีย์บอร์ดตั้งอยู่ layout ไทย (e.key เป็นตัวอักษรไทย ๅ/ภ/ถ...)
+function rgToneKeyNum(e){ var m=/^(?:Digit|Numpad)([1-5])$/.exec(e.code||''); return m?Number(m[1]):0; }
 document.addEventListener('keydown',function(e){
   if(!RG_TYPE.on)return;
   var gameEl=document.getElementById('game');
   if(!gameEl || gameEl.style.display==='none')return;
   var ae=document.activeElement;
   if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))return;
+  // Smart Tone: ตอนเลือกวรรณยุกต์ (bonus-section โชว์) กดเลข 1-5 = เลือกวรรณยุกต์ ไม่พิมพ์ตัวไทยของปุ่มเลขนั้น (ปล่อยให้ handler ด้านล่างจัดการ)
+  if(rgToneKeyNum(e)){ var _bs=document.getElementById('bonus-section'); if(_bs && _bs.classList.contains('show')){ e.preventDefault(); return; } }
   // โมดัลเปิดอยู่ (怎麼玩 / 我有問題 / 成就) → อย่าให้พิมพ์ทะลุไปโดนเกม — Lin 2026-07-02
   var _hm=document.getElementById('rg-howto-modal');
   if(_hm && _hm.style.display==='flex')return;
@@ -2594,7 +2603,8 @@ document.addEventListener('keydown',function(e){
 });
 // กดเลข 1-5 บนคีย์บอร์ดแทนการคลิกเลือกวรรณยุกต์ได้ — ใช้ได้ทุกโหมด (กดเลือก/พิมพ์ทีละพยางค์/พิมพ์ต่อเนื่องทั้งคำ) เพราะเช็คแค่ #bonus-section โชว์อยู่ไหม — Lin 2026-07-12
 document.addEventListener('keydown',function(e){
-  if(e.key<'1'||e.key>'5')return;
+  var _toneN=rgToneKeyNum(e); // Lin 2026-07-12: อ่านจาก e.code ใช้ได้ทุก layout (รวมไทย)
+  if(!_toneN)return;
   var ae=document.activeElement;
   if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))return;
   var _hm=document.getElementById('rg-howto-modal');
@@ -2606,7 +2616,7 @@ document.addEventListener('keydown',function(e){
   if(!sec || !sec.classList.contains('show'))return;
   var box=document.getElementById('bonus-opts');
   if(!box)return;
-  var tone=BONUS_TONES[Number(e.key)-1];
+  var tone=BONUS_TONES[_toneN-1];
   if(!tone)return;
   var btn=box.querySelector('[data-tone="'+tone.name+'"]');
   if(!btn || btn.classList.contains('locked'))return;
@@ -2892,7 +2902,7 @@ function rgOpenAsk() {
 
 </script>
 </div><!-- /.v3-page -->
-<script src="shared.js?v=26"></script>
+<script src="shared.js?v=27"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

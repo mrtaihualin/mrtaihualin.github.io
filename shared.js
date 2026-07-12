@@ -1697,6 +1697,8 @@ window.deleteFBComment = function(postId, idx) {
         // คอม: ตำแหน่งเดิม (bottom 60px) · มือถือ: ลงมาชิดล่างขึ้นอีกสเตป (เดิมลอยสูงไปทับกัน) แค่พ้น bottom-nav (60px) นิดเดียว
         '.rg-ctl-wrap{position:fixed;right:12px;bottom:calc(60px + env(safe-area-inset-bottom,0px));z-index:100000;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}' +
         '@media(max-width:768px){.rg-ctl-wrap{bottom:calc(68px + env(safe-area-inset-bottom,0px));}}' +
+        // Lin 2026-07-12: เฉพาะตอนเต็มจอ → ย้ายชุดปุ่ม (🎮+⛶) ลงไปติดขอบล่างสุด · ออกจากเต็มจอแล้วเด้งกลับที่เดิม
+        '.rg-ctl-wrap.rg-ctl-fs,body.rg-fake-fullscreen .rg-ctl-wrap{bottom:calc(6px + env(safe-area-inset-bottom,0px)) !important;}' +
         '.rg-ctl-fab{width:44px;height:44px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;flex-shrink:0;}' +
         '.rg-ctl-fab:active{transform:scale(.92);}' +
         // ── ดรอปดาวน์เมนูเกม (แนวตั้ง) — ซ่อนไว้ กดปุ่ม 🎮 ถึงเปิด · ทับสไตล์แถบเดิมของทุกเกมด้วย !important ──
@@ -1750,6 +1752,7 @@ window.deleteFBComment = function(postId, idx) {
       function renderFab() { fab.textContent = on ? '✕' : '⛶'; fab.title = on ? '離開全螢幕模式' : '全螢幕模式（隱藏其他選單）'; }
       function applyState() {
         document.body.classList.toggle('rg-fake-fullscreen', on);
+        try { wrap.classList.toggle('rg-ctl-fs', on); } catch (e) {} // Lin 2026-07-12: เต็มจอ = ชุดปุ่มลงขอบล่างสุด
         renderFab();
         try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
       }
