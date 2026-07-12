@@ -12,7 +12,6 @@
     --gold: #8B6310; --gold-bright: #C8973A; --gold-light: #F3E4C2; --gold-deep: #5a3e0a;
     --ink: #1C1C1C; --ink-soft: #333333; --ink-muted: #6b6b6b;
     --bg: #EDE7D9; --cream: #FAF4E8; --border: rgba(139,99,16,0.18);
-    --green: #2d6a4f; --green-dark: #1b4332;
     --amber: #b45309; --amber-dark: #78350f; --amber-muted: #92400e;
     --slate: #7c6f61; --slate-dark: #5c5148;
     --radius: 14px; --shadow: 0 4px 24px rgba(90,62,10,0.10), 0 1px 4px rgba(0,0,0,0.04);
@@ -148,8 +147,8 @@
   .btn-record.recording { background: var(--amber-dark); animation: pulse 1.2s infinite; }
   .btn-stop { background: var(--slate); color: #fff; }
   .btn-stop:hover:not(:disabled) { background: var(--slate-dark); }
-  .btn-download { background: var(--green); color: #fff; box-shadow: 0 3px 10px rgba(45,106,79,0.25); }
-  .btn-download:hover:not(:disabled) { background: var(--green-dark); transform: translateY(-1px); }
+  .btn-download { background: var(--gold); color: #fff; box-shadow: 0 3px 10px rgba(139,99,16,0.25); }
+  .btn-download:hover:not(:disabled) { background: var(--gold-deep); transform: translateY(-1px); }
   .btn-gold { background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%); color: #fff; border: none; border-radius: 12px; padding: 18px 28px; cursor: pointer; font-size: 1.1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 1px; box-shadow: 0 6px 24px rgba(139,99,16,0.35), 0 1px 4px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; }
   .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(139,99,16,0.45); }
 
@@ -157,7 +156,7 @@
 
   .status { font-size: 0.8rem; color: var(--ink-muted); min-height: 16px; font-family: 'Noto Sans TC', sans-serif; }
   .status.active { color: var(--amber); font-weight: 600; }
-  .status.done   { color: var(--green); font-weight: 600; }
+  .status.done   { color: var(--gold-deep); font-weight: 600; }
 
   .timer { font-family: monospace; font-size: 1rem; color: var(--gold-deep); font-weight: 700; display: none; }
   .timer.visible { display: inline-block; }
@@ -243,9 +242,9 @@
 
   /* Attendance section */
   /* ── Today schedule ─────────────────────── */
-  .attend-card { background: linear-gradient(180deg,#fff 0%,#f0f9f4 100%); border: 1px solid rgba(45,106,79,0.2); border-top: 2px solid var(--green); border-radius: var(--radius); padding: 20px; }
-  .attend-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--green); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(45,106,79,0.15); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-  .attend-card h2::after { content: ''; flex: 1; height: 1px; background: rgba(45,106,79,0.15); }
+  .attend-card { background: linear-gradient(180deg,#fff 0%,#faf4e8 100%); border: 1px solid rgba(139,99,16,0.2); border-top: 2px solid var(--gold-bright); border-radius: var(--radius); padding: 20px; }
+  .attend-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-bright); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(139,99,16,0.15); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .attend-card h2::after { content: ''; flex: 1; height: 1px; background: rgba(139,99,16,0.15); }
   .attend-list { display: flex; flex-direction: column; gap: 7px; }
   .today-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #fff; border-radius: 10px; border: 1px solid var(--border); font-family: 'Noto Sans TC', sans-serif; gap: 10px; }
   .today-row .t-name { font-weight: 700; font-size: 0.95rem; color: var(--ink-soft); flex: 1; }
@@ -345,8 +344,8 @@
   .notepad-editor { flex: 1; overflow-y: auto; background: #fffdf7; padding: 20px 24px; font-size: 1.05rem; font-family: 'Noto Serif TC', serif; color: var(--ink); line-height: 1.9; outline: none; min-height: 200px; }
   .notepad-editor:empty::before { content: attr(data-placeholder); color: var(--ink-muted); pointer-events: none; }
   .notepad-modal-footer { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--border); background: linear-gradient(0deg,#fff 0%,#fdf8f0 100%); flex-shrink: 0; }
-  .btn-save-note { background: var(--green); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 0.9rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; }
-  .btn-save-note:hover { background: var(--green-dark); }
+  .btn-save-note { background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 0.9rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; }
+  .btn-save-note:hover { background: var(--gold-deep); }
   .note-save-status { font-size: 0.82rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; flex: 1; }
   .btn-open-note { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 0.85rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; color: var(--gold-deep); cursor: pointer; transition: all 0.15s; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); width: 100%; justify-content: center; }
   .btn-open-note:hover { background: var(--gold-light); border-color: var(--gold-bright); }
@@ -2485,11 +2484,11 @@ async function loadTeacherStudentInfo(token) {
               }).join('') +
               '</div>';
             var actionRow = f.approved
-              ? '<div style="font-size:0.78rem;color:var(--green);margin-top:5px;">公開名稱：' + escHtml(f.display_name || '匿名學員') + '　分類：' + catLabel +
+              ? '<div style="font-size:0.78rem;color:var(--gold-deep);margin-top:5px;">公開名稱：' + escHtml(f.display_name || '匿名學員') + '　分類：' + catLabel +
                   ' <button onclick="unapproveTestimonial(\'' + fid + '\',\'' + token.replace(/'/g,'') + '\')" style="background:none;border:none;cursor:pointer;font-size:0.75rem;color:#b91c1c;padding:0 4px;font-family:\'Noto Sans TC\',sans-serif;">撤銷刊登</button></div>'
               : '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;">' +
                   '<input id="dn-' + fid + '" placeholder="公開名稱（例：小明同學）" value="' + escHtml(f.display_name || '') + '" style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--border);font-size:0.78rem;font-family:\'Noto Sans TC\',sans-serif;background:#fff;color:var(--ink);">' +
-                  '<button onclick="approveTestimonial(\'' + fid + '\',\'' + token.replace(/'/g,'') + '\')" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;white-space:nowrap;">✅ 核准刊登</button>' +
+                  '<button onclick="approveTestimonial(\'' + fid + '\',\'' + token.replace(/'/g,'') + '\')" style="background:var(--gold);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans TC\',sans-serif;white-space:nowrap;">✅ 核准刊登</button>' +
                 '</div>' + checkboxRow;
             return '<div style="background:#f9f7f2;border-radius:8px;padding:9px 10px;margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">' +
               '<div style="font-size:0.76rem;color:var(--ink-muted);margin-bottom:3px;">' + d + approvedBadge + '</div>' +
@@ -2551,9 +2550,9 @@ function renderNewFeedbackBanner() {
   var item = newFeedbackList[newFeedbackIdx];
   var counter = newFeedbackList.length > 1 ? ' <span style="opacity:0.65;font-weight:400;">(' + (newFeedbackIdx + 1) + '/' + newFeedbackList.length + ')</span>' : '';
   var preview = item.content.length > 36 ? item.content.slice(0, 36) + '…' : item.content;
-  el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;background:#eef6f0;border:1.5px solid var(--green);border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--green-dark);font-weight:700;">' +
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;background:var(--gold-light);border:1.5px solid var(--gold-bright);border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--gold-deep);font-weight:700;">' +
     '<span style="flex:1;cursor:pointer;" onclick="openFeedbackFromBanner(\'' + item.token + '\',\'' + item.id + '\')">📝 新回饋：' + escHtml(item.name) + '「' + escHtml(preview) + '」' + counter + '</span>' +
-    '<button onclick="dismissFeedbackAlert(\'' + item.id + '\')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--green-dark);opacity:0.6;padding:2px 6px;flex-shrink:0;">✕</button>' +
+    '<button onclick="dismissFeedbackAlert(\'' + item.id + '\')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--gold-deep);opacity:0.6;padding:2px 6px;flex-shrink:0;">✕</button>' +
   '</div>';
   if (newFeedbackList.length > 1) {
     newFeedbackRotateTimer = setInterval(function() {
@@ -2985,7 +2984,7 @@ async function submitFeedback(token) {
     var { error } = await sb.from('classroom_feedback').insert({ token: token, content: text });
     if (error) throw error;
     if (ta) ta.value = '';
-    if (el) { el.style.color = 'var(--green)'; el.textContent = '✅ 已送出，謝謝你的感想！'; }
+    if (el) { el.style.color = 'var(--gold-deep)'; el.textContent = '✅ 已送出，謝謝你的感想！'; }
     setTimeout(function() { if (el) { el.style.color = ''; el.textContent = ''; } }, 6000);
   } catch (e) {
     if (el) { el.style.color = 'var(--amber)'; el.textContent = '⚠️ 送出失敗：' + (e.message || e); }
