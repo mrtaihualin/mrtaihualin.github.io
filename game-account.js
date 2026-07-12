@@ -152,24 +152,19 @@
         client.from('game_accounts').select('stars,streak,last_play,hard_words_by_level').eq('user_id', userId).maybeSingle().then(function (r) {
           var rem = (r && r.data) || {};
           var la = load();
-          la.stars = Math.max(la.stars || 0, rem.stars || 0);
+          // ── Phase 4 (ล็อก 2026-07-11): เซิร์ฟเวอร์เป็นเจ้าของ "ดาว + ตัวนับเพดาน" (remote-authoritative) ──
+          //   เดิม: Math.max(local, remote) → localStorage ที่ถูกแก้มั่ว (เปิด DevTools ตั้งดาว 9999) ชนะ = โชว์ดาวปลอม
+          //   ใหม่: เอาค่าจากเซิร์ฟเวอร์มาโชว์ตรงๆ → ดาวปลอมใน localStorage ถูกทับด้วยค่าจริงทุกครั้งที่ sync
+          //   ดาวเพิ่มได้ทางเดียว = Edge Function tone-round (service_role) · client เขียน game_accounts ไม่ได้แล้ว (RLS ล็อก step2)
+          if (rem.stars != null) la.stars = rem.stars;
+          if (rem.hard_words_by_level != null) la.hardWordsByLevel = rem.hard_words_by_level;
+          // streak/last_play = ไม่ใช่เงิน · หลังล็อก RLS เขียนขึ้นเซิร์ฟเวอร์ไม่ได้ → คงแบบต่อเครื่อง (ดึงค่าที่มากกว่ามาโชว์)
           la.streak = Math.max(la.streak || 0, rem.streak || 0);
           var lp = la.lastPlay || null;
           if (rem.last_play && (!lp || rem.last_play > lp)) lp = rem.last_play;
           if (lp) la.lastPlay = lp;
-          // เพดานดาวเงินตลอดชีพต่อระดับ: เอาค่ามากสุดต่อระดับ (ล็อกอิน = ลิงค์ข้ามทุกเครื่อง มีประวัติตามไป)
-          var remHw = rem.hard_words_by_level || {};
-          var locHw = la.hardWordsByLevel || {};
-          var mergedHw = {};
-          [1, 2, 3].forEach(function (lvl) {
-            mergedHw[lvl] = Math.max(locHw[lvl] || 0, remHw[lvl] || 0);
-          });
-          la.hardWordsByLevel = mergedHw;
           save(la);
-          client.from('game_accounts').upsert(
-            { user_id: userId, stars: la.stars, streak: la.streak, last_play: la.lastPlay || null, hard_words_by_level: la.hardWordsByLevel, updated_at: new Date().toISOString() },
-            { onConflict: 'user_id' }
-          ).then(function () {}, function () {});
+          // ❌ เลิก upsert game_accounts จาก client — เดิมบรรทัดนี้คือ "รู" ให้เขียนดาวตรง · เซิร์ฟเวอร์เขียนเองแล้ว
         }, function () {});
       } catch (e) {}
     }
