@@ -342,7 +342,7 @@
   global.buildWordsForPhonicsGames = function (master) {
     return master.map(function (w) {
       var out = { th: w.word, zh: w.zh, en: w.en, level: w.level };
-      ['cons', 'lead', 'cluster', 'vowel', 'tone', 'final', 'tone_name', 'syls'].forEach(function (f) {
+      ['cons', 'lead', 'cluster', 'vowel', 'tone', 'final', 'tone_name', 'syls', 'readingTH'].forEach(function (f) {
         if (w[f] !== undefined) out[f] = w[f];
       });
       return out;

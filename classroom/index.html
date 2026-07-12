@@ -2674,6 +2674,11 @@ async function renderStudentView() {
       '<div id="payHistory" style="margin-top:14px;"></div>' +
     '</div>' +
     '<div class="card">' +
+      '<h2>🔗 連結遊戲帳號</h2>' +
+      '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">連結後，老師可以看到你在小遊戲裡的練習狀況，備課更準。</p>' +
+      '<div id="gameLinkCard"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+    '</div>' +
+    '<div class="card">' +
       '<h2>📚 更多學習資源</h2>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
         '<a href="../content.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">📚 影片與文章</a>' +
@@ -2692,6 +2697,65 @@ async function renderStudentView() {
   loadStudentQuota(token);
   loadStudentReceipts(token);
   loadStudentPayments(token);
+  loadGameLinkStatus(token);
+}
+
+// ── 連結遊戲帳號（把 classroom token 跟遊戲登入帳號綁在一起）──
+// 2026-07-13 Lin：讓老師之後能看到學生在小遊戲的練習狀況（弱點字/準確率）
+// 綁定寫入交給 RPC（link_game_account / unlink_game_account）處理，
+// 用 auth.uid() 當事人自己驗證身分，不直接開放 classroom_game_links 表給 anon 寫。
+async function loadGameLinkStatus(token) {
+  var el = document.getElementById('gameLinkCard');
+  if (!el || !token) return;
+  try {
+    var statusRes = await sb.rpc('get_game_link_status', { p_token: token });
+    var row = statusRes.data && statusRes.data[0];
+    if (row && row.linked) {
+      el.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;background:var(--gold-light);border-radius:9px;padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--gold-deep);font-weight:600;">' +
+          '✅ 已連結：' + escHtml(row.email || '') +
+        '</div>' +
+        '<button onclick="unlinkGameAccount(\'' + token + '\')" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--ink-muted);border-radius:999px;padding:8px 16px;font-size:0.8rem;font-family:\'Noto Sans TC\',sans-serif;cursor:pointer;">解除連結</button>';
+      return;
+    }
+    var sessRes = await sb.auth.getSession();
+    var user = sessRes.data && sessRes.data.session && sessRes.data.session.user;
+    if (user) {
+      el.innerHTML =
+        '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:8px;">目前登入的遊戲帳號：<b>' + escHtml(user.email || '') + '</b></p>' +
+        '<button class="btn-gold" onclick="linkGameAccount(\'' + token + '\')">🔗 連結這個帳號</button>';
+    } else {
+      el.innerHTML =
+        '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:8px;">請先登入你玩遊戲用的帳號，才能連結。</p>' +
+        '<button class="btn-gold" onclick="gameLoginForLink(\'' + token + '\')">使用 Google 登入</button>';
+    }
+  } catch (e) {
+    el.innerHTML = '<p style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">⚠️ 載入失敗，稍後再試</p>';
+  }
+}
+async function linkGameAccount(token) {
+  var el = document.getElementById('gameLinkCard');
+  try {
+    var res = await sb.rpc('link_game_account', { p_token: token });
+    if (res.error) throw res.error;
+    loadGameLinkStatus(token);
+  } catch (e) {
+    alert('連結失敗：' + (e.message || e));
+  }
+}
+async function unlinkGameAccount(token) {
+  if (!confirm('確定要解除連結嗎？')) return;
+  try {
+    var res = await sb.rpc('unlink_game_account', { p_token: token });
+    if (res.error) throw res.error;
+    loadGameLinkStatus(token);
+  } catch (e) {
+    alert('解除失敗：' + (e.message || e));
+  }
+}
+function gameLoginForLink(token) {
+  try { sessionStorage.setItem('classroomLinkToken', token); } catch (e) {}
+  sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
 }
 
 // ── 「入班前 / 等待老師確認收款」頁面 ──────────────────────
