@@ -1679,20 +1679,24 @@ window.deleteFBComment = function(postId, idx) {
 
       var style = document.createElement('style');
       style.textContent =
-        '.rg-fs-fab{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0));z-index:100000;width:42px;height:42px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;}' +
+        /* Lin 2026-07-12: เจอสาเหตุจริงแล้ว — แถบดำที่ทับปุ่มคือ .page-strip (สูง 44px บนคอม / 48px มือถือ ปักหมุดล่างสุด "ทุกขนาดจอ" รวมคอมด้วย!)
+           ไม่ใช่ #bottom-nav (อันนั้นมือถือเท่านั้น + หน้าเกมไม่ได้ใช้ด้วยซ้ำ) — เมื่อกี้แก้ผิดตัว เลยยังทับอยู่บนคอมเพราะ desktop ไม่มี media query ป้องกันเลย (มีแค่ 12px)
+           ตอนนี้ตั้ง clearance หลักให้พ้น .page-strip เสมอ "ทุกขนาดจอ" (ไม่ง้อ media query) แล้วมือถือแคบๆ ค่อยเผื่อเพิ่มอีกชั้นเผื่อ #bottom-nav โผล่มาซ้อนด้วย */
+        '.rg-fs-fab{position:fixed;right:12px;bottom:calc(60px + env(safe-area-inset-bottom,0));z-index:100000;width:42px;height:42px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;}' +
         '.rg-fs-fab:active{transform:scale(.92);}' +
-        /* Lin 2026-07-10: มือถือมีแถบดำ #bottom-nav สูง 60px+safe-area อยู่ล่างสุด — ปุ่มนี้ต้องขยับขึ้นมาไม่ให้จมใต้แถบดำ */
-        '@media(max-width:768px){.rg-fs-fab{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 8px);}}' +
+        '@media(max-width:768px){.rg-fs-fab{bottom:calc(120px + env(safe-area-inset-bottom,0px));}}' +
         /* โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม — ใช้ !important เพราะบางอันมี inline style ล็อกไว้ */
         'body.rg-fake-fullscreen .site-nav,' +
         'body.rg-fake-fullscreen .avail-band,' + /* Lin 2026-07-10: ซ่อนแถบโปรโมทบนสุดด้วยตอนเปิดเกมเต็มจอ */
         'body.rg-fake-fullscreen .page-strip,' +
         'body.rg-fake-fullscreen .page-header,' +
-        'body.rg-fake-fullscreen #game-switcher,' +
+        /* Lin 2026-07-12: เต็มจอแล้วยังต้องมีปุ่มเมนูเกมเล็กๆ กดได้เสมอ (ทั้งคอม+มือถือ) — ซ่อนแค่ตอน "กางเป็นแถบยาว" เท่านั้น ไม่ซ่อนตอนย่อเป็นวงกลมเล็ก */
+        'body.rg-fake-fullscreen #game-switcher:not(.gs-collapsed),' +
         'body.rg-fake-fullscreen .floating-qr,' +
         'body.rg-fake-fullscreen #vault-hero' +
         '{display:none !important;}' +
-        'body.rg-fake-fullscreen{padding-bottom:0 !important;overflow-y:auto;}' +
+        /* Lin 2026-07-12: ซ่อน .site-nav ไปแล้วแต่ body ยังกันพื้นที่ 60px ไว้ให้ nav อยู่ดี (var(--nav-h)) เลยเหลือช่องว่างลอยบนสุด → รีเซ็ตเป็น 0 ไปเลยตอนเต็มจอ */
+        'body.rg-fake-fullscreen{padding-bottom:0 !important;padding-top:0 !important;overflow-y:auto;}' +
         'body.rg-fake-fullscreen .v3-page{padding-top:6px !important;}';
       document.head.appendChild(style);
 
@@ -1705,6 +1709,12 @@ window.deleteFBComment = function(postId, idx) {
         document.body.classList.toggle('rg-fake-fullscreen', on);
         renderFab();
         try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
+        // Lin 2026-07-12: เข้าเต็มจอ → บังคับย่อเมนูเกมเป็นวงกลมเล็กเสมอ (กันเผลอกางเป็นแถบยาวค้างอยู่ตอนเต็มจอ)
+        // ตั้งทั้ง class (เผื่อเรียกก่อนบล็อก ▾ ด้านล่างจะรันเสร็จ) และตัวแปร+ไอคอน (ถ้าบล็อกด้านล่างรันไปแล้ว) ให้ตรงกันเสมอ
+        if (on) {
+          try { gs.classList.add('gs-collapsed'); } catch (e) {}
+          try { if (typeof gsCollapsed !== 'undefined') { gsCollapsed = true; } if (typeof renderMini === 'function') renderMini(); } catch (e) {}
+        }
       }
       fab.onclick = function () { on = !on; applyState(); };
       document.body.appendChild(fab);
@@ -1713,19 +1723,30 @@ window.deleteFBComment = function(postId, idx) {
       // ▾ ปุ่มย่อแถบสลับเกม (#game-switcher) ให้เหลือไอคอนเล็ก — แยกจากปุ่ม fullscreen ด้านบน
       // (fullscreen = ซ่อนทุกอย่างรวมเกม, อันนี้ = แค่ย่อแถบเมนูล่างเวลาเล่นปกติ ไม่ต้องเข้าโหมด fullscreen) — Lin 2026-07-08
       try {
-        var GS_KEY = 'rg_gs_collapsed';
-        var gsCollapsed = false;
-        try { gsCollapsed = localStorage.getItem(GS_KEY) === '1'; } catch (e) {}
+        // Lin 2026-07-12: เปลี่ยนชื่อ key ใหม่ (v2) กัน localStorage ค่าเก่าจากตอนทดสอบก่อนหน้าค้างอยู่ (ตอนนั้น default ยังเป็น false)
+        // ทำให้ยังเห็นเป็นแถบยาวเหมือนเดิมทั้งที่แก้ default เป็น collapsed แล้ว — เปลี่ยน key ให้ทุกคนเริ่มจากค่า default ใหม่จริงๆ
+        var GS_KEY = 'rg_gs_collapsed_v2';
+        var gsCollapsed = true; // default = ย่อเป็นไอคอนเล็กด้านขวา (ผู้เล่นใหม่ที่ยังไม่เคยกดเลือกเอง)
+        try {
+          var _gsSaved = localStorage.getItem(GS_KEY);
+          if (_gsSaved !== null) gsCollapsed = (_gsSaved === '1'); // เคยกดเลือกเองไว้แล้ว → เคารพค่าที่เคยเลือก
+        } catch (e) {}
 
         var gsStyle = document.createElement('style');
         gsStyle.textContent =
           // ย่อ (collapsed) = เลิกอยู่กลางจอ ย้ายไปฝั่งขวาแทน ให้ซ้อนอยู่เหนือปุ่ม ⛶ fullscreen — Lin 2026-07-10
           '#game-switcher.gs-collapsed{padding:0 !important;overflow:visible !important;background:transparent !important;border:none !important;box-shadow:none !important;backdrop-filter:none !important;max-width:none !important;left:auto !important;right:12px !important;transform:none !important;}' +
           '#game-switcher.gs-collapsed > *:not(.gs-mini-toggle){display:none !important;}' +
-          '.gs-mini-toggle{width:38px;height:38px;border-radius:50%;background:rgba(17,17,17,0.92);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:16px;display:flex !important;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;user-select:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);}' +
+          // Lin 2026-07-12: ขนาด/สี/สไตล์วงกลมย่อ (collapsed) ให้ "เหมือนปุ่ม ⛶ เต็มจอเป๊ะ" ทุกค่า (เดิมมีเลขต่างกันนิดๆ 0.92 vs 0.9, 17 vs 18, 0.25 vs 0.3 — ตอนนี้ copy ค่าจาก .rg-fs-fab มาให้ตรงกันทุกตัว) + align-self:center กันติดขอบบน (ปุ่มนี้อยู่ใน flex ของ #game-switcher ที่ align-items ไม่ได้ตั้งไว้ default เป็น stretch เลยลอยชิดบน)
+          '.gs-mini-toggle{align-self:center;width:42px;height:42px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex !important;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;user-select:none;box-shadow:0 4px 14px rgba(0,0,0,0.3);}' +
           // ปุ่มย่อตอนแถบยังกาง (▾) — เดิมเล็ก 24px จางมาก (opacity .6) Lin บอกดูไม่ออกว่ากดได้ → ขยายให้ใหญ่ขึ้น+ชัดขึ้น
-          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle{background:rgba(139,99,16,0.12);border:1px solid rgba(139,99,16,0.3);color:#8b6310;font-size:17px;width:32px;height:32px;opacity:.95;margin-left:2px;}' +
-          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle:hover{opacity:1;background:rgba(139,99,16,0.2);}';
+          // Lin 2026-07-12: วงกลมนี้โผล่ออกนอกขอบมนของแถบ (border-radius:999px) เพราะ margin เดิมแคบไป → เพิ่ม margin ขวาให้เยอะขึ้นอีก + เพิ่ม padding-right ให้ตัวแถบเองด้วยกันชัวร์
+          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle{align-self:center;background:rgba(139,99,16,0.12);border:1px solid rgba(139,99,16,0.3);color:#8b6310;font-size:17px;width:32px;height:32px;opacity:.95;margin:0 10px 0 4px;flex-shrink:0;}' +
+          '#game-switcher:not(.gs-collapsed) .gs-mini-toggle:hover{opacity:1;background:rgba(139,99,16,0.2);}' +
+          '#game-switcher:not(.gs-collapsed){padding-right:8px !important;}' +
+          // Lin 2026-07-12: ตอนย่อ (collapsed) ตั้ง bottom เองตรงๆ ให้พ้น .page-strip เหมือนปุ่ม ⛶ (เพิ่งแก้ด้านบน) แล้วซ้อนเหนือมันอีกที 52px (ความสูงปุ่ม 42 + ช่องว่าง 10)
+          '#game-switcher.gs-collapsed{bottom:calc(60px + env(safe-area-inset-bottom,0px) + 52px) !important;}' +
+          '@media(max-width:768px){#game-switcher.gs-collapsed{bottom:calc(120px + env(safe-area-inset-bottom,0px) + 52px) !important;}}';
         document.head.appendChild(gsStyle);
 
         var miniBtn = document.createElement('span');

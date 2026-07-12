@@ -1696,7 +1696,7 @@
     z-index: 9999;
     pointer-events: none;
     font-weight: 900;
-    color: #2e9a4a;
+    color: #d9a400;
     text-shadow: 0 2px 8px rgba(0,0,0,0.18);
     animation: tf-score-float 1.9s cubic-bezier(.22,1,.36,1) forwards;
     display: flex;
@@ -3009,11 +3009,19 @@ function tfMinaBubble(msg, size) {
 // ── น้องมีนา: ป๊อปพูดสดระหว่างเล่น (โทสต์มุมล่างซ้าย) — Lin 2026-07-10 ──
 // throttle=true → สุ่มโชว์บางครั้ง (กันน่าเบื่อ ตามหลัก variable-ratio) · false → โชว์เสมอ (ผิด/คำทอง/ทักทาย/คอมโบ)
 var _tfMinaToastTimer = null;
+var _tfMinaToastQueue = []; var _tfMinaToastBusy = false; // กันบทพูดน้องมีนาทับ/ตัดกันก่อนอ่านทัน — Lin 2026-07-12
 function tfMinaToast(key, opts) {
   opts = opts || {};
   if (opts.throttle && Math.random() > (opts.chance || 0.34)) return;
   var msg = tfMinaSay(key, opts.vars);
   if (!msg) return;
+  _tfMinaToastQueue.push({ msg: msg, dur: opts.dur || 2600 });
+  _tfProcessMinaToastQueue();
+}
+function _tfProcessMinaToastQueue() {
+  if (_tfMinaToastBusy || !_tfMinaToastQueue.length) return;
+  _tfMinaToastBusy = true;
+  var item = _tfMinaToastQueue.shift();
   var el = document.getElementById('tf-mina-toast');
   if (!el) {
     el = document.createElement('div');
@@ -3022,11 +3030,14 @@ function tfMinaToast(key, opts) {
                    '<div class="tf-mina-toast-bubble"></div>';
     document.body.appendChild(el);
   }
-  el.querySelector('.tf-mina-toast-bubble').innerHTML = msg;
+  el.querySelector('.tf-mina-toast-bubble').innerHTML = item.msg;
   void el.offsetWidth;
   el.classList.add('show');
   if (_tfMinaToastTimer) clearTimeout(_tfMinaToastTimer);
-  _tfMinaToastTimer = setTimeout(function () { el.classList.remove('show'); }, opts.dur || 2600);
+  _tfMinaToastTimer = setTimeout(function () {
+    el.classList.remove('show');
+    setTimeout(function () { _tfMinaToastBusy = false; setTimeout(_tfProcessMinaToastQueue, 220); }, 340);
+  }, item.dur);
 }
 
 // ── ระบบแบดจ์ (ธีมข้าว/อาหารไทย) ──
@@ -3169,7 +3180,15 @@ function tfChallengeBump(session) {
 
 // Lin 2026-07-04: ตัด tfBuildAllMix (ระบบ 全部 50/50 เก่า) ทิ้งแล้ว — ผูกกับหน้าเลือกหมวดที่ลบไปแล้ว ไม่มีทางเข้าถึงอีก
 // toast แจ้งเตือนสั้นๆ
+var _tfToastQueue = []; var _tfToastBusy = false; // กันข้อความ toast ทับ/แย่งกันแสดง — Lin 2026-07-12
 function tfToast(msg) {
+  _tfToastQueue.push(msg);
+  _tfProcessToastQueue();
+}
+function _tfProcessToastQueue() {
+  if (_tfToastBusy || !_tfToastQueue.length) return;
+  _tfToastBusy = true;
+  var msg = _tfToastQueue.shift();
   try {
     var old = document.getElementById('tf-toast'); if (old) old.remove();
     var d = document.createElement('div');
@@ -3177,8 +3196,8 @@ function tfToast(msg) {
     d.textContent = msg;
     document.body.appendChild(d);
     requestAnimationFrame(function(){ d.classList.add('tf-toast-show'); });
-    setTimeout(function(){ d.classList.remove('tf-toast-show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 350); }, 2600);
-  } catch (e) {}
+    setTimeout(function(){ d.classList.remove('tf-toast-show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); _tfToastBusy = false; setTimeout(_tfProcessToastQueue, 150); }, 350); }, 2600);
+  } catch (e) { _tfToastBusy = false; }
 }
 
 // ── streak: โหลด/เซฟ localStorage ──
@@ -3235,18 +3254,21 @@ function tfCurWordNoTools() {
 }
 
 // เด้งคะแนน +N ลอยขึ้น (+ คอนเฟตติเมื่อคอมโบ/perfect)
+var _tfScorePopCount = 0; // กันป๊อปคะแนนซ้อนทับกัน (เช่น หลายพยางค์ยิงถี่) — Lin 2026-07-12
 function tfScorePop(points, opts) {
   opts = opts || {};
   try {
     var host = document.getElementById('tf-card') || document.body;
+    var idx = _tfScorePopCount++;
     var pop = document.createElement('div');
     pop.className = 'tf-score-pop' + (opts.big ? ' tf-score-pop-big' : '') + (opts.gold ? ' tf-score-pop-gold' : '');
+    if (idx > 0) pop.style.top = (32 + idx * 9) + '%';
     var sign = points >= 0 ? '+' : '';
     var multTxt = (opts.mult && opts.mult > 1) ? '<span class="tf-score-pop-mult">×' + opts.mult + '</span>' : '';
     var goldTxt = opts.gold ? '<span class="tf-score-pop-mult">✨</span>' : '';
     pop.innerHTML = '<span class="tf-score-pop-num">' + sign + points + '</span>' + multTxt + goldTxt;
     document.body.appendChild(pop);
-    setTimeout(function () { if (pop && pop.parentNode) pop.parentNode.removeChild(pop); }, 1300);
+    setTimeout(function () { if (pop && pop.parentNode) pop.parentNode.removeChild(pop); _tfScorePopCount = Math.max(0, _tfScorePopCount - 1); }, 1300);
   } catch (e) { /* ignore */ }
   // อัปเดต HUD คะแนนรวม
   tfUpdateScoreHud();
@@ -5004,7 +5026,8 @@ function markRow(mark, onclickStr) {
 }
 
 function footer() {
-  return '<div class="tf-footer"><button class="tf-restart-btn" onclick="TF.reselectTopic()">🎲 再來 5 字</button></div>';
+  // Lin 2026-07-12: เอาปุ่ม "🎲 再來 5 字" ออกจากหน้าระหว่างเล่น (ทุกขั้นคำถาม) — ให้เหลือแค่หน้าผลสรุปจบรอบเท่านั้น
+  return '<div class="tf-footer"></div>';
 }
 
 // ── Lin 2026-07-04: "ปุ่มแอบดูก็คือปุ่ม '?'" — Lin ยืนยันว่าเป็นปุ่มเดียวกัน ไม่ต้องมี 2 ปุ่มซ้ำซ้อนในทุกขั้น推導 ──
@@ -5405,15 +5428,15 @@ function stepOverview() {
 
   var overviewBd = breakdownChipsHTML(S.word, syls);
   var bdSection = overviewBd ? '<div class="sg-ov-bd-title">音節拆解</div>' + overviewBd : '';
+  // Lin 2026-07-12: ย้ายปุ่ม "太棒了，我們繼續" ขึ้นมาอยู่เหนือส่วน 音節拆解 (เดิมอยู่ล่างสุด) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) ให้เหลือแค่หน้าผลสรุปจบรอบเท่านั้น
   return '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:8px;">選擇要分析的音節</div>' +
+    '<div style="text-align:center;margin-bottom:14px;">' +
+      '<button class="tf-result-restart" onclick="TF.nextWord()">太棒了，我們繼續 →</button>' +
+    '</div>' +
     bdSection +
     '<div class="tf-syl-grid">' + cardsHtml + '</div>' +
     detailHtml +
-    summaryHtml +
-    '<div style="text-align:center;margin-top:20px;">' +
-      '<button class="tf-result-restart" onclick="TF.nextWord()" style="margin-right:10px;">太棒了，我們繼續 →</button>' +
-      '<button class="tf-result-restart" onclick="TF.reselectTopic()">🎲 再來 5 字</button>' +
-    '</div>';
+    summaryHtml;
 }
 
 function stepResult() {
@@ -5516,6 +5539,12 @@ function stepResult() {
     '}).call(this)">🔖</button>';
   }
 
+  // Lin 2026-07-12: ย้ายปุ่ม "太棒了/看看成果" ขึ้นมาอยู่เหนือส่วน 音節拆解 (ใน sessionBlock) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) เหลือแค่หน้าผลสรุปจบรอบ
+  var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:14px;">'+
+      '<button class="tf-session-next-btn" onclick="TF.nextWord()">'+nextBtnLabel+'</button>'+
+      (session ? '' : '<button class="tf-result-secondary" onclick="'+againAct+'">↺ 重新分析</button>')+
+    '</div>';
+
   return '<div class="result-v2">'+
     '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+vaultBtnHtml+'</div>'+
     '<button class="result-v2-speak-btn" onclick="speakThai(\''+S.word+'\')">🔊 聽發音</button>'+
@@ -5525,6 +5554,8 @@ function stepResult() {
       '<div class="result-v2-tone-num" style="color:'+t.color+';">'+t.zh+'</div>'+
       '<div class="result-v2-tone-match" style="color:'+t.color+'cc;">'+t.match+'</div>'+
     '</div>'+
+
+    nextBtnHtml+
 
     sessionBlock+
 
@@ -5547,12 +5578,6 @@ function stepResult() {
           render();
         })+'">← 回到音節總覽</button>'
       : '')+
-
-    '<div class="result-v2-actions">'+
-      '<button class="tf-session-next-btn" onclick="TF.nextWord()">'+nextBtnLabel+'</button>'+
-      (session ? '' : '<button class="tf-result-secondary" onclick="'+againAct+'">↺ 重新分析</button>')+
-      '<button class="tf-result-restart" onclick="TF.reselectTopic()" style="margin-top:0;">🎲 再來 5 字</button>'+
-    '</div>'+
   '</div>';
 }
 

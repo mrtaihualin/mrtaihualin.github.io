@@ -1199,6 +1199,8 @@ function renderTestUI(){
     const used=!!testUsed[orig];
     return `<div class="test-tile${used?' used':''}" onclick="${(testLocked||used)?'':`addTestTile(${orig})`}">${testWords[orig].th}</div>`;
   }).join('');
+  // Lin 2026-07-12: ล็อกแล้ว (ตอบถูก/ตาย) = คำในคลังใช้หมดแล้ว (opacity:0 แต่ยังกินที่) → ซ่อนกล่องทั้งกล่อง กันช่องว่างเปล่าๆ ก่อนถึง popup ผลลัพธ์
+  bankEl.style.display=testLocked?'none':'';
   updateLegoScoreBar(testFailed?0:testLife); // Lin 2026-07-06: หลอด 本題分數 ในกล่องทดสอบ ไล่สีทอง→แดง
 }
 
@@ -1343,11 +1345,26 @@ document.addEventListener('click',e=>{
 });
 
 // ════════ TOAST ════════
+// เพิ่มคิว กันข้อความทับกันจนอ่านไม่ทัน (เช่น ข้อความจบรอบ + ข้อความปลอกเกราะ เด้งใกล้กันเกินไป) — Lin 2026-07-12
 let tT=null;
+let _toastQueue=[];
+let _toastBusy=false;
 function toast(msg,err){
+  _toastQueue.push({msg,err});
+  _processToastQueue();
+}
+function _processToastQueue(){
+  if(_toastBusy || !_toastQueue.length) return;
+  _toastBusy=true;
+  const next=_toastQueue.shift();
   const t=document.getElementById('toast');
-  t.textContent=msg;t.className='toast'+(err?' err':'')+' show';
-  clearTimeout(tT);tT=setTimeout(()=>{t.className='toast'+(err?' err':'');},1700);
+  t.textContent=next.msg;t.className='toast'+(next.err?' err':'')+' show';
+  clearTimeout(tT);
+  tT=setTimeout(()=>{
+    t.className='toast'+(next.err?' err':'');
+    _toastBusy=false;
+    setTimeout(_processToastQueue,150);
+  },1700);
 }
 
 // ── น้องมีนา 米娜: บทพูด + ป๊อปพูดสด (โทนจีนไต้หวันอุ่นๆ ไกด์อ่อนโยน) — Lin 2026-07-10 ──
@@ -1367,10 +1384,18 @@ function minaSay(key,vars){
   return t;
 }
 var _minaToastTimer=null;
+var _minaToastQueue=[]; var _minaToastBusy=false; // กันบทพูดน้องมีนาทับ/ตัดกันก่อนอ่านทัน — Lin 2026-07-12
 function minaToast(key,opts){
   opts=opts||{};
   if(opts.throttle && Math.random()>(opts.chance||0.34))return;
   var msg=minaSay(key,opts.vars); if(!msg)return;
+  _minaToastQueue.push({msg:msg,dur:opts.dur||2600});
+  _processMinaToastQueue();
+}
+function _processMinaToastQueue(){
+  if(_minaToastBusy || !_minaToastQueue.length) return;
+  _minaToastBusy=true;
+  var item=_minaToastQueue.shift();
   try{
     var el=document.getElementById('mina-toast');
     if(!el){
@@ -1380,11 +1405,14 @@ function minaToast(key,opts){
                    '<div class="mina-bubble" style="background:#FAF4E8;border:1.5px solid #F3E4C2;border-radius:14px;padding:9px 13px;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:#5a4a2a;line-height:1.5;box-shadow:0 4px 14px rgba(139,99,16,.14);"></div>';
       document.body.appendChild(el);
     }
-    el.querySelector('.mina-bubble').innerHTML=msg;
+    el.querySelector('.mina-bubble').innerHTML=item.msg;
     void el.offsetWidth; el.style.opacity='1'; el.style.transform='translateY(0)';
     if(_minaToastTimer)clearTimeout(_minaToastTimer);
-    _minaToastTimer=setTimeout(function(){el.style.opacity='0';el.style.transform='translateY(14px)';},opts.dur||2600);
-  }catch(e){}
+    _minaToastTimer=setTimeout(function(){
+      el.style.opacity='0';el.style.transform='translateY(14px)';
+      setTimeout(function(){_minaToastBusy=false; setTimeout(_processMinaToastQueue,220);},340);
+    },item.dur);
+  }catch(e){_minaToastBusy=false;}
 }
 
 // ── INIT ──

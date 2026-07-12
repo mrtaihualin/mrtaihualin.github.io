@@ -38,6 +38,7 @@
 <script defer src="game-account.js?v=1"></script>
 <script defer src="auth-widget.js?v=1"></script>
 <script defer src="reading-auth.js?v=4"></script>
+<script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="word-vault.js"></script>
 <script src="adv-sentences.js?v=2"></script>
 <style>
@@ -370,6 +371,22 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   function woSaveSrs(){ try{ localStorage.setItem(SRS_SAVE_KEY, JSON.stringify(srsRecords)); }catch(e){} }
   function woLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
 
+  // ── Phase 4 (กันโกงดาว): ให้เซิร์ฟเวอร์เป็นคนตัดสิน+แจกดาวจริง (เกมเรียงประโยค = trust-clean เหมือนเกมสะกด) ──
+  //   ยิงทุกจุดที่ SRS ขยับ (advance/reset/fail/known-check) → เซิร์ฟเวอร์เลื่อน/รีเซ็ตเอง → mastered แล้วแจกดาว
+  //   starClean = จำเอง(3⭐) vs ใช้คำใบ้/กู้(1⭐) → ส่งไปให้ดาวเซิร์ฟเวอร์ตรงกับที่เกมโชว์
+  //   คู่ขนาน ไม่รื้อ local · เน็ตล่ม/ไม่ล็อกอิน = เกมทำงานเหมือนเดิม
+  function woServerFinish(sentThai, clean, extra){
+    try{
+      if(woLoggedIn() && !practiceMode && window.TONE_SERVER && TONE_SERVER.available()){
+        var body = { game:'wordorder', word:sentThai, level:LEVEL_NUM, clean:clean };
+        if(extra) for(var k in extra) body[k]=extra[k];
+        TONE_SERVER.finishRound(body).then(function(r){
+          if(r&&r.ok&&r.justMastered&&r.stars>0&&window.console) console.log('[P4] ⭐ server',r.stars,'→ total',r.totalStars);
+        });
+      }
+    }catch(e){}
+  }
+
   var SET = [];          // ดัชนี (index) เข้า ADV_SENTENCES ของรอบนี้ (สุ่มลำดับ, กรองด้วย SRS ถ้าล็อกอิน)
   var idx = 0;            // ตำแหน่งปัจจุบันใน SET (0-based)
   var score = 0;
@@ -539,7 +556,15 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     var sn = document.getElementById('rg-streak-num'); if (sn) sn.textContent = (alive ? (st.streak || 0) : 0);
     var fn = document.getElementById('rg-freeze-num'); if (fn) fn.textContent = (st.freezes || 0);
   }
+  var _rgToastQueue = []; var _rgToastBusy = false; // กันข้อความ toast ทับ/แย่งกันแสดง — Lin 2026-07-12
   function rgToast(msg) {
+    _rgToastQueue.push(msg);
+    _rgProcessToastQueue();
+  }
+  function _rgProcessToastQueue() {
+    if (_rgToastBusy || !_rgToastQueue.length) return;
+    _rgToastBusy = true;
+    var msg = _rgToastQueue.shift();
     try {
       var old = document.getElementById('rg-toast-el'); if (old) old.remove();
       var d = document.createElement('div');
@@ -547,8 +572,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       d.textContent = msg;
       document.body.appendChild(d);
       requestAnimationFrame(function(){ d.classList.add('show'); });
-      setTimeout(function(){ d.classList.remove('show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 350); }, 2800);
-    } catch(e) {}
+      setTimeout(function(){ d.classList.remove('show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); _rgToastBusy = false; setTimeout(_rgProcessToastQueue, 150); }, 350); }, 2800);
+    } catch(e) { _rgToastBusy = false; }
   }
 
   // ── น้องมีนา 米娜: บทพูด + ป๊อปพูดสด (โทนจีนไต้หวันอุ่นๆ ไกด์อ่อนโยน) — Lin 2026-07-10 ──
@@ -568,10 +593,18 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     return t;
   }
   var _minaToastTimer=null;
+  var _minaToastQueue=[]; var _minaToastBusy=false; // กันบทพูดน้องมีนาทับ/ตัดกันก่อนอ่านทัน — Lin 2026-07-12
   function minaToast(key,opts){
     opts=opts||{};
     if(opts.throttle && Math.random()>(opts.chance||0.34))return;
     var msg=minaSay(key,opts.vars); if(!msg)return;
+    _minaToastQueue.push({msg:msg,dur:opts.dur||2600});
+    _processMinaToastQueue();
+  }
+  function _processMinaToastQueue(){
+    if(_minaToastBusy || !_minaToastQueue.length) return;
+    _minaToastBusy=true;
+    var item=_minaToastQueue.shift();
     try{
       var el=document.getElementById('mina-toast');
       if(!el){
@@ -581,11 +614,14 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
                      '<div class="mina-bubble" style="background:#FAF4E8;border:1.5px solid #F3E4C2;border-radius:14px;padding:9px 13px;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:#5a4a2a;line-height:1.5;box-shadow:0 4px 14px rgba(139,99,16,.14);"></div>';
         document.body.appendChild(el);
       }
-      el.querySelector('.mina-bubble').innerHTML=msg;
+      el.querySelector('.mina-bubble').innerHTML=item.msg;
       void el.offsetWidth; el.style.opacity='1'; el.style.transform='translateY(0)';
       if(_minaToastTimer)clearTimeout(_minaToastTimer);
-      _minaToastTimer=setTimeout(function(){el.style.opacity='0';el.style.transform='translateY(14px)';},opts.dur||2600);
-    }catch(e){}
+      _minaToastTimer=setTimeout(function(){
+        el.style.opacity='0';el.style.transform='translateY(14px)';
+        setTimeout(function(){_minaToastBusy=false; setTimeout(_processMinaToastQueue,220);},340);
+      },item.dur);
+    }catch(e){_minaToastBusy=false;}
   }
 
   function init(){
@@ -706,6 +742,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   function renderBank(){
     var wrap = document.getElementById('wo-bank');
+    wrap.style.display=''; // Lin 2026-07-12: ประโยคใหม่ → เอากลับมาโชว์ (เผื่อถูกซ่อนไว้ตอนประโยคก่อนจบ)
     wrap.innerHTML = '';
     bank.forEach(function(tile){
       var el = document.createElement('div');
@@ -762,11 +799,14 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
     document.getElementById('wo-next-btn').disabled = false;
     document.getElementById('wo-hint-btn').disabled = true;
+    // Lin 2026-07-12: ซ่อนกล่องคำในคลัง (ใช้ครบแล้ว แต่ opacity:0 ยังกินที่อยู่) กันช่องว่างเปล่าๆ ก่อนถึง popup ผลลัพธ์
+    var _wob0=document.getElementById('wo-bank'); if(_wob0)_wob0.style.display='none';
     updateHintWarning();
     if (woLoggedIn() && !practiceMode) {
       var srsIdx = SET[idx];
       srsRecords[srsIdx] = WO_SRS.resetOnFail(srsRecords[srsIdx]); // ผิด/ตาย = กลับวันแรกเสมอ (MASTER ข้อ7)
       woSaveSrs();
+      woServerFinish(s.th, false); // Phase 4: ตาย/ล้มเหลว = รีเซ็ตฝั่งเซิร์ฟเวอร์ด้วย
     }
     woLogSentence({failed:true, pts:0, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[SET[idx]] && srsRecords[SET[idx]].dueDate) || '') : ''});
     curSentenceIsKnownCheck = false;
@@ -795,12 +835,14 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
             srsRecords[srsIdx] = WO_SRS.resetOnFail(srsRecords[srsIdx]);
           }
           woSaveSrs();
+          woServerFinish(s.th, passedClean, {knownCheck:true}); // Phase 4: 已記得 → mastered ไม่ให้ดาว
         }
         banner.className = passedClean ? 'result-banner ok show' : 'result-banner no show';
         banner.textContent = passedClean ? '真的記得！這句標記為熟練 ✓（不計分、不加星）' : '中途排錯過，這句先留在複習清單裡 🔁';
         document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
         document.getElementById('wo-next-btn').disabled = false;
         document.getElementById('wo-hint-btn').disabled = true;
+        var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
         woLogSentence({mastered:!!passedClean, pts:0, srsDue:passedClean?'已精通':((srsRecords[srsIdx] && srsRecords[srsIdx].dueDate) || '')});
         return;
@@ -831,6 +873,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
           if (hintUsedThisSentence) rec.everHinted = true;
           var res = WO_SRS.advanceOnClean(rec, Date.now());
           rec = res.rec;
+          woServerFinish(s.th, true, {starClean: !rec.everFailed && !rec.everHinted}); // Phase 4: เลื่อนขั้น (จำเอง/คำใบ้ = 3/1⭐)
           var rb2 = SRS_REVIEW_BONUS[res.passedStage] || 0;
           if (rb2 > 0) { score += rb2; popScore('+' + rb2 + ' 🔁'); }
           if (res.justMastered) {
@@ -845,6 +888,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
           }
         } else {
           rec = WO_SRS.resetOnFail(rec);
+          woServerFinish(s.th, false); // Phase 4: ผิด/ใช้คำใบ้ตอน day16 = รีเซ็ต
         }
         srsRecords[srsIdx] = rec;
         woSaveSrs();
@@ -853,6 +897,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       banner.className = 'result-banner ok show';
       banner.textContent = '✅ 排對了！+' + pts + ' 分' + (golden ? ' ✨黃金句' : '') + (cmult > 1 ? ' 🔥連對×' + cmult : '') + (hintUsedThisSentence ? '（用了提示）' : '');
       document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
+      // Lin 2026-07-12: คำในคลังใช้หมดแล้ว (มองไม่เห็นแต่ยังกินพื้นที่อยู่ opacity:0) → ซ่อนกล่องทั้งกล่องไปเลย กันช่องว่างเปล่าๆ ระหว่างช่องเฉลยกับ popup ผลลัพธ์
+      var _wob=document.getElementById('wo-bank'); if(_wob)_wob.style.display='none';
       document.getElementById('wo-next-btn').disabled = false;
       document.getElementById('wo-hint-btn').disabled = true;
       updateHintWarning();
@@ -893,12 +939,15 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     }
   }
 
+  var _scorePopCount=0; // กันป๊อปคะแนนซ้อนทับกัน — Lin 2026-07-12
   function popScore(text){
+    var idx=_scorePopCount++;
     var pop = document.createElement('div');
     pop.className = 'score-pop';
     pop.textContent = text;
+    if(idx>0) pop.style.top=(26+idx*9)+'%';
     document.body.appendChild(pop);
-    setTimeout(function(){ pop.remove(); }, 1850);
+    setTimeout(function(){ pop.remove(); _scorePopCount=Math.max(0,_scorePopCount-1); }, 1850);
   }
 
   window.woHint = function(){

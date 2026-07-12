@@ -84,6 +84,11 @@
 .word-area{text-align:center;margin:4px 0 0;}
 .word-th{font-size:62px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px;}
 .word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px;}
+/* มือถือแนวนอน (landscape): ตรึงเฉพาะโซนคำศัพท์ไว้บนสุด ไม่ต้องเลื่อนตามหน้า — ปุ่ม/ช่อง/คีย์บอร์ดด้านล่างเลื่อนปกติ — Lin 2026-07-12 */
+@media (orientation:landscape) and (hover:none) and (pointer:coarse){
+  .word-area{position:sticky;top:var(--nav-h,60px);z-index:50;background:#F5F0E8;padding-bottom:4px;}
+  body.rg-fake-fullscreen .word-area{top:0;}
+}
 
 /* ── Slot row ── */
 .syl-strip{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:2px 0 8px;}
@@ -224,11 +229,17 @@
 .rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
 .rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
 /* ── ฟอนต์โมเดิร์น (ไม่มีหัว) — ครอบทุก element ที่เป็น Thai text ── */
+/* Lin 2026-07-12: เดิมครอบไม่ครบ เหลือหลายจุดเป็นฟอนต์เดิม (กล่องพิมพ์เป้าหมาย/คำอ่าน/คำอธิบาย/คีย์บอร์ด) — เพิ่มให้ครบทุกจุดที่มีตัวอักษรไทยในหน้านี้ */
 body.rg-modern-font .word-th,
 body.rg-modern-font .syl-chip,
 body.rg-modern-font .slot-box,
 body.rg-modern-font .chip-item,
 body.rg-modern-font .opt,
+body.rg-modern-font .type-target,
+body.rg-modern-font .rev-pron,
+body.rg-modern-font .bonus-reading,
+body.rg-modern-font .rule-txt,
+body.rg-modern-font .tk-key .tk-base,
 body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
 
 .btn-row{display:flex;gap:7px;justify-content:center;width:100%;margin-top:12px;flex-wrap:wrap;}
@@ -282,8 +293,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 /* มือถือ + 有提示(引導)模式: ปิดปุ่มเรียกคีย์บอร์ดจริงของเครื่อง บังคับใช้คีย์บอร์ดในเกมอย่างเดียว (เห็นตัวที่ต้องกดชัดเจน) — Lin 2026-07-07 */
 @media not all and (hover:hover) and (pointer:fine){ body.tg-guide-hint #rg-mobile-kbd-btn{display:none !important;} }
 .tkbd{display:flex;flex-direction:column;gap:4px;width:100%;max-width:520px;}
-/* คอมพิวเตอร์ + 無提示(挑戰)模式: ซ่อนคีย์บอร์ดบนจอไปเลย ให้พิมพ์ด้วยคีย์บอร์ดจริงล้วนๆ (ท้าทายความจำ) — 有提示 ยังโชว์คีย์บอร์ดไว้เป็นไกด์เหมือนเดิม ทั้งสองโหมดพิมพ์คีย์บอร์ดจริงได้เสมอ — Lin 2026-07-07 */
-@media (hover:hover) and (pointer:fine){ body:not(.tg-guide-hint) .tkbd{display:none !important;} }
+/* 無提示(挑戰)模式: ซ่อนคีย์บอร์ดบนจอเป็นค่าเริ่มต้น ให้พิมพ์ด้วยคีย์บอร์ดจริง(เครื่อง/มือถือ)ล้วนๆ ท้าทายความจำ — 有提示 ยังบังคับโชว์คีย์บอร์ดในเกมเป็นไกด์เหมือนเดิม — ผู้เล่นกดปุ่ม "⌨️ 開啟螢幕鍵盤" เปิดเองได้ถ้าต้องการ (.tg-kbd-open) — ใช้กฎเดียวกันทั้งคอมและมือถือ — Lin 2026-07-12 */
+body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 .tk-row{display:flex;gap:3px;justify-content:center;}
 .tk-key{flex:1;max-width:38px;min-width:20px;height:40px;border:1.5px solid #d4b87a;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;cursor:pointer;user-select:none;transition:all .1s;overflow:hidden;}
 .tk-key:active{transform:scale(.92);background:#fff3d8;}
@@ -405,6 +416,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <span id="rg-vault-btn-slot"></span>
       </div>
       <div class="word-zh" id="wzh"></div>
+      <div class="rev-pron" id="rev-pron"></div>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;">✨ 黃金字 ×2</div>
     </div>
   </div>
@@ -437,6 +449,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤排好位置了，打對會自動跳下一步 👇</div>
     <!-- ปุ่มกด → เด้งคีย์บอร์ดของมือถือเอง (Gboard/คีย์บอร์ด iOS ไทย) ขึ้นมาพิมพ์ได้ตรงๆ ไม่ต้องใช้ปุ่มเสมือนด้านล่างก็ได้ — ตัว input จริงซ่อนไว้ (โฟกัสได้แต่มองไม่เห็น) เพราะมือถือต้องมี input จริงถึงจะเด้งคีย์บอร์ด — Lin 2026-07-06 -->
     <button type="button" id="rg-mobile-kbd-btn" class="btn btn-secondary" style="font-size:13px;padding:8px 16px;" onclick="document.getElementById('rg-mobile-input').focus()">📱 用手機鍵盤打字</button>
+    <!-- 無提示(挑戰)模式預設用自己的鍵盤(手機/電腦)打字，不強制用遊戲內鍵盤 → 這顆讓玩家自己選要不要開螢幕鍵盤看 — Lin 2026-07-12 -->
+    <button type="button" id="rg-webkbd-toggle" class="btn btn-secondary" style="font-size:13px;padding:8px 16px;display:none;" onclick="rgToggleWebKbd()">⌨️ 開啟螢幕鍵盤</button>
     <input type="text" id="rg-mobile-input" class="mobile-kbd-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" lang="th">
     <!-- ปุ่มเลือกโหมดไกด์ไลน์ — ใช้ร่วมทุกระดับ (Lin 2026-07-02) · ปุ่ม "ไม่เลือกวรรณยุกต์ ข้ามไปเลย" ย้ายมาอยู่แถวเดียวกัน (Lin 2026-07-07) -->
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0;">
@@ -473,10 +487,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <!-- Reveal -->
   <div class="reveal" id="reveal">
-    <div class="reveal-word-row">
-      <div class="rev-word" id="rev-word"></div>
-      <div class="rev-pron" id="rev-pron"></div>
-    </div>
     <div class="reveal-rules" id="reveal-rules"></div>
   </div>
 </div>
@@ -940,6 +950,7 @@ function dispOpt(comp,x){
 // ════════════════════════════════════════════
 function setLevel(lv){
   curLevel=lv;
+  try{localStorage.setItem('tg_level',lv);}catch(e){} // Lin 2026-07-12: จำระดับที่เลือกไว้ → รีเฟรชแล้วไม่ต้องเลือกใหม่
   document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
   document.getElementById('ltab-'+lv).classList.add('active');
   document.getElementById('end').style.display='none';
@@ -1044,6 +1055,7 @@ function loadWord(){
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
+  document.getElementById('rev-pron').textContent=''; // ล้างคำอ่านของคำเก่าทิ้งก่อน กันค้างโชว์คำอ่านผิดคำตอนคำใหม่ยังไม่เฉลย — Lin 2026-07-12 (bug: เจอ "สกปรก" โชว์คำอ่าน "เงิน-สด" ของคำก่อนหน้า)
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
   // vault save button
@@ -1712,24 +1724,27 @@ function buildThaiPron(){
   return W?W.th:'';
 }
 function showReveal(){
-  document.getElementById('rev-word').textContent=W.th;
   var _pron=buildThaiPron();
   document.getElementById('rev-pron').textContent=_pron?('🔊 '+_pron):'';
-  var rules=buildRevealRules(W);
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
-  rules.forEach(function(r){
-    var row=document.createElement('div');row.className='rule-row';
-    var tag=document.createElement('span');tag.className='rule-tag'+(r.sp?' sp':'');tag.textContent=r.tag;
-    var txt=document.createElement('span');txt.className='rule-txt';txt.innerHTML=r.text;
-    row.appendChild(tag);row.appendChild(txt);box.appendChild(row);
-  });
+  // ถ้ากล่อง猜聲調 (#bonus-section) ยังโชว์อยู่ (คำนี้มี tone_name) แปลว่า #bonus-reason โชว์ 子音/母音/尾音/聲調符 ชุดเดียวกันไปแล้ว
+  // ไม่ต้องพิมพ์ซ้ำอีกรอบในกล่องนี้ — Lin 2026-07-12 (แก้ของซ้ำ)
+  var bonusShowing=document.getElementById('bonus-section').classList.contains('show');
+  if(!bonusShowing){
+    var rules=buildRevealRules(W);
+    rules.forEach(function(r){
+      var row=document.createElement('div');row.className='rule-row';
+      var tag=document.createElement('span');tag.className='rule-tag'+(r.sp?' sp':'');tag.textContent=r.tag;
+      var txt=document.createElement('span');txt.className='rule-txt';txt.innerHTML=r.text;
+      row.appendChild(tag);row.appendChild(txt);box.appendChild(row);
+    });
+  }
   document.getElementById('reveal').className='reveal show';
 }
 // 打完整句（多音節連續打字模式）— 顯示「整句」的子音/母音/尾音分析＋泰文讀法，不是只顯示最後一個音節而已
 // 每個字/音節各自一段分析，答對答錯都會顯示（rgContFinish 不管成功/失敗都會呼叫這個）— Lin 2026-07-07
 function showRevealMulti(){
-  document.getElementById('rev-word').textContent=WORD.th;
   var _pronM=buildThaiPron();
   document.getElementById('rev-pron').textContent=_pronM?('🔊 '+_pronM):'';
   var box=document.getElementById('reveal-rules');
@@ -1751,10 +1766,13 @@ function showRevealMulti(){
   document.getElementById('reveal').className='reveal show';
 }
 
+var _scorePopCount=0; // กันป๊อปคะแนนซ้อนทับกัน — Lin 2026-07-12
 function pop(t){
+  var idx=_scorePopCount++;
   var p=document.createElement('div');p.className='score-pop';p.textContent=t;
+  if(idx>0) p.style.top=(26+idx*9)+'%';
   document.body.appendChild(p);
-  setTimeout(function(){if(p.parentNode)p.parentNode.removeChild(p);},1850);
+  setTimeout(function(){if(p.parentNode)p.parentNode.removeChild(p);_scorePopCount=Math.max(0,_scorePopCount-1);},1850);
 }
 
 // ════════════════════════════════════════════
@@ -1907,7 +1925,15 @@ function rgRenderGameBar() {
   var fn = document.getElementById('rg-freeze-num'); if (fn) fn.textContent = (st.freezes || 0);
 }
 
+var _rgToastQueue = []; var _rgToastBusy = false; // กันข้อความ toast ทับ/แย่งกันแสดง — Lin 2026-07-12
 function rgToast(msg) {
+  _rgToastQueue.push(msg);
+  _rgProcessToastQueue();
+}
+function _rgProcessToastQueue() {
+  if (_rgToastBusy || !_rgToastQueue.length) return;
+  _rgToastBusy = true;
+  var msg = _rgToastQueue.shift();
   try {
     var old = document.getElementById('rg-toast-el'); if (old) old.remove();
     var d = document.createElement('div');
@@ -1915,8 +1941,8 @@ function rgToast(msg) {
     d.textContent = msg;
     document.body.appendChild(d);
     requestAnimationFrame(function(){ d.classList.add('show'); });
-    setTimeout(function(){ d.classList.remove('show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 350); }, 2800);
-  } catch(e) {}
+    setTimeout(function(){ d.classList.remove('show'); setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); _rgToastBusy = false; setTimeout(_rgProcessToastQueue, 150); }, 350); }, 2800);
+  } catch(e) { _rgToastBusy = false; }
 }
 
 // ════════════════════════════════════════════
@@ -1940,10 +1966,18 @@ function minaSay(key,vars){
   return t;
 }
 var _minaToastTimer=null;
+var _minaToastQueue=[]; var _minaToastBusy=false; // กันบทพูดน้องมีนาทับ/ตัดกันก่อนอ่านทัน — Lin 2026-07-12
 function minaToast(key,opts){
   opts=opts||{};
   if(opts.throttle && Math.random()>(opts.chance||0.34))return;
   var msg=minaSay(key,opts.vars); if(!msg)return;
+  _minaToastQueue.push({msg:msg,dur:opts.dur||2600});
+  _processMinaToastQueue();
+}
+function _processMinaToastQueue(){
+  if(_minaToastBusy || !_minaToastQueue.length) return;
+  _minaToastBusy=true;
+  var item=_minaToastQueue.shift();
   try{
     var el=document.getElementById('mina-toast');
     if(!el){
@@ -1953,11 +1987,14 @@ function minaToast(key,opts){
                    '<div class="mina-bubble" style="background:#FAF4E8;border:1.5px solid #F3E4C2;border-radius:14px;padding:9px 13px;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:#5a4a2a;line-height:1.5;box-shadow:0 4px 14px rgba(139,99,16,.14);"></div>';
       document.body.appendChild(el);
     }
-    el.querySelector('.mina-bubble').innerHTML=msg;
+    el.querySelector('.mina-bubble').innerHTML=item.msg;
     void el.offsetWidth; el.style.opacity='1'; el.style.transform='translateY(0)';
     if(_minaToastTimer)clearTimeout(_minaToastTimer);
-    _minaToastTimer=setTimeout(function(){el.style.opacity='0';el.style.transform='translateY(14px)';},opts.dur||2600);
-  }catch(e){}
+    _minaToastTimer=setTimeout(function(){
+      el.style.opacity='0';el.style.transform='translateY(14px)';
+      setTimeout(function(){_minaToastBusy=false; setTimeout(_processMinaToastQueue,220);},340);
+    },item.dur);
+  }catch(e){_minaToastBusy=false;}
 }
 
 // ════════════════════════════════════════════
@@ -2027,6 +2064,12 @@ function setGuideMode(on){
     if(a)a.className='btn '+(guideMode?'btn-primary':'btn-secondary');
     if(b)b.className='btn '+(guideMode?'btn-secondary':'btn-primary');
   });
+  // 有提示: บังคับคีย์บอร์ดในเกมอย่างเดียว (ปุ่มเปิด/ปิดเองไม่มีความหมาย ซ่อนไป) · 無提示: ค่าเริ่มต้นซ่อนคีย์บอร์ดในเกม โชว์ปุ่มให้เปิดเองได้ถ้าอยากดู — Lin 2026-07-12
+  try{
+    document.body.classList.remove('tg-kbd-open'); // สลับโหมดทีไร รีเซ็ตกลับ default เสมอ
+    var wkb=document.getElementById('rg-webkbd-toggle');
+    if(wkb){ wkb.style.display=guideMode?'none':''; wkb.textContent='⌨️ 開啟螢幕鍵盤'; }
+  }catch(e){}
   ['tg-guide-note'].forEach(function(id){
     var note=document.getElementById(id);
     if(!note)return;
@@ -2037,6 +2080,12 @@ function setGuideMode(on){
 }
 setGuideMode(guideMode); // ตั้งสถานะปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 
+// 無提示(挑戰)模式用: ผู้เล่นกดเองเพื่อเปิด/ปิดคีย์บอร์ดในเกม (ปกติซ่อนไว้ ให้พิมพ์ด้วยคีย์บอร์ดจริงล้วนๆ) — Lin 2026-07-12
+function rgToggleWebKbd(){
+  var open=document.body.classList.toggle('tg-kbd-open');
+  var b=document.getElementById('rg-webkbd-toggle');
+  if(b)b.textContent=open?'⌨️ 關閉螢幕鍵盤':'⌨️ 開啟螢幕鍵盤';
+}
 function rgBuildKeyboard(){
   var box=document.getElementById('rg-kbd');
   if(!box)return;
@@ -2101,6 +2150,13 @@ function rgApplyTypeModeUI(){
     if(chBtn && !checked)chBtn.style.display='';
   }
 }
+// Lin 2026-07-12: คำ/พยางค์จบแล้ว (checked=true) → ซ่อนทั้ง #type-panel (กล่องเป้าหมาย+คำใบ้+ปุ่มไกด์+คีย์บอร์ด) ไปเลย
+// บั๊กเดิม: ปล่อยให้ค้างโชว์ทั้งที่ไม่เกี่ยวแล้ว ทำให้ดูเหมือนหน้าว่างยาว/บังกล่องอธิบายด้านล่างจนนึกว่าไม่มีคำอธิบาย
+// จะโชว์กลับมาอัตโนมัติตอนขึ้นคำ/พยางค์ถัดไป (ดู loadSyl wrapper ด้านล่าง)
+function rgHideTypePanelForReveal(){
+  var panel=document.getElementById('type-panel');
+  if(panel)panel.style.display='none';
+}
 function rgTypeRenderTarget(){
   var el=document.getElementById('rg-type-target');
   if(!el)return;
@@ -2151,6 +2207,7 @@ function rgTypeSuccessBranch(){
   setGameBtns('done');
   var lastSyl=(sylIdx>=sylList.length-1);
   if(lastSyl){
+    rgHideTypePanelForReveal(); // Lin 2026-07-12: คำจบแล้ว ซ่อนแป้นพิมพ์+คำใบ้ที่ค้างอยู่ ไม่งั้นบังกล่องอธิบายด้านล่าง/เหลือช่องว่างยาว
     finalizeWord();
     document.getElementById('btn-next').textContent='下一題 →';
   } else {
@@ -2170,6 +2227,7 @@ function rgTypeFailBranch(){
   setGameBtns('done');
   var lastSyl=(sylIdx>=sylList.length-1);
   if(lastSyl){
+    rgHideTypePanelForReveal(); // Lin 2026-07-12: เหมือนกัน — คำจบแล้ว ซ่อนแป้นพิมพ์+คำใบ้ที่ค้างอยู่
     finalizeWord();
     document.getElementById('btn-next').textContent='下一題 →';
   } else {
@@ -2420,14 +2478,14 @@ function rgContAskNextTone(){
         if(correctBtn)correctBtn.classList.add('correct');
         res.textContent='不對，是'+tZH+'，沒扣分，繼續加油！';res.style.color='#b06020';
       }
-      renderBonusReason(SY);
+      // Lin 2026-07-12: เอากล่องอธิบาย 子音/母音/尾音 ระหว่างทายทีละพยางค์ออก — ไปสรุปรวมทุกพยางค์ตอนจบคำแทน (showRevealMulti) กันโชว์ซ้ำ 2 รอบ
       setTimeout(function(){
         if(RG_CONT_TOKEN!==_tok)return; // เปลี่ยนคำไปแล้วระหว่างรอ — ไม่ต้องไปต่อคิวของคำเก่า
         RG_CONT_TONE_IDX++;
         box.innerHTML='';
         document.getElementById('bonus-result').textContent='';
         rgContAskNextTone();
-      },2600); // Lin 2026-07-10: เดิม 220ms อ่านคำอธิบายไม่ทัน ตอนนี้มีคำอธิบาย+ตารางแยกเสียงให้อ่านเสมอ ต้องหน่วงนานขึ้น
+      },900); // เดิม 220ms → เพิ่มนิดหน่อยให้อ่านทัน ✓/✗ + คำตอบที่ถูก (ไม่มีคำอธิบายยาวแล้ว เลยไม่ต้องหน่วง 2600ms เหมือนก่อน)
     };
     box.appendChild(btn);
   });
@@ -2448,7 +2506,7 @@ function rgContSkipTone(){
   }
   var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
   if(res){res.textContent='（未作答）正確答案是'+tZH;res.style.color='#888';}
-  renderBonusReason(SY);
+  // Lin 2026-07-12: เอากล่องอธิบายระหว่างทายทีละพยางค์ออกเหมือนกัน — ไปสรุปรวมตอนจบคำแทน
   var _tok=RG_CONT_TOKEN;
   setTimeout(function(){
     if(RG_CONT_TOKEN!==_tok)return;
@@ -2456,7 +2514,7 @@ function rgContSkipTone(){
     if(box)box.innerHTML='';
     if(res)res.textContent='';
     rgContAskNextTone();
-  },2200); // Lin 2026-07-10: เดิม 220ms อ่านคำอธิบายไม่ทัน ตอนนี้มีคำอธิบาย+ตารางแยกเสียงให้อ่านเสมอ ต้องหน่วงนานขึ้น
+  },700); // เดิม 220ms → เพิ่มนิดหน่อยให้อ่านคำตอบที่ถูกทัน (ไม่มีคำอธิบายยาวแล้ว)
 }
 // คำพิมพ์ครบทุกพยางค์ + ถามวรรณยุกต์ครบคิวแล้ว → ปิดจบเหมือน rgTypeSuccessBranch/rgTypeFailBranch ตอน lastSyl ทุกประการ
 // (ตั้ง W ให้ตรงพยางค์สุดท้ายก่อน เพราะ loadSyl() ถูกเรียกแค่ครั้งเดียวตอน sylIdx=0 — showReveal()/buildRevealRules ต้องใช้ W ของพยางค์ที่เพิ่งพิมพ์จบจริง)
@@ -2468,6 +2526,7 @@ function rgContFinish(){
   W={th:SY.th,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section'; // ซ่อนแผงถามวรรณยุกต์ ก่อนโชว์การ์ดเฉลยท้ายคำ
+  rgHideTypePanelForReveal(); // Lin 2026-07-12: คำจบแล้ว ซ่อนแป้นพิมพ์+คำใบ้ที่ค้างอยู่ (บั๊กเดิม: หัวข้อ "選一下...的聲調" ค้างโชว์ทับกล่องอธิบายจนดูเหมือนไม่มีคำอธิบาย/หน้าว่างยาว)
   renderSylStrip();
   // ทั้งประโยค (หลายพยางค์/หลายคำ) → โชว์วิเคราะห์ทุกคำ + คำอ่านเต็มประโยค ไม่ใช่แค่คำสุดท้าย ไม่ว่าตอบถูกหรือผิด — Lin 2026-07-07
   showRevealMulti();
@@ -2505,12 +2564,36 @@ document.addEventListener('keydown',function(e){
   var ch=map[e.code];
   if(ch){ rgTypeChar(ch); e.preventDefault(); }
 });
+// กดเลข 1-5 บนคีย์บอร์ดแทนการคลิกเลือกวรรณยุกต์ได้ — ใช้ได้ทุกโหมด (กดเลือก/พิมพ์ทีละพยางค์/พิมพ์ต่อเนื่องทั้งคำ) เพราะเช็คแค่ #bonus-section โชว์อยู่ไหม — Lin 2026-07-12
+document.addEventListener('keydown',function(e){
+  if(e.key<'1'||e.key>'5')return;
+  var ae=document.activeElement;
+  if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))return;
+  var _hm=document.getElementById('rg-howto-modal');
+  if(_hm && _hm.style.display==='flex')return;
+  if(document.getElementById('rg-ask-ov'))return;
+  var _bm=document.getElementById('badge-modal');
+  if(_bm && _bm.classList.contains('show'))return;
+  var sec=document.getElementById('bonus-section');
+  if(!sec || !sec.classList.contains('show'))return;
+  var box=document.getElementById('bonus-opts');
+  if(!box)return;
+  var tone=BONUS_TONES[Number(e.key)-1];
+  if(!tone)return;
+  var btn=box.querySelector('[data-tone="'+tone.name+'"]');
+  if(!btn || btn.classList.contains('locked'))return;
+  btn.click();
+  e.preventDefault();
+});
 // ผูก loadSyl() เดิม — ทุกครั้งที่ขึ้นพยางค์ใหม่ ถ้าเปิดโหมดพิมพ์อยู่ ให้ตั้งเป้าหมาย/keyboard ใหม่ด้วย
 (function(){
   var _origLoadSyl=loadSyl;
   loadSyl=function(){
     _origLoadSyl();
     if(!RG_TYPE.on)return;
+    // Lin 2026-07-12: ขึ้นคำ/พยางค์ใหม่ → เอา #type-panel กลับมาโชว์เสมอ (เผื่อถูกซ่อนไว้ตอนคำก่อนหน้าจบ — ดู rgHideTypePanelForReveal)
+    var _tp=document.getElementById('type-panel');
+    if(_tp)_tp.style.display='flex';
     // คำ/ประโยคหลายพยางค์ (2 พยางค์ขึ้นไป ทุกระดับ รวม 高) → เข้าโหมดพิมพ์ต่อเนื่องทั้งคำ ที่ sylIdx===0 ครั้งเดียว
     // ขยายจาก "≥3 พยางค์" เป็น "≥2 พยางค์" ตามที่ Lin ขอ 2026-07-03 (หลังทดสอบคำ 2 พยางค์แล้วอยากให้พิมพ์ต่อเนื่องด้วย)
     // เดิม 高級 ถูกกันไว้ไม่ให้พิมพ์ต่อเนื่อง (ต้องกดสลับพยางค์เอง) — Lin แจ้ง 2026-07-07 ว่า 高級 ก็ต้องพิมพ์ต่อเนื่องได้เหมือน 中級ทุกประการ จึงเอาเงื่อนไขกัน 高級 ออก
@@ -2680,7 +2763,8 @@ function rgCheckWholeWord(){
     rgJumpForCheck(sylList.length-1); // ให้ sylIdx จบที่พยางค์สุดท้ายเสมอ กัน next() งงว่าไปพยางค์ถัดไปหรือคำถัดไป
     checked=true; // ต้องตั้งหลังสลับพยางค์ เพราะ loadSyl() (ถ้าพยางค์นี้ยังไม่เคยแวะ) จะ reset checked=false ทับ
     rgFinalizeAllBonuses();
-    markOpts();markSlots();showReveal();renderSylStrip();
+    document.getElementById('bonus-section').className='bonus-section'; // ซ่อนกล่องทายวรรณยุกต์ ก่อนโชว์สรุปรวมทุกพยางค์ (กันโชว์ซ้ำ) — Lin 2026-07-12
+    markOpts();markSlots();showRevealMulti();renderSylStrip();
     document.getElementById('retry-hint').className='retry-hint';
     setGameBtns('done');
     finalizeWord();
@@ -2724,6 +2808,16 @@ function rgCheckWholeWord(){
   }
 }
 
+// Lin 2026-07-12: รีเฟรชหน้าแล้วต้องอยู่ระดับ(初/中/高)เดิม ไม่กระเด้งกลับ 初級 default เสมอ
+try{
+  var _savedLv=localStorage.getItem('tg_level');
+  if(_savedLv==='初'||_savedLv==='中'||_savedLv==='高'){
+    curLevel=_savedLv;
+    document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
+    var _lt=document.getElementById('ltab-'+curLevel);
+    if(_lt)_lt.classList.add('active');
+  }
+}catch(e){}
 loadSave();
 initGame();
 try { rgRenderGameBar(); } catch(e){}

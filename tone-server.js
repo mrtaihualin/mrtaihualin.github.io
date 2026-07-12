@@ -19,8 +19,9 @@
         body: {
           word: args.word,
           level: args.level,
-          game: args.game,                    // 'tone'(default)/'reading'/'typing' — แยก SRS ต่อเกม
-          clean: args.clean,                  // เกมสะกด (อ่าน/พิมพ์): รอบนี้สะอาดไหม
+          game: args.game,                    // 'tone'(default)/'reading'/'typing'/'wordorder' — แยก SRS ต่อเกม
+          clean: args.clean,                  // เกมสะกด/เรียงประโยค: รอบนี้เลื่อนขั้น(clean)ไหม
+          starClean: args.starClean,          // เกมเรียงประโยค: จำเอง(3⭐) vs ใช้คำใบ้/กู้(1⭐)
           initialGuess: args.initialGuess,   // คำพยางค์เดียว (เกมเสียง)
           syllables: args.syllables,          // คำหลายพยางค์ (ถ้ามี)
           guesses: args.guesses,              // คำเดารายพยางค์ (ถ้ามี)
