@@ -113,15 +113,14 @@
       ]
     },
     {
-      th: 'เธอยังไม่กลับบ้านเลยหรอ', zh: '她還沒回家嗎？', wc: 7,
+      th: 'เธอยังไม่กลับบ้านเหรอ', zh: '她還沒回家嗎？', wc: 6,
       words: [
       { th: 'เธอ', zh: '她', syl: ['เทอ'], syls: [{cons:'ธ', vowel:'เออ', tone_name:'สามัญ', th:'เธอ', en:'thoe'}] },
       { th: 'ยัง', zh: '還', syl: ['ยัง'], syls: [{cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง', en:'yang'}] },
       { th: 'ไม่', zh: '沒', syl: ['ไม่'], syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
       { th: 'กลับ', zh: '回', syl: ['กลับ'], syls: [{cons:'ก', cluster:'ล', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กลับ', en:'glàp'}] },
       { th: 'บ้าน', zh: '家', syl: ['บ้าน'], syls: [{cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'}] },
-      { th: 'เลย', zh: '（強調）', syl: ['เลย'], syls: [{cons:'ล', vowel:'เออ', final:'ย', tone_name:'สามัญ', th:'เลย', en:'loei'}] },
-      { th: 'หรอ', zh: '嗎', syl: ['หรอ'], syls: [{cons:'ร', lead:'ห', vowel:'ออ', tone_name:'จัตวา', th:'หรอ', en:'rǒ'}] }
+      { th: 'เหรอ', zh: '嗎', syl: ['เหรอ'], syls: [{cons:'ร', lead:'ห', vowel:'เออ', tone_name:'จัตวา', th:'เหรอ', en:'rǒe'}] }
       ]
     }
   ];

@@ -541,3 +541,7 @@
   html.lite .scroll-hint .line,
   html.lite .tf-float-cta { animation:none !important; }
 
+
+/* Lin 2026-07-12: footer มือถือ = ตัดเป็น 2 บรรทัดตรงกลาง (หลัง 設計的泰文課) · คอม = บรรทัดเดียวมี · คั่นเหมือนเดิม */
+.foot-mbr{display:none;}
+@media(max-width:768px){ footer .foot-sep{display:none;} footer .foot-mbr{display:inline !important;} }
