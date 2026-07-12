@@ -1719,6 +1719,8 @@ window.deleteFBComment = function(postId, idx) {
         // ตัวที่ Lin บอกว่าไม่ใช้ = แถบไอคอน 5 อันล่างมือถือ (#bottom-nav / 首頁課程...) → ซ่อนถาวรบนหน้าเกม + คืนพื้นที่ padding ล่าง
         '#bottom-nav{display:none !important;}' +
         '@media(max-width:768px){body{padding-bottom:0 !important;}}' +
+        // Lin 2026-07-12: บนมือถือ ปุ่มลอย 🎮/⛶ (มุมขวาล่าง) เคยทับข้อความ footer (泰華眼裡的泰語教學) → ดัน footer ขึ้นให้พ้นโซนปุ่ม
+        '@media(max-width:768px){footer{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px)) !important;}}' +
         'body.rg-fake-fullscreen{padding-bottom:0 !important;padding-top:0 !important;overflow-y:auto;}' +
         'body.rg-fake-fullscreen .v3-page{padding-top:6px !important;}';
       document.head.appendChild(style);

@@ -136,7 +136,9 @@
       var flatSyls = [];
       s.words.forEach(function (w) { flatSyls = flatSyls.concat(w.syls); });
       var en = flatSyls.map(function (sy) { return sy.en; }).join('-'); // คำอ่านโรมันทั้งประโยค (เดิม typing-game.html เก็บแยกไว้ต่างหาก ตอนนี้คำนวณสดจาก syls แทน)
-      return { th: s.th, zh: s.zh, en: en, level: '高', syls: flatSyls };
+      // Lin 2026-07-12: เก็บ "รายคำ + คำแปล" ไว้ด้วย → เกมพิมพ์ 高 / เกมเรียงคำ ใช้โชว์คำอธิบายว่าแต่ละคำแปลว่าอะไร
+      var wordMeanings = s.words.map(function (w) { return { th: w.th, zh: w.zh }; });
+      return { th: s.th, zh: s.zh, en: en, level: '高', syls: flatSyls, words: wordMeanings };
     });
   };
 })(window);

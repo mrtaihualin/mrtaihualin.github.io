@@ -40,7 +40,7 @@
 <script defer src="reading-auth.js?v=4"></script>
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="word-vault.js"></script>
-<script src="adv-sentences.js?v=3"></script>
+<script src="adv-sentences.js?v=4"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -270,6 +270,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <div class="result-banner" id="wo-banner"></div>
 
+  <!-- Lin 2026-07-12: อธิบายว่าแต่ละคำในประโยคแปลว่าอะไร (โชว์ตอนจบ มาตรฐานเดียวกับเกมพิมพ์ 高) -->
+  <div id="wo-reveal" style="display:none;width:100%;margin-top:8px;background:#fffbf0;border:1.5px dashed #f0b030;border-radius:12px;padding:10px 14px;box-sizing:border-box;"></div>
+
   <div class="btn-row">
     <button class="btn btn-remember" id="wo-remember-btn" onclick="woRemember()">已記得</button>
     <button class="btn btn-secondary" onclick="woResetSentence()">↺ 重排這句</button>
@@ -315,7 +318,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="shared.js?v=25"></script>
+<script src="shared.js?v=26"></script>
 <script>
 // ════════════════════════════════════════════════════════════════
 // 泰語語序遊戲 (word-order.html) — Lin 2026-07-03
@@ -683,6 +686,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
     document.getElementById('wo-score').textContent = score;
     document.getElementById('wo-zh').innerHTML = '';
+    var _woRev0=document.getElementById('wo-reveal'); if(_woRev0){_woRev0.style.display='none';_woRev0.innerHTML='';} // ประโยคใหม่ = ล้างคำอธิบายเก่า
     document.getElementById('wo-banner').className = 'result-banner';
     document.getElementById('wo-banner').textContent = '';
     document.getElementById('wo-next-btn').disabled = true;
@@ -897,6 +901,13 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       banner.className = 'result-banner ok show';
       banner.textContent = '✅ 排對了！+' + pts + ' 分' + (golden ? ' ✨黃金句' : '') + (cmult > 1 ? ' 🔥連對×' + cmult : '') + (hintUsedThisSentence ? '（用了提示）' : '');
       document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
+      // Lin 2026-07-12: โชว์คำอธิบายว่าแต่ละคำแปลว่าอะไร (ตอนจบ)
+      var _woRev=document.getElementById('wo-reveal');
+      if(_woRev){
+        _woRev.innerHTML='<div style="font-size:12px;color:#8B6310;font-weight:800;margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">每個字的意思</div>'+
+          s.words.map(function(w){ return '<div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(139,99,16,0.10);"><span style="font-family:\'Sarabun\',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;min-width:74px;">'+w.th+'</span><span style="color:#666;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;">'+w.zh+'</span></div>'; }).join('');
+        _woRev.style.display='block';
+      }
       // Lin 2026-07-12: คำในคลังใช้หมดแล้ว (มองไม่เห็นแต่ยังกินพื้นที่อยู่ opacity:0) → ซ่อนกล่องทั้งกล่องไปเลย กันช่องว่างเปล่าๆ ระหว่างช่องเฉลยกับ popup ผลลัพธ์
       var _wob=document.getElementById('wo-bank'); if(_wob)_wob.style.display='none';
       document.getElementById('wo-next-btn').disabled = false;

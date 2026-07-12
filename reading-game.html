@@ -41,7 +41,7 @@
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="word-vault.js"></script>
 <script src="words-data.js?v=2"></script>
-<script src="adv-sentences.js?v=3"></script>
+<script src="adv-sentences.js?v=4"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -1813,9 +1813,11 @@ function showReveal(){
   document.getElementById('rev-pron').textContent=_pron?('🔊 '+_pron):'';
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
-  // ถ้ากล่อง猜聲調 (#bonus-section) ยังโชว์อยู่ (คำนี้มี tone_name) แปลว่า #bonus-reason โชว์ 子音/母音/尾音/聲調符 ชุดเดียวกันไปแล้ว
-  // ไม่ต้องพิมพ์ซ้ำอีกรอบในกล่องนี้ — เหมือนเกมพิมพ์ — Lin 2026-07-12
-  var bonusShowing=document.getElementById('bonus-section').classList.contains('show');
+  // ข้ามการพิมพ์ซ้ำ "เฉพาะเมื่อ" แผงวรรณยุกต์ (#bonus-reason) โชว์คำอธิบายจริงๆ อยู่แล้วเท่านั้น
+  // Lin 2026-07-12: แก้บั๊กคำอธิบายหาย (圖3) — เดิมเช็คแค่ #bonus-section โชว์ไหม แต่บางคำ #bonus-reason ว่างเปล่า → เลย skip ทิ้งจนไม่มีคำอธิบายเลย (แก้ทั้งเกมพิมพ์+เกมอ่าน)
+  var _bSec=document.getElementById('bonus-section');
+  var _bRea=document.getElementById('bonus-reason');
+  var bonusShowing=_bSec.classList.contains('show') && _bRea && _bRea.classList.contains('show') && _bRea.innerHTML.trim()!=='';
   if(!bonusShowing){
     var rules=buildRevealRules(W);
     rules.forEach(function(r){
@@ -2438,7 +2440,7 @@ document.addEventListener('keydown',function(e){
 });
 </script>
 </div><!-- /.v3-page -->
-<script src="shared.js?v=25"></script>
+<script src="shared.js?v=26"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -2477,5 +2479,10 @@ document.addEventListener('keydown',function(e){
     }
   });
 </script>
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課 · 泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
 </body>
 </html>
