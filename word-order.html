@@ -75,7 +75,7 @@
 .wo-bank{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;width:100%;margin-bottom:4px;}
 .wo-tile{min-width:56px;padding:10px 16px;border-radius:14px;border:2px solid #d4b87a;background:#fff;color:#5a3e10;font-size:22px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;text-align:center;user-select:none;transition:transform .1s,opacity .15s;}
 .wo-tile:hover{background:#ffeedd;border-color:#c07030;transform:translateY(-2px);}
-.wo-tile.used{opacity:0;pointer-events:none;transform:scale(.6);}
+.wo-tile.used{opacity:0;pointer-events:none;transform:scale(.6);position:absolute;}/* Lin 2026-07-12: เอาออกจาก flow เลย ไม่ให้เหลือช่องว่างค้างในแถบตัวเลือกคำ */
 
 .result-banner{width:100%;padding:9px 14px;border-radius:11px;text-align:center;font-size:14px;font-weight:600;font-family:'Noto Sans TC',sans-serif;display:none;margin-top:6px;}
 .result-banner.show{display:block;}

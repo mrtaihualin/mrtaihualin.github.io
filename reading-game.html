@@ -748,10 +748,10 @@ function buildToneReason(w){
     return '「'+initCh+'」是'+classLabel+'，加上聲調符「'+mark+'」（'+TONE_MARK_NAME[mark]+'）→ 組合成'+toneZh;
   }
   if(live){
-    return '「'+initCh+'」是'+classLabel+'，這個音節是活音節（長母音或有濁尾音），沒有聲調符 → 固定念'+toneZh;
+    return '「'+initCh+'」是'+classLabel+'，這個音節是活音節（長母音或長尾音），沒有聲調符 → 固定念'+toneZh;
   }
   if(e==='high'||e==='mid'){
-    return '「'+initCh+'」是'+classLabel+'，這個音節是死音節（短母音或清塞音尾），沒有聲調符 → 固定念'+toneZh;
+    return '「'+initCh+'」是'+classLabel+'，這個音節是死音節（短母音或短尾音），沒有聲調符 → 固定念'+toneZh;
   }
   var isShort=(vowel==='short')||(vowel==null);
   return '「'+initCh+'」是低子音，死音節+'+(isShort?'短母音':'長母音')+' → 念'+toneZh;

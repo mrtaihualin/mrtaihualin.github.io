@@ -1673,6 +1673,18 @@ window.deleteFBComment = function(postId, idx) {
       var gs = document.getElementById('game-switcher');
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ (มี #game-switcher) — หน้าอื่นในเว็บไม่กระทบ
 
+      // Lin 2026-07-12: ห่อตัวอักษรจีนในปุ่มเมนูเกมด้วย .gs-lbl → CSS ซ่อนให้เหลือแต่ไอคอนบนมือถือได้ (คอมยังเห็นข้อความ)
+      try {
+        gs.querySelectorAll('.gs-tab').forEach(function (t) {
+          if (t.querySelector('.gs-lbl')) return;
+          var raw = (t.textContent || '').trim();
+          var sp = raw.indexOf(' ');
+          if (sp > 0) {
+            t.innerHTML = raw.slice(0, sp) + '<span class="gs-lbl"> ' + raw.slice(sp + 1) + '</span>';
+          }
+        });
+      } catch (e) {}
+
       var KEY = 'rg_fake_fullscreen';
       var on = false;
       try { on = localStorage.getItem(KEY) === '1'; } catch (e) {}
@@ -1687,14 +1699,19 @@ window.deleteFBComment = function(postId, idx) {
         '@media(max-width:768px){.rg-fs-fab{bottom:calc(120px + env(safe-area-inset-bottom,0px));}}' +
         /* โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม — ใช้ !important เพราะบางอันมี inline style ล็อกไว้ */
         'body.rg-fake-fullscreen .site-nav,' +
+        'body.rg-fake-fullscreen #bottom-nav,' + /* Lin 2026-07-12: เต็มจอ = ซ่อน bottom-nav (首頁/課程) บนมือถือด้วย */
         'body.rg-fake-fullscreen .avail-band,' + /* Lin 2026-07-10: ซ่อนแถบโปรโมทบนสุดด้วยตอนเปิดเกมเต็มจอ */
         'body.rg-fake-fullscreen .page-strip,' +
         'body.rg-fake-fullscreen .page-header,' +
-        /* Lin 2026-07-12: เต็มจอแล้วยังต้องมีปุ่มเมนูเกมเล็กๆ กดได้เสมอ (ทั้งคอม+มือถือ) — ซ่อนแค่ตอน "กางเป็นแถบยาว" เท่านั้น ไม่ซ่อนตอนย่อเป็นวงกลมเล็ก */
-        'body.rg-fake-fullscreen #game-switcher:not(.gs-collapsed),' +
+        /* Lin 2026-07-12: เต็มจอ = เมนูเกม (#game-switcher) ยังต้องเห็นตลอด (ไม่ซ่อนแล้ว ทั้งกาง/ย่อ) — แก้บั๊กกดเต็มจอแล้วเมนูหาย */
         'body.rg-fake-fullscreen .floating-qr,' +
         'body.rg-fake-fullscreen #vault-hero' +
         '{display:none !important;}' +
+        /* Lin 2026-07-12: หน้าเกมไม่ใช้แถบ nav บนสุด (首頁/課程) เลย → ซ่อนถาวร + คืนพื้นที่ด้านบน */
+        '.site-nav{display:none !important;}' +
+        'body{padding-top:0 !important;}' +
+        /* Lin 2026-07-12: เมนูเกมบนมือถือ = โชว์แค่ไอคอน ซ่อนตัวอักษรจีน (คอมยังเห็นข้อความเหมือนเดิม) */
+        '@media(max-width:768px){#game-switcher .gs-lbl{display:none !important;}}' +
         /* Lin 2026-07-12: ซ่อน .site-nav ไปแล้วแต่ body ยังกันพื้นที่ 60px ไว้ให้ nav อยู่ดี (var(--nav-h)) เลยเหลือช่องว่างลอยบนสุด → รีเซ็ตเป็น 0 ไปเลยตอนเต็มจอ */
         'body.rg-fake-fullscreen{padding-bottom:0 !important;padding-top:0 !important;overflow-y:auto;}' +
         'body.rg-fake-fullscreen .v3-page{padding-top:6px !important;}';
@@ -1709,11 +1726,11 @@ window.deleteFBComment = function(postId, idx) {
         document.body.classList.toggle('rg-fake-fullscreen', on);
         renderFab();
         try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
-        // Lin 2026-07-12: เข้าเต็มจอ → บังคับย่อเมนูเกมเป็นวงกลมเล็กเสมอ (กันเผลอกางเป็นแถบยาวค้างอยู่ตอนเต็มจอ)
-        // ตั้งทั้ง class (เผื่อเรียกก่อนบล็อก ▾ ด้านล่างจะรันเสร็จ) และตัวแปร+ไอคอน (ถ้าบล็อกด้านล่างรันไปแล้ว) ให้ตรงกันเสมอ
+        // Lin 2026-07-12: เข้าเต็มจอ → กางเมนูเกมเป็นแถบไอคอนให้เห็นตลอด (เดิมย่อเป็นวงกลมเล็กจนดูเหมือนเมนูหาย)
+        // ตั้งทั้ง class และตัวแปร+ไอคอนให้ตรงกันเสมอ
         if (on) {
-          try { gs.classList.add('gs-collapsed'); } catch (e) {}
-          try { if (typeof gsCollapsed !== 'undefined') { gsCollapsed = true; } if (typeof renderMini === 'function') renderMini(); } catch (e) {}
+          try { gs.classList.remove('gs-collapsed'); } catch (e) {}
+          try { if (typeof gsCollapsed !== 'undefined') { gsCollapsed = false; } if (typeof renderMini === 'function') renderMini(); } catch (e) {}
         }
       }
       fab.onclick = function () { on = !on; applyState(); };
