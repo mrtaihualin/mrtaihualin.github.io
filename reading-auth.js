@@ -186,6 +186,9 @@
     API.user = u || null;
     if (API.user) closeGate();   // เพิ่งล็อกอินสำเร็จ → ปิด modal
     render();
+    // Lin 2026-07-12: auth เพิ่งเสร็จ/เปลี่ยน (getSession เป็น async) → สั่งเกม re-render แถบชวนล็อกอิน "登入解鎖"
+    // แก้บั๊ก: ตอนโหลดหน้า auth ยังไม่เสร็จ การ์ดเลยโชว์ค้าง ทั้งที่จริงล็อกอินอยู่ (ผู้เล่นนึกว่าต้องล็อกอินใหม่ทุกครั้ง)
+    ['rgRenderGameBar','legoRenderGameBar','woRerenderBar'].forEach(function(fn){ if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){} } });
     if (API.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
       try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}
     }

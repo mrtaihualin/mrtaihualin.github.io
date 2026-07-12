@@ -37,7 +37,7 @@
 <script defer src="supabase-config.js?v=4"></script>
 <script defer src="game-account.js?v=1"></script>
 <script defer src="auth-widget.js?v=1"></script>
-<script defer src="reading-auth.js?v=4"></script>
+<script defer src="reading-auth.js?v=5"></script>
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="word-vault.js"></script>
 <script src="adv-sentences.js?v=4"></script>
@@ -1102,6 +1102,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   }
 
   window.woRestart = function(){ init(); };
+  window.woRerenderBar = rgRenderGameBar; // Lin 2026-07-12: ให้ reading-auth.js เรียก re-render แถบชวนล็อกอินได้ตอน auth เสร็จ (กันการ์ด "登入解鎖" ค้างทั้งที่ล็อกอินแล้ว)
 
   // ════════════════════════════════════════════
   // PDF 報告（本輪排過的句子 + 錯誤分析 + SRS下次複習日期）— Lin 2026-07-08
