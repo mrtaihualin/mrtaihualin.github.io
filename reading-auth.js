@@ -217,14 +217,18 @@
   }
 
   // error จาก PostgREST ที่แปลว่า "คอลัมน์ game ยังไม่มีใน schema" — จับกว้างไว้ก่อน
-  function isMissingGameColumn(err) {
+  function isMissingColumn(err, colName) {
     if (!err) return false;
-    if (err.code === 'PGRST204') return true; // Could not find the 'game' column ... in the schema cache
+    if (err.code === 'PGRST204') return true; // Could not find the column ... in the schema cache
     var m = String(err.message || '');
-    return /game/i.test(m) && /(column|schema|cache|find)/i.test(m);
+    return new RegExp(colName, 'i').test(m) && /(column|schema|cache|find)/i.test(m);
   }
+  function isMissingGameColumn(err) { return isMissingColumn(err, 'game'); }
 
-  function saveScore(score, games, game) {
+  // 2026-07-13 Lin：เพิ่ม wrongItems (4th param) — เก็บคำ/ประโยคที่พลาดในรอบนั้น (เหมือน tone_sessions.wrong_words)
+  // ใช้เป็นฐานข้อมูลจุดอ่อนให้เกมอ่าน/พิมพ์/เรียงคำ/ต่อประโยค — เดิมมีแค่คะแนน ไม่มีรายละเอียดคำผิด
+  // ต้องรัน SQL เพิ่มคอลัมน์ wrong_items ก่อน (ไฟล์ SQL แยก) — ถ้ายังไม่รัน จะ fallback เซฟแบบไม่มีคอลัมน์นี้ ให้คะแนนไม่หาย
+  function saveScore(score, games, game, wrongItems) {
     if (!API.user) return; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
     if ((API.user.email || '').toLowerCase() === ADMIN_EMAIL) {
       console.info('[board] admin account — score not saved (excluded from leaderboard)');
@@ -232,17 +236,30 @@
     }
     var gm = (game === 'typing' || game === 'reading' || game === 'word_order' || game === 'lego') ? game : pageGame();
     var base = { user_id: API.user.id, score: (score || 0) | 0, games: (games || 1) | 0 };
-    var row = { user_id: base.user_id, score: base.score, games: base.games, game: gm };
+    var withGame = { user_id: base.user_id, score: base.score, games: base.games, game: gm };
+    var full = { user_id: withGame.user_id, score: withGame.score, games: withGame.games, game: withGame.game, wrong_items: Array.isArray(wrongItems) ? wrongItems : [] };
     function onFail(msg) {
       console.warn('[board] save failed:', msg);
       saveToast('⚠️ 分數儲存失敗：' + msg, false);
       try { if (window.gtag) gtag('event', 'score_save_fail', { reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
     }
     try {
-      sb.from('reading_sessions').insert(row).then(function (res) {
+      sb.from('reading_sessions').insert(full).then(function (res) {
         if (!res.error) { saveToast('✅ 分數已儲存 +' + base.score + ' 分', true); return; }
-        if (isMissingGameColumn(res.error)) {
-          // Lin ยังไม่รัน SQL เพิ่มคอลัมน์ game → เซฟแบบเดิม (ไม่มี game) ให้คะแนนไม่หาย
+        if (isMissingColumn(res.error, 'wrong_items')) {
+          // Lin ยังไม่รัน SQL เพิ่มคอลัมน์ wrong_items → เซฟแบบเดิม (ไม่มี wrong_items) ให้คะแนนไม่หาย
+          console.warn('[board] wrong_items column not ready — saved without it');
+          sb.from('reading_sessions').insert(withGame).then(function (res2) {
+            if (!res2.error) { saveToast('✅ 分數已儲存 +' + base.score + ' 分', true); return; }
+            if (isMissingGameColumn(res2.error)) {
+              console.warn('[board] game column not ready — saved without game');
+              sb.from('reading_sessions').insert(base).then(function (res3) {
+                if (res3.error) onFail(res3.error.message);
+                else saveToast('✅ 分數已儲存 +' + base.score + ' 分', true);
+              }, function (e3) { onFail(e3 && e3.message || '網路錯誤'); });
+            } else onFail(res2.error.message);
+          }, function (e2) { onFail(e2 && e2.message || '網路錯誤'); });
+        } else if (isMissingGameColumn(res.error)) {
           console.warn('[board] game column not ready — saved without game');
           sb.from('reading_sessions').insert(base).then(function (res2) {
             if (res2.error) onFail(res2.error.message);

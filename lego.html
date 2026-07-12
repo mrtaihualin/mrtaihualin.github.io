@@ -872,6 +872,13 @@ let sentencesThisRound=0;
 // ⚡ คะแนนสะสมของรอบนี้ — เพิ่ม 2026-07-03 เพื่อโชว์หลอด 進度/⚡ เหมือนเกมอื่น
 // ใช้ pts จริงที่ checkTestAnswer() คำนวณต่อการทดสอบผ่านแต่ละครั้ง ไม่ได้เดา/ให้คะแนนลอยๆ
 let roundScoreLego=0;
+// 2026-07-13 Lin：เก็บประโยคที่ต่อในรอบนี้ไว้ทำ wrong_items (ฐานข้อมูลจุดอ่อน) — ดัน entry ทุกครั้งที่ทดสอบผ่าน (checkTestAnswer)
+// แล้วส่งไปกับ saveScore ตอนจบรอบ (finishLegoRound) จากนั้นล้างทิ้งเริ่มรอบใหม่
+let legoRoundLog=[];
+function legoWrongItemsFromLog(){
+  try{ return legoRoundLog.filter(function(w){return (w.wrong||0)>0;}); }
+  catch(e){ return []; }
+}
 
 // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
 function legoScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
@@ -907,7 +914,8 @@ function finishLegoRound(){
   if(window.GAME_ACCOUNT){GAME_ACCOUNT.bumpStreakToday();}
   try{ legoChallengeBump(cleanCount,count,comboSnapshot); }catch(e){}
   // 存分數到共用排行榜（'lego' key 已在 reading-auth.js 註冊，跟 word_order 分開算，不會混榜）
-  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'lego'); }catch(e){}
+  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'lego',legoWrongItemsFromLog()); }catch(e){}   // เฟส 3: แนบประโยคที่พลาด — 2026-07-13
+  legoRoundLog=[]; // ล้างรอบ กันข้อมูลรอบเก่าค้างไปติดรอบถัดไป
   try{
     const _sv=legoApplyStreak();
     if(_sv.events.freezeUsed) setTimeout(()=>toast('護盾幫你保住連續紀錄！🛡️'),900);
@@ -1241,6 +1249,7 @@ function checkTestAnswer(){
     const golden=clean&&testGolden;
     if(golden) pts*=GOLDEN_SENTENCE_MULT;
     if(clean){ legoCleanThisRound++; }
+    legoRoundLog.push({th:testWords.map(function(w){return w.th;}).join(''), zh:testWords.map(function(w){return w.zh;}).join('・'), wrong:testWrongCount||0}); // 2026-07-13：เก็บไว้ทำ wrong_items
     // legoCurCombo/legoMaxCombo: เก็บไว้แค่ให้ชาเลนจ์รายสัปดาห์ lego_combo5 ใช้ — ไม่มีผลกับคะแนนแล้ว (ตัดคอมโบคูณคะแนนออกตาม Lin ยืนยัน 2026-07-05)
     legoCurCombo=clean?legoCurCombo+1:0;
     if(legoCurCombo>legoMaxCombo) legoMaxCombo=legoCurCombo;

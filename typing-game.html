@@ -854,6 +854,11 @@ function rgLogWord(o){
     roundLog.push(base);
   }catch(e){}
 }
+// 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
+function rgWrongItemsFromLog(){
+  try{ return roundLog.filter(function(w){return (w.wrong||0)>0||w.failed;}).map(function(w){return {th:w.th,zh:w.zh,wrong:w.wrong||0};}); }
+  catch(e){ return []; }
+}
 var picks=[],comps=[],correctSet=[],needN=0;
 var checked=false,wrongCount=0;
 var wordToneBonus=0; // รวมแต้มโบนัสวรรณยุกต์ (+1 ต่อพยางค์) ของ "คำนี้" ทั้งคำ — เอาไว้บวกรวมกับคะแนนหลักตอนแสดงแบนเนอร์ตอนจบคำ ไม่ให้แยกโชว์คนละที่จนบวกเลขไม่ลง — Lin 2026-07-07
@@ -1566,7 +1571,7 @@ function endRound(){
   }
   if(roundBonus)detail+='・含完成獎勵 +'+roundBonus;
   document.getElementById('end-detail').textContent=detail;
-  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'typing'); }catch(e){}   // เซฟแต้มขึ้นลีกเกมพิมพ์ (ถ้าล็อกอิน) · ระบุเกมชัดเจน — 2026-07-02
+  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'typing',rgWrongItemsFromLog()); }catch(e){}   // เซฟแต้มขึ้นลีกเกมพิมพ์ (ถ้าล็อกอิน) · ระบุเกมชัดเจน — 2026-07-02 · เฟส 3: แนบคำที่พลาด — 2026-07-13
   // ── weekly challenge + streak freeze ──
   var _isPerfect = (cleanC === roundTotal && roundTotal > 0);
   var _maxCombo = maxStreak; // max combo ที่ทำได้ในรอบนี้

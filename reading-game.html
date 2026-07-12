@@ -813,6 +813,11 @@ function rgLogWord(o){
     roundLog.push(base);
   }catch(e){}
 }
+// 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
+function rgWrongItemsFromLog(){
+  try{ return roundLog.filter(function(w){return (w.wrong||0)>0||w.failed;}).map(function(w){return {th:w.th,zh:w.zh,wrong:w.wrong||0};}); }
+  catch(e){ return []; }
+}
 var roundHadGuide=false; // (เลิกใช้แล้ว — คำใบ้เป็นรายคำ) เก็บตัวแปรไว้กันโค้ดเดิมอ้างถึง
 var isWordPractice=false; // ?word= ฝึกคำเดียว / ทบทวนหลังจำครบ = ไม่คิดคะแนน/ลีก (G + กฎ15)
 var rgAllMasteredPending=false; // กฎ15: รอเด้งหน้าฉลอง 全部精通
@@ -1614,7 +1619,7 @@ function endRound(){
   }
   if(roundBonus)detail+='・含完成獎勵 +'+roundBonus;
   document.getElementById('end-detail').textContent=detail;
-  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'reading'); }catch(e){}   // เฟส 2: เซฟแต้มขึ้นลีกเกมอ่าน (ถ้าล็อกอิน) · ระบุเกมชัดเจน — 2026-07-02
+  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'reading',rgWrongItemsFromLog()); }catch(e){}   // เฟส 2: เซฟแต้มขึ้นลีกเกมอ่าน (ถ้าล็อกอิน) · ระบุเกมชัดเจน — 2026-07-02 · เฟส 3: แนบคำที่พลาด — 2026-07-13
   // ── weekly challenge + streak freeze ──
   var _maxCombo = maxStreak; // max combo ที่ทำได้ในรอบนี้
   try { rgChallengeBump(_maxCombo, _isPerfect); } catch(e){}
