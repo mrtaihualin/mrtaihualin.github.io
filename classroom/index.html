@@ -2504,15 +2504,93 @@ async function loadTeacherStudentInfo(token) {
   } catch (e) {}
 }
 
+// ── 2026-07-13 新增：學生「回饋」通知 banner（老師首頁）──
+// Lin 要求：學生送出感想時，老師一登入首頁就要看到提醒，不用點進每個學生才看得到。
+// 設計跟 lowQuotaBanner 同一套模式：已關閉過的用 localStorage 記住（本機裝置），
+// 不動資料庫欄位、不需要額外 schema — classroom_feedback 本身沒有「已讀」欄位。
+var newFeedbackList = [];
+var newFeedbackIdx = 0;
+var newFeedbackRotateTimer = null;
+
+function getDismissedFeedbackIds() {
+  try { return JSON.parse(localStorage.getItem('dismissedFeedbackIds') || '[]'); } catch (e) { return []; }
+}
+function markFeedbackDismissed(id) {
+  try {
+    var d = getDismissedFeedbackIds();
+    if (d.indexOf(id) === -1) d.push(id);
+    if (d.length > 300) d = d.slice(d.length - 300); // 防止 localStorage 無限長大
+    localStorage.setItem('dismissedFeedbackIds', JSON.stringify(d));
+  } catch (e) {}
+}
+
+async function loadNewFeedbackBanner() {
+  var el = document.getElementById('newFeedbackBanner');
+  if (!el) return;
+  try {
+    var res = await sb.from('classroom_feedback').select('id,token,content,created_at').order('created_at', { ascending: false }).limit(30);
+    var rows = res.data || [];
+    if (res.error) { el.innerHTML = ''; console.warn('讀取學生回饋失敗：', res.error.message); return; }
+    var dismissed = getDismissedFeedbackIds();
+    newFeedbackList = rows.filter(function(r) { return dismissed.indexOf(r.id) === -1; })
+      .map(function(r) {
+        var s = studentsCache[r.token];
+        return { id: r.id, token: r.token, name: s ? s.name : '（學生）', content: r.content || '' };
+      });
+    newFeedbackIdx = 0;
+    renderNewFeedbackBanner();
+  } catch (e) {}
+}
+
+function renderNewFeedbackBanner() {
+  var el = document.getElementById('newFeedbackBanner');
+  if (!el) return;
+  if (newFeedbackRotateTimer) { clearInterval(newFeedbackRotateTimer); newFeedbackRotateTimer = null; }
+  if (!newFeedbackList.length) { el.innerHTML = ''; return; }
+  if (newFeedbackIdx >= newFeedbackList.length) newFeedbackIdx = 0;
+  var item = newFeedbackList[newFeedbackIdx];
+  var counter = newFeedbackList.length > 1 ? ' <span style="opacity:0.65;font-weight:400;">(' + (newFeedbackIdx + 1) + '/' + newFeedbackList.length + ')</span>' : '';
+  var preview = item.content.length > 36 ? item.content.slice(0, 36) + '…' : item.content;
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;background:#eef6f0;border:1.5px solid var(--green);border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--green-dark);font-weight:700;">' +
+    '<span style="flex:1;cursor:pointer;" onclick="openFeedbackFromBanner(\'' + item.token + '\',\'' + item.id + '\')">📝 新回饋：' + escHtml(item.name) + '「' + escHtml(preview) + '」' + counter + '</span>' +
+    '<button onclick="dismissFeedbackAlert(\'' + item.id + '\')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--green-dark);opacity:0.6;padding:2px 6px;flex-shrink:0;">✕</button>' +
+  '</div>';
+  if (newFeedbackList.length > 1) {
+    newFeedbackRotateTimer = setInterval(function() {
+      newFeedbackIdx = (newFeedbackIdx + 1) % newFeedbackList.length;
+      renderNewFeedbackBanner();
+    }, 5000);
+  }
+}
+
+function dismissFeedbackAlert(id) {
+  markFeedbackDismissed(id);
+  newFeedbackList = newFeedbackList.filter(function(x) { return x.id !== id; });
+  if (newFeedbackIdx >= newFeedbackList.length) newFeedbackIdx = 0;
+  renderNewFeedbackBanner();
+}
+
+// 點 banner 文字 → 直接跳到那位學生的面板（順便關掉這則提醒）
+function openFeedbackFromBanner(token, id) {
+  dismissFeedbackAlert(id);
+  var dd = document.getElementById('stuDropdown');
+  if (dd) dd.value = token;
+  selectStudent(token);
+  setTimeout(function() {
+    var panel = document.getElementById('stuPanel');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
 async function renderTeacherView() {
   document.getElementById('studentNameDisplay').textContent = '👩‍🏫 教師管理頁面';
   document.getElementById('mainContainer').innerHTML =
     '<div id="lowQuotaBanner"></div>' +
+    '<div id="newFeedbackBanner"></div>' +
     '<div class="teacher-panel">' +
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
-      '<div style="display:flex;gap:10px;margin-top:16px;">' +
-        '<button class="btn-add-student" style="margin-top:0;" onclick="openAddStudentModal()">➕ 新增學生</button>' +
+      '<div style="margin-top:16px;">' +
         '<button class="btn-add-student" style="margin-top:0;" onclick="openGenLinkModal()">🔗 入班連結</button>' +
       '</div>' +
     '</div>' +
@@ -2526,6 +2604,7 @@ async function renderTeacherView() {
   await loadPendingClassRequests();
   await loadTodaySchedule();
   loadLowQuotaBanner();
+  loadNewFeedbackBanner();
   // auto-click "連接 Google Calendar" ถ้าเคย connect ไว้แล้ว (localStorage flag)
   if (localStorage.getItem('gdConnected')) {
     setTimeout(async function() {
@@ -2682,7 +2761,7 @@ async function renderStudentView() {
       '<h2>📚 更多學習資源</h2>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
         '<a href="../content.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">📚 影片與文章</a>' +
-        '<a href="../games.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🎮 泰語小遊戲</a>' +
+        '<a href="../games.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🎮 泰語小遊戲</a>' +
         '<a href="https://mrtaihualin.com/" target="_blank" rel="noopener" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🏠 回官網首頁</a>' +
       '</div>' +
     '</div>' +
@@ -3809,8 +3888,14 @@ async function markClassRequestHandled(id, status) {
   // 2026-07-11：先讓這個項目立刻從畫面消失（不用等 reload），資料庫仍照舊更新
   var rowEl = document.getElementById('req-row-' + id);
   if (rowEl) rowEl.remove();
-  var res = await sb.from('classroom_requests').update({ status: status }).eq('id', id);
-  if (res.error) { alert('更新失敗：' + res.error.message); await loadPendingClassRequests(); return; }
+  // 2026-07-13：加 .select() 確認真的有改到資料庫，防止 RLS 權限擋掉卻不報 error（畫面看起來像沒反應、按了又跳回來）
+  var res = await sb.from('classroom_requests').update({ status: status }).eq('id', id).select();
+  if (res.error) { alert('⚠️ 更新失敗：' + res.error.message); await loadPendingClassRequests(); return; }
+  if (!res.data || res.data.length === 0) {
+    alert('⚠️ 標記失敗：資料庫沒有真的更新到（可能是 Supabase 權限設定 RLS 擋住了 UPDATE），請到 Supabase Dashboard 檢查 classroom_requests 資料表的 UPDATE 權限。');
+    await loadPendingClassRequests();
+    return;
+  }
   await loadPendingClassRequests();
 }
 
