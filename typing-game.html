@@ -1759,9 +1759,15 @@ function showReveal(){
 function showRevealMulti(){
   var _pronM=buildThaiPron();
   document.getElementById('rev-pron').textContent=_pronM?('🔊 '+_pronM):'';
-  var box=document.getElementById('reveal-rules');
+  // Lin 2026-07-12 (圖3 unify): คำอธิบายต้องอยู่ "ในกล่องพยางค์" เสมอ → หลายพยางค์ = ใส่ใน #bonus-reason ของกล่องสุดท้าย (เลิกใช้แผงแยก #reveal)
+  var box=document.getElementById('bonus-reason');
   box.innerHTML='';
-  // Lin 2026-07-12: 高級(ประโยค) → อธิบายว่า "แต่ละคำแปลว่าอะไร" (ไม่แยกพยัญชนะ/สระ) — มาตรฐานเดียวกับเกมเรียงคำ
+  function _finishInBox(){
+    box.className='bonus-reason show';
+    var _sec=document.getElementById('bonus-section'); if(_sec)_sec.className='bonus-section show';
+    var _rv=document.getElementById('reveal'); if(_rv)_rv.className='reveal'; // ซ่อนแผงเฉลยแยกด้านล่าง ไม่ใช้แล้ว
+  }
+  // 高級(ประโยค) → อธิบายว่า "แต่ละคำแปลว่าอะไร" (ไม่แยกพยัญชนะ/สระ) — มาตรฐานเดียวกับเกมเรียงคำ
   if(WORD && WORD.words && WORD.words.length){
     WORD.words.forEach(function(wd){
       var row=document.createElement('div');row.className='rule-row';
@@ -1769,8 +1775,7 @@ function showRevealMulti(){
       var txt=document.createElement('span');txt.className='rule-txt';txt.textContent=wd.zh;
       row.appendChild(tag);row.appendChild(txt);box.appendChild(row);
     });
-    document.getElementById('reveal').className='reveal show';
-    return;
+    _finishInBox();return;
   }
   sylList.forEach(function(SY,i){
     var head=document.createElement('div');
@@ -1786,7 +1791,7 @@ function showRevealMulti(){
       row.appendChild(tag);row.appendChild(txt);box.appendChild(row);
     });
   });
-  document.getElementById('reveal').className='reveal show';
+  _finishInBox();
 }
 
 var _scorePopCount=0; // กันป๊อปคะแนนซ้อนทับกัน — Lin 2026-07-12
@@ -2477,6 +2482,8 @@ function rgContAskNextTone(){
   RG_CONT_TONE_ANSWERED=false;
   var sec=document.getElementById('bonus-section');
   sec.className='bonus-section show';
+  // Lin 2026-07-12 (Smart Tone มือถือ): พิมพ์ครบแล้ว → ปิดคีย์บอร์ดเครื่อง ให้ปุ่มเลือกวรรณยุกต์ (แตะ 1-5) โผล่ กดได้เลย ไม่ต้องสลับไปแป้นเลข
+  try{var _miT=document.getElementById('rg-mobile-input');if(_miT)_miT.blur();}catch(e){}
   var box=document.getElementById('bonus-opts');
   box.innerHTML='';
   document.getElementById('bonus-result').textContent='';

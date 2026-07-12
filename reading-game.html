@@ -1836,7 +1836,8 @@ function showReveal(){
 function showRevealMulti(){
   var _pronM=buildThaiPron();
   document.getElementById('rev-pron').textContent=_pronM?('🔊 '+_pronM):'';
-  var box=document.getElementById('reveal-rules');
+  // Lin 2026-07-12 (圖3 unify): คำอธิบายอยู่ "ในกล่องพยางค์" (#bonus-reason ของกล่องสุดท้าย) เสมอ — เลิกใช้แผงแยก #reveal
+  var box=document.getElementById('bonus-reason');
   box.innerHTML='';
   sylList.forEach(function(SY,i){
     var head=document.createElement('div');
@@ -1852,7 +1853,9 @@ function showRevealMulti(){
       row.appendChild(tag);row.appendChild(txt);box.appendChild(row);
     });
   });
-  document.getElementById('reveal').className='reveal show';
+  box.className='bonus-reason show';
+  var _sec=document.getElementById('bonus-section'); if(_sec)_sec.className='bonus-section show';
+  var _rv=document.getElementById('reveal'); if(_rv)_rv.className='reveal';
 }
 
 var _scorePopCount=0; // กันป๊อปคะแนนซ้อนทับกัน — Lin 2026-07-12
