@@ -1715,9 +1715,10 @@ window.deleteFBComment = function(postId, idx) {
         'body.rg-fake-fullscreen .floating-qr,' +
         'body.rg-fake-fullscreen #vault-hero' +
         '{display:none !important;}' +
-        // Lin 2026-07-12: หน้าเกมไม่ใช้แถบ nav บนสุด (首頁/課程) เลย → ซ่อนถาวร + คืนพื้นที่ด้านบน
-        '.site-nav{display:none !important;}' +
-        'body{padding-top:0 !important;}' +
+        // Lin 2026-07-12 (แก้ที่เข้าใจผิด): แถบ nav บนสุด (site-nav) ต้อง "มี" ทั้งคอม+มือถือ (เดิมเผลอซ่อนผิดตัว) → คืนมา ซ่อนแค่ตอนเต็มจอ
+        // ตัวที่ Lin บอกว่าไม่ใช้ = แถบไอคอน 5 อันล่างมือถือ (#bottom-nav / 首頁課程...) → ซ่อนถาวรบนหน้าเกม + คืนพื้นที่ padding ล่าง
+        '#bottom-nav{display:none !important;}' +
+        '@media(max-width:768px){body{padding-bottom:0 !important;}}' +
         'body.rg-fake-fullscreen{padding-bottom:0 !important;padding-top:0 !important;overflow-y:auto;}' +
         'body.rg-fake-fullscreen .v3-page{padding-top:6px !important;}';
       document.head.appendChild(style);
