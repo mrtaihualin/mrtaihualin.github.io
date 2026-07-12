@@ -192,7 +192,61 @@
     if (API.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
       try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}
     }
+    loadAdaptiveHistory(); // 2026-07-13 Lin：ล็อกอิน/สลับบัญชี → โหลดประวัติคำพลาดของเกมนี้ใหม่
   }
+
+  // ── ฝึกจุดอ่อนอัตโนมัติ (75/25) — ก็อปแนวคิดจาก adaptive.js ของเกมเสียง มาใช้กับอ่าน/พิมพ์/เรียงคำ/ต่อประโยค ──
+  // ดึงจาก reading_sessions.wrong_items เฉพาะเกมปัจจุบัน (แยกกันเป็นเกม ๆ ไป ไม่ปนกัน)
+  var ADAPTIVE_RATIO = 0.75;      // 75% คำ/ประโยคที่ยังไม่เคยพลาด (หรือพลาดน้อย) 25% คำที่พลาดบ่อย
+  var ADAPTIVE_HISTORY_LIMIT = 50;
+  var adaptiveWrongCounts = {};   // { th: จำนวนครั้งที่พลาด }
+  var adaptiveLoaded = false;
+
+  function loadAdaptiveHistory() {
+    if (!API.user) { adaptiveLoaded = false; adaptiveWrongCounts = {}; return; }
+    sb.from('reading_sessions')
+      .select('wrong_items')
+      .eq('user_id', API.user.id)
+      .eq('game', pageGame())
+      .order('created_at', { ascending: false })
+      .limit(ADAPTIVE_HISTORY_LIMIT)
+      .then(function (res) {
+        adaptiveWrongCounts = {};
+        if (res && res.data) {
+          res.data.forEach(function (row) {
+            (row.wrong_items || []).forEach(function (w) {
+              var key = w && w.th; if (!key) return;
+              adaptiveWrongCounts[key] = (adaptiveWrongCounts[key] || 0) + (w.wrong || 1);
+            });
+          });
+        }
+        adaptiveLoaded = true;
+      }, function () { adaptiveLoaded = false; });
+  }
+  function rgShuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function rgSample(arr, n) { return rgShuffle(arr).slice(0, n); }
+  // pool = array ของ item ที่มี .th (คำ/ประโยค) — คืน array ของ item ที่เลือกแล้ว (ไม่ใช่แค่ index)
+  API.adaptiveReady = function () { return adaptiveLoaded && Object.keys(adaptiveWrongCounts).length > 0; };
+  API.pickAdaptive = function (pool, n) {
+    pool = (pool || []).slice();
+    n = n || pool.length;
+    if (pool.length <= n || !API.adaptiveReady()) return rgSample(pool, n);
+    var weak = pool.filter(function (w) { return w && w.th && adaptiveWrongCounts[w.th]; })
+                   .sort(function (a, b) { return (adaptiveWrongCounts[b.th] || 0) - (adaptiveWrongCounts[a.th] || 0); });
+    var strong = pool.filter(function (w) { return !(w && w.th && adaptiveWrongCounts[w.th]); });
+    var nWeak = Math.min(weak.length, Math.round(n * (1 - ADAPTIVE_RATIO)));
+    var nStrong = n - nWeak;
+    var res = rgSample(weak, nWeak).concat(rgSample(strong, nStrong));
+    if (res.length < n) {
+      var rest = pool.filter(function (w) { return res.indexOf(w) < 0; });
+      res = res.concat(rgSample(rest, n - res.length));
+    }
+    return rgShuffle(res).slice(0, n);
+  };
 
   // ── เซฟแต้มรอบนี้ขึ้นลีก (เฉพาะตอนล็อกอิน) + sync ดาว/streak ──
   // v3 (LIN 2026-07-02): ระบุเกม 'reading'/'typing' ต่อแถว · กัน email แอดมิน ·
