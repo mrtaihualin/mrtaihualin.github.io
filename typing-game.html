@@ -831,7 +831,7 @@ var GOLDEN_WORD_MULT=2;                        // คำทองตอบถู
 // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
 function tgScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
 // 本題分數: คะแนนที่จะได้ของคำนี้ตอนนี้ ตามจำนวนครั้งที่ผิดสะสม · ตาย/ใช้คำใบ้=0
-function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide))return 0; var sc=(typeof sylList!=='undefined'&&sylList)?sylList.length:1; return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
+function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide&&typeof guideMode!=='undefined'&&guideMode))return 0; var sc=(typeof sylList!=='undefined'&&sylList)?sylList.length:1; return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
 function tgUpdateScoreBar(){ var max=10, sc=Math.max(0,Math.min(10,tgCurWordScore())); var pw=document.getElementById('tg-ws-fill'); if(pw){pw.style.width=Math.max(0,Math.min(100,sc/max*100))+'%'; pw.style.background=tgScoreBarColor(sc,max);} var pn=document.getElementById('tg-ws-num'); if(pn)pn.textContent=sc; }
 function rgQuotaFor(sylCount){return Math.min(4+Math.max(0,(sylCount||1)-4),9);}
 function rgWrongScore(sylCount,wrongN){
@@ -1275,7 +1275,8 @@ function finalizeWord(){
   }
 
   // ── เปิดคำใบ้ระหว่างพิมพ์คำนี้ → 0 คะแนน + ไม่แตะ SRS เลย เหมือนยังไม่ได้ทำ (กฎ MASTER ข้อ9) ──
-  if(wordUsedGuide){
+  // Lin 2026-07-12: บังคับให้เงื่อนไขนี้ทำงานเฉพาะโหมด 有提示 เท่านั้น — โหมด無提示 ไม่มีคำใบ้ให้ใช้ ห้ามโดนหักเป็น 0 เด็ดขาด (แก้บั๊ก無提示ได้ 0)
+  if(wordUsedGuide && guideMode){
     okC++;
     roundHadGuide=true;
     b.textContent='這次用了提示，先不計分（下次試試看不看提示！）';b.className='result-banner show half';
@@ -2878,7 +2879,7 @@ function rgOpenAsk() {
 
 </script>
 </div><!-- /.v3-page -->
-<script src="shared.js?v=22"></script>
+<script src="shared.js?v=24"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
