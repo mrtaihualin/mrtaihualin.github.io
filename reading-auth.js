@@ -202,8 +202,29 @@
   var adaptiveWrongCounts = {};   // { th: จำนวนครั้งที่พลาด }
   var adaptiveLoaded = false;
 
+  // 2026-07-13 Lin: เพิ่ม fallback กันคอลัมน์ game/wrong_items ยังไม่มีใน Supabase (รอรัน SQL migration)
+  // เดิม: ถ้า SELECT error (เช่น column game does not exist, HTTP 400) โค้ดเก่ายังตั้ง adaptiveLoaded = true
+  // ทั้งที่ไม่ได้ข้อมูลจริงเลย (บั๊ก) — ตอนนี้แยก apply()/disable() ให้ error จริงไม่ทำให้เข้าใจผิดว่าพร้อมใช้
+  // จงใจไม่ fallback ไปคิวรีแบบไม่กรอง game (จะผสมคำผิดข้ามเกม ความหมายผิด) — ปิดฟีเจอร์ทบทวนไปก่อนจนกว่าจะมีคอลัมน์ครบ
   function loadAdaptiveHistory() {
     if (!API.user) { adaptiveLoaded = false; adaptiveWrongCounts = {}; return; }
+    function apply(res) {
+      adaptiveWrongCounts = {};
+      if (res && res.data) {
+        res.data.forEach(function (row) {
+          (row.wrong_items || []).forEach(function (w) {
+            var key = w && w.th; if (!key) return;
+            adaptiveWrongCounts[key] = (adaptiveWrongCounts[key] || 0) + (w.wrong || 1);
+          });
+        });
+      }
+      adaptiveLoaded = true;
+    }
+    function disable(msg) {
+      console.warn('[adaptive] history not available yet:', msg);
+      adaptiveLoaded = false;
+      adaptiveWrongCounts = {};
+    }
     sb.from('reading_sessions')
       .select('wrong_items')
       .eq('user_id', API.user.id)
@@ -211,17 +232,9 @@
       .order('created_at', { ascending: false })
       .limit(ADAPTIVE_HISTORY_LIMIT)
       .then(function (res) {
-        adaptiveWrongCounts = {};
-        if (res && res.data) {
-          res.data.forEach(function (row) {
-            (row.wrong_items || []).forEach(function (w) {
-              var key = w && w.th; if (!key) return;
-              adaptiveWrongCounts[key] = (adaptiveWrongCounts[key] || 0) + (w.wrong || 1);
-            });
-          });
-        }
-        adaptiveLoaded = true;
-      }, function () { adaptiveLoaded = false; });
+        if (res && !res.error) { apply(res); }
+        else { disable(res && res.error && res.error.message || 'unknown error'); }
+      }, function (e) { disable(e && e.message || 'เครือข่ายผิดพลาด'); });
   }
   function rgShuffle(a) {
     a = a.slice();

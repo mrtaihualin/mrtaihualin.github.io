@@ -1822,8 +1822,9 @@ window.deleteFBComment = function(postId, idx) {
       var fab = document.createElement('button');
       fab.type = 'button';
       fab.className = 'rg-ctl-fab';
+      // ไอคอน: ผูกธีมน้องมีนา (มีนา=ข้าว) — 🍙 ข้าวปั้นพร้อมกิน = คำแปลโชว์อยู่ · 🌾 รวงข้าวยังไม่สี = คำแปลซ่อนอยู่ — Lin เลือก 2026-07-13
       function renderFab() {
-        fab.textContent = hideOn ? '🈚' : '🈶';
+        fab.textContent = hideOn ? '🌾' : '🍙';
         fab.title = hideOn ? '目前：翻譯已關閉（點擊開啟）' : '目前：翻譯已開啟（點擊關閉）';
         fab.setAttribute('aria-label', fab.title);
       }

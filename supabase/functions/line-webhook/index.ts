@@ -1,8 +1,22 @@
 // ════════════════════════════════════════════════════════════
 // Supabase Edge Function: line-webhook
-// หน้าที่: รับ Webhook event จาก LINE (ตอนครูกดปุ่มในข้อความ Flex Message ที่ notify-line ส่งไป)
-//   ตอนนี้รองรับ postback action เดียว: "อนุมัติ/ยกเลิก คำขอเปลี่ยน-ยกเลิกคาบ" ของนักเรียน
-//   → อัปเดต classroom_requests.status ให้ตรง แล้วตอบกลับ (reply) ยืนยันสั้นๆ ใน LINE เลย
+// หน้าที่: รับ Webhook event จาก LINE
+//   รองรับ 2 ชนิด postback:
+//   1) action=approve|deny (แบบเดิม 2026-07-10) — ปุ่มเก่าในข้อความที่เคยส่งให้ครูก่อนหน้านี้
+//      2026-07-13 แก้: status เปลี่ยนจาก approved/denied → acknowledged (ตาม constraint จริงในฐานข้อมูล
+//      classroom_requests_status_check ที่รองรับแค่ pending/acknowledged เท่านั้น) — เก็บไว้เผื่อมีข้อความ
+//      เก่าที่ยังไม่ถูกกดค้างอยู่ใน LINE ของครู กดแล้วจะไม่ error แต่ **ไม่ได้แตะ Google Calendar ใดๆ ทั้งสิ้น**
+//      (ตอนนี้ปุ่มนี้เป็นเวอร์ชันเก่าที่เลิกส่งใหม่แล้ว — ดูข้อ 2026-07-13 ด้านล่าง)
+//   2) action=accept_offer|decline_offer (2026-07-13 เพิ่ม) — ปุ่มที่นักเรียนกดตอบรับ/ปฏิเสธ
+//      เวลาครูเสนอเวลาใหม่ให้ (ดู submitProposeTime ในเว็บ) → อัปเดต classroom_requests.offer_status
+//      **ไม่แตะ Google Calendar** (Edge Function ไม่มี Google OAuth token ของครู ทำไม่ได้จากฝั่งนี้)
+//      ครูต้องกลับไปเปิดหน้าเว็บเพื่อกด "✅ ยืนยันและย้าย Calendar" เอง ระบบจะโชว์ให้เห็นในหน้าแรกอัตโนมัติ
+//
+// 2026-07-13 สำคัญมาก：ตั้งแต่เปลี่ยนมาให้ "處理" ปุ่มบนเว็บค้นหา+ย้าย/ลบ Calendar เองแล้ว
+//   ปุ่ม "✅ 已處理"/"❌ 婉拒" แบบเดิมที่เคยส่งไปให้ครูกดตรงจาก LINE **เอาออกจากข้อความแจ้งเตือนใหม่แล้ว**
+//   (ดู notifyTeacherClassRequest ในเว็บ) เพราะกดจาก LINE แล้วจะ "ดูเหมือนจัดการเสร็จ" ทั้งที่ Google Calendar
+//   ไม่ได้ถูกแตะเลย (Edge Function ไม่มีสิทธิ์ Calendar ของครู) — เสี่ยงข้อมูลไม่ตรงกันแบบอันตราย
+//   (RELIABILITY FIRST) ตอนนี้ข้อความแจ้งเตือนครูจะมีแค่ลิงก์ "🔗 開 Calendar" + "📋 到網站處理" แทน
 //
 // ⚠️ นี่คือ Webhook — ต่างจาก notify-line/link-line ตรงที่ "LINE เป็นฝ่ายเรียกเรา" ไม่ใช่เว็บเรียก
 //   ดังนั้นต้องไปตั้งค่า Webhook URL ในหน้า LINE Developers Console ด้วย (ดูขั้นตอนด้านล่าง)
@@ -84,29 +98,59 @@ serve(async (req) => {
     try {
       const data = event.postback && event.postback.data ? event.postback.data : '';
       const params = new URLSearchParams(data);
-      const action = params.get('action'); // "approve" | "deny"
-      const token = params.get('token');
-      const type = params.get('type');
-      const odate = params.get('odate');
+      const action = params.get('action');
 
-      if (!action || !token || !type || !odate) continue; // ข้อมูลไม่ครบ ข้ามไป ไม่ให้ทั้ง webhook พัง
+      if (action === 'approve' || action === 'deny') {
+        // ── 2026-07-10 แบบเก่า：เก็บไว้เผื่อมีข้อความค้างที่ยังไม่ถูกกด ไม่ได้แตะ Calendar ──
+        const token = params.get('token');
+        const type = params.get('type');
+        const odate = params.get('odate');
+        if (!token || !type || !odate) continue;
 
-      const newStatus = action === 'approve' ? 'approved' : 'denied';
-      const { error, count } = await supabase
-        .from('classroom_requests')
-        .update({ status: newStatus }, { count: 'exact' })
-        .eq('token', token)
-        .eq('request_type', type)
-        .eq('original_date', odate)
-        .eq('status', 'pending');
+        const { error, count } = await supabase
+          .from('classroom_requests')
+          .update({ status: 'acknowledged' }, { count: 'exact' })
+          .eq('token', token)
+          .eq('request_type', type)
+          .eq('original_date', odate)
+          .eq('status', 'pending');
 
-      if (channelToken && event.replyToken) {
-        let replyText;
-        if (error) replyText = '⚠️ 更新失敗：' + error.message;
-        else if (!count) replyText = 'ℹ️ 這筆申請可能已經被處理過了（找不到還在 pending 的紀錄）';
-        else replyText = newStatus === 'approved' ? '✅ 已標記「已處理」' : '❌ 已標記「婉拒」';
-        await replyLine(channelToken, event.replyToken, replyText);
+        if (channelToken && event.replyToken) {
+          let replyText;
+          if (error) replyText = '⚠️ 更新失敗：' + error.message;
+          else if (!count) replyText = 'ℹ️ 這筆申請可能已經被處理過了';
+          else replyText = 'ℹ️ 已標記完成，但這個舊版按鈕不會動 Google Calendar，記得自己到 Calendar 確認調整好了';
+          await replyLine(channelToken, event.replyToken, replyText);
+        }
+        continue;
       }
+
+      if (action === 'accept_offer' || action === 'decline_offer') {
+        // ── 2026-07-13 加：นักเรียนตอบรับ/ปฏิเสธเวลาใหม่ที่ครูเสนอ ──
+        // แค่บันทึก offer_status ลงฐานข้อมูล **ไม่แตะ Calendar** — ครูต้องเปิดหน้าเว็บกดยืนยันเองอีกที
+        // ถึงจะย้าย Calendar จริง (Edge Function ไม่มี Google OAuth token ของครู ทำเองไม่ได้)
+        const requestId = params.get('request');
+        if (!requestId) continue;
+        const newOfferStatus = action === 'accept_offer' ? 'accepted' : 'declined';
+
+        const { error, count } = await supabase
+          .from('classroom_requests')
+          .update({ offer_status: newOfferStatus }, { count: 'exact' })
+          .eq('id', requestId)
+          .eq('offer_status', 'proposed');
+
+        if (channelToken && event.replyToken) {
+          let replyText;
+          if (error) replyText = '⚠️ 回覆失敗：' + error.message;
+          else if (!count) replyText = 'ℹ️ 這個提議可能已經被回覆過了，重新整理網頁看看目前狀態';
+          else replyText = newOfferStatus === 'accepted'
+            ? '✅ 已回覆「可以」！等老師開電腦確認後才會真的調整行事曆喔'
+            : '✅ 已回覆「不方便」，老師會再想辦法跟你討論新時間';
+          await replyLine(channelToken, event.replyToken, replyText);
+        }
+        continue;
+      }
+      // action 未知的類型 → 忽略，不讓整個 webhook 掛掉
     } catch (e) {
       // 一個 event 出錯不影響其他 event（LINE 有時候一次會送多個 event 進來）
     }

@@ -5776,6 +5776,8 @@ function clearTodayStats() {
   var data = loadStats();
   delete data[todayStr()];
   saveStats(data);
+  // 2026-07-13 Lin: ดัน push ทันที กันสถิติที่เพิ่งลบถูก merge จากเครื่องอื่นกลับมาโผล่ใหม่
+  try { if (window.TF_SYNC) window.TF_SYNC.push(); } catch (e) {}
   showStats();
 }
 

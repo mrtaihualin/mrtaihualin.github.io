@@ -1112,7 +1112,15 @@ function initGame(){
     } else {
       pool=allIdx.slice();
     }
-    roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
+    // Lin 2026-07-13: SRS กรอง pool ก่อนแล้ว (ข้างบน) — เลือก "ลำดับ" ในรอบด้วย pickAdaptive
+    // (เน้นคำที่เพิ่งพลาดบ่อยจาก reading_sessions ขึ้นมาก่อน ไม่ทับ/ไม่ยุ่ง SRS)
+    if(window.READING_AUTH && typeof READING_AUTH.pickAdaptive==='function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()){
+      var _items=pool.map(function(i){return {idx:i, th:WORDS[i].th};});
+      var _picked=READING_AUTH.pickAdaptive(_items, Math.min(ROUND_SIZE,_items.length));
+      roundQueue=_picked.map(function(p){return p.idx;});
+    } else {
+      roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
+    }
   }
   roundTotal=roundQueue.length;
   cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;
@@ -3210,5 +3218,113 @@ function rgOpenReview(){
   專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
+
+<!-- ════════════════════════════════════════════
+     🔧 DEBUG (ชั่วคราว): mobile keyboard timing diagnostic — Lin 2026-07-13
+     ตรวจบั๊ก "แตะปุ่มวรรณยุกต์ครั้งแรกไม่ติด ต้องแตะซ้ำ" บนมือถือ
+     ทำงานเฉพาะเปิดด้วย ?debugkbd=1 ใน URL เท่านั้น — ผู้เล่นจริงไม่เห็น ไม่กระทบอะไร
+     ลบบล็อกนี้ทั้งหมดได้เลยหลังตรวจเสร็จ (หา "DEBUG (ชั่วคราว)" เพื่อหาจุดเริ่ม/จบ)
+     ════════════════════════════════════════════ -->
+<script>
+(function(){
+  if(!/[?&]debugkbd=1(&|$)/.test(location.search))return; // ปิดขาดสำหรับผู้เล่นจริง
+
+  var t0=null; // เวลาพิมพ์ตัวล่าสุด (นับใหม่ทุกครั้งที่พิมพ์ตัวอักษร)
+  var log=[];
+  function relTime(now){ return t0===null ? '  -.-' : ((now-t0)>=0?'+':'')+(now-t0).toFixed(0)+'ms'; }
+  function addLog(label, extra){
+    var now=performance.now();
+    log.push({rel:relTime(now), label:label, extra:extra||''});
+    if(log.length>30)log.shift();
+    render();
+    try{console.log('[debugkbd]',relTime(now),label,extra||'');}catch(e){}
+  }
+  function render(){
+    var el=document.getElementById('rg-debug-kbd-panel');
+    if(!el)return;
+    el.innerHTML='<div style="font-weight:700;margin-bottom:4px;">🔧 debugkbd log (ล่าสุดอยู่บนสุด)</div>'+
+      log.slice().reverse().map(function(e){
+        return '<div>'+e.rel+' — '+e.label+(e.extra?(' <span style="opacity:.7">'+e.extra+'</span>'):'')+'</div>';
+      }).join('');
+  }
+  function buildPanel(){
+    var el=document.createElement('div');
+    el.id='rg-debug-kbd-panel';
+    el.style.cssText='position:fixed;left:6px;bottom:6px;z-index:99999;max-width:92vw;max-height:46vh;overflow:auto;'+
+      'background:rgba(0,0,0,.86);color:#7CFC9A;font:11px/1.5 monospace;padding:8px 10px;border-radius:8px;'+
+      'pointer-events:none;white-space:nowrap;';
+    document.body.appendChild(el);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', buildPanel);
+  else buildPanel();
+
+  // 1) จับทุกตัวอักษรที่พิมพ์สำเร็จ (คีย์บอร์ดเครื่องจริงผ่าน rg-mobile-input และคีย์บอร์ดในเกม ใช้ทางเดียวกันหมด)
+  try{
+    var _origRgTypeChar=window.rgTypeChar;
+    if(typeof _origRgTypeChar==='function'){
+      window.rgTypeChar=function(ch){
+        t0=performance.now();
+        addLog('พิมพ์ตัวอักษร','"'+ch+'"');
+        return _origRgTypeChar.apply(this,arguments);
+      };
+    }
+  }catch(e){}
+
+  // 2) จับตอนเกมสั่งโชว์ปุ่มวรรณยุกต์ + สั่ง blur() ช่องพิมพ์ (คำหลายพยางค์ — rgContAskNextTone)
+  try{
+    var _origAskNextTone=window.rgContAskNextTone;
+    if(typeof _origAskNextTone==='function'){
+      window.rgContAskNextTone=function(){
+        var before=document.activeElement;
+        addLog('rgContAskNextTone() เริ่ม','activeElement ก่อน='+(before?(before.id||before.tagName):'none'));
+        var ret=_origAskNextTone.apply(this,arguments);
+        var after=document.activeElement;
+        addLog('rgContAskNextTone() จบ (blur เรียกไปแล้ว)','activeElement หลัง='+(after?(after.id||after.tagName):'none'));
+        return ret;
+      };
+    }
+  }catch(e){}
+
+  // 2b) จับ path คำพยางค์เดียว (showBonus) ไว้ด้วยเผื่อบั๊กไม่ได้อยู่ที่ path หลายพยางค์อย่างที่คาด
+  try{
+    var _origShowBonus=window.showBonus;
+    if(typeof _origShowBonus==='function'){
+      window.showBonus=function(){
+        addLog('showBonus() (คำพยางค์เดียว)','activeElement='+(document.activeElement?(document.activeElement.id||document.activeElement.tagName):'none'));
+        return _origShowBonus.apply(this,arguments);
+      };
+    }
+  }catch(e){}
+
+  // 3) จับตอนคีย์บอร์ดจริง "ปิดเสร็จจริง" บนจอ (visualViewport เปลี่ยนความสูง)
+  try{
+    if(window.visualViewport){
+      var lastH=window.visualViewport.height;
+      window.visualViewport.addEventListener('resize', function(){
+        var h=window.visualViewport.height;
+        addLog('visualViewport resize','height='+h.toFixed(0)+' (เดิม '+lastH.toFixed(0)+')');
+        lastH=h;
+      });
+    } else {
+      addLog('เบราว์เซอร์นี้ไม่มี window.visualViewport','');
+    }
+  }catch(e){}
+
+  // 4) จับทุกการแตะจอ ที่ capture phase (เร็วสุดเท่าที่ JS จะจับได้ กัน stopPropagation ของโค้ดเกมบัง)
+  //    ถ้าแตะแรกไม่มี event ไหนถูก log เลย = เบราว์เซอร์/ระบบ "กลืน" การแตะไปปิดคีย์บอร์ดเองทั้งหมด ไม่ส่งมาที่หน้าเว็บ
+  ['pointerdown','touchstart','click'].forEach(function(evtName){
+    document.addEventListener(evtName, function(e){
+      var tgt=e.target;
+      var isBonusBtn=!!(tgt && tgt.closest && tgt.closest('.bonus-btn'));
+      var cls=(tgt && typeof tgt.className==='string' && tgt.className) ? ('.'+tgt.className.trim().split(/\s+/).join('.')) : '';
+      var desc=(tgt&&tgt.tagName||'?')+(tgt&&tgt.id?('#'+tgt.id):'')+cls;
+      addLog('[event] '+evtName, desc+(isBonusBtn?' 🎯โดนปุ่มวรรณยุกต์':''));
+    }, true);
+  });
+
+  addLog('debugkbd diagnostic เริ่มทำงานแล้ว','');
+})();
+</script>
+
 </body>
 </html>

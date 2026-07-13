@@ -1124,7 +1124,15 @@ function initGame(){
     } else {
       pool=allIdx.slice();
     }
-    roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
+    // Lin 2026-07-13: SRS กรอง pool ก่อนแล้ว (ข้างบน) — เลือก "ลำดับ" ในรอบด้วย pickAdaptive
+    // (เน้นคำที่เพิ่งพลาดบ่อยจาก reading_sessions ขึ้นมาก่อน ไม่ทับ/ไม่ยุ่ง SRS)
+    if(window.READING_AUTH && typeof READING_AUTH.pickAdaptive==='function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()){
+      var _items=pool.map(function(i){return {idx:i, th:WORDS[i].th};});
+      var _picked=READING_AUTH.pickAdaptive(_items, Math.min(ROUND_SIZE,_items.length));
+      roundQueue=_picked.map(function(p){return p.idx;});
+    } else {
+      roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
+    }
   }
   roundTotal=roundQueue.length;
   cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;

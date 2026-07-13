@@ -728,7 +728,15 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     } else {
       pool = allIdx.slice();
     }
-    SET = shuffle(pool);
+    // Lin 2026-07-13: SRS กรอง pool ก่อนแล้ว (ข้างบน) — เลือก "ลำดับ" ในเซ็ตด้วย pickAdaptive
+    // (เน้นประโยคที่เพิ่งพลาดบ่อยจาก reading_sessions ขึ้นมาก่อน ไม่ทับ/ไม่ยุ่ง SRS)
+    if (window.READING_AUTH && typeof READING_AUTH.pickAdaptive === 'function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()) {
+      var _items = pool.map(function(i){ return {idx:i, th:ADV_SENTENCES[i].th}; });
+      var _picked = READING_AUTH.pickAdaptive(_items, _items.length);
+      SET = _picked.map(function(p){ return p.idx; });
+    } else {
+      SET = shuffle(pool);
+    }
     idx = 0; score = 0; correctFirstTry = 0;
     cleanC = 0; curCombo = 0; maxCombo = 0;
     roundLog = [];

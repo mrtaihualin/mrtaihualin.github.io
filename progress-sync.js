@@ -10,7 +10,9 @@
   var pulled = false;
 
   // คีย์ใน localStorage ที่ต้องซิงก์
-  var KEYS = ['tf_badges_v1', 'tf_streak_v1', 'tf_set_state_v1', 'tf_special_words_v1', 'tf_special_meta_v1', 'tf_word_wrong_v1'];
+  // 2026-07-13 Lin: เพิ่ม tf_wrong_stats_v1 (สถิติผิดรายวัน 今日統計) — ซิงก์ข้ามเครื่อง
+  var KEYS = ['tf_badges_v1', 'tf_streak_v1', 'tf_set_state_v1', 'tf_special_words_v1', 'tf_special_meta_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1'];
+  var STATS_KEEP_DAYS = 30; // ต้องตรงกับ STATS_KEEP_DAYS ใน tone-finder.html (ตัดเก็บแค่ 30 วันล่าสุดหลัง merge)
 
   function lsGet(k) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -63,6 +65,23 @@
       for (key in local) o[key] = local[key];
       for (key in remote) o[key] = maxNum(o[key], remote[key]);                          // ค่ามากกว่า (กันนับซ้ำ)
       return o;
+    }
+    if (k === 'tf_wrong_stats_v1') {
+      // โครงสร้าง: { 'YYYY-MM-DD': [ {time,word,step,choice,message}, ... ] } — union รายวัน กันซ้ำด้วย signature ของ entry เอง
+      var days = {}, d;
+      for (d in local) days[d] = (local[d] || []).slice();
+      for (d in remote) {
+        var la = days[d] || [];
+        var seen = {}; la.forEach(function (e) { seen[JSON.stringify(e)] = 1; });
+        (remote[d] || []).forEach(function (e) {
+          var sig = JSON.stringify(e);
+          if (!seen[sig]) { la.push(e); seen[sig] = 1; }
+        });
+        days[d] = la;
+      }
+      var dayKeys = Object.keys(days).sort();
+      while (dayKeys.length > STATS_KEEP_DAYS) { delete days[dayKeys.shift()]; }   // เก็บแค่ 30 วันล่าสุด กันข้อมูลบวมไม่รู้จบ
+      return days;
     }
     return remote; // fallback
   }
