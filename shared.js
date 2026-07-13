@@ -1722,7 +1722,8 @@ window.deleteFBComment = function(postId, idx) {
         '#bottom-nav{display:none !important;}' +
         '@media(max-width:768px){body{padding-bottom:0 !important;}}' +
         // Lin 2026-07-12: บนมือถือ ปุ่มลอย 🎮/⛶ (มุมขวาล่าง) เคยทับข้อความ footer (泰華眼裡的泰語教學) → ดัน footer ขึ้นให้พ้นโซนปุ่ม
-        '@media(max-width:768px){footer{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px)) !important;}}' +
+        // Lin 2026-07-13: เพิ่มปุ่มที่ 3 (🈶/🈚 เปิด/ปิดคำแปล) เข้าชุดเดียวกัน → ชุดปุ่มสูงขึ้นอีก ~54px ดันระยะ footer เพิ่มตาม
+        '@media(max-width:768px){footer{padding-bottom:calc(204px + env(safe-area-inset-bottom,0px)) !important;}}' +
         'body.rg-fake-fullscreen{padding-bottom:0 !important;padding-top:0 !important;overflow-y:auto;}' +
         'body.rg-fake-fullscreen .v3-page{padding-top:6px !important;}';
       document.head.appendChild(style);
@@ -1764,6 +1765,82 @@ window.deleteFBComment = function(postId, idx) {
       wrap.appendChild(fab);
       document.body.appendChild(wrap);
       applyState();
+    } catch (e) {}
+  });
+})();
+
+// ===================================================================
+// 🈶 ปุ่มเปิด/ปิดคำแปลจีน (ทุกหน้าเกม) — Lin 2026-07-13
+// ค่า default: จำไว้ด้วย localStorage (คีย์ games_hide_zh — แยกจาก textbook/controls-ui.js โดยตั้งใจ ตามที่ Lin เลือก)
+// ระหว่างเล่น: คลิกที่กล่องคำแปลแต่ละกล่อง เปิด/ปิดเฉพาะจุดนั้นได้ (ไม่กระทบค่า default)
+// ทำงานเฉพาะหน้าเกม (มี #game-switcher) เหมือนปุ่มเต็มจอด้านบน — หน้าอื่นในเว็บไม่กระทบ
+// ⚠️ กล่องที่ "ซ้อนอยู่ในปุ่ม/เมนูที่มี onclick อื่นของเกม" (เช่น .ozh/.szh ในเกมเลโก้, .tf-level-sub ในเมนูเลือกประโยค高級)
+//    เปิด/ปิดได้เฉพาะจากปุ่ม default เท่านั้น — ไม่ผูกคลิกรายจุดให้ เพราะจะไปชนกับฟังก์ชันเลือกคำ/เปิดเมนูของเกมเอง
+// ===================================================================
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      var gs = document.getElementById('game-switcher');
+      if (!gs) return; // เอาแค่หน้าเกมจริงๆ
+
+      var KEY = 'games_hide_zh';
+      var hideOn = false;
+      try { hideOn = localStorage.getItem(KEY) === '1'; } catch (e) {}
+
+      // กล่องคำแปลที่ "ยืนคนเดียว" ไม่ได้ซ้อนอยู่ในปุ่ม/เมนูอื่น → เปิด/ปิดรายจุดด้วยคลิกได้
+      var ZH_CLICKABLE = ['.word-zh', '.out-zh', '.out-zh-full', '.pzh', '.tf-adv-sent-ctx-zh'];
+      // กล่องคำแปลที่ซ้อนอยู่ในปุ่มเลือกคำ/เมนูของเกม → ซ่อน/โชว์ตามค่า default อย่างเดียว ห้ามผูกคลิก (กันชนฟังก์ชันเกม)
+      var ZH_GLOBAL_ONLY = ['.tf-lvl-adv .tf-level-sub', '.ozh', '.szh'];
+      var ZH_ALL = ZH_CLICKABLE.concat(ZH_GLOBAL_ONLY);
+
+      var style = document.createElement('style');
+      style.textContent =
+        ZH_ALL.map(function (s) { return 'body.games-hide-zh ' + s; }).join(', ') + ' { display:none !important; }' +
+        // คลิกรายจุด: บังคับโชว์ทั้งที่ default ปิดอยู่ (div/box)
+        '.word-zh.zh-shown, .out-zh.zh-shown, .out-zh-full.zh-shown, .tf-adv-sent-ctx-zh.zh-shown { display:block !important; }' +
+        // .pzh เป็น span (inline) ต้องคืนเป็น inline ไม่ใช่ block
+        '.pzh.zh-shown { display:inline !important; }' +
+        // คลิกรายจุด: บังคับซ่อนทั้งที่ default เปิดอยู่
+        ZH_CLICKABLE.map(function (s) { return s + '.zh-hidden-solo'; }).join(', ') + ' { display:none !important; }' +
+        ZH_CLICKABLE.join(', ') + ' { cursor:pointer; }';
+      document.head.appendChild(style);
+
+      function applyGlobal() {
+        document.body.classList.toggle('games-hide-zh', hideOn);
+        // เปลี่ยนค่า default → ล้างการปรับรายจุดทั้งหมด เริ่มนับใหม่ตาม default ปัจจุบัน
+        document.querySelectorAll('.zh-shown,.zh-hidden-solo').forEach(function (el) {
+          el.classList.remove('zh-shown', 'zh-hidden-solo');
+        });
+        try { localStorage.setItem(KEY, hideOn ? '1' : '0'); } catch (e) {}
+        renderFab();
+      }
+
+      var fab = document.createElement('button');
+      fab.type = 'button';
+      fab.className = 'rg-ctl-fab';
+      function renderFab() {
+        fab.textContent = hideOn ? '🈚' : '🈶';
+        fab.title = hideOn ? '目前：翻譯已關閉（點擊開啟）' : '目前：翻譯已開啟（點擊關閉）';
+        fab.setAttribute('aria-label', fab.title);
+      }
+      fab.onclick = function () { hideOn = !hideOn; applyGlobal(); };
+
+      // ต่อเข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap ของปุ่มเต็มจอด้านบน สร้างไปแล้วก่อนหน้านี้ในไฟล์เดียวกัน)
+      var wrap2 = document.querySelector('.rg-ctl-wrap');
+      if (wrap2) { wrap2.appendChild(fab); } else { document.body.appendChild(fab); }
+      applyGlobal();
+
+      // คลิกรายจุด: event delegation (กันคำใหม่ที่ยังไม่เกิดตอนโหลดหน้า)
+      document.addEventListener('click', function (e) {
+        var el = e.target.closest(ZH_CLICKABLE.join(', '));
+        if (!el) return;
+        if (hideOn) el.classList.toggle('zh-shown');
+        else el.classList.toggle('zh-hidden-solo');
+      });
     } catch (e) {}
   });
 })();

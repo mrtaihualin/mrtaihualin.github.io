@@ -2905,6 +2905,67 @@ function tfSrsLoggedIn() {
   var a = window.TF_AUTH;
   return !!(a && ((a.hasAccess && a.hasAccess()) || (a.loggedIn && a.loggedIn())));
 }
+
+// ════════════════════════════════════════════════════════════
+// ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state) → merge เข้า tf_srs_v1 ──
+//   • อ่านอย่างเดียว (SELECT) · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ Edge Function tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
+//   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอินจริง = ใช้เล่มในเครื่อง (localStorage) เดิมทุกอย่าง
+//   • กติกา merge: เลือก "อันก้าวหน้ากว่า" เสมอ (精通 > stage สูง > วันครบกำหนดใหม่กว่า) → ไม่มีทางถอยหลัง/ข้อมูลหาย
+//     (ยืนยันด้วยตัวทดสอบกดจริง 8/8 เคส ก่อนนำมาใช้ — กฎ 14)
+// ════════════════════════════════════════════════════════════
+function tfSrsRank(r) { if (!r) return -1; if (r.mastered) return 3; return (r.stage || 0); }
+function tfSrsPickAdvanced(a, b) {
+  if (!a) return b; if (!b) return a;
+  var ra = tfSrsRank(a), rb = tfSrsRank(b);
+  if (ra !== rb) return ra > rb ? a : b;
+  var da = a.dueDate || '', db = b.dueDate || '';
+  if (da !== db) return (da > db) ? a : b;
+  return a;
+}
+var __tfSrsSyncPromise = null;
+window.__tfSrsSyncedOnce = false;
+function tfSyncSrsFromServer() {
+  if (__tfSrsSyncPromise) return __tfSrsSyncPromise;
+  __tfSrsSyncPromise = (function () {
+    try {
+      var a = window.TF_AUTH;
+      // ต้อง "ล็อกอินจริง" (มี JWT) เท่านั้น — แค่ให้อีเมล (lead) ไม่มีแถวบนเซิร์ฟเวอร์อยู่แล้ว
+      if (!(a && a.loggedIn && a.loggedIn())) return Promise.resolve(false);
+      var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
+      if (!sb || !sb.from) return Promise.resolve(false);
+      return sb.from('tone_srs_state')
+        .select('level, word, stage, due_date, ever_failed, mastered')
+        .eq('game', 'tone')
+        .then(function (res) {
+          if (res.error || !res.data) return false;
+          var local = tfLoadSrs(), changed = false;
+          res.data.forEach(function (row) {
+            var key = TF_SRS.keyFor(row.word, row.level);
+            var srv = { stage: row.stage || 0, dueDate: row.due_date || '', dueAt: 0,
+                        everFailed: !!row.ever_failed, mastered: !!row.mastered };
+            var cur = local[key];
+            var win = tfSrsPickAdvanced(cur, srv);
+            // เขียนกลับเฉพาะเมื่อผลต่างจากเดิมจริง (กันเขียน localStorage ฟุ่มเฟือย)
+            if (!cur || win.stage !== cur.stage || (win.dueDate || '') !== (cur.dueDate || '') || (!!win.mastered) !== (!!cur.mastered)) {
+              local[key] = win; changed = true;
+            }
+          });
+          if (changed) tfSaveSrs(local);
+          window.__tfSrsSyncedOnce = true;
+          return changed;
+        })
+        .catch(function () { window.__tfSrsSyncedOnce = true; return false; });
+    } catch (e) { window.__tfSrsSyncedOnce = true; return Promise.resolve(false); }
+  })();
+  return __tfSrsSyncPromise;
+}
+// ทริกเกอร์: ซิงก์ตอนเปิดหน้าถ้าล็อกอินอยู่แล้ว + ทุกครั้งที่ล็อกอินใหม่ระหว่างเล่น
+try {
+  if (window.SITE_AUTH && SITE_AUTH.onChange) {
+    SITE_AUTH.onChange(function (u) { if (u) { __tfSrsSyncPromise = null; window.__tfSrsSyncedOnce = false; tfSyncSrsFromServer(); } });
+  }
+  setTimeout(function () { if (window.TF_AUTH && TF_AUTH.loggedIn && TF_AUTH.loggedIn()) tfSyncSrsFromServer(); }, 800);
+} catch (e) {}
 // ===== TF_SRS ENGINE END =====
 
 // ════════════════════════════════════════════════════════════
@@ -4153,7 +4214,7 @@ function render() {
     var goldWord = (session && session.currentWordGolden) ? ' tf-banner-word-gold' : '';
     // 高級句子: โชว์ context ประโยคเต็ม+ความหมายจีนไว้เหนือคำ ให้รู้ว่ากำลังอ่านคำไหนของประโยคไหน (Lin 2026-07-03)
     var sentCtxHtml = advSentenceCtx
-      ? '<div class="tf-adv-sent-ctx" style="font-family:\'Sarabun\',sans-serif;font-size:14px;color:#8B7340;background:#FBF5E7;border:1px solid rgba(200,151,58,0.3);border-radius:10px;padding:6px 10px;margin-bottom:6px;line-height:1.6;">📖 ' + advSentenceCtx.th + '<br><span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08a5a;">' + advSentenceCtx.zh + '</span></div>'
+      ? '<div class="tf-adv-sent-ctx" style="font-family:\'Sarabun\',sans-serif;font-size:14px;color:#8B7340;background:#FBF5E7;border:1px solid rgba(200,151,58,0.3);border-radius:10px;padding:6px 10px;margin-bottom:6px;line-height:1.6;">📖 ' + advSentenceCtx.th + '<br><span class="tf-adv-sent-ctx-zh" style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08a5a;">' + advSentenceCtx.zh + '</span></div>'
       : '';
     banner.innerHTML = sentCtxHtml + counterHtml + '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>';
     // inject vault save button
@@ -6148,7 +6209,15 @@ var TF = {
     selectedCategory = 'ทั้งหมด';
     randomEntry = null; session = null;
     hist=[]; histPos=-1;
-    TF._startRandom5();
+    // Lin 2026-07-13: ถ้าล็อกอินแต่ยังไม่เคยซิงก์ SRS จากเซิร์ฟเวอร์ → รอสั้นๆ (สูงสุด 1.5 วิ) ให้รอบแรก
+    // "บนเครื่องใหม่" ถูกต้อง (ไม่เอาคำที่จำได้แล้วมาถามซ้ำ) · เน็ตช้า/ล่ม = ไปต่อด้วยเล่มในเครื่องทันที ไม่ค้าง
+    if (tfSrsLoggedIn() && window.TF_AUTH && TF_AUTH.loggedIn && TF_AUTH.loggedIn() && !window.__tfSrsSyncedOnce) {
+      var started = false, go = function () { if (started) return; started = true; TF._startRandom5(); };
+      try { Promise.race([ tfSyncSrsFromServer(), new Promise(function (r) { setTimeout(r, 1500); }) ]).then(go); } catch (e) { go(); }
+      setTimeout(go, 1600); // กันเหนียว: ไม่ว่าอะไรเกิดขึ้นก็เริ่มเกมแน่นอน
+    } else {
+      TF._startRandom5();
+    }
   },
   // สุ่ม 5 คำจาก level ที่เลือก แล้ว loop ต่อเนื่อง
   _startRandom5: function() {
