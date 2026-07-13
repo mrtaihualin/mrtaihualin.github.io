@@ -571,8 +571,8 @@
     </p>
     <label class="settings-label">想改到哪一天？</label>
     <input class="settings-input" id="reqDateInput" type="date" />
-    <label class="settings-label">想改到幾點？（選填）</label>
-    <input class="settings-input" id="reqTimeInput" type="time" />
+    <label class="settings-label">想改到幾點？（選填，格式 HH:MM，例如 14:30）</label>
+    <input class="settings-input" id="reqTimeInput" type="text" placeholder="例：14:30" />
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeClassRequestModal()">取消</button>
       <button class="btn-gold" id="reqSubmitBtn" onclick="submitClassRequest()">📤 送出申請</button>
@@ -604,8 +604,8 @@
     </p>
     <label class="settings-label">提議改到哪一天？（泰國時間）</label>
     <input class="settings-input" id="proposeDateInput" type="date" />
-    <label class="settings-label">提議改到幾點？（泰國時間）</label>
-    <input class="settings-input" id="proposeTimeInput" type="time" />
+    <label class="settings-label">提議改到幾點？（泰國時間，格式 HH:MM，例如 14:30）</label>
+    <input class="settings-input" id="proposeTimeInput" type="text" placeholder="例：14:30" />
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeProposeTimeModal()">取消</button>
       <button class="btn-gold" id="proposeSubmitBtn" onclick="submitProposeTime()">📤 傳送給學生</button>
@@ -622,8 +622,8 @@
     </p>
     <label class="settings-label">從哪一天開始，每週固定改到？（泰國時間）</label>
     <input class="settings-input" id="permDateInput" type="date" />
-    <label class="settings-label">固定改到幾點？（泰國時間）</label>
-    <input class="settings-input" id="permTimeInput" type="time" />
+    <label class="settings-label">固定改到幾點？（泰國時間，格式 HH:MM，例如 14:30）</label>
+    <input class="settings-input" id="permTimeInput" type="text" placeholder="例：14:30" />
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closePermanentChangeModal()">取消</button>
       <button class="btn-gold" onclick="submitPermanentChange()">📌 永久變更</button>
@@ -825,8 +825,8 @@
         <input class="settings-input" type="date" id="genStartDate" onchange="onGenScheduleChange()" />
       </div>
       <div style="flex:1;">
-        <label class="settings-label">上課時間</label>
-        <input class="settings-input" type="time" id="genClassTime" step="60" onchange="onGenScheduleChange()" />
+        <label class="settings-label">上課時間（格式 HH:MM，例如 14:30）</label>
+        <input class="settings-input" type="text" id="genClassTime" placeholder="例：14:30" onchange="onGenScheduleChange()" />
       </div>
     </div>
 
@@ -1276,6 +1276,13 @@ function formatThaiDateTimeLabel(isoOrDateStr) {
   if (!isoOrDateStr) return '-';
   var f = formatInTz(new Date(isoOrDateStr), TEACHER_TZ);
   return f.dateStr + ' ' + f.timeStr;
+}
+
+// 2026-07-13 改（Lin 要求）：上課時間欄位一律改回「自己打字」的文字框（不要下拉、不要瀏覽器原生 time picker）
+// 但輸入自由文字容易打錯格式，下游 teacherTimeToDate() 是直接字串拼接（dateStr+'T'+timeStr+':00+07:00'），
+// 打錯格式會變成 Invalid Date 卻不會報錯，所以送出前一定要驗證格式，不能只信任使用者打對。
+function isValidTimeStr(str) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test((str || '').trim());
 }
 
 // 搜尋「某天」Calendar 上「標題完全等於學生姓名」的事件（singleEvents 展開後每一次重複都有自己的 id，
@@ -1895,6 +1902,7 @@ function onGenScheduleChange() {
   const tzVal = document.getElementById('genStudentTz') ? document.getElementById('genStudentTz').value : '';
   const hint = document.getElementById('genScheduleHint');
   if (!dateVal || !timeVal) { hint.style.display = 'none'; return; }
+  if (!isValidTimeStr(timeVal)) { hint.style.display = 'block'; hint.textContent = '⚠️ 時間格式不對，請用 HH:MM，例如 14:30'; return; }
   // 2026-07-10：改用 teacherTimeToDate（固定泰國 +07:00）+ formatInTz，不再用瀏覽器本地時區的
   // start.getMonth()/getDate()/getDay()，避免這台電腦時區設錯時連老師自己看到的預覽都跟著算錯。
   const start = teacherTimeToDate(dateVal, timeVal);
@@ -1987,7 +1995,12 @@ async function genLinkAddStudent() {
   const courseId   = document.getElementById('genCourse').value;
   const lessons    = parseInt(document.getElementById('genPack').value, 10) || null;
   const startDate  = document.getElementById('genStartDate').value || null; // 老師自己時區的日期
-  const classTime  = document.getElementById('genClassTime').value || null; // 老師自己時區的時間
+  const classTimeRaw = document.getElementById('genClassTime').value.trim();
+  if (classTimeRaw && !isValidTimeStr(classTimeRaw)) {
+    alert('⚠️ 上課時間格式不對，請用 HH:MM，例如 14:30');
+    return;
+  }
+  const classTime  = classTimeRaw || null; // 老師自己時區的時間
   const studentTz  = document.getElementById('genStudentTz').value || null;
   const recurringChecked = document.getElementById('genWeeklyRecurring').checked;
   // 2026-07-11 修 bug（Lin 回報：明明有勾「每週固定上課」，Google Calendar 卻沒有每週重複）：
@@ -3580,9 +3593,10 @@ function closeClassRequestModal() { document.getElementById('classRequestModal')
 async function submitClassRequest() {
   if (!nextClassCtx) { closeClassRequestModal(); return; }
   const newDate = document.getElementById('reqDateInput').value;
-  const newTime = document.getElementById('reqTimeInput').value;
+  const newTime = document.getElementById('reqTimeInput').value.trim();
   const note = '';
   if (!newDate) { alert('請選擇想改到哪一天'); return; }
+  if (newTime && !isValidTimeStr(newTime)) { alert('時間格式不對，請用 HH:MM，例如 14:30'); return; }
   const studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return nextClassCtx.token; } })();
   const btn = document.getElementById('reqSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
@@ -4278,8 +4292,9 @@ async function submitProposeTime() {
   var r = (window._classRequestCache || {})[id];
   if (!id || !r) { closeProposeTimeModal(); return; }
   var newDate = document.getElementById('proposeDateInput').value;
-  var newTime = document.getElementById('proposeTimeInput').value;
+  var newTime = document.getElementById('proposeTimeInput').value.trim();
   if (!newDate || !newTime) { alert('請選擇日期和時間'); return; }
+  if (!isValidTimeStr(newTime)) { alert('時間格式不對，請用 HH:MM，例如 14:30'); return; }
   var rStudent = studentsCache[r.token];
   if (!rStudent || !rStudent.line_user_id) {
     if (!confirm('⚠️ 這位學生還沒連結 LINE，系統沒辦法傳送提議通知。\n\n還是要儲存這筆提議嗎？（要自己另外聯絡學生說一聲）')) return;
@@ -4701,8 +4716,9 @@ async function submitPermanentChangeInner(token) {
   var ctx = _teacherNextClassCtx[token];
   if (!token || !ctx) { alert('找不到這位學生的下一堂課資料，請重新整理再試'); return; }
   var newDate = document.getElementById('permDateInput').value;
-  var newTime = document.getElementById('permTimeInput').value;
+  var newTime = document.getElementById('permTimeInput').value.trim();
   if (!newDate || !newTime) { alert('請選擇新的日期和時間'); return; }
+  if (!isValidTimeStr(newTime)) { alert('時間格式不對，請用 HH:MM，例如 14:30'); return; }
   var s = studentsCache[token];
   var studentName = s ? s.name : token;
 

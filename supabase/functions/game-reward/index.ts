@@ -41,6 +41,21 @@ function json(body, status) {
   return new Response(JSON.stringify(body), { status: status || 200, headers: { 'Content-Type': 'application/json', ...corsHeaders() } });
 }
 
+// เช็คว่าข้อความดูเหมือนพิมพ์มั่ว/สแปมไหม (กันเคสพิมพ์อะไรก็ได้ 20 ตัวอักษรเพื่อเอาแต้ม) — Lin 2026-07-13
+// รันอัตโนมัติทุกครั้งที่ submit_review ฝั่งเซิร์ฟเวอร์ (client แก้ไม่ได้) ไม่ต้องรอ Lin นั่งตรวจเอง
+// เช็ค 3 ชั้น: (1) ตัวเดียวซ้ำติดกันยาวเกินไป (2) สัดส่วนตัวอักษรไม่ซ้ำกันต่ำเกินไป (วนซ้ำแบบ asdasdasd)
+// (3) ต้องมีตัวอักษรจีน/ไทยจริงอย่างน้อยระดับหนึ่ง (เนื้อหาควรเป็นข้อความสะท้อนการเรียน ไม่ใช่กดคีย์บอร์ดมั่วเป็นอังกฤษ)
+function looksLikeSpam(text) {
+  const s = String(text || '').trim();
+  if (!s) return true;
+  if (/(.)\1{5,}/.test(s)) return true; // เช่น aaaaaaaaaaaaaaaaaaaa
+  const uniqueRatio = new Set(s).size / s.length;
+  if (uniqueRatio < 0.28) return true; // เช่น asdasdasdasdasdasdasd
+  const cjkThaiCount = (s.match(/[一-鿿฀-๿]/g) || []).length;
+  if (cjkThaiCount < 6) return true; // ไม่มีจีน/ไทยพอ (เช่น qwertyuiopasdfghjkl)
+  return false;
+}
+
 // เพิ่มแต้ม + lifetime_points ให้ user (ชนเพดาน POINTS_CAP) — ใช้ upsert ผ่าน service role เท่านั้น
 async function addPoints(admin, userId, amount) {
   const { data: existing } = await admin.from('game_reward_points').select('points, lifetime_points').eq('user_id', userId).maybeSingle();
@@ -131,6 +146,7 @@ serve(async (req) => {
 
     if (action === 'submit_bug_report') {
       if (content.length < 5) return json({ error: '請再詳細描述問題一點（至少 5 個字）' }, 400);
+      if (/(.)\1{5,}/.test(content)) return json({ error: '這看起來不像真的問題描述，請認真寫一下你遇到的狀況喔 🙂' }, 400); // เบากว่า submit_review เพราะยังไงก็ต้องรอ Lin อนุมัติก่อนได้แต้มอยู่แล้ว แค่กันสแปมกวนใจ
       const { data, error } = await admin.from('game_reward_events').insert({
         user_id: userId, game, type: 'bug_report', content: content.slice(0, 2000), status: 'pending', points_awarded: 0,
       }).select().single();
@@ -140,6 +156,7 @@ serve(async (req) => {
 
     if (action === 'submit_review') {
       if (content.length < 20) return json({ error: '心得請再寫長一點喔（至少 20 個字），才不會被當亂打' }, 400);
+      if (looksLikeSpam(content)) return json({ error: '內容看起來像亂打的，請認真寫一下今天學到了什麼喔 🙂' }, 400); // กันพิมพ์มั่ว 20 ตัวอักษรเพื่อเอาแต้มฟรี — เช็คอัตโนมัติ ไม่ต้องรอ Lin ตรวจ
 
       // เช็คโควต้า 1 ครั้ง/เกม/วัน (เผื่อ unique index ที่ DB ไว้อีกชั้นกันแข่งกันยิงพร้อมกัน)
       const { data: ins, error: insErr } = await admin.from('game_reward_events').insert({
