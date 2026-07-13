@@ -1888,16 +1888,16 @@ window.deleteFBComment = function(postId, idx) {
       var fab = document.createElement('button');
       fab.type = 'button';
       fab.className = 'rg-ctl-fab grw-fab';
-      fab.setAttribute('aria-label', 'แจ้งปัญหา / รีวิว');
-      fab.title = 'แจ้งปัญหา / รีวิว (ได้แต้มสะสม)';
+      fab.setAttribute('aria-label', '回報問題 / 心得分享');
+      fab.title = '回報問題 / 心得分享（累積點數）';
       fab.innerHTML = '🪧<span id="grw-pts" style="display:none;"></span>';
 
       // ── เมนูป๊อปอัพ (แจ้งปัญหา/รีวิว) — โผล่เหนือชุดปุ่มทั้งหมดเหมือนดรอปดาวน์ #game-switcher ──
       var menu = document.createElement('div');
       menu.className = 'grw-menu';
       menu.innerHTML =
-        '<div class="grw-item" data-act="report"><span class="ico">🔧</span>แจ้งปัญหา</div>' +
-        '<div class="grw-item" data-act="review"><span class="ico">💭</span>รีวิว / สิ่งที่เรียนรู้</div>';
+        '<div class="grw-item" data-act="report"><span class="ico">🔧</span>回報問題</div>' +
+        '<div class="grw-item" data-act="review"><span class="ico">💭</span>心得 / 學到了什麼</div>';
       menu.addEventListener('click', function (e) {
         var it = e.target.closest('.grw-item');
         if (!it) return;
@@ -1938,17 +1938,17 @@ window.deleteFBComment = function(postId, idx) {
   function grwRewardCall(gameId, fnUrl, action, payload, cb) {
     var sb = window.getSupabaseClient && window.getSupabaseClient();
     if (!sb || !window.SITE_AUTH || !window.SITE_AUTH.user) {
-      cb({ error: 'ต้องล็อกอินก่อนถึงจะใช้ฟีเจอร์นี้ได้ครับ (กดที่ชื่อ/ล็อกอินมุมบนก่อน)' }); return;
+      cb({ error: '請先登入才能使用這個功能喔（點右上角的名字/登入）' }); return;
     }
     sb.auth.getSession().then(function (res) {
       var token = res && res.data && res.data.session && res.data.session.access_token;
-      if (!token) { cb({ error: 'เซสชันหมดอายุ กรุณาล็อกอินใหม่' }); return; }
+      if (!token) { cb({ error: '登入已過期，請重新登入' }); return; }
       var body = Object.assign({ action: action, game: gameId }, payload || {});
       fetch(fnUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(body) })
         .then(function (r) { return r.json(); })
         .then(function (data) { cb(data); })
-        .catch(function () { cb({ error: 'ส่งไม่สำเร็จ เช็คอินเทอร์เน็ตแล้วลองใหม่' }); });
-    }).catch(function () { cb({ error: 'ตรวจสอบสถานะล็อกอินไม่สำเร็จ ลองรีเฟรชหน้า' }); });
+        .catch(function () { cb({ error: '送出失敗，請檢查網路後再試一次' }); });
+    }).catch(function () { cb({ error: '無法確認登入狀態，請重新整理頁面' }); });
   }
 
   function grwModal(id, titleHtml, descHtml, placeholder, minLen, minLenMsg, onSend) {
@@ -1971,31 +1971,31 @@ window.deleteFBComment = function(postId, idx) {
     btn.onclick = function () {
       var msg = (div.querySelector('[data-msg]') || {}).value || '';
       if (msg.trim().length < minLen) { alert(minLenMsg); return; }
-      btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+      btn.disabled = true; btn.textContent = '送出中…';
       onSend(msg.trim(), btn, div);
     };
   }
 
   function grwOpenReport(gameId, fnUrl) {
-    grwModal('grw-report-ov', '🔧 แจ้งปัญหา',
-      'เจอบั๊ก/จุดแปลกๆ ในเกมนี้ใช่ไหม? เขียนบอกได้เลย — <b style="color:#b45309;">ถ้า Lin ตรวจแล้วเป็นจริงและแก้ให้แล้ว จะได้ 20 แต้ม 🎉</b><br><span style="color:#aaa;">(แต้มนี้แยกจากคะแนนอันดับ ใช้สะสมแลกดาวได้ในอนาคต ต้องรอ Lin ตรวจก่อนเสมอ ไม่ได้ทันที)</span>',
-      'อธิบายว่าเจออะไร ทำยังไงถึงเจอ...', 5, 'อธิบายปัญหาให้ละเอียดขึ้นอีกนิดนะครับ',
+    grwModal('grw-report-ov', '🔧 回報問題',
+      '在這個遊戲裡遇到 bug 或怪怪的地方了嗎？寫下來告訴老師吧 — <b style="color:#b45309;">老師確認後，如果真的是問題且修好了，會獲得 20 點 🎉</b><br><span style="color:#aaa;">（這個點數跟排行榜分數是分開算的，之後可以拿來換獎勵，一定要等老師確認過才會發放，不是馬上就有）</span>',
+      '請描述你遇到的狀況，是怎麼發生的...', 5, '請再詳細描述一下問題喔',
       function (msg, btn, div) {
         grwRewardCall(gameId, fnUrl, 'submit_bug_report', { content: msg }, function (res) {
           if (res.error) { btn.disabled = false; btn.textContent = '送出 →'; alert(res.error); return; }
-          btn.textContent = '✅ ส่งแล้ว ขอบคุณครับ!'; setTimeout(function () { div.remove(); }, 1400);
+          btn.textContent = '✅ 已送出，謝謝你！'; setTimeout(function () { div.remove(); }, 1400);
         });
       });
   }
 
   function grwOpenReview(gameId, fnUrl) {
-    grwModal('grw-review-ov', '💭 รีวิว / สิ่งที่เรียนรู้',
-      'วันนี้เล่นแล้วได้อะไรบ้าง เขียนสั้นๆ ก็ได้ — <b style="color:#2e7d32;">ได้ 2 แต้มทันที</b> ทุกครั้ง (จำกัด 1 ครั้ง/เกม/วัน)<br><span style="color:#aaa;">(แต้มนี้แยกจากคะแนนอันดับ ใช้สะสมแลกดาวได้ในอนาคต)</span>',
-      'เช่น วันนี้จำได้ว่าไม้เอกอยู่ปุ่ม J...', 20, 'เขียนยาวกว่านี้อีกนิดนะครับ (อย่างน้อย 20 ตัวอักษร)',
+    grwModal('grw-review-ov', '💭 心得 / 學到了什麼',
+      '今天玩完學到了什麼？簡短寫一下也可以 — <b style="color:#2e7d32;">馬上獲得 2 點</b>（每個遊戲每天限 1 次）<br><span style="color:#aaa;">（這個點數跟排行榜分數是分開算的，之後可以拿來換獎勵）</span>',
+      '例如：今天記住了第二聲符號在 J 鍵...', 20, '請再寫長一點喔（至少 20 個字）',
       function (msg, btn, div) {
         grwRewardCall(gameId, fnUrl, 'submit_review', { content: msg }, function (res) {
           if (res.error) { btn.disabled = false; btn.textContent = '送出 →'; alert(res.error); return; }
-          btn.textContent = '✅ ' + (res.message || 'ได้แต้มแล้ว!'); grwRefreshBalance();
+          btn.textContent = '✅ ' + (res.message || '獲得點數了！'); grwRefreshBalance();
           setTimeout(function () { div.remove(); }, 1600);
         });
       });

@@ -118,11 +118,11 @@ serve(async (req) => {
     // ไม่เชื่อ user_id ที่ client ส่งมาตรง ๆ เด็ดขาด — ต้องแกะจาก token ที่ล็อกอินจริงเท่านั้น
     const authHeader = req.headers.get('Authorization') || '';
     const jwt = authHeader.replace(/^Bearer\s+/i, '');
-    if (!jwt) return json({ error: 'missing auth token — ต้องล็อกอินก่อนถึงจะแจ้งปัญหา/รีวิวได้' }, 401);
+    if (!jwt) return json({ error: 'missing auth token — 請先登入才能回報問題/寫心得' }, 401);
 
     const asUser = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY'), { global: { headers: { Authorization: authHeader } } });
     const { data: userData, error: userErr } = await asUser.auth.getUser(jwt);
-    if (userErr || !userData?.user) return json({ error: 'invalid session — กรุณาล็อกอินใหม่' }, 401);
+    if (userErr || !userData?.user) return json({ error: 'invalid session — 請重新登入' }, 401);
     const userId = userData.user.id;
 
     const game = body?.game;
@@ -130,16 +130,16 @@ serve(async (req) => {
     if (!VALID_GAMES.includes(game)) return json({ error: 'invalid game' }, 400);
 
     if (action === 'submit_bug_report') {
-      if (content.length < 5) return json({ error: 'กรุณาอธิบายปัญหาให้ละเอียดขึ้นอีกนิด (อย่างน้อย 5 ตัวอักษร)' }, 400);
+      if (content.length < 5) return json({ error: '請再詳細描述問題一點（至少 5 個字）' }, 400);
       const { data, error } = await admin.from('game_reward_events').insert({
         user_id: userId, game, type: 'bug_report', content: content.slice(0, 2000), status: 'pending', points_awarded: 0,
       }).select().single();
       if (error) throw error;
-      return json({ ok: true, event: data, message: 'ส่งแจ้งปัญหาแล้ว รอ Lin ตรวจสอบ — ถ้าเป็นบั๊กจริงและแก้แล้วจะได้ ' + BUG_REPORT_POINTS + ' แต้ม' });
+      return json({ ok: true, event: data, message: '已送出，等老師確認 — 如果確實是問題且修好了，會獲得 ' + BUG_REPORT_POINTS + ' 點' });
     }
 
     if (action === 'submit_review') {
-      if (content.length < 20) return json({ error: 'เขียนสิ่งที่เรียนรู้ให้ยาวกว่านี้อีกนิดนะ (อย่างน้อย 20 ตัวอักษร) กันคนพิมพ์มั่ว' }, 400);
+      if (content.length < 20) return json({ error: '心得請再寫長一點喔（至少 20 個字），才不會被當亂打' }, 400);
 
       // เช็คโควต้า 1 ครั้ง/เกม/วัน (เผื่อ unique index ที่ DB ไว้อีกชั้นกันแข่งกันยิงพร้อมกัน)
       const { data: ins, error: insErr } = await admin.from('game_reward_events').insert({
@@ -147,12 +147,12 @@ serve(async (req) => {
       }).select().single();
       if (insErr) {
         if (String(insErr.message || '').includes('uniq_daily_review')) {
-          return json({ error: 'วันนี้รีวิวเกมนี้ไปแล้ว พรุ่งนี้มาใหม่นะ 🙂' }, 429);
+          return json({ error: '今天已經寫過這個遊戲的心得了，明天再來喔 🙂' }, 429);
         }
         throw insErr;
       }
       const balance = await addPoints(admin, userId, REVIEW_POINTS);
-      return json({ ok: true, event: ins, points_awarded: REVIEW_POINTS, balance, message: 'ขอบคุณสำหรับรีวิว! ได้ ' + REVIEW_POINTS + ' แต้ม 🎉' });
+      return json({ ok: true, event: ins, points_awarded: REVIEW_POINTS, balance, message: '謝謝你的心得！獲得 ' + REVIEW_POINTS + ' 點 🎉' });
     }
 
     return json({ error: 'unknown action' }, 400);
