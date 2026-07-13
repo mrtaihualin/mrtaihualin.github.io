@@ -2292,7 +2292,6 @@ function selectStudent(token) {
       '<button class="btn-start-class" onclick="recordClass(\'' + t + '\')">🔴 開始錄影</button>' +
       '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
     '</div>' +
-    '<div id="teacherNextClass-' + t + '"></div>' +
     '<div class="stu-acc-actions">' +
       '<button class="btn-sm btn-sm-pay" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
       '<button class="btn-sm btn-sm-preview" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
@@ -2322,6 +2321,7 @@ function selectStudent(token) {
         '<span id="progressStatus-' + t + '" style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;"></span>' +
       '</div>' +
     '</div>' +
+    '<div id="teacherNextClass-' + t + '"></div>' +
     '<div id="stuInfo-' + t + '" style="margin-top:12px;"></div>';
 
   panel.classList.add('visible');
@@ -4467,9 +4467,9 @@ async function loadTeacherNextClassBox(token) {
     el.innerHTML = '<div class="card" style="padding:12px 14px;margin-top:12px;">' +
       '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:8px;">📅 下一堂課：' + escHtml(label) + '（泰國時間）</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="initiateTeacherReschedule(\'' + t + '\')">🔄 幫忙改期</button>' +
-        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:#b45309;" onclick="teacherCancelClassNow(\'' + t + '\')">❌ 幫忙取消</button>' +
-        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openPermanentChangeModal(\'' + t + '\')">📌 改成永久</button>' +
+        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="initiateTeacherReschedule(\'' + t + '\')">🔄 改期</button>' +
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:#b45309;" onclick="teacherCancelClassNow(\'' + t + '\')">❌ 取消</button>' +
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openPermanentChangeModal(\'' + t + '\')">📌 固定</button>' +
       '</div>' +
     '</div>';
   } catch (e) {
@@ -4483,6 +4483,8 @@ async function initiateTeacherReschedule(token) {
   if (!ctx) { alert('目前沒有排定下一堂課，無法幫忙改期'); return; }
   var s = studentsCache[token];
   if (!s || !s.line_user_id) { alert('這位學生還沒連結 LINE，沒辦法傳送提議通知，請先請學生去連結 LINE。'); return; }
+  var origLabel = formatThaiDateTimeLabel(teacherTimeToDate(ctx.isoDate, ctx.timeStr || '00:00').toISOString());
+  if (!confirm('確定要幫這堂課改期嗎？\n\n學生：' + s.name + '\n原本時間：' + origLabel + '（泰國時間）\n\n下一步選新時間，送出後會傳 LINE 通知學生。')) return;
   var res = await sb.rpc('submit_class_request', {
     p_token: token, p_student_name: s ? s.name : token, p_request_type: 'reschedule',
     p_original_date: ctx.isoDate, p_requested_date: null, p_requested_time: null, p_note: null,
