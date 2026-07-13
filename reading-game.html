@@ -936,6 +936,59 @@ function doSave(){
 }
 
 // ════════════════════════════════════════════
+// ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='reading') → merge เข้า srsRecords ──
+//   • อ่านอย่างเดียว · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
+//   • เกมนี้เก็บ SRS ด้วย "ลำดับ(index)" ใน WORDS → ต้องแปลง (level,คำ)→index ก่อน merge · คำที่ไม่มีใน WORDS แล้ว = ข้าม (กันคำผี)
+//   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอิน = ใช้ srsRecords ในเครื่องเดิม · กติกา merge = เลือกอันก้าวหน้ากว่า (ทดสอบกดจริง 8/8)
+// ════════════════════════════════════════════
+function rgSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
+function rgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=rgSrsRank(a),rb=rgSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
+function rgSrsIndexByWordLevel(word, levelNum){
+  for(var i=0;i<WORDS.length;i++){ if(WORDS[i].th===word && RG_LEVEL_TO_NUM[WORDS[i].level]===levelNum) return i; }
+  return -1; // ไม่มีใน WORDS แล้ว = คำผี → ข้าม
+}
+var __rgSrsSyncPromise=null;
+window.__rgSrsSyncedOnce=false;
+function rgSyncSrsFromServer(force){
+  try{ if(!force && !rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
+  if(__rgSrsSyncPromise) return __rgSrsSyncPromise;
+  var sb=window.getSupabaseClient?window.getSupabaseClient():null;
+  if(!sb||!sb.from) return Promise.resolve(false);
+  __rgSrsSyncPromise = sb.from('tone_srs_state')
+    .select('level, word, stage, due_date, ever_failed, mastered')
+    .eq('game','reading')
+    .then(function(res){
+      if(res.error||!res.data){ window.__rgSrsSyncedOnce=true; return false; }
+      var changed=false;
+      res.data.forEach(function(row){
+        var idx=rgSrsIndexByWordLevel(row.word, row.level);
+        if(idx<0) return; // คำผี ข้าม
+        var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,mastered:!!row.mastered};
+        var cur=srsRecords[idx];
+        var win=rgSrsPickAdvanced(cur,srv);
+        if(!cur || win.stage!==cur.stage || (win.dueDate||'')!==(cur.dueDate||'') || (!!win.mastered)!==(!!cur.mastered)){
+          srsRecords[idx]=win; changed=true;
+        }
+      });
+      if(changed) doSave();
+      window.__rgSrsSyncedOnce=true;
+      return changed;
+    })
+    .catch(function(){ window.__rgSrsSyncedOnce=true; return false; });
+  return __rgSrsSyncPromise;
+}
+// ทริกเกอร์: ล็อกอินครั้งแรกของหน้า → ซิงก์แล้ว rebuild รอบให้ใช้ SRS ที่ตามมาข้ามเครื่อง (ครอบเคสรีเฟรช/เครื่องใหม่) · ล็อกอินซ้ำ → ซิงก์เฉยๆ
+try{
+  if(window.SITE_AUTH && SITE_AUTH.onChange){
+    SITE_AUTH.onChange(function(u){
+      if(!u) return;
+      if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
+      else { __rgSrsSyncPromise=null; rgSyncSrsFromServer(true); }
+    });
+  }
+}catch(e){}
+
+// ════════════════════════════════════════════
 // UTILS
 // ════════════════════════════════════════════
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
@@ -996,7 +1049,14 @@ function setLevel(lv){
   document.getElementById('bars-wrap').style.display='flex';
   document.getElementById('rg-stat-row').style.display='flex';
   document.getElementById('game').style.display='flex';
-  initGame();
+  // Lin 2026-07-13: เครื่องใหม่ที่เพิ่งล็อกอิน → รอ sync สั้นๆ (≤1.5วิ) ให้รอบแรกถูกต้อง เน็ตล่ม/ช้าไปต่อทันที ไม่ค้าง
+  if(rgLoggedIn() && !window.__rgSrsSyncedOnce){
+    var started=false, go=function(){ if(started)return; started=true; initGame(); };
+    try{ Promise.race([ rgSyncSrsFromServer(), new Promise(function(r){setTimeout(r,1500);}) ]).then(go); }catch(e){ go(); }
+    setTimeout(go,1600);
+  } else {
+    initGame();
+  }
 }
 
 // ════════════════════════════════════════════

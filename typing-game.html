@@ -933,6 +933,59 @@ function doSave(){
 }
 
 // ════════════════════════════════════════════
+// ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='typing') → merge เข้า srsRecords ──
+//   • อ่านอย่างเดียว · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
+//   • เก็บด้วย "ลำดับ(index)" ใน WORDS → แปลง (level,คำ)→index ก่อน merge · คำที่ไม่มีแล้ว = ข้าม (กันคำผี)
+//   • หมายเหตุ: เกมพิมพ์+เกมอ่านใช้ SAVE_KEY 'rgv3_save' + ลำดับ WORDS เดียวกัน (แชร์ SRS ในเครื่องเป็นดีไซน์เดิม)
+//     merge เลือก "อันก้าวหน้ากว่า" อย่างเดียว → ไม่มีทาง downgrade คำที่จำได้จากอีกเกม (ทดสอบกดจริง 8/8)
+// ════════════════════════════════════════════
+function tgSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
+function tgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=tgSrsRank(a),rb=tgSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
+function tgSrsIndexByWordLevel(word, levelNum){
+  for(var i=0;i<WORDS.length;i++){ if(WORDS[i].th===word && RG_LEVEL_TO_NUM[WORDS[i].level]===levelNum) return i; }
+  return -1;
+}
+var __tgSrsSyncPromise=null;
+window.__tgSrsSyncedOnce=false;
+function tgSyncSrsFromServer(force){
+  try{ if(!force && !rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
+  if(__tgSrsSyncPromise) return __tgSrsSyncPromise;
+  var sb=window.getSupabaseClient?window.getSupabaseClient():null;
+  if(!sb||!sb.from) return Promise.resolve(false);
+  __tgSrsSyncPromise = sb.from('tone_srs_state')
+    .select('level, word, stage, due_date, ever_failed, mastered')
+    .eq('game','typing')
+    .then(function(res){
+      if(res.error||!res.data){ window.__tgSrsSyncedOnce=true; return false; }
+      var changed=false;
+      res.data.forEach(function(row){
+        var idx=tgSrsIndexByWordLevel(row.word, row.level);
+        if(idx<0) return;
+        var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,mastered:!!row.mastered};
+        var cur=srsRecords[idx];
+        var win=tgSrsPickAdvanced(cur,srv);
+        if(!cur || win.stage!==cur.stage || (win.dueDate||'')!==(cur.dueDate||'') || (!!win.mastered)!==(!!cur.mastered)){
+          srsRecords[idx]=win; changed=true;
+        }
+      });
+      if(changed) doSave();
+      window.__tgSrsSyncedOnce=true;
+      return changed;
+    })
+    .catch(function(){ window.__tgSrsSyncedOnce=true; return false; });
+  return __tgSrsSyncPromise;
+}
+try{
+  if(window.SITE_AUTH && SITE_AUTH.onChange){
+    SITE_AUTH.onChange(function(u){
+      if(!u) return;
+      if(!window.__tgSrsSyncedOnce){ tgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
+      else { __tgSrsSyncPromise=null; tgSyncSrsFromServer(true); }
+    });
+  }
+}catch(e){}
+
+// ════════════════════════════════════════════
 // UTILS
 // ════════════════════════════════════════════
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
@@ -969,7 +1022,14 @@ function setLevel(lv){
   document.getElementById('bars-wrap').style.display='flex';
   document.getElementById('rg-stat-row').style.display='flex';
   document.getElementById('game').style.display='flex';
-  initGame();
+  // Lin 2026-07-13: เครื่องใหม่ที่เพิ่งล็อกอิน → รอ sync สั้นๆ (≤1.5วิ) ให้รอบแรกถูกต้อง เน็ตล่ม/ช้าไปต่อทันที ไม่ค้าง
+  if(rgLoggedIn() && !window.__tgSrsSyncedOnce){
+    var started=false, go=function(){ if(started)return; started=true; initGame(); };
+    try{ Promise.race([ tgSyncSrsFromServer(), new Promise(function(r){setTimeout(r,1500);}) ]).then(go); }catch(e){ go(); }
+    setTimeout(go,1600);
+  } else {
+    initGame();
+  }
 }
 
 // ════════════════════════════════════════════
@@ -2068,6 +2128,11 @@ var RG_CONT_TONE_Q=[];       // คิวพยางค์ที่ต้อง
 var RG_CONT_TONE_IDX=0;      // ตำแหน่งปัจจุบันในคิว RG_CONT_TONE_Q
 var RG_CONT_TONE_ANSWERED=false; // กันตอบ/ข้ามซ้ำสำหรับคำถามวรรณยุกต์ข้อปัจจุบัน (ให้ rgContSkipTone เช็คได้จากนอกฟังก์ชัน)
 
+// เช็คว่าเป็นอุปกรณ์จอสัมผัส (มือถือ/แท็บเล็ต) ใช้ร่วมหลายจุด — Lin 2026-07-13
+function rgIsTouchDevice(){ return !window.matchMedia('(hover:hover) and (pointer:fine)').matches; }
+// เคยโฟกัสช่องพิมพ์มือถือมาก่อนไหม (เอาไว้ตัดสินใจว่าต้องดึงคีย์บอร์ดเครื่องกลับมาอัตโนมัติตอนขึ้นคำใหม่หรือเปล่า) — Lin 2026-07-13
+var RG_MOBILE_KBD_USED=false;
+
 // ── โหมดไกด์ไลน์ ใช้ร่วมทุกระดับ 初/中/高 (Lin 2026-07-02) ──
 // true = highlight ปุ่มถัดไปบนคีย์บอร์ด + โชว์ need บน shift · false = ปิดหมด · จำค่าไว้ใน localStorage
 var guideMode=(function(){try{return localStorage.getItem('tg_guide_mode')==='1';}catch(e){return false;}})(); // กฎ MASTER ข้อ9: default = 無提示 (โหมดเก็บแต้ม)
@@ -2125,7 +2190,7 @@ function rgToggleWebKbd(){
   try{
     var mi=document.getElementById('rg-mobile-input');
     if(!mi)return;
-    mi.addEventListener('focus',function(){ if(typeof guideMode==='undefined'||!guideMode){ document.body.classList.add('tg-kbd-typing'); } });
+    mi.addEventListener('focus',function(){ RG_MOBILE_KBD_USED=true; if(typeof guideMode==='undefined'||!guideMode){ document.body.classList.add('tg-kbd-typing'); } });
     mi.addEventListener('blur', function(){ document.body.classList.remove('tg-kbd-typing'); });
   }catch(e){}
 })();
@@ -2233,6 +2298,7 @@ function rgTypeLoadSyl(){
   var SY=(typeof sylList!=='undefined' && sylList[sylIdx])?sylList[sylIdx]:null;
   RG_TYPE.target=SY?SY.th:'';
   RG_TYPE.pos=0;RG_TYPE.wrong=0;
+  try{rgMobileInputReset();}catch(e){} // ขึ้นพยางค์ใหม่ = จุดจบธรรมชาติ เคลียร์ช่องพิมพ์มือถือให้ตรงกับ pos=0 — Lin 2026-07-13
   rgTypeRenderTarget();
   rgTypeHighlightNextKey();
   var chBtn=document.getElementById('btn-check');
@@ -2400,6 +2466,7 @@ function rgContStart(){
   sylList.forEach(function(s){acc+=s.th.length;RG_CONT_BOUNDS.push(acc);});
   RG_TYPE.target=sylList.map(function(s){return s.th;}).join('');
   RG_TYPE.pos=0;RG_TYPE.wrong=0;
+  try{rgMobileInputReset();}catch(e){} // ขึ้นคำใหม่ = จุดจบธรรมชาติ เคลียร์ช่องพิมพ์มือถือให้ตรงกับ pos=0 — Lin 2026-07-13
   rgTypeRenderTarget();
   rgTypeHighlightNextKey();
   var chBtn=document.getElementById('btn-check');
@@ -2654,24 +2721,64 @@ document.addEventListener('keydown',function(e){
       RG_CONT_ON=false;
       rgTypeLoadSyl();
     }
+    // Lin 2026-07-13: เคยเจอว่าพอตอบ/ข้ามคำถามวรรณยุกต์เสร็จ (rgContAskNextTone เคย blur ช่องพิมพ์มือถือทิ้งไว้)
+    // ขึ้นคำ/พยางค์ใหม่แล้วคีย์บอร์ดเครื่องไม่เด้งกลับมาเอง ต้องแตะกล่องคำเองใหม่ทุกครั้ง ดูเหมือน "พิมพ์ไม่ได้"
+    // แก้: ถ้าเคยใช้คีย์บอร์ดมือถือมาก่อน (RG_MOBILE_KBD_USED) + เป็นจอสัมผัส + ไม่ได้อยู่โหมดมีคำใบ้ (ซึ่งตั้งใจปิดคีย์บอร์ดเครื่องอยู่แล้ว) → ดึงโฟกัสกลับให้อัตโนมัติ
+    try{
+      if(RG_MOBILE_KBD_USED && rgIsTouchDevice() && (typeof guideMode==='undefined'||!guideMode)){
+        var _mi=document.getElementById('rg-mobile-input');
+        if(_mi)_mi.focus();
+      }
+    }catch(e){}
   };
 })();
 // ช่องพิมพ์จริงสำหรับคีย์บอร์ดมือถือของผู้ใช้เอง (Gboard/คีย์บอร์ด iOS ไทย ฯลฯ)
 // เดิมเกมนี้ดักเฉพาะ document keydown (e.code) → ใช้ได้แค่คีย์บอร์ดจริง/เสมือนบนจอเท่านั้น
 // คีย์บอร์ดมือถือจริงไม่ส่ง e.code แบบนั้น ต้องอ่านจาก input event แทน — Lin 2026-07-06
+//
+// แก้ 2026-07-13 — บั๊ก "พิมพ์ไม้เอก/ไม้โท/ไม้ตรี/ไม้จัตวา ไม่ติด" บน iOS จริง (ยืนยันจากวีดีโอ Lin ส่งมา):
+// สาเหตุ: โค้ดเดิมสั่ง mi.value='' "ทันที" (synchronous) ทุกครั้งที่มี input event เพื่อเตรียมรับตัวถัดไป
+// แต่เครื่องหมายวรรณยุกต์เป็น combining mark ที่ iOS ต้องใช้เวลาประมวลผล/ต่อเข้ากับตัวหน้าเล็กน้อย
+// พอโดนล้างช่องแทรกกลางคัน (ระหว่าง WebKit ยังไม่เคลียร์ state ภายในของ input event ให้เสร็จ) เครื่องหมายเลยหลุดหาย
+// อ้างอิง: MDN InputEvent.isComposing/inputType · Apple Developer Forums thread 698078 (set .value ใน input handler ทำ Safari state เพี้ยน)
+// วิธีแก้ (ไม่ต้องปิดคีย์บอร์ดเครื่องจริงเหมือนโหมดมีคำใบ้ — ยังพิมพ์ด้วยคีย์บอร์ดเครื่องได้ปกติ):
+//  1) ห้ามประมวลผล/ห้ามแตะช่องเลยระหว่างกำลัง compose (compositionstart→compositionend) — รอให้ compose เสร็จก่อน
+//  2) ไม่ล้างช่องทันทีทุกคีย์ — ใช้วิธี "จำค่าล่าสุดที่เคยอ่านไปแล้ว (lastVal) แล้ว diff เอาเฉพาะตัวใหม่ที่เพิ่มมา" แทน ปล่อยให้ช่องพิมพ์สะสมค่าไปได้ตามธรรมชาติระหว่างพิมพ์ทั้งพยางค์
+//  3) ค่อยล้างช่องจริง (mi.value='') ที่ "จุดจบธรรมชาติ" เท่านั้น (ขึ้นพยางค์/คำใหม่, กด Backspace, กด Enter) ไม่ใช่ระหว่างพิมพ์
+//  4) เพิ่ม fallback ฝั่ง Android: บาง IME ไม่ยิง keydown Backspace จริงตอนกดปุ่มลบบนคีย์บอร์ดจอ (ส่งมาเป็น input event inputType:'deleteContentBackward' แทน) เดิมโค้ดไม่ดักไว้เลย ปุ่มลบเลยไม่ทำงานบน Android บางรุ่น
+var RG_MI_LASTVAL=''; // ค่าล่าสุดที่ประมวลผลไปแล้วในช่องพิมพ์มือถือ (ใช้ diff)
+function rgMobileInputReset(){ // เรียกตอน "จุดจบธรรมชาติ" เท่านั้น (ขึ้นคำ/พยางค์ใหม่ ฯลฯ) — ห้ามเรียกกลางคันตอนกำลังพิมพ์
+  RG_MI_LASTVAL='';
+  try{ var mi0=document.getElementById('rg-mobile-input'); if(mi0)mi0.value=''; }catch(e){}
+}
 (function(){
   var mi=document.getElementById('rg-mobile-input');
   if(!mi)return;
+  var composing=false; // กำลังอยู่ระหว่าง IME compose (เช่น กำลังต่อวรรณยุกต์เข้ากับตัวหน้า) — ห้ามแตะ/อ่านช่องตอนนี้เด็ดขาด
+  mi.addEventListener('compositionstart',function(){ composing=true; });
+  mi.addEventListener('compositionend',function(){ composing=false; rgMobileProcessInput(); });
   mi.addEventListener('keydown',function(e){
-    if(e.key==='Backspace'){ rgTypeBackspace(); e.preventDefault(); mi.value=''; return; }
-    if(e.key==='Enter'){ rgHandleEnterKey(e); mi.value=''; }
+    if(e.key==='Backspace'){ rgTypeBackspace(); e.preventDefault(); rgMobileInputReset(); return; }
+    if(e.key==='Enter'){ rgHandleEnterKey(e); rgMobileInputReset(); }
   });
-  mi.addEventListener('input',function(){
+  function rgMobileProcessInput(){
+    if(composing)return; // รอ compositionend ก่อน ห้ามอ่านค่ากลางคันที่ยัง compose ไม่เสร็จ
     var val=mi.value;
-    if(val){
-      for(var i=0;i<val.length;i++){ rgTypeChar(val[i]); }
+    if(!val){ RG_MI_LASTVAL=''; return; } // ช่องว่าง (เช่นโดน backspace/keydown เคลียร์ไปแล้ว) ไม่มีอะไรต้องทำต่อ
+    // ค่าใหม่ต่อจากค่าเดิมปกติ → เอาเฉพาะส่วนที่เพิ่มมาไปประมวลผล ไม่วนอ่านซ้ำตัวที่ทำไปแล้ว
+    var added=(val.length>=RG_MI_LASTVAL.length && val.indexOf(RG_MI_LASTVAL)===0)?val.slice(RG_MI_LASTVAL.length):val;
+    for(var i=0;i<added.length;i++){ rgTypeChar(added.charAt(i)); }
+    RG_MI_LASTVAL=val; // จำไว้ว่าอ่านถึงตรงนี้แล้ว — ยังไม่ล้างช่องจริง ปล่อยให้สะสมต่อได้จนกว่าจะถึงจุดจบธรรมชาติ (ดู rgMobileInputReset)
+  }
+  mi.addEventListener('input',function(e){
+    // ฝั่ง Android บาง IME: กดปุ่มลบบนคีย์บอร์ดจอ ไม่ยิง keydown Backspace จริง ส่งมาเป็น input event inputType นี้แทน
+    if(e && e.inputType && /delete/i.test(e.inputType)){
+      rgTypeBackspace();
+      RG_MI_LASTVAL=mi.value; // sync ตามค่าที่ field เหลืออยู่จริงหลังลบ กันหลุด diff รอบถัดไป
+      return;
     }
-    mi.value='';
+    if(e && e.isComposing)return; // บางเบราว์เซอร์ยังไม่ยิง compositionend ทัน ใช้ isComposing กันซ้ำอีกชั้น
+    rgMobileProcessInput();
   });
 })();
 rgBuildKeyboard();
