@@ -986,7 +986,15 @@ function tgWireSrsSync(){
       });
     }
   }catch(e){}
-  setTimeout(function(){ try{ if(rgLoggedIn() && !window.__tgSrsSyncedOnce) tgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }catch(e){} }, 1000);
+  // fallback แบบ poll — กันกรณี onChange ไม่ยิงตอนโหลด หรือ READING_AUTH พร้อมช้า · ลองทุก 0.5วิ จนซิงก์สำเร็จ สูงสุด ~12วิ
+  var _tgT=0, _tgIv=setInterval(function(){
+    _tgT++;
+    try{
+      if(window.__tgSrsSyncedOnce){ clearInterval(_tgIv); return; }
+      if(rgLoggedIn()) tgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} });
+    }catch(e){}
+    if(_tgT>=24) clearInterval(_tgIv);
+  }, 500);
 }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', tgWireSrsSync); else tgWireSrsSync();
 
