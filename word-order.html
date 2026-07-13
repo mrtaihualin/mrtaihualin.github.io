@@ -374,6 +374,64 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   function woSaveSrs(){ try{ localStorage.setItem(SRS_SAVE_KEY, JSON.stringify(srsRecords)); }catch(e){} }
   function woLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
 
+  // ════════════════════════════════════════════
+  // ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='wordorder') → merge เข้า srsRecords ──
+  //   • อ่านอย่างเดียว · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
+  //   • เก็บด้วย "ลำดับ(index)" ใน ADV_SENTENCES → แปลงประโยค→index ก่อน merge · ประโยคที่ไม่มีแล้ว = ข้าม (กันคำผี)
+  //   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอิน = ใช้ srsRecords ในเครื่องเดิม · merge = เลือกอันก้าวหน้ากว่า (ทดสอบกดจริง 8/8)
+  // ════════════════════════════════════════════
+  function woSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
+  function woSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=woSrsRank(a),rb=woSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
+  function woSrsIndexBySentence(sentThai){
+    for(var i=0;i<ADV_SENTENCES.length;i++){ if(ADV_SENTENCES[i].th===sentThai) return i; }
+    return -1; // ไม่มีใน ADV_SENTENCES แล้ว = ประโยคผี → ข้าม
+  }
+  var __woSrsSyncPromise=null;
+  window.__woSrsSyncedOnce=false;
+  function woSyncSrsFromServer(force){
+    try{ if(!force && !woLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
+    if(__woSrsSyncPromise) return __woSrsSyncPromise;
+    var sb=window.getSupabaseClient?window.getSupabaseClient():null;
+    if(!sb||!sb.from) return Promise.resolve(false);
+    __woSrsSyncPromise = sb.from('tone_srs_state')
+      .select('level, word, stage, due_date, ever_failed, mastered')
+      .eq('game','wordorder')
+      .then(function(res){
+        if(res.error||!res.data){ window.__woSrsSyncedOnce=true; return false; }
+        var changed=false;
+        res.data.forEach(function(row){
+          if(Number(row.level)!==LEVEL_NUM) return;         // เกมนี้มีระดับเดียว (高=3)
+          var i=woSrsIndexBySentence(row.word);
+          if(i<0) return;                                    // ประโยคผี ข้าม
+          var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,everHinted:false,mastered:!!row.mastered};
+          var cur=srsRecords[i];
+          var win=woSrsPickAdvanced(cur,srv);
+          if(!cur || win.stage!==cur.stage || (win.dueDate||'')!==(cur.dueDate||'') || (!!win.mastered)!==(!!cur.mastered)){
+            srsRecords[i]=win; changed=true;
+          }
+        });
+        if(changed) woSaveSrs();
+        window.__woSrsSyncedOnce=true;
+        return changed;
+      })
+      .catch(function(){ window.__woSrsSyncedOnce=true; return false; });
+    return __woSrsSyncPromise;
+  }
+  // เรียก init() แบบปลอดภัย — ถ้า DOM ยังโหลดไม่เสร็จ (สคริปต์นี้รันก่อน DOMContentLoaded) ให้รอก่อน กัน getElementById เป็น null
+  function woReinitSafe(){
+    if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', function(){ try{ init(); }catch(e){} }, {once:true}); }
+    else { try{ init(); }catch(e){} }
+  }
+  try{
+    if(window.SITE_AUTH && SITE_AUTH.onChange){
+      SITE_AUTH.onChange(function(u){
+        if(!u) return;
+        if(!window.__woSrsSyncedOnce){ woSyncSrsFromServer(true).then(function(){ woReinitSafe(); }); }
+        else { __woSrsSyncPromise=null; woSyncSrsFromServer(true); }
+      });
+    }
+  }catch(e){}
+
   // ── Phase 4 (กันโกงดาว): ให้เซิร์ฟเวอร์เป็นคนตัดสิน+แจกดาวจริง (เกมเรียงประโยค = trust-clean เหมือนเกมสะกด) ──
   //   ยิงทุกจุดที่ SRS ขยับ (advance/reset/fail/known-check) → เซิร์ฟเวอร์เลื่อน/รีเซ็ตเอง → mastered แล้วแจกดาว
   //   starClean = จำเอง(3⭐) vs ใช้คำใบ้/กู้(1⭐) → ส่งไปให้ดาวเซิร์ฟเวอร์ตรงกับที่เกมโชว์
