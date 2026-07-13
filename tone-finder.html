@@ -25,7 +25,6 @@
 <script defer src="supabase-auth.js?v=20"></script>
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="progress-sync.js?v=2"></script>
-<script defer src="adaptive.js?v=2"></script>
 <script src="word-vault.js"></script>
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
@@ -1867,15 +1866,6 @@
   .tf-badge-th { font-family:'Sarabun',sans-serif; font-size:12px; color:#8B7340; }
   .tf-badge-need { font-size:10px; color:#b0a080; margin-top:4px; }
 
-  /* ════ สเตจ 4: ปุ่ม Adaptive ════ */
-  .tf-adaptive-btn {
-    display:block; width:100%; margin:0 0 14px; padding:13px 16px;
-    border:none; border-radius:14px; cursor:pointer;
-    background:linear-gradient(135deg,#8B6310,#C8973A); color:#fff;
-    font-size:15px; font-weight:800; letter-spacing:.5px;
-    box-shadow:0 4px 14px rgba(139,99,16,.25);
-  }
-  .tf-adaptive-btn:active { transform:scale(.98); }
   .tf-home-streak { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 0 14px; }
   .tf-stat-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; width:100%; max-width:640px; margin:18px 0 14px; }
   .tf-stat-row .tf-streak-chip { font-size:12.5px; padding:6px 14px; }
@@ -6284,27 +6274,6 @@ var TF = {
       '<div style="font-size:11px;color:#a08a5a;margin-top:12px;line-height:1.6;">每枚徽章都有泰國米食文化小知識，集滿解鎖更多 🌾（圖示為暫定，之後會換成手繪版）</div>' +
     '</div>';
     document.body.appendChild(div);
-  },
-  // 🎯 โหมดฝึกแบบปรับระดับ (Adaptive 75/25) — เลือกคำจากจุดอ่อนผู้เล่น (ไม่พร้อม → สุ่ม)
-  startAdaptive: function() {
-    // ── daily limit: free = 2 คำ/วัน ──────────────────────────
-    var today = new Date().toISOString().slice(0,10);
-    var _key = 'tf_adaptive_' + today;
-    var _used = 0; try { _used = parseInt(localStorage.getItem(_key)||'0', 10); } catch(e){}
-    var FREE_LIMIT = 2;
-    if (_used >= FREE_LIMIT) {
-      tfToast('智慧複習今日 2 字額度已用完 🌱 明天再來！');
-      return;
-    }
-    var n = FREE_LIMIT - _used;   // 剩餘字數 (最多 2)
-    try { localStorage.setItem(_key, String(_used + n)); } catch(e){}
-    // ────────────────────────────────────────────────────────────
-    selectedCategory = 'ทั้งหมด';
-    var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
-    var words = (window.TF_ADAPTIVE && window.TF_ADAPTIVE.pickWords)
-      ? window.TF_ADAPTIVE.pickWords(pool, n)
-      : pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, n);
-    startSetSession(words);
   },
   // ── Lin 2026-07-04: "✓ 已記得這個字" แบบเข้ม (กันปั๊ม) ──
   //   เดิม: กดแล้วข้ามคำเฉยๆ (ไม่ตัดคำ ไม่ได้ดาว)
