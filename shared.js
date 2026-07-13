@@ -1978,7 +1978,7 @@ window.deleteFBComment = function(postId, idx) {
 
   function grwOpenReport(gameId, fnUrl) {
     grwModal('grw-report-ov', '🔧 回報問題',
-      '在這個遊戲裡遇到 bug 或怪怪的地方了嗎？寫下來告訴老師吧 — <b style="color:#b45309;">老師確認後，如果真的是問題且修好了，會獲得 20 點 🎉</b><br><span style="color:#aaa;">（這個點數跟排行榜分數是分開算的，之後可以拿來換獎勵，一定要等老師確認過才會發放，不是馬上就有）</span>',
+      '發現 bug 或怪怪的地方嗎？寫下來告訴老師。<br><b style="color:#b45309;">確認後最高可得 20 點 🎉</b><br><span style="color:#aaa;">（點數與排行榜分數分開算，需等老師確認）</span>',
       '請描述你遇到的狀況，是怎麼發生的...', 5, '請再詳細描述一下問題喔',
       function (msg, btn, div) {
         grwRewardCall(gameId, fnUrl, 'submit_bug_report', { content: msg }, function (res) {
@@ -1990,7 +1990,7 @@ window.deleteFBComment = function(postId, idx) {
 
   function grwOpenReview(gameId, fnUrl) {
     grwModal('grw-review-ov', '💭 心得 / 學到了什麼',
-      '今天玩完學到了什麼？簡短寫一下也可以 — <b style="color:#2e7d32;">馬上獲得 2 點</b>（每個遊戲每天限 1 次）<br><span style="color:#aaa;">（這個點數跟排行榜分數是分開算的，之後可以拿來換獎勵）</span>',
+      '今天學到了什麼？簡短寫幾句就好。<br><b style="color:#2e7d32;">馬上得 2 點</b>（每天限 1 次）<br><span style="color:#aaa;">（點數與排行榜分數分開算）</span>',
       '例如：今天記住了第二聲符號在 J 鍵...', 20, '請再寫長一點喔（至少 20 個字）',
       function (msg, btn, div) {
         grwRewardCall(gameId, fnUrl, 'submit_review', { content: msg }, function (res) {
