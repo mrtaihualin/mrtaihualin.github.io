@@ -2801,11 +2801,11 @@ async function loadGameLinkStatus(token) {
     if (user) {
       el.innerHTML =
         '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:8px;">目前登入的遊戲帳號：<b>' + escHtml(user.email || '') + '</b></p>' +
-        '<button class="btn-gold" onclick="linkGameAccount(\'' + token + '\')">🔗 連結這個帳號</button>';
+        '<button class="btn-gold" style="display:block;margin:0 auto;" onclick="linkGameAccount(\'' + token + '\')">🔗 連結這個帳號</button>';
     } else {
       el.innerHTML =
         '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:8px;">請先登入你玩遊戲用的帳號，才能連結。</p>' +
-        '<button class="btn-gold" onclick="gameLoginForLink(\'' + token + '\')">使用 Google 登入</button>';
+        '<button class="btn-gold" style="display:block;margin:0 auto;" onclick="gameLoginForLink(\'' + token + '\')">使用 Google 登入</button>';
     }
   } catch (e) {
     el.innerHTML = '<p style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">⚠️ 載入失敗，稍後再試</p>';
