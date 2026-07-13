@@ -182,6 +182,12 @@
     otpTimer = setInterval(tick, 1000);
   }
 
+  // 2026-07-13 Lin (v2): กัน setUser() ยิงซ้ำ — SITE_AUTH.fireChange() มาจากหลายจุด
+  // (getSession resolve + onAuthStateChange initial fire + revalidate ตอนสลับ/กลับมาที่แท็บ)
+  // เดิมทุกครั้งที่ fireChange ยิง setUser จะเรียก GAME_ACCOUNT.sync + loadAdaptiveHistory ซ้ำ
+  // ทั้งที่ user คนเดิมไม่ได้เปลี่ยน → ยิง Supabase เกินจำเป็น (พบ 4-7 ครั้งต่อโหลดหน้าเดียวจริง)
+  // ตอนนี้ sync/loadAdaptiveHistory จะรันแค่ตอน user id เปลี่ยนจริง (ล็อกอิน/สลับบัญชี/ล็อกเอาท์)
+  var lastAdaptiveUserId = null;
   function setUser(u) {
     API.user = u || null;
     if (API.user) closeGate();   // เพิ่งล็อกอินสำเร็จ → ปิด modal
@@ -189,6 +195,9 @@
     // Lin 2026-07-12: auth เพิ่งเสร็จ/เปลี่ยน (getSession เป็น async) → สั่งเกม re-render แถบชวนล็อกอิน "登入解鎖"
     // แก้บั๊ก: ตอนโหลดหน้า auth ยังไม่เสร็จ การ์ดเลยโชว์ค้าง ทั้งที่จริงล็อกอินอยู่ (ผู้เล่นนึกว่าต้องล็อกอินใหม่ทุกครั้ง)
     ['rgRenderGameBar','legoRenderGameBar','woRerenderBar'].forEach(function(fn){ if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){} } });
+    var uid = (API.user && API.user.id) || null;
+    if (uid === lastAdaptiveUserId) return; // user เดิม (หรือยังไม่ล็อกอินเหมือนเดิม) — ไม่ต้องยิงซ้ำ
+    lastAdaptiveUserId = uid;
     if (API.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
       try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}
     }
