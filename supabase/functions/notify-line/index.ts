@@ -70,14 +70,16 @@ async function pushLine(channelToken, targetUserId, message) {
 // ปุ่ม postback = ส่งข้อมูลกลับมาที่ line-webhook (ไม่เปิดหน้าเว็บใดๆ) ให้ไปอัปเดตฐานข้อมูลแทน
 // buttons: [{ label, uri }] หรือ [{ label, postbackData }]
 // 2026-07-13 แก้ (Lin สั่ง): เดิมปุ่ม primary ไม่ใส่ color จะออกเป็นสีเขียวเริ่มต้นของ LINE ไม่ตรงธีมเว็บ
-// (Lin ห้ามใช้สีเขียวเด็ดขาด นอกจากปุ่ม LINE ทางการ) → ใส่ color ทองของเว็บ (--gold-bright/--gold-deep)
-// เป็นค่าเริ่มต้นเสมอ ยกเว้น caller จะส่ง b.color มาเอง
+// (Lin ห้ามใช้สีเขียวเด็ดขาด นอกจากปุ่ม LINE ทางการ) → ใส่สีทอง/ครีมของเว็บเป็นค่าเริ่มต้นเสมอ
+// ยกเว้น caller จะส่ง b.color มาเอง (--gold-bright สำหรับ primary, --gold-light/ครีม สำหรับ secondary)
+// 2026-07-13 แก้เพิ่ม: ห้ามใส่ emoji ✅/❌ ในปุ่ม เพราะ emoji มีสีเขียว/แดงตายตัวในตัวเอง
+// ต่อให้ตั้ง color ของปุ่มเป็นอะไรก็ยังโผล่เขียว/แดงแทรกอยู่ดี ไม่ตรงธีม
 function buildFlexMessage(title, bodyText, buttons) {
   const footerContents = (buttons || []).map((b) => ({
     type: 'button',
     style: b.style || 'secondary',
     height: 'sm',
-    color: b.color || (b.style === 'primary' ? '#8B6310' : '#5a3e0a'),
+    color: b.color || (b.style === 'primary' ? '#C8973A' : '#F3E4C2'),
     action: b.uri
       ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
       : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },

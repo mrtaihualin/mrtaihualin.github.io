@@ -4322,8 +4322,8 @@ async function submitProposeTime() {
             title: '🔄 老師提議新的上課時間',
             bodyText: '原本：' + (r.original_date || '-') + '\n提議改到：' + newDate + ' ' + newTime + '（泰國時間）\n\n方便嗎？',
             buttons: [
-              { label: '✅ 可以', postbackData: 'action=accept_offer&request=' + encodeURIComponent(id), style: 'primary', color: '#8B6310' },
-              { label: '❌ 不方便', postbackData: 'action=decline_offer&request=' + encodeURIComponent(id), style: 'secondary', color: '#5a3e0a' },
+              { label: '可以', postbackData: 'action=accept_offer&request=' + encodeURIComponent(id), style: 'primary', color: '#C8973A' },
+              { label: '不方便', postbackData: 'action=decline_offer&request=' + encodeURIComponent(id), style: 'secondary', color: '#F3E4C2' },
             ],
           },
         }),
