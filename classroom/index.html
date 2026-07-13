@@ -4171,10 +4171,24 @@ async function finalizeRequestStatus(id, statusValue) {
 }
 
 // ✅ 處理：自動找 Calendar 上對應的那一次課堂，改期就 move、取消就 delete，動手前先備份
+// 2026-07-13 加：防止「還在搜尋/移動 Calendar 途中」時，趁按鈕還沒消失又被點第二次
+// （曾經真的發生過：同一筆申請被移動了兩次，雖然結果一樣沒造成問題，但還是補起來比較安全）
+var _inFlightRequestIds = {};
+
 async function processClassRequest(id) {
+  if (_inFlightRequestIds[id]) return; // 正在處理中，忽略這次重複點擊
   var r = (window._classRequestCache || {})[id];
   if (!r) return;
   var isCancel = r.request_type === 'cancel';
+  _inFlightRequestIds[id] = true;
+  try {
+    return await processClassRequestInner(id, r, isCancel);
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
+}
+
+async function processClassRequestInner(id, r, isCancel) {
   var matches;
   try {
     matches = await findClassEventForRequest(r.student_name, r.original_date);
@@ -4300,8 +4314,18 @@ async function cancelProposedOffer(id) {
 
 // ✅ 學生已經同意提議的新時間 → 老師按這顆才真的動 Calendar（一定要等老師開電腦，Google 授權只在老師瀏覽器裡）
 async function confirmAcceptedOffer(id) {
+  if (_inFlightRequestIds[id]) return;
   var r = (window._classRequestCache || {})[id];
   if (!r || !r.requested_date) { alert('資料不完整，請改用「⚙️ 其他 → 我會自己聯絡學生」手動處理。'); return; }
+  _inFlightRequestIds[id] = true;
+  try {
+    return await confirmAcceptedOfferInner(id, r);
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
+}
+
+async function confirmAcceptedOfferInner(id, r) {
   var matches;
   try {
     matches = await findClassEventForRequest(r.student_name, r.original_date);
@@ -4474,7 +4498,19 @@ async function initiateTeacherReschedule(token) {
 }
 
 // ❌ 老師直接取消這一次課（自己決定，不用等學生同意，但一樣會備份+通知）
+// 2026-07-13 加：同一組防重複點擊鎖（跟處理/確認同意共用 _inFlightRequestIds，用 'cancel:'+token 當 key 避免撞名）
 async function teacherCancelClassNow(token) {
+  var lockKey = 'cancel:' + token;
+  if (_inFlightRequestIds[lockKey]) return;
+  _inFlightRequestIds[lockKey] = true;
+  try {
+    return await teacherCancelClassNowInner(token);
+  } finally {
+    delete _inFlightRequestIds[lockKey];
+  }
+}
+
+async function teacherCancelClassNowInner(token) {
   var ctx = _teacherNextClassCtx[token];
   if (!ctx) { alert('目前沒有排定下一堂課，無法幫忙取消'); return; }
   var s = studentsCache[token];
@@ -4545,8 +4581,20 @@ function openPermanentChangeModal(token) {
 }
 function closePermanentChangeModal() { document.getElementById('permanentChangeModal').classList.remove('open'); }
 
+// 2026-07-13 加：同一組防重複點擊鎖，key 用 'perm:'+token 避免跟其他鎖撞名
 async function submitPermanentChange() {
   var token = _permanentChangeToken;
+  var lockKey = 'perm:' + token;
+  if (_inFlightRequestIds[lockKey]) return;
+  _inFlightRequestIds[lockKey] = true;
+  try {
+    return await submitPermanentChangeInner(token);
+  } finally {
+    delete _inFlightRequestIds[lockKey];
+  }
+}
+
+async function submitPermanentChangeInner(token) {
   var ctx = _teacherNextClassCtx[token];
   if (!token || !ctx) { alert('找不到這位學生的下一堂課資料，請重新整理再試'); return; }
   var newDate = document.getElementById('permDateInput').value;

@@ -1845,3 +1845,159 @@ window.deleteFBComment = function(postId, idx) {
     } catch (e) {}
   });
 })();
+
+// ════════════════════════════════════════════════════════════
+// 🪧 แจ้งปัญหา / รีวิวเกม — ได้แต้มสะสม (แยกจากคะแนนอันดับ/ดาว 100%) — Lin 2026-07-13
+// ใช้ร่วมทุกเกม (typing/reading/lego/word_order/tone_finder) — ต่อเข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap)
+// รีวิว: ได้ 2 แต้มทันที (จำกัด 1 ครั้ง/เกม/วัน) · แจ้งปัญหา: รอ Lin ตรวจ ถ้าจริง+แก้แล้วได้ 20 แต้ม · เพดานสะสม 300 แต้ม
+// prefix ฟังก์ชัน/id ทั้งหมดใช้ "grw" (Game ReWard) กันชนกับ "rg"/"lg" ฯลฯ ที่แต่ละเกมใช้เป็นของตัวเองอยู่แล้ว
+// ต้อง deploy Edge Function "game-reward" ก่อนถึงจะใช้งานได้จริง (ดูไฟล์ supabase/functions/game-reward/index.ts)
+// ════════════════════════════════════════════════════════════
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      if (!document.getElementById('game-switcher')) return; // เอาแค่หน้าเกมจริงๆ เหมือนชุดปุ่มลอยเดิม
+
+      var path = (location.pathname || '').toLowerCase();
+      var GAME_ID = null;
+      if (path.indexOf('typing-game') > -1) GAME_ID = 'typing';
+      else if (path.indexOf('reading-game') > -1) GAME_ID = 'reading';
+      else if (path.indexOf('lego') > -1) GAME_ID = 'lego';
+      else if (path.indexOf('word-order') > -1) GAME_ID = 'word_order';
+      else if (path.indexOf('tone-finder') > -1) GAME_ID = 'tone_finder';
+      if (!GAME_ID) return; // หน้าเกมที่ยังไม่รู้จัก ไม่ต้องขึ้นปุ่มนี้
+
+      var FN_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/game-reward';
+
+      var style = document.createElement('style');
+      style.textContent =
+        '.grw-menu{display:none;flex-direction:column;gap:6px;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.25);border-radius:14px;padding:8px;box-shadow:0 6px 24px rgba(90,62,10,0.22);margin-bottom:4px;}' +
+        '.grw-menu.gs-open{display:flex;}' +
+        '.grw-menu .grw-item{display:flex;align-items:center;gap:8px;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}' +
+        '.grw-menu .grw-item:hover{background:rgba(139,99,16,0.10);}' +
+        '.grw-menu .grw-item .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}' +
+        '.grw-fab{position:relative;}' +
+        '#grw-pts{position:absolute;top:-6px;left:-8px;background:#FAF4E8;border:1.5px solid #C8973A;color:#8B6310;font-size:10px;font-weight:800;border-radius:999px;padding:2px 6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);}';
+      document.head.appendChild(style);
+
+      // ── ปุ่มหลัก 🪧 (หน้าตาเหมือน .rg-ctl-fab ของ 🎮/⛶/🍙) ──
+      var fab = document.createElement('button');
+      fab.type = 'button';
+      fab.className = 'rg-ctl-fab grw-fab';
+      fab.setAttribute('aria-label', 'แจ้งปัญหา / รีวิว');
+      fab.title = 'แจ้งปัญหา / รีวิว (ได้แต้มสะสม)';
+      fab.innerHTML = '🪧<span id="grw-pts" style="display:none;"></span>';
+
+      // ── เมนูป๊อปอัพ (แจ้งปัญหา/รีวิว) — โผล่เหนือชุดปุ่มทั้งหมดเหมือนดรอปดาวน์ #game-switcher ──
+      var menu = document.createElement('div');
+      menu.className = 'grw-menu';
+      menu.innerHTML =
+        '<div class="grw-item" data-act="report"><span class="ico">🔧</span>แจ้งปัญหา</div>' +
+        '<div class="grw-item" data-act="review"><span class="ico">💭</span>รีวิว / สิ่งที่เรียนรู้</div>';
+      menu.addEventListener('click', function (e) {
+        var it = e.target.closest('.grw-item');
+        if (!it) return;
+        menu.classList.remove('gs-open');
+        if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
+        else grwOpenReview(GAME_ID, FN_URL);
+      });
+      fab.onclick = function (e) { e.stopPropagation(); menu.classList.toggle('gs-open'); };
+      document.addEventListener('click', function (e) {
+        if (e.target !== fab && !fab.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
+      });
+
+      var wrap = document.querySelector('.rg-ctl-wrap');
+      if (wrap) { wrap.insertBefore(menu, wrap.firstChild); wrap.appendChild(fab); }
+      else { document.body.appendChild(menu); document.body.appendChild(fab); } // เผื่อกรณีชุดปุ่มเดิมยังไม่ถูกสร้าง (ไม่ควรเกิด แต่กันพัง)
+
+      grwRefreshBalance();
+      try { if (window.SITE_AUTH && window.SITE_AUTH.onChange) window.SITE_AUTH.onChange(grwRefreshBalance); } catch (e) {}
+    } catch (e) {}
+  });
+
+  // โหลด/แสดงยอดแต้มสะสม (แสดงเฉพาะตอนล็อกอินแล้ว)
+  function grwRefreshBalance() {
+    try {
+      var sb = window.getSupabaseClient && window.getSupabaseClient();
+      var badge = document.getElementById('grw-pts');
+      if (!sb || !badge) return;
+      if (!window.SITE_AUTH || !window.SITE_AUTH.user) { badge.style.display = 'none'; return; }
+      sb.from('game_reward_points').select('points').eq('user_id', window.SITE_AUTH.user.id).maybeSingle()
+        .then(function (res) {
+          var pts = (res && res.data && res.data.points) || 0;
+          badge.textContent = pts; badge.style.display = 'block';
+        }).catch(function () {});
+    } catch (e) {}
+  }
+
+  // เรียก Edge Function พร้อมแนบ token ผู้ใช้ที่ล็อกอินอยู่ (ต้องล็อกอินก่อนเสมอ กันสวมรอย)
+  function grwRewardCall(gameId, fnUrl, action, payload, cb) {
+    var sb = window.getSupabaseClient && window.getSupabaseClient();
+    if (!sb || !window.SITE_AUTH || !window.SITE_AUTH.user) {
+      cb({ error: 'ต้องล็อกอินก่อนถึงจะใช้ฟีเจอร์นี้ได้ครับ (กดที่ชื่อ/ล็อกอินมุมบนก่อน)' }); return;
+    }
+    sb.auth.getSession().then(function (res) {
+      var token = res && res.data && res.data.session && res.data.session.access_token;
+      if (!token) { cb({ error: 'เซสชันหมดอายุ กรุณาล็อกอินใหม่' }); return; }
+      var body = Object.assign({ action: action, game: gameId }, payload || {});
+      fetch(fnUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) { cb(data); })
+        .catch(function () { cb({ error: 'ส่งไม่สำเร็จ เช็คอินเทอร์เน็ตแล้วลองใหม่' }); });
+    }).catch(function () { cb({ error: 'ตรวจสอบสถานะล็อกอินไม่สำเร็จ ลองรีเฟรชหน้า' }); });
+  }
+
+  function grwModal(id, titleHtml, descHtml, placeholder, minLen, minLenMsg, onSend) {
+    var old = document.getElementById(id); if (old) old.remove();
+    var div = document.createElement('div'); div.id = id;
+    div.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.48);font-family:"Noto Sans TC",sans-serif;';
+    div.innerHTML =
+      '<div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:28px 24px;position:relative;">' +
+      '<button data-close style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>' +
+      '<div style="font-size:20px;font-weight:900;color:#8B6310;margin-bottom:10px;">' + titleHtml + '</div>' +
+      '<div style="font-size:13px;color:#888;margin-bottom:14px;line-height:1.6;">' + descHtml + '</div>' +
+      '<textarea data-msg placeholder="' + placeholder + '" rows="4" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;resize:none;font-family:inherit;margin-bottom:14px;box-sizing:border-box;"></textarea>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+      '<button data-close style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>' +
+      '<button data-send style="padding:9px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">送出 →</button>' +
+      '</div></div>';
+    document.body.appendChild(div);
+    div.querySelectorAll('[data-close]').forEach(function (b) { b.onclick = function () { div.remove(); }; });
+    var btn = div.querySelector('[data-send]');
+    btn.onclick = function () {
+      var msg = (div.querySelector('[data-msg]') || {}).value || '';
+      if (msg.trim().length < minLen) { alert(minLenMsg); return; }
+      btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+      onSend(msg.trim(), btn, div);
+    };
+  }
+
+  function grwOpenReport(gameId, fnUrl) {
+    grwModal('grw-report-ov', '🔧 แจ้งปัญหา',
+      'เจอบั๊ก/จุดแปลกๆ ในเกมนี้ใช่ไหม? เขียนบอกได้เลย — <b style="color:#b45309;">ถ้า Lin ตรวจแล้วเป็นจริงและแก้ให้แล้ว จะได้ 20 แต้ม 🎉</b><br><span style="color:#aaa;">(แต้มนี้แยกจากคะแนนอันดับ ใช้สะสมแลกดาวได้ในอนาคต ต้องรอ Lin ตรวจก่อนเสมอ ไม่ได้ทันที)</span>',
+      'อธิบายว่าเจออะไร ทำยังไงถึงเจอ...', 5, 'อธิบายปัญหาให้ละเอียดขึ้นอีกนิดนะครับ',
+      function (msg, btn, div) {
+        grwRewardCall(gameId, fnUrl, 'submit_bug_report', { content: msg }, function (res) {
+          if (res.error) { btn.disabled = false; btn.textContent = '送出 →'; alert(res.error); return; }
+          btn.textContent = '✅ ส่งแล้ว ขอบคุณครับ!'; setTimeout(function () { div.remove(); }, 1400);
+        });
+      });
+  }
+
+  function grwOpenReview(gameId, fnUrl) {
+    grwModal('grw-review-ov', '💭 รีวิว / สิ่งที่เรียนรู้',
+      'วันนี้เล่นแล้วได้อะไรบ้าง เขียนสั้นๆ ก็ได้ — <b style="color:#2e7d32;">ได้ 2 แต้มทันที</b> ทุกครั้ง (จำกัด 1 ครั้ง/เกม/วัน)<br><span style="color:#aaa;">(แต้มนี้แยกจากคะแนนอันดับ ใช้สะสมแลกดาวได้ในอนาคต)</span>',
+      'เช่น วันนี้จำได้ว่าไม้เอกอยู่ปุ่ม J...', 20, 'เขียนยาวกว่านี้อีกนิดนะครับ (อย่างน้อย 20 ตัวอักษร)',
+      function (msg, btn, div) {
+        grwRewardCall(gameId, fnUrl, 'submit_review', { content: msg }, function (res) {
+          if (res.error) { btn.disabled = false; btn.textContent = '送出 →'; alert(res.error); return; }
+          btn.textContent = '✅ ' + (res.message || 'ได้แต้มแล้ว!'); grwRefreshBalance();
+          setTimeout(function () { div.remove(); }, 1600);
+        });
+      });
+  }
+})();

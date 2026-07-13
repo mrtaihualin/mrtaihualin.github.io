@@ -328,27 +328,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </button>
 </div>
 
-<!-- ══ เมนูขวาล่าง: 🔧แจ้งปัญหา / 💭รีวิว — Lin 2026-07-13 ══ -->
-<style>
-#rg-fab-wrap{position:fixed;right:14px;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:1001;display:flex;flex-direction:column;align-items:flex-end;gap:10px;font-family:'Noto Sans TC',sans-serif;}
-#rg-fab-main{width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;font-size:22px;box-shadow:0 6px 18px rgba(90,62,10,0.35);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s;}
-#rg-fab-main.open{transform:rotate(135deg);}
-#rg-fab-pts{position:absolute;top:-6px;left:-8px;background:#FAF4E8;border:1.5px solid #C8973A;color:#8B6310;font-size:10px;font-weight:800;border-radius:999px;padding:2px 6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);}
-#rg-fab-menu{display:none;flex-direction:column;gap:8px;align-items:flex-end;}
-#rg-fab-menu.open{display:flex;}
-.rg-fab-item{display:flex;align-items:center;gap:8px;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.25);border-radius:999px;padding:8px 14px 8px 8px;box-shadow:0 4px 14px rgba(90,62,10,0.18);cursor:pointer;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}
-.rg-fab-item .ico{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-</style>
-<div id="rg-fab-wrap">
-  <div id="rg-fab-menu">
-    <div class="rg-fab-item" onclick="rgOpenReport()"><span class="ico">🔧</span>แจ้งปัญหา</div>
-    <div class="rg-fab-item" onclick="rgOpenReview()"><span class="ico">💭</span>รีวิว / สิ่งที่เรียนรู้</div>
-  </div>
-  <button id="rg-fab-main" onclick="rgFabToggle()" aria-label="เมนู">
-    ✦
-    <span id="rg-fab-pts" style="display:none;"></span>
-  </button>
-</div>
+<!-- 2026-07-13: เมนู 🪧แจ้งปัญหา/รีวิว ย้ายไปทำใน shared.js แล้ว (ให้ขึ้นเหมือนกันทุกเกมอัตโนมัติ) ไม่ต้องมีโค้ดซ้ำในไฟล์นี้อีก -->
 
 <nav class="site-nav"></nav>
 
@@ -3062,115 +3042,7 @@ function rgOpenAsk() {
   };
 }
 
-// ════════════════════════════════════════════════════════════
-// ── 🔧แจ้งปัญหา / 💭รีวิว — แต้มแยกจากคะแนนอันดับ/ดาว 100% — Lin 2026-07-13 ──
-// ต้องล็อกอินก่อนถึงจะแจ้งปัญหา/รีวิวได้ (ต้องรู้ user_id แน่ชัด กันสวมรอย)
-// รีวิว: ได้แต้มทันที 2 แต้ม (จำกัด 1 ครั้ง/เกม/วัน) · แจ้งปัญหา: รอ Lin ตรวจ ถ้าจริง+แก้แล้วได้ 20 แต้ม
-// เพดานสะสมสูงสุด 300 แต้ม · ทั้งหมดนี้ "ไม่ใช่" คะแนนที่ใช้จัดอันดับ leaderboard เด็ดขาด
-// ต้อง deploy Edge Function "game-reward" ก่อนถึงจะใช้งานได้จริง (ดูไฟล์ game-reward-index.ts ที่ AI เตรียมให้)
-// ════════════════════════════════════════════════════════════
-var RG_REWARD_FN_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/game-reward';
-var RG_REWARD_GAME_ID = 'typing';
-var RG_REWARD_POINTS_CAP = 300;
-
-function rgFabToggle(){
-  var menu=document.getElementById('rg-fab-menu'); var btn=document.getElementById('rg-fab-main');
-  if(!menu||!btn)return;
-  var open=menu.classList.toggle('open'); btn.classList.toggle('open',open);
-}
-
-// โหลด/แสดงยอดแต้มสะสม มุมซ้ายบนของปุ่ม (แสดงเฉพาะตอนล็อกอินแล้ว)
-function rgRewardRefreshBalance(){
-  try{
-    var sb=window.getSupabaseClient&&window.getSupabaseClient();
-    var badge=document.getElementById('rg-fab-pts');
-    if(!sb||!badge)return;
-    if(!window.SITE_AUTH||!window.SITE_AUTH.user){ badge.style.display='none'; return; }
-    sb.from('game_reward_points').select('points').eq('user_id',window.SITE_AUTH.user.id).maybeSingle()
-      .then(function(res){
-        var pts=(res&&res.data&&res.data.points)||0;
-        badge.textContent=pts+'✦'; badge.style.display='block';
-      }).catch(function(){ /* เงียบไว้ ไม่ต้องรบกวนผู้เล่นถ้าดึงยอดไม่สำเร็จ */ });
-  }catch(e){}
-}
-try{ if(window.SITE_AUTH&&window.SITE_AUTH.onChange) window.SITE_AUTH.onChange(function(){ rgRewardRefreshBalance(); }); }catch(e){}
-window.addEventListener('DOMContentLoaded', rgRewardRefreshBalance);
-
-// เรียก Edge Function พร้อมแนบ token ผู้ใช้ที่ล็อกอินอยู่ (ต้องล็อกอินก่อนเสมอ)
-function rgRewardCall(action, payload, cb){
-  var sb=window.getSupabaseClient&&window.getSupabaseClient();
-  if(!sb || !window.SITE_AUTH || !window.SITE_AUTH.user){
-    cb({ error:'ต้องล็อกอินก่อนถึงจะใช้ฟีเจอร์นี้ได้ครับ (กดที่ชื่อ/ล็อกอินมุมบนก่อน)' }); return;
-  }
-  sb.auth.getSession().then(function(res){
-    var token = res && res.data && res.data.session && res.data.session.access_token;
-    if(!token){ cb({ error:'เซสชันหมดอายุ กรุณาล็อกอินใหม่' }); return; }
-    var body=Object.assign({ action:action, game:RG_REWARD_GAME_ID }, payload||{});
-    fetch(RG_REWARD_FN_URL, { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify(body) })
-      .then(function(r){ return r.json(); })
-      .then(function(data){ cb(data); })
-      .catch(function(){ cb({ error:'ส่งไม่สำเร็จ เช็คอินเทอร์เน็ตแล้วลองใหม่' }); });
-  }).catch(function(){ cb({ error:'ตรวจสอบสถานะล็อกอินไม่สำเร็จ ลองรีเฟรชหน้า' }); });
-}
-
-// กล่องแจ้งปัญหา (🔧) — ต่างจาก 💬我有問題 เดิม: อันนี้ผูกกับบัญชี + Lin อนุมัติแล้วได้แต้ม
-function rgOpenReport(){
-  document.getElementById('rg-fab-menu').classList.remove('open');
-  document.getElementById('rg-fab-main').classList.remove('open');
-  var old=document.getElementById('rg-report-ov'); if(old)old.remove();
-  var div=document.createElement('div'); div.id='rg-report-ov';
-  div.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.48);font-family:"Noto Sans TC",sans-serif;';
-  div.innerHTML=
-    '<div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:28px 24px;position:relative;">'+
-    '<button onclick="document.getElementById(\'rg-report-ov\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>'+
-    '<div style="font-size:20px;font-weight:900;color:#8B6310;margin-bottom:10px;">🔧 แจ้งปัญหา</div>'+
-    '<div style="font-size:13px;color:#888;margin-bottom:14px;line-height:1.6;">เจอบั๊ก/จุดแปลกๆ ในเกมนี้ใช่ไหม? เขียนบอกได้เลย — <b style="color:#b45309;">ถ้า Lin ตรวจแล้วเป็นจริงและแก้ให้แล้ว จะได้ 20 แต้ม 🎉</b><br><span style="color:#aaa;">(แต้มนี้แยกจากคะแนนอันดับ ใช้สะสมแลกดาวได้ในอนาคต ต้องรอ Lin ตรวจก่อนเสมอ ไม่ได้ทันที)</span></div>'+
-    '<textarea id="rg-report-msg" placeholder="อธิบายว่าเจออะไร ทำยังไงถึงเจอ..." rows="4" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;resize:none;font-family:inherit;margin-bottom:14px;"></textarea>'+
-    '<div style="display:flex;gap:8px;justify-content:flex-end;">'+
-    '<button onclick="document.getElementById(\'rg-report-ov\').remove()" style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>'+
-    '<button id="rg-report-send" style="padding:9px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">送出 →</button>'+
-    '</div></div>';
-  document.body.appendChild(div);
-  div.querySelector('#rg-report-send').onclick=function(){
-    var msg=(document.getElementById('rg-report-msg')||{}).value||'';
-    if(msg.trim().length<5){ alert('อธิบายปัญหาให้ละเอียดขึ้นอีกนิดนะครับ'); return; }
-    var btn=div.querySelector('#rg-report-send'); btn.disabled=true; btn.textContent='กำลังส่ง…';
-    rgRewardCall('submit_bug_report',{ content:msg.trim() },function(res){
-      if(res.error){ btn.disabled=false; btn.textContent='送出 →'; alert(res.error); return; }
-      btn.textContent='✅ ส่งแล้ว ขอบคุณครับ!'; setTimeout(function(){ div.remove(); },1400);
-    });
-  };
-}
-
-// กล่องรีวิว/สิ่งที่เรียนรู้ (💭) — ได้แต้มทันที
-function rgOpenReview(){
-  document.getElementById('rg-fab-menu').classList.remove('open');
-  document.getElementById('rg-fab-main').classList.remove('open');
-  var old=document.getElementById('rg-review-ov'); if(old)old.remove();
-  var div=document.createElement('div'); div.id='rg-review-ov';
-  div.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.48);font-family:"Noto Sans TC",sans-serif;';
-  div.innerHTML=
-    '<div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:28px 24px;position:relative;">'+
-    '<button onclick="document.getElementById(\'rg-review-ov\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>'+
-    '<div style="font-size:20px;font-weight:900;color:#8B6310;margin-bottom:10px;">💭 รีวิว / สิ่งที่เรียนรู้</div>'+
-    '<div style="font-size:13px;color:#888;margin-bottom:14px;line-height:1.6;">วันนี้ฝึกพิมพ์แล้วได้อะไรบ้าง เขียนสั้นๆ ก็ได้ — <b style="color:#2e7d32;">ได้ 2 แต้มทันที</b> ทุกครั้ง (จำกัด 1 ครั้ง/เกม/วัน)<br><span style="color:#aaa;">(แต้มนี้แยกจากคะแนนอันดับ ใช้สะสมแลกดาวได้ในอนาคต)</span></div>'+
-    '<textarea id="rg-review-msg" placeholder="เช่น วันนี้จำได้ว่าไม้เอกอยู่ปุ่ม J..." rows="4" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;resize:none;font-family:inherit;margin-bottom:14px;"></textarea>'+
-    '<div style="display:flex;gap:8px;justify-content:flex-end;">'+
-    '<button onclick="document.getElementById(\'rg-review-ov\').remove()" style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>'+
-    '<button id="rg-review-send" style="padding:9px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">送出 →</button>'+
-    '</div></div>';
-  document.body.appendChild(div);
-  div.querySelector('#rg-review-send').onclick=function(){
-    var msg=(document.getElementById('rg-review-msg')||{}).value||'';
-    if(msg.trim().length<20){ alert('เขียนยาวกว่านี้อีกนิดนะครับ (อย่างน้อย 20 ตัวอักษร)'); return; }
-    var btn=div.querySelector('#rg-review-send'); btn.disabled=true; btn.textContent='กำลังส่ง…';
-    rgRewardCall('submit_review',{ content:msg.trim() },function(res){
-      if(res.error){ btn.disabled=false; btn.textContent='送出 →'; alert(res.error); return; }
-      btn.textContent='✅ '+(res.message||'ได้แต้มแล้ว!'); rgRewardRefreshBalance();
-      setTimeout(function(){ div.remove(); },1600);
-    });
-  };
-}
+// 2026-07-13: ระบบ 🔧แจ้งปัญหา/💭รีวิว ย้ายไปทำใน shared.js แล้ว (ใช้ร่วมทุกเกม ดูรายละเอียดที่นั่น)
 
 </script>
 </div><!-- /.v3-page -->

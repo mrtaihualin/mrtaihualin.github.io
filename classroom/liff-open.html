@@ -34,6 +34,7 @@
   <div class="card">
     <div class="icon">⏳</div>
     <p id="statusText">正在開啟頁面…</p>
+    <div id="actionArea"></div>
   </div>
 
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -44,15 +45,22 @@
       classroom: 'index.html',
       pay: 'pay.html',
       games: '../games.html', // 2026-07-10 เพิ่ม: เปิดหน้าเกมใน LINE ได้เลย (games.html อยู่นอก classroom/ เลยต้อง ../)
-      linkline: 'line-link.html' // 2026-07-11 เพิ่ม: line-link.html เปลี่ยนมาผ่านหน้านี้ก่อน login
+      linkline: 'line-link.html', // 2026-07-11 เพิ่ม: line-link.html เปลี่ยนมาผ่านหน้านี้ก่อน login
       // เพราะ liff.login() redirectUri ต้อง "ขึ้นต้นด้วย Endpoint URL" (คือ liff-open.html) ไม่งั้น LINE ตอบ 400
+      myroom: 'index.html' // 2026-07-13 เพิ่ม: ปุ่มเดียวใน LINE Rich Menu "📚 我的教室" ไม่มี ?s=token ต่อท้าย
+      // เพราะฉะนั้น goto=myroom ต้องหา token เองจาก LINE userId ก่อน (ดู resolveMyRoom ด้านล่าง)
+      // ห้ามปล่อยให้ทะลุไป index.html แบบไม่มี token เด็ดขาด เพราะ index.html จะตีความว่าไม่มี token = ครู (isTeacher)
       // ระบบคำศัพท์วันละคำ (คนเล่นเกมทั่วไป ไม่ใช่นักเรียน) ยังไม่ทำ — ดูแผนอนาคต
     };
+    // Edge Function ตัวใหม่ 2026-07-13: หา token นักเรียนจาก LINE userId (ต้องผูกบัญชีมาก่อนแล้วครั้งหนึ่งผ่าน line-link.html)
+    var FIND_LINE_STUDENT_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/find-line-student';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw';
 
     var urlParams = new URLSearchParams(window.location.search);
     var goto = urlParams.get('goto') || 'classroom';
     var token = urlParams.get('s') || '';
     var statusEl = document.getElementById('statusText');
+    var actionEl = document.getElementById('actionArea');
 
     function fail(msg) {
       statusEl.textContent = '❌ ' + msg;
@@ -66,6 +74,47 @@
       return file + qs;
     }
 
+    // 2026-07-13 เพิ่ม: ปุ่มกลาง Rich Menu ไม่มี token → เอา LINE access token ไปถาม Edge Function ว่า
+    // "userId นี้เคยผูกกับนักเรียนคนไหน" แล้วค่อย redirect ไปห้องเรียนของคนนั้น
+    // ไม่เจอ (ยังไม่เคยผูกบัญชี) → ไม่ทะลุไป index.html เปล่าๆ (จะกลายเป็นหน้าล็อกอินครู) แต่โชว์ข้อความให้ติดต่อครูแทน
+    async function resolveMyRoom() {
+      if (!liff.isLoggedIn()) {
+        fail('เปิดผ่านแอป LINE เพื่อเข้าห้องเรียนของคุณ');
+        return;
+      }
+      statusEl.textContent = '正在確認您的身分…';
+      var accessToken;
+      try { accessToken = liff.getAccessToken(); } catch (e) {}
+      if (!accessToken) { fail('ไม่พบข้อมูลบัญชี LINE กรุณาลองใหม่'); return; }
+
+      try {
+        var res = await fetch(FIND_LINE_STUDENT_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ accessToken: accessToken })
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (res.ok && data.ok && data.token) {
+          token = data.token;
+          localStorage.setItem('clsLiffOpenToken_classroom', token); // ให้ goto=classroom ปกติก็ใช้ต่อได้
+          window.location.replace('index.html?s=' + encodeURIComponent(token));
+          return;
+        }
+        if (res.ok && data.reason === 'not_linked') {
+          statusEl.textContent = '尚未連結帳號';
+          actionEl.innerHTML = '<p style="margin-top:10px;">ยังไม่เคยผูกบัญชี LINE กับห้องเรียน<br>กรุณากดลิงก์ที่ครูส่งให้ครั้งแรก (ในข้อความ) เพื่อผูกบัญชีก่อนนะคะ</p>';
+          return;
+        }
+        fail('เชื่อมต่อไม่สำเร็จ (' + (data.error || res.status) + ') กรุณาลองใหม่ภายหลัง');
+      } catch (e) {
+        fail('เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่ภายหลัง');
+      }
+    }
+
     async function main() {
       var target = buildTarget();
       if (!target) { fail('ลิงก์ไม่ถูกต้อง'); return; }
@@ -73,23 +122,27 @@
       // token หาย (เช่น LINE ตัด query ทิ้งตอน redirect) → สำรองไว้ใน localStorage เหมือน line-link.html เดิม
       if (token) {
         localStorage.setItem('clsLiffOpenToken_' + goto, token);
-      } else {
+      } else if (goto !== 'myroom') {
         var saved = localStorage.getItem('clsLiffOpenToken_' + goto);
         if (saved) { token = saved; target = buildTarget(); }
       }
 
       if (!window.LIFF_CONFIG || !window.LIFF_CONFIG.liffId) {
-        // ไม่มี LIFF config ก็ยังเปิดหน้าปลายทางแบบเว็บปกติได้ ไม่ต้อง block คนดู
+        // ไม่มี LIFF config ก็ยังเปิดหน้าปลายทางแบบเว็บปกติได้ ไม่ต้อง block คนดู (ยกเว้น myroom ที่ต้องมี LIFF เท่านั้น)
+        if (goto === 'myroom') { fail('กรุณาเปิดผ่านแอป LINE'); return; }
         window.location.replace(target);
         return;
       }
       try {
         await liff.init({ liffId: window.LIFF_CONFIG.liffId });
       } catch (e) {
+        if (goto === 'myroom') { fail('เปิดผ่านแอป LINE ไม่สำเร็จ กรุณาลองใหม่'); return; }
         // LIFF init พังก็ยังพาไปหน้าปลายทางได้ตามปกติ (แค่ไม่ได้อยู่ใน LIFF context เฉยๆ ไม่ใช่ error ที่ block ผู้ใช้)
         window.location.replace(target);
         return;
       }
+
+      if (goto === 'myroom' && !token) { await resolveMyRoom(); return; }
       window.location.replace(target);
     }
     main();
