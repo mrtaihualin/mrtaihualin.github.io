@@ -975,15 +975,20 @@ function tgSyncSrsFromServer(force){
     .catch(function(){ window.__tgSrsSyncedOnce=true; return false; });
   return __tgSrsSyncPromise;
 }
-try{
-  if(window.SITE_AUTH && SITE_AUTH.onChange){
-    SITE_AUTH.onChange(function(u){
-      if(!u) return;
-      if(!window.__tgSrsSyncedOnce){ tgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
-      else { __tgSrsSyncPromise=null; tgSyncSrsFromServer(true); }
-    });
-  }
-}catch(e){}
+// ⚠️ ต้องลงทะเบียน "หลัง DOM พร้อม" เพราะสคริปต์เกม (inline) รันก่อนสคริปต์ defer (auth-widget) → ตอน parse ยังไม่มี SITE_AUTH
+function tgWireSrsSync(){
+  try{
+    if(window.SITE_AUTH && SITE_AUTH.onChange){
+      SITE_AUTH.onChange(function(u){
+        if(!u) return;
+        if(!window.__tgSrsSyncedOnce){ tgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
+        else { __tgSrsSyncPromise=null; tgSyncSrsFromServer(true); }
+      });
+    }
+  }catch(e){}
+  setTimeout(function(){ try{ if(rgLoggedIn() && !window.__tgSrsSyncedOnce) tgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }catch(e){} }, 1000);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', tgWireSrsSync); else tgWireSrsSync();
 
 // ════════════════════════════════════════════
 // UTILS

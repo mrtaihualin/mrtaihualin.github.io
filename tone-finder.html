@@ -2960,12 +2960,16 @@ function tfSyncSrsFromServer() {
   return __tfSrsSyncPromise;
 }
 // ทริกเกอร์: ซิงก์ตอนเปิดหน้าถ้าล็อกอินอยู่แล้ว + ทุกครั้งที่ล็อกอินใหม่ระหว่างเล่น
-try {
-  if (window.SITE_AUTH && SITE_AUTH.onChange) {
-    SITE_AUTH.onChange(function (u) { if (u) { __tfSrsSyncPromise = null; window.__tfSrsSyncedOnce = false; tfSyncSrsFromServer(); } });
-  }
-  setTimeout(function () { if (window.TF_AUTH && TF_AUTH.loggedIn && TF_AUTH.loggedIn()) tfSyncSrsFromServer(); }, 800);
-} catch (e) {}
+// ⚠️ ต้องลงทะเบียน "หลัง DOM พร้อม" เพราะสคริปต์เกม (inline) รันก่อนสคริปต์ defer (auth-widget) → ตอน parse ยังไม่มี SITE_AUTH
+function tfWireSrsSync() {
+  try {
+    if (window.SITE_AUTH && SITE_AUTH.onChange) {
+      SITE_AUTH.onChange(function (u) { if (u) { __tfSrsSyncPromise = null; window.__tfSrsSyncedOnce = false; tfSyncSrsFromServer(); } });
+    }
+  } catch (e) {}
+  setTimeout(function () { try { if (window.TF_AUTH && TF_AUTH.loggedIn && TF_AUTH.loggedIn()) tfSyncSrsFromServer(); } catch (e) {} }, 1000);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireSrsSync); else tfWireSrsSync();
 // ===== TF_SRS ENGINE END =====
 
 // ════════════════════════════════════════════════════════════

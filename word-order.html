@@ -422,15 +422,22 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', function(){ try{ init(); }catch(e){} }, {once:true}); }
     else { try{ init(); }catch(e){} }
   }
-  try{
-    if(window.SITE_AUTH && SITE_AUTH.onChange){
-      SITE_AUTH.onChange(function(u){
-        if(!u) return;
-        if(!window.__woSrsSyncedOnce){ woSyncSrsFromServer(true).then(function(){ woReinitSafe(); }); }
-        else { __woSrsSyncPromise=null; woSyncSrsFromServer(true); }
-      });
-    }
-  }catch(e){}
+  // ⚠️ สำคัญ: สคริปต์เกม (inline) รัน "ก่อน" สคริปต์ defer (auth-widget/supabase-config) → ตอน parse ยังไม่มี SITE_AUTH
+  //   ต้องลงทะเบียน onChange "หลัง DOM พร้อม" (ตอนนั้น defer โหลดครบแล้ว) + มี fallback ยิงซ้ำกันเหนียว
+  function woWireSrsSync(){
+    try{
+      if(window.SITE_AUTH && SITE_AUTH.onChange){
+        SITE_AUTH.onChange(function(u){
+          if(!u) return;
+          if(!window.__woSrsSyncedOnce){ woSyncSrsFromServer(true).then(function(){ woReinitSafe(); }); }
+          else { __woSrsSyncPromise=null; woSyncSrsFromServer(true); }
+        });
+      }
+    }catch(e){}
+    // เผื่อ session ล็อกอินพร้อมช้ากว่า onChange → ลองซิงก์อีกทีหลังโหลด (idempotent, กันเหนียว)
+    setTimeout(function(){ try{ if(woLoggedIn() && !window.__woSrsSyncedOnce) woSyncSrsFromServer(true).then(function(){ woReinitSafe(); }); }catch(e){} }, 1000);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', woWireSrsSync); else woWireSrsSync();
 
   // ── Phase 4 (กันโกงดาว): ให้เซิร์ฟเวอร์เป็นคนตัดสิน+แจกดาวจริง (เกมเรียงประโยค = trust-clean เหมือนเกมสะกด) ──
   //   ยิงทุกจุดที่ SRS ขยับ (advance/reset/fail/known-check) → เซิร์ฟเวอร์เลื่อน/รีเซ็ตเอง → mastered แล้วแจกดาว

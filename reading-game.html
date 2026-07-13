@@ -978,15 +978,20 @@ function rgSyncSrsFromServer(force){
   return __rgSrsSyncPromise;
 }
 // ทริกเกอร์: ล็อกอินครั้งแรกของหน้า → ซิงก์แล้ว rebuild รอบให้ใช้ SRS ที่ตามมาข้ามเครื่อง (ครอบเคสรีเฟรช/เครื่องใหม่) · ล็อกอินซ้ำ → ซิงก์เฉยๆ
-try{
-  if(window.SITE_AUTH && SITE_AUTH.onChange){
-    SITE_AUTH.onChange(function(u){
-      if(!u) return;
-      if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
-      else { __rgSrsSyncPromise=null; rgSyncSrsFromServer(true); }
-    });
-  }
-}catch(e){}
+// ⚠️ ต้องลงทะเบียน "หลัง DOM พร้อม" เพราะสคริปต์เกม (inline) รันก่อนสคริปต์ defer (auth-widget) → ตอน parse ยังไม่มี SITE_AUTH
+function rgWireSrsSync(){
+  try{
+    if(window.SITE_AUTH && SITE_AUTH.onChange){
+      SITE_AUTH.onChange(function(u){
+        if(!u) return;
+        if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
+        else { __rgSrsSyncPromise=null; rgSyncSrsFromServer(true); }
+      });
+    }
+  }catch(e){}
+  setTimeout(function(){ try{ if(rgLoggedIn() && !window.__rgSrsSyncedOnce) rgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }catch(e){} }, 1000);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', rgWireSrsSync); else rgWireSrsSync();
 
 // ════════════════════════════════════════════
 // UTILS
