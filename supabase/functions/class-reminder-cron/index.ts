@@ -198,7 +198,7 @@ serve(async (req) => {
         if (minutesSinceEnd >= 0 && minutesSinceEnd <= CATCH_WINDOW_MIN) {
           try {
             await pushLine(channelToken, s.line_user_id,
-              '🎉 今天的泰語課辛苦了！\n記得複習今天學的內容，有問題歡迎回來問老師喔 💬');
+              '🎉 今天的泰語課辛苦了！\n記得複習與分享學習心得喔😊\n有問題歡迎隨時問老師喔 💬');
             await supabase.from('classroom_schedule').update({ line_followup_sent: true }).in('id', idsNeedFollowup);
             sentCount++;
           } catch (e) { errCount++; }
