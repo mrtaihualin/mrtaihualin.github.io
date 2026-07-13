@@ -69,11 +69,15 @@ async function pushLine(channelToken, targetUserId, message) {
 // ใช้กับ "แจ้งเตือนคำขอเปลี่ยน/ยกเลิกคาบ" — ปุ่ม uri = เปิดลิงก์ (เช่น Google Calendar)
 // ปุ่ม postback = ส่งข้อมูลกลับมาที่ line-webhook (ไม่เปิดหน้าเว็บใดๆ) ให้ไปอัปเดตฐานข้อมูลแทน
 // buttons: [{ label, uri }] หรือ [{ label, postbackData }]
+// 2026-07-13 แก้ (Lin สั่ง): เดิมปุ่ม primary ไม่ใส่ color จะออกเป็นสีเขียวเริ่มต้นของ LINE ไม่ตรงธีมเว็บ
+// (Lin ห้ามใช้สีเขียวเด็ดขาด นอกจากปุ่ม LINE ทางการ) → ใส่ color ทองของเว็บ (--gold-bright/--gold-deep)
+// เป็นค่าเริ่มต้นเสมอ ยกเว้น caller จะส่ง b.color มาเอง
 function buildFlexMessage(title, bodyText, buttons) {
   const footerContents = (buttons || []).map((b) => ({
     type: 'button',
     style: b.style || 'secondary',
     height: 'sm',
+    color: b.color || (b.style === 'primary' ? '#8B6310' : '#5a3e0a'),
     action: b.uri
       ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
       : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },
@@ -86,8 +90,8 @@ function buildFlexMessage(title, bodyText, buttons) {
       body: {
         type: 'box', layout: 'vertical', spacing: 'md',
         contents: [
-          { type: 'text', text: title, weight: 'bold', size: 'md', wrap: true },
-          { type: 'text', text: bodyText, size: 'sm', color: '#666666', wrap: true },
+          { type: 'text', text: title, weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
+          { type: 'text', text: bodyText, size: 'sm', color: '#6b6b6b', wrap: true },
         ],
       },
       footer: footerContents.length
