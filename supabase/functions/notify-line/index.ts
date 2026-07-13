@@ -79,7 +79,7 @@ function buildFlexMessage(title, bodyText, buttons) {
     type: 'button',
     style: b.style || 'secondary',
     height: 'sm',
-    color: b.color || (b.style === 'primary' ? '#C8973A' : '#F3E4C2'),
+    color: b.color || (b.style === 'primary' ? '#8B6310' : '#FAF4E8'),
     action: b.uri
       ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
       : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },

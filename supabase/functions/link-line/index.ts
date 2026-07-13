@@ -14,6 +14,9 @@
 //      (สังเกตง่ายๆ: ตัวเลขก่อนขีด "-" ใน LIFF ID เช่น "2010620934-5MFOEYBX" ก็คือค่านี้เลย ไม่ต้องไปหาที่อื่น)
 //   2. supabase functions deploy link-line
 //   (ไม่ต้องตั้ง SUPABASE_SERVICE_ROLE_KEY เอง — Supabase ใส่ให้อัตโนมัติทุก Edge Function อยู่แล้ว)
+//   3. (เพิ่ม 2026-07-13, ไม่บังคับ) หลังสร้าง "เมนูนักเรียน" ใน LINE Official Account Manager เสร็จ:
+//      supabase secrets set STUDENT_RICH_MENU_ID=richmenu-xxxxxxxx
+//      → ผูกบัญชีสำเร็จจะสลับ Rich Menu ของคนนั้นเป็นเมนูนักเรียนให้อัตโนมัติ (ใช้ LINE_CHANNEL_ACCESS_TOKEN ตัวเดิม)
 // ════════════════════════════════════════════════════════════
 
 // deno-lint-ignore-file
@@ -110,6 +113,24 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'token not found' }), {
         status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
       });
+    }
+
+    // 2026-07-13 เพิ่ม: ผูกบัญชีสำเร็จ → สลับ Rich Menu ของคนนี้เป็น "เมนูนักเรียน" (มีปุ่ม 我的教室 เพิ่ม)
+    //   ไม่บังคับต้องตั้งค่า — ถ้า Lin ยังไม่สร้างเมนูนักเรียน/ยังไม่ตั้ง secret ก็ข้ามไปเฉยๆ ไม่ทำให้การผูกบัญชีล้มเหลว
+    //   ตั้งค่า: supabase secrets set STUDENT_RICH_MENU_ID=richmenu-xxxxxxxx (เอาจาก LINE Official Account Manager
+    //   หลังสร้างเมนูนักเรียนเสร็จ) — ใช้ LINE_CHANNEL_ACCESS_TOKEN ตัวเดียวกับที่ notify-line ใช้อยู่แล้ว
+    const studentRichMenuId = Deno.env.get('STUDENT_RICH_MENU_ID');
+    const channelAccessToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
+    if (studentRichMenuId && channelAccessToken) {
+      try {
+        await fetch(
+          'https://api.line.me/v2/bot/user/' + encodeURIComponent(lineUserId) + '/richmenu/' + encodeURIComponent(studentRichMenuId),
+          { method: 'POST', headers: { Authorization: 'Bearer ' + channelAccessToken } }
+        );
+        // ไม่เช็ค response ผลลัพธ์ต่อ (ไม่ critical) — ผูกบัญชีถือว่าสำเร็จแล้วไม่ว่าสลับเมนูจะติดปัญหาหรือไม่
+      } catch (e) {
+        // เงียบไว้ ไม่ทำให้ทั้ง request ล้มเหลว — เมนูสลับไม่ได้ก็ยังใช้ปุ่มเดิมได้ ไม่กระทบการเรียน
+      }
     }
 
     return new Response(JSON.stringify({ ok: true }), {

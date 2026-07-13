@@ -47,9 +47,11 @@
       games: '../games.html', // 2026-07-10 เพิ่ม: เปิดหน้าเกมใน LINE ได้เลย (games.html อยู่นอก classroom/ เลยต้อง ../)
       linkline: 'line-link.html', // 2026-07-11 เพิ่ม: line-link.html เปลี่ยนมาผ่านหน้านี้ก่อน login
       // เพราะ liff.login() redirectUri ต้อง "ขึ้นต้นด้วย Endpoint URL" (คือ liff-open.html) ไม่งั้น LINE ตอบ 400
-      myroom: 'index.html' // 2026-07-13 เพิ่ม: ปุ่มเดียวใน LINE Rich Menu "📚 我的教室" ไม่มี ?s=token ต่อท้าย
+      myroom: 'index.html', // 2026-07-13 เพิ่ม: ปุ่มเดียวใน LINE Rich Menu "📚 我的教室" ไม่มี ?s=token ต่อท้าย
       // เพราะฉะนั้น goto=myroom ต้องหา token เองจาก LINE userId ก่อน (ดู resolveMyRoom ด้านล่าง)
       // ห้ามปล่อยให้ทะลุไป index.html แบบไม่มี token เด็ดขาด เพราะ index.html จะตีความว่าไม่มี token = ครู (isTeacher)
+      home: '../index.html', // 2026-07-13 เพิ่ม: ปุ่ม 官方網站 ใน Rich Menu — เปลี่ยนจากลิงก์ธรรมดาเป็น LIFF ให้ไม่เด้งออกแอป LINE เหมือนปุ่มอื่น
+      trial: '../trial.html' // 2026-07-13 เพิ่ม: ปุ่ม 體驗課程 ใน Rich Menu — พาไปหน้าจองทดลองเรียน (Cal.com ฝังอยู่แล้ว)
       // ระบบคำศัพท์วันละคำ (คนเล่นเกมทั่วไป ไม่ใช่นักเรียน) ยังไม่ทำ — ดูแผนอนาคต
     };
     // Edge Function ตัวใหม่ 2026-07-13: หา token นักเรียนจาก LINE userId (ต้องผูกบัญชีมาก่อนแล้วครั้งหนึ่งผ่าน line-link.html)
