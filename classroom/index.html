@@ -631,6 +631,20 @@
   </div>
 </div>
 
+<!-- ======= TEACHER: 選擇要改期/取消的課堂 MODAL（2026-07-13 新增，Lin 要求自己選，不要系統自動猜）======= -->
+<div class="modal-overlay" id="pickLessonModal">
+  <div class="modal" style="max-width:420px;">
+    <h3 id="pickLessonTitle">📅 選擇課堂</h3>
+    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;" id="pickLessonHint"></p>
+    <label class="settings-label">本輪剩餘課堂（泰國時間）</label>
+    <select class="settings-input" id="pickLessonSelect"></select>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closePickLessonModal()">取消</button>
+      <button class="btn-gold" onclick="confirmPickLesson()">下一步</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= TEACHER: SLIP APPROVAL MODAL ======= -->
 <div class="modal-overlay" id="slipApprovalModal">
   <div class="modal" style="max-width:500px;">
@@ -4485,59 +4499,139 @@ async function loadTeacherNextClassBox(token) {
   }
 }
 
-// 🔄 老師幫忙改期（只改這一次）：建一筆申請紀錄 + 直接開「提議新時間」視窗，流程跟「其他 → 提議新時間」完全共用
-async function initiateTeacherReschedule(token) {
-  var ctx = _teacherNextClassCtx[token];
-  if (!ctx) { alert('目前沒有排定下一堂課，無法幫忙改期'); return; }
+// 📅 抓「這位學生本輪剩餘的課堂」清單，給老師自己挑（不用系統自動猜是哪一堂）
+// 剩餘堂數算法跟 loadStudentQuota 共用 computeCurrentCourse；抓不到堂數資料時，先列出未來 12 堂讓老師自己選
+async function listRemainingLessonsForStudent(token) {
   var s = studentsCache[token];
-  var origLabel = formatThaiDateTimeLabel(teacherTimeToDate(ctx.isoDate, ctx.timeStr || '00:00').toISOString());
-  if (!confirm('確定要幫這堂課改期嗎？\n\n學生：' + (s ? s.name : token) + '\n原本時間：' + origLabel + '（泰國時間）\n\n下一步選新時間，送出後會傳 LINE 通知學生。')) return;
+  var studentName = (s ? s.name : token) || '';
+  var pays = (await sb.rpc('get_student_payments', { p_token: token })).data || [];
+  var atts = (await sb.rpc('get_student_attendance', { p_token: token })).data || [];
+  var q = computeCurrentCourse(pays, atts);
+  var limit = (q.hasCourse && q.remain > 0) ? q.remain : 12;
+
+  var calToken = await gdGetToken();
+  if (gdTokenScopes && gdTokenScopes.indexOf('calendar') === -1) calToken = await gdGetToken(true);
+  var timeMin = new Date().toISOString();
+  var timeMax = new Date(Date.now() + (limit + 6) * 7 * 24 * 3600 * 1000).toISOString();
+  var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+    + '?timeMin=' + encodeURIComponent(timeMin)
+    + '&timeMax=' + encodeURIComponent(timeMax)
+    + '&singleEvents=true&orderBy=startTime&maxResults=250'
+    + '&q=' + encodeURIComponent(studentName);
+  var r = await fetch(url, { headers: { Authorization: 'Bearer ' + calToken } });
+  if (r.status === 403) {
+    var body = await r.text();
+    if (/insufficient|scope|PERMISSION_DENIED/i.test(body)) {
+      calToken = await gdGetToken(true);
+      r = await fetch(url, { headers: { Authorization: 'Bearer ' + calToken } });
+    }
+  }
+  if (!r.ok) throw new Error('Calendar API ' + r.status + '：' + (await r.text()).slice(0, 200));
+  var data = await r.json();
+  var name = studentName.trim();
+  var items = (data.items || []).filter(function(ev) { return (ev.summary || '').trim() === name; });
+  return items.slice(0, limit).map(function(ev) {
+    var startIso = ev.start && (ev.start.dateTime || ev.start.date);
+    return { ev: ev, iso: startIso, label: formatThaiDateTimeLabel(startIso) };
+  });
+}
+
+var _pickLessonToken = null;
+var _pickLessonPurpose = null; // 'reschedule' | 'cancel'
+var _pickLessonOptions = [];
+
+async function openPickLessonModal(token, purpose) {
+  _pickLessonToken = token;
+  _pickLessonPurpose = purpose;
+  _pickLessonOptions = [];
+  document.getElementById('pickLessonTitle').textContent = purpose === 'cancel' ? '❌ 選擇要取消的課堂' : '🔄 選擇要改期的課堂';
+  document.getElementById('pickLessonHint').textContent = purpose === 'cancel'
+    ? '從本輪剩餘課堂中，選出要直接取消的那一堂。'
+    : '從本輪剩餘課堂中，選出要改期的那一堂，下一步再選新時間。';
+  var sel = document.getElementById('pickLessonSelect');
+  sel.innerHTML = '<option value="">讀取中…</option>';
+  document.getElementById('pickLessonModal').classList.add('open');
+  try {
+    _pickLessonOptions = await listRemainingLessonsForStudent(token);
+  } catch (e) {
+    sel.innerHTML = '<option value="">讀取失敗</option>';
+    alert('⚠️ 讀取課表失敗：' + (e.message || e));
+    return;
+  }
+  if (!_pickLessonOptions.length) {
+    sel.innerHTML = '<option value="">找不到排定的課堂</option>';
+    return;
+  }
+  sel.innerHTML = _pickLessonOptions.map(function(o, i) {
+    return '<option value="' + i + '">' + o.label + '</option>';
+  }).join('');
+}
+function closePickLessonModal() { document.getElementById('pickLessonModal').classList.remove('open'); }
+
+function confirmPickLesson() {
+  var sel = document.getElementById('pickLessonSelect');
+  var idx = sel.value;
+  if (idx === '' || !_pickLessonOptions[idx]) { alert('請選擇一堂課'); return; }
+  var chosen = _pickLessonOptions[idx];
+  var token = _pickLessonToken, purpose = _pickLessonPurpose;
+  closePickLessonModal();
+  if (purpose === 'cancel') teacherCancelClassNow_chosen(token, chosen);
+  else initiateTeacherReschedule_chosen(token, chosen);
+}
+
+// 🔄 老師幫忙改期（只改這一次）：建一筆申請紀錄 + 直接開「提議新時間」視窗，流程跟「其他 → 提議新時間」完全共用
+// 2026-07-13 改（Lin 要求）：原本時間改成老師自己從「本輪剩餘課堂」下拉選單挑，不是系統自動猜下一堂
+async function initiateTeacherReschedule(token) {
+  openPickLessonModal(token, 'reschedule');
+}
+
+async function initiateTeacherReschedule_chosen(token, chosen) {
+  var s = studentsCache[token];
+  if (!confirm('確定要幫這堂課改期嗎？\n\n學生：' + (s ? s.name : token) + '\n原本時間：' + chosen.label + '（泰國時間）\n\n下一步選新時間，送出後會傳 LINE 通知學生。')) return;
+  var p = formatInTz(new Date(chosen.iso), TEACHER_TZ);
   var res = await sb.rpc('submit_class_request', {
     p_token: token, p_student_name: s ? s.name : token, p_request_type: 'reschedule',
-    p_original_date: ctx.isoDate, p_requested_date: null, p_requested_time: null, p_note: null,
+    p_original_date: p.dateStr, p_requested_date: null, p_requested_time: null, p_note: null,
     p_initiated_by: 'teacher',
   });
   if (res.error) { alert('建立申請失敗：' + res.error.message); return; }
   var newId = res.data;
   window._classRequestCache = window._classRequestCache || {};
-  window._classRequestCache[newId] = { id: newId, token: token, student_name: s ? s.name : token, original_date: ctx.isoDate, request_type: 'reschedule' };
+  window._classRequestCache[newId] = { id: newId, token: token, student_name: s ? s.name : token, original_date: p.dateStr, request_type: 'reschedule' };
   _otherOptionsRequestId = newId;
   openProposeTimeModal();
   loadPendingClassRequests();
 }
 
 // ❌ 老師直接取消這一次課（自己決定，不用等學生同意，但一樣會備份+通知）
-// 2026-07-13 加：同一組防重複點擊鎖（跟處理/確認同意共用 _inFlightRequestIds，用 'cancel:'+token 當 key 避免撞名）
+// 2026-07-13 改（Lin 要求）：要取消的那一堂改成老師自己從下拉選單挑，不是系統自動猜下一堂
+// 同一組防重複點擊鎖（跟處理/確認同意共用 _inFlightRequestIds，用 'cancel:'+token 當 key 避免撞名）
 async function teacherCancelClassNow(token) {
+  openPickLessonModal(token, 'cancel');
+}
+
+async function teacherCancelClassNow_chosen(token, chosen) {
   var lockKey = 'cancel:' + token;
   if (_inFlightRequestIds[lockKey]) return;
   _inFlightRequestIds[lockKey] = true;
   try {
-    return await teacherCancelClassNowInner(token);
+    return await teacherCancelClassNowInner(token, chosen);
   } finally {
     delete _inFlightRequestIds[lockKey];
   }
 }
 
-async function teacherCancelClassNowInner(token) {
-  var ctx = _teacherNextClassCtx[token];
-  if (!ctx) { alert('目前沒有排定下一堂課，無法幫忙取消'); return; }
+async function teacherCancelClassNowInner(token, chosen) {
   var s = studentsCache[token];
   var studentName = s ? s.name : token;
-  var matches;
-  try { matches = await findClassEventForRequest(studentName, ctx.isoDate); }
-  catch (e) { alert('⚠️ 搜尋 Calendar 失敗：' + (e.message || e)); return; }
-  if (matches.length !== 1) {
-    alert((matches.length === 0 ? '⚠️ 找不到符合的課堂事件' : '⚠️ 找到 ' + matches.length + ' 筆疑似符合的課堂，不確定是哪一筆') + '，請自己到 Calendar 手動處理。');
-    return;
-  }
-  var ev = matches[0];
-  var oldStartIso = ev.start && (ev.start.dateTime || ev.start.date);
+  var ev = chosen.ev;
+  var oldStartIso = chosen.iso;
   if (!confirm('確定要直接取消這堂課嗎？\n\n學生：' + studentName + '\n時間：' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）\n\n只會刪除這一次課堂，不影響其他週。刪除前會先備份，可以復原。系統會發 LINE 通知學生。確定嗎？')) return;
 
+  var p = formatInTz(new Date(oldStartIso), TEACHER_TZ);
   var res = await sb.rpc('submit_class_request', {
     p_token: token, p_student_name: studentName, p_request_type: 'cancel',
-    p_original_date: ctx.isoDate, p_requested_date: null, p_requested_time: null, p_note: null,
+    p_original_date: p.dateStr, p_requested_date: null, p_requested_time: null, p_note: null,
     p_initiated_by: 'teacher',
   });
   if (res.error) { alert('建立紀錄失敗：' + res.error.message); return; }
