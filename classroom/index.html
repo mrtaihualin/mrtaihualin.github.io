@@ -4266,6 +4266,10 @@ async function submitProposeTime() {
   var newDate = document.getElementById('proposeDateInput').value;
   var newTime = document.getElementById('proposeTimeInput').value;
   if (!newDate || !newTime) { alert('請選擇日期和時間'); return; }
+  var rStudent = studentsCache[r.token];
+  if (!rStudent || !rStudent.line_user_id) {
+    if (!confirm('⚠️ 這位學生還沒連結 LINE，系統沒辦法傳送提議通知。\n\n還是要儲存這筆提議嗎？（要自己另外聯絡學生說一聲）')) return;
+  }
   var btn = document.getElementById('proposeSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
   var res = await sb.from('classroom_requests').update({
@@ -4277,28 +4281,32 @@ async function submitProposeTime() {
     alert('⚠️ 儲存失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
     return;
   }
-  try {
-    await fetch(LINE_NOTIFY_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-      body: JSON.stringify({
-        to: { studentToken: r.token },
-        message: '老師提議新的上課時間：' + newDate + ' ' + newTime + '（泰國時間），請到網站查看並回覆',
-        flex: {
-          title: '🔄 老師提議新的上課時間',
-          bodyText: '原本：' + (r.original_date || '-') + '\n提議改到：' + newDate + ' ' + newTime + '（泰國時間）\n\n方便嗎？',
-          buttons: [
-            { label: '✅ 可以', postbackData: 'action=accept_offer&request=' + encodeURIComponent(id), style: 'primary' },
-            { label: '❌ 不方便', postbackData: 'action=decline_offer&request=' + encodeURIComponent(id) },
-          ],
-        },
-      }),
-    });
-  } catch (e) {
-    alert('⚠️ 提議已存檔，但 LINE 通知傳送失敗，請自己再跟學生說一聲：' + (e.message || e));
+  if (rStudent && rStudent.line_user_id) {
+    try {
+      await fetch(LINE_NOTIFY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        body: JSON.stringify({
+          to: { studentToken: r.token },
+          message: '老師提議新的上課時間：' + newDate + ' ' + newTime + '（泰國時間），請到網站查看並回覆',
+          flex: {
+            title: '🔄 老師提議新的上課時間',
+            bodyText: '原本：' + (r.original_date || '-') + '\n提議改到：' + newDate + ' ' + newTime + '（泰國時間）\n\n方便嗎？',
+            buttons: [
+              { label: '✅ 可以', postbackData: 'action=accept_offer&request=' + encodeURIComponent(id), style: 'primary' },
+              { label: '❌ 不方便', postbackData: 'action=decline_offer&request=' + encodeURIComponent(id) },
+            ],
+          },
+        }),
+      });
+    } catch (e) {
+      alert('⚠️ 提議已存檔，但 LINE 通知傳送失敗，請自己再跟學生說一聲：' + (e.message || e));
+    }
   }
   closeProposeTimeModal();
-  alert('✅ 已傳送提議，等學生在 LINE 上點選回覆（超過 48 小時沒回覆會在首頁提醒你追蹤）');
+  alert(rStudent && rStudent.line_user_id
+    ? '✅ 已傳送提議，等學生在 LINE 上點選回覆（超過 48 小時沒回覆會在首頁提醒你追蹤）'
+    : '✅ 提議已存檔（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
   await loadPendingClassRequests();
 }
 
@@ -4482,9 +4490,8 @@ async function initiateTeacherReschedule(token) {
   var ctx = _teacherNextClassCtx[token];
   if (!ctx) { alert('目前沒有排定下一堂課，無法幫忙改期'); return; }
   var s = studentsCache[token];
-  if (!s || !s.line_user_id) { alert('這位學生還沒連結 LINE，沒辦法傳送提議通知，請先請學生去連結 LINE。'); return; }
   var origLabel = formatThaiDateTimeLabel(teacherTimeToDate(ctx.isoDate, ctx.timeStr || '00:00').toISOString());
-  if (!confirm('確定要幫這堂課改期嗎？\n\n學生：' + s.name + '\n原本時間：' + origLabel + '（泰國時間）\n\n下一步選新時間，送出後會傳 LINE 通知學生。')) return;
+  if (!confirm('確定要幫這堂課改期嗎？\n\n學生：' + (s ? s.name : token) + '\n原本時間：' + origLabel + '（泰國時間）\n\n下一步選新時間，送出後會傳 LINE 通知學生。')) return;
   var res = await sb.rpc('submit_class_request', {
     p_token: token, p_student_name: s ? s.name : token, p_request_type: 'reschedule',
     p_original_date: ctx.isoDate, p_requested_date: null, p_requested_time: null, p_note: null,
