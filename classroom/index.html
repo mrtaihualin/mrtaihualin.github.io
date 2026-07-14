@@ -4050,46 +4050,76 @@ async function requestCancelClass(isoDate) {
 }
 
 // 2026-07-14 新增（Lin 要求）：算出「未來還有哪幾堂課」，讓學生可以選其他週的課來取消，
-// 不是只能取消最近下一堂。只有「每週固定上課」的學生才會有多堂——邏輯跟算下一堂課的
-// anchor 完全同一套（見 loadStudentNextClass），只是算完下一堂之後繼續往後加一週、加一週。
-// 單次（非固定）課程只有一堂，回傳陣列長度就是 1，跟現在的行為一樣。
-function computeUpcomingOccurrences(token, count) {
+// 不是只能取消最近下一堂。
+// 2026-07-14 修 bug（Lin 回報：清單突然變空白「目前沒有排定的課堂」，但下一堂課卡片明明有顯示）：
+//   原因找到了——「下一堂課」卡片的資料主要來源是 classroom_schedule（老師 Google Calendar
+//   同步過來的，見 loadStudentNextClass），pending_start_date/pending_class_time 只是沒同步到
+//   資料時的備援。這個函式當初漏看了這點，只用了備援欄位，遇到主要靠 Calendar 同步的學生
+//   （pending_start_date 是空的）就直接回傳空陣列，清單當然是空的。
+//   改法：跟「下一堂課」卡片用同一套資料來源——(1) 先抓 classroom_schedule 同步到的近期資料
+//   （最準，可能反映老師手動調過的單堂），(2) 再用固定課表（pending_*）往後推算，
+//   補滿到 count 堂（涵蓋 Calendar 同步範圍以外的未來週），兩邊用日期去重。
+async function computeUpcomingOccurrences(token, count) {
   const s = studentsCache[token];
-  if (!s || !s.pending_start_date || !s.pending_class_time) return [];
-  let anchor = teacherTimeToDate(s.pending_start_date, s.pending_class_time);
-  const weekMs = 7 * 24 * 3600 * 1000;
-  const nowMs = Date.now();
-  if (!s.pending_recurring) {
-    return anchor.getTime() >= nowMs ? [anchor] : [];
+  const results = [];
+  const seenDates = {};
+
+  try {
+    const { data } = await sb.rpc('get_student_schedule', { p_token: token });
+    if (data && data.length) {
+      data.forEach(function(row) {
+        if (!row.lesson_date) return;
+        const startTimeStr = (row.start_time && /^\d{1,2}:\d{2}/.test(row.start_time)) ? row.start_time : '00:00';
+        const anchor = teacherTimeToDate(row.lesson_date, startTimeStr);
+        if (anchor.getTime() >= Date.now() && !seenDates[row.lesson_date]) {
+          seenDates[row.lesson_date] = true;
+          results.push(anchor);
+        }
+      });
+    }
+  } catch (e) { /* 讀不到就跳過，退回下面用固定課表算 */ }
+
+  if (s && s.pending_start_date && s.pending_class_time) {
+    let anchor = teacherTimeToDate(s.pending_start_date, s.pending_class_time);
+    const weekMs = 7 * 24 * 3600 * 1000;
+    const nowMs = Date.now();
+    if (s.pending_recurring) {
+      if (anchor.getTime() < nowMs) {
+        const weeksPassed = Math.ceil((nowMs - anchor.getTime()) / weekMs);
+        anchor = new Date(anchor.getTime() + weeksPassed * weekMs);
+      }
+      let cur = anchor, guard = 0;
+      while (results.length < count && guard < count * 3) {
+        const thai = formatInTz(cur, TEACHER_TZ);
+        if (!seenDates[thai.dateStr]) { seenDates[thai.dateStr] = true; results.push(cur); }
+        cur = new Date(cur.getTime() + weekMs);
+        guard++;
+      }
+    } else if (anchor.getTime() >= nowMs && !results.length) {
+      results.push(anchor);
+    }
   }
-  if (anchor.getTime() < nowMs) {
-    const weeksPassed = Math.ceil((nowMs - anchor.getTime()) / weekMs);
-    anchor = new Date(anchor.getTime() + weeksPassed * weekMs);
-  }
-  const list = [];
-  let cur = anchor;
-  for (let i = 0; i < count; i++) {
-    list.push(cur);
-    cur = new Date(cur.getTime() + weekMs);
-  }
-  return list;
+
+  results.sort(function(a, b) { return a.getTime() - b.getTime(); });
+  return results.slice(0, count);
 }
 
-function openCancelPickerModal() {
+async function openCancelPickerModal() {
   if (!nextClassCtx) return;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
-  renderCancelPickerList();
+  document.getElementById('cancelPickerList').innerHTML = '<div style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;padding:8px 0;">載入中…</div>';
   document.getElementById('cancelPickerModal').classList.add('open');
+  await renderCancelPickerList();
 }
 function closeCancelPickerModal() { document.getElementById('cancelPickerModal').classList.remove('open'); }
 
-function renderCancelPickerList() {
+async function renderCancelPickerList() {
   const listEl = document.getElementById('cancelPickerList');
   if (!nextClassCtx || !listEl) return;
   const token = nextClassCtx.token;
   const s = studentsCache[token];
   const studentTz = s && s.pending_student_tz;
-  const occurrences = computeUpcomingOccurrences(token, 6);
+  const occurrences = await computeUpcomingOccurrences(token, 6);
   if (!occurrences.length) { listEl.innerHTML = '<div style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;padding:8px 0;">目前沒有排定的課堂</div>'; return; }
   const dayZh = ['日','一','二','三','四','五','六'];
   listEl.innerHTML = occurrences.map(function(anchor) {
