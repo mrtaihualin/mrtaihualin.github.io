@@ -583,6 +583,20 @@
   </div>
 </div>
 
+<!-- ======= STUDENT: 選擇要取消的課堂 MODAL（2026-07-14 新增）======= -->
+<div class="modal-overlay" id="cancelPickerModal">
+  <div class="modal" style="max-width:440px;">
+    <h3>❌ 選擇要取消的課堂</h3>
+    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:6px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
+      只能取消「開課前 24 小時以上」的課堂；不到 24 小時的課堂請直接聯絡老師。
+    </p>
+    <div id="cancelPickerList"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeCancelPickerModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= TEACHER: 其他方式 MODAL（2026-07-13 新增，處理「其他」按鈕）======= -->
 <div class="modal-overlay" id="otherOptionsModal">
   <div class="modal" style="max-width:400px;">
@@ -2422,6 +2436,18 @@ async function repairMeet(token) {
 const LINE_UNLINK_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/unlink-line-student';
 const LINE_RESTORE_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/restore-line-student';
 
+// 2026-07-14 加（SECURITY FIRST）：以前這兩個 Edge Function 呼叫都只帶公開的 anonKey 當
+// Authorization，等於誰都能照樣打這個 API 封存/恢復任何學生，不用真的登入成老師。
+// 現在改成帶「老師真的登入的 session token」，Edge Function 那邊會驗證這個 token 真的屬於
+// 老師的信箱才放行（跟 teacherSendOtp/teacherVerifyOtp 用的同一個登入 session）。
+async function teacherAuthHeader() {
+  try {
+    const { data } = await sb.auth.getSession();
+    const accessToken = data && data.session && data.session.access_token;
+    return accessToken || window.SUPABASE_CONFIG.anonKey; // 沒 session 就退回 anonKey（Edge Function 會拒絕，不會誤放行）
+  } catch (e) { return window.SUPABASE_CONFIG.anonKey; }
+}
+
 // 2026-07-14（第 2 版，Lin 要求改成「封存」不要真的刪除資料）：
 //   按這顆按鈕不再是永久刪除 —
 //   (1) 先處理 Google Calendar：往後的固定課停掉、已經上過的課堂紀錄一律保留
@@ -2449,7 +2475,7 @@ async function deleteStudent(token) {
       headers: {
         'Content-Type': 'application/json',
         'apikey': window.SUPABASE_CONFIG.anonKey,
-        'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey
+        'Authorization': 'Bearer ' + (await teacherAuthHeader())
       },
       body: JSON.stringify({ token: token })
     });
@@ -2485,7 +2511,7 @@ async function restoreStudent(token) {
       headers: {
         'Content-Type': 'application/json',
         'apikey': window.SUPABASE_CONFIG.anonKey,
-        'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey
+        'Authorization': 'Bearer ' + (await teacherAuthHeader())
       },
       body: JSON.stringify({ token: token })
     });
@@ -3286,18 +3312,34 @@ function buildCourseSummaryCard(s) {
 async function renderStudentView() {
   const token = urlParams.get('s') || '';
   let student = null;
+  let dbLookupFailed = false;
   if (token) {
-    try {
-      const { data } = await sb.rpc('get_student_by_token', { p_token: token });
-      if (data) student = data;
-    } catch (e) {}
+    // 2026-07-14 加：RPC 失敗有可能只是網路暫時卡一下，先重試 1 次再放棄，
+    // 減少「明明資料庫是好的，卻因為一次網路小狀況而退回舊連結資料」的機會（RELIABILITY FIRST）。
+    for (let attempt = 0; attempt < 2 && !student; attempt++) {
+      try {
+        const { data } = await sb.rpc('get_student_by_token', { p_token: token });
+        if (data) { student = data; break; }
+        break; // 沒有 error 但也沒資料 → token 本身就查無此人，不用重試
+      } catch (e) {
+        dbLookupFailed = true;
+        console.warn('[classroom] get_student_by_token 失敗（第 ' + (attempt + 1) + ' 次）：', (e && e.message) || e);
+        if (attempt === 0) { try { await new Promise(function(r) { setTimeout(r, 800); }); } catch (e2) {} }
+      }
+    }
   }
   // 舊格式連結（升級前發出去、還沒被打開過的）沒有資料庫紀錄可能還帶著 n/m 參數 → 相容 fallback
+  // 2026-07-14 加：這條路現在也會在「資料庫查得到但暫時連不上」時被觸發，資料是「凍結在連結裡」的舊版本
+  // （姓名如果後來改過就不是最新的）→ 一定要標記起來，不能悄悄當成跟資料庫查到的一樣可信。
+  let usedStaleUrlFallback = false;
   if (!student) {
     const nParam = urlParams.get('n');
     const mParam = urlParams.get('m');
     if (nParam && mParam) {
-      try { student = { name: decodeURIComponent(atob(nParam)), meet: normalizeMeet(decodeURIComponent(atob(mParam))), setup_status: 'confirmed' }; } catch(e) {}
+      try {
+        student = { name: decodeURIComponent(atob(nParam)), meet: normalizeMeet(decodeURIComponent(atob(mParam))), setup_status: 'confirmed' };
+        usedStaleUrlFallback = true;
+      } catch(e) {}
     }
   }
   if (!student) {
@@ -3310,6 +3352,16 @@ async function renderStudentView() {
   }
   student.meet = normalizeMeet(student.meet || '');
   if (token) studentsCache[token] = student; // 讓 openSlipModalLocked() 等函式能透過 studentsCache 拿到 pending_* 資料
+  // 2026-07-14 加：用到舊連結資料時，一定要讓學生知道（不能悄悄用可能過期的姓名/狀態），
+  // 尤其是資料庫連線真的失敗那種情況（不只是老連結沒被打開過而已）。
+  if (usedStaleUrlFallback && dbLookupFailed) {
+    try {
+      var warnBanner = document.createElement('div');
+      warnBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#fef3c7;color:#92400e;text-align:center;padding:8px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;box-shadow:0 1px 4px rgba(0,0,0,0.1);';
+      warnBanner.textContent = '⚠️ 網路連線不穩，目前顯示的資料可能不是最新，建議重新整理一次再操作';
+      document.body.insertBefore(warnBanner, document.body.firstChild);
+    } catch (e) {}
+  }
   var sInitial = student.name ? student.name.charAt(0) : '?';
   document.getElementById('studentNameDisplay').textContent = '';
   // 2026-07-08：閘門只看「老師是否已確認收款」(setup_status === 'confirmed')，不再用 meet 是否存在判斷。
@@ -3942,11 +3994,14 @@ async function loadStudentNextClass(token) {
         (timeStr ? '<div style="font-size:0.9rem;color:var(--ink-soft);margin-top:2px;">' + escHtml(timeStr) + '</div>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
-        (canCancel
-          ? '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="requestCancelClass()">❌ 申請取消這堂課</button>'
-          : '<span style="font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;align-self:center;">⚠️ 距離上課不到 24 小時，無法線上取消，請直接聯絡老師</span>') +
+        // 2026-07-14 改（Lin 要求）：以前這顆按鈕只能取消「下一堂課」，如果剛好在 24 小時內
+        // 就整個沒有取消按鈕，只能傳老師。現在改成一律開「選擇要取消的課堂」清單——
+        // 有固定每週上課的學生會列出未來好幾堂，每一堂各自判斷是否超過 24 小時可以線上取消，
+        // 不到 24 小時的那一堂會顯示「聯絡老師」而不是擋住整組功能。
+        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openCancelPickerModal()">❌ 取消課堂</button>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openClassRequestModal()">🔄 申請改期</button>' +
         '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
+        (canCancel ? '' : '<div style="width:100%;font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">⚠️ 最近這一堂距離上課不到 24 小時，無法線上取消（其他週的課仍可在「❌ 取消課堂」裡選）</div>') +
       '</div>' +
       classRequestSameWarn();
   } catch (e) {
@@ -3964,10 +4019,13 @@ function requireLineLinkedOrPrompt(token) {
   return false;
 }
 
-async function requestCancelClass() {
+// 2026-07-14 改：現在可以取消「下一堂課」以外的其他堂（從「選擇要取消的課堂」清單點進來），
+// isoDate 有帶就取消那一堂，沒帶（舊的呼叫方式）就照舊取消下一堂課，維持相容。
+async function requestCancelClass(isoDate) {
   if (!nextClassCtx) return;
+  const targetDate = isoDate || nextClassCtx.isoDate;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
-  if (!confirm('確定要送出「申請取消這堂課」給老師嗎？\n（老師確認後才算真的取消，請耐心等候回覆）')) return;
+  if (!confirm('確定要送出「申請取消 ' + targetDate + ' 這堂課」給老師嗎？\n（老師確認後才算真的取消，請耐心等候回覆）')) return;
   // 2026-07-14 修正：改用既有的 currentStudentName()（2026-07-08 就修過同一個 bug 的共用函式），
   // 之前這裡沒用到，只信網址參數 n，沒帶 n 的連結會送出空白姓名，老師端顯示「-」
   const studentName = currentStudentName(nextClassCtx.token);
@@ -3975,7 +4033,7 @@ async function requestCancelClass() {
     p_token: nextClassCtx.token,
     p_student_name: studentName,
     p_request_type: 'cancel',
-    p_original_date: nextClassCtx.isoDate,
+    p_original_date: targetDate,
     p_requested_date: null,
     p_requested_time: null,
     p_note: null,
@@ -3986,8 +4044,68 @@ async function requestCancelClass() {
     p_initiated_by: 'student',
   });
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
-  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: nextClassCtx.isoDate });
+  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate });
+  closeCancelPickerModal();
   alert('✅ 已送出取消申請，老師確認後會回覆你。');
+}
+
+// 2026-07-14 新增（Lin 要求）：算出「未來還有哪幾堂課」，讓學生可以選其他週的課來取消，
+// 不是只能取消最近下一堂。只有「每週固定上課」的學生才會有多堂——邏輯跟算下一堂課的
+// anchor 完全同一套（見 loadStudentNextClass），只是算完下一堂之後繼續往後加一週、加一週。
+// 單次（非固定）課程只有一堂，回傳陣列長度就是 1，跟現在的行為一樣。
+function computeUpcomingOccurrences(token, count) {
+  const s = studentsCache[token];
+  if (!s || !s.pending_start_date || !s.pending_class_time) return [];
+  let anchor = teacherTimeToDate(s.pending_start_date, s.pending_class_time);
+  const weekMs = 7 * 24 * 3600 * 1000;
+  const nowMs = Date.now();
+  if (!s.pending_recurring) {
+    return anchor.getTime() >= nowMs ? [anchor] : [];
+  }
+  if (anchor.getTime() < nowMs) {
+    const weeksPassed = Math.ceil((nowMs - anchor.getTime()) / weekMs);
+    anchor = new Date(anchor.getTime() + weeksPassed * weekMs);
+  }
+  const list = [];
+  let cur = anchor;
+  for (let i = 0; i < count; i++) {
+    list.push(cur);
+    cur = new Date(cur.getTime() + weekMs);
+  }
+  return list;
+}
+
+function openCancelPickerModal() {
+  if (!nextClassCtx) return;
+  if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
+  renderCancelPickerList();
+  document.getElementById('cancelPickerModal').classList.add('open');
+}
+function closeCancelPickerModal() { document.getElementById('cancelPickerModal').classList.remove('open'); }
+
+function renderCancelPickerList() {
+  const listEl = document.getElementById('cancelPickerList');
+  if (!nextClassCtx || !listEl) return;
+  const token = nextClassCtx.token;
+  const s = studentsCache[token];
+  const studentTz = s && s.pending_student_tz;
+  const occurrences = computeUpcomingOccurrences(token, 6);
+  if (!occurrences.length) { listEl.innerHTML = '<div style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;padding:8px 0;">目前沒有排定的課堂</div>'; return; }
+  const dayZh = ['日','一','二','三','四','五','六'];
+  listEl.innerHTML = occurrences.map(function(anchor) {
+    const thai = formatInTz(anchor, TEACHER_TZ); // 泰國時間 → 送給老師/資料庫用
+    const disp = studentTz ? formatInTz(anchor, studentTz) : thai; // 學生自己時區 → 顯示用
+    const d = new Date(disp.dateStr + 'T00:00:00');
+    const label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）' + disp.timeStr;
+    const hoursUntil = (anchor.getTime() - Date.now()) / 3600000;
+    const canCancel = hoursUntil >= 24;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-family:\'Noto Sans TC\',sans-serif;">' +
+      '<div style="font-size:0.88rem;color:var(--ink);">' + escHtml(label) + '</div>' +
+      (canCancel
+        ? '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;flex-shrink:0;" onclick="requestCancelClass(\'' + thai.dateStr + '\')">❌ 申請取消</button>'
+        : '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:none;border:1px solid var(--border);color:var(--ink-muted);text-decoration:none;flex-shrink:0;font-size:0.76rem;">⚠️ 不到24h・聯絡老師</a>') +
+    '</div>';
+  }).join('');
 }
 
 function openClassRequestModal() {

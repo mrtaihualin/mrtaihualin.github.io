@@ -42,6 +42,26 @@ serve(async (req) => {
   }
 
   try {
+    // 2026-07-14 加（SECURITY FIRST）：เดิมฟังก์ชันนี้ไม่มีการตรวจสิทธิ์อะไรเลย — ใครก็ยิง
+    // request ตรงมาที่ url นี้พร้อม token นักเรียนคนไหนก็ได้ (ใช้แค่ anon key สาธารณะ) ก็สั่งกู้คืน
+    // นักเรียนคนนั้นได้ ไม่ต้องล็อกอินเป็นครูเลย — ตอนนี้บังคับต้องมี session จริงของครู (ล็อกอิน
+    // ผ่าน email OTP ในหน้าเว็บ) แนบมาด้วยเสมอ วิธีเดียวกับที่ game-reward ใช้ตรวจนักเรียนที่ล็อกอินจริง
+    const authHeader = req.headers.get('Authorization') || '';
+    const jwt = authHeader.replace(/^Bearer\s+/i, '');
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: 'missing auth token — 請先登入教師帳號' }), {
+        status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    }
+    const asUser = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_ANON_KEY'), { global: { headers: { Authorization: authHeader } } });
+    const { data: userData, error: userErr } = await asUser.auth.getUser(jwt);
+    const callerEmail = (userData?.user?.email || '').toLowerCase();
+    if (userErr || callerEmail !== 'mr.taihualin@gmail.com') {
+      return new Response(JSON.stringify({ error: 'unauthorized — 只有老師本人登入後才能操作' }), {
+        status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    }
+
     const { token } = await req.json();
     if (!token) {
       return new Response(JSON.stringify({ error: 'missing token' }), {

@@ -202,7 +202,11 @@ serve(async (req) => {
                 '📢 提醒：等一下 ' + timeLabel + ' 有泰語課囉！\n老師還在準備課堂連結，請直接聯絡老師 ✨');
             }
             // มาร์คว่าส่งแล้ว "ทุกแถวในกลุ่ม" กันแถวซ้ำที่เหลือมาส่งซ้ำอีกในรอบถัดไป
-            await supabase.from('classroom_schedule').update({ line_reminder_sent: true }).in('id', idsNeedReminder);
+            // 2026-07-14 加：เดิมไม่เช็ค error ตรงนี้เลย — ถ้า update ล้มเหลว (RLS/เน็ตสะดุด)
+            // flag จะไม่ถูกตั้ง แล้ว cron รอบถัดไป (~5 นาที) จะส่งซ้ำไปเรื่อยๆ แบบไม่มีใครรู้ตัว
+            // (RELIABILITY FIRST — ต้อง log ให้เห็นใน Supabase Function Logs อย่างน้อย)
+            const { error: markErr } = await supabase.from('classroom_schedule').update({ line_reminder_sent: true }).in('id', idsNeedReminder);
+            if (markErr) { console.error('[class-reminder-cron] 標記 line_reminder_sent 失敗，可能會重複發送：', markErr.message, 'ids=', idsNeedReminder); errCount++; }
             sentCount++;
           } catch (e) { errCount++; }
         }
@@ -215,7 +219,9 @@ serve(async (req) => {
           try {
             await pushLine(channelToken, s.line_user_id,
               '🎉 今天的泰語課辛苦了！\n記得複習與分享學習心得喔😊\n有問題歡迎隨時問老師喔 💬');
-            await supabase.from('classroom_schedule').update({ line_followup_sent: true }).in('id', idsNeedFollowup);
+            // 2026-07-14 加：同上，檢查 update 有沒有真的成功，失敗要 log 不能悄悄過去
+            const { error: markErr2 } = await supabase.from('classroom_schedule').update({ line_followup_sent: true }).in('id', idsNeedFollowup);
+            if (markErr2) { console.error('[class-reminder-cron] 標記 line_followup_sent 失敗，可能會重複發送：', markErr2.message, 'ids=', idsNeedFollowup); errCount++; }
             sentCount++;
           } catch (e) { errCount++; }
         }

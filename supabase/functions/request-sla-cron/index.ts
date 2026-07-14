@@ -76,7 +76,9 @@ serve(async (req) => {
           await pushLine(channelToken, stu.line_user_id,
             '⏰ 提醒：你的「' + sinceLabel + '」老師還在處理中，已經超過 48 小時了，若急需請直接用 LINE 聯絡老師');
         }
-        await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+        // 2026-07-14 加：เดิมไม่เช็ค error — update ล้มเหลวจะทำให้เตือนซ้ำทุกรอบ cron ไม่มีที่สิ้นสุด
+        const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+        if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
         sent++;
       } catch (e) { errCount++; }
     }

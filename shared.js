@@ -628,7 +628,12 @@ window.renderSoftCTA = function(containerId, pageKey, message){
             'Prefer':'return=minimal'
           },
           body: JSON.stringify({ email:fields.email||'', name:fields.name||null, source:fields.source||null })
-        }).catch(function(){});
+        }).then(function(res){
+          // 2026-07-14 加：以前 .catch(function(){}) 完全吞掉錯誤，insert 失敗也沒人知道
+          // （RELIABILITY FIRST：不能悄悄失敗）現在至少把失敗印到 console，留紀錄可查
+          // （Google Sheet 備份 + email 通知老師還是照樣會跑，不會整條線都斷掉）
+          if(!res.ok){ console.error('[saveLead] Supabase insert 失敗，狀態碼 ' + res.status + '（email: ' + (fields.email||'-') + '）'); }
+        }).catch(function(e){ console.error('[saveLead] Supabase 網路錯誤：', e, '（email: ' + (fields.email||'-') + '）'); });
       }
     }catch(e){}
     // 2) Google Sheet (สำรอง) — sendBeacon รอดแม้หน้าเปลี่ยน

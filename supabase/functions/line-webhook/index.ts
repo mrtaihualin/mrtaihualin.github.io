@@ -84,6 +84,12 @@ serve(async (req) => {
     const sig = req.headers.get('x-line-signature') || '';
     const ok = await verifySignature(rawBody, sig, channelSecret);
     if (!ok) return new Response('invalid signature', { status: 401 });
+  } else {
+    // 2026-07-14 加：เดิมข้ามการเช็คแบบเงียบๆ ถ้ายังไม่ตั้ง secret — เผื่อไว้สำหรับตอน deploy ครั้งแรก
+    // แต่ถ้าลืมตั้ง secret แล้วปล่อยไว้แบบนี้จริงจัง ใครก็ยิง request ปลอมมาสั่งงานฟังก์ชันนี้ได้
+    // (SECURITY/RELIABILITY FIRST) ต้อง log ดังๆ ทุกครั้งที่เกิดแบบนี้ ไม่ให้เงียบหายไป
+    // เช็ค log ได้จาก Supabase Dashboard → Edge Functions → line-webhook → Logs
+    console.error('[line-webhook] ⚠️ ยังไม่ได้ตั้งค่า LINE_CHANNEL_SECRET — ข้ามการตรวจลายเซ็นไปเฉยๆ (เสี่ยงมีคนปลอม request มาสั่งงาน) ควรตั้ง secret นี้โดยเร็ว');
   }
 
   let payload;
