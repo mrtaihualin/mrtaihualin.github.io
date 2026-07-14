@@ -583,16 +583,21 @@
   </div>
 </div>
 
-<!-- ======= STUDENT: 選擇要取消的課堂 MODAL（2026-07-14 新增）======= -->
+<!-- ======= STUDENT: 選擇要取消的課堂 MODAL（2026-07-14 新增，2026-07-14 改成跟老師端 pickLessonModal
+     同一種下拉選單體驗，Lin 要求兩邊一致）======= -->
 <div class="modal-overlay" id="cancelPickerModal">
-  <div class="modal" style="max-width:440px;">
+  <div class="modal" style="max-width:420px;">
     <h3>❌ 選擇要取消的課堂</h3>
-    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:6px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
+    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
       只能取消「開課前 24 小時以上」的課堂；不到 24 小時的課堂請直接聯絡老師。
     </p>
-    <div id="cancelPickerList"></div>
+    <label class="settings-label">你的近期上課時間（你自己的時區）</label>
+    <select class="settings-input" id="cancelPickerSelect" onchange="onCancelPickerSelectChange()"></select>
+    <p id="cancelPickerHint" style="display:none;font-size:0.8rem;color:var(--amber);font-family:'Noto Sans TC',sans-serif;margin-top:6px;"></p>
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeCancelPickerModal()">關閉</button>
+      <a class="btn-sm" id="cancelPickerContactBtn" style="display:none;background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;" target="_blank" rel="noopener">💬 聯絡老師</a>
+      <button class="btn-gold" id="cancelPickerSubmitBtn" onclick="submitCancelPickerChoice()">❌ 送出取消申請</button>
     </div>
   </div>
 </div>
@@ -3986,7 +3991,9 @@ async function loadStudentNextClass(token) {
     const dayLabel = (dLabelDate.getMonth()+1) + '月' + dLabelDate.getDate() + '日（週' + dayZh[dLabelDate.getDay()] + '）';
     const hoursUntil = (teacherTimeToDate(lessonDate, startTimeStr || '00:00').getTime() - Date.now()) / 3600000;
     const canCancel = hoursUntil >= 24;
-    nextClassCtx = { token: token, isoDate: lessonDate };
+    // 2026-07-14：多存一份 timeStr（泰國時間 HH:MM），讓「選擇要取消的課堂」清單可以直接
+    // 沿用這裡已經算好、且已經成功顯示在畫面上的下一堂課時間，不用另外重新算一次。
+    nextClassCtx = { token: token, isoDate: lessonDate, timeStr: startTimeStr || '00:00' };
 
     el.innerHTML =
       '<div style="background:#f8f4ea;border:1px solid #e5d9b8;border-radius:10px;padding:12px 14px;font-family:\'Noto Sans TC\',sans-serif;">' +
@@ -4051,91 +4058,94 @@ async function requestCancelClass(isoDate) {
 
 // 2026-07-14 新增（Lin 要求）：算出「未來還有哪幾堂課」，讓學生可以選其他週的課來取消，
 // 不是只能取消最近下一堂。
-// 2026-07-14 修 bug（Lin 回報：清單突然變空白「目前沒有排定的課堂」，但下一堂課卡片明明有顯示）：
-//   原因找到了——「下一堂課」卡片的資料主要來源是 classroom_schedule（老師 Google Calendar
-//   同步過來的，見 loadStudentNextClass），pending_start_date/pending_class_time 只是沒同步到
-//   資料時的備援。這個函式當初漏看了這點，只用了備援欄位，遇到主要靠 Calendar 同步的學生
-//   （pending_start_date 是空的）就直接回傳空陣列，清單當然是空的。
-//   改法：跟「下一堂課」卡片用同一套資料來源——(1) 先抓 classroom_schedule 同步到的近期資料
-//   （最準，可能反映老師手動調過的單堂），(2) 再用固定課表（pending_*）往後推算，
-//   補滿到 count 堂（涵蓋 Calendar 同步範圍以外的未來週），兩邊用日期去重。
-async function computeUpcomingOccurrences(token, count) {
+// 2026-07-14 修 bug 第 2 次（Lin 回報：改完清單還是空的「目前沒有排定的課堂」，但下一堂課
+// 卡片明明有顯示 7/14 11:00）：
+//   第一版自己另外呼叫一次 get_student_schedule + 重新算 pending_* anchor，想法是「跟卡片
+//   用同一套來源」，但實際上是兩份各自獨立算的邏輯，遇到某種還沒抓到的資料狀況就會兩邊
+//   算出不同答案（卡片算得出來、這裡算不出來）——問題出在「重新算一次」本身就有風險。
+//   改法：不要重新算「下一堂課是哪一堂」，直接沿用 loadStudentNextClass 已經算好、
+//   而且已經成功顯示在畫面上的 nextClassCtx（isoDate + timeStr）—— 兩者保證 100% 一致，
+//   因為根本是同一份資料，不會再有算出不同答案的空間。之後每一堂只需要單純往後推一週，
+//   只有「每週固定上課」的學生才會有第 2 堂以後（跟卡片背後的固定課表邏輯一致）。
+function computeUpcomingOccurrences(token, count) {
+  if (!nextClassCtx || nextClassCtx.token !== token || !nextClassCtx.isoDate) return [];
+  const anchor1 = teacherTimeToDate(nextClassCtx.isoDate, nextClassCtx.timeStr || '00:00');
+  const results = [anchor1];
   const s = studentsCache[token];
-  const results = [];
-  const seenDates = {};
-
-  try {
-    const { data } = await sb.rpc('get_student_schedule', { p_token: token });
-    if (data && data.length) {
-      data.forEach(function(row) {
-        if (!row.lesson_date) return;
-        const startTimeStr = (row.start_time && /^\d{1,2}:\d{2}/.test(row.start_time)) ? row.start_time : '00:00';
-        const anchor = teacherTimeToDate(row.lesson_date, startTimeStr);
-        if (anchor.getTime() >= Date.now() && !seenDates[row.lesson_date]) {
-          seenDates[row.lesson_date] = true;
-          results.push(anchor);
-        }
-      });
-    }
-  } catch (e) { /* 讀不到就跳過，退回下面用固定課表算 */ }
-
-  if (s && s.pending_start_date && s.pending_class_time) {
-    let anchor = teacherTimeToDate(s.pending_start_date, s.pending_class_time);
+  if (s && s.pending_recurring && s.pending_start_date && s.pending_class_time) {
     const weekMs = 7 * 24 * 3600 * 1000;
-    const nowMs = Date.now();
-    if (s.pending_recurring) {
-      if (anchor.getTime() < nowMs) {
-        const weeksPassed = Math.ceil((nowMs - anchor.getTime()) / weekMs);
-        anchor = new Date(anchor.getTime() + weeksPassed * weekMs);
-      }
-      let cur = anchor, guard = 0;
-      while (results.length < count && guard < count * 3) {
-        const thai = formatInTz(cur, TEACHER_TZ);
-        if (!seenDates[thai.dateStr]) { seenDates[thai.dateStr] = true; results.push(cur); }
-        cur = new Date(cur.getTime() + weekMs);
-        guard++;
-      }
-    } else if (anchor.getTime() >= nowMs && !results.length) {
-      results.push(anchor);
+    let cur = new Date(anchor1.getTime() + weekMs);
+    for (let i = 1; i < count; i++) {
+      results.push(cur);
+      cur = new Date(cur.getTime() + weekMs);
     }
   }
-
-  results.sort(function(a, b) { return a.getTime() - b.getTime(); });
-  return results.slice(0, count);
+  return results;
 }
 
-async function openCancelPickerModal() {
+// 2026-07-14 改（Lin 要求）：老師端選課堂已經是「下拉選單」（見 pickLessonModal/
+// openPickLessonModal），學生端這裡改成同一種體驗，不要用一排排按鈕的清單。
+var _cancelPickerOptions = [];
+
+function openCancelPickerModal() {
   if (!nextClassCtx) return;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
-  document.getElementById('cancelPickerList').innerHTML = '<div style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;padding:8px 0;">載入中…</div>';
+  renderCancelPickerSelect();
   document.getElementById('cancelPickerModal').classList.add('open');
-  await renderCancelPickerList();
 }
 function closeCancelPickerModal() { document.getElementById('cancelPickerModal').classList.remove('open'); }
 
-async function renderCancelPickerList() {
-  const listEl = document.getElementById('cancelPickerList');
-  if (!nextClassCtx || !listEl) return;
+function renderCancelPickerSelect() {
+  const sel = document.getElementById('cancelPickerSelect');
+  if (!nextClassCtx || !sel) return;
   const token = nextClassCtx.token;
   const s = studentsCache[token];
   const studentTz = s && s.pending_student_tz;
-  const occurrences = await computeUpcomingOccurrences(token, 6);
-  if (!occurrences.length) { listEl.innerHTML = '<div style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;padding:8px 0;">目前沒有排定的課堂</div>'; return; }
+  const occurrences = computeUpcomingOccurrences(token, 6);
+  _cancelPickerOptions = occurrences;
+  if (!occurrences.length) {
+    sel.innerHTML = '<option value="">目前沒有排定的課堂</option>';
+    onCancelPickerSelectChange();
+    return;
+  }
   const dayZh = ['日','一','二','三','四','五','六'];
-  listEl.innerHTML = occurrences.map(function(anchor) {
-    const thai = formatInTz(anchor, TEACHER_TZ); // 泰國時間 → 送給老師/資料庫用
-    const disp = studentTz ? formatInTz(anchor, studentTz) : thai; // 學生自己時區 → 顯示用
+  sel.innerHTML = occurrences.map(function(anchor, i) {
+    const disp = studentTz ? formatInTz(anchor, studentTz) : formatInTz(anchor, TEACHER_TZ); // 學生自己時區 → 顯示用
     const d = new Date(disp.dateStr + 'T00:00:00');
     const label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）' + disp.timeStr;
-    const hoursUntil = (anchor.getTime() - Date.now()) / 3600000;
-    const canCancel = hoursUntil >= 24;
-    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-family:\'Noto Sans TC\',sans-serif;">' +
-      '<div style="font-size:0.88rem;color:var(--ink);">' + escHtml(label) + '</div>' +
-      (canCancel
-        ? '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;flex-shrink:0;" onclick="requestCancelClass(\'' + thai.dateStr + '\')">❌ 申請取消</button>'
-        : '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:none;border:1px solid var(--border);color:var(--ink-muted);text-decoration:none;flex-shrink:0;font-size:0.76rem;">⚠️ 不到24h・聯絡老師</a>') +
-    '</div>';
+    return '<option value="' + i + '">' + escHtml(label) + '</option>';
   }).join('');
+  onCancelPickerSelectChange();
+}
+
+// 選單換選項 → 即時判斷這一堂是否 >24 小時，不能取消就換成「聯絡老師」按鈕，不讓送出。
+function onCancelPickerSelectChange() {
+  const sel = document.getElementById('cancelPickerSelect');
+  const hint = document.getElementById('cancelPickerHint');
+  const submitBtn = document.getElementById('cancelPickerSubmitBtn');
+  const contactBtn = document.getElementById('cancelPickerContactBtn');
+  const chosen = _cancelPickerOptions[sel.value];
+  if (!chosen) {
+    hint.style.display = 'none';
+    submitBtn.style.display = 'none';
+    contactBtn.style.display = 'none';
+    return;
+  }
+  const hoursUntil = (chosen.getTime() - Date.now()) / 3600000;
+  const canCancel = hoursUntil >= 24;
+  hint.style.display = canCancel ? 'none' : 'block';
+  hint.textContent = canCancel ? '' : '⚠️ 這堂距離上課不到 24 小時，無法線上取消，請直接聯絡老師';
+  submitBtn.style.display = canCancel ? '' : 'none';
+  contactBtn.style.display = canCancel ? 'none' : '';
+  contactBtn.href = LINE_OA_URL;
+}
+
+function submitCancelPickerChoice() {
+  const sel = document.getElementById('cancelPickerSelect');
+  const chosen = _cancelPickerOptions[sel.value];
+  if (!chosen) return;
+  const thai = formatInTz(chosen, TEACHER_TZ); // 泰國時間 → 送給老師/資料庫用
+  requestCancelClass(thai.dateStr);
 }
 
 function openClassRequestModal() {
