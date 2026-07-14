@@ -132,6 +132,14 @@
     letter-spacing: 4px;
     line-height: 1.45;
   }
+  /* Lin 2026-07-14: คำแปลจีนใต้คำศัพท์ (เหมือนเกมอ่าน/เกมพิมพ์) ต่อกับปุ่ม 🍙/🌾 เปิด/ปิดของ shared.js */
+  .word-zh {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    color: #a08a5a;
+    margin-top: 6px;
+    cursor: pointer;
+  }
 
   /* ── Breadcrumb ── */
   .tf-bc {
@@ -4218,7 +4226,10 @@ function render() {
     var sentCtxHtml = advSentenceCtx
       ? '<div class="tf-adv-sent-ctx" style="font-family:\'Sarabun\',sans-serif;font-size:14px;color:#8B7340;background:#FBF5E7;border:1px solid rgba(200,151,58,0.3);border-radius:10px;padding:6px 10px;margin-bottom:6px;line-height:1.6;">📖 ' + advSentenceCtx.th + '<br><span class="tf-adv-sent-ctx-zh" style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08a5a;">' + advSentenceCtx.zh + '</span></div>'
       : '';
-    banner.innerHTML = sentCtxHtml + counterHtml + '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>';
+    // Lin 2026-07-14: คำแปลจีนใต้คำศัพท์ เหมือนเกมอ่าน/เกมพิมพ์ — ใช้ class "word-zh" เดียวกัน ต่อเข้าปุ่ม 🍙/🌾 เดิม (shared.js) อัตโนมัติ ไม่ต้องทำปุ่มใหม่
+    var curZh = session ? (session.words[session.index] && session.words[session.index].zh) : (randomEntry ? randomEntry.zh : (S.zh || ''));
+    var zhHtml = curZh ? '<div class="word-zh">' + curZh + '</div>' : '';
+    banner.innerHTML = sentCtxHtml + counterHtml + '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>' + zhHtml;
     // inject vault save button
     if (window.WordVault && S.word) {
       WordVault.injectStyles();
@@ -5046,9 +5057,8 @@ function stepInput() {
       '<button class="tf-search-btn" onclick="TF.search()">🔍 開始分析</button>' +
     '</div>' +
     '<div class="tf-word-info-row" id="tf-word-info-row" style="display:none;">' +
-      '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'zh\')">🇹🇼 中文翻譯</button>' +
       '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'th\')">🔤 泰文讀音</button>' +
-      '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'en\')">🔡 English 讀音</button>' +
+      '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'en\')">🔡 英文讀音</button>' +
     '</div>' +
     '<div class="tf-word-info-box" id="tf-word-info-box" style="display:none;"></div>' +
     (searchHistory.length ? '<div style="text-align:center;margin-top:14px;"><button class="tf-secondary-btn" type="button" onclick="TF.downloadSearchReport()">📄 下載搜尋紀錄 ('+searchHistory.length+')</button></div>' : '') +
@@ -5269,9 +5279,8 @@ function stepSessionGuess() {
   // Toggle info buttons
   var toggleHtml =
     '<div class="sg-toggle-row">'+
-      '<button class="sg-toggle-btn" id="sg-btn-zh" onclick="TF.sgToggle(\'zh\')">🇹🇼 中文翻譯</button>'+
       '<button class="sg-toggle-btn" id="sg-btn-th" onclick="TF.sgToggle(\'th\')">🔤 泰文讀音</button>'+
-      '<button class="sg-toggle-btn" id="sg-btn-en" onclick="TF.sgToggle(\'en\')">🔡 English 讀音</button>'+
+      '<button class="sg-toggle-btn" id="sg-btn-en" onclick="TF.sgToggle(\'en\')">🔡 英文讀音</button>'+
     '</div>'+
     '<div class="sg-info-box" id="sg-info-box" style="display:none;"></div>';
 
@@ -5423,54 +5432,35 @@ function goToResult(finalAnswer) {
 // ── RESULT ──
 function stepOverview() {
   var syls = S.syllables || [];
-  var sel = S.selectedSyl != null ? S.selectedSyl : null;
   var results = S.sylResults || {};
   var allDone = syls.length > 0 && syls.every(function(_, i){ return results[i] != null; });
 
+  // Lin 2026-07-14: กดการ์ดพยางค์ปุ๊บ เข้าหน้าทายวรรณยุกต์ทันที ไม่ต้องผ่านกล่อง已選音節+ปุ่มแยกอีกที
   var cardsHtml = syls.map(function(syl, i) {
-    var isActive = (sel === i);
     var isDone = results[i] != null;
     var t = isDone ? TONES[results[i].tone] : null;
     var captureI = i;
-    var selectAct = act(function(){ S.selectedSyl = captureI; render(); });
-    var doneTag = isDone && t
-      ? '<div class="syl-num" style="color:' + t.color + ';">' + t.zh + '</div>'
-      : '<div class="syl-num">音節 ' + (i+1) + ' / ' + syls.length + '</div>';
-    return '<div class="tf-syl-card' + (isActive ? ' active' : '') + (isDone ? '" style="border-color:' + t.color + '33;' : '') + '" onclick="' + selectAct + '">' +
-      '<div class="syl-thai">' + syl + '</div>' +
-      doneTag +
-    '</div>';
-  }).join('');
-
-  var detailHtml = '';
-  if (sel !== null) {
-    var chosen = syls[sel];
-    var isDoneChosen = results[sel] != null;
-    var capSel = sel;
-    var capChosen = chosen;
-    var analyzeAct = act(function() {
+    var capChosen = syl;
+    var goAct = act(function() {
       hist = hist.slice(0, histPos+1);
       // รีเซ็ตตัวนับกดผิดรายพยางค์ (เพดาน 3 ครั้ง + การหัก คิดแยกต่อพยางค์)
       // Lin 2026-07-04: ปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ก็ใช้หลักเดียวกัน — รีเซ็ตให้กดได้ใหม่ทุกพยางค์ (ไม่ใช่ใช้ได้ครั้งเดียวทั้งประโยค)
       if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
       // ในเกม (มี session) ใช้ flow ทาย; ในโหมดเสิร์ช (ไม่มี session) ใช้ flow วิเคราะห์อิสระ s1 — กันหน้าว่าง
       var sylStep = session ? 'session-guess' : 's1';
-      var ns = { word: capChosen, step: sylStep, path: [capChosen], tone: null, syllables: syls, selectedSyl: capSel, sylResults: results, parentWord: S.word };
+      var ns = { word: capChosen, step: sylStep, path: [capChosen], tone: null, syllables: syls, selectedSyl: captureI, sylResults: results, parentWord: S.word };
       hist.push(ns); histPos++;
       S = ns;
       render();
     });
-    var reanalyzeLabel = isDoneChosen ? '🔄 重新分析此音節' : '🔍 分析此音節';
-    detailHtml =
-      '<div class="tf-syl-detail">' +
-        '<div class="tf-syl-detail-title">已選音節</div>' +
-        '<div class="tf-syl-detail-word">' + chosen + '</div>' +
-        (isDoneChosen && TONES[results[sel].tone]
-          ? '<div style="font-size:13px;color:' + TONES[results[sel].tone].color + ';margin-bottom:8px;">上次結果：' + TONES[results[sel].tone].zh + '</div>'
-          : '') +
-        '<button class="tf-syl-analyze-btn" onclick="' + analyzeAct + '">' + reanalyzeLabel + '</button>' +
-      '</div>';
-  }
+    var doneTag = isDone && t
+      ? '<div class="syl-num" style="color:' + t.color + ';">' + t.zh + '</div>'
+      : '<div class="syl-num">音節 ' + (i+1) + ' / ' + syls.length + '</div>';
+    return '<div class="tf-syl-card' + (isDone ? '" style="border-color:' + t.color + '33;' : '') + '" onclick="' + goAct + '">' +
+      '<div class="syl-thai">' + syl + '</div>' +
+      doneTag +
+    '</div>';
+  }).join('');
 
   var summaryHtml = '';
   if (allDone) {
@@ -5489,16 +5479,12 @@ function stepOverview() {
       '</div>';
   }
 
-  var overviewBd = breakdownChipsHTML(S.word, syls);
-  var bdSection = overviewBd ? '<div class="sg-ov-bd-title">音節拆解</div>' + overviewBd : '';
-  // Lin 2026-07-12: ย้ายปุ่ม "太棒了，我們繼續" ขึ้นมาอยู่เหนือส่วน 音節拆解 (เดิมอยู่ล่างสุด) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) ให้เหลือแค่หน้าผลสรุปจบรอบเท่านั้น
+  // Lin 2026-07-14: เอา音節拆解 (bdSection) ออก — เหลือแค่การ์ดเลือกพยางค์ กดแล้วเข้าหน้าทายวรรณยุกต์ทันที
   return '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:8px;">選擇要分析的音節</div>' +
     '<div style="text-align:center;margin-bottom:14px;">' +
-      '<button class="tf-result-restart" onclick="TF.nextWord()">太棒了，我們繼續 →</button>' +
+      '<button class="tf-result-restart" onclick="TF.nextWord()">⏭️ 先跳過這個字</button>' +
     '</div>' +
-    bdSection +
     '<div class="tf-syl-grid">' + cardsHtml + '</div>' +
-    detailHtml +
     summaryHtml;
 }
 
@@ -6125,14 +6111,11 @@ var TF = {
     var label, value, isThai = false;
     var isSyl = entry && !!entry.parentWord;
     if (!entry) { box.style.display = 'none'; box.innerHTML = ''; return; }
-    if (type === 'zh') {
-      label = '中文翻譯';
-      value = (entry.zh || '—') + (isSyl ? '　（' + entry.parentWord + '）' : '');
-    } else if (type === 'th') {
+    if (type === 'th') {
       label = isSyl ? '泰文讀音（完整）' : '泰文讀音';
       value = entry.readingTH; isThai = true;
     } else if (type === 'en') {
-      label = 'English 讀音';
+      label = '英文讀音';
       value = entry.readingEN; isThai = true;
     } else return;
     box.innerHTML =
@@ -6576,10 +6559,9 @@ var TF = {
     if (!entry) return;
     var box = document.getElementById('sg-info-box');
     if (!box) return;
-    var btnZh = document.getElementById('sg-btn-zh');
     var btnTh = document.getElementById('sg-btn-th');
     var btnEn = document.getElementById('sg-btn-en');
-    var allBtns = [btnZh, btnTh, btnEn];
+    var allBtns = [btnTh, btnEn];
     // Toggle off if already showing same type
     if (box.getAttribute('data-active') === type) {
       box.removeAttribute('data-active');
@@ -6590,10 +6572,7 @@ var TF = {
     allBtns.forEach(function(b){ if(b) b.classList.remove('active'); });
     box.setAttribute('data-active', type);
     var html = '';
-    if (type === 'zh') {
-      if (btnZh) btnZh.classList.add('active');
-      html = '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:22px;color:#5a3e0a;font-weight:700;">'+(entry.zh||'—')+'</span>';
-    } else if (type === 'th') {
+    if (type === 'th') {
       if (btnTh) btnTh.classList.add('active');
       html = '<span style="font-family:\'Sarabun\',sans-serif;font-size:22px;color:#8B6310;letter-spacing:1px;">'+(entry.readingTH||'—')+'</span>';
     } else if (type === 'en') {
