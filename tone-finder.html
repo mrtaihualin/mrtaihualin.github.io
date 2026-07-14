@@ -140,6 +140,35 @@
     margin-top: 6px;
     cursor: pointer;
   }
+  /* Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ประโยคเต็ม (แทนที่จะโชว์แค่คำเดียว) */
+  .tf-adv-sent-main {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #8B6310;
+    line-height: 1.9;
+    margin-bottom: 4px;
+  }
+  .tf-sent-cur-word {
+    background: #C8973A;
+    color: #fff;
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+  .tf-adv-sent-ctx-zh {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #a08a5a;
+    margin-bottom: 14px;
+  }
+  /* คำ/พยางค์ที่กำลังถามวรรณยุกต์อยู่จริง (แยกจากประโยคเต็มด้านบน) */
+  .tf-adv-sent-focus {
+    font-size: 26px !important;
+    background: #FAF4E8;
+    border-radius: 10px;
+    padding: 10px;
+    justify-content: center;
+  }
 
   /* ── Breadcrumb ── */
   .tf-bc {
@@ -3638,26 +3667,35 @@ function tfShowRevealOverlay(entry, correctTone, opts) {
       '<div class="tf-reveal-word">' + entry.word + '</div>' +
       '<div class="tf-reveal-zh">' + (entry.zh || '') + '　<span class="th">' + (entry.readingTH || '') + '</span></div>' +
       '<div class="tf-reveal-answer" style="color:' + toneColor + ';border-color:' + toneColor + '55;background:' + toneColor + '14;">正確聲調：' + toneTxt + '</div>' +
-      '<button class="tf-error-close" id="tf-reveal-next">' + (isSyl ? '學會了，回音節總覽 →' : '學會了，我們去下一個 →') + '</button>' +
+      '<button class="tf-error-close" id="tf-reveal-next">' + ((isSyl && S.syllables && opts.sylIdx + 1 < S.syllables.length) ? '學會了，下一個音節 →' : '學會了，我們去下一個 →') + '</button>' +
     '</div>';
   document.body.appendChild(div);
   var btn = document.getElementById('tf-reveal-next');
   if (btn) btn.addEventListener('click', function () {
     div.remove();
-    if (isSyl) tfReturnToOverviewAfterSyl(opts.sylIdx, opts.sylTone);
+    if (isSyl) tfAfterForcedRevealSyl(opts.sylIdx, opts.sylTone);
     else tfCommitWordAndAdvance({ forced: true });
   });
 }
 
-// กลับจอรวมพยางค์ พร้อมบันทึกผลพยางค์ที่เพิ่งเฉลย
-function tfReturnToOverviewAfterSyl(idx, tone) {
+// Lin 2026-07-14: เฉลยพยางค์ (ผิดครบ 3 ครั้ง) แล้วไปพยางค์ถัดไปของคำเดิมโดยตรง (ไม่มีหน้าเลือกพยางค์เองแล้ว)
+// พยางค์สุดท้าย → commit คำนี้เป็น forced ไปคำใหม่เลย (พฤติกรรมเดิม เหมือนคำพยางค์เดียวตอนเฉลย)
+function tfAfterForcedRevealSyl(idx, tone) {
   var results = S.sylResults || {};
   results[idx] = { tone: tone };
-  var parentWord = S.parentWord || (S.syllables ? S.syllables.join('') : S.word);
-  S = { word: parentWord, step: 'overview', path: [parentWord], tone: null, syllables: S.syllables, selectedSyl: idx, sylResults: results };
-  hist = hist.slice(0, histPos + 1);
-  hist.push(S); histPos++;
-  render();
+  var syls = S.syllables;
+  var parentWord = S.parentWord || (syls ? syls.join('') : S.word);
+  if (idx + 1 < syls.length) {
+    if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
+    var sylStep = session ? 'session-guess' : 's1';
+    var ns = { word: syls[idx + 1], step: sylStep, path: [syls[idx + 1]], tone: null, syllables: syls, selectedSyl: idx + 1, sylResults: results, parentWord: parentWord };
+    hist = hist.slice(0, histPos + 1);
+    hist.push(ns); histPos++;
+    S = ns;
+    render();
+  } else {
+    tfCommitWordAndAdvance({ forced: true });
+  }
 }
 
 // บันทึกผลคำปัจจุบันลง results แล้วไปคำถัดไป/สรุป
@@ -3845,8 +3883,10 @@ function tfSetupNextWord() {
   var w = nx.word;
   session.currentWordGolden = tfRollGolden();
   tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check ก่อนตั้งคำถัดไป
+  // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย ไล่ตามลำดับอัตโนมัติ
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
-    S = { word: w, step: 'overview', path: [w], tone: null, syllables: nx.readingTH.split('-'), selectedSyl: null };
+    var _syls0 = nx.readingTH.split('-');
+    S = { word: _syls0[0], step: 'session-guess', path: [_syls0[0]], tone: null, syllables: _syls0, selectedSyl: 0, sylResults: {}, parentWord: w };
   } else {
     S = { word: w, step: 'session-guess', path: [w], tone: null };
   }
@@ -4222,14 +4262,24 @@ function render() {
         + tfBarsHtml()
       : '';
     var goldWord = (session && session.currentWordGolden) ? ' tf-banner-word-gold' : '';
-    // 高級句子: โชว์ context ประโยคเต็ม+ความหมายจีนไว้เหนือคำ ให้รู้ว่ากำลังอ่านคำไหนของประโยคไหน (Lin 2026-07-03)
-    var sentCtxHtml = advSentenceCtx
-      ? '<div class="tf-adv-sent-ctx" style="font-family:\'Sarabun\',sans-serif;font-size:14px;color:#8B7340;background:#FBF5E7;border:1px solid rgba(200,151,58,0.3);border-radius:10px;padding:6px 10px;margin-bottom:6px;line-height:1.6;">📖 ' + advSentenceCtx.th + '<br><span class="tf-adv-sent-ctx-zh" style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08a5a;">' + advSentenceCtx.zh + '</span></div>'
-      : '';
     // Lin 2026-07-14: คำแปลจีนใต้คำศัพท์ เหมือนเกมอ่าน/เกมพิมพ์ — ใช้ class "word-zh" เดียวกัน ต่อเข้าปุ่ม 🍙/🌾 เดิม (shared.js) อัตโนมัติ ไม่ต้องทำปุ่มใหม่
     var curZh = session ? (session.words[session.index] && session.words[session.index].zh) : (randomEntry ? randomEntry.zh : (S.zh || ''));
     var zhHtml = curZh ? '<div class="word-zh">' + curZh + '</div>' : '';
-    banner.innerHTML = sentCtxHtml + counterHtml + '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>' + zhHtml;
+    var mainBoxHtml, sentCtxHtml = '';
+    if (advSentenceCtx && session && session.words && session.words.length) {
+      // Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ "ประโยคเต็ม" ไฮไลต์คำที่กำลังถามอยู่ในประโยค ส่วนคำถามวรรณยุกต์ (S.word) แยกไปโชว์ด้านล่างแทน
+      var sentHtml = session.words.map(function (w, i) {
+        return i === session.index ? '<span class="tf-sent-cur-word">' + w.word + '</span>' : w.word;
+      }).join('');
+      mainBoxHtml =
+        '<div class="tf-adv-sent-main">' + sentHtml + '</div>' +
+        '<div class="tf-adv-sent-ctx-zh">' + (advSentenceCtx.zh || '') + '</div>' +
+        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>' +
+        zhHtml;
+    } else {
+      mainBoxHtml = '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>' + zhHtml;
+    }
+    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml;
     // inject vault save button
     if (window.WordVault && S.word) {
       WordVault.injectStyles();
@@ -5019,8 +5069,10 @@ function startSetSession(words, opts) {
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check สำหรับคำแรกของ session
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
+  // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
   if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
-    S = { word:w, step:'overview', path:[w], tone:null, syllables:entry.readingTH.split('-'), selectedSyl:null };
+    var _syls1 = entry.readingTH.split('-');
+    S = { word:_syls1[0], step:'session-guess', path:[_syls1[0]], tone:null, syllables:_syls1, selectedSyl:0, sylResults:{}, parentWord:w };
   } else {
     S = { word:w, step:'session-guess', path:[w], tone:null };
   }
@@ -5572,7 +5624,42 @@ function stepResult() {
   }
 
   var isLastSessionWord = session && (session.index + 1 >= session.words.length);
-  var nextBtnLabel = session ? (isLastSessionWord ? '來看看我們的成果吧 🎉' : '太棒了，我們繼續 →') : '分析新單字';
+  // Lin 2026-07-14: คำหลายพยางค์ ไหลอัตโนมัติทีละพยางค์ตามลำดับ (ไม่มีหน้าเลือกพยางค์เอง/ไม่มี回到音節總覽 อีกแล้ว)
+  //   ยังไม่ใช่พยางค์สุดท้าย → 下一個音節 (ไปพยางค์ถัดไปของคำเดิม) · พยางค์สุดท้าย → 太棒了 (โชว์สรุปทุกพยางค์ก่อนไปคำใหม่จริง)
+  var isMultiSyl = S.syllables && S.syllables.length > 1 && S.selectedSyl != null;
+  var isLastSyl = !isMultiSyl || (S.selectedSyl + 1 >= S.syllables.length);
+  var nextBtnLabel, nextBtnOnclick;
+  if (isMultiSyl && !isLastSyl) {
+    nextBtnLabel = '下一個音節 →';
+    nextBtnOnclick = 'TF.nextSyllable()';
+  } else {
+    nextBtnLabel = session ? (isLastSessionWord ? '來看看我們的成果吧 🎉' : '太棒了，我們繼續 →') : '分析新單字';
+    nextBtnOnclick = 'TF.nextWord()';
+  }
+
+  // Lin 2026-07-14: จบพยางค์สุดท้ายของคำหลายพยางค์ → โชว์การ์ดสรุปผลทุกพยางค์ก่อนไปคำใหม่
+  var multiSummaryHtml = '';
+  if (isMultiSyl && isLastSyl) {
+    var summaryResults = {};
+    for (var _k in (S.sylResults || {})) summaryResults[_k] = S.sylResults[_k];
+    summaryResults[S.selectedSyl] = { tone: S.tone };
+    var allFirstTry = !session || session.curWordAllFirstTry !== false;
+    var sylCardsHtml = S.syllables.map(function(syl, i) {
+      var rt = summaryResults[i] ? TONES[summaryResults[i].tone] : null;
+      return '<div style="flex:1;background:#fff;border:1.5px solid '+(rt?rt.color:'#ccc')+';border-radius:10px;padding:10px;text-align:center;">'+
+        '<div style="font-family:\'Sarabun\',sans-serif;font-size:18px;color:#1C1C1C;">'+syl+'</div>'+
+        '<div style="font-size:12px;color:'+(rt?rt.color:'#999')+';font-weight:600;margin-top:4px;">'+(rt?'✓ '+rt.zh:'—')+'</div>'+
+      '</div>';
+    }).join('');
+    multiSummaryHtml =
+      '<div style="margin-bottom:14px;">'+
+        '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:8px;">音節結果</div>'+
+        '<div style="display:flex;gap:10px;margin-bottom:10px;">'+sylCardsHtml+'</div>'+
+        '<div style="text-align:center;font-size:13px;font-weight:500;color:'+(allFirstTry?'#2d6a4f':'#b45309')+';">'+
+          (allFirstTry ? '🎉 這個字全部一次就對了！' : '💪 這個字我們一起學會了！') +
+        '</div>'+
+      '</div>';
+  }
 
   var vaultBtnHtml = '';
   if (window.WordVault && S.word) {
@@ -5590,7 +5677,7 @@ function stepResult() {
 
   // Lin 2026-07-12: ย้ายปุ่ม "太棒了/看看成果" ขึ้นมาอยู่เหนือส่วน 音節拆解 (ใน sessionBlock) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) เหลือแค่หน้าผลสรุปจบรอบ
   var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:14px;">'+
-      '<button class="tf-session-next-btn" onclick="TF.nextWord()">'+nextBtnLabel+'</button>'+
+      '<button class="tf-session-next-btn" onclick="'+nextBtnOnclick+'">'+nextBtnLabel+'</button>'+
       (session ? '' : '<button class="tf-result-secondary" onclick="'+againAct+'">↺ 重新分析</button>')+
     '</div>';
 
@@ -5606,27 +5693,14 @@ function stepResult() {
 
     nextBtnHtml+
 
+    multiSummaryHtml+
+
     sessionBlock+
 
     '<div class="result-v2-path">'+
       '<div class="result-v2-path-label">分析路徑</div>'+
       '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">'+pathHtml+'</div>'+
     '</div>'+
-
-    (S.syllables && S.syllables.length > 1
-      ? '<button class="tf-syl-analyze-btn" style="margin-bottom:12px;" onclick="'+act(function(){
-          var parentWord = S.syllables.join('');
-          var syls = S.syllables;
-          var sel = S.selectedSyl;
-          var results = S.sylResults || {};
-          if (sel != null && S.tone != null) results[sel] = { tone: S.tone };
-          var ns = { word: parentWord, step: 'overview', path: [parentWord], tone: null, syllables: syls, selectedSyl: sel, sylResults: results };
-          hist = hist.slice(0, histPos+1);
-          hist.push(ns); histPos++;
-          S = ns;
-          render();
-        })+'">← 回到音節總覽</button>'
-      : '')+
   '</div>';
 }
 
@@ -6277,8 +6351,10 @@ var TF = {
     var nx = session.words[session.index];
     randomEntry = nx;
     var w = nx.word;
+    // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
     if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
-      S = { word: w, step: 'overview', path: [w], tone: null, syllables: nx.readingTH.split('-'), selectedSyl: null };
+      var _syls2 = nx.readingTH.split('-');
+      S = { word: _syls2[0], step: 'session-guess', path: [_syls2[0]], tone: null, syllables: _syls2, selectedSyl: 0, sylResults: {}, parentWord: w };
     } else {
       S = { word: w, step: 'session-guess', path: [w], tone: null };
     }
@@ -6411,6 +6487,23 @@ var TF = {
     flash.index = 0; flash.flipped = false; flash.showExp = false; render();
     var card = flash.cards[flash.order[flash.index]];
     if (card && !card.exp) this.flashSpeak();
+  },
+  // Lin 2026-07-14: ไปพยางค์ถัดไปของ "คำเดิม" (ไม่ commit เป็นคำใหม่ ไม่บวกคะแนนจบคำ) — ใช้ตอนยังไม่ใช่พยางค์สุดท้าย
+  nextSyllable: function() {
+    if (!S.syllables || S.selectedSyl == null) { TF.nextWord(); return; }
+    var results = {};
+    for (var k in (S.sylResults || {})) results[k] = S.sylResults[k];
+    results[S.selectedSyl] = { tone: S.tone };
+    var nextIdx = S.selectedSyl + 1;
+    var syls = S.syllables;
+    var parentWord = S.parentWord || syls.join('');
+    if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
+    var sylStep = session ? 'session-guess' : 's1';
+    var ns = { word: syls[nextIdx], step: sylStep, path: [syls[nextIdx]], tone: null, syllables: syls, selectedSyl: nextIdx, sylResults: results, parentWord: parentWord };
+    hist = hist.slice(0, histPos+1);
+    hist.push(ns); histPos++;
+    S = ns;
+    render();
   },
   nextWord: function() {
     if (session) {

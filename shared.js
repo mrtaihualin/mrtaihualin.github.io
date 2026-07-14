@@ -1715,7 +1715,8 @@ window.deleteFBComment = function(postId, idx) {
         'body.rg-fake-fullscreen .page-strip,' +
         'body.rg-fake-fullscreen .page-header,' +
         'body.rg-fake-fullscreen .floating-qr,' +
-        'body.rg-fake-fullscreen #vault-hero' +
+        'body.rg-fake-fullscreen #vault-hero,' +
+        'body.rg-fake-fullscreen footer' + // Lin 2026-07-14: ลืมใส่ footer ไว้ในลิสต์ซ่อน → ตอนเต็มจอเหลือแถบ footer ค้างอยู่ล่างสุด (ทั้งคอม+มือถือ) แก้ที่นี่ทีเดียวครบทุกเกม
         '{display:none !important;}' +
         // Lin 2026-07-12 (แก้ที่เข้าใจผิด): แถบ nav บนสุด (site-nav) ต้อง "มี" ทั้งคอม+มือถือ (เดิมเผลอซ่อนผิดตัว) → คืนมา ซ่อนแค่ตอนเต็มจอ
         // ตัวที่ Lin บอกว่าไม่ใช้ = แถบไอคอน 5 อันล่างมือถือ (#bottom-nav / 首頁課程...) → ซ่อนถาวรบนหน้าเกม + คืนพื้นที่ padding ล่าง
