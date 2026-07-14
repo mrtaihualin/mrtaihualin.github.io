@@ -2170,11 +2170,38 @@ async function repairMeet(token) {
   }
 }
 
+// 2026-07-14：改成先呼叫 Edge Function unlink-line-student —
+//   如果這個學生有綁 LINE，會先把他的 LINE 選單切回「win-back」版（避免刪除後
+//   選單卡在學生版、點「我的教室」變成「尚未綁定」很奇怪），再由 Edge Function
+//   本身把資料庫那筆刪掉（一次做完，避免切選單成功但刪除失敗的競態）。
+//   Edge Function 還沒部署/連不到時，自動退回原本「client 直接刪」的做法，
+//   確保刪除功能本身不會被新功能卡住（RELIABILITY FIRST：刪除一定要成功或明確報錯）。
+const LINE_UNLINK_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/unlink-line-student';
+
 async function deleteStudent(token) {
   const name = studentsCache[token]?.name || token;
   if (!confirm('確定要刪除「' + name + '」嗎？')) return;
-  const { error } = await sb.from('classroom_students').delete().eq('token', token);
-  if (error) { alert('刪除失敗：' + error.message); return; }
+
+  let handledByFunction = false;
+  try {
+    const r = await fetch(LINE_UNLINK_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': window.SUPABASE_CONFIG.anonKey,
+        'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey
+      },
+      body: JSON.stringify({ token: token })
+    });
+    if (r.ok) handledByFunction = true;
+  } catch (e) {
+    // 連不到 Edge Function（例如還沒部署）→ 往下退回原本的直接刪除
+  }
+
+  if (!handledByFunction) {
+    const { error } = await sb.from('classroom_students').delete().eq('token', token);
+    if (error) { alert('刪除失敗：' + error.message); return; }
+  }
   await refreshStudentList();
 }
 
