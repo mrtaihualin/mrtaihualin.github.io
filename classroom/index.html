@@ -5427,6 +5427,25 @@ async function submitPermanentChangeInner(token) {
     try { await deleteClassEventOnce(masterEv.id); } catch (e) {}
   }
 
+  // 2026-07-14 修 bug（Lin 回報：老師端「選擇要取消的課堂」能列出好幾週，學生端卻只有一堂）：
+  //   原因找到了——這個函式只有改 Google Calendar 的真實課表，從來沒有把新的固定時間寫回
+  //   classroom_students.pending_start_date/pending_class_time/pending_recurring。
+  //   老師端的清單是直接讀 Google Calendar（老師有 OAuth 權限），永遠準；學生端沒有 Calendar
+  //   權限，只能靠這三個欄位往後推算未來每一堂——欄位沒同步，學生端當然只看得到眼前這一堂。
+  //   改法：Calendar 那邊處理完，順手把這三個欄位也更新，兩邊資料源才會一致。
+  var pendingSyncOk = true, pendingSyncError = null;
+  try {
+    const { error: pendingSyncErr } = await sb.from('classroom_students').update({
+      pending_start_date: newDate, pending_class_time: newTime, pending_recurring: true,
+    }).eq('token', token);
+    if (pendingSyncErr) { pendingSyncOk = false; pendingSyncError = pendingSyncErr.message; }
+    else if (studentsCache[token]) {
+      studentsCache[token].pending_start_date = newDate;
+      studentsCache[token].pending_class_time = newTime;
+      studentsCache[token].pending_recurring = true;
+    }
+  } catch (e) { pendingSyncOk = false; pendingSyncError = e.message || String(e); }
+
   // 2026-07-14 加（RELIABILITY FIRST，同樣道理：空 catch 會吞掉失敗，不能還跟老師說「已通知學生」）
   var permNotifySent = false, permNotifyError = null;
   if (s && s.line_user_id) {
@@ -5448,6 +5467,7 @@ async function submitPermanentChangeInner(token) {
   if (!s || !s.line_user_id) permResultMsg += '（學生還沒連結 LINE，建議自己說一聲）';
   else if (permNotifySent) permResultMsg += '，並已通知學生';
   else permResultMsg += '\n⚠️ 但 LINE 通知學生失敗（' + permNotifyError + '），請自己再跟學生說一聲';
+  if (!pendingSyncOk) permResultMsg += '\n⚠️ Google Calendar 已經改好了，但學生端的課表資料同步失敗（' + pendingSyncError + '）——學生自己頁面上的「選擇要取消的課堂」可能還是只看得到下一堂，不影響 Calendar 本身，建議通知開發者檢查。';
   alert(permResultMsg);
   loadTeacherNextClassBox(token);
   loadRecentBackups();
