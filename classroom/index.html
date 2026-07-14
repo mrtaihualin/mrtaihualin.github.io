@@ -572,9 +572,10 @@
       送出後老師會收到通知，實際是否能改期由老師確認後回覆你喔！
     </p>
     <label class="settings-label">想改到哪一天？</label>
-    <input class="settings-input" id="reqDateInput" type="date" />
-    <label class="settings-label">想改到幾點？（選填，格式 HH:MM，例如 14:30）</label>
-    <input class="settings-input" id="reqTimeInput" type="text" placeholder="例：14:30" />
+    <input class="settings-input" id="reqDateInput" type="date" oninput="onReqScheduleChange()" />
+    <label class="settings-label">想改到幾點？（選填，格式 HH:MM，例如 14:30 — 請填「你自己現在所在地」的時間，不用換算成泰國時間）</label>
+    <input class="settings-input" id="reqTimeInput" type="text" placeholder="例：14:30" oninput="onReqScheduleChange()" />
+    <p id="reqScheduleHint" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeClassRequestModal()">取消</button>
       <button class="btn-gold" id="reqSubmitBtn" onclick="submitClassRequest()">📤 送出申請</button>
@@ -1264,10 +1265,34 @@ async function createMeetLinkForStudent(studentName, opts) {
     }
   }
   if (!r.ok) throw new Error('建立 Meet 連結失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
-  const data = await r.json();
-  const videoEntry = data.conferenceData && data.conferenceData.entryPoints && data.conferenceData.entryPoints.find(function(e) { return e.entryPointType === 'video'; });
-  const link = data.hangoutLink || (videoEntry && videoEntry.uri);
-  if (!link) throw new Error('Google 沒有回傳 Meet 連結，請重試一次');
+  let data = await r.json();
+  function extractLink(d) {
+    const videoEntry = d.conferenceData && d.conferenceData.entryPoints && d.conferenceData.entryPoints.find(function(e) { return e.entryPointType === 'video'; });
+    return d.hangoutLink || (videoEntry && videoEntry.uri);
+  }
+  let link = extractLink(data);
+  // 2026-07-14 加（Lin 回報：Calendar 上看得到 Meet 連結，網站卻說沒有）：
+  // Google 建立 Meet 連結是非同步的——剛建立完 event 那一瞬間，回應裡的 conferenceData
+  // 常常還是「processing」狀態，entryPoints/hangoutLink 都還是空的，要過幾秒才會真的生出來
+  // （這是 Google Calendar API 已知的行為，不是我們建立失敗）。原本的寫法只看第一次回應，
+  // 沒等就直接判定「沒有連結」報錯——但 Google 那邊其實還在處理中，Calendar 事件本身已經
+  // 建好了，等一下重新整理 Calendar 就會看到連結，只是我們的資料庫沒存到而已。
+  // 改成：沒拿到就重新 GET 這個 event 最多 5 次，每次間隔 1.5 秒，給 Google 時間把連結生出來。
+  if (!link) {
+    for (let i = 0; i < 5 && !link; i++) {
+      await new Promise(function(resolve) { setTimeout(resolve, 1500); });
+      try {
+        const pollRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(data.id), {
+          headers: { Authorization: 'Bearer ' + token },
+        });
+        if (pollRes.ok) { data = await pollRes.json(); link = extractLink(data); }
+      } catch (e) { /* 這次輪詢失敗就再試下一次，不中斷整個流程 */ }
+    }
+  }
+  // ⚠️ 這裡故意不建議「再按一次 🔧 補課堂連結重試」——重按會再建立一個全新的 Calendar
+  // 事件，變成同一位學生有兩筆重複課表。真的遇到這個罕見狀況，請改用「✏️」編輯，
+  // 把 Google Calendar 裡那個事件的 Meet 連結手動複製貼上（只更新網站資料，不會動 Calendar）。
+  if (!link) throw new Error('Google Calendar 事件已經建立好了，但 Meet 連結還沒產生完成（Google 那邊比較慢，通常等 10~20 秒就會出現）。請不要再按一次「🔧 補課堂連結」（會多建一筆重複課表）——到 Google Calendar 找到剛剛那個事件，等連結出現後複製，改用「✏️」編輯貼上就好。');
   return link;
 }
 
@@ -1421,6 +1446,30 @@ async function cancelFutureClassesForArchive(token) {
         method: 'PATCH', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(patchBody),
       });
       if (!pr.ok) throw new Error('關閉往後課表失敗（' + pr.status + '）：' + (await pr.text()).slice(0, 200));
+
+      // 2026-07-14 加（Lin 回報：改過期的課，封存後還在未來出現）：如果這位學生「以前被
+      // 單獨改期過」（用 🔄 改期／📌 固定 把某一次課移到別天），Google Calendar 會把那一次
+      // 存成跟主系列分開的「例外」事件——只改主系列的 RRULE UNTIL 不會自動清掉這種已經
+      // 移到未來某天的例外，要另外找出來刪掉，不然封存後那一次改期還是會單獨出現在未來。
+      try {
+        const nowIso = new Date().toISOString();
+        const farFutureIso = new Date(Date.now() + 2 * 365 * 24 * 3600 * 1000).toISOString();
+        const sweepUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+          + '?timeMin=' + encodeURIComponent(nowIso)
+          + '&timeMax=' + encodeURIComponent(farFutureIso)
+          + '&singleEvents=true&orderBy=startTime&maxResults=250'
+          + '&q=' + encodeURIComponent(studentName);
+        const sweepRes = await fetch(sweepUrl, { headers: { Authorization: 'Bearer ' + calToken } });
+        if (sweepRes.ok) {
+          const sweepData = await sweepRes.json();
+          const leftovers = (sweepData.items || []).filter(function(ev) {
+            return ev.status !== 'cancelled' && (ev.recurringEventId === masterEv.id || ev.id === masterEv.id);
+          });
+          for (const ev of leftovers) {
+            try { await deleteClassEventOnce(ev.id); } catch (e) { /* 單一筆刪不掉不影響其他筆，也不影響封存本身 */ }
+          }
+        }
+      } catch (e) { /* 這段是 best-effort 補漏，找不到/掃不到也不影響封存本身 */ }
     } else {
       await deleteClassEventOnce(masterEv.id);
     }
@@ -1961,6 +2010,39 @@ function formatInTz(date, tz) {
     timeStr: hour + ':' + get('minute'),
     weekday: weekdayMap[get('weekday')] !== undefined ? weekdayMap[get('weekday')] : new Date(date).getDay()
   };
+}
+
+// 2026-07-14 加：跟 teacherTimeToDate 相反方向——把「某個時區的 wall-clock 時間」換算成
+// 絕對時間點（Date）。teacherTimeToDate 只能處理泰國（固定 +07:00，泰國沒有日光節約時間，
+// 這樣寫死沒問題），但學生可能在任何時區（可能有日光節約時間），所以要用「查那一天那個時區
+// 實際的 UTC 偏移量」的寫法（跟 supabase/functions/class-reminder-cron/index.ts 的
+// localToUtcMs 同一招）。
+function parseInTzToDate(dateStr, timeStr, tz) {
+  const probe = new Date(dateStr + 'T' + timeStr + ':00Z');
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' });
+  const parts = fmt.formatToParts(probe);
+  const offsetPart = parts.find(function(p) { return p.type === 'timeZoneName'; });
+  let offsetMin = 0;
+  if (offsetPart) {
+    const m = offsetPart.value.match(/GMT([+-]\d{1,2})(?::?(\d{2}))?/);
+    if (m) offsetMin = (parseInt(m[1], 10) * 60) + (m[1].startsWith('-') ? -1 : 1) * (parseInt(m[2] || '0', 10));
+  }
+  return new Date(new Date(dateStr + 'T' + timeStr + ':00Z').getTime() - offsetMin * 60000);
+}
+
+// 2026-07-14 加（Lin 要求）：任何要「傳給學生看」的時間，一律換算成學生自己的時區顯示 —
+//   不管是誰改的時間、用哪個功能改的，都要一致。傳給「老師自己」看的維持泰國時間不變
+//   （老師習慣用泰國時間工作，這是老師自己要的）。
+//   studentTz 有填 → 換算成他自己的時間（不用特別標時區名字，反正就是他自己的時間，不會搞混）
+//   studentTz 沒填（舊資料/還沒設定過）→ 退回泰國時間，並清楚標「泰國時間」提醒可能跟學生本地時間不同
+function studentFacingTimeLabel(dateOrIso, studentTz) {
+  const d = (dateOrIso instanceof Date) ? dateOrIso : new Date(dateOrIso);
+  if (studentTz) {
+    const conv = formatInTz(d, studentTz);
+    return conv.dateStr + ' ' + conv.timeStr + '（你的當地時間）';
+  }
+  const thai = formatInTz(d, TEACHER_TZ);
+  return thai.dateStr + ' ' + thai.timeStr + '（泰國時間 — 尚未設定你的時區，可能跟你的當地時間不同）';
 }
 
 let genLinkGenerated = false; // true = 連結已產生，按鈕變成「關閉」
@@ -3840,17 +3922,62 @@ function openClassRequestModal() {
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
   document.getElementById('reqDateInput').value = '';
   document.getElementById('reqTimeInput').value = '';
+  document.getElementById('reqScheduleHint').style.display = 'none';
   document.getElementById('classRequestModal').classList.add('open');
 }
 function closeClassRequestModal() { document.getElementById('classRequestModal').classList.remove('open'); }
 
+// 2026-07-14 加（Lin 回報學生對時區會搞混）：學生在這個框填的是「他自己現在所在地」的時間
+// （這樣他才不用自己心算換算成泰國時間），送給老師看之前這裡先即時換算成泰國時間預覽給他看，
+// 讓他能確認换算結果跟自己想的對得上（跟老師那邊 onGenScheduleChange 的雙時區預覽同一招）。
+function onReqScheduleChange() {
+  const dateVal = document.getElementById('reqDateInput').value;
+  const timeVal = document.getElementById('reqTimeInput').value.trim();
+  const hint = document.getElementById('reqScheduleHint');
+  if (!dateVal || !timeVal) { hint.style.display = 'none'; return; }
+  if (!isValidTimeStr(timeVal)) { hint.style.display = 'block'; hint.textContent = '⚠️ 時間格式不對，請用 HH:MM，例如 14:30'; return; }
+  const s = (nextClassCtx && typeof studentsCache !== 'undefined') ? studentsCache[nextClassCtx.token] : null;
+  const studentTz = s && s.pending_student_tz;
+  hint.style.display = 'block';
+  if (studentTz) {
+    // 2026-07-14 加：時區字串萬一是壞資料，parseInTzToDate 內的 Intl.DateTimeFormat 會直接
+    // throw——這裡只是即時預覽用，接住錯誤退回泰國時間版本就好，不要讓整個輸入框卡住不能用
+    try {
+      const abs = parseInTzToDate(dateVal, timeVal, studentTz);
+      const thai = formatInTz(abs, TEACHER_TZ);
+      hint.textContent = '＝ 老師端泰國時間：' + thai.dateStr + ' ' + thai.timeStr;
+    } catch (e) {
+      hint.textContent = '⚠️ 時區資料有問題，這個時間會直接當成泰國時間送給老師，建議送出後跟老師確認一下';
+    }
+  } else {
+    hint.textContent = '⚠️ 你還沒設定過自己的時區，這個時間會直接當成泰國時間送給老師（跟你想的可能會差好幾個小時，建議先跟老師確認）';
+  }
+}
+
 async function submitClassRequest() {
   if (!nextClassCtx) { closeClassRequestModal(); return; }
-  const newDate = document.getElementById('reqDateInput').value;
-  const newTime = document.getElementById('reqTimeInput').value.trim();
+  const rawDate = document.getElementById('reqDateInput').value;
+  const rawTime = document.getElementById('reqTimeInput').value.trim();
   const note = '';
-  if (!newDate) { alert('請選擇想改到哪一天'); return; }
-  if (newTime && !isValidTimeStr(newTime)) { alert('時間格式不對，請用 HH:MM，例如 14:30'); return; }
+  if (!rawDate) { alert('請選擇想改到哪一天'); return; }
+  if (rawTime && !isValidTimeStr(rawTime)) { alert('時間格式不對，請用 HH:MM，例如 14:30'); return; }
+
+  // 2026-07-14 加：學生填的是「他自己的時間」，但資料庫/老師那邊全部都是用泰國時間當基準
+  // （跟 pending_class_time 的定義一致）→ 送出前先換算成泰國時間，這樣老師看到的、
+  // 之後用來真的建立 Calendar 事件的，才會是正確的泰國時間，不會兩邊時區對不起來。
+  const s = studentsCache[nextClassCtx.token];
+  const studentTz = s && s.pending_student_tz;
+  let newDate = rawDate, newTime = rawTime || null;
+  if (rawTime && studentTz) {
+    // 2026-07-14 加：壞的時區字串會讓 Intl.DateTimeFormat throw——接住錯誤退回「當泰國時間
+    // 直接送出」，不要讓學生點了送出卻整個沒反應（RELIABILITY FIRST：至少要送得出去）
+    try {
+      const abs = parseInTzToDate(rawDate, rawTime, studentTz);
+      const thai = formatInTz(abs, TEACHER_TZ);
+      newDate = thai.dateStr; newTime = thai.timeStr;
+    } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
+  }
+
   const studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return nextClassCtx.token; } })();
   const btn = document.getElementById('reqSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
@@ -3860,7 +3987,7 @@ async function submitClassRequest() {
     p_request_type: 'reschedule',
     p_original_date: nextClassCtx.isoDate,
     p_requested_date: newDate,
-    p_requested_time: newTime || null,
+    p_requested_time: newTime,
     p_note: note || null
   });
   btn.disabled = false; btn.textContent = '📤 送出申請';
@@ -4566,15 +4693,19 @@ async function submitProposeTime() {
   }
   if (rStudent && rStudent.line_user_id) {
     try {
+      // 2026-07-14 加：老師輸入的 newDate/newTime 是泰國時間（老師自己時區），
+      // 但這則訊息是傳給「學生」看的 → 換算成學生自己的時區再顯示，不要直接把泰國時間丟給學生
+      const proposedAbs = teacherTimeToDate(newDate, newTime);
+      const studentTimeLabel = studentFacingTimeLabel(proposedAbs, rStudent.pending_student_tz);
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
         body: JSON.stringify({
           to: { studentToken: r.token },
-          message: '老師提議新的上課時間：' + newDate + ' ' + newTime + '（泰國時間），請到網站查看並回覆',
+          message: '老師提議新的上課時間：' + studentTimeLabel + '，請到網站查看並回覆',
           flex: {
             title: '🔄 老師提議新的上課時間',
-            bodyText: '原本：' + (r.original_date || '-') + '\n提議改到：' + newDate + ' ' + newTime + '（泰國時間）\n\n方便嗎？',
+            bodyText: '原本：' + (r.original_date || '-') + '\n提議改到：' + studentTimeLabel + '\n\n方便嗎？',
             buttons: [
               { label: '可以', postbackData: 'action=accept_offer&request=' + encodeURIComponent(id), style: 'primary', color: '#8B6310' },
               { label: '不方便', postbackData: 'action=decline_offer&request=' + encodeURIComponent(id), style: 'secondary', color: '#FAF4E8' },
@@ -4911,18 +5042,29 @@ async function teacherCancelClassNowInner(token, chosen) {
     await deleteClassEventOnce(ev.id);
   } catch (e) { alert('⚠️ 刪除課堂失敗：' + (e.message || e)); return; }
 
+  // 2026-07-14 加（RELIABILITY FIRST，之前這裡空的 catch 會吞掉失敗，卻還是跟老師說「已通知學生」——
+  // 現在改成明確追蹤有沒有真的送出去，送失敗要老實講，不能報喜不報憂）
+  var notifySent = false, notifyError = null;
   if (s && s.line_user_id) {
     try {
-      await fetch(LINE_NOTIFY_ENDPOINT, {
+      // 傳給學生看的時間 → 換算成學生自己的時區，不要直接丟泰國時間給學生
+      const cancelTimeLabel = studentFacingTimeLabel(new Date(oldStartIso), s.pending_student_tz);
+      const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-        body: JSON.stringify({ to: { studentToken: token }, message: '老師取消了 ' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）這堂課，如有疑問請直接聯絡老師' }),
+        body: JSON.stringify({ to: { studentToken: token }, message: '老師取消了 ' + cancelTimeLabel + ' 這堂課，如有疑問請直接聯絡老師' }),
       });
-    } catch (e) {}
+      notifySent = notifyRes.ok;
+      if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+    } catch (e) { notifyError = e.message || String(e); }
   }
 
   await sb.from('classroom_requests').update({ status: 'acknowledged' }).eq('id', newId);
-  alert('✅ 已取消這堂課' + (s && s.line_user_id ? '，並已通知學生' : '（學生還沒連結 LINE，沒收到通知，建議自己再說一聲）'));
+  var cancelResultMsg = '✅ 已取消這堂課';
+  if (!s || !s.line_user_id) cancelResultMsg += '（學生還沒連結 LINE，沒收到通知，建議自己再說一聲）';
+  else if (notifySent) cancelResultMsg += '，並已通知學生';
+  else cancelResultMsg += '\n⚠️ 但 LINE 通知學生失敗（' + notifyError + '），請自己再跟學生說一聲';
+  alert(cancelResultMsg);
   loadTeacherNextClassBox(token);
   loadRecentBackups();
   loadPendingClassRequests();
@@ -5049,18 +5191,28 @@ async function submitPermanentChangeInner(token) {
     try { await deleteClassEventOnce(masterEv.id); } catch (e) {}
   }
 
+  // 2026-07-14 加（RELIABILITY FIRST，同樣道理：空 catch 會吞掉失敗，不能還跟老師說「已通知學生」）
+  var permNotifySent = false, permNotifyError = null;
   if (s && s.line_user_id) {
     try {
-      await fetch(LINE_NOTIFY_ENDPOINT, {
+      // newDate/newTime 是老師輸入的泰國時間 → 傳給學生看之前先換算成他自己的時區
+      const permTimeLabel = studentFacingTimeLabel(new Date(newStartIso), s.pending_student_tz);
+      const permNotifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-        body: JSON.stringify({ to: { studentToken: token }, message: '老師調整了你的固定上課時間，之後改成每週 ' + newDate + ' ' + newTime + '（泰國時間），如有疑問請直接聯絡老師' }),
+        body: JSON.stringify({ to: { studentToken: token }, message: '老師調整了你的固定上課時間，之後改成每週 ' + permTimeLabel + '，如有疑問請直接聯絡老師' }),
       });
-    } catch (e) {}
+      permNotifySent = permNotifyRes.ok;
+      if (!permNotifyRes.ok) permNotifyError = 'LINE 回應 ' + permNotifyRes.status;
+    } catch (e) { permNotifyError = e.message || String(e); }
   }
 
   closePermanentChangeModal();
-  alert('✅ 已永久變更課表' + (s && s.line_user_id ? '，並已通知學生' : '（學生還沒連結 LINE，建議自己說一聲）'));
+  var permResultMsg = '✅ 已永久變更課表';
+  if (!s || !s.line_user_id) permResultMsg += '（學生還沒連結 LINE，建議自己說一聲）';
+  else if (permNotifySent) permResultMsg += '，並已通知學生';
+  else permResultMsg += '\n⚠️ 但 LINE 通知學生失敗（' + permNotifyError + '），請自己再跟學生說一聲';
+  alert(permResultMsg);
   loadTeacherNextClassBox(token);
   loadRecentBackups();
 }

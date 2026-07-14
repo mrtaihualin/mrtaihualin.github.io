@@ -89,6 +89,13 @@ function normalizeTimeStr(timeStr) {
   return String(hour).padStart(2, '0') + ':' + min;
 }
 
+// 2026-07-14 加：เอาเวลาจริง (UTC ms) มาแปลงเป็น "HH:MM" ตาม timezone ไหนก็ได้ — ใช้ตอนจะโชว์
+// เวลาให้นักเรียนเห็นเป็นเวลาของเขาเอง (ไม่ใช่เวลาไทยที่ครูตั้งไว้)
+function formatHHMMInTz(utcMs, tz) {
+  const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+  return fmt.format(new Date(utcMs));
+}
+
 // แปลง lesson_date + "HH:MM" ให้เป็นเวลาจริง (UTC) โดยตีความว่า HH:MM คือเวลาท้องถิ่นตาม tz ที่กำหนด
 function localToUtcMs(dateStr, rawTimeStr, tz) {
   const timeStr = normalizeTimeStr(rawTimeStr);
@@ -129,10 +136,12 @@ serve(async (req) => {
     if (!rows || !rows.length) return new Response(JSON.stringify({ ok: true, processed: 0 }), { status: 200 });
 
     // ดึงข้อมูลนักเรียนทั้งหมดมาแมปครั้งเดียว (เร็วกว่าถามทีละคน)
+    // 2026-07-14 加：เพิ่ม pending_student_tz — ต้องใช้ตอนแจ้งเตือนนักเรียน ให้โชว์เป็นเวลา
+    // ของนักเรียนเอง ไม่ใช่เวลาไทยดิบๆ (Lin สั่งว่าแจ้งนักเรียนต้องเป็นเวลานักเรียนเสมอ)
     const tokens = [...new Set(rows.map(r => r.token))];
     const { data: students } = await supabase
       .from('classroom_students')
-      .select('token, name, meet, line_user_id')
+      .select('token, name, meet, line_user_id, pending_student_tz')
       .in('token', tokens);
     const studentMap = {};
     (students || []).forEach(s => { studentMap[s.token] = s; });
@@ -175,8 +184,15 @@ serve(async (req) => {
         const minutesToStart = (startMs - nowMs) / 60000;
         if (minutesToStart <= REMINDER_BEFORE_MIN && minutesToStart >= -CATCH_WINDOW_MIN) {
           try {
-            // ใช้เวลาที่ normalize แล้ว (24 ชม.ล้วน) ตอนโชว์ให้นักเรียนเห็นในข้อความ LINE เสมอ กันโชว์ปนกัน
-            const timeLabel = (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
+            // 2026-07-14 改（Lin 回報學生對時區搞混，要求「一定要用學生自己的時間」）：
+            // 原本這裡直接拿老師輸入的泰國時間字串給學生看，完全沒管學生自己的時區。
+            // 現在改成：學生填過自己的時區 (pending_student_tz) 就用 startMs/endMs（已經是
+            // 絕對時間點了）換算成他自己時區的 HH:MM；沒填過時區的舊資料才退回泰國時間
+            // （沒有其他資訊可用，只能這樣，但至少不會是錯的换算）。
+            const studentTz = s.pending_student_tz;
+            const timeLabel = studentTz
+              ? formatHHMMInTz(startMs, studentTz) + (normalizedEndTime ? '–' + formatHHMMInTz(endMs, studentTz) : '')
+              : (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
             if (s.meet) {
               // 2026-07-11 改：Flex Message + 一顆「進入 Google Meet」按鈕（金色主題）
               await pushLineMessages(channelToken, s.line_user_id, [buildReminderFlex(timeLabel, s.meet)]);

@@ -1986,7 +1986,7 @@
   </div>
 
   <div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;width:100%;box-sizing:border-box;">
-    <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;">🎁 免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
+    <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;"><img src="assets/icons/gift-box.svg" alt="" style="width:18px;height:18px;vertical-align:-4px;margin-right:3px;">免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
     <span style="font-size:13px;background:var(--gold-bright,#C8973A);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
   </div>
 
@@ -3365,7 +3365,7 @@ function tfScorePop(points, opts) {
     if (idx > 0) pop.style.top = (32 + idx * 9) + '%';
     var sign = points >= 0 ? '+' : '';
     var multTxt = (opts.mult && opts.mult > 1) ? '<span class="tf-score-pop-mult">×' + opts.mult + '</span>' : '';
-    var goldTxt = opts.gold ? '<span class="tf-score-pop-mult">✨</span>' : '';
+    var goldTxt = opts.gold ? '<span class="tf-score-pop-mult"><img src="assets/icons/golden-grain.svg" alt="" style="width:16px;height:16px;vertical-align:-3px;"></span>' : '';
     pop.innerHTML = '<span class="tf-score-pop-num">' + sign + points + '</span>' + multTxt + goldTxt;
     document.body.appendChild(pop);
     setTimeout(function () { if (pop && pop.parentNode) pop.parentNode.removeChild(pop); _tfScorePopCount = Math.max(0, _tfScorePopCount - 1); }, 1300);
@@ -4257,7 +4257,7 @@ function render() {
       ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字'
         + '<span id="tf-score-hud" class="tf-score-hud">🏆 ' + (session.score || 0) + ' 分</span>'
         + (session.combo >= 3 ? '<span class="tf-combo-hud">🔥 ×' + TF_SCORE.comboMultiplier(session.combo) + '</span>' : '')
-        + (session.currentWordGolden ? '<span class="tf-golden-hud">✨ 黃金米題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
+        + (session.currentWordGolden ? '<span class="tf-golden-hud"><img src="assets/icons/golden-grain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金米題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
         + '</div>'
         + tfBarsHtml()
       : '';
@@ -6827,7 +6827,7 @@ setTimeout(tfRenderExtBar, 0);
   <div class="gs-divider"></div>
   <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="vault.html">🔖 單字庫</a>
+  <a class="gs-tab" href="vault.html"><img src="assets/icons/kratip.svg" alt="" style="width:16px;height:16px;vertical-align:-3px;margin-right:3px;">單字庫</a>
 </div>
 <script>
   // vault badge init
