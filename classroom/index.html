@@ -1473,17 +1473,13 @@ async function moveStudentFolderToArchive(studentName) {
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message || String(e) }; }
 }
-// 恢復：把學生資料夾從「舊生」搬回根目錄
-async function moveStudentFolderFromArchive(studentName) {
-  try {
-    const rootId = await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
-    const archiveRootId = await gdEnsureFolder(DRIVE_ARCHIVE_FOLDER, rootId);
-    const stuId = await gdFindFolder(studentName, archiveRootId);
-    if (!stuId) return { ok: true, note: '在「舊生」資料夾裡找不到這位學生的資料夾，略過搬移' };
-    await gdMoveFolder(stuId, rootId, archiveRootId);
-    return { ok: true };
-  } catch (e) { return { ok: false, error: e.message || String(e) }; }
-}
+// 2026-07-14（第 3 版，Lin 明確要求改成這樣）：恢復舊生「不」把 Drive 資料夾搬回來 —
+//   進了「舊生」資料夾就永久留在那裡當歷史紀錄，不會再搬出來。
+//   之後這位學生走一次跟全新付款學生完全一樣的流程（確認收款→建立 Meet/Calendar/Drive），
+//   到時候 gdGetStudentFolderId(studentName) 只會在根目錄找，找不到（因為舊的在「舊生」
+//   裡）就會自動建一個全新的資料夾——不管舊資料夾還在不在，一律重新建立，不嘗試沿用。
+//   （曾經寫過一版「搬回原本位置沿用舊資料夾」的 moveStudentFolderFromArchive，
+//   Lin 確認不要這樣，2026-07-14 拿掉了）
 // 學生資料夾下再分子資料夾：學習內容（筆記）／影片（錄影）
 async function gdGetStudentSubfolderId(studentName, sub) {
   const stuId = await gdGetStudentFolderId(studentName);
@@ -2235,6 +2231,22 @@ async function saveStudentEdit() {
 async function repairMeet(token) {
   var s = studentsCache[token];
   if (!s) return;
+
+  // 2026-07-14 加：舊生從「📦 舊生列表」恢復回來之後，舊的課表日期會被清空
+  // （比照全新學生，要重新選一次日期，見 restoreStudent()）——這裡補問一次新日期/時間，
+  // 不然照舊用空白的 pending_start_date 建立，會變成沒有固定課表的 Meet。
+  if (!s.pending_start_date || !s.pending_class_time) {
+    var newDate = prompt('這位學生還沒有排課表日期，請輸入開課日期（格式 YYYY-MM-DD，例如 2026-08-01）：', '');
+    if (!newDate) { alert('沒有輸入日期，已取消。'); return; }
+    var newTime = prompt('請輸入上課時間（老師自己泰國時區，格式 HH:MM，例如 14:30）：', '');
+    if (!newTime || !isValidTimeStr(newTime)) { alert('時間格式不對或沒有輸入，已取消。'); return; }
+    var newRecurring = confirm('是否為「每週固定上課」？\n（按「確定」＝是，每週重複／按「取消」＝否，只有這一次）');
+    var scheduleUpd = { pending_start_date: newDate, pending_class_time: newTime, pending_recurring: newRecurring };
+    var scheduleRes = await sb.from('classroom_students').update(scheduleUpd).eq('token', token);
+    if (scheduleRes.error) { alert('儲存課表失敗：' + scheduleRes.error.message); return; }
+    Object.assign(s, scheduleUpd);
+  }
+
   if (!confirm('要為「' + s.name + '」建立課堂 Meet 連結嗎？（會同時把學生設為已開通）')) return;
   // 2026-07-11：跟「確認收款」共用同一把鎖（_studentSetupLocks），避免 Lin 同時點這顆按鈕
   // 和「確認收款」（或開兩個分頁各點一次）→ 兩邊各自建一份 Meet + 時刻表，變成重複資料。
@@ -2334,15 +2346,17 @@ async function deleteStudent(token) {
   if (warnings.length) alert(warnings.join('\n\n'));
 }
 
-// 2026-07-14 加：從「📦 舊生列表」把封存的學生恢復成使用中 —
-//   (1) 把 Drive 資料夾從「舊生」搬回原本位置 (2) 解除 archived_at + 有連 LINE 的話把選單切回學生版
+// 2026-07-14 加：從「📦 舊生列表」把封存的學生恢復成使用中。
+// 2026-07-14（第 3 版，Lin 明確要求）：恢復舊生要「完全比照全新付款學生」——
+//   Drive 資料夾「不」搬回來，永久留在「舊生」當歷史紀錄；之後建立 Meet 時會自動
+//   生一個全新的資料夾（不管舊的還在不在，一律重新建立，不嘗試沿用）
+//   Calendar 完全重來 — 舊的排課資訊清空，回到「setup_status = pending」（跟從沒
+//   確認過收款的新學生一模一樣的狀態），等 Lin 用「🔧 補課堂連結」重新選一次日期/時間
+//   LINE 綁定 (line_user_id) 不會被清掉，選單也會切回學生版。
 async function restoreStudent(token) {
   const s = studentsCache[token];
   const name = (s && s.name) || token;
-  if (!confirm('確定要把「' + name + '」從舊生恢復成使用中的學生嗎？')) return;
-
-  const driveRes = await moveStudentFolderFromArchive(name);
-  if (!driveRes.ok) alert('⚠️ Google Drive 資料夾沒搬回成功：' + driveRes.error + '\n（不影響恢復本身，之後可以自己手動搬回來）');
+  if (!confirm('確定要把「' + name + '」從舊生恢復嗎？\n\n・原本「舊生」資料夾裡的 Drive 資料會留在原地當歷史紀錄，不會搬回來\n・之後建立 Meet 連結時，會自動建立一個全新的 Drive 資料夾\n・舊的上課時間會清空，回到「待確認收款」狀態，之後要重新選一次新的日期/時間\n・LINE 綁定狀態不會不見')) return;
 
   let handledByFunction = false;
   try {
@@ -2364,7 +2378,21 @@ async function restoreStudent(token) {
     const { error } = await sb.from('classroom_students').update({ archived_at: null }).eq('token', token);
     if (error) { alert('恢復失敗：' + error.message); return; }
   }
+
+  // 比照新學生：清空舊排課資訊，回到「待安排課表」狀態（critical 這步失敗要明確講，
+  // 不能默默失敗讓舊資料留著混淆——RELIABILITY FIRST）
+  const resetRes = await sb.from('classroom_students').update({
+    setup_status: 'pending', meet: null,
+    pending_start_date: null, pending_class_time: null, pending_recurring: null
+  }).eq('token', token);
+  if (resetRes.error) {
+    alert('⚠️ 學生已經恢復回來了，但清空舊課表狀態失敗：' + resetRes.error.message + '\n（不影響恢復本身，可以之後用「✏️」手動調整，或再點一次「♻️ 恢復」重試這步）');
+  } else if (s) {
+    Object.assign(s, { setup_status: 'pending', meet: null, pending_start_date: null, pending_class_time: null, pending_recurring: null, archived_at: null });
+  }
+
   await refreshStudentList();
+  alert('✅ 已恢復「' + name + '」為使用中學生。\n下一步：點選這位學生 →「🔧 補課堂連結」→ 會請你輸入新的上課日期/時間，建立新的 Meet/Calendar。');
 }
 
 // ============================================================
