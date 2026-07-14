@@ -5671,7 +5671,7 @@ function stepResult() {
       'if(WordVault.has(th)){WordVault.removeWord(th);this.setAttribute(\'data-saved\',\'0\');this.title=\'儲存到單字庫\';}'+
       'else if(WordVault.isFull()){WordVault.notifyFull();return;}'+
       'else{WordVault.addWord(th,meta);this.setAttribute(\'data-saved\',\'1\');this.title=\'從單字庫移除\';}'+
-      'var b=document.querySelectorAll(\'.vault-badge\');b.forEach(function(x){x.textContent=\'🔖 單字庫\';});'+
+      'if(window.WordVault&&WordVault.refreshBadges)WordVault.refreshBadges();'+
     '}).call(this)">🔖</button>';
   }
 
@@ -6840,7 +6840,7 @@ setTimeout(tfRenderExtBar, 0);
       badge.href = 'vault.html';
       badge.className = 'vault-badge';
       badge.id = 'vault-badge-tf';
-      badge.textContent = '🔖 單字庫';
+      badge.innerHTML = '<img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫';
       slot.appendChild(badge);
     }
   });

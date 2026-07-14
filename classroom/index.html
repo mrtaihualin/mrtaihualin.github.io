@@ -3910,7 +3910,12 @@ async function requestCancelClass() {
     p_original_date: nextClassCtx.isoDate,
     p_requested_date: null,
     p_requested_time: null,
-    p_note: null
+    p_note: null,
+    // 2026-07-14 加：資料庫裡 submit_class_request 現在有兩個版本（一個有 p_initiated_by
+    // 一個沒有），沒帶這個參數會讓 Postgres 分不出要用哪一個（"Could not choose the best
+    // candidate function"）送出失敗。老師端呼叫時都有帶 p_initiated_by:'teacher'，
+    // 學生端這裡也要帶（'student'），兩邊都明確帶才不會撞到這個問題。
+    p_initiated_by: 'student',
   });
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
   notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: nextClassCtx.isoDate });
@@ -3988,7 +3993,10 @@ async function submitClassRequest() {
     p_original_date: nextClassCtx.isoDate,
     p_requested_date: newDate,
     p_requested_time: newTime,
-    p_note: note || null
+    p_note: note || null,
+    // 2026-07-14 加：同上（requestCancelClass 那顆）—— 一定要帶 p_initiated_by，
+    // 不然資料庫裡兩個版本的 submit_class_request 會分不出來選哪個，送出失敗。
+    p_initiated_by: 'student',
   });
   btn.disabled = false; btn.textContent = '📤 送出申請';
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }

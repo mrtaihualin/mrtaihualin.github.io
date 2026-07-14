@@ -188,8 +188,10 @@
     _refreshBadge(badge);
   }
 
+  var BADGE_HTML = '<img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫';
+
   function _refreshBadge(badge) {
-    badge.textContent = '🔖 單字庫';
+    badge.innerHTML = BADGE_HTML;
     badge.style.display = '';
   }
 
@@ -235,6 +237,7 @@
     clear: clear,
     createSaveBtn: createSaveBtn,
     mountBadge: mountBadge,
+    refreshBadges: _notifyBadges,
     injectStyles: injectStyles
   };
 
