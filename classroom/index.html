@@ -820,6 +820,9 @@
 
     <label class="settings-label">堂數方案</label>
     <select class="settings-input" id="genPack" onchange="onGenPackChange()"></select>
+
+    <label class="settings-label" id="genBonusLabel" style="display:none;">🎁 優惠堂數（贈送，可自行修改）</label>
+    <input class="settings-input" type="number" id="genBonus" min="0" step="1" placeholder="0" oninput="onGenBonusInput()" style="display:none;" />
     <div class="token-preview" id="genCoursePreview" style="display:none;"></div>
 
     <div style="display:flex;gap:10px;">
@@ -2117,6 +2120,30 @@ function populateGenCourseDropdown() {
     '<option value="custom">自訂（單堂購買）</option>';
   document.getElementById('genPack').innerHTML = '';
   document.getElementById('genCoursePreview').style.display = 'none';
+  hideGenBonusField();
+}
+
+// 2026-07-14 新增（Lin 要求）：優惠堂數（贈送）欄位，每個方案（含自訂）都能填。
+// 選堂數時先帶入舊規則的自動預設值（20堂送1／30堂送3，自訂預設0），Lin 隨時可以自己改成別的數字，
+// 改完的數字會存進 pending_bonus_lessons，之後付款頁/課程摘要卡都改讀這個真實數字，不再是死公式。
+function hideGenBonusField() {
+  document.getElementById('genBonusLabel').style.display = 'none';
+  document.getElementById('genBonus').style.display = 'none';
+  document.getElementById('genBonus').value = '';
+}
+function showGenBonusField(defaultVal) {
+  document.getElementById('genBonusLabel').style.display = 'block';
+  document.getElementById('genBonus').style.display = 'block';
+  document.getElementById('genBonus').value = defaultVal;
+}
+// 老師手動改優惠堂數 → 只更新價格預覽文字，不要動堂數/其他欄位
+function onGenBonusInput() {
+  const courseId = document.getElementById('genCourse').value;
+  if (!courseId || courseId === 'custom') return;
+  const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
+  if (!c) return;
+  const lessons = parseInt(document.getElementById('genPack').value, 10) || 0;
+  renderGenCoursePreview(c, lessons);
 }
 function onGenCourseChange() {
   const courseId = document.getElementById('genCourse').value;
@@ -2131,8 +2158,9 @@ function onGenCourseChange() {
     } else {
       packSel.value = '';
     }
+    showGenBonusField(0); // 2026-07-14：自訂方案以前完全沒有優惠堂數，現在也能填了
     preview.style.display = 'block';
-    preview.textContent = '💡 自訂方案：請直接輸入這期共幾堂課（單價／一對一或雙人共學，學生會在繳費頁自己選）。';
+    preview.textContent = '💡 自訂方案：請直接輸入這期共幾堂課（單價／一對一或雙人共學，學生會在繳費頁自己選）。上面「優惠堂數」可填加送幾堂。';
     return;
   }
   if (packSel.tagName !== 'SELECT') {
@@ -2140,18 +2168,24 @@ function onGenCourseChange() {
     packSel = document.getElementById('genPack');
   }
   const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
-  if (!c) { packSel.innerHTML = ''; preview.style.display = 'none'; return; }
+  if (!c) { packSel.innerHTML = ''; preview.style.display = 'none'; hideGenBonusField(); return; }
   packSel.innerHTML = c.packs.map(function(n) { return '<option value="' + n + '">' + n + ' 堂</option>'; }).join('');
   onGenPackChange();
 }
 function onGenPackChange() {
   const courseId = document.getElementById('genCourse').value;
-  if (courseId === 'custom') return; // 自訂堂數：老師自己輸入，不用算價格預覽（單價未知，留給學生繳費頁決定）
+  if (courseId === 'custom') return; // 自訂堂數：優惠堂數欄位維持老師自己填的值，換堂數不用重算
   const c = COURSE_TYPES.find(function(x) { return x.id === courseId; });
   const preview = document.getElementById('genCoursePreview');
-  if (!c) { preview.style.display = 'none'; return; }
+  if (!c) { preview.style.display = 'none'; hideGenBonusField(); return; }
   const lessons = parseInt(document.getElementById('genPack').value, 10) || 0;
-  const bonus = typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0;
+  const autoBonus = typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0;
+  showGenBonusField(autoBonus); // 換堂數 → 重新帶入自動預設值（老師隨時可以自己改成別的數字）
+  renderGenCoursePreview(c, lessons);
+}
+function renderGenCoursePreview(c, lessons) {
+  const preview = document.getElementById('genCoursePreview');
+  const bonus = parseInt(document.getElementById('genBonus').value, 10) || 0;
   const total = lessons * (c.priceNTD || 0);
   preview.style.display = 'block';
   preview.textContent = '💰 NTD ' + total.toLocaleString() + '（THB ' + (lessons * (c.priceTHB || 0)).toLocaleString() + '）' +
@@ -2182,6 +2216,9 @@ async function genLinkAddStudent() {
 
   const courseId   = document.getElementById('genCourse').value;
   const lessons    = parseInt(document.getElementById('genPack').value, 10) || null;
+  // 2026-07-14 新增：優惠堂數（贈送），老師自己填的真實數字，不指定課程方案時沒有欄位所以是 null
+  const bonusRaw   = document.getElementById('genBonus').value;
+  const bonusLessons = (courseId && bonusRaw !== '') ? (parseInt(bonusRaw, 10) || 0) : null;
   const startDate  = document.getElementById('genStartDate').value || null; // 老師自己時區的日期
   const classTimeRaw = document.getElementById('genClassTime').value.trim();
   if (classTimeRaw && !isValidTimeStr(classTimeRaw)) {
@@ -2209,6 +2246,7 @@ async function genLinkAddStudent() {
     token, name, meet: null, setup_status: 'pending',
     pending_course_id: courseId || null,
     pending_lessons: lessons,
+    pending_bonus_lessons: bonusLessons,
     pending_start_date: startDate,
     pending_class_time: classTime,
     pending_student_tz: studentTz,
@@ -2621,9 +2659,29 @@ function renderArchivedStudentsHTML() {
         '<div style="font-weight:700;color:var(--ink);font-family:\'Noto Serif TC\',serif;">' + escHtml(s.name) + '</div>' +
         '<div style="font-size:0.75rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">封存於 ' + escHtml(archivedDateStr) + '</div>' +
       '</div>' +
-      '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;flex-shrink:0;" onclick="restoreStudent(\'' + t + '\')">♻️ 恢復</button>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="restoreStudent(\'' + t + '\')">♻️ 恢復</button>' +
+        '<button class="btn-sm btn-sm-delete" onclick="permanentlyDeleteStudent(\'' + t + '\')" title="永久刪除（無法復原，Google Drive 檔案不受影響）">🗑️ 永久刪除</button>' +
+      '</div>' +
     '</div>';
   }).join('');
+}
+
+// 2026-07-14 加（Lin 要求把「永久刪除」加回來）：只能對「已封存」的舊生使用——
+//   一定要先封存過（Calendar 停課＋Drive 資料夾搬進「舊生」）才能永久刪除，避免誤刪還在上課中的學生。
+//   永久刪除只砍資料庫這筆學生紀錄，不會動 Google Drive 檔案（封存時已經搬進「舊生」資料夾保留了）。
+//   RELIABILITY FIRST：要求 Lin 手動打一次學生姓名才能刪，防止手滑點錯；刪除失敗要清楚顯示原因，不能默默失敗。
+async function permanentlyDeleteStudent(token) {
+  const s = studentsCache[token];
+  const name = s?.name || token;
+  if (!s || !s.archived_at) { alert('⚠️ 只能永久刪除「已封存」的舊生，請先封存再刪除。'); return; }
+  const typed = prompt('⚠️ 永久刪除「' + name + '」無法復原！\n\n・資料庫裡這位學生的所有紀錄會被永久刪除\n・Google Drive 資料夾不會被刪除（檔案還在「舊生」資料夾裡）\n\n請輸入學生姓名「' + name + '」以確認刪除：');
+  if (typed !== name) { if (typed !== null) alert('姓名不符，已取消刪除。'); return; }
+  const { error } = await sb.from('classroom_students').delete().eq('token', token);
+  if (error) { alert('❌ 永久刪除失敗：' + error.message + '\n（資料還在，沒有被刪除）'); return; }
+  delete studentsCache[token];
+  alert('✅ 已永久刪除「' + name + '」的資料庫紀錄。');
+  await refreshStudentList(); // 舊生列表面板會跟著重新整理收合，點「📦 舊生列表」重新展開就會看到最新名單
 }
 
 // 老師：開啟某學生的 Drive 資料夾（用老師的 Google 權限解析資料夾）
@@ -3174,16 +3232,24 @@ async function renderTeacherView() {
 function buildCourseSummaryCard(s) {
   const courseId = s && s.pending_course_id;
   if (!courseId) return '';
-  const c = (typeof COURSE_TYPES !== 'undefined') ? COURSE_TYPES.find(function(x) { return x.id === courseId; }) : null;
+  // 2026-07-14：自訂（單堂購買）以前不在 COURSE_TYPES 裡，卡片直接不顯示——
+  // 現在自訂也能填優惠堂數了，補上自訂專用的顯示資料，卡片才會正常出現。
+  const isCustom = courseId === 'custom';
+  const c = isCustom
+    ? { label: '自訂（單堂購買）', desc: '單價／幣別由學生在繳費頁選' }
+    : ((typeof COURSE_TYPES !== 'undefined') ? COURSE_TYPES.find(function(x) { return x.id === courseId; }) : null);
   if (!c) return '';
   const lessons = s.pending_lessons || 0;
   const startDate = s.pending_start_date;   // 老師自己時區的日期
   const classTime = s.pending_class_time;   // 老師自己時區的時間
   const studentTz = s.pending_student_tz;
   const recurring = !!s.pending_recurring;
-  const bonus = lessons && typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0;
-  const totalNTD = lessons * (c.priceNTD || 0);
-  const totalTHB = lessons * (c.priceTHB || 0);
+  // 2026-07-14：優惠堂數改成優先讀老師在「入班連結」時填的真實數字（pending_bonus_lessons）；
+  // 沒有值（舊資料，還沒補這個欄位）才退回舊的自動公式（20堂送1／30堂送3）當備援。
+  const bonus = (s.pending_bonus_lessons != null) ? (s.pending_bonus_lessons || 0) :
+    (lessons && typeof slipBonusFor === 'function' ? slipBonusFor(lessons) : 0);
+  const totalNTD = isCustom ? 0 : lessons * (c.priceNTD || 0);
+  const totalTHB = isCustom ? 0 : lessons * (c.priceTHB || 0);
   const weekdayZh = ['日','一','二','三','四','五','六'];
   const shortDate = function(d) { return (d.getMonth()+1) + '月' + d.getDate() + '日（週' + weekdayZh[d.getDay()] + '）'; };
 
@@ -3207,7 +3273,7 @@ function buildCourseSummaryCard(s) {
     '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:0.92rem;color:var(--ink);line-height:2;">' +
       '<div><strong style="color:var(--gold-deep);">' + escHtml(c.label) + '</strong>' + (c.desc ? '　·　' + escHtml(c.desc) : '') + '</div>' +
       (lessons ? '<div>堂數：' + lessons + ' 堂' + (bonus ? '（贈 ' + bonus + ' 堂）' : '') + '</div>' : '') +
-      (lessons ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
+      (lessons && !isCustom ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
       (timeLine ? '<div>' + escHtml(timeLine) + '</div>' : '') +
       (recurring ? '<div style="color:var(--ink-muted);font-size:0.82rem;">🔁 每週固定上課</div>' : '') +
     '</div>' +
@@ -3902,7 +3968,9 @@ async function requestCancelClass() {
   if (!nextClassCtx) return;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
   if (!confirm('確定要送出「申請取消這堂課」給老師嗎？\n（老師確認後才算真的取消，請耐心等候回覆）')) return;
-  const studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return nextClassCtx.token; } })();
+  // 2026-07-14 修正：改用既有的 currentStudentName()（2026-07-08 就修過同一個 bug 的共用函式），
+  // 之前這裡沒用到，只信網址參數 n，沒帶 n 的連結會送出空白姓名，老師端顯示「-」
+  const studentName = currentStudentName(nextClassCtx.token);
   const res = await sb.rpc('submit_class_request', {
     p_token: nextClassCtx.token,
     p_student_name: studentName,
@@ -3983,7 +4051,8 @@ async function submitClassRequest() {
     } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
   }
 
-  const studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return nextClassCtx.token; } })();
+  // 2026-07-14 修正：改用既有的 currentStudentName()（理由同上，requestCancelClass 那顆）
+  const studentName = currentStudentName(nextClassCtx.token);
   const btn = document.getElementById('reqSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
   const res = await sb.rpc('submit_class_request', {
@@ -4427,7 +4496,8 @@ async function submitSlip() {
       note = (note ? note + '\n' : '') + '⚠️ 學生填寫實際匯款金額為 ' + payCur + ' ' + actualVal.toLocaleString() + '（與方案金額 ' + payCur + ' ' + total.toLocaleString() + ' 不同，請確認）';
     }
   }
-  var studentName = (function() { try { return decodeURIComponent(atob(urlParams.get('n') || '')); } catch(e) { return slipToken; } })();
+  // 2026-07-14 修正：改用既有的 currentStudentName()（理由同上，requestCancelClass 那顆）
+  var studentName = currentStudentName(slipToken);
   var btn = document.getElementById('slipSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
   // ผ่าน RPC security-definer → บังคับ status='slip_submitted' ฝั่ง DB (anon เขียนตรงตารางไม่ได้แล้ว)
@@ -5247,7 +5317,12 @@ function openSlipApproval(id) {
   document.getElementById('approvalCurrency').value = p.currency || 'THB';
   document.getElementById('approvalPricePer').value  = p.price_per || 800;
   document.getElementById('approvalLessons').value   = p.lessons || 10;
-  document.getElementById('approvalBonus').value     = p.bonus_lessons || 0;
+  // 2026-07-14：這筆繳費送出時的優惠堂數是 0（例如自訂單堂購買，送出時一律沒有優惠）→
+  // 改成優先帶入老師當初在「入班連結」時就填好的優惠堂數（pending_bonus_lessons），
+  // 省得 Lin confirm 收款時要重新想一次、重新打一次數字；Lin 隨時仍可在這裡自己改成別的數字。
+  var plannedBonus = (typeof studentsCache !== 'undefined' && studentsCache[p.token] && studentsCache[p.token].pending_bonus_lessons != null)
+    ? studentsCache[p.token].pending_bonus_lessons : null;
+  document.getElementById('approvalBonus').value = p.bonus_lessons ? p.bonus_lessons : (plannedBonus != null ? plannedBonus : 0);
   document.getElementById('approvalStart').value     = p.start_note || '';
   document.getElementById('approvalNote').value      = p.note || '';
   updateApprovalTotal();

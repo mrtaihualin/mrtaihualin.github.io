@@ -228,9 +228,14 @@ function renderInvalid(msg){
 }
 
 function courseInfo(s){
-  var c = COURSE_TYPES.find(function(x){ return x.id === s.pending_course_id; });
+  // 2026-07-14：自訂（單堂購買）以前不在 COURSE_TYPES 裡，課程摘要卡直接不顯示——
+  // 現在自訂也能填優惠堂數了，補上自訂專用的顯示資料，卡片才會正常出現。
+  var isCustom = s.pending_course_id === 'custom';
+  var c = isCustom
+    ? { label:'自訂（單堂購買）', desc:'單價／幣別由學生在繳費頁選' }
+    : COURSE_TYPES.find(function(x){ return x.id === s.pending_course_id; });
   var lessons = s.pending_lessons || 0;
-  return { c:c, lessons:lessons };
+  return { c:c, lessons:lessons, isCustom:isCustom };
 }
 
 function render(s){
@@ -311,10 +316,13 @@ function copyClsLink(){
 function courseSummaryCard(s){
   var info = courseInfo(s);
   if (!info.c) return '';
-  var c = info.c, lessons = info.lessons;
-  var bonus = lessons ? slipBonusFor(lessons) : 0;
-  var totalNTD = lessons * (c.priceNTD || 0);
-  var totalTHB = lessons * (c.priceTHB || 0);
+  var c = info.c, lessons = info.lessons, isCustom = info.isCustom;
+  // 2026-07-14：優惠堂數改成優先讀老師在「入班連結」時填的真實數字（pending_bonus_lessons）；
+  // 沒有值（舊資料，還沒補這個欄位）才退回舊的自動公式（20堂送1／30堂送3）當備援。
+  var bonus = (s.pending_bonus_lessons != null) ? (s.pending_bonus_lessons || 0) :
+    (lessons ? slipBonusFor(lessons) : 0);
+  var totalNTD = isCustom ? 0 : lessons * (c.priceNTD || 0);
+  var totalTHB = isCustom ? 0 : lessons * (c.priceTHB || 0);
   var wk = ['日','一','二','三','四','五','六'];
   var line = '';
   var startDateObj = s.pending_start_date ? new Date(s.pending_start_date + 'T00:00:00') : null;
@@ -330,7 +338,7 @@ function courseSummaryCard(s){
     '<div class="summary">' +
       '<div><strong>' + escHtml(c.label) + '</strong>' + (c.desc ? '　·　' + escHtml(c.desc) : '') + '</div>' +
       (lessons ? '<div>堂數：' + lessons + ' 堂' + (bonus ? '（贈 ' + bonus + ' 堂）' : '') + '</div>' : '') +
-      (lessons ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
+      (lessons && !isCustom ? '<div>費用：NTD ' + totalNTD.toLocaleString() + '　／　THB ' + totalTHB.toLocaleString() + '</div>' : '') +
       (line ? '<div>' + escHtml(line) + '</div>' : '') +
       (s.pending_recurring ? '<div style="color:var(--ink-muted);font-size:0.82rem;">🔁 每週固定上課</div>' : '') +
     '</div></div>';
@@ -363,7 +371,8 @@ function openSlipModal(){
   if (lock && lockedCourse){
     document.getElementById('slipCourseGrid').innerHTML =
       '<div class="course-card selected" style="cursor:default;grid-column:1 / -1;"><div class="c-name">' + escHtml(lockedCourse.label) + '</div><div class="c-desc">' + escHtml(lockedCourse.desc||'') + '　·　老師已指定此方案</div></div>';
-    var bonus = slipBonusFor(lock.lessons);
+    // 2026-07-14：優惠堂數優先用老師在「入班連結」時填的真實數字，沒有值才退回舊公式當備援。
+    var bonus = (s.pending_bonus_lessons != null) ? (s.pending_bonus_lessons || 0) : slipBonusFor(lock.lessons);
     document.getElementById('slipPackGrid').innerHTML =
       '<div class="course-card selected" style="cursor:default;min-width:88px;text-align:center;"><div style="font-weight:700;">' + lock.lessons + ' 堂</div>' + (bonus?'<div style="font-size:0.72rem;color:var(--gold-deep);">贈 ' + bonus + ' 堂</div>':'') + '</div>';
     document.getElementById('slipPackWrap').style.display='block';
