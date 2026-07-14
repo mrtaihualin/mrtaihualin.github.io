@@ -6,7 +6,7 @@
    ===================================================================== */
 
 /* ── 載入字體 ───────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@300;400;500;600&family=Kanit:wght@400;600&family=Mali:wght@400;700&family=Charmonman:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@300;400;500;600&family=Kanit:wght@400;600&family=Mali:wght@400;700&family=Charmonman:wght@400;700&family=Sarabun:wght@400;600;700&display=swap');
 
 :root{
   /* ═══════ 主色盤（在這裡改顏色，全站生效）═══════ */
@@ -49,9 +49,14 @@
   --font-zh-serif:    'Noto Serif TC','Georgia',serif;
   --font-thai-modern: 'Kanit',sans-serif;     /* 現代字體切換 */
   --font-thai-hand:   'Charmonman',cursive;   /* 手寫字體切換 */
+  --font-thai:        'Sarabun',sans-serif;   /* 泰文本字（聲調符號等）— 確保聲調正常顯示 */
 
   --hl:      #fff1a8;   /* 螢光標記底色（補充說明用） */
 }
+
+/* ── 聲調符號顯示（不用 ◌ 虛線圈，改用隱形 ก 當底才不會有些裝置顯示不出來）───── */
+.comb-disp{ display:inline-block; line-height:1.3; font-family:var(--font-thai); }
+.comb-base{ color:transparent; }
 
 /* =====================================================================
    補充說明（note / warn / note-box…）文字格式
