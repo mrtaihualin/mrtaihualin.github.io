@@ -288,7 +288,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .rg-typed-rest{color:#c9b78a;}
 .type-hint{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;text-align:center;}
 /* ซ่อนช่อง input จริงไว้ (มองไม่เห็น แต่ยังโฟกัสได้) — ห้ามใช้ display:none/visibility:hidden เพราะมือถือจะไม่เด้งคีย์บอร์ดให้ */
-.mobile-kbd-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;border:0;opacity:0;overflow:hidden;font-size:16px;}
+/* Lin 2026-07-15: ขยายจาก 1px เป็น 24px + pointer-events:none — มือถือบางรุ่นเช็คว่า input "จริงพอ" ก่อนเด้งคีย์บอร์ด ถ้าเล็กเกินไปบางทีแตะครั้งแรกไม่ขึ้น ต้องแตะซ้ำ (อ้างอิง: ปัญหา iOS/Android hidden-input focus ที่มีคนเจอทั่วไป) */
+.mobile-kbd-input{position:absolute;width:24px;height:24px;padding:0;margin:-1px;border:0;opacity:0;overflow:hidden;font-size:16px;pointer-events:none;}
 /* Lin 2026-07-12: มือถือ無顯示 → แตะกล่องคำเรียกคีย์บอร์ดเครื่องเอง */
 .type-target{cursor:pointer;}
 /* Lin 2026-07-12: ตอนคีย์บอร์ดเครื่องขึ้นมาพิมพ์ → ซ่อนหัวเว็บ/แถบชื่อ ไม่ให้กินพื้นที่จอ */
@@ -455,7 +456,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
 
   <div class="type-panel" id="type-panel" style="display:none">
-    <div class="type-target" id="rg-type-target" onclick="try{document.getElementById('rg-mobile-input').focus();}catch(e){}" title="點一下用鍵盤打字"></div>
+    <div class="type-target" id="rg-type-target" onclick="try{document.getElementById('rg-mobile-input').focus();}catch(e){}" ontouchstart="try{document.getElementById('rg-mobile-input').focus();}catch(e){}" title="點一下用鍵盤打字"></div>
     <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤排好位置了，打對會自動跳下一步 👇</div>
     <!-- ปุ่มกด → เด้งคีย์บอร์ดของมือถือเอง (Gboard/คีย์บอร์ด iOS ไทย) ขึ้นมาพิมพ์ได้ตรงๆ ไม่ต้องใช้ปุ่มเสมือนด้านล่างก็ได้ — ตัว input จริงซ่อนไว้ (โฟกัสได้แต่มองไม่เห็น) เพราะมือถือต้องมี input จริงถึงจะเด้งคีย์บอร์ด — Lin 2026-07-06 -->
     <!-- Lin 2026-07-12: ลบปุ่ม 📱 用手機鍵盤打字 ออก — แตะที่กล่องคำ (rg-type-target) เรียกคีย์บอร์ดเครื่องได้เลย ไม่ต้องมีปุ่ม -->
