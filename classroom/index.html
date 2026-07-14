@@ -104,7 +104,9 @@
   .btn-sm-preview { background: #e0f2fe; color: #0369a1; }
   .btn-sm-meet    { background: var(--gold-light); color: var(--gold-deep); }
   .btn-sm-edit    { background: #fef9c3; color: #854d0e; }
-  .btn-sm-delete  { background: #fee2e2; color: #b91c1c; }
+  /* 2026-07-14 改：這顆按鈕現在是「封存」不是永久刪除了，改用琥珀色不用刺眼的紅色警示色
+     （紅色會讓人誤以為是不可逆的危險操作，跟品牌色也不搭 — 見 CLAUDE.md 顏色規則） */
+  .btn-sm-delete  { background: #fdf0da; color: var(--amber-dark, #78350f); }
 
   .empty-state { text-align: center; padding: 28px 0 12px; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; font-size: 0.87rem; }
 
@@ -1353,6 +1355,80 @@ async function findConflictingEvents(newStartIso, newEndIso, excludeEventId) {
   } catch (e) { return []; }
 }
 
+// 2026-07-14 加：封存學生時停掉「往後」的固定課，但「已經上過」的課堂紀錄一定要保留 —
+//   跟 submitPermanentChangeInner 用同一招：固定課是「一個」有 RRULE 的 recurring event，
+//   不是每週各自獨立的 event，所以「往後全部停掉、以前全部保留」不用一筆一筆刪，
+//   只要把 RRULE 的 UNTIL 改成「現在這一刻」就好（UNTIL 之前的 occurrence 都還在，
+//   之後的 occurrence 全部消失，天生就符合「上過的別動、以後的都停」）。
+//   單次（非固定）課程才需要真的刪除 — 但這裡查到的一定是「下一堂課」，代表還沒上過，
+//   刪掉不會動到任何已發生的歷史紀錄。
+async function cancelFutureClassesForArchive(token) {
+  const s = studentsCache[token];
+  if (!s) return { ok: true, note: '找不到學生資料，略過 Calendar' };
+  const studentName = s.name;
+
+  // 1) 找「下一堂課」的日期（跟 loadTeacherNextClassBox 同一套邏輯，獨立算一次，
+  //    不依賴那個 UI 有沒有先載入過）
+  let lessonDate = null;
+  try {
+    const { data } = await sb.rpc('get_student_schedule', { p_token: token });
+    if (data && data.length) {
+      lessonDate = data[0].lesson_date;
+    } else if (s.pending_start_date && s.pending_class_time) {
+      let anchor = teacherTimeToDate(s.pending_start_date, s.pending_class_time);
+      if (s.pending_recurring) {
+        const weekMs = 7 * 24 * 3600 * 1000, nowMs = Date.now();
+        if (anchor.getTime() < nowMs) { const weeksPassed = Math.ceil((nowMs - anchor.getTime()) / weekMs); anchor = new Date(anchor.getTime() + weeksPassed * weekMs); }
+      } else if (anchor.getTime() < Date.now()) { anchor = null; }
+      if (anchor) { const p = formatInTz(anchor, TEACHER_TZ); lessonDate = p.dateStr; }
+    }
+  } catch (e) { return { ok: false, error: '讀取課表失敗：' + (e.message || e) }; }
+
+  if (!lessonDate) return { ok: true, note: '目前沒有排定中的課，不用處理 Calendar' };
+
+  // 2) 用學生姓名 + 那天的日期，去 Calendar 找出那個 recurring event
+  let matches;
+  try { matches = await findClassEventForRequest(studentName, lessonDate); }
+  catch (e) { return { ok: false, error: '搜尋 Calendar 失敗：' + (e.message || e) }; }
+  if (!matches.length) return { ok: true, note: '在 Calendar 找不到符合的課堂事件（可能已經手動處理過）' };
+  if (matches.length > 1) return { ok: false, error: '找到 ' + matches.length + ' 筆疑似符合的課堂，不確定是哪一筆，請自己到 Calendar 手動處理' };
+
+  const instance = matches[0];
+  const masterId = instance.recurringEventId || instance.id;
+  let masterEv;
+  try {
+    const calToken = await gdGetToken();
+    const mr = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(masterId), { headers: { Authorization: 'Bearer ' + calToken } });
+    if (!mr.ok) throw new Error('讀取課表事件失敗（' + mr.status + '）');
+    masterEv = await mr.json();
+  } catch (e) { return { ok: false, error: e.message || String(e) }; }
+
+  // RELIABILITY FIRST：動 Calendar 之前先備份整包事件，之後有需要能人工復原
+  try {
+    await sb.from('classroom_calendar_backups').insert({
+      request_id: null, token: token, action: 'archive_student',
+      old_event_id: masterEv.id, new_event_id: null,
+      old_event_json: masterEv, old_start: masterEv.start && (masterEv.start.dateTime || masterEv.start.date),
+    });
+  } catch (e) {}
+
+  try {
+    const calToken = await gdGetToken();
+    if (masterEv.recurrence && masterEv.recurrence.length) {
+      const untilStr = buildIcalUntilUtc(new Date());
+      const patchBody = { recurrence: setRruleUntil(masterEv.recurrence, untilStr) };
+      const pr = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(masterEv.id), {
+        method: 'PATCH', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(patchBody),
+      });
+      if (!pr.ok) throw new Error('關閉往後課表失敗（' + pr.status + '）：' + (await pr.text()).slice(0, 200));
+    } else {
+      await deleteClassEventOnce(masterEv.id);
+    }
+  } catch (e) { return { ok: false, error: e.message || String(e) }; }
+
+  return { ok: true };
+}
+
 // RELIABILITY FIRST：任何「移動/刪除」Calendar 事件之前，一定先把原本的事件整包存起來，
 // 之後才有辦法「復原」。存的是移動/刪除「之前」抓到的完整 event JSON。
 async function backupCalendarEvent(requestId, token, action, eventObj, newStartIso) {
@@ -1373,6 +1449,40 @@ async function backupCalendarEvent(requestId, token, action, eventObj, newStartI
 async function gdGetStudentFolderId(studentName) {
   const rootId = await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
   return await gdEnsureFolder(studentName, rootId);
+}
+
+// 2026-07-14 加：封存/恢復學生時，把整個學生資料夾搬進／搬出「舊生」子資料夾
+// （用 addParents/removeParents，資料夾本體 id 不變，裡面的檔案完全不受影響，只是換位置而已）
+async function gdMoveFolder(fileId, newParentId, oldParentId) {
+  return await gdApi(
+    'drive/v3/files/' + fileId + '?addParents=' + encodeURIComponent(newParentId) +
+      '&removeParents=' + encodeURIComponent(oldParentId) + '&fields=id,parents',
+    { method: 'PATCH' }
+  );
+}
+const DRIVE_ARCHIVE_FOLDER = '舊生';
+// 封存：把學生資料夾從根目錄搬進「舊生」— 只搬「已經存在」的資料夾，沒有的話就跳過
+// （不要因為封存而意外新建一個空的學生資料夾）
+async function moveStudentFolderToArchive(studentName) {
+  try {
+    const rootId = await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
+    const stuId = await gdFindFolder(studentName, rootId);
+    if (!stuId) return { ok: true, note: '找不到這位學生的 Drive 資料夾，略過搬移' };
+    const archiveRootId = await gdEnsureFolder(DRIVE_ARCHIVE_FOLDER, rootId);
+    await gdMoveFolder(stuId, archiveRootId, rootId);
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message || String(e) }; }
+}
+// 恢復：把學生資料夾從「舊生」搬回根目錄
+async function moveStudentFolderFromArchive(studentName) {
+  try {
+    const rootId = await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
+    const archiveRootId = await gdEnsureFolder(DRIVE_ARCHIVE_FOLDER, rootId);
+    const stuId = await gdFindFolder(studentName, archiveRootId);
+    if (!stuId) return { ok: true, note: '在「舊生」資料夾裡找不到這位學生的資料夾，略過搬移' };
+    await gdMoveFolder(stuId, rootId, archiveRootId);
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message || String(e) }; }
 }
 // 學生資料夾下再分子資料夾：學習內容（筆記）／影片（錄影）
 async function gdGetStudentSubfolderId(studentName, sub) {
@@ -2171,16 +2281,34 @@ async function repairMeet(token) {
 }
 
 // 2026-07-14：改成先呼叫 Edge Function unlink-line-student —
-//   如果這個學生有綁 LINE，會先把他的 LINE 選單切回「win-back」版（避免刪除後
+//   如果這個學生有綁 LINE，會先把他的 LINE 選單切回「win-back」版（避免封存後
 //   選單卡在學生版、點「我的教室」變成「尚未綁定」很奇怪），再由 Edge Function
-//   本身把資料庫那筆刪掉（一次做完，避免切選單成功但刪除失敗的競態）。
-//   Edge Function 還沒部署/連不到時，自動退回原本「client 直接刪」的做法，
-//   確保刪除功能本身不會被新功能卡住（RELIABILITY FIRST：刪除一定要成功或明確報錯）。
+//   本身把資料庫那筆標記 archived_at（一次做完，避免切選單成功但標記失敗的競態）。
+//   🆕 2026-07-14（第 2 版）：Edge Function 內部已改成 UPDATE archived_at，不再是 DELETE。
+//   Edge Function 還沒部署/連不到時，自動退回原本「client 直接標記」的做法，
+//   確保封存功能本身不會被新功能卡住（RELIABILITY FIRST：封存一定要成功或明確報錯）。
 const LINE_UNLINK_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/unlink-line-student';
+const LINE_RESTORE_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/restore-line-student';
 
+// 2026-07-14（第 2 版，Lin 要求改成「封存」不要真的刪除資料）：
+//   按這顆按鈕不再是永久刪除 —
+//   (1) 先處理 Google Calendar：往後的固定課停掉、已經上過的課堂紀錄一律保留
+//   (2) 再把 Google Drive 學生資料夾整個搬進「舊生」子資料夾（檔案都還在，只是換位置）
+//   (3) 最後才把資料庫那筆標記成「已封存」(archived_at)，不是刪除 —
+//       之後在「📦 舊生列表」裡隨時可以用「♻️ 恢復」按鈕救回來
+//   (1)(2) 是 best-effort：失敗會跳警告請 Lin 自己去 Calendar/Drive 檢查，但不會擋住封存本身，
+//   因為封存學生（讓他從常用名單消失）才是這顆按鈕最重要、最不能失敗的部分。
 async function deleteStudent(token) {
   const name = studentsCache[token]?.name || token;
-  if (!confirm('確定要刪除「' + name + '」嗎？')) return;
+  if (!confirm('確定要把「' + name + '」封存成舊生嗎？\n\n・往後排定的課會停止，但已經上過的課堂紀錄都會保留\n・Google Drive 資料夾會整個搬進「舊生」資料夾，檔案不會不見\n・之後可以在「📦 舊生列表」隨時恢復')) return;
+
+  const warnings = [];
+
+  const calRes = await cancelFutureClassesForArchive(token);
+  if (!calRes.ok) warnings.push('⚠️ Google Calendar 沒處理成功：' + calRes.error + '\n（不影響封存本身，請自己到 Calendar 手動處理往後的課）');
+
+  const driveRes = await moveStudentFolderToArchive(name);
+  if (!driveRes.ok) warnings.push('⚠️ Google Drive 資料夾沒搬成功：' + driveRes.error + '\n（資料還在原本位置，不影響封存本身，之後可以自己手動搬進「舊生」資料夾）');
 
   let handledByFunction = false;
   try {
@@ -2195,12 +2323,46 @@ async function deleteStudent(token) {
     });
     if (r.ok) handledByFunction = true;
   } catch (e) {
-    // 連不到 Edge Function（例如還沒部署）→ 往下退回原本的直接刪除
+    // 連不到 Edge Function（例如還沒部署）→ 往下退回原本的直接標記
   }
 
   if (!handledByFunction) {
-    const { error } = await sb.from('classroom_students').delete().eq('token', token);
-    if (error) { alert('刪除失敗：' + error.message); return; }
+    const { error } = await sb.from('classroom_students').update({ archived_at: new Date().toISOString() }).eq('token', token);
+    if (error) { alert('封存失敗：' + error.message); return; }
+  }
+  await refreshStudentList();
+  if (warnings.length) alert(warnings.join('\n\n'));
+}
+
+// 2026-07-14 加：從「📦 舊生列表」把封存的學生恢復成使用中 —
+//   (1) 把 Drive 資料夾從「舊生」搬回原本位置 (2) 解除 archived_at + 有連 LINE 的話把選單切回學生版
+async function restoreStudent(token) {
+  const s = studentsCache[token];
+  const name = (s && s.name) || token;
+  if (!confirm('確定要把「' + name + '」從舊生恢復成使用中的學生嗎？')) return;
+
+  const driveRes = await moveStudentFolderFromArchive(name);
+  if (!driveRes.ok) alert('⚠️ Google Drive 資料夾沒搬回成功：' + driveRes.error + '\n（不影響恢復本身，之後可以自己手動搬回來）');
+
+  let handledByFunction = false;
+  try {
+    const r = await fetch(LINE_RESTORE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': window.SUPABASE_CONFIG.anonKey,
+        'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey
+      },
+      body: JSON.stringify({ token: token })
+    });
+    if (r.ok) handledByFunction = true;
+  } catch (e) {
+    // 連不到 Edge Function（例如還沒部署）→ 往下退回原本的直接標記
+  }
+
+  if (!handledByFunction) {
+    const { error } = await sb.from('classroom_students').update({ archived_at: null }).eq('token', token);
+    if (error) { alert('恢復失敗：' + error.message); return; }
   }
   await refreshStudentList();
 }
@@ -2299,9 +2461,14 @@ const meetSVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 6C4 4.9 4.9 4 
 const TEXT_COLORS  = ['#1C1C1C','#b45309','#15803d','#1d4ed8','#7c3aed','#be185d','#dc2626'];
 const HL_COLORS    = ['#fef08a','#bbf7d0','#bfdbfe','#f5d0fe','#fed7aa','#fecaca','transparent'];
 
+// 2026-07-14 加：已封存（archived_at 有值）的學生不列進「選擇學生」下拉選單裡 —
+//   要看/恢復舊生要點下面的「📦 舊生列表」才會展開
 function renderStudentListHTML() {
-  const entries = Object.entries(studentsCache);
-  if (entries.length === 0) return '<div class="empty-state">尚未新增學生<br>點擊下方按鈕新增第一位學生</div>';
+  const allEntries = Object.entries(studentsCache);
+  if (allEntries.length === 0) return '<div class="empty-state">尚未新增學生<br>點擊下方按鈕新增第一位學生</div>';
+
+  const entries = allEntries.filter(function(e) { return !e[1].archived_at; });
+  const archived = allEntries.filter(function(e) { return e[1].archived_at; });
 
   const options = entries.map(function(entry) {
     const token = entry[0], s = entry[1];
@@ -2314,7 +2481,39 @@ function renderStudentListHTML() {
       options +
     '</select>' +
   '</div>' +
-  '<div class="stu-panel" id="stuPanel"></div>';
+  '<div class="stu-panel" id="stuPanel"></div>' +
+  '<div style="margin-top:14px;text-align:right;">' +
+    '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="toggleArchivedStudents()" id="archivedToggleBtn">📦 舊生列表（' + archived.length + '）</button>' +
+  '</div>' +
+  '<div id="archivedStudentsPanel" style="display:none;margin-top:8px;"></div>';
+}
+
+// 2026-07-14 加：展開/收合「舊生列表」面板 — 每次展開都重新從 studentsCache 畫一次，
+//   確保剛封存/恢復完之後資料是最新的
+function toggleArchivedStudents() {
+  const panel = document.getElementById('archivedStudentsPanel');
+  if (!panel) return;
+  const showing = panel.style.display !== 'none';
+  panel.style.display = showing ? 'none' : 'block';
+  if (!showing) panel.innerHTML = renderArchivedStudentsHTML();
+}
+
+function renderArchivedStudentsHTML() {
+  const archived = Object.entries(studentsCache).filter(function(e) { return e[1].archived_at; });
+  if (!archived.length) return '<div class="empty-state" style="font-size:0.85rem;padding:16px;">目前沒有舊生</div>';
+  return archived.map(function(entry) {
+    const token = entry[0], s = entry[1];
+    const t = token.replace(/'/g, '');
+    let archivedDateStr = '';
+    try { archivedDateStr = new Date(s.archived_at).toLocaleDateString('zh-TW'); } catch (e) {}
+    return '<div class="card" style="padding:10px 14px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+      '<div>' +
+        '<div style="font-weight:700;color:var(--ink);font-family:\'Noto Serif TC\',serif;">' + escHtml(s.name) + '</div>' +
+        '<div style="font-size:0.75rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">封存於 ' + escHtml(archivedDateStr) + '</div>' +
+      '</div>' +
+      '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;flex-shrink:0;" onclick="restoreStudent(\'' + t + '\')">♻️ 恢復</button>' +
+    '</div>';
+  }).join('');
 }
 
 // 老師：開啟某學生的 Drive 資料夾（用老師的 Google 權限解析資料夾）
@@ -2355,7 +2554,7 @@ function selectStudent(token) {
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       (!s.meet ? '<button class="btn-sm" style="background:#b45309;color:#fff;" onclick="repairMeet(\'' + t + '\')">🔧 補課堂連結</button>' : '') +
-      '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')">🗑</button>' +
+      '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')" title="封存成舊生（不是永久刪除，之後可在舊生列表恢復）">📦 封存</button>' +
     '</div>' +
     '<button class="btn-open-note" onclick="openStudentNotesDoc(\'' + t + '\')">📝 開啟課堂筆記</button>' +
     '<div class="card" style="margin-top:12px;padding:14px;">' +
