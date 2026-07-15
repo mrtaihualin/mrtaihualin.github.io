@@ -93,13 +93,13 @@
       ]
     },
     {
-      th: 'พรุ่งนี้เราไปด้วยกันนะ', zh: '明天我們一起去吧', wc: 7,
+      th: 'พรุ่งนี้เราไปด้วยกันนะ', zh: '明天我們一起去喔', wc: 7,
       words: [
       { th: 'พรุ่งนี้', zh: '明天', syl: ['พรุ่ง', 'นี้'], syls: [{cons:'พ', cluster:'ร', vowel:'อุ', tone:'่', final:'ง', tone_name:'โท', th:'พรุ่ง', en:'phrûng'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'เรา', zh: '我們', syl: ['เรา'], syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
       { th: 'ไป', zh: '去', syl: ['ไป'], syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}] },
       { th: 'ด้วยกัน', zh: '一起', syl: ['ด้วย', 'กัน'], syls: [{cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย', en:'dûay'}, {cons:'ก', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'กัน', en:'gan'}] },
-      { th: 'นะ', zh: '吧', syl: ['นะ'], syls: [{cons:'น', vowel:'อะ', tone_name:'ตรี', th:'นะ', en:'ná'}] }
+      { th: 'นะ', zh: '喔', syl: ['นะ'], syls: [{cons:'น', vowel:'อะ', tone_name:'ตรี', th:'นะ', en:'ná'}] }
       ]
     },
     {
@@ -113,14 +113,14 @@
       ]
     },
     {
-      th: 'เธอยังไม่กลับบ้านเหรอ', zh: '她還沒回家嗎？', wc: 6,
+      th: 'เธอยังไม่กลับบ้านเหรอ', zh: '你還沒回家喔？', wc: 6,
       words: [
-      { th: 'เธอ', zh: '她', syl: ['เทอ'], syls: [{cons:'ธ', vowel:'เออ', tone_name:'สามัญ', th:'เทอ', en:'thoe'}] },
+      { th: 'เธอ', zh: '你', syl: ['เทอ'], syls: [{cons:'ธ', vowel:'เออ', tone_name:'สามัญ', th:'เทอ', en:'thoe'}] },
       { th: 'ยัง', zh: '還', syl: ['ยัง'], syls: [{cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง', en:'yang'}] },
       { th: 'ไม่', zh: '沒', syl: ['ไม่'], syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
       { th: 'กลับ', zh: '回', syl: ['กลับ'], syls: [{cons:'ก', cluster:'ล', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กลับ', en:'glàp'}] },
       { th: 'บ้าน', zh: '家', syl: ['บ้าน'], syls: [{cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'}] },
-      { th: 'เหรอ', zh: '嗎', syl: ['เหรอ'], syls: [{cons:'ร', lead:'ห', vowel:'เออ', tone_name:'จัตวา', th:'เหรอ', en:'rǒe'}] }
+      { th: 'เหรอ', zh: '喔？', syl: ['เหรอ'], syls: [{cons:'ร', lead:'ห', vowel:'เออ', tone_name:'จัตวา', th:'เหรอ', en:'rǒe'}] }
       ]
     }
   ];
