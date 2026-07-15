@@ -1086,9 +1086,15 @@ function gdGetToken(forceConsent) {
 async function ensureGoogleReady() {
   await gdGetToken(); // 先取一次（靜默或首次同意）
   var sc = gdTokenScopes || '';
-  // 2026-07-15 加 freebusy 檢查：舊 token 只有 calendar.events，字串裡雖然含「calendar」但沒有
-  // 「freebusy」，之前這裡漏檢查，才會漏補權限，導致「檢查是否衝突」403
-  var missing = !sc || sc.indexOf('calendar') === -1 || sc.indexOf('freebusy') === -1 || sc.indexOf('drive') === -1 || sc.indexOf('documents') === -1;
+  // 2026-07-15 加過 freebusy 檢查又移除：這個函式是「確認收款」「補課堂連結」共用的，
+  // 兩個都不會呼叫 freeBusy.query，不需要 freebusy scope。當時誤把 freebusy 加進這裡的
+  // 通用檢查，結果每個「舊 token（今天以前授權過、本來就沒有 freebusy 也不需要）」的老師
+  // 一按「確認收款」就會被逼著跳出強制重新同意（forceConsent）的彈窗——這種彈窗因為隔著
+  // 好幾個 await 才觸發，很容易被瀏覽器當成「非使用者操作」直接擋掉或彈窗卡住 6 秒逾時，
+  // 造成「收據產生失敗」（Lin 回報：昨天還正常，今天壞掉）。
+  // freebusy 真正需要的地方（checkFreebusyConflict()，「檢查是否衝突」功能）已經有自己
+  // 專屬的 freebusy 補權限判斷（見下面），不需要也不該讓這裡的通用檢查重複逼一次。
+  var missing = !sc || sc.indexOf('calendar') === -1 || sc.indexOf('drive') === -1 || sc.indexOf('documents') === -1;
   if (missing) { await gdGetToken(true); } // 缺 scope（含舊 token 不知道 scope 的情況）→ 趁點擊手勢還在，強制補權限
   return true;
 }
@@ -6406,6 +6412,8 @@ async function approveSlip() {
 
   // 產生收據檔到學生「收據」資料夾
   var receipt = null;
+  var receiptErrMsg = ''; // 2026-07-15 加：以前這裡失敗只 console.warn，老師只看到「請確認已用 Google 登入授權」
+                           // 這種通用訊息，猜不到真正原因（Lin 回報）。改成把 e.message 存起來，直接顯示給老師看。
   btn.textContent = '產生收據中…';
   var receiptDbWarn = '';
   try {
@@ -6418,16 +6426,17 @@ async function approveSlip() {
         receiptDbWarn = '\n\n⚠️ 收據已產生（編號 ' + receipt.receiptNo + '），但繳費狀態改成「已完成」失敗（' + (rdRes.error ? rdRes.error.message : 'RLS 權限問題') + '），這筆可能還停在「pending」，請檢查。';
       }
     }
-  } catch (e) { console.warn('收據產生失敗：', e); }
+  } catch (e) { console.warn('收據產生失敗：', e); receiptErrMsg = (e && e.message) ? e.message : String(e); }
   btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據';
   document.getElementById('slipApprovalModal').classList.remove('open');
   pendingSlipId = null;
   var meetWarn = (setupResult && setupResult.meetError)
     ? '\n\n⚠️ 課堂 Meet 連結自動建立失敗，但學生已解鎖（連結先留空）。\n請在學生面板按「🔧 補課堂連結」補上（學生頁目前顯示「課堂連結準備中」）。'
     : '';
+  // 2026-07-15 改：收據失敗時顯示真正的錯誤原因（不再是固定的通用訊息），方便抓根本原因。
   alert('✅ 已確認！' + (receipt
     ? '\n收據已存到學生「課表 & 收據」資料夾\n編號：' + receipt.receiptNo
-    : '\n（收據檔產生失敗，請確認已用 Google 登入授權）') + meetWarn + receiptDbWarn);
+    : '\n⚠️ 收據檔產生失敗：' + (receiptErrMsg || '未知錯誤') + '\n（付款已確認生效，學生已解鎖，不受影響）') + meetWarn + receiptDbWarn);
   await loadPendingSlips();
   loadLowQuotaBanner();
   await refreshStudentList();
