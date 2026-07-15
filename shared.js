@@ -20,7 +20,6 @@
 //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล
 // ===================================================================
 var ANN = [
-  { emoji:'📡', text:'每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！', cta:'前往直播', href:'https://www.facebook.com/mrtaihua' },
   { emoji:'🎁', text:'首堂 30 分鐘體驗課免費・中文授課', cta:'立即預約', modal:'modal-line-qr' },
   { emoji:'🎮', text:'5 款免費泰語遊戲上線！聲調・拼讀・打字・造句・語序，每款都有排行榜可以比賽', cta:'前往遊戲', href:'games.html' },
   { emoji:'🎵', text:'用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta:'去聽歌學泰語', href:'resources.html#songs' },
@@ -872,7 +871,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     if(window.scrollY > 200) { el.classList.add('visible'); } else { el.classList.remove('visible'); }
   }, {passive:true});
 
-document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">📡 每週六 20:00（台灣時間）FB 粉絲頁準時直播泰語教學，千萬別錯過！</span><a class="avail-cta" href="https://www.facebook.com/mrtaihua" target="_blank">前往直播</a></div></div>'; });
+document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><a class="avail-cta" href="javascript:void(0)" onclick="openModal(\'modal-line-qr\')">立即預約</a></div></div>'; });
 
 // ===== 📬 Contact / LINE QR / Social Modal Injection =====
 (function injectSharedModals() {
@@ -935,7 +934,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
           <div style="flex:1;">${_infoCard(_miscIcon.email, '電子郵件', 'mr.taihualin@gmail.com', 'mailto:mr.taihualin@gmail.com')}</div>
           <button onclick="navigator.clipboard.writeText('mr.taihualin@gmail.com').then(function(){var b=document.getElementById('copy-email-btn');if(b){b.textContent='✅ 已複製';setTimeout(function(){b.textContent='複製';},2000);}}).catch(function(){prompt('複製此 Email：','mr.taihualin@gmail.com');})" id="copy-email-btn" style="flex-shrink:0;padding:0 14px;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));color:#5C4410;border:1px solid rgba(200,151,58,0.32);border-radius:12px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 4px rgba(140,100,20,0.05);">複製</button>
         </div>
-        ${_snsRow('https://www.facebook.com/mrtaihua','','','Facebook','粉絲頁・每週直播教學','facebook')}
+        ${_snsRow('https://www.facebook.com/mrtaihua','','','Facebook','粉絲頁・泰語教學貼文','facebook')}
         ${_snsRow('https://www.youtube.com/@mrtaihua','','','YouTube','教學影片・聲調解析','youtube')}
         ${_snsRow('https://www.instagram.com/mrtaihua','','','Instagram','每日一字・學習花絮','instagram')}
         ${_snsRow('https://www.tiktok.com/@mrtaihua','','','TikTok','短影音・快速學泰語','tiktok')}
@@ -968,7 +967,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     <div class="modal-body">
       <p style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:var(--ink-muted);line-height:1.6;margin:0 0 12px;">每天學一點泰語，第一時間收到新課程與聲調小技巧 ✨</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        ${_snsRow('https://www.facebook.com/mrtaihua','#1877F2','f','Facebook','粉絲頁・每週直播教學','facebook')}
+        ${_snsRow('https://www.facebook.com/mrtaihua','#1877F2','f','Facebook','粉絲頁・泰語教學貼文','facebook')}
         ${_snsRow('https://www.youtube.com/@mrtaihua','#FF0000','▶','YouTube','教學影片・聲調解析','youtube')}
         ${_snsRow('https://www.instagram.com/mrtaihua','linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)','📷','Instagram','每日一字・學習花絮','instagram')}
         ${_snsRow('https://www.tiktok.com/@mrtaihua','#000','🎵','TikTok','短影音・快速學泰語','tiktok')}
