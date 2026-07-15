@@ -1558,13 +1558,19 @@ async function cancelFutureClassesForArchive(token) {
     } catch (e) { errors.push((e.message || e) + '（event: ' + masterId + '）'); continue; }
 
     // RELIABILITY FIRST：動 Calendar 之前先備份整包事件，之後有需要能人工復原
+    // 2026-07-15 修：以前這裡空的 catch 會吞掉備份失敗，備份沒存到還是照樣往下關掉/刪掉
+    // Calendar 事件——改成備份失敗就跳過這筆的風險操作，記進 errors 讓老師看到。
     try {
-      await sb.from('classroom_calendar_backups').insert({
+      const bkRes = await sb.from('classroom_calendar_backups').insert({
         request_id: null, token: token, action: 'archive_student',
         old_event_id: masterEv.id, new_event_id: null,
         old_event_json: masterEv, old_start: masterEv.start && (masterEv.start.dateTime || masterEv.start.date),
       });
-    } catch (e) {}
+      if (bkRes.error) throw new Error('備份失敗：' + bkRes.error.message);
+    } catch (e) {
+      errors.push((e.message || String(e)) + '（event: ' + masterEv.id + '，為了安全跳過這筆，沒有動 Calendar）');
+      continue;
+    }
 
     try {
       const calToken = await gdGetToken();
@@ -1866,6 +1872,17 @@ async function backupCalendarEvent(requestId, token, action, eventObj, newStartI
   }).select().single();
 }
 
+// 2026-07-15 加（RELIABILITY FIRST）：以前每個呼叫 backupCalendarEvent() 的地方都沒檢查
+// 回傳結果，備份失敗會完全無聲無息——之後真的要復原時才發現那筆根本沒備份到，
+// 卻已經動了 Calendar（刪除/搬移）。改成統一用這個檢查，備份失敗就丟出例外，
+// 讓外層 try/catch 擋下來、不繼續做真正會動 Calendar 的刪除/搬移。
+function assertBackupOk(res, what) {
+  if (!res || res.error || !res.data) {
+    throw new Error('備份失敗（' + (what || 'Calendar 事件') + '），為了安全不繼續動 Calendar：' +
+      (res && res.error ? res.error.message : '資料庫沒有寫入備份記錄'));
+  }
+}
+
 // ── Drive: get/create student folder + small-file upload ───────
 async function gdGetStudentFolderId(studentName) {
   const rootId = await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
@@ -1912,7 +1929,15 @@ async function ensureStudentFolderShared(studentName, token) {
     const stuId = await gdGetStudentFolderId(studentName);
     try { await gdShareAnyone(stuId); } catch(e) {}
     const link = 'https://drive.google.com/drive/folders/' + stuId;
-    if (token) { try { await sb.from('classroom_students').update({ folder_url: link }).eq('token', token); } catch(e) {} }
+    if (token) {
+      // 2026-07-15 修：以前這裡吞掉所有結果，連 error 都沒讀，RLS 擋掉也不會發現，
+      // 學生頁的資料夾連結永遠不會更新到。改成讀 error + 確認真的有 row 被改到。
+      const folderUpdRes = await sb.from('classroom_students').update({ folder_url: link }).eq('token', token).select();
+      if (folderUpdRes.error || !folderUpdRes.data || !folderUpdRes.data.length) {
+        console.warn('⚠️ ensureStudentFolderShared：資料夾連結沒有真的寫入資料庫（token=' + token + '）：' +
+          (folderUpdRes.error ? folderUpdRes.error.message : '可能是 RLS 權限問題，0 筆被更新'));
+      }
+    }
     return link;
   } catch(e) { return null; }
 }
@@ -2196,9 +2221,9 @@ async function saveLessonProgress(token) {
   if (!ta) return;
   const val = ta.value;
   if (statusEl) statusEl.textContent = '儲存中…';
-  const { error } = await sb.from('classroom_students').update({ lesson_progress: val }).eq('token', t);
-  if (error) {
-    if (statusEl) statusEl.textContent = '❌ 儲存失敗：' + error.message;
+  const res = await sb.from('classroom_students').update({ lesson_progress: val }).eq('token', t).select();
+  if (res.error || !res.data || !res.data.length) {
+    if (statusEl) statusEl.textContent = '❌ 儲存失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）');
     return;
   }
   if (studentsCache[t]) studentsCache[t].lesson_progress = val;
@@ -2691,12 +2716,15 @@ async function saveStudentEdit() {
   // 否則學生頁的閘門（只看 confirmed）會讓學生還是進不去（這是之前卡住的第二個原因）。
   // 2026-07-11：新增 custom_entry_link（老師自訂入班連結，留空就用系統自動產生的），
   // 跟其他學生欄位一樣直接寫進 classroom_students，走同一個 update。
-  let { error } = await sb.from('classroom_students').update({ name: newName, meet: newMeet, setup_status: 'confirmed', custom_entry_link: newEntryLink || null }).eq('token', editingToken);
-  if (error && /custom_entry_link/.test(error.message || '')) {
+  // 2026-07-15 修：以前這裡只看 error，沒確認真的有 row 被改到——RLS 擋掉的話會顯示
+  // 「儲存成功」但資料庫其實沒變。改成用 .select() 檢查 data.length。
+  let res = await sb.from('classroom_students').update({ name: newName, meet: newMeet, setup_status: 'confirmed', custom_entry_link: newEntryLink || null }).eq('token', editingToken).select();
+  let error = res.error || ((!res.data || !res.data.length) ? { message: '資料庫沒有真的更新到（可能是 RLS 權限問題）' } : null);
+  if (res.error && /custom_entry_link/.test(res.error.message || '')) {
     // Supabase 資料庫還沒加這個欄位 → 先不帶這欄位重存一次，姓名/Meet 還是要能正常存
-    console.warn('custom_entry_link 欄位可能還沒建立，改用不含此欄位的方式儲存：', error.message);
-    const retry = await sb.from('classroom_students').update({ name: newName, meet: newMeet, setup_status: 'confirmed' }).eq('token', editingToken);
-    error = retry.error;
+    console.warn('custom_entry_link 欄位可能還沒建立，改用不含此欄位的方式儲存：', res.error.message);
+    const retry = await sb.from('classroom_students').update({ name: newName, meet: newMeet, setup_status: 'confirmed' }).eq('token', editingToken).select();
+    error = retry.error || ((!retry.data || !retry.data.length) ? { message: '資料庫沒有真的更新到（可能是 RLS 權限問題）' } : null);
     if (!error) alert('⚠️ 姓名／Meet 連結已儲存，但「自訂入班連結」還沒存成功——資料庫缺少 custom_entry_link 欄位，請先請 Lin 在 Supabase 執行對應的 SQL 再重試一次。');
   }
   saveBtn.disabled = false; saveBtn.textContent = '儲存';
@@ -2731,8 +2759,11 @@ async function repairMeet(token) {
     if (!newTime || !isValidTimeStr(newTime)) { alert('時間格式不對或沒有輸入，已取消。'); return; }
     var newRecurring = confirm('是否為「每週固定上課」？\n（按「確定」＝是，每週重複／按「取消」＝否，只有這一次）');
     var scheduleUpd = { pending_start_date: newDate, pending_class_time: newTime, pending_recurring: newRecurring };
-    var scheduleRes = await sb.from('classroom_students').update(scheduleUpd).eq('token', token);
-    if (scheduleRes.error) { alert('儲存課表失敗：' + scheduleRes.error.message); return; }
+    var scheduleRes = await sb.from('classroom_students').update(scheduleUpd).eq('token', token).select();
+    if (scheduleRes.error || !scheduleRes.data || !scheduleRes.data.length) {
+      alert('儲存課表失敗：' + (scheduleRes.error ? scheduleRes.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+      return;
+    }
     Object.assign(s, scheduleUpd);
   }
 
@@ -2759,8 +2790,11 @@ async function repairMeet(token) {
     var meet = await createMeetLinkForStudent(s.name, {
       startDate: s.pending_start_date, classTime: s.pending_class_time, recurring: !!s.pending_recurring
     });
-    var res = await sb.from('classroom_students').update({ meet: meet, setup_status: 'confirmed' }).eq('token', token);
-    if (res.error) { alert('⚠️ Meet 建好了但寫入資料庫失敗：' + res.error.message); return; }
+    var res = await sb.from('classroom_students').update({ meet: meet, setup_status: 'confirmed' }).eq('token', token).select();
+    if (res.error || !res.data || !res.data.length) {
+      alert('⚠️ Meet 建好了但寫入資料庫失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+      return;
+    }
     s.meet = meet; s.setup_status = 'confirmed';
     // Drive 資料夾 best-effort（跟確認收款時一樣，缺就補）
     try {
@@ -2843,8 +2877,11 @@ async function deleteStudent(token) {
   }
 
   if (!handledByFunction) {
-    const { error } = await sb.from('classroom_students').update({ archived_at: new Date().toISOString() }).eq('token', token);
-    if (error) { alert('封存失敗：' + error.message); return; }
+    const archRes = await sb.from('classroom_students').update({ archived_at: new Date().toISOString() }).eq('token', token).select();
+    if (archRes.error || !archRes.data || !archRes.data.length) {
+      alert('封存失敗：' + (archRes.error ? archRes.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+      return;
+    }
   }
   await refreshStudentList();
   if (warnings.length) alert(warnings.join('\n\n'));
@@ -2879,8 +2916,11 @@ async function restoreStudent(token) {
   }
 
   if (!handledByFunction) {
-    const { error } = await sb.from('classroom_students').update({ archived_at: null }).eq('token', token);
-    if (error) { alert('恢復失敗：' + error.message); return; }
+    const restRes = await sb.from('classroom_students').update({ archived_at: null }).eq('token', token).select();
+    if (restRes.error || !restRes.data || !restRes.data.length) {
+      alert('恢復失敗：' + (restRes.error ? restRes.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+      return;
+    }
   }
 
   // 比照新學生：清空舊排課資訊，回到「待安排課表」狀態（critical 這步失敗要明確講，
@@ -2888,9 +2928,9 @@ async function restoreStudent(token) {
   const resetRes = await sb.from('classroom_students').update({
     setup_status: 'pending', meet: null,
     pending_start_date: null, pending_class_time: null, pending_recurring: null
-  }).eq('token', token);
-  if (resetRes.error) {
-    alert('⚠️ 學生已經恢復回來了，但清空舊課表狀態失敗：' + resetRes.error.message + '\n（不影響恢復本身，可以之後用「✏️」手動調整，或再點一次「♻️ 恢復」重試這步）');
+  }).eq('token', token).select();
+  if (resetRes.error || !resetRes.data || !resetRes.data.length) {
+    alert('⚠️ 學生已經恢復回來了，但清空舊課表狀態失敗：' + (resetRes.error ? resetRes.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）') + '\n（不影響恢復本身，可以之後用「✏️」手動調整，或再點一次「♻️ 恢復」重試這步）');
   } else if (s) {
     Object.assign(s, { setup_status: 'pending', meet: null, pending_start_date: null, pending_class_time: null, pending_recurring: null, archived_at: null });
   }
@@ -3991,15 +4031,15 @@ async function approveTestimonial(id, token) {
   var category = Array.prototype.map.call(catBoxes, function(b){ return b.value; }).join(' ');
   if (!category) { alert('請至少勾選一個分類，才能核准刊登喔'); return; }
   try {
-    var { error } = await sb.from('classroom_feedback').update({ approved: true, display_name: displayName, category: category }).eq('id', id);
-    if (error) throw error;
+    var res = await sb.from('classroom_feedback').update({ approved: true, display_name: displayName, category: category }).eq('id', id).select();
+    if (res.error || !res.data || !res.data.length) throw new Error(res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）');
     if (token) loadTeacherStudentInfo(token);
   } catch(e) { alert('核准失敗：' + (e.message || e)); }
 }
 async function unapproveTestimonial(id, token) {
   try {
-    var { error } = await sb.from('classroom_feedback').update({ approved: false }).eq('id', id);
-    if (error) throw error;
+    var res = await sb.from('classroom_feedback').update({ approved: false }).eq('id', id).select();
+    if (res.error || !res.data || !res.data.length) throw new Error(res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）');
     if (token) loadTeacherStudentInfo(token);
   } catch(e) { alert('撤銷失敗：' + (e.message || e)); }
 }
@@ -5330,7 +5370,7 @@ async function processClassRequestInner(id, r, isCancel) {
   if (isCancel) {
     if (!confirm('確定要取消這堂課嗎？\n\n學生：' + r.student_name + '\n原本時間：' + oldStartLabel + '（泰國時間 Asia/Bangkok）\n\n只會刪除 Google Calendar 上「這一次」的課堂，不影響其他週的固定課程。刪除前會先備份，之後可以復原。確定嗎？')) return;
     try {
-      await backupCalendarEvent(id, r.token, 'delete', ev, null);
+      assertBackupOk(await backupCalendarEvent(id, r.token, 'delete', ev, null), '取消課堂');
       await deleteClassEventOnce(ev.id);
       await verifyEventDeleted(ev.id); // 2026-07-15：真的回頭確認 Calendar 上刪除成功，不是只信任 API 回應
     } catch (e) {
@@ -5348,7 +5388,7 @@ async function processClassRequestInner(id, r, isCancel) {
     var conflictWarn1 = (conflicts1 && conflicts1.length) ? ('\n\n⚠️ 這個新時間跟其他行事曆事件重疊：\n' + conflicts1.map(function(c){ return '・' + (c.summary || '(無標題)'); }).join('\n')) : '';
     if (!confirm('確定要把這堂課移到新時間嗎？\n\n學生：' + r.student_name + '\n原本：' + oldStartLabel + '（泰國時間）\n改到：' + newStartLabel + '（泰國時間）' + conflictWarn1 + '\n\n只會移動「這一次」的課堂，不影響其他週的固定課程。移動前會先備份，之後可以復原。確定嗎？')) return;
     try {
-      await backupCalendarEvent(id, r.token, 'move', ev, newStartIso);
+      assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
       await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
       await verifyEventMoved(ev.id, newStartIso); // 2026-07-15：真的回頭確認 Calendar 上時間真的改了，不是只信任 API 回應
       newStartIsoForNotify = newStartIso;
@@ -5514,7 +5554,7 @@ async function confirmAcceptedOfferInner(id, r) {
 
   if (!confirm('學生已經同意了，確定要把課堂移到新時間嗎？\n\n學生：' + r.student_name + '\n原本：' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）\n改到：' + formatThaiDateTimeLabel(newStartIso) + '（泰國時間）' + conflictWarn + '\n\n只會移動這一次課堂，動手前會先備份，之後可以復原。確定嗎？')) return;
   try {
-    await backupCalendarEvent(id, r.token, 'move', ev, newStartIso);
+    assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
     await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
   } catch (e) {
     alert('⚠️ 移動課堂失敗：' + (e.message || e));
@@ -5805,7 +5845,7 @@ async function teacherCancelClassNowInner(token, chosen) {
   var newId = res.data;
 
   try {
-    await backupCalendarEvent(newId, token, 'delete', ev, null);
+    assertBackupOk(await backupCalendarEvent(newId, token, 'delete', ev, null), '取消課堂');
     await deleteClassEventOnce(ev.id);
   } catch (e) { alert('⚠️ 刪除課堂失敗：' + (e.message || e)); return; }
 
@@ -5935,15 +5975,22 @@ async function submitPermanentChangeInner(token) {
     newEventId = newEv.id;
   } catch (e) { alert('⚠️ ' + (e.message || e) + '\n（還沒動舊課表，安全，可以重試）'); return; }
 
+  // 2026-07-15 修：以前這裡空的 catch 會吞掉備份失敗，備份沒存到還是照樣往下關掉/刪掉
+  // 舊課表——新課表已經建好了，只保護「關掉舊課表」這步：備份失敗就不要動舊課表，
+  // 明確警告 Lin 自己到 Calendar 處理（新課表不用重建、也不會重複）。
+  var backupOk = true, backupErrMsg = '';
   try {
-    await sb.from('classroom_calendar_backups').insert({
+    var bkRes2 = await sb.from('classroom_calendar_backups').insert({
       request_id: null, token: token, action: 'permanent_change',
       old_event_id: masterEv.id, new_event_id: newEventId,
       old_event_json: masterEv, old_start: oldStartIso, new_start: newStartIso,
     });
-  } catch (e) {}
+    if (bkRes2.error) { backupOk = false; backupErrMsg = bkRes2.error.message; }
+  } catch (e) { backupOk = false; backupErrMsg = e.message || String(e); }
 
-  if (hasRecurrence) {
+  if (!backupOk) {
+    alert('⚠️ 新課表已經建立好了，但備份舊課表失敗（' + backupErrMsg + '），為了安全「沒有」關閉/刪除舊課表。\n請自己到 Calendar 手動關閉舊課表，避免兩份課表同時存在。（新課表不用重建）');
+  } else if (hasRecurrence) {
     try {
       var untilStr = buildIcalUntilUtc(new Date(newStart.getTime() - 3600000));
       var patchBody = { recurrence: setRruleUntil(masterEv.recurrence, untilStr) };
@@ -6255,8 +6302,12 @@ async function approveSlip() {
     status: 'pending', currency: cur, price_per: pp,
     lessons: ls, bonus_lessons: bn, total_amount: ls * pp,
     start_note: start || null, start_date: start || null, note: note || null
-  }).eq('id', slipId);
-  if (res.error) { btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據'; alert('儲存失敗：' + res.error.message); return; }
+  }).eq('id', slipId).select();
+  if (res.error || !res.data || !res.data.length) {
+    btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據';
+    alert('儲存失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+    return;
+  }
 
   // 第一次確認收款 → 建立 Meet／Drive 並解鎖學生。
   // runDeferredStudentSetup 已保證「不論 Meet 成敗都會把學生設成 confirmed（解鎖）」，
@@ -6273,9 +6324,15 @@ async function approveSlip() {
   // 產生收據檔到學生「收據」資料夾
   var receipt = null;
   btn.textContent = '產生收據中…';
+  var receiptDbWarn = '';
   try {
     receipt = await generateAndUploadReceipt(slip, { cur: cur, pp: pp, ls: ls, bn: bn, start: start, note: note });
-    if (receipt) await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo, status: 'done' }).eq('id', slipId);
+    if (receipt) {
+      var rdRes = await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo, status: 'done' }).eq('id', slipId).select();
+      if (rdRes.error || !rdRes.data || !rdRes.data.length) {
+        receiptDbWarn = '\n\n⚠️ 收據檔已產生，但收據編號寫入資料庫失敗（' + (rdRes.error ? rdRes.error.message : 'RLS 權限問題') + '），這筆繳費狀態可能還停在「pending」，請檢查。';
+      }
+    }
   } catch (e) { console.warn('收據產生失敗：', e); }
   btn.disabled = false; btn.textContent = '✅ 確認收款・開立收據';
   document.getElementById('slipApprovalModal').classList.remove('open');
@@ -6285,7 +6342,7 @@ async function approveSlip() {
     : '';
   alert('✅ 已確認！' + (receipt
     ? '\n收據已存到學生「課表 & 收據」資料夾\n編號：' + receipt.receiptNo
-    : '\n（收據檔產生失敗，請確認已用 Google 登入授權）') + meetWarn);
+    : '\n（收據檔產生失敗，請確認已用 Google 登入授權）') + meetWarn + receiptDbWarn);
   await loadPendingSlips();
   loadLowQuotaBanner();
   await refreshStudentList();
@@ -6317,7 +6374,12 @@ async function regenReceipt(paymentId) {
     };
     alert('開始產生 PDF 收據，請稍候…');
     var receipt = await generateAndUploadReceipt(p, v);
-    await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo }).eq('id', paymentId);
+    var updRes = await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo }).eq('id', paymentId).select();
+    if (updRes.error || !updRes.data || !updRes.data.length) {
+      alert('⚠️ 收據檔已產生並存到 Drive，但收據編號寫入資料庫失敗（' + (updRes.error ? updRes.error.message : '可能是 RLS 權限問題') + '）\n收據還是可以在 Drive 找到，只是系統裡的收據編號沒更新。');
+      if (p.token) loadTeacherStudentInfo(p.token);
+      return;
+    }
     alert('✅ 收據已重新開立！\n編號：' + receipt.receiptNo + '\n已存到學生「課表 & 收據」資料夾');
     if (p.token) loadTeacherStudentInfo(p.token);
   } catch (e) {
@@ -6330,7 +6392,11 @@ async function rejectSlip(id) {
   if (!rid) return;
   var p = (window._slipCache || {})[rid] || {};
   if (!confirm('確定拒絕 ' + (p.student_name || rid) + ' 的繳費通知？')) return;
-  await sb.from('classroom_payments').update({ status: 'rejected' }).eq('id', rid);
+  var rejRes = await sb.from('classroom_payments').update({ status: 'rejected' }).eq('id', rid).select();
+  if (rejRes.error || !rejRes.data || !rejRes.data.length) {
+    alert('拒絕失敗：' + (rejRes.error ? rejRes.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+    return;
+  }
   document.getElementById('slipApprovalModal').classList.remove('open');
   await loadPendingSlips();
 }
