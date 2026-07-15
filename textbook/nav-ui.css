@@ -13,8 +13,8 @@
   top: 16px;
   right: 16px;
   z-index: 1000;
-  width: 42px;
-  height: 42px;
+  width: 52px;
+  height: 52px;
   border-radius: 10px;
   background: var(--step);
   border: none;
@@ -28,12 +28,12 @@
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .fnav-btn:hover { transform: scale(1.07); box-shadow: 0 4px 16px rgba(0,0,0,0.28); }
-.fnav-btn .bar { width: 18px; height: 2px; background: #fff; border-radius: 2px; display: block; }
+.fnav-btn .bar { width: 22px; height: 2.5px; background: #fff; border-radius: 2px; display: block; }
 
 /* ══ 目錄下拉選單 ══ */
 .fnav-menu {
   position: fixed;
-  top: 64px;
+  top: 74px;
   right: 16px;
   z-index: 999;
   background: var(--paper);
@@ -187,7 +187,7 @@
 }
 /* 學生筆記 — 工具列（標題／粗斜底線／顏色／螢光筆／清單／清除格式／字級加減） */
 .fnotes-tools {
-  display: flex; flex-wrap: wrap; gap: 5px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
   padding: 8px 10px;
   background: var(--bg2);
   border: 1.5px solid var(--border2);
@@ -196,20 +196,23 @@
   position: relative;
 }
 .fnotes-tools button {
-  width: 38px; height: 38px; padding: 0;
+  width: 38px; height: 38px; padding: 0; margin: 0;
   border: 1px solid var(--border2);
   background: var(--paper);
   border-radius: 8px;
   font-family: var(--font-zh-sans);
-  font-size: 14px; font-weight: 700;
+  font-size: 14px; font-weight: 700; line-height: 1;
   color: var(--ink);
   cursor: pointer;
   transition: all .12s;
   display: inline-flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  flex: 0 0 38px;
+  overflow: hidden;
+  box-sizing: border-box;
+  vertical-align: middle;
 }
 .fnotes-tools button:hover { background: var(--step); color: #fff; border-color: var(--step); }
-.fnotes-tools .sep { width: 1px; height: 22px; background: var(--border2); margin: 4px 2px; align-self: center; }
+.fnotes-tools .sep { width: 1px; height: 22px; background: var(--border2); margin: 0 2px; align-self: center; flex: 0 0 auto; }
 .fnotes-swatch {
   width: 22px; height: 22px;
   border-radius: 50%;
@@ -218,7 +221,8 @@
 }
 .fnotes-swatch:hover { transform: scale(1.12); }
 /* ปุ่มแบบ dropdown — กดค่อยกางสีให้เลือก กันแถบเครื่องมือรก */
-.fnotes-dd { position: relative; display: inline-block; }
+.fnotes-dd { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; flex: 0 0 38px; }
+.fnotes-dd button { margin: 0; }
 .fnotes-dd-pop {
   position: absolute; top: calc(100% + 6px); left: 0; display: none; flex-wrap: wrap; gap: 6px;
   width: 118px; background: var(--paper); border: 1px solid var(--border2); border-radius: 10px;
@@ -353,12 +357,13 @@
 .fsite-menu a:hover { background: var(--step-pale); color: var(--step); }
 
 @media (max-width: 480px) {
-  .fnav-btn { top: 10px; right: 10px; width: 38px; height: 38px; }
-  .fnav-menu { top: 54px; right: 10px; }
+  .fnav-btn { top: 10px; right: 10px; width: 46px; height: 46px; }
+  .fnav-menu { top: 60px; right: 10px; }
   .fnotes-btn { right: 10px; bottom: 14px; }
   .fpdf-btn { left: 10px; bottom: 14px; width: 46px; height: 46px; }
   .fsite-btn { left: 10px; bottom: 68px; width: 46px; height: 46px; }
   .fsite-menu { left: 10px; bottom: 122px; }
-  .fnotes-tools button { width: 32px; height: 32px; padding: 0; font-size: 13px; }
+  .fnotes-tools button { width: 32px; height: 32px; padding: 0; font-size: 13px; flex: 0 0 32px; }
+  .fnotes-dd { width: 32px; height: 32px; flex: 0 0 32px; }
   .fnotes-swatch { width: 20px; height: 20px; }
 }
