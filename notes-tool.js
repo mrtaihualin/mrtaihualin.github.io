@@ -44,13 +44,17 @@
     + '.ntbk-status{font-size:11px;font-weight:700;opacity:.9;letter-spacing:.5px;white-space:nowrap;}'
     + '.ntbk-x{background:rgba(255,255,255,.16);border:none;color:#fff;width:30px;height:30px;border-radius:8px;font-size:16px;cursor:pointer;line-height:1;}'
     + '.ntbk-x:hover{background:rgba(255,255,255,.3);}'
-    + '.ntbk-tools{flex-shrink:0;display:flex;flex-wrap:wrap;gap:4px;padding:9px 12px;background:#f3ead2;border-bottom:1px solid #e0d2a8;}'
-    + '.ntbk-tools button{min-width:32px;height:32px;padding:0 8px;border:1px solid #d8c48f;background:#fff;border-radius:7px;'
-    +   'font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:700;color:#5a3e10;cursor:pointer;transition:all .12s;}'
+    + '.ntbk-tools{flex-shrink:0;display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;background:#f3ead2;border-bottom:1px solid #e0d2a8;position:relative;}'
+    + '.ntbk-tools button{min-width:34px;height:34px;padding:0 9px;border:1px solid #d8c48f;background:#fff;border-radius:7px;'
+    +   'font-family:"Noto Sans TC",sans-serif;font-size:14px;font-weight:700;color:#5a3e10;cursor:pointer;transition:all .12s;}'
     + '.ntbk-tools button:hover{background:#C8973A;color:#1a1a1a;border-color:#C8973A;}'
-    + '.ntbk-tools .sep{width:1px;height:24px;background:#d8c48f;margin:4px 3px;align-self:center;}'
-    + '.ntbk-swatch{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.2);cursor:pointer;padding:0;min-width:0;}'
-    + '.ntbk-swatch:hover{transform:scale(1.15);}'
+    + '.ntbk-tools .sep{width:1px;height:22px;background:#d8c48f;margin:4px 2px;align-self:center;}'
+    + '.ntbk-swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.2);cursor:pointer;padding:0;min-width:0;}'
+    + '.ntbk-swatch:hover{transform:scale(1.12);}'
+    + '.ntbk-dd{position:relative;display:inline-block;}'
+    + '.ntbk-dd-pop{position:absolute;top:calc(100% + 6px);left:0;display:none;flex-wrap:wrap;gap:6px;width:118px;'
+    +   'background:#fff;border:1px solid #d8c48f;border-radius:10px;padding:8px;box-shadow:0 8px 20px rgba(0,0,0,.2);z-index:20;}'
+    + '.ntbk-dd-pop.open{display:flex;}'
     + '.ntbk-editor{flex:1;overflow-y:auto;padding:18px 20px;font-size:15.5px;line-height:1.85;color:#2d2a22;outline:none;}'
     + '.ntbk-editor:empty:before{content:attr(data-ph);color:#b3a884;}'
     + '.ntbk-editor h3{font-family:"Noto Serif TC",serif;font-size:19px;font-weight:900;color:#5a3e10;margin:14px 0 6px;}'
@@ -104,6 +108,8 @@
     panel.querySelector('#ntbk-clr').addEventListener('click', clearAll);
 
     buildTools();
+    restoreFontSize();
+    bindShortcuts();
 
     // autosave: debounce ทุกครั้งที่พิมพ์
     editor.addEventListener('input', scheduleSave);
@@ -116,6 +122,7 @@
 
   function cmd(c, v){ editor.focus(); try{ document.execCommand(c, false, v); }catch(e){} scheduleSave(); }
 
+  var ntbkDDs = []; // เก็บ popover ทั้งหมดของแผงนี้ ไว้ปิดพร้อมกัน
   function buildTools() {
     var bar = panel.querySelector('#ntbk-tools');
     function btn(label, title, fn){
@@ -124,39 +131,81 @@
       b.addEventListener('click', fn); bar.appendChild(b); return b;
     }
     function sep(){ var s=document.createElement('span'); s.className='sep'; bar.appendChild(s); }
-    function swatch(color, cmdName){
-      var b=document.createElement('button'); b.type='button'; b.className='ntbk-swatch'; b.style.background=color; b.title=color;
+    // ปุ่มแบบ dropdown: กดแล้วค่อยกางสีให้เลือก (กันแถบเครื่องมือรก/ยาวเกินไป)
+    function ddBtn(label, title){
+      var wrap = document.createElement('span'); wrap.className='ntbk-dd';
+      var b = document.createElement('button'); b.type='button'; b.title=title; b.innerHTML=label;
+      var pop = document.createElement('div'); pop.className='ntbk-dd-pop';
       b.addEventListener('mousedown', function(e){ e.preventDefault(); });
-      b.addEventListener('click', function(){ cmd(cmdName, color); }); bar.appendChild(b);
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var willOpen = !pop.classList.contains('open');
+        closeAllDD();
+        if (willOpen) pop.classList.add('open');
+      });
+      wrap.appendChild(b); wrap.appendChild(pop); bar.appendChild(wrap);
+      ntbkDDs.push(pop);
+      return pop;
     }
+    function closeAllDD(){ ntbkDDs.forEach(function(p){ p.classList.remove('open'); }); }
+    if (!ntbkDDs._bound){ document.addEventListener('click', closeAllDD); ntbkDDs._bound = true; }
 
-    btn('標題', '大標題', function(){ toggleHeading(); });
-    btn('<b>B</b>', '粗體', function(){ cmd('bold'); });
-    btn('<i>I</i>', '斜體', function(){ cmd('italic'); });
-    btn('<u>U</u>', '底線', function(){ cmd('underline'); });
+    btn('<b>B</b>', '粗體 (Ctrl+B)', function(){ cmd('bold'); });
+    btn('<i>I</i>', '斜體 (Ctrl+I)', function(){ cmd('italic'); });
+    btn('<u>U</u>', '底線 (Ctrl+U)', function(){ cmd('underline'); });
     sep();
-    // สีตัวอักษร
-    ['#1a1a1a','#d85a30','#C8973A','#2e7d32','#1565c0','#c62828'].forEach(function(c){ swatch(c,'foreColor'); });
-    sep();
-    // ไฮไลต์ (螢光筆)
+    // สีตัวอักษร — กดปุ่ม 🎨 ค่อยกางให้เลือก
+    var colorPop = ddBtn('🎨', '文字顏色');
+    ['#1a1a1a','#d85a30','#C8973A','#2e7d32','#1565c0','#c62828'].forEach(function(c){
+      var b=document.createElement('button'); b.type='button'; b.className='ntbk-swatch'; b.style.background=c; b.title=c;
+      b.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      b.addEventListener('click', function(){ cmd('foreColor', c); closeAllDD(); });
+      colorPop.appendChild(b);
+    });
+    // ไฮไลต์ (螢光筆) — กดปุ่ม 🖍 ค่อยกางให้เลือก
+    var hiPop = ddBtn('🖍', '螢光筆');
     ['#fff3a3','#ffd6a5','#b8f0c8','#cfe8ff','#ffc9de'].forEach(function(c){
       var b=document.createElement('button'); b.type='button'; b.className='ntbk-swatch'; b.title='螢光筆';
       b.style.background=c; b.style.border='1px solid rgba(0,0,0,.15)';
       b.addEventListener('mousedown', function(e){ e.preventDefault(); });
-      b.addEventListener('click', function(){ hilite(c); });
-      panel.querySelector('#ntbk-tools').appendChild(b);
+      b.addEventListener('click', function(){ hilite(c); closeAllDD(); });
+      hiPop.appendChild(b);
     });
     sep();
-    btn('•', '項目符號', function(){ cmd('insertUnorderedList'); });
-    btn('1.', '編號清單', function(){ cmd('insertOrderedList'); });
-    btn('✕格式', '清除格式', function(){ cmd('removeFormat'); });
+    btn('A－', '縮小字體', function(){ stepFont(-1); });
+    btn('A＋', '放大字體', function(){ stepFont(1); });
   }
 
-  function toggleHeading(){
-    editor.focus();
-    var block = document.queryCommandValue ? document.queryCommandValue('formatBlock') : '';
-    if (/h3/i.test(block)) cmd('formatBlock', '<div>');
-    else cmd('formatBlock', '<h3>');
+  // ── 放大/縮小整個筆記本文字（給眼睛不好/想看清楚的人） ──────
+  var FS_KEY = 'mtl_notes_fontsize', FS_MIN = 14, FS_MAX = 32;
+  function applyFontSize(px){
+    editor.style.fontSize = px + 'px';
+    try{ localStorage.setItem(FS_KEY, String(px)); }catch(e){}
+  }
+  function stepFont(dir){
+    var cur = parseFloat(editor.style.fontSize) || 15.5;
+    var next = cur + dir*2;
+    if (next < FS_MIN) next = FS_MIN;
+    if (next > FS_MAX) next = FS_MAX;
+    applyFontSize(next);
+  }
+  function restoreFontSize(){
+    try{
+      var saved = localStorage.getItem(FS_KEY);
+      if (saved) editor.style.fontSize = saved + 'px';
+    }catch(e){}
+  }
+
+  // ── คีย์ลัด Ctrl/Cmd+B/I/U (กัน default ของเบราว์เซอร์ชนกัน ทำเองให้ชัวร์ทุกเบราว์เซอร์) ──
+  function bindShortcuts(){
+    editor.addEventListener('keydown', function(e){
+      var mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      var k = e.key.toLowerCase();
+      if (k === 'b'){ e.preventDefault(); cmd('bold'); }
+      else if (k === 'i'){ e.preventDefault(); cmd('italic'); }
+      else if (k === 'u'){ e.preventDefault(); cmd('underline'); }
+    });
   }
   function hilite(color){
     editor.focus();

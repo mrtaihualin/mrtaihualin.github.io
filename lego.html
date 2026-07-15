@@ -156,7 +156,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .opt-clear:hover{background:rgba(196,87,79,.1);color:#c4574f;}
 .opt.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
 .opt-custom{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid rgba(184,134,44,.12);background:rgba(0,0,0,.02);}
-.opt-custom input{flex:1;min-width:0;border:1.5px solid rgba(154,131,56,.35);border-radius:10px;padding:6px 8px;font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:15px;color:var(--ink);}
+.opt-custom input{flex:1;min-width:0;border:1.5px solid rgba(154,131,56,.35);border-radius:10px;padding:6px 8px;font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:16px;color:var(--ink);}
 .opt-custom button{border:none;border-radius:10px;padding:0 12px;background:var(--sc);color:#fff;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .dep-hint{padding:14px 16px;text-align:center;font-size:13px;color:var(--ink-muted);font-style:italic;}
 
@@ -664,17 +664,17 @@ function renderBaseplate(){
     // ── slot button ──
     let btn;
     if(objLocked){
-      btn=`<div class="slot-btn dep-locked" onclick="toast('「${state.verb.th}」不需要受詞')">
+      btn=`<div class="slot-btn dep-locked" role="button" tabindex="0" onclick="toast('「${state.verb.th}」不需要受詞')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toast('「${state.verb.th}」不需要受詞')}">
         <span class="splus" style="font-size:13px">不需受詞</span></div>`;
     }else if(w){
-      btn=`<div class="slot-btn filled" onclick="toggleMenu('${s.id}')">
+      btn=`<div class="slot-btn filled" role="button" tabindex="0" onclick="toggleMenu('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleMenu('${s.id}')}">
         <span class="sth">${w.th}</span><span class="szh">${w.zh}</span></div>`;
     }else if(depUnmet){
       // clicking dep-locked slot → open parent slot's menu
-      btn=`<div class="slot-btn dep-locked" onclick="toggleMenu('${s.dep}')">
+      btn=`<div class="slot-btn dep-locked" role="button" tabindex="0" onclick="toggleMenu('${s.dep}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleMenu('${s.dep}')}">
         <span class="splus" style="font-size:13px">先選↑</span></div>`;
     }else{
-      btn=`<div class="slot-btn" onclick="toggleMenu('${s.id}')"><span class="splus">＋</span></div>`;
+      btn=`<div class="slot-btn" role="button" tabindex="0" onclick="toggleMenu('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleMenu('${s.id}')}"><span class="splus">＋</span></div>`;
     }
 
     // ── dropdown content ──
@@ -694,7 +694,7 @@ function renderBaseplate(){
           <button onclick="addCustomSubj()">加入</button></div>`;
       }
       if(s.opt){
-        opts+=`<div class="opt-clear" onclick="clearSlot('${s.id}')">— 清除 —</div>`;
+        opts+=`<div class="opt-clear" role="button" tabindex="0" onclick="clearSlot('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();clearSlot('${s.id}')}">— 清除 —</div>`;
       }
       pool.forEach(o=>{
         const sel=(w&&w.th===o.th)?' sel':'';
@@ -707,7 +707,7 @@ function renderBaseplate(){
         if(s.id==='adv'&&o.th==='ที่'&&state.verb&&NO_PLACE_VERBS.includes(state.verb.th)){
           disabled=true;label2=o.zh+'・此動詞不用';
         }
-        opts+=`<div class="opt${sel}${disabled?' disabled':''}" ${disabled?'':`onclick="pickWord('${s.id}','${o.th}')"`}>
+        opts+=`<div class="opt${sel}${disabled?' disabled':''}" ${disabled?'':`role="button" tabindex="0" onclick="pickWord('${s.id}','${o.th}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickWord('${s.id}','${o.th}')}"`}>
           <span class="oth">${o.th}</span><span class="ozh">${label2}</span>
           <span class="lego-vault-save" onclick="event.stopPropagation();legoVaultSave('${o.th}','${o.zh}')" title="加入我的造句單字庫（最多15個）">${(window.LegoVault&&LegoVault.has(o.th))?'🔖':'📑'}</span></div>`;
       });

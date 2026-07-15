@@ -111,6 +111,10 @@
       '<hr class="fnotes-hr">';
   }
 
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   var overlay = document.createElement('div');
   overlay.className = 'fnotes-overlay';
   overlay.innerHTML =
@@ -118,36 +122,129 @@
       '<button class="fnotes-close" aria-label="關閉">✕</button>' +
       '<div class="fnotes-title">📝&ensp;補充說明</div>' +
       teacherHtml +
-      '<textarea class="fnotes-textarea" placeholder="在這裡寫下你的筆記⋯"></textarea>' +
+      '<div class="fnotes-tools"></div>' +
+      '<div class="fnotes-editor" contenteditable="true" data-ph="在這裡寫下你的筆記⋯"></div>' +
       '<div class="fnotes-actions">' +
         '<span class="fnotes-hint">筆記會自動儲存在這個瀏覽器</span>' +
         '<button class="fnotes-dl-btn">⬇ 下載 PDF</button>' +
       '</div>' +
     '</div>';
 
-  var textarea = overlay.querySelector('.fnotes-textarea');
+  var editor  = overlay.querySelector('.fnotes-editor');
+  var toolsBar = overlay.querySelector('.fnotes-tools');
 
-  /* 載入 localStorage 筆記 */
+  /* ── 工具列：粗斜底線／文字顏色／螢光筆／字級加減
+     （跟浮動的「我的學習筆記」用同一套設計，統一操作方式） ── */
+  var fnSaveTimer = null;
+  function fnSaveNow() {
+    if (fnSaveTimer) { clearTimeout(fnSaveTimer); fnSaveTimer = null; }
+    localStorage.setItem(NOTES_KEY, editor.innerHTML);
+    if (editor.textContent.trim()) unsavedSincePDF = true;
+  }
+  function fnCmd(c, v) { editor.focus(); try { document.execCommand(c, false, v); } catch (e) {} fnSaveNow(); }
+  function fnBtn(label, title, fn) {
+    var b = document.createElement('button'); b.type = 'button'; b.title = title; b.innerHTML = label;
+    b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    b.addEventListener('click', fn); toolsBar.appendChild(b); return b;
+  }
+  function fnSep() { var s = document.createElement('span'); s.className = 'sep'; toolsBar.appendChild(s); }
+  // ปุ่มแบบ dropdown — กดค่อยกางสีให้เลือก กันแถบเครื่องมือรก/ยาวเกินไป
+  var fnDDs = [];
+  function fnCloseAllDD() { fnDDs.forEach(function (p) { p.classList.remove('open'); }); }
+  document.addEventListener('click', fnCloseAllDD);
+  function fnDD(label, title) {
+    var wrap = document.createElement('span'); wrap.className = 'fnotes-dd';
+    var b = document.createElement('button'); b.type = 'button'; b.title = title; b.innerHTML = label;
+    var pop = document.createElement('div'); pop.className = 'fnotes-dd-pop';
+    b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var willOpen = !pop.classList.contains('open');
+      fnCloseAllDD();
+      if (willOpen) pop.classList.add('open');
+    });
+    wrap.appendChild(b); wrap.appendChild(pop); toolsBar.appendChild(wrap);
+    fnDDs.push(pop);
+    return pop;
+  }
+  // ── คีย์ลัด Ctrl/Cmd+B/I/U (กัน default ของเบราว์เซอร์ชนกัน ทำเองให้ชัวร์ทุกเบราว์เซอร์) ──
+  function fnBindShortcuts() {
+    editor.addEventListener('keydown', function (e) {
+      var mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      var k = e.key.toLowerCase();
+      if (k === 'b') { e.preventDefault(); fnCmd('bold'); }
+      else if (k === 'i') { e.preventDefault(); fnCmd('italic'); }
+      else if (k === 'u') { e.preventDefault(); fnCmd('underline'); }
+    });
+  }
+  function fnHilite(color) {
+    editor.focus();
+    try { if (!document.execCommand('hiliteColor', false, color)) document.execCommand('backColor', false, color); }
+    catch (e) { try { document.execCommand('backColor', false, color); } catch (e2) {} }
+    fnSaveNow();
+  }
+  var FS_KEY = 'fnotes-fontsize', FS_MIN = 18, FS_MAX = 48;
+  function fnApplyFontSize(px) {
+    editor.style.fontSize = px + 'px';
+    try { localStorage.setItem(FS_KEY, String(px)); } catch (e) {}
+  }
+  function fnStepFont(dir) {
+    var cur = parseFloat(editor.style.fontSize) || 29;
+    var next = cur + dir * 4;
+    if (next < FS_MIN) next = FS_MIN;
+    if (next > FS_MAX) next = FS_MAX;
+    fnApplyFontSize(next);
+  }
+
+  fnBtn('<b>B</b>', '粗體 (Ctrl+B)', function () { fnCmd('bold'); });
+  fnBtn('<i>I</i>', '斜體 (Ctrl+I)', function () { fnCmd('italic'); });
+  fnBtn('<u>U</u>', '底線 (Ctrl+U)', function () { fnCmd('underline'); });
+  fnSep();
+  var fnColorPop = fnDD('🎨', '文字顏色');
+  ['#1a1a1a', '#d85a30', '#C8973A', '#2e7d32', '#1565c0', '#c62828'].forEach(function (c) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'fnotes-swatch'; b.style.background = c; b.title = c;
+    b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    b.addEventListener('click', function () { fnCmd('foreColor', c); fnCloseAllDD(); });
+    fnColorPop.appendChild(b);
+  });
+  var fnHiPop = fnDD('🖍', '螢光筆');
+  ['#fff3a3', '#ffd6a5', '#b8f0c8', '#cfe8ff', '#ffc9de'].forEach(function (c) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'fnotes-swatch'; b.title = '螢光筆';
+    b.style.background = c; b.style.border = '1px solid rgba(0,0,0,.15)';
+    b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    b.addEventListener('click', function () { fnHilite(c); fnCloseAllDD(); });
+    fnHiPop.appendChild(b);
+  });
+  fnSep();
+  fnBtn('A－', '縮小字體', function () { fnStepFont(-1); });
+  fnBtn('A＋', '放大字體', function () { fnStepFont(1); });
+
+  fnBindShortcuts();
+
+  try {
+    var savedFs = localStorage.getItem(FS_KEY);
+    if (savedFs) editor.style.fontSize = savedFs + 'px';
+  } catch (e) {}
+
+  /* 載入 localStorage 筆記（舊資料是純文字 → 自動轉成有換行的 HTML，照樣能正常編輯） */
   var saved = localStorage.getItem(NOTES_KEY);
-  if (saved) textarea.value = saved;
+  if (saved) {
+    editor.innerHTML = (saved.indexOf('<') === -1) ? escapeHtml(saved).replace(/\n/g, '<br>') : saved;
+  }
 
   /* 是否有「尚未存成 PDF」的變更（用來決定關閉頁面時要不要提醒） */
   var unsavedSincePDF = false;
 
-  /* 即時存入 localStorage */
-  textarea.addEventListener('input', function () {
-    localStorage.setItem(NOTES_KEY, textarea.value);
-    if (textarea.value.trim()) unsavedSincePDF = true;
+  /* 即時存入 localStorage（打字時 debounce，跟「我的學習筆記」一樣的節奏） */
+  editor.addEventListener('input', function () {
+    if (fnSaveTimer) clearTimeout(fnSaveTimer);
+    fnSaveTimer = setTimeout(fnSaveNow, 400);
   });
 
   /* 下載筆記為 PDF（用瀏覽器列印 → 另存為 PDF；版面與網頁同風格） */
-  function escapeHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  /* 下載筆記為 PDF（用瀏覽器列印 → 另存為 PDF；版面與網頁同風格） */
   function downloadPDF() {
-    var content = textarea.value.trim();
+    var content = editor.textContent.trim();
     if (!content) return;
 
     /* 取得目前頁面標題（目錄裡的頁名） */
@@ -162,11 +259,8 @@
     var fileTitle = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
                     '_' + pad(now.getHours()) + '-' + pad(now.getMinutes());
 
-    /* 將純文字轉成段落（空行分段，單行換行保留） */
-    var bodyHtml = escapeHtml(content)
-      .split(/\n{2,}/)
-      .map(function (para) { return '<p>' + para.replace(/\n/g, '<br>') + '</p>'; })
-      .join('');
+    /* 筆記本身已經是排版好的 HTML（標題／顏色／螢光筆…），直接帶入 PDF */
+    var bodyHtml = editor.innerHTML;
 
     var html =
       '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8">' +
@@ -233,7 +327,7 @@
   /* 關閉頁面時，若有尚未存成 PDF 的筆記，跳出瀏覽器確認視窗提醒先存檔
      （筆記本身已即時存在瀏覽器；這裡是提醒下載 PDF 備份） */
   window.addEventListener('beforeunload', function (e) {
-    if (unsavedSincePDF && textarea.value.trim()) {
+    if (unsavedSincePDF && editor.textContent.trim()) {
       e.preventDefault();
       e.returnValue = '';   /* 觸發瀏覽器原生「確定離開？」確認視窗 */
       return '';

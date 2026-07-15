@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>เครื่องมือตรวจวรรณยุกต์ (Lin ใช้เอง — ไม่ผูกกับเมนูเว็บ)</title>
+<meta name="robots" content="noindex,nofollow">
+<!--
+  review-tool.html — เครื่องมือตรวจ/รีวิววรรณยุกต์ ใช้ร่วมกัน 2 งาน (Lin 2026-07-15)
+  ไม่ใช่หน้าเว็บสาธารณะ ไม่ผูกกับเมนู games.html — เปิดตรงๆ จากไฟล์ หรือ URL ตรงเท่านั้น
+
+  งานที่ 1 — ตรวจคลังคำเดิม (System 1, ครั้งเดียว):
+    เปิดไฟล์ data/tone-regression-report.json (สร้างจาก `node data/regression-check-tone.js`)
+    ดูว่าคำ/ประโยคไหนที่ Lin พิมพ์คำตอบไว้ ไม่ตรงกับที่เครื่องคิด (คำนวณจาก data/tone-engine.js จริง
+    ไม่ใช่ mock) — คลิกเข้าไปดูเหตุผลทีละพยางค์ได้
+
+  งานที่ 2 — รีวิวคำร่างใหม่จาก AI (System 2, อนาคต):
+    เปิดไฟล์ JSON schema เดียวกัน แค่ mode:"ai-draft" แทน mode:"catalog-audit" — Lin กด
+    approve/reject ทีละคำ แล้วกด "ส่งออกผลตรวจ" โหลดไฟล์ JSON ที่มี status อัปเดตแล้วกลับไป
+
+  ═══════════════════════════════════════════════════════════════════════════
+  JSON SCHEMA (ใช้ร่วมกันทั้ง 2 งาน — เอกสารนี้คือ spec ให้ daily-draft process ในอนาคตอ้างอิงได้เลย):
+
+  {
+    "schemaVersion": 1,
+    "mode": "catalog-audit" | "ai-draft",
+    "generatedAt": "ISO datetime string",
+    "summary": { "totalEntries": number, "mismatchEntries": number, "totalSyllables": number, "mismatchSyllables": number },
+    "entries": [
+      {
+        "id": "string เอกลักษณ์ เช่น 'catalog:ตลาด' หรือ 'draft:2026-07-16-01'",
+        "word": "ตัวสะกดจริงเต็มคำ/เต็มประโยค",
+        "readingTH": "คำอ่านไทย (ตัด - แบ่งพยางค์)",
+        "zh": "คำแปลจีน", "en": "คำอ่านโรมัน",
+        "level": "初" | "中" | "高",
+        "category": "หมวดคำ",
+        "sourceFile": "words-data.js" | "adv-sentences.js" | "ai-draft" | null,
+        "status": "match" | "mismatch"            (mode=catalog-audit)
+                | "pending" | "approved" | "rejected"  (mode=ai-draft),
+        "syllables": [
+          {
+            "th": "ตัวสะกดพยางค์นี้ (ไม่รวม lead)", "lead": "ห"|"อ"|null, "cons": "พยัญชนะหลัก",
+            "fullSpelling": "ตัวสะกดเต็มที่ป้อนเข้าเครื่องคิดจริง (ต่อ lead กลับแล้วถ้าจำเป็น)",
+            "expectedToneName": "เอก/โท/ตรี/จัตวา/สามัญ หรือ null (ai-draft ที่ยังไม่ระบุคำตอบ)",
+            "computedToneName": "คำตอบที่เครื่องคิดได้ หรือ null (คำนวณไม่ได้)",
+            "match": true | false | null,
+            "cls": "low"|"high"|"mid"|"lead", "clsZh": "低子音"|..., "mark": "่/้/๊/๋"|null, "markName": "...",
+            "live": true|false|null, "vowelType": "short"|"long"|null,
+            "initChar": "พยัญชนะ/กลุ่มพยัญชนะที่ใช้ตัดสินชั้นเสียง", "reason": "ประโยคอธิบายเหตุผล หรือ null"
+          }
+        ],
+        "notes": "ข้อความอิสระ — เช่น เหตุผลของ AI ที่ร่างคำนี้ หรือ note ที่ Lin เขียนตอนรีวิว"
+      }
+    ]
+  }
+
+  หมายเหตุสำหรับ daily-draft process ในอนาคต (System 2): ให้ AI drafter สร้างไฟล์ JSON ตาม schema
+  ข้างบนนี้เป๊ะๆ (mode:"ai-draft", status ทุกคำเริ่มที่ "pending", syllables คำนวณ expectedToneName จาก
+  คำตอบที่ AI เสนอ) แล้ว Lin เปิดไฟล์นี้ในเครื่องมือตัวนี้เพื่อ approve/reject ได้เลย ไม่ต้องสร้างเครื่องมือใหม่
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+<style>
+  :root {
+    --gold: #8B6310; --gold-bright: #C8973A; --gold-light: #F3E4C2; --gold-deep: #5a3e0a;
+    --ink: #1C1C1C; --ink-soft: #333333; --ink-muted: #6b6b6b;
+    --bg: #EDE7D9; --cream: #FAF4E8; --border: rgba(139,99,16,0.18);
+    --green: #2d6a4f; --green-dark: #1b4332;
+    --amber: #b45309; --amber-dark: #78350f; --amber-muted: #92400e;
+    --red: #b3261e; --red-bg: #fbe9e7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  h1, h2, h3 { font-family: 'Noto Serif TC', serif; font-weight: 700; color: var(--gold-deep); margin: 0 0 8px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  header.top { background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep)); color: #fff; padding: 18px 20px; border-radius: 14px; margin-bottom: 18px; }
+  header.top h1 { color: #fff; font-size: 20px; margin-bottom: 4px; }
+  header.top p { margin: 0; font-size: 13px; opacity: .92; }
+  .panel { background: var(--cream); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  button, .btn {
+    font-family: 'Noto Sans TC', sans-serif; cursor: pointer; border: 1px solid var(--border);
+    background: #fff; color: var(--ink-soft); border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 600;
+  }
+  button.primary { background: linear-gradient(135deg, var(--gold-bright), var(--gold)); color: #fff; border: none; }
+  button.green { background: var(--green); color: #fff; border: none; }
+  button.red { background: var(--red); color: #fff; border: none; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  input[type=text], input[type=search], select {
+    font-family: 'Noto Sans TC', sans-serif; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: #fff; font-size: 13px; color: var(--ink);
+  }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .stat { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; font-size: 13px; }
+  .stat b { color: var(--gold-deep); font-size: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--gold-deep); padding: 8px 6px; border-bottom: 2px solid var(--border); }
+  td { padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr.entry-row { cursor: pointer; }
+  tr.entry-row:hover { background: var(--gold-light); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .badge.match, .badge.approved { background: #e3f2e9; color: var(--green-dark); }
+  .badge.mismatch, .badge.rejected { background: var(--red-bg); color: var(--red); }
+  .badge.pending { background: #fef3c7; color: var(--amber-dark); }
+  .detail { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 6px; }
+  .syl-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: var(--cream); }
+  .syl-card.ok { border-left: 4px solid var(--green); }
+  .syl-card.bad { border-left: 4px solid var(--red); }
+  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 8px; font-size: 12.5px; margin-top: 6px; }
+  .kv span.k { color: var(--ink-muted); }
+  .reason { margin-top: 8px; padding: 8px 10px; background: var(--gold-light); border-radius: 8px; font-size: 12.5px; color: var(--gold-deep); }
+  .muted { color: var(--ink-muted); font-size: 12.5px; }
+  .tester input { width: 100px; }
+  #testResult { margin-top: 10px; }
+  .hidden { display: none !important; }
+  .file-name { font-size: 12.5px; color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>🌾 เครื่องมือตรวจวรรณยุกต์ (Lin ใช้คนเดียว)</h1>
+    <p id="modeDesc">โหลด data/tone-regression-report.json อัตโนมัติ ถ้าโหลดไม่ได้ให้กด "เลือกไฟล์ JSON" เอง</p>
+  </header>
+
+  <div class="panel">
+    <div class="row">
+      <button class="primary" id="btnPickFile">📂 เลือกไฟล์ JSON</button>
+      <input type="file" id="filePicker" accept="application/json" class="hidden">
+      <span class="file-name" id="fileName">ยังไม่ได้โหลดไฟล์</span>
+      <button id="btnExport" disabled>⬇️ ส่งออกผลตรวจ (JSON)</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <input type="search" id="q" placeholder="ค้นหาคำ...">
+      <select id="filterStatus"></select>
+      <span class="muted" id="countShown"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <table>
+      <thead><tr><th>คำ/ประโยค</th><th>คำอ่าน</th><th>ระดับ</th><th>หมวด</th><th>สถานะ</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <p class="muted" id="emptyMsg" style="display:none;">ไม่มีรายการ — ลองเปลี่ยนตัวกรอง หรือโหลดไฟล์ JSON</p>
+  </div>
+
+  <div class="panel">
+    <h3>🧪 ทดสอบเครื่องคิดสด (รันฟังก์ชันจริงจาก tone-engine.js — ไม่ใช่ mock)</h3>
+    <p class="muted">พิมพ์ตัวสะกดพยางค์ + ตัวนำ (ถ้ามี) + คำตอบที่ควรจะเป็น → กด "คำนวณ" ดูว่าเครื่องคิดตรงไหม</p>
+    <div class="row tester">
+      <label>ตัวสะกด (th): <input type="text" id="tTh" placeholder="เช่น ลาด"></label>
+      <label>ตัวนำ (lead, ถ้ามี): <input type="text" id="tLead" placeholder="ห หรือ อ"></label>
+      <label>คำตอบที่ควรได้ (tone_name):
+        <select id="tTone"><option value="">(ไม่ระบุ)</option><option>สามัญ</option><option>เอก</option><option>โท</option><option>ตรี</option><option>จัตวา</option></select>
+      </label>
+      <button class="primary" id="btnCalc">คำนวณ</button>
+      <button id="btnKnownBad">ลองเคสที่เคยผิด (ตลาด พยางค์ 2)</button>
+    </div>
+    <div id="testResult"></div>
+  </div>
+</div>
+
+<script src="tone-engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var report = null;
+  var selectedId = null;
+
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+
+  function setModeUI() {
+    var desc = document.getElementById('modeDesc');
+    var filter = document.getElementById('filterStatus');
+    filter.innerHTML = '';
+    if (!report) return;
+    if (report.mode === 'ai-draft') {
+      desc.textContent = 'โหมดรีวิวคำร่างใหม่จาก AI — กด approve/reject ทีละคำ แล้วส่งออกผลตรวจได้';
+      ['all', 'pending', 'approved', 'rejected'].forEach(function (v) {
+        var o = el('option', null, ({ all: 'ทั้งหมด', pending: 'รอตรวจ', approved: 'อนุมัติแล้ว', rejected: 'ตัดออกแล้ว' })[v]);
+        o.value = v; filter.appendChild(o);
+      });
+      document.getElementById('btnExport').disabled = false;
+    } else {
+      desc.textContent = 'โหมดตรวจคลังคำเดิม — เทียบคำตอบที่ Lin พิมพ์ไว้ กับที่เครื่องคิดได้ (เครื่องคิดใหม่แก้บั๊กแล้ว)';
+      ['all', 'mismatch', 'match'].forEach(function (v) {
+        var o = el('option', null, ({ all: 'ทั้งหมด', mismatch: 'ไม่ตรง(ต้องดู)', match: 'ตรงแล้ว' })[v]);
+        o.value = v; filter.appendChild(o);
+      });
+      document.getElementById('btnExport').disabled = false;
+    }
+  }
+
+  function renderStats() {
+    var box = document.getElementById('stats');
+    box.innerHTML = '';
+    if (!report) return;
+    var s = report.summary || {};
+    var items;
+    if (report.mode === 'ai-draft') {
+      var approved = report.entries.filter(function (e) { return e.status === 'approved'; }).length;
+      var rejected = report.entries.filter(function (e) { return e.status === 'rejected'; }).length;
+      var pending = report.entries.filter(function (e) { return e.status === 'pending'; }).length;
+      items = [['ทั้งหมด', report.entries.length], ['รอตรวจ', pending], ['อนุมัติ', approved], ['ตัดออก', rejected]];
+    } else {
+      items = [['ทั้งหมด', s.totalEntries], ['ไม่ตรง', s.mismatchEntries], ['พยางค์ทั้งหมด', s.totalSyllables], ['พยางค์ไม่ตรง', s.mismatchSyllables]];
+    }
+    items.forEach(function (it) {
+      var d = el('div', 'stat', it[0] + ': <b>' + it[1] + '</b>');
+      box.appendChild(d);
+    });
+  }
+
+  function currentFilterList() {
+    if (!report) return [];
+    var q = document.getElementById('q').value.trim();
+    var f = document.getElementById('filterStatus').value;
+    return report.entries.filter(function (e) {
+      if (f && f !== 'all' && e.status !== f) return false;
+      if (q && e.word.indexOf(q) === -1 && (e.zh || '').indexOf(q) === -1) return false;
+      return true;
+    });
+  }
+
+  function badgeLabel(status) {
+    return { match: '✓ ตรง', mismatch: '✗ ไม่ตรง', pending: '⏳ รอตรวจ', approved: '✓ อนุมัติ', rejected: '✗ ตัดออก' }[status] || status;
+  }
+
+  function renderTable() {
+    var tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+    var list = currentFilterList();
+    document.getElementById('countShown').textContent = 'แสดง ' + list.length + ' / ' + (report ? report.entries.length : 0) + ' รายการ';
+    document.getElementById('emptyMsg').style.display = list.length ? 'none' : 'block';
+    list.forEach(function (e) {
+      var tr = el('tr', 'entry-row');
+      tr.innerHTML = '<td><b>' + e.word + '</b></td><td>' + (e.readingTH || '') + '</td><td>' + (e.level || '') + '</td><td>' + (e.category || '') + '</td>' +
+        '<td><span class="badge ' + e.status + '">' + badgeLabel(e.status) + '</span></td>';
+      // เรียก renderTable() ไม่ใช่ renderDetail() ตรงๆ — แถว detail ถูกสร้างขึ้นใน renderTable() เท่านั้น
+      // (คลิกครั้งแรกต้องมีที่ให้ renderDetail() วาดก่อน ไม่งั้น detailBox จะยังไม่มีในหน้า)
+      tr.onclick = function () { selectedId = (selectedId === e.id) ? null : e.id; renderTable(); };
+      tbody.appendChild(tr);
+      if (e.id === selectedId) {
+        var tdDetail = el('tr'); var td = el('td'); td.colSpan = 5;
+        var detailBox = el('div', 'detail'); detailBox.id = 'detailBox';
+        td.appendChild(detailBox); tdDetail.appendChild(td); tbody.appendChild(tdDetail);
+      }
+    });
+    // เรนเดอร์ detail เฉพาะตอน selectedId ยังอยู่ในรายการที่กรองแล้วจริงๆ (กันวนซ้ำกับ renderDetail ตอนถูกกรองออก)
+    if (selectedId && list.some(function (e) { return e.id === selectedId; })) renderDetail();
+  }
+
+  function renderDetail() {
+    var box = document.getElementById('detailBox');
+    if (!box) return; // แถวถูกกรองออกไปแล้ว ไม่มีที่ให้วาด detail — ไม่เรียก renderTable() ซ้ำ (กันวนไม่รู้จบ)
+    var e = report.entries.filter(function (x) { return x.id === selectedId; })[0];
+    if (!e) return;
+    var html = '<div class="row" style="justify-content:space-between;">' +
+      '<div><b>' + e.word + '</b> <span class="muted">' + (e.zh || '') + ' · ' + (e.en || '') + '</span></div>';
+    if (report.mode === 'ai-draft') {
+      html += '<div class="row"><button class="green" data-act="approve">✓ อนุมัติ</button><button class="red" data-act="reject">✗ ตัดออก</button></div>';
+    }
+    html += '</div>';
+    if (e.notes) html += '<div class="reason">📝 ' + e.notes + '</div>';
+    e.syllables.forEach(function (s) {
+      var cls = s.match === true ? 'ok' : (s.match === false ? 'bad' : '');
+      html += '<div class="syl-card ' + cls + '">' +
+        '<b>' + s.th + '</b> (ตัวสะกดเต็มที่ป้อนเข้าเครื่องคิด: ' + s.fullSpelling + ')' +
+        '<div class="kv">' +
+        '<span class="k">ตัวนำ (lead)</span><span>' + (s.lead || '—') + '</span>' +
+        '<span class="k">พยัญชนะต้น</span><span>' + (s.initChar || '—') + ' (' + (s.clsZh || '—') + ')</span>' +
+        '<span class="k">วรรณยุกต์</span><span>' + (s.mark ? s.mark + ' (' + s.markName + ')' : 'ไม่มีรูป') + '</span>' +
+        '<span class="k">คำเป็น/ตาย</span><span>' + (s.live === true ? 'คำเป็น' : (s.live === false ? 'คำตาย' : '—')) + '</span>' +
+        '<span class="k">สระ</span><span>' + (s.vowelType === 'long' ? 'ยาว' : (s.vowelType === 'short' ? 'สั้น' : '—')) + '</span>' +
+        '<span class="k">คำตอบที่ควรได้</span><span>' + (s.expectedToneName || '(ไม่ระบุ)') + '</span>' +
+        '<span class="k">เครื่องคิดได้</span><span>' + (s.computedToneName || '(คำนวณไม่ได้)') + '</span>' +
+        '</div>' +
+        (s.reason ? '<div class="reason">💡 ' + s.reason + '</div>' : '<div class="muted" style="margin-top:6px;">(ไม่มีคำอธิบาย — คำตอบกับที่เครื่องคิดไม่ตรงกัน หรือคำนวณไม่ได้)</div>') +
+        '</div>';
+    });
+    box.innerHTML = html;
+    if (report.mode === 'ai-draft') {
+      box.querySelectorAll('[data-act]').forEach(function (b) {
+        b.onclick = function () {
+          e.status = b.dataset.act === 'approve' ? 'approved' : 'rejected';
+          renderStats(); renderTable();
+        };
+      });
+    }
+  }
+
+  function loadReport(obj) {
+    report = obj;
+    selectedId = null;
+    setModeUI(); renderStats(); renderTable();
+  }
+
+  document.getElementById('btnPickFile').onclick = function () { document.getElementById('filePicker').click(); };
+  document.getElementById('filePicker').onchange = function (ev) {
+    var f = ev.target.files[0];
+    if (!f) return;
+    document.getElementById('fileName').textContent = f.name;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var obj = JSON.parse(reader.result);
+        loadReport(obj);
+      } catch (e) {
+        alert('เปิดไฟล์ไม่ได้ — JSON ผิดรูปแบบ: ' + e.message);
+      }
+    };
+    reader.onerror = function () { alert('อ่านไฟล์ไม่สำเร็จ'); };
+    reader.readAsText(f, 'utf-8');
+  };
+
+  document.getElementById('btnExport').onclick = function () {
+    if (!report) return;
+    var blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var stamp = new Date().toISOString().slice(0, 10);
+    a.href = url; a.download = 'tone-review-result_' + stamp + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  document.getElementById('q').oninput = renderTable;
+  document.getElementById('filterStatus').onchange = renderTable;
+
+  // ── ทดสอบเครื่องคิดสด (รัน analyzeSyllable จริงจาก tone-engine.js) ──
+  function runTest(th, lead, toneName) {
+    var syl = { th: th, lead: lead || undefined, tone_name: toneName || undefined };
+    var a = window.analyzeSyllable(syl);
+    var html = '<div class="syl-card ' + (a.match === true ? 'ok' : (a.match === false ? 'bad' : '')) + '">' +
+      '<div class="kv">' +
+      '<span class="k">ตัวสะกดเต็ม</span><span>' + a.fullSpelling + '</span>' +
+      '<span class="k">พยัญชนะต้น</span><span>' + (a.initChar || '—') + ' (' + (a.clsZh || '—') + ')</span>' +
+      '<span class="k">วรรณยุกต์</span><span>' + (a.mark ? a.mark + ' (' + a.markName + ')' : 'ไม่มีรูป') + '</span>' +
+      '<span class="k">คำเป็น/ตาย</span><span>' + (a.live === true ? 'คำเป็น' : (a.live === false ? 'คำตาย' : '—')) + '</span>' +
+      '<span class="k">สระ</span><span>' + (a.vowelType === 'long' ? 'ยาว' : (a.vowelType === 'short' ? 'สั้น' : '—')) + '</span>' +
+      '<span class="k">เครื่องคิดได้</span><span><b>' + (a.computedName || '(คำนวณไม่ได้)') + '</b></span>' +
+      (toneName ? '<span class="k">ควรจะได้</span><span>' + toneName + (a.match ? ' ✓ ตรง' : ' ✗ ไม่ตรง') + '</span>' : '') +
+      '</div>' + (a.reason ? '<div class="reason">💡 ' + a.reason + '</div>' : '') + '</div>';
+    document.getElementById('testResult').innerHTML = html;
+  }
+  document.getElementById('btnCalc').onclick = function () {
+    runTest(document.getElementById('tTh').value.trim(), document.getElementById('tLead').value.trim(), document.getElementById('tTone').value);
+  };
+  document.getElementById('btnKnownBad').onclick = function () {
+    document.getElementById('tTh').value = 'ลาด';
+    document.getElementById('tLead').value = 'ห';
+    document.getElementById('tTone').value = 'เอก';
+    runTest('ลาด', 'ห', 'เอก');
+  };
+
+  // โหลด default report อัตโนมัติถ้าเปิดผ่าน http(s) (เปิดตรงจากไฟล์ file:// อาจโดน CORS บล็อก — ใช้ปุ่มเลือกไฟล์แทนได้)
+  // เช็ค typeof fetch ก่อนกันพัง (environment ที่ไม่มี fetch เลย — เผื่อไว้ ไม่ควรเกิดในเบราว์เซอร์จริง)
+  if (typeof fetch === 'function') {
+    fetch('tone-regression-report.json').then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (obj) {
+      document.getElementById('fileName').textContent = 'tone-regression-report.json (โหลดอัตโนมัติ)';
+      loadReport(obj);
+    }).catch(function (e) {
+      document.getElementById('fileName').textContent = 'โหลดอัตโนมัติไม่ได้ (' + e.message + ') — กด "เลือกไฟล์ JSON" เอง';
+    });
+  } else {
+    document.getElementById('fileName').textContent = 'โหลดอัตโนมัติไม่รองรับ — กด "เลือกไฟล์ JSON" เอง';
+  }
+})();
+</script>
+</body>
+</html>

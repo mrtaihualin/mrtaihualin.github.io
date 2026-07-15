@@ -185,26 +185,67 @@
   display: block;
   margin-bottom: 6px;
 }
-/* 學生筆記 */
-.fnotes-textarea {
+/* 學生筆記 — 工具列（標題／粗斜底線／顏色／螢光筆／清單／清除格式／字級加減） */
+.fnotes-tools {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border: 1.5px solid var(--border2);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  position: relative;
+}
+.fnotes-tools button {
+  min-width: 34px; height: 34px; padding: 0 9px;
+  border: 1px solid var(--border2);
+  background: var(--paper);
+  border-radius: 7px;
+  font-family: var(--font-zh-sans);
+  font-size: 14px; font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all .12s;
+}
+.fnotes-tools button:hover { background: var(--step); color: #fff; border-color: var(--step); }
+.fnotes-tools .sep { width: 1px; height: 22px; background: var(--border2); margin: 4px 2px; align-self: center; }
+.fnotes-swatch {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,.2);
+  cursor: pointer; padding: 0; min-width: 0;
+}
+.fnotes-swatch:hover { transform: scale(1.12); }
+/* ปุ่มแบบ dropdown — กดค่อยกางสีให้เลือก กันแถบเครื่องมือรก */
+.fnotes-dd { position: relative; display: inline-block; }
+.fnotes-dd-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; display: none; flex-wrap: wrap; gap: 6px;
+  width: 118px; background: var(--paper); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.2); z-index: 20;
+}
+.fnotes-dd-pop.open { display: flex; }
+
+/* 學生筆記 — 內容區（原本是 textarea，現在是可格式化的 contenteditable） */
+.fnotes-editor {
   width: 100%;
   min-height: 300px;
   border: 1.5px solid var(--border2);
-  border-radius: 10px;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
   padding: 18px 20px;
   font-size: 29px;
   font-family: var(--font-zh-sans);
   color: var(--ink);
   background: var(--bg2);
-  resize: vertical;
   outline: none;
   line-height: 1.7;
   transition: border-color 0.15s;
   margin-bottom: 12px;
-  display: block;
+  overflow-y: auto;
 }
-.fnotes-textarea:focus { border-color: var(--step); background: var(--paper); }
-.fnotes-textarea::placeholder { color: var(--ink-light); }
+.fnotes-editor:focus { border-color: var(--step); background: var(--paper); }
+.fnotes-editor:empty:before { content: attr(data-ph); color: var(--ink-light); }
+.fnotes-editor h3 { font-family: var(--font-zh-serif); font-weight: 900; color: var(--step); margin: 14px 0 6px; }
+.fnotes-editor ul, .fnotes-editor ol { padding-left: 24px; margin: 8px 0; }
 .fnotes-actions {
   display: flex;
   align-items: center;
@@ -316,4 +357,6 @@
   .fpdf-btn { left: 10px; bottom: 14px; width: 46px; height: 46px; }
   .fsite-btn { left: 10px; bottom: 68px; width: 46px; height: 46px; }
   .fsite-menu { left: 10px; bottom: 122px; }
+  .fnotes-tools button { min-width: 32px; height: 32px; padding: 0 8px; font-size: 13px; }
+  .fnotes-swatch { width: 20px; height: 20px; }
 }

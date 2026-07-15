@@ -28,6 +28,7 @@
 <script src="word-vault.js"></script>
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
+<script src="data/tone-engine.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -855,7 +856,7 @@
   .tf-ask-title { font-size:17px; font-weight:700; color:#5a3e0a; margin-bottom:4px; }
   .tf-ask-sub { font-size:12.5px; color:#9a8a6a; margin-bottom:14px; line-height:1.5; }
   .tf-ask-ctx { font-size:12px; background:rgba(200,151,58,0.12); border:1px solid rgba(200,151,58,0.30); border-radius:8px; padding:7px 11px; margin-bottom:12px; color:#7a5510; }
-  .tf-ask-input, .tf-ask-textarea { width:100%; border:1.5px solid rgba(139,99,16,0.25); border-radius:9px; padding:9px 11px; font-size:14px; font-family:'Noto Sans TC',sans-serif; margin-bottom:10px; background:#fff; }
+  .tf-ask-input, .tf-ask-textarea { width:100%; border:1.5px solid rgba(139,99,16,0.25); border-radius:9px; padding:9px 11px; font-size:16px; font-family:'Noto Sans TC',sans-serif; margin-bottom:10px; background:#fff; }
   .tf-ask-textarea { min-height:90px; resize:vertical; }
   .tf-ask-actions { display:flex; gap:10px; justify-content:flex-end; }
   .tf-ask-send { background:#C8973A; color:#fff; border:none; border-radius:9px; padding:9px 20px; font-size:14px; font-weight:700; cursor:pointer; }
@@ -1985,7 +1986,7 @@
     </div>
   </div>
 
-  <div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;width:100%;box-sizing:border-box;">
+  <div onclick="openModal('modal-freebie')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('modal-freebie')}" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;width:100%;box-sizing:border-box;">
     <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;"><img src="assets/icons/gift-box.svg" alt="" style="width:18px;height:18px;vertical-align:-4px;margin-right:3px;">免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
     <span style="font-size:13px;background:var(--gold-bright,#C8973A);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
   </div>
@@ -2009,7 +2010,7 @@
     <span class="tf-streak-chip">🔥 連續 <b id="tf-streak-num">0</b> 天</span>
     <span class="tf-streak-chip">🛡️ ×<b id="tf-freeze-num">0</b></span>
     <span class="tf-streak-chip">⭐ <b id="tf-star-count">0</b> 顆星</span>
-    <span class="tf-streak-chip" style="cursor:pointer;" onclick="TF.showBadges()"><span id="tf-badge-emoji">🌱</span> <b id="tf-badge-count">0</b> 枚勳章</span>
+    <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" onclick="TF.showBadges()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showBadges()}"><span id="tf-badge-emoji">🌱</span> <b id="tf-badge-count">0</b> 枚勳章</span>
   </div>
 
   <div class="tf-level-tabs" id="tf-level-tabs">
@@ -2541,126 +2542,9 @@ function breakdownChipsHTML(word, sylLabels) {
   }).join('') + '</div>';
 }
 
-var TH = (function() {
-  var LOW_SET  = new Set('คฅฆงชซฌญฑฒณทธนพฟภมยรลวฬฮ'.split(''));
-  var HIGH_SET = new Set('ขฃฉฐถผฝศษสห'.split(''));
-  var MID_SET  = new Set('กจดตบปอฎฏ'.split(''));
-  var SHORT_TAIL = new Set('กขคฆบปพฟภจชซฎฏฐฑฒดตถทธศษส'.split(''));
-  var LONG_TAIL  = new Set('นณญรลฬมยวง'.split(''));
-  var CONS_SET   = new Set('กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ'.split(''));
-  var LEAD_PATS  = ['หน','หม','หล','หว','หย','หร','หญ','หง','อย'];
-  // Short vowel characters
-  var SHORT_V = new Set(['ะ','ั','ิ','ึ','ุ','็']); // ะ ั ิ ึ ุ + ็ (ไม้ไต่คู้ = ย่อเสียงสระให้สั้น)
-  // Long vowel characters
-  var LONG_V  = new Set(['า','ี','ื','ู','เ','แ','โ']); // า ี ื ู เ แ โ
-  // Tone mark characters
-  var TONE_CHARS = new Set(['่','้','๊','๋']); // ่ ้ ๊ ๋
-  // สระพิเศษที่ลงท้ายด้วยเสียงก้อง (semivowel/นาสิก) = "คำเป็น" เสมอ: ไ(-ai) ใ(-ai) ำ(-am)
-  var LIVE_V = new Set(['ไ','ใ','ำ']);
-  // Lin 2026-07-04: รองรับอักษรควบกล้ำ (ปร กร คร ฯลฯ) + สระออ (อ ทำหน้าที่สระยาว)
-  var CLUSTER2 = new Set('รลว'.split(''));            // ตัวที่สองของควบกล้ำ
-  var CLUSTER_INIT = new Set('กขคฆปผพภตบดฟ'.split('')); // ตัวนำที่ควบได้
-  function _initChar(word){
-    for (var i=0;i<LEAD_PATS.length;i++){ if (word.indexOf(LEAD_PATS[i])===0) return LEAD_PATS[i]; }
-    for (var j=0;j<word.length;j++){ if (CONS_SET.has(word[j])) return word[j]; }
-    return null;
-  }
-  // สระออ: มี อ ที่ไม่ใช่พยัญชนะต้น และมีพยัญชนะนำหน้ามัน (เช่น ทอด คฺรอบ = เสียงยาว)
-  function _hasSaraOr(word){
-    var ic=_initChar(word), firstOr=word.indexOf('อ');
-    for (var i=0;i<word.length;i++){
-      if (word[i]==='อ' && i>0){
-        var hasConsBefore=false;
-        for (var k=0;k<i;k++){ if (CONS_SET.has(word[k])){ hasConsBefore=true; break; } }
-        if (hasConsBefore && !(ic==='อ' && firstOr===i)) return true;
-      }
-    }
-    return false;
-  }
-  // รายชื่อพยัญชนะสำหรับหา "ตัวสะกด" — ตัดตัวที่สองของควบกล้ำออก (ปร กร คร) ถ้าตามด้วยสระ/พยางค์
-  function _codaCons(word){
-    var cons=[]; for (var i=0;i<word.length;i++){ if (CONS_SET.has(word[i])) cons.push(word[i]); }
-    if (cons.length>=2 && CLUSTER_INIT.has(cons[0]) && CLUSTER2.has(cons[1])){
-      var idx0=word.indexOf(cons[0]);
-      var idx2=word.indexOf(cons[1], idx0+1);
-      var after=word.slice(idx2+1), clusterOK=false;
-      for (var a=0;a<after.length;a++){
-        var ch=after[a];
-        if (SHORT_V.has(ch)||LONG_V.has(ch)||ch==='อ'||CONS_SET.has(ch)||LIVE_V.has(ch)){ clusterOK=true; break; }
-      }
-      if (clusterOK) cons=[cons[0]].concat(cons.slice(2));
-    }
-    return cons;
-  }
-
-  return {
-    hasToneMark: function(word) {
-      for (var i=0; i<word.length; i++) if (TONE_CHARS.has(word[i])) return true;
-      return false;
-    },
-    getToneMark: function(word) {
-      for (var i=0; i<word.length; i++) if (TONE_CHARS.has(word[i])) return word[i];
-      return null;
-    },
-    getInitClass: function(word) {
-      for (var i=0; i<LEAD_PATS.length; i++) {
-        if (word.indexOf(LEAD_PATS[i]) === 0) return 'lead';
-      }
-      for (var j=0; j<word.length; j++) {
-        var c = word[j];
-        if (LOW_SET.has(c))  return 'low';
-        if (HIGH_SET.has(c)) return 'high';
-        if (MID_SET.has(c))  return 'mid';
-      }
-      return null;
-    },
-    getInitChar: function(word) {
-      for (var i=0; i<LEAD_PATS.length; i++) {
-        if (word.indexOf(LEAD_PATS[i]) === 0) return LEAD_PATS[i];
-      }
-      for (var j=0; j<word.length; j++) {
-        if (CONS_SET.has(word[j])) return word[j];
-      }
-      return null;
-    },
-    isLiveWord: function(word) {
-      var cons = _codaCons(word);
-      if (cons.length >= 2) {
-        var last = cons[cons.length-1];
-        // อ ตัวสุดท้าย = สระออ (เสียงยาว เปิด) ไม่ใช่ตัวสะกด → คำเป็น
-        if (last === 'อ' && word[word.length-1] === 'อ' && this.getInitChar(word) !== 'อ') return true;
-        if (SHORT_TAIL.has(last)) return false;
-        if (LONG_TAIL.has(last))  return true;
-      }
-      for (var n=0; n<word.length; n++) if (LIVE_V.has(word[n])) return true; // ไ ใ ำ = คำเป็น
-      for (var j=0; j<word.length; j++) if (SHORT_V.has(word[j])) return false;
-      for (var k=0; k<word.length; k++) if (LONG_V.has(word[k]))  return true;
-      if (_hasSaraOr(word)) return true; // สระออ ไม่มีตัวสะกด = คำเป็น
-      return null;
-    },
-    classLabel: function(cls) {
-      return {low:'低子音',high:'高子音',mid:'中子音',lead:'前引字'}[cls] || cls;
-    },
-    getVowelType: function(word) {
-      for (var i=0; i<word.length; i++) if (SHORT_V.has(word[i])) return 'short';
-      for (var j=0; j<word.length; j++) if (LONG_V.has(word[j]))  return 'long';
-      if (_hasSaraOr(word)) return 'long'; // สระออ = สระยาว
-      return null;
-    },
-    hasTailCons: function(word) {
-      return _codaCons(word).length >= 2;
-    },
-    getEndConsType: function(word) {
-      var cons = _codaCons(word);
-      if (cons.length >= 2) {
-        var last = cons[cons.length-1];
-        if (SHORT_TAIL.has(last)) return 'short';
-        if (LONG_TAIL.has(last))  return 'long';
-      }
-      return null;
-    }
-  };
-})();
+// Lin 2026-07-15: TH object ย้ายไปรวมกับ TH_ENGINE (reading-game.html/typing-game.html เดิม) เป็นไฟล์เดียว
+// data/tone-engine.js แล้ว (แก้บั๊กอักษรนำ + ตัวการันต์ที่นั่น) — โหลดผ่าน <script src="data/tone-engine.js">
+// ด้านบน ได้ตัวแปร TH ชื่อเดิมเป๊ะ ใช้ต่อได้โดยไม่ต้องแก้โค้ดข้างล่างนี้เลย
 
 // ════════════════════════════════════════════════════════════
 // STATE & HISTORY

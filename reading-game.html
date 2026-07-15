@@ -42,6 +42,7 @@
 <script src="word-vault.js"></script>
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
+<script src="data/tone-engine.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -326,7 +327,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;">
+<div onclick="openModal('modal-freebie')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('modal-freebie')}" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;">
   <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;"><img src="assets/icons/gift-box.svg" alt="" style="width:18px;height:18px;vertical-align:-4px;margin-right:3px;">免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
   <span style="font-size:13px;background:var(--gold-bright,#C8973A);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
 </div>
@@ -348,7 +349,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
   <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
   <span class="tf-streak-chip">⭐ <b id="star-count">0</b> 顆星</span>
-  <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" onclick="openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
 </div>
 
 <div class="level-tabs">
@@ -670,7 +671,7 @@ function buildRevealRules(w){
     if(w.tone==='์'){
       rows.push({tag:'聲調符',sp:false,text:dispHTML(w.tone)+' = 消音符（不發音）'});
     } else {
-      var _cls=w.th?TH_ENGINE.getInitClass(w.th):null;
+      var _cls=w.th?TH_ENGINE.getInitClass(getFullSyllableSpelling(w)):null;
       var _clsZh=TONE_CLASS_ZH[_cls==='lead'?'high':_cls]||'';
       var _toneZh=(TONE_ZH[w.tone_name]||w.tone_name);
       var _markLabel=_clsZh
@@ -685,77 +686,11 @@ function buildRevealRules(w){
   return rows;
 }
 
-// Lin 2026-07-10: 泰語聲調規則引擎（從 tone-finder.html 的 TH 物件移植過來，同一套驗證過的規則）
-// 用來：(1) 修正上面聲調符標籤原本不分子音種類的問題 (2) 產生「猜聲調」小遊戲答完後的推導句
-var TH_ENGINE=(function(){
-  var LOW_SET=new Set('คฅฆงชซฌญฑฒณทธนพฟภมยรลวฬฮ'.split(''));
-  var HIGH_SET=new Set('ขฃฉฐถผฝศษสห'.split(''));
-  var MID_SET=new Set('กจดตบปอฎฏ'.split(''));
-  var SHORT_TAIL=new Set('กขคฆบปพฟภจชซฎฏฐฑฒดตถทธศษส'.split(''));
-  var LONG_TAIL=new Set('นณญรลฬมยวง'.split(''));
-  var CONS_SET=new Set('กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ'.split(''));
-  var LEAD_PATS=['หน','หม','หล','หว','หย','หร','หญ','หง','อย'];
-  var SHORT_V=new Set(['ะ','ั','ิ','ึ','ุ','็']);
-  var LONG_V=new Set(['า','ี','ื','ู','เ','แ','โ']);
-  var TONE_CHARS=new Set(['่','้','๊','๋']);
-  var LIVE_V=new Set(['ไ','ใ','ำ']);
-  var CLUSTER2=new Set('รลว'.split(''));
-  var CLUSTER_INIT=new Set('กขคฆปผพภตบดฟ'.split(''));
-  function _initChar(word){for(var i=0;i<LEAD_PATS.length;i++){if(word.indexOf(LEAD_PATS[i])===0)return LEAD_PATS[i];}for(var j=0;j<word.length;j++){if(CONS_SET.has(word[j]))return word[j];}return null;}
-  function _hasSaraOr(word){var ic=_initChar(word),firstOr=word.indexOf('อ');for(var i=0;i<word.length;i++){if(word[i]==='อ'&&i>0){var hasConsBefore=false;for(var k=0;k<i;k++){if(CONS_SET.has(word[k])){hasConsBefore=true;break;}}if(hasConsBefore&&!(ic==='อ'&&firstOr===i))return true;}}return false;}
-  function _codaCons(word){var cons=[];for(var i=0;i<word.length;i++){if(CONS_SET.has(word[i]))cons.push(word[i]);}if(cons.length>=2&&CLUSTER_INIT.has(cons[0])&&CLUSTER2.has(cons[1])){var idx0=word.indexOf(cons[0]),idx2=word.indexOf(cons[1],idx0+1),after=word.slice(idx2+1),clusterOK=false;for(var a=0;a<after.length;a++){var ch=after[a];if(SHORT_V.has(ch)||LONG_V.has(ch)||ch==='อ'||CONS_SET.has(ch)||LIVE_V.has(ch)){clusterOK=true;break;}}if(clusterOK)cons=[cons[0]].concat(cons.slice(2));}return cons;}
-  return {
-    getToneMark:function(word){for(var i=0;i<word.length;i++)if(TONE_CHARS.has(word[i]))return word[i];return null;},
-    getInitClass:function(word){for(var i=0;i<LEAD_PATS.length;i++){if(word.indexOf(LEAD_PATS[i])===0)return 'lead';}for(var j=0;j<word.length;j++){var c=word[j];if(LOW_SET.has(c))return 'low';if(HIGH_SET.has(c))return 'high';if(MID_SET.has(c))return 'mid';}return null;},
-    getInitChar:function(word){for(var i=0;i<LEAD_PATS.length;i++){if(word.indexOf(LEAD_PATS[i])===0)return LEAD_PATS[i];}for(var j=0;j<word.length;j++){if(CONS_SET.has(word[j]))return word[j];}return null;},
-    isLiveWord:function(word){var cons=_codaCons(word);if(cons.length>=2){var last=cons[cons.length-1];if(last==='อ'&&word[word.length-1]==='อ'&&this.getInitChar(word)!=='อ')return true;if(SHORT_TAIL.has(last))return false;if(LONG_TAIL.has(last))return true;}for(var n=0;n<word.length;n++)if(LIVE_V.has(word[n]))return true;for(var j=0;j<word.length;j++)if(SHORT_V.has(word[j]))return false;for(var k=0;k<word.length;k++)if(LONG_V.has(word[k]))return true;if(_hasSaraOr(word))return true;return null;},
-    getVowelType:function(word){for(var i=0;i<word.length;i++)if(SHORT_V.has(word[i]))return 'short';for(var j=0;j<word.length;j++)if(LONG_V.has(word[j]))return 'long';if(_hasSaraOr(word))return 'long';return null;}
-  };
-})();
-var TONE_CLASS_ZH={low:'低子音',high:'高子音',mid:'中子音',lead:'前引字'};
-var TONE_MARK_NAME={'่':'ไม้เอก','้':'ไม้โท','๊':'ไม้ตรี','๋':'ไม้จัตวา'};
-var TONE_NUM_NAME=['','สามัญ','เอก','โท','ตรี','จัตวา'];
-function computeToneFromSpelling(word){
-  var cls=TH_ENGINE.getInitClass(word),mark=TH_ENGINE.getToneMark(word),live=TH_ENGINE.isLiveWord(word),vowel=TH_ENGINE.getVowelType(word);
-  if(!cls)return null;
-  var e=(cls==='lead')?'high':cls;
-  if(mark){
-    if(e==='low'){if(mark==='่')return 3;if(mark==='้')return 4;}
-    else if(e==='mid'){if(mark==='่')return 2;if(mark==='้')return 3;if(mark==='๊')return 4;if(mark==='๋')return 5;}
-    else{if(mark==='่')return 2;if(mark==='้')return 3;}
-  } else {
-    if(live)return(e==='high')?5:1;
-    if(e==='high'||e==='mid')return 2;
-    var isShort=(vowel==='short')||(vowel==null);
-    return isShort?4:3;
-  }
-  return null;
-}
-// 猜聲調小遊戲答完後的「為什麼是這個聲調」推導句 — 用單字真正的拼字(th)算一次規則，
-// 如果算出來的聲調跟遊戲原本標的答案對不上（通常是外來語/特殊念法，例如 ออฟ ว่าง 這種字）
-// 就回傳 null，不顯示推導句，只顯示聲調名稱本身，避免把規則講錯 — Lin 2026-07-10 確認過測試器
-function buildToneReason(w){
-  if(!w||!w.th||!w.tone_name)return null;
-  var expectedNum={'สามัญ':1,'เอก':2,'โท':3,'ตรี':4,'จัตวา':5}[w.tone_name];
-  var computed=computeToneFromSpelling(w.th);
-  if(computed!==expectedNum)return null;
-  var cls=TH_ENGINE.getInitClass(w.th),mark=TH_ENGINE.getToneMark(w.th),live=TH_ENGINE.isLiveWord(w.th),vowel=TH_ENGINE.getVowelType(w.th);
-  var e=(cls==='lead')?'high':cls;
-  var initCh=TH_ENGINE.getInitChar(w.th)||w.cons;
-  var classLabel=TONE_CLASS_ZH[cls]||cls;
-  var toneZh=(TONE_ZH[w.tone_name]||w.tone_name);
-  if(mark){
-    return '「'+initCh+'」是'+classLabel+'，加上聲調符「'+mark+'」（'+TONE_MARK_NAME[mark]+'）→ 組合成'+toneZh;
-  }
-  if(live){
-    return '「'+initCh+'」是'+classLabel+'，這個音節是活音節（長母音或長尾音），沒有聲調符 → 固定念'+toneZh;
-  }
-  if(e==='high'||e==='mid'){
-    return '「'+initCh+'」是'+classLabel+'，這個音節是死音節（短母音或短尾音），沒有聲調符 → 固定念'+toneZh;
-  }
-  var isShort=(vowel==='short')||(vowel==null);
-  return '「'+initCh+'」是低子音，死音節+'+(isShort?'短母音':'長母音')+' → 念'+toneZh;
-}
+// Lin 2026-07-15: TH_ENGINE + computeToneFromSpelling + buildToneReason ย้ายไปรวมเป็นไฟล์เดียว
+// data/tone-engine.js แล้ว (ก่อนหน้านี้ก็อปปี้เหมือนกันเป๊ะอยู่ 3 ที่: tone-finder.html/reading-game.html/
+// typing-game.html — แก้บั๊กอักษรนำ+ตัวการันต์ที่ไฟล์เดียวพอ) โหลดผ่าน <script src="data/tone-engine.js">
+// ด้านบน ได้ตัวแปร/ฟังก์ชันชื่อเดิมเป๊ะ (TH_ENGINE, computeToneFromSpelling, buildToneReason,
+// TONE_CLASS_ZH, TONE_MARK_NAME, TONE_NUM_NAME) ใช้ต่อได้โดยไม่ต้องแก้โค้ดข้างล่างนี้เลย
 
 // Lin 2026-07-10: 猜聲調答完後，把「為什麼」推導句 + 子音/母音/尾音（含前引字/複合音）拆解一起顯示在 #bonus-reason
 // buildRevealRules() 本身一律安全可顯示（純拆字），只有 buildToneReason() 對不上時才跳過那句推導句
@@ -1097,9 +1032,12 @@ function initGame(){
     // กรองตามระดับ: 高 = ประโยค (level:'高') · 中 = คำหลายพยางค์ (มี syls แต่ไม่ใช่ level:'高') · 初 = พยางค์เดียว
     var inLevel=function(i){
       var w=WORDS[i];
+      // Lin 2026-07-15: เดิมเช็คจาก "มี/ไม่มี w.syls" ซึ่งใช้ได้ตอน syls มีเฉพาะคำหลายพยางค์
+      // ตอนนี้รวม schema แล้ว ทุกคำมี syls หมด (คำเดียวก็ยาว 1) → ต้องเช็ค w.level ตรงๆ แทน
+      // ไม่งั้นระดับ初จะกรองได้ 0 คำ (บั๊กที่พบตอนตรวจระบบเสียง 2026-07-12)
       if(curLevel==='高')return w.level==='高';
-      if(curLevel==='中')return !!w.syls && w.level!=='高';
-      return !w.syls;
+      if(curLevel==='中')return w.level==='中';
+      return w.level==='初';
     };
     var allIdx=WORDS.map(function(_,i){return i;}).filter(inLevel);
     // งานที่4: กรองด้วย SRS ใหม่ (stage-based) — เฉพาะตอนล็อกอินเท่านั้น (ลอกกฎเกมเสียง: SRS ทำงานเฉพาะล็อกอิน)
@@ -1167,6 +1105,8 @@ function renderSylStrip(){
     c.innerHTML='<span class="syl-th">'+s.th+'</span><span class="syl-n">'+(i+1)+'/'+sylList.length+'</span>';
     c.style.cursor=(typeof RG_TYPE!=='undefined' && RG_TYPE.on)?'default':'pointer';
     c.onclick=function(){ if(typeof RG_TYPE!=='undefined' && RG_TYPE.on)return; rgGotoSyl(i); }; // โหมดพิมพ์ให้พิมพ์ต่อเนื่องไปเลย ไม่ต้องคลิกสลับ
+    c.setAttribute('role','button');c.setAttribute('tabindex','0');
+    c.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); c.onclick(); } };
     strip.appendChild(c);
   });
   updateNextSylBtn();
@@ -1243,6 +1183,8 @@ function loadSyl(){
     col.style.display=comps.indexOf(c)>=0?'flex':'none';
     setSlotContent(box,null,null);
     box.onclick=function(){ if(checked)return; setActiveSlot(c); };
+    box.setAttribute('role','button');box.setAttribute('tabindex','0');
+    box.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); box.onclick(); } };
   });
   var slotRow=document.getElementById('slot-row');
   slotSeq=getSlotOrder(W.vowel,W.final).filter(function(c){return comps.indexOf(c)>=0;});
@@ -1339,6 +1281,10 @@ function renderOptions(tiles){
       }
       document.getElementById('btn-check').disabled=!rgAllSylsFilled();
     };
+    // Lin 2026-07-15 (audit): ให้กดเลือกด้วยคีย์บอร์ด/โปรแกรมอ่านหน้าจอได้ ไม่ใช่แค่เมาส์/แตะ
+    el.setAttribute('role','button');
+    el.setAttribute('tabindex','0');
+    el.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.onclick(); } };
     pool.appendChild(el);
   });
   updateOptHint(); // ทาไฮไลต์ตัวเลือกที่ถูกทันทีที่ pool เพิ่งสร้างใหม่ (ถ้าเปิดคำใบ้)
@@ -1822,7 +1768,7 @@ function rgLevelWordCount(lv){
   var c=0;
   for(var i=0;i<WORDS.length;i++){
     var w=WORDS[i];
-    var inLv = (lv==='高')?(w.level==='高'):(lv==='中')?(!!w.syls&&w.level!=='高'):(!w.syls);
+    var inLv = (lv==='高')?(w.level==='高'):(lv==='中')?(w.level==='中'):(w.level==='初'); // Lin 2026-07-15: เช็ค w.level ตรงๆ แทน w.syls (ดูเหตุผลที่ inLevel() ข้างบน)
     if(inLv)c++;
   }
   return c;
@@ -2469,7 +2415,7 @@ function rgOpenAsk() {
     '<button onclick="document.getElementById(\'rg-ask-ov\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>' +
     '<div style="font-size:20px;font-weight:900;color:#8B6310;margin-bottom:10px;">？ 我有問題</div>' +
     '<div style="font-size:13px;color:#888;margin-bottom:14px;">在練習中卡住了嗎？把問題寫下來，老師會收到並回覆你 🙏</div>' +
-    '<input id="rg-ask-email" type="email" placeholder="你的 Email（方便老師回覆，可留空）" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px;font-family:inherit;">' +
+    '<input id="rg-ask-email" type="email" placeholder="你的 Email（方便老師回覆，可留空）" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:16px;margin-bottom:10px;font-family:inherit;">' +
     '<textarea id="rg-ask-msg" placeholder="想問的問題…" rows="4" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;resize:none;font-family:inherit;margin-bottom:14px;"></textarea>' +
     '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
     '<button onclick="document.getElementById(\'rg-ask-ov\').remove()" style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>' +
