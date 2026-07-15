@@ -6234,7 +6234,13 @@ async function syncScheduleToSupabase(matched) {
     const rows = matched.map(function(m) {
       return { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.s.name };
     });
-    const { error } = await sb.from('classroom_schedule').insert(rows);
+    // 2026-07-15 แก้（Lin ตรวจเจอ classroom_schedule มีแถวซ้ำเป็นร้อย ทุก token）：
+    //   ต้นตอจริงคือ RLS บล็อกการลบข้างบนแบบเงียบๆ (ไม่ error, แค่ลบได้ 0 แถว) ตามที่ comment
+    //   2026-07-11 เตือนไว้แล้ว — แก้ RLS ให้ลบได้จริงคือทางหลัก แต่เพิ่มเกราะกันชั้นที่ 2 ไว้ด้วย：
+    //   เปลี่ยนจาก insert เป็น upsert (ทับซ้ำแทนสร้างซ้ำ) กันไว้เผื่อเปิดหลายแท็บพร้อมกันแล้วชนกัน
+    //   ต้องมี unique constraint (token, lesson_date, start_time) ในฐานข้อมูลก่อน ไม่งั้น onConflict จะไม่มีผล
+    const { error } = await sb.from('classroom_schedule')
+      .upsert(rows, { onConflict: 'token,lesson_date,start_time' });
     if (error) {
       console.warn('ซิงค์ตารางลง Supabase ไม่สำเร็จ:', error.message);
       alert('⚠️ ซิงค์ตารางไม่สำเร็จ（เขียนข้อมูลใหม่ไม่ได้）：' + error.message);
