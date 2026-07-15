@@ -8,7 +8,14 @@
  *
  * โครงสร้างแต่ละคำ:
  *   word      = คำไทย (ตัวสะกดจริง, ใช้เป็น key หลัก)
- *   readingTH = คำอ่านแบบไทย (ใส่เฉพาะตอนอ่านต่างจาก word, อยู่ระดับคำเสมอ ไม่ผูกกับ syls)
+ *   readingTH = คำอ่านแบบไทย = "เสียงจริง" (ใส่เฉพาะตอนอ่านต่างจาก word, อยู่ระดับคำเสมอ ไม่ผูกกับ syls)
+ *               กฎการแปลง (ยืนยันจาก Lin 2026-07-15, ดู Projects/MD/2026-07-15_คำอ่าน-กฎอ้างอิงกลาง.md):
+ *               ตัวสะกดท้ายพยางค์ที่ไม่ใช่ตัวแทนหลักของแม่ ให้เปลี่ยนเป็นตัวแทนหลัก (แม่กก→ก, กด→ด, กบ→บ)
+ *               + ตัดตัวอักษรที่ไม่ออกเสียง (เช่น ร ใน จริง) + โชว์ ห/อ นำที่ซ่อนอยู่ (เช่น ตลาด→หลาด)
+ *               ข้อยกเว้น: อยู่/อย่าง/อย่า/อยาก เขียนเหมือนตัวสะกดจริงเสมอ ห้ามแปลงเป็น หยู่/หย่าง ฯลฯ
+ *   spellingTH = (ใหม่ 2026-07-15, ใส่เฉพาะตอนต่างจาก readingTH) ตัวสะกดจริงไว้ใช้ตอนพิมพ์ในเกมพิมพ์/เกมที่ต้อง
+ *               เทียบตัวสะกด เช่น อดีต: readingTH='อะ-ดีด' (เสียงจริง) แต่ spellingTH='อ-ดีต' (ตัวสะกดจริง)
+ *               ⚠️ ยังไม่มีเกมไหนอ่าน field นี้จริง (ข้อมูลรอไว้ก่อน จนกว่าจะผูก logic เข้าเกมพิมพ์)
  *   en        = คำอ่านโรมัน
  *   zh        = คำแปลจีน
  *   level     = '初' / '中' (ตัวอักษรไทย ตามที่ Lin เลือก 2026-07-11)
@@ -323,7 +330,47 @@
   {word:'ขวา', en:'khwǎa', zh:'右', level:'初', category:'ทิศทาง', syls:[{cons:'ข', cluster:'ว', vowel:'อา', tone_name:'จัตวา', th:'ขวา'}]},
   {word:'เหนือ', en:'něua', zh:'北', level:'初', category:'ทิศทาง', syls:[{cons:'น', lead:'ห', vowel:'เอือ', tone_name:'จัตวา', th:'เหนือ'}]},
   {word:'ใต้', en:'tâi', zh:'南', level:'初', category:'ทิศทาง', syls:[{cons:'ต', vowel:'ใอ', tone:'้', tone_name:'โท', th:'ใต้'}]},
-  {word:'ตรงไป', readingTH:'ตรง-ไป', en:'dtrong-bpai', zh:'直走', level:'初', category:'ทิศทาง', syls:[{cons:'ต', cluster:'ร', vowel:'โอะ', final:'ง', tone_name:'สามัญ', th:'ตรง'}, {cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป'}]}
+  {word:'ตรงไป', readingTH:'ตรง-ไป', en:'dtrong-bpai', zh:'直走', level:'初', category:'ทิศทาง', syls:[{cons:'ต', cluster:'ร', vowel:'โอะ', final:'ง', tone_name:'สามัญ', th:'ตรง'}, {cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป'}]},
+
+  // 2026-07-15 รอบ 2: ชุด 36 คำจาก System 2 (AI ร่าง + เช็ค 4 ชั้น: Claude x2 + tone-engine.js + Gemini) + Lin แก้/ยืนยันเองหลายจุด — Lin approve แล้ว ("เอาขึ้นเกมเลย")
+  // อ้างอิงกฎ readingTH/spellingTH ทั้งหมด + log การแก้ทุกจุด: Projects/MD/2026-07-15_คำอ่าน-กฎอ้างอิงกลาง.md
+  // เติมหมวดเดิม ทิศทาง / เวลา / สัตว์-ธรรมชาติ + เปิดหมวดใหม่ แนวคิด (คำนามธรรม):
+  {word:'ใกล้', en:'glâi', zh:'近', level:'初', category:'ทิศทาง', syls:[{cons:'ก', cluster:'ล', vowel:'ใอ', tone:'้', tone_name:'โท', th:'ใกล้'}]},
+  {word:'ไกล', en:'glai', zh:'遠', level:'初', category:'ทิศทาง', syls:[{cons:'ก', cluster:'ล', vowel:'ไอ', tone_name:'สามัญ', th:'ไกล'}]},
+  {word:'เช้า', en:'cháo', zh:'早上', level:'初', category:'เวลา', syls:[{cons:'ช', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เช้า'}]},
+  {word:'สาย', en:'sǎai', zh:'遲/晚一點', level:'初', category:'เวลา', syls:[{cons:'ส', vowel:'อา', final:'ย', tone_name:'จัตวา', th:'สาย'}]},
+  {word:'บ่าย', en:'bàai', zh:'下午', level:'初', category:'เวลา', syls:[{cons:'บ', vowel:'อา', tone:'่', final:'ย', tone_name:'เอก', th:'บ่าย'}]},
+  {word:'ค่ำ', en:'khâm', zh:'傍晚', level:'初', category:'เวลา', syls:[{cons:'ค', vowel:'อำ', tone:'่', tone_name:'โท', th:'ค่ำ'}]},
+  {word:'ดึก', en:'dèuk', zh:'深夜', level:'初', category:'เวลา', syls:[{cons:'ด', vowel:'อึ', final:'ก', tone_name:'เอก', th:'ดึก'}]},
+  {word:'ครั้ง', en:'kráng', zh:'次', level:'初', category:'เวลา', syls:[{cons:'ค', cluster:'ร', vowel:'อะ', tone:'้', final:'ง', tone_name:'ตรี', th:'ครั้ง'}]},
+  {word:'วัว', en:'wua', zh:'牛', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ว', vowel:'อัว', tone_name:'สามัญ', th:'วัว'}]},
+  {word:'เป็ด', en:'bpèt', zh:'鴨', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ป', vowel:'เอะ', final:'ด', tone_name:'เอก', th:'เป็ด'}]},
+  {word:'งู', en:'nguu', zh:'蛇', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ง', vowel:'อู', tone_name:'สามัญ', th:'งู'}]},
+  {word:'มด', en:'mót', zh:'螞蟻', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ม', vowel:'โอะ', final:'ด', tone_name:'ตรี', th:'มด'}]},
+  {word:'หนู', en:'nǔu', zh:'老鼠', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'น', lead:'ห', vowel:'อู', tone_name:'จัตวา', th:'หนู'}]},
+  {word:'กบ', en:'gòp', zh:'青蛙', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ก', vowel:'โอะ', final:'บ', tone_name:'เอก', th:'กบ'}]},
+  {word:'กลางวัน', readingTH:'กลาง-วัน', en:'glaang-wan', zh:'白天', level:'初', category:'เวลา', syls:[{cons:'ก', cluster:'ล', vowel:'อา', final:'ง', tone_name:'สามัญ', th:'กลาง'}, {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'}]}, // ระดับยืนยันจาก Lin 2026-07-15: เป็น 初 (คำง่ายใช้บ่อย)
+  {word:'กลางคืน', readingTH:'กลาง-คืน', en:'glaang-kheun', zh:'夜晚', level:'初', category:'เวลา', syls:[{cons:'ก', cluster:'ล', vowel:'อา', final:'ง', tone_name:'สามัญ', th:'กลาง'}, {cons:'ค', vowel:'อื', final:'น', tone_name:'สามัญ', th:'คืน'}]}, // ระดับยืนยันจาก Lin 2026-07-15: เป็น 初
+  {word:'อดีต', readingTH:'อะ-ดีด', spellingTH:'อ-ดีต', en:'à-dìit', zh:'過去', level:'中', category:'เวลา', syls:[{cons:'อ', vowel:'อะ', tone_name:'เอก', th:'อ'}, {cons:'ด', vowel:'อี', final:'ต', tone_name:'เอก', th:'ดีต'}]}, // readingTH=เสียงจริง(อะ-ดีด) / spellingTH=ตัวสะกดจริงสำหรับพิมพ์(อ-ดีต) — ยืนยันจาก Lin 2026-07-15
+  {word:'ทุกวัน', readingTH:'ทุก-วัน', en:'thúk-wan', zh:'每天', level:'初', category:'เวลา', syls:[{cons:'ท', vowel:'อุ', final:'ก', tone_name:'ตรี', th:'ทุก'}, {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'}]}, // ระดับยืนยันจาก Lin 2026-07-15: เป็น 初
+  {word:'นาที', readingTH:'นา-ที', en:'naa-thii', zh:'分鐘', level:'中', category:'เวลา', syls:[{cons:'น', vowel:'อา', tone_name:'สามัญ', th:'นา'}, {cons:'ท', vowel:'อี', tone_name:'สามัญ', th:'ที'}]},
+  {word:'ชั่วโมง', readingTH:'ชั่ว-โมง', en:'chûa-moong', zh:'小時', level:'中', category:'เวลา', syls:[{cons:'ช', vowel:'อัว', tone:'่', tone_name:'โท', th:'ชั่ว'}, {cons:'ม', vowel:'โอ', final:'ง', tone_name:'สามัญ', th:'โมง'}]},
+  {word:'เมื่อกี้', readingTH:'เมื่อ-กี้', en:'mʉ̂a-gîi', zh:'剛才', level:'中', category:'เวลา', syls:[{cons:'ม', vowel:'เอือ', tone:'่', tone_name:'โท', th:'เมื่อ'}, {cons:'ก', vowel:'อี', tone:'้', tone_name:'ตรี', th:'กี้'}]}, // ⚠️ กี้ ยืนยันจาก Lin 2026-07-15 ว่าเป็น ตรี(4) — แต่เครื่องคิดจริง (tone-engine.js: อักษรกลาง+ไม้โท=โท เสมอ) + subagent อิสระ + Gemini ตอบตรงกันหมดว่าเป็น โท(3) ถ้าเอาคำนี้เข้า words-data.js จริง ตัวเช็ก mismatch อัตโนมัติ (regression-check-tone.js) จะขึ้น flag คำนี้ทุกรอบ เป็นเรื่องปกติไม่ใช่บั๊ก ให้ข้ามได้
+  {word:'เดี๋ยวนี้', readingTH:'เดี๋ยว-นี้', en:'dǐao-níi', zh:'現在/馬上', level:'中', category:'เวลา', syls:[{cons:'ด', vowel:'เอีย', tone:'๋', final:'ว', tone_name:'จัตวา', th:'เดี๋ยว'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้'}]},
+  {word:'วินาที', readingTH:'วิ-นา-ที', en:'wí-naa-thii', zh:'秒', level:'中', category:'เวลา', syls:[{cons:'ว', vowel:'อิ', tone_name:'ตรี', th:'วิ'}, {cons:'น', vowel:'อา', tone_name:'สามัญ', th:'นา'}, {cons:'ท', vowel:'อี', tone_name:'สามัญ', th:'ที'}]},
+  {word:'ความรัก', readingTH:'ความ-รัก', en:'khwaam-rák', zh:'愛', level:'中', category:'แนวคิด', syls:[{cons:'ค', cluster:'ว', vowel:'อา', final:'ม', tone_name:'สามัญ', th:'ความ'}, {cons:'ร', vowel:'อะ', final:'ก', tone_name:'ตรี', th:'รัก'}]},
+  {word:'ความสุข', readingTH:'ความ-สุก', spellingTH:'ความ-สุข', en:'khwaam-sùk', zh:'幸福', level:'中', category:'แนวคิด', syls:[{cons:'ค', cluster:'ว', vowel:'อา', final:'ม', tone_name:'สามัญ', th:'ความ'}, {cons:'ส', vowel:'อุ', final:'ข', tone_name:'เอก', th:'สุข'}]}, // readingTH=ความ-สุก (ข→ก ตัวแทนแม่กก) / spellingTH=ตัวสะกดจริง(ความ-สุข) — แก้ตาม Lin 2026-07-15
+  {word:'ความฝัน', readingTH:'ความ-ฝัน', en:'khwaam-fǎn', zh:'夢想', level:'中', category:'แนวคิด', syls:[{cons:'ค', cluster:'ว', vowel:'อา', final:'ม', tone_name:'สามัญ', th:'ความ'}, {cons:'ฝ', vowel:'อะ', final:'น', tone_name:'จัตวา', th:'ฝัน'}]},
+  {word:'ความจริง', readingTH:'ความ-จิง', spellingTH:'ความ-จริง', en:'khwaam-jing', zh:'真相', level:'中', category:'แนวคิด', syls:[{cons:'ค', cluster:'ว', vowel:'อา', final:'ม', tone_name:'สามัญ', th:'ความ'}, {cons:'จ', cluster:'ร', vowel:'อิ', final:'ง', tone_name:'สามัญ', th:'จริง'}]}, // ยืนยันวรรณยุกต์ถูกต้องจาก Lin — readingTH=ความ-จิง (ร ไม่ออกเสียง) / spellingTH=ตัวสะกดจริง(ความ-จริง) 2026-07-15
+  {word:'โอกาส', readingTH:'โอ-กาด', spellingTH:'โอ-กาส', en:'oo-gàat', zh:'機會', level:'中', category:'แนวคิด', syls:[{cons:'อ', vowel:'โอ', tone_name:'สามัญ', th:'โอ'}, {cons:'ก', vowel:'อา', final:'ส', tone_name:'เอก', th:'กาส'}]}, // readingTH=โอ-กาด (ส→ด ตัวแทนแม่กด) / spellingTH=ตัวสะกดจริง(โอ-กาส) — แก้ตาม Lin 2026-07-15
+  {word:'ปัญหา', readingTH:'ปัน-หา', en:'pan-hǎa', zh:'問題', level:'中', category:'แนวคิด', syls:[{cons:'ป', vowel:'อะ', final:'ญ', tone_name:'สามัญ', th:'ปัญ'}, {cons:'ห', vowel:'อา', tone_name:'จัตวา', th:'หา'}]},
+  {word:'เป้าหมาย', readingTH:'เป้า-หมาย', en:'bpâo-mǎai', zh:'目標', level:'中', category:'แนวคิด', syls:[{cons:'ป', vowel:'เอา', tone:'้', tone_name:'โท', th:'เป้า'}, {cons:'ม', lead:'ห', vowel:'อา', final:'ย', tone_name:'จัตวา', th:'หมาย'}]},
+  {word:'ความคิด', readingTH:'ความ-คิด', en:'khwaam-khít', zh:'想法', level:'中', category:'แนวคิด', syls:[{cons:'ค', cluster:'ว', vowel:'อา', final:'ม', tone_name:'สามัญ', th:'ความ'}, {cons:'ค', vowel:'อิ', final:'ด', tone_name:'ตรี', th:'คิด'}]},
+  {word:'แม่น้ำ', readingTH:'แม่-น้ำ', en:'mâe-náam', zh:'河', level:'中', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ม', vowel:'แอ', tone:'่', tone_name:'โท', th:'แม่'}, {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'}]},
+  {word:'ดอกไม้', readingTH:'ดอก-ไม้', en:'dòok-máai', zh:'花', level:'中', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ด', vowel:'ออ', final:'ก', tone_name:'เอก', th:'ดอก'}, {cons:'ม', vowel:'ไอ', tone:'้', tone_name:'ตรี', th:'ไม้'}]},
+  {word:'สวนสัตว์', readingTH:'สวน-สัด', spellingTH:'สวน-สัตว์', en:'sǔan-sàt', zh:'動物園', level:'中', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ส', vowel:'อัว', final:'น', tone_name:'จัตวา', th:'สวน'}, {cons:'ส', vowel:'อะ', final:'ต', tone_name:'เอก', th:'สัตว์'}]}, // readingTH=สวน-สัด (ตว์→ด ตัวแทนแม่กด, ว์ การันต์ไม่ออกเสียง) / spellingTH=ตัวสะกดจริง(สวน-สัตว์) — แก้ตาม Lin 2026-07-15
+  {word:'ตะวันออก', readingTH:'ตะ-วัน-ออก', en:'dtà-wan-òok', zh:'東', level:'中', category:'ทิศทาง', syls:[{cons:'ต', vowel:'อะ', tone_name:'เอก', th:'ตะ'}, {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'}, {cons:'อ', vowel:'ออ', final:'ก', tone_name:'เอก', th:'ออก'}]},
+  {word:'ตะวันตก', readingTH:'ตะ-วัน-ตก', en:'dtà-wan-dtòk', zh:'西', level:'中', category:'ทิศทาง', syls:[{cons:'ต', vowel:'อะ', tone_name:'เอก', th:'ตะ'}, {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'}, {cons:'ต', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ตก'}]}
   ];
 
   global.WORDS_MASTER = WORDS_MASTER;

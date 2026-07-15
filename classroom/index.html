@@ -6121,12 +6121,17 @@ async function generateAndUploadReceipt(p, v) {
   // 收據日期算錯天，連帶編號序號跟著撞號/跳號。
   const _todayParts = teacherToday().split('-'); // [YYYY, MM, DD]
   const datePart = _todayParts[0] + '-' + _todayParts[1] + _todayParts[2];
-  let _seq = 1;
-  try {
-    const _r = await sb.from('classroom_payments').select('receipt_no').like('receipt_no', datePart + '-%');
-    if (_r && _r.data) _seq = _r.data.length + 1;
-  } catch (e) { console.warn('收據序號查詢失敗：', e); }
-  const receiptNo = datePart + '-' + String(_seq).padStart(2, '0');
+  // 2026-07-15 修（🟡 項目7，Lin 要求順便修）：以前用「數今天已經有幾筆收據」算下一個序號，
+  // 是 check-then-act——只有一位老師在用，機率很低，但兩筆繳費幾乎同時開收據理論上還是會撞號。
+  // 改成呼叫資料庫端的 assign_receipt_no()：裡面用 pg_advisory_xact_lock 把「算序號」跟
+  // 「把編號寫回這筆繳費記錄」鎖在同一個交易裡做完，兩筆同時呼叫也不會搶到一樣的編號。
+  // （這裡直接把編號寫進資料庫，approveSlip/submitPayment 事後只需要再把 status 改成 done，
+  // 不用再自己寫一次 receipt_no。）
+  const assignRes = await sb.rpc('assign_receipt_no', { p_payment_id: p.id, p_date_part: datePart });
+  if (assignRes.error || !assignRes.data) {
+    throw new Error('收據編號寫入資料庫失敗：' + (assignRes.error ? assignRes.error.message : '找不到這筆繳費記錄（id=' + p.id + '）'));
+  }
+  const receiptNo = assignRes.data;
   const today = _todayParts.join('/');
   const total = v.ls * v.pp;
 
@@ -6326,11 +6331,13 @@ async function approveSlip() {
   btn.textContent = '產生收據中…';
   var receiptDbWarn = '';
   try {
+    // 2026-07-15 修：收據編號現在由 generateAndUploadReceipt() 內部的 assign_receipt_no()
+    // 原子寫入資料庫了，這裡不用也不該再寫一次 receipt_no，只需要把 status 改成 done。
     receipt = await generateAndUploadReceipt(slip, { cur: cur, pp: pp, ls: ls, bn: bn, start: start, note: note });
     if (receipt) {
-      var rdRes = await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo, status: 'done' }).eq('id', slipId).select();
+      var rdRes = await sb.from('classroom_payments').update({ status: 'done' }).eq('id', slipId).select();
       if (rdRes.error || !rdRes.data || !rdRes.data.length) {
-        receiptDbWarn = '\n\n⚠️ 收據檔已產生，但收據編號寫入資料庫失敗（' + (rdRes.error ? rdRes.error.message : 'RLS 權限問題') + '），這筆繳費狀態可能還停在「pending」，請檢查。';
+        receiptDbWarn = '\n\n⚠️ 收據已產生（編號 ' + receipt.receiptNo + '），但繳費狀態改成「已完成」失敗（' + (rdRes.error ? rdRes.error.message : 'RLS 權限問題') + '），這筆可能還停在「pending」，請檢查。';
       }
     }
   } catch (e) { console.warn('收據產生失敗：', e); }
@@ -6373,13 +6380,9 @@ async function regenReceipt(paymentId) {
       start: p.start_note || p.start_date || ''
     };
     alert('開始產生 PDF 收據，請稍候…');
+    // 2026-07-15 修：收據編號現在由 generateAndUploadReceipt() 內部的 assign_receipt_no()
+    // 原子寫入資料庫了（失敗會直接丟例外，被下面的 catch 擋到），這裡不用再自己寫一次。
     var receipt = await generateAndUploadReceipt(p, v);
-    var updRes = await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo }).eq('id', paymentId).select();
-    if (updRes.error || !updRes.data || !updRes.data.length) {
-      alert('⚠️ 收據檔已產生並存到 Drive，但收據編號寫入資料庫失敗（' + (updRes.error ? updRes.error.message : '可能是 RLS 權限問題') + '）\n收據還是可以在 Drive 找到，只是系統裡的收據編號沒更新。');
-      if (p.token) loadTeacherStudentInfo(p.token);
-      return;
-    }
     alert('✅ 收據已重新開立！\n編號：' + receipt.receiptNo + '\n已存到學生「課表 & 收據」資料夾');
     if (p.token) loadTeacherStudentInfo(p.token);
   } catch (e) {
@@ -6602,9 +6605,18 @@ async function submitPayment() {
   // 用既有的收據系統產生收據 → 存進該學生「課表 & 收據」資料夾，並讓學生頁出現下載鈕
   btn.textContent = '產生收據中…';
   var receipt = null;
+  var receiptDbWarn = '';
   try {
+    // 2026-07-15 修（Lin 回報這裡跟 approveSlip 有一樣的問題）：收據編號現在由
+    // generateAndUploadReceipt() 內部的 assign_receipt_no() 原子寫入資料庫了，
+    // 這裡只需要另外把 status 改成 done，並且要檢查真的有改到（以前完全沒檢查）。
     receipt = await generateAndUploadReceipt(row, { cur: cur, pp: pricePer, ls: lessons, bn: bonus, start: start });
-    if (receipt) await sb.from('classroom_payments').update({ receipt_no: receipt.receiptNo, status: 'done' }).eq('id', row.id);
+    if (receipt) {
+      var payDoneRes = await sb.from('classroom_payments').update({ status: 'done' }).eq('id', row.id).select();
+      if (payDoneRes.error || !payDoneRes.data || !payDoneRes.data.length) {
+        receiptDbWarn = '\n\n⚠️ 收據已產生（編號 ' + receipt.receiptNo + '），但繳費狀態改成「已完成」失敗（' + (payDoneRes.error ? payDoneRes.error.message : 'RLS 權限問題') + '），這筆可能還停在「pending」，請檢查。';
+      }
+    }
   } catch (e) { console.warn('收據產生失敗：', e); }
   btn.disabled = false; btn.textContent = '確認收費';
   var tkRefresh = payToken;
@@ -6612,7 +6624,7 @@ async function submitPayment() {
   if (typeof loadLowQuotaBanner === 'function') loadLowQuotaBanner();
   if (typeof loadTeacherStudentInfo === 'function' && tkRefresh) loadTeacherStudentInfo(tkRefresh);
   alert('✅ 已記錄！\n' + (s ? s.name : '') + ' · ' + courseLabel + ' · ' + cur + ' ' + total.toLocaleString()
-    + (receipt ? '\n\n🧾 收據已存到學生「課表 & 收據」資料夾\n編號：' + receipt.receiptNo : '\n\n（收據產生失敗，請確認已用 Google 登入授權後再試）'));
+    + (receipt ? '\n\n🧾 收據已存到學生「課表 & 收據」資料夾\n編號：' + receipt.receiptNo : '\n\n（收據產生失敗，請確認已用 Google 登入授權後再試）') + receiptDbWarn);
 }
 
 // ============================================================
@@ -6624,19 +6636,19 @@ async function recordAttendance(token) {
   const today = teacherToday();
   const btn = document.getElementById('attend-' + token);
   if (btn) { btn.disabled = true; btn.textContent = '記錄中…'; }
-  // Check if already recorded today → increment lessons; otherwise insert new row
-  const { data: existing } = await sb.from('classroom_attendance')
-    .select('id,lessons').eq('token', token).eq('lesson_date', today).maybeSingle();
-  let error;
-  if (existing) {
-    ({ error } = await sb.from('classroom_attendance')
-      .update({ lessons: (existing.lessons || 1) + 1 }).eq('id', existing.id));
-  } else {
-    ({ error } = await sb.from('classroom_attendance')
-      .insert({ token: token, student_name: name, lesson_date: today, lessons: 1 }));
-  }
+  // 2026-07-15 修（🔴 項目3）：以前「先查今天有沒有紀錄 → 再決定 insert 或 update」是
+  // check-then-act，雙擊按鈕或開兩個分頁同時按，會各自查到「還沒有」再各自 insert（重複兩筆），
+  // 或各自查到同一個 lessons 值各自 +1（結果少算一堂）——兩種都會讓學生的堂數算錯。
+  // 已請 Lin 確認 classroom_attendance 已經有 (token, lesson_date) 的 unique constraint
+  // （classroom_attendance_token_lesson_date_key），改用資料庫端 record_attendance_increment()
+  // 做「INSERT ... ON CONFLICT DO UPDATE」原子的 insert-or-increment，不在 JS 端查完再算。
+  const attRes = await sb.rpc('record_attendance_increment', {
+    p_token: token, p_student_name: name, p_lesson_date: today
+  });
   if (btn) { btn.disabled = false; }
-  if (error) { alert('記錄失敗：' + error.message); if (btn) btn.textContent = '✅ 今日上課'; return; }
+  if (attRes.error || !attRes.data || !attRes.data.length) {
+    alert('記錄失敗：' + (attRes.error ? attRes.error.message : '資料庫沒有回傳結果')); if (btn) btn.textContent = '✅ 今日上課'; return;
+  }
   await refreshTodayScheduleSection(); // refresh today section（2026-07-06 修正：原本呼叫 loadTodaySchedule() 會把整塊課表重置成「尚未連接」的初始畫面，卡片跟按鈕就整個消失，要重新連接才會再出現）
   openAttendanceHistory(token); // open history so Lin can verify & undo
   loadLowQuotaBanner();
