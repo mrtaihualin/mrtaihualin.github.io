@@ -1013,7 +1013,11 @@ const GOOGLE_CLIENT_ID = '912926837729-j8n8mojmrmngpha68pbasv9qslvgtvrn.apps.goo
 // 2026-07-08 calendar.readonly → calendar.events：改成可讀寫，才能用 Calendar API 自動建立
 // 「新增學生／入班連結」時的 Google Meet 連結（不用老師手動貼），calendar.events 本身也涵蓋讀取，
 // 所以 calFetchUpcomingEvents() 讀近期課表不受影響
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/documents';
+// 2026-07-15 加 calendar.freebusy：官方文件證實 freeBusy.query 需要 calendar.readonly／calendar／
+// calendar.freebusy／calendar.events.freebusy 其中一個 scope，calendar.events 不夠用
+// （https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query）
+// 「➕ 加課堂時間」按「檢查是否衝突」才會 403 insufficient authentication scopes
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/documents';
 const DRIVE_ROOT_FOLDER = 'mrtaihualin 課堂錄影';
 let gdToken = null, gdTokenExp = 0, gdTokenClient = null, gdTokenScopes = '';
 
@@ -1057,7 +1061,9 @@ function gdGetToken(forceConsent) {
 async function ensureGoogleReady() {
   await gdGetToken(); // 先取一次（靜默或首次同意）
   var sc = gdTokenScopes || '';
-  var missing = !sc || sc.indexOf('calendar') === -1 || sc.indexOf('drive') === -1 || sc.indexOf('documents') === -1;
+  // 2026-07-15 加 freebusy 檢查：舊 token 只有 calendar.events，字串裡雖然含「calendar」但沒有
+  // 「freebusy」，之前這裡漏檢查，才會漏補權限，導致「檢查是否衝突」403
+  var missing = !sc || sc.indexOf('calendar') === -1 || sc.indexOf('freebusy') === -1 || sc.indexOf('drive') === -1 || sc.indexOf('documents') === -1;
   if (missing) { await gdGetToken(true); } // 缺 scope（含舊 token 不知道 scope 的情況）→ 趁點擊手勢還在，強制補權限
   return true;
 }
@@ -1636,7 +1642,12 @@ function thaiDateWeekday(dateStr) {
 }
 
 async function checkFreebusyConflict(startIso, endIso) {
-  const calToken = await gdGetToken();
+  let calToken = await gdGetToken();
+  // 2026-07-15 加：舊 token 可能只有 calendar.events（沒有 freebusy）→ 強制補權限一次，
+  // 避免又出現 403 insufficient authentication scopes
+  if (gdTokenScopes && gdTokenScopes.indexOf('freebusy') === -1) {
+    calToken = await gdGetToken(true);
+  }
   const r = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' },
@@ -3578,6 +3589,10 @@ function openFeedbackFromBanner(token, id) {
 //   1) 一般申請 pending 超過 48 小時還沒處理
 //   2) 提議新時間 (offer_status='proposed') 超過 48 小時學生還沒回覆
 //   3) 學生還沒連結 LINE，可能收不到通知（提議新時間/老師主動聯絡時特別重要）
+//   4) 🆕 2026-07-15：有上課紀錄（classroom_attendance）但完全沒有任何 payment
+//      （不分 pending/done/rejected，只要一筆都沒有就算）——防止像 Ling 那樣，
+//      學生真的上了好幾堂課，卻沒人記得幫他建 payment，導致本輪堂數算不出來、
+//      學生頁也一直顯示「尚未購課」。
 // ⚠️ 已知限制：這是「打開網頁才會檢查」，不是主動推播提醒——如果要在時間到了就自動推 LINE
 // 提醒雙方，需要另外排一個 cron function，這次沒有做，先用這個版本，之後想要再加。
 var SLA_HOURS = 48;
@@ -3602,6 +3617,23 @@ async function loadActionNeededBanner() {
       }
       if (s && !s.line_user_id) items.push(escHtml(name) + '：還沒連結 LINE，通知可能收不到');
     });
+    // 4) 有上課紀錄卻完全沒有 payment（不分狀態）
+    try {
+      var attTokRes = await sb.from('classroom_attendance').select('token');
+      var attTokRows = attTokRes.data || [];
+      var payAnyRes = await sb.from('classroom_payments').select('token');
+      var payTokenSet = {};
+      (payAnyRes.data || []).forEach(function(p) { payTokenSet[p.token] = true; });
+      var seenNoPay = {};
+      attTokRows.forEach(function(a) {
+        if (payTokenSet[a.token] || seenNoPay[a.token]) return;
+        seenNoPay[a.token] = true;
+        var s2 = studentsCache[a.token];
+        if (s2 && s2.archived_at) return; // 已封存的舊生不提醒
+        var name2 = s2 ? s2.name : a.token;
+        items.push(escHtml(name2) + '：有上課紀錄，但完全沒有 payment，請確認是否漏建');
+      });
+    } catch (e) {}
     if (!items.length) { el.innerHTML = ''; return; }
     // 去重（同一個學生可能同時中兩條，只顯示一次同樣的文字）
     items = items.filter(function(t, i) { return items.indexOf(t) === i; });
