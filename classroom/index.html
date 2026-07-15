@@ -2787,6 +2787,9 @@ async function repairMeet(token) {
 //   確保封存功能本身不會被新功能卡住（RELIABILITY FIRST：封存一定要成功或明確報錯）。
 const LINE_UNLINK_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/unlink-line-student';
 const LINE_RESTORE_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/restore-line-student';
+// 2026-07-15 加：เช็ค+ส่งเตือน "โควต้าใกล้หมด" ทันทีตอนบันทึกเข้าเรียน (แทนที่จะรอ cron วันละครั้ง)
+// เผื่อคาบที่เพิ่งบันทึกเป็นคาบสุดท้ายของรอบพอดี นักเรียนจะได้รับ LINE เตือนทันทีวันนั้นเลย ไม่ต้องรอถึงพรุ่งนี้เช้า
+const LOW_QUOTA_CHECK_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/low-quota-cron';
 
 // 2026-07-14 加（SECURITY FIRST）：以前這兩個 Edge Function 呼叫都只帶公開的 anonKey 當
 // Authorization，等於誰都能照樣打這個 API 封存/恢復任何學生，不用真的登入成老師。
@@ -6569,6 +6572,16 @@ async function recordAttendance(token) {
   openAttendanceHistory(token); // open history so Lin can verify & undo
   loadLowQuotaBanner();
   loadTeacherStudentInfo(token);
+  // 2026-07-15 加（Lin 要求）：บันทึกเข้าเรียนเสร็จ เช็คทันทีว่าคาบนี้เป็นคาบสุดท้ายของรอบไหม
+  // ถ้าใช่ ส่ง LINE เตือนนักเรียนทันทีวันนั้นเลย ไม่ต้องรอ cron วันละครั้งตอน 9 โมงเช้า
+  // (best-effort — ยิงไปเฉยๆ ไม่รอผล ไม่กระทบการบันทึกเข้าเรียนซึ่งสำเร็จไปแล้วข้างบน)
+  try {
+    fetch(LOW_QUOTA_CHECK_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      body: JSON.stringify({ token: token })
+    });
+  } catch (e) { /* best-effort เฉยๆ ไม่ critical — cron วันละครั้งเป็นตาข่ายสำรองอยู่แล้ว */ }
 }
 
 // 2026-07-06 新增：記錄/取消出席後，用這個來刷新「近期課表」區塊

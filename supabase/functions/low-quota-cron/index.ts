@@ -21,6 +21,12 @@
 // เพิ่ม 2026-07-15 (รอบ 2) — Lin ขอให้ทุกครั้งที่ส่ง LINE เตือนนักเรียน ให้ส่งสำเนาแบบเดียวกันไปหาครูด้วย
 //   (จะได้รู้ว่าใครถูกเตือนไปแล้วบ้าง) — ใช้ secret LINE_TEACHER_USER_ID ตัวเดียวกับที่ request-sla-cron
 //   ใช้อยู่แล้ว ไม่ต้องตั้งใหม่ — ถ้ายังไม่เคยตั้ง secret นี้มาก่อน ข้ามส่วนนี้ไปเฉยๆ ไม่ทำให้การเตือนนักเรียนพัง
+//   (รอบ 3) — ต้องส่งสำเร็จทั้งนักเรียน+ครูถึงจะมาร์คว่าเตือนแล้ว ถ้าฝั่งครูพัง พรุ่งนี้ลองใหม่ทั้งคู่
+//   (นักเรียนอาจได้ข้อความซ้ำ ยอมแลกเพื่อไม่ให้ครูพลาด)
+//
+// เพิ่ม 2026-07-15 (รอบ 4) — Lin ขอให้ส่งทันทีหลังคาบสุดท้ายจบ ไม่ต้องรอ cron วันละครั้ง:
+//   เรียกฟังก์ชันนี้ได้ 2 แบบแล้ว — ไม่ส่ง body (cron วันละครั้ง) = เช็คทุกคน / ส่ง {token:'...'} มา
+//   (จาก recordAttendance() ใน classroom/index.html ทันทีหลังบันทึกเข้าเรียน) = เช็คแค่คนนั้นคนเดียว
 //
 // วิธี deploy (Lin ทำเอง):
 //   1. รัน SQL เพิ่มคอลัมน์ก่อน (ดูไฟล์/ข้อความ SQL ที่แนบแยก ไม่ได้เก็บในไฟล์นี้)
@@ -72,11 +78,24 @@ serve(async (req) => {
     }
     const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
 
-    const { data: students, error: stuErr } = await supabase
+    // 2026-07-15 加（Lin 要求）：เรียกได้ 2 แบบ —
+    //   (1) cron วันละครั้ง ไม่ส่ง body มา → เช็คนักเรียนทุกคนที่ผูก LINE ไว้ (เหมือนเดิม)
+    //   (2) เรียกจาก classroom/index.html ทันทีหลังบันทึกเข้าเรียน (ส่ง {token} มา) → เช็คแค่คนนั้นคนเดียว
+    //       ให้ได้รับ LINE ทันทีถ้าคาบที่เพิ่งบันทึกเป็นคาบสุดท้ายของรอบพอดี ไม่ต้องรอ cron ตอน 9 โมงเช้า
+    let bodyToken = null;
+    try {
+      const body = await req.json();
+      bodyToken = body && body.token ? String(body.token) : null;
+    } catch (e) { /* ไม่มี body ส่งมา (เรียกจาก cron) ถือว่าปกติ ไม่ใช่ error */ }
+
+    let studentsQuery = supabase
       .from('classroom_students')
       .select('token, name, line_user_id')
       .is('archived_at', null)
       .not('line_user_id', 'is', null);
+    if (bodyToken) studentsQuery = studentsQuery.eq('token', bodyToken);
+
+    const { data: students, error: stuErr } = await studentsQuery;
     if (stuErr) return new Response(JSON.stringify({ error: stuErr.message }), { status: 500 });
     if (!students || !students.length) return new Response(JSON.stringify({ ok: true, checked: 0 }), { status: 200 });
 
