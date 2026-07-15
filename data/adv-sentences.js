@@ -122,6 +122,95 @@
       { th: 'บ้าน', zh: '家', syl: ['บ้าน'], syls: [{cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'}] },
       { th: 'เหรอ', zh: '喔？', syl: ['เหรอ'], syls: [{cons:'ร', lead:'ห', vowel:'เออ', tone_name:'จัตวา', th:'เหรอ', en:'rǒe'}] }
       ]
+    },
+    {
+      th: 'ผมไม่ชอบกินผัก', zh: '我不喜歡吃菜', wc: 5,
+      words: [
+      { th: 'ผม', zh: '我', syl: ['ผม'], syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'ไม่', zh: '不', syl: ['ไม่'], syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
+      { th: 'ชอบ', zh: '喜歡', syl: ['ชอบ'], syls: [{cons:'ช', vowel:'ออ', final:'บ', tone_name:'โท', th:'ชอบ', en:'châop'}] },
+      { th: 'กิน', zh: '吃', syl: ['กิน'], syls: [{cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'}] },
+      { th: 'ผัก', zh: '菜', syl: ['ผัก'], syls: [{cons:'ผ', vowel:'อะ', final:'ก', tone_name:'เอก', th:'ผัก', en:'phàk'}] }
+      ]
+    },
+    {
+      th: 'เขาไปตลาดทุกวัน', zh: '他每天去市場', wc: 6,
+      words: [
+      { th: 'เขา', zh: '他', syl: ['เขา'], syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
+      { th: 'ไป', zh: '去', syl: ['ไป'], syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}] },
+      { th: 'ตลาด', zh: '市場', syl: ['ตะ', 'หลาด'], syls: [{cons:'ต', vowel:'อะ', tone_name:'เอก', th:'ต', en:'dtà'}, {cons:'ล', lead:'ห', vowel:'อา', final:'ด', tone_name:'เอก', th:'ลาด', en:'làat'}] },
+      { th: 'ทุกวัน', zh: '每天', syl: ['ทุก', 'วัน'], syls: [{cons:'ท', vowel:'อุ', final:'ก', tone_name:'ตรี', th:'ทุก', en:'thúk'}, {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}] }
+      ]
+    },
+    {
+      th: 'วันนี้ฝนตกหนักมาก', zh: '今天雨下很大', wc: 6,
+      words: [
+      { th: 'วันนี้', zh: '今天', syl: ['วัน', 'นี้'], syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'ฝน', zh: '雨', syl: ['ฝน'], syls: [{cons:'ฝ', vowel:'โอะ', final:'น', tone_name:'จัตวา', th:'ฝน', en:'fǒn'}] },
+      { th: 'ตก', zh: '下（雨）', syl: ['ตก'], syls: [{cons:'ต', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ตก', en:'dtòk'}] },
+      { th: 'หนัก', zh: '大', syl: ['หนัก'], syls: [{cons:'น', lead:'ห', vowel:'อะ', final:'ก', tone_name:'เอก', th:'หนัก', en:'nàk'}] },
+      { th: 'มาก', zh: '很/多', syl: ['มาก'], syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] }
+      ]
+    },
+    {
+      th: 'คุณอยู่ที่ไหน', zh: '你在哪裡', wc: 4,
+      words: [
+      { th: 'คุณ', zh: '你', syl: ['คุน'], syls: [{cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุน', en:'khun'}] },
+      { th: 'อยู่', zh: '在', syl: ['อยู่'], syls: [{cons:'ย', lead:'อ', vowel:'อู', tone:'่', tone_name:'เอก', th:'อยู่', en:'yùu'}] },
+      { th: 'ที่', zh: '地方', syl: ['ที่'], syls: [{cons:'ท', vowel:'อี', tone:'่', tone_name:'โท', th:'ที่', en:'thîi'}] },
+      { th: 'ไหน', zh: '哪裡', syl: ['ไหน'], syls: [{cons:'น', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหน', en:'nǎi'}] }
+      ]
+    },
+    {
+      th: 'เราหิวแล้ว', zh: '我餓了', wc: 3,
+      words: [
+      { th: 'เรา', zh: '我', syl: ['เรา'], syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
+      { th: 'หิว', zh: '餓', syl: ['หิว'], syls: [{cons:'ห', vowel:'อิ', final:'ว', tone_name:'จัตวา', th:'หิว', en:'hǐw'}] },
+      { th: 'แล้ว', zh: '了', syl: ['แล้ว'], syls: [{cons:'ล', vowel:'แอ', tone:'้', final:'ว', tone_name:'ตรี', th:'แล้ว', en:'láew'}] }
+      ]
+    },
+    {
+      th: 'เขาไม่มีเวลา', zh: '他沒有時間', wc: 5,
+      words: [
+      { th: 'เขา', zh: '他', syl: ['เขา'], syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
+      { th: 'ไม่', zh: '不/沒', syl: ['ไม่'], syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
+      { th: 'มี', zh: '有', syl: ['มี'], syls: [{cons:'ม', vowel:'อี', tone_name:'สามัญ', th:'มี', en:'mii'}] },
+      { th: 'เวลา', zh: '時間', syl: ['เว', 'ลา'], syls: [{cons:'ว', vowel:'เอ', tone_name:'สามัญ', th:'เว', en:'wee'}, {cons:'ล', vowel:'อา', tone_name:'สามัญ', th:'ลา', en:'laa'}] }
+      ]
+    },
+    {
+      th: 'วันนี้อากาศดีมาก', zh: '今天天氣很好', wc: 6,
+      words: [
+      { th: 'วันนี้', zh: '今天', syl: ['วัน', 'นี้'], syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'อากาศ', zh: '天氣', syl: ['อา', 'กาด'], syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ก', vowel:'อา', final:'ศ', tone_name:'เอก', th:'กาศ', en:'gàat'}] },
+      { th: 'ดี', zh: '好', syl: ['ดี'], syls: [{cons:'ด', vowel:'อี', tone_name:'สามัญ', th:'ดี', en:'dii'}] },
+      { th: 'มาก', zh: '很/多', syl: ['มาก'], syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] }
+      ]
+    },
+    {
+      th: 'ขอบคุณมากครับ', zh: '非常謝謝', wc: 4,
+      words: [
+      { th: 'ขอบคุณ', zh: '謝謝', syl: ['ขอบ', 'คุน'], syls: [{cons:'ข', vowel:'ออ', final:'บ', tone_name:'เอก', th:'ขอบ', en:'khòp'}, {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุน', en:'khun'}] },
+      { th: 'มาก', zh: '很/非常', syl: ['มาก'], syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] },
+      { th: 'ครับ', zh: '（男性禮貌詞）', syl: ['ครับ'], syls: [{cons:'ค', cluster:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'ครับ', en:'kráp'}] }
+      ]
+    },
+    {
+      th: 'ร้านนี้อร่อยมาก', zh: '這家餐廳很好吃', wc: 5,
+      words: [
+      { th: 'ร้าน', zh: '店', syl: ['ร้าน'], syls: [{cons:'ร', vowel:'อา', tone:'้', final:'น', tone_name:'ตรี', th:'ร้าน', en:'ráan'}] },
+      { th: 'นี้', zh: '這', syl: ['นี้'], syls: [{cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'อร่อย', zh: '好吃', syl: ['อะ', 'ร่อย'], syls: [{cons:'อ', vowel:'อะ', tone_name:'เอก', th:'อะ', en:'à'}, {cons:'ร', vowel:'ออ', tone:'่', final:'ย', tone_name:'โท', th:'ร่อย', en:'ròi'}] },
+      { th: 'มาก', zh: '很/非常', syl: ['มาก'], syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] }
+      ]
+    },
+    {
+      th: 'ผมอยากพักผ่อน', zh: '我想休息', wc: 4,
+      words: [
+      { th: 'ผม', zh: '我', syl: ['ผม'], syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'อยาก', zh: '想', syl: ['อยาก'], syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'พักผ่อน', zh: '休息', syl: ['พัก', 'ผ่อน'], syls: [{cons:'พ', vowel:'อะ', final:'ก', tone_name:'ตรี', th:'พัก', en:'phák'}, {cons:'ผ', vowel:'ออ', tone:'่', final:'น', tone_name:'เอก', th:'ผ่อน', en:'phòn'}] }
+      ]
     }
   ];
 
