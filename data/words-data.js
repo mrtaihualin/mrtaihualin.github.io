@@ -309,7 +309,21 @@
   {word:'หัวเราะ', readingTH:'หัว-เราะ', en:'hǔa-ró', zh:'笑', level:'初', category:'กริยา', syls:[{cons:'ห', vowel:'อัว', tone_name:'จัตวา', th:'หัว'}, {cons:'ร', vowel:'เอาะ', tone_name:'ตรี', th:'เราะ'}]},
   {word:'สว่าง', readingTH:'สะ-หว่าง', en:'sà-wàang', zh:'亮', level:'中', category:'คำขยาย', syls:[{cons:'ส', vowel:'อะ', tone_name:'เอก', th:'ส'}, {cons:'ว', lead:'ห', vowel:'อา', tone:'่', final:'ง', tone_name:'เอก', th:'ว่าง'}]},
   {word:'สะอาด', readingTH:'สะ-อาด', en:'sà-àat', zh:'乾淨', level:'初', category:'คำขยาย', syls:[{cons:'ส', vowel:'อะ', tone_name:'เอก', th:'สะ'}, {cons:'อ', vowel:'อา', final:'ด', tone_name:'เอก', th:'อาด'}]},
-  {word:'สกปรก', readingTH:'สก-กะ-ปรก', en:'sòk-gà-pròk', zh:'髒', level:'中', category:'คำขยาย', syls:[{cons:'ส', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'สก'}, {cons:'ป', cluster:'ร', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ปรก'}]} // Lin 2026-07-14: ยกเลิกพยางค์แทรก — พิมพ์ต้องเป็นตัวสะกดจริงเท่านั้น (สก+ปรก) คำอ่าน 3 พยางค์อยู่ที่ readingTH เท่านั้น
+  {word:'สกปรก', readingTH:'สก-กะ-ปรก', en:'sòk-gà-pròk', zh:'髒', level:'中', category:'คำขยาย', syls:[{cons:'ส', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'สก'}, {cons:'ป', cluster:'ร', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ปรก'}]}, // Lin 2026-07-14: ยกเลิกพยางค์แทรก — พิมพ์ต้องเป็นตัวสะกดจริงเท่านั้น (สก+ปรก) คำอ่าน 3 พยางค์อยู่ที่ readingTH เท่านั้น
+
+  // 2026-07-15: ชุดทดสอบแรกจาก System 2 (AI ร่าง + เช็ค 4 ชั้น: Claude x2 + tone-engine.js + Gemini ตรงกันหมด) — Lin approve แล้ว
+  // เติมหมวดเดิม สัตว์/ธรรมชาติ (บางที่สุดในคลัง):
+  {word:'ต้นไม้', readingTH:'ต้น-ไม้', en:'dtôn-máai', zh:'樹', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ต', vowel:'โอะ', tone:'้', final:'น', tone_name:'โท', th:'ต้น'}, {cons:'ม', vowel:'ไอ', tone:'้', tone_name:'ตรี', th:'ไม้'}]},
+  {word:'ภูเขา', readingTH:'ภู-เขา', en:'phuu-khǎo', zh:'山', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ภ', vowel:'อู', tone_name:'สามัญ', th:'ภู'}, {cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา'}]},
+  {word:'ทะเล', readingTH:'ทะ-เล', en:'thá-lay', zh:'海', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ท', vowel:'อะ', tone_name:'ตรี', th:'ทะ'}, {cons:'ล', vowel:'เอ', tone_name:'สามัญ', th:'เล'}]},
+  {word:'ดาว', en:'daao', zh:'星星', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ด', vowel:'อา', final:'ว', tone_name:'สามัญ', th:'ดาว'}]},
+  {word:'เมฆ', en:'mêek', zh:'雲', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ม', vowel:'เอ', final:'ฆ', tone_name:'โท', th:'เมฆ'}]},
+  // เปิดหมวดใหม่ ทิศทาง (ยังไม่เคยมีในคลัง):
+  {word:'ซ้าย', en:'sáai', zh:'左', level:'初', category:'ทิศทาง', syls:[{cons:'ซ', vowel:'อา', tone:'้', final:'ย', tone_name:'ตรี', th:'ซ้าย'}]},
+  {word:'ขวา', en:'khwǎa', zh:'右', level:'初', category:'ทิศทาง', syls:[{cons:'ข', cluster:'ว', vowel:'อา', tone_name:'จัตวา', th:'ขวา'}]},
+  {word:'เหนือ', en:'něua', zh:'北', level:'初', category:'ทิศทาง', syls:[{cons:'น', lead:'ห', vowel:'เอือ', tone_name:'จัตวา', th:'เหนือ'}]},
+  {word:'ใต้', en:'tâi', zh:'南', level:'初', category:'ทิศทาง', syls:[{cons:'ต', vowel:'ใอ', tone:'้', tone_name:'โท', th:'ใต้'}]},
+  {word:'ตรงไป', readingTH:'ตรง-ไป', en:'dtrong-bpai', zh:'直走', level:'初', category:'ทิศทาง', syls:[{cons:'ต', cluster:'ร', vowel:'โอะ', final:'ง', tone_name:'สามัญ', th:'ตรง'}, {cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป'}]}
   ];
 
   global.WORDS_MASTER = WORDS_MASTER;

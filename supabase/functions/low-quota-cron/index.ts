@@ -18,6 +18,10 @@
 //   ดู SQL แนบแยกที่ Lin ต้องรันเอง) — ส่งแล้วมาร์ค true ที่แถว payment ของรอบนั้น พอ Lin ยืนยันรับเงินรอบใหม่
 //   (แถว payment ใหม่) low_quota_notified จะเป็น false โดยอัตโนมัติ (ค่าเริ่มต้น) เตือนรอบใหม่ได้ต่อ
 //
+// เพิ่ม 2026-07-15 (รอบ 2) — Lin ขอให้ทุกครั้งที่ส่ง LINE เตือนนักเรียน ให้ส่งสำเนาแบบเดียวกันไปหาครูด้วย
+//   (จะได้รู้ว่าใครถูกเตือนไปแล้วบ้าง) — ใช้ secret LINE_TEACHER_USER_ID ตัวเดียวกับที่ request-sla-cron
+//   ใช้อยู่แล้ว ไม่ต้องตั้งใหม่ — ถ้ายังไม่เคยตั้ง secret นี้มาก่อน ข้ามส่วนนี้ไปเฉยๆ ไม่ทำให้การเตือนนักเรียนพัง
+//
 // วิธี deploy (Lin ทำเอง):
 //   1. รัน SQL เพิ่มคอลัมน์ก่อน (ดูไฟล์/ข้อความ SQL ที่แนบแยก ไม่ได้เก็บในไฟล์นี้)
 //   2. supabase functions deploy low-quota-cron
@@ -62,6 +66,7 @@ function computeCurrentCourse(pays, atts) {
 serve(async (req) => {
   try {
     const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
+    const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID'); // ไม่บังคับต้องตั้ง — ถ้าไม่มีก็แค่ไม่ส่งสำเนาให้ครู
     if (!channelToken) {
       return new Response(JSON.stringify({ error: 'missing LINE_CHANNEL_ACCESS_TOKEN' }), { status: 500 });
     }
@@ -95,22 +100,39 @@ serve(async (req) => {
       if (!curPayment || curPayment.low_quota_notified) continue; // ส่งไปแล้วรอบนี้ ไม่ส่งซ้ำ
 
       const remain = q.remain < 0 ? 0 : q.remain;
+      const messageText = '⏰ 提醒：你這一期的泰語課只剩 ' + remain + ' 堂囉！記得跟老師約續課時間，才不會中斷學習喔 😊';
       try {
-        await pushLine(
-          channelToken,
-          s.line_user_id,
-          '⏰ 提醒：你這一期的泰語課只剩 ' + remain + ' 堂囉！記得跟老師約續課時間，才不會中斷學習喔 😊'
-        );
-        // RELIABILITY FIRST：一定要檢查有沒有真的標記成功，不然會每天重複發送
-        const { error: markErr } = await supabase
-          .from('classroom_payments')
-          .update({ low_quota_notified: true })
-          .eq('id', curPayment.id);
-        if (markErr) {
-          console.error('[low-quota-cron] 標記 low_quota_notified 失敗，可能會重複提醒：', markErr.message, 'payment_id=', curPayment.id);
+        await pushLine(channelToken, s.line_user_id, messageText);
+        sent++;
+
+        // 2026-07-15（รอบ 3, Lin สั่ง）：เดิมสำเนาให้ครู "best-effort" — ส่งนักเรียนสำเร็จก็มาร์คว่าเตือนแล้วเลย
+        // ไม่สนว่าสำเนาครูจะสำเร็จไหม เปลี่ยนใหม่ตามที่ Lin ขอ: "ถ้าส่งของผมไม่สำเร็จ ให้ถือว่าไม่สำเร็จเหมือนกัน"
+        // → ต้องส่งครบทั้ง 2 ฝั่ง (นักเรียน + ครู) ก่อนถึงจะมาร์ค low_quota_notified = true
+        // ผลข้างเคียงที่ Lin ควรรู้ไว้: ถ้าสำเนาฝั่งครูพังแต่ฝั่งนักเรียนส่งไปแล้ว พรุ่งนี้ระบบจะลองส่งใหม่ทั้งคู่
+        // (นักเรียนอาจได้รับข้อความซ้ำ) — ยอมแลกแบบนี้เพื่อไม่ให้ครูพลาดการแจ้งเตือนแม้แต่ครั้งเดียว
+        let teacherOk = true;
+        if (teacherUserId) {
+          try {
+            await pushLine(channelToken, teacherUserId, '📋 已發送提醒給 ' + (s.name || s.token) + '：\n' + messageText);
+          } catch (e) {
+            teacherOk = false;
+            console.warn('[low-quota-cron] ส่งสำเนาให้ครูไม่สำเร็จ — ถือว่ารอบนี้ยังไม่สำเร็จ พรุ่งนี้จะลองใหม่ทั้งคู่:', e);
+          }
+        }
+
+        if (teacherOk) {
+          // RELIABILITY FIRST：一定要檢查有沒有真的標記成功，不然會每天重複發送
+          const { error: markErr } = await supabase
+            .from('classroom_payments')
+            .update({ low_quota_notified: true })
+            .eq('id', curPayment.id);
+          if (markErr) {
+            console.error('[low-quota-cron] 標記 low_quota_notified 失敗，可能會重複提醒：', markErr.message, 'payment_id=', curPayment.id);
+            errCount++;
+          }
+        } else {
           errCount++;
         }
-        sent++;
       } catch (e) {
         errCount++;
       }
