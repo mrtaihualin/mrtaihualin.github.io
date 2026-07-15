@@ -828,9 +828,13 @@ var RG_SRS={
   },
   resetOnFail:function(rec){rec=rec||this.blank();rec.stage=0;rec.dueDate='';rec.dueAt=0;rec.everFailed=true;return rec;}
 };
-var srsRecords={}; // idx (index ใน WORDS) → SRS record
-function rgSrsGet(idx){return srsRecords[idx]||null;}
-function rgSrsSet(idx,rec){srsRecords[idx]=rec;}
+// Lin 2026-07-15: เปลี่ยน key จาก "ลำดับ index ใน WORDS" เป็น "คำ+ระดับ" (rgSrsKey) กันบั๊ก —
+// เดิม key เป็นตำแหน่งเลขในลิสต์ พอ Lin เพิ่ม/ลบคำ ตำแหน่งขยับ ความจำของนักเรียนที่เคยเล่นแล้วจะไปติดผิดคำ
+// ฝั่งเซิร์ฟเวอร์ (tone_srs_state, tone-round) เก็บด้วย "คำ+ระดับ" อยู่แล้วเป็นความจริงหลัก — อันนี้แค่ทำให้ local ตรงกัน
+function rgSrsKey(w){ return (w&&w.th||'')+'@'+(RG_LEVEL_TO_NUM[w&&w.level]||0); }
+var srsRecords={}; // key = rgSrsKey(word) → SRS record
+function rgSrsGet(key){return srsRecords[key]||null;}
+function rgSrsSet(key,rec){srsRecords[key]=rec;}
 function rgLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
 var SAVE_KEY='rgv3_save';
 var rememberStep=0,rememberTimer=null,curWordIsKnownCheck=false; // curWordIsKnownCheck: ด่านพิสูจน์ 已記得 (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
@@ -875,16 +879,14 @@ function doSave(){
 // ════════════════════════════════════════════
 // ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='typing') → merge เข้า srsRecords ──
 //   • อ่านอย่างเดียว · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
-//   • เก็บด้วย "ลำดับ(index)" ใน WORDS → แปลง (level,คำ)→index ก่อน merge · คำที่ไม่มีแล้ว = ข้าม (กันคำผี)
-//   • หมายเหตุ: เกมพิมพ์+เกมอ่านใช้ SAVE_KEY 'rgv3_save' + ลำดับ WORDS เดียวกัน (แชร์ SRS ในเครื่องเป็นดีไซน์เดิม)
+//   • 2026-07-15: เปลี่ยนมาใช้ key "คำ+ระดับ" ตรงกับฝั่งเซิร์ฟเวอร์เป๊ะ ไม่ต้องแปลง index อีกแล้ว
+//     (เดิมต้องสแกนหา index ใน WORDS ก่อน merge — พอ Lin แก้ไฟล์คำ ตำแหน่งขยับ ก็เคย merge ผิดคำได้)
+//   • หมายเหตุ: เกมพิมพ์+เกมอ่านใช้ SAVE_KEY 'rgv3_save' เดียวกัน (แชร์ SRS ในเครื่องเป็นดีไซน์เดิม) —
+//     ใช้ key "คำ+ระดับ" เหมือนกันทั้ง 2 เกมแล้ว การแชร์นี้เลยไม่พึ่งพาลำดับ WORDS ต้องตรงกันอีกต่อไป
 //     merge เลือก "อันก้าวหน้ากว่า" อย่างเดียว → ไม่มีทาง downgrade คำที่จำได้จากอีกเกม (ทดสอบกดจริง 8/8)
 // ════════════════════════════════════════════
 function tgSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
 function tgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=tgSrsRank(a),rb=tgSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
-function tgSrsIndexByWordLevel(word, levelNum){
-  for(var i=0;i<WORDS.length;i++){ if(WORDS[i].th===word && RG_LEVEL_TO_NUM[WORDS[i].level]===levelNum) return i; }
-  return -1;
-}
 var __tgSrsSyncPromise=null;
 window.__tgSrsSyncedOnce=false;
 function tgSyncSrsFromServer(force){
@@ -899,13 +901,12 @@ function tgSyncSrsFromServer(force){
       if(res.error||!res.data){ window.__tgSrsSyncedOnce=true; return false; }
       var changed=false;
       res.data.forEach(function(row){
-        var idx=tgSrsIndexByWordLevel(row.word, row.level);
-        if(idx<0) return;
+        var key=(row.word||'')+'@'+(row.level||0);
         var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,mastered:!!row.mastered};
-        var cur=srsRecords[idx];
+        var cur=srsRecords[key];
         var win=tgSrsPickAdvanced(cur,srv);
         if(!cur || win.stage!==cur.stage || (win.dueDate||'')!==(cur.dueDate||'') || (!!win.mastered)!==(!!cur.mastered)){
-          srsRecords[idx]=win; changed=true;
+          srsRecords[key]=win; changed=true;
         }
       });
       if(changed) doSave();
@@ -1021,13 +1022,13 @@ function initGame(){
     var pool;
     if(rgLoggedIn()){
       pool=allIdx.filter(function(i){
-        var rec=srsRecords[i];
+        var rec=srsRecords[rgSrsKey(WORDS[i])];
         if(rec&&rec.mastered)return false;           // เชี่ยวชาญแล้ว (ตัดออกถาวร)
         if(rec&&!RG_SRS.isDue(rec,now))return false; // ยังไม่ครบกำหนดทบทวน
         return true;
       });
       // ถ้าไม่มีคำพร้อม → เปิด cooldown words ก่อน (ยกเว้น mastered)
-      if(pool.length===0)pool=allIdx.filter(function(i){var rec=srsRecords[i];return !(rec&&rec.mastered);});
+      if(pool.length===0)pool=allIdx.filter(function(i){var rec=srsRecords[rgSrsKey(WORDS[i])];return !(rec&&rec.mastered);});
       // ถ้า mastered ทั้งหมดในระดับนี้ → เด้ง 全部精通 (ครั้งเดียว) แล้วเล่นซ้ำได้ (ฝึกอย่างเดียว 0 แต้ม กันฟาร์ม) — Lin 2026-07-06
       if(pool.length===0){ try{ if(!window.tgAllMasteredShown){ window.tgAllMasteredShown=true; setTimeout(tgShowAllMastered,350); } }catch(e){} pool=allIdx.slice(); }
     } else {
@@ -1262,7 +1263,7 @@ function markSlots(){
 // ─── Check answer ───
 // คะแนน/มาสเตอร์ ทำตอน "จบทั้งคำ" (รองรับหลายพยางค์)
 function finalizeWord(){
-  var idx=roundQueue[cur];var b=document.getElementById('banner');
+  var srsKey=rgSrsKey(WORD);var b=document.getElementById('banner');
   var loggedIn=rgLoggedIn();
   var sylCount=sylList.length;
 
@@ -1270,8 +1271,8 @@ function finalizeWord(){
   if(wordFailed){
     streak=0;
     if(loggedIn){
-      var recF=RG_SRS.resetOnFail(rgSrsGet(idx));
-      rgSrsSet(idx,recF);
+      var recF=RG_SRS.resetOnFail(rgSrsGet(srsKey));
+      rgSrsSet(srsKey,recF);
     }
     if(curWordIsKnownCheck){
       curWordIsKnownCheck=false;
@@ -1291,11 +1292,11 @@ function finalizeWord(){
     var passedClean=!wordHadWrong && !wordUsedGuide;
     if(loggedIn){
       if(passedClean){
-        var recM=rgSrsGet(idx)||RG_SRS.blank();
+        var recM=rgSrsGet(srsKey)||RG_SRS.blank();
         recM.mastered=true;
-        rgSrsSet(idx,recM);
+        rgSrsSet(srsKey,recM);
       } else {
-        rgSrsSet(idx,RG_SRS.resetOnFail(rgSrsGet(idx)));
+        rgSrsSet(srsKey,RG_SRS.resetOnFail(rgSrsGet(srsKey)));
       }
       // Phase 4: บอกเซิร์ฟเวอร์ด้วย (已記得 = พิสูจน์ครั้งเดียว → mastered แต่ไม่ให้ดาว)
       try{
@@ -1323,7 +1324,7 @@ function finalizeWord(){
   }
 
   // ── Lin 2026-07-06: กันฟาร์ม — คำที่ "精通"(mastered) แล้ว เอามาเล่นซ้ำ (ตอนคำใหม่หมดทั้งระดับ) = 0 แต้ม ไม่แตะ SRS/ดาว/ลีก (กฎ MASTER ข้อ7/15) ──
-  if(loggedIn){ var _recM=rgSrsGet(idx); if(_recM&&_recM.mastered){ okC++; streak=0; b.textContent='這個字你已經精通了，複習不計分 ✨';b.className='result-banner show ok'; rgLogWord({pts:0,mastered:true}); doSave(); return; } }
+  if(loggedIn){ var _recM=rgSrsGet(srsKey); if(_recM&&_recM.mastered){ okC++; streak=0; b.textContent='這個字你已經精通了，複習不計分 ✨';b.className='result-banner show ok'; rgLogWord({pts:0,mastered:true}); doSave(); return; } }
 
   // ── คะแนน: แบ่งขั้นตามโควต้าที่ขยายตามความยาวคำ/ประโยค (กฎ Lin 2026-07-05, นับผิดรวมทั้งคำ ไม่แยกพยางค์) ──
   var pts=rgWrongScore(sylCount,wordWrongTotal);
@@ -1354,7 +1355,7 @@ function finalizeWord(){
 
   // ── SRS เลื่อนขั้น/รีเซ็ต + โบนัสรอบทบทวน + แจกดาวเงินตอน mastered จริง (เฉพาะล็อกอิน) ──
   if(loggedIn){
-    var rec=rgSrsGet(idx)||RG_SRS.blank();
+    var rec=rgSrsGet(srsKey)||RG_SRS.blank();
     if(clean){
       var passedStage=rec.stage; // stage ก่อนเลื่อน = รอบทบทวนที่เพิ่งผ่าน (0/1/2)
       var res=RG_SRS.advanceOnClean(rec,Date.now());
@@ -1373,7 +1374,7 @@ function finalizeWord(){
     } else {
       rec=RG_SRS.resetOnFail(rec); // ผิดแม้ครั้งเดียว (ไม่ใช่แค่ fail เต็ม) = กลับวันแรกเสมอ
     }
-    rgSrsSet(idx,rec);
+    rgSrsSet(srsKey,rec);
   }
 
   // ── รวมโบนัสทั้งหมดของ "คำนี้" (คะแนนหลัก + วรรณยุกต์ + SRS) เป็นก้อนเดียวตอนแสดงแบนเนอร์ตอนจบคำ ──

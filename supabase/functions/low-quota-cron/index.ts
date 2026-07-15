@@ -1,0 +1,123 @@
+// ════════════════════════════════════════════════════════════
+// Supabase Edge Function: low-quota-cron
+// หน้าที่: เช็คทุกวันว่านักเรียนคนไหน "โควต้าคาบเรียนรอบนี้" ใกล้หมด (เหลือ ≤ 1 คาบ)
+//   ถ้าใกล้หมด + เชื่อม LINE ไว้แล้ว → ส่ง LINE เตือนให้ต่อคอร์ส (ส่งครั้งเดียวต่อรอบการซื้อ ไม่ส่งซ้ำทุกวัน)
+//
+// เพิ่ม 2026-07-15 — Lin ขอให้ระบบส่ง LINE อัตโนมัติ แทนที่จะเห็นแค่ป้ายเตือนในหน้าเว็บครู (banner เดิม
+//   ในหน้าครู classroom/index.html ยังอยู่เหมือนเดิม อันนี้คือเพิ่มการแจ้ง "ตัวนักเรียนเอง" ผ่าน LINE)
+//
+// วิธีคิด "โควต้ารอบนี้" (คัดลอกสูตรมาจาก computeCurrentCourse() ใน classroom/index.html
+//   ตรงๆ ห้ามคิดสูตรใหม่เอง — เคยพลาดมาแล้วรอบนึงที่คิดแบบ "รวมทุกอย่างตลอดชีพ" แล้วได้ตัวเลขผิด):
+//   1. เอาเฉพาะรายการจ่ายเงินที่ status = 'pending' หรือ 'done'
+//   2. ในนั้นเอาที่มี start_date มา เรียงหาอันที่ start_date ใหม่ล่าสุด = "รอบปัจจุบัน"
+//   3. ซื้อไว้ = lessons + bonus_lessons ของรอบนั้น
+//   4. เรียนไปแล้ว(รอบนี้) = รวม lessons ของ classroom_attendance ที่ lesson_date >= start_date ของรอบนั้น
+//   5. เหลือ = ซื้อไว้ - เรียนไปแล้ว
+//
+// กันส่งซ้ำ: ใช้คอลัมน์ใหม่ classroom_payments.low_quota_notified (ต้องรัน SQL เพิ่มคอลัมน์นี้ก่อน
+//   ดู SQL แนบแยกที่ Lin ต้องรันเอง) — ส่งแล้วมาร์ค true ที่แถว payment ของรอบนั้น พอ Lin ยืนยันรับเงินรอบใหม่
+//   (แถว payment ใหม่) low_quota_notified จะเป็น false โดยอัตโนมัติ (ค่าเริ่มต้น) เตือนรอบใหม่ได้ต่อ
+//
+// วิธี deploy (Lin ทำเอง):
+//   1. รัน SQL เพิ่มคอลัมน์ก่อน (ดูไฟล์/ข้อความ SQL ที่แนบแยก ไม่ได้เก็บในไฟล์นี้)
+//   2. supabase functions deploy low-quota-cron
+//   3. ตั้ง pg_cron ให้เรียกวันละครั้ง (ดู SQL แนบแยก) — ใช้ secret ชุดเดียวกับ cron อื่นๆ ที่ตั้งไว้แล้ว
+//      (LINE_CHANNEL_ACCESS_TOKEN) ไม่ต้องตั้งใหม่
+// ════════════════════════════════════════════════════════════
+
+// deno-lint-ignore-file
+// @ts-nocheck
+
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
+const LOW_QUOTA_THRESHOLD = 1; // เหลือ ≤ เท่านี้ถือว่า "ใกล้หมด" (เท่ากับเกณฑ์ป้ายเตือนหน้าเว็บครูเดิม)
+
+async function pushLine(channelToken, targetUserId, text) {
+  const res = await fetch(LINE_PUSH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+    body: JSON.stringify({ to: targetUserId, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }),
+  });
+  if (!res.ok) throw new Error('LINE API ' + res.status + ': ' + (await res.text()));
+}
+
+// เหมือน computeCurrentCourse() ใน classroom/index.html เป๊ะๆ — ห้ามแก้สูตรที่นี่โดยไม่แก้ที่นั่นด้วย
+function computeCurrentCourse(pays, atts) {
+  const active = (pays || []).filter((p) => p.status === 'pending' || p.status === 'done');
+  const withDate = active.filter((p) => p.start_date);
+  if (withDate.length) {
+    withDate.sort((a, b) => (a.start_date < b.start_date ? 1 : -1)); // ใหม่→เก่า
+    const cur = withDate[0];
+    const bought = (cur.lessons || 0) + (cur.bonus_lessons || 0);
+    const used = (atts || [])
+      .filter((a) => a.lesson_date >= cur.start_date)
+      .reduce((s, a) => s + (a.lessons || 1), 0);
+    return { hasCourse: true, bought, used, remain: bought - used, paymentId: cur.id };
+  }
+  return { hasCourse: false, bought: 0, used: 0, remain: 0, paymentId: null };
+}
+
+serve(async (req) => {
+  try {
+    const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
+    if (!channelToken) {
+      return new Response(JSON.stringify({ error: 'missing LINE_CHANNEL_ACCESS_TOKEN' }), { status: 500 });
+    }
+    const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+
+    const { data: students, error: stuErr } = await supabase
+      .from('classroom_students')
+      .select('token, name, line_user_id')
+      .is('archived_at', null)
+      .not('line_user_id', 'is', null);
+    if (stuErr) return new Response(JSON.stringify({ error: stuErr.message }), { status: 500 });
+    if (!students || !students.length) return new Response(JSON.stringify({ ok: true, checked: 0 }), { status: 200 });
+
+    let sent = 0, errCount = 0, checked = 0;
+
+    for (const s of students) {
+      checked++;
+      const { data: pays } = await supabase
+        .from('classroom_payments')
+        .select('id, lessons, bonus_lessons, status, start_date, low_quota_notified')
+        .eq('token', s.token);
+      const { data: atts } = await supabase
+        .from('classroom_attendance')
+        .select('lesson_date, lessons')
+        .eq('token', s.token);
+
+      const q = computeCurrentCourse(pays || [], atts || []);
+      if (!q.hasCourse || q.remain > LOW_QUOTA_THRESHOLD) continue;
+
+      const curPayment = (pays || []).find((p) => p.id === q.paymentId);
+      if (!curPayment || curPayment.low_quota_notified) continue; // ส่งไปแล้วรอบนี้ ไม่ส่งซ้ำ
+
+      const remain = q.remain < 0 ? 0 : q.remain;
+      try {
+        await pushLine(
+          channelToken,
+          s.line_user_id,
+          '⏰ 提醒：你這一期的泰語課只剩 ' + remain + ' 堂囉！記得跟老師約續課時間，才不會中斷學習喔 😊'
+        );
+        // RELIABILITY FIRST：一定要檢查有沒有真的標記成功，不然會每天重複發送
+        const { error: markErr } = await supabase
+          .from('classroom_payments')
+          .update({ low_quota_notified: true })
+          .eq('id', curPayment.id);
+        if (markErr) {
+          console.error('[low-quota-cron] 標記 low_quota_notified 失敗，可能會重複提醒：', markErr.message, 'payment_id=', curPayment.id);
+          errCount++;
+        }
+        sent++;
+      } catch (e) {
+        errCount++;
+      }
+    }
+
+    return new Response(JSON.stringify({ ok: true, checked, sent, errors: errCount }), { status: 200 });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e && e.message || e) }), { status: 500 });
+  }
+});

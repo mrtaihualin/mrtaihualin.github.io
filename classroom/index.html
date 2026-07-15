@@ -583,6 +583,28 @@
   </div>
 </div>
 
+<!-- ======= STUDENT: 申請加課 MODAL（2026-07-15 新增：給不固定/偶爾約課的學生自己提出想加的時間，
+     老師確認沒有衝突後才會真的排進 Calendar，跟「申請改期」共用同一套審核清單） ======= -->
+<div class="modal-overlay" id="addRequestModal">
+  <div class="modal" style="max-width:440px;">
+    <h3>➕ 申請加課</h3>
+    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
+      送出後老師會收到通知，確認沒有衝突後才會真的排進課表。如果是想長期每週固定上這個時間，也可以寫在備註裡讓老師知道。
+    </p>
+    <label class="settings-label">想約哪一天？</label>
+    <input class="settings-input" id="addReqDateInput" type="date" oninput="onAddReqScheduleChange()" />
+    <label class="settings-label">想約幾點？（格式 HH:MM，例如 14:30 — 請填「你自己現在所在地」的時間，不用換算成泰國時間）</label>
+    <input class="settings-input" id="addReqTimeInput" type="text" placeholder="例：14:30" oninput="onAddReqScheduleChange()" />
+    <p id="addReqScheduleHint" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
+    <label class="settings-label">備註（選填，例如：想從這天開始每週固定）</label>
+    <input class="settings-input" id="addReqNoteInput" placeholder="選填" />
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeAddRequestModal()">取消</button>
+      <button class="btn-gold" id="addReqSubmitBtn" onclick="submitAddRequest()">📤 送出申請</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= STUDENT: 選擇要取消的課堂 MODAL（2026-07-14 新增，2026-07-14 改成跟老師端 pickLessonModal
      同一種下拉選單體驗，Lin 要求兩邊一致）======= -->
 <div class="modal-overlay" id="cancelPickerModal">
@@ -663,6 +685,45 @@
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closePickLessonModal()">取消</button>
       <button class="btn-gold" onclick="confirmPickLesson()">下一步</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= 加課堂時間（2026-07-15 新增：老師自己排單次課，或加一個新的每週固定上課日）======= -->
+<div class="modal-overlay" id="addClassDayModal">
+  <div class="modal" style="max-width:440px;">
+    <h3>➕ 加課堂時間</h3>
+    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;" id="addClassDayStudentLabel"></p>
+
+    <label class="settings-label">日期</label>
+    <input class="settings-input" id="addClassDayDate" type="date" />
+
+    <div class="pay-form-row">
+      <div style="flex:1;">
+        <label class="settings-label">開始時間（泰國時間，HH:MM）</label>
+        <input class="settings-input" id="addClassDayStart" placeholder="例：20:00" />
+      </div>
+      <div style="flex:1;">
+        <label class="settings-label">結束時間</label>
+        <input class="settings-input" id="addClassDayEnd" placeholder="例：21:00" />
+      </div>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:0.88rem;color:var(--ink);margin:10px 0;">
+      <input type="checkbox" id="addClassDayRecurring" onchange="onAddClassDayRecurringChange()" />
+      🔁 每週固定（從這天開始，之後每週都排這個時間）
+    </label>
+    <div id="addClassDayUntilWrap" style="display:none;">
+      <label class="settings-label">固定到（不填＝一直排下去，沒有結束日）</label>
+      <input class="settings-input" id="addClassDayUntil" type="date" />
+    </div>
+
+    <div id="addClassDayResult" style="font-size:0.82rem;font-family:'Noto Sans TC',sans-serif;line-height:1.6;margin-top:6px;"></div>
+    <div id="addClassDayList" style="font-size:0.8rem;font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);margin-top:8px;"></div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeAddClassDayModal()">完成</button>
+      <button class="btn-gold" id="addClassDayCheckBtn" onclick="checkAddClassDayConflict()">🔍 檢查是否衝突</button>
     </div>
   </div>
 </div>
@@ -1170,7 +1231,12 @@ async function gdShareAnyone(fileId) {
 // ── Google Calendar: fetch today's events ──────────────────────
 // 2026-07-06 แก้จาก 3 → 9 วัน: เดิม 3 วันแคบไปสำหรับนักเรียนที่เรียนสัปดาห์ละครั้ง
 // (คาบถัดไปอาจอยู่ไกลกว่า 3 วัน) ทำให้การ์ด "คลาสต่อไป" ฝั่งนักเรียนขึ้นว่าง ๆ ทั้งที่จริงมีคาบแล้ว
-const SCHEDULE_DAYS = 9; // แสดง/ซิงค์ตารางล่วงหน้ากี่วัน (วันนี้ + อีก 8 วัน ครอบคลุมรอบสัปดาห์ละครั้งชัวร์ๆ)
+const SCHEDULE_DAYS = 9; // "近期課表" ที่ครูเห็นบนหน้าจอ แสดงกี่วัน (ไม่เปลี่ยน — ของเดิม)
+// 2026-07-15 เพิ่ม：ข้อมูลที่ sync ลง classroom_schedule (ให้นักเรียนใช้เลือก "คาบจะยกเลิก")
+// ต้องมองไกลกว่าที่ครูเห็นบนจอ ไม่งั้นนักเรียนที่เรียนหลายวัน/สัปดาห์จะเห็นแค่ 1-2 คาบให้เลือก
+// Lin ยืนยันแล้ว (2026-07-15)：จอครูไม่ได้เปลี่ยนตาม (ตัดแสดงแค่ SCHEDULE_DAYS อยู่แล้ว)
+// งั้นขยับเป็น 60 วันไปเลย ไม่มีข้อเสียเพิ่ม (ถ้าจะยกเลิกไกลกว่านั้นให้ทักหาครูตรงๆ)
+const SCHEDULE_SYNC_DAYS = 60;
 
 // 2026-07-10 เพิ่ม：ครูกรอกวัน/เวลาสอน (pending_start_date/pending_class_time, classroom_schedule.start_time)
 // เป็น "เวลาไทยเสมอ" (Asia/Bangkok, UTC+7 ตายตัว ไม่มี DST) — ต้องแปลงด้วย offset ตายตัวนี้เท่านั้น
@@ -1186,7 +1252,11 @@ function teacherTimeToDate(dateStr, timeStr) {
 function teacherToday() {
   return formatInTz(new Date(), TEACHER_TZ).dateStr;
 }
-async function calFetchUpcomingEvents() {
+// 2026-07-15 加：รับพารามิเตอร์ "กี่วันล่วงหน้า" ได้ (ไม่ใส่ = ใช้ SCHEDULE_DAYS เหมือนเดิม)
+// ให้ connectCalendar() เรียกแบบ 30 วัน (SCHEDULE_SYNC_DAYS) ไป sync ลง classroom_schedule ได้
+// โดยจอครูเองยังคง "近期課表" แค่ SCHEDULE_DAYS วันเหมือนเดิม (ตัดแสดงแยกที่ connectCalendar)
+async function calFetchUpcomingEvents(days) {
+  const rangeDays = days || SCHEDULE_DAYS;
   let token = await gdGetToken();
   // ถ้า token ที่จำไว้ยังไม่มีสิทธิ์ Calendar (เพราะ scope เพิ่งถูกเพิ่มทีหลัง) → ขอ consent ใหม่ครั้งเดียว
   if (gdTokenScopes && gdTokenScopes.indexOf('calendar') === -1) {
@@ -1198,11 +1268,13 @@ async function calFetchUpcomingEvents() {
   const todayIso = teacherToday();
   const dayMs = 24 * 3600 * 1000;
   const start = teacherTimeToDate(todayIso, '00:00').toISOString();
-  const end   = new Date(teacherTimeToDate(todayIso, '00:00').getTime() + SCHEDULE_DAYS * dayMs - 1000).toISOString();
+  const end   = new Date(teacherTimeToDate(todayIso, '00:00').getTime() + rangeDays * dayMs - 1000).toISOString();
+  // 2026-07-15 加：ช่วงยาวขึ้น (สูงสุด 30 วัน) อาจมี event ทั้งปฏิทินเกิน 100 รายการได้ (มีทั้งคาบเรียน
+  // และนัดส่วนตัวอื่นๆ ของครูปนกัน) → ขยับ maxResults ขึ้นเป็น 250 กันข้อมูลตกหล่นแบบเงียบๆ
   const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
     + '?timeMin=' + encodeURIComponent(start)
     + '&timeMax=' + encodeURIComponent(end)
-    + '&singleEvents=true&orderBy=startTime&maxResults=100';
+    + '&singleEvents=true&orderBy=startTime&maxResults=250';
   let r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
   // 403 ที่เกิดจากสิทธิ์ไม่พอ → ขอ consent ใหม่แล้วลองอีกครั้ง (จัดการเคส token จำสิทธิ์เก่า)
   if (r.status === 403) {
@@ -1386,6 +1458,35 @@ async function deleteClassEventOnce(eventId) {
   if (!r.ok && r.status !== 410 && r.status !== 404) throw new Error('刪除課堂失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
 }
 
+// 2026-07-15 加（Lin 要求：改期/取消完要真的回頭確認 Calendar，不要只信任 API 回應）：
+// 刪除/移動完之後重新 GET 一次同一個事件，確認 Calendar 上的實際狀態真的照預期變了。
+async function verifyEventDeleted(eventId) {
+  const calToken = await gdGetToken();
+  const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), {
+    headers: { Authorization: 'Bearer ' + calToken },
+  });
+  if (r.status === 404 || r.status === 410) return true; // ถูกลบไปจริงแล้ว
+  if (r.ok) {
+    const ev = await r.json();
+    if (ev.status === 'cancelled') return true;
+    throw new Error('Google Calendar 上這個事件還在（狀態：' + ev.status + '），看起來沒有真的刪除成功');
+  }
+  throw new Error('確認刪除結果時連線失敗（' + r.status + '），Calendar 上的實際狀態不確定，請自己到 Calendar 檢查一次');
+}
+async function verifyEventMoved(eventId, expectedStartIso) {
+  const calToken = await gdGetToken();
+  const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), {
+    headers: { Authorization: 'Bearer ' + calToken },
+  });
+  if (!r.ok) throw new Error('確認改期結果時連線失敗（' + r.status + '），Calendar 上的實際狀態不確定，請自己到 Calendar 檢查一次');
+  const ev = await r.json();
+  const actualStart = ev.start && (ev.start.dateTime || ev.start.date);
+  if (!actualStart || Math.abs(new Date(actualStart).getTime() - new Date(expectedStartIso).getTime()) > 60000) {
+    throw new Error('Google Calendar 上的時間跟預期不一樣（Calendar 顯示：' + (actualStart || '無') + '），改期可能沒有成功，請自己到 Calendar 檢查一次');
+  }
+  return true;
+}
+
 // 2026-07-13 加：檢查新時段是否跟其他事件重疊（排除自己本身）。查不到就當作沒有衝突（不擋主要流程），
 // 有查到才回傳清單讓呼叫端在確認視窗裡明確列出來，讓老師自己決定要不要硬是重疊排課。
 async function findConflictingEvents(newStartIso, newEndIso, excludeEventId) {
@@ -1403,101 +1504,347 @@ async function findConflictingEvents(newStartIso, newEndIso, excludeEventId) {
 }
 
 // 2026-07-14 加：封存學生時停掉「往後」的固定課，但「已經上過」的課堂紀錄一定要保留 —
-//   跟 submitPermanentChangeInner 用同一招：固定課是「一個」有 RRULE 的 recurring event，
-//   不是每週各自獨立的 event，所以「往後全部停掉、以前全部保留」不用一筆一筆刪，
+//   固定課是「一個」有 RRULE 的 recurring event，「往後全部停掉、以前全部保留」不用一筆一筆刪，
 //   只要把 RRULE 的 UNTIL 改成「現在這一刻」就好（UNTIL 之前的 occurrence 都還在，
 //   之後的 occurrence 全部消失，天生就符合「上過的別動、以後的都停」）。
-//   單次（非固定）課程才需要真的刪除 — 但這裡查到的一定是「下一堂課」，代表還沒上過，
-//   刪掉不會動到任何已發生的歷史紀錄。
+//   單次（非固定）課程才需要真的刪除。
+// 2026-07-15 改版（Lin 要求：「直接用名字找，不要用下一堂課日期去猜」）：
+//   舊版先算「下一堂課是哪天」再拿那天去 Calendar 找符合的 1 筆事件——如果學生一週上好幾天課
+//   （例如週五+週一各自是獨立的 recurring event），舊版只找得到「下一堂課那天」對應的那一筆，
+//   另一天的固定課系列完全沒被關掉，封存後還是會繼續每週出現。
+//   新版改成：直接拿學生姓名去 Calendar 搜尋「未來 2 年內」所有符合的事件，不管幾天/幾個
+//   獨立的 recurring series，全部找出來、去重（同一個 recurring 系列可能展開成很多筆 instance，
+//   用 masterId 去重只留「主系列」），每一個系列各自關閉（UNTIL=現在）或刪除（單次）。
 async function cancelFutureClassesForArchive(token) {
   const s = studentsCache[token];
   if (!s) return { ok: true, note: '找不到學生資料，略過 Calendar' };
   const studentName = s.name;
 
-  // 1) 找「下一堂課」的日期（跟 loadTeacherNextClassBox 同一套邏輯，獨立算一次，
-  //    不依賴那個 UI 有沒有先載入過）
-  let lessonDate = null;
-  try {
-    const { data } = await sb.rpc('get_student_schedule', { p_token: token });
-    if (data && data.length) {
-      lessonDate = data[0].lesson_date;
-    } else if (s.pending_start_date && s.pending_class_time) {
-      let anchor = teacherTimeToDate(s.pending_start_date, s.pending_class_time);
-      if (s.pending_recurring) {
-        const weekMs = 7 * 24 * 3600 * 1000, nowMs = Date.now();
-        if (anchor.getTime() < nowMs) { const weeksPassed = Math.ceil((nowMs - anchor.getTime()) / weekMs); anchor = new Date(anchor.getTime() + weeksPassed * weekMs); }
-      } else if (anchor.getTime() < Date.now()) { anchor = null; }
-      if (anchor) { const p = formatInTz(anchor, TEACHER_TZ); lessonDate = p.dateStr; }
-    }
-  } catch (e) { return { ok: false, error: '讀取課表失敗：' + (e.message || e) }; }
-
-  if (!lessonDate) return { ok: true, note: '目前沒有排定中的課，不用處理 Calendar' };
-
-  // 2) 用學生姓名 + 那天的日期，去 Calendar 找出那個 recurring event
-  let matches;
-  try { matches = await findClassEventForRequest(studentName, lessonDate); }
-  catch (e) { return { ok: false, error: '搜尋 Calendar 失敗：' + (e.message || e) }; }
-  if (!matches.length) return { ok: true, note: '在 Calendar 找不到符合的課堂事件（可能已經手動處理過）' };
-  if (matches.length > 1) return { ok: false, error: '找到 ' + matches.length + ' 筆疑似符合的課堂，不確定是哪一筆，請自己到 Calendar 手動處理' };
-
-  const instance = matches[0];
-  const masterId = instance.recurringEventId || instance.id;
-  let masterEv;
+  // 1) 直接用姓名搜尋「未來 2 年內」所有符合的課堂事件（涵蓋所有星期幾、所有獨立的固定課系列）
+  let items;
   try {
     const calToken = await gdGetToken();
-    const mr = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(masterId), { headers: { Authorization: 'Bearer ' + calToken } });
-    if (!mr.ok) throw new Error('讀取課表事件失敗（' + mr.status + '）');
-    masterEv = await mr.json();
-  } catch (e) { return { ok: false, error: e.message || String(e) }; }
+    const nowIso = new Date().toISOString();
+    const farFutureIso = new Date(Date.now() + 2 * 365 * 24 * 3600 * 1000).toISOString();
+    const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+      + '?timeMin=' + encodeURIComponent(nowIso)
+      + '&timeMax=' + encodeURIComponent(farFutureIso)
+      + '&singleEvents=true&orderBy=startTime&maxResults=250'
+      + '&q=' + encodeURIComponent(studentName);
+    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + calToken } });
+    if (!r.ok) throw new Error('Calendar API ' + r.status + '：' + (await r.text()).slice(0, 200));
+    const data = await r.json();
+    const name = (studentName || '').trim();
+    items = (data.items || []).filter(function(ev) { return ev.status !== 'cancelled' && (ev.summary || '').trim() === name; });
+  } catch (e) { return { ok: false, error: '搜尋 Calendar 失敗：' + (e.message || e) }; }
 
-  // RELIABILITY FIRST：動 Calendar 之前先備份整包事件，之後有需要能人工復原
-  try {
-    await sb.from('classroom_calendar_backups').insert({
-      request_id: null, token: token, action: 'archive_student',
-      old_event_id: masterEv.id, new_event_id: null,
-      old_event_json: masterEv, old_start: masterEv.start && (masterEv.start.dateTime || masterEv.start.date),
-    });
-  } catch (e) {}
+  if (!items.length) return { ok: true, note: '在 Calendar 找不到符合的課堂事件（可能已經手動處理過）' };
 
-  try {
-    const calToken = await gdGetToken();
-    if (masterEv.recurrence && masterEv.recurrence.length) {
-      const untilStr = buildIcalUntilUtc(new Date());
-      const patchBody = { recurrence: setRruleUntil(masterEv.recurrence, untilStr) };
-      const pr = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(masterEv.id), {
-        method: 'PATCH', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(patchBody),
+  // 2) 去重：同一個 recurring 系列會展開成很多筆 instance，只留「主系列」的 id（masterId）處理一次
+  const masterIds = [];
+  items.forEach(function(ev) {
+    const mid = ev.recurringEventId || ev.id;
+    if (masterIds.indexOf(mid) === -1) masterIds.push(mid);
+  });
+
+  const errors = [];
+  for (const masterId of masterIds) {
+    let masterEv;
+    try {
+      const calToken = await gdGetToken();
+      const mr = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(masterId), { headers: { Authorization: 'Bearer ' + calToken } });
+      if (!mr.ok) throw new Error('讀取課表事件失敗（' + mr.status + '）');
+      masterEv = await mr.json();
+    } catch (e) { errors.push((e.message || e) + '（event: ' + masterId + '）'); continue; }
+
+    // RELIABILITY FIRST：動 Calendar 之前先備份整包事件，之後有需要能人工復原
+    try {
+      await sb.from('classroom_calendar_backups').insert({
+        request_id: null, token: token, action: 'archive_student',
+        old_event_id: masterEv.id, new_event_id: null,
+        old_event_json: masterEv, old_start: masterEv.start && (masterEv.start.dateTime || masterEv.start.date),
       });
-      if (!pr.ok) throw new Error('關閉往後課表失敗（' + pr.status + '）：' + (await pr.text()).slice(0, 200));
+    } catch (e) {}
 
-      // 2026-07-14 加（Lin 回報：改過期的課，封存後還在未來出現）：如果這位學生「以前被
-      // 單獨改期過」（用 🔄 改期／📌 固定 把某一次課移到別天），Google Calendar 會把那一次
-      // 存成跟主系列分開的「例外」事件——只改主系列的 RRULE UNTIL 不會自動清掉這種已經
-      // 移到未來某天的例外，要另外找出來刪掉，不然封存後那一次改期還是會單獨出現在未來。
-      try {
-        const nowIso = new Date().toISOString();
-        const farFutureIso = new Date(Date.now() + 2 * 365 * 24 * 3600 * 1000).toISOString();
-        const sweepUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
-          + '?timeMin=' + encodeURIComponent(nowIso)
-          + '&timeMax=' + encodeURIComponent(farFutureIso)
-          + '&singleEvents=true&orderBy=startTime&maxResults=250'
-          + '&q=' + encodeURIComponent(studentName);
-        const sweepRes = await fetch(sweepUrl, { headers: { Authorization: 'Bearer ' + calToken } });
-        if (sweepRes.ok) {
-          const sweepData = await sweepRes.json();
-          const leftovers = (sweepData.items || []).filter(function(ev) {
-            return ev.status !== 'cancelled' && (ev.recurringEventId === masterEv.id || ev.id === masterEv.id);
-          });
-          for (const ev of leftovers) {
-            try { await deleteClassEventOnce(ev.id); } catch (e) { /* 單一筆刪不掉不影響其他筆，也不影響封存本身 */ }
-          }
-        }
-      } catch (e) { /* 這段是 best-effort 補漏，找不到/掃不到也不影響封存本身 */ }
-    } else {
-      await deleteClassEventOnce(masterEv.id);
+    try {
+      const calToken = await gdGetToken();
+      if (masterEv.recurrence && masterEv.recurrence.length) {
+        const untilStr = buildIcalUntilUtc(new Date());
+        const patchBody = { recurrence: setRruleUntil(masterEv.recurrence, untilStr) };
+        const pr = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(masterEv.id), {
+          method: 'PATCH', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(patchBody),
+        });
+        if (!pr.ok) throw new Error('關閉往後課表失敗（' + pr.status + '）：' + (await pr.text()).slice(0, 200));
+      } else {
+        await deleteClassEventOnce(masterEv.id);
+      }
+    } catch (e) { errors.push(e.message || String(e)); }
+  }
+
+  // 2026-07-14 加（Lin 回報：改過期的課，封存後還在未來出現）：如果這位學生「以前被
+  // 單獨改期過」（用 🔄 改期／📌 固定 把某一次課移到別天），Google Calendar 會把那一次
+  // 存成跟主系列分開的「例外」事件——只改主系列的 RRULE UNTIL 不會自動清掉這種已經
+  // 移到未來某天的例外，要另外找出來刪掉，不然封存後那一次改期還是會單獨出現在未來。
+  // 2026-07-15：改成對「每一個」masterId 都掃一次 leftover（原本只掃 1 個），涵蓋多天/多系列。
+  try {
+    const calToken = await gdGetToken();
+    const nowIso2 = new Date().toISOString();
+    const farFutureIso2 = new Date(Date.now() + 2 * 365 * 24 * 3600 * 1000).toISOString();
+    const sweepUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+      + '?timeMin=' + encodeURIComponent(nowIso2)
+      + '&timeMax=' + encodeURIComponent(farFutureIso2)
+      + '&singleEvents=true&orderBy=startTime&maxResults=250'
+      + '&q=' + encodeURIComponent(studentName);
+    const sweepRes = await fetch(sweepUrl, { headers: { Authorization: 'Bearer ' + calToken } });
+    if (sweepRes.ok) {
+      const sweepData = await sweepRes.json();
+      const leftovers = (sweepData.items || []).filter(function(ev) {
+        return ev.status !== 'cancelled' && masterIds.indexOf(ev.recurringEventId || ev.id) !== -1 && ev.id !== ev.recurringEventId;
+      });
+      for (const ev of leftovers) {
+        try { await deleteClassEventOnce(ev.id); } catch (e) { /* 單一筆刪不掉不影響其他筆，也不影響封存本身 */ }
+      }
     }
-  } catch (e) { return { ok: false, error: e.message || String(e) }; }
+  } catch (e) { /* 這段是 best-effort 補漏，找不到/掃不到也不影響封存本身 */ }
+
+  if (errors.length) return { ok: false, error: errors.join('；') };
 
   return { ok: true };
+}
+
+// ============================================================
+// ➕ 加課堂時間（2026-07-15 新增）
+// 用途：(1) Danny 這種「一週上好幾天課」的學生 → 加第 2、第 3 個固定星期幾
+//       (2) Edward／米線 這種「不固定，偶爾約課」的學生 → 排單次課
+// 同一個工具兩用：勾「🔁 每週固定」＝固定課（可選填「固定到」結束日）／不勾＝只排這一次。
+// 流程：選日期時間 → 檢查真的 Google Calendar 是否衝突 → 沒衝突才顯示「確認新增」→
+// 按確認才真的建立 Calendar 事件＋寫資料庫（Lin 要求：兩步驟都在同一個視窗完成，不用外部通知）。
+// ============================================================
+var _addClassDayToken = null;
+var _addClassDayPending = null; // เช็คไม่ชนคิวแล้ว รอกดยืนยันอีกที
+var _addClassDayFromRequestId = null; // 2026-07-15 加：ถ้าเปิดจาก "📅 開始安排" (คำขอของนักเรียน)
+                                       // จำ id ของคำขอไว้ → สร้างสำเร็จค่อย mark ว่าจัดการแล้วอัตโนมัติ
+
+function thaiDateWeekday(dateStr) {
+  return new Date(dateStr + 'T12:00:00+07:00').getUTCDay(); // 0=日 ... 6=六（เที่ยงกันขอบวันเพี้ยน）
+}
+
+async function checkFreebusyConflict(startIso, endIso) {
+  const calToken = await gdGetToken();
+  const r = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ timeMin: startIso, timeMax: endIso, items: [{ id: 'primary' }] }),
+  });
+  if (!r.ok) throw new Error('檢查行事曆失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
+  const data = await r.json();
+  return (data.calendars && data.calendars.primary && data.calendars.primary.busy) || [];
+}
+
+// prefill（選填）：{ date, time, requestId } — 從學生「➕ 申請加課」的申請單帶入日期/時間，
+// 老師不用自己重打一次；requestId 記起來，建立成功後自動把那筆申請標記完成。
+async function openAddClassDayModal(token, prefill) {
+  _addClassDayToken = token;
+  _addClassDayPending = null;
+  _addClassDayFromRequestId = (prefill && prefill.requestId) || null;
+  const s = studentsCache[token];
+  document.getElementById('addClassDayStudentLabel').textContent = '學生：' + (s ? s.name : token);
+  document.getElementById('addClassDayDate').value = (prefill && prefill.date) || '';
+  document.getElementById('addClassDayStart').value = (prefill && prefill.time) || '';
+  document.getElementById('addClassDayEnd').value = '';
+  document.getElementById('addClassDayRecurring').checked = false;
+  document.getElementById('addClassDayUntil').value = '';
+  document.getElementById('addClassDayUntilWrap').style.display = 'none';
+  document.getElementById('addClassDayResult').innerHTML = prefill && prefill.note
+    ? ('<div style="color:var(--ink-muted);">📝 學生備註：' + escHtml(prefill.note) + '</div>') : '';
+  document.getElementById('addClassDayModal').classList.add('open');
+  await renderAddClassDayExistingList(token);
+}
+function closeAddClassDayModal() {
+  document.getElementById('addClassDayModal').classList.remove('open');
+  _addClassDayToken = null;
+  _addClassDayPending = null;
+  _addClassDayFromRequestId = null;
+}
+
+// 進入點：老師從「📋 學生申請改期/取消」清單按「📅 開始安排」加課申請
+function handleAddClassRequest(id) {
+  var r = (window._classRequestCache || {})[id];
+  if (!r) return;
+  openAddClassDayModal(r.token, { date: r.requested_date, time: r.requested_time, note: r.note, requestId: id });
+}
+function onAddClassDayRecurringChange() {
+  const checked = document.getElementById('addClassDayRecurring').checked;
+  document.getElementById('addClassDayUntilWrap').style.display = checked ? 'block' : 'none';
+}
+
+// โชว์ให้ Lin เห็นว่าตอนนี้นักเรียนคนนี้มีวันประจำอะไรอยู่แล้วบ้าง (กันลืม/ซ้ำ)
+async function renderAddClassDayExistingList(token) {
+  const el = document.getElementById('addClassDayList');
+  if (!el) return;
+  el.textContent = '讀取中…';
+  const dayZh = ['日','一','二','三','四','五','六'];
+  const parts = [];
+  try {
+    const s = studentsCache[token];
+    if (s && s.pending_recurring && s.pending_start_date && s.pending_class_time) {
+      const wd = thaiDateWeekday(s.pending_start_date);
+      parts.push('週' + dayZh[wd] + ' ' + s.pending_class_time + '（原本的固定課）');
+    }
+    const { data, error } = await sb.from('classroom_recurring_days').select('weekday,start_time,end_time').eq('token', token).order('weekday');
+    if (error) throw error;
+    (data || []).forEach(function(r) {
+      parts.push('週' + dayZh[r.weekday] + ' ' + r.start_time + (r.end_time ? '–' + r.end_time : '') + '（用「加課堂時間」新增）');
+    });
+    el.innerHTML = parts.length ? ('目前已經有的固定上課日：<br>' + parts.map(escHtml).join('<br>')) : '目前沒有已設定的每週固定上課日';
+  } catch (e) {
+    el.textContent = '（讀不到目前的固定課表，不影響繼續新增，錯誤：' + (e.message || e) + '）';
+  }
+}
+
+function addOneHourTimeStr(timeStr) {
+  const parts = timeStr.split(':');
+  const h = (parseInt(parts[0], 10) + 1) % 24;
+  return String(h).padStart(2, '0') + ':' + parts[1];
+}
+
+async function checkAddClassDayConflict() {
+  const token = _addClassDayToken;
+  if (!token) return;
+  const dateVal = document.getElementById('addClassDayDate').value;
+  const startVal = document.getElementById('addClassDayStart').value.trim();
+  const endValRaw = document.getElementById('addClassDayEnd').value.trim();
+  const recurring = document.getElementById('addClassDayRecurring').checked;
+  const untilVal = document.getElementById('addClassDayUntil').value;
+  const resultEl = document.getElementById('addClassDayResult');
+
+  if (!dateVal) { alert('請選擇日期'); return; }
+  if (!isValidTimeStr(startVal)) { alert('⚠️ 開始時間格式不對，請用 HH:MM，例如 20:00'); return; }
+  if (endValRaw && !isValidTimeStr(endValRaw)) { alert('⚠️ 結束時間格式不對，請用 HH:MM，例如 21:00'); return; }
+  const endTime = endValRaw || addOneHourTimeStr(startVal);
+
+  const startAbs = teacherTimeToDate(dateVal, startVal);
+  const endAbs = teacherTimeToDate(dateVal, endTime);
+  if (endAbs.getTime() <= startAbs.getTime()) { alert('⚠️ 結束時間要晚於開始時間'); return; }
+  if (recurring && untilVal && teacherTimeToDate(untilVal, '23:59').getTime() < startAbs.getTime()) {
+    alert('⚠️「固定到」的日期不能早於開課日期'); return;
+  }
+
+  const btn = document.getElementById('addClassDayCheckBtn');
+  btn.disabled = true; btn.textContent = '檢查中…';
+  resultEl.innerHTML = '';
+  _addClassDayPending = null;
+  try {
+    const busy = await checkFreebusyConflict(startAbs.toISOString(), endAbs.toISOString());
+    if (busy.length) {
+      const list = busy.map(function(b) {
+        return formatThaiDateTimeLabel(b.start) + ' – ' + formatInTz(new Date(b.end), TEACHER_TZ).timeStr;
+      }).join('<br>');
+      resultEl.innerHTML = '<div style="color:#b45309;font-weight:700;">⚠️ 這個時段跟行事曆上其他行程衝突：<br>' + list + '<br><span style="font-weight:400;">請換一個時間再檢查一次。</span></div>';
+      return;
+    }
+    const dayZh = ['日','一','二','三','四','五','六'];
+    const wd = thaiDateWeekday(dateVal);
+    let previewText = '✅ 沒有衝突。' + dateVal + '（週' + dayZh[wd] + '）' + startVal + '–' + endTime + '（泰國時間）';
+    previewText += recurring ? '，每週固定上課' + (untilVal ? '，固定到 ' + untilVal : '（沒有結束日，之後每週都排）') : '，只有這一次';
+    _addClassDayPending = { token: token, dateVal: dateVal, startVal: startVal, endTime: endTime, recurring: recurring, untilVal: untilVal || null, weekday: wd };
+    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;margin-bottom:8px;">' + escHtml(previewText) + '</div>' +
+      '<button class="btn-gold" style="width:100%;" onclick="confirmAddClassDay()">✅ 確認新增這個時段</button>';
+  } catch (e) {
+    resultEl.innerHTML = '<div style="color:#b45309;">檢查失敗：' + escHtml(e.message || String(e)) + '</div>';
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 檢查是否衝突';
+  }
+}
+
+// 第 2 步：老師確認過預覽內容才會真的建立 Calendar 事件＋寫資料庫
+async function confirmAddClassDay() {
+  const p = _addClassDayPending;
+  if (!p) return;
+  const token = p.token;
+  const s = studentsCache[token];
+  if (!s) { alert('找不到學生資料'); return; }
+  const resultEl = document.getElementById('addClassDayResult');
+  resultEl.innerHTML = '建立中…';
+
+  try {
+    let calToken = await gdGetToken();
+    const start = teacherTimeToDate(p.dateVal, p.startVal);
+    const end = teacherTimeToDate(p.dateVal, p.endTime);
+    const body = {
+      summary: s.name,
+      description: '系統自動建立（➕ 加課堂時間）' + (s.meet ? ('\n上課連結：' + s.meet) : ''),
+      start: { dateTime: start.toISOString(), timeZone: TEACHER_TZ },
+      end: { dateTime: end.toISOString(), timeZone: TEACHER_TZ },
+    };
+    if (p.recurring) {
+      let rule = 'RRULE:FREQ=WEEKLY';
+      if (p.untilVal) rule += ';UNTIL=' + buildIcalUntilUtc(teacherTimeToDate(p.untilVal, '23:59'));
+      body.recurrence = [rule];
+    }
+    let r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (r.status === 403) {
+      const errBody = await r.text();
+      if (/insufficient|scope|PERMISSION_DENIED/i.test(errBody)) {
+        calToken = await gdGetToken(true);
+        r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+      }
+    }
+    if (!r.ok) throw new Error('建立 Calendar 事件失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
+    const ev = await r.json();
+
+    // 2026-07-15 加（Lin 要求：加完課要真的回頭確認 Calendar 上有沒有出現，不要只信任建立時的
+    // API 回應）：重新 GET 一次這個事件，確認真的存在、時間也對，才繼續寫資料庫。
+    try {
+      const verifyR = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(ev.id), {
+        headers: { Authorization: 'Bearer ' + calToken },
+      });
+      if (!verifyR.ok) throw new Error('重新確認時連線失敗（' + verifyR.status + '）');
+      const verifyEv = await verifyR.json();
+      const actualStart = verifyEv.start && (verifyEv.start.dateTime || verifyEv.start.date);
+      if (!actualStart || Math.abs(new Date(actualStart).getTime() - start.getTime()) > 60000) {
+        throw new Error('Calendar 上顯示的時間跟預期不一樣（顯示：' + (actualStart || '無') + '）');
+      }
+    } catch (verErr) {
+      throw new Error('Calendar 事件建立的 API 有回應，但重新確認時發現不對勁：' + (verErr.message || verErr) + '\n請自己到 Calendar 檢查一次是否真的建立成功，先不寫入資料庫（避免資料庫記了一個不確定存在的事件）。');
+    }
+
+    // RELIABILITY FIRST：Calendar 事件已經真的建立了（且重新確認過）→ 資料庫這步失敗也要講清楚「Calendar 上已經有了」，
+    // 不能讓 Lin 誤會沒成功而重按一次（會建立重複事件）。
+    if (p.recurring) {
+      const { error } = await sb.from('classroom_recurring_days')
+        .upsert({ token: token, weekday: p.weekday, start_time: p.startVal, end_time: p.endTime, calendar_event_id: ev.id }, { onConflict: 'token,weekday' });
+      if (error) throw new Error('Calendar 事件已經建立成功，但存進資料庫失敗：' + error.message + '\n（不要重按一次，Calendar 上已經有這個事件了，請告訴 Lin/AI 手動補資料庫）');
+    } else {
+      const { error } = await sb.from('classroom_schedule')
+        .upsert({ token: token, lesson_date: p.dateVal, start_time: p.startVal, end_time: p.endTime, title: s.name, calendar_event_id: ev.id }, { onConflict: 'token,lesson_date,start_time' });
+      if (error) throw new Error('Calendar 事件已經建立成功，但存進資料庫失敗：' + error.message + '\n（不要重按一次，Calendar 上已經有這個事件了，請告訴 Lin/AI 手動補資料庫）');
+    }
+
+    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;">✅ 新增成功！（已重新確認 Calendar 上真的有這堂課）</div>';
+    _addClassDayPending = null;
+    document.getElementById('addClassDayDate').value = '';
+    document.getElementById('addClassDayStart').value = '';
+    document.getElementById('addClassDayEnd').value = '';
+    document.getElementById('addClassDayRecurring').checked = false;
+    document.getElementById('addClassDayUntil').value = '';
+    document.getElementById('addClassDayUntilWrap').style.display = 'none';
+    await renderAddClassDayExistingList(token);
+
+    // 2026-07-15 加：如果是從學生「➕ 申請加課」的申請單開進來的，Calendar+資料庫都真的
+    // 成功了才把那筆申請標記完成（RELIABILITY FIRST：先確定真的排進去了才關單，不能先關單）。
+    if (_addClassDayFromRequestId) {
+      const doneId = _addClassDayFromRequestId;
+      _addClassDayFromRequestId = null;
+      try { await finalizeRequestStatus(doneId, 'acknowledged'); } catch (e) { /* 標記失敗不影響已經建立成功的課堂，loadPendingClassRequests 下次刷新還會看到這筆，可以再按一次 */ }
+    }
+  } catch (e) {
+    resultEl.innerHTML = '<div style="color:#b45309;">❌ 失敗：' + escHtml(e.message || String(e)) + '</div>';
+  }
 }
 
 // RELIABILITY FIRST：任何「移動/刪除」Calendar 事件之前，一定先把原本的事件整包存起來，
@@ -2752,6 +3099,7 @@ function selectStudent(token) {
       '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳</button>' +
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
+      '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openAddClassDayModal(\'' + t + '\')" title="加一個上課時間（單次，或每週固定）">➕ 加課堂時間</button>' +
       (!s.meet ? '<button class="btn-sm" style="background:#b45309;color:#fff;" onclick="repairMeet(\'' + t + '\')">🔧 補課堂連結</button>' : '') +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')" title="封存成舊生（不是永久刪除，之後可在舊生列表恢復）">📦 封存</button>' +
     '</div>' +
@@ -3971,8 +4319,11 @@ async function loadStudentNextClass(token) {
     }
 
     if (!lessonDate) {
-      el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前沒有排定下一堂課，如需安排請聯絡老師。</div>' +
-        '<a class="meet-btn" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="margin-top:10px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));">💬 聯絡老師</a>';
+      el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前沒有排定下一堂課，如需安排請聯絡老師，或直接送出「申請加課」。</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+          '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
+          '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
+        '</div>';
       nextClassCtx = null;
       return;
     }
@@ -4007,6 +4358,7 @@ async function loadStudentNextClass(token) {
         // 不到 24 小時的那一堂會顯示「聯絡老師」而不是擋住整組功能。
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openCancelPickerModal()">❌ 取消課堂</button>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openClassRequestModal()">🔄 申請改期</button>' +
+        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
         '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
         (canCancel ? '' : '<div style="width:100%;font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">⚠️ 最近這一堂距離上課不到 24 小時，無法線上取消（其他週的課仍可在「❌ 取消課堂」裡選）</div>') +
       '</div>' +
@@ -4058,50 +4410,70 @@ async function requestCancelClass(isoDate) {
 
 // 2026-07-14 新增（Lin 要求）：算出「未來還有哪幾堂課」，讓學生可以選其他週的課來取消，
 // 不是只能取消最近下一堂。
-// 2026-07-14 修 bug 第 2 次（Lin 回報：改完清單還是空的「目前沒有排定的課堂」，但下一堂課
-// 卡片明明有顯示 7/14 11:00）：
-//   第一版自己另外呼叫一次 get_student_schedule + 重新算 pending_* anchor，想法是「跟卡片
-//   用同一套來源」，但實際上是兩份各自獨立算的邏輯，遇到某種還沒抓到的資料狀況就會兩邊
-//   算出不同答案（卡片算得出來、這裡算不出來）——問題出在「重新算一次」本身就有風險。
-//   改法：不要重新算「下一堂課是哪一堂」，直接沿用 loadStudentNextClass 已經算好、
-//   而且已經成功顯示在畫面上的 nextClassCtx（isoDate + timeStr）—— 兩者保證 100% 一致，
-//   因為根本是同一份資料，不會再有算出不同答案的空間。之後每一堂只需要單純往後推一週，
-//   只有「每週固定上課」的學生才會有第 2 堂以後（跟卡片背後的固定課表邏輯一致）。
-function computeUpcomingOccurrences(token, count) {
-  if (!nextClassCtx || nextClassCtx.token !== token || !nextClassCtx.isoDate) return [];
-  const anchor1 = teacherTimeToDate(nextClassCtx.isoDate, nextClassCtx.timeStr || '00:00');
-  const results = [anchor1];
-  const s = studentsCache[token];
-  if (s && s.pending_recurring && s.pending_start_date && s.pending_class_time) {
-    const weekMs = 7 * 24 * 3600 * 1000;
-    let cur = new Date(anchor1.getTime() + weekMs);
-    for (let i = 1; i < count; i++) {
-      results.push(cur);
-      cur = new Date(cur.getTime() + weekMs);
+// 2026-07-15 改版（Lin 要求：一定要「對到真的課堂」+「照真實剩餘堂數」）：
+//   舊版只會「+7 天」一直往後推，假設每個人只有 1 個固定星期幾 —— 學生一週上好幾天課
+//   （例如週五+週一都上）就會漏掉其中一天，甚至猜出根本沒有課的那一天。
+//   新版改成直接讀 classroom_schedule（get_student_schedule RPC，來源＝真的 Google Calendar
+//   同步下來的資料，2026-07-15 已經改成同步未來 SCHEDULE_SYNC_DAYS=30 天），有幾堂就是幾堂，
+//   不用猜。再用 computeCurrentCourse（跟「本輪剩餘 X 堂」同一套算法）算出真實剩餘堂數，
+//   把清單裁到剩餘堂數以內，不會讓學生選到「已經上完」的課。
+//   RPC 讀不到資料時（例如剛好還沒 sync）→ 退回舊版「+7 天」邏輯當保底，至少不會整個空白。
+async function computeUpcomingOccurrences(token, count) {
+  try {
+    const { data, error } = await sb.rpc('get_student_schedule', { p_token: token });
+    if (error) throw error;
+    let rows = (data || []).filter(function(r) { return r.lesson_date; });
+    if (!rows.length) throw new Error('no rows'); // ยังไม่ sync ข้อมูล → ไปใช้ fallback ด้านล่าง
+    var limit = count || rows.length;
+    try {
+      var pays = (await sb.rpc('get_student_payments', { p_token: token })).data || [];
+      var atts = (await sb.rpc('get_student_attendance', { p_token: token })).data || [];
+      var q = computeCurrentCourse(pays, atts);
+      if (q.hasCourse) limit = Math.min(count || q.remain, q.remain < 0 ? 0 : q.remain);
+    } catch (qerr) { /* เช็คโควตาไม่ได้ก็ไม่บล็อก แค่ใช้ count เดิมเป็น cap */ }
+    return rows.slice(0, limit).map(function(r) {
+      var t = (r.start_time && /^\d{1,2}:\d{2}/.test(r.start_time)) ? r.start_time : '00:00';
+      return teacherTimeToDate(r.lesson_date, t);
+    });
+  } catch (e) {
+    // Fallback：ข้อมูลจริงยังดึงไม่ได้ (RPC พัง/ยังไม่ sync) → ใช้วิธีเดิม (+7 วันจากคาบเดียว)
+    // ดีกว่าไม่มีอะไรให้เลือกเลย แต่รู้ตัวว่าไม่แม่นสำหรับคนเรียนหลายวัน/สัปดาห์
+    if (!nextClassCtx || nextClassCtx.token !== token || !nextClassCtx.isoDate) return [];
+    const anchor1 = teacherTimeToDate(nextClassCtx.isoDate, nextClassCtx.timeStr || '00:00');
+    const results = [anchor1];
+    const s = studentsCache[token];
+    if (s && s.pending_recurring && s.pending_start_date && s.pending_class_time) {
+      const weekMs = 7 * 24 * 3600 * 1000;
+      let cur = new Date(anchor1.getTime() + weekMs);
+      for (let i = 1; i < (count || 6); i++) {
+        results.push(cur);
+        cur = new Date(cur.getTime() + weekMs);
+      }
     }
+    return results;
   }
-  return results;
 }
 
 // 2026-07-14 改（Lin 要求）：老師端選課堂已經是「下拉選單」（見 pickLessonModal/
 // openPickLessonModal），學生端這裡改成同一種體驗，不要用一排排按鈕的清單。
 var _cancelPickerOptions = [];
 
-function openCancelPickerModal() {
+async function openCancelPickerModal() {
   if (!nextClassCtx) return;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
-  renderCancelPickerSelect();
   document.getElementById('cancelPickerModal').classList.add('open');
+  await renderCancelPickerSelect();
 }
 function closeCancelPickerModal() { document.getElementById('cancelPickerModal').classList.remove('open'); }
 
-function renderCancelPickerSelect() {
+async function renderCancelPickerSelect() {
   const sel = document.getElementById('cancelPickerSelect');
   if (!nextClassCtx || !sel) return;
   const token = nextClassCtx.token;
   const s = studentsCache[token];
   const studentTz = s && s.pending_student_tz;
-  const occurrences = computeUpcomingOccurrences(token, 6);
+  sel.innerHTML = '<option value="">讀取中…</option>';
+  const occurrences = await computeUpcomingOccurrences(token, 6);
   _cancelPickerOptions = occurrences;
   if (!occurrences.length) {
     sel.innerHTML = '<option value="">目前沒有排定的課堂</option>';
@@ -4232,6 +4604,88 @@ async function submitClassRequest() {
   alert('✅ 已送出改期申請，老師確認後會回覆你。');
 }
 
+// 2026-07-15 加：「申請加課」— 給不固定/偶爾約課的學生（例如 Edward、米線）自己提出想加的時間，
+// 跟「申請改期」共用同一張 classroom_requests 表 + 同一套審核清單，只是 request_type 不同
+// （'add_class'），p_original_date 特意傳 null（沒有「原本課堂」這回事，純粹是新加的一堂）。
+// 老師端確認沒有衝突、真的排進 Calendar，用的是已經做好的「➕ 加課堂時間」那套工具（見
+// openAddClassDayModal／checkAddClassDayConflict／confirmAddClassDay），不用重造一次。
+var _addReqToken = null;
+function openAddRequestModal(token) {
+  if (!requireLineLinkedOrPrompt(token)) return;
+  _addReqToken = token;
+  document.getElementById('addReqDateInput').value = '';
+  document.getElementById('addReqTimeInput').value = '';
+  document.getElementById('addReqNoteInput').value = '';
+  document.getElementById('addReqScheduleHint').style.display = 'none';
+  document.getElementById('addRequestModal').classList.add('open');
+}
+function closeAddRequestModal() { document.getElementById('addRequestModal').classList.remove('open'); }
+
+function onAddReqScheduleChange() {
+  const dateVal = document.getElementById('addReqDateInput').value;
+  const timeVal = document.getElementById('addReqTimeInput').value.trim();
+  const hint = document.getElementById('addReqScheduleHint');
+  if (!dateVal || !timeVal) { hint.style.display = 'none'; return; }
+  if (!isValidTimeStr(timeVal)) { hint.style.display = 'block'; hint.textContent = '⚠️ 時間格式不對，請用 HH:MM，例如 14:30'; return; }
+  const s = (_addReqToken && typeof studentsCache !== 'undefined') ? studentsCache[_addReqToken] : null;
+  const studentTz = s && s.pending_student_tz;
+  hint.style.display = 'block';
+  if (studentTz) {
+    try {
+      const abs = parseInTzToDate(dateVal, timeVal, studentTz);
+      const thai = formatInTz(abs, TEACHER_TZ);
+      hint.textContent = '＝ 老師端泰國時間：' + thai.dateStr + ' ' + thai.timeStr;
+    } catch (e) {
+      hint.textContent = '⚠️ 時區資料有問題，這個時間會直接當成泰國時間送給老師，建議送出後跟老師確認一下';
+    }
+  } else {
+    hint.textContent = '⚠️ 你還沒設定過自己的時區，這個時間會直接當成泰國時間送給老師（跟你想的可能會差好幾個小時，建議先跟老師確認）';
+  }
+}
+
+async function submitAddRequest() {
+  const token = _addReqToken;
+  if (!token) { closeAddRequestModal(); return; }
+  const rawDate = document.getElementById('addReqDateInput').value;
+  const rawTime = document.getElementById('addReqTimeInput').value.trim();
+  const note = document.getElementById('addReqNoteInput').value.trim();
+  if (!rawDate) { alert('請選擇想約哪一天'); return; }
+  if (!isValidTimeStr(rawTime)) { alert('⚠️ 時間格式不對，請用 HH:MM，例如 14:30'); return; }
+
+  const s = studentsCache[token];
+  const studentTz = s && s.pending_student_tz;
+  let newDate = rawDate, newTime = rawTime;
+  if (studentTz) {
+    try {
+      const abs = parseInTzToDate(rawDate, rawTime, studentTz);
+      const thai = formatInTz(abs, TEACHER_TZ);
+      newDate = thai.dateStr; newTime = thai.timeStr;
+    } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
+  }
+
+  const studentName = currentStudentName(token);
+  const btn = document.getElementById('addReqSubmitBtn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  const res = await sb.rpc('submit_class_request', {
+    p_token: token,
+    p_student_name: studentName,
+    p_request_type: 'add_class',
+    p_original_date: null, // ไม่มี "คาบเดิม" — เป็นคาบใหม่ที่ขอเพิ่ม
+    p_requested_date: newDate,
+    p_requested_time: newTime,
+    p_note: note || null,
+    p_initiated_by: 'student',
+  });
+  btn.disabled = false; btn.textContent = '📤 送出申請';
+  if (res.error) {
+    alert('送出失敗：' + res.error.message + (/request_type|constraint|check/i.test(res.error.message || '') ? '\n（可能是資料庫還沒支援「add_class」這個類型，請告訴 Lin/AI 到 Supabase 調整）' : '\n請直接聯絡老師比較保險。'));
+    return;
+  }
+  notifyTeacherClassRequest({ type: 'add_class', name: studentName, token: token, requestedDate: newDate, requestedTime: newTime, note: note });
+  closeAddRequestModal();
+  alert('✅ 已送出加課申請，老師確認沒有衝突後會安排進課表。');
+}
+
 // 2026-07-13 加：學生自己頁面看「目前送出的申請」狀態
 //   - offer_status 空的 → 一般申請，還在等老師處理（顯示 48 小時倒數，純提醒不是硬性規定）
 //   - offer_status = 'proposed' → 老師提議了新時間，讓學生直接在網頁上按「可以」/「不方便」
@@ -4248,6 +4702,7 @@ async function loadStudentPendingRequestStatus(token) {
     if (!r) { el.innerHTML = ''; return; }
     window._myPendingRequest = r;
     const isCancel = r.request_type === 'cancel';
+    const isAdd = r.request_type === 'add_class';
 
     function hoursLeftLabel(sinceIso) {
       if (!sinceIso) return '';
@@ -4275,7 +4730,8 @@ async function loadStudentPendingRequestStatus(token) {
       '</div>';
     } else {
       el.innerHTML = '<div class="card">' +
-        '<h2>' + (isCancel ? '⏳ 取消申請處理中' : '⏳ 改期申請處理中') + '</h2>' +
+        '<h2>' + (isCancel ? '⏳ 取消申請處理中' : isAdd ? '⏳ 加課申請處理中' : '⏳ 改期申請處理中') + '</h2>' +
+        (isAdd ? '<p style="font-size:0.85rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:4px;">申請時間：' + escHtml(r.requested_date || '-') + ' ' + escHtml(r.requested_time || '') + '（泰國時間）</p>' : '') +
         '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">' + hoursLeftLabel(r.created_at) + '</p>' +
       '</div>';
     }
@@ -4304,21 +4760,24 @@ const LINE_NOTIFY_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions
 function notifyTeacherClassRequest(d) {
   try {
     var isCancel = d.type === 'cancel';
-    var subject = (isCancel ? '❌ 學生申請取消課程 — ' : '🔄 學生申請改期 — ') + (d.name || '學生');
+    var isAdd = d.type === 'add_class';
+    // 2026-07-15 加：type='add_class'（學生自己申請加課，沒有「原本課堂」這回事）獨立出文案，
+    // 不然會照 isCancel=false 的舊邏輯誤顯示成「申請改期」+「原本課堂日期：-」，讓老師看不懂。
+    var subject = (isCancel ? '❌ 學生申請取消課程 — ' : isAdd ? '➕ 學生申請加課 — ' : '🔄 學生申請改期 — ') + (d.name || '學生');
     // 2026-07-10 加：直接附 Google Calendar 那一天的連結，點了就直接開到正確日期（在 LINE 裡點也會開）
-    // isCancel → 開原本那天；改期 → 開「想改到」那天（老師比較可能需要去那天新增/調整）
+    // isCancel → 開原本那天；改期/加課 → 開「想改到/想約」那天（老師比較可能需要去那天新增/調整）
     var calDateStr = isCancel ? d.originalDate : (d.requestedDate || d.originalDate);
     var calLink = null;
     if (calDateStr && /^\d{4}-\d{2}-\d{2}/.test(calDateStr)) {
       var _p = calDateStr.split('-');
       calLink = 'https://calendar.google.com/calendar/r/day/' + parseInt(_p[0],10) + '/' + parseInt(_p[1],10) + '/' + parseInt(_p[2],10);
     }
-    var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : '申請改期')
-      + '\n原本課堂日期：' + (d.originalDate || '-')
-      + (isCancel ? '' : ('\n想改到：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')))
+    var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期')
+      + (isAdd ? '' : ('\n原本課堂日期：' + (d.originalDate || '-')))
+      + (isCancel ? '' : ('\n想' + (isAdd ? '約' : '改到') + '：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')))
       + (d.note ? '\n備註：' + d.note : '')
       + (calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
-      + '\n\n請到老師網站「📋 學生申請改期/取消」按「✅ 處理」，系統會自動幫你搬/刪 Calendar。';
+      + '\n\n請到老師網站「📋 學生申請改期/取消」' + (isAdd ? '按「📅 開始安排」確認沒有衝突後排進課表。' : '按「✅ 處理」，系統會自動幫你搬/刪 Calendar。');
 
     function sendEmailFallback() {
       fetch('https://api.web3forms.com/submit', {
@@ -4764,15 +5223,26 @@ async function loadPendingClassRequests() {
 
   var rows = data.map(function(r) {
     var isCancel = r.request_type === 'cancel';
+    // 2026-07-15 加：request_type='add_class'（學生自己申請加課，沒有「原本課堂」）獨立處理，
+    // 不能走「處理」（那顆是找既有 Calendar 事件搬/刪，加課沒有既有事件可找）。
+    var isAdd = r.request_type === 'add_class';
     var isProposed = r.offer_status === 'proposed';
     var calDate = isCancel ? r.original_date : (r.requested_date || r.original_date);
     var calUrl = calendarDayUrl(calDate);
     var detail = isCancel
       ? ('原本課堂：' + (r.original_date || '-'))
+      : isAdd
+      ? ('申請時間：' + (r.requested_date || '-') + (r.requested_time ? ' ' + r.requested_time : '') + '（泰國時間）')
       : ('原本課堂：' + (r.original_date || '-') + '　→　想改到：' + (r.requested_date || '-') + (r.requested_time ? ' ' + r.requested_time : ''));
-    var typeLabel = (r.initiated_by === 'teacher' ? '（老師提出）' : '') + (isCancel ? '申請取消' : '申請改期');
+    var typeLabel = (r.initiated_by === 'teacher' ? '（老師提出）' : '') + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期');
     var actionsHtml;
-    if (r.offer_status === 'accepted') {
+    if (isAdd) {
+      // 加課申請：不用「處理」（找不到既有事件），改開「➕ 加課堂時間」那套工具，
+      // 先幫老師帶入學生申請的日期/時間，老師檢查沒衝突、確認新增後，這筆申請才會自動標記完成。
+      actionsHtml = (calUrl ? '<a class="btn-approve" style="text-decoration:none;text-align:center;" href="' + calUrl + '" target="_blank" rel="noopener">🔗 開 Calendar</a>' : '') +
+        '<button class="btn-approve" onclick="handleAddClassRequest(\'' + r.id + '\')">📅 開始安排</button>' +
+        '<button class="btn-reject" onclick="openOtherOptionsModal(\'' + r.id + '\')">⚙️ 其他</button>';
+    } else if (r.offer_status === 'accepted') {
       actionsHtml = '<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">✅ 學生同意新時間了，按下方確認才會真的搬 Calendar</div>' +
         '<button class="btn-approve" onclick="confirmAcceptedOffer(\'' + r.id + '\')">✅ 確認並搬 Calendar</button>';
     } else if (r.offer_status === 'declined') {
@@ -4787,7 +5257,7 @@ async function loadPendingClassRequests() {
         '<button class="btn-reject" onclick="openOtherOptionsModal(\'' + r.id + '\')">⚙️ 其他</button>';
     }
     return '<div class="slip-row" id="req-row-' + r.id + '">' +
-      '<div class="slip-thumb-placeholder">' + (isCancel ? '❌' : '🔄') + '</div>' +
+      '<div class="slip-thumb-placeholder">' + (isCancel ? '❌' : isAdd ? '➕' : '🔄') + '</div>' +
       '<div class="slip-info">' +
         '<div class="slip-name">' + escHtml(r.student_name || '-') + '　' + typeLabel + '</div>' +
         '<div class="slip-course">' + escHtml(detail) + '</div>' +
@@ -4856,6 +5326,7 @@ async function processClassRequestInner(id, r, isCancel) {
     try {
       await backupCalendarEvent(id, r.token, 'delete', ev, null);
       await deleteClassEventOnce(ev.id);
+      await verifyEventDeleted(ev.id); // 2026-07-15：真的回頭確認 Calendar 上刪除成功，不是只信任 API 回應
     } catch (e) {
       alert('⚠️ 刪除課堂失敗：' + (e.message || e) + '\n這筆申請還沒標記完成，請重試或手動處理。');
       return;
@@ -4873,6 +5344,7 @@ async function processClassRequestInner(id, r, isCancel) {
     try {
       await backupCalendarEvent(id, r.token, 'move', ev, newStartIso);
       await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
+      await verifyEventMoved(ev.id, newStartIso); // 2026-07-15：真的回頭確認 Calendar 上時間真的改了，不是只信任 API 回應
       newStartIsoForNotify = newStartIso;
     } catch (e) {
       alert('⚠️ 移動課堂失敗：' + (e.message || e) + '\n這筆申請還沒標記完成，請重試或手動處理。');
@@ -6134,7 +6606,11 @@ async function connectCalendar() {
   }
 
   try {
-    const events = await calFetchUpcomingEvents();
+    // 2026-07-15 改：ดึงยาวขึ้นเป็น SCHEDULE_SYNC_DAYS (30 วัน) — ไม่ใช่แค่ SCHEDULE_DAYS (9 วัน)
+    // เหตุผล：matched ชุดนี้จะถูกส่งเข้า syncScheduleToSupabase() ทั้งหมด ให้นักเรียนที่เรียน
+    // หลายวัน/สัปดาห์เลือก "คาบจะยกเลิก" ได้ครบจริง ไม่ใช่แค่ 9 วันที่จอครูเองแสดง
+    // (จอครู "近期課表" ยังคงตัดมาแสดงแค่ SCHEDULE_DAYS วันเหมือนเดิม ดูด้านล่าง matchedForDisplay)
+    const events = await calFetchUpcomingEvents(SCHEDULE_SYNC_DAYS);
     const studentNames = Object.entries(studentsCache);
     const todayKey = nowParts.dateStr;
     // 2026-07-11 修 bug：按「今日上課」畫面上卡片會馬上被移除，但這裡是整段重新用 Google Calendar
@@ -6171,13 +6647,18 @@ async function connectCalendar() {
       });
     });
 
+    // 2026-07-15 加：matched ตอนนี้ยาวถึง SCHEDULE_SYNC_DAYS (30 วัน) แล้ว แต่จอครู "近期課表"
+    // ยังอยากโชว์แค่ SCHEDULE_DAYS (9 วัน) เหมือนเดิม (ไม่ให้รกจอ) → ตัดมาแสดงแค่ช่วงนี้
+    const displayCutoff = formatInTz(new Date(teacherTimeToDate(todayKey, '00:00').getTime() + SCHEDULE_DAYS * 24 * 3600 * 1000), TEACHER_TZ).dateStr;
+    const matchedForDisplay = matched.filter(function(m) { return m.dayKey < displayCutoff; });
+
     let content;
-    if (matched.length === 0) {
+    if (matchedForDisplay.length === 0) {
       content = '<div class="empty-attend">未來七天沒有排課</div>';
     } else {
       // จัดกลุ่มตามวัน (events เรียงตามเวลามาแล้ว → ลำดับวันถูกต้อง)
       const order = []; const groups = {};
-      matched.forEach(function(item) {
+      matchedForDisplay.forEach(function(item) {
         if (!groups[item.dayKey]) { groups[item.dayKey] = []; order.push(item.dayKey); }
         groups[item.dayKey].push(item);
       });

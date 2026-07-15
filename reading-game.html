@@ -790,9 +790,13 @@ var RG_SRS={
   },
   resetOnFail:function(rec){rec=rec||this.blank();rec.stage=0;rec.dueDate='';rec.dueAt=0;rec.everFailed=true;return rec;}
 };
-var srsRecords={}; // idx (index ใน WORDS) → SRS record — Lin ยืนยัน 2026-07-04: ยังไม่มีคนเล่นจริง ล้างของเก่าได้เลย ไม่ต้องย้ายข้อมูล
-function rgSrsGet(idx){return srsRecords[idx]||null;}
-function rgSrsSet(idx,rec){srsRecords[idx]=rec;}
+// Lin 2026-07-15: เปลี่ยน key จาก "ลำดับ index ใน WORDS" เป็น "คำ+ระดับ" (rgSrsKey) กันบั๊ก —
+// เดิม key เป็นตำแหน่งเลขในลิสต์ พอ Lin เพิ่ม/ลบคำ ตำแหน่งขยับ ความจำของนักเรียนที่เคยเล่นแล้วจะไปติดผิดคำ
+// ฝั่งเซิร์ฟเวอร์ (tone_srs_state, tone-round) เก็บด้วย "คำ+ระดับ" อยู่แล้วเป็นความจริงหลัก — อันนี้แค่ทำให้ local ตรงกัน
+function rgSrsKey(w){ return (w&&w.th||'')+'@'+(RG_LEVEL_TO_NUM[w&&w.level]||0); }
+var srsRecords={}; // key = rgSrsKey(word) → SRS record
+function rgSrsGet(key){return srsRecords[key]||null;}
+function rgSrsSet(key,rec){srsRecords[key]=rec;}
 var SAVE_KEY='rgv3_save';
 var rememberStep=0,rememberTimer=null;
 var totalStars=0,totalBadges=0;
@@ -873,15 +877,12 @@ function doSave(){
 // ════════════════════════════════════════════
 // ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='reading') → merge เข้า srsRecords ──
 //   • อ่านอย่างเดียว · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
-//   • เกมนี้เก็บ SRS ด้วย "ลำดับ(index)" ใน WORDS → ต้องแปลง (level,คำ)→index ก่อน merge · คำที่ไม่มีใน WORDS แล้ว = ข้าม (กันคำผี)
+//   • 2026-07-15: เปลี่ยนมาใช้ key "คำ+ระดับ" ตรงกับฝั่งเซิร์ฟเวอร์เป๊ะ ไม่ต้องแปลง index อีกแล้ว
+//     (เดิมต้องสแกนหา index ใน WORDS ก่อน merge — พอ Lin แก้ไฟล์คำ ตำแหน่งขยับ ก็เคย merge ผิดคำได้)
 //   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอิน = ใช้ srsRecords ในเครื่องเดิม · กติกา merge = เลือกอันก้าวหน้ากว่า (ทดสอบกดจริง 8/8)
 // ════════════════════════════════════════════
 function rgSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
 function rgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=rgSrsRank(a),rb=rgSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
-function rgSrsIndexByWordLevel(word, levelNum){
-  for(var i=0;i<WORDS.length;i++){ if(WORDS[i].th===word && RG_LEVEL_TO_NUM[WORDS[i].level]===levelNum) return i; }
-  return -1; // ไม่มีใน WORDS แล้ว = คำผี → ข้าม
-}
 var __rgSrsSyncPromise=null;
 window.__rgSrsSyncedOnce=false;
 function rgSyncSrsFromServer(force){
@@ -896,13 +897,12 @@ function rgSyncSrsFromServer(force){
       if(res.error||!res.data){ window.__rgSrsSyncedOnce=true; return false; }
       var changed=false;
       res.data.forEach(function(row){
-        var idx=rgSrsIndexByWordLevel(row.word, row.level);
-        if(idx<0) return; // คำผี ข้าม
+        var key=(row.word||'')+'@'+(row.level||0);
         var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,mastered:!!row.mastered};
-        var cur=srsRecords[idx];
+        var cur=srsRecords[key];
         var win=rgSrsPickAdvanced(cur,srv);
         if(!cur || win.stage!==cur.stage || (win.dueDate||'')!==(cur.dueDate||'') || (!!win.mastered)!==(!!cur.mastered)){
-          srsRecords[idx]=win; changed=true;
+          srsRecords[key]=win; changed=true;
         }
       });
       if(changed) doSave();
@@ -1045,13 +1045,13 @@ function initGame(){
     var pool;
     if(rgLoggedIn()){
       pool=allIdx.filter(function(i){
-        var rec=srsRecords[i];
+        var rec=srsRecords[rgSrsKey(WORDS[i])];
         if(rec&&rec.mastered)return false;      // เชี่ยวชาญแล้ว (ตัดออกถาวร)
         if(rec&&!RG_SRS.isDue(rec,now))return false; // ยังไม่ครบกำหนดทบทวน
         return true;
       });
       // ถ้าไม่มีคำพร้อม → เปิด cooldown words ก่อน (ยกเว้น mastered)
-      if(pool.length===0)pool=allIdx.filter(function(i){var rec=srsRecords[i];return !(rec&&rec.mastered);});
+      if(pool.length===0)pool=allIdx.filter(function(i){var rec=srsRecords[rgSrsKey(WORDS[i])];return !(rec&&rec.mastered);});
       // ถ้า mastered ทั้งหมดในระดับนี้ (全部精通) → มาร์คคำครบ + ทบทวนแบบ 0 แต้ม + เด้งหน้าฉลอง (กฎ15)
       if(pool.length===0){
         try{ if(window.GAME_ACCOUNT) GAME_ACCOUNT.markLevelSeen('reading',RG_LEVEL_TO_NUM[curLevel]||1, allIdx.length); }catch(e){}
@@ -1318,15 +1318,15 @@ function markSlots(){
 // ─── Check answer ───
 // คะแนน/มาสเตอร์ ทำตอน "จบทั้งคำ" (รองรับหลายพยางค์)
 function finalizeWord(){
-  var idx=roundQueue[cur];var b=document.getElementById('banner');
+  var srsKey=rgSrsKey(WORD);var b=document.getElementById('banner');
   var loggedIn=rgLoggedIn();
 
   // ── ผิดครบ 4 ครั้ง (fail) — งานที่1: เฉลย + เข้าคิว SRS ใหม่ ไม่ recycle ในรอบเดียวกันอีกต่อไป ──
   if(wordFailed){
     streak=0;
     if(loggedIn){
-      var recF=RG_SRS.resetOnFail(rgSrsGet(idx));
-      rgSrsSet(idx,recF);
+      var recF=RG_SRS.resetOnFail(rgSrsGet(srsKey));
+      rgSrsSet(srsKey,recF);
     }
     if(curWordIsKnownCheck){
       curWordIsKnownCheck=false;
@@ -1334,7 +1334,7 @@ function finalizeWord(){
     } else {
       b.textContent='綠色才是正確答案 — 這個字之後會再複習到';b.className='result-banner show no';
     }
-    rgLogWord({failed:true,pts:0,srsDue:(loggedIn?(rgSrsGet(idx)&&rgSrsGet(idx).dueDate||''):'')});
+    rgLogWord({failed:true,pts:0,srsDue:(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
     doSave();
     return;
   }
@@ -1344,11 +1344,11 @@ function finalizeWord(){
     var passedClean=!wordHadWrong && !wordUsedGuide;
     if(loggedIn){
       if(passedClean){
-        var recM=rgSrsGet(idx)||RG_SRS.blank();
+        var recM=rgSrsGet(srsKey)||RG_SRS.blank();
         recM.mastered=true;
-        rgSrsSet(idx,recM);
+        rgSrsSet(srsKey,recM);
       } else {
-        rgSrsSet(idx,RG_SRS.resetOnFail(rgSrsGet(idx)));
+        rgSrsSet(srsKey,RG_SRS.resetOnFail(rgSrsGet(srsKey)));
       }
       // Phase 4: บอกเซิร์ฟเวอร์ด้วย (已記得 = พิสูจน์ครั้งเดียว → mastered แต่ไม่ให้ดาว)
       try{
@@ -1359,7 +1359,7 @@ function finalizeWord(){
     curWordIsKnownCheck=false;
     if(passedClean){ b.textContent='真的記得！這個字標記為熟練 ✓（不計分、不加幣）';b.className='result-banner show ok'; }
     else{ b.textContent='中途有出錯/用了提示，這個字先留在複習清單裡 🔁';b.className='result-banner show no'; }
-    rgLogWord({mastered:!!passedClean,pts:0,srsDue:passedClean?'已精通':(loggedIn?(rgSrsGet(idx)&&rgSrsGet(idx).dueDate||''):'')});
+    rgLogWord({mastered:!!passedClean,pts:0,srsDue:passedClean?'已精通':(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
     doSave();
     return;
   }
@@ -1368,7 +1368,7 @@ function finalizeWord(){
   if(wordUsedGuide){
     okC++;
     b.textContent='這次用了提示，先不計分（下次試試看不看提示！）';b.className='result-banner show half';
-    rgLogWord({guide:true,pts:0,srsDue:(loggedIn?(rgSrsGet(idx)&&rgSrsGet(idx).dueDate||''):'')});
+    rgLogWord({guide:true,pts:0,srsDue:(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
     doSave();
     return;
   }
@@ -1411,7 +1411,7 @@ function finalizeWord(){
 
   // ── SRS เลื่อนขั้น/รีเซ็ต + โบนัสรอบทบทวน + แจกดาวเงินตอน mastered จริง (เฉพาะล็อกอิน) ──
   if(loggedIn){
-    var rec=rgSrsGet(idx)||RG_SRS.blank();
+    var rec=rgSrsGet(srsKey)||RG_SRS.blank();
     if(clean){
       var passedStage=rec.stage; // stage ก่อนเลื่อน = รอบทบทวนที่เพิ่งผ่าน (0/1/2)
       var res=RG_SRS.advanceOnClean(rec,Date.now());
@@ -1434,7 +1434,7 @@ function finalizeWord(){
     } else {
       rec=RG_SRS.resetOnFail(rec); // ผิดแม้ครั้งเดียว (ไม่ใช่แค่ fail เต็ม) = กลับวันแรกเสมอ ตรงเกมเสียง
     }
-    rgSrsSet(idx,rec);
+    rgSrsSet(srsKey,rec);
   }
 
   // ── รวมโบนัสทั้งหมดของ "คำนี้" (คะแนนหลัก + วรรณยุกต์ + SRS) เป็นก้อนเดียวตอนแสดงแบนเนอร์ตอนจบคำ (ทำเหมือนเกมพิมพ์ ตามที่ Lin สั่ง) — Lin 2026-07-07

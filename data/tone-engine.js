@@ -19,6 +19,10 @@
  * แต่เพิ่มการ "เก็บ log" ทุกเคสที่ไม่ตรงไว้ใน mismatch log อ่านได้ผ่าน getToneMismatches() แทนที่จะ
  * หายไปเฉยๆ — ใช้กับ regression-check + review-tool.html
  *
+ * แก้บั๊ก (d) — เพิ่ม 2026-07-15: ควบกล้ำไม่แท้ สร/ศร/ษร (ร มีรูปแต่ไม่ออกเสียง เช่น สระ, เสร็จ, สร้าง, เศร้า)
+ *   เดิมนับ ร เป็นตัวสะกดจริง ทำให้พยางค์ที่ควรเป็นเสียงตาย (dead) กลายเป็นเสียงยาว (live) ผิด →
+ *   แก้โดยตัด ร ที่ตามหลัง ส/ศ/ษ ทันทีออกก่อนวิเคราะห์ทุกอย่าง (Lin ยืนยันกฎนี้ 2026-07-15)
+ *
  * ใช้แบบไหนก็ได้:
  *   Browser: <script src="data/tone-engine.js?v=1"></script> (ต้องมาหลัง words-data.js ก็ได้ ไม่บังคับลำดับ)
  *   Node:    global.window = global; require('./tone-engine.js');
@@ -53,6 +57,8 @@
   var CLUSTER2 = new Set('รลว'.split(''));
   var CLUSTER_INIT = new Set('กขคฆปผพภตบดฟ'.split(''));
   var KARUN = '์';
+  // ควบกล้ำไม่แท้ สร/ศร/ษร — ร มีรูปแต่ไม่ออกเสียง (Lin ยืนยัน 2026-07-15, ตัวอย่าง: สระ, เสร็จ, สร้าง, เศร้า)
+  var SILENT_R_LEADS = new Set(['ส', 'ศ', 'ษ']);
 
   // ── แก้บั๊ก (b) ตัวการันต์: ตัดพยัญชนะหน้า ์ + ์ เอง ออกก่อนวิเคราะห์อะไรทั้งหมด ──
   function _stripKarun(word) {
@@ -61,6 +67,23 @@
     if (idx < 1) return word; // ไม่มี ์ หรือ ์ อยู่ตำแหน่งแรก (ผิดปกติ ไม่ตัด กันพัง)
     // การันต์บางคำอาจทับ 2 ตัวอักษร (เช่น รร์ ที่ไม่ค่อยเจอ) — ในชุดคำจริงของเราทับทีละ 1 ตัวพอ
     return word.slice(0, idx - 1) + word.slice(idx + 1);
+  }
+
+  // ── แก้บั๊ก (d) ควบกล้ำไม่แท้ สร/ศร/ษร: ตัด ร ที่ตามหลัง ส/ศ/ษ ทันทีออกก่อนวิเคราะห์ ──
+  // (2026-07-15 — เจอจาก "สระ" ในสระว่ายน้ำ คำนวณผิดเป็นจัตวา ที่ถูกคือเอก เพราะเครื่องคิดเดิม
+  //  นับ ร เป็นตัวสะกดจริง ทำให้ดูเหมือนพยางค์เป็นเสียงยาว(live) ทั้งที่จริงตายเสียง(dead))
+  function _stripSilentR(word) {
+    if (!word) return word;
+    var out = '';
+    for (var i = 0; i < word.length; i++) {
+      if (word[i] === 'ร' && i > 0 && SILENT_R_LEADS.has(word[i - 1])) continue;
+      out += word[i];
+    }
+    return out;
+  }
+
+  function _normalize(word) {
+    return _stripSilentR(_stripKarun(word));
   }
 
   // ── แก้บั๊ก (a) อักษรนำ: กฎทั่วไปแทน list ตายตัว ──
@@ -108,17 +131,17 @@
 
   var ENGINE = {
     hasToneMark: function (word) {
-      word = _stripKarun(word);
+      word = _normalize(word);
       for (var i = 0; i < word.length; i++) if (TONE_CHARS.has(word[i])) return true;
       return false;
     },
     getToneMark: function (word) {
-      word = _stripKarun(word);
+      word = _normalize(word);
       for (var i = 0; i < word.length; i++) if (TONE_CHARS.has(word[i])) return word[i];
       return null;
     },
     getInitClass: function (word) {
-      word = _stripKarun(word);
+      word = _normalize(word);
       if (_leadLen(word)) return 'lead';
       for (var j = 0; j < word.length; j++) {
         var c = word[j];
@@ -129,14 +152,14 @@
       return null;
     },
     getInitChar: function (word) {
-      word = _stripKarun(word);
+      word = _normalize(word);
       var ll = _leadLen(word);
       if (ll) return word.slice(0, ll);
       for (var j = 0; j < word.length; j++) { if (CONS_SET.has(word[j])) return word[j]; }
       return null;
     },
     isLiveWord: function (word) {
-      word = _stripKarun(word);
+      word = _normalize(word);
       var cons = _codaCons(word);
       if (cons.length >= 2) {
         var last = cons[cons.length - 1];
@@ -151,7 +174,7 @@
       return null;
     },
     getVowelType: function (word) {
-      word = _stripKarun(word);
+      word = _normalize(word);
       for (var i = 0; i < word.length; i++) if (SHORT_V.has(word[i])) return 'short';
       for (var j = 0; j < word.length; j++) if (LONG_V.has(word[j]))  return 'long';
       if (_hasSaraOr(word)) return 'long';
@@ -161,10 +184,10 @@
       return { low: '低子音', high: '高子音', mid: '中子音', lead: '前引字' }[cls] || cls;
     },
     hasTailCons: function (word) {
-      return _codaCons(_stripKarun(word)).length >= 2;
+      return _codaCons(_normalize(word)).length >= 2;
     },
     getEndConsType: function (word) {
-      word = _stripKarun(word);
+      word = _normalize(word);
       var cons = _codaCons(word);
       if (cons.length >= 2) {
         var last = cons[cons.length - 1];

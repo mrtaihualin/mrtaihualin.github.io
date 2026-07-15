@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "mode": "catalog-audit",
-  "generatedAt": "2026-07-14T18:16:13.248Z",
+  "generatedAt": "2026-07-15T04:14:25.756Z",
   "summary": {
-    "totalEntries": 298,
-    "mismatchEntries": 9,
-    "totalSyllables": 505,
-    "mismatchSyllables": 9
+    "totalEntries": 296,
+    "mismatchEntries": 5,
+    "totalSyllables": 504,
+    "mismatchSyllables": 5
   },
   "entries": [
     {
@@ -1679,68 +1679,6 @@
           "vowelType": "long",
           "initChar": "น",
           "reason": "「น」是低子音，這個音節是活音節（長母音或長尾音），沒有聲調符 → 固定念第一聲"
-        }
-      ],
-      "notes": ""
-    },
-    {
-      "id": "catalog:ท่าน",
-      "word": "ท่าน",
-      "readingTH": "ท่าน",
-      "zh": "您",
-      "en": "thâan",
-      "level": "初",
-      "category": "นามคน",
-      "sourceFile": "words-data.js",
-      "status": "match",
-      "syllables": [
-        {
-          "th": "ท่าน",
-          "lead": null,
-          "cons": "ท",
-          "fullSpelling": "ท่าน",
-          "expectedToneName": "โท",
-          "computedToneName": "โท",
-          "match": true,
-          "cls": "low",
-          "clsZh": "低子音",
-          "mark": "่",
-          "markName": "ไม้เอก",
-          "live": true,
-          "vowelType": "long",
-          "initChar": "ท",
-          "reason": "「ท」是低子音，加上聲調符「่」（ไม้เอก）→ 組合成第三聲"
-        }
-      ],
-      "notes": ""
-    },
-    {
-      "id": "catalog:เจ้า",
-      "word": "เจ้า",
-      "readingTH": "เจ้า",
-      "zh": "主人",
-      "en": "jâo",
-      "level": "初",
-      "category": "นามคน",
-      "sourceFile": "words-data.js",
-      "status": "match",
-      "syllables": [
-        {
-          "th": "เจ้า",
-          "lead": null,
-          "cons": "จ",
-          "fullSpelling": "เจ้า",
-          "expectedToneName": "โท",
-          "computedToneName": "โท",
-          "match": true,
-          "cls": "mid",
-          "clsZh": "中子音",
-          "mark": "้",
-          "markName": "ไม้โท",
-          "live": true,
-          "vowelType": "long",
-          "initChar": "จ",
-          "reason": "「จ」是中子音，加上聲調符「้」（ไม้โท）→ 組合成第三聲"
         }
       ],
       "notes": ""
@@ -5345,7 +5283,7 @@
       "level": "中",
       "category": "การเดินทาง",
       "sourceFile": "words-data.js",
-      "status": "mismatch",
+      "status": "match",
       "syllables": [
         {
           "th": "ส",
@@ -5366,20 +5304,20 @@
         },
         {
           "th": "นาม",
-          "lead": null,
-          "cons": "ส",
-          "fullSpelling": "นาม",
+          "lead": "ห",
+          "cons": "น",
+          "fullSpelling": "หนาม",
           "expectedToneName": "จัตวา",
-          "computedToneName": "สามัญ",
-          "match": false,
-          "cls": "low",
-          "clsZh": "低子音",
+          "computedToneName": "จัตวา",
+          "match": true,
+          "cls": "lead",
+          "clsZh": "高子音",
           "mark": null,
           "markName": null,
           "live": true,
           "vowelType": "long",
-          "initChar": "น",
-          "reason": null
+          "initChar": "หน",
+          "reason": "「หน」是前引字，這個音節是活音節（長母音或長尾音），沒有聲調符 → 固定念第五聲"
         },
         {
           "th": "บิน",
@@ -5859,7 +5797,7 @@
       "level": "中",
       "category": "โรงแรม",
       "sourceFile": "words-data.js",
-      "status": "mismatch",
+      "status": "match",
       "syllables": [
         {
           "th": "สระ",
@@ -5867,16 +5805,16 @@
           "cons": "ส",
           "fullSpelling": "สระ",
           "expectedToneName": "เอก",
-          "computedToneName": "จัตวา",
-          "match": false,
+          "computedToneName": "เอก",
+          "match": true,
           "cls": "high",
           "clsZh": "高子音",
           "mark": null,
           "markName": null,
-          "live": true,
+          "live": false,
           "vowelType": "short",
           "initChar": "ส",
-          "reason": null
+          "reason": "「ส」是高子音，這個音節是死音節（短母音或短尾音），沒有聲調符 → 固定念第二聲"
         },
         {
           "th": "ว่าย",
@@ -6407,7 +6345,7 @@
       "level": "中",
       "category": "ทักทาย/เวลา/แนวคิด",
       "sourceFile": "words-data.js",
-      "status": "mismatch",
+      "status": "match",
       "syllables": [
         {
           "th": "ส",
@@ -6428,20 +6366,20 @@
         },
         {
           "th": "วัส",
-          "lead": null,
-          "cons": "ส",
-          "fullSpelling": "วัส",
+          "lead": "ห",
+          "cons": "ว",
+          "fullSpelling": "หวัส",
           "expectedToneName": "เอก",
-          "computedToneName": "ตรี",
-          "match": false,
-          "cls": "low",
-          "clsZh": "低子音",
+          "computedToneName": "เอก",
+          "match": true,
+          "cls": "lead",
+          "clsZh": "高子音",
           "mark": null,
           "markName": null,
           "live": false,
           "vowelType": "short",
-          "initChar": "ว",
-          "reason": null
+          "initChar": "หว",
+          "reason": "「หว」是前引字，這個音節是死音節（短母音或短尾音），沒有聲調符 → 固定念第二聲"
         },
         {
           "th": "ดี",
@@ -7528,7 +7466,7 @@
       "readingTH": "เครื่อง-บิน",
       "zh": "飛機",
       "en": "khrʉ̂ang-bin",
-      "level": "初",
+      "level": "中",
       "category": "การเดินทาง",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -8119,11 +8057,11 @@
       "notes": ""
     },
     {
-      "id": "catalog:ป้ายรถ",
-      "word": "ป้ายรถ",
-      "readingTH": "ป้าย-รด",
+      "id": "catalog:ป้ายรถเมล์",
+      "word": "ป้ายรถเมล์",
+      "readingTH": "ป้าย-รด-เม",
       "zh": "站牌",
-      "en": "bpâai-rót",
+      "en": "bpâai-rót-mee",
       "level": "中",
       "category": "การเดินทาง",
       "sourceFile": "words-data.js",
@@ -8162,6 +8100,23 @@
           "vowelType": null,
           "initChar": "ร",
           "reason": "「ร」是低子音，死音節+短母音 → 念第四聲"
+        },
+        {
+          "th": "เมล์",
+          "lead": null,
+          "cons": "ม",
+          "fullSpelling": "เมล์",
+          "expectedToneName": "สามัญ",
+          "computedToneName": "สามัญ",
+          "match": true,
+          "cls": "low",
+          "clsZh": "低子音",
+          "mark": null,
+          "markName": null,
+          "live": true,
+          "vowelType": "long",
+          "initChar": "ม",
+          "reason": "「ม」是低子音，這個音節是活音節（長母音或長尾音），沒有聲調符 → 固定念第一聲"
         }
       ],
       "notes": ""
@@ -9169,7 +9124,7 @@
       "readingTH": "ตำ-แหน่ง",
       "zh": "職位",
       "en": "dtam-nàeng",
-      "level": "初",
+      "level": "中",
       "category": "งาน",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -9265,7 +9220,7 @@
       "readingTH": "งาน-เลี้ยง",
       "zh": "聚會",
       "en": "ngaan-líang",
-      "level": "初",
+      "level": "中",
       "category": "งาน",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -9313,7 +9268,7 @@
       "readingTH": "อี-เมล",
       "zh": "電子郵件",
       "en": "ii-meeo",
-      "level": "初",
+      "level": "中",
       "category": "งาน",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -9426,7 +9381,7 @@
       "readingTH": "วัน-หยุด",
       "zh": "假日",
       "en": "wan-yùt",
-      "level": "初",
+      "level": "中",
       "category": "งาน",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -9567,7 +9522,7 @@
     {
       "id": "catalog:ประชุมงาน",
       "word": "ประชุมงาน",
-      "readingTH": "ปฺระ-ชุม-งาน",
+      "readingTH": "ประ-ชุม-งาน",
       "zh": "工作會議",
       "en": "bprà-chum-ngaan",
       "level": "中",
@@ -9793,7 +9748,7 @@
     {
       "id": "catalog:กระเป๋าเงิน",
       "word": "กระเป๋าเงิน",
-      "readingTH": "กฺระ-เป๋า-เงิน",
+      "readingTH": "กระ-เป๋า-เงิน",
       "zh": "錢包",
       "en": "grà-bpǎo-ngern",
       "level": "中",
@@ -10629,7 +10584,7 @@
     {
       "id": "catalog:ครอบครัว",
       "word": "ครอบครัว",
-      "readingTH": "คฺรอบ-คฺรัว",
+      "readingTH": "ครอบ-ครัว",
       "zh": "家庭",
       "en": "khrôop-khrua",
       "level": "中",
@@ -10869,10 +10824,10 @@
     {
       "id": "catalog:พรุ่งนี้",
       "word": "พรุ่งนี้",
-      "readingTH": "พฺรุ่ง-นี้",
+      "readingTH": "พรุ่ง-นี้",
       "zh": "明天",
       "en": "phrûng-níi",
-      "level": "中",
+      "level": "初",
       "category": "ทักทาย/เวลา/แนวคิด",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -11290,7 +11245,7 @@
       "readingTH": "น้ำ-ตาน",
       "zh": "咖啡色",
       "en": "nám-taan",
-      "level": "中",
+      "level": "初",
       "category": "สี",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -11437,7 +11392,7 @@
       "level": "中",
       "category": "คำขยาย",
       "sourceFile": "words-data.js",
-      "status": "mismatch",
+      "status": "match",
       "syllables": [
         {
           "th": "ส",
@@ -11458,20 +11413,20 @@
         },
         {
           "th": "ว่าง",
-          "lead": null,
-          "cons": "ส",
-          "fullSpelling": "ว่าง",
+          "lead": "ห",
+          "cons": "ว",
+          "fullSpelling": "หว่าง",
           "expectedToneName": "เอก",
-          "computedToneName": "โท",
-          "match": false,
-          "cls": "low",
-          "clsZh": "低子音",
+          "computedToneName": "เอก",
+          "match": true,
+          "cls": "lead",
+          "clsZh": "高子音",
           "mark": "่",
           "markName": "ไม้เอก",
           "live": true,
           "vowelType": "long",
-          "initChar": "ว",
-          "reason": null
+          "initChar": "หว",
+          "reason": "「หว」是前引字，加上聲調符「่」（ไม้เอก）→ 組合成第二聲"
         }
       ],
       "notes": ""

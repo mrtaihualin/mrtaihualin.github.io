@@ -2016,7 +2016,7 @@
   <div class="tf-level-tabs" id="tf-level-tabs">
     <button class="tf-ltab" id="tf-ltab-1" onclick="TF.selectLevel(1)">初級</button>
     <button class="tf-ltab" id="tf-ltab-2" onclick="TF.selectLevel(2)">中級</button>
-    <button class="tf-ltab" id="tf-ltab-3" onclick="TF.selectLevel(3)">高級</button>
+    <button class="tf-ltab" id="tf-ltab-3" onclick="TF.selectLevel(3)" style="display:none;">高級</button> <!-- Lin 2026-07-15: ซ่อนแท็บ 高級 ไว้ก่อน (ไม่ลบโค้ด/ข้อมูล เผื่อเปิดคืน) -->
   </div>
 
   <div class="tf-card">
@@ -2397,8 +2397,6 @@ var WORD_PARTS = {
   'ญาติ':[{c:'ญ',vn:'สระอา',vf:'◌า',f:'ติ'}],
   'หมอ':[{c:'หม',vn:'สระออ',vf:'◌อ',f:''}],
   'นาย':[{c:'น',vn:'สระอา',vf:'◌า',f:'ย'}],
-  'ท่าน':[{c:'ท',vn:'สระอา',vf:'◌า',f:'น'}],
-  'เจ้า':[{c:'จ',vn:'สระเอา',vf:'เ◌า',f:''}],
   'ชาย':[{c:'ช',vn:'สระอา',vf:'◌า',f:'ย'}],
   'เด็ก':[{c:'ด',vn:'สระเอะ',vf:'เ็',f:'ก'}],
   'แขก':[{c:'ข',vn:'สระแอ',vf:'แ◌',f:'ก'}],

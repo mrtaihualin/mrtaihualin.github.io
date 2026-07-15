@@ -368,7 +368,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     },
     resetOnFail: function(rec){ rec = rec || this.blank(); rec.stage = 0; rec.dueDate = ''; rec.dueAt = 0; rec.everFailed = true; return rec; }
   };
-  var srsRecords = {};           // key = index ใน ADV_SENTENCES (คงที่ ไม่ใช่ลำดับสุ่มของรอบนี้)
+  // Lin 2026-07-15: เปลี่ยน key จาก "ลำดับ index ใน ADV_SENTENCES" เป็น "ตัวประโยค+ระดับ" (woSrsKey) กันบั๊ก —
+  // ก่อนหน้านี้ถ้า Lin แก้/เพิ่ม/ลบ/สลับลำดับประโยคใน data/adv-sentences.js ความจำ SRS ของนักเรียนจะไปติดผิดประโยคแบบเงียบๆ
+  var srsRecords = {};           // key = woSrsKey(ประโยค) → SRS record
   var SRS_SAVE_KEY = 'wo_srs_v1';
   function woLoadSrs(){ try{ var raw=localStorage.getItem(SRS_SAVE_KEY); srsRecords = raw ? (JSON.parse(raw)||{}) : {}; }catch(e){ srsRecords = {}; } }
   function woSaveSrs(){ try{ localStorage.setItem(SRS_SAVE_KEY, JSON.stringify(srsRecords)); }catch(e){} }
@@ -377,14 +379,15 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   // ════════════════════════════════════════════
   // ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='wordorder') → merge เข้า srsRecords ──
   //   • อ่านอย่างเดียว · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
-  //   • เก็บด้วย "ลำดับ(index)" ใน ADV_SENTENCES → แปลงประโยค→index ก่อน merge · ประโยคที่ไม่มีแล้ว = ข้าม (กันคำผี)
-  //   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอิน = ใช้ srsRecords ในเครื่องเดิม · merge = เลือกอันก้าวหน้ากว่า (ทดสอบกดจริง 8/8)
+  //   • เก็บด้วย "ตัวประโยค+ระดับ" (woSrsKey) → ประโยคที่ไม่มีแล้ว = ข้าม (กันประโยคผี) — แก้ 2026-07-15 (เดิมเก็บด้วย index, บั๊กเดียวกับ reading-game/typing-game)
+  //   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอิน = ใช้ srsRecords ในเครื่องเดิม · merge = เลือกอันก้าวหน้ากว่า
   // ════════════════════════════════════════════
   function woSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
   function woSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=woSrsRank(a),rb=woSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
-  function woSrsIndexBySentence(sentThai){
-    for(var i=0;i<ADV_SENTENCES.length;i++){ if(ADV_SENTENCES[i].th===sentThai) return i; }
-    return -1; // ไม่มีใน ADV_SENTENCES แล้ว = ประโยคผี → ข้าม
+  function woSrsKey(th){ return (th||'')+'@'+LEVEL_NUM; }
+  function woSentenceExists(sentThai){
+    for(var i=0;i<ADV_SENTENCES.length;i++){ if(ADV_SENTENCES[i].th===sentThai) return true; }
+    return false; // ไม่มีใน ADV_SENTENCES แล้ว = ประโยคผี → ข้าม
   }
   var __woSrsSyncPromise=null;
   window.__woSrsSyncedOnce=false;
@@ -401,13 +404,13 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         var changed=false;
         res.data.forEach(function(row){
           if(Number(row.level)!==LEVEL_NUM) return;         // เกมนี้มีระดับเดียว (高=3)
-          var i=woSrsIndexBySentence(row.word);
-          if(i<0) return;                                    // ประโยคผี ข้าม
+          if(!woSentenceExists(row.word)) return;            // ประโยคผี ข้าม
+          var key=woSrsKey(row.word);
           var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,everHinted:false,mastered:!!row.mastered};
-          var cur=srsRecords[i];
+          var cur=srsRecords[key];
           var win=woSrsPickAdvanced(cur,srv);
           if(!cur || win.stage!==cur.stage || (win.dueDate||'')!==(cur.dueDate||'') || (!!win.mastered)!==(!!cur.mastered)){
-            srsRecords[i]=win; changed=true;
+            srsRecords[key]=win; changed=true;
           }
         });
         if(changed) woSaveSrs();
@@ -718,12 +721,12 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     // งานที่7 (SRS): กรองด้วย stage-based SRS เฉพาะตอนล็อกอินเท่านั้น — ไม่ล็อกอิน = เล่นได้ทุกประโยค ไม่จำ (ข้อ0/ข้อ7)
     if (woLoggedIn()) {
       pool = allIdx.filter(function(i){
-        var rec = srsRecords[i];
+        var rec = srsRecords[woSrsKey(ADV_SENTENCES[i].th)];
         if (rec && rec.mastered) return false;          // เชี่ยวชาญแล้ว (ตัดออกถาวร)
         if (rec && !WO_SRS.isDue(rec, now)) return false; // ยังไม่ครบกำหนดทบทวน
         return true;
       });
-      if (pool.length === 0) pool = allIdx.filter(function(i){ var rec = srsRecords[i]; return !(rec && rec.mastered); });
+      if (pool.length === 0) pool = allIdx.filter(function(i){ var rec = srsRecords[woSrsKey(ADV_SENTENCES[i].th)]; return !(rec && rec.mastered); });
       if (pool.length === 0) { practiceMode = true; pool = allIdx.slice(); } // จำครบทุกประโยคแล้ว → ทบทวนฟรี 0 แต้ม (กันฟาร์ม)
     } else {
       pool = allIdx.slice();
@@ -899,13 +902,13 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     // Lin 2026-07-12: ซ่อนกล่องคำในคลัง (ใช้ครบแล้ว แต่ opacity:0 ยังกินที่อยู่) กันช่องว่างเปล่าๆ ก่อนถึง popup ผลลัพธ์
     var _wob0=document.getElementById('wo-bank'); if(_wob0)_wob0.style.display='none';
     updateHintWarning();
+    var srsKey = woSrsKey(s.th);
     if (woLoggedIn() && !practiceMode) {
-      var srsIdx = SET[idx];
-      srsRecords[srsIdx] = WO_SRS.resetOnFail(srsRecords[srsIdx]); // ผิด/ตาย = กลับวันแรกเสมอ (MASTER ข้อ7)
+      srsRecords[srsKey] = WO_SRS.resetOnFail(srsRecords[srsKey]); // ผิด/ตาย = กลับวันแรกเสมอ (MASTER ข้อ7)
       woSaveSrs();
       woServerFinish(s.th, false); // Phase 4: ตาย/ล้มเหลว = รีเซ็ตฝั่งเซิร์ฟเวอร์ด้วย
     }
-    woLogSentence({failed:true, pts:0, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[SET[idx]] && srsRecords[SET[idx]].dueDate) || '') : ''});
+    woLogSentence({failed:true, pts:0, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
     curSentenceIsKnownCheck = false;
     curCombo = 0;
   }
@@ -914,7 +917,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     var s = curSentence();
     var isCorrect = answer.every(function(v, i){ return v === i; });
     var banner = document.getElementById('wo-banner');
-    var srsIdx = SET[idx];
+    var srsKey = woSrsKey(s.th);
 
     if (isCorrect) {
       locked = true;
@@ -925,11 +928,11 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         curSentenceIsKnownCheck = false;
         if (woLoggedIn() && !practiceMode) {
           if (passedClean) {
-            var recK = srsRecords[srsIdx] || WO_SRS.blank();
+            var recK = srsRecords[srsKey] || WO_SRS.blank();
             recK.mastered = true;
-            srsRecords[srsIdx] = recK;
+            srsRecords[srsKey] = recK;
           } else {
-            srsRecords[srsIdx] = WO_SRS.resetOnFail(srsRecords[srsIdx]);
+            srsRecords[srsKey] = WO_SRS.resetOnFail(srsRecords[srsKey]);
           }
           woSaveSrs();
           woServerFinish(s.th, passedClean, {knownCheck:true}); // Phase 4: 已記得 → mastered ไม่ให้ดาว
@@ -941,7 +944,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         document.getElementById('wo-hint-btn').disabled = true;
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
-        woLogSentence({mastered:!!passedClean, pts:0, srsDue:passedClean?'已精通':((srsRecords[srsIdx] && srsRecords[srsIdx].dueDate) || '')});
+        woLogSentence({mastered:!!passedClean, pts:0, srsDue:passedClean?'已精通':((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '')});
         return;
       }
 
@@ -963,7 +966,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
       // ── SRS (เฉพาะล็อกอิน+ไม่ใช่ practiceMode) ──
       if (woLoggedIn() && !practiceMode) {
-        var rec = srsRecords[srsIdx] || WO_SRS.blank();
+        var rec = srsRecords[srsKey] || WO_SRS.blank();
         var isFinalReview = (rec.stage === (WO_SRS.cfg.CLEAN_ROUNDS_TO_MASTER - 1)) && !rec.mastered;
         // MASTER ข้อ3.6: ด่านตัดสิน day16 ห้ามใช้提示เด็ดขาด — ใช้提示ตอน day16 ถือว่าไม่ผ่าน กลับ day1 (ต่างจาก day1/day7 ที่提示ยังผ่านได้ปกติแค่ลดคุณภาพดาว)
         if (!attemptedWrongThisSentence && !(hintUsedThisSentence && isFinalReview)) {
@@ -987,7 +990,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
           rec = WO_SRS.resetOnFail(rec);
           woServerFinish(s.th, false); // Phase 4: ผิด/ใช้คำใบ้ตอน day16 = รีเซ็ต
         }
-        srsRecords[srsIdx] = rec;
+        srsRecords[srsKey] = rec;
         woSaveSrs();
       }
 
@@ -1016,7 +1019,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){
         el.classList.add('correct');
       });
-      woLogSentence({guide:!!hintUsedThisSentence, pts:pts, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsIdx] && srsRecords[srsIdx].dueDate) || '') : ''});
+      woLogSentence({guide:!!hintUsedThisSentence, pts:pts, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
       try{ if(window.gtag) gtag('event','word_order_correct',{sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
     } else {
       attemptedWrongThisSentence = true;
