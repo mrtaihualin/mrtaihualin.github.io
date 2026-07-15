@@ -54,6 +54,11 @@ async function pushLine(channelToken, targetUserId, text) {
 }
 
 // เหมือน computeCurrentCourse() ใน classroom/index.html เป๊ะๆ — ห้ามแก้สูตรที่นี่โดยไม่แก้ที่นั่นด้วย
+// 2026-07-15 แก้ (เจอจากการเช็คข้อมูลจริง — Mark กับ Oreo ไม่มี start_date เลยสักแถว)：
+//   ต้นฉบับใน classroom/index.html มี fallback สำหรับกรณี "ไม่มีแถวไหนมี start_date เลย" ด้วย
+//   (รวมทุกแถวตลอดชีพแทน) — ตอนพอร์ตมาที่นี่รอบแรกลืมใส่ fallback นี้ ทำให้คนที่ไม่มี start_date
+//   (เช่น Mark, Oreo) จะไม่เข้าเงื่อนไข hasCourse เลย ต่อให้โควต้าใกล้หมดจริงก็จะไม่ได้รับ LINE เตือน
+//   แบบเงียบๆ — ตรงกับบั๊กคลาสเดียวกับที่ตรวจทั้งระบบมา ต้องใส่ fallback ให้ตรงกับต้นฉบับ 100%
 function computeCurrentCourse(pays, atts) {
   const active = (pays || []).filter((p) => p.status === 'pending' || p.status === 'done');
   const withDate = active.filter((p) => p.start_date);
@@ -66,7 +71,12 @@ function computeCurrentCourse(pays, atts) {
       .reduce((s, a) => s + (a.lessons || 1), 0);
     return { hasCourse: true, bought, used, remain: bought - used, paymentId: cur.id };
   }
-  return { hasCourse: false, bought: 0, used: 0, remain: 0, paymentId: null };
+  if (!active.length) return { hasCourse: false, bought: 0, used: 0, remain: 0, paymentId: null };
+  // fallback: ไม่มีแถวไหนมี start_date เลย → รวมทุกแถวตลอดชีพ (เหมือนต้นฉบับเป๊ะ)
+  const bought = active.reduce((s, p) => s + (p.lessons || 0) + (p.bonus_lessons || 0), 0);
+  const used = (atts || []).reduce((s, a) => s + (a.lessons || 1), 0);
+  const latest = active.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
+  return { hasCourse: bought > 0, bought, used, remain: bought - used, paymentId: latest.id };
 }
 
 serve(async (req) => {
@@ -105,7 +115,7 @@ serve(async (req) => {
       checked++;
       const { data: pays } = await supabase
         .from('classroom_payments')
-        .select('id, lessons, bonus_lessons, status, start_date, low_quota_notified')
+        .select('id, lessons, bonus_lessons, status, start_date, low_quota_notified, created_at')
         .eq('token', s.token);
       const { data: atts } = await supabase
         .from('classroom_attendance')
@@ -120,40 +130,41 @@ serve(async (req) => {
 
       const remain = q.remain < 0 ? 0 : q.remain;
       const messageText = '⏰ 提醒：你這一期的泰語課只剩 ' + remain + ' 堂囉！記得跟老師約續課時間，才不會中斷學習喔 😊';
-      try {
-        await pushLine(channelToken, s.line_user_id, messageText);
-        sent++;
 
-        // 2026-07-15（รอบ 3, Lin สั่ง）：เดิมสำเนาให้ครู "best-effort" — ส่งนักเรียนสำเร็จก็มาร์คว่าเตือนแล้วเลย
-        // ไม่สนว่าสำเนาครูจะสำเร็จไหม เปลี่ยนใหม่ตามที่ Lin ขอ: "ถ้าส่งของผมไม่สำเร็จ ให้ถือว่าไม่สำเร็จเหมือนกัน"
-        // → ต้องส่งครบทั้ง 2 ฝั่ง (นักเรียน + ครู) ก่อนถึงจะมาร์ค low_quota_notified = true
-        // ผลข้างเคียงที่ Lin ควรรู้ไว้: ถ้าสำเนาฝั่งครูพังแต่ฝั่งนักเรียนส่งไปแล้ว พรุ่งนี้ระบบจะลองส่งใหม่ทั้งคู่
-        // (นักเรียนอาจได้รับข้อความซ้ำ) — ยอมแลกแบบนี้เพื่อไม่ให้ครูพลาดการแจ้งเตือนแม้แต่ครั้งเดียว
+      // 2026-07-15（รอบ 4, Lin ถาม）："ทำให้ส่งได้เหมือนกัน/ไม่ได้เหมือนกัน" (ส่งพร้อมกันจริงๆ ทั้ง 2 ฝั่ง)
+      // ทำแบบ "ทั้งคู่พังพร้อมกันเป๊ะๆ" ไม่มีทางเป็นไปได้ 100% เพราะเป็นการยิง LINE 2 ครั้งแยกกัน
+      // (ฝั่งไหนฝั่งหนึ่งอาจสำเร็จก่อนแล้วอีกฝั่งเน็ตสะดุดทีหลังก็ได้ ควบคุมให้พังพร้อมกันเป๊ะไม่ได้จริง)
+      // แต่ทำให้ "ผลข้างเคียงตกไปอยู่ฝั่งที่ปลอดภัยกว่า" ได้ — เปลี่ยนลำดับใหม่: ยิงหาครูก่อน
+      //   ถ้าฝั่งครูพัง → ไม่ส่งหานักเรียนเลยรอบนี้ (นักเรียนไม่ได้อะไรทั้งคู่ ไม่มีใครได้ข้อความซ้ำ)
+      //   ถ้าฝั่งครูสำเร็จ ค่อยส่งหานักเรียนต่อ → ถ้าฝั่งนักเรียนพังทีหลัง พรุ่งนี้จะลองใหม่ทั้งคู่
+      //     (ครูอาจได้ข้อความซ้ำ 1 รอบ แต่นักเรียนจะได้รับแค่ครั้งเดียวเสมอ) — ยอมให้ของซ้ำตกที่ครูเอง
+      //     ไม่ใช่ที่นักเรียน เพราะข้อความซ้ำถึงนักเรียนดูไม่เป็นมืออาชีพกว่าซ้ำถึงครูเอง
+      try {
         let teacherOk = true;
         if (teacherUserId) {
           try {
-            await pushLine(channelToken, teacherUserId, '📋 已發送提醒給 ' + (s.name || s.token) + '：\n' + messageText);
+            await pushLine(channelToken, teacherUserId, '📋 即將發送提醒給 ' + (s.name || s.token) + '：\n' + messageText);
           } catch (e) {
             teacherOk = false;
-            console.warn('[low-quota-cron] ส่งสำเนาให้ครูไม่สำเร็จ — ถือว่ารอบนี้ยังไม่สำเร็จ พรุ่งนี้จะลองใหม่ทั้งคู่:', e);
+            console.warn('[low-quota-cron] ส่งให้ครูไม่สำเร็จ — ยังไม่ส่งหานักเรียน รอลองใหม่พรุ่งนี้:', e);
           }
         }
+        if (!teacherOk) { errCount++; continue; }
 
-        if (teacherOk) {
-          // RELIABILITY FIRST：一定要檢查有沒有真的標記成功，不然會每天重複發送
-          const { error: markErr } = await supabase
-            .from('classroom_payments')
-            .update({ low_quota_notified: true })
-            .eq('id', curPayment.id);
-          if (markErr) {
-            console.error('[low-quota-cron] 標記 low_quota_notified 失敗，可能會重複提醒：', markErr.message, 'payment_id=', curPayment.id);
-            errCount++;
-          }
-        } else {
+        await pushLine(channelToken, s.line_user_id, messageText);
+        sent++;
+
+        // RELIABILITY FIRST：一定要檢查有沒有真的標記成功，不然會每天重複發送
+        const { error: markErr } = await supabase
+          .from('classroom_payments')
+          .update({ low_quota_notified: true })
+          .eq('id', curPayment.id);
+        if (markErr) {
+          console.error('[low-quota-cron] 標記 low_quota_notified 失敗，可能會重複提醒：', markErr.message, 'payment_id=', curPayment.id);
           errCount++;
         }
       } catch (e) {
-        errCount++;
+        errCount++; // ส่งหานักเรียนไม่สำเร็จ (ครูอาจได้ข้อความไปแล้ว 1 ครั้งเป็นของแถม ไม่กระทบอะไร)
       }
     }
 

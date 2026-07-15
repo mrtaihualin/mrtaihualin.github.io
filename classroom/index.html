@@ -1773,6 +1773,9 @@ async function confirmAddClassDay() {
     const end = teacherTimeToDate(p.dateVal, p.endTime);
     const body = {
       summary: s.name,
+      // 2026-07-15 加（Lin 要求）：跟 createMeetLinkForStudent 用同一個顏色（colorId '6' = Tangerine，
+      // 是 Google Calendar 11 個可用顏色裡最接近 Lin 選的 Mango 的那個，2026-07-10 就對過了）
+      colorId: '6',
       description: '系統自動建立（➕ 加課堂時間）' + (s.meet ? ('\n上課連結：' + s.meet) : ''),
       start: { dateTime: start.toISOString(), timeZone: TEACHER_TZ },
       end: { dateTime: end.toISOString(), timeZone: TEACHER_TZ },
