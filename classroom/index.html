@@ -573,8 +573,13 @@
     </p>
     <label class="settings-label">想改到哪一天？</label>
     <input class="settings-input" id="reqDateInput" type="date" oninput="onReqScheduleChange()" />
-    <label class="settings-label">想改到幾點？（選填，格式 HH:MM，例如 14:30 — 請填「你自己現在所在地」的時間，不用換算成泰國時間）</label>
-    <input class="settings-input" id="reqTimeInput" type="text" placeholder="例：14:30" oninput="onReqScheduleChange()" />
+    <label class="settings-label">想改到幾點？（選填，請選「你自己現在所在地」的時間，不用換算成泰國時間）</label>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="reqTimeInput_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="reqTimeInput_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+    </div>
+    <input type="hidden" id="reqTimeInput" value="" oninput="onReqScheduleChange()" />
     <p id="reqScheduleHint" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeClassRequestModal()">取消</button>
@@ -593,8 +598,13 @@
     </p>
     <label class="settings-label">想約哪一天？</label>
     <input class="settings-input" id="addReqDateInput" type="date" oninput="onAddReqScheduleChange()" />
-    <label class="settings-label">想約幾點？（格式 HH:MM，例如 14:30 — 請填「你自己現在所在地」的時間，不用換算成泰國時間）</label>
-    <input class="settings-input" id="addReqTimeInput" type="text" placeholder="例：14:30" oninput="onAddReqScheduleChange()" />
+    <label class="settings-label">想約幾點？（請選「你自己現在所在地」的時間，不用換算成泰國時間）</label>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="addReqTimeInput_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addReqTimeInput')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="addReqTimeInput_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addReqTimeInput')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+    </div>
+    <input type="hidden" id="addReqTimeInput" value="" oninput="onAddReqScheduleChange()" />
     <p id="addReqScheduleHint" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
     <label class="settings-label">備註（選填，例如：想從這天開始每週固定）</label>
     <input class="settings-input" id="addReqNoteInput" placeholder="選填" />
@@ -648,8 +658,13 @@
     </p>
     <label class="settings-label">提議改到哪一天？（泰國時間）</label>
     <input class="settings-input" id="proposeDateInput" type="date" />
-    <label class="settings-label">提議改到幾點？（泰國時間，格式 HH:MM，例如 14:30）</label>
-    <input class="settings-input" id="proposeTimeInput" type="text" placeholder="例：14:30" />
+    <label class="settings-label">提議改到幾點？（泰國時間）</label>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="proposeTimeInput_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="proposeTimeInput_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+    </div>
+    <input type="hidden" id="proposeTimeInput" value="" />
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeProposeTimeModal()">取消</button>
       <button class="btn-gold" id="proposeSubmitBtn" onclick="submitProposeTime()">📤 傳送給學生</button>
@@ -666,8 +681,13 @@
     </p>
     <label class="settings-label">從哪一天開始，每週固定改到？（泰國時間）</label>
     <input class="settings-input" id="permDateInput" type="date" />
-    <label class="settings-label">固定改到幾點？（泰國時間，格式 HH:MM，例如 14:30）</label>
-    <input class="settings-input" id="permTimeInput" type="text" placeholder="例：14:30" />
+    <label class="settings-label">固定改到幾點？（泰國時間）</label>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="permTimeInput_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('permTimeInput')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="permTimeInput_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('permTimeInput')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+    </div>
+    <input type="hidden" id="permTimeInput" value="" />
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closePermanentChangeModal()">取消</button>
       <button class="btn-gold" onclick="submitPermanentChange()">📌 永久變更</button>
@@ -912,7 +932,12 @@
       </div>
       <div style="flex:1;">
         <label class="settings-label">上課時間</label>
-        <input class="settings-input" type="text" id="genClassTime" placeholder="例：14:30" onchange="onGenScheduleChange()" />
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select class="settings-input" id="genClassTime_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('genClassTime')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+          <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+          <select class="settings-input" id="genClassTime_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('genClassTime')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+        </div>
+        <input type="hidden" id="genClassTime" value="" onchange="onGenScheduleChange()" />
       </div>
     </div>
 
@@ -1405,11 +1430,32 @@ function formatThaiDateTimeLabel(isoOrDateStr) {
   return f.dateStr + ' ' + f.timeStr;
 }
 
-// 2026-07-13 改（Lin 要求）：上課時間欄位一律改回「自己打字」的文字框（不要下拉、不要瀏覽器原生 time picker）
-// 但輸入自由文字容易打錯格式，下游 teacherTimeToDate() 是直接字串拼接（dateStr+'T'+timeStr+':00+07:00'），
-// 打錯格式會變成 Invalid Date 卻不會報錯，所以送出前一定要驗證格式，不能只信任使用者打對。
+// 2026-07-15 改（Lin 要求）：上課時間欄位改回「下拉選單」（小時 00-23 + 分鐘只有 00/30），
+// 不讓老師/學生自己打字了，改用兩個 <select> + 一個隱藏 <input>（id 不變，值="HH:MM"）同步，
+// 這樣下面所有讀 .value 的地方完全不用改，isValidTimeStr() 還是拿來做最後一道防線。
 function isValidTimeStr(str) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test((str || '').trim());
+}
+
+// 小時+分鐘其中一個沒選 → 隱藏 input 清空；兩個都選了 → 組成 "HH:MM" 寫回隱藏 input，
+// 再手動 dispatch input/change event，讓原本掛在隱藏 input 上的 oninput/onchange 屬性照常觸發。
+function syncTimeDropdown(baseId) {
+  var hEl = document.getElementById(baseId + '_h'), mEl = document.getElementById(baseId + '_m');
+  var hidden = document.getElementById(baseId);
+  if (!hEl || !mEl || !hidden) return;
+  hidden.value = (hEl.value && mEl.value) ? (hEl.value + ':' + mEl.value) : '';
+  hidden.dispatchEvent(new Event('input', { bubbles: true }));
+  hidden.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+// 開 modal / 送出後要清空時間欄位 → 用這個，把小時+分鐘下拉跟隱藏 input 一起清空
+// （原本直接 document.getElementById(id).value='' 只清得到隱藏 input，下拉選單不會跟著變空）
+function resetTimeDropdown(baseId) {
+  var hEl = document.getElementById(baseId + '_h'), mEl = document.getElementById(baseId + '_m');
+  if (hEl) hEl.value = '';
+  if (mEl) mEl.value = '';
+  var hidden = document.getElementById(baseId);
+  if (hidden) hidden.value = '';
 }
 
 // 搜尋「某天」Calendar 上「標題完全等於學生姓名」的事件（singleEvents 展開後每一次重複都有自己的 id，
@@ -2459,7 +2505,7 @@ function openGenLinkModal() {
   document.getElementById('genName').value = '';
   document.getElementById('genTokenPreview').style.display = 'none';
   document.getElementById('genStartDate').value = '';
-  document.getElementById('genClassTime').value = '';
+  resetTimeDropdown('genClassTime');
   populateGenStudentTzDropdown();
   document.getElementById('genStudentTz').value = '';
   document.getElementById('genWeeklyRecurring').checked = true;
@@ -4602,7 +4648,7 @@ function openClassRequestModal() {
   if (!nextClassCtx) return;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
   document.getElementById('reqDateInput').value = '';
-  document.getElementById('reqTimeInput').value = '';
+  resetTimeDropdown('reqTimeInput');
   document.getElementById('reqScheduleHint').style.display = 'none';
   document.getElementById('classRequestModal').classList.add('open');
 }
@@ -4692,7 +4738,7 @@ function openAddRequestModal(token) {
   if (!requireLineLinkedOrPrompt(token)) return;
   _addReqToken = token;
   document.getElementById('addReqDateInput').value = '';
-  document.getElementById('addReqTimeInput').value = '';
+  resetTimeDropdown('addReqTimeInput');
   document.getElementById('addReqNoteInput').value = '';
   document.getElementById('addReqScheduleHint').style.display = 'none';
   document.getElementById('addRequestModal').classList.add('open');
@@ -5478,7 +5524,7 @@ async function handleContactMyself() {
 function openProposeTimeModal() {
   closeOtherOptionsModal();
   document.getElementById('proposeDateInput').value = '';
-  document.getElementById('proposeTimeInput').value = '';
+  resetTimeDropdown('proposeTimeInput');
   document.getElementById('proposeTimeModal').classList.add('open');
 }
 function closeProposeTimeModal() { document.getElementById('proposeTimeModal').classList.remove('open'); }
@@ -5929,7 +5975,7 @@ var _permanentChangeToken = null;
 function openPermanentChangeModal(token) {
   _permanentChangeToken = token;
   document.getElementById('permDateInput').value = '';
-  document.getElementById('permTimeInput').value = '';
+  resetTimeDropdown('permTimeInput');
   document.getElementById('permanentChangeModal').classList.add('open');
 }
 function closePermanentChangeModal() { document.getElementById('permanentChangeModal').classList.remove('open'); }
