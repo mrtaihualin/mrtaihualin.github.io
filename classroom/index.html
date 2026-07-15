@@ -4849,6 +4849,7 @@ async function processClassRequestInner(id, r, isCancel) {
   var ev = matches[0];
   var oldStartIso = ev.start && (ev.start.dateTime || ev.start.date);
   var oldStartLabel = formatThaiDateTimeLabel(oldStartIso);
+  var newStartIsoForNotify = null; // 2026-07-15 加：改期時記下新時間，處理完要通知學生用
 
   if (isCancel) {
     if (!confirm('確定要取消這堂課嗎？\n\n學生：' + r.student_name + '\n原本時間：' + oldStartLabel + '（泰國時間 Asia/Bangkok）\n\n只會刪除 Google Calendar 上「這一次」的課堂，不影響其他週的固定課程。刪除前會先備份，之後可以復原。確定嗎？')) return;
@@ -4872,12 +4873,40 @@ async function processClassRequestInner(id, r, isCancel) {
     try {
       await backupCalendarEvent(id, r.token, 'move', ev, newStartIso);
       await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
+      newStartIsoForNotify = newStartIso;
     } catch (e) {
       alert('⚠️ 移動課堂失敗：' + (e.message || e) + '\n這筆申請還沒標記完成，請重試或手動處理。');
       return;
     }
   }
+
+  // 2026-07-15 加（Lin 回報：學生申請改期/取消，老師按「✅ 處理」後，Calendar 有動但學生完全沒收到通知
+  // ——查了才發現這條路線從一開始就沒接 LINE 通知，Calendar 搬完就直接結案，學生只能自己上網站看）
+  // RELIABILITY FIRST：不能吞掉失敗還跟老師說「已通知」，要老實回報實際送出結果
+  var notifySent = false, notifyError = null;
+  var sForNotify = studentsCache[r.token];
+  if (sForNotify && sForNotify.line_user_id) {
+    try {
+      var notifyMsg = isCancel
+        ? ('老師已確認，' + studentFacingTimeLabel(oldStartIso, sForNotify.pending_student_tz) + ' 這堂課已經取消了，如有疑問請直接聯絡老師')
+        : ('老師已確認，課堂已經改到 ' + studentFacingTimeLabel(newStartIsoForNotify, sForNotify.pending_student_tz) + '，如有疑問請直接聯絡老師');
+      var notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        body: JSON.stringify({ to: { studentToken: r.token }, message: notifyMsg }),
+      });
+      notifySent = notifyRes.ok;
+      if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+    } catch (e) { notifyError = e.message || String(e); }
+  }
+
   await finalizeRequestStatus(id, 'acknowledged');
+
+  if (!sForNotify || !sForNotify.line_user_id) {
+    alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
+  } else if (!notifySent) {
+    alert('✅ Calendar 已處理完成\n⚠️ 但 LINE 通知學生失敗（' + notifyError + '），請自己再跟學生說一聲');
+  }
 }
 
 // ⚙️ 其他：開小視窗選「自己聯絡學生」或「提議新時間給學生」
@@ -5013,7 +5042,31 @@ async function confirmAcceptedOfferInner(id, r) {
     alert('⚠️ 移動課堂失敗：' + (e.message || e));
     return;
   }
+
+  // 2026-07-15 加：同 processClassRequestInner 的理由——Calendar 搬完一定要通知學生，
+  // 不然學生按過「可以」之後就完全沒下文，還要自己上網站才知道處理好了
+  var notifySent2 = false, notifyError2 = null;
+  var sForNotify2 = studentsCache[r.token];
+  if (sForNotify2 && sForNotify2.line_user_id) {
+    try {
+      var notifyMsg2 = '老師已確認，課堂已經改到 ' + studentFacingTimeLabel(newStartIso, sForNotify2.pending_student_tz) + '，如有疑問請直接聯絡老師';
+      var notifyRes2 = await fetch(LINE_NOTIFY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        body: JSON.stringify({ to: { studentToken: r.token }, message: notifyMsg2 }),
+      });
+      notifySent2 = notifyRes2.ok;
+      if (!notifyRes2.ok) notifyError2 = 'LINE 回應 ' + notifyRes2.status;
+    } catch (e) { notifyError2 = e.message || String(e); }
+  }
+
   await finalizeRequestStatus(id, 'acknowledged');
+
+  if (!sForNotify2 || !sForNotify2.line_user_id) {
+    alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
+  } else if (!notifySent2) {
+    alert('✅ Calendar 已處理完成\n⚠️ 但 LINE 通知學生失敗（' + notifyError2 + '），請自己再跟學生說一聲');
+  }
 }
 
 // ↩️ 最近處理過、還在復原期限內的項目（backup 表）
