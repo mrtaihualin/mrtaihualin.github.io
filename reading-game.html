@@ -385,13 +385,17 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <div class="word-area">
       <div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
         <div class="word-th" id="wth">—</div>
-        <span id="rg-audio-btn-slot"></span><!-- ปุ่มลำโพง (โชว์เฉพาะคำที่มีไฟล์เสียง) — 2026-07-16 -->
-        <span id="rg-vault-btn-slot"></span>
       </div>
       <div class="word-zh" id="wzh"></div>
+      <!-- แถวปุ่ม 4 อันใต้คำศัพท์: 🔊เสียง(โชว์เมื่อมีไฟล์) · 🐣คำอ่าน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — Lin 2026-07-16 -->
+      <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 2px;">
+        <span id="rg-audio-btn-slot"></span>
+        <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="setRgPronMode(!rgPronMode)"></button>
+        <span id="zh-toggle-slot"></span>
+        <span id="rg-vault-btn-slot"></span>
+      </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
         <div class="rev-pron" id="rev-pron"></div>
-        <button id="rg-pron-toggle" type="button" onclick="setRgPronMode(!rgPronMode)" style="border:none;background:none;font-size:17px;cursor:pointer;padding:2px 4px;line-height:1;"></button>
       </div>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
     </div>

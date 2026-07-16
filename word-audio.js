@@ -27,14 +27,16 @@
     var s = document.createElement('style');
     s.id = 'word-audio-css';
     s.textContent =
-      '.word-audio-btn{background:#fff;border:1.5px solid rgba(139,99,16,0.30);cursor:pointer;font-size:17px;' +
+      '.word-audio-btn,.word-ctl-btn{background:#fff;border:1.5px solid rgba(139,99,16,0.30);cursor:pointer;font-size:17px;' +
       'width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;' +
       'padding:0;line-height:1;transition:transform .15s,background .15s;vertical-align:middle;}' +
-      '.word-audio-btn:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}' +
+      '.word-audio-btn:hover,.word-ctl-btn:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}' +
       '.word-audio-btn[data-playing="1"]{background:#fff3d8;border-color:#C8973A;}';
     document.head.appendChild(s);
     _styled = true;
   }
+  // ฉีด style ทันทีตอนโหลดไฟล์ — ปุ่มอื่นในแถวเดียวกัน (🐣 คำอ่าน) ใช้ class .word-ctl-btn ร่วมด้วย
+  injectStyles();
 
   function play(th, btn) {
     var url = urlFor(th);

@@ -2023,6 +2023,12 @@
 
   <div class="tf-card">
     <div class="tf-word-banner" id="tf-banner"></div>
+    <!-- แถวปุ่ม 3 อันใต้คำศัพท์: 🔊เสียง(โชว์เมื่อมีไฟล์) · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — ไม่มีปุ่มไข่🐣 เพราะคำอ่านจะเฉลยวรรณยุกต์ก่อนตอบ — Lin 2026-07-16 -->
+    <div id="tf-word-ctl-row" style="display:none;align-items:center;justify-content:center;gap:8px;margin:6px 0;">
+      <span id="tf-audio-btn-slot"></span>
+      <span id="zh-toggle-slot"></span>
+      <span id="tf-vault-btn-slot"></span>
+    </div>
     <div class="tf-bc" id="tf-bc"></div>
     <div class="tf-nav-bar" id="tf-nav-bar">
       <button class="tf-nav-btn" id="tf-back-btn" onclick="TF.back()" disabled>← 上一步</button>
@@ -4158,10 +4164,10 @@ function render() {
       mainBoxHtml =
         '<div class="tf-adv-sent-main">' + sentHtml + '</div>' +
         '<div class="tf-adv-sent-ctx-zh">' + (advSentenceCtx.zh || '') + '</div>' +
-        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-audio-btn-slot"></span><span id="tf-vault-btn-slot"></span></div>' +
+        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '">' + S.word + '</div>' +
         zhHtml;
     } else {
-      mainBoxHtml = '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-audio-btn-slot"></span><span id="tf-vault-btn-slot"></span></div>' + zhHtml;
+      mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>' + zhHtml;
     }
     banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml;
     // inject vault save button
@@ -4176,9 +4182,14 @@ function render() {
     }
     // ปุ่มลำโพงฟังเสียง — โชว์เฉพาะคำที่มีไฟล์เสียงใน AUDIO_MANIFEST (2026-07-16)
     if (window.WordAudio) WordAudio.fillSlot('tf-audio-btn-slot', S.word);
+    // แถวปุ่มใต้คำศัพท์ (อยู่นอก banner เพื่อไม่โดน innerHTML ล้างปุ่ม 🍙 ของ shared.js ทิ้ง) — โชว์คู่กับ banner เสมอ
+    var _ctlRow = document.getElementById('tf-word-ctl-row');
+    if (_ctlRow) _ctlRow.style.display = S.word ? 'flex' : 'none';
     document.getElementById('tf-hint').style.display = 'none';
   } else {
     banner.style.display = 'none';
+    var _ctlRow2 = document.getElementById('tf-word-ctl-row');
+    if (_ctlRow2) _ctlRow2.style.display = 'none';
     document.getElementById('tf-hint').style.display = (S.step === 'level-select') ? 'block' : 'none';
   }
 

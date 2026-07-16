@@ -427,10 +427,15 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     <div class="word-area">
       <div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
         <div class="word-th" id="wth">—</div>
-        <span id="rg-audio-btn-slot"></span><!-- ปุ่มลำโพง (โชว์เฉพาะคำที่มีไฟล์เสียง) — 2026-07-16 -->
-        <span id="rg-vault-btn-slot"></span>
       </div>
       <div class="word-zh" id="wzh"></div>
+      <!-- แถวปุ่ม 4 อันใต้คำศัพท์: 🔊เสียง(โชว์เมื่อมีไฟล์) · 🐣คำอ่าน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — Lin 2026-07-16 -->
+      <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 2px;">
+        <span id="rg-audio-btn-slot"></span>
+        <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="setRgPronMode(!rgPronMode)"></button>
+        <span id="zh-toggle-slot"></span>
+        <span id="rg-vault-btn-slot"></span>
+      </div>
       <div class="rev-pron" id="rev-pron"></div>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
     </div>
@@ -1086,6 +1091,23 @@ function renderSylStrip(){
     strip.appendChild(c);
   });
 }
+// ── ปุ่มเปิด/ปิดคำอ่าน 🐣/🥚 — port มาจากเกมอ่าน (Lin 2026-07-16) · ใช้ localStorage key เดียวกัน = ตั้งค่าครั้งเดียว sync กันทั้งเกมอ่าน/เกมพิมพ์
+// 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่ (จนกว่าจะเฉลย — ตอนเฉลย showReveal/showRevealMulti โชว์เสมอเหมือนเดิม)
+var rgPronMode=(function(){try{var v=localStorage.getItem('rg_pron_mode');return v===null?false:v==='1';}catch(e){return false;}})();
+function setRgPronMode(on){
+  rgPronMode=!!on;
+  try{localStorage.setItem('rg_pron_mode',rgPronMode?'1':'0');}catch(e){}
+  var btn=document.getElementById('rg-pron-toggle');
+  if(btn){
+    btn.textContent=rgPronMode?'🐣':'🥚';
+    btn.title=rgPronMode?'目前：讀音已顯示（點擊隱藏，答對後仍會顯示）':'目前：讀音已隱藏（點擊顯示）';
+    btn.setAttribute('aria-label',btn.title);
+  }
+  if(typeof WORD!=='undefined' && WORD && !checked){
+    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
+  }
+}
+setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 function loadWord(){
   wordToneBonus=0; // คำใหม่ = ล้างโบนัสวรรณยุกต์สะสมของคำก่อนหน้า — Lin 2026-07-07
   rememberStep=0;clearTimeout(rememberTimer);curWordIsKnownCheck=false;
@@ -1098,7 +1120,7 @@ function loadWord(){
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
-  document.getElementById('rev-pron').textContent=''; // ล้างคำอ่านของคำเก่าทิ้งก่อน กันค้างโชว์คำอ่านผิดคำตอนคำใหม่ยังไม่เฉลย — Lin 2026-07-12 (bug: เจอ "สกปรก" โชว์คำอ่าน "เงิน-สด" ของคำก่อนหน้า)
+  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดถ้าปุ่ม🐣เปิดอยู่ (แทนการล้างทิ้งเฉยๆ เดิม — ยังกันบั๊กคำอ่านค้างจากคำก่อน เพราะเซ็ตค่าใหม่ทุกคำ) · ใช้ readingTH เสมอ ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
   // ปุ่มลำโพงฟังเสียง — โชว์เฉพาะคำที่มีไฟล์เสียงใน AUDIO_MANIFEST (2026-07-16)

@@ -1811,7 +1811,10 @@ window.deleteFBComment = function(postId, idx) {
         '.pzh.zh-shown { display:inline !important; }' +
         // คลิกรายจุด: บังคับซ่อนทั้งที่ default เปิดอยู่
         ZH_CLICKABLE.map(function (s) { return s + '.zh-hidden-solo'; }).join(', ') + ' { display:none !important; }' +
-        ZH_CLICKABLE.join(', ') + ' { cursor:pointer; }';
+        ZH_CLICKABLE.join(', ') + ' { cursor:pointer; }' +
+        // ปุ่ม 🍙/🌾 แบบ "ในแถวปุ่มใต้คำศัพท์" (มี #zh-toggle-slot ในหน้า) — หน้าตากลมขาวเหมือนปุ่มเซฟ/ลำโพง — Lin 2026-07-16
+        '.rg-ctl-fab.zh-fab-inline{width:34px;height:34px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);box-shadow:none;font-size:17px;}' +
+        '.rg-ctl-fab.zh-fab-inline:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}';
       document.head.appendChild(style);
 
       function applyGlobal() {
@@ -1835,9 +1838,16 @@ window.deleteFBComment = function(postId, idx) {
       }
       fab.onclick = function () { hideOn = !hideOn; applyGlobal(); };
 
-      // ต่อเข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap ของปุ่มเต็มจอด้านบน สร้างไปแล้วก่อนหน้านี้ในไฟล์เดียวกัน)
-      var wrap2 = document.querySelector('.rg-ctl-wrap');
-      if (wrap2) { wrap2.appendChild(fab); } else { document.body.appendChild(fab); }
+      // Lin 2026-07-16: ถ้าหน้านั้นมี #zh-toggle-slot (แถวปุ่มใต้คำศัพท์ ในเกมเสียง/เกมอ่าน/เกมพิมพ์) → ย้ายปุ่มไปอยู่ในแถวแทนมุมขวาล่าง
+      var inlineSlot = document.getElementById('zh-toggle-slot');
+      if (inlineSlot) {
+        fab.classList.add('zh-fab-inline');
+        inlineSlot.appendChild(fab);
+      } else {
+        // ต่อเข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap ของปุ่มเต็มจอด้านบน สร้างไปแล้วก่อนหน้านี้ในไฟล์เดียวกัน)
+        var wrap2 = document.querySelector('.rg-ctl-wrap');
+        if (wrap2) { wrap2.appendChild(fab); } else { document.body.appendChild(fab); }
+      }
       applyGlobal();
 
       // คลิกรายจุด: event delegation (กันคำใหม่ที่ยังไม่เกิดตอนโหลดหน้า)
