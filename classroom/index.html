@@ -3733,6 +3733,10 @@ async function renderTeacherView() {
     '<div id="lowQuotaBanner"></div>' +
     '<div id="newFeedbackBanner"></div>' +
     '<div id="actionNeededBanner"></div>' +
+    // 2026-07-16 加（Lin 要求）：學生申請（取消/改期/加課，全部類型一起）搬到最上面，
+    // 就在標題底下，不用再往下滑才看到——本來排在「學生管理」清單之後，現在整個區塊移到最前面。
+    // 主要是為了配合 LINE 通知只留一顆按鈕、點了直接跳到這裡的新做法（見 notifyTeacherClassRequest）。
+    '<div id="pendingRequestsSection" style="margin-bottom:16px;"></div>' +
     '<div class="teacher-panel">' +
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
@@ -3741,14 +3745,19 @@ async function renderTeacherView() {
       '</div>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
-    '<div id="pendingRequestsSection" style="margin-bottom:16px;"></div>' +
     '<div id="recentBackupsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
     recordingHTML();
   initRecording();
+  // 2026-07-16 加：載入順序刻意不動（雖然畫面上「學生申請」搬到最上面了）——
+  // refreshStudentList() 會重建 studentsCache（見 1042 行），processClassRequestInner
+  // 通知學生時要讀 studentsCache[token] 才知道學生的 line_user_id。如果讓 loadPendingClassRequests()
+  // 先跑完、老師畫面一出現就能點「✅ 處理」，但 studentsCache 還沒重建好，會誤判成「學生沒連 LINE」
+  // 沒發通知（RELIABILITY FIRST：寧可畫面晚一點點出現，也不要讓通知邏輯讀到還沒準備好的資料）。
   await refreshStudentList();
   await loadPendingSlips();
   await loadPendingClassRequests();
+  scrollToRequestFromHash(); // 2026-07-16 加：LINE 通知按鈕點進來會帶 #req-row-xxx，載入完清單後跳過去+框起來
   await loadRecentBackups();
   await loadTodaySchedule();
   loadLowQuotaBanner();
@@ -4575,7 +4584,9 @@ async function requestCancelClass(isoDate, calendarEventId) {
     const idRes = await sb.from('classroom_requests').update({ calendar_event_id: calendarEventId }).eq('id', res.data);
     if (idRes.error) console.warn('⚠️ 補存 calendar_event_id 失敗（不影響這次申請本身）：', idRes.error.message);
   }
-  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate });
+  // 2026-07-16 加：把這筆申請的 id 一起帶給 notifyTeacherClassRequest，
+  // 讓 LINE 通知裡的按鈕可以直接連到網站上這一筆卡片的位置（#req-row-<id>）。
+  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate, requestId: res.data });
   closeCancelPickerModal();
   alert('✅ 已送出取消申請，老師確認後會回覆你。');
 }
@@ -5000,12 +5011,22 @@ function notifyTeacherClassRequest(d) {
       var _p = calDateStr.split('-');
       calLink = 'https://calendar.google.com/calendar/r/day/' + parseInt(_p[0],10) + '/' + parseInt(_p[1],10) + '/' + parseInt(_p[2],10);
     }
+    // 2026-07-16 加：申請取消的網站連結，帶 #req-row-<id> 直接跳到這筆申請的卡片
+    // （見 scrollToRequestFromHash）。沒有 requestId（理論上不會發生，保險起見還是防一下）
+    // 就退回沒有 # 的舊版連結，最多就是老師自己要滑一下找，不會壞掉。
+    var siteLink = 'https://mrtaihualin.com/classroom/' + (isCancel && d.requestId ? ('#req-row-' + encodeURIComponent(d.requestId)) : '');
+
     var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期')
       + (isAdd ? '' : ('\n原本課堂日期：' + (d.originalDate || '-')))
       + (isCancel ? '' : ('\n想' + (isAdd ? '約' : '改到') + '：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')))
       + (d.note ? '\n備註：' + d.note : '')
-      + (calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
-      + '\n\n請到老師網站「📋 學生申請改期/取消」' + (isAdd ? '按「📅 開始安排」確認沒有衝突後排進課表。' : '按「✅ 處理」，系統會自動幫你搬/刪 Calendar。');
+      // 2026-07-16 改（Lin 要求：取消申請的通知只留一顆按鈕）：不再提「開 Google Calendar」這條路了，
+      // 按鈕直接跳到網站卡片，「✅ 處理」會自動處理 Calendar，不用老師自己先去 Calendar 看一次。
+      // 改期/加課還是保留這條 Calendar 連結文字，這兩種沒有改動。
+      + (!isCancel && calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
+      + (isCancel
+        ? '\n\n請點下方按鈕前往網站處理'
+        : ('\n\n請到老師網站「📋 學生申請改期/取消」' + (isAdd ? '按「📅 開始安排」確認沒有衝突後排進課表。' : '按「✅ 處理」，系統會自動幫你搬/刪 Calendar。')));
 
     function sendEmailFallback() {
       fetch('https://api.web3forms.com/submit', {
@@ -5019,9 +5040,12 @@ function notifyTeacherClassRequest(d) {
     // 現在「處理」牽涉到自動搜尋+搬/刪 Google Calendar，Edge Function 沒有老師的 Google 授權做不到，
     // 從 LINE 按下去只會誤以為處理完成，Calendar 其實完全沒被動到（RELIABILITY FIRST，寧可少一顆按鈕
     // 也不要讓老師誤判）。改成純連結：開 Calendar + 到網站處理。
+    // 2026-07-16 改（Lin 要求）：「申請取消」這種類型只留一顆「📋 到網站處理」按鈕，直接連到那筆
+    // 申請卡片的位置，不用再多一顆「開 Calendar」（反正點進去就有「✅ 處理」可以直接按了）。
+    // 改期/加課這兩種維持原本 2 顆按鈕的邏輯，沒有改動。
     var flexButtons = [];
-    if (calLink) flexButtons.push({ label: '🔗 開 Calendar', uri: calLink });
-    flexButtons.push({ label: '📋 到網站處理', uri: 'https://mrtaihualin.com/classroom/' });
+    if (!isCancel && calLink) flexButtons.push({ label: '🔗 開 Calendar', uri: calLink });
+    flexButtons.push({ label: '📋 到網站處理', uri: siteLink });
 
     fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
@@ -5432,6 +5456,25 @@ async function loadPendingSlips() {
 //   ✅ 處理       → 自動搜尋 Calendar 上對應的那一次課堂，move（改期）或 delete（取消），
 //                    動手前一定先備份，動完才把這筆申請標記 acknowledged
 //   ⚙️ 其他       → 開小視窗選：自己聯絡學生（單純關掉）／提議新時間給學生（傳 LINE 讓學生按同意/不方便）
+// 2026-07-16 加（Lin 要求）：LINE 通知（學生申請取消）現在只留一顆「📋 到網站處理」按鈕，
+// 網址後面會帶 #req-row-<申請id>，點了開網頁後要自動捲到那張申請卡片、框起來讓老師一眼看到，
+// 不用自己在清單裡找。清單是非同步載入的（loadPendingClassRequests 跑完才有這個 DOM），
+// 瀏覽器自己的「網址帶 # 自動捲動」在頁面一開始（DOM 還沒有這張卡片）時不會生效，所以要自己補這段。
+// 找不到對應的卡片（例如這筆申請已經被處理掉、卡片不在清單裡了）就安靜跳過，不影響其他功能。
+function scrollToRequestFromHash() {
+  try {
+    var hash = location.hash || '';
+    if (hash.indexOf('#req-row-') !== 0) return;
+    var elId = decodeURIComponent(hash.slice(1));
+    var el = document.getElementById(elId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.outline = '3px solid var(--gold-bright)';
+    el.style.outlineOffset = '3px';
+    setTimeout(function () { el.style.outline = ''; el.style.outlineOffset = ''; }, 5000);
+  } catch (e) {}
+}
+
 async function loadPendingClassRequests() {
   var container = document.getElementById('pendingRequestsSection');
   if (!container) return;
