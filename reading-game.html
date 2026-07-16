@@ -40,6 +40,8 @@
 <script defer src="reading-auth.js?v=6"></script>
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="word-vault.js"></script>
+<script src="data/audio-manifest.js?v=1"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (ว่าง = ปุ่มลำโพงยังไม่โชว์) -->
+<script src="word-audio.js?v=1"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
 <script src="data/tone-engine.js?v=1"></script>
@@ -383,6 +385,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <div class="word-area">
       <div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
         <div class="word-th" id="wth">—</div>
+        <span id="rg-audio-btn-slot"></span><!-- ปุ่มลำโพง (โชว์เฉพาะคำที่มีไฟล์เสียง) — 2026-07-16 -->
         <span id="rg-vault-btn-slot"></span>
       </div>
       <div class="word-zh" id="wzh"></div>
@@ -1157,6 +1160,8 @@ function loadWord(){
   document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน) — ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
+  // ปุ่มลำโพงฟังเสียง — โชว์เฉพาะคำที่มีไฟล์เสียงใน AUDIO_MANIFEST (2026-07-16)
+  if(window.WordAudio)WordAudio.fillSlot('rg-audio-btn-slot',WORD.th);
   // vault save button
   var vslot=document.getElementById('rg-vault-btn-slot');
   if(vslot && window.WordVault){

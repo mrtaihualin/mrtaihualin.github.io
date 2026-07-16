@@ -26,6 +26,8 @@
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="progress-sync.js?v=2"></script>
 <script src="word-vault.js"></script>
+<script src="data/audio-manifest.js?v=1"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (ว่าง = ปุ่มลำโพงยังไม่โชว์) -->
+<script src="word-audio.js?v=1"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
 <script src="data/tone-engine.js?v=1"></script>
@@ -4156,10 +4158,10 @@ function render() {
       mainBoxHtml =
         '<div class="tf-adv-sent-main">' + sentHtml + '</div>' +
         '<div class="tf-adv-sent-ctx-zh">' + (advSentenceCtx.zh || '') + '</div>' +
-        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>' +
+        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-audio-btn-slot"></span><span id="tf-vault-btn-slot"></span></div>' +
         zhHtml;
     } else {
-      mainBoxHtml = '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-vault-btn-slot"></span></div>' + zhHtml;
+      mainBoxHtml = '<div class="tf-banner-word' + goldWord + '" style="display:inline-flex;align-items:center;gap:6px;">' + S.word + '<span id="tf-audio-btn-slot"></span><span id="tf-vault-btn-slot"></span></div>' + zhHtml;
     }
     banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml;
     // inject vault save button
@@ -4172,6 +4174,8 @@ function render() {
         slot.appendChild(WordVault.createSaveBtn(S.word, meta));
       }
     }
+    // ปุ่มลำโพงฟังเสียง — โชว์เฉพาะคำที่มีไฟล์เสียงใน AUDIO_MANIFEST (2026-07-16)
+    if (window.WordAudio) WordAudio.fillSlot('tf-audio-btn-slot', S.word);
     document.getElementById('tf-hint').style.display = 'none';
   } else {
     banner.style.display = 'none';
@@ -5543,6 +5547,8 @@ function stepResult() {
       '</div>';
   }
 
+  // ปุ่มลำโพงฟังเสียง — อยู่ระหว่างคำกับปุ่มเซฟ โชว์เฉพาะคำที่มีไฟล์เสียง (2026-07-16)
+  var audioBtnHtml = (window.WordAudio && S.word) ? WordAudio.btnHtml(S.word) : '';
   var vaultBtnHtml = '';
   if (window.WordVault && S.word) {
     WordVault.injectStyles();
@@ -5564,7 +5570,7 @@ function stepResult() {
     '</div>';
 
   return '<div class="result-v2">'+
-    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+vaultBtnHtml+'</div>'+
+    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+vaultBtnHtml+'</div>'+
     '<button class="result-v2-speak-btn" onclick="speakThai(\''+S.word+'\')">🔊 聽發音</button>'+
 
     '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+
