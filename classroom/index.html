@@ -3891,6 +3891,9 @@ async function renderStudentView() {
   var header = document.querySelector('header');
   if (header) header.style.display = '';
   document.getElementById('mainContainer').innerHTML =
+    // 2026-07-17 改（Lin 要求）：取消通知這個 banner 移到全頁最上面，比 hero 歡迎區塊還高
+    // ——課堂被取消是最重要的事，要第一眼就看到，不要埋在下面滑半天才看到。
+    '<div id="teacherCancelNoticeBanner"></div>' +
     '<div class="student-hero">' +
       '<div class="student-hero-avatar">' + escHtml(sInitial) + '</div>' +
       '<div class="student-hero-name">' + escHtml(student.name) + ' 同學</div>' +
@@ -3911,7 +3914,6 @@ async function renderStudentView() {
       '<div id="nextClassInfo"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
       buildLineActionBtn(token, student) +
     '</div>' +
-    '<div id="teacherCancelNoticeBanner"></div>' +
     '<div id="pendingRequestCard"></div>' +
     '<div class="card">' +
       '<h2>💬 今日學習感想</h2>' +
