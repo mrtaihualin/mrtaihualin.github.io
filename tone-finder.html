@@ -5240,7 +5240,7 @@ function stepSessionGuess() {
         // ── Lin 2026-07-04: วันที่ 16 (day16 final check) หรือ known-check (กด "✓ 已記得") = ไม่มี推導ให้เลย ผิดปุ๊บนับ fail ทันที รีเซ็ต SRS กลับ day1 ──
         // (เดิมทุกคำ ผิด/ไม่มั่นใจ จะเข้า推導สอนทีละขั้น แต่ day16/known-check ต้องนึกเองล้วนๆ ไม่มีเครื่องมือช่วยใดๆ)
         if (tfCurWordNoTools()) tfForceRevealZero();
-        else showStartInflection(navigateToInflection);  // ปกติ (ไม่ใช่ day16): เข้า推導สอนเหมือนเดิม
+        else navigateToInflection();  // Lin 2026-07-16: เดาผิด → เข้าหน้าตรวจ推導เลย ไม่มี popup 開始聲調推導
       }
     });
     return '<button class="sg-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="'+clickAct+'">'+n+'</button>';
@@ -5250,7 +5250,7 @@ function stepSessionGuess() {
     session.initialGuess = 0;
     try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = 0; } catch(e){}  // Phase 4: จำ "ไม่มั่นใจ" รายพยางค์
     if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // 🤷 = เข้า推導 ไม่นับ first-try
-    showStartInflection(navigateToInflection);
+    navigateToInflection();  // Lin 2026-07-16: กด "ไม่แน่ใจ" → เข้าหน้าตรวจเลย ไม่มี popup
   });
 
   // ── Lin 2026-07-04: หน้านี้ไม่มีปุ่ม "?" /แอบดูเลย (ยังไม่เข้า推導) — เดามั่ว/ท้าทายตรงๆ เท่านั้น ──
@@ -5306,10 +5306,10 @@ function showStartInflection(callback) {
 
 function navigateToInflection() {
   var w = S.word;
-  hist = hist.slice(0, histPos+1);
+  // Lin 2026-07-16: เข้าหน้าตรวจ推導 = รีเซ็ตประวัติให้ s1 เป็นฐาน → กดย้อนกลับไปหน้าเดาวรรณยุกต์ไม่ได้ (กันย้อนไปเดาใหม่จนถูก)
   S = { word: w, step: 's1', path: [w], tone: null, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults, parentWord: S.parentWord };
-  hist.push({ step: 's1', path: [w], tone: null, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults });
-  histPos = hist.length - 1;
+  hist = [{ step: 's1', path: [w], tone: null, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults }];
+  histPos = 0;
   render();
 }
 
