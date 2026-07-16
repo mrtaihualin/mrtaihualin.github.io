@@ -68,6 +68,17 @@
     // 這把 anon key 是公開用的（跟 classroom/index.html 裡用的同一把），本來就設計成可以放在前端網頁裡，安全性由後端 RLS 把關，不是這裡的密鑰外洩
     var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw';
 
+    // 2026-07-16 หน้าด่าน "ต้องแอดเพื่อนก่อน": ปุ่มแอด OA + ปุ่มลองใหม่หลังแอดแล้ว
+    // สีปุ่มใช้ธีมทองของเว็บ (กฎสีธีม) — ไม่ใช้เขียว LINE เพราะไม่ใช่ปุ่มทางการของ LINE
+    function showAddFriendGate() {
+      document.getElementById('titleText').textContent = '還差一步：先加老師好友';
+      document.getElementById('descText').textContent = '要先加「泰華眼裡的世界」為 LINE 好友，才能收到上課提醒。加完好友後再按「我加好友了」。';
+      actionEl.innerHTML =
+        '<a class="btn" href="https://line.me/R/ti/p/%40010rhagu" target="_blank" rel="noopener">➕ 加老師好友</a>' +
+        '<button class="btn" style="margin-left:8px" onclick="location.reload()">✅ 我加好友了</button>';
+      setStatus('加好友後回到這頁，按「我加好友了」就會自動完成連結', 'err');
+    }
+
     async function main() {
       if (!studentToken) {
         setStatus('❌ 連結無效：網址缺少學生代碼，請從自己的課堂頁面點「連結 LINE」按鈕進來', 'err');
@@ -103,6 +114,13 @@
         return;
       }
       setStatus('取得 LINE 身分中…', 'wait');
+      // 2026-07-16 ด่านที่ 1 (ฝั่งหน้าเว็บ): เช็คก่อนเลยว่าแอด OA เป็นเพื่อนแล้วหรือยัง
+      // (liff.getFriendship ใช้ได้เพราะ channel ผูก OA แล้ว — Add friend option ใน LINE Developers Console)
+      // ยังไม่แอด → โชว์ปุ่มแอดเพื่อน ไม่ต้องยิงผูกให้เสียเที่ยว · ฝั่ง server (link-line) มีด่านเดียวกันกันไว้อีกชั้น
+      try {
+        var fs = await liff.getFriendship();
+        if (fs && fs.friendFlag === false) { showAddFriendGate(); return; }
+      } catch (e) { /* เช็คไม่ได้ (เช่น scope ยังไม่มา) → ปล่อยผ่าน ให้ด่าน server ตัดสิน */ }
       // 2026-07-11 改用 access token（不用 idToken）：
       //   LINE 官方限制 idToken 1 小時就過期、且重新登入也不會換新 → 常常 "IdToken expired"。
       //   access token 由 LIFF SDK 自動維護，後端再拿去跟 LINE 驗證身分，穩定不會過期壞掉。
@@ -124,6 +142,8 @@
         });
         var data = await res.json().catch(function(){ return {}; });
         if (!res.ok || !data.ok) {
+          // 2026-07-16: server ตอบ not_friend = ยังไม่ได้แอด OA → โชว์ปุ่มแอดเพื่อนแทน error ดิบ
+          if (data.error === 'not_friend') { showAddFriendGate(); return; }
           // 2026-07-11 debug：把 LINE 回傳的真正原因 (detail) 也顯示出來，才不用瞎猜為什麼 verify 失敗
           setStatus('❌ 連結失敗：' + (data.error || res.status) + (data.detail ? ' — ' + data.detail : ''), 'err');
           return;

@@ -94,7 +94,28 @@ serve(async (req) => {
       });
     }
 
-    // 2) เขียนลง Supabase ด้วย service role (bypass RLS, รันฝั่ง server เท่านั้น ไม่มีทางเรียกจาก browser ได้)
+    // 2.5) 2026-07-16 ด่านบังคับ "ต้องแอด OA เป็นเพื่อนก่อนถึงจะผูกได้" (SECURITY/RELIABILITY FIRST)
+    //   บทเรียนจริง 2026-07-16: นักเรียน 3 คนผูกบัญชีสำเร็จแต่ไม่เคยแอด OA →
+    //   LINE push ตอบ 200 "สำเร็จ" แต่ทิ้งข้อความเงียบๆ ทุกครั้ง (พฤติกรรมทางการของ LINE:
+    //   https://developers.line.biz/en/docs/messaging-api/sending-messages/) → เตือนก่อนเรียน/ทักทาย ไม่เคยถึงใครเลย
+    //   วิธีเช็ค: GET /v2/bot/profile/{userId} ด้วย channel token ของ OA
+    //   → 200 = เป็นเพื่อนกัน (ส่งข้อความถึงแน่) · 404 = ยังไม่แอด/บล็อกอยู่ → ไม่ให้ผูก บอกให้แอดก่อน
+    const botToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
+    if (botToken) {
+      const friendRes = await fetch(
+        'https://api.line.me/v2/bot/profile/' + encodeURIComponent(lineUserId),
+        { headers: { Authorization: 'Bearer ' + botToken } }
+      );
+      if (!friendRes.ok) {
+        // 404 = ยังไม่ได้แอด OA เป็นเพื่อน (หรือบล็อกอยู่) → ผูกไม่ผ่าน ให้หน้าเว็บโชว์ปุ่มแอดเพื่อน
+        return new Response(JSON.stringify({ error: 'not_friend', detail: 'user has not added the OA as friend (or blocked it)' }), {
+          status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
+      }
+    }
+    // ถ้าไม่มี botToken (secret ยังไม่ตั้ง) → ข้ามด่านนี้ไปก่อน ไม่ทำให้การผูกพังทั้งระบบ
+
+    // 3) เขียนลง Supabase ด้วย service role (bypass RLS, รันฝั่ง server เท่านั้น ไม่มีทางเรียกจาก browser ได้)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL'),
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
