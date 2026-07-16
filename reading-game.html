@@ -875,7 +875,7 @@ function setRgPronMode(on){
     btn.setAttribute('aria-label',btn.title);
   }
   if(typeof WORD!=='undefined' && WORD && !checked){
-    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.readingTH)?('🔊 '+WORD.readingTH):'';
+    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: ปุ่มคำอ่านต้องใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   }
 }
 setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
@@ -1154,7 +1154,7 @@ function loadWord(){
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
-  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.readingTH)?('🔊 '+WORD.readingTH):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน)
+  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน) — ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
   // vault save button
@@ -1861,7 +1861,7 @@ function markOpts(){
 // Lin 2026-07-10: เปลี่ยนคำอ่านจากอังกฤษ (náam) เป็นสะกดไทยจริง — คำหลายพยางค์ (มี WORD.syls) ต่อเป็น "ผม-กิน-ข้าว" ให้เห็นจุดแบ่งพยางค์
 function buildThaiPron(){
   if(WORD&&WORD.readingTH)return WORD.readingTH; // Lin 2026-07-12: คำอ่านจริง (สะ-หนาม-บิน) ไม่ใช่ตัวเขียน
-  if(WORD&&WORD.syls&&WORD.syls.length)return WORD.syls.map(function(s){return s.th;}).join('-');
+  if(WORD&&WORD.th)return WORD.th; // Lin 2026-07-16: ปุ่ม/กล่องคำอ่านต้องใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th ต่อกัน
   return W?(W.read||W.th):'';
 }
 function showReveal(){
