@@ -672,6 +672,22 @@
   </div>
 </div>
 
+<!-- ======= TEACHER: 聯絡學生 MODAL（2026-07-16 新增，Lin 要求）======= -->
+<!-- LINE 沒有官方連結能直接打開「跟某個學生的對話」，與其亂猜網址連錯人，
+     改成直接在這裡打字送出，走跟其他通知一樣的 notify-line（server 端用 token 查 line_user_id，安全）。 -->
+<div class="modal-overlay" id="contactStudentModal">
+  <div class="modal" style="max-width:400px;">
+    <h3>💬 聯絡學生</h3>
+    <p id="contactStudentTargetLabel" style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;"></p>
+    <textarea class="settings-input" id="contactStudentText" rows="4" placeholder="輸入要傳給學生的訊息…" style="width:100%;min-height:88px;resize:vertical;font-family:'Noto Sans TC',sans-serif;box-sizing:border-box;"></textarea>
+    <div id="contactStudentStatus" style="font-size:0.8rem;margin-top:6px;min-height:18px;font-family:'Noto Sans TC',sans-serif;"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeContactStudentModal()">取消</button>
+      <button class="btn-gold" id="contactStudentSendBtn" onclick="sendContactStudentMessage()">📤 傳送</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= TEACHER: 永久變更課表 MODAL（2026-07-13 新增）======= -->
 <div class="modal-overlay" id="permanentChangeModal">
   <div class="modal" style="max-width:420px;">
@@ -1489,6 +1505,21 @@ async function findClassEventForRequest(studentName, dateStr) {
   const data = await r.json();
   const name = (studentName || '').trim();
   return (data.items || []).filter(function(ev) { return (ev.summary || '').trim() === name; });
+}
+
+// 2026-07-16 加：如果申請單上已經記了真正的 Calendar 事件 ID（見 requestCancelClass），
+// 直接用 ID 拿事件，不用再靠「姓名+日期」猜——比 findClassEventForRequest 準，優先用這個。
+// 事件被刪過/ID 是舊的 → 回傳 null，呼叫端要自己退回用 findClassEventForRequest 搜尋。
+async function getClassEventById(eventId) {
+  const token = await gdGetToken();
+  const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), {
+    headers: { Authorization: 'Bearer ' + token },
+  });
+  if (r.status === 404 || r.status === 410) return null;
+  if (!r.ok) throw new Error('Calendar API ' + r.status + '：' + (await r.text()).slice(0, 200));
+  const ev = await r.json();
+  if (ev.status === 'cancelled') return null;
+  return ev;
 }
 
 // 把「某一次」課堂事件移到新時間（保留原本上課長度），只動這個 instance 的 id
@@ -4512,7 +4543,7 @@ function requireLineLinkedOrPrompt(token) {
 
 // 2026-07-14 改：現在可以取消「下一堂課」以外的其他堂（從「選擇要取消的課堂」清單點進來），
 // isoDate 有帶就取消那一堂，沒帶（舊的呼叫方式）就照舊取消下一堂課，維持相容。
-async function requestCancelClass(isoDate) {
+async function requestCancelClass(isoDate, calendarEventId) {
   if (!nextClassCtx) return;
   const targetDate = isoDate || nextClassCtx.isoDate;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
@@ -4535,6 +4566,13 @@ async function requestCancelClass(isoDate) {
     p_initiated_by: 'student',
   });
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  // 2026-07-16 加：submit_class_request 這個 RPC 目前不收 calendar_event_id 參數（不想動資料庫
+  // 函式本身，風險比較低），改成插入成功後馬上補一個 update 把真正的事件 ID 存上去。
+  // 存不成功也不擋這次申請（老師那邊會退回舊版「姓名+日期」搜尋），只在主控台留紀錄。
+  if (calendarEventId && res.data) {
+    const idRes = await sb.from('classroom_requests').update({ calendar_event_id: calendarEventId }).eq('id', res.data);
+    if (idRes.error) console.warn('⚠️ 補存 calendar_event_id 失敗（不影響這次申請本身）：', idRes.error.message);
+  }
   notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate });
   closeCancelPickerModal();
   alert('✅ 已送出取消申請，老師確認後會回覆你。');
@@ -4550,6 +4588,12 @@ async function requestCancelClass(isoDate) {
 //   不用猜。再用 computeCurrentCourse（跟「本輪剩餘 X 堂」同一套算法）算出真實剩餘堂數，
 //   把清單裁到剩餘堂數以內，不會讓學生選到「已經上完」的課。
 //   RPC 讀不到資料時（例如剛好還沒 sync）→ 退回舊版「+7 天」邏輯當保底，至少不會整個空白。
+// 2026-07-16 改（Lin 要求：取消要對到真的 Calendar 事件 ID，不要事後用「姓名+日期」用猜的）：
+// 回傳值從單純 Date[] 改成 {date, calendarEventId}[]，calendarEventId 有值就是「這一堂真正
+// 對應的 Google Calendar 事件 ID」，之後老師端可以直接用這個 ID 刪/搬，不用再搜尋比對。
+// ⚠️ 前提：get_student_schedule 這個 RPC 要有回傳 calendar_event_id 欄位（classroom_schedule
+// 資料表本來就有這欄）。如果 RPC 目前的 SELECT 清單沒帶到，這裡會拿到 undefined → calendarEventId
+// 變成 null，不會壞掉，但也享受不到這次改的好處，記得跟 Lin 確認/更新那個 RPC。
 async function computeUpcomingOccurrences(token, count) {
   try {
     const { data, error } = await sb.rpc('get_student_schedule', { p_token: token });
@@ -4563,22 +4607,26 @@ async function computeUpcomingOccurrences(token, count) {
       var q = computeCurrentCourse(pays, atts);
       if (q.hasCourse) limit = Math.min(count || q.remain, q.remain < 0 ? 0 : q.remain);
     } catch (qerr) { /* เช็คโควตาไม่ได้ก็ไม่บล็อก แค่ใช้ count เดิมเป็น cap */ }
-    return rows.slice(0, limit).map(function(r) {
+    var sliced = rows.slice(0, limit);
+    if (sliced.length && sliced.every(function(r) { return !r.calendar_event_id; })) {
+      console.warn('⚠️ get_student_schedule 沒有回傳 calendar_event_id，取消申請會退回用姓名+日期比對（不夠準），請跟 Lin 確認這個 RPC 的 SELECT 欄位。');
+    }
+    return sliced.map(function(r) {
       var t = (r.start_time && /^\d{1,2}:\d{2}/.test(r.start_time)) ? r.start_time : '00:00';
-      return teacherTimeToDate(r.lesson_date, t);
+      return { date: teacherTimeToDate(r.lesson_date, t), calendarEventId: r.calendar_event_id || null };
     });
   } catch (e) {
     // Fallback：ข้อมูลจริงยังดึงไม่ได้ (RPC พัง/ยังไม่ sync) → ใช้วิธีเดิม (+7 วันจากคาบเดียว)
-    // ดีกว่าไม่มีอะไรให้เลือกเลย แต่รู้ตัวว่าไม่แม่นสำหรับคนเรียนหลายวัน/สัปดาห์
+    // ดีกว่าไม่มีอะไรให้เลือกเลย แต่รู้ตัวว่าไม่แม่นสำหรับคนเรียนหลายวัน/สัปดาห์ ไม่มี calendarEventId ให้
     if (!nextClassCtx || nextClassCtx.token !== token || !nextClassCtx.isoDate) return [];
     const anchor1 = teacherTimeToDate(nextClassCtx.isoDate, nextClassCtx.timeStr || '00:00');
-    const results = [anchor1];
+    const results = [{ date: anchor1, calendarEventId: null }];
     const s = studentsCache[token];
     if (s && s.pending_recurring && s.pending_start_date && s.pending_class_time) {
       const weekMs = 7 * 24 * 3600 * 1000;
       let cur = new Date(anchor1.getTime() + weekMs);
       for (let i = 1; i < (count || 6); i++) {
-        results.push(cur);
+        results.push({ date: cur, calendarEventId: null });
         cur = new Date(cur.getTime() + weekMs);
       }
     }
@@ -4613,8 +4661,8 @@ async function renderCancelPickerSelect() {
     return;
   }
   const dayZh = ['日','一','二','三','四','五','六'];
-  sel.innerHTML = occurrences.map(function(anchor, i) {
-    const disp = studentTz ? formatInTz(anchor, studentTz) : formatInTz(anchor, TEACHER_TZ); // 學生自己時區 → 顯示用
+  sel.innerHTML = occurrences.map(function(occ, i) {
+    const disp = studentTz ? formatInTz(occ.date, studentTz) : formatInTz(occ.date, TEACHER_TZ); // 學生自己時區 → 顯示用
     const d = new Date(disp.dateStr + 'T00:00:00');
     const label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）' + disp.timeStr;
     return '<option value="' + i + '">' + escHtml(label) + '</option>';
@@ -4635,7 +4683,7 @@ function onCancelPickerSelectChange() {
     contactBtn.style.display = 'none';
     return;
   }
-  const hoursUntil = (chosen.getTime() - Date.now()) / 3600000;
+  const hoursUntil = (chosen.date.getTime() - Date.now()) / 3600000;
   const canCancel = hoursUntil >= 24;
   hint.style.display = canCancel ? 'none' : 'block';
   hint.textContent = canCancel ? '' : '⚠️ 這堂距離上課不到 24 小時，無法線上取消，請直接聯絡老師';
@@ -4648,8 +4696,8 @@ function submitCancelPickerChoice() {
   const sel = document.getElementById('cancelPickerSelect');
   const chosen = _cancelPickerOptions[sel.value];
   if (!chosen) return;
-  const thai = formatInTz(chosen, TEACHER_TZ); // 泰國時間 → 送給老師/資料庫用
-  requestCancelClass(thai.dateStr);
+  const thai = formatInTz(chosen.date, TEACHER_TZ); // 泰國時間 → 送給老師/資料庫用
+  requestCancelClass(thai.dateStr, chosen.calendarEventId);
 }
 
 function openClassRequestModal() {
@@ -5432,6 +5480,7 @@ async function loadPendingClassRequests() {
     } else {
       actionsHtml = (calUrl ? '<a class="btn-approve" style="text-decoration:none;text-align:center;" href="' + calUrl + '" target="_blank" rel="noopener">🔗 開 Calendar</a>' : '') +
         '<button class="btn-approve" onclick="processClassRequest(\'' + r.id + '\')">✅ 處理</button>' +
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>' +
         '<button class="btn-reject" onclick="openOtherOptionsModal(\'' + r.id + '\')">⚙️ 其他</button>';
     }
     return '<div class="slip-row" id="req-row-' + r.id + '">' +
@@ -5482,19 +5531,33 @@ async function processClassRequest(id) {
 }
 
 async function processClassRequestInner(id, r, isCancel) {
-  var matches;
-  try {
-    matches = await findClassEventForRequest(r.student_name, r.original_date);
-  } catch (e) {
-    alert('⚠️ 搜尋 Google Calendar 失敗：' + (e.message || e) + '\n請改用「🔗 開 Calendar」自己手動處理，處理完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。');
-    return;
+  var ev = null;
+  // 2026-07-16 加：如果這筆申請有記真正的 Calendar 事件 ID（學生用「選擇要取消的課堂」選的，
+  // 見 requestCancelClass），直接用 ID 拿，比姓名+日期搜尋準，不會有「找到 0 筆/2 筆」的問題。
+  // 事件已經被刪掉/ID 失效 → getClassEventById 回傳 null，退回舊版搜尋當保底。
+  if (r.calendar_event_id) {
+    try {
+      ev = await getClassEventById(r.calendar_event_id);
+    } catch (e) {
+      alert('⚠️ 讀取 Google Calendar 失敗：' + (e.message || e) + '\n請改用「🔗 開 Calendar」自己手動處理，處理完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。');
+      return;
+    }
   }
-  if (matches.length !== 1) {
-    alert((matches.length === 0 ? '⚠️ 在 Calendar 找不到符合的課堂事件' : '⚠️ 在 Calendar 找到 ' + matches.length + ' 筆疑似符合的課堂，不確定是哪一筆') +
-      '，為了安全不會自動處理。\n請按「🔗 開 Calendar」自己手動調整，調整完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆申請。');
-    return;
+  if (!ev) {
+    var matches;
+    try {
+      matches = await findClassEventForRequest(r.student_name, r.original_date);
+    } catch (e) {
+      alert('⚠️ 搜尋 Google Calendar 失敗：' + (e.message || e) + '\n請改用「🔗 開 Calendar」自己手動處理，處理完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。');
+      return;
+    }
+    if (matches.length !== 1) {
+      alert((matches.length === 0 ? '⚠️ 在 Calendar 找不到符合的課堂事件' : '⚠️ 在 Calendar 找到 ' + matches.length + ' 筆疑似符合的課堂，不確定是哪一筆') +
+        '，為了安全不會自動處理。\n請按「🔗 開 Calendar」自己手動調整，調整完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆申請。');
+      return;
+    }
+    ev = matches[0];
   }
-  var ev = matches[0];
   var oldStartIso = ev.start && (ev.start.dateTime || ev.start.date);
   var oldStartLabel = formatThaiDateTimeLabel(oldStartIso);
   var newStartIsoForNotify = null; // 2026-07-15 加：改期時記下新時間，處理完要通知學生用
@@ -5637,6 +5700,54 @@ async function submitProposeTime() {
     ? '✅ 已傳送提議，等學生在 LINE 上點選回覆（超過 48 小時沒回覆會在首頁提醒你追蹤）'
     : '✅ 提議已存檔（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
   await loadPendingClassRequests();
+}
+
+// 💬 聯絡學生（2026-07-16 新增，Lin 要求）：老師直接在網站打字，送 LINE 給指定學生
+// 沒有連到某個 request，只需要 token，所以任何地方都能呼叫（目前先接在「學生申請改期/取消」清單）
+var _contactStudentToken = null;
+function openContactStudentModal(token) {
+  _contactStudentToken = token;
+  var s = studentsCache[token];
+  document.getElementById('contactStudentTargetLabel').textContent = '傳送對象：' + (s && s.name ? s.name : token);
+  document.getElementById('contactStudentText').value = '';
+  var statusEl = document.getElementById('contactStudentStatus');
+  statusEl.textContent = ''; statusEl.style.color = 'var(--ink-muted)';
+  document.getElementById('contactStudentModal').classList.add('open');
+}
+function closeContactStudentModal() {
+  document.getElementById('contactStudentModal').classList.remove('open');
+  _contactStudentToken = null;
+}
+async function sendContactStudentMessage() {
+  var token = _contactStudentToken;
+  var text = document.getElementById('contactStudentText').value.trim();
+  var statusEl = document.getElementById('contactStudentStatus');
+  if (!token) { closeContactStudentModal(); return; }
+  if (!text) { alert('請輸入訊息內容'); return; }
+  var btn = document.getElementById('contactStudentSendBtn');
+  btn.disabled = true; btn.textContent = '傳送中…';
+  try {
+    var res = await fetch(LINE_NOTIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      body: JSON.stringify({ to: { studentToken: token }, message: text }),
+    });
+    if (res.ok) {
+      statusEl.style.color = 'var(--gold-deep)';
+      statusEl.textContent = '✅ 已送出';
+      setTimeout(closeContactStudentModal, 900);
+    } else {
+      var errMsg = '';
+      try { var j = await res.json(); errMsg = j.error || ''; } catch (e2) {}
+      statusEl.style.color = 'var(--amber)';
+      statusEl.textContent = '⚠️ 傳送失敗（' + (errMsg || ('HTTP ' + res.status)) + '），學生可能還沒連結 LINE';
+    }
+  } catch (e) {
+    statusEl.style.color = 'var(--amber)';
+    statusEl.textContent = '⚠️ 傳送失敗：' + (e.message || e);
+  } finally {
+    btn.disabled = false; btn.textContent = '📤 傳送';
+  }
 }
 
 async function cancelProposedOffer(id) {
