@@ -177,47 +177,6 @@
     padding: 10px;
     justify-content: center;
   }
-  /* Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ ไม่ใช่ประโยค高級) — แถบพยางค์ใต้คำเต็ม กดไม่ได้ ไล่จากพยางค์แรกเสมอ (คล้ายเกมอ่าน แต่ไม่ให้จิ้มข้าม) */
-  .tf-syl-row {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin: 4px 0 14px;
-  }
-  .tf-syl-chip {
-    font-family: 'Sarabun', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    border-radius: 10px;
-    padding: 6px 14px;
-    background: #fff;
-    color: var(--gold-deep, #5a3e0a);
-    border: 1.5px solid rgba(139,99,16,0.18);
-    cursor: default;
-    user-select: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
-  .tf-syl-chip-n {
-    font-size: 10px;
-    font-weight: 400;
-    color: #a08a5a;
-  }
-  .tf-syl-chip.cur {
-    background: var(--gold-bright, #C8973A);
-    color: #fff;
-    border-color: var(--gold-bright, #C8973A);
-  }
-  .tf-syl-chip.done {
-    background: var(--green, #2d6a4f);
-    color: #fff;
-    border-color: var(--green-dark, #1b4332);
-    opacity: .85;
-  }
-
   /* ── Breadcrumb ── */
   .tf-bc {
     display: none;
@@ -4212,17 +4171,11 @@ function render() {
         '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '">' + S.word + '</div>' +
         zhHtml;
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
-      // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + แถบพยางค์ใต้คำ (ไล่จากพยางค์แรกเสมอ กดข้ามไม่ได้ ต่างจากเกมอ่านที่จิ้มเลือกเองได้)
+      // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
+      // 2026-07-16: เอาแถบพยางค์ (syl-chip แบบเกมอ่าน) ออกตามที่ Lin สั่ง — เหลือแค่คำเต็ม + กล่องโฟกัส
       var fullWord = S.parentWord || S.syllables.join('');
-      var sylResults = S.sylResults || {};
-      var chipsHtml = S.syllables.map(function (syl, i) {
-        var done = sylResults[i] != null;
-        var cls = 'tf-syl-chip' + (i === S.selectedSyl ? ' cur' : (done ? ' done' : ''));
-        return '<div class="' + cls + '"><span>' + syl + (done ? ' ✓' : '') + '</span><span class="tf-syl-chip-n">' + (i + 1) + '/' + S.syllables.length + '</span></div>';
-      }).join('');
       mainBoxHtml =
         '<div class="tf-adv-sent-main">' + fullWord + '</div>' +
-        '<div class="tf-syl-row">' + chipsHtml + '</div>' +
         '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '">' + S.word + '</div>' +
         zhHtml;
     } else {
