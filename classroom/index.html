@@ -3880,6 +3880,7 @@ async function renderStudentView() {
       '<div id="nextClassInfo"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
       buildLineActionBtn(token, student) +
     '</div>' +
+    '<div id="teacherCancelNoticeBanner"></div>' +
     '<div id="pendingRequestCard"></div>' +
     '<div class="card">' +
       '<h2>💬 今日學習感想</h2>' +
@@ -3923,6 +3924,7 @@ async function renderStudentView() {
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentNextClass(token);
+  loadTeacherCancelNoticeBanner(token);
   loadStudentPendingRequestStatus(token);
   loadStudentSchedule(token);
   loadStudentFiles(token);
@@ -4865,6 +4867,52 @@ async function loadStudentPendingRequestStatus(token) {
         '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">' + hoursLeftLabel(r.created_at) + '</p>' +
       '</div>';
     }
+  } catch (e) { el.innerHTML = ''; }
+}
+
+// ── 2026-07-16 新增：老師直接取消課堂 → 學生進網站也要看得到（之前只有 LINE 有通知）──
+// 設計跟 dismissedFeedbackIds／dismissedReceipts 同一套模式：關閉過的用 localStorage 記住（本機裝置，依 token 分開存），
+// 不動資料庫欄位、不需要額外 schema。LINE 那邊卡片本身沒有按鈕（已經在對話裡了，按了也只是跳回同一頁沒用）；
+// 網站這邊才需要「聯絡老師」按鈕，因為學生是從網站要跳出去 LINE。
+function getDismissedTeacherCancelIds(token) {
+  try { return JSON.parse(localStorage.getItem('dismissedTeacherCancel_' + token) || '[]'); } catch (e) { return []; }
+}
+function markTeacherCancelDismissed(token, id) {
+  try {
+    var d = getDismissedTeacherCancelIds(token);
+    if (d.indexOf(id) === -1) d.push(id);
+    if (d.length > 100) d = d.slice(d.length - 100);
+    localStorage.setItem('dismissedTeacherCancel_' + token, JSON.stringify(d));
+  } catch (e) {}
+}
+function dismissTeacherCancelNotice(token, id) {
+  markTeacherCancelDismissed(token, id);
+  loadTeacherCancelNoticeBanner(token);
+}
+
+async function loadTeacherCancelNoticeBanner(token) {
+  var el = document.getElementById('teacherCancelNoticeBanner');
+  if (!el) return;
+  try {
+    var res = await sb.from('classroom_requests').select('id,original_date,created_at')
+      .eq('token', token).eq('request_type', 'cancel').eq('initiated_by', 'teacher').eq('status', 'acknowledged')
+      .order('created_at', { ascending: false }).limit(10);
+    if (res.error) { el.innerHTML = ''; return; }
+    var rows = res.data || [];
+    var dismissed = getDismissedTeacherCancelIds(token);
+    var pending = rows.filter(function(r) { return dismissed.indexOf(r.id) === -1; });
+    el.innerHTML = pending.map(function(r) {
+      return '<div style="background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
+          '<div style="flex:1;">' +
+            '<div style="font-weight:700;font-size:0.95rem;color:var(--amber-dark);margin-bottom:4px;">❌ 課堂已取消</div>' +
+            '<div style="font-size:0.85rem;color:var(--ink);">老師取消了 ' + escHtml(r.original_date || '-') + ' 這堂課</div>' +
+          '</div>' +
+          '<button onclick="dismissTeacherCancelNotice(\'' + token + '\',\'' + r.id + '\')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--amber-dark);opacity:0.6;padding:2px 6px;flex-shrink:0;">✕</button>' +
+        '</div>' +
+        '<a href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;text-decoration:none;border-radius:999px;padding:8px 16px;font-size:0.85rem;font-weight:700;">💬 聯絡老師</a>' +
+      '</div>';
+    }).join('');
   } catch (e) { el.innerHTML = ''; }
 }
 
@@ -5940,8 +5988,8 @@ async function teacherCancelClassNowInner(token, chosen) {
     try {
       // 傳給學生看的時間 → 換算成學生自己的時區，不要直接丟泰國時間給學生
       const cancelTimeLabel = studentFacingTimeLabel(new Date(oldStartIso), s.pending_student_tz);
-      // 2026-07-16 加：改成有「聯絡老師」按鈕的卡片，不再只是純文字叫學生自己聯絡
-      // （沿用全站統一的 LINE_OA_URL，跟其他「聯絡老師」按鈕一致）
+      // 2026-07-16 加：改成卡片樣式（比純文字清楚），但這則本來就在 LINE 對話裡了
+      // → 不放「聯絡老師」按鈕（按了也只是跳回同一個對話，沒用）純資訊卡片，不能點
       const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
@@ -5950,8 +5998,7 @@ async function teacherCancelClassNowInner(token, chosen) {
           message: '老師取消了 ' + cancelTimeLabel + ' 這堂課，如有疑問請直接聯絡老師',
           flex: {
             title: '❌ 課堂已取消',
-            bodyText: '老師取消了 ' + cancelTimeLabel + ' 這堂課',
-            buttons: [{ label: '💬 聯絡老師', uri: LINE_OA_URL }],
+            bodyText: '老師取消了 ' + cancelTimeLabel + ' 這堂課，如有疑問請直接在這裡跟老師說',
           },
         }),
       });
@@ -6903,9 +6950,16 @@ async function syncScheduleToSupabase(matched) {
       return; // ลบไม่สำเร็จ → ไม่ insert ต่อ กันข้อมูลซ้ำเพิ่มอีก
     }
     if (!matched || !matched.length) return;
-    const rows = matched.map(function(m) {
-      return { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.s.name };
+    // 2026-07-16 แก้（error: "ON CONFLICT DO UPDATE command cannot affect row a second time"）：
+    //   ต้นตอคือ matched มีแถวซ้ำ key เดียวกัน (token+lesson_date+start_time) ปนมาในชุดเดียวกัน
+    //   (เช่น ชื่อนักเรียนคนหนึ่งเป็นคำย่อยของอีกคน หรือ event ปฏิทินซ้อนกันพอดีเวลาเดียวกัน)
+    //   Postgres ห้าม 1 คำสั่ง upsert แก้แถวเดียวกันซ้ำ 2 รอบ → ต้อง dedupe ฝั่ง JS ก่อนส่งเข้า upsert เสมอ
+    const rowMap = new Map();
+    matched.forEach(function(m) {
+      const key = m.token + '|' + m.isoDate + '|' + (m.startTime || '');
+      rowMap.set(key, { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.s.name });
     });
+    const rows = Array.from(rowMap.values());
     // 2026-07-15 แก้（Lin ตรวจเจอ classroom_schedule มีแถวซ้ำเป็นร้อย ทุก token）：
     //   ต้นตอจริงคือ RLS บล็อกการลบข้างบนแบบเงียบๆ (ไม่ error, แค่ลบได้ 0 แถว) ตามที่ comment
     //   2026-07-11 เตือนไว้แล้ว — แก้ RLS ให้ลบได้จริงคือทางหลัก แต่เพิ่มเกราะกันชั้นที่ 2 ไว้ด้วย：
