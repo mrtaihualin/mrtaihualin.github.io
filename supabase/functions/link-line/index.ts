@@ -154,6 +154,31 @@ serve(async (req) => {
       }
     }
 
+    // 2026-07-16 เพิ่ม: ผูกบัญชีสำเร็จ → ส่งข้อความต้อนรับให้นักเรียน
+    //   มีด่านแอดเพื่อน (ข้อ 2.5) กันไว้แล้วก่อนจะมาถึงจุดนี้ → คนที่ผูกสำเร็จ = เป็นเพื่อนแน่นอน = ส่งถึงแน่นอน
+    //   ห่อ try/catch ไว้ — ส่งข้อความไม่ได้ ก็ห้ามทำให้การผูกบัญชีล้มเหลว (ผูกบัญชีสำคัญกว่า)
+    if (channelAccessToken) {
+      try {
+        await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + channelAccessToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: lineUserId,
+            messages: [{
+              type: 'text',
+              text: '帳號連結成功 🎉\n你好！這裡是泰華 🙏\n之後的上課提醒、改期通知，都會從這裡自動傳給你\n有任何課程問題，直接在這裡留言就可以囉 😊',
+            }],
+          }),
+        });
+        // ไม่เช็ค response ต่อ — ส่งข้อความต้อนรับไม่ใช่ critical path ผูกบัญชีถือว่าสำเร็จแล้ว
+      } catch (e) {
+        // เงียบไว้ ไม่ทำให้ request ล้มเหลว
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     });
