@@ -386,7 +386,10 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <span id="rg-vault-btn-slot"></span>
       </div>
       <div class="word-zh" id="wzh"></div>
-      <div class="rev-pron" id="rev-pron"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+        <div class="rev-pron" id="rev-pron"></div>
+        <button id="rg-pron-toggle" type="button" onclick="setRgPronMode(!rgPronMode)" style="border:none;background:none;font-size:17px;cursor:pointer;padding:2px 4px;line-height:1;"></button>
+      </div>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
     </div>
   </div>
@@ -858,6 +861,24 @@ function updateOptHint(){
   }
 }
 setRgGuideMode(rgGuideMode); // ตั้งสถานะปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
+
+// ── ปุ่มเปิด/ปิดคำอ่านที่โชว์ตั้งแต่คำเพิ่งโหลด (ไม่กระทบตอนเฉลย showReveal/showRevealMulti ซึ่งโชว์เสมอ) — Lin 2026-07-16
+// 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่ (จนกว่าจะเฉลย) — icon เลือกโดย Lin
+var rgPronMode=(function(){try{var v=localStorage.getItem('rg_pron_mode');return v===null?false:v==='1';}catch(e){return false;}})(); // default = ซ่อน (ผู้เล่นกดเปิดเอง) — Lin 2026-07-16
+function setRgPronMode(on){
+  rgPronMode=!!on;
+  try{localStorage.setItem('rg_pron_mode',rgPronMode?'1':'0');}catch(e){}
+  var btn=document.getElementById('rg-pron-toggle');
+  if(btn){
+    btn.textContent=rgPronMode?'🐣':'🥚';
+    btn.title=rgPronMode?'目前：讀音已顯示（點擊隱藏，答對後仍會顯示）':'目前：讀音已隱藏（點擊顯示）';
+    btn.setAttribute('aria-label',btn.title);
+  }
+  if(typeof WORD!=='undefined' && WORD && !checked){
+    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.readingTH)?('🔊 '+WORD.readingTH):'';
+  }
+}
+setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 var bonusAnswered=false;
 var selectedBonus=null;  // tone name user picked before 檢查
 
@@ -1133,7 +1154,7 @@ function loadWord(){
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
-  document.getElementById('rev-pron').textContent=''; // ล้างคำอ่านของคำเก่าทิ้งก่อน กันค้างโชว์คำอ่านผิดคำตอนคำใหม่ยังไม่เฉลย — Lin 2026-07-12
+  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.readingTH)?('🔊 '+WORD.readingTH):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน)
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
   // vault save button

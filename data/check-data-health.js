@@ -1,6 +1,6 @@
 /**
- * check-data-health.js — ตัวตรวจสุขภาพข้อมูลคำ (data/words-data.js)
- * รันก่อน push ทุกครั้งที่แตะ data/words-data.js (ตามกฎ CLAUDE.md หัวข้อ 🗄️ ฐานข้อมูลเกมกลาง)
+ * check-data-health.js — ตัวตรวจสุขภาพข้อมูลคำ+ประโยค (data/words-data.js + data/adv-sentences.js)
+ * รันก่อน push ทุกครั้งที่แตะ data/words-data.js หรือ data/adv-sentences.js (ตามกฎ CLAUDE.md หัวข้อ 🗄️ ฐานข้อมูลเกมกลาง)
  *
  * วิธีรัน: node data/check-data-health.js
  * ผ่าน = ไม่มี error พิมพ์ออกมา (exit code 0)
@@ -23,6 +23,12 @@
  * sylCount() เลยอ่าน w.syls.length ตรงๆ ได้เลย ไม่ต้อง fallback เป็น 1 อีกต่อไป และเช็ค 1 (concat)
  * รันได้กับทุกคำจริงๆ (เดิมมี early-return ข้ามคำพยางค์เดียวเพราะใช้ "มี/ไม่มี syls" เป็นตัวเช็คจำนวนพยางค์
  * — บั๊กคลาสเดียวกับที่พบใน reading-game.html/typing-game.html inLevel())
+ *
+ * 2026-07-16: เพิ่มเช็ค data/adv-sentences.js (ADV_SENTENCES) ด้วย — หลังพบว่าบั๊กคลาสเดียวกัน
+ * (syls[].th สะกดผิด เช่น ภาษาไทย/อร่อย 9 จุด) หลุดเข้ามาในไฟล์ประโยค 高級 เพราะตัวตรวจเดิมเช็ค
+ * แค่ words-data.js อย่างเดียว ไม่ได้แตะไฟล์ประโยคเลย โครงสร้างไฟล์ประโยคต่างจากไฟล์คำ
+ * (ประโยค → words[] → syls[]) จึงต้องเช็คแยกอีกก้อนหนึ่ง แต่ใช้กติกาเดิม (syls[].th ต่อกัน = th จริง)
+ * ⚠️ ต้องรันไฟล์นี้ก่อน push ทุกครั้งที่แตะ data/words-data.js หรือ data/adv-sentences.js ไฟล์ใดไฟล์หนึ่ง
  */
 global.window = global;
 require('./words-data.js');
@@ -71,10 +77,35 @@ W.forEach(function (w) {
   }
 });
 
+// ════════════════════════════════════════════════════════════
+// เช็คไฟล์ประโยค adv-sentences.js (ADV_SENTENCES) — เพิ่ม 2026-07-16
+// โครงสร้างต่างจากไฟล์คำ: ประโยค → words[] → syls[] เลยต้องไล่เข้าไปอีกชั้น
+// ════════════════════════════════════════════════════════════
+require('./adv-sentences.js');
+const S = global.ADV_SENTENCES;
+
+S.forEach(function (sent) {
+  sent.words.forEach(function (w) {
+    if (!w.syls || !w.syls.length) {
+      errors.push('[ประโยค] "' + sent.th + '" → คำ "' + w.th + '" ไม่มี syls เลย');
+      return;
+    }
+    const missingTh = w.syls.some(function (s) { return !s.th; });
+    if (missingTh) {
+      errors.push('[ประโยค] "' + sent.th + '" → คำ "' + w.th + '" มีพยางค์ที่ไม่มี th');
+      return;
+    }
+    const concat = w.syls.map(function (s) { return s.th; }).join('');
+    if (concat !== w.th) {
+      errors.push('[ประโยค] "' + sent.th + '" → คำ "' + w.th + '" syls.th ต่อกันได้ "' + concat + '" ไม่ตรงกับตัวสะกดจริง (' + w.th + ')');
+    }
+  });
+});
+
 if (errors.length) {
-  console.log('❌ พบปัญหา ' + errors.length + ' คำ:\n');
+  console.log('❌ พบปัญหา ' + errors.length + ' จุด:\n');
   errors.forEach(function (e) { console.log('- ' + e); });
   process.exitCode = 1;
 } else {
-  console.log('✅ ผ่านหมด — syls.th ตรงตัวสะกดจริง + level ตรงกฎ ครบทั้ง ' + W.length + ' คำ');
+  console.log('✅ ผ่านหมด — คำ ' + W.length + ' คำ + ประโยค ' + S.length + ' ประโยค ตรวจแล้วโอเค');
 }
