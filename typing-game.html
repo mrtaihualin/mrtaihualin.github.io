@@ -2113,22 +2113,14 @@ var guideMode=(function(){try{return localStorage.getItem('tg_guide_mode')==='1'
 function setGuideMode(on){
   guideMode=!!on;
   try{localStorage.setItem('tg_guide_mode',guideMode?'1':'0');}catch(e){}
-  // มือถือ + 有提示(有引導模式): ปิดคีย์บอร์ดจริงของเครื่อง บังคับใช้แต่คีย์บอร์ดในเกมเท่านั้น (ให้เห็นตัวอักษรที่ต้องกดชัดๆ ไม่งง) — Lin 2026-07-07
   try{ document.body.classList.toggle('tg-guide-hint', guideMode); }catch(e){}
-  // แก้ 2026-07-08 ตาม audit: เดิมแค่ซ่อนปุ่ม 📱 ไม่ได้ block คีย์บอร์ดจริงจริง — ถ้า input ยังโฟกัสอยู่/ถูกโฟกัสทางอื่น (เช่น Tab, คีย์บอร์ดบลูทูธ) คีย์บอร์ดเนทีฟยังโผล่ได้อยู่ดี
-  // ตอนนี้ตั้ง readonly+inputmode=none บนมือถือจริงตอนมีคำใบ้ เพื่อบล็อกคีย์บอร์ดเนทีฟจริงๆ ไม่ใช่แค่ซ่อนปุ่มเรียก
+  // Lin 2026-07-16: ยกเลิกการบล็อกคีย์บอร์ดเครื่องในโหมดมีคำใบ้ (เดิม 2026-07-08 ตั้ง readonly+inputmode=none บนมือถือ)
+  // เหตุผล: Lin แจ้งว่าอยากพิมพ์ด้วยคีย์บอร์ดมือถือได้ "ทุกโหมด" — โหมดมีคำใบ้ยังโชว์คีย์บอร์ดในเกมเป็นไกด์เหมือนเดิม แต่พิมพ์ด้วยคีย์บอร์ดเครื่องก็ได้
   try{
-    var isTouchDevice = !window.matchMedia('(hover:hover) and (pointer:fine)').matches;
     var mi2=document.getElementById('rg-mobile-input');
     if(mi2){
-      if(isTouchDevice && guideMode){
-        mi2.setAttribute('readonly','readonly');
-        mi2.setAttribute('inputmode','none');
-        mi2.blur();
-      } else {
-        mi2.removeAttribute('readonly');
-        mi2.setAttribute('inputmode','text');
-      }
+      mi2.removeAttribute('readonly');
+      mi2.setAttribute('inputmode','text');
     }
   }catch(e){}
   [['guide-on','guide-off']].forEach(function(p){
@@ -2164,7 +2156,7 @@ function rgToggleWebKbd(){
   try{
     var mi=document.getElementById('rg-mobile-input');
     if(!mi)return;
-    mi.addEventListener('focus',function(){ RG_MOBILE_KBD_USED=true; if(typeof guideMode==='undefined'||!guideMode){ document.body.classList.add('tg-kbd-typing'); } });
+    mi.addEventListener('focus',function(){ RG_MOBILE_KBD_USED=true; document.body.classList.add('tg-kbd-typing'); }); // Lin 2026-07-16: โหมดมีคำใบ้ก็ใช้คีย์บอร์ดเครื่องได้แล้ว → ซ่อนหัวเว็บให้เหมือนกันทุกโหมด
     mi.addEventListener('blur', function(){ document.body.classList.remove('tg-kbd-typing'); });
   }catch(e){}
 })();
@@ -2718,9 +2710,9 @@ document.addEventListener('keydown',function(e){
     }
     // Lin 2026-07-13: เคยเจอว่าพอตอบ/ข้ามคำถามวรรณยุกต์เสร็จ (rgContAskNextTone เคย blur ช่องพิมพ์มือถือทิ้งไว้)
     // ขึ้นคำ/พยางค์ใหม่แล้วคีย์บอร์ดเครื่องไม่เด้งกลับมาเอง ต้องแตะกล่องคำเองใหม่ทุกครั้ง ดูเหมือน "พิมพ์ไม่ได้"
-    // แก้: ถ้าเคยใช้คีย์บอร์ดมือถือมาก่อน (RG_MOBILE_KBD_USED) + เป็นจอสัมผัส + ไม่ได้อยู่โหมดมีคำใบ้ (ซึ่งตั้งใจปิดคีย์บอร์ดเครื่องอยู่แล้ว) → ดึงโฟกัสกลับให้อัตโนมัติ
+    // แก้: ถ้าเคยใช้คีย์บอร์ดมือถือมาก่อน (RG_MOBILE_KBD_USED) + เป็นจอสัมผัส → ดึงโฟกัสกลับให้อัตโนมัติ (Lin 2026-07-16: โหมดมีคำใบ้ก็ใช้คีย์บอร์ดเครื่องได้แล้ว เลยเอาเงื่อนไขกัน guideMode ออก)
     try{
-      if(RG_MOBILE_KBD_USED && rgIsTouchDevice() && (typeof guideMode==='undefined'||!guideMode)){
+      if(RG_MOBILE_KBD_USED && rgIsTouchDevice()){
         var _mi=document.getElementById('rg-mobile-input');
         if(_mi)_mi.focus();
       }
