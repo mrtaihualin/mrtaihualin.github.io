@@ -3733,6 +3733,10 @@ async function renderTeacherView() {
     '<div id="lowQuotaBanner"></div>' +
     '<div id="newFeedbackBanner"></div>' +
     '<div id="actionNeededBanner"></div>' +
+    // 2026-07-16 加（Lin 要求）：學生申請（取消/改期/加課，全部類型一起）搬到最上面，
+    // 就在標題底下，不用再往下滑才看到——本來排在「學生管理」清單之後，現在整個區塊移到最前面。
+    // 主要是為了配合 LINE 通知只留一顆按鈕、點了直接跳到這裡的新做法（見 notifyTeacherClassRequest）。
+    '<div id="pendingRequestsSection" style="margin-bottom:16px;"></div>' +
     '<div class="teacher-panel">' +
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
@@ -3741,14 +3745,19 @@ async function renderTeacherView() {
       '</div>' +
     '</div>' +
     '<div id="pendingSlipsSection" style="margin-bottom:16px;"></div>' +
-    '<div id="pendingRequestsSection" style="margin-bottom:16px;"></div>' +
     '<div id="recentBackupsSection" style="margin-bottom:16px;"></div>' +
     '<div id="attendanceSection" style="margin-top:16px;"></div>' +
     recordingHTML();
   initRecording();
+  // 2026-07-16 加：載入順序刻意不動（雖然畫面上「學生申請」搬到最上面了）——
+  // refreshStudentList() 會重建 studentsCache（見 1042 行），processClassRequestInner
+  // 通知學生時要讀 studentsCache[token] 才知道學生的 line_user_id。如果讓 loadPendingClassRequests()
+  // 先跑完、老師畫面一出現就能點「✅ 處理」，但 studentsCache 還沒重建好，會誤判成「學生沒連 LINE」
+  // 沒發通知（RELIABILITY FIRST：寧可畫面晚一點點出現，也不要讓通知邏輯讀到還沒準備好的資料）。
   await refreshStudentList();
   await loadPendingSlips();
   await loadPendingClassRequests();
+  scrollToRequestFromHash(); // 2026-07-16 加：LINE 通知按鈕點進來會帶 #req-row-xxx，載入完清單後跳過去+框起來
   await loadRecentBackups();
   await loadTodaySchedule();
   loadLowQuotaBanner();
@@ -3893,6 +3902,9 @@ async function renderStudentView() {
   document.getElementById('mainContainer').innerHTML =
     // 2026-07-17 改（Lin 要求）：取消通知這個 banner 移到全頁最上面，比 hero 歡迎區塊還高
     // ——課堂被取消是最重要的事，要第一眼就看到，不要埋在下面滑半天才看到。
+    // 2026-07-16 加：老師剛發起、還沒被學生確認的取消通知放在最上面（要學生按確認的優先度更高），
+    // 已經確認完成的舊版通知（純關閉用）放下面。
+    '<div id="teacherCancelAckBanner"></div>' +
     '<div id="teacherCancelNoticeBanner"></div>' +
     '<div class="student-hero">' +
       '<div class="student-hero-avatar">' + escHtml(sInitial) + '</div>' +
@@ -3957,6 +3969,7 @@ async function renderStudentView() {
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentNextClass(token);
+  loadTeacherCancelAckBanner(token);
   loadTeacherCancelNoticeBanner(token);
   loadStudentPendingRequestStatus(token);
   loadStudentSchedule(token);
@@ -4575,7 +4588,9 @@ async function requestCancelClass(isoDate, calendarEventId) {
     const idRes = await sb.from('classroom_requests').update({ calendar_event_id: calendarEventId }).eq('id', res.data);
     if (idRes.error) console.warn('⚠️ 補存 calendar_event_id 失敗（不影響這次申請本身）：', idRes.error.message);
   }
-  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate });
+  // 2026-07-16 加：把這筆申請的 id 一起帶給 notifyTeacherClassRequest，
+  // 讓 LINE 通知裡的按鈕可以直接連到網站上這一筆卡片的位置（#req-row-<id>）。
+  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate, requestId: res.data });
   closeCancelPickerModal();
   alert('✅ 已送出取消申請，老師確認後會回覆你。');
 }
@@ -4639,6 +4654,9 @@ async function computeUpcomingOccurrences(token, count) {
 // 2026-07-14 改（Lin 要求）：老師端選課堂已經是「下拉選單」（見 pickLessonModal/
 // openPickLessonModal），學生端這裡改成同一種體驗，不要用一排排按鈕的清單。
 var _cancelPickerOptions = [];
+// 2026-07-16 加：學生「改選課堂」自己已送出的取消申請時用——不是 null 就代表現在是
+// 「編輯模式」，送出時要改成更新同一筆申請（editCancelRequestChoice），不是新建一筆。
+var _cancelPickerEditRequestId = null;
 
 async function openCancelPickerModal() {
   if (!nextClassCtx) return;
@@ -4646,7 +4664,21 @@ async function openCancelPickerModal() {
   document.getElementById('cancelPickerModal').classList.add('open');
   await renderCancelPickerSelect();
 }
-function closeCancelPickerModal() { document.getElementById('cancelPickerModal').classList.remove('open'); }
+
+// 2026-07-16 加：學生對自己已送出、老師還沒處理的取消申請按「✏️ 改選課堂」——
+// 重用同一個下拉選單 modal，只是設一個旗標讓送出時改成「更新」而不是「新建」。
+async function openEditCancelRequestPicker(id) {
+  if (!nextClassCtx) return;
+  if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
+  _cancelPickerEditRequestId = id;
+  document.getElementById('cancelPickerModal').classList.add('open');
+  await renderCancelPickerSelect();
+}
+
+function closeCancelPickerModal() {
+  document.getElementById('cancelPickerModal').classList.remove('open');
+  _cancelPickerEditRequestId = null; // 關閉就重設，下次打開預設都是「新建」模式
+}
 
 async function renderCancelPickerSelect() {
   const sel = document.getElementById('cancelPickerSelect');
@@ -4699,7 +4731,54 @@ function submitCancelPickerChoice() {
   const chosen = _cancelPickerOptions[sel.value];
   if (!chosen) return;
   const thai = formatInTz(chosen.date, TEACHER_TZ); // 泰國時間 → 送給老師/資料庫用
-  requestCancelClass(thai.dateStr, chosen.calendarEventId);
+  if (_cancelPickerEditRequestId) {
+    editCancelRequestChoice(_cancelPickerEditRequestId, thai.dateStr, chosen.calendarEventId);
+  } else {
+    requestCancelClass(thai.dateStr, chosen.calendarEventId);
+  }
+}
+
+// 2026-07-16 加：學生改選另一堂課取消（不是重新送出新的一筆，是更新同一筆申請）——
+// 跟老師端 teacherEditOwnCancelRequest_chosen 同樣邏輯，只是這裡是學生改自己的，
+// 通知對象換成老師。用 .eq('status','pending') 當保險閘：如果老師剛好在這一刻已經
+// 處理完了，這裡就會抓不到（count=0），要老實跟學生講來不及改了。
+async function editCancelRequestChoice(id, isoDate, calendarEventId) {
+  if (!nextClassCtx) return;
+  const token = nextClassCtx.token;
+  if (!confirm('確定要改成申請取消 ' + isoDate + ' 這一堂嗎？（會重新通知老師）')) return;
+  const studentName = currentStudentName(token);
+  const updateFields = { original_date: isoDate };
+  if (calendarEventId) updateFields.calendar_event_id = calendarEventId;
+  const res = await sb.from('classroom_requests').update(updateFields)
+    .eq('id', id).eq('status', 'pending').select();
+  if (res.error) { alert('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  if (!res.data || !res.data.length) {
+    alert('ℹ️ 更新失敗，這筆申請可能已經被老師處理了，重新整理頁面看看。');
+    closeCancelPickerModal();
+    loadStudentPendingRequestStatus(token);
+    return;
+  }
+  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: token, originalDate: isoDate, requestId: id });
+  closeCancelPickerModal();
+  alert('✅ 已更新，老師確認後會回覆你。');
+  loadStudentPendingRequestStatus(token);
+}
+
+// 2026-07-16 加：學生收回自己送出、老師還沒處理的取消申請——跟老師端
+// teacherWithdrawOwnCancelRequest 同樣邏輯，角色對調，Calendar 本來就還沒被動過，
+// 收回不用管 Calendar。用 .eq('status','pending') 當保險閘，防止跟老師處理的動作互相競爭。
+async function studentWithdrawOwnRequest(token, id) {
+  if (!confirm('確定要收回這個取消申請嗎？（等於不取消了，這堂課維持原本安排）')) return;
+  const res = await sb.from('classroom_requests').update({ status: 'acknowledged' })
+    .eq('id', id).eq('status', 'pending').select();
+  if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
+  if (!res.data || !res.data.length) {
+    alert('ℹ️ 收回失敗——老師可能剛好已經處理了，請直接用 LINE 聯絡老師確認狀況。');
+    loadStudentPendingRequestStatus(token);
+    return;
+  }
+  alert('✅ 已收回，這堂課不會被取消');
+  loadStudentPendingRequestStatus(token);
 }
 
 function openClassRequestModal() {
@@ -4877,14 +4956,18 @@ async function loadStudentPendingRequestStatus(token) {
   const el = document.getElementById('pendingRequestCard');
   if (!el) return;
   try {
+    // 2026-07-16 改：多撈幾筆，自己篩掉「老師發起的取消」（那個已經有專屬的
+    // teacherCancelAckBanner 處理確認流程了，這裡不用重複顯示，不然學生會看到兩個一樣的東西）。
     const res = await sb.from('classroom_requests').select('*')
       .eq('token', token).eq('status', 'pending')
-      .order('created_at', { ascending: false }).limit(1);
-    const r = res.data && res.data[0];
-    if (!r) { el.innerHTML = ''; return; }
+      .order('created_at', { ascending: false }).limit(5);
+    const rows = res.data || [];
+    const r = rows.find(function (x) { return !(x.request_type === 'cancel' && x.initiated_by === 'teacher'); });
+    if (!r) { await loadStudentRecentAcknowledgedCancelCard(token, el); return; }
     window._myPendingRequest = r;
     const isCancel = r.request_type === 'cancel';
     const isAdd = r.request_type === 'add_class';
+    const isOwnCancel = isCancel && r.initiated_by !== 'teacher'; // 學生自己申請的取消（不是老師發起的）
 
     function hoursLeftLabel(sinceIso) {
       if (!sinceIso) return '';
@@ -4911,12 +4994,51 @@ async function loadStudentPendingRequestStatus(token) {
         '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">等老師開電腦確認後，才會真的調整行事曆喔！</p>' +
       '</div>';
     } else {
+      // 2026-07-16 加（Lin 要求）：老師還沒處理前，學生自己申請的取消可以「查看／改選課堂／收回」，
+      // 跟老師端能對自己發起的取消做的事一樣，角色對調。改期/加課申請維持原本（沒有這些按鈕）。
+      var ownCancelActions = isOwnCancel
+        ? ('<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+             '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="viewRequestDetail(window._myPendingRequest)">👁️ 查看</button>' +
+             '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openEditCancelRequestPicker(\'' + r.id + '\')">✏️ 改選課堂</button>' +
+             '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:#b45309;" onclick="studentWithdrawOwnRequest(\'' + token + '\',\'' + r.id + '\')">收回申請</button>' +
+           '</div>')
+        : '';
       el.innerHTML = '<div class="card">' +
         '<h2>' + (isCancel ? '⏳ 取消申請處理中' : isAdd ? '⏳ 加課申請處理中' : '⏳ 改期申請處理中') + '</h2>' +
         (isAdd ? '<p style="font-size:0.85rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:4px;">申請時間：' + escHtml(r.requested_date || '-') + ' ' + escHtml(r.requested_time || '') + '（泰國時間）</p>' : '') +
         '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">' + hoursLeftLabel(r.created_at) + '</p>' +
+        ownCancelActions +
       '</div>';
     }
+  } catch (e) { el.innerHTML = ''; }
+}
+
+// 2026-07-16 加：學生自己申請的取消，老師處理完（status='acknowledged'）之後，
+// 在「原本課堂那天結束之前」，學生還是可以來「查看／聯絡老師」（不能再改選課堂了，
+// 因為 Calendar 已經真的被刪掉，改用「查看＋聯絡老師」比較安全，跟老師發起那邊
+// phase 2 的做法一致，只是老師發起的用 teacherCancelNoticeBanner 顯示，這裡是學生
+// 自己發起的，用同一張卡片位置（pendingRequestCard）顯示）。
+// 用字串比較日期（'YYYY-MM-DD' 字典序＝時間順序，不用轉成真正的 Date 比較），
+// 用泰國時間當「今天」的基準（跟 original_date 存的時區一致）。
+async function loadStudentRecentAcknowledgedCancelCard(token, el) {
+  try {
+    var todayStr = formatInTz(new Date(), TEACHER_TZ).dateStr;
+    var res = await sb.from('classroom_requests').select('*')
+      .eq('token', token).eq('request_type', 'cancel').eq('status', 'acknowledged')
+      .neq('initiated_by', 'teacher')
+      .gte('original_date', todayStr)
+      .order('created_at', { ascending: false }).limit(5);
+    if (res.error || !res.data || !res.data.length) { el.innerHTML = ''; return; }
+    var r = res.data[0];
+    window._myPendingRequest = r;
+    el.innerHTML = '<div class="card">' +
+      '<h2>✅ 取消申請已處理</h2>' +
+      '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">原本課堂：' + escHtml(r.original_date || '-') + '（已取消）</p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="viewRequestDetail(window._myPendingRequest)">👁️ 查看</button>' +
+        '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
+      '</div>' +
+    '</div>';
   } catch (e) { el.innerHTML = ''; }
 }
 
@@ -4966,6 +5088,49 @@ async function loadTeacherCancelNoticeBanner(token) {
   } catch (e) { el.innerHTML = ''; }
 }
 
+// 2026-07-16 加（Lin 要求）：老師發起取消 → 不再馬上刪 Calendar，改成先請學生按「我知道了」確認。
+// 這裡是學生網站上的確認按鈕（LINE 那邊也有一顆一樣功能的，見 line-webhook 的 ack_teacher_cancel，
+// 兩邊哪個先按都算數，按下去馬上互相同步，不是各自本機記憶而已）。
+async function loadTeacherCancelAckBanner(token) {
+  var el = document.getElementById('teacherCancelAckBanner');
+  if (!el) return;
+  try {
+    var res = await sb.from('classroom_requests').select('id,original_date')
+      .eq('token', token).eq('request_type', 'cancel').eq('initiated_by', 'teacher')
+      .eq('status', 'pending').is('teacher_cancel_ack_at', null)
+      .order('created_at', { ascending: false }).limit(5);
+    if (res.error) { el.innerHTML = ''; return; }
+    var rows = res.data || [];
+    el.innerHTML = rows.map(function(r) {
+      return '<div style="background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;">' +
+        '<div style="font-weight:700;font-size:0.95rem;color:var(--amber-dark);margin-bottom:4px;">❌ 老師想取消這堂課</div>' +
+        '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:10px;">時間：' + escHtml(r.original_date || '-') + '，請按一下確認收到</div>' +
+        '<button onclick="ackTeacherCancel(\'' + token + '\',\'' + r.id + '\')" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border:none;border-radius:999px;padding:8px 16px;font-size:0.85rem;font-weight:700;cursor:pointer;">我知道了</button>' +
+      '</div>';
+    }).join('');
+  } catch (e) { el.innerHTML = ''; }
+}
+
+async function ackTeacherCancel(token, id) {
+  var res = await sb.from('classroom_requests').update({ teacher_cancel_ack_at: new Date().toISOString() })
+    .eq('id', id).is('teacher_cancel_ack_at', null).select();
+  if (res.error) { alert('⚠️ 確認失敗：' + res.error.message + '\n可以直接用 LINE 聯絡老師比較保險。'); return; }
+  if (!res.data || !res.data.length) {
+    // count=0：可能已經在 LINE 按過了，或老師剛好收回了通知——不管哪一種，重新整理畫面看目前狀態就好
+    await loadTeacherCancelAckBanner(token);
+    return;
+  }
+  // 2026-07-16 加：確認後要「彈回去通知老師」，老師才知道可以回網站按「確認刪除」了
+  try {
+    await fetch(LINE_NOTIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到取消通知（' + (res.data[0].original_date || '-') + '），可以到網站按「確認刪除」了' }),
+    });
+  } catch (e) { /* 通知老師失敗不影響學生這邊已經確認成功 */ }
+  await loadTeacherCancelAckBanner(token);
+}
+
 async function respondToOfferAsStudent(requestId, response) {
   if (!confirm(response === 'accepted' ? '確定接受這個新時間嗎？' : '確定不方便這個時間嗎？（老師會再想辦法）')) return;
   const token = urlParams.get('s') || '';
@@ -5000,12 +5165,22 @@ function notifyTeacherClassRequest(d) {
       var _p = calDateStr.split('-');
       calLink = 'https://calendar.google.com/calendar/r/day/' + parseInt(_p[0],10) + '/' + parseInt(_p[1],10) + '/' + parseInt(_p[2],10);
     }
+    // 2026-07-16 加：申請取消的網站連結，帶 #req-row-<id> 直接跳到這筆申請的卡片
+    // （見 scrollToRequestFromHash）。沒有 requestId（理論上不會發生，保險起見還是防一下）
+    // 就退回沒有 # 的舊版連結，最多就是老師自己要滑一下找，不會壞掉。
+    var siteLink = 'https://mrtaihualin.com/classroom/' + (isCancel && d.requestId ? ('#req-row-' + encodeURIComponent(d.requestId)) : '');
+
     var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期')
       + (isAdd ? '' : ('\n原本課堂日期：' + (d.originalDate || '-')))
       + (isCancel ? '' : ('\n想' + (isAdd ? '約' : '改到') + '：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')))
       + (d.note ? '\n備註：' + d.note : '')
-      + (calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
-      + '\n\n請到老師網站「📋 學生申請改期/取消」' + (isAdd ? '按「📅 開始安排」確認沒有衝突後排進課表。' : '按「✅ 處理」，系統會自動幫你搬/刪 Calendar。');
+      // 2026-07-16 改（Lin 要求：取消申請的通知只留一顆按鈕）：不再提「開 Google Calendar」這條路了，
+      // 按鈕直接跳到網站卡片，「✅ 處理」會自動處理 Calendar，不用老師自己先去 Calendar 看一次。
+      // 改期/加課還是保留這條 Calendar 連結文字，這兩種沒有改動。
+      + (!isCancel && calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
+      + (isCancel
+        ? '\n\n請點下方按鈕前往網站處理'
+        : ('\n\n請到老師網站「📋 學生申請改期/取消」' + (isAdd ? '按「📅 開始安排」確認沒有衝突後排進課表。' : '按「✅ 處理」，系統會自動幫你搬/刪 Calendar。')));
 
     function sendEmailFallback() {
       fetch('https://api.web3forms.com/submit', {
@@ -5019,9 +5194,12 @@ function notifyTeacherClassRequest(d) {
     // 現在「處理」牽涉到自動搜尋+搬/刪 Google Calendar，Edge Function 沒有老師的 Google 授權做不到，
     // 從 LINE 按下去只會誤以為處理完成，Calendar 其實完全沒被動到（RELIABILITY FIRST，寧可少一顆按鈕
     // 也不要讓老師誤判）。改成純連結：開 Calendar + 到網站處理。
+    // 2026-07-16 改（Lin 要求）：「申請取消」這種類型只留一顆「📋 到網站處理」按鈕，直接連到那筆
+    // 申請卡片的位置，不用再多一顆「開 Calendar」（反正點進去就有「✅ 處理」可以直接按了）。
+    // 改期/加課這兩種維持原本 2 顆按鈕的邏輯，沒有改動。
     var flexButtons = [];
-    if (calLink) flexButtons.push({ label: '🔗 開 Calendar', uri: calLink });
-    flexButtons.push({ label: '📋 到網站處理', uri: 'https://mrtaihualin.com/classroom/' });
+    if (!isCancel && calLink) flexButtons.push({ label: '🔗 開 Calendar', uri: calLink });
+    flexButtons.push({ label: '📋 到網站處理', uri: siteLink });
 
     fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
@@ -5432,6 +5610,25 @@ async function loadPendingSlips() {
 //   ✅ 處理       → 自動搜尋 Calendar 上對應的那一次課堂，move（改期）或 delete（取消），
 //                    動手前一定先備份，動完才把這筆申請標記 acknowledged
 //   ⚙️ 其他       → 開小視窗選：自己聯絡學生（單純關掉）／提議新時間給學生（傳 LINE 讓學生按同意/不方便）
+// 2026-07-16 加（Lin 要求）：LINE 通知（學生申請取消）現在只留一顆「📋 到網站處理」按鈕，
+// 網址後面會帶 #req-row-<申請id>，點了開網頁後要自動捲到那張申請卡片、框起來讓老師一眼看到，
+// 不用自己在清單裡找。清單是非同步載入的（loadPendingClassRequests 跑完才有這個 DOM），
+// 瀏覽器自己的「網址帶 # 自動捲動」在頁面一開始（DOM 還沒有這張卡片）時不會生效，所以要自己補這段。
+// 找不到對應的卡片（例如這筆申請已經被處理掉、卡片不在清單裡了）就安靜跳過，不影響其他功能。
+function scrollToRequestFromHash() {
+  try {
+    var hash = location.hash || '';
+    if (hash.indexOf('#req-row-') !== 0) return;
+    var elId = decodeURIComponent(hash.slice(1));
+    var el = document.getElementById(elId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.outline = '3px solid var(--gold-bright)';
+    el.style.outlineOffset = '3px';
+    setTimeout(function () { el.style.outline = ''; el.style.outlineOffset = ''; }, 5000);
+  } catch (e) {}
+}
+
 async function loadPendingClassRequests() {
   var container = document.getElementById('pendingRequestsSection');
   if (!container) return;
@@ -5479,6 +5676,17 @@ async function loadPendingClassRequests() {
     } else if (isProposed) {
       actionsHtml = '<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">🔁 已提議新時間，等學生回覆中…</div>' +
         '<button class="btn-reject" onclick="cancelProposedOffer(\'' + r.id + '\')">↩️ 取消這個提議</button>';
+    } else if (isCancel && r.initiated_by === 'teacher') {
+      // 2026-07-16 加（Lin 要求）：老師自己發起的取消，不再馬上刪 Calendar——現在要先等學生按
+      // 「我知道了」確認收到，才輪到老師按「確認刪除」真的動 Calendar。學生確認前，老師這裡可以
+      // 反悔收回／查看／改選成別堂課（跟學生能對自己送出的申請做的事一樣，角色對調）。
+      actionsHtml = r.teacher_cancel_ack_at
+        ? ('<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">✅ 學生已經確認了，可以刪 Calendar 了</div>' +
+           '<button class="btn-approve" onclick="processClassRequest(\'' + r.id + '\')">確認刪除 Calendar</button>')
+        : ('<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">🕐 等學生按「我知道了」確認</div>' +
+           '<button class="btn-approve" onclick="viewRequestDetail(window._classRequestCache[\'' + r.id + '\'])">👁️ 查看</button>' +
+           '<button class="btn-approve" onclick="teacherEditOwnCancelRequest(\'' + r.id + '\')">✏️ 改選課堂</button>' +
+           '<button class="btn-reject" onclick="teacherWithdrawOwnCancelRequest(\'' + r.id + '\')">收回這個取消</button>');
     } else if (isCancel) {
       // 2026-07-16 改（Lin 要求）：取消申請簡化成只留 2 顆——現在有 calendar_event_id 直接對到
       // 真正的事件（見 requestCancelClass／processClassRequestInner），不用再靠「姓名+日期」
@@ -6003,16 +6211,21 @@ async function listRemainingLessonsForStudent(token) {
 }
 
 var _pickLessonToken = null;
-var _pickLessonPurpose = null; // 'reschedule' | 'cancel'
+var _pickLessonPurpose = null; // 'reschedule' | 'cancel' | 'edit_teacher_cancel'
 var _pickLessonOptions = [];
+var _pickLessonEditRequestId = null; // 2026-07-16 加：purpose='edit_teacher_cancel' 時，記著在改哪一筆申請
 
 async function openPickLessonModal(token, purpose) {
   _pickLessonToken = token;
   _pickLessonPurpose = purpose;
   _pickLessonOptions = [];
-  document.getElementById('pickLessonTitle').textContent = purpose === 'cancel' ? '❌ 選擇要取消的課堂' : '🔄 選擇要改期的課堂';
+  document.getElementById('pickLessonTitle').textContent = purpose === 'cancel' ? '❌ 選擇要取消的課堂'
+    : purpose === 'edit_teacher_cancel' ? '✏️ 改選要取消的課堂'
+    : '🔄 選擇要改期的課堂';
   document.getElementById('pickLessonHint').textContent = purpose === 'cancel'
     ? '從本輪剩餘課堂中，選出要直接取消的那一堂。'
+    : purpose === 'edit_teacher_cancel'
+    ? '改選這次真正要取消的課堂（原本那筆通知會更新成新的時間，重新請學生確認一次）。'
     : '從本輪剩餘課堂中，選出要改期的那一堂，下一步再選新時間。';
   var sel = document.getElementById('pickLessonSelect');
   sel.innerHTML = '<option value="">讀取中…</option>';
@@ -6042,6 +6255,7 @@ function confirmPickLesson() {
   var token = _pickLessonToken, purpose = _pickLessonPurpose;
   closePickLessonModal();
   if (purpose === 'cancel') teacherCancelClassNow_chosen(token, chosen);
+  else if (purpose === 'edit_teacher_cancel') teacherEditOwnCancelRequest_chosen(_pickLessonEditRequestId, token, chosen);
   else initiateTeacherReschedule_chosen(token, chosen);
 }
 
@@ -6087,12 +6301,17 @@ async function teacherCancelClassNow_chosen(token, chosen) {
   }
 }
 
+// 2026-07-16 改（Lin 要求）：以前這裡是「老師一按就馬上刪 Calendar」，現在改成「先請學生確認，
+// 學生按了『我知道了』（LINE 或網站都可以）之後，老師要自己回來按一次『確認刪除』才會真的刪」——
+// 避免學生完全不知情、課堂就悄悄從 Calendar 消失。超過 48 小時學生沒確認，系統會自動提醒老師
+// 直接去聯絡學生（見 request-sla-cron 的新分支）。真正的刪除邏輯還是共用 processClassRequestInner
+// （跟學生申請取消、老師按「✅ 處理」同一套），這裡只負責「建立紀錄 + 通知學生來確認」。
 async function teacherCancelClassNowInner(token, chosen) {
   var s = studentsCache[token];
   var studentName = s ? s.name : token;
   var ev = chosen.ev;
   var oldStartIso = chosen.iso;
-  if (!confirm('確定要直接取消這堂課嗎？\n\n學生：' + studentName + '\n時間：' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）\n\n只會刪除這一次課堂，不影響其他週。刪除前會先備份，可以復原。系統會發 LINE 通知學生。確定嗎？')) return;
+  if (!confirm('確定要取消這堂課嗎？\n\n學生：' + studentName + '\n時間：' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）\n\n送出後不會馬上刪 Calendar——會先請學生按「我知道了」確認收到，等學生確認後，你要回來這裡按一次「確認刪除」才會真的刪除。確定要送出這個取消通知嗎？')) return;
 
   var p = formatInTz(new Date(oldStartIso), TEACHER_TZ);
   var res = await sb.rpc('submit_class_request', {
@@ -6103,29 +6322,28 @@ async function teacherCancelClassNowInner(token, chosen) {
   if (res.error) { alert('建立紀錄失敗：' + res.error.message); return; }
   var newId = res.data;
 
-  try {
-    assertBackupOk(await backupCalendarEvent(newId, token, 'delete', ev, null), '取消課堂');
-    await deleteClassEventOnce(ev.id);
-  } catch (e) { alert('⚠️ 刪除課堂失敗：' + (e.message || e)); return; }
+  // 2026-07-16 加：跟學生申請取消同一套做法——現在就把真正的 Calendar 事件 ID 存起來，
+  // 之後「確認刪除」才不用再猜，直接用 ID 拿（這裡還沒刪 Calendar，只是先記錄起來）。
+  var idRes = await sb.from('classroom_requests').update({ calendar_event_id: ev.id }).eq('id', newId);
+  if (idRes.error) console.warn('⚠️ 補存 calendar_event_id 失敗（不影響通知本身）：', idRes.error.message);
 
-  // 2026-07-14 加（RELIABILITY FIRST，之前這裡空的 catch 會吞掉失敗，卻還是跟老師說「已通知學生」——
-  // 現在改成明確追蹤有沒有真的送出去，送失敗要老實講，不能報喜不報憂）
   var notifySent = false, notifyError = null;
   if (s && s.line_user_id) {
     try {
       // 傳給學生看的時間 → 換算成學生自己的時區，不要直接丟泰國時間給學生
       const cancelTimeLabel = studentFacingTimeLabel(new Date(oldStartIso), s.pending_student_tz);
-      // 2026-07-16 加：改成卡片樣式（比純文字清楚），但這則本來就在 LINE 對話裡了
-      // → 不放「聯絡老師」按鈕（按了也只是跳回同一個對話，沒用）純資訊卡片，不能點
+      // 2026-07-16 改：現在要請學生「確認」，所以要有一顆真的能按的按鈕（postback），
+      // 交給 line-webhook 處理 action=ack_teacher_cancel（見該檔案）。
       const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
         body: JSON.stringify({
           to: { studentToken: token },
-          message: '老師取消了 ' + cancelTimeLabel + ' 這堂課，如有疑問請直接聯絡老師',
+          message: '老師想取消 ' + cancelTimeLabel + ' 這堂課，請按一下確認收到',
           flex: {
-            title: '❌ 課堂已取消',
-            bodyText: '老師取消了 ' + cancelTimeLabel + ' 這堂課，如有疑問請直接在這裡跟老師說',
+            title: '❌ 老師想取消這堂課',
+            bodyText: '時間：' + cancelTimeLabel + '\n\n請按下方按鈕確認收到',
+            buttons: [ { label: '我知道了', postbackData: 'action=ack_teacher_cancel&request=' + encodeURIComponent(newId) } ],
           },
         }),
       });
@@ -6134,15 +6352,98 @@ async function teacherCancelClassNowInner(token, chosen) {
     } catch (e) { notifyError = e.message || String(e); }
   }
 
-  await sb.from('classroom_requests').update({ status: 'acknowledged' }).eq('id', newId);
-  var cancelResultMsg = '✅ 已取消這堂課';
-  if (!s || !s.line_user_id) cancelResultMsg += '（學生還沒連結 LINE，沒收到通知，建議自己再說一聲）';
-  else if (notifySent) cancelResultMsg += '，並已通知學生';
-  else cancelResultMsg += '\n⚠️ 但 LINE 通知學生失敗（' + notifyError + '），請自己再跟學生說一聲';
-  alert(cancelResultMsg);
+  var resultMsg = '✅ 已送出取消通知，等學生按「我知道了」（LINE 或網站都可以）之後，記得回來這裡按「確認刪除」才會真的刪 Calendar';
+  if (!s || !s.line_user_id) resultMsg += '\n⚠️ 學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下';
+  else if (!notifySent) resultMsg += '\n⚠️ 但 LINE 通知失敗（' + notifyError + '），學生開網站還是看得到，也可以自己再說一聲';
+  alert(resultMsg);
   loadTeacherNextClassBox(token);
-  loadRecentBackups();
   loadPendingClassRequests();
+}
+
+// 2026-07-16 加（Lin 要求）：老師自己發起的「取消這堂課」通知，在學生按確認之前，
+// 老師也可以反悔收回（跟學生能收回自己送出的取消申請同一個邏輯，角色對調，只是 Calendar
+// 本來就還沒被動過，收回不用管 Calendar）。用 .is('teacher_cancel_ack_at', null) 當保險閘：
+// 如果學生剛好在這一刻按了確認，這裡就會抓不到（count=0），要老實跟老師講已經來不及收回。
+async function teacherWithdrawOwnCancelRequest(id) {
+  if (!confirm('確定要收回這個取消通知嗎？（等於不取消了，這堂課維持原本安排，Google Calendar 完全沒被動過）')) return;
+  var res = await sb.from('classroom_requests').update({ status: 'acknowledged' })
+    .eq('id', id).eq('status', 'pending').is('teacher_cancel_ack_at', null).select();
+  if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
+  if (!res.data || !res.data.length) {
+    alert('ℹ️ 收回失敗——學生可能剛好已經按了確認，這種情況要用「確認刪除」把 Calendar 也刪掉，或自己聯絡學生說明。');
+    await loadPendingClassRequests();
+    return;
+  }
+  alert('✅ 已收回，這堂課不會被取消，Calendar 沒有被動過');
+  await loadPendingClassRequests();
+}
+
+// 2026-07-16 加：老師想改成取消「另一堂」而不是原本選的那堂——更新同一筆申請的日期/Calendar
+// 事件 ID，不用整個作廢重新來一次。因為時間變了，等於是新的通知，所以重設 teacher_cancel_ack_at，
+// 重新發一次 LINE/網站確認請學生重新按一次「我知道了」。只允許學生還沒確認前改（同withdraw的閘）。
+async function teacherEditOwnCancelRequest(id) {
+  var r = (window._classRequestCache || {})[id];
+  if (!r) { alert('資料不見了，重新整理頁面再試'); return; }
+  _pickLessonEditRequestId = id;
+  await openPickLessonModal(r.token, 'edit_teacher_cancel');
+}
+
+async function teacherEditOwnCancelRequest_chosen(id, token, chosen) {
+  if (!id) return;
+  var s = studentsCache[token];
+  var studentName = s ? s.name : token;
+  var ev = chosen.ev;
+  var oldStartIso = chosen.iso;
+  if (!confirm('確定要改成取消這一堂嗎？\n\n學生：' + studentName + '\n時間：' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）\n\n會重新請學生確認一次。確定嗎？')) return;
+
+  var p = formatInTz(new Date(oldStartIso), TEACHER_TZ);
+  var res = await sb.from('classroom_requests').update({
+    original_date: p.dateStr, calendar_event_id: ev.id, teacher_cancel_ack_at: null,
+  }).eq('id', id).eq('status', 'pending').is('teacher_cancel_ack_at', null).select();
+  if (res.error) { alert('⚠️ 更新失敗：' + res.error.message); return; }
+  if (!res.data || !res.data.length) { alert('ℹ️ 更新失敗，這筆申請可能已經不是「等學生確認」狀態了，重新整理頁面看看。'); await loadPendingClassRequests(); return; }
+
+  var notifySent = false, notifyError = null;
+  if (s && s.line_user_id) {
+    try {
+      const cancelTimeLabel = studentFacingTimeLabel(new Date(oldStartIso), s.pending_student_tz);
+      const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        body: JSON.stringify({
+          to: { studentToken: token },
+          message: '老師想取消的課堂時間改了：' + cancelTimeLabel + '，請重新按一下確認收到',
+          flex: {
+            title: '❌ 老師想取消這堂課（時間更新了）',
+            bodyText: '時間：' + cancelTimeLabel + '\n\n請按下方按鈕確認收到',
+            buttons: [ { label: '我知道了', postbackData: 'action=ack_teacher_cancel&request=' + encodeURIComponent(id) } ],
+          },
+        }),
+      });
+      notifySent = notifyRes.ok;
+      if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+    } catch (e) { notifyError = e.message || String(e); }
+  }
+  var msg = '✅ 已更新，重新請學生確認';
+  if (!s || !s.line_user_id) msg += '\n⚠️ 學生還沒連結 LINE，收不到 LINE 通知，學生開網站還是看得到';
+  else if (!notifySent) msg += '\n⚠️ 但 LINE 通知失敗（' + notifyError + '）';
+  alert(msg);
+  loadPendingClassRequests();
+}
+
+// 2026-07-16 加：通用的「查看申請詳情」——老師/學生共用同一個函式，傳整筆申請物件進來就好，
+// 不用另外查資料庫（反正資料早就已經在畫面上，不用多打一次 API）。
+function viewRequestDetail(r) {
+  if (!r) { alert('資料不見了，重新整理頁面再試'); return; }
+  var lines = [
+    '學生：' + (r.student_name || '-'),
+    '類型：' + (r.request_type === 'cancel' ? '取消' : r.request_type === 'add_class' ? '加課' : '改期') + (r.initiated_by === 'teacher' ? '（老師發起）' : ''),
+    '課堂日期：' + (r.original_date || '-'),
+  ];
+  if (r.requested_date) lines.push('想改到：' + r.requested_date + (r.requested_time ? ' ' + r.requested_time : ''));
+  if (r.note) lines.push('備註：' + r.note);
+  lines.push('送出時間：' + (r.created_at ? new Date(r.created_at).toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' }) : '-'));
+  alert('📋 申請詳情\n\n' + lines.join('\n'));
 }
 
 // 📌 永久變更：關閉舊的每週固定課、從新日期開始開一組新的每週固定課（技術上叫「this and following」，

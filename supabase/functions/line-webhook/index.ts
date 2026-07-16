@@ -11,6 +11,10 @@
 //      เวลาครูเสนอเวลาใหม่ให้ (ดู submitProposeTime ในเว็บ) → อัปเดต classroom_requests.offer_status
 //      **ไม่แตะ Google Calendar** (Edge Function ไม่มี Google OAuth token ของครู ทำไม่ได้จากฝั่งนี้)
 //      ครูต้องกลับไปเปิดหน้าเว็บเพื่อกด "✅ ยืนยันและย้าย Calendar" เอง ระบบจะโชว์ให้เห็นในหน้าแรกอัตโนมัติ
+//   3) action=ack_teacher_cancel (2026-07-16 เพิ่ม) — ครูสั่งยกเลิกคาบ (teacherCancelClassNowInner)
+//      ไม่ลบ Calendar ทันทีแล้ว ต้องรอนักเรียนกด "我知道了" ก่อน (กดฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้ อันไหน
+//      กดก่อนนับอันนั้น) → set teacher_cancel_ack_at แล้ว push แจ้งครูว่ากดยืนยันลบได้แล้ว
+//      **ไม่แตะ Google Calendar เอง** (ครูต้องกลับไปกด "確認刪除 Calendar" ที่เว็บเอง)
 //
 // 2026-07-13 สำคัญมาก：ตั้งแต่เปลี่ยนมาให้ "處理" ปุ่มบนเว็บค้นหา+ย้าย/ลบ Calendar เองแล้ว
 //   ปุ่ม "✅ 已處理"/"❌ 婉拒" แบบเดิมที่เคยส่งไปให้ครูกดตรงจาก LINE **เอาออกจากข้อความแจ้งเตือนใหม่แล้ว**
@@ -41,6 +45,7 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const LINE_REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
+const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 
 async function verifySignature(rawBody, signatureHeader, channelSecret) {
   const key = await crypto.subtle.importKey(
@@ -66,6 +71,18 @@ async function replyLine(channelToken, replyToken, text) {
       body: JSON.stringify({ replyToken, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }),
     });
   } catch (e) { /* ตอบกลับไม่สำเร็จก็ไม่เป็นไร ฐานข้อมูลอัปเดตไปแล้วเป็นหลัก */ }
+}
+
+// 2026-07-16 加：ต่างจาก replyLine ตรงที่ push ส่งหาใครก็ได้ (ไม่ต้องมี replyToken สดๆ)
+// ใช้ตอนต้องเด้งไปแจ้ง "อีกฝ่าย" (เช่น นักเรียนกดรับทราบใน LINE → ต้องเด้งไปเตือนครู)
+async function pushLine(channelToken, targetUserId, text) {
+  try {
+    await fetch(LINE_PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+      body: JSON.stringify({ to: targetUserId, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }),
+    });
+  } catch (e) { /* push ไม่สำเร็จก็ไม่เป็นไร ฐานข้อมูลอัปเดตไปแล้วเป็นหลัก */ }
 }
 
 serve(async (req) => {
@@ -153,6 +170,40 @@ serve(async (req) => {
             ? '✅ 已回覆「可以」！等老師開電腦確認後才會真的調整行事曆喔'
             : '✅ 已回覆「不方便」，老師會再想辦法跟你討論新時間';
           await replyLine(channelToken, event.replyToken, replyText);
+        }
+        continue;
+      }
+
+      if (action === 'ack_teacher_cancel') {
+        // ── 2026-07-16 加：老師發起的取消，學生在 LINE 這邊按「我知道了」確認收到 ──
+        // 網站那邊也有一顆一樣功能的按鈕（見 ackTeacherCancel in classroom/index.html）
+        // 哪邊先按都算數，兩邊共用同一個欄位 teacher_cancel_ack_at，用 .is(null) 當保險閘
+        // 防止兩邊同時按/重複按 push 兩次通知給老師。
+        const requestId = params.get('request');
+        if (!requestId) continue;
+
+        const { data: updated, error, count } = await supabase
+          .from('classroom_requests')
+          .update({ teacher_cancel_ack_at: new Date().toISOString() }, { count: 'exact' })
+          .eq('id', requestId)
+          .is('teacher_cancel_ack_at', null)
+          .select('original_date');
+
+        if (channelToken && event.replyToken) {
+          let replyText;
+          if (error) replyText = '⚠️ 確認失敗：' + error.message;
+          else if (!count) replyText = 'ℹ️ 這筆通知可能已經確認過了';
+          else replyText = '✅ 已確認收到，老師會盡快到網站按「確認刪除」處理 Calendar';
+          await replyLine(channelToken, event.replyToken, replyText);
+        }
+
+        // 只有「這次真的是我讓它從 null 變成有值」（count>0）才通知老師，避免重複按/兩邊搶著按時推兩次
+        if (!error && count && channelToken) {
+          const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
+          if (teacherUserId) {
+            const odate = (updated && updated[0] && updated[0].original_date) || '-';
+            await pushLine(channelToken, teacherUserId, 'ℹ️ 學生已確認收到取消通知（' + odate + '），可以到網站按「確認刪除」了');
+          }
         }
         continue;
       }

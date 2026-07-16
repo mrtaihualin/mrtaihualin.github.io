@@ -4,9 +4,12 @@
 //   ยังไม่ถูกจัดการไหม ถ้ามี → ส่ง LINE เตือนทั้งครูและนักเรียน (ส่งครั้งเดียวต่อรายการ กันสแปมซ้ำ
 //   ด้วยคอลัมน์ sla_reminder_sent — รันทุกรอบแต่ยิงแค่ครั้งเดียวจนกว่าจะมีการเปลี่ยนแปลงสถานะใหม่)
 //
-// 2 เงื่อนไขที่ถือว่า "ค้าง":
+// 3 เงื่อนไขที่ถือว่า "ค้าง":
 //   1) offer_status = 'proposed' และเวลาผ่านจาก offer_created_at เกิน 48 ชม. (รอนักเรียนตอบ)
 //   2) offer_status เป็น null (ยังไม่มีข้อเสนอ) และเวลาผ่านจาก created_at เกิน 48 ชม. (รอครูจัดการ)
+//   3) (2026-07-16 เพิ่ม) request_type='cancel' + initiated_by='teacher' + teacher_cancel_ack_at
+//      ยังเป็น null (นักเรียนยังไม่กด "我知道了" ทั้งฝั่ง LINE/เว็บ) เกิน 48 ชม. จาก created_at
+//      → เตือน**เฉพาะครู**ให้ไปติดต่อนักเรียนเอง (ไม่เตือนนักเรียนซ้ำ เพราะนักเรียนเป็นฝ่ายที่ยังไม่ตอบอยู่แล้ว)
 //
 // วิธี deploy:
 //   1. supabase functions deploy request-sla-cron
@@ -44,7 +47,7 @@ serve(async (req) => {
     const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
     const { data: rows, error } = await supabase
       .from('classroom_requests')
-      .select('id, token, student_name, request_type, offer_status, offer_created_at, created_at')
+      .select('id, token, student_name, request_type, offer_status, offer_created_at, created_at, initiated_by, teacher_cancel_ack_at')
       .eq('status', 'pending')
       .eq('sla_reminder_sent', false);
 
@@ -55,6 +58,25 @@ serve(async (req) => {
     let sent = 0, errCount = 0;
 
     for (const r of rows) {
+      // 2026-07-16 加：老師發起的取消，卡在「等學生確認」——這種只提醒老師自己去聯絡學生，
+      // 邏輯跟下面「一般情況」不一樣（不用管 offer_status，也不推播給學生），單獨處理完就 continue，
+      // 不會掉進下面那段一般邏輯。
+      if (r.request_type === 'cancel' && r.initiated_by === 'teacher') {
+        if (r.teacher_cancel_ack_at) continue; // 學生已經確認過了，不用提醒
+        const hrs = (nowMs - new Date(r.created_at).getTime()) / 3600000;
+        if (hrs < SLA_HOURS) continue;
+        try {
+          if (teacherUserId) {
+            await pushLine(channelToken, teacherUserId,
+              '⏰ 提醒：' + (r.student_name || '學生') + ' 已經超過 48 小時還沒按「我知道了」確認取消通知，建議直接用 LINE 聯絡學生確認');
+          }
+          const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+          if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
+          sent++;
+        } catch (e) { errCount++; }
+        continue;
+      }
+
       let isStale = false, sinceLabel = '';
       if (r.offer_status === 'proposed' && r.offer_created_at) {
         const hrs = (nowMs - new Date(r.offer_created_at).getTime()) / 3600000;
