@@ -31,9 +31,7 @@
       'width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;' +
       'padding:0;line-height:1;transition:transform .15s,background .15s;vertical-align:middle;}' +
       '.word-audio-btn:hover,.word-ctl-btn:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}' +
-      '.word-audio-btn[data-playing="1"]{background:#fff3d8;border-color:#C8973A;}' +
-      '#rg-sound-toggle[data-on="0"]{opacity:.55;background:rgba(139,99,16,0.06);}' +
-      'body.games-sound-off .word-audio-btn{display:none !important;}';
+      '.word-audio-btn[data-playing="1"],.word-ctl-btn[data-playing="1"]{background:#fff3d8;border-color:#C8973A;}';
     document.head.appendChild(s);
     _styled = true;
   }
@@ -41,8 +39,6 @@
   injectStyles();
 
   function play(th, btn) {
-    // ปุ่มเปิด/ปิดเสียง 🔊/🔇 (แถบลอยข้างๆ จาก shared.js) ปิดอยู่ → ไม่เล่นเสียง — Lin 2026-07-16
-    if (document.body && document.body.classList.contains('games-sound-off')) return;
     var url = urlFor(th);
     if (!url) return;
     try {
@@ -92,48 +88,38 @@
     if (b) slot.appendChild(b);
   }
 
-  // ── ปุ่มเปิด/ปิดเสียงคำศัพท์ 🔊/🔇 — อยู่ในแถวปุ่มใต้คำศัพท์ แถวเดียวกับ 🐣/🍙/🔖 (Lin 2026-07-16) ──
-  // โชว์ทันทีตั้งแต่ยังไม่มีไฟล์เสียง · จำค่าไว้ใน localStorage · ปิด = ไม่เล่นเสียง + ซ่อนปุ่มลำโพงรายคำ
-  var SOUND_KEY = 'games_sound_on';
-  var _soundOn = true;
-  try { _soundOn = localStorage.getItem(SOUND_KEY) !== '0'; } catch (e) {}
+  // ── ปุ่มลำโพง 🔊 ในแถวปุ่มใต้คำศัพท์ — "กด 1 ที = เล่นเสียงคำปัจจุบัน 1 ที" (Lin 2026-07-16) ──
+  // โชว์ทันทีตั้งแต่ยังไม่มีไฟล์เสียง · ถ้าคำนั้นยังไม่มีไฟล์เสียง → ขึ้น toast "即將推出" (ไม่เงียบเฉยๆ ให้คนงง)
+  var _currentWord = null;
 
-  function soundOn() { return _soundOn; }
+  // เกมเรียกทุกครั้งที่เปลี่ยนคำ เพื่อบอกว่า "คำปัจจุบัน" คือคำไหน
+  function setCurrent(th) { _currentWord = th || null; }
 
-  function _renderToggle(btn) {
-    btn.textContent = _soundOn ? '🔊' : '🔇';
-    btn.title = _soundOn ? '目前：單字發音已開啟（點擊關閉）' : '目前：單字發音已關閉（點擊開啟）';
-    btn.setAttribute('aria-label', btn.title);
-    btn.setAttribute('data-on', _soundOn ? '1' : '0');
-    if (document.body) document.body.classList.toggle('games-sound-off', !_soundOn);
+  function _showSoonToast() {
+    var old = document.getElementById('wa-soon-toast');
+    if (old) old.remove();
+    var d = document.createElement('div');
+    d.id = 'wa-soon-toast';
+    d.textContent = '🔊 即將推出';
+    d.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#fff3d8;border:1.5px solid #C8973A;color:#5a3e0a;font-family:\'Noto Sans TC\',sans-serif;font-size:14px;font-weight:700;padding:8px 16px;border-radius:20px;z-index:100001;box-shadow:0 4px 14px rgba(90,62,10,0.2);';
+    document.body.appendChild(d);
+    setTimeout(function () { if (d) d.remove(); }, 1800);
   }
 
-  function _setSound(on) {
-    _soundOn = !!on;
-    try { localStorage.setItem(SOUND_KEY, _soundOn ? '1' : '0'); } catch (e) {}
-    var btn = document.getElementById('rg-sound-toggle');
-    if (btn) _renderToggle(btn);
-    if (!_soundOn && _current) { try { _current.pause(); } catch (e) {} }
-  }
-
-  function _initToggle() {
+  function _initPlayBtn() {
     var btn = document.getElementById('rg-sound-toggle');
     if (!btn) return;
-    _renderToggle(btn);
-    btn.addEventListener('click', function (e) { e.stopPropagation(); _setSound(!_soundOn); });
+    btn.textContent = '🔊';
+    btn.title = '聽發音';
+    btn.setAttribute('aria-label', '聽發音');
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (_currentWord && has(_currentWord)) play(_currentWord, btn);
+      else _showSoonToast(); // ยังไม่มีไฟล์เสียงของคำนี้
+    });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initToggle);
-  else _initToggle();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initPlayBtn);
+  else _initPlayBtn();
 
-  // เล่นเสียงคำอัตโนมัติตอนคำใหม่โหลด (เฉพาะตอนเปิด 🔊 + คำนั้นมีไฟล์เสียงจริง)
-  var _lastAuto = null;
-  function autoPlay(th) {
-    if (!_soundOn || !th) return;
-    if (_lastAuto === th) return; // กันเล่นซ้ำตอนหน้าจอ re-render คำเดิม
-    _lastAuto = th;
-    if (!has(th)) return;
-    play(th, null);
-  }
-
-  window.WordAudio = { has: has, urlFor: urlFor, play: play, createBtn: createBtn, btnHtml: btnHtml, fillSlot: fillSlot, soundOn: soundOn, autoPlay: autoPlay };
+  window.WordAudio = { has: has, urlFor: urlFor, play: play, createBtn: createBtn, btnHtml: btnHtml, fillSlot: fillSlot, setCurrent: setCurrent };
 })();

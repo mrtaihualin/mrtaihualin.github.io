@@ -42,6 +42,8 @@
   {word:'แปด', en:'bpàet', zh:'八', level:'初', category:'ตัวเลข', syls:[{cons:'ป', vowel:'แอ', final:'ด', tone_name:'เอก', th:'แปด'}]},
   {word:'เก้า', en:'gâo', zh:'九', level:'初', category:'ตัวเลข', syls:[{cons:'ก', vowel:'เอา', tone:'้', tone_name:'โท', th:'เก้า'}]},
   {word:'สิบ', en:'sìp', zh:'十', level:'初', category:'ตัวเลข', syls:[{cons:'ส', vowel:'อิ', final:'บ', tone_name:'เอก', th:'สิบ'}]},
+  {word:'ร้อย', en:'rói', zh:'百', level:'初', category:'ตัวเลข', syls:[{cons:'ร', vowel:'ออ', tone:'้', final:'ย', tone_name:'ตรี', th:'ร้อย'}]},
+  {word:'พัน', en:'phan', zh:'千', level:'初', category:'ตัวเลข', syls:[{cons:'พ', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'พัน'}]},
   {word:'ดำ', en:'dam', zh:'黑', level:'初', category:'สี', syls:[{cons:'ด', vowel:'อำ', tone_name:'สามัญ', th:'ดำ'}]},
   {word:'ขาว', en:'khǎao', zh:'白', level:'初', category:'สี', syls:[{cons:'ข', vowel:'อา', final:'ว', tone_name:'จัตวา', th:'ขาว'}]},
   {word:'แดง', en:'daeng', zh:'紅', level:'初', category:'สี', syls:[{cons:'ด', vowel:'แอ', final:'ง', tone_name:'สามัญ', th:'แดง'}]},
@@ -312,6 +314,7 @@
   {word:'น้ำเงิน', readingTH:'น้ำ-เงิน', en:'nám-ngern', zh:'深藍', level:'初', category:'สี', syls:[{cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'}, {cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน'}]},
   {word:'ชมพู', readingTH:'ชม-พู', en:'chom-phuu', zh:'粉紅', level:'初', category:'สี', syls:[{cons:'ช', vowel:'โอะ', final:'ม', tone_name:'สามัญ', th:'ชม'}, {cons:'พ', vowel:'อู', tone_name:'สามัญ', th:'พู'}]},
   {word:'น้ำตาล', readingTH:'น้ำ-ตาน', en:'nám-taan', zh:'咖啡色', level:'初', category:'สี', syls:[{cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ'}, {cons:'ต', vowel:'อา', final:'ล', tone_name:'สามัญ', th:'ตาล'}]},
+  {word:'ทอง', en:'thong', zh:'金色', level:'初', category:'สี', syls:[{cons:'ท', vowel:'ออ', final:'ง', tone_name:'สามัญ', th:'ทอง'}]},
   {word:'ฉบับ', readingTH:'ฉะ-บับ', en:'chà-bàp', zh:'份/冊', level:'中', category:'ลักษณนาม', syls:[{cons:'ฉ', vowel:'อะ', tone_name:'เอก', th:'ฉ'}, {cons:'บ', vowel:'อะ', final:'บ', tone_name:'เอก', th:'บับ'}]},
   {word:'หัวเราะ', readingTH:'หัว-เราะ', en:'hǔa-ró', zh:'笑', level:'初', category:'กริยา', syls:[{cons:'ห', vowel:'อัว', tone_name:'จัตวา', th:'หัว'}, {cons:'ร', vowel:'เอาะ', tone_name:'ตรี', th:'เราะ'}]},
   {word:'สว่าง', readingTH:'สะ-หว่าง', en:'sà-wàang', zh:'亮', level:'中', category:'คำขยาย', syls:[{cons:'ส', vowel:'อะ', tone_name:'เอก', th:'ส'}, {cons:'ว', lead:'ห', vowel:'อา', tone:'่', final:'ง', tone_name:'เอก', th:'ว่าง'}]},
@@ -370,7 +373,9 @@
   {word:'ดอกไม้', readingTH:'ดอก-ไม้', en:'dòok-máai', zh:'花', level:'初', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ด', vowel:'ออ', final:'ก', tone_name:'เอก', th:'ดอก'}, {cons:'ม', vowel:'ไอ', tone:'้', tone_name:'ตรี', th:'ไม้'}]},
   {word:'สวนสัตว์', readingTH:'สวน-สัด', en:'sǔan-sàt', zh:'動物園', level:'中', category:'สัตว์/ธรรมชาติ', syls:[{cons:'ส', vowel:'อัว', final:'น', tone_name:'จัตวา', th:'สวน'}, {cons:'ส', vowel:'อะ', final:'ต', tone_name:'เอก', th:'สัตว์'}]}, // readingTH=สวน-สัด (ตว์→ด ตัวแทนแม่กด, ว์ การันต์ไม่ออกเสียง) / ตัวสะกดจริง = syls[].th ต่อกัน(สวน-สัตว์)
   {word:'ตะวันออก', readingTH:'ตะ-วัน-ออก', en:'dtà-wan-òok', zh:'東', level:'中', category:'ทิศทาง', syls:[{cons:'ต', vowel:'อะ', tone_name:'เอก', th:'ตะ'}, {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'}, {cons:'อ', vowel:'ออ', final:'ก', tone_name:'เอก', th:'ออก'}]},
-  {word:'ตะวันตก', readingTH:'ตะ-วัน-ตก', en:'dtà-wan-dtòk', zh:'西', level:'中', category:'ทิศทาง', syls:[{cons:'ต', vowel:'อะ', tone_name:'เอก', th:'ตะ'}, {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'}, {cons:'ต', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ตก'}]}
+  {word:'ตะวันตก', readingTH:'ตะ-วัน-ตก', en:'dtà-wan-dtòk', zh:'西', level:'中', category:'ทิศทาง', syls:[{cons:'ต', vowel:'อะ', tone_name:'เอก', th:'ตะ'}, {cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน'}, {cons:'ต', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'ตก'}]},
+  {word:'ข้างหน้า', readingTH:'ข้าง-หน้า', en:'khâang-nâa', zh:'前面', level:'初', category:'ทิศทาง', syls:[{cons:'ข', vowel:'อา', tone:'้', final:'ง', tone_name:'โท', th:'ข้าง'}, {cons:'น', lead:'ห', vowel:'อา', tone:'้', tone_name:'โท', th:'หน้า'}]},
+  {word:'ข้างหลัง', readingTH:'ข้าง-หลัง', en:'khâang-lǎng', zh:'後面', level:'初', category:'ทิศทาง', syls:[{cons:'ข', vowel:'อา', tone:'้', final:'ง', tone_name:'โท', th:'ข้าง'}, {cons:'ล', lead:'ห', vowel:'อะ', final:'ง', tone_name:'จัตวา', th:'หลัง'}]}
   ];
 
   global.WORDS_MASTER = WORDS_MASTER;

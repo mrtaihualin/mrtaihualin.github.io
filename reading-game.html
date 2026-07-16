@@ -41,7 +41,7 @@
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="word-vault.js"></script>
 <script src="data/audio-manifest.js?v=1"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (ว่าง = ปุ่มลำโพงยังไม่โชว์) -->
-<script src="word-audio.js?v=1"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
+<script src="word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
 <script src="data/tone-engine.js?v=1"></script>
@@ -391,7 +391,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
         <div class="rev-pron" id="rev-pron"></div>
       </div>
-      <!-- แถวปุ่ม 4 อันใต้คำศัพท์: 🔊/🔇เปิดปิดเสียง · 🐣คำอ่าน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — Lin 2026-07-16 -->
+      <!-- แถวปุ่ม 4 อันใต้คำศัพท์: 🔊กด1ที=ฟังเสียงคำ1ที · 🐣คำอ่าน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — Lin 2026-07-16 -->
       <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 2px;">
         <button id="rg-sound-toggle" class="word-ctl-btn" type="button"></button>
         <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="setRgPronMode(!rgPronMode)"></button>
@@ -1165,8 +1165,8 @@ function loadWord(){
   document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน) — ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
-  // เสียงอ่านคำอัตโนมัติ — เล่นเฉพาะตอนปุ่ม 🔊 เปิด + คำนั้นมีไฟล์เสียงจริงใน AUDIO_MANIFEST (2026-07-16)
-  if(window.WordAudio)WordAudio.autoPlay(WORD.th);
+  // บอกระบบเสียงว่าคำปัจจุบันคือคำไหน — ปุ่ม 🔊 กด 1 ที = เล่นเสียงคำนี้ 1 ที (2026-07-16)
+  if(window.WordAudio)WordAudio.setCurrent(WORD.th);
   // vault save button
   var vslot=document.getElementById('rg-vault-btn-slot');
   if(vslot && window.WordVault){
