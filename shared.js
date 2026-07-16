@@ -662,7 +662,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
           '<div style="font-size:40px;line-height:1;margin-bottom:10px;">📖</div>'+
           '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">玩得不錯！送你單字速查表 🎁</h2>'+
           '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">老師精選 <b>60 個常用泰語單字</b>（含子音・母音・尾音・拼音・中文對照）。留 Email 免費領取，<b>關掉也能繼續玩</b>～</p>'+
-          '<input id="vp-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">'+
+          '<input id="vp-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:16px;color:#5C4410;outline:none;">'+
           '<div id="vp-err" style="display:none;color:#C0392B;font-size:12px;margin:6px 0 0;text-align:left;"></div>'+
           '<button id="vp-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">免費領取 →</button>'+
           '<p style="margin:12px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">輸入 Email 代表同意<a href="terms.html" style="color:#A07A1E;">服務條款與資料收集</a>，只用來寄學習資訊，不會外流</p>'+
@@ -944,9 +944,9 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
       </div>
       <div style="border-top:1px solid var(--warm-line);margin:18px 0 14px;padding-top:18px;">
         <div class="contact-label" style="margin-bottom:10px;display:block;">不方便加 LINE？直接留言給老師（寄到信箱）</div>
-        <input id="c-name" type="text" placeholder="你的名字（可填暱稱）" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
-        <input id="c-email" type="email" placeholder="你的 Email" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
-        <textarea id="c-msg" rows="3" placeholder="想詢問的內容…" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;resize:vertical;margin-bottom:10px;"></textarea>
+        <input id="c-name" type="text" placeholder="你的名字（可填暱稱）" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
+        <input id="c-email" type="email" placeholder="你的 Email" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
+        <textarea id="c-msg" rows="3" placeholder="想詢問的內容…" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;resize:vertical;margin-bottom:10px;"></textarea>
         <button class="contact-cta" style="background:var(--gold);" onclick="submitContact()">送出訊息 →</button>
         <span id="c-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-align:center;margin-top:10px;"></span>
       </div>
@@ -990,8 +990,8 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     </div>
     <div class="modal-body">
       <p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);line-height:1.9;margin-bottom:18px;">留下 Email，馬上免費下載「泰語聲調速查表」 — 用台灣人熟悉的中文聲調，一張表搞懂泰語五個聲調與判斷規則。</p>
-      <input id="lm-name" type="text" placeholder="你的名字（可填暱稱）" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
-      <input id="lm-email" type="email" placeholder="你的 Email" style="font-family:'Noto Sans TC',sans-serif;font-size:14px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:14px;">
+      <input id="lm-name" type="text" placeholder="你的名字（可填暱稱）" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
+      <input id="lm-email" type="email" placeholder="你的 Email" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:14px;">
       <button class="contact-cta" onclick="submitFreebie()">馬上免費下載 →</button>
       <span id="lm-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-align:center;margin-top:12px;"></span>
       <p style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:var(--ink-muted);text-align:center;margin-top:14px;">我們不會寄垃圾信，隨時可取消。</p>

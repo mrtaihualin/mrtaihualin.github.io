@@ -2023,9 +2023,9 @@
 
   <div class="tf-card">
     <div class="tf-word-banner" id="tf-banner"></div>
-    <!-- แถวปุ่ม 3 อันใต้คำศัพท์: 🔊เสียง(โชว์เมื่อมีไฟล์) · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — ไม่มีปุ่มไข่🐣 เพราะคำอ่านจะเฉลยวรรณยุกต์ก่อนตอบ — Lin 2026-07-16 -->
+    <!-- แถวปุ่ม 3 อันใต้คำศัพท์: 🔊/🔇เปิดปิดเสียง · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — ไม่มีปุ่มไข่🐣 เพราะคำอ่านจะเฉลยวรรณยุกต์ก่อนตอบ — Lin 2026-07-16 -->
     <div id="tf-word-ctl-row" style="display:none;align-items:center;justify-content:center;gap:8px;margin:6px 0;">
-      <span id="tf-audio-btn-slot"></span>
+      <button id="rg-sound-toggle" class="word-ctl-btn" type="button"></button>
       <span id="zh-toggle-slot"></span>
       <span id="tf-vault-btn-slot"></span>
     </div>
@@ -4180,8 +4180,8 @@ function render() {
         slot.appendChild(WordVault.createSaveBtn(S.word, meta));
       }
     }
-    // ปุ่มลำโพงฟังเสียง — โชว์เฉพาะคำที่มีไฟล์เสียงใน AUDIO_MANIFEST (2026-07-16)
-    if (window.WordAudio) WordAudio.fillSlot('tf-audio-btn-slot', S.word);
+    // เสียงอ่านคำอัตโนมัติ — เล่นเฉพาะตอนปุ่ม 🔊 เปิด + คำนั้นมีไฟล์เสียงจริงใน AUDIO_MANIFEST (2026-07-16)
+    if (window.WordAudio) WordAudio.autoPlay(S.word);
     // แถวปุ่มใต้คำศัพท์ (อยู่นอก banner เพื่อไม่โดน innerHTML ล้างปุ่ม 🍙 ของ shared.js ทิ้ง) — โชว์คู่กับ banner เสมอ
     var _ctlRow = document.getElementById('tf-word-ctl-row');
     if (_ctlRow) _ctlRow.style.display = S.word ? 'flex' : 'none';
@@ -6664,7 +6664,7 @@ setTimeout(tfRenderExtBar, 0);
 </footer>
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
-<script src="shared.js?v=29"></script>
+<script src="shared.js?v=30"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)
