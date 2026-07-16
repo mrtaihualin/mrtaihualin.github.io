@@ -6259,8 +6259,13 @@ var TF = {
   startAdvSentence: function(idx) {
     var s = ADV_SENTENCES[idx];
     if (!s) return;
+    // Lin 2026-07-16: ช่อง syl รายคำถูกถอดออกจาก adv-sentences.js แล้ว — คำอ่านรวมอยู่ที่ s.readingTH (ทั้งประโยค คั่น '-')
+    // ตัดกลับเป็นรายคำด้วยจำนวนพยางค์ของแต่ละคำ (w.syls.length) ซึ่งตรงกันเสมอ (มีด่านเช็คใน check-data-health.js)
+    var _parts = (s.readingTH || '').split('-'), _p = 0;
     var entries = s.words.map(function(w){
-      return { word: w.th, readingTH: w.syl.join('-'), zh: w.zh, level: 3, category: '高級句子' };
+      var _n = w.syls.length;
+      var _read = _parts.slice(_p, _p + _n).join('-') || w.th; _p += _n;
+      return { word: w.th, readingTH: _read, zh: w.zh, level: 3, category: '高級句子' };
     });
     selectedLevel = 3;
     selectedCategory = '高級句子';

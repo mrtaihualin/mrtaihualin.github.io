@@ -85,6 +85,16 @@ require('./adv-sentences.js');
 const S = global.ADV_SENTENCES;
 
 S.forEach(function (sent) {
+  // เช็ค readingTH ระดับประโยค — เพิ่ม 2026-07-16 (ช่อง syl รายคำถูกถอดออก คำอ่านรวมอยู่ที่ readingTH ที่เดียว)
+  const totalSyls = sent.words.reduce(function (n, w) { return n + ((w.syls && w.syls.length) || 0); }, 0);
+  if (!sent.readingTH) {
+    errors.push('[ประโยค] "' + sent.th + '" → ไม่มี readingTH (กล่อง讀音/เกมเสียงจะไม่มีคำอ่านใช้)');
+  } else if (sent.readingTH.split('-').length !== totalSyls) {
+    errors.push('[ประโยค] "' + sent.th + '" → readingTH มี ' + sent.readingTH.split('-').length + ' พยางค์ ไม่เท่าผลรวม syls (' + totalSyls + ') — เกมจะจับคำอ่านเข้าพยางค์ผิดตำแหน่ง');
+  }
+  if (sent.wc !== totalSyls) {
+    errors.push('[ประโยค] "' + sent.th + '" → wc=' + sent.wc + ' ไม่เท่าผลรวม syls (' + totalSyls + ')');
+  }
   sent.words.forEach(function (w) {
     if (!w.syls || !w.syls.length) {
       errors.push('[ประโยค] "' + sent.th + '" → คำ "' + w.th + '" ไม่มี syls เลย');
