@@ -48,10 +48,20 @@ function expectedLevel(w) {
   return '中';
 }
 
+// Lin ยืนยันแล้ว 2026-07-16 ว่า 4 คำนี้ให้คง level เดิมไว้ตามนี้เสมอ (ขัดกับกฎอัตโนมัติด้านบน
+// โดยตั้งใจ) — ไม่ต้องถามซ้ำ ไม่ต้องฟ้องเป็น error อีก
+const LEVEL_OVERRIDE_CONFIRMED = {
+  'เครื่องบิน': '中',
+  'ตำแหน่ง': '中',
+  'งานเลี้ยง': '中',
+  'น้ำตาล': '初'
+};
+
 W.forEach(function (w) {
-  // เช็ค 4: ระดับตรงกฎไหม
+  // เช็ค 4: ระดับตรงกฎไหม (ข้ามคำที่ Lin ยืนยัน override ไว้แล้ว)
   const exp = expectedLevel(w);
-  if (w.level !== exp) {
+  const isConfirmedOverride = LEVEL_OVERRIDE_CONFIRMED[w.word] !== undefined && LEVEL_OVERRIDE_CONFIRMED[w.word] === w.level;
+  if (w.level !== exp && !isConfirmedOverride) {
     errors.push(w.word + ' → level เป็น "' + w.level + '" แต่ควรเป็น "' + exp + '" (' + sylCount(w) + ' พยางค์, ' + (isHardReading(w) ? 'อ่านยาก' : 'อ่านง่าย') + ')');
   }
 
