@@ -213,6 +213,51 @@
       { th: 'อยาก', zh: '想', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
       { th: 'พักผ่อน', zh: '休息', syls: [{cons:'พ', vowel:'อะ', final:'ก', tone_name:'ตรี', th:'พัก', en:'phák'}, {cons:'ผ', vowel:'ออ', tone:'่', final:'น', tone_name:'เอก', th:'ผ่อน', en:'phòn'}] }
       ]
+    },
+    {
+      th: 'ขอเมนูหน่อยครับ', zh: '麻煩給我看一下菜單', readingTH: 'ขอ-เม-นู-หน่อย-ครับ', wc: 5,
+      words: [
+      { th: 'ขอ', zh: '請／想要', syls: [{cons:'ข', vowel:'ออ', tone_name:'จัตวา', th:'ขอ', en:'khɔ̌ɔ'}] },
+      { th: 'เมนู', zh: '菜單', syls: [{cons:'ม', vowel:'เอ', tone_name:'สามัญ', th:'เม', en:'mee'}, {cons:'น', vowel:'อู', tone_name:'สามัญ', th:'นู', en:'nuu'}] },
+      { th: 'หน่อย', zh: '一下（軟化語氣）', syls: [{cons:'น', lead:'ห', vowel:'ออ', tone:'่', final:'ย', tone_name:'เอก', th:'หน่อย', en:'nɔ̀i'}] },
+      { th: 'ครับ', zh: '（男性禮貌詞）', syls: [{cons:'ค', cluster:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'ครับ', en:'khráp'}] }
+      ]
+    },
+    {
+      th: 'อาหารจานนี้เผ็ดไหม', zh: '這道菜辣嗎？', readingTH: 'อา-หาร-จาน-นี้-เผ็ด-ไหม', wc: 6,
+      words: [
+      { th: 'อาหาร', zh: '食物／餐點', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาร', en:'hǎan'}] },
+      { th: 'จานนี้', zh: '這盤／這道', syls: [{cons:'จ', vowel:'อา', final:'น', tone_name:'สามัญ', th:'จาน', en:'jaan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'เผ็ด', zh: '辣', syls: [{cons:'ผ', vowel:'เอะ', final:'ด', tone_name:'เอก', th:'เผ็ด', en:'phèt'}] },
+      { th: 'ไหม', zh: '嗎（疑問）', syls: [{cons:'ม', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหม', en:'mǎi'}] }
+      ]
+    },
+    {
+      th: 'ผมเอาข้าวผัดกุ้ง', zh: '我要蝦炒飯', readingTH: 'ผม-เอา-ข้าว-ผัด-กุ้ง', wc: 5,
+      words: [
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'เอา', zh: '要（拿／取）', syls: [{cons:'อ', vowel:'เอา', tone_name:'สามัญ', th:'เอา', en:'ao'}] },
+      { th: 'ข้าวผัด', zh: '炒飯', syls: [{cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว', en:'khâao'}, {cons:'ผ', vowel:'อะ', final:'ด', tone_name:'เอก', th:'ผัด', en:'phàt'}] },
+      { th: 'กุ้ง', zh: '蝦', syls: [{cons:'ก', vowel:'อุ', tone:'้', final:'ง', tone_name:'โท', th:'กุ้ง', en:'gûng'}] }
+      ]
+    },
+    {
+      th: 'ไม่ใส่ผักชีนะ', zh: '不要放香菜喔', readingTH: 'ไม่-ใส่-ผัก-ชี-นะ', wc: 5,
+      words: [
+      { th: 'ไม่', zh: '不要', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
+      { th: 'ใส่', zh: '放／加', syls: [{cons:'ส', vowel:'ใอ', tone:'่', tone_name:'เอก', th:'ใส่', en:'sài'}] },
+      { th: 'ผักชี', zh: '香菜', syls: [{cons:'ผ', vowel:'อะ', final:'ก', tone_name:'เอก', th:'ผัก', en:'phàk'}, {cons:'ช', vowel:'อี', tone_name:'สามัญ', th:'ชี', en:'chii'}] },
+      { th: 'นะ', zh: '喔（語氣詞）', syls: [{cons:'น', vowel:'อะ', tone_name:'ตรี', th:'นะ', en:'ná'}] }
+      ]
+    },
+    {
+      th: 'เก็บเงินด้วยครับ', zh: '麻煩結帳', readingTH: 'เก็บ-เงิน-ด้วย-ครับ', wc: 4,
+      words: [
+      { th: 'เก็บ', zh: '收（款）', syls: [{cons:'ก', vowel:'เอะ', final:'บ', tone_name:'เอก', th:'เก็บ', en:'gèp'}] },
+      { th: 'เงิน', zh: '錢', syls: [{cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน', en:'ngəən'}] },
+      { th: 'ด้วย', zh: '也／請', syls: [{cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย', en:'dûay'}] },
+      { th: 'ครับ', zh: '（男性禮貌詞）', syls: [{cons:'ค', cluster:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'ครับ', en:'khráp'}] }
+      ]
     }
   ];
 
