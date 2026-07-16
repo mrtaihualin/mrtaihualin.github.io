@@ -7,10 +7,13 @@
 //      classroom_requests_status_check ที่รองรับแค่ pending/acknowledged เท่านั้น) — เก็บไว้เผื่อมีข้อความ
 //      เก่าที่ยังไม่ถูกกดค้างอยู่ใน LINE ของครู กดแล้วจะไม่ error แต่ **ไม่ได้แตะ Google Calendar ใดๆ ทั้งสิ้น**
 //      (ตอนนี้ปุ่มนี้เป็นเวอร์ชันเก่าที่เลิกส่งใหม่แล้ว — ดูข้อ 2026-07-13 ด้านล่าง)
-//   2) action=accept_offer|decline_offer (2026-07-13 เพิ่ม) — ปุ่มที่นักเรียนกดตอบรับ/ปฏิเสธ
-//      เวลาครูเสนอเวลาใหม่ให้ (ดู submitProposeTime ในเว็บ) → อัปเดต classroom_requests.offer_status
+//   2) action=accept_offer|decline_offer (2026-07-13 เพิ่ม, 2026-07-16 แก้：รองรับสูงสุด 3 ตัวเลือก) —
+//      ปุ่มที่นักเรียนกดตอบรับ/ปฏิเสธเวลาครูเสนอ (ดู submitProposeTime ในเว็บ) → accept_offer ตอนนี้
+//      แนบ opt=<index> บอกว่าเลือกตัวเลือกไหนใน proposed_options (สูงสุด 3 อัน) แล้วอัปเดต
+//      requested_date/requested_time + offer_status='accepted' · decline_offer = ทั้งหมดไม่สะดวก
 //      **ไม่แตะ Google Calendar** (Edge Function ไม่มี Google OAuth token ของครู ทำไม่ได้จากฝั่งนี้)
 //      ครูต้องกลับไปเปิดหน้าเว็บเพื่อกด "✅ ยืนยันและย้าย Calendar" เอง ระบบจะโชว์ให้เห็นในหน้าแรกอัตโนมัติ
+//      ทั้งสองแบบตอนนี้ push แจ้งครูทันที (Lin ขอ) ไม่ต้องรอครูเปิดเว็บเองถึงจะรู้
 //   3) action=ack_teacher_cancel (2026-07-16 เพิ่ม) — ครูสั่งยกเลิกคาบ (teacherCancelClassNowInner)
 //      ไม่ลบ Calendar ทันทีแล้ว ต้องรอนักเรียนกด "我知道了" ก่อน (กดฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้ อันไหน
 //      กดก่อนนับอันนั้น) → set teacher_cancel_ack_at แล้ว push แจ้งครูว่ากดยืนยันลบได้แล้ว
@@ -152,13 +155,33 @@ serve(async (req) => {
         // ── 2026-07-13 加：นักเรียนตอบรับ/ปฏิเสธเวลาใหม่ที่ครูเสนอ ──
         // แค่บันทึก offer_status ลงฐานข้อมูล **ไม่แตะ Calendar** — ครูต้องเปิดหน้าเว็บกดยืนยันเองอีกที
         // ถึงจะย้าย Calendar จริง (Edge Function ไม่มี Google OAuth token ของครู ทำเองไม่ได้)
+        // 2026-07-16 加（Lin 要求：最多 3 個時間選項）：accept_offer 現在會帶 opt=<index>，
+        // 指出學生選了 proposed_options 裡第幾個——先查一次這筆申請，把選到的那個存進
+        // requested_date/requested_time（老師「確認並搬 Calendar」讀的就是這兩欄，
+        // 完全不用改那段既有的搬 Calendar 邏輯）。
         const requestId = params.get('request');
         if (!requestId) continue;
         const newOfferStatus = action === 'accept_offer' ? 'accepted' : 'declined';
 
+        const updateFields = { offer_status: newOfferStatus };
+        let chosenOpt = null;
+        if (action === 'accept_offer') {
+          const optIdx = parseInt(params.get('opt') || '0', 10);
+          const { data: rowData } = await supabase
+            .from('classroom_requests')
+            .select('proposed_options,requested_date,requested_time')
+            .eq('id', requestId)
+            .maybeSingle();
+          const opts = (rowData && Array.isArray(rowData.proposed_options) && rowData.proposed_options.length)
+            ? rowData.proposed_options
+            : (rowData ? [{ date: rowData.requested_date, time: rowData.requested_time }] : []);
+          chosenOpt = opts[optIdx] || opts[0] || null;
+          if (chosenOpt) { updateFields.requested_date = chosenOpt.date; updateFields.requested_time = chosenOpt.time; }
+        }
+
         const { error, count } = await supabase
           .from('classroom_requests')
-          .update({ offer_status: newOfferStatus }, { count: 'exact' })
+          .update(updateFields, { count: 'exact' })
           .eq('id', requestId)
           .eq('offer_status', 'proposed');
 
@@ -167,9 +190,22 @@ serve(async (req) => {
           if (error) replyText = '⚠️ 回覆失敗：' + error.message;
           else if (!count) replyText = 'ℹ️ 這個提議可能已經被回覆過了，重新整理網頁看看目前狀態';
           else replyText = newOfferStatus === 'accepted'
-            ? '✅ 已回覆「可以」！等老師開電腦確認後才會真的調整行事曆喔'
-            : '✅ 已回覆「不方便」，老師會再想辦法跟你討論新時間';
+            ? '✅ 已回覆，等老師開電腦確認後才會真的調整行事曆喔'
+            : '✅ 已回覆都不方便，老師會直接聯絡你討論時間';
           await replyLine(channelToken, event.replyToken, replyText);
+        }
+
+        // 2026-07-16 加（Lin 要求）：不管選了時間還是都不方便，都要推播通知老師——老師可能不在電腦前，
+        // 不然要自己開網站才會知道學生回覆了。只有這次真的成功翻到 accepted/declined（count>0）才通知，
+        // 避免重複按/兩邊搶著按時推兩次給老師。
+        if (!error && count && channelToken) {
+          const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
+          if (teacherUserId) {
+            const msg = newOfferStatus === 'accepted'
+              ? ('ℹ️ 學生已經選好新時間' + (chosenOpt ? '（' + chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '') + '）' : '') + '，到網站按「確認並搬 Calendar」')
+              : '⚠️ 學生說這些時間都不方便，請直接聯絡學生討論';
+            await pushLine(channelToken, teacherUserId, msg);
+          }
         }
         continue;
       }

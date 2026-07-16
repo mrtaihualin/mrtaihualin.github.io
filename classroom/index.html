@@ -564,23 +564,44 @@
   </div>
 </div>
 
-<!-- ======= STUDENT: 申請改期 MODAL（2026-07-06 新增）======= -->
+<!-- ======= STUDENT: 申請改期 MODAL（2026-07-06 新增，2026-07-16 改：最多可以給 3 個時間選項，
+     讓老師從裡面挑一個，或都不方便再自己聯絡——不用一直來回猜時間）======= -->
 <div class="modal-overlay" id="classRequestModal">
   <div class="modal" style="max-width:440px;">
-    <h3>🔄 申請改期</h3>
+    <h3 id="classRequestModalTitle">🔄 申請改期</h3>
     <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      送出後老師會收到通知，實際是否能改期由老師確認後回覆你喔！
+      最多可以提供 3 個你方便的新時間，老師會挑一個確認，或都不方便的話會另外聯絡你。送出後實際是否能改由老師確認後回覆你喔！
     </p>
-    <label class="settings-label">想改到哪一天？</label>
-    <input class="settings-input" id="reqDateInput" type="date" oninput="onReqScheduleChange()" />
-    <label class="settings-label">想改到幾點？（選填，請選「你自己現在所在地」的時間，不用換算成泰國時間）</label>
+    <label class="settings-label">選項 1（必填）</label>
+    <input class="settings-input" id="reqDateInput1" type="date" oninput="onReqScheduleChange(1)" />
     <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="reqTimeInput_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <select class="settings-input" id="reqTimeInput1_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput1')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
       <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="reqTimeInput_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+      <select class="settings-input" id="reqTimeInput1_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput1')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
     </div>
-    <input type="hidden" id="reqTimeInput" value="" oninput="onReqScheduleChange()" />
-    <p id="reqScheduleHint" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
+    <input type="hidden" id="reqTimeInput1" value="" oninput="onReqScheduleChange(1)" />
+    <p id="reqScheduleHint1" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
+
+    <label class="settings-label">選項 2（選填）</label>
+    <input class="settings-input" id="reqDateInput2" type="date" oninput="onReqScheduleChange(2)" />
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="reqTimeInput2_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput2')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="reqTimeInput2_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput2')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+    </div>
+    <input type="hidden" id="reqTimeInput2" value="" oninput="onReqScheduleChange(2)" />
+    <p id="reqScheduleHint2" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
+
+    <label class="settings-label">選項 3（選填）</label>
+    <input class="settings-input" id="reqDateInput3" type="date" oninput="onReqScheduleChange(3)" />
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="reqTimeInput3_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput3')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="reqTimeInput3_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput3')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+    </div>
+    <input type="hidden" id="reqTimeInput3" value="" oninput="onReqScheduleChange(3)" />
+    <p id="reqScheduleHint3" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
+
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeClassRequestModal()">取消</button>
       <button class="btn-gold" id="reqSubmitBtn" onclick="submitClassRequest()">📤 送出申請</button>
@@ -649,22 +670,41 @@
   </div>
 </div>
 
-<!-- ======= TEACHER: 提議新時間 MODAL（2026-07-13 新增）======= -->
+<!-- ======= TEACHER: 提議新時間 MODAL（2026-07-13 新增，2026-07-16 改：最多可以給 3 個時間選項，
+     學生選一個，或都不方便——都不方便會直接跳回來提醒老師自己聯絡學生）======= -->
 <div class="modal-overlay" id="proposeTimeModal">
   <div class="modal" style="max-width:420px;">
-    <h3>🔁 提議新時間給學生</h3>
+    <h3 id="proposeTimeModalTitle">🔁 提議新時間給學生</h3>
     <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      送出後會傳 LINE 給學生，學生按「可以」系統才會自動移動 Calendar；按「不方便」會回到待處理清單。
+      最多可以給 3 個時間選項（泰國時間），送出後會傳 LINE 給學生選一個；學生都不方便的話會直接通知你要自己聯絡學生。
     </p>
-    <label class="settings-label">提議改到哪一天？（泰國時間）</label>
-    <input class="settings-input" id="proposeDateInput" type="date" />
-    <label class="settings-label">提議改到幾點？（泰國時間）</label>
+    <label class="settings-label">選項 1（必填，泰國時間）</label>
+    <input class="settings-input" id="proposeDateInput1" type="date" />
     <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="proposeTimeInput_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <select class="settings-input" id="proposeTimeInput1_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput1')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
       <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="proposeTimeInput_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+      <select class="settings-input" id="proposeTimeInput1_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput1')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
     </div>
-    <input type="hidden" id="proposeTimeInput" value="" />
+    <input type="hidden" id="proposeTimeInput1" value="" />
+
+    <label class="settings-label">選項 2（選填，泰國時間）</label>
+    <input class="settings-input" id="proposeDateInput2" type="date" />
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="proposeTimeInput2_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput2')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="proposeTimeInput2_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput2')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+    </div>
+    <input type="hidden" id="proposeTimeInput2" value="" />
+
+    <label class="settings-label">選項 3（選填，泰國時間）</label>
+    <input class="settings-input" id="proposeDateInput3" type="date" />
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="proposeTimeInput3_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput3')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="proposeTimeInput3_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput3')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
+    </div>
+    <input type="hidden" id="proposeTimeInput3" value="" />
+
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeProposeTimeModal()">取消</button>
       <button class="btn-gold" id="proposeSubmitBtn" onclick="submitProposeTime()">📤 傳送給學生</button>
@@ -4781,23 +4821,51 @@ async function studentWithdrawOwnRequest(token, id) {
   loadStudentPendingRequestStatus(token);
 }
 
+// 2026-07-16 加：編輯模式旗標——學生對自己已送出、老師還沒回覆的改期申請按「✏️ 修改」時設成該筆 id，
+// 送出時就會改成「更新」而不是「新建」一筆。
+var _classRequestEditRequestId = null;
+
+function resetClassRequestModalFields() {
+  [1, 2, 3].forEach(function (i) {
+    document.getElementById('reqDateInput' + i).value = '';
+    resetTimeDropdown('reqTimeInput' + i);
+    document.getElementById('reqScheduleHint' + i).style.display = 'none';
+  });
+}
+
 function openClassRequestModal() {
   if (!nextClassCtx) return;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
-  document.getElementById('reqDateInput').value = '';
-  resetTimeDropdown('reqTimeInput');
-  document.getElementById('reqScheduleHint').style.display = 'none';
+  _classRequestEditRequestId = null;
+  document.getElementById('classRequestModalTitle').textContent = '🔄 申請改期';
+  resetClassRequestModalFields();
   document.getElementById('classRequestModal').classList.add('open');
 }
-function closeClassRequestModal() { document.getElementById('classRequestModal').classList.remove('open'); }
+
+// 2026-07-16 加：學生對自己已送出、老師還沒回覆的改期申請按「✏️ 修改」——重用同一個 modal，
+// 只是設旗標讓送出時改成「更新」（跟取消申請的 openEditCancelRequestPicker 同樣做法）。
+function openEditRescheduleRequestPicker(id) {
+  if (!nextClassCtx) return;
+  if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
+  _classRequestEditRequestId = id;
+  document.getElementById('classRequestModalTitle').textContent = '✏️ 修改改期申請';
+  resetClassRequestModalFields();
+  document.getElementById('classRequestModal').classList.add('open');
+}
+
+function closeClassRequestModal() {
+  document.getElementById('classRequestModal').classList.remove('open');
+  _classRequestEditRequestId = null;
+}
 
 // 2026-07-14 加（Lin 回報學生對時區會搞混）：學生在這個框填的是「他自己現在所在地」的時間
 // （這樣他才不用自己心算換算成泰國時間），送給老師看之前這裡先即時換算成泰國時間預覽給他看，
 // 讓他能確認换算結果跟自己想的對得上（跟老師那邊 onGenScheduleChange 的雙時區預覽同一招）。
-function onReqScheduleChange() {
-  const dateVal = document.getElementById('reqDateInput').value;
-  const timeVal = document.getElementById('reqTimeInput').value.trim();
-  const hint = document.getElementById('reqScheduleHint');
+// 2026-07-16 改：最多 3 個選項，每個選項各自獨立預覽，所以要傳 idx 進來認是哪一組欄位。
+function onReqScheduleChange(idx) {
+  const dateVal = document.getElementById('reqDateInput' + idx).value;
+  const timeVal = document.getElementById('reqTimeInput' + idx).value.trim();
+  const hint = document.getElementById('reqScheduleHint' + idx);
   if (!dateVal || !timeVal) { hint.style.display = 'none'; return; }
   if (!isValidTimeStr(timeVal)) { hint.style.display = 'block'; hint.textContent = '⚠️ 時間格式不對，請用 HH:MM，例如 14:30'; return; }
   const s = (nextClassCtx && typeof studentsCache !== 'undefined') ? studentsCache[nextClassCtx.token] : null;
@@ -4818,51 +4886,115 @@ function onReqScheduleChange() {
   }
 }
 
-async function submitClassRequest() {
-  if (!nextClassCtx) { closeClassRequestModal(); return; }
-  const rawDate = document.getElementById('reqDateInput').value;
-  const rawTime = document.getElementById('reqTimeInput').value.trim();
-  const note = '';
-  if (!rawDate) { alert('請選擇想改到哪一天'); return; }
-  if (rawTime && !isValidTimeStr(rawTime)) { alert('時間格式不對，請用 HH:MM，例如 14:30'); return; }
-
-  // 2026-07-14 加：學生填的是「他自己的時間」，但資料庫/老師那邊全部都是用泰國時間當基準
-  // （跟 pending_class_time 的定義一致）→ 送出前先換算成泰國時間，這樣老師看到的、
-  // 之後用來真的建立 Calendar 事件的，才會是正確的泰國時間，不會兩邊時區對不起來。
+// 2026-07-16 加：最多蒐集 3 組「想改到」的日期/時間（選項 1 必填，2/3 選填），換算成泰國時間。
+// 回傳 null 代表格式錯誤（已經 alert 過了），回傳 [] 代表選項 1 沒填。
+function collectClassRequestOptions() {
   const s = studentsCache[nextClassCtx.token];
   const studentTz = s && s.pending_student_tz;
-  let newDate = rawDate, newTime = rawTime || null;
-  if (rawTime && studentTz) {
-    // 2026-07-14 加：壞的時區字串會讓 Intl.DateTimeFormat throw——接住錯誤退回「當泰國時間
-    // 直接送出」，不要讓學生點了送出卻整個沒反應（RELIABILITY FIRST：至少要送得出去）
-    try {
-      const abs = parseInTzToDate(rawDate, rawTime, studentTz);
-      const thai = formatInTz(abs, TEACHER_TZ);
-      newDate = thai.dateStr; newTime = thai.timeStr;
-    } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
+  const options = [];
+  for (let i = 1; i <= 3; i++) {
+    const rawDate = document.getElementById('reqDateInput' + i).value;
+    const rawTime = document.getElementById('reqTimeInput' + i).value.trim();
+    if (!rawDate) continue; // 選項 2/3 沒填就跳過
+    if (rawTime && !isValidTimeStr(rawTime)) { alert('選項 ' + i + ' 時間格式不對，請用 HH:MM，例如 14:30'); return null; }
+    let newDate = rawDate, newTime = rawTime || null;
+    if (rawTime && studentTz) {
+      // 2026-07-14 加：壞的時區字串會讓 Intl.DateTimeFormat throw——接住錯誤退回「當泰國時間
+      // 直接送出」，不要讓學生點了送出卻整個沒反應（RELIABILITY FIRST：至少要送得出去）
+      try {
+        const abs = parseInTzToDate(rawDate, rawTime, studentTz);
+        const thai = formatInTz(abs, TEACHER_TZ);
+        newDate = thai.dateStr; newTime = thai.timeStr;
+      } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
+    }
+    options.push({ date: newDate, time: newTime });
   }
+  return options;
+}
 
-  // 2026-07-14 修正：改用既有的 currentStudentName()（理由同上，requestCancelClass 那顆）
+// 2026-07-16 改（Lin 要求：最多可以給 3 個時間選項）：不再只送 1 個「想改到」的時間，
+// 改成蒐集 1-3 個選項存進 proposed_options（JSONB 陣列），offer_status 直接設成 'proposed'
+// ——跟老師「提議新時間給學生」共用同一套「列出選項讓對方挑」機制，老師那邊會看到清單可以直接挑，
+// 不用先按「處理」再走「其他 → 提議新時間」。
+async function submitClassRequest() {
+  if (!nextClassCtx) { closeClassRequestModal(); return; }
+  const options = collectClassRequestOptions();
+  if (options === null) return; // 格式錯誤，collectClassRequestOptions 已經 alert 過了
+  if (!options.length) { alert('請至少填選項 1 的日期'); return; }
+
   const studentName = currentStudentName(nextClassCtx.token);
   const btn = document.getElementById('reqSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
+
+  if (_classRequestEditRequestId) {
+    await submitClassRequestEdit(_classRequestEditRequestId, options, studentName);
+    btn.disabled = false; btn.textContent = '📤 送出申請';
+    return;
+  }
+
   const res = await sb.rpc('submit_class_request', {
     p_token: nextClassCtx.token,
     p_student_name: studentName,
     p_request_type: 'reschedule',
     p_original_date: nextClassCtx.isoDate,
-    p_requested_date: newDate,
-    p_requested_time: newTime,
-    p_note: note || null,
+    p_requested_date: options[0].date,
+    p_requested_time: options[0].time,
+    p_note: null,
     // 2026-07-14 加：同上（requestCancelClass 那顆）—— 一定要帶 p_initiated_by，
     // 不然資料庫裡兩個版本的 submit_class_request 會分不出來選哪個，送出失敗。
     p_initiated_by: 'student',
   });
   btn.disabled = false; btn.textContent = '📤 送出申請';
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
-  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: nextClassCtx.isoDate, requestedDate: newDate, requestedTime: newTime, note: note });
+  const newId = res.data;
+  // 2026-07-16 加：submit_class_request 這個 RPC 不收 proposed_options/offer_status 參數
+  // （不想動資料庫函式本身），插入成功後馬上補一個 update 存上完整選項清單 + 設 offer_status。
+  // 存不成功也不擋這次申請，只在主控台留紀錄（老師那邊會退回看單一 requested_date 當保底）。
+  if (newId) {
+    const upd = await sb.from('classroom_requests').update({
+      proposed_options: options, offer_status: 'proposed', offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
+    }).eq('id', newId);
+    if (upd.error) console.warn('⚠️ 補存選項清單失敗（不影響這次申請本身）：', upd.error.message);
+  }
+  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: nextClassCtx.isoDate, options: options, requestId: newId });
   closeClassRequestModal();
   alert('✅ 已送出改期申請，老師確認後會回覆你。');
+}
+
+// 2026-07-16 加：學生修改自己已送出、老師還沒回覆的改期申請——重新給 1-3 個新選項，
+// 用 .eq('offer_status','proposed') 當保險閘：如果老師剛好在這一刻已經處理了，這裡就會抓不到。
+async function submitClassRequestEdit(id, options, studentName) {
+  const res = await sb.from('classroom_requests').update({
+    requested_date: options[0].date, requested_time: options[0].time,
+    proposed_options: options, offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
+  }).eq('id', id).eq('status', 'pending').eq('offer_status', 'proposed').select();
+  if (res.error) { alert('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  if (!res.data || !res.data.length) {
+    alert('ℹ️ 更新失敗，這筆申請可能已經被老師處理了，重新整理頁面看看。');
+    closeClassRequestModal();
+    loadStudentPendingRequestStatus(nextClassCtx.token);
+    return;
+  }
+  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: res.data[0].original_date, options: options, requestId: id });
+  closeClassRequestModal();
+  alert('✅ 已更新，老師確認後會回覆你。');
+  loadStudentPendingRequestStatus(nextClassCtx.token);
+}
+
+// 2026-07-16 加：學生收回自己送出、老師還沒回覆的改期申請——跟收回取消申請
+// （studentWithdrawOwnRequest）同樣邏輯，用 .eq('offer_status','proposed') 當保險閘。
+async function studentWithdrawOwnRescheduleRequest(token, id) {
+  if (!confirm('確定要收回這個改期申請嗎？（這堂課維持原本安排）')) return;
+  const res = await sb.from('classroom_requests').update({ status: 'acknowledged', offer_status: null })
+    .eq('id', id).eq('status', 'pending').eq('offer_status', 'proposed').select();
+  if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
+  if (!res.data || !res.data.length) {
+    alert('ℹ️ 收回失敗——老師可能剛好已經處理了，請直接用 LINE 聯絡老師確認狀況。');
+    loadStudentPendingRequestStatus(token);
+    return;
+  }
+  alert('✅ 已收回，這堂課維持原本安排');
+  loadStudentPendingRequestStatus(token);
 }
 
 // 2026-07-15 加：「申請加課」— 給不固定/偶爾約課的學生（例如 Edward、米線）自己提出想加的時間，
@@ -4976,26 +5108,48 @@ async function loadStudentPendingRequestStatus(token) {
       return left > 0 ? ('（建議 48 小時內處理，剩約 ' + Math.max(0, Math.round(left)) + ' 小時）') : '（已超過 48 小時，建議直接用 LINE 提醒老師）';
     }
 
-    if (r.offer_status === 'proposed') {
+    // 2026-07-16 改（Lin 要求：最多 3 個時間選項）：offer_status='proposed' 現在兩種情況都會用到——
+    //   initiated_by==='teacher' → 老師提議新時間給學生，這裡要讓學生挑一個（或都不方便）
+    //   initiated_by==='student'（自己申請的）→ 自己送出的改期申請，等老師回覆，可以查看/修改/收回
+    if (r.offer_status === 'proposed' && r.initiated_by === 'teacher') {
+      var sForTz = studentsCache[token];
+      var studentTzForCard = sForTz && sForTz.pending_student_tz;
+      var opts = (Array.isArray(r.proposed_options) && r.proposed_options.length) ? r.proposed_options : [{ date: r.requested_date, time: r.requested_time }];
+      var optButtonsHtml = opts.map(function (opt, i) {
+        return '<button class="btn-sm" style="width:100%;margin-bottom:6px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="respondToOfferAsStudent(\'' + r.id + '\',\'accepted\',' + i + ')">' + escHtml(formatOfferOptionForStudent(opt, studentTzForCard)) + '</button>';
+      }).join('');
       el.innerHTML = '<div class="card" style="border-color:var(--gold-bright);">' +
         '<h2>🔁 老師提議新時間</h2>' +
-        '<p style="font-size:0.88rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:4px;">原本：' + escHtml(r.original_date || '-') + '</p>' +
-        '<p style="font-size:0.95rem;color:var(--gold-deep);font-weight:700;font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">提議改到：' + escHtml(r.requested_date || '-') + ' ' + escHtml(r.requested_time || '') + '（泰國時間）</p>' +
-        '<p style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">' + hoursLeftLabel(r.offer_created_at) + '</p>' +
-        '<div style="display:flex;gap:8px;">' +
-          '<button class="btn-sm" style="flex:1;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="respondToOfferAsStudent(\'' + r.id + '\',\'accepted\')">✅ 可以</button>' +
-          '<button class="btn-sm" style="flex:1;background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="respondToOfferAsStudent(\'' + r.id + '\',\'declined\')">❌ 不方便</button>' +
+        '<p style="font-size:0.88rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">原本：' + escHtml(r.original_date || '-') + '</p>' +
+        optButtonsHtml +
+        '<button class="btn-sm" style="width:100%;background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="respondToOfferAsStudent(\'' + r.id + '\',\'declined\')">都不方便，請老師直接聯絡我</button>' +
+        '<p style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:10px;">' + hoursLeftLabel(r.offer_created_at) + '</p>' +
+      '</div>';
+    } else if (r.offer_status === 'proposed') {
+      // 自己申請改期，等老師回覆——可以查看/修改（重選 1-3 個新選項）/收回，跟自己申請取消的做法一樣。
+      el.innerHTML = '<div class="card">' +
+        '<h2>⏳ 改期申請處理中</h2>' +
+        '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">' + hoursLeftLabel(r.offer_created_at) + '</p>' +
+        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+          '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="viewRequestDetail(window._myPendingRequest)">👁️ 查看</button>' +
+          '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openEditRescheduleRequestPicker(\'' + r.id + '\')">✏️ 修改</button>' +
+          '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:#b45309;" onclick="studentWithdrawOwnRescheduleRequest(\'' + token + '\',\'' + r.id + '\')">收回申請</button>' +
         '</div>' +
       '</div>';
-    } else if (r.offer_status === 'accepted' || r.offer_status === 'declined') {
+    } else if (r.offer_status === 'accepted') {
       // 已經回覆了，等老師端按確認才會真的動 Calendar（Calendar 綁在老師自己的 Google 帳號，一定要等老師開電腦）
       el.innerHTML = '<div class="card">' +
-        '<h2>' + (r.offer_status === 'accepted' ? '✅ 已回覆「可以」' : '❌ 已回覆「不方便」') + '</h2>' +
+        '<h2>✅ 已選好新時間</h2>' +
         '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">等老師開電腦確認後，才會真的調整行事曆喔！</p>' +
+      '</div>';
+    } else if (r.offer_status === 'declined') {
+      el.innerHTML = '<div class="card">' +
+        '<h2>❌ 已回覆都不方便</h2>' +
+        '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">老師會直接聯絡你討論時間</p>' +
       '</div>';
     } else {
       // 2026-07-16 加（Lin 要求）：老師還沒處理前，學生自己申請的取消可以「查看／改選課堂／收回」，
-      // 跟老師端能對自己發起的取消做的事一樣，角色對調。改期/加課申請維持原本（沒有這些按鈕）。
+      // 跟老師端能對自己發起的取消做的事一樣，角色對調。加課申請維持原本（沒有這些按鈕）。
       var ownCancelActions = isOwnCancel
         ? ('<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
              '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="viewRequestDetail(window._myPendingRequest)">👁️ 查看</button>' +
@@ -5011,6 +5165,18 @@ async function loadStudentPendingRequestStatus(token) {
       '</div>';
     }
   } catch (e) { el.innerHTML = ''; }
+}
+
+// 2026-07-16 加：把一個候選時間 {date,time} 換算成給學生/老師看的文字。
+function optionToDate(opt) { return teacherTimeToDate(opt.date, opt.time || '00:00'); }
+function formatOfferOptionForStudent(opt, studentTz) {
+  if (!opt || !opt.date) return '-';
+  if (!opt.time) return opt.date + '（時間還沒定，泰國時間）';
+  return studentFacingTimeLabel(optionToDate(opt), studentTz);
+}
+function formatOfferOptionForTeacher(opt) {
+  if (!opt || !opt.date) return '-';
+  return opt.date + (opt.time ? ' ' + opt.time : '（時間未定）') + '（泰國時間）';
 }
 
 // 2026-07-16 加：學生自己申請的取消，老師處理完（status='acknowledged'）之後，
@@ -5131,15 +5297,42 @@ async function ackTeacherCancel(token, id) {
   await loadTeacherCancelAckBanner(token);
 }
 
-async function respondToOfferAsStudent(requestId, response) {
-  if (!confirm(response === 'accepted' ? '確定接受這個新時間嗎？' : '確定不方便這個時間嗎？（老師會再想辦法）')) return;
+// 2026-07-16 改（Lin 要求：最多 3 個時間選項 + 都不方便要通知老師）：
+//   accepted 現在要帶 optIndex，指出學生挑的是 proposed_options 裡第幾個——先把那個選項存成
+//   requested_date/requested_time（老師「確認並搬 Calendar」讀的就是這兩欄，這樣完全不用改那段
+//   既有的搬 Calendar 邏輯），再呼叫既有的 respond_to_offer_as_student RPC 正式把 offer_status
+//   翻成 accepted/declined（沿用原本的 RPC，不新增/改動資料庫函式）。
+//   不管選了時間還是都不方便，都要彈回去通知老師（老師可能不在電腦前，不然要自己開網站才會知道）。
+async function respondToOfferAsStudent(requestId, response, optIndex) {
+  if (!confirm(response === 'accepted' ? '確定接受這個時間嗎？' : '確定都不方便這些時間嗎？（老師會收到通知，直接跟你聯絡）')) return;
   const token = urlParams.get('s') || '';
+  let chosenOpt = null;
+  if (response === 'accepted') {
+    const r = window._myPendingRequest;
+    const opts = (r && Array.isArray(r.proposed_options) && r.proposed_options.length) ? r.proposed_options : (r ? [{ date: r.requested_date, time: r.requested_time }] : []);
+    chosenOpt = opts[optIndex || 0] || null;
+    if (chosenOpt) {
+      const upd = await sb.from('classroom_requests').update({ requested_date: chosenOpt.date, requested_time: chosenOpt.time })
+        .eq('id', requestId).eq('token', token).eq('offer_status', 'proposed');
+      if (upd.error) { alert('⚠️ 儲存選擇失敗：' + upd.error.message + '\n請直接聯絡老師比較保險。'); return; }
+    }
+  }
   const res = await sb.rpc('respond_to_offer_as_student', { p_request_id: requestId, p_token: token, p_response: response });
   if (res.error || res.data !== true) {
     alert('⚠️ 回覆失敗，可能是這個提議已經處理過了，重新整理頁面看看：' + (res.error ? res.error.message : ''));
     return;
   }
-  alert(response === 'accepted' ? '✅ 已回覆「可以」，等老師確認完成調整' : '✅ 已回覆「不方便」，老師會再跟你討論');
+  try {
+    const msg = response === 'accepted'
+      ? ('ℹ️ 學生已經選好新時間' + (chosenOpt ? '（' + chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '') + '）' : '') + '，到網站按「確認並搬 Calendar」')
+      : '⚠️ 學生說這些時間都不方便，請直接聯絡學生討論';
+    await fetch(LINE_NOTIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      body: JSON.stringify({ to: 'teacher', message: msg }),
+    });
+  } catch (e) { /* 通知老師失敗不影響學生這邊已經回覆成功 */ }
+  alert(response === 'accepted' ? '✅ 已回覆，等老師確認完成調整' : '✅ 已回覆，老師會直接聯絡你');
   loadStudentPendingRequestStatus(token);
 }
 
@@ -5154,33 +5347,42 @@ function notifyTeacherClassRequest(d) {
   try {
     var isCancel = d.type === 'cancel';
     var isAdd = d.type === 'add_class';
+    var isReschedule = !isCancel && !isAdd;
     // 2026-07-15 加：type='add_class'（學生自己申請加課，沒有「原本課堂」這回事）獨立出文案，
     // 不然會照 isCancel=false 的舊邏輯誤顯示成「申請改期」+「原本課堂日期：-」，讓老師看不懂。
     var subject = (isCancel ? '❌ 學生申請取消課程 — ' : isAdd ? '➕ 學生申請加課 — ' : '🔄 學生申請改期 — ') + (d.name || '學生');
     // 2026-07-10 加：直接附 Google Calendar 那一天的連結，點了就直接開到正確日期（在 LINE 裡點也會開）
-    // isCancel → 開原本那天；改期/加課 → 開「想改到/想約」那天（老師比較可能需要去那天新增/調整）
-    var calDateStr = isCancel ? d.originalDate : (d.requestedDate || d.originalDate);
+    // 2026-07-16 改（Lin 要求：改期也簡化成一顆按鈕）：只有「加課」還需要這條 Calendar 連結
+    // （老師要自己去那天新增），取消／改期現在都走「到網站處理」單一按鈕，不用另外開 Calendar 連結。
+    var calDateStr = isAdd ? (d.requestedDate || d.originalDate) : null;
     var calLink = null;
     if (calDateStr && /^\d{4}-\d{2}-\d{2}/.test(calDateStr)) {
       var _p = calDateStr.split('-');
       calLink = 'https://calendar.google.com/calendar/r/day/' + parseInt(_p[0],10) + '/' + parseInt(_p[1],10) + '/' + parseInt(_p[2],10);
     }
-    // 2026-07-16 加：申請取消的網站連結，帶 #req-row-<id> 直接跳到這筆申請的卡片
+    // 2026-07-16 改：取消／改期的網站連結都帶 #req-row-<id> 直接跳到這筆申請的卡片
     // （見 scrollToRequestFromHash）。沒有 requestId（理論上不會發生，保險起見還是防一下）
-    // 就退回沒有 # 的舊版連結，最多就是老師自己要滑一下找，不會壞掉。
-    var siteLink = 'https://mrtaihualin.com/classroom/' + (isCancel && d.requestId ? ('#req-row-' + encodeURIComponent(d.requestId)) : '');
+    // 就退回沒有 # 的舊版連結，最多就是老師自己要滑一下找，不會壞掉。加課沒有這個機制維持原樣。
+    var siteLink = 'https://mrtaihualin.com/classroom/' + ((!isAdd && d.requestId) ? ('#req-row-' + encodeURIComponent(d.requestId)) : '');
+
+    // 2026-07-16 加（Lin 要求：最多可以給 3 個時間選項）：改期把候選時間全部列出來，
+    // 老師一眼就看到全部選項，不用點進網站才知道有幾個。
+    var optionsText = '';
+    if (isReschedule && Array.isArray(d.options) && d.options.length) {
+      optionsText = '\n' + d.options.map(function (opt, i) {
+        return '選項' + (i + 1) + '：' + (opt.date || '-') + (opt.time ? ' ' + opt.time : '') + '（泰國時間）';
+      }).join('\n');
+    }
 
     var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期')
       + (isAdd ? '' : ('\n原本課堂日期：' + (d.originalDate || '-')))
-      + (isCancel ? '' : ('\n想' + (isAdd ? '約' : '改到') + '：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')))
+      + (isAdd ? ('\n想約：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')) : '')
+      + optionsText
       + (d.note ? '\n備註：' + d.note : '')
-      // 2026-07-16 改（Lin 要求：取消申請的通知只留一顆按鈕）：不再提「開 Google Calendar」這條路了，
-      // 按鈕直接跳到網站卡片，「✅ 處理」會自動處理 Calendar，不用老師自己先去 Calendar 看一次。
-      // 改期/加課還是保留這條 Calendar 連結文字，這兩種沒有改動。
-      + (!isCancel && calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
-      + (isCancel
-        ? '\n\n請點下方按鈕前往網站處理'
-        : ('\n\n請到老師網站「📋 學生申請改期/取消」' + (isAdd ? '按「📅 開始安排」確認沒有衝突後排進課表。' : '按「✅ 處理」，系統會自動幫你搬/刪 Calendar。')));
+      + (isAdd && calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
+      + (isAdd
+        ? '\n\n請到老師網站「📋 學生申請改期/取消」按「📅 開始安排」確認沒有衝突後排進課表。'
+        : '\n\n請點下方按鈕前往網站處理');
 
     function sendEmailFallback() {
       fetch('https://api.web3forms.com/submit', {
@@ -5194,11 +5396,10 @@ function notifyTeacherClassRequest(d) {
     // 現在「處理」牽涉到自動搜尋+搬/刪 Google Calendar，Edge Function 沒有老師的 Google 授權做不到，
     // 從 LINE 按下去只會誤以為處理完成，Calendar 其實完全沒被動到（RELIABILITY FIRST，寧可少一顆按鈕
     // 也不要讓老師誤判）。改成純連結：開 Calendar + 到網站處理。
-    // 2026-07-16 改（Lin 要求）：「申請取消」這種類型只留一顆「📋 到網站處理」按鈕，直接連到那筆
-    // 申請卡片的位置，不用再多一顆「開 Calendar」（反正點進去就有「✅ 處理」可以直接按了）。
-    // 改期/加課這兩種維持原本 2 顆按鈕的邏輯，沒有改動。
+    // 2026-07-16 改（Lin 要求）：「申請取消」「申請改期」這兩種只留一顆「📋 到網站處理」按鈕，
+    // 直接連到那筆申請卡片的位置，不用再多一顆「開 Calendar」。加課維持原本 2 顆按鈕，沒有改動。
     var flexButtons = [];
-    if (!isCancel && calLink) flexButtons.push({ label: '🔗 開 Calendar', uri: calLink });
+    if (isAdd && calLink) flexButtons.push({ label: '🔗 開 Calendar', uri: calLink });
     flexButtons.push({ label: '📋 到網站處理', uri: siteLink });
 
     fetch(LINE_NOTIFY_ENDPOINT, {
@@ -5668,14 +5869,27 @@ async function loadPendingClassRequests() {
         '<button class="btn-approve" onclick="handleAddClassRequest(\'' + r.id + '\')">📅 開始安排</button>' +
         '<button class="btn-reject" onclick="openOtherOptionsModal(\'' + r.id + '\')">⚙️ 其他</button>';
     } else if (r.offer_status === 'accepted') {
-      actionsHtml = '<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">✅ 學生同意新時間了，按下方確認才會真的搬 Calendar</div>' +
+      // 只會發生在「老師提議、學生回覆」這條路（學生自己申請的由老師直接挑選項，不會經過這個中繼狀態）
+      actionsHtml = '<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">✅ 學生選好時間了，按下方確認才會真的搬 Calendar</div>' +
         '<button class="btn-approve" onclick="confirmAcceptedOffer(\'' + r.id + '\')">✅ 確認並搬 Calendar</button>';
     } else if (r.offer_status === 'declined') {
-      actionsHtml = '<div style="font-size:0.78rem;color:#b45309;font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">❌ 學生說這個時間不方便</div>' +
+      actionsHtml = '<div style="font-size:0.78rem;color:#b45309;font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">❌ 學生說這些時間都不方便，記得直接聯絡學生</div>' +
         '<button class="btn-reject" onclick="cancelProposedOffer(\'' + r.id + '\')">↩️ 重新處理這筆</button>';
-    } else if (isProposed) {
+    } else if (isProposed && r.initiated_by === 'teacher') {
+      // 老師自己發起的改期提議，等學生回覆——跟老師自己發起的取消一樣，回覆前可以查看/修改/收回。
       actionsHtml = '<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">🔁 已提議新時間，等學生回覆中…</div>' +
-        '<button class="btn-reject" onclick="cancelProposedOffer(\'' + r.id + '\')">↩️ 取消這個提議</button>';
+        '<button class="btn-approve" onclick="viewRequestDetail(window._classRequestCache[\'' + r.id + '\'])">👁️ 查看</button>' +
+        '<button class="btn-approve" onclick="teacherEditOwnRescheduleRequest(\'' + r.id + '\')">✏️ 修改</button>' +
+        '<button class="btn-reject" onclick="teacherWithdrawOwnRescheduleRequest(\'' + r.id + '\')">收回這個提議</button>';
+    } else if (isProposed) {
+      // 2026-07-16 加（Lin 要求：最多 3 個時間選項）：學生自己申請改期，給了 1-3 個候選時間——
+      // 老師挑其中一個直接搬 Calendar，或都不方便直接關掉這筆申請去聯絡學生。
+      var pickOpts = (Array.isArray(r.proposed_options) && r.proposed_options.length) ? r.proposed_options : [{ date: r.requested_date, time: r.requested_time }];
+      actionsHtml = pickOpts.map(function (opt, i) {
+        return '<button class="btn-approve" onclick="teacherPickRescheduleOption(\'' + r.id + '\',' + i + ')">✅ ' + escHtml(formatOfferOptionForTeacher(opt)) + '</button>';
+      }).join('') +
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>' +
+        '<button class="btn-reject" onclick="teacherDeclineRescheduleOptions(\'' + r.id + '\')">都不方便，關掉這筆</button>';
     } else if (isCancel && r.initiated_by === 'teacher') {
       // 2026-07-16 加（Lin 要求）：老師自己發起的取消，不再馬上刪 Calendar——現在要先等學生按
       // 「我知道了」確認收到，才輪到老師按「確認刪除」真的動 Calendar。學生確認前，老師這裡可以
@@ -5839,6 +6053,19 @@ async function processClassRequestInner(id, r, isCancel) {
 
   await finalizeRequestStatus(id, 'acknowledged');
 
+  // 2026-07-16 加（Lin 要求）：處理完成除了通知學生，也要推播通知老師自己一份「已經改好了」的紀錄，
+  // 不管有沒有連 LINE 通知學生成功都要送（獨立的 try/catch，失敗也不影響前面已經完成的 Calendar 動作）。
+  try {
+    var teacherNotifyMsg = isCancel
+      ? ('✅ 已取消 ' + r.student_name + ' ' + formatThaiDateTimeLabel(oldStartIso) + ' 這堂課')
+      : ('✅ 已把 ' + r.student_name + ' 的課改到 ' + formatThaiDateTimeLabel(newStartIsoForNotify));
+    await fetch(LINE_NOTIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      body: JSON.stringify({ to: 'teacher', message: teacherNotifyMsg }),
+    });
+  } catch (e) { /* 通知老師自己失敗不影響已經完成的 Calendar 動作 */ }
+
   if (!sForNotify || !sForNotify.line_user_id) {
     alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
   } else if (!notifySent) {
@@ -5862,56 +6089,109 @@ async function handleContactMyself() {
   await finalizeRequestStatus(id, 'acknowledged');
 }
 
+// 2026-07-16 加：編輯模式旗標——老師對自己已送出、學生還沒回覆的提議按「✏️ 修改」時設成 true，
+// 送出時會多一道保險閘（防止學生剛好這時候已經回覆，卻被老師的編輯蓋掉）。
+var _proposeTimeIsEditMode = false;
+
+function resetProposeTimeModalFields() {
+  [1, 2, 3].forEach(function (i) {
+    document.getElementById('proposeDateInput' + i).value = '';
+    resetTimeDropdown('proposeTimeInput' + i);
+  });
+}
+
 function openProposeTimeModal() {
   closeOtherOptionsModal();
-  document.getElementById('proposeDateInput').value = '';
-  resetTimeDropdown('proposeTimeInput');
+  _proposeTimeIsEditMode = false;
+  document.getElementById('proposeTimeModalTitle').textContent = '🔁 提議新時間給學生';
+  resetProposeTimeModalFields();
   document.getElementById('proposeTimeModal').classList.add('open');
 }
-function closeProposeTimeModal() { document.getElementById('proposeTimeModal').classList.remove('open'); }
 
+// 2026-07-16 加：老師對自己已送出、學生還沒回覆的改期提議按「✏️ 修改」——重用同一個 modal。
+function openEditRescheduleProposal(id) {
+  _otherOptionsRequestId = id;
+  _proposeTimeIsEditMode = true;
+  document.getElementById('proposeTimeModalTitle').textContent = '✏️ 修改提議';
+  resetProposeTimeModalFields();
+  document.getElementById('proposeTimeModal').classList.add('open');
+}
+
+function closeProposeTimeModal() {
+  document.getElementById('proposeTimeModal').classList.remove('open');
+  _proposeTimeIsEditMode = false;
+}
+
+// 2026-07-16 加：最多蒐集 3 組「提議改到」的日期/時間（泰國時間，選項 1 必填，2/3 選填）。
+function collectProposeTimeOptions() {
+  const options = [];
+  for (let i = 1; i <= 3; i++) {
+    const rawDate = document.getElementById('proposeDateInput' + i).value;
+    const rawTime = document.getElementById('proposeTimeInput' + i).value.trim();
+    if (!rawDate) continue;
+    if (rawTime && !isValidTimeStr(rawTime)) { alert('選項 ' + i + ' 時間格式不對，請用 HH:MM，例如 14:30'); return null; }
+    options.push({ date: rawDate, time: rawTime || null });
+  }
+  return options;
+}
+
+// 2026-07-16 改（Lin 要求：最多可以給 3 個時間選項）：現在最多送 3 個候選時間給學生選，
+// 學生按其中一個或「都不方便」；LINE flex 訊息按鈕上限抓 20 字，超過就截斷防止送出失敗。
 async function submitProposeTime() {
   var id = _otherOptionsRequestId;
   var r = (window._classRequestCache || {})[id];
   if (!id || !r) { closeProposeTimeModal(); return; }
-  var newDate = document.getElementById('proposeDateInput').value;
-  var newTime = document.getElementById('proposeTimeInput').value.trim();
-  if (!newDate || !newTime) { alert('請選擇日期和時間'); return; }
-  if (!isValidTimeStr(newTime)) { alert('時間格式不對，請用 HH:MM，例如 14:30'); return; }
+  var options = collectProposeTimeOptions();
+  if (options === null) return; // 格式錯誤，collectProposeTimeOptions 已經 alert 過了
+  if (!options.length) { alert('請至少填選項 1 的日期'); return; }
   var rStudent = studentsCache[r.token];
   if (!rStudent || !rStudent.line_user_id) {
     if (!confirm('⚠️ 這位學生還沒連結 LINE，系統沒辦法傳送提議通知。\n\n還是要儲存這筆提議嗎？（要自己另外聯絡學生說一聲）')) return;
   }
   var btn = document.getElementById('proposeSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
-  var res = await sb.from('classroom_requests').update({
-    requested_date: newDate, requested_time: newTime,
-    offer_status: 'proposed', offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
-  }).eq('id', id).select();
+  var updateFields = {
+    requested_date: options[0].date, requested_time: options[0].time,
+    proposed_options: options, offer_status: 'proposed', offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
+  };
+  var query = sb.from('classroom_requests').update(updateFields).eq('id', id);
+  if (_proposeTimeIsEditMode) query = query.eq('offer_status', 'proposed');
+  var res = await query.select();
   btn.disabled = false; btn.textContent = '📤 傳送給學生';
   if (res.error || !res.data || !res.data.length) {
-    alert('⚠️ 儲存失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+    if (_proposeTimeIsEditMode) {
+      alert('ℹ️ 更新失敗，學生可能已經回覆了，重新整理頁面看看。');
+      closeProposeTimeModal();
+      await loadPendingClassRequests();
+    } else {
+      alert('⚠️ 儲存失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+    }
     return;
   }
   if (rStudent && rStudent.line_user_id) {
     try {
-      // 2026-07-14 加：老師輸入的 newDate/newTime 是泰國時間（老師自己時區），
+      // 2026-07-14 加：老師輸入的日期/時間是泰國時間（老師自己時區），
       // 但這則訊息是傳給「學生」看的 → 換算成學生自己的時區再顯示，不要直接把泰國時間丟給學生
-      const proposedAbs = teacherTimeToDate(newDate, newTime);
-      const studentTimeLabel = studentFacingTimeLabel(proposedAbs, rStudent.pending_student_tz);
+      const buttons = options.map(function (opt, i) {
+        const abs = teacherTimeToDate(opt.date, opt.time || '00:00');
+        const label = studentFacingTimeLabel(abs, rStudent.pending_student_tz);
+        return { label: label.length > 20 ? (label.slice(0, 19) + '…') : label, postbackData: 'action=accept_offer&request=' + encodeURIComponent(id) + '&opt=' + i, style: 'primary', color: '#8B6310' };
+      });
+      buttons.push({ label: '都不方便', postbackData: 'action=decline_offer&request=' + encodeURIComponent(id), style: 'secondary', color: '#FAF4E8' });
+      const bodyOptionsText = options.map(function (opt, i) {
+        const abs = teacherTimeToDate(opt.date, opt.time || '00:00');
+        return '選項' + (i + 1) + '：' + studentFacingTimeLabel(abs, rStudent.pending_student_tz);
+      }).join('\n');
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
         body: JSON.stringify({
           to: { studentToken: r.token },
-          message: '老師提議新的上課時間：' + studentTimeLabel + '，請到網站查看並回覆',
+          message: '老師提議新的上課時間，請到網站查看並回覆',
           flex: {
             title: '🔄 老師提議新的上課時間',
-            bodyText: '原本：' + (r.original_date || '-') + '\n提議改到：' + studentTimeLabel + '\n\n方便嗎？',
-            buttons: [
-              { label: '可以', postbackData: 'action=accept_offer&request=' + encodeURIComponent(id), style: 'primary', color: '#8B6310' },
-              { label: '不方便', postbackData: 'action=decline_offer&request=' + encodeURIComponent(id), style: 'secondary', color: '#FAF4E8' },
-            ],
+            bodyText: '原本：' + (r.original_date || '-') + '\n' + bodyOptionsText + '\n\n請選一個方便的時間',
+            buttons: buttons,
           },
         }),
       });
@@ -5921,9 +6201,59 @@ async function submitProposeTime() {
   }
   closeProposeTimeModal();
   alert(rStudent && rStudent.line_user_id
-    ? '✅ 已傳送提議，等學生在 LINE 上點選回覆（超過 48 小時沒回覆會在首頁提醒你追蹤）'
+    ? '✅ 已傳送提議，等學生在 LINE 上點選回覆（超過 48 小時沒回覆會提醒你追蹤）'
     : '✅ 提議已存檔（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
   await loadPendingClassRequests();
+}
+
+// 2026-07-16 加（Lin 要求：跟取消申請一樣，老師自己發起的改期也能收回/查看/修改）：
+// 老師自己送出、學生還沒回覆的改期提議，反悔收回——不會動 Calendar（本來就還沒動），
+// 用 .eq('offer_status','proposed') 當保險閘：學生剛好這時候已經回覆了，這裡就會抓不到。
+async function teacherWithdrawOwnRescheduleRequest(id) {
+  if (!confirm('確定要收回這個改期提議嗎？（等於不改期了，這堂課維持原本安排）')) return;
+  var res = await sb.from('classroom_requests').update({ status: 'acknowledged', offer_status: null })
+    .eq('id', id).eq('status', 'pending').eq('offer_status', 'proposed').select();
+  if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
+  if (!res.data || !res.data.length) {
+    alert('ℹ️ 收回失敗——學生可能剛好已經回覆了，重新整理頁面看看目前狀態。');
+    await loadPendingClassRequests();
+    return;
+  }
+  alert('✅ 已收回，這堂課維持原本安排');
+  await loadPendingClassRequests();
+}
+
+// 2026-07-16 加：老師修改自己已送出、學生還沒回覆的改期提議（重新給 1-3 個新選項）——
+// 重用「提議新時間」的 modal，只是切到編輯模式。
+function teacherEditOwnRescheduleRequest(id) {
+  openEditRescheduleProposal(id);
+}
+
+// 2026-07-16 加（Lin 要求：老師端也能挑學生給的其中一個選項，或都不方便直接聯絡學生）：
+// 學生自己申請改期時給的 1-3 個候選時間，老師挑其中一個 → 直接重用既有的「✅ 處理」邏輯
+// （processClassRequestInner）搬 Calendar；不用另外寫一套搬 Calendar 的程式碼。
+async function teacherPickRescheduleOption(id, optIndex) {
+  if (_inFlightRequestIds[id]) return;
+  var r = (window._classRequestCache || {})[id];
+  if (!r) return;
+  var opts = (Array.isArray(r.proposed_options) && r.proposed_options.length) ? r.proposed_options : [{ date: r.requested_date, time: r.requested_time }];
+  var chosen = opts[optIndex];
+  if (!chosen) return;
+  _inFlightRequestIds[id] = true;
+  try {
+    var rWithChoice = Object.assign({}, r, { requested_date: chosen.date, requested_time: chosen.time });
+    return await processClassRequestInner(id, rWithChoice, false);
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
+}
+
+// 2026-07-16 加：老師覺得學生給的選項都不方便——直接關掉這筆申請（不動 Calendar），
+// 提醒老師自己聯絡學生討論（不用再跳一次 LINE push 通知自己，人已經在網站上了）。
+async function teacherDeclineRescheduleOptions(id) {
+  if (!confirm('確定學生給的這些時間都不方便嗎？（不會動 Calendar，關掉這筆申請，記得自己聯絡學生討論）')) return;
+  await finalizeRequestStatus(id, 'acknowledged');
+  alert('ℹ️ 已關閉這筆申請，記得直接聯絡學生討論時間');
 }
 
 // 💬 聯絡學生（2026-07-16 新增，Lin 要求）：老師直接在網站打字，送 LINE 給指定學生
@@ -6046,6 +6376,15 @@ async function confirmAcceptedOfferInner(id, r) {
   }
 
   await finalizeRequestStatus(id, 'acknowledged');
+
+  // 2026-07-16 加（Lin 要求）：推播通知老師自己一份「已經改好了」的紀錄。
+  try {
+    await fetch(LINE_NOTIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      body: JSON.stringify({ to: 'teacher', message: '✅ 已把 ' + r.student_name + ' 的課改到 ' + formatThaiDateTimeLabel(newStartIso) }),
+    });
+  } catch (e) { /* 通知老師自己失敗不影響已經完成的 Calendar 動作 */ }
 
   if (!sForNotify2 || !sForNotify2.line_user_id) {
     alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
@@ -6440,7 +6779,15 @@ function viewRequestDetail(r) {
     '類型：' + (r.request_type === 'cancel' ? '取消' : r.request_type === 'add_class' ? '加課' : '改期') + (r.initiated_by === 'teacher' ? '（老師發起）' : ''),
     '課堂日期：' + (r.original_date || '-'),
   ];
-  if (r.requested_date) lines.push('想改到：' + r.requested_date + (r.requested_time ? ' ' + r.requested_time : ''));
+  // 2026-07-16 加：改期最多有 3 個候選時間（proposed_options），全部列出來，
+  // 沒有的話就退回顯示單一 requested_date（舊資料/加課申請的情況）。
+  if (Array.isArray(r.proposed_options) && r.proposed_options.length) {
+    r.proposed_options.forEach(function (opt, i) {
+      lines.push('選項' + (i + 1) + '：' + (opt.date || '-') + (opt.time ? ' ' + opt.time : '') + '（泰國時間）');
+    });
+  } else if (r.requested_date) {
+    lines.push('想改到：' + r.requested_date + (r.requested_time ? ' ' + r.requested_time : ''));
+  }
   if (r.note) lines.push('備註：' + r.note);
   lines.push('送出時間：' + (r.created_at ? new Date(r.created_at).toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' }) : '-'));
   alert('📋 申請詳情\n\n' + lines.join('\n'));

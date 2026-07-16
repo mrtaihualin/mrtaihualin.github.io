@@ -5,8 +5,12 @@
 //   ด้วยคอลัมน์ sla_reminder_sent — รันทุกรอบแต่ยิงแค่ครั้งเดียวจนกว่าจะมีการเปลี่ยนแปลงสถานะใหม่)
 //
 // 3 เงื่อนไขที่ถือว่า "ค้าง":
-//   1) offer_status = 'proposed' และเวลาผ่านจาก offer_created_at เกิน 48 ชม. (รอนักเรียนตอบ)
-//   2) offer_status เป็น null (ยังไม่มีข้อเสนอ) และเวลาผ่านจาก created_at เกิน 48 ชม. (รอครูจัดการ)
+//   1) offer_status = 'proposed' และเวลาผ่านจาก offer_created_at เกิน 48 ชม. — ครอบคลุมการเสนอเวลาใหม่
+//      ทั้ง 2 ทิศทาง (ครูเสนอให้นักเรียน / นักเรียนเสนอให้ครูเลือกจากสูงสุด 3 ตัวเลือก)
+//      2026-07-16 改（Lin 要求）：ไม่ว่าฝ่ายไหนเป็นคนรอ ก็ push **เฉพาะครู** ให้ไปติดต่อนักเรียนเอง
+//      ไม่เตือนนักเรียนซ้ำแล้ว (เดิมเตือนทั้งสองฝ่าย)
+//   2) offer_status เป็น null (ยังไม่มีข้อเสนอ／ยังไม่มีใครเลือกเวลา) และเวลาผ่านจาก created_at เกิน 48 ชม.
+//      (คือ cancel/add_class ที่เพิ่งส่งมา ครูยังไม่เริ่มจัดการ) → ยังคงเตือนทั้งสองฝ่ายเหมือนเดิม
 //   3) (2026-07-16 เพิ่ม) request_type='cancel' + initiated_by='teacher' + teacher_cancel_ack_at
 //      ยังเป็น null (นักเรียนยังไม่กด "我知道了" ทั้งฝั่ง LINE/เว็บ) เกิน 48 ชม. จาก created_at
 //      → เตือน**เฉพาะครู**ให้ไปติดต่อนักเรียนเอง (ไม่เตือนนักเรียนซ้ำ เพราะนักเรียนเป็นฝ่ายที่ยังไม่ตอบอยู่แล้ว)
@@ -77,32 +81,47 @@ serve(async (req) => {
         continue;
       }
 
-      let isStale = false, sinceLabel = '';
+      // 2026-07-16 改（Lin 要求：「等對方回覆」的情況一律只提醒老師去聯絡學生，不用再提醒學生了——
+      // 不管本來是誰在等誰回覆，最後都是老師要主動處理）：offer_status='proposed' 現在涵蓋改期的
+      // 兩種發起方向（老師提議給學生 / 學生自己申請給老師挑），統一只 push 給老師。
       if (r.offer_status === 'proposed' && r.offer_created_at) {
         const hrs = (nowMs - new Date(r.offer_created_at).getTime()) / 3600000;
-        if (hrs >= SLA_HOURS) { isStale = true; sinceLabel = '提議新時間'; }
-      } else if (!r.offer_status) {
-        const hrs = (nowMs - new Date(r.created_at).getTime()) / 3600000;
-        if (hrs >= SLA_HOURS) { isStale = true; sinceLabel = (r.request_type === 'cancel' ? '取消' : '改期') + '申請'; }
+        if (hrs < SLA_HOURS) continue;
+        try {
+          if (teacherUserId) {
+            await pushLine(channelToken, teacherUserId,
+              '⏰ 提醒：' + (r.student_name || '學生') + ' 的改期提議已經超過 48 小時沒有回覆，建議直接聯絡學生確認');
+          }
+          const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+          if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
+          sent++;
+        } catch (e) { errCount++; }
+        continue;
       }
-      if (!isStale) continue;
 
-      try {
-        if (teacherUserId) {
-          await pushLine(channelToken, teacherUserId,
-            '⏰ 提醒：' + (r.student_name || '學生') + ' 的「' + sinceLabel + '」已經超過 48 小時還沒處理，記得到網站看一下');
-        }
-        // ค้นหา line_user_id เองฝั่ง server ด้วย service role (ไม่เชื่อค่าจากที่อื่น)
-        const { data: stu } = await supabase.from('classroom_students').select('line_user_id').eq('token', r.token).maybeSingle();
-        if (stu && stu.line_user_id) {
-          await pushLine(channelToken, stu.line_user_id,
-            '⏰ 提醒：你的「' + sinceLabel + '」老師還在處理中，已經超過 48 小時了，若急需請直接用 LINE 聯絡老師');
-        }
-        // 2026-07-14 加：เดิมไม่เช็ค error — update ล้มเหลวจะทำให้เตือนซ้ำทุกรอบ cron ไม่มีที่สิ้นสุด
-        const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
-        if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
-        sent++;
-      } catch (e) { errCount++; }
+      // 一般情況（cancel/add_class 剛送出、老師還沒開始處理，offer_status 還是空的）——維持原本
+      // 「提醒雙方」的做法不變，這個分支跟改期的提議機制無關。
+      if (!r.offer_status) {
+        const hrs = (nowMs - new Date(r.created_at).getTime()) / 3600000;
+        if (hrs < SLA_HOURS) continue;
+        const sinceLabel = (r.request_type === 'cancel' ? '取消' : '改期') + '申請';
+        try {
+          if (teacherUserId) {
+            await pushLine(channelToken, teacherUserId,
+              '⏰ 提醒：' + (r.student_name || '學生') + ' 的「' + sinceLabel + '」已經超過 48 小時還沒處理，記得到網站看一下');
+          }
+          // ค้นหา line_user_id เองฝั่ง server ด้วย service role (ไม่เชื่อค่าจากที่อื่น)
+          const { data: stu } = await supabase.from('classroom_students').select('line_user_id').eq('token', r.token).maybeSingle();
+          if (stu && stu.line_user_id) {
+            await pushLine(channelToken, stu.line_user_id,
+              '⏰ 提醒：你的「' + sinceLabel + '」老師還在處理中，已經超過 48 小時了，若急需請直接用 LINE 聯絡老師');
+          }
+          // 2026-07-14 加：เดิมไม่เช็ค error — update ล้มเหลวจะทำให้เตือนซ้ำทุกรอบ cron ไม่มีที่สิ้นสุด
+          const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+          if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
+          sent++;
+        } catch (e) { errCount++; }
+      }
     }
 
     return new Response(JSON.stringify({ ok: true, checked: rows.length, sent, errors: errCount }), { status: 200 });
