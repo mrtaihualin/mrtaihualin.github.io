@@ -41,6 +41,8 @@
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="word-vault.js"></script>
 <script src="data/adv-sentences.js?v=4"></script>
+<script src="data/audio-manifest.js?v=2"></script><!-- เพิ่ม 2026-07-17: เสียงประโยค 30 ประโยค (เสียง th-TH-Chirp3-HD-Leda) -->
+<script src="word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงประโยค — โชว์เฉพาะตอนเฉลยแล้ว -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -266,6 +268,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <div class="zh-hint" id="wo-zh"></div>
 
+  <!-- เพิ่ม 2026-07-17: ปุ่มฟังเสียงประโยค — โชว์เฉพาะตอนคำตอบเฉลยแล้ว (กันสปอยล์คำตอบก่อนตอบ) -->
+  <button type="button" id="wo-sound-btn" class="word-audio-btn" style="display:none;margin:2px 0 6px;" title="聽發音" aria-label="聽發音">🔊</button>
+
   <div class="wo-bank" id="wo-bank"></div>
 
   <div class="result-banner" id="wo-banner"></div>
@@ -484,6 +489,22 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   var curSentenceIsKnownCheck = false; // กำลังอยู่ในด่านพิสูจน์ "已記得" ของประโยคนี้ไหม (ข้อ10)
 
   function curSentence(){ return ADV_SENTENCES[SET[idx]]; }
+
+  // เพิ่ม 2026-07-17: ปุ่มฟังเสียงประโยค — เรียกโชว์เฉพาะตอนเฉลยคำตอบแล้ว (กันสปอยล์)
+  function woShowSound(sentenceTh){
+    var btn = document.getElementById('wo-sound-btn');
+    if (!btn) return;
+    if (window.WordAudio && WordAudio.has(sentenceTh)) {
+      btn.style.display = '';
+      btn.onclick = function(e){ e.stopPropagation(); WordAudio.play(sentenceTh, btn); };
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+  function woHideSound(){
+    var btn = document.getElementById('wo-sound-btn');
+    if (btn) { btn.style.display = 'none'; btn.onclick = null; }
+  }
 
   // ── 共用進度系統的這局統計：只在 finish() 時彙整一次，跟其他遊戲的「一輪結束才結算」邏輯一致 ──
   var cleanC = 0;      // 這局「乾淨」過關的句數（沒放錯過、也沒用提示）
@@ -775,6 +796,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
     document.getElementById('wo-score').textContent = score;
     document.getElementById('wo-zh').innerHTML = '';
+    woHideSound(); // ประโยคใหม่ = ซ่อนปุ่มฟังเสียงจนกว่าจะเฉลย (กันสปอยล์)
     var _woRev0=document.getElementById('wo-reveal'); if(_woRev0){_woRev0.style.display='none';_woRev0.innerHTML='';} // ประโยคใหม่ = ล้างคำอธิบายเก่า
     document.getElementById('wo-banner').className = 'result-banner';
     document.getElementById('wo-banner').textContent = '';
@@ -897,6 +919,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       ? '看來這句還沒完全記熟，先留在複習清單裡 🔁'
       : '這句先看答案～綠色就是正確順序，我們下一句再加油 💪（本句不計分）';
     document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
+    woShowSound(s.th);
     document.getElementById('wo-next-btn').disabled = false;
     document.getElementById('wo-hint-btn').disabled = true;
     // Lin 2026-07-12: ซ่อนกล่องคำในคลัง (ใช้ครบแล้ว แต่ opacity:0 ยังกินที่อยู่) กันช่องว่างเปล่าๆ ก่อนถึง popup ผลลัพธ์
@@ -940,6 +963,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         banner.className = passedClean ? 'result-banner ok show' : 'result-banner no show';
         banner.textContent = passedClean ? '真的記得！這句標記為熟練 ✓（不計分、不加星）' : '中途排錯過，這句先留在複習清單裡 🔁';
         document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
+        woShowSound(s.th);
         document.getElementById('wo-next-btn').disabled = false;
         document.getElementById('wo-hint-btn').disabled = true;
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
@@ -997,6 +1021,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       banner.className = 'result-banner ok show';
       banner.textContent = '✅ 排對了！+' + pts + ' 分' + (golden ? ' ✨黃金句' : '') + (cmult > 1 ? ' 🔥連對×' + cmult : '') + (hintUsedThisSentence ? '（用了提示）' : '');
       document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
+      woShowSound(s.th);
       // Lin 2026-07-12: โชว์คำอธิบายว่าแต่ละคำแปลว่าอะไร (ตอนจบ)
       var _woRev=document.getElementById('wo-reveal');
       if(_woRev){

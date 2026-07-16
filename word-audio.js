@@ -11,9 +11,15 @@
     return (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.words) || {};
   }
 
+  // เพิ่ม 2026-07-17: เสียงประโยค (adv-sentences.js) เก็บแยก key ใน AUDIO_MANIFEST.sentences
+  // คีย์ด้วยตัวข้อความจริงเหมือน words — urlFor เช็ค words ก่อน แล้วค่อย sentences (ไม่ชนกันเพราะประโยคยาวกว่าคำมาก)
+  function _sentManifest() {
+    return (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.sentences) || {};
+  }
+
   function urlFor(th) {
     if (!th) return null;
-    var f = _manifest()[th];
+    var f = _manifest()[th] || _sentManifest()[th];
     if (!f) return null;
     if (/^https?:/.test(f)) return f;
     var base = (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.baseUrl) || '';
