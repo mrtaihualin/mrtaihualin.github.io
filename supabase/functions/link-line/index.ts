@@ -115,11 +115,34 @@ serve(async (req) => {
     }
     // ถ้าไม่มี botToken (secret ยังไม่ตั้ง) → ข้ามด่านนี้ไปก่อน ไม่ทำให้การผูกพังทั้งระบบ
 
-    // 3) เขียนลง Supabase ด้วย service role (bypass RLS, รันฝั่ง server เท่านั้น ไม่มีทางเรียกจาก browser ได้)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL'),
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     );
+
+    // 2026-07-16 เพิ่ม: เช็คของเดิมก่อน update — ต้องรู้ว่าเป็นการ "ผูกครั้งแรก/เปลี่ยนบัญชี LINE ใหม่จริงๆ"
+    //   หรือแค่ "ผูกซ้ำอันเดิม" (เช่น เน็ตหลุดกลางทาง หน้าเว็บขึ้น error ทั้งที่ server เขียนสำเร็จแล้ว
+    //   นักเรียนเลยกดลิงก์ซ้ำ) — กันไม่ให้ส่งข้อความต้อนรับซ้ำเวลาผูกซ้ำอันเดิม
+    const { data: existingRow, error: selError } = await supabase
+      .from('classroom_students')
+      .select('line_user_id, name')
+      .eq('token', token)
+      .maybeSingle();
+
+    if (selError) {
+      return new Response(JSON.stringify({ error: 'db lookup failed', detail: selError.message }), {
+        status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    }
+    if (!existingRow) {
+      return new Response(JSON.stringify({ error: 'token not found' }), {
+        status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    }
+    const isFirstOrChangedLink = existingRow.line_user_id !== lineUserId;
+    const studentLabel = existingRow.name || token;
+
+    // 3) เขียนลง Supabase ด้วย service role (bypass RLS, รันฝั่ง server เท่านั้น ไม่มีทางเรียกจาก browser ได้)
     const { error, count } = await supabase
       .from('classroom_students')
       .update({ line_user_id: lineUserId }, { count: 'exact' })
@@ -154,28 +177,43 @@ serve(async (req) => {
       }
     }
 
-    // 2026-07-16 เพิ่ม: ผูกบัญชีสำเร็จ → ส่งข้อความต้อนรับให้นักเรียน
-    //   มีด่านแอดเพื่อน (ข้อ 2.5) กันไว้แล้วก่อนจะมาถึงจุดนี้ → คนที่ผูกสำเร็จ = เป็นเพื่อนแน่นอน = ส่งถึงแน่นอน
-    //   ห่อ try/catch ไว้ — ส่งข้อความไม่ได้ ก็ห้ามทำให้การผูกบัญชีล้มเหลว (ผูกบัญชีสำคัญกว่า)
-    if (channelAccessToken) {
-      try {
-        await fetch('https://api.line.me/v2/bot/message/push', {
-          method: 'POST',
-          headers: {
-            Authorization: 'Bearer ' + channelAccessToken,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: lineUserId,
-            messages: [{
-              type: 'text',
-              text: '帳號連結成功 🎉\n你好！我是泰華 🙏\n之後的上課提醒、改期通知，都會從這裡自動傳給你\n有任何課程問題，直接在這裡留言就可以囉 😊',
-            }],
-          }),
-        });
-        // ไม่เช็ค response ต่อ — ส่งข้อความต้อนรับไม่ใช่ critical path ผูกบัญชีถือว่าสำเร็จแล้ว
-      } catch (e) {
-        // เงียบไว้ ไม่ทำให้ request ล้มเหลว
+    // 2026-07-16 เพิ่ม: ผูกบัญชีสำเร็จ (ครั้งแรก/เปลี่ยนบัญชีใหม่เท่านั้น — ไม่ใช่ผูกซ้ำอันเดิม) →
+    //   ส่งสำเนาให้ครู (Lin) ก่อนเสมอ แล้วค่อยส่งข้อความต้อนรับหานักเรียน (ตามที่ Lin สั่ง 2026-07-16)
+    //   กติกา: ครูติด (ส่งหาครูไม่สำเร็จ) → นักเรียนก็ติด (ข้ามไม่ส่งรอบนี้) / ครูไม่ติด → นักเรียนก็ไม่ติด
+    //   ใช้แพทเทิร์นเดียวกับ low-quota-cron (secret LINE_TEACHER_USER_ID ตัวเดิม ไม่ต้องตั้งใหม่)
+    //   ⚠️ ต่างจาก low-quota-cron ตรงที่นี่เป็นเหตุการณ์ครั้งเดียว ไม่มี cron รันซ้ำวันถัดไป — ถ้าส่งหาครู
+    //   พังรอบนี้ นักเรียนจะไม่ได้ข้อความต้อนรับเลย (ไม่ auto retry) แจ้ง Lin ไว้แล้วตอนเสนองาน
+    //   ห่อ try/catch ทั้งคู่ + log error ไว้เสมอ (เช็คได้จาก Supabase Dashboard → Edge Functions → Logs)
+    //   — ส่งข้อความไม่ได้ ก็ห้ามทำให้การผูกบัญชีล้มเหลว (ผูกบัญชีสำคัญกว่า)
+    if (isFirstOrChangedLink && channelAccessToken) {
+      const welcomeText = '帳號連結成功 🎉\n你好！我是泰華 🙏\n之後的上課提醒、改期通知，都會從這裡自動傳給你\n有任何課程問題，直接在這裡留言就可以囉 😊';
+      const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
+      let teacherOk = true;
+      if (teacherUserId) {
+        try {
+          await fetch('https://api.line.me/v2/bot/message/push', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + channelAccessToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: teacherUserId,
+              messages: [{ type: 'text', text: '📋 ' + studentLabel + ' 剛連結 LINE 帳號成功，已發送以下歡迎訊息給他：\n\n' + welcomeText }],
+            }),
+          });
+        } catch (e) {
+          teacherOk = false;
+          console.error('[link-line] ส่งสำเนาให้ครูไม่สำเร็จ — ข้ามไม่ส่งข้อความต้อนรับหานักเรียนรอบนี้:', e);
+        }
+      }
+      if (teacherOk) {
+        try {
+          await fetch('https://api.line.me/v2/bot/message/push', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + channelAccessToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: welcomeText }] }),
+          });
+        } catch (e) {
+          console.error('[link-line] ส่งข้อความต้อนรับให้นักเรียนไม่สำเร็จ:', e);
+        }
       }
     }
 
