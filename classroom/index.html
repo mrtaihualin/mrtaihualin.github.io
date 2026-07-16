@@ -5940,10 +5940,20 @@ async function teacherCancelClassNowInner(token, chosen) {
     try {
       // 傳給學生看的時間 → 換算成學生自己的時區，不要直接丟泰國時間給學生
       const cancelTimeLabel = studentFacingTimeLabel(new Date(oldStartIso), s.pending_student_tz);
+      // 2026-07-16 加：改成有「聯絡老師」按鈕的卡片，不再只是純文字叫學生自己聯絡
+      // （沿用全站統一的 LINE_OA_URL，跟其他「聯絡老師」按鈕一致）
       const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-        body: JSON.stringify({ to: { studentToken: token }, message: '老師取消了 ' + cancelTimeLabel + ' 這堂課，如有疑問請直接聯絡老師' }),
+        body: JSON.stringify({
+          to: { studentToken: token },
+          message: '老師取消了 ' + cancelTimeLabel + ' 這堂課，如有疑問請直接聯絡老師',
+          flex: {
+            title: '❌ 課堂已取消',
+            bodyText: '老師取消了 ' + cancelTimeLabel + ' 這堂課',
+            buttons: [{ label: '💬 聯絡老師', uri: LINE_OA_URL }],
+          },
+        }),
       });
       notifySent = notifyRes.ok;
       if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
