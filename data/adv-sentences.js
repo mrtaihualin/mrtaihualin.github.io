@@ -258,6 +258,58 @@
       { th: 'ด้วย', zh: '也／請', syls: [{cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย', en:'dûay'}] },
       { th: 'ครับ', zh: '（男性禮貌詞）', syls: [{cons:'ค', cluster:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'ครับ', en:'khráp'}] }
       ]
+    },
+    {
+      th: 'ผมตื่นนอนตอนหกโมงเช้า', zh: '我早上六點起床', readingTH: 'ผม-ตื่น-นอน-ตอน-หก-โมง-เช้า', wc: 7,
+      words: [
+      { th: 'ผม', zh: '我（男性自稱）', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
+      { th: 'ตื่นนอน', zh: '起床', syls: [{cons:'ต', vowel:'อื', tone:'่', final:'น', tone_name:'เอก', th:'ตื่น', en:'dtùuen'}, {cons:'น', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'นอน', en:'norn'}] },
+      { th: 'ตอน', zh: '在（時段）', syls: [{cons:'ต', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'ตอน', en:'dtorn'}] },
+      { th: 'หก', zh: '六', syls: [{cons:'ห', vowel:'โอะ', final:'ก', tone_name:'เอก', th:'หก', en:'hòk'}] },
+      { th: 'โมง', zh: '點（鐘點）', syls: [{cons:'ม', vowel:'โอ', final:'ง', tone_name:'สามัญ', th:'โมง', en:'moong'}] },
+      { th: 'เช้า', zh: '早上', syls: [{cons:'ช', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เช้า', en:'cháo'}] }
+      ]
+    },
+    {
+      th: 'เขาชอบอาบน้ำก่อนนอน', zh: '他喜歡睡前洗澡', readingTH: 'เขา-ชอบ-อาบ-น้ำ-ก่อน-นอน', wc: 6,
+      words: [
+      { th: 'เขา', zh: '他', syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
+      { th: 'ชอบ', zh: '喜歡', syls: [{cons:'ช', vowel:'ออ', final:'บ', tone_name:'โท', th:'ชอบ', en:'chôp'}] },
+      { th: 'อาบน้ำ', zh: '洗澡', syls: [{cons:'อ', vowel:'อา', final:'บ', tone_name:'เอก', th:'อาบ', en:'àap'}, {cons:'น', vowel:'อำ', tone:'้', tone_name:'ตรี', th:'น้ำ', en:'náam'}] },
+      { th: 'ก่อน', zh: '之前', syls: [{cons:'ก', vowel:'ออ', tone:'่', final:'น', tone_name:'เอก', th:'ก่อน', en:'gòn'}] },
+      { th: 'นอน', zh: '睡覺', syls: [{cons:'น', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'นอน', en:'norn'}] }
+      ]
+    },
+    {
+      th: 'เราดื่มกาแฟทุกเช้า', zh: '我們每天早上喝咖啡', readingTH: 'เรา-ดื่ม-กา-แฟ-ทุก-เช้า', wc: 6,
+      words: [
+      { th: 'เรา', zh: '我們', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
+      { th: 'ดื่ม', zh: '喝', syls: [{cons:'ด', vowel:'อื', tone:'่', final:'ม', tone_name:'เอก', th:'ดื่ม', en:'dèum'}] },
+      { th: 'กาแฟ', zh: '咖啡', syls: [{cons:'ก', vowel:'อา', tone_name:'สามัญ', th:'กา', en:'gaa'}, {cons:'ฟ', vowel:'แอ', tone_name:'สามัญ', th:'แฟ', en:'fae'}] },
+      { th: 'ทุก', zh: '每', syls: [{cons:'ท', vowel:'อุ', final:'ก', tone_name:'ตรี', th:'ทุก', en:'túk'}] },
+      { th: 'เช้า', zh: '早上', syls: [{cons:'ช', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เช้า', en:'cháo'}] }
+      ]
+    },
+    {
+      th: 'วันนี้ผมทำงานที่บ้าน', zh: '今天我在家工作', readingTH: 'วัน-นี้-ผม-ทำ-งาน-ที่-บ้าน', wc: 7,
+      words: [
+      { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'ผม', zh: '我（男性自稱）', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
+      { th: 'ทำงาน', zh: '工作', syls: [{cons:'ท', vowel:'อำ', tone_name:'สามัญ', th:'ทำ', en:'tam'}, {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน', en:'ngaan'}] },
+      { th: 'ที่', zh: '在（地點）', syls: [{cons:'ท', vowel:'อี', tone:'่', tone_name:'โท', th:'ที่', en:'thîi'}] },
+      { th: 'บ้าน', zh: '家', syls: [{cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'}] }
+      ]
+    },
+    {
+      th: 'เย็นนี้เรากินข้าวด้วยกันไหม', zh: '今晚我們一起吃飯嗎', readingTH: 'เย็น-นี้-เรา-กิน-ข้าว-ด้วย-กัน-ไหม', wc: 8,
+      words: [
+      { th: 'เย็นนี้', zh: '今晚', syls: [{cons:'ย', vowel:'เอะ', final:'น', tone_name:'สามัญ', th:'เย็น', en:'yen'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'เรา', zh: '我們', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
+      { th: 'กิน', zh: '吃', syls: [{cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'}] },
+      { th: 'ข้าว', zh: '飯', syls: [{cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว', en:'khâao'}] },
+      { th: 'ด้วยกัน', zh: '一起', syls: [{cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย', en:'dûay'}, {cons:'ก', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'กัน', en:'gan'}] },
+      { th: 'ไหม', zh: '嗎（疑問）', syls: [{cons:'ม', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหม', en:'mǎi'}] }
+      ]
     }
   ];
 
