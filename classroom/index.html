@@ -5477,7 +5477,16 @@ async function loadPendingClassRequests() {
     } else if (isProposed) {
       actionsHtml = '<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">🔁 已提議新時間，等學生回覆中…</div>' +
         '<button class="btn-reject" onclick="cancelProposedOffer(\'' + r.id + '\')">↩️ 取消這個提議</button>';
+    } else if (isCancel) {
+      // 2026-07-16 改（Lin 要求）：取消申請簡化成只留 2 顆——現在有 calendar_event_id 直接對到
+      // 真正的事件（見 requestCancelClass／processClassRequestInner），不用再靠「姓名+日期」
+      // 搜尋，找不到/找到多筆的機率大幅降低，所以「🔗 開 Calendar」這個手動備援按鈕先拿掉。
+      // 「⚙️ 其他」的兩個選項（自己聯絡學生／提議新時間）取消申請用不到「提議新時間」，
+      // 「自己聯絡學生」也被新的「💬 聯絡學生」取代掉了，所以整顆一起拿掉。
+      actionsHtml = '<button class="btn-approve" onclick="processClassRequest(\'' + r.id + '\')">✅ 處理</button>' +
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>';
     } else {
+      // 改期申請：保留完整 4 顆——「⚙️ 其他 → 提議新時間」是回覆改期申請唯一的入口，不能拿掉。
       actionsHtml = (calUrl ? '<a class="btn-approve" style="text-decoration:none;text-align:center;" href="' + calUrl + '" target="_blank" rel="noopener">🔗 開 Calendar</a>' : '') +
         '<button class="btn-approve" onclick="processClassRequest(\'' + r.id + '\')">✅ 處理</button>' +
         '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>' +
@@ -5532,6 +5541,11 @@ async function processClassRequest(id) {
 
 async function processClassRequestInner(id, r, isCancel) {
   var ev = null;
+  // 2026-07-16 加：取消申請的「🔗 開 Calendar」「⚙️ 其他」按鈕拿掉了（Lin 要求簡化成 2 顆），
+  // 這裡的手動備援文字改成不提那兩顆按鈕——取消申請卡住的話，改期申請仍然保留完整 4 顆按鈕。
+  var fallbackHint = isCancel
+    ? '請自己到 calendar.google.com 手動確認，再用「💬 聯絡學生」跟學生說一聲。這筆申請會留在待處理清單裡（真的要關掉，可以到 Supabase 把這筆狀態手動標記成 acknowledged）。'
+    : '請按「🔗 開 Calendar」自己手動處理，處理完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。';
   // 2026-07-16 加：如果這筆申請有記真正的 Calendar 事件 ID（學生用「選擇要取消的課堂」選的，
   // 見 requestCancelClass），直接用 ID 拿，比姓名+日期搜尋準，不會有「找到 0 筆/2 筆」的問題。
   // 事件已經被刪掉/ID 失效 → getClassEventById 回傳 null，退回舊版搜尋當保底。
@@ -5539,7 +5553,7 @@ async function processClassRequestInner(id, r, isCancel) {
     try {
       ev = await getClassEventById(r.calendar_event_id);
     } catch (e) {
-      alert('⚠️ 讀取 Google Calendar 失敗：' + (e.message || e) + '\n請改用「🔗 開 Calendar」自己手動處理，處理完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。');
+      alert('⚠️ 讀取 Google Calendar 失敗：' + (e.message || e) + '\n' + fallbackHint);
       return;
     }
   }
@@ -5548,12 +5562,12 @@ async function processClassRequestInner(id, r, isCancel) {
     try {
       matches = await findClassEventForRequest(r.student_name, r.original_date);
     } catch (e) {
-      alert('⚠️ 搜尋 Google Calendar 失敗：' + (e.message || e) + '\n請改用「🔗 開 Calendar」自己手動處理，處理完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。');
+      alert('⚠️ 搜尋 Google Calendar 失敗：' + (e.message || e) + '\n' + fallbackHint);
       return;
     }
     if (matches.length !== 1) {
       alert((matches.length === 0 ? '⚠️ 在 Calendar 找不到符合的課堂事件' : '⚠️ 在 Calendar 找到 ' + matches.length + ' 筆疑似符合的課堂，不確定是哪一筆') +
-        '，為了安全不會自動處理。\n請按「🔗 開 Calendar」自己手動調整，調整完再按「⚙️ 其他 → 我會自己聯絡學生」關掉這筆申請。');
+        '，為了安全不會自動處理。\n' + fallbackHint);
       return;
     }
     ev = matches[0];
