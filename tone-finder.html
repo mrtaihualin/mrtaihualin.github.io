@@ -114,10 +114,15 @@
   /* ── Word banner ── */
   .tf-word-banner {
     display: none;
-    padding: 16px 22px 14px;
+    padding: 16px 22px 10px;
     background: linear-gradient(180deg, #EFDDB4 0%, #F8F0DE 100%);
-    border-bottom: 2px solid rgba(184,134,40,0.50);
+    /* Lin 2026-07-16: เส้นขอบทองล่างย้ายไปอยู่ใต้แถวปุ่ม #tf-word-ctl-row แทน — ให้ปุ่มอยู่ "ในกรอบทอง" เดียวกับคำศัพท์ */
     text-align: center;
+  }
+  /* Lin 2026-07-16: แถวปุ่มใต้คำศัพท์เป็นส่วนหนึ่งของกรอบทอง (พื้นสีเดียวกับปลาย gradient ของ banner + เส้นขอบทองปิดท้าย) */
+  #tf-word-ctl-row {
+    background: #F8F0DE;
+    border-bottom: 2px solid rgba(184,134,40,0.50);
   }
   .tf-banner-counter {
     font-family: 'Noto Sans TC', sans-serif;
@@ -2024,7 +2029,7 @@
   <div class="tf-card">
     <div class="tf-word-banner" id="tf-banner"></div>
     <!-- แถวปุ่ม 3 อันใต้คำศัพท์: 🔊/🔇เปิดปิดเสียง · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — ไม่มีปุ่มไข่🐣 เพราะคำอ่านจะเฉลยวรรณยุกต์ก่อนตอบ — Lin 2026-07-16 -->
-    <div id="tf-word-ctl-row" style="display:none;align-items:center;justify-content:center;gap:8px;margin:6px 0;">
+    <div id="tf-word-ctl-row" style="display:none;align-items:center;justify-content:center;gap:8px;margin:0;padding:0 22px 14px;">
       <button id="rg-sound-toggle" class="word-ctl-btn" type="button"></button>
       <span id="zh-toggle-slot"></span>
       <span id="tf-vault-btn-slot"></span>
@@ -3255,7 +3260,7 @@ function tfScorePop(points, opts) {
     if (idx > 0) pop.style.top = (32 + idx * 9) + '%';
     var sign = points >= 0 ? '+' : '';
     var multTxt = (opts.mult && opts.mult > 1) ? '<span class="tf-score-pop-mult">×' + opts.mult + '</span>' : '';
-    var goldTxt = opts.gold ? '<span class="tf-score-pop-mult"><img src="assets/icons/golden-grain.svg" alt="" style="width:16px;height:16px;vertical-align:-3px;"></span>' : '';
+    var goldTxt = opts.gold ? '<span class="tf-score-pop-mult"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:16px;height:16px;vertical-align:-3px;"></span>' : '';
     pop.innerHTML = '<span class="tf-score-pop-num">' + sign + points + '</span>' + multTxt + goldTxt;
     document.body.appendChild(pop);
     setTimeout(function () { if (pop && pop.parentNode) pop.parentNode.removeChild(pop); _tfScorePopCount = Math.max(0, _tfScorePopCount - 1); }, 1300);
@@ -4147,7 +4152,7 @@ function render() {
       ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字'
         + '<span id="tf-score-hud" class="tf-score-hud">🏆 ' + (session.score || 0) + ' 分</span>'
         + (session.combo >= 3 ? '<span class="tf-combo-hud">🔥 ×' + TF_SCORE.comboMultiplier(session.combo) + '</span>' : '')
-        + (session.currentWordGolden ? '<span class="tf-golden-hud"><img src="assets/icons/golden-grain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金米題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
+        + (session.currentWordGolden ? '<span class="tf-golden-hud"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金米題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
         + '</div>'
         + tfBarsHtml()
       : '';

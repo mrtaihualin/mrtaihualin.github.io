@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs>
+<linearGradient id="grainP" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#FDF3C4"/><stop offset="0.5" stop-color="#EAC36B"/><stop offset="1" stop-color="#B9821F"/></linearGradient>
+</defs>
+<!-- เมล็ดข้าวทองล้วน (ดึงมาจาก golden-grain.svg เดิม ตัดเหรียญวงกลมออก) — Lin 2026-07-16 -->
+<g transform="translate(24,25)">
+<ellipse rx="10.5" ry="18" fill="url(#grainP)" stroke="#9A6512" stroke-width="2" transform="rotate(-14)"/>
+</g>
+<g transform="translate(10,9)"><path d="M0 -6.5 L1.6 -1.6 L6.5 0 L1.6 1.6 L0 6.5 L-1.6 1.6 L-6.5 0 L-1.6 -1.6 Z" fill="#FFFFFF" stroke="#E3C26B" stroke-width="0.6"/></g>
+<g transform="translate(39,15)"><path d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z" fill="#FFFFFF" stroke="#E3C26B" stroke-width="0.5"/></g>
+</svg>
