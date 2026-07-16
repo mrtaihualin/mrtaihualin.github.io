@@ -1792,6 +1792,9 @@ window.deleteFBComment = function(postId, idx) {
       var gs = document.getElementById('game-switcher');
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ
 
+      // Lin 2026-07-16: ปุ่ม 🍙/🌾 กดแล้วไม่มีผลในเกมเรียงคำ (กล่องคำแปล .zh-hint#wo-zh ไม่ได้อยู่ในลิสต์ ZH_ALL) → ลบปุ่มออกจากหน้านี้ไปก่อน
+      if ((location.pathname || '').toLowerCase().indexOf('word-order') > -1) return;
+
       var KEY = 'games_hide_zh';
       var hideOn = false;
       try { hideOn = localStorage.getItem(KEY) === '1'; } catch (e) {}

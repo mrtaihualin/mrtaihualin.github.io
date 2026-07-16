@@ -582,7 +582,8 @@ const LEVELS={
   lv3:{name:'第三級',sub:'單字持續增加中',type:'build',hideNeg:false,exTags:['p2','p3','p4'],locked:true,
        intro:'情態與否定一起用，自由挑戰各種完整句子。'},
 };
-const LV_ORDER=['pre','lv1','lv2','lv3'];
+// Lin 2026-07-16: ซ่อน 預備級 (pre) ไว้ก่อน — ไม่ลบ ยังเก็บ LEVELS.pre ไว้เผื่อเอากลับมาใช้ทีหลัง
+const LV_ORDER=['lv1','lv2','lv3'];
 
 // ════════ TEACH STEPS ════════
 const STEPS=[
@@ -604,7 +605,7 @@ const STEPS=[
 ];
 
 // ════════ STATE ════════
-let curLevel='pre', teachStep=0;
+let curLevel='lv1', teachStep=0;
 const state={}; SLOTS.forEach(s=>state[s.id]=null);
 let openSlot=null, exIdx=0;
 
@@ -1426,7 +1427,7 @@ function _processMinaToastQueue(){
 
 // ── INIT ──
 renderLevels();
-setLevel('pre');
+setLevel('lv1');
 refreshLegoAcctUI();
 try{ legoRenderGameBar(); }catch(e){}
 </script>
