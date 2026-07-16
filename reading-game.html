@@ -883,7 +883,7 @@ function setRgPronMode(on){
     btn.setAttribute('aria-label',btn.title);
   }
   if(typeof WORD!=='undefined' && WORD && !checked){
-    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: ปุ่มคำอ่านต้องใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
+    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: ปุ่มคำอ่านต้องใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   }
 }
 setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
@@ -1162,7 +1162,7 @@ function loadWord(){
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
-  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน) — ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
+  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน) — ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
   // บอกระบบเสียงว่าคำปัจจุบันคือคำไหน — ปุ่ม 🔊 กด 1 ที = เล่นเสียงคำนี้ 1 ที (2026-07-16)
@@ -1876,7 +1876,7 @@ function buildThaiPron(){
 }
 function showReveal(){
   var _pron=buildThaiPron();
-  document.getElementById('rev-pron').textContent=_pron?('🔊 '+_pron):'';
+  document.getElementById('rev-pron').textContent=_pron?(_pron):'';
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
   // ข้ามการพิมพ์ซ้ำ "เฉพาะเมื่อ" แผงวรรณยุกต์ (#bonus-reason) โชว์คำอธิบายจริงๆ อยู่แล้วเท่านั้น
@@ -1898,7 +1898,7 @@ function showReveal(){
 // 打完整句（多音節）— 顯示「整句」的子音/母音/尾音分析＋泰文讀法，不是只顯示最後一個音節而已 — เหมือนเกมพิมพ์ (showRevealMulti) — Lin 2026-07-12
 function showRevealMulti(){
   var _pronM=buildThaiPron();
-  document.getElementById('rev-pron').textContent=_pronM?('🔊 '+_pronM):'';
+  document.getElementById('rev-pron').textContent=_pronM?(_pronM):'';
   // Lin 2026-07-12 (圖3 unify): คำอธิบายอยู่ "ในกล่องพยางค์" (#bonus-reason ของกล่องสุดท้าย) เสมอ — เลิกใช้แผงแยก #reveal
   var box=document.getElementById('bonus-reason');
   box.innerHTML='';

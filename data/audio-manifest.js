@@ -1,5 +1,5 @@
-// data/audio-manifest.js — เสียงคำศัพท์ไทย (generate อัตโนมัติ ห้ามแก้มือ)
-// voice: th-TH-Chirp3-HD-Leda · สร้างล่าสุด: 2026-07-17
+// data/audio-manifest.js — เสียงคำศัพท์+ประโยคไทย (generate อัตโนมัติ ห้ามแก้มือ)
+// voice: th-TH-Chirp3-HD-Leda · อัปเดตล่าสุด: 2026-07-17 (เพิ่มประโยค 30 ประโยค)
 window.AUDIO_MANIFEST = {
   voiceId: 'th-TH-Chirp3-HD-Leda',
   baseUrl: '',
@@ -341,5 +341,37 @@ window.AUDIO_MANIFEST = {
   "ตะวันตก": "assets/word-audio/th/google-chirp3hd/e4/e40a9a6f076c84cac087df96b557483b0a7cd1dae7abcf564fd2734e1d21a058.mp3",
   "ข้างหน้า": "assets/word-audio/th/google-chirp3hd/ca/ca0617300c291f7ce74575d60643a53f62d0f8f1b93c8e11bc6582fdb819312e.mp3",
   "ข้างหลัง": "assets/word-audio/th/google-chirp3hd/8e/8e8d55a96f6babc00c6da090038b959775fffcb7c553c473946f45991875c8a4.mp3"
+},
+  sentences: {
+  "sent-01": "assets/sentence-audio/th/google-chirp3hd/e7/e71c1dc7454ec0bd698c000876f868465ddf85f8a8196686bb66a3e532a8352b.mp3",
+  "sent-02": "assets/sentence-audio/th/google-chirp3hd/50/501c728b1db306aea442c4144b10a2c0256f22dd26e7819a0ad8c962874a9c45.mp3",
+  "sent-03": "assets/sentence-audio/th/google-chirp3hd/21/2160f046d01580e0cfd55312517cb387788a86797e8fddc5e1f3a5a9a2f0c8ac.mp3",
+  "sent-04": "assets/sentence-audio/th/google-chirp3hd/cc/cc088803f18bcf7f5544a7a6d93cea4c38776bc7a7e5d658f28d10b6549529bb.mp3",
+  "sent-05": "assets/sentence-audio/th/google-chirp3hd/8b/8bde098b7a21b4372ba39da11b90d9bb3bed8aede5fe7382ad260a51ee4ac12e.mp3",
+  "sent-06": "assets/sentence-audio/th/google-chirp3hd/e6/e6ef21a25ae0aeedfdce718f8129ba62b98b84ce92e17bebeec840b542db6943.mp3",
+  "sent-07": "assets/sentence-audio/th/google-chirp3hd/a9/a9cc12f8ce27e334adafd4621ed85f1553b91d11b1b140f1fb40aa1d296ff4a8.mp3",
+  "sent-08": "assets/sentence-audio/th/google-chirp3hd/fd/fdeef85a8ad7c6e675a2562063eb2e97251a095c75802b5fe431211e4e6cb3d3.mp3",
+  "sent-09": "assets/sentence-audio/th/google-chirp3hd/ee/ee1fd9b29a3fd31e518cd7eb21d1d67afa46e1a0d81eafa2061f6d17a8b3d0e6.mp3",
+  "sent-10": "assets/sentence-audio/th/google-chirp3hd/e7/e7881dc9fc5e3ba9192f66f13eba26b52abb4b6699b2953f84037ef08ec3a1b6.mp3",
+  "sent-11": "assets/sentence-audio/th/google-chirp3hd/b4/b495e5facdb56a7b31875145d164fd43f6d97b0b51dc9c41dd477b9f4952a79f.mp3",
+  "sent-12": "assets/sentence-audio/th/google-chirp3hd/c3/c35ced84fc270d2fd087aff3b507fa599aa46d001aa346d53c96ca06ef05606d.mp3",
+  "sent-13": "assets/sentence-audio/th/google-chirp3hd/d3/d34b723bf42a627edd63becc245b4532dd93766ab9267184b52d2664c9fa9f7a.mp3",
+  "sent-14": "assets/sentence-audio/th/google-chirp3hd/9a/9a785b01148816bd4ccb812fb57426814959e00443b92a8d66c40305aa573fa0.mp3",
+  "sent-15": "assets/sentence-audio/th/google-chirp3hd/eb/eb4ecde335543e78454db560740fbe3bf0426af8fbc4acf7a3f4d0a600cc7995.mp3",
+  "sent-16": "assets/sentence-audio/th/google-chirp3hd/13/13f2b1d6b43f210bbc36726adc5fcb2c939300d918a4d60b66d2179dd74f9c42.mp3",
+  "sent-17": "assets/sentence-audio/th/google-chirp3hd/2d/2d39eab4b233d4350c3348c13f78ad78582cc26b7cfbe73219da70b2e9df690c.mp3",
+  "sent-18": "assets/sentence-audio/th/google-chirp3hd/b1/b10b6562a52cb21557cee22a77c1088ec13bb793634985c7ea8dc8819cbecdb5.mp3",
+  "sent-19": "assets/sentence-audio/th/google-chirp3hd/d4/d4fc7c0c904f02138e0283f728f5235f1063495722a64622bd6c8e6b8b6d9576.mp3",
+  "sent-20": "assets/sentence-audio/th/google-chirp3hd/95/95be6f25e39bb56baaaa0464b4eea8be842db4457cf41eaa2bf21eaace6d61b9.mp3",
+  "sent-21": "assets/sentence-audio/th/google-chirp3hd/6f/6fb9042903b141f32e29772be134ecbce2ec8a8d72045f2e7f74f426c3caa172.mp3",
+  "sent-22": "assets/sentence-audio/th/google-chirp3hd/a8/a8217ca59a2fca281cd52fbb96bfeb968196d91e74b0472eaba985c6431a32de.mp3",
+  "sent-23": "assets/sentence-audio/th/google-chirp3hd/a0/a029ff5745eaf1913aa3e1af36e54a6214c313cb6cbb69024ea51a1bf898f40b.mp3",
+  "sent-24": "assets/sentence-audio/th/google-chirp3hd/f3/f340d42be679b9cea0b4edc439d7799b20f93ee150b51b60471607e92956d172.mp3",
+  "sent-25": "assets/sentence-audio/th/google-chirp3hd/be/bec9003ffc07c92952f1ab7fbcd909cb1bec529cf4b56d0f8be61a69851be263.mp3",
+  "sent-26": "assets/sentence-audio/th/google-chirp3hd/fa/fa414c79776631d8326e539d67d41cf55075de840a46801dcd7f4b020fc36b88.mp3",
+  "sent-27": "assets/sentence-audio/th/google-chirp3hd/5c/5cc6439cb7ab6cb7933910ef5ba3668295e4d70f255eab9682fbcaee52b110f6.mp3",
+  "sent-28": "assets/sentence-audio/th/google-chirp3hd/9f/9fc860d158573237f38343b181350fd1f9eeb60801141a52a7aa9f6e082d4a8a.mp3",
+  "sent-29": "assets/sentence-audio/th/google-chirp3hd/92/925d96ae8fe75a35af4bc25db33c7553a48ea32f72d970a4c21367a724ea164a.mp3",
+  "sent-30": "assets/sentence-audio/th/google-chirp3hd/3c/3c9a764e681abea9d803160e4e3c10e10de0a97ee362a5604978461675df5ee8.mp3"
 }
 };

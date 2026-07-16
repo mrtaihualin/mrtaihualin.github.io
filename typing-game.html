@@ -1108,7 +1108,7 @@ function setRgPronMode(on){
     btn.setAttribute('aria-label',btn.title);
   }
   if(typeof WORD!=='undefined' && WORD && !checked){
-    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
+    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   }
 }
 setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
@@ -1124,7 +1124,7 @@ function loadWord(){
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
-  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?('🔊 '+(WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดถ้าปุ่ม🐣เปิดอยู่ (แทนการล้างทิ้งเฉยๆ เดิม — ยังกันบั๊กคำอ่านค้างจากคำก่อน เพราะเซ็ตค่าใหม่ทุกคำ) · ใช้ readingTH เสมอ ห้ามใช้ syls[].th
+  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดถ้าปุ่ม🐣เปิดอยู่ (แทนการล้างทิ้งเฉยๆ เดิม — ยังกันบั๊กคำอ่านค้างจากคำก่อน เพราะเซ็ตค่าใหม่ทุกคำ) · ใช้ readingTH เสมอ ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
   // บอกระบบเสียงว่าคำปัจจุบันคือคำไหน — ปุ่ม 🔊 กด 1 ที = เล่นเสียงคำนี้ 1 ที (2026-07-16)
@@ -1800,7 +1800,7 @@ function buildThaiPron(){
 }
 function showReveal(){
   var _pron=buildThaiPron();
-  document.getElementById('rev-pron').textContent=_pron?('🔊 '+_pron):'';
+  document.getElementById('rev-pron').textContent=_pron?(_pron):'';
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
   // ข้ามการพิมพ์ซ้ำ "เฉพาะเมื่อ" แผงวรรณยุกต์ (#bonus-reason) โชว์คำอธิบายจริงๆ อยู่แล้วเท่านั้น
@@ -1823,7 +1823,7 @@ function showReveal(){
 // 每個字/音節各自一段分析，答對答錯都會顯示（rgContFinish 不管成功/失敗都會呼叫這個）— Lin 2026-07-07
 function showRevealMulti(){
   var _pronM=buildThaiPron();
-  document.getElementById('rev-pron').textContent=_pronM?('🔊 '+_pronM):'';
+  document.getElementById('rev-pron').textContent=_pronM?(_pronM):'';
   // Lin 2026-07-12 (圖3 unify): คำอธิบายต้องอยู่ "ในกล่องพยางค์" เสมอ → หลายพยางค์ = ใส่ใน #bonus-reason ของกล่องสุดท้าย (เลิกใช้แผงแยก #reveal)
   var box=document.getElementById('bonus-reason');
   box.innerHTML='';
