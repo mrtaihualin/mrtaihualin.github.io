@@ -181,8 +181,9 @@ serve(async (req) => {
     //   ส่งสำเนาให้ครู (Lin) ก่อนเสมอ แล้วค่อยส่งข้อความต้อนรับหานักเรียน (ตามที่ Lin สั่ง 2026-07-16)
     //   กติกา: ครูติด (ส่งหาครูไม่สำเร็จ) → นักเรียนก็ติด (ข้ามไม่ส่งรอบนี้) / ครูไม่ติด → นักเรียนก็ไม่ติด
     //   ใช้แพทเทิร์นเดียวกับ low-quota-cron (secret LINE_TEACHER_USER_ID ตัวเดิม ไม่ต้องตั้งใหม่)
-    //   ⚠️ ต่างจาก low-quota-cron ตรงที่นี่เป็นเหตุการณ์ครั้งเดียว ไม่มี cron รันซ้ำวันถัดไป — ถ้าส่งหาครู
-    //   พังรอบนี้ นักเรียนจะไม่ได้ข้อความต้อนรับเลย (ไม่ auto retry) แจ้ง Lin ไว้แล้วตอนเสนองาน
+    //   🆕 2026-07-16 (fallback แบบ 2 ตามที่ Lin เลือก): ถ้าส่งพังรอบนี้ (ครูหรือนักเรียน) จะ "ไม่มาร์คว่าสำเร็จ"
+    //   (ไม่ set welcome_msg_sent_at) → ปล่อยให้ welcome-retry-cron (ฟังก์ชันแยก รันเป็นรอบๆ) มาลองส่งซ้ำเองทีหลัง
+    //   ไม่มีทางหายไปถาวรแบบไม่มีใครรู้อีกต่อไป — ต้องรัน SQL เพิ่มคอลัมน์ welcome_msg_sent_at ก่อน (แนบแยกให้ Lin)
     //   ห่อ try/catch ทั้งคู่ + log error ไว้เสมอ (เช็คได้จาก Supabase Dashboard → Edge Functions → Logs)
     //   — ส่งข้อความไม่ได้ ก็ห้ามทำให้การผูกบัญชีล้มเหลว (ผูกบัญชีสำคัญกว่า)
     if (isFirstOrChangedLink && channelAccessToken) {
@@ -201,10 +202,11 @@ serve(async (req) => {
           });
         } catch (e) {
           teacherOk = false;
-          console.error('[link-line] ส่งสำเนาให้ครูไม่สำเร็จ — ข้ามไม่ส่งข้อความต้อนรับหานักเรียนรอบนี้:', e);
+          console.error('[link-line] ส่งสำเนาให้ครูไม่สำเร็จ — ข้ามไม่ส่งข้อความต้อนรับหานักเรียนรอบนี้ (welcome-retry-cron จะลองใหม่ให้เอง):', e);
         }
       }
       if (teacherOk) {
+        let studentOk = true;
         try {
           await fetch('https://api.line.me/v2/bot/message/push', {
             method: 'POST',
@@ -212,7 +214,18 @@ serve(async (req) => {
             body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: welcomeText }] }),
           });
         } catch (e) {
-          console.error('[link-line] ส่งข้อความต้อนรับให้นักเรียนไม่สำเร็จ:', e);
+          studentOk = false;
+          console.error('[link-line] ส่งข้อความต้อนรับให้นักเรียนไม่สำเร็จ (welcome-retry-cron จะลองใหม่ให้เอง):', e);
+        }
+        if (studentOk) {
+          // สำเร็จทั้งคู่ → มาร์คกันไม่ให้ welcome-retry-cron ส่งซ้ำอีกทีหลัง
+          const { error: markError } = await supabase
+            .from('classroom_students')
+            .update({ welcome_msg_sent_at: new Date().toISOString() })
+            .eq('token', token);
+          if (markError) {
+            console.error('[link-line] มาร์ค welcome_msg_sent_at ไม่สำเร็จ (นักเรียนอาจได้ข้อความต้อนรับซ้ำอีกรอบจาก retry-cron):', markError);
+          }
         }
       }
     }
