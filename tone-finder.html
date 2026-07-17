@@ -22,7 +22,8 @@
 <script defer src="supabase-config.js?v=4"></script>
 <script defer src="game-account.js?v=3"></script><!-- v3: Phase 4 ล็อก — sync remote-authoritative + เลิก upsert (เซิร์ฟเวอร์เป็นเจ้าของดาว) -->
 <script defer src="auth-widget.js?v=1"></script>
-<script defer src="supabase-auth.js?v=20"></script>
+<script defer src="reading-auth.js?v=6"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="tone-companion.js?v=1"></script><!-- ส่วนที่เกมเสียงใช้เฉพาะ: เซฟคะแนน tone_sessions + ปลดล็อกเหรียญ admin + ป๊อปอัพสำรวจก่อนออกจากหน้า -->
 <script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="progress-sync.js?v=2"></script>
 <script src="word-vault.js"></script>
@@ -1998,10 +1999,10 @@
   </div>
 
   <div id="tf-newword-banner" style="width:100%;"></div>
-  <div id="tf-cta-login" style="width:100%;"></div>
+  <div id="rg-cta-login" style="width:100%;"></div>
 
   <div class="tf-tools-row">
-    <div id="tf-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
+    <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
     <div id="tf-vault-badge-slot" style="display:flex;align-items:center;"></div>
     <button class="tf-tool-btn" id="tf-font-btn" onclick="TF.toggleFont()" title="切換有頭字體/現代字體">✍️ 換現代字體</button>
     <button class="tf-tool-btn" onclick="TF.openAsk()" title="玩的時候有問題，隨時問">💬 我有問題</button>
@@ -2821,10 +2822,15 @@ function tfSetSrsRecord(word, level, rec) {
   all[TF_SRS.keyFor(word, level)] = rec;
   tfSaveSrs(all);
 }
-// เช็กว่าล็อกอินอยู่ไหม (ระบบคะแนน/ดาวเงิน/SRS ทำงานเฉพาะตอนล็อกอินตามสเปกข้อ 0)
+// เช็กว่าล็อกอินอยู่ไหม (ระบบคะแนน/ดาวเงิน/SRS ทำงานเฉพาะตอนล็อกอินจริงตามสเปกข้อ 0)
+// Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (window.READING_AUTH) — เลิกใช้ window.TF_AUTH/supabase-auth.js
+// เดิมยอมรับ "ให้อีเมล (lead) แต่ไม่ได้ล็อกอินจริง" ด้วย (hasAccess) ตอนนี้ต้องล็อกอินจริงเท่านั้น เหมือน 4 เกมที่เหลือ (Lin ยืนยันแล้ว)
 function tfSrsLoggedIn() {
-  var a = window.TF_AUTH;
-  return !!(a && ((a.hasAccess && a.hasAccess()) || (a.loggedIn && a.loggedIn())));
+  return !!(window.READING_AUTH && READING_AUTH.user);
+}
+// proxy-click ปุ่มล็อกอินกลาง (#rg-login-slot) — แพทเทิร์นเดียวกับ rgCtaLogin()/woCtaLogin()/legoCtaLogin() ในอีก 4 เกม
+function tfCtaLogin() {
+  try { var b = document.querySelector('#rg-login-slot button'); if (b) { b.click(); return; } } catch (e) {}
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2849,9 +2855,8 @@ function tfSyncSrsFromServer() {
   if (__tfSrsSyncPromise) return __tfSrsSyncPromise;
   __tfSrsSyncPromise = (function () {
     try {
-      var a = window.TF_AUTH;
       // ต้อง "ล็อกอินจริง" (มี JWT) เท่านั้น — แค่ให้อีเมล (lead) ไม่มีแถวบนเซิร์ฟเวอร์อยู่แล้ว
-      if (!(a && a.loggedIn && a.loggedIn())) return Promise.resolve(false);
+      if (!(window.READING_AUTH && READING_AUTH.user)) return Promise.resolve(false);
       var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
       if (!sb || !sb.from) return Promise.resolve(false);
       return sb.from('tone_srs_state')
@@ -2888,12 +2893,12 @@ function tfWireSrsSync() {
       SITE_AUTH.onChange(function (u) { if (u) { __tfSrsSyncPromise = null; window.__tfSrsSyncedOnce = false; tfSyncSrsFromServer(); } });
     }
   } catch (e) {}
-  // fallback แบบ poll — กันกรณี onChange ไม่ยิงตอนโหลด หรือ TF_AUTH พร้อมช้า · ลองทุก 0.5วิ จนซิงก์สำเร็จ สูงสุด ~12วิ
+  // fallback แบบ poll — กันกรณี onChange ไม่ยิงตอนโหลด หรือ READING_AUTH พร้อมช้า · ลองทุก 0.5วิ จนซิงก์สำเร็จ สูงสุด ~12วิ
   var _tfT = 0, _tfIv = setInterval(function () {
     _tfT++;
     try {
       if (window.__tfSrsSyncedOnce) { clearInterval(_tfIv); return; }
-      if (window.TF_AUTH && TF_AUTH.loggedIn && TF_AUTH.loggedIn()) tfSyncSrsFromServer();
+      if (window.READING_AUTH && READING_AUTH.user) tfSyncSrsFromServer();
     } catch (e) {}
     if (_tfT >= 24) clearInterval(_tfIv);
   }, 500);
@@ -3842,7 +3847,13 @@ function tfApplySessionBonus() {
   try { tfRenderExtBar(); } catch (e) {}
   // ซิงก์ความก้าวหน้าขึ้น Supabase (ถ้าล็อกอิน) — LIN 2026-06-20
   try { if (window.TF_SYNC) window.TF_SYNC.push(); } catch (e) {}
-  try { if (window.TF_AUTH && window.TF_AUTH.syncAccount) window.TF_AUTH.syncAccount(); } catch (e) {}   // เฟส 2: sync ดาว/streak รวมขึ้นบัญชี
+  // Lin 2026-07-16: เดิมเรียกผ่าน window.TF_AUTH.syncAccount() (supabase-auth.js) — รวมระบบล็อกอินแล้ว เรียก GAME_ACCOUNT.sync ตรงๆ แทน
+  try {
+    if (window.READING_AUTH && READING_AUTH.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
+      var _sbSync = window.getSupabaseClient ? window.getSupabaseClient() : null;
+      if (_sbSync) GAME_ACCOUNT.sync(_sbSync, READING_AUTH.user.id);
+    }
+  } catch (e) {}
 }
 
 function act(fn) {
@@ -4757,10 +4768,10 @@ function stepSessionSummary() {
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
     '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
-    ((window.TF_AUTH && window.TF_AUTH.loggedIn()) ? '' :
+    ((window.READING_AUTH && READING_AUTH.user) ? '' :
       '<div style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
         '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +
-        '<button onclick="if(window.TF_AUTH)window.TF_AUTH.showGate(true)" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
+        '<button onclick="tfCtaLogin()" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
       '</div>') +
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
       '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
@@ -4915,9 +4926,9 @@ function stepLevelSelect() {
 // (เดิมอยู่ใน stepLevelSelect ที่โผล่เฉพาะตอน step==='level-select' เท่านั้น) — เรียกจาก render() ทุกครั้ง
 function tfRenderTopBanners() {
   var nb = document.getElementById('tf-newword-banner');
-  var cb = document.getElementById('tf-cta-login');
+  var cb = document.getElementById('rg-cta-login');
   if (!nb || !cb) return;
-  var _loggedIn = !!(window.TF_AUTH && ((window.TF_AUTH.hasAccess && window.TF_AUTH.hasAccess()) || (window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn())));
+  var _loggedIn = !!(window.READING_AUTH && READING_AUTH.user);
   function _newN(level){ try { return (window.GAME_ACCOUNT) ? GAME_ACCOUNT.newWordsCount('tone', level, tfLevelWordCount(level)) : 0; } catch(e){ return 0; } }
   var _newTotal = _newN(1)+_newN(2)+_newN(3);
   nb.innerHTML = _newTotal>0 ? '<div style="background:#fdecea;border:1px solid #e24b4a;border-radius:10px;padding:10px 14px;margin:0 0 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:#a32d2d;text-align:center;font-weight:700;">🆕 有新單字上架囉！快來練習吧 ✨</div>' : '';
@@ -4925,7 +4936,7 @@ function tfRenderTopBanners() {
     '<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;margin:0 0 12px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;text-align:left;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
         '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:170px;">😊 先玩玩看也可以喔～登入後米娜才幫你把進度記起來 🌾</span>' +
-        '<button onclick="if(window.TF_AUTH)window.TF_AUTH.showGate(true)" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>' +
+        '<button onclick="tfCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>' +
         '<button onclick="var d=document.getElementById(\'tf-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>' +
       '</div>' +
       '<div id="tf-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">' +
@@ -6183,7 +6194,7 @@ var TF = {
     hist=[]; histPos=-1;
     // Lin 2026-07-13: ถ้าล็อกอินแต่ยังไม่เคยซิงก์ SRS จากเซิร์ฟเวอร์ → รอสั้นๆ (สูงสุด 1.5 วิ) ให้รอบแรก
     // "บนเครื่องใหม่" ถูกต้อง (ไม่เอาคำที่จำได้แล้วมาถามซ้ำ) · เน็ตช้า/ล่ม = ไปต่อด้วยเล่มในเครื่องทันที ไม่ค้าง
-    if (tfSrsLoggedIn() && window.TF_AUTH && TF_AUTH.loggedIn && TF_AUTH.loggedIn() && !window.__tfSrsSyncedOnce) {
+    if (tfSrsLoggedIn() && !window.__tfSrsSyncedOnce) {
       var started = false, go = function () { if (started) return; started = true; TF._startRandom5(); };
       try { Promise.race([ tfSyncSrsFromServer(), new Promise(function (r) { setTimeout(r, 1500); }) ]).then(go); } catch (e) { go(); }
       setTimeout(go, 1600); // กันเหนียว: ไม่ว่าอะไรเกิดขึ้นก็เริ่มเกมแน่นอน
