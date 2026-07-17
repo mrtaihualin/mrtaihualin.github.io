@@ -160,7 +160,7 @@
   async function load() {
     root.innerHTML = tabs() + nickBar() + box('⏳', '載入中...', '請稍候');
     wireTabs();
-    var fn = (period === 'week') ? 'leaderboard_weekly' : 'leaderboard_alltime';
+    var fn = window.LB_COMBINED ? ((period === 'week') ? 'combined_leaderboard_weekly' : 'combined_leaderboard_alltime') : ((period === 'week') ? 'leaderboard_weekly' : 'leaderboard_alltime');
     var res;
     try {
       res = await sb.rpc(fn);

@@ -2003,7 +2003,7 @@
 
   <div class="tf-tools-row">
     <div id="rg-login-slot" style="display:flex;align-items:center;margin-right:auto;"></div>
-    <div id="tf-vault-badge-slot" style="display:flex;align-items:center;"></div>
+    <div id="rg-vault-badge-slot" style="display:flex;align-items:center;"></div>
     <button class="tf-tool-btn" id="tf-font-btn" onclick="TF.toggleFont()" title="切換有頭字體/現代字體">✍️ 換現代字體</button>
     <button class="tf-tool-btn" onclick="TF.openAsk()" title="玩的時候有問題，隨時問">💬 我有問題</button>
     <button class="tf-tool-btn" onclick="document.getElementById('tf-howto-modal').style.display='flex'">📖 怎麼玩</button>
@@ -6761,7 +6761,7 @@ setTimeout(tfRenderExtBar, 0);
   document.addEventListener('DOMContentLoaded', function() {
     if (!window.WordVault) return;
     WordVault.injectStyles();
-    var slot = document.getElementById('tf-vault-badge-slot');
+    var slot = document.getElementById('rg-vault-badge-slot');
     if (slot && WordVault.count() > 0) {
       var badge = document.createElement('a');
       badge.href = 'vault.html';
