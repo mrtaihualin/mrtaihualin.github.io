@@ -8378,6 +8378,14 @@ try {
 // ============================================================
 const REC_AUDIO_BPS=24000;       // 聲音位元率（約 11 MB/小時）
 const REC_VIDEO_BPS=180000;      // 影片位元率（約 100 MB/小時，畫面更清楚）
+const REC_VIDEO_BPS_HQ=500000;   // 2026-07-17 Lin 指定：Edward 專用較高畫質（約 225 MB/小時）— webm_to_mp4.py 已同步調高該生轉檔上限，否則轉檔會把畫質壓回去
+const REC_HQ_STUDENT_NAMES=['Edward'];  // 高畫質名單（大小寫不分、部分比對 studentsCache[token].name）
+function recIsHQStudent(){
+  if(!recActiveStudent || typeof studentsCache==='undefined') return false;
+  const s=studentsCache[recActiveStudent]; if(!s||!s.name) return false;
+  const name=String(s.name).trim().toLowerCase();
+  return REC_HQ_STUDENT_NAMES.some(n=>name.indexOf(String(n).trim().toLowerCase())>=0);
+}
 const REC_SPLIT_MS=60*60*1000;   // 滿 1 小時自動切檔
 
 let recMethod=null, recState='idle';
@@ -8810,7 +8818,7 @@ function startSegment(stream, mimeIdx){
   recMime = segMime;   // 仍同步一份全域值，給其他地方（例如崩潰備份標記）讀最新狀態用
   if(recIsVideo && !segMime){ recSetStatus('❌ 此瀏覽器不支援影片錄製，請改用電腦版 Chrome',''); cleanupRecStreams(); return; }
   recBackupUpdateMime(segMime);   // 崩潰備份的格式標記要跟著這次實際使用的格式走，不然萬一中途切換格式後當機，救回的檔案會標錯格式打不開
-  const videoBps = REC_VIDEO_BPS;
+  const videoBps = recIsHQStudent() ? REC_VIDEO_BPS_HQ : REC_VIDEO_BPS;
   const opts = recIsVideo
     ? {mimeType:segMime||undefined, videoBitsPerSecond:videoBps, audioBitsPerSecond:REC_AUDIO_BPS}
     : {mimeType:segMime||undefined, audioBitsPerSecond:REC_AUDIO_BPS};
