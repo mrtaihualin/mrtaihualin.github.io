@@ -2642,6 +2642,15 @@ function studentFacingTimeLabel(dateOrIso, studentTz) {
   return thai.dateStr + ' ' + thai.timeStr + '（泰國時間 — 尚未設定你的時區，可能跟你的當地時間不同）';
 }
 
+// 2026-07-17 加（Lin 要求）：跟 studentFacingTimeLabel 一樣換算時區，但不附加「（你的當地時間）」
+// 這種註記——給「列出好幾個時間」的地方用（例如老師提議的 1-3 個新時間），註記只要在最後
+// 統一寫一次就好，不用每一行都重複講一次是不是本地時間。
+function bareTimeLabel(dateOrIso, studentTz) {
+  const d = (dateOrIso instanceof Date) ? dateOrIso : new Date(dateOrIso);
+  const conv = studentTz ? formatInTz(d, studentTz) : formatInTz(d, TEACHER_TZ);
+  return conv.dateStr + ' ' + conv.timeStr;
+}
+
 let genLinkGenerated = false; // true = 連結已產生，按鈕變成「關閉」
 
 function openGenLinkModal() {
@@ -4664,7 +4673,7 @@ function requireLineLinkedOrPrompt(token) {
 
 // 2026-07-14 改：現在可以取消「下一堂課」以外的其他堂（從「選擇要取消的課堂」清單點進來），
 // isoDate 有帶就取消那一堂，沒帶（舊的呼叫方式）就照舊取消下一堂課，維持相容。
-async function requestCancelClass(isoDate, calendarEventId) {
+async function requestCancelClass(isoDate, calendarEventId, timeStr) {
   if (!nextClassCtx) return;
   const targetDate = isoDate || nextClassCtx.isoDate;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
@@ -4690,13 +4699,18 @@ async function requestCancelClass(isoDate, calendarEventId) {
   // 2026-07-16 加：submit_class_request 這個 RPC 目前不收 calendar_event_id 參數（不想動資料庫
   // 函式本身，風險比較低），改成插入成功後馬上補一個 update 把真正的事件 ID 存上去。
   // 存不成功也不擋這次申請（老師那邊會退回舊版「姓名+日期」搜尋），只在主控台留紀錄。
-  if (calendarEventId && res.data) {
-    const idRes = await sb.from('classroom_requests').update({ calendar_event_id: calendarEventId }).eq('id', res.data);
-    if (idRes.error) console.warn('⚠️ 補存 calendar_event_id 失敗（不影響這次申請本身）：', idRes.error.message);
+  const extraFields1 = {};
+  if (calendarEventId) extraFields1.calendar_event_id = calendarEventId;
+  // 2026-07-17 加（Lin 要求：改期/取消相關訊息都要講清楚原本上課的時間，不能只有日期）：
+  // 順便把原本課堂的時間也存起來，之後通知/清單顯示才有時間可以用。
+  if (timeStr) extraFields1.original_time = timeStr;
+  if (Object.keys(extraFields1).length && res.data) {
+    const idRes = await sb.from('classroom_requests').update(extraFields1).eq('id', res.data);
+    if (idRes.error) console.warn('⚠️ 補存 calendar_event_id/original_time 失敗（不影響這次申請本身）：', idRes.error.message);
   }
   // 2026-07-16 加：把這筆申請的 id 一起帶給 notifyTeacherClassRequest，
   // 讓 LINE 通知裡的按鈕可以直接連到網站上這一筆卡片的位置（#req-row-<id>）。
-  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate, requestId: res.data });
+  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate, originalTime: timeStr, requestId: res.data });
   closeCancelPickerModal();
   alert('✅ 已送出取消申請，老師確認後會回覆你。');
 }
@@ -4841,9 +4855,9 @@ function submitCancelPickerChoice() {
   if (!chosen) return;
   const thai = formatInTz(chosen.date, TEACHER_TZ); // 泰國時間 → 送給老師/資料庫用
   if (_cancelPickerEditRequestId) {
-    editCancelRequestChoice(_cancelPickerEditRequestId, thai.dateStr, chosen.calendarEventId);
+    editCancelRequestChoice(_cancelPickerEditRequestId, thai.dateStr, chosen.calendarEventId, thai.timeStr);
   } else {
-    requestCancelClass(thai.dateStr, chosen.calendarEventId);
+    requestCancelClass(thai.dateStr, chosen.calendarEventId, thai.timeStr);
   }
 }
 
@@ -4851,13 +4865,14 @@ function submitCancelPickerChoice() {
 // 跟老師端 teacherEditOwnCancelRequest_chosen 同樣邏輯，只是這裡是學生改自己的，
 // 通知對象換成老師。用 .eq('status','pending') 當保險閘：如果老師剛好在這一刻已經
 // 處理完了，這裡就會抓不到（count=0），要老實跟學生講來不及改了。
-async function editCancelRequestChoice(id, isoDate, calendarEventId) {
+async function editCancelRequestChoice(id, isoDate, calendarEventId, timeStr) {
   if (!nextClassCtx) return;
   const token = nextClassCtx.token;
   if (!confirm('確定要改成申請取消 ' + isoDate + ' 這一堂嗎？（會重新通知老師）')) return;
   const studentName = currentStudentName(token);
   const updateFields = { original_date: isoDate };
   if (calendarEventId) updateFields.calendar_event_id = calendarEventId;
+  if (timeStr) updateFields.original_time = timeStr;
   const res = await sb.from('classroom_requests').update(updateFields)
     .eq('id', id).eq('status', 'pending').select();
   if (res.error) { alert('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
@@ -4867,7 +4882,7 @@ async function editCancelRequestChoice(id, isoDate, calendarEventId) {
     loadStudentPendingRequestStatus(token);
     return;
   }
-  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: token, originalDate: isoDate, requestId: id });
+  notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: token, originalDate: isoDate, originalTime: timeStr, requestId: id });
   closeCancelPickerModal();
   alert('✅ 已更新，老師確認後會回覆你。');
   loadStudentPendingRequestStatus(token);
@@ -4895,7 +4910,7 @@ async function studentWithdrawOwnRequest(token, id) {
 // 不再只能挑「下一堂課」。選好之後才進到既有的「填新時間（最多 3 選項）」那一步（classRequestModal）。
 // ════════════════════════════════════════════════════════════
 var _reschedulePickerOptions = [];
-// 選好要改期的那一堂之後，記下來給 submitClassRequest 用：{isoDate, calendarEventId}
+// 選好要改期的那一堂之後，記下來給 submitClassRequest 用：{isoDate, time, calendarEventId}
 var _rescheduleChosenOccurrence = null;
 
 async function openReschedulePickerModal() {
@@ -4944,7 +4959,7 @@ function proceedToRescheduleTimeOptions() {
   const chosen = _reschedulePickerOptions[sel.value];
   if (!chosen) { alert('請先選一堂課'); return; }
   const thai = formatInTz(chosen.date, TEACHER_TZ); // 泰國時間 → 存資料庫/給老師看用
-  _rescheduleChosenOccurrence = { isoDate: thai.dateStr, calendarEventId: chosen.calendarEventId };
+  _rescheduleChosenOccurrence = { isoDate: thai.dateStr, time: thai.timeStr, calendarEventId: chosen.calendarEventId };
   closeReschedulePickerModal();
   openClassRequestModal();
 }
@@ -5074,6 +5089,7 @@ async function submitClassRequest() {
   // （_rescheduleChosenOccurrence），不是只能用 nextClassCtx（下一堂課）——沒選過（理論上不會發生，
   // 例如舊連結直接呼叫這個 function）就退回原本抓「下一堂課」的行為，不會壞掉。
   const originalDateToUse = (_rescheduleChosenOccurrence && _rescheduleChosenOccurrence.isoDate) || nextClassCtx.isoDate;
+  const originalTimeToUse = (_rescheduleChosenOccurrence && _rescheduleChosenOccurrence.time) || nextClassCtx.timeStr;
   const chosenCalendarEventId = _rescheduleChosenOccurrence && _rescheduleChosenOccurrence.calendarEventId;
 
   const res = await sb.rpc('submit_class_request', {
@@ -5102,10 +5118,12 @@ async function submitClassRequest() {
     // 事件 ID 存起來，老師端就能直接用 ID 搬課，不用再靠「姓名+日期」猜哪一筆（以前改期申請
     // 完全沒有存過這個欄位）。拿不到 ID（例如舊版 fallback）就不存，退回原本的姓名+日期比對。
     if (chosenCalendarEventId) updFields.calendar_event_id = chosenCalendarEventId;
+    // 2026-07-17 加（Lin 要求）：原本課堂的時間也存起來，之後通知/清單顯示才不會只有日期沒有時間。
+    if (originalTimeToUse) updFields.original_time = originalTimeToUse;
     const upd = await sb.from('classroom_requests').update(updFields).eq('id', newId);
     if (upd.error) console.warn('⚠️ 補存選項清單失敗（不影響這次申請本身）：', upd.error.message);
   }
-  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: originalDateToUse, options: options, requestId: newId });
+  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: originalDateToUse, originalTime: originalTimeToUse, options: options, requestId: newId });
   closeClassRequestModal();
   alert('✅ 已送出改期申請，老師確認後會回覆你。');
 }
@@ -5267,9 +5285,13 @@ async function loadStudentPendingRequestStatus(token) {
       var optButtonsHtml = opts.map(function (opt, i) {
         return '<button class="btn-sm" style="width:100%;margin-bottom:6px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="respondToOfferAsStudent(\'' + r.id + '\',\'accepted\',' + i + ')">' + escHtml(formatOfferOptionForStudent(opt, studentTzForCard)) + '</button>';
       }).join('');
+      // 2026-07-17 加（Lin 要求）：「原本」要連時間一起顯示，不能只有日期，換算成學生自己的時區看比較清楚。
+      var origLabelForCard = r.original_date
+        ? escHtml(formatOfferOptionForStudent({ date: r.original_date, time: r.original_time }, studentTzForCard))
+        : '-';
       el.innerHTML = '<div class="card" style="border-color:var(--gold-bright);">' +
         '<h2>🔁 老師提議新時間</h2>' +
-        '<p style="font-size:0.88rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">原本：' + escHtml(r.original_date || '-') + '</p>' +
+        '<p style="font-size:0.88rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">原本：' + origLabelForCard + '</p>' +
         optButtonsHtml +
         '<button class="btn-sm" style="width:100%;background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="respondToOfferAsStudent(\'' + r.id + '\',\'declined\')">都不方便，請老師直接聯絡我</button>' +
         '<p style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:10px;">' + hoursLeftLabel(r.offer_created_at) + '</p>' +
@@ -5348,7 +5370,7 @@ async function loadStudentRecentAcknowledgedCancelCard(token, el) {
     window._myPendingRequest = r;
     el.innerHTML = '<div class="card">' +
       '<h2>✅ 取消申請已處理</h2>' +
-      '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">原本課堂：' + escHtml(r.original_date || '-') + '（已取消）</p>' +
+      '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">原本課堂：' + escHtml((r.original_date || '-') + (r.original_time ? ' ' + r.original_time : '')) + '（已取消）</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
         '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="viewRequestDetail(window._myPendingRequest)">👁️ 查看</button>' +
         '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
@@ -5529,13 +5551,16 @@ function notifyTeacherClassRequest(d) {
     // 老師一眼就看到全部選項，不用點進網站才知道有幾個。
     var optionsText = '';
     if (isReschedule && Array.isArray(d.options) && d.options.length) {
+      // 2026-07-17 改（Lin 要求）：「泰國時間」這個註記寫在最後一行講一次就好，
+      // 不用每個選項後面都重複寫一次。
       optionsText = '\n' + d.options.map(function (opt, i) {
-        return '選項' + (i + 1) + '：' + (opt.date || '-') + (opt.time ? ' ' + opt.time : '') + '（泰國時間）';
-      }).join('\n');
+        return '選項' + (i + 1) + '：' + (opt.date || '-') + (opt.time ? ' ' + opt.time : '');
+      }).join('\n') + '\n（以上都是泰國時間）';
     }
 
     var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期')
-      + (isAdd ? '' : ('\n原本課堂日期：' + (d.originalDate || '-')))
+      // 2026-07-17 加（Lin 要求）：原本課堂要連時間一起講，不能只有日期。
+      + (isAdd ? '' : ('\n原本課堂日期：' + (d.originalDate || '-') + (d.originalTime ? ' ' + d.originalTime : '') + '（泰國時間）'))
       + (isAdd ? ('\n想約：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')) : '')
       + optionsText
       + (d.note ? '\n備註：' + d.note : '')
@@ -6015,11 +6040,12 @@ async function loadPendingClassRequests() {
     var isProposed = r.offer_status === 'proposed';
     var calDate = isCancel ? r.original_date : (r.requested_date || r.original_date);
     var calUrl = calendarDayUrl(calDate);
+    var origLabel1 = (r.original_date || '-') + (r.original_time ? ' ' + r.original_time : '');
     var detail = isCancel
-      ? ('原本課堂：' + (r.original_date || '-'))
+      ? ('原本課堂：' + origLabel1)
       : isAdd
       ? ('申請時間：' + (r.requested_date || '-') + (r.requested_time ? ' ' + r.requested_time : '') + '（泰國時間）')
-      : ('原本課堂：' + (r.original_date || '-') + '　→　想改到：' + (r.requested_date || '-') + (r.requested_time ? ' ' + r.requested_time : ''));
+      : ('原本課堂：' + origLabel1 + '　→　想改到：' + (r.requested_date || '-') + (r.requested_time ? ' ' + r.requested_time : ''));
     var typeLabel = (r.initiated_by === 'teacher' ? '（老師提出）' : '') + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期');
     var actionsHtml;
     if (isAdd) {
@@ -6247,6 +6273,8 @@ async function processClassRequestInner(id, r, isCancel) {
     });
   } catch (e) { /* 通知老師自己失敗不影響已經完成的 Calendar 動作 */ }
 
+  try { await refreshTodayScheduleSection(); } catch (e) { console.warn('⚠️ 課表 resync 失敗（不影響 Calendar 本身）：', e.message || e); }
+
   if (!sForNotify || !sForNotify.line_user_id) {
     alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
   } else if (!notifySent) {
@@ -6373,16 +6401,23 @@ async function submitProposeTime() {
     try {
       // 2026-07-14 加：老師輸入的日期/時間是泰國時間（老師自己時區），
       // 但這則訊息是傳給「學生」看的 → 換算成學生自己的時區再顯示，不要直接把泰國時間丟給學生
+      // 2026-07-17 改（Lin 要求）：按鈕文字、選項清單都改用「不帶時區註記」的版本，
+      // 時區說明統一寫在訊息最下面一次就好，不要每一行都重複。
       const buttons = options.map(function (opt, i) {
         const abs = teacherTimeToDate(opt.date, opt.time || '00:00');
-        const label = studentFacingTimeLabel(abs, rStudent.pending_student_tz);
+        const label = bareTimeLabel(abs, rStudent.pending_student_tz);
         return { label: label.length > 20 ? (label.slice(0, 19) + '…') : label, postbackData: 'action=accept_offer&request=' + encodeURIComponent(id) + '&opt=' + i, style: 'primary', color: '#8B6310' };
       });
       buttons.push({ label: '都不方便', postbackData: 'action=decline_offer&request=' + encodeURIComponent(id), style: 'secondary', color: '#FAF4E8' });
       const bodyOptionsText = options.map(function (opt, i) {
         const abs = teacherTimeToDate(opt.date, opt.time || '00:00');
-        return '選項' + (i + 1) + '：' + studentFacingTimeLabel(abs, rStudent.pending_student_tz);
+        return '選項' + (i + 1) + '：' + bareTimeLabel(abs, rStudent.pending_student_tz);
       }).join('\n');
+      // 2026-07-17 加（Lin 要求）：「原本」要連時間一起講，不能只有日期。
+      const origLabelForFlex = r.original_date
+        ? bareTimeLabel(teacherTimeToDate(r.original_date, r.original_time || '00:00'), rStudent.pending_student_tz)
+        : '-';
+      const tzFooter = rStudent.pending_student_tz ? '（以上時間都是你的當地時間）' : '（以上時間都是泰國時間，你還沒設定時區，可能跟你的當地時間不同）';
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
@@ -6391,7 +6426,7 @@ async function submitProposeTime() {
           message: '老師提議新的上課時間，請到網站查看並回覆',
           flex: {
             title: '🔄 老師提議新的上課時間',
-            bodyText: '原本：' + (r.original_date || '-') + '\n' + bodyOptionsText + '\n\n請選一個方便的時間',
+            bodyText: '原本：' + origLabelForFlex + '\n' + bodyOptionsText + '\n' + tzFooter + '\n\n請選一個方便的時間',
             buttons: buttons,
           },
         }),
@@ -6611,6 +6646,8 @@ async function confirmAcceptedOfferInner(id, r) {
     });
   } catch (e) { /* 通知老師自己失敗不影響已經完成的 Calendar 動作 */ }
 
+  try { await refreshTodayScheduleSection(); } catch (e) { console.warn('⚠️ 課表 resync 失敗（不影響 Calendar 本身）：', e.message || e); }
+
   if (!sForNotify2 || !sForNotify2.line_user_id) {
     alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
   } else if (!notifySent2) {
@@ -6713,6 +6750,8 @@ async function revertCalendarBackup(id) {
       body: JSON.stringify({ to: 'teacher', message: '✅ ' + revertLabelForTeacher + '：' + (sForRevert ? sForRevert.name : (b.token || '-')) + '　' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）' }),
     });
   } catch (e) { console.warn('⚠️ 復原通知老師自己失敗（不影響已經完成的復原）：', e.message || e); }
+
+  try { await refreshTodayScheduleSection(); } catch (e) { console.warn('⚠️ 課表 resync 失敗（不影響已經完成的復原）：', e.message || e); }
 
   await loadRecentBackups();
 }
@@ -6880,8 +6919,11 @@ async function initiateTeacherReschedule_chosenInner(token, chosen) {
   // 以前這裡寫「建立申請失敗」、取消那邊寫「建立紀錄失敗」，同一種失敗卻用詞不一致。
   if (res.error) { alert('建立紀錄失敗：' + res.error.message); return; }
   var newId = res.data;
+  // 2026-07-17 加（Lin 要求）：把原本課堂的時間也存進去，不要只有日期。
+  var timeRes1 = await sb.from('classroom_requests').update({ original_time: p.timeStr }).eq('id', newId);
+  if (timeRes1.error) console.warn('⚠️ 補存 original_time 失敗（不影響這次通知本身）：', timeRes1.error.message);
   window._classRequestCache = window._classRequestCache || {};
-  window._classRequestCache[newId] = { id: newId, token: token, student_name: s ? s.name : token, original_date: p.dateStr, request_type: 'reschedule' };
+  window._classRequestCache[newId] = { id: newId, token: token, student_name: s ? s.name : token, original_date: p.dateStr, original_time: p.timeStr, request_type: 'reschedule' };
   _otherOptionsRequestId = newId;
   openProposeTimeModal();
   loadPendingClassRequests();
@@ -6928,8 +6970,9 @@ async function teacherCancelClassNowInner(token, chosen) {
 
   // 2026-07-16 加：跟學生申請取消同一套做法——現在就把真正的 Calendar 事件 ID 存起來，
   // 之後「確認刪除」才不用再猜，直接用 ID 拿（這裡還沒刪 Calendar，只是先記錄起來）。
-  var idRes = await sb.from('classroom_requests').update({ calendar_event_id: ev.id }).eq('id', newId);
-  if (idRes.error) console.warn('⚠️ 補存 calendar_event_id 失敗（不影響通知本身）：', idRes.error.message);
+  // 2026-07-17 加（Lin 要求）：順便存原本課堂的時間，不要只有日期。
+  var idRes = await sb.from('classroom_requests').update({ calendar_event_id: ev.id, original_time: p.timeStr }).eq('id', newId);
+  if (idRes.error) console.warn('⚠️ 補存 calendar_event_id/original_time 失敗（不影響通知本身）：', idRes.error.message);
 
   var notifySent = false, notifyError = null;
   if (s && s.line_user_id) {
@@ -7008,7 +7051,7 @@ async function teacherEditOwnCancelRequest_chosen(id, token, chosen) {
 
   var p = formatInTz(new Date(oldStartIso), TEACHER_TZ);
   var res = await sb.from('classroom_requests').update({
-    original_date: p.dateStr, calendar_event_id: ev.id, teacher_cancel_ack_at: null,
+    original_date: p.dateStr, original_time: p.timeStr, calendar_event_id: ev.id, teacher_cancel_ack_at: null,
   }).eq('id', id).eq('status', 'pending').is('teacher_cancel_ack_at', null).select();
   if (res.error) { alert('⚠️ 更新失敗：' + res.error.message); return; }
   if (!res.data || !res.data.length) { alert('ℹ️ 更新失敗，這筆申請可能已經不是「等學生確認」狀態了，重新整理頁面看看。'); await loadPendingClassRequests(); return; }
@@ -7048,7 +7091,7 @@ function viewRequestDetail(r) {
   var lines = [
     '學生：' + (r.student_name || '-'),
     '類型：' + (r.request_type === 'cancel' ? '取消' : r.request_type === 'add_class' ? '加課' : '改期') + (r.initiated_by === 'teacher' ? '（老師發起）' : ''),
-    '課堂日期：' + (r.original_date || '-'),
+    '課堂日期：' + (r.original_date || '-') + (r.original_time ? ' ' + r.original_time : ''),
   ];
   // 2026-07-16 加：改期最多有 3 個候選時間（proposed_options），全部列出來，
   // 沒有的話就退回顯示單一 requested_date（舊資料/加課申請的情況）。
@@ -7142,6 +7185,7 @@ async function submitPermanentChangeInner(token) {
   if (!confirm('再次確認：真的要永久變更嗎？這個動作影響範圍比一般改期大很多，請確定學生已經同意再繼續。')) return;
 
   var hasRecurrence = !!masterEv.recurrence;
+  var oldEventStillThere = false, oldEventDeleteError = '';
   var newSeriesBody = {
     summary: masterEv.summary,
     description: masterEv.description,
@@ -7186,10 +7230,15 @@ async function submitPermanentChangeInner(token) {
       });
       if (!pr.ok) throw new Error('關閉舊課表失敗（' + pr.status + '）：' + (await pr.text()).slice(0, 200));
     } catch (e) {
+      oldEventStillThere = true; oldEventDeleteError = e.message || String(e);
       alert('⚠️ 新課表已經建立好了，但關閉舊課表失敗：' + (e.message || e) + '\n請自己到 Calendar 檢查，避免舊課表繼續出現（新課表不用重建）。');
     }
   } else {
-    try { await deleteClassEventOnce(masterEv.id); } catch (e) {}
+    try { await deleteClassEventOnce(masterEv.id); }
+    catch (e) {
+      oldEventStillThere = true; oldEventDeleteError = e.message || String(e);
+      alert('⚠️ 新課表已經建立好了，但刪除舊時間失敗：' + oldEventDeleteError + '\n請自己到 Calendar 手動刪除舊的那一筆，避免新舊時間同時出現。（新課表不用重建）');
+    }
   }
 
   // 2026-07-14 修 bug（Lin 回報：老師端「選擇要取消的課堂」能列出好幾週，學生端卻只有一堂）：
@@ -7233,7 +7282,9 @@ async function submitPermanentChangeInner(token) {
   else if (permNotifySent) permResultMsg += '，並已通知學生';
   else permResultMsg += '\n⚠️ 但 LINE 通知學生失敗（' + permNotifyError + '），請自己再跟學生說一聲';
   if (!pendingSyncOk) permResultMsg += '\n⚠️ Google Calendar 已經改好了，但學生端的課表資料同步失敗（' + pendingSyncError + '）——學生自己頁面上的「選擇要取消的課堂」可能還是只看得到下一堂，不影響 Calendar 本身，建議通知開發者檢查。';
+  if (oldEventStillThere) permResultMsg += '\n⚠️ 舊的上課時間可能還沒清掉（' + oldEventDeleteError + '），請自己到 Calendar 確認，避免新舊時間同時出現。';
   alert(permResultMsg);
+  try { await refreshTodayScheduleSection(); } catch (e) { console.warn('⚠️ 課表 resync 失敗（不影響 Calendar 本身）：', e.message || e); }
   loadTeacherNextClassBox(token);
   loadRecentBackups();
 }
