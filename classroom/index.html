@@ -2175,6 +2175,11 @@ async function doUploadFiles() {
       return parent;
     }
     let n = 0;
+    // 2026-07-17 加（RELIABILITY FIRST）：以前 saveRecordingLink 失敗時是 try/catch 吞掉，
+    // 檔案明明上傳到 Drive 了，但登記進資料庫失敗的話學生會完全看不到這個檔案，
+    // 而畫面卻照樣顯示「✅ 已上傳 N 個檔案」——看起來成功，其實沒完全成功。改成收集失敗清單，
+    // 最後如果有失敗，明確告訴老師哪些檔案「Drive 有，但學生看不到」。
+    const failedRegistrations = [];
     for (const f of files) {
       // 選「整個資料夾」時 webkitRelativePath = "資料夾/子層/檔名" → 在 Drive 重建一樣的資料夾結構
       const rel = (f.webkitRelativePath || f.name).split('/');
@@ -2188,13 +2193,19 @@ async function doUploadFiles() {
       // 分享 + 記錄 → 學生在「課堂資料下載」看得到並可下載
       try { await gdShareAnyone(up.id); } catch(e) {}
       const ulink = up.webViewLink || ('https://drive.google.com/file/d/' + up.id + '/view');
-      try { await saveRecordingLink(token, showName, up.id, ulink, (f.size / 1048576).toFixed(1), null); } catch(e) {}
+      const regErr = await saveRecordingLink(token, showName, up.id, ulink, (f.size / 1048576).toFixed(1), null);
+      if (regErr) failedRegistrations.push(showName + '（' + regErr.message + '）');
       n++;
     }
     try { await ensureStudentFolderShared(name, token); } catch(e) {}
-    setUploadStatus('✅ 已上傳 ' + n + ' 個檔案到「' + name + ' / ' + dest + '」');
+    if (failedRegistrations.length) {
+      setUploadStatus('⚠️ 上傳完成，但有 ' + failedRegistrations.length + ' 個檔案登記失敗（學生可能看不到）');
+    } else {
+      setUploadStatus('✅ 已上傳 ' + n + ' 個檔案到「' + name + ' / ' + dest + '」');
+    }
     // 完成 popup：顯示結果 + 到 Drive 查看
-    document.getElementById('uploadDoneMsg').innerHTML = '已上傳 <b>' + n + '</b> 個檔案到<br>「' + name + ' / ' + dest + '」';
+    document.getElementById('uploadDoneMsg').innerHTML = '已上傳 <b>' + n + '</b> 個檔案到<br>「' + name + ' / ' + dest + '」'
+      + (failedRegistrations.length ? '<br><span style="color:var(--amber-dark);font-weight:700;">⚠️ 但以下 ' + failedRegistrations.length + ' 個檔案登記失敗，學生可能看不到（Drive 裡有檔案，請點下面「同步舊檔」補登記）：<br>' + failedRegistrations.map(function(s){return escHtml(s);}).join('<br>') + '</span>' : '');
     document.getElementById('uploadDoneDriveBtn').href = 'https://drive.google.com/drive/folders/' + folderId;
     document.getElementById('uploadDoneModal').classList.add('open');
   } catch (e) {
@@ -2234,6 +2245,9 @@ async function saveRecordingLink(token, name, fileId, url, sizeMB, part) {
     token, name, file_id: fileId, url, size_mb: sizeMB, part
   });
   if (error) console.warn('儲存錄影連結失敗：', error.message);
+  // 2026-07-17 加（RELIABILITY FIRST）：以前失敗只 console.warn，呼叫端完全不知道有沒有存成功。
+  // 現在把 error 回傳出去，重要的呼叫端（教材連結、上傳檔案）可以直接檢查並提示老師。
+  return error || null;
 }
 
 // ============================================================
@@ -2361,7 +2375,10 @@ async function saveMaterialLink(token) {
   if (!label) { alert('請輸入教材名稱'); return; }
   if (!/^https:\/\//i.test(url)) { alert('請貼上正確的連結（需以 https:// 開頭）'); return; }
   const finalUrl = personalizeMaterialUrl(url, token);
-  await saveRecordingLink(token, '教材_' + label, null, finalUrl, '', null);
+  // 2026-07-17 修（RELIABILITY FIRST）：以前不管存有沒有成功，都清空欄位+當作存好了——
+  // 如果存失敗（例如 RLS 擋掉），老師看到欄位清空以為存好了，其實教材連結沒有真的存進去。
+  const err = await saveRecordingLink(token, '教材_' + label, null, finalUrl, '', null);
+  if (err) { alert('❌ 儲存教材連結失敗：' + err.message + '\n（還沒存進去，請再試一次，欄位內容保留）'); return; }
   if (labelEl) labelEl.value = '';
   if (urlEl) urlEl.value = '';
   loadMaterialLinks(token);
@@ -2412,9 +2429,11 @@ async function loadMaterialLinks(token) {
 
 async function deleteMaterialLink(token, url) {
   if (!confirm('確定要移除這個教材連結嗎？（不會刪掉原本的網頁，只是從清單移除）')) return;
-  try {
-    await sb.rpc('delete_student_recording', { p_token: token, p_url: url });
-  } catch (e) {}
+  // 2026-07-17 修（RELIABILITY FIRST）：以前用 try/catch 包 rpc，但 supabase-js 的 rpc()
+  // 失敗時是回傳 { error }，不是 throw，所以這個 catch 根本接不到——刪除失敗也完全看不出來，
+  // 連結會在重新整理後「自己跑回來」，老師搞不懂為什麼刪不掉。改成直接檢查 error 並提示。
+  const { error } = await sb.rpc('delete_student_recording', { p_token: token, p_url: url });
+  if (error) alert('❌ 移除失敗：' + error.message + '\n（連結可能還在，請再試一次）');
   loadMaterialLinks(token);
 }
 
@@ -8060,7 +8079,10 @@ function editAttendanceDate(id, currentDate, token) {
 
 async function deleteAttendance(id, token) {
   if (!confirm('確定刪除此堂記錄？')) return;
-  await sb.from('classroom_attendance').delete().eq('id', id);
+  // 2026-07-17 修（RELIABILITY FIRST）：以前沒檢查 error，刪除被 RLS 擋掉時會「靜默失敗」——
+  // 畫面照樣重新整理，老師看起來像刪除成功，但那筆記錄其實還在資料庫裡。
+  const { error } = await sb.from('classroom_attendance').delete().eq('id', id);
+  if (error) { alert('❌ 刪除失敗：' + error.message + '\n（這筆記錄還在，沒有被刪除）'); return; }
   await refreshTodayScheduleSection(); // 2026-07-06 修正：同上，避免課表整塊消失
   await openAttendanceHistory(token); // refresh modal
 }
