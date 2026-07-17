@@ -3033,6 +3033,11 @@ async function repairMeet(token) {
 //   確保封存功能本身不會被新功能卡住（RELIABILITY FIRST：封存一定要成功或明確報錯）。
 const LINE_UNLINK_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/unlink-line-student';
 const LINE_RESTORE_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/restore-line-student';
+// 2026-07-17 加：แก้ปัญหาจริง Jenny/Ling/育郁 — ผูกบัญชี LINE ก่อนแอด OA เป็นเพื่อน (ก่อนมีด่านกันใน link-line
+// ที่เพิ่มเมื่อ 2026-07-16) ทำให้ Rich Menu ไม่เคยสลับเป็นเมนูนักเรียนสำเร็จ ทั้งที่ตอนนี้แอดเพื่อนแล้ว
+// หน้านักเรียนเองมองว่า "ผูกแล้ว" (buildLineActionBtn เช็คแค่ line_user_id) เลยไม่มีปุ่มให้กดผูกซ้ำอีก
+// → ให้ครูกดสั่งสลับเมนูเองจากหน้า admin ได้เลย ไม่ต้องรบกวนนักเรียน (ดูปุ่ม "🔄 同步 LINE 選單" ใน selectStudent())
+const SYNC_LINE_MENU_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/sync-line-menu';
 // 2026-07-15 加：เช็ค+ส่งเตือน "โควต้าใกล้หมด" ทันทีตอนบันทึกเข้าเรียน (แทนที่จะรอ cron วันละครั้ง)
 // เผื่อคาบที่เพิ่งบันทึกเป็นคาบสุดท้ายของรอบพอดี นักเรียนจะได้รับ LINE เตือนทันทีวันนั้นเลย ไม่ต้องรอถึงพรุ่งนี้เช้า
 const LOW_QUOTA_CHECK_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/low-quota-cron';
@@ -3146,6 +3151,41 @@ async function restoreStudent(token) {
 
   await refreshStudentList();
   alert('✅ 已恢復「' + name + '」為使用中學生。\n下一步：點選這位學生 →「🔧 補課堂連結」→ 會請你輸入新的上課日期/時間，建立新的 Meet/Calendar。');
+}
+
+// 2026-07-17 加：手動幫已連結 LINE 的學生「重新同步」Rich Menu（改成學生版，出現 我的教室）。
+//   用途：學生是「先連結網站帳號、後來才加 LINE 好友」的情況（舊資料，2026-07-16 以前發生過），
+//   導致當時 LINE 不肯切選單、卡在一般版（體驗課）——現在已經加好友了，但學生頁面看起來「已連結」
+//   （buildLineActionBtn 只看 line_user_id 有沒有值）不會再跳出連結按鈕讓他重新觸發一次。
+//   這顆按鈕讓「老師」直接從後台把這個學生的選單切過去，不用麻煩學生做任何事。
+async function syncLineMenu(token) {
+  const s = studentsCache[token];
+  const name = (s && s.name) || token;
+  try {
+    const r = await fetch(SYNC_LINE_MENU_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': window.SUPABASE_CONFIG.anonKey,
+        'Authorization': 'Bearer ' + (await teacherAuthHeader())
+      },
+      body: JSON.stringify({ token: token })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok && data.ok) {
+      alert('✅ 「' + name + '」的 LINE 選單已切換成學生版（我的教室）。');
+      return;
+    }
+    const reasonMsg = {
+      not_linked: '這位學生還沒連結過 LINE 帳號，不用同步。',
+      not_friend: '這位學生還沒加 LINE 官方帳號好友（或已封鎖），要先請他加好友，加完再按一次這顆按鈕。',
+      not_configured: '伺服器還沒設定好 STUDENT_RICH_MENU_ID / LINE_CHANNEL_ACCESS_TOKEN，要先在 Supabase 設定。',
+      switch_failed: '呼叫 LINE API 失敗：' + (data.detail || ''),
+    };
+    alert('⚠️ 沒有切換成功：' + (reasonMsg[data.reason] || data.error || data.detail || ('HTTP ' + r.status)));
+  } catch (e) {
+    alert('❌ 同步失敗：' + (e.message || e) + '（請確認已用教師帳號登入後再試一次）');
+  }
 }
 
 // ============================================================
@@ -3356,6 +3396,8 @@ function selectStudent(token) {
       '<button class="btn-sm btn-sm-edit" onclick="openEditMeetModal(\'' + t + '\')">✏️</button>' +
       '<button class="btn-sm" style="background:#0f766e;color:#fff;" onclick="openAddClassDayModal(\'' + t + '\')" title="加一個上課時間（單次，或每週固定）">➕ 加課堂時間</button>' +
       (!s.meet ? '<button class="btn-sm" style="background:#b45309;color:#fff;" onclick="repairMeet(\'' + t + '\')">🔧 補課堂連結</button>' : '') +
+      // 2026-07-17 加：只有已連結 LINE 的學生才需要（顯示這顆按鈕不代表選單一定切壞了，是給「切壞了」的情況用的補救按鈕）
+      (s.line_user_id ? '<button class="btn-sm" style="background:#06C755;color:#fff;" onclick="syncLineMenu(\'' + t + '\')" title="學生選單卡在一般版（體驗課）沒切成學生版（我的教室）時，按這顆手動同步">🔄 同步 LINE 選單</button>' : '') +
       '<button class="btn-sm btn-sm-delete" onclick="deleteStudent(\'' + t + '\')" title="封存成舊生（不是永久刪除，之後可在舊生列表恢復）">📦 封存</button>' +
     '</div>' +
     '<button class="btn-open-note" onclick="openStudentNotesDoc(\'' + t + '\')">📝 開啟課堂筆記</button>' +
