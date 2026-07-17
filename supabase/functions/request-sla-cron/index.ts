@@ -4,7 +4,7 @@
 //   ยังไม่ถูกจัดการไหม ถ้ามี → ส่ง LINE เตือนทั้งครูและนักเรียน (ส่งครั้งเดียวต่อรายการ กันสแปมซ้ำ
 //   ด้วยคอลัมน์ sla_reminder_sent — รันทุกรอบแต่ยิงแค่ครั้งเดียวจนกว่าจะมีการเปลี่ยนแปลงสถานะใหม่)
 //
-// 3 เงื่อนไขที่ถือว่า "ค้าง":
+// 4 เงื่อนไขที่ถือว่า "ค้าง":
 //   1) offer_status = 'proposed' และเวลาผ่านจาก offer_created_at เกิน 48 ชม. — ครอบคลุมการเสนอเวลาใหม่
 //      ทั้ง 2 ทิศทาง (ครูเสนอให้นักเรียน / นักเรียนเสนอให้ครูเลือกจากสูงสุด 3 ตัวเลือก)
 //      2026-07-16 改（Lin 要求）：ไม่ว่าฝ่ายไหนเป็นคนรอ ก็ push **เฉพาะครู** ให้ไปติดต่อนักเรียนเอง
@@ -14,6 +14,9 @@
 //   3) (2026-07-16 เพิ่ม) request_type='cancel' + initiated_by='teacher' + teacher_cancel_ack_at
 //      ยังเป็น null (นักเรียนยังไม่กด "我知道了" ทั้งฝั่ง LINE/เว็บ) เกิน 48 ชม. จาก created_at
 //      → เตือน**เฉพาะครู**ให้ไปติดต่อนักเรียนเอง (ไม่เตือนนักเรียนซ้ำ เพราะนักเรียนเป็นฝ่ายที่ยังไม่ตอบอยู่แล้ว)
+//   4) (2026-07-16 稽核後เพิ่ม) offer_status = 'accepted' และเวลาผ่านจาก offer_accepted_at เกิน 48 ชม.
+//      (นักเรียนตอบรับเวลาใหม่แล้ว แต่ครูยังไม่กด "確認並搬 Calendar") → เตือน**เฉพาะครู**
+//      (ต้องมีคอลัมน์ offer_accepted_at ในตาราง classroom_requests ก่อน — ดู SQL migration แนบแยก)
 //
 // วิธี deploy:
 //   1. supabase functions deploy request-sla-cron
@@ -51,7 +54,7 @@ serve(async (req) => {
     const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
     const { data: rows, error } = await supabase
       .from('classroom_requests')
-      .select('id, token, student_name, request_type, offer_status, offer_created_at, created_at, initiated_by, teacher_cancel_ack_at')
+      .select('id, token, student_name, request_type, offer_status, offer_created_at, offer_accepted_at, created_at, initiated_by, teacher_cancel_ack_at')
       .eq('status', 'pending')
       .eq('sla_reminder_sent', false);
 
@@ -91,6 +94,23 @@ serve(async (req) => {
           if (teacherUserId) {
             await pushLine(channelToken, teacherUserId,
               '⏰ 提醒：' + (r.student_name || '學生') + ' 的改期提議已經超過 48 小時沒有回覆，建議直接聯絡學生確認');
+          }
+          const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+          if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
+          sent++;
+        } catch (e) { errCount++; }
+        continue;
+      }
+
+      // 2026-07-16 加（稽核發現，ORANGE#4）：學生已經接受提議、正在等老師開電腦按「確認並搬 Calendar」
+      // ——之前完全沒有這個分支，如果老師忘記打開網站，這筆會永遠沒有任何提醒。
+      if (r.offer_status === 'accepted' && r.offer_accepted_at) {
+        const hrs = (nowMs - new Date(r.offer_accepted_at).getTime()) / 3600000;
+        if (hrs < SLA_HOURS) continue;
+        try {
+          if (teacherUserId) {
+            await pushLine(channelToken, teacherUserId,
+              '⏰ 提醒：' + (r.student_name || '學生') + ' 已經接受新時間超過 48 小時了，還沒到網站按「確認並搬 Calendar」，記得去處理');
           }
           const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
           if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }

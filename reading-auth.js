@@ -30,8 +30,12 @@
   // เกมของหน้าปัจจุบัน — ใช้ตัดสินใจว่า 🏆 ต้องพาไปกระดานไหน + บันทึกคะแนนเป็นเกมอะไร
   // v4 (LIN 2026-07-03): เพิ่ม 'word_order' (เกมเรียงประโยค/語序遊戲) — เดิมมีแค่ typing/reading
   // v5 (LIN 2026-07-03): เพิ่ม 'lego' (造句遊戲/樂高式造句) — เกมนี้กับ word_order เป็นคนละเกม ห้ามใช้ key เดียวกัน
+  // v6 (LIN 2026-07-16): เพิ่ม 'tone_finder' (เกมเสียง/tone-finder.html) — รวมระบบล็อกอินเข้ามาใช้ไฟล์นี้ร่วมกับอีก 4 เกม
+  //   (เดิมเกมเสียงใช้ supabase-auth.js แยกของตัวเอง) — คะแนนเกมเสียงยังเก็บคนละตาราง (tone_sessions) ไม่ผ่าน saveScore() ที่นี่
+  //   เพิ่มแค่ branch นี้ให้ badge/🏆 ลิงก์ถูกที่ ไม่กระทบ 4 เกมเดิม
   function pageGame() {
     var p = location.pathname || '';
+    if (/tone-finder/i.test(p)) return 'tone_finder';
     if (/typing-game/i.test(p)) return 'typing';
     if (/word-order/i.test(p)) return 'word_order';
     if (/lego/i.test(p)) return 'lego';
@@ -39,6 +43,7 @@
   }
   function boardHref() {
     var g = pageGame();
+    if (g === 'tone_finder') return 'leaderboard.html';
     if (g === 'typing') return 'typing-board.html';
     if (g === 'word_order') return 'word-order-board.html';
     if (g === 'lego') return 'lego-board.html';
@@ -59,10 +64,9 @@
         window.SITE_AUTH.renderBadge('rg-login-slot', { leaderboardHref: boardHref(), progressHref: 'my-progress.html' });
       }
     } else {
-      // v2 (Lin 2026-07-10): หน้าเกม (reading/typing/word-order/lego) มีแบนเนอร์เหลือง "先玩玩看...登入解鎖"
-      // อยู่เหนือแถบนี้แล้ว ซึ่งกดแล้ว proxy-click ปุ่มนี้อยู่ดี (ดู rgCtaLogin/woCtaLogin/legoCtaLogin)
+      // v2 (Lin 2026-07-10): หน้าเกม (reading/typing/word-order/lego/tone-finder) มีแบนเนอร์เหลือง "先玩玩看...登入解鎖"
+      // อยู่เหนือแถบนี้แล้ว ซึ่งกดแล้ว proxy-click ปุ่มนี้อยู่ดี (ดู rgCtaLogin/woCtaLogin/legoCtaLogin/tfCtaLogin)
       // → โชว์ปุ่มนี้ซ้ำสองอันดูรก จึงซ่อนด้วย display:none แต่ยังคงอยู่ใน DOM ให้ปุ่มแบนเนอร์กดผ่านได้เหมือนเดิม
-      // หน้าที่ไม่มีแบนเนอร์เหลือง (เช่น tone-finder) จะไม่โดนผลกระทบ เพราะปุ่มนี้จะเป็นทางเข้าล็อกอินเดียวอยู่แล้ว
       var hideDup = !!document.getElementById('rg-cta-login');
       el.innerHTML =
         '<button id="rg-login-btn" style="display:' + (hideDup ? 'none' : 'flex') + ';align-items:center;gap:6px;' +

@@ -655,6 +655,26 @@
   </div>
 </div>
 
+<!-- ======= STUDENT: 選擇要改期的課堂 MODAL（2026-07-16 稽核後新增，ORANGE#6）——
+     以前「申請改期」只能挑「下一堂課」，跟取消申請（可以挑好幾週的課）不一致，
+     學生一週上好幾天課的話只能改最近那一堂。現在重用 computeUpcomingOccurrences
+     跟取消申請一樣的下拉選單體驗，選好要改哪一堂之後才進到「填新時間」那一步。======= -->
+<div class="modal-overlay" id="reschedulePickerModal">
+  <div class="modal" style="max-width:420px;">
+    <h3>🔄 選擇要改期的課堂</h3>
+    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
+      先選要改哪一堂課，下一步再填想改到的新時間（最多 3 個選項）。
+    </p>
+    <label class="settings-label">你的近期上課時間（你自己的時區）</label>
+    <select class="settings-input" id="reschedulePickerSelect" onchange="onReschedulePickerSelectChange()"></select>
+    <p id="reschedulePickerHint" style="display:none;font-size:0.8rem;color:var(--amber);font-family:'Noto Sans TC',sans-serif;margin-top:6px;"></p>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeReschedulePickerModal()">關閉</button>
+      <button class="btn-gold" id="reschedulePickerNextBtn" onclick="proceedToRescheduleTimeOptions()">下一步 →</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= TEACHER: 其他方式 MODAL（2026-07-13 新增，處理「其他」按鈕）======= -->
 <div class="modal-overlay" id="otherOptionsModal">
   <div class="modal" style="max-width:400px;">
@@ -4575,7 +4595,7 @@ async function loadStudentNextClass(token) {
         // 有固定每週上課的學生會列出未來好幾堂，每一堂各自判斷是否超過 24 小時可以線上取消，
         // 不到 24 小時的那一堂會顯示「聯絡老師」而不是擋住整組功能。
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openCancelPickerModal()">❌ 取消課堂</button>' +
-        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openClassRequestModal()">🔄 申請改期</button>' +
+        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openReschedulePickerModal()">🔄 申請改期</button>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
         '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
         (canCancel ? '' : '<div style="width:100%;font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">⚠️ 最近這一堂距離上課不到 24 小時，無法線上取消（其他週的課仍可在「❌ 取消課堂」裡選）</div>') +
@@ -4821,6 +4841,64 @@ async function studentWithdrawOwnRequest(token, id) {
   loadStudentPendingRequestStatus(token);
 }
 
+// ════════════════════════════════════════════════════════════
+// 2026-07-16 稽核後新增（ORANGE#6）：申請改期先選「要改哪一堂」，跟取消申請一樣可以挑好幾週的課，
+// 不再只能挑「下一堂課」。選好之後才進到既有的「填新時間（最多 3 選項）」那一步（classRequestModal）。
+// ════════════════════════════════════════════════════════════
+var _reschedulePickerOptions = [];
+// 選好要改期的那一堂之後，記下來給 submitClassRequest 用：{isoDate, calendarEventId}
+var _rescheduleChosenOccurrence = null;
+
+async function openReschedulePickerModal() {
+  if (!nextClassCtx) return;
+  if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
+  document.getElementById('reschedulePickerModal').classList.add('open');
+  await renderReschedulePickerSelect();
+}
+
+function closeReschedulePickerModal() {
+  document.getElementById('reschedulePickerModal').classList.remove('open');
+}
+
+async function renderReschedulePickerSelect() {
+  const sel = document.getElementById('reschedulePickerSelect');
+  if (!nextClassCtx || !sel) return;
+  const token = nextClassCtx.token;
+  const s = studentsCache[token];
+  const studentTz = s && s.pending_student_tz;
+  sel.innerHTML = '<option value="">讀取中…</option>';
+  // 2026-07-16：跟取消申請共用同一個 computeUpcomingOccurrences，一樣可以列出未來好幾堂，
+  // 也一樣拿得到 calendarEventId（讓老師端可以直接用 ID 搬 Calendar，不用姓名+日期用猜的）。
+  const occurrences = await computeUpcomingOccurrences(token, 6);
+  _reschedulePickerOptions = occurrences;
+  const nextBtn = document.getElementById('reschedulePickerNextBtn');
+  if (!occurrences.length) {
+    sel.innerHTML = '<option value="">目前沒有排定的課堂</option>';
+    if (nextBtn) nextBtn.disabled = true;
+    return;
+  }
+  if (nextBtn) nextBtn.disabled = false;
+  const dayZh = ['日','一','二','三','四','五','六'];
+  sel.innerHTML = occurrences.map(function(occ, i) {
+    const disp = studentTz ? formatInTz(occ.date, studentTz) : formatInTz(occ.date, TEACHER_TZ);
+    const d = new Date(disp.dateStr + 'T00:00:00');
+    const label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）' + disp.timeStr;
+    return '<option value="' + i + '">' + escHtml(label) + '</option>';
+  }).join('');
+}
+
+function onReschedulePickerSelectChange() { /* 改期沒有 24 小時限制，留這個 function 只是保留跟取消申請一致的結構，方便以後要加規則 */ }
+
+function proceedToRescheduleTimeOptions() {
+  const sel = document.getElementById('reschedulePickerSelect');
+  const chosen = _reschedulePickerOptions[sel.value];
+  if (!chosen) { alert('請先選一堂課'); return; }
+  const thai = formatInTz(chosen.date, TEACHER_TZ); // 泰國時間 → 存資料庫/給老師看用
+  _rescheduleChosenOccurrence = { isoDate: thai.dateStr, calendarEventId: chosen.calendarEventId };
+  closeReschedulePickerModal();
+  openClassRequestModal();
+}
+
 // 2026-07-16 加：編輯模式旗標——學生對自己已送出、老師還沒回覆的改期申請按「✏️ 修改」時設成該筆 id，
 // 送出時就會改成「更新」而不是「新建」一筆。
 var _classRequestEditRequestId = null;
@@ -4848,6 +4926,7 @@ function openEditRescheduleRequestPicker(id) {
   if (!nextClassCtx) return;
   if (!requireLineLinkedOrPrompt(nextClassCtx.token)) return;
   _classRequestEditRequestId = id;
+  _rescheduleChosenOccurrence = null; // 改的是時間選項，不是換課堂，跟「選哪一堂」無關
   document.getElementById('classRequestModalTitle').textContent = '✏️ 修改改期申請';
   resetClassRequestModalFields();
   document.getElementById('classRequestModal').classList.add('open');
@@ -4856,6 +4935,7 @@ function openEditRescheduleRequestPicker(id) {
 function closeClassRequestModal() {
   document.getElementById('classRequestModal').classList.remove('open');
   _classRequestEditRequestId = null;
+  _rescheduleChosenOccurrence = null;
 }
 
 // 2026-07-14 加（Lin 回報學生對時區會搞混）：學生在這個框填的是「他自己現在所在地」的時間
@@ -4909,6 +4989,14 @@ function collectClassRequestOptions() {
     }
     options.push({ date: newDate, time: newTime });
   }
+  // 2026-07-16 加（稽核發現，GREEN）：避免學生不小心把 2-3 個選項填成完全一樣的日期時間，
+  // 送出去老師看到會覺得莫名其妙（明明說給 3 個選項，卻是同一個時間重複 3 次）。
+  const seenKeys = {};
+  for (const opt of options) {
+    const key = opt.date + '|' + (opt.time || '');
+    if (seenKeys[key]) { alert('選項裡有重複的日期時間，請改成不一樣的時間再送出。'); return null; }
+    seenKeys[key] = true;
+  }
   return options;
 }
 
@@ -4932,11 +5020,17 @@ async function submitClassRequest() {
     return;
   }
 
+  // 2026-07-16 加（稽核後，ORANGE#6）：改用學生在「選擇要改期的課堂」picker 裡選的那一堂
+  // （_rescheduleChosenOccurrence），不是只能用 nextClassCtx（下一堂課）——沒選過（理論上不會發生，
+  // 例如舊連結直接呼叫這個 function）就退回原本抓「下一堂課」的行為，不會壞掉。
+  const originalDateToUse = (_rescheduleChosenOccurrence && _rescheduleChosenOccurrence.isoDate) || nextClassCtx.isoDate;
+  const chosenCalendarEventId = _rescheduleChosenOccurrence && _rescheduleChosenOccurrence.calendarEventId;
+
   const res = await sb.rpc('submit_class_request', {
     p_token: nextClassCtx.token,
     p_student_name: studentName,
     p_request_type: 'reschedule',
-    p_original_date: nextClassCtx.isoDate,
+    p_original_date: originalDateToUse,
     p_requested_date: options[0].date,
     p_requested_time: options[0].time,
     p_note: null,
@@ -4951,12 +5045,17 @@ async function submitClassRequest() {
   // （不想動資料庫函式本身），插入成功後馬上補一個 update 存上完整選項清單 + 設 offer_status。
   // 存不成功也不擋這次申請，只在主控台留紀錄（老師那邊會退回看單一 requested_date 當保底）。
   if (newId) {
-    const upd = await sb.from('classroom_requests').update({
+    const updFields = {
       proposed_options: options, offer_status: 'proposed', offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
-    }).eq('id', newId);
+    };
+    // 2026-07-16 加（稽核後，ORANGE#6 順便補上）：跟取消申請一樣，把真正對應的 Google Calendar
+    // 事件 ID 存起來，老師端就能直接用 ID 搬課，不用再靠「姓名+日期」猜哪一筆（以前改期申請
+    // 完全沒有存過這個欄位）。拿不到 ID（例如舊版 fallback）就不存，退回原本的姓名+日期比對。
+    if (chosenCalendarEventId) updFields.calendar_event_id = chosenCalendarEventId;
+    const upd = await sb.from('classroom_requests').update(updFields).eq('id', newId);
     if (upd.error) console.warn('⚠️ 補存選項清單失敗（不影響這次申請本身）：', upd.error.message);
   }
-  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: nextClassCtx.isoDate, options: options, requestId: newId });
+  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: originalDateToUse, options: options, requestId: newId });
   closeClassRequestModal();
   alert('✅ 已送出改期申請，老師確認後會回覆你。');
 }
@@ -5310,17 +5409,28 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
   if (response === 'accepted') {
     const r = window._myPendingRequest;
     const opts = (r && Array.isArray(r.proposed_options) && r.proposed_options.length) ? r.proposed_options : (r ? [{ date: r.requested_date, time: r.requested_time }] : []);
-    chosenOpt = opts[optIndex || 0] || null;
-    if (chosenOpt) {
-      const upd = await sb.from('classroom_requests').update({ requested_date: chosenOpt.date, requested_time: chosenOpt.time })
-        .eq('id', requestId).eq('token', token).eq('offer_status', 'proposed');
-      if (upd.error) { alert('⚠️ 儲存選擇失敗：' + upd.error.message + '\n請直接聯絡老師比較保險。'); return; }
-    }
+    const idx = (typeof optIndex === 'number') ? optIndex : 0;
+    chosenOpt = opts[idx] || null;
+    // 2026-07-16 加（稽核發現，RED#2）：以前這裡如果選項對不到，會直接跳過存新時間，
+    // 但下面還是照樣送出「已接受」——變成老師之後拿到的是舊的/錯的時間，卻完全沒有警告。
+    // 現在改成：對不到就當作失敗，請學生重新整理頁面看最新選項，不能用猜的。
+    if (!chosenOpt) { alert('⚠️ 這個選項好像已經失效了（老師可能剛修改過提議），請重新整理頁面看最新的選項再選一次。'); return; }
+    const upd = await sb.from('classroom_requests').update({ requested_date: chosenOpt.date, requested_time: chosenOpt.time })
+      .eq('id', requestId).eq('token', token).eq('offer_status', 'proposed');
+    if (upd.error) { alert('⚠️ 儲存選擇失敗：' + upd.error.message + '\n請直接聯絡老師比較保險。'); return; }
   }
   const res = await sb.rpc('respond_to_offer_as_student', { p_request_id: requestId, p_token: token, p_response: response });
   if (res.error || res.data !== true) {
     alert('⚠️ 回覆失敗，可能是這個提議已經處理過了，重新整理頁面看看：' + (res.error ? res.error.message : ''));
     return;
+  }
+  // 2026-07-16 加（稽核發現，ORANGE#4）：學生接受後，重開 48 小時計時器讓「老師確認搬 Calendar」
+  // 這一步也會被提醒到（不然可能在「等學生回覆」階段就已經提醒過，老師之後永遠不會再被提醒）。
+  // 用既有的「RPC 寫完再補一筆 update」模式，不用改 respond_to_offer_as_student 這個 RPC 本身。
+  if (response === 'accepted') {
+    try {
+      await sb.from('classroom_requests').update({ offer_accepted_at: new Date().toISOString(), sla_reminder_sent: false }).eq('id', requestId);
+    } catch (e) { /* 這步失敗頂多是少一次 48 小時提醒，不影響已經成功的回覆 */ }
   }
   try {
     const msg = response === 'accepted'
@@ -5934,15 +6044,32 @@ async function loadPendingClassRequests() {
 async function finalizeRequestStatus(id, statusValue) {
   var rowEl = document.getElementById('req-row-' + id);
   if (rowEl) rowEl.remove();
-  var res = await sb.from('classroom_requests').update({ status: statusValue }).eq('id', id).select();
+  // 2026-07-16 加（稽核發現）：一定要加 .eq('status','pending') 當保險閘——沒有這道閘的話，
+  // 就算這筆申請已經被別的動作（例如學生收回）改成別的狀態，這裡還是會「成功」蓋回去，
+  // 讓畫面誤以為剛剛的操作真的處理成功了。
+  var res = await sb.from('classroom_requests').update({ status: statusValue }).eq('id', id).eq('status', 'pending').select();
   if (res.error) { alert('⚠️ 更新失敗：' + res.error.message); await loadPendingClassRequests(); return; }
   if (!res.data || res.data.length === 0) {
-    alert('⚠️ 標記失敗：資料庫沒有真的更新到（可能是 Supabase 權限設定 RLS 擋住了 UPDATE），請到 Supabase Dashboard 檢查 classroom_requests 資料表的 UPDATE 權限。');
+    alert('⚠️ 標記失敗：這筆申請的狀態剛好被改變了（可能學生剛收回、或已經被處理過），不是 RLS 問題，畫面重新整理一下看最新狀態。（如果確定不是這個原因，才需要去檢查 Supabase 的 UPDATE 權限）');
     await loadPendingClassRequests();
     return;
   }
   await loadPendingClassRequests();
   await loadRecentBackups();
+}
+
+// 2026-07-16 加（稽核發現，RED#1）：動 Google Calendar 之前，一定要回頭問資料庫一次最新狀態，
+// 不能只信任畫面上快取的資料——防止「老師在畫面上按處理」跟「學生剛好收回/回覆」同一瞬間搶著發生，
+// 導致 Calendar 已經被移動/刪除了，畫面卻沒有任何警告。
+async function reverifyRequestState(id, cachedR) {
+  var res = await sb.from('classroom_requests').select('status, offer_status').eq('id', id).maybeSingle();
+  if (res.error) return { ok: false, reason: '重新檢查資料庫狀態失敗：' + res.error.message + '\n為了安全，這次先不動 Calendar，請重試一次。' };
+  if (!res.data) return { ok: false, reason: '這筆申請在資料庫裡已經不存在了，請重新整理頁面。' };
+  if (res.data.status !== 'pending') return { ok: false, reason: '這筆申請已經被處理過了（目前狀態：' + res.data.status + '），可能剛剛被別的方式關掉，請重新整理頁面查看最新狀態，不會重複動 Calendar。' };
+  if (cachedR && cachedR.offer_status && res.data.offer_status !== cachedR.offer_status) {
+    return { ok: false, reason: '狀態剛好改變了（可能學生剛回覆或收回提議），請重新整理頁面查看最新狀態，不會用舊資料去動 Calendar。' };
+  }
+  return { ok: true };
 }
 
 // ✅ 處理：自動找 Calendar 上對應的那一次課堂，改期就 move、取消就 delete，動手前先備份
@@ -6002,6 +6129,8 @@ async function processClassRequestInner(id, r, isCancel) {
 
   if (isCancel) {
     if (!confirm('確定要取消這堂課嗎？\n\n學生：' + r.student_name + '\n原本時間：' + oldStartLabel + '（泰國時間 Asia/Bangkok）\n\n只會刪除 Google Calendar 上「這一次」的課堂，不影響其他週的固定課程。刪除前會先備份，之後可以復原。確定嗎？')) return;
+    var recheck1 = await reverifyRequestState(id, r);
+    if (!recheck1.ok) { alert('⚠️ ' + recheck1.reason); await loadPendingClassRequests(); return; }
     try {
       assertBackupOk(await backupCalendarEvent(id, r.token, 'delete', ev, null), '取消課堂');
       await deleteClassEventOnce(ev.id);
@@ -6020,6 +6149,8 @@ async function processClassRequestInner(id, r, isCancel) {
     var conflicts1 = await findConflictingEvents(newStartIso, new Date(new Date(newStartIso).getTime() + durationMs).toISOString(), ev.id);
     var conflictWarn1 = (conflicts1 && conflicts1.length) ? ('\n\n⚠️ 這個新時間跟其他行事曆事件重疊：\n' + conflicts1.map(function(c){ return '・' + (c.summary || '(無標題)'); }).join('\n')) : '';
     if (!confirm('確定要把這堂課移到新時間嗎？\n\n學生：' + r.student_name + '\n原本：' + oldStartLabel + '（泰國時間）\n改到：' + newStartLabel + '（泰國時間）' + conflictWarn1 + '\n\n只會移動「這一次」的課堂，不影響其他週的固定課程。移動前會先備份，之後可以復原。確定嗎？')) return;
+    var recheck2 = await reverifyRequestState(id, r);
+    if (!recheck2.ok) { alert('⚠️ ' + recheck2.reason); await loadPendingClassRequests(); return; }
     try {
       assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
       await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
@@ -6086,7 +6217,15 @@ async function handleContactMyself() {
   closeOtherOptionsModal();
   if (!id) return;
   if (!confirm('確定要關掉這筆申請嗎？（系統不會動 Calendar，也不會通知學生，記得自己聯絡學生喔）')) return;
-  await finalizeRequestStatus(id, 'acknowledged');
+  // 2026-07-16 加（稽核發現，GREEN）：補上防重複點擊鎖，跟其他處理按鈕一致（就算沒鎖，
+  // finalizeRequestStatus 本身也有資料庫保險閘，頂多重複點跳出「已經處理過」提示，不會壞）。
+  if (_inFlightRequestIds[id]) return;
+  _inFlightRequestIds[id] = true;
+  try {
+    await finalizeRequestStatus(id, 'acknowledged');
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
 }
 
 // 2026-07-16 加：編輯模式旗標——老師對自己已送出、學生還沒回覆的提議按「✏️ 修改」時設成 true，
@@ -6132,6 +6271,13 @@ function collectProposeTimeOptions() {
     if (rawTime && !isValidTimeStr(rawTime)) { alert('選項 ' + i + ' 時間格式不對，請用 HH:MM，例如 14:30'); return null; }
     options.push({ date: rawDate, time: rawTime || null });
   }
+  // 2026-07-16 加（稽核發現，GREEN）：同一個道理，避免老師不小心把 2-3 個選項填成一樣的時間。
+  const seenKeys = {};
+  for (const opt of options) {
+    const key = opt.date + '|' + (opt.time || '');
+    if (seenKeys[key]) { alert('選項裡有重複的日期時間，請改成不一樣的時間再送出。'); return null; }
+    seenKeys[key] = true;
+  }
   return options;
 }
 
@@ -6155,7 +6301,11 @@ async function submitProposeTime() {
     proposed_options: options, offer_status: 'proposed', offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
   };
   var query = sb.from('classroom_requests').update(updateFields).eq('id', id);
-  if (_proposeTimeIsEditMode) query = query.eq('offer_status', 'proposed');
+  // 2026-07-16 加（稽核發現，YELLOW#7）：以前只有「修改」模式才加 .eq('offer_status','proposed') 保險閘，
+  // 第一次提議完全沒有保險閘（只有 .eq('id',id)）——理論上還是可能撞到極短暫的競速
+  // （例如這筆申請剛好同時被別的方式改掉），現在兩種模式都加閘，只是期待值不同：
+  // 第一次提議期待還是 null（還沒開始提議過），修改期待是 proposed（還沒被學生回覆）。
+  query = _proposeTimeIsEditMode ? query.eq('offer_status', 'proposed') : query.is('offer_status', null);
   var res = await query.select();
   btn.disabled = false; btn.textContent = '📤 傳送給學生';
   if (res.error || !res.data || !res.data.length) {
@@ -6164,7 +6314,8 @@ async function submitProposeTime() {
       closeProposeTimeModal();
       await loadPendingClassRequests();
     } else {
-      alert('⚠️ 儲存失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+      alert(res.error ? ('⚠️ 儲存失敗：' + res.error.message) : 'ℹ️ 儲存失敗——這筆申請的狀態剛好被改變了，重新整理頁面看看目前狀態。');
+      if (!res.error) { closeProposeTimeModal(); await loadPendingClassRequests(); }
     }
     return;
   }
@@ -6211,16 +6362,24 @@ async function submitProposeTime() {
 // 用 .eq('offer_status','proposed') 當保險閘：學生剛好這時候已經回覆了，這裡就會抓不到。
 async function teacherWithdrawOwnRescheduleRequest(id) {
   if (!confirm('確定要收回這個改期提議嗎？（等於不改期了，這堂課維持原本安排）')) return;
-  var res = await sb.from('classroom_requests').update({ status: 'acknowledged', offer_status: null })
-    .eq('id', id).eq('status', 'pending').eq('offer_status', 'proposed').select();
-  if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
-  if (!res.data || !res.data.length) {
-    alert('ℹ️ 收回失敗——學生可能剛好已經回覆了，重新整理頁面看看目前狀態。');
+  // 2026-07-16 加（稽核發現，GREEN）：補防重複點擊鎖，跟 teacherPickRescheduleOption 共用同一組
+  // _inFlightRequestIds（就算沒鎖，下面的 .eq('offer_status','proposed') 保險閘也不會讓資料壞掉）。
+  if (_inFlightRequestIds[id]) return;
+  _inFlightRequestIds[id] = true;
+  try {
+    var res = await sb.from('classroom_requests').update({ status: 'acknowledged', offer_status: null })
+      .eq('id', id).eq('status', 'pending').eq('offer_status', 'proposed').select();
+    if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
+    if (!res.data || !res.data.length) {
+      alert('ℹ️ 收回失敗——學生可能剛好已經回覆了，重新整理頁面看看目前狀態。');
+      await loadPendingClassRequests();
+      return;
+    }
+    alert('✅ 已收回，這堂課維持原本安排');
     await loadPendingClassRequests();
-    return;
+  } finally {
+    delete _inFlightRequestIds[id];
   }
-  alert('✅ 已收回，這堂課維持原本安排');
-  await loadPendingClassRequests();
 }
 
 // 2026-07-16 加：老師修改自己已送出、學生還沒回覆的改期提議（重新給 1-3 個新選項）——
@@ -6252,8 +6411,14 @@ async function teacherPickRescheduleOption(id, optIndex) {
 // 提醒老師自己聯絡學生討論（不用再跳一次 LINE push 通知自己，人已經在網站上了）。
 async function teacherDeclineRescheduleOptions(id) {
   if (!confirm('確定學生給的這些時間都不方便嗎？（不會動 Calendar，關掉這筆申請，記得自己聯絡學生討論）')) return;
-  await finalizeRequestStatus(id, 'acknowledged');
-  alert('ℹ️ 已關閉這筆申請，記得直接聯絡學生討論時間');
+  if (_inFlightRequestIds[id]) return;
+  _inFlightRequestIds[id] = true;
+  try {
+    await finalizeRequestStatus(id, 'acknowledged');
+    alert('ℹ️ 已關閉這筆申請，記得直接聯絡學生討論時間');
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
 }
 
 // 💬 聯絡學生（2026-07-16 新增，Lin 要求）：老師直接在網站打字，送 LINE 給指定學生
@@ -6306,9 +6471,17 @@ async function sendContactStudentMessage() {
 
 async function cancelProposedOffer(id) {
   if (!confirm('確定要取消這個提議嗎？（不會通知學生，之後可以重新用「處理」或「其他」處理這筆申請）')) return;
-  var res = await sb.from('classroom_requests').update({ offer_status: null, offer_created_at: null, sla_reminder_sent: false }).eq('id', id).select();
-  if (res.error || !res.data || !res.data.length) {
-    alert('⚠️ 取消失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
+  // 2026-07-16 加（稽核發現，ORANGE#3）：一定要加 .eq('offer_status','proposed') 當保險閘——
+  // 沒有這道閘的話，如果學生剛好在這一瞬間已經在 LINE 上按了「可以/都不方便」，
+  // 老師這邊按取消會直接把學生剛回覆的結果蓋掉，卻完全不會有警告。
+  var res = await sb.from('classroom_requests').update({ offer_status: null, offer_created_at: null, sla_reminder_sent: false }).eq('id', id).eq('offer_status', 'proposed').select();
+  if (res.error) {
+    alert('⚠️ 取消失敗：' + res.error.message);
+    return;
+  }
+  if (!res.data || !res.data.length) {
+    alert('ℹ️ 取消失敗——學生可能剛好已經回覆了，重新整理頁面看看目前狀態，不會覆蓋學生的回覆。');
+    await loadPendingClassRequests();
     return;
   }
   await loadPendingClassRequests();
@@ -6350,6 +6523,8 @@ async function confirmAcceptedOfferInner(id, r) {
   var conflictWarn = (conflicts && conflicts.length) ? ('\n\n⚠️ 這個新時間跟其他行事曆事件重疊：\n' + conflicts.map(function(c){ return '・' + (c.summary || '(無標題)'); }).join('\n')) : '';
 
   if (!confirm('學生已經同意了，確定要把課堂移到新時間嗎？\n\n學生：' + r.student_name + '\n原本：' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）\n改到：' + formatThaiDateTimeLabel(newStartIso) + '（泰國時間）' + conflictWarn + '\n\n只會移動這一次課堂，動手前會先備份，之後可以復原。確定嗎？')) return;
+  var recheck3 = await reverifyRequestState(id, r);
+  if (!recheck3.ok) { alert('⚠️ ' + recheck3.reason); await loadPendingClassRequests(); return; }
   try {
     assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
     await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
@@ -6604,7 +6779,20 @@ async function initiateTeacherReschedule(token) {
   openPickLessonModal(token, 'reschedule');
 }
 
+// 2026-07-16 加（稽核發現，YELLOW#9）：跟 teacherCancelClassNow_chosen 一樣補上防重複點擊鎖——
+// 以前這裡按快一點可能連續建立兩筆一樣的改期申請（沒有動 Calendar，不危險，但會讓老師端多出重複的卡片）。
 async function initiateTeacherReschedule_chosen(token, chosen) {
+  var lockKey = 'reschedule-init:' + token;
+  if (_inFlightRequestIds[lockKey]) return;
+  _inFlightRequestIds[lockKey] = true;
+  try {
+    return await initiateTeacherReschedule_chosenInner(token, chosen);
+  } finally {
+    delete _inFlightRequestIds[lockKey];
+  }
+}
+
+async function initiateTeacherReschedule_chosenInner(token, chosen) {
   var s = studentsCache[token];
   if (!confirm('確定要幫這堂課改期嗎？\n\n學生：' + (s ? s.name : token) + '\n原本時間：' + chosen.label + '（泰國時間）\n\n下一步選新時間，送出後會傳 LINE 通知學生。')) return;
   var p = formatInTz(new Date(chosen.iso), TEACHER_TZ);
@@ -6613,7 +6801,9 @@ async function initiateTeacherReschedule_chosen(token, chosen) {
     p_original_date: p.dateStr, p_requested_date: null, p_requested_time: null, p_note: null,
     p_initiated_by: 'teacher',
   });
-  if (res.error) { alert('建立申請失敗：' + res.error.message); return; }
+  // 2026-07-16 改（稽核發現，YELLOW#13）：統一跟 teacherCancelClassNowInner 用一樣的錯誤文字，
+  // 以前這裡寫「建立申請失敗」、取消那邊寫「建立紀錄失敗」，同一種失敗卻用詞不一致。
+  if (res.error) { alert('建立紀錄失敗：' + res.error.message); return; }
   var newId = res.data;
   window._classRequestCache = window._classRequestCache || {};
   window._classRequestCache[newId] = { id: newId, token: token, student_name: s ? s.name : token, original_date: p.dateStr, request_type: 'reschedule' };
@@ -6705,16 +6895,22 @@ async function teacherCancelClassNowInner(token, chosen) {
 // 如果學生剛好在這一刻按了確認，這裡就會抓不到（count=0），要老實跟老師講已經來不及收回。
 async function teacherWithdrawOwnCancelRequest(id) {
   if (!confirm('確定要收回這個取消通知嗎？（等於不取消了，這堂課維持原本安排，Google Calendar 完全沒被動過）')) return;
-  var res = await sb.from('classroom_requests').update({ status: 'acknowledged' })
-    .eq('id', id).eq('status', 'pending').is('teacher_cancel_ack_at', null).select();
-  if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
-  if (!res.data || !res.data.length) {
-    alert('ℹ️ 收回失敗——學生可能剛好已經按了確認，這種情況要用「確認刪除」把 Calendar 也刪掉，或自己聯絡學生說明。');
+  if (_inFlightRequestIds[id]) return; // 2026-07-16 加（稽核發現，GREEN）：補防重複點擊鎖
+  _inFlightRequestIds[id] = true;
+  try {
+    var res = await sb.from('classroom_requests').update({ status: 'acknowledged' })
+      .eq('id', id).eq('status', 'pending').is('teacher_cancel_ack_at', null).select();
+    if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
+    if (!res.data || !res.data.length) {
+      alert('ℹ️ 收回失敗——學生可能剛好已經按了確認，這種情況要用「確認刪除」把 Calendar 也刪掉，或自己聯絡學生說明。');
+      await loadPendingClassRequests();
+      return;
+    }
+    alert('✅ 已收回，這堂課不會被取消，Calendar 沒有被動過');
     await loadPendingClassRequests();
-    return;
+  } finally {
+    delete _inFlightRequestIds[id];
   }
-  alert('✅ 已收回，這堂課不會被取消，Calendar 沒有被動過');
-  await loadPendingClassRequests();
 }
 
 // 2026-07-16 加：老師想改成取消「另一堂」而不是原本選的那堂——更新同一筆申請的日期/Calendar

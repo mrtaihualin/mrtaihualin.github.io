@@ -163,20 +163,54 @@ serve(async (req) => {
         if (!requestId) continue;
         const newOfferStatus = action === 'accept_offer' ? 'accepted' : 'declined';
 
+        // 2026-07-16 加（稽核發現，ORANGE#5）：先查這筆申請屬於哪個學生（token），連同
+        // accept_offer 要用的候選時間一起查一次。
+        const { data: reqRow } = await supabase
+          .from('classroom_requests')
+          .select('token,proposed_options,requested_date,requested_time')
+          .eq('id', requestId)
+          .maybeSingle();
+        if (!reqRow) continue; // 這筆申請不存在，安全忽略，不用回覆什麼
+
+        // 2026-07-16 加（稽核發現，ORANGE#5）：以前這裡只認 request id，沒有確認按按鈕的
+        // LINE 使用者是不是這筆申請真正的學生本人——多加這層防護（防禦性加強，不是因為
+        // 已知有真的被利用，是稽核時發現「理論上少了這一層」）。對不上就安全忽略，不回覆任何內容
+        // （避免透露「這筆申請存在/不存在」這種資訊給不是本人的人）。
+        const senderUserId = event.source && event.source.userId;
+        if (senderUserId) {
+          const { data: stuRow } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRow.token).maybeSingle();
+          if (!stuRow || stuRow.line_user_id !== senderUserId) {
+            console.error('[line-webhook] ⚠️ accept/decline_offer：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestId);
+            continue;
+          }
+        }
+
         const updateFields = { offer_status: newOfferStatus };
         let chosenOpt = null;
         if (action === 'accept_offer') {
-          const optIdx = parseInt(params.get('opt') || '0', 10);
-          const { data: rowData } = await supabase
-            .from('classroom_requests')
-            .select('proposed_options,requested_date,requested_time')
-            .eq('id', requestId)
-            .maybeSingle();
-          const opts = (rowData && Array.isArray(rowData.proposed_options) && rowData.proposed_options.length)
-            ? rowData.proposed_options
-            : (rowData ? [{ date: rowData.requested_date, time: rowData.requested_time }] : []);
-          chosenOpt = opts[optIdx] || opts[0] || null;
-          if (chosenOpt) { updateFields.requested_date = chosenOpt.date; updateFields.requested_time = chosenOpt.time; }
+          const optIdxRaw = params.get('opt');
+          const optIdx = optIdxRaw === null ? 0 : parseInt(optIdxRaw, 10);
+          const opts = (Array.isArray(reqRow.proposed_options) && reqRow.proposed_options.length)
+            ? reqRow.proposed_options
+            : [{ date: reqRow.requested_date, time: reqRow.requested_time }];
+          // 2026-07-16 加（稽核發現，RED#2）：以前這裡選項對不到（例如老師剛好把提議改成剩 2 個選項，
+          // 學生卻點了舊訊息裡的第 3 個按鈕）會偷偷退回選第一個，等於老師之後搬 Calendar 搬到
+          // 學生根本沒選過的時間，而且完全沒有警告。現在改成：對不到就直接當失敗處理，
+          // 不寫入 accepted，回覆學生請重新整理網頁看最新選項再選一次。
+          if (!Number.isInteger(optIdx) || optIdx < 0 || optIdx >= opts.length || !opts[optIdx]) {
+            if (channelToken && event.replyToken) {
+              await replyLine(channelToken, event.replyToken, '⚠️ 這個選項好像已經失效了（老師可能剛修改過提議），請重新整理網頁看最新的選項再選一次。');
+            }
+            continue;
+          }
+          chosenOpt = opts[optIdx];
+          updateFields.requested_date = chosenOpt.date;
+          updateFields.requested_time = chosenOpt.time;
+          // 2026-07-16 加（稽核發現，ORANGE#4）：學生接受之後，48 小時提醒的計時器要重新開始算
+          // 「等老師去確認搬 Calendar」，不然這筆申請的 sla_reminder_sent 可能早在「等學生回覆」
+          // 階段就已經是 true 了，導致老師永遠收不到「學生已經回覆很久了，記得去確認」的提醒。
+          updateFields.offer_accepted_at = new Date().toISOString();
+          updateFields.sla_reminder_sent = false;
         }
 
         const { error, count } = await supabase
@@ -217,6 +251,19 @@ serve(async (req) => {
         // 防止兩邊同時按/重複按 push 兩次通知給老師。
         const requestId = params.get('request');
         if (!requestId) continue;
+
+        // 2026-07-16 加（稽核發現，ORANGE#5）：跟 accept/decline_offer 一樣，多加一層確認
+        // 按按鈕的人是不是這筆通知真正要給的那個學生。
+        const senderUserIdAck = event.source && event.source.userId;
+        if (senderUserIdAck) {
+          const { data: reqRowAck } = await supabase.from('classroom_requests').select('token').eq('id', requestId).maybeSingle();
+          if (!reqRowAck) continue;
+          const { data: stuRowAck } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAck.token).maybeSingle();
+          if (!stuRowAck || stuRowAck.line_user_id !== senderUserIdAck) {
+            console.error('[line-webhook] ⚠️ ack_teacher_cancel：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestId);
+            continue;
+          }
+        }
 
         const { data: updated, error, count } = await supabase
           .from('classroom_requests')
