@@ -8377,7 +8377,7 @@ try {
 //   - 影片：~80kbps，約 45–50 MB/小時；滿 1 小時自動切檔續錄
 // ============================================================
 const REC_AUDIO_BPS=24000;       // 聲音位元率（約 11 MB/小時）
-const REC_VIDEO_BPS=180000;      // 影片位元率（約 100 MB/小時，畫面更清楚）
+const REC_VIDEO_BPS=210000;      // 2026-07-17 Lin 指定全體微調升清晰度：180k→210k（約 100 MB/小時）— mp4 轉檔預設 220k/300k 剛好夠涵蓋，轉檔不會再壓縮損失
 const REC_VIDEO_BPS_HQ=500000;   // 2026-07-17 Lin 指定：Edward 專用較高畫質（約 225 MB/小時）— webm_to_mp4.py 已同步調高該生轉檔上限，否則轉檔會把畫質壓回去
 const REC_HQ_STUDENT_NAMES=['Edward'];  // 高畫質名單（大小寫不分、部分比對 studentsCache[token].name）
 function recIsHQStudent(){
