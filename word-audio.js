@@ -17,8 +17,15 @@
     return (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST.sentences) || {};
   }
 
+  // เพิ่ม 2026-07-17: เช็คลิสต์ "ปิดเสียงชั่วคราว" (data/audio-disabled.js) ก่อนเสมอ — คำ/ประโยคในลิสต์นี้
+  // จะไม่มีปุ่ม 🔊 เลย แม้จะมีไฟล์เสียงจริงอยู่ใน manifest ก็ตาม (ปิดไว้ก่อนโดยไม่ลบไฟล์เสียง/ข้อมูลคำ)
+  function isDisabled(th) {
+    var d = window.AUDIO_DISABLED;
+    return !!(d && d.indexOf(th) !== -1);
+  }
+
   function urlFor(th) {
-    if (!th) return null;
+    if (!th || isDisabled(th)) return null;
     var f = _manifest()[th] || _sentManifest()[th];
     if (!f) return null;
     if (/^https?:/.test(f)) return f;

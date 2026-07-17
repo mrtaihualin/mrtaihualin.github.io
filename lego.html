@@ -35,8 +35,8 @@
 <link rel="stylesheet" href="shared.css?v=13">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="supabase-config.js?v=4"></script>
-<script defer src="game-account.js?v=3"></script>
 <script defer src="auth-widget.js?v=1"></script>
+<script defer src="game-account.js?v=3"></script>
 <script defer src="reading-auth.js?v=6"></script>
 <script defer src="lego-vault.js?v=1"></script>
 <style>
@@ -289,7 +289,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 </div>
 
 <div class="rg-top-row">
-  <div id="rg-login-slot" style="display:flex;align-items:center;flex-shrink:0;margin-right:auto;"></div>
+  <div id="rg-login-slot" style="display:flex;align-items:center;flex-shrink:0;"></div>
 </div>
 
 <div id="rg-challenge-banner"></div>
@@ -1381,7 +1381,7 @@ function _processToastQueue(){
 var MINA_EMOJI='👧🏻';
 var MINA_LINES={
   welcome:['哈囉～我是米娜 🌾 我們一起用詞塊造出漂亮的泰文句子吧，好不好？','嗨嗨～我是米娜，今天也一起慢慢造句吧 😊'],
-  correct:['唉唷～排對了呢，你做得很好 ✨','對了對了！這句就是這樣排 🌾','很好喔～你越來越會造句了 😊'],
+  correct:['哇～排對了呢，你做得很好 ✨','對了對了！這句就是這樣排 🌾','很好喔～你越來越會造句了 😊'],
   combo:['哇～連續排對，米娜都替你開心 🔥','停不下來了呢，好厲害 ⚡'],
   golden:['這句…裡面有可以吃的字喔！米娜最喜歡了 😋 分數加倍！'],
   wrong:['沒關係的…這句米娜以前也排錯過，我們再看一次好嗎？','再試一次就好，米娜陪你 💛','慢慢來，先想想第一個詞是哪個 🌱']
