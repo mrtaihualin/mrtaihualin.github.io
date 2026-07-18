@@ -5864,8 +5864,13 @@ function notifyTeacherClassRequest(d) {
     // 也不要讓老師誤判）。改成純連結：開 Calendar + 到網站處理。
     // 2026-07-16 改（Lin 要求）：「申請取消」「申請改期」這兩種只留一顆「📋 到網站處理」按鈕，
     // 直接連到那筆申請卡片的位置，不用再多一顆「開 Calendar」。加課維持原本 2 顆按鈕，沒有改動。
+    // 2026-07-19 加（Lin 要求：LINE 一鍵刪除）：現在有 Google service account 了，line-webhook
+    // 可以自己刪 Calendar，不會再有「按了以為處理完但 Calendar 沒動到」的風險（見 line-webhook
+    // action=confirm_cancel_delete）。只加在「申請取消」——改期需要老師先選新時間，沒辦法一鍵完成，
+    // 維持原本「到網站處理」。「到網站處理」保留當備援（例如老師想先看清楚細節再確認）。
     var flexButtons = [];
     if (isAdd && calLink) flexButtons.push({ label: '🔗 開 Calendar', uri: calLink });
+    if (isCancel && d.requestId) flexButtons.push({ label: '✅ 確認並刪除課程', postbackData: 'action=confirm_cancel_delete&request=' + encodeURIComponent(d.requestId) });
     flexButtons.push({ label: '📋 到網站處理', uri: siteLink });
 
     fetch(LINE_NOTIFY_ENDPOINT, {

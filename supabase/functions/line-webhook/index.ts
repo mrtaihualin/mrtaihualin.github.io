@@ -2,6 +2,13 @@
 // Supabase Edge Function: line-webhook
 // หน้าที่: รับ Webhook event จาก LINE
 //   รองรับ 2 ชนิด postback:
+//   0) action=confirm_cancel_delete (2026-07-19 เพิ่ม) — ครูกดปุ่มเดียวใน LINE ยืนยัน "ยกเลิกคาบ"
+//      ที่นักเรียนขอมา → ตอนนี้ **ลบ Google Calendar จริงทันที** ผ่าน Google service account
+//      (ดูฟังก์ชัน getGoogleCalendarToken/deleteCalendarEventById ด้านล่าง) ต่างจากข้อ 3/4 ด้านล่างที่ยัง
+//      "แตะ Calendar เองไม่ได้" — อันนี้แตะได้แล้วเพราะมี service account credential เป็นของตัวเอง
+//      ไม่ต้องพึ่ง OAuth token ของครู เช็คว่าคนกดเป็นครูจริง (LINE_TEACHER_USER_ID) ก่อนทำงานทุกครั้ง
+//      ต้องตั้ง secret GOOGLE_SERVICE_ACCOUNT_KEY ก่อน (ดูคอมเมนต์เหนือ getGoogleCalendarToken)
+//      และต้องแชร์ Google Calendar ("primary") ให้อีเมล service account สิทธิ์ "Make changes to events"
 //   1) action=approve|deny (แบบเดิม 2026-07-10) — ปุ่มเก่าในข้อความที่เคยส่งให้ครูก่อนหน้านี้
 //      2026-07-13 แก้: status เปลี่ยนจาก approved/denied → acknowledged (ตาม constraint จริงในฐานข้อมูล
 //      classroom_requests_status_check ที่รองรับแค่ pending/acknowledged เท่านั้น) — เก็บไว้เผื่อมีข้อความ
@@ -90,6 +97,97 @@ async function pushLine(channelToken, targetUserId, text) {
       body: JSON.stringify({ to: targetUserId, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }),
     });
   } catch (e) { /* push ไม่สำเร็จก็ไม่เป็นไร ฐานข้อมูลอัปเดตไปแล้วเป็นหลัก */ }
+}
+
+// ════════════════════════════════════════════════════════════
+// 2026-07-19 加：Google Calendar (service account) — ให้ปุ่มเดียวใน LINE ลบ Calendar ได้จริง
+// ก่อนหน้านี้ทำไม่ได้เพราะ Edge Function ไม่มี OAuth token ของครู (ดูคอมเมนต์บรรทัด 26-30 ด้านบน)
+// ต้องตั้ง secret ก่อนใช้: supabase secrets set GOOGLE_SERVICE_ACCOUNT_KEY="$(cat service-account.json)"
+// และต้องแชร์ Google Calendar ("primary" ของครู) ให้อีเมล service account สิทธิ์ "Make changes to events"
+// เลียนแบบวิธีลบของฝั่งเว็บ (deleteClassEventOnce ใน classroom/index.html) ให้พฤติกรรมตรงกัน:
+// ลบทีละ event ตรง id เดียว (ไม่แตะ RRULE/recurring master) 404/410 ถือว่า "ลบไปแล้ว" ไม่ error ซ้ำ
+// ════════════════════════════════════════════════════════════
+function pemToArrayBuffer(pem) {
+  const b64 = String(pem).replace(/-----BEGIN PRIVATE KEY-----/, '').replace(/-----END PRIVATE KEY-----/, '').replace(/\s+/g, '');
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function base64url(input) {
+  let b64;
+  if (typeof input === 'string') b64 = btoa(input);
+  else {
+    const bytes = new Uint8Array(input);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    b64 = btoa(binary);
+  }
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+let _cachedGoogleToken = null; // { token, exp } — cache ไว้กันขอ token ซ้ำถ้า 1 request มีหลาย event (cold start ใหม่ทุกครั้งอยู่แล้ว ไม่ลอยค้างข้าม request)
+
+async function getGoogleCalendarToken() {
+  const now = Math.floor(Date.now() / 1000);
+  if (_cachedGoogleToken && _cachedGoogleToken.exp > now + 30) return _cachedGoogleToken.token;
+
+  const raw = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY');
+  if (!raw) { console.error('[calendar-auth] ⚠️ ยังไม่ได้ตั้ง secret GOOGLE_SERVICE_ACCOUNT_KEY'); return null; }
+  let sa;
+  try { sa = JSON.parse(raw); } catch (e) { console.error('[calendar-auth] GOOGLE_SERVICE_ACCOUNT_KEY parse ไม่ผ่าน:', e.message); return null; }
+  if (!sa.private_key || !sa.client_email) { console.error('[calendar-auth] service account json ไม่มี private_key/client_email'); return null; }
+
+  try {
+    const header = { alg: 'RS256', typ: 'JWT' };
+    const claim = {
+      iss: sa.client_email,
+      scope: 'https://www.googleapis.com/auth/calendar',
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600,
+    };
+    const unsigned = base64url(JSON.stringify(header)) + '.' + base64url(JSON.stringify(claim));
+    const key = await crypto.subtle.importKey(
+      'pkcs8', pemToArrayBuffer(sa.private_key), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']
+    );
+    const sigBuf = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
+    const jwt = unsigned + '.' + base64url(sigBuf);
+
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + jwt,
+    });
+    const data = await res.json();
+    if (!res.ok || !data.access_token) {
+      console.error('[calendar-auth] ขอ token ไม่สำเร็จ:', JSON.stringify(data));
+      return null;
+    }
+    _cachedGoogleToken = { token: data.access_token, exp: now + (data.expires_in || 3600) };
+    return data.access_token;
+  } catch (e) {
+    console.error('[calendar-auth] เซ็น JWT/ขอ token พัง:', e.message);
+    return null;
+  }
+}
+
+// ลบคาบเดียวใน Google Calendar ด้วย eventId ตรงตัว (ไม่เดา) — คืนค่า { ok, reason? }
+async function deleteCalendarEventById(eventId) {
+  const token = await getGoogleCalendarToken();
+  if (!token) return { ok: false, reason: 'no_token' };
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token },
+    });
+    if (res.ok || res.status === 404 || res.status === 410) return { ok: true };
+    const detail = await res.text().catch(() => '');
+    return { ok: false, reason: 'http_' + res.status, detail: detail.slice(0, 300) };
+  } catch (e) {
+    return { ok: false, reason: 'fetch_error', detail: e.message };
+  }
 }
 
 serve(async (req) => {
@@ -339,6 +437,81 @@ serve(async (req) => {
         }
         continue;
       }
+      if (action === 'confirm_cancel_delete') {
+        // ── 2026-07-19 加：ครูกดปุ่มเดียวใน LINE → ลบ Calendar จริงทันที (ใช้ Google service account) ──
+        // เดิมทำไม่ได้เพราะไม่มี OAuth token ของครู (ดูคอมเมนต์บรรทัด 26-30) ตอนนี้มี service account แล้ว
+        // ใช้ calendar_event_id ตรงตัว ไม่เดาจากชื่อ+วันที่ (เหมือน deleteClassEventOnce ฝั่งเว็บ)
+        const requestIdCancel = params.get('request');
+        if (!requestIdCancel) continue;
+
+        // เฉพาะครูเท่านั้นที่กดปุ่มนี้ได้ (กันคนอื่นกดสั่งลบ Calendar ของครูได้)
+        const teacherUserIdCheck = Deno.env.get('LINE_TEACHER_USER_ID');
+        const senderIsTeacher = event.source && teacherUserIdCheck && event.source.userId === teacherUserIdCheck;
+        if (!senderIsTeacher) {
+          console.error('[line-webhook] ⚠️ confirm_cancel_delete: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdCancel);
+          continue;
+        }
+
+        const { data: reqRowCancel, error: fetchErrCancel } = await supabase
+          .from('classroom_requests')
+          .select('calendar_event_id,status,token,original_date,original_time')
+          .eq('id', requestIdCancel)
+          .maybeSingle();
+
+        if (fetchErrCancel || !reqRowCancel) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 找不到這筆申請了，請到網站確認');
+          continue;
+        }
+        if (reqRowCancel.status === 'acknowledged') {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經處理過了');
+          continue;
+        }
+        if (!reqRowCancel.calendar_event_id) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這筆沒有記錄 Calendar 事件 ID，請到網站手動處理');
+          continue;
+        }
+
+        const delResult = await deleteCalendarEventById(reqRowCancel.calendar_event_id);
+        if (!delResult.ok) {
+          console.error('[line-webhook] ⚠️ confirm_cancel_delete 刪除 Calendar 失敗:', JSON.stringify(delResult), 'request=', requestIdCancel);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 刪除 Calendar 失敗，請到網站手動處理（不要重複點這顆按鈕）');
+          }
+          continue;
+        }
+
+        const { error: updErrCancel, count: updCountCancel } = await supabase
+          .from('classroom_requests')
+          .update({ status: 'acknowledged' }, { count: 'exact' })
+          .eq('id', requestIdCancel)
+          .eq('status', 'pending');
+
+        if (updErrCancel) {
+          // Calendar ลบสำเร็จแล้วจริง แต่บันทึกฐานข้อมูลไม่สำเร็จ — ต้องบอกครูดังๆ ไม่ให้เข้าใจผิดว่ายังไม่ได้ลบ
+          console.error('[line-webhook] ⚠️ confirm_cancel_delete: Calendar ลบแล้วแต่อัปเดตฐานข้อมูลพัง:', updErrCancel.message, 'request=', requestIdCancel);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ Calendar ลบสำเร็จแล้ว แต่บันทึกสถานะในระบบไม่สำเร็จ ลองรีเฟรชหน้าเว็บดูอีกที');
+          }
+          continue;
+        }
+
+        if (channelToken && event.replyToken) {
+          await replyLine(channelToken, event.replyToken, '✅ 已刪除 Calendar 課程，並通知學生了');
+        }
+
+        // แจ้งนักเรียนว่ายกเลิกเรียบร้อยแล้วจริง (best-effort ไม่บล็อกถ้าหาไม่เจอ)
+        if (channelToken && reqRowCancel.token) {
+          try {
+            const { data: stuRowCancel } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowCancel.token).maybeSingle();
+            if (stuRowCancel && stuRowCancel.line_user_id) {
+              const odateMsg = (reqRowCancel.original_date || '') + (reqRowCancel.original_time ? ' ' + reqRowCancel.original_time : '');
+              await pushLine(channelToken, stuRowCancel.line_user_id, '✅ 老師已確認，' + odateMsg + ' 的課程已經取消囉');
+            }
+          } catch (e) { /* แจ้งนักเรียนไม่สำเร็จ ไม่กระทบว่าลบ Calendar สำเร็จแล้ว */ }
+        }
+        continue;
+      }
+
       // action 未知的類型 → 忽略，不讓整個 webhook 掛掉
     } catch (e) {
       // 一個 event 出錯不影響其他 event（LINE 有時候一次會送多個 event 進來）

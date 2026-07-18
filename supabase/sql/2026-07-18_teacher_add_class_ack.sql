@@ -18,3 +18,14 @@ alter table classroom_requests
 -- หมายเหตุ: ไม่ต้องแก้ RLS policy เพิ่ม — เว็บอ่าน/เขียนตาราง classroom_requests
 -- ผ่าน RPC (submit_class_request) + policy เดิมที่มีอยู่แล้วสำหรับ token ของตัวเอง
 -- คอลัมน์ใหม่เป็น nullable ทั้งหมด ไม่กระทบแถวเก่า
+
+-- ════════════════════════════════════════════════════════════
+-- 2026-07-19 เพิ่ม (เจอสาเหตุจริงที่ Lin ➕申請加課 ของนักเรียนกดไม่ได้ผล):
+-- constraint classroom_requests_request_type_check เดิมอนุญาตแค่ 'cancel'/'reschedule'
+-- ไม่มี 'add_class' เลย ตั้งแต่แรก — เพราะงั้นทุกครั้งที่ส่ง request_type='add_class'
+-- (ทั้งนักเรียนกด➕申請加課 และครูกด➕加課堂時間ที่ไม่ได้มาจากคำขอเดิม) ฝั่ง Supabase
+-- ปฏิเสธเงียบๆ ตลอด ไม่ใช่บั๊กโค้ดฝั่งเว็บ — แก้ constraint ให้รับ 'add_class' ด้วย
+-- ════════════════════════════════════════════════════════════
+alter table classroom_requests drop constraint classroom_requests_request_type_check;
+alter table classroom_requests add constraint classroom_requests_request_type_check
+  check (request_type = ANY (ARRAY['cancel'::text, 'reschedule'::text, 'add_class'::text]));
