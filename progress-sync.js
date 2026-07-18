@@ -11,7 +11,7 @@
 
   // คีย์ใน localStorage ที่ต้องซิงก์
   // 2026-07-13 Lin: เพิ่ม tf_wrong_stats_v1 (สถิติผิดรายวัน 今日統計) — ซิงก์ข้ามเครื่อง
-  var KEYS = ['tf_badges_v1', 'tf_streak_v1', 'tf_set_state_v1', 'tf_special_words_v1', 'tf_special_meta_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1'];
+  var KEYS = ['tf_badges_v1', 'tf_streak_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1'];
   var STATS_KEEP_DAYS = 30; // ต้องตรงกับ STATS_KEEP_DAYS ใน tone-finder.html (ตัดเก็บแค่ 30 วันล่าสุดหลัง merge)
 
   function lsGet(k) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
@@ -43,24 +43,7 @@
       out.streak = maxNum(local.streak, remote.streak);
       return out;
     }
-    if (k === 'tf_set_state_v1') {
-      var m = {}, id;
-      for (id in local) m[id] = local[id];
-      for (id in remote) {
-        var a = m[id], b = remote[id];
-        if (!a) { m[id] = b; continue; }
-        // retired ชนะ locked · ถ้าสถานะเดียวกันใช้ date ใหม่กว่า
-        if (b.status === 'retired' && a.status !== 'retired') m[id] = b;
-        else if (a.status === b.status && String(b.date || '') > String(a.date || '')) m[id] = b;
-      }
-      return m;
-    }
-    if (k === 'tf_special_words_v1') {
-      var arr = (local || []).slice();
-      (remote || []).forEach(function (w) { if (arr.indexOf(w) < 0) arr.push(w); });   // union
-      return arr;
-    }
-    if (k === 'tf_special_meta_v1' || k === 'tf_word_wrong_v1') {
+    if (k === 'tf_word_wrong_v1') {
       var o = {}, key;
       for (key in local) o[key] = local[key];
       for (key in remote) o[key] = maxNum(o[key], remote[key]);                          // ค่ามากกว่า (กันนับซ้ำ)
