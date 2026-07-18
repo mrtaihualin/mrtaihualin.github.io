@@ -42,7 +42,9 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const SCHEDULE_SYNC_DAYS = 90; // ต้องตรงกับ SCHEDULE_SYNC_DAYS ใน classroom/index.html
+// 2026-07-19 ขยับ 90→180 วัน (Lin ยืนยัน)：คอร์สใหญ่สุดที่ขาย 20 คาบ/สัปดาห์ละครั้ง ≈ 140 วัน
+// 90 วันไม่พอ (พบจริง: MARK ซื้อ 20 เห็นแค่ 15) ต้องแก้พร้อมกับ classroom/index.html เสมอ
+const SCHEDULE_SYNC_DAYS = 180; // ต้องตรงกับ SCHEDULE_SYNC_DAYS ใน classroom/index.html
 const TZ_OFFSET_MS = 7 * 3600 * 1000; // Asia/Bangkok คงที่ ไม่มี DST (เหมือนที่ teacherTimeToDate ฝั่งเว็บใช้ '+07:00' ตายตัว)
 
 // "วันนี้" ตามเวลาไทย — เหมือน teacherToday() ฝั่งเว็บ
