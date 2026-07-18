@@ -8509,11 +8509,14 @@ async function syncScheduleToSupabase(matched) {
   }
 }
 
-// 2026-07-19 改（Lin 要求）：📅上課記錄 改成跟學生的 📅我的課程記錄 同一套系統——
-// 「本期課程」不只列已經上過的（✅已完成），還要合併還沒上到的未來排課（⏳未完成），
-// 常駐展開不折疊；「過去的課程記錄」維持原本可摺疊、可編輯/刪除的清單。
-// 已完成的列還是用 classroom_attendance 直接查（保留 id 才能編輯/刪除），
-// 未完成（未來排課）用跟學生端一樣的 get_student_schedule RPC 撈，只顯示不能編輯（還沒有 attendance 記錄可改）。
+// 2026-07-19 改（Lin 要求，第二輪：畫面要真的長得跟學生那邊一樣，不是只有邏輯像）：
+// 📅上課記錄 改成跟學生的 📅我的課程記錄 同一套「表格＋上課日期/狀態」樣式（courseTableHtml），
+// 不再用舊的 hist-row 條列樣式。「本期課程」合併已上（✅已完成，來自 classroom_attendance，
+// 保留 id 才能編輯/刪除）+ 還沒上到的未來排課（⏳未完成，來自 get_student_schedule，跟學生端
+// 同一支 RPC），依日期排序成一張表；只有已完成的列才有編輯/刪除按鈕（多一欄「操作」）。
+// 「過去的課程記錄」維持原本可摺疊，一樣改成表格樣式配編輯/刪除。
+// 標題文字也跟學生端一樣寫「共 X 堂」（X＝表格列數，不是 classroom_attendance 的 lessons 加總，
+// 上一版「本輪共 1 堂（6 天）」數字對不起來就是這裡搞錯，這次修正一致）。
 async function openAttendanceHistory(token) {
   const s = studentsCache[token];
   const name = s ? s.name : token;
@@ -8521,6 +8524,7 @@ async function openAttendanceHistory(token) {
 
   document.getElementById('attendHistTitle').textContent = '📅 ' + name + ' 的上課記錄';
   document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">載入中…</div>';
+  document.getElementById('attendHistSummary').textContent = '';
   document.getElementById('attendHistModal').classList.add('open');
 
   const [attRes, schedRes, payRes] = await Promise.all([
@@ -8533,7 +8537,6 @@ async function openAttendanceHistory(token) {
 
   if (!data.length && !schedData.length) {
     document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">尚無上課記錄</div>';
-    document.getElementById('attendHistSummary').textContent = '';
     return;
   }
 
@@ -8555,48 +8558,58 @@ async function openAttendanceHistory(token) {
     const d = new Date(dateStr + 'T12:00:00');
     return (d.getMonth()+1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）';
   }
-  function rowsHtml(list) {
-    let cum = 0, tot = 0;
-    const html = list.map(function(r) {
+
+  // 合併已完成＋未完成，依日期排序（跟學生端 mergedDates 同一套做法）
+  var currentRowsByDate = {};
+  current.forEach(function(r) { currentRowsByDate[r.lesson_date] = r; });
+  var currentMerged = {};
+  current.forEach(function(r) { currentMerged[r.lesson_date] = true; });
+  upcomingDates.forEach(function(d) { if (!(d in currentMerged)) currentMerged[d] = false; });
+  var currentMergedDates = Object.keys(currentMerged).sort();
+
+  function opCellHtml(r) {
+    var n = r.lessons || 1;
+    return '<button class="hist-edit" title="改堂數（一天幾堂）" onclick="editAttendanceLessons(\'' + r.id + '\',' + n + ',\'' + token + '\')">' + n + '堂</button> ' +
+      '<button class="hist-edit" title="改日期" onclick="editAttendanceDate(\'' + r.id + '\',\'' + r.lesson_date + '\',\'' + token + '\')">✏️</button> ' +
+      '<button class="hist-del" title="刪除此記錄" onclick="deleteAttendance(\'' + r.id + '\',\'' + token + '\')">🗑</button>';
+  }
+
+  function courseTableHtml() {
+    if (!currentMergedDates.length) {
+      return '<div class="empty-attend">本輪課程尚無上課記錄</div>';
+    }
+    var rows = currentMergedDates.map(function(dateKey) {
+      var done = currentMerged[dateKey];
+      var isToday = dateKey === today;
+      var dateLabel = fmtDateOnly(dateKey) + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '');
+      var statusLabel = done ? '✅ 已完成' : '⏳ 未完成';
+      var opCell = done ? opCellHtml(currentRowsByDate[dateKey]) : '';
+      return '<tr><td>' + dateLabel + '</td><td>' + statusLabel + '</td><td style="white-space:nowrap;">' + opCell + '</td></tr>';
+    }).join('');
+    return '<table class="schedule-table"><thead><tr><th>上課日期</th><th>狀態</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function historyTableHtml() {
+    let cum = 0;
+    const rows = history.map(function(r) {
       const n = r.lessons || 1;
-      const start = cum + 1, end = cum + n; cum = end; tot += n;
-      const numLabel = n > 1 ? ('第 ' + start + '–' + end + ' 堂') : ('第 ' + start + ' 堂');
+      const start = cum + 1, end = cum + n; cum = end;
+      const badge = n > 1 ? ('第 ' + start + '–' + end + ' 堂') : ('第 ' + start + ' 堂');
       const dateStr = fmtDateOnly(r.lesson_date) + (n > 1 ? ' · ' + n + ' 堂' : '');
-      const isToday = r.lesson_date === today;
-      return '<div class="hist-row">' +
-        '<span class="hist-num">' + numLabel + '</span>' +
-        '<span class="hist-date" id="hist-date-' + r.id + '">' + dateStr + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
-        '<button class="hist-edit" title="改堂數（一天幾堂）" onclick="editAttendanceLessons(\'' + r.id + '\',' + n + ',\'' + token + '\')">' + n + '堂</button>' +
-        '<button class="hist-edit" title="改日期" onclick="editAttendanceDate(\'' + r.id + '\',\'' + r.lesson_date + '\',\'' + token + '\')">✏️</button>' +
-        '<button class="hist-del" title="刪除此記錄" onclick="deleteAttendance(\'' + r.id + '\',\'' + token + '\')">🗑</button>' +
-      '</div>';
+      return '<tr><td><span class="lesson-badge">' + badge + '</span></td><td>' + dateStr + '</td><td style="white-space:nowrap;">' + opCellHtml(r) + '</td></tr>';
     }).join('');
-    return { html: html, lessons: tot, count: list.length };
-  }
-  function upcomingRowsHtml(dates) {
-    return dates.map(function(dateKey) {
-      const isToday = dateKey === today;
-      return '<div class="hist-row">' +
-        '<span class="hist-num">⏳ 未完成</span>' +
-        '<span class="hist-date">' + fmtDateOnly(dateKey) + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
-      '</div>';
-    }).join('');
+    return '<table class="schedule-table"><thead><tr><th>堂次</th><th>上課日期</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  const cur = rowsHtml(current);
-  let listHtml = current.length ? cur.html : '';
-  listHtml += upcomingRowsHtml(upcomingDates);
-  if (!current.length && !upcomingDates.length) listHtml = '<div class="empty-attend">本輪課程尚無上課記錄</div>';
-  if (history.length) {
-    const his = rowsHtml(history);
-    listHtml += '<details style="margin-top:10px;">' +
-      '<summary style="cursor:pointer;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:6px 0;">📜 過往課程記錄（' + his.count + ' 天，點此展開）</summary>' +
-      '<div style="margin-top:6px;opacity:0.8;">' + his.html + '</div>' +
+  const html =
+    '<div style="color:var(--gold-deep);font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;padding:4px 0;">📖 本期課程' + (currentMergedDates.length ? '（共 ' + currentMergedDates.length + ' 堂）' : '') + '</div>' +
+    '<div style="margin-top:8px;">' + courseTableHtml() + '</div>' +
+    '<details style="margin-top:12px;">' +
+      '<summary style="cursor:pointer;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:4px 0;">📅 過去的課程記錄' + (history.length ? '（' + history.length + ' 筆）' : '') + '</summary>' +
+      '<div style="margin-top:6px;opacity:0.8;">' + (history.length ? historyTableHtml() : '<div class="empty-attend">尚無過去的課程記錄</div>') + '</div>' +
     '</details>';
-  }
 
-  document.getElementById('attendHistList').innerHTML = listHtml;
-  document.getElementById('attendHistSummary').textContent = '本輪共 ' + cur.lessons + ' 堂（' + (cur.count + upcomingDates.length) + ' 天，含 ' + upcomingDates.length + ' 天未上）';
+  document.getElementById('attendHistList').innerHTML = html;
 }
 
 // 改某一天的堂數（例如一天上 2 堂）
