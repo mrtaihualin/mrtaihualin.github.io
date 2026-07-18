@@ -276,7 +276,7 @@ serve(async (req) => {
           let replyText;
           if (error) replyText = '⚠️ 確認失敗：' + error.message;
           else if (!count) replyText = 'ℹ️ 這筆通知可能已經確認過了';
-          else replyText = '✅ 已確認收到，老師會盡快到網站按「確認刪除」處理 Calendar';
+          else replyText = '✅ 已確認收到，老師會盡快處理';
           await replyLine(channelToken, event.replyToken, replyText);
         }
 

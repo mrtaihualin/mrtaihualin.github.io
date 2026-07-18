@@ -794,26 +794,15 @@
     <label class="settings-label">日期</label>
     <input class="settings-input" id="addClassDayDate" type="date" />
 
-    <div class="pay-form-row">
-      <div style="flex:1;">
-        <label class="settings-label">開始時間（泰國時間）</label>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <select class="settings-input" id="addClassDayStart_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addClassDayStart')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-          <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-          <select class="settings-input" id="addClassDayStart_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addClassDayStart')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-        </div>
-        <input type="hidden" id="addClassDayStart" value="" />
-      </div>
-      <div style="flex:1;">
-        <label class="settings-label">結束時間</label>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <select class="settings-input" id="addClassDayEnd_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addClassDayEnd')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-          <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-          <select class="settings-input" id="addClassDayEnd_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addClassDayEnd')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-        </div>
-        <input type="hidden" id="addClassDayEnd" value="" />
-      </div>
+    <!-- 2026-07-18 改（Lin 要求）：拿掉「結束時間」欄位——每堂課固定算 1 小時，不用手動選結束時間，
+         程式自動用開始時間 +1 小時當結束時間（見 checkAddClassDayConflict 的 addOneHourTimeStr） -->
+    <label class="settings-label">開始時間（泰國時間，固定算 1 小時一堂）</label>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select class="settings-input" id="addClassDayStart_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addClassDayStart')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
+      <select class="settings-input" id="addClassDayStart_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addClassDayStart')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
     </div>
+    <input type="hidden" id="addClassDayStart" value="" />
 
     <label style="display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:0.88rem;color:var(--ink);margin:10px 0;">
       <input type="checkbox" id="addClassDayRecurring" onchange="onAddClassDayRecurringChange()" />
@@ -964,7 +953,7 @@
     <!-- 2026-07-18 加（Lin 要求）：「🔗 連結」「📦 封存」從外面主要按鈕列移進編輯視窗裡 -->
     <div style="margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn-sm" id="editModalCopyBtn" style="background:var(--gold-light);color:var(--gold-deep);" onclick="copyStudentLink(editingToken,'editModalCopyBtn')">🔗 複製學生連結</button>
-      <button class="btn-sm btn-sm-delete" onclick="deleteStudent(editingToken)" title="封存成舊生（不是永久刪除，之後可在舊生列表恢復）">📦 封存這位學生</button>
+      <button class="btn-sm" style="background:var(--gold-light);color:var(--gold-deep);" onclick="deleteStudent(editingToken)" title="封存成舊生（不是永久刪除，之後可在舊生列表恢復）">📦 封存這位學生</button>
     </div>
 
     <div class="modal-footer">
@@ -1846,7 +1835,6 @@ async function openAddClassDayModal(token, prefill) {
   document.getElementById('addClassDayStudentLabel').textContent = '學生：' + (s ? s.name : token);
   document.getElementById('addClassDayDate').value = (prefill && prefill.date) || '';
   setTimeDropdown('addClassDayStart', (prefill && prefill.time) || '');
-  resetTimeDropdown('addClassDayEnd');
   document.getElementById('addClassDayRecurring').checked = false;
   document.getElementById('addClassDayUntil').value = '';
   document.getElementById('addClassDayUntilWrap').style.display = 'none';
@@ -1908,15 +1896,14 @@ async function checkAddClassDayConflict() {
   if (!token) return;
   const dateVal = document.getElementById('addClassDayDate').value;
   const startVal = document.getElementById('addClassDayStart').value.trim();
-  const endValRaw = document.getElementById('addClassDayEnd').value.trim();
   const recurring = document.getElementById('addClassDayRecurring').checked;
   const untilVal = document.getElementById('addClassDayUntil').value;
   const resultEl = document.getElementById('addClassDayResult');
 
   if (!dateVal) { alert('請選擇日期'); return; }
   if (!isValidTimeStr(startVal)) { alert('⚠️ 開始時間格式不對，請用 HH:MM，例如 20:00'); return; }
-  if (endValRaw && !isValidTimeStr(endValRaw)) { alert('⚠️ 結束時間格式不對，請用 HH:MM，例如 21:00'); return; }
-  const endTime = endValRaw || addOneHourTimeStr(startVal);
+  // 2026-07-18 改（Lin 要求）：不用再選結束時間，固定算開始時間 +1 小時
+  const endTime = addOneHourTimeStr(startVal);
 
   const startAbs = teacherTimeToDate(dateVal, startVal);
   const endAbs = teacherTimeToDate(dateVal, endTime);
@@ -2051,7 +2038,6 @@ async function confirmAddClassDay() {
     _addClassDayPending = null;
     document.getElementById('addClassDayDate').value = '';
     resetTimeDropdown('addClassDayStart');
-    resetTimeDropdown('addClassDayEnd');
     document.getElementById('addClassDayRecurring').checked = false;
     document.getElementById('addClassDayUntil').value = '';
     document.getElementById('addClassDayUntilWrap').style.display = 'none';
@@ -3418,20 +3404,17 @@ function selectStudent(token) {
       '<button class="btn-start-class" onclick="recordClass(\'' + t + '\')">🔴 開始錄影</button>' +
       '<button class="btn-start-class" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));" onclick="recordAttendance(\'' + t + '\')">✅ 記錄今日上課</button>' +
     '</div>' +
-    // 2026-07-18 改（Lin 要求）：主要按鈕列只留 5 顆固定順序、統一米色（跟 btn-sm-copy 同一套顏色）：
-    // 📝開啟課堂筆記／👁預覽／📁Drive／✏️編輯／💳收費。其餘按鈕排在後面（沒特別要求動的先保留原樣）——
-    // ⬆️上傳 併進下面「📚 教材連結」卡片、🔗連結／📦封存 移進 ✏️編輯 視窗裡（見 editMeetModal）
+    // 2026-07-18 改（Lin 要求）：主要按鈕列只留 5 顆固定順序、統一米色：
+    // 📝開啟課堂筆記／👁預覽／📁Drive／✏️編輯／💳收費。
+    // ⬆️上傳 併進「📚 教材連結」卡片、🔗連結／📦封存 移進 ✏️編輯 視窗（見 editMeetModal）
+    // 📅上課記錄／➕加課堂時間 移到下面「📅 下一堂課」小卡片裡（跟學生頁「下一堂課」按鈕列同一套排法）
+    // 🔧補課堂連結／🔄同步LINE選單 拿掉（補連結可以直接用 ✏️編輯 手動貼 Meet 連結，效果一樣）
     '<div class="stu-acc-actions">' +
       '<button class="btn-sm" style="background:var(--gold-light);color:var(--gold-deep);" onclick="openStudentNotesDoc(\'' + t + '\')">📝 開啟課堂筆記</button>' +
       '<button class="btn-sm" style="background:var(--gold-light);color:var(--gold-deep);" onclick="previewStudent(\'' + t + '\')">👁 預覽</button>' +
       '<button class="btn-sm" style="background:var(--gold-light);color:var(--gold-deep);" onclick="openStudentDriveFolder(\'' + (s.name||'').replace(/'/g,"\\'") + '\')">📁 Drive</button>' +
       '<button class="btn-sm" style="background:var(--gold-light);color:var(--gold-deep);" onclick="openEditMeetModal(\'' + t + '\')">✏️ 編輯</button>' +
       '<button class="btn-sm" style="background:var(--gold-light);color:var(--gold-deep);" onclick="openPaymentModal(\'' + t + '\')">💳 收費</button>' +
-      '<button class="btn-sm" style="background:var(--gold-light);color:var(--gold-deep);" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
-      '<button class="btn-sm" style="background:var(--gold-light);color:var(--gold-deep);" onclick="openAddClassDayModal(\'' + t + '\')" title="加一個上課時間（單次，或每週固定）">➕ 加課堂時間</button>' +
-      (!s.meet ? '<button class="btn-sm" style="background:#b45309;color:#fff;" onclick="repairMeet(\'' + t + '\')">🔧 補課堂連結</button>' : '') +
-      // 2026-07-17 加：只有已連結 LINE 的學生才需要（顯示這顆按鈕不代表選單一定切壞了，是給「切壞了」的情況用的補救按鈕）
-      (s.line_user_id ? '<button class="btn-sm" style="background:#06C755;color:#fff;" onclick="syncLineMenu(\'' + t + '\')" title="學生選單卡在一般版（體驗課）沒切成學生版（我的教室）時，按這顆手動同步">🔄 同步 LINE 選單</button>' : '') +
     '</div>' +
     '<div class="card" style="margin-top:12px;padding:14px;">' +
       '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;">📚 教材連結</div>' +
@@ -3440,7 +3423,7 @@ function selectStudent(token) {
       '<div style="display:flex;gap:8px;">' +
         '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;flex:1;" onclick="saveMaterialLink(\'' + t + '\')">💾 儲存連結</button>' +
         // 2026-07-18 移過來（Lin 要求）：以前⬆️上傳單獨在主按鈕列，現在跟教材連結放一起（都是「給學生的課堂資料」）
-        '<button class="btn-sm" style="background:#0f766e;color:#fff;flex:1;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳檔案</button>' +
+        '<button class="btn-sm" style="background:var(--gold-deep);color:#fff;flex:1;" onclick="openUploadModal(\'' + t + '\')">⬆️ 上傳檔案</button>' +
       '</div>' +
       '<div id="matList-' + t + '" style="margin-top:10px;"></div>' +
     '</div>' +
@@ -5631,9 +5614,8 @@ async function ackTeacherCancel(token, id) {
       body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到取消通知（' + (res.data[0].original_date || '-') + '），可以到網站按「確認刪除」了' }),
     });
   } catch (e) { /* 通知老師失敗不影響學生這邊已經確認成功 */ }
-  // 2026-07-18 加（Lin 要求）：以前這裡按完「我知道了」，通知卡片直接悄悄消失，完全沒有
-  // 任何回饋，學生會搞不清楚到底按到了沒有——現在跳出確認訊息。
-  alert('✅ 已確認收到，老師會盡快到網站按「確認刪除」處理 Calendar');
+  // 2026-07-18 加了又拿掉：Lin 確認網站這裡不用加提示訊息，維持原本按完就悄悄消失的行為。
+  // 要改的是 LINE 那邊的回覆文字（見 supabase/functions/line-webhook/index.ts 的 ack_teacher_cancel）
   await loadTeacherCancelAckBanner(token);
 }
 
@@ -6975,8 +6957,16 @@ async function loadTeacherNextClassBox(token) {
       } else if (anchor.getTime() < Date.now()) { anchor = null; }
       if (anchor) { const p = formatInTz(anchor, TEACHER_TZ); lessonDate = p.dateStr; startTimeStr = p.timeStr; }
     }
+    // 2026-07-18 改（Lin 要求，看截圖比對）：按鈕全部用跟學生頁「下一堂課」一模一樣的金色漸層
+    // （不要外框透明/不同色，5 顆通通統一）
+    var TEACHER_NEXTCLASS_BTN_STYLE = 'background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;';
     if (!lessonDate) {
-      el.innerHTML = '<div class="card" style="padding:16px 18px;margin-top:12px;"><h2>📅 下一堂課</h2><div style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">目前沒有排定下一堂課</div></div>';
+      el.innerHTML = '<div class="card" style="padding:16px 18px;margin-top:12px;"><h2>📅 下一堂課</h2>' +
+        '<div style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">目前沒有排定下一堂課</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
+          '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openAddClassDayModal(\'' + t + '\')" title="加一個上課時間（單次，或每週固定）">➕ 加課堂時間</button>' +
+        '</div></div>';
       _teacherNextClassCtx[token] = null;
       return;
     }
@@ -6994,9 +6984,13 @@ async function loadTeacherNextClassBox(token) {
         (timeStr ? '<div style="font-size:0.9rem;color:var(--ink-soft);margin-top:2px;">' + escHtml(timeStr) + '</div>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
-        '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="initiateTeacherReschedule(\'' + t + '\')">🔄 改期</button>' +
-        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:#b45309;" onclick="teacherCancelClassNow(\'' + t + '\')">❌ 取消</button>' +
-        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openPermanentChangeModal(\'' + t + '\')">📌 固定</button>' +
+        // 2026-07-18 加（Lin 要求）：跟學生頁「下一堂課」按鈕列同一套排法+同一套顏色——
+        // 📅上課記錄放第一顆，➕加課堂時間也一起放這裡（不是丟在上面主要按鈕列），全部統一金色漸層
+        '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
+        '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="initiateTeacherReschedule(\'' + t + '\')">🔄 改期</button>' +
+        '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="teacherCancelClassNow(\'' + t + '\')">❌ 取消</button>' +
+        '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openPermanentChangeModal(\'' + t + '\')">📌 固定</button>' +
+        '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openAddClassDayModal(\'' + t + '\')" title="加一個上課時間（單次，或每週固定）">➕ 加課堂時間</button>' +
       '</div>' +
     '</div>';
   } catch (e) {
