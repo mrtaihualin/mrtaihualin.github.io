@@ -88,6 +88,13 @@ serve(async (req) => {
     }
     const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
 
+    // 2026-07-18 加（Lin 要求）：只提醒「今天真的有排課、而且今天就是最後一堂」的學生
+    // 不再是「隨便哪天堂數變低就發」— 這樣訊息才會準確對到「今天」，跟網站上的「今天是最後一堂」banner 邏輯一致
+    const tz = Deno.env.get('CLASS_TIMEZONE') || 'Asia/Bangkok';
+    const todayIso = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+    const { data: todaySched } = await supabase.from('classroom_schedule').select('token').eq('lesson_date', todayIso);
+    const todayTokens = new Set((todaySched || []).map((r) => r.token));
+
     // 2026-07-15 加（Lin 要求）：เรียกได้ 2 แบบ —
     //   (1) cron วันละครั้ง ไม่ส่ง body มา → เช็คนักเรียนทุกคนที่ผูก LINE ไว้ (เหมือนเดิม)
     //   (2) เรียกจาก classroom/index.html ทันทีหลังบันทึกเข้าเรียน (ส่ง {token} มา) → เช็คแค่คนนั้นคนเดียว
@@ -105,9 +112,11 @@ serve(async (req) => {
       .not('line_user_id', 'is', null);
     if (bodyToken) studentsQuery = studentsQuery.eq('token', bodyToken);
 
-    const { data: students, error: stuErr } = await studentsQuery;
+    const { data: studentsRaw, error: stuErr } = await studentsQuery;
     if (stuErr) return new Response(JSON.stringify({ error: stuErr.message }), { status: 500 });
-    if (!students || !students.length) return new Response(JSON.stringify({ ok: true, checked: 0 }), { status: 200 });
+    // 2026-07-18 加：เดิมเช็คทุกคน ตอนนี้กรองเหลือเฉพาะคนที่มีคาบเรียนวันนี้จริงๆ
+    const students = (studentsRaw || []).filter((s) => todayTokens.has(s.token));
+    if (!students.length) return new Response(JSON.stringify({ ok: true, checked: 0, note: 'no students have class today' }), { status: 200 });
 
     let sent = 0, errCount = 0, checked = 0;
 
@@ -129,7 +138,8 @@ serve(async (req) => {
       if (!curPayment || curPayment.low_quota_notified) continue; // ส่งไปแล้วรอบนี้ ไม่ส่งซ้ำ
 
       const remain = q.remain < 0 ? 0 : q.remain;
-      const messageText = '⏰ 提醒：你這一期的泰語課只剩 ' + remain + ' 堂囉！記得跟老師約續課時間，才不會中斷學習喔 😊';
+      // 2026-07-18 改（Lin 要求）：改成「今天是最後一堂」的措辭，因為現在只在今天真的有排課時才會發
+      const messageText = '☀️ 早安！提醒你：今天的泰語課是這一期最後一堂課囉！記得跟老師約續課時間，才不會中斷學習喔 😊';
 
       // 2026-07-15（รอบ 4, Lin ถาม）："ทำให้ส่งได้เหมือนกัน/ไม่ได้เหมือนกัน" (ส่งพร้อมกันจริงๆ ทั้ง 2 ฝั่ง)
       // ทำแบบ "ทั้งคู่พังพร้อมกันเป๊ะๆ" ไม่มีทางเป็นไปได้ 100% เพราะเป็นการยิง LINE 2 ครั้งแยกกัน
@@ -143,7 +153,7 @@ serve(async (req) => {
         let teacherOk = true;
         if (teacherUserId) {
           try {
-            await pushLine(channelToken, teacherUserId, '📋 即將發送提醒給 ' + (s.name || s.token) + '：\n' + messageText);
+            await pushLine(channelToken, teacherUserId, '📋 今天要發「最後一堂課」提醒給 ' + (s.name || s.token) + '：\n' + messageText);
           } catch (e) {
             teacherOk = false;
             console.warn('[low-quota-cron] ส่งให้ครูไม่สำเร็จ — ยังไม่ส่งหานักเรียน รอลองใหม่พรุ่งนี้:', e);

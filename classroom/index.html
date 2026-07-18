@@ -4272,9 +4272,19 @@ async function loadStudentQuota(token) {
         sumEl.innerHTML = '<div style="background:#faf7f0;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--ink-muted);">剩餘堂數：尚未購課（老師確認繳費後顯示）</div>';
       }
     }
+    // 2026-07-18 改（Lin 要求）：原本 remain<=1 每次進網站都會看到提醒，
+    // 改成「今天真的有排課 + 今天就是最後一堂」才顯示，語意更準確
     var banEl = document.getElementById('quotaBanner');
     if (banEl && q.hasCourse && q.remain <= 1) {
-      banEl.innerHTML = '<div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">⏰ 課程即將上完！本輪剩餘 ' + remain + ' 堂，記得提早續課喔～</div>';
+      try {
+        var sched = (await sb.rpc('get_student_schedule', { p_token: token })).data || [];
+        var now = new Date();
+        var todayLocal = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        var hasClassToday = sched.some(function(r) { return r.lesson_date === todayLocal; });
+        if (hasClassToday) {
+          banEl.innerHTML = '<div style="background:#fff7ed;border:1.5px solid #f59e0b;border-radius:12px;padding:13px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:#b45309;font-weight:700;">⏰ 今天是這一期最後一堂課囉！記得跟老師約續課時間，才不會中斷學習喔 😊</div>';
+        }
+      } catch (e2) {}
     }
   } catch (e) {}
 }

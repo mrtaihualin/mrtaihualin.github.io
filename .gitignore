@@ -28,3 +28,6 @@ node_modules/
 CLAUDE.md
 assets/testimonials/IMG_C989003FFDD6-1.jpeg
 _archive/
+
+# ไฟล์ debug จาก AI sandbox หลุดมาติด repo — กันไม่ให้กลับมาอีก
+check_old_tmp*
