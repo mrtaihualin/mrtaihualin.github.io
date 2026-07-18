@@ -187,11 +187,6 @@
   .rec-card-btns .btn-record { flex: 1; justify-content: center; font-size: 0.8rem; padding: 8px 6px; border-radius: 8px; }
   @media(max-width:480px){ .rec-grid { grid-template-columns: 1fr; } }
 
-  /* 2026-07-18 加（Lin 要求）：學生頁「今日學習感想」跟「課堂資料下載」兩張卡片並排各半版 */
-  .card-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .card-row-2 > .card { margin-bottom: 0; }
-  @media(max-width:600px){ .card-row-2 { grid-template-columns: 1fr; } }
-
   .radio-group { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
   .radio-group label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 0.88rem; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-soft); }
   .radio-group input[type="radio"] { accent-color: var(--gold); width: 16px; height: 16px; }
@@ -4086,34 +4081,31 @@ async function renderStudentView() {
         : '<div class="meet-btn" style="opacity:1;cursor:default;background:var(--gold-light);color:var(--gold-deep);">' + meetSVG + ' 課堂連結準備中…</div>' +
           '<p class="meet-link-text">老師正在整理你的課堂連結，稍後重新整理就會看到（太久沒出現可用 LINE 提醒老師）</p>') +
     '</div>' +
+    // 2026-07-18 改（Lin 要求）：「🔁 老師提議新時間」移到「下一堂課」上面，最優先看到
+    '<div id="pendingRequestCard"></div>' +
     '<div class="card" id="nextClassCard">' +
       '<h2>📅 下一堂課</h2>' +
       '<div id="nextClassInfo"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
       buildLineActionBtn(token, student) +
     '</div>' +
-    '<div id="pendingRequestCard"></div>' +
-    // 2026-07-18 改（Lin 要求）：「今日學習感想」跟「課堂資料下載」並排各半版（手機版自動變回上下疊）
-    '<div class="card-row-2">' +
-      '<div class="card">' +
-        '<h2>💬 今日學習感想</h2>' +
-        '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">今天學了什麼？寫下你的感想讓老師知道 ✨</p>' +
-        '<textarea id="feedbackText" placeholder="例：今天學了聲調，สวัสดี 的用法還不太確定…" style="width:100%;min-height:88px;border-radius:9px;border:1px solid var(--border);padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;"></textarea>' +
-        '<button class="btn-gold" onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;">送出感想 ✉️</button>' +
-        '<div id="feedbackStatus" style="margin-top:8px;font-size:0.82rem;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);min-height:18px;"></div>' +
-      '</div>' +
-      // 2026-07-18 改（Lin 要求）：拿掉這裡直接列出檔案清單/下載鈕，只留一顆進 Google Drive 資料夾的按鈕
-      '<div class="card">' +
-        '<h2>📂 課堂資料下載</h2>' +
-        '<div id="driveFolderLink"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
-      '</div>' +
-    '</div>' +
-    // 2026-07-18 改（Lin 要求）：整張卡做成下拉（<details>，預設收合），並多列出「所有還沒上完的排定課堂」
+    // 2026-07-18 改（Lin 要求）：卡片標題改回一般 <h2>（不是整張卡片下拉），
+    // dropdown 改放在裡面的「本期課程」子標題，內容合併「已完成」+「還沒上（預期）」成一份清單
     '<div class="card">' +
-      '<details>' +
-        '<summary style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold-bright);font-family:\'Noto Sans TC\',sans-serif;cursor:pointer;">📅 我的課程記錄</summary>' +
-        '<div id="quotaSummary" style="margin-top:14px;"></div>' +
-        '<div id="scheduleList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
-      '</details>' +
+      '<h2>📅 我的課程記錄</h2>' +
+      '<div id="quotaSummary"></div>' +
+      '<div id="scheduleList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+    '</div>' +
+    // 2026-07-18 改（Lin 要求）：「今日學習感想」「課堂資料下載」改回單欄上下排列（取消並排半版）
+    '<div class="card">' +
+      '<h2>💬 今日學習感想</h2>' +
+      '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">今天學了什麼？寫下你的感想讓老師知道 ✨</p>' +
+      '<textarea id="feedbackText" placeholder="例：今天學了聲調，สวัสดี 的用法還不太確定…" style="width:100%;min-height:88px;border-radius:9px;border:1px solid var(--border);padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;"></textarea>' +
+      '<button class="btn-gold" onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;">送出感想 ✉️</button>' +
+      '<div id="feedbackStatus" style="margin-top:8px;font-size:0.82rem;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);min-height:18px;"></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h2>📂 課堂資料下載</h2>' +
+      '<div id="driveFolderLink"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
     '</div>' +
     '<div class="card">' +
       '<h2>💰 繳費 & 收據</h2>' +
@@ -4400,93 +4392,91 @@ async function loadStudentPayments(token) {
   } catch (e) { el.innerHTML = ''; }
 }
 
-// 2026-07-18 改（Lin 要求）：以前資料為空就直接顯示「尚無上課記錄」然後 return，
-// 完全不會列出「未來排定的課堂」（就算老師已經排好課、只是還沒上過）——現在拆開兩段，
-// 「未來排定課堂」永遠會嘗試載入，不受有沒有上課記錄影響。
+// 2026-07-18 改（Lin 要求二次調整）：拆成 2 個 dropdown ——
+// 1) 「本期課程」：合併本輪已經上過（✅已完成）+ 還沒上、但已排定（⏳未完成／預期）成同一份清單，只顯示 上課日期／狀態
+// 2) 「過去的課程記錄」：跟以前的「過往課程記錄」一樣，只列本輪起算日之前、已經上過的舊紀錄
 async function loadStudentSchedule(token) {
   const el = document.getElementById('scheduleList');
   if (!el) return;
   const dayZh = ['日','一','二','三','四','五','六'];
-
-  // 第一段：所有還沒上的排定課堂（來自老師端同步的 Google Calendar，跟「下一堂課」同一個 RPC，
-  // 差別是這裡列「全部」不是只列最近一堂）
-  var upcomingHtml = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">載入中…</div>';
+  function fmtDate(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '（週' + dayZh[d.getDay()] + '）';
+  }
   try {
     const s = (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
     const studentTz = s && s.pending_student_tz;
-    const schedRes = await sb.rpc('get_student_schedule', { p_token: token });
-    const sched = (schedRes.data || []).slice().sort(function(a, b) { return a.lesson_date < b.lesson_date ? -1 : 1; });
-    if (sched.length) {
-      const rows = sched.map(function(r) {
-        const startTimeStr = (r.start_time && /^\d{1,2}:\d{2}/.test(r.start_time)) ? r.start_time : null;
-        let dLabelDate, timeStr;
-        if (startTimeStr && studentTz) {
-          const abs = teacherTimeToDate(r.lesson_date, startTimeStr);
-          const conv = formatInTz(abs, studentTz);
-          dLabelDate = new Date(conv.dateStr + 'T00:00:00');
-          timeStr = conv.timeStr;
-        } else {
-          dLabelDate = new Date(r.lesson_date + 'T00:00:00');
-          timeStr = startTimeStr || '-';
-        }
-        const dateStr = dLabelDate.getFullYear() + '/' + String(dLabelDate.getMonth() + 1).padStart(2, '0') + '/' + String(dLabelDate.getDate()).padStart(2, '0') + '（週' + dayZh[dLabelDate.getDay()] + '）';
-        return '<tr><td>' + dateStr + '</td><td>' + timeStr + '</td></tr>';
-      }).join('');
-      upcomingHtml = '<table class="schedule-table"><thead><tr><th>上課日期</th><th>時間</th></tr></thead><tbody>' + rows + '</tbody></table>';
-    } else {
-      upcomingHtml = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">目前沒有排定中的課堂</div>';
-    }
-  } catch (e1) {
-    upcomingHtml = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">未來課堂載入失敗</div>';
-  }
-  const upcomingSection = '<div style="font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:0.82rem;color:var(--gold-deep);letter-spacing:0.5px;margin:2px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">🔜 未來排定課堂</div>' + upcomingHtml;
 
-  // 第二段：已經上過的課（跟以前一樣，本輪 vs 過往摺疊）
-  try {
-    const attRes = await sb.rpc('get_student_attendance', { p_token: token });
-    const data = attRes.data;
-    if (attRes.error || !data || data.length === 0) {
-      el.innerHTML = upcomingSection +
-        '<div style="font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:0.82rem;color:var(--gold-deep);letter-spacing:0.5px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">📖 已上課紀錄</div>' +
-        '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無上課記錄</div>';
-      return;
-    }
-    // 取「本輪起算日」（與剩餘堂數同一基準）→ 起算日前=舊課程，收進「過往記錄」摺疊區
-    const payRes = await sb.rpc('get_student_payments', { p_token: token });
-    const q = computeCurrentCourse(payRes.data || [], data);
+    const [attRes, schedRes, payRes] = await Promise.all([
+      sb.rpc('get_student_attendance', { p_token: token }),
+      sb.rpc('get_student_schedule', { p_token: token }),
+      sb.rpc('get_student_payments', { p_token: token }),
+    ]);
+    const attData = attRes.data || [];
+    const schedData = schedRes.data || [];
+    const q = computeCurrentCourse(payRes.data || [], attData);
     const startDay = q.start || null;
-    const current = startDay ? data.filter(function(r){ return r.lesson_date >= startDay; }) : data;
-    const history = startDay ? data.filter(function(r){ return r.lesson_date < startDay; }) : [];
 
-    function rowsHtml(list) {
+    const attCurrent = startDay ? attData.filter(function(r) { return r.lesson_date >= startDay; }) : attData;
+    const attHistory = startDay ? attData.filter(function(r) { return r.lesson_date < startDay; }) : [];
+
+    // 未來排定但還沒上的課（用學生自己的時區換算日期，跟「下一堂課」同一套邏輯，避免半夜跨日算錯天）
+    function upcomingDateKey(r) {
+      const startTimeStr = (r.start_time && /^\d{1,2}:\d{2}/.test(r.start_time)) ? r.start_time : null;
+      if (startTimeStr && studentTz) {
+        const abs = teacherTimeToDate(r.lesson_date, startTimeStr);
+        return formatInTz(abs, studentTz).dateStr;
+      }
+      return r.lesson_date;
+    }
+    const attCurrentDates = {};
+    attCurrent.forEach(function(r) { attCurrentDates[r.lesson_date] = true; });
+    const upcoming = schedData
+      .map(function(r) { return upcomingDateKey(r); })
+      .filter(function(dateKey) { return (!startDay || dateKey >= startDay) && !attCurrentDates[dateKey]; });
+
+    // 合併「本期課程」：已完成（attCurrent）+ 未完成／預期（upcoming），去重＋依日期排序
+    const merged = {};
+    attCurrent.forEach(function(r) { merged[r.lesson_date] = true; });
+    upcoming.forEach(function(dateKey) { if (!(dateKey in merged)) merged[dateKey] = false; });
+    const mergedDates = Object.keys(merged).sort();
+
+    function courseTableHtml() {
+      if (!mergedDates.length) {
+        return '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">本期課程尚無資料</div>';
+      }
+      const rows = mergedDates.map(function(dateKey) {
+        const done = merged[dateKey];
+        const statusLabel = done ? '✅ 已完成' : '⏳ 未完成';
+        return '<tr><td>' + fmtDate(dateKey) + '</td><td>' + statusLabel + '</td></tr>';
+      }).join('');
+      return '<table class="schedule-table"><thead><tr><th>上課日期</th><th>狀態</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+
+    function historyTableHtml() {
       let cum = 0;
-      return list.map(function(r) {
+      const rows = attHistory.map(function(r) {
         const n = r.lessons || 1;
         const start = cum + 1, end = cum + n; cum = end;
         const badge = n > 1 ? ('第 ' + start + '–' + end + ' 堂') : ('第 ' + start + ' 堂');
-        const d = new Date(r.lesson_date + 'T12:00:00');
-        const dateStr = d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '（週' + dayZh[d.getDay()] + '）' + (n > 1 ? ' · ' + n + ' 堂' : '');
+        const dateStr = fmtDate(r.lesson_date) + (n > 1 ? ' · ' + n + ' 堂' : '');
         return '<tr><td><span class="lesson-badge">' + badge + '</span></td><td>' + dateStr + '</td></tr>';
       }).join('');
-    }
-    function tableHtml(list) {
-      return '<table class="schedule-table"><thead><tr><th>堂次</th><th>上課日期</th></tr></thead><tbody>' + rowsHtml(list) + '</tbody></table>';
+      return '<table class="schedule-table"><thead><tr><th>堂次</th><th>上課日期</th></tr></thead><tbody>' + rows + '</tbody></table>';
     }
 
-    let html = upcomingSection +
-      '<div style="font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:0.82rem;color:var(--gold-deep);letter-spacing:0.5px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">📖 已上課紀錄</div>' +
-      (current.length
-        ? tableHtml(current)
-        : '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">本輪課程尚無上課記錄</div>');
-    if (history.length) {
-      html += '<details style="margin-top:12px;">' +
-        '<summary style="cursor:pointer;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:4px 0;">📜 過往課程記錄（' + history.length + ' 筆，點此展開）</summary>' +
-        '<div style="margin-top:6px;opacity:0.8;">' + tableHtml(history) + '</div>' +
+    const html =
+      '<details>' +
+        '<summary style="cursor:pointer;color:var(--gold-deep);font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;padding:4px 0;">📖 本期課程' + (mergedDates.length ? '（共 ' + mergedDates.length + ' 堂）' : '') + '</summary>' +
+        '<div style="margin-top:8px;">' + courseTableHtml() + '</div>' +
+      '</details>' +
+      '<details style="margin-top:12px;">' +
+        '<summary style="cursor:pointer;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:4px 0;">📅 過去的課程記錄' + (attHistory.length ? '（' + attHistory.length + ' 筆）' : '') + '</summary>' +
+        '<div style="margin-top:6px;opacity:0.8;">' + (attHistory.length ? historyTableHtml() : '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無過去的課程記錄</div>') + '</div>' +
       '</details>';
-    }
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = upcomingSection + '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
+    el.innerHTML = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
   }
 }
 
