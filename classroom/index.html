@@ -187,6 +187,11 @@
   .rec-card-btns .btn-record { flex: 1; justify-content: center; font-size: 0.8rem; padding: 8px 6px; border-radius: 8px; }
   @media(max-width:480px){ .rec-grid { grid-template-columns: 1fr; } }
 
+  /* 2026-07-18 加（Lin 要求）：學生頁「今日學習感想」跟「課堂資料下載」兩張卡片並排各半版 */
+  .card-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card-row-2 > .card { margin-bottom: 0; }
+  @media(max-width:600px){ .card-row-2 { grid-template-columns: 1fr; } }
+
   .radio-group { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
   .radio-group label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 0.88rem; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-soft); }
   .radio-group input[type="radio"] { accent-color: var(--gold); width: 16px; height: 16px; }
@@ -4087,22 +4092,28 @@ async function renderStudentView() {
       buildLineActionBtn(token, student) +
     '</div>' +
     '<div id="pendingRequestCard"></div>' +
-    '<div class="card">' +
-      '<h2>💬 今日學習感想</h2>' +
-      '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">今天學了什麼？寫下你的感想讓老師知道 ✨</p>' +
-      '<textarea id="feedbackText" placeholder="例：今天學了聲調，สวัสดี 的用法還不太確定…" style="width:100%;min-height:88px;border-radius:9px;border:1px solid var(--border);padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;"></textarea>' +
-      '<button class="btn-gold" onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;">送出感想 ✉️</button>' +
-      '<div id="feedbackStatus" style="margin-top:8px;font-size:0.82rem;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);min-height:18px;"></div>' +
+    // 2026-07-18 改（Lin 要求）：「今日學習感想」跟「課堂資料下載」並排各半版（手機版自動變回上下疊）
+    '<div class="card-row-2">' +
+      '<div class="card">' +
+        '<h2>💬 今日學習感想</h2>' +
+        '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">今天學了什麼？寫下你的感想讓老師知道 ✨</p>' +
+        '<textarea id="feedbackText" placeholder="例：今天學了聲調，สวัสดี 的用法還不太確定…" style="width:100%;min-height:88px;border-radius:9px;border:1px solid var(--border);padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;"></textarea>' +
+        '<button class="btn-gold" onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;">送出感想 ✉️</button>' +
+        '<div id="feedbackStatus" style="margin-top:8px;font-size:0.82rem;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);min-height:18px;"></div>' +
+      '</div>' +
+      // 2026-07-18 改（Lin 要求）：拿掉這裡直接列出檔案清單/下載鈕，只留一顆進 Google Drive 資料夾的按鈕
+      '<div class="card">' +
+        '<h2>📂 課堂資料下載</h2>' +
+        '<div id="driveFolderLink"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+      '</div>' +
     '</div>' +
+    // 2026-07-18 改（Lin 要求）：整張卡做成下拉（<details>，預設收合），並多列出「所有還沒上完的排定課堂」
     '<div class="card">' +
-      '<h2>📅 我的課程記錄</h2>' +
-      '<div id="quotaSummary"></div>' +
-      '<div id="scheduleList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
-    '</div>' +
-    '<div class="card">' +
-      '<h2>📂 課堂資料下載</h2>' +
-      '<div id="filesList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
-      '<div id="driveFolderLink" style="margin-top:12px;"></div>' +
+      '<details>' +
+        '<summary style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold-bright);font-family:\'Noto Sans TC\',sans-serif;cursor:pointer;">📅 我的課程記錄</summary>' +
+        '<div id="quotaSummary" style="margin-top:14px;"></div>' +
+        '<div id="scheduleList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+      '</details>' +
     '</div>' +
     '<div class="card">' +
       '<h2>💰 繳費 & 收據</h2>' +
@@ -4110,11 +4121,6 @@ async function renderStudentView() {
       '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
       '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 選幣別 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
       '<div id="payHistory" style="margin-top:14px;"></div>' +
-    '</div>' +
-    '<div class="card">' +
-      '<h2>🔗 連結遊戲帳號</h2>' +
-      '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">連結後，老師可以看到你在小遊戲裡的練習狀況，備課更準。</p>' +
-      '<div id="gameLinkCard"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
     '</div>' +
     '<div class="card">' +
       '<h2>📚 更多學習資源</h2>' +
@@ -4133,12 +4139,12 @@ async function renderStudentView() {
   loadTeacherCancelNoticeBanner(token);
   loadStudentPendingRequestStatus(token);
   loadStudentSchedule(token);
-  loadStudentFiles(token);
   loadStudentFolderLink(token);
   loadStudentQuota(token);
   loadStudentReceipts(token);
   loadStudentPayments(token);
-  loadGameLinkStatus(token);
+  // 2026-07-18 拿掉「連結遊戲帳號」卡片（Lin 要求不需要這功能了）→ 不再呼叫 loadGameLinkStatus
+  // 2026-07-18 拿掉「課堂資料下載」的直接列表（Lin 要求只留 Drive 按鈕）→ 不再呼叫 loadStudentFiles
 }
 
 // ── 連結遊戲帳號（把 classroom token 跟遊戲登入帳號綁在一起）──
@@ -4292,7 +4298,7 @@ async function loadStudentQuota(token) {
   } catch (e) {}
 }
 
-// 學生：收據下載按鈕（可按 X 關閉，記住已關閉）
+// 學生：收據下載按鈕（可按 X 關閉，記住已關閉；2026-07-18 加：開立超過 3 天自動不再顯示，不用學生自己關）
 async function loadStudentReceipts(token) {
   var el = document.getElementById('receiptBtns');
   if (!el) return;
@@ -4300,6 +4306,10 @@ async function loadStudentReceipts(token) {
     var res = await sb.rpc('get_student_recordings', { p_token: token });
     var data = res.data || [];
     var receipts = data.filter(function(r) { return (r.name || '').indexOf('收據') !== -1; });
+    // 2026-07-18 加（Lin 要求）：收據通知只留 3 天，超過自動消失（不用等學生手動按 X 關）
+    var RECEIPT_NOTICE_DAYS = 3;
+    var cutoffMs = Date.now() - RECEIPT_NOTICE_DAYS * 24 * 3600 * 1000;
+    receipts = receipts.filter(function(r) { return !r.created_at || new Date(r.created_at).getTime() >= cutoffMs; });
     if (!receipts.length) { el.innerHTML = ''; return; }
     var dismissed = {};
     try { dismissed = JSON.parse(localStorage.getItem('dismissedReceipts_' + token) || '{}'); } catch (e) {}
@@ -4390,14 +4400,55 @@ async function loadStudentPayments(token) {
   } catch (e) { el.innerHTML = ''; }
 }
 
+// 2026-07-18 改（Lin 要求）：以前資料為空就直接顯示「尚無上課記錄」然後 return，
+// 完全不會列出「未來排定的課堂」（就算老師已經排好課、只是還沒上過）——現在拆開兩段，
+// 「未來排定課堂」永遠會嘗試載入，不受有沒有上課記錄影響。
 async function loadStudentSchedule(token) {
   const el = document.getElementById('scheduleList');
   if (!el) return;
+  const dayZh = ['日','一','二','三','四','五','六'];
+
+  // 第一段：所有還沒上的排定課堂（來自老師端同步的 Google Calendar，跟「下一堂課」同一個 RPC，
+  // 差別是這裡列「全部」不是只列最近一堂）
+  var upcomingHtml = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">載入中…</div>';
+  try {
+    const s = (typeof studentsCache !== 'undefined') ? studentsCache[token] : null;
+    const studentTz = s && s.pending_student_tz;
+    const schedRes = await sb.rpc('get_student_schedule', { p_token: token });
+    const sched = (schedRes.data || []).slice().sort(function(a, b) { return a.lesson_date < b.lesson_date ? -1 : 1; });
+    if (sched.length) {
+      const rows = sched.map(function(r) {
+        const startTimeStr = (r.start_time && /^\d{1,2}:\d{2}/.test(r.start_time)) ? r.start_time : null;
+        let dLabelDate, timeStr;
+        if (startTimeStr && studentTz) {
+          const abs = teacherTimeToDate(r.lesson_date, startTimeStr);
+          const conv = formatInTz(abs, studentTz);
+          dLabelDate = new Date(conv.dateStr + 'T00:00:00');
+          timeStr = conv.timeStr;
+        } else {
+          dLabelDate = new Date(r.lesson_date + 'T00:00:00');
+          timeStr = startTimeStr || '-';
+        }
+        const dateStr = dLabelDate.getFullYear() + '/' + String(dLabelDate.getMonth() + 1).padStart(2, '0') + '/' + String(dLabelDate.getDate()).padStart(2, '0') + '（週' + dayZh[dLabelDate.getDay()] + '）';
+        return '<tr><td>' + dateStr + '</td><td>' + timeStr + '</td></tr>';
+      }).join('');
+      upcomingHtml = '<table class="schedule-table"><thead><tr><th>上課日期</th><th>時間</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    } else {
+      upcomingHtml = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">目前沒有排定中的課堂</div>';
+    }
+  } catch (e1) {
+    upcomingHtml = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">未來課堂載入失敗</div>';
+  }
+  const upcomingSection = '<div style="font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:0.82rem;color:var(--gold-deep);letter-spacing:0.5px;margin:2px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">🔜 未來排定課堂</div>' + upcomingHtml;
+
+  // 第二段：已經上過的課（跟以前一樣，本輪 vs 過往摺疊）
   try {
     const attRes = await sb.rpc('get_student_attendance', { p_token: token });
     const data = attRes.data;
     if (attRes.error || !data || data.length === 0) {
-      el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無上課記錄</div>';
+      el.innerHTML = upcomingSection +
+        '<div style="font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:0.82rem;color:var(--gold-deep);letter-spacing:0.5px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">📖 已上課紀錄</div>' +
+        '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無上課記錄</div>';
       return;
     }
     // 取「本輪起算日」（與剩餘堂數同一基準）→ 起算日前=舊課程，收進「過往記錄」摺疊區
@@ -4407,7 +4458,6 @@ async function loadStudentSchedule(token) {
     const current = startDay ? data.filter(function(r){ return r.lesson_date >= startDay; }) : data;
     const history = startDay ? data.filter(function(r){ return r.lesson_date < startDay; }) : [];
 
-    const dayZh = ['日','一','二','三','四','五','六'];
     function rowsHtml(list) {
       let cum = 0;
       return list.map(function(r) {
@@ -4423,9 +4473,11 @@ async function loadStudentSchedule(token) {
       return '<table class="schedule-table"><thead><tr><th>堂次</th><th>上課日期</th></tr></thead><tbody>' + rowsHtml(list) + '</tbody></table>';
     }
 
-    let html = current.length
-      ? tableHtml(current)
-      : '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">本輪課程尚無上課記錄</div>';
+    let html = upcomingSection +
+      '<div style="font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:0.82rem;color:var(--gold-deep);letter-spacing:0.5px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">📖 已上課紀錄</div>' +
+      (current.length
+        ? tableHtml(current)
+        : '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">本輪課程尚無上課記錄</div>');
     if (history.length) {
       html += '<details style="margin-top:12px;">' +
         '<summary style="cursor:pointer;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:4px 0;">📜 過往課程記錄（' + history.length + ' 筆，點此展開）</summary>' +
@@ -4434,7 +4486,7 @@ async function loadStudentSchedule(token) {
     }
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
+    el.innerHTML = upcomingSection + '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
   }
 }
 
@@ -4585,12 +4637,17 @@ async function deleteStudentFile(token, url, btn) {
 }
 
 // 學生：顯示「開啟我的 Google Drive 資料夾」連結（老師上傳後才會有）
+// 2026-07-18 改（Lin 要求）：這張卡現在只留這顆 Drive 按鈕，不再直接列檔案清單/下載鈕
+// （之前的檔案清單邏輯還留在 loadStudentFiles/renderStudentFiles，只是不再呼叫，之後要恢復也還在）
 async function loadStudentFolderLink(token) {
   const el = document.getElementById('driveFolderLink');
   if (!el) return;
   try {
     const { data, error } = await sb.rpc('get_student_folder', { p_token: token });
-    if (error || !data) { el.innerHTML = ''; return; }
+    if (error || !data) {
+      el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無課堂資料<br><span style="font-size:0.78rem;">課後老師上傳後即可在此下載</span></div>';
+      return;
+    }
     el.innerHTML = '<a class="meet-btn" href="' + escHtml(safeHref(data)) + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));">📁 開啟我的 Google Drive 資料夾</a>' +
       '<p class="meet-link-text" style="margin-top:6px;">這裡有老師上傳的所有課堂資料</p>';
   } catch(e) { el.innerHTML = ''; }
@@ -4620,9 +4677,7 @@ function buildLineActionBtn(token, student) {
   return '<a class="meet-btn" href="' + linkUrl + '" style="margin-top:12px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));font-size:0.95rem;padding:12px 20px;">🔔 連結 LINE 帳號，上課前自動提醒</a>';
 }
 
-function classRequestSameWarn() {
-  return '<p style="font-size:0.76rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:6px;">此為「唯讀」課表，直接參考老師的行事曆，無法在這裡直接修改。</p>';
-}
+// 2026-07-18 拿掉 classRequestSameWarn()（Lin 要求刪掉「此為唯讀課表…」這行提示文字）
 
 // 2026-07-10 改版：
 // (1) 原本只看 classroom_schedule（老師手動連 Google Calendar 才會同步，只涵蓋近 9 天）——
@@ -4709,8 +4764,7 @@ async function loadStudentNextClass(token) {
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
         '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
         (canCancel ? '' : '<div style="width:100%;font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">⚠️ 最近這一堂距離上課不到 24 小時，無法線上取消（其他週的課仍可在「❌ 取消課堂」裡選）</div>') +
-      '</div>' +
-      classRequestSameWarn();
+      '</div>';
   } catch (e) {
     el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">載入失敗：' + (e.message || e) + '</div>';
   }
