@@ -1474,7 +1474,9 @@ window.deleteFBComment = function(postId, idx) {
             method:'POST', keepalive:true,
             headers:{'Content-Type':'application/json','Accept':'application/json'},
             body: JSON.stringify({ access_key: ES_WEB3FORMS_KEY, subject:'【離站調查】來自泰華網站', from_name:'泰華網站・離站調查', '原因':val, '頁面':location.pathname })
-          }).catch(function(){});
+          }).then(function(r){ return r.json(); }).then(function(data){
+            if(!(data && data.success)){ console.error('[web3forms] 離站調查送出失敗:', data); }
+          }).catch(function(e){ console.error('[web3forms] 離站調查網路錯誤:', e); });
         }catch(e){}
         bar.innerHTML = '<div style="max-width:720px;margin:0 auto;text-align:center;font-size:13.5px;color:#5C4410;padding:4px 0;">✅ 謝謝你的回饋！</div>';
         setTimeout(closeBar, 1600);
