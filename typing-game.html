@@ -291,9 +291,15 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .rg-typed-ok{color:#2e7d32;}
 .rg-typed-rest{color:#c9b78a;}
 .type-hint{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;text-align:center;}
-/* ซ่อนช่อง input จริงไว้ (มองไม่เห็น แต่ยังโฟกัสได้) — ห้ามใช้ display:none/visibility:hidden เพราะมือถือจะไม่เด้งคีย์บอร์ดให้ */
-/* Lin 2026-07-15: ขยายจาก 1px เป็น 24px + pointer-events:none — มือถือบางรุ่นเช็คว่า input "จริงพอ" ก่อนเด้งคีย์บอร์ด ถ้าเล็กเกินไปบางทีแตะครั้งแรกไม่ขึ้น ต้องแตะซ้ำ (อ้างอิง: ปัญหา iOS/Android hidden-input focus ที่มีคนเจอทั่วไป) */
-.mobile-kbd-input{position:absolute;width:24px;height:24px;padding:0;margin:-1px;border:0;opacity:0;overflow:hidden;font-size:16px;pointer-events:none;}
+/* Lin 2026-07-18: เปลี่ยนวิธีถาวร — ช่อง input จริง "ทาบทับ" กล่องคำแบบล่องหน (#rg-type-wrap ครอบทั้งคู่)
+   ผู้เล่นแตะกล่องคำ = นิ้วแตะโดน input จริงโดยตรง → เบราว์เซอร์เด้งคีย์บอร์ดเองแบบ native 100%
+   ไม่ต้องพึ่ง JS สั่ง focus() จาก touchstart/click อีก (จุดเดิมที่พังซ้ำๆ เพราะ iOS/Android บล็อก focus ที่ผิดจังหวะ)
+   font-size:16px = กัน iOS ซูมหน้าเองตอนโฟกัส · ตัวหนังสือ+เคอร์เซอร์โปร่งใส มองไม่เห็นอะไรเลย
+   ห้ามใส่ pointer-events:none / display:none / visibility:hidden เด็ดขาด — จะกลับไปพังแบบเดิม */
+#rg-type-wrap{position:relative;width:100%;display:flex;justify-content:center;}
+.mobile-kbd-input{position:absolute;inset:0;width:100%;height:100%;padding:0;margin:0;border:0;background:transparent;color:transparent;caret-color:transparent;opacity:0.01;font-size:16px;z-index:5;outline:none;-webkit-tap-highlight-color:transparent;}
+/* คอม(มีเมาส์): ไม่ต้องให้คลิกโดน input ล่องหน (พิมพ์ด้วยคีย์บอร์ดจริงผ่าน document keydown อยู่แล้ว — กันเคสคลิกแล้วโฟกัส input จนตัวอักษร layout อังกฤษไหลเข้าเกม) */
+@media (hover:hover) and (pointer:fine){ .mobile-kbd-input{pointer-events:none;} }
 /* Lin 2026-07-12: มือถือ無顯示 → แตะกล่องคำเรียกคีย์บอร์ดเครื่องเอง */
 .type-target{cursor:pointer;}
 /* Lin 2026-07-12: ตอนคีย์บอร์ดเครื่องขึ้นมาพิมพ์ → ซ่อนหัวเว็บ/แถบชื่อ ไม่ให้กินพื้นที่จอ */
@@ -469,13 +475,14 @@ body.tg-kbd-typing .floating-qr{opacity:0!important;pointer-events:none!importan
   </div>
 
   <div class="type-panel" id="type-panel" style="display:none">
-    <div class="type-target" id="rg-type-target" onclick="try{document.getElementById('rg-mobile-input').focus();}catch(e){}" ontouchstart="try{document.getElementById('rg-mobile-input').focus();}catch(e){}" title="點一下用鍵盤打字"></div>
+    <!-- Lin 2026-07-18: ช่อง input จริงย้ายมาทาบทับกล่องคำใน #rg-type-wrap — แตะกล่อง = แตะ input จริงโดยตรง คีย์บอร์ดมือถือเด้งแบบ native แน่นอน (เลิกใช้ JS focus() จาก onclick/ontouchstart ที่เคยพังซ้ำ) -->
+    <div id="rg-type-wrap">
+      <div class="type-target" id="rg-type-target" title="點一下用鍵盤打字"></div>
+      <input type="text" id="rg-mobile-input" class="mobile-kbd-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" lang="th" aria-label="打字輸入框">
+    </div>
     <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤排好位置了，打對會自動跳下一步 👇</div>
-    <!-- ปุ่มกด → เด้งคีย์บอร์ดของมือถือเอง (Gboard/คีย์บอร์ด iOS ไทย) ขึ้นมาพิมพ์ได้ตรงๆ ไม่ต้องใช้ปุ่มเสมือนด้านล่างก็ได้ — ตัว input จริงซ่อนไว้ (โฟกัสได้แต่มองไม่เห็น) เพราะมือถือต้องมี input จริงถึงจะเด้งคีย์บอร์ด — Lin 2026-07-06 -->
-    <!-- Lin 2026-07-12: ลบปุ่ม 📱 用手機鍵盤打字 ออก — แตะที่กล่องคำ (rg-type-target) เรียกคีย์บอร์ดเครื่องได้เลย ไม่ต้องมีปุ่ม -->
-    <!-- 無提示(挑戰)模式預設用自己的鍵盤(手機/電腦)打字，不強制用遊戲內鍵盤 → 這顆讓玩家自己選要不要開螢幕鍵盤看 — Lin 2026-07-12 -->
+    <!-- ปุ่มเปิด/ปิดคีย์บอร์ดในเกม (บนจอ) — Lin 2026-07-18 สั่งเอากลับมาโชว์ในโหมด 無提示 (ดู setGuideMode ใน typing-game-app.js) -->
     <button type="button" id="rg-webkbd-toggle" class="btn btn-secondary" style="font-size:13px;padding:8px 16px;display:none;" onclick="rgToggleWebKbd()">⌨️ 開啟螢幕鍵盤</button>
-    <input type="text" id="rg-mobile-input" class="mobile-kbd-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" lang="th">
     <!-- ปุ่มเลือกโหมดไกด์ไลน์ — ใช้ร่วมทุกระดับ (Lin 2026-07-02) · ปุ่ม "ไม่เลือกวรรณยุกต์ ข้ามไปเลย" ย้ายมาอยู่แถวเดียวกัน (Lin 2026-07-07) -->
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0;">
       <button id="guide-on" class="btn btn-primary" style="font-size:12px;padding:6px 14px;" onclick="setGuideMode(true)">💡 有提示</button>
@@ -548,7 +555,7 @@ body.tg-kbd-typing .floating-qr{opacity:0!important;pointer-events:none!importan
   </div>
 </div>
 
-<script src="typing-game-app.js?v=1"></script>
+<script src="typing-game-app.js?v=2"></script>
 </div><!-- /.v3-page -->
 <script src="shared.js?v=30"></script>
 

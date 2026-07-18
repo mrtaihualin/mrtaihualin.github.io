@@ -1607,9 +1607,10 @@ function setGuideMode(on){
   // 有提示: บังคับคีย์บอร์ดในเกมอย่างเดียว (ปุ่มเปิด/ปิดเองไม่มีความหมาย ซ่อนไป) · 無提示: ค่าเริ่มต้นซ่อนคีย์บอร์ดในเกม โชว์ปุ่มให้เปิดเองได้ถ้าอยากดู — Lin 2026-07-12
   try{
     document.body.classList.remove('tg-kbd-open'); // สลับโหมดทีไร รีเซ็ตกลับ default เสมอ
-    // Lin 2026-07-12: 無顯示 ไม่มีปุ่มเปิด/ปิดคีย์บอร์ดในเกม + ไม่มีคีย์บอร์ดในเกมแล้ว (พิมพ์ด้วยคีย์บอร์ดเครื่องล้วนๆ) → ซ่อนปุ่มถาวร
+    // Lin 2026-07-18: เอาปุ่ม ⌨️ เปิด/ปิดคีย์บอร์ดในเกมกลับมา — โชว์ในโหมด 無提示 (คีย์บอร์ดในเกมซ่อนอยู่ อยากดูก็กดเปิดเอง)
+    // โหมด 有提示 คีย์บอร์ดในเกมถูกบังคับโชว์เป็นไกด์อยู่แล้ว ปุ่มนี้ไม่มีความหมาย → ซ่อน
     var wkb=document.getElementById('rg-webkbd-toggle');
-    if(wkb){ wkb.style.display='none'; }
+    if(wkb){ wkb.style.display=guideMode?'none':'inline-block'; wkb.textContent='⌨️ 開啟螢幕鍵盤'; }
   }catch(e){}
   ['tg-guide-note'].forEach(function(id){
     var note=document.getElementById(id);
@@ -2263,6 +2264,7 @@ try{
   var _bo=document.getElementById('bonus-opts');
   if(_bo)_bo.addEventListener('mousedown',function(e){e.preventDefault();});
   rgNoFocusSteal(document.getElementById('rg-tone-skip-btn'));
+  rgNoFocusSteal(document.getElementById('rg-webkbd-toggle')); // Lin 2026-07-18: กดปุ่มเปิด/ปิดคีย์บอร์ดในเกม แล้วคีย์บอร์ดเครื่องต้องไม่หุบ
   // Lin 2026-07-16 (audit รอบ 2): แถวปุ่มบนการ์ดคำ 🔊/🐣/🍙/🔖 ก็แย่งโฟกัสเหมือนกัน — ผู้เล่นชอบกด 🔊 ฟังเสียงระหว่างพิมพ์ แล้วคีย์บอร์ดหุบ
   // ดักที่ตัวแถว (delegate) ครอบคลุมปุ่มที่สคริปต์อื่น (WordAudio/WordVault/zh-toggle) มา inject ทีหลังด้วย
   var _wcr=document.getElementById('word-ctl-row');
