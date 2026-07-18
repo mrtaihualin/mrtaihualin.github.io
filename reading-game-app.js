@@ -329,9 +329,9 @@ var rgGuideMode=(function(){try{return localStorage.getItem('rg_guide_mode')==='
 function setRgGuideMode(on){
   rgGuideMode=!!on;
   try{localStorage.setItem('rg_guide_mode',rgGuideMode?'1':'0');}catch(e){}
-  var a=document.getElementById('rg-guide-on'),b=document.getElementById('rg-guide-off');
-  if(a)a.className='btn '+(rgGuideMode?'btn-primary':'btn-secondary');
-  if(b)b.className='btn '+(rgGuideMode?'btn-secondary':'btn-primary');
+  // Lin 2026-07-19: ปุ่มวงเดียว กดสลับ — 有提示 โชว์ 💡 · 無提示 โชว์ 🔥
+  var t=document.getElementById('rg-guide-toggle');
+  if(t){ t.textContent=rgGuideMode?'💡':'🔥'; t.title=rgGuideMode?'有提示（練習）':'無提示（挑戰）'; }
   // ป้ายบอกโหมด (Lin 2026-07-04): 有提示 = ฝึกฝนล้วน ไม่ได้อะไรเลย · 無提示 = เก็บแต้ม/ดาว/ความคืบหน้า
   var note=document.getElementById('rg-mode-note');
   if(note){

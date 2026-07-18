@@ -446,11 +446,10 @@ body.tg-kbd-typing .floating-qr{opacity:0!important;pointer-events:none!importan
         <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="setRgPronMode(!rgPronMode)"></button>
         <span id="zh-toggle-slot"></span>
         <span id="rg-vault-btn-slot"></span>
-        <!-- ปุ่มเปิด/ปิดคำใบ้ + เปิดคีย์บอร์ดบนจอ — ย้ายขึ้นมาแถวเดียวกับปุ่มไข่/ข้าวปั้น (Lin 2026-07-19) · เหลือแค่ไอคอนไม่มีตัวหนังสือ + แยกปุ่มคีย์บอร์ดออกจากปุ่มไกด์ด้วยเส้นคั่น (Lin 2026-07-19) -->
-        <button id="guide-on" class="btn btn-primary" style="font-size:17px;width:34px;height:34px;padding:0;border-radius:50%;" onclick="setGuideMode(true)" title="有提示">💡</button>
-        <button id="guide-off" class="btn btn-secondary" style="font-size:17px;width:34px;height:34px;padding:0;border-radius:50%;" onclick="setGuideMode(false)" title="無提示（挑戰）">🔥</button>
-        <span style="display:none;width:1px;height:22px;background:rgba(139,99,16,0.25);margin:0 2px;" id="rg-webkbd-divider"></span>
-        <button type="button" id="rg-webkbd-toggle" class="btn btn-secondary" style="font-size:17px;width:34px;height:34px;padding:0;border-radius:50%;display:none;" onclick="rgToggleWebKbd()" title="開啟螢幕鍵盤">⌨️</button>
+        <!-- ปุ่มวงเดียว กดสลับ 有提示/無提示 · สีเหมือนปุ่มไข่/ข้าวปั้น (Lin 2026-07-19) -->
+        <button id="guide-toggle" class="word-ctl-btn" type="button" onclick="setGuideMode(!guideMode)"></button>
+        <!-- ปุ่มเปิด/ปิดคีย์บอร์ดบนจอ — เป็นปุ่มอิสระ ไม่ผูกกับโหมด 無提示 (Lin 2026-07-19) -->
+        <button type="button" id="rg-webkbd-toggle" class="word-ctl-btn" onclick="rgToggleWebKbd()" title="開啟螢幕鍵盤">⌨️</button>
       </div>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
     </div>
