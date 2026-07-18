@@ -27,6 +27,13 @@
 //
 // ⚠️ SCHEDULE_SYNC_DAYS ด้านล่างต้อง "ตรงกับ" ค่าเดียวกันใน classroom/index.html เสมอ —
 //   ถ้าแก้ฝั่งเว็บ ต้องกลับมาแก้ที่นี่ด้วย ไม่งั้นสองฝั่งจะซิงค์ช่วงวันไม่เท่ากัน
+//
+// 🔴 2026-07-19 แก้บั๊กสำคัญ (Lin เจอตอนทดสอบปุ่มลบ Calendar จาก LINE)：เดิมตอน sync ใหม่ทุกรอบ
+//   ไม่ได้เก็บ calendar_event_id ของ Google ไว้เลย (อ่านแค่ชื่อ/วันที่/เวลา) — เพราะรอบนี้ "ลบตาราง
+//   อนาคตทั้งหมดทิ้งก่อนเขียนใหม่" (บรรทัด delError ด้านล่าง) ทุก 15-30 นาที ID ที่เคยบันทึกถูกต้องตอน
+//   จองครั้งแรกจะโดนลบทิ้งไปเรื่อยๆ ทำให้ "ยกเลิกคาบแล้วลบ Calendar ด้วย ID ตรงๆ" ใช้งานจริงไม่ได้เลย
+//   (เงียบมาตลอดตั้งแต่เพิ่มฟีเจอร์นี้ 2026-07-16/17) แก้แล้ว: เก็บ ev.id ตอน match + ใส่ลง
+//   calendar_event_id ทุกครั้งที่ upsert
 // ════════════════════════════════════════════════════════════
 
 // deno-lint-ignore-file
@@ -122,7 +129,11 @@ serve(async (req) => {
         const endTime = ev.end && ev.end.dateTime ? bangkokParts(new Date(ev.end.dateTime)).timeStr : '';
         const isoDate = startParts.dateStr;
         if (isoDate === todayIso && attendedTodayTokens.has(s.token)) return;
-        matched.push({ token: s.token, isoDate, startTime, endTime, name: s.name });
+        // 2026-07-19 加（RELIABILITY FIX，Lin 發現）：以前這裡沒存 ev.id，導致每次 cron 跑完
+        // （每 15-30 分鐘一次）都會把 calendar_event_id 洗掉，讓「取消申請直接用 ID 刪 Calendar」
+        // 這個安全機制形同虛設。singleEvents=true 展開後 ev.id 已經是「這一次」的正確事件 ID
+        // （不是整個系列的 master id），直接存起來就對了。
+        matched.push({ token: s.token, isoDate, startTime, endTime, name: s.name, eventId: ev.id || null });
       });
     });
 
@@ -130,7 +141,8 @@ serve(async (req) => {
     const rowMap = new Map();
     matched.forEach((m) => {
       const key = m.token + '|' + m.isoDate + '|' + (m.startTime || '');
-      rowMap.set(key, { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.name });
+      // 2026-07-19 加：เก็บ calendar_event_id ไปด้วยทุกครั้ง (ดูคอมเมนต์ตอน push เข้า matched ด้านบน)
+      rowMap.set(key, { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.name, calendar_event_id: m.eventId || null });
     });
     const rows = Array.from(rowMap.values());
 
