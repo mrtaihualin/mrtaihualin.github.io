@@ -7,8 +7,11 @@
 //      (ดูฟังก์ชัน getGoogleCalendarToken/deleteCalendarEventById ด้านล่าง) ต่างจากข้อ 3/4 ด้านล่างที่ยัง
 //      "แตะ Calendar เองไม่ได้" — อันนี้แตะได้แล้วเพราะมี service account credential เป็นของตัวเอง
 //      ไม่ต้องพึ่ง OAuth token ของครู เช็คว่าคนกดเป็นครูจริง (LINE_TEACHER_USER_ID) ก่อนทำงานทุกครั้ง
-//      ต้องตั้ง secret GOOGLE_SERVICE_ACCOUNT_KEY ก่อน (ดูคอมเมนต์เหนือ getGoogleCalendarToken)
-//      และต้องแชร์ Google Calendar ("primary") ให้อีเมล service account สิทธิ์ "Make changes to events"
+//      ต้องตั้ง secret 2 ตัวก่อน: GOOGLE_SERVICE_ACCOUNT_KEY (ดูคอมเมนต์เหนือ getGoogleCalendarToken)
+//      และ GOOGLE_CALENDAR_ID = อีเมลปฏิทินจริงของครู เช่น mr.taihualin@gmail.com (ดูคอมเมนต์เหนือ
+//      deleteCalendarEventById — 2026-07-19 แก้บั๊ก：ห้ามใช้ "primary" เพราะนั่นคือปฏิทินของบัญชี
+//      หุ่นยนต์เอง ไม่ใช่ปฏิทินของครู) และต้องแชร์ Google Calendar ของครูให้อีเมล service account
+//      สิทธิ์ "Make changes to events" ด้วย
 //   1) action=approve|deny (แบบเดิม 2026-07-10) — ปุ่มเก่าในข้อความที่เคยส่งให้ครูก่อนหน้านี้
 //      2026-07-13 แก้: status เปลี่ยนจาก approved/denied → acknowledged (ตาม constraint จริงในฐานข้อมูล
 //      classroom_requests_status_check ที่รองรับแค่ pending/acknowledged เท่านั้น) — เก็บไว้เผื่อมีข้อความ
@@ -173,18 +176,38 @@ async function getGoogleCalendarToken() {
   }
 }
 
-// ลบคาบเดียวใน Google Calendar ด้วย eventId ตรงตัว (ไม่เดา) — คืนค่า { ok, reason? }
+// 🔴 2026-07-19 แก้บั๊กร้ายแรง (Lin ทดสอบเจอ：กดปุ่มขึ้น "สำเร็จ" แต่ Calendar ไม่ถูกลบจริง):
+// เดิม hardcode "primary" — แต่ "primary" ของ service account หมายถึงปฏิทินของ "บัญชีหุ่นยนต์" เอง
+// (ปฏิทินว่างๆ อีกอันหนึ่ง) ไม่ใช่ปฏิทินจริงของครูที่แชร์ให้! ทำให้ DELETE ไปโดนคนละปฏิทิน คืน 404
+// (หาไม่เจอในปฏิทินหุ่นยนต์) แล้วโค้ดเดิมเข้าใจผิดว่า 404 = "ลบไปแล้ว" (ok:true) ทั้งที่จริงคือ "หาไม่เจอ
+// เพราะผิดปฏิทิน" (RELIABILITY FIRST — ต้องไม่ขึ้นสำเร็จถ้ายังไม่ตรวจว่าสำเร็จจริง)
+// แก้ 2 จุด: (1) ใช้ GOOGLE_CALENDAR_ID (อีเมลปฏิทินจริงของครู) แทน "primary" ตายตัว
+//           (2) หลัง DELETE แล้ว GET ซ้ำอีกครั้งเพื่อ "ยืนยัน" ว่าลบจริง (เหมือน verifyEventDeleted
+//               ฝั่งเว็บ) ไม่เชื่อแค่ status code ของ DELETE เฉยๆ
+// ต้องตั้ง secret ก่อนใช้: supabase secrets set GOOGLE_CALENDAR_ID=mr.taihualin@gmail.com (อีเมล
+// ปฏิทินจริงของครูที่แชร์ให้ service account ไว้แล้ว)
 async function deleteCalendarEventById(eventId) {
   const token = await getGoogleCalendarToken();
   if (!token) return { ok: false, reason: 'no_token' };
+  const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
+  if (!calendarId) return { ok: false, reason: 'no_calendar_id', detail: 'ยังไม่ได้ตั้ง secret GOOGLE_CALENDAR_ID' };
+  const eventUrl = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(eventId);
   try {
-    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), {
-      method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + token },
-    });
-    if (res.ok || res.status === 404 || res.status === 410) return { ok: true };
-    const detail = await res.text().catch(() => '');
-    return { ok: false, reason: 'http_' + res.status, detail: detail.slice(0, 300) };
+    const delRes = await fetch(eventUrl, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+    if (!delRes.ok && delRes.status !== 404 && delRes.status !== 410) {
+      const detail = await delRes.text().catch(() => '');
+      return { ok: false, reason: 'http_' + delRes.status, detail: detail.slice(0, 300) };
+    }
+    // ── ยืนยันซ้ำว่าลบจริง (กันเคสแบบที่เพิ่งเจอ — DELETE ตอบ 404 เพราะผิดปฏิทิน ไม่ใช่เพราะลบสำเร็จ) ──
+    const verifyRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
+    if (verifyRes.status === 404 || verifyRes.status === 410) return { ok: true };
+    if (verifyRes.ok) {
+      const verifyData = await verifyRes.json().catch(() => ({}));
+      if (verifyData.status === 'cancelled') return { ok: true };
+      return { ok: false, reason: 'still_exists', detail: 'GET ยืนยันแล้วเจอ event ยังอยู่ (status=' + (verifyData.status || '-') + ') — เช็ค GOOGLE_CALENDAR_ID ว่าตรงกับปฏิทินจริงไหม' };
+    }
+    // ยืนยันไม่ได้ (เช่น network พัง) — ไม่กล้าฟันธงว่าสำเร็จ ให้ครูไปเช็คเองที่เว็บ
+    return { ok: false, reason: 'verify_failed_http_' + verifyRes.status };
   } catch (e) {
     return { ok: false, reason: 'fetch_error', detail: e.message };
   }
