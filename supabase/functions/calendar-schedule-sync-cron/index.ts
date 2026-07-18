@@ -104,7 +104,18 @@ serve(async (req) => {
       + '&singleEvents=true&orderBy=startTime&maxResults=250';
     const evRes = await fetch(calUrl, { headers: { Authorization: 'Bearer ' + accessToken } });
     if (!evRes.ok) throw new Error('Calendar API ' + evRes.status + '：' + (await evRes.text()).slice(0, 300));
-    const events = (await evRes.json()).items || [];
+    let evData = await evRes.json();
+    let events = evData.items || [];
+    // 2026-07-19 加（跟 classroom/index.html 的 calFetchUpcomingEvents 同一套修法）：maxResults=250
+    // 只是一頁的上限，超過的話 Google 回 nextPageToken，之前沒接著撈，資料量大時會悄悄漏掉部分事件。
+    let pageGuard = 0;
+    while (evData.nextPageToken && pageGuard < 20) {
+      pageGuard++;
+      const pageRes = await fetch(calUrl + '&pageToken=' + encodeURIComponent(evData.nextPageToken), { headers: { Authorization: 'Bearer ' + accessToken } });
+      if (!pageRes.ok) break;
+      evData = await pageRes.json();
+      events = events.concat(evData.items || []);
+    }
 
     const { data: students, error: studErr } = await supabase.from('classroom_students').select('token,name');
     if (studErr) throw new Error('讀取學生名單失敗：' + studErr.message);

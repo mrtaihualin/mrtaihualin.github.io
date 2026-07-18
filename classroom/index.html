@@ -1418,8 +1418,21 @@ async function calFetchUpcomingEvents(days) {
   } else if (!r.ok) {
     throw new Error('Calendar API ' + r.status + '：' + (await r.text()).slice(0, 200));
   }
-  const data = await r.json();
-  return data.items || [];
+  let data = await r.json();
+  let items = data.items || [];
+  // 2026-07-19 加（RELIABILITY FIX，Lin 問到才發現）：以前 maxResults=250 是「一頁最多 250 筆」，
+  // 超過的話 Google 會回傳 nextPageToken，之前沒接著撈下一頁——如果全部學生+老師自己其他行程
+  // 加起來在這個天數範圍內超過 250 筆，最早（時間最前）的 250 筆會被留下，超過的部分會被悄悄漏掉，
+  // 不會噴錯誤，只是資料不完整。現在改成有 nextPageToken 就一直撈到撈完為止。
+  let guard = 0;
+  while (data.nextPageToken && guard < 20) {
+    guard++;
+    const pageR = await fetch(url + '&pageToken=' + encodeURIComponent(data.nextPageToken), { headers: { Authorization: 'Bearer ' + token } });
+    if (!pageR.ok) break; // 撈下一頁失敗就停在目前撈到的，不讓整個同步失敗
+    data = await pageR.json();
+    items = items.concat(data.items || []);
+  }
+  return items;
 }
 
 // ── Google Calendar：自動建立一個帶 Google Meet 的行事曆活動，回傳 Meet 連結 ──
