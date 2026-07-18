@@ -1417,18 +1417,19 @@ window.deleteFBComment = function(postId, idx) {
 };
 
 // ════════════════════════════════════════════════════════════════════
-// 📋 Exit-intent survey — ทุกหน้า ยกเว้นหน้าเกม 5 ไฟล์ + หน้าดาวน์โหลดชีต (LIN 2026-07-07)
+// 📋 Exit-intent survey — เฉพาะหน้าเกม 5 หน้า + games.html + pricing.html (LIN 2026-07-18)
 //   Desktop: mouseout ขอบบน (exit-intent มาตรฐาน)
-//   มือถือ/สำรอง: idle timer 45 วิ (จับ exit-intent มือถือไม่ได้จริง)
+//   ทุกอุปกรณ์: visibilitychange (สลับแท็บ/ปิดแท็บ/สลับแอปจริง) — เอา idle timer 45 วิออก
+//     (ของเดิมนับ "นิ่ง 45 วิ" ผิด จับคนที่แค่หยุดอ่านเฉยๆ เป็นจะออกด้วย)
 //   โชว์เป็นแถบเล็กด้านล่าง ไม่บล็อกจอ · โชว์ครั้งเดียวตลอดไปต่อเบราว์เซอร์ (localStorage)
 //   ส่งคำตอบ: web3forms (เข้าอีเมล Lin) + GA4 — ไม่ต้องสร้างตาราง Supabase (ตามที่ Lin เคาะ)
 // ════════════════════════════════════════════════════════════════════
 (function(){
   var SHOWN_KEY = 'exit_survey_shown_v1';
-  var EXCLUDE = ['tone-finder.html','reading-game.html','typing-game.html','word-order.html','lego.html',
-                 'vocab-thank-you.html','thank-you.html','vocab-cheatsheet.html'];
+  var INCLUDE = ['tone-finder.html','reading-game.html','typing-game.html','word-order.html','lego.html',
+                 'games.html','pricing.html'];
   var page = (location.pathname.split('/').pop() || 'index.html');
-  if (EXCLUDE.indexOf(page) !== -1) return;
+  if (INCLUDE.indexOf(page) === -1) return;
 
   function shown(){ try{ return localStorage.getItem(SHOWN_KEY)==='1'; }catch(e){ return false; } }
   function markShown(){ try{ localStorage.setItem(SHOWN_KEY,'1'); }catch(e){} }
@@ -1491,13 +1492,11 @@ window.deleteFBComment = function(postId, idx) {
     document.addEventListener('mouseout', function(e){
       if (e.clientY <= 0 && !e.relatedTarget && !e.toElement) showBar();
     });
-    // สำรอง/มือถือ: idle timer (จับ mouse-leave บนมือถือไม่ได้จริง)
-    var idleTimer;
-    function resetIdle(){ clearTimeout(idleTimer); idleTimer = setTimeout(showBar, 45000); }
-    ['scroll','touchstart','click','keydown'].forEach(function(ev){
-      window.addEventListener(ev, resetIdle, {passive:true});
+    // ทุกอุปกรณ์ (คอม+มือถือ): สลับแท็บ/ปิดแท็บ/สลับแอปจริง = กำลังออกจริง
+    // (แทน idle timer เดิมที่จับคนหยุดอ่านเฉยๆ ผิดเป็นจะออก)
+    document.addEventListener('visibilitychange', function(){
+      if (document.visibilityState === 'hidden') showBar();
     });
-    resetIdle();
   }
 
   // รอ engagement ขั้นต่ำ 8 วิ ก่อนเริ่มจับ (กัน bounce ไว โชว์ทันทีจนน่ารำคาญ)
