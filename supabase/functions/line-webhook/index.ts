@@ -18,6 +18,10 @@
 //      ไม่ลบ Calendar ทันทีแล้ว ต้องรอนักเรียนกด "我知道了" ก่อน (กดฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้ อันไหน
 //      กดก่อนนับอันนั้น) → set teacher_cancel_ack_at แล้ว push แจ้งครูว่ากดยืนยันลบได้แล้ว
 //      **ไม่แตะ Google Calendar เอง** (ครูต้องกลับไปกด "確認刪除 Calendar" ที่เว็บเอง)
+//   4) action=ack_teacher_add (2026-07-18 เพิ่ม) — ครูสั่งเพิ่มคาบเอง (proposeAddClassDay)
+//      ไม่สร้าง Calendar ทันที ต้องรอนักเรียนกด "我知道了" ก่อน (ฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้) →
+//      set teacher_add_ack_at แล้ว push แจ้งครูว่ากดยืนยันเพิ่มได้แล้ว **ไม่แตะ Google Calendar เอง**
+//      (ครูต้องกลับไปกด "確認新增 Calendar" ที่เว็บเอง — ดู confirmTeacherAddClass ในเว็บ)
 //
 // 2026-07-13 สำคัญมาก：ตั้งแต่เปลี่ยนมาให้ "處理" ปุ่มบนเว็บค้นหา+ย้าย/ลบ Calendar เองแล้ว
 //   ปุ่ม "✅ 已處理"/"❌ 婉拒" แบบเดิมที่เคยส่งไปให้ครูกดตรงจาก LINE **เอาออกจากข้อความแจ้งเตือนใหม่แล้ว**
@@ -286,6 +290,51 @@ serve(async (req) => {
           if (teacherUserId) {
             const odate = (updated && updated[0] && updated[0].original_date) || '-';
             await pushLine(channelToken, teacherUserId, 'ℹ️ 學生已確認收到取消通知（' + odate + '），可以到網站按「確認刪除」了');
+          }
+        }
+        continue;
+      }
+
+      if (action === 'ack_teacher_add') {
+        // ── 2026-07-18 加：老師發起的加課，學生在 LINE 這邊按「我知道了」確認 ──
+        // 網站那邊也有一顆一樣功能的按鈕（見 ackTeacherAdd in classroom/index.html）
+        // 哪邊先按都算數，兩邊共用同一個欄位 teacher_add_ack_at，用 .is(null) 當保險閘。
+        // 跟 ack_teacher_cancel 同一套模式，只是欄位/文字換成加課版本。
+        const requestIdAdd = params.get('request');
+        if (!requestIdAdd) continue;
+
+        const senderUserIdAckAdd = event.source && event.source.userId;
+        if (senderUserIdAckAdd) {
+          const { data: reqRowAckAdd } = await supabase.from('classroom_requests').select('token').eq('id', requestIdAdd).maybeSingle();
+          if (!reqRowAckAdd) continue;
+          const { data: stuRowAckAdd } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAckAdd.token).maybeSingle();
+          if (!stuRowAckAdd || stuRowAckAdd.line_user_id !== senderUserIdAckAdd) {
+            console.error('[line-webhook] ⚠️ ack_teacher_add：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestIdAdd);
+            continue;
+          }
+        }
+
+        const { data: updatedAdd, error: errorAdd, count: countAdd } = await supabase
+          .from('classroom_requests')
+          .update({ teacher_add_ack_at: new Date().toISOString() }, { count: 'exact' })
+          .eq('id', requestIdAdd)
+          .is('teacher_add_ack_at', null)
+          .select('requested_date, requested_time');
+
+        if (channelToken && event.replyToken) {
+          let replyTextAdd;
+          if (errorAdd) replyTextAdd = '⚠️ 確認失敗：' + errorAdd.message;
+          else if (!countAdd) replyTextAdd = 'ℹ️ 這筆通知可能已經確認過了';
+          else replyTextAdd = '✅ 已確認收到，老師會盡快處理';
+          await replyLine(channelToken, event.replyToken, replyTextAdd);
+        }
+
+        if (!errorAdd && countAdd && channelToken) {
+          const teacherUserIdAdd = Deno.env.get('LINE_TEACHER_USER_ID');
+          if (teacherUserIdAdd) {
+            const rdate = (updatedAdd && updatedAdd[0] && updatedAdd[0].requested_date) || '-';
+            const rtime = (updatedAdd && updatedAdd[0] && updatedAdd[0].requested_time) || '';
+            await pushLine(channelToken, teacherUserIdAdd, 'ℹ️ 學生已確認收到加課通知（' + rdate + ' ' + rtime + '），可以到網站按「確認新增」了');
           }
         }
         continue;

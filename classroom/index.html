@@ -1930,8 +1930,14 @@ async function checkAddClassDayConflict() {
     let previewText = '✅ 沒有衝突。' + dateVal + '（週' + dayZh[wd] + '）' + startVal + '–' + endTime + '（泰國時間）';
     previewText += recurring ? '，每週固定上課' + (untilVal ? '，固定到 ' + untilVal : '（沒有結束日，之後每週都排）') : '，只有這一次';
     _addClassDayPending = { token: token, dateVal: dateVal, startVal: startVal, endTime: endTime, recurring: recurring, untilVal: untilVal || null, weekday: wd };
+    // 2026-07-18 改（Lin 要求）：老師「自己想到要加課」（不是在處理學生已經送出的加課申請）
+    // 現在要先送通知給學生確認，學生按「我知道了」後老師才能回來按「確認新增」真的排進 Calendar。
+    // 學生自己申請加課、老師只是在核准那筆申請的情況（_addClassDayFromRequestId 有值）維持原本
+    // 「老師一按就直接排進去」——因為那是學生自己要的，不用再多問一次。
     resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;margin-bottom:8px;">' + escHtml(previewText) + '</div>' +
-      '<button class="btn-gold" style="width:100%;" onclick="confirmAddClassDay()">✅ 確認新增這個時段</button>';
+      (_addClassDayFromRequestId
+        ? '<button class="btn-gold" style="width:100%;" onclick="confirmAddClassDay()">✅ 確認新增這個時段</button>'
+        : '<button class="btn-gold" style="width:100%;" onclick="proposeAddClassDay()">📤 送出通知給學生，確認後才會新增</button>');
   } catch (e) {
     resultEl.innerHTML = '<div style="color:#b45309;">檢查失敗：' + escHtml(e.message || String(e)) + '</div>';
   } finally {
@@ -1939,7 +1945,75 @@ async function checkAddClassDayConflict() {
   }
 }
 
+// 2026-07-18 拆出來（Lin 要求「加課要先讓學生確認」）：真正「建立 Calendar 事件＋寫資料庫」的
+// 核心邏輯抽成共用函式，confirmAddClassDay（核准學生自己申請的加課／舊行為）跟
+// confirmTeacherAddClass（老師自己發起、學生已確認過的加課）都呼叫這個，避免兩份重複邏輯
+// 之後改一邊忘記改另一邊。p = { dateVal, startVal, endTime, recurring, untilVal, weekday }
+async function createCalendarClassEventForStudent(token, s, p) {
+  let calToken = await gdGetToken();
+  const start = teacherTimeToDate(p.dateVal, p.startVal);
+  const end = teacherTimeToDate(p.dateVal, p.endTime);
+  const body = {
+    summary: s.name,
+    // 2026-07-15 加（Lin 要求）：跟 createMeetLinkForStudent 用同一個顏色（colorId '6' = Tangerine，
+    // 是 Google Calendar 11 個可用顏色裡最接近 Lin 選的 Mango 的那個，2026-07-10 就對過了）
+    colorId: '6',
+    description: '系統自動建立（➕ 加課堂時間）' + (s.meet ? ('\n上課連結：' + s.meet) : ''),
+    start: { dateTime: start.toISOString(), timeZone: TEACHER_TZ },
+    end: { dateTime: end.toISOString(), timeZone: TEACHER_TZ },
+  };
+  if (p.recurring) {
+    let rule = 'RRULE:FREQ=WEEKLY';
+    if (p.untilVal) rule += ';UNTIL=' + buildIcalUntilUtc(teacherTimeToDate(p.untilVal, '23:59'));
+    body.recurrence = [rule];
+  }
+  let r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  if (r.status === 403) {
+    const errBody = await r.text();
+    if (/insufficient|scope|PERMISSION_DENIED/i.test(errBody)) {
+      calToken = await gdGetToken(true);
+      r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+    }
+  }
+  if (!r.ok) throw new Error('建立 Calendar 事件失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
+  const ev = await r.json();
+
+  // 2026-07-15 加（Lin 要求：加完課要真的回頭確認 Calendar 上有沒有出現，不要只信任建立時的
+  // API 回應）：重新 GET 一次這個事件，確認真的存在、時間也對，才繼續寫資料庫。
+  try {
+    const verifyR = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(ev.id), {
+      headers: { Authorization: 'Bearer ' + calToken },
+    });
+    if (!verifyR.ok) throw new Error('重新確認時連線失敗（' + verifyR.status + '）');
+    const verifyEv = await verifyR.json();
+    const actualStart = verifyEv.start && (verifyEv.start.dateTime || verifyEv.start.date);
+    if (!actualStart || Math.abs(new Date(actualStart).getTime() - start.getTime()) > 60000) {
+      throw new Error('Calendar 上顯示的時間跟預期不一樣（顯示：' + (actualStart || '無') + '）');
+    }
+  } catch (verErr) {
+    throw new Error('Calendar 事件建立的 API 有回應，但重新確認時發現不對勁：' + (verErr.message || verErr) + '\n請自己到 Calendar 檢查一次是否真的建立成功，先不寫入資料庫（避免資料庫記了一個不確定存在的事件）。');
+  }
+
+  // RELIABILITY FIRST：Calendar 事件已經真的建立了（且重新確認過）→ 資料庫這步失敗也要講清楚「Calendar 上已經有了」，
+  // 不能讓 Lin 誤會沒成功而重按一次（會建立重複事件）。
+  if (p.recurring) {
+    const { error } = await sb.from('classroom_recurring_days')
+      .upsert({ token: token, weekday: p.weekday, start_time: p.startVal, end_time: p.endTime, calendar_event_id: ev.id }, { onConflict: 'token,weekday' });
+    if (error) throw new Error('Calendar 事件已經建立成功，但存進資料庫失敗：' + error.message + '\n（不要重按一次，Calendar 上已經有這個事件了，請告訴 Lin/AI 手動補資料庫）');
+  } else {
+    const { error } = await sb.from('classroom_schedule')
+      .upsert({ token: token, lesson_date: p.dateVal, start_time: p.startVal, end_time: p.endTime, title: s.name, calendar_event_id: ev.id }, { onConflict: 'token,lesson_date,start_time' });
+    if (error) throw new Error('Calendar 事件已經建立成功，但存進資料庫失敗：' + error.message + '\n（不要重按一次，Calendar 上已經有這個事件了，請告訴 Lin/AI 手動補資料庫）');
+  }
+  return { ev: ev, start: start, end: end };
+}
+
 // 第 2 步：老師確認過預覽內容才會真的建立 Calendar 事件＋寫資料庫
+// （這裡是「核准學生自己送出的加課申請」或「舊有直接建立」路徑，維持原本行為不變）
 async function confirmAddClassDay() {
   const p = _addClassDayPending;
   if (!p) return;
@@ -1950,65 +2024,8 @@ async function confirmAddClassDay() {
   resultEl.innerHTML = '建立中…';
 
   try {
-    let calToken = await gdGetToken();
-    const start = teacherTimeToDate(p.dateVal, p.startVal);
-    const end = teacherTimeToDate(p.dateVal, p.endTime);
-    const body = {
-      summary: s.name,
-      // 2026-07-15 加（Lin 要求）：跟 createMeetLinkForStudent 用同一個顏色（colorId '6' = Tangerine，
-      // 是 Google Calendar 11 個可用顏色裡最接近 Lin 選的 Mango 的那個，2026-07-10 就對過了）
-      colorId: '6',
-      description: '系統自動建立（➕ 加課堂時間）' + (s.meet ? ('\n上課連結：' + s.meet) : ''),
-      start: { dateTime: start.toISOString(), timeZone: TEACHER_TZ },
-      end: { dateTime: end.toISOString(), timeZone: TEACHER_TZ },
-    };
-    if (p.recurring) {
-      let rule = 'RRULE:FREQ=WEEKLY';
-      if (p.untilVal) rule += ';UNTIL=' + buildIcalUntilUtc(teacherTimeToDate(p.untilVal, '23:59'));
-      body.recurrence = [rule];
-    }
-    let r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    });
-    if (r.status === 403) {
-      const errBody = await r.text();
-      if (/insufficient|scope|PERMISSION_DENIED/i.test(errBody)) {
-        calToken = await gdGetToken(true);
-        r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-          method: 'POST', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-        });
-      }
-    }
-    if (!r.ok) throw new Error('建立 Calendar 事件失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
-    const ev = await r.json();
-
-    // 2026-07-15 加（Lin 要求：加完課要真的回頭確認 Calendar 上有沒有出現，不要只信任建立時的
-    // API 回應）：重新 GET 一次這個事件，確認真的存在、時間也對，才繼續寫資料庫。
-    try {
-      const verifyR = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(ev.id), {
-        headers: { Authorization: 'Bearer ' + calToken },
-      });
-      if (!verifyR.ok) throw new Error('重新確認時連線失敗（' + verifyR.status + '）');
-      const verifyEv = await verifyR.json();
-      const actualStart = verifyEv.start && (verifyEv.start.dateTime || verifyEv.start.date);
-      if (!actualStart || Math.abs(new Date(actualStart).getTime() - start.getTime()) > 60000) {
-        throw new Error('Calendar 上顯示的時間跟預期不一樣（顯示：' + (actualStart || '無') + '）');
-      }
-    } catch (verErr) {
-      throw new Error('Calendar 事件建立的 API 有回應，但重新確認時發現不對勁：' + (verErr.message || verErr) + '\n請自己到 Calendar 檢查一次是否真的建立成功，先不寫入資料庫（避免資料庫記了一個不確定存在的事件）。');
-    }
-
-    // RELIABILITY FIRST：Calendar 事件已經真的建立了（且重新確認過）→ 資料庫這步失敗也要講清楚「Calendar 上已經有了」，
-    // 不能讓 Lin 誤會沒成功而重按一次（會建立重複事件）。
-    if (p.recurring) {
-      const { error } = await sb.from('classroom_recurring_days')
-        .upsert({ token: token, weekday: p.weekday, start_time: p.startVal, end_time: p.endTime, calendar_event_id: ev.id }, { onConflict: 'token,weekday' });
-      if (error) throw new Error('Calendar 事件已經建立成功，但存進資料庫失敗：' + error.message + '\n（不要重按一次，Calendar 上已經有這個事件了，請告訴 Lin/AI 手動補資料庫）');
-    } else {
-      const { error } = await sb.from('classroom_schedule')
-        .upsert({ token: token, lesson_date: p.dateVal, start_time: p.startVal, end_time: p.endTime, title: s.name, calendar_event_id: ev.id }, { onConflict: 'token,lesson_date,start_time' });
-      if (error) throw new Error('Calendar 事件已經建立成功，但存進資料庫失敗：' + error.message + '\n（不要重按一次，Calendar 上已經有這個事件了，請告訴 Lin/AI 手動補資料庫）');
-    }
+    const created = await createCalendarClassEventForStudent(token, s, p);
+    const start = created.start;
 
     // 2026-07-17 加（Lin 要求）：加課成功之後，跟取消/改期一樣，用 LINE 通知學生跟老師自己一份，
     // 不要讓學生完全不知情、只能自己上網站才發現多了一堂課。跟 processClassRequestInner 用同一套
@@ -2052,6 +2069,70 @@ async function confirmAddClassDay() {
     }
   } catch (e) {
     resultEl.innerHTML = '<div style="color:#b45309;">❌ 失敗：' + escHtml(e.message || String(e)) + '</div>';
+  }
+}
+
+// 2026-07-18 加（Lin 要求）：老師自己想到要加課（不是在核准學生送出的申請）——
+// 這裡「不」直接建立 Calendar，先建一筆 classroom_requests（request_type='add_class',
+// initiated_by='teacher'），送 LINE/網站通知請學生按「我知道了」確認，老師之後要回到
+// 「📋 學生申請改期/取消」清單按「確認新增」（見 confirmTeacherAddClass）才會真的排進 Calendar。
+// 跟 teacherCancelClassNowInner（老師發起取消）同一套模式。
+async function proposeAddClassDay() {
+  const p = _addClassDayPending;
+  if (!p) return;
+  const token = p.token;
+  const s = studentsCache[token];
+  if (!s) { alert('找不到學生資料'); return; }
+  const resultEl = document.getElementById('addClassDayResult');
+  resultEl.innerHTML = '送出中…';
+  try {
+    const res = await sb.rpc('submit_class_request', {
+      p_token: token, p_student_name: s.name, p_request_type: 'add_class',
+      p_original_date: null, p_requested_date: p.dateVal, p_requested_time: p.startVal,
+      p_note: p.recurring ? ('每週固定上課' + (p.untilVal ? '，固定到 ' + p.untilVal : '（沒有結束日）')) : null,
+      p_initiated_by: 'teacher',
+    });
+    if (res.error) { resultEl.innerHTML = '<div style="color:#b45309;">建立紀錄失敗：' + escHtml(res.error.message) + '</div>'; return; }
+    const newId = res.data;
+
+    // 補存這次加課提案的細節（結束時間/是否每週固定/固定到哪天/星期幾）——之後老師按「確認新增」時要用
+    const payloadRes = await sb.from('classroom_requests').update({
+      proposed_end_time: p.endTime, proposed_recurring: p.recurring, proposed_until: p.untilVal, proposed_weekday: p.weekday,
+    }).eq('id', newId);
+    if (payloadRes.error) console.warn('⚠️ 補存加課提案細節失敗（不影響通知本身，但「確認新增」時可能讀不到完整時段，請告訴 Lin/AI 手動補資料庫）：', payloadRes.error.message);
+
+    let notifySent = false, notifyError = null;
+    if (s.line_user_id) {
+      try {
+        const addTimeLabel = p.recurring
+          ? ('每週' + ['日','一','二','三','四','五','六'][p.weekday] + ' ' + p.startVal + '–' + p.endTime + '（泰國時間，從 ' + p.dateVal + ' 開始' + (p.untilVal ? '，固定到 ' + p.untilVal : '') + '）')
+          : studentFacingTimeLabel(teacherTimeToDate(p.dateVal, p.startVal), s.pending_student_tz);
+        const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+          body: JSON.stringify({
+            to: { studentToken: token },
+            message: '老師想幫你加一堂課：' + addTimeLabel + '，請按一下確認',
+            flex: {
+              title: '➕ 老師想幫你加一堂課',
+              bodyText: '時間：' + addTimeLabel + '\n\n請按下方按鈕確認',
+              buttons: [ { label: '我知道了', postbackData: 'action=ack_teacher_add&request=' + encodeURIComponent(newId) } ],
+            },
+          }),
+        });
+        notifySent = notifyRes.ok;
+        if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+      } catch (e) { notifyError = e.message || String(e); }
+    }
+
+    var msg = '✅ 已送出加課通知，等學生按「我知道了」（LINE 或網站都可以）之後，記得回來「📋 學生申請改期/取消」清單按「確認新增」才會真的排進 Calendar';
+    if (!s.line_user_id) msg += '\n⚠️ 學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下';
+    else if (!notifySent) msg += '\n⚠️ 但 LINE 通知失敗（' + notifyError + '），學生開網站還是看得到，也可以自己再說一聲';
+    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;">' + escHtml(msg).replace(/\n/g, '<br>') + '</div>';
+    _addClassDayPending = null;
+    loadPendingClassRequests();
+  } catch (e) {
+    resultEl.innerHTML = '<div style="color:#b45309;">送出失敗：' + escHtml(e.message || String(e)) + '</div>';
   }
 }
 
@@ -4079,6 +4160,7 @@ async function renderStudentView() {
     // 2026-07-16 加：老師剛發起、還沒被學生確認的取消通知放在最上面（要學生按確認的優先度更高），
     // 已經確認完成的舊版通知（純關閉用）放下面。
     '<div id="teacherCancelAckBanner"></div>' +
+    '<div id="teacherAddAckBanner"></div>' +
     '<div id="teacherCancelNoticeBanner"></div>' +
     '<div class="student-hero">' +
       '<div class="student-hero-avatar">' + escHtml(sInitial) + '</div>' +
@@ -4144,6 +4226,7 @@ async function renderStudentView() {
   checkStudentSlipStatus(token);
   loadStudentNextClass(token);
   loadTeacherCancelAckBanner(token);
+  loadTeacherAddAckBanner(token);
   loadTeacherCancelNoticeBanner(token);
   loadStudentPendingRequestStatus(token);
   loadStudentSchedule(token);
@@ -4483,10 +4566,9 @@ async function loadStudentSchedule(token) {
     }
 
     const html =
-      '<details>' +
-        '<summary style="cursor:pointer;color:var(--gold-deep);font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;padding:4px 0;">📖 本期課程' + (mergedDates.length ? '（共 ' + mergedDates.length + ' 堂）' : '') + '</summary>' +
-        '<div style="margin-top:8px;">' + courseTableHtml() + '</div>' +
-      '</details>' +
+      // 2026-07-19 改（Lin 要求）：「本期課程」不要用 dropdown 折疊，直接展開常駐顯示
+      '<div style="color:var(--gold-deep);font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;padding:4px 0;">📖 本期課程' + (mergedDates.length ? '（共 ' + mergedDates.length + ' 堂）' : '') + '</div>' +
+      '<div style="margin-top:8px;">' + courseTableHtml() + '</div>' +
       '<details style="margin-top:12px;">' +
         '<summary style="cursor:pointer;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:4px 0;">📅 過去的課程記錄' + (attHistory.length ? '（' + attHistory.length + ' 筆）' : '') + '</summary>' +
         '<div style="margin-top:6px;opacity:0.8;">' + (attHistory.length ? historyTableHtml() : '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無過去的課程記錄</div>') + '</div>' +
@@ -5406,11 +5488,15 @@ async function loadStudentPendingRequestStatus(token) {
   try {
     // 2026-07-16 改：多撈幾筆，自己篩掉「老師發起的取消」（那個已經有專屬的
     // teacherCancelAckBanner 處理確認流程了，這裡不用重複顯示，不然學生會看到兩個一樣的東西）。
+    // 2026-07-18 加：同理篩掉「老師發起的加課」，改用專屬的 teacherAddAckBanner 顯示確認流程。
     const res = await sb.from('classroom_requests').select('*')
       .eq('token', token).eq('status', 'pending')
       .order('created_at', { ascending: false }).limit(5);
     const rows = res.data || [];
-    const r = rows.find(function (x) { return !(x.request_type === 'cancel' && x.initiated_by === 'teacher'); });
+    const r = rows.find(function (x) {
+      return !(x.request_type === 'cancel' && x.initiated_by === 'teacher') &&
+        !(x.request_type === 'add_class' && x.initiated_by === 'teacher');
+    });
     if (!r) { await loadStudentRecentAcknowledgedCancelCard(token, el); return; }
     window._myPendingRequest = r;
     const isCancel = r.request_type === 'cancel';
@@ -5617,6 +5703,50 @@ async function ackTeacherCancel(token, id) {
   // 2026-07-18 加了又拿掉：Lin 確認網站這裡不用加提示訊息，維持原本按完就悄悄消失的行為。
   // 要改的是 LINE 那邊的回覆文字（見 supabase/functions/line-webhook/index.ts 的 ack_teacher_cancel）
   await loadTeacherCancelAckBanner(token);
+}
+
+// 2026-07-18 加（Lin 要求）：老師自己發起「➕ 加課堂時間」也要先讓學生確認，才會真的排進 Calendar，
+// 跟老師發起取消同一套模式（loadTeacherCancelAckBanner／ackTeacherCancel 的加課版）。
+async function loadTeacherAddAckBanner(token) {
+  var el = document.getElementById('teacherAddAckBanner');
+  if (!el) return;
+  try {
+    var res = await sb.from('classroom_requests').select('id,requested_date,requested_time,proposed_recurring,proposed_weekday')
+      .eq('token', token).eq('request_type', 'add_class').eq('initiated_by', 'teacher')
+      .eq('status', 'pending').is('teacher_add_ack_at', null)
+      .order('created_at', { ascending: false }).limit(5);
+    if (res.error) { el.innerHTML = ''; return; }
+    var rows = res.data || [];
+    el.innerHTML = rows.map(function(r) {
+      var timeLabel = r.proposed_recurring
+        ? ('每週' + ['日','一','二','三','四','五','六'][r.proposed_weekday] + ' ' + (r.requested_time || '-') + '（泰國時間）')
+        : ((r.requested_date || '-') + ' ' + (r.requested_time || '-') + '（泰國時間）');
+      return '<div style="background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;">' +
+        '<div style="font-weight:700;font-size:0.95rem;color:var(--amber-dark);margin-bottom:4px;">➕ 老師想幫你加一堂課</div>' +
+        '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:10px;">時間：' + escHtml(timeLabel) + '，請按一下確認</div>' +
+        '<button onclick="ackTeacherAdd(\'' + token + '\',\'' + r.id + '\')" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border:none;border-radius:999px;padding:8px 16px;font-size:0.85rem;font-weight:700;cursor:pointer;">我知道了</button>' +
+      '</div>';
+    }).join('');
+  } catch (e) { el.innerHTML = ''; }
+}
+
+async function ackTeacherAdd(token, id) {
+  var res = await sb.from('classroom_requests').update({ teacher_add_ack_at: new Date().toISOString() })
+    .eq('id', id).is('teacher_add_ack_at', null).select();
+  if (res.error) { alert('⚠️ 確認失敗：' + res.error.message + '\n可以直接用 LINE 聯絡老師比較保險。'); return; }
+  if (!res.data || !res.data.length) {
+    // count=0：可能已經在 LINE 按過了，或老師剛好收回了通知——不管哪一種，重新整理畫面看目前狀態就好
+    await loadTeacherAddAckBanner(token);
+    return;
+  }
+  try {
+    await fetch(LINE_NOTIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到加課通知（' + (res.data[0].requested_date || '-') + ' ' + (res.data[0].requested_time || '') + '），可以到網站按「確認新增」了' }),
+    });
+  } catch (e) { /* 通知老師失敗不影響學生這邊已經確認成功 */ }
+  await loadTeacherAddAckBanner(token);
 }
 
 // 2026-07-16 改（Lin 要求：最多 3 個時間選項 + 都不方便要通知老師）：
@@ -6199,7 +6329,16 @@ async function loadPendingClassRequests() {
       : ('原本課堂：' + origLabel1 + '　→　想改到：' + (r.requested_date || '-') + (r.requested_time ? ' ' + r.requested_time : ''));
     var typeLabel = (r.initiated_by === 'teacher' ? '（老師提出）' : '') + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期');
     var actionsHtml;
-    if (isAdd) {
+    if (isAdd && r.initiated_by === 'teacher') {
+      // 2026-07-18 加（Lin 要求）：老師自己想到要加課（不是核准學生送出的申請）——一樣要先等
+      // 學生按「我知道了」確認，才輪到老師按「確認新增」真的排進 Calendar，跟老師發起取消同一套。
+      actionsHtml = r.teacher_add_ack_at
+        ? ('<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">✅ 學生已經確認了，可以排進 Calendar 了</div>' +
+           '<button class="btn-approve" onclick="confirmTeacherAddClass(\'' + r.id + '\')">確認新增 Calendar</button>')
+        : ('<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">🕐 等學生按「我知道了」確認</div>' +
+           '<button class="btn-approve" onclick="viewRequestDetail(window._classRequestCache[\'' + r.id + '\'])">👁️ 查看</button>' +
+           '<button class="btn-reject" onclick="teacherWithdrawOwnAddRequest(\'' + r.id + '\')">收回這個加課</button>');
+    } else if (isAdd) {
       // 加課申請：不用「處理」（找不到既有事件），改開「➕ 加課堂時間」那套工具，
       // 先幫老師帶入學生申請的日期/時間，老師檢查沒衝突、確認新增後，這筆申請才會自動標記完成。
       actionsHtml = (calUrl ? '<a class="btn-approve" style="text-decoration:none;text-align:center;" href="' + calUrl + '" target="_blank" rel="noopener">🔗 開 Calendar</a>' : '') +
@@ -6230,8 +6369,8 @@ async function loadPendingClassRequests() {
       actionsHtml = pickOpts.map(function (opt, i) {
         return '<button class="btn-approve" onclick="teacherPickRescheduleOption(\'' + r.id + '\',' + i + ')">✅ ' + escHtml(formatOfferOptionForTeacher(opt)) + '</button>';
       }).join('') +
-        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>' +
-        '<button class="btn-reject" onclick="teacherDeclineRescheduleOptions(\'' + r.id + '\')">都不方便，關掉這筆</button>';
+        // 2026-07-19 拿掉（Lin 要求）：「都不方便，關掉這筆」按鈕移除，teacherDeclineRescheduleOptions 保留但不再從這裡呼叫。
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>';
     } else if (isCancel && r.initiated_by === 'teacher') {
       // 2026-07-16 加（Lin 要求）：老師自己發起的取消，不再馬上刪 Calendar——現在要先等學生按
       // 「我知道了」確認收到，才輪到老師按「確認刪除」真的動 Calendar。學生確認前，老師這裡可以
@@ -7223,6 +7362,91 @@ async function teacherWithdrawOwnCancelRequest(id) {
     }
     alert('✅ 已收回，這堂課不會被取消，Calendar 沒有被動過');
     await loadPendingClassRequests();
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
+}
+
+// 2026-07-18 加（Lin 要求）：老師自己發起的加課提議，學生還沒確認前可以收回——跟
+// teacherWithdrawOwnCancelRequest 同一套模式，只是欄位換成 teacher_add_ack_at。
+async function teacherWithdrawOwnAddRequest(id) {
+  if (!confirm('確定要收回這個加課通知嗎？（不會排進 Calendar，學生看到的確認按鈕會消失）')) return;
+  if (_inFlightRequestIds[id]) return;
+  _inFlightRequestIds[id] = true;
+  try {
+    var res = await sb.from('classroom_requests').update({ status: 'acknowledged' })
+      .eq('id', id).eq('status', 'pending').is('teacher_add_ack_at', null).select();
+    if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
+    if (!res.data || !res.data.length) {
+      alert('ℹ️ 收回失敗——學生可能剛好已經按了確認，這種情況直接按「確認新增」排進 Calendar，或自己聯絡學生說明不加了。');
+      await loadPendingClassRequests();
+      return;
+    }
+    alert('✅ 已收回，沒有排進 Calendar');
+    await loadPendingClassRequests();
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
+}
+
+// 2026-07-18 加（Lin 要求）：老師自己發起的加課，學生已經按「我知道了」確認後，老師回來
+// 這裡按「確認新增 Calendar」才會真的建立事件——共用 createCalendarClassEventForStudent
+// （跟 confirmAddClassDay 同一個核心函式，只是這裡從 classroom_requests 這筆申請讀資料，
+// 不是從 _addClassDayPending 讀）。
+async function confirmTeacherAddClass(id) {
+  if (_inFlightRequestIds[id]) return;
+  _inFlightRequestIds[id] = true;
+  try {
+    // RELIABILITY FIRST：動 Calendar 之前先回頭問資料庫一次最新狀態，不要只信任畫面快取
+    // （防止學生剛好同時收回，或這筆申請已經被別的方式關掉）。
+    const verify = await reverifyRequestState(id, null);
+    if (!verify.ok) { alert('⚠️ ' + verify.reason); await loadPendingClassRequests(); return; }
+
+    const res = await sb.from('classroom_requests').select('*').eq('id', id).maybeSingle();
+    if (res.error || !res.data) { alert('⚠️ 讀取這筆加課申請失敗：' + (res.error ? res.error.message : '找不到資料')); return; }
+    const r = res.data;
+    if (!r.teacher_add_ack_at) { alert('ℹ️ 學生還沒按「我知道了」確認，先不能新增。'); await loadPendingClassRequests(); return; }
+
+    const token = r.token;
+    const s = studentsCache[token];
+    if (!s) { alert('找不到學生資料'); return; }
+
+    const p = {
+      dateVal: r.requested_date,
+      startVal: r.requested_time,
+      endTime: r.proposed_end_time || addOneHourTimeStr(r.requested_time),
+      recurring: !!r.proposed_recurring,
+      untilVal: r.proposed_until,
+      weekday: r.proposed_weekday,
+    };
+
+    const created = await createCalendarClassEventForStudent(token, s, p);
+    const start = created.start;
+
+    const addedTimeLabel = p.recurring
+      ? ('每週' + ['日','一','二','三','四','五','六'][p.weekday] + ' ' + p.startVal + '–' + p.endTime + '（泰國時間，從 ' + p.dateVal + ' 開始' + (p.untilVal ? '，固定到 ' + p.untilVal : '') + '）')
+      : formatThaiDateTimeLabel(start.toISOString()) + '（泰國時間）';
+    if (s.line_user_id) {
+      try {
+        const studentTimeLabel = p.recurring ? addedTimeLabel : studentFacingTimeLabel(start, s.pending_student_tz);
+        await fetch(LINE_NOTIFY_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+          body: JSON.stringify({ to: { studentToken: token }, message: '你確認的加課已經排進 Calendar 了：' + studentTimeLabel }),
+        });
+      } catch (e) { console.warn('⚠️ 加課完成通知學生失敗（不影響已經加成功的課）：', e.message || e); }
+    }
+    try {
+      await fetch(LINE_NOTIFY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        body: JSON.stringify({ to: 'teacher', message: '✅ 已幫 ' + s.name + ' 加課：' + addedTimeLabel }),
+      });
+    } catch (e) { console.warn('⚠️ 加課完成通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
+
+    await finalizeRequestStatus(id, 'acknowledged');
+  } catch (e) {
+    alert('❌ 新增失敗：' + (e.message || String(e)));
   } finally {
     delete _inFlightRequestIds[id];
   }
@@ -8280,6 +8504,11 @@ async function syncScheduleToSupabase(matched) {
   }
 }
 
+// 2026-07-19 改（Lin 要求）：📅上課記錄 改成跟學生的 📅我的課程記錄 同一套系統——
+// 「本期課程」不只列已經上過的（✅已完成），還要合併還沒上到的未來排課（⏳未完成），
+// 常駐展開不折疊；「過去的課程記錄」維持原本可摺疊、可編輯/刪除的清單。
+// 已完成的列還是用 classroom_attendance 直接查（保留 id 才能編輯/刪除），
+// 未完成（未來排課）用跟學生端一樣的 get_student_schedule RPC 撈，只顯示不能編輯（還沒有 attendance 記錄可改）。
 async function openAttendanceHistory(token) {
   const s = studentsCache[token];
   const name = s ? s.name : token;
@@ -8289,33 +8518,45 @@ async function openAttendanceHistory(token) {
   document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">載入中…</div>';
   document.getElementById('attendHistModal').classList.add('open');
 
-  const attRes = await sb.from('classroom_attendance')
-    .select('id,lesson_date,lessons').eq('token', token).order('lesson_date', { ascending: true });
-  const data = attRes.data;
+  const [attRes, schedRes, payRes] = await Promise.all([
+    sb.from('classroom_attendance').select('id,lesson_date,lessons').eq('token', token).order('lesson_date', { ascending: true }),
+    sb.rpc('get_student_schedule', { p_token: token }),
+    sb.from('classroom_payments').select('lessons,bonus_lessons,status,start_date').eq('token', token).in('status', ['pending', 'done']),
+  ]);
+  const data = attRes.data || [];
+  const schedData = schedRes.data || [];
 
-  if (!data || data.length === 0) {
+  if (!data.length && !schedData.length) {
     document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">尚無上課記錄</div>';
     document.getElementById('attendHistSummary').textContent = '';
     return;
   }
 
   // 依「本輪起算日」分流：起算日前=過往課程（收進摺疊區，仍可編輯/刪除）
-  const payRes = await sb.from('classroom_payments')
-    .select('lessons,bonus_lessons,status,start_date').eq('token', token).in('status', ['pending', 'done']);
   const q = computeCurrentCourse(payRes.data || [], data);
   const startDay = q.start || null;
   const current = startDay ? data.filter(function(r){ return r.lesson_date >= startDay; }) : data;
   const history = startDay ? data.filter(function(r){ return r.lesson_date < startDay; }) : [];
 
+  // 未來排定但還沒上的課（跟 loadStudentSchedule 同一套合併邏輯，教師端用教師自己的時區日期，不用換算）
+  const attCurrentDates = {};
+  current.forEach(function(r) { attCurrentDates[r.lesson_date] = true; });
+  const upcomingDates = schedData
+    .map(function(r) { return r.lesson_date; })
+    .filter(function(d) { return d && (!startDay || d >= startDay) && !attCurrentDates[d]; });
+
   const dayZh = ['日','一','二','三','四','五','六'];
+  function fmtDateOnly(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    return (d.getMonth()+1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）';
+  }
   function rowsHtml(list) {
     let cum = 0, tot = 0;
     const html = list.map(function(r) {
       const n = r.lessons || 1;
       const start = cum + 1, end = cum + n; cum = end; tot += n;
       const numLabel = n > 1 ? ('第 ' + start + '–' + end + ' 堂') : ('第 ' + start + ' 堂');
-      const d = new Date(r.lesson_date + 'T12:00:00');
-      const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）' + (n > 1 ? ' · ' + n + ' 堂' : '');
+      const dateStr = fmtDateOnly(r.lesson_date) + (n > 1 ? ' · ' + n + ' 堂' : '');
       const isToday = r.lesson_date === today;
       return '<div class="hist-row">' +
         '<span class="hist-num">' + numLabel + '</span>' +
@@ -8327,9 +8568,20 @@ async function openAttendanceHistory(token) {
     }).join('');
     return { html: html, lessons: tot, count: list.length };
   }
+  function upcomingRowsHtml(dates) {
+    return dates.map(function(dateKey) {
+      const isToday = dateKey === today;
+      return '<div class="hist-row">' +
+        '<span class="hist-num">⏳ 未完成</span>' +
+        '<span class="hist-date">' + fmtDateOnly(dateKey) + (isToday ? ' <span class="hist-today-tag">✨ 今日</span>' : '') + '</span>' +
+      '</div>';
+    }).join('');
+  }
 
   const cur = rowsHtml(current);
-  let listHtml = current.length ? cur.html : '<div class="empty-attend">本輪課程尚無上課記錄</div>';
+  let listHtml = current.length ? cur.html : '';
+  listHtml += upcomingRowsHtml(upcomingDates);
+  if (!current.length && !upcomingDates.length) listHtml = '<div class="empty-attend">本輪課程尚無上課記錄</div>';
   if (history.length) {
     const his = rowsHtml(history);
     listHtml += '<details style="margin-top:10px;">' +
@@ -8339,7 +8591,7 @@ async function openAttendanceHistory(token) {
   }
 
   document.getElementById('attendHistList').innerHTML = listHtml;
-  document.getElementById('attendHistSummary').textContent = '本輪共 ' + cur.lessons + ' 堂（' + cur.count + ' 天）';
+  document.getElementById('attendHistSummary').textContent = '本輪共 ' + cur.lessons + ' 堂（' + (cur.count + upcomingDates.length) + ' 天，含 ' + upcomingDates.length + ' 天未上）';
 }
 
 // 改某一天的堂數（例如一天上 2 堂）
