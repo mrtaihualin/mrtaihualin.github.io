@@ -4075,32 +4075,32 @@ async function renderStudentView() {
     '<div id="receiptBtns"></div>' +
     '<div class="card">' +
       '<h2>📹 進入課堂</h2>' +
+      // 2026-07-18 改（Lin 要求）：所有按鈕大小要跟「🔔 連結 LINE 帳號」那顆一樣（font-size:0.95rem;padding:12px 20px）
       (student.meet
-        ? '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener">' + meetSVG + ' 點此進入課堂</a>' +
+        ? '<a class="meet-btn" href="' + escHtml(safeHref(student.meet)) + '" target="_blank" rel="noopener" style="font-size:0.95rem;padding:12px 20px;">' + meetSVG + ' 點此進入課堂</a>' +
           '<p class="meet-link-text">點擊後將在新視窗開啟 Google Meet</p>'
-        : '<div class="meet-btn" style="opacity:1;cursor:default;background:var(--gold-light);color:var(--gold-deep);">' + meetSVG + ' 課堂連結準備中…</div>' +
+        : '<div class="meet-btn" style="opacity:1;cursor:default;background:var(--gold-light);color:var(--gold-deep);font-size:0.95rem;padding:12px 20px;">' + meetSVG + ' 課堂連結準備中…</div>' +
           '<p class="meet-link-text">老師正在整理你的課堂連結，稍後重新整理就會看到（太久沒出現可用 LINE 提醒老師）</p>') +
     '</div>' +
     // 2026-07-18 改（Lin 要求）：「🔁 老師提議新時間」移到「下一堂課」上面，最優先看到
     '<div id="pendingRequestCard"></div>' +
+    // 2026-07-18 再改（Lin 要求）：拿掉獨立的「我的課程記錄」卡片，改成「下一堂課」按鈕列的
+    // 第一顆按鈕（放在 ❌取消課堂 前面），點下去直接在原地展開，不用跳到別的卡片
     '<div class="card" id="nextClassCard">' +
       '<h2>📅 下一堂課</h2>' +
       '<div id="nextClassInfo"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+      '<div id="courseRecordPanel" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">' +
+        '<div id="quotaSummary"></div>' +
+        '<div id="scheduleList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
+      '</div>' +
       buildLineActionBtn(token, student) +
-    '</div>' +
-    // 2026-07-18 改（Lin 要求）：卡片標題改回一般 <h2>（不是整張卡片下拉），
-    // dropdown 改放在裡面的「本期課程」子標題，內容合併「已完成」+「還沒上（預期）」成一份清單
-    '<div class="card">' +
-      '<h2>📅 我的課程記錄</h2>' +
-      '<div id="quotaSummary"></div>' +
-      '<div id="scheduleList"><div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:12px 0;">載入中…</div></div>' +
     '</div>' +
     // 2026-07-18 改（Lin 要求）：「今日學習感想」「課堂資料下載」改回單欄上下排列（取消並排半版）
     '<div class="card">' +
       '<h2>💬 今日學習感想</h2>' +
       '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">今天學了什麼？寫下你的感想讓老師知道 ✨</p>' +
       '<textarea id="feedbackText" placeholder="例：今天學了聲調，สวัสดี 的用法還不太確定…" style="width:100%;min-height:88px;border-radius:9px;border:1px solid var(--border);padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.9rem;color:var(--ink);background:#fff;resize:vertical;box-sizing:border-box;"></textarea>' +
-      '<button class="btn-gold" onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;">送出感想 ✉️</button>' +
+      '<button class="btn-gold" onclick="submitFeedback(\'' + token + '\')" style="margin-top:10px;width:100%;font-size:0.95rem;padding:12px 20px;">送出感想 ✉️</button>' +
       '<div id="feedbackStatus" style="margin-top:8px;font-size:0.82rem;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);min-height:18px;"></div>' +
     '</div>' +
     '<div class="card">' +
@@ -4110,7 +4110,7 @@ async function renderStudentView() {
     '<div class="card">' +
       '<h2>💰 繳費 & 收據</h2>' +
       '<div id="slipStatusMsg"></div>' +
-      '<button class="btn-add-student" style="margin-top:8px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
+      '<button class="btn-add-student" style="margin-top:8px;font-size:0.95rem;padding:12px 20px;" onclick="openSlipModal(\'' + token + '\')">💰 繳費通知</button>' +
       '<p class="meet-link-text" style="margin-top:8px;">選課程方案 → 選幣別 → 上傳匯款截圖 → 老師確認後自動開立收據</p>' +
       '<div id="payHistory" style="margin-top:14px;"></div>' +
     '</div>' +
@@ -4638,7 +4638,7 @@ async function loadStudentFolderLink(token) {
       el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無課堂資料<br><span style="font-size:0.78rem;">課後老師上傳後即可在此下載</span></div>';
       return;
     }
-    el.innerHTML = '<a class="meet-btn" href="' + escHtml(safeHref(data)) + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));">📁 開啟我的 Google Drive 資料夾</a>' +
+    el.innerHTML = '<a class="meet-btn" href="' + escHtml(safeHref(data)) + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));font-size:0.95rem;padding:12px 20px;">📁 開啟我的 Google Drive 資料夾</a>' +
       '<p class="meet-link-text" style="margin-top:6px;">這裡有老師上傳的所有課堂資料</p>';
   } catch(e) { el.innerHTML = ''; }
 }
@@ -4668,6 +4668,18 @@ function buildLineActionBtn(token, student) {
 }
 
 // 2026-07-18 拿掉 classRequestSameWarn()（Lin 要求刪掉「此為唯讀課表…」這行提示文字）
+
+// 2026-07-18 加：「📅 我的課程記錄」現在是「下一堂課」按鈕列的第一顆按鈕，點下去原地展開/收合
+// #courseRecordPanel（裡面是 quotaSummary + scheduleList，資料已經在 loadStudentQuota/
+// loadStudentSchedule 載入好了，這裡只是切換顯示/隱藏，不用重新打 API）
+function toggleCourseRecordPanel() {
+  var panel = document.getElementById('courseRecordPanel');
+  var btn = document.getElementById('courseRecordToggleBtn');
+  if (!panel) return;
+  var opening = panel.style.display === 'none';
+  panel.style.display = opening ? '' : 'none';
+  if (btn) btn.textContent = opening ? '📅 我的課程記錄 ▲' : '📅 我的課程記錄 ▼';
+}
 
 // 2026-07-10 改版：
 // (1) 原本只看 classroom_schedule（老師手動連 Google Calendar 才會同步，只涵蓋近 9 天）——
@@ -4714,6 +4726,7 @@ async function loadStudentNextClass(token) {
     if (!lessonDate) {
       el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前沒有排定下一堂課，如需安排請聯絡老師，或直接送出「申請加課」。</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+          '<button class="btn-sm" id="courseRecordToggleBtn" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="toggleCourseRecordPanel()">📅 我的課程記錄 ▼</button>' +
           '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
           '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
         '</div>';
@@ -4749,6 +4762,8 @@ async function loadStudentNextClass(token) {
         // 就整個沒有取消按鈕，只能傳老師。現在改成一律開「選擇要取消的課堂」清單——
         // 有固定每週上課的學生會列出未來好幾堂，每一堂各自判斷是否超過 24 小時可以線上取消，
         // 不到 24 小時的那一堂會顯示「聯絡老師」而不是擋住整組功能。
+        // 2026-07-18 加（Lin 要求）：「📅 我的課程記錄」移到這一排第一顆，點下去原地展開/收合
+        '<button class="btn-sm" id="courseRecordToggleBtn" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="toggleCourseRecordPanel()">📅 我的課程記錄 ▼</button>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openCancelPickerModal()">❌ 取消課堂</button>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openReschedulePickerModal()">🔄 申請改期</button>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
@@ -6158,8 +6173,13 @@ async function loadPendingClassRequests() {
       actionsHtml = '<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">✅ 學生選好時間了，按下方確認才會真的搬 Calendar</div>' +
         '<button class="btn-approve" onclick="confirmAcceptedOffer(\'' + r.id + '\')">✅ 確認並搬 Calendar</button>';
     } else if (r.offer_status === 'declined') {
+      // 2026-07-18 改（Lin 要求）：改成 2 顆按鈕——
+      // 「💬 聯絡學生」重用既有的 openContactStudentModal（從網站直接送 LINE 訊息給這位學生），
+      // 「✅ 已讀，知道了」單純關掉這筆申請（跟 teacherDeclineRescheduleOptions 同一套 acknowledged 模式，
+      // 不動 Calendar）。兩顆都會關掉這張通知卡片。
       actionsHtml = '<div style="font-size:0.78rem;color:#b45309;font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">❌ 學生說這些時間都不方便，記得直接聯絡學生</div>' +
-        '<button class="btn-reject" onclick="cancelProposedOffer(\'' + r.id + '\')">↩️ 重新處理這筆</button>';
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\');finalizeRequestStatus(\'' + r.id + '\',\'acknowledged\')">💬 聯絡學生</button>' +
+        '<button class="btn-reject" onclick="finalizeRequestStatus(\'' + r.id + '\',\'acknowledged\')">✅ 已讀，知道了</button>';
     } else if (isProposed && r.initiated_by === 'teacher') {
       // 老師自己發起的改期提議，等學生回覆——跟老師自己發起的取消一樣，回覆前可以查看/修改/收回。
       actionsHtml = '<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">🔁 已提議新時間，等學生回覆中…</div>' +
@@ -6755,6 +6775,21 @@ async function confirmAcceptedOfferInner(id, r) {
 }
 
 // ↩️ 最近處理過、還在復原期限內的項目（backup 表）
+// 2026-07-18 加（Lin 要求）：每一筆都要有「關閉」按鈕——只是把這張通知關掉不要再看到，
+// 不影響「復原」本身還能不能用（DB 裡的備份還在，只是這裡不顯示了）。用 localStorage 記
+// 「已關閉的 id」，跟學生頁收據通知的 dismissReceipt() 同一套做法。
+function dismissedBackupIds() {
+  try { return JSON.parse(localStorage.getItem('dismissedBackupNotices') || '{}'); } catch (e) { return {}; }
+}
+function dismissBackupNotice(id) {
+  try {
+    var d = dismissedBackupIds();
+    d[id] = 1;
+    localStorage.setItem('dismissedBackupNotices', JSON.stringify(d));
+  } catch (e) {}
+  var row = document.getElementById('backup-row-' + id);
+  if (row) row.remove();
+}
 async function loadRecentBackups() {
   var container = document.getElementById('recentBackupsSection');
   if (!container) return;
@@ -6762,7 +6797,9 @@ async function loadRecentBackups() {
   var data = res.data || [];
   if (res.error) { container.innerHTML = ''; console.warn('讀取備份紀錄失敗：', res.error.message); return; }
   var now = Date.now();
+  var dismissed = dismissedBackupIds();
   var visible = data.filter(function(b) {
+    if (dismissed[b.id]) return false;
     var expiry;
     if (b.action === 'move') expiry = Math.max(new Date(b.old_start).getTime(), b.new_start ? new Date(b.new_start).getTime() : 0);
     else if (b.action === 'permanent_change') expiry = b.new_start ? new Date(b.new_start).getTime() : 0;
@@ -6782,7 +6819,10 @@ async function loadRecentBackups() {
         '<div class="slip-name">' + escHtml(name) + '　' + (actionLabel[b.action] || b.action) + '</div>' +
         '<div class="slip-course">' + formatThaiDateTimeLabel(b.old_start) + (b.new_start ? ('　→　' + formatThaiDateTimeLabel(b.new_start)) : '') + '（泰國時間）</div>' +
       '</div>' +
-      '<div class="slip-actions"><button class="btn-reject" onclick="revertCalendarBackup(\'' + b.id + '\')">↩️ 復原</button></div>' +
+      '<div class="slip-actions">' +
+        '<button class="btn-reject" onclick="revertCalendarBackup(\'' + b.id + '\')">↩️ 復原</button>' +
+        '<button onclick="dismissBackupNotice(\'' + b.id + '\')" title="關閉這則通知（復原功能不受影響）" style="background:none;border:none;cursor:pointer;font-size:1.05rem;color:var(--ink-muted);opacity:0.6;padding:2px 6px;">✕</button>' +
+      '</div>' +
     '</div>';
   }).join('');
   container.innerHTML = '<div class="pending-card">' + '<h2>↩️ 最近處理（還能復原）</h2>' + rows + '</div>';
@@ -6881,15 +6921,24 @@ async function loadTeacherNextClassBox(token) {
       if (anchor) { const p = formatInTz(anchor, TEACHER_TZ); lessonDate = p.dateStr; startTimeStr = p.timeStr; }
     }
     if (!lessonDate) {
-      el.innerHTML = '<div class="card" style="padding:12px 14px;margin-top:12px;"><div style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">目前沒有排定下一堂課</div></div>';
+      el.innerHTML = '<div class="card" style="padding:16px 18px;margin-top:12px;"><h2>📅 下一堂課</h2><div style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">目前沒有排定下一堂課</div></div>';
       _teacherNextClassCtx[token] = null;
       return;
     }
     _teacherNextClassCtx[token] = { isoDate: lessonDate, timeStr: startTimeStr };
-    var label = formatThaiDateTimeLabel(teacherTimeToDate(lessonDate, startTimeStr || '00:00').toISOString());
-    el.innerHTML = '<div class="card" style="padding:12px 14px;margin-top:12px;">' +
-      '<div style="font-weight:700;font-size:0.85rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:8px;">📅 下一堂課：' + escHtml(label) + '（泰國時間）</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+    // 2026-07-18 改（Lin 要求）：跟學生自己看到的「下一堂課」用同一套版型
+    // （<h2> 標題 + 米色資訊框顯示日期/時間，不是以前擠成一行的小字）
+    var dayZh = ['日','一','二','三','四','五','六'];
+    var dLabelDate = new Date(lessonDate + 'T00:00:00');
+    var dayLabel = (dLabelDate.getMonth()+1) + '月' + dLabelDate.getDate() + '日（週' + dayZh[dLabelDate.getDay()] + '）';
+    var timeStr = startTimeStr ? (startTimeStr + '（泰國時間）') : '';
+    el.innerHTML = '<div class="card" style="padding:16px 18px;margin-top:12px;">' +
+      '<h2>📅 下一堂課</h2>' +
+      '<div style="background:#f8f4ea;border:1px solid #e5d9b8;border-radius:10px;padding:12px 14px;font-family:\'Noto Sans TC\',sans-serif;">' +
+        '<div style="font-weight:700;font-size:1rem;color:var(--ink);">' + escHtml(dayLabel) + '</div>' +
+        (timeStr ? '<div style="font-size:0.9rem;color:var(--ink-soft);margin-top:2px;">' + escHtml(timeStr) + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;" onclick="initiateTeacherReschedule(\'' + t + '\')">🔄 改期</button>' +
         '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:#b45309;" onclick="teacherCancelClassNow(\'' + t + '\')">❌ 取消</button>' +
         '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openPermanentChangeModal(\'' + t + '\')">📌 固定</button>' +
