@@ -8,14 +8,15 @@
 // สิ่งที่ย้ายมา (ของเดิมเฉพาะเกมเสียง ไม่มีในอีก 4 เกม):
 //   1) เซฟคะแนนรอบเล่นลงตาราง tone_sessions (คนละตารางกับ reading_sessions ของอีก 4 เกม — ยังไม่รวม ต้องคุยแยกถ้าจะรวม)
 //   2) ปลดล็อกเหรียญรางวัลอัตโนมัติสำหรับบัญชี Lin (admin)
-//   3) ป๊อปอัพสำรวจก่อนออกจากหน้าแบบแถบล่าง (mouseout ขอบบน / idle 45วิ บนมือถือ)
 //
 // ⚠️ สิ่งที่ "ไม่ได้" ย้ายมา (ของเดิมมีแต่ตัดออกตอนรวมระบบ — Lin รับทราบแล้ว):
 //   - "lead gate" เก็บอีเมลแบบไม่ยืนยันแล้วเล่นต่อได้ (submitLeadEmail/leads table) — requireLogin ตายอยู่แล้วมาตลอด ไม่เคยบังคับจริง
 //     ผลคือ: คนที่เคยแค่กรอกอีเมล (ไม่ได้ล็อกอินจริง) จะไม่มีระบบจำคำ/ทบทวน (SRS) อีกต่อไป ต้องล็อกอินจริงเหมือนอีก 4 เกม (Lin ยืนยันแล้ว 2026-07-16)
 //   - ป๊อปอัพสำรวจแบบ modal เต็มจอ (เด้งเวลาปิดหน้าล็อกอินของเกมเสียงเองโดยยังไม่ล็อกอิน) — ผูกกับปุ่มปิด gate เดิมของ supabase-auth.js โดยตรง
 //     ตอนนี้ปุ่มล็อกอินใช้ของ reading-auth.js ร่วมกับเกมอื่นแล้ว ไม่ได้ต่อ hook นี้ไว้ (Lin บอกยังไม่ต้องทำ 2026-07-16)
-//     เหลือแค่แถบล่าง (ข้อ 3 ด้านบน) ซึ่งเป็นตัวหลักที่คนเจอจริงอยู่แล้ว
+//   - (เดิมข้อ 3) ป๊อปอัพสำรวจก่อนออกจากหน้าแบบแถบล่างของไฟล์นี้เอง — ลบออกแล้ว 2026-07-18 เพราะซ้ำกับระบบกลาง
+//     ใน shared.js (ใช้ร่วมทุกหน้าเกม+หน้าราคา) ของเดิมจำ "เคยโชว์แล้ว" แค่ตอนเปิดหน้าอยู่ ไม่ถาวรเหมือน shared.js
+//     ทำให้ก่อนหน้านี้เจอบั๊กขึ้นซ้อนกัน 2 แถบ/โชว์ซ้ำทุกครั้งที่รีเฟรชหน้า — Lin ยืนยันให้เหลือระบบเดียว (shared.js)
 // ════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -134,104 +135,7 @@
     }
   } catch (e) {}
 
-  // ════════ 3) น้องมีนา exit-survey แถบล่าง — mouseout ขอบบน (desktop) / idle 45วิ (มือถือ) LIN 2026-07-05 ════════
-  var exitSurveyShown = false;   // โชว์ครั้งเดียวต่อ session (ไม่กวน)
-  var PUBLIC_W3F_KEY = 'b3bfdb97-19dd-4910-bd15-89720be846c2';   // public submit-only key (โชว์ในเว็บได้)
-
-  function anyModalOpen() { try { return !!document.querySelector('.modal-overlay.open'); } catch (e) { return false; } }
-  function gateOpen() { try { var g = document.getElementById('rg-gate'); return !!g && g.style.display === 'flex'; } catch (e) { return false; } }
-
-  function exitSurveyEmail(choice, text, surface) {
-    try {
-      var fields = {
-        subject: '【離開問卷】遊戲頁 exit survey',
-        from_name: '泰華遊戲・exit survey',
-        '原因': choice || '(未選)',
-        '留言': text || '',
-        '觸發方式': surface || '',
-        '頁面': location.pathname
-      };
-      if (typeof window.web3Send === 'function') { window.web3Send({ fields: fields }); return; }
-      fetch('https://api.web3forms.com/submit', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, keepalive: true,
-        body: JSON.stringify(Object.assign({ access_key: PUBLIC_W3F_KEY }, fields))
-      }).catch(function () {});
-    } catch (e) {}
-  }
-
-  function maybeShowExitBar(trigger) {
-    var loggedIn = !!(window.READING_AUTH && READING_AUTH.user);
-    if (loggedIn || exitSurveyShown) return;
-    if (gateOpen()) return;                 // กำแพงล็อกอินเปิดอยู่ = ไม่เด้งทับ
-    try { if (anyModalOpen()) return; } catch (e) {}   // มี modal เปิด = ไม่เด้งทับ
-    showExitBar(trigger);
-  }
-
-  function showExitBar(trigger) {
-    exitSurveyShown = true;
-    try { window.gtag('event', 'exit_survey_shown', { surface: 'bar', trigger: trigger || '' }); } catch (e) {}
-    var opts = [['no_login', '不想登入'], ['login_broken', '登入怪怪的'], ['just_play', '隨便玩玩'], ['no_email', '還不想留 Email'], ['other', '其他…']];
-    var chips = opts.map(function (o) {
-      return '<button class="tf-eb-opt" data-v="' + o[0] + '" style="flex:0 0 auto;background:#fff;border:1px solid rgba(70,179,119,0.4);border-radius:20px;padding:7px 13px;font-size:13px;color:#2E7D4F;cursor:pointer;font-family:inherit;white-space:nowrap;">' + o[1] + '</button>';
-    }).join('');
-    var bar = document.createElement('div');
-    bar.id = 'tf-exit-bar';
-    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:100001;background:#FBF5E7;border-top:1px solid rgba(70,179,119,0.35);box-shadow:0 -8px 24px rgba(0,0,0,0.14);padding:12px 14px calc(12px + env(safe-area-inset-bottom));font-family:\'Noto Sans TC\',\'Noto Sans Thai\',sans-serif;transform:translateY(115%);transition:transform .32s ease;';
-    bar.innerHTML =
-      '<div style="max-width:680px;margin:0 auto;position:relative;">' +
-        '<button id="tf-eb-close" aria-label="關閉" style="position:absolute;top:-2px;right:0;border:none;background:none;font-size:18px;color:#5A3E0A;cursor:pointer;line-height:1;">✕</button>' +
-        '<div style="display:flex;align-items:center;gap:8px;margin:0 26px 9px 0;font-size:14px;color:#2E7D4F;"><span style="font-size:22px;">👧🏻</span><b>要走了嗎？是哪裡卡住了？告訴米娜一下 🙏</b></div>' +
-        '<div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;">' + chips + '</div>' +
-        '<textarea id="tf-eb-text" rows="1" placeholder="想說的話…（可不填）" style="display:none;width:100%;box-sizing:border-box;margin-top:8px;padding:8px 11px;border:1px solid rgba(70,179,119,0.4);border-radius:10px;font-size:13px;color:#2E7D4F;font-family:inherit;resize:none;"></textarea>' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-top:9px;">' +
-          '<span style="font-size:12px;color:#5A3E0A;">先看看課程也可以喔 😊</span>' +
-          '<button id="tf-eb-book" style="margin-left:auto;background:#C8973A;color:#FBF5E7;border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;">免費體驗課</button>' +
-        '</div>' +
-      '</div>';
-    document.body.appendChild(bar);
-    requestAnimationFrame(function () { bar.style.transform = 'translateY(0)'; });
-    function done(choice, text) {
-      if (choice) {
-        try { window.gtag('event', 'exit_survey_choice', { choice: choice, surface: 'bar', trigger: trigger || '' }); } catch (e) {}
-        exitSurveyEmail(choice, text || '', trigger || 'bar');
-      }
-      bar.style.transform = 'translateY(115%)';
-      setTimeout(function () { if (bar.parentNode) bar.remove(); }, 320);
-    }
-    bar.querySelector('#tf-eb-close').onclick = function () { done(null); };
-    bar.querySelector('#tf-eb-book').onclick = function () {
-      try { window.gtag('event', 'book_trial_click', { from: 'exit_bar' }); } catch (e) {}
-      done('book_trial');
-      if (typeof window.openModal === 'function') window.openModal('modal-line-qr');
-    };
-    [].forEach.call(bar.querySelectorAll('.tf-eb-opt'), function (b) {
-      b.onclick = function () {
-        var v = b.getAttribute('data-v');
-        if (v === 'other') {
-          var ta = bar.querySelector('#tf-eb-text');
-          ta.style.display = 'block'; ta.focus();
-          b.textContent = '送出 →'; b.style.background = '#CDEBD6';
-          b.onclick = function () { done('other:' + (ta.value || '').slice(0, 200), (ta.value || '').slice(0, 200)); };
-        } else { done(v); }
-      };
-    });
-  }
-
-  function setupExitTriggers() {
-    var isTouch = false;
-    try { isTouch = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
-    if (isTouch) {
-      var idleT;
-      var arm = function () { clearTimeout(idleT); idleT = setTimeout(function () { maybeShowExitBar('idle'); }, 45000); };
-      ['touchstart', 'scroll', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, arm, { passive: true }); });
-      arm();
-    } else {
-      document.addEventListener('mouseout', function (e) {
-        if (e.clientY <= 0 && !e.relatedTarget && !e.toElement) maybeShowExitBar('exit_intent');   // เมาส์ออกทางขอบบนเท่านั้น
-      });
-    }
-  }
-
-  function boot() { setupExitTriggers(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  // 2026-07-18: ลบ exit-survey แถบล่างของไฟล์นี้ออกแล้ว (ซ้ำกับระบบกลางใน shared.js
+  // ที่ใช้ร่วมทุกหน้าเกม + หน้าราคา ทำให้ก่อนหน้านี้เจอบั๊กขึ้นซ้อนกัน 2 แถบ/โชว์ซ้ำทุกครั้งที่รีเฟรช
+  // เพราะไฟล์นี้จำ "เคยโชว์แล้ว" แค่ตอนเปิดหน้าอยู่ ไม่ได้บันทึกถาวรเหมือน shared.js — Lin ยืนยันให้เหลือระบบเดียว)
 })();
