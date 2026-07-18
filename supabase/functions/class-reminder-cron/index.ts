@@ -1,10 +1,14 @@
 // ════════════════════════════════════════════════════════════
 // Supabase Edge Function: class-reminder-cron
 // หน้าที่: รันอัตโนมัติทุก ~5 นาที (ผ่าน pg_cron ดูไฟล์ SQL_pg_cron_class-reminder_2026-07-06.sql)
-//   1. เช็คตาราง classroom_schedule ว่ามีคาบไหน "ใกล้ถึงเวลาเรียน" (ยังไม่เคยส่งเตือน) → ส่ง LINE เตือนก่อนเรียน
+//   0. เช็คตาราง classroom_schedule ว่ามีคาบไหน "อีก 24 ชม.จะถึงเวลาเรียน" (ยังไม่เคยส่งเตือน) → ส่ง LINE เตือนล่วงหน้า
+//      (เพิ่ม 2026-07-18 — เตือนแยกอันที่ 2 ไม่ทับของเดิม)
+//   1. เช็คตาราง classroom_schedule ว่ามีคาบไหน "ใกล้ถึงเวลาเรียน" (ยังไม่เคยส่งเตือน) → ส่ง LINE เตือนก่อนเรียน (30 นาที)
 //   2. เช็คว่ามีคาบไหน "เพิ่งจบไป" (ยังไม่เคยส่งขอบคุณ) → ส่ง LINE ขอบคุณหลังเรียน
 //   3. ส่งเฉพาะนักเรียนที่ "เชื่อม LINE แล้ว" (มี line_user_id) — คนที่ยังไม่เชื่อมจะไม่ได้รับ (ไม่ error ไม่ค้าง)
-//   4. ส่งสำเร็จแล้วทำเครื่องหมาย line_reminder_sent / line_followup_sent = true กันส่งซ้ำ
+//   4. ส่งสำเร็จแล้วทำเครื่องหมาย line_reminder24h_sent / line_reminder_sent / line_followup_sent = true กันส่งซ้ำ
+//      ⚠️ ก่อน deploy ต้องรัน supabase/sql/2026-07-18_reminder24h_column.sql ใน Supabase SQL Editor ก่อน
+//      (เพิ่มคอลัมน์ line_reminder24h_sent ให้ตาราง classroom_schedule) ไม่งั้นฟังก์ชันจะ error
 //
 // ⚠️ เรื่องเขตเวลา (สำคัญมาก ต้องยืนยันกับ Lin ก่อนใช้จริง):
 //   lesson_date/start_time ใน classroom_schedule เป็นเวลาที่อ่านจาก Google Calendar ผ่านเบราว์เซอร์ของ Lin
@@ -31,6 +35,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 const REMINDER_BEFORE_MIN = 30; // เตือนล่วงหน้ากี่นาทีก่อนเริ่มเรียน
+// 2026-07-18 加：เตือนล่วงหน้า 24 ชม. — เพิ่มเป็น "อันที่ 2" ตามที่ Lin ยืนยัน (ไม่ทับของเดิม 30 นาที)
+const REMINDER24H_BEFORE_MIN = 24 * 60;
 const FOLLOWUP_AFTER_MIN = 60;  // ถ้าไม่มี end_time ให้สมมติคาบยาวกี่นาที (ไว้คำนวณเวลา "จบแล้ว")
 const CATCH_WINDOW_MIN = 20;    // หน้าต่างจับเวลาหลังจุดที่ควรส่ง (กันพลาดถ้า cron รันไม่ตรงเป๊ะ)
 
@@ -73,6 +79,25 @@ function buildReminderFlex(timeLabel, meetUrl) {
   };
 }
 
+// 2026-07-18 加：เตือนล่วงหน้า 24 ชม. — ข้อความคนละแบบกับ 30 นาที (บอกวันที่ด้วย เพราะเตือนข้ามวัน)
+// ไม่มีปุ่ม Google Meet (ยังไกลเกินไป ใส่ไปก็ไม่มีประโยชน์ กันกดผิดเวลา) เป็นข้อความล้วนพอ
+function buildReminder24hFlex(dateLabel, timeLabel) {
+  return {
+    type: 'flex',
+    altText: '📅 明天有泰語課，別忘記囉！',
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'md',
+        contents: [
+          { type: 'text', text: '📅 明天有泰語課，別忘記囉！', weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
+          { type: 'text', text: dateLabel + ' ' + timeLabel + '\n記得提前安排時間，準時上線喔 ✨', size: 'sm', color: '#6b6b6b', wrap: true },
+        ],
+      },
+    },
+  };
+}
+
 // 2026-07-11 加：มีบั๊กที่อื่นในระบบ (ฝั่ง sync ปฏิทิน) ทำให้บางแถวใน classroom_schedule.start_time
 // หลุดมาเป็นรูปแบบ "上午10:00" / "下午02:00" (12 ชม. + คำนำหน้าเช้า/บ่าย) แทนที่จะเป็น "10:00" ตรงๆ —
 // ยังหาสาเหตุต้นตอไม่เจอ 100% แต่เพื่อความชัวร์ที่สุด (RELIABILITY FIRST) ฟังก์ชันนี้ต้องอ่านได้ทั้ง 2 แบบ
@@ -93,6 +118,13 @@ function normalizeTimeStr(timeStr) {
 // เวลาให้นักเรียนเห็นเป็นเวลาของเขาเอง (ไม่ใช่เวลาไทยที่ครูตั้งไว้)
 function formatHHMMInTz(utcMs, tz) {
   const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+  return fmt.format(new Date(utcMs));
+}
+
+// 2026-07-18 加：ให้ข้อความเตือน 24 ชม. บอก "วัน/เดือน" ด้วย (ไม่ใช่แค่เวลา) เพราะเตือนข้ามวัน
+// ต้องแปลงตาม timezone ของนักเรียนเหมือนกัน (วันที่อาจเลื่อน ±1 วันได้ถ้าใกล้เที่ยงคืน)
+function formatDateInTz(utcMs, tz) {
+  const fmt = new Intl.DateTimeFormat('zh-TW', { timeZone: tz, month: 'numeric', day: 'numeric', weekday: 'short' });
   return fmt.format(new Date(utcMs));
 }
 
@@ -125,12 +157,15 @@ serve(async (req) => {
     const nowMs = Date.now();
     const todayIso = new Date(nowMs).toISOString().slice(0, 10);
     const yestIso = new Date(nowMs - 86400000).toISOString().slice(0, 10); // เผื่อคาบดึกข้ามเที่ยงคืน
+    // 2026-07-18 加：ต้องดึง "พรุ่งนี้" ด้วย เพราะเตือน 24 ชม.ก่อน = จุดที่ต้องส่งอยู่ "วันนี้"
+    // สำหรับคาบที่เรียน "พรุ่งนี้" (ไม่งั้นแถวของพรุ่งนี้จะไม่ถูกดึงมาเช็คเลย)
+    const tomorrowIso = new Date(nowMs + 86400000).toISOString().slice(0, 10);
 
     const { data: rows, error } = await supabase
       .from('classroom_schedule')
-      .select('id, token, lesson_date, start_time, end_time, line_reminder_sent, line_followup_sent')
-      .in('lesson_date', [yestIso, todayIso])
-      .or('line_reminder_sent.eq.false,line_followup_sent.eq.false');
+      .select('id, token, lesson_date, start_time, end_time, line_reminder_sent, line_followup_sent, line_reminder24h_sent')
+      .in('lesson_date', [yestIso, todayIso, tomorrowIso])
+      .or('line_reminder_sent.eq.false,line_followup_sent.eq.false,line_reminder24h_sent.eq.false');
 
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     if (!rows || !rows.length) return new Response(JSON.stringify({ ok: true, processed: 0 }), { status: 200 });
@@ -178,6 +213,26 @@ serve(async (req) => {
 
       const idsNeedReminder = groupRows.filter(r => !r.line_reminder_sent).map(r => r.id);
       const idsNeedFollowup = groupRows.filter(r => !r.line_followup_sent).map(r => r.id);
+      const idsNeedReminder24h = groupRows.filter(r => !r.line_reminder24h_sent).map(r => r.id);
+
+      // 0) เตือนล่วงหน้า 24 ชม.：อยู่ในหน้าต่าง [start - 24hr - CATCH_WINDOW, start - 24hr] และยังไม่เคยส่ง
+      // (เพิ่ม 2026-07-18 — เป็น "อันที่ 2" แยกจากเตือน 30 นาทีก่อน ไม่ทับกัน)
+      if (idsNeedReminder24h.length) {
+        const minutesToStart = (startMs - nowMs) / 60000;
+        if (minutesToStart <= REMINDER24H_BEFORE_MIN && minutesToStart >= REMINDER24H_BEFORE_MIN - CATCH_WINDOW_MIN) {
+          try {
+            const studentTz = s.pending_student_tz;
+            const dateLabel = studentTz ? formatDateInTz(startMs, studentTz) : repRow.lesson_date;
+            const timeLabel = studentTz
+              ? formatHHMMInTz(startMs, studentTz) + (normalizedEndTime ? '–' + formatHHMMInTz(endMs, studentTz) : '')
+              : (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
+            await pushLineMessages(channelToken, s.line_user_id, [buildReminder24hFlex(dateLabel, timeLabel)]);
+            const { error: markErr0 } = await supabase.from('classroom_schedule').update({ line_reminder24h_sent: true }).in('id', idsNeedReminder24h);
+            if (markErr0) { console.error('[class-reminder-cron] 標記 line_reminder24h_sent 失敗，可能會重複發送：', markErr0.message, 'ids=', idsNeedReminder24h); errCount++; }
+            sentCount++;
+          } catch (e) { errCount++; }
+        }
+      }
 
       // 1) เตือนก่อนเรียน：อยู่ในหน้าต่าง [start - 30min, start] และยังไม่เคยส่ง (สักแถวในกลุ่ม)
       if (idsNeedReminder.length) {

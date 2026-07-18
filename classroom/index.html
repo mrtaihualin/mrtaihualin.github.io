@@ -1344,7 +1344,10 @@ async function gdShareAnyone(fileId) {
 // ── Google Calendar: fetch today's events ──────────────────────
 // 2026-07-06 แก้จาก 3 → 9 วัน: เดิม 3 วันแคบไปสำหรับนักเรียนที่เรียนสัปดาห์ละครั้ง
 // (คาบถัดไปอาจอยู่ไกลกว่า 3 วัน) ทำให้การ์ด "คลาสต่อไป" ฝั่งนักเรียนขึ้นว่าง ๆ ทั้งที่จริงมีคาบแล้ว
-const SCHEDULE_DAYS = 9; // "近期課表" ที่ครูเห็นบนหน้าจอ แสดงกี่วัน (ไม่เปลี่ยน — ของเดิม)
+// 2026-07-18 Lin สั่งเปลี่ยนกลับเป็น 3 วัน: การ์ดนักเรียนใช้ classroom_schedule (sync 90 วัน) แยกกันอยู่แล้ว
+// ไม่ได้พึ่ง SCHEDULE_DAYS ตัวนี้ (มีจุดเรียก calFetchUpcomingEvents() แค่จุดเดียว ระบุ SCHEDULE_SYNC_DAYS เสมอ)
+// ตัวนี้คุมแค่ "近期課表" ที่ครูเห็นบนหน้าจอเท่านั้น ปลอดภัยที่จะแก้
+const SCHEDULE_DAYS = 3; // "近期課表" ที่ครูเห็นบนหน้าจอ แสดงกี่วัน
 // 2026-07-15 เพิ่ม：ข้อมูลที่ sync ลง classroom_schedule (ให้นักเรียนใช้เลือก "คาบจะยกเลิก")
 // ต้องมองไกลกว่าที่ครูเห็นบนจอ ไม่งั้นนักเรียนที่เรียนหลายวัน/สัปดาห์จะเห็นแค่ 1-2 คาบให้เลือก
 // Lin ยืนยันแล้ว (2026-07-15)：จอครูไม่ได้เปลี่ยนตาม (ตัดแสดงแค่ SCHEDULE_DAYS อยู่แล้ว)
@@ -8002,7 +8005,7 @@ async function connectCalendar() {
   }
 
   try {
-    // 2026-07-15 改：ดึงยาวขึ้นเป็น SCHEDULE_SYNC_DAYS (30 วัน) — ไม่ใช่แค่ SCHEDULE_DAYS (9 วัน)
+    // 2026-07-15 改：ดึงยาวขึ้นเป็น SCHEDULE_SYNC_DAYS (90 วัน) — ไม่ใช่แค่ SCHEDULE_DAYS (3 วัน, แก้ 2026-07-18)
     // เหตุผล：matched ชุดนี้จะถูกส่งเข้า syncScheduleToSupabase() ทั้งหมด ให้นักเรียนที่เรียน
     // หลายวัน/สัปดาห์เลือก "คาบจะยกเลิก" ได้ครบจริง ไม่ใช่แค่ 9 วันที่จอครูเองแสดง
     // (จอครู "近期課表" ยังคงตัดมาแสดงแค่ SCHEDULE_DAYS วันเหมือนเดิม ดูด้านล่าง matchedForDisplay)
@@ -8044,7 +8047,7 @@ async function connectCalendar() {
     });
 
     // 2026-07-15 加：matched ตอนนี้ยาวถึง SCHEDULE_SYNC_DAYS (30 วัน) แล้ว แต่จอครู "近期課表"
-    // ยังอยากโชว์แค่ SCHEDULE_DAYS (9 วัน) เหมือนเดิม (ไม่ให้รกจอ) → ตัดมาแสดงแค่ช่วงนี้
+    // ยังอยากโชว์แค่ SCHEDULE_DAYS (3 วัน, แก้ 2026-07-18) เหมือนเดิม (ไม่ให้รกจอ) → ตัดมาแสดงแค่ช่วงนี้
     const displayCutoff = formatInTz(new Date(teacherTimeToDate(todayKey, '00:00').getTime() + SCHEDULE_DAYS * 24 * 3600 * 1000), TEACHER_TZ).dateStr;
     const matchedForDisplay = matched.filter(function(m) { return m.dayKey < displayCutoff; });
 
