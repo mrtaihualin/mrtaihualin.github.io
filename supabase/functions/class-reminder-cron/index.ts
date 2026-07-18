@@ -82,15 +82,17 @@ function buildReminderFlex(timeLabel, meetUrl) {
 // 2026-07-18 加：เตือนล่วงหน้า 24 ชม. — ข้อความคนละแบบกับ 30 นาที (บอกวันที่ด้วย เพราะเตือนข้ามวัน)
 // ไม่มีปุ่ม Google Meet (ยังไกลเกินไป ใส่ไปก็ไม่มีประโยชน์ กันกดผิดเวลา) เป็นข้อความล้วนพอ
 function buildReminder24hFlex(dateLabel, timeLabel) {
+  // 2026-07-18 加（Lin 要求）：แถบแจ้งเตือน (altText) ต้องเห็นเวลาเลยโดยไม่ต้องกดเปิด LINE ก่อน
+  const titleText = '📅 明天' + timeLabel + '有泰語課，別忘記囉！';
   return {
     type: 'flex',
-    altText: '📅 明天有泰語課，別忘記囉！',
+    altText: titleText,
     contents: {
       type: 'bubble',
       body: {
         type: 'box', layout: 'vertical', spacing: 'md',
         contents: [
-          { type: 'text', text: '📅 明天有泰語課，別忘記囉！', weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
+          { type: 'text', text: titleText, weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
           { type: 'text', text: dateLabel + ' ' + timeLabel + '\n記得提前安排時間，準時上線喔 ✨', size: 'sm', color: '#6b6b6b', wrap: true },
         ],
       },
