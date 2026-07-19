@@ -4554,10 +4554,18 @@ async function loadStudentSchedule(token) {
       .map(function(r) { return upcomingDateKey(r); })
       .filter(function(dateKey) { return (!startDay || dateKey >= startDay) && !attCurrentDates[dateKey]; });
 
-    // 合併「本期課程」：已完成（attCurrent）+ 未完成／預期（upcoming），去重＋依日期排序
+    // 2026-07-19 加（Lin 要求：拿掉 RPC 的 limit 5 之後變成顯示到 classroom_schedule 同步到的
+    // 最遠日期，超過買的課包很多）：「本期課程」只該顯示到「這期課包結束」，不是顯示到 Calendar
+    // 同步到多遠——用 computeCurrentCourse 算出來的剩餘堂數（q.remain）決定要顯示幾筆「未完成」，
+    // 多的（代表下一期或還沒排定續課方案的）先不放進本期課程表。
+    const upcomingUnique = Array.from(new Set(upcoming)).sort();
+    const remainCount = Math.max(0, Math.ceil(q.remain || 0));
+    const upcomingCapped = upcomingUnique.slice(0, remainCount);
+
+    // 合併「本期課程」：已完成（attCurrent）+ 未完成／預期（upcomingCapped，只到課包結束），去重＋依日期排序
     const merged = {};
     attCurrent.forEach(function(r) { merged[r.lesson_date] = true; });
-    upcoming.forEach(function(dateKey) { if (!(dateKey in merged)) merged[dateKey] = false; });
+    upcomingCapped.forEach(function(dateKey) { if (!(dateKey in merged)) merged[dateKey] = false; });
     const mergedDates = Object.keys(merged).sort();
 
     function courseTableHtml() {
@@ -8568,9 +8576,11 @@ async function openAttendanceHistory(token) {
   // 未來排定但還沒上的課（跟 loadStudentSchedule 同一套合併邏輯，教師端用教師自己的時區日期，不用換算）
   const attCurrentDates = {};
   current.forEach(function(r) { attCurrentDates[r.lesson_date] = true; });
-  const upcomingDates = schedData
+  const upcomingRaw = schedData
     .map(function(r) { return r.lesson_date; })
     .filter(function(d) { return d && (!startDay || d >= startDay) && !attCurrentDates[d]; });
+  // 2026-07-19 加（跟 loadStudentSchedule 同一套修法）：只顯示到這期課包結束，不是顯示到 Calendar 同步到多遠
+  const upcomingDates = Array.from(new Set(upcomingRaw)).sort().slice(0, Math.max(0, Math.ceil(q.remain || 0)));
 
   const dayZh = ['日','一','二','三','四','五','六'];
   function fmtDateOnly(dateStr) {
@@ -8620,7 +8630,15 @@ async function openAttendanceHistory(token) {
     return '<table class="schedule-table"><thead><tr><th>堂次</th><th>上課日期</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
+  // 2026-07-19 加（Lin 要求：畫面要跟學生端一模一樣，不只邏輯像）：補上「本輪剩餘 X 堂」提示條，
+  // 樣式跟 loadStudentQuota（學生端 quotaSummary）完全同一份 CSS，一字不改。
+  const remain = q.remain < 0 ? 0 : q.remain;
+  const quotaHtml = q.hasCourse
+    ? '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;color:' + (q.remain <= 1 ? '#b45309' : 'var(--gold-deep)') + ';font-weight:700;">本輪剩餘 ' + remain + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（本輪 ' + q.bought + ' · 已上 ' + q.used + '）</span></div>'
+    : '<div style="background:#faf7f0;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--ink-muted);">剩餘堂數：尚未購課</div>';
+
   const html =
+    quotaHtml +
     '<div style="color:var(--gold-deep);font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;padding:4px 0;">📖 本期課程' + (currentMergedDates.length ? '（共 ' + currentMergedDates.length + ' 堂）' : '') + '</div>' +
     '<div style="margin-top:8px;">' + courseTableHtml() + '</div>' +
     '<details style="margin-top:12px;">' +
