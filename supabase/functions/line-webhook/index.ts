@@ -102,6 +102,50 @@ async function pushLine(channelToken, targetUserId, text) {
   } catch (e) { /* push ไม่สำเร็จก็ไม่เป็นไร ฐานข้อมูลอัปเดตไปแล้วเป็นหลัก */ }
 }
 
+// 2026-07-19 加（Lin 要求）：老師發起取消 → 學生在 LINE 那邊按「我知道了」確認之後，
+// 原本推給老師的只是「純文字」叫老師自己去網站按「確認刪除」——現在改成直接附一顆按鈕，
+// 老師在 LINE 這裡就能直接按，不用開網站。跟 notify-line/index.ts 的 buildFlexMessage 同一套樣式規則
+// （金色主題、按鈕不能放 ✅/❌ emoji，因為 emoji 自帶紅綠色跟網站主題不符）。
+function buildFlexMessage(title, bodyText, buttons) {
+  const footerContents = (buttons || []).map((b) => ({
+    type: 'button',
+    style: b.style || 'secondary',
+    height: 'sm',
+    color: b.color || (b.style === 'primary' ? '#8B6310' : '#FAF4E8'),
+    action: b.uri
+      ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
+      : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },
+  }));
+  return {
+    type: 'flex',
+    altText: title.slice(0, 400),
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'md',
+        contents: [
+          { type: 'text', text: title, weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
+          { type: 'text', text: bodyText, size: 'sm', color: '#6b6b6b', wrap: true },
+        ],
+      },
+      footer: footerContents.length
+        ? { type: 'box', layout: 'vertical', spacing: 'sm', contents: footerContents }
+        : undefined,
+    },
+  };
+}
+
+async function pushLineFlex(channelToken, targetUserId, title, bodyText, buttons) {
+  try {
+    const flexMsg = buildFlexMessage(title, bodyText, buttons);
+    await fetch(LINE_PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+      body: JSON.stringify({ to: targetUserId, messages: [flexMsg] }),
+    });
+  } catch (e) { /* push ไม่สำเร็จก็ไม่เป็นไร ฐานข้อมูลอัปเดตไปแล้วเป็นหลัก */ }
+}
+
 // ════════════════════════════════════════════════════════════
 // 2026-07-19 加：Google Calendar (service account) — ให้ปุ่มเดียวใน LINE ลบ Calendar ได้จริง
 // ก่อนหน้านี้ทำไม่ได้เพราะ Edge Function ไม่มี OAuth token ของครู (ดูคอมเมนต์บรรทัด 26-30 ด้านบน)
@@ -410,7 +454,14 @@ serve(async (req) => {
           const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
           if (teacherUserId) {
             const odate = (updated && updated[0] && updated[0].original_date) || '-';
-            await pushLine(channelToken, teacherUserId, 'ℹ️ 學生已確認收到取消通知（' + odate + '），可以到網站按「確認刪除」了');
+            // 2026-07-19 改：原本只推純文字叫老師去網站按，現在直接附一顆按鈕，共用同一個
+            // action=confirm_cancel_delete（跟學生自己申請取消那顆按鈕完全同一套邏輯／同一個 Edge Function 分支）
+            await pushLineFlex(
+              channelToken, teacherUserId,
+              '學生已確認收到取消通知',
+              '時間：' + odate + '\n\n可以直接按下方按鈕刪除 Calendar，或到網站處理',
+              [{ label: '確認刪除 Calendar', postbackData: 'action=confirm_cancel_delete&request=' + encodeURIComponent(requestId), style: 'primary' }],
+            );
           }
         }
         continue;
