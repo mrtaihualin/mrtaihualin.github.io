@@ -139,6 +139,30 @@ serve(async (req) => {
         });
       }
     } else if (to && typeof to === 'object' && to.studentToken) {
+      // 2026-07-19 加（SECURITY FIRST，稽核發現）：เดิมสาขานี้ไม่มีการตรวจสิทธิ์เลย — ใครก็ยิง
+      // request ตรงมาที่ url นี้พร้อม studentToken + message อะไรก็ได้ (ใช้แค่ anon key สาธารณะ)
+      // ก็ปลอมข้อความส่งราวกับเป็นครูไปหานักเรียนคนไหนก็ได้ทันที (ยิ่งเสี่ยงขึ้นหลังเพิ่ม feature
+      // 💬 聯絡學生 ที่ครูพิมพ์ข้อความอิสระได้ — sendContactStudentMessage ใน classroom/index.html)
+      // ต่างจากสาขา to==='teacher' ด้านบนที่ต้องเปิดไว้แบบเดิม เพราะนักเรียนต้องเรียกได้เองตอนส่ง
+      // คำขอเปลี่ยน/ยกเลิกคาบ โดยไม่ได้ล็อกอินเป็นครู — ตอนนี้เฉพาะสาขานี้บังคับต้องมี session จริง
+      // ของครูแนบมาด้วยเสมอ วิธีเดียวกับ unlink-line-student/restore-line-student (ฝั่งเว็บต้องเปลี่ยน
+      // Authorization ของการเรียก to:{studentToken} จาก anonKey เป็น teacherAuthHeader() ด้วย)
+      const authHeader = req.headers.get('Authorization') || '';
+      const jwt = authHeader.replace(/^Bearer\s+/i, '');
+      let callerIsTeacher = false;
+      if (jwt) {
+        try {
+          const asUser = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_ANON_KEY'), { global: { headers: { Authorization: authHeader } } });
+          const { data: userData } = await asUser.auth.getUser(jwt);
+          callerIsTeacher = (userData?.user?.email || '').toLowerCase() === 'mr.taihualin@gmail.com';
+        } catch (e) { callerIsTeacher = false; }
+      }
+      if (!callerIsTeacher) {
+        return new Response(JSON.stringify({ error: 'unauthorized — 只有老師本人登入後才能傳訊息給指定學生' }), {
+          status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
+      }
+
       // ค้นหา line_user_id เองฝั่ง server ด้วย service role — ไม่รับ userId ตรงจาก client เด็ดขาด
       const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
       const { data, error } = await supabase

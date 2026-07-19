@@ -2057,7 +2057,8 @@ async function confirmAddClassDay() {
         const studentTimeLabel = p.recurring ? addedTimeLabel : studentFacingTimeLabel(start, s.pending_student_tz);
         await fetch(LINE_NOTIFY_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+          // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
           body: JSON.stringify({ to: { studentToken: token }, message: '老師幫你加了一堂課：' + studentTimeLabel + '，如有疑問請直接聯絡老師' }),
         });
       } catch (e) { console.warn('⚠️ 加課通知學生失敗（不影響已經加成功的課）：', e.message || e); }
@@ -2128,7 +2129,8 @@ async function proposeAddClassDay() {
           : studentFacingTimeLabel(teacherTimeToDate(p.dateVal, p.startVal), s.pending_student_tz);
         const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+          // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
           body: JSON.stringify({
             to: { studentToken: token },
             message: '老師想幫你加一堂課：' + addTimeLabel + '，請按一下確認',
@@ -6577,7 +6579,8 @@ async function processClassRequestInner(id, r, isCancel) {
         : ('老師已確認，課堂已經改到 ' + studentFacingTimeLabel(newStartIsoForNotify, sForNotify.pending_student_tz) + '，如有疑問請直接聯絡老師');
       var notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
         body: JSON.stringify({ to: { studentToken: r.token }, message: notifyMsg }),
       });
       notifySent = notifyRes.ok;
@@ -6747,7 +6750,8 @@ async function submitProposeTime() {
       const tzFooter = rStudent.pending_student_tz ? '（以上時間都是你的當地時間）' : '（以上時間都是泰國時間，你還沒設定時區，可能跟你的當地時間不同）';
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
         body: JSON.stringify({
           to: { studentToken: r.token },
           message: '老師提議新的上課時間，請到網站查看並回覆',
@@ -6860,7 +6864,8 @@ async function sendContactStudentMessage() {
   try {
     var res = await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
       body: JSON.stringify({ to: { studentToken: token }, message: text }),
     });
     if (res.ok) {
@@ -6954,7 +6959,8 @@ async function confirmAcceptedOfferInner(id, r) {
       var notifyMsg2 = '老師已確認，課堂已經改到 ' + studentFacingTimeLabel(newStartIso, sForNotify2.pending_student_tz) + '，如有疑問請直接聯絡老師';
       var notifyRes2 = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
         body: JSON.stringify({ to: { studentToken: r.token }, message: notifyMsg2 }),
       });
       notifySent2 = notifyRes2.ok;
@@ -7085,7 +7091,8 @@ async function revertCalendarBackup(id) {
       var studentOldTimeLabel = studentFacingTimeLabel(b.old_start, sForRevert.pending_student_tz);
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
         body: JSON.stringify({ to: { studentToken: b.token }, message: '老師剛剛把之前的操作復原了，' + revertLabelForStudent + '：' + studentOldTimeLabel + '，如有疑問請直接聯絡老師' }),
       });
     } catch (e) { console.warn('⚠️ 復原通知學生失敗（不影響已經完成的復原）：', e.message || e); }
@@ -7356,7 +7363,8 @@ async function teacherCancelClassNowInner(token, chosen) {
       // 交給 line-webhook 處理 action=ack_teacher_cancel（見該檔案）。
       const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
         body: JSON.stringify({
           to: { studentToken: token },
           message: '老師想取消 ' + cancelTimeLabel + ' 這堂課，請按一下確認收到',
@@ -7468,7 +7476,8 @@ async function confirmTeacherAddClass(id) {
         const studentTimeLabel = p.recurring ? addedTimeLabel : studentFacingTimeLabel(start, s.pending_student_tz);
         await fetch(LINE_NOTIFY_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+          // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
           body: JSON.stringify({ to: { studentToken: token }, message: '你確認的加課已經排進 Calendar 了：' + studentTimeLabel }),
         });
       } catch (e) { console.warn('⚠️ 加課完成通知學生失敗（不影響已經加成功的課）：', e.message || e); }
@@ -7520,7 +7529,8 @@ async function teacherEditOwnCancelRequest_chosen(id, token, chosen) {
       const cancelTimeLabel = studentFacingTimeLabel(new Date(oldStartIso), s.pending_student_tz);
       const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
         body: JSON.stringify({
           to: { studentToken: token },
           message: '老師想取消的課堂時間改了：' + cancelTimeLabel + '，請重新按一下確認收到',
@@ -7726,7 +7736,8 @@ async function submitPermanentChangeInner(token) {
       const permTimeLabel = studentFacingTimeLabel(new Date(newStartIso), s.pending_student_tz);
       const permNotifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
         body: JSON.stringify({ to: { studentToken: token }, message: '老師調整了你的固定上課時間，之後改成每週 ' + permTimeLabel + '，如有疑問請直接聯絡老師' }),
       });
       permNotifySent = permNotifyRes.ok;
