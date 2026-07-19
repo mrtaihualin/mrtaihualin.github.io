@@ -8439,24 +8439,38 @@ async function connectCalendar() {
     const matched = [];
     events.forEach(function(ev) {
       const title = (ev.summary || '').toLowerCase();
-      studentNames.forEach(function(entry) {
+      // 2026-07-19 แก้บั๊ก (Lin สั่ง)：เดิมเช็คแบบ substring ตรงๆ (title.includes(ชื่อ)) — ถ้ามีนักเรียน
+      // 2 คนที่ชื่อหนึ่งเป็นส่วนหนึ่งของอีกชื่อ (เช่น "Ann" อยู่ใน "Anna") event ชื่อ "Anna" จะจับคู่ผิด
+      // ไปโดนทั้ง 2 คน ตอนนี้เก็บผู้สมัครทั้งหมดก่อน แล้วตัดคนที่ชื่อสั้นกว่า+เป็น substring ของอีกคนที่จับคู่ได้ทิ้ง
+      // (เก็บเฉพาะชื่อที่ยาว/เจาะจงกว่าไว้) — ถ้ามีการตัดออกจะ log เตือนไว้ กันเงียบเกินไป (RELIABILITY FIRST)
+      const candidates = studentNames.filter(function(entry) { return title.includes(entry[1].name.toLowerCase()); });
+      const finalists = candidates.filter(function(entry) {
+        return !candidates.some(function(other) {
+          return other[1].name !== entry[1].name
+            && other[1].name.toLowerCase().includes(entry[1].name.toLowerCase())
+            && other[1].name.length > entry[1].name.length;
+        });
+      });
+      if (finalists.length < candidates.length) {
+        console.warn('[connectCalendar] ชื่อนักเรียนซ้อนกันใน event "' + (ev.summary || '') + '" — ตัดชื่อสั้นกว่าออก:',
+          candidates.map(function(c){return c[1].name;}), '→ เหลือ', finalists.map(function(c){return c[1].name;}));
+      }
+      finalists.forEach(function(entry) {
         const token = entry[0], s = entry[1];
-        if (title.includes(s.name.toLowerCase())) {
-          const hasDateTime = !!(ev.start && ev.start.dateTime);
-          const startAbs = hasDateTime ? new Date(ev.start.dateTime)
-            : ev.start && ev.start.date ? teacherTimeToDate(ev.start.date, '00:00') : now;
-          // 2026-07-10：一律用 formatInTz 換算成泰國時間的日期/時間/星期幾，不再用 browser 本地時區的
-          // getFullYear()/getMonth()/getDate()/toLocaleTimeString()（那些是「這台電腦現在的時區」，不保證是泰國）
-          const startParts = formatInTz(startAbs, TEACHER_TZ);
-          const startTime = hasDateTime ? startParts.timeStr : (ev.start && ev.start.date ? '全天' : '');
-          const endTime = ev.end && ev.end.dateTime ? formatInTz(new Date(ev.end.dateTime), TEACHER_TZ).timeStr : '';
-          const dayKey = startParts.dateStr;
-          const isoDate = startParts.dateStr;
-          const dayLabel = parseInt(startParts.dateStr.slice(5,7),10) + '月' + parseInt(startParts.dateStr.slice(8,10),10) + '日（週' + dayZh[startParts.weekday] + '）';
-          const isToday = dayKey === todayKey;
-          if (isToday && attendedTodayTokens.has(token)) return; // 今天已記錄出席過 → 不再顯示這張卡
-          matched.push({ token, s, startTime, endTime, dayKey, isoDate, dayLabel, isToday });
-        }
+        const hasDateTime = !!(ev.start && ev.start.dateTime);
+        const startAbs = hasDateTime ? new Date(ev.start.dateTime)
+          : ev.start && ev.start.date ? teacherTimeToDate(ev.start.date, '00:00') : now;
+        // 2026-07-10：一律用 formatInTz 換算成泰國時間的日期/時間/星期幾，不再用 browser 本地時區的
+        // getFullYear()/getMonth()/getDate()/toLocaleTimeString()（那些是「這台電腦現在的時區」，不保證是泰國）
+        const startParts = formatInTz(startAbs, TEACHER_TZ);
+        const startTime = hasDateTime ? startParts.timeStr : (ev.start && ev.start.date ? '全天' : '');
+        const endTime = ev.end && ev.end.dateTime ? formatInTz(new Date(ev.end.dateTime), TEACHER_TZ).timeStr : '';
+        const dayKey = startParts.dateStr;
+        const isoDate = startParts.dateStr;
+        const dayLabel = parseInt(startParts.dateStr.slice(5,7),10) + '月' + parseInt(startParts.dateStr.slice(8,10),10) + '日（週' + dayZh[startParts.weekday] + '）';
+        const isToday = dayKey === todayKey;
+        if (isToday && attendedTodayTokens.has(token)) return; // 今天已記錄出席過 → 不再顯示這張卡
+        matched.push({ token, s, startTime, endTime, dayKey, isoDate, dayLabel, isToday });
       });
     });
 

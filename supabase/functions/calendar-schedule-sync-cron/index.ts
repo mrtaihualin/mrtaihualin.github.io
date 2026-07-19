@@ -130,9 +130,20 @@ serve(async (req) => {
     const matched = [];
     events.forEach((ev) => {
       const title = (ev.summary || '').toLowerCase();
-      (students || []).forEach((s) => {
-        if (!s.name) return;
-        if (!title.includes(String(s.name).toLowerCase())) return;
+      // 2026-07-19 加（Lin 要求，跟網頁版 connectCalendar() 同步修）：以前直接 substring 比對——
+      // 如果兩個學生名字一個是另一個的一部分（例如 "Ann" 包含在 "Anna" 裡面），標題是 "Anna" 的
+      // event 會誤配到兩個人身上。現在先收集所有「名字出現在標題裡」的候選人，再把「名字比較短、
+      // 而且是另一個候選人名字的一部分」的人剔除（只留比較長/精確的那個）。有剔除就 console.warn
+      // 留紀錄（RELIABILITY FIRST，不能悄悄發生看不到）。
+      const candidates = (students || []).filter((s) => s.name && title.includes(String(s.name).toLowerCase()));
+      const finalists = candidates.filter((s) => !candidates.some((s2) =>
+        s2.name !== s.name && String(s2.name).toLowerCase().includes(String(s.name).toLowerCase()) && s2.name.length > s.name.length
+      ));
+      if (finalists.length < candidates.length) {
+        console.warn('[calendar-schedule-sync-cron] ชื่อนักเรียนซ้อนกันใน event "' + (ev.summary || '') + '" — ตัดชื่อสั้นกว่าออก:',
+          candidates.map((c) => c.name), '→ เหลือ', finalists.map((c) => c.name));
+      }
+      finalists.forEach((s) => {
         const hasDateTime = !!(ev.start && ev.start.dateTime);
         const startAbs = hasDateTime
           ? new Date(ev.start.dateTime)
@@ -159,6 +170,22 @@ serve(async (req) => {
     });
     const rows = Array.from(rowMap.values());
 
+    // 2026-07-19 加（Lin สั่ง）：ก่อนลบของเก่า เก็บ "จำนวนเดิม" ไว้เทียบก่อน — ฟังก์ชันนี้ลบตารางอนาคต
+    // ทั้งหมดแล้วเขียนใหม่ทุกรอบ (ทุก 15-20 นาที) ถ้ารอบไหนจับคู่ชื่อพลาดผิดปกติ (เช่น Calendar API
+    // ตอบไม่ครบ, ชื่อพิมพ์เพี้ยน ฯลฯ) คาบเรียนจะหายจากตาราง/เว็บ/การเตือน LINE แบบเงียบๆ ไม่มีใครรู้
+    // (Google Calendar ตัวจริงไม่ถูกแตะ ไม่หาย — อันนี้หายแค่จาก "สำเนา" ในตาราง classroom_schedule)
+    // ตอนนี้เทียบจำนวนก่อน/หลัง ถ้าหายเยอะผิดปกติจะ push LINE เตือนครูทันที ไม่ต้องรอมาเจอเอง
+    // 2026-07-19 แก้ตามที่ Lin สั่ง：เทียบแค่ 30 วันข้างหน้าพอ (ไม่ใช่เต็ม SCHEDULE_SYNC_DAYS 180 วัน)
+    // เพราะคาบไกลๆ ยังไงก็ถูก sync ซ้ำเรื่อยๆ ทุก 15-20 นาทีอยู่แล้ว เทียบแค่ช่วงใกล้ (ที่สำคัญ/เร่งด่วนจริง)
+    // ก็พอ ลดโอกาสแจ้งเตือนหลอกจากความเปลี่ยนแปลงปกติของคาบไกลๆ (เช่น ครูแก้ recurring series ไกลๆ ทีเดียว)
+    const ALERT_WINDOW_DAYS = 30;
+    const alertCutoffIso = new Date(startDate.getTime() + ALERT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10);
+    const { count: beforeCount } = await supabase
+      .from('classroom_schedule')
+      .select('id', { count: 'exact', head: true })
+      .gte('lesson_date', todayIso)
+      .lt('lesson_date', alertCutoffIso);
+
     // ── ล้างคาบอนาคตเดิมทิ้งก่อนเขียนชุดใหม่ (เหมือนฝั่งเว็บ) — เช็ค error เสมอ ห้ามล้มเหลวเงียบๆ ──
     const { error: delError } = await supabase.from('classroom_schedule').delete({ count: 'exact' }).gte('lesson_date', todayIso);
     if (delError) {
@@ -175,11 +202,40 @@ serve(async (req) => {
       if (error) console.error('[calendar-schedule-sync-cron] เขียนตารางใหม่ไม่สำเร็จ：', error.message);
     }
 
+    // 2026-07-19 加：เทียบจำนวนก่อน/หลัง (เฉพาะช่วง 30 วันข้างหน้า) — หายเกิน 30% และหายอย่างน้อย 3 แถว
+    // (กันแจ้งเตือนเล่นๆ ตอนข้อมูลน้อยอยู่แล้ว เช่น 2 คาบเหลือ 1 คาบ ไม่ใช่เรื่องผิดปกติ) ถือว่าผิดปกติ
+    const rowsInWindow = rows.filter((r) => r.lesson_date < alertCutoffIso).length;
+    let dropAlertSent = false;
+    if (!upsertError && !delError && typeof beforeCount === 'number' && beforeCount >= 3) {
+      const dropped = beforeCount - rowsInWindow;
+      if (dropped >= 3 && dropped / beforeCount >= 0.3) {
+        console.error('[calendar-schedule-sync-cron] ⚠️ จำนวนคาบหายผิดปกติ (30 วันข้างหน้า): ก่อน=' + beforeCount + ' หลัง=' + rowsInWindow + ' (หาย ' + dropped + ' แถว, ' + Math.round((dropped / beforeCount) * 100) + '%)');
+        const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
+        const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
+        if (channelToken && teacherUserId) {
+          try {
+            await fetch('https://api.line.me/v2/bot/message/push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+              body: JSON.stringify({
+                to: teacherUserId,
+                messages: [{ type: 'text', text: '⚠️ ตารางเรียนหายผิดปกติ (auto-sync, ภายใน 30 วัน)\nก่อน: ' + beforeCount + ' คาบ → ตอนนี้: ' + rowsInWindow + ' คาบ (หาย ' + dropped + ' คาบ)\n\nGoogle Calendar ตัวจริงไม่ได้ถูกแตะ ข้อมูลยังอยู่ครบ — แต่ระบบจับคู่ชื่อ/ดึงข้อมูลรอบนี้อาจพลาด แนะนำเปิดเว็บเช็คตารางเรียนอีกที' }],
+              }),
+            });
+            dropAlertSent = true;
+          } catch (e) { console.error('[calendar-schedule-sync-cron] แจ้งเตือนครูไม่สำเร็จ:', e); }
+        }
+      }
+    }
+
     return new Response(JSON.stringify({
       ok: !upsertError,
       events_checked: events.length,
       students_checked: (students || []).length,
       matched_rows: rows.length,
+      before_count_30d: beforeCount,
+      after_count_30d: rowsInWindow,
+      drop_alert_sent: dropAlertSent,
       error: upsertError ? upsertError.message : null,
     }), { status: upsertError ? 500 : 200, headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
