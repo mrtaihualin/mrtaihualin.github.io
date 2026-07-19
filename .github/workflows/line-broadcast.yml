@@ -1,0 +1,47 @@
+name: ส่ง LINE Broadcast (กดเองเวลาต้องการ)
+
+# วิธีใช้: เข้า GitHub → แท็บ Actions → เลือก workflow นี้ (ทางซ้าย) → กด "Run workflow"
+# → ใส่ข้อความที่จะส่ง (ภาษาจีน ตามที่เว็บใช้จริง) → กด Run workflow อีกที
+# ไม่ต้องเข้าแอป LINE Official Account Manager เอง ระบบยิงให้อัตโนมัติ
+#
+# ก่อนใช้ครั้งแรก Lin ต้องทำ 2 อย่าง (ทำครั้งเดียว ไม่ต้องทำซ้ำ):
+# 1. เปิด Messaging API ในบัญชี LINE Official Account (LINE Official Account Manager
+#    → ตั้งค่า → Messaging API → เปิดใช้งาน) แล้วสร้าง Channel Access Token (long-lived)
+# 2. เอา token ไปเก็บเป็น GitHub Secret ของ repo นี้ (ไม่ใช่พิมพ์ใส่ไฟล์นี้หรือแชท!)
+#    Settings → Secrets and variables → Actions → New repository secret
+#    ชื่อ: LINE_CHANNEL_ACCESS_TOKEN  ค่า: (วาง token ที่ได้จากข้อ 1)
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'ข้อความที่จะส่ง (ภาษาจีน ตัวเต็ม)'
+        required: true
+        type: string
+
+jobs:
+  broadcast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ส่งข้อความไปหาทุกคนที่แอด LINE OA
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          MSG: ${{ inputs.message }}
+        run: |
+          if [ -z "$LINE_CHANNEL_ACCESS_TOKEN" ]; then
+            echo "::error::ยังไม่ได้ตั้งค่า Secret ชื่อ LINE_CHANNEL_ACCESS_TOKEN — ดูวิธีตั้งค่าที่คอมเมนต์บนสุดของไฟล์นี้"
+            exit 1
+          fi
+          BODY=$(python3 -c "import json,os; print(json.dumps({'messages':[{'type':'text','text':os.environ['MSG']}]}))")
+          RESP=$(curl -s -w "\n%{http_code}" -X POST https://api.line.me/v2/bot/message/broadcast \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_CHANNEL_ACCESS_TOKEN" \
+            -d "$BODY")
+          HTTP_CODE=$(echo "$RESP" | tail -n1)
+          BODY_RESP=$(echo "$RESP" | sed '$d')
+          echo "LINE API ตอบกลับ: $BODY_RESP"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::ส่งไม่สำเร็จ (HTTP $HTTP_CODE) — $BODY_RESP"
+            exit 1
+          fi
+          echo "✅ ส่งสำเร็จ!"

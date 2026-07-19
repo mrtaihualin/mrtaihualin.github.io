@@ -43,6 +43,7 @@
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
+<script src="word-menu.js?v=1"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
 <script src="data/tone-engine.js?v=1"></script>
@@ -401,6 +402,14 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <!-- ปุ่มเปิด/ปิดคำใบ้ — ปุ่มวงเดียว กดสลับ 有提示/無提示 · สีเหมือนปุ่มไข่/ข้าวปั้น (Lin 2026-07-19) -->
         <button id="rg-guide-toggle" class="word-ctl-btn" type="button" onclick="setRgGuideMode(!rgGuideMode)"></button>
       </div>
+      <!-- Lin 2026-07-19: ยุบปุ่มทั้ง 5 เข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
+      <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
+        {id:'rg-sound-toggle',   label:'發音',   state:'none'},
+        {id:'rg-pron-toggle',    label:'讀音',   state:'pron'},
+        {id:'zh-toggle-slot',    label:'翻譯',   state:'zh'},
+        {id:'rg-vault-btn-slot', label:'單字庫', state:'vault'},
+        {id:'rg-guide-toggle',   label:'提示',   state:'guide'}
+      ]});});</script>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
     </div>
   </div>

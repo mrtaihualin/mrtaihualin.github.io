@@ -30,6 +30,7 @@
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
+<script src="word-menu.js?v=1"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
 <script src="data/tone-engine.js?v=1"></script>
@@ -2035,6 +2036,12 @@
       <span id="zh-toggle-slot"></span>
       <span id="tf-vault-btn-slot"></span>
     </div>
+    <!-- Lin 2026-07-19: ยุบปุ่มทั้ง 3 เข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
+    <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'tf-word-ctl-row',items:[
+      {id:'rg-sound-toggle',   label:'發音',   state:'none'},
+      {id:'zh-toggle-slot',    label:'翻譯',   state:'zh'},
+      {id:'tf-vault-btn-slot', label:'單字庫', state:'vault'}
+    ]});});</script>
     <div class="tf-bc" id="tf-bc"></div>
     <div class="tf-nav-bar" id="tf-nav-bar">
       <button class="tf-nav-btn" id="tf-back-btn" onclick="TF.back()" disabled>← 上一步</button>
