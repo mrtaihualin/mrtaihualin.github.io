@@ -237,18 +237,38 @@ async function deleteCalendarEventById(eventId) {
   if (!calendarId) return { ok: false, reason: 'no_calendar_id', detail: 'ยังไม่ได้ตั้ง secret GOOGLE_CALENDAR_ID' };
   const eventUrl = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(eventId);
   try {
+    // ── 2026-07-19 加（บั๊กจริงที่เจอ）：เดิมยิง DELETE เลยแล้วเชื่อว่า 404 = "ลบสำเร็จแล้ว"
+    // แต่ 404 ก็ขึ้นได้ตอน service account "มองไม่เห็นปฏิทินนี้เลย" (ยังไม่ได้แชร์ปฏิทินให้ / แชร์ผิดอีเมล /
+    // GOOGLE_CALENDAR_ID พิมพ์ผิด) — เคส "มองไม่เห็นเลย" กับ "ลบสำเร็จ" ตอบ 404 เหมือนกันทุกประการ
+    // แยกไม่ออกจาก DELETE+verify GET อย่างเดียว (สอง GET ก็ 404 เหมือนกันทั้งคู่ ทำให้ขึ้น "สำเร็จ" ทั้งที่
+    // ความจริงคือไม่มีสิทธิ์เห็น calendar นี้เลยตั้งแต่ต้น ไม่เคยแตะ event จริงเลย)
+    // แก้：ต้อง GET "ก่อน" ลบก่อนเสมอ พิสูจน์ว่า service account เห็น event ตัวนี้จริงๆ (status สด ๆ)
+    // เห็นแล้วค่อยลบ — ถ้า GET ก่อนลบก็ 404 อยู่แล้ว แปลว่าปัญหาอยู่ที่การเชื่อมต่อ/สิทธิ์ ไม่ใช่ลบสำเร็จ
+    const preRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
+    if (preRes.status === 404 || preRes.status === 410) {
+      return { ok: false, reason: 'not_visible_before_delete', detail: 'ก่อนลบ service account มองไม่เห็น event นี้เลย (' + preRes.status + ') — เช็ค: (1) แชร์ Google Calendar ให้อีเมล service account สิทธิ์ "Make changes to events" แล้วหรือยัง (2) GOOGLE_CALENDAR_ID ตรงกับปฏิทินจริงไหม' };
+    }
+    if (preRes.ok) {
+      const preData = await preRes.json().catch(() => ({}));
+      if (preData.status === 'cancelled') return { ok: true }; // ถูกลบไปแล้วจากที่อื่นก่อนหน้านี้
+    } else {
+      const detail = await preRes.text().catch(() => '');
+      return { ok: false, reason: 'pre_check_http_' + preRes.status, detail: detail.slice(0, 300) };
+    }
+
     const delRes = await fetch(eventUrl, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
     if (!delRes.ok && delRes.status !== 404 && delRes.status !== 410) {
       const detail = await delRes.text().catch(() => '');
       return { ok: false, reason: 'http_' + delRes.status, detail: detail.slice(0, 300) };
     }
-    // ── ยืนยันซ้ำว่าลบจริง (กันเคสแบบที่เพิ่งเจอ — DELETE ตอบ 404 เพราะผิดปฏิทิน ไม่ใช่เพราะลบสำเร็จ) ──
+    // ── ยืนยันซ้ำว่าลบจริง (ตอนนี้พิสูจน์แล้วว่ามองเห็น calendar/event นี้จริงตั้งแต่ก่อนลบ (preRes.ok
+    // ด้านบน) ดังนั้น 404 ตรงนี้แปลว่า "ลบสำเร็จจริง" ไม่ใช่ "มองไม่เห็นตั้งแต่ต้น" อีกแล้ว) ──
     const verifyRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
     if (verifyRes.status === 404 || verifyRes.status === 410) return { ok: true };
     if (verifyRes.ok) {
       const verifyData = await verifyRes.json().catch(() => ({}));
       if (verifyData.status === 'cancelled') return { ok: true };
-      return { ok: false, reason: 'still_exists', detail: 'GET ยืนยันแล้วเจอ event ยังอยู่ (status=' + (verifyData.status || '-') + ') — เช็ค GOOGLE_CALENDAR_ID ว่าตรงกับปฏิทินจริงไหม' };
+      return { ok: false, reason: 'still_exists', detail: 'GET ยืนยันแล้วเจอ event ยังอยู่ (status=' + (verifyData.status || '-') + ')' };
     }
     // ยืนยันไม่ได้ (เช่น network พัง) — ไม่กล้าฟันธงว่าสำเร็จ ให้ครูไปเช็คเองที่เว็บ
     return { ok: false, reason: 'verify_failed_http_' + verifyRes.status };
@@ -549,7 +569,9 @@ serve(async (req) => {
         if (!delResult.ok) {
           console.error('[line-webhook] ⚠️ confirm_cancel_delete 刪除 Calendar 失敗:', JSON.stringify(delResult), 'request=', requestIdCancel);
           if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken, '⚠️ 刪除 Calendar 失敗，請到網站手動處理（不要重複點這顆按鈕）');
+            // 2026-07-19 加：把失敗原因直接秀給老師看（不用再翻 log），先前遇過「回覆✅但其實沒刪到」
+            // 的假成功，之後任何失敗都要讓老師當場看到原因，不能只說「失敗，去網站處理」含糊帶過
+            await replyLine(channelToken, event.replyToken, '⚠️ 刪除 Calendar 失敗（不要重複點這顆按鈕，請到網站手動處理）\n原因：' + (delResult.reason || '未知') + (delResult.detail ? '\n' + delResult.detail : ''));
           }
           continue;
         }
