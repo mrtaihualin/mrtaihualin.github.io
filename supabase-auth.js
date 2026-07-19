@@ -443,9 +443,16 @@
   }
 
   // ── น้องมีนา exit survey — เด้งถามตอนคนจะปิด gate โดยยังไม่ล็อกอิน/ไม่ให้อีเมล LIN 2026-06-23 ──
-  var exitSurveyShown = false;   // โชว์ครั้งเดียวต่อ session (ไม่กวน)
+  // 2026-07-19 แก้ (Lin สั่ง: เก็บไว้ได้ แต่ต้องไม่กวน เพราะไม่ได้มีประโยชน์มาก): เดิม exitSurveyShown
+  // เป็นแค่ตัวแปรในหน้า รีเซ็ตทุกครั้งที่โหลดหน้าใหม่ — คนกลับมาเล่นเกมซ้ำแล้วปิดกำแพงล็อกอินอีก
+  // จะเจอป๊อบอัพเต็มจอนี้ซ้ำทุกรอบ ไม่หยุดสักที ตอนนี้จำถาวรด้วย localStorage แบบเดียวกับแถบล่าง
+  // exit-survey ใน shared.js (SHOWN_KEY 'exit_survey_shown_v1') — โชว์ครั้งเดียวตลอดไปต่อเครื่องพอ
+  var GATE_SURVEY_SHOWN_KEY = 'tf_gate_exit_survey_shown_v1';
+  function gateSurveyShown() { try { return localStorage.getItem(GATE_SURVEY_SHOWN_KEY) === '1'; } catch (e) { return false; } }
+  function markGateSurveyShown() { try { localStorage.setItem(GATE_SURVEY_SHOWN_KEY, '1'); } catch (e) {} }
+  var exitSurveyShown = false;   // กันโชว์ซ้อนภายในหน้าเดียวกัน (เสริมจาก localStorage ด้านบนที่กันข้ามหน้า/ข้าม session)
   function requestCloseGate() {
-    if (currentUser || leadCaptured() || exitSurveyShown) { hideGate(); return; }
+    if (currentUser || leadCaptured() || exitSurveyShown || gateSurveyShown()) { hideGate(); return; }
     showExitSurvey();
   }
   function finishExitSurvey(choice) {
@@ -459,6 +466,7 @@
   }
   function showExitSurvey() {
     exitSurveyShown = true;
+    markGateSurveyShown();
     try { window.gtag('event', 'exit_survey_shown', { surface: 'modal' }); } catch (e) {}
     var opts = [['no_login', '不想登入 / 註冊'], ['login_broken', '登入怪怪的、按不動'],
                 ['just_play', '只是想隨便玩玩'], ['no_email', '還不想留 Email'], ['other', '其他…']];
