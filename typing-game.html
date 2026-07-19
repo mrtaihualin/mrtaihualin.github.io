@@ -365,20 +365,73 @@ body.tg-kbd-typing .floating-qr{opacity:0!important;pointer-events:none!importan
   <div class="page-sub">照泰文鍵盤打出正確拼寫</div>
 </div>
 
-<!-- How-to modal: เกมพิมพ์ -->
+<!-- How-to modal: เกมพิมพ์ — ฉบับสั้น (default) + ฉบับละเอียด (กดขยาย) — Lin 2026-07-19 -->
 <div id="rg-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+  <div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
     <button onclick="document.getElementById('rg-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
-    <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">⌨️ 怎麼玩？</div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">練打字順便練拼字！鍵盤已經照泰文鍵盤排好位置了 😊</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">看著上面的泰文字，照樣打出來，打對會自動跳下一個字母。手機也能用螢幕上的虛擬鍵盤打 📱</p>
-    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:2;">
-      第一次就全對 → <strong>+10 分</strong><br>
-      中途打錯，最後還是打對 → <strong>+5 分</strong><br>
-      打完還可以猜聲調，答對再拿 <strong>+1 分</strong>（答錯不扣喔）
+    <div style="font-family:'Noto Serif TC',serif;font-size:22px;font-weight:900;color:#8B6310;margin-bottom:12px;">⌨️ 怎麼玩？</div>
+
+    <ul style="font-size:14px;color:#333;line-height:2;margin:0 0 12px;padding-left:20px;">
+      <li>一輪 10 題，初／中／高三級（難度依單字難易度，不是音節數）</li>
+      <li>照畫面順序由左到右打，打對自動跳下一步</li>
+      <li>💡有提示＝練習不計分／🔥無提示＝計分</li>
+      <li>打錯有額度，額度用完直接公佈答案</li>
+      <li>打完秀拆解：初/中→子音母音聲調符尾音；高級→單字意思</li>
+      <li>聲調小測驗（初/中限定，非強制）：答對 +1 分</li>
+      <li>「已記得」＝跳過提示自測，不加分不加星</li>
+      <li>連擊／黃金字／等級加權都加分；整輪無提示才有 +20，全對再 +50</li>
+      <li>🍚選單：發音(AI)／讀音／翻譯／收藏／提示切換／螢幕鍵盤</li>
+      <li>星星＝真正精通才給，累積解鎖 5 款稻米勳章</li>
+      <li>可下載 PDF 報告；登入才記錄複習進度</li>
+    </ul>
+
+    <button onclick="var d=document.getElementById('rg-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
+
+    <div id="rg-howto-detail" style="display:none;font-size:13.5px;color:#333;line-height:1.85;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
+      <p style="margin:0 0 10px;">用泰文鍵盤把泰文字打出來，練習拼字＋鍵盤操作。鍵盤已照泰文排好位置，不用自己記英文鍵對應哪個泰文字母。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📚 三個等級</div>
+      <p style="margin:0 0 4px;"><strong>初級</strong>：以單音節字為主，少數是 2 音節，難度是照單字難易度分的，不是看音節數。</p>
+      <p style="margin:0 0 4px;"><strong>中級</strong>：以 2 音節以上的字為主，難度比初級高一階。</p>
+      <p style="margin:0 0 4px;"><strong>高級</strong>：整句話，練習連續打字＋整句理解。一輪固定 10 題，三個等級都一樣。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">⌨️ 怎麼打字</div>
+      <p style="margin:0 0 4px;">照畫面上寫的順序、由左到右打就對了。泰文有些母音寫在子音前面（เ, แ, โ, ใ, ไ），這種字第一鍵反而是母音——照螢幕順序打不會錯。多音節字，音節之間自動接續，不用按鍵切換。電腦實體鍵盤跟手機鍵盤都能打，或按 ⌨️ 開螢幕鍵盤用滑鼠／觸控輸入。打對自動跳下一步，不用按確認鍵。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔥💡 兩種模式</div>
+      <p style="margin:0 0 4px;"><strong>💡 有提示（練習模式）</strong>：鍵盤亮下一個該按的鍵，不計分、不算星星、不算複習進度，適合剛學或想穩基礎時用。</p>
+      <p style="margin:0 0 4px;"><strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己記，答對才有分數、複習進度（星星要等這個字真正「精通」才會拿到，不是答對一次就有）。畫面上按鈕可切換兩種模式。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">⚠️ 打錯了怎麼辦</div>
+      <p style="margin:0 0 4px;">每個字有「可以打錯幾次」的額度（字越長額度越寬鬆）。額度用完，系統直接公佈答案，接著打下一個字，不會卡住你。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🎁 打完字之後：拆解分析</div>
+      <p style="margin:0 0 4px;"><strong>初級／中級（單字）</strong>：列出這個字的拆解，包含子音、母音、聲調符，有尾音、前導子音（ห、อ）或複合音也會標出來。</p>
+      <p style="margin:0 0 4px;"><strong>高級（句子）</strong>：改列出句子裡每個字＋對應的中文意思。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🎲 聲調小測驗（額外加分，非強制，只有初級／中級才有）</div>
+      <p style="margin:0 0 4px;">打完整個字後，若有聲調，畫面會問「這是第幾聲」（可選 1～5，鍵盤數字鍵也行），答對 +1 分，答錯不扣分，不想答按 Enter 或跳過鍵即可。高級不會問聲調。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💰 計分怎麼算</div>
+      <p style="margin:0 0 4px;">基礎分：打對有基礎分，額度內打錯次數越多分數越低。<strong>連擊加成</strong>：連續答對加成（連續 3 題 ×1.5、5 題 ×2、8 題 ×3）。<strong>黃金字</strong>：偶爾出現，答對分數雙倍。<strong>等級加權</strong>：初級 ×1、中級 ×1.5、高級 ×2。<strong>完成／全對獎勵</strong>：這輪全程沒開過提示（哪怕一次也不行），打完 +20 分，全對再 +50 分；用過一次提示這兩個獎勵都沒有。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓ 「已記得」按鈕是什麼意思</div>
+      <p style="margin:0 0 4px;">覺得字已經很熟，可按「已記得」跳過提示直接自測。不會加分、不會加星星，就算全打對也一樣——純粹標記「已精通」，用在複習系統。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
+      <p style="margin:0 0 4px;">點 🍚 圖示展開直式清單：🔊發音（AI 語音）・🐣／🥚讀音顯示（切換注音式泰語讀音）・🍙／🌾翻譯顯示（🍙顯示中文翻譯，🌾隱藏翻譯）・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・⌨️螢幕鍵盤開關。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章、連續天數</div>
+      <p style="margin:0 0 4px;">星星不是答對一題就有，是這個字經過複習、真的「精通」了才拿到一顆（跟其他遊戲共用）。星星累積解鎖稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。每天練習累積連續天數，斷一天有「護盾」保護連續紀錄不歸零（次數有限）。每週換一次每週挑戰，完成有額外獎勵。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 一輪結束後</div>
+      <p style="margin:0 0 4px;">畫面顯示這輪總分、答對題數、星星累積，還可以按「📄 下載 PDF 報告」產生本輪報告：本輪得分、答對題數、每個字表現（狀態／打錯次數／得分／下次複習日期）、「弱點分析」列出這輪打錯最多的字。沒登入的話，PDF 會提醒：登入後系統才會記住每個字的複習進度。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
+      <p style="margin:0;">打錯過的字會排時間回來複習：第一次答對排隔天複習，隔天再答對排約一週後複習，兩次都答對就直接標記「已精通」。</p>
     </div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐（跟拼讀練習共用進度）</p>
-    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">還不熟鍵盤位置也沒關係，照著螢幕上的鍵盤打就行，<a href="pricing.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔 😄</a></p>
+
+    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:16px 0 0;">還不熟鍵盤位置也沒關係，照著螢幕上的鍵盤打就行，<a href="pricing.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔 😄</a></p>
   </div>
 </div>
 
