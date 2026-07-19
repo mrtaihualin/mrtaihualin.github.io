@@ -232,7 +232,7 @@ serve(async (req) => {
             const { error: markErr0 } = await supabase.from('classroom_schedule').update({ line_reminder24h_sent: true }).in('id', idsNeedReminder24h);
             if (markErr0) { console.error('[class-reminder-cron] 標記 line_reminder24h_sent 失敗，可能會重複發送：', markErr0.message, 'ids=', idsNeedReminder24h); errCount++; }
             sentCount++;
-          } catch (e) { errCount++; }
+          } catch (e) { errCount++; console.error('[class-reminder-cron] 發送 24 小時前提醒失敗，ids=' + idsNeedReminder24h.join(',') + '：', e && e.message ? e.message : e); }
         }
       }
 
@@ -265,7 +265,7 @@ serve(async (req) => {
             const { error: markErr } = await supabase.from('classroom_schedule').update({ line_reminder_sent: true }).in('id', idsNeedReminder);
             if (markErr) { console.error('[class-reminder-cron] 標記 line_reminder_sent 失敗，可能會重複發送：', markErr.message, 'ids=', idsNeedReminder); errCount++; }
             sentCount++;
-          } catch (e) { errCount++; }
+          } catch (e) { errCount++; console.error('[class-reminder-cron] 發送上課前提醒失敗，ids=' + idsNeedReminder.join(',') + '：', e && e.message ? e.message : e); }
         }
       }
 
@@ -280,7 +280,7 @@ serve(async (req) => {
             const { error: markErr2 } = await supabase.from('classroom_schedule').update({ line_followup_sent: true }).in('id', idsNeedFollowup);
             if (markErr2) { console.error('[class-reminder-cron] 標記 line_followup_sent 失敗，可能會重複發送：', markErr2.message, 'ids=', idsNeedFollowup); errCount++; }
             sentCount++;
-          } catch (e) { errCount++; }
+          } catch (e) { errCount++; console.error('[class-reminder-cron] 發送下課後訊息失敗，ids=' + idsNeedFollowup.join(',') + '：', e && e.message ? e.message : e); }
         }
       }
     }

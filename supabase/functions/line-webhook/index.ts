@@ -310,10 +310,12 @@ serve(async (req) => {
 
   for (const event of (payload.events || [])) {
     if (event.type !== 'postback') continue; // ตอนนี้สนใจแค่ postback (ปุ่มในข้อความ) เท่านั้น
+    let actionForLog = 'unknown'; // 2026-07-19 加：ให้ catch ครอบนอกสุดข้างล่างรู้ว่า action ไหนพังอยู่
     try {
       const data = event.postback && event.postback.data ? event.postback.data : '';
       const params = new URLSearchParams(data);
       const action = params.get('action');
+      actionForLog = action || 'unknown';
 
       if (action === 'approve' || action === 'deny') {
         // ── 2026-07-10 แบบเก่า：เก็บไว้เผื่อมีข้อความค้างที่ยังไม่ถูกกด ไม่ได้แตะ Calendar ──
@@ -365,13 +367,14 @@ serve(async (req) => {
         // LINE 使用者是不是這筆申請真正的學生本人——多加這層防護（防禦性加強，不是因為
         // 已知有真的被利用，是稽核時發現「理論上少了這一層」）。對不上就安全忽略，不回覆任何內容
         // （避免透露「這筆申請存在/不存在」這種資訊給不是本人的人）。
+        // 2026-07-19 改（稽核發現，YELLOW）：原本 if(senderUserId){檢查} 意味著萬一
+        // senderUserId 是空值（理論上 LINE postback 一定會帶，但不該假設），這層檢查會被整段跳過（fail-open）。
+        // 改成 fail-closed：沒有 senderUserId 或對不起來都直接拒絕。
         const senderUserId = event.source && event.source.userId;
-        if (senderUserId) {
-          const { data: stuRow } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRow.token).maybeSingle();
-          if (!stuRow || stuRow.line_user_id !== senderUserId) {
-            console.error('[line-webhook] ⚠️ accept/decline_offer：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestId);
-            continue;
-          }
+        const { data: stuRow } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRow.token).maybeSingle();
+        if (!senderUserId || !stuRow || stuRow.line_user_id !== senderUserId) {
+          console.error('[line-webhook] ⚠️ accept/decline_offer：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestId);
+          continue;
         }
 
         const updateFields = { offer_status: newOfferStatus };
@@ -443,20 +446,22 @@ serve(async (req) => {
 
         // 2026-07-16 加（稽核發現，ORANGE#5）：跟 accept/decline_offer 一樣，多加一層確認
         // 按按鈕的人是不是這筆通知真正要給的那個學生。
+        // 2026-07-19 改（稽核發現，YELLOW）：fail-closed，不能因為 senderUserIdAck 空值就跳過檢查
         const senderUserIdAck = event.source && event.source.userId;
-        if (senderUserIdAck) {
-          const { data: reqRowAck } = await supabase.from('classroom_requests').select('token').eq('id', requestId).maybeSingle();
-          if (!reqRowAck) continue;
-          const { data: stuRowAck } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAck.token).maybeSingle();
-          if (!stuRowAck || stuRowAck.line_user_id !== senderUserIdAck) {
-            console.error('[line-webhook] ⚠️ ack_teacher_cancel：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestId);
-            continue;
-          }
+        const { data: reqRowAck } = await supabase.from('classroom_requests').select('token').eq('id', requestId).maybeSingle();
+        if (!reqRowAck) continue;
+        const { data: stuRowAck } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAck.token).maybeSingle();
+        if (!senderUserIdAck || !stuRowAck || stuRowAck.line_user_id !== senderUserIdAck) {
+          console.error('[line-webhook] ⚠️ ack_teacher_cancel：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestId);
+          continue;
         }
 
+        // 2026-07-19 加（稽核發現，ORANGE#6）：學生確認收到取消通知之後，還要等老師去網站按
+        // 「確認刪除 Calendar」才算真的完成——這裡把 sla_reminder_sent 重設回 false，讓
+        // request-sla-cron 可以在老師忘記時繼續每 48 小時提醒一次（不然這筆申請可能永遠沒人再提醒）。
         const { data: updated, error, count } = await supabase
           .from('classroom_requests')
-          .update({ teacher_cancel_ack_at: new Date().toISOString() }, { count: 'exact' })
+          .update({ teacher_cancel_ack_at: new Date().toISOString(), sla_reminder_sent: false }, { count: 'exact' })
           .eq('id', requestId)
           .is('teacher_cancel_ack_at', null)
           .select('original_date');
@@ -495,20 +500,21 @@ serve(async (req) => {
         const requestIdAdd = params.get('request');
         if (!requestIdAdd) continue;
 
+        // 2026-07-19 改（稽核發現，YELLOW）：fail-closed，同上
         const senderUserIdAckAdd = event.source && event.source.userId;
-        if (senderUserIdAckAdd) {
-          const { data: reqRowAckAdd } = await supabase.from('classroom_requests').select('token').eq('id', requestIdAdd).maybeSingle();
-          if (!reqRowAckAdd) continue;
-          const { data: stuRowAckAdd } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAckAdd.token).maybeSingle();
-          if (!stuRowAckAdd || stuRowAckAdd.line_user_id !== senderUserIdAckAdd) {
-            console.error('[line-webhook] ⚠️ ack_teacher_add：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestIdAdd);
-            continue;
-          }
+        const { data: reqRowAckAdd } = await supabase.from('classroom_requests').select('token').eq('id', requestIdAdd).maybeSingle();
+        if (!reqRowAckAdd) continue;
+        const { data: stuRowAckAdd } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAckAdd.token).maybeSingle();
+        if (!senderUserIdAckAdd || !stuRowAckAdd || stuRowAckAdd.line_user_id !== senderUserIdAckAdd) {
+          console.error('[line-webhook] ⚠️ ack_teacher_add：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestIdAdd);
+          continue;
         }
 
+        // 2026-07-19 加（稽核發現，ORANGE#6 同一套邏輯，加課版本）：重設 sla_reminder_sent 讓
+        // cron 可以在老師忘記按「確認新增 Calendar」時繼續提醒。
         const { data: updatedAdd, error: errorAdd, count: countAdd } = await supabase
           .from('classroom_requests')
-          .update({ teacher_add_ack_at: new Date().toISOString() }, { count: 'exact' })
+          .update({ teacher_add_ack_at: new Date().toISOString(), sla_reminder_sent: false }, { count: 'exact' })
           .eq('id', requestIdAdd)
           .is('teacher_add_ack_at', null)
           .select('requested_date, requested_time');
@@ -565,9 +571,38 @@ serve(async (req) => {
           continue;
         }
 
+        // ── 2026-07-19 เพิ่ม（แก้ ORANGE：ครูกดลบจาก LINE กับเว็บพร้อมกัน ชนกันได้）──
+        // เดิม: เช็คแค่ status ด้านบน (อ่านเฉยๆ ไม่ atomic) แล้วยิงลบ Calendar เลย → ถ้าเว็บกับ LINE
+        // อ่านผ่านพร้อมกันภายในไม่กี่วินาที ทั้งคู่จะยิง deleteCalendarEventById ซ้อนกันจริง
+        // ตอนนี้ต้อง "ล็อกแบบ atomic" ก่อนแตะ Calendar เสมอ — ใช้คอลัมน์ processing_started_at แยกจาก
+        // status (status มี CHECK constraint classroom_requests_status_check รองรับแค่
+        // pending/acknowledged เท่านั้น เอามาใช้เป็นล็อกที่ 3 ไม่ได้) ฝั่งเว็บ (classroom/index.html
+        // claimRequestForProcessing) ใช้ล็อกคอลัมน์เดียวกัน ความหมายเดียวกัน
+        const { data: claimDataCancel, error: claimErrCancel, count: claimCountCancel } = await supabase
+          .from('classroom_requests')
+          .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
+          .eq('id', requestIdCancel)
+          .eq('status', 'pending')
+          .is('processing_started_at', null)
+          .select('id');
+
+        if (claimErrCancel) {
+          console.error('[line-webhook] ⚠️ confirm_cancel_delete: ล็อกก่อนลบพัง:', claimErrCancel.message, 'request=', requestIdCancel);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ เตรียมประมวลผลไม่สำเร็จ：' + claimErrCancel.message + '\nยังไม่ได้แตะ Calendar');
+          continue;
+        }
+        if (!claimCountCancel) {
+          // ล็อกไม่ได้ = อีกฝั่ง (เว็บ หรือกด LINE ซ้ำ) กำลังทำอยู่/ทำเสร็จไปแล้ว → ห้ามแตะ Calendar ซ้ำ
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          continue;
+        }
+
         const delResult = await deleteCalendarEventById(reqRowCancel.calendar_event_id);
         if (!delResult.ok) {
           console.error('[line-webhook] ⚠️ confirm_cancel_delete 刪除 Calendar 失敗:', JSON.stringify(delResult), 'request=', requestIdCancel);
+          // Calendar ยังไม่ถูกแตะจริง (API ล้มเหลว) → ปลดล็อกคืน ให้กดใหม่/ไปทำที่เว็บได้โดยไม่ติดล็อกค้าง
+          const { error: unlockErrCancel } = await supabase.from('classroom_requests').update({ processing_started_at: null }).eq('id', requestIdCancel);
+          if (unlockErrCancel) console.error('[line-webhook] ⚠️ confirm_cancel_delete: ปลดล็อกคืนไม่สำเร็จหลัง Calendar ลบพัง:', unlockErrCancel.message, 'request=', requestIdCancel);
           if (channelToken && event.replyToken) {
             // 2026-07-19 加：把失敗原因直接秀給老師看（不用再翻 log），先前遇過「回覆✅但其實沒刪到」
             // 的假成功，之後任何失敗都要讓老師當場看到原因，不能只說「失敗，去網站處理」含糊帶過
@@ -576,17 +611,21 @@ serve(async (req) => {
           continue;
         }
 
+        // Calendar ลบสำเร็จแล้วจริง — ปิดสถานะ + ปลดล็อกพร้อมกันในคำสั่งเดียว (atomic)
+        // 2026-07-19 加：ถ้า update นี้ล้มเหลว แปลว่า Calendar ลบสำเร็จแล้วแต่บันทึกฐานข้อมูลพัง —
+        // จงใจ "ไม่ปลดล็อก" (เพราะ update ทั้งก้อนพังหมด ไม่มีฟิลด์ไหนถูกเปลี่ยนอยู่แล้ว) กันไม่ให้ใครกดซ้ำ
+        // แล้วไปลบ Calendar ที่ถูกลบไปแล้วซ้ำอีกรอบ — ต้องให้ Lin เข้าไปเช็คมือใน Supabase
         const { error: updErrCancel, count: updCountCancel } = await supabase
           .from('classroom_requests')
-          .update({ status: 'acknowledged' }, { count: 'exact' })
+          .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
           .eq('id', requestIdCancel)
           .eq('status', 'pending');
 
         if (updErrCancel) {
           // Calendar ลบสำเร็จแล้วจริง แต่บันทึกฐานข้อมูลไม่สำเร็จ — ต้องบอกครูดังๆ ไม่ให้เข้าใจผิดว่ายังไม่ได้ลบ
-          console.error('[line-webhook] ⚠️ confirm_cancel_delete: Calendar ลบแล้วแต่อัปเดตฐานข้อมูลพัง:', updErrCancel.message, 'request=', requestIdCancel);
+          console.error('[line-webhook] ⚠️ confirm_cancel_delete: Calendar ลบแล้วแต่อัปเดตฐานข้อมูลพัง (ล็อกจะค้างไว้ตั้งใจ ต้องเช็คมือ):', updErrCancel.message, 'request=', requestIdCancel);
           if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken, '⚠️ Calendar ลบสำเร็จแล้ว แต่บันทึกสถานะในระบบไม่สำเร็จ ลองรีเฟรชหน้าเว็บดูอีกที');
+            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 刪除成功，但存資料庫失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdCancel + '）');
           }
           continue;
         }
@@ -610,7 +649,13 @@ serve(async (req) => {
 
       // action 未知的類型 → 忽略，不讓整個 webhook 掛掉
     } catch (e) {
-      // 一個 event 出錯不影響其他 event（LINE 有時候一次會送多個 event 進來）
+      // 2026-07-19 加（稽核發現，RED#3）：以前這裡完全靜默——如果 Calendar 已經刪除成功，
+      // 但後面存資料庫/回覆 LINE 那段忽然發生未預期的錯誤，老師畫面上什麼都不會看到，
+      // 以為沒動作，其實 Calendar 可能已經被動過了。現在一定要留 log + 盡量推播提醒老師去網站確認。
+      console.error('[line-webhook] ⚠️ 處理 postback 發生未預期錯誤 action=' + actionForLog + '：', e && e.message ? e.message : e);
+      if (channelToken && event.replyToken) {
+        await replyLine(channelToken, event.replyToken, '⚠️ 系統發生未預期錯誤，請到網站確認 Calendar 狀態');
+      }
     }
   }
 

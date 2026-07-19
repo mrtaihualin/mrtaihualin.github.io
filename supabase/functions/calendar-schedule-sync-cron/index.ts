@@ -186,6 +186,50 @@ serve(async (req) => {
       .gte('lesson_date', todayIso)
       .lt('lesson_date', alertCutoffIso);
 
+    // 2026-07-19 改（稽核發現，RED#5）：以前是先刪光未來的資料，再拿刪除前後的數量比對是否異常——
+    // 但那時候已經刪了，就算發現異常，表已經空了，只能等下一輪 cron（15-30 分鐘後）填回去，
+    // 這段空窗期網站/LINE 提醒看到的都是空的課表。現在改成：先算好這次抓到的 rows/rowsInWindow，
+    // 「刪除之前」就先比對，異常的話直接跳過這整輪的刪除+寫入，保留上一輪成功的資料，只發警報。
+    const rowsInWindow = rows.filter((r) => r.lesson_date < alertCutoffIso).length;
+    let isAnomalousDrop = false;
+    let dropped = 0;
+    if (typeof beforeCount === 'number' && beforeCount >= 3) {
+      dropped = beforeCount - rowsInWindow;
+      if (dropped >= 3 && dropped / beforeCount >= 0.3) isAnomalousDrop = true;
+    }
+
+    let dropAlertSent = false;
+    if (isAnomalousDrop) {
+      console.error('[calendar-schedule-sync-cron] ⚠️ จำนวนคาบหายผิดปกติ (30 วันข้างหน้า): ก่อน=' + beforeCount + ' หลัง=' + rowsInWindow + ' (หาย ' + dropped + ' แถว, ' + Math.round((dropped / beforeCount) * 100) + '%) — ข้ามรอบนี้ ไม่ลบ/ไม่เขียนทับ เก็บข้อมูลรอบก่อนหน้าไว้ก่อน');
+      const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
+      const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
+      if (channelToken && teacherUserId) {
+        try {
+          await fetch('https://api.line.me/v2/bot/message/push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+            body: JSON.stringify({
+              to: teacherUserId,
+              messages: [{ type: 'text', text: '⚠️ ตารางเรียนหายผิดปกติ (auto-sync, ภายใน 30 วัน)\nก่อน: ' + beforeCount + ' คาบ → รอบนี้เจอ: ' + rowsInWindow + ' คาบ (หาย ' + dropped + ' คาบ)\n\nGoogle Calendar ตัวจริงไม่ได้ถูกแตะ ข้อมูลยังอยู่ครบ — รอบนี้ระบบข้ามการอัปเดตตารางสำเนาไปก่อน (ของเดิมยังอยู่) เพราะจับคู่ชื่อ/ดึงข้อมูลรอบนี้อาจพลาด แนะนำเปิดเว็บเช็คตารางเรียนอีกที' }],
+            }),
+          });
+          dropAlertSent = true;
+        } catch (e) { console.error('[calendar-schedule-sync-cron] แจ้งเตือนครูไม่สำเร็จ:', e); }
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        skipped: true,
+        reason: 'anomalous_drop',
+        events_checked: events.length,
+        students_checked: (students || []).length,
+        matched_rows: rows.length,
+        before_count_30d: beforeCount,
+        after_count_30d: rowsInWindow,
+        drop_alert_sent: dropAlertSent,
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // ── ล้างคาบอนาคตเดิมทิ้งก่อนเขียนชุดใหม่ (เหมือนฝั่งเว็บ) — เช็ค error เสมอ ห้ามล้มเหลวเงียบๆ ──
     const { error: delError } = await supabase.from('classroom_schedule').delete({ count: 'exact' }).gte('lesson_date', todayIso);
     if (delError) {
@@ -200,32 +244,6 @@ serve(async (req) => {
       const { error } = await supabase.from('classroom_schedule').upsert(rows, { onConflict: 'token,lesson_date,start_time' });
       upsertError = error;
       if (error) console.error('[calendar-schedule-sync-cron] เขียนตารางใหม่ไม่สำเร็จ：', error.message);
-    }
-
-    // 2026-07-19 加：เทียบจำนวนก่อน/หลัง (เฉพาะช่วง 30 วันข้างหน้า) — หายเกิน 30% และหายอย่างน้อย 3 แถว
-    // (กันแจ้งเตือนเล่นๆ ตอนข้อมูลน้อยอยู่แล้ว เช่น 2 คาบเหลือ 1 คาบ ไม่ใช่เรื่องผิดปกติ) ถือว่าผิดปกติ
-    const rowsInWindow = rows.filter((r) => r.lesson_date < alertCutoffIso).length;
-    let dropAlertSent = false;
-    if (!upsertError && !delError && typeof beforeCount === 'number' && beforeCount >= 3) {
-      const dropped = beforeCount - rowsInWindow;
-      if (dropped >= 3 && dropped / beforeCount >= 0.3) {
-        console.error('[calendar-schedule-sync-cron] ⚠️ จำนวนคาบหายผิดปกติ (30 วันข้างหน้า): ก่อน=' + beforeCount + ' หลัง=' + rowsInWindow + ' (หาย ' + dropped + ' แถว, ' + Math.round((dropped / beforeCount) * 100) + '%)');
-        const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
-        const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
-        if (channelToken && teacherUserId) {
-          try {
-            await fetch('https://api.line.me/v2/bot/message/push', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
-              body: JSON.stringify({
-                to: teacherUserId,
-                messages: [{ type: 'text', text: '⚠️ ตารางเรียนหายผิดปกติ (auto-sync, ภายใน 30 วัน)\nก่อน: ' + beforeCount + ' คาบ → ตอนนี้: ' + rowsInWindow + ' คาบ (หาย ' + dropped + ' คาบ)\n\nGoogle Calendar ตัวจริงไม่ได้ถูกแตะ ข้อมูลยังอยู่ครบ — แต่ระบบจับคู่ชื่อ/ดึงข้อมูลรอบนี้อาจพลาด แนะนำเปิดเว็บเช็คตารางเรียนอีกที' }],
-              }),
-            });
-            dropAlertSent = true;
-          } catch (e) { console.error('[calendar-schedule-sync-cron] แจ้งเตือนครูไม่สำเร็จ:', e); }
-        }
-      }
     }
 
     return new Response(JSON.stringify({

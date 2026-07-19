@@ -54,7 +54,7 @@ serve(async (req) => {
     const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
     const { data: rows, error } = await supabase
       .from('classroom_requests')
-      .select('id, token, student_name, request_type, offer_status, offer_created_at, offer_accepted_at, created_at, initiated_by, teacher_cancel_ack_at')
+      .select('id, token, student_name, request_type, offer_status, offer_created_at, offer_accepted_at, created_at, initiated_by, teacher_cancel_ack_at, teacher_add_ack_at')
       .eq('status', 'pending')
       .eq('sla_reminder_sent', false);
 
@@ -69,18 +69,69 @@ serve(async (req) => {
       // 邏輯跟下面「一般情況」不一樣（不用管 offer_status，也不推播給學生），單獨處理完就 continue，
       // 不會掉進下面那段一般邏輯。
       if (r.request_type === 'cancel' && r.initiated_by === 'teacher') {
-        if (r.teacher_cancel_ack_at) continue; // 學生已經確認過了，不用提醒
-        const hrs = (nowMs - new Date(r.created_at).getTime()) / 3600000;
-        if (hrs < SLA_HOURS) continue;
+        if (!r.teacher_cancel_ack_at) {
+          // 學生還沒按「我知道了」確認取消通知
+          const hrs = (nowMs - new Date(r.created_at).getTime()) / 3600000;
+          if (hrs < SLA_HOURS) continue;
+          try {
+            if (teacherUserId) {
+              await pushLine(channelToken, teacherUserId,
+                '⏰ 提醒：' + (r.student_name || '學生') + ' 已經超過 48 小時還沒按「我知道了」確認取消通知，建議直接用 LINE 聯絡學生確認');
+            }
+            const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+            if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
+            sent++;
+          } catch (e) { errCount++; console.error('[request-sla-cron] 提醒老師（等學生確認取消）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
+          continue;
+        }
+        // 2026-07-19 加（稽核發現，ORANGE#6）：學生已經按「我知道了」了，但老師還沒回網站按
+        // 「確認刪除 Calendar」——這種以前完全不會再被提醒（line-webhook 那邊按 ack 時已經把
+        // sla_reminder_sent 重設回 false，這裡才會再被抓到），跟 offer_status='accepted' 同一套模式，
+        // 用 teacher_cancel_ack_at 當計時起點，每 48 小時提醒一次。
+        const hrsAck = (nowMs - new Date(r.teacher_cancel_ack_at).getTime()) / 3600000;
+        if (hrsAck < SLA_HOURS) continue;
         try {
           if (teacherUserId) {
             await pushLine(channelToken, teacherUserId,
-              '⏰ 提醒：' + (r.student_name || '學生') + ' 已經超過 48 小時還沒按「我知道了」確認取消通知，建議直接用 LINE 聯絡學生確認');
+              '⏰ 提醒：' + (r.student_name || '學生') + ' 已經確認收到取消通知超過 48 小時了，還沒到網站按「確認刪除 Calendar」，記得去處理');
           }
           const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
           if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
           sent++;
-        } catch (e) { errCount++; }
+        } catch (e) { errCount++; console.error('[request-sla-cron] 提醒老師（等確認刪除 Calendar）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
+        continue;
+      }
+
+      // 2026-07-19 加（稽核發現，ORANGE#6，加課版本）：以前完全沒有這個分支——老師自己發起加課
+      // （initiated_by='teacher'）本來會掉進最下面「一般情況」分支，一起提醒老師+學生，但那個分支的
+      // 文字/邏輯是給學生自己送出的申請設計的，跟取消的模式不一致。這裡跟 cancel 分支用同一套：
+      // 先看學生是否已按「我知道了」，沒有就提醒老師去催學生；已經按了就改成提醒老師去網站按「確認新增」。
+      if (r.request_type === 'add_class' && r.initiated_by === 'teacher') {
+        if (!r.teacher_add_ack_at) {
+          const hrs = (nowMs - new Date(r.created_at).getTime()) / 3600000;
+          if (hrs < SLA_HOURS) continue;
+          try {
+            if (teacherUserId) {
+              await pushLine(channelToken, teacherUserId,
+                '⏰ 提醒：' + (r.student_name || '學生') + ' 已經超過 48 小時還沒按「我知道了」確認加課通知，建議直接用 LINE 聯絡學生確認');
+            }
+            const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+            if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
+            sent++;
+          } catch (e) { errCount++; console.error('[request-sla-cron] 提醒老師（等學生確認加課）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
+          continue;
+        }
+        const hrsAckAdd = (nowMs - new Date(r.teacher_add_ack_at).getTime()) / 3600000;
+        if (hrsAckAdd < SLA_HOURS) continue;
+        try {
+          if (teacherUserId) {
+            await pushLine(channelToken, teacherUserId,
+              '⏰ 提醒：' + (r.student_name || '學生') + ' 已經確認收到加課通知超過 48 小時了，還沒到網站按「確認新增 Calendar」，記得去處理');
+          }
+          const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+          if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
+          sent++;
+        } catch (e) { errCount++; console.error('[request-sla-cron] 提醒老師（等確認新增 Calendar）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
         continue;
       }
 
@@ -98,7 +149,7 @@ serve(async (req) => {
           const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
           if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
           sent++;
-        } catch (e) { errCount++; }
+        } catch (e) { errCount++; console.error('[request-sla-cron] 提醒老師（等改期提議回覆）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
         continue;
       }
 
@@ -115,7 +166,27 @@ serve(async (req) => {
           const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
           if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
           sent++;
-        } catch (e) { errCount++; }
+        } catch (e) { errCount++; console.error('[request-sla-cron] 提醒老師（等確認並搬 Calendar）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
+        continue;
+      }
+
+      // 2026-07-19 加（稽核發現，ORANGE#7）：學生回覆「這些時間都不方便」（decline_offer）之後，
+      // 以前每個檢查條件都要求 offer_status IN ('proposed','accepted') 或 IS NULL，declined 完全沒有
+      // 對應的分支——decline 那一刻雖然會 push 一次通知老師（見 line-webhook），但如果老師錯過那則
+      // 訊息，這筆申請就會永遠卡住、沒有人再提醒。用 offer_accepted_at 不適用（declined 不會設這個
+      // 欄位），改用 created_at 當計時起點，每 48 小時提醒一次。
+      if (r.offer_status === 'declined') {
+        const hrsDeclined = (nowMs - new Date(r.created_at).getTime()) / 3600000;
+        if (hrsDeclined < SLA_HOURS) continue;
+        try {
+          if (teacherUserId) {
+            await pushLine(channelToken, teacherUserId,
+              '⏰ 提醒：' + (r.student_name || '學生') + ' 說提議的時間都不方便，已經超過 48 小時了，記得直接聯絡學生討論新時間');
+          }
+          const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
+          if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
+          sent++;
+        } catch (e) { errCount++; console.error('[request-sla-cron] 提醒老師（學生已拒絕提議）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
         continue;
       }
 
@@ -140,7 +211,7 @@ serve(async (req) => {
           const { error: markErr } = await supabase.from('classroom_requests').update({ sla_reminder_sent: true }).eq('id', r.id);
           if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
           sent++;
-        } catch (e) { errCount++; }
+        } catch (e) { errCount++; console.error('[request-sla-cron] 提醒雙方（一般情況）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
       }
     }
 

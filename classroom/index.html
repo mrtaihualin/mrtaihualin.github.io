@@ -2034,11 +2034,18 @@ async function createCalendarClassEventForStudent(token, s, p) {
 // 第 2 步：老師確認過預覽內容才會真的建立 Calendar 事件＋寫資料庫
 // （這裡是「核准學生自己送出的加課申請」或「舊有直接建立」路徑，維持原本行為不變）
 async function confirmAddClassDay() {
+  // 2026-07-19 加（稽核發現，ORANGE#5）：這顆按鈕原本沒有防重複點擊鎖，跟 confirmTeacherAddClass
+  // 用同一套 _inFlightRequestIds 機制不一致——連點兩下或開兩個分頁都可能真的在 Google Calendar
+  // 建立兩筆重複的事件。這裡沒有 request id 可以當 key（是從 modal 的 _addClassDayPending 讀），
+  // 用固定字串當 lock key 即可，反正同一時間只會有一個加課 modal 開著。
+  const lockKey = 'confirmAddClassDay';
+  if (_inFlightRequestIds[lockKey]) return; // 正在處理中，忽略這次重複點擊
+  _inFlightRequestIds[lockKey] = true;
   const p = _addClassDayPending;
-  if (!p) return;
+  if (!p) { delete _inFlightRequestIds[lockKey]; return; }
   const token = p.token;
   const s = studentsCache[token];
-  if (!s) { alert('找不到學生資料'); return; }
+  if (!s) { alert('找不到學生資料'); delete _inFlightRequestIds[lockKey]; return; }
   const resultEl = document.getElementById('addClassDayResult');
   resultEl.innerHTML = '建立中…';
 
@@ -2089,6 +2096,8 @@ async function confirmAddClassDay() {
     }
   } catch (e) {
     resultEl.innerHTML = '<div style="color:#b45309;">❌ 失敗：' + escHtml(e.message || String(e)) + '</div>';
+  } finally {
+    delete _inFlightRequestIds[lockKey];
   }
 }
 
