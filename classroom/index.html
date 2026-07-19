@@ -9112,7 +9112,11 @@ function recIsHQStudent(){
   const name=String(s.name).trim().toLowerCase();
   return REC_HQ_STUDENT_NAMES.some(n=>name.indexOf(String(n).trim().toLowerCase())>=0);
 }
-const REC_SPLIT_MS=60*60*1000;   // 滿 1 小時自動切檔
+// 2026-07-19 Lin 指定：一堂課錄成一個檔，不要被切成兩半（以前滿 1 小時就切，1.5 小時的課會被切開很難用）。
+// 留 3 小時當「跑掉了」的保險（例如忘記按停止，錄了一整天）——正常上課絕對碰不到，等於不會切。
+// 上傳是分段續傳（gdUpload 1MB/塊，斷線可續），所以檔案大不是問題：
+// 一般學生約 100 MB/小時、Edward 約 225 MB/小時 → 2 小時的課約 200–450 MB，正常範圍。
+const REC_SPLIT_MS=3*60*60*1000;
 
 let recMethod=null, recState='idle';
 let recDisplayStream=null, recMicStream=null, recAudioCtx=null;
@@ -9842,7 +9846,11 @@ async function finalizeSegment(chunksArg, mimeArg, startTimeArg, backupIdArg){
   let blob=new Blob(chunks,{type:mime});
   if(!blob.size) return;
   // webm 補時長 → 存檔/上雲端後可正常顯示長度並拖動（mp4 不需要）
-  if(/webm/i.test(blob.type) && window.ysFixWebmDuration && durMs>0){
+  // 2026-07-19：補時長要把整個檔讀進記憶體一次。改成一堂課一個檔之後檔案變大，
+  // 超過 1.5 GB（3 小時的上限錄滿也還不到，正常上課不可能）就跳過，寧可少了「時長」標記，
+  // 也不要冒著整個分頁記憶體爆掉的風險——檔案本身還是完整的，轉成 mp4 後時長就會正常。
+  const FIX_DURATION_MAX = 1.5 * 1024 * 1024 * 1024;
+  if(/webm/i.test(blob.type) && window.ysFixWebmDuration && durMs>0 && blob.size<=FIX_DURATION_MAX){
     try { blob = await window.ysFixWebmDuration(blob, durMs, { logger:false }); } catch(e){}
   }
   recPartCount++;
