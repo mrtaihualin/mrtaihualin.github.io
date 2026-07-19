@@ -7135,9 +7135,11 @@ async function loadTeacherNextClassBox(token) {
       el.innerHTML = '<div class="card" style="padding:16px 18px;margin-top:12px;"><h2>📅 下一堂課</h2>' +
         '<div style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:10px;">目前沒有排定下一堂課</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-          '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
+          '<button class="btn-sm" id="teacherAttendToggleBtn-' + t + '" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="toggleTeacherAttendPanel(\'' + t + '\')">📅 上課記錄 ▼</button>' +
           '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openAddClassDayModal(\'' + t + '\')" title="加一個上課時間（單次，或每週固定）">➕ 加課堂時間</button>' +
-        '</div></div>';
+        '</div>' +
+        '<div id="teacherAttendPanel-' + t + '" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"></div>' +
+      '</div>';
       _teacherNextClassCtx[token] = null;
       return;
     }
@@ -7157,12 +7159,15 @@ async function loadTeacherNextClassBox(token) {
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
         // 2026-07-18 加（Lin 要求）：跟學生頁「下一堂課」按鈕列同一套排法+同一套顏色——
         // 📅上課記錄放第一顆，➕加課堂時間也一起放這裡（不是丟在上面主要按鈕列），全部統一金色漸層
-        '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openAttendanceHistory(\'' + t + '\')">📅 上課記錄</button>' +
+        // 2026-07-19 改（Lin 要求，講了五次）：📅上課記錄從 popup 改成跟學生端一樣的「原地展開」
+        // dropdown，不再開 modal 彈窗
+        '<button class="btn-sm" id="teacherAttendToggleBtn-' + t + '" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="toggleTeacherAttendPanel(\'' + t + '\')">📅 上課記錄 ▼</button>' +
         '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="initiateTeacherReschedule(\'' + t + '\')">🔄 改期</button>' +
         '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="teacherCancelClassNow(\'' + t + '\')">❌ 取消</button>' +
         '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openPermanentChangeModal(\'' + t + '\')">📌 固定</button>' +
         '<button class="btn-sm" style="' + TEACHER_NEXTCLASS_BTN_STYLE + '" onclick="openAddClassDayModal(\'' + t + '\')" title="加一個上課時間（單次，或每週固定）">➕ 加課堂時間</button>' +
       '</div>' +
+      '<div id="teacherAttendPanel-' + t + '" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"></div>' +
     '</div>';
   } catch (e) {
     el.innerHTML = '<div class="card" style="padding:12px 14px;margin-top:12px;"><div style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">載入下一堂課失敗：' + escHtml(e.message || String(e)) + '</div></div>';
@@ -8544,15 +8549,31 @@ async function syncScheduleToSupabase(matched) {
 // 「過去的課程記錄」維持原本可摺疊，一樣改成表格樣式配編輯/刪除。
 // 標題文字也跟學生端一樣寫「共 X 堂」（X＝表格列數，不是 classroom_attendance 的 lessons 加總，
 // 上一版「本輪共 1 堂（6 天）」數字對不起來就是這裡搞錯，這次修正一致）。
+// 2026-07-19 改（Lin 講了五次）：從 modal popup 改成跟學生端一樣「原地展開」的 dropdown——
+// 不再開 #attendHistModal，改成寫進按鈕列下面的 #teacherAttendPanel-<token>，toggle 按鈕文字同步換 ▲/▼。
+function toggleTeacherAttendPanel(token) {
+  var t = String(token).replace(/'/g, '');
+  var panel = document.getElementById('teacherAttendPanel-' + t);
+  if (!panel) return;
+  if (panel.style.display === 'none') {
+    openAttendanceHistory(token); // 展開時才載入/重新整理資料
+  } else {
+    panel.style.display = 'none';
+    var btn = document.getElementById('teacherAttendToggleBtn-' + t);
+    if (btn) btn.textContent = '📅 上課記錄 ▼';
+  }
+}
+
 async function openAttendanceHistory(token) {
-  const s = studentsCache[token];
-  const name = s ? s.name : token;
+  const t = String(token).replace(/'/g, '');
+  const panel = document.getElementById('teacherAttendPanel-' + t);
+  const btn = document.getElementById('teacherAttendToggleBtn-' + t);
+  if (!panel) return; // 這個學生目前沒有渲染在畫面上（例如面板還沒載入），略過即可
   const today = teacherToday();
 
-  document.getElementById('attendHistTitle').textContent = '📅 ' + name + ' 的上課記錄';
-  document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">載入中…</div>';
-  document.getElementById('attendHistSummary').textContent = '';
-  document.getElementById('attendHistModal').classList.add('open');
+  panel.style.display = '';
+  panel.innerHTML = '<div class="empty-attend">載入中…</div>';
+  if (btn) btn.textContent = '📅 上課記錄 ▲';
 
   const [attRes, schedRes, payRes] = await Promise.all([
     sb.from('classroom_attendance').select('id,lesson_date,lessons').eq('token', token).order('lesson_date', { ascending: true }),
@@ -8563,7 +8584,7 @@ async function openAttendanceHistory(token) {
   const schedData = schedRes.data || [];
 
   if (!data.length && !schedData.length) {
-    document.getElementById('attendHistList').innerHTML = '<div class="empty-attend">尚無上課記錄</div>';
+    panel.innerHTML = '<div class="empty-attend">尚無上課記錄</div>';
     return;
   }
 
@@ -8646,7 +8667,7 @@ async function openAttendanceHistory(token) {
       '<div style="margin-top:6px;opacity:0.8;">' + (history.length ? historyTableHtml() : '<div class="empty-attend">尚無過去的課程記錄</div>') + '</div>' +
     '</details>';
 
-  document.getElementById('attendHistList').innerHTML = html;
+  panel.innerHTML = html;
 }
 
 // 改某一天的堂數（例如一天上 2 堂）
