@@ -24,7 +24,8 @@ var ANN = [
   { emoji:'🎮', text:'5 款免費泰語遊戲上線！聲調・拼讀・打字・造句・語序，每款都有排行榜可以比賽', cta:'前往遊戲', href:'games.html' },
   { emoji:'🎵', text:'用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta:'去聽歌學泰語', href:'resources.html#songs' },
   { emoji:'📖', text:'免費泰語學習文章上線！生活情境單字、聲調技巧，隨看隨學', cta:'去讀文章', href:'blog.html#sharing' },
-  { emoji:'📺', text:'YouTube 播放清單整理好了！依主題分類，找教學影片更方便', cta:'去看播放清單', href:'resources.html#playlists' }
+  { emoji:'📺', text:'YouTube 播放清單整理好了！依主題分類，找教學影片更方便', cta:'去看播放清單', href:'resources.html#playlists' },
+  { emoji:'📚', text:'課程堂數快用完囉～別忘記回來續購課程包喔 🌾', cta:'查看方案', href:'pricing.html' }
   // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
   // LIN 2026-07-03: ลบสไลด์ "造句遊戲即將推出" ออกแล้ว (เกมเลโก้ออกจริงแล้ว ไม่ใช่ coming-soon อีกต่อไป)
   // LIN 2026-07-03 (รอบ 4): เพิ่ม 3 สไลด์ประกาศ — เพลง/บทความ/เพลลิสต์ยูทูป ตามที่ Lin สั่ง
@@ -1417,22 +1418,18 @@ window.deleteFBComment = function(postId, idx) {
 };
 
 // ════════════════════════════════════════════════════════════════════
-// 📋 Exit-intent survey — เฉพาะหน้าเกม 5 หน้า + pricing.html (LIN 2026-07-18)
-//   หน้าเกม: ถามความรู้สึกเล่นเกม (สนุกไหม/เรียนรู้อะไรไหม/อยากกลับมาเล่นไหม)
-//   หน้าราคา: ถามเหตุผลที่ยังไม่ตัดสินใจเรียน (เหมือนของเดิม)
+// 📋 Exit-intent survey — ทุกหน้า ยกเว้นหน้าเกม 5 ไฟล์ + หน้าดาวน์โหลดชีต (LIN 2026-07-07)
 //   Desktop: mouseout ขอบบน (exit-intent มาตรฐาน)
-//   ทุกอุปกรณ์: visibilitychange (สลับแท็บ/ปิดแท็บ/สลับแอปจริง) — เอา idle timer 45 วิออก
-//     (ของเดิมนับ "นิ่ง 45 วิ" ผิด จับคนที่แค่หยุดอ่านเฉยๆ เป็นจะออกด้วย)
+//   มือถือ/สำรอง: idle timer 45 วิ (จับ exit-intent มือถือไม่ได้จริง)
 //   โชว์เป็นแถบเล็กด้านล่าง ไม่บล็อกจอ · โชว์ครั้งเดียวตลอดไปต่อเบราว์เซอร์ (localStorage)
 //   ส่งคำตอบ: web3forms (เข้าอีเมล Lin) + GA4 — ไม่ต้องสร้างตาราง Supabase (ตามที่ Lin เคาะ)
 // ════════════════════════════════════════════════════════════════════
 (function(){
   var SHOWN_KEY = 'exit_survey_shown_v1';
-  var GAME_PAGES = ['tone-finder.html','reading-game.html','typing-game.html','word-order.html','lego.html'];
-  var INCLUDE = GAME_PAGES.concat(['pricing.html']);
+  var EXCLUDE = ['tone-finder.html','reading-game.html','typing-game.html','word-order.html','lego.html',
+                 'vocab-thank-you.html','thank-you.html','vocab-cheatsheet.html'];
   var page = (location.pathname.split('/').pop() || 'index.html');
-  if (INCLUDE.indexOf(page) === -1) return;
-  var isGamePage = GAME_PAGES.indexOf(page) !== -1;
+  if (EXCLUDE.indexOf(page) !== -1) return;
 
   function shown(){ try{ return localStorage.getItem(SHOWN_KEY)==='1'; }catch(e){ return false; } }
   function markShown(){ try{ localStorage.setItem(SHOWN_KEY,'1'); }catch(e){} }
@@ -1449,61 +1446,20 @@ window.deleteFBComment = function(postId, idx) {
     var bar = document.createElement('div');
     bar.id = 'exit-survey-bar';
     bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#fff;border-top:2px solid #C8973A;box-shadow:0 -6px 24px rgba(0,0,0,.14);padding:14px 18px;font-family:"Noto Sans TC",sans-serif;transform:translateY(110%);transition:transform .3s ease;';
-    var headline = isGamePage ? '要走了嗎？米娜想知道你玩得開不開心 🌾' : '要離開了嗎？花 3 秒告訴老師為什麼 🙏';
-    // custom:true → กดแล้วเปิดช่องให้พิมพ์เพิ่มเอง (ไม่ส่งทันที)
-    var opts = isGamePage
-      ? [
-          { t:'很好玩，會想再回來玩 🎉' },
-          { t:'有點難' },
-          { t:'覺得還好' },
-          { t:'只是想休息一下而已' },
-          { t:'覺得可以再增加一些內容～', custom:true }
-        ]
-      : [
-          { t:'價格考量' },
-          { t:'沒有決定' },
-          { t:'想先自己練習' },
-          { t:'其他', custom:true }
-        ];
-    var optsHTML = opts.map(function(o){
-      return '<button class="es-opt" data-v="'+o.t+'" data-custom="'+(o.custom?'1':'0')+'" style="background:#FBF6EA;border:1px solid #EADFBF;border-radius:999px;padding:6px 13px;font-size:12.5px;color:#5C4410;cursor:pointer;">'+o.t+'</button>';
+    var opts = ['還在比較','時間喬不攏','想先自己練習','價格考量','其他'];
+    var optsHTML = opts.map(function(t){
+      return '<button class="es-opt" data-v="'+t+'" style="background:#FBF6EA;border:1px solid #EADFBF;border-radius:999px;padding:6px 13px;font-size:12.5px;color:#5C4410;cursor:pointer;">'+t+'</button>';
     }).join('');
-    // หน้าราคาเท่านั้น: แถบชวนจองคาบทดลอง (ไม่ใช่ตัวเลือกเหตุผล เป็นทางลัดไปจอง)
-    var ctaHTML = isGamePage ? '' :
-      '<div id="es-cta" style="flex:1 1 100%;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid #EADFBF;">'+
-        '<span style="font-size:12.5px;color:#8B7340;">可以先體驗看看，會比較清楚上課方向</span>'+
-        '<button onclick="openModal(\'modal-line-qr\')" style="background:#C8973A;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;">體驗看看 →</button>'+
-      '</div>';
     bar.innerHTML =
       '<div style="max-width:720px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">'+
         '<button id="es-x" aria-label="關閉" style="order:9;margin-left:auto;border:none;background:none;font-size:16px;color:#B0A080;cursor:pointer;line-height:1;">✕</button>'+
-        '<span style="font-size:13.5px;font-weight:700;color:#5C4410;flex:1 1 100%;">'+headline+'</span>'+
+        '<span style="font-size:13.5px;font-weight:700;color:#5C4410;flex:1 1 100%;">要離開了嗎？花 3 秒告訴老師為什麼 🙏</span>'+
         '<div id="es-opts" style="display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%;">'+optsHTML+'</div>'+
-        ctaHTML+
       '</div>';
     document.body.appendChild(bar);
     requestAnimationFrame(function(){ bar.style.transform='translateY(0)'; });
 
     function closeBar(){ bar.style.transform='translateY(110%)'; setTimeout(function(){ try{ bar.remove(); }catch(e){} }, 320); }
-
-    function sendReason(val){
-      try{ if (typeof gtag === 'function') gtag('event','exit_survey_submit',{ reason: val, source_page: location.pathname }); }catch(e){}
-      try{
-        fetch('https://api.web3forms.com/submit', {
-          method:'POST', keepalive:true,
-          headers:{'Content-Type':'application/json','Accept':'application/json'},
-          body: JSON.stringify({ access_key: ES_WEB3FORMS_KEY, subject:'【離站調查】來自泰華網站', from_name:'泰華網站・離站調查', '原因':val, '頁面':location.pathname })
-        }).then(function(r){ return r.json(); }).then(function(data){
-          if(!(data && data.success)){ console.error('[web3forms] 離站調查送出失敗:', data); }
-        }).catch(function(e){ console.error('[web3forms] 離站調查網路錯誤:', e); });
-      }catch(e){}
-    }
-
-    function showThanks(){
-      var opts2 = document.getElementById('es-opts');
-      if (opts2) opts2.innerHTML = '<div style="text-align:center;width:100%;font-size:13.5px;color:#5C4410;padding:4px 0;">✅ 謝謝你的回饋！</div>';
-      setTimeout(closeBar, 1600);
-    }
 
     var xBtn = bar.querySelector('#es-x');
     if (xBtn) xBtn.onclick = function(){
@@ -1513,26 +1469,18 @@ window.deleteFBComment = function(postId, idx) {
     bar.querySelectorAll('.es-opt').forEach(function(btn){
       btn.onclick = function(){
         var val = btn.getAttribute('data-v');
-        if (btn.getAttribute('data-custom') === '1'){
-          var optsWrap = document.getElementById('es-opts');
-          if (!optsWrap) return;
-          optsWrap.innerHTML =
-            '<input id="es-custom-input" type="text" placeholder="想跟老師說什麼呢？" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid #EADFBF;border-radius:8px;font-size:12.5px;color:#5C4410;outline:none;">'+
-            '<button id="es-custom-send" style="background:#C8973A;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;">送出</button>';
-          var inp = document.getElementById('es-custom-input');
-          if (inp) inp.focus();
-          function submitCustom(){
-            var extra = (inp && inp.value ? inp.value.trim() : '');
-            sendReason(extra ? (val+'：'+extra) : val);
-            showThanks();
-          }
-          var sendBtn = document.getElementById('es-custom-send');
-          if (sendBtn) sendBtn.onclick = submitCustom;
-          if (inp) inp.addEventListener('keydown', function(ev){ if (ev.key==='Enter') submitCustom(); });
-          return;
-        }
-        sendReason(val);
-        showThanks();
+        try{ if (typeof gtag === 'function') gtag('event','exit_survey_submit',{ reason: val, source_page: location.pathname }); }catch(e){}
+        try{
+          fetch('https://api.web3forms.com/submit', {
+            method:'POST', keepalive:true,
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify({ access_key: ES_WEB3FORMS_KEY, subject:'【離站調查】來自泰華網站', from_name:'泰華網站・離站調查', email:'exit-survey@mrtaihualin.com', '原因':val, '頁面':location.pathname })
+          }).then(function(r){ return r.json(); }).then(function(data){
+            if(!data || !data.success) console.error('[exit-survey] web3forms送出失敗:', data);
+          }).catch(function(e){ console.error('[exit-survey] 網路錯誤:', e); });
+        }catch(e){}
+        bar.innerHTML = '<div style="max-width:720px;margin:0 auto;text-align:center;font-size:13.5px;color:#5C4410;padding:4px 0;">✅ 謝謝你的回饋！</div>';
+        setTimeout(closeBar, 1600);
       };
     });
   }
@@ -1544,11 +1492,13 @@ window.deleteFBComment = function(postId, idx) {
     document.addEventListener('mouseout', function(e){
       if (e.clientY <= 0 && !e.relatedTarget && !e.toElement) showBar();
     });
-    // ทุกอุปกรณ์ (คอม+มือถือ): สลับแท็บ/ปิดแท็บ/สลับแอปจริง = กำลังออกจริง
-    // (แทน idle timer เดิมที่จับคนหยุดอ่านเฉยๆ ผิดเป็นจะออก)
-    document.addEventListener('visibilitychange', function(){
-      if (document.visibilityState === 'hidden') showBar();
+    // สำรอง/มือถือ: idle timer (จับ mouse-leave บนมือถือไม่ได้จริง)
+    var idleTimer;
+    function resetIdle(){ clearTimeout(idleTimer); idleTimer = setTimeout(showBar, 45000); }
+    ['scroll','touchstart','click','keydown'].forEach(function(ev){
+      window.addEventListener(ev, resetIdle, {passive:true});
     });
+    resetIdle();
   }
 
   // รอ engagement ขั้นต่ำ 8 วิ ก่อนเริ่มจับ (กัน bounce ไว โชว์ทันทีจนน่ารำคาญ)
