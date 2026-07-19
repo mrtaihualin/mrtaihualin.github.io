@@ -5162,11 +5162,14 @@ async function editCancelRequestChoice(id, isoDate, calendarEventId, timeStr) {
 // 收回不用管 Calendar。用 .eq('status','pending') 當保險閘，防止跟老師處理的動作互相競爭。
 async function studentWithdrawOwnRequest(token, id) {
   if (!confirm('確定要收回這個取消申請嗎？（等於不取消了，這堂課維持原本安排）')) return;
+  // 2026-07-19 加（稽核 ORANGE：學生收回 vs 老師刪除 Calendar 撞期）：多加 .is('processing_started_at', null)
+  // 當第二道閘——如果老師剛好已經搶到鎖、正在動 Calendar 的路上（見 claimRequestForProcessing），
+  // 這裡就不能悄悄收回成功，不然畫面會顯示「收回成功」但 Calendar 其實已經被刪掉了。
   const res = await sb.from('classroom_requests').update({ status: 'acknowledged' })
-    .eq('id', id).eq('status', 'pending').select();
+    .eq('id', id).eq('status', 'pending').is('processing_started_at', null).select();
   if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
   if (!res.data || !res.data.length) {
-    alert('ℹ️ 收回失敗——老師可能剛好已經處理了，請直接用 LINE 聯絡老師確認狀況。');
+    alert('ℹ️ 收回失敗——老師可能正在處理中，或剛好已經處理完了，請直接用 LINE 聯絡老師確認狀況。');
     loadStudentPendingRequestStatus(token);
     return;
   }
@@ -6455,14 +6458,44 @@ async function loadPendingClassRequests() {
     rows + '</div>';
 }
 
+// ── 2026-07-19 加（稽核 ORANGE：跨管道 (LINE vs 網站) 搶著刪/搬同一筆 Calendar 事件的競爭問題）──
+// 動 Google Calendar 之前，先用這道「原子鎖」搶下這筆申請的處理權——同一時間只有一邊（網站或 LINE，
+// 或網站的兩個分頁）搶得到，搶不到就直接不碰 Calendar。用獨立欄位 processing_started_at 當鎖，
+// 不是拿 status 來用（status 有 CHECK constraint classroom_requests_status_check，只准
+// pending/acknowledged 兩種值，不能塞第三種當鎖）。LINE 那邊（line-webhook/index.ts 的
+// confirm_cancel_delete）用同一個欄位、同一套語意。
+async function claimRequestForProcessing(id) {
+  var res = await sb.from('classroom_requests')
+    .update({ processing_started_at: new Date().toISOString() })
+    .eq('id', id).eq('status', 'pending').is('processing_started_at', null).select();
+  if (res.error) return { ok: false, reason: '搶佔處理權失敗：' + res.error.message + '\n為了安全，這次先不動 Calendar，請重試一次。' };
+  if (!res.data || !res.data.length) return { ok: false, reason: '這筆申請已經在別的地方（LINE 或另一個分頁）處理中，或剛好已經處理完了，請重新整理頁面查看最新狀態，不會重複動 Calendar。' };
+  return { ok: true };
+}
+
+// 只在「Calendar API 還沒真的成功」就失敗時呼叫——把鎖放開，讓之後還能重試。
+// 注意：如果 Calendar 已經動了、但後面存資料庫（finalizeRequestStatus）失敗，不要呼叫這個放鎖，
+// 讓鎖故意卡住比較安全（避免有人之後又搶到鎖，對同一個已經被動過的 Calendar 事件重複動手）。
+async function releaseRequestClaim(id) {
+  try { await sb.from('classroom_requests').update({ processing_started_at: null }).eq('id', id); }
+  catch (e) { console.warn('⚠️ 放開處理鎖失敗（不影響本次已經取消的操作，重新整理頁面即可）：', e.message || e); }
+}
+
 async function finalizeRequestStatus(id, statusValue) {
   var rowEl = document.getElementById('req-row-' + id);
   if (rowEl) rowEl.remove();
   // 2026-07-16 加（稽核發現）：一定要加 .eq('status','pending') 當保險閘——沒有這道閘的話，
   // 就算這筆申請已經被別的動作（例如學生收回）改成別的狀態，這裡還是會「成功」蓋回去，
   // 讓畫面誤以為剛剛的操作真的處理成功了。
-  var res = await sb.from('classroom_requests').update({ status: statusValue }).eq('id', id).eq('status', 'pending').select();
-  if (res.error) { alert('⚠️ 更新失敗：' + res.error.message); await loadPendingClassRequests(); return; }
+  // 2026-07-19 加：同時把 processing_started_at 鎖清掉（跟 status 一起，同一個 atomic update）——
+  // 如果這個 update 整包失敗，鎖會「故意」維持鎖住狀態（因為沒有任何欄位真的被改到），代表 Calendar
+  // 可能已經動了但這裡沒存成功，不能讓別人再搶到鎖重複動 Calendar，要 Lin 自己去 Supabase 檢查這筆。
+  var res = await sb.from('classroom_requests').update({ status: statusValue, processing_started_at: null }).eq('id', id).eq('status', 'pending').select();
+  if (res.error) {
+    alert('⚠️ 更新失敗：' + res.error.message + '\n⚠️ 注意：Calendar 動作可能已經成功了，但狀態沒存進資料庫，這筆的處理鎖會維持鎖住（避免被重複動 Calendar），請直接去 Supabase 檢查這筆（id: ' + id + '）。');
+    await loadPendingClassRequests();
+    return;
+  }
   if (!res.data || res.data.length === 0) {
     alert('⚠️ 標記失敗：這筆申請的狀態剛好被改變了（可能學生剛收回、或已經被處理過），不是 RLS 問題，畫面重新整理一下看最新狀態。（如果確定不是這個原因，才需要去檢查 Supabase 的 UPDATE 權限）');
     await loadPendingClassRequests();
@@ -6545,11 +6578,15 @@ async function processClassRequestInner(id, r, isCancel) {
     if (!confirm('確定要取消這堂課嗎？\n\n學生：' + r.student_name + '\n原本時間：' + oldStartLabel + '（泰國時間 Asia/Bangkok）\n\n只會刪除 Google Calendar 上「這一次」的課堂，不影響其他週的固定課程。刪除前會先備份，之後可以復原。確定嗎？')) return;
     var recheck1 = await reverifyRequestState(id, r);
     if (!recheck1.ok) { alert('⚠️ ' + recheck1.reason); await loadPendingClassRequests(); return; }
+    // 2026-07-19 加：動 Calendar 前先搶原子鎖，防止跟 LINE 那邊的「確認刪除 Calendar」按鈕撞期
+    var claim1 = await claimRequestForProcessing(id);
+    if (!claim1.ok) { alert('⚠️ ' + claim1.reason); await loadPendingClassRequests(); return; }
     try {
       assertBackupOk(await backupCalendarEvent(id, r.token, 'delete', ev, null), '取消課堂');
       await deleteClassEventOnce(ev.id);
       await verifyEventDeleted(ev.id); // 2026-07-15：真的回頭確認 Calendar 上刪除成功，不是只信任 API 回應
     } catch (e) {
+      await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
       alert('⚠️ 刪除課堂失敗：' + (e.message || e) + '\n這筆申請還沒標記完成，請重試或手動處理。');
       return;
     }
@@ -6565,12 +6602,16 @@ async function processClassRequestInner(id, r, isCancel) {
     if (!confirm('確定要把這堂課移到新時間嗎？\n\n學生：' + r.student_name + '\n原本：' + oldStartLabel + '（泰國時間）\n改到：' + newStartLabel + '（泰國時間）' + conflictWarn1 + '\n\n只會移動「這一次」的課堂，不影響其他週的固定課程。移動前會先備份，之後可以復原。確定嗎？')) return;
     var recheck2 = await reverifyRequestState(id, r);
     if (!recheck2.ok) { alert('⚠️ ' + recheck2.reason); await loadPendingClassRequests(); return; }
+    // 2026-07-19 加：動 Calendar 前先搶原子鎖，防止跟 LINE 那邊或其他分頁撞期
+    var claim2 = await claimRequestForProcessing(id);
+    if (!claim2.ok) { alert('⚠️ ' + claim2.reason); await loadPendingClassRequests(); return; }
     try {
       assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
       await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
       await verifyEventMoved(ev.id, newStartIso); // 2026-07-15：真的回頭確認 Calendar 上時間真的改了，不是只信任 API 回應
       newStartIsoForNotify = newStartIso;
     } catch (e) {
+      await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
       alert('⚠️ 移動課堂失敗：' + (e.message || e) + '\n這筆申請還沒標記完成，請重試或手動處理。');
       return;
     }
@@ -6951,10 +6992,14 @@ async function confirmAcceptedOfferInner(id, r) {
   if (!confirm('學生已經同意了，確定要把課堂移到新時間嗎？\n\n學生：' + r.student_name + '\n原本：' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）\n改到：' + formatThaiDateTimeLabel(newStartIso) + '（泰國時間）' + conflictWarn + '\n\n只會移動這一次課堂，動手前會先備份，之後可以復原。確定嗎？')) return;
   var recheck3 = await reverifyRequestState(id, r);
   if (!recheck3.ok) { alert('⚠️ ' + recheck3.reason); await loadPendingClassRequests(); return; }
+  // 2026-07-19 加：動 Calendar 前先搶原子鎖，防止跟 LINE 那邊或其他分頁撞期
+  var claim3 = await claimRequestForProcessing(id);
+  if (!claim3.ok) { alert('⚠️ ' + claim3.reason); await loadPendingClassRequests(); return; }
   try {
     assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
     await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
   } catch (e) {
+    await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
     alert('⚠️ 移動課堂失敗：' + (e.message || e));
     return;
   }

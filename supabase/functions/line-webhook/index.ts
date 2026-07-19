@@ -12,11 +12,9 @@
 //      deleteCalendarEventById — 2026-07-19 แก้บั๊ก：ห้ามใช้ "primary" เพราะนั่นคือปฏิทินของบัญชี
 //      หุ่นยนต์เอง ไม่ใช่ปฏิทินของครู) และต้องแชร์ Google Calendar ของครูให้อีเมล service account
 //      สิทธิ์ "Make changes to events" ด้วย
-//   1) action=approve|deny (แบบเดิม 2026-07-10) — ปุ่มเก่าในข้อความที่เคยส่งให้ครูก่อนหน้านี้
-//      2026-07-13 แก้: status เปลี่ยนจาก approved/denied → acknowledged (ตาม constraint จริงในฐานข้อมูล
-//      classroom_requests_status_check ที่รองรับแค่ pending/acknowledged เท่านั้น) — เก็บไว้เผื่อมีข้อความ
-//      เก่าที่ยังไม่ถูกกดค้างอยู่ใน LINE ของครู กดแล้วจะไม่ error แต่ **ไม่ได้แตะ Google Calendar ใดๆ ทั้งสิ้น**
-//      (ตอนนี้ปุ่มนี้เป็นเวอร์ชันเก่าที่เลิกส่งใหม่แล้ว — ดูข้อ 2026-07-13 ด้านล่าง)
+//   1) (2026-07-19 移除) action=approve|deny — ปุ่มเก่ารุ่น 2026-07-10 ที่ไม่มีการเช็คตัวตนคนกดเลย
+//      และไม่แตะ Google Calendar อะไรทั้งสิ้น เอาออกจากข้อความแจ้งเตือนไปตั้งแต่ 2026-07-13 แล้ว
+//      Lin ยืนยันแล้วว่าไม่มีข้อความเก่าค้างใน LINE จึงลบโค้ดฝั่ง webhook ทิ้งด้วย
 //   2) action=accept_offer|decline_offer (2026-07-13 เพิ่ม, 2026-07-16 แก้：รองรับสูงสุด 3 ตัวเลือก) —
 //      ปุ่มที่นักเรียนกดตอบรับ/ปฏิเสธเวลาครูเสนอ (ดู submitProposeTime ในเว็บ) → accept_offer ตอนนี้
 //      แนบ opt=<index> บอกว่าเลือกตัวเลือกไหนใน proposed_options (สูงสุด 3 อัน) แล้วอัปเดต
@@ -317,30 +315,9 @@ serve(async (req) => {
       const action = params.get('action');
       actionForLog = action || 'unknown';
 
-      if (action === 'approve' || action === 'deny') {
-        // ── 2026-07-10 แบบเก่า：เก็บไว้เผื่อมีข้อความค้างที่ยังไม่ถูกกด ไม่ได้แตะ Calendar ──
-        const token = params.get('token');
-        const type = params.get('type');
-        const odate = params.get('odate');
-        if (!token || !type || !odate) continue;
-
-        const { error, count } = await supabase
-          .from('classroom_requests')
-          .update({ status: 'acknowledged' }, { count: 'exact' })
-          .eq('token', token)
-          .eq('request_type', type)
-          .eq('original_date', odate)
-          .eq('status', 'pending');
-
-        if (channelToken && event.replyToken) {
-          let replyText;
-          if (error) replyText = '⚠️ 更新失敗：' + error.message;
-          else if (!count) replyText = 'ℹ️ 這筆申請可能已經被處理過了';
-          else replyText = 'ℹ️ 已標記完成，但這個舊版按鈕不會動 Google Calendar，記得自己到 Calendar 確認調整好了';
-          await replyLine(channelToken, event.replyToken, replyText);
-        }
-        continue;
-      }
+      // 2026-07-19 移除（Lin 確認過 LINE 裡已經沒有任何舊版 approve/deny 按鈕的訊息了）：
+      // 原本這裡有 action==='approve'||'deny' 的舊版分支，是 2026-07-10 之前發送的按鈕，
+      // 不會動 Google Calendar、也完全沒有身分驗證（誰都能按）。Lin 確認訊息已清空，安全移除。
 
       if (action === 'accept_offer' || action === 'decline_offer') {
         // ── 2026-07-13 加：นักเรียนตอบรับ/ปฏิเสธเวลาใหม่ที่ครูเสนอ ──
