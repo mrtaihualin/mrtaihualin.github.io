@@ -1381,9 +1381,9 @@ function _processToastQueue(){
 var MINA_EMOJI='👧🏻';
 var MINA_LINES={
   welcome:['哈囉～我是米娜 🌾 我們一起用詞塊造出漂亮的泰文句子吧，好不好？','嗨嗨～我是米娜，今天也一起慢慢造句吧 😊'],
-  correct:['哇～排對了呢，你做得很好 ✨','對了對了！這句就是這樣排 🌾','很好喔～你越來越會造句了 😊'],
+  correct:['哇～排對了，你做得很好 ✨','對了對了！這句就是這樣排 🌾','很好喔～你越來越會造句了 😊'],
   combo:['哇～連續排對，米娜都替你開心 🔥','停不下來了呢，好厲害 ⚡'],
-  golden:['這句…裡面有可以吃的字喔！米娜最喜歡了 😋 分數加倍！'],
+  golden:['這句…閃閃發光的！米娜找到黃金稻穗了 🌾✨ 分數加倍！'],
   wrong:['沒關係的…這句米娜以前也排錯過，我們再看一次好嗎？','再試一次就好，米娜陪你 💛','慢慢來，先想想第一個詞是哪個 🌱']
 };
 function minaSay(key,vars){
@@ -1395,7 +1395,9 @@ function minaSay(key,vars){
 }
 var _minaToastTimer=null;
 var _minaToastQueue=[]; var _minaToastBusy=false; // กันบทพูดน้องมีนาทับ/ตัดกันก่อนอ่านทัน — Lin 2026-07-12
+var MINA_ENABLED=false; // Lin 2026-07-20: เกมเลโก้ยังไม่ต้องมีบทพูดมีนา ปิดไว้ก่อน (โค้ด/บทพูดยังอยู่ครบ เผื่อเปิดใหม่ทีหลัง)
 function minaToast(key,opts){
+  if(!MINA_ENABLED)return;
   opts=opts||{};
   if(opts.throttle && Math.random()>(opts.chance||0.34))return;
   var msg=minaSay(key,opts.vars); if(!msg)return;

@@ -1086,7 +1086,16 @@ function endRound(){
   var _isPerfect = (cleanC === roundTotal && roundTotal > 0);
   var _maxCombo = maxStreak; // max combo ที่ทำได้ในรอบนี้
   try { rgChallengeBump(_maxCombo, _isPerfect); } catch(e){}
-  try { var _sv = rgApplyStreak(); if(_sv.events.freezeUsed) rgToast('護盾幫你保住連續紀錄！🛡️'); if(_sv.events.freezeEarned) rgToast('獲得新護盾 🛡️ ×1！連續'+_sv.state.streak+'天'); } catch(e){}
+  try {
+    var _sv = rgApplyStreak();
+    if(_sv.events.freezeEarned) rgToast('獲得新護盾 🛡️ ×1！連續'+_sv.state.streak+'天');
+    // น้องมีนาพูดตอนจบรอบ: goalMet > freezeUsed > perfect/greatSet/goodSet — Lin 2026-07-20 (เทียบเกมเสียง)
+    var _cleanRatio = roundTotal>0 ? (cleanC/roundTotal) : 0;
+    var _minaSetKey = _isPerfect ? 'perfect' : (_cleanRatio>=0.6 ? 'greatSet' : 'goodSet');
+    if(_sv.events.goalMetToday) minaToast('goalMet',{vars:{n:_sv.state.streak},dur:3400});
+    else if(_sv.events.freezeUsed) minaToast('freezeUsed',{dur:3200});
+    else minaToast(_minaSetKey,{dur:3000});
+  } catch(e){}
   try { rgRenderGameBar(); } catch(e){}
   refreshUI();
   // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมเสียง)
@@ -1495,11 +1504,17 @@ function _rgProcessToastQueue() {
 var MINA_EMOJI='👧🏻';
 var MINA_LINES={
   welcome:['哈囉～我是米娜 🌾 我們一起把泰文打字變厲害，好不好？','嗨嗨～我是米娜，今天也一起慢慢打吧 😊'],
-  correct:['哇～打對了呢，你做得很好 ✨','對了對了！就是這樣打 🌾','很好喔～鍵位越來越熟了 😊'],
-  combo:['哇～連續打對，米娜都替你開心 🔥','停不下來了呢，好厲害 ⚡'],
-  golden:['這個字…是可以吃的喔！米娜最喜歡了 😋 分數加倍！'],
+  correct:['哇～打對了，你做得很好 ✨','對了對了！就是這樣打 🌾','很好喔～鍵位越來越熟了 😊'],
+  combo:['哇～連續打對，米娜替你開心 🔥','停不下來了，好厲害 ⚡'],
+  golden:['這個字…閃閃發光的！米娜找到黃金稻穗了 🌾✨ 分數加倍！'],
   wrong:['沒關係的…這個字米娜以前也打錯過，我們再看一次好嗎？','再試一次就好，米娜陪你 💛','慢慢來，看清楚鍵位就好 🌱'],
-  perfect:['全部一次就打對！你比自己想的還厲害喔 🌾 米娜給你拍拍手 👏','一題都沒錯～好棒，米娜好開心 ✨']
+  perfect:['全部一次就打對！你比自己想的還厲害喔 🌾 米娜給你拍拍手 👏','一題都沒錯～好棒，米娜好開心 ✨'],
+  greatSet:['這組打得很棒，我們慢慢繼續 💪','打得很好～要再一組看看嗎？🌱'],
+  goodSet:['完成囉！每天一點點，打字會越來越快 🌱','辛苦了～有練就有進步喔 😊'],
+  goalMet:['今天也做到了，好棒 🌙 連續第 {n} 天！明天也要回來找米娜喔'],
+  freezeUsed:['米娜幫你保住連續紀錄了～用掉 1 個護盾 🛡️'],
+  comeback:['又見面啦～今天也一起打字吧 😊','你回來了！米娜好想你 🌾'],
+  streakWarn:['有點想你了…要不要回來陪米娜打字一下呢 🌾']
 };
 function minaSay(key,vars){
   var t=MINA_LINES[key];
