@@ -51,11 +51,22 @@
     // （LINE 官方自己也承認這個行為）→ 改成先把 token 存 localStorage 備份，
     // 導回來後网址掉了就從 localStorage 撈回來，不會再變成「網址缺少學生代碼」
     var urlParams = new URLSearchParams(window.location.search);
+    // 2026-07-19 加（AI 稽核橘色問題）：這份備份只是為了撐過 liff.login() 導回的那幾秒，
+    // 但以前沒有期限 → 幾天後別人用同一台電腦打開這頁，會被自動當成「上一位學生」，
+    // 可能把 LINE 綁到錯的人身上。現在加 10 分鐘有效期，過期就丟掉，回到正常的「缺少代碼」流程。
+    var LINK_TOKEN_TTL_MS = 10 * 60 * 1000;
     var studentToken = urlParams.get('s') || '';
     if (studentToken) {
       localStorage.setItem('clsLineLinkToken', studentToken);
+      localStorage.setItem('clsLineLinkTokenTs', String(Date.now()));
     } else {
-      studentToken = localStorage.getItem('clsLineLinkToken') || '';
+      var savedTs = parseInt(localStorage.getItem('clsLineLinkTokenTs') || '0', 10);
+      if (savedTs && (Date.now() - savedTs) < LINK_TOKEN_TTL_MS) {
+        studentToken = localStorage.getItem('clsLineLinkToken') || '';
+      } else {
+        localStorage.removeItem('clsLineLinkToken');
+        localStorage.removeItem('clsLineLinkTokenTs');
+      }
     }
     var statusEl = document.getElementById('statusText');
     var actionEl = document.getElementById('actionArea');

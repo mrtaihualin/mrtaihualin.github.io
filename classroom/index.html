@@ -97,7 +97,8 @@
   .student-item-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 
   /* Pill-style small buttons */
-  .btn-sm { display: inline-flex; align-items: center; gap: 4px; border: none; border-radius: 20px; padding: 5px 12px; font-size: 0.77rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  /* 2026-07-19：手機實測只有 91x29px，太小很容易誤按（旁邊就是「取消課堂」）→ 高度拉到 Apple 建議的 44px */
+  .btn-sm { display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: none; border-radius: 20px; padding: 5px 14px; min-height: 44px; font-size: 0.77rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .btn-sm:hover { transform: translateY(-1px); filter: brightness(0.94); }
   .btn-sm-copy    { background: var(--gold-light); color: var(--gold-deep); }
   .btn-sm-copy.copied { background: var(--gold-light); color: var(--gold-deep); }
@@ -2360,7 +2361,7 @@ async function doUploadFiles() {
       setUploadStatus('✅ 已上傳 ' + n + ' 個檔案到「' + name + ' / ' + dest + '」');
     }
     // 完成 popup：顯示結果 + 到 Drive 查看
-    document.getElementById('uploadDoneMsg').innerHTML = '已上傳 <b>' + n + '</b> 個檔案到<br>「' + name + ' / ' + dest + '」'
+    document.getElementById('uploadDoneMsg').innerHTML = '已上傳 <b>' + n + '</b> 個檔案到<br>「' + escHtml(name) + ' / ' + escHtml(dest) + '」'
       + (failedRegistrations.length ? '<br><span style="color:var(--amber-dark);font-weight:700;">⚠️ 但以下 ' + failedRegistrations.length + ' 個檔案登記失敗，學生可能看不到（Drive 裡有檔案，請點下面「同步舊檔」補登記）：<br>' + failedRegistrations.map(function(s){return escHtml(s);}).join('<br>') + '</span>' : '');
     document.getElementById('uploadDoneDriveBtn').href = 'https://drive.google.com/drive/folders/' + folderId;
     document.getElementById('uploadDoneModal').classList.add('open');
@@ -2571,7 +2572,7 @@ async function loadMaterialLinks(token) {
     if (!items.length) { el.innerHTML = '<div style="font-size:0.78rem;color:var(--ink-muted);">尚未儲存教材連結</div>'; return; }
     el.innerHTML = items.map(function(r) {
       const label = (r.name || '').replace(/^教材_/, '');
-      const safeUrl = (r.url || '').replace(/'/g, "\\'");
+      const safeUrl = escAttrJs(r.url || '');
       return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:\'Noto Sans TC\',sans-serif;font-size:0.8rem;">' +
         '<span style="flex:1;">📚 ' + escHtml(label) + '</span>' +
         '<a href="' + escHtml(safeHref(personalizeMaterialUrl(r.url, token, true))) + '" target="_blank" rel="noopener" style="color:var(--gold-deep);font-weight:700;text-decoration:none;">🔗 開啟</a>' +
@@ -2624,6 +2625,10 @@ const isTeacher = !studentToken;
 
 // --- security helpers: escape HTML + whitelist URL scheme (กัน XSS) ---
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+// 2026-07-19 加（AI 稽核）：要把字串塞進 onclick="fn('這裡')" 這種地方時用這支。
+// 舊寫法只有 .replace(/'/g,"\\'")，字串裡若含有雙引號 " 就會跳出 HTML 屬性 → 可被注入。
+// 先做 JS 字串跳脫（\ 和 '），再做 HTML 跳脫（" 會變 &quot;，瀏覽器解回來剛好是安全的）。
+function escAttrJs(s){ return escHtml(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")); }
 function safeHref(u){var s=String(u==null?'':u).trim();return /^https:\/\//i.test(s)?s:'#';}
 // 2026-07-08 修 bug：以前學生姓名都是從網址 ?n=base64 這個參數解出來的，
 // 但「入班連結」現在已經改成只給 ?s=token（不再帶 n），如果還照舊去解 n 會拿到空字串，
@@ -4436,7 +4441,7 @@ async function loadStudentReceipts(token) {
     var dismissed = {};
     try { dismissed = JSON.parse(localStorage.getItem('dismissedReceipts_' + token) || '{}'); } catch (e) {}
     var html = receipts.filter(function(r) { return !dismissed[r.url]; }).map(function(r) {
-      var safeUrl = (r.url || '').replace(/'/g, "\\'");
+      var safeUrl = escAttrJs(r.url || '');
       return '<div style="display:flex;align-items:center;gap:10px;background:var(--gold-light);border:1px solid var(--gold-bright);border-radius:11px;padding:11px 14px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;">' +
         '<span style="font-size:1.2rem;">🧾</span>' +
         '<a href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener" style="flex:1;color:var(--gold-deep);font-weight:700;font-size:0.88rem;text-decoration:none;">收據已開立，點此下載</a>' +
@@ -4653,7 +4658,7 @@ function fileRowHTML(r, i, tid) {
   var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
   var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
   var label = isLink ? name.replace(/^教材_/, '') : (name || (d + ' 課堂錄影' + sz));
-  var safeUrl = (r.url || '').replace(/'/g, "\\'");
+  var safeUrl = escAttrJs(r.url || '');
   var actionLabel = isLink ? '🔗 開啟' : '⬇ 下載';
   var rowClickAttr = safeHref(r.url) !== '#'
     ? ' style="cursor:pointer;" onclick="openFileRow(event,\'' + safeUrl + '\')"'
@@ -4940,6 +4945,57 @@ function requireLineLinkedOrPrompt(token) {
   return false;
 }
 
+// ════════════════════════════════════════════════════════════
+// 2026-07-19 新增（重大修正）：學生端一律改用 RPC 存取 classroom_requests
+//
+// 為什麼：classroom_requests 有開 RLS，但三條 policy（INSERT/SELECT/UPDATE）
+// 全都要求「JWT 的 email＝老師信箱」。學生只有網址上的 token，沒有真的登入
+// Supabase（isTeacher 是靠網址參數 s 判斷的，見 2621-2623），所以學生端所有
+// `sb.from('classroom_requests')` 直接存取全部會被 RLS 擋掉。
+//
+// ⚠️ 最陰險的地方：被 RLS 擋掉的 UPDATE **不會回傳 error**，只是「更新 0 筆」，
+// PostgREST 回 error=null。所以只檢查 `if (res.error)` 的舊寫法會一路顯示成功，
+// 但其實什麼都沒存進去 —— 這就是 2026-07-19 找到的「取消申請沒有
+// calendar_event_id」那個 bug 的真正原因（連同其他 14 個一起壞掉的地方）。
+//
+// 解法：改走 SECURITY DEFINER 的 RPC（見 supabase/sql/2026-07-19_student_request_rpcs.sql），
+// 函式內部一定會比對 token，而且只准改白名單欄位、status 只能設成 acknowledged。
+// 沒有放寬 RLS，學生依然不能亂改別人的資料。
+//
+// 用法：回傳 { rows, error }。rows.length === 0 代表「沒改到任何一筆」
+//（通常是被老師搶先處理了），呼叫端一定要自己判斷，不能只看 error。
+// ════════════════════════════════════════════════════════════
+async function studentPatchRequest(token, id, patch, guards) {
+  const g = guards || {};
+  const res = await sb.rpc('student_update_own_request', {
+    p_token: token,
+    p_id: id,
+    p_patch: patch,
+    p_require_status: g.status || null,
+    p_require_offer_status: g.offerStatus || null,
+    p_require_not_processing: !!g.notProcessing,
+    p_require_null_column: g.nullColumn || null,
+  });
+  if (res.error) return { rows: [], error: res.error };
+  return { rows: res.data || [], error: null };
+}
+
+// 2026-07-19 新增：學生端讀自己的申請（取代被 RLS 擋掉的 select）。
+// 細部條件（日期、ack 是否為 null、本機關掉過的）留在呼叫端自己過濾，
+// 這樣資料庫只需要維護一個函式。
+async function studentFetchRequests(token, opts) {
+  const o = opts || {};
+  const res = await sb.rpc('student_get_own_requests', {
+    p_token: token,
+    p_request_type: o.requestType || null,
+    p_status: o.status || null,
+    p_initiated_by: o.initiatedBy || null,
+    p_limit: o.limit || 10,
+  });
+  if (res.error) { console.error('⚠️ 讀取申請失敗：', res.error.message); return { rows: [], error: res.error }; }
+  return { rows: res.data || [], error: null };
+}
+
 // 2026-07-14 改：現在可以取消「下一堂課」以外的其他堂（從「選擇要取消的課堂」清單點進來），
 // isoDate 有帶就取消那一堂，沒帶（舊的呼叫方式）就照舊取消下一堂課，維持相容。
 async function requestCancelClass(isoDate, calendarEventId, timeStr) {
@@ -4973,15 +5029,28 @@ async function requestCancelClass(isoDate, calendarEventId, timeStr) {
   // 2026-07-17 加（Lin 要求：改期/取消相關訊息都要講清楚原本上課的時間，不能只有日期）：
   // 順便把原本課堂的時間也存起來，之後通知/清單顯示才有時間可以用。
   if (timeStr) extraFields1.original_time = timeStr;
+  // 2026-07-19 修正（就是這個 bug）：舊版用 sb.from(...).update(...) 直接補存，
+  // 被 RLS 靜靜擋掉「更新 0 筆」且不回 error → calendar_event_id 永遠是 null，
+  // 老師按 LINE 的「✅ 確認並刪除課程」就會跳「這筆沒有記錄 Calendar 事件 ID」。
+  // 改走 RPC，並且真的檢查有沒有存進去（rows.length），失敗就大聲講，不再吞掉。
+  let backfillOk = true;
   if (Object.keys(extraFields1).length && res.data) {
-    const idRes = await sb.from('classroom_requests').update(extraFields1).eq('id', res.data);
-    if (idRes.error) console.warn('⚠️ 補存 calendar_event_id/original_time 失敗（不影響這次申請本身）：', idRes.error.message);
+    const idRes = await studentPatchRequest(nextClassCtx.token, res.data, extraFields1, {});
+    if (idRes.error || !idRes.rows.length) {
+      backfillOk = false;
+      console.error('⚠️ 補存 calendar_event_id/original_time 失敗：', idRes.error ? idRes.error.message : '更新 0 筆（token 對不上或該筆不存在）');
+    }
   }
   // 2026-07-16 加：把這筆申請的 id 一起帶給 notifyTeacherClassRequest，
   // 讓 LINE 通知裡的按鈕可以直接連到網站上這一筆卡片的位置（#req-row-<id>）。
   notifyTeacherClassRequest({ type: 'cancel', name: studentName, token: nextClassCtx.token, originalDate: targetDate, originalTime: timeStr, requestId: res.data });
   closeCancelPickerModal();
-  alert('✅ 已送出取消申請，老師確認後會回覆你。');
+  // 2026-07-19 加（照 CLAUDE.md 規則 12：沒確認成功就不准顯示「成功」）：
+  // 申請本身確實送出去了（RPC 成功），但如果事件 ID 沒補存成功，老師端要多花工夫確認，
+  // 所以老實跟學生講一句，不要假裝一切完美。
+  alert(backfillOk
+    ? '✅ 已送出取消申請，老師確認後會回覆你。'
+    : '✅ 已送出取消申請，老師確認後會回覆你。\n（系統備註：這筆需要老師手動核對課堂，處理可能稍慢一點）');
 }
 
 // 2026-07-14 新增（Lin 要求）：算出「未來還有哪幾堂課」，讓學生可以選其他週的課來取消，
@@ -5142,10 +5211,10 @@ async function editCancelRequestChoice(id, isoDate, calendarEventId, timeStr) {
   const updateFields = { original_date: isoDate };
   if (calendarEventId) updateFields.calendar_event_id = calendarEventId;
   if (timeStr) updateFields.original_time = timeStr;
-  const res = await sb.from('classroom_requests').update(updateFields)
-    .eq('id', id).eq('status', 'pending').select();
+  // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
+  const res = await studentPatchRequest(token, id, updateFields, { status: 'pending' });
   if (res.error) { alert('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
-  if (!res.data || !res.data.length) {
+  if (!res.rows.length) {
     alert('ℹ️ 更新失敗，這筆申請可能已經被老師處理了，重新整理頁面看看。');
     closeCancelPickerModal();
     loadStudentPendingRequestStatus(token);
@@ -5165,10 +5234,10 @@ async function studentWithdrawOwnRequest(token, id) {
   // 2026-07-19 加（稽核 ORANGE：學生收回 vs 老師刪除 Calendar 撞期）：多加 .is('processing_started_at', null)
   // 當第二道閘——如果老師剛好已經搶到鎖、正在動 Calendar 的路上（見 claimRequestForProcessing），
   // 這裡就不能悄悄收回成功，不然畫面會顯示「收回成功」但 Calendar 其實已經被刪掉了。
-  const res = await sb.from('classroom_requests').update({ status: 'acknowledged' })
-    .eq('id', id).eq('status', 'pending').is('processing_started_at', null).select();
+  // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
+  const res = await studentPatchRequest(token, id, { status: 'acknowledged' }, { status: 'pending', notProcessing: true });
   if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
-  if (!res.data || !res.data.length) {
+  if (!res.rows.length) {
     alert('ℹ️ 收回失敗——老師可能正在處理中，或剛好已經處理完了，請直接用 LINE 聯絡老師確認狀況。');
     loadStudentPendingRequestStatus(token);
     return;
@@ -5392,8 +5461,12 @@ async function submitClassRequest() {
     if (chosenCalendarEventId) updFields.calendar_event_id = chosenCalendarEventId;
     // 2026-07-17 加（Lin 要求）：原本課堂的時間也存起來，之後通知/清單顯示才不會只有日期沒有時間。
     if (originalTimeToUse) updFields.original_time = originalTimeToUse;
-    const upd = await sb.from('classroom_requests').update(updFields).eq('id', newId);
-    if (upd.error) console.warn('⚠️ 補存選項清單失敗（不影響這次申請本身）：', upd.error.message);
+    // 2026-07-19 改：直接 update 會被 RLS 靜靜擋掉（更新 0 筆又不回 error），
+    // 導致 proposed_options／calendar_event_id 從來沒存進去過。改走 RPC + 檢查筆數。
+    const upd = await studentPatchRequest(nextClassCtx.token, newId, updFields, {});
+    if (upd.error || !upd.rows.length) {
+      console.error('⚠️ 補存選項清單失敗：', upd.error ? upd.error.message : '更新 0 筆');
+    }
   }
   notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: originalDateToUse, originalTime: originalTimeToUse, options: options, requestId: newId });
   closeClassRequestModal();
@@ -5403,18 +5476,19 @@ async function submitClassRequest() {
 // 2026-07-16 加：學生修改自己已送出、老師還沒回覆的改期申請——重新給 1-3 個新選項，
 // 用 .eq('offer_status','proposed') 當保險閘：如果老師剛好在這一刻已經處理了，這裡就會抓不到。
 async function submitClassRequestEdit(id, options, studentName) {
-  const res = await sb.from('classroom_requests').update({
+  // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
+  const res = await studentPatchRequest(nextClassCtx.token, id, {
     requested_date: options[0].date, requested_time: options[0].time,
     proposed_options: options, offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
-  }).eq('id', id).eq('status', 'pending').eq('offer_status', 'proposed').select();
+  }, { status: 'pending', offerStatus: 'proposed' });
   if (res.error) { alert('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
-  if (!res.data || !res.data.length) {
+  if (!res.rows.length) {
     alert('ℹ️ 更新失敗，這筆申請可能已經被老師處理了，重新整理頁面看看。');
     closeClassRequestModal();
     loadStudentPendingRequestStatus(nextClassCtx.token);
     return;
   }
-  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: res.data[0].original_date, options: options, requestId: id });
+  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: res.rows[0].original_date, options: options, requestId: id });
   closeClassRequestModal();
   alert('✅ 已更新，老師確認後會回覆你。');
   loadStudentPendingRequestStatus(nextClassCtx.token);
@@ -5424,10 +5498,10 @@ async function submitClassRequestEdit(id, options, studentName) {
 // （studentWithdrawOwnRequest）同樣邏輯，用 .eq('offer_status','proposed') 當保險閘。
 async function studentWithdrawOwnRescheduleRequest(token, id) {
   if (!confirm('確定要收回這個改期申請嗎？（這堂課維持原本安排）')) return;
-  const res = await sb.from('classroom_requests').update({ status: 'acknowledged', offer_status: null })
-    .eq('id', id).eq('status', 'pending').eq('offer_status', 'proposed').select();
+  // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
+  const res = await studentPatchRequest(token, id, { status: 'acknowledged', offer_status: null }, { status: 'pending', offerStatus: 'proposed' });
   if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
-  if (!res.data || !res.data.length) {
+  if (!res.rows.length) {
     alert('ℹ️ 收回失敗——老師可能剛好已經處理了，請直接用 LINE 聯絡老師確認狀況。');
     loadStudentPendingRequestStatus(token);
     return;
@@ -5530,10 +5604,10 @@ async function loadStudentPendingRequestStatus(token) {
     // 2026-07-16 改：多撈幾筆，自己篩掉「老師發起的取消」（那個已經有專屬的
     // teacherCancelAckBanner 處理確認流程了，這裡不用重複顯示，不然學生會看到兩個一樣的東西）。
     // 2026-07-18 加：同理篩掉「老師發起的加課」，改用專屬的 teacherAddAckBanner 顯示確認流程。
-    const res = await sb.from('classroom_requests').select('*')
-      .eq('token', token).eq('status', 'pending')
-      .order('created_at', { ascending: false }).limit(5);
-    const rows = res.data || [];
+    // 2026-07-19 改：直接 select 會被 RLS 擋掉，永遠回空陣列（學生因此完全看不到自己的
+    // 申請狀態，而且不會有任何錯誤訊息）。改走 student_get_own_requests RPC。
+    const res = await studentFetchRequests(token, { status: 'pending', limit: 5 });
+    const rows = res.rows;
     const r = rows.find(function (x) {
       return !(x.request_type === 'cancel' && x.initiated_by === 'teacher') &&
         !(x.request_type === 'add_class' && x.initiated_by === 'teacher');
@@ -5636,13 +5710,15 @@ function formatOfferOptionForTeacher(opt) {
 async function loadStudentRecentAcknowledgedCancelCard(token, el) {
   try {
     var todayStr = formatInTz(new Date(), TEACHER_TZ).dateStr;
-    var res = await sb.from('classroom_requests').select('*')
-      .eq('token', token).eq('request_type', 'cancel').eq('status', 'acknowledged')
-      .neq('initiated_by', 'teacher')
-      .gte('original_date', todayStr)
-      .order('created_at', { ascending: false }).limit(5);
-    if (res.error || !res.data || !res.data.length) { el.innerHTML = ''; return; }
-    var r = res.data[0];
+    // 2026-07-19 改：直接 select 會被 RLS 擋掉（見 studentFetchRequests 的說明），改走 RPC。
+    // RPC 只吃 type/status/initiated_by，剩下的兩個條件（不是老師發起的、原本課堂還沒過）
+    // 在這裡自己過濾，行為跟舊版完全一樣。
+    var res = await studentFetchRequests(token, { requestType: 'cancel', status: 'acknowledged', limit: 10 });
+    var mine = res.rows.filter(function (x) {
+      return x.initiated_by !== 'teacher' && (x.original_date || '') >= todayStr;
+    });
+    if (res.error || !mine.length) { el.innerHTML = ''; return; }
+    var r = mine[0];
     window._myPendingRequest = r;
     el.innerHTML = '<div class="card">' +
       '<h2>✅ 取消申請已處理</h2>' +
@@ -5674,30 +5750,52 @@ function dismissTeacherCancelNotice(token, id) {
   markTeacherCancelDismissed(token, id);
   loadTeacherCancelNoticeBanner(token);
 }
+// 合併卡的「全部關閉」（2026-07-19 加）
+function dismissAllTeacherCancelNotices(token, ids) {
+  (ids || []).forEach(function(id) { markTeacherCancelDismissed(token, id); });
+  loadTeacherCancelNoticeBanner(token);
+}
 
 async function loadTeacherCancelNoticeBanner(token) {
   var el = document.getElementById('teacherCancelNoticeBanner');
   if (!el) return;
   try {
-    var res = await sb.from('classroom_requests').select('id,original_date,created_at')
-      .eq('token', token).eq('request_type', 'cancel').eq('initiated_by', 'teacher').eq('status', 'acknowledged')
-      .order('created_at', { ascending: false }).limit(10);
+    // 2026-07-19 改：直接 select 會被 RLS 擋掉（見 studentFetchRequests 的說明），改走 RPC
+    var res = await studentFetchRequests(token, { requestType: 'cancel', status: 'acknowledged', initiatedBy: 'teacher', limit: 10 });
     if (res.error) { el.innerHTML = ''; return; }
-    var rows = res.data || [];
+    var rows = res.rows;
     var dismissed = getDismissedTeacherCancelIds(token);
     var pending = rows.filter(function(r) { return dismissed.indexOf(r.id) === -1; });
-    el.innerHTML = pending.map(function(r) {
-      return '<div style="background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;">' +
+    if (!pending.length) { el.innerHTML = ''; return; }
+    // 2026-07-19 改（AI 稽核橘色問題）：以前每一則各一張大卡，手機上 3 則就把「點此進入課堂」
+    // 推到第一屏外面（實測按鈕在 y=1024px，手機高度只有 844px）→ 2 則以上合併成一張卡。
+    var contactBtn = '<a href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:10px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;text-decoration:none;border-radius:999px;padding:8px 18px;font-size:0.85rem;font-weight:700;">💬 聯絡老師</a>';
+    var closeBtnStyle = 'background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1;color:var(--amber-dark);opacity:0.6;padding:10px;min-width:44px;min-height:44px;flex-shrink:0;';
+    var cardOpen = '<div style="background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;">';
+    if (pending.length === 1) {
+      var r = pending[0];
+      el.innerHTML = cardOpen +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
           '<div style="flex:1;">' +
             '<div style="font-weight:700;font-size:0.95rem;color:var(--amber-dark);margin-bottom:4px;">❌ 課堂已取消</div>' +
             '<div style="font-size:0.85rem;color:var(--ink);">老師取消了 ' + escHtml(r.original_date || '-') + ' 這堂課</div>' +
           '</div>' +
-          '<button onclick="dismissTeacherCancelNotice(\'' + token + '\',\'' + r.id + '\')" title="關閉" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--amber-dark);opacity:0.6;padding:2px 6px;flex-shrink:0;">✕</button>' +
-        '</div>' +
-        '<a href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;text-decoration:none;border-radius:999px;padding:8px 16px;font-size:0.85rem;font-weight:700;">💬 聯絡老師</a>' +
-      '</div>';
+          '<button onclick="dismissTeacherCancelNotice(\'' + token + '\',\'' + r.id + '\')" title="關閉" style="' + closeBtnStyle + '">✕</button>' +
+        '</div>' + contactBtn + '</div>';
+      return;
+    }
+    var ids = pending.map(function(r) { return r.id; });
+    var dates = pending.map(function(r) {
+      return '<div style="font-size:0.85rem;color:var(--ink);padding:2px 0;">・' + escHtml(r.original_date || '-') + '</div>';
     }).join('');
+    el.innerHTML = cardOpen +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:700;font-size:0.95rem;color:var(--amber-dark);margin-bottom:4px;">❌ 有 ' + pending.length + ' 堂課已取消</div>' +
+          dates +
+        '</div>' +
+        '<button onclick="dismissAllTeacherCancelNotices(\'' + token + '\',' + JSON.stringify(ids).replace(/"/g, '&quot;') + ')" title="全部關閉" style="' + closeBtnStyle + '">✕</button>' +
+      '</div>' + contactBtn + '</div>';
   } catch (e) { el.innerHTML = ''; }
 }
 
@@ -5708,12 +5806,11 @@ async function loadTeacherCancelAckBanner(token) {
   var el = document.getElementById('teacherCancelAckBanner');
   if (!el) return;
   try {
-    var res = await sb.from('classroom_requests').select('id,original_date')
-      .eq('token', token).eq('request_type', 'cancel').eq('initiated_by', 'teacher')
-      .eq('status', 'pending').is('teacher_cancel_ack_at', null)
-      .order('created_at', { ascending: false }).limit(5);
+    // 2026-07-19 改：直接 select 會被 RLS 擋掉（見 studentFetchRequests 的說明），改走 RPC。
+    // 「還沒按過我知道了」（teacher_cancel_ack_at is null）在這裡自己過濾。
+    var res = await studentFetchRequests(token, { requestType: 'cancel', status: 'pending', initiatedBy: 'teacher', limit: 10 });
     if (res.error) { el.innerHTML = ''; return; }
-    var rows = res.data || [];
+    var rows = res.rows.filter(function (x) { return !x.teacher_cancel_ack_at; }).slice(0, 5);
     el.innerHTML = rows.map(function(r) {
       return '<div style="background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;">' +
         '<div style="font-weight:700;font-size:0.95rem;color:var(--amber-dark);margin-bottom:4px;">❌ 老師想取消這堂課</div>' +
@@ -5725,10 +5822,11 @@ async function loadTeacherCancelAckBanner(token) {
 }
 
 async function ackTeacherCancel(token, id) {
-  var res = await sb.from('classroom_requests').update({ teacher_cancel_ack_at: new Date().toISOString() })
-    .eq('id', id).is('teacher_cancel_ack_at', null).select();
+  // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明）→ 學生按了
+  // 「我知道了」其實從來沒存進資料庫過，老師端因此一直等不到確認。改走 RPC。
+  var res = await studentPatchRequest(token, id, { teacher_cancel_ack_at: new Date().toISOString() }, { nullColumn: 'teacher_cancel_ack_at' });
   if (res.error) { alert('⚠️ 確認失敗：' + res.error.message + '\n可以直接用 LINE 聯絡老師比較保險。'); return; }
-  if (!res.data || !res.data.length) {
+  if (!res.rows.length) {
     // count=0：可能已經在 LINE 按過了，或老師剛好收回了通知——不管哪一種，重新整理畫面看目前狀態就好
     await loadTeacherCancelAckBanner(token);
     return;
@@ -5738,7 +5836,7 @@ async function ackTeacherCancel(token, id) {
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-      body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到取消通知（' + (res.data[0].original_date || '-') + '），可以到網站按「確認刪除」了' }),
+      body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到取消通知（' + (res.rows[0].original_date || '-') + '），可以到網站按「確認刪除」了' }),
     });
   } catch (e) { /* 通知老師失敗不影響學生這邊已經確認成功 */ }
   // 2026-07-18 加了又拿掉：Lin 確認網站這裡不用加提示訊息，維持原本按完就悄悄消失的行為。
@@ -5752,12 +5850,11 @@ async function loadTeacherAddAckBanner(token) {
   var el = document.getElementById('teacherAddAckBanner');
   if (!el) return;
   try {
-    var res = await sb.from('classroom_requests').select('id,requested_date,requested_time,proposed_recurring,proposed_weekday')
-      .eq('token', token).eq('request_type', 'add_class').eq('initiated_by', 'teacher')
-      .eq('status', 'pending').is('teacher_add_ack_at', null)
-      .order('created_at', { ascending: false }).limit(5);
+    // 2026-07-19 改：直接 select 會被 RLS 擋掉（見 studentFetchRequests 的說明），改走 RPC。
+    // 「還沒按過我知道了」（teacher_add_ack_at is null）在這裡自己過濾。
+    var res = await studentFetchRequests(token, { requestType: 'add_class', status: 'pending', initiatedBy: 'teacher', limit: 10 });
     if (res.error) { el.innerHTML = ''; return; }
-    var rows = res.data || [];
+    var rows = res.rows.filter(function (x) { return !x.teacher_add_ack_at; }).slice(0, 5);
     el.innerHTML = rows.map(function(r) {
       var timeLabel = r.proposed_recurring
         ? ('每週' + ['日','一','二','三','四','五','六'][r.proposed_weekday] + ' ' + (r.requested_time || '-') + '（泰國時間）')
@@ -5772,10 +5869,11 @@ async function loadTeacherAddAckBanner(token) {
 }
 
 async function ackTeacherAdd(token, id) {
-  var res = await sb.from('classroom_requests').update({ teacher_add_ack_at: new Date().toISOString() })
-    .eq('id', id).is('teacher_add_ack_at', null).select();
+  // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明）→ 學生按了
+  // 「我知道了」沒存進去，老師端 confirmTeacherAddClass 會永遠卡在「學生還沒確認」。改走 RPC。
+  var res = await studentPatchRequest(token, id, { teacher_add_ack_at: new Date().toISOString() }, { nullColumn: 'teacher_add_ack_at' });
   if (res.error) { alert('⚠️ 確認失敗：' + res.error.message + '\n可以直接用 LINE 聯絡老師比較保險。'); return; }
-  if (!res.data || !res.data.length) {
+  if (!res.rows.length) {
     // count=0：可能已經在 LINE 按過了，或老師剛好收回了通知——不管哪一種，重新整理畫面看目前狀態就好
     await loadTeacherAddAckBanner(token);
     return;
@@ -5784,7 +5882,7 @@ async function ackTeacherAdd(token, id) {
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-      body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到加課通知（' + (res.data[0].requested_date || '-') + ' ' + (res.data[0].requested_time || '') + '），可以到網站按「確認新增」了' }),
+      body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到加課通知（' + (res.rows[0].requested_date || '-') + ' ' + (res.rows[0].requested_time || '') + '），可以到網站按「確認新增」了' }),
     });
   } catch (e) { /* 通知老師失敗不影響學生這邊已經確認成功 */ }
   await loadTeacherAddAckBanner(token);
@@ -5809,9 +5907,11 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
     // 但下面還是照樣送出「已接受」——變成老師之後拿到的是舊的/錯的時間，卻完全沒有警告。
     // 現在改成：對不到就當作失敗，請學生重新整理頁面看最新選項，不能用猜的。
     if (!chosenOpt) { alert('⚠️ 這個選項好像已經失效了（老師可能剛修改過提議），請重新整理頁面看最新的選項再選一次。'); return; }
-    const upd = await sb.from('classroom_requests').update({ requested_date: chosenOpt.date, requested_time: chosenOpt.time })
-      .eq('id', requestId).eq('token', token).eq('offer_status', 'proposed');
+    // 2026-07-19 改：直接 update 會被 RLS 靜靜擋掉（更新 0 筆又不回 error）→ 學生挑的新時間
+    // 根本沒存進去，老師之後看到的還是舊時間，而且完全沒有警告。改走 RPC + 檢查筆數。
+    const upd = await studentPatchRequest(token, requestId, { requested_date: chosenOpt.date, requested_time: chosenOpt.time }, { offerStatus: 'proposed' });
     if (upd.error) { alert('⚠️ 儲存選擇失敗：' + upd.error.message + '\n請直接聯絡老師比較保險。'); return; }
+    if (!upd.rows.length) { alert('⚠️ 儲存選擇失敗（這個提議可能已經被老師改過或處理掉了），請重新整理頁面看最新狀態。'); return; }
   }
   const res = await sb.rpc('respond_to_offer_as_student', { p_request_id: requestId, p_token: token, p_response: response });
   if (res.error || res.data !== true) {
@@ -5823,7 +5923,9 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
   // 用既有的「RPC 寫完再補一筆 update」模式，不用改 respond_to_offer_as_student 這個 RPC 本身。
   if (response === 'accepted') {
     try {
-      await sb.from('classroom_requests').update({ offer_accepted_at: new Date().toISOString(), sla_reminder_sent: false }).eq('id', requestId);
+      // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
+      const accUpd = await studentPatchRequest(token, requestId, { offer_accepted_at: new Date().toISOString(), sla_reminder_sent: false }, {});
+      if (accUpd.error || !accUpd.rows.length) console.error('⚠️ 重開 48 小時計時器失敗：', accUpd.error ? accUpd.error.message : '更新 0 筆');
     } catch (e) { /* 這步失敗頂多是少一次 48 小時提醒，不影響已經成功的回覆 */ }
   }
   try {
@@ -5958,6 +6060,29 @@ function initRecording() {
   // 開頁面就檢查上次有沒有沒存完的錄影（崩潰防護救回）
   try { recCheckLeftover(); } catch(e) {}
 }
+
+// 2026-07-19 加（AI 稽核橘色問題）：這頁常常是從 LINE 點進來的，會落在 LINE 內建瀏覽器裡。
+// Google 會擋掉 app 內建瀏覽器的登入 → 學生點「進入課堂(Meet)」或「Google Drive」會失敗且看不懂原因。
+// 先提醒，比等他們卡住再來問老師好（提醒只顯示一次，按過就記住）。
+function showLineBrowserHintIfNeeded() {
+  try {
+    if (!/ Line\//i.test(navigator.userAgent || '')) return;          // 不是 LINE 內建瀏覽器就不用提醒
+    if (localStorage.getItem('lineBrowserHintDismissed') === '1') return;
+    const host = document.getElementById('mainContainer'); if (!host) return;
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:13px 15px;margin:0 0 14px;font-family:\'Noto Sans TC\',sans-serif;color:var(--amber-dark);font-size:0.85rem;line-height:1.6;';
+    div.innerHTML = '<b>💡 小提醒</b>：你現在是在 LINE 內建的瀏覽器裡。<br>'
+      + '要進入 <b>Google Meet 課堂</b> 或開 <b>Google 雲端硬碟</b> 時，Google 可能會不讓你登入。<br>'
+      + '請點右上角的「⋯」→ 選「<b>用其他瀏覽器開啟</b>」再操作就正常了 🙏'
+      + '<div style="margin-top:10px;"><button id="lineHintOk" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border:none;border-radius:999px;padding:8px 18px;min-height:44px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;cursor:pointer;">知道了</button></div>';
+    host.insertBefore(div, host.firstChild);
+    document.getElementById('lineHintOk').onclick = function() {
+      try { localStorage.setItem('lineBrowserHintDismissed', '1'); } catch(e) {}
+      div.remove();
+    };
+  } catch (e) {}
+}
+try { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showLineBrowserHintIfNeeded); else showLineBrowserHintIfNeeded(); } catch(e) {}
 
 // ============================================================
 // SLIP SYSTEM (student-initiated payment)
@@ -8557,7 +8682,7 @@ async function connectCalendar() {
             : '<span style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;align-self:center;">即將到來</span>';
           return '<div class="today-row class-card">' +
             '<div style="flex:1;">' +
-              '<span class="t-name">' + item.s.name + '</span>' +
+              '<span class="t-name">' + escHtml(item.s.name) + '</span>' +
               (timeStr ? '<div style="font-size:0.78rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">' + timeStr + '</div>' : '') +
             '</div>' + action +
           '</div>';
@@ -8581,18 +8706,16 @@ async function connectCalendar() {
 async function syncScheduleToSupabase(matched) {
   try {
     const todayIso = teacherToday();
-    // ล้างคาบอนาคตเดิมทิ้งก่อน (กันคาบที่ยกเลิก/เลื่อนค้าง) แล้วเขียนชุดใหม่
-    // 2026-07-11 แก้：ต้องเช็ค error ของการลบด้วยเสมอ — ก่อนหน้านี้ไม่เช็ค ถ้าโดน RLS บล็อกการลบ
-    // จะ "ลบได้ 0 แถว" แบบเงียบๆ ไม่มี error โผล่ แล้วทุกครั้งที่ sync จะเขียนซ้ำทับถมเพิ่มเรื่อยๆ
-    // จนคาบเดียวกันมีหลายแถวในฐานข้อมูล ทำให้ระบบแจ้งเตือน LINE ส่งซ้ำหลายรอบให้นักเรียนคนเดียว
-    // (RELIABILITY FIRST：ห้ามล้มเหลวแบบเงียบๆ เด็ดขาด)
-    const { error: delError } = await sb.from('classroom_schedule').delete({ count: 'exact' }).gte('lesson_date', todayIso);
-    if (delError) {
-      console.error('ล้างตารางเก่าไม่สำเร็จ:', delError.message);
-      alert('⚠️ ซิงค์ตารางไม่สำเร็จ：ล้างข้อมูลเก่าไม่ได้ (' + delError.message + ')\nรอบนี้จะไม่เขียนข้อมูลใหม่ กันคาบซ้ำเพิ่ม กรุณาแคปหน้าจอนี้แจ้ง Lin/AI ให้ตรวจสอบ');
-      return; // ลบไม่สำเร็จ → ไม่ insert ต่อ กันข้อมูลซ้ำเพิ่มอีก
+    // 🔴 2026-07-19 แก้บั๊กแดง (AI ตรวจ 2 ตัวเจอตรงกัน — ตัวหนึ่งอ่านโค้ด ตัวหนึ่งเห็น DELETE 204 ในเว็บจริง)
+    // เดิม: "ลบคาบอนาคตของนักเรียนทุกคนทิ้งก่อน แล้วค่อยเช็คว่ามีข้อมูลจะเขียนไหม" (เช็คทีหลังการลบ)
+    //   → ถ้ารอบนั้นดึง Calendar ได้ไม่ครบ / จับคู่ชื่อไม่เจอสักคน / เน็ตหลุดหลังลบ
+    //     = ตารางเรียนของนักเรียนทุกคนหายเกลี้ยง กู้ไม่ได้ (ตรงกับบทเรียน RELIABILITY FIRST)
+    // ใหม่: "เขียนของใหม่ให้สำเร็จก่อน แล้วค่อยลบเฉพาะแถวที่หายไปจาก Calendar จริงๆ ทีละ id"
+    //   → ไม่มีวินาทีไหนเลยที่ตารางว่าง และถ้าขั้นไหนพัง จะหยุดโดยที่ข้อมูลเดิมยังอยู่ครบ
+    if (!matched || !matched.length) {
+      console.warn('[syncSchedule] รอบนี้จับคู่คาบไม่ได้เลย → ไม่แตะฐานข้อมูล (กันลบตารางทิ้งทั้งหมด)');
+      return;
     }
-    if (!matched || !matched.length) return;
     // 2026-07-16 แก้（error: "ON CONFLICT DO UPDATE command cannot affect row a second time"）：
     //   ต้นตอคือ matched มีแถวซ้ำ key เดียวกัน (token+lesson_date+start_time) ปนมาในชุดเดียวกัน
     //   (เช่น ชื่อนักเรียนคนหนึ่งเป็นคำย่อยของอีกคน หรือ event ปฏิทินซ้อนกันพอดีเวลาเดียวกัน)
@@ -8612,7 +8735,48 @@ async function syncScheduleToSupabase(matched) {
       .upsert(rows, { onConflict: 'token,lesson_date,start_time' });
     if (error) {
       console.warn('ซิงค์ตารางลง Supabase ไม่สำเร็จ:', error.message);
-      alert('⚠️ ซิงค์ตารางไม่สำเร็จ（เขียนข้อมูลใหม่ไม่ได้）：' + error.message);
+      alert('⚠️ ซิงค์ตารางไม่สำเร็จ（เขียนข้อมูลใหม่ไม่ได้）：' + error.message + '\nข้อมูลเดิมยังอยู่ครบ ไม่มีอะไรถูกลบ');
+      return;   // เขียนไม่สำเร็จ → ห้ามลบอะไรทั้งสิ้น
+    }
+
+    // ---- ขั้นที่ 2：ค่อยเก็บกวาดคาบเก่าที่หายไปจาก Calendar แล้ว (ลบทีละ id เท่านั้น ไม่ลบเหมาเข่ง) ----
+    const keepKeys = new Set(rows.map(function(r){ return r.token + '|' + r.lesson_date + '|' + r.start_time; }));
+    // ขอบเขตการเก็บกวาด = นักเรียนทุกคนที่รู้จัก (ไม่ใช่แค่คนที่มีคาบรอบนี้) เพราะคนที่ถูกยกเลิกครบทุกคาบ
+    // จะไม่โผล่ใน rows แต่แถวเก่าของเขาต้องถูกลบด้วย ไม่งั้นนักเรียนจะเห็นคาบผีค้างอยู่
+    let scopeTokens = Array.from(new Set(rows.map(function(r){ return r.token; })));
+    try {
+      if (typeof studentsCache !== 'undefined' && studentsCache) {
+        const all = Object.keys(studentsCache);
+        if (all.length) scopeTokens = Array.from(new Set(all.concat(scopeTokens)));
+      }
+    } catch (e) {}
+    const { data: existing, error: selError } = await sb.from('classroom_schedule')
+      .select('id,token,lesson_date,start_time')
+      .gte('lesson_date', todayIso)
+      .in('token', scopeTokens);
+    if (selError) {
+      console.warn('อ่านตารางเดิมเพื่อเก็บกวาดไม่สำเร็จ:', selError.message);
+      return;   // อ่านไม่ได้ → ไม่ลบ (ของใหม่เขียนลงไปแล้ว ข้อมูลไม่หาย แค่อาจมีคาบเก่าค้าง)
+    }
+    const staleIds = (existing || [])
+      .filter(function(r){ return !keepKeys.has(r.token + '|' + r.lesson_date + '|' + (r.start_time || '')); })
+      .map(function(r){ return r.id; });
+    if (staleIds.length) {
+      // 🛑 กันพลาดใหญ่: ถ้ารอบนี้จะลบเกินครึ่งของที่มีอยู่ (และมากกว่า 10 แถว) แปลว่าน่าจะผิดปกติ
+      // (เช่น Calendar โหลดมาไม่ครบ) → ถามครูก่อน ไม่ลบเงียบๆ
+      const total = (existing || []).length;
+      if (staleIds.length >= 3 && staleIds.length > total * 0.5) {
+        const ok = confirm('⚠️ ระบบกำลังจะลบคาบเก่า ' + staleIds.length + ' จาก ' + total + ' แถว\n'
+          + 'จำนวนเยอะผิดปกติ — อาจเป็นเพราะ Google Calendar โหลดมาไม่ครบรอบนี้\n\n'
+          + 'กด OK = ลบตามนี้　·　กด Cancel = ไม่ลบ (ปลอดภัยกว่า แล้วค่อยกดซิงค์ใหม่)');
+        if (!ok) { console.warn('[syncSchedule] ครูเลือกไม่ลบรอบนี้'); return; }
+      }
+      const { error: delError } = await sb.from('classroom_schedule').delete().in('id', staleIds);
+      if (delError) {
+        console.error('เก็บกวาดคาบเก่าไม่สำเร็จ:', delError.message);
+        alert('⚠️ เขียนตารางใหม่สำเร็จแล้ว แต่ลบคาบเก่าที่ยกเลิกไปไม่ได้ (' + delError.message + ')\n'
+          + 'นักเรียนอาจเห็นคาบที่ยกเลิกแล้วค้างอยู่ — แคปหน้าจอนี้แจ้ง Lin/AI');
+      }
     }
   } catch (e) {
     console.warn('syncScheduleToSupabase error:', e);
@@ -9225,14 +9389,32 @@ function recDBPut(obj){
     catch(e){ rej(e); }
   });
 }
+// 🔒 2026-07-19 修（AI 稽核紅色問題 2）：崩潰備份改成「每一段各自一份」，並用清單記住全部還沒安全清掉的段。
+//   舊版問題：整場錄影只在 beginRecording 開一次備份 id；滿 1 小時自動切檔後不會重開，
+//   而第 1 段上傳到 Drive 成功時 recBackupClear() 會把 id 清成 null → 第 2 段之後只存在 RAM，
+//   當機/關分頁就整段消失，而且救回橫幅也不會出現（RELIABILITY FIRST：備份不能有空窗）。
+function recBackupListGet(){
+  try{ const a=JSON.parse(localStorage.getItem('recPendingBackups')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+}
+function recBackupListSet(list){
+  try{ localStorage.setItem('recPendingBackups', JSON.stringify(list||[])); }catch(e){}
+}
 async function recBackupStart(meta){
+  // id 一定要「同步」先產生（不要等 await）—— MediaRecorder 每 1 秒就丟資料進來，
+  // 晚一步設好 recBackupId 就會漏掉最前面那幾秒沒寫進備份
+  recBackupId='rec_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); recBackupSeq=0;
+  const myId=recBackupId;
+  const list=recBackupListGet(); list.push({ id:myId, meta:meta||{} }); recBackupListSet(list);
+  localStorage.setItem('recPendingBackup', myId);   // 舊欄位仍寫著（相容舊版留下來的備份）
+  localStorage.setItem('recPendingMeta', JSON.stringify(meta||{}));
   try{
     await recOpenDB();
-    recBackupId='rec_'+Date.now(); recBackupSeq=0;
-    await recDBPut({ k:recBackupId+'__meta', meta:meta });
-    localStorage.setItem('recPendingBackup', recBackupId);
-    localStorage.setItem('recPendingMeta', JSON.stringify(meta||{}));
-  }catch(e){ recBackupId=null; }   // 備份失敗 → 照常錄影（只是少了崩潰防護）
+    await recDBPut({ k:myId+'__meta', meta:meta });
+  }catch(e){                                        // 備份失敗 → 照常錄影（只是少了崩潰防護）
+    if(recBackupId===myId) recBackupId=null;
+    recBackupListSet(recBackupListGet().filter(function(x){ return x && x.id!==myId; }));
+  }
+  return myId;
 }
 // 中途自動切換編碼格式（EncodingError fallback）時呼叫：更新備份的 mime 標記，
 // 否則萬一切換格式後才當機，救回時會照舊標記（例如 mp4）去重建檔案，但裡面其實是換過的格式（例如 webm）的位元組 → 存出來的檔案打不開
@@ -9264,44 +9446,67 @@ async function recBackupClear(id){
     await new Promise((res)=>{
       const tx=recDB.transaction(REC_STORE,'readwrite'); const st=tx.objectStore(REC_STORE);
       const rq=st.getAllKeys();
-      rq.onsuccess=()=>{ (rq.result||[]).forEach(k=>{ if(String(k).indexOf(id)===0) st.delete(k); }); };
+      // ⚠️ 一定要比對 id+'__'（不能只比對 id）——現在同一場錄影的各段 id 開頭很像，
+      // 只比對 id 會連「還在上傳中的下一段備份」一起刪掉（2026-07-19 修）
+      rq.onsuccess=()=>{ (rq.result||[]).forEach(k=>{ if(String(k).indexOf(id+'__')===0) st.delete(k); }); };
       tx.oncomplete=()=>res(); tx.onerror=()=>res();
     });
   }catch(e){}
+  recBackupListSet(recBackupListGet().filter(function(x){ return x && x.id!==id; }));
   if((localStorage.getItem('recPendingBackup')||'')===id){ localStorage.removeItem('recPendingBackup'); localStorage.removeItem('recPendingMeta'); }
   if(id===recBackupId){ recBackupId=null; }
 }
+// 整場錄影結束、且已經確定安全（例如沒綁學生＝老師自己下載存檔）→ 一次清掉全部段的備份
+async function recBackupClearAll(){
+  const ids=recBackupListGet().map(function(x){ return x&&x.id; }).filter(Boolean);
+  const legacy=localStorage.getItem('recPendingBackup');
+  if(legacy && ids.indexOf(legacy)<0) ids.push(legacy);
+  for(const id of ids){ try{ await recBackupClear(id); }catch(e){} }
+}
 // 開頁面時檢查有沒有上次沒存成功的錄影 → 跳救回橫幅
 async function recCheckLeftover(){
-  const id=localStorage.getItem('recPendingBackup'); if(!id) return;
-  let meta={}; try{ meta=JSON.parse(localStorage.getItem('recPendingMeta')||'{}')||{}; }catch(e){}
+  // 2026-07-19 改：一次檢查「全部」還沒清掉的段（可能不只一段：第 1 段還在上傳時當機 → 第 1、2 段都留著）
+  const list=recBackupListGet();
+  const legacyId=localStorage.getItem('recPendingBackup');
+  let legacyMeta={}; try{ legacyMeta=JSON.parse(localStorage.getItem('recPendingMeta')||'{}')||{}; }catch(e){}
+  const ids=[];
+  list.forEach(function(x){ if(x&&x.id&&ids.indexOf(x.id)<0) ids.push(x.id); });
+  if(legacyId && ids.indexOf(legacyId)<0) ids.push(legacyId);
+  if(!ids.length) return;
   try{
     await recOpenDB();
-    const keys=await new Promise((res)=>{
+    const allKeys=await new Promise((res)=>{
       const tx=recDB.transaction(REC_STORE,'readonly'); const rq=tx.objectStore(REC_STORE).getAllKeys();
-      rq.onsuccess=()=>res((rq.result||[]).filter(k=>String(k).indexOf(id+'__')===0 && String(k).indexOf('__meta')<0).sort());
-      rq.onerror=()=>res([]);
+      rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>res([]);
     });
-    if(!keys.length){ recBackupClear(id); return; }
-    recShowRecoverBanner(id, meta, keys);
+    for(const id of ids){
+      const entry=list.filter(function(x){ return x&&x.id===id; })[0];
+      const meta=(entry&&entry.meta)||legacyMeta||{};
+      const keys=allKeys.filter(k=>String(k).indexOf(id+'__')===0 && String(k).indexOf('__meta')<0).sort();
+      if(!keys.length){ await recBackupClear(id); continue; }
+      recShowRecoverBanner(id, meta, keys);
+    }
   }catch(e){}
 }
+let recRecoverBannerSeq=0;
 function recShowRecoverBanner(id, meta, keys){
   const host=document.getElementById('mainContainer'); if(!host) return;
+  const uid='recRecover'+(++recRecoverBannerSeq);   // 可能同時出現好幾張橫幅 → id 不能重複，不然按鈕會綁錯張
+  const partLabel=(meta&&meta.part)?('（第'+meta.part+'段）'):'';
   const div=document.createElement('div');
-  div.id='recRecoverBanner';
+  div.id=uid;
   div.style.cssText='background:#fef3c7;border:1px solid #d97706;border-radius:12px;padding:14px 16px;margin:0 0 16px;font-family:\'Noto Sans TC\',sans-serif;color:#78350f;';
-  div.innerHTML='<b>⚠️ 偵測到上次有一段錄影沒存完</b>（可能中途關掉了視窗）。共 '+keys.length+' 個片段，點下面救回成檔案：'
+  div.innerHTML='<b>⚠️ 偵測到上次有一段錄影沒存完</b>'+partLabel+'（可能中途關掉了視窗）。共 '+keys.length+' 個片段，點下面救回成檔案：'
     +'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
-    +'<button id="recRecoverBtn" style="background:#b45309;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;">⬇ 救回並下載</button>'
-    +'<button id="recRecoverDismiss" style="background:#fff;color:#78350f;border:1px solid #d97706;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;">刪除這段備份</button>'
-    +'</div><div id="recRecoverMsg" style="margin-top:8px;font-size:0.85rem;"></div>';
+    +'<button id="'+uid+'Btn" style="background:#b45309;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;">⬇ 救回並下載</button>'
+    +'<button id="'+uid+'Dismiss" style="background:#fff;color:#78350f;border:1px solid #d97706;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;">刪除這段備份</button>'
+    +'</div><div id="'+uid+'Msg" style="margin-top:8px;font-size:0.85rem;"></div>';
   host.insertBefore(div, host.firstChild);
-  document.getElementById('recRecoverBtn').onclick=()=>recRecoverDownload(id, meta, keys);
-  document.getElementById('recRecoverDismiss').onclick=()=>{ recBackupClear(id); div.remove(); };
+  document.getElementById(uid+'Btn').onclick=()=>recRecoverDownload(id, meta, keys, uid+'Msg');
+  document.getElementById(uid+'Dismiss').onclick=()=>{ recBackupClear(id); div.remove(); };
 }
-async function recRecoverDownload(id, meta, keys){
-  const msg=document.getElementById('recRecoverMsg'); if(msg) msg.textContent='讀取中…';
+async function recRecoverDownload(id, meta, keys, msgElId){
+  const msg=document.getElementById(msgElId||'recRecoverMsg'); if(msg) msg.textContent='讀取中…';
   try{
     await recOpenDB();
     const parts=[];
@@ -9363,8 +9568,7 @@ async function beginRecording(method){
       const vTrack=recDisplayStream.getVideoTracks()[0];
       if(vTrack) vTrack.onended=()=>{ if(recState==='recording') stopRecording(); };
     }
-    // 開始崩潰備份（非阻塞；失敗也不擋錄影）
-    recBackupStart({ isVideo: recIsVideo, mime: (recIsVideo?recPickVideoMime():recPickAudioMime()), startTs: recSessionStart, student: recActiveStudent||'' });
+    // 崩潰備份改由 startSegment 每一段各開一份（2026-07-19 修），這裡不再開，避免只有第 1 段有備份
     startSegment(finalStream);
   }catch(err){
     recSetStatus('❌ '+(err.message||err.name||'無法開始錄製'),'');
@@ -9379,7 +9583,7 @@ function startSegment(stream, mimeIdx){
   const segMime = recMimeCandidates[mimeIdx] || '';   // 這個片段專用（closure），避免下面 fallback 重啟時被下一段覆蓋掉造成資料/標籤錯亂
   recMime = segMime;   // 仍同步一份全域值，給其他地方（例如崩潰備份標記）讀最新狀態用
   if(recIsVideo && !segMime){ recSetStatus('❌ 此瀏覽器不支援影片錄製，請改用電腦版 Chrome',''); cleanupRecStreams(); return; }
-  recBackupUpdateMime(segMime);   // 崩潰備份的格式標記要跟著這次實際使用的格式走，不然萬一中途切換格式後當機，救回的檔案會標錯格式打不開
+  // （2026-07-19 起改成每段各開一份備份，格式標記在 recBackupStart 當下就寫對了，不用再事後更新）
   const videoBps = recIsHQStudent() ? REC_VIDEO_BPS_HQ : REC_VIDEO_BPS;
   const opts = recIsVideo
     ? {mimeType:segMime||undefined, videoBitsPerSecond:videoBps, audioBitsPerSecond:REC_AUDIO_BPS}
@@ -9388,6 +9592,9 @@ function startSegment(stream, mimeIdx){
   const segChunks=[];   // 這個片段專用的陣列（closure），不是共用全域，才不會被下一段的 startSegment 清空
   let segStartTime;     // 這個片段專用的開始時間（closure），理由同上 —— 算時長要用「這段自己的」開始時間
   recChunks=segChunks; recPart++;
+  // 🔒 這一段自己的崩潰備份（每段一份）——滿 1 小時切檔後也會重開，不會有「第 2 段只在 RAM」的空窗
+  recBackupStart({ isVideo: recIsVideo, mime: segMime, startTs: Date.now(), student: recActiveStudent||'', part: recPart });
+  const segBackupId = recBackupId;   // closure 記住這段的備份 id，上傳成功後只清「這一段」的
   recMR.ondataavailable=e=>{ if(e.data&&e.data.size){ segChunks.push(e.data); recHadData=true; recBackupChunk(e.data); recLastDataTs=Date.now(); recStallLogged=false; } };
   recMR.onerror=ev=>{
     const errName=(ev&&ev.error&&ev.error.name)||'未知';
@@ -9406,7 +9613,7 @@ function startSegment(stream, mimeIdx){
     recShowStallWarning('錄影發生錯誤：'+errName+'，請按停止後重新錄影！');
     recPlayAlert(3);
   };
-  recMR.onstop=()=>finalizeSegment(segChunks, segMime, segStartTime);
+  recMR.onstop=()=>finalizeSegment(segChunks, segMime, segStartTime, segBackupId);
   recMR.start(1000);
   recState='recording';
   recAcquireWakeLock();     // 防止電腦自動休眠中斷錄影
@@ -9428,7 +9635,11 @@ function startSegment(stream, mimeIdx){
 // 滿 1 小時：結束目前片段，於同一串流續錄新檔（毋須重新授權）
 function splitSegment(stream){
   if(!recMR||recMR.state==='inactive') return;
-  recMR.onstop=()=>{ finalizeSegment(); startSegment(stream); };
+  // 2026-07-19 修：不要自己重寫成 finalizeSegment()（沒帶參數會去讀共用全域變數，
+  // 下一段一開始就把全域蓋掉 → 這段的資料/格式/時長/備份 id 全部會錯甚至變空檔）。
+  // 改成「接在原本那個 onstop 後面」，原本的已經帶了這段自己的 chunks/mime/開始時間/備份 id。
+  const prevOnStop=recMR.onstop;
+  recMR.onstop=()=>{ if(prevOnStop) prevOnStop(); startSegment(stream); };
   recMR.stop();
 }
 
@@ -9621,7 +9832,7 @@ function splitSegment(stream){
     return fixWebmDuration;
 });
 
-async function finalizeSegment(chunksArg, mimeArg, startTimeArg){
+async function finalizeSegment(chunksArg, mimeArg, startTimeArg, backupIdArg){
   // 用呼叫端傳進來的 chunks/mime/開始時間（該片段自己的 closure），不要讀共用全域變數 ——
   // 因為格式自動切換是非同步重啟下一段，全域 recChunks/recMime/recStartTime 這時可能已經被下一段覆寫掉了，
   // 讀共用全域會有把「這段」的資料/格式標籤/時長跟「下一段」搞混、甚至存到空陣列（資料憑空消失）的風險
@@ -9656,14 +9867,14 @@ async function finalizeSegment(chunksArg, mimeArg, startTimeArg){
     upRow.style.cssText='font-size:0.8rem;color:var(--ink-muted);margin-top:6px;font-family:\'Noto Sans TC\',sans-serif;';
     upRow.textContent='☁️ 準備上傳到雲端…';
     document.getElementById('recDownloads').appendChild(upRow);
-    autoUploadRecording(blob, name, recActiveStudent, sizeMB, recPartCount, upRow, recActiveFolder||'影片');
+    autoUploadRecording(blob, name, recActiveStudent, sizeMB, recPartCount, upRow, recActiveFolder||'影片', backupIdArg);
   }
 }
 
 // 2026-07-11：錄影上傳中的旗標，跟 beforeunload 掛勾（見上方 uploadInProgress 的同一顆監聽器），
 // 上傳影片途中關分頁一樣要跳出警告，避免整堂錄影傳到一半就不見（RELIABILITY FIRST）
 let recUploadInProgress = false;
-async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl, folder){
+async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl, folder, backupId){
   folder = folder || '影片';
   const s=(typeof studentsCache!=='undefined' && studentsCache[token])?studentsCache[token]:{name:token};
   const setMsg=(t)=>{ if(statusEl) statusEl.textContent=t; };
@@ -9678,8 +9889,9 @@ async function autoUploadRecording(blob, fileName, token, sizeMB, part, statusEl
     await saveRecordingLink(token, fileName, up.id, link, sizeMB, part);
     try { await ensureStudentFolderShared(s.name||token, token); } catch(e) {}
     if(statusEl) statusEl.innerHTML='✅ 已上傳到「'+escHtml(s.name||token)+' / '+escHtml(folder)+'」　<a href="'+escHtml(safeHref(link))+'" target="_blank" rel="noopener" style="color:var(--amber-dark);font-weight:700;">開啟</a>';
-    // Drive 上傳成功 → 現在才安全清掉 IDB 崩潰備份（有備份 = 有學生時才需要）
-    try { await recBackupClear(); } catch(e) {}
+    // Drive 上傳成功 → 現在才安全清掉「這一段」的 IDB 崩潰備份
+    // ⚠️ 一定要指名 backupId：不指名會清到「目前正在錄的那一段」，第 2 段之後就變成完全沒備份（2026-07-19 修）
+    try { if(backupId) await recBackupClear(backupId); } catch(e) {}
   }catch(err){
     recLogIssue('upload_fail', (err&&(err.message||err))||'未知錯誤', {part:part});
     setMsg('⚠️ 自動上傳失敗：'+(err.message||err)+'（已保留上方下載按鈕，可手動存檔）');
@@ -9698,9 +9910,15 @@ function stopRecording(){
   recState='idle';
   recStopWatchdog();
   recReleaseWakeLock();
-  if(recMR && recMR.state!=='inactive'){ recMR.onstop=async ()=>{ await finalizeSegment(); recAfterStop(); }; recMR.stop(); }
-  else { recAfterStop(); }
-  cleanupRecStreams();
+  // 2026-07-19 修 2 點：
+  //  (1) 不再自己蓋成 finalizeSegment()（沒帶參數＝讀共用全域，資料/格式/備份 id 會錯）→ 接在原本的 onstop 後面
+  //  (2) cleanupRecStreams()（關鏡頭/麥克風）要等 onstop 跑完才做，
+  //      原本在 stop() 之後馬上關，最後一秒的資料有機會被切掉
+  if(recMR && recMR.state!=='inactive'){
+    const prevOnStop=recMR.onstop;
+    recMR.onstop=async ()=>{ try{ if(prevOnStop) await prevOnStop(); }finally{ cleanupRecStreams(); recAfterStop(); } };
+    recMR.stop();
+  } else { cleanupRecStreams(); recAfterStop(); }
   recToggleStartBtns(false);
   document.getElementById('recStopBtn').disabled=true;
 }
@@ -9710,7 +9928,7 @@ function recAfterStop(){
     recSetStatus('✅ 錄製完成，可預覽或下載','done');
     // 無綁定學生 → 手動下載即備份，立即清掉 IDB
     // 有綁定學生 → 等 Drive 上傳成功後才清（由 autoUploadRecording 負責）
-    if(!recActiveStudent) recBackupClear();
+    if(!recActiveStudent) recBackupClearAll();   // 清全部段（不是只有最後一段）
   }else{
     recLogIssue('zero_bytes', '整堂錄影結束後完全沒有任何資料（0 位元組）');
     recSetStatus('❌ 這次完全沒有錄到內容（0 位元組）！請立即重新錄影。','');

@@ -222,9 +222,16 @@ async function init(){
   checkSlipStatus();
 }
 
+// 2026-07-19 加（AI 稽核橘色問題）：以前這頁出錯就只剩一行紅字、頁面上 0 個連結＝死路，
+// 學生點到過期/被 LINE 截斷的連結就卡住，也不會去問老師。現在一定給出口。
 function renderInvalid(msg){
   document.getElementById('wrap').innerHTML =
-    '<div class="card"><div class="state-msg">❌ ' + escHtml(msg) + '</div></div>';
+    '<div class="card"><div class="state-msg">❌ ' + escHtml(msg) + '</div>' +
+    '<p class="note" style="text-align:center;">連結可能過期或被通訊軟體截斷了，直接問老師最快 🙏</p>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px;">' +
+      '<a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" style="flex:1;min-width:150px;text-align:center;background:#06C755;color:#fff;text-decoration:none;border-radius:10px;padding:13px 18px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;min-height:44px;box-sizing:border-box;">💬 用 LINE 聯絡老師</a>' +
+      '<a href="https://mrtaihualin.com/" style="flex:1;min-width:150px;text-align:center;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;text-decoration:none;border-radius:10px;padding:13px 18px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;min-height:44px;box-sizing:border-box;">🏠 回首頁</a>' +
+    '</div></div>';
 }
 
 function courseInfo(s){

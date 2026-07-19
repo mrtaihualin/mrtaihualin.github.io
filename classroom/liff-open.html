@@ -103,6 +103,7 @@
         if (res.ok && data.ok && data.token) {
           token = data.token;
           localStorage.setItem('clsLiffOpenToken_classroom', token); // ให้ goto=classroom ปกติก็ใช้ต่อได้
+          localStorage.setItem('clsLiffOpenTokenTs_classroom', String(Date.now()));
           window.location.replace('index.html?s=' + encodeURIComponent(token));
           return;
         }
@@ -122,11 +123,21 @@
       if (!target) { fail('ลิงก์ไม่ถูกต้อง'); return; }
 
       // token หาย (เช่น LINE ตัด query ทิ้งตอน redirect) → สำรองไว้ใน localStorage เหมือน line-link.html เดิม
+      // 2026-07-19 เพิ่มอายุ 10 นาที (AI ตรวจเจอ): เดิมไม่มีวันหมดอายุ → เปิดหน้านี้เปล่าๆ ทีหลัง
+      // มันจะเด้งเข้าเป็น "นักเรียนคนก่อน" อัตโนมัติ เครื่องที่ใช้ร่วมกันจะเห็นข้อมูลคนอื่น
+      var LIFF_TOKEN_TTL_MS = 10 * 60 * 1000;
       if (token) {
         localStorage.setItem('clsLiffOpenToken_' + goto, token);
+        localStorage.setItem('clsLiffOpenTokenTs_' + goto, String(Date.now()));
       } else if (goto !== 'myroom') {
+        var savedTs = parseInt(localStorage.getItem('clsLiffOpenTokenTs_' + goto) || '0', 10);
         var saved = localStorage.getItem('clsLiffOpenToken_' + goto);
-        if (saved) { token = saved; target = buildTarget(); }
+        if (saved && savedTs && (Date.now() - savedTs) < LIFF_TOKEN_TTL_MS) {
+          token = saved; target = buildTarget();
+        } else {
+          localStorage.removeItem('clsLiffOpenToken_' + goto);
+          localStorage.removeItem('clsLiffOpenTokenTs_' + goto);
+        }
       }
 
       if (!window.LIFF_CONFIG || !window.LIFF_CONFIG.liffId) {
