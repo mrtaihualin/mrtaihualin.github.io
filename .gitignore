@@ -31,3 +31,6 @@ _archive/
 
 # ไฟล์ debug จาก AI sandbox หลุดมาติด repo — กันไม่ให้กลับมาอีก
 check_old_tmp*
+
+# โฟลเดอร์ขยะรอลบ (lock ค้าง + workflow เก่าที่ลบไปแล้ว) — กันไม่ให้หลุดขึ้น repo public
+_to_delete/

@@ -355,9 +355,15 @@ function tgSyncSrsFromServer(force){
   if(__tgSrsSyncPromise) return __tgSrsSyncPromise;
   var sb=window.getSupabaseClient?window.getSupabaseClient():null;
   if(!sb||!sb.from) return Promise.resolve(false);
-  __tgSrsSyncPromise = sb.from('tone_srs_state')
-    .select('level, word, stage, due_date, ever_failed, mastered')
-    .eq('game','typing')
+  // dedupe fetch 2026-07-20: tgWireSrsSync รีเซ็ต __tgSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
+  //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
+  var _uid=(window.READING_AUTH && READING_AUTH.user && READING_AUTH.user.id) || 'anon';
+  var _fetchSrs = window.getCachedFetch
+    ? window.getCachedFetch('tone_srs_state:typing:'+_uid, function(){
+        return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game','typing');
+      })
+    : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game','typing');
+  __tgSrsSyncPromise = _fetchSrs
     .then(function(res){
       if(res.error||!res.data){ window.__tgSrsSyncedOnce=true; return false; }
       var changed=false;
@@ -1108,109 +1114,89 @@ function restart(){
 
 // ════════════════════════════════════════════
 // PDF 報告（本輪打過的字 + 錯誤分析 + SRS下次複習日期）— Lin 2026-07-07
-// ใช้วิธีเดียวกับใบเสร็จใน classroom/index.html: render เป็น HTML ก่อน → html2canvas ถ่ายเป็นรูป → jsPDF
-// (jsPDF ฟอนต์มาตรฐานไม่รองรับภาษาไทย/จีนเลย พิมพ์ตรงๆจะเบลอ/หาย ต้องผ่านรูปภาพแทน)
+// Lin 2026-07-20: เปลี่ยนจาก html2canvas+jsPDF (โหลด CDN ทุกครั้ง เสี่ยงพัง/ช้า) → หน้าต่าง print เหมือนเกมเสียง
+//   (เกมเสียงเคยเจอ html2canvas ออกไฟล์ว่างเปล่าบนคอม + ค้างบนมือถือ มาแล้ว เปลี่ยนเป็น print window ตั้งแต่ 2026-06-19 เสถียรกว่า)
 // ════════════════════════════════════════════
-function _rgLoadScript(url){
-  return new Promise(function(resolve,reject){
-    if(document.querySelector('script[src="'+url+'"]')){ resolve(); return; }
-    var s=document.createElement('script'); s.src=url;
-    s.onload=resolve; s.onerror=reject;
-    document.head.appendChild(s);
-  });
-}
 function rgDownloadReport(){
-  var btn=document.getElementById('rg-pdf-btn');
-  if(btn){btn.disabled=true;btn.textContent='📄 產生中…';}
-  Promise.all([
-    _rgLoadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
-    _rgLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-  ]).then(function(){
-    var SERIF="'Noto Serif TC','PingFang TC',serif";
-    var SANS="'Noto Sans TC','PingFang TC',sans-serif";
-    var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
-    var levelWeight=LEVEL_WEIGHT[curLevel]||1;
-    var weightedScore=Math.round(roundScore*levelWeight);
-    var loggedIn=rgLoggedIn();
+  var SERIF="'Noto Serif TC','PingFang TC',serif";
+  var SANS="'Noto Sans TC','PingFang TC',sans-serif";
+  var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+  var levelWeight=LEVEL_WEIGHT[curLevel]||1;
+  var weightedScore=Math.round(roundScore*levelWeight);
+  var loggedIn=rgLoggedIn();
 
-    function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function statusLabel(w){
-      if(w.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
-      if(w.guide) return '<span style="color:#b06020;">💡 用提示</span>';
-      if(w.failed) return '<span style="color:#c62828;">✗ 待加強</span>';
-      return '<span style="color:#2e7d32;">✓ 答對</span>';
-    }
-    var rows=roundLog.map(function(w,i){
-      return '<tr>'
-        +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-        +'<td style="padding:7px 6px;font-size:15px;font-weight:700;">'+esc(w.th)+'</td>'
-        +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
-        +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
-        +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
-        +'<td style="padding:7px 6px;font-size:12px;text-align:center;font-weight:700;color:#8B6310;">+'+(w.pts||0)+'</td>'
-        +'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+(w.mastered?'已精通':(w.srsDue?w.srsDue:(loggedIn?'—':'未登入')))+'</td>'
-        +'</tr>';
-    }).join('');
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function statusLabel(w){
+    if(w.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
+    if(w.guide) return '<span style="color:#b06020;">💡 用提示</span>';
+    if(w.failed) return '<span style="color:#c62828;">✗ 待加強</span>';
+    return '<span style="color:#2e7d32;">✓ 答對</span>';
+  }
+  var rows=roundLog.map(function(w,i){
+    return '<tr>'
+      +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
+      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;">'+esc(w.th)+'</td>'
+      +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
+      +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
+      +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
+      +'<td style="padding:7px 6px;font-size:12px;text-align:center;font-weight:700;color:#8B6310;">+'+(w.pts||0)+'</td>'
+      +'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+(w.mastered?'已精通':(w.srsDue?w.srsDue:(loggedIn?'—':'未登入')))+'</td>'
+      +'</tr>';
+  }).join('');
 
-    // 弱點分析：打錯次數最多的字，排前面
-    var weak=roundLog.filter(function(w){return (w.wrong||0)>0;}).sort(function(a,b){return (b.wrong||0)-(a.wrong||0);}).slice(0,8);
-    var weakHtml = weak.length
-      ? weak.map(function(w){return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;">'+esc(w.th)+'（錯 '+w.wrong+' 次）</span>';}).join('')
-      : '<span style="font-size:12px;color:#888;">這輪沒有打錯的字，太棒了！🎉</span>';
+  // 弱點分析：打錯次數最多的字，排前面
+  var weak=roundLog.filter(function(w){return (w.wrong||0)>0;}).sort(function(a,b){return (b.wrong||0)-(a.wrong||0);}).slice(0,8);
+  var weakHtml = weak.length
+    ? weak.map(function(w){return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;">'+esc(w.th)+'（錯 '+w.wrong+' 次）</span>';}).join('')
+    : '<span style="font-size:12px;color:#888;">這輪沒有打錯的字，太棒了！🎉</span>';
 
-    var wrap=document.createElement('div');
-    wrap.style.cssText='position:fixed;left:-9999px;top:0;width:640px;padding:24px;background:#FBF5E7;box-sizing:border-box;font-family:'+SERIF+';color:#1C1C1C;';
-    wrap.innerHTML =
-      '<div style="background:#fff;border:1px solid #C8973A;">'
-      +'<table style="width:100%;background:#1C1C1C;border-bottom:3px solid #C8973A;border-collapse:collapse;"><tr>'
-      +'<td style="padding:22px 26px;vertical-align:top;">'
-      +'<div style="color:#fff;font-size:20px;font-weight:700;font-family:'+SERIF+';">泰語打字練習・本輪報告</div>'
-      +'<div style="font-family:'+SANS+';font-size:9px;letter-spacing:0.2em;color:#C8973A;font-weight:700;margin-top:6px;">mrtaihualin.com</div>'
-      +'</td>'
-      +'<td style="padding:22px 26px;vertical-align:top;text-align:right;color:#C8973A;white-space:nowrap;">'
-      +'<div style="font-family:'+SANS+';font-size:11px;">'+esc(today)+'</div>'
-      +'<div style="font-family:'+SANS+';font-size:11px;">'+esc(curLevel)+'級</div>'
-      +'</td></tr></table>'
-      +'<div style="padding:20px 26px;">'
-      +'<table style="width:100%;font-family:'+SANS+';font-size:12px;color:#8B6310;"><tr>'
-      +'<td>本輪得分</td><td style="text-align:right;font-size:20px;font-weight:700;color:#5a3e0a;">'+weightedScore+' 分</td>'
-      +'</tr><tr><td>答對題數</td><td style="text-align:right;">'+cleanC+' / '+roundTotal+'</td></tr></table>'
-      +'<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
-      +'<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:1.5px solid #C8973A;">'
-      +'<th style="font-size:11px;color:#8B6310;padding:5px;">#</th>'
-      +'<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">泰文</th>'
-      +'<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">意思</th>'
-      +'<th style="font-size:11px;color:#8B6310;padding:5px;">狀態</th>'
-      +'<th style="font-size:11px;color:#8B6310;padding:5px;">打錯次數</th>'
-      +'<th style="font-size:11px;color:#8B6310;padding:5px;">得分</th>'
-      +'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>'
-      +'</tr></thead><tbody>'+rows+'</tbody></table>'
-      +'<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
-      +'<div style="font-size:13px;font-weight:700;color:#8B6310;margin-bottom:6px;">⚠️ 弱點分析（打錯最多的字）</div>'
-      +'<div>'+weakHtml+'</div>'
-      +(loggedIn?'':'<div style="margin-top:12px;font-size:11px;color:#b06020;">💡 登入後系統會記住每個字的複習進度，下次能從弱點練起</div>')
-      +'</div></div>'
-      +'<div style="text-align:center;font-family:'+SANS+';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>';
-    document.body.appendChild(wrap);
+  var innerHtml =
+    '<div style="max-width:640px;margin:0 auto;padding:24px;background:#FBF5E7;box-sizing:border-box;font-family:'+SERIF+';color:#1C1C1C;">'
+    +'<div style="background:#fff;border:1px solid #C8973A;">'
+    +'<table style="width:100%;background:#1C1C1C;border-bottom:3px solid #C8973A;border-collapse:collapse;"><tr>'
+    +'<td style="padding:22px 26px;vertical-align:top;">'
+    +'<div style="color:#fff;font-size:20px;font-weight:700;font-family:'+SERIF+';">泰語打字練習・本輪報告</div>'
+    +'<div style="font-family:'+SANS+';font-size:9px;letter-spacing:0.2em;color:#C8973A;font-weight:700;margin-top:6px;">mrtaihualin.com</div>'
+    +'</td>'
+    +'<td style="padding:22px 26px;vertical-align:top;text-align:right;color:#C8973A;white-space:nowrap;">'
+    +'<div style="font-family:'+SANS+';font-size:11px;">'+esc(today)+'</div>'
+    +'<div style="font-family:'+SANS+';font-size:11px;">'+esc(curLevel)+'級</div>'
+    +'</td></tr></table>'
+    +'<div style="padding:20px 26px;">'
+    +'<table style="width:100%;font-family:'+SANS+';font-size:12px;color:#8B6310;"><tr>'
+    +'<td>本輪得分</td><td style="text-align:right;font-size:20px;font-weight:700;color:#5a3e0a;">'+weightedScore+' 分</td>'
+    +'</tr><tr><td>答對題數</td><td style="text-align:right;">'+cleanC+' / '+roundTotal+'</td></tr></table>'
+    +'<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
+    +'<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:1.5px solid #C8973A;">'
+    +'<th style="font-size:11px;color:#8B6310;padding:5px;">#</th>'
+    +'<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">泰文</th>'
+    +'<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">意思</th>'
+    +'<th style="font-size:11px;color:#8B6310;padding:5px;">狀態</th>'
+    +'<th style="font-size:11px;color:#8B6310;padding:5px;">打錯次數</th>'
+    +'<th style="font-size:11px;color:#8B6310;padding:5px;">得分</th>'
+    +'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
+    +'<div style="font-size:13px;font-weight:700;color:#8B6310;margin-bottom:6px;">⚠️ 弱點分析（打錯最多的字）</div>'
+    +'<div>'+weakHtml+'</div>'
+    +(loggedIn?'':'<div style="margin-top:12px;font-size:11px;color:#b06020;">💡 登入後系統會記住每個字的複習進度，下次能從弱點練起</div>')
+    +'</div></div>'
+    +'<div style="text-align:center;font-family:'+SANS+';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'
+    +'</div>';
 
-    return document.fonts.ready.then(function(){
-      return html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
-        document.body.removeChild(wrap);
-        var jsPDF=window.jspdf.jsPDF;
-        var imgW=canvas.width/2, imgH=canvas.height/2;
-        var pdf=new jsPDF({orientation:'portrait',unit:'px',format:[imgW,imgH]});
-        pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',0,0,imgW,imgH);
-        pdf.save('打字練習報告_'+RG_SRS.twDate()+'.pdf');
-      });
-    });
-  }).catch(function(e){
-    console.warn('PDF 產生失敗',e);
-    rgToast('產生 PDF 失敗，請稍後再試 🙏');
-  }).then(function(){
-    if(btn){btn.disabled=false;btn.textContent='📄 下載 PDF 報告';}
-  });
+  var win = window.open('', '_blank');
+  if (!win) { try{ rgToast('請允許彈出視窗才能列印報告 🙏'); }catch(e2){ alert('請允許彈出視窗才能列印報告'); } return; }
+  win.document.open();
+  win.document.write(
+    '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>打字練習報告</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">'
+    +'<style>@page{margin:10mm;}body{margin:0;background:#fff;}</style>'
+    +'</head><body>'+innerHtml+'</body></html>'
+  );
+  win.document.close();
+  win.focus();
+  setTimeout(function(){ try{ win.print(); }catch(e){} }, 600);
 }
-
 // ── GA: 遊戲結束 → 預約 / 聲調遊戲 追蹤（標準模式才會記錄）──
 function trackBookCTA(){try{if(typeof gtag==='function')gtag('event','book_trial_click',{method:'typing_game_end'});}catch(e){}}
 function trackToneLink(){try{if(typeof gtag==='function')gtag('event','game_link_click',{target:'games_hub',from:'typing_game'});}catch(e){}} // ปุ่มนี้ลิงก์ไป games.html จริง → target ต้องเป็น games_hub — แก้ 2026-07-02

@@ -80,7 +80,12 @@
   // ── ดึงจาก Supabase → merge เข้า local → เขียนกลับขึ้น Supabase (ตอนล็อกอิน) ──
   function pull() {
     if (!sb || !user) return;
-    sb.from('tone_progress').select('data').eq('user_id', user.id).maybeSingle()
+    // dedupe fetch 2026-07-20: pull() ถูกเรียกทั้งจาก getSession().then และ onAuthStateChange (ยิงหลายรอบต่อโหลดหน้าเดียว)
+    //   ห่อ SELECT ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม (ตัว merge/push ด้านล่างยังทำงานเหมือนเดิมทุกครั้งที่เรียก)
+    var _fetchTP = window.getCachedFetch
+      ? window.getCachedFetch('tone_progress:' + user.id, function () { return sb.from('tone_progress').select('data').eq('user_id', user.id).maybeSingle(); })
+      : sb.from('tone_progress').select('data').eq('user_id', user.id).maybeSingle();
+    _fetchTP
       .then(function (res) {
         var remote = (res && res.data && res.data.data) ? res.data.data : {};
         applyMerged(remote);

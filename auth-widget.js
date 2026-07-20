@@ -108,11 +108,19 @@
         setTimeout(openProfileEditor, 600);
       }
     }
-    sb.from('profiles').select('nickname, avatar, badge_id').eq('user_id', uid).maybeSingle()
+    // dedupe fetch 2026-07-20: ห่อด้วย getCachedFetch กัน SITE_AUTH.fireChange() ที่ยิงหลายครั้งต่อโหลดหน้าเดียว
+    //   (getSession resolve + onAuthStateChange initial fire + revalidate) ทำให้ profiles ถูกยิงซ้ำทั้งที่ user เดิม
+    var _fetchProfileFull = window.getCachedFetch
+      ? window.getCachedFetch('profiles:full:' + uid, function () { return sb.from('profiles').select('nickname, avatar, badge_id').eq('user_id', uid).maybeSingle(); })
+      : sb.from('profiles').select('nickname, avatar, badge_id').eq('user_id', uid).maybeSingle();
+    _fetchProfileFull
       .then(function (res) {
         if (res.error) {
           // คอลัมน์ avatar/badge_id ยังไม่มีใน Supabase → ใช้แค่ชื่อ + แคชเครื่อง
-          sb.from('profiles').select('nickname').eq('user_id', uid).maybeSingle().then(function (r2) {
+          var _fetchProfileBasic = window.getCachedFetch
+            ? window.getCachedFetch('profiles:basic:' + uid, function () { return sb.from('profiles').select('nickname').eq('user_id', uid).maybeSingle(); })
+            : sb.from('profiles').select('nickname').eq('user_id', uid).maybeSingle();
+          _fetchProfileBasic.then(function (r2) {
             myNick = (r2.data && r2.data.nickname) || null;
             myAvatar = getAvatarCache() || null;
             myBadge = getPinBadgeCache() || null;

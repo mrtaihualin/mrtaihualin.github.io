@@ -1946,7 +1946,13 @@ window.deleteFBComment = function(postId, idx) {
       var badge = document.getElementById('grw-pts');
       if (!sb || !badge) return;
       if (!window.SITE_AUTH || !window.SITE_AUTH.user) { badge.style.display = 'none'; return; }
-      sb.from('game_reward_points').select('points').eq('user_id', window.SITE_AUTH.user.id).maybeSingle()
+      // dedupe fetch 2026-07-20: grwRefreshBalance ถูกเรียกทุกครั้งที่ SITE_AUTH.fireChange() ยิง (หลายรอบต่อโหลดหน้าเดียว)
+      //   ห่อด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม (ไม่เปลี่ยนพฤติกรรม แค่กันยิงซ้ำ)
+      var _uid = window.SITE_AUTH.user.id;
+      var _fetchGrw = window.getCachedFetch
+        ? window.getCachedFetch('game_reward_points:' + _uid, function () { return sb.from('game_reward_points').select('points').eq('user_id', _uid).maybeSingle(); })
+        : sb.from('game_reward_points').select('points').eq('user_id', _uid).maybeSingle();
+      _fetchGrw
         .then(function (res) {
           var pts = (res && res.data && res.data.points) || 0;
           badge.textContent = pts; badge.style.display = 'block';
