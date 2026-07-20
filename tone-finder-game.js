@@ -859,6 +859,24 @@ function tfWireSrsSync() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireSrsSync); else tfWireSrsSync();
 // ===== TF_SRS ENGINE END =====
 
+// ── กดเลข 1–5 บนคีย์บอร์ด (คอม) แทนการคลิกปุ่มวรรณยุกต์ — Lin สั่ง 2026-07-20 ──
+// ใช้เฉพาะหน้าเดา (session-guess) เท่านั้น + ปิดเมื่อกำลังพิมพ์ในช่อง input/textarea หรือมี popup เปิดอยู่ (กันชนกับ 開始聲調推導/我有問題)
+function tfWireToneKeyboard() {
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (typeof S === 'undefined' || S.step !== 'session-guess') return;
+    if (document.querySelector('.sg-start-overlay, .tf-ask-overlay')) return; // popup เปิดอยู่ ห้ามกดลัด
+    var n = parseInt(e.key, 10);
+    if (n < 1 || n > 5) return;
+    var btns = document.querySelectorAll('.sg-tone-btn');
+    var btn = btns[n - 1];
+    if (btn) { btn.click(); e.preventDefault(); }
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireToneKeyboard); else tfWireToneKeyboard();
+
 // ════════════════════════════════════════════════════════════
 // ===== TF_GAME ENGINE START =====  (สเตจ 2: streak/freeze/เป้า/คำทอง)
 // ════════════════════════════════════════════════════════════
@@ -3265,6 +3283,7 @@ function stepSessionGuess() {
     '<div class="sg-divider"></div>'+
     '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
+    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#a08a5a;margin-top:4px;">💡 電腦也可以直接按鍵盤 1–5</div>'+
     dontKnowHtml+
   '</div>';
 }
