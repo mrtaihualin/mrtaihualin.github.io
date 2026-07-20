@@ -5680,18 +5680,19 @@ function onReqScheduleChange(idx) {
   if (!isValidTimeStr(timeVal)) { hint.style.display = 'block'; hint.textContent = '⚠️ 時間格式不對，請用 HH:MM，例如 14:30'; return; }
   const s = (nextClassCtx && typeof studentsCache !== 'undefined') ? studentsCache[nextClassCtx.token] : null;
   const studentTz = s && s.pending_student_tz;
-  hint.style.display = 'block';
   if (studentTz) {
     // 2026-07-14 加：時區字串萬一是壞資料，parseInTzToDate 內的 Intl.DateTimeFormat 會直接
     // throw——這裡只是即時預覽用，接住錯誤退回泰國時間版本就好，不要讓整個輸入框卡住不能用
+    // 2026-07-22 改（Lin 要求移除）：時區換算正常時不再顯示「＝ 老師端泰國時間」這行提示，只在有問題時才顯示警告。
     try {
-      const abs = parseInTzToDate(dateVal, timeVal, studentTz);
-      const thai = formatInTz(abs, TEACHER_TZ);
-      hint.textContent = '＝ 老師端泰國時間：' + thai.dateStr + ' ' + thai.timeStr;
+      parseInTzToDate(dateVal, timeVal, studentTz);
+      hint.style.display = 'none';
     } catch (e) {
+      hint.style.display = 'block';
       hint.textContent = '⚠️ 時區資料有問題，這個時間會直接當成泰國時間送給老師，建議送出後跟老師確認一下';
     }
   } else {
+    hint.style.display = 'block';
     hint.textContent = '⚠️ 你還沒設定過自己的時區，這個時間會直接當成泰國時間送給老師（跟你想的可能會差好幾個小時，建議先跟老師確認）';
   }
 }
@@ -6411,13 +6412,23 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
     } catch (e) { /* 這步失敗頂多是少一次 48 小時提醒，不影響已經成功的回覆 */ }
   }
   try {
+    const timeLabelForTeacher = chosenOpt ? (chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '')) : '（時間資料異常，請到網站確認）';
     const msg = response === 'accepted'
-      ? ('ℹ️ 學生已經選好新時間' + (chosenOpt ? '（' + chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '') + '）' : '') + '，到網站按「確認並搬 Calendar」')
+      ? ('ℹ️ 學生已經選好新時間（' + timeLabelForTeacher + '），到網站按「確認並搬 Calendar」')
       : '⚠️ 學生說這些時間都不方便，請直接聯絡學生討論';
     // 2026-07-20 加（Lin 要求：都不方便要能直接聯繫學生，不能只有純文字警告）：都不方便時附一顆
     // 「💬 聯繫學生」按鈕——2026-07-20 改：直接在 LINE 裡打字回覆，不用開網站。
+    // 2026-07-22 加（Lin 要求：改期也要能直接在 LINE 按一顆按鈕完成，不用開網站）：接受新時間時
+    // 也附一顆按鈕，共用 line-webhook 新增的 action=confirm_reschedule_move（跟 confirm_add_class
+    // 同一套模式），不管學生是從網站還是從 LINE 回覆的，老師都能直接在 LINE 按完成。
     const bodyPayload = { to: 'teacher', message: msg };
-    if (response !== 'accepted') {
+    if (response === 'accepted') {
+      bodyPayload.flex = {
+        title: 'ℹ️ 學生已經選好新時間',
+        bodyText: '時間：' + timeLabelForTeacher + '（泰國時間）\n\n可以直接按下方按鈕搬 Calendar，或到網站處理',
+        buttons: [{ label: '✅ 確認並搬 Calendar', postbackData: 'action=confirm_reschedule_move&request=' + encodeURIComponent(requestId), style: 'primary' }],
+      };
+    } else {
       bodyPayload.flex = {
         title: '⚠️ 學生說這些時間都不方便',
         bodyText: msg,
@@ -6582,6 +6593,15 @@ function notifyTeacherClassRequest(d) {
       flexButtons.push({ label: '📋 到網站處理', uri: siteLink });
     }
 
+    // 2026-07-22 改（Lin 要求：申請加課這張卡版面精簡，LINE 卡片裡不用再重複寫「學生／類型／
+    // Google Calendar 連結／到網站處理」——這些下面 rows／title 已經有了，只留新的上課時間就好。
+    // email 備援 message 維持原本完整版，只有 LINE flex 卡片的 bodyText 改用精簡版）。
+    var flexBodyText = message;
+    if (isAdd) {
+      flexBodyText = (addRows ? addRowsText : ((d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')));
+      if (d.note) flexBodyText += '\n備註：' + d.note;
+    }
+
     fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
       // 2026-07-06 修正：Supabase Edge Function 預設一定要帶 anon key，不然還沒進到我們的程式碼就先被擋 401
@@ -6593,7 +6613,7 @@ function notifyTeacherClassRequest(d) {
       body: JSON.stringify({
         to: 'teacher',
         message: subject + '\n\n' + message,
-        flex: { title: subject, bodyText: message, rows: flexRows, buttons: flexButtons }
+        flex: { title: subject, bodyText: flexBodyText, rows: flexRows, buttons: flexButtons }
       })
     }).then(function(r) {
       if (!r.ok) sendEmailFallback(); // Edge Function 還沒部署好／回錯誤 → 改寄 email，不會漏通知

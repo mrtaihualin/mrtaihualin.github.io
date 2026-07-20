@@ -28,6 +28,12 @@
 // ⚠️ SCHEDULE_SYNC_DAYS ด้านล่างต้อง "ตรงกับ" ค่าเดียวกันใน classroom/index.html เสมอ —
 //   ถ้าแก้ฝั่งเว็บ ต้องกลับมาแก้ที่นี่ด้วย ไม่งั้นสองฝั่งจะซิงค์ช่วงวันไม่เท่ากัน
 //
+// 🔴 2026-07-20 แก้บั๊กสำคัญ (Lin เจอ：ข้อความเตือนก่อนเรียน "ส่งซ้ำ 2 รอบตลอด" ทั้งเตือน 24 ชม.
+//   และเตือน 30 นาที)：ต้นตอคือฟังก์ชันนี้ "ลบคาบอนาคตทั้งหมดทิ้งก่อนเขียนใหม่" ทุกรอบ (ทุก 15-30 นาที)
+//   ทำให้คอลัมน์ line_reminder_sent/line_reminder24h_sent/line_followup_sent ใน classroom_schedule
+//   รีเซ็ตกลับเป็น false ทุกรอบไปด้วย → class-reminder-cron (รันทุก 5 นาที) เห็นว่ายังไม่เคยส่งอีกรอบ
+//   เลยส่งซ้ำ แก้แล้ว: เปลี่ยนเป็น "upsert ก่อน (ไม่แตะคอลัมน์เตือน) แล้วค่อยลบเฉพาะแถวที่หายไปจริง
+//   ทีละ id" ตามสูตรเดียวกับฝั่งเว็บ (ดูรายละเอียดที่คอมเมนต์ตรงจุดแก้ด้านล่าง)
 // 🔴 2026-07-19 แก้บั๊กสำคัญ (Lin เจอตอนทดสอบปุ่มลบ Calendar จาก LINE)：เดิมตอน sync ใหม่ทุกรอบ
 //   ไม่ได้เก็บ calendar_event_id ของ Google ไว้เลย (อ่านแค่ชื่อ/วันที่/เวลา) — เพราะรอบนี้ "ลบตาราง
 //   อนาคตทั้งหมดทิ้งก่อนเขียนใหม่" (บรรทัด delError ด้านล่าง) ทุก 15-30 นาที ID ที่เคยบันทึกถูกต้องตอน
@@ -230,20 +236,50 @@ serve(async (req) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // ── ล้างคาบอนาคตเดิมทิ้งก่อนเขียนชุดใหม่ (เหมือนฝั่งเว็บ) — เช็ค error เสมอ ห้ามล้มเหลวเงียบๆ ──
-    const { error: delError } = await supabase.from('classroom_schedule').delete({ count: 'exact' }).gte('lesson_date', todayIso);
-    if (delError) {
-      console.error('[calendar-schedule-sync-cron] ล้างตารางเก่าไม่สำเร็จ，รอบนี้ไม่เขียนข้อมูลใหม่กันซ้ำซ้อน：', delError.message);
-      return new Response(JSON.stringify({ ok: false, stage: 'delete', error: delError.message }), {
-        status: 500, headers: { 'Content-Type': 'application/json' },
+    // 🔴 2026-07-20 แก้บั๊กสำคัญ (Lin เจอ：ข้อความเตือนก่อนเรียนส่งซ้ำ 2 รอบทุกครั้ง — ทั้งเตือน 24 ชม.
+    //   และเตือน 30 นาที)：เดิมตรงนี้ "ลบคาบอนาคตทั้งหมดทิ้งก่อนเขียนใหม่" ทุกรอบ (ทุก 15-30 นาที)
+    //   พอลบแล้วสร้างแถวใหม่ คอลัมน์ line_reminder_sent / line_reminder24h_sent / line_followup_sent
+    //   (ที่ class-reminder-cron เพิ่งติ๊ก true ไปเมื่อกี้) จะรีเซ็ตกลับเป็น false ตามค่า default ทุกรอบ
+    //   ไปด้วย → class-reminder-cron รอบถัดไป (ทุก 5 นาที) เห็นว่า "ยังไม่เคยส่ง" อีกครั้งในหน้าต่าง
+    //   เวลาเดิม เลยส่งซ้ำ — ตรงกับที่ Lin เจอว่าส่งซ้ำ 2 รอบตลอด
+    //   แก้ตามสูตรเดียวกับฝั่งเว็บ (syncScheduleToSupabase ที่แก้ไปแล้ว 2026-07-19，ดูคอมเมนต์ที่นั่น)：
+    //   "เขียนของใหม่ให้สำเร็จก่อน (upsert ทับเฉพาะ title/end_time/calendar_event_id ไม่แตะคอลัมน์
+    //   เตือน เพราะไม่ได้ส่งค่าคอลัมน์เตือนเข้าไปใน payload เลย) แล้วค่อยลบเฉพาะแถวที่หายไปจาก
+    //   Calendar จริงๆ ทีละ id" — ไม่มีวินาทีไหนที่ตารางว่าง และคอลัมน์เตือนของคาบที่ยังอยู่จะไม่ถูกแตะเลย
+    if (!rows.length) {
+      console.warn('[calendar-schedule-sync-cron] รอบนี้จับคู่คาบไม่ได้เลย → ไม่แตะฐานข้อมูล (กันลบตารางทิ้งทั้งหมด)');
+      return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'no_matched_rows', events_checked: events.length }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
       });
     }
 
     let upsertError = null;
-    if (rows.length) {
+    {
       const { error } = await supabase.from('classroom_schedule').upsert(rows, { onConflict: 'token,lesson_date,start_time' });
       upsertError = error;
-      if (error) console.error('[calendar-schedule-sync-cron] เขียนตารางใหม่ไม่สำเร็จ：', error.message);
+      if (error) {
+        console.error('[calendar-schedule-sync-cron] เขียนตารางใหม่ไม่สำเร็จ，รอบนี้ไม่ลบอะไรทั้งสิ้น（กันข้อมูลหาย）：', error.message);
+        return new Response(JSON.stringify({ ok: false, stage: 'upsert', error: error.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // ---- ค่อยเก็บกวาดคาบเก่าที่หายไปจาก Calendar แล้ว (ลบทีละ id เท่านั้น ไม่ลบเหมาเข่ง) ----
+    const keepKeys = new Set(rows.map((r) => r.token + '|' + r.lesson_date + '|' + r.start_time));
+    const { data: existingRows, error: selError } = await supabase.from('classroom_schedule')
+      .select('id,token,lesson_date,start_time')
+      .gte('lesson_date', todayIso);
+    if (selError) {
+      console.error('[calendar-schedule-sync-cron] อ่านตารางเดิมเพื่อเก็บกวาดไม่สำเร็จ（ของใหม่เขียนลงไปแล้ว ไม่มีอะไรหาย แค่อาจมีคาบเก่าค้าง）：', selError.message);
+    } else {
+      const staleIds = (existingRows || [])
+        .filter((r) => !keepKeys.has(r.token + '|' + r.lesson_date + '|' + (r.start_time || '')))
+        .map((r) => r.id);
+      if (staleIds.length) {
+        const { error: delError } = await supabase.from('classroom_schedule').delete().in('id', staleIds);
+        if (delError) console.error('[calendar-schedule-sync-cron] เก็บกวาดคาบเก่าไม่สำเร็จ（อาจมีคาบยกเลิกค้างอยู่）：', delError.message);
+      }
     }
 
     return new Response(JSON.stringify({

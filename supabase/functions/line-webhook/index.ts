@@ -19,9 +19,10 @@
 //      ปุ่มที่นักเรียนกดตอบรับ/ปฏิเสธเวลาครูเสนอ (ดู submitProposeTime ในเว็บ) → accept_offer ตอนนี้
 //      แนบ opt=<index> บอกว่าเลือกตัวเลือกไหนใน proposed_options (สูงสุด 3 อัน) แล้วอัปเดต
 //      requested_date/requested_time + offer_status='accepted' · decline_offer = ทั้งหมดไม่สะดวก
-//      **ไม่แตะ Google Calendar** (Edge Function ไม่มี Google OAuth token ของครู ทำไม่ได้จากฝั่งนี้)
-//      ครูต้องกลับไปเปิดหน้าเว็บเพื่อกด "✅ ยืนยันและย้าย Calendar" เอง ระบบจะโชว์ให้เห็นในหน้าแรกอัตโนมัติ
-//      ทั้งสองแบบตอนนี้ push แจ้งครูทันที (Lin ขอ) ไม่ต้องรอครูเปิดเว็บเองถึงจะรู้
+//      **ไม่แตะ Google Calendar เอง** (แค่บันทึก offer_status/requested_date/requested_time)
+//      ทั้งสองแบบตอนนี้ push แจ้งครูทันที (Lin ขอ) ไม่ต้องรอครูเปิดเว็บเองถึงจะรู้ · accept_offer
+//      ตอนนี้ push เป็นปุ่ม "✅ 確認並搬 Calendar" กดจาก LINE ได้เลย (2026-07-22 加，ดูข้อ 9 ด้านล่าง)
+//      ไม่ต้องเปิดเว็บอีกต่อไป (เดิมต้องเปิดเว็บกด "✅ 確認並搬 Calendar" เอง ก่อน service account พร้อม)
 //   3) action=ack_teacher_cancel (2026-07-16 เพิ่ม) — ครูสั่งยกเลิกคาบ (teacherCancelClassNowInner)
 //      ไม่ลบ Calendar ทันทีแล้ว ต้องรอนักเรียนกด "我知道了" ก่อน (กดฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้ อันไหน
 //      กดก่อนนับอันนั้น) → set teacher_cancel_ack_at แล้ว push แจ้งครูว่ากดยืนยันลบได้แล้ว
@@ -59,6 +60,16 @@
 //      handleTeacherTextMessage ด้านบน serve()) อ่านตาราง แล้ว pushLine ข้อความนั้นไปหานักเรียนทันที
 //      แล้วเคลียร์ตารางทิ้ง (ใช้ได้ครั้งเดียวต่อการกด กันพิมพ์ประโยคถัดๆ ไปหลุดไปหาคนเดิม) หมดอายุ 15 นาที
 //      ⚠️ ต้องรัน SQL สร้างตาราง line_pending_reply ก่อน (ดูไฟล์ SQL แยกที่เตรียมให้ Lin รันเอง)
+//   9) action=confirm_reschedule_move (2026-07-22 เพิ่ม, Lin ขอ：改期也要能直接在 LINE 按一顆按鈕完成) —
+//      ครูกดปุ่มเดียวใน LINE ยืนยัน "搬課堂" (หลังนักเรียนกด accept_offer เลือกเวลาใหม่แล้ว) → ตอนนี้
+//      **PATCH เวลาของ Google Calendar event เดิมจริงทันที** ผ่าน service account (ดูฟังก์ชัน
+//      moveCalendarEventById ด้านล่าง — เหมือน confirm_add_class/confirm_cancel_delete แต่เป็นการ "ย้าย"
+//      ไม่ใช่สร้าง/ลบ) ใช้ classroom_requests.calendar_event_id ตรงตัว (ไม่เดาจากชื่อ+วันที่เหมือนเว็บรุ่นเก่า
+//      confirmAcceptedOfferInner) เงื่อนไข: offer_status ต้องเป็น 'accepted' ก่อน (นักเรียนเลือกเวลาแล้ว)
+//      ยืนยันสิทธิ์คนกดเป็นครู + atomic lock คอลัมน์เดียวกัน (processing_started_at) เหมือนข้อ 6
+//      ย้ายสำเร็จแล้วเขียนบันทึกลง classroom_calendar_backups (action='move') ให้หน้าเว็บ "↩️ 最近處理
+//      （還能復原）" เห็น+復原ได้เหมือนกดจากเว็บทุกประการ แล้วแจ้งทั้งนักเรียน(換算เป็นเวลาท้องถิ่นของ
+//      นักเรียนเอง ถ้ามีข้อมูล timezone)และครูเอง
 //
 // 2026-07-13 สำคัญมาก：ตั้งแต่เปลี่ยนมาให้ "處理" ปุ่มบนเว็บค้นหา+ย้าย/ลบ Calendar เองแล้ว
 //   ปุ่ม "✅ 已處理"/"❌ 婉拒" แบบเดิมที่เคยส่งไปให้ครูกดตรงจาก LINE **เอาออกจากข้อความแจ้งเตือนใหม่แล้ว**
@@ -315,18 +326,21 @@ async function deleteCalendarEventById(eventId) {
 // 跟網站端 backupCalendarEvent 用同一張表、同一組欄位——這樣不管老師是從網站按「✅ 處理」還是從
 // LINE 按按鈕完成，老師網站上「↩️ 最近處理（還能復原）」那張持久通知卡片都看得到、都能復原。
 // best-effort：備份失敗不擋主流程（Calendar 已經真的動了），只留 log 讓 Lin 之後手動補。
-async function backupCalendarEventServer(supabase, requestId, token, action, eventObj) {
+async function backupCalendarEventServer(supabase, requestId, token, action, eventObj, newStartIso) {
   if (!eventObj) return;
   try {
     const oldStartIso = eventObj.start && (eventObj.start.dateTime || eventObj.start.date);
+    // 2026-07-22 加：action='move' 時跟網站端 backupCalendarEvent 一樣多存 new_event_id（搬移沒換 ID，
+    // 就是同一個事件）+ new_start，「↩️ 最近處理（還能復原）」卡片才看得到「舊時間 → 新時間」。
     const { error } = await supabase.from('classroom_calendar_backups').insert({
       request_id: requestId || null,
       token: token || null,
       action: action,
       old_event_id: eventObj.id,
-      new_event_id: null,
+      new_event_id: action === 'move' ? eventObj.id : null,
       old_event_json: eventObj,
       old_start: oldStartIso,
+      new_start: newStartIso || null,
     });
     if (error) console.error('[line-webhook] ⚠️ 備份 Calendar 事件失敗（不影響已經完成的操作，但老師網站上「最近處理」看不到這筆）：', error.message);
   } catch (e) {
@@ -421,6 +435,85 @@ async function createCalendarEventById(eventBody) {
       return { ok: false, reason: 'verify_mismatch', detail: 'Calendar 顯示的時間跟預期不一樣（顯示：' + (actualStart || '無') + '）', eventCreatedButUnverified: ev.id };
     }
     return { ok: true, eventId: ev.id };
+  } catch (e) {
+    return { ok: false, reason: 'fetch_error', detail: e.message };
+  }
+}
+
+// 2026-07-22 加：跟網站端 studentFacingTimeLabel 同樣的用途——把 UTC ISO 字串換算成學生自己
+// 當地時區的日期+時間，通知學生時才不用一直讓學生自己心算泰國時間。沒有 studentTz 或換算失敗
+// 就回傳 null，呼叫端退回顯示泰國時間版本（不會整段訊息壞掉）。
+function formatIsoInTz(iso, tz) {
+  if (!tz) return null;
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(new Date(iso));
+    const map = {}; parts.forEach((p) => { map[p.type] = p.value; });
+    return map.year + '-' + map.month + '-' + map.day + ' ' + map.hour + ':' + map.minute;
+  } catch (e) { return null; }
+}
+
+// 從一個 UTC ISO 字串取出「泰國時間（UTC+7，全年固定不變）」的 HH:MM，給 moveCalendarEventById
+// 在學生沒指定新時間（理論上不該發生，防呆用）時，沿用原本事件的時間點。
+function extractBangkokTimeStr(iso) {
+  const d = new Date(iso);
+  const totalMin = (d.getUTCHours() * 60 + d.getUTCMinutes() + 7 * 60) % (24 * 60);
+  const hh = Math.floor(totalMin / 60), mm = totalMin % 60;
+  return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+}
+
+// action=confirm_reschedule_move 用（2026-07-22 加，Lin 要求：改期也要能直接在 LINE 按一顆按鈕完成）：
+// 把已存在的事件 PATCH 成新的開始/結束時間（搬課堂），課堂長度沿用原本事件的長度，跟網站端
+// confirmAcceptedOfferInner 的邏輯一樣，只是這裡用服務帳號直接動 Calendar，不用等老師開電腦。
+// 一樣先 GET 證明服務帳號看得到這個 event、PATCH 完再 GET 驗證時間真的改了（RELIABILITY FIRST，
+// 跟 deleteCalendarEventById／createCalendarEventById 同一套「不能只信任 API 回應」原則）。
+async function moveCalendarEventById(eventId, newDateStr, newTimeStrOrNull) {
+  const token = await getGoogleCalendarToken();
+  if (!token) return { ok: false, reason: 'no_token' };
+  const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
+  if (!calendarId) return { ok: false, reason: 'no_calendar_id', detail: 'ยังไม่ได้ตั้ง secret GOOGLE_CALENDAR_ID' };
+  const eventUrl = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(eventId);
+  try {
+    const preRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
+    if (preRes.status === 404 || preRes.status === 410) {
+      return { ok: false, reason: 'not_visible', detail: '服務帳號目前看不到這個 event（' + preRes.status + '）——請確認 Calendar 有分享給服務帳號、GOOGLE_CALENDAR_ID 有沒有寫對' };
+    }
+    if (!preRes.ok) {
+      const detail = await preRes.text().catch(() => '');
+      return { ok: false, reason: 'pre_check_http_' + preRes.status, detail: detail.slice(0, 300) };
+    }
+    const preEventData = await preRes.json().catch(() => ({}));
+    if (preEventData.status === 'cancelled') {
+      return { ok: false, reason: 'already_cancelled', detail: '這堂課的 Calendar 事件已經被刪除了，沒辦法搬' };
+    }
+
+    const oldStartIso = preEventData.start && (preEventData.start.dateTime || preEventData.start.date);
+    const oldEndIso = preEventData.end && (preEventData.end.dateTime || preEventData.end.date);
+    const durationMs = (oldStartIso && oldEndIso && (new Date(oldEndIso).getTime() - new Date(oldStartIso).getTime())) || 3600000;
+    const effectiveTimeStr = newTimeStrOrNull || (oldStartIso ? extractBangkokTimeStr(oldStartIso) : '00:00');
+    const newStartIso = bangkokToIso(newDateStr, effectiveTimeStr);
+    const newEndIso = new Date(new Date(newStartIso).getTime() + durationMs).toISOString();
+
+    const patchRes = await fetch(eventUrl, {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start: { dateTime: newStartIso, timeZone: 'Asia/Bangkok' }, end: { dateTime: newEndIso, timeZone: 'Asia/Bangkok' } }),
+    });
+    if (!patchRes.ok) {
+      const detail = await patchRes.text().catch(() => '');
+      return { ok: false, reason: 'http_' + patchRes.status, detail: detail.slice(0, 300) };
+    }
+
+    // PATCH 完一定要回頭 GET 確認時間真的改了，不能只信任 PATCH 當下的回應（RELIABILITY FIRST）
+    const verifyRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
+    if (!verifyRes.ok) return { ok: false, reason: 'verify_failed_http_' + verifyRes.status, eventMovedButUnverified: true };
+    const verifyEv = await verifyRes.json();
+    const actualStart = verifyEv.start && (verifyEv.start.dateTime || verifyEv.start.date);
+    if (!actualStart || Math.abs(new Date(actualStart).getTime() - new Date(newStartIso).getTime()) > 60000) {
+      return { ok: false, reason: 'verify_mismatch', detail: 'Calendar 顯示的時間跟預期不一樣（顯示：' + (actualStart || '無') + '）', eventMovedButUnverified: true };
+    }
+    return { ok: true, oldEventData: preEventData, newStartIso: newStartIso };
   } catch (e) {
     return { ok: false, reason: 'fetch_error', detail: e.message };
   }
@@ -612,8 +705,12 @@ serve(async (req) => {
           const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
           if (teacherUserId) {
             if (newOfferStatus === 'accepted') {
-              const msg = 'ℹ️ 學生已經選好新時間' + (chosenOpt ? '（' + chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '') + '）' : '') + '，到網站按「確認並搬 Calendar」';
-              await pushLine(channelToken, teacherUserId, msg);
+              // 2026-07-22 改（Lin 要求：改期也要能直接在 LINE 按一顆按鈕完成，不用開網站）：
+              // 以前這裡只推純文字叫老師自己去網站按，現在附一顆按鈕，共用下面新增的
+              // action=confirm_reschedule_move（跟 confirm_add_class／confirm_cancel_delete 同一套模式）。
+              const timeLabel = chosenOpt ? (chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '')) : '（時間資料異常，請到網站確認）';
+              await pushLineFlex(channelToken, teacherUserId, 'ℹ️ 學生已經選好新時間', '時間：' + timeLabel + '（泰國時間）\n\n可以直接按下方按鈕搬 Calendar，或到網站處理',
+                [{ label: '✅ 確認並搬 Calendar', postbackData: 'action=confirm_reschedule_move&request=' + encodeURIComponent(requestId), style: 'primary' }]);
             } else {
               // 2026-07-20 加（Lin 要求：都不方便要能直接聯繫學生）：跟網站端 respondToOfferAsStudent
               // 同一套改法，從純文字警告改成附一顆「💬 聯繫學生」按鈕。
@@ -624,6 +721,123 @@ serve(async (req) => {
                 [{ label: '💬 聯繫學生', postbackData: 'action=start_contact_student&token=' + encodeURIComponent(reqRow.token || '') }]);
             }
           }
+        }
+        continue;
+      }
+
+      if (action === 'confirm_reschedule_move') {
+        // ── 2026-07-22 加（Lin 要求：學生接受新時間後，老師要能直接在 LINE 按一顆按鈕把課搬過去，
+        // 不用開網站）── 前提：這筆 classroom_requests 一定要有 calendar_event_id（原本課堂事件的
+        // ID，送出改期申請時就存進去了）跟 offer_status='accepted'（學生已經選好新時間，存在
+        // requested_date/requested_time）。用 ID 直接動，不像網站舊版 confirmAcceptedOfferInner
+        // 那樣用姓名+日期搜尋（更準、也不用等找不到/找到多筆的情況）。
+        const requestIdMove = params.get('request');
+        if (!requestIdMove) continue;
+
+        const teacherUserIdMove = Deno.env.get('LINE_TEACHER_USER_ID');
+        const senderIsTeacherMove = event.source && teacherUserIdMove && event.source.userId === teacherUserIdMove;
+        if (!senderIsTeacherMove) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_move: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdMove);
+          continue;
+        }
+
+        const { data: reqRowMove, error: fetchErrMove } = await supabase
+          .from('classroom_requests')
+          .select('calendar_event_id,status,token,requested_date,requested_time,offer_status,student_name')
+          .eq('id', requestIdMove)
+          .maybeSingle();
+
+        if (fetchErrMove || !reqRowMove) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 找不到這筆申請了，請到網站確認');
+          continue;
+        }
+        if (reqRowMove.status === 'acknowledged') {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經處理過了');
+          continue;
+        }
+        if (reqRowMove.offer_status !== 'accepted') {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 學生還沒接受新時間（或狀態已經變了），請到網站確認目前狀態');
+          continue;
+        }
+        if (!reqRowMove.calendar_event_id) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這筆沒有記錄 Calendar 事件 ID，請到網站手動處理');
+          continue;
+        }
+        if (!reqRowMove.requested_date) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這筆沒有記錄學生選的新日期，請到網站手動處理');
+          continue;
+        }
+
+        // ── 原子鎖：跟 confirm_add_class／confirm_cancel_delete 同一個欄位、同一套語意 ──
+        const { error: claimErrMove, count: claimCountMove } = await supabase
+          .from('classroom_requests')
+          .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
+          .eq('id', requestIdMove)
+          .eq('status', 'pending')
+          .is('processing_started_at', null)
+          .select('id');
+
+        if (claimErrMove) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_move: ล็อกก่อนย้ายพัง:', claimErrMove.message, 'request=', requestIdMove);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 準備搬課失敗：' + claimErrMove.message + '\n還沒動 Calendar');
+          continue;
+        }
+        if (!claimCountMove) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          continue;
+        }
+
+        const moveResult = await moveCalendarEventById(reqRowMove.calendar_event_id, reqRowMove.requested_date, reqRowMove.requested_time || null);
+        if (!moveResult.ok) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_move 搬 Calendar 失敗:', JSON.stringify(moveResult), 'request=', requestIdMove);
+          if (moveResult.eventMovedButUnverified) {
+            // 可能已經搬了但驗證失敗——不敢放鎖讓人重按（可能搬兩次、時間亂掉），請 Lin 手動檢查
+            if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ Calendar 可能已經搬了但無法確認狀態，請直接到 Google Calendar／Supabase 手動檢查這筆（id: ' + requestIdMove + '），先不要重複點這顆按鈕');
+            continue;
+          }
+          const { error: unlockErrMove } = await supabase.from('classroom_requests').update({ processing_started_at: null }).eq('id', requestIdMove);
+          if (unlockErrMove) console.error('[line-webhook] ⚠️ confirm_reschedule_move: 解鎖失敗:', unlockErrMove.message, 'request=', requestIdMove);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 搬 Calendar 失敗（可以重新點一次，或到網站手動處理）\n原因：' + (moveResult.reason || '未知') + (moveResult.detail ? '\n' + moveResult.detail : ''));
+          }
+          continue;
+        }
+
+        // 搬成功後備份（best-effort，失敗不擋主流程，Calendar 已經真的搬了）
+        await backupCalendarEventServer(supabase, requestIdMove, reqRowMove.token, 'move', moveResult.oldEventData, moveResult.newStartIso);
+
+        // Calendar 搬成功——關單+解鎖同一個 atomic update（跟 confirm_add_class／confirm_cancel_delete 一樣）
+        const { error: updErrMove, count: updCountMove } = await supabase
+          .from('classroom_requests')
+          .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
+          .eq('id', requestIdMove)
+          .eq('status', 'pending');
+
+        if (updErrMove || !updCountMove) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_move: Calendar 搬成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrMove ? updErrMove.message : '更新 0 筆', 'request=', requestIdMove);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經搬成功了，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdMove + '）');
+          }
+          continue;
+        }
+
+        if (channelToken && event.replyToken) {
+          await replyLine(channelToken, event.replyToken, '✅ 已把課搬到新時間，並通知學生了');
+        }
+
+        // 通知學生（best-effort，失敗不影響已經成功的搬課）——換算成學生自己的時區，跟網站端
+        // confirmAcceptedOfferInner 用 studentFacingTimeLabel 同樣的邏輯，沒有時區資料就退回泰國時間。
+        if (channelToken && reqRowMove.token) {
+          try {
+            const { data: stuRowMove } = await supabase.from('classroom_students').select('line_user_id,pending_student_tz').eq('token', reqRowMove.token).maybeSingle();
+            if (stuRowMove && stuRowMove.line_user_id) {
+              const localLabel = moveResult.newStartIso ? formatIsoInTz(moveResult.newStartIso, stuRowMove.pending_student_tz) : null;
+              const timeLabelForStudent = localLabel
+                ? (localLabel + '（你的當地時間）')
+                : (reqRowMove.requested_date + ' ' + (reqRowMove.requested_time || '') + '（泰國時間）');
+              await pushLine(channelToken, stuRowMove.line_user_id, '老師已確認，課堂已經改到 ' + timeLabelForStudent + '，如有疑問請直接聯絡老師');
+            }
+          } catch (e) { /* แจ้งนักเรียนไม่สำเร็จ ไม่กระทบว่าย้าย Calendar สำเร็จแล้ว */ }
         }
         continue;
       }
