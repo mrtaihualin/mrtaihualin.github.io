@@ -74,7 +74,13 @@ async function pushLine(channelToken, targetUserId, message) {
 // ยกเว้น caller จะส่ง b.color มาเอง (--gold-bright สำหรับ primary, --gold-light/ครีม สำหรับ secondary)
 // 2026-07-13 แก้เพิ่ม: ห้ามใส่ emoji ✅/❌ ในปุ่ม เพราะ emoji มีสีเขียว/แดงตายตัวในตัวเอง
 // ต่อให้ตั้ง color ของปุ่มเป็นอะไรก็ยังโผล่เขียว/แดงแทรกอยู่ดี ไม่ตรงธีม
-function buildFlexMessage(title, bodyText, buttons) {
+// 2026-07-20 加（Lin 實測 mockup 後要求：老師一次提議好幾個時段時，畫面要改成「日期時間」
+// 一行文字在左邊，「接受」「婉拒」兩顆小按鈕排在同一行的右邊——不要像原本那樣每個時段各自變成
+// 一整條寫著「接受：7/21 05:30」的長按鈕）：新增選填的第 4 個參數 rows，每個元素是
+// { label: '日期時間文字', buttons: [{label,postbackData 或 uri,style,color}, ...] }，
+// 會排成 layout:'horizontal' 的一行（文字 flex:3 靠左、按鈕各 flex:2 排右邊）。
+// 沒有帶 rows 的舊呼叫方式（例如取消/改期單顆按鈕的通知）完全不受影響，維持原本 footer 直式按鈕。
+function buildFlexMessage(title, bodyText, buttons, rows) {
   const footerContents = (buttons || []).map((b) => ({
     type: 'button',
     style: b.style || 'secondary',
@@ -84,18 +90,38 @@ function buildFlexMessage(title, bodyText, buttons) {
       ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
       : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },
   }));
+  const rowContents = (rows || []).map(function (r, i) {
+    return {
+      type: 'box', layout: 'horizontal', alignItems: 'center', spacing: 'sm',
+      margin: i > 0 ? 'sm' : 'none',
+      contents: [
+        { type: 'text', text: String(r.label || ''), size: 'sm', color: '#1C1C1C', wrap: true, flex: 3, gravity: 'center' },
+      ].concat((r.buttons || []).map((b) => ({
+        type: 'button',
+        style: b.style || 'secondary',
+        height: 'sm',
+        flex: 2,
+        color: b.color || (b.style === 'primary' ? '#8B6310' : '#FAF4E8'),
+        action: b.uri
+          ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
+          : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },
+      }))),
+    };
+  });
+  const bodyContents = [
+    { type: 'text', text: title, weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
+    { type: 'text', text: bodyText, size: 'sm', color: '#6b6b6b', wrap: true },
+  ];
+  if (rowContents.length) {
+    bodyContents.push({ type: 'separator', margin: 'md' });
+    bodyContents.push.apply(bodyContents, rowContents);
+  }
   return {
     type: 'flex',
     altText: title.slice(0, 400),
     contents: {
       type: 'bubble',
-      body: {
-        type: 'box', layout: 'vertical', spacing: 'md',
-        contents: [
-          { type: 'text', text: title, weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
-          { type: 'text', text: bodyText, size: 'sm', color: '#6b6b6b', wrap: true },
-        ],
-      },
+      body: { type: 'box', layout: 'vertical', spacing: 'md', contents: bodyContents },
       footer: footerContents.length
         ? { type: 'box', layout: 'vertical', spacing: 'sm', contents: footerContents }
         : undefined,
@@ -187,7 +213,7 @@ serve(async (req) => {
     // ไม่ส่ง body.flex มา → พฤติกรรมเดิมทุกอย่าง (ข้อความธรรมดา) ไม่กระทบของเดิม
     const flex = body?.flex;
     if (flex && flex.title && flex.bodyText) {
-      const flexMsg = buildFlexMessage(flex.title, flex.bodyText, flex.buttons || []);
+      const flexMsg = buildFlexMessage(flex.title, flex.bodyText, flex.buttons || [], flex.rows || []);
       await pushLineMessages(channelToken, targetUserId, [flexMsg]);
     } else {
       await pushLine(channelToken, targetUserId, message);

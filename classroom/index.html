@@ -2351,13 +2351,19 @@ async function proposeAddClassRows(token, pendingRows) {
     try {
       const isSingle = created.length === 1;
       const bodyLines = created.map(function (p, i) { return (isSingle ? '' : ((i + 1) + '. ')) + addClassDayTimeLabel(p); }).join('\n');
-      const buttons = [];
-      created.forEach(function (p) {
+      // 2026-07-20 加（Lin 看實機畫面後要求）：每個時段一行「日期時間 + 接受/婉拒兩顆小按鈕排右邊」，
+      // 不要再像以前那樣把日期時間整個寫進按鈕文字裡、變成兩顆各自佔一整行的長按鈕。
+      const rows = created.map(function (p) {
         const shortLabel = addClassDayShortLabel(p);
-        buttons.push({ label: '接受：' + shortLabel, postbackData: 'action=ack_teacher_add&request=' + encodeURIComponent(p.requestId) });
-        buttons.push({ label: '婉拒：' + shortLabel, postbackData: 'action=decline_add_class&request=' + encodeURIComponent(p.requestId) });
+        return {
+          label: shortLabel,
+          buttons: [
+            { label: '接受', postbackData: 'action=ack_teacher_add&request=' + encodeURIComponent(p.requestId) },
+            { label: '婉拒', postbackData: 'action=decline_add_class&request=' + encodeURIComponent(p.requestId) },
+          ],
+        };
       });
-      buttons.push({ label: '聯繫老師', uri: LINE_OA_URL });
+      const buttons = [{ label: '聯繫老師', uri: LINE_OA_URL }];
       const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
@@ -2368,6 +2374,7 @@ async function proposeAddClassRows(token, pendingRows) {
           flex: {
             title: isSingle ? '➕ 老師想幫你加一堂課' : '➕ 老師想幫你加課（' + created.length + ' 個時段）',
             bodyText: (isSingle ? '時間：' : '時間：\n') + bodyLines + '\n\n請針對每個時段按下方按鈕確認或婉拒',
+            rows: rows,
             buttons: buttons,
           },
         }),
@@ -5200,7 +5207,7 @@ async function loadStudentNextClass(token) {
 
     if (!lessonDate) {
       el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前沒有排定下一堂課，如需安排請聯絡老師，或直接送出「申請加課」。</div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">' +
           '<button class="btn-sm" id="courseRecordToggleBtn" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="toggleCourseRecordPanel()">📅 我的課程記錄 ▼</button>' +
           '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
           '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;display:inline-block;">💬 聯絡老師</a>' +
@@ -5232,7 +5239,7 @@ async function loadStudentNextClass(token) {
         '<div style="font-weight:700;font-size:1rem;color:var(--ink);">' + escHtml(dayLabel) + '</div>' +
         (timeStr ? '<div style="font-size:0.9rem;color:var(--ink-soft);margin-top:2px;">' + escHtml(timeStr) + '</div>' : '') +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">' +
         // 2026-07-14 改（Lin 要求）：以前這顆按鈕只能取消「下一堂課」，如果剛好在 24 小時內
         // 就整個沒有取消按鈕，只能傳老師。現在改成一律開「選擇要取消的課堂」清單——
         // 有固定每週上課的學生會列出未來好幾堂，每一堂各自判斷是否超過 24 小時可以線上取消，
@@ -6493,21 +6500,36 @@ function notifyTeacherClassRequest(d) {
     // 時段」才需要等學生確認，「學生自己申請」的時段本來就是學生指定好的，老師按這顆等於直接批准，
     // 不用再多繞一圈——見 line-webhook/index.ts confirm_add_class 的 initiated_by 判斷）。
     var flexButtons = [];
+    var flexRows = [];
     // 2026-07-20（第二輪，Lin 看過 mockup 後要求）：學生自己申請加課（➕ 申請加課）這張卡片，
     // 老師要能「完全在 LINE 裡處理完，不用開網站」——拿掉「🔗 開 Calendar」跟「📋 到網站處理」，
     // 改成每個時段一顆「✅ 確認新增」（沿用既有 action=confirm_add_class，webhook 那邊已經放寬
     // 只有 initiated_by==='teacher' 才需要等學生先按「我知道了」，學生自己申請的直接讓老師這裡按
     // 就直接建 Calendar）。「🔍 檢查是否衝突」維持不變，「💬 聯繫學生」也維持不變。
+    // 2026-07-20 再改（Lin 看到「接受/婉拒」那張卡的新排版後要求同一套規格）：這裡以前也是把
+    // 日期時間整個寫進按鈕文字裡（「🔍 查衝突：7/21 05:30」），變成每個時段兩顆各自佔一整行的
+    // 長按鈕，跟之前那個 bug 是同一個問題，一起改成「一行＝日期時間文字＋兩顆小按鈕排右邊」。
     if (isAdd && addRows) {
       addRows.forEach(function (r) {
         var label = (r.newDate || '-') + ' ' + (r.newTime || '');
-        flexButtons.push({ label: '🔍 查衝突：' + label, postbackData: 'action=check_conflict&request=' + encodeURIComponent(r.requestId) });
-        flexButtons.push({ label: '✅ 確認新增：' + label, postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(r.requestId) });
+        flexRows.push({
+          label: label,
+          buttons: [
+            { label: '查衝突', postbackData: 'action=check_conflict&request=' + encodeURIComponent(r.requestId) },
+            { label: '確認新增', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(r.requestId), style: 'primary' },
+          ],
+        });
       });
       flexButtons.push({ label: '💬 聯繫學生', uri: contactStudentDeepLink(d.token) });
     } else if (isAdd && d.requestId) {
-      flexButtons.push({ label: '🔍 檢查是否衝突', postbackData: 'action=check_conflict&request=' + encodeURIComponent(d.requestId) });
-      flexButtons.push({ label: '✅ 確認新增', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(d.requestId) });
+      var singleLabel = (d.requestedDate || '-') + ' ' + (d.requestedTime || '');
+      flexRows.push({
+        label: singleLabel,
+        buttons: [
+          { label: '查衝突', postbackData: 'action=check_conflict&request=' + encodeURIComponent(d.requestId) },
+          { label: '確認新增', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(d.requestId), style: 'primary' },
+        ],
+      });
       flexButtons.push({ label: '💬 聯繫學生', uri: contactStudentDeepLink(d.token) });
     } else if (isCancel && d.requestId) {
       flexButtons.push({ label: '✅ 確認並刪除課程', postbackData: 'action=confirm_cancel_delete&request=' + encodeURIComponent(d.requestId) });
@@ -6529,7 +6551,7 @@ function notifyTeacherClassRequest(d) {
       body: JSON.stringify({
         to: 'teacher',
         message: subject + '\n\n' + message,
-        flex: { title: subject, bodyText: message, buttons: flexButtons }
+        flex: { title: subject, bodyText: message, rows: flexRows, buttons: flexButtons }
       })
     }).then(function(r) {
       if (!r.ok) sendEmailFallback(); // Edge Function 還沒部署好／回錯誤 → 改寄 email，不會漏通知
@@ -7902,7 +7924,7 @@ async function loadTeacherNextClassBox(token) {
         '<div style="font-weight:700;font-size:1rem;color:var(--ink);">' + escHtml(dayLabel) + '</div>' +
         (timeStr ? '<div style="font-size:0.9rem;color:var(--ink-soft);margin-top:2px;">' + escHtml(timeStr) + '</div>' : '') +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">' +
         // 2026-07-18 加（Lin 要求）：跟學生頁「下一堂課」按鈕列同一套排法+同一套顏色——
         // 📅上課記錄放第一顆，➕加課堂時間也一起放這裡（不是丟在上面主要按鈕列），全部統一金色漸層
         // 2026-07-19 改（Lin 要求，講了五次）：📅上課記錄從 popup 改成跟學生端一樣的「原地展開」
