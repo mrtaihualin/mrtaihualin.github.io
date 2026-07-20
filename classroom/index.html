@@ -5124,14 +5124,16 @@ const LINE_OA_URL = 'https://line.me/R/oaMessage/' + encodeURIComponent('@010rha
 const LIFF_ID = '2010620934-5MFOEYBX'; // 跟 classroom/liff-config.js 同一個 LIFF app，用來在 LINE 裡直接開課堂頁
 let nextClassCtx = null; // 目前顯示中的下一堂課資訊，給申請改期/取消用
 
-// 2026-07-20 加（Lin 要求：LINE 上的「💬 聯繫學生」也要能一鍵開啟）：LINE flex message 的按鈕
-// 只能是 uri／postback／message，沒有辦法直接「開啟老師網站上某個學生的聊天輸入框」。
-// 這裡用「uri 開網站＋帶 hash」的方式，重用既有的 openContactStudentModal（跟網站上的
-// 「💬 聯繫學生」按鈕完全同一個 modal），不用另外做一套 webhook 訊息代收邏輯——
-// 跟 #req-row-<id> 的做法（見 scrollToRequestFromHash）同一套模式，只是這次是開 modal 不是捲動卡片。
-// 前提：老師手機瀏覽器裡本來就已經登入教師帳號（跟其他「🔗 開 Calendar」「📋 到網站處理」連結一樣的假設）。
-function contactStudentDeepLink(token) {
-  return 'https://mrtaihualin.com/classroom/#contact-student-' + encodeURIComponent(token || '');
+// 2026-07-20 改（Lin 要求：「💬 聯繫學生」不用再跳去網站，按了直接在同一個 LINE 聊天視窗打字）：
+// 以前這裡是「uri 開網站＋帶 hash」開啟網站上的聯絡 modal，需要老師手機瀏覽器已登入教師帳號。
+// 現在改成 postback（action=start_contact_student），line-webhook 收到會記住「接下來老師打的
+// 下一句純文字要轉給這個學生」，老師直接在 LINE 裡打字回覆即可，完全不用開網站
+// （見 supabase/functions/line-webhook/index.ts 的 handleTeacherTextMessage）。
+function contactStudentPostbackButton(token) {
+  return {
+    label: '💬 聯繫學生',
+    postbackData: 'action=start_contact_student&token=' + encodeURIComponent(token || ''),
+  };
 }
 
 // 2026-07-11 加：「下一堂課」卡片下方的 LINE 按鈕 —
@@ -6377,13 +6379,13 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
       ? ('ℹ️ 學生已經選好新時間' + (chosenOpt ? '（' + chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '') + '）' : '') + '，到網站按「確認並搬 Calendar」')
       : '⚠️ 學生說這些時間都不方便，請直接聯絡學生討論';
     // 2026-07-20 加（Lin 要求：都不方便要能直接聯繫學生，不能只有純文字警告）：都不方便時附一顆
-    // 「💬 聯繫學生」按鈕，開網站上既有的聯絡視窗（openContactStudentModal），不用自己在清單裡找。
+    // 「💬 聯繫學生」按鈕——2026-07-20 改：直接在 LINE 裡打字回覆，不用開網站。
     const bodyPayload = { to: 'teacher', message: msg };
     if (response !== 'accepted') {
       bodyPayload.flex = {
         title: '⚠️ 學生說這些時間都不方便',
         bodyText: msg,
-        buttons: [{ label: '💬 聯繫學生', uri: contactStudentDeepLink(token) }],
+        buttons: [contactStudentPostbackButton(token)],
       };
     }
     await fetch(LINE_NOTIFY_ENDPOINT, {
@@ -6520,7 +6522,7 @@ function notifyTeacherClassRequest(d) {
           ],
         });
       });
-      flexButtons.push({ label: '💬 聯繫學生', uri: contactStudentDeepLink(d.token) });
+      flexButtons.push(contactStudentPostbackButton(d.token));
     } else if (isAdd && d.requestId) {
       var singleLabel = (d.requestedDate || '-') + ' ' + (d.requestedTime || '');
       flexRows.push({
@@ -6530,11 +6532,11 @@ function notifyTeacherClassRequest(d) {
           { label: '確認新增', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(d.requestId), style: 'primary' },
         ],
       });
-      flexButtons.push({ label: '💬 聯繫學生', uri: contactStudentDeepLink(d.token) });
+      flexButtons.push(contactStudentPostbackButton(d.token));
     } else if (isCancel && d.requestId) {
       flexButtons.push({ label: '✅ 確認並刪除課程', postbackData: 'action=confirm_cancel_delete&request=' + encodeURIComponent(d.requestId) });
     } else if (isReschedule) {
-      flexButtons.push({ label: '💬 聯繫學生', uri: contactStudentDeepLink(d.token) });
+      flexButtons.push(contactStudentPostbackButton(d.token));
     } else {
       // 保底：理論上不會發生（isCancel 沒有 requestId），還是給一顆到網站處理當備援，不會壞掉。
       flexButtons.push({ label: '📋 到網站處理', uri: siteLink });

@@ -52,6 +52,13 @@
 //      pending/acknowledged เท่านั้น จึงยืมฟิลด์ offer_status ที่มีค่า 'declined' อยู่แล้ว (เดิมใช้กับ
 //      提議改期 เท่านั้น) มาสื่อความหมายเดียวกัน：「นักเรียนไม่เอา」) **ไม่แตะ Google Calendar เลย**
 //      (ยังไม่เคยสร้าง event ตัวนี้ เพราะครูยังไม่ได้กด "確認新增") แค่ปิดคำขอ+แจ้งทั้งสองฝ่าย
+//   8) action=start_contact_student (2026-07-20 เพิ่ม, Lin ยืนยัน：「กดแล้วพิมพ์ตอบในแชทเดิมได้เลย」) —
+//      ทุกปุ่ม "💬 聯繫學生" (เดิมเป็น uri เปิดเว็บผ่าน contactStudentDeepLink) เปลี่ยนมาใช้ action นี้
+//      ทั้งหมดแล้ว: ครูกดปุ่ม → เขียนตาราง line_pending_reply (แถวเดียว id=1) จำว่า "ประโยคถัดไปที่ครูพิมพ์
+//      ให้ส่งหานักเรียนคนนี้" → ครูพิมพ์ข้อความธรรมดาในแชทเดิม → event.type==='message' (ดู
+//      handleTeacherTextMessage ด้านบน serve()) อ่านตาราง แล้ว pushLine ข้อความนั้นไปหานักเรียนทันที
+//      แล้วเคลียร์ตารางทิ้ง (ใช้ได้ครั้งเดียวต่อการกด กันพิมพ์ประโยคถัดๆ ไปหลุดไปหาคนเดิม) หมดอายุ 15 นาที
+//      ⚠️ ต้องรัน SQL สร้างตาราง line_pending_reply ก่อน (ดูไฟล์ SQL แยกที่เตรียมให้ Lin รันเอง)
 //
 // 2026-07-13 สำคัญมาก：ตั้งแต่เปลี่ยนมาให้ "處理" ปุ่มบนเว็บค้นหา+ย้าย/ลบ Calendar เองแล้ว
 //   ปุ่ม "✅ 已處理"/"❌ 婉拒" แบบเดิมที่เคยส่งไปให้ครูกดตรงจาก LINE **เอาออกจากข้อความแจ้งเตือนใหม่แล้ว**
@@ -419,6 +426,51 @@ async function createCalendarEventById(eventBody) {
   }
 }
 
+// 2026-07-20 加（Lin 要求：「💬 聯繫學生」不用再跳去網站，按了以後直接在同一個 LINE 聊天視窗打字，
+// 系統自動把老師打的下一句話轉給對應的學生）：
+// line_pending_reply 是只有 1 列的小表（id 固定 = 1），記住「現在老師打的下一句純文字要轉給誰」。
+// 老師按 action=start_contact_student 的按鈕時寫入這張表，老師接下來傳的第一則純文字訊息會被這裡
+// 讀出來、轉發給該學生，然後立刻清空，避免老師之後隨口聊天被誤轉給舊的學生。
+// 逾時保護：超過 15 分鐘沒打字就視為失效，提醒老師重新按一次「💬 聯繫學生」。
+async function handleTeacherTextMessage(supabase, channelToken, event) {
+  const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
+  const senderUserId = event.source && event.source.userId;
+  if (!teacherUserId || !senderUserId || senderUserId !== teacherUserId) return; // 不是老師本人傳的，安全忽略
+  const { data: pending } = await supabase
+    .from('line_pending_reply')
+    .select('student_token, student_name, set_at')
+    .eq('id', 1)
+    .maybeSingle();
+  if (!pending || !pending.student_token) return; // 沒有正在等待轉發的對象，當一般聊天忽略，不回覆什麼
+
+  const setAt = pending.set_at ? new Date(pending.set_at).getTime() : 0;
+  const ageMs = Date.now() - setAt;
+  if (!setAt || ageMs > 15 * 60 * 1000) {
+    await supabase.from('line_pending_reply').update({ student_token: null, student_name: null, set_at: null }).eq('id', 1);
+    if (channelToken && event.replyToken) {
+      await replyLine(channelToken, event.replyToken, '⚠️ 剛剛選的「聯繫學生」已經過期了（超過 15 分鐘），請重新按一次「💬 聯繫學生」再打字');
+    }
+    return;
+  }
+
+  const { data: stuRow } = await supabase.from('classroom_students').select('line_user_id, name').eq('token', pending.student_token).maybeSingle();
+  if (!stuRow || !stuRow.line_user_id) {
+    await supabase.from('line_pending_reply').update({ student_token: null, student_name: null, set_at: null }).eq('id', 1);
+    if (channelToken && event.replyToken) {
+      await replyLine(channelToken, event.replyToken, '⚠️ 找不到這位學生的 LINE 資料了，請到網站手動聯絡');
+    }
+    return;
+  }
+
+  const textToSend = event.message.text || '';
+  await pushLine(channelToken, stuRow.line_user_id, textToSend);
+  // 送出後立刻清掉，避免老師下一句閒聊被誤轉給同一個學生
+  await supabase.from('line_pending_reply').update({ student_token: null, student_name: null, set_at: null }).eq('id', 1);
+  if (channelToken && event.replyToken) {
+    await replyLine(channelToken, event.replyToken, '✅ 已經幫你轉給「' + (stuRow.name || pending.student_name || '這位學生') + '」了');
+  }
+}
+
 serve(async (req) => {
   // LINE จะยิง GET มาตอนกด "Verify" ในหน้า console ครั้งแรก ให้ตอบ 200 เฉยๆ ก็พอ
   if (req.method !== 'POST') {
@@ -451,7 +503,18 @@ serve(async (req) => {
   const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
 
   for (const event of (payload.events || [])) {
-    if (event.type !== 'postback') continue; // ตอนนี้สนใจแค่ postback (ปุ่มในข้อความ) เท่านั้น
+    // 2026-07-20 加（Lin 要求：「聯繫學生」改成按了直接在同一個聊天視窗打字，不用再開網站）：
+    // 以前這裡完全不理會純文字訊息，現在多接一種——如果老師剛按過「💬 聯繫學生」，
+    // 接下來傳的第一句純文字就會被轉發給對應學生（見 handleTeacherTextMessage）。
+    if (event.type === 'message' && event.message && event.message.type === 'text') {
+      try {
+        await handleTeacherTextMessage(supabase, channelToken, event);
+      } catch (e) {
+        console.error('[line-webhook] ⚠️ 處理文字訊息（聯繫學生轉發）發生未預期錯誤：', e && e.message ? e.message : e);
+      }
+      continue;
+    }
+    if (event.type !== 'postback') continue; // 其他類型（例如貼圖、圖片）還是先忽略
     let actionForLog = 'unknown'; // 2026-07-19 加：ให้ catch ครอบนอกสุดข้างล่างรู้ว่า action ไหนพังอยู่
     try {
       const data = event.postback && event.postback.data ? event.postback.data : '';
@@ -1049,6 +1112,31 @@ serve(async (req) => {
               await pushLine(channelToken, stuRowCancel.line_user_id, '✅ 老師已確認，' + odateMsg + ' 的課程已經取消囉');
             }
           } catch (e) { /* แจ้งนักเรียนไม่สำเร็จ ไม่กระทบว่าลบ Calendar สำเร็จแล้ว */ }
+        }
+        continue;
+      }
+
+      if (action === 'start_contact_student') {
+        // 2026-07-20 加（Lin 要求：所有「💬 聯繫學生」按鈕統一改成這個，取代原本開網站的
+        // contactStudentDeepLink）：老師按下去，記住「接下來打的字要轉給這個學生」，
+        // 實際轉發邏輯在 handleTeacherTextMessage（收到老師下一句純文字時處理）。
+        const teacherUserIdContact = Deno.env.get('LINE_TEACHER_USER_ID');
+        const senderIsTeacherContact = event.source && teacherUserIdContact && event.source.userId === teacherUserIdContact;
+        if (!senderIsTeacherContact) continue; // 不是老師本人按的，安全忽略
+        const contactToken = params.get('token');
+        if (!contactToken) continue;
+        const { data: stuRowContact } = await supabase.from('classroom_students').select('name').eq('token', contactToken).maybeSingle();
+        const contactName = (stuRowContact && stuRowContact.name) || decodeURIComponent(params.get('name') || '') || '這位學生';
+        const { error: pendingErr } = await supabase
+          .from('line_pending_reply')
+          .upsert({ id: 1, student_token: contactToken, student_name: contactName, set_at: new Date().toISOString() });
+        if (pendingErr) {
+          console.error('[line-webhook] ⚠️ start_contact_student：寫入 line_pending_reply 失敗（可能還沒建這張表，請確認 SQL 已執行）：', pendingErr.message);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 系統還沒設定好聯繫學生功能，請到網站手動聯絡');
+          continue;
+        }
+        if (channelToken && event.replyToken) {
+          await replyLine(channelToken, event.replyToken, '好，請直接輸入要跟「' + contactName + '」說的話，我會馬上幫你轉過去（15 分鐘內有效）');
         }
         continue;
       }
