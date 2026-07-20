@@ -1051,7 +1051,7 @@ function rgOpenAsk() {
     fetch('https://api.web3forms.com/submit', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ access_key:'b0b4c37b-6fad-4e64-9a16-81c5ab2ff4c3', subject:'[語序遊戲] 學生問題', from_name:'語序遊戲', email: email||'anonymous@game', message: msg }) })
     .then(function(r){ return r.json(); })
-    .then(function(){ btn.textContent = '✅ 已送出！'; setTimeout(function(){ div.remove(); }, 1200); })
+    .then(function(d){ if (!d || !d.success) throw new Error((d && d.message) || 'submit failed'); btn.textContent = '✅ 已送出！'; setTimeout(function(){ div.remove(); }, 1200); })
     .catch(function(){ btn.disabled=false; btn.textContent='送出問題 →'; alert('送出失敗，請稍後再試'); });
   };
 }

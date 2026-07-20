@@ -786,7 +786,7 @@ function finalizeWord(){
       }catch(e){}
     }
     curWordIsKnownCheck=false;
-    if(passedClean){ b.textContent='真的記得！這個字標記為熟練 ✓（不計分、不加幣）';b.className='result-banner show ok'; }
+    if(passedClean){ b.textContent='真的記得！這個字標記為熟練 ✓（不計分、不加星）';b.className='result-banner show ok'; }
     else{ b.textContent='中途有出錯/用了提示，這個字先留在複習清單裡 🔁';b.className='result-banner show no'; }
     rgLogWord({failed:!passedClean,pts:0,mastered:passedClean});
     doSave();
@@ -2527,7 +2527,7 @@ function rgOpenAsk() {
     fetch('https://api.web3forms.com/submit', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ access_key:'b0b4c37b-6fad-4e64-9a16-81c5ab2ff4c3', subject:'[打字遊戲] 學生問題', from_name:'打字遊戲', email: email||'anonymous@game', message: msg }) })
     .then(function(r){ return r.json(); })
-    .then(function(){ btn.textContent = '✅ 已送出！'; setTimeout(function(){ div.remove(); }, 1200); })
+    .then(function(d){ if (!d || !d.success) throw new Error((d && d.message) || 'submit failed'); btn.textContent = '✅ 已送出！'; setTimeout(function(){ div.remove(); }, 1200); })
     .catch(function(){ btn.disabled=false; btn.textContent='送出問題 →'; alert('送出失敗，請稍後再試'); });
   };
 }

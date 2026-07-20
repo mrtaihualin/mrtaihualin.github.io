@@ -4493,6 +4493,7 @@ var TF = {
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload)
     }).then(function(r){ return r.json(); }).then(function(d){
+      if (!d || !d.success) throw new Error((d && d.message) || 'submit failed');
       var box = ov.querySelector('.tf-ask-box');
       if (box) box.innerHTML = '<div class="tf-ask-ok">✅ 已送出！老師收到後會回覆你 🙏</div>' +
         '<div class="tf-ask-actions"><button class="tf-ask-send" onclick="TF.closeAsk()">關閉</button></div>';
