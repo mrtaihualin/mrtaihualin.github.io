@@ -611,24 +611,20 @@
 </div>
 
 <!-- ======= STUDENT: 申請加課 MODAL（2026-07-15 新增：給不固定/偶爾約課的學生自己提出想加的時間，
-     老師確認沒有衝突後才會真的排進 Calendar，跟「申請改期」共用同一套審核清單） ======= -->
+     老師確認沒有衝突後才會真的排進 Calendar，跟「申請改期」共用同一套審核清單）
+     2026-07-20 改（Lin 要求：跟老師端「➕ 加課堂時間」一致）：(1) 加「🔁 每週固定」+「固定到」欄位，
+     跟老師端同樣的欄位/文案，不再只能寫在備註裡讓老師自己看；(2) 一次可以「➕ 再加一筆時間」
+     送出好幾筆申請，不用重複開好幾次這個視窗——跟老師端同一套 row 樣板/JS 邏輯 ======= -->
 <div class="modal-overlay" id="addRequestModal">
   <div class="modal" style="max-width:440px;">
     <h3>➕ 申請加課</h3>
     <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      送出後老師會收到通知，確認沒有衝突後才會真的排進課表。如果是想長期每週固定上這個時間，也可以寫在備註裡讓老師知道。
+      送出後老師會收到通知，確認沒有衝突後才會真的排進課表。
     </p>
-    <label class="settings-label">想約哪一天？</label>
-    <input class="settings-input" id="addReqDateInput" type="date" oninput="onAddReqScheduleChange()" />
-    <label class="settings-label">想約幾點？（請選「你自己現在所在地」的時間，不用換算成泰國時間）</label>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="addReqTimeInput_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addReqTimeInput')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="addReqTimeInput_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addReqTimeInput')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="addReqTimeInput" value="" oninput="onAddReqScheduleChange()" />
-    <p id="addReqScheduleHint" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
-    <label class="settings-label">備註（選填，例如：想從這天開始每週固定）</label>
+    <div id="addReqRows"></div>
+    <button type="button" class="btn-ghost" style="width:100%;margin-top:4px;font-size:0.85rem;" onclick="addReqAddRow()">➕ 再加一筆時間</button>
+
+    <label class="settings-label" style="margin-top:10px;">備註（選填）</label>
     <input class="settings-input" id="addReqNoteInput" placeholder="選填" />
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeAddRequestModal()">取消</button>
@@ -786,39 +782,25 @@
   </div>
 </div>
 
-<!-- ======= 加課堂時間（2026-07-15 新增：老師自己排單次課，或加一個新的每週固定上課日）======= -->
+<!-- ======= 加課堂時間（2026-07-15 新增：老師自己排單次課，或加一個新的每週固定上課日）
+     2026-07-20 改（Lin 要求：一次可以加好幾筆時間，不用重複開這個視窗好幾次）：
+     日期/時間/固定/固定到 那組欄位改成可以「➕ 再加一筆時間」複製好幾份，每份用 addClassDayRowHtml()
+     產生、id 帶 idx 後綴區分——見下面 script 區塊的 addClassDayAddRow/removeClassDayRow ======= -->
 <div class="modal-overlay" id="addClassDayModal">
   <div class="modal" style="max-width:440px;">
     <h3>➕ 加課堂時間</h3>
     <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;" id="addClassDayStudentLabel"></p>
 
-    <label class="settings-label">日期</label>
-    <input class="settings-input" id="addClassDayDate" type="date" />
-
-    <!-- 2026-07-18 改（Lin 要求）：拿掉「結束時間」欄位——每堂課固定算 1 小時，不用手動選結束時間，
-         程式自動用開始時間 +1 小時當結束時間（見 checkAddClassDayConflict 的 addOneHourTimeStr） -->
-    <label class="settings-label">開始時間（泰國時間，固定算 1 小時一堂）</label>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="addClassDayStart_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addClassDayStart')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="addClassDayStart_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('addClassDayStart')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="addClassDayStart" value="" />
-
-    <label style="display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:0.88rem;color:var(--ink);margin:10px 0;">
-      <input type="checkbox" id="addClassDayRecurring" onchange="onAddClassDayRecurringChange()" />
-      🔁 每週固定（從這天開始，之後每週都排這個時間）
-    </label>
-    <div id="addClassDayUntilWrap" style="display:none;">
-      <label class="settings-label">固定到（不填＝一直排下去，沒有結束日）</label>
-      <input class="settings-input" id="addClassDayUntil" type="date" />
-    </div>
+    <div id="addClassDayRows"></div>
+    <button type="button" class="btn-ghost" style="width:100%;margin-top:4px;font-size:0.85rem;" onclick="addClassDayAddRow(null,'teacher')">➕ 再加一筆時間（老師自己加，不是學生申請的）</button>
 
     <div id="addClassDayResult" style="font-size:0.82rem;font-family:'Noto Sans TC',sans-serif;line-height:1.6;margin-top:6px;"></div>
     <div id="addClassDayList" style="font-size:0.8rem;font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);margin-top:8px;"></div>
 
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeAddClassDayModal()">完成</button>
+      <!-- 2026-07-20 加（Lin 要求）：加課時常常想直接跟學生對一下時間，不用先關視窗再去清單找人聯絡 -->
+      <button class="btn-ghost" onclick="openContactStudentModal(_addClassDayToken)">💬 聯繫學生</button>
       <button class="btn-gold" id="addClassDayCheckBtn" onclick="checkAddClassDayConflict()">🔍 檢查是否衝突</button>
     </div>
   </div>
@@ -1823,6 +1805,14 @@ var _addClassDayToken = null;
 var _addClassDayPending = null; // เช็คไม่ชนคิวแล้ว รอกดยืนยันอีกที
 var _addClassDayFromRequestId = null; // 2026-07-15 加：ถ้าเปิดจาก "📅 開始安排" (คำขอของนักเรียน)
                                        // จำ id ของคำขอไว้ → สร้างสำเร็จค่อย mark ว่าจัดการแล้วอัตโนมัติ
+// 2026-07-20 再改（Lin 要求：加一筆不相關的時間，不該連累學生原本申請的那一筆也要重新等確認）
+// _addClassDayPrefillSnapshot：記住「一開始從學生申請單帶進來」的原始值（日期/時間/固定/固定到），
+// 之後在 checkAddClassDayConflict 拿目前表單的值去比對——完全沒改過才算「這就是學生本來要的那筆」，
+// 可以直接排（不用再等學生確認一次）。老師如果動過這幾個欄位，就當作新的提案處理，照樣要走確認。
+var _addClassDayPrefillSnapshot = null;
+// _addClassDayEligibleDirectIdx：checkAddClassDayConflict 算出「目前這批沒衝突的時段」裡，
+// 哪一筆完全符合 _addClassDayPrefillSnapshot（-1＝沒有，全部都要走送出通知給學生確認）。
+var _addClassDayEligibleDirectIdx = -1;
 
 function thaiDateWeekday(dateStr) {
   return new Date(dateStr + 'T12:00:00+07:00').getUTCDay(); // 0=日 ... 6=六（เที่ยงกันขอบวันเพี้ยน）
@@ -1851,13 +1841,18 @@ async function openAddClassDayModal(token, prefill) {
   _addClassDayToken = token;
   _addClassDayPending = null;
   _addClassDayFromRequestId = (prefill && prefill.requestId) || null;
+  // 2026-07-20 再改：只有「從學生申請單開進來」才有 snapshot 好比對——手動開的「➕ 加課堂時間」
+  // (沒有 requestId) 本來就沒有「學生原本要的那筆」這回事，維持 null。
+  _addClassDayPrefillSnapshot = _addClassDayFromRequestId ? {
+    date: (prefill && prefill.date) || '',
+    time: (prefill && prefill.time) || '',
+    recurring: !!(prefill && prefill.recurring),
+    untilVal: (prefill && prefill.untilVal) || ''
+  } : null;
+  _addClassDayEligibleDirectIdx = -1;
   const s = studentsCache[token];
   document.getElementById('addClassDayStudentLabel').textContent = '學生：' + (s ? s.name : token);
-  document.getElementById('addClassDayDate').value = (prefill && prefill.date) || '';
-  setTimeDropdown('addClassDayStart', (prefill && prefill.time) || '');
-  document.getElementById('addClassDayRecurring').checked = false;
-  document.getElementById('addClassDayUntil').value = '';
-  document.getElementById('addClassDayUntilWrap').style.display = 'none';
+  resetAddClassDayRows(prefill); // 重設回只有 1 筆（清掉上次開視窗殘留的多筆 row）
   document.getElementById('addClassDayResult').innerHTML = prefill && prefill.note
     ? ('<div style="color:var(--ink-muted);">📝 學生備註：' + escHtml(prefill.note) + '</div>') : '';
   document.getElementById('addClassDayModal').classList.add('open');
@@ -1868,17 +1863,24 @@ function closeAddClassDayModal() {
   _addClassDayToken = null;
   _addClassDayPending = null;
   _addClassDayFromRequestId = null;
+  _addClassDayPrefillSnapshot = null;
+  _addClassDayEligibleDirectIdx = -1;
 }
 
 // 進入點：老師從「📋 學生申請改期/取消」清單按「📅 開始安排」加課申請
+// 2026-07-20 再改：連 recurring/untilVal 一起帶進來（學生自己申請也可能勾「每週固定」），
+// 不然 _addClassDayPrefillSnapshot 比對不到，會誤判成「老師改過」而不能直接排。
 function handleAddClassRequest(id) {
   var r = (window._classRequestCache || {})[id];
   if (!r) return;
-  openAddClassDayModal(r.token, { date: r.requested_date, time: r.requested_time, note: r.note, requestId: id });
+  openAddClassDayModal(r.token, {
+    date: r.requested_date, time: r.requested_time, note: r.note, requestId: id,
+    recurring: !!r.proposed_recurring, untilVal: r.proposed_until || null
+  });
 }
-function onAddClassDayRecurringChange() {
-  const checked = document.getElementById('addClassDayRecurring').checked;
-  document.getElementById('addClassDayUntilWrap').style.display = checked ? 'block' : 'none';
+function onAddClassDayRecurringChange(idx) {
+  const checked = document.getElementById('addClassDayRecurring_' + idx).checked;
+  document.getElementById('addClassDayUntilWrap_' + idx).style.display = checked ? 'block' : 'none';
 }
 
 // โชว์ให้ Lin เห็นว่าตอนนี้นักเรียนคนนี้มีวันประจำอะไรอยู่แล้วบ้าง (กันลืม/ซ้ำ)
@@ -1911,53 +1913,204 @@ function addOneHourTimeStr(timeStr) {
   return String(h).padStart(2, '0') + ':' + parts[1];
 }
 
+// ════════════════════════════════════════════════════════════
+// 2026-07-20 加（Lin 要求：加課要能一次加好幾筆時間，不用重複開視窗好幾次）
+// 老師端「➕ 加課堂時間」的「日期＋開始時間＋固定/固定到」那組欄位改成可以「➕ 再加一筆時間」
+// 複製好幾份——每份是一個獨立的 DOM row（id 帶 idx 後綴），永不重新產生已經存在的 row
+// （避免使用者已經填的值被清掉）。學生端「➕ 申請加課」用同一套邏輯（見 addReqRowHtml 等）。
+// TIME_HOUR_OPTIONS_HTML / TIME_MIN_OPTIONS_HTML 兩邊共用，不用各自複製一份 24 小時的 <option>。
+// ════════════════════════════════════════════════════════════
+var TIME_HOUR_OPTIONS_HTML = '<option value="">--</option>' +
+  Array.from({ length: 24 }, function (_, i) { var h = String(i).padStart(2, '0'); return '<option value="' + h + '">' + h + '</option>'; }).join('');
+var TIME_MIN_OPTIONS_HTML = '<option value="">--</option><option value="00">00</option><option value="30">30</option>';
+
+// 2026-07-20 加（Lin 要求：「ทำให้ไม่เผลอได้ไหม」——กังวลว่าครูจะเผลอ + เพิ่มคาบที่นักเรียนไม่ได้ขอ
+// ปนกับคาบที่นักเรียนขอเองในโมดัลเดียวกัน）：ให้ทุกแถวมีป้ายชัดเจนว่า "นักเรียนขอเวลานี้เอง" (แถวที่ตรง
+// กับ _addClassDayFromRequestId เสมอเป็น idx 0) หรือ "ครูเพิ่มเอง" (ทุกแถวที่กดปุ่ม + เพิ่มเติม) —
+// กันสับสน/กดส่งผิดโดยไม่ตั้งใจ ไม่ใช่แค่ให้ระบบจัดการถูกหลังบ้านเฉยๆ
+function addClassDayRowBadgeHtml(kind) {
+  if (kind === 'student') {
+    return '<div style="background:var(--gold-light);color:var(--gold-deep);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.76rem;font-weight:700;margin-bottom:8px;">📌 學生自己申請的時間 — 送出後直接排進 Calendar，不用再等學生確認一次</div>';
+  }
+  if (kind === 'teacher') {
+    return '<div style="background:var(--cream);color:var(--ink-muted);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.76rem;font-weight:700;margin-bottom:8px;">➕ 老師自己加的時間 — 學生沒有申請這個時間，送出後要等學生按「我知道了」才會排進 Calendar</div>';
+  }
+  return '';
+}
+function addClassDayRowHtml(idx, badgeKind) {
+  return '<div class="addClassDayRow" id="addClassDayRow_' + idx + '" style="' + (idx > 0 ? 'border-top:1px solid var(--border);padding-top:10px;margin-top:10px;' : '') + '">' +
+    addClassDayRowBadgeHtml(badgeKind) +
+    '<label class="settings-label">日期</label>' +
+    '<input class="settings-input" id="addClassDayDate_' + idx + '" type="date" />' +
+    '<label class="settings-label">開始時間（泰國時間，固定算 1 小時一堂）</label>' +
+    '<div style="display:flex;gap:6px;align-items:center;">' +
+      '<select class="settings-input" id="addClassDayStart_' + idx + '_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown(\'addClassDayStart_' + idx + '\')">' + TIME_HOUR_OPTIONS_HTML + '</select>' +
+      '<span style="font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>' +
+      '<select class="settings-input" id="addClassDayStart_' + idx + '_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown(\'addClassDayStart_' + idx + '\')">' + TIME_MIN_OPTIONS_HTML + '</select>' +
+    '</div>' +
+    '<input type="hidden" id="addClassDayStart_' + idx + '" value="" />' +
+    '<label style="display:flex;align-items:center;gap:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;color:var(--ink);margin:10px 0;">' +
+      '<input type="checkbox" id="addClassDayRecurring_' + idx + '" onchange="onAddClassDayRecurringChange(' + idx + ')" /> 🔁 每週固定（從這天開始，之後每週都排這個時間）' +
+    '</label>' +
+    '<div id="addClassDayUntilWrap_' + idx + '" style="display:none;">' +
+      '<label class="settings-label">固定到（不填＝一直排下去，沒有結束日）</label>' +
+      '<input class="settings-input" id="addClassDayUntil_' + idx + '" type="date" />' +
+    '</div>' +
+    '<div style="text-align:right;">' +
+      '<button type="button" class="btn-ghost addClassDayRemoveBtn" style="display:none;font-size:0.78rem;padding:3px 10px;" onclick="removeClassDayRow(' + idx + ')">－ 移除這筆</button>' +
+    '</div>' +
+  '</div>';
+}
+var _addClassDayNextIdx = 0;
+function updateAddClassDayRemoveButtons() {
+  var rows = document.querySelectorAll('#addClassDayRows .addClassDayRow');
+  rows.forEach(function (row) {
+    var btn = row.querySelector('.addClassDayRemoveBtn');
+    // 2026-07-20 加：แถวที่เป็น "นักเรียนขอเวลานี้เอง" (idx 0 ตอนเปิดจากคำขอ) ห้ามลบเด็ดขาด แม้จะมี
+    // หลายแถวอยู่ก็ตาม — กันครูเผลอลบคาบที่นักเรียนขอทิ้ง เหลือแต่คาบที่ตัวเองเพิ่มเอง
+    var isLockedStudentRow = _addClassDayFromRequestId && row.id === 'addClassDayRow_0';
+    if (btn) btn.style.display = (rows.length > 1 && !isLockedStudentRow) ? '' : 'none';
+  });
+}
+// prefill（選填）：{ date, time, recurring, untilVal } — 從學生已送出的加課申請帶入第一筆的日期/時間
+// （2026-07-20 再改：連 recurring/untilVal 一起帶，不然改用「每筆比對」判斷能不能直接排時，
+// 表單裡的固定/固定到永遠是空的，跟 snapshot 對不起來）
+// badgeKind（選填）：'student'＝這筆是學生自己申請的（通常是 idx 0，從 _addClassDayFromRequestId 開進來時）
+//                    'teacher'＝這筆是老師自己按「＋ 再加一筆」加的，沒有 badgeKind＝手動開「➕ 加課堂時間」
+//                    (沒有任何學生申請單牽扯進來)，不用顯示任何標籤。
+function addClassDayAddRow(prefill, badgeKind) {
+  var idx = _addClassDayNextIdx++;
+  var container = document.getElementById('addClassDayRows');
+  container.insertAdjacentHTML('beforeend', addClassDayRowHtml(idx, badgeKind));
+  if (prefill && prefill.date) document.getElementById('addClassDayDate_' + idx).value = prefill.date;
+  if (prefill && prefill.time) setTimeDropdown('addClassDayStart_' + idx, prefill.time);
+  if (prefill && prefill.recurring) {
+    document.getElementById('addClassDayRecurring_' + idx).checked = true;
+    onAddClassDayRecurringChange(idx);
+    if (prefill.untilVal) document.getElementById('addClassDayUntil_' + idx).value = prefill.untilVal;
+  }
+  updateAddClassDayRemoveButtons();
+  return idx;
+}
+function removeClassDayRow(idx) {
+  var rows = document.querySelectorAll('#addClassDayRows .addClassDayRow');
+  if (rows.length <= 1) return; // 不能減到 0 筆
+  var el = document.getElementById('addClassDayRow_' + idx);
+  if (el) el.remove();
+  updateAddClassDayRemoveButtons();
+}
+function resetAddClassDayRows(prefill) {
+  var container = document.getElementById('addClassDayRows');
+  container.innerHTML = '';
+  _addClassDayNextIdx = 0;
+  // 2026-07-20 加：idx 0 是「從學生申請單開進來」的那筆才貼 'student' 標籤，手動開的「➕ 加課堂時間」
+  // （沒有 requestId，_addClassDayFromRequestId 是 null）不用貼任何標籤。
+  addClassDayAddRow(prefill, _addClassDayFromRequestId ? 'student' : null);
+}
+
+// 2026-07-20 改（Lin 要求：可以一次加好幾筆時間）：改成迴圈檢查 #addClassDayRows 底下每一個
+// .addClassDayRow，全部沒衝突才給「送出/確認」按鈕；只要有一筆有問題就整批擋下來、清楚指出是第幾筆。
+// _addClassDayPending 從單一物件改成陣列（每個 row 一個物件），confirmAddClassDay/proposeAddClassDay
+// 都改成讀陣列、迴圈處理。
 async function checkAddClassDayConflict() {
   const token = _addClassDayToken;
   if (!token) return;
-  const dateVal = document.getElementById('addClassDayDate').value;
-  const startVal = document.getElementById('addClassDayStart').value.trim();
-  const recurring = document.getElementById('addClassDayRecurring').checked;
-  const untilVal = document.getElementById('addClassDayUntil').value;
   const resultEl = document.getElementById('addClassDayResult');
+  const rowEls = Array.prototype.slice.call(document.querySelectorAll('#addClassDayRows .addClassDayRow'));
+  const dayZh = ['日','一','二','三','四','五','六'];
 
-  if (!dateVal) { alert('請選擇日期'); return; }
-  if (!isValidTimeStr(startVal)) { alert('⚠️ 開始時間格式不對，請用 HH:MM，例如 20:00'); return; }
-  // 2026-07-18 改（Lin 要求）：不用再選結束時間，固定算開始時間 +1 小時
-  const endTime = addOneHourTimeStr(startVal);
-
-  const startAbs = teacherTimeToDate(dateVal, startVal);
-  const endAbs = teacherTimeToDate(dateVal, endTime);
-  if (endAbs.getTime() <= startAbs.getTime()) { alert('⚠️ 結束時間要晚於開始時間'); return; }
-  if (recurring && untilVal && teacherTimeToDate(untilVal, '23:59').getTime() < startAbs.getTime()) {
-    alert('⚠️「固定到」的日期不能早於開課日期'); return;
+  const rowsInput = [];
+  for (let i = 0; i < rowEls.length; i++) {
+    const idx = rowEls[i].id.replace('addClassDayRow_', '');
+    const n = i + 1;
+    const dateVal = document.getElementById('addClassDayDate_' + idx).value;
+    const startVal = document.getElementById('addClassDayStart_' + idx).value.trim();
+    const recurring = document.getElementById('addClassDayRecurring_' + idx).checked;
+    const untilVal = document.getElementById('addClassDayUntil_' + idx).value;
+    if (!dateVal) { alert('第 ' + n + ' 筆：請選擇日期'); return; }
+    if (!isValidTimeStr(startVal)) { alert('⚠️ 第 ' + n + ' 筆：開始時間格式不對，請用 HH:MM，例如 20:00'); return; }
+    const endTime = addOneHourTimeStr(startVal);
+    const startAbs = teacherTimeToDate(dateVal, startVal);
+    const endAbs = teacherTimeToDate(dateVal, endTime);
+    if (endAbs.getTime() <= startAbs.getTime()) { alert('⚠️ 第 ' + n + ' 筆：結束時間要晚於開始時間'); return; }
+    if (recurring && untilVal && teacherTimeToDate(untilVal, '23:59').getTime() < startAbs.getTime()) {
+      alert('⚠️ 第 ' + n + ' 筆：「固定到」的日期不能早於開課日期'); return;
+    }
+    rowsInput.push({ dateVal: dateVal, startVal: startVal, endTime: endTime, recurring: recurring, untilVal: untilVal || null, startAbs: startAbs, endAbs: endAbs, n: n });
   }
+  if (!rowsInput.length) { alert('至少要有一筆時間'); return; }
 
   const btn = document.getElementById('addClassDayCheckBtn');
   btn.disabled = true; btn.textContent = '檢查中…';
   resultEl.innerHTML = '';
   _addClassDayPending = null;
   try {
-    const busy = await checkFreebusyConflict(startAbs.toISOString(), endAbs.toISOString());
-    if (busy.length) {
-      const list = busy.map(function(b) {
-        return formatThaiDateTimeLabel(b.start) + ' – ' + formatInTz(new Date(b.end), TEACHER_TZ).timeStr;
-      }).join('<br>');
-      resultEl.innerHTML = '<div style="color:#b45309;font-weight:700;">⚠️ 這個時段跟行事曆上其他行程衝突：<br>' + list + '<br><span style="font-weight:400;">請換一個時間再檢查一次。</span></div>';
+    const previewLines = [];
+    const pendingRows = [];
+    let anyConflict = false;
+    // 依序檢查（不平行送，避免同時打太多次 Google Calendar API），每一筆都跑一次 checkFreebusyConflict
+    for (const row of rowsInput) {
+      const wd = thaiDateWeekday(row.dateVal);
+      try {
+        const busy = await checkFreebusyConflict(row.startAbs.toISOString(), row.endAbs.toISOString());
+        if (busy.length) {
+          anyConflict = true;
+          const list = busy.map(function(b) {
+            return formatThaiDateTimeLabel(b.start) + ' – ' + formatInTz(new Date(b.end), TEACHER_TZ).timeStr;
+          }).join('<br>');
+          previewLines.push('<div style="color:#b45309;font-weight:700;">⚠️ 第 ' + row.n + ' 筆（' + row.dateVal + ' ' + row.startVal + '）跟行事曆衝突：<br>' + list + '</div>');
+        } else {
+          let previewText = '✅ 第 ' + row.n + ' 筆沒有衝突。' + row.dateVal + '（週' + dayZh[wd] + '）' + row.startVal + '–' + row.endTime + '（泰國時間）';
+          previewText += row.recurring ? '，每週固定上課' + (row.untilVal ? '，固定到 ' + row.untilVal : '（沒有結束日，之後每週都排）') : '，只有這一次';
+          previewLines.push('<div style="color:var(--gold-deep);">' + escHtml(previewText) + '</div>');
+          pendingRows.push({ token: token, dateVal: row.dateVal, startVal: row.startVal, endTime: row.endTime, recurring: row.recurring, untilVal: row.untilVal, weekday: wd });
+        }
+      } catch (e) {
+        anyConflict = true; // 檢查失敗當作不能繼續，避免漏檢查到有衝突卻放行
+        previewLines.push('<div style="color:#b45309;">第 ' + row.n + ' 筆檢查失敗：' + escHtml(e.message || String(e)) + '</div>');
+      }
+    }
+
+    if (anyConflict) {
+      resultEl.innerHTML = previewLines.join('') + '<div style="margin-top:6px;font-weight:400;color:#b45309;">請調整有問題的時段後再檢查一次（全部都沒問題才能送出）。</div>';
       return;
     }
-    const dayZh = ['日','一','二','三','四','五','六'];
-    const wd = thaiDateWeekday(dateVal);
-    let previewText = '✅ 沒有衝突。' + dateVal + '（週' + dayZh[wd] + '）' + startVal + '–' + endTime + '（泰國時間）';
-    previewText += recurring ? '，每週固定上課' + (untilVal ? '，固定到 ' + untilVal : '（沒有結束日，之後每週都排）') : '，只有這一次';
-    _addClassDayPending = { token: token, dateVal: dateVal, startVal: startVal, endTime: endTime, recurring: recurring, untilVal: untilVal || null, weekday: wd };
+    _addClassDayPending = pendingRows;
     // 2026-07-18 改（Lin 要求）：老師「自己想到要加課」（不是在處理學生已經送出的加課申請）
     // 現在要先送通知給學生確認，學生按「我知道了」後老師才能回來按「確認新增」真的排進 Calendar。
     // 學生自己申請加課、老師只是在核准那筆申請的情況（_addClassDayFromRequestId 有值）維持原本
     // 「老師一按就直接排進去」——因為那是學生自己要的，不用再多問一次。
-    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;margin-bottom:8px;">' + escHtml(previewText) + '</div>' +
-      (_addClassDayFromRequestId
-        ? '<button class="btn-gold" style="width:100%;" onclick="confirmAddClassDay()">✅ 確認新增這個時段</button>'
-        : '<button class="btn-gold" style="width:100%;" onclick="proposeAddClassDay()">📤 送出通知給學生，確認後才會新增</button>');
+    // 2026-07-20 再改（Lin 要求：per-row 不要整批綁在一起）——以前「一次加好幾筆」不管有沒有
+    // 學生原本要的那筆混在裡面，整批都要走送出通知給學生確認，就算老師只是「順手多加一筆自己的」，
+    // 學生已經申請過的那一筆也要跟著多等一次確認，很奇怪。改成：找出目前這批沒衝突的時段裡，
+    // 有沒有一筆完全符合 _addClassDayPrefillSnapshot（日期/時間/固定/固定到都沒被老師改過）——
+    // 有的話那一筆可以直接排，其餘的（老師自己多加的）照樣走送出通知給學生確認，兩種可以同時發生，
+    // 按鈕文字/流程對應調整（見 submitAddClassDayCombined）。
+    let eligibleIdx = -1;
+    if (_addClassDayFromRequestId && _addClassDayPrefillSnapshot) {
+      for (let i = 0; i < pendingRows.length; i++) {
+        const pr = pendingRows[i];
+        if (pr.dateVal === _addClassDayPrefillSnapshot.date &&
+            pr.startVal === _addClassDayPrefillSnapshot.time &&
+            !!pr.recurring === !!_addClassDayPrefillSnapshot.recurring &&
+            (pr.untilVal || '') === (_addClassDayPrefillSnapshot.untilVal || '')) {
+          eligibleIdx = i;
+          break;
+        }
+      }
+    }
+    _addClassDayEligibleDirectIdx = eligibleIdx;
+    const hasDirect = eligibleIdx !== -1;
+    const hasOthers = pendingRows.length > (hasDirect ? 1 : 0);
+    let btnHtml;
+    if (hasDirect && !hasOthers) {
+      btnHtml = '<button class="btn-gold" style="width:100%;margin-top:8px;" onclick="confirmAddClassDay()">✅ 確認新增這個時段</button>';
+    } else if (hasDirect && hasOthers) {
+      btnHtml = '<button class="btn-gold" style="width:100%;margin-top:8px;" onclick="submitAddClassDayCombined()">📤 送出（第 ' + (eligibleIdx + 1) + ' 筆直接排進 Calendar，其餘送出通知給學生確認）</button>';
+    } else {
+      btnHtml = '<button class="btn-gold" style="width:100%;margin-top:8px;" onclick="proposeAddClassDay()">📤 送出通知給學生，確認後才會新增</button>';
+    }
+    resultEl.innerHTML = previewLines.join('') + btnHtml;
   } catch (e) {
     resultEl.innerHTML = '<div style="color:#b45309;">檢查失敗：' + escHtml(e.message || String(e)) + '</div>';
   } finally {
@@ -2032,24 +2185,14 @@ async function createCalendarClassEventForStudent(token, s, p) {
   return { ev: ev, start: start, end: end };
 }
 
-// 第 2 步：老師確認過預覽內容才會真的建立 Calendar 事件＋寫資料庫
-// （這裡是「核准學生自己送出的加課申請」或「舊有直接建立」路徑，維持原本行為不變）
-async function confirmAddClassDay() {
-  // 2026-07-19 加（稽核發現，ORANGE#5）：這顆按鈕原本沒有防重複點擊鎖，跟 confirmTeacherAddClass
-  // 用同一套 _inFlightRequestIds 機制不一致——連點兩下或開兩個分頁都可能真的在 Google Calendar
-  // 建立兩筆重複的事件。這裡沒有 request id 可以當 key（是從 modal 的 _addClassDayPending 讀），
-  // 用固定字串當 lock key 即可，反正同一時間只會有一個加課 modal 開著。
-  const lockKey = 'confirmAddClassDay';
-  if (_inFlightRequestIds[lockKey]) return; // 正在處理中，忽略這次重複點擊
-  _inFlightRequestIds[lockKey] = true;
-  const p = _addClassDayPending;
-  if (!p) { delete _inFlightRequestIds[lockKey]; return; }
-  const token = p.token;
+// 2026-07-20 再改（Lin 要求：per-row 直接排 vs 送出等確認能同時發生於同一次送出）：把「單筆
+// 真正建立 Calendar＋通知學生老師＋（如果是核准學生申請）標記那筆申請完成」的核心邏輯抽出來，
+// confirmAddClassDay（單筆、維持原本行為）跟 submitAddClassDayCombined（新的 per-row 組合流程）
+// 都呼叫這個，避免兩份重複邏輯之後改一邊忘記改另一邊。
+// 不丟例外，回傳 {ok:true,...} 或 {ok:false,error}，呼叫端自己組訊息文字。
+async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
   const s = studentsCache[token];
-  if (!s) { alert('找不到學生資料'); delete _inFlightRequestIds[lockKey]; return; }
-  const resultEl = document.getElementById('addClassDayResult');
-  resultEl.innerHTML = '建立中…';
-
+  if (!s) return { ok: false, error: '找不到學生資料' };
   try {
     const created = await createCalendarClassEventForStudent(token, s, p);
     const start = created.start;
@@ -2079,27 +2222,47 @@ async function confirmAddClassDay() {
       });
     } catch (e) { console.warn('⚠️ 加課通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
 
-    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;">✅ 新增成功！（已重新確認 Calendar 上真的有這堂課' + (s.line_user_id ? '，已 LINE 通知學生' : '，學生還沒連結 LINE，沒收到通知') + '）</div>';
-    _addClassDayPending = null;
-    document.getElementById('addClassDayDate').value = '';
-    resetTimeDropdown('addClassDayStart');
-    document.getElementById('addClassDayRecurring').checked = false;
-    document.getElementById('addClassDayUntil').value = '';
-    document.getElementById('addClassDayUntilWrap').style.display = 'none';
-    await renderAddClassDayExistingList(token);
-
     // 2026-07-15 加：如果是從學生「➕ 申請加課」的申請單開進來的，Calendar+資料庫都真的
     // 成功了才把那筆申請標記完成（RELIABILITY FIRST：先確定真的排進去了才關單，不能先關單）。
-    if (_addClassDayFromRequestId) {
-      const doneId = _addClassDayFromRequestId;
-      _addClassDayFromRequestId = null;
-      try { await finalizeRequestStatus(doneId, 'acknowledged'); } catch (e) { /* 標記失敗不影響已經建立成功的課堂，loadPendingClassRequests 下次刷新還會看到這筆，可以再按一次 */ }
+    if (requestIdToFinalize) {
+      try { await finalizeRequestStatus(requestIdToFinalize, 'acknowledged'); } catch (e) { /* 標記失敗不影響已經建立成功的課堂，loadPendingClassRequests 下次刷新還會看到這筆，可以再按一次 */ }
     }
+    return { ok: true, hasLine: !!s.line_user_id };
   } catch (e) {
-    resultEl.innerHTML = '<div style="color:#b45309;">❌ 失敗：' + escHtml(e.message || String(e)) + '</div>';
-  } finally {
-    delete _inFlightRequestIds[lockKey];
+    return { ok: false, error: e.message || String(e) };
   }
+}
+
+// 第 2 步：老師確認過預覽內容才會真的建立 Calendar 事件＋寫資料庫
+// （這裡是「核准學生自己送出的加課申請」單筆場景，或手動「➕ 加課堂時間」單筆直接建立，維持原本行為不變）
+async function confirmAddClassDay() {
+  // 2026-07-19 加（稽核發現，ORANGE#5）：這顆按鈕原本沒有防重複點擊鎖，跟 confirmTeacherAddClass
+  // 用同一套 _inFlightRequestIds 機制不一致——連點兩下或開兩個分頁都可能真的在 Google Calendar
+  // 建立兩筆重複的事件。這裡沒有 request id 可以當 key（是從 modal 的 _addClassDayPending 讀），
+  // 用固定字串當 lock key 即可，反正同一時間只會有一個加課 modal 開著。
+  const lockKey = 'confirmAddClassDay';
+  if (_inFlightRequestIds[lockKey]) return; // 正在處理中，忽略這次重複點擊
+  _inFlightRequestIds[lockKey] = true;
+  // 2026-07-20 改：_addClassDayPending 現在是陣列，但這條「一按就直接排進去」的捷徑只在單一筆
+  // （這一筆同時也是 _addClassDayEligibleDirectIdx）時才會出現這顆按鈕，固定讀第一筆即可。
+  const p = (_addClassDayPending || [])[0];
+  if (!p) { delete _inFlightRequestIds[lockKey]; return; }
+  const token = p.token;
+  const resultEl = document.getElementById('addClassDayResult');
+  resultEl.innerHTML = '建立中…';
+
+  const requestIdToFinalize = _addClassDayFromRequestId;
+  const r = await directConfirmAddClassRow(token, p, requestIdToFinalize);
+  if (r.ok) {
+    _addClassDayFromRequestId = null;
+    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;">✅ 新增成功！（已重新確認 Calendar 上真的有這堂課' + (r.hasLine ? '，已 LINE 通知學生' : '，學生還沒連結 LINE，沒收到通知') + '）</div>';
+    _addClassDayPending = null;
+    resetAddClassDayRows();
+    await renderAddClassDayExistingList(token);
+  } else {
+    resultEl.innerHTML = '<div style="color:#b45309;">❌ 失敗：' + escHtml(r.error) + '</div>';
+  }
+  delete _inFlightRequestIds[lockKey];
 }
 
 // 2026-07-18 加（Lin 要求）：老師自己想到要加課（不是在核准學生送出的申請）——
@@ -2107,63 +2270,173 @@ async function confirmAddClassDay() {
 // initiated_by='teacher'），送 LINE/網站通知請學生按「我知道了」確認，老師之後要回到
 // 「📋 學生申請改期/取消」清單按「確認新增」（見 confirmTeacherAddClass）才會真的排進 Calendar。
 // 跟 teacherCancelClassNowInner（老師發起取消）同一套模式。
-async function proposeAddClassDay() {
-  const p = _addClassDayPending;
-  if (!p) return;
-  const token = p.token;
+// 把一筆 pending row 換成給學生看的完整時間文字（跟原本單筆版本文字一致）
+function addClassDayTimeLabel(p) {
+  return p.recurring
+    ? ('每週' + ['日','一','二','三','四','五','六'][p.weekday] + ' ' + p.startVal + '–' + p.endTime + '（泰國時間，從 ' + p.dateVal + ' 開始' + (p.untilVal ? '，固定到 ' + p.untilVal : '') + '）')
+    : (p.dateVal + '（週' + ['日','一','二','三','四','五','六'][p.weekday] + '）' + p.startVal + '–' + p.endTime + '（泰國時間）');
+}
+// LINE 按鈕標籤要短（buildFlexMessage 會 slice(0,20)，但先自己盡量精簡）
+function addClassDayShortLabel(p) {
+  const dayZh = ['日','一','二','三','四','五','六'];
+  if (p.recurring) return '每週' + dayZh[p.weekday] + ' ' + p.startVal;
+  const dp = p.dateVal.split('-');
+  return parseInt(dp[1], 10) + '/' + parseInt(dp[2], 10) + ' ' + p.startVal;
+}
+
+// 2026-07-20 改（Lin 要求：一次可以送出好幾筆加課提案）：迴圈處理 _addClassDayPending 陣列，
+// 每一筆都各自呼叫 submit_class_request + 補存 proposed_* 欄位（跟原本單筆版本完全一樣的兩步驟，
+// 只是包在迴圈裡，一筆失敗不影響其他筆繼續送）。全部送完後才發「一則」整合的 LINE flex 訊息給
+// 學生，內容列出所有時段，每個時段各自一組「接受／婉拒」按鈕（Lin 指示：「กล่องเดียว มีหลายเวลาให้เลือก
+// มีปุ่มได้และไม่ได้」＝一個訊息框、列出全部時間、每個時間都有可以/不可以兩顆按鈕）。
+// 接受＝沿用既有 action=ack_teacher_add（本來就是用 request id 當 key，不用改 webhook）；
+// 婉拒＝新的 action=decline_add_class（見 line-webhook/index.ts）。
+// 2026-07-20 再改（Lin 要求：per-row 直接排 vs 送出等確認能同時發生）：核心「幫一批 pendingRows
+// 各自建立 classroom_requests 提案＋補存細節＋整合成一則 LINE flex 訊息送給學生」的邏輯抽出來，
+// proposeAddClassDay（原本整批送出，維持原本行為）跟 submitAddClassDayCombined（新的 per-row
+// 組合流程，只送「非直接排」的那幾筆）都呼叫這個。不碰 _addClassDayPending/resultEl/UI，
+// 呼叫端自己組畫面文字跟收尾動作。
+async function proposeAddClassRows(token, pendingRows) {
   const s = studentsCache[token];
-  if (!s) { alert('找不到學生資料'); return; }
+  if (!s) return { created: [], failedLines: ['找不到學生資料'], notifySent: false, notifyError: null, hasLine: false };
+
+  const created = []; // 成功建立紀錄的那幾筆：{ requestId, ...p }
+  const failedLines = [];
+  for (const p of pendingRows) {
+    try {
+      const res = await sb.rpc('submit_class_request', {
+        p_token: token, p_student_name: s.name, p_request_type: 'add_class',
+        p_original_date: null, p_requested_date: p.dateVal, p_requested_time: p.startVal,
+        p_note: p.recurring ? ('每週固定上課' + (p.untilVal ? '，固定到 ' + p.untilVal : '（沒有結束日）')) : null,
+        p_initiated_by: 'teacher',
+      });
+      if (res.error) { failedLines.push('❌ ' + p.dateVal + ' ' + p.startVal + '：建立紀錄失敗（' + res.error.message + '）'); continue; }
+      const newId = res.data;
+
+      // 補存這次加課提案的細節（結束時間/是否每週固定/固定到哪天/星期幾）——之後老師按「確認新增」時要用
+      // 2026-07-20 加：補上 .select() + 檢查筆數（同一份「ฝั่งครู UPDATE ไม่เช็กแถว」清單）——這幾個欄位
+      // 現在也是 confirm_add_class（LINE 一鍵新增）會直接讀的資料，沒存到的話新增出來的時段會不完整
+      // 卻毫無警告，補起來至少主控台看得到。
+      const payloadRes = await sb.from('classroom_requests').update({
+        proposed_end_time: p.endTime, proposed_recurring: p.recurring, proposed_until: p.untilVal, proposed_weekday: p.weekday,
+      }).eq('id', newId).select();
+      if (payloadRes.error || !payloadRes.data || !payloadRes.data.length) console.warn('⚠️ 補存加課提案細節失敗（不影響通知本身，但「確認新增」時可能讀不到完整時段，請告訴 Lin/AI 手動補資料庫，可能是 RLS 靜靜擋掉更新 0 筆）：', payloadRes.error ? payloadRes.error.message : '更新 0 筆');
+
+      created.push(Object.assign({ requestId: newId }, p));
+    } catch (e) {
+      failedLines.push('❌ ' + p.dateVal + ' ' + p.startVal + '：' + (e.message || String(e)));
+    }
+  }
+
+  let notifySent = false, notifyError = null;
+  if (created.length && s.line_user_id) {
+    try {
+      const isSingle = created.length === 1;
+      const bodyLines = created.map(function (p, i) { return (isSingle ? '' : ((i + 1) + '. ')) + addClassDayTimeLabel(p); }).join('\n');
+      const buttons = [];
+      created.forEach(function (p) {
+        const shortLabel = addClassDayShortLabel(p);
+        buttons.push({ label: '接受：' + shortLabel, postbackData: 'action=ack_teacher_add&request=' + encodeURIComponent(p.requestId) });
+        buttons.push({ label: '婉拒：' + shortLabel, postbackData: 'action=decline_add_class&request=' + encodeURIComponent(p.requestId) });
+      });
+      buttons.push({ label: '聯繫老師', uri: LINE_OA_URL });
+      const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
+        method: 'POST',
+        // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
+        body: JSON.stringify({
+          to: { studentToken: token },
+          message: (isSingle ? '老師想幫你加一堂課：' : '老師想幫你加' + created.length + '堂課：') + bodyLines + '，請按一下確認',
+          flex: {
+            title: isSingle ? '➕ 老師想幫你加一堂課' : '➕ 老師想幫你加課（' + created.length + ' 個時段）',
+            bodyText: (isSingle ? '時間：' : '時間：\n') + bodyLines + '\n\n請針對每個時段按下方按鈕確認或婉拒',
+            buttons: buttons,
+          },
+        }),
+      });
+      notifySent = notifyRes.ok;
+      if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+    } catch (e) { notifyError = e.message || String(e); }
+  }
+  return { created, failedLines, notifySent, notifyError, hasLine: !!s.line_user_id };
+}
+
+async function proposeAddClassDay() {
+  const pendingRows = _addClassDayPending;
+  if (!pendingRows || !pendingRows.length) return;
+  const token = pendingRows[0].token;
   const resultEl = document.getElementById('addClassDayResult');
   resultEl.innerHTML = '送出中…';
+
+  const r = await proposeAddClassRows(token, pendingRows);
+  const lines = [];
+  if (r.created.length) {
+    lines.push('✅ 已送出 ' + r.created.length + ' 筆加課通知，等學生按「接受」（LINE 或網站都可以）之後，記得回來「📋 學生申請改期/取消」清單按「確認新增」才會真的排進 Calendar');
+    if (!r.hasLine) lines.push('⚠️ 學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下');
+    else if (!r.notifySent) lines.push('⚠️ 但 LINE 通知失敗（' + r.notifyError + '），學生開網站還是看得到，也可以自己再說一聲');
+  }
+  if (r.failedLines.length) lines.push.apply(lines, r.failedLines);
+  resultEl.innerHTML = lines.length
+    ? ('<div style="color:var(--gold-deep);font-weight:700;">' + lines.map(escHtml).join('<br>') + '</div>')
+    : '<div style="color:#b45309;">送出失敗，所有筆數都沒有成功建立</div>';
+  _addClassDayPending = null;
+  loadPendingClassRequests();
+}
+
+// 2026-07-20 加（Lin 要求：per-row 直接排 vs 送出等確認可以同時發生於同一次「送出」）：
+// checkAddClassDayConflict 找到「符合學生原本申請」的那一筆（_addClassDayEligibleDirectIdx）時
+// 顯示這顆按鈕——直接排進 Calendar 那一筆（沿用 directConfirmAddClassRow，同時標記原本那筆
+// 申請完成），其餘（老師自己順手多加的）照樣走 proposeAddClassRows 送出通知給學生確認，
+// 兩件事都做完才顯示一個合併結果訊息給老師看，清楚寫「第幾筆」是哪種結果。
+async function submitAddClassDayCombined() {
+  const lockKey = 'addClassDayCombined';
+  if (_inFlightRequestIds[lockKey]) return;
+  _inFlightRequestIds[lockKey] = true;
+  const resultEl = document.getElementById('addClassDayResult');
+  resultEl.innerHTML = '處理中…';
+  const pendingRows = _addClassDayPending || [];
+  const eligibleIdx = _addClassDayEligibleDirectIdx;
+  const token = pendingRows[0] && pendingRows[0].token;
+  const lines = [];
+
   try {
-    const res = await sb.rpc('submit_class_request', {
-      p_token: token, p_student_name: s.name, p_request_type: 'add_class',
-      p_original_date: null, p_requested_date: p.dateVal, p_requested_time: p.startVal,
-      p_note: p.recurring ? ('每週固定上課' + (p.untilVal ? '，固定到 ' + p.untilVal : '（沒有結束日）')) : null,
-      p_initiated_by: 'teacher',
-    });
-    if (res.error) { resultEl.innerHTML = '<div style="color:#b45309;">建立紀錄失敗：' + escHtml(res.error.message) + '</div>'; return; }
-    const newId = res.data;
+    if (!token || !pendingRows.length) { resultEl.innerHTML = '<div style="color:#b45309;">找不到待處理的時段，請重新檢查一次</div>'; return; }
 
-    // 補存這次加課提案的細節（結束時間/是否每週固定/固定到哪天/星期幾）——之後老師按「確認新增」時要用
-    const payloadRes = await sb.from('classroom_requests').update({
-      proposed_end_time: p.endTime, proposed_recurring: p.recurring, proposed_until: p.untilVal, proposed_weekday: p.weekday,
-    }).eq('id', newId);
-    if (payloadRes.error) console.warn('⚠️ 補存加課提案細節失敗（不影響通知本身，但「確認新增」時可能讀不到完整時段，請告訴 Lin/AI 手動補資料庫）：', payloadRes.error.message);
-
-    let notifySent = false, notifyError = null;
-    if (s.line_user_id) {
-      try {
-        const addTimeLabel = p.recurring
-          ? ('每週' + ['日','一','二','三','四','五','六'][p.weekday] + ' ' + p.startVal + '–' + p.endTime + '（泰國時間，從 ' + p.dateVal + ' 開始' + (p.untilVal ? '，固定到 ' + p.untilVal : '') + '）')
-          : studentFacingTimeLabel(teacherTimeToDate(p.dateVal, p.startVal), s.pending_student_tz);
-        const notifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
-          method: 'POST',
-          // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
-          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
-          body: JSON.stringify({
-            to: { studentToken: token },
-            message: '老師想幫你加一堂課：' + addTimeLabel + '，請按一下確認',
-            flex: {
-              title: '➕ 老師想幫你加一堂課',
-              bodyText: '時間：' + addTimeLabel + '\n\n請按下方按鈕確認',
-              buttons: [ { label: '我知道了', postbackData: 'action=ack_teacher_add&request=' + encodeURIComponent(newId) } ],
-            },
-          }),
-        });
-        notifySent = notifyRes.ok;
-        if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
-      } catch (e) { notifyError = e.message || String(e); }
+    if (eligibleIdx !== -1 && pendingRows[eligibleIdx]) {
+      const requestIdToFinalize = _addClassDayFromRequestId;
+      const r = await directConfirmAddClassRow(token, pendingRows[eligibleIdx], requestIdToFinalize);
+      if (r.ok) {
+        _addClassDayFromRequestId = null;
+        lines.push('✅ 第 ' + (eligibleIdx + 1) + ' 筆已直接排進 Calendar' + (r.hasLine ? '（已 LINE 通知學生）' : '（學生還沒連結 LINE，沒收到通知）'));
+      } else {
+        lines.push('❌ 第 ' + (eligibleIdx + 1) + ' 筆直接排進 Calendar 失敗：' + r.error);
+      }
     }
 
-    var msg = '✅ 已送出加課通知，等學生按「我知道了」（LINE 或網站都可以）之後，記得回來「📋 學生申請改期/取消」清單按「確認新增」才會真的排進 Calendar';
-    if (!s.line_user_id) msg += '\n⚠️ 學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下';
-    else if (!notifySent) msg += '\n⚠️ 但 LINE 通知失敗（' + notifyError + '），學生開網站還是看得到，也可以自己再說一聲';
-    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;">' + escHtml(msg).replace(/\n/g, '<br>') + '</div>';
+    const restRowsWithIdx = [];
+    pendingRows.forEach(function (p, i) { if (i !== eligibleIdx) restRowsWithIdx.push({ idx: i, row: p }); });
+    if (restRowsWithIdx.length) {
+      const restRows = restRowsWithIdx.map(function (x) { return x.row; });
+      const pr = await proposeAddClassRows(token, restRows);
+      const idxLabel = restRowsWithIdx.map(function (x) { return '第 ' + (x.idx + 1) + ' 筆'; }).join('、');
+      if (pr.created.length) {
+        lines.push('📤 ' + idxLabel + '已送出通知給學生，等學生按「接受」（LINE 或網站都可以）之後，記得回來「📋 學生申請改期/取消」清單按「確認新增」才會真的排進 Calendar');
+        if (!pr.hasLine) lines.push('⚠️ 學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下');
+        else if (!pr.notifySent) lines.push('⚠️ 但 LINE 通知失敗（' + pr.notifyError + '），學生開網站還是看得到，也可以自己再說一聲');
+      }
+      if (pr.failedLines.length) lines.push.apply(lines, pr.failedLines);
+    }
+
+    resultEl.innerHTML = lines.length
+      ? ('<div style="color:var(--gold-deep);font-weight:700;">' + lines.map(escHtml).join('<br>') + '</div>')
+      : '<div style="color:#b45309;">處理失敗，沒有成功的項目</div>';
     _addClassDayPending = null;
+    _addClassDayEligibleDirectIdx = -1;
+    resetAddClassDayRows();
+    await renderAddClassDayExistingList(token);
     loadPendingClassRequests();
-  } catch (e) {
-    resultEl.innerHTML = '<div style="color:#b45309;">送出失敗：' + escHtml(e.message || String(e)) + '</div>';
+  } finally {
+    delete _inFlightRequestIds[lockKey];
   }
 }
 
@@ -4812,6 +5085,16 @@ const LINE_OA_URL = 'https://lin.ee/yVBgvywy'; // 全站統一用這個 LINE 官
 const LIFF_ID = '2010620934-5MFOEYBX'; // 跟 classroom/liff-config.js 同一個 LIFF app，用來在 LINE 裡直接開課堂頁
 let nextClassCtx = null; // 目前顯示中的下一堂課資訊，給申請改期/取消用
 
+// 2026-07-20 加（Lin 要求：LINE 上的「💬 聯繫學生」也要能一鍵開啟）：LINE flex message 的按鈕
+// 只能是 uri／postback／message，沒有辦法直接「開啟老師網站上某個學生的聊天輸入框」。
+// 這裡用「uri 開網站＋帶 hash」的方式，重用既有的 openContactStudentModal（跟網站上的
+// 「💬 聯繫學生」按鈕完全同一個 modal），不用另外做一套 webhook 訊息代收邏輯——
+// 跟 #req-row-<id> 的做法（見 scrollToRequestFromHash）同一套模式，只是這次是開 modal 不是捲動卡片。
+// 前提：老師手機瀏覽器裡本來就已經登入教師帳號（跟其他「🔗 開 Calendar」「📋 到網站處理」連結一樣的假設）。
+function contactStudentDeepLink(token) {
+  return 'https://mrtaihualin.com/classroom/#contact-student-' + encodeURIComponent(token || '');
+}
+
 // 2026-07-11 加：「下一堂課」卡片下方的 LINE 按鈕 —
 //   已連結 LINE（student.line_user_id 有值）→ 顯示「在 LINE 中開啟」，用 LIFF 在 LINE 裡開這個課堂頁
 //   還沒連結 LINE → 顯示「連結 LINE 帳號」，帶去 line-link.html 做第一次連結
@@ -5515,22 +5798,78 @@ async function studentWithdrawOwnRescheduleRequest(token, id) {
 // （'add_class'），p_original_date 特意傳 null（沒有「原本課堂」這回事，純粹是新加的一堂）。
 // 老師端確認沒有衝突、真的排進 Calendar，用的是已經做好的「➕ 加課堂時間」那套工具（見
 // openAddClassDayModal／checkAddClassDayConflict／confirmAddClassDay），不用重造一次。
+// 2026-07-20 加（Lin 要求：跟老師端「➕ 加課堂時間」一致，一次可以送出好幾筆＋有「固定」欄位）
+// 跟老師端 addClassDayRowHtml 同一套 row 樣板做法：每筆一個 row（id 帶 idx 後綴），
+// 「➕ 再加一筆時間」複製新的一份、「－ 移除這筆」拿掉一份（不能減到 0 筆）。
+function addReqRowHtml(idx) {
+  return '<div class="addReqRow" id="addReqRow_' + idx + '" style="' + (idx > 0 ? 'border-top:1px solid var(--border);padding-top:10px;margin-top:10px;' : '') + '">' +
+    '<label class="settings-label">想約哪一天？</label>' +
+    '<input class="settings-input" id="addReqDate_' + idx + '" type="date" oninput="onAddReqScheduleChange(' + idx + ')" />' +
+    '<label class="settings-label">想約幾點？（請選「你自己現在所在地」的時間，不用換算成泰國時間）</label>' +
+    '<div style="display:flex;gap:6px;align-items:center;">' +
+      '<select class="settings-input" id="addReqTime_' + idx + '_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown(\'addReqTime_' + idx + '\');onAddReqScheduleChange(' + idx + ')">' + TIME_HOUR_OPTIONS_HTML + '</select>' +
+      '<span style="font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>' +
+      '<select class="settings-input" id="addReqTime_' + idx + '_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown(\'addReqTime_' + idx + '\');onAddReqScheduleChange(' + idx + ')">' + TIME_MIN_OPTIONS_HTML + '</select>' +
+    '</div>' +
+    '<input type="hidden" id="addReqTime_' + idx + '" value="" />' +
+    '<p id="addReqHint_' + idx + '" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>' +
+    '<label style="display:flex;align-items:center;gap:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;color:var(--ink);margin:10px 0;">' +
+      '<input type="checkbox" id="addReqRecurring_' + idx + '" onchange="onAddReqRecurringChange(' + idx + ')" /> 🔁 每週固定（從這天開始，之後每週都排這個時間）' +
+    '</label>' +
+    '<div id="addReqUntilWrap_' + idx + '" style="display:none;">' +
+      '<label class="settings-label">固定到（不填＝一直排下去，沒有結束日）</label>' +
+      '<input class="settings-input" id="addReqUntil_' + idx + '" type="date" />' +
+    '</div>' +
+    '<div style="text-align:right;">' +
+      '<button type="button" class="btn-ghost addReqRemoveBtn" style="display:none;font-size:0.78rem;padding:3px 10px;" onclick="removeReqRow(' + idx + ')">－ 移除這筆</button>' +
+    '</div>' +
+  '</div>';
+}
+var _addReqNextIdx = 0;
+function updateAddReqRemoveButtons() {
+  var rows = document.querySelectorAll('#addReqRows .addReqRow');
+  rows.forEach(function (row) {
+    var btn = row.querySelector('.addReqRemoveBtn');
+    if (btn) btn.style.display = rows.length > 1 ? '' : 'none';
+  });
+}
+function addReqAddRow() {
+  var idx = _addReqNextIdx++;
+  document.getElementById('addReqRows').insertAdjacentHTML('beforeend', addReqRowHtml(idx));
+  updateAddReqRemoveButtons();
+  return idx;
+}
+function removeReqRow(idx) {
+  var rows = document.querySelectorAll('#addReqRows .addReqRow');
+  if (rows.length <= 1) return; // 不能減到 0 筆
+  var el = document.getElementById('addReqRow_' + idx);
+  if (el) el.remove();
+  updateAddReqRemoveButtons();
+}
+function resetAddReqRows() {
+  document.getElementById('addReqRows').innerHTML = '';
+  _addReqNextIdx = 0;
+  addReqAddRow();
+}
+function onAddReqRecurringChange(idx) {
+  var checked = document.getElementById('addReqRecurring_' + idx).checked;
+  document.getElementById('addReqUntilWrap_' + idx).style.display = checked ? 'block' : 'none';
+}
+
 var _addReqToken = null;
 function openAddRequestModal(token) {
   if (!requireLineLinkedOrPrompt(token)) return;
   _addReqToken = token;
-  document.getElementById('addReqDateInput').value = '';
-  resetTimeDropdown('addReqTimeInput');
+  resetAddReqRows();
   document.getElementById('addReqNoteInput').value = '';
-  document.getElementById('addReqScheduleHint').style.display = 'none';
   document.getElementById('addRequestModal').classList.add('open');
 }
 function closeAddRequestModal() { document.getElementById('addRequestModal').classList.remove('open'); }
 
-function onAddReqScheduleChange() {
-  const dateVal = document.getElementById('addReqDateInput').value;
-  const timeVal = document.getElementById('addReqTimeInput').value.trim();
-  const hint = document.getElementById('addReqScheduleHint');
+function onAddReqScheduleChange(idx) {
+  const dateVal = document.getElementById('addReqDate_' + idx).value;
+  const timeVal = document.getElementById('addReqTime_' + idx).value.trim();
+  const hint = document.getElementById('addReqHint_' + idx);
   if (!dateVal || !timeVal) { hint.style.display = 'none'; return; }
   if (!isValidTimeStr(timeVal)) { hint.style.display = 'block'; hint.textContent = '⚠️ 時間格式不對，請用 HH:MM，例如 14:30'; return; }
   const s = (_addReqToken && typeof studentsCache !== 'undefined') ? studentsCache[_addReqToken] : null;
@@ -5549,47 +5888,101 @@ function onAddReqScheduleChange() {
   }
 }
 
+// 2026-07-20 改（Lin 要求：一次可以送出好幾筆＋要有結構化的「固定/固定到」）：迴圈處理
+// #addReqRows 底下每一筆 row，各自送 submit_class_request，然後跟老師端 proposeAddClassDay
+// 同一套「update proposed_* 欄位 + .select() + 檢查筆數」寫法補存固定/固定到細節——這是這次
+// 真正的 parity 修正：以前學生送出的加課申請完全沒有結構化存這幾個欄位，老師只能從備註文字
+// 自己看，現在跟老師端一樣可以直接被 confirm_add_class／confirmTeacherAddClass 讀取使用。
+// 備註欄位維持共用同一個（送出時套用到這批送出的每一筆），不做成逐筆備註（避免過度複雜）。
 async function submitAddRequest() {
   const token = _addReqToken;
   if (!token) { closeAddRequestModal(); return; }
-  const rawDate = document.getElementById('addReqDateInput').value;
-  const rawTime = document.getElementById('addReqTimeInput').value.trim();
   const note = document.getElementById('addReqNoteInput').value.trim();
-  if (!rawDate) { alert('請選擇想約哪一天'); return; }
-  if (!isValidTimeStr(rawTime)) { alert('⚠️ 時間格式不對，請用 HH:MM，例如 14:30'); return; }
-
   const s = studentsCache[token];
   const studentTz = s && s.pending_student_tz;
-  let newDate = rawDate, newTime = rawTime;
-  if (studentTz) {
-    try {
-      const abs = parseInTzToDate(rawDate, rawTime, studentTz);
-      const thai = formatInTz(abs, TEACHER_TZ);
-      newDate = thai.dateStr; newTime = thai.timeStr;
-    } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
-  }
-
   const studentName = currentStudentName(token);
+
+  const rowEls = Array.prototype.slice.call(document.querySelectorAll('#addReqRows .addReqRow'));
+  const rowsInput = [];
+  for (let i = 0; i < rowEls.length; i++) {
+    const idx = rowEls[i].id.replace('addReqRow_', '');
+    const n = i + 1;
+    const rawDate = document.getElementById('addReqDate_' + idx).value;
+    const rawTime = document.getElementById('addReqTime_' + idx).value.trim();
+    const recurring = document.getElementById('addReqRecurring_' + idx).checked;
+    const untilVal = document.getElementById('addReqUntil_' + idx).value;
+    if (!rawDate) { alert('第 ' + n + ' 筆：請選擇想約哪一天'); return; }
+    if (!isValidTimeStr(rawTime)) { alert('⚠️ 第 ' + n + ' 筆：時間格式不對，請用 HH:MM，例如 14:30'); return; }
+
+    let newDate = rawDate, newTime = rawTime;
+    if (studentTz) {
+      try {
+        const abs = parseInTzToDate(rawDate, rawTime, studentTz);
+        const thai = formatInTz(abs, TEACHER_TZ);
+        newDate = thai.dateStr; newTime = thai.timeStr;
+      } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
+    }
+    let newUntilVal = untilVal || null;
+    if (recurring && newUntilVal && studentTz) {
+      try {
+        const untilAbs = parseInTzToDate(newUntilVal, '23:59', studentTz);
+        newUntilVal = formatInTz(untilAbs, TEACHER_TZ).dateStr;
+      } catch (e) { /* 換算失敗就照原樣送（照學生自己選的日期字串），跟開始日期同一套邏輯 */ }
+    }
+    if (recurring && newUntilVal) {
+      const untilAbsCheck = teacherTimeToDate(newUntilVal, '23:59');
+      const startAbsCheck = teacherTimeToDate(newDate, newTime);
+      if (untilAbsCheck.getTime() < startAbsCheck.getTime()) { alert('⚠️ 第 ' + n + ' 筆：「固定到」的日期不能早於想約的日期'); return; }
+    }
+    rowsInput.push({ newDate: newDate, newTime: newTime, recurring: recurring, untilVal: newUntilVal, endTime: addOneHourTimeStr(newTime), weekday: thaiDateWeekday(newDate) });
+  }
+  if (!rowsInput.length) { alert('至少要有一筆時間'); return; }
+
   const btn = document.getElementById('addReqSubmitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
-  const res = await sb.rpc('submit_class_request', {
-    p_token: token,
-    p_student_name: studentName,
-    p_request_type: 'add_class',
-    p_original_date: null, // ไม่มี "คาบเดิม" — เป็นคาบใหม่ที่ขอเพิ่ม
-    p_requested_date: newDate,
-    p_requested_time: newTime,
-    p_note: note || null,
-    p_initiated_by: 'student',
-  });
+
+  const created = []; // 成功建立的那幾筆：{ requestId, newDate, newTime, recurring, untilVal, endTime, weekday }
+  const failedLines = [];
+  for (const row of rowsInput) {
+    try {
+      const res = await sb.rpc('submit_class_request', {
+        p_token: token,
+        p_student_name: studentName,
+        p_request_type: 'add_class',
+        p_original_date: null, // ไม่มี "คาบเดิม" — เป็นคาบใหม่ที่ขอเพิ่ม
+        p_requested_date: row.newDate,
+        p_requested_time: row.newTime,
+        p_note: note || null,
+        p_initiated_by: 'student',
+      });
+      if (res.error) { failedLines.push(row.newDate + ' ' + row.newTime + '：' + res.error.message); continue; }
+      const newId = res.data;
+
+      const payloadRes = await sb.from('classroom_requests').update({
+        proposed_end_time: row.endTime, proposed_recurring: row.recurring, proposed_until: row.untilVal, proposed_weekday: row.weekday,
+      }).eq('id', newId).select();
+      if (payloadRes.error || !payloadRes.data || !payloadRes.data.length) console.warn('⚠️ 補存加課申請的固定/固定到細節失敗（不影響申請本身，但老師端可能讀不到完整時段，請告訴 Lin/AI 手動補資料庫，可能是 RLS 靜靜擋掉更新 0 筆）：', payloadRes.error ? payloadRes.error.message : '更新 0 筆');
+
+      created.push(Object.assign({ requestId: newId }, row));
+    } catch (e) {
+      failedLines.push(row.newDate + ' ' + row.newTime + '：' + (e.message || String(e)));
+    }
+  }
+
   btn.disabled = false; btn.textContent = '📤 送出申請';
-  if (res.error) {
-    alert('送出失敗：' + res.error.message + (/request_type|constraint|check/i.test(res.error.message || '') ? '\n（可能是資料庫還沒支援「add_class」這個類型，請告訴 Lin/AI 到 Supabase 調整）' : '\n請直接聯絡老師比較保險。'));
+
+  if (!created.length) {
+    alert('送出失敗：\n' + failedLines.join('\n') + (failedLines.some(function (l) { return /request_type|constraint|check/i.test(l); }) ? '\n（可能是資料庫還沒支援「add_class」這個類型，請告訴 Lin/AI 到 Supabase 調整）' : '\n請直接聯絡老師比較保險。'));
     return;
   }
-  notifyTeacherClassRequest({ type: 'add_class', name: studentName, token: token, requestedDate: newDate, requestedTime: newTime, note: note });
+
+  // 2026-07-20 改：一次送出好幾筆時整合成「一則」通知給老師（見 notifyTeacherClassRequest 的
+  // rows 參數），不用一筆一則轟炸老師的 LINE。單筆時維持原本的呼叫方式（rows 陣列長度 1 一樣適用）。
+  notifyTeacherClassRequest({ type: 'add_class', name: studentName, token: token, note: note, rows: created });
   closeAddRequestModal();
-  alert('✅ 已送出加課申請，老師確認沒有衝突後會安排進課表。');
+  let doneMsg = '✅ 已送出 ' + created.length + ' 筆加課申請，老師確認沒有衝突後會安排進課表。';
+  if (failedLines.length) doneMsg += '\n⚠️ 但有 ' + failedLines.length + ' 筆沒送出成功：\n' + failedLines.join('\n');
+  alert(doneMsg);
 }
 
 // 2026-07-13 加：學生自己頁面看「目前送出的申請」狀態
@@ -5879,10 +6272,22 @@ async function ackTeacherAdd(token, id) {
     return;
   }
   try {
+    // 2026-07-20 改（Lin 要求：確認新增 Calendar 要能從 LINE 直接按）：以前這裡只推純文字叫老師
+    // 自己去網站按，現在附一顆按鈕，共用 line-webhook 的 action=confirm_add_class（跟
+    // confirm_cancel_delete 同一套模式），老師在 LINE 這裡就能直接按完成，不用開網站。
+    const rDateForFlex = (res.rows[0].requested_date || '-') + (res.rows[0].requested_time ? ' ' + res.rows[0].requested_time : '');
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-      body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到加課通知（' + (res.rows[0].requested_date || '-') + ' ' + (res.rows[0].requested_time || '') + '），可以到網站按「確認新增」了' }),
+      body: JSON.stringify({
+        to: 'teacher',
+        message: 'ℹ️ 學生已確認收到加課通知（' + rDateForFlex + '），可以按下方按鈕新增，或到網站按「確認新增」',
+        flex: {
+          title: '學生已確認收到加課通知',
+          bodyText: '時間：' + rDateForFlex + '\n\n可以直接按下方按鈕新增 Calendar，或到網站處理',
+          buttons: [{ label: '確認新增 Calendar', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(id), style: 'primary' }],
+        },
+      }),
     });
   } catch (e) { /* 通知老師失敗不影響學生這邊已經確認成功 */ }
   await loadTeacherAddAckBanner(token);
@@ -5932,10 +6337,20 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
     const msg = response === 'accepted'
       ? ('ℹ️ 學生已經選好新時間' + (chosenOpt ? '（' + chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '') + '）' : '') + '，到網站按「確認並搬 Calendar」')
       : '⚠️ 學生說這些時間都不方便，請直接聯絡學生討論';
+    // 2026-07-20 加（Lin 要求：都不方便要能直接聯繫學生，不能只有純文字警告）：都不方便時附一顆
+    // 「💬 聯繫學生」按鈕，開網站上既有的聯絡視窗（openContactStudentModal），不用自己在清單裡找。
+    const bodyPayload = { to: 'teacher', message: msg };
+    if (response !== 'accepted') {
+      bodyPayload.flex = {
+        title: '⚠️ 學生說這些時間都不方便',
+        bodyText: msg,
+        buttons: [{ label: '💬 聯繫學生', uri: contactStudentDeepLink(token) }],
+      };
+    }
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-      body: JSON.stringify({ to: 'teacher', message: msg }),
+      body: JSON.stringify(bodyPayload),
     });
   } catch (e) { /* 通知老師失敗不影響學生這邊已經回覆成功 */ }
   alert(response === 'accepted' ? '✅ 已回覆，等老師確認完成調整' : '✅ 已回覆，老師會直接聯絡你');
@@ -5949,18 +6364,25 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
 //     → 同一段程式碼會自動改成走 LINE 通知，完全不用再改這裡的程式
 const LINE_NOTIFY_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/notify-line';
 
+// 2026-07-20 改（Lin 要求：學生一次送出好幾筆加課申請，要整合成「一則」通知給老師，不要
+// 一筆一則轟炸 LINE）：加一個 d.rows（陣列，每個 { requestId, newDate, newTime, recurring, untilVal }）
+// 參數，isAdd 時如果有帶 rows 就走「多筆整合」文案/按鈕，沒帶就照舊維持單筆版本的行為不變
+// （d.requestId/d.requestedDate/d.requestedTime）——目前唯一呼叫點（submitAddRequest）
+// 已經改成一律帶 rows（就算只有 1 筆也是 rows.length===1），舊的單筆分支保留當防呆備援。
 function notifyTeacherClassRequest(d) {
   try {
     var isCancel = d.type === 'cancel';
     var isAdd = d.type === 'add_class';
     var isReschedule = !isCancel && !isAdd;
+    var addRows = isAdd && Array.isArray(d.rows) && d.rows.length ? d.rows : null;
     // 2026-07-15 加：type='add_class'（學生自己申請加課，沒有「原本課堂」這回事）獨立出文案，
     // 不然會照 isCancel=false 的舊邏輯誤顯示成「申請改期」+「原本課堂日期：-」，讓老師看不懂。
-    var subject = (isCancel ? '❌ 學生申請取消課程 — ' : isAdd ? '➕ 學生申請加課 — ' : '🔄 學生申請改期 — ') + (d.name || '學生');
+    var subject = (isCancel ? '❌ 學生申請取消課程 — ' : isAdd ? ('➕ 學生申請加課' + (addRows && addRows.length > 1 ? '（' + addRows.length + ' 個時段）' : '') + ' — ') : '🔄 學生申請改期 — ') + (d.name || '學生');
     // 2026-07-10 加：直接附 Google Calendar 那一天的連結，點了就直接開到正確日期（在 LINE 裡點也會開）
     // 2026-07-16 改（Lin 要求：改期也簡化成一顆按鈕）：只有「加課」還需要這條 Calendar 連結
     // （老師要自己去那天新增），取消／改期現在都走「到網站處理」單一按鈕，不用另外開 Calendar 連結。
-    var calDateStr = isAdd ? (d.requestedDate || d.originalDate) : null;
+    // 2026-07-20 加：多筆時段橫跨不同天，不清楚要開哪一天，只有剛好只有 1 筆時才附這顆連結。
+    var calDateStr = isAdd ? ((addRows && addRows.length === 1 ? addRows[0].newDate : (!addRows ? (d.requestedDate || d.originalDate) : null))) : null;
     var calLink = null;
     if (calDateStr && /^\d{4}-\d{2}-\d{2}/.test(calDateStr)) {
       var _p = calDateStr.split('-');
@@ -5968,8 +6390,12 @@ function notifyTeacherClassRequest(d) {
     }
     // 2026-07-16 改：取消／改期的網站連結都帶 #req-row-<id> 直接跳到這筆申請的卡片
     // （見 scrollToRequestFromHash）。沒有 requestId（理論上不會發生，保險起見還是防一下）
-    // 就退回沒有 # 的舊版連結，最多就是老師自己要滑一下找，不會壞掉。加課沒有這個機制維持原樣。
-    var siteLink = 'https://mrtaihualin.com/classroom/' + ((!isAdd && d.requestId) ? ('#req-row-' + encodeURIComponent(d.requestId)) : '');
+    // 就退回沒有 # 的舊版連結，最多就是老師自己要滑一下找，不會壞掉。
+    // 2026-07-20 改（順手修）：加課現在也一起帶 # 了（以前特地排除 isAdd，但 scrollToRequestFromHash
+    // 本來就認得住所有 req-row-<id>，加課申請的卡片也是同一個 id，之前沒有理由不給，順便讓
+    // 「📋 到網站處理」在加課卡片也能直接跳到那張卡片，不用自己滑）。多筆時用第一筆的 id 跳頁。
+    var siteLinkId = (addRows && addRows[0] && addRows[0].requestId) || d.requestId;
+    var siteLink = 'https://mrtaihualin.com/classroom/' + (siteLinkId ? ('#req-row-' + encodeURIComponent(siteLinkId)) : '');
 
     // 2026-07-16 加（Lin 要求：最多可以給 3 個時間選項）：改期把候選時間全部列出來，
     // 老師一眼就看到全部選項，不用點進網站才知道有幾個。
@@ -5982,10 +6408,18 @@ function notifyTeacherClassRequest(d) {
       }).join('\n') + '\n（以上都是泰國時間）';
     }
 
+    // 2026-07-20 加：多筆加課申請的內容列表——每筆列出日期/時間，有勾「每週固定」的話也列出來
+    // （跟老師端 addClassDayTimeLabel 同樣的資訊，但用學生申請的欄位名稱）。
+    var addRowsText = addRows ? addRows.map(function (r, i) {
+      var label = (r.newDate || '-') + (r.newTime ? ' ' + r.newTime : '');
+      var recur = r.recurring ? '（每週固定' + (r.untilVal ? '，固定到 ' + r.untilVal : '，沒有結束日') + '）' : '';
+      return (addRows.length > 1 ? (i + 1) + '. ' : '') + label + recur;
+    }).join('\n') : null;
+
     var message = '學生：' + (d.name || '-') + '\n類型：' + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期')
       // 2026-07-17 加（Lin 要求）：原本課堂要連時間一起講，不能只有日期。
       + (isAdd ? '' : ('\n原本課堂日期：' + (d.originalDate || '-') + (d.originalTime ? ' ' + d.originalTime : '') + '（泰國時間）'))
-      + (isAdd ? ('\n想約：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')) : '')
+      + (addRows ? ('\n想約：\n' + addRowsText) : (isAdd ? ('\n想約：' + (d.requestedDate || '-') + (d.requestedTime ? ' ' + d.requestedTime : '')) : ''))
       + optionsText
       + (d.note ? '\n備註：' + d.note : '')
       + (isAdd && calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
@@ -6011,10 +6445,46 @@ function notifyTeacherClassRequest(d) {
     // 可以自己刪 Calendar，不會再有「按了以為處理完但 Calendar 沒動到」的風險（見 line-webhook
     // action=confirm_cancel_delete）。只加在「申請取消」——改期需要老師先選新時間，沒辦法一鍵完成，
     // 維持原本「到網站處理」。「到網站處理」保留當備援（例如老師想先看清楚細節再確認）。
+    // 2026-07-20 改（Lin 檢查 mockup 後要求，見 _แผนงาน/ทำต่อ_2026-07-20.md）：
+    //   ・申請加課：加「🔍 檢查是否衝突」（LINE 內直接查 Google Calendar，服務帳號有讀取權限）
+    //     跟「💬 聯繫學生」（開網站聯絡視窗），跟網站上請求佇列卡片的按鈕看齊；
+    //     「📋 到網站處理」保留當備援——實際「排進 Calendar」還是要開「➕ 加課堂時間」那個小視窗，
+    //     LINE 這裡沒有對應的完整流程可以做。
+    //   ・申請取消：「✅ 確認並刪除課程」已經能在 LINE 內完成整個流程了，拿掉「📋 到網站處理」
+    //     （不需要再多一顆備援連結）。
+    //   ・申請改期（學生自己送出的）：「📋 到網站處理」換成「💬 聯繫學生」（老師通常是想直接
+    //     聯絡學生討論時間，不是想跳去卡片本身）。
+    // 2026-07-20 再改（Lin 看過上面這版 mockup 後又要求，第二輪）：申請加課要能「完全在 LINE 處理
+    // 完，不用開網站」——拿掉「🔗 開 Calendar」跟「📋 到網站處理」這兩顆，每個時段改成一顆
+    // 「✅ 確認新增：<日期時間>」（沿用既有 action=confirm_add_class，見下面按鈕組裝；webhook 端
+    // 那個 action 原本規定一定要等學生先按「我知道了」才能按，現在放寬成：只有「老師自己提議的
+    // 時段」才需要等學生確認，「學生自己申請」的時段本來就是學生指定好的，老師按這顆等於直接批准，
+    // 不用再多繞一圈——見 line-webhook/index.ts confirm_add_class 的 initiated_by 判斷）。
     var flexButtons = [];
-    if (isAdd && calLink) flexButtons.push({ label: '🔗 開 Calendar', uri: calLink });
-    if (isCancel && d.requestId) flexButtons.push({ label: '✅ 確認並刪除課程', postbackData: 'action=confirm_cancel_delete&request=' + encodeURIComponent(d.requestId) });
-    flexButtons.push({ label: '📋 到網站處理', uri: siteLink });
+    // 2026-07-20（第二輪，Lin 看過 mockup 後要求）：學生自己申請加課（➕ 申請加課）這張卡片，
+    // 老師要能「完全在 LINE 裡處理完，不用開網站」——拿掉「🔗 開 Calendar」跟「📋 到網站處理」，
+    // 改成每個時段一顆「✅ 確認新增」（沿用既有 action=confirm_add_class，webhook 那邊已經放寬
+    // 只有 initiated_by==='teacher' 才需要等學生先按「我知道了」，學生自己申請的直接讓老師這裡按
+    // 就直接建 Calendar）。「🔍 檢查是否衝突」維持不變，「💬 聯繫學生」也維持不變。
+    if (isAdd && addRows) {
+      addRows.forEach(function (r) {
+        var label = (r.newDate || '-') + ' ' + (r.newTime || '');
+        flexButtons.push({ label: '🔍 查衝突：' + label, postbackData: 'action=check_conflict&request=' + encodeURIComponent(r.requestId) });
+        flexButtons.push({ label: '✅ 確認新增：' + label, postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(r.requestId) });
+      });
+      flexButtons.push({ label: '💬 聯繫學生', uri: contactStudentDeepLink(d.token) });
+    } else if (isAdd && d.requestId) {
+      flexButtons.push({ label: '🔍 檢查是否衝突', postbackData: 'action=check_conflict&request=' + encodeURIComponent(d.requestId) });
+      flexButtons.push({ label: '✅ 確認新增', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(d.requestId) });
+      flexButtons.push({ label: '💬 聯繫學生', uri: contactStudentDeepLink(d.token) });
+    } else if (isCancel && d.requestId) {
+      flexButtons.push({ label: '✅ 確認並刪除課程', postbackData: 'action=confirm_cancel_delete&request=' + encodeURIComponent(d.requestId) });
+    } else if (isReschedule) {
+      flexButtons.push({ label: '💬 聯繫學生', uri: contactStudentDeepLink(d.token) });
+    } else {
+      // 保底：理論上不會發生（isCancel 沒有 requestId），還是給一顆到網站處理當備援，不會壞掉。
+      flexButtons.push({ label: '📋 到網站處理', uri: siteLink });
+    }
 
     fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
@@ -6456,6 +6926,14 @@ async function loadPendingSlips() {
 function scrollToRequestFromHash() {
   try {
     var hash = location.hash || '';
+    // 2026-07-20 加（Lin 要求：LINE「💬 聯繫學生」按鈕直接開聯絡視窗）：#contact-student-<token>
+    // 開頁後直接呼叫 openContactStudentModal，不用老師自己在清單裡找學生點「💬 聯繫學生」。
+    // studentsCache 在呼叫這個函式之前（renderTeacherView 裡 await refreshStudentList() 之後）已經備妥。
+    if (hash.indexOf('#contact-student-') === 0) {
+      var contactToken = decodeURIComponent(hash.slice('#contact-student-'.length));
+      if (contactToken && studentsCache[contactToken]) openContactStudentModal(contactToken);
+      return;
+    }
     if (hash.indexOf('#req-row-') !== 0) return;
     var elId = decodeURIComponent(hash.slice(1));
     var el = document.getElementById(elId);
@@ -6602,8 +7080,17 @@ async function claimRequestForProcessing(id) {
 // 注意：如果 Calendar 已經動了、但後面存資料庫（finalizeRequestStatus）失敗，不要呼叫這個放鎖，
 // 讓鎖故意卡住比較安全（避免有人之後又搶到鎖，對同一個已經被動過的 Calendar 事件重複動手）。
 async function releaseRequestClaim(id) {
-  try { await sb.from('classroom_requests').update({ processing_started_at: null }).eq('id', id); }
-  catch (e) { console.warn('⚠️ 放開處理鎖失敗（不影響本次已經取消的操作，重新整理頁面即可）：', e.message || e); }
+  try {
+    // 2026-07-20 加（照 _แผนงาน/ทำต่อในอนาคต.md「ฝั่งครู UPDATE ที่ยังไม่เช็กจำนวนแถว」補齊）：
+    // 以前這裡只看 error，RLS 靜靜擋掉「更新 0 筆」不會回 error，鎖會誤以為解開了但其實沒有，
+    // 之後這筆申請可能永遠搶不到鎖。加 .select() + 檢查筆數，0 筆就大聲警告（不擋流程，
+    // 因為老師目前都是本人登入、RLS 通常會過，風險低，但至少留紀錄方便之後追）。
+    const res = await sb.from('classroom_requests').update({ processing_started_at: null }).eq('id', id).select();
+    if (res.error) { console.warn('⚠️ 放開處理鎖失敗（不影響本次已經取消的操作，重新整理頁面即可）：', res.error.message); return; }
+    if (!res.data || !res.data.length) {
+      console.warn('⚠️ 放開處理鎖：更新 0 筆（可能是 RLS 擋住或這筆申請已經不在了），鎖可能沒有真的解開，id=' + id);
+    }
+  } catch (e) { console.warn('⚠️ 放開處理鎖失敗（不影響本次已經取消的操作，重新整理頁面即可）：', e.message || e); }
 }
 
 async function finalizeRequestStatus(id, statusValue) {
@@ -7479,8 +7966,10 @@ async function initiateTeacherReschedule_chosenInner(token, chosen) {
   if (res.error) { alert('建立紀錄失敗：' + res.error.message); return; }
   var newId = res.data;
   // 2026-07-17 加（Lin 要求）：把原本課堂的時間也存進去，不要只有日期。
-  var timeRes1 = await sb.from('classroom_requests').update({ original_time: p.timeStr }).eq('id', newId);
-  if (timeRes1.error) console.warn('⚠️ 補存 original_time 失敗（不影響這次通知本身）：', timeRes1.error.message);
+  // 2026-07-20 加：補上 .select() + 檢查筆數（照 ทำต่อในอนาคต.md 補齊「ฝั่งครู UPDATE ไม่เช็กแถว」清單）——
+  // 以前只看 error，RLS 靜靜擋掉更新 0 筆不會回 error，original_time 可能沒真的存進去卻不會有任何警告。
+  var timeRes1 = await sb.from('classroom_requests').update({ original_time: p.timeStr }).eq('id', newId).select();
+  if (timeRes1.error || !timeRes1.data || !timeRes1.data.length) console.warn('⚠️ 補存 original_time 失敗（不影響這次通知本身，可能是 RLS 靜靜擋掉更新 0 筆）：', timeRes1.error ? timeRes1.error.message : '更新 0 筆');
   window._classRequestCache = window._classRequestCache || {};
   window._classRequestCache[newId] = { id: newId, token: token, student_name: s ? s.name : token, original_date: p.dateStr, original_time: p.timeStr, request_type: 'reschedule' };
   _otherOptionsRequestId = newId;
@@ -7530,8 +8019,11 @@ async function teacherCancelClassNowInner(token, chosen) {
   // 2026-07-16 加：跟學生申請取消同一套做法——現在就把真正的 Calendar 事件 ID 存起來，
   // 之後「確認刪除」才不用再猜，直接用 ID 拿（這裡還沒刪 Calendar，只是先記錄起來）。
   // 2026-07-17 加（Lin 要求）：順便存原本課堂的時間，不要只有日期。
-  var idRes = await sb.from('classroom_requests').update({ calendar_event_id: ev.id, original_time: p.timeStr }).eq('id', newId);
-  if (idRes.error) console.warn('⚠️ 補存 calendar_event_id/original_time 失敗（不影響通知本身）：', idRes.error.message);
+  // 2026-07-20 加：補上 .select() + 檢查筆數——這裡跟學生端當初那個真的發生過的 bug（calendar_event_id
+  // 被 RLS 靜靜擋掉、更新 0 筆卻不回 error）是同一個寫法、同一個風險，只是老師端因為是本人登入
+  // 目前都會過 RLS，還沒真的出過事，補起來才不會等哪天 RLS/登入方式變了又無聲無息壞掉。
+  var idRes = await sb.from('classroom_requests').update({ calendar_event_id: ev.id, original_time: p.timeStr }).eq('id', newId).select();
+  if (idRes.error || !idRes.data || !idRes.data.length) console.warn('⚠️ 補存 calendar_event_id/original_time 失敗（不影響通知本身，但之後「確認刪除 Calendar」可能找不到事件 ID、要退回用姓名+日期猜，可能是 RLS 靜靜擋掉更新 0 筆）：', idRes.error ? idRes.error.message : '更新 0 筆');
 
   var notifySent = false, notifyError = null;
   if (s && s.line_user_id) {
@@ -7550,7 +8042,11 @@ async function teacherCancelClassNowInner(token, chosen) {
           flex: {
             title: '❌ 老師想取消這堂課',
             bodyText: '時間：' + cancelTimeLabel + '\n\n請按下方按鈕確認收到',
-            buttons: [ { label: '我知道了', postbackData: 'action=ack_teacher_cancel&request=' + encodeURIComponent(newId) } ],
+            // 2026-07-20 加（Lin 要求）：跟加課通知一樣加「聯繫老師」，點了直接開 LINE 跟老師的對話。
+            buttons: [
+              { label: '我知道了', postbackData: 'action=ack_teacher_cancel&request=' + encodeURIComponent(newId) },
+              { label: '聯繫老師', uri: LINE_OA_URL },
+            ],
           },
         }),
       });
@@ -7716,7 +8212,11 @@ async function teacherEditOwnCancelRequest_chosen(id, token, chosen) {
           flex: {
             title: '❌ 老師想取消這堂課（時間更新了）',
             bodyText: '時間：' + cancelTimeLabel + '\n\n請按下方按鈕確認收到',
-            buttons: [ { label: '我知道了', postbackData: 'action=ack_teacher_cancel&request=' + encodeURIComponent(id) } ],
+            // 2026-07-20 加：跟原本第一次發送的取消通知一致，也加「聯繫老師」按鈕。
+            buttons: [
+              { label: '我知道了', postbackData: 'action=ack_teacher_cancel&request=' + encodeURIComponent(id) },
+              { label: '聯繫老師', uri: LINE_OA_URL },
+            ],
           },
         }),
       });

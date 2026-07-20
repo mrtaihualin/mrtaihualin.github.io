@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════
 // Supabase Edge Function: line-webhook
 // หน้าที่: รับ Webhook event จาก LINE
-//   รองรับ 2 ชนิด postback:
+//   รองรับ postback หลายชนิด (จำนวนจริง ณ 2026-07-20 มากกว่าตัวเลขนี้แล้ว ดูรายละเอียดแต่ละอันด้านล่าง):
 //   0) action=confirm_cancel_delete (2026-07-19 เพิ่ม) — ครูกดปุ่มเดียวใน LINE ยืนยัน "ยกเลิกคาบ"
 //      ที่นักเรียนขอมา → ตอนนี้ **ลบ Google Calendar จริงทันที** ผ่าน Google service account
 //      (ดูฟังก์ชัน getGoogleCalendarToken/deleteCalendarEventById ด้านล่าง) ต่างจากข้อ 3/4 ด้านล่างที่ยัง
@@ -26,10 +26,32 @@
 //      ไม่ลบ Calendar ทันทีแล้ว ต้องรอนักเรียนกด "我知道了" ก่อน (กดฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้ อันไหน
 //      กดก่อนนับอันนั้น) → set teacher_cancel_ack_at แล้ว push แจ้งครูว่ากดยืนยันลบได้แล้ว
 //      **ไม่แตะ Google Calendar เอง** (ครูต้องกลับไปกด "確認刪除 Calendar" ที่เว็บเอง)
-//   4) action=ack_teacher_add (2026-07-18 เพิ่ม) — ครูสั่งเพิ่มคาบเอง (proposeAddClassDay)
-//      ไม่สร้าง Calendar ทันที ต้องรอนักเรียนกด "我知道了" ก่อน (ฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้) →
-//      set teacher_add_ack_at แล้ว push แจ้งครูว่ากดยืนยันเพิ่มได้แล้ว **ไม่แตะ Google Calendar เอง**
-//      (ครูต้องกลับไปกด "確認新增 Calendar" ที่เว็บเอง — ดู confirmTeacherAddClass ในเว็บ)
+//   4) action=ack_teacher_add (2026-07-18 เพิ่ม, 2026-07-20 แก้：push ตอนนี้เป็นปุ่มกดได้） —
+//      ครูสั่งเพิ่มคาบเอง (proposeAddClassDay) ไม่สร้าง Calendar ทันที ต้องรอนักเรียนกด "我知道了" ก่อน
+//      (ฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้) → set teacher_add_ack_at แล้ว push แจ้งครูพร้อมปุ่ม
+//      "確認新增 Calendar" (action=confirm_add_class ด้านล่าง) กดจาก LINE ได้เลย ไม่ต้องเปิดเว็บ
+//   5) action=check_conflict (2026-07-20 เพิ่ม) — ครูกดปุ่ม "🔍 檢查是否衝突" ในการ์ดคำขอเพิ่มคาบ
+//      (notifyTeacherClassRequest ฝั่งเว็บตอน type='add_class') → ใช้ service account เช็ค
+//      freeBusy ของ GOOGLE_CALENDAR_ID ในช่วงเวลาที่นักเรียนขอ แล้ว reply ผลกลับไปในแชททันที
+//      **ไม่แตะ Calendar เอง แค่อ่าน**
+//   6) action=confirm_add_class (2026-07-20 เพิ่ม, 2026-07-20 แก้รอบ 2：ผ่อนเงื่อนไขตาม initiated_by) —
+//      ครูกดปุ่มเดียวใน LINE ยืนยัน "เพิ่มคาบ" → ตอนนี้ **สร้าง Google Calendar event จริงทันที**
+//      ผ่าน service account เดียวกับ confirm_cancel_delete (ดู createCalendarEventById ด้านล่าง)
+//      ยืนยันสิทธิ์คนกดเป็นครูก่อนทุกครั้งเหมือนกัน ใช้ atomic lock คอลัมน์เดียวกัน (processing_started_at)
+//      กันชนกับเว็บ/กดซ้ำ สร้างสำเร็จแล้วเขียนต่อ classroom_schedule/classroom_recurring_days
+//      เหมือนฝั่งเว็บทุกประการ · เงื่อนไข "ต้องรอนักเรียนกด 我知道了 ก่อน" (teacher_add_ack_at)
+//      **เดิมบังคับทุกกรณี ตอนนี้เช็คเฉพาะ initiated_by==='teacher'** (ครูเป็นคนเสนอเวลาก่อน ต้องรอ
+//      นักเรียนตอบรับก่อนถึงจะสร้างจริงได้) — ถ้า initiated_by==='student' (นักเรียนพิมพ์วันเวลาที่
+//      ต้องการเองผ่าน "➕ 申請加課") ครูกดปุ่มนี้คือการอนุมัติขั้นสุดท้ายอยู่แล้ว ไม่มีอะไรต้องรอ
+//      นักเรียนตอบรับซ้ำ ข้ามด่านนี้ไปสร้าง Calendar ได้ทันที (ดูเงื่อนไขจริงก่อน atomic lock ด้านล่าง)
+//   7) action=decline_add_class (2026-07-20 เพิ่ม, Lin ยืนยัน：「กล่องเดียว มีหลายเวลาให้เลือก มีปุ่ม
+//      ได้และไม่ได้」) — ครูเสนอเพิ่มคาบหลายช่วงเวลาในครั้งเดียว (proposeAddClassDay ฝั่งเว็บตอนนี้
+//      ส่งข้อความเดียวรวมทุกช่วงเวลา ปุ่ม "接受"/"婉拒" แยกทีละช่วง) นักเรียนกด "婉拒" ช่วงไหน →
+//      ปิดคำขอนั้น (status='acknowledged', offer_status='declined' — ไม่มีสถานะ 'declined' ใน status
+//      column เอง เพราะติด CHECK constraint classroom_requests_status_check ที่รับแค่
+//      pending/acknowledged เท่านั้น จึงยืมฟิลด์ offer_status ที่มีค่า 'declined' อยู่แล้ว (เดิมใช้กับ
+//      提議改期 เท่านั้น) มาสื่อความหมายเดียวกัน：「นักเรียนไม่เอา」) **ไม่แตะ Google Calendar เลย**
+//      (ยังไม่เคยสร้าง event ตัวนี้ เพราะครูยังไม่ได้กด "確認新增") แค่ปิดคำขอ+แจ้งทั้งสองฝ่าย
 //
 // 2026-07-13 สำคัญมาก：ตั้งแต่เปลี่ยนมาให้ "處理" ปุ่มบนเว็บค้นหา+ย้าย/ลบ Calendar เองแล้ว
 //   ปุ่ม "✅ 已處理"/"❌ 婉拒" แบบเดิมที่เคยส่งไปให้ครูกดตรงจาก LINE **เอาออกจากข้อความแจ้งเตือนใหม่แล้ว**
@@ -234,6 +256,13 @@ async function deleteCalendarEventById(eventId) {
   const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
   if (!calendarId) return { ok: false, reason: 'no_calendar_id', detail: 'ยังไม่ได้ตั้ง secret GOOGLE_CALENDAR_ID' };
   const eventUrl = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(eventId);
+  // 2026-07-20 加（Lin 檢查 mockup 發現：從 LINE 一鍵刪除的課堂，網站「↩️ 最近處理（還能復原）」
+  // 那張老師端持久通知卡片完全看不到——因為那張卡片是讀 classroom_calendar_backups，而這裡
+  // 刪除前只是「順便確認看得到 event」，從沒有把整包事件存進備份表。網站按鈕那條路
+  // （processClassRequestInner → backupCalendarEvent）本來就有存，LINE 這條路沒有，造成
+  // 老師如果全程都在 LINE 操作，完全看不到網站上有任何持久通知/可復原紀錄。
+  // 這裡把「刪除前」讀到的完整事件 JSON 留著回傳給呼叫端，讓呼叫端可以自己寫進備份表。
+  let preEventData = null;
   try {
     // ── 2026-07-19 加（บั๊กจริงที่เจอ）：เดิมยิง DELETE เลยแล้วเชื่อว่า 404 = "ลบสำเร็จแล้ว"
     // แต่ 404 ก็ขึ้นได้ตอน service account "มองไม่เห็นปฏิทินนี้เลย" (ยังไม่ได้แชร์ปฏิทินให้ / แชร์ผิดอีเมล /
@@ -247,8 +276,8 @@ async function deleteCalendarEventById(eventId) {
       return { ok: false, reason: 'not_visible_before_delete', detail: 'ก่อนลบ service account มองไม่เห็น event นี้เลย (' + preRes.status + ') — เช็ค: (1) แชร์ Google Calendar ให้อีเมล service account สิทธิ์ "Make changes to events" แล้วหรือยัง (2) GOOGLE_CALENDAR_ID ตรงกับปฏิทินจริงไหม' };
     }
     if (preRes.ok) {
-      const preData = await preRes.json().catch(() => ({}));
-      if (preData.status === 'cancelled') return { ok: true }; // ถูกลบไปแล้วจากที่อื่นก่อนหน้านี้
+      preEventData = await preRes.json().catch(() => ({}));
+      if (preEventData.status === 'cancelled') return { ok: true, eventData: preEventData }; // ถูกลบไปแล้วจากที่อื่นก่อนหน้านี้
     } else {
       const detail = await preRes.text().catch(() => '');
       return { ok: false, reason: 'pre_check_http_' + preRes.status, detail: detail.slice(0, 300) };
@@ -262,14 +291,129 @@ async function deleteCalendarEventById(eventId) {
     // ── ยืนยันซ้ำว่าลบจริง (ตอนนี้พิสูจน์แล้วว่ามองเห็น calendar/event นี้จริงตั้งแต่ก่อนลบ (preRes.ok
     // ด้านบน) ดังนั้น 404 ตรงนี้แปลว่า "ลบสำเร็จจริง" ไม่ใช่ "มองไม่เห็นตั้งแต่ต้น" อีกแล้ว) ──
     const verifyRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
-    if (verifyRes.status === 404 || verifyRes.status === 410) return { ok: true };
+    if (verifyRes.status === 404 || verifyRes.status === 410) return { ok: true, eventData: preEventData };
     if (verifyRes.ok) {
       const verifyData = await verifyRes.json().catch(() => ({}));
-      if (verifyData.status === 'cancelled') return { ok: true };
+      if (verifyData.status === 'cancelled') return { ok: true, eventData: preEventData };
       return { ok: false, reason: 'still_exists', detail: 'GET ยืนยันแล้วเจอ event ยังอยู่ (status=' + (verifyData.status || '-') + ')' };
     }
     // ยืนยันไม่ได้ (เช่น network พัง) — ไม่กล้าฟันธงว่าสำเร็จ ให้ครูไปเช็คเองที่เว็บ
     return { ok: false, reason: 'verify_failed_http_' + verifyRes.status };
+  } catch (e) {
+    return { ok: false, reason: 'fetch_error', detail: e.message };
+  }
+}
+
+// 2026-07-20 加：把伺服器端（service account）動 Calendar 的紀錄也存進 classroom_calendar_backups，
+// 跟網站端 backupCalendarEvent 用同一張表、同一組欄位——這樣不管老師是從網站按「✅ 處理」還是從
+// LINE 按按鈕完成，老師網站上「↩️ 最近處理（還能復原）」那張持久通知卡片都看得到、都能復原。
+// best-effort：備份失敗不擋主流程（Calendar 已經真的動了），只留 log 讓 Lin 之後手動補。
+async function backupCalendarEventServer(supabase, requestId, token, action, eventObj) {
+  if (!eventObj) return;
+  try {
+    const oldStartIso = eventObj.start && (eventObj.start.dateTime || eventObj.start.date);
+    const { error } = await supabase.from('classroom_calendar_backups').insert({
+      request_id: requestId || null,
+      token: token || null,
+      action: action,
+      old_event_id: eventObj.id,
+      new_event_id: null,
+      old_event_json: eventObj,
+      old_start: oldStartIso,
+    });
+    if (error) console.error('[line-webhook] ⚠️ 備份 Calendar 事件失敗（不影響已經完成的操作，但老師網站上「最近處理」看不到這筆）：', error.message);
+  } catch (e) {
+    console.error('[line-webhook] ⚠️ 備份 Calendar 事件時發生例外：', e && e.message ? e.message : e);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// 2026-07-20 加：以下 3 個功能都是延伸同一套「服務帳號能讀寫 Calendar」的能力（見上面
+// getGoogleCalendarToken／deleteCalendarEventById 的說明，2026-07-19 就確認過 scope 是完整的
+// https://www.googleapis.com/auth/calendar，不是唯讀，也不是只能刪除）：
+//   1) checkFreebusyConflictService／addOneHourTimeStr — action=check_conflict 用，讓老師在 LINE
+//      裡按「🔍 檢查是否衝突」就能查，不用開網站
+//   2) createCalendarEventById／buildIcalUntilUtcSimple — action=confirm_add_class 用，讓「確認新增
+//      Calendar」也能從 LINE 按（跟 confirm_cancel_delete 一鍵刪除同一套模式，只是這次是新增）
+// 泰國時間全年沒有日光節約時間、固定 UTC+7，所以「日期+時間（泰國時間）→ UTC」直接用
+// 顯式時區偏移字串 "+07:00" 建構 Date 即可，不需要额外的時區資料庫。
+// ════════════════════════════════════════════════════════════
+function addOneHourTimeStr(timeStr) {
+  const parts = String(timeStr || '00:00').split(':');
+  const h = (parseInt(parts[0], 10) + 1) % 24;
+  return String(h).padStart(2, '0') + ':' + (parts[1] || '00');
+}
+
+function bangkokToIso(dateStr, timeStr) {
+  return new Date(dateStr + 'T' + (timeStr || '00:00') + ':00+07:00').toISOString();
+}
+
+function buildIcalUntilUtcSimple(untilDateStr) {
+  const d = new Date(untilDateStr + 'T23:59:00+07:00');
+  const pad = (n) => String(n).padStart(2, '0');
+  return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
+}
+
+// action=check_conflict 用：查詢服務帳號能看到的那個 Calendar（GOOGLE_CALENDAR_ID，不是 primary，
+// 原因跟 deleteCalendarEventById 上面的說明一樣）在這段時間有沒有其他事件卡到。
+async function checkFreebusyConflictService(startIso, endIso) {
+  const token = await getGoogleCalendarToken();
+  if (!token) return { ok: false, reason: 'no_token' };
+  const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
+  if (!calendarId) return { ok: false, reason: 'no_calendar_id' };
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timeMin: startIso, timeMax: endIso, items: [{ id: calendarId }] }),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      return { ok: false, reason: 'http_' + res.status, detail: detail.slice(0, 300) };
+    }
+    const data = await res.json();
+    const busy = (data.calendars && data.calendars[calendarId] && data.calendars[calendarId].busy) || [];
+    return { ok: true, busy };
+  } catch (e) {
+    return { ok: false, reason: 'fetch_error', detail: e.message };
+  }
+}
+
+// action=confirm_add_class 用：直接在服務帳號的 Calendar 上建立事件＋建立後回頭 GET 一次確認
+// （跟網站端 createCalendarClassEventForStudent 同一套「建立後一定要驗證，不是只信任 API 回應」）。
+// 只負責 Calendar 本身，不寫資料庫（資料庫寫入交給呼叫端，因為要決定寫 classroom_schedule 還是
+// classroom_recurring_days，那是業務邏輯，這裡只管 Calendar）。
+async function createCalendarEventById(eventBody) {
+  const token = await getGoogleCalendarToken();
+  if (!token) return { ok: false, reason: 'no_token' };
+  const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
+  if (!calendarId) return { ok: false, reason: 'no_calendar_id', detail: 'ยังไม่ได้ตั้ง secret GOOGLE_CALENDAR_ID' };
+  try {
+    const createRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(eventBody),
+    });
+    if (!createRes.ok) {
+      const detail = await createRes.text().catch(() => '');
+      return { ok: false, reason: 'http_' + createRes.status, detail: detail.slice(0, 300) };
+    }
+    const ev = await createRes.json();
+    // 建立完一定要回頭確認真的存在、時間也對，不能只信任建立當下的 API 回應（RELIABILITY FIRST）
+    const verifyRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(ev.id), {
+      headers: { Authorization: 'Bearer ' + token },
+    });
+    if (!verifyRes.ok) {
+      // 建立的 API 說成功，但驗證連線失敗——不確定到底有沒有真的建立，不能放心讓人重按（可能重複建立）
+      return { ok: false, reason: 'verify_failed_http_' + verifyRes.status, eventCreatedButUnverified: ev.id };
+    }
+    const verifyEv = await verifyRes.json();
+    const actualStart = verifyEv.start && (verifyEv.start.dateTime || verifyEv.start.date);
+    const expectedStart = eventBody.start && eventBody.start.dateTime;
+    if (!actualStart || (expectedStart && Math.abs(new Date(actualStart).getTime() - new Date(expectedStart).getTime()) > 60000)) {
+      return { ok: false, reason: 'verify_mismatch', detail: 'Calendar 顯示的時間跟預期不一樣（顯示：' + (actualStart || '無') + '）', eventCreatedButUnverified: ev.id };
+    }
+    return { ok: true, eventId: ev.id };
   } catch (e) {
     return { ok: false, reason: 'fetch_error', detail: e.message };
   }
@@ -404,10 +548,16 @@ serve(async (req) => {
         if (!error && count && channelToken) {
           const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
           if (teacherUserId) {
-            const msg = newOfferStatus === 'accepted'
-              ? ('ℹ️ 學生已經選好新時間' + (chosenOpt ? '（' + chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '') + '）' : '') + '，到網站按「確認並搬 Calendar」')
-              : '⚠️ 學生說這些時間都不方便，請直接聯絡學生討論';
-            await pushLine(channelToken, teacherUserId, msg);
+            if (newOfferStatus === 'accepted') {
+              const msg = 'ℹ️ 學生已經選好新時間' + (chosenOpt ? '（' + chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '') + '）' : '') + '，到網站按「確認並搬 Calendar」';
+              await pushLine(channelToken, teacherUserId, msg);
+            } else {
+              // 2026-07-20 加（Lin 要求：都不方便要能直接聯繫學生）：跟網站端 respondToOfferAsStudent
+              // 同一套改法，從純文字警告改成附一顆「💬 聯繫學生」按鈕，直接開網站聯絡視窗。
+              const msg = '⚠️ 學生說這些時間都不方便，請直接聯絡學生討論';
+              await pushLineFlex(channelToken, teacherUserId, '⚠️ 學生說這些時間都不方便', msg,
+                [{ label: '💬 聯繫學生', uri: 'https://mrtaihualin.com/classroom/#contact-student-' + encodeURIComponent(reqRow.token || '') }]);
+            }
           }
         }
         continue;
@@ -509,11 +659,274 @@ serve(async (req) => {
           if (teacherUserIdAdd) {
             const rdate = (updatedAdd && updatedAdd[0] && updatedAdd[0].requested_date) || '-';
             const rtime = (updatedAdd && updatedAdd[0] && updatedAdd[0].requested_time) || '';
-            await pushLine(channelToken, teacherUserIdAdd, 'ℹ️ 學生已確認收到加課通知（' + rdate + ' ' + rtime + '），可以到網站按「確認新增」了');
+            // 2026-07-20 改（Lin 要求：確認新增 Calendar 要能從 LINE 直接按）：跟 ack_teacher_cancel
+            // 推 confirm_cancel_delete 按鈕同一套模式，這裡附 action=confirm_add_class 的按鈕。
+            await pushLineFlex(
+              channelToken, teacherUserIdAdd,
+              '學生已確認收到加課通知',
+              '時間：' + rdate + ' ' + rtime + '\n\n可以直接按下方按鈕新增 Calendar，或到網站處理',
+              [{ label: '確認新增 Calendar', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(requestIdAdd), style: 'primary' }],
+            );
           }
         }
         continue;
       }
+
+      if (action === 'decline_add_class') {
+        // ── 2026-07-20 加（Lin 要求：老師一次提議好幾個加課時段，學生要能針對「每一個」時段
+        // 各自按接受或婉拒，不是整批一起回覆）── 跟 ack_teacher_add 同樣是學生在 LINE 這邊按的，
+        // 差別是這裡是「不要這個時段」。這個 request 本來就還沒建立 Calendar 事件（老師還沒按
+        // 「確認新增」），所以完全不用碰 Google Calendar，只需要：(1) 把這筆申請關掉，不讓老師之後
+        // 還誤按「確認新增」建立一個學生已經拒絕的時段 (2) 回覆學生 (3) 推播老師。
+        // status 欄位只有 CHECK constraint 允許的 pending/acknowledged 兩種值（同一份 constraint
+        // 見 confirm_cancel_delete 上面的說明），不能塞「declined」進 status——沿用既有的
+        // offer_status 欄位（本來就已經有 'declined' 這個值，只是原本只給改期提議用，這裡借用
+        // 同樣的語意：「學生說不要」），status 依照其他「結案」動作的慣例改成 acknowledged。
+        const requestIdDecline = params.get('request');
+        if (!requestIdDecline) continue;
+
+        const senderUserIdDecline = event.source && event.source.userId;
+        const { data: reqRowDecline } = await supabase
+          .from('classroom_requests')
+          .select('token,status,requested_date,requested_time')
+          .eq('id', requestIdDecline)
+          .maybeSingle();
+        if (!reqRowDecline) continue; // 這筆申請不存在，安全忽略
+
+        // 2026-07-20 加：跟 ack_teacher_add 同一套 fail-closed 身分檢查——按鈕點的人一定要是
+        // 這筆申請本人的學生（用 line_user_id 對照），對不上就安全忽略，不回覆任何內容。
+        const { data: stuRowDecline } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowDecline.token).maybeSingle();
+        if (!senderUserIdDecline || !stuRowDecline || stuRowDecline.line_user_id !== senderUserIdDecline) {
+          console.error('[line-webhook] ⚠️ decline_add_class：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestIdDecline);
+          continue;
+        }
+
+        if (reqRowDecline.status === 'acknowledged') {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經處理過了');
+          continue;
+        }
+
+        const { data: updatedDecline, error: errorDecline, count: countDecline } = await supabase
+          .from('classroom_requests')
+          .update({ status: 'acknowledged', offer_status: 'declined', processing_started_at: null }, { count: 'exact' })
+          .eq('id', requestIdDecline)
+          .eq('status', 'pending')
+          .select('requested_date, requested_time');
+
+        if (channelToken && event.replyToken) {
+          let replyTextDecline;
+          if (errorDecline) replyTextDecline = '⚠️ 婉拒失敗：' + errorDecline.message;
+          else if (!countDecline) replyTextDecline = 'ℹ️ 這筆可能剛好已經被處理過了';
+          else replyTextDecline = '已經幫你婉拒這堂課的時間了，如果有其他想約的時間可以再跟老師說';
+          await replyLine(channelToken, event.replyToken, replyTextDecline);
+        }
+
+        // 只有「這次真的成功把它關掉」（count>0）才推播老師，避免重複按/兩邊搶著按時推兩次
+        if (!errorDecline && countDecline && channelToken) {
+          const teacherUserIdDecline = Deno.env.get('LINE_TEACHER_USER_ID');
+          if (teacherUserIdDecline) {
+            const ddate = (updatedDecline && updatedDecline[0] && updatedDecline[0].requested_date) || reqRowDecline.requested_date || '-';
+            const dtime = (updatedDecline && updatedDecline[0] && updatedDecline[0].requested_time) || reqRowDecline.requested_time || '';
+            // 跟 accept_offer/decline_offer 推「都不方便」給老師同一套模式：附「💬 聯繫學生」按鈕，
+            // 不用只留純文字讓老師自己去網站找學生聯絡方式。
+            await pushLineFlex(
+              channelToken, teacherUserIdDecline,
+              '學生婉拒了這堂加課',
+              '時間：' + ddate + ' ' + dtime + '（泰國時間）\n\n學生婉拒了這個時段，這筆申請已經關閉，不會再被誤新增，可以直接聯繫學生討論其他時間',
+              [{ label: '💬 聯繫學生', uri: 'https://mrtaihualin.com/classroom/#contact-student-' + encodeURIComponent(reqRowDecline.token || '') }],
+            );
+          }
+        }
+        continue;
+      }
+
+      if (action === 'check_conflict') {
+        // ── 2026-07-20 加（Lin 要求：申請加課的 LINE 卡片也要能直接查衝突，不用開網站）──
+        // 只有老師能按（跟其他會碰 Calendar/資料庫的 postback 一樣，fail-closed 檢查身分）。
+        const requestIdChk = params.get('request');
+        if (!requestIdChk) continue;
+        const teacherUserIdChk = Deno.env.get('LINE_TEACHER_USER_ID');
+        const senderIsTeacherChk = event.source && teacherUserIdChk && event.source.userId === teacherUserIdChk;
+        if (!senderIsTeacherChk) {
+          console.error('[line-webhook] ⚠️ check_conflict: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdChk);
+          continue;
+        }
+        const { data: reqChk } = await supabase
+          .from('classroom_requests')
+          .select('requested_date,requested_time,proposed_end_time')
+          .eq('id', requestIdChk)
+          .maybeSingle();
+        if (!reqChk || !reqChk.requested_date) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 找不到這筆申請的時間資料，請到網站確認');
+          continue;
+        }
+        const startTimeChk = reqChk.requested_time || '00:00';
+        const endTimeChk = reqChk.proposed_end_time || addOneHourTimeStr(startTimeChk);
+        const startIsoChk = bangkokToIso(reqChk.requested_date, startTimeChk);
+        const endIsoChk = bangkokToIso(reqChk.requested_date, endTimeChk);
+        const fbResult = await checkFreebusyConflictService(startIsoChk, endIsoChk);
+        if (channelToken && event.replyToken) {
+          let msgChk;
+          if (!fbResult.ok) {
+            msgChk = '⚠️ 檢查失敗（' + (fbResult.reason || '未知') + (fbResult.detail ? '：' + fbResult.detail : '') + '），請到網站手動檢查';
+          } else if (!fbResult.busy.length) {
+            msgChk = '✅ 沒有衝突，' + reqChk.requested_date + ' ' + startTimeChk + '–' + endTimeChk + '（泰國時間）這個時段是空的';
+          } else {
+            msgChk = '⚠️ 這個時段跟其他行程重疊：\n' + fbResult.busy.map((b) => '・' + b.start + ' ~ ' + b.end).join('\n');
+          }
+          await replyLine(channelToken, event.replyToken, msgChk);
+        }
+        continue;
+      }
+
+      if (action === 'confirm_add_class') {
+        // ── 2026-07-20 加（Lin 要求：確認新增 Calendar 要能從 LINE 直接按，跟 confirm_cancel_delete
+        // 一鍵刪除同一套模式，只是這次是新增）── 前提（2026-07-19 已確認）：service account 的
+        // OAuth scope 是完整的 https://www.googleapis.com/auth/calendar，不是唯讀也不是只能刪除，
+        // 建立事件（POST .../events）本來就在同一個 scope 裡，不需要額外授權。
+        const requestIdAddC = params.get('request');
+        if (!requestIdAddC) continue;
+
+        const teacherUserIdAddC = Deno.env.get('LINE_TEACHER_USER_ID');
+        const senderIsTeacherAddC = event.source && teacherUserIdAddC && event.source.userId === teacherUserIdAddC;
+        if (!senderIsTeacherAddC) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdAddC);
+          continue;
+        }
+
+        const { data: reqRowAddC, error: fetchErrAddC } = await supabase
+          .from('classroom_requests')
+          .select('token,status,teacher_add_ack_at,requested_date,requested_time,proposed_end_time,proposed_recurring,proposed_until,proposed_weekday,student_name,initiated_by')
+          .eq('id', requestIdAddC)
+          .maybeSingle();
+
+        if (fetchErrAddC || !reqRowAddC) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 找不到這筆申請了，請到網站確認');
+          continue;
+        }
+        if (reqRowAddC.status === 'acknowledged') {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經處理過了');
+          continue;
+        }
+        // 2026-07-20 再改（Lin 要求：學生自己申請的加課，老師按這顆就是最終批准，不用等學生
+        // 再按一次「我知道了」）——只有「老師自己先提議時段」（initiated_by==='teacher'）才需要
+        // 等 teacher_add_ack_at 這個關卡；學生自己申請的（initiated_by==='student'）跳過這關，
+        // 直接往下走原子鎖＋建 Calendar。
+        if (reqRowAddC.initiated_by === 'teacher' && !reqRowAddC.teacher_add_ack_at) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 學生還沒按「我知道了」確認，先不能新增');
+          continue;
+        }
+        if (!reqRowAddC.requested_date || !reqRowAddC.requested_time) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這筆申請缺少時間資料，請到網站手動處理');
+          continue;
+        }
+
+        // ── 原子鎖：跟 confirm_cancel_delete 同一個欄位、同一套語意，防止跟網站同時搶著新增 ──
+        const { data: claimDataAddC, error: claimErrAddC, count: claimCountAddC } = await supabase
+          .from('classroom_requests')
+          .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
+          .eq('id', requestIdAddC)
+          .eq('status', 'pending')
+          .is('processing_started_at', null)
+          .select('id');
+
+        if (claimErrAddC) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: ล็อกก่อนสร้างพัง:', claimErrAddC.message, 'request=', requestIdAddC);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 準備新增失敗：' + claimErrAddC.message + '\n還沒建立 Calendar');
+          continue;
+        }
+        if (!claimCountAddC) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          continue;
+        }
+
+        const startTimeAddC = reqRowAddC.requested_time;
+        const endTimeAddC = reqRowAddC.proposed_end_time || addOneHourTimeStr(startTimeAddC);
+        const evBodyAddC = {
+          summary: reqRowAddC.student_name || '-',
+          colorId: '6', // 跟網站端 createCalendarClassEventForStudent 同一色（Tangerine），2026-07-15 就對過了
+          description: '系統自動建立（LINE 確認新增）',
+          start: { dateTime: bangkokToIso(reqRowAddC.requested_date, startTimeAddC), timeZone: 'Asia/Bangkok' },
+          end: { dateTime: bangkokToIso(reqRowAddC.requested_date, endTimeAddC), timeZone: 'Asia/Bangkok' },
+        };
+        if (reqRowAddC.proposed_recurring) {
+          let rule = 'RRULE:FREQ=WEEKLY';
+          if (reqRowAddC.proposed_until) rule += ';UNTIL=' + buildIcalUntilUtcSimple(reqRowAddC.proposed_until);
+          evBodyAddC.recurrence = [rule];
+        }
+
+        const createResultAddC = await createCalendarEventById(evBodyAddC);
+        if (!createResultAddC.ok) {
+          console.error('[line-webhook] ⚠️ confirm_add_class 建立 Calendar 失敗:', JSON.stringify(createResultAddC), 'request=', requestIdAddC);
+          if (createResultAddC.eventCreatedButUnverified) {
+            // 可能已經建立但驗證失敗——不敢放鎖讓人重按（可能造成重複事件），請 Lin 手動檢查
+            if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ Calendar 可能已經建立但無法確認狀態，請直接到 Google Calendar／Supabase 手動檢查這筆（id: ' + requestIdAddC + '），先不要重複點這顆按鈕');
+            continue;
+          }
+          // API 呼叫本身就失敗，還沒有真的建立任何東西 → 放鎖讓之後可以重試
+          const { error: unlockErrAddC } = await supabase.from('classroom_requests').update({ processing_started_at: null }).eq('id', requestIdAddC);
+          if (unlockErrAddC) console.error('[line-webhook] ⚠️ confirm_add_class: 解鎖失敗:', unlockErrAddC.message, 'request=', requestIdAddC);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 新增 Calendar 失敗（可以重新點一次，或到網站手動處理）\n原因：' + (createResultAddC.reason || '未知') + (createResultAddC.detail ? '\n' + createResultAddC.detail : ''));
+          }
+          continue;
+        }
+
+        // Calendar 建立成功——寫進課表資料庫（recurring_days 或 schedule，看是不是每週固定）
+        let dbErrAddC = null;
+        if (reqRowAddC.proposed_recurring) {
+          const { error } = await supabase.from('classroom_recurring_days')
+            .upsert({ token: reqRowAddC.token, weekday: reqRowAddC.proposed_weekday, start_time: startTimeAddC, end_time: endTimeAddC, calendar_event_id: createResultAddC.eventId }, { onConflict: 'token,weekday' });
+          dbErrAddC = error;
+        } else {
+          const { error } = await supabase.from('classroom_schedule')
+            .upsert({ token: reqRowAddC.token, lesson_date: reqRowAddC.requested_date, start_time: startTimeAddC, end_time: endTimeAddC, title: reqRowAddC.student_name, calendar_event_id: createResultAddC.eventId }, { onConflict: 'token,lesson_date,start_time' });
+          dbErrAddC = error;
+        }
+        if (dbErrAddC) {
+          // Calendar 已經真的建立成功了——故意不放鎖（避免有人再按一次造成重複建立事件），
+          // 要 Lin 自己去 Supabase 手動補課表資料
+          console.error('[line-webhook] ⚠️ confirm_add_class: Calendar 建立成功但寫課表資料庫失敗（鎖故意維持鎖住）:', dbErrAddC.message, 'request=', requestIdAddC, 'calendar_event_id=', createResultAddC.eventId);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經建立成功了（事件 ID: ' + createResultAddC.eventId + '），但存課表資料庫失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdAddC + '），不要重複點這顆按鈕');
+          }
+          continue;
+        }
+
+        // 全部成功——關單（跟 confirm_cancel_delete 一樣，狀態+解鎖同一個 atomic update）
+        const { error: updErrAddC } = await supabase
+          .from('classroom_requests')
+          .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
+          .eq('id', requestIdAddC)
+          .eq('status', 'pending');
+
+        if (updErrAddC) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: Calendar+課表都寫成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrAddC.message, 'request=', requestIdAddC);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已新增成功，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdAddC + '）');
+          }
+          continue;
+        }
+
+        if (channelToken && event.replyToken) {
+          await replyLine(channelToken, event.replyToken, '✅ 已新增 Calendar 課程，並通知學生了');
+        }
+
+        // 通知學生（best-effort，失敗不影響已經成功的新增）
+        if (channelToken && reqRowAddC.token) {
+          try {
+            const { data: stuRowAddC } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAddC.token).maybeSingle();
+            if (stuRowAddC && stuRowAddC.line_user_id) {
+              const timeLabelAddC = reqRowAddC.proposed_recurring
+                ? ('每週固定 ' + startTimeAddC + '–' + endTimeAddC + '（泰國時間）')
+                : (reqRowAddC.requested_date + ' ' + startTimeAddC + '（泰國時間）');
+              await pushLine(channelToken, stuRowAddC.line_user_id, '✅ 你確認的加課已經排進 Calendar 了：' + timeLabelAddC);
+            }
+          } catch (e) { /* แจ้งนักเรียนไม่สำเร็จ ไม่กระทบว่าสร้าง Calendar สำเร็จแล้ว */ }
+        }
+        continue;
+      }
+
       if (action === 'confirm_cancel_delete') {
         // ── 2026-07-19 加：ครูกดปุ่มเดียวใน LINE → ลบ Calendar จริงทันที (ใช้ Google service account) ──
         // เดิมทำไม่ได้เพราะไม่มี OAuth token ของครู (ดูคอมเมนต์บรรทัด 26-30) ตอนนี้มี service account แล้ว
@@ -587,6 +1000,10 @@ serve(async (req) => {
           }
           continue;
         }
+
+        // 2026-07-20 加：跟網站端 processClassRequestInner 一樣，Calendar 真的刪除成功之後
+        // 存一筆備份紀錄，老師網站上「↩️ 最近處理（還能復原）」才看得到這筆（best-effort，失敗不擋流程）。
+        await backupCalendarEventServer(supabase, requestIdCancel, reqRowCancel.token, 'delete', delResult.eventData);
 
         // Calendar ลบสำเร็จแล้วจริง — ปิดสถานะ + ปลดล็อกพร้อมกันในคำสั่งเดียว (atomic)
         // 2026-07-19 加：ถ้า update นี้ล้มเหลว แปลว่า Calendar ลบสำเร็จแล้วแต่บันทึกฐานข้อมูลพัง —
