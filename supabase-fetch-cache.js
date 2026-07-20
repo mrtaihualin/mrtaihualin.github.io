@@ -17,7 +17,13 @@
   window.getCachedFetch = function (key, fetchFn) {
     var cache = window.SB_FETCH_CACHE;
     if (!cache[key]) {
-      cache[key] = fetchFn(); // เก็บ promise ทันที (ไม่รอ resolve) กันคนเรียกซ้อนกันตอนกำลังโหลดอยู่แชร์ promise เดียวกัน
+      // แก้บั๊ก 2026-07-21 (เจอจริงตอนเทสบนเว็บจริงผ่าน Chrome MCP หลัง push รอบแรก — ยังยิงซ้ำ 3-4 ครั้งเหมือนเดิม):
+      //   builder ของ Supabase (sb.from(...).select(...)) เป็นแค่ "thenable" ไม่ใช่ Promise จริง
+      //   ทุกครั้งที่มีคนเรียก .then() บน object เดิม มันจะยิง request ใหม่ซ้ำอีกรอบ (ไม่ได้จำผลไว้เอง)
+      //   ก่อนหน้านี้เก็บ builder ดิบๆ ไว้ใน cache แล้วให้หลายจุดเรียก .then() ต่อ = ยิงซ้ำเท่าจำนวนจุดที่เรียก
+      //   แก้ด้วย Promise.resolve(...) ห่อครั้งเดียว → บังคับให้ทำงานจริงแค่ครั้งเดียว แล้ว native Promise
+      //   จะแจกผลลัพธ์เดิมให้ทุก .then() ที่ตามมาโดยไม่ยิง network ซ้ำ
+      cache[key] = Promise.resolve(fetchFn());
     }
     return cache[key];
   };
