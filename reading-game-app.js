@@ -611,6 +611,7 @@ function initGame(){
   cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
+  try{ if(typeof gtag==='function') gtag('event','reading_game_start',{level: curLevel}); }catch(e){}
   refreshUI();
   loadWord();
   if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
@@ -932,6 +933,7 @@ function finalizeWord(){
   // ── กฎ MASTER ข้อ7 (แก้ 2026-07-05 ตาม Lin ยืนยัน): วันที่16 (ด่านตัดสินสุดท้ายของ SRS นำไปสู่ดาวเงินจริง) ได้คะแนนฐานตามปกติ ไม่ zero — ต่างจาก 已記得 (known-check) ที่ยังคง 0 แต้มเสมอ (ดูจุด curWordIsKnownCheck ด้านบน) ──
   var basePtsAwarded=pts;
   roundScore+=basePtsAwarded;okC++;
+  try{ if(typeof gtag==='function') gtag('event','reading_game_correct',{word: WORD.th, pts: basePtsAwarded}); }catch(e){}
   var srsBonusAwarded=0; // เก็บโบนัสรอบทบทวน SRS ไว้รวมกับแบนเนอร์ตอนจบคำ — Lin 2026-07-07
 
   // ── Phase 4 (กันโกงดาว): ให้เซิร์ฟเวอร์เป็นคนตัดสิน+แจกดาวจริง (เกมสะกด: ดาว=สะกดถูก ไม่ใช่วรรณยุกต์) ──
@@ -1014,6 +1016,7 @@ function check(){
   } else {
     wrongCount++;wordHadWrong=true;streak=0;badC++;
     sylWrongCount[0]=wrongCount; // งานที่1: sylList.length===1 เสมอในพาธนี้ → พยางค์เดียว = sylIdx 0
+    try{ if(typeof gtag==='function') gtag('event','reading_game_wrong',{word: WORD.th, wrongs: wrongCount}); }catch(e){}
     refreshUI(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนกดผิด
     if(wrongCount < 4){
       // ผิดครั้งที่ 1/2/3 → กระพริบตัวที่ผิด, เคลียร์, ลองใหม่ (งานที่1: เพิ่มจาก 3→4 ครั้งก่อน fail)
@@ -1158,6 +1161,7 @@ function endRound(){
   // กฎ MASTER: คูณตัวคูณระดับ "ทั้งรอบรวมโบนัส" ตอนจบ (เลิกคูณต่อคำ)
   var levelWeight=LEVEL_WEIGHT[curLevel]||1;
   var weightedScore=Math.round(roundScore*levelWeight);
+  try{ if(typeof gtag==='function') gtag('event','reading_game_complete',{score: weightedScore, total: roundTotal, perfect: cleanC, level: curLevel, practice: !!practiceMode}); }catch(e){}
   // ── ?word= ฝึกคำเดียว: โชว์คะแนนดิบ ไม่ส่งลีก/ไม่แตะดาวรอบ/ชาเลนจ์/สตรีค ──
   if(practiceMode){
     document.getElementById('end-score').textContent='練習模式';
@@ -1880,6 +1884,7 @@ function rgCheckWholeWord(){
     wordHadWrong=true;streak=0;badC++;
     // งานที่1: นับผิดแยกรายพยางค์ (พยางค์ไหนโผล่มาว่าผิด ก็ +1 เฉพาะพยางค์นั้น) แทนนับรวมทั้งคำแบบเดิม
     sylWrongCount[wrongIdx]=(sylWrongCount[wrongIdx]||0)+1;
+    try{ if(typeof gtag==='function') gtag('event','reading_game_wrong',{word: WORD.th, wrongs: sylWrongCount[wrongIdx], syllable: wrongIdx+1}); }catch(e){}
     wrongCount=sylWrongCount[wrongIdx]; // ให้ retry-hint อ้างอิงจำนวนผิดของพยางค์นี้เอง
     rgJumpForCheck(wrongIdx);
     refreshUI(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนกดผิด (พยางค์ปัจจุบัน)

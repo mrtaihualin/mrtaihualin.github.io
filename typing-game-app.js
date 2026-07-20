@@ -515,6 +515,7 @@ function initGame(){
   cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
+  try{ if(typeof gtag==='function') gtag('event','typing_game_start',{level: curLevel}); }catch(e){}
   refreshUI();
   loadWord();
   if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
@@ -822,6 +823,7 @@ function finalizeWord(){
   streak++;if(streak>maxStreak)maxStreak=streak;
   var cmult=rgComboMult(streak); // คอมโบ×แต้ม (สะอาดติดกัน)
   if(cmult>1)pts=Math.max(1,Math.round(pts*cmult));
+  try{ if(typeof gtag==='function') gtag('event','typing_game_correct',{word: WORD.th, pts: pts}); }catch(e){}
 
   // ── กฎ MASTER ข้อ7 (แก้ 2026-07-05 ตาม Lin ยืนยัน): วันที่16 (ด่านตัดสินสุดท้ายของ SRS นำไปสู่ดาวเงินจริง) ได้คะแนนฐานตามปกติ ไม่ zero — ต่างจาก 已記得 (known-check) ที่ยังคง 0 แต้มเสมอ (ดูจุด curWordIsKnownCheck ด้านบน) ──
   var basePtsAwarded=pts;
@@ -903,6 +905,7 @@ function check(){
     refreshUI();
   } else {
     wrongCount++;wordHadWrong=true;streak=0;badC++;
+    try{ if(typeof gtag==='function') gtag('event','typing_game_wrong',{word: WORD.th, wrongs: wrongCount}); }catch(e){}
     if(wrongCount < 3){
       // ผิดครั้งที่ 1/2 → กระพริบตัวที่ผิด, เคลียร์, ลองใหม่
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
@@ -1070,6 +1073,7 @@ function endRound(){
   roundScore+=roundBonus;
   var levelWeight=LEVEL_WEIGHT[curLevel]||1;
   var weightedScore=Math.round(roundScore*levelWeight);
+  try{ if(typeof gtag==='function') gtag('event','typing_game_complete',{score: weightedScore, total: roundTotal, perfect: cleanC, level: curLevel}); }catch(e){}
   document.getElementById('end-score').textContent=weightedScore+' 分'+(levelWeight!==1?'（'+curLevel+'級 ×'+levelWeight+'）':'');
   var detail='';
   if(window.GAME_ACCOUNT){ GAME_ACCOUNT.bumpStreakToday(); totalStars=GAME_ACCOUNT.getStars(); totalBadges=GAME_ACCOUNT.earnedBadges().length; }
@@ -2429,6 +2433,7 @@ function rgCheckWholeWord(){
     refreshUI();
   } else {
     wrongCount++;wordHadWrong=true;streak=0;badC++;
+    try{ if(typeof gtag==='function') gtag('event','typing_game_wrong',{word: WORD.th, wrongs: wrongCount, syllable: wrongIdx+1}); }catch(e){}
     rgJumpForCheck(wrongIdx);
     if(wrongCount<3){
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){

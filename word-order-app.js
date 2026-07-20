@@ -846,6 +846,9 @@
     document.getElementById('pf').style.width = '100%';
     document.getElementById('prog-txt').textContent = SET.length + '/' + SET.length;
 
+    // GA4: ยิงทุกครั้งที่จบรอบ ไม่ว่าจะ practiceMode หรือไม่ (แก้บั๊กเดิม: game_complete เคยยิงหลัง if(practiceMode) เท่านั้น ทำให้คนที่จำครบแล้วไม่ถูกนับ)
+    try{ if(window.gtag) gtag('event','word_order_complete',{practice: !!practiceMode}); }catch(e){}
+
     // จำครบทุกประโยคแล้ว (mastered หมด) → รอบนี้เป็นแค่ทบทวนฟรี ไม่คิดคะแนน/ดาว/ลีก (กันฟาร์ม MASTER ข้อ7)
     if (practiceMode) {
       document.getElementById('wo-end-score').textContent = '複習模式';
@@ -890,7 +893,7 @@
     detail += ' · 累積共 ' + totalStars + ' 顆星';
     document.getElementById('wo-end-detail').textContent = detail;
 
-    try{ if(window.gtag) gtag('event','game_complete',{game:'word_order', score: weightedScore}); }catch(e){}
+    try{ if(window.gtag) gtag('event','word_order_complete',{practice: false, score: weightedScore}); }catch(e){}
     // 嘗試存分數到共用排行榜系統（若後端還沒開放 'word_order' 這個 game key，
     // 這行會安全地無效果，不會讓遊戲壞掉 — 之後要接排行榜要請 Lin 到 Supabase 確認）
     try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog()); }catch(e){}   // เฟส 3: แนบประโยคที่พลาด — 2026-07-13

@@ -907,6 +907,7 @@ function finishLegoRound(){
   const roundBonus=ROUND_COMPLETE_BONUS+(isPerfect?ROUND_PERFECT_BONUS:0);
   roundScoreLego+=roundBonus;
   const weightedScore=Math.round(roundScoreLego*LEVEL_WEIGHT);
+  try{ if(window.gtag) gtag('event','lego_complete',{score: weightedScore, total: count, perfect: isPerfect}); }catch(e){}
   sentencesThisRound=0;
   roundScoreLego=0;
   legoCleanThisRound=0;
@@ -1186,6 +1187,7 @@ function startTest(){
   document.getElementById('testBanner').textContent='';
   updateTestHintWarning();
   document.getElementById('testOverlay').classList.add('show');
+  try{ if(window.gtag) gtag('event','lego_start',{words: testWords.length}); }catch(e){}
   if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
 }
 
@@ -1256,6 +1258,7 @@ function checkTestAnswer(){
     legoCurCombo=clean?legoCurCombo+1:0;
     if(legoCurCombo>legoMaxCombo) legoMaxCombo=legoCurCombo;
     roundScoreLego+=pts;
+    try{ if(window.gtag) gtag('event','lego_correct',{sentence: testWords.map(function(w){return w.th;}).join(''), clean: clean, pts: pts}); }catch(e){}
     banner.className='test-banner ok';
     banner.textContent='✅ 排對了！+'+pts+' 分'+(golden?' ✨黃金句':'')+(testHintUsed?'（用了提示）':'');
     // น้องมีนาพูด: คำทอง > คอมโบ > มีผิด(ปลอบ) > ถูก(สุ่ม) — Lin 2026-07-10
@@ -1275,6 +1278,7 @@ function checkTestAnswer(){
     const deduct=WRONG_DEDUCT[Math.min(testWrongCount,3)];
     testWrongCount++;
     testLife-=deduct;
+    try{ if(window.gtag) gtag('event','lego_wrong',{sentence: testWords.map(function(w){return w.th;}).join(''), wrongs: testWrongCount}); }catch(e){}
     legoCurCombo=0;
     if(testLife<=0){
       failTest();
