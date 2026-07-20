@@ -739,7 +739,7 @@
     <textarea class="settings-input" id="contactStudentText" rows="4" placeholder="輸入要傳給學生的訊息…" style="width:100%;min-height:88px;resize:vertical;font-family:'Noto Sans TC',sans-serif;box-sizing:border-box;"></textarea>
     <div id="contactStudentStatus" style="font-size:0.8rem;margin-top:6px;min-height:18px;font-family:'Noto Sans TC',sans-serif;"></div>
     <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeContactStudentModal()">取消</button>
+      <button class="btn-ghost" id="contactStudentCancelBtn" onclick="closeContactStudentModal()">取消</button>
       <button class="btn-gold" id="contactStudentSendBtn" onclick="sendContactStudentMessage()">📤 傳送</button>
     </div>
   </div>
@@ -800,7 +800,7 @@
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeAddClassDayModal()">完成</button>
       <!-- 2026-07-20 加（Lin 要求）：加課時常常想直接跟學生對一下時間，不用先關視窗再去清單找人聯絡 -->
-      <button class="btn-ghost" onclick="openContactStudentModal(_addClassDayToken)">💬 聯繫學生</button>
+      <button class="btn-ghost" onclick="openContactStudentModalFromAddClassDay()">💬 聯繫學生</button>
       <button class="btn-gold" id="addClassDayCheckBtn" onclick="checkAddClassDayConflict()">🔍 檢查是否衝突</button>
     </div>
   </div>
@@ -2193,6 +2193,17 @@ async function createCalendarClassEventForStudent(token, s, p) {
 async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
   const s = studentsCache[token];
   if (!s) return { ok: false, error: '找不到學生資料' };
+  // 2026-07-20 加（稽核發現 🔴 RED——這裡以前完全沒搶 processing_started_at 原子鎖，跟取消/改期
+  // 走的 claimRequestForProcessing/releaseRequestClaim 不一樣，也跟 LINE 那邊 confirm_add_class
+  // 自己有搶鎖不一致）：網頁跟 LINE 兩邊都能觸發「確認新增」，如果剛好同時按（例如電腦開著網頁、
+  // 手機同時點 LINE 的「✅ 確認新增」）以前可能會真的在 Google Calendar 建立兩筆重複事件。
+  // 這裡補上跟取消/改期同一套鎖，只有真的搶到鎖才往下建立 Calendar。
+  let claimedLock = false;
+  if (requestIdToFinalize) {
+    const claim = await claimRequestForProcessing(requestIdToFinalize);
+    if (!claim.ok) return { ok: false, error: claim.reason };
+    claimedLock = true;
+  }
   try {
     const created = await createCalendarClassEventForStudent(token, s, p);
     const start = created.start;
@@ -2229,7 +2240,14 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
     }
     return { ok: true, hasLine: !!s.line_user_id };
   } catch (e) {
-    return { ok: false, error: e.message || String(e) };
+    // 只有「Calendar API 這次真的還沒建立成功」才能安全放鎖讓人重試——如果錯誤訊息顯示
+    // 「已經建立成功」或「重新確認時」代表 createCalendarClassEventForStudent 裡 Calendar 事件
+    // 可能已經真的建立了，這種情況故意不放鎖，避免重按造成重複事件（跟 line-webhook
+    // confirm_add_class 的 eventCreatedButUnverified 判斷同一個原則，寧可少方便也不要重複建立）。
+    const msg = e.message || String(e);
+    const ambiguous = /已經建立成功|重新確認時/.test(msg);
+    if (claimedLock && !ambiguous) await releaseRequestClaim(requestIdToFinalize);
+    return { ok: false, error: msg + (claimedLock && ambiguous ? '\n⚠️ Calendar 可能已經建立成功，為了安全這筆先鎖住不能重按，請直接檢查 Google Calendar／Supabase 手動確認，或告訴 Lin/AI 處理。' : '') };
   }
 }
 
@@ -2399,6 +2417,9 @@ async function submitAddClassDayCombined() {
   const token = pendingRows[0] && pendingRows[0].token;
   const lines = [];
 
+  let eligibleFailed = false; // 2026-07-20 加（稽核發現 🟠）：學生自己申請那一筆若直接排進 Calendar
+  // 失敗，不能照樣重置整個表單——不然那一筆「📌 學生自己申請的時間」的鎖定狀態/內容會憑空消失，
+  // 看起來像資料不見了，其實只是還沒真的處理成功。失敗時維持表單原樣，讓老師看得到、能重試。
   try {
     if (!token || !pendingRows.length) { resultEl.innerHTML = '<div style="color:#b45309;">找不到待處理的時段，請重新檢查一次</div>'; return; }
 
@@ -2409,6 +2430,7 @@ async function submitAddClassDayCombined() {
         _addClassDayFromRequestId = null;
         lines.push('✅ 第 ' + (eligibleIdx + 1) + ' 筆已直接排進 Calendar' + (r.hasLine ? '（已 LINE 通知學生）' : '（學生還沒連結 LINE，沒收到通知）'));
       } else {
+        eligibleFailed = true;
         lines.push('❌ 第 ' + (eligibleIdx + 1) + ' 筆直接排進 Calendar 失敗：' + r.error);
       }
     }
@@ -2428,11 +2450,13 @@ async function submitAddClassDayCombined() {
     }
 
     resultEl.innerHTML = lines.length
-      ? ('<div style="color:var(--gold-deep);font-weight:700;">' + lines.map(escHtml).join('<br>') + '</div>')
+      ? ('<div style="color:var(--gold-deep);font-weight:700;">' + lines.map(escHtml).join('<br>') + (eligibleFailed ? '<br><span style="font-weight:400;color:#b45309;">⚠️ 學生申請的那一筆還沒排進去，表單保留原樣，可以再按一次「送出」重試</span>' : '') + '</div>')
       : '<div style="color:#b45309;">處理失敗，沒有成功的項目</div>';
-    _addClassDayPending = null;
-    _addClassDayEligibleDirectIdx = -1;
-    resetAddClassDayRows();
+    if (!eligibleFailed) {
+      _addClassDayPending = null;
+      _addClassDayEligibleDirectIdx = -1;
+      resetAddClassDayRows();
+    }
     await renderAddClassDayExistingList(token);
     loadPendingClassRequests();
   } finally {
@@ -4320,6 +4344,7 @@ async function renderTeacherView() {
   await refreshStudentList();
   await loadPendingSlips();
   await loadPendingClassRequests();
+  subscribePendingClassRequestsRealtime(); // 2026-07-20 加：訂閱之後，其他分頁/LINE/學生自己送出的異動會自動反映在這個清單，不用手動刷新
   scrollToRequestFromHash(); // 2026-07-16 加：LINE 通知按鈕點進來會帶 #req-row-xxx，載入完清單後跳過去+框起來
   await loadRecentBackups();
   await loadTodaySchedule();
@@ -5081,7 +5106,14 @@ async function loadStudentFolderLink(token) {
 // 2026-07-06 新增：只顯示，學生不能自己改課表本身；要改期/取消 → 送「申請」給老師，
 // 老師收到通知後自己去 Google Calendar 手動調整（系統不會自動改老師的行事曆）
 // ============================================================
-const LINE_OA_URL = 'https://lin.ee/yVBgvywy'; // 全站統一用這個 LINE 官方帳號當「聯絡老師」入口
+// 2026-07-20 改（Lin 實測回報：lin.ee 這個加好友短連結點了只會開「官方帳號主頁」，不是直接跳進聊天室，
+// 跟原本以為的行為不一樣）：改用 LINE 官方文件記載的「開啟與官方帳號聊天畫面」深連結格式
+// https://line.me/R/oaMessage/{Basic ID} — 這個格式手機上點了會直接開 LINE App 跳進聊天室
+// （已加好友的話直接進現有對話，不會再問加好友一次），比 lin.ee 更符合「聯繫老師」按鈕的用途。
+// Basic ID 從 LINE Developers Console → 選 Messaging API 那個 channel（泰華眼裡的世界 Taihua Lin）
+// → Basic settings 分頁 → 「Bot basic ID」欄位找到（Lin 提供 2026-07-20：@010rhagu）。
+// 注意：這個深連結只在手機 LINE App（iOS/Android）有效，LINE 桌面版不支援這個 scheme（LINE 官方文件寫的）。
+const LINE_OA_URL = 'https://line.me/R/oaMessage/' + encodeURIComponent('@010rhagu'); // 全站統一用這個 LINE 官方帳號當「聯絡老師」入口
 const LIFF_ID = '2010620934-5MFOEYBX'; // 跟 classroom/liff-config.js 同一個 LIFF app，用來在 LINE 裡直接開課堂頁
 let nextClassCtx = null; // 目前顯示中的下一堂課資訊，給申請改期/取消用
 
@@ -6945,6 +6977,28 @@ function scrollToRequestFromHash() {
   } catch (e) {}
 }
 
+// 2026-07-20 加（Lin 要求：คิวคำขอต้องขึ้นเองไม่ต้องกดรีเฟรช）：ใช้ Supabase Realtime ฟัง
+// การเปลี่ยนแปลงตาราง classroom_requests สด ๆ แทนที่จะรอให้ครูกดปุ่ม/รีเฟรชหน้าเอง
+// ⚠️ ก่อนใช้งานได้จริง Lin ต้องเปิด Realtime ให้ตาราง classroom_requests ก่อน 1 ครั้ง
+// (Supabase Dashboard → Database → Replication → เปิดสวิตช์ตาราง classroom_requests
+// ให้ publication "supabase_realtime") ไม่งั้นโค้ดนี้จะแค่ subscribe เฉย ๆ ไม่มี event เข้ามา
+// (ไม่ error ไม่พังอะไร แค่เงียบ — เหมือนเดิมทุกอย่างจนกว่าจะเปิดสวิตช์ให้)
+var _pendingRequestsRealtimeChannel = null;
+var _pendingRequestsRealtimeDebounce = null;
+function subscribePendingClassRequestsRealtime() {
+  // กันซ้อน—ถ้าเคย subscribe ไว้แล้ว (เช่น กลับมาหน้าครูซ้ำ) ต้องถอนตัวเก่าก่อนเสมอ ไม่งั้นจะเปิดซ้อน
+  // กันหลายช่องพร้อมกัน โหลดซ้ำหลายรอบโดยไม่จำเป็น
+  try { if (_pendingRequestsRealtimeChannel) sb.removeChannel(_pendingRequestsRealtimeChannel); } catch (e) {}
+  _pendingRequestsRealtimeChannel = sb.channel('classroom_requests_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'classroom_requests' }, function () {
+      // 2026-07-20：ดีบาวซ์ 800ms กันเหตุการณ์รัว ๆ (เช่นกด "+" หลายคาบพร้อมกัน = INSERT หลายแถวติดกัน)
+      // ทำให้โหลดซ้ำรัว ๆ โดยไม่จำเป็น—รวมเป็นโหลดครั้งเดียวพอ
+      clearTimeout(_pendingRequestsRealtimeDebounce);
+      _pendingRequestsRealtimeDebounce = setTimeout(function () { loadPendingClassRequests(); }, 800);
+    })
+    .subscribe();
+}
+
 async function loadPendingClassRequests() {
   var container = document.getElementById('pendingRequestsSection');
   if (!container) return;
@@ -7502,18 +7556,37 @@ async function teacherDeclineRescheduleOptions(id) {
 // 💬 聯絡學生（2026-07-16 新增，Lin 要求）：老師直接在網站打字，送 LINE 給指定學生
 // 沒有連到某個 request，只需要 token，所以任何地方都能呼叫（目前先接在「學生申請改期/取消」清單）
 var _contactStudentToken = null;
-function openContactStudentModal(token) {
+// 2026-07-20 加（Lin 回報：從「➕ 加課堂時間」按「💬 聯繫學生」，兩個 modal 都用同一個
+// z-index，addClassDayModal 還開著、疊在上面，把新開的聯絡視窗整個擋住）：記住是從哪個 modal
+// 開進來的，開的時候把那個 modal 先「藏起來」（不是整個關掉/清空——不能用 closeAddClassDayModal，
+// 那個會把已經填的日期/時間全部重設，teacher 辛苦填的東西不能因為順手聯絡一下學生就不見了）
+// 關掉/傳送完再把它「叫回來」，狀態原封不動。
+var _contactStudentReturnTo = null;
+function openContactStudentModal(token, returnTo) {
   _contactStudentToken = token;
+  _contactStudentReturnTo = returnTo || null;
   var s = studentsCache[token];
   document.getElementById('contactStudentTargetLabel').textContent = '傳送對象：' + (s && s.name ? s.name : token);
   document.getElementById('contactStudentText').value = '';
   var statusEl = document.getElementById('contactStudentStatus');
   statusEl.textContent = ''; statusEl.style.color = 'var(--ink-muted)';
+  var cancelBtn = document.getElementById('contactStudentCancelBtn');
+  if (cancelBtn) cancelBtn.textContent = returnTo ? '← 返回' : '取消';
   document.getElementById('contactStudentModal').classList.add('open');
+}
+// 2026-07-20 加：專門給「➕ 加課堂時間」modal 裡的「💬 聯繫學生」按鈕用——先把 addClassDayModal
+// 藏起來（只拿掉 .open，不呼叫 closeAddClassDayModal，裡面填的東西完全保留），再開聯絡視窗。
+function openContactStudentModalFromAddClassDay() {
+  document.getElementById('addClassDayModal').classList.remove('open');
+  openContactStudentModal(_addClassDayToken, 'addClassDay');
 }
 function closeContactStudentModal() {
   document.getElementById('contactStudentModal').classList.remove('open');
   _contactStudentToken = null;
+  if (_contactStudentReturnTo === 'addClassDay') {
+    document.getElementById('addClassDayModal').classList.add('open'); // 叫回加課視窗，裡面填的日期/時間都還在
+  }
+  _contactStudentReturnTo = null;
 }
 async function sendContactStudentMessage() {
   var token = _contactStudentToken;
@@ -8140,7 +8213,26 @@ async function confirmTeacherAddClass(id) {
       weekday: r.proposed_weekday,
     };
 
-    const created = await createCalendarClassEventForStudent(token, s, p);
+    // 2026-07-20 加（稽核發現 🔴 RED——這裡以前完全沒搶 processing_started_at 原子鎖，跟取消/
+    // 改期已經在用的 claimRequestForProcessing 不一致，也跟 LINE 那邊 confirm_add_class 自己有
+    // 搶鎖不一致）：這筆同時能從網頁「確認新增」跟 LINE「✅ 確認新增」兩邊觸發，沒搶鎖的話同時按
+    // 可能真的在 Google Calendar 建立兩筆重複事件。這裡補上跟取消/改期同一套鎖。
+    const claimTeacherAdd = await claimRequestForProcessing(id);
+    if (!claimTeacherAdd.ok) { alert('⚠️ ' + claimTeacherAdd.reason); await loadPendingClassRequests(); return; }
+
+    let created;
+    try {
+      created = await createCalendarClassEventForStudent(token, s, p);
+    } catch (calErr) {
+      // 只有「Calendar API 這次真的還沒建立成功」才能安全放鎖讓人重試——如果錯誤訊息顯示
+      // 「已經建立成功」或「重新確認時」代表事件可能已經真的建立了，故意不放鎖，避免重按
+      // 造成重複事件（跟 line-webhook confirm_add_class 的 eventCreatedButUnverified 同一原則）。
+      const calMsg = calErr.message || String(calErr);
+      const ambiguousAdd = /已經建立成功|重新確認時/.test(calMsg);
+      if (!ambiguousAdd) await releaseRequestClaim(id);
+      alert('❌ 新增失敗：' + calMsg + (ambiguousAdd ? '\n⚠️ Calendar 可能已經建立成功，為了安全這筆先鎖住不能重按，請直接檢查 Google Calendar／Supabase 手動確認，或告訴 Lin/AI 處理。' : ''));
+      return;
+    }
     const start = created.start;
 
     const addedTimeLabel = p.recurring

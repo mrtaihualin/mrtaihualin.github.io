@@ -683,15 +683,18 @@ serve(async (req) => {
         // offer_status 欄位（本來就已經有 'declined' 這個值，只是原本只給改期提議用，這裡借用
         // 同樣的語意：「學生說不要」），status 依照其他「結案」動作的慣例改成 acknowledged。
         const requestIdDecline = params.get('request');
-        if (!requestIdDecline) continue;
+        // 2026-07-20 加（除錯用）：這幾個「安全忽略」的分支以前完全不留紀錄，Lin 回報「按了婉拒，
+        // 老師完全沒收到通知」時根本查不出是卡在哪一關——現在每個分支都留 console.error，
+        // 之後到 Supabase Edge Functions 的 Logs 頁面查 line-webhook 就看得到卡在哪。
+        if (!requestIdDecline) { console.error('[line-webhook] ⚠️ decline_add_class：postback 沒帶 request id，已忽略。'); continue; }
 
         const senderUserIdDecline = event.source && event.source.userId;
         const { data: reqRowDecline } = await supabase
           .from('classroom_requests')
-          .select('token,status,requested_date,requested_time')
+          .select('token,status,requested_date,requested_time,processing_started_at')
           .eq('id', requestIdDecline)
           .maybeSingle();
-        if (!reqRowDecline) continue; // 這筆申請不存在，安全忽略
+        if (!reqRowDecline) { console.error('[line-webhook] ⚠️ decline_add_class：找不到這筆申請，已忽略。request=', requestIdDecline); continue; }
 
         // 2026-07-20 加：跟 ack_teacher_add 同一套 fail-closed 身分檢查——按鈕點的人一定要是
         // 這筆申請本人的學生（用 line_user_id 對照），對不上就安全忽略，不回覆任何內容。
@@ -706,11 +709,17 @@ serve(async (req) => {
           continue;
         }
 
+        // 2026-07-20 加（稽核發現 🟠 ORANGE）：以前這裡只擋 status='pending'，沒擋
+        // processing_started_at——如果老師剛好在同一瞬間按了「✅ 確認新增」（confirm_add_class 會先
+        // 搶 processing_started_at 鎖再建立 Calendar，狀態這時還是 'pending'），學生這邊「婉拒」可能
+        // 跟老師那邊的建立動作撞期，甚至在 Calendar 已經建立成功後才把這筆改成「declined」。加一樣的
+        // .is('processing_started_at', null) 閘，確保正在被處理中的申請不會被婉拒動作打斷。
         const { data: updatedDecline, error: errorDecline, count: countDecline } = await supabase
           .from('classroom_requests')
           .update({ status: 'acknowledged', offer_status: 'declined', processing_started_at: null }, { count: 'exact' })
           .eq('id', requestIdDecline)
           .eq('status', 'pending')
+          .is('processing_started_at', null)
           .select('requested_date, requested_time');
 
         if (channelToken && event.replyToken) {
@@ -894,14 +903,17 @@ serve(async (req) => {
         }
 
         // 全部成功——關單（跟 confirm_cancel_delete 一樣，狀態+解鎖同一個 atomic update）
-        const { error: updErrAddC } = await supabase
+        // 2026-07-20 加（稽核發現 🟠 ORANGE）：以前這裡只看 error，沒檢查真的改到幾筆——如果剛好
+        // 更新 0 筆（例如這期間被別的動作搶先關掉了），會誤以為成功、鎖也沒真的解開/確認，
+        // 卻完全沒有任何警告。加 count 檢查，0 筆一樣要大聲提醒。
+        const { error: updErrAddC, count: updCountAddC } = await supabase
           .from('classroom_requests')
           .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
           .eq('id', requestIdAddC)
           .eq('status', 'pending');
 
-        if (updErrAddC) {
-          console.error('[line-webhook] ⚠️ confirm_add_class: Calendar+課表都寫成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrAddC.message, 'request=', requestIdAddC);
+        if (updErrAddC || !updCountAddC) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: Calendar+課表都寫成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrAddC ? updErrAddC.message : '更新 0 筆', 'request=', requestIdAddC);
           if (channelToken && event.replyToken) {
             await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已新增成功，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdAddC + '）');
           }
