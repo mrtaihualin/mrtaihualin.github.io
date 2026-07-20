@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DKVQE30982');
+</script>
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>泰文字全部黏在一起，根本看不出哪裡斷句？連電腦都會卡住 | 泰華眼裡的泰語教學</title>
+<meta name="description" content="看泰文文章，字全部擠在一起分不出哪裡是一個詞、哪裡該斷句，是不是自己特別笨？其實泰文本來就沒有空格分詞，連電腦的翻譯軟體都要靠字典和演算法才能斷詞。這篇說明為什麼會這樣，以及怎麼練出斷詞的直覺。">
+<link rel="canonical" href="https://mrtaihualin.com/blog-word-segmentation-guide.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="泰華眼裡的泰語教學">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="泰文字全部黏在一起，根本看不出哪裡斷句？連電腦都會卡住">
+<meta property="og:description" content="泰文本來就沒有空格分詞，連電腦的翻譯軟體都要靠字典跟演算法才能斷詞，不是你特別笨。">
+<meta property="og:url" content="https://mrtaihualin.com/blog-word-segmentation-guide.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="泰文字全部黏在一起，根本看不出哪裡斷句？連電腦都會卡住">
+<meta name="twitter:description" content="泰文本來就沒有空格分詞，連電腦的翻譯軟體都要靠字典跟演算法才能斷詞，不是你特別笨。">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css?v=13">
+<style>
+  .blog-wrap{max-width:760px;margin:0 auto;padding:40px 22px 64px;font-family:'Noto Sans TC',sans-serif;color:#2d2a22;line-height:1.85;}
+  .blog-wrap h1{font-family:'Noto Serif TC',serif;font-size:clamp(26px,5vw,40px);font-weight:900;line-height:1.3;margin:0 0 10px;color:#2d2a22;}
+  .blog-lead{font-size:17px;color:#5c5648;margin-bottom:28px;}
+  .blog-wrap h2{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:#8B6310;margin:34px 0 12px;}
+  .blog-wrap p{margin:0 0 14px;font-size:16.5px;}
+  .blog-wrap ul,.blog-wrap ol{margin:0 0 14px;padding-left:22px;}
+  .blog-wrap li{margin-bottom:7px;}
+  .blog-wrap strong{color:#8B6310;}
+  .tone-th{font-family:'Sarabun',sans-serif;font-weight:700;color:#C8973A;}
+  .blog-note{font-size:13.5px;color:#8b7340;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 14px;}
+  .blog-example{font-family:'Sarabun',sans-serif;font-size:19px;background:#fff;border:1.5px solid #e0d2a8;border-radius:10px;padding:14px 18px;margin:0 0 14px;text-align:center;color:#2d2a22;letter-spacing:0.5px;}
+  .blog-cta{background:linear-gradient(135deg,#fff6e9,#ffe9d6);border:1.5px solid #f0c89a;border-radius:16px;padding:22px;margin:34px 0 10px;text-align:center;}
+  .blog-cta .t{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:900;color:#5a3e10;margin-bottom:6px;}
+  .blog-cta .s{font-size:14px;color:#a06a30;margin-bottom:14px;}
+  .blog-btn{display:inline-block;background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:11px 22px;border-radius:999px;margin:4px;cursor:pointer;border:none;}
+  .blog-btn.alt{background:#f0e8d8;color:#8b6310;}
+</style>
+</head>
+<body>
+
+<nav class="site-nav"></nav>
+
+<main class="blog-wrap">
+  <h1>泰文字全部黏在一起，根本看不出哪裡斷句？連電腦都會卡住</h1>
+  <p class="blog-lead">學了子音母音、也會拼讀了，結果打開一篇真正的泰文文章，還是完全看不懂——因為所有的字全部黏在一起，看不出哪裡是一個詞的開頭、哪裡是結尾。如果你有這種挫折感，先說一個事實讓你安心：<strong>這不是你特別笨，是泰文書寫本身就是這樣設計的</strong>，連電腦都拿它沒轍。</p>
+
+  <h2>泰文真的沒有空格分詞</h2>
+  <p>中文雖然也沒有空格，但我們從小就在閱讀中訓練出斷詞的直覺；泰文更極端——泰文字母之間<strong>完全沒有空格</strong>，一個句子甚至一整段話可以連續寫成一長串，中間的空格反而是留給「斷句」用的（類似逗號、句號的功能），不是用來分詞。也就是說，看到一長串泰文黏在一起，裡面可能藏著五、六個詞，但書寫上完全沒有任何符號告訴你「這裡切一刀」。</p>
+  <div class="blog-example">ผมกินข้าวที่บ้านทุกวัน</div>
+  <p class="blog-note">上面這串字其實是「ผม／กิน／ข้าว／ที่／บ้าน／ทุกวัน」六個詞組成的句子（意思是「我每天在家吃飯」），但寫出來就是一整串連在一起，初學者常常看半天分不出詞在哪裡斷開。</p>
+
+  <h2>不是只有你覺得難——連電腦都要靠字典硬猜</h2>
+  <p>這件事有多難，看一個例子就知道：泰文的自然語言處理（也就是翻譯軟體、輸入法、搜尋引擎背後的技術）裡，「斷詞」被公認是特別麻煩的一關。因為泰文書寫沒有明確的分隔符號，電腦沒辦法像處理英文那樣直接用空格切開單字，必須依賴龐大的詞庫字典或機器學習演算法去「猜」哪裡該斷詞，而且準確率也不是百分之百。</p>
+  <p>連工程師寫程式、用機器學習訓練模型都要為這件事傷腦筋，代表這不是「你程度不夠」的問題，是泰文語言本身的特性，每個學泰文的人都要經過這一關。</p>
+
+  <h2>那要怎麼練出「斷詞的眼睛」？</h2>
+  <ul>
+    <li><strong>先累積詞彙量，是唯一的根本解法</strong>：斷詞能力本質上就是「認得這個字組合是不是一個詞」，認識的詞越多，看到熟悉的組合就會自動在腦中「跳出」詞的邊界，這跟認字母、認單字是不同層次的能力，需要另外花時間練。</li>
+    <li><strong>常見的語助詞、代名詞、介系詞先認熟</strong>：像 ที่、กับ、และ、แล้ว、ก็ 這類高頻率出現的小詞，先認熟它們，等於在句子裡先找到幾個「錨點」，剩下的部分自然容易斷開。</li>
+    <li><strong>多讀「已經替你標好詞界」的內容</strong>：初期閱讀材料如果能先用某種方式標出詞與詞的界線（例如教材特別排版過的內容），會比直接啃原始新聞、原始文章有效率很多。</li>
+    <li><strong>讓聽力帶著眼睛走</strong>：先聽過這句話怎麼念、怎麼停頓，再回頭看文字，會發現斷詞的位置其實跟語音的停頓感很接近——用耳朵先建立節奏感，看字的時候會更容易抓到斷點。</li>
+  </ul>
+
+  <h2>這也是為什麼「有人帶」差很多</h2>
+  <p>斷詞這件事，自己盯著一長串泰文摸索，進步速度會很慢——因為你不知道自己猜得對不對，錯誤的斷詞習慣一旦養成，之後很難改。有老師在旁邊，直接把一句話拆給你看、講解為什麼是這樣斷，效率會比自己瞎猜快非常多。</p>
+
+  <div class="blog-cta">
+    <div class="t">想知道怎麼把一長串泰文拆成看得懂的詞嗎？</div>
+    <div class="s">30 分鐘免費體驗課，Lin 老師用中文一對一，帶你實際拆解一段泰文，直接看懂斷詞的邏輯在哪。</div>
+    <button class="blog-btn" onclick="if(window.openModal)openModal('modal-line-qr')">預約免費體驗課</button>
+    <a class="blog-btn alt" href="reading-game.html" onclick="if(window.gtag)gtag('event','game_link_click',{target:'reading_game',from:'blog_word_segmentation_guide'})">先玩玩看拼讀練習遊戲 📝</a>
+  </div>
+</main>
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="shared.js?v=30"></script>
+</body>
+</html>
