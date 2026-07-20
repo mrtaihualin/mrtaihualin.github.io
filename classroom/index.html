@@ -5916,16 +5916,18 @@ function onAddReqScheduleChange(idx) {
   if (!isValidTimeStr(timeVal)) { hint.style.display = 'block'; hint.textContent = '⚠️ 時間格式不對，請用 HH:MM，例如 14:30'; return; }
   const s = (_addReqToken && typeof studentsCache !== 'undefined') ? studentsCache[_addReqToken] : null;
   const studentTz = s && s.pending_student_tz;
-  hint.style.display = 'block';
   if (studentTz) {
+    // 2026-07-22 改（Lin 要求移除，跟 onReqScheduleChange 同一套改法）：時區換算正常時不再顯示
+    // 「＝ 老師端泰國時間」這行提示，只在有問題時才顯示警告。
     try {
-      const abs = parseInTzToDate(dateVal, timeVal, studentTz);
-      const thai = formatInTz(abs, TEACHER_TZ);
-      hint.textContent = '＝ 老師端泰國時間：' + thai.dateStr + ' ' + thai.timeStr;
+      parseInTzToDate(dateVal, timeVal, studentTz);
+      hint.style.display = 'none';
     } catch (e) {
+      hint.style.display = 'block';
       hint.textContent = '⚠️ 時區資料有問題，這個時間會直接當成泰國時間送給老師，建議送出後跟老師確認一下';
     }
   } else {
+    hint.style.display = 'block';
     hint.textContent = '⚠️ 你還沒設定過自己的時區，這個時間會直接當成泰國時間送給老師（跟你想的可能會差好幾個小時，建議先跟老師確認）';
   }
 }
