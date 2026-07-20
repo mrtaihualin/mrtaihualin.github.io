@@ -20,6 +20,7 @@
 <!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="supabase-config.js?v=4"></script>
+<script defer src="supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js/progress-sync.js/tone-finder-game.js -->
 <script defer src="game-account.js?v=3"></script><!-- v3: Phase 4 ล็อก — sync remote-authoritative + เลิก upsert (เซิร์ฟเวอร์เป็นเจ้าของดาว) -->
 <script defer src="auth-widget.js?v=1"></script>
 <script defer src="reading-auth.js?v=6"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
@@ -2052,7 +2053,7 @@
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="tone-finder-game.js?v=1"></script>
+<script src="tone-finder-game.min.js?v=1"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
@@ -2061,7 +2062,7 @@
 </footer>
 <script src="posts-data.js"></script>
 <script src="lessons-data.js"></script>
-<script src="shared.js?v=30"></script>
+<script src="shared.min.js?v=1"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)

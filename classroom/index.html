@@ -6296,10 +6296,46 @@ async function loadTeacherAddAckBanner(token) {
       return '<div style="background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;">' +
         '<div style="font-weight:700;font-size:0.95rem;color:var(--amber-dark);margin-bottom:4px;">➕ 老師想幫你加一堂課</div>' +
         '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:10px;">時間：' + escHtml(timeLabel) + '，請按一下確認</div>' +
+        '<div style="display:flex;gap:8px;">' +
         '<button onclick="ackTeacherAdd(\'' + token + '\',\'' + r.id + '\')" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border:none;border-radius:999px;padding:8px 16px;font-size:0.85rem;font-weight:700;cursor:pointer;">我知道了</button>' +
+        // 2026-07-20 加（Lin 要求：沒有 LINE 的學生也要能拒絕）：以前這裡只有「我知道了」，
+        // 沒連結 LINE 的學生完全沒辦法拒絕老師提議的時間，只能在 LINE 裡按「婉拒」。
+        '<button onclick="declineTeacherAdd(\'' + token + '\',\'' + r.id + '\')" style="background:none;border:1.5px solid var(--amber);color:var(--amber-dark);border-radius:999px;padding:8px 16px;font-size:0.85rem;font-weight:700;cursor:pointer;">婉拒</button>' +
+        '</div>' +
       '</div>';
     }).join('');
   } catch (e) { el.innerHTML = ''; }
+}
+
+// 2026-07-20 加（Lin 要求：沒有 LINE 的學生也要能拒絕老師提議的加課時間）：
+// 跟 line-webhook 的 action=decline_add_class 同一套邏輯——只關掉這筆申請（status=acknowledged,
+// offer_status=declined），不動 Google Calendar（本來就還沒建立，老師還沒按「確認新增」）。
+async function declineTeacherAdd(token, id) {
+  if (!confirm('確定要婉拒老師提議的這個時間嗎？（不會動到 Calendar，老師會收到通知）')) return;
+  const res = await studentPatchRequest(token, id, { status: 'acknowledged', offer_status: 'declined' }, { status: 'pending', notProcessing: true });
+  if (res.error) { alert('⚠️ 婉拒失敗：' + res.error.message + '\n可以直接用 LINE 聯絡老師比較保險。'); return; }
+  if (!res.rows.length) {
+    alert('ℹ️ 這筆可能剛好已經被處理過了，重新整理看看目前狀態。');
+    await loadTeacherAddAckBanner(token);
+    return;
+  }
+  try {
+    const rDate = (res.rows[0].requested_date || '-') + (res.rows[0].requested_time ? ' ' + res.rows[0].requested_time : '');
+    await fetch(LINE_NOTIFY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      body: JSON.stringify({
+        to: 'teacher',
+        message: '學生婉拒了這堂加課提議（' + rDate + '）',
+        flex: {
+          title: '❌ 學生婉拒了這堂加課',
+          bodyText: '時間：' + rDate + '（泰國時間）\n\n學生婉拒了這個時段，這筆申請已經關閉，不會再被誤新增，可以直接在 LINE 打字聯繫學生討論其他時間',
+          buttons: [contactStudentPostbackButton(token)],
+        },
+      }),
+    });
+  } catch (e) { /* 通知老師失敗不影響學生這邊已經婉拒成功 */ }
+  await loadTeacherAddAckBanner(token);
 }
 
 async function ackTeacherAdd(token, id) {
@@ -6464,9 +6500,13 @@ function notifyTeacherClassRequest(d) {
       + optionsText
       + (d.note ? '\n備註：' + d.note : '')
       + (isAdd && calLink ? ('\n\n🔗 點此開 Google Calendar：' + calLink) : '')
-      + (isAdd
-        ? '\n\n請到老師網站「📋 學生申請改期/取消」按「📅 開始安排」確認沒有衝突後排進課表。'
-        : '\n\n請點下方按鈕前往網站處理');
+      // 2026-07-20 改（Lin 回報「檢查加課還有什麼問題」時發現）：以前這段文字是給 LINE flex
+      // 訊息當備用純文字用的，但 notify-line 現在只要有帶 flex 就完全不會用到這段文字——
+      // 這段文字唯一還會真的被看到的地方，是 LINE 整個推播失敗時的「email 備援」(sendEmailFallback)。
+      // Email 是純文字，完全沒有按鈕可以按，「請點下方按鈕」這句話在 email 裡是錯的、老師看了會
+      // 找不到按鈕在哪——改成直接附網站連結文字，不管是加課還是取消/改期都能直接點連結過去。
+      + '\n\n請直接到網站處理：' + siteLink
+      + (isAdd ? '（「📋 學生申請改期/取消」按「📅 開始安排」確認沒有衝突後排進課表）' : '');
 
     function sendEmailFallback() {
       fetch('https://api.web3forms.com/submit', {

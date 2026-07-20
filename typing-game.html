@@ -35,6 +35,7 @@
 <link rel="stylesheet" href="shared.css?v=13">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="supabase-config.js?v=4"></script>
+<script defer src="supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/typing-game-app.js -->
 <script defer src="game-account.js?v=3"></script>
 <script defer src="auth-widget.js?v=1"></script>
 <script defer src="reading-auth.js?v=6"></script>
@@ -367,11 +368,11 @@ body.tg-kbd-typing .floating-qr{opacity:0!important;pointer-events:none!importan
 
 <!-- How-to modal: เกมพิมพ์ — ฉบับสั้น (default) + ฉบับละเอียด (กดขยาย) — Lin 2026-07-19 -->
 <div id="rg-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+  <div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:32px 30px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
     <button onclick="document.getElementById('rg-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
     <div style="font-family:'Noto Serif TC',serif;font-size:22px;font-weight:900;color:#8B6310;margin-bottom:12px;">⌨️ 怎麼玩？</div>
 
-    <ul style="font-size:14px;color:#333;line-height:2;margin:0 0 12px;padding-left:20px;">
+    <ul style="font-size:15px;color:#333;line-height:2;margin:0 0 12px;padding-left:22px;">
       <li>一輪 10 題，初／中／高三級（難度依單字難易度，不是音節數）</li>
       <li>照畫面順序由左到右打，打對自動跳下一步</li>
       <li>💡有提示＝練習不計分／🔥無提示＝計分</li>
@@ -387,7 +388,7 @@ body.tg-kbd-typing .floating-qr{opacity:0!important;pointer-events:none!importan
 
     <button onclick="var d=document.getElementById('rg-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
 
-    <div id="rg-howto-detail" style="display:none;font-size:13.5px;color:#333;line-height:1.85;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
+    <div id="rg-howto-detail" style="display:none;font-size:14.5px;color:#333;line-height:1.9;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
       <p style="margin:0 0 10px;">用泰文鍵盤把泰文字打出來，練習拼字＋鍵盤操作。鍵盤已照泰文排好位置，不用自己記英文鍵對應哪個泰文字母。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📚 三個等級</div>
@@ -618,9 +619,9 @@ body.tg-kbd-typing .floating-qr{opacity:0!important;pointer-events:none!importan
   </div>
 </div>
 
-<script src="typing-game-app.js?v=2"></script>
+<script src="typing-game-app.min.js?v=1"></script>
 </div><!-- /.v3-page -->
-<script src="shared.js?v=30"></script>
+<script src="shared.min.js?v=1"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

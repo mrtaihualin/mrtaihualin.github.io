@@ -616,10 +616,12 @@ serve(async (req) => {
               await pushLine(channelToken, teacherUserId, msg);
             } else {
               // 2026-07-20 加（Lin 要求：都不方便要能直接聯繫學生）：跟網站端 respondToOfferAsStudent
-              // 同一套改法，從純文字警告改成附一顆「💬 聯繫學生」按鈕，直接開網站聯絡視窗。
+              // 同一套改法，從純文字警告改成附一顆「💬 聯繫學生」按鈕。
+              // 2026-07-20 再改：換成 action=start_contact_student（按了直接在這個聊天視窗打字），
+              // 跟其他地方一致，不再是開網站的舊連結。
               const msg = '⚠️ 學生說這些時間都不方便，請直接聯絡學生討論';
               await pushLineFlex(channelToken, teacherUserId, '⚠️ 學生說這些時間都不方便', msg,
-                [{ label: '💬 聯繫學生', uri: 'https://mrtaihualin.com/classroom/#contact-student-' + encodeURIComponent(reqRow.token || '') }]);
+                [{ label: '💬 聯繫學生', postbackData: 'action=start_contact_student&token=' + encodeURIComponent(reqRow.token || '') }]);
             }
           }
         }
@@ -801,11 +803,14 @@ serve(async (req) => {
             const dtime = (updatedDecline && updatedDecline[0] && updatedDecline[0].requested_time) || reqRowDecline.requested_time || '';
             // 跟 accept_offer/decline_offer 推「都不方便」給老師同一套模式：附「💬 聯繫學生」按鈕，
             // 不用只留純文字讓老師自己去網站找學生聯絡方式。
+            // 2026-07-20 改：這裡以前還是用舊的 #contact-student-<token> 開網站連結（跟網站那邊
+            // 4 個地方換掉的是同一個舊機制，這裡漏掉了）——換成跟其他地方一致的
+            // action=start_contact_student，按了直接在這個聊天視窗打字就能轉給學生。
             await pushLineFlex(
               channelToken, teacherUserIdDecline,
               '學生婉拒了這堂加課',
               '時間：' + ddate + ' ' + dtime + '（泰國時間）\n\n學生婉拒了這個時段，這筆申請已經關閉，不會再被誤新增，可以直接聯繫學生討論其他時間',
-              [{ label: '💬 聯繫學生', uri: 'https://mrtaihualin.com/classroom/#contact-student-' + encodeURIComponent(reqRowDecline.token || '') }],
+              [{ label: '💬 聯繫學生', postbackData: 'action=start_contact_student&token=' + encodeURIComponent(reqRowDecline.token || '') }],
             );
           }
         }

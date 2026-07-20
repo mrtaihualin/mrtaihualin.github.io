@@ -35,6 +35,7 @@
 <link rel="stylesheet" href="shared.css?v=13">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="supabase-config.js?v=4"></script>
+<script defer src="supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js -->
 <script defer src="auth-widget.js?v=1"></script>
 <script defer src="game-account.js?v=3"></script>
 <script defer src="reading-auth.js?v=6"></script>
@@ -411,7 +412,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="shared.js?v=30"></script>
+<script src="shared.min.js?v=1"></script>
 <script>
 // ════════ SLOTS ════════
 // adv (副詞: ที่/กับ) + advObj (跟著變：ที่→地點、กับ→誰) 配對
@@ -1352,6 +1353,16 @@ function teachPrev(){if(teachStep>0){teachStep--;renderTeach();}}
 // ════════ CLOSE ON OUTSIDE CLICK ════════
 document.addEventListener('click',e=>{
   if(!e.target.closest('.slot')&&openSlot){openSlot=null;applyOpen();}
+});
+
+// ════════ กด Enter ไปข้อถัดไป (ตอนตอบถูก/เฉลยแล้ว มีปุ่ม「繼續 →」โผล่มา) — Lin 2026-07-20
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  const overlay=document.getElementById('testOverlay');
+  if(!overlay||!overlay.classList.contains('show')) return;
+  if(!testLocked) return;
+  e.preventDefault();
+  closeTest();
 });
 
 // ════════ TOAST ════════
