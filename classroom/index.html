@@ -612,9 +612,10 @@
 
 <!-- ======= STUDENT: 申請加課 MODAL（2026-07-15 新增：給不固定/偶爾約課的學生自己提出想加的時間，
      老師確認沒有衝突後才會真的排進 Calendar，跟「申請改期」共用同一套審核清單）
-     2026-07-20 改（Lin 要求：跟老師端「➕ 加課堂時間」一致）：(1) 加「🔁 每週固定」+「固定到」欄位，
-     跟老師端同樣的欄位/文案，不再只能寫在備註裡讓老師自己看；(2) 一次可以「➕ 再加一筆時間」
-     送出好幾筆申請，不用重複開好幾次這個視窗——跟老師端同一套 row 樣板/JS 邏輯 ======= -->
+     2026-07-20 改（Lin 要求：跟老師端「➕ 加課堂時間」一致）：一次可以「➕ 再加一筆時間」
+     送出好幾筆申請，不用重複開好幾次這個視窗——跟老師端同一套 row 樣板/JS 邏輯
+     2026-07-22 改（Lin 要求）：拿掉「🔁 每週固定」+「固定到」欄位——學生自己申請加課一律
+     當單次課，固定課表變更只能由老師發起（見 addReqRowHtml/submitAddRequest） ======= -->
 <div class="modal-overlay" id="addRequestModal">
   <div class="modal" style="max-width:440px;">
     <h3>➕ 申請加課</h3>
@@ -5843,6 +5844,9 @@ async function studentWithdrawOwnRescheduleRequest(token, id) {
 // 2026-07-20 加（Lin 要求：跟老師端「➕ 加課堂時間」一致，一次可以送出好幾筆＋有「固定」欄位）
 // 跟老師端 addClassDayRowHtml 同一套 row 樣板做法：每筆一個 row（id 帶 idx 後綴），
 // 「➕ 再加一筆時間」複製新的一份、「－ 移除這筆」拿掉一份（不能減到 0 筆）。
+// 2026-07-22 改（Lin 要求：學生自己申請加課不需要「🔁 每週固定」這個欄位——固定課表變更
+// 應該只由老師發起，學生自己臨時想加的都是單次課）：拿掉勾選框＋「固定到」欄位，
+// recurring/untilVal 直接在 submitAddRequest 裡固定寫 false/null，不用再讀這兩個 DOM 元素了。
 function addReqRowHtml(idx) {
   return '<div class="addReqRow" id="addReqRow_' + idx + '" style="' + (idx > 0 ? 'border-top:1px solid var(--border);padding-top:10px;margin-top:10px;' : '') + '">' +
     '<label class="settings-label">想約哪一天？</label>' +
@@ -5855,13 +5859,6 @@ function addReqRowHtml(idx) {
     '</div>' +
     '<input type="hidden" id="addReqTime_' + idx + '" value="" />' +
     '<p id="addReqHint_' + idx + '" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>' +
-    '<label style="display:flex;align-items:center;gap:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;color:var(--ink);margin:10px 0;">' +
-      '<input type="checkbox" id="addReqRecurring_' + idx + '" onchange="onAddReqRecurringChange(' + idx + ')" /> 🔁 每週固定（從這天開始，之後每週都排這個時間）' +
-    '</label>' +
-    '<div id="addReqUntilWrap_' + idx + '" style="display:none;">' +
-      '<label class="settings-label">固定到（不填＝一直排下去，沒有結束日）</label>' +
-      '<input class="settings-input" id="addReqUntil_' + idx + '" type="date" />' +
-    '</div>' +
     '<div style="text-align:right;">' +
       '<button type="button" class="btn-ghost addReqRemoveBtn" style="display:none;font-size:0.78rem;padding:3px 10px;" onclick="removeReqRow(' + idx + ')">－ 移除這筆</button>' +
     '</div>' +
@@ -5893,11 +5890,6 @@ function resetAddReqRows() {
   _addReqNextIdx = 0;
   addReqAddRow();
 }
-function onAddReqRecurringChange(idx) {
-  var checked = document.getElementById('addReqRecurring_' + idx).checked;
-  document.getElementById('addReqUntilWrap_' + idx).style.display = checked ? 'block' : 'none';
-}
-
 var _addReqToken = null;
 function openAddRequestModal(token) {
   if (!requireLineLinkedOrPrompt(token)) return;
@@ -5953,8 +5945,6 @@ async function submitAddRequest() {
     const n = i + 1;
     const rawDate = document.getElementById('addReqDate_' + idx).value;
     const rawTime = document.getElementById('addReqTime_' + idx).value.trim();
-    const recurring = document.getElementById('addReqRecurring_' + idx).checked;
-    const untilVal = document.getElementById('addReqUntil_' + idx).value;
     if (!rawDate) { alert('第 ' + n + ' 筆：請選擇想約哪一天'); return; }
     if (!isValidTimeStr(rawTime)) { alert('⚠️ 第 ' + n + ' 筆：時間格式不對，請用 HH:MM，例如 14:30'); return; }
 
@@ -5966,19 +5956,9 @@ async function submitAddRequest() {
         newDate = thai.dateStr; newTime = thai.timeStr;
       } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
     }
-    let newUntilVal = untilVal || null;
-    if (recurring && newUntilVal && studentTz) {
-      try {
-        const untilAbs = parseInTzToDate(newUntilVal, '23:59', studentTz);
-        newUntilVal = formatInTz(untilAbs, TEACHER_TZ).dateStr;
-      } catch (e) { /* 換算失敗就照原樣送（照學生自己選的日期字串），跟開始日期同一套邏輯 */ }
-    }
-    if (recurring && newUntilVal) {
-      const untilAbsCheck = teacherTimeToDate(newUntilVal, '23:59');
-      const startAbsCheck = teacherTimeToDate(newDate, newTime);
-      if (untilAbsCheck.getTime() < startAbsCheck.getTime()) { alert('⚠️ 第 ' + n + ' 筆：「固定到」的日期不能早於想約的日期'); return; }
-    }
-    rowsInput.push({ newDate: newDate, newTime: newTime, recurring: recurring, untilVal: newUntilVal, endTime: addOneHourTimeStr(newTime), weekday: thaiDateWeekday(newDate) });
+    // 2026-07-22 改（Lin 要求）：學生自己申請加課一律當「單次」，不再有「每週固定」選項
+    // （固定課表變更只能由老師發起），recurring/untilVal 固定寫死。
+    rowsInput.push({ newDate: newDate, newTime: newTime, recurring: false, untilVal: null, endTime: addOneHourTimeStr(newTime), weekday: thaiDateWeekday(newDate) });
   }
   if (!rowsInput.length) { alert('至少要有一筆時間'); return; }
 
