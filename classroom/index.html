@@ -5213,7 +5213,7 @@ async function loadStudentNextClass(token) {
       // 不需要再一顆按鈕跳回去（其他真的必要的地方，例如 24 小時內無法線上取消/老師提議的時間都不方便，
       // 那種「非聯絡老師不可」的情境還是保留這顆按鈕，只有這排常駐主按鈕拿掉）。
       el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">目前沒有排定下一堂課，如需安排請聯絡老師，或直接送出「申請加課」。</div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-top:10px;">' +
           '<button class="btn-sm" id="courseRecordToggleBtn" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="toggleCourseRecordPanel()">📅 我的課程記錄 ▼</button>' +
           '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
         '</div>';
@@ -5244,7 +5244,7 @@ async function loadStudentNextClass(token) {
         '<div style="font-weight:700;font-size:1rem;color:var(--ink);">' + escHtml(dayLabel) + '</div>' +
         (timeStr ? '<div style="font-size:0.9rem;color:var(--ink-soft);margin-top:2px;">' + escHtml(timeStr) + '</div>' : '') +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-top:10px;">' +
         // 2026-07-14 改（Lin 要求）：以前這顆按鈕只能取消「下一堂課」，如果剛好在 24 小時內
         // 就整個沒有取消按鈕，只能傳老師。現在改成一律開「選擇要取消的課堂」清單——
         // 有固定每週上課的學生會列出未來好幾堂，每一堂各自判斷是否超過 24 小時可以線上取消，
@@ -7991,7 +7991,7 @@ async function loadTeacherNextClassBox(token) {
         '<div style="font-weight:700;font-size:1rem;color:var(--ink);">' + escHtml(dayLabel) + '</div>' +
         (timeStr ? '<div style="font-size:0.9rem;color:var(--ink-soft);margin-top:2px;">' + escHtml(timeStr) + '</div>' : '') +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-top:10px;">' +
         // 2026-07-18 加（Lin 要求）：跟學生頁「下一堂課」按鈕列同一套排法+同一套顏色——
         // 📅上課記錄放第一顆，➕加課堂時間也一起放這裡（不是丟在上面主要按鈕列），全部統一金色漸層
         // 2026-07-19 改（Lin 要求，講了五次）：📅上課記錄從 popup 改成跟學生端一樣的「原地展開」
