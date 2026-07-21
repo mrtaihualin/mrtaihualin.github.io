@@ -38,7 +38,7 @@ window.goHome = function() {
   if (p.endsWith('index.html') || p === '/' || p.endsWith('/')) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } else {
-    window.location.href = 'index.html';
+    window.location.href = '/index.html';
   }
 };
 
@@ -58,41 +58,41 @@ window.goHome = function() {
         '<a href="javascript:void(0)" class="has-drop">關於老師與學生</a>',
         '<div class="nav-drop">',
           '<span class="nav-drop-label">老師與學生</span>',
-          '<a href="index.html#teacher">關於老師</a>',
-          '<a href="pricing.html#testimonials">學生回饋</a>',
-          '<a href="faq.html#feedback-section">分享你的經驗</a>',
+          '<a href="/index.html#teacher">關於老師</a>',
+          '<a href="/pricing.html#testimonials">學生回饋</a>',
+          '<a href="/faq.html#feedback-section">分享你的經驗</a>',
         '</div>',
       '</li>',
       '<li>',
         '<a href="javascript:void(0)" class="has-drop">了解課程</a>',
         '<div class="nav-drop">',
           '<span class="nav-drop-label">課程資訊</span>',
-          '<a href="index.html#problems">學習困境</a>',
-          '<a href="pricing.html#how">上課方式</a>',
-          '<a href="pricing.html#pricing">費用方案</a>',
-          '<a href="faq.html#faq">常見問題</a>',
+          '<a href="/index.html#problems">學習困境</a>',
+          '<a href="/pricing.html#how">上課方式</a>',
+          '<a href="/pricing.html#pricing">費用方案</a>',
+          '<a href="/faq.html#faq">常見問題</a>',
           '<div class="nav-drop-divider"></div>',
-          '<a href="faq.html#rules">上課須知</a>',
+          '<a href="/faq.html#rules">上課須知</a>',
         '</div>',
       '</li>',
       '<li>',
         '<a href="javascript:void(0)" class="has-drop">資源分享</a>',
         '<div class="nav-drop">',
           '<span class="nav-drop-label">學習素材</span>',
-          '<a href="content.html">📚 影片與文章</a>',
-          '<a href="games.html">🎮 泰語小遊戲</a>',
-          '<a href="community.html">🇹🇭 泰語學習心聲與提問</a>',
+          '<a href="/content.html">📚 影片與文章</a>',
+          '<a href="/games.html">🎮 泰語小遊戲</a>',
+          '<a href="/community.html">🇹🇭 泰語學習心聲與提問</a>',
         '</div>',
       '</li>',
       '<li>',
         '<a href="javascript:void(0)" class="has-drop">專業服務</a>',
         '<div class="nav-drop">',
           '<span class="nav-drop-label">專業服務</span>',
-          '<a href="page-services.html#tour-guide">🗺️ 導遊服務</a>',
-          '<a href="page-services.html#drama">🎬 字幕翻譯</a>',
-          '<a href="page-services.html#interpret">🎙️ 口譯服務</a>',
+          '<a href="/page-services.html#tour-guide">🗺️ 導遊服務</a>',
+          '<a href="/page-services.html#drama">🎬 字幕翻譯</a>',
+          '<a href="/page-services.html#interpret">🎙️ 口譯服務</a>',
           '<div class="nav-drop-divider"></div>',
-          '<a href="page-services.html#quote-form">📋 索取報價</a>',
+          '<a href="/page-services.html#quote-form">📋 索取報價</a>',
         '</div>',
       '</li>',
       '<li><a href="javascript:void(0)" onclick="openModal(\'modal-contact\')">聯絡我們</a></li>',
@@ -158,19 +158,19 @@ window.goHome = function() {
   var bottomBar = document.createElement('nav');
   bottomBar.id = 'bottom-nav';
   bottomBar.innerHTML = [
-    '<a href="index.html" class="bn-item">',
+    '<a href="/index.html" class="bn-item">',
       '<span class="bn-icon">🏠</span>',
       '<span class="bn-label">首頁</span>',
     '</a>',
-    '<a href="pricing.html" class="bn-item">',
+    '<a href="/pricing.html" class="bn-item">',
       '<span class="bn-icon">📚</span>',
       '<span class="bn-label">課程</span>',
     '</a>',
-    '<a href="games.html" class="bn-item">',
+    '<a href="/games.html" class="bn-item">',
       '<span class="bn-icon">🎮</span>',
       '<span class="bn-label">遊戲</span>',
     '</a>',
-    '<a href="page-services.html" class="bn-item">',
+    '<a href="/page-services.html" class="bn-item">',
       '<span class="bn-icon">🌐</span>',
       '<span class="bn-label">專業服務</span>',
     '</a>',
@@ -665,7 +665,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
           '<input id="vp-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:16px;color:#5C4410;outline:none;">'+
           '<div id="vp-err" style="display:none;color:#C0392B;font-size:12px;margin:6px 0 0;text-align:left;"></div>'+
           '<button id="vp-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">免費領取 →</button>'+
-          '<p style="margin:12px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">輸入 Email 代表同意<a href="terms.html" style="color:#A07A1E;">服務條款與資料收集</a>，只用來寄學習資訊，不會外流</p>'+
+          '<p style="margin:12px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">輸入 Email 代表同意<a href="/terms.html" style="color:#A07A1E;">服務條款與資料收集</a>，只用來寄學習資訊，不會外流</p>'+
           '<p style="margin:8px 0 0;font-size:12px;color:#A07A1E;">點右上角 ✕ 可關閉繼續玩</p>'+
         '</div>';
       document.body.appendChild(ov);
@@ -679,7 +679,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
         try{ if(window.saveLead) saveLead({ email:em, source:'遊戲・單字表' }); }catch(e){}
         try{ localStorage.setItem(LEAD_KEY,'1'); }catch(e){}
         try{ if(typeof gtag==='function') gtag('event','lead_magnet_submit',{ source:'遊戲・單字表' }); }catch(e){}
-        location.href='vocab-thank-you.html';
+        location.href='/vocab-thank-you.html';
       }
       ov.querySelector('#vp-go').onclick=submit;
       inp.addEventListener('keydown',function(ev){ if(ev.key==='Enter') submit(); });
@@ -787,7 +787,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     saveLead({ email:em, name:nm, source:'彈窗・索取速查表' });                       // 1) เก็บ lead (Supabase + Sheet)
     try{ web3Send({ fields:{ subject:'【索取】泰語聲調速查表', from_name:'泰華網站・索取速查表', '姓名':nm||'未填', 'Email':em } }); }catch(e){} // 2) แจ้งครู (best-effort)
     if(name)name.value=''; if(email)email.value='';
-    setTimeout(function(){ location.href='thank-you.html'; }, 700);                  // 3) ไปดาวน์โหลดเสมอ
+    setTimeout(function(){ location.href='/thank-you.html'; }, 700);                  // 3) ไปดาวน์โหลดเสมอ
   };
 
   // 首頁速查表索取（inline 表單）
@@ -803,7 +803,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     saveLead({ email:em, source:'首頁橫幅・索取速查表' });
     try{ web3Send({ fields:{ subject:'【索取】泰語聲調速查表（首頁）', from_name:'泰華網站・索取速查表', 'Email':em } }); }catch(e){}
     if(email)email.value='';
-    setTimeout(function(){ location.href='thank-you.html'; }, 700);
+    setTimeout(function(){ location.href='/thank-you.html'; }, 700);
   };
 
   // 預約體驗課（留言版）
@@ -1509,7 +1509,7 @@ window.deleteFBComment = function(postId, idx) {
 //   ยิง article_scroll_depth (25/50/75/100%) + article_time_on_page (15/30/60/120 วิ)
 // ════════════════════════════════════════════════════════════════════
 (function(){
-  var ARTICLE_PAGES = ['blog.html','blog-tone-guide.html','content.html','resources.html'];
+  var ARTICLE_PAGES = ['blog.html','blog/tone-guide.html','content.html','resources.html'];
   var page = (location.pathname.split('/').pop() || 'index.html');
   if (ARTICLE_PAGES.indexOf(page) === -1) return;
 

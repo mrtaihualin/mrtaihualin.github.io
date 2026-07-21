@@ -32,19 +32,19 @@
 <meta name="twitter:description" content="免費泰語打字練習：照泰文鍵盤（Kedmanee）打出單字，邊打字邊記住拼寫與鍵盤位置。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=13">
+<link rel="stylesheet" href="css/shared.css?v=13">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="supabase-config.js?v=4"></script>
-<script defer src="supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/typing-game-app.js -->
-<script defer src="game-account.js?v=3"></script>
-<script defer src="auth-widget.js?v=1"></script>
-<script defer src="reading-auth.js?v=6"></script>
-<script defer src="tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
-<script src="word-vault.js"></script>
+<script defer src="js/core/supabase-config.js?v=4"></script>
+<script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/typing-game-app.js -->
+<script defer src="js/games/game-account.js?v=3"></script>
+<script defer src="js/core/auth-widget.js?v=1"></script>
+<script defer src="js/games/reading-auth.js?v=6"></script>
+<script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
+<script src="js/games/word-vault.js"></script>
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
-<script src="word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
-<script src="word-menu.js?v=1"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
+<script src="js/games/word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
+<script src="js/games/word-menu.js?v=1"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
 <script src="data/tone-engine.js?v=1"></script>
@@ -619,9 +619,9 @@ body.tg-kbd-typing .floating-qr{opacity:0!important;pointer-events:none!importan
   </div>
 </div>
 
-<script src="typing-game-app.min.js?v=1"></script>
+<script src="js/games/typing-game-app.min.js?v=1"></script>
 </div><!-- /.v3-page -->
-<script src="shared.min.js?v=1"></script>
+<script src="js/core/shared.min.js?v=1"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

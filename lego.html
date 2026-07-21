@@ -32,14 +32,14 @@
 <meta name="twitter:description" content="像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@400;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css?v=13">
+<link rel="stylesheet" href="css/shared.css?v=13">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="supabase-config.js?v=4"></script>
-<script defer src="supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js -->
-<script defer src="auth-widget.js?v=1"></script>
-<script defer src="game-account.js?v=3"></script>
-<script defer src="reading-auth.js?v=6"></script>
-<script defer src="lego-vault.js?v=1"></script>
+<script defer src="js/core/supabase-config.js?v=4"></script>
+<script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js -->
+<script defer src="js/core/auth-widget.js?v=1"></script>
+<script defer src="js/games/game-account.js?v=3"></script>
+<script defer src="js/games/reading-auth.js?v=6"></script>
+<script defer src="js/games/lego-vault.js?v=1"></script>
 <style>
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
 :root{
@@ -412,7 +412,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="shared.min.js?v=1"></script>
+<script src="js/core/shared.min.js?v=1"></script>
 <script>
 // ════════ SLOTS ════════
 // adv (副詞: ที่/กับ) + advObj (跟著變：ที่→地點、กับ→誰) 配對

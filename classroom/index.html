@@ -8128,10 +8128,15 @@ async function initiateTeacherReschedule_chosenInner(token, chosen) {
   if (res.error) { alert('建立紀錄失敗：' + res.error.message); return; }
   var newId = res.data;
   // 2026-07-17 加（Lin 要求）：把原本課堂的時間也存進去，不要只有日期。
+  // 2026-07-22 加（Lin 回報：LINE 按「確認並搬 Calendar」跳「這筆沒有記錄 Calendar 事件 ID」）：
+  // 這裡以前漏存 calendar_event_id——跟 teacherCancelClassNowInner 同一個 chosen（都來自
+  // listRemainingLessonsForStudent，一定有 chosen.ev 這個真正的 Calendar 事件），但那邊有存
+  // calendar_event_id，這裡沒有，導致老師自己發起的改期提議永遠沒有 ID，只能退回姓名+日期
+  // 搜尋（網站版還有這條備援，但 LINE 一鍵按鈕 confirm_reschedule_move 沒有備援，直接失敗）。
   // 2026-07-20 加：補上 .select() + 檢查筆數（照 ทำต่อในอนาคต.md 補齊「ฝั่งครู UPDATE ไม่เช็กแถว」清單）——
-  // 以前只看 error，RLS 靜靜擋掉更新 0 筆不會回 error，original_time 可能沒真的存進去卻不會有任何警告。
-  var timeRes1 = await sb.from('classroom_requests').update({ original_time: p.timeStr }).eq('id', newId).select();
-  if (timeRes1.error || !timeRes1.data || !timeRes1.data.length) console.warn('⚠️ 補存 original_time 失敗（不影響這次通知本身，可能是 RLS 靜靜擋掉更新 0 筆）：', timeRes1.error ? timeRes1.error.message : '更新 0 筆');
+  // 以前只看 error，RLS 靜靜擋掉更新 0 筆不會回 error，這些欄位可能沒真的存進去卻不會有任何警告。
+  var timeRes1 = await sb.from('classroom_requests').update({ original_time: p.timeStr, calendar_event_id: chosen.ev ? chosen.ev.id : null }).eq('id', newId).select();
+  if (timeRes1.error || !timeRes1.data || !timeRes1.data.length) console.warn('⚠️ 補存 original_time/calendar_event_id 失敗（不影響這次通知本身，可能是 RLS 靜靜擋掉更新 0 筆）：', timeRes1.error ? timeRes1.error.message : '更新 0 筆');
   window._classRequestCache = window._classRequestCache || {};
   window._classRequestCache[newId] = { id: newId, token: token, student_name: s ? s.name : token, original_date: p.dateStr, original_time: p.timeStr, request_type: 'reschedule' };
   _otherOptionsRequestId = newId;
