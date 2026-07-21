@@ -90,22 +90,31 @@ function buildFlexMessage(title, bodyText, buttons, rows) {
       ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
       : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },
   }));
+  // 2026-07-22 改（Lin 回報：手機上按鈕文字被截斷「確認搬...」「查...」，看不清楚）：
+  // 以前是「文字（flex:3）＋按鈕（各 flex:2）」全部塞在同一條橫線裡，按鈕分到的寬度太窄
+  // （2 顆按鈕的情況每顆只有整行的 2/7≈28%，塞不下「確認新增」這種 4 個字，被迫截斷）。
+  // 改成「文字自己一行（wrap，佔滿寬度）→ 按鈕另外一行橫排（平分寬度，flex:1）」，
+  // 按鈕能拿到的寬度多很多（1 顆按鈕時整行都給它，2 顆按鈕時各拿一半），不會再被截斷。
   const rowContents = (rows || []).map(function (r, i) {
     return {
-      type: 'box', layout: 'horizontal', alignItems: 'center', spacing: 'sm',
-      margin: i > 0 ? 'sm' : 'none',
+      type: 'box', layout: 'vertical', spacing: 'xs',
+      margin: i > 0 ? 'md' : 'none',
       contents: [
-        { type: 'text', text: String(r.label || ''), size: 'sm', color: '#1C1C1C', wrap: true, flex: 3, gravity: 'center' },
-      ].concat((r.buttons || []).map((b) => ({
-        type: 'button',
-        style: b.style || 'secondary',
-        height: 'sm',
-        flex: 2,
-        color: b.color || (b.style === 'primary' ? '#8B6310' : '#FAF4E8'),
-        action: b.uri
-          ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
-          : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },
-      }))),
+        { type: 'text', text: String(r.label || ''), size: 'sm', color: '#1C1C1C', wrap: true },
+        {
+          type: 'box', layout: 'horizontal', spacing: 'sm',
+          contents: (r.buttons || []).map((b) => ({
+            type: 'button',
+            style: b.style || 'secondary',
+            height: 'sm',
+            flex: 1,
+            color: b.color || (b.style === 'primary' ? '#8B6310' : '#FAF4E8'),
+            action: b.uri
+              ? { type: 'uri', label: b.label.slice(0, 20), uri: b.uri }
+              : { type: 'postback', label: b.label.slice(0, 20), data: b.postbackData, displayText: b.label },
+          })),
+        },
+      ],
     };
   });
   const bodyContents = [
