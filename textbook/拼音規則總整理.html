@@ -176,6 +176,9 @@
   table.tone td{ color:var(--ink); font-weight:700; font-size:19px; }
   table.tone tr:nth-child(2) td, table.tone tr:nth-child(2) th{ font-size:21px; }
   table.tone td.thai-mark{ font-family:var(--font-thai); font-size:26px; color:var(--step); }
+  /* Chrome 對「color:transparent」的組合字元底字有渲染 bug：完全透明會連帶把上面的聲調符號也跳過不畫。
+     改用與底色相同的顏色（視覺上一樣看不見），可在 Chrome / Safari 都正常顯示聲調符號。 */
+  table.tone td.thai-mark .comb-base{ color:var(--paper); }
 
   /* ---- overview grid ---- */
   .overview-grid{
