@@ -70,6 +70,13 @@
 //      ย้ายสำเร็จแล้วเขียนบันทึกลง classroom_calendar_backups (action='move') ให้หน้าเว็บ "↩️ 最近處理
 //      （還能復原）" เห็น+復原ได้เหมือนกดจากเว็บทุกประการ แล้วแจ้งทั้งนักเรียน(換算เป็นเวลาท้องถิ่นของ
 //      นักเรียนเอง ถ้ามีข้อมูล timezone)และครูเอง
+//   10) action=confirm_reschedule_pick (2026-07-22 เพิ่ม, Lin ขอ：學生自己申請改期，老師只能到網站處理，
+//      系統不完整) — ทิศทางตรงข้ามกับข้อ 9: ข้อ 9 คือ "ครูเสนอเวลา รอนักเรียนเลือก" (offer_status ต้อง
+//      ='accepted' ก่อน) ส่วนอันนี้คือ "นักเรียนเสนอ 1-3 เวลาเอง ครูเป็นคนตัดสินใจ" (offer_status ยังเป็น
+//      'proposed' อยู่ ไม่ต้องรอใคร accept) ครูกดเลือกช่วงเวลาไหนใน LINE ก็ย้าย Calendar ทันทีช่วงนั้น
+//      (ดู moveCalendarEventById ตัวเดียวกับข้อ 9) เช็ค initiated_by==='student' ก่อนเสมอ (กันครูกด
+//      ปุ่มนี้ผิดกับรายการที่ตัวเองเป็นคนเสนอ ต้องไปกด accept_offer/confirm_reschedule_move แทน)
+//      เหมือนฝั่งเว็บ teacherPickRescheduleOption → processClassRequestInner ทุกประการ
 //
 // 2026-07-13 สำคัญมาก：ตั้งแต่เปลี่ยนมาให้ "處理" ปุ่มบนเว็บค้นหา+ย้าย/ลบ Calendar เองแล้ว
 //   ปุ่ม "✅ 已處理"/"❌ 婉拒" แบบเดิมที่เคยส่งไปให้ครูกดตรงจาก LINE **เอาออกจากข้อความแจ้งเตือนใหม่แล้ว**
@@ -836,6 +843,131 @@ serve(async (req) => {
                 ? (localLabel + '（你的當地時間）')
                 : (reqRowMove.requested_date + ' ' + (reqRowMove.requested_time || '') + '（泰國時間）');
               await pushLine(channelToken, stuRowMove.line_user_id, '老師已確認，課堂已經改到 ' + timeLabelForStudent + '，如有疑問請直接聯絡老師');
+            }
+          } catch (e) { /* แจ้งนักเรียนไม่สำเร็จ ไม่กระทบว่าย้าย Calendar สำเร็จแล้ว */ }
+        }
+        continue;
+      }
+
+      if (action === 'confirm_reschedule_pick') {
+        // ── 2026-07-22 加（Lin 回報：學生自己申請改期，老師只能到網站處理，系統不完整）──
+        // 學生自己送出「申請改期」時會給 1-3 個候選時間（proposed_options），老師是「決定的人」，
+        // 直接在 LINE 挑一個按下去就搬 Calendar，不用像 confirm_reschedule_move 那樣等
+        // offer_status 變成 'accepted'（那個是「老師先提議，等學生選」的相反方向）。
+        // 跟網站端 teacherPickRescheduleOption → processClassRequestInner 同一套邏輯：
+        // 用 calendar_event_id 直接搬，不用姓名+日期猜。
+        const requestIdPick = params.get('request');
+        const optIdxRaw = params.get('opt');
+        const optIdx = optIdxRaw === null ? 0 : parseInt(optIdxRaw, 10);
+        if (!requestIdPick) continue;
+
+        const teacherUserIdPick = Deno.env.get('LINE_TEACHER_USER_ID');
+        const senderIsTeacherPick = event.source && teacherUserIdPick && event.source.userId === teacherUserIdPick;
+        if (!senderIsTeacherPick) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_pick: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdPick);
+          continue;
+        }
+
+        const { data: reqRowPick, error: fetchErrPick } = await supabase
+          .from('classroom_requests')
+          .select('calendar_event_id,status,token,proposed_options,requested_date,requested_time,offer_status,initiated_by')
+          .eq('id', requestIdPick)
+          .maybeSingle();
+
+        if (fetchErrPick || !reqRowPick) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 找不到這筆申請了，請到網站確認');
+          continue;
+        }
+        if (reqRowPick.status === 'acknowledged') {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經處理過了');
+          continue;
+        }
+        if (reqRowPick.offer_status !== 'proposed') {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這筆狀態已經變了（可能已經處理過），請到網站確認');
+          continue;
+        }
+        if (reqRowPick.initiated_by !== 'student') {
+          // 老師自己提議的時間要先等學生選，不能用這顆按鈕直接搬（那個走 accept_offer→confirm_reschedule_move）
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這筆是老師自己提議的時間，要等學生先選好才能搬，請到網站確認');
+          continue;
+        }
+        if (!reqRowPick.calendar_event_id) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這筆沒有記錄 Calendar 事件 ID，請到網站手動處理');
+          continue;
+        }
+
+        const optsPick = (Array.isArray(reqRowPick.proposed_options) && reqRowPick.proposed_options.length)
+          ? reqRowPick.proposed_options
+          : [{ date: reqRowPick.requested_date, time: reqRowPick.requested_time }];
+        const chosenPick = (Number.isInteger(optIdx) && optIdx >= 0 && optIdx < optsPick.length) ? optsPick[optIdx] : null;
+        if (!chosenPick || !chosenPick.date) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這個選項好像已經失效了，請到網站確認最新狀態');
+          continue;
+        }
+
+        // ── 原子鎖：跟其他 confirm_* action 同一個欄位、同一套語意 ──
+        const { error: claimErrPick, count: claimCountPick } = await supabase
+          .from('classroom_requests')
+          .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
+          .eq('id', requestIdPick)
+          .eq('status', 'pending')
+          .is('processing_started_at', null)
+          .select('id');
+
+        if (claimErrPick) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_pick: ล็อกก่อนย้ายพัง:', claimErrPick.message, 'request=', requestIdPick);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 準備搬課失敗：' + claimErrPick.message + '\n還沒動 Calendar');
+          continue;
+        }
+        if (!claimCountPick) {
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          continue;
+        }
+
+        const moveResultPick = await moveCalendarEventById(reqRowPick.calendar_event_id, chosenPick.date, chosenPick.time || null);
+        if (!moveResultPick.ok) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_pick 搬 Calendar 失敗:', JSON.stringify(moveResultPick), 'request=', requestIdPick);
+          if (moveResultPick.eventMovedButUnverified) {
+            if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ Calendar 可能已經搬了但無法確認狀態，請直接到 Google Calendar／Supabase 手動檢查這筆（id: ' + requestIdPick + '），先不要重複點這顆按鈕');
+            continue;
+          }
+          const { error: unlockErrPick } = await supabase.from('classroom_requests').update({ processing_started_at: null }).eq('id', requestIdPick);
+          if (unlockErrPick) console.error('[line-webhook] ⚠️ confirm_reschedule_pick: 解鎖失敗:', unlockErrPick.message, 'request=', requestIdPick);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 搬 Calendar 失敗（可以重新點一次，或到網站手動處理）\n原因：' + (moveResultPick.reason || '未知') + (moveResultPick.detail ? '\n' + moveResultPick.detail : ''));
+          }
+          continue;
+        }
+
+        await backupCalendarEventServer(supabase, requestIdPick, reqRowPick.token, 'move', moveResultPick.oldEventData, moveResultPick.newStartIso);
+
+        const { error: updErrPick, count: updCountPick } = await supabase
+          .from('classroom_requests')
+          .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
+          .eq('id', requestIdPick)
+          .eq('status', 'pending');
+
+        if (updErrPick || !updCountPick) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_pick: Calendar 搬成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrPick ? updErrPick.message : '更新 0 筆', 'request=', requestIdPick);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經搬成功了，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdPick + '）');
+          }
+          continue;
+        }
+
+        if (channelToken && event.replyToken) {
+          await replyLine(channelToken, event.replyToken, '✅ 已把課搬到新時間，並通知學生了');
+        }
+
+        if (channelToken && reqRowPick.token) {
+          try {
+            const { data: stuRowPick } = await supabase.from('classroom_students').select('line_user_id,pending_student_tz').eq('token', reqRowPick.token).maybeSingle();
+            if (stuRowPick && stuRowPick.line_user_id) {
+              const localLabelPick = moveResultPick.newStartIso ? formatIsoInTz(moveResultPick.newStartIso, stuRowPick.pending_student_tz) : null;
+              const timeLabelForStudentPick = localLabelPick
+                ? (localLabelPick + '（你的當地時間）')
+                : (chosenPick.date + ' ' + (chosenPick.time || '') + '（泰國時間）');
+              await pushLine(channelToken, stuRowPick.line_user_id, '老師已確認，課堂已經改到 ' + timeLabelForStudentPick + '，如有疑問請直接聯絡老師');
             }
           } catch (e) { /* แจ้งนักเรียนไม่สำเร็จ ไม่กระทบว่าย้าย Calendar สำเร็จแล้ว */ }
         }
