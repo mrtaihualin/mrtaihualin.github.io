@@ -636,6 +636,14 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(SB_URL, SB_SVC, { auth: { persistSession: false } });
 
+  // ── rate limit: กันสคริปต์ยิงรัวถล่ม DB (เพดานดาว+ปฏิทินกันดาวเกินอยู่แล้ว อันนี้เกราะเสริม) ──
+  //   60 รอบ/นาที/คน — คนเล่นเร็วสุด ~20-30/นาที, สคริปต์ยิงเป็นพัน → 60 ไม่บล็อกคนจริง
+  //   fail-open โดยตั้งใจ: ถ้า rl_check พัง/หาย จะไม่บล็อกใคร (rate limit ไม่ใช่ด่านหลัก)
+  const { data: rlOk, error: rlErr } = await admin.rpc("rl_check", {
+    p_user: user.id, p_fn: "tone-round", p_limit: 60, p_window: 60,
+  });
+  if (!rlErr && rlOk === false) return json({ error: "rate_limited" }, 429);
+
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
 
