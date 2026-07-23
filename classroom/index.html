@@ -2091,19 +2091,12 @@ async function checkAddClassDayConflict() {
     // 有沒有一筆完全符合 _addClassDayPrefillSnapshot（日期/時間/固定/固定到都沒被老師改過）——
     // 有的話那一筆可以直接排，其餘的（老師自己多加的）照樣走送出通知給學生確認，兩種可以同時發生，
     // 按鈕文字/流程對應調整（見 submitAddClassDayCombined）。
+    // 2026-07-24 改（Lin 要求）：以前「這筆完全符合學生自己原本申請的時間」會被判定成
+    // 「不用再問一次，老師一按就直接排進 Calendar」的捷徑。Lin 說不要這個捷徑了——
+    // 不管是不是學生自己申請的時間，一律都要「先送 LINE 通知，等學生按接受，老師才回來確認新增」，
+    // 不能老師一按就直接排進去。所以 eligibleIdx 固定鎖 -1，永遠不會走直接排的分支
+    // （下面 directConfirmAddClassRow / confirmAddClassDay 兩個函式維持在，只是不會再被觸發到）。
     let eligibleIdx = -1;
-    if (_addClassDayFromRequestId && _addClassDayPrefillSnapshot) {
-      for (let i = 0; i < pendingRows.length; i++) {
-        const pr = pendingRows[i];
-        if (pr.dateVal === _addClassDayPrefillSnapshot.date &&
-            pr.startVal === _addClassDayPrefillSnapshot.time &&
-            !!pr.recurring === !!_addClassDayPrefillSnapshot.recurring &&
-            (pr.untilVal || '') === (_addClassDayPrefillSnapshot.untilVal || '')) {
-          eligibleIdx = i;
-          break;
-        }
-      }
-    }
     _addClassDayEligibleDirectIdx = eligibleIdx;
     const hasDirect = eligibleIdx !== -1;
     const hasOthers = pendingRows.length > (hasDirect ? 1 : 0);
@@ -2282,6 +2275,7 @@ async function confirmAddClassDay() {
   if (r.ok) {
     _addClassDayFromRequestId = null;
     resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;">✅ 新增成功！（已重新確認 Calendar 上真的有這堂課' + (r.hasLine ? '，已 LINE 通知學生' : '，學生還沒連結 LINE，沒收到通知') + '）</div>';
+    if (!r.hasLine) alert('✅ Calendar 已新增成功\n⚠️ 但學生還沒連結 LINE，沒收到通知，建議自己也提醒學生上網站看一下'); // 2026-07-24 加：用彈窗確保老師一定看到
     _addClassDayPending = null;
     resetAddClassDayRows();
     await renderAddClassDayExistingList(token);
@@ -2403,15 +2397,21 @@ async function proposeAddClassDay() {
 
   const r = await proposeAddClassRows(token, pendingRows);
   const lines = [];
+  let lineWarning = null; // 2026-07-24 加（Lin 要求：LINE 沒送到要「大聲」提醒，不能只寫在小字裡容易漏看）
   if (r.created.length) {
     lines.push('✅ 已送出 ' + r.created.length + ' 筆加課通知，等學生按「接受」（LINE 或網站都可以）之後，記得回來「📋 學生申請改期/取消」清單按「確認新增」才會真的排進 Calendar');
-    if (!r.hasLine) lines.push('⚠️ 學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下');
-    else if (!r.notifySent) lines.push('⚠️ 但 LINE 通知失敗（' + r.notifyError + '），學生開網站還是看得到，也可以自己再說一聲');
+    if (!r.hasLine) {
+      lineWarning = '⚠️ 學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下';
+    } else if (!r.notifySent) {
+      lineWarning = '⚠️ 但 LINE 通知失敗（' + r.notifyError + '），學生開網站還是看得到，也可以自己再說一聲';
+    }
+    if (lineWarning) lines.push(lineWarning);
   }
   if (r.failedLines.length) lines.push.apply(lines, r.failedLines);
   resultEl.innerHTML = lines.length
     ? ('<div style="color:var(--gold-deep);font-weight:700;">' + lines.map(escHtml).join('<br>') + '</div>')
     : '<div style="color:#b45309;">送出失敗，所有筆數都沒有成功建立</div>';
+  if (lineWarning) alert(lineWarning); // 用彈窗擋一下老師，確保一定看到，不會被畫面上的小字漏掉
   _addClassDayPending = null;
   loadPendingClassRequests();
 }
@@ -2435,6 +2435,7 @@ async function submitAddClassDayCombined() {
   let eligibleFailed = false; // 2026-07-20 加（稽核發現 🟠）：學生自己申請那一筆若直接排進 Calendar
   // 失敗，不能照樣重置整個表單——不然那一筆「📌 學生自己申請的時間」的鎖定狀態/內容會憑空消失，
   // 看起來像資料不見了，其實只是還沒真的處理成功。失敗時維持表單原樣，讓老師看得到、能重試。
+  const lineWarnings = []; // 2026-07-24 加（Lin 要求：LINE 沒送到要「大聲」提醒，不能只寫在小字裡容易漏看）
   try {
     if (!token || !pendingRows.length) { resultEl.innerHTML = '<div style="color:#b45309;">找不到待處理的時段，請重新檢查一次</div>'; return; }
 
@@ -2444,6 +2445,7 @@ async function submitAddClassDayCombined() {
       if (r.ok) {
         _addClassDayFromRequestId = null;
         lines.push('✅ 第 ' + (eligibleIdx + 1) + ' 筆已直接排進 Calendar' + (r.hasLine ? '（已 LINE 通知學生）' : '（學生還沒連結 LINE，沒收到通知）'));
+        if (!r.hasLine) lineWarnings.push('第 ' + (eligibleIdx + 1) + ' 筆：學生還沒連結 LINE，沒收到通知，建議自己也提醒學生上網站看一下');
       } else {
         eligibleFailed = true;
         lines.push('❌ 第 ' + (eligibleIdx + 1) + ' 筆直接排進 Calendar 失敗：' + r.error);
@@ -2458,8 +2460,13 @@ async function submitAddClassDayCombined() {
       const idxLabel = restRowsWithIdx.map(function (x) { return '第 ' + (x.idx + 1) + ' 筆'; }).join('、');
       if (pr.created.length) {
         lines.push('📤 ' + idxLabel + '已送出通知給學生，等學生按「接受」（LINE 或網站都可以）之後，記得回來「📋 學生申請改期/取消」清單按「確認新增」才會真的排進 Calendar');
-        if (!pr.hasLine) lines.push('⚠️ 學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下');
-        else if (!pr.notifySent) lines.push('⚠️ 但 LINE 通知失敗（' + pr.notifyError + '），學生開網站還是看得到，也可以自己再說一聲');
+        if (!pr.hasLine) {
+          const w = idxLabel + '：學生還沒連結 LINE，收不到 LINE 通知——學生開網站還是會看到確認按鈕，建議自己也提醒學生上網站看一下';
+          lines.push('⚠️ ' + w); lineWarnings.push(w);
+        } else if (!pr.notifySent) {
+          const w = idxLabel + '：LINE 通知失敗（' + pr.notifyError + '），學生開網站還是看得到，也可以自己再說一聲';
+          lines.push('⚠️ ' + w); lineWarnings.push(w);
+        }
       }
       if (pr.failedLines.length) lines.push.apply(lines, pr.failedLines);
     }
@@ -2467,6 +2474,7 @@ async function submitAddClassDayCombined() {
     resultEl.innerHTML = lines.length
       ? ('<div style="color:var(--gold-deep);font-weight:700;">' + lines.map(escHtml).join('<br>') + (eligibleFailed ? '<br><span style="font-weight:400;color:#b45309;">⚠️ 學生申請的那一筆還沒排進去，表單保留原樣，可以再按一次「送出」重試</span>' : '') + '</div>')
       : '<div style="color:#b45309;">處理失敗，沒有成功的項目</div>';
+    if (lineWarnings.length) alert('⚠️ LINE 沒送到：\n\n' + lineWarnings.join('\n')); // 用彈窗擋一下老師，確保一定看到
     if (!eligibleFailed) {
       _addClassDayPending = null;
       _addClassDayEligibleDirectIdx = -1;
