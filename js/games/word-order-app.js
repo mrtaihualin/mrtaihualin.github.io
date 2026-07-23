@@ -732,6 +732,7 @@
       });
       woLogSentence({guide:!!hintUsedThisSentence, pts:pts, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
       try{ if(window.gtag) gtag('event','word_order_correct',{sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
+      try{ if(window.gtag) gtag('event','game_correct',{game:'word_order'}); }catch(e){}
     } else {
       attemptedWrongThisSentence = true;
       var deduct = WRONG_DEDUCT[Math.min(wrongCount, 3)];
@@ -753,6 +754,7 @@
         updateHintWarning();
         updateScoreBar();  // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนเรียงผิด
         try{ if(window.gtag) gtag('event','word_order_wrong',{sentence:s.th, wrongs:wrongCount}); }catch(e){}
+        try{ if(window.gtag) gtag('event','game_wrong',{game:'word_order'}); }catch(e){}
       }
     }
   }
@@ -848,6 +850,7 @@
 
     // GA4: ยิงทุกครั้งที่จบรอบ ไม่ว่าจะ practiceMode หรือไม่ (แก้บั๊กเดิม: game_complete เคยยิงหลัง if(practiceMode) เท่านั้น ทำให้คนที่จำครบแล้วไม่ถูกนับ)
     try{ if(window.gtag) gtag('event','word_order_complete',{practice: !!practiceMode}); }catch(e){}
+    try{ if(window.gtag) gtag('event','game_complete',{game:'word_order'}); }catch(e){}
 
     // จำครบทุกประโยคแล้ว (mastered หมด) → รอบนี้เป็นแค่ทบทวนฟรี ไม่คิดคะแนน/ดาว/ลีก (กันฟาร์ม MASTER ข้อ7)
     if (practiceMode) {

@@ -2670,6 +2670,7 @@ function stepSessionSummary() {
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event', 'tone_finder_complete', {score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
+  try{ if(window.gtag) gtag('event','game_complete',{game:'tone_finder', score: weightedScore, total: total}); }catch(e){}
   // Lin 2026-07-10: ลบ branch บังคับล็อกอินทิ้ง (requireLogin=false ตายอยู่แล้ว ไม่เคยทำงานจริง) — เหลือแค่คำเชิญ "ขอ單字速查表" หลังเล่นจบรอบ
   setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   var rows = results.map(function(r, i){
@@ -2993,6 +2994,7 @@ function startSetSession(words, opts) {
     hardStarsEarned: 0
   };
   gtag('event', 'tone_finder_start', {mode: selectedCategory || 'ทั้งหมด'});
+  try{ if(window.gtag) gtag('event','game_start',{game:'tone_finder'}); }catch(e){}
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check สำหรับคำแรกของ session
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
@@ -4448,10 +4450,12 @@ var TF = {
       var _gaToneName = (TONES[_gaTone] && TONES[_gaTone].zh) || String(_gaTone);
       if (_gaMistakes === 0) {
         gtag('event', 'tone_answer_correct', {word: _gaEntry.word, tone: _gaToneName});
+        try{ if(window.gtag) gtag('event','game_correct',{game:'tone_finder'}); }catch(e){}
       } else {
         var _gaFinal = session.finalAnswer != null ? session.finalAnswer : session.initialGuess;
         var _gaSelectedName = (TONES[_gaFinal] && TONES[_gaFinal].zh) || String(_gaFinal);
         gtag('event', 'tone_answer_wrong', {word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName});
+        try{ if(window.gtag) gtag('event','game_wrong',{game:'tone_finder'}); }catch(e){}
       }
       // สเตจ 1: บันทึกผล (พร้อมคะแนน) + ไปคำถัดไป/สรุป + คิดโบนัสจบชุด
       tfCommitWordAndAdvance({ forced: false });

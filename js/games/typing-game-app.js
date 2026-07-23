@@ -516,6 +516,7 @@ function initGame(){
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
   try{ if(typeof gtag==='function') gtag('event','typing_game_start',{level: curLevel}); }catch(e){}
+  try{ if(typeof gtag==='function') gtag('event','game_start',{game:'typing_game'}); }catch(e){}
   refreshUI();
   loadWord();
   if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
@@ -824,6 +825,7 @@ function finalizeWord(){
   var cmult=rgComboMult(streak); // คอมโบ×แต้ม (สะอาดติดกัน)
   if(cmult>1)pts=Math.max(1,Math.round(pts*cmult));
   try{ if(typeof gtag==='function') gtag('event','typing_game_correct',{word: WORD.th, pts: pts}); }catch(e){}
+  try{ if(typeof gtag==='function') gtag('event','game_correct',{game:'typing_game'}); }catch(e){}
 
   // ── กฎ MASTER ข้อ7 (แก้ 2026-07-05 ตาม Lin ยืนยัน): วันที่16 (ด่านตัดสินสุดท้ายของ SRS นำไปสู่ดาวเงินจริง) ได้คะแนนฐานตามปกติ ไม่ zero — ต่างจาก 已記得 (known-check) ที่ยังคง 0 แต้มเสมอ (ดูจุด curWordIsKnownCheck ด้านบน) ──
   var basePtsAwarded=pts;
@@ -906,6 +908,7 @@ function check(){
   } else {
     wrongCount++;wordHadWrong=true;streak=0;badC++;
     try{ if(typeof gtag==='function') gtag('event','typing_game_wrong',{word: WORD.th, wrongs: wrongCount}); }catch(e){}
+    try{ if(typeof gtag==='function') gtag('event','game_wrong',{game:'typing_game'}); }catch(e){}
     if(wrongCount < 3){
       // ผิดครั้งที่ 1/2 → กระพริบตัวที่ผิด, เคลียร์, ลองใหม่
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){
@@ -2434,6 +2437,7 @@ function rgCheckWholeWord(){
   } else {
     wrongCount++;wordHadWrong=true;streak=0;badC++;
     try{ if(typeof gtag==='function') gtag('event','typing_game_wrong',{word: WORD.th, wrongs: wrongCount, syllable: wrongIdx+1}); }catch(e){}
+    try{ if(typeof gtag==='function') gtag('event','game_wrong',{game:'typing_game'}); }catch(e){}
     rgJumpForCheck(wrongIdx);
     if(wrongCount<3){
       document.getElementById('pool').querySelectorAll('.opt').forEach(function(x){

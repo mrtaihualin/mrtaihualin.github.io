@@ -908,6 +908,7 @@ function finishLegoRound(){
   roundScoreLego+=roundBonus;
   const weightedScore=Math.round(roundScoreLego*LEVEL_WEIGHT);
   try{ if(window.gtag) gtag('event','lego_complete',{score: weightedScore, total: count, perfect: isPerfect}); }catch(e){}
+  try{ if(window.gtag) gtag('event','game_complete',{game:'lego', score: weightedScore, total: count}); }catch(e){}
   sentencesThisRound=0;
   roundScoreLego=0;
   legoCleanThisRound=0;
@@ -1188,6 +1189,7 @@ function startTest(){
   updateTestHintWarning();
   document.getElementById('testOverlay').classList.add('show');
   try{ if(window.gtag) gtag('event','lego_start',{words: testWords.length}); }catch(e){}
+  try{ if(window.gtag) gtag('event','game_start',{game:'lego'}); }catch(e){}
   if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
 }
 
@@ -1259,6 +1261,7 @@ function checkTestAnswer(){
     if(legoCurCombo>legoMaxCombo) legoMaxCombo=legoCurCombo;
     roundScoreLego+=pts;
     try{ if(window.gtag) gtag('event','lego_correct',{sentence: testWords.map(function(w){return w.th;}).join(''), clean: clean, pts: pts}); }catch(e){}
+    try{ if(window.gtag) gtag('event','game_correct',{game:'lego'}); }catch(e){}
     banner.className='test-banner ok';
     banner.textContent='✅ 排對了！+'+pts+' 分'+(golden?' ✨黃金句':'')+(testHintUsed?'（用了提示）':'');
     // น้องมีนาพูด: คำทอง > คอมโบ > มีผิด(ปลอบ) > ถูก(สุ่ม) — Lin 2026-07-10
@@ -1279,6 +1282,7 @@ function checkTestAnswer(){
     testWrongCount++;
     testLife-=deduct;
     try{ if(window.gtag) gtag('event','lego_wrong',{sentence: testWords.map(function(w){return w.th;}).join(''), wrongs: testWrongCount}); }catch(e){}
+    try{ if(window.gtag) gtag('event','game_wrong',{game:'lego'}); }catch(e){}
     legoCurCombo=0;
     if(testLife<=0){
       failTest();
