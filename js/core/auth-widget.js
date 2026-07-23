@@ -308,6 +308,30 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _startObserve); else _startObserve();
   } catch (e) {}
 
+  // ── กันหลายบัญชี Phase 5: ส่ง fingerprint+IP ไปเก็บที่เซิร์ฟเวอร์ (throttle 1 ครั้ง/6 ชม./เครื่อง) ──
+  //   ข้าม admin (Lin เอง) · fingerprint โหลด lazy จาก FingerprintJS OSS ฟรี · พังก็ยังส่ง IP อย่างเดียว
+  var LOGSESS_KEY = 'tf_logsess_at';
+  function shouldLogSession() {
+    try {
+      var last = parseInt(localStorage.getItem(LOGSESS_KEY) || '0', 10);
+      return (Date.now() - last) > 6 * 3600 * 1000;
+    } catch (e) { return true; }
+  }
+  function logSession() {
+    if (!API.user || API.user.email === ADMIN_EMAIL || !shouldLogSession()) return;
+    try { localStorage.setItem(LOGSESS_KEY, String(Date.now())); } catch (e) {} // จองก่อน กันยิงซ้ำ
+    var send = function (fp) {
+      try { sb.functions.invoke('log-session', { body: { fingerprint: fp || '', event: 'login' } }).catch(function () {}); } catch (e) {}
+    };
+    try {
+      import('https://openfpcdn.io/fingerprintjs/v4')
+        .then(function (m) { return m.default.load(); })
+        .then(function (fp) { return fp.get(); })
+        .then(function (r) { send((r && r.visitorId) || ''); })
+        .catch(function () { send(''); });
+    } catch (e) { send(''); }
+  }
+
   // ── init: session เดียว ฟังเดียว (client กลาง) ใช้ร่วมกันทุกหน้าที่โหลดไฟล์นี้ ──
   function boot() {
     sb.auth.getSession().then(function (res) {
@@ -315,6 +339,7 @@
       API.authResolved = true;
       fireChange();
       fetchProfile();
+      if (API.user) logSession();
     });
     sb.auth.onAuthStateChange(function (_event, session) {
       API.user = (session && session.user) || null;
@@ -322,6 +347,7 @@
       myNick = myAvatar = myBadge = null; // เคลียร์โปรไฟล์เดิม แล้วดึงของ user ปัจจุบันใหม่
       fireChange();
       fetchProfile();
+      if (API.user) logSession();
     });
   }
 
