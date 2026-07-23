@@ -1,0 +1,299 @@
+/* ============================================================
+   Mr. Thai Hua Thai Language Teaching — EN verification site
+   Standalone build. Not linked from the main site. English only.
+   Brand palette per site CLAUDE.md (rule 4) — do not change.
+   ============================================================ */
+
+:root {
+  --gold: #8B6310;
+  --gold-bright: #C8973A;
+  --gold-light: #F3E4C2;
+  --gold-deep: #5a3e0a;
+  --ink: #1C1C1C;
+  --ink-soft: #333333;
+  --ink-muted: #6b6b6b;
+  --bg: #EDE7D9;
+  --cream: #FAF4E8;
+  --white: #FFFFFF;
+  --border: rgba(139,99,16,0.18);
+  --green: #2d6a4f;
+  --green-dark: #1b4332;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Sans TC', sans-serif;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-family: 'Noto Serif TC', serif; font-weight: 900; color: var(--ink); margin: 0; }
+
+a { color: inherit; }
+
+img { max-width: 100%; display: block; }
+
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- Nav ---------- */
+.site-nav {
+  background: var(--ink);
+  border-bottom: 3px solid var(--gold-bright);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.site-nav .brand {
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 900;
+  color: var(--gold-bright);
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+}
+.site-nav .links { display: flex; gap: 22px; flex-wrap: wrap; }
+.site-nav .links a {
+  color: rgba(255,255,255,0.78);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.site-nav .links a:hover,
+.site-nav .links a.active { color: var(--gold-bright); border-color: var(--gold-bright); }
+
+.notice-band {
+  background: var(--gold-light);
+  color: var(--gold-deep);
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  background: linear-gradient(135deg,#FFF8EC 0%,#F7E9CC 55%,#F1DFB8 100%);
+  border-bottom: 3px solid var(--gold-bright);
+  text-align: center;
+  padding: 84px 24px 70px;
+}
+.eyebrow {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+.hero h1 { font-size: clamp(28px,5vw,44px); line-height: 1.3; margin-bottom: 18px; }
+.hero h1 .accent { color: var(--gold-bright); }
+.hero p.sub { font-size: 15px; color: var(--ink-soft); max-width: 560px; margin: 0 auto 30px; }
+.cta-btn {
+  display: inline-block;
+  background: linear-gradient(135deg,#8B6310,#C8973A);
+  color: #fff;
+  font-weight: 900;
+  font-size: 15px;
+  padding: 16px 40px;
+  border-radius: 40px;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(139,99,16,0.35);
+}
+.cta-btn.outline {
+  background: transparent;
+  color: var(--gold-deep);
+  border: 2px solid var(--gold-bright);
+  box-shadow: none;
+}
+
+/* ---------- Sections ---------- */
+section.block { padding: 64px 24px; }
+section.block.dark { background: var(--ink); }
+section.block.cream { background: var(--cream); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+section.block.white { background: var(--white); }
+.section-heading { text-align: center; font-size: clamp(22px,3.6vw,32px); line-height: 1.35; margin-bottom: 14px; }
+.section-heading.on-dark { color: #fff; }
+.section-lead { text-align: center; font-size: 14px; color: var(--ink-soft); max-width: 560px; margin: 0 auto 36px; }
+.eyebrow.center { text-align: center; }
+.eyebrow.on-dark { color: var(--gold-bright); }
+
+/* ---------- Cards / grids ----------
+   English runs longer than Chinese per line, so card grids use wider
+   minimum columns (fewer, wider boxes) instead of many narrow ones. */
+.grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 16px; }
+.card {
+  background: var(--white);
+  border: 1.5px solid rgba(200,151,58,0.30);
+  border-radius: 14px;
+  padding: 24px 18px;
+  text-align: center;
+}
+.card .ic { font-size: 30px; margin-bottom: 10px; }
+.card .cat { font-size: 11px; color: var(--gold); font-weight: 700; letter-spacing: 1px; margin-bottom: 6px; }
+.card .title { font-family: 'Noto Serif TC', serif; font-size: 15px; font-weight: 900; }
+.card ul { text-align: left; font-size: 13px; color: var(--ink-soft); padding-left: 18px; margin: 10px 0 0; }
+.card ul li { margin-bottom: 6px; }
+
+/* Wider 2-column grid for text-heavy cards (long English sentences/lists
+   read badly when squeezed into narrow columns — give them more width) */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 16px; }
+
+/* Horizontal card: icon badge on the left, left-aligned text block on the
+   right. Used instead of the icon-on-top-centered card whenever a card
+   holds a full sentence or a bullet list, so the box reads as a wide
+   horizontal block instead of a tall, narrow, centered one. */
+.card-h {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  text-align: left;
+  background: var(--white);
+  border: 1.5px solid rgba(200,151,58,0.30);
+  border-radius: 14px;
+  padding: 22px 22px;
+}
+.card-h .ic-badge {
+  flex: 0 0 auto;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--gold-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.card-h .content { flex: 1; min-width: 0; }
+.card-h .cat { font-size: 11px; color: var(--gold); font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
+.card-h .title { font-family: 'Noto Serif TC', serif; font-size: 15px; font-weight: 900; margin-bottom: 8px; }
+.card-h ul { padding-left: 18px; font-size: 13px; color: var(--ink-soft); margin: 0; }
+.card-h ul li { margin-bottom: 6px; }
+.card-h p { font-size: 13px; color: var(--ink-soft); margin: 0; line-height: 1.8; }
+
+.card-h.on-dark { background: rgba(255,255,255,0.05); border-color: rgba(200,151,58,0.35); }
+.card-h.on-dark .ic-badge { background: rgba(200,151,58,0.18); }
+.card-h.on-dark .title { color: #fff; }
+.card-h.on-dark ul, .card-h.on-dark p { color: rgba(255,255,255,0.72); }
+
+/* ---------- Stats ---------- */
+.stats { background: var(--ink); display: flex; justify-content: center; flex-wrap: wrap; gap: 48px; padding: 40px 24px; }
+.stat { text-align: center; }
+.stat .num { font-family: 'Noto Serif TC', serif; font-size: 28px; font-weight: 900; color: var(--gold-bright); }
+.stat .label { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; letter-spacing: 0.5px; }
+
+/* ---------- Testimonials ---------- */
+.testi { background: var(--white); border-left: 4px solid var(--gold-bright); border-radius: 4px; padding: 20px; }
+.testi p { font-size: 13px; color: var(--ink); margin: 0 0 10px; font-style: italic; }
+.testi .name { font-size: 12px; color: var(--ink-muted); font-weight: 700; }
+
+/* ---------- Teacher story ---------- */
+.story-block { border: 2px solid var(--ink); margin-bottom: 24px; }
+.story-block .row { padding: 22px 26px; border-bottom: 2px solid var(--ink); }
+.story-block .row:last-child { border-bottom: none; }
+.story-block .row .tag { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; margin-bottom: 8px; }
+.story-block .row .headline { font-family: 'Noto Serif TC', serif; font-size: 17px; font-weight: 900; color: var(--gold); margin-bottom: 8px; }
+.story-block .row p { font-size: 14px; color: var(--ink-soft); margin: 0; }
+
+/* ---------- Pricing ---------- */
+.plans { display: grid; grid-template-columns: repeat(auto-fit,minmax(270px,1fr)); gap: 18px; margin-top: 30px; }
+.plan {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-top: 4px solid var(--gold-bright);
+  border-radius: 10px;
+  padding: 28px 24px;
+}
+.plan.featured { border-top-color: var(--gold-deep); box-shadow: 0 8px 24px rgba(139,99,16,0.12); }
+.plan .tag { font-size: 11px; color: var(--gold); font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
+.plan .name { font-family: 'Noto Serif TC', serif; font-size: 22px; font-weight: 900; margin-bottom: 10px; }
+.plan ul { padding-left: 18px; font-size: 13px; color: var(--ink-soft); margin: 12px 0; }
+.plan ul li { margin-bottom: 6px; }
+.plan .price-row { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 4px; }
+.plan .price { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 900; color: var(--gold); }
+.plan .unit { font-size: 12px; color: var(--ink-muted); }
+.plan .note { font-size: 12px; color: var(--ink-muted); margin-bottom: 10px; }
+.course-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.course-row:last-child { border-bottom: none; }
+.bonus { color: var(--gold); font-size: 11px; margin-left: 6px; }
+
+/* ---------- Timeline ---------- */
+.timeline { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 18px; }
+.tl-step { text-align: left; color: #fff; }
+.tl-circle { width: 44px; height: 44px; border-radius: 50%; background: var(--gold-bright); color: var(--ink); font-weight: 900; display: flex; align-items: center; justify-content: center; margin: 0 0 12px; }
+.tl-hours { font-size: 11px; color: var(--gold-bright); letter-spacing: 1px; margin-bottom: 4px; }
+.tl-title { font-family: 'Noto Serif TC', serif; font-weight: 900; margin-bottom: 6px; }
+.tl-desc { font-size: 12.5px; color: rgba(255,255,255,0.65); line-height: 1.75; }
+
+/* ---------- Lesson preview ---------- */
+.lesson-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 10px; padding: 20px; }
+.lesson-tag { font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-bottom: 8px; }
+.lesson-title { font-family: 'Noto Serif TC', serif; font-weight: 900; margin-bottom: 12px; }
+.lesson-sample { background: var(--cream); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; }
+.thai-txt { font-family: 'Sarabun', sans-serif; font-size: 18px; color: var(--gold-deep); }
+.phonetic { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+.meaning { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+
+/* ---------- FAQ ---------- */
+.faq-item { border-bottom: 1px solid var(--border); }
+.faq-q {
+  width: 100%; text-align: left; background: none; border: none; cursor: pointer;
+  padding: 18px 4px; font-family: 'Noto Sans TC', sans-serif; font-size: 15px; font-weight: 700; color: var(--ink);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.faq-a { display: none; padding: 0 4px 18px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.9; }
+.faq-item.open .faq-a { display: block; }
+.faq-item.open .faq-q .faq-icon { transform: rotate(45deg); }
+.faq-icon { transition: transform 0.2s; font-size: 18px; color: var(--gold); }
+
+/* ---------- Rule cards ---------- */
+.rule-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(200,151,58,0.35); border-radius: 10px; padding: 22px; color: #fff; }
+.rule-card .ic { font-size: 24px; margin-bottom: 8px; }
+.rule-card .title { font-family: 'Noto Serif TC', serif; font-weight: 900; margin-bottom: 10px; }
+.rule-card ul { padding-left: 18px; font-size: 13px; color: rgba(255,255,255,0.72); margin: 0; }
+.rule-card ul li { margin-bottom: 6px; }
+
+/* ---------- Chips ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 14px 0; }
+.chip { font-size: 12.5px; font-weight: 700; color: var(--gold-deep); background: var(--gold-light); border: 1px solid var(--gold-bright); padding: 6px 16px; border-radius: 30px; }
+
+/* ---------- CTA banner ---------- */
+.cta-banner { background: var(--ink); border-top: 4px solid var(--gold-bright); padding: 56px 24px; text-align: center; }
+.cta-banner h2 { color: #fff; font-size: clamp(20px,3vw,30px); margin-bottom: 10px; }
+.cta-banner p { color: rgba(255,255,255,0.65); font-size: 14px; margin-bottom: 24px; }
+
+/* ---------- Footer ---------- */
+footer {
+  background: var(--ink);
+  color: rgba(255,255,255,0.55);
+  text-align: center;
+  font-size: 12.5px;
+  padding: 32px 24px;
+  border-top: 3px solid var(--gold-bright);
+}
+footer a { color: rgba(255,255,255,0.75); text-decoration: underline; margin: 0 6px; }
+footer .verify-note { display: block; margin-top: 14px; font-size: 11px; color: rgba(255,255,255,0.35); }
+
+/* ---------- Simple legal pages ---------- */
+.legal-wrap { max-width: 760px; margin: 0 auto; padding: 40px 24px 70px; }
+.legal-wrap h1 { font-size: 24px; margin-bottom: 6px; }
+.legal-wrap .updated { color: var(--ink-muted); font-size: 13px; margin-bottom: 30px; }
+.legal-wrap h2 { font-size: 17px; margin-top: 30px; margin-bottom: 8px; color: var(--gold-deep); }
+.legal-wrap p { font-size: 14px; color: var(--ink-soft); }
+.legal-wrap a { color: var(--gold-deep); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .site-nav { flex-direction: column; align-items: flex-start; }
+}
