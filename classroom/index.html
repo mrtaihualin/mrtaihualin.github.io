@@ -2032,8 +2032,12 @@ async function checkAddClassDayConflict() {
     if (!isValidTimeStr(startVal)) { alert('⚠️ 第 ' + n + ' 筆：開始時間格式不對，請用 HH:MM，例如 20:00'); return; }
     const endTime = addOneHourTimeStr(startVal);
     const startAbs = teacherTimeToDate(dateVal, startVal);
-    const endAbs = teacherTimeToDate(dateVal, endTime);
-    if (endAbs.getTime() <= startAbs.getTime()) { alert('⚠️ 第 ' + n + ' 筆：結束時間要晚於開始時間'); return; }
+    // 2026-07-23 修正 bug（Lin 回報開始時間選 23:00 一定跳「結束時間要晚於開始時間」）：
+    // 以前用 teacherTimeToDate(dateVal, endTime) 重組結束時間，但開始時間是 23:xx 時
+    // addOneHourTimeStr 只把小時 wrap 成 00，日期字串沒跟著 +1 天，害「結束」被算成
+    // 「同一天 00:xx」，比「23:xx 開始」還早 → 一定判定失敗。改成直接用毫秒算「開始 +1 小時」，
+    // 不管跨不跨午夜都一定對，不用管日期字串。
+    const endAbs = new Date(startAbs.getTime() + 60 * 60 * 1000);
     if (recurring && untilVal && teacherTimeToDate(untilVal, '23:59').getTime() < startAbs.getTime()) {
       alert('⚠️ 第 ' + n + ' 筆：「固定到」的日期不能早於開課日期'); return;
     }
@@ -2126,7 +2130,10 @@ async function checkAddClassDayConflict() {
 async function createCalendarClassEventForStudent(token, s, p) {
   let calToken = await gdGetToken();
   const start = teacherTimeToDate(p.dateVal, p.startVal);
-  const end = teacherTimeToDate(p.dateVal, p.endTime);
+  // 2026-07-23 修正：同一個跨午夜 bug（開始 23:xx 時 p.endTime 字串是「同一天 00:xx」），
+  // 這裡以前也用 teacherTimeToDate(p.dateVal, p.endTime) 重組，會把 Calendar 事件的結束時間
+  // 排在開始之前（甚至更早的日期），改成直接「開始 +1 小時」算，永遠對。
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
   const body = {
     summary: s.name,
     // 2026-07-15 加（Lin 要求）：跟 createMeetLinkForStudent 用同一個顏色（colorId '6' = Tangerine，
