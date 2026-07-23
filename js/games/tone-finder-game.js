@@ -2965,6 +2965,15 @@ function tfSyncLevelTabs() {
 // Lin 2026-07-10: ลบระบบ "เล่นฟรี N รอบแล้วบังคับล็อกอิน" ทิ้งทั้งหมด (TF_FREE_ROUNDS_LIMIT/tfFreeRoundsUsed/tfBumpFreeRounds/tfFreeRoundsLeft)
 // เพราะ requireLogin=false ใน supabase-config.js มาตลอด → โค้ดนี้ไม่เคยทำงานจริง เกมเสียงเล่นฟรีไม่จำกัดเหมือนเกมอื่นทุกเกม
 
+// ── Analytics 2026-07-23: ยิง start ครั้งเดียวต่อ session ตอนผู้เล่นตอบข้อแรกจริง (นับ "คนเล่นจริง" ไม่ใช่ pageview) ──
+function tfFireStartOnce() {
+  if (session && !session.startFired) {
+    session.startFired = true;
+    try { gtag('event', 'tone_finder_start', {mode: selectedCategory || 'ทั้งหมด'}); } catch(e){}
+    try { if (window.gtag) gtag('event','game_start',{game:'tone_finder'}); } catch(e){}
+  }
+}
+
 function startSetSession(words, opts) {
   advSentenceCtx = null; // ล้าง context ประโยค 高級 ทุกครั้งที่เริ่ม session ใหม่ (TF.startAdvSentence จะตั้งใหม่เองถ้าใช่)
   var entries = words.map(function(wd){
@@ -2991,10 +3000,10 @@ function startSetSession(words, opts) {
     curWordAllFirstTry: true, scoredSyls: {},
     currentWordGolden: tfRollGolden(),
     // ── สเปก 2026-07-03: ดาวเงินที่ได้จริงรอบนี้ (สะสมจากคำที่ mastered ระหว่างเล่น) ──
-    hardStarsEarned: 0
+    hardStarsEarned: 0,
+    // ── Analytics 2026-07-23: ยิง tone_finder_start ตอนผู้เล่น "ตอบข้อแรกจริง" เท่านั้น (ไม่ใช่ตอนโหลดหน้า) — กัน start นับ pageview ──
+    startFired: false
   };
-  gtag('event', 'tone_finder_start', {mode: selectedCategory || 'ทั้งหมด'});
-  try{ if(window.gtag) gtag('event','game_start',{game:'tone_finder'}); }catch(e){}
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check สำหรับคำแรกของ session
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
@@ -3271,6 +3280,7 @@ function stepSessionGuess() {
     var c = toneColors[n-1];
     var captureN = n;
     var clickAct = act(function(){
+      tfFireStartOnce();  // Analytics 2026-07-23: ตอบข้อแรก = เริ่มเล่นจริง
       session.initialGuess = captureN;
       try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = captureN; } catch(e){}  // Phase 4: จำคำเดารายพยางค์
       // ── โหมดเร็ว (Approach A): ตอบถูกตั้งแต่แรก → ข้าม推導ไป result เลย; ผิด/คำนวณไม่ได้ → 推導สอนเหมือนเดิม ──
@@ -3294,6 +3304,7 @@ function stepSessionGuess() {
   }).join('');
 
   var dontKnowAct = act(function(){
+    tfFireStartOnce();  // Analytics 2026-07-23: กด "ไม่มั่นใจ" ข้อแรกก็นับว่าเริ่มเล่นจริง
     session.initialGuess = 0;
     try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = 0; } catch(e){}  // Phase 4: จำ "ไม่มั่นใจ" รายพยางค์
     if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // 🤷 = เข้า推導 ไม่นับ first-try

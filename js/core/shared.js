@@ -327,7 +327,7 @@ window.goHome = function() {
       </div>
       <!-- Video Info -->
       <div id="yt-title" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:var(--white);font-weight:700;margin-bottom:4px;line-height:1.5;min-height:22px;"></div>
-      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--gold);letter-spacing:1px;margin-bottom:16px;">Mr. Thai Hua · 泰語老師</div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--gold);letter-spacing:1px;margin-bottom:16px;">Mr. Tai Hua · 泰語老師</div>
       <!-- Action Buttons -->
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button id="yt-shuffle-btn" onclick="shuffleYTVideo()" style="flex:1;min-width:130px;padding:12px 20px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔀 換一部影片</button>

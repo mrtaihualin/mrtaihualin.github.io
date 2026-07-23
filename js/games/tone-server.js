@@ -28,12 +28,36 @@
           knownCheck: !!args.knownCheck
         }
       });
-      if (r.error) return { ok: false, reason: 'net_error', detail: String(r.error) };
+      if (r.error) {
+        // Phase 5: โดน rate limit (429 = ยิงเกิน 60 รอบ/นาที) → บอกคนเล่นตรงๆ ว่ารอแป๊บ
+        var st = 0;
+        try { st = (r.error.context && r.error.context.status) || 0; } catch (e2) {}
+        if (st === 429) { showRateLimitToast(); return { ok: false, reason: 'rate_limited' }; }
+        return { ok: false, reason: 'net_error', detail: String(r.error) };
+      }
       return r.data || { ok: false, reason: 'empty' };
     } catch (e) {
       return { ok: false, reason: 'exception', detail: String(e) };
     }
   }
+  // toast แจ้งโดน rate limit — ใช้สีธีมเว็บ (ทอง/ครีม) · โชว์ครั้งเดียวต่อ 10 วิ กันเด้งรัว
+  var _rlToastAt = 0;
+  function showRateLimitToast() {
+    try {
+      if (Date.now() - _rlToastAt < 10000) return;
+      _rlToastAt = Date.now();
+      var d = document.createElement('div');
+      d.textContent = '🌾 玩得太快啦！休息一下，幾秒後再繼續～';
+      d.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);z-index:100001;' +
+        'background:#FAF4E8;border:1.5px solid #C8973A;color:#5a3e0a;border-radius:14px;' +
+        'padding:10px 18px;font-size:14px;font-weight:700;font-family:"Noto Sans TC",sans-serif;' +
+        'box-shadow:0 6px 24px rgba(90,62,10,0.25);opacity:0;transition:opacity .3s;';
+      document.body.appendChild(d);
+      requestAnimationFrame(function () { d.style.opacity = '1'; });
+      setTimeout(function () { d.style.opacity = '0'; setTimeout(function () { try { d.remove(); } catch (e) {} }, 400); }, 3500);
+    } catch (e) {}
+  }
+
   // ล็อกอินไหม — รองรับหลายเกม: เกมเสียงใช้ TF_AUTH · เกมอ่าน/พิมพ์ใช้ READING_AUTH
   function loggedIn() {
     try {
