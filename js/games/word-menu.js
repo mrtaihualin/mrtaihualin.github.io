@@ -33,9 +33,10 @@
       '.wm-row .word-ctl-btn,.wm-row .word-audio-btn,.wm-row .vault-save-btn,.wm-row .rg-ctl-fab{' +
         'flex:0 0 auto;position:static!important;margin:0!important;}' +
       '.wm-row:hover .word-ctl-btn,.wm-row:hover .word-audio-btn,.wm-row:hover .vault-save-btn,.wm-row:hover .rg-ctl-fab{transform:none;}' +
-      // ป้ายข้อความข้าง 🍚 — Lin 2026-07-24: บอกให้รู้ว่ากดแล้วมีฟีเจอร์ซ่อนอยู่ข้างใน (กันคนไม่รู้ว่ามีเมนู)
-      '.wm-trigger-label{font-family:\'Noto Sans TC\',sans-serif;font-size:11px;font-weight:700;color:#8B6310;' +
-        'white-space:nowrap;cursor:pointer;margin-left:2px;}';
+      // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปรวมกับเมนูลอยมุมขวาล่าง (🎮/⛶/🍙/🪧) — แผงตัวเลือกต้องเปิด "ขึ้นด้านบน" แทน (เดิมเปิดลงล่าง)
+      // เพราะปุ่มอยู่ติดขอบล่างสุดของจอ เปิดลงล่างจะโดนตัดขาดจอ · ชิดขวาแทนกึ่งกลาง กันล้นขอบขวาจอ
+      '.wm-wrap-side{position:relative;}' +
+      '.wm-wrap-side .wm-panel{top:auto;bottom:calc(100% + 8px);left:auto;right:0;transform:none;}';
     document.head.appendChild(s);
     _styled = true;
   }
@@ -118,26 +119,35 @@
     trigger.id = 'wm-trigger';
     trigger.className = 'word-ctl-btn';
     trigger.textContent = '🍚';
-    trigger.title = '選項';
-    trigger.setAttribute('aria-label', '選項');
+    trigger.title = '更多功能（發音／拼音／翻譯／收藏）';
+    trigger.setAttribute('aria-label', '更多功能');
     trigger.setAttribute('aria-haspopup', 'true');
     trigger.setAttribute('aria-expanded', 'false');
 
-    // ป้ายข้อความข้าง 🍚 ให้ทุกคนรู้ว่ากดแล้วมีตัวเลือกซ่อนอยู่ (ไม่ใช่แค่ไอคอนเฉยๆ) — Lin 2026-07-24
-    var triggerLabel = document.createElement('span');
-    triggerLabel.className = 'wm-trigger-label';
-    triggerLabel.textContent = '更多功能';
-    triggerLabel.addEventListener('click', function (e) { e.stopPropagation(); trigger.click(); });
-
     var wrap = document.createElement('span');
     wrap.className = 'wm-wrap';
-    wrap.style.display = 'inline-flex';
-    wrap.style.alignItems = 'center';
     wrap.appendChild(trigger);
-    wrap.appendChild(triggerLabel);
     wrap.appendChild(panel);
 
-    row.appendChild(wrap); // แถวเดิมยังอยู่ (โค้ดเดิมที่ show/hide แถวนี้ยังทำงานปกติ) เหลือปุ่มเดียวคือ 🍚
+    // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปอยู่กับเมนูลอยมุมขวาล่าง (ชุดเดียวกับ 🎮/⛶/🍙/🪧) แทนที่จะฝังอยู่ใต้คำศัพท์
+    // .rg-ctl-wrap สร้างโดย shared.js ซึ่งโหลด/รันทีหลังไฟล์นี้ในทุกหน้าเกม → ต้องรอ/ลองใหม่จนกว่าจะเจอ
+    function moveToSideMenu() {
+      var sideWrap = document.querySelector('.rg-ctl-wrap');
+      if (!sideWrap) return false;
+      trigger.classList.remove('word-ctl-btn');
+      trigger.classList.add('rg-ctl-fab');
+      wrap.classList.add('wm-wrap-side');
+      sideWrap.insertBefore(wrap, sideWrap.firstChild); // ไว้บนสุดของชุดปุ่ม (เหนือ 🎮) ให้แผงตัวเลือกเปิดขึ้นไม่โดนบัง
+      return true;
+    }
+    if (!moveToSideMenu()) {
+      row.appendChild(wrap); // ที่อยู่ชั่วคราว ระหว่างรอเมนูขวาสร้างเสร็จ (กันปุ่มหายไปเฉยๆ)
+      var moveTries = 0;
+      var moveIv = setInterval(function () {
+        moveTries++;
+        if (moveToSideMenu() || moveTries > 40) clearInterval(moveIv); // ลองนาน ~4 วิ แล้วเลิก (เผื่อหน้าไหนไม่มีเมนูขวาจริงๆ)
+      }, 100);
+    }
 
     function refresh() {
       watched.forEach(function (w) {
