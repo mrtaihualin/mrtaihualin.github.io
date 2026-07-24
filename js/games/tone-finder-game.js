@@ -2941,7 +2941,7 @@ function tfRenderTopBanners() {
   var _newTotal = _newN(1)+_newN(2)+_newN(3);
   nb.innerHTML = _newTotal>0 ? '<div style="background:#fdecea;border:1px solid #e24b4a;border-radius:10px;padding:10px 14px;margin:0 0 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:#a32d2d;text-align:center;font-weight:700;">🆕 有新單字上架囉！快來練習吧 ✨</div>' : '';
   cb.innerHTML = _loggedIn ? '' : (
-    '<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;margin:0 0 12px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;text-align:left;">' +
+    '<div style="font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;text-align:left;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
         '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:170px;">😊 先玩玩看也可以喔～登入後米娜才幫你把進度記起來 🌾</span>' +
         '<button onclick="tfCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>' +

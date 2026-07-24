@@ -1435,7 +1435,7 @@ function rgChallengeBump(maxCombo, isPerfect) {
 function rgRenderLoginCTA(){
   var el=document.getElementById('rg-cta-login'); if(!el)return;
   if(rgLoggedIn()){ el.innerHTML=''; return; }
-  el.innerHTML='<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;">'+
+  el.innerHTML='<div style="font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;">'+
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
       '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:180px;">😊 先玩玩看也可以喔～登入後米娜才幫你把進度記起來 🌾</span>'+
       '<button onclick="rgCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>'+
