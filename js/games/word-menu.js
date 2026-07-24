@@ -133,16 +133,20 @@
 
     // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปอยู่กับเมนูลอยมุมขวาล่าง (ชุดเดียวกับ 🎮/⛶/🍙/🪧) แทนที่จะฝังอยู่ใต้คำศัพท์
     // .rg-ctl-wrap สร้างโดย shared.js ซึ่งโหลด/รันทีหลังไฟล์นี้ในทุกหน้าเกม → ต้องรอ/ลองใหม่จนกว่าจะเจอ
-    // Lin 2026-07-25 (v2): แยกปุ่ม🍚กับแผงตัวเลือกออกจากกัน (เดิมอยู่ใน <span class="wm-wrap"> เดียวกัน) —
-    //   ปุ่ม → แทรกเป็นปุ่มบนสุดของแถวปุ่ม (เหมือนเดิม) · แผง → แทรกเหนือปุ่มทั้งหมดอีกที (เหมือนเมนู 🎮/🪧) กันบัง/กันโผล่คนละที่กัน
+    // Lin 2026-07-25 (v3): บั๊กที่ Lin เจอ — ปุ่ม 🍚 เด้งขึ้นข้างบนตอนเปิดเมนู 🎮 สาเหตุคือตอนแทรกปุ่ม 🍚 ไว้ "บนสุดของทั้งชุด"
+      // (sideWrap.firstChild) ดันไปแทรกไว้เหนือ #game-switcher (แผงดรอปดาวน์ของปุ่ม 🎮 เอง ไม่ใช่ปุ่ม) — พอแผงนั้นเปิด/โตขึ้น
+      // สิ่งที่อยู่ "เหนือมัน" ในลำดับ DOM จะถูกดันขึ้นตาม (กลไกธรรมชาติของ flex column ที่ยึดขอบล่างตายตัว) ปุ่ม 🍚 เลยเด้ง
+      // แก้จริง: ปุ่มทุกปุ่มต้อง "อยู่ติดกันเป็นกลุ่มเดียว" ห้ามมีแผงเมนูอื่นแทรกกลาง → แทรกปุ่ม 🍚 ไว้ "ก่อนหน้าปุ่ม 🎮 ทันที" แทน (ใต้ #game-switcher แต่เหนือปุ่ม 🎮)
+      // ส่วนแผงตัวเลือกของ 🍚 เอง ยังแทรกเหนือปุ่ม 🍚 เหมือนเดิม (ไม่กระทบปุ่มไหนเพราะปิดอยู่ตลอดเวลาที่ไม่ได้ใช้ = สูง 0)
     function moveToSideMenu() {
       var sideWrap = document.querySelector('.rg-ctl-wrap');
       if (!sideWrap) return false;
       trigger.classList.remove('word-ctl-btn');
       trigger.classList.add('rg-ctl-fab');
       panel.classList.add('wm-panel-side');
-      sideWrap.insertBefore(trigger, sideWrap.firstChild); // ปุ่ม 🍚 → บนสุดของแถวปุ่ม
-      sideWrap.insertBefore(panel, sideWrap.firstChild);   // แผงตัวเลือก → เหนือปุ่มทั้งหมดอีกที (รวมปุ่ม 🍚 ด้วย)
+      var menuBtn = sideWrap.querySelector('.rg-ctl-fab[aria-label="遊戲選單"]'); // ปุ่ม 🎮 — จุดอ้างอิงที่ปุ่ม 🍚 ต้องอยู่ "ติดกัน" ด้วย
+      sideWrap.insertBefore(trigger, menuBtn || sideWrap.firstChild); // ปุ่ม 🍚 → ติดกับปุ่ม 🎮 เป็นกลุ่มเดียวกัน (ไม่แทรกเหนือแผง #game-switcher)
+      sideWrap.insertBefore(panel, trigger);                          // แผงตัวเลือกของ 🍚 → เหนือปุ่ม 🍚 ของตัวเองเท่านั้น
       return true;
     }
     if (!moveToSideMenu()) {
