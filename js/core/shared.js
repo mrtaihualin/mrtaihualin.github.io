@@ -2187,15 +2187,30 @@ window.deleteFBComment = function(postId, idx) {
     hideTimer = setTimeout(panel.close, 3200);
   }
 
-  document.addEventListener('click', function (e) {
-    var chip = e.target.closest && e.target.closest('.tf-streak-chip[title]');
-    if (chip && !chip.onclick && EXPLAIN[chip.getAttribute('title')]) {
-      e.stopPropagation();
-      showBubble(chip, EXPLAIN[chip.getAttribute('title')]);
-      return;
-    }
-    if (bubble && (!e.target.closest || !e.target.closest('.tf-stat-explain'))) panel.close();
-  }, true);
+  // Lin 2026-07-25: คอม (มีเมาส์จริง) → เอาเมาส์ไปแตะ (hover) ก็ขึ้นเลย ไม่ต้องคลิก · มือถือ (แตะจอ) → ใช้วิธีแตะ/คลิกเหมือนเดิม
+  var isDesktop = false;
+  try { isDesktop = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
+
+  if (isDesktop) {
+    document.addEventListener('mouseover', function (e) {
+      var chip = e.target.closest && e.target.closest('.tf-streak-chip[title]');
+      if (chip && !chip.onclick && EXPLAIN[chip.getAttribute('title')]) showBubble(chip, EXPLAIN[chip.getAttribute('title')]);
+    });
+    document.addEventListener('mouseout', function (e) {
+      var chip = e.target.closest && e.target.closest('.tf-streak-chip[title]');
+      if (chip && EXPLAIN[chip.getAttribute('title')] && !chip.contains(e.relatedTarget)) panel.close();
+    });
+  } else {
+    document.addEventListener('click', function (e) {
+      var chip = e.target.closest && e.target.closest('.tf-streak-chip[title]');
+      if (chip && !chip.onclick && EXPLAIN[chip.getAttribute('title')]) {
+        e.stopPropagation();
+        showBubble(chip, EXPLAIN[chip.getAttribute('title')]);
+        return;
+      }
+      if (bubble && (!e.target.closest || !e.target.closest('.tf-stat-explain'))) panel.close();
+    }, true);
+  }
 
   var style = document.createElement('style');
   style.textContent =
