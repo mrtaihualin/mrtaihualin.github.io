@@ -2058,25 +2058,24 @@
   <div id="tf-newword-banner" style="width:100%;"></div>
 
   <div class="tf-tools-row">
-    <div id="rg-profile-wrap" style="display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
-        <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
-          <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖</span>
-          <div class="howto-hint-bubble" id="howto-hint-tone">
-            <button class="howto-hint-close" onclick="dismissHowtoHint('tone')">✕</button>
-            這裡有教怎麼玩喔 👆
-          </div>
-        </span>
-      </div>
-      <div id="rg-cta-login" style="width:100%;"></div>
-      <!-- 連續天數／護盾／星星／勳章：搬進「個人檔案」旁邊了 — 沒登入就整條不顯示 — Lin 2026-07-24 -->
-      <div class="tf-stat-row" id="tf-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;">
+    <div id="rg-profile-wrap" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
+      <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
+      <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
+      <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
+        <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖</span>
+        <div class="howto-hint-bubble" id="howto-hint-tone">
+          <button class="howto-hint-close" onclick="dismissHowtoHint('tone')">✕</button>
+          這裡有教怎麼玩喔 👆
+        </div>
+      </span>
+      <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
+      <div class="tf-stat-row" id="tf-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
         <span class="tf-streak-chip" title="連續天數">🔥 <b id="tf-streak-num">0</b></span>
         <span class="tf-streak-chip" title="護盾">🛡️ ×<b id="tf-freeze-num">0</b></span>
         <span class="tf-streak-chip" title="累積星星">⭐ <b id="tf-star-count">0</b></span>
         <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="TF.showBadges()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showBadges()}"><span id="tf-badge-emoji">🌱</span> <b id="tf-badge-count">0</b></span>
       </div>
+      <div id="rg-cta-login" style="width:100%;"></div>
     </div>
     <button class="tf-tool-btn" onclick="TF.openAlpha()">🔤 字母練習區</button>
     <button class="tf-tool-btn" onclick="TF.openSearch()">🔎 自行搜尋</button>
