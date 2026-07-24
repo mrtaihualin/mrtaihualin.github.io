@@ -20,7 +20,7 @@
       '.wm-panel{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);' +
         'min-width:200px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);border-radius:12px;' +
         'box-shadow:0 6px 20px rgba(90,62,10,0.18);overflow:hidden;z-index:99990;display:none;text-align:left;}' +
-      '.wm-wrap.wm-open .wm-panel{display:block;}' +
+      '.wm-panel.wm-open{display:block;}' +
       '.wm-row{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;' +
         'border-bottom:0.5px solid rgba(139,99,16,0.18);background:#fff;transition:background .12s;}' +
       '.wm-row:last-child{border-bottom:none;}' +
@@ -33,16 +33,12 @@
       '.wm-row .word-ctl-btn,.wm-row .word-audio-btn,.wm-row .vault-save-btn,.wm-row .rg-ctl-fab{' +
         'flex:0 0 auto;position:static!important;margin:0!important;}' +
       '.wm-row:hover .word-ctl-btn,.wm-row:hover .word-audio-btn,.wm-row:hover .vault-save-btn,.wm-row:hover .rg-ctl-fab{transform:none;}' +
-      // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปรวมกับเมนูลอยมุมขวาล่าง (🎮/⛶/🍙/🪧) — แผงตัวเลือกต้องเปิด "ขึ้นด้านบน" แทน (เดิมเปิดลงล่าง)
-      // เพราะปุ่มอยู่ติดขอบล่างสุดของจอ เปิดลงล่างจะโดนตัดขาดจอ · ชิดขวาแทนกึ่งกลาง กันล้นขอบขวาจอ
-      '.wm-wrap-side{position:relative;}' +
-      // Lin 2026-07-25: เดิมแผง (bottom:calc(100% + 8px)) อ้างอิงตำแหน่งปุ่ม 🍚 เอง — ปุ่ม 🍚 อยู่ "บนสุด" ของชุดปุ่มลอย
-      // เสมอก็จริง แต่ตำแหน่ง Y จริงบนจอขยับได้ตามจำนวนปุ่มอื่นในชุด/ลำดับโหลดสคริปต์ (race) → แผงเลยโผล่คนละที่ในแต่ละหน้า/แต่ละรอบโหลด
-      // แก้ให้ "ตายตัว" จริง: ใช้ position:fixed ผูกกับระยะห่างจากขอบจอโดยตรง (เลขเดียวกับ .rg-ctl-wrap ทุกจุด + เผื่อที่ให้พ้นปุ่มอื่นทั้งชุดเสมอ)
-      // ไม่อ้างอิงตำแหน่งปุ่ม 🍚 อีกต่อไป → ตำแหน่งแผงจะเหมือนกันทุกหน้า ทุกครั้งที่เปิด ไม่ขึ้นกับลำดับปุ่ม/timing
-      '.wm-wrap-side .wm-panel{position:fixed;top:auto;left:auto;right:12px;transform:none;bottom:calc(60px + env(safe-area-inset-bottom,0px) + 220px);}' +
-      '@media(max-width:768px){.wm-wrap-side .wm-panel{bottom:calc(68px + env(safe-area-inset-bottom,0px) + 220px);}}' +
-      '.rg-ctl-wrap.rg-ctl-fs .wm-wrap-side .wm-panel,body.rg-fake-fullscreen .wm-wrap-side .wm-panel{bottom:calc(6px + env(safe-area-inset-bottom,0px) + 220px) !important;}';
+      // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปรวมกับเมนูลอยมุมขวาล่าง (🎮/⛶/🍙/🪧)
+      // Lin 2026-07-25 (v2): รอบแรกลองผูกตำแหน่ง fixed ตายตัวเอง (bottom:280px) แต่ Lin เจอว่าเมนูอื่น (🎮/🪧) ยังโผล่คนละที่ (เหนือปุ่มตัวเองเฉยๆ) ไม่ตรงกัน
+      // แก้ใหม่ให้ตรงกับที่ Lin ต้องการจริง: "โผล่เหนือปุ่มทั้ง 4 เสมอ ไม่ว่าจะเปิดอันไหน" → ใช้วิธีเดียวกับเมนู 🎮(#game-switcher) กับ 🪧(.grw-menu) เป๊ะๆ
+      // คือทำแผงเป็น flex item ปกติของ .rg-ctl-wrap เอง (ไม่ใช้ position:fixed/absolute) แล้ว insert ไว้บนสุดของชุดปุ่มเสมอ
+      // เพราะกล่องอื่นที่ไม่ได้เปิด = display:none (สูง 0) เวลาเปิดกล่องไหน จะเห็นเป็น item บนสุดที่ "แสดงอยู่จริง" เสมอ = โผล่เหนือปุ่มทั้ง 4 พอดี ทุกกล่อง ทุกหน้า เหมือนกันหมด
+      '.wm-panel.wm-panel-side{position:static;top:auto;left:auto;right:auto;bottom:auto;transform:none;width:auto;min-width:150px;box-sizing:border-box;}';
     document.head.appendChild(s);
     _styled = true;
   }
@@ -137,13 +133,16 @@
 
     // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปอยู่กับเมนูลอยมุมขวาล่าง (ชุดเดียวกับ 🎮/⛶/🍙/🪧) แทนที่จะฝังอยู่ใต้คำศัพท์
     // .rg-ctl-wrap สร้างโดย shared.js ซึ่งโหลด/รันทีหลังไฟล์นี้ในทุกหน้าเกม → ต้องรอ/ลองใหม่จนกว่าจะเจอ
+    // Lin 2026-07-25 (v2): แยกปุ่ม🍚กับแผงตัวเลือกออกจากกัน (เดิมอยู่ใน <span class="wm-wrap"> เดียวกัน) —
+    //   ปุ่ม → แทรกเป็นปุ่มบนสุดของแถวปุ่ม (เหมือนเดิม) · แผง → แทรกเหนือปุ่มทั้งหมดอีกที (เหมือนเมนู 🎮/🪧) กันบัง/กันโผล่คนละที่กัน
     function moveToSideMenu() {
       var sideWrap = document.querySelector('.rg-ctl-wrap');
       if (!sideWrap) return false;
       trigger.classList.remove('word-ctl-btn');
       trigger.classList.add('rg-ctl-fab');
-      wrap.classList.add('wm-wrap-side');
-      sideWrap.insertBefore(wrap, sideWrap.firstChild); // ไว้บนสุดของชุดปุ่ม (เหนือ 🎮) ให้แผงตัวเลือกเปิดขึ้นไม่โดนบัง
+      panel.classList.add('wm-panel-side');
+      sideWrap.insertBefore(trigger, sideWrap.firstChild); // ปุ่ม 🍚 → บนสุดของแถวปุ่ม
+      sideWrap.insertBefore(panel, sideWrap.firstChild);   // แผงตัวเลือก → เหนือปุ่มทั้งหมดอีกที (รวมปุ่ม 🍚 ด้วย)
       return true;
     }
     if (!moveToSideMenu()) {
@@ -187,22 +186,25 @@
     setTimeout(refresh, 300);   // เผื่อปุ่มที่ถูกเติมทีหลัง (vault/zh) ยังมาไม่ทันตอนโหลด
     setTimeout(refresh, 1200);
 
-    function close() { wrap.classList.remove('wm-open'); trigger.setAttribute('aria-expanded', 'false'); }
-    // Lin 2026-07-25: แผงนี้ตอนนี้ position:fixed ตำแหน่งตายตัวแล้ว (ไม่ขยับตามปุ่ม) → เสี่ยงซ้อนกับกล่องลอยอื่น (🎮/🪧)
-    // ถ้าเปิดพร้อมกัน → ลงทะเบียนกับ GamePanels กลาง กันซ้อนแบบเดียวกับกล่องอื่นๆ ในหน้าเกม
-    var wmPanel = { isOpen: function () { return wrap.classList.contains('wm-open'); }, close: close };
+    // Lin 2026-07-25 (v2): ปุ่ม/แผงแยกเป็นคนละ element ของ .rg-ctl-wrap แล้ว (ไม่ได้อยู่ใน wrap เดียวกันเสมอไป — เฉพาะโหมด fallback ที่ยังอยู่ด้วยกัน)
+    // เลยเช็คสถานะเปิด/ปิดจาก class บนตัว panel เองแทน ไม่พึ่ง wrap
+    function close() { panel.classList.remove('wm-open'); trigger.setAttribute('aria-expanded', 'false'); }
+    // แผงนี้เป็น item ปกติในชุดปุ่มลอยแล้ว (ไม่ใช้ position:fixed) → ยังเสี่ยงซ้อนกับกล่องลอยอื่น (🎮/🪧) ถ้าเปิดพร้อมกัน
+    // ลงทะเบียนกับ GamePanels กลาง กันซ้อนแบบเดียวกับกล่องอื่นๆ ในหน้าเกม
+    var wmPanel = { isOpen: function () { return panel.classList.contains('wm-open'); }, close: close };
     if (window.GamePanels) window.GamePanels.add(wmPanel);
-    function open() { refresh(); if (window.GamePanels) window.GamePanels.closeOthers(wmPanel); wrap.classList.add('wm-open'); trigger.setAttribute('aria-expanded', 'true'); }
+    function open() { refresh(); if (window.GamePanels) window.GamePanels.closeOthers(wmPanel); panel.classList.add('wm-open'); trigger.setAttribute('aria-expanded', 'true'); }
 
     trigger.addEventListener('click', function (e) {
       e.stopPropagation();
-      if (wrap.classList.contains('wm-open')) close(); else open();
+      if (panel.classList.contains('wm-open')) close(); else open();
     });
     // กดที่อื่นในหน้า / กด Esc = ปิดเมนู
-    document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
+    document.addEventListener('click', function (e) { if (!trigger.contains(e.target) && !panel.contains(e.target)) close(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
     // กันคีย์บอร์ดมือถือหุบตอนแตะเมนู (เกมพิมพ์) — วิธีเดียวกับ rgNoFocusSteal ในเกม
-    wrap.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    trigger.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    panel.addEventListener('mousedown', function (e) { e.preventDefault(); });
 
     row.setAttribute('data-wm-done', '1');
     window.WordMenu.refresh = refresh;

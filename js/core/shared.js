@@ -2015,7 +2015,16 @@ window.deleteFBComment = function(postId, idx) {
         else if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
         else grwOpenReview(GAME_ID, FN_URL);
       });
-      fab.onclick = function (e) { e.stopPropagation(); menu.classList.toggle('gs-open'); };
+      // Lin 2026-07-25: เมนูนี้ไม่เคยลงทะเบียนกับ GamePanels กลางมาก่อน → เปิด 🪧 พร้อม 🎮/🍚 ค้างไว้ได้ ซ้อนทับกันบนจอ (บั๊กจริงที่ Lin เจอ)
+      // แก้: ลงทะเบียนเหมือนกล่องอื่น กันซ้อนทั้ง 2 ทาง (เปิด 🪧 ต้องปิดกล่องอื่นก่อน + กล่องอื่นเปิดต้องปิด 🪧 ได้ด้วย)
+      var grwPanel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: function () { menu.classList.remove('gs-open'); } };
+      if (window.GamePanels) window.GamePanels.add(grwPanel);
+      fab.onclick = function (e) {
+        e.stopPropagation();
+        var opening = !menu.classList.contains('gs-open');
+        if (opening && window.GamePanels) window.GamePanels.closeOthers(grwPanel);
+        menu.classList.toggle('gs-open');
+      };
       document.addEventListener('click', function (e) {
         if (e.target !== fab && !fab.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
       });
