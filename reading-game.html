@@ -13,7 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Google tag -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -28,11 +28,35 @@
 <meta property="og:url" content="https://mrtaihualin.com/reading-game.html">
 <meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "additionalType": "https://schema.org/LearningResource",
+  "name": "泰語拼讀練習",
+  "description": "免費泰語拼讀練習：把子音、母音、聲調、尾音一格一格拼成正確的字，邊玩邊學泰文拼讀規則。專為台灣人設計的泰語學習遊戲。",
+  "url": "https://mrtaihualin.com/reading-game.html",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Web",
+  "inLanguage": ["th", "zh-TW"],
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TWD"
+  },
+  "provider": {
+    "@type": "Organization",
+    "name": "泰華眼裡的泰語教學",
+    "url": "https://mrtaihualin.com/"
+  }
+}
+</script>
 <meta name="twitter:title" content="泰語拼讀練習 — 泰華眼裡的泰語教學">
 <meta name="twitter:description" content="免費泰語拼讀練習：把子音、母音、聲調、尾音一格一格拼成正確的字，邊玩邊學泰文拼讀規則。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=13">
+<link rel="stylesheet" href="css/shared.css?v=14">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=4"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/reading-game-app.js -->
@@ -281,8 +305,40 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .tree-caption{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;margin-top:6px;}
 .star-progress{font-size:16px;letter-spacing:2px;margin:10px 0 4px;}
 .star-prog-label{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
+/* Lin 2026-07-24: 提示泡泡 — 第一次進遊戲，指給玩家看「這裡有教怎麼玩」，看過一次就不再出現 */
+.howto-hint-bubble{display:none;position:absolute;top:calc(100% + 8px);left:0;background:#5a3e0a;color:#fff;font-size:12.5px;font-weight:700;padding:8px 28px 8px 12px;border-radius:10px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:50;animation:howtoHintPop .25s ease;}
+.howto-hint-bubble::before{content:'';position:absolute;top:-6px;left:16px;border:6px solid transparent;border-bottom-color:#5a3e0a;}
+.howto-hint-bubble.show{display:block;}
+.howto-hint-close{position:absolute;top:2px;right:4px;background:none;border:none;color:#fff;opacity:.75;font-size:12px;cursor:pointer;padding:2px 4px;}
+@keyframes howtoHintPop{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
 
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://mrtaihualin.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "遊戲",
+      "item": "https://mrtaihualin.com/games.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "泰語拼讀練習",
+      "item": "https://mrtaihualin.com/reading-game.html"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -296,7 +352,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </button>
 </div>
 
-<nav class="site-nav"></nav>
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語小遊戲</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
 <div class="page-strip">
   <span class="page-strip-label">頁面</span>
@@ -345,7 +401,13 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div id="rg-vault-badge-slot" style="display:flex;align-items:center;flex-shrink:0;"></div>
   <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">✍️ 換現代字體</button>
   <button class="rg-tool-btn" onclick="rgOpenAsk()">💬 我有問題</button>
-  <button class="rg-tool-btn" onclick="document.getElementById('rg-howto-modal').style.display='flex'">📖 怎麼玩</button>
+  <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
+    <button class="rg-tool-btn" id="rg-howto-btn" onclick="dismissHowtoHint('reading');document.getElementById('rg-howto-modal').style.display='flex'">📖 怎麼玩</button>
+    <div class="howto-hint-bubble" id="howto-hint-reading">
+      <button class="howto-hint-close" onclick="dismissHowtoHint('reading')">✕</button>
+      這裡有教怎麼玩喔 👆
+    </div>
+  </span>
 </div>
 
 <div id="rg-challenge-banner" style="width:100%;max-width:640px;"></div>
@@ -488,7 +550,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="end-actions">
     <button class="btn btn-primary" onclick="restart()">再玩一次</button>
     <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 下載 PDF 報告</button>
-    <a class="btn btn-secondary" href="reading-board.html" onclick="try{gtag('event','game_link_click',{target:'reading_board',from:'reading_game'})}catch(e){}">🏆 看排行榜</a>
+    <a class="btn btn-secondary" href="reading-board.html" onclick="try{gtag('event', 'game_link_click', {category:'game', target:'reading_board',from:'reading_game'})}catch(e){}">🏆 看排行榜</a>
     <a class="btn btn-secondary" href="games.html" onclick="trackToneLink()">看其他遊戲 🎮</a>
   </div>
 </div>
@@ -506,7 +568,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 <script src="js/games/reading-game-app.min.js?v=1"></script>
 </div><!-- /.v3-page -->
-<script src="js/core/shared.min.js?v=1"></script>
+<script src="js/core/shared.min.js?v=2"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -544,6 +606,26 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       slot.appendChild(badge);
     }
   });
+</script>
+<script>
+// ── 提示泡泡：第一次進來，指給玩家看「這裡有教怎麼玩」— Lin 2026-07-24 ──
+function dismissHowtoHint(id){
+  try{ var b=document.getElementById('howto-hint-'+id); if(b) b.classList.remove('show'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_'+id,'1'); }catch(e){}
+}
+(function(){
+  try{
+    if(!localStorage.getItem('howto_hint_seen_reading')){
+      setTimeout(function(){
+        var b=document.getElementById('howto-hint-reading');
+        if(!b) return;
+        b.classList.add('show');
+        try{ localStorage.setItem('howto_hint_seen_reading','1'); }catch(e){}
+        setTimeout(function(){ b.classList.remove('show'); }, 8000);
+      }, 900);
+    }
+  }catch(e){}
+})();
 </script>
 
 <footer>

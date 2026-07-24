@@ -102,7 +102,25 @@ window.goHome = function() {
     '<div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div>',
   ].join('');
 
-  navEls.forEach(function(el) { el.innerHTML = H; });
+  // 2026-07-24 (SEO/GEO audit): เมนูตอนนี้ hard-code ไว้ในไฟล์ HTML แต่ละหน้าแล้ว (ให้ crawler เห็นลิงก์แบบ static ได้เลย)
+  // ตรงนี้แค่ "เติมให้" เฉพาะหน้าที่ยังไม่มี (เช่นหน้าที่สร้างใหม่ในอนาคตแล้วลืมใส่) กันเผื่อ ไม่ overwrite ของที่มีอยู่แล้ว
+  navEls.forEach(function(el) { if (!el.innerHTML || !el.innerHTML.trim()) el.innerHTML = H; });
+
+  // ไฮไลต์ลิงก์ในเมนูที่ตรงกับหน้าปัจจุบัน (ไม่ว่าเมนูจะมาจาก static HTML หรือเติมด้วย JS ข้างบน)
+  (function setActiveNav(){
+    try{
+      var path = window.location.pathname;
+      var gamePages = ['/tone-finder.html','/reading-game.html','/typing-game.html','/word-order.html','/lego.html','/games.html'];
+      document.querySelectorAll('nav.site-nav a[href]').forEach(function(a){
+        var href = a.getAttribute('href');
+        if(!href || href.indexOf('javascript:') === 0) return;
+        var hrefPath = href.split('#')[0];
+        if(!hrefPath) return;
+        var isActive = (hrefPath === path) || (hrefPath === '/games.html' && gamePages.indexOf(path) !== -1);
+        if(isActive) a.classList.add('nav-current');
+      });
+    }catch(e){}
+  })();
 
   // 📢 แถบประกาศหมุนเวียน — ฉีดเข้าทุกหน้า (แก้ข้อความที่ตัวแปร ANN ด้านบนสุด)
   if (typeof ANN !== 'undefined' && ANN.length && sessionStorage.getItem('annDismissed') !== '1') {
@@ -407,7 +425,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     '<div class="soft-cta-card" style="background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:12px;padding:14px 16px;margin:16px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
       '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:var(--gold-deep,#5a3e0a);font-weight:700;line-height:1.5;">' + message + '</span>' +
       '<span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">' +
-        '<button onclick="window.gtag&&gtag(\'event\',\'soft_cta_click\',{source:\'' + pageKey + '\'});openModal(\'modal-line-qr\')" style="background:var(--gold-bright,#C8973A);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:\'Noto Sans TC\',sans-serif;font-weight:900;font-size:12.5px;cursor:pointer;white-space:nowrap;">預約免費體驗課</button>' +
+        '<button onclick="window.gtag&&gtag(\'event\',\'soft_cta_click\',{category:window.GA_CATEGORY||\'unknown\',source:\'' + pageKey + '\'});openModal(\'modal-line-qr\')" style="background:var(--gold-bright,#C8973A);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:\'Noto Sans TC\',sans-serif;font-weight:900;font-size:12.5px;cursor:pointer;white-space:nowrap;">預約免費體驗課</button>' +
         '<button onclick="localStorage.setItem(\'' + KEY + '\',Date.now());document.getElementById(\'' + containerId + '\').innerHTML=\'\';" aria-label="關閉" style="background:none;border:none;color:var(--gold-deep,#5a3e0a);opacity:0.6;font-size:16px;cursor:pointer;padding:2px 4px;">✕</button>' +
       '</span>' +
     '</div>';
@@ -433,10 +451,10 @@ window.renderSoftCTA = function(containerId, pageKey, message){
         try{
           var _k='btc_'+location.pathname;
           if(sessionStorage.getItem(_k)!=='1'){
-            gtag('event','book_trial_click',{ source_page: location.pathname });
+            gtag('event','book_trial_click',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname });
             sessionStorage.setItem(_k,'1');
           }
-        }catch(e){ gtag('event','book_trial_click',{ source_page: location.pathname }); }
+        }catch(e){ gtag('event','book_trial_click',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }
       }
       window.mountCalInline('#cal-embed-modal');
     }
@@ -445,7 +463,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
   //    book_trial_click (source_page) ยังยิงตามปกติใน openModal → ดูได้ว่าจองมาจากหน้าไหน
   //    book_cta_click เพิ่มให้รู้ลึกว่า "การ์ดในเกมไหน/ตำแหน่งไหน" เป็นตัวพาไปจอง
   window.bookFromGame = function(game, placement){
-    try{ if(typeof gtag==='function') gtag('event','book_cta_click',{ game:game, placement:placement }); }catch(e){}
+    try{ if(typeof gtag==='function') gtag('event','book_cta_click',{category:window.GA_CATEGORY||'unknown', game:game, placement:placement }); }catch(e){}
     openModal('modal-line-qr');
   };
   // ── Cal.com inline embed (ทางการ) — ฝัง embed.js ครั้งเดียว แล้ว mount ตาม selector ──
@@ -472,7 +490,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     Cal('on',{action:'linkReady',callback:_hideCalLoading});
     Cal('on',{action:'bookingSuccessful',callback:function(){
       // ✅ การจองสำเร็จจริง → ยิง GA4 (เดิมไม่เคยยิงเพราะใช้ iframe ดิบ)
-      if(typeof gtag==='function'){ gtag('event','book_trial_submit',{ source_page: location.pathname }); }
+      if(typeof gtag==='function'){ gtag('event','book_trial_submit',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }
       _hideCalLoading();
       var bv=document.getElementById('cal-booking-view');
       var sv=document.getElementById('cal-success-view');
@@ -652,7 +670,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     function show(){
       if(document.getElementById('vp-pop')) return;
       markShown();
-      try{ if(typeof gtag==='function') gtag('event','vocab_popup_show',{}); }catch(e){}
+      try{ if(typeof gtag==='function') gtag('event','vocab_popup_show',{category:window.GA_CATEGORY||'unknown',}); }catch(e){}
       var ov=document.createElement('div');
       ov.id='vp-pop';
       ov.style.cssText='position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(40,30,10,0.45);font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
@@ -669,7 +687,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
           '<p style="margin:8px 0 0;font-size:12px;color:#A07A1E;">點右上角 ✕ 可關閉繼續玩</p>'+
         '</div>';
       document.body.appendChild(ov);
-      function close(){ try{ ov.remove(); }catch(e){} try{ if(typeof gtag==='function') gtag('event','vocab_popup_close',{}); }catch(e){} }
+      function close(){ try{ ov.remove(); }catch(e){} try{ if(typeof gtag==='function') gtag('event','vocab_popup_close',{category:window.GA_CATEGORY||'unknown',}); }catch(e){} }
       ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
       ov.querySelector('#vp-x').onclick=close;
       var inp=ov.querySelector('#vp-email'), err=ov.querySelector('#vp-err');
@@ -678,7 +696,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
         if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ err.textContent='Email 格式不正確 / อีเมลไม่ถูกต้อง'; err.style.display='block'; return; }
         try{ if(window.saveLead) saveLead({ email:em, source:'遊戲・單字表' }); }catch(e){}
         try{ localStorage.setItem(LEAD_KEY,'1'); }catch(e){}
-        try{ if(typeof gtag==='function') gtag('event','lead_magnet_submit',{ source:'遊戲・單字表' }); }catch(e){}
+        try{ if(typeof gtag==='function') gtag('event','lead_magnet_submit',{category:window.GA_CATEGORY||'unknown', source:'遊戲・單字表' }); }catch(e){}
         location.href='/vocab-thank-you.html';
       }
       ov.querySelector('#vp-go').onclick=submit;
@@ -783,7 +801,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     var statusEl=document.getElementById('lm-status');
     if(btn){ btn.disabled=true; btn.textContent='處理中…'; }
     if(statusEl){ statusEl.textContent='✅ 謝謝！正在帶你前往下載頁面…'; statusEl.style.display='block'; statusEl.style.color='var(--gold-deep)'; }
-    if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{ source_page: location.pathname }); }
+    if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }
     saveLead({ email:em, name:nm, source:'彈窗・索取速查表' });                       // 1) เก็บ lead (Supabase + Sheet)
     try{ web3Send({ fields:{ subject:'【索取】泰語聲調速查表', from_name:'泰華網站・索取速查表', '姓名':nm||'未填', 'Email':em } }); }catch(e){} // 2) แจ้งครู (best-effort)
     if(name)name.value=''; if(email)email.value='';
@@ -799,7 +817,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     var statusEl=document.getElementById('hm-status');
     if(btn){ btn.disabled=true; btn.textContent='處理中…'; }
     if(statusEl){ statusEl.textContent='✅ 謝謝！正在帶你前往下載頁面…'; statusEl.style.display='block'; statusEl.style.color='var(--gold-deep)'; }
-    if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{ source_page: location.pathname }); }
+    if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }
     saveLead({ email:em, source:'首頁橫幅・索取速查表' });
     try{ web3Send({ fields:{ subject:'【索取】泰語聲調速查表（首頁）', from_name:'泰華網站・索取速查表', 'Email':em } }); }catch(e){}
     if(email)email.value='';
@@ -816,7 +834,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
       statusEl: document.getElementById('b-status'),
       successMsg: '✅ 已收到你的預約！我們會盡快與你聯絡安排體驗課。',
       fields: { subject:'【預約體驗課】來自泰華網站', from_name:'泰華網站・預約體驗課', '姓名':v(name)||'未填', 'Email':v(email), '方便時段':v(when)||'未填' },
-      onsuccess: function(){ if(typeof gtag==='function'){ gtag('event','book_trial_submit',{ source_page: location.pathname }); } if(name)name.value=''; if(email)email.value=''; if(when)when.value=''; }
+      onsuccess: function(){ if(typeof gtag==='function'){ gtag('event','book_trial_submit',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); } if(name)name.value=''; if(email)email.value=''; if(when)when.value=''; }
     });
   };
 
@@ -890,7 +908,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
   var _snsColor = { facebook:'#1877F2', youtube:'#FF0000', instagram:'#E1306C', tiktok:'#111111', threads:'#111111', line:'#C8973A' };
   // การ์ดลิงก์ SNS — ชิปขาวขอบทอง + ไอคอนสีแบรนด์ (ตัดสี แต่ยังเข้าธีม)
   var _snsRow = function(url,bg,ic,name,sub,ch){
-    return '<a href="'+url+'" target="_blank" rel="noopener" onclick="window.gtag&&gtag(\'event\',\'sns_click\',{ch:\''+ch+'\'})" '+
+    return '<a href="'+url+'" target="_blank" rel="noopener" onclick="window.gtag&&gtag(\'event\',\'sns_click\',{category:window.GA_CATEGORY||\'unknown\',ch:\''+ch+'\'})" '+
       'style="display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));border:1px solid rgba(200,151,58,0.32);border-radius:12px;padding:9px 13px;box-shadow:0 1px 4px rgba(140,100,20,0.05);transition:border-color .15s,box-shadow .15s,transform .15s;" onmouseover="this.style.borderColor=\'rgba(200,151,58,0.75)\';this.style.boxShadow=\'0 5px 16px rgba(140,100,20,0.14)\';this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.borderColor=\'rgba(200,151,58,0.32)\';this.style.boxShadow=\'0 1px 4px rgba(140,100,20,0.05)\';this.style.transform=\'none\'">'+
       '<span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(200,151,58,0.35);box-shadow:0 1px 4px rgba(140,100,20,0.09);color:'+(_snsColor[ch]||'#C8973A')+';">'+(_snsIcon[ch]||'')+'</span>'+
       '<span style="min-width:0;flex:1;"><span style="display:block;font-family:\'Noto Serif TC\',serif;font-weight:700;color:#5C4410;font-size:14.5px;line-height:1.25;">'+name+'</span>'+
@@ -1021,7 +1039,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
     </div>
     <div style="padding:14px 20px 18px;border-top:1px solid var(--border,rgba(139,99,16,0.18));display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
       <img src="https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:38px;height:38px;border-radius:4px;opacity:.8;" loading="lazy">
-      <a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" onclick="window.gtag&&gtag('event','add_line',{source:'modal_line_qr'})" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted,#6b6b6b);text-decoration:underline;">或先加 LINE 問老師 →</a>
+      <a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" onclick="window.gtag&&gtag('event','add_line',{category:window.GA_CATEGORY||'unknown',source:'modal_line_qr'})" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted,#6b6b6b);text-decoration:underline;">或先加 LINE 問老師 →</a>
     </div>
   </div>
 </div>
@@ -1440,7 +1458,7 @@ window.deleteFBComment = function(postId, idx) {
   function showBar(){
     if (triggered || shown() || document.getElementById('exit-survey-bar')) return;
     triggered = true; markShown();
-    try{ if (typeof gtag === 'function') gtag('event','exit_survey_show',{ source_page: location.pathname }); }catch(e){}
+    try{ if (typeof gtag === 'function') gtag('event','exit_survey_show',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }catch(e){}
 
     var bar = document.createElement('div');
     bar.id = 'exit-survey-bar';
@@ -1462,13 +1480,13 @@ window.deleteFBComment = function(postId, idx) {
 
     var xBtn = bar.querySelector('#es-x');
     if (xBtn) xBtn.onclick = function(){
-      try{ if (typeof gtag === 'function') gtag('event','exit_survey_dismiss',{ source_page: location.pathname }); }catch(e){}
+      try{ if (typeof gtag === 'function') gtag('event','exit_survey_dismiss',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }catch(e){}
       closeBar();
     };
     bar.querySelectorAll('.es-opt').forEach(function(btn){
       btn.onclick = function(){
         var val = btn.getAttribute('data-v');
-        try{ if (typeof gtag === 'function') gtag('event','exit_survey_submit',{ reason: val, source_page: location.pathname }); }catch(e){}
+        try{ if (typeof gtag === 'function') gtag('event','exit_survey_submit',{category:window.GA_CATEGORY||'unknown', reason: val, source_page: location.pathname }); }catch(e){}
         try{
           fetch('https://api.web3forms.com/submit', {
             method:'POST', keepalive:true,
@@ -1528,7 +1546,7 @@ window.deleteFBComment = function(postId, idx) {
     [25,50,75,100].forEach(function(p){
       if (pct >= p && !scrollFlags[p]) {
         scrollFlags[p] = true;
-        try{ if (typeof gtag === 'function') gtag('event','article_scroll_depth',{ percent_scrolled:p, source_page: location.pathname }); }catch(e){}
+        try{ if (typeof gtag === 'function') gtag('event','article_scroll_depth',{category:window.GA_CATEGORY||'unknown', percent_scrolled:p, source_page: location.pathname }); }catch(e){}
       }
     });
   }
@@ -1539,14 +1557,14 @@ window.deleteFBComment = function(postId, idx) {
     TIME_MARKS.forEach(function(t){
       if (sec >= t && !timeFlags[t]) {
         timeFlags[t] = true;
-        try{ if (typeof gtag === 'function') gtag('event','article_time_on_page',{ seconds:t, source_page: location.pathname }); }catch(e){}
+        try{ if (typeof gtag === 'function') gtag('event','article_time_on_page',{category:window.GA_CATEGORY||'unknown', seconds:t, source_page: location.pathname }); }catch(e){}
       }
     });
   }
   setInterval(function(){ try{ checkTime(); }catch(e){} }, 5000);
 
   window.addEventListener('pagehide', function(){
-    try{ if (typeof gtag === 'function') gtag('event','article_time_final',{ seconds: Math.round((Date.now()-startTime)/1000), source_page: location.pathname, transport_type:'beacon' }); }catch(e){}
+    try{ if (typeof gtag === 'function') gtag('event','article_time_final',{category:window.GA_CATEGORY||'unknown', seconds: Math.round((Date.now()-startTime)/1000), source_page: location.pathname, transport_type:'beacon' }); }catch(e){}
   });
 })();
 
@@ -1595,7 +1613,7 @@ window.deleteFBComment = function(postId, idx) {
       [25,50,75].forEach(function(p){
         if (pct >= p && !_ytFlags[p]) {
           _ytFlags[p] = true;
-          if (typeof gtag === 'function') gtag('event','youtube_progress',{ percent_progress:p, video_id:_ytCurVideoId, source_page: location.pathname });
+          if (typeof gtag === 'function') gtag('event','youtube_progress',{category:window.GA_CATEGORY||'unknown', percent_progress:p, video_id:_ytCurVideoId, source_page: location.pathname });
         }
       });
     }catch(e){}
@@ -1607,7 +1625,7 @@ window.deleteFBComment = function(postId, idx) {
       if (e.data === YTState.PLAYING) {
         if (!_ytFlags.started) {
           _ytFlags.started = true;
-          if (typeof gtag === 'function') gtag('event','youtube_play',{ video_id:_ytCurVideoId, source_page: location.pathname });
+          if (typeof gtag === 'function') gtag('event','youtube_play',{category:window.GA_CATEGORY||'unknown', video_id:_ytCurVideoId, source_page: location.pathname });
         }
         clearPoll();
         _ytPollTimer = setInterval(fireMilestones, 2000);
@@ -1615,7 +1633,7 @@ window.deleteFBComment = function(postId, idx) {
         clearPoll();
         if (!_ytFlags[100]) {
           _ytFlags[100] = true;
-          if (typeof gtag === 'function') gtag('event','youtube_complete',{ video_id:_ytCurVideoId, source_page: location.pathname });
+          if (typeof gtag === 'function') gtag('event','youtube_complete',{category:window.GA_CATEGORY||'unknown', video_id:_ytCurVideoId, source_page: location.pathname });
         }
       } else if (e.data === YTState.PAUSED) {
         clearPoll();

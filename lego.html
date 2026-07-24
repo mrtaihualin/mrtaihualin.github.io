@@ -13,7 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Google tag -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -28,11 +28,35 @@
 <meta property="og:url" content="https://mrtaihualin.com/lego.html">
 <meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "additionalType": "https://schema.org/LearningResource",
+  "name": "泰語造句遊戲 — 樂高式組句",
+  "description": "免費泰語造句遊戲：像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對，邊玩邊練泰語語序。專為台灣人設計的泰語學習遊戲。",
+  "url": "https://mrtaihualin.com/lego.html",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Web",
+  "inLanguage": ["th", "zh-TW"],
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TWD"
+  },
+  "provider": {
+    "@type": "Organization",
+    "name": "泰華眼裡的泰語教學",
+    "url": "https://mrtaihualin.com/"
+  }
+}
+</script>
 <meta name="twitter:title" content="泰語造句遊戲 — 樂高式組句 | 泰華眼裡的泰語教學">
 <meta name="twitter:description" content="像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@400;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=13">
+<link rel="stylesheet" href="css/shared.css?v=14">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=4"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js -->
@@ -259,7 +283,39 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .tree-caption{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-top:6px;}
 .star-progress{font-size:16px;letter-spacing:2px;margin:10px 0 4px;}
 .star-prog-label{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);}
+/* Lin 2026-07-24: 提示泡泡 — 第一次進遊戲，指給玩家看「這裡有教怎麼玩」，看過一次就不再出現 */
+.howto-hint-bubble{display:none;position:absolute;top:calc(100% + 8px);left:0;background:var(--gold-deep);color:#fff;font-size:12.5px;font-weight:700;padding:8px 28px 8px 12px;border-radius:10px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:50;animation:howtoHintPop .25s ease;}
+.howto-hint-bubble::before{content:'';position:absolute;top:-6px;left:16px;border:6px solid transparent;border-bottom-color:var(--gold-deep);}
+.howto-hint-bubble.show{display:block;}
+.howto-hint-close{position:absolute;top:2px;right:4px;background:none;border:none;color:#fff;opacity:.75;font-size:12px;cursor:pointer;padding:2px 4px;}
+@keyframes howtoHintPop{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://mrtaihualin.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "遊戲",
+      "item": "https://mrtaihualin.com/games.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "泰語造句遊戲",
+      "item": "https://mrtaihualin.com/lego.html"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -272,7 +328,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   </button>
 </div>
 
-<nav class="site-nav"></nav>
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語小遊戲</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
 <div class="page-strip">
   <span class="page-strip-label">頁面</span>
@@ -302,6 +358,13 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <span class="tf-streak-chip" style="display:none;">⭐ <b id="star-count">0</b> 顆星</span>
   <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
   <span class="tf-streak-chip" style="cursor:pointer;" onclick="legoVaultOpen()">📑 <b id="lego-vault-count">0</b>/15 單字庫</span>
+  <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
+    <span class="tf-streak-chip" id="lego-howto-btn" style="cursor:pointer;" onclick="dismissHowtoHint('lego');document.getElementById('lego-howto-modal').style.display='flex'">📖 怎麼玩</span>
+    <div class="howto-hint-bubble" id="howto-hint-lego">
+      <button class="howto-hint-close" onclick="dismissHowtoHint('lego')">✕</button>
+      這裡有教怎麼玩喔 👆
+    </div>
+  </span>
 </div>
 
 <!-- Lin 2026-07-06: CTA ชวนล็อกอิน (MASTER ข้อ13) — เดิมเลโก้ไม่มี เพิ่มให้เหมือนเกมอื่น -->
@@ -407,12 +470,31 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   </div>
 </div>
 
+<!-- How-to modal: เกมเลโก้（造句遊戲）— Lin 2026-07-24 -->
+<div id="lego-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:700;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;max-width:400px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+    <button onclick="document.getElementById('lego-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+    <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🧱 怎麼玩？</div>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">自己動手，把泰語句子一塊一塊組出來，比死背文法有感覺多了 😊</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">「句子底板」上每一格代表一種詞性（時間／主語／否定／文法／動詞／受詞…），點格子選詞，一格一格把句子組起來。至少要選「主語」和「動詞」才能組成一句話，其他格子都可以先不填。</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">組好之後按「🧪 測試（拿分）」，句子會被打散成一塊一塊的詞卡，把它們依照正確順序點回去，排對了才算過關拿分。點錯了？點一下格子裡的詞卡，就能拿回來重排。</p>
+    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:2;">
+      每句從 <strong>10 分</strong>開始：排錯一次扣一些分（10→7→4→1），用「提示」每次扣 <strong>2 分</strong>，兩種扣分共用同一個分數 — 扣到 0 分這句就直接看解答，本句 0 分，可以重排再挑戰。<br>
+      完成一輪（<strong>5 句</strong>）過關 <strong>+20</strong>，如果整輪 5 句都第一次就排對、沒用提示（乾淨過關）再 <strong>+50</strong>。<br>
+      每完成一輪後，<strong>下一句保證是 ✨黃金句 ×2</strong>！乾淨過關分數直接翻倍，記得把握。
+    </div>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;">句子底板上的詞卡可以按 📑 加進「單字庫」（最多 15 個），方便之後複習。</p>
+    <p style="font-size:13px;color:#2e7d32;background:#e8f5e9;border-radius:8px;padding:10px 14px;margin:0 0 12px;">🔑 <b>登入</b>後：系統會記住連續練習天數、護盾，還有你收藏的單字庫，下次回來接著練 ⭐</p>
+    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">泰語語序跟中文不太一樣，多排幾次就會抓到感覺 😄 <a href="pricing.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔</a></p>
+  </div>
+</div>
+
 <footer>
   專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="js/core/shared.min.js?v=1"></script>
+<script src="js/core/shared.min.js?v=2"></script>
 <script>
 // ════════ SLOTS ════════
 // adv (副詞: ที่/กับ) + advObj (跟著變：ที่→地點、กับ→誰) 配對
@@ -907,8 +989,8 @@ function finishLegoRound(){
   const roundBonus=ROUND_COMPLETE_BONUS+(isPerfect?ROUND_PERFECT_BONUS:0);
   roundScoreLego+=roundBonus;
   const weightedScore=Math.round(roundScoreLego*LEVEL_WEIGHT);
-  try{ if(window.gtag) gtag('event','lego_complete',{score: weightedScore, total: count, perfect: isPerfect}); }catch(e){}
-  try{ if(window.gtag) gtag('event','game_complete',{game:'lego', score: weightedScore, total: count}); }catch(e){}
+  try{ if(window.gtag) gtag('event', 'lego_complete', {category:'game', score: weightedScore, total: count, perfect: isPerfect}); }catch(e){}
+  try{ if(window.gtag) gtag('event', 'game_complete', {category:'game', game:'lego', score: weightedScore, total: count}); }catch(e){}
   sentencesThisRound=0;
   roundScoreLego=0;
   legoCleanThisRound=0;
@@ -1188,8 +1270,8 @@ function startTest(){
   document.getElementById('testBanner').textContent='';
   updateTestHintWarning();
   document.getElementById('testOverlay').classList.add('show');
-  try{ if(window.gtag) gtag('event','lego_start',{words: testWords.length}); }catch(e){}
-  try{ if(window.gtag) gtag('event','game_start',{game:'lego'}); }catch(e){}
+  try{ if(window.gtag) gtag('event', 'lego_start', {category:'game', words: testWords.length}); }catch(e){}
+  try{ if(window.gtag) gtag('event', 'game_start', {category:'game', game:'lego'}); }catch(e){}
   if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
 }
 
@@ -1260,8 +1342,8 @@ function checkTestAnswer(){
     legoCurCombo=clean?legoCurCombo+1:0;
     if(legoCurCombo>legoMaxCombo) legoMaxCombo=legoCurCombo;
     roundScoreLego+=pts;
-    try{ if(window.gtag) gtag('event','lego_correct',{sentence: testWords.map(function(w){return w.th;}).join(''), clean: clean, pts: pts}); }catch(e){}
-    try{ if(window.gtag) gtag('event','game_correct',{game:'lego'}); }catch(e){}
+    try{ if(window.gtag) gtag('event', 'lego_correct', {category:'game', sentence: testWords.map(function(w){return w.th;}).join(''), clean: clean, pts: pts}); }catch(e){}
+    try{ if(window.gtag) gtag('event', 'game_correct', {category:'game', game:'lego'}); }catch(e){}
     banner.className='test-banner ok';
     banner.textContent='✅ 排對了！+'+pts+' 分'+(golden?' ✨黃金句':'')+(testHintUsed?'（用了提示）':'');
     // น้องมีนาพูด: คำทอง > คอมโบ > มีผิด(ปลอบ) > ถูก(สุ่ม) — Lin 2026-07-10
@@ -1281,8 +1363,8 @@ function checkTestAnswer(){
     const deduct=WRONG_DEDUCT[Math.min(testWrongCount,3)];
     testWrongCount++;
     testLife-=deduct;
-    try{ if(window.gtag) gtag('event','lego_wrong',{sentence: testWords.map(function(w){return w.th;}).join(''), wrongs: testWrongCount}); }catch(e){}
-    try{ if(window.gtag) gtag('event','game_wrong',{game:'lego'}); }catch(e){}
+    try{ if(window.gtag) gtag('event', 'lego_wrong', {category:'game', sentence: testWords.map(function(w){return w.th;}).join(''), wrongs: testWrongCount}); }catch(e){}
+    try{ if(window.gtag) gtag('event', 'game_wrong', {category:'game', game:'lego'}); }catch(e){}
     legoCurCombo=0;
     if(testLife<=0){
       failTest();
@@ -1451,6 +1533,25 @@ renderLevels();
 setLevel('lv1');
 refreshLegoAcctUI();
 try{ legoRenderGameBar(); }catch(e){}
+
+// ── 提示泡泡：第一次進來，指給玩家看「這裡有教怎麼玩」— Lin 2026-07-24 ──
+function dismissHowtoHint(id){
+  try{ var b=document.getElementById('howto-hint-'+id); if(b) b.classList.remove('show'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_'+id,'1'); }catch(e){}
+}
+(function(){
+  try{
+    if(!localStorage.getItem('howto_hint_seen_lego')){
+      setTimeout(function(){
+        var b=document.getElementById('howto-hint-lego');
+        if(!b) return;
+        b.classList.add('show');
+        try{ localStorage.setItem('howto_hint_seen_lego','1'); }catch(e){}
+        setTimeout(function(){ b.classList.remove('show'); }, 8000);
+      }, 900);
+    }
+  }catch(e){}
+})();
 </script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 — Lin 2026-07-08: เลโก้ขาดแถบนี้ไปเดิม เพิ่มให้ครบเหมือนเกมอื่น ── -->

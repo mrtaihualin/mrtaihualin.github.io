@@ -8,6 +8,7 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-DKVQE30982');
+  window.GA_CATEGORY='course';
 </script>
 <!-- Microsoft Clarity -->
 <script type="text/javascript">
@@ -37,7 +38,7 @@
 <meta name="twitter:description" content="專為台灣人設計的完整泰語學習系統，結合系統練習、一對一教學與即時回饋，從聲調、拼讀、語序到實際對話，一步步練到真正開口。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=13">
+<link rel="stylesheet" href="css/shared.css?v=14">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -106,7 +107,7 @@
 
 
 <!-- NAV -->
-<nav class="site-nav"></nav>
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語小遊戲</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
 <!-- AVAILABILITY BAND -->
 
@@ -779,7 +780,7 @@ function deleteFBComment(postId, idx) {
 </script>
 <script src="js/content/posts-data.js"></script>
 <script src="js/content/lessons-data.js"></script>
-<script src="js/core/shared.min.js?v=1"></script>
+<script src="js/core/shared.min.js?v=2"></script>
 <script>
 // ── GA4 Event Tracking: index.html ──────────────────────────────────
 
@@ -793,7 +794,7 @@ function deleteFBComment(postId, idx) {
     [25, 50, 75, 90].forEach(function(m) {
       if (pct >= m && !fired[m]) {
         fired[m] = true;
-        gtag('event', 'scroll_depth', { depth_percent: m, page: 'index' });
+        gtag('event','scroll_depth',{category:'course', depth_percent: m, page: 'index' });
       }
     });
   }, { passive: true });
@@ -804,14 +805,14 @@ function deleteFBComment(postId, idx) {
 // [3] คลิกลิงก์ไปหน้าเกม tone-finder
 document.querySelectorAll('a[href="games.html"]').forEach(function(el) {
   el.addEventListener('click', function() {
-    gtag('event', 'game_link_click', { source_page: 'index' });
+    gtag('event','game_link_click',{category:'course', source_page: 'index' });
   });
 });
 
 // [4] คลิกลิงก์ไปหน้าราคา page2
 document.querySelectorAll('a[href="pricing.html"], a[href*="page2"]').forEach(function(el) {
   el.addEventListener('click', function() {
-    gtag('event', 'pricing_page_click', { source_page: 'index' });
+    gtag('event','pricing_page_click',{category:'course', source_page: 'index' });
   });
 });
 
@@ -821,7 +822,7 @@ document.querySelectorAll('a[href="pricing.html"], a[href*="page2"]').forEach(fu
   var iv = setInterval(function() {
     t += 30;
     if (t === 60 || t === 180 || t === 300) {
-      gtag('event', 'time_on_page', { seconds: t, page: 'index' });
+      gtag('event','time_on_page',{category:'course', seconds: t, page: 'index' });
     }
     if (t >= 300) clearInterval(iv);
   }, 30000);

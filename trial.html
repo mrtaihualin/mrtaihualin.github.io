@@ -8,6 +8,7 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-DKVQE30982');
+  window.GA_CATEGORY='course';
 </script>
 <!-- Microsoft Clarity -->
 <script type="text/javascript">
@@ -36,7 +37,7 @@
 <meta name="twitter:description" content="首堂 30 分鐘完全免費 · Google Meet 線上一對一 · 用中文學泰語。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=13">
+<link rel="stylesheet" href="css/shared.css?v=14">
 <style>
   .bk-wrap{max-width:640px;margin:0 auto;padding:40px 20px 80px;}
   .bk-card{background:var(--white);border:3px solid var(--gold-bright);box-shadow:0 14px 50px rgba(0,0,0,.12);overflow:hidden;}
@@ -70,7 +71,7 @@
 </style>
 </head>
 <body>
-<nav class="site-nav"></nav>
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語小遊戲</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
 <!-- ════════════ BOTTOM PAGE NAV ════════════ -->
 <div class="page-strip">
@@ -116,13 +117,13 @@
 <script>
   // GA: 記錄進入預約頁 + 加 LINE
   (function(){
-    if(typeof gtag==='function') gtag('event','view_booking_page',{page:'trial'});
+    if(typeof gtag==='function') gtag('event','view_booking_page',{category:'course',page:'trial'});
     var b=document.getElementById('bk-line-btn');
     if(b) b.addEventListener('click',function(){
-      if(typeof gtag==='function') gtag('event','add_line',{source:'trial_page'});
+      if(typeof gtag==='function') gtag('event','add_line',{category:'course',source:'trial_page'});
     });
   })();
 </script>
-<script src="js/core/shared.min.js?v=1"></script>
+<script src="js/core/shared.min.js?v=2"></script>
 </body>
 </html>

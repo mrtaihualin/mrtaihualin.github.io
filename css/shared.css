@@ -52,6 +52,8 @@
     padding:10px 18px 4px; display:block;
   }
   .nav-drop-divider { height:1px; background:rgba(255,255,255,0.06); margin:6px 0; }
+  .nav-links > li > a.nav-current { color:var(--gold-bright); font-weight:700; }
+  .nav-drop a.nav-current { color:var(--gold-bright); background:rgba(200,151,58,0.08); }
 
   .nav-cta { background:var(--gold-bright) !important; color:var(--ink) !important; font-weight:700 !important; padding:8px 18px !important; font-size:12px !important; }
   .nav-cta:hover { background:#b07820 !important; color:var(--ink) !important; }
