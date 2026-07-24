@@ -1776,9 +1776,11 @@ window.deleteFBComment = function(postId, idx) {
         '.rg-ctl-fab{width:44px;height:44px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;flex-shrink:0;}' +
         '.rg-ctl-fab:active{transform:scale(.92);}' +
         // ── ดรอปดาวน์เมนูเกม (แนวตั้ง) — ซ่อนไว้ กดปุ่ม 🎮 ถึงเปิด · ทับสไตล์แถบเดิมของทุกเกมด้วย !important ──
-        '#game-switcher{position:static !important;transform:none !important;left:auto !important;right:auto !important;bottom:auto !important;top:auto !important;max-width:none !important;width:auto !important;flex-direction:column !important;align-items:stretch !important;gap:2px !important;background:rgba(255,255,255,0.98) !important;border:1.5px solid #d4b87a !important;border-radius:14px !important;box-shadow:0 6px 24px rgba(90,62,10,0.22) !important;overflow-y:auto !important;overflow-x:hidden !important;max-height:60vh;padding:6px !important;display:none !important;min-width:150px;backdrop-filter:blur(8px);}' +
+        '#game-switcher{position:static !important;transform:none !important;left:auto !important;right:auto !important;bottom:auto !important;top:auto !important;max-width:none !important;width:auto !important;flex-direction:column !important;align-items:stretch !important;gap:4px !important;background:rgba(255,255,255,0.98) !important;border:1.5px solid #d4b87a !important;border-radius:14px !important;box-shadow:0 6px 24px rgba(90,62,10,0.22) !important;overflow-y:auto !important;overflow-x:hidden !important;max-height:60vh;padding:6px !important;display:none !important;min-width:150px;backdrop-filter:blur(8px);}' +
         '#game-switcher.gs-open{display:flex !important;}' +
-        '#game-switcher .gs-tab{padding:9px 13px !important;border-radius:9px;text-align:left;white-space:nowrap;font-size:13.5px;color:#5a3e10;text-decoration:none;font-weight:700;}' +
+        // Lin 2026-07-24: เพิ่ม min-height ให้กดง่ายขึ้น (นิ้วโป้งกดพลาดปุ่มติดกันได้) + เส้นคั่นบางๆ ระหว่างแต่ละปุ่ม กันรู้สึกว่าซ้อนกัน
+        '#game-switcher .gs-tab{padding:11px 13px !important;min-height:22px;border-radius:9px;text-align:left;white-space:nowrap;font-size:13.5px;color:#5a3e10;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(212,184,122,0.35);}' +
+        '#game-switcher .gs-tab:last-child{border-bottom:none;}' +
         '#game-switcher .gs-tab.gs-active{background:rgba(200,151,58,0.18);color:#8b6310;}' +
         '#game-switcher .gs-tab:hover{background:rgba(139,99,16,0.10);}' +
         '#game-switcher .gs-lbl{display:inline !important;}' +
