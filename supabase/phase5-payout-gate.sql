@@ -23,6 +23,7 @@ declare
   v_baseline int;
   v_unexplained int;
   v_dup int;
+  v_has_fp int;   -- นับแถว fingerprint ที่ใช้ได้ของคนนี้
 begin
   -- ด่าน 1: บัญชีต้องมีอยู่จริง
   select g.stars into v_stars from public.game_accounts g where g.user_id = p_user;
@@ -41,7 +42,17 @@ begin
     return query select false, 'unexplained_stars', v_stars, v_ledger, v_unexplained, 0; return;
   end if;
 
-  -- ด่าน 3: เครื่องเดียวกันต้องไม่มีหลายบัญชี (เช็กจาก login_events / fingerprint)
+  -- ด่าน 3a: ต้องมีข้อมูลอุปกรณ์ก่อน — ไม่มีเลย = น่าสงสัย ต้องตรวจมือ (fail-closed)
+  --   ดักทั้ง NULL (log-session เก็บ null เมื่อ client ส่งค่าว่าง) และ '' (แถวเก่า)
+  select count(*) into v_has_fp
+    from public.login_events le
+    where le.user_id = p_user
+      and le.fingerprint is not null and le.fingerprint <> '';
+  if coalesce(v_has_fp, 0) = 0 then
+    return query select false, 'no_device_data', v_stars, v_ledger, 0, 0; return;
+  end if;
+
+  -- ด่าน 3b: เครื่องเดียวกันต้องไม่มีหลายบัญชี (เช็กจาก login_events / fingerprint)
   select count(distinct le2.user_id) into v_dup
     from public.login_events le1
     join public.login_events le2 on le2.fingerprint = le1.fingerprint

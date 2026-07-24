@@ -32,7 +32,7 @@ const VALID_GAMES = ['typing', 'reading', 'lego', 'word_order', 'tone_finder'];
 
 function corsHeaders() {
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': 'https://mrtaihualin.com',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-key',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
@@ -139,6 +139,13 @@ serve(async (req) => {
     const { data: userData, error: userErr } = await asUser.auth.getUser(jwt);
     if (userErr || !userData?.user) return json({ error: 'invalid session — 請重新登入' }, 401);
     const userId = userData.user.id;
+
+    // ── rate limit เกราะเสริม กันสคริปต์ยิงรัว (fail-open เหมือน tone-round) ──
+    //   30 ครั้ง/นาที/คน — คนจริงเขียนรีวิว/แจ้งบั๊กไม่ถึง, สคริปต์ยิงรัวโดนบล็อก
+    const { data: rlOk, error: rlErr } = await admin.rpc('rl_check', {
+      p_user: userId, p_fn: 'game-reward', p_limit: 30, p_window: 60,
+    });
+    if (!rlErr && rlOk === false) return json({ error: 'rate_limited — 請稍後再試' }, 429);
 
     const game = body?.game;
     const content = String(body?.content || '').trim();
