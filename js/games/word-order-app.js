@@ -1049,17 +1049,4 @@ function rgOpenAsk() {
   };
 }
 
-// ── 單字庫徽章（如果之前在別的遊戲存過單字，這裡也看得到）──
-document.addEventListener('DOMContentLoaded', function() {
-  if (!window.WordVault) return;
-  WordVault.injectStyles();
-  var slot = document.getElementById('rg-vault-badge-slot');
-  if (slot && WordVault.count() > 0) {
-    var badge = document.createElement('a');
-    badge.href = 'vault.html';
-    badge.className = 'vault-badge';
-    badge.id = 'vault-badge-rg';
-    badge.innerHTML = '<img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫';
-    slot.appendChild(badge);
-  }
-});
+// ── 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 ──

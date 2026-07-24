@@ -1711,6 +1711,38 @@ window.deleteFBComment = function(postId, idx) {
       // ดรอปดาวน์แนวตั้งไม่ใช้เส้นคั่นแนวนอนเดิม → เอาออก
       try { gs.querySelectorAll('.gs-divider').forEach(function (d) { d.remove(); }); } catch (e) {}
 
+      // ── ✍️ สลับฟอนต์ — ย้ายเข้ามาอยู่ในเมนู 🎮 เดียวกันแทนปุ่มแยกในแถวเครื่องมือ — Lin 2026-07-24 ──
+      // เรียกฟังก์ชันเดิมของแต่ละเกม (rgToggleFont ของ word-order/typing/reading หรือ TF.toggleFont ของเกมเสียง) แค่ย้ายที่ปุ่มเฉยๆ ไม่แตะ logic เดิม
+      try {
+        function callFontToggle() {
+          if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
+          if (window.TF && typeof window.TF.toggleFont === 'function') { window.TF.toggleFont(); return true; }
+          return false;
+        }
+        if (typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function')) {
+          // rg-modern-font = word-order/typing/reading, tf-modern-font = ทำนอง/เกมเสียง — เช็คทั้งคู่ เพราะแต่ละเกมตั้งชื่อ class เองคนละอัน
+          function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
+          var fontOn = isFontOn();
+          var fontDivider = document.createElement('div');
+          fontDivider.className = 'gs-divider-toggle';
+          var fontRow = document.createElement('button');
+          fontRow.type = 'button';
+          fontRow.className = 'gs-tab gs-toggle-row';
+          function renderFontRow() {
+            fontRow.innerHTML = (fontOn ? '✅' : '✍️') + '<span class="gs-lbl"> ' + (fontOn ? '換回標準字體' : '換現代字體') + '</span>';
+          }
+          renderFontRow();
+          fontRow.onclick = function (e) {
+            e.stopPropagation();
+            if (!callFontToggle()) return;
+            fontOn = isFontOn();
+            renderFontRow();
+          };
+          gs.appendChild(fontDivider);
+          gs.appendChild(fontRow);
+        }
+      } catch (e) {}
+
       var KEY = 'rg_fake_fullscreen';
       var on = false;
       try { on = localStorage.getItem(KEY) === '1'; } catch (e) {}
@@ -1732,6 +1764,9 @@ window.deleteFBComment = function(postId, idx) {
         '#game-switcher .gs-tab.gs-active{background:rgba(200,151,58,0.18);color:#8b6310;}' +
         '#game-switcher .gs-tab:hover{background:rgba(139,99,16,0.10);}' +
         '#game-switcher .gs-lbl{display:inline !important;}' +
+        // ── ✍️ แถวสลับฟอนต์ ในดรอปดาวน์เดียวกัน — Lin 2026-07-24 ──
+        '#game-switcher .gs-toggle-row{background:none !important;border:none !important;width:100%;font-family:inherit;cursor:pointer;}' +
+        '.gs-divider-toggle{height:1px;background:#e4d3ac;margin:4px 2px;flex-shrink:0;}' +
         // ── โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม (ชุดปุ่มลอย .rg-ctl-wrap ไม่โดนซ่อน = เมนู+เต็มจอกดได้ตลอด) ──
         'body.rg-fake-fullscreen .site-nav,' +
         'body.rg-fake-fullscreen #bottom-nav,' +
@@ -1931,16 +1966,26 @@ window.deleteFBComment = function(postId, idx) {
       fab.innerHTML = '🪧<span id="grw-pts" style="display:none;"></span>';
 
       // ── เมนูป๊อปอัพ (แจ้งปัญหา/รีวิว) — โผล่เหนือชุดปุ่มทั้งหมดเหมือนดรอปดาวน์ #game-switcher ──
+      // Lin 2026-07-24: 「我有問題」（問老師的問答框，跟「回報問題」bug report 不一樣）合併進這個選單 — 只有頁面有 rgOpenAsk()/TF.openAsk() 才加這個項目（lego 目前還沒做這功能，先不顯示）
+      function callAsk() {
+        if (typeof window.rgOpenAsk === 'function') { window.rgOpenAsk(); return true; }
+        if (window.TF && typeof window.TF.openAsk === 'function') { window.TF.openAsk(); return true; }
+        return false;
+      }
+      var hasAsk = typeof window.rgOpenAsk === 'function' || (window.TF && typeof window.TF.openAsk === 'function');
+
       var menu = document.createElement('div');
       menu.className = 'grw-menu';
       menu.innerHTML =
+        (hasAsk ? '<div class="grw-item" data-act="ask"><span class="ico">💬</span>有問題想問老師</div>' : '') +
         '<div class="grw-item" data-act="report"><span class="ico">🔧</span>回報問題</div>' +
         '<div class="grw-item" data-act="review"><span class="ico">💭</span>心得 / 學到了什麼</div>';
       menu.addEventListener('click', function (e) {
         var it = e.target.closest('.grw-item');
         if (!it) return;
         menu.classList.remove('gs-open');
-        if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
+        if (it.dataset.act === 'ask') callAsk();
+        else if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
         else grwOpenReview(GAME_ID, FN_URL);
       });
       fab.onclick = function (e) { e.stopPropagation(); menu.classList.toggle('gs-open'); };
@@ -2044,4 +2089,24 @@ window.deleteFBComment = function(postId, idx) {
         });
       });
   }
+})();
+
+// ════════════════════════════════════════════════════════════
+// 🔥⭐ แถบสถิติ (連續/護盾/星星/勳章) — ย้ายไปติดกับ "個人檔案" (ปุ่มชื่อ) แล้ว — Lin 2026-07-24
+// เดิมแถบนี้โชว์ตลอดแม้ไม่ล็อกอิน (ขึ้น 0 หมด) — Lin สั่งให้ไม่ล็อกอิน = ไม่โชว์เลย
+// ตัวเลข/logic เดิมของแต่ละเกม (rgRenderGameBar/refreshUI/TF.xxx) ไม่แตะเลย — ที่นี่แค่โชว์/ซ่อนทั้งแถบตามสถานะล็อกอิน
+// ════════════════════════════════════════════════════════════
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      var row = document.getElementById('rg-stat-row') || document.getElementById('tf-stat-row');
+      if (!row) return;
+      function apply(user) { row.style.display = user ? 'flex' : 'none'; }
+      if (window.SITE_AUTH && window.SITE_AUTH.onChange) window.SITE_AUTH.onChange(apply);
+    } catch (e) {}
+  });
 })();

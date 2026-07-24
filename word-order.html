@@ -125,6 +125,8 @@
 .rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
 @media(max-width:480px){.rg-tool-btn{font-size:11.5px;padding:5px 11px;}}
 .rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
+.rg-tool-btn.hl{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;border:none;font-weight:900;box-shadow:0 3px 10px rgba(216,90,48,.35);}
+.rg-tool-btn.hl:hover{background:linear-gradient(135deg,#e8a020,#d85a30);filter:brightness(1.06);}
 
 /* ── 換現代字體（跟其他遊戲共用同一個 localStorage 設定，切一次全部遊戲都套用）── */
 body.rg-modern-font .wo-slot,
@@ -270,20 +272,21 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<div onclick="openModal('modal-freebie')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('modal-freebie')}" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:10px;padding:13px 18px;margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;">
-  <span style="font-size:14px;color:var(--gold-deep,#5a3e0a);font-weight:700;"><img src="assets/icons/gift-box.svg" alt="" style="width:18px;height:18px;vertical-align:-4px;margin-right:3px;">免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
-  <span style="font-size:13px;background:var(--gold-bright,#C8973A);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
-</div>
-
 <div id="rg-cta-login" style="width:100%;max-width:640px;"></div>
 
 <div class="rg-tools-row">
-  <div id="rg-login-slot" style="display:flex;align-items:center;flex-shrink:0;margin-right:auto;"></div>
-  <div id="rg-vault-badge-slot" style="display:flex;align-items:center;flex-shrink:0;"></div>
-  <button class="rg-tool-btn" id="rg-font-btn" onclick="rgToggleFont()">✍️ 換現代字體</button>
-  <button class="rg-tool-btn" onclick="rgOpenAsk()">💬 我有問題</button>
+  <div id="rg-profile-wrap" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;flex-shrink:0;margin-right:auto;">
+    <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
+    <!-- 連續天數／護盾／星星／勳章：搬進「個人檔案」旁邊了 — 沒登入就整條不顯示（原本沒登入也一直顯示 0，Lin 2026-07-24 要求改掉）-->
+    <div class="rg-stat-row" id="rg-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;">
+      <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
+      <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
+      <span class="tf-streak-chip">⭐ <b id="star-count">0</b> 顆星</span>
+      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" onclick="openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+    </div>
+  </div>
   <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
-    <button class="rg-tool-btn" id="wo-howto-btn" onclick="dismissHowtoHint('wordorder');document.getElementById('wo-howto-modal').style.display='flex'">❓ 怎麼玩</button>
+    <button class="rg-tool-btn hl" id="wo-howto-btn" onclick="dismissHowtoHint('wordorder');document.getElementById('wo-howto-modal').style.display='flex'">❓ 怎麼玩</button>
     <div class="howto-hint-bubble" id="howto-hint-wordorder">
       <button class="howto-hint-close" onclick="dismissHowtoHint('wordorder')">✕</button>
       這裡有教怎麼玩喔 👆
@@ -293,14 +296,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 <!-- 每週挑戰 banner（跟其他遊戲共用同一套邏輯，各遊戲各自的挑戰進度）-->
 <div id="rg-challenge-banner" style="width:100%;max-width:640px;"></div>
-
-<!-- 連續天數／護盾／星星／勳章（跟聲調・拼讀・打字遊戲共用同一個帳號＋同一個 streak，練哪個遊戲都算數）-->
-<div class="rg-stat-row" id="rg-stat-row">
-  <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
-  <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
-  <span class="tf-streak-chip">⭐ <b id="star-count">0</b> 顆星</span>
-  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" onclick="openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
-</div>
 
 <!-- GAME -->
 <div id="game" class="card">
@@ -387,8 +382,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="js/core/shared.min.js?v=2"></script>
-<script src="js/games/word-order-app.min.js?v=1"></script>
+<script src="js/core/shared.min.js?v=4"></script>
+<script src="js/games/word-order-app.min.js?v=2"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>
