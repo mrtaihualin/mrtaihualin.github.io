@@ -2137,3 +2137,63 @@ window.deleteFBComment = function(postId, idx) {
     } catch (e) {}
   });
 })();
+
+// ════════════════════════════════════════════════════════════
+// 💬 ป๊อปอัปอธิบายไอคอนสถิติ (🔥連續天數 / 🛡️護盾 / ⭐星星) — Lin 2026-07-24
+// ปัญหาเดิม: ไอคอนพวกนี้มีแค่ title= (hover ถึงเห็น) → บนมือถือแตะแล้วไม่มีอะไรเกิดขึ้นเลย
+// แก้: แตะแล้วเด้งกล่องคำอธิบายสั้นๆ ธีมทองเหมือนเว็บ ใกล้ๆ ไอคอนที่กด แตะที่อื่น/รอ 3 วิ = ปิดเอง
+// ไม่แตะ 📖(วิธีเล่น) กับ 🌱(勳章) — 2 อันนี้กดแล้วเปิด modal จริงอยู่แล้ว (มีฟังก์ชันจริง ไม่ใช่แค่โชว์ค่า) ไม่ต้องมี popup ซ้อน
+// ใช้ title= เดิมเป็นกุญแจ (ไม่ผูกกับ id) → เกมเดียวกันครบ 5 หน้าได้ฟีเจอร์นี้พร้อมกันจากไฟล์นี้ไฟล์เดียว
+// ════════════════════════════════════════════════════════════
+(function () {
+  var EXPLAIN = {
+    '連續天數': { emoji: '🔥', desc: '連續玩遊戲的天數，每天玩一次就會累積，斷了會歸零' },
+    '護盾':     { emoji: '🛡️', desc: '護盾可以保護連續天數，就算斷一天也不會馬上歸零' },
+    '累積星星': { emoji: '⭐', desc: '玩遊戲賺到的星星，代表你練習過的量' }
+  };
+  var bubble = null, hideTimer = null;
+  var panel = {
+    isOpen: function () { return !!bubble; },
+    close: function () {
+      if (bubble) { bubble.remove(); bubble = null; }
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    }
+  };
+  if (window.GamePanels) window.GamePanels.add(panel);
+
+  function showBubble(target, info) {
+    panel.close();
+    if (window.GamePanels) window.GamePanels.closeOthers(panel);
+    bubble = document.createElement('div');
+    bubble.className = 'tf-stat-explain';
+    bubble.innerHTML = '<span style="font-size:15px;margin-right:4px;">' + info.emoji + '</span>' + info.desc;
+    document.body.appendChild(bubble);
+    var r = target.getBoundingClientRect();
+    var bw = bubble.offsetWidth, vw = window.innerWidth;
+    var left = r.left + r.width / 2;
+    if (left - bw / 2 < 8) left = 8 + bw / 2;
+    if (left + bw / 2 > vw - 8) left = vw - 8 - bw / 2;
+    bubble.style.left = left + 'px';
+    bubble.style.top = (r.bottom + 8) + 'px';
+    hideTimer = setTimeout(panel.close, 3200);
+  }
+
+  document.addEventListener('click', function (e) {
+    var chip = e.target.closest && e.target.closest('.tf-streak-chip[title]');
+    if (chip && !chip.onclick && EXPLAIN[chip.getAttribute('title')]) {
+      e.stopPropagation();
+      showBubble(chip, EXPLAIN[chip.getAttribute('title')]);
+      return;
+    }
+    if (bubble && (!e.target.closest || !e.target.closest('.tf-stat-explain'))) panel.close();
+  }, true);
+
+  var style = document.createElement('style');
+  style.textContent =
+    // กล่องคำอธิบาย — โทนทอง/ครีมตามธีมเว็บ
+    '.tf-stat-explain{position:fixed;transform:translateX(-50%);z-index:100002;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:12px;padding:9px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;font-weight:700;color:#5a3e0a;box-shadow:0 6px 18px rgba(90,62,10,0.25);max-width:min(78vw,260px);line-height:1.5;white-space:normal;}' +
+    // Lin 2026-07-24: ไอคอนในแถบ (สถิติ+โปรไฟล์) กึ่งกลางไม่พอดี → บังคับ line-height:1 กันอิโมจิ/ตัวเลขเยื้องแนวตั้ง
+    '.tf-streak-chip{line-height:1;}' +
+    '#rg-login-slot,#tf-login-slot{display:flex;align-items:center;}';
+  document.head.appendChild(style);
+})();
