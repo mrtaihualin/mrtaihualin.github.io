@@ -36,7 +36,13 @@
       // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปรวมกับเมนูลอยมุมขวาล่าง (🎮/⛶/🍙/🪧) — แผงตัวเลือกต้องเปิด "ขึ้นด้านบน" แทน (เดิมเปิดลงล่าง)
       // เพราะปุ่มอยู่ติดขอบล่างสุดของจอ เปิดลงล่างจะโดนตัดขาดจอ · ชิดขวาแทนกึ่งกลาง กันล้นขอบขวาจอ
       '.wm-wrap-side{position:relative;}' +
-      '.wm-wrap-side .wm-panel{top:auto;bottom:calc(100% + 8px);left:auto;right:0;transform:none;}';
+      // Lin 2026-07-25: เดิมแผง (bottom:calc(100% + 8px)) อ้างอิงตำแหน่งปุ่ม 🍚 เอง — ปุ่ม 🍚 อยู่ "บนสุด" ของชุดปุ่มลอย
+      // เสมอก็จริง แต่ตำแหน่ง Y จริงบนจอขยับได้ตามจำนวนปุ่มอื่นในชุด/ลำดับโหลดสคริปต์ (race) → แผงเลยโผล่คนละที่ในแต่ละหน้า/แต่ละรอบโหลด
+      // แก้ให้ "ตายตัว" จริง: ใช้ position:fixed ผูกกับระยะห่างจากขอบจอโดยตรง (เลขเดียวกับ .rg-ctl-wrap ทุกจุด + เผื่อที่ให้พ้นปุ่มอื่นทั้งชุดเสมอ)
+      // ไม่อ้างอิงตำแหน่งปุ่ม 🍚 อีกต่อไป → ตำแหน่งแผงจะเหมือนกันทุกหน้า ทุกครั้งที่เปิด ไม่ขึ้นกับลำดับปุ่ม/timing
+      '.wm-wrap-side .wm-panel{position:fixed;top:auto;left:auto;right:12px;transform:none;bottom:calc(60px + env(safe-area-inset-bottom,0px) + 220px);}' +
+      '@media(max-width:768px){.wm-wrap-side .wm-panel{bottom:calc(68px + env(safe-area-inset-bottom,0px) + 220px);}}' +
+      '.rg-ctl-wrap.rg-ctl-fs .wm-wrap-side .wm-panel,body.rg-fake-fullscreen .wm-wrap-side .wm-panel{bottom:calc(6px + env(safe-area-inset-bottom,0px) + 220px) !important;}';
     document.head.appendChild(s);
     _styled = true;
   }
@@ -182,7 +188,11 @@
     setTimeout(refresh, 1200);
 
     function close() { wrap.classList.remove('wm-open'); trigger.setAttribute('aria-expanded', 'false'); }
-    function open()  { refresh(); wrap.classList.add('wm-open'); trigger.setAttribute('aria-expanded', 'true'); }
+    // Lin 2026-07-25: แผงนี้ตอนนี้ position:fixed ตำแหน่งตายตัวแล้ว (ไม่ขยับตามปุ่ม) → เสี่ยงซ้อนกับกล่องลอยอื่น (🎮/🪧)
+    // ถ้าเปิดพร้อมกัน → ลงทะเบียนกับ GamePanels กลาง กันซ้อนแบบเดียวกับกล่องอื่นๆ ในหน้าเกม
+    var wmPanel = { isOpen: function () { return wrap.classList.contains('wm-open'); }, close: close };
+    if (window.GamePanels) window.GamePanels.add(wmPanel);
+    function open() { refresh(); if (window.GamePanels) window.GamePanels.closeOthers(wmPanel); wrap.classList.add('wm-open'); trigger.setAttribute('aria-expanded', 'true'); }
 
     trigger.addEventListener('click', function (e) {
       e.stopPropagation();
