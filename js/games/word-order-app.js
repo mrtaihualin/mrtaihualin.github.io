@@ -455,7 +455,7 @@
     try { rgRenderGameBar(); } catch(e){}
     document.getElementById('end').style.display = 'none';
     document.getElementById('game').style.display = 'flex';
-    try{ if(window.gtag) gtag('event','game_start',{game:'word_order'}); }catch(e){}
+    try{ if(window.gtag) gtag('event','game_start',{category:'game',game:'word_order'}); }catch(e){}
     loadSentence();
     if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
   }
@@ -731,8 +731,8 @@
         el.classList.add('correct');
       });
       woLogSentence({guide:!!hintUsedThisSentence, pts:pts, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
-      try{ if(window.gtag) gtag('event','word_order_correct',{sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
-      try{ if(window.gtag) gtag('event','game_correct',{game:'word_order'}); }catch(e){}
+      try{ if(window.gtag) gtag('event','word_order_correct',{category:'game',sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
+      try{ if(window.gtag) gtag('event','game_correct',{category:'game',game:'word_order'}); }catch(e){}
     } else {
       attemptedWrongThisSentence = true;
       var deduct = WRONG_DEDUCT[Math.min(wrongCount, 3)];
@@ -743,7 +743,7 @@
       if (life <= 0) {
         var wasProof = curSentenceIsKnownCheck;
         failSentence(s, wasProof);
-        try{ if(window.gtag) gtag('event','word_order_fail',{sentence:s.th, wrongs:wrongCount}); }catch(e){}
+        try{ if(window.gtag) gtag('event','word_order_fail',{category:'game',sentence:s.th, wrongs:wrongCount}); }catch(e){}
       } else {
         banner.className = 'result-banner no show';
         banner.textContent = '👧🏻 還沒對喔，別擔心～點一下格子裡的詞塊，再排排看 💕';
@@ -753,8 +753,8 @@
         });
         updateHintWarning();
         updateScoreBar();  // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนเรียงผิด
-        try{ if(window.gtag) gtag('event','word_order_wrong',{sentence:s.th, wrongs:wrongCount}); }catch(e){}
-        try{ if(window.gtag) gtag('event','game_wrong',{game:'word_order'}); }catch(e){}
+        try{ if(window.gtag) gtag('event','word_order_wrong',{category:'game',sentence:s.th, wrongs:wrongCount}); }catch(e){}
+        try{ if(window.gtag) gtag('event','game_wrong',{category:'game',game:'word_order'}); }catch(e){}
       }
     }
   }
@@ -789,7 +789,7 @@
     updatePowerBar(s);
     if (life <= 0) {
       failSentence(s, false);
-      try{ if(window.gtag) gtag('event','word_order_hint_death',{sentence:s.th}); }catch(e){}
+      try{ if(window.gtag) gtag('event','word_order_hint_death',{category:'game',sentence:s.th}); }catch(e){}
       return;
     }
     updateHintWarning();
@@ -849,8 +849,8 @@
     document.getElementById('prog-txt').textContent = SET.length + '/' + SET.length;
 
     // GA4: ยิงทุกครั้งที่จบรอบ ไม่ว่าจะ practiceMode หรือไม่ (แก้บั๊กเดิม: game_complete เคยยิงหลัง if(practiceMode) เท่านั้น ทำให้คนที่จำครบแล้วไม่ถูกนับ)
-    try{ if(window.gtag) gtag('event','word_order_complete',{practice: !!practiceMode}); }catch(e){}
-    try{ if(window.gtag) gtag('event','game_complete',{game:'word_order'}); }catch(e){}
+    try{ if(window.gtag) gtag('event','word_order_complete',{category:'game',practice: !!practiceMode}); }catch(e){}
+    try{ if(window.gtag) gtag('event','game_complete',{category:'game',game:'word_order'}); }catch(e){}
 
     // จำครบทุกประโยคแล้ว (mastered หมด) → รอบนี้เป็นแค่ทบทวนฟรี ไม่คิดคะแนน/ดาว/ลีก (กันฟาร์ม MASTER ข้อ7)
     if (practiceMode) {
@@ -896,7 +896,7 @@
     detail += ' · 累積共 ' + totalStars + ' 顆星';
     document.getElementById('wo-end-detail').textContent = detail;
 
-    try{ if(window.gtag) gtag('event','word_order_complete',{practice: false, score: weightedScore}); }catch(e){}
+    try{ if(window.gtag) gtag('event','word_order_complete',{category:'game',practice: false, score: weightedScore}); }catch(e){}
     // 嘗試存分數到共用排行榜系統（若後端還沒開放 'word_order' 這個 game key，
     // 這行會安全地無效果，不會讓遊戲壞掉 — 之後要接排行榜要請 Lin 到 Supabase 確認）
     try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog()); }catch(e){}   // เฟส 3: แนบประโยคที่พลาด — 2026-07-13

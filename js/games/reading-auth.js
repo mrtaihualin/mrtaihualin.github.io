@@ -321,7 +321,7 @@
     function onFail(msg) {
       console.warn('[board] save failed:', msg);
       saveToast('⚠️ 分數儲存失敗：' + msg, false);
-      try { if (window.gtag) gtag('event', 'score_save_fail', { reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
+      try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
     }
     try {
       sb.from('reading_sessions').insert(full).then(function (res) {

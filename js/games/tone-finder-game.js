@@ -2669,8 +2669,8 @@ function stepSessionSummary() {
   var perfectCount = results.filter(function(r){ return r.mistakes === 0; }).length;
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
-  gtag('event', 'tone_finder_complete', {score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
-  try{ if(window.gtag) gtag('event','game_complete',{game:'tone_finder', score: weightedScore, total: total}); }catch(e){}
+  gtag('event','tone_finder_complete',{category:'game',score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
+  try{ if(window.gtag) gtag('event','game_complete',{category:'game',game:'tone_finder', score: weightedScore, total: total}); }catch(e){}
   // Lin 2026-07-10: ลบ branch บังคับล็อกอินทิ้ง (requireLogin=false ตายอยู่แล้ว ไม่เคยทำงานจริง) — เหลือแค่คำเชิญ "ขอ單字速查表" หลังเล่นจบรอบ
   setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   var rows = results.map(function(r, i){
@@ -2785,8 +2785,8 @@ function stepSessionSummary() {
       '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
       '<button class="tf-restart-btn" onclick="TF.reselectTopic()">' + (selectedLevel === 3 ? '🎲 再來一句' : '🎲 再來 5 字') + '</button>' +
       (selectedLevel === 3 ? '<button class="tf-restart-btn" onclick="TF.openAdvanced()">📖 選其他句子</button>' : '') +
-      '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
-      '<a class="tf-restart-btn" href="leaderboard.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{target:\'leaderboard\',from:\'tone_finder\'})}catch(e){}">🏆 看排行榜</a>' +
+      '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
+      '<a class="tf-restart-btn" href="leaderboard.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'leaderboard\',from:\'tone_finder\'})}catch(e){}">🏆 看排行榜</a>' +
     '</div>' +
   '</div>';
 }
@@ -2969,8 +2969,8 @@ function tfSyncLevelTabs() {
 function tfFireStartOnce() {
   if (session && !session.startFired) {
     session.startFired = true;
-    try { gtag('event', 'tone_finder_start', {mode: selectedCategory || 'ทั้งหมด'}); } catch(e){}
-    try { if (window.gtag) gtag('event','game_start',{game:'tone_finder'}); } catch(e){}
+    try { gtag('event','tone_finder_start',{category:'game',mode: selectedCategory || 'ทั้งหมด'}); } catch(e){}
+    try { if (window.gtag) gtag('event','game_start',{category:'game',game:'tone_finder'}); } catch(e){}
   }
 }
 
@@ -4460,13 +4460,13 @@ var TF = {
       var _gaMistakes = session.currentWordMistakes || 0;
       var _gaToneName = (TONES[_gaTone] && TONES[_gaTone].zh) || String(_gaTone);
       if (_gaMistakes === 0) {
-        gtag('event', 'tone_answer_correct', {word: _gaEntry.word, tone: _gaToneName});
-        try{ if(window.gtag) gtag('event','game_correct',{game:'tone_finder'}); }catch(e){}
+        gtag('event','tone_answer_correct',{category:'game',word: _gaEntry.word, tone: _gaToneName});
+        try{ if(window.gtag) gtag('event','game_correct',{category:'game',game:'tone_finder'}); }catch(e){}
       } else {
         var _gaFinal = session.finalAnswer != null ? session.finalAnswer : session.initialGuess;
         var _gaSelectedName = (TONES[_gaFinal] && TONES[_gaFinal].zh) || String(_gaFinal);
-        gtag('event', 'tone_answer_wrong', {word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName});
-        try{ if(window.gtag) gtag('event','game_wrong',{game:'tone_finder'}); }catch(e){}
+        gtag('event','tone_answer_wrong',{category:'game',word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName});
+        try{ if(window.gtag) gtag('event','game_wrong',{category:'game',game:'tone_finder'}); }catch(e){}
       }
       // สเตจ 1: บันทึกผล (พร้อมคะแนน) + ไปคำถัดไป/สรุป + คิดโบนัสจบชุด
       tfCommitWordAndAdvance({ forced: false });

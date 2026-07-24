@@ -78,12 +78,12 @@
       if (res.error) {
         console.warn('[tone-finder] บันทึกไม่สำเร็จ:', res.error.message);
         showScoreToast('⚠️ บันทึกคะแนนไม่สำเร็จ: ' + res.error.message, false);
-        try { if (window.gtag) gtag('event', 'score_save_fail', { reason: res.error.message, mode: s.mode || '' }); } catch (e) {}
+        try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: res.error.message, mode: s.mode || '' }); } catch (e) {}
       } else {
         console.info('[tone-finder] บันทึกผลแล้ว score=' + s.score);
         if (lastSession === s) lastSession = null;   // บันทึกสำเร็จ → เคลียร์ค้าง กันบันทึกซ้ำ
         showScoreToast('✅ บันทึกคะแนน ' + (s.score || 0) + ' 分 สำเร็จ', true);
-        try { if (window.gtag) gtag('event', 'score_saved', { score: s.score || 0, mode: s.mode || '' }); } catch (e) {}
+        try { if (window.gtag) gtag('event','score_saved',{category:'game', score: s.score || 0, mode: s.mode || '' }); } catch (e) {}
       }
     });
   }
