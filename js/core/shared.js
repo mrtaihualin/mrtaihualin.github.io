@@ -15,6 +15,24 @@
 })();
 
 // ===================================================================
+// 📦 GamePanels — ที่กลางให้กล่อง/เมนู popup ทุกชนิดในหน้าเกม "รู้จักกัน"
+//   Lin 2026-07-24: เจอปัญหาเปิดพร้อมกันได้ 2 กล่อง (เช่น 🍚 เมนูคำศัพท์ + 🎮 เมนูเกม) ทับกันบนจอ
+//   → กติกาใหม่: ก่อนกล่องไหนจะเปิด ต้องเรียก closeOthers(ตัวเอง) ก่อนเสมอ → กล่องอื่นที่เปิดอยู่จะถูกปิดหมด เหลือเปิดได้ทีละกล่อง
+//   ใช้ pattern "window.GamePanels = window.GamePanels || ..." กันปัญหาลำดับโหลดไฟล์ (shared.js/word-menu.js ใครโหลดก่อนก็สร้างอันเดียวกันได้)
+window.GamePanels = window.GamePanels || (function () {
+  var list = [];
+  return {
+    // panel = { isOpen: function(){return bool}, close: function(){} }
+    add: function (panel) { list.push(panel); },
+    closeOthers: function (except) {
+      list.forEach(function (p) {
+        if (p !== except && p.isOpen()) p.close();
+      });
+    }
+  };
+})();
+
+// ===================================================================
 // 📢 แถบประกาศหมุนเวียน (rotating announcement) — โชว์ทุกหน้า, หมุนทุก 6 วิ
 //   เพิ่ม/แก้/ลบประกาศได้ที่ array ด้านล่างนี้ที่เดียว มีผลทุกหน้า
 //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล
@@ -1800,7 +1818,14 @@ window.deleteFBComment = function(postId, idx) {
       menuBtn.setAttribute('aria-label', '遊戲選單');
       menuBtn.title = '遊戲選單';
       function closeMenu() { gs.classList.remove('gs-open'); }
-      menuBtn.onclick = function (e) { e.stopPropagation(); gs.classList.toggle('gs-open'); };
+      var gsPanel = { isOpen: function () { return gs.classList.contains('gs-open'); }, close: closeMenu };
+      window.GamePanels.add(gsPanel);
+      menuBtn.onclick = function (e) {
+        e.stopPropagation();
+        var opening = !gs.classList.contains('gs-open');
+        if (opening) window.GamePanels.closeOthers(gsPanel); // Lin 2026-07-24: เปิดตัวนี้ → ปิดกล่องอื่นที่เปิดค้างอยู่ก่อน
+        gs.classList.toggle('gs-open');
+      };
       // เลือกเกมแล้ว หรือคลิกที่อื่น → ปิดดรอปดาวน์
       gs.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.gs-tab')) closeMenu(); });
       document.addEventListener('click', function (e) { if (e.target !== menuBtn && !gs.contains(e.target)) closeMenu(); });
