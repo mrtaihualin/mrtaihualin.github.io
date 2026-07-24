@@ -5,6 +5,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>線上教室 — 泰華老師</title>
+<!-- GA4 (เพิ่ม 2026-07-24 ตามที่ Lin อนุมัติ — เก็บแค่ "เกิดอะไรขึ้น" ห้ามใส่ชื่อจริง/token/อีเมลลงพารามิเตอร์ เพราะเป็นพื้นที่ส่วนตัวครู/นักเรียน) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DKVQE30982', { anonymize_ip: true });
+  // เช็คว่าเข้ามาทาง LINE (in-app browser) หรือเว็บทั่วไป — เช็คจาก User-Agent เท่านั้น ไม่เก็บ token/ชื่อ
+  gtag('event', 'classroom_entry', {
+    category: 'course',
+    entry_channel: /Line/i.test(navigator.userAgent) ? 'line' : 'web'
+  });
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -5362,6 +5375,7 @@ async function requestCancelClass(isoDate, calendarEventId, timeStr) {
     p_initiated_by: 'student',
   });
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  if (typeof gtag === 'function') gtag('event', 'class_request_submitted', { category: 'course', request_type: 'cancel' });
   // 2026-07-16 加：submit_class_request 這個 RPC 目前不收 calendar_event_id 參數（不想動資料庫
   // 函式本身，風險比較低），改成插入成功後馬上補一個 update 把真正的事件 ID 存上去。
   // 存不成功也不擋這次申請（老師那邊會退回舊版「姓名+日期」搜尋），只在主控台留紀錄。
@@ -5789,6 +5803,7 @@ async function submitClassRequest() {
   });
   btn.disabled = false; btn.textContent = '📤 送出申請';
   if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  if (typeof gtag === 'function') gtag('event', 'class_request_submitted', { category: 'course', request_type: 'reschedule' });
   const newId = res.data;
   // 2026-07-16 加：submit_class_request 這個 RPC 不收 proposed_options/offer_status 參數
   // （不想動資料庫函式本身），插入成功後馬上補一個 update 存上完整選項清單 + 設 offer_status。
@@ -6983,6 +6998,7 @@ async function submitSlip() {
   });
   btn.disabled = false; btn.textContent = '📤 送出繳費通知';
   if (res.error) { alert('送出失敗：' + res.error.message); return; }
+  if (typeof gtag === 'function') gtag('event', 'payment_slip_submitted', { category: 'course' });
   // 寄信通知老師（沿用全站既有的 Web3Forms，免後端）
   notifyTeacherNewSlip({ name: studentName, course: courseLabel, lessons: lessons, bonus: bonus, currency: payCur, total: total, note: note });
   closeSlipModal();
@@ -8900,6 +8916,7 @@ async function approveSlip() {
     alert('儲存失敗：' + (res.error ? res.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
     return;
   }
+  if (typeof gtag === 'function') gtag('event', 'payment_slip_approved', { category: 'course' });
 
   // 第一次確認收款 → 建立 Meet／Drive 並解鎖學生。
   // runDeferredStudentSetup 已保證「不論 Meet 成敗都會把學生設成 confirmed（解鎖）」，
@@ -8999,6 +9016,7 @@ async function rejectSlip(id) {
     alert('拒絕失敗：' + (rejRes.error ? rejRes.error.message : '資料庫沒有真的更新到（可能是 RLS 權限問題）'));
     return;
   }
+  if (typeof gtag === 'function') gtag('event', 'payment_slip_rejected', { category: 'course' });
   document.getElementById('slipApprovalModal').classList.remove('open');
   await loadPendingSlips();
 }
