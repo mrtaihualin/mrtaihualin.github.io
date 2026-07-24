@@ -396,23 +396,25 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 <div class="rg-tools-row">
   <div id="rg-profile-wrap" style="display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex-shrink:0;margin-right:auto;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.18);border-radius:16px;padding:10px 12px;"><!-- margin-right:auto = ดันปุ่มที่เหลือชิดขวา เหมือน tone-finder — Lin 2026-07-02 -->
-    <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
+      <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
+        <span class="tf-streak-chip" id="rg-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="dismissHowtoHint('reading');document.getElementById('rg-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖</span>
+        <div class="howto-hint-bubble" id="howto-hint-reading">
+          <button class="howto-hint-close" onclick="dismissHowtoHint('reading')">✕</button>
+          這裡有教怎麼玩喔 👆
+        </div>
+      </span>
+    </div>
     <div id="rg-cta-login" style="width:100%;"></div>
     <!-- 連續天數／護盾／星星／勳章：搬進「個人檔案」旁邊了 — 沒登入就整條不顯示 — Lin 2026-07-24 -->
     <div class="rg-stat-row" id="rg-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;">
-      <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
-      <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
-      <span class="tf-streak-chip">⭐ <b id="star-count">0</b> 顆星</span>
-      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" onclick="openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+      <span class="tf-streak-chip" title="連續天數">🔥 <b id="rg-streak-num">0</b></span>
+      <span class="tf-streak-chip" title="護盾">🛡️ ×<b id="rg-freeze-num">0</b></span>
+      <span class="tf-streak-chip" title="累積星星">⭐ <b id="star-count">0</b></span>
+      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b></span>
     </div>
   </div>
-  <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
-    <button class="rg-tool-btn hl" id="rg-howto-btn" onclick="dismissHowtoHint('reading');document.getElementById('rg-howto-modal').style.display='flex'">📖 怎麼玩</button>
-    <div class="howto-hint-bubble" id="howto-hint-reading">
-      <button class="howto-hint-close" onclick="dismissHowtoHint('reading')">✕</button>
-      這裡有教怎麼玩喔 👆
-    </div>
-  </span>
 </div>
 
 <div class="level-tabs">
