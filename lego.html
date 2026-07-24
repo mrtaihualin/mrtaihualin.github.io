@@ -319,15 +319,6 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 </head>
 <body>
 
-<!-- FLOATING LINE QR -->
-<div class="floating-qr" id="floating-qr">
-  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
-  <button class="floating-qr-book" onclick="openModal('modal-line-qr')">
-    <span class="fqb-icon">📅</span>
-    <span class="fqb-text"><b>預約免費體驗課</b><small>30 分鐘・線上一對一</small></span>
-  </button>
-</div>
-
 <nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語小遊戲</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
 <div class="page-strip">
@@ -352,9 +343,9 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <div id="rg-login-slot" style="display:flex;align-items:center;flex-shrink:0;"></div>
   <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
   <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
-  <!-- Lin 2026-07-06: เลโก้ไม่แจกดาวเงิน (คนละระบบ) → ซ่อนป้ายดาว ไม่ให้คนเล่นสับสน -->
-  <span class="tf-streak-chip" style="display:none;">⭐ <b id="star-count">0</b> 顆星</span>
-  <span class="tf-streak-chip" style="cursor:pointer;" onclick="openBadge()"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+  <!-- Lin 2026-07-25: กดได้แล้ว — โชว์ดาวสะสม (ทุกเกมรวมกัน) แยกจากปุ่มวรรณยุกต์ -->
+  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="openStar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStar()}">⭐ <b id="star-count">0</b> 顆星</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
   <span class="tf-streak-chip" style="cursor:pointer;" onclick="legoVaultOpen()">📑 <b id="lego-vault-count">0</b>/15 單字庫</span>
   <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
     <span class="tf-streak-chip" id="lego-howto-btn" style="cursor:pointer;" onclick="dismissHowtoHint('lego');document.getElementById('lego-howto-modal').style.display='flex'">📖 怎麼玩</span>
@@ -460,11 +451,19 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 <div class="v3-modal" id="badge-modal" onclick="this.classList.remove('show')">
   <div class="v3-modal-box" onclick="event.stopPropagation()">
     <h3>我的成就</h3>
-    <div class="tree-area" id="tree-area">🌱</div>
-    <div class="tree-caption" id="tree-caption"></div>
     <div class="star-progress" id="star-prog"></div>
     <div class="star-prog-label" id="star-prog-label"></div>
     <button class="btn btn-line" style="margin-top:16px" onclick="document.getElementById('badge-modal').classList.remove('show')">關閉</button>
+  </div>
+</div>
+
+<!-- Lin 2026-07-25: ⭐ กดปุ่มดาวแยกจากปุ่ม勳章 — ย้าย tree-area/tree-caption มาไว้ที่นี่ -->
+<div class="v3-modal" id="star-modal" onclick="this.classList.remove('show')">
+  <div class="v3-modal-box" onclick="event.stopPropagation()">
+    <h3>累積星星</h3>
+    <div class="tree-area" id="star-tree-area">⭐</div>
+    <div class="tree-caption" id="star-tree-caption">累積星星（全部遊戲共用）</div>
+    <button class="btn btn-line" style="margin-top:16px" onclick="document.getElementById('star-modal').classList.remove('show')">關閉</button>
   </div>
 </div>
 
@@ -492,7 +491,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="js/core/shared.min.js?v=4"></script>
+<script src="js/core/shared.min.js?v=5"></script>
 <script>
 // ════════ SLOTS ════════
 // adv (副詞: ที่/กับ) + advObj (跟著變：ที่→地點、กับ→誰) 配對
@@ -1108,11 +1107,16 @@ function legoVaultOpen(){
   document.body.appendChild(ov);
 }
 
+// Lin 2026-07-25: ⭐ ปุ่มดาว แยกออกจากปุ่ม勳章(openBadge) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์
+function openStar(){
+  const s=window.GAME_ACCOUNT?GAME_ACCOUNT.getStars():0;
+  document.getElementById('star-tree-area').textContent='⭐ '+s;
+  document.getElementById('star-tree-caption').textContent='累積星星（全部遊戲共用）';
+  document.getElementById('star-modal').classList.add('show');
+}
 function openBadge(){
   const s=window.GAME_ACCOUNT?GAME_ACCOUNT.getStars():0;
   const badges=window.GAME_ACCOUNT?GAME_ACCOUNT.starBadges:[];
-  document.getElementById('tree-area').textContent='⭐ '+s;
-  document.getElementById('tree-caption').textContent='累積星星（全部遊戲共用）';
   let html='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px;">';
   badges.forEach(b=>{
     const got=s>=b.at;

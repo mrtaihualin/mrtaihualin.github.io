@@ -1336,12 +1336,17 @@ var BADGE_STAGES=[
   {min:30,emoji:'👑',label:'泰語之王！'}
 ];
 function badgeEmoji(n){var e='🌱';BADGE_STAGES.forEach(function(s){if(n>=s.min)e=s.emoji;});return e;}
+// Lin 2026-07-25: ⭐ ปุ่มดาว แยกออกจากปุ่ม勳章(openBadge) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์
+function openStar(){
+  var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
+  document.getElementById('star-tree-area').textContent='⭐ '+s;
+  document.getElementById('star-tree-caption').textContent='累積星星（全部遊戲共用）';
+  document.getElementById('star-modal').classList.add('show');
+}
 function openBadge(){
   // ⭐ แบดจ์พันธุ์ข้าว ตามดาวรวม (รวมกับเกมเสียง) — Lin 2026-06-27
   var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
   var badges=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starBadges:[];
-  document.getElementById('tree-area').textContent='⭐ '+s;
-  document.getElementById('tree-caption').textContent='累積星星（全部遊戲共用）';
   var html='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px;">';
   badges.forEach(function(b){
     var got=s>=b.at;
@@ -2147,6 +2152,8 @@ document.addEventListener('keydown',function(e){
   if(document.getElementById('rg-ask-ov'))return;
   var _bm=document.getElementById('badge-modal');
   if(_bm && _bm.classList.contains('show'))return;
+  var _sm=document.getElementById('star-modal');
+  if(_sm && _sm.classList.contains('show'))return;
   if(e.key==='Backspace'){ rgTypeBackspace(); e.preventDefault(); return; }
   if(e.key==='Enter'){ rgHandleEnterKey(e); return; }
   // Space: ไม่มีคำไหนมีช่องว่าง → กันหน้าเลื่อนเฉยๆ ไม่นับผิด — Lin 2026-07-02
@@ -2166,6 +2173,8 @@ document.addEventListener('keydown',function(e){
   if(document.getElementById('rg-ask-ov'))return;
   var _bm=document.getElementById('badge-modal');
   if(_bm && _bm.classList.contains('show'))return;
+  var _sm=document.getElementById('star-modal');
+  if(_sm && _sm.classList.contains('show'))return;
   var sec=document.getElementById('bonus-section');
   if(!sec || !sec.classList.contains('show'))return;
   var box=document.getElementById('bonus-opts');
@@ -2275,21 +2284,6 @@ try{
   var _wcr=document.getElementById('word-ctl-row');
   if(_wcr)_wcr.addEventListener('mousedown',function(e){e.preventDefault();});
 }catch(e){}
-
-// Lin 2026-07-13: กันป้ายลอย 預約免費體驗課 (#floating-qr, position:fixed มุมขวาบน) ทับปุ่มวรรณยุกต์ตอนคีย์บอร์ดมือถือปิด/จอเลื่อนกะทันหัน
-// (บั๊ก "แตะปุ่มวรรณยุกต์ครั้งแรกไม่ติด" — ยืนยันจริงจาก debugkbd log บนมือถือ: แตะแรกไปโดนป้ายลอยแทนปุ่ม)
-// วิธีแก้: เกาะติด class ของ #bonus-section ด้วย MutationObserver (จุดเดียวที่เกมใช้เปิด/ปิดปุ่มวรรณยุกต์อยู่แล้วทุก path ทั้งคำพยางค์เดียวและพิมพ์ต่อเนื่อง)
-// ไม่ต้องเพิ่มจุดเปิด/ปิดเองหลายที่ กันลืม/กันหลุด ป้ายโปรโมทไม่หายถาวร กลับมาโชว์ปกติทันทีที่ปุ่มวรรณยุกต์ปิด
-(function(){
-  try{
-    var sec=document.getElementById('bonus-section');
-    var qr=document.getElementById('floating-qr');
-    if(!sec||!qr)return;
-    function sync(){ qr.classList.toggle('rg-qr-suppressed', sec.classList.contains('show')); }
-    new MutationObserver(sync).observe(sec,{attributes:true,attributeFilter:['class']});
-    sync();
-  }catch(e){}
-})();
 
 // ════════════════════════════════════════════
 // เลือกพยางค์เองได้อิสระ (คำหลายพยางค์) — Lin 2026-07-02

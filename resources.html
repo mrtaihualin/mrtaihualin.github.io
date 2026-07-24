@@ -398,14 +398,6 @@ details[open] > .p4-acc-sum .p4-acc-chev { transform: rotate(180deg); }
 
 <!-- LINE QR Modal -->
 <!-- Floating QR -->
-<div class="floating-qr" id="floating-qr">
-  <button class="floating-qr-close" onclick="hideFLoatingQr()" aria-label="關閉">✕</button>
-  <button class="floating-qr-book" onclick="openModal('modal-line-qr')">
-    <span class="fqb-icon">📅</span>
-    <span class="fqb-text"><b>預約免費體驗課</b><small>30 分鐘・線上一對一</small></span>
-  </button>
-</div>
-
 <!-- Share Popup -->
 <div id="share-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;" onclick="closeSharePopup()"></div>
 <div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(200,151,58,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
@@ -943,7 +935,7 @@ var P4 = (function () {
 document.addEventListener('DOMContentLoaded', function () { P4.init(); });
 </script>
 
-<script src="js/core/shared.min.js?v=4"></script>
+<script src="js/core/shared.min.js?v=5"></script>
 <!-- ปุ่มลอย "學習筆記" — จดโน้ตขณะดูคลิป + เซฟอัตโนมัติ + ดาวน์โหลด PDF (ลายน้ำ) · Lin 2026-07-03 -->
 <script defer src="js/content/notes-tool.js?v=20260716"></script>
 </body>

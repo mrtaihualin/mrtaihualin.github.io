@@ -24,7 +24,33 @@
   window.READING_AUTH = API;
 
   function slot() { return document.getElementById('rg-login-slot'); }
-  function isInApp() { return /FBAN|FBAV|Instagram|Line|Messenger/i.test(navigator.userAgent || ''); }
+  // v7 (LIN 2026-07-25): แยกประเภท "เปิดจากในแอปไหน" ให้ละเอียดขึ้น (เดิมรู้แค่ true/false)
+  //   ใช้เช็คได้จริงว่าล็อกอินพังเพราะเปิดจากแอปไหน ไม่ใช่แค่ซ่อนปุ่ม Google เฉยๆ
+  function inAppChannel() {
+    var ua = navigator.userAgent || '';
+    if (/\bLine\//i.test(ua)) return 'line';
+    if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'fb';
+    if (/Instagram/i.test(ua)) return 'ig';
+    if (/Messenger/i.test(ua)) return 'messenger';
+    return null;
+  }
+  function isInApp() { return !!inAppChannel(); }
+  function deviceType() { return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '') ? 'mobile' : 'desktop'; }
+  // ยิง GA4 เช็คว่าล็อกอินมาจากช่องทางไหน + สำเร็จ/พังไหม (LIN สั่ง 2026-07-25)
+  // เห็นปัญหาแต่ละช่องทางได้จริง เช่น "เข้าจากในแอป LINE กด Google แล้วพัง"
+  function trackLogin(evt, provider, extra) {
+    try {
+      if (typeof gtag !== 'function') return;
+      var params = { category: window.GA_CATEGORY || 'unknown', provider: provider || 'unknown',
+        channel: inAppChannel() || 'browser', device: deviceType(), source_page: location.pathname };
+      if (extra) { for (var k in extra) { if (extra.hasOwnProperty(k)) params[k] = extra[k]; } }
+      gtag('event', evt, params);
+    } catch (e) {}
+  }
+  // จำไว้ว่า "กำลังพยายามล็อกอินด้วยอะไรอยู่" ข้ามการ redirect ของ OAuth ได้ (sessionStorage ทนต่อการรีโหลดหน้า)
+  // ใช้ตัดสินใจตอน setUser() ว่า user คนนี้เพิ่ง "ล็อกอินสำเร็จจริง" (ไม่ใช่แค่โหลดหน้าแล้วมี session เดิมอยู่)
+  function markPendingLogin(provider) { try { sessionStorage.setItem('rg_login_pending', provider); } catch (e) {} }
+  function takePendingLogin() { try { var p = sessionStorage.getItem('rg_login_pending'); sessionStorage.removeItem('rg_login_pending'); return p; } catch (e) { return null; } }
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   // เกมของหน้าปัจจุบัน — ใช้ตัดสินใจว่า 🏆 ต้องพาไปกระดานไหน + บันทึกคะแนนเป็นเกมอะไร
@@ -139,7 +165,15 @@
     if (ci) ci.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') verifyCode(ci.value); });
     var rBtn = rgGate.querySelector('#rg-resend');
     if (rBtn) rBtn.onclick = function () { if (otpCooldown <= 0) startOtp(otpEmail || se.value, true); };
-    if (!inApp) { var g = rgGate.querySelector('#rg-g'); if (g) g.onclick = function () { try { sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href } }); } catch (e) {} }; }
+    if (!inApp) { var g = rgGate.querySelector('#rg-g'); if (g) g.onclick = function () {
+      trackLogin('login_attempt', 'google');
+      markPendingLogin('google');
+      try {
+        sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href } }).then(function (res) {
+          if (res && res.error) { trackLogin('login_fail', 'google', { reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); }
+        });
+      } catch (e) { trackLogin('login_fail', 'google', { reason: String(e && e.message || e).slice(0, 90) }); takePendingLogin(); }
+    }; }
   }
   function setMsg(msg, isErr) {
     var el = rgGate && rgGate.querySelector('#rg-msg');
@@ -155,7 +189,7 @@
     setMsg('寄送中…⏳', false);
     sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } })
       .then(function (res) {
-        if (res.error) { setMsg('寄送失敗：' + res.error.message, true); return; }
+        if (res.error) { setMsg('寄送失敗：' + res.error.message, true); trackLogin('login_fail', 'email', { step: 'send', reason: String(res.error.message || '').slice(0, 90) }); return; }
         var step2 = rgGate.querySelector('#rg-step2'); if (step2) step2.style.display = 'block';
         var sBtn = rgGate.querySelector('#rg-send'); if (sBtn) sBtn.style.display = 'none';
         setMsg('驗證碼已寄到 ' + esc(email) + '，請查看信箱（含垃圾信匣）', false);
@@ -167,9 +201,11 @@
     code = (code || '').trim();
     if (!/^\d{6,10}$/.test(code)) { setMsg('請輸入信中的驗證碼（純數字）', true); return; }
     setMsg('驗證中…⏳', false);
+    trackLogin('login_attempt', 'email', { step: 'verify' });
+    markPendingLogin('email');
     sb.auth.verifyOtp({ email: otpEmail, token: code, type: 'email' })
       .then(function (res) {
-        if (res.error) { setMsg('驗證碼錯誤或已過期，請重新輸入', true); return; }
+        if (res.error) { setMsg('驗證碼錯誤或已過期，請重新輸入', true); trackLogin('login_fail', 'email', { step: 'verify', reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); return; }
         // สำเร็จ → onAuthStateChange → setUser → closeGate ปิดให้เอง
       });
   }
@@ -202,6 +238,12 @@
     var uid = (API.user && API.user.id) || null;
     if (uid === lastAdaptiveUserId) return; // user เดิม (หรือยังไม่ล็อกอินเหมือนเดิม) — ไม่ต้องยิงซ้ำ
     lastAdaptiveUserId = uid;
+    // เพิ่งล็อกอินสำเร็จในแท็บนี้จริงๆ (ไม่ใช่แค่โหลดหน้าแล้วเจอ session เดิม) → ยิง login_success
+    // ทน redirect ของ Google OAuth ได้ (markPendingLogin ใช้ sessionStorage ไม่ใช่ตัวแปรในหน่วยความจำ)
+    if (API.user) {
+      var pendingProvider = takePendingLogin();
+      if (pendingProvider) trackLogin('login_success', pendingProvider);
+    }
     if (API.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
       try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}
     }

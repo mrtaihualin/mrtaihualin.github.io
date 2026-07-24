@@ -1457,12 +1457,17 @@ var BADGE_STAGES=[
   {min:30,emoji:'👑',label:'泰語之王！'}
 ];
 function badgeEmoji(n){var e='🌱';BADGE_STAGES.forEach(function(s){if(n>=s.min)e=s.emoji;});return e;}
+// Lin 2026-07-25: ⭐ ปุ่มดาว แยกออกจากปุ่ม勳章(openBadge) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์
+function openStar(){
+  var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
+  document.getElementById('star-tree-area').textContent='⭐ '+s;
+  document.getElementById('star-tree-caption').textContent='累積星星（全部遊戲共用）';
+  document.getElementById('star-modal').classList.add('show');
+}
 function openBadge(){
   // ⭐ แบดจ์พันธุ์ข้าว ตามดาวรวม (รวมกับเกมเสียง) — Lin 2026-06-27
   var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
   var badges=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starBadges:[];
-  document.getElementById('tree-area').textContent='⭐ '+s;
-  document.getElementById('tree-caption').textContent='累積星星（全部遊戲共用）';
   var html='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px;">';
   badges.forEach(function(b){
     var got=s>=b.at;
@@ -1998,6 +2003,8 @@ document.addEventListener('keydown',function(e){
   if(document.getElementById('rg-ask-ov'))return;
   var _bm=document.getElementById('badge-modal');
   if(_bm && _bm.classList.contains('show'))return;
+  var _sm=document.getElementById('star-modal');
+  if(_sm && _sm.classList.contains('show'))return;
   var nextBtn=document.getElementById('btn-next');
   if(nextBtn && nextBtn.style.display!=='none' && nextBtn.offsetParent!==null){ nextBtn.click(); e.preventDefault(); return; }
   var checkBtn=document.getElementById('btn-check');
@@ -2015,6 +2022,8 @@ document.addEventListener('keydown',function(e){
   if(document.getElementById('rg-ask-ov'))return;
   var _bm=document.getElementById('badge-modal');
   if(_bm && _bm.classList.contains('show'))return;
+  var _sm=document.getElementById('star-modal');
+  if(_sm && _sm.classList.contains('show'))return;
   var sec=document.getElementById('bonus-section');
   if(!sec || !sec.classList.contains('show'))return;
   var box=document.getElementById('bonus-opts');

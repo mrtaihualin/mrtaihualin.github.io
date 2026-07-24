@@ -231,11 +231,16 @@
     {min:30,emoji:'👑',label:'泰語之王！'}
   ];
   function badgeEmoji(n){var e='🌱';BADGE_STAGES.forEach(function(s){if(n>=s.min)e=s.emoji;});return e;}
+  // Lin 2026-07-25: ⭐ ปุ่มดาว แยกออกจากปุ่ม勳章(openBadge) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์
+  window.openStar = function(){
+    var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
+    document.getElementById('star-tree-area').textContent='⭐ '+s;
+    document.getElementById('star-tree-caption').textContent='累積星星（全部遊戲共用）';
+    document.getElementById('star-modal').classList.add('show');
+  };
   window.openBadge = function(){
     var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
     var badges=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starBadges:[];
-    document.getElementById('tree-area').textContent='⭐ '+s;
-    document.getElementById('tree-caption').textContent='累積星星（全部遊戲共用）';
     var html='<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px;">';
     badges.forEach(function(b){
       var got=s>=b.at;

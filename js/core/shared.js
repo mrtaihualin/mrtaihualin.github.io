@@ -897,16 +897,6 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     setTimeout(function(){ if(el){ el.style.opacity='0'; el.style.transform='translate(-50%,-50%) scale(0.85)'; setTimeout(function(){if(el)el.remove();},200); } }, 4000);
   };
 
-  // Floating QR scroll logic
-  var _qrDismissed = false;
-  function hideFLoatingQr() { _qrDismissed = true; var el = document.getElementById('floating-qr'); if(el) el.classList.remove('visible'); }
-  window.addEventListener('scroll', function() {
-    if(_qrDismissed) return;
-    var el = document.getElementById('floating-qr');
-    if(!el) return;
-    if(window.scrollY > 200) { el.classList.add('visible'); } else { el.classList.remove('visible'); }
-  }, {passive:true});
-
 document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><a class="avail-cta" href="javascript:void(0)" onclick="openModal(\'modal-line-qr\')">立即預約</a></div></div>'; });
 
 // ===== 📬 Contact / LINE QR / Social Modal Injection =====
@@ -1545,9 +1535,10 @@ window.deleteFBComment = function(postId, idx) {
 //   ยิง article_scroll_depth (25/50/75/100%) + article_time_on_page (15/30/60/120 วิ)
 // ════════════════════════════════════════════════════════════════════
 (function(){
-  var ARTICLE_PAGES = ['blog.html','blog/tone-guide.html','content.html','resources.html'];
+  var ARTICLE_PAGES = ['blog.html','content.html','resources.html']; // หน้าฮับ/หน้ารวม — บทความจริงทุกไฟล์ใต้ /blog/ เช็คแยกด้านล่าง (ไม่ต้องเพิ่มชื่อไฟล์เองทุกสัปดาห์)
   var page = (location.pathname.split('/').pop() || 'index.html');
-  if (ARTICLE_PAGES.indexOf(page) === -1) return;
+  var isArticlePath = /^\/blog\//.test(location.pathname); // ครอบคลุมบทความใหม่ทุกไฟล์ใต้ /blog/ อัตโนมัติ (path ต้องขึ้นต้นด้วย /blog/)
+  if (!isArticlePath && ARTICLE_PAGES.indexOf(page) === -1) return;
 
   var startTime = Date.now();
   var scrollFlags = {}, timeFlags = {};
@@ -1716,50 +1707,19 @@ window.deleteFBComment = function(postId, idx) {
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ (มี #game-switcher) — หน้าอื่นในเว็บไม่กระทบ
 
       // Lin 2026-07-12: ห่อชื่อเกมด้วย .gs-lbl (ให้จัดสไตล์ได้) — โชว์ชื่อเสมอทั้งคอม+มือถือ (เลิกโหมดไอคอนล้วนแล้ว)
+      // Lin 2026-07-25: เปลี่ยนไอคอนนำหน้าให้เป็นวงกลมไล่สีทอง (.ico) ให้หน้าตาเหมือนการ์ด .grw-item ของเมนู 🪧
       try {
         gs.querySelectorAll('.gs-tab').forEach(function (t) {
           if (t.querySelector('.gs-lbl')) return;
           var raw = (t.textContent || '').trim();
           var sp = raw.indexOf(' ');
           if (sp > 0) {
-            t.innerHTML = raw.slice(0, sp) + '<span class="gs-lbl"> ' + raw.slice(sp + 1) + '</span>';
+            t.innerHTML = '<span class="ico">' + raw.slice(0, sp) + '</span><span class="gs-lbl">' + raw.slice(sp + 1) + '</span>';
           }
         });
       } catch (e) {}
       // ดรอปดาวน์แนวตั้งไม่ใช้เส้นคั่นแนวนอนเดิม → เอาออก
       try { gs.querySelectorAll('.gs-divider').forEach(function (d) { d.remove(); }); } catch (e) {}
-
-      // ── ✍️ สลับฟอนต์ — ย้ายเข้ามาอยู่ในเมนู 🎮 เดียวกันแทนปุ่มแยกในแถวเครื่องมือ — Lin 2026-07-24 ──
-      // เรียกฟังก์ชันเดิมของแต่ละเกม (rgToggleFont ของ word-order/typing/reading หรือ TF.toggleFont ของเกมเสียง) แค่ย้ายที่ปุ่มเฉยๆ ไม่แตะ logic เดิม
-      try {
-        function callFontToggle() {
-          if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
-          if (window.TF && typeof window.TF.toggleFont === 'function') { window.TF.toggleFont(); return true; }
-          return false;
-        }
-        if (typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function')) {
-          // rg-modern-font = word-order/typing/reading, tf-modern-font = ทำนอง/เกมเสียง — เช็คทั้งคู่ เพราะแต่ละเกมตั้งชื่อ class เองคนละอัน
-          function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
-          var fontOn = isFontOn();
-          var fontDivider = document.createElement('div');
-          fontDivider.className = 'gs-divider-toggle';
-          var fontRow = document.createElement('button');
-          fontRow.type = 'button';
-          fontRow.className = 'gs-tab gs-toggle-row';
-          function renderFontRow() {
-            fontRow.innerHTML = (fontOn ? '✅' : '✍️') + '<span class="gs-lbl"> ' + (fontOn ? '換回標準字體' : '換現代字體') + '</span>';
-          }
-          renderFontRow();
-          fontRow.onclick = function (e) {
-            e.stopPropagation();
-            if (!callFontToggle()) return;
-            fontOn = isFontOn();
-            renderFontRow();
-          };
-          gs.appendChild(fontDivider);
-          gs.appendChild(fontRow);
-        }
-      } catch (e) {}
 
       var KEY = 'rg_fake_fullscreen';
       var on = false;
@@ -1778,22 +1738,18 @@ window.deleteFBComment = function(postId, idx) {
         // ── ดรอปดาวน์เมนูเกม (แนวตั้ง) — ซ่อนไว้ กดปุ่ม 🎮 ถึงเปิด · ทับสไตล์แถบเดิมของทุกเกมด้วย !important ──
         '#game-switcher{position:static !important;transform:none !important;left:auto !important;right:auto !important;bottom:auto !important;top:auto !important;max-width:none !important;width:auto !important;flex-direction:column !important;align-items:stretch !important;gap:4px !important;background:rgba(255,255,255,0.98) !important;border:1.5px solid #d4b87a !important;border-radius:14px !important;box-shadow:0 6px 24px rgba(90,62,10,0.22) !important;overflow-y:auto !important;overflow-x:hidden !important;max-height:60vh;padding:6px !important;display:none !important;min-width:150px;backdrop-filter:blur(8px);}' +
         '#game-switcher.gs-open{display:flex !important;}' +
-        // Lin 2026-07-24: เพิ่ม min-height ให้กดง่ายขึ้น (นิ้วโป้งกดพลาดปุ่มติดกันได้) + เส้นคั่นบางๆ ระหว่างแต่ละปุ่ม กันรู้สึกว่าซ้อนกัน
-        '#game-switcher .gs-tab{padding:11px 13px !important;min-height:22px;border-radius:9px;text-align:left;white-space:nowrap;font-size:13.5px;color:#5a3e10;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(212,184,122,0.35);}' +
-        '#game-switcher .gs-tab:last-child{border-bottom:none;}' +
+        // Lin 2026-07-25: ปรับหน้าตาแถวเมนูให้เหมือนการ์ด .grw-item ของเมนู 🪧 (ไอคอนในวงกลมไล่สีทอง + ป้ายชื่อ) แทนแถวขีดเส้นใต้แบบเดิม
+        '#game-switcher .gs-tab{display:flex !important;align-items:center;gap:8px;padding:8px 12px !important;min-height:22px;border-radius:10px;text-align:left;white-space:nowrap;font-size:13px;color:#5a3e0a;text-decoration:none;font-weight:700;}' +
         '#game-switcher .gs-tab.gs-active{background:rgba(200,151,58,0.18);color:#8b6310;}' +
         '#game-switcher .gs-tab:hover{background:rgba(139,99,16,0.10);}' +
         '#game-switcher .gs-lbl{display:inline !important;}' +
-        // ── ✍️ แถวสลับฟอนต์ ในดรอปดาวน์เดียวกัน — Lin 2026-07-24 ──
-        '#game-switcher .gs-toggle-row{background:none !important;border:none !important;width:100%;font-family:inherit;cursor:pointer;}' +
-        '.gs-divider-toggle{height:1px;background:#e4d3ac;margin:4px 2px;flex-shrink:0;}' +
+        '#game-switcher .gs-tab .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}' +
         // ── โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม (ชุดปุ่มลอย .rg-ctl-wrap ไม่โดนซ่อน = เมนู+เต็มจอกดได้ตลอด) ──
         'body.rg-fake-fullscreen .site-nav,' +
         'body.rg-fake-fullscreen #bottom-nav,' +
         'body.rg-fake-fullscreen .avail-band,' +
         'body.rg-fake-fullscreen .page-strip,' +
         'body.rg-fake-fullscreen .page-header,' +
-        'body.rg-fake-fullscreen .floating-qr,' +
         'body.rg-fake-fullscreen #vault-hero,' +
         'body.rg-fake-fullscreen footer' + // Lin 2026-07-14: ลืมใส่ footer ไว้ในลิสต์ซ่อน → ตอนเต็มจอเหลือแถบ footer ค้างอยู่ล่างสุด (ทั้งคอม+มือถือ) แก้ที่นี่ทีเดียวครบทุกเกม
         '{display:none !important;}' +
@@ -1857,12 +1813,15 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ===================================================================
-// 🈶 ปุ่มเปิด/ปิดคำแปลจีน (ทุกหน้าเกม) — Lin 2026-07-13
+// 🍙 ปุ่มเปิด/ปิดคำแปลจีน + สลับฟอนต์ (ทุกหน้าเกม) — Lin 2026-07-13, เปลี่ยนเป็นดรอปดาวน์ 2026-07-25
 // ค่า default: จำไว้ด้วย localStorage (คีย์ games_hide_zh — แยกจาก textbook/controls-ui.js โดยตั้งใจ ตามที่ Lin เลือก)
 // ระหว่างเล่น: คลิกที่กล่องคำแปลแต่ละกล่อง เปิด/ปิดเฉพาะจุดนั้นได้ (ไม่กระทบค่า default)
 // ทำงานเฉพาะหน้าเกม (มี #game-switcher) เหมือนปุ่มเต็มจอด้านบน — หน้าอื่นในเว็บไม่กระทบ
 // ⚠️ กล่องที่ "ซ้อนอยู่ในปุ่ม/เมนูที่มี onclick อื่นของเกม" (เช่น .ozh/.szh ในเกมเลโก้, .tf-level-sub ในเมนูเลือกประโยค高級)
 //    เปิด/ปิดได้เฉพาะจากปุ่ม default เท่านั้น — ไม่ผูกคลิกรายจุดให้ เพราะจะไปชนกับฟังก์ชันเลือกคำ/เปิดเมนูของเกมเอง
+// Lin 2026-07-25: ปุ่ม 🍙/🌾 เปลี่ยนจาก "กดแล้วสลับทันที" เป็นดรอปดาวน์ (หน้าตาเหมือนเมนู 🪧) — ย้ายแถว "換現代字體/換回標準字體"
+// จากเมนู 🎮 มาไว้ในดรอปดาวน์นี้แทน (ตามที่ Lin สั่ง) — ยกเว้นหน้าเกมเรียงลำดับคำ (word-order) ที่ไม่มีปุ่ม 🍙 (บั๊กเดิม: กล่องคำแปลไม่ตอบสนอง)
+//    → หน้านั้นคงปุ่มสลับฟอนต์ไว้ในเมนู 🎮 เหมือนเดิม กันฟีเจอร์หายไปเฉยๆ
 // ===================================================================
 (function () {
   function ready(fn) {
@@ -1874,8 +1833,41 @@ window.deleteFBComment = function(postId, idx) {
       var gs = document.getElementById('game-switcher');
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ
 
-      // Lin 2026-07-16: ปุ่ม 🍙/🌾 กดแล้วไม่มีผลในเกมเรียงคำ (กล่องคำแปล .zh-hint#wo-zh ไม่ได้อยู่ในลิสต์ ZH_ALL) → ลบปุ่มออกจากหน้านี้ไปก่อน
-      if ((location.pathname || '').toLowerCase().indexOf('word-order') > -1) return;
+      function callFontToggle() {
+        if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
+        if (window.TF && typeof window.TF.toggleFont === 'function') { window.TF.toggleFont(); return true; }
+        return false;
+      }
+      // rg-modern-font = word-order/typing/reading, tf-modern-font = ทำนอง/เกมเสียง — เช็คทั้งคู่ เพราะแต่ละเกมตั้งชื่อ class เองคนละอัน
+      function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
+      var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
+
+      var isWordOrder = (location.pathname || '').toLowerCase().indexOf('word-order') > -1;
+
+      // Lin 2026-07-16: ปุ่ม 🍙/🌾 กดแล้วไม่มีผลในเกมเรียงคำ (กล่องคำแปล .zh-hint#wo-zh ไม่ได้อยู่ในลิสต์ ZH_ALL) → ไม่มีปุ่ม 🍙 ในหน้านี้
+      // แต่ยังต้องกดสลับฟอนต์ได้ → ใส่แถวนี้กลับเข้าเมนู 🎮 เดิมเฉพาะหน้านี้เท่านั้น
+      if (isWordOrder) {
+        try {
+          if (hasFontToggle) {
+            var fontOnWO = isFontOn();
+            var fontRowWO = document.createElement('button');
+            fontRowWO.type = 'button';
+            fontRowWO.className = 'gs-tab';
+            function renderFontRowWO() {
+              fontRowWO.innerHTML = '<span class="ico">' + (fontOnWO ? '✅' : '✍️') + '</span><span class="gs-lbl">' + (fontOnWO ? '換回標準字體' : '換現代字體') + '</span>';
+            }
+            renderFontRowWO();
+            fontRowWO.onclick = function (e) {
+              e.stopPropagation();
+              if (!callFontToggle()) return;
+              fontOnWO = isFontOn();
+              renderFontRowWO();
+            };
+            gs.appendChild(fontRowWO);
+          }
+        } catch (e) {}
+        return;
+      }
 
       var KEY = 'games_hide_zh';
       var hideOn = false;
@@ -1899,7 +1891,10 @@ window.deleteFBComment = function(postId, idx) {
         ZH_CLICKABLE.join(', ') + ' { cursor:pointer; }' +
         // ปุ่ม 🍙/🌾 แบบ "ในแถวปุ่มใต้คำศัพท์" (มี #zh-toggle-slot ในหน้า) — หน้าตากลมขาวเหมือนปุ่มเซฟ/ลำโพง — Lin 2026-07-16
         '.rg-ctl-fab.zh-fab-inline{width:34px;height:34px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);box-shadow:none;font-size:17px;}' +
-        '.rg-ctl-fab.zh-fab-inline:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}';
+        '.rg-ctl-fab.zh-fab-inline:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}' +
+        // Lin 2026-07-25: โหมด "แถวปุ่มใต้คำศัพท์" (#zh-toggle-slot) ดรอปดาวน์ต้องลอย (absolute) เหนือปุ่ม ไม่งั้นดันแถวปุ่มอื่นเบี้ยว
+        '.zh-fab-wrap{position:relative;display:inline-flex;}' +
+        '.zh-fab-wrap .grw-menu{position:absolute;bottom:calc(100% + 8px);right:0;margin-bottom:0;z-index:100001;min-width:180px;}';
       document.head.appendChild(style);
 
       function applyGlobal() {
@@ -1910,28 +1905,66 @@ window.deleteFBComment = function(postId, idx) {
         });
         try { localStorage.setItem(KEY, hideOn ? '1' : '0'); } catch (e) {}
         renderFab();
+        renderMenu();
       }
+
+      var fontOn = isFontOn();
 
       var fab = document.createElement('button');
       fab.type = 'button';
       fab.className = 'rg-ctl-fab';
+      fab.setAttribute('aria-label', '翻譯 / 字體設定');
+      fab.title = '翻譯 / 字體設定';
       // ไอคอน: ผูกธีมน้องมีนา (มีนา=ข้าว) — 🍙 ข้าวปั้นพร้อมกิน = คำแปลโชว์อยู่ · 🌾 รวงข้าวยังไม่สี = คำแปลซ่อนอยู่ — Lin เลือก 2026-07-13
-      function renderFab() {
-        fab.textContent = hideOn ? '🌾' : '🍙';
-        fab.title = hideOn ? '目前：翻譯已關閉（點擊開啟）' : '目前：翻譯已開啟（點擊關閉）';
-        fab.setAttribute('aria-label', fab.title);
+      function renderFab() { fab.textContent = hideOn ? '🌾' : '🍙'; }
+      renderFab();
+
+      // ── ดรอปดาวน์ (หน้าตาเหมือน .grw-menu ของปุ่ม 🪧) — แถวคำแปล + แถวสลับฟอนต์ (ถ้าหน้านั้นมีฟังก์ชันสลับฟอนต์) ──
+      var menu = document.createElement('div');
+      menu.className = 'grw-menu';
+      function renderMenu() {
+        var zhIco = hideOn ? '🌾' : '🍙';
+        var zhLbl = hideOn ? '翻譯已關閉（點擊開啟）' : '翻譯已開啟（點擊關閉）';
+        var html = '<div class="grw-item" data-act="zh"><span class="ico">' + zhIco + '</span>' + zhLbl + '</div>';
+        if (hasFontToggle) {
+          html += '<div class="grw-item" data-act="font"><span class="ico">' + (fontOn ? '✅' : '✍️') + '</span>' + (fontOn ? '換回標準字體' : '換現代字體') + '</div>';
+        }
+        menu.innerHTML = html;
       }
-      fab.onclick = function () { hideOn = !hideOn; applyGlobal(); };
+      renderMenu();
+      menu.addEventListener('click', function (e) {
+        var it = e.target.closest('.grw-item');
+        if (!it) return;
+        if (it.dataset.act === 'zh') { hideOn = !hideOn; applyGlobal(); }
+        else if (it.dataset.act === 'font') { if (callFontToggle()) { fontOn = isFontOn(); renderMenu(); } }
+      });
+
+      // ลงทะเบียนกับ GamePanels กลาง — เปิดตัวนี้ต้องปิดกล่องอื่น (🎮/🪧) ที่เปิดค้างไว้ และกล่องอื่นเปิดก็ต้องปิดตัวนี้ได้ด้วย
+      var zhPanel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: function () { menu.classList.remove('gs-open'); } };
+      if (window.GamePanels) window.GamePanels.add(zhPanel);
+      fab.onclick = function (e) {
+        e.stopPropagation();
+        var opening = !menu.classList.contains('gs-open');
+        if (opening && window.GamePanels) window.GamePanels.closeOthers(zhPanel);
+        menu.classList.toggle('gs-open');
+      };
+      document.addEventListener('click', function (e) {
+        if (e.target !== fab && !fab.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
+      });
 
       // Lin 2026-07-16: ถ้าหน้านั้นมี #zh-toggle-slot (แถวปุ่มใต้คำศัพท์ ในเกมเสียง/เกมอ่าน/เกมพิมพ์) → ย้ายปุ่มไปอยู่ในแถวแทนมุมขวาล่าง
       var inlineSlot = document.getElementById('zh-toggle-slot');
       if (inlineSlot) {
         fab.classList.add('zh-fab-inline');
-        inlineSlot.appendChild(fab);
+        var fabWrap = document.createElement('span');
+        fabWrap.className = 'zh-fab-wrap';
+        fabWrap.appendChild(fab);
+        fabWrap.appendChild(menu);
+        inlineSlot.appendChild(fabWrap);
       } else {
         // ต่อเข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap ของปุ่มเต็มจอด้านบน สร้างไปแล้วก่อนหน้านี้ในไฟล์เดียวกัน)
         var wrap2 = document.querySelector('.rg-ctl-wrap');
-        if (wrap2) { wrap2.appendChild(fab); } else { document.body.appendChild(fab); }
+        if (wrap2) { wrap2.appendChild(menu); wrap2.appendChild(fab); } else { document.body.appendChild(menu); document.body.appendChild(fab); }
       }
       applyGlobal();
 
@@ -1962,6 +1995,20 @@ window.deleteFBComment = function(postId, idx) {
     try {
       if (!document.getElementById('game-switcher')) return; // เอาแค่หน้าเกมจริงๆ เหมือนชุดปุ่มลอยเดิม
 
+      // Lin 2026-07-25 (hardening): .grw-menu/.grw-item/.ico เป็นสไตล์กลางที่ปุ่ม 🍙 ก็ใช้ร่วมด้วย
+      // ต้อง inject ก่อนเช็ค GAME_ID (ซึ่งอาจ return ก่อนถึงบรรทัดนี้) กันปุ่ม 🍙 ไม่มีสไตล์ถ้าเจอหน้าเกมที่ยังไม่รู้จัก
+      if (!document.getElementById('grw-shared-style')) {
+        var baseStyle = document.createElement('style');
+        baseStyle.id = 'grw-shared-style';
+        baseStyle.textContent =
+          '.grw-menu{display:none;flex-direction:column;gap:6px;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.25);border-radius:14px;padding:8px;box-shadow:0 6px 24px rgba(90,62,10,0.22);margin-bottom:4px;}' +
+          '.grw-menu.gs-open{display:flex;}' +
+          '.grw-menu .grw-item{display:flex;align-items:center;gap:8px;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}' +
+          '.grw-menu .grw-item:hover{background:rgba(139,99,16,0.10);}' +
+          '.grw-menu .grw-item .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}';
+        document.head.appendChild(baseStyle);
+      }
+
       var path = (location.pathname || '').toLowerCase();
       var GAME_ID = null;
       if (path.indexOf('typing-game') > -1) GAME_ID = 'typing';
@@ -1975,11 +2022,6 @@ window.deleteFBComment = function(postId, idx) {
 
       var style = document.createElement('style');
       style.textContent =
-        '.grw-menu{display:none;flex-direction:column;gap:6px;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.25);border-radius:14px;padding:8px;box-shadow:0 6px 24px rgba(90,62,10,0.22);margin-bottom:4px;}' +
-        '.grw-menu.gs-open{display:flex;}' +
-        '.grw-menu .grw-item{display:flex;align-items:center;gap:8px;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}' +
-        '.grw-menu .grw-item:hover{background:rgba(139,99,16,0.10);}' +
-        '.grw-menu .grw-item .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}' +
         '.grw-fab{position:relative;}' +
         '#grw-pts{position:absolute;top:-6px;left:-8px;background:#FAF4E8;border:1.5px solid #C8973A;color:#8B6310;font-size:10px;font-weight:800;border-radius:999px;padding:2px 6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);}';
       document.head.appendChild(style);

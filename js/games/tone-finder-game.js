@@ -4245,6 +4245,25 @@ var TF = {
     startSetSession(words);
   },
   // Lin 2026-07-04: ตัด selectCategory/selectSet/openSpecial ทิ้งแล้ว — หน้าเลือกหมวด/ชุด + 特訓區 ไม่ใช้แล้ว
+  // ⭐ Lin 2026-07-25: ปุ่มดาว แยกออกจากปุ่ม勳章(showBadges) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์
+  showStars: function() {
+    var old = document.getElementById('tf-star-ov');
+    if (old) old.remove();
+    var s = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0;
+    var div = document.createElement('div');
+    div.id = 'tf-star-ov';
+    div.className = 'tf-tip-overlay';
+    div.onclick = function(e){ if (e.target === div) div.remove(); };
+    div.innerHTML = '<div class="tf-tip-box" style="max-width:340px;text-align:center;">' +
+      '<div class="tf-tip-header"><span class="tf-tip-header-title" style="color:#000;">⭐ 累積星星</span>' +
+      '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-star-ov\').remove()">✕</button></div>' +
+      '<div style="padding:22px;">' +
+        '<div style="font-size:56px;line-height:1;margin-bottom:8px;">⭐ ' + s + '</div>' +
+        '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:#a08050;">累積星星（全部遊戲共用）</div>' +
+      '</div>' +
+    '</div>';
+    document.body.appendChild(div);
+  },
   // 🎖️ เปิดสมุดสะสมแบดจ์
   showBadges: function() {
     var old = document.getElementById('tf-badges-ov');
