@@ -2483,40 +2483,9 @@ function computeTone(word) {
   return null;
 }
 
-// ⚠️ 暫時全站靜音（依 LIN 指示 2026-06-18）：先不提供語音。
-// 之後要恢復發音時，把下面的 return 拿掉、還原原本的 Web Speech API 版本即可。
-var TF_MUTED = true;
-function speakThai(text) {
-  if (TF_MUTED) return;   // 靜音模式：點擊不做任何事，也不報錯
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) { showComingSoon(); return; }
-  try {
-    window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(String(text));
-    u.lang = 'th-TH';
-    u.rate = 0.75;
-    u.volume = 1;
-    u.pitch = 1;
-    var voices = window.speechSynthesis.getVoices() || [];
-    for (var i = 0; i < voices.length; i++) {
-      if (/^th/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
-    }
-    window.speechSynthesis.speak(u);
-  } catch (e) { showComingSoon(); }
-}
-// TTS สำหรับ 字母練習區 — ไม่สนใจ TF_MUTED (fallback ตอนไม่มีไฟล์เสียง)
-function speakThaiForce(text) {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-  try {
-    window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(String(text));
-    u.lang = 'th-TH'; u.rate = 0.75; u.volume = 1; u.pitch = 1;
-    var voices = window.speechSynthesis.getVoices() || [];
-    for (var i = 0; i < voices.length; i++) {
-      if (/^th/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
-    }
-    window.speechSynthesis.speak(u);
-  } catch(e) {}
-}
+// Lin 2026-07-25: ลบระบบเสียงสังเคราะห์ (Web Speech API) ออกถาวรตามที่ Lin สั่ง
+//   เดิมมี TF_MUTED/speakThai/speakThaiForce + ปุ่ม 🔊 聽發音 / 🔊 點擊聽發音 — ทั้งหมดถูกปิดเสียง+ซ่อนด้วย CSS มาตั้งแต่ 2026-06-18 อยู่แล้ว (ไม่มีใครเห็น/ใช้ได้)
+//   เสียงที่ใช้จริงตอนนี้ = ไฟล์ TTS จริง ผ่าน WordAudio (ปุ่ม 🔊 กลมข้างคำในหน้าเฉลย) + TF_FLASH_AUDIO ของ 字母練習區
 
 function showComingSoon() {
   var old = document.getElementById('tf-soon-toast');
@@ -3510,7 +3479,6 @@ function stepPreResultConfirm() {
   }).join('');
 
   return '<div class="prc-page">'+
-    '<button class="prc-audio-btn" onclick="speakThai(\''+word.replace(/'/g,"\\'")+'\')" type="button">🔊 點擊聽發音</button>'+
     '<div class="sg-divider"></div>'+
     '<div class="prc-question">分析完之後，你還是覺得是同一個聲調嗎？</div>'+
     (guessHintText ? '<div class="prc-guess-hint">'+guessHintText+'</div>' : '')+
@@ -3734,7 +3702,6 @@ function stepResult() {
 
   return '<div class="result-v2">'+
     '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+vaultBtnHtml+'</div>'+
-    '<button class="result-v2-speak-btn" onclick="speakThai(\''+S.word+'\')">🔊 聽發音</button>'+
 
     '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+
       '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:10px;letter-spacing:3px;color:'+t.color+'99;margin-bottom:8px;text-transform:uppercase;">聲調分析結果</div>'+

@@ -867,8 +867,7 @@
   .tf-session-result-badge.wrong   { color:#cc4444; background:rgba(204,68,68,0.1); }
   .tf-session-correction { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#666; margin-bottom:10px; }
   .tf-session-answer-word { font-family:'Sarabun',sans-serif; font-size:48px; color:#5a3e0a; margin:8px 0 4px; }
-  /* ⚠️ 暫時靜音（LIN 2026-06-18）：隱藏所有發音按鈕。恢復語音時刪掉這條規則即可。 */
-  .tf-speak-word-btn, .tf-speak-btn, .result-v2-speak-btn, .prc-audio-btn { display:none !important; }
+  /* Lin 2026-07-25: ลบกฎซ่อนปุ่มเสียง + ตัวปุ่มเสียงสังเคราะห์ทั้งหมดออกถาวรแล้ว (ไม่ต้องซ่อนอะไรอีก) */
 
   /* ── แถบเครื่องมือในเกม (สลับฟอนต์ / ถามคำถาม) ── */
   .tf-tools-row { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:14px; flex-wrap:wrap; }
@@ -911,8 +910,6 @@
   .tf-ask-send:disabled { opacity:0.5; cursor:default; }
   .tf-ask-cancel { background:none; border:1.5px solid rgba(139,99,16,0.30); border-radius:9px; padding:9px 16px; font-size:14px; cursor:pointer; color:#7a5510; }
   .tf-ask-ok { text-align:center; padding:10px 0; color:#4a9a4a; font-size:15px; font-weight:700; }
-  .tf-speak-word-btn { font-family:'Noto Sans TC',sans-serif; font-size:13px; background:rgba(139,99,16,0.08); border:1px solid rgba(139,99,16,0.25); border-radius:20px; padding:6px 16px; cursor:pointer; color:#7a5510; margin-bottom:14px; }
-  .tf-speak-word-btn:hover { background:rgba(139,99,16,0.15); }
   .tf-session-info-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
   .tf-session-info-item { background:#f9f6f0; border-radius:8px; padding:8px 14px; min-width:80px; }
   .tf-session-info-label { font-family:'Noto Sans TC',sans-serif; font-size:10px; color:#aaa; letter-spacing:1px; margin-bottom:2px; }
@@ -923,7 +920,6 @@
   .tf-breakdown-table { width:100%; border-collapse:collapse; }
   .tf-breakdown-table td { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#5a3e0a; padding:5px 8px; }
   .tf-bd-th { font-family:'Sarabun',sans-serif; font-size:18px; }
-  .tf-speak-btn { background:none; border:1px solid rgba(139,99,16,0.3); border-radius:12px; padding:2px 8px; font-size:13px; cursor:pointer; }
   .tf-soon-toast {
     position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
     background: rgba(90,62,10,0.96); color: #fff;
@@ -1478,20 +1474,6 @@
     margin-bottom: 6px;
     letter-spacing: 4px;
   }
-  .prc-audio-btn {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
-    background: rgba(139,99,16,0.10);
-    border: 1.5px solid rgba(139,99,16,0.28);
-    border-radius: 22px;
-    padding: 8px 22px;
-    cursor: pointer;
-    color: #7a5510;
-    margin-bottom: 14px;
-    display: inline-block;
-    transition: background 0.18s;
-  }
-  .prc-audio-btn:hover { background: rgba(139,99,16,0.20); }
   .prc-question {
     font-family: 'Noto Serif TC', serif;
     font-size: 16px;
@@ -1561,19 +1543,6 @@
     margin-bottom: 4px;
     line-height: 1.2;
   }
-  .result-v2-speak-btn {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 12px;
-    background: rgba(139,99,16,0.08);
-    border: 1px solid rgba(139,99,16,0.22);
-    border-radius: 20px;
-    padding: 5px 14px;
-    cursor: pointer;
-    color: #7a5510;
-    margin-bottom: 16px;
-    display: inline-block;
-  }
-  .result-v2-speak-btn:hover { background: rgba(139,99,16,0.15); }
   .result-v2-tone-card {
     border-radius: 16px;
     padding: 22px 18px;
@@ -2146,7 +2115,7 @@
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=6"></script>
+<script src="js/games/tone-finder-game.min.js?v=7"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
