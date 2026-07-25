@@ -1,13 +1,27 @@
 /**
  * mix-game-app.js — เกมรวม (โปรโตไทป์) — Lin 2026-07-25
- * ขอบเขต: เฉพาะ 初級 เท่านั้น (คำพยางค์เดียว) · 3 ด่าน: ทายเสียง → ต่อพยางค์ → พิมพ์
+ * ขอบเขต: เฉพาะ 初級ทั้งหมด (พยางค์เดียว + 2 พยางค์ 266/266 คำ) · 3 ด่าน: ทายเสียง → ต่อพยางค์ → พิมพ์
  * ไม่ต่อเซิร์ฟเวอร์เลย — ไม่มีล็อกอิน ไม่มีดาว ไม่มี SRS ไม่มีกระดานคะแนน (ตกลงกับ Lin 2026-07-25)
  * ไฟล์นี้เป็นไฟล์ใหม่ล้วน ไม่แก้ไฟล์เดิมสักบรรทัด (tone-finder-game.js / reading-game-app.js / typing-game-app.js ไม่ถูกแตะ)
  *
- * แก้ 2026-07-25 (รอบ 2 — Lin บอก "ไม่เห็นเหมือนเกมตอนนี้เลย"): รอบแรกคิด class/สี/ป้ายภาษาขึ้นเอง (mx-*, ป้ายไทย, สีแบน)
- * ไม่ตรงของจริงเลย — รอบนี้เปลี่ยนมาใช้ class ชื่อเดียวกับเกมเดิมเป๊ะ (.card/.gold-banner/.opt/.slot-box/.btn/.tk-key ฯลฯ
- * ก็อปมาจาก reading-game.html + typing-game.html จริง) + ป้าย UI เปลี่ยนเป็นภาษาจีนตามเว็บจริงทั้งเว็บ (ตัวคำ/คำแปลยังเป็นไทยเหมือนเดิม
- * แค่ป้ายปุ่ม/label เปลี่ยนเป็นจีน) — เว็บนี้สอนคนไต้หวันเรียนไทย UI จึงเป็นจีนเสมอ ไม่ใช่ไทย
+ * แก้ 2026-07-25 (รอบ 2 — Lin บอก "ไม่เห็นเหมือนเกมตอนนี้เลย"): เปลี่ยนมาใช้ class ชื่อเดียวกับเกมเดิมเป๊ะ
+ * (ก็อปมาจาก reading-game.html + typing-game.html จริง) + ป้าย UI เป็นภาษาจีนตามเว็บจริงทั้งเว็บ
+ *
+ * แก้ 2026-07-25 (รอบ 3 — Lin สั่ง "ทุกเกมเลยนะ เล่นจริงล้วนๆ"): เอาไฮไลต์ปุ่มถัดไป (ด่านพิมพ์) ออก
+ * ระหว่างเทสเจอบั๊กจริง 2 อัน (ไม่เกี่ยวกับตัวใบ้ แต่ตัวใบ้บังไว้): 1) ไม่มีแป้น Shift เลย คำที่ต้องกด Shift พิมพ์ไม่ได้จริง
+ * 2) คีย์บอร์ดขาดคอลัมน์ท้ายแถว (บ/ล/ว/ง/ม/ใ/ฝ ไม่มีปุ่ม) — แก้ทั้งคู่แล้ว คัดลอกจาก typing-game-app.js ของจริง
+ *
+ * แก้ 2026-07-25 (รอบ 4 — Lin สั่ง "คำหลายพยางค์ ก็ทำเหมือนกันไปเลย" หลังถามว่าต่างกันยังไง):
+ * เพิ่มคำ 2 พยางค์ (83/266 คำที่เคยตัดออก) เข้าพูลด้วย — อ้างอิงวิธีคิดจากเกมต้นฉบับจริง (grep tone-finder-game.js /
+ * reading-game-app.js / typing-game-app.js) ไม่ได้เดาเอง:
+ *   - ด่านทายเสียง+ด่านต่อพยางค์: คำหลายพยางค์ = ไล่ทีละพยางค์ (พยางค์ไหนเสียง/ตัวสะกดต่างกันก็ถามแยก)
+ *     คะแนน = เฉลี่ยคะแนนต่อพยางค์ แล้วคูณทอง+คอมโบ "ครั้งเดียว" ตอนจบทั้งคำ (กันปั๊มด้วยคำยาว — สูตรเดียวกับ tone-finder-game.js
+ *     บรรทัด ~1722-1733)
+ *   - ด่านพิมพ์: พิมพ์ทั้งคำรวดเดียว (ไม่หยุดถามทีละพยางค์) นับผิดสะสมทั้งคำ — ตรงกับ typing-game-app.js rgContStart()/rgContChar()
+ *   - พยางค์ไหนผิดครบ 4 ครั้ง = เฉลย 0 แต้มพยางค์นั้น แล้วไปพยางค์ถัดไปของคำเดิมทันที (ไม่ใช่ข้ามไปคำอื่น) ตรงกับ
+ *     tfAfterForcedRevealSyl ของจริง — พยางค์สุดท้ายผิดครบถึงจะจบคำ
+ *   - จำนวนการ์ดต่อรอบยังคง 5 คำ×3 ด่าน=15 การ์ดเท่าเดิม ไม่ได้เพิ่มตามความยาวคำ (ทำให้ความยาวรอบคาดเดาได้ง่าย
+ *     เป็นทางลัดที่ตั้งใจต่างจากต้นฉบับเล็กน้อย — คำยาวจะใช้เวลาต่อการ์ดนานกว่า ไม่ใช่นับเป็นหลายการ์ด)
  *
  * กลไกคะแนนยืมมาจาก MASTER RULES เดิมที่ 4 เกมใช้ร่วมกัน (บันได / คอมโบ / ทองคำ) เพื่อความคุ้นเคย
  * ไม่ได้ import ไฟล์เดิม — เขียนค่าคงที่ซ้ำไว้ในไฟล์นี้ตรงๆ (เจตนา ไม่ใช่บั๊ก — กันไฟล์ใหม่พังไฟล์เก่า)
@@ -54,9 +68,9 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   // ════════════════════════════════════════════
-  // ข้อมูล — เฉพาะ 初級ที่พยางค์เดียว (183/266 คำ — 初級ที่ 2 พยางค์ เช่น "เมนู" ยังไม่รองรับในโปรโตไทป์นี้)
+  // ข้อมูล — 初級ทั้งหมด (266/266 คำ — พยางค์เดียว+2 พยางค์ รวมกัน 2026-07-25 รอบ 4)
   // ════════════════════════════════════════════
-  var POOL = buildWordsForPhonicsGames(WORDS_MASTER).filter(function (w) { return w.level === '初' && w.syls.length === 1; });
+  var POOL = buildWordsForPhonicsGames(WORDS_MASTER).filter(function (w) { return w.level === '初'; });
 
   var S = {
     queue: [], total: 0, done: 0, score: 0, streak: 0, perfectCount: 0,
@@ -112,12 +126,22 @@
   // ════════════════════════════════════════════
   // เริ่มรอบใหม่
   // ════════════════════════════════════════════
+  function makeCard(w, st, golden) {
+    // sylWrong/sylIdx/sylBaseSum: ใช้เฉพาะด่าน 1(ทายเสียง)/2(ต่อพยางค์) — ไล่ทีละพยางค์ + เฉลี่ยคะแนนตอนจบคำ
+    // wrongCount: ใช้เฉพาะด่าน 3(พิมพ์) — พิมพ์ทั้งคำรวด นับผิดสะสมทั้งคำ (ตรงกับ typing-game-app.js ของจริง)
+    return {
+      word: w, stage: st, golden: golden,
+      wrongCount: 0,
+      sylIdx: 0, sylWrong: w.syls.map(function () { return 0; }), sylBaseSum: 0, anyFail: false
+    };
+  }
+
   function startRound() {
     var words = pick(POOL, Math.min(ROUND_WORDS, POOL.length));
     var cards = [];
     words.forEach(function (w) {
       var golden = Math.random() < GOLDEN_CHANCE;
-      for (var st = 1; st <= 3; st++) cards.push({ word: w, stage: st, wrongCount: 0, golden: golden });
+      for (var st = 1; st <= 3; st++) cards.push(makeCard(w, st, golden));
     });
     S.queue = shuffle(cards);
     S.total = S.queue.length;
@@ -132,32 +156,85 @@
     render();
   }
 
+  function cardWasClean(card) {
+    if (card.stage === 3) return card.wrongCount === 0;
+    return card.sylWrong.every(function (x) { return x === 0; });
+  }
+
   // ป้องกันคะแนนเบิ้ล: ระหว่างรอทรานซิชัน (750-1200ms หลังตอบ) ต้องล็อกอินพุตทั้งหมด
   // เจอบั๊กจริงระหว่างทดสอบ 2026-07-25 — ปุ่ม 檢查/ปุ่มพิมพ์ ยังกดซ้ำได้ระหว่างรอ ทำให้ finishCard() ถูกเรียกซ้ำๆ
   // บนการ์ดเดิม คะแนนพุ่งเกินจริง (990 แต้มจาก 15 ข้อ, perfectCount ทะลุ total) — แก้โดยเช็ค S.resolving ทุกจุดรับอินพุต
+  //
+  // ด่าน 3 (พิมพ์): ผิด = นับสะสมทั้งคำ, ผิดครบ FAIL_AT = จบการ์ดทันที (0 แต้ม)
+  // ด่าน 2 (ต่อพยางค์): ผิด = นับเฉพาะพยางค์ปัจจุบัน, ผิดครบ FAIL_AT ในพยางค์นั้น = เฉลย 0 แต้มพยางค์นั้น
+  //   แล้วไปพยางค์ถัดไปของคำเดิมทันที (ไม่ใช่จบการ์ด) เว้นแต่เป็นพยางค์สุดท้ายแล้วถึงจะจบการ์ด — ตรงกับเกมต้นฉบับ
+  //   (tfAfterForcedRevealSyl: "พยางค์เดียว→คำใหม่ · หลายพยางค์→พยางค์ถัดไปของคำเดิม")
   function requeueWrong(card) {
     if (S.resolving) return;
     S.resolving = true;
-    card.wrongCount++;
-    if (card.wrongCount >= FAIL_AT) { finishCard(card, 0, true); }
-    else { S.queue.push(card); flashBanner(false); setTimeout(nextCard, 750); }
+    if (card.stage === 3) {
+      card.wrongCount++;
+      if (card.wrongCount >= FAIL_AT) { finishCard(card, 0, true); return; }
+      S.queue.push(card); flashBanner(false); setTimeout(nextCard, 750);
+      return;
+    }
+    card.sylWrong[card.sylIdx]++;
+    if (card.sylWrong[card.sylIdx] >= FAIL_AT) { sylForceFail(card); return; }
+    S.queue.push(card); flashBanner(false); setTimeout(nextCard, 750);
+  }
+
+  // พยางค์ปัจจุบันผิดครบ FAIL_AT ครั้ง → เฉลย 0 แต้มพยางค์นี้ แล้วไปพยางค์ถัดไปของ "คำเดิม" ทันที (ไม่สลับคำ)
+  // พยางค์สุดท้ายถึงจะปิดการ์ด (finalizeMultiCard → finishCard failed=true)
+  function sylForceFail(card) {
+    S.resolving = true;
+    card.anyFail = true;
+    card.sylIdx++;
+    if (card.sylIdx >= card.word.syls.length) { finalizeMultiCard(card); return; }
+    flashBanner(false, 0, true);
+    setTimeout(function () { S.resolving = false; render(); }, 900);
+  }
+
+  // ด่าน 1/2 พยางค์ปัจจุบันตอบถูก → บวกคะแนนพยางค์นี้เข้ากอง แล้วไปพยางค์ถัดไปของคำเดิมทันที (ไม่สลับคำ)
+  // พยางค์สุดท้ายถึงจะปิดการ์ด (finalizeMultiCard → finishCard)
+  function sylCorrect(card) {
+    if (S.resolving) return;
+    S.resolving = true;
+    var wc = card.sylWrong[card.sylIdx];
+    var base = LADDER[wc] != null ? LADDER[wc] : 0;
+    card.sylBaseSum += base;
+    card.sylIdx++;
+    if (card.sylIdx >= card.word.syls.length) { finalizeMultiCard(card); return; }
+    flashBanner(true, base);
+    setTimeout(function () { S.resolving = false; render(); }, 750);
+  }
+
+  // ทุกพยางค์ของด่าน 1/2 ทำครบแล้ว → เฉลี่ยคะแนนต่อพยางค์ (สูตรเดียวกับ tone-finder-game.js บรรทัด ~1722-1733)
+  function finalizeMultiCard(card) {
+    var n = card.word.syls.length;
+    var avg = card.sylBaseSum / n;
+    finishCard(card, avg, !!card.anyFail);
   }
 
   function finishCard(card, basePts, failed) {
     S.resolving = true;
     S.done++;
+    var clean = cardWasClean(card);
     var pts = basePts;
-    if (!failed && card.golden && card.wrongCount === 0) pts = pts * GOLDEN_MULT;
+    if (!failed && card.golden && clean) pts = pts * GOLDEN_MULT;
     if (!failed) {
       S.streak++;
       pts = Math.max(1, Math.round(pts * comboMult(S.streak)));
-      if (card.wrongCount === 0) S.perfectCount++;
-    } else { S.streak = 0; }
+      if (clean) S.perfectCount++;
+    } else {
+      S.streak = 0;
+      pts = Math.round(pts);
+    }
     S.score += pts;
-    flashBanner(!failed, pts);
+    flashBanner(!failed, pts, failed);
     setTimeout(nextCard, failed ? 1200 : 750);
   }
 
+  // ใช้เฉพาะด่าน 3 (พิมพ์) — พิมพ์ทั้งคำรวดถูกหมด = จบการ์ดทันที ไม่มีพยางค์ย่อยให้ไล่
   function answerCorrect(card) {
     if (S.resolving) return;
     S.resolving = true;
@@ -166,10 +243,10 @@
   }
 
   var bannerEl = null;
-  function flashBanner(ok, pts) {
+  function flashBanner(ok, pts, revealMsg) {
     if (!bannerEl) return;
     bannerEl.className = 'result-banner show ' + (ok ? 'ok' : 'no');
-    bannerEl.textContent = ok ? ('✓ 答對了 +' + pts + ' 分') : '✗ 這題晚點還會再出現';
+    bannerEl.textContent = ok ? ('✓ 答對了 +' + pts + ' 分') : (revealMsg ? '📖 直接公佈答案' : '✗ 這題晚點還會再出現');
     setTimeout(function () { bannerEl.className = 'result-banner'; }, 700);
   }
 
@@ -197,20 +274,30 @@
 
   function stageTagHtml(c) {
     var zh = ['聲調', '拼字', '打字'][c.stage - 1];
+    var sylTag = (c.stage !== 3 && c.word.syls.length > 1) ? (' <span class="rule-tag">音節 ' + (c.sylIdx + 1) + '/' + c.word.syls.length + '</span>') : '';
     return '<div style="text-align:center;margin-bottom:2px">' +
-      '<span class="rule-tag">第 ' + c.stage + ' 關 · ' + zh + '</span>' +
+      '<span class="rule-tag">第 ' + c.stage + ' 關 · ' + zh + '</span>' + sylTag +
       (c.golden ? ' <span class="rule-tag sp">🌾 黃金字</span>' : '') +
     '</div>';
   }
 
+  // คำหลายพยางค์: โชว์ทั้งคำ ไฮไลต์พยางค์ที่กำลังถาม (ด่าน1/2 เท่านั้น) — พยางค์เดียวโชว์เฉยๆ ไม่ไฮไลต์ (เหมือนเดิม)
+  function wordDisplayHtml(w, idx) {
+    if (w.syls.length <= 1) return esc(w.th);
+    return w.syls.map(function (s, i) {
+      return '<span style="' + (i === idx ? 'color:#d85a30;border-bottom:3px solid #d85a30' : 'color:#c9b98a') + '">' + esc(s.th) + '</span>';
+    }).join('');
+  }
+
   function render() {
-    var c = S.cur, w = c.word, syl = w.syls[0];
+    var c = S.cur, w = c.word;
+    var syl = w.syls[c.stage === 3 ? 0 : c.sylIdx];
     var html = goldBannerHtml() + stageTagHtml(c) +
-      '<div class="word-area"><div class="word-th">' + esc(w.th) + '</div><div class="word-zh">' + esc(w.zh) + '</div></div>' +
+      '<div class="word-area"><div class="word-th">' + (c.stage === 3 ? esc(w.th) : wordDisplayHtml(w, c.sylIdx)) + '</div><div class="word-zh">' + esc(w.zh) + '</div></div>' +
       '<div class="result-banner" id="mx-result"></div>';
-    if (c.stage === 1) html += stage1Html(w, syl);
-    else if (c.stage === 2) html += stage2Html(w, syl);
-    else html += stage3Html(w, syl);
+    if (c.stage === 1) html += stage1Html();
+    else if (c.stage === 2) html += stage2Html(syl);
+    else html += stage3Html(w);
     card.innerHTML = html;
     bannerEl = document.getElementById('mx-result');
     wireStage(c);
@@ -222,20 +309,20 @@
   function stage1Html() {
     var opts = '';
     for (var i = 1; i <= 5; i++) opts += '<div class="opt" data-n="' + i + '" style="--delay:' + (i * 0.05) + 's">' + i + '</div>';
-    return '<p style="text-align:center;font-size:13px;color:#a08050;margin:2px 0 8px">這個字是第幾聲？</p>' +
+    return '<p style="text-align:center;font-size:13px;color:#a08050;margin:2px 0 8px">這個音節是第幾聲？</p>' +
       '<div class="opts-wrap"><div class="opts">' + opts + '</div></div>' +
       '<div id="mx-deriv"></div>';
   }
 
   function wireStage1(c) {
-    var w = c.word, syl = w.syls[0];
+    var syl = c.word.syls[c.sylIdx];
     var correctNum = TONE_NAME_TO_NUM[syl.tone_name];
     card.querySelectorAll('.opts .opt').forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (btn.classList.contains('locked')) return;
         var n = +btn.dataset.n;
         card.querySelectorAll('.opts .opt').forEach(function (b) { b.classList.add('locked'); });
-        if (n === correctNum) { btn.classList.add('correct'); answerCorrect(c); }
+        if (n === correctNum) { btn.classList.add('correct'); sylCorrect(c); }
         else { btn.classList.add('wrong'); openDerivation(c); }
       });
     });
@@ -245,7 +332,7 @@
 
   function openDerivation(c) {
     S.derivStep = { part: 'mark' };
-    renderDeriv(c, fullSpell(c.word.syls[0]));
+    renderDeriv(c, fullSpell(c.word.syls[c.sylIdx]));
   }
 
   function renderDeriv(c, full) {
@@ -257,7 +344,7 @@
     else if (step === 'vlen') { q = '母音是短音還是長音？'; opts = [['short', '短音'], ['long', '長音']]; }
 
     if (step === 'result') {
-      var w2 = c.word.syls[0];
+      var w2 = c.word.syls[c.sylIdx];
       var reason = buildToneReason({ th: full, tone_name: w2.tone_name, lead: w2.lead, cons: w2.cons });
       document.getElementById('mx-deriv').innerHTML =
         '<div class="bonus-section show">' +
@@ -265,15 +352,20 @@
           (reason ? '<div class="bonus-reason show"><div class="bonus-reason-why">' + esc(reason) + '</div></div>' : '') +
           '<div class="opts-wrap" style="margin-top:8px"><div class="opts"><div class="opt" id="mx-deriv-done" style="font-size:16px;padding:8px 16px">懂了 →</div></div></div>' +
         '</div>';
-      document.getElementById('mx-deriv-done').addEventListener('click', function () { answerCorrect(c); });
+      document.getElementById('mx-deriv-done').addEventListener('click', function () { sylCorrect(c); });
       return;
     }
-    document.getElementById('mx-deriv').innerHTML =
+    var derivEl = document.getElementById('mx-deriv');
+    // 2026-07-25 รอบ4: บั๊กจริงที่เจอตอนเทส — dataset.locked ถูกตั้งตอนตอบคำถามย่อยแรก แต่ innerHTML แทนที่แค่ลูก
+    // ไม่ล้าง dataset ของ #mx-deriv เอง ทำให้คำถามย่อยถัดไปในสายเดียวกัน (mark→class→live→vlen) กดไม่ติดอีกเลย
+    // ต้องล้าง lock ทุกครั้งที่ขึ้นคำถามย่อยใหม่
+    derivEl.removeAttribute('data-locked');
+    derivEl.innerHTML =
       '<div class="bonus-section show">' +
         '<div class="bonus-header">' + q + '</div>' +
         '<div class="bonus-opts">' + opts.map(function (o) { return '<div class="bonus-btn" data-v="' + o[0] + '">' + o[1] + '</div>'; }).join('') + '</div>' +
       '</div>';
-    document.getElementById('mx-deriv').querySelectorAll('.bonus-btn').forEach(function (btn) {
+    derivEl.querySelectorAll('.bonus-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (document.getElementById('mx-deriv').dataset.locked) return;
         document.getElementById('mx-deriv').dataset.locked = '1';
@@ -302,13 +394,16 @@
       right = (val === (isShort ? 'short' : 'long')); next = 'result';
     }
     btnEl.classList.add(right ? 'correct' : 'wrong');
-    if (!right) { c.wrongCount++; if (c.wrongCount >= FAIL_AT) { finishCard(c, 0, true); return; } }
+    if (!right) {
+      c.sylWrong[c.sylIdx]++;
+      if (c.sylWrong[c.sylIdx] >= FAIL_AT) { setTimeout(function () { sylForceFail(c); }, 350); return; }
+    }
     S.derivStep = { part: next };
     setTimeout(function () { renderDeriv(c, full); }, 350);
   }
 
   // ════════════════════════════════════════════
-  // ด่าน 2 — 拼字（子音／聲調符／母音／尾音）
+  // ด่าน 2 — 拼字（子音／聲調符／母音／尾音）— ไล่ทีละพยางค์ถ้าคำมีหลายพยางค์
   // ════════════════════════════════════════════
   function comps(syl) {
     var out = [];
@@ -320,7 +415,7 @@
     return out;
   }
 
-  function stage2Html(w, syl) {
+  function stage2Html(syl) {
     var parts = comps(syl);
     var slots = parts.map(function (p) {
       return '<div class="slot-col"><div class="slot-label">' + p.label + '</div><div class="slot-box" data-type="' + p.type + '">◌</div></div>';
@@ -346,7 +441,7 @@
   }
 
   function wireStage2(c) {
-    var w = c.word, syl = w.syls[0], parts = comps(syl);
+    var syl = c.word.syls[c.sylIdx], parts = comps(syl);
     var need = parts.length, filled = {};
     var slotEls = {};
     card.querySelectorAll('.slot-box').forEach(function (s) { slotEls[s.dataset.type] = s; });
@@ -369,7 +464,7 @@
       var ok = parts.every(function (p) { return filled[p.type] === p.val; });
       if (ok) {
         parts.forEach(function (p) { slotEls[p.type].classList.add('correct'); });
-        answerCorrect(c);
+        sylCorrect(c);
       } else {
         parts.forEach(function (p) { slotEls[p.type].classList.add(filled[p.type] === p.val ? 'correct' : 'wrong'); });
         requeueWrong(c);
@@ -378,9 +473,9 @@
   }
 
   // ════════════════════════════════════════════
-  // ด่าน 3 — 打字（Kedmanee 泰文鍵盤）
+  // ด่าน 3 — 打字（Kedmanee 泰文鍵盤）— คำหลายพยางค์พิมพ์ต่อเนื่องรวด ไม่หยุดถามทีละพยางค์ (ตรงกับเกมพิมพ์จริง)
   // ════════════════════════════════════════════
-  function stage3Html(w, syl) {
+  function stage3Html(w) {
     S.shiftOn = false;
     var rows = TK_ROWS.map(function (row) {
       return '<div class="tk-row">' + row.map(function (code) {
@@ -399,8 +494,7 @@
     '</div>';
   }
 
-  function paintType(c) {
-    var target = c.word.syls[0].th;
+  function paintType(c, target) {
     var html = '';
     for (var i = 0; i < target.length; i++) {
       var col = i < S.typePos ? '#2e7d32' : (i === S.typePos ? '#d85a30' : '#c9b98a');
@@ -420,16 +514,17 @@
   }
 
   function wireStage3(c) {
-    paintType(c);
-    var target = c.word.syls[0].th;
+    // 2026-07-25 รอบ4: คำหลายพยางค์ = ต่อพยางค์ทุกตัวเป็น string เดียว พิมพ์รวด (เหมือน rgContStart ของเกมพิมพ์จริง)
+    var target = c.word.syls.map(function (s) { return s.th; }).join('');
+    paintType(c, target);
     var targetEl = document.getElementById('mx-typetarget');
-    function tryChar(ch, usedShift) {
+    function tryChar(ch) {
       if (S.resolving) return;
       if (ch === target[S.typePos]) {
         S.typePos++;
         S.shiftOn = false;
         if (S.typePos >= target.length) { answerCorrect(c); return; }
-        paintType(c);
+        paintType(c, target);
       } else {
         S.shiftOn = false;
         updateShiftKeyVisual();

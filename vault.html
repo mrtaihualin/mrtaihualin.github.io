@@ -139,7 +139,7 @@ function practiceBtnsHtml(th){
   var q='?word='+encodeURIComponent(th);
   return '<div class="vault-practice-btns">'+
     '<a class="vault-practice-btn" href="reading-game.html'+q+'">📝 拼讀練習</a>'+
-    '<a class="vault-practice-btn" href="tone-finder.html'+q+'">🎵 聲調搜尋</a>'+
+    /* Lin 2026-07-25: ถอดปุ่ม 🎵 聲調搜尋 ออก — เกมเสียงปิดโหมด 自行搜尋 แล้ว ลิงก์ ?word= ใช้ไม่ได้ (กันปุ่มพัง) */
     '<a class="vault-practice-btn" href="typing-game.html'+q+'">⌨️ 打字練習</a>'+
     '<a class="vault-practice-btn" href="lego.html'+q+'">🧩 造句遊戲</a>'+
   '</div>';

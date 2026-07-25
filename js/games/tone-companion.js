@@ -66,7 +66,9 @@
     if (!s) return;
     var u = window.READING_AUTH && READING_AUTH.user;
     if (!u) return; // ยังไม่ล็อกอิน → คะแนนค้างใน lastSession รอ login มาบันทึกย้อนหลัง (GA4 ยังนับภาพรวมให้)
-    if ((u.email || '') === ADMIN_EMAIL) { lastSession = null; return; } // admin: ไม่นับคะแนนใน ranking
+    // v2 (LIN 2026-07-25, audit): ใช้ window.isSiteAdmin (email + user id) แทนเช็ค email อย่างเดียว
+    //   กัน Facebook/LINE ของแอดมิน (อาจไม่มี email) หลุดรอดเข้า leaderboard เกมเสียง
+    if ((window.isSiteAdmin && window.isSiteAdmin(u)) || (u.email || '') === ADMIN_EMAIL) { lastSession = null; return; } // admin: ไม่นับคะแนนใน ranking
     var row = {
       user_id: u.id,
       mode: s.mode,

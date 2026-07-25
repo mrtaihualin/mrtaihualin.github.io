@@ -163,29 +163,7 @@ var TONES = {
 // ════════════════════════════════════════════════════════════
 var WORD_LIST = buildWordListForToneFinder(WORDS_MASTER); // 2026-07-11: ย้ายคำเดี่ยวไปเก็บที่ words-data.js (ใช้ร่วมกับเกมอ่าน/เกมพิมพ์)
 
-// ════════════════════════════════════════════════════════════
-// SYLLABLE LIST — multi-syllable words split by readingTH
-// ════════════════════════════════════════════════════════════
-var SYLLABLE_LIST = (function() {
-  var list = [];
-  WORD_LIST.forEach(function(w) {
-    if (w.readingTH.indexOf('-') === -1) return;
-    var parts = w.readingTH.split('-');
-    parts.forEach(function(syl, i) {
-      list.push({
-        word: syl,
-        readingTH: w.readingTH,
-        readingEN: w.readingEN,
-        zh: w.zh,
-        parentWord: w.word,
-        sylNum: i + 1,
-        sylTotal: parts.length
-      });
-    });
-  });
-  return list;
-})();
-
+// Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [SYLLABLE_LIST]
 // ════════════════════════════════════════════════════════════
 // THAI WORD PARSER  (smart error detection)
 // ════════════════════════════════════════════════════════════
@@ -551,7 +529,6 @@ var randomEntry = null;
 var selectedLevel = null;
 var selectedCategory = null;
 var session = null;
-var searchHistory = [];      // ประวัติคำที่เสิร์ชในโหมด 自行搜尋 (แยกจากเกม ไม่นับคะแนน)
 var _sessionsThisVisit = 0;  // นับ session ที่เล่นจบในรอบเข้าเว็บนี้ (สำหรับ popup โปรโมท)
 var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, flipped, back }
 
@@ -2266,7 +2243,7 @@ function render() {
   var banner = document.getElementById('tf-banner');
   var isSelectScreen = (S.step === 'level-select' || S.step === 'advanced' || S.step === 'adv-cat-select' || S.step === 'adv-sent-select' || S.step === 'adv-summary' || S.step === 'session-summary' || S.step === 'alpha-home' || S.step === 'alpha-consonant' || S.step === 'alpha-vowel' || S.step === 'alpha-flashcard');
   var noBannerSteps = ['result'];
-  if (S.word && S.step !== 'input' && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
+  if (S.word && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
     var counterHtml = (session && session.words && session.words.length)
       ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字'
@@ -2329,7 +2306,7 @@ function render() {
 
   // Breadcrumb
   var bc = document.getElementById('tf-bc');
-  if (S.path.length > 1 && S.step !== 'input' && S.step !== 'result' && !isSelectScreen) {
+  if (S.path.length > 1 && S.step !== 'result' && !isSelectScreen) {
     bc.style.display = 'flex';
     bc.innerHTML = S.path.map(function(p,i){
       return (i>0?'<span class="tf-bc-sep">›</span>':'') +
@@ -2341,8 +2318,7 @@ function render() {
   var navBar = document.getElementById('tf-nav-bar');
   var backBtn = document.getElementById('tf-back-btn');
   var fwdBtn = document.getElementById('tf-fwd-btn');
-  var noNavSteps = ['input'];
-  if (S.step !== 'input' && !isSelectScreen && noNavSteps.indexOf(S.step) === -1) {
+  if (!isSelectScreen) {
     navBar.style.display = 'flex';
     backBtn.disabled = (histPos <= 0 && !(session && selectedLevel));
     fwdBtn.disabled = (histPos >= hist.length-1);
@@ -2413,7 +2389,6 @@ function buildStep() {
     case 'adv-sent-select': return stepAdvSentSelect();
     case 'adv-summary':     return stepAdvSummary();
     case 'session-summary': return stepSessionSummary();
-    case 'input':     return stepInput();
     case 's1':        return step1();
     case 's2a':       return step2a();
     case 's2a_low':   return step2aLow();
@@ -2563,39 +2538,7 @@ function deriveText(word) {
   return parts.join(' + ') + ' → ' + (TONES[tone] ? TONES[tone].zh : '—');
 }
 
-// ── 自行搜尋: บันทึกประวัติการค้น (แยกจากเกม ไม่นับคะแนน) ──
-function recordSearch(w) {
-  if (!w) return;
-  var e = null;
-  for (var i=0;i<WORD_LIST.length;i++){ if(WORD_LIST[i].word===w){ e=WORD_LIST[i]; break; } }
-  var t = (typeof computeTone==='function') ? computeTone(w) : null;
-  var rec = { word:w, tone:t, readingTH:(e&&e.readingTH)||w, readingEN:(e&&e.readingEN)||'', zh:(e&&e.zh)||'' };
-  searchHistory = searchHistory.filter(function(x){ return x.word!==w; });
-  searchHistory.unshift(rec);
-  if (searchHistory.length>60) searchHistory = searchHistory.slice(0,60);
-}
-
-function buildSearchReportInner() {
-  var dateStr = new Date().toLocaleDateString('zh-TW');
-  var rows = searchHistory.map(function(r,i){
-    var tl = TONES[r.tone]||{};
-    var parts = WORD_PARTS[r.word]||[];
-    var bd = parts.map(function(p){ return '子音 '+p.c+' ／ 母音 '+vowelText(p.vn)+' ／ 尾音 '+(p.f||'—'); }).join('<br>') || '—';
-    return '<tr><td>'+(i+1)+'</td><td class="th big">'+r.word+'</td><td class="th">'+(r.readingTH||'—')+'</td><td>'+(r.zh||'—')+'</td><td class="bd">'+bd+'</td><td style="color:'+(tl.color||'#5a3e0a')+';font-weight:700;">'+(tl.zh||'—')+'</td></tr>';
-  }).join('');
-  return '<style>@page{margin:15mm;}body{font-family:"Noto Sans TC","Sarabun",sans-serif;color:#3a2c10;margin:0;padding:22px;background:#fff;}'+
-    '.rp-head{text-align:center;border-bottom:3px solid #C8973A;padding-bottom:14px;margin-bottom:18px;}'+
-    '.rp-title{font-size:25px;font-weight:700;color:#8B6310;letter-spacing:2px;}.rp-meta{font-size:13px;color:#7a6a4a;margin-top:8px;}'+
-    'table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12.5px;}th{background:#8B6310;color:#fff;padding:8px 6px;}'+
-    'td{border:1px solid #e0d2ad;padding:7px 6px;text-align:center;vertical-align:middle;}td.th{font-family:"Sarabun",sans-serif;}'+
-    'td.big{font-size:20px;font-weight:700;color:#5a3e0a;}td.bd{font-size:11px;color:#5a3e0a;text-align:left;}'+
-    '.rp-foot{text-align:center;color:#a08a5a;font-size:11px;margin-top:22px;}</style>'+
-    '<div class="rp-head"><div class="rp-title">🔎 泰語聲調搜尋紀錄</div>'+
-    '<div class="rp-meta">日期 '+dateStr+' ・ 共 '+searchHistory.length+' 個查詢</div></div>'+
-    '<table><thead><tr><th>#</th><th>單字</th><th>泰文讀音</th><th>中文</th><th>拆解（子音／母音／尾音）</th><th>聲調</th></tr></thead><tbody>'+rows+'</tbody></table>'+
-    '<div class="rp-foot">泰華眼裡的泰語教學 ・ 自動產生於 '+dateStr+'</div>';
-}
-
+// Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [recordSearch + buildSearchReportInner]
 // ── Popup โปรโมทคอร์ส (เด้งวันละครั้ง จังหวะเล่นจบรอบที่ 2+) ──
 function maybeShowCoursePromo() {
   _sessionsThisVisit++;
@@ -3107,30 +3050,7 @@ function tfPrioritizeDueSrs(entries) {
 }
 
 // Lin 2026-07-04: ตัด stepNounSubcat/stepSetSelect/stepCatSelect ทิ้งแล้ว — หน้าเลือกหมวด/ชุดไม่มีทางเข้าถึงอีก
-function stepInput() {
-  return '<div class="tf-input-wrap">' +
-    '<input id="tf-inp" class="tf-input" type="text" autocomplete="off" spellcheck="false" ' +
-      'placeholder="例：กา, ข้าว, ไทย…" ' +
-      'oninput="TF.filterThai(this)" ' +
-      'onkeydown="if(event.key===\'Enter\')TF.search()">' +
-    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12.5px;color:#8B6310;background:rgba(200,151,58,0.10);border:1px solid rgba(200,151,58,0.30);border-radius:6px;padding:9px 12px;margin-top:10px;line-height:1.6;text-align:left;">💡 目前「自行搜尋」僅支援<strong>單音節</strong>單字；多音節單字請改用上方主題練習。</div>' +
-    '<div id="tf-lang-warn" style="display:none;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#ff6b6b;margin-top:8px;letter-spacing:0.5px;">⚠️ 請輸入泰文字符</div>' +
-    '<div class="tf-input-actions">' +
-      '<button class="tf-secondary-btn" type="button" onclick="TF.randomWord()">🎲 隨機取字</button>' +
-      '<button class="tf-search-btn" onclick="TF.search()">🔍 開始分析</button>' +
-    '</div>' +
-    '<div class="tf-word-info-row" id="tf-word-info-row" style="display:none;">' +
-      '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'th\')">🔤 泰文讀音</button>' +
-      '<button class="tf-info-btn" type="button" onclick="TF.showWordInfo(\'en\')">🔡 英文讀音</button>' +
-    '</div>' +
-    '<div class="tf-word-info-box" id="tf-word-info-box" style="display:none;"></div>' +
-    (searchHistory.length ? '<div style="text-align:center;margin-top:14px;"><button class="tf-secondary-btn" type="button" onclick="TF.downloadSearchReport()">📄 下載搜尋紀錄 ('+searchHistory.length+')</button></div>' : '') +
-    '<div style="text-align:center;margin-top:18px;">' +
-      '<button class="tf-back-level-btn" onclick="TF.reset()">← 返回</button>' +
-    '</div>' +
-  '</div>';
-}
-
+// Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [stepInput()]
 function qbox(stepNum, text) {
   return '<div class="tf-qbox">' +
     (stepNum ? '<div class="tf-step-badge">步驟 ' + stepNum + '</div>' : '') +
@@ -4084,124 +4004,7 @@ function tfConfirmQuit(onYes) {
 //   เหตุผล: คนแค่แวะมาลองเล่นแล้วจะปิด เจอกล่องเตือนน่ากลัวของเบราว์เซอร์ = รู้สึกเว็บหนึบ ผลตอบแทนต่ำ
 
 var TF = {
-  filterThai: function(inp) {
-    var orig = inp.value;
-    // Allow only Thai characters (U+0E00–U+0E7F) and spaces
-    var filtered = orig.replace(/[^฀-๿\s]/g, '');
-    if (filtered !== orig) {
-      inp.value = filtered;
-      // Restore cursor position
-      var warn = document.getElementById('tf-lang-warn');
-      if (warn) { warn.style.display = 'block'; setTimeout(function(){ warn.style.display='none'; }, 2500); }
-    }
-    // User edited the input manually — the word info (中文翻譯／讀音) no longer
-    // matches what's in the box, so hide it.
-    randomEntry = null;
-    var infoRow = document.getElementById('tf-word-info-row');
-    if (infoRow) infoRow.style.display = 'none';
-    var infoBox = document.getElementById('tf-word-info-box');
-    if (infoBox) { infoBox.style.display = 'none'; infoBox.innerHTML = ''; }
-  },
-  randomSyllable: function() {
-    if (!SYLLABLE_LIST || !SYLLABLE_LIST.length) return;
-    var entry = SYLLABLE_LIST[Math.floor(Math.random() * SYLLABLE_LIST.length)];
-    randomEntry = entry;
-    var inp = document.getElementById('tf-inp');
-    if (!inp) return;
-    inp.value = entry.word;
-    inp.style.borderColor = '';
-    var warn = document.getElementById('tf-lang-warn');
-    if (warn) warn.style.display = 'none';
-    var infoRow = document.getElementById('tf-word-info-row');
-    if (infoRow) infoRow.style.display = 'flex';
-    var infoBox = document.getElementById('tf-word-info-box');
-    if (infoBox) { infoBox.style.display = 'none'; infoBox.innerHTML = ''; }
-    inp.focus();
-  },
-  randomWord: function() {
-    if (!WORD_LIST || !WORD_LIST.length) return;
-    var pool = WORD_LIST.filter(function(w){
-      if (selectedLevel && w.level !== selectedLevel) return false;
-      if (selectedCategory && selectedCategory !== 'ทั้งหมด' && w.category !== selectedCategory) return false;
-      return true;
-    });
-    if (!pool.length) pool = WORD_LIST;
-    var entry = pool[Math.floor(Math.random() * pool.length)];
-    randomEntry = entry;
-    var inp = document.getElementById('tf-inp');
-    if (!inp) return;
-    inp.value = entry.word;
-    inp.style.borderColor = '';
-    var warn = document.getElementById('tf-lang-warn');
-    if (warn) warn.style.display = 'none';
-    var infoRow = document.getElementById('tf-word-info-row');
-    if (infoRow) infoRow.style.display = 'flex';
-    var infoBox = document.getElementById('tf-word-info-box');
-    if (infoBox) { infoBox.style.display = 'none'; infoBox.innerHTML = ''; }
-    inp.focus();
-  },
-  showWordInfo: function(type) {
-    // Resolve the entry: prefer the last random pick, otherwise look up
-    // whatever the user typed in the box against the vocab / syllable lists.
-    var entry = randomEntry;
-    if (!entry) {
-      var inpEl = document.getElementById('tf-inp');
-      var val = inpEl ? inpEl.value.trim() : '';
-      if (val) {
-        entry = WORD_LIST.filter(function(e){ return e.word === val; })[0]
-             || (SYLLABLE_LIST || []).filter(function(e){ return e.word === val; })[0]
-             || null;
-      }
-    }
-    var box = document.getElementById('tf-word-info-box');
-    if (!box) return;
-    var label, value, isThai = false;
-    var isSyl = entry && !!entry.parentWord;
-    if (!entry) { box.style.display = 'none'; box.innerHTML = ''; return; }
-    if (type === 'th') {
-      label = isSyl ? '泰文讀音（完整）' : '泰文讀音';
-      value = entry.readingTH; isThai = true;
-    } else if (type === 'en') {
-      label = '英文讀音';
-      value = entry.readingEN; isThai = true;
-    } else return;
-    box.innerHTML =
-      '<div class="tf-word-info-label">'+label+'</div>' +
-      '<div class="tf-word-info-value' + (isThai ? ' tf-word-info-th' : '') + '">'+value+'</div>';
-    box.style.display = 'block';
-  },
-  search: function() {
-    var inp = document.getElementById('tf-inp');
-    var w = inp ? inp.value.trim() : '';
-    if (!w) { if(inp) inp.style.borderColor='#ff6b6b'; return; }
-    // Validate Thai only
-    if (/[^฀-๿\s]/.test(w)) {
-      if(inp) inp.style.borderColor='#ff6b6b';
-      var warn = document.getElementById('tf-lang-warn');
-      if (warn) warn.style.display = 'block';
-      return;
-    }
-    var warn = document.getElementById('tf-lang-warn');
-    if (warn) warn.style.display = 'none';
-    recordSearch(w); // บันทึกประวัติการค้น (โหมดเสิร์ช ไม่นับคะแนนเกม)
-    hist = []; histPos = -1;
-    // Check if word is multi-syllable in WORD_LIST
-    var entry = WORD_LIST.find ? WORD_LIST.find(function(e){ return e.word === w; }) : (function(){
-      for(var i=0;i<WORD_LIST.length;i++){ if(WORD_LIST[i].word===w) return WORD_LIST[i]; }
-      return null;
-    })();
-    if (entry && entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
-      var syls = entry.readingTH.split('-');
-      S = { word: w, step: 'overview', path: [w], tone: null, syllables: syls, selectedSyl: null };
-      hist.push(S);
-      histPos = 0;
-    } else {
-      S = { word:w, step:'s1', path:[w], tone:null };
-      hist.push({step:'s1', path:[w], tone:null});
-      histPos = 0;
-    }
-    render();
-  },
+// Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [TF.filterThai/randomSyllable/randomWord/showWordInfo/search]
   back: function() {
     if (histPos > 0) { restoreState(histPos-1); return; }
     // ลบหน้า cat-select แล้ว → back กลับไป level-select เสมอ
@@ -4377,13 +4180,7 @@ var TF = {
     startSetSession(entries, { keepOrder: true });
     advSentenceCtx = { th: s.th, zh: s.zh }; // ตั้งหลัง startSetSession (ฟังก์ชันนั้นจะล้างค่านี้ก่อนเสมอ)
   },
-  openSearch: function() {
-    selectedLevel = null; selectedCategory = null; session = null; randomEntry = null;
-    S = { word:'', step:'input', path:[], tone:null };
-    hist = []; histPos = -1;
-    render();
-  },
-  // ── 字母練習區 ──
+// Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [TF.openSearch]
   openAlpha: function() {
     selectedLevel = null; selectedCategory = null; session = null; randomEntry = null;
     S = { word:'', step:'alpha-home', path:[], tone:null };
@@ -4651,16 +4448,7 @@ var TF = {
     //   ถ้าอยากกลับไปดาวน์โหลดไฟล์ตรงๆ ด้วย html2pdf ค่อยเปิดบล็อกเดิมคืน (อยู่ใน backup_20260619)
     openReportPrint();
   },
-  downloadSearchReport: function() {
-    if (!searchHistory.length) return;
-    // LIN 2026-06-19: ใช้หน้าต่าง print ทั้งคอม/มือถือ (กันไฟล์ว่างจาก html2canvas + กันค้าง)
-    var win = window.open('', '_blank');
-    if (win) { win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8">'+
-        '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet"></head><body>'+
-        buildSearchReportInner()+'</body></html>'); win.document.close(); win.focus();
-      setTimeout(function(){ try{win.print();}catch(e){} },600); }
-    else { showComingSoon(); }
-  },
+// Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [TF.downloadSearchReport]
   backToLevelSelect: function() {
     selectedLevel = null;
     selectedCategory = null;
@@ -4735,14 +4523,4 @@ setTimeout(tfRenderExtBar, 0);
   });
   _syncFs();
 })();
-// มาจากคลัง (?word=) → เปิดหน้าค้นหา + ใส่คำนี้ + วิเคราะห์ให้เลยทันที — Lin 2026-07-02
-(function(){
-  try{
-    var m=location.search.match(/[?&]word=([^&]+)/);
-    if(!m)return;
-    var w=decodeURIComponent(m[1]);
-    TF.openSearch();
-    var inp=document.getElementById('tf-inp');
-    if(inp){ inp.value=w; TF.search(); }
-  }catch(e){}
-})();
+// Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [ตัวรับลิงก์ ?word=]

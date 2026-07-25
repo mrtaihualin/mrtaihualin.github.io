@@ -140,25 +140,35 @@
   }
   function renderGate() {
     if (!rgGate) return;
-    var inApp = isInApp();
-    var googleBtn = '<button id="rg-g" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #dadce0;background:#fff;color:#3c4043;border-radius:10px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);">' +
-      '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>使用 Google 登入</button>';
-    // v8 (LIN 2026-07-25): เพิ่มปุ่ม Facebook — โชว์ทุกช่องทาง (ไม่ซ่อนตอนเปิดจากในแอป ต่างจาก Google
-    //   ที่ Google เองบล็อก OAuth ในเว็บวิวฝัง — Facebook ไม่มีข้อจำกัดแบบนี้) ใช้ trackLogin เช็คจริงทีหลังว่าช่องไหนพัง
-    var facebookBtn = '<button id="rg-fb" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:none;background:#1877F2;color:#fff;border-radius:10px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-top:10px;">' +
-      '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M22 12.06C22 6.51 17.52 2 12 2S2 6.51 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.58v1.85h2.78l-.44 2.91h-2.34v7.03C18.34 21.24 22 17.08 22 12.06z"/></svg>使用 Facebook 登入</button>';
+    var inAppCh = inAppChannel();
+    var inApp = !!inAppCh;
+    // v12 (LIN 2026-07-25): เปลี่ยนปุ่ม Google/Facebook/LINE เป็น "แค่โลโก้" ทรงกลม เรียงแถวเดียวกัน
+    //   (เดิมเต็มความกว้าง+ข้อความ ซ้อนกัน 3 แถวสูงมาก เสี่ยงล้นจอมือถือจอเล็ก) ตาม Lin สั่ง 2026-07-25
+    //   มี title/aria-label เก็บข้อความเดิมไว้ให้คนอ่านหน้าจอ/hover เห็นความหมาย ไม่เสียการเข้าถึง
+    var ICON_BTN = 'width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,0.12);';
+    var googleBtn = '<button id="rg-g" title="使用 Google 登入" aria-label="使用 Google 登入" style="' + ICON_BTN + 'border:1px solid #dadce0;background:#fff;">' +
+      '<svg width="24" height="24" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></button>';
+    // v8 (LIN 2026-07-25): เพิ่มปุ่ม Facebook
+    // v11 (LIN 2026-07-25, แก้จาก audit): เดิมคิดว่า Facebook ไม่บล็อก OAuth ในเว็บวิวฝัง (ผิด!)
+    //   Facebook เองก็บล็อกคล้าย Google (disallowed_useragent) ในเว็บวิวของแอปอื่น (เช่น LINE) เหมือนกัน
+    //   → ซ่อนปุ่มนี้ตอนเปิดจากในแอปด้วย เหมือน Google (ดู render logic ด้านล่าง)
+    var facebookBtn = '<button id="rg-fb" title="使用 Facebook 登入" aria-label="使用 Facebook 登入" style="' + ICON_BTN + 'border:none;background:#1877F2;">' +
+      '<svg width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M22 12.06C22 6.51 17.52 2 12 2S2 6.51 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.58v1.85h2.78l-.44 2.91h-2.34v7.03C18.34 21.24 22 17.08 22 12.06z"/></svg></button>';
     // v10 (LIN 2026-07-25): เพิ่มปุ่ม LINE — ผูกผ่าน Custom OIDC Provider ของ Supabase (custom:line)
     //   ใช้ channel "ผูกบัญชีนักเรียน" (LINE Login) ตัวเดิมที่ line-link.html ใช้อยู่ — คนละระบบกัน ไม่กระทบกัน
     //   สีเขียว #06C755 = สีทางการ LINE (ข้อยกเว้นตามกฎธีมเว็บ CLAUDE.md)
-    var lineBtn = '<button id="rg-line" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:none;background:#06C755;color:#fff;border-radius:10px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-top:10px;">' +
-      '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M12 2C6.48 2 2 5.69 2 10.24c0 4.08 3.54 7.5 8.32 8.15.32.07.76.21.87.49.1.25.06.65.03.9l-.14.85c-.04.25-.19.98.86.53 1.05-.44 5.67-3.34 7.74-5.72C21.15 13.62 22 12.02 22 10.24 22 5.69 17.52 2 12 2zm-3.3 10.6H7.05a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3c.16 0 .3.14.3.3v3.68h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3zm1.86 0h-.3a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3a.3.3 0 0 1 .3.3v4.28a.3.3 0 0 1-.3.3zm4.44 0h-.3a.3.3 0 0 1-.24-.12l-1.68-2.27v2.09a.3.3 0 0 1-.3.3h-.3a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3c.09 0 .18.04.24.12l1.68 2.27V8.03a.3.3 0 0 1 .3-.3h.3a.3.3 0 0 1 .3.3v4.28a.3.3 0 0 1-.3.3zm3.72-3.68h-1.72v.72h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3h-1.72v.72h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3h-2.32a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h2.32a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3z"/></svg>使用 LINE 登入</button>';
+    // v11 (LIN 2026-07-25, audit): LINE เปิดจาก "ในแอป LINE เอง" ควรใช้ได้ปกติ (ระบบเดียวกัน)
+    //   แต่เปิดจากในแอปอื่น (FB/IG/Messenger) ยัง "ไม่ยืนยันแน่ชัด" ว่าใช้ได้จริง (ไม่มีเอกสารยืนยัน)
+    //   → โชว์ปุ่มนี้เฉพาะตอนไม่ได้เปิดจากในแอป หรือเปิดจากในแอป LINE เอง (ดู render logic ด้านล่าง)
+    var lineBtn = '<button id="rg-line" title="使用 LINE 登入" aria-label="使用 LINE 登入" style="' + ICON_BTN + 'border:none;background:#06C755;">' +
+      '<svg width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M12 2C6.48 2 2 5.69 2 10.24c0 4.08 3.54 7.5 8.32 8.15.32.07.76.21.87.49.1.25.06.65.03.9l-.14.85c-.04.25-.19.98.86.53 1.05-.44 5.67-3.34 7.74-5.72C21.15 13.62 22 12.02 22 10.24 22 5.69 17.52 2 12 2zm-3.3 10.6H7.05a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3c.16 0 .3.14.3.3v3.68h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3zm1.86 0h-.3a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3a.3.3 0 0 1 .3.3v4.28a.3.3 0 0 1-.3.3zm4.44 0h-.3a.3.3 0 0 1-.24-.12l-1.68-2.27v2.09a.3.3 0 0 1-.3.3h-.3a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3c.09 0 .18.04.24.12l1.68 2.27V8.03a.3.3 0 0 1 .3-.3h.3a.3.3 0 0 1 .3.3v4.28a.3.3 0 0 1-.3.3zm3.72-3.68h-1.72v.72h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3h-1.72v.72h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3h-2.32a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h2.32a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3z"/></svg></button>';
     // v9 (LIN 2026-07-25): เตือน "ครั้งที่แล้วล็อกอินด้วยอะไร" — กันสับสนไปกดคนละช่องทางแล้วได้บัญชีใหม่ (คะแนนหาย)
     var lastProvider = getLastProvider();
     var lastProviderHint = lastProvider
       ? '<div style="margin:0 0 14px;background:#EAF4EC;border:1px solid #A9D3B4;border-radius:10px;padding:8px 12px;font-size:12.5px;color:#2d6a4f;line-height:1.5;">💡 上次你是用 <b>' + esc(providerLabel(lastProvider)) + '</b> 登入的，建議用同一種方式，分數才接得上</div>'
       : '';
     rgGate.innerHTML =
-      '<div style="position:relative;background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
+      '<div style="position:relative;background:#fff;max-width:380px;width:100%;max-height:88vh;overflow-y:auto;border-radius:18px;padding:30px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
       '<button id="rg-x" aria-label="關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
       '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🏆</div>' +
       '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入排行榜</h2>' +
@@ -172,9 +182,15 @@
         '<button id="rg-resend" style="margin-top:8px;width:100%;border:1px solid #E5D9B8;background:#fff;color:#8B7340;border-radius:10px;padding:9px;cursor:pointer;font-size:13px;">重新寄送驗證碼</button>' +
       '</div>' +
       '<div id="rg-msg" style="display:none;font-size:12.5px;margin:10px 0 0;text-align:left;line-height:1.5;"></div>' +
+      // v11 (LIN 2026-07-25, audit): แก้ตาม audit — Facebook เองก็บล็อก OAuth ในเว็บวิวฝัง (เหมือน Google)
+      //   LINE ยังไม่ยืนยันว่าใช้ได้จากในแอปอื่น (นอกแอป LINE) → โชว์แค่ตอนไม่ได้เปิดจากในแอป หรือเปิดจากในแอป LINE เอง
       (inApp
-        ? ('<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內用上面的 <b>Email 驗證碼</b>或下面的 <b>Facebook / LINE</b> 登入即可（Google 在 App 內無法使用）</div>' + facebookBtn + lineBtn)
-        : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' + googleBtn + facebookBtn + lineBtn)) +
+        ? (inAppCh === 'line'
+            ? ('<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內用上面的 <b>Email 驗證碼</b>或下面的 <b>LINE</b> 登入即可（Google / Facebook 在 App 內無法使用）</div>' +
+               '<div style="display:flex;justify-content:center;gap:14px;margin-top:12px;">' + lineBtn + '</div>')
+            : ('<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內請用上面的 <b>Email 驗證碼</b>登入（Google / Facebook / LINE 在此 App 內可能無法使用，建議用瀏覽器開啟本頁再登入）</div>'))
+        : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' +
+           '<div style="display:flex;justify-content:center;gap:14px;">' + googleBtn + facebookBtn + lineBtn + '</div>')) +
       '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回</p>' +
       '</div>';
     rgGate.querySelector('#rg-x').onclick = closeGate;
@@ -188,33 +204,26 @@
     if (ci) ci.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') verifyCode(ci.value); });
     var rBtn = rgGate.querySelector('#rg-resend');
     if (rBtn) rBtn.onclick = function () { if (otpCooldown <= 0) startOtp(otpEmail || se.value, true); };
-    if (!inApp) { var g = rgGate.querySelector('#rg-g'); if (g) g.onclick = function () {
-      trackLogin('login_attempt', 'google');
-      markPendingLogin('google');
-      try {
-        sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href } }).then(function (res) {
-          if (res && res.error) { trackLogin('login_fail', 'google', { reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); }
-        });
-      } catch (e) { trackLogin('login_fail', 'google', { reason: String(e && e.message || e).slice(0, 90) }); takePendingLogin(); }
-    }; }
-    var fb = rgGate.querySelector('#rg-fb'); if (fb) fb.onclick = function () {
-      trackLogin('login_attempt', 'facebook');
-      markPendingLogin('facebook');
-      try {
-        sb.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: location.href } }).then(function (res) {
-          if (res && res.error) { trackLogin('login_fail', 'facebook', { reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); }
-        });
-      } catch (e) { trackLogin('login_fail', 'facebook', { reason: String(e && e.message || e).slice(0, 90) }); takePendingLogin(); }
-    };
-    var ln = rgGate.querySelector('#rg-line'); if (ln) ln.onclick = function () {
-      trackLogin('login_attempt', 'line');
-      markPendingLogin('line');
-      try {
-        sb.auth.signInWithOAuth({ provider: 'custom:line', options: { redirectTo: location.href } }).then(function (res) {
-          if (res && res.error) { trackLogin('login_fail', 'line', { reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); }
-        });
-      } catch (e) { trackLogin('login_fail', 'line', { reason: String(e && e.message || e).slice(0, 90) }); takePendingLogin(); }
-    };
+    if (!inApp) { var g = rgGate.querySelector('#rg-g'); if (g) g.onclick = function () { oauthLogin('google', 'google'); }; }
+    var fb = rgGate.querySelector('#rg-fb'); if (fb) fb.onclick = function () { oauthLogin('facebook', 'facebook'); };
+    var ln = rgGate.querySelector('#rg-line'); if (ln) ln.onclick = function () { oauthLogin('line', 'custom:line'); };
+  }
+  // v11 (LIN 2026-07-25, audit): รวมโค้ดปุ่ม Google/Facebook/LINE เป็นฟังก์ชันเดียว (เดิมก็อปวาง 3 รอบ)
+  //   เพิ่ม 2 จุดที่ audit เจอว่าขาด: (1) .catch() กัน promise reject ตกหล่นไม่ยิง trackLogin (2) setMsg()
+  //   โชว์ error ให้ผู้เล่นเห็นจริง — เดิมกดแล้วพังเงียบๆ ไม่รู้ว่าเกิดอะไรขึ้น ผู้เล่นนึกว่าเว็บค้าง
+  function oauthLogin(trackName, supabaseProvider) {
+    trackLogin('login_attempt', trackName);
+    markPendingLogin(trackName);
+    function onFail(reason) {
+      trackLogin('login_fail', trackName, { reason: String(reason || '').slice(0, 90) });
+      takePendingLogin();
+      setMsg('登入失敗，請改用上面的 Email 驗證碼再試一次', true);
+    }
+    try {
+      sb.auth.signInWithOAuth({ provider: supabaseProvider, options: { redirectTo: location.href } })
+        .then(function (res) { if (res && res.error) onFail(res.error.message); }, function (e) { onFail(e && e.message || e); })
+        .catch(function (e) { onFail(e && e.message || e); });
+    } catch (e) { onFail(e && e.message || e); }
   }
   function setMsg(msg, isErr) {
     var el = rgGate && rgGate.querySelector('#rg-msg');
@@ -397,7 +406,9 @@
   // ต้องรัน SQL เพิ่มคอลัมน์ wrong_items ก่อน (ไฟล์ SQL แยก) — ถ้ายังไม่รัน จะ fallback เซฟแบบไม่มีคอลัมน์นี้ ให้คะแนนไม่หาย
   function saveScore(score, games, game, wrongItems) {
     if (!API.user) return; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
-    if ((API.user.email || '').toLowerCase() === ADMIN_EMAIL) {
+    // v11 (LIN 2026-07-25, audit): ใช้ window.isSiteAdmin (ตรวจทั้ง email + user id) แทนเช็ค email อย่างเดียว
+    //   กัน Facebook/LINE ของแอดมินเอง (อาจไม่มี email) หลุดรอดเข้า leaderboard ตอนทดสอบ
+    if ((window.isSiteAdmin && window.isSiteAdmin(API.user)) || (API.user.email || '').toLowerCase() === ADMIN_EMAIL) {
       console.info('[board] admin account — score not saved (excluded from leaderboard)');
       return;
     }
