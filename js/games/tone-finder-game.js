@@ -1143,10 +1143,23 @@ function tfReadingLineHtml() {
   if (!tfPronMode && !tfEnMode) return '';
   var e = tfCurEntry();
   if (!e) return '';
+
+  // ── กันเฉลยข้ามพยางค์ (Lin 2026-07-25) ──
+  // คำหลายพยางค์ถามทีละพยางค์ → ถ้าโชว์คำอ่าน "ทั้งคำ" หลังตอบพยางค์แรก = เฉลยวรรณยุกต์พยางค์ที่ยังไม่ถามด้วย
+  // เลยตัดให้เหลือแค่พยางค์ที่ตอบไปแล้ว (ที่เหลือแทนด้วย …) · ถ้าจำนวนพยางค์ไม่ตรงกัน ไม่ตัด (กันข้อมูลเพี้ยน)
+  var _multi = S.syllables && S.syllables.length > 1 && S.selectedSyl != null;
+  var _done  = _multi ? (S.selectedSyl + 1) : 0;   // จำนวนพยางค์ที่ตอบแล้ว (รวมพยางค์ปัจจุบัน เพราะตอบแล้วถึงจะถึงบรรทัดนี้)
+  function _clip(str) {
+    if (!_multi || !str) return str;
+    var ps = String(str).split('-');
+    if (ps.length !== S.syllables.length || _done >= ps.length) return str;
+    return ps.slice(0, _done).join('-') + '-…';
+  }
+
   var html = '';
   // คำอ่านไทยโชว์เฉพาะตอน "อ่านไม่ตรงกับตัวเขียน" — ตรงกันแล้วโชว์ซ้ำใต้คำเดิมก็รกเปล่าๆ (กติกาเดียวกับเกมเรียงคำ)
-  if (tfPronMode) { var _th = e.readingTH || ''; if (_th && _th !== e.word) html += '<div class="tf-read-th">' + _th + '</div>'; }
-  if (tfEnMode)   { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _en + '</div>'; }
+  if (tfPronMode) { var _th = e.readingTH || ''; if (_th && _th !== e.word) html += '<div class="tf-read-th">' + _clip(_th) + '</div>'; }
+  if (tfEnMode)   { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _clip(_en) + '</div>'; }
   return html;
 }
 
@@ -4172,7 +4185,10 @@ var TF = {
     var entries = s.words.map(function(w){
       var _n = w.syls.length;
       var _read = _parts.slice(_p, _p + _n).join('-') || w.th; _p += _n;
-      return { word: w.th, readingTH: _read, zh: w.zh, level: 3, category: '高級句子' };
+      // Lin 2026-07-25: ใส่ readingEN ด้วย (ต่อ en ของทุกพยางค์) — เดิมลืมใส่ ทำให้ปุ่ม 英文讀音 ในโหมด高級 โชว์ว่างเปล่า
+      //   (กฎ CLAUDE.md: ตัวประกอบต้อง copy ทุกฟิลด์ที่เกมใช้จริง)
+      var _readEn = w.syls.map(function(sy){ return sy.en || ''; }).filter(Boolean).join('-');
+      return { word: w.th, readingTH: _read, readingEN: _readEn, zh: w.zh, level: 3, category: '高級句子' };
     });
     selectedLevel = 3;
     selectedCategory = '高級句子';

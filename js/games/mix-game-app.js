@@ -285,7 +285,7 @@
   function wordDisplayHtml(w, idx) {
     if (w.syls.length <= 1) return esc(w.th);
     return w.syls.map(function (s, i) {
-      return '<span style="' + (i === idx ? 'color:#d85a30;border-bottom:3px solid #d85a30' : 'color:#c9b98a') + '">' + esc(s.th) + '</span>';
+      return '<span style="' + (i === idx ? 'color:#8B6310;border-bottom:3px solid #8B6310' : 'color:#c9b98a') + '">' + esc(s.th) + '</span>';
     }).join('');
   }
 
@@ -485,10 +485,13 @@
         '</div>';
       }).join('') + '</div>';
     }).join('');
+    // 2026-07-25 รอบ5: บั๊กจริงที่ Lin เจอจากภาพจริง — เดิมเอา rows (ซึ่งเป็น 4 แถว .tk-row สมบูรณ์อยู่แล้ว) ไปห่อด้วย
+    // .tk-row อีกชั้นนึงโดยไม่ตั้งใจ พอ .tk-row เป็น display:flex (แนวนอน) เลยลาก 4 แถวมาเรียงติดกันในบรรทัดเดียว
+    // บีบจนดูเหมือนมีแถวเดียว — jsdom เทสก่อนหน้าจับไม่ได้เพราะ jsdom ไม่คำนวณ CSS layout จริง เห็นแค่ปุ่มกดได้/พิมพ์ถูกก็ผ่าน
     return '<div class="type-panel" style="display:flex">' +
       '<div class="type-target" id="mx-typetarget"></div>' +
-      '<div class="tkbd" style="display:flex">' +
-        '<div class="tk-row">' + rows + '</div>' +
+      '<div class="tkbd">' +
+        rows +
         '<div class="tk-row"><div class="tk-key tk-shift-key" id="mx-shift-key" style="flex:2;max-width:110px"><span class="tk-base" style="font-size:12px">⇧ Shift</span></div></div>' +
       '</div>' +
     '</div>';
