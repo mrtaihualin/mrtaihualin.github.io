@@ -9477,20 +9477,48 @@ async function syncScheduleToSupabase(matched) {
       console.warn('อ่านตารางเดิมเพื่อเก็บกวาดไม่สำเร็จ:', selError.message);
       return;   // อ่านไม่ได้ → ไม่ลบ (ของใหม่เขียนลงไปแล้ว ข้อมูลไม่หาย แค่อาจมีคาบเก่าค้าง)
     }
-    const staleIds = (existing || [])
-      .filter(function(r){ return !keepKeys.has(r.token + '|' + r.lesson_date + '|' + (r.start_time || '')); })
-      .map(function(r){ return r.id; });
+    const staleRows = (existing || [])
+      .filter(function(r){ return !keepKeys.has(r.token + '|' + r.lesson_date + '|' + (r.start_time || '')); });
+    const staleIds = staleRows.map(function(r){ return r.id; });
     if (staleIds.length) {
-      // 🛑 กันพลาดใหญ่: ถ้ารอบนี้จะลบเกินครึ่งของที่มีอยู่ (และมากกว่า 10 แถว) แปลว่าน่าจะผิดปกติ
+      // 🛑 กันพลาดใหญ่ ชั้นที่ 1: ถ้ารอบนี้จะลบเกินครึ่งของ "ยอดรวมทุกคน" (และ ≥3 แถว) แปลว่าน่าจะผิดปกติทั้งระบบ
       // (เช่น Calendar โหลดมาไม่ครบ) → ถามครูก่อน ไม่ลบเงียบๆ
       const total = (existing || []).length;
+      let proceedIds = staleIds;
       if (staleIds.length >= 3 && staleIds.length > total * 0.5) {
-        const ok = confirm('⚠️ ระบบกำลังจะลบคาบเก่า ' + staleIds.length + ' จาก ' + total + ' แถว\n'
+        const ok = confirm('⚠️ ระบบกำลังจะลบคาบเก่า ' + staleIds.length + ' จาก ' + total + ' แถว (รวมทุกคน)\n'
           + 'จำนวนเยอะผิดปกติ — อาจเป็นเพราะ Google Calendar โหลดมาไม่ครบรอบนี้\n\n'
           + 'กด OK = ลบตามนี้　·　กด Cancel = ไม่ลบ (ปลอดภัยกว่า แล้วค่อยกดซิงค์ใหม่)');
         if (!ok) { console.warn('[syncSchedule] ครูเลือกไม่ลบรอบนี้'); return; }
       }
-      const { error: delError } = await sb.from('classroom_schedule').delete().in('id', staleIds);
+      // 🛑 กันพลาดใหญ่ ชั้นที่ 2 (เพิ่ม 2026-07-25 ตาม Lin สั่ง): ยกเลิกทีละนัด/สองนัดของนักเรียนคนหนึ่ง = ปกติ ไม่ต้องถาม
+      // แต่ถ้านักเรียนคนไหนคนหนึ่งจะโดนลบเกินครึ่งของคาบตัวเอง (และ ≥3 แถว) ต้องถามก่อนเสมอ แม้ยอดรวมทุกคนจะดูไม่เยอะ
+      // (เคสจริง 2026-07-25: 育郁 โดนลบคาบเก่าหมดทุกแถว แต่ยอดรวมทุกคนไม่เกินครึ่ง เลยไม่มีการเตือนมาก่อนหน้านี้)
+      const totalByToken = {}, staleByToken = {};
+      (existing || []).forEach(function(r){ totalByToken[r.token] = (totalByToken[r.token] || 0) + 1; });
+      staleRows.forEach(function(r){ (staleByToken[r.token] = staleByToken[r.token] || []).push(r.id); });
+      // 2026-07-25 แก้ตาม Lin สั่ง: ยกเลิก 1 คาบเดียวของนักเรียนคนไหน = ปกติ ไม่ถาม · เกิน 1 คาบ (≥2) ต้องถามเสมอ
+      const flagged = Object.keys(staleByToken).map(function(token) {
+        return { token: token, cnt: staleByToken[token].length, tot: totalByToken[token] || 0 };
+      }).filter(function(f) { return f.cnt > 1; });
+      if (flagged.length) {
+        const lines = flagged.map(function(f) {
+          const nm = (typeof studentsCache !== 'undefined' && studentsCache && studentsCache[f.token] && studentsCache[f.token].name) || f.token;
+          return '・' + nm + '：จะถูกลบ ' + f.cnt + ' จาก ' + f.tot + ' คาบ';
+        }).join('\n');
+        const ok2 = confirm('⚠️ นักเรียนต่อไปนี้กำลังจะถูกลบคาบเก่าเกินครึ่งของตัวเอง:\n' + lines
+          + '\n\nกด OK = ลบตามนี้　·　กด Cancel = ข้ามคนเหล่านี้ไว้ก่อน (คนอื่นลบตามปกติ ไม่กระทบ)');
+        if (!ok2) {
+          const skipTokens = new Set(flagged.map(function(f){ return f.token; }));
+          proceedIds = proceedIds.filter(function(id) {
+            const row = staleRows.find(function(r){ return r.id === id; });
+            return row && !skipTokens.has(row.token);
+          });
+          console.warn('[syncSchedule] ครูเลือกข้ามการลบของนักเรียนที่ถูก flag:', Array.from(skipTokens));
+        }
+      }
+      if (!proceedIds.length) return;
+      const { error: delError } = await sb.from('classroom_schedule').delete().in('id', proceedIds);
       if (delError) {
         console.error('เก็บกวาดคาบเก่าไม่สำเร็จ:', delError.message);
         alert('⚠️ เขียนตารางใหม่สำเร็จแล้ว แต่ลบคาบเก่าที่ยกเลิกไปไม่ได้ (' + delError.message + ')\n'

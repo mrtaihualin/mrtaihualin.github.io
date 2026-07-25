@@ -393,6 +393,30 @@ function setRgPronMode(on){
   }
 }
 setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
+
+// ── ปุ่มเปิด/ปิด "คำอ่านโรมัน" (英文讀音) — Lin 2026-07-25 ──
+// 🔡 = โชว์อยู่ · 🔠 = ซ่อนอยู่ (ไอคอนตามที่ Lin เลือก) · ค่าจำแยกจากคำอ่านไทย (rg_en_mode)
+// ต่างจาก 讀音 ตรงที่ "โชว์เมื่อเปิดเท่านั้น" ทั้งก่อนและหลังเฉลย (เฉลยไม่บังคับโชว์ เพราะเป็นตัวช่วยเสริม)
+var rgEnMode=(function(){try{var v=localStorage.getItem('rg_en_mode');return v===null?false:v==='1';}catch(e){return false;}})();
+function buildEnPron(){ return (typeof WORD!=='undefined'&&WORD&&WORD.en)?WORD.en:''; }
+function rgRenderEnLine(){
+  var el=document.getElementById('rev-en');
+  if(!el)return;
+  el.textContent=rgEnMode?buildEnPron():'';
+}
+function setRgEnMode(on){
+  rgEnMode=!!on;
+  try{localStorage.setItem('rg_en_mode',rgEnMode?'1':'0');}catch(e){}
+  var btn=document.getElementById('rg-en-toggle');
+  if(btn){
+    btn.textContent=rgEnMode?'🔡':'🔠';
+    btn.title=rgEnMode?'目前：英文讀音已顯示（點擊隱藏）':'目前：英文讀音已隱藏（點擊顯示）';
+    btn.setAttribute('aria-label',btn.title);
+  }
+  rgRenderEnLine();
+}
+setRgEnMode(rgEnMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
+
 var bonusAnswered=false;
 var selectedBonus=null;  // tone name user picked before 檢查
 
@@ -676,6 +700,7 @@ function loadWord(){
   document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
+  rgRenderEnLine(); // Lin 2026-07-25: คำอ่านโรมันของคำใหม่ (ถ้าเปิด 英文讀音 อยู่)
   document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน) — ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
@@ -1388,6 +1413,7 @@ function buildThaiPron(){
 function showReveal(){
   var _pron=buildThaiPron();
   document.getElementById('rev-pron').textContent=_pron?(_pron):'';
+  rgRenderEnLine();
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
   // ข้ามการพิมพ์ซ้ำ "เฉพาะเมื่อ" แผงวรรณยุกต์ (#bonus-reason) โชว์คำอธิบายจริงๆ อยู่แล้วเท่านั้น
@@ -1410,6 +1436,7 @@ function showReveal(){
 function showRevealMulti(){
   var _pronM=buildThaiPron();
   document.getElementById('rev-pron').textContent=_pronM?(_pronM):'';
+  rgRenderEnLine();
   // Lin 2026-07-12 (圖3 unify): คำอธิบายอยู่ "ในกล่องพยางค์" (#bonus-reason ของกล่องสุดท้าย) เสมอ — เลิกใช้แผงแยก #reveal
   var box=document.getElementById('bonus-reason');
   box.innerHTML='';

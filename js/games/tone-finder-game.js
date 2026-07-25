@@ -1128,6 +1128,56 @@ function tfRollGolden() {
 var advSentenceCtx = null;      // {th, zh} ของประโยคที่กำลังเล่น (null = ไม่ได้เล่นโหมด高級句子) — ใช้โชว์บนแบนเนอร์
 var advSentIdx = -1;            // index ของประโยคปัจจุบันใน ADV_SENTENCES
 
+// ════════════════════════════════════════════════════════════
+// ── คำอ่านใต้คำศัพท์: 讀音 (ไทย 🐣/🥚) + 英文讀音 (โรมัน 🔡/🔠) — Lin 2026-07-25
+// เดิมเกมเสียงไม่มี 2 ปุ่มนี้เลย เพราะ "คำอ่านเฉลยวรรณยุกต์ก่อนตอบ" (โน้ต 2026-07-16)
+// รอบนี้ Lin สั่งให้เพิ่ม แต่ล็อกไว้ว่า **โชว์เฉพาะหลังตอบแล้วเท่านั้น** → ขั้น 'session-guess' (หน้าเดาวรรณยุกต์) จะไม่โชว์เด็ดขาด
+// ค่าจำใช้คีย์เดียวกับเกมอ่าน/เกมพิมพ์ (rg_pron_mode / rg_en_mode) → ตั้งครั้งเดียวเหมือนกันทุกเกม
+// ════════════════════════════════════════════════════════════
+var tfPronMode = (function () { try { var v = localStorage.getItem('rg_pron_mode'); return v === null ? false : v === '1'; } catch (e) { return false; } })();
+var tfEnMode   = (function () { try { var v = localStorage.getItem('rg_en_mode');   return v === null ? false : v === '1'; } catch (e) { return false; } })();
+
+function tfSyncReadBtns() {
+  var b1 = document.getElementById('rg-pron-toggle');
+  if (b1) {
+    b1.textContent = tfPronMode ? '🐣' : '🥚';
+    b1.title = tfPronMode ? '目前：讀音已顯示（答完聲調後才出現）' : '目前：讀音已隱藏（點擊顯示，答完聲調後才出現）';
+    b1.setAttribute('aria-label', b1.title);
+  }
+  var b2 = document.getElementById('rg-en-toggle');
+  if (b2) {
+    b2.textContent = tfEnMode ? '🔡' : '🔠';
+    b2.title = tfEnMode ? '目前：英文讀音已顯示（答完聲調後才出現）' : '目前：英文讀音已隱藏（點擊顯示，答完聲調後才出現）';
+    b2.setAttribute('aria-label', b2.title);
+  }
+}
+
+// entry ของคำที่กำลังเล่นอยู่ (มี readingTH / readingEN จาก buildWordListForToneFinder)
+function tfCurEntry() {
+  try { if (session && session.words && session.words.length) return session.words[session.index]; } catch (e) {}
+  return (typeof randomEntry !== 'undefined') ? randomEntry : null;
+}
+
+// ด่านกันเฉลย: ขั้น 'session-guess' = ยังไม่ได้ตอบ → ห้ามโชว์คำอ่านทุกแบบ
+function tfReadingUnlocked() { return S.step !== 'session-guess'; }
+
+function tfReadingLineHtml() {
+  if (!tfReadingUnlocked()) return '';
+  if (!tfPronMode && !tfEnMode) return '';
+  var e = tfCurEntry();
+  if (!e) return '';
+  var html = '';
+  if (tfPronMode) { var _th = e.readingTH || e.word || ''; if (_th) html += '<div class="tf-read-th">' + _th + '</div>'; }
+  if (tfEnMode)   { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _en + '</div>'; }
+  return html;
+}
+
+// อัปเดตเฉพาะบรรทัดคำอ่าน (ไม่ render ใหม่ทั้งหน้า — กันสถานะเกมสะดุด)
+function tfUpdateReadingLine() {
+  var el = document.getElementById('tf-read-line');
+  if (el) el.innerHTML = tfReadingLineHtml();
+}
+
 // ── สถิติคำที่ตอบผิดรายคำ (localStorage) + หน้า 全部 แบบ 50/50 เน้นคำที่ยังไม่แม่น — LIN 2026-06-20 ──
 var TF_WORD_WRONG_KEY = 'tf_word_wrong_v1';
 function tfShuffleArr(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
@@ -2199,7 +2249,8 @@ function render() {
     } else {
       mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>' + zhHtml;
     }
-    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml;
+    // Lin 2026-07-25: บรรทัดคำอ่าน (讀音 / 英文讀音) — โชว์เฉพาะหลังตอบวรรณยุกต์แล้ว (ดู tfReadingUnlocked)
+    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>';
     // inject vault save button
     if (window.WordVault && S.word) {
       WordVault.injectStyles();
@@ -4534,6 +4585,20 @@ var TF = {
     if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? '✍️ 換回標準字體' : '✍️ 換現代字體'; }
     try { localStorage.setItem('tf_modern_font', on ? '1' : '0'); } catch(e){}
   },
+  // ── ปุ่ม 讀音 (คำอ่านไทย) / 英文讀音 (คำอ่านโรมัน) — Lin 2026-07-25 ──
+  // กดได้ตลอด แต่ตัวคำอ่านจะโผล่เฉพาะหลังตอบวรรณยุกต์แล้วเท่านั้น (tfReadingUnlocked)
+  togglePron: function() {
+    tfPronMode = !tfPronMode;
+    try { localStorage.setItem('rg_pron_mode', tfPronMode ? '1' : '0'); } catch(e){}
+    tfSyncReadBtns(); tfUpdateReadingLine();
+    if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  },
+  toggleEn: function() {
+    tfEnMode = !tfEnMode;
+    try { localStorage.setItem('rg_en_mode', tfEnMode ? '1' : '0'); } catch(e){}
+    tfSyncReadBtns(); tfUpdateReadingLine();
+    if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  },
   // ── ปุ่มถามคำถามในเกม → ส่งเข้า Gmail ของ LIN ผ่าน Web3Forms (ผู้เล่นพิมพ์เอง + แนบคำที่กำลังเล่น) ──
   openAsk: function() {
     var old = document.getElementById('tf-ask-ov'); if (old) old.remove();
@@ -4661,6 +4726,8 @@ try {
     if (_fb) { _fb.classList.add('active'); _fb.textContent = '✍️ 換回標準字體'; }
   }
 } catch(e){}
+// Lin 2026-07-25: ตั้งไอคอนปุ่ม 讀音 (🐣/🥚) + 英文讀音 (🔡/🔠) ตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfSyncReadBtns); else tfSyncReadBtns();
 // ── render challenge banner + streak chips + ⭐/🌱 ในแถบนอก tf-card ──
 function tfRenderExtBar() {
   try {

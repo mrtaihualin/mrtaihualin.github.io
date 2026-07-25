@@ -51,6 +51,8 @@
   var READERS = {
     none:  function () { return null; },
     pron:  function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('🐣') !== -1; },
+    // Lin 2026-07-25: แถวคำอ่านโรมัน (英文讀音) — 🔡 = เปิด · 🔠 = ปิด (ไอคอนตามที่ Lin เลือก)
+    en:    function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('🔡') !== -1; },
     zh:    function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('🍙') !== -1; },
     vault: function (el) { var b = el.querySelector('button') || el; return b.getAttribute && b.getAttribute('data-saved') === '1'; },
     guide: function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('💡') !== -1; },
