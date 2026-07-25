@@ -1831,7 +1831,8 @@ window.deleteFBComment = function(postId, idx) {
 // Lin 2026-07-25 v2: ปุ่ม 🍙/🌾 = กดสลับคำแปลทันที (เหมือนเดิม) · ปุ่มสลับฟอนต์ "換現代字體/換回標準字體" ย้ายจากเมนู 🎮
 //    มาเป็น "อีกแถวหนึ่งในเมนู 🍚 (WordMenu)" ผ่านช่อง #font-toggle-slot ในหน้า (ตามที่ Lin สั่ง)
 //    ⚠️ v1 เคยทำ 🍙 เป็นดรอปดาวน์ซ้อนในเมนู 🍚 → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ (บั๊ก) แก้เป็น v2 นี้แล้ว
-//    ยกเว้นหน้าเกมเรียงลำดับคำ (word-order) ที่ไม่มีปุ่ม 🍙 (บั๊กเดิม: กล่องคำแปลไม่ตอบสนอง) → คงปุ่มสลับฟอนต์ไว้ในเมนู 🎮 เหมือนเดิม
+// Lin 2026-07-25 v3: หน้าเกมเรียงลำดับคำ (word-order) ไม่มีปุ่ม 🍙 (บั๊กเดิม: กล่องคำแปลไม่ตอบสนอง) → ย้ายปุ่มสลับฟอนต์ของหน้านี้
+//    ไปอยู่ในเมนู 🍚 stub ตัวใหม่แทน (ดูบล็อก "🍚 เมนูตัวเลือกใต้คำ สำหรับหน้าที่ยังไม่มี WordMenu" ท้ายไฟล์นี้) ไม่ต้องมีซ้ำ 2 ที่ (เดิมอยู่ในเมนู 🎮)
 // ===================================================================
 (function () {
   function ready(fn) {
@@ -1855,29 +1856,8 @@ window.deleteFBComment = function(postId, idx) {
       var isWordOrder = (location.pathname || '').toLowerCase().indexOf('word-order') > -1;
 
       // Lin 2026-07-16: ปุ่ม 🍙/🌾 กดแล้วไม่มีผลในเกมเรียงคำ (กล่องคำแปล .zh-hint#wo-zh ไม่ได้อยู่ในลิสต์ ZH_ALL) → ไม่มีปุ่ม 🍙 ในหน้านี้
-      // แต่ยังต้องกดสลับฟอนต์ได้ → ใส่แถวนี้กลับเข้าเมนู 🎮 เดิมเฉพาะหน้านี้เท่านั้น
-      if (isWordOrder) {
-        try {
-          if (hasFontToggle) {
-            var fontOnWO = isFontOn();
-            var fontRowWO = document.createElement('button');
-            fontRowWO.type = 'button';
-            fontRowWO.className = 'gs-tab';
-            function renderFontRowWO() {
-              fontRowWO.innerHTML = '<span class="ico">' + (fontOnWO ? '✅' : '✍️') + '</span><span class="gs-lbl">' + (fontOnWO ? '換回標準字體' : '換現代字體') + '</span>';
-            }
-            renderFontRowWO();
-            fontRowWO.onclick = function (e) {
-              e.stopPropagation();
-              if (!callFontToggle()) return;
-              fontOnWO = isFontOn();
-              renderFontRowWO();
-            };
-            gs.appendChild(fontRowWO);
-          }
-        } catch (e) {}
-        return;
-      }
+      // ปุ่มสลับฟอนต์ของหน้านี้ย้ายไปอยู่ในเมนู 🍚 stub ตัวใหม่แล้ว (Lin 2026-07-25 v3) → จบงานของบล็อกนี้แค่นี้พอ ไม่ต้องสร้างอะไรเพิ่ม
+      if (isWordOrder) return;
 
       var KEY = 'games_hide_zh';
       var hideOn = false;
@@ -1959,7 +1939,9 @@ window.deleteFBComment = function(postId, idx) {
           fontSlot.appendChild(fontBtn);
         }
       } else {
-        // lego (ไม่มีช่องแถวปุ่มใต้คำ + ไม่มีสลับฟอนต์) → ต่อ 🍙 เข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap)
+        // lego (ไม่มีช่องแถวปุ่มใต้คำ + ไม่มีสลับฟอนต์) → ต่อ 🍙 เข้าชุดปุ่มลอยเดิมไปก่อน (.rg-ctl-wrap)
+        // Lin 2026-07-25 v3: ตั้ง id ไว้ให้บล็อก "🍚 เมนูตัวเลือกใต้คำ สำหรับหน้าที่ยังไม่มี WordMenu" (ท้ายไฟล์นี้) มาย้ายปุ่มนี้เข้าไปเป็นแถว "翻譯" แทนที่จะลอยเดี่ยว
+        fab.id = 'zh-fab-standalone';
         var wrap2 = document.querySelector('.rg-ctl-wrap');
         if (wrap2) { wrap2.appendChild(fab); } else { document.body.appendChild(fab); }
       }
@@ -2002,7 +1984,12 @@ window.deleteFBComment = function(postId, idx) {
           '.grw-menu.gs-open{display:flex;}' +
           '.grw-menu .grw-item{display:flex;align-items:center;gap:8px;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}' +
           '.grw-menu .grw-item:hover{background:rgba(139,99,16,0.10);}' +
-          '.grw-menu .grw-item .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}';
+          '.grw-menu .grw-item .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}' +
+          // Lin 2026-07-25 v3: ปุ่มจริงเดิม (เช่น 🍙 ที่ย้ายจากลอยเดี่ยวเข้ามาเป็นแถวในเมนู) → ทำให้หน้าตาเป็นวงกลมทองเหมือน .ico
+          '.grw-menu .grw-item .rg-ctl-fab{position:static!important;width:26px!important;height:26px!important;border-radius:50%!important;background:linear-gradient(135deg,#C8973A,#8B6310)!important;border:none!important;color:#fff!important;font-size:13px!important;box-shadow:none!important;margin:0!important;flex-shrink:0;}' +
+          // Lin 2026-07-25 v3: แถวเปล่า (ฟีเจอร์ยังไม่มีในหน้านี้) — จางลงนิดหน่อย บอกใบ้ว่ายังกดไม่ได้จริง ตามที่ Lin สั่ง "ใส่มาก่อน ถ้ายังทำงานไม่ได้ไม่เป็นไร ให้เป็นปุ่มเปล่าๆ"
+          '.grw-menu .grw-item.stub{opacity:0.5;cursor:default;}' +
+          '.grw-menu .grw-item.stub:hover{background:none;}';
         document.head.appendChild(baseStyle);
       }
 
@@ -2259,4 +2246,111 @@ window.deleteFBComment = function(postId, idx) {
     '.tf-streak-chip{line-height:1;}' +
     '#rg-login-slot,#tf-login-slot{display:flex;align-items:center;}';
   document.head.appendChild(style);
+})();
+
+// ════════════════════════════════════════════════════════════
+// 🍚 เมนูตัวเลือกใต้คำ — สำหรับหน้าเกมที่ยังไม่มี WordMenu ของตัวเอง (เกมเรียงคำ/เกมเลโก้) — Lin 2026-07-25
+// Lin สั่ง: "ทุกเกมต้องมีเมนูแบบนี้ ใส่มาก่อน ถ้ายังทำงานไม่ได้ไม่เป็นไร ให้เป็นปุ่มเปล่าๆ"
+// → ทุกหน้าเกมโชว์เมนู 🍚 เหมือนกันหมด 7 แถว (發音/讀音/翻譯/單字庫/提示/螢幕鍵盤/字體)
+//   แถวไหนมีฟังก์ชันจริงอยู่แล้วในหน้านั้น (翻譯/字體) ผูกให้ทำงานจริง — ที่เหลือเป็นปุ่มเปล่า (จางลง กดไม่มีผล) รอเพิ่มฟีเจอร์ทีหลัง
+// หน้าที่มี WordMenu ของตัวเองแล้ว (typing/reading/tone-finder ผ่าน word-menu.js) → บล็อกนี้ข้ามไปเลย ไม่ทำซ้ำ
+// ════════════════════════════════════════════════════════════
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      if (!document.getElementById('game-switcher')) return;
+      if (document.getElementById('word-ctl-row') || document.getElementById('tf-word-ctl-row')) return; // หน้านี้มี WordMenu จริงอยู่แล้ว
+
+      function callFontToggle() {
+        if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
+        if (window.TF && typeof window.TF.toggleFont === 'function') { window.TF.toggleFont(); return true; }
+        return false;
+      }
+      function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
+      var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
+
+      var wrap = document.querySelector('.rg-ctl-wrap');
+      if (!wrap) return; // ไม่ควรเกิด (ทุกหน้าเกมมีชุดปุ่มลอยนี้อยู่แล้ว) แต่กันพังไว้
+
+      function stubRow(icon, label) {
+        var d = document.createElement('div');
+        d.className = 'grw-item stub';
+        d.innerHTML = '<span class="ico">' + icon + '</span>' + label;
+        d.title = '這個功能這頁還沒開放';
+        return d;
+      }
+
+      var menu = document.createElement('div');
+      menu.className = 'grw-menu';
+
+      // ── 翻譯 ── ถ้าหน้านี้มีปุ่ม 🍙/🌾 ลอยเดี่ยวอยู่แล้ว (เช่นเกมเลโก้) → ย้ายเข้ามาเป็นแถวในเมนูนี้แทน (ทำงานจริง ไม่ใช่ปุ่มเปล่า)
+      var existingZhFab = document.getElementById('zh-fab-standalone');
+      var zhRow;
+      if (existingZhFab) {
+        zhRow = document.createElement('div');
+        zhRow.className = 'grw-item';
+        zhRow.appendChild(existingZhFab);
+        var zhLbl = document.createElement('span');
+        zhLbl.textContent = '翻譯';
+        zhRow.appendChild(zhLbl);
+        zhRow.addEventListener('click', function (e) {
+          if (e.target === existingZhFab || existingZhFab.contains(e.target)) return; // ปุ่มจริงจัดการคลิกของตัวเองอยู่แล้ว กันสั่งซ้ำ
+          existingZhFab.click();
+        });
+      } else {
+        zhRow = stubRow('🍙', '翻譯'); // เช่นหน้าเกมเรียงคำ — บั๊กเดิมทำให้ยังไม่มีปุ่มจริงให้ย้าย (ดูคอมเมนต์ 2026-07-16 ด้านบนไฟล์นี้)
+      }
+
+      // ── 字體 ── ถ้าหน้านี้มีฟังก์ชันสลับฟอนต์จริง (เช่นเกมเรียงคำ) → ผูกให้ทำงานจริง ไม่งั้นเป็นปุ่มเปล่า (เช่นเกมเลโก้ ยังไม่มีฟีเจอร์นี้)
+      var fontRow;
+      if (hasFontToggle) {
+        var fontOn = isFontOn();
+        fontRow = document.createElement('div');
+        fontRow.className = 'grw-item';
+        function renderFontRow() {
+          fontRow.innerHTML = '<span class="ico">' + (fontOn ? '✅' : '✍️') + '</span>' + (fontOn ? '換回標準字體' : '換現代字體');
+        }
+        renderFontRow();
+        fontRow.addEventListener('click', function () {
+          if (callFontToggle()) { fontOn = isFontOn(); renderFontRow(); }
+        });
+      } else {
+        fontRow = stubRow('✍️', '字體');
+      }
+
+      menu.appendChild(stubRow('🔊', '發音'));
+      menu.appendChild(stubRow('🐣', '讀音'));
+      menu.appendChild(zhRow);
+      menu.appendChild(stubRow('🔖', '單字庫'));
+      menu.appendChild(stubRow('💡', '提示'));
+      menu.appendChild(stubRow('⌨️', '螢幕鍵盤'));
+      menu.appendChild(fontRow);
+
+      var trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'rg-ctl-fab';
+      trigger.textContent = '🍚';
+      trigger.title = '更多功能';
+      trigger.setAttribute('aria-label', '更多功能');
+
+      var panel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: function () { menu.classList.remove('gs-open'); } };
+      if (window.GamePanels) window.GamePanels.add(panel);
+      trigger.onclick = function (e) {
+        e.stopPropagation();
+        var opening = !menu.classList.contains('gs-open');
+        if (opening && window.GamePanels) window.GamePanels.closeOthers(panel);
+        menu.classList.toggle('gs-open');
+      };
+      document.addEventListener('click', function (e) {
+        if (e.target !== trigger && !trigger.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
+      });
+
+      wrap.appendChild(trigger);
+      wrap.insertBefore(menu, trigger);
+    } catch (e) {}
+  });
 })();
