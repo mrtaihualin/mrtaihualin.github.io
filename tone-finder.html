@@ -170,6 +170,24 @@
     margin-top: 2px;
   }
   body.tf-modern-font .tf-read-th { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif !important; }
+  /* Lin 2026-07-25: ป้ายบอกว่ากำลังอยู่โหมด 提示 (ไม่คิดคะแนน) + ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 */
+  .tf-guide-note {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    color: var(--amber-muted);
+    background: rgba(200,151,58,0.16);
+    border: 1px solid rgba(184,134,40,0.45);
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin: 8px auto 0;
+    display: inline-block;
+  }
+  .tf-opt.tf-opt-hint,
+  .tf-mark-btn.tf-opt-hint {
+    border-color: var(--gold-bright) !important;
+    background: rgba(200,151,58,0.20) !important;
+    box-shadow: 0 0 0 3px rgba(200,151,58,0.28);
+  }
   /* Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ประโยคเต็ม (แทนที่จะโชว์แค่คำเดียว) */
   .tf-adv-sent-main {
     font-family: 'Sarabun', sans-serif;
@@ -2106,6 +2124,7 @@
       <button id="rg-en-toggle" class="word-ctl-btn" type="button" onclick="TF.toggleEn()"></button>
       <span id="zh-toggle-slot"></span>
       <span id="tf-vault-btn-slot"></span>
+      <button id="tf-guide-toggle" class="word-ctl-btn" type="button" onclick="TF.toggleGuide()"></button>
       <span id="font-toggle-slot"></span>
     </div>
     <!-- Lin 2026-07-19: ยุบปุ่มทั้งหมดเข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
@@ -2114,6 +2133,7 @@
       {id:'rg-en-toggle',      label:'英文讀音', state:'en'},
       {id:'zh-toggle-slot',    label:'翻譯',   state:'zh'},
       {id:'tf-vault-btn-slot', label:'單字庫', state:'vault'},
+      {id:'tf-guide-toggle',   label:'提示',   state:'guide'},
       {id:'font-toggle-slot',  label:'字體',   state:'font'}
     ]});});</script>
     <div class="tf-bc" id="tf-bc"></div>
@@ -2126,7 +2146,7 @@
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=5"></script>
+<script src="js/games/tone-finder-game.min.js?v=6"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>

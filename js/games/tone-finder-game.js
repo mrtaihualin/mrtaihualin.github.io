@@ -1178,6 +1178,46 @@ function tfUpdateReadingLine() {
   if (el) el.innerHTML = tfReadingLineHtml();
 }
 
+// ════════════════════════════════════════════════════════════
+// ── โหมด 提示 (คำใบ้) ในเกมเสียง — Lin 2026-07-25
+// กติกาที่ Lin สั่ง: ใบ้ "เฉพาะขั้น推導" (บอกว่าให้เลือกตัวเลือกไหน) · หน้าเดาวรรณยุกต์แรกไม่ใบ้
+//   และ **เปิดโหมดนี้ = ไม่ได้อะไรเลย** ไม่มีคะแนน ไม่มีดาว ไม่มีความคืบหน้าทบทวน (SRS) ไม่มีสตรีค/แบดจ์/ชาเลนจ์
+// ค่าจำใช้คีย์เดียวกับเกมอ่าน/เกมพิมพ์ (rg_guide_mode) → ตั้งครั้งเดียวเหมือนกันทุกเกม
+// ════════════════════════════════════════════════════════════
+var tfGuideMode = (function () { try { return localStorage.getItem('rg_guide_mode') === '1'; } catch (e) { return false; } })();
+
+function tfSyncGuideBtn() {
+  var b = document.getElementById('tf-guide-toggle');
+  if (!b) return;
+  b.textContent = tfGuideMode ? '💡' : '🔥';
+  b.title = tfGuideMode ? '有提示（純練習・完全不計分）' : '無提示（挑戰・正常計分）';
+  b.setAttribute('aria-label', b.title);
+}
+
+// ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 — ใช้ validate() ตัวเดียวกับที่เกมใช้ตรวจคำตอบจริง (ไม่ได้เดาเอง)
+// กันพลาด: ถ้าเช็กแล้ว "ถูกมากกว่า 1 ตัว" (บางคำระบบแยกไม่ออก) → ไม่ใบ้เลย ดีกว่าใบ้ผิด
+function tfApplyGuideHints() {
+  var body = document.getElementById('tf-body');
+  if (!body) return;
+  var old = body.querySelectorAll('.tf-opt-hint');
+  for (var j = 0; j < old.length; j++) old[j].classList.remove('tf-opt-hint');
+  if (!tfGuideMode) return;
+  if (S.step === 'session-guess') return;   // หน้าเดาวรรณยุกต์แรก: ไม่ใบ้ (ตามที่ Lin สั่ง)
+  var btns = body.querySelectorAll('[data-hintkey]');
+  if (btns.length < 2) return;              // มีตัวเลือกเดียว ไม่ต้องใบ้
+  var correct = [];
+  for (var i = 0; i < btns.length; i++) {
+    if (!validate(btns[i].getAttribute('data-hintkey'), '')) correct.push(btns[i]);
+  }
+  if (correct.length === 1) correct[0].classList.add('tf-opt-hint');
+}
+
+// ป้ายบอกโหมด (เหมือนเกมอ่าน) — ให้ผู้เล่นรู้ตัวว่ากำลังเล่นแบบไม่คิดคะแนนอยู่
+function tfGuideNoteHtml() {
+  if (!tfGuideMode) return '';
+  return '<div class="tf-guide-note">💡 <b>練習模式</b>・純練習不計分（沒有分數、星星與複習進度）</div>';
+}
+
 // ── สถิติคำที่ตอบผิดรายคำ (localStorage) + หน้า 全部 แบบ 50/50 เน้นคำที่ยังไม่แม่น — LIN 2026-06-20 ──
 var TF_WORD_WRONG_KEY = 'tf_word_wrong_v1';
 function tfShuffleArr(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
@@ -1431,6 +1471,7 @@ function tfComboFlash(combo, mult) {
 // คำที่ mastered แล้ว (ตัดออกจาก SRS ถาวร) ไม่ควรโผล่ให้เล่นซ้ำอีก แต่เผื่อกรณีคำอยู่ในชุด/ห้องพิเศษอื่นที่ไม่ผ่าน SRS
 // (เช่น 全部/ห้องพิเศษ) → กันไว้อีกชั้น: ถ้าคำนี้ mastered แล้วในบัญชีผู้เล่น ไม่ให้แต้มเกมซ้ำอีก
 function tfSoftPointsAllowed(entry) {
+  if (tfGuideMode) return false;     // Lin 2026-07-25: โหมด 提示 (คำใบ้) = ไม่ได้แต้มเลย
   if (!tfSrsLoggedIn()) return true; // ไม่ล็อกอิน = ไม่มี SRS อยู่แล้ว ให้แต้มปกติตามเดิม
   var rec = tfGetSrsRecord(entry && entry.word, selectedLevel);
   return !(rec && rec.mastered); // mastered แล้ว → ห้ามแจกแต้มเกมซ้ำอีก (กันฟาร์ม)
@@ -1739,6 +1780,7 @@ function tfLevelWordCount(level) {
 // ไม่ clean (ผิด/แอบดู/forced) → รีเซ็ตกลับ day 1 เข้าคิวใหม่ (กันโกงข้อ 5: ห้ามเร่งขั้นเร็วกว่ากำหนด)
 function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (!entry || !entry.word) return;
+  if (tfGuideMode) return;   // Lin 2026-07-25: โหมด 提示 = ไม่แตะ SRS เลย (ไม่ได้ดาว ไม่ขยับความคืบหน้า และไม่โดนรีเซ็ตด้วย)
   var wasFinalCheck = !!(session && session.curWordIsFinalSrsCheck);
   var wasKnownCheck = !!(session && session.curWordIsKnownCheck);
   // หมายเหตุ: ปุ่ม "?" (= แอบดู) ไม่มี flag แยกแล้ว (Lin 2026-07-04 แก้ให้ใช้หลักตอบผิดตรงๆ) — mistakes>0 จาก tfUseHint ครอบคลุมอยู่แล้ว
@@ -1868,6 +1910,16 @@ function tfApplySessionBonus() {
   var perfectCount = session.results.filter(function (r) { return r.firstTry; }).length;
   var bonus = TF_SCORE.sessionBonus(total, perfectCount);
   var isPerfect = (total > 0 && perfectCount === total && !session.hadSkip);
+  // Lin 2026-07-25: โหมด 提示 = ไม่ได้อะไรเลย → ข้ามโบนัสจบชุด/สตรีค/ดาว/แบดจ์/ชาเลนจ์ทั้งหมด (สถิติคำผิดยังเก็บปกติ ไม่ใช่รางวัล)
+  if (tfGuideMode) {
+    session.bonusAwarded = 0; session.isPerfect = isPerfect;
+    session.starsEarned = 0;
+    try { session.totalStars = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0; } catch (e) { session.totalStars = 0; }
+    session.newBadges = []; session.streakResult = null;
+    session.sessionScored = true;
+    try { tfRenderExtBar(); } catch (e) {}
+    return;
+  }
   if (bonus > 0) {
     session.score += bonus;
     session.bonusAwarded = bonus;
@@ -2250,7 +2302,7 @@ function render() {
       mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>' + zhHtml;
     }
     // Lin 2026-07-25: บรรทัดคำอ่าน (讀音 / 英文讀音) — โชว์เฉพาะหลังตอบวรรณยุกต์แล้ว (ดู tfReadingUnlocked)
-    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>';
+    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + tfGuideNoteHtml();
     // inject vault save button
     if (window.WordVault && S.word) {
       WordVault.injectStyles();
@@ -2300,6 +2352,7 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
+  tfApplyGuideHints();   // Lin 2026-07-25: โหมด 提示 เปิดอยู่ → ไฮไลต์ตัวเลือกที่ถูกในขั้น推導
   // Lin 2026-07-11: หลอด本題分數 ย้ายไปโชว์ในการ์ดทอง (#tf-banner) แล้ว — เลิก prepend ซ้ำเข้า body ตรงนี้ (กันโชว์ซ้อน 2 หลอด)
   var practiceSteps = ['session-guess','overview'];
   if (session && practiceSteps.indexOf(S.step) !== -1) {
@@ -3116,13 +3169,16 @@ function qbox(stepNum, text) {
   '</div>';
 }
 
-function optRow(label, onclickStr, defKeys) {
+// Lin 2026-07-25: เพิ่มพารามิเตอร์ที่ 4 = hintKey (คีย์ตัวเลือกเดียวกับที่ส่งให้ tryNavigate)
+//   ใช้แปะ data-hintkey ไว้บนปุ่ม → โหมด 提示 เอาไปเช็คกับ validate() ว่าตัวไหนถูก แล้วไฮไลต์ให้ (ดู tfApplyGuideHints)
+function optRow(label, onclickStr, defKeys, hintKey) {
   // ── Lin 2026-07-04: ปุ่ม "?" เปลี่ยนไปเรียก TF.hint() แทน TF.tip() ตรงๆ ──
   // TF.hint() = โชว์ตารางเหมือนเดิม + ล็อกคำนี้ "ไม่สะอาด/ไม่ได้คะแนน" ครั้งแรกที่กด (ดู tfUseHint บนสุด)
   var tipBtn = defKeys && defKeys.length
     ? '<button class="tf-tip-btn" onclick="event.stopPropagation();TF.hint(' + JSON.stringify(defKeys).replace(/"/g, '&quot;') + ')">?</button>'
     : '';
-  return '<div class="tf-opt-wrap"><button class="tf-opt" onclick="'+onclickStr+'">'+label+'</button>'+tipBtn+'</div>';
+  var hintAttr = hintKey ? ' data-hintkey="'+hintKey+'"' : '';
+  return '<div class="tf-opt-wrap"><button class="tf-opt"'+hintAttr+' onclick="'+onclickStr+'">'+label+'</button>'+tipBtn+'</div>';
 }
 
 function markSymbol(mark) {
@@ -3134,7 +3190,8 @@ function markSymbol(mark) {
 }
 
 function markRow(mark, onclickStr) {
-  return '<button class="tf-mark-btn" onclick="'+onclickStr+'">' +
+  // Lin 2026-07-25: ตัววรรณยุกต์เองคือคีย์ตัวเลือก (ตรงกับที่ส่งให้ tryNavigate) → ใช้เป็น data-hintkey ได้เลย
+  return '<button class="tf-mark-btn" data-hintkey="'+mark+'" onclick="'+onclickStr+'">' +
     markSymbol(mark) +
   '</button>';
 }
@@ -3152,16 +3209,16 @@ function footer() {
 function step1() {
   return qbox('1','這個字有<strong style="color:var(--gold-bright);">聲調符號</strong>嗎？') +
     '<div class="tf-options">' +
-      optRow('有聲調符號', act(function(){ tryNavigate('hasMark','有聲調符號','s2a'); }), ['toneMark']) +
-      optRow('無聲調符號', act(function(){ tryNavigate('noMark','無聲調符號','s2b'); })) +
+      optRow('有聲調符號', act(function(){ tryNavigate('hasMark','有聲調符號','s2a'); }), ['toneMark'], 'hasMark') +
+      optRow('無聲調符號', act(function(){ tryNavigate('noMark','無聲調符號','s2b'); }), null, 'noMark') +
     '</div>' + footer();
 }
 
 function step2a() {
   return qbox('2','起首子音屬於哪一組？') +
     '<div class="tf-options">' +
-      optRow('低子音', act(function(){ tryNavigate('low','低子音','s2a_low'); }), ['low']) +
-      optRow('其他子音（中子音 ／ 高子音 ／ 前引字）', act(function(){ tryNavigate('other','其他子音','s2a_other'); }), ['other']) +
+      optRow('低子音', act(function(){ tryNavigate('low','低子音','s2a_low'); }), ['low'], 'low') +
+      optRow('其他子音（中子音 ／ 高子音 ／ 前引字）', act(function(){ tryNavigate('other','其他子音','s2a_other'); }), ['other'], 'other') +
     '</div>' + footer();
 }
 
@@ -3176,9 +3233,9 @@ function step2aLow() {
 function step2aOther() {
   return qbox('3','請選擇確切的子音種類') +
     '<div class="tf-options">' +
-      optRow('中子音', act(function(){ tryNavigate('mid','中子音','s2a_mid'); }), ['mid']) +
-      optRow('高子音', act(function(){ tryNavigate('high','高子音','s2a_hi'); }), ['high']) +
-      optRow('前引字', act(function(){ tryNavigate('lead','前引字','s2a_hi'); }), ['lead']) +
+      optRow('中子音', act(function(){ tryNavigate('mid','中子音','s2a_mid'); }), ['mid'], 'mid') +
+      optRow('高子音', act(function(){ tryNavigate('high','高子音','s2a_hi'); }), ['high'], 'high') +
+      optRow('前引字', act(function(){ tryNavigate('lead','前引字','s2a_hi'); }), ['lead'], 'lead') +
     '</div>' + footer();
 }
 
@@ -3204,8 +3261,8 @@ function step2b() {
   return qbox('2','這個字是<strong style="color:#7ec87e;">活音</strong>還是<strong style="color:#ff7c7c;">死音</strong>？') +
     '<button class="tf-helper-trigger" onclick="'+act(function(){ navigate('helper','開啟判斷工具'); })+'">🔎 還不確定？ 檢查活音／死音</button>' +
     '<div class="tf-options">' +
-      optRow('活音', act(function(){ tryNavigate('live','活音','s2b_live'); }), ['live']) +
-      optRow('死音', act(function(){ tryNavigate('dead','死音','s2b_dead'); }), ['dead']) +
+      optRow('活音', act(function(){ tryNavigate('live','活音','s2b_live'); }), ['live'], 'live') +
+      optRow('死音', act(function(){ tryNavigate('dead','死音','s2b_dead'); }), ['dead'], 'dead') +
     '</div>' + footer();
 }
 
@@ -3216,24 +3273,24 @@ function helperBannerHTML() {
 function helperStep1() {
   return helperBannerHTML() + qbox('','這個字有「尾音」嗎？') +
     '<div class="tf-options">' +
-      optRow('有尾音', act(function(){ tryNavigate('has_tail','有尾音','h_with'); }), ['longEnd','shortEnd']) +
-      optRow('無尾音', act(function(){ tryNavigate('no_tail','無尾音','h_no'); })) +
+      optRow('有尾音', act(function(){ tryNavigate('has_tail','有尾音','h_with'); }), ['longEnd','shortEnd'], 'has_tail') +
+      optRow('無尾音', act(function(){ tryNavigate('no_tail','無尾音','h_no'); }), null, 'no_tail') +
     '</div>';
 }
 
 function helperWith() {
   return helperBannerHTML() + qbox('','尾音是哪種類型？') +
     '<div class="tf-options">' +
-      optRow('短尾音', act(function(){ tryNavigate('short_tail','短尾音','h_done'); }), ['shortEnd']) +
-      optRow('長尾音', act(function(){ tryNavigate('long_tail','長尾音','h_done'); }), ['longEnd']) +
+      optRow('短尾音', act(function(){ tryNavigate('short_tail','短尾音','h_done'); }), ['shortEnd'], 'short_tail') +
+      optRow('長尾音', act(function(){ tryNavigate('long_tail','長尾音','h_done'); }), ['longEnd'], 'long_tail') +
     '</div>';
 }
 
 function helperNo() {
   return helperBannerHTML() + qbox('','使用的母音是哪種類型？') +
     '<div class="tf-options">' +
-      optRow('短母音', act(function(){ tryNavigate('short_vowel_h','短母音','h_done'); }), ['shortVowel']) +
-      optRow('長母音', act(function(){ tryNavigate('long_vowel_h','長母音','h_done'); }), ['longVowel']) +
+      optRow('短母音', act(function(){ tryNavigate('short_vowel_h','短母音','h_done'); }), ['shortVowel'], 'short_vowel_h') +
+      optRow('長母音', act(function(){ tryNavigate('long_vowel_h','長母音','h_done'); }), ['longVowel'], 'long_vowel_h') +
     '</div>';
 }
 
@@ -3256,24 +3313,24 @@ function helperDone() {
 function s2bLive() {
   return qbox('3','起首子音屬於哪一組？') +
     '<div class="tf-options">' +
-      optRow('中子音 ／ 低子音', act(function(){ tryNavigate('mid_low','中子音/低子音','result',1); }), ['mid','low']) +
-      optRow('高子音 ／ 前引字', act(function(){ tryNavigate('high_lead','高子音/前引字','result',5); }), ['high','lead']) +
+      optRow('中子音 ／ 低子音', act(function(){ tryNavigate('mid_low','中子音/低子音','result',1); }), ['mid','low'], 'mid_low') +
+      optRow('高子音 ／ 前引字', act(function(){ tryNavigate('high_lead','高子音/前引字','result',5); }), ['high','lead'], 'high_lead') +
     '</div>' + footer();
 }
 
 function s2bDead() {
   return qbox('3','起首子音屬於哪一組？') +
     '<div class="tf-options">' +
-      optRow('高子音 ／ 前引字 ／ 中子音', act(function(){ tryNavigate('high_lead_mid','高子音/前引字/中子音','result',2); }), ['high','lead','mid']) +
-      optRow('低子音', act(function(){ tryNavigate('low_dead','低子音','s2b_dl'); }), ['low']) +
+      optRow('高子音 ／ 前引字 ／ 中子音', act(function(){ tryNavigate('high_lead_mid','高子音/前引字/中子音','result',2); }), ['high','lead','mid'], 'high_lead_mid') +
+      optRow('低子音', act(function(){ tryNavigate('low_dead','低子音','s2b_dl'); }), ['low'], 'low_dead') +
     '</div>' + footer();
 }
 
 function s2bDeadLow() {
   return qbox('4','母音是哪種類型？') +
     '<div class="tf-options">' +
-      optRow('長母音', act(function(){ tryNavigate('long_vowel','長母音','result',3); }), ['longVowel']) +
-      optRow('短母音', act(function(){ tryNavigate('short_vowel','短母音','result',4); }), ['shortVowel']) +
+      optRow('長母音', act(function(){ tryNavigate('long_vowel','長母音','result',3); }), ['longVowel'], 'long_vowel') +
+      optRow('短母音', act(function(){ tryNavigate('short_vowel','短母音','result',4); }), ['shortVowel'], 'short_vowel') +
     '</div>' + footer();
 }
 
@@ -4598,6 +4655,15 @@ var TF = {
     tfSyncReadBtns(); tfUpdateReadingLine();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
+  // ── ปุ่ม 提示 (คำใบ้) — Lin 2026-07-25 ──
+  // เปิด = ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 แต่ทั้งรอบ "ไม่ได้คะแนน/ดาว/ความคืบหน้า" อะไรเลย
+  toggleGuide: function() {
+    tfGuideMode = !tfGuideMode;
+    try { localStorage.setItem('rg_guide_mode', tfGuideMode ? '1' : '0'); } catch(e){}
+    tfSyncGuideBtn();
+    render();   // วาดใหม่ทั้งหน้า: ป้ายบอกโหมด + ไฮไลต์ตัวเลือก อัปเดตพร้อมกัน
+    if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  },
   // ── ปุ่มถามคำถามในเกม → ส่งเข้า Gmail ของ LIN ผ่าน Web3Forms (ผู้เล่นพิมพ์เอง + แนบคำที่กำลังเล่น) ──
   openAsk: function() {
     var old = document.getElementById('tf-ask-ov'); if (old) old.remove();
@@ -4724,7 +4790,8 @@ try {
   }
 } catch(e){}
 // Lin 2026-07-25: ตั้งไอคอนปุ่ม 讀音 (🐣/🥚) + 英文讀音 (🔡/🔠) ตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfSyncReadBtns); else tfSyncReadBtns();
+function tfSyncMenuBtns() { tfSyncReadBtns(); tfSyncGuideBtn(); }
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfSyncMenuBtns); else tfSyncMenuBtns();
 // ── render challenge banner + streak chips + ⭐/🌱 ในแถบนอก tf-card ──
 function tfRenderExtBar() {
   try {
