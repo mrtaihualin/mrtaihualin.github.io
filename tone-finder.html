@@ -32,7 +32,7 @@
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
-<script src="js/games/word-menu.js?v=1"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
+<script src="js/games/word-menu.js?v=2"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="data/words-data.js?v=3"></script>
 <script src="data/adv-sentences.js?v=4"></script>
 <script src="data/tone-engine.js?v=1"></script>
@@ -2085,12 +2085,14 @@
       <button id="rg-sound-toggle" class="word-ctl-btn" type="button"></button>
       <span id="zh-toggle-slot"></span>
       <span id="tf-vault-btn-slot"></span>
+      <span id="font-toggle-slot"></span>
     </div>
     <!-- Lin 2026-07-19: ยุบปุ่มทั้ง 3 เข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
     <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'tf-word-ctl-row',items:[
       {id:'rg-sound-toggle',   label:'發音',   state:'none'},
       {id:'zh-toggle-slot',    label:'翻譯',   state:'zh'},
-      {id:'tf-vault-btn-slot', label:'單字庫', state:'vault'}
+      {id:'tf-vault-btn-slot', label:'單字庫', state:'vault'},
+      {id:'font-toggle-slot',  label:'字體',   state:'font'}
     ]});});</script>
     <div class="tf-bc" id="tf-bc"></div>
     <div class="tf-nav-bar" id="tf-nav-bar">
@@ -2111,7 +2113,7 @@
 </footer>
 <script src="js/content/posts-data.js"></script>
 <script src="js/content/lessons-data.js"></script>
-<script src="js/core/shared.min.js?v=5"></script>
+<script src="js/core/shared.min.js?v=6"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)

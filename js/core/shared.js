@@ -1819,9 +1819,10 @@ window.deleteFBComment = function(postId, idx) {
 // ทำงานเฉพาะหน้าเกม (มี #game-switcher) เหมือนปุ่มเต็มจอด้านบน — หน้าอื่นในเว็บไม่กระทบ
 // ⚠️ กล่องที่ "ซ้อนอยู่ในปุ่ม/เมนูที่มี onclick อื่นของเกม" (เช่น .ozh/.szh ในเกมเลโก้, .tf-level-sub ในเมนูเลือกประโยค高級)
 //    เปิด/ปิดได้เฉพาะจากปุ่ม default เท่านั้น — ไม่ผูกคลิกรายจุดให้ เพราะจะไปชนกับฟังก์ชันเลือกคำ/เปิดเมนูของเกมเอง
-// Lin 2026-07-25: ปุ่ม 🍙/🌾 เปลี่ยนจาก "กดแล้วสลับทันที" เป็นดรอปดาวน์ (หน้าตาเหมือนเมนู 🪧) — ย้ายแถว "換現代字體/換回標準字體"
-// จากเมนู 🎮 มาไว้ในดรอปดาวน์นี้แทน (ตามที่ Lin สั่ง) — ยกเว้นหน้าเกมเรียงลำดับคำ (word-order) ที่ไม่มีปุ่ม 🍙 (บั๊กเดิม: กล่องคำแปลไม่ตอบสนอง)
-//    → หน้านั้นคงปุ่มสลับฟอนต์ไว้ในเมนู 🎮 เหมือนเดิม กันฟีเจอร์หายไปเฉยๆ
+// Lin 2026-07-25 v2: ปุ่ม 🍙/🌾 = กดสลับคำแปลทันที (เหมือนเดิม) · ปุ่มสลับฟอนต์ "換現代字體/換回標準字體" ย้ายจากเมนู 🎮
+//    มาเป็น "อีกแถวหนึ่งในเมนู 🍚 (WordMenu)" ผ่านช่อง #font-toggle-slot ในหน้า (ตามที่ Lin สั่ง)
+//    ⚠️ v1 เคยทำ 🍙 เป็นดรอปดาวน์ซ้อนในเมนู 🍚 → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ (บั๊ก) แก้เป็น v2 นี้แล้ว
+//    ยกเว้นหน้าเกมเรียงลำดับคำ (word-order) ที่ไม่มีปุ่ม 🍙 (บั๊กเดิม: กล่องคำแปลไม่ตอบสนอง) → คงปุ่มสลับฟอนต์ไว้ในเมนู 🎮 เหมือนเดิม
 // ===================================================================
 (function () {
   function ready(fn) {
@@ -1891,10 +1892,7 @@ window.deleteFBComment = function(postId, idx) {
         ZH_CLICKABLE.join(', ') + ' { cursor:pointer; }' +
         // ปุ่ม 🍙/🌾 แบบ "ในแถวปุ่มใต้คำศัพท์" (มี #zh-toggle-slot ในหน้า) — หน้าตากลมขาวเหมือนปุ่มเซฟ/ลำโพง — Lin 2026-07-16
         '.rg-ctl-fab.zh-fab-inline{width:34px;height:34px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);box-shadow:none;font-size:17px;}' +
-        '.rg-ctl-fab.zh-fab-inline:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}' +
-        // Lin 2026-07-25: โหมด "แถวปุ่มใต้คำศัพท์" (#zh-toggle-slot) ดรอปดาวน์ต้องลอย (absolute) เหนือปุ่ม ไม่งั้นดันแถวปุ่มอื่นเบี้ยว
-        '.zh-fab-wrap{position:relative;display:inline-flex;}' +
-        '.zh-fab-wrap .grw-menu{position:absolute;bottom:calc(100% + 8px);right:0;margin-bottom:0;z-index:100001;min-width:180px;}';
+        '.rg-ctl-fab.zh-fab-inline:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}';
       document.head.appendChild(style);
 
       function applyGlobal() {
@@ -1905,66 +1903,56 @@ window.deleteFBComment = function(postId, idx) {
         });
         try { localStorage.setItem(KEY, hideOn ? '1' : '0'); } catch (e) {}
         renderFab();
-        renderMenu();
       }
 
-      var fontOn = isFontOn();
-
+      // ── ปุ่ม 🍙/🌾 = กดสลับคำแปลทันที (ไม่มีดรอปดาวน์ซ้อน) — Lin 2026-07-25 v2
+      //    (v1 เคยทำเป็นดรอปดาวน์ซ้อนในเมนู 🍚 → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ = บั๊ก · v2 คืนเป็นกดสลับตรงๆ เหมือนเดิม)
       var fab = document.createElement('button');
       fab.type = 'button';
       fab.className = 'rg-ctl-fab';
-      fab.setAttribute('aria-label', '翻譯 / 字體設定');
-      fab.title = '翻譯 / 字體設定';
       // ไอคอน: ผูกธีมน้องมีนา (มีนา=ข้าว) — 🍙 ข้าวปั้นพร้อมกิน = คำแปลโชว์อยู่ · 🌾 รวงข้าวยังไม่สี = คำแปลซ่อนอยู่ — Lin เลือก 2026-07-13
-      function renderFab() { fab.textContent = hideOn ? '🌾' : '🍙'; }
-      renderFab();
-
-      // ── ดรอปดาวน์ (หน้าตาเหมือน .grw-menu ของปุ่ม 🪧) — แถวคำแปล + แถวสลับฟอนต์ (ถ้าหน้านั้นมีฟังก์ชันสลับฟอนต์) ──
-      var menu = document.createElement('div');
-      menu.className = 'grw-menu';
-      function renderMenu() {
-        var zhIco = hideOn ? '🌾' : '🍙';
-        var zhLbl = hideOn ? '翻譯已關閉（點擊開啟）' : '翻譯已開啟（點擊關閉）';
-        var html = '<div class="grw-item" data-act="zh"><span class="ico">' + zhIco + '</span>' + zhLbl + '</div>';
-        if (hasFontToggle) {
-          html += '<div class="grw-item" data-act="font"><span class="ico">' + (fontOn ? '✅' : '✍️') + '</span>' + (fontOn ? '換回標準字體' : '換現代字體') + '</div>';
-        }
-        menu.innerHTML = html;
+      function renderFab() {
+        fab.textContent = hideOn ? '🌾' : '🍙';
+        fab.title = hideOn ? '目前：翻譯已關閉（點擊開啟）' : '目前：翻譯已開啟（點擊關閉）';
+        fab.setAttribute('aria-label', fab.title);
       }
-      renderMenu();
-      menu.addEventListener('click', function (e) {
-        var it = e.target.closest('.grw-item');
-        if (!it) return;
-        if (it.dataset.act === 'zh') { hideOn = !hideOn; applyGlobal(); }
-        else if (it.dataset.act === 'font') { if (callFontToggle()) { fontOn = isFontOn(); renderMenu(); } }
-      });
-
-      // ลงทะเบียนกับ GamePanels กลาง — เปิดตัวนี้ต้องปิดกล่องอื่น (🎮/🪧) ที่เปิดค้างไว้ และกล่องอื่นเปิดก็ต้องปิดตัวนี้ได้ด้วย
-      var zhPanel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: function () { menu.classList.remove('gs-open'); } };
-      if (window.GamePanels) window.GamePanels.add(zhPanel);
-      fab.onclick = function (e) {
-        e.stopPropagation();
-        var opening = !menu.classList.contains('gs-open');
-        if (opening && window.GamePanels) window.GamePanels.closeOthers(zhPanel);
-        menu.classList.toggle('gs-open');
-      };
-      document.addEventListener('click', function (e) {
-        if (e.target !== fab && !fab.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
-      });
+      renderFab();
+      fab.onclick = function () { hideOn = !hideOn; applyGlobal(); };
 
       // Lin 2026-07-16: ถ้าหน้านั้นมี #zh-toggle-slot (แถวปุ่มใต้คำศัพท์ ในเกมเสียง/เกมอ่าน/เกมพิมพ์) → ย้ายปุ่มไปอยู่ในแถวแทนมุมขวาล่าง
       var inlineSlot = document.getElementById('zh-toggle-slot');
       if (inlineSlot) {
         fab.classList.add('zh-fab-inline');
-        var fabWrap = document.createElement('span');
-        fabWrap.className = 'zh-fab-wrap';
-        fabWrap.appendChild(fab);
-        fabWrap.appendChild(menu);
-        inlineSlot.appendChild(fabWrap);
+        inlineSlot.appendChild(fab);
+
+        // ── ✍️ ปุ่มสลับฟอนต์ = อีกแถวหนึ่งในเมนู 🍚 เดียวกัน (ช่อง #font-toggle-slot ในหน้า) — Lin 2026-07-25 v2
+        //    ย้ายมาจากเมนู 🎮 เดิม (ตามที่ Lin สั่ง) — ใส่เป็นแถวปกติในเมนูเดียวกับ 翻譯 ไม่ทำดรอปดาวน์ซ้อน
+        var fontSlot = document.getElementById('font-toggle-slot');
+        if (fontSlot && hasFontToggle) {
+          var fontOn = isFontOn();
+          var fontBtn = document.createElement('button');
+          fontBtn.type = 'button';
+          fontBtn.className = 'word-ctl-btn';
+          function renderFontBtn() {
+            fontBtn.textContent = fontOn ? '✅' : '✍️';
+            fontBtn.title = fontOn ? '目前：現代字體（點擊換回標準）' : '目前：標準字體（點擊換現代）';
+            fontBtn.setAttribute('aria-label', fontBtn.title);
+          }
+          renderFontBtn();
+          fontBtn.onclick = function (e) {
+            e.stopPropagation();
+            if (callFontToggle()) {
+              fontOn = isFontOn();
+              renderFontBtn();
+              if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+            }
+          };
+          fontSlot.appendChild(fontBtn);
+        }
       } else {
-        // ต่อเข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap ของปุ่มเต็มจอด้านบน สร้างไปแล้วก่อนหน้านี้ในไฟล์เดียวกัน)
+        // lego (ไม่มีช่องแถวปุ่มใต้คำ + ไม่มีสลับฟอนต์) → ต่อ 🍙 เข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap)
         var wrap2 = document.querySelector('.rg-ctl-wrap');
-        if (wrap2) { wrap2.appendChild(menu); wrap2.appendChild(fab); } else { document.body.appendChild(menu); document.body.appendChild(fab); }
+        if (wrap2) { wrap2.appendChild(fab); } else { document.body.appendChild(fab); }
       }
       applyGlobal();
 

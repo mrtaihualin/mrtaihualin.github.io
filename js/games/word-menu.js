@@ -51,11 +51,14 @@
     zh:    function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('🍙') !== -1; },
     vault: function (el) { var b = el.querySelector('button') || el; return b.getAttribute && b.getAttribute('data-saved') === '1'; },
     guide: function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('💡') !== -1; },
-    kbd:   function (el) { var b = el.querySelector('button') || el; return b.getAttribute && b.getAttribute('data-playing') === '1'; }
+    kbd:   function (el) { var b = el.querySelector('button') || el; return b.getAttribute && b.getAttribute('data-playing') === '1'; },
+    // Lin 2026-07-25: แถวสลับฟอนต์ — อ่านจาก class บน <body> โดยตรง (rg-modern-font=พิมพ์/อ่าน · tf-modern-font=เกมเสียง) แม่นกว่าอ่านจากไอคอนปุ่ม
+    font:  function () { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
   };
   // ข้อความป้ายสถานะของแต่ละแบบ (ไม่ใช่ 開/關 หมดทุกอัน — ให้อ่านแล้วเข้าใจทันที)
   var PILL_TEXT = {
     vault: { on: '已收藏', off: '未收藏' },
+    font:  { on: '現代字', off: '標準字' },
     _default: { on: '開', off: '關' }
   };
 
