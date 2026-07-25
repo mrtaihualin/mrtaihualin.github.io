@@ -1912,34 +1912,40 @@ window.deleteFBComment = function(postId, idx) {
 
       // Lin 2026-07-16: ถ้าหน้านั้นมี #zh-toggle-slot (แถวปุ่มใต้คำศัพท์ ในเกมเสียง/เกมอ่าน/เกมพิมพ์) → ย้ายปุ่มไปอยู่ในแถวแทนมุมขวาล่าง
       var inlineSlot = document.getElementById('zh-toggle-slot');
+
+      // ── ✍️ ปุ่มสลับฟอนต์ = อีกแถวหนึ่งในเมนู 🍚 (ช่อง #font-toggle-slot ในหน้า) — Lin 2026-07-25 v2
+      //    ย้ายมาจากเมนู 🎮 เดิม (ตามที่ Lin สั่ง) — ใส่เป็นแถวปกติในเมนู ไม่ทำดรอปดาวน์ซ้อน
+      //    Lin 2026-07-25 v4: แยกออกมาจากเงื่อนไข #zh-toggle-slot แล้ว — เกมเรียงคำมีแถว 字體 แต่ไม่มีปุ่ม 翻譯 ในเมนู (คำแปลขึ้นเองตอนเฉลย)
+      var fontSlot = document.getElementById('font-toggle-slot');
+      if (fontSlot && hasFontToggle) {
+        var fontOn = isFontOn();
+        var fontBtn = document.createElement('button');
+        fontBtn.type = 'button';
+        fontBtn.className = 'word-ctl-btn';
+        function renderFontBtn() {
+          fontBtn.textContent = fontOn ? '✅' : '✍️';
+          fontBtn.title = fontOn ? '目前：現代字體（點擊換回標準）' : '目前：標準字體（點擊換現代）';
+          fontBtn.setAttribute('aria-label', fontBtn.title);
+        }
+        renderFontBtn();
+        fontBtn.onclick = function (e) {
+          e.stopPropagation();
+          if (callFontToggle()) {
+            fontOn = isFontOn();
+            renderFontBtn();
+            if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+          }
+        };
+        fontSlot.appendChild(fontBtn);
+      }
+
+      // Lin 2026-07-16: ถ้าหน้านั้นมี #zh-toggle-slot (แถวปุ่มใต้คำศัพท์ ในเกมเสียง/เกมอ่าน/เกมพิมพ์) → ย้ายปุ่มไปอยู่ในแถวแทนมุมขวาล่าง
       if (inlineSlot) {
         fab.classList.add('zh-fab-inline');
         inlineSlot.appendChild(fab);
-
-        // ── ✍️ ปุ่มสลับฟอนต์ = อีกแถวหนึ่งในเมนู 🍚 เดียวกัน (ช่อง #font-toggle-slot ในหน้า) — Lin 2026-07-25 v2
-        //    ย้ายมาจากเมนู 🎮 เดิม (ตามที่ Lin สั่ง) — ใส่เป็นแถวปกติในเมนูเดียวกับ 翻譯 ไม่ทำดรอปดาวน์ซ้อน
-        var fontSlot = document.getElementById('font-toggle-slot');
-        if (fontSlot && hasFontToggle) {
-          var fontOn = isFontOn();
-          var fontBtn = document.createElement('button');
-          fontBtn.type = 'button';
-          fontBtn.className = 'word-ctl-btn';
-          function renderFontBtn() {
-            fontBtn.textContent = fontOn ? '✅' : '✍️';
-            fontBtn.title = fontOn ? '目前：現代字體（點擊換回標準）' : '目前：標準字體（點擊換現代）';
-            fontBtn.setAttribute('aria-label', fontBtn.title);
-          }
-          renderFontBtn();
-          fontBtn.onclick = function (e) {
-            e.stopPropagation();
-            if (callFontToggle()) {
-              fontOn = isFontOn();
-              renderFontBtn();
-              if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
-            }
-          };
-          fontSlot.appendChild(fontBtn);
-        }
+      } else if (document.getElementById('word-ctl-row')) {
+        // Lin 2026-07-25: เกมเรียงคำ — มีเมนู 🍚 ของตัวเองแล้ว แต่ไม่เอาปุ่ม 翻譯 เข้าเมนู (คำแปลคุมด้วยปุ่ม 🍙 ข้างคำที่เฉลยแทน)
+        fab.remove && fab.remove();
       } else {
         // lego (ไม่มีช่องแถวปุ่มใต้คำ + ไม่มีสลับฟอนต์) → ต่อ 🍙 เข้าชุดปุ่มลอยเดิมไปก่อน (.rg-ctl-wrap)
         // Lin 2026-07-25 v3: ตั้ง id ไว้ให้บล็อก "🍚 เมนูตัวเลือกใต้คำ สำหรับหน้าที่ยังไม่มี WordMenu" (ท้ายไฟล์นี้) มาย้ายปุ่มนี้เข้าไปเป็นแถว "翻譯" แทนที่จะลอยเดี่ยว

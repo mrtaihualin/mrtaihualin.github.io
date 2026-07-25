@@ -4,12 +4,16 @@
  * ไม่ต่อเซิร์ฟเวอร์เลย — ไม่มีล็อกอิน ไม่มีดาว ไม่มี SRS ไม่มีกระดานคะแนน (ตกลงกับ Lin 2026-07-25)
  * ไฟล์นี้เป็นไฟล์ใหม่ล้วน ไม่แก้ไฟล์เดิมสักบรรทัด (tone-finder-game.js / reading-game-app.js / typing-game-app.js ไม่ถูกแตะ)
  *
+ * แก้ 2026-07-25 (รอบ 2 — Lin บอก "ไม่เห็นเหมือนเกมตอนนี้เลย"): รอบแรกคิด class/สี/ป้ายภาษาขึ้นเอง (mx-*, ป้ายไทย, สีแบน)
+ * ไม่ตรงของจริงเลย — รอบนี้เปลี่ยนมาใช้ class ชื่อเดียวกับเกมเดิมเป๊ะ (.card/.gold-banner/.opt/.slot-box/.btn/.tk-key ฯลฯ
+ * ก็อปมาจาก reading-game.html + typing-game.html จริง) + ป้าย UI เปลี่ยนเป็นภาษาจีนตามเว็บจริงทั้งเว็บ (ตัวคำ/คำแปลยังเป็นไทยเหมือนเดิม
+ * แค่ป้ายปุ่ม/label เปลี่ยนเป็นจีน) — เว็บนี้สอนคนไต้หวันเรียนไทย UI จึงเป็นจีนเสมอ ไม่ใช่ไทย
+ *
  * กลไกคะแนนยืมมาจาก MASTER RULES เดิมที่ 4 เกมใช้ร่วมกัน (บันได / คอมโบ / ทองคำ) เพื่อความคุ้นเคย
  * ไม่ได้ import ไฟล์เดิม — เขียนค่าคงที่ซ้ำไว้ในไฟล์นี้ตรงๆ (เจตนา ไม่ใช่บั๊ก — กันไฟล์ใหม่พังไฟล์เก่า)
  *
  * โครงข้อมูลที่ใช้จาก data/words-data.js (ไม่แก้ไฟล์นั้นเลย แค่เรียกอ่าน):
  *   buildWordsForPhonicsGames(WORDS_MASTER) → {th, zh, en, level, cons, lead, cluster, vowel, tone, final, tone_name, syls, readingTH}
- *   เฉพาะ level==='初' ทุกคำมี syls.length===1 (ยืนยันจากคอมเมนต์ใน words-data.js บรรทัด 24-25)
  *
  * โครงข้อมูลที่ใช้จาก data/tone-engine.js (ไม่แก้ไฟล์นั้นเลย แค่เรียกอ่าน):
  *   TH_ENGINE.{hasToneMark,getToneMark,getInitClass,isLiveWord,getVowelType,getInitChar}
@@ -21,13 +25,12 @@
   // ════════════════════════════════════════════
   // ค่าคงที่คะแนน — ชุดเดียวกับ MASTER RULES ของ 4 เกมเดิม (10/7/4/1/0, คอมโบ 3/5/8, ทองคำ 18%)
   // ════════════════════════════════════════════
-  var LADDER = [10, 7, 4, 1, 0];       // ดัชนี = จำนวนครั้งที่ตอบผิดก่อนตอบถูก (0..3) · 4 ครั้ง = ตก
+  var LADDER = [10, 7, 4, 1, 0];
   var FAIL_AT = 4;
   var GOLDEN_CHANCE = 0.18;
   var GOLDEN_MULT = 2;
-  var ROUND_WORDS = 5;                 // 5 คำ × 3 ด่าน = 15 การ์ดต่อรอบ
-  var STAGE_NAMES = ['ทายเสียง', 'ต่อพยางค์', 'พิมพ์'];
-  var STAGE_EMOJI = ['🎵', '🧩', '⌨️'];
+  var ROUND_WORDS = 5;
+  var STAGE_NAMES = ['聲調', '拼字', '打字'];
 
   function comboMult(streak) {
     if (streak >= 8) return 3;
@@ -37,7 +40,7 @@
   }
 
   var TONE_NAME_TO_NUM = { 'สามัญ': 1, 'เอก': 2, 'โท': 3, 'ตรี': 4, 'จัตวา': 5 };
-  var TONE_NUM_NAME = ['', 'สามัญ', 'เอก', 'โท', 'ตรี', 'จัตวา'];
+  var TONE_NUM_ZH = ['', '第一聲', '第二聲', '第三聲', '第四聲', '第五聲'];
 
   function shuffle(arr) {
     var a = arr.slice();
@@ -51,43 +54,28 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   // ════════════════════════════════════════════
-  // ข้อมูล — เฉพาะ 初級
+  // ข้อมูล — เฉพาะ 初級ที่พยางค์เดียว (183/266 คำ — 初級ที่ 2 พยางค์ เช่น "เมนู" ยังไม่รองรับในโปรโตไทป์นี้)
   // ════════════════════════════════════════════
-  // หมายเหตุ: 初級ไม่ได้แปลว่าพยางค์เดียวเสมอ (มีคำ 初級ที่ 2 พยางค์ เช่น "เมนู" "โรงแรม" 83/266 คำ)
-  // โปรโตไทป์รอบแรกนี้จำกัดเฉพาะ "初級ที่พยางค์เดียว" ก่อน (183 คำ) — คำ 初級ที่ 2 พยางค์ค่อยเพิ่มด่านรองรับทีหลัง
   var POOL = buildWordsForPhonicsGames(WORDS_MASTER).filter(function (w) { return w.level === '初' && w.syls.length === 1; });
 
-  // ════════════════════════════════════════════
-  // STATE
-  // ════════════════════════════════════════════
   var S = {
-    queue: [],       // การ์ดที่เหลือในรอบนี้ [{word, stage, wrongCount, golden}]
-    total: 0,        // จำนวนการ์ดทั้งหมดตอนเริ่มรอบ (คงที่ = 15)
-    done: 0,         // จำนวนการ์ดที่ตอบจบแล้ว (ถูกหรือตก)
-    score: 0,
-    streak: 0,
-    perfectCount: 0, // การ์ดที่ผ่านแบบไม่พลาดเลย (นับรวม golden)
-    cur: null,       // การ์ดปัจจุบัน
-    derivStep: null, // สถานะขั้นต้นไม้ถาม-ตอบของด่านทายเสียง (null = ยังไม่เปิด)
-    typePos: 0
+    queue: [], total: 0, done: 0, score: 0, streak: 0, perfectCount: 0,
+    cur: null, derivStep: null, typePos: 0
   };
 
+  var TK_ROWS = [
+    ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'],
+    ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP'],
+    ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL'],
+    ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM']
+  ];
   var RG_BASE_MAP = {
     Backquote: '_', Digit1: 'ๅ', Digit2: '/', Digit3: '-', Digit4: 'ภ', Digit5: 'ถ', Digit6: 'ุ', Digit7: 'ึ', Digit8: 'ค', Digit9: 'ต', Digit0: 'จ', Minus: 'ข', Equal: 'ช',
     KeyQ: 'ๆ', KeyW: 'ไ', KeyE: 'ำ', KeyR: 'พ', KeyT: 'ะ', KeyY: 'ั', KeyU: 'ี', KeyI: 'ร', KeyO: 'น', KeyP: 'ย', BracketLeft: 'บ', BracketRight: 'ล',
     KeyA: 'ฟ', KeyS: 'ห', KeyD: 'ก', KeyF: 'ด', KeyG: 'เ', KeyH: '้', KeyJ: '่', KeyK: 'า', KeyL: 'ส', Semicolon: 'ว', Quote: 'ง', Backslash: 'ฃ',
     KeyZ: 'ผ', KeyX: 'ป', KeyC: 'แ', KeyV: 'อ', KeyB: 'ิ', KeyN: 'ื', KeyM: 'ท', Comma: 'ม', Period: 'ใ', Slash: 'ฝ'
   };
-  var KBD_ROWS = [
-    ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'],
-    ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP'],
-    ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL'],
-    ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM']
-  ];
 
-  // ════════════════════════════════════════════
-  // เสียง — สำหรับด่านต่อพยางค์ (ตัวไหนออกเสียงเดียวกันให้แสดงเป็นตัวเดียวกัน) ยืมชุดเดียวกับเกมอ่านเดิม
-  // ════════════════════════════════════════════
   var CONS_GROUPS = [
     ['ก', 'ภ', 'ถ'], ['ข', 'ช', 'ซ'], ['ค', 'ด', 'ศ', 'ต'], ['บ', 'ษ', 'ป'],
     ['พ', 'ฟ', 'ผ', 'ฝ'], ['ม', 'ห', 'น', 'ฆ'], ['อ', 'ย'], ['ท'],
@@ -108,8 +96,7 @@
   function distractors(list, correct, n) {
     var group = findGroup(list, correct).filter(function (c) { return c !== correct; });
     var pool = shuffle(group).slice(0, n - 1);
-    var out = shuffle([correct].concat(pool));
-    return out;
+    return shuffle([correct].concat(pool));
   }
 
   // ════════════════════════════════════════════
@@ -124,33 +111,30 @@
     });
     S.queue = shuffle(cards);
     S.total = S.queue.length;
-    S.done = 0;
-    S.score = 0;
-    S.streak = 0;
-    S.perfectCount = 0;
+    S.done = 0; S.score = 0; S.streak = 0; S.perfectCount = 0;
     nextCard();
   }
 
   function nextCard() {
-    S.derivStep = null;
-    S.typePos = 0;
+    S.derivStep = null; S.typePos = 0; S.resolving = false;
     if (S.queue.length === 0) { renderEnd(); return; }
     S.cur = S.queue.shift();
     render();
   }
 
+  // ป้องกันคะแนนเบิ้ล: ระหว่างรอทรานซิชัน (750-1200ms หลังตอบ) ต้องล็อกอินพุตทั้งหมด
+  // เจอบั๊กจริงระหว่างทดสอบ 2026-07-25 — ปุ่ม 檢查/ปุ่มพิมพ์ ยังกดซ้ำได้ระหว่างรอ ทำให้ finishCard() ถูกเรียกซ้ำๆ
+  // บนการ์ดเดิม คะแนนพุ่งเกินจริง (990 แต้มจาก 15 ข้อ, perfectCount ทะลุ total) — แก้โดยเช็ค S.resolving ทุกจุดรับอินพุต
   function requeueWrong(card) {
+    if (S.resolving) return;
+    S.resolving = true;
     card.wrongCount++;
-    if (card.wrongCount >= FAIL_AT) {
-      finishCard(card, 0, true);
-    } else {
-      S.queue.push(card);
-      flash(false);
-      setTimeout(nextCard, 700);
-    }
+    if (card.wrongCount >= FAIL_AT) { finishCard(card, 0, true); }
+    else { S.queue.push(card); flashBanner(false); setTimeout(nextCard, 750); }
   }
 
   function finishCard(card, basePts, failed) {
+    S.resolving = true;
     S.done++;
     var pts = basePts;
     if (!failed && card.golden && card.wrongCount === 0) pts = pts * GOLDEN_MULT;
@@ -158,93 +142,91 @@
       S.streak++;
       pts = Math.max(1, Math.round(pts * comboMult(S.streak)));
       if (card.wrongCount === 0) S.perfectCount++;
-    } else {
-      S.streak = 0;
-    }
+    } else { S.streak = 0; }
     S.score += pts;
-    flash(!failed, pts);
-    setTimeout(nextCard, failed ? 1100 : 700);
+    flashBanner(!failed, pts);
+    setTimeout(nextCard, failed ? 1200 : 750);
   }
 
   function answerCorrect(card) {
+    if (S.resolving) return;
+    S.resolving = true;
     var pts = LADDER[card.wrongCount] != null ? LADDER[card.wrongCount] : 0;
     finishCard(card, pts, false);
   }
 
-  var flashEl = null;
-  function flash(ok, pts) {
-    if (!flashEl) return;
-    flashEl.textContent = ok ? ('✓ +' + pts) : '✗ ลองใหม่ทีหลัง';
-    flashEl.className = 'mx-flash ' + (ok ? 'ok' : 'bad');
-    flashEl.style.opacity = '1';
-    setTimeout(function () { flashEl.style.opacity = '0'; }, 650);
+  var bannerEl = null;
+  function flashBanner(ok, pts) {
+    if (!bannerEl) return;
+    bannerEl.className = 'result-banner show ' + (ok ? 'ok' : 'no');
+    bannerEl.textContent = ok ? ('✓ 答對了 +' + pts + ' 分') : '✗ 這題晚點還會再出現';
+    setTimeout(function () { bannerEl.className = 'result-banner'; }, 700);
   }
 
   // ════════════════════════════════════════════
-  // RENDER — เปลือกเกม
+  // RENDER — เปลือกเกม (ใช้ class เดียวกับเกมเดิม)
   // ════════════════════════════════════════════
-  var root, body, hud;
+  var root, card;
   function mount(container) {
     root = container;
-    root.innerHTML =
-      '<div class="mx-hud" id="mx-hud"></div>' +
-      '<div class="mx-flash" id="mx-flash"></div>' +
-      '<div class="mx-body" id="mx-body"></div>' +
-      '<div class="mx-end" id="mx-end" style="display:none"></div>';
-    hud = document.getElementById('mx-hud');
-    body = document.getElementById('mx-body');
-    flashEl = document.getElementById('mx-flash');
+    root.innerHTML = '<div class="card" id="mx-card"></div>';
+    card = document.getElementById('mx-card');
     startRound();
   }
 
-  function renderHud() {
+  function goldBannerHtml() {
     var pct = S.total ? Math.round((S.done / S.total) * 100) : 0;
-    hud.innerHTML =
-      '<div class="mx-hud-top">' +
-        '<span>第 ' + (S.done + 1) + '/' + S.total + ' 題</span>' +
-        '<span>🏆 ' + S.score + (S.streak >= 3 ? ' · 🔥' + S.streak : '') + '</span>' +
+    return '<div class="gold-banner">' +
+      '<div class="top-bar">' +
+        '<div class="score-bar"><span>第 ' + (S.done + 1) + '/' + S.total + ' 題</span><span>🏆<span>' + S.score + '</span></span></div>' +
+        '<div class="combo-badge' + (S.streak >= 3 ? ' show' : '') + '">🔥 連對 ' + S.streak + '</div>' +
       '</div>' +
-      '<div class="mx-bar"><i style="width:' + pct + '%"></i></div>';
+      '<div class="bars-wrap"><div class="bar-row"><span class="bar-label">進度</span><div class="bar-bg"><div class="bar-fill prog" style="width:' + pct + '%"></div></div></div></div>' +
+    '</div>';
+  }
+
+  function stageTagHtml(c) {
+    var zh = ['聲調', '拼字', '打字'][c.stage - 1];
+    return '<div style="text-align:center;margin-bottom:2px">' +
+      '<span class="rule-tag">第 ' + c.stage + ' 關 · ' + zh + '</span>' +
+      (c.golden ? ' <span class="rule-tag sp">🌾 黃金字</span>' : '') +
+    '</div>';
   }
 
   function render() {
-    renderHud();
     var c = S.cur, w = c.word, syl = w.syls[0];
-    var head = '<div class="mx-stagechip">' + STAGE_EMOJI[c.stage - 1] + ' ด่าน ' + c.stage + ' · ' + STAGE_NAMES[c.stage - 1] +
-      (c.golden ? ' <span class="mx-golden">🌾 คำทองคำ</span>' : '') + '</div>';
-    if (c.stage === 1) body.innerHTML = head + stage1Html(w, syl);
-    else if (c.stage === 2) body.innerHTML = head + stage2Html(w, syl);
-    else body.innerHTML = head + stage3Html(w, syl);
+    var html = goldBannerHtml() + stageTagHtml(c) +
+      '<div class="word-area"><div class="word-th">' + esc(w.th) + '</div><div class="word-zh">' + esc(w.zh) + '</div></div>' +
+      '<div class="result-banner" id="mx-result"></div>';
+    if (c.stage === 1) html += stage1Html(w, syl);
+    else if (c.stage === 2) html += stage2Html(w, syl);
+    else html += stage3Html(w, syl);
+    card.innerHTML = html;
+    bannerEl = document.getElementById('mx-result');
     wireStage(c);
   }
 
   // ════════════════════════════════════════════
-  // ด่าน 1 — ทายเสียง (ตอบเร็ว 1-5 → ถูกไปต่อ / ผิดเปิด 推導)
+  // ด่าน 1 — 猜聲調（快問快答 → 答對直接過關 / 答錯開推導）
   // ════════════════════════════════════════════
-  function stage1Html(w, syl) {
-    var pills = '';
-    for (var i = 1; i <= 5; i++) pills += '<button class="mx-pill mx-tone-btn" data-n="' + i + '">' + i + '<small>' + TONE_NUM_NAME[i] + '</small></button>';
-    return '<div class="mx-word">' + esc(w.th) + '</div><div class="mx-zh">' + esc(w.zh) + '</div>' +
-      '<div class="mx-hint">คำนี้เป็นเสียงที่เท่าไหร่?</div>' +
-      '<div class="mx-pills">' + pills + '</div>' +
+  function stage1Html() {
+    var opts = '';
+    for (var i = 1; i <= 5; i++) opts += '<div class="opt" data-n="' + i + '" style="--delay:' + (i * 0.05) + 's">' + i + '</div>';
+    return '<p style="text-align:center;font-size:13px;color:#a08050;margin:2px 0 8px">這個字是第幾聲？</p>' +
+      '<div class="opts-wrap"><div class="opts">' + opts + '</div></div>' +
       '<div id="mx-deriv"></div>';
   }
 
   function wireStage1(c) {
     var w = c.word, syl = w.syls[0];
     var correctNum = TONE_NAME_TO_NUM[syl.tone_name];
-    body.querySelectorAll('.mx-tone-btn').forEach(function (btn) {
+    card.querySelectorAll('.opts .opt').forEach(function (btn) {
       btn.addEventListener('click', function () {
+        if (btn.classList.contains('locked')) return;
         var n = +btn.dataset.n;
-        if (S.derivStep) { derivToneAnswer(c, n); return; } // อยู่ในต้นไม้แล้ว ปุ่ม 1-5 ไม่ทำงานซ้ำ
-        if (n === correctNum) {
-          body.querySelectorAll('.mx-tone-btn').forEach(function (b) { b.disabled = true; });
-          btn.classList.add('right');
-          answerCorrect(c);
-        } else {
-          btn.classList.add('wrong');
-          openDerivation(c);
-        }
+        card.querySelectorAll('.opts .opt').forEach(function (b) { b.classList.add('locked'); });
+        if (n === correctNum) { btn.classList.add('correct'); answerCorrect(c); }
+        else { btn.classList.add('wrong'); openDerivation(c); }
       });
     });
   }
@@ -252,89 +234,87 @@
   function fullSpell(syl) { return getFullSyllableSpelling(syl); }
 
   function openDerivation(c) {
-    var w = c.word, syl = w.syls[0];
-    var full = fullSpell(syl);
     S.derivStep = { part: 'mark' };
-    renderDeriv(c, full);
+    renderDeriv(c, fullSpell(c.word.syls[0]));
   }
-
-  function derivBox(html) { document.getElementById('mx-deriv').innerHTML = html; }
 
   function renderDeriv(c, full) {
     var step = S.derivStep.part;
-    var html = '<div class="mx-deriv">';
-    if (step === 'mark') {
-      html += '<div class="mx-q">มีรูปวรรณยุกต์ (่ ้ ๊ ๋) ติดอยู่ไหม?</div>' +
-        '<div class="mx-opts"><button class="mx-opt" data-v="yes">มี</button><button class="mx-opt" data-v="no">ไม่มี</button></div>';
-    } else if (step === 'class') {
-      html += '<div class="mx-q">พยัญชนะต้น "' + esc(TH_ENGINE.getInitChar(full)) + '" เป็นอักษรกลุ่มไหน?</div>' +
-        '<div class="mx-opts"><button class="mx-opt" data-v="mid">กลาง</button><button class="mx-opt" data-v="high">สูง</button><button class="mx-opt" data-v="low">ต่ำ</button></div>';
-    } else if (step === 'live') {
-      html += '<div class="mx-q">พยางค์นี้เป็นคำเป็นหรือคำตาย?</div>' +
-        '<div class="mx-opts"><button class="mx-opt" data-v="live">คำเป็น</button><button class="mx-opt" data-v="dead">คำตาย</button></div>';
-    } else if (step === 'vlen') {
-      html += '<div class="mx-q">สระเสียงสั้นหรือยาว?</div>' +
-        '<div class="mx-opts"><button class="mx-opt" data-v="short">สั้น</button><button class="mx-opt" data-v="long">ยาว</button></div>';
-    } else if (step === 'result') {
-      var reason = buildToneReason({ th: fullSpell(c.word.syls[0]), tone_name: c.word.syls[0].tone_name, lead: c.word.syls[0].lead, cons: c.word.syls[0].cons });
-      html += '<div class="mx-res">สรุป: เสียงที่ ' + TONE_NAME_TO_NUM[c.word.syls[0].tone_name] + ' (' + c.word.syls[0].tone_name + ')' +
-        (reason ? '<div class="mx-reason">' + esc(reason) + '</div>' : '') + '</div>' +
-        '<button class="mx-opt mx-next" id="mx-deriv-done">เข้าใจแล้ว →</button>';
-    }
-    html += '</div>';
-    derivBox(html);
+    var q = '', opts = [];
+    if (step === 'mark') { q = '有聲調符號（่ ้ ๊ ๋）嗎？'; opts = [['yes', '有'], ['no', '沒有']]; }
+    else if (step === 'class') { q = '子音「' + esc(TH_ENGINE.getInitChar(full)) + '」是哪一類？'; opts = [['mid', '中子音'], ['high', '高子音'], ['low', '低子音']]; }
+    else if (step === 'live') { q = '這個音節是活音節還是死音節？'; opts = [['live', '活音節'], ['dead', '死音節']]; }
+    else if (step === 'vlen') { q = '母音是短音還是長音？'; opts = [['short', '短音'], ['long', '長音']]; }
+
     if (step === 'result') {
+      var w2 = c.word.syls[0];
+      var reason = buildToneReason({ th: full, tone_name: w2.tone_name, lead: w2.lead, cons: w2.cons });
+      document.getElementById('mx-deriv').innerHTML =
+        '<div class="bonus-section show">' +
+          '<div class="bonus-header">結論：' + TONE_NUM_ZH[TONE_NAME_TO_NUM[w2.tone_name]] + ' (' + w2.tone_name + ')</div>' +
+          (reason ? '<div class="bonus-reason show"><div class="bonus-reason-why">' + esc(reason) + '</div></div>' : '') +
+          '<div class="opts-wrap" style="margin-top:8px"><div class="opts"><div class="opt" id="mx-deriv-done" style="font-size:16px;padding:8px 16px">懂了 →</div></div></div>' +
+        '</div>';
       document.getElementById('mx-deriv-done').addEventListener('click', function () { answerCorrect(c); });
       return;
     }
-    body.querySelectorAll('.mx-opt').forEach(function (btn) {
-      btn.addEventListener('click', function () { derivClick(c, full, btn.dataset.v); });
+    document.getElementById('mx-deriv').innerHTML =
+      '<div class="bonus-section show">' +
+        '<div class="bonus-header">' + q + '</div>' +
+        '<div class="bonus-opts">' + opts.map(function (o) { return '<div class="bonus-btn" data-v="' + o[0] + '">' + o[1] + '</div>'; }).join('') + '</div>' +
+      '</div>';
+    document.getElementById('mx-deriv').querySelectorAll('.bonus-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (document.getElementById('mx-deriv').dataset.locked) return;
+        document.getElementById('mx-deriv').dataset.locked = '1';
+        derivClick(c, full, btn.dataset.v, btn);
+      });
     });
   }
 
-  function derivClick(c, full, val) {
+  function derivClick(c, full, val, btnEl) {
     var step = S.derivStep.part;
     var right = false, next = 'result';
     if (step === 'mark') {
       right = (val === 'yes') === TH_ENGINE.hasToneMark(full);
-      if (TH_ENGINE.hasToneMark(full)) next = 'class'; else next = 'live';
+      next = TH_ENGINE.hasToneMark(full) ? 'class' : 'live';
     } else if (step === 'class') {
       var cls = TH_ENGINE.getInitClass(full); var e = (cls === 'lead') ? 'high' : cls;
-      right = (val === e);
-      next = 'result'; // มีรูปวรรณยุกต์แล้ว รู้กลุ่มพอสรุปได้เลย
+      right = (val === e); next = 'result';
     } else if (step === 'live') {
       var live = TH_ENGINE.isLiveWord(full);
       right = (val === 'live') === live;
       var cls2 = TH_ENGINE.getInitClass(full); var e2 = (cls2 === 'lead') ? 'high' : cls2;
-      if (live) next = 'result';
-      else next = (e2 === 'low') ? 'vlen' : 'result';
+      next = live ? 'result' : (e2 === 'low' ? 'vlen' : 'result');
     } else if (step === 'vlen') {
       var vt = TH_ENGINE.getVowelType(full);
       var isShort = (vt === 'short') || (vt == null);
-      right = (val === (isShort ? 'short' : 'long'));
-      next = 'result';
+      right = (val === (isShort ? 'short' : 'long')); next = 'result';
     }
+    btnEl.classList.add(right ? 'correct' : 'wrong');
     if (!right) { c.wrongCount++; if (c.wrongCount >= FAIL_AT) { finishCard(c, 0, true); return; } }
     S.derivStep = { part: next };
-    renderDeriv(c, full);
+    setTimeout(function () { renderDeriv(c, full); }, 350);
   }
 
   // ════════════════════════════════════════════
-  // ด่าน 2 — ต่อพยางค์ (แยก พยัญชนะ/สระ/วรรณยุกต์/ตัวสะกด)
+  // ด่าน 2 — 拼字（子音／聲調符／母音／尾音）
   // ════════════════════════════════════════════
   function comps(syl) {
     var out = [];
     var consDisp = syl.lead ? syl.lead + syl.cons : (syl.cluster ? syl.cons + syl.cluster : syl.cons);
-    out.push({ type: 'cons', label: 'พยัญชนะ', val: syl.cons, disp: consDisp });
-    if (syl.tone) out.push({ type: 'tone', label: 'วรรณยุกต์', val: syl.tone, disp: syl.tone });
-    out.push({ type: 'vowel', label: 'สระ', val: syl.vowel, disp: syl.vowel });
-    if (syl.final) out.push({ type: 'final', label: 'ตัวสะกด', val: syl.final, disp: syl.final });
+    out.push({ type: 'cons', label: '子音', val: syl.cons, disp: consDisp });
+    if (syl.tone) out.push({ type: 'tone', label: '聲調符', val: syl.tone, disp: syl.tone });
+    out.push({ type: 'vowel', label: '母音', val: syl.vowel, disp: syl.vowel });
+    if (syl.final) out.push({ type: 'final', label: '尾音', val: syl.final, disp: syl.final });
     return out;
   }
 
   function stage2Html(w, syl) {
     var parts = comps(syl);
-    var slots = parts.map(function (p) { return '<span class="mx-slot" data-type="' + p.type + '"></span>'; }).join('');
+    var slots = parts.map(function (p) {
+      return '<div class="slot-col"><div class="slot-label">' + p.label + '</div><div class="slot-box" data-type="' + p.type + '">◌</div></div>';
+    }).join('');
     var pool = [];
     parts.forEach(function (p) {
       var opts;
@@ -345,81 +325,93 @@
       pool = pool.concat(opts);
     });
     pool = shuffle(pool);
-    var pills = pool.map(function (o, i) { return '<button class="mx-pill mx-tile" data-type="' + o.type + '" data-v="' + esc(o.v) + '" data-i="' + i + '">' + esc(o.disp) + '</button>'; }).join('');
-    return '<div class="mx-word">' + esc(w.th) + '</div><div class="mx-zh">' + esc(w.zh) + '</div>' +
-      '<div class="mx-slots">' + slots + '</div>' +
-      '<div class="mx-pills mx-pool">' + pills + '</div>' +
-      '<button class="mx-opt mx-check" id="mx-s2-check" disabled>ตรวจคำตอบ</button>';
+    var i = 0;
+    var pills = pool.map(function (o) {
+      i++;
+      return '<div class="opt" data-type="' + o.type + '" data-v="' + esc(o.v) + '" style="--delay:' + (i * 0.04) + 's">' + esc(o.disp) + '</div>';
+    }).join('');
+    return '<div class="slot-row">' + slots + '</div>' +
+      '<div class="opts-wrap"><div class="opts">' + pills + '</div></div>' +
+      '<div class="btn-row"><button class="btn btn-primary" id="mx-s2-check" disabled>檢查</button></div>';
   }
 
   function wireStage2(c) {
     var w = c.word, syl = w.syls[0], parts = comps(syl);
     var need = parts.length, filled = {};
     var slotEls = {};
-    body.querySelectorAll('.mx-slot').forEach(function (s) { slotEls[s.dataset.type] = s; });
+    card.querySelectorAll('.slot-box').forEach(function (s) { slotEls[s.dataset.type] = s; });
     var checkBtn = document.getElementById('mx-s2-check');
-    body.querySelectorAll('.mx-tile').forEach(function (tile) {
+    card.querySelectorAll('.opts .opt[data-type]').forEach(function (tile) {
       tile.addEventListener('click', function () {
+        if (tile.classList.contains('locked')) return;
         var type = tile.dataset.type;
-        if (filled[type]) return; // ช่องนี้เต็มแล้ว
+        if (filled[type]) return;
         filled[type] = tile.dataset.v;
         slotEls[type].textContent = tile.dataset.v;
-        slotEls[type].classList.add('f');
-        tile.disabled = true;
-        tile.classList.add('used');
+        slotEls[type].classList.add('filled');
+        tile.classList.add('locked', 'sel');
         if (Object.keys(filled).length === need) checkBtn.disabled = false;
       });
     });
     checkBtn.addEventListener('click', function () {
+      if (S.resolving) return;
+      checkBtn.disabled = true;
       var ok = parts.every(function (p) { return filled[p.type] === p.val; });
-      if (ok) { answerCorrect(c); }
-      else {
-        parts.forEach(function (p) { if (filled[p.type] !== p.val) slotEls[p.type].classList.add('wrong'); });
+      if (ok) {
+        parts.forEach(function (p) { slotEls[p.type].classList.add('correct'); });
+        answerCorrect(c);
+      } else {
+        parts.forEach(function (p) { slotEls[p.type].classList.add(filled[p.type] === p.val ? 'correct' : 'wrong'); });
         requeueWrong(c);
       }
     });
   }
 
   // ════════════════════════════════════════════
-  // ด่าน 3 — พิมพ์ (แป้นพิมพ์ไทย Kedmanee)
+  // ด่าน 3 — 打字（Kedmanee 泰文鍵盤）
   // ════════════════════════════════════════════
   function stage3Html(w, syl) {
-    var target = syl.th;
-    var rows = KBD_ROWS.map(function (row) {
-      return '<div class="mx-kbd-row">' + row.map(function (code) { return '<span class="mx-key" data-code="' + code + '">' + esc(RG_BASE_MAP[code]) + '</span>'; }).join('') + '</div>';
+    var rows = TK_ROWS.map(function (row) {
+      return '<div class="tk-row">' + row.map(function (code) {
+        return '<div class="tk-key" data-code="' + code + '"><span class="tk-base">' + esc(RG_BASE_MAP[code]) + '</span></div>';
+      }).join('') + '</div>';
     }).join('');
-    return '<div class="mx-word">' + esc(w.th) + '</div><div class="mx-zh">พิมพ์ตามด้วยแป้นไทย · ' + esc(w.zh) + '</div>' +
-      '<div class="mx-typetarget" id="mx-typetarget"></div>' +
-      '<div class="mx-kbd">' + rows + '</div>';
+    return '<div class="type-panel" style="display:flex">' +
+      '<div class="type-target" id="mx-typetarget"></div>' +
+      '<div class="tkbd" style="display:flex">' + rows + '</div>' +
+    '</div>';
   }
 
   function paintType(c) {
     var target = c.word.syls[0].th;
     var html = '';
     for (var i = 0; i < target.length; i++) {
-      var cls = i < S.typePos ? 'done' : (i === S.typePos ? 'cur' : '');
-      html += '<span class="mx-tc ' + cls + '">' + esc(target[i]) + '</span>';
+      var col = i < S.typePos ? '#2e7d32' : (i === S.typePos ? '#d85a30' : '#c9b98a');
+      var deco = i === S.typePos ? 'border-bottom:3px solid #d85a30' : '';
+      html += '<span style="color:' + col + ';' + deco + '">' + esc(target[i]) + '</span>';
     }
     document.getElementById('mx-typetarget').innerHTML = html;
     var nextCh = target[S.typePos];
-    body.querySelectorAll('.mx-key').forEach(function (k) { k.classList.toggle('hl', RG_BASE_MAP[k.dataset.code] === nextCh); });
+    card.querySelectorAll('.tk-key').forEach(function (k) { k.classList.toggle('hint', RG_BASE_MAP[k.dataset.code] === nextCh); });
   }
 
   function wireStage3(c) {
     paintType(c);
     var target = c.word.syls[0].th;
+    var targetEl = document.getElementById('mx-typetarget');
     function tryChar(ch) {
+      if (S.resolving) return;
       if (ch === target[S.typePos]) {
         S.typePos++;
         if (S.typePos >= target.length) { answerCorrect(c); return; }
         paintType(c);
       } else {
-        body.classList.add('mx-shake');
-        setTimeout(function () { body.classList.remove('mx-shake'); }, 250);
+        targetEl.classList.add('shake');
+        setTimeout(function () { targetEl.classList.remove('shake'); }, 350);
         requeueWrong(c);
       }
     }
-    body.querySelectorAll('.mx-key').forEach(function (k) {
+    card.querySelectorAll('.tk-key').forEach(function (k) {
       k.addEventListener('click', function () { tryChar(RG_BASE_MAP[k.dataset.code]); });
     });
     S._keyHandler = function (e) {
@@ -441,20 +433,15 @@
   // ════════════════════════════════════════════
   function renderEnd() {
     if (S._keyHandler) { document.removeEventListener('keydown', S._keyHandler); S._keyHandler = null; }
-    body.style.display = 'none';
-    hud.style.display = 'none';
-    var endEl = document.getElementById('mx-end');
-    endEl.style.display = 'block';
     var perfectAll = S.perfectCount === S.total;
-    endEl.innerHTML =
-      '<div class="mx-end-emoji">🎉</div>' +
-      '<div class="mx-end-score">' + S.score + ' คะแนน</div>' +
-      '<div class="mx-end-detail">ผ่าน ' + S.perfectCount + '/' + S.total + ' ข้อแบบไม่พลาดเลย' + (perfectAll ? ' · เพอร์เฟกต์!' : '') + '</div>' +
-      '<button class="mx-opt mx-again" id="mx-again">🎲 เล่นอีกรอบ</button>';
-    document.getElementById('mx-again').addEventListener('click', function () {
-      body.style.display = ''; hud.style.display = ''; endEl.style.display = 'none';
-      startRound();
-    });
+    card.innerHTML =
+      '<div id="end" style="display:flex">' +
+        '<h2>🎉 這輪結束了！</h2>' +
+        '<div class="end-score-big">' + S.score + ' 分</div>' +
+        '<div class="end-detail">' + S.perfectCount + '/' + S.total + ' 題全對零失誤' + (perfectAll ? ' · 完美！' : '') + '</div>' +
+        '<button class="btn btn-primary" id="mx-again">🎲 再玩一次</button>' +
+      '</div>';
+    document.getElementById('mx-again').addEventListener('click', startRound);
   }
 
   window.MixGame = { mount: mount };

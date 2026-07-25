@@ -135,6 +135,10 @@
     var inApp = isInApp();
     var googleBtn = '<button id="rg-g" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #dadce0;background:#fff;color:#3c4043;border-radius:10px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);">' +
       '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>使用 Google 登入</button>';
+    // v8 (LIN 2026-07-25): เพิ่มปุ่ม Facebook — โชว์ทุกช่องทาง (ไม่ซ่อนตอนเปิดจากในแอป ต่างจาก Google
+    //   ที่ Google เองบล็อก OAuth ในเว็บวิวฝัง — Facebook ไม่มีข้อจำกัดแบบนี้) ใช้ trackLogin เช็คจริงทีหลังว่าช่องไหนพัง
+    var facebookBtn = '<button id="rg-fb" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:none;background:#1877F2;color:#fff;border-radius:10px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-top:10px;">' +
+      '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M22 12.06C22 6.51 17.52 2 12 2S2 6.51 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.58v1.85h2.78l-.44 2.91h-2.34v7.03C18.34 21.24 22 17.08 22 12.06z"/></svg>使用 Facebook 登入</button>';
     rgGate.innerHTML =
       '<div style="position:relative;background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
       '<button id="rg-x" aria-label="關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
@@ -150,8 +154,8 @@
       '</div>' +
       '<div id="rg-msg" style="display:none;font-size:12.5px;margin:10px 0 0;text-align:left;line-height:1.5;"></div>' +
       (inApp
-        ? '<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內就用上面的 <b>Email 驗證碼</b>登入即可（Google 在 App 內無法使用）</div>'
-        : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' + googleBtn)) +
+        ? ('<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內用上面的 <b>Email 驗證碼</b>或下面的 <b>Facebook</b> 登入即可（Google 在 App 內無法使用）</div>' + facebookBtn)
+        : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' + googleBtn + facebookBtn)) +
       '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回</p>' +
       '</div>';
     rgGate.querySelector('#rg-x').onclick = closeGate;
@@ -174,6 +178,15 @@
         });
       } catch (e) { trackLogin('login_fail', 'google', { reason: String(e && e.message || e).slice(0, 90) }); takePendingLogin(); }
     }; }
+    var fb = rgGate.querySelector('#rg-fb'); if (fb) fb.onclick = function () {
+      trackLogin('login_attempt', 'facebook');
+      markPendingLogin('facebook');
+      try {
+        sb.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: location.href } }).then(function (res) {
+          if (res && res.error) { trackLogin('login_fail', 'facebook', { reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); }
+        });
+      } catch (e) { trackLogin('login_fail', 'facebook', { reason: String(e && e.message || e).slice(0, 90) }); takePendingLogin(); }
+    };
   }
   function setMsg(msg, isErr) {
     var el = rgGate && rgGate.querySelector('#rg-msg');

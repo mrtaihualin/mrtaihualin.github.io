@@ -183,6 +183,106 @@
   function woHideSound(){
     var btn = document.getElementById('wo-sound-btn');
     if (btn) { btn.style.display = 'none'; btn.onclick = null; }
+    var row = document.getElementById('wo-reveal-ctl'); if (row) row.style.display = 'none';
+    var zh = document.getElementById('wo-zh'); if (zh) zh.innerHTML = '';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // ── ปุ่ม/ข้อมูลใต้คำที่เฉลย + คำอ่านติดไทล์คำ — Lin 2026-07-25
+  // ════════════════════════════════════════════════════════════
+  // คำอ่านรายคำ: readingTH ของประโยคเป็น "รายพยางค์" คั่นด้วย '-' → หั่นแบ่งให้แต่ละคำตามจำนวน syls ของคำนั้น
+  // ถ้าจำนวนพยางค์ไม่ตรงกัน (ข้อมูลผิด) → fallback เป็นตัวเขียนของคำเอง ไม่เดา
+  var _woReadCache = null, _woReadCacheTh = '';
+  function woWordReads(s){
+    if (!s) return [];
+    if (_woReadCacheTh === s.th && _woReadCache) return _woReadCache;
+    var parts = String(s.readingTH || '').split('-');
+    var total = 0;
+    s.words.forEach(function(w){ total += (w.syls && w.syls.length) || 1; });
+    var ok = (parts.length === total);
+    var out = [], p = 0;
+    s.words.forEach(function(w){
+      var n = (w.syls && w.syls.length) || 1;
+      var thRead = ok ? parts.slice(p, p + n).join('-') : w.th;
+      var enRead = (w.syls || []).map(function(sy){ return sy.en || ''; }).filter(Boolean).join('-');
+      out.push({ th: thRead || w.th, en: enRead });
+      p += n;
+    });
+    _woReadCacheTh = s.th; _woReadCache = out;
+    return out;
+  }
+
+  // สวิตช์คำอ่าน — ใช้คีย์เดียวกับเกมอื่น (rg_pron_mode / rg_en_mode) ตั้งครั้งเดียวเหมือนกันทุกเกม
+  var woPronMode = (function(){ try { return localStorage.getItem('rg_pron_mode') === '1'; } catch(e){ return false; } })();
+  var woEnMode   = (function(){ try { return localStorage.getItem('rg_en_mode')   === '1'; } catch(e){ return false; } })();
+  function woSyncReadBtns(){
+    var b1 = document.getElementById('rg-pron-toggle');
+    if (b1) {
+      b1.textContent = woPronMode ? '🐣' : '🥚';
+      b1.title = woPronMode ? '目前：讀音已顯示（跟著詞塊一起移動）' : '目前：讀音已隱藏（點擊顯示）';
+      b1.setAttribute('aria-label', b1.title);
+    }
+    var b2 = document.getElementById('rg-en-toggle');
+    if (b2) {
+      b2.textContent = woEnMode ? '🔡' : '🔠';
+      b2.title = woEnMode ? '目前：英文讀音已顯示（跟著詞塊一起移動）' : '目前：英文讀音已隱藏（點擊顯示）';
+      b2.setAttribute('aria-label', b2.title);
+    }
+  }
+  // HTML คำอ่านที่แปะใต้คำแต่ละคำ (ใช้ทั้งไทล์ในกองและช่องที่วางแล้ว → เลื่อนตามคำเสมอ)
+  function woReadHtml(wordIndex){
+    if (!woPronMode && !woEnMode) return '';
+    var s = curSentence();
+    var r = woWordReads(s)[wordIndex];
+    if (!r) return '';
+    var written = (s.words[wordIndex] && s.words[wordIndex].th) || '';
+    var h = '';
+    // คำอ่านไทยโชว์เฉพาะตอน "อ่านไม่ตรงกับตัวเขียน" — ตรงกันแล้วโชว์ซ้ำใต้คำเดิมก็รกเปล่าๆ
+    if (woPronMode && r.th && r.th !== written) h += '<div class="wo-read-th">' + r.th + '</div>';
+    if (woEnMode   && r.en) h += '<div class="wo-read-en">' + r.en + '</div>';
+    return h;
+  }
+  function woRepaintWords(){
+    var s = curSentence();
+    if (!s) return;
+    renderSlots(s); renderBank();
+  }
+  window.woTogglePron = function(){
+    woPronMode = !woPronMode;
+    try { localStorage.setItem('rg_pron_mode', woPronMode ? '1' : '0'); } catch(e){}
+    woSyncReadBtns(); woRepaintWords();
+    if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  };
+  window.woToggleEn = function(){
+    woEnMode = !woEnMode;
+    try { localStorage.setItem('rg_en_mode', woEnMode ? '1' : '0'); } catch(e){}
+    woSyncReadBtns(); woRepaintWords();
+    if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  };
+
+  // ── คำแปลจีนตอนเฉลย: เป็นสวิตช์ 🍙/🌾 อยู่ "ใต้คำที่เฉลย" (ไม่ได้อยู่ในเมนูมุมขวาล่าง) — Lin 2026-07-25 ──
+  var woZhOn = (function(){ try { var v = localStorage.getItem('wo_zh_on'); return v === null ? true : v === '1'; } catch(e){ return true; } })();
+  function woRenderZh(){
+    var zh = document.getElementById('wo-zh');
+    var s = curSentence();
+    if (zh) zh.innerHTML = (woZhOn && s) ? ('中文：<b>' + s.zh + '</b>') : '';
+    var b = document.getElementById('wo-zh-toggle');
+    if (b) {
+      b.textContent = woZhOn ? '🍙' : '🌾';
+      b.title = woZhOn ? '目前：翻譯已開啟（點擊關閉）' : '目前：翻譯已關閉（點擊開啟）';
+      b.setAttribute('aria-label', b.title);
+    }
+  }
+  window.woToggleZh = function(){
+    woZhOn = !woZhOn;
+    try { localStorage.setItem('wo_zh_on', woZhOn ? '1' : '0'); } catch(e){}
+    woRenderZh();
+  };
+  // เรียกตอนเฉลยทุกทาง: โชว์แถวปุ่ม (🔊 + 🍙) ใต้คำที่เฉลย + คำแปลตามสวิตช์
+  function woRevealExtras(sentenceTh){
+    var row = document.getElementById('wo-reveal-ctl'); if (row) row.style.display = 'flex';
+    woShowSound(sentenceTh);
+    woRenderZh();
   }
 
   // ── 共用進度系統的這局統計：只在 finish() 時彙整一次，跟其他遊戲的「一輪結束才結算」邏輯一致 ──
@@ -426,6 +526,8 @@
       return;
     }
     woLoadSrs();
+    woSyncReadBtns();   // Lin 2026-07-25: ตั้งไอคอนปุ่ม 讀音/英文讀音 ตามค่าที่จำไว้
+    woRenderZh();       // ตั้งไอคอนปุ่ม 翻譯 (🍙/🌾) ใต้คำที่เฉลย
     var now = Date.now();
     var allIdx = ADV_SENTENCES.map(function(_, i){ return i; });
     practiceMode = false;
@@ -536,7 +638,8 @@
         slot.textContent = '';
       } else {
         slot.className = 'wo-slot filled';
-        slot.textContent = s.words[filledOrig].th;
+        // Lin 2026-07-25: คำอ่านติดไปกับคำ → ย้ายไปวางช่องไหน คำอ่านก็ตามไปด้วย
+        slot.innerHTML = '<div class="wo-word-th">' + s.words[filledOrig].th + '</div>' + woReadHtml(filledOrig);
         slot.title = '點一下移回下面';
         (function(slotIndex){
           slot.onclick = function(){ if (!locked) removeFromAnswer(slotIndex); };
@@ -557,7 +660,8 @@
     bank.forEach(function(tile){
       var el = document.createElement('div');
       el.className = 'wo-tile' + (used[tile.orig] ? ' used' : '');
-      el.textContent = tile.th;
+      // Lin 2026-07-25: คำอ่านแปะใต้คำในกองด้วย (กองสลับที่แล้ว คำอ่านก็ยังตรงกับคำของตัวเอง ไม่เฉลยลำดับ)
+      el.innerHTML = '<div class="wo-word-th">' + tile.th + '</div>' + woReadHtml(tile.orig);
       el.onclick = function(){ if (!locked && !used[tile.orig]) addToAnswer(tile.orig); };
       el.setAttribute('role','button');
       el.setAttribute('tabindex','0');
@@ -609,8 +713,7 @@
     banner.textContent = wasProof
       ? '看來這句還沒完全記熟，先留在複習清單裡 🔁'
       : '這句先看答案～綠色就是正確順序，我們下一句再加油 💪（本句不計分）';
-    document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
-    woShowSound(s.th);
+        woRevealExtras(s.th);
     document.getElementById('wo-next-btn').disabled = false;
     document.getElementById('wo-hint-btn').disabled = true;
     // Lin 2026-07-12: ซ่อนกล่องคำในคลัง (ใช้ครบแล้ว แต่ opacity:0 ยังกินที่อยู่) กันช่องว่างเปล่าๆ ก่อนถึง popup ผลลัพธ์
@@ -653,8 +756,7 @@
         }
         banner.className = passedClean ? 'result-banner ok show' : 'result-banner no show';
         banner.textContent = passedClean ? '真的記得！這句標記為熟練 ✓（不計分、不加星）' : '中途排錯過，這句先留在複習清單裡 🔁';
-        document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
-        woShowSound(s.th);
+                woRevealExtras(s.th);
         document.getElementById('wo-next-btn').disabled = false;
         document.getElementById('wo-hint-btn').disabled = true;
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
@@ -711,8 +813,7 @@
 
       banner.className = 'result-banner ok show';
       banner.textContent = '✅ 排對了！+' + pts + ' 分' + (golden ? ' ✨黃金句' : '') + (cmult > 1 ? ' 🔥連對×' + cmult : '') + (hintUsedThisSentence ? '（用了提示）' : '');
-      document.getElementById('wo-zh').innerHTML = '中文：<b>' + s.zh + '</b>';
-      woShowSound(s.th);
+            woRevealExtras(s.th);
       // Lin 2026-07-12: โชว์คำอธิบายว่าแต่ละคำแปลว่าอะไร (ตอนจบ)
       var _woRev=document.getElementById('wo-reveal');
       if(_woRev){

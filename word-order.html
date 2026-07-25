@@ -69,6 +69,7 @@
 <script src="data/audio-manifest.js?v=2"></script><!-- เพิ่ม 2026-07-17: เสียงประโยค 30 ประโยค (เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงประโยค — โชว์เฉพาะตอนเฉลยแล้ว -->
+<script src="js/games/word-menu.js?v=4"></script><!-- เมนู 🍚 (讀音/英文讀音/字體) — Lin 2026-07-25 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -104,6 +105,13 @@
 .wo-tile{min-width:56px;padding:10px 16px;border-radius:14px;border:2px solid #d4b87a;background:#fff;color:#5a3e10;font-size:22px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;text-align:center;user-select:none;transition:transform .1s,opacity .15s;}
 .wo-tile:hover{background:#ffeedd;border-color:#c07030;transform:translateY(-2px);}
 .wo-tile.used{opacity:0;pointer-events:none;transform:scale(.6);position:absolute;}/* Lin 2026-07-12: เอาออกจาก flow เลย ไม่ให้เหลือช่องว่างค้างในแถบตัวเลือกคำ */
+/* Lin 2026-07-25: คำอ่าน (讀音 / 英文讀音) แปะใต้คำแต่ละคำ — ติดไปกับคำ ย้ายไปวางช่องไหนก็ตามไปด้วย */
+.wo-slot.filled{flex-direction:column;gap:1px;}
+.wo-word-th{font-family:'Sarabun',sans-serif;line-height:1.25;}
+.wo-read-th{font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;color:#993C1D;line-height:1.3;margin-top:2px;}
+.wo-read-en{font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:600;color:#8B6310;line-height:1.3;letter-spacing:0.2px;}
+body.rg-modern-font .wo-word-th,
+body.rg-modern-font .wo-read-th{font-family:'Noto Sans Thai','Sarabun',sans-serif !important;}
 
 .result-banner{width:100%;padding:9px 14px;border-radius:11px;text-align:center;font-size:14px;font-weight:600;font-family:'Noto Sans TC',sans-serif;display:none;margin-top:6px;}
 .result-banner.show{display:block;}
@@ -314,10 +322,24 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <div class="wo-slots" id="wo-slots"></div>
 
+  <!-- Lin 2026-07-25: ปุ่ม 發音 (🔊) + 翻譯 (🍙/🌾) ย้ายมาอยู่ "ใต้คำที่เฉลย" แทนเมนูมุมขวาล่าง — โชว์เฉพาะตอนเฉลยแล้ว (กันสปอยล์) -->
+  <div id="wo-reveal-ctl" style="display:none;align-items:center;justify-content:center;gap:8px;margin:2px 0 6px;">
+    <button type="button" id="wo-sound-btn" class="word-audio-btn" style="display:none;" title="聽發音" aria-label="聽發音">🔊</button>
+    <button type="button" id="wo-zh-toggle" class="word-ctl-btn" onclick="woToggleZh()" title="翻譯">🍙</button>
+  </div>
   <div class="zh-hint" id="wo-zh"></div>
 
-  <!-- เพิ่ม 2026-07-17: ปุ่มฟังเสียงประโยค — โชว์เฉพาะตอนคำตอบเฉลยแล้ว (กันสปอยล์คำตอบก่อนตอบ) -->
-  <button type="button" id="wo-sound-btn" class="word-audio-btn" style="display:none;margin:2px 0 6px;" title="聽發音" aria-label="聽發音">🔊</button>
+  <!-- แถวปุ่มของเมนู 🍚 (ปุ่มจริงถูกย้ายเข้าเมนูตอนโหลด เหลือกล่องเปล่า) — Lin 2026-07-25 -->
+  <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;">
+    <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="woTogglePron()"></button>
+    <button id="rg-en-toggle" class="word-ctl-btn" type="button" onclick="woToggleEn()"></button>
+    <span id="font-toggle-slot"></span>
+  </div>
+  <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
+    {id:'rg-pron-toggle',   label:'讀音',     state:'pron'},
+    {id:'rg-en-toggle',     label:'英文讀音', state:'en'},
+    {id:'font-toggle-slot', label:'字體',     state:'font'}
+  ]});});</script>
 
   <div class="wo-bank" id="wo-bank"></div>
 
@@ -379,8 +401,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="js/core/shared.min.js?v=10"></script>
-<script src="js/games/word-order-app.min.js?v=4"></script>
+<script src="js/core/shared.min.js?v=11"></script>
+<script src="js/games/word-order-app.min.js?v=6"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>
