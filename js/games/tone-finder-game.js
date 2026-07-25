@@ -3343,13 +3343,7 @@ function stepSessionGuess() {
   var customBd = sylPart ? singlePartChips(sylPart) : breakdownChipsHTML(word, null);
   var breakdownHtml = customBd || '<div class="sg-breakdown">'+chips.join('')+'</div>';
 
-  // Toggle info buttons
-  var toggleHtml =
-    '<div class="sg-toggle-row">'+
-      '<button class="sg-toggle-btn" id="sg-btn-th" onclick="TF.sgToggle(\'th\')">🔤 泰文讀音</button>'+
-      '<button class="sg-toggle-btn" id="sg-btn-en" onclick="TF.sgToggle(\'en\')">🔡 英文讀音</button>'+
-    '</div>'+
-    '<div class="sg-info-box" id="sg-info-box" style="display:none;"></div>';
+  // Lin 2026-07-25: ลบแถบปุ่ม 泰文讀音/英文讀音 ในหน้าเดาวรรณยุกต์ทิ้ง — ย้ายไปใช้สวิตช์ในเมนู 🍚 (ปุ่มขวา) ที่เดียว
 
   // Tone guess buttons
   var toneColors = ['#6cb8ff','#7ec87e','#ff7c7c','#ffb347','#c39bff'];
@@ -3405,7 +3399,6 @@ function stepSessionGuess() {
   return '<div style="text-align:center;padding:4px 0 8px;">'+
     wordHtml+
     breakdownHtml+
-    toggleHtml+
     '<div class="sg-divider"></div>'+
     '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
@@ -4675,35 +4668,7 @@ var TF = {
     hist=[]; histPos=-1;
     render();
   },
-  sgToggle: function(type) {
-    if (!session) return;
-    var entry = session.words[session.index];
-    if (!entry) return;
-    var box = document.getElementById('sg-info-box');
-    if (!box) return;
-    var btnTh = document.getElementById('sg-btn-th');
-    var btnEn = document.getElementById('sg-btn-en');
-    var allBtns = [btnTh, btnEn];
-    // Toggle off if already showing same type
-    if (box.getAttribute('data-active') === type) {
-      box.removeAttribute('data-active');
-      box.style.cssText = 'display:none;';
-      allBtns.forEach(function(b){ if(b) b.classList.remove('active'); });
-      return;
-    }
-    allBtns.forEach(function(b){ if(b) b.classList.remove('active'); });
-    box.setAttribute('data-active', type);
-    var html = '';
-    if (type === 'th') {
-      if (btnTh) btnTh.classList.add('active');
-      html = '<span style="font-family:\'Sarabun\',sans-serif;font-size:22px;color:#8B6310;letter-spacing:1px;">'+(entry.readingTH||'—')+'</span>';
-    } else if (type === 'en') {
-      if (btnEn) btnEn.classList.add('active');
-      html = '<span style="font-family:\'Sarabun\',sans-serif;font-size:20px;color:#666;">'+(entry.readingEN||'—')+'</span>';
-    }
-    box.innerHTML = html;
-    box.style.cssText = 'display:block;';
-  },
+  // Lin 2026-07-25: ลบ TF.sgToggle ทิ้ง — แถบปุ่ม 泰文讀音/英文讀音 ในหน้าเดาถูกเอาออกแล้ว
   tip: function(keys) { showTip(keys); },
   hint: function(keys) { tfUseHint(keys); }, // Lin 2026-07-04: ปุ่ม "?" ในทุกขั้น推導/helper — โชว์ตาราง + ล็อกคำนี้ไม่สะอาด/ไม่ได้คะแนน (ดู tfUseHint)
   _run: function(id) { if(_acts[id]) _acts[id](); }

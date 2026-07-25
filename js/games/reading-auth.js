@@ -147,6 +147,11 @@
     //   ที่ Google เองบล็อก OAuth ในเว็บวิวฝัง — Facebook ไม่มีข้อจำกัดแบบนี้) ใช้ trackLogin เช็คจริงทีหลังว่าช่องไหนพัง
     var facebookBtn = '<button id="rg-fb" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:none;background:#1877F2;color:#fff;border-radius:10px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-top:10px;">' +
       '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M22 12.06C22 6.51 17.52 2 12 2S2 6.51 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.58v1.85h2.78l-.44 2.91h-2.34v7.03C18.34 21.24 22 17.08 22 12.06z"/></svg>使用 Facebook 登入</button>';
+    // v10 (LIN 2026-07-25): เพิ่มปุ่ม LINE — ผูกผ่าน Custom OIDC Provider ของ Supabase (custom:line)
+    //   ใช้ channel "ผูกบัญชีนักเรียน" (LINE Login) ตัวเดิมที่ line-link.html ใช้อยู่ — คนละระบบกัน ไม่กระทบกัน
+    //   สีเขียว #06C755 = สีทางการ LINE (ข้อยกเว้นตามกฎธีมเว็บ CLAUDE.md)
+    var lineBtn = '<button id="rg-line" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:none;background:#06C755;color:#fff;border-radius:10px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-top:10px;">' +
+      '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M12 2C6.48 2 2 5.69 2 10.24c0 4.08 3.54 7.5 8.32 8.15.32.07.76.21.87.49.1.25.06.65.03.9l-.14.85c-.04.25-.19.98.86.53 1.05-.44 5.67-3.34 7.74-5.72C21.15 13.62 22 12.02 22 10.24 22 5.69 17.52 2 12 2zm-3.3 10.6H7.05a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3c.16 0 .3.14.3.3v3.68h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3zm1.86 0h-.3a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3a.3.3 0 0 1 .3.3v4.28a.3.3 0 0 1-.3.3zm4.44 0h-.3a.3.3 0 0 1-.24-.12l-1.68-2.27v2.09a.3.3 0 0 1-.3.3h-.3a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h.3c.09 0 .18.04.24.12l1.68 2.27V8.03a.3.3 0 0 1 .3-.3h.3a.3.3 0 0 1 .3.3v4.28a.3.3 0 0 1-.3.3zm3.72-3.68h-1.72v.72h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3h-1.72v.72h1.72a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3h-2.32a.3.3 0 0 1-.3-.3V8.03a.3.3 0 0 1 .3-.3h2.32a.3.3 0 0 1 .3.3v.3a.3.3 0 0 1-.3.3z"/></svg>使用 LINE 登入</button>';
     // v9 (LIN 2026-07-25): เตือน "ครั้งที่แล้วล็อกอินด้วยอะไร" — กันสับสนไปกดคนละช่องทางแล้วได้บัญชีใหม่ (คะแนนหาย)
     var lastProvider = getLastProvider();
     var lastProviderHint = lastProvider
@@ -168,8 +173,8 @@
       '</div>' +
       '<div id="rg-msg" style="display:none;font-size:12.5px;margin:10px 0 0;text-align:left;line-height:1.5;"></div>' +
       (inApp
-        ? ('<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內用上面的 <b>Email 驗證碼</b>或下面的 <b>Facebook</b> 登入即可（Google 在 App 內無法使用）</div>' + facebookBtn)
-        : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' + googleBtn + facebookBtn)) +
+        ? ('<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內用上面的 <b>Email 驗證碼</b>或下面的 <b>Facebook / LINE</b> 登入即可（Google 在 App 內無法使用）</div>' + facebookBtn + lineBtn)
+        : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' + googleBtn + facebookBtn + lineBtn)) +
       '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回</p>' +
       '</div>';
     rgGate.querySelector('#rg-x').onclick = closeGate;
@@ -200,6 +205,15 @@
           if (res && res.error) { trackLogin('login_fail', 'facebook', { reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); }
         });
       } catch (e) { trackLogin('login_fail', 'facebook', { reason: String(e && e.message || e).slice(0, 90) }); takePendingLogin(); }
+    };
+    var ln = rgGate.querySelector('#rg-line'); if (ln) ln.onclick = function () {
+      trackLogin('login_attempt', 'line');
+      markPendingLogin('line');
+      try {
+        sb.auth.signInWithOAuth({ provider: 'custom:line', options: { redirectTo: location.href } }).then(function (res) {
+          if (res && res.error) { trackLogin('login_fail', 'line', { reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); }
+        });
+      } catch (e) { trackLogin('login_fail', 'line', { reason: String(e && e.message || e).slice(0, 90) }); takePendingLogin(); }
     };
   }
   function setMsg(msg, isErr) {
