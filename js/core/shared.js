@@ -1739,7 +1739,9 @@ window.deleteFBComment = function(postId, idx) {
         '.rg-ctl-wrap{position:fixed;right:12px;bottom:calc(60px + env(safe-area-inset-bottom,0px));z-index:100000;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}' +
         '@media(max-width:768px){.rg-ctl-wrap{bottom:calc(68px + env(safe-area-inset-bottom,0px));}}' +
         // Lin 2026-07-12: เฉพาะตอนเต็มจอ → ย้ายชุดปุ่ม (🎮+⛶) ลงไปติดขอบล่างสุด · ออกจากเต็มจอแล้วเด้งกลับที่เดิม
-        '.rg-ctl-wrap.rg-ctl-fs,body.rg-fake-fullscreen .rg-ctl-wrap{bottom:calc(6px + env(safe-area-inset-bottom,0px)) !important;}' +
+        // Lin 2026-07-25: กดเต็มจอแล้ว "ชุดปุ่มขวาห้ามขยับที่" ในคอม — เดิมเลื่อนลงขอบล่าง (6px) ทุกขนาดจอ
+        //   ตอนนี้ให้เลื่อนเฉพาะมือถือ (≤768px) ที่แถบล่างหายไปจริงและพื้นที่จอน้อย · คอม (>768px) อยู่ที่เดิมตลอด ไม่กระโดด
+        '@media(max-width:768px){.rg-ctl-wrap.rg-ctl-fs,body.rg-fake-fullscreen .rg-ctl-wrap{bottom:calc(6px + env(safe-area-inset-bottom,0px)) !important;}}' +
         '.rg-ctl-fab{width:44px;height:44px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;flex-shrink:0;}' +
         '.rg-ctl-fab:active{transform:scale(.92);}' +
         // ── ดรอปดาวน์เมนูเกม (แนวตั้ง) — ซ่อนไว้ กดปุ่ม 🎮 ถึงเปิด · ทับสไตล์แถบเดิมของทุกเกมด้วย !important ──
