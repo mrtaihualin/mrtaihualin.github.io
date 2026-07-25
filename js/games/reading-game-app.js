@@ -1979,12 +1979,11 @@ try { rgRenderGameBar(); } catch(e){}
 
 // ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──
 function rgToggleFont() {
+  // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #rg-font-btn ออก — ปุ่มนั้นไม่มีในหน้าแล้วตั้งแต่ย้ายเข้าเมนู 🍚 (shared.js สร้างปุ่มจริงเอง อ่านสถานะจาก class บน <body>)
   var on = document.body.classList.toggle('rg-modern-font');
-  var btn = document.getElementById('rg-font-btn');
-  if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? '✍️ 換回標準字體' : '✍️ 換現代字體'; }
   try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
 }
-(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); var b=document.getElementById('rg-font-btn'); if(b){b.classList.add('active');b.textContent='✍️ 換回標準字體';} } } catch(e){} })();
+(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); } } catch(e){} })(); // Lin 2026-07-25: ตัดโค้ดตั้งปุ่มเก่า #rg-font-btn ออก (ปุ่มไม่มีในหน้าแล้ว)
 
 // ── 我有問題 ──
 function rgOpenAsk() {

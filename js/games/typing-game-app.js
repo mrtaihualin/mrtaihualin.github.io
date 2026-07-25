@@ -1730,20 +1730,18 @@ function rgVirtualPress(code){
   if(ch)rgTypeChar(ch);
 }
 
+// Lin 2026-07-25: ลบตัวแปร btn (#rg-type-toggle) ออก — ปุ่มสลับโหมดพิมพ์ตัวนั้นไม่มีในหน้าแล้ว
 function rgApplyTypeModeUI(){
-  var btn=document.getElementById('rg-type-toggle');
   var panel=document.getElementById('type-panel');
   var slotRow=document.getElementById('slot-row');
   var optsWrap=document.querySelector('.opts-wrap');
   var chBtn=document.getElementById('btn-check');
   if(RG_TYPE.on){
-    if(btn){btn.classList.add('active');btn.textContent='⌨️ 打字模式';}
     if(panel)panel.style.display='flex';
     if(slotRow)slotRow.style.display='none';
     if(optsWrap)optsWrap.style.display='none';
     if(chBtn && !checked)chBtn.style.display='none';
   } else {
-    if(btn){btn.classList.remove('active');btn.textContent='⌨️ 打字模式';}
     if(panel)panel.style.display='none';
     if(slotRow)slotRow.style.display='';
     if(optsWrap)optsWrap.style.display='';
@@ -2304,10 +2302,8 @@ try{
   if(_bo)_bo.addEventListener('mousedown',function(e){e.preventDefault();});
   rgNoFocusSteal(document.getElementById('rg-tone-skip-btn'));
   rgNoFocusSteal(document.getElementById('rg-webkbd-toggle')); // Lin 2026-07-18: กดปุ่มเปิด/ปิดคีย์บอร์ดในเกม แล้วคีย์บอร์ดเครื่องต้องไม่หุบ
-  // Lin 2026-07-16 (audit รอบ 2): แถวปุ่มบนการ์ดคำ 🔊/🐣/🍙/🔖 ก็แย่งโฟกัสเหมือนกัน — ผู้เล่นชอบกด 🔊 ฟังเสียงระหว่างพิมพ์ แล้วคีย์บอร์ดหุบ
-  // ดักที่ตัวแถว (delegate) ครอบคลุมปุ่มที่สคริปต์อื่น (WordAudio/WordVault/zh-toggle) มา inject ทีหลังด้วย
-  var _wcr=document.getElementById('word-ctl-row');
-  if(_wcr)_wcr.addEventListener('mousedown',function(e){e.preventDefault();});
+  // Lin 2026-07-25: ลบตัวดัก mousedown ของ #word-ctl-row ออก — ปุ่มทั้งแถวถูกย้ายเข้าเมนู 🍚 หมดแล้ว แถวนี้ว่างเปล่า
+  // (word-menu.js ดัก mousedown ให้ทั้งปุ่ม 🍚 และแผงเมนูอยู่แล้ว คีย์บอร์ดยังไม่หุบเหมือนเดิม)
 }catch(e){}
 
 // ════════════════════════════════════════════
@@ -2508,12 +2504,11 @@ try { rgRenderGameBar(); } catch(e){}
 
 // ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──
 function rgToggleFont() {
+  // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #rg-font-btn ออก — ปุ่มนั้นไม่มีในหน้าแล้วตั้งแต่ย้ายเข้าเมนู 🍚 (shared.js สร้างปุ่มจริงเอง อ่านสถานะจาก class บน <body>)
   var on = document.body.classList.toggle('rg-modern-font');
-  var btn = document.getElementById('rg-font-btn');
-  if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? '✍️ 換回標準字體' : '✍️ 換現代字體'; }
   try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
 }
-(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); var b=document.getElementById('rg-font-btn'); if(b){b.classList.add('active');b.textContent='✍️ 換回標準字體';} } } catch(e){} })();
+(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); } } catch(e){} })(); // Lin 2026-07-25: ตัดโค้ดตั้งปุ่มเก่า #rg-font-btn ออก (ปุ่มไม่มีในหน้าแล้ว)
 
 // ── 我有問題 ──
 function rgOpenAsk() {

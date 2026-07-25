@@ -1314,7 +1314,7 @@ var _tfScorePopCount = 0; // กันป๊อปคะแนนซ้อนท
 function tfScorePop(points, opts) {
   opts = opts || {};
   try {
-    var host = document.getElementById('tf-card') || document.body;
+    var host = document.body; // Lin 2026-07-25: เดิมเขียน getElementById('tf-card') แต่ในหน้าเป็น class ไม่ใช่ id → ตกมาใช้ body ทุกครั้งอยู่แล้ว ตัดโค้ดตายทิ้ง (พฤติกรรมเหมือนเดิมเป๊ะ)
     var idx = _tfScorePopCount++;
     var pop = document.createElement('div');
     pop.className = 'tf-score-pop' + (opts.big ? ' tf-score-pop-big' : '') + (opts.gold ? ' tf-score-pop-gold' : '');
@@ -4579,10 +4579,9 @@ var TF = {
     URL.revokeObjectURL(url);
   },
   // ── สลับฟอนต์ มีหัว(Sarabun) ↔ โมเดิร์นไม่มีหัว(Noto Sans Thai) + จำค่าไว้ ──
+  // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #tf-font-btn ออก — ปุ่มนั้นไม่มีในหน้าแล้วตั้งแต่ย้ายเข้าเมนู 🍚 (ปุ่มจริงสร้างโดย shared.js ใส่ช่อง #font-toggle-slot และอ่านสถานะจาก class บน <body> เอง)
   toggleFont: function() {
     var on = document.body.classList.toggle('tf-modern-font');
-    var btn = document.getElementById('tf-font-btn');
-    if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? '✍️ 換回標準字體' : '✍️ 換現代字體'; }
     try { localStorage.setItem('tf_modern_font', on ? '1' : '0'); } catch(e){}
   },
   // ── ปุ่ม 讀音 (คำอ่านไทย) / 英文讀音 (คำอ่านโรมัน) — Lin 2026-07-25 ──
@@ -4721,9 +4720,7 @@ var TF = {
 // คืนค่าฟอนต์โมเดิร์นที่ผู้ใช้เคยเลือก
 try {
   if (localStorage.getItem('tf_modern_font') === '1') {
-    document.body.classList.add('tf-modern-font');
-    var _fb = document.getElementById('tf-font-btn');
-    if (_fb) { _fb.classList.add('active'); _fb.textContent = '✍️ 換回標準字體'; }
+    document.body.classList.add('tf-modern-font'); // Lin 2026-07-25: ลบโค้ดตั้งปุ่มเก่า #tf-font-btn ออก (ปุ่มไม่มีในหน้าแล้ว)
   }
 } catch(e){}
 // Lin 2026-07-25: ตั้งไอคอนปุ่ม 讀音 (🐣/🥚) + 英文讀音 (🔡/🔠) ตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
