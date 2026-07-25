@@ -60,20 +60,30 @@
 
   var S = {
     queue: [], total: 0, done: 0, score: 0, streak: 0, perfectCount: 0,
-    cur: null, derivStep: null, typePos: 0
+    cur: null, derivStep: null, typePos: 0, shiftOn: false, resolving: false
   };
 
+  // 2026-07-25: แก้บั๊กจริงอีกจุด — แถวเดิมตัด BracketLeft/Right, Semicolon, Quote, Backslash, Comma, Period, Slash ออก
+  // ทำให้ตัวอักษรพื้นฐานอย่าง บ/ล/ว/ง/ม/ใ/ฝ (อยู่ปุ่มพวกนี้ในเลย์เอาต์ Kedmanee จริง) กดไม่ได้เลย — คัดลอกแถวเต็มจาก typing-game-app.js บรรทัด 1683-1686 มาแทน
   var TK_ROWS = [
-    ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'],
-    ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP'],
-    ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL'],
-    ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM']
+    ['Backquote', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'],
+    ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'BracketLeft', 'BracketRight'],
+    ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'Quote', 'Backslash'],
+    ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash']
   ];
+  // 2026-07-25: เจอบั๊กจริงระหว่างทดสอบ — ตอนแรกมีแค่ base map ไม่มี shift map เลย ทำให้คำที่ตัวอักษรอยู่บนแป้น
+  // Shift (เช่น "โจ๊ก" ตัว โ อยู่ Shift+F) พิมพ์ไม่ได้จริง ไม่ใช่แค่เรื่องตัวใบ้ — ต้องเพิ่มแป้น Shift เข้าไปด้วย
   var RG_BASE_MAP = {
     Backquote: '_', Digit1: 'ๅ', Digit2: '/', Digit3: '-', Digit4: 'ภ', Digit5: 'ถ', Digit6: 'ุ', Digit7: 'ึ', Digit8: 'ค', Digit9: 'ต', Digit0: 'จ', Minus: 'ข', Equal: 'ช',
     KeyQ: 'ๆ', KeyW: 'ไ', KeyE: 'ำ', KeyR: 'พ', KeyT: 'ะ', KeyY: 'ั', KeyU: 'ี', KeyI: 'ร', KeyO: 'น', KeyP: 'ย', BracketLeft: 'บ', BracketRight: 'ล',
     KeyA: 'ฟ', KeyS: 'ห', KeyD: 'ก', KeyF: 'ด', KeyG: 'เ', KeyH: '้', KeyJ: '่', KeyK: 'า', KeyL: 'ส', Semicolon: 'ว', Quote: 'ง', Backslash: 'ฃ',
     KeyZ: 'ผ', KeyX: 'ป', KeyC: 'แ', KeyV: 'อ', KeyB: 'ิ', KeyN: 'ื', KeyM: 'ท', Comma: 'ม', Period: 'ใ', Slash: 'ฝ'
+  };
+  var RG_SHIFT_MAP = {
+    Backquote: '%', Digit1: '+', Digit2: '๑', Digit3: '๒', Digit4: '๓', Digit5: '๔', Digit6: 'ู', Digit7: '฿', Digit8: '๕', Digit9: '๖', Digit0: '๗', Minus: '๘', Equal: '๙',
+    KeyQ: '๐', KeyW: '"', KeyE: 'ฎ', KeyR: 'ฑ', KeyT: 'ธ', KeyY: 'ํ', KeyU: '๊', KeyI: 'ณ', KeyO: 'ฯ', KeyP: 'ญ', BracketLeft: 'ฐ', BracketRight: ',',
+    KeyA: 'ฤ', KeyS: 'ฆ', KeyD: 'ฏ', KeyF: 'โ', KeyG: 'ฌ', KeyH: '็', KeyJ: '๋', KeyK: 'ษ', KeyL: 'ศ', Semicolon: 'ซ', Quote: '.', Backslash: 'ฅ',
+    KeyZ: '(', KeyX: ')', KeyC: 'ฉ', KeyV: 'ฮ', KeyB: 'ฺ', KeyN: '์', KeyM: '?', Comma: 'ฒ', Period: 'ฬ', Slash: 'ฦ'
   };
 
   var CONS_GROUPS = [
@@ -371,14 +381,21 @@
   // ด่าน 3 — 打字（Kedmanee 泰文鍵盤）
   // ════════════════════════════════════════════
   function stage3Html(w, syl) {
+    S.shiftOn = false;
     var rows = TK_ROWS.map(function (row) {
       return '<div class="tk-row">' + row.map(function (code) {
-        return '<div class="tk-key" data-code="' + code + '"><span class="tk-base">' + esc(RG_BASE_MAP[code]) + '</span></div>';
+        return '<div class="tk-key" data-code="' + code + '">' +
+          '<span class="tk-shift">' + esc(RG_SHIFT_MAP[code] || '') + '</span>' +
+          '<span class="tk-base">' + esc(RG_BASE_MAP[code]) + '</span>' +
+        '</div>';
       }).join('') + '</div>';
     }).join('');
     return '<div class="type-panel" style="display:flex">' +
       '<div class="type-target" id="mx-typetarget"></div>' +
-      '<div class="tkbd" style="display:flex">' + rows + '</div>' +
+      '<div class="tkbd" style="display:flex">' +
+        '<div class="tk-row">' + rows + '</div>' +
+        '<div class="tk-row"><div class="tk-key tk-shift-key" id="mx-shift-key" style="flex:2;max-width:110px"><span class="tk-base" style="font-size:12px">⇧ Shift</span></div></div>' +
+      '</div>' +
     '</div>';
   }
 
@@ -391,32 +408,48 @@
       html += '<span style="color:' + col + ';' + deco + '">' + esc(target[i]) + '</span>';
     }
     document.getElementById('mx-typetarget').innerHTML = html;
-    // Lin 2026-07-25: "เกมรวมไม่ต้องมีตัวใบ้เลย เล่นจริงอย่างเดียว" — เอาไฮไลต์ปุ่มถัดไปออก
-    // (เดิมไฮไลต์ปุ่มที่ต้องกดต่อไปอัตโนมัติทุกครั้ง เท่ากับเปิด "โหมดมีตัวใบ้" ตลอดเวลาโดยไม่ได้ตั้งใจ
-    // ต่างจากเกมพิมพ์เดิมที่ตัวใบ้เป็นโหมดแยก ปิดเป็นค่าเริ่มต้น) ผู้เล่นต้องจำตำแหน่งปุ่มเองจริงๆ
+    // Lin 2026-07-25: "เกมรวมไม่ต้องมีตัวใบ้เลย เล่นจริงอย่างเดียว" — เอาไฮไลต์ "ปุ่มถัดไปที่ต้องกด" ออก
+    // (เดิมไฮไลต์อัตโนมัติทุกครั้ง เท่ากับเปิดโหมดมีตัวใบ้ตลอดเวลาโดยไม่ได้ตั้งใจ ต่างจากเกมพิมพ์เดิมที่ตัวใบ้เป็นโหมดแยก ปิดเป็นค่าเริ่มต้น)
+    // ป้ายเล็กบนปุ่ม (tk-shift/tk-base) ไม่ใช่ตัวใบ้ — เป็นแค่ป้ายแป้นพิมพ์แบบคีย์บอร์ดจริงที่มี 2 ตัวอักษรต่อปุ่มเสมอ ไม่ผูกกับคำที่กำลังพิมพ์
+    updateShiftKeyVisual();
+  }
+
+  function updateShiftKeyVisual() {
+    var sk = document.getElementById('mx-shift-key');
+    if (sk) sk.classList.toggle('active', S.shiftOn);
   }
 
   function wireStage3(c) {
     paintType(c);
     var target = c.word.syls[0].th;
     var targetEl = document.getElementById('mx-typetarget');
-    function tryChar(ch) {
+    function tryChar(ch, usedShift) {
       if (S.resolving) return;
       if (ch === target[S.typePos]) {
         S.typePos++;
+        S.shiftOn = false;
         if (S.typePos >= target.length) { answerCorrect(c); return; }
         paintType(c);
       } else {
+        S.shiftOn = false;
+        updateShiftKeyVisual();
         targetEl.classList.add('shake');
         setTimeout(function () { targetEl.classList.remove('shake'); }, 350);
         requeueWrong(c);
       }
     }
-    card.querySelectorAll('.tk-key').forEach(function (k) {
-      k.addEventListener('click', function () { tryChar(RG_BASE_MAP[k.dataset.code]); });
+    card.querySelectorAll('.tk-key[data-code]').forEach(function (k) {
+      k.addEventListener('click', function () {
+        var code = k.dataset.code;
+        var ch = S.shiftOn ? (RG_SHIFT_MAP[code] || RG_BASE_MAP[code]) : RG_BASE_MAP[code];
+        tryChar(ch);
+      });
     });
+    var shiftKey = document.getElementById('mx-shift-key');
+    if (shiftKey) shiftKey.addEventListener('click', function () { S.shiftOn = !S.shiftOn; updateShiftKeyVisual(); });
+    // แป้นพิมพ์จริง (คอมพิวเตอร์) — ใช้ e.shiftKey ตรงๆ ได้เลย ไม่ต้องพึ่งปุ่ม Shift บนจอ
     S._keyHandler = function (e) {
-      var ch = RG_BASE_MAP[e.code];
+      var ch = e.shiftKey ? (RG_SHIFT_MAP[e.code] || RG_BASE_MAP[e.code]) : RG_BASE_MAP[e.code];
       if (ch) { e.preventDefault(); tryChar(ch); }
     };
     document.addEventListener('keydown', S._keyHandler);

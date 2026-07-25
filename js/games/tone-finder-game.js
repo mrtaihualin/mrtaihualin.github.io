@@ -1975,7 +1975,7 @@ function navigate(nextStep, label, toneNum) {
   // ── ถามวรรณยุกต์ "ครั้งเดียว" (LIN 2026-06-18) ──
   // เดิม: พอ推導จบจะ redirect 'result' → 'pre-result-confirm' = ถามเสียงซ้ำอีกรอบ (คำถามที่ 2)
   // ตอนนี้: ถามแค่ตอนเริ่ม (stepSessionGuess) ที่เดียว — ตอบผิดก็推導สอนแล้วเฉลยเลย ไม่ถามซ้ำ
-  // หมายเหตุ: stepPreResultConfirm() ยังนิยามไว้แต่ไม่ถูกเรียกแล้ว (เก็บไว้เผื่ออยากเปิดคืน)
+  // Lin 2026-07-25: หน้า pre-result-confirm ถูกลบทิ้งทั้งหน้าแล้ว (โค้ดตาย ไม่มีทางเข้าถึง)
   // Truncate forward history
   hist = hist.slice(0, histPos+1);
   // Apply new state
@@ -2428,7 +2428,6 @@ function buildStep() {
     case 's2b_dead':  return s2bDead();
     case 's2b_dl':          return s2bDeadLow();
     case 'session-guess':   return stepSessionGuess();
-    case 'pre-result-confirm': return stepPreResultConfirm();
     case 'result':          return stepResult();
     case 'overview':        return stepOverview();
     default: return '';
@@ -3449,44 +3448,8 @@ function navigateToInflection() {
   render();
 }
 
-// ════════════════════════════════════════════════════════════
-// NEW PAGE: PRE-RESULT CONFIRM  (after tone-inflection, before answer)
-// ════════════════════════════════════════════════════════════
-function stepPreResultConfirm() {
-  if (!TONES[S.tone]) return '';
-  var word = S.word;
-  var initialGuess = session ? session.initialGuess : null;
-  var toneColors = ['#6cb8ff','#7ec87e','#ff7c7c','#ffb347','#c39bff'];
-
-  var guessHintText = '';
-  if (initialGuess === 0) guessHintText = '（你當時選了「我不太確定」）';
-  else if (initialGuess) guessHintText = '（你當時猜的是第 '+initialGuess+' 聲）';
-
-  var sameBtnHtml = '';
-  if (initialGuess !== undefined && initialGuess !== null) {
-    var sameLabel = (initialGuess && initialGuess !== 0)
-      ? '✅ 和剛才一樣，第 '+initialGuess+' 聲'
-      : '✅ 和剛才一樣，我還不確定';
-    var sameAct = act(function(){ goToResult(session ? session.initialGuess : 0); });
-    sameBtnHtml = '<button class="prc-same-btn" onclick="'+sameAct+'">'+sameLabel+'</button>';
-  }
-
-  var changeBtns = [1,2,3,4,5].map(function(n) {
-    var c = toneColors[n-1];
-    var captureN = n;
-    var changeAct = act(function(){ goToResult(captureN); });
-    return '<button class="prc-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="'+changeAct+'">'+n+'</button>';
-  }).join('');
-
-  return '<div class="prc-page">'+
-    '<div class="sg-divider"></div>'+
-    '<div class="prc-question">分析完之後，你還是覺得是同一個聲調嗎？</div>'+
-    (guessHintText ? '<div class="prc-guess-hint">'+guessHintText+'</div>' : '')+
-    sameBtnHtml+
-    '<div class="prc-change-label">或者改選聲調</div>'+
-    '<div class="prc-tone-row">'+changeBtns+'</div>'+
-  '</div>';
-}
+// Lin 2026-07-25: ลบหน้า PRE-RESULT CONFIRM (「分析完之後，你還是覺得是同一個聲調嗎？」) ทิ้งทั้งหน้า — โค้ดตาย
+//   เกมเปลี่ยนเป็น "ถามวรรณยุกต์ครั้งเดียวก่อนเล่น" ตั้งแต่ 2026-06-18 แล้ว ไม่มีทางไหนพามาหน้านี้อีกเลย
 
 function goToResult(finalAnswer) {
   if (session) session.finalAnswer = finalAnswer;
@@ -3595,19 +3558,15 @@ function stepResult() {
     // Guess comparison row
     var igTone = initialGuess && initialGuess !== 0 ? TONES[initialGuess] : null;
     var faAnswerKey = (finalAnswer !== undefined && finalAnswer !== null) ? finalAnswer : initialGuess;
-    var faTone = faAnswerKey && faAnswerKey !== 0 ? TONES[faAnswerKey] : null;
     var igLabel = initialGuess === 0 ? '不確定' : (igTone ? igTone.zh : '—');
-    var faLabel = faAnswerKey === 0 ? '不確定' : (faTone ? faTone.zh : '—');
     var guessCorrect = faAnswerKey === S.tone || (faAnswerKey === 0 && initialGuess === S.tone);
 
+    // Lin 2026-07-25: ตัดช่อง "最終選擇" ออก — เกมถามวรรณยุกต์ครั้งเดียวก่อนเล่นแล้ว (ไม่มีถามซ้ำอีกรอบ)
+    //   ช่องนี้เลยโชว์ค่าเดียวกับ "一開始的選擇" ทุกครั้ง = ซ้ำเปล่าๆ · เปลี่ยนป้ายช่องแรกเป็น 你的選擇 ให้ตรงความจริง
     var guessRow = '<div class="result-v2-guess-row">'+
       '<div class="result-v2-guess-item">'+
-        '<div class="result-v2-guess-label">一開始的選擇</div>'+
+        '<div class="result-v2-guess-label">你的選擇</div>'+
         '<div class="result-v2-guess-val" style="color:'+(igTone ? igTone.color : '#aaa')+';">'+igLabel+'</div>'+
-      '</div>'+
-      '<div class="result-v2-guess-item">'+
-        '<div class="result-v2-guess-label">最終選擇</div>'+
-        '<div class="result-v2-guess-val" style="color:'+(faTone ? faTone.color : '#aaa')+';">'+faLabel+'</div>'+
       '</div>'+
       '<div class="result-v2-guess-item">'+
         '<div class="result-v2-guess-label">結果</div>'+
