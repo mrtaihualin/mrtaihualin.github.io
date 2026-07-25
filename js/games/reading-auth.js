@@ -52,6 +52,14 @@
   function markPendingLogin(provider) { try { sessionStorage.setItem('rg_login_pending', provider); } catch (e) {} }
   function takePendingLogin() { try { var p = sessionStorage.getItem('rg_login_pending'); sessionStorage.removeItem('rg_login_pending'); return p; } catch (e) { return null; } }
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  // v9 (LIN 2026-07-25): จำ "ครั้งที่แล้วล็อกอินด้วยอะไร" ไว้ในเครื่อง (localStorage ทนได้แม้ปิดเบราว์เซอร์/log out)
+  //   กันคนละสับสนไปกดคนละช่องทางแล้วได้บัญชีใหม่ (คะแนนหาย) — เตือนก่อนกดตั้งแต่เปิด modal เลย
+  var LAST_PROVIDER_KEY = 'rg_last_login_provider';
+  function saveLastProvider(p) { try { if (p) localStorage.setItem(LAST_PROVIDER_KEY, p); } catch (e) {} }
+  function getLastProvider() { try { return localStorage.getItem(LAST_PROVIDER_KEY) || ''; } catch (e) { return ''; } }
+  function providerLabel(p) {
+    return { google: 'Google', facebook: 'Facebook', email: 'Email 驗證碼', line: 'LINE', apple: 'Apple' }[p] || p;
+  }
 
   // เกมของหน้าปัจจุบัน — ใช้ตัดสินใจว่า 🏆 ต้องพาไปกระดานไหน + บันทึกคะแนนเป็นเกมอะไร
   // v4 (LIN 2026-07-03): เพิ่ม 'word_order' (เกมเรียงประโยค/語序遊戲) — เดิมมีแค่ typing/reading
@@ -139,12 +147,18 @@
     //   ที่ Google เองบล็อก OAuth ในเว็บวิวฝัง — Facebook ไม่มีข้อจำกัดแบบนี้) ใช้ trackLogin เช็คจริงทีหลังว่าช่องไหนพัง
     var facebookBtn = '<button id="rg-fb" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:none;background:#1877F2;color:#fff;border-radius:10px;padding:12px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-top:10px;">' +
       '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M22 12.06C22 6.51 17.52 2 12 2S2 6.51 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.58v1.85h2.78l-.44 2.91h-2.34v7.03C18.34 21.24 22 17.08 22 12.06z"/></svg>使用 Facebook 登入</button>';
+    // v9 (LIN 2026-07-25): เตือน "ครั้งที่แล้วล็อกอินด้วยอะไร" — กันสับสนไปกดคนละช่องทางแล้วได้บัญชีใหม่ (คะแนนหาย)
+    var lastProvider = getLastProvider();
+    var lastProviderHint = lastProvider
+      ? '<div style="margin:0 0 14px;background:#EAF4EC;border:1px solid #A9D3B4;border-radius:10px;padding:8px 12px;font-size:12.5px;color:#2d6a4f;line-height:1.5;">💡 上次你是用 <b>' + esc(providerLabel(lastProvider)) + '</b> 登入的，建議用同一種方式，分數才接得上</div>'
+      : '';
     rgGate.innerHTML =
       '<div style="position:relative;background:#fff;max-width:380px;width:100%;border-radius:18px;padding:30px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
       '<button id="rg-x" aria-label="關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
       '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🏆</div>' +
       '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入排行榜</h2>' +
       '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">登入後分數<b>同步保存</b>、上<b>排行榜</b>，換手機也記得你！</p>' +
+      lastProviderHint +
       '<input id="rg-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
       '<button id="rg-send" style="margin-top:10px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">寄送驗證碼 →</button>' +
       '<div id="rg-step2" style="display:none;margin-top:12px;">' +
@@ -256,6 +270,10 @@
     if (API.user) {
       var pendingProvider = takePendingLogin();
       if (pendingProvider) trackLogin('login_success', pendingProvider);
+      // จำวิธีล็อกอินไว้เตือนตอนกลับมาเปิด modal ใหม่ (LIN สั่ง 2026-07-25) — เอาจาก Supabase ก่อน (แม่นสุด)
+      // ถ้ายังไม่มี (บาง edge case) ค่อย fallback ไปใช้ pendingProvider ที่เพิ่งกดไป
+      var actualProvider = (API.user.app_metadata && API.user.app_metadata.provider) || pendingProvider;
+      saveLastProvider(actualProvider);
     }
     if (API.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
       try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}

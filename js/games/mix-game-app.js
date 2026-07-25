@@ -391,8 +391,9 @@
       html += '<span style="color:' + col + ';' + deco + '">' + esc(target[i]) + '</span>';
     }
     document.getElementById('mx-typetarget').innerHTML = html;
-    var nextCh = target[S.typePos];
-    card.querySelectorAll('.tk-key').forEach(function (k) { k.classList.toggle('hint', RG_BASE_MAP[k.dataset.code] === nextCh); });
+    // Lin 2026-07-25: "เกมรวมไม่ต้องมีตัวใบ้เลย เล่นจริงอย่างเดียว" — เอาไฮไลต์ปุ่มถัดไปออก
+    // (เดิมไฮไลต์ปุ่มที่ต้องกดต่อไปอัตโนมัติทุกครั้ง เท่ากับเปิด "โหมดมีตัวใบ้" ตลอดเวลาโดยไม่ได้ตั้งใจ
+    // ต่างจากเกมพิมพ์เดิมที่ตัวใบ้เป็นโหมดแยก ปิดเป็นค่าเริ่มต้น) ผู้เล่นต้องจำตำแหน่งปุ่มเองจริงๆ
   }
 
   function wireStage3(c) {
