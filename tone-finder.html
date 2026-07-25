@@ -891,7 +891,6 @@
   body.tf-modern-font .tf-sum-th,
   body.tf-modern-font .tf-bd-th,
   body.tf-modern-font .sg-bd-value,
-  body.tf-modern-font .result-v2-info-val.th,
   body.tf-modern-font .tf-session-answer-word,
   body.tf-modern-font .afc-front-char,
   body.tf-modern-font .adv-sentence, body.tf-modern-font .adv-word,
@@ -1537,33 +1536,7 @@
     font-weight: 700;
     line-height: 1.3;
   }
-  .result-v2-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-  .result-v2-info-cell {
-    background: #f9f6f0;
-    border-radius: 10px;
-    padding: 9px 10px;
-  }
-  .result-v2-info-label {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 10px;
-    color: #aaa;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-  }
-  .result-v2-info-val {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13px;
-    color: #5a3e0a;
-    font-weight: 600;
-    line-height: 1.3;
-    word-break: break-all;
-  }
-  .result-v2-info-val.th { font-family: 'Sarabun', sans-serif; font-size: 15px; }
+  /* Lin 2026-07-25: ลบ CSS แถบ 中文/泰文讀音/英文拼音 (.result-v2-info-*) — ย้ายไปใช้สวิตช์ในเมนู 🍚 ใต้คำศัพท์แทน */
   .result-v2-bd {
     background: rgba(139,99,16,0.05);
     border: 1px solid rgba(139,99,16,0.12);
@@ -2050,7 +2023,7 @@
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=8"></script>
+<script src="js/games/tone-finder-game.min.js?v=10"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>

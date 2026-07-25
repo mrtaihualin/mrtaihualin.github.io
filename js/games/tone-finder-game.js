@@ -1167,7 +1167,8 @@ function tfReadingLineHtml() {
   var e = tfCurEntry();
   if (!e) return '';
   var html = '';
-  if (tfPronMode) { var _th = e.readingTH || e.word || ''; if (_th) html += '<div class="tf-read-th">' + _th + '</div>'; }
+  // คำอ่านไทยโชว์เฉพาะตอน "อ่านไม่ตรงกับตัวเขียน" — ตรงกันแล้วโชว์ซ้ำใต้คำเดิมก็รกเปล่าๆ (กติกาเดียวกับเกมเรียงคำ)
+  if (tfPronMode) { var _th = e.readingTH || ''; if (_th && _th !== e.word) html += '<div class="tf-read-th">' + _th + '</div>'; }
   if (tfEnMode)   { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _en + '</div>'; }
   return html;
 }
@@ -3574,12 +3575,8 @@ function stepResult() {
       '</div>'+
     '</div>';
 
-    // Info grid
-    var infoGrid = '<div class="result-v2-info-grid">'+
-      '<div class="result-v2-info-cell"><div class="result-v2-info-label">中文</div><div class="result-v2-info-val">'+sEntry.zh+'</div></div>'+
-      '<div class="result-v2-info-cell"><div class="result-v2-info-label">泰文讀音</div><div class="result-v2-info-val th">'+sEntry.readingTH+'</div></div>'+
-      '<div class="result-v2-info-cell"><div class="result-v2-info-label">英文拼音</div><div class="result-v2-info-val">'+sEntry.readingEN+'</div></div>'+
-    '</div>';
+    // Lin 2026-07-25: ตัดแถบ 中文／泰文讀音／英文拼音 ออก — ย้ายไปใช้สวิตช์ในเมนู 🍚 (翻譯 / 讀音 / 英文讀音)
+    //   ที่โชว์ใต้คำศัพท์แทน (ดูบล็อกใต้ .result-v2-word ท้ายฟังก์ชันนี้) — ไม่โชว์ซ้ำ 2 ที่
 
     // Breakdown
     var bdRows = '';
@@ -3592,7 +3589,6 @@ function stepResult() {
     sessionBlock =
       '<div style="margin-bottom:12px;">'+badge+'</div>'+
       guessRow+
-      infoGrid+
       '<div class="result-v2-bd">'+
         '<div class="result-v2-bd-title">音節拆解</div>'+
         '<table class="tf-breakdown-table"><tbody>'+bdRows+'</tbody></table>'+
@@ -3659,8 +3655,15 @@ function stepResult() {
       (session ? '' : '<button class="tf-result-secondary" onclick="'+againAct+'">↺ 重新分析</button>')+
     '</div>';
 
+  // Lin 2026-07-25: คำแปล/คำอ่าน ใต้คำศัพท์ในหน้าเฉลย — คุมด้วยสวิตช์ในเมนู 🍚 (翻譯 🍙 / 讀音 🐣 / 英文讀音 🔡)
+  //   ใช้ class "word-zh" เดียวกับที่อื่น → ปุ่ม 🍙 ของ shared.js คุมได้เองอัตโนมัติ ไม่ต้องต่อสายใหม่
+  var _rEntry = tfCurEntry();
+  var resultZhHtml = (_rEntry && _rEntry.zh) ? '<div class="word-zh">' + _rEntry.zh + '</div>' : '';
+  var resultReadHtml = tfReadingLineHtml();
+
   return '<div class="result-v2">'+
     '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+vaultBtnHtml+'</div>'+
+    resultZhHtml + resultReadHtml +
 
     '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+
       '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:10px;letter-spacing:3px;color:'+t.color+'99;margin-bottom:8px;text-transform:uppercase;">聲調分析結果</div>'+
