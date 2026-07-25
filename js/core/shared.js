@@ -1711,6 +1711,13 @@ window.deleteFBComment = function(postId, idx) {
       try {
         gs.querySelectorAll('.gs-tab').forEach(function (t) {
           if (t.querySelector('.gs-lbl')) return;
+          // Lin 2026-07-25: แท็บ "單字庫" ใช้ <img> แทนอิโมจิ (ไม่มีช่องว่างให้ split) → เดิมเลยไม่โดนห่อวงกลมทอง แก้แยกเคสนี้
+          var img = t.querySelector('img');
+          if (img) {
+            var lbl = (t.textContent || '').trim();
+            t.innerHTML = '<span class="ico">' + img.outerHTML + '</span><span class="gs-lbl">' + lbl + '</span>';
+            return;
+          }
           var raw = (t.textContent || '').trim();
           var sp = raw.indexOf(' ');
           if (sp > 0) {
@@ -1736,7 +1743,8 @@ window.deleteFBComment = function(postId, idx) {
         '.rg-ctl-fab{width:44px;height:44px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;flex-shrink:0;}' +
         '.rg-ctl-fab:active{transform:scale(.92);}' +
         // ── ดรอปดาวน์เมนูเกม (แนวตั้ง) — ซ่อนไว้ กดปุ่ม 🎮 ถึงเปิด · ทับสไตล์แถบเดิมของทุกเกมด้วย !important ──
-        '#game-switcher{position:static !important;transform:none !important;left:auto !important;right:auto !important;bottom:auto !important;top:auto !important;max-width:none !important;width:auto !important;flex-direction:column !important;align-items:stretch !important;gap:4px !important;background:rgba(255,255,255,0.98) !important;border:1.5px solid #d4b87a !important;border-radius:14px !important;box-shadow:0 6px 24px rgba(90,62,10,0.22) !important;overflow-y:auto !important;overflow-x:hidden !important;max-height:60vh;padding:6px !important;display:none !important;min-width:150px;backdrop-filter:blur(8px);}' +
+        // Lin 2026-07-25 v2: panel เดิมพื้นขาว/ขอบ #d4b87a ไม่ตรงกับการ์ด .grw-menu ของเมนู 🪧 (พื้นครีม #FAF4E8/ขอบทองอ่อน) — แก้ให้เหมือนกันเป๊ะๆ ตามที่ Lin ขอ
+        '#game-switcher{position:static !important;transform:none !important;left:auto !important;right:auto !important;bottom:auto !important;top:auto !important;max-width:none !important;width:auto !important;flex-direction:column !important;align-items:stretch !important;gap:6px !important;background:#FAF4E8 !important;border:1.5px solid rgba(139,99,16,0.25) !important;border-radius:14px !important;box-shadow:0 6px 24px rgba(90,62,10,0.22) !important;overflow-y:auto !important;overflow-x:hidden !important;max-height:60vh;padding:8px !important;display:none !important;min-width:150px;}' +
         '#game-switcher.gs-open{display:flex !important;}' +
         // Lin 2026-07-25: ปรับหน้าตาแถวเมนูให้เหมือนการ์ด .grw-item ของเมนู 🪧 (ไอคอนในวงกลมไล่สีทอง + ป้ายชื่อ) แทนแถวขีดเส้นใต้แบบเดิม
         '#game-switcher .gs-tab{display:flex !important;align-items:center;gap:8px;padding:8px 12px !important;min-height:22px;border-radius:10px;text-align:left;white-space:nowrap;font-size:13px;color:#5a3e0a;text-decoration:none;font-weight:700;}' +
@@ -1744,6 +1752,7 @@ window.deleteFBComment = function(postId, idx) {
         '#game-switcher .gs-tab:hover{background:rgba(139,99,16,0.10);}' +
         '#game-switcher .gs-lbl{display:inline !important;}' +
         '#game-switcher .gs-tab .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}' +
+        '#game-switcher .gs-tab .ico img{width:15px;height:19px;filter:brightness(0) invert(1);}' + // Lin 2026-07-25: ไอคอน單字庫เป็น svg สีเข้ม → ทำขาวให้เข้าธีมวงกลมทอง เหมือนอิโมจิอื่นๆ ในเมนู
         // ── โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม (ชุดปุ่มลอย .rg-ctl-wrap ไม่โดนซ่อน = เมนู+เต็มจอกดได้ตลอด) ──
         'body.rg-fake-fullscreen .site-nav,' +
         'body.rg-fake-fullscreen #bottom-nav,' +

@@ -16,22 +16,25 @@
     var s = document.createElement('style');
     s.id = 'word-menu-css';
     s.textContent =
+      // Lin 2026-07-25 v2: เปลี่ยนหน้าตาแผงทั้งหมดให้เหมือนการ์ด .grw-menu/.grw-item ของเมนู 🪧 เป๊ะๆ ตามที่ Lin ขอ
+      // (เดิม: พื้นขาว + วงกลมขาวขอบบาง + ป้าย 開/關 → ใหม่: พื้นครีม #FAF4E8 + วงกลมไล่สีทอง + ป้ายชื่อตัวหนา เหมือนกันทุกเมนู)
       '.wm-wrap{position:relative;display:inline-block;}' +
       '.wm-panel{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);' +
-        'min-width:200px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);border-radius:12px;' +
-        'box-shadow:0 6px 20px rgba(90,62,10,0.18);overflow:hidden;z-index:99990;display:none;text-align:left;}' +
-      '.wm-panel.wm-open{display:block;}' +
-      '.wm-row{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;' +
-        'border-bottom:0.5px solid rgba(139,99,16,0.18);background:#fff;transition:background .12s;}' +
-      '.wm-row:last-child{border-bottom:none;}' +
-      '.wm-row:hover{background:rgba(139,99,16,0.08);}' +
-      '.wm-row-label{flex:1;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;font-weight:700;color:#1C1C1C;white-space:nowrap;}' +
+        'min-width:200px;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.25);border-radius:14px;' +
+        'box-shadow:0 6px 24px rgba(90,62,10,0.22);z-index:99990;display:none;flex-direction:column;gap:6px;padding:8px;text-align:left;}' +
+      '.wm-panel.wm-open{display:flex;}' +
+      '.wm-row{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;' +
+        'border-radius:10px;background:none;transition:background .12s;}' +
+      '.wm-row:hover{background:rgba(139,99,16,0.10);}' +
+      '.wm-row-label{flex:1;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}' +
       '.wm-pill{font-family:\'Noto Sans TC\',sans-serif;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}' +
       '.wm-pill.on{color:#2d6a4f;background:#e8f5e9;}' +
       '.wm-pill.off{color:#6b6b6b;background:rgba(139,99,16,0.10);}' +
-      // ปุ่มเดิมที่ถูกย้ายเข้ามาในแถว — คงหน้าตาวงกลมเดิมไว้ แต่ห้ามขยายตอน hover (อยู่ในลิสต์แล้ว ขยายจะกระตุก)
+      // ปุ่มเดิมที่ถูกย้ายเข้ามาในแถว — เดิมคงหน้าตาวงกลมขาวไว้ ตอนนี้ทำเป็นวงกลมไล่สีทองเหมือน .ico ของเมนูอื่น (สถานะเปิด/ปิดยังเห็นได้จากป้าย wm-pill ข้างๆ อยู่แล้ว ไม่ต้องพึ่งสีพื้นปุ่ม)
       '.wm-row .word-ctl-btn,.wm-row .word-audio-btn,.wm-row .vault-save-btn,.wm-row .rg-ctl-fab{' +
-        'flex:0 0 auto;position:static!important;margin:0!important;}' +
+        'flex:0 0 auto;position:static!important;margin:0!important;width:26px!important;height:26px!important;' +
+        'border-radius:50%!important;background:linear-gradient(135deg,#C8973A,#8B6310)!important;border:none!important;' +
+        'color:#fff!important;font-size:13px!important;box-shadow:none!important;}' +
       '.wm-row:hover .word-ctl-btn,.wm-row:hover .word-audio-btn,.wm-row:hover .vault-save-btn,.wm-row:hover .rg-ctl-fab{transform:none;}' +
       // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปรวมกับเมนูลอยมุมขวาล่าง (🎮/⛶/🍙/🪧)
       // Lin 2026-07-25 (v2): รอบแรกลองผูกตำแหน่ง fixed ตายตัวเอง (bottom:280px) แต่ Lin เจอว่าเมนูอื่น (🎮/🪧) ยังโผล่คนละที่ (เหนือปุ่มตัวเองเฉยๆ) ไม่ตรงกัน
