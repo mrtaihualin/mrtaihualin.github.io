@@ -984,6 +984,8 @@ function showBonus(){
   selectedBonus=null;
   var sec=document.getElementById('bonus-section');
   sec.className='bonus-section show';
+  var hdr0=document.getElementById('bonus-header');
+  if(hdr0)hdr0.style.display=''; // Lin 2026-07-26: โจทย์ใหม่ → โชว์ป้าย猜聲調อธิบายกฎอีกครั้ง (ตอนเฉลยจะถูกซ่อนใน evaluateBonus)
   var box=document.getElementById('bonus-opts');
   box.innerHTML='';
   document.getElementById('bonus-result').textContent='';
@@ -1017,6 +1019,8 @@ function showBonus(){
 function evaluateBonus(){
   if(bonusAnswered||!W.tone_name)return;
   bonusAnswered=true;
+  var hdrE=document.getElementById('bonus-header');
+  if(hdrE)hdrE.style.display='none'; // Lin 2026-07-26: ตอบแล้ว/เฉลยแล้ว → ไม่ต้องโชว์ป้ายอธิบายกฎ猜聲調ซ้ำ
   var box=document.getElementById('bonus-opts');
   var res=document.getElementById('bonus-result');
   box.querySelectorAll('.bonus-btn').forEach(function(b){
@@ -1308,6 +1312,10 @@ function showRevealMulti(){
     box.className='bonus-reason show';
     var _sec=document.getElementById('bonus-section'); if(_sec)_sec.className='bonus-section show';
     var _rv=document.getElementById('reveal'); if(_rv)_rv.className='reveal'; // ซ่อนแผงเฉลยแยกด้านล่าง ไม่ใช้แล้ว
+    // Lin 2026-07-26: จบคำแล้ว (ทุกพยางค์ตอบ/ข้ามหมดแล้ว) → ซ่อนป้ายอธิบายกฎ猜聲調 + เคลียร์讀音ของพยางค์สุดท้ายที่ค้างอยู่
+    // (แต่ละพยางค์มีเลขเสียงกำกับอยู่แล้วในหัว "📍 คำ（第X聲）" ด้านล่างนี้ ไม่ต้องมี讀音บรรทัดเดียวลอยๆซ้ำ)
+    var _hdrF=document.getElementById('bonus-header'); if(_hdrF)_hdrF.style.display='none';
+    var _rdF=document.getElementById('bonus-reading'); if(_rdF)_rdF.textContent='';
   }
   // 高級(ประโยค) → อธิบายว่า "แต่ละคำแปลว่าอะไร" (ไม่แยกพยัญชนะ/สระ) — มาตรฐานเดียวกับเกมเรียงคำ
   if(WORD && WORD.words && WORD.words.length){
@@ -2057,6 +2065,8 @@ function rgContAskNextTone(){
   RG_CONT_TONE_ANSWERED=false;
   var sec=document.getElementById('bonus-section');
   sec.className='bonus-section show';
+  var hdrC=document.getElementById('bonus-header');
+  if(hdrC)hdrC.style.display=''; // Lin 2026-07-26: พยางค์ใหม่ → โชว์ป้ายอธิบายกฎ猜聲調อีกครั้ง (ซ่อนตอนตอบ/ข้าม/เฉลยจบคำ)
   // Lin 2026-07-12 (Smart Tone มือถือ): พิมพ์ครบแล้ว → ปิดคีย์บอร์ดเครื่อง ให้ปุ่มเลือกวรรณยุกต์ (แตะ 1-5) โผล่ กดได้เลย ไม่ต้องสลับไปแป้นเลข
   try{var _miT=document.getElementById('rg-mobile-input');if(_miT)_miT.blur();}catch(e){}
   var box=document.getElementById('bonus-opts');
@@ -2079,6 +2089,8 @@ function rgContAskNextTone(){
       if(e&&e.stopPropagation)e.stopPropagation(); // กัน listener เดิมของ #bonus-opts (rgHookBonusOpts) ทำงานซ้ำ/นับแต้มซ้ำ
       var skipBtn2=document.getElementById('rg-tone-skip-btn');
       if(skipBtn2)skipBtn2.style.display='none';
+      var hdrA=document.getElementById('bonus-header');
+      if(hdrA)hdrA.style.display='none'; // Lin 2026-07-26: ตอบแล้ว → ซ่อนป้ายอธิบายกฎ猜聲調
       box.querySelectorAll('.bonus-btn').forEach(function(b){b.classList.add('locked');});
       var res=document.getElementById('bonus-result');
       var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
@@ -2111,6 +2123,8 @@ function rgContSkipTone(){
   var box=document.getElementById('bonus-opts');
   var skipBtn=document.getElementById('rg-tone-skip-btn');
   if(skipBtn)skipBtn.style.display='none';
+  var hdrS=document.getElementById('bonus-header');
+  if(hdrS)hdrS.style.display='none'; // Lin 2026-07-26: ข้ามแล้ว → ซ่อนป้ายอธิบายกฎ猜聲調
   var seg=RG_CONT_TONE_Q[RG_CONT_TONE_IDX];
   var SY=sylList[seg];
   var res=document.getElementById('bonus-result');
@@ -2338,6 +2352,8 @@ function rgRenderBonusForSyl(cachedAnswered,cachedSelected){
   selectedBonus=cachedSelected||null;
   var sec=document.getElementById('bonus-section');
   sec.className='bonus-section show';
+  var hdrR=document.getElementById('bonus-header');
+  if(hdrR)hdrR.style.display=cachedAnswered?'none':''; // Lin 2026-07-26: กลับไปดูของเก่าที่ตอบแล้ว → ไม่ต้องโชว์ป้ายอธิบายกฎซ้ำ
   var box=document.getElementById('bonus-opts');
   box.innerHTML='';
   var res=document.getElementById('bonus-result');
