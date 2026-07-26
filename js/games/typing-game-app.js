@@ -123,6 +123,13 @@ var FINAL_SOUND={
   'ติ':'ด',  // ญาติ (อ่าน ยาด)
   'ตร':'ด'   // บัตร (อ่าน บัด)
 };
+// Lin 2026-07-26 (ยกเลิกกลับคืน): เดิมเคยเพิ่มการ "เดาเสียงจาก readingTH" ไว้ตรงนี้ แต่ใช้ข้อมูล readingTH
+// เดิมในไฟล์ (ที่ไม่เคยผ่านการยืนยันจาก Lin จริงๆ) มาตัดสินเรื่องการออกเสียงเอง — Lin แจ้งว่าไม่ถูกต้อง
+// จึงถอยกลับมาใช้ตาราง FINAL_SOUND ตรงๆ เหมือนเดิมก่อนหน้านี้ทั้งหมด รอ Lin ยืนยันเนื้อหา/การออกเสียงที่ถูกต้องก่อน
+function finalSound(syl){
+  if(!syl)return'';
+  return FINAL_SOUND[syl.final]!==undefined?FINAL_SOUND[syl.final]:syl.final;
+}
 var VOWEL_READ={
   'อะ':'อะ（短母音）','อา':'อา（長母音）','ออ':'ออ',
   'เอาะ':'เอาะ','เออะ':'เออะ（短母音）',
@@ -170,7 +177,7 @@ function buildRevealRules(w){
   rows.push({tag:'母音',sp:false,
     text:dispHTML(vsym)+' <span class="rule-arrow">→</span> '+vread});
   if(w.final){
-    var fsnd=FINAL_SOUND[w.final]||w.final;
+    var fsnd=finalSound(w);
     rows.push({tag:'尾音',sp:false,
       text:w.final+(fsnd!==w.final?' <span class="rule-arrow">→</span> 發音「'+fsnd+'」':' 發音「'+fsnd+'」')});
   }
@@ -630,7 +637,7 @@ function loadWord(){
 // โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
 function loadSyl(){
   var SY=sylList[sylIdx];
-  W={th:SY.th,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
   checked=false;picks=[];bonusAnswered=false;selectedBonus=null; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
   comps=['cons','vowel'];
   if(W.final)comps.push('final');
@@ -2157,7 +2164,7 @@ function rgContFinish(){
   RG_CONT_ON=false;RG_CONT_PAUSED=false;
   sylIdx=sylList.length-1;
   var SY=sylList[sylIdx];
-  W={th:SY.th,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section'; // ซ่อนแผงถามวรรณยุกต์ ก่อนโชว์การ์ดเฉลยท้ายคำ
   rgHideTypePanelForReveal(); // Lin 2026-07-12: คำจบแล้ว ซ่อนแป้นพิมพ์+คำใบ้ที่ค้างอยู่ (บั๊กเดิม: หัวข้อ "選一下...的聲調" ค้างโชว์ทับกล่องอธิบายจนดูเหมือนไม่มีคำอธิบาย/หน้าว่างยาว)

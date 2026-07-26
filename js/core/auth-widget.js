@@ -204,6 +204,22 @@
           '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#06C755" d="M12 2C6.48 2 2 5.69 2 10.24c0 4.08 3.54 7.5 8.32 8.15.32.07.76.21.87.49.1.25.06.65.03.9l-.14.85c-.04.25-.19.98.86.53 1.05-.44 5.67-3.34 7.74-5.72C21.15 13.62 22 12.02 22 10.24 22 5.69 17.52 2 12 2z"/></svg>連接 LINE 帳號</button>'
       : (alreadyLinkedLine ? '<div style="font-size:12px;color:#2d6a4f;margin-bottom:10px;">✅ 已連接 LINE 帳號</div>' : '');
 
+    // v2 (LIN 2026-07-26，ตามที่ Lin สั่ง "ทำเลย"): ปุ่ม "連接 Facebook 帳號" — กันเหตุการณ์ซ้ำแบบ LINE
+    //   (LINE ตอนแรกล็อกอินแล้วได้บัญชีแยก ไม่ merge กับบัญชีเดิม เพราะ LINE ใช้ Edge Function ของเราเอง
+    //   ไม่ผ่านระบบ auto-link ปกติของ Supabase) — Facebook เป็น native provider ของ Supabase อยู่แล้ว
+    //   ปกติควร auto-link เองถ้าอีเมลตรงกับบัญชีเดิม (ดู https://supabase.com/docs/guides/auth/auth-identity-linking)
+    //   แต่ auto-link ใช้ไม่ได้ถ้า Facebook ไม่ส่งอีเมลมา (ผู้ใช้กดปฏิเสธสิทธิ์อีเมลตอนล็อกอิน) — ปุ่มนี้เป็นทางสำรอง
+    //   ผูกเข้าบัญชีที่ล็อกอินอยู่ตรงๆ ผ่าน sb.auth.linkIdentity() ไม่ต้องพึ่งอีเมลตรงกัน
+    //   ⚠️ ต้องเปิด "Manual Linking (beta)" ใน Supabase Dashboard → Authentication → Sign In/Providers ก่อน ถึงจะกดสำเร็จจริง
+    //   (ยังไม่ได้เช็คว่า Lin เปิดค่านี้ไว้หรือยัง — session Supabase Dashboard หลุดตอนตรวจ 2026-07-26)
+    var alreadyLinkedFacebook = !!(API.user.identities && API.user.identities.some(function (i) { return i.provider === 'facebook'; }));
+    var canLinkFacebook = !alreadyLinkedFacebook;
+    var linkFacebookHtml = canLinkFacebook
+      ? '<button id="sap-link-fb" style="width:100%;border:none;background:#1877F2;color:#fff;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M22 12.06C22 6.51 17.52 2 12 2S2 6.51 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.58v1.85h2.78l-.44 2.91h-2.34v7.03C18.34 21.24 22 17.08 22 12.06z"/></svg>連接 Facebook 帳號</button>' +
+        '<div id="sap-link-fb-msg" style="display:none;font-size:12px;color:#b45309;margin:-2px 0 10px;line-height:1.5;"></div>'
+      : (alreadyLinkedFacebook ? '<div style="font-size:12px;color:#2d6a4f;margin-bottom:10px;">✅ 已連接 Facebook 帳號</div>' : '');
+
     profileModal.innerHTML =
       '<div style="background:#fff;max-width:360px;width:100%;border-radius:18px;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,0.35);max-height:88vh;overflow:auto;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
@@ -217,12 +233,36 @@
         '<div id="sap-avatars" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">' + avatarChoices + '</div>' +
         '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:8px;">展示徽章（顯示在名稱旁）</div>' +
         '<div id="sap-badges" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' + badgeChoices + '</div>' +
+        linkFacebookHtml +
         linkLineHtml +
         '<button id="sap-save" style="width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;">儲存</button>' +
       '</div>';
     document.body.appendChild(profileModal);
     var linkLineBtn = profileModal.querySelector('#sap-link-line');
     if (linkLineBtn) linkLineBtn.onclick = function () { window.READING_AUTH.startLineLink(); };
+    // v2 (LIN 2026-07-26): กดแล้ว redirect ไป Facebook ทันที (สำเร็จจะไม่เห็นโค้ดหลังจากนี้ เพราะหน้าเปลี่ยนไปแล้ว)
+    //   error ที่เจอได้บ่อยสุด = ยังไม่ได้เปิด "Manual Linking" ใน Supabase Dashboard (ดู comment ด้านบน)
+    var linkFbBtn = profileModal.querySelector('#sap-link-fb');
+    var linkFbMsg = profileModal.querySelector('#sap-link-fb-msg');
+    if (linkFbBtn) linkFbBtn.onclick = function () {
+      linkFbBtn.disabled = true; linkFbBtn.style.opacity = '0.6';
+      if (linkFbMsg) linkFbMsg.style.display = 'none';
+      try {
+        sb.auth.linkIdentity({ provider: 'facebook', options: { redirectTo: location.href } }).then(function (res) {
+          if (res && res.error) {
+            linkFbBtn.disabled = false; linkFbBtn.style.opacity = '1';
+            if (linkFbMsg) { linkFbMsg.style.display = 'block'; linkFbMsg.textContent = '⚠️ 連接失敗：' + (res.error.message || '請稍後再試'); }
+          }
+          // 成功的話 Supabase 會直接把頁面導去 Facebook，不會執行到這裡
+        }, function (e) {
+          linkFbBtn.disabled = false; linkFbBtn.style.opacity = '1';
+          if (linkFbMsg) { linkFbMsg.style.display = 'block'; linkFbMsg.textContent = '⚠️ 連接失敗：' + (e && e.message || '請稍後再試'); }
+        });
+      } catch (e) {
+        linkFbBtn.disabled = false; linkFbBtn.style.opacity = '1';
+        if (linkFbMsg) { linkFbMsg.style.display = 'block'; linkFbMsg.textContent = '⚠️ 連接失敗：' + (e && e.message || String(e)); }
+      }
+    };
 
     function closeModal() { if (profileModal) { profileModal.remove(); profileModal = null; } }
     profileModal.querySelector('#sap-close').onclick = closeModal;
