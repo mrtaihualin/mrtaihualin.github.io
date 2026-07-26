@@ -3,6 +3,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow"><!-- Lin 2026-07-26: หน้าครู ห้าม Google เก็บ (หน้าอื่นในโฟลเดอร์นี้ใส่แล้ว ขาดแค่หน้านี้) -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>線上教室 — 泰華老師</title>
 <!-- GA4 (เพิ่ม 2026-07-24 ตามที่ Lin อนุมัติ — เก็บแค่ "เกิดอะไรขึ้น" ห้ามใส่ชื่อจริง/token/อีเมลลงพารามิเตอร์ เพราะเป็นพื้นที่ส่วนตัวครู/นักเรียน) -->
@@ -19,6 +20,7 @@
   });
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1087,7 +1089,17 @@ let studentsCache = {}; // { token: <ทุกคอลัมน์ของแ�
 
 function generateToken(name) {
   const slug = name.replace(/[^a-zA-Z0-9一-鿿]/g, '').slice(0, 4) || 's';
-  const rand = Date.now().toString(36).slice(-4);
+  // Lin 2026-07-26: เดิมใช้ Date.now() ตัด 4 ตัว = ไม่ได้สุ่มจริง เดาได้แค่ 1.7 ล้านแบบ และเลขวนซ้ำทุก 28 นาที
+  //   ใครเดาถูก = เปิดดูตาราง/ประวัติจ่ายเงิน/วิดีโอของนักเรียนคนนั้นได้ → เปลี่ยนเป็นสุ่มจริง 16 ตัว
+  //   ลิงก์เก่าที่ส่งไปแล้วยังใช้ได้ตามปกติ (ไม่ได้แตะของเดิม)
+  let rand = '';
+  try {
+    const a = new Uint8Array(12);
+    crypto.getRandomValues(a);
+    rand = Array.from(a).map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 16);
+  } catch (e) {
+    rand = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 16);
+  }
   return slug + '-' + rand;
 }
 
@@ -2957,6 +2969,9 @@ const studentToken = urlParams.get('s');
 const isTeacher = !studentToken;
 
 // --- security helpers: escape HTML + whitelist URL scheme (กัน XSS) ---
+// Lin 2026-07-26: รับเฉพาะรูปจริง — data:image/... หรือ https:// เท่านั้น
+// กัน src="javascript:..." หรือ data:text/html ที่คนนอกยัดมาทาง submit_payment_slip (anon RPC)
+function safeImgSrc(u){ u=String(u==null?'':u); return /^(data:image\/[a-z0-9.+-]+;base64,|https:\/\/)/i.test(u) ? escHtml(u) : ''; }
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 // 2026-07-19 加（AI 稽核）：要把字串塞進 onclick="fn('這裡')" 這種地方時用這支。
 // 舊寫法只有 .replace(/'/g,"\\'")，字串裡若含有雙引號 " 就會跳出 HTML 屬性 → 可被注入。
@@ -3846,7 +3861,7 @@ function selectStudent(token) {
   panel.innerHTML =
     '<div class="stu-panel-header">' +
       '<div class="stu-acc-avatar">' + initial + '</div>' +
-      '<span class="stu-panel-name">' + s.name + '</span>' +
+      '<span class="stu-panel-name">' + escHtml(s.name) + '</span>' +
     '</div>' +
     '<div class="class-actions-row">' +
       '<button class="btn-start-class" onclick="enterClass(\'' + t + '\')">📹 進入課堂</button>' +
@@ -7042,14 +7057,14 @@ async function loadPendingSlips() {
   if (data.length === 0) { container.innerHTML = ''; return; }
   var rows = data.map(function(p) {
     var thumbHtml = p.slip_data
-      ? '<img class="slip-thumb" src="' + p.slip_data + '" onclick="viewSlip(\'' + p.id + '\')" title="點擊查看原圖" />'
+      ? '<img class="slip-thumb" src="' + safeImgSrc(p.slip_data) + '" onclick="viewSlip(\'' + escHtml(p.id) + '\')" title="點擊查看原圖" />'
       : '<div class="slip-thumb-placeholder">📄</div>';
     return '<div class="slip-row" id="slip-row-' + p.id + '">' +
       thumbHtml +
       '<div class="slip-info">' +
-        '<div class="slip-name">' + p.student_name + '</div>' +
-        '<div class="slip-course"><strong style="color:var(--ink);">' + p.course_label + '</strong> · ' + p.lessons + '堂 · ' + p.currency + ' ' + (p.total_amount || 0).toLocaleString() + '</div>' +
-        (p.note ? '<div class="slip-course" style="color:var(--gold-deep);">📝 ' + p.note + '</div>' : '') +
+        '<div class="slip-name">' + escHtml(p.student_name) + '</div>' +
+        '<div class="slip-course"><strong style="color:var(--ink);">' + escHtml(p.course_label) + '</strong> · ' + escHtml(p.lessons) + '堂 · ' + escHtml(p.currency) + ' ' + (p.total_amount || 0).toLocaleString() + '</div>' +
+        (p.note ? '<div class="slip-course" style="color:var(--gold-deep);">📝 ' + escHtml(p.note) + '</div>' : '') +
       '</div>' +
       '<div class="slip-actions">' +
         '<button class="btn-approve" onclick="openSlipApproval(\'' + p.id + '\')">✅ 確認</button>' +
@@ -8666,12 +8681,12 @@ function openSlipApproval(id) {
   if (!p) return;
   pendingSlipId = id;
   var slipHtml = p.slip_data
-    ? '<img src="' + p.slip_data + '" style="max-width:100%;border-radius:8px;margin-bottom:12px;cursor:zoom-in;" onclick="viewSlip(\'' + id + '\')" />'
+    ? '<img src="' + safeImgSrc(p.slip_data) + '" style="max-width:100%;border-radius:8px;margin-bottom:12px;cursor:zoom-in;" onclick="viewSlip(\'' + escHtml(id) + '\')" />'
     : '';
   document.getElementById('slipApprovalContent').innerHTML =
     '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;margin-bottom:8px;">' +
-      '<strong>' + p.student_name + '</strong> · <strong>' + p.course_label + '</strong> · ' + p.lessons + '堂' +
-      (p.note ? '<br>📝 ' + p.note : '') +
+      '<strong>' + escHtml(p.student_name) + '</strong> · <strong>' + escHtml(p.course_label) + '</strong> · ' + escHtml(p.lessons) + '堂' +
+      (p.note ? '<br>📝 ' + escHtml(p.note) : '') +
     '</div>' + slipHtml;
   document.getElementById('approvalCurrency').value = p.currency || 'THB';
   document.getElementById('approvalPricePer').value  = p.price_per || 800;
