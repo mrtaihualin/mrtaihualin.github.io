@@ -95,6 +95,15 @@
         if (!token) throw new Error('請先登入才能連接 LINE 帳號');
         return callEdgeFn({ link: true }, { Authorization: 'Bearer ' + token });
       }).then(function () {
+        // v17 (LIN 2026-07-26): แก้บั๊กจริง — เจอจาก Lin ทดสอบ ขึ้น "連接成功" แต่เช็คแล้วไม่ได้ผูกจริง
+        // สาเหตุ: Edge Function อัปเดต app_metadata.line_linked ที่ฝั่ง Supabase เสร็จแล้วก็จริง (ตาราง
+        // line_identities มีแถวถูกต้อง) แต่ access token/JWT ที่เบราว์เซอร์ถืออยู่ ณ ตอนนั้น "เก่ากว่า" การอัปเดต
+        // (JWT ฝัง app_metadata ไว้ตอนออกบัตรครั้งก่อน ไม่รู้จักการเปลี่ยนแปลงจนกว่าจะรีเฟรช token เอง) ผลคือ
+        // หน้าเว็บอ่านค่า "已連接" จาก JWT เก่ายังเห็นเป็นยังไม่ผูก ทั้งที่หลังบ้านผูกสำเร็จแล้วจริง —
+        // แก้โดยสั่ง refreshSession() ให้ออก JWT ใบใหม่ทันทีหลังผูกสำเร็จ ก่อนเด้งกลับหน้าเดิม
+        // (best-effort — ถ้า refresh พลาดก็ไม่เป็นไร ข้อมูลผูกจริงในฐานข้อมูลถูกต้องอยู่แล้ว แค่ badge จะช้าไปรอบเดียว)
+        return sb.auth.refreshSession().catch(function () {});
+      }).then(function () {
         if (boxEl) {
           boxEl.innerHTML =
             '<div style="font-size:34px;margin-bottom:10px;">🎉</div>' +

@@ -27,12 +27,25 @@
   function slot() { return document.getElementById('rg-login-slot'); }
   // v7 (LIN 2026-07-25): แยกประเภท "เปิดจากในแอปไหน" ให้ละเอียดขึ้น (เดิมรู้แค่ true/false)
   //   ใช้เช็คได้จริงว่าล็อกอินพังเพราะเปิดจากแอปไหน ไม่ใช่แค่ซ่อนปุ่ม Google เฉยๆ
+  // v17 (LIN 2026-07-26): เพิ่มการจับแอปที่ Google/Facebook OAuth บล็อกจริงอีก 5 แอป (เดิมจับแค่ 4 แอป
+  //   LINE/FB/IG/Messenger — Threads/TikTok/WeChat/KakaoTalk/Android WebView ทั่วไปหลุดผ่านไปได้ ปุ่ม Google/Facebook
+  //   จะโชว์ให้กดทั้งที่กดแล้วเจอหน้า error ของ Google เองตรงๆ "403: disallowed_useragent" — ไม่ผ่านโค้ดเรา เตือนไม่ได้)
+  //   อ้างอิงรายชื่อ UA signature ที่ Google บล็อกจริง (ตรวจสอบแล้ว 2026-07-26):
+  //   https://truelink-group.com/en/blog/why-google-login-fails-in-line-facebook-in-app-browsers-2026/
+  //   Threads='Barcelona' (ชื่อรหัสภายในของแอป Threads) ยืนยันจาก Google Search Community/Auth0 community เช่นกัน
+  //   ตั้งใจไม่จับ iOS WebView ทั่วไป (เบราว์เซอร์จริงบน iOS อย่าง Chrome/Firefox ก็ใช้ WebKit เหมือนกัน จะจับผิดคนกด
+  //   จากเบราว์เซอร์จริงไปด้วย) จับแค่ "; wv)" ซึ่งเป็น signature เฉพาะ Android System WebView เท่านั้น
   function inAppChannel() {
     var ua = navigator.userAgent || '';
     if (/\bLine\//i.test(ua)) return 'line';
     if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'fb';
     if (/Instagram/i.test(ua)) return 'ig';
     if (/Messenger/i.test(ua)) return 'messenger';
+    if (/Barcelona/i.test(ua)) return 'threads';
+    if (/BytedanceWebview|musical_ly/i.test(ua)) return 'tiktok';
+    if (/MicroMessenger/i.test(ua)) return 'wechat';
+    if (/KAKAOTALK/i.test(ua)) return 'kakao';
+    if (/; ?wv\)/i.test(ua)) return 'androidwebview';
     return null;
   }
   function isInApp() { return !!inAppChannel(); }

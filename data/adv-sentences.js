@@ -313,6 +313,31 @@
     }
   ];
 
+  // v1 (LIN 2026-07-26): เพดานเนื้อหาฟรี — ไม่ล็อกอิน 50 ประโยค · ล็อกอิน (ยังไม่จ่ายเงิน) 100 ประโยค
+  // ตรรกะเดียวกับ data/words-data.js เป๊ะ (ดูคอมเมนต์เต็มที่ไฟล์นั้น) — ต้องแยกเช็คในไฟล์นี้เองอีกรอบ
+  // เพราะแต่ละไฟล์รันเป็น IIFE ของตัวเอง ไม่แชร์ตัวแปรภายในกัน
+  function _sb26StorageKeyS() {
+    var url = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url) || 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
+    var ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || 'qzkxlhpcputsvbqmtqfi';
+    return 'sb-' + ref + '-auth-token';
+  }
+  function _looksLoggedInSyncS() {
+    if (typeof localStorage === 'undefined') return null; // node (data/check-data-health.js ฯลฯ) → ไม่ตัดเลย
+    try {
+      var raw = localStorage.getItem(_sb26StorageKeyS());
+      if (!raw) return false;
+      var t = JSON.parse(raw);
+      var exp = t && (t.expires_at || (t.currentSession && t.currentSession.expires_at));
+      return !!exp && (Number(exp) * 1000) > Date.now();
+    } catch (e) { return false; }
+  }
+  var _tierLoggedInS = _looksLoggedInSyncS();
+  var ADV_SENTENCES_FULL = ADV_SENTENCES; // ชุดเต็มเสมอ — ตัวตรวจข้อมูล/เครื่องมือ Lin ใช้ชุดนี้
+  global.ADV_SENTENCES_FULL = ADV_SENTENCES_FULL;
+  if (_tierLoggedInS !== null) {
+    var sentCap = _tierLoggedInS ? 100 : 50;
+    ADV_SENTENCES = ADV_SENTENCES_FULL.slice(0, sentCap);
+  }
   global.ADV_SENTENCES = ADV_SENTENCES;
 
   // ════════════════════════════════════════════════════════════

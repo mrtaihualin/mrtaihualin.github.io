@@ -378,6 +378,47 @@
   {word:'ข้างหลัง', readingTH:'ข้าง-หลัง', en:'khâang-lǎng', zh:'後面', level:'初', category:'ทิศทาง', syls:[{cons:'ข', vowel:'อา', tone:'้', final:'ง', tone_name:'โท', th:'ข้าง'}, {cons:'ล', lead:'ห', vowel:'อะ', final:'ง', tone_name:'จัตวา', th:'หลัง'}]}
   ];
 
+  // ════════════════════════════════════════════════════════════
+  // v1 (LIN 2026-07-26): เพดานเนื้อหาฟรี — ไม่ล็อกอิน 150 คำ · ล็อกอิน (ยังไม่จ่ายเงิน) 200 คำ
+  // (ตัวเลขที่ Lin กำหนด 2026-07-26 — ระบบสมาชิกจ่ายเงินยังไม่ทำตอนนี้ พักไว้ทำอนาคต ตามที่ Lin สั่ง)
+  // ตัดเอาแค่ N คำแรกตามลำดับที่มีอยู่แล้วในไฟล์นี้ (ไม่สุ่ม/ไม่คัดเอง — เรียงตามที่เขียนไว้)
+  //
+  // ⚠️ เช็คสถานะล็อกอินแบบ sync ตอนไฟล์นี้โหลด (ไม่รอ Supabase client resolve เพราะเป็น async ช้ากว่านี้)
+  // โดยอ่าน token ที่ Supabase เก็บไว้ใน localStorage เอง (เดากับที่มีอยู่แล้วในเครื่อง ณ ตอนนี้)
+  // แม่นเกือบทุกกรณีจริง ยกเว้นเคส "เพิ่งล็อกอินครั้งแรกในแท็บนี้เอง" ซึ่งจะเห็นเพดานไม่ล็อกอินไปก่อน
+  // จนกว่าจะรีเฟรชหน้าอีกที — ยอมรับได้ เพราะนี่คือ "เพดานนุ่ม" ฝั่ง client เท่านั้น (ตามที่ Lin ตกลง
+  // 2026-07-26) ไม่ใช่ระบบล็อกเนื้อหาจริงจัง (ล็อกจริงต้องเสิร์ฟผ่าน Edge Function — ดู
+  // _แผนงาน/ทำต่อในอนาคต.md หัวข้อ "🔒 Freemium เกม")
+  //
+  // ⚠️ สำคัญ: ถ้าไม่มี localStorage เลย (เช่นรันผ่าน node data/check-data-health.js ตรวจสุขภาพข้อมูล)
+  // ต้อง "ไม่ตัด" ปล่อยเต็มเสมอ — ไม่งั้นตัวตรวจข้อมูลจะเช็คแค่ 150 คำแรก แล้วมองไม่เห็นคำใหม่ที่ Lin
+  // เพิ่มไว้ท้ายไฟล์เลย (คำใหม่ ๆ อยู่ท้ายไฟล์เกือบทุกครั้ง) — อันตรายมาก ต้องกันไว้ก่อน
+  function _sb26StorageKey() {
+    var url = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url) || 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
+    var ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || 'qzkxlhpcputsvbqmtqfi';
+    return 'sb-' + ref + '-auth-token';
+  }
+  function _looksLoggedInSync() {
+    if (typeof localStorage === 'undefined') return null; // ไม่ใช่เบราว์เซอร์จริง (เช่น node) → null = ไม่ตัดเลย
+    try {
+      var raw = localStorage.getItem(_sb26StorageKey());
+      if (!raw) return false;
+      var t = JSON.parse(raw);
+      var exp = t && (t.expires_at || (t.currentSession && t.currentSession.expires_at));
+      return !!exp && (Number(exp) * 1000) > Date.now();
+    } catch (e) { return false; }
+  }
+  var FREE_TIER_CAPS = { words: 150, sentences: 50 };   // ไม่ล็อกอิน
+  var LOGIN_TIER_CAPS = { words: 200, sentences: 100 }; // ล็อกอินแล้ว (ยังไม่จ่ายเงิน)
+  var _tierLoggedIn = _looksLoggedInSync(); // true/false/null(=ไม่ตัด)
+  global.CONTENT_TIER_IS_LOGIN_GUESS = _tierLoggedIn; // เผื่อไฟล์อื่นอยากอ่าน (debug/แสดงผล)
+
+  var WORDS_MASTER_FULL = WORDS_MASTER; // เก็บชุดเต็มไว้เสมอ (ตัวตรวจข้อมูล/เครื่องมือ Lin ใช้ชุดนี้)
+  global.WORDS_MASTER_FULL = WORDS_MASTER_FULL;
+  if (_tierLoggedIn !== null) {
+    var wordCap = _tierLoggedIn ? LOGIN_TIER_CAPS.words : FREE_TIER_CAPS.words;
+    WORDS_MASTER = WORDS_MASTER_FULL.slice(0, wordCap);
+  }
   global.WORDS_MASTER = WORDS_MASTER;
 })(window);
 

@@ -1391,6 +1391,44 @@ function teacherTimeToDate(dateStr, timeStr) {
 function teacherToday() {
   return formatInTz(new Date(), TEACHER_TZ).dateStr;
 }
+
+// 🔴 2026-07-26 เพิ่ม (Lin สั่ง หลังเคสจริง: คาบของ 育郁 ที่สอนไปแล้ว 5 คาบ หายจาก Google Calendar)
+// ────────────────────────────────────────────────────────────────────────────────
+// ต้นตอจริง: ช่องเลือกวันที่ของ "📌 永久變更固定上課時間" ไม่มีขอบล่าง (ไม่มี min) → เลือกวันย้อนหลังได้
+//   โค้ดเอาวันใหม่นั้นไปตัดจบชุดคาบเดิม (RRULE UNTIL = เวลาเริ่มใหม่ − 1 ชม.)
+//   → ถ้าวันใหม่อยู่ในอดีต UNTIL ก็ตกไปอยู่ในอดีตด้วย → คาบทุกคาบหลังจุดนั้น "รวมคาบที่สอนไปแล้ว"
+//     ถูกลบทิ้งเงียบๆ ทั้งหมด (Calendar หาย แต่ classroom_attendance ยังจำว่าเรียนแล้ว = ข้อมูล 2 ฝั่งไม่ตรง)
+// กฎที่ Lin สั่ง (ใช้ทั้งแอป ไม่ใช่แค่ปุ่มนี้): "ห้ามจัด/ย้าย/ตั้งคาบไปวันย้อนหลัง ทุกจุดในแอปนี้
+//   ไม่มีปุ่มยกเว้น ไม่มี 'ยืนยันแล้วผ่านได้'" — ถ้าจำเป็นต้องแก้ย้อนหลังจริงๆ Lin ไปย้ายเองใน Google Calendar
+// ────────────────────────────────────────────────────────────────────────────────
+// ⚠️ ต้องใช้ 2 ชั้นเสมอ ห้ามใช้ชั้นเดียว:
+//   ชั้น 1  lockDateInputToFuture(id, tz)  → ใส่ min ให้ช่อง input (กันตั้งแต่หน้าจอ ใช้งานง่ายขึ้น)
+//   ชั้น 2  assertNotPastDate(date, label, tz) → เช็คซ้ำ "ตอนกดส่ง" ก่อนยิงเข้า Supabase/Calendar
+//   เหตุผลที่ min อย่างเดียวไม่พอ: min เป็นแค่ UI hint — บางเบราว์เซอร์ยังพิมพ์วันเองทะลุได้,
+//   แก้ DOM ก็ทะลุได้, autofill/prefill ก็ทะลุได้ → ห้ามไว้ใจ min เป็นด่านความปลอดภัย
+// ⚠️ เพิ่มช่องวันที่ใหม่ในอนาคต ต้องต่อ 2 ชั้นนี้ด้วยเสมอ (อย่าเขียนเช็คเองซ้ำ ใช้ตัวกลางนี้)
+//   ยกเว้นช่องที่ "บันทึกสิ่งที่เกิดขึ้นไปแล้ว" ไม่ใช่การจัดคาบ (approvalStart / payStart / แก้วันที่ของ
+//   คาบที่บันทึกเข้าเรียนไปแล้ว) — พวกนั้นต้องเลือกวันย้อนหลังได้ตามปกติ ห้ามใส่ด่านนี้
+function todayInTz(tz) {
+  try { return formatInTz(new Date(), tz || TEACHER_TZ).dateStr; }
+  catch (e) { return formatInTz(new Date(), TEACHER_TZ).dateStr; } // tz พัง → ถอยมาใช้เวลาไทย ไม่ปล่อยหลุด
+}
+function lockDateInputToFuture(elOrId, tz) {
+  var node = (typeof elOrId === 'string') ? document.getElementById(elOrId) : elOrId;
+  if (node) node.min = todayInTz(tz);
+}
+function assertNotPastDate(dateStr, label, tz) {
+  var today = todayInTz(tz);
+  var name = label || '日期';
+  if (!dateStr) { alert('⚠️ ' + name + '：還沒選日期'); return false; }
+  if (String(dateStr) < today) {
+    alert('⚠️ ' + name + ' 不能選過去的日期。\n\n你選的是 ' + dateStr + '，今天是 ' + today + '。\n請改選今天或之後的日期。\n\n'
+      + '（系統一律不動已經過去的課——之前就是這樣把已經上過的課整批從 Calendar 刪掉的。\n'
+      + '真的需要改過去的課，請直接到 Google Calendar 手動處理。）');
+    return false;
+  }
+  return true;
+}
 // 2026-07-15 加：รับพารามิเตอร์ "กี่วันล่วงหน้า" ได้ (ไม่ใส่ = ใช้ SCHEDULE_DAYS เหมือนเดิม)
 // ให้ connectCalendar() เรียกแบบ 30 วัน (SCHEDULE_SYNC_DAYS) ไป sync ลง classroom_schedule ได้
 // โดยจอครูเองยังคง "近期課表" แค่ SCHEDULE_DAYS วันเหมือนเดิม (ตัดแสดงแยกที่ connectCalendar)
@@ -1808,11 +1846,23 @@ async function cancelFutureClassesForArchive(token) {
       const leftovers = (sweepData.items || []).filter(function(ev) {
         return ev.status !== 'cancelled' && masterIds.indexOf(ev.recurringEventId || ev.id) !== -1 && ev.id !== ev.recurringEventId;
       });
+      // 🟠 2026-07-26 แก้：เดิมลบ exception ทีละอันโดย "ไม่มีการสำรอง" และ catch ว่างเปล่ากลืน error หมด
+      // → ถ้าลบผิด/ลบพลาด กู้ไม่ได้เลย และครูไม่มีทางรู้ว่ามีอันไหนลบไม่ผ่าน
+      // ใหม่: สำรองลง classroom_calendar_backups ก่อนทุกอัน (สำรองไม่สำเร็จ = ไม่ลบอันนั้น)
+      //       + เก็บรายการที่ลบไม่ผ่านไปแจ้งครูตอนจบ ไม่กลืนเงียบ
       for (const ev of leftovers) {
-        try { await deleteClassEventOnce(ev.id); } catch (e) { /* 單一筆刪不掉不影響其他筆，也不影響封存本身 */ }
+        try {
+          assertBackupOk(await backupCalendarEvent(null, token, 'archive_student', ev, null), '已改期過的單堂課');
+          await deleteClassEventOnce(ev.id);
+        } catch (e) {
+          errors.push('清除已改期過的單堂課「' + (ev.summary || ev.id) + '」失敗：' + (e.message || String(e)));
+        }
       }
     }
-  } catch (e) { /* 這段是 best-effort 補漏，找不到/掃不到也不影響封存本身 */ }
+  } catch (e) {
+    // 🟠 2026-07-26：ยังไม่บล็อกการ封存 แต่ห้ามกลืนเงียบ — ต้องบอกครูว่าเก็บกวาดไม่สำเร็จ
+    errors.push('掃描「已改期過的單堂課」失敗：' + (e.message || String(e)) + '（請自己到 Calendar 檢查一次）');
+  }
 
   if (errors.length) return { ok: false, error: errors.join('；') };
 
@@ -2008,6 +2058,9 @@ function addClassDayAddRow(prefill, badgeKind) {
   var idx = _addClassDayNextIdx++;
   var container = document.getElementById('addClassDayRows');
   container.insertAdjacentHTML('beforeend', addClassDayRowHtml(idx, badgeKind));
+  // 🔴 2026-07-26：ช่องฝั่งครู → ยึดวันนี้เวลาไทย ("固定到" ก็เป็นวันในอนาคตเสมอ ห้ามย้อนหลัง)
+  lockDateInputToFuture('addClassDayDate_' + idx);
+  lockDateInputToFuture('addClassDayUntil_' + idx);
   if (prefill && prefill.date) document.getElementById('addClassDayDate_' + idx).value = prefill.date;
   if (prefill && prefill.time) setTimeDropdown('addClassDayStart_' + idx, prefill.time);
   if (prefill && prefill.recurring) {
@@ -2054,6 +2107,9 @@ async function checkAddClassDayConflict() {
     const recurring = document.getElementById('addClassDayRecurring_' + idx).checked;
     const untilVal = document.getElementById('addClassDayUntil_' + idx).value;
     if (!dateVal) { alert('第 ' + n + ' 筆：請選擇日期'); return; }
+    // 🔴 2026-07-26 ชั้นที่ 2：ทั้งวันเริ่มและ "固定到" ห้ามย้อนหลัง
+    if (!assertNotPastDate(dateVal, '第 ' + n + ' 筆的日期')) return;
+    if (recurring && untilVal && !assertNotPastDate(untilVal, '第 ' + n + ' 筆的「固定到」日期')) return;
     if (!isValidTimeStr(startVal)) { alert('⚠️ 第 ' + n + ' 筆：開始時間格式不對，請用 HH:MM，例如 20:00'); return; }
     const endTime = addOneHourTimeStr(startVal);
     const startAbs = teacherTimeToDate(dateVal, startVal);
@@ -2146,6 +2202,41 @@ async function checkAddClassDayConflict() {
 // confirmTeacherAddClass（老師自己發起、學生已確認過的加課）都呼叫這個，避免兩份重複邏輯
 // 之後改一邊忘記改另一邊。p = { dateVal, startVal, endTime, recurring, untilVal, weekday }
 async function createCalendarClassEventForStudent(token, s, p) {
+  // 🟠 2026-07-26：ตาราง classroom_recurring_days ผูก unique ที่ (token, weekday) เท่านั้น
+  //   → นักเรียนคนเดียวที่มีคาบประจำ "วันเดียวกัน 2 รอบเวลา" (เช่นพุธ 10:00 กับ พุธ 19:00)
+  //     รอบที่ 2 จะทับรอบแรก แถวเดิมหาย พร้อมกับ calendar_event_id ของคาบแรก
+  //     → คาบแรกยังอยู่ใน Google Calendar แต่ระบบจำไม่ได้แล้วว่าเป็นของใคร (คาบกำพร้า)
+  // ⚠️ แก้ให้ขาดจริงต้องเพิ่ม unique constraint (token, weekday, start_time) ในฐานข้อมูลก่อน
+  //   แล้วค่อยเปลี่ยน onConflict ข้างล่าง — เปลี่ยน onConflict ก่อนมี constraint จะพังทันที
+  //   ("no unique or exclusion constraint matching the ON CONFLICT specification")
+  //   👉 รอบนี้ Lin เลือกให้แก้เฉพาะไฟล์นี้ ยังไม่แตะฐานข้อมูล จึงใส่ "ด่านหยุด" ไว้ก่อน
+  //   ⚠️ ต้องเช็ค "ก่อน" สร้าง event ใน Calendar — ถ้าเช็คทีหลังก็สายไปแล้ว ของถูกสร้างและถูกทับไปแล้ว
+  if (p.recurring) {
+    try {
+      const dupRes = await sb.from('classroom_recurring_days').select('start_time')
+        .eq('token', token).eq('weekday', p.weekday);
+      if (dupRes.error) {
+        // อ่านไม่ได้ = ไม่รู้ว่าจะทับของเดิมไหม. สิ่งที่กันอยู่คือ "ข้อมูลหายกู้ไม่ได้" ไม่ใช่ error ที่ลองใหม่ได้
+        // → RELIABILITY FIRST: ไม่รู้ = ไม่ทำ (คำว่า 固定時段 ต้องมีในข้อความ ให้ catch ข้างล่างส่งต่อออกไป)
+        throw new Error('讀不到這位學生目前的固定時段（' + dupRes.error.message + '）。\n'
+          + '不確定會不會蓋掉他原本的固定時段，為了安全這次「沒有」建立任何東西。\n請重新整理再試一次。');
+      } else {
+        // start_time อาจกลับมาเป็น "19:00" หรือ "19:00:00" แล้วแต่ชนิดคอลัมน์ → เทียบแค่ HH:MM
+        const clash = (dupRes.data || []).filter(function (r) { return String(r.start_time || '').slice(0, 5) !== String(p.startVal || '').slice(0, 5); });
+        if (clash.length) {
+          throw new Error('這位學生「同一個星期幾」已經有另一個固定時段了：' + clash.map(function (r) { return r.start_time; }).join('、')
+            + '\n資料庫目前一個星期幾只能記一個固定時段，硬排下去舊的那筆會被蓋掉，\n'
+            + '舊時段在 Calendar 上還在但系統會對不到它（變成孤兒課堂）。\n\n'
+            + '為了安全，這次「沒有」建立任何東西。\n'
+            + '請告訴 Lin/AI（要在資料庫加一個設定才能支援一天多個固定時段），\n'
+            + '或先把舊的那個固定時段處理掉再排。');
+        }
+      }
+    } catch (e) {
+      if (/固定時段/.test(e.message || '')) throw e; // ด่านของเราเอง → หยุดจริง
+      /* เช็คไม่ได้เพราะเน็ต/สิทธิ์ → ไม่บล็อก ปล่อยให้ทำงานตามปกติ */
+    }
+  }
   let calToken = await gdGetToken();
   const start = teacherTimeToDate(p.dateVal, p.startVal);
   // 2026-07-23 修正：同一個跨午夜 bug（開始 23:xx 時 p.endTime 字串是「同一天 00:xx」），
@@ -2200,6 +2291,7 @@ async function createCalendarClassEventForStudent(token, s, p) {
   // RELIABILITY FIRST：Calendar 事件已經真的建立了（且重新確認過）→ 資料庫這步失敗也要講清楚「Calendar 上已經有了」，
   // 不能讓 Lin 誤會沒成功而重按一次（會建立重複事件）。
   if (p.recurring) {
+    // 🟠 2026-07-26：ด่านกัน "วันเดียวกัน 2 รอบเวลา" ย้ายไปไว้ต้นฟังก์ชันแล้ว (ต้องเช็คก่อนสร้าง event)
     const { error } = await sb.from('classroom_recurring_days')
       .upsert({ token: token, weekday: p.weekday, start_time: p.startVal, end_time: p.endTime, calendar_event_id: ev.id }, { onConflict: 'token,weekday' });
     if (error) throw new Error('Calendar 事件已經建立成功，但存進資料庫失敗：' + error.message + '\n（不要重按一次，Calendar 上已經有這個事件了，請告訴 Lin/AI 手動補資料庫）');
@@ -3139,6 +3231,7 @@ function openGenLinkModal() {
   document.getElementById('genName').value = '';
   document.getElementById('genTokenPreview').style.display = 'none';
   document.getElementById('genStartDate').value = '';
+  lockDateInputToFuture('genStartDate'); // 🔴 2026-07-26 (Lin เลือกให้บล็อกด้วย)：開課日期 ใช้สร้างคาบใน Calendar จริง ห้ามย้อนหลัง
   resetTimeDropdown('genClassTime');
   populateGenStudentTzDropdown();
   document.getElementById('genStudentTz').value = '';
@@ -3305,6 +3398,8 @@ async function genLinkAddStudent() {
   const bonusRaw   = document.getElementById('genBonus').value;
   const bonusLessons = (courseId && bonusRaw !== '') ? (parseInt(bonusRaw, 10) || 0) : null;
   const startDate  = document.getElementById('genStartDate').value || null; // 老師自己時區的日期
+  // 🔴 2026-07-26 ชั้นที่ 2 (Lin เลือกให้บล็อก)：ไม่กรอกได้ (ยังไม่รู้วันเปิดคอร์ส) แต่ถ้ากรอก ห้ามย้อนหลัง
+  if (startDate && !assertNotPastDate(startDate, '開課日期')) return;
   const classTimeRaw = document.getElementById('genClassTime').value.trim();
   if (classTimeRaw && !isValidTimeStr(classTimeRaw)) {
     alert('⚠️ 上課時間格式不對，請用 HH:MM，例如 14:30');
@@ -3534,6 +3629,69 @@ async function teacherAuthHeader() {
     const accessToken = data && data.session && data.session.access_token;
     return accessToken || window.SUPABASE_CONFIG.anonKey; // 沒 session 就退回 anonKey（Edge Function 會拒絕，不會誤放行）
   } catch (e) { return window.SUPABASE_CONFIG.anonKey; }
+}
+
+// 🔴 2026-07-26 เพิ่ม (RELIABILITY FIRST — จากอาการจริงที่เจอวันนี้)
+// ────────────────────────────────────────────────────────────────────────────────
+// อาการ: ครูเปิดแท็บหน้าห้องเรียนทิ้งไว้ข้ามคืน พอกด "✅ 今日上課" ขึ้น
+//   "記錄失敗：new row violates row-level security policy for table classroom_attendance"
+// ตรวจแล้ว: ทั้งด่าน RLS และฟังก์ชัน record_attendance_increment() ในฐานข้อมูล "ถูกต้องอยู่แล้ว"
+//   ต้นตอจริงคือ session (การล็อกอิน) ของครูหมดอายุไปเงียบๆ → Supabase มองเป็นคนแปลกหน้า เลยโดนด่านเด้ง
+//   เดิมโค้ดเช็คการล็อกอิน "แค่ครั้งเดียวตอนเปิดหน้า" หลังจากนั้นไม่เคยเช็คอีกเลย
+// วิธีแก้ 2 ชั้น:
+//   ชั้น 1  ensureTeacherSession()  → เช็คก่อนเขียนข้อมูลทุกครั้ง หมดอายุ = หยุด + บอกให้ล็อกอินใหม่
+//   ชั้น 2  writeErrorMessage()     → ถ้าเขียนพังจริง แปล error ดิบของ Postgres เป็นภาษาคนก่อนโชว์
+// ⚠️ ทั้ง 2 ตัว "ห้ามฟันธงว่าหมดอายุเพราะเน็ตหลุด" — ถ้าเช็คไม่ได้เพราะเน็ต ให้ปล่อยผ่านไปก่อน
+//   (ตัวเขียนจริงจะฟ้องเองอยู่แล้ว) ไม่งั้นเน็ตกระตุกทีเดียวจะเด้งครูออกจากระบบทั้งที่ยังล็อกอินอยู่
+
+// error ของ getUser() แบบไหน = "เน็ตมีปัญหา" (เช็คไม่ได้) ไม่ใช่ "token ใช้ไม่ได้"
+function isRetryableAuthError(err) {
+  if (!err) return false;
+  if (err.name === 'AuthRetryableFetchError') return true;
+  if (err.status === 0 || err.status >= 500) return true;
+  return /fetch|network|timeout|offline|Load failed/i.test(String(err.message || ''));
+}
+// ยิงถาม server จริงว่า token ตอนนี้ยังใช้ได้ไหม (getSession อ่านจากเครื่องตัวเองอย่างเดียว เชื่อไม่ได้)
+// คืน true = ให้ทำต่อได้ · false = หยุด (แจ้งครูเรียบร้อยแล้ว)
+// silent = true → แค่คืนค่า ไม่เด้ง alert และไม่เด้งกลับหน้าล็อกอิน
+//   ใช้กับงานที่ "ทำงานเองอัตโนมัติ ไม่ได้มาจากการกดปุ่ม" (เช่นซิงค์ตารางตอนเปิดหน้า)
+//   ไม่งั้นครูจะโดนกล่องเด้งขึ้นมาเองโดยไม่ได้กดอะไร แล้วจอถูกล้างกลางคันด้วย
+async function ensureTeacherSession(actionLabel, silent) {
+  var label = actionLabel || '這個動作';
+  var res;
+  try { res = await sb.auth.getUser(); }
+  catch (e) { return true; } // เช็คไม่ได้เพราะเน็ต → ไม่บล็อก
+  if (res && res.error) {
+    if (isRetryableAuthError(res.error)) return true; // เน็ตมีปัญหา ไม่ใช่หมดอายุ
+    if (silent) { console.warn('[session] 登入過期，略過：' + label); return false; }
+    alert('🔑 老師登入已經過期了。\n\n「' + label + '」沒有執行，資料完全沒有被改動。\n'
+      + '請重新登入之後再做一次。\n\n（這不是資料庫壞掉，是分頁開太久沒動、登入失效了。）');
+    try { if (typeof renderTeacherLogin === 'function') renderTeacherLogin(); } catch (e2) {}
+    return false;
+  }
+  var email = res && res.data && res.data.user && res.data.user.email;
+  if ((email || '').toLowerCase() !== TEACHER_EMAIL) {
+    if (silent) { console.warn('[session] 不是老師帳號，略過：' + label); return false; }
+    alert('🔑 目前登入的不是老師的帳號（' + (email || '沒有登入') + '）。\n\n「' + label + '」沒有執行。請用老師的帳號重新登入。');
+    return false;
+  }
+  return true;
+}
+// แปล error ตอนเขียนข้อมูลให้เป็นภาษาคน — โดยเฉพาะ error ที่หน้าตาเหมือน RLS แต่จริงๆ คือ session หมดอายุ
+async function writeErrorMessage(rawMsg, actionLabel) {
+  var base = '❌ ' + (actionLabel || '這個動作') + '失敗：' + (rawMsg || '（資料庫沒有回傳錯誤訊息）');
+  if (!/row.level security|violates|JWT|jwt|401|not authenticated|permission denied/i.test(String(rawMsg || ''))) return base;
+  var loggedIn = true;
+  try {
+    var res = await sb.auth.getUser();
+    if (res && res.error && !isRetryableAuthError(res.error)) loggedIn = false;
+    else if (res && res.data && res.data.user) loggedIn = (res.data.user.email || '').toLowerCase() === TEACHER_EMAIL;
+  } catch (e) { loggedIn = true; } // เช็คไม่ได้ → ไม่ฟันธง
+  if (!loggedIn) {
+    return '🔑 老師登入已經過期了，所以資料庫把這個動作擋掉了。\n\n「' + (actionLabel || '這個動作') + '」沒有成功，資料沒有被改動。\n'
+      + '請重新登入之後再做一次。\n\n（原始訊息：' + rawMsg + '）';
+  }
+  return base + '\n\n（登入是正常的，所以不是登入過期的問題——請截圖這個畫面給 Lin/AI 看。）';
 }
 
 // 2026-07-14（第 2 版，Lin 要求改成「封存」不要真的刪除資料）：
@@ -3832,8 +3990,12 @@ async function permanentlyDeleteStudent(token) {
   if (!s || !s.archived_at) { alert('⚠️ 只能永久刪除「已封存」的舊生，請先封存再刪除。'); return; }
   const typed = prompt('⚠️ 永久刪除「' + name + '」無法復原！\n\n・資料庫裡這位學生的所有紀錄會被永久刪除\n・Google Drive 資料夾不會被刪除（檔案還在「舊生」資料夾裡）\n\n請輸入學生姓名「' + name + '」以確認刪除：');
   if (typed !== name) { if (typed !== null) alert('姓名不符，已取消刪除。'); return; }
-  const { error } = await sb.from('classroom_students').delete().eq('token', token);
-  if (error) { alert('❌ 永久刪除失敗：' + error.message + '\n（資料還在，沒有被刪除）'); return; }
+  if (!(await ensureTeacherSession('永久刪除學生'))) return;
+  // 🔴 2026-07-26 (RED 4)：เดิมเช็คแค่ error — RLS ที่ "ลบได้ 0 แถวโดยไม่ error" จะทำให้ขึ้นว่า
+  // ลบสำเร็จ + ลบออกจาก studentsCache ในจอ ทั้งที่ข้อมูลยังอยู่ในฐานข้อมูล → รีเฟรชแล้วโผล่กลับมา
+  const { data: gone, error } = await sb.from('classroom_students').delete().eq('token', token).select();
+  if (error) { alert(await writeErrorMessage(error.message, '永久刪除學生') + '\n（資料還在，沒有被刪除）'); return; }
+  if (!gone || !gone.length) { alert(await writeErrorMessage('刪除了 0 筆', '永久刪除學生') + '\n\n⚠️ 資料「還在」，沒有被刪除。'); return; }
   delete studentsCache[token];
   alert('✅ 已永久刪除「' + name + '」的資料庫紀錄。');
   await refreshStudentList(); // 舊生列表面板會跟著重新整理收合，點「📦 舊生列表」重新展開就會看到最新名單
@@ -4161,8 +4323,9 @@ async function loadTeacherStudentInfo(token) {
   var el = document.getElementById('stuInfo-' + token.replace(/'/g, ''));
   if (!el) return;
   try {
-    var pays = (await sb.from('classroom_payments').select('id,course_label,lessons,bonus_lessons,currency,total_amount,status,start_date,created_at').eq('token', token).order('created_at', { ascending: false })).data || [];
-    var atts = (await sb.from('classroom_attendance').select('lesson_date,lessons').eq('token', token)).data || [];
+    // 🔴 2026-07-26：อ่านพัง = ต้องบอกว่าอ่านพัง ห้ามคิดเป็น 0 (ดู rowsOrThrow)
+    var pays = rowsOrThrow(await sb.from('classroom_payments').select('id,course_label,lessons,bonus_lessons,currency,total_amount,status,start_date,created_at').eq('token', token).order('created_at', { ascending: false }), '繳費紀錄');
+    var atts = rowsOrThrow(await sb.from('classroom_attendance').select('lesson_date,lessons').eq('token', token), '上課紀錄');
     var q = computeCurrentCourse(pays, atts);
     var quotaHtml = q.hasCourse
       ? '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:8px 12px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:' + (q.remain <= 1 ? '#b45309' : 'var(--gold-deep)') + ';font-weight:700;">本輪剩餘 ' + (q.remain < 0 ? 0 : q.remain) + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（本輪 ' + q.bought + ' · 已上 ' + q.used + (q.start ? ' · 起算 ' + q.start : '') + '）</span></div>'
@@ -4224,7 +4387,11 @@ async function loadTeacherStudentInfo(token) {
       }
     } catch(e) {}
     el.innerHTML = quotaHtml + histHtml + fbHtml;
-  } catch (e) {}
+  } catch (e) {
+    // 🔴 2026-07-26：เดิม catch ว่างเปล่า → อ่านพังแล้วช่องนี้ว่างเปล่าเงียบๆ ครูไม่รู้ว่าเลขที่เห็นเชื่อไม่ได้
+    el.innerHTML = quotaLoadFailHtml(e && e.message);
+    console.warn('loadTeacherStudentInfo failed:', e);
+  }
 }
 
 // ── 2026-07-13 新增：學生「回饋」通知 banner（老師首頁）──
@@ -4725,6 +4892,24 @@ function openSlipModalLocked(token) {
 
 // 依「本輪起算日」計算當期課程剩餘堂數（起算日前=舊課，不計入）
 // pays: [{lessons,bonus_lessons,status,start_date}]　atts: [{lesson_date,lessons}]
+// 🔴 2026-07-26 เพิ่ม (RED 4 — คิดเงินผิดได้จริง)
+// เดิมทุกจุดเขียนว่า `(await sb...).data || []` → ถ้าอ่านฐานข้อมูลไม่สำเร็จจะได้ [] เหมือนกับ
+// "อ่านสำเร็จแต่ไม่มีข้อมูล" แยกไม่ออกเลย ผลคือ:
+//   · อ่านตาราง payments พัง → หน้าจอขึ้น "尚未購課" ทั้งที่นักเรียนจ่ายเงินมาแล้ว
+//   · อ่านตาราง attendance พัง → 已上 นับเป็น 0 → "เหลือคาบ" เยอะเกินจริง = ให้เรียนฟรีโดยไม่รู้ตัว
+// ตัวนี้บังคับให้แยก "โหลดไม่ได้" ออกจาก "ค่าเป็น 0 จริงๆ" — โหลดไม่ได้ต้องโยน error ออกไป
+// ให้ผู้เรียกแสดงสถานะ "อ่านข้อมูลไม่ได้" แทนที่จะแสดงตัวเลขที่ผิด
+function rowsOrThrow(res, what) {
+  if (res && res.error) throw new Error('讀取' + (what || '資料') + '失敗：' + res.error.message);
+  return (res && res.data) || [];
+}
+function quotaLoadFailHtml(msg) {
+  // สีใช้ตัวแปรธีมของเว็บเท่านั้น (กฎข้อ 4 ใน CLAUDE.md) ห้ามฮาร์ดโค้ด hex นอกชุด
+  return '<div style="background:var(--cream);border:1.5px solid var(--amber);border-radius:9px;padding:9px 13px;margin-bottom:10px;'
+    + 'font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--amber-dark);font-weight:700;">'
+    + '⚠️ 剩餘堂數讀取失敗，暫時無法顯示<span style="font-weight:400;display:block;margin-top:3px;">'
+    + escHtml(String(msg || '')) + '<br>請重新整理頁面再看一次（不要照這裡的數字算堂數）。</span></div>';
+}
 function computeCurrentCourse(pays, atts) {
   var active = (pays || []).filter(function(p) { return p.status === 'pending' || p.status === 'done'; });
   var withDate = active.filter(function(p) { return p.start_date; });
@@ -4744,8 +4929,9 @@ function computeCurrentCourse(pays, atts) {
 // 學生：本輪剩餘堂數 + 快用完提醒
 async function loadStudentQuota(token) {
   try {
-    var pays = (await sb.rpc('get_student_payments', { p_token: token })).data || [];
-    var atts = (await sb.rpc('get_student_attendance', { p_token: token })).data || [];
+    // 🔴 2026-07-26：อ่านไม่ได้ ต้องรู้ว่าอ่านไม่ได้ ห้ามกลายเป็น 0 เงียบๆ (ดู rowsOrThrow)
+    var pays = rowsOrThrow(await sb.rpc('get_student_payments', { p_token: token }), '繳費紀錄');
+    var atts = rowsOrThrow(await sb.rpc('get_student_attendance', { p_token: token }), '上課紀錄');
     var q = computeCurrentCourse(pays, atts);
     var remain = q.remain < 0 ? 0 : q.remain;
     var sumEl = document.getElementById('quotaSummary');
@@ -4771,7 +4957,12 @@ async function loadStudentQuota(token) {
         }
       } catch (e2) {}
     }
-  } catch (e) {}
+  } catch (e) {
+    // 🔴 2026-07-26：เดิม catch ว่างเปล่า = อ่านพังแล้วเงียบสนิท นักเรียนเห็นตัวเลขค้างของเก่าหรือไม่เห็นอะไรเลย
+    var failEl = document.getElementById('quotaSummary');
+    if (failEl) failEl.innerHTML = quotaLoadFailHtml(e && e.message);
+    console.warn('loadStudentQuota failed:', e);
+  }
 }
 
 // 學生：收據下載按鈕（可按 X 關閉，記住已關閉；2026-07-18 加：開立超過 3 天自動不再顯示，不用學生自己關）
@@ -4896,9 +5087,10 @@ async function loadStudentSchedule(token) {
       sb.rpc('get_student_schedule', { p_token: token }),
       sb.rpc('get_student_payments', { p_token: token }),
     ]);
-    const attData = attRes.data || [];
-    const schedData = schedRes.data || [];
-    const q = computeCurrentCourse(payRes.data || [], attData);
+    // 🔴 2026-07-26：อ่านพัง = ต้องรู้ (ไม่งั้น 已上 กลายเป็น 0 → เหลือคาบเกินจริง = คิดเงินผิด)
+    const attData = rowsOrThrow(attRes, '上課紀錄');
+    const schedData = rowsOrThrow(schedRes, '課表');
+    const q = computeCurrentCourse(rowsOrThrow(payRes, '繳費紀錄'), attData);
     const startDay = q.start || null;
 
     const attCurrent = startDay ? attData.filter(function(r) { return r.lesson_date >= startDay; }) : attData;
@@ -4967,7 +5159,11 @@ async function loadStudentSchedule(token) {
       '</details>';
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
+    // 🔴 2026-07-26：เดิมขึ้นแค่ "載入失敗" ลอยๆ — ต้องบอกให้ชัดว่า "อย่าเอาเลขที่เห็นไปนับคาบ"
+    el.innerHTML = '<div style="color:var(--amber);font-weight:700;font-size:0.83rem;text-align:center;padding:8px 0;font-family:\'Noto Sans TC\',sans-serif;">'
+      + '⚠️ 課程記錄載入失敗<div style="font-weight:400;color:var(--ink-muted);margin-top:4px;">' + escHtml(String((e && e.message) || ''))
+      + '<br>請重新整理再看一次（不要照這裡的內容算堂數）。</div></div>';
+    console.warn('courseTable load failed:', e);
   }
 }
 
@@ -5680,8 +5876,13 @@ function proceedToRescheduleTimeOptions() {
 var _classRequestEditRequestId = null;
 
 function resetClassRequestModalFields() {
+  // 🔴 2026-07-26：ช่องฝั่งนักเรียน ใช้ "วันนี้ของนักเรียนเอง" เป็นขอบล่าง (ไม่ใช่วันนี้ของครู)
+  // นักเรียนที่อยู่โซนเวลาช้ากว่าไทย ถ้าไปใช้วันนี้ของครูจะโดนบล็อกวันที่ยังเป็นวันนี้ของเขาจริงๆ
+  var _s = (nextClassCtx && typeof studentsCache !== 'undefined') ? studentsCache[nextClassCtx.token] : null;
+  var _tz = _s && _s.pending_student_tz;
   [1, 2, 3].forEach(function (i) {
     document.getElementById('reqDateInput' + i).value = '';
+    lockDateInputToFuture('reqDateInput' + i, _tz);
     resetTimeDropdown('reqTimeInput' + i);
     document.getElementById('reqScheduleHint' + i).style.display = 'none';
   });
@@ -5754,6 +5955,8 @@ function collectClassRequestOptions() {
     const rawTime = document.getElementById('reqTimeInput' + i).value.trim();
     if (!rawDate) continue; // 選項 2/3 沒填就跳過
     if (rawTime && !isValidTimeStr(rawTime)) { alert('選項 ' + i + ' 時間格式不對，請用 HH:MM，例如 14:30'); return null; }
+    // 🔴 2026-07-26 ชั้นที่ 2：เช็คซ้ำตอนกดส่ง (เทียบกับ "วันนี้ของนักเรียนเอง")
+    if (!assertNotPastDate(rawDate, '選項 ' + i + ' 的日期', studentTz)) return null;
     let newDate = rawDate, newTime = rawTime || null;
     if (rawTime && studentTz) {
       // 2026-07-14 加：壞的時區字串會讓 Intl.DateTimeFormat throw——接住錯誤退回「當泰國時間
@@ -5921,6 +6124,9 @@ function updateAddReqRemoveButtons() {
 function addReqAddRow() {
   var idx = _addReqNextIdx++;
   document.getElementById('addReqRows').insertAdjacentHTML('beforeend', addReqRowHtml(idx));
+  // 🔴 2026-07-26：ช่องฝั่งนักเรียน → ยึด "วันนี้ของนักเรียนเอง" (ชั้นที่ 2 อยู่ใน submitAddRequest)
+  var _s = (_addReqToken && typeof studentsCache !== 'undefined') ? studentsCache[_addReqToken] : null;
+  lockDateInputToFuture('addReqDate_' + idx, _s && _s.pending_student_tz);
   updateAddReqRemoveButtons();
   return idx;
 }
@@ -5992,6 +6198,7 @@ async function submitAddRequest() {
     const rawDate = document.getElementById('addReqDate_' + idx).value;
     const rawTime = document.getElementById('addReqTime_' + idx).value.trim();
     if (!rawDate) { alert('第 ' + n + ' 筆：請選擇想約哪一天'); return; }
+    if (!assertNotPastDate(rawDate, '第 ' + n + ' 筆的日期', studentTz)) return; // 🔴 2026-07-26 ชั้นที่ 2
     if (!isValidTimeStr(rawTime)) { alert('⚠️ 第 ' + n + ' 筆：時間格式不對，請用 HH:MM，例如 14:30'); return; }
 
     let newDate = rawDate, newTime = rawTime;
@@ -7355,6 +7562,21 @@ async function processClassRequestInner(id, r, isCancel) {
       alert('⚠️ 讀取 Google Calendar 失敗：' + (e.message || e) + '\n' + fallbackHint);
       return;
     }
+    // 🟠 2026-07-26 加：ID ที่จำไว้ชี้ไป "คาบไหน" ตอนนักเรียนกดส่งคำขอ — แต่ถ้าคาบนั้นถูกย้ายวัน
+    // ไปแล้วหลังจากนั้น (ครูย้ายเอง / มีคำขอก่อนหน้าถูกอนุมัติ) ID เดิมจะยังใช้ได้ แต่ชี้ไปวันใหม่
+    // → เดิมโค้ดลบ/ย้ายทันทีโดยไม่เทียบวัน = ลบผิดคาบ. ตอนนี้เทียบกับ original_date ก่อนเสมอ
+    if (ev && r.original_date) {
+      var evDayCheck = ev.start && (ev.start.dateTime || ev.start.date);
+      var evDayStr = evDayCheck ? formatInTz(new Date(evDayCheck), TEACHER_TZ).dateStr : null;
+      if (evDayStr && evDayStr !== r.original_date) {
+        if (!confirm('⚠️ 對不上，請先確認再繼續。\n\n這筆申請寫的原本課堂是 ' + r.original_date + '，\n'
+          + '但 Calendar 上這筆課堂現在的日期是 ' + evDayStr + '（可能中間已經被改期過了）。\n\n'
+          + '按「確定」= 就用 Calendar 上這筆（' + evDayStr + '）繼續處理\n'
+          + '按「取消」= 先不動，自己到 Calendar 確認清楚（比較安全）')) {
+          return;
+        }
+      }
+    }
   }
   if (!ev) {
     var matches;
@@ -7393,6 +7615,10 @@ async function processClassRequestInner(id, r, isCancel) {
     }
   } else {
     if (!r.requested_date) { alert('這筆申請沒有指定想改到的日期，無法自動處理，請用「⚙️ 其他」手動聯絡學生。'); return; }
+    // 🔴 2026-07-26 加：คำขอที่ค้างมานาน วันที่ที่ขอไว้อาจกลายเป็นอดีตไปแล้วตอนที่ครูมากดประมวลผล
+    // → ห้ามย้ายคาบไปวันที่ผ่านไปแล้วเด็ดขาด (ด่านตอนนักเรียนส่งคำขอ กันได้แค่ตอนส่ง ไม่ได้กันตอนนี้)
+    // (ข้อความอธิบายรวมไว้ใน label เลย — ไม่ยิง alert ซ้อน 2 กล่องให้ครูต้องกดปิด 2 ที)
+    if (!assertNotPastDate(r.requested_date, '這筆申請要改到的日期（請用「⚙️ 其他」聯絡學生，請他重新申請一個未來的時間）')) return;
     var oldEndIso = ev.end && (ev.end.dateTime || ev.end.date);
     var durationMs = (new Date(oldEndIso).getTime() - new Date(oldStartIso).getTime()) || 3600000;
     var newTimeStr = r.requested_time || formatInTz(new Date(oldStartIso), TEACHER_TZ).timeStr;
@@ -7494,6 +7720,7 @@ var _proposeTimeIsEditMode = false;
 function resetProposeTimeModalFields() {
   [1, 2, 3].forEach(function (i) {
     document.getElementById('proposeDateInput' + i).value = '';
+    lockDateInputToFuture('proposeDateInput' + i); // 🔴 2026-07-26：ครูเป็นคนกรอก → ยึดวันนี้เวลาไทย
     resetTimeDropdown('proposeTimeInput' + i);
   });
 }
@@ -7528,6 +7755,7 @@ function collectProposeTimeOptions() {
     const rawTime = document.getElementById('proposeTimeInput' + i).value.trim();
     if (!rawDate) continue;
     if (rawTime && !isValidTimeStr(rawTime)) { alert('選項 ' + i + ' 時間格式不對，請用 HH:MM，例如 14:30'); return null; }
+    if (!assertNotPastDate(rawDate, '選項 ' + i + ' 的日期')) return null; // 🔴 2026-07-26 ชั้นที่ 2
     options.push({ date: rawDate, time: rawTime || null });
   }
   // 2026-07-16 加（稽核發現，GREEN）：同一個道理，避免老師不小心把 2-3 個選項填成一樣的時間。
@@ -7801,6 +8029,8 @@ async function confirmAcceptedOfferInner(id, r) {
     return;
   }
   var ev = matches[0];
+  // 🔴 2026-07-26 加（同 processClassRequestInner）：นักเรียนกด "ตกลง" ไว้นานแล้ว วันที่นั้นอาจกลายเป็นอดีต
+  if (!assertNotPastDate(r.requested_date, '要改到的日期（這筆提議的日期已經過去了，請重新提議一個未來的時間）')) return;
   var oldStartIso = ev.start && (ev.start.dateTime || ev.start.date);
   var oldEndIso = ev.end && (ev.end.dateTime || ev.end.date);
   var durationMs = (new Date(oldEndIso).getTime() - new Date(oldStartIso).getTime()) || 3600000;
@@ -7818,6 +8048,9 @@ async function confirmAcceptedOfferInner(id, r) {
   try {
     assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
     await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
+    // 🟠 2026-07-26 加：เส้นทางนี้ (นักเรียนกดตกลงแล้วครูยืนยัน) ลืมเรียก verifyEventMoved
+    // ต่างจากอีกเส้นทางที่มีอยู่แล้ว → เดิมเชื่อแค่ API ตอบ ok แล้วเดินหน้าแจ้งนักเรียนเลย
+    await verifyEventMoved(ev.id, newStartIso);
   } catch (e) {
     await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
     alert('⚠️ 移動課堂失敗：' + (e.message || e));
@@ -7881,12 +8114,27 @@ function dismissBackupNotice(id) {
 async function loadRecentBackups() {
   var container = document.getElementById('recentBackupsSection');
   if (!container) return;
-  var res = await sb.from('classroom_calendar_backups').select('*').eq('reverted', false).order('created_at', { ascending: false }).limit(20);
+  // 🟠 2026-07-26 แก้：เดิม .limit(20) ทำงาน "ก่อน" การกรองรายการหมดอายุ (กรองใน JS ข้างล่าง)
+  // → ถ้ามีรายการหมดอายุใหม่ๆ 20 รายการแรก รายการที่ยังกดคืนค่าได้จะถูกตัดทิ้งตั้งแต่ตอน query
+  //   ปุ่ม ↩️ 復原 หายไปเงียบๆ ทั้งที่ข้อมูลสำรองยังอยู่ในฐานข้อมูลครบ
+  // แก้: ดึงมา 200 แถว (ยังจำกัดอยู่ กันดึงทั้งตาราง) แล้วค่อยกรองหมดอายุ + ตัดเหลือ 20 ใบล่าสุดที่ "ยังคืนค่าได้จริง"
+  var res = await sb.from('classroom_calendar_backups').select('*').eq('reverted', false).order('created_at', { ascending: false }).limit(200);
   var data = res.data || [];
-  if (res.error) { container.innerHTML = ''; console.warn('讀取備份紀錄失敗：', res.error.message); return; }
+  if (res.error) {
+    // 🟠 2026-07-26 แก้：เดิมล้างช่องนี้ให้ว่างเปล่า = หน้าตาเหมือน "ไม่มีอะไรให้คืนค่า" เป๊ะ
+    // ครูจะไม่มีทางรู้เลยว่ามีรายการที่กดคืนค่าได้ค้างอยู่ แค่อ่านไม่ออกรอบนี้
+    container.innerHTML = '<div class="pending-card"><h2>↩️ 最近處理</h2>'
+      + '<div style="background:var(--cream);border:1.5px solid var(--amber);border-radius:9px;padding:10px 13px;'
+      + 'font-family:\'Noto Sans TC\',sans-serif;font-size:0.84rem;color:var(--amber-dark);font-weight:700;">'
+      + '⚠️ 讀不到備份紀錄（' + escHtml(res.error.message) + '）'
+      + '<span style="font-weight:400;display:block;margin-top:3px;color:var(--ink-muted);">'
+      + '現在看不到「可以復原」的項目，但備份本身還在資料庫裡沒有不見。請重新整理頁面再看一次。</span></div></div>';
+    console.warn('讀取備份紀錄失敗：', res.error.message);
+    return;
+  }
   var now = Date.now();
   var dismissed = dismissedBackupIds();
-  var visible = data.filter(function(b) {
+  var inDeadline = data.filter(function(b) {
     if (dismissed[b.id]) return false;
     var expiry;
     if (b.action === 'move') expiry = Math.max(new Date(b.old_start).getTime(), b.new_start ? new Date(b.new_start).getTime() : 0);
@@ -7894,17 +8142,37 @@ async function loadRecentBackups() {
     else expiry = new Date(b.old_start).getTime();
     return now < expiry;
   });
-  if (!visible.length) { container.innerHTML = ''; return; }
+  // 🟠 2026-07-26：ตัด 20 ใบ "หลัง" กรองหมดอายุแล้ว (เดิม .limit(20) ทำงานก่อนกรอง ปุ่มคืนค่าเลยหายเงียบ)
+  // ⚠️ ต้องแยก inDeadline (ทั้งหมดที่ยังอยู่ในกำหนด) ออกจาก visible (20 ใบที่โชว์) — ไม่งั้นใบที่ 21+
+  //   ซึ่งยังอยู่ในกำหนดจริงๆ จะถูกติดป้ายผิดว่า "เลยกำหนดแล้ว"
+  var visible = inDeadline.slice(0, 20);
+  // 🟠 2026-07-26 เพิ่ม：ปุ่มดู "ทั้งหมดที่ยังไม่ได้กดคืนค่า" (รวมใบที่เลยกำหนดแจ้งเตือนแล้ว)
+  //   ข้อมูลสำรองยังอยู่ในฐานข้อมูลครบ แค่เดิมไม่มีทางเปิดดู/กดคืนค่าจากหน้าจอได้อีกเลย
+  // ⚠️ ตรงนี้ "ไม่" กรอง dismissed ออกโดยตั้งใจ — ปุ่ม ✕ เขียนไว้ว่า "แค่ปิดการแจ้งเตือน ไม่กระทบการคืนค่า"
+  //   ถ้ากรองออกที่นี่ด้วย ใบที่กด ✕ ไปแล้วจะไม่มีทางเปิดกลับมาคืนค่าได้อีกเลย = ผิดจากที่ปุ่มบอกไว้
+  //   (ยังกรอง dismissed ออกจาก inDeadline ตามเดิม → รายการแจ้งเตือนปกติยังสะอาดเหมือนเดิม)
+  var expiredNotDismissed = data.filter(function(b) {
+    return visible.indexOf(b) === -1;
+  });
+  if (!visible.length && !(window._backupShowAll && expiredNotDismissed.length)) {
+    container.innerHTML = expiredNotDismissed.length
+      ? '<div class="pending-card"><h2>↩️ 最近處理</h2><div style="font-size:0.83rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">目前沒有在提醒期限內的項目。'
+        + '<button onclick="toggleAllBackups()" style="background:none;border:none;color:var(--gold-deep);text-decoration:underline;cursor:pointer;font-size:0.83rem;padding:0 4px;">查看全部 ' + expiredNotDismissed.length + ' 筆備份（還是可以復原）</button></div></div>'
+      : '';
+    return;
+  }
+  var showList = window._backupShowAll ? visible.concat(expiredNotDismissed) : visible;
   window._backupCache = {};
-  visible.forEach(function(b) { window._backupCache[b.id] = b; });
+  showList.forEach(function(b) { window._backupCache[b.id] = b; });
   var actionLabel = { move: '🔄 已移動課堂', delete: '❌ 已取消課堂', permanent_change: '📌 已永久變更課表' };
-  var rows = visible.map(function(b) {
+  var rows = showList.map(function(b) {
     var s = studentsCache[b.token];
     var name = s ? s.name : (b.token || '-');
-    return '<div class="slip-row" id="backup-row-' + b.id + '">' +
+    var isExpired = inDeadline.indexOf(b) === -1; // 🟠 2026-07-26：เทียบกับ "ทั้งหมดที่ยังอยู่ในกำหนด" ไม่ใช่ 20 ใบที่โชว์
+    return '<div class="slip-row" id="backup-row-' + b.id + '"' + (isExpired ? ' style="opacity:0.65;"' : '') + '>' +
       '<div class="slip-thumb-placeholder">↩️</div>' +
       '<div class="slip-info">' +
-        '<div class="slip-name">' + escHtml(name) + '　' + (actionLabel[b.action] || b.action) + '</div>' +
+        '<div class="slip-name">' + escHtml(name) + '　' + (actionLabel[b.action] || b.action) + (isExpired ? '　<span style="font-weight:400;font-size:0.75rem;color:var(--ink-muted);">（已過提醒期限，仍可復原）</span>' : '') + '</div>' +
         '<div class="slip-course">' + formatThaiDateTimeLabel(b.old_start) + (b.new_start ? ('　→　' + formatThaiDateTimeLabel(b.new_start)) : '') + '（泰國時間）</div>' +
       '</div>' +
       '<div class="slip-actions">' +
@@ -7913,7 +8181,16 @@ async function loadRecentBackups() {
       '</div>' +
     '</div>';
   }).join('');
-  container.innerHTML = '<div class="pending-card">' + '<h2>↩️ 最近處理（還能復原）</h2>' + rows + '</div>';
+  var toggleHtml = expiredNotDismissed.length
+    ? '<div style="text-align:center;margin-top:6px;"><button onclick="toggleAllBackups()" style="background:none;border:none;color:var(--gold-deep);text-decoration:underline;cursor:pointer;font-size:0.8rem;font-family:\'Noto Sans TC\',sans-serif;">'
+      + (window._backupShowAll ? '只看提醒期限內的' : '查看全部 ' + (visible.length + expiredNotDismissed.length) + ' 筆備份（過期的也還能復原）') + '</button></div>'
+    : '';
+  container.innerHTML = '<div class="pending-card">' + '<h2>↩️ 最近處理（還能復原）</h2>' + rows + toggleHtml + '</div>';
+}
+// 🟠 2026-07-26 เพิ่ม：สลับดู "เฉพาะในกำหนด" ↔ "ทั้งหมดที่ยังไม่ได้คืนค่า"
+function toggleAllBackups() {
+  window._backupShowAll = !window._backupShowAll;
+  loadRecentBackups();
 }
 
 async function revertCalendarBackup(id) {
@@ -7922,6 +8199,30 @@ async function revertCalendarBackup(id) {
   var msg = b.action === 'delete'
     ? ('確定要復原嗎？會重新建立回原本的課堂：' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）')
     : ('確定要復原嗎？會把課堂移回原本時間：' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）');
+  // 🔴 2026-07-26 加：復原「永久變更」會把新課表整組刪掉。如果新課表那段期間已經有「上過課」的紀錄，
+  // 代表那幾堂是真的上過的，刪掉會讓 Calendar 跟上課紀錄對不起來（就是這次 育郁 事件的同一個坑）。
+  // → 先查 classroom_attendance，有就把日期列出來，讓 Lin 知道自己在刪什麼再決定。
+  if (b.action === 'permanent_change' && b.new_start && b.token) {
+    try {
+      var newStartDay = formatInTz(new Date(b.new_start), TEACHER_TZ).dateStr;
+      // 🟠 2026-07-26：จำกัด 10 บรรทัด — กล่อง confirm ของเบราว์เซอร์ถ้ายาวเกินจะตัด/เลื่อนไม่ได้
+      // แล้วบรรทัดสำคัญที่สุด ("真的要繼續嗎？") จะหลุดออกนอกจอ บนปุ่มที่อันตรายที่สุดในระบบ
+      var attWarn = await sb.from('classroom_attendance').select('lesson_date', { count: 'exact' }).eq('token', b.token)
+        .gte('lesson_date', newStartDay).order('lesson_date', { ascending: true }).limit(10);
+      if (attWarn.error) {
+        msg += '\n\n⚠️ 讀不到上課紀錄（' + attWarn.error.message + '），無法確認新課表那段期間有沒有已經上過的課，請自己確認過再繼續。';
+      } else if (attWarn.data && attWarn.data.length) {
+        var attTotal = (typeof attWarn.count === 'number') ? attWarn.count : attWarn.data.length;
+        msg += '\n\n🛑 注意：新課表這段期間已經有「上過課」的紀錄（共 ' + attTotal + ' 堂）：\n'
+          + attWarn.data.map(function (x) { return '・' + x.lesson_date; }).join('\n')
+          + (attTotal > attWarn.data.length ? '\n・…還有 ' + (attTotal - attWarn.data.length) + ' 堂' : '')
+          + '\n復原會把新課表整組從 Calendar 刪掉，這幾堂已經上過的課會從 Calendar 消失（上課紀錄還在資料庫）。\n'
+          + '真的要繼續嗎？';
+      }
+    } catch (e) {
+      msg += '\n\n⚠️ 檢查上課紀錄時出錯（' + (e.message || e) + '），請自己確認過再繼續。';
+    }
+  }
   if (!confirm(msg)) return;
   try {
     var token = await gdGetToken();
@@ -7940,9 +8241,18 @@ async function revertCalendarBackup(id) {
       });
       if (!r2.ok) throw new Error('復原失敗（' + r2.status + '）：' + (await r2.text()).slice(0, 200));
       if (b.action === 'permanent_change' && b.new_event_id) {
-        await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(b.new_event_id), {
+        // 🔴 2026-07-26 แก้ (RELIABILITY FIRST)：เดิมเป็น .catch(function(){}) = กลืน error เงียบสนิท
+        // ถ้าลบชุดคาบใหม่ไม่สำเร็จ ครูจะเหลือ "คาบเก่า + คาบใหม่" ซ้อนกัน 2 ชุดในปฏิทิน
+        // โดยระบบขึ้นว่าคืนค่าสำเร็จแล้ว → ต้องเช็ค r.ok + verifyEventDeleted จริง แล้วโยน error ออกไป
+        var delRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(b.new_event_id), {
           method: 'DELETE', headers: { Authorization: 'Bearer ' + token },
-        }).catch(function() {});
+        });
+        // 410 = ถูกลบไปแล้วก่อนหน้า, 404 = ไม่มีอยู่แล้ว → ทั้งคู่ถือว่า "ผลลัพธ์ที่ต้องการเกิดแล้ว" ผ่านได้
+        if (!delRes.ok && delRes.status !== 410 && delRes.status !== 404) {
+          throw new Error('舊課表已經復原了，但「刪除新課表」失敗（' + delRes.status + '）：' + (await delRes.text()).slice(0, 200)
+            + '\n⚠️ 現在 Calendar 上可能同時有新舊兩份課表，請自己到 Calendar 把新的那份刪掉。');
+        }
+        await verifyEventDeleted(b.new_event_id); // ไม่เชื่อแค่ API ตอบ ok — กลับไปดูของจริงว่าหายแล้วจริง
       }
     }
   } catch (e) {
@@ -8060,10 +8370,18 @@ async function loadTeacherNextClassBox(token) {
 async function listRemainingLessonsForStudent(token) {
   var s = studentsCache[token];
   var studentName = (s ? s.name : token) || '';
-  var pays = (await sb.rpc('get_student_payments', { p_token: token })).data || [];
-  var atts = (await sb.rpc('get_student_attendance', { p_token: token })).data || [];
+  // 🔴 2026-07-26：อ่านโควตาพัง → เดิมเงียบแล้วถอยไปโชว์ 12 คาบ ทำให้ครูอาจเลือกคาบที่ไม่มีสิทธิ์
+  // ตอนนี้ยังถอยไป 12 คาบเหมือนเดิม (ไม่บล็อกครู) แต่ "บอกให้รู้" ว่าเลขโควตาเชื่อไม่ได้รอบนี้
+  var payRes0 = await sb.rpc('get_student_payments', { p_token: token });
+  var attRes0 = await sb.rpc('get_student_attendance', { p_token: token });
+  if (payRes0.error || attRes0.error) {
+    alert('⚠️ 讀不到這位學生的堂數資料（' + ((payRes0.error && payRes0.error.message) || (attRes0.error && attRes0.error.message)) + '）。\n'
+      + '下面的清單會先列出未來 12 堂讓你自己挑，「不代表」他本輪真的剩這麼多堂——請自己確認過再操作。');
+  }
+  var pays = payRes0.data || [];
+  var atts = attRes0.data || [];
   var q = computeCurrentCourse(pays, atts);
-  var limit = (q.hasCourse && q.remain > 0) ? q.remain : 12;
+  var limit = ((!payRes0.error && !attRes0.error) && q.hasCourse && q.remain > 0) ? q.remain : 12;
 
   var calToken = await gdGetToken();
   if (gdTokenScopes && gdTokenScopes.indexOf('calendar') === -1) calToken = await gdGetToken(true);
@@ -8493,6 +8811,80 @@ function buildIcalUntilUtc(date) {
   var pad = function(n) { return String(n).padStart(2, '0'); };
   return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
 }
+// 🟠 2026-07-26 เพิ่ม：ตอน "永久變更" เดิมชุดคาบใหม่ถูกสร้างด้วย ['RRULE:FREQ=WEEKLY'] ล้วนๆ
+// → เงื่อนไข "จบเมื่อไหร่" ของคอร์สเดิม (UNTIL = จบวันไหน / COUNT = ทั้งหมดกี่ครั้ง / INTERVAL = ทุกกี่สัปดาห์)
+//   หายหมด คอร์สที่มีวันจบชัดเจนกลายเป็น "เรียนไปเรื่อยๆ ไม่มีวันจบ" ในปฏิทิน
+// ตัวนี้ยกเงื่อนไขเดิมมาต่อให้ชุดใหม่:
+//   · UNTIL  → ยกมาตรงๆ (วันจบคอร์สยังเป็นวันเดิม)
+//   · COUNT  → หักจำนวนครั้งที่ "ผ่านไปแล้ว" ในชุดเก่าออกก่อน แล้วค่อยยกส่วนที่เหลือมา
+//              (ยกมาทั้งก้อนไม่ได้ ไม่งั้นคอร์สจะยาวขึ้นเป็น 2 เท่า)
+//   · INTERVAL → ยกมาตรงๆ (เรียนสัปดาห์เว้นสัปดาห์ ฯลฯ)
+//   · BYDAY  → ตัดทิ้งโดยตั้งใจ เพราะมันชี้วันในสัปดาห์แบบเดิม ซึ่งกำลังจะเปลี่ยน
+//              (ไม่ใส่ Google จะใช้วันของ event เริ่มต้นให้เอง = วันใหม่ที่ถูกต้อง)
+// คืน { ok:true, recurrence:[...] } หรือ { ok:false, reason:'ข้อความบอกครู' }
+// ok:false = ห้ามทำต่อเด็ดขาด ต้องหยุดก่อนแตะ Calendar (ไม่ใช่เตือนแล้วทำต่อ)
+function buildNewSeriesRecurrence(oldRecurrenceArr, oldStartIso, cutMs, newStartMs) {
+  var oldRule = (oldRecurrenceArr || []).find(function (r) { return r.indexOf('RRULE') === 0; });
+  if (!oldRule) return { ok: true, recurrence: ['RRULE:FREQ=WEEKLY'] };
+  var map = {};
+  oldRule.replace(/^RRULE:/, '').split(';').forEach(function (p) {
+    var i = p.indexOf('=');
+    if (i > 0) map[p.slice(0, i).toUpperCase()] = p.slice(i + 1);
+  });
+  // 🛑 การคำนวณข้างล่างนี้ยึด "ทุก 7 วัน" เป็นฐาน ถ้าชุดเดิมไม่ใช่รายสัปดาห์ (รายวัน/รายเดือน)
+  // ตัวเลขจะผิดแบบเงียบๆ (เคยลองแล้ว: FREQ=DAILY;COUNT=20 ได้ COUNT=18 ทั้งที่ควรเป็น 6 = คอร์สยาวขึ้น 3 เท่า)
+  // ระบบเราสร้าง event เป็น FREQ=WEEKLY เสมอ เคสนี้เกิดได้เฉพาะซีรีส์ที่ Lin สร้างเองใน Google Calendar
+  if ((map.FREQ || 'WEEKLY').toUpperCase() !== 'WEEKLY') {
+    return { ok: false, reason: '這個課表系列不是「每週」重複（' + (map.FREQ || '?') + '），\n'
+      + '系統沒辦法自動算出新課表還剩幾堂（算錯會直接影響堂數）。\n'
+      + '請自己到 Google Calendar 手動調整這個系列。' };
+  }
+  var interval = parseInt(map.INTERVAL, 10);
+  var daysPerCycle = map.BYDAY ? map.BYDAY.split(',').filter(Boolean).length : 1;
+  // 🛑 คอร์สเดิมเรียนสัปดาห์ละหลายวัน (BYDAY=TU,TH) — คำนวณ "เหลือกี่ครั้ง" ให้ถูกไม่ได้
+  // ถ้าเดาแล้วผิด คอร์สจะยาว/สั้นกว่าที่จ่ายเงินมา → หยุด ให้ครูจัดเองใน Calendar
+  if (daysPerCycle > 1) {
+    return { ok: false, reason: '這位學生的固定課表是「一週上好幾天」（' + map.BYDAY + '），\n'
+      + '系統沒辦法自動算出新課表還剩幾堂（算錯會讓課變多或變少，直接影響堂數）。\n'
+      + '請自己到 Google Calendar 手動調整這個系列。' };
+  }
+  var parts = ['FREQ=WEEKLY'];
+  if (interval > 1) parts.push('INTERVAL=' + interval);
+  if (map.UNTIL) {
+    // 🛑 คอร์สเดิมมีวันจบอยู่แล้ว ถ้าวันเริ่มใหม่เลยวันจบไปแล้ว ชุดใหม่จะ "ไม่มีคาบเลยสักคาบ"
+    // (Google รับสร้างได้แต่ว่างเปล่า) — แล้วโค้ดจะไปตัดชุดเก่าต่อ = นักเรียนไม่เหลือคาบเลย
+    var untilMs = icalUntilToMs(map.UNTIL);
+    if (untilMs !== null && newStartMs !== undefined && untilMs <= newStartMs) {
+      return { ok: false, reason: '這位學生本期課程的結束日是 ' + formatThaiDateTimeLabel(new Date(untilMs).toISOString()) + '（泰國時間），\n'
+        + '你選的新開始日已經超過結束日了——照這樣改，新課表會「一堂課都沒有」，\n'
+        + '舊課表又會被關掉，等於這位學生完全沒課。\n\n'
+        + '請先幫他建立新一期的課程，或改選結束日之前的日期。' };
+    }
+    parts.push('UNTIL=' + map.UNTIL);
+  } else if (map.COUNT) {
+    var total = parseInt(map.COUNT, 10) || 0;
+    var stepMs = (interval > 1 ? interval : 1) * 7 * 24 * 3600 * 1000;
+    var oldStartMs = new Date(oldStartIso).getTime();
+    // จำนวนครั้งที่เกิดขึ้นไปแล้วในชุดเก่า ตั้งแต่ครั้งแรกจนถึงจุดตัด (นับครั้งแรกด้วย)
+    var used = (cutMs > oldStartMs) ? (Math.floor((cutMs - oldStartMs) / stepMs) + 1) : 0;
+    if (used > total) used = total;
+    var left = total - used;
+    // 🛑 คอร์สเดิมครบจำนวนแล้ว — เดิมโค้ดจะ "ไม่ใส่ COUNT" กลายเป็นเรียนไม่มีวันจบ (บั๊กเดิมย้ายที่)
+    if (left <= 0) {
+      return { ok: false, reason: '這位學生本期的 ' + total + ' 堂課，到你選的新開始日已經全部排完了。\n'
+        + '照這樣改，新課表會變成「沒有結束日、一直排下去」。\n\n'
+        + '請先幫他建立新一期的課程，再做永久變更。' };
+    }
+    parts.push('COUNT=' + left);
+  }
+  return { ok: true, recurrence: ['RRULE:' + parts.join(';')] };
+}
+// แปลงค่า UNTIL แบบ iCal (20261231T120000Z หรือ 20261231) เป็น timestamp — แปลงไม่ได้คืน null
+function icalUntilToMs(v) {
+  var m = String(v || '').match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})Z?)?$/);
+  if (!m) return null;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 23), +(m[5] || 59), +(m[6] || 59));
+}
 function setRruleUntil(recurrenceArr, untilUtcStr) {
   return (recurrenceArr || []).map(function(rule) {
     if (rule.indexOf('RRULE') !== 0) return rule;
@@ -8506,6 +8898,7 @@ var _permanentChangeToken = null;
 function openPermanentChangeModal(token) {
   _permanentChangeToken = token;
   document.getElementById('permDateInput').value = '';
+  lockDateInputToFuture('permDateInput'); // 🔴 2026-07-26：ชั้นที่ 1 กันเลือกวันย้อนหลัง (ชั้นที่ 2 อยู่ใน submitPermanentChangeInner)
   resetTimeDropdown('permTimeInput');
   document.getElementById('permanentChangeModal').classList.add('open');
 }
@@ -8531,8 +8924,36 @@ async function submitPermanentChangeInner(token) {
   var newTime = document.getElementById('permTimeInput').value.trim();
   if (!newDate || !newTime) { alert('請選擇新的日期和時間'); return; }
   if (!isValidTimeStr(newTime)) { alert('時間格式不對，請用 HH:MM，例如 14:30'); return; }
+  // 🔴 2026-07-26 ชั้นที่ 2 (ด่านหลัก) — ต้องเช็คตรงนี้เสมอ ไม่ใช่หวังพึ่ง min ของ input อย่างเดียว
+  if (!assertNotPastDate(newDate, '新的固定上課日期')) return;
+  if (!(await ensureTeacherSession('永久變更固定上課時間'))) return; // 🔴 2026-07-26：ก่อนแตะ Calendar/DB ต้องแน่ใจว่ายังล็อกอินอยู่
   var s = studentsCache[token];
   var studentName = s ? s.name : token;
+  // 🔴 2026-07-26 ด่านที่ 2 เฉพาะของ 永久變更 (เจาะจงกับเคส 育郁):
+  // การ "永久變更" ทำงานโดยตัดจบชุดคาบเดิมที่วันใหม่ (UNTIL) → คาบทุกคาบตั้งแต่วันใหม่เป็นต้นไป
+  // ในชุดเดิมจะถูกลบจาก Calendar. ถ้ามีคาบที่ "บันทึกเข้าเรียนไปแล้ว" (classroom_attendance)
+  // ตกอยู่ในช่วงที่จะถูกตัด = กำลังจะลบประวัติการสอนจริงทิ้ง → บล็อกทั้งอัน ไม่มีทางผ่าน
+  // (ต้องเช็คก่อนสร้างชุดใหม่ เพื่อให้ล้มเหลวตั้งแต่ยังไม่แตะ Calendar เลยสักนิด)
+  try {
+    var attGuard = await sb.from('classroom_attendance').select('lesson_date').eq('token', token)
+      .gte('lesson_date', newDate).order('lesson_date', { ascending: false }).limit(1);
+    if (attGuard.error) {
+      alert('⚠️ 讀不到這位學生的上課紀錄（' + attGuard.error.message + '），為了安全先不繼續。\n'
+        + '（不確定會不會刪掉已經上過的課，就不動 Calendar——請重新整理再試一次。）');
+      return;
+    }
+    if (attGuard.data && attGuard.data.length) {
+      alert('🛑 不能這樣改。\n\n' + studentName + ' 在 ' + attGuard.data[0].lesson_date + ' 已經有「上過課」的紀錄，\n'
+        + '但你選的新開始日是 ' + newDate + '——永久變更會把 ' + newDate + ' 之後的舊課表整段從 Calendar 砍掉，\n'
+        + '那堂已經上過的課會跟著不見（之前 5 堂課消失就是這樣來的）。\n\n'
+        + '請把新的開始日改到「最後一堂已上課程的隔天以後」。\n'
+        + '如果真的必須改到已經過去的時間，請自己到 Google Calendar 手動處理。');
+      return;
+    }
+  } catch (e) {
+    alert('⚠️ 檢查上課紀錄時出錯（' + (e.message || e) + '），為了安全先不繼續，請重試。');
+    return;
+  }
 
   var matches;
   try { matches = await findClassEventForRequest(studentName, ctx.isoDate); }
@@ -8565,6 +8986,12 @@ async function submitPermanentChangeInner(token) {
 
   var hasRecurrence = !!masterEv.recurrence;
   var oldEventStillThere = false, oldEventDeleteError = '';
+  // 🟠 2026-07-26 แก้：จุดตัดชุดคาบเดิม
+  // เดิม UNTIL = (เวลาเริ่มใหม่ − 1 ชั่วโมง) → ถ้าย้ายเวลาให้ "สายขึ้นในวันเดียวกันของสัปดาห์"
+  //   (เช่น อังคาร 19:00 → อังคาร 20:00) คาบเก่าของวันนั้นยังอยู่ก่อนจุดตัด = เหลือคาบซ้ำ 2 อันในวันเดียว
+  // ใหม่: ตัดที่ "เที่ยงคืนก่อนวันเริ่มใหม่" (เวลาไทย) → ชุดเก่าเก็บทุกคาบก่อนวันนั้น ชุดใหม่รับตั้งแต่วันนั้น
+  //   ไม่มีวันไหนที่มีทั้งคาบเก่าและคาบใหม่พร้อมกัน
+  var cutMs = teacherTimeToDate(newDate, '00:00').getTime() - 1000;
   var newSeriesBody = {
     summary: masterEv.summary,
     description: masterEv.description,
@@ -8572,7 +8999,14 @@ async function submitPermanentChangeInner(token) {
     start: { dateTime: newStartIso, timeZone: TEACHER_TZ },
     end: { dateTime: newEnd.toISOString(), timeZone: TEACHER_TZ },
   };
-  if (hasRecurrence) newSeriesBody.recurrence = ['RRULE:FREQ=WEEKLY'];
+  // 🟠 2026-07-26 แก้：ยกเงื่อนไข "จบเมื่อไหร่" ของคอร์สเดิมมาต่อ (เดิมเขียนตายเป็น FREQ=WEEKLY ล้วน
+  // ทำให้คอร์สที่มีวันจบ กลายเป็นเรียนไม่มีวันจบ) — ดู buildNewSeriesRecurrence
+  // ⚠️ ต้องคำนวณ + ตัดสินใจ "ก่อน" สร้างอะไรใน Calendar เพราะบางเคสต้องหยุดทั้งอัน
+  if (hasRecurrence) {
+    var recur = buildNewSeriesRecurrence(masterEv.recurrence, oldStartIso, cutMs, newStart.getTime());
+    if (!recur.ok) { alert('🛑 不能這樣改。\n\n' + recur.reason + '\n\n（Calendar 完全沒有被動到，很安全。）'); return; }
+    newSeriesBody.recurrence = recur.recurrence;
+  }
   if (masterEv.conferenceData) newSeriesBody.conferenceData = masterEv.conferenceData;
 
   var newEventId = null;
@@ -8584,6 +9018,30 @@ async function submitPermanentChangeInner(token) {
     var newEv = await cr.json();
     newEventId = newEv.id;
   } catch (e) { alert('⚠️ ' + (e.message || e) + '\n（還沒動舊課表，安全，可以重試）'); return; }
+
+  // 🟠 2026-07-26 加 (RELIABILITY FIRST)：ไม่เชื่อแค่ "API ตอบว่าสร้างแล้ว" — กลับไปถาม Google ว่า
+  // ชุดคาบใหม่นี้มีคาบจริงอย่างน้อย 1 คาบไหม. ถ้าเงื่อนไขซ้ำซ้อนกันจนได้ชุดว่างเปล่า
+  // แล้วเราเดินหน้าไปตัดชุดเก่าต่อ = นักเรียนไม่เหลือคาบเลยสักคาบ (พังเงียบสนิท)
+  if (hasRecurrence) {
+    try {
+      var instRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'
+        + encodeURIComponent(newEventId) + '/instances?maxResults=1',
+        { headers: { Authorization: 'Bearer ' + calToken } });
+      if (!instRes.ok) throw new Error('確認新課表內容失敗（' + instRes.status + '）');
+      var instData = await instRes.json();
+      if (!instData.items || !instData.items.length) throw new Error('新課表建立出來是「空的」，一堂課都沒有');
+    } catch (e) {
+      // ลบชุดใหม่ที่เพิ่งสร้างทิ้ง แล้วหยุด — ยังไม่แตะชุดเก่า ปลอดภัย
+      var cleanupNote = '';
+      try {
+        var undoRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(newEventId),
+          { method: 'DELETE', headers: { Authorization: 'Bearer ' + calToken } });
+        if (!undoRes.ok && undoRes.status !== 410 && undoRes.status !== 404) cleanupNote = '\n⚠️ 而且剛剛建立的新課表也刪不掉，請自己到 Calendar 刪掉它。';
+      } catch (e2) { cleanupNote = '\n⚠️ 而且剛剛建立的新課表也刪不掉，請自己到 Calendar 刪掉它。'; }
+      alert('🛑 停下來了：' + (e.message || e) + '\n\n舊課表完全沒有被動到，學生的課都還在。' + cleanupNote);
+      return;
+    }
+  }
 
   // 2026-07-15 修：以前這裡空的 catch 會吞掉備份失敗，備份沒存到還是照樣往下關掉/刪掉
   // 舊課表——新課表已經建好了，只保護「關掉舊課表」這步：備份失敗就不要動舊課表，
@@ -8602,7 +9060,7 @@ async function submitPermanentChangeInner(token) {
     alert('⚠️ 新課表已經建立好了，但備份舊課表失敗（' + backupErrMsg + '），為了安全「沒有」關閉/刪除舊課表。\n請自己到 Calendar 手動關閉舊課表，避免兩份課表同時存在。（新課表不用重建）');
   } else if (hasRecurrence) {
     try {
-      var untilStr = buildIcalUntilUtc(new Date(newStart.getTime() - 3600000));
+      var untilStr = buildIcalUntilUtc(new Date(cutMs)); // 🟠 2026-07-26：ตัดที่เที่ยงคืนก่อนวันใหม่ ไม่ใช่ −1 ชั่วโมง
       var patchBody = { recurrence: setRruleUntil(masterEv.recurrence, untilStr) };
       var pr = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(masterEv.id), {
         method: 'PATCH', headers: { Authorization: 'Bearer ' + calToken, 'Content-Type': 'application/json' }, body: JSON.stringify(patchBody),
@@ -8628,10 +9086,12 @@ async function submitPermanentChangeInner(token) {
   //   改法：Calendar 那邊處理完，順手把這三個欄位也更新，兩邊資料源才會一致。
   var pendingSyncOk = true, pendingSyncError = null;
   try {
-    const { error: pendingSyncErr } = await sb.from('classroom_students').update({
+    // 🔴 2026-07-26 (RED 4)：เช็คจำนวนแถวจริงด้วย ไม่ใช่แค่ error (RLS บล็อกแบบ 0 แถวได้)
+    const { data: pendingSyncRows, error: pendingSyncErr } = await sb.from('classroom_students').update({
       pending_start_date: newDate, pending_class_time: newTime, pending_recurring: true,
-    }).eq('token', token);
+    }).eq('token', token).select();
     if (pendingSyncErr) { pendingSyncOk = false; pendingSyncError = pendingSyncErr.message; }
+    else if (!pendingSyncRows || !pendingSyncRows.length) { pendingSyncOk = false; pendingSyncError = '更新了 0 筆（資料庫沒有真的改到，可能是 RLS 權限或登入過期）'; }
     else if (studentsCache[token]) {
       studentsCache[token].pending_start_date = newDate;
       studentsCache[token].pending_class_time = newTime;
@@ -8888,8 +9348,11 @@ async function runDeferredStudentSetup(token, name) {
     // ★ 一定解鎖：不論 Meet 有沒有建成功，都把學生設為 confirmed（Meet 有就一起寫）
     var upd = { setup_status: 'confirmed' };
     if (meet) upd.meet = meet;
-    var res = await sb.from('classroom_students').update(upd).eq('token', token);
+    // 🔴 2026-07-26 (RED 4)：เดิมเช็คแค่ error → ถ้า RLS แก้ได้ 0 แถว จะขึ้นว่า "ปลดล็อกแล้ว"
+    // ทั้งที่ setup_status ในฐานข้อมูลยังเป็น pending อยู่ (นักเรียนยังเข้าห้องเรียนไม่ได้)
+    var res = await sb.from('classroom_students').update(upd).eq('token', token).select();
     if (res.error) return { ok: false, dbError: res.error, meetError: meetError };
+    if (!res.data || !res.data.length) return { ok: false, dbError: { message: '更新了 0 筆（資料庫沒有真的改到，可能是 RLS 權限或登入過期）' }, meetError: meetError };
     if (studentsCache[token]) { studentsCache[token].setup_status = 'confirmed'; if (meet) studentsCache[token].meet = meet; }
 
     // Drive 資料夾（best-effort，任何一步失敗都不影響「已解鎖」這個結果）
@@ -8981,8 +9444,11 @@ async function approveSlip() {
 // ลบรายการชำระเงิน
 async function deletePayment(paymentId, token) {
   if (!confirm('確定刪除此筆繳費記錄？（無法復原）')) return;
-  var res = await sb.from('classroom_payments').delete().eq('id', paymentId);
-  if (res.error) { alert('刪除失敗：' + res.error.message); return; }
+  if (!(await ensureTeacherSession('刪除繳費記錄'))) return;
+  // 🔴 2026-07-26 (RED 4)：เดิมเช็คแค่ error → RLS ที่ลบได้ 0 แถวจะขึ้นว่าสำเร็จ ทั้งที่ยอดเงิน/คาบยังอยู่
+  var res = await sb.from('classroom_payments').delete().eq('id', paymentId).select();
+  if (res.error) { alert(await writeErrorMessage(res.error.message, '刪除繳費記錄') + '\n（這筆記錄還在）'); return; }
+  if (!res.data || !res.data.length) { alert(await writeErrorMessage('刪除了 0 筆', '刪除繳費記錄') + '\n\n⚠️ 這筆繳費記錄「還在」，堂數也沒有跟著變。'); return; }
   loadTeacherStudentInfo(token);
   loadLowQuotaBanner();
 }
@@ -9267,6 +9733,9 @@ async function recordAttendance(token) {
   const name = s ? s.name : token;
   const today = teacherToday();
   const btn = document.getElementById('attend-' + token);
+  // 🔴 2026-07-26：เช็ค session ก่อนเขียน — อาการ "new row violates row-level security policy" ที่เจอจริง
+  // เกิดจาก session หมดอายุ ไม่ใช่ฐานข้อมูลพัง (ดู ensureTeacherSession)
+  if (!(await ensureTeacherSession('記錄今日上課'))) return;
   if (btn) { btn.disabled = true; btn.textContent = '記錄中…'; }
   // 2026-07-15 修（🔴 項目3）：以前「先查今天有沒有紀錄 → 再決定 insert 或 update」是
   // check-then-act，雙擊按鈕或開兩個分頁同時按，會各自查到「還沒有」再各自 insert（重複兩筆），
@@ -9279,7 +9748,9 @@ async function recordAttendance(token) {
   });
   if (btn) { btn.disabled = false; }
   if (attRes.error || !attRes.data || !attRes.data.length) {
-    alert('記錄失敗：' + (attRes.error ? attRes.error.message : '資料庫沒有回傳結果')); if (btn) btn.textContent = '✅ 今日上課'; return;
+    // 🔴 2026-07-26：แปล error ดิบของฐานข้อมูลเป็นภาษาคนก่อน (โดยเฉพาะเคส session หมดอายุ)
+    alert(await writeErrorMessage(attRes.error ? attRes.error.message : '資料庫沒有回傳結果', '記錄今日上課'));
+    if (btn) btn.textContent = '✅ 今日上課'; return;
   }
   await refreshTodayScheduleSection(); // refresh today section（2026-07-06 修正：原本呼叫 loadTodaySchedule() 會把整塊課表重置成「尚未連接」的初始畫面，卡片跟按鈕就整個消失，要重新連接才會再出現）
   openAttendanceHistory(token); // open history so Lin can verify & undo
@@ -9439,6 +9910,23 @@ async function connectCalendar() {
 // ซิงค์คาบล่วงหน้า (จาก Calendar) ลง Supabase → หน้านักเรียนดึงไปแสดง
 async function syncScheduleToSupabase(matched) {
   try {
+    // 🔴 2026-07-26：ซิงค์ตารางเป็นการ "เขียน+ลบ" ข้อมูลตารางเรียนของนักเรียนทุกคน
+    // ถ้า session หมดอายุ RLS จะบล็อกแบบเงียบๆ (เขียนไม่เข้า/ลบไม่ออก 0 แถว) → ต้องเช็คก่อนเริ่ม
+    // ⚠️ ใช้โหมดเงียบ (silent) เพราะฟังก์ชันนี้ถูกเรียกอัตโนมัติตอนเปิดหน้า ไม่ได้มาจากการกดปุ่ม
+    //    ถ้าเด้ง alert + กลับหน้าล็อกอินตรงนี้ จอครูจะถูกล้างกลางคันทั้งที่ยังโหลดไม่เสร็จ
+    //    → แจ้งเป็นแถบเตือนในหน้าแทน (ดูข้างล่าง) แล้วจบเงียบๆ
+    if (!(await ensureTeacherSession('同步課表', true))) {
+      var syncWarnEl = document.getElementById('attendanceSection');
+      if (syncWarnEl) {
+        syncWarnEl.insertAdjacentHTML('afterbegin',
+          '<div style="background:var(--cream);border:1.5px solid var(--amber);border-radius:10px;padding:10px 13px;margin-bottom:10px;'
+          + 'font-family:\'Noto Sans TC\',sans-serif;font-size:0.84rem;color:var(--amber-dark);font-weight:700;">'
+          + '🔑 老師登入已經過期，這次「沒有」同步課表到學生那邊'
+          + '<span style="font-weight:400;display:block;margin-top:3px;color:var(--ink-muted);">'
+          + '資料完全沒有被改動。請重新登入之後再連接一次 Google Calendar。</span></div>');
+      }
+      return;
+    }
     const todayIso = teacherToday();
     // 🔴 2026-07-19 แก้บั๊กแดง (AI ตรวจ 2 ตัวเจอตรงกัน — ตัวหนึ่งอ่านโค้ด ตัวหนึ่งเห็น DELETE 204 ในเว็บจริง)
     // เดิม: "ลบคาบอนาคตของนักเรียนทุกคนทิ้งก่อน แล้วค่อยเช็คว่ามีข้อมูลจะเขียนไหม" (เช็คทีหลังการลบ)
@@ -9484,9 +9972,17 @@ async function syncScheduleToSupabase(matched) {
         if (all.length) scopeTokens = Array.from(new Set(all.concat(scopeTokens)));
       }
     } catch (e) {}
+    // 🟠 2026-07-26 แก้：เดิมมีแต่ขอบล่าง (.gte วันนี้) ไม่มีขอบบน
+    //   แต่ rows ที่เพิ่งเขียนมาจาก Calendar แค่ช่วง SCHEDULE_SYNC_DAYS วันเท่านั้น
+    //   → คาบที่อยู่ "ไกลกว่าหน้าต่างที่ซิงค์" จะไม่มีวันอยู่ใน keepKeys เลย เลยถูกมองว่าเก่าและโดนลบทุกครั้ง
+    //   (ซิงค์ทีไร คาบไกลๆ ก็หายไปรอบหนึ่ง แล้วกลับมาเมื่อขยับเข้ามาในหน้าต่าง — ตารางนักเรียนกะพริบ)
+    // ใหม่: จำกัดขอบเขตการเก็บกวาดให้เท่ากับหน้าต่างที่ซิงค์จริงๆ เท่านั้น
+    const syncWindowEndIso = formatInTz(new Date(teacherTimeToDate(todayIso, '00:00').getTime()
+      + (SCHEDULE_SYNC_DAYS * 24 * 3600 * 1000) - 1000), TEACHER_TZ).dateStr;
     const { data: existing, error: selError } = await sb.from('classroom_schedule')
       .select('id,token,lesson_date,start_time')
       .gte('lesson_date', todayIso)
+      .lte('lesson_date', syncWindowEndIso)
       .in('token', scopeTokens);
     if (selError) {
       console.warn('อ่านตารางเดิมเพื่อเก็บกวาดไม่สำเร็จ:', selError.message);
@@ -9681,8 +10177,13 @@ async function editAttendanceLessons(id, current, token) {
   if (v === null) return;
   var n = parseInt(v);
   if (!n || n < 1) { alert('請輸入 1 以上的數字'); return; }
-  var { error } = await sb.from('classroom_attendance').update({ lessons: n }).eq('id', id);
-  if (error) { alert('改不了：' + error.message); return; }
+  if (!(await ensureTeacherSession('修改堂數'))) return;
+  // 🔴 2026-07-26 (RED 4)：เดิมเช็คแค่ error — แต่ RLS บล็อกแบบ "ไม่ error แค่แก้ได้ 0 แถว" ได้ด้วย
+  // → ขึ้นว่าสำเร็จทั้งที่ตัวเลขในฐานข้อมูลไม่ได้เปลี่ยน (เรื่องนี้กระทบการคิดเงินโดยตรง)
+  // ต้อง .select() แล้วเช็คว่าได้แถวกลับมาจริง
+  var { data: updRows, error } = await sb.from('classroom_attendance').update({ lessons: n }).eq('id', id).select();
+  if (error) { alert(await writeErrorMessage(error.message, '修改堂數')); return; }
+  if (!updRows || !updRows.length) { alert(await writeErrorMessage('更新了 0 筆（資料庫沒有回傳任何被改到的資料）', '修改堂數') + '\n\n⚠️ 堂數「沒有」被改動，畫面上的數字還是舊的。'); return; }
   await openAttendanceHistory(token);
   if (typeof loadLowQuotaBanner === 'function') loadLowQuotaBanner();
   if (typeof loadTeacherStudentInfo === 'function') loadTeacherStudentInfo(token);
@@ -9706,8 +10207,13 @@ function editAttendanceDate(id, currentDate, token) {
     const newDate = inp.value;
     inp.remove();
     if (!newDate || newDate === currentDate) return;
-    const { error } = await sb.from('classroom_attendance').update({ lesson_date: newDate }).eq('id', id);
-    if (error) { alert('แก้ไม่ได้: ' + error.message); return; }
+    if (!(await ensureTeacherSession('修改上課日期'))) return;
+    // 🔴 2026-07-26 (RED 4)：เช็คจำนวนแถวที่แก้ได้จริง ไม่ใช่เช็คแค่ error
+    // (ช่องวันที่ตรงนี้ "ต้อง" เลือกย้อนหลังได้ — เป็นการแก้บันทึกคาบที่เรียนไปแล้ว ไม่ใช่การจัดคาบใหม่
+    //  จึงไม่ใส่ด่าน assertNotPastDate ตรงนี้โดยตั้งใจ)
+    const { data: dateRows, error } = await sb.from('classroom_attendance').update({ lesson_date: newDate }).eq('id', id).select();
+    if (error) { alert(await writeErrorMessage(error.message, '修改上課日期')); return; }
+    if (!dateRows || !dateRows.length) { alert(await writeErrorMessage('更新了 0 筆', '修改上課日期') + '\n\n⚠️ 日期「沒有」被改動。'); return; }
     await openAttendanceHistory(token);
   }
   inp.addEventListener('change', applyEdit);
@@ -9718,8 +10224,12 @@ async function deleteAttendance(id, token) {
   if (!confirm('確定刪除此堂記錄？')) return;
   // 2026-07-17 修（RELIABILITY FIRST）：以前沒檢查 error，刪除被 RLS 擋掉時會「靜默失敗」——
   // 畫面照樣重新整理，老師看起來像刪除成功，但那筆記錄其實還在資料庫裡。
-  const { error } = await sb.from('classroom_attendance').delete().eq('id', id);
-  if (error) { alert('❌ 刪除失敗：' + error.message + '\n（這筆記錄還在，沒有被刪除）'); return; }
+  if (!(await ensureTeacherSession('刪除上課記錄'))) return;
+  // 🔴 2026-07-26 (RED 4)：เดิมเช็คแค่ error — RLS ที่บล็อกแบบ "ลบได้ 0 แถว" ยังหลุดผ่านได้อยู่
+  // → ขึ้นว่าลบสำเร็จ แต่แถวยังอยู่ในฐานข้อมูล ต้อง .select() แล้วเช็คว่าลบไปกี่แถวจริง
+  const { data: delRows, error } = await sb.from('classroom_attendance').delete().eq('id', id).select();
+  if (error) { alert(await writeErrorMessage(error.message, '刪除上課記錄') + '\n（這筆記錄還在，沒有被刪除）'); return; }
+  if (!delRows || !delRows.length) { alert(await writeErrorMessage('刪除了 0 筆', '刪除上課記錄') + '\n\n⚠️ 這筆記錄「還在」，沒有被刪除。'); return; }
   await refreshTodayScheduleSection(); // 2026-07-06 修正：同上，避免課表整塊消失
   await openAttendanceHistory(token); // refresh modal
 }

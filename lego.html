@@ -63,7 +63,7 @@
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js -->
 <script defer src="js/core/auth-widget.js?v=2"></script>
 <script defer src="js/games/game-account.js?v=3"></script>
-<script defer src="js/games/reading-auth.js?v=8"></script>
+<script defer src="js/games/reading-auth.js?v=9"></script>
 <script defer src="js/games/lego-vault.js?v=1"></script>
 <style>
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -975,9 +975,37 @@ function legoRefreshBars(){
   try{ updateLegoScoreBar(typeof testLife==='number'?testLife:null); }catch(e){ updateLegoScoreBar(null); }
 }
 
+// ════════════════════════════════════════════════════════════
+// v1 (LIN 2026-07-26): เพดานเล่นต่อวัน — ไม่ล็อกอิน 2 ประโยค/วัน · ล็อกอิน (ยังไม่จ่ายเงิน) 5 ประโยค/วัน
+// (ระบบสมาชิกจ่ายเงินยังไม่ทำตอนนี้ พักไว้ทำอนาคตตามที่ Lin สั่ง — เพดานสูงสุดตอนนี้คือ 5)
+// นับ "ประโยคที่ทดสอบผ่าน" (ทุกครั้งที่ finishLegoRound() ถูกเรียก = ผ่าน 1 ประโยค) ผูกกับวันที่ไต้หวัน
+// (Asia/Taipei เหมือนระบบ streak/ดาวเดิมในไฟล์นี้ — ให้วันขึ้นวันใหม่ตรงกันทั้งเว็บ ไม่ใช้เวลาเครื่องผู้เล่น)
+// เก็บที่ localStorage — เป็น "เพดานนุ่ม" ฝั่ง client เท่านั้น (ตามที่ Lin ตกลง 2026-07-26) กันเล่นวนไม่หยุด
+// ไม่ใช่ระบบกันโกงเข้มงวด (ล้าง localStorage/เปิด incognito ก็ข้ามได้ — ยอมรับความเสี่ยงนี้ตามสเปกที่ Lin ให้)
+function legoTodayKeyTH(){
+  try{ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'}); } // 'en-CA' → รูปแบบ YYYY-MM-DD
+  catch(e){ return new Date().toISOString().slice(0,10); }
+}
+function legoDailyCap(){ return (window.READING_AUTH && READING_AUTH.user) ? 5 : 2; }
+function legoDailyCountToday(){
+  try{
+    var raw=JSON.parse(localStorage.getItem('lego_daily_count')||'{}');
+    return (raw.date===legoTodayKeyTH()) ? (raw.count||0) : 0;
+  }catch(e){ return 0; }
+}
+function legoDailyIncrement(){
+  try{
+    var today=legoTodayKeyTH();
+    var raw=JSON.parse(localStorage.getItem('lego_daily_count')||'{}');
+    var count=(raw.date===today)?(raw.count||0):0;
+    localStorage.setItem('lego_daily_count', JSON.stringify({date:today, count:count+1}));
+  }catch(e){}
+}
+
 // จบรอบ (ทุก SENTENCES_PER_ROUND ประโยคที่ "ผ่าน") → +20/+50 perfect + ×2 高級倍率 แล้วเซฟลงลีก
 // ไม่มีดาวเงินอีกต่อไป (ตามที่ Lin สั่ง 2026-07-05) — GAME_ACCOUNT.getStars()/badges ที่โชว์อยู่คือดาวจากเกมอื่นที่มี SRS เท่านั้น
 function finishLegoRound(){
+  legoDailyIncrement(); // v1 (LIN 2026-07-26): นับทุกครั้งที่ทดสอบผ่าน 1 ประโยค (ไม่ว่าจะจบรอบ 5 ประโยคหรือยัง)
   sentencesThisRound++;
   if(sentencesThisRound<SENTENCES_PER_ROUND){legoRefreshBars();return null;}
   const count=sentencesThisRound;
@@ -1262,6 +1290,16 @@ function getSentenceWords(){
 
 function startTest(){
   if(!state.subj||!state.verb){toast('至少要有「主語」和「動詞」',true);return;}
+  // v1 (LIN 2026-07-26): เพดานเล่นต่อวัน — เช็คก่อนเปิดหน้าต่างทดสอบ (ยังต่อประโยคเล่นเองได้ไม่จำกัด
+  // แค่ "กดทดสอบ" ที่ถูกจำกัด — ดูคอมเมนต์เต็มที่ finishLegoRound() ด้านบน)
+  if(legoDailyCountToday()>=legoDailyCap()){
+    var isIn=!!(window.READING_AUTH && READING_AUTH.user);
+    toast(isIn
+      ? ('👧🏻 米娜：今天已經測試 '+legoDailyCap()+' 句囉！明天再回來繼續造句吧 🌙')
+      : ('👧🏻 米娜：今天已經測試 '+legoDailyCap()+' 句囉！登入帳號可以多測到每天 5 句，明天也可以再回來 🌙'),
+      true);
+    return;
+  }
   testWords=getSentenceWords();
   if(testWords.length<2){toast('句子太短，多加一點詞再測試吧',true);return;}
   testWrongCount=0; testLife=SENTENCE_LIFE_START; testHintUsed=false; testFailed=false; testLocked=false;
