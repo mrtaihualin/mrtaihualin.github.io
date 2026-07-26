@@ -1,0 +1,92 @@
+// ════════════════════════════════════════════════════════════
+// line-callback.js — หน้ารับกลับจาก LINE Login (line-callback.html)
+// อ่าน ?code=&state= จาก URL → เช็ค state ตรงกับที่ส่งไปไหม (กัน CSRF) →
+// ส่ง code ให้ Edge Function line-login ตรวจสอบ → ได้ hashed_token กลับมา →
+// verifyOtp() ได้ session จริง → เด้งกลับไปหน้าที่มาจาก
+//
+// LIN 2026-07-26: Custom OIDC Provider ของ Supabase ใช้กับ LINE ไม่ได้จริง (LINE เซ็น
+// id_token แบบ HS256 ตอน web login แต่ Supabase custom provider คาด ES256) ต้องเชื่อมเอง
+// ผ่าน Edge Function แทน (ดู supabase/functions/line-login/index.ts)
+//
+// เริ่มต้น flow ที่ reading-auth.js (ฟังก์ชัน startLineLogin) — หน้านั้นเป็นคนสร้าง
+// state/nonce/return_to เก็บใน sessionStorage ก่อน redirect ไป LINE
+// ════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+  var boxEl = document.getElementById('line-cb-box');
+
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function returnTo() {
+    var t = '';
+    try { t = sessionStorage.getItem('line_login_return_to') || ''; } catch (e) {}
+    // กัน open-redirect: ต้องเป็น path ในเว็บเราเอง (ขึ้นต้นด้วย / หรือเป็นชื่อไฟล์ .html เท่านั้น) ไม่ใช่ URL เต็มไปเว็บอื่น
+    if (!t || /^https?:\/\//i.test(t) || t.indexOf('//') === 0) return 'games.html';
+    return t;
+  }
+
+  function showError(msg) {
+    if (!boxEl) return;
+    boxEl.innerHTML =
+      '<div style="font-size:34px;margin-bottom:10px;">😥</div>' +
+      '<h1 style="font-family:\'Noto Serif TC\',serif;font-size:17px;margin:0 0 8px;color:#C0392B;">登入失敗</h1>' +
+      '<p>' + esc(msg) + '</p>' +
+      '<a class="btn" href="' + esc(returnTo()) + '">返回上一頁</a>';
+  }
+
+  function run() {
+    var cfg = window.SUPABASE_CONFIG || {};
+    var ready = cfg.url && cfg.anonKey && window.supabase && window.supabase.createClient;
+    if (!ready) { showError('網頁載入不完整，請重新整理再試一次'); return; }
+    var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
+
+    var qs = new URLSearchParams(location.search || '');
+    var lineErr = qs.get('error');
+    if (lineErr) {
+      // LINE เองปฏิเสธ/ผู้เล่นกดยกเลิกที่หน้ายินยอม (ไม่ใช่ error จาก Edge Function ของเรา)
+      // รายละเอียด error code: https://developers.line.biz/en/docs/line-login/integrate-line-login/#error-codes
+      showError(lineErr === 'ACCESS_DENIED' ? '你取消了 LINE 登入' : ('LINE 拒絕登入請求（' + lineErr + '）'));
+      return;
+    }
+
+    var code = qs.get('code');
+    var state = qs.get('state');
+    var savedState = '', nonce = '';
+    try {
+      savedState = sessionStorage.getItem('line_login_state') || '';
+      nonce = sessionStorage.getItem('line_login_nonce') || '';
+    } catch (e) {}
+
+    if (!code || !state || !savedState || state !== savedState) {
+      showError('這個連結可能已經用過，或不是從登入按鈕開啟的。請回上一頁重新點擊 LINE 登入');
+      return;
+    }
+    // state/nonce ใช้ครั้งเดียว — ลบทิ้งทันทีกันเอาไปใช้ซ้ำ (replay)
+    try { sessionStorage.removeItem('line_login_state'); sessionStorage.removeItem('line_login_nonce'); } catch (e) {}
+
+    var redirectUri = location.origin + location.pathname; // ต้องตรงเป๊ะกับตอนขอ code (ไม่มี query/hash)
+
+    sb.functions.invoke('line-login', { body: { code: code, redirect_uri: redirectUri, nonce: nonce } })
+      .then(function (res) {
+        if (res.error || !res.data || !res.data.ok || !res.data.hashed_token) {
+          if (res.error && res.error.context && typeof res.error.context.json === 'function') {
+            return res.error.context.json().then(function (body) {
+              throw new Error((body && (body.detail || body.error)) || res.error.message || '未知錯誤');
+            });
+          }
+          throw new Error((res.data && (res.data.detail || res.data.error)) || (res.error && res.error.message) || '未知錯誤');
+        }
+        return sb.auth.verifyOtp({ token_hash: res.data.hashed_token, type: 'email' }).then(function (r2) {
+          if (r2.error) throw new Error(r2.error.message);
+          // ให้ reading-auth.js รู้ว่าเพิ่งล็อกอินสำเร็จด้วย LINE จริงๆ (ยิง GA4 login_success ให้ครบ)
+          try { sessionStorage.setItem('rg_login_pending', 'line'); } catch (e) {}
+          location.replace(returnTo());
+        });
+      })
+      .catch(function (e) {
+        showError('連接 LINE 時發生問題（' + esc((e && e.message) || String(e)).slice(0, 120) + '）請改用 Email 驗證碼登入');
+      });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();

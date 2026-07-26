@@ -211,7 +211,7 @@
     if (rBtn) rBtn.onclick = function () { if (otpCooldown <= 0) startOtp(otpEmail || se.value, true); };
     if (!inApp) { var g = rgGate.querySelector('#rg-g'); if (g) g.onclick = function () { oauthLogin('google', 'google'); }; }
     var fb = rgGate.querySelector('#rg-fb'); if (fb) fb.onclick = function () { oauthLogin('facebook', 'facebook'); };
-    var ln = rgGate.querySelector('#rg-line'); if (ln) ln.onclick = function () { oauthLogin('line', 'custom:line'); };
+    var ln = rgGate.querySelector('#rg-line'); if (ln) ln.onclick = function () { startLineLogin(); };
   }
   // v11 (LIN 2026-07-25, audit): รวมโค้ดปุ่ม Google/Facebook/LINE เป็นฟังก์ชันเดียว (เดิมก็อปวาง 3 รอบ)
   //   เพิ่ม 2 จุดที่ audit เจอว่าขาด: (1) .catch() กัน promise reject ตกหล่นไม่ยิง trackLogin (2) setMsg()
@@ -229,6 +229,39 @@
         .then(function (res) { if (res && res.error) onFail(res.error.message); }, function (e) { onFail(e && e.message || e); })
         .catch(function (e) { onFail(e && e.message || e); });
     } catch (e) { onFail(e && e.message || e); }
+  }
+  // v15 (LIN 2026-07-26): LINE เปลี่ยนมาใช้ Edge Function ของเราเอง ไม่ใช้ Supabase Custom OIDC
+  // Provider (oauthLogin ด้านบน) อีกต่อไป — พังจริง เพราะ LINE เซ็น id_token แบบ HS256 ตอน web
+  // login แต่ Supabase custom provider คาด ES256 (ยืนยันจาก Supabase Auth log จริง 26/07/2026:
+  // "expected [ES256] got HS256") ดู supabase/functions/line-login/index.ts + line-callback.html
+  function randomToken(len) {
+    var arr = new Uint8Array(len || 16);
+    (window.crypto || window.msCrypto).getRandomValues(arr);
+    var out = '';
+    for (var i = 0; i < arr.length; i++) { var h = arr[i].toString(16); out += (h.length < 2 ? '0' + h : h); }
+    return out;
+  }
+  function startLineLogin() {
+    var channelId = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.lineChannelId) || '';
+    if (!channelId) { setMsg('LINE 登入尚未設定完成，請改用上面的 Email 驗證碼', true); return; }
+    trackLogin('login_attempt', 'line');
+    markPendingLogin('line');
+    var state = randomToken(16);
+    var nonce = randomToken(16);
+    try {
+      sessionStorage.setItem('line_login_state', state);
+      sessionStorage.setItem('line_login_nonce', nonce);
+      sessionStorage.setItem('line_login_return_to', location.pathname + location.search);
+    } catch (e) {}
+    var redirectUri = location.origin + '/line-callback.html';
+    var url = 'https://access.line.me/oauth2/v2.1/authorize'
+      + '?response_type=code'
+      + '&client_id=' + encodeURIComponent(channelId)
+      + '&redirect_uri=' + encodeURIComponent(redirectUri)
+      + '&state=' + encodeURIComponent(state)
+      + '&scope=' + encodeURIComponent('profile openid')
+      + '&nonce=' + encodeURIComponent(nonce);
+    location.href = url;
   }
   // v13 (LIN 2026-07-25, audit รอบ 2): เปลี่ยน innerHTML → textContent — ทุก call site เป็นข้อความล้วนอยู่แล้ว
   //   (ไม่มีใครใช้ tag HTML จริง) ไม่มีอะไรเสีย แต่กันไว้ล่วงหน้าเผื่อ error message จาก Supabase เปลี่ยนรูปแบบในอนาคต
