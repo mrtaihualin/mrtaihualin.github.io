@@ -2363,7 +2363,7 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
           body: JSON.stringify({ to: { studentToken: token }, message: '老師幫你加了一堂課：' + studentTimeLabel + '，如有疑問請直接聯絡老師' }),
         });
         studentNotified = stuRes.ok;
-        if (!stuRes.ok) studentNotifyErr = 'LINE 回應 ' + stuRes.status + (stuRes.status === 401 ? '（老師登入可能已過期）' : '');
+        if (!stuRes.ok) studentNotifyErr = await lineNotifyErrorText(stuRes);
       } catch (e) { studentNotifyErr = e.message || String(e); console.warn('⚠️ 加課通知學生失敗（不影響已經加成功的課）：', studentNotifyErr); }
     }
     try {
@@ -2371,7 +2371,7 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
         body: JSON.stringify({ to: 'teacher', message: '✅ 已幫 ' + s.name + ' 加課：' + addedTimeLabel }),
-      }).then(function (r) { if (!r.ok) console.warn('⚠️ 通知老師自己失敗（LINE 回應 ' + r.status + '）'); });
+      }).then(async function (r) { if (!r.ok) console.warn('⚠️ 通知老師自己失敗（' + (await lineNotifyErrorText(r)) + '）'); });
     } catch (e) { console.warn('⚠️ 加課通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
 
     // 2026-07-15 加：如果是從學生「➕ 申請加課」的申請單開進來的，Calendar+資料庫都真的
@@ -2533,7 +2533,7 @@ async function proposeAddClassRows(token, pendingRows) {
         }),
       });
       notifySent = notifyRes.ok;
-      if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+      if (!notifyRes.ok) notifyError = await lineNotifyErrorText(notifyRes);
     } catch (e) { notifyError = e.message || String(e); }
   }
   return { created, failedLines, notifySent, notifyError, hasLine: !!s.line_user_id };
@@ -6750,6 +6750,26 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
 //     → 同一段程式碼會自動改成走 LINE 通知，完全不用再改這裡的程式
 const LINE_NOTIFY_ENDPOINT = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/notify-line';
 
+// 2026-07-26 加（Lin 要求「แก้ถาวร」）：以前每個地方 LINE 通知失敗時，都只顯示
+// 'LINE 回應 ' + res.status —— 但 notify-line 這個 Edge Function 內部不管真正是什麼原因
+// 壞掉（LINE token 過期、payload 格式錯、LINE 自己臨時掛掉…），最後都統一回傳 HTTP 500，
+// 所以老師畫面上看到的永遠是「LINE 回應 500」，完全看不出真正原因。
+// 其實 notify-line 早就有把真正原因寫進回應 body 的 error 欄位（例如 "LINE API 401: ..."），
+// 只是前端從來沒讀過 —— 這裡補上共用函式，統一讀出真正原因；讀不到（body 不是 JSON 等意外狀況）
+// 才退回顯示狀態碼。之後任何地方要顯示 LINE 通知失敗原因，都呼叫這個函式，
+// 不要再自己組 'LINE 回應 ' + res.status。
+async function lineNotifyErrorText(res) {
+  let detail = '';
+  try {
+    const j = await res.json();
+    if (j && j.error) detail = String(j.error);
+  } catch (_e) { /* body 不是 JSON 或讀取失敗 → 退回用狀態碼 */ }
+  const base = detail || ('LINE 回應 ' + res.status);
+  // 401 這個狀態碼在我們自己的 notify-line 裡，只有「呼叫的人不是登入中的老師本人」這一種原因
+  // 會直接回（session 過期最常見），跟 LINE 自己回的錯誤不會混在一起 → 這個備註還是準的。
+  return res.status === 401 ? (base + '（老師登入可能已過期）') : base;
+}
+
 // 2026-07-20 改（Lin 要求：學生一次送出好幾筆加課申請，要整合成「一則」通知給老師，不要
 // 一筆一則轟炸 LINE）：加一個 d.rows（陣列，每個 { requestId, newDate, newTime, recurring, untilVal }）
 // 參數，isAdd 時如果有帶 rows 就走「多筆整合」文案/按鈕，沒帶就照舊維持單筆版本的行為不變
@@ -7727,7 +7747,7 @@ async function processClassRequestInner(id, r, isCancel) {
         body: JSON.stringify({ to: { studentToken: r.token }, message: notifyMsg }),
       });
       notifySent = notifyRes.ok;
-      if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+      if (!notifyRes.ok) notifyError = await lineNotifyErrorText(notifyRes);
     } catch (e) { notifyError = e.message || String(e); }
   }
 
@@ -8137,7 +8157,7 @@ async function confirmAcceptedOfferInner(id, r) {
         body: JSON.stringify({ to: { studentToken: r.token }, message: notifyMsg2 }),
       });
       notifySent2 = notifyRes2.ok;
-      if (!notifyRes2.ok) notifyError2 = 'LINE 回應 ' + notifyRes2.status;
+      if (!notifyRes2.ok) notifyError2 = await lineNotifyErrorText(notifyRes2);
     } catch (e) { notifyError2 = e.message || String(e); }
   }
 
@@ -8654,7 +8674,7 @@ async function teacherCancelClassNowInner(token, chosen) {
         }),
       });
       notifySent = notifyRes.ok;
-      if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+      if (!notifyRes.ok) notifyError = await lineNotifyErrorText(notifyRes);
     } catch (e) { notifyError = e.message || String(e); }
   }
 
@@ -8778,7 +8798,7 @@ async function confirmTeacherAddClass(id) {
           headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
           body: JSON.stringify({ to: { studentToken: token }, message: '你確認的加課已經排進 Calendar 了：' + studentTimeLabel }),
         });
-        if (!stuRes2.ok) alert('✅ Calendar 已新增成功\n⚠️ 但通知學生失敗（LINE 回應 ' + stuRes2.status + (stuRes2.status === 401 ? '，老師登入可能已過期' : '') + '），請自己跟學生說一聲');
+        if (!stuRes2.ok) alert('✅ Calendar 已新增成功\n⚠️ 但通知學生失敗（' + (await lineNotifyErrorText(stuRes2)) + '），請自己跟學生說一聲');
       } catch (e) { console.warn('⚠️ 加課完成通知學生失敗（不影響已經加成功的課）：', e.message || e); }
     }
     try {
@@ -8786,7 +8806,7 @@ async function confirmTeacherAddClass(id) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
         body: JSON.stringify({ to: 'teacher', message: '✅ 已幫 ' + s.name + ' 加課：' + addedTimeLabel }),
-      }).then(function (r) { if (!r.ok) console.warn('⚠️ 通知老師自己失敗（LINE 回應 ' + r.status + '）'); });
+      }).then(async function (r) { if (!r.ok) console.warn('⚠️ 通知老師自己失敗（' + (await lineNotifyErrorText(r)) + '）'); });
     } catch (e) { console.warn('⚠️ 加課完成通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
 
     await finalizeRequestStatus(id, 'acknowledged');
@@ -8845,7 +8865,7 @@ async function teacherEditOwnCancelRequest_chosen(id, token, chosen) {
         }),
       });
       notifySent = notifyRes.ok;
-      if (!notifyRes.ok) notifyError = 'LINE 回應 ' + notifyRes.status;
+      if (!notifyRes.ok) notifyError = await lineNotifyErrorText(notifyRes);
     } catch (e) { notifyError = e.message || String(e); }
   }
   var msg = '✅ 已更新，重新請學生確認';
@@ -9186,7 +9206,7 @@ async function submitPermanentChangeInner(token) {
         body: JSON.stringify({ to: { studentToken: token }, message: '老師調整了你的固定上課時間，之後改成每週 ' + permTimeLabel + '，如有疑問請直接聯絡老師' }),
       });
       permNotifySent = permNotifyRes.ok;
-      if (!permNotifyRes.ok) permNotifyError = 'LINE 回應 ' + permNotifyRes.status;
+      if (!permNotifyRes.ok) permNotifyError = await lineNotifyErrorText(permNotifyRes);
     } catch (e) { permNotifyError = e.message || String(e); }
   }
 
