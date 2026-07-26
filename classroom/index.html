@@ -1870,11 +1870,17 @@ async function cancelFutureClassesForArchive(token) {
   // แต่พอเปลี่ยนเป็น "วันเดียวกันมีหลายรอบเวลาได้" แถวเก่าจะไม่ถูกทับอีกแล้ว → ค้างสะสม
   // → ตอนกด "➕ 加課堂時間" ช่อง "วันเรียนประจำที่มีอยู่" จะโชว์คาบผีของนักเรียนที่เลิกเรียนไปแล้ว
   //   ซึ่งเป็นช่องที่ครูใช้ "ดูก่อนเพิ่ม" พอดี = หลอกตาตรงจุดที่สำคัญที่สุด
-  try {
-    const rdDel = await sb.from('classroom_recurring_days').delete().eq('token', token).select();
-    if (rdDel.error) errors.push('清空「每週固定上課日」資料失敗：' + rdDel.error.message + '（不影響封存本身，之後恢復時可能會看到舊的固定時段）');
-  } catch (e) {
-    errors.push('清空「每週固定上課日」資料失敗：' + (e.message || String(e)));
+  // ⚠️ ลบเฉพาะตอนที่ "ขั้นตอน Calendar ข้างบนสำเร็จครบทุกอย่าง" เท่านั้น
+  //    แถวพวกนี้คือที่เดียวที่จำได้ว่าคาบประจำอันไหนผูกกับ event ไหนใน Calendar
+  //    และไม่ได้ถูกสำรองไว้ที่ไหนเลย (ต่างจาก event ที่มี classroom_calendar_backups)
+  //    → ถ้าปิดคาบใน Calendar ไม่สำเร็จ แล้วเรามาลบสายเชื่อมทิ้ง = คาบยังอยู่แต่ตามหาไม่เจอตลอดกาล
+  if (!errors.length) {
+    try {
+      const rdDel = await sb.from('classroom_recurring_days').delete().eq('token', token).select();
+      if (rdDel.error) errors.push('清空「每週固定上課日」資料失敗：' + rdDel.error.message + '（不影響封存本身，之後恢復時可能會看到舊的固定時段）');
+    } catch (e) {
+      errors.push('清空「每週固定上課日」資料失敗：' + (e.message || String(e)));
+    }
   }
 
   if (errors.length) return { ok: false, error: errors.join('；') };
@@ -2286,11 +2292,18 @@ async function createCalendarClassEventForStudent(token, s, p) {
       // แล้วขึ้นว่าสำเร็จ = สร้างคาบกำพร้าซ้ำรอยบั๊กเดิมเป๊ะๆ โดยไม่มีใครรู้
       // → เช็คก่อนว่ามีคาบวันเดียวกันคนละเวลาอยู่หรือเปล่า มี = หยุด บอกให้ไปรัน SQL ก่อน
       console.warn('[recurring_days] ยังไม่ได้รัน 2026-07-26_recurring_days_multi_slot.sql');
+      // ⚠️ ห้ามใช้ .neq('start_time', ...) กรองฝั่งฐานข้อมูล — แถวที่ start_time เป็นค่าว่าง (NULL)
+      // จะไม่ถูกนับว่า "ไม่เท่ากัน" (NULL <> 'x' ได้ผลเป็น NULL ไม่ใช่ true) → แถวนั้นหลุดออกจากผลลัพธ์
+      // = ด่านมองไม่เห็นมัน แล้วปล่อยให้ทับทิ้ง ซึ่งคือบั๊กที่กำลังกันอยู่พอดี
+      // → ดึงทุกแถวของวันนั้นมาก่อน แล้วค่อยเทียบเองใน JS (ค่าว่างก็นับเป็น "คนละคาบ" ด้วย)
       const dup = await sb.from('classroom_recurring_days').select('start_time')
-        .eq('token', token).eq('weekday', p.weekday).neq('start_time', p.startVal);
-      if (dup.error || (dup.data && dup.data.length)) {
+        .eq('token', token).eq('weekday', p.weekday);
+      const dupOther = (dup.data || []).filter(function (x) {
+        return String(x.start_time || '').slice(0, 5) !== String(p.startVal || '').slice(0, 5);
+      });
+      if (dup.error || dupOther.length) {
         throw new Error('Calendar 事件已經建立成功了，但「沒有」寫進資料庫。\n\n'
-          + '原因：這位學生同一個星期幾已經有另一個固定時段（' + ((dup.data || []).map(function (x) { return x.start_time; }).join('、') || '讀取失敗') + '），\n'
+          + '原因：這位學生同一個星期幾已經有另一個固定時段（' + (dupOther.map(function (x) { return x.start_time || '(空白)'; }).join('、') || '讀取失敗') + '），\n'
           + '而資料庫還沒升級成「一天可以有多個固定時段」。\n'
           + '硬寫下去會把舊的那筆蓋掉，舊課堂就會變成沒有主人的孤兒課堂——所以這次刻意不寫。\n\n'
           + '👉 請先執行 supabase/sql/2026-07-26_recurring_days_multi_slot.sql，再請 Lin/AI 手動補這一筆。\n'
@@ -4012,14 +4025,30 @@ async function permanentlyDeleteStudent(token) {
   const s = studentsCache[token];
   const name = s?.name || token;
   if (!s || !s.archived_at) { alert('⚠️ 只能永久刪除「已封存」的舊生，請先封存再刪除。'); return; }
-  const typed = prompt('⚠️ 永久刪除「' + name + '」無法復原！\n\n・資料庫裡這位學生的所有紀錄會被永久刪除\n・Google Drive 資料夾不會被刪除（檔案還在「舊生」資料夾裡）\n\n請輸入學生姓名「' + name + '」以確認刪除：');
+  // 2026-07-26 แก้ข้อความให้ตรงความจริง: ระบบลบให้แค่ 2 ตาราง (ข้อมูลนักเรียน + วันเรียนประจำ)
+  // ตารางอื่น (ประวัติการเรียน/การจ่ายเงิน/คำขอ) จะถูกลบตามหรือไม่ ขึ้นกับการตั้งค่าฐานข้อมูล
+  // → ห้ามเขียนว่า "ลบทุกอย่าง" ถ้าไม่ได้ตรวจว่าลบจริง (RELIABILITY FIRST: ห้ามขึ้นสำเร็จโดยไม่ตรวจ)
+  const typed = prompt('⚠️ 永久刪除「' + name + '」無法復原！\n\n・會刪除：學生基本資料 + 每週固定上課日設定\n・其他紀錄（上課紀錄／繳費／申請單）是否一併刪除，取決於資料庫設定，請自己到 Supabase 確認一次\n・Google Drive 資料夾不會被刪除（檔案還在「舊生」資料夾裡）\n\n請輸入學生姓名「' + name + '」以確認刪除：');
   if (typed !== name) { if (typed !== null) alert('姓名不符，已取消刪除。'); return; }
   if (!(await ensureTeacherSession('永久刪除學生'))) return;
-  // 🟠 2026-07-26：ลบรายการ "วันเรียนประจำ" ของคนนี้ทิ้งก่อน (ตารางนี้ไม่มี cascade แน่นอนไหม ไม่รู้)
+  // 🟠 2026-07-26：ลบรายการ "วันเรียนประจำ" ของคนนี้ทิ้งก่อน (ไม่มีที่ไหนลบตารางนี้มาก่อนเลย)
   // ทำก่อนลบตัวนักเรียน ถ้าล้มเหลวจะได้หยุดโดยที่ยังไม่ลบอะไรสำคัญ
+  // ⚠️ นับจำนวนก่อน แล้วเทียบกับจำนวนที่ลบได้จริง — RLS ที่บล็อกการลบจะ "ลบได้ 0 แถวโดยไม่ error"
+  //    ถ้าดูแค่ error จะขึ้นว่าสำเร็จทั้งที่ไม่ได้ลบอะไรเลย (บทเรียนเดิมใน CLAUDE.md)
+  //    หมายเหตุ: 0 แถวจริงๆ ก็เป็นไปได้ (นักเรียนไม่มีคาบประจำ) เลยต้องนับก่อน ไม่ใช่ฟันธงจาก 0
   try {
-    const rdWipe = await sb.from('classroom_recurring_days').delete().eq('token', token).select();
-    if (rdWipe.error) { alert(await writeErrorMessage(rdWipe.error.message, '清空「每週固定上課日」資料') + '\n\n為了安全，這次「沒有」刪除學生。'); return; }
+    const rdBefore = await sb.from('classroom_recurring_days').select('token').eq('token', token);
+    if (rdBefore.error) { alert(await writeErrorMessage(rdBefore.error.message, '讀取「每週固定上課日」資料') + '\n\n為了安全，這次「沒有」刪除學生。'); return; }
+    const rdCount = (rdBefore.data || []).length;
+    if (rdCount > 0) {
+      const rdWipe = await sb.from('classroom_recurring_days').delete().eq('token', token).select();
+      if (rdWipe.error) { alert(await writeErrorMessage(rdWipe.error.message, '清空「每週固定上課日」資料') + '\n\n為了安全，這次「沒有」刪除學生。'); return; }
+      if (!rdWipe.data || rdWipe.data.length < rdCount) {
+        alert(await writeErrorMessage('應該刪除 ' + rdCount + ' 筆，實際只刪掉 ' + ((rdWipe.data || []).length) + ' 筆（可能是資料庫權限擋住）', '清空「每週固定上課日」資料')
+          + '\n\n為了安全，這次「沒有」刪除學生。');
+        return;
+      }
+    }
   } catch (e) { alert('❌ 清空「每週固定上課日」資料失敗：' + (e.message || e) + '\n為了安全，這次「沒有」刪除學生。'); return; }
   // 🔴 2026-07-26 (RED 4)：เดิมเช็คแค่ error — RLS ที่ "ลบได้ 0 แถวโดยไม่ error" จะทำให้ขึ้นว่า
   // ลบสำเร็จ + ลบออกจาก studentsCache ในจอ ทั้งที่ข้อมูลยังอยู่ในฐานข้อมูล → รีเฟรชแล้วโผล่กลับมา
