@@ -219,8 +219,16 @@ serve(async (req) => {
         let gateOk = null;
         try {
           const { data: gate, error: gateErr } = await admin.rpc('notify_line_gate', { p_token: fromStudentToken, p_ip: clientIp() });
-          if (!gateErr) gateOk = gate === true;
-        } catch (_e) { gateOk = null; }
+          if (gateErr) {
+            // RELIABILITY FIRST: ถ้าด่านนี้พัง ต้องมีร่องรอยใน log เสมอ ห้ามเสื่อมสภาพเงียบๆ
+            console.warn('[notify-line] notify_line_gate ใช้ไม่ได้ → ถอยไปเช็คแค่ว่า token มีจริง:', gateErr.message);
+          } else {
+            gateOk = gate === true;
+          }
+        } catch (e) {
+          console.warn('[notify-line] เรียก notify_line_gate ไม่สำเร็จ:', String(e && e.message || e));
+          gateOk = null;
+        }
         if (gateOk === null) {
           const { data: stu } = await admin.from('classroom_students').select('token').eq('token', fromStudentToken).maybeSingle();
           gateOk = !!stu;
@@ -230,9 +238,44 @@ serve(async (req) => {
             status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
           });
         }
-        // นักเรียนส่งได้ แต่ห้ามยาวเกิน — กันเอา endpoint นี้ไปยิงข้อความยาวๆ ใส่ LINE ของ Lin
-        if (message.length > 1200) {
+
+        // ── จำกัดเนื้อหาที่คนที่ "ไม่ใช่ครู" ส่งเข้า LINE ของ Lin ได้ ──────────────
+        // 2026-07-26：เดิมจำกัดแค่ความยาวของ message — แต่ถ้าส่ง body.flex มาด้วย
+        // ตัว message จะถูกข้ามไปเลย (ดูข้างล่าง) → จำกัดความยาวไม่มีผลอะไรเลย
+        // ต้องจำกัด title/bodyText ของ flex ด้วย
+        const flexIn = body?.flex;
+        const flexTextLen = String(flexIn?.title || '').length + String(flexIn?.bodyText || '').length;
+        if (message.length > 1200 || flexTextLen > 1200) {
           return new Response(JSON.stringify({ error: 'message too long' }), {
+            status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+          });
+        }
+        // ⚠️ ปุ่มในข้อความ flex อันตรายกว่าตัวข้อความมาก:
+        //    ปุ่ม postback = พอ Lin กด ระบบจะไป "ทำงานจริง" (เช่นสร้างคาบใน Calendar)
+        //    ปุ่ม uri      = พา Lin ไปเว็บไหนก็ได้ (ลิงก์หลอก/ฟิชชิ่ง)
+        //    line-webhook ตรวจแค่ว่า "คนกดคือครู" ไม่ได้ตรวจว่าปุ่มนั้นถูกสร้างมาจากไหน
+        //    → คนที่ไม่ใช่ครู ส่งปุ่มได้เฉพาะชุดที่ระบบเราใช้จริงเท่านั้น และลิงก์ต้องเป็นเว็บเราเท่านั้น
+        // รายการนี้ = ปุ่มทุกแบบที่หน้าเว็บฝั่งนักเรียนส่งจริง (ไล่เก็บจาก classroom/index.html ครบแล้ว)
+        // เพิ่มปุ่มใหม่ฝั่งนักเรียนเมื่อไหร่ ต้องมาเติมชื่อ action ที่นี่ด้วย ไม่งั้นปุ่มจะถูกปฏิเสธ 400
+        const ALLOWED_ACTIONS = new Set([
+          'check_conflict', 'confirm_add_class', 'decline_add_class',
+          'ack_teacher_add', 'ack_teacher_cancel', 'confirm_cancel_delete',
+          'confirm_reschedule_pick', 'confirm_reschedule_move',
+          'accept_offer', 'decline_offer', 'start_contact_student',
+        ]);
+        const buttonAllowed = (b) => {
+          if (!b || typeof b !== 'object') return false;
+          if (b.uri) return /^https:\/\/(mrtaihualin\.com|calendar\.google\.com)\//.test(String(b.uri));
+          const act = new URLSearchParams(String(b.postbackData || '')).get('action') || '';
+          return ALLOWED_ACTIONS.has(act);
+        };
+        const allButtons = [
+          ...(Array.isArray(flexIn?.buttons) ? flexIn.buttons : []),
+          ...(Array.isArray(flexIn?.rows) ? flexIn.rows.flatMap((r) => (Array.isArray(r?.buttons) ? r.buttons : [])) : []),
+        ];
+        if (allButtons.some((b) => !buttonAllowed(b))) {
+          console.warn('[notify-line] ปฏิเสธปุ่มที่ไม่อยู่ในรายการอนุญาต จาก token:', String(fromStudentToken).slice(0, 6));
+          return new Response(JSON.stringify({ error: 'button not allowed' }), {
             status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
           });
         }

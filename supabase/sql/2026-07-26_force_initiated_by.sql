@@ -69,12 +69,17 @@ declare
   rl_ok  boolean := true;
 begin
   -- ยามเฝ้าประตู: ยิงเกิน 20 ครั้ง/60 วิ ต่อ IP = บล็อก (กันไล่เดา token)
-  if to_regprocedure('public.slink_rl_check(text,int,int)') is not null then
+  -- ⚠️ ยกเว้นครู: ตอนเสนอหลายรอบเวลาพร้อมกัน ครูยิงฟังก์ชันนี้รัวๆ ทีละแถวโดยธรรมชาติ
+  --    ถ้าไม่ยกเว้น ครูเสนอเกิน 20 แถวในนาทีเดียวจะโดนบล็อกตัวเอง
+  if not public.is_teacher_caller()
+     and to_regprocedure('public.slink_rl_check(text,int,int)') is not null then
     execute 'select public.slink_rl_check($1,$2,$3)' into rl_ok using 'submit_class_request', 20, 60;
     if not rl_ok then
       raise exception 'too many requests' using errcode = 'P0001';
     end if;
-    if not exists (select 1 from public.classroom_students where token = p_token) then
+    -- เช็คแยกอีกตัว: ถ้ามี slink_rl_check แต่ไม่มี slink_log_fail จะพังทั้งฟังก์ชัน (undefined_function)
+    if to_regprocedure('public.slink_log_fail(text,text)') is not null
+       and not exists (select 1 from public.classroom_students where token = p_token) then
       execute 'select public.slink_log_fail($1,$2)' using 'submit_class_request', p_token;
     end if;
   end if;
@@ -124,12 +129,17 @@ declare
   new_id uuid;
   rl_ok  boolean := true;
 begin
-  if to_regprocedure('public.slink_rl_check(text,int,int)') is not null then
+  -- ⚠️ ยกเว้นครู: ตอนเสนอหลายรอบเวลาพร้อมกัน ครูยิงฟังก์ชันนี้รัวๆ ทีละแถวโดยธรรมชาติ
+  --    ถ้าไม่ยกเว้น ครูเสนอเกิน 20 แถวในนาทีเดียวจะโดนบล็อกตัวเอง
+  if not public.is_teacher_caller()
+     and to_regprocedure('public.slink_rl_check(text,int,int)') is not null then
     execute 'select public.slink_rl_check($1,$2,$3)' into rl_ok using 'submit_class_request', 20, 60;
     if not rl_ok then
       raise exception 'too many requests' using errcode = 'P0001';
     end if;
-    if not exists (select 1 from public.classroom_students where token = p_token) then
+    -- เช็คแยกอีกตัว: ถ้ามี slink_rl_check แต่ไม่มี slink_log_fail จะพังทั้งฟังก์ชัน (undefined_function)
+    if to_regprocedure('public.slink_log_fail(text,text)') is not null
+       and not exists (select 1 from public.classroom_students where token = p_token) then
       execute 'select public.slink_log_fail($1,$2)' using 'submit_class_request', p_token;
     end if;
   end if;
@@ -156,3 +166,11 @@ select p.proname,
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.proname = 'submit_class_request';
+
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 4) ปิดสิทธิ์ is_teacher_caller() ไม่ให้หน้าเว็บเรียกเองตรงๆ (ใช้ภายในฟังก์ชันอื่นเท่านั้น)
+--    ⚠️ ต้อง revoke จาก "public" ด้วย ไม่ใช่แค่ anon/authenticated
+--    เพราะ Postgres แจกสิทธิ์ EXECUTE ให้ role พิเศษชื่อ PUBLIC (= ทุกคน) อัตโนมัติทุกฟังก์ชันใหม่
+-- ────────────────────────────────────────────────────────────────────────────
+revoke execute on function public.is_teacher_caller() from public, anon, authenticated;

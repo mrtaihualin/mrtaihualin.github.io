@@ -2332,23 +2332,29 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
     const addedTimeLabel = p.recurring
       ? ('每週' + ['日','一','二','三','四','五','六'][p.weekday] + ' ' + p.startVal + '–' + p.endTime + '（泰國時間，從 ' + p.dateVal + ' 開始' + (p.untilVal ? '，固定到 ' + p.untilVal : '') + '）')
       : formatThaiDateTimeLabel(start.toISOString()) + '（泰國時間）';
+    // 🔴 2026-07-26 (RELIABILITY FIRST)：เดิมทิ้งผลลัพธ์ของ fetch แล้วไปบอกครูว่า "已 LINE 通知學生"
+    // โดยดูแค่ว่านักเรียนผูก LINE ไว้ไหม → ถ้าส่งไม่สำเร็จจริง (เช่น session ครูหมดอายุ = 401)
+    // ครูจะเข้าใจผิดว่านักเรียนรู้แล้ว ทั้งที่นักเรียนไม่ได้รับอะไรเลย
+    let studentNotified = false, studentNotifyErr = null;
     if (s.line_user_id) {
       try {
         const studentTimeLabel = p.recurring ? addedTimeLabel : studentFacingTimeLabel(start, s.pending_student_tz);
-        await fetch(LINE_NOTIFY_ENDPOINT, {
+        const stuRes = await fetch(LINE_NOTIFY_ENDPOINT, {
           method: 'POST',
           // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
           headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
           body: JSON.stringify({ to: { studentToken: token }, message: '老師幫你加了一堂課：' + studentTimeLabel + '，如有疑問請直接聯絡老師' }),
         });
-      } catch (e) { console.warn('⚠️ 加課通知學生失敗（不影響已經加成功的課）：', e.message || e); }
+        studentNotified = stuRes.ok;
+        if (!stuRes.ok) studentNotifyErr = 'LINE 回應 ' + stuRes.status + (stuRes.status === 401 ? '（老師登入可能已過期）' : '');
+      } catch (e) { studentNotifyErr = e.message || String(e); console.warn('⚠️ 加課通知學生失敗（不影響已經加成功的課）：', studentNotifyErr); }
     }
     try {
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
         body: JSON.stringify({ to: 'teacher', message: '✅ 已幫 ' + s.name + ' 加課：' + addedTimeLabel }),
-      });
+      }).then(function (r) { if (!r.ok) console.warn('⚠️ 通知老師自己失敗（LINE 回應 ' + r.status + '）'); });
     } catch (e) { console.warn('⚠️ 加課通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
 
     // 2026-07-15 加：如果是從學生「➕ 申請加課」的申請單開進來的，Calendar+資料庫都真的
@@ -2356,7 +2362,7 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
     if (requestIdToFinalize) {
       try { await finalizeRequestStatus(requestIdToFinalize, 'acknowledged'); } catch (e) { /* 標記失敗不影響已經建立成功的課堂，loadPendingClassRequests 下次刷新還會看到這筆，可以再按一次 */ }
     }
-    return { ok: true, hasLine: !!s.line_user_id };
+    return { ok: true, hasLine: !!s.line_user_id, studentNotified: studentNotified, studentNotifyErr: studentNotifyErr };
   } catch (e) {
     // 只有「Calendar API 這次真的還沒建立成功」才能安全放鎖讓人重試——如果錯誤訊息顯示
     // 「已經建立成功」或「重新確認時」代表 createCalendarClassEventForStudent 裡 Calendar 事件
@@ -2391,8 +2397,13 @@ async function confirmAddClassDay() {
   const r = await directConfirmAddClassRow(token, p, requestIdToFinalize);
   if (r.ok) {
     _addClassDayFromRequestId = null;
-    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;">✅ 新增成功！（已重新確認 Calendar 上真的有這堂課' + (r.hasLine ? '，已 LINE 通知學生' : '，學生還沒連結 LINE，沒收到通知') + '）</div>';
+    // 🔴 2026-07-26 (RELIABILITY FIRST)：เดิมบอกว่า "已 LINE 通知學生" แค่เพราะนักเรียนผูก LINE ไว้
+    // ทั้งที่ไม่เคยเช็คว่าส่งถึงจริงไหม → ตอนนี้ดูผลจริง (r.studentNotified) และถ้าไม่ถึง ต้องบอกดังๆ
+    var lineStatusTxt = !r.hasLine ? '，學生還沒連結 LINE，沒收到通知'
+      : (r.studentNotified ? '，已 LINE 通知學生' : '，⚠️ LINE 通知學生沒送出去');
+    resultEl.innerHTML = '<div style="color:var(--gold-deep);font-weight:700;">✅ 新增成功！（已重新確認 Calendar 上真的有這堂課' + lineStatusTxt + '）</div>';
     if (!r.hasLine) alert('✅ Calendar 已新增成功\n⚠️ 但學生還沒連結 LINE，沒收到通知，建議自己也提醒學生上網站看一下'); // 2026-07-24 加：用彈窗確保老師一定看到
+    else if (!r.studentNotified) alert('✅ Calendar 已新增成功\n⚠️ 但 LINE 通知學生沒送出去（' + (r.studentNotifyErr || '原因不明') + '），請自己跟學生說一聲');
     _addClassDayPending = null;
     resetAddClassDayRows();
     await renderAddClassDayExistingList(token);
@@ -2535,6 +2546,9 @@ async function proposeAddClassDay() {
     ? ('<div style="color:var(--gold-deep);font-weight:700;">' + lines.map(escHtml).join('<br>') + '</div>')
     : '<div style="color:#b45309;">送出失敗，所有筆數都沒有成功建立</div>';
   if (lineWarning) alert(lineWarning); // 用彈窗擋一下老師，確保一定看到，不會被畫面上的小字漏掉
+  // 🟡 2026-07-26：ไม่ได้ส่งสำเร็จสักแถว (เช่น session ครูหมดอายุ) → เก็บสิ่งที่ครูกรอกไว้ให้
+  // ไม่งั้นครูต้องพิมพ์ใหม่ + กด "🔍 檢查是否衝突" ใหม่ทั้งหมด ทั้งที่แค่ล็อกอินใหม่ก็กดส่งซ้ำได้เลย
+  if (!r.created.length) { loadPendingClassRequests(); return; }
   _addClassDayPending = null;
   loadPendingClassRequests();
 }
@@ -8718,12 +8732,14 @@ async function confirmTeacherAddClass(id) {
     if (s.line_user_id) {
       try {
         const studentTimeLabel = p.recurring ? addedTimeLabel : studentFacingTimeLabel(start, s.pending_student_tz);
-        await fetch(LINE_NOTIFY_ENDPOINT, {
+        // 🔴 2026-07-26 (RELIABILITY FIRST)：เดิมทิ้งผลลัพธ์ ส่งไม่ถึงนักเรียนก็เงียบสนิท
+        const stuRes2 = await fetch(LINE_NOTIFY_ENDPOINT, {
           method: 'POST',
           // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
           headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
           body: JSON.stringify({ to: { studentToken: token }, message: '你確認的加課已經排進 Calendar 了：' + studentTimeLabel }),
         });
+        if (!stuRes2.ok) alert('✅ Calendar 已新增成功\n⚠️ 但通知學生失敗（LINE 回應 ' + stuRes2.status + (stuRes2.status === 401 ? '，老師登入可能已過期' : '') + '），請自己跟學生說一聲');
       } catch (e) { console.warn('⚠️ 加課完成通知學生失敗（不影響已經加成功的課）：', e.message || e); }
     }
     try {
@@ -8731,7 +8747,7 @@ async function confirmTeacherAddClass(id) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
         body: JSON.stringify({ to: 'teacher', message: '✅ 已幫 ' + s.name + ' 加課：' + addedTimeLabel }),
-      });
+      }).then(function (r) { if (!r.ok) console.warn('⚠️ 通知老師自己失敗（LINE 回應 ' + r.status + '）'); });
     } catch (e) { console.warn('⚠️ 加課完成通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
 
     await finalizeRequestStatus(id, 'acknowledged');

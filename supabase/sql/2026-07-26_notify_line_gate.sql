@@ -76,10 +76,34 @@ end; $$;
 
 
 -- ── 3) ห้ามหน้าเว็บเรียกฟังก์ชันนี้เองตรงๆ (เรียกได้เฉพาะ service_role คือ Edge Function) ──
-revoke execute on function public.notify_line_gate(text, text, int, int) from anon, authenticated;
+-- ⚠️ สำคัญมาก: ต้อง revoke จาก "public" ด้วย ไม่ใช่แค่ anon/authenticated
+--    Postgres แจกสิทธิ์ EXECUTE ให้ role พิเศษชื่อ PUBLIC (= ทุกคน) อัตโนมัติทุกฟังก์ชันที่สร้างใหม่
+--    ถ้า revoke แค่ anon/authenticated สิทธิ์ของ PUBLIC ยังอยู่ → หน้าเว็บยังเรียกได้อยู่ดี
+--    ผลถ้าพลาด: ใครก็ยิงฟังก์ชันนี้เองพร้อม p_limit สูงๆ แล้วใช้เป็นเครื่องมือ "ไล่เดา token นักเรียน"
+--    ได้ไม่จำกัด (ตรงข้ามกับที่ระบบกันเดา token ตั้งใจไว้) + เขียนขยะลงตาราง slink_rl ได้ไม่จำกัด
+revoke execute on function public.notify_line_gate(text, text, int, int) from public, anon, authenticated;
+grant  execute on function public.notify_line_gate(text, text, int, int) to service_role;
+
+-- ปิดรูเดียวกันให้ฟังก์ชันของระบบกันเดา token ที่สร้างไว้ก่อนหน้า (ถ้ามีอยู่แล้ว)
+do $$
+begin
+  if to_regprocedure('public.slink_rl_check(text,int,int)') is not null then
+    execute 'revoke execute on function public.slink_rl_check(text,int,int) from public, anon, authenticated';
+  end if;
+  if to_regprocedure('public.slink_log_fail(text,text)') is not null then
+    execute 'revoke execute on function public.slink_log_fail(text,text) from public, anon, authenticated';
+  end if;
+  if to_regprocedure('public.slink_client_ip()') is not null then
+    execute 'revoke execute on function public.slink_client_ip() from public, anon, authenticated';
+  end if;
+end $$;
 
 
--- ── 4) ตรวจว่าสร้างสำเร็จ — ต้องเห็น 1 บรรทัด ────────────────────────────────
-select p.proname, pg_get_function_identity_arguments(p.oid) as args
+-- ── 4) ตรวจว่าสร้างสำเร็จ + สิทธิ์ถูกต้อง ────────────────────────────────────
+-- ต้องเห็น 1 บรรทัด · ในคอลัมน์ acl ต้อง "ไม่มี" คำว่า anon / authenticated
+-- และต้องไม่มีรายการที่ขึ้นต้นด้วย "=" เฉยๆ (นั่นคือสิทธิ์ของ PUBLIC ที่ต้องถูกถอดออกไปแล้ว)
+select p.proname,
+       pg_get_function_identity_arguments(p.oid) as args,
+       coalesce(array_to_string(p.proacl, ' | '), '(ไม่มีสิทธิ์ให้ใครเลย = ปลอดภัย)') as acl
 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = 'public' and p.proname = 'notify_line_gate';
+where n.nspname = 'public' and p.proname in ('notify_line_gate', 'slink_rl_check', 'slink_log_fail', 'slink_client_ip');
