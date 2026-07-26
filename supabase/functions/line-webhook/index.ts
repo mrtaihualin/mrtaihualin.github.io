@@ -1298,9 +1298,61 @@ serve(async (req) => {
         // Calendar 建立成功——寫進課表資料庫（recurring_days 或 schedule，看是不是每週固定）
         let dbErrAddC = null;
         if (reqRowAddC.proposed_recurring) {
-          const { error } = await supabase.from('classroom_recurring_days')
-            .upsert({ token: reqRowAddC.token, weekday: reqRowAddC.proposed_weekday, start_time: startTimeAddC, end_time: endTimeAddC, calendar_event_id: createResultAddC.eventId }, { onConflict: 'token,weekday' });
-          dbErrAddC = error;
+          // ✅ 2026-07-26 (Lin สั่ง: ต้องขึ้นได้ทั้ง Calendar และระบบ) — แก้แบบเดียวกับฝั่งเว็บ
+          // (classroom/index.html → createCalendarClassEventForStudent)
+          // เดิมชนกันที่ (token, weekday) = นักเรียน 1 คน มีคาบประจำได้วันละ 1 รอบเวลาเท่านั้น
+          // → เพิ่มพุธ 19:00 ให้คนที่มีพุธ 10:00 อยู่แล้ว = แถวพุธ 10:00 โดนทับหาย
+          //   คาบ 10:00 ยังอยู่ใน Calendar แต่ระบบจำ calendar_event_id ไม่ได้แล้ว = คาบกำพร้า
+          // ⚠️ ปุ่มนี้อยู่ในแอป LINE — คนละเส้นทางกับปุ่มในเว็บ ต้องแก้ทั้ง 2 ที่ ไม่งั้นรูยังอยู่
+          // ⚠️ ต้องรัน supabase/sql/2026-07-26_recurring_days_multi_slot.sql ก่อน
+          //    ยังไม่ได้รัน → error 42P10 → ถอยไปใช้กฎเดิมอัตโนมัติ (ไม่พัง แต่ยังทับกันอยู่)
+          // 2026-07-26 加：proposed_weekday อาจเป็นค่าว่างได้ (ตอนบันทึกรายละเอียดคำขอพลาดแบบเงียบๆ)
+          // ถ้าปล่อยผ่าน จะได้แถวที่ weekday ว่าง = คาบประจำที่ไม่รู้ว่าวันไหน + ด่านเช็คซ้ำก็มองไม่เห็น
+          // → คำนวณจากวันที่ที่ขอมาแทน (เวลาไทย) ยังว่างอีก = หยุด ไม่เขียนมั่ว
+          // 2026-07-26 加：proposed_weekday อาจเป็นค่าว่างได้ (ตอนบันทึกรายละเอียดคำขอพลาดแบบเงียบๆ)
+          // ถ้าปล่อยผ่าน จะได้แถวที่ weekday ว่าง = คาบประจำที่ไม่รู้ว่าวันไหน + ด่านเช็คซ้ำก็มองไม่เห็น
+          // → คำนวณจากวันที่ที่ขอมาแทน (เวลาไทย) · ยังหาไม่ได้อีก = หยุด ไม่เขียนข้อมูลมั่ว
+          let weekdayAddC = reqRowAddC.proposed_weekday;
+          if (weekdayAddC === null || weekdayAddC === undefined) {
+            const wdGuess = new Date(bangkokToIso(reqRowAddC.requested_date, startTimeAddC));
+            if (!isNaN(wdGuess.getTime())) {
+              const wdName = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Bangkok', weekday: 'short' }).format(wdGuess);
+              const wdIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(wdName);
+              weekdayAddC = wdIdx >= 0 ? wdIdx : null;
+            } else {
+              weekdayAddC = null;
+            }
+            console.warn('[line-webhook] proposed_weekday ว่าง → คำนวณใหม่จากวันที่ได้:', weekdayAddC, 'request=', requestIdAddC);
+          }
+          if (weekdayAddC === null || weekdayAddC === undefined) {
+            dbErrAddC = { message: '這筆申請沒有記到「星期幾」，無法存成每週固定課（會變成不知道是哪一天的固定課）。Calendar 已建立，請到網站或 Supabase 手動補這筆。' };
+          } else {
+            const rdRowAddC = { token: reqRowAddC.token, weekday: weekdayAddC, start_time: startTimeAddC, end_time: endTimeAddC, calendar_event_id: createResultAddC.eventId };
+            let { error } = await supabase.from('classroom_recurring_days')
+              .upsert(rdRowAddC, { onConflict: 'token,weekday,start_time' });
+            if (error && (error.code === '42P10' || /no unique or exclusion constraint/i.test(error.message || ''))) {
+              // ⚠️ ยังไม่ได้รัน SQL → ฐานข้อมูลยังใช้กฎเดิม (วันละ 1 รอบเวลา)
+              // ห้ามถอยไปใช้กฎเดิมเงียบๆ — กฎเดิมจะ "ทับ" แถวคาบเดิมหายแล้วขึ้นว่าสำเร็จ
+              // = สร้างคาบกำพร้าซ้ำรอยบั๊กเดิมเป๊ะๆ (แก้แบบเดียวกับฝั่งเว็บ classroom/index.html)
+              console.warn('[line-webhook] ยังไม่ได้รัน 2026-07-26_recurring_days_multi_slot.sql');
+              // ⚠️ ห้ามกรองด้วย .neq() — แถวที่ start_time เป็นค่าว่าง (NULL) จะหลุดออกจากผลลัพธ์
+              // (NULL <> 'x' ได้ผลเป็น NULL ไม่ใช่ true) → ด่านมองไม่เห็นแล้วปล่อยทับทิ้ง
+              // → ดึงทุกแถวของวันนั้นมาเทียบเองแทน (เหมือนฝั่งเว็บ classroom/index.html)
+              const dupAddC = await supabase.from('classroom_recurring_days').select('start_time')
+                .eq('token', reqRowAddC.token).eq('weekday', weekdayAddC);
+              const dupOtherAddC = (dupAddC.data || []).filter(
+                (x) => String(x.start_time || '').slice(0, 5) !== String(startTimeAddC || '').slice(0, 5));
+              if (dupAddC.error || dupOtherAddC.length) {
+                error = { message: '這位學生同一個星期幾已經有另一個固定時段（'
+                  + (dupOtherAddC.map((x) => x.start_time || '(空白)').join('、') || '讀取失敗')
+                  + '），而資料庫還沒升級成「一天可以有多個固定時段」。硬寫下去會蓋掉舊的那筆，所以這次刻意沒寫。'
+                  + '請先執行 supabase/sql/2026-07-26_recurring_days_multi_slot.sql' };
+              } else {
+                ({ error } = await supabase.from('classroom_recurring_days').upsert(rdRowAddC, { onConflict: 'token,weekday' }));
+              }
+            }
+            dbErrAddC = error;
+          }
         } else {
           const { error } = await supabase.from('classroom_schedule')
             .upsert({ token: reqRowAddC.token, lesson_date: reqRowAddC.requested_date, start_time: startTimeAddC, end_time: endTimeAddC, title: reqRowAddC.student_name, calendar_event_id: createResultAddC.eventId }, { onConflict: 'token,lesson_date,start_time' });
@@ -1311,7 +1363,9 @@ serve(async (req) => {
           // 要 Lin 自己去 Supabase 手動補課表資料
           console.error('[line-webhook] ⚠️ confirm_add_class: Calendar 建立成功但寫課表資料庫失敗（鎖故意維持鎖住）:', dbErrAddC.message, 'request=', requestIdAddC, 'calendar_event_id=', createResultAddC.eventId);
           if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經建立成功了（事件 ID: ' + createResultAddC.eventId + '），但存課表資料庫失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdAddC + '），不要重複點這顆按鈕');
+            // 2026-07-26 แก้：เดิมข้อความตอบกลับไม่บอกสาเหตุเลย ครูที่กดจาก LINE จะไม่มีทางรู้ว่า
+            // เกิดอะไรขึ้น (โดยเฉพาะเคส "ยังไม่ได้รัน SQL" ที่มีวิธีแก้ชัดเจนอยู่ในข้อความ)
+            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經建立成功了（事件 ID: ' + createResultAddC.eventId + '），但存課表資料庫失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdAddC + '），不要重複點這顆按鈕\n\n原因：' + (dbErrAddC.message || '未知'));
           }
           continue;
         }

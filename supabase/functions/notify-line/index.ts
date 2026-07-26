@@ -164,6 +164,23 @@ serve(async (req) => {
       });
     }
 
+    // ── ตัวช่วย: ตรวจว่า Authorization ที่แนบมาเป็น session จริงของครูหรือเปล่า ──
+    // (แยกออกมาเป็นฟังก์ชัน เพราะตอนนี้ใช้ทั้งสาขา to:'teacher' และ to:{studentToken})
+    const authHeaderRaw = req.headers.get('Authorization') || '';
+    async function callerIsTeacher() {
+      const jwt = authHeaderRaw.replace(/^Bearer\s+/i, '');
+      if (!jwt) return false;
+      try {
+        const asUser = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_ANON_KEY'), { global: { headers: { Authorization: authHeaderRaw } } });
+        const { data: userData } = await asUser.auth.getUser(jwt);
+        return (userData?.user?.email || '').toLowerCase() === 'mr.taihualin@gmail.com';
+      } catch (_e) { return false; }
+    }
+    function clientIp() {
+      const xff = req.headers.get('x-forwarded-for') || '';
+      return (xff.split(',')[0] || '').trim() || req.headers.get('cf-connecting-ip') || 'unknown';
+    }
+
     let targetUserId = null;
 
     if (to === 'teacher') {
@@ -172,6 +189,96 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: 'server not configured: missing LINE_TEACHER_USER_ID' }), {
           status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
         });
+      }
+      // ══════════════════════════════════════════════════════════════════════
+      // 2026-07-26 เพิ่ม (SECURITY FIRST — Lin สั่งแก้ หลังตรวจเจอ)
+      // ปัญหาเดิม: สาขานี้ "เปิดโล่ง" ใครก็ได้ที่รู้ URL นี้ (ซึ่งอยู่ในโค้ดหน้าเว็บ ดูได้ทุกคน)
+      //   ยิง POST พร้อมข้อความอะไรก็ได้ → เด้งเข้า LINE ส่วนตัวของ Lin ทันที ไม่จำกัดจำนวน
+      //   = สแปม/ข้อความก่อกวนหา Lin ได้ไม่จำกัด
+      // ทำไมถึงบังคับ "ต้องล็อกอินเป็นครู" เฉยๆ ไม่ได้:
+      //   เพราะสาขานี้นักเรียน (ที่ไม่ได้ล็อกอิน) ต้องเรียกได้จริง ตอนส่งคำขอเลื่อน/ยกเลิกคาบ
+      //   ถ้าปิดตายไปเลย Lin จะไม่ได้รับแจ้งเตือนจากนักเรียนอีกเลย = พังหนักกว่าเดิม
+      // วิธีที่ใช้: ต้องพิสูจน์ตัวได้อย่างใดอย่างหนึ่ง
+      //   (ก) เป็นครูจริง (มี session ของ Lin)  → ผ่าน ส่งอะไรก็ได้
+      //   (ข) เป็นนักเรียนจริง (แนบ fromStudentToken ที่มีอยู่จริงในตาราง classroom_students)
+      //       → ผ่าน แต่จำกัดความยาวข้อความ + จำกัดจำนวนครั้งต่อ IP (ผ่าน RPC notify_line_gate)
+      //   (ค) พิสูจน์ไม่ได้ → 401 ไม่ส่ง
+      // ⚠️ token ของนักเรียนคือลิงก์ส่วนตัวของเขา คนนอกไม่มีทางรู้ → ยกระดับความยากขึ้นมาก
+      //    และถึงรู้ ก็ยังโดนจำกัดจำนวนครั้ง + ตามรอยได้ว่ามาจาก token ไหน
+      // ══════════════════════════════════════════════════════════════════════
+      if (!(await callerIsTeacher())) {
+        const fromStudentToken = body?.fromStudentToken;
+        if (!fromStudentToken || typeof fromStudentToken !== 'string') {
+          return new Response(JSON.stringify({ error: 'unauthorized — 必須是老師本人，或附上有效的學生 token（fromStudentToken）' }), {
+            status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+          });
+        }
+        const admin = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+        // ด่านรวม: token มีจริงไหม + ยิงถี่เกินไปไหม (นับต่อ IP) — ตัดสินฝั่งฐานข้อมูล
+        // ถ้ายังไม่ได้รัน SQL ตัวนี้ (RPC ไม่มี) → ถอยไปเช็คแค่ว่า token มีจริง จะได้ไม่พังทั้งระบบ
+        let gateOk = null;
+        try {
+          const { data: gate, error: gateErr } = await admin.rpc('notify_line_gate', { p_token: fromStudentToken, p_ip: clientIp() });
+          if (gateErr) {
+            // RELIABILITY FIRST: ถ้าด่านนี้พัง ต้องมีร่องรอยใน log เสมอ ห้ามเสื่อมสภาพเงียบๆ
+            console.warn('[notify-line] notify_line_gate ใช้ไม่ได้ → ถอยไปเช็คแค่ว่า token มีจริง:', gateErr.message);
+          } else {
+            gateOk = gate === true;
+          }
+        } catch (e) {
+          console.warn('[notify-line] เรียก notify_line_gate ไม่สำเร็จ:', String(e && e.message || e));
+          gateOk = null;
+        }
+        if (gateOk === null) {
+          const { data: stu } = await admin.from('classroom_students').select('token').eq('token', fromStudentToken).maybeSingle();
+          gateOk = !!stu;
+        }
+        if (!gateOk) {
+          return new Response(JSON.stringify({ error: 'unauthorized or rate limited' }), {
+            status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+          });
+        }
+
+        // ── จำกัดเนื้อหาที่คนที่ "ไม่ใช่ครู" ส่งเข้า LINE ของ Lin ได้ ──────────────
+        // 2026-07-26：เดิมจำกัดแค่ความยาวของ message — แต่ถ้าส่ง body.flex มาด้วย
+        // ตัว message จะถูกข้ามไปเลย (ดูข้างล่าง) → จำกัดความยาวไม่มีผลอะไรเลย
+        // ต้องจำกัด title/bodyText ของ flex ด้วย
+        const flexIn = body?.flex;
+        const flexTextLen = String(flexIn?.title || '').length + String(flexIn?.bodyText || '').length;
+        if (message.length > 1200 || flexTextLen > 1200) {
+          return new Response(JSON.stringify({ error: 'message too long' }), {
+            status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+          });
+        }
+        // ⚠️ ปุ่มในข้อความ flex อันตรายกว่าตัวข้อความมาก:
+        //    ปุ่ม postback = พอ Lin กด ระบบจะไป "ทำงานจริง" (เช่นสร้างคาบใน Calendar)
+        //    ปุ่ม uri      = พา Lin ไปเว็บไหนก็ได้ (ลิงก์หลอก/ฟิชชิ่ง)
+        //    line-webhook ตรวจแค่ว่า "คนกดคือครู" ไม่ได้ตรวจว่าปุ่มนั้นถูกสร้างมาจากไหน
+        //    → คนที่ไม่ใช่ครู ส่งปุ่มได้เฉพาะชุดที่ระบบเราใช้จริงเท่านั้น และลิงก์ต้องเป็นเว็บเราเท่านั้น
+        // รายการนี้ = ปุ่มทุกแบบที่หน้าเว็บฝั่งนักเรียนส่งจริง (ไล่เก็บจาก classroom/index.html ครบแล้ว)
+        // เพิ่มปุ่มใหม่ฝั่งนักเรียนเมื่อไหร่ ต้องมาเติมชื่อ action ที่นี่ด้วย ไม่งั้นปุ่มจะถูกปฏิเสธ 400
+        const ALLOWED_ACTIONS = new Set([
+          'check_conflict', 'confirm_add_class', 'decline_add_class',
+          'ack_teacher_add', 'ack_teacher_cancel', 'confirm_cancel_delete',
+          'confirm_reschedule_pick', 'confirm_reschedule_move',
+          'accept_offer', 'decline_offer', 'start_contact_student',
+        ]);
+        const buttonAllowed = (b) => {
+          if (!b || typeof b !== 'object') return false;
+          if (b.uri) return /^https:\/\/(mrtaihualin\.com|calendar\.google\.com)\//.test(String(b.uri));
+          const act = new URLSearchParams(String(b.postbackData || '')).get('action') || '';
+          return ALLOWED_ACTIONS.has(act);
+        };
+        const allButtons = [
+          ...(Array.isArray(flexIn?.buttons) ? flexIn.buttons : []),
+          ...(Array.isArray(flexIn?.rows) ? flexIn.rows.flatMap((r) => (Array.isArray(r?.buttons) ? r.buttons : [])) : []),
+        ];
+        if (allButtons.some((b) => !buttonAllowed(b))) {
+          console.warn('[notify-line] ปฏิเสธปุ่มที่ไม่อยู่ในรายการอนุญาต จาก token:', String(fromStudentToken).slice(0, 6));
+          return new Response(JSON.stringify({ error: 'button not allowed' }), {
+            status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+          });
+        }
       }
     } else if (to && typeof to === 'object' && to.studentToken) {
       // 2026-07-19 加（SECURITY FIRST，稽核發現）：เดิมสาขานี้ไม่มีการตรวจสิทธิ์เลย — ใครก็ยิง
@@ -182,17 +289,8 @@ serve(async (req) => {
       // คำขอเปลี่ยน/ยกเลิกคาบ โดยไม่ได้ล็อกอินเป็นครู — ตอนนี้เฉพาะสาขานี้บังคับต้องมี session จริง
       // ของครูแนบมาด้วยเสมอ วิธีเดียวกับ unlink-line-student/restore-line-student (ฝั่งเว็บต้องเปลี่ยน
       // Authorization ของการเรียก to:{studentToken} จาก anonKey เป็น teacherAuthHeader() ด้วย)
-      const authHeader = req.headers.get('Authorization') || '';
-      const jwt = authHeader.replace(/^Bearer\s+/i, '');
-      let callerIsTeacher = false;
-      if (jwt) {
-        try {
-          const asUser = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_ANON_KEY'), { global: { headers: { Authorization: authHeader } } });
-          const { data: userData } = await asUser.auth.getUser(jwt);
-          callerIsTeacher = (userData?.user?.email || '').toLowerCase() === 'mr.taihualin@gmail.com';
-        } catch (e) { callerIsTeacher = false; }
-      }
-      if (!callerIsTeacher) {
+      // 2026-07-26：ย้ายตรรกะตรวจครูไปเป็นฟังก์ชัน callerIsTeacher() ข้างบน (ใช้ร่วมกับสาขา to:'teacher')
+      if (!(await callerIsTeacher())) {
         return new Response(JSON.stringify({ error: 'unauthorized — 只有老師本人登入後才能傳訊息給指定學生' }), {
           status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
         });
