@@ -25,6 +25,20 @@
 //   (สีทองตามธีมเว็บ) — เอาลิงก์ "查看課表/申請改期" ออกจากข้อความ LINE แล้ว (ย้ายไปเป็นปุ่ม
 //   "在 LINE 中開啟" ที่หน้าคาบเรียนต่อไปในเว็บแทน ดู classroom/index.html) → ไม่ต้องตั้ง secret LIFF_ID
 //   ให้ฟังก์ชันนี้อีกต่อไป (เอาออกจาก deploy steps แล้ว)
+//
+// 🔴 2026-07-26 แก้ความเสี่ยงส่งซ้ำ (Lin เจอ：LINE เตือนก่อน/หลังเข้าเรียน "ส่งซ้ำ 2 ข้อความ")：
+//   เช็คแล้ว บั๊กเดิมที่แก้ไป 2026-07-20 (calendar-sync ลบ/เขียนตารางใหม่แล้วรีเซ็ต flag เตือนกลับเป็น
+//   false) ยังแก้ถูกอยู่ทั้ง 2 จุด (calendar-schedule-sync-cron + classroom/index.html) ไม่ใช่ต้นตอรอบนี้
+//   จุดเสี่ยงที่เจอจริงในโค้ดนี้: เดิมทำเป็น 2 ขั้นแยกกัน "ส่ง LINE ก่อน → มาร์ค flag=true ทีหลัง" —
+//   ถ้า cron รอบถัดไปเริ่มทำงานก่อนรอบก่อนหน้ามาร์คเสร็จ (เช่น รอบก่อนช้าเพราะเน็ต/LINE API ตอบช้า)
+//   ทั้ง 2 รอบจะเห็น flag=false เหมือนกัน แล้วส่ง LINE ซ้ำกันทั้งคู่ ก่อนฝ่ายไหนจะมาร์คเสร็จด้วยซ้ำ
+//   (race condition) — แก้แล้ว: สลับลำดับเป็น "จอง (claim) ก่อนส่ง" ด้วย atomic update (WHERE flag=false)
+//   ถ้ารอบไหนจองไม่ติด (อีกรอบจองไปแล้ว) จะข้ามการส่งทันที กันซ้ำได้ชัวร์ไม่ว่า cron จะทับกันกี่รอบ
+//   ถ้ายิง LINE แล้วพัง (network/LINE API error) จะคืนค่า flag กลับเป็น false ให้รอบถัดไปลองส่งใหม่ได้
+//   (ไม่เสียพฤติกรรม retry-เมื่อพัง ของเดิม) ดูฟังก์ชัน claimReminderIds()/releaseReminderIds() ด้านล่าง
+//   ⚠️ อีกจุดที่ Lin ควรเช็คเอง (AI มองไม่เห็นจาก repo): เปิด Supabase → SQL Editor รัน
+//   `select jobname, schedule from cron.job where jobname ilike '%reminder%';`
+//   ถ้าเจอ class-reminder-cron ซ้ำกันมากกว่า 1 แถว = มีสาเหตุซ้ำอีกจุดที่ต้อง unschedule อันซ้ำทิ้ง
 // ════════════════════════════════════════════════════════════
 
 // deno-lint-ignore-file
@@ -51,6 +65,29 @@ async function pushLineMessages(channelToken, targetUserId, messages) {
 
 async function pushLine(channelToken, targetUserId, message) {
   return pushLineMessages(channelToken, targetUserId, [{ type: 'text', text: String(message).slice(0, 4900) }]);
+}
+
+// 2026-07-26 เพิ่ม："จอง" ก่อนส่ง — atomic update (WHERE field=false) ให้ Postgres เป็นคนตัดสินว่า
+// ใครจองได้ก่อน ถ้ามี cron 2 รอบทับเวลากันพอดี รอบที่จองไม่ติดจะได้ id คืนมาว่างเปล่า (claimedIds.length===0)
+// แล้วรู้ตัวว่าต้องข้ามการส่งไปเลย ไม่ใช่ต่างคนต่างเห็น flag=false แล้วส่งซ้ำกันทั้งคู่
+async function claimReminderIds(supabase, fieldName, ids) {
+  if (!ids.length) return { claimedIds: [], error: null };
+  const { data, error } = await supabase.from('classroom_schedule')
+    .update({ [fieldName]: true })
+    .in('id', ids)
+    .eq(fieldName, false)
+    .select('id');
+  return { claimedIds: (data || []).map((r) => r.id), error };
+}
+
+// 2026-07-26 เพิ่ม：ถ้าจองไปแล้วแต่ยิง LINE ไม่สำเร็จ (network/LINE API พัง) ต้องคืน flag กลับเป็น false
+// ไม่งั้นจะเสียพฤติกรรม "รอบหน้าลองส่งใหม่อัตโนมัติ" ของเดิมไป (กลายเป็นไม่ส่งเลยตลอดกาลแทน)
+async function releaseReminderIds(supabase, fieldName, ids) {
+  if (!ids.length) return;
+  const { error } = await supabase.from('classroom_schedule').update({ [fieldName]: false }).in('id', ids);
+  if (error) {
+    console.error('[class-reminder-cron] คืนค่า ' + fieldName + ' กลับเป็น false ไม่สำเร็จ（รอบหน้าจะไม่ลองส่งซ้ำให้อัตโนมัติ ต้องแก้มือ）：', error.message, 'ids=', ids);
+  }
 }
 
 // 2026-07-11 加：上課前提醒改用 Flex Message，只留一顆按鈕「進入 Google Meet」（金色，跟網站同一套主題色）
@@ -222,17 +259,27 @@ serve(async (req) => {
       if (idsNeedReminder24h.length) {
         const minutesToStart = (startMs - nowMs) / 60000;
         if (minutesToStart <= REMINDER24H_BEFORE_MIN && minutesToStart >= REMINDER24H_BEFORE_MIN - CATCH_WINDOW_MIN) {
-          try {
-            const studentTz = s.pending_student_tz;
-            const dateLabel = studentTz ? formatDateInTz(startMs, studentTz) : repRow.lesson_date;
-            const timeLabel = studentTz
-              ? formatHHMMInTz(startMs, studentTz) + (normalizedEndTime ? '–' + formatHHMMInTz(endMs, studentTz) : '')
-              : (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
-            await pushLineMessages(channelToken, s.line_user_id, [buildReminder24hFlex(dateLabel, timeLabel)]);
-            const { error: markErr0 } = await supabase.from('classroom_schedule').update({ line_reminder24h_sent: true }).in('id', idsNeedReminder24h);
-            if (markErr0) { console.error('[class-reminder-cron] 標記 line_reminder24h_sent 失敗，可能會重複發送：', markErr0.message, 'ids=', idsNeedReminder24h); errCount++; }
-            sentCount++;
-          } catch (e) { errCount++; console.error('[class-reminder-cron] 發送 24 小時前提醒失敗，ids=' + idsNeedReminder24h.join(',') + '：', e && e.message ? e.message : e); }
+          // 2026-07-26 แก้：จอง (claim) ก่อนส่งเสมอ — กันส่งซ้ำถ้า cron 2 รอบทับเวลากันพอดี (ดูคอมเมนต์บนสุดไฟล์)
+          const { claimedIds: claimed24h, error: claimErr0 } = await claimReminderIds(supabase, 'line_reminder24h_sent', idsNeedReminder24h);
+          if (claimErr0) {
+            console.error('[class-reminder-cron] จองสิทธิ์ส่งเตือน 24 ชม. ไม่สำเร็จ（ข้ามรอบนี้ กันส่งซ้ำ）：', claimErr0.message, 'ids=', idsNeedReminder24h);
+            errCount++;
+          } else if (claimed24h.length) {
+            try {
+              const studentTz = s.pending_student_tz;
+              const dateLabel = studentTz ? formatDateInTz(startMs, studentTz) : repRow.lesson_date;
+              const timeLabel = studentTz
+                ? formatHHMMInTz(startMs, studentTz) + (normalizedEndTime ? '–' + formatHHMMInTz(endMs, studentTz) : '')
+                : (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
+              await pushLineMessages(channelToken, s.line_user_id, [buildReminder24hFlex(dateLabel, timeLabel)]);
+              sentCount++;
+            } catch (e) {
+              errCount++;
+              console.error('[class-reminder-cron] 發送 24 小時前提醒失敗，ids=' + claimed24h.join(',') + '：', e && e.message ? e.message : e);
+              await releaseReminderIds(supabase, 'line_reminder24h_sent', claimed24h); // คืนสิทธิ์ ให้รอบหน้าลองส่งใหม่
+            }
+          }
+          // claimed24h.length === 0 = อีกรอบ (cron ที่ทับเวลากัน) จองไปแล้ว → ข้ามเงียบๆ ไม่ใช่ error
         }
       }
 
@@ -240,32 +287,38 @@ serve(async (req) => {
       if (idsNeedReminder.length) {
         const minutesToStart = (startMs - nowMs) / 60000;
         if (minutesToStart <= REMINDER_BEFORE_MIN && minutesToStart >= -CATCH_WINDOW_MIN) {
-          try {
-            // 2026-07-14 改（Lin 回報學生對時區搞混，要求「一定要用學生自己的時間」）：
-            // 原本這裡直接拿老師輸入的泰國時間字串給學生看，完全沒管學生自己的時區。
-            // 現在改成：學生填過自己的時區 (pending_student_tz) 就用 startMs/endMs（已經是
-            // 絕對時間點了）換算成他自己時區的 HH:MM；沒填過時區的舊資料才退回泰國時間
-            // （沒有其他資訊可用，只能這樣，但至少不會是錯的换算）。
-            const studentTz = s.pending_student_tz;
-            const timeLabel = studentTz
-              ? formatHHMMInTz(startMs, studentTz) + (normalizedEndTime ? '–' + formatHHMMInTz(endMs, studentTz) : '')
-              : (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
-            if (s.meet) {
-              // 2026-07-11 改：Flex Message + 一顆「進入 Google Meet」按鈕（金色主題）
-              await pushLineMessages(channelToken, s.line_user_id, [buildReminderFlex(timeLabel, s.meet)]);
-            } else {
-              // 還沒有 Meet 連結（老師還沒補上）→ 照舊發純文字，不放按鈕，避免按鈕連到空連結
-              await pushLine(channelToken, s.line_user_id,
-                '📢 提醒：等一下 ' + timeLabel + ' 有泰語課囉！\n老師還在準備課堂連結，請直接聯絡老師 ✨');
+          // 2026-07-26 แก้：จอง (claim) ก่อนส่งเสมอ — กันส่งซ้ำถ้า cron 2 รอบทับเวลากันพอดี (ดูคอมเมนต์บนสุดไฟล์)
+          const { claimedIds: claimedReminder, error: claimErr } = await claimReminderIds(supabase, 'line_reminder_sent', idsNeedReminder);
+          if (claimErr) {
+            console.error('[class-reminder-cron] จองสิทธิ์ส่งเตือนก่อนเรียน ไม่สำเร็จ（ข้ามรอบนี้ กันส่งซ้ำ）：', claimErr.message, 'ids=', idsNeedReminder);
+            errCount++;
+          } else if (claimedReminder.length) {
+            try {
+              // 2026-07-14 改（Lin 回報學生對時區搞混，要求「一定要用學生自己的時間」）：
+              // 原本這裡直接拿老師輸入的泰國時間字串給學生看，完全沒管學生自己的時區。
+              // 現在改成：學生填過自己的時區 (pending_student_tz) 就用 startMs/endMs（已經是
+              // 絕對時間點了）換算成他自己時區的 HH:MM；沒填過時區的舊資料才退回泰國時間
+              // （沒有其他資訊可用，只能這樣，但至少不會是錯的换算）。
+              const studentTz = s.pending_student_tz;
+              const timeLabel = studentTz
+                ? formatHHMMInTz(startMs, studentTz) + (normalizedEndTime ? '–' + formatHHMMInTz(endMs, studentTz) : '')
+                : (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
+              if (s.meet) {
+                // 2026-07-11 改：Flex Message + 一顆「進入 Google Meet」按鈕（金色主題）
+                await pushLineMessages(channelToken, s.line_user_id, [buildReminderFlex(timeLabel, s.meet)]);
+              } else {
+                // 還沒有 Meet 連結（老師還沒補上）→ 照舊發純文字，不放按鈕，避免按鈕連到空連結
+                await pushLine(channelToken, s.line_user_id,
+                  '📢 提醒：等一下 ' + timeLabel + ' 有泰語課囉！\n老師還在準備課堂連結，請直接聯絡老師 ✨');
+              }
+              sentCount++;
+            } catch (e) {
+              errCount++;
+              console.error('[class-reminder-cron] 發送上課前提醒失敗，ids=' + claimedReminder.join(',') + '：', e && e.message ? e.message : e);
+              await releaseReminderIds(supabase, 'line_reminder_sent', claimedReminder); // คืนสิทธิ์ ให้รอบหน้าลองส่งใหม่
             }
-            // มาร์คว่าส่งแล้ว "ทุกแถวในกลุ่ม" กันแถวซ้ำที่เหลือมาส่งซ้ำอีกในรอบถัดไป
-            // 2026-07-14 加：เดิมไม่เช็ค error ตรงนี้เลย — ถ้า update ล้มเหลว (RLS/เน็ตสะดุด)
-            // flag จะไม่ถูกตั้ง แล้ว cron รอบถัดไป (~5 นาที) จะส่งซ้ำไปเรื่อยๆ แบบไม่มีใครรู้ตัว
-            // (RELIABILITY FIRST — ต้อง log ให้เห็นใน Supabase Function Logs อย่างน้อย)
-            const { error: markErr } = await supabase.from('classroom_schedule').update({ line_reminder_sent: true }).in('id', idsNeedReminder);
-            if (markErr) { console.error('[class-reminder-cron] 標記 line_reminder_sent 失敗，可能會重複發送：', markErr.message, 'ids=', idsNeedReminder); errCount++; }
-            sentCount++;
-          } catch (e) { errCount++; console.error('[class-reminder-cron] 發送上課前提醒失敗，ids=' + idsNeedReminder.join(',') + '：', e && e.message ? e.message : e); }
+          }
+          // claimedReminder.length === 0 = อีกรอบ (cron ที่ทับเวลากัน) จองไปแล้ว → ข้ามเงียบๆ ไม่ใช่ error
         }
       }
 
@@ -273,14 +326,23 @@ serve(async (req) => {
       if (idsNeedFollowup.length) {
         const minutesSinceEnd = (nowMs - endMs) / 60000;
         if (minutesSinceEnd >= 0 && minutesSinceEnd <= CATCH_WINDOW_MIN) {
-          try {
-            await pushLine(channelToken, s.line_user_id,
-              '🎉 今天的泰語課辛苦了！\n記得複習與分享學習心得喔😊\n有問題歡迎隨時問老師喔 💬');
-            // 2026-07-14 加：同上，檢查 update 有沒有真的成功，失敗要 log 不能悄悄過去
-            const { error: markErr2 } = await supabase.from('classroom_schedule').update({ line_followup_sent: true }).in('id', idsNeedFollowup);
-            if (markErr2) { console.error('[class-reminder-cron] 標記 line_followup_sent 失敗，可能會重複發送：', markErr2.message, 'ids=', idsNeedFollowup); errCount++; }
-            sentCount++;
-          } catch (e) { errCount++; console.error('[class-reminder-cron] 發送下課後訊息失敗，ids=' + idsNeedFollowup.join(',') + '：', e && e.message ? e.message : e); }
+          // 2026-07-26 แก้：จอง (claim) ก่อนส่งเสมอ — กันส่งซ้ำถ้า cron 2 รอบทับเวลากันพอดี (ดูคอมเมนต์บนสุดไฟล์)
+          const { claimedIds: claimedFollowup, error: claimErr2 } = await claimReminderIds(supabase, 'line_followup_sent', idsNeedFollowup);
+          if (claimErr2) {
+            console.error('[class-reminder-cron] จองสิทธิ์ส่งข้อความหลังเรียน ไม่สำเร็จ（ข้ามรอบนี้ กันส่งซ้ำ）：', claimErr2.message, 'ids=', idsNeedFollowup);
+            errCount++;
+          } else if (claimedFollowup.length) {
+            try {
+              await pushLine(channelToken, s.line_user_id,
+                '🎉 今天的泰語課辛苦了！\n記得複習與分享學習心得喔😊\n有問題歡迎隨時問老師喔 💬');
+              sentCount++;
+            } catch (e) {
+              errCount++;
+              console.error('[class-reminder-cron] 發送下課後訊息失敗，ids=' + claimedFollowup.join(',') + '：', e && e.message ? e.message : e);
+              await releaseReminderIds(supabase, 'line_followup_sent', claimedFollowup); // คืนสิทธิ์ ให้รอบหน้าลองส่งใหม่
+            }
+          }
+          // claimedFollowup.length === 0 = อีกรอบ (cron ที่ทับเวลากัน) จองไปแล้ว → ข้ามเงียบๆ ไม่ใช่ error
         }
       }
     }

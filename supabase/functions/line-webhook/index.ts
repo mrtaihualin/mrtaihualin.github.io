@@ -1298,8 +1298,33 @@ serve(async (req) => {
         // Calendar 建立成功——寫進課表資料庫（recurring_days 或 schedule，看是不是每週固定）
         let dbErrAddC = null;
         if (reqRowAddC.proposed_recurring) {
-          const { error } = await supabase.from('classroom_recurring_days')
-            .upsert({ token: reqRowAddC.token, weekday: reqRowAddC.proposed_weekday, start_time: startTimeAddC, end_time: endTimeAddC, calendar_event_id: createResultAddC.eventId }, { onConflict: 'token,weekday' });
+          // ✅ 2026-07-26 (Lin สั่ง: ต้องขึ้นได้ทั้ง Calendar และระบบ) — แก้แบบเดียวกับฝั่งเว็บ
+          // (classroom/index.html → createCalendarClassEventForStudent)
+          // เดิมชนกันที่ (token, weekday) = นักเรียน 1 คน มีคาบประจำได้วันละ 1 รอบเวลาเท่านั้น
+          // → เพิ่มพุธ 19:00 ให้คนที่มีพุธ 10:00 อยู่แล้ว = แถวพุธ 10:00 โดนทับหาย
+          //   คาบ 10:00 ยังอยู่ใน Calendar แต่ระบบจำ calendar_event_id ไม่ได้แล้ว = คาบกำพร้า
+          // ⚠️ ปุ่มนี้อยู่ในแอป LINE — คนละเส้นทางกับปุ่มในเว็บ ต้องแก้ทั้ง 2 ที่ ไม่งั้นรูยังอยู่
+          // ⚠️ ต้องรัน supabase/sql/2026-07-26_recurring_days_multi_slot.sql ก่อน
+          //    ยังไม่ได้รัน → error 42P10 → ถอยไปใช้กฎเดิมอัตโนมัติ (ไม่พัง แต่ยังทับกันอยู่)
+          const rdRowAddC = { token: reqRowAddC.token, weekday: reqRowAddC.proposed_weekday, start_time: startTimeAddC, end_time: endTimeAddC, calendar_event_id: createResultAddC.eventId };
+          let { error } = await supabase.from('classroom_recurring_days')
+            .upsert(rdRowAddC, { onConflict: 'token,weekday,start_time' });
+          if (error && (error.code === '42P10' || /no unique or exclusion constraint/i.test(error.message || ''))) {
+            // ⚠️ ยังไม่ได้รัน SQL → ฐานข้อมูลยังใช้กฎเดิม (วันละ 1 รอบเวลา)
+            // ห้ามถอยไปใช้กฎเดิมเงียบๆ — กฎเดิมจะ "ทับ" แถวคาบเดิมหายแล้วขึ้นว่าสำเร็จ
+            // = สร้างคาบกำพร้าซ้ำรอยบั๊กเดิมเป๊ะๆ (แก้แบบเดียวกับฝั่งเว็บ classroom/index.html)
+            console.warn('[line-webhook] ยังไม่ได้รัน 2026-07-26_recurring_days_multi_slot.sql');
+            const dupAddC = await supabase.from('classroom_recurring_days').select('start_time')
+              .eq('token', reqRowAddC.token).eq('weekday', reqRowAddC.proposed_weekday).neq('start_time', startTimeAddC);
+            if (dupAddC.error || (dupAddC.data && dupAddC.data.length)) {
+              error = { message: '這位學生同一個星期幾已經有另一個固定時段（'
+                + ((dupAddC.data || []).map((x) => x.start_time).join('、') || '讀取失敗')
+                + '），而資料庫還沒升級成「一天可以有多個固定時段」。硬寫下去會蓋掉舊的那筆，所以這次刻意沒寫。'
+                + '請先執行 supabase/sql/2026-07-26_recurring_days_multi_slot.sql' };
+            } else {
+              ({ error } = await supabase.from('classroom_recurring_days').upsert(rdRowAddC, { onConflict: 'token,weekday' }));
+            }
+          }
           dbErrAddC = error;
         } else {
           const { error } = await supabase.from('classroom_schedule')
