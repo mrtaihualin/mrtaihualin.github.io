@@ -976,36 +976,52 @@ function legoRefreshBars(){
 }
 
 // ════════════════════════════════════════════════════════════
-// v1 (LIN 2026-07-26): เพดานเล่นต่อวัน — ไม่ล็อกอิน 2 ประโยค/วัน · ล็อกอิน (ยังไม่จ่ายเงิน) 5 ประโยค/วัน
+// v2 (LIN 2026-07-26): เพดานเล่นต่อวัน — ไม่ล็อกอิน 2 ประโยค/วัน · ล็อกอิน (ยังไม่จ่ายเงิน) 5 ประโยค/วัน
 // (ระบบสมาชิกจ่ายเงินยังไม่ทำตอนนี้ พักไว้ทำอนาคตตามที่ Lin สั่ง — เพดานสูงสุดตอนนี้คือ 5)
-// นับ "ประโยคที่ทดสอบผ่าน" (ทุกครั้งที่ finishLegoRound() ถูกเรียก = ผ่าน 1 ประโยค) ผูกกับวันที่ไต้หวัน
-// (Asia/Taipei เหมือนระบบ streak/ดาวเดิมในไฟล์นี้ — ให้วันขึ้นวันใหม่ตรงกันทั้งเว็บ ไม่ใช้เวลาเครื่องผู้เล่น)
-// เก็บที่ localStorage — เป็น "เพดานนุ่ม" ฝั่ง client เท่านั้น (ตามที่ Lin ตกลง 2026-07-26) กันเล่นวนไม่หยุด
-// ไม่ใช่ระบบกันโกงเข้มงวด (ล้าง localStorage/เปิด incognito ก็ข้ามได้ — ยอมรับความเสี่ยงนี้ตามสเปกที่ Lin ให้)
-function legoTodayKeyTH(){
-  try{ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'}); } // 'en-CA' → รูปแบบ YYYY-MM-DD
-  catch(e){ return new Date().toISOString().slice(0,10); }
-}
-function legoDailyCap(){ return (window.READING_AUTH && READING_AUTH.user) ? 5 : 2; }
-function legoDailyCountToday(){
+//
+// ⚠️ เปลี่ยนจาก localStorage (เพดานนุ่ม ล้างเบราว์เซอร์/เปิด incognito ข้ามได้) เป็นนับที่เซิร์ฟเวอร์
+// (เพดานแข็ง) ตามที่ Lin สั่ง 2026-07-26: "ข้ามไม่ได้ทั้งล็อกอินและไม่ล็อกอิน เกมนี้จะเป็นตัวหลักในการหาเงินต่อไป"
+// ผ่าน Edge Function lego-daily-limit (ดู supabase/functions/lego-daily-limit/index.ts +
+// supabase/sql/2026-07-26_lego_daily_limits.sql) — นับ 1 ครั้งทุกครั้งที่กด "🧪測試" (ก่อนเริ่มทำโจทย์
+// ไม่ใช่ตอนทำผ่าน — กันกรณีเริ่มแล้วไม่ทำต่อ ยังนับเป็น 1 ครั้งที่ใช้โควต้าไปแล้ว)
+//
+// วิธีระบุตัวตน: ล็อกอิน → ผูกกับ user id จริง (ล้างเบราว์เซอร์ไม่ช่วย) · ไม่ล็อกอิน → ผูกกับ IP (hash ไว้)
+// ⚠️ ข้อจำกัดที่ Lin ควรรู้ (บอกตรง ๆ ไม่ใช่ทำเนียนว่าแข็ง 100%): กันคนไม่ล็อกอินด้วย IP แก้ปัญหา
+// "ล้าง localStorage/เปิด incognito" ได้จริง (IP ไม่เปลี่ยนตามการล้างข้อมูลเบราว์เซอร์) แต่ยังมีช่องโหว่
+// เดียวที่เหลือ: สลับเครือข่าย (WiFi → 4G, เปิด VPN, มือถือคนละเครื่อง) จะได้ IP ใหม่ = โควต้าใหม่
+// นี่คือขีดจำกัดมาตรฐานของการจำกัดคนไม่มีบัญชีจริง — ถ้าต้องการแข็ง 100% จริง ๆ ต้องบังคับล็อกอินก่อนเล่น
+// เกมนี้เท่านั้น (ตัดสินใจแยกต่างหาก ยังไม่ได้ทำตอนนี้ เพราะเดิมตกลงว่า "ไม่บังคับล็อกอิน")
+// v2: fail-closed โดยตั้งใจ (เช็คไม่ได้ = "ไม่ให้ผ่าน" ไม่ใช่ปล่อยผ่าน) — ตรงตามที่ Lin สั่ง "ข้ามไม่ได้"
+// ข้อเสียที่ Lin ควรรู้: ถ้า Supabase/เน็ตมีปัญหาจริง ๆ (ไม่ใช่แค่คนพยายามข้าม) เกมนี้จะเล่นไม่ได้ชั่วคราว
+// ทั้งเว็บจนกว่าจะกลับมาปกติ — เป็น trade-off ที่จำเป็นถ้าจะเอาเพดานแข็งจริง (เลือกฝั่ง "กันเงินรั่ว"
+// มากกว่า "กันเกมล่ม" เพราะ Lin บอกว่าเกมนี้จะเป็นตัวหลักในการหาเงิน)
+async function legoCheckDailyQuota(){
   try{
-    var raw=JSON.parse(localStorage.getItem('lego_daily_count')||'{}');
-    return (raw.date===legoTodayKeyTH()) ? (raw.count||0) : 0;
-  }catch(e){ return 0; }
-}
-function legoDailyIncrement(){
-  try{
-    var today=legoTodayKeyTH();
-    var raw=JSON.parse(localStorage.getItem('lego_daily_count')||'{}');
-    var count=(raw.date===today)?(raw.count||0):0;
-    localStorage.setItem('lego_daily_count', JSON.stringify({date:today, count:count+1}));
-  }catch(e){}
+    var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    if(!sb) return {ok:false, reason:'no_client'};
+    var headers = {};
+    try{
+      var sres = await sb.auth.getSession();
+      var token = sres && sres.data && sres.data.session && sres.data.session.access_token;
+      if(token) headers.Authorization = 'Bearer ' + token;
+    }catch(e){}
+    var res = await sb.functions.invoke('lego-daily-limit', { headers: headers });
+    if(res.error || !res.data){
+      console.warn('[lego-daily-limit] เช็คโควต้าไม่ได้:', res.error);
+      return {ok:false, reason:'network'};
+    }
+    return res.data; // {ok, used, cap, loggedIn, remaining}
+  }catch(e){
+    console.warn('[lego-daily-limit] error:', e);
+    return {ok:false, reason:'network'};
+  }
 }
 
 // จบรอบ (ทุก SENTENCES_PER_ROUND ประโยคที่ "ผ่าน") → +20/+50 perfect + ×2 高級倍率 แล้วเซฟลงลีก
 // ไม่มีดาวเงินอีกต่อไป (ตามที่ Lin สั่ง 2026-07-05) — GAME_ACCOUNT.getStars()/badges ที่โชว์อยู่คือดาวจากเกมอื่นที่มี SRS เท่านั้น
 function finishLegoRound(){
-  legoDailyIncrement(); // v1 (LIN 2026-07-26): นับทุกครั้งที่ทดสอบผ่าน 1 ประโยค (ไม่ว่าจะจบรอบ 5 ประโยคหรือยัง)
+  // v2 (LIN 2026-07-26): เดิมนับโควต้าตรงนี้ (ตอน "ทำผ่าน") ย้ายไปนับที่ startTest() แทนแล้ว
+  // (ตอน "เริ่มทดสอบ" ผ่าน Edge Function lego-daily-limit — ดูคอมเมนต์เต็มด้านบน legoCheckDailyQuota())
   sentencesThisRound++;
   if(sentencesThisRound<SENTENCES_PER_ROUND){legoRefreshBars();return null;}
   const count=sentencesThisRound;
@@ -1288,16 +1304,24 @@ function getSentenceWords(){
   return words;
 }
 
-function startTest(){
+let legoQuotaCheckInFlight=false; // v2 (LIN 2026-07-26): กันกดรัว ๆ ยิง Edge Function ซ้อนกัน (แต่ละครั้งกินโควต้า 1 หน่วยจริง)
+async function startTest(){
   if(!state.subj||!state.verb){toast('至少要有「主語」和「動詞」',true);return;}
-  // v1 (LIN 2026-07-26): เพดานเล่นต่อวัน — เช็คก่อนเปิดหน้าต่างทดสอบ (ยังต่อประโยคเล่นเองได้ไม่จำกัด
-  // แค่ "กดทดสอบ" ที่ถูกจำกัด — ดูคอมเมนต์เต็มที่ finishLegoRound() ด้านบน)
-  if(legoDailyCountToday()>=legoDailyCap()){
-    var isIn=!!(window.READING_AUTH && READING_AUTH.user);
-    toast(isIn
-      ? ('👧🏻 米娜：今天已經測試 '+legoDailyCap()+' 句囉！明天再回來繼續造句吧 🌙')
-      : ('👧🏻 米娜：今天已經測試 '+legoDailyCap()+' 句囉！登入帳號可以多測到每天 5 句，明天也可以再回來 🌙'),
-      true);
+  if(legoQuotaCheckInFlight) return; // กำลังเช็คโควต้าค้างอยู่ — กันดับเบิลคลิก
+  legoQuotaCheckInFlight=true;
+  toast('檢查中…⏳',false);
+  const quota=await legoCheckDailyQuota();
+  legoQuotaCheckInFlight=false;
+  if(!quota.ok){
+    if(quota.reason==='network' || quota.reason==='no_client'){
+      toast('⚠️ 連線不穩，暫時無法測試，請稍等一下再試一次',true);
+    }else{
+      var cap=quota.cap||(quota.loggedIn?5:2);
+      toast(quota.loggedIn
+        ? ('👧🏻 米娜：今天已經測試 '+cap+' 句囉！明天再回來繼續造句吧 🌙')
+        : ('👧🏻 米娜：今天已經測試 '+cap+' 句囉！登入帳號可以多測到每天 5 句，明天也可以再回來 🌙'),
+        true);
+    }
     return;
   }
   testWords=getSentenceWords();
