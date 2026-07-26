@@ -220,11 +220,25 @@ serve(async (req) => {
       }
     }
 
+    // v3 (LIN 2026-07-26): แก้บั๊กจริง — เจอจาก Lin ทดสอบล็อกอิน LINE ซ้ำหลังผูกบัญชีแล้วดันได้บัญชีใหม่อีก
+    //   สาเหตุ: ตอนเจอ user เดิม (ผูกไว้แล้ว) โค้ดเดิมยังใช้ userEmail แบบ synthetic เสมอ (บรรทัดบน)
+    //   ทั้งที่ user คนนั้นอาจมีอีเมลจริง (เช่นผูกกับบัญชี Google) — generateLink(synthetic email)
+    //   เลยหา user ไม่เจอ แล้ว Supabase สร้าง user ใหม่ซ้อนขึ้นมาให้แทนเงียบๆ ต้องเอา "อีเมลจริงของ
+    //   user ที่เจอ" มาใช้สร้าง magic link แทน ไม่ใช่ synthetic เสมอไป
+    let linkEmail = userEmail;
+    if (existing && existing.user_id) {
+      const { data: existingUserData, error: getUserErr } = await supabase.auth.admin.getUserById(userId);
+      if (getUserErr || !existingUserData || !existingUserData.user) {
+        return json({ error: 'get_user_failed', detail: (getUserErr && getUserErr.message) || 'unknown' }, 500);
+      }
+      linkEmail = existingUserData.user.email || userEmail;
+    }
+
     // 5) สร้าง magic link แล้วส่งแค่ hashed_token กลับไปให้เว็บ (ไม่ส่งอีเมลจริง — เว็บเอาไปยืนยัน
     //    เองด้วย verifyOtp() ได้ session จริงเลย ไม่ต้องพึ่งระบบส่งเมล)
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
-      email: userEmail,
+      email: linkEmail,
     });
     if (linkErr || !linkData || !linkData.properties || !linkData.properties.hashed_token) {
       return json({ error: 'generate_link_failed', detail: (linkErr && linkErr.message) || 'unknown' }, 500);
