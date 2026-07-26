@@ -2346,7 +2346,7 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
     try {
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
         body: JSON.stringify({ to: 'teacher', message: '✅ 已幫 ' + s.name + ' 加課：' + addedTimeLabel }),
       });
     } catch (e) { console.warn('⚠️ 加課通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
@@ -2434,6 +2434,12 @@ function addClassDayShortLabel(p) {
 // 組合流程，只送「非直接排」的那幾筆）都呼叫這個。不碰 _addClassDayPending/resultEl/UI，
 // 呼叫端自己組畫面文字跟收尾動作。
 async function proposeAddClassRows(token, pendingRows) {
+  // 🔒 2026-07-26：ฐานข้อมูลบังคับแล้วว่า "คำขอที่ติดป้ายว่าครูเป็นคนขอ" ต้องมาจากครูจริงเท่านั้น
+  // → เช็ค session ก่อนตรงนี้ ครูจะได้เห็นข้อความ "ล็อกอินหมดอายุ" แทน error ดิบของฐานข้อมูล
+  // ⚠️ ต้องคืนค่าหน้าตาเดิม (created/failedLines/...) ผู้เรียกอ่าน r.created ทันที คืน undefined จะพังต่อ
+  if (!(await ensureTeacherSession('通知學生加課'))) {
+    return { created: [], failedLines: ['老師登入已過期，沒有送出任何通知'], notifySent: false, notifyError: null, hasLine: false };
+  }
   const s = studentsCache[token];
   if (!s) return { created: [], failedLines: ['找不到學生資料'], notifySent: false, notifyError: null, hasLine: false };
 
@@ -6506,7 +6512,8 @@ async function ackTeacherCancel(token, id) {
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-      body: JSON.stringify({ to: 'teacher', message: 'ℹ️ 學生已確認收到取消通知（' + (res.rows[0].original_date || '-') + '），可以到網站按「確認刪除」了' }),
+      // 2026-07-26：ฝั่งนักเรียนไม่ได้ล็อกอิน → ต้องแนบ token ของตัวเองเป็นหลักฐานว่าเป็นนักเรียนจริง
+      body: JSON.stringify({ to: 'teacher', fromStudentToken: token, message: 'ℹ️ 學生已確認收到取消通知（' + (res.rows[0].original_date || '-') + '），可以到網站按「確認刪除」了' }),
     });
   } catch (e) { /* 通知老師失敗不影響學生這邊已經確認成功 */ }
   // 2026-07-18 加了又拿掉：Lin 確認網站這裡不用加提示訊息，維持原本按完就悄悄消失的行為。
@@ -6562,6 +6569,7 @@ async function declineTeacherAdd(token, id) {
       headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
       body: JSON.stringify({
         to: 'teacher',
+        fromStudentToken: token, // 2026-07-26：หลักฐานว่าเป็นนักเรียนจริง (ฝั่งนักเรียนไม่ได้ล็อกอิน)
         message: '學生婉拒了這堂加課提議（' + rDate + '）',
         flex: {
           title: '❌ 學生婉拒了這堂加課',
@@ -6594,6 +6602,7 @@ async function ackTeacherAdd(token, id) {
       headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
       body: JSON.stringify({
         to: 'teacher',
+        fromStudentToken: token, // 2026-07-26：หลักฐานว่าเป็นนักเรียนจริง (ฝั่งนักเรียนไม่ได้ล็อกอิน)
         message: 'ℹ️ 學生已確認收到加課通知（' + rDateForFlex + '），可以按下方按鈕新增，或到網站按「確認新增」',
         flex: {
           title: '學生已確認收到加課通知',
@@ -6656,7 +6665,8 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
     // 2026-07-22 加（Lin 要求：改期也要能直接在 LINE 按一顆按鈕完成，不用開網站）：接受新時間時
     // 也附一顆按鈕，共用 line-webhook 新增的 action=confirm_reschedule_move（跟 confirm_add_class
     // 同一套模式），不管學生是從網站還是從 LINE 回覆的，老師都能直接在 LINE 按完成。
-    const bodyPayload = { to: 'teacher', message: msg };
+    // 2026-07-26：แนบ token ของนักเรียนเป็นหลักฐาน (สาขา to:'teacher' ไม่เปิดโล่งแล้ว)
+    const bodyPayload = { to: 'teacher', fromStudentToken: token, message: msg };
     if (response === 'accepted') {
       bodyPayload.flex = {
         title: 'ℹ️ 學生已經選好新時間',
@@ -6869,6 +6879,9 @@ function notifyTeacherClassRequest(d) {
       },
       body: JSON.stringify({
         to: 'teacher',
+        // 2026-07-26：ช่องทางหลักที่นักเรียนแจ้งครู — แนบ token ของตัวเองเป็นหลักฐานว่าเป็นนักเรียนจริง
+        // (d.token ถูกส่งมาจากทุกจุดที่เรียกฟังก์ชันนี้อยู่แล้ว — เช็คแล้วครบทั้ง 5 จุด)
+        fromStudentToken: d.token || null,
         message: subject + '\n\n' + message,
         flex: { title: subject, bodyText: flexBodyText, rows: flexRows, buttons: flexButtons }
       })
@@ -7675,7 +7688,7 @@ async function processClassRequestInner(id, r, isCancel) {
       : ('✅ 已把 ' + r.student_name + ' 的課改到 ' + formatThaiDateTimeLabel(newStartIsoForNotify));
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
       body: JSON.stringify({ to: 'teacher', message: teacherNotifyMsg }),
     });
   } catch (e) { /* 通知老師自己失敗不影響已經完成的 Calendar 動作 */ }
@@ -8081,7 +8094,7 @@ async function confirmAcceptedOfferInner(id, r) {
   try {
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
       body: JSON.stringify({ to: 'teacher', message: '✅ 已把 ' + r.student_name + ' 的課改到 ' + formatThaiDateTimeLabel(newStartIso) }),
     });
   } catch (e) { /* 通知老師自己失敗不影響已經完成的 Calendar 動作 */ }
@@ -8284,7 +8297,7 @@ async function revertCalendarBackup(id) {
   try {
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
       body: JSON.stringify({ to: 'teacher', message: '✅ ' + revertLabelForTeacher + '：' + (sForRevert ? sForRevert.name : (b.token || '-')) + '　' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）' }),
     });
   } catch (e) { console.warn('⚠️ 復原通知老師自己失敗（不影響已經完成的復原）：', e.message || e); }
@@ -8479,6 +8492,9 @@ async function initiateTeacherReschedule_chosen(token, chosen) {
 }
 
 async function initiateTeacherReschedule_chosenInner(token, chosen) {
+  // 🔒 2026-07-26：ฐานข้อมูลบังคับแล้วว่า "คำขอที่ติดป้ายว่าครูเป็นคนขอ" ต้องมาจากครูจริงเท่านั้น
+  // → เช็ค session ก่อนตรงนี้ ครูจะได้เห็นข้อความ "ล็อกอินหมดอายุ" แทน error ดิบของฐานข้อมูล
+  if (!(await ensureTeacherSession('老師發起改期'))) return;
   var s = studentsCache[token];
   if (!confirm('確定要幫這堂課改期嗎？\n\n學生：' + (s ? s.name : token) + '\n原本時間：' + chosen.label + '（泰國時間）\n\n下一步選新時間，送出後會傳 LINE 通知學生。')) return;
   var p = formatInTz(new Date(chosen.iso), TEACHER_TZ);
@@ -8532,6 +8548,9 @@ async function teacherCancelClassNow_chosen(token, chosen) {
 // 直接去聯絡學生（見 request-sla-cron 的新分支）。真正的刪除邏輯還是共用 processClassRequestInner
 // （跟學生申請取消、老師按「✅ 處理」同一套），這裡只負責「建立紀錄 + 通知學生來確認」。
 async function teacherCancelClassNowInner(token, chosen) {
+  // 🔒 2026-07-26：ฐานข้อมูลบังคับแล้วว่า "คำขอที่ติดป้ายว่าครูเป็นคนขอ" ต้องมาจากครูจริงเท่านั้น
+  // → เช็ค session ก่อนตรงนี้ ครูจะได้เห็นข้อความ "ล็อกอินหมดอายุ" แทน error ดิบของฐานข้อมูล
+  if (!(await ensureTeacherSession('老師取消課堂'))) return;
   var s = studentsCache[token];
   var studentName = s ? s.name : token;
   var ev = chosen.ev;
@@ -8710,7 +8729,7 @@ async function confirmTeacherAddClass(id) {
     try {
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
         body: JSON.stringify({ to: 'teacher', message: '✅ 已幫 ' + s.name + ' 加課：' + addedTimeLabel }),
       });
     } catch (e) { console.warn('⚠️ 加課完成通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
