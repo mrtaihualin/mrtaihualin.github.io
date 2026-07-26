@@ -376,8 +376,9 @@ function updateOptHint(){
 }
 setRgGuideMode(rgGuideMode); // ตั้งสถานะปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 
-// ── ปุ่มเปิด/ปิดคำอ่านที่โชว์ตั้งแต่คำเพิ่งโหลด (ไม่กระทบตอนเฉลย showReveal/showRevealMulti ซึ่งโชว์เสมอ) — Lin 2026-07-16
-// 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่ (จนกว่าจะเฉลย) — icon เลือกโดย Lin
+// ── ปุ่มเปิด/ปิดคำอ่านที่โชว์ตั้งแต่คำเพิ่งโหลด — Lin 2026-07-16
+// 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่ — icon เลือกโดย Lin
+// Lin 2026-07-26: เดิมตอนเฉลย (checked=true) จะบังคับโชว์讀音เสมอ กดปุ่ม🐣/🥚ไม่มีผลตอนเฉลย → แก้ให้ปุ่มกดเปิด/ปิดได้จริงแม้ตอนเฉลยแล้ว
 var rgPronMode=(function(){try{var v=localStorage.getItem('rg_pron_mode');return v===null?false:v==='1';}catch(e){return false;}})(); // default = ซ่อน (ผู้เล่นกดเปิดเอง) — Lin 2026-07-16
 function setRgPronMode(on){
   rgPronMode=!!on;
@@ -385,11 +386,12 @@ function setRgPronMode(on){
   var btn=document.getElementById('rg-pron-toggle');
   if(btn){
     btn.textContent=rgPronMode?'🐣':'🥚';
-    btn.title=rgPronMode?'目前：讀音已顯示（點擊隱藏，答對後仍會顯示）':'目前：讀音已隱藏（點擊顯示）';
+    btn.title=rgPronMode?'目前：讀音已顯示（點擊隱藏）':'目前：讀音已隱藏（點擊顯示）';
     btn.setAttribute('aria-label',btn.title);
   }
-  if(typeof WORD!=='undefined' && WORD && !checked){
-    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: ปุ่มคำอ่านต้องใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
+  if(typeof WORD!=='undefined' && WORD){
+    var _rpTxt=checked?(typeof buildThaiPron==='function'?buildThaiPron():(WORD.readingTH||WORD.th||'')):((WORD.th)?(WORD.readingTH||WORD.th):'');
+    document.getElementById('rev-pron').textContent=(rgPronMode&&_rpTxt)?_rpTxt:''; // ใช้ readingTH เสมอ ห้ามใช้ syls[].th
   }
 }
 setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
@@ -701,7 +703,7 @@ function loadWord(){
   document.getElementById('wth').textContent=WORD.th;
   document.getElementById('wzh').textContent=WORD.zh;
   rgRenderEnLine(); // Lin 2026-07-25: คำอ่านโรมันของคำใหม่ (ถ้าเปิด 英文讀音 อยู่)
-  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (ที่เฉลย showReveal/showRevealMulti ยังโชว์เสมอ ไม่เปลี่ยน) — ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
+  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดเลย ถ้าปุ่ม🐣/🥚เปิดอยู่ (2026-07-26: ตอนเฉลยก็เคารพปุ่มนี้เหมือนกันแล้ว ไม่บังคับโชว์อีก) — ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
   // บอกระบบเสียงว่าคำปัจจุบันคือคำไหน — ปุ่ม 🔊 กด 1 ที = เล่นเสียงคำนี้ 1 ที (2026-07-16)
@@ -1102,6 +1104,8 @@ function showBonus(){
   selectedBonus=null;
   var sec=document.getElementById('bonus-section');
   sec.className='bonus-section show';
+  var hdr0=document.getElementById('bonus-header');
+  if(hdr0){hdr0.style.display='';hdr0.innerHTML='猜聲調！答對 <span class="bonus-pts">+1</span> 分 ✨ 答錯不扣分';} // Lin 2026-07-26: โจทย์ใหม่ → โชว์ป้ายอธิบายกฎอีกครั้ง (ซ่อนตอนเฉลยใน evaluateBonus)
   var box=document.getElementById('bonus-opts');
   box.innerHTML='';
   document.getElementById('bonus-result').textContent='';
@@ -1131,6 +1135,8 @@ function showBonus(){
 function evaluateBonus(){
   if(bonusAnswered||!W.tone_name)return;
   bonusAnswered=true;
+  var hdrE=document.getElementById('bonus-header');
+  if(hdrE)hdrE.style.display='none'; // Lin 2026-07-26: ตอบแล้ว/เฉลยแล้ว → ไม่ต้องโชว์ป้ายอธิบายกฎ猜聲調ซ้ำ
   var box=document.getElementById('bonus-opts');
   var res=document.getElementById('bonus-result');
   box.querySelectorAll('.bonus-btn').forEach(function(b){
@@ -1412,7 +1418,7 @@ function buildThaiPron(){
 }
 function showReveal(){
   var _pron=buildThaiPron();
-  document.getElementById('rev-pron').textContent=_pron?(_pron):'';
+  document.getElementById('rev-pron').textContent=(rgPronMode&&_pron)?_pron:''; // Lin 2026-07-26: เคารพปุ่ม🐣/🥚 ไม่บังคับโชว์讀音ตอนเฉลยอีกต่อไป
   rgRenderEnLine();
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
@@ -1435,7 +1441,7 @@ function showReveal(){
 // 打完整句（多音節）— 顯示「整句」的子音/母音/尾音分析＋泰文讀法，不是只顯示最後一個音節而已 — เหมือนเกมพิมพ์ (showRevealMulti) — Lin 2026-07-12
 function showRevealMulti(){
   var _pronM=buildThaiPron();
-  document.getElementById('rev-pron').textContent=_pronM?(_pronM):'';
+  document.getElementById('rev-pron').textContent=(rgPronMode&&_pronM)?_pronM:''; // Lin 2026-07-26: เคารพปุ่ม🐣/🥚 ไม่บังคับโชว์讀音ตอนเฉลยอีกต่อไป
   rgRenderEnLine();
   // Lin 2026-07-12 (圖3 unify): คำอธิบายอยู่ "ในกล่องพยางค์" (#bonus-reason ของกล่องสุดท้าย) เสมอ — เลิกใช้แผงแยก #reveal
   var box=document.getElementById('bonus-reason');
@@ -1457,6 +1463,7 @@ function showRevealMulti(){
   box.className='bonus-reason show';
   var _sec=document.getElementById('bonus-section'); if(_sec)_sec.className='bonus-section show';
   var _rv=document.getElementById('reveal'); if(_rv)_rv.className='reveal';
+  var _hdrF=document.getElementById('bonus-header'); if(_hdrF)_hdrF.style.display='none'; // Lin 2026-07-26: จบคำแล้ว → ไม่ต้องโชว์ป้ายอธิบายกฎ猜聲調ซ้ำตอนเฉลย
 }
 
 var _scorePopCount=0; // กันป๊อปคะแนนซ้อนทับกัน — Lin 2026-07-12
@@ -1837,6 +1844,8 @@ function rgAskMidTone(){
       box.querySelectorAll('.bonus-btn').forEach(function(b){b.classList.add('locked');});
       var skipBtn2=document.getElementById('rg-mid-tone-skip');
       if(skipBtn2)skipBtn2.style.display='none';
+      var hdrA=document.getElementById('bonus-header');
+      if(hdrA)hdrA.style.display='none'; // Lin 2026-07-26: ตอบแล้ว → ซ่อนป้ายอธิบายกฎ猜聲調
       var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
       if(t.name===SY.tone_name){
         var toneScored=!wordUsedGuide && !curWordIsKnownCheck; // โหมดฝึกฝน/พิสูจน์ = ไม่ได้แต้มโบนัสเสียง เหมือน初級
@@ -1865,6 +1874,8 @@ function rgSkipMidTone(){
   if(box)box.querySelectorAll('.bonus-btn').forEach(function(b){b.classList.add('locked');});
   var skipBtn=document.getElementById('rg-mid-tone-skip');
   if(skipBtn)skipBtn.style.display='none';
+  var hdrS=document.getElementById('bonus-header');
+  if(hdrS)hdrS.style.display='none'; // Lin 2026-07-26: ข้ามแล้ว → ซ่อนป้ายอธิบายกฎ猜聲調
   var seg=RG_MID_TONE_Q[RG_MID_TONE_IDX];
   var SY=sylList[seg];
   var res=document.getElementById('bonus-result');
@@ -1883,7 +1894,7 @@ function rgFinishWholeWordAfterTone(){
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section';
   var hdr=document.getElementById('bonus-header');
-  if(hdr)hdr.innerHTML='猜聲調！答對 <span class="bonus-pts">+1</span> 分 ✨ 答錯不扣分'; // คืนข้อความเดิมไว้ให้คำถัดไป (ถ้าเป็นคำพยางค์เดียว)
+  if(hdr){hdr.innerHTML='猜聲調！答對 <span class="bonus-pts">+1</span> 分 ✨ 答錯不扣分';hdr.style.display='none';} // คืนข้อความเดิมไว้ให้คำถัดไป (ถ้าเป็นคำพยางค์เดียว) แต่ซ่อนไว้ก่อน — Lin 2026-07-26: จบคำแล้ว ไม่ต้องโชว์ป้ายกฎซ้ำตอนเฉลย
   // Lin 2026-07-12: คำหลายพยางค์ → โชว์สรุปรวมทุกพยางค์ (เหมือนเกมพิมพ์) ไม่ใช่แค่พยางค์สุดท้าย
   markOpts();markSlots();(sylList.length>1?showRevealMulti():showReveal());renderSylStrip();
   document.getElementById('retry-hint').className='retry-hint';

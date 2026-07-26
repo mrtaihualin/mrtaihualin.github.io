@@ -554,7 +554,8 @@ function renderSylStrip(){
   });
 }
 // ── ปุ่มเปิด/ปิดคำอ่าน 🐣/🥚 — port มาจากเกมอ่าน (Lin 2026-07-16) · ใช้ localStorage key เดียวกัน = ตั้งค่าครั้งเดียว sync กันทั้งเกมอ่าน/เกมพิมพ์
-// 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่ (จนกว่าจะเฉลย — ตอนเฉลย showReveal/showRevealMulti โชว์เสมอเหมือนเดิม)
+// 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่
+// Lin 2026-07-26: เดิมตอนเฉลย (checked=true) จะบังคับโชว์讀音เสมอ กดปุ่ม🐣/🥚ไม่มีผลตอนเฉลย → แก้ให้ปุ่มกดเปิด/ปิดได้จริงแม้ตอนเฉลยแล้ว (ไม่บังคับโชว์อีกต่อไป)
 var rgPronMode=(function(){try{var v=localStorage.getItem('rg_pron_mode');return v===null?false:v==='1';}catch(e){return false;}})();
 function setRgPronMode(on){
   rgPronMode=!!on;
@@ -562,11 +563,12 @@ function setRgPronMode(on){
   var btn=document.getElementById('rg-pron-toggle');
   if(btn){
     btn.textContent=rgPronMode?'🐣':'🥚';
-    btn.title=rgPronMode?'目前：讀音已顯示（點擊隱藏，答對後仍會顯示）':'目前：讀音已隱藏（點擊顯示）';
+    btn.title=rgPronMode?'目前：讀音已顯示（點擊隱藏）':'目前：讀音已隱藏（點擊顯示）';
     btn.setAttribute('aria-label',btn.title);
   }
-  if(typeof WORD!=='undefined' && WORD && !checked){
-    document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // ใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th
+  if(typeof WORD!=='undefined' && WORD){
+    var _rpTxt=checked?(typeof buildThaiPron==='function'?buildThaiPron():(WORD.readingTH||WORD.th||'')):((WORD.th)?(WORD.readingTH||WORD.th):'');
+    document.getElementById('rev-pron').textContent=(rgPronMode&&_rpTxt)?_rpTxt:''; // ใช้ readingTH เสมอ ห้ามใช้ syls[].th
   }
 }
 setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
@@ -991,7 +993,7 @@ function showBonus(){
   document.getElementById('bonus-result').textContent='';
   document.getElementById('bonus-reason').className='bonus-reason';
   var _rd0=document.getElementById('bonus-reading');
-  if(_rd0)_rd0.textContent=W.th?('讀音：'+(W.read||W.th)):''; // Lin 2026-07-12: ช่อง讀音ต้องเป็น "คำอ่าน" (read) ไม่ใช่ตัวเขียน (th)
+  if(_rd0)_rd0.textContent=''; // Lin 2026-07-26: เอา讀音ออกจากกล่องเฉลย/กล่องทายวรรณยุกต์ทั้งหมด — ใช้ปุ่ม🐣/🥚มุมขวาล่างแทน
   var skipBtn0=document.getElementById('rg-tone-skip-btn');
   if(skipBtn0)skipBtn0.style.display='none'; // ยังไม่ถึงตอนที่พิมพ์ครบ ยังไม่ให้กดข้าม
   BONUS_TONES.forEach(function(t){
@@ -1279,7 +1281,7 @@ function buildThaiPron(){
 }
 function showReveal(){
   var _pron=buildThaiPron();
-  document.getElementById('rev-pron').textContent=_pron?(_pron):'';
+  document.getElementById('rev-pron').textContent=(rgPronMode&&_pron)?_pron:''; // Lin 2026-07-26: เคารพปุ่ม🐣/🥚 ไม่บังคับโชว์讀音ตอนเฉลยอีกต่อไป
   rgRenderEnLine();
   var box=document.getElementById('reveal-rules');
   box.innerHTML='';
@@ -1303,7 +1305,7 @@ function showReveal(){
 // 每個字/音節各自一段分析，答對答錯都會顯示（rgContFinish 不管成功/失敗都會呼叫這個）— Lin 2026-07-07
 function showRevealMulti(){
   var _pronM=buildThaiPron();
-  document.getElementById('rev-pron').textContent=_pronM?(_pronM):'';
+  document.getElementById('rev-pron').textContent=(rgPronMode&&_pronM)?_pronM:''; // Lin 2026-07-26: เคารพปุ่ม🐣/🥚 ไม่บังคับโชว์讀音ตอนเฉลยอีกต่อไป
   rgRenderEnLine();
   // Lin 2026-07-12 (圖3 unify): คำอธิบายต้องอยู่ "ในกล่องพยางค์" เสมอ → หลายพยางค์ = ใส่ใน #bonus-reason ของกล่องสุดท้าย (เลิกใช้แผงแยก #reveal)
   var box=document.getElementById('bonus-reason');
@@ -2074,7 +2076,7 @@ function rgContAskNextTone(){
   document.getElementById('bonus-result').textContent='';
   document.getElementById('bonus-reason').className='bonus-reason';
   var _rd=document.getElementById('bonus-reading');
-  if(_rd)_rd.textContent=SY.th?('讀音：'+(SY.read||SY.th)):''; // Lin 2026-07-12: ช่อง讀音ต้องเป็น "คำอ่าน" (read) ไม่ใช่ตัวเขียน (th)
+  if(_rd)_rd.textContent=''; // Lin 2026-07-26: เอา讀音ออกจากกล่องเฉลย/กล่องทายวรรณยุกต์ทั้งหมด — ใช้ปุ่ม🐣/🥚มุมขวาล่างแทน
   var hintEl=document.getElementById('rg-type-hint');
   if(hintEl){hintEl.textContent='打完整個字了！選一下「'+SY.th+'」的聲調也可以（'+(RG_CONT_TONE_IDX+1)+'/'+RG_CONT_TONE_Q.length+'），不選按 Enter 或下面按鈕直接跳過 👇';hintEl.className='type-hint good';}
   var skipBtn=document.getElementById('rg-tone-skip-btn');
