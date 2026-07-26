@@ -161,11 +161,13 @@
       return true;
     }
     if (!moveToSideMenu()) {
+      // Lin 2026-07-25: ซ่อนไว้ก่อนระหว่างรอ — เดิมโผล่ใต้คำศัพท์แวบนึงแล้วกระโดดไปมุมขวา ดูสะดุดตา
+      trigger.style.visibility = 'hidden';
       row.appendChild(wrap); // ที่อยู่ชั่วคราว ระหว่างรอเมนูขวาสร้างเสร็จ (กันปุ่มหายไปเฉยๆ)
       var moveTries = 0;
       var moveIv = setInterval(function () {
         moveTries++;
-        if (moveToSideMenu() || moveTries > 40) clearInterval(moveIv); // ลองนาน ~4 วิ แล้วเลิก (เผื่อหน้าไหนไม่มีเมนูขวาจริงๆ)
+        if (moveToSideMenu() || moveTries > 40) { trigger.style.visibility = ''; clearInterval(moveIv); } // ลองนาน ~4 วิ แล้วเลิก (เผื่อหน้าไหนไม่มีเมนูขวาจริงๆ) — โชว์ปุ่มตอนย้ายเสร็จ/เลิกลองแล้ว
       }, 100);
     }
 

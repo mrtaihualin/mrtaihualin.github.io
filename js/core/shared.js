@@ -1866,7 +1866,7 @@ window.deleteFBComment = function(postId, idx) {
         fontBtn.type = 'button';
         fontBtn.className = 'word-ctl-btn';
         var renderFontBtn = function () {
-          fontBtn.textContent = fontOn ? '✅' : '✍️';
+          fontBtn.textContent = '\u270D\uFE0F';   // Lin 2026-07-25: เดิมสลับเป็น ✅ ตอนเปิด — ✅ เป็นเครื่องหมายถูกทั่วไป ไม่สื่อว่า "ฟอนต์" และไม่ผูกแบรนด์ (กฎ 16) · สถานะดูจากป้าย 標準字/現代字 ข้างๆ ได้แล้ว
           fontBtn.title = fontOn ? '目前：現代字體（點擊換回標準）' : '目前：標準字體（點擊換現代）';
           fontBtn.setAttribute('aria-label', fontBtn.title);
         };

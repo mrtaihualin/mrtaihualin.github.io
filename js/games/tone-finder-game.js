@@ -3474,7 +3474,10 @@ function stepResult() {
   var sessionBlock = '';
   if (session) {
     var sEntry = session.words[session.index];
-    var bd = getBreakdown(sEntry.word);
+    // Lin 2026-07-25: แตกเสียงจาก "พยางค์ที่กำลังตอบ" (S.word) ไม่ใช่คำเต็ม
+    //   บั๊กเดิม: คำหลายพยางค์จะโชว์ 母音/尾音 ของท้ายคำ เช่น สว่าง ตอบพยางค์ สะ แต่ตารางขึ้น 尾音 ง (ของ หว่าง)
+    //   คำพยางค์เดียว S.word เท่ากับ sEntry.word อยู่แล้ว จึงไม่กระทบ
+    var bd = getBreakdown(S.word);
     var noMistakes = (session.currentWordMistakes || 0) === 0;
     var initialGuess = session.initialGuess;
     var finalAnswer = session.finalAnswer;
@@ -3510,7 +3513,7 @@ function stepResult() {
     // Breakdown
     var bdRows = '';
     if (bd.init) bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;white-space:nowrap;">起首子音</td><td class="tf-bd-th" style="padding:6px 10px;">'+bd.init+'</td></tr>';
-    var vForm = vowelFormOh(sEntry.word);
+    var vForm = vowelFormOh(S.word);   // Lin 2026-07-25: เหตุผลเดียวกับ getBreakdown ด้านบน
     var vd = vForm ? vForm : (bd.vowelType === 'short' ? '短母音' : bd.vowelType === 'long' ? '長母音' : '—');
     bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;">母音</td><td class="tf-bd-th" style="padding:6px 10px;">'+vd+'</td></tr>';
     if (bd.finalCons) bdRows += '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;">尾音</td><td class="tf-bd-th" style="padding:6px 10px;">'+bd.finalCons+'</td></tr>';
