@@ -20,6 +20,13 @@
 //   5. สร้าง "magic link" ให้ผู้ใช้คนนั้น (ไม่ส่งอีเมลจริง — synthetic) แล้วส่ง hashed_token
 //      กลับไปให้เว็บ → เว็บเอาไปยืนยันเองด้วย verifyOtp() ได้ session จริง
 //
+// v2 (LIN 2026-07-26): เพิ่มโหมด "link" — ผูก LINE เข้ากับบัญชีที่ล็อกอินอยู่แล้ว แทนที่จะสร้าง
+//   บัญชีใหม่ (เจอจริง: Lin ล็อกอินด้วย LINE แล้วได้บัญชีแยกจากบัญชีเดิม ไม่เชื่อมโปรไฟล์/คะแนนเก่า)
+//   ใช้จากปุ่ม "連接 LINE 帳號" ในหน้าแก้โปรไฟล์ (auth-widget.js) — ต้องมี Authorization header
+//   เป็น access token ของบัญชีที่ล็อกอินอยู่ตอนนั้น ฟังก์ชันจะยืนยัน token กับ Supabase auth server
+//   เองก่อนเสมอ (ไม่เชื่อ user id ที่ client ส่งมาตรงๆ) ถ้า deploy ครั้งแรกไปแล้ว ให้กลับมา
+//   copy โค้ดไฟล์นี้ไปวางทับ + Deploy ใหม่อีกรอบ (ไม่ต้องตั้งอะไรเพิ่มใน Dashboard)
+//
 // วิธี deploy:
 //   1. ต้องรัน SQL migration ก่อน: supabase/sql/2026-07-26_line_identities.sql
 //      (Supabase Dashboard → SQL Editor → วางทั้งไฟล์ → Run)
@@ -65,13 +72,32 @@ serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 
   try {
-    const { code, redirect_uri, nonce } = await req.json();
+    const { code, redirect_uri, nonce, link } = await req.json();
     if (!code || !redirect_uri || !nonce) return json({ error: 'missing code/redirect_uri/nonce' }, 400);
 
     const channelId = Deno.env.get('LINE_CHANNEL_ID');
     const channelSecret = Deno.env.get('LINE_CHANNEL_SECRET');
     if (!channelId || !channelSecret) {
       return json({ error: 'server not configured: missing LINE_CHANNEL_ID/LINE_CHANNEL_SECRET' }, 500);
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    // v2 (LIN 2026-07-26): โหมด "link" — ผูก LINE เข้ากับบัญชีที่ล็อกอินอยู่แล้ว (ไม่สร้างบัญชีใหม่)
+    // ต้องรู้ตัวจริงว่า "ใครกำลังกดผูก" จาก JWT ใน header เท่านั้น (ห้ามเชื่อ user id ที่ client ส่งมาตรงๆ
+    // เพราะปลอมได้ง่าย — ต้องให้ Supabase auth server ยืนยัน token ให้ก่อนเสมอ)
+    let linkUserId = null;
+    if (link) {
+      const authHeader = req.headers.get('Authorization') || '';
+      const accessToken = authHeader.replace(/^Bearer\s+/i, '');
+      if (!accessToken) return json({ error: 'missing auth token for link mode' }, 401);
+      const { data: authedUser, error: authErr } = await supabase.auth.getUser(accessToken);
+      if (authErr || !authedUser || !authedUser.user) {
+        return json({ error: 'invalid session — please log in again then retry linking' }, 401);
+      }
+      linkUserId = authedUser.user.id;
     }
 
     // กัน redirect_uri มั่วจากฝั่ง client — ต้องเป็นหน้า line-callback.html ของเราเองเท่านั้น
@@ -124,14 +150,37 @@ serve(async (req) => {
     const lineUserId = claims.sub;
     if (!lineUserId) return json({ error: 'no sub in id_token' }, 401);
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL'),
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    );
-
     const displayName = claims.name || '';
     const avatarUrl = claims.picture || '';
     const userEmail = syntheticEmail(lineUserId);
+
+    // v2 (LIN 2026-07-26): โหมด "link" จบตรงนี้เลย — ผูก line_user_id เข้ากับบัญชีที่ล็อกอินอยู่แล้ว
+    // (linkUserId มาจาก JWT ที่ยืนยันแล้วด้านบน ไม่ใช่ค่าที่ client ส่งมาลอยๆ) ไม่สร้าง/ไม่ล็อกอินบัญชีใหม่
+    if (linkUserId) {
+      const { data: existingLink, error: findLinkErr } = await supabase
+        .from('line_identities')
+        .select('user_id')
+        .eq('line_user_id', lineUserId)
+        .maybeSingle();
+      if (findLinkErr) return json({ error: 'db_lookup_failed', detail: findLinkErr.message }, 500);
+      if (existingLink && existingLink.user_id && existingLink.user_id !== linkUserId) {
+        // LINE นี้ผูกกับบัญชีอื่นไปแล้ว — กันคนละบัญชีมาแย่งผูก LINE เดียวกันซ้ำ
+        return json({ error: 'already_linked_to_other_account' }, 409);
+      }
+      if (!existingLink) {
+        const { error: mapErr } = await supabase
+          .from('line_identities')
+          .insert({ line_user_id: lineUserId, user_id: linkUserId });
+        if (mapErr) return json({ error: 'map_insert_failed', detail: mapErr.message }, 500);
+      }
+      // ไม่ critical ถ้าพลาด — การผูกถือว่าสำเร็จแล้วตั้งแต่ insert บรรทัดบน
+      try {
+        await supabase.auth.admin.updateUserById(linkUserId, {
+          app_metadata: { line_linked: true, line_user_id: lineUserId },
+        });
+      } catch (e) {}
+      return json({ ok: true, linked: true });
+    }
 
     // 4) หา user เดิมที่เคยผูกกับ LINE user id นี้ก่อน (ตาราง line_identities — คีย์คือ line_user_id)
     const { data: existing, error: findErr } = await supabase

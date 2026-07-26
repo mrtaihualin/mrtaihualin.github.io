@@ -51,32 +51,70 @@
 
     var code = qs.get('code');
     var state = qs.get('state');
-    var savedState = '', nonce = '';
+    var savedState = '', nonce = '', linkMode = false;
     try {
       savedState = sessionStorage.getItem('line_login_state') || '';
       nonce = sessionStorage.getItem('line_login_nonce') || '';
+      linkMode = sessionStorage.getItem('line_login_link') === '1';
     } catch (e) {}
 
     if (!code || !state || !savedState || state !== savedState) {
       showError('這個連結可能已經用過，或不是從登入按鈕開啟的。請回上一頁重新點擊 LINE 登入');
       return;
     }
-    // state/nonce ใช้ครั้งเดียว — ลบทิ้งทันทีกันเอาไปใช้ซ้ำ (replay)
-    try { sessionStorage.removeItem('line_login_state'); sessionStorage.removeItem('line_login_nonce'); } catch (e) {}
+    // state/nonce/link flag ใช้ครั้งเดียว — ลบทิ้งทันทีกันเอาไปใช้ซ้ำ (replay)
+    try {
+      sessionStorage.removeItem('line_login_state');
+      sessionStorage.removeItem('line_login_nonce');
+      sessionStorage.removeItem('line_login_link');
+    } catch (e) {}
 
     var redirectUri = location.origin + location.pathname; // ต้องตรงเป๊ะกับตอนขอ code (ไม่มี query/hash)
 
-    sb.functions.invoke('line-login', { body: { code: code, redirect_uri: redirectUri, nonce: nonce } })
-      .then(function (res) {
-        if (res.error || !res.data || !res.data.ok || !res.data.hashed_token) {
+    function callEdgeFn(extraBody, extraHeaders) {
+      var body = { code: code, redirect_uri: redirectUri, nonce: nonce };
+      for (var k in extraBody) { if (extraBody.hasOwnProperty(k)) body[k] = extraBody[k]; }
+      return sb.functions.invoke('line-login', { body: body, headers: extraHeaders || {} }).then(function (res) {
+        if (res.error || !res.data || !res.data.ok) {
           if (res.error && res.error.context && typeof res.error.context.json === 'function') {
-            return res.error.context.json().then(function (body) {
-              throw new Error((body && (body.detail || body.error)) || res.error.message || '未知錯誤');
+            return res.error.context.json().then(function (body2) {
+              throw new Error((body2 && (body2.detail || body2.error)) || res.error.message || '未知錯誤');
             });
           }
           throw new Error((res.data && (res.data.detail || res.data.error)) || (res.error && res.error.message) || '未知錯誤');
         }
-        return sb.auth.verifyOtp({ token_hash: res.data.hashed_token, type: 'email' }).then(function (r2) {
+        return res.data;
+      });
+    }
+
+    if (linkMode) {
+      // v16 (LIN 2026-07-26): โหมดผูก LINE เข้ากับบัญชีที่ล็อกอินอยู่แล้ว (ไม่ใช่ล็อกอินใหม่)
+      // ต้องส่ง access token ของบัญชีปัจจุบันไปให้ Edge Function ยืนยันตัวจริงฝั่งเซิร์ฟเวอร์
+      sb.auth.getSession().then(function (sres) {
+        var token = sres && sres.data && sres.data.session && sres.data.session.access_token;
+        if (!token) throw new Error('請先登入才能連接 LINE 帳號');
+        return callEdgeFn({ link: true }, { Authorization: 'Bearer ' + token });
+      }).then(function () {
+        if (boxEl) {
+          boxEl.innerHTML =
+            '<div style="font-size:34px;margin-bottom:10px;">🎉</div>' +
+            '<h1 style="font-family:\'Noto Serif TC\',serif;font-size:17px;margin:0 0 8px;color:#2d6a4f;">連接成功！</h1>' +
+            '<p>下次可以直接用 LINE 登入這個帳號了</p>' +
+            '<a class="btn" href="' + esc(returnTo()) + '">返回上一頁</a>';
+        }
+        setTimeout(function () { location.replace(returnTo()); }, 1500);
+      }).catch(function (e) {
+        var msg = (e && e.message) || String(e);
+        if (msg === 'already_linked_to_other_account') msg = '這個 LINE 帳號已經連接過別的帳號了';
+        showError('連接失敗（' + esc(msg).slice(0, 120) + '）');
+      });
+      return;
+    }
+
+    callEdgeFn({})
+      .then(function (data) {
+        if (!data.hashed_token) throw new Error('伺服器沒有回傳登入憑證');
+        return sb.auth.verifyOtp({ token_hash: data.hashed_token, type: 'email' }).then(function (r2) {
           if (r2.error) throw new Error(r2.error.message);
           // ให้ reading-auth.js รู้ว่าเพิ่งล็อกอินสำเร็จด้วย LINE จริงๆ (ยิง GA4 login_success ให้ครบ)
           try { sessionStorage.setItem('rg_login_pending', 'line'); } catch (e) {}

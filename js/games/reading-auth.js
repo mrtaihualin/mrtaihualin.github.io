@@ -20,7 +20,8 @@
   if (!ready) { window.READING_AUTH = { ready: false, user: null, saveScore: function () {}, render: function () {} }; return; }
 
   var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
-  var API = { ready: true, user: null, saveScore: saveScore, render: render };
+  // v16 (LIN 2026-07-26): startLineLink ให้หน้าอื่น (auth-widget.js ปุ่ม "連接 LINE 帳號") เรียกได้
+  var API = { ready: true, user: null, saveScore: saveScore, render: render, startLineLink: function () { startLineLogin(true); } };
   window.READING_AUTH = API;
 
   function slot() { return document.getElementById('rg-login-slot'); }
@@ -241,17 +242,26 @@
     for (var i = 0; i < arr.length; i++) { var h = arr[i].toString(16); out += (h.length < 2 ? '0' + h : h); }
     return out;
   }
-  function startLineLogin() {
+  // v16 (LIN 2026-07-26): เพิ่มโหมด "link" — ผูก LINE เข้ากับบัญชีที่ล็อกอินอยู่แล้ว แทนที่จะสร้าง
+  //   บัญชีใหม่ (เจอจริง: Lin ล็อกอินด้วย LINE แล้วได้บัญชีแยกจากบัญชีเดิม ไม่เชื่อมโปรไฟล์/คะแนนเก่า)
+  //   linkMode=true ใช้ตอนกดปุ่ม "連接 LINE 帳號" จากหน้าแก้โปรไฟล์ (auth-widget.js เรียกผ่าน
+  //   window.READING_AUTH.startLineLink) — เก็บ flag ไว้ให้ line-callback.js รู้ว่าต้องทำโหมดไหน
+  function startLineLogin(linkMode) {
     var channelId = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.lineChannelId) || '';
     if (!channelId) { setMsg('LINE 登入尚未設定完成，請改用上面的 Email 驗證碼', true); return; }
-    trackLogin('login_attempt', 'line');
-    markPendingLogin('line');
+    if (linkMode) {
+      if (!API.user) return; // ต้องล็อกอินอยู่ก่อนถึงจะผูกได้
+    } else {
+      trackLogin('login_attempt', 'line');
+      markPendingLogin('line');
+    }
     var state = randomToken(16);
     var nonce = randomToken(16);
     try {
       sessionStorage.setItem('line_login_state', state);
       sessionStorage.setItem('line_login_nonce', nonce);
       sessionStorage.setItem('line_login_return_to', location.pathname + location.search);
+      if (linkMode) sessionStorage.setItem('line_login_link', '1'); else sessionStorage.removeItem('line_login_link');
     } catch (e) {}
     var redirectUri = location.origin + '/line-callback.html';
     var url = 'https://access.line.me/oauth2/v2.1/authorize'

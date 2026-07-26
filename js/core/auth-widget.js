@@ -192,6 +192,18 @@
     profileModal.id = 'sa-profile-modal';
     profileModal.style.cssText = 'position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:18px;' +
       'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);font-family:"Noto Sans TC",sans-serif;';
+    // v1 (LIN 2026-07-26): ปุ่ม "連接 LINE 帳號" — ให้คนที่ล็อกอินอยู่แล้ว (Google/Email/Facebook)
+    //   ผูก LINE เข้ากับบัญชีเดิมได้ กันได้บัญชีแยกตอนล็อกอินด้วย LINE ครั้งแรก (เจอจริงจาก Lin ทดสอบ)
+    //   โชว์เฉพาะตอนมี window.READING_AUTH.startLineLink (หน้าเกมที่โหลด reading-auth.js) +
+    //   ตั้งค่า lineChannelId แล้ว + ยังไม่เคยผูกมาก่อน (เช็คจาก app_metadata คร่าวๆ)
+    var alreadyLinkedLine = !!(API.user.app_metadata && (API.user.app_metadata.line_linked || API.user.app_metadata.line_user_id));
+    var canLinkLine = window.READING_AUTH && typeof window.READING_AUTH.startLineLink === 'function' &&
+      window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.lineChannelId && !alreadyLinkedLine;
+    var linkLineHtml = canLinkLine
+      ? '<button id="sap-link-line" style="width:100%;border:1.5px solid #06C755;background:#fff;color:#06C755;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#06C755" d="M12 2C6.48 2 2 5.69 2 10.24c0 4.08 3.54 7.5 8.32 8.15.32.07.76.21.87.49.1.25.06.65.03.9l-.14.85c-.04.25-.19.98.86.53 1.05-.44 5.67-3.34 7.74-5.72C21.15 13.62 22 12.02 22 10.24 22 5.69 17.52 2 12 2z"/></svg>連接 LINE 帳號</button>'
+      : (alreadyLinkedLine ? '<div style="font-size:12px;color:#2d6a4f;margin-bottom:10px;">✅ 已連接 LINE 帳號</div>' : '');
+
     profileModal.innerHTML =
       '<div style="background:#fff;max-width:360px;width:100%;border-radius:18px;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,0.35);max-height:88vh;overflow:auto;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
@@ -205,9 +217,12 @@
         '<div id="sap-avatars" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">' + avatarChoices + '</div>' +
         '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:8px;">展示徽章（顯示在名稱旁）</div>' +
         '<div id="sap-badges" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' + badgeChoices + '</div>' +
+        linkLineHtml +
         '<button id="sap-save" style="width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;">儲存</button>' +
       '</div>';
     document.body.appendChild(profileModal);
+    var linkLineBtn = profileModal.querySelector('#sap-link-line');
+    if (linkLineBtn) linkLineBtn.onclick = function () { window.READING_AUTH.startLineLink(); };
 
     function closeModal() { if (profileModal) { profileModal.remove(); profileModal = null; } }
     profileModal.querySelector('#sap-close').onclick = closeModal;
