@@ -55,7 +55,9 @@
   // v9 (LIN 2026-07-25): จำ "ครั้งที่แล้วล็อกอินด้วยอะไร" ไว้ในเครื่อง (localStorage ทนได้แม้ปิดเบราว์เซอร์/log out)
   //   กันคนละสับสนไปกดคนละช่องทางแล้วได้บัญชีใหม่ (คะแนนหาย) — เตือนก่อนกดตั้งแต่เปิด modal เลย
   var LAST_PROVIDER_KEY = 'rg_last_login_provider';
-  function saveLastProvider(p) { try { if (p) localStorage.setItem(LAST_PROVIDER_KEY, p); } catch (e) {} }
+  // v13 (LIN 2026-07-25, audit รอบ 2): Custom OIDC provider ของ Supabase เก็บชื่อเป็น "custom:line"
+  //   (มี prefix "custom:" ติดมาด้วยจริง ตามเอกสาร Supabase) → ตัด prefix ออกก่อนเก็บ กันโชว์ "custom:line" ตรงๆ ให้ผู้เล่นเห็น
+  function saveLastProvider(p) { try { if (p) localStorage.setItem(LAST_PROVIDER_KEY, String(p).replace(/^custom:/, '')); } catch (e) {} }
   function getLastProvider() { try { return localStorage.getItem(LAST_PROVIDER_KEY) || ''; } catch (e) { return ''; } }
   function providerLabel(p) {
     return { google: 'Google', facebook: 'Facebook', email: 'Email 驗證碼', line: 'LINE', apple: 'Apple' }[p] || p;
@@ -189,7 +191,10 @@
             ? ('<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內用上面的 <b>Email 驗證碼</b>或下面的 <b>LINE</b> 登入即可（Google / Facebook 在 App 內無法使用）</div>' +
                '<div style="display:flex;justify-content:center;gap:14px;margin-top:12px;">' + lineBtn + '</div>')
             : ('<div style="margin-top:14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#8B6310;line-height:1.6;">📩 在 App 內請用上面的 <b>Email 驗證碼</b>登入（Google / Facebook / LINE 在此 App 內可能無法使用，建議用瀏覽器開啟本頁再登入）</div>'))
-        : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' +
+        // v13 (LIN 2026-07-25, audit รอบ 2): เพิ่มคำอธิบายที่ divider จาก "或" เฉยๆ → "或用以下方式登入"
+        //   เดิมปุ่มไอคอนล้วนไม่มีข้อความกำกับเลย (title/aria-label โชว์แค่ hover เมาส์ มือถือไม่มี hover)
+        //   คนเข้าเว็บครั้งแรกอาจไม่รู้ว่าวงกลม 3 สีคือปุ่มล็อกอิน
+        : ('<div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:#C3B594;font-size:12px;"><span style="flex:1;height:1px;background:#EADFBF;"></span>或用以下方式登入<span style="flex:1;height:1px;background:#EADFBF;"></span></div>' +
            '<div style="display:flex;justify-content:center;gap:14px;">' + googleBtn + facebookBtn + lineBtn + '</div>')) +
       '<p style="margin:16px 0 0;font-size:12px;color:#A07A1E;">點擊空白處可先返回</p>' +
       '</div>';
@@ -225,12 +230,14 @@
         .catch(function (e) { onFail(e && e.message || e); });
     } catch (e) { onFail(e && e.message || e); }
   }
+  // v13 (LIN 2026-07-25, audit รอบ 2): เปลี่ยน innerHTML → textContent — ทุก call site เป็นข้อความล้วนอยู่แล้ว
+  //   (ไม่มีใครใช้ tag HTML จริง) ไม่มีอะไรเสีย แต่กันไว้ล่วงหน้าเผื่อ error message จาก Supabase เปลี่ยนรูปแบบในอนาคต
   function setMsg(msg, isErr) {
     var el = rgGate && rgGate.querySelector('#rg-msg');
     if (!el) return;
     el.style.display = 'block';
     el.style.color = isErr ? '#C0392B' : '#8B7340';
-    el.innerHTML = msg;
+    el.textContent = msg;
   }
   function startOtp(email, isResend) {
     email = (email || '').trim();

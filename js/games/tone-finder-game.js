@@ -1135,8 +1135,11 @@ function tfCurEntry() {
   return (typeof randomEntry !== 'undefined') ? randomEntry : null;
 }
 
-// ด่านกันเฉลย: ขั้น 'session-guess' = ยังไม่ได้ตอบ → ห้ามโชว์คำอ่านทุกแบบ
-function tfReadingUnlocked() { return S.step !== 'session-guess'; }
+// ด่านกันเฉลย — Lin 2026-07-25 (แก้รอบ 2 หลังตรวจเว็บจริง):
+//   เดิมกันแค่ขั้น 'session-guess' → ยังรั่ว เพราะกด 🤷我不太確定 แล้วเข้าขั้น推導 (s1/s2a/…) คำอ่านโชว์เลย
+//   ทั้งที่ขั้น推導 ยังถามต่อ (子音類/母音/尾音) และคำอ่านโรมันมีขีดวรรณยุกต์ = บอกคำตอบตรงๆ (nèung)
+//   แก้เป็น "ขาวลิสต์": โชว์ได้เฉพาะตอนวรรณยุกต์ถูกเฉลยจริงแล้ว = หน้าเฉลย (result) กับหน้าสรุปพยางค์ (overview)
+function tfReadingUnlocked() { return S.step === 'result' || S.step === 'overview'; }
 
 function tfReadingLineHtml() {
   if (!tfReadingUnlocked()) return '';

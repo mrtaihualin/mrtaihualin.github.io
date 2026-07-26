@@ -21,7 +21,10 @@
       '.wm-wrap{position:relative;display:inline-block;}' +
       '.wm-panel{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);' +
         'min-width:200px;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.25);border-radius:14px;' +
-        'box-shadow:0 6px 24px rgba(90,62,10,0.22);z-index:99990;display:none;flex-direction:column;gap:6px;padding:8px;text-align:left;}' +
+        'box-shadow:0 6px 24px rgba(90,62,10,0.22);z-index:99990;display:none;flex-direction:column;gap:6px;padding:8px;text-align:left;' +
+        // Lin 2026-07-25 (แก้หลังตรวจเว็บจริง): ใส่เพดานความสูง + เลื่อนได้ — เดิมไม่มีเพดาน เมนูยาว (เกมพิมพ์ 8 แถว)
+        // จะโตทะลุขอบจอบน แถวบนสุด (發音) หลุดหายกดไม่ได้เลยบนจอเตี้ย · ใช้ 60vh เท่ากับเมนู 🎮 (#game-switcher)
+        'max-height:60vh;overflow-y:auto;overflow-x:hidden;}' +
       '.wm-panel.wm-open{display:flex;}' +
       '.wm-row{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;' +
         'border-radius:10px;background:none;transition:background .12s;}' +
