@@ -466,5 +466,41 @@
       sb.auth.onAuthStateChange(function (_e, s) { setUser(s && s.user); });
     }
   } catch (e) {}
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
+
+  // ── v14 (LIN 2026-07-26): เช็ค error ที่ Supabase ส่งกลับมาทาง URL หลัง OAuth redirect ──
+  // เดิมเช็ค error ได้แค่ "ก่อน" redirect (ตอน signInWithOAuth() เอง reject) เท่านั้น
+  // ถ้า Supabase ฝั่ง server แลก code/token กับผู้ให้บริการ (Google/Facebook/LINE) แล้วพัง
+  // (เช่น ตั้งค่า Client ID/Secret ผิด, nonce ไม่ตรง) Supabase จะ redirect กลับมาที่หน้าเว็บ
+  // พร้อม ?error=...&error_description=... ต่อท้าย URL — โค้ดเดิมไม่มีใครอ่านค่านี้เลย
+  // ผู้เล่นกดล็อกอินจบ (ผ่านหน้ายินยอมของผู้ให้บริการแล้ว) แต่กลับมาเว็บแล้ว "ไม่ขึ้นอะไรเลย"
+  // เงียบสนิท ขัดกฎ "ห้ามพังเงียบ" — พบจริงจาก Lin ทดสอบ LINE 2026-07-26 เพิ่มจุดนี้ให้ครบวงจร
+  function stripAuthParams(paramsStr) {
+    if (!paramsStr) return '';
+    var p = new URLSearchParams(paramsStr);
+    ['error', 'error_description', 'error_code', 'code', 'state', 'access_token', 'refresh_token',
+     'expires_in', 'token_type', 'provider_token', 'provider_refresh_token'].forEach(function (k) { p.delete(k); });
+    return p.toString();
+  }
+  function checkOAuthReturnError() {
+    try {
+      var qs = new URLSearchParams(location.search || '');
+      var hs = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+      var err = qs.get('error') || hs.get('error') || qs.get('error_code') || hs.get('error_code');
+      if (!err) return;
+      var desc = qs.get('error_description') || hs.get('error_description') || err;
+      var pendingProvider = takePendingLogin() || 'unknown';
+      trackLogin('login_fail', pendingProvider, { reason: String(desc).slice(0, 90), stage: 'redirect_back' });
+      // ล้าง error ออกจาก URL กันโชว์ค้างตอน refresh/แชร์ลิงก์ (คง query/hash อื่นที่ไม่เกี่ยวไว้)
+      try {
+        var newSearch = stripAuthParams(location.search.replace(/^\?/, ''));
+        var newHash = stripAuthParams(location.hash.replace(/^#/, ''));
+        history.replaceState(null, '', location.pathname + (newSearch ? '?' + newSearch : '') + (newHash ? '#' + newHash : ''));
+      } catch (e) {}
+      openGate();
+      setMsg('登入失敗：' + decodeURIComponent(String(desc)).slice(0, 120) + '（請改用上面的 Email 驗證碼再試一次）', true);
+    } catch (e) {}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { render(); checkOAuthReturnError(); });
+  } else { render(); checkOAuthReturnError(); }
 })();
