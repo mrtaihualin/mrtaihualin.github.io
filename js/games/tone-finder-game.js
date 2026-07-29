@@ -3334,7 +3334,7 @@ function stepSessionGuess() {
 
   return '<div style="text-align:center;padding:4px 0 8px;">'+
     wordHtml+
-    breakdownHtml+
+    // Lin 2026-07-29: ลบแถบเฉลย 子音/母音/尾音 (breakdownHtml) ออกจากหน้าเดาวรรณยุกต์ทุกระดับ — โชว์คำตอบให้ก่อนเดาเลย
     '<div class="sg-divider"></div>'+
     '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+

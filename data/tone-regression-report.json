@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "mode": "catalog-audit",
-  "generatedAt": "2026-07-26T08:07:07.044Z",
+  "generatedAt": "2026-07-29T04:31:11.555Z",
   "summary": {
     "totalEntries": 367,
     "mismatchEntries": 6,
@@ -5805,7 +5805,7 @@
     {
       "id": "catalog:เช็คเอาท์",
       "word": "เช็คเอาท์",
-      "readingTH": "เช็ค-เอาท์",
+      "readingTH": "เช็ค-เอา",
       "zh": "退房",
       "en": "chék-áo",
       "level": "初",
@@ -6836,7 +6836,7 @@
     {
       "id": "catalog:ผัดไทย",
       "word": "ผัดไทย",
-      "readingTH": "ผัด-ไท",
+      "readingTH": "ผัด-ไทย",
       "zh": "泰式炒麵",
       "en": "phàt-thai",
       "level": "中",
@@ -9163,7 +9163,7 @@
         {
           "th": "ภาษณ์",
           "lead": null,
-          "cons": "พ",
+          "cons": "ภ",
           "fullSpelling": "ภาษณ์",
           "expectedToneName": "โท",
           "computedToneName": "โท",
@@ -9330,7 +9330,7 @@
       "readingTH": "อี-เมล",
       "zh": "電子郵件",
       "en": "ii-meeo",
-      "level": "初",
+      "level": "中",
       "category": "งาน",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -9443,7 +9443,7 @@
       "readingTH": "วัน-หยุด",
       "zh": "假日",
       "en": "wan-yùt",
-      "level": "初",
+      "level": "中",
       "category": "งาน",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -10561,7 +10561,7 @@
         {
           "th": "ฬิ",
           "lead": null,
-          "cons": "ล",
+          "cons": "ฬ",
           "fullSpelling": "ฬิ",
           "expectedToneName": "ตรี",
           "computedToneName": "ตรี",
@@ -10705,7 +10705,7 @@
         {
           "th": "ภา",
           "lead": null,
-          "cons": "พ",
+          "cons": "ภ",
           "fullSpelling": "ภา",
           "expectedToneName": "สามัญ",
           "computedToneName": "สามัญ",
@@ -10722,7 +10722,7 @@
         {
           "th": "ษา",
           "lead": null,
-          "cons": "ส",
+          "cons": "ษ",
           "fullSpelling": "ษา",
           "expectedToneName": "จัตวา",
           "computedToneName": "จัตวา",
@@ -10790,7 +10790,7 @@
     {
       "id": "catalog:เมืองไทย",
       "word": "เมืองไทย",
-      "readingTH": "เมือง-ไท",
+      "readingTH": "เมือง-ไทย",
       "zh": "泰國",
       "en": "mʉang-thai",
       "level": "中",

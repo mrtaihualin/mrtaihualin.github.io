@@ -109,19 +109,11 @@ function getSlotOrder(vowel,final){
 // ════════════════════════════════════════════
 // PHONETIC MAPS
 // ════════════════════════════════════════════
-var CONS_SOUND={
-  'ก':'ก','ข':'ข','ค':'ค','ง':'ง','จ':'จ','ช':'ช',
-  'ซ':'ซ','ฉ':'ฉ','ฌ':'ช','ญ':'ย','ฎ':'ด','ฏ':'ต',
-  'ฐ':'ถ','ฑ':'ท','ฒ':'ท','ณ':'น','ด':'ด','ต':'ต',
-  'ถ':'ถ','ท':'ท','ธ':'ท','น':'น','บ':'บ','ป':'ป',
-  'ผ':'ผ','ฝ':'ฝ','พ':'พ','ฟ':'ฟ','ภ':'พ','ม':'ม',
-  'ย':'ย','ร':'ร','ล':'ล','ว':'ว','ศ':'ส','ษ':'ส',
-  'ส':'ส','ห':'ห','ฬ':'ล','อ':'อ','ฮ':'ฮ','ฆ':'ค'
-};
-// Lin 2026-07-26: ลบระบบ FINAL_SOUND ออกทั้งหมดตามคำสั่ง Lin — ตารางนี้ไม่เคยผ่านการตรวจ/ยืนยันจาก Lin จริงๆ
-// (เป็นตารางที่ AI เขียนตามกฎมาตรฐานตอนสร้างเกม ไม่ใช่เนื้อหาที่ Lin พิมพ์/ยืนยันเอง) ตอนนี้แถว "尾音" ในเฉลย
-// และไทล์คำตอบในเกมปะติดคำ (拼字) โชว์แค่ตัวสะกดจริงตามที่เขียน ไม่มีการอ้างเสียงที่แปลงแล้วอีกต่อไป
-// จนกว่า Lin จะให้ข้อมูลเสียงที่ถูกต้องมาแทน (หมายเหตุ: จุดนี้ย้อนกลับไปเป็นพฤติกรรมก่อน "MASTER ข้อ12" 2026-07-07)
+// Lin 2026-07-27: เอาระบบ CONS_SOUND + FINAL_SOUND ออกทั้งหมด (ทั้งสองตาราง ไม่เหลือแม้แต่ส่วนมาตรฐาน)
+// เหตุผล: Lin จะตรวจ+แก้ฟิลด์ cons/vowel/final ในข้อมูลเองให้ถูกต้องโดยตรงทีละคำ (ผ่านไฟล์
+// 2026-07-27_คลังคำศัพท์ทั้งหมด_ให้Linตรวจ.xlsx) แทนที่จะให้เกมคอย "แปลงเสียง" ผ่านตารางอีกชั้น —
+// ตอนนี้ 子音/尾音 ในหน้าเฉลย + ไทล์คำตอบ โชว์ค่าที่เก็บในข้อมูลตรงๆ ไม่มีการแปลง/ลูกศรแสดงเสียงอีกต่อไป
+// (CONS_GROUPS/VOWEL_GROUPS/FINAL_GROUPS ที่ใช้สร้างตัวลวงในเกมจับคู่ ยังอยู่เหมือนเดิม คนละระบบ)
 var VOWEL_READ={
   'อะ':'อะ（短母音）','อา':'อา（長母音）','ออ':'ออ',
   'เอาะ':'เอาะ','เออะ':'เออะ（短母音）',
@@ -166,9 +158,7 @@ var BONUS_TONES=[
 function buildRevealRules(w){
   var rows=[];
   var consDisp=w.lead?w.lead+w.cons:(w.cluster?w.cons+w.cluster:w.cons);
-  var csnd=CONS_SOUND[w.cons]||w.cons;
-  rows.push({tag:'子音',sp:false,
-    text:consDisp+(csnd!==w.cons?' <span class="rule-arrow">→</span> 發音「'+csnd+'」':' 發音「'+csnd+'」')});
+  rows.push({tag:'子音',sp:false,text:consDisp+' 發音「'+w.cons+'」'});
   var vread=VOWEL_READ[w.vowel]||w.vowel;
   var vsym=VOWEL_SYMBOL[w.vowel]||w.vowel;
   rows.push({tag:'母音',sp:false,
@@ -532,16 +522,14 @@ function buildOpts(ans,comp,groups,pool2,count,exclude,avoid){
   return shuffle(opts);
 }
 
-// เดิม dispOpt โชว์ "ตัวเขียน" → เปลี่ยนเป็น "เสียงอ่านจริง" ตามกฎ MASTER ข้อ12 (Lin 2026-07-07)
-//   - cons: ตัดตัวนำ (ห/อ) ออกเพราะไม่ออกเสียงแยก แค่ยกวรรณยุกต์ · เก็บ cluster (複合音) ไว้เพราะออกเสียงจริงทั้งคู่
-//   - vowel: ยังใช้ VOWEL_READ (คนละระบบ ไม่เกี่ยวกับ FINAL_SOUND ที่ถูกลบ)
-//   - final: Lin 2026-07-26 สั่งลบ FINAL_SOUND ทิ้ง (ไม่เคยผ่านการตรวจจาก Lin จริง) → กลับไปโชว์ "ตัวเขียนจริง" เหมือนก่อน 2026-07-07
+// dispOpt: Lin 2026-07-27 เอา CONS_SOUND/FINAL_SOUND ออกหมด — cons/final โชว์ตัวเขียนตรงๆ ไม่แปลงเสียงอีกต่อไป
+//   - vowel: ยังใช้ VOWEL_READ (คนละระบบ ไม่เกี่ยวกับ CONS_SOUND/FINAL_SOUND ที่ถูกลบ)
 function stripAnnotation(s){return String(s).replace(/（[^）]*）/g,'').replace(/\([^)]*\)/g,'').trim();}
 function dispOpt(comp,x){
-  if(comp==='cons'){var snd=CONS_SOUND[x]||x;return W.cluster?snd+W.cluster:snd;}
+  if(comp==='cons')return W.cluster?x+W.cluster:x;
   if(comp==='tone')return x;
   if(comp==='vowel'){var vr=stripAnnotation(VOWEL_READ[x]||VOWEL_SYMBOL[x]||x);return vr||x;}
-  return x; // final: โชว์ตัวสะกดจริงตรงๆ ไม่แปลงเสียง
+  return x; // final: โชว์ตัวสะกดจริงตรงๆ
 }
 
 // ════════════════════════════════════════════
