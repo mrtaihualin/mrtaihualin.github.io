@@ -109,28 +109,11 @@ function getSlotOrder(vowel,final){
 // ════════════════════════════════════════════
 // PHONETIC MAPS
 // ════════════════════════════════════════════
-var CONS_SOUND={
-  'ก':'ก','ข':'ข','ค':'ค','ง':'ง','จ':'จ','ช':'ช',
-  'ซ':'ซ','ฉ':'ฉ','ฌ':'ช','ญ':'ย','ฎ':'ด','ฏ':'ต',
-  'ฐ':'ถ','ฑ':'ท','ฒ':'ท','ณ':'น','ด':'ด','ต':'ต',
-  'ถ':'ถ','ท':'ท','ธ':'ท','น':'น','บ':'บ','ป':'ป',
-  'ผ':'ผ','ฝ':'ฝ','พ':'พ','ฟ':'ฟ','ภ':'พ','ม':'ม',
-  'ย':'ย','ร':'ร','ล':'ล','ว':'ว','ศ':'ส','ษ':'ส',
-  'ส':'ส','ห':'ห','ฬ':'ล','อ':'อ','ฮ':'ฮ','ฆ':'ค'
-};
-var FINAL_SOUND={
-  'ก':'ก','ข':'ก','ค':'ก','ฆ':'ก','ง':'ง',
-  'จ':'ด','ช':'ด','ซ':'ด','ฉ':'ด','ฌ':'ด',
-  'ต':'ด','ถ':'ด','ท':'ด','ธ':'ด','ด':'ด','ฎ':'ด','ฏ':'ด',
-  'ฐ':'ด','ฑ':'ด','ฒ':'ด','ศ':'ด','ษ':'ด','ส':'ด',
-  'น':'น','ณ':'น','ญ':'น','ร':'น','ล':'น','ฬ':'น',
-  'บ':'บ','พ':'บ','ภ':'บ','ฟ':'บ','ป':'บ','ผ':'บ','ฝ':'บ',
-  'ม':'ม','ย':'ย','ว':'ว',
-  'ห':'（不發音）','อ':'（不發音）',
-  // Lin 2026-07-26: เพิ่ม 2 เคสตัวสะกดคำยืมที่เขียนติดกับสระ/ตัวควบใบ้ (ตัวเขียนจริงยังเก็บเหมือนเดิม 'ติ'/'ตร' — แค่เพิ่มให้ตารางนี้รู้จักแปลงเป็นเสียงถูก)
-  'ติ':'ด',  // ญาติ (อ่าน ยาด)
-  'ตร':'ด'   // บัตร (อ่าน บัด)
-};
+// Lin 2026-07-27: เอาระบบ CONS_SOUND + FINAL_SOUND ออกทั้งหมด (ทั้งสองตาราง ไม่เหลือแม้แต่ส่วนมาตรฐาน)
+// เหตุผล: Lin จะตรวจ+แก้ฟิลด์ cons/vowel/final ในข้อมูลเองให้ถูกต้องโดยตรงทีละคำ (ผ่านไฟล์
+// 2026-07-27_คลังคำศัพท์ทั้งหมด_ให้Linตรวจ.xlsx) แทนที่จะให้เกมคอย "แปลงเสียง" ผ่านตารางอีกชั้น —
+// ตอนนี้ 子音/尾音 ในหน้าเฉลย + ไทล์คำตอบ โชว์ค่าที่เก็บในข้อมูลตรงๆ ไม่มีการแปลง/ลูกศรแสดงเสียงอีกต่อไป
+// (CONS_GROUPS/VOWEL_GROUPS/FINAL_GROUPS ที่ใช้สร้างตัวลวงในเกมจับคู่ ยังอยู่เหมือนเดิม คนละระบบ)
 var VOWEL_READ={
   'อะ':'อะ（短母音）','อา':'อา（長母音）','ออ':'ออ',
   'เอาะ':'เอาะ','เออะ':'เออะ（短母音）',
@@ -175,17 +158,13 @@ var BONUS_TONES=[
 function buildRevealRules(w){
   var rows=[];
   var consDisp=w.lead?w.lead+w.cons:(w.cluster?w.cons+w.cluster:w.cons);
-  var csnd=CONS_SOUND[w.cons]||w.cons;
-  rows.push({tag:'子音',sp:false,
-    text:consDisp+(csnd!==w.cons?' <span class="rule-arrow">→</span> 發音「'+csnd+'」':' 發音「'+csnd+'」')});
+  rows.push({tag:'子音',sp:false,text:consDisp+' 發音「'+w.cons+'」'});
   var vread=VOWEL_READ[w.vowel]||w.vowel;
   var vsym=VOWEL_SYMBOL[w.vowel]||w.vowel;
   rows.push({tag:'母音',sp:false,
     text:dispHTML(vsym)+' <span class="rule-arrow">→</span> '+vread});
   if(w.final){
-    var fsnd=FINAL_SOUND[w.final]||w.final;
-    rows.push({tag:'尾音',sp:false,
-      text:w.final+(fsnd!==w.final?' <span class="rule-arrow">→</span> 發音「'+fsnd+'」':' 發音「'+fsnd+'」')});
+    rows.push({tag:'尾音',sp:false,text:'發音「'+w.final+'」'});
   }
   if(w.tone){
     if(w.tone==='์'){
@@ -543,15 +522,14 @@ function buildOpts(ans,comp,groups,pool2,count,exclude,avoid){
   return shuffle(opts);
 }
 
-// เดิม dispOpt โชว์ "ตัวเขียน" — เปลี่ยนเป็น "เสียงอ่านจริง" ตามกฎ MASTER ข้อ12 (Lin 2026-07-07)
-//   - cons: ตัดตัวนำ (ห/อ) ออกเพราะไม่ออกเสียงแยก แค่ยกวรรณยุกต์ · เก็บ cluster (複合音) ไว้เพราะออกเสียงจริงทั้งคู่
-//   - vowel/final: ใช้ตารางเสียงจริง (VOWEL_READ/FINAL_SOUND) เดียวกับที่ใช้เฉลยด้านล่าง แล้วตัดวงเล็บอธิบาย(ภาษาจีน)ออก เหลือแต่รูปอ่านไทยล้วนๆ บนไทล์
+// dispOpt: Lin 2026-07-27 เอา CONS_SOUND/FINAL_SOUND ออกหมด — cons/final โชว์ตัวเขียนตรงๆ ไม่แปลงเสียงอีกต่อไป
+//   - vowel: ยังใช้ VOWEL_READ (คนละระบบ ไม่เกี่ยวกับ CONS_SOUND/FINAL_SOUND ที่ถูกลบ)
 function stripAnnotation(s){return String(s).replace(/（[^）]*）/g,'').replace(/\([^)]*\)/g,'').trim();}
 function dispOpt(comp,x){
-  if(comp==='cons'){var snd=CONS_SOUND[x]||x;return W.cluster?snd+W.cluster:snd;}
+  if(comp==='cons')return W.cluster?x+W.cluster:x;
   if(comp==='tone')return x;
   if(comp==='vowel'){var vr=stripAnnotation(VOWEL_READ[x]||VOWEL_SYMBOL[x]||x);return vr||x;}
-  var fs=stripAnnotation(FINAL_SOUND[x]||x);return fs||x;
+  return x; // final: โชว์ตัวสะกดจริงตรงๆ
 }
 
 // ════════════════════════════════════════════
@@ -726,7 +704,7 @@ function loadWord(){
 // โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
 function loadSyl(){
   var SY=sylList[sylIdx];
-  W={th:SY.th,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
   checked=false;picks=[];bonusAnswered=false;selectedBonus=null; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
   comps=['cons','vowel'];
   if(W.final)comps.push('final');
