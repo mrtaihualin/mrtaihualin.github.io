@@ -2287,10 +2287,12 @@ function render() {
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
       // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
       // 2026-07-16: เอาแถบพยางค์ (syl-chip แบบเกมอ่าน) ออกตามที่ Lin สั่ง — เหลือแค่คำเต็ม + กล่องโฟกัส
-      var fullWord = S.parentWord || S.syllables.join('');
+      // 2026-07-29: เอากล่องพยางค์แยก (tf-adv-sent-focus) ออกอีกที ตามที่ Lin สั่ง — เปลี่ยนไปเน้นพยางค์ที่กำลังถามตรงคำเต็มด้านบนแทน (ตัวหนา+ขีดเส้นใต้สีทอง แทนกล่องแยก)
+      var fullWordHtml = S.syllables.map(function (syl, i) {
+        return '<span class="' + (i === S.selectedSyl ? 'tf-syl-cur' : 'tf-syl-dim') + '">' + syl + '</span>';
+      }).join('');
       mainBoxHtml =
-        '<div class="tf-adv-sent-main">' + fullWord + '</div>' +
-        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '">' + S.word + '</div>' +
+        '<div class="tf-adv-sent-main">' + fullWordHtml + '</div>' +
         zhHtml;
     } else {
       mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>' + zhHtml;
