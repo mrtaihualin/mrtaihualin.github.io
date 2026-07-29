@@ -147,13 +147,8 @@ var WORDS = buildWordsForPhonicsGames(WORDS_MASTER); // 2026-07-11: ย้าย
 var WORDS_HIGH = buildSentencesForPhonicsGames(ADV_SENTENCES); // 2026-07-11: ย้ายประโยค高級กลับไปเก็บที่ adv-sentences.js (ใช้ร่วมกับ 4 เกม)
 WORDS = WORDS.concat(WORDS_HIGH);
 
-var BONUS_TONES=[
-  {name:'สามัญ', zh:'第一聲', num:1},
-  {name:'เอก',   zh:'第二聲', num:2},
-  {name:'โท',    zh:'第三聲', num:3},
-  {name:'ตรี',   zh:'第四聲', num:4},
-  {name:'จัตวา', zh:'第五聲', num:5}
-];
+// Lin 2026-07-30: เอาระบบ猜聲調 (ทายเสียงวรรณยุกต์ +1 แต้ม) ออกทั้งเกม — ตาราง BONUS_TONES/ปุ่มทาย/แต้มโบนัสถูกลบหมด
+// กล่อง #bonus-section เหลือหน้าที่เดียว: โชว์คำอธิบายเฉลย (renderBonusReason) อัตโนมัติตอนเฉลย
 
 function buildRevealRules(w){
   var rows=[];
@@ -257,7 +252,7 @@ var isWordPractice=false; // ?word= ฝึกคำเดียว / ทบท�
 var rgAllMasteredPending=false; // กฎ15: รอเด้งหน้าฉลอง 全部精通
 var picks=[],comps=[],correctSet=[],needN=0;
 var checked=false,wrongCount=0;
-var wordToneBonus=0; // รวมแต้มโบนัสวรรณยุกต์ (+1) ของ "คำนี้" ทั้งคำ — บวกรวมกับคะแนนหลักตอนแสดงแบนเนอร์ตอนจบคำ ไม่ให้แยกโชว์คนละที่ (ตามที่ Lin สั่งให้ทำเหมือนเกมพิมพ์) — Lin 2026-07-07
+// wordToneBonus ถูกลบแล้ว (เอา猜聲調ออก 2026-07-30) — ไม่มีแต้มโบนัสวรรณยุกต์อีกต่อไป
 var sylWrongCount=[];          // งานที่1: จำนวนครั้งที่ผิดก่อนถูก แยกรายพยางค์ (index ตรงกับ sylList)
 var wordUsedGuide=false;       // งานที่3: เปิดคำใบ้ระหว่างเช็คคำตอบหน่วยนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS)
 var curWordIsKnownCheck=false; // งานที่7: กำลังอยู่ในด่านพิสูจน์ "已記得" ของคำนี้ไหม (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
@@ -400,9 +395,6 @@ function setRgEnMode(on){
   rgRenderEnLine();
 }
 setRgEnMode(rgEnMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
-
-var bonusAnswered=false;
-var selectedBonus=null;  // tone name user picked before 檢查
 
 // ════════════════════════════════════════════
 // STORAGE
@@ -670,7 +662,6 @@ function updateNextSylBtn(){
   b.style.display=show?'':'none';
 }
 function loadWord(){
-  wordToneBonus=0; // คำใหม่ = ล้างโบนัสวรรณยุกต์สะสมของคำก่อนหน้า — Lin 2026-07-07
   rememberStep=0;clearTimeout(rememberTimer);
   var rb=document.getElementById('btn-remember');
   if(rb){rb.textContent='已記得';rb.style.cssText='';rb.style.display='';}
@@ -705,7 +696,7 @@ function loadWord(){
 function loadSyl(){
   var SY=sylList[sylIdx];
   W={th:SY.th,read:SY.read,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
-  checked=false;picks=[];bonusAnswered=false;selectedBonus=null; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
+  checked=false;picks=[]; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
   comps=['cons','vowel'];
   if(W.final)comps.push('final');
   if(W.tone) comps.push('tone');
@@ -721,7 +712,6 @@ function loadSyl(){
   document.getElementById('retry-hint').className='retry-hint';
   document.getElementById('banner').className='result-banner';
   document.getElementById('reveal').className='reveal';
-  document.getElementById('bonus-result').textContent='';
   document.getElementById('bonus-reason').className='bonus-reason';
   document.getElementById('ok').textContent=okC;
   document.getElementById('bad').textContent=badC;
@@ -772,9 +762,8 @@ function loadSyl(){
   optTiles.forEach(function(t,i){t.id=i;});
 
   renderOptions(optTiles);
-  // ป็อปอัพทายวรรณยุกต์: เฉพาะคำพยางค์เดียว (初級) — คำ 2 พยางค์ขึ้นไป (中/高級) ไม่ต้องกดทาย ได้ +1/พยางค์อัตโนมัติแทน (Lin 2026-07-04)
-  if(sylList.length===1) showBonus();
-  else document.getElementById('bonus-section').className='bonus-section';
+  // Lin 2026-07-30: เอา猜聲調ออกแล้ว — กล่อง #bonus-section ซ่อนไว้ก่อน จะโชว์เองตอนเฉลย (evaluateBonus/showRevealMulti)
+  document.getElementById('bonus-section').className='bonus-section';
   refreshUI();
 }
 
@@ -992,8 +981,8 @@ function finalizeWord(){
     rgSrsSet(srsKey,rec);
   }
 
-  // ── รวมโบนัสทั้งหมดของ "คำนี้" (คะแนนหลัก + วรรณยุกต์ + SRS) เป็นก้อนเดียวตอนแสดงแบนเนอร์ตอนจบคำ (ทำเหมือนเกมพิมพ์ ตามที่ Lin สั่ง) — Lin 2026-07-07
-  var dispPtsAwarded=basePtsAwarded+wordToneBonus+srsBonusAwarded;
+  // ── รวมโบนัสทั้งหมดของ "คำนี้" (คะแนนหลัก + SRS) เป็นก้อนเดียวตอนแสดงแบนเนอร์ตอนจบคำ (โบนัสวรรณยุกต์ถูกลบแล้ว 2026-07-30) ──
+  var dispPtsAwarded=basePtsAwarded+srsBonusAwarded;
 
   if(wordHadWrong){b.textContent='完成這個字！+'+dispPtsAwarded+' 分';b.className='result-banner show half';}
   else{b.textContent=rnd(['全部正確！🎉','太棒了！✨','非常好！🌟'])+(streak>=3?' 🔥連對'+streak:'')+(golden?' ✨黃金字':'')+' +'+dispPtsAwarded+' 分';b.className='result-banner show ok';}
@@ -1077,68 +1066,16 @@ function check(){
   }
 }
 
-// ─── Bonus tone question ───
+// ─── กล่องคำอธิบายเฉลย ───
+// Lin 2026-07-30: เอา猜聲調ออกทั้งเกมแล้ว — evaluateBonus() เหลือหน้าที่เดียวคือโชว์คำอธิบายเฉลย
+// (子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์) อัตโนมัติตอนเฉลย ไม่มีปุ่มทาย/ไม่มีแต้ม +1 แล้ว
+// คงชื่อฟังก์ชันเดิมไว้ เพราะถูกเรียกจากจุดเฉลยหลายที่ใน check()
 var TONE_ZH={'สามัญ':'第一聲','เอก':'第二聲','โท':'第三聲','ตรี':'第四聲','จัตวา':'第五聲'};
 
-function showBonus(){
-  if(!W.tone_name)return;
-  selectedBonus=null;
-  var sec=document.getElementById('bonus-section');
-  sec.className='bonus-section show';
-  var hdr0=document.getElementById('bonus-header');
-  if(hdr0){hdr0.style.display='';hdr0.innerHTML='猜聲調！答對 <span class="bonus-pts">+1</span> 分 ✨ 答錯不扣分';} // Lin 2026-07-26: โจทย์ใหม่ → โชว์ป้ายอธิบายกฎอีกครั้ง (ซ่อนตอนเฉลยใน evaluateBonus)
-  var box=document.getElementById('bonus-opts');
-  box.innerHTML='';
-  document.getElementById('bonus-result').textContent='';
-  document.getElementById('bonus-reason').className='bonus-reason';
-  BONUS_TONES.forEach(function(t){
-    var btn=document.createElement('button');
-    btn.className='bonus-btn';
-    btn.dataset.tone=t.name;
-    btn.innerHTML=t.num;
-    btn.onclick=function(){
-      if(bonusAnswered)return;  // locked after 檢查
-      // toggle selection
-      if(selectedBonus===t.name){
-        selectedBonus=null;
-        btn.classList.remove('sel');
-      } else {
-        box.querySelectorAll('.bonus-btn').forEach(function(b){b.classList.remove('sel');});
-        selectedBonus=t.name;
-        btn.classList.add('sel');
-      }
-    };
-    box.appendChild(btn);
-  });
-}
-
-// Called by check() — locks buttons and shows result
 function evaluateBonus(){
-  if(bonusAnswered||!W.tone_name)return;
-  bonusAnswered=true;
-  var hdrE=document.getElementById('bonus-header');
-  if(hdrE)hdrE.style.display='none'; // Lin 2026-07-26: ตอบแล้ว/เฉลยแล้ว → ไม่ต้องโชว์ป้ายอธิบายกฎ猜聲調ซ้ำ
-  var box=document.getElementById('bonus-opts');
-  var res=document.getElementById('bonus-result');
-  box.querySelectorAll('.bonus-btn').forEach(function(b){
-    b.classList.add('locked');
-    if(b.dataset.tone===W.tone_name) b.classList.add('correct');
-  });
-  var tZH=TONE_ZH[W.tone_name]||W.tone_name;
-  if(selectedBonus===W.tone_name){
-    var toneScored=!wordUsedGuide && !curWordIsKnownCheck; // Lin 2026-07-04: โหมดฝึกฝน(有提示)/พิสูจน์(已記得) = ไม่ได้แต้มโบนัสเสียง
-    if(toneScored){ roundScore+=1; wordToneBonus+=1; pop('+1 ✨'); refreshUI(); } // wordToneBonus: รวมกับคะแนนหลักตอนแบนเนอร์ตอนจบคำ — Lin 2026-07-07
-    res.textContent='正確！是'+tZH+(toneScored?' 🎉 +1 分':' 🎉（練習模式不計分）');
-    res.style.color='#2e7d32';
-    box.querySelector('[data-tone="'+W.tone_name+'"]').classList.add('correct');
-  } else if(selectedBonus){
-    box.querySelector('[data-tone="'+selectedBonus+'"]').classList.add('wrong');
-    res.textContent='不對，是'+tZH+'，沒扣分，繼續加油！';
-    res.style.color='#b06020';
-  } else {
-    res.textContent='（未作答）正確答案是'+tZH;
-    res.style.color='#888';
-  }
+  if(!W.tone_name)return; // ไม่มีข้อมูลเสียง → ใช้แผงเฉลยแยก (#reveal) ตามเดิมใน showReveal()
+  var sec=document.getElementById('bonus-section');
+  if(sec)sec.className='bonus-section show';
   renderBonusReason(W);
 }
 
@@ -1444,7 +1381,7 @@ function showRevealMulti(){
   box.className='bonus-reason show';
   var _sec=document.getElementById('bonus-section'); if(_sec)_sec.className='bonus-section show';
   var _rv=document.getElementById('reveal'); if(_rv)_rv.className='reveal';
-  var _hdrF=document.getElementById('bonus-header'); if(_hdrF)_hdrF.style.display='none'; // Lin 2026-07-26: จบคำแล้ว → ไม่ต้องโชว์ป้ายอธิบายกฎ猜聲調ซ้ำตอนเฉลย
+  // (ป้าย猜聲調 ในกล่องนี้ถูกลบไปแล้ว 2026-07-30 — ไม่มีอะไรต้องซ่อนเพิ่ม)
 }
 
 var _scorePopCount=0; // กันป๊อปคะแนนซ้อนทับกัน — Lin 2026-07-12
@@ -1709,8 +1646,7 @@ function rgCaptureSylState(){
     correctVal:{cons:correctVal.cons,vowel:correctVal.vowel,final:correctVal.final,tone:correctVal.tone},
     optTiles:optTiles.map(function(t){return {type:t.type,val:t.val,id:t.id};}),
     slotFills:{cons:slotFills.cons,vowel:slotFills.vowel,final:slotFills.final,tone:slotFills.tone},
-    picks:picks.slice(), needN:needN, slotSeq:slotSeq.slice(),
-    bonusAnswered:bonusAnswered, selectedBonus:selectedBonus
+    picks:picks.slice(), needN:needN, slotSeq:slotSeq.slice()
   };
 }
 function rgSylFilled(st){ return st.comps.every(function(c){return st.slotFills[c]!=null;}); }
@@ -1722,8 +1658,8 @@ function rgAllSylsFilled(){
   }
   return true;
 }
-// คำ 2 พยางค์ขึ้นไป (中/高級) ไม่มีป็อปอัพทายวรรณยุกต์แล้ว — ซ่อน section นี้ไว้เสมอ (Lin 2026-07-04)
-function rgRenderBonusForSyl(cachedAnswered,cachedSelected){
+// ตอนสลับพยางค์ (ยังไม่เฉลย) — ซ่อนกล่องคำอธิบายเฉลยไว้ก่อน (Lin 2026-07-30: เอา猜聲調ออกแล้ว กล่องนี้เหลือแค่คำอธิบาย)
+function rgRenderBonusForSyl(){
   document.getElementById('bonus-section').className='bonus-section';
 }
 function rgRestoreSylState(st){
@@ -1744,7 +1680,7 @@ function rgRestoreSylState(st){
     if(id!=null){ var el=document.getElementById('pool').querySelector('.opt[data-id="'+id+'"]'); if(el)el.classList.add('sel'); }
   });
   activeSlot=nextEmptySlot();updateActiveSlot();updateSlots();
-  rgRenderBonusForSyl(st.bonusAnswered,st.selectedBonus);
+  rgRenderBonusForSyl();
   document.getElementById('btn-check').disabled=!rgAllSylsFilled();
 }
 function rgGotoSyl(idx){
@@ -1786,105 +1722,7 @@ function rgJumpForCheck(idx){
   renderSylStrip();
 }
 
-// ════════════════════════════════════════════
-// 中級 (หลายพยางค์) 猜聲調 ทีละพยางค์หลังตอบทั้งคำถูกแล้ว — Lin 2026-07-07 (เดิมระดับนี้ได้แต้มอัตโนมัติไม่มี popup ให้ทาย ตอนนี้เพิ่ม popup ให้ทายจริงเหมือน 初級)
-// 高級ยังคงพฤติกรรมเดิม (อัตโนมัติ ไม่ทาย) ตามที่ Lin ยืนยัน — เปลี่ยนเฉพาะ 中級
-// ════════════════════════════════════════════
-var RG_MID_TONE_Q=[],RG_MID_TONE_IDX=0,RG_MID_TONE_TOKEN=0;
-function rgStartMidToneQuizzes(){
-  RG_MID_TONE_Q=[];
-  sylList.forEach(function(s,i){ if(s.tone_name) RG_MID_TONE_Q.push(i); });
-  RG_MID_TONE_IDX=0;
-  RG_MID_TONE_TOKEN++;
-  rgAskMidTone();
-}
-function rgAskMidTone(){
-  if(RG_MID_TONE_IDX>=RG_MID_TONE_Q.length){ rgFinishWholeWordAfterTone(); return; }
-  var seg=RG_MID_TONE_Q[RG_MID_TONE_IDX];
-  var SY=sylList[seg];
-  var sec=document.getElementById('bonus-section');
-  sec.className='bonus-section show';
-  var box=document.getElementById('bonus-opts');
-  box.innerHTML='';
-  var res=document.getElementById('bonus-result');
-  if(res){res.textContent='';res.style.color='';}
-  var reasonEl0=document.getElementById('bonus-reason');
-  if(reasonEl0)reasonEl0.className='bonus-reason';
-  var hdr=document.getElementById('bonus-header');
-  if(hdr)hdr.innerHTML='猜聲調！選一下「'+SY.th+'」的聲調（'+(RG_MID_TONE_IDX+1)+'/'+RG_MID_TONE_Q.length+'）答對 <span class="bonus-pts">+1</span> 分 ✨ 答錯不扣分（不選也可以，按下面按鈕跳過）';
-  var skipBtn=document.getElementById('rg-mid-tone-skip');
-  if(skipBtn)skipBtn.style.display='inline-block';
-  var _tok=RG_MID_TONE_TOKEN;
-  BONUS_TONES.forEach(function(t){
-    var btn=document.createElement('button');
-    btn.className='bonus-btn';
-    btn.dataset.tone=t.name;
-    btn.innerHTML=t.num;
-    btn.onclick=function(){
-      if(box.querySelector('.bonus-btn.locked'))return; // ล็อกหลังตอบแล้ว กันกดซ้ำ
-      box.querySelectorAll('.bonus-btn').forEach(function(b){b.classList.add('locked');});
-      var skipBtn2=document.getElementById('rg-mid-tone-skip');
-      if(skipBtn2)skipBtn2.style.display='none';
-      var hdrA=document.getElementById('bonus-header');
-      if(hdrA)hdrA.style.display='none'; // Lin 2026-07-26: ตอบแล้ว → ซ่อนป้ายอธิบายกฎ猜聲調
-      var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
-      if(t.name===SY.tone_name){
-        var toneScored=!wordUsedGuide && !curWordIsKnownCheck; // โหมดฝึกฝน/พิสูจน์ = ไม่ได้แต้มโบนัสเสียง เหมือน初級
-        if(toneScored){ roundScore+=1; wordToneBonus+=1; pop('+1 ✨'); refreshUI(); }
-        btn.classList.add('correct');
-        res.textContent='正確！是'+tZH+(toneScored?' 🎉 +1 分':' 🎉（練習模式不計分）');
-        res.style.color='#2e7d32';
-      } else {
-        btn.classList.add('wrong');
-        var cb=box.querySelector('[data-tone="'+SY.tone_name+'"]'); if(cb)cb.classList.add('correct');
-        res.textContent='不對，是'+tZH+'，沒扣分，繼續加油！';
-        res.style.color='#b06020';
-      }
-      // Lin 2026-07-12: เอากล่องอธิบาย 子音/母音/尾音 ระหว่างทายทีละพยางค์ออก (เหมือนเกมพิมพ์) — ไปสรุปรวมทุกพยางค์ตอนจบคำแทน (showRevealMulti) กันโชว์ซ้ำ 2 รอบ
-      setTimeout(function(){
-        if(RG_MID_TONE_TOKEN!==_tok)return; // ผู้เล่นกดข้ามไปคำอื่นระหว่างรอ — ไม่ทำอะไรกับคำเก่า
-        RG_MID_TONE_IDX++;
-        rgAskMidTone();
-      },900); // เดิม 2600ms → ไม่มีคำอธิบายยาวแล้ว ลดกลับมาสั้นพอให้อ่าน ✓/✗ ทัน
-    };
-    box.appendChild(btn);
-  });
-}
-function rgSkipMidTone(){
-  var box=document.getElementById('bonus-opts');
-  if(box)box.querySelectorAll('.bonus-btn').forEach(function(b){b.classList.add('locked');});
-  var skipBtn=document.getElementById('rg-mid-tone-skip');
-  if(skipBtn)skipBtn.style.display='none';
-  var hdrS=document.getElementById('bonus-header');
-  if(hdrS)hdrS.style.display='none'; // Lin 2026-07-26: ข้ามแล้ว → ซ่อนป้ายอธิบายกฎ猜聲調
-  var seg=RG_MID_TONE_Q[RG_MID_TONE_IDX];
-  var SY=sylList[seg];
-  var res=document.getElementById('bonus-result');
-  var tZH=TONE_ZH[SY.tone_name]||SY.tone_name;
-  if(res){res.textContent='（未作答）正確答案是'+tZH;res.style.color='#888';}
-  // Lin 2026-07-12: เอากล่องอธิบายระหว่างทายทีละพยางค์ออกเหมือนกัน — ไปสรุปรวมตอนจบคำแทน
-  var _tok=RG_MID_TONE_TOKEN;
-  setTimeout(function(){
-    if(RG_MID_TONE_TOKEN!==_tok)return;
-    RG_MID_TONE_IDX++;
-    rgAskMidTone();
-  },700); // เดิม 2200ms → ไม่มีคำอธิบายยาวแล้ว
-}
-// ถามวรรณยุกต์ครบทุกพยางค์ที่มีแล้ว (หรือไม่มีพยางค์ไหนต้องถามเลย) → ไปจบคำเหมือนเดิมทุกประการ (showReveal/finalizeWord ฯลฯ)
-function rgFinishWholeWordAfterTone(){
-  var sec=document.getElementById('bonus-section');
-  if(sec)sec.className='bonus-section';
-  var hdr=document.getElementById('bonus-header');
-  if(hdr){hdr.innerHTML='猜聲調！答對 <span class="bonus-pts">+1</span> 分 ✨ 答錯不扣分';hdr.style.display='none';} // คืนข้อความเดิมไว้ให้คำถัดไป (ถ้าเป็นคำพยางค์เดียว) แต่ซ่อนไว้ก่อน — Lin 2026-07-26: จบคำแล้ว ไม่ต้องโชว์ป้ายกฎซ้ำตอนเฉลย
-  // Lin 2026-07-12: คำหลายพยางค์ → โชว์สรุปรวมทุกพยางค์ (เหมือนเกมพิมพ์) ไม่ใช่แค่พยางค์สุดท้าย
-  markOpts();markSlots();(sylList.length>1?showRevealMulti():showReveal());renderSylStrip();
-  document.getElementById('retry-hint').className='retry-hint';
-  setGameBtns('done');
-  finalizeWord();
-  document.getElementById('btn-next').textContent='下一題 →';
-  document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
-  refreshUI();
-}
+// (ระบบถามวรรณยุกต์ทีละพยางค์ของ 中級 — rgStartMidToneQuizzes/rgAskMidTone/rgSkipMidTone/rgFinishWholeWordAfterTone — ถูกลบแล้ว: เอา猜聲調ออก 2026-07-30)
 function rgCheckWholeWord(){
   sylCache[sylIdx]=rgCaptureSylState();
   var wrongIdx=-1;
@@ -1901,19 +1739,15 @@ function rgCheckWholeWord(){
     rgJumpForCheck(sylList.length-1); // ให้ sylIdx จบที่พยางค์สุดท้ายเสมอ กัน next() งงว่าไปพยางค์ถัดไปหรือคำถัดไป
     checked=true; // ต้องตั้งหลังสลับพยางค์ เพราะ loadSyl() (ถ้าพยางค์นี้ยังไม่เคยแวะ) จะ reset checked=false ทับ
     rgFinalizeAllBonuses();
-    // 中級ให้ทายวรรณยุกต์ทีละพยางค์ต่อ (เหมือน初級) ก่อนค่อยจบคำ — 高級ยังคงพฤติกรรมเดิม (อัตโนมัติ) — Lin 2026-07-07
-    if(curLevel==='中'){
-      rgStartMidToneQuizzes();
-    } else {
-      // Lin 2026-07-12: 高級ประโยคหลายพยางค์ → โชว์สรุปรวมทุกพยางค์เหมือนกัน ไม่ใช่แค่พยางค์สุดท้าย
-      markOpts();markSlots();(sylList.length>1?showRevealMulti():showReveal());renderSylStrip();
-      document.getElementById('retry-hint').className='retry-hint';
-      setGameBtns('done');
-      finalizeWord();
-      document.getElementById('btn-next').textContent='下一題 →';
-      document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
-      refreshUI();
-    }
+    // Lin 2026-07-30: เอา猜聲調ออกแล้ว — ทุกระดับ (中/高) จบคำเหมือนกันเลย ไม่มีขั้นถามวรรณยุกต์ต่อ
+    // Lin 2026-07-12: ประโยค/คำหลายพยางค์ → โชว์สรุปรวมทุกพยางค์ ไม่ใช่แค่พยางค์สุดท้าย
+    markOpts();markSlots();(sylList.length>1?showRevealMulti():showReveal());renderSylStrip();
+    document.getElementById('retry-hint').className='retry-hint';
+    setGameBtns('done');
+    finalizeWord();
+    document.getElementById('btn-next').textContent='下一題 →';
+    document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
+    refreshUI();
   } else {
     wordHadWrong=true;streak=0;badC++;
     // งานที่1: นับผิดแยกรายพยางค์ (พยางค์ไหนโผล่มาว่าผิด ก็ +1 เฉพาะพยางค์นั้น) แทนนับรวมทั้งคำแบบเดิม
@@ -2028,28 +1862,4 @@ document.addEventListener('keydown',function(e){
   var checkBtn=document.getElementById('btn-check');
   if(checkBtn && checkBtn.style.display!=='none' && !checkBtn.disabled){ checkBtn.click(); e.preventDefault(); }
 });
-// กดเลข 1-5 บนคีย์บอร์ดแทนการคลิกเลือกวรรณยุกต์ได้ — Lin 2026-07-12
-document.addEventListener('keydown',function(e){
-  if(e.key<'1'||e.key>'5')return;
-  var ae=document.activeElement;
-  if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))return;
-  var gameEl=document.getElementById('game');
-  if(!gameEl || gameEl.style.display==='none')return;
-  var _hm=document.getElementById('rg-howto-modal');
-  if(_hm && _hm.style.display==='flex')return;
-  if(document.getElementById('rg-ask-ov'))return;
-  var _bm=document.getElementById('badge-modal');
-  if(_bm && _bm.classList.contains('show'))return;
-  var _sm=document.getElementById('star-modal');
-  if(_sm && _sm.classList.contains('show'))return;
-  var sec=document.getElementById('bonus-section');
-  if(!sec || !sec.classList.contains('show'))return;
-  var box=document.getElementById('bonus-opts');
-  if(!box)return;
-  var tone=BONUS_TONES[Number(e.key)-1];
-  if(!tone)return;
-  var btn=box.querySelector('[data-tone="'+tone.name+'"]');
-  if(!btn || btn.classList.contains('locked'))return;
-  btn.click();
-  e.preventDefault();
-});
+// (คีย์ลัดกดเลข 1-5 เลือกวรรณยุกต์ ถูกลบแล้ว — เอา猜聲調ออก 2026-07-30)

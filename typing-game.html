@@ -194,23 +194,9 @@
 .result-banner.half{background:#fff8e1;color:#f57f17;border:1px solid #ffe082;}
 .result-banner.no  {background:#fdecea;color:#c62828;border:1px solid #ef9a9a;}
 
-/* ── Bonus tone section ── */
+/* ── กล่องคำอธิบายเฉลย (เดิมคือกล่อง猜聲調 — เอาปุ่มทายออกแล้ว 2026-07-30 ตามที่ Lin สั่ง เหลือแค่คำอธิบาย) ── */
 .bonus-section{width:100%;margin-top:8px;border-radius:12px;border:1.5px dashed #f0b030;background:#fffbf0;padding:10px 12px;display:none;}
 .bonus-section.show{display:block;}
-.bonus-header{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a06810;text-align:center;margin-bottom:8px;}
-.bonus-pts{font-weight:900;color:#d85a00;font-size:14px;}
-.bonus-opts{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
-.bonus-btn{
-  padding:6px 14px;border-radius:999px;border:1.5px solid #e8c070;
-  background:#fff;color:#8b6310;font-size:12px;font-weight:700;cursor:pointer;
-  font-family:'Noto Sans TC',sans-serif;transition:all .12s;
-}
-.bonus-btn:hover:not(.locked){background:#fff3d0;border-color:#d09030;}
-.bonus-btn.sel    {background:#fff3d0;border-color:#d09030;color:#7a4000;font-weight:700;}
-.bonus-btn.correct{background:#e8f5e9;color:#2e7d32;border-color:#4caf50;}
-.bonus-btn.wrong  {background:#fdecea;color:#c62828;border-color:#f44336;}
-.bonus-btn.locked {pointer-events:none;opacity:.85;}
-.bonus-result{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#8b6310;text-align:center;margin-top:6px;}
 .bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:6px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
 .bonus-reason.show{display:block;}
 .bonus-reason-why{margin-bottom:6px;}
@@ -274,13 +260,12 @@ body.rg-modern-font .chip-item,
 body.rg-modern-font .opt,
 body.rg-modern-font .type-target,
 body.rg-modern-font .rev-pron,
-body.rg-modern-font .bonus-reading,
 body.rg-modern-font .rule-txt,
 body.rg-modern-font .tk-key .tk-base,
 body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
 
 .btn-row{display:flex;gap:7px;justify-content:center;width:100%;margin-top:12px;flex-wrap:wrap;}
-/* Lin 2026-07-10: เลิกใช้ position:sticky (ทำให้ปุ่มลอยหลุดกรอบการ์ดตอนการ์ดสั้น) — ย้ายปุ่มขึ้นไปอยู่เหนือกล่อง猜聲調ในโค้ด HTML แทน กดง่ายไม่ต้องเลื่อนหา และไม่มีทางล้นกรอบเพราะเป็น flow ปกติ */
+/* Lin 2026-07-10: เลิกใช้ position:sticky (ทำให้ปุ่มลอยหลุดกรอบการ์ดตอนการ์ดสั้น) — ย้ายปุ่มขึ้นไปอยู่เหนือกล่องคำอธิบายเฉลยในโค้ด HTML แทน กดง่ายไม่ต้องเลื่อนหา และไม่มีทางล้นกรอบเพราะเป็น flow ปกติ */
 .btn{padding:10px 18px;border-radius:999px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:transform .1s;}
 .btn:active{transform:scale(.96);}
 .btn-primary  {background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
@@ -444,7 +429,6 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <li>💡有提示＝練習不計分／🔥無提示＝計分</li>
       <li>打錯有額度，額度用完直接公佈答案</li>
       <li>打完秀拆解：初/中→子音母音聲調符尾音；高級→單字意思</li>
-      <li>聲調小測驗（初/中限定，非強制）：答對 +1 分</li>
       <li>「已記得」＝跳過提示自測，不加分不加星</li>
       <li>連擊／黃金字／等級加權都加分；整輪無提示才有 +20，全對再 +50</li>
       <li>🍚選單：發音(AI)／讀音／翻譯／收藏／提示切換／螢幕鍵盤</li>
@@ -475,9 +459,6 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🎁 打完字之後：拆解分析</div>
       <p style="margin:0 0 4px;"><strong>初級／中級（單字）</strong>：列出這個字的拆解，包含子音、母音、聲調符，有尾音、前導子音（ห、อ）或複合音也會標出來。</p>
       <p style="margin:0 0 4px;"><strong>高級（句子）</strong>：改列出句子裡每個字＋對應的中文意思。</p>
-
-      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🎲 聲調小測驗（額外加分，非強制，只有初級／中級才有）</div>
-      <p style="margin:0 0 4px;">打完整個字後，若有聲調，畫面會問「這是第幾聲」（可選 1～5，鍵盤數字鍵也行），答對 +1 分，答錯不扣分，不想答按 Enter 或跳過鍵即可。高級不會問聲調。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💰 計分怎麼算</div>
       <p style="margin:0 0 4px;">基礎分：打對有基礎分，額度內打錯次數越多分數越低。<strong>連擊加成</strong>：連續答對加成（連續 3 題 ×1.5、5 題 ×2、8 題 ×3）。<strong>黃金字</strong>：偶爾出現，答對分數雙倍。<strong>等級加權</strong>：初級 ×1、中級 ×1.5、高級 ×2。<strong>完成／全對獎勵</strong>：這輪全程沒開過提示（哪怕一次也不行），打完 +20 分，全對再 +50 分；用過一次提示這兩個獎勵都沒有。</p>
@@ -619,32 +600,23 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <input type="text" id="rg-mobile-input" class="mobile-kbd-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" lang="th" aria-label="打字輸入框">
     </div>
     <div class="type-hint" id="rg-type-hint">照著打出上面這個音節，鍵盤已經照泰文鍵盤排好位置了，打對會自動跳下一步 👇</div>
-    <!-- ปุ่มเปิด/ปิดคีย์บอร์ดบนจอ + 提示/無提示 ย้ายขึ้นไปแถว word-ctl-row แล้ว (Lin 2026-07-19) — เหลือแค่ปุ่มข้ามวรรณยุกต์ -->
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0;">
-      <button type="button" id="rg-tone-skip-btn" class="btn btn-secondary" style="display:none;font-size:12px;padding:6px 14px;" onclick="rgSkipTone()">⏭️ 不選，直接下一個</button>
-    </div>
+    <!-- ปุ่มเปิด/ปิดคีย์บอร์ดบนจอ + 提示/無提示 ย้ายขึ้นไปแถว word-ctl-row แล้ว (Lin 2026-07-19) · ปุ่มข้ามวรรณยุกต์ถูกลบแล้ว (เอา猜聲調ออก 2026-07-30) -->
     <div id="tg-guide-note" style="text-align:center;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;margin:0 0 6px;"></div>
     <div class="tkbd" id="rg-kbd"></div>
   </div>
 
   <div class="opts-wrap"><div class="opts" id="pool"></div></div>
 
-  <!-- ปุ่มแอ็คชัน — ย้ายขึ้นมาอยู่เหนือกล่อง猜聲調แทนการใช้ position:sticky (Lin 2026-07-10) -->
+  <!-- ปุ่มแอ็คชัน — อยู่เหนือกล่องคำอธิบายเฉลย (Lin 2026-07-10) -->
   <div class="btn-row">
     <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
     <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
     <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一字 →</button>
   </div>
 
-  <!-- Bonus tone — shown at load, user picks before pressing 檢查 -->
+  <!-- กล่องคำอธิบายเฉลย — Lin 2026-07-30: เอา猜聲調 (ปุ่มทายเสียง+แต้มโบนัส) ออกทั้งหมดแล้ว เหลือแค่คำอธิบาย 子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์ โชว์อัตโนมัติตอนเฉลย -->
   <div class="bonus-section" id="bonus-section">
-    <div class="bonus-header" id="bonus-header">猜聲調！答對 <span class="bonus-pts">+1</span> 分 ✨ 答錯不扣分（不選也可以，按 Enter 或下面的按鈕直接跳過）</div>
-    <!-- Lin 2026-07-26: เอา讀音（bonus-reading）ออกจากกล่องนี้แล้ว — ให้ใช้ปุ่ม🐣/🥚(讀音)มุมขวาล่างแทน · เหลือ id ไว้เฉยๆกัน JS เก่าพัง (element ไม่มีแล้วก็ไม่เป็นไร เพราะ JS เช็ค null ก่อนใช้ทุกจุด) -->
-    <div class="bonus-reading" id="bonus-reading" style="display:none;"></div>
-    <div class="bonus-opts" id="bonus-opts"></div>
-    <div class="bonus-result" id="bonus-result"></div>
     <div class="bonus-reason" id="bonus-reason"></div>
-    <!-- ปุ่มข้าม (⏭️ 不選，直接下一個) ย้ายขึ้นไปอยู่แถวเดียวกับปุ่มไกด์ไลน์ด้านบนแล้ว (id="rg-tone-skip-btn") — Lin 2026-07-07 -->
   </div>
 
   <div class="retry-hint" id="retry-hint">沒關係～再看看，換一個試試 🌱</div>
@@ -715,7 +687,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
 </div>
 
-<script src="js/games/typing-game-app.min.js?v=13"></script>
+<script src="js/games/typing-game-app.min.js?v=14"></script>
 </div><!-- /.v3-page -->
 <script src="js/core/shared.min.js?v=15"></script>
 
