@@ -197,7 +197,7 @@
 /* ── กล่องคำอธิบายเฉลย (เดิมคือกล่อง猜聲調 — เอาปุ่มทายออกแล้ว 2026-07-30 ตามที่ Lin สั่ง เหลือแค่คำอธิบาย) ── */
 .bonus-section{width:100%;margin-top:8px;border-radius:12px;border:1.5px dashed #f0b030;background:#fffbf0;padding:10px 12px;display:none;}
 .bonus-section.show{display:block;}
-.bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:6px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
+.bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:0;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
 .bonus-reason.show{display:block;}
 .bonus-reason-why{margin-bottom:6px;}
 .bonus-reason-rules{display:flex;flex-direction:column;gap:5px;}
@@ -615,7 +615,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
 
   <!-- กล่องคำอธิบายเฉลย — Lin 2026-07-30: เอา猜聲調 (ปุ่มทายเสียง+แต้มโบนัส) ออกทั้งหมดแล้ว เหลือแค่คำอธิบาย 子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์ โชว์อัตโนมัติตอนเฉลย -->
-  <div class="bonus-section" id="bonus-section">
+  <div class="bonus-section" id="bonus-section" aria-live="polite">
     <div class="bonus-reason" id="bonus-reason"></div>
   </div>
 

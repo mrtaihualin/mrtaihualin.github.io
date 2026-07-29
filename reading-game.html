@@ -198,7 +198,7 @@
 /* ── กล่องคำอธิบายเฉลย (เดิมคือกล่อง猜聲調 — เอาปุ่มทายออกแล้ว 2026-07-30 ตามที่ Lin สั่ง เหลือแค่คำอธิบาย) ── */
 .bonus-section{width:100%;margin-top:8px;border-radius:12px;border:1.5px dashed #f0b030;background:#fffbf0;padding:10px 12px;display:none;}
 .bonus-section.show{display:block;}
-.bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:6px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
+.bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:0;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
 .bonus-reason.show{display:block;}
 .bonus-reason-why{margin-bottom:6px;}
 .bonus-reason-rules{display:flex;flex-direction:column;gap:5px;}
@@ -365,7 +365,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:1.9;">
       每格一次就對 → <strong>10 分</strong>，錯 1／2／3 次 → <strong>7／4／1 分</strong>，錯 4 次 → 0 分並進入複習<br>
       中級 ×1.5、高級 ×2 · ✨黃金字全對 <strong>×2</strong> · 連對 3／5／8 次 <strong>×1.5／×2／×3</strong><br>
-      完成一輪 <strong>+20</strong>，全對再 <strong>+50</strong> · 💡「有提示」模式純練習、不計分
+      完成一輪 <strong>+20</strong>，全對再 <strong>+50</strong> · 💡「有提示」模式純練習、不計分<br>
+      拼完自動顯示拆解：子音／母音／尾音＋為什麼是這個聲調
     </div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐</p>
     <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">母音的種類有點多呢～想知道每個怎麼發音，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
@@ -500,7 +501,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <button class="btn btn-secondary" id="btn-next-syl" onclick="rgGotoSyl(sylIdx+1)" style="display:none;margin:2px 0 6px;">下一個音節 →</button>
 
   <!-- กล่องคำอธิบายเฉลย — Lin 2026-07-30: เอา猜聲調 (ปุ่มทายเสียง+แต้มโบนัส) ออกทั้งหมดแล้ว เหลือแค่คำอธิบาย 子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์ โชว์อัตโนมัติตอนเฉลย -->
-  <div class="bonus-section" id="bonus-section">
+  <div class="bonus-section" id="bonus-section" aria-live="polite">
     <div class="bonus-reason" id="bonus-reason"></div>
   </div>
 
