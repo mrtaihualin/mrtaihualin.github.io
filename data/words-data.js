@@ -422,7 +422,9 @@
   'use strict';
   var LEVEL_TXT_TO_NUM = { '初': 1, '中': 2 };
 
-  // เกมเสียง (tone-finder.html) ใช้: word, readingTH, readingEN, zh, level(เลข 1/2), category
+  // เกมเสียง (tone-finder.html) ใช้: word, readingTH, readingEN, zh, level(เลข 1/2), category, syls
+  // Lin 2026-07-30: เพิ่ม syls เข้ามา — เกมเสียงเคยไม่ได้รับข้อมูลแยกพยางค์ เลยต้องเดาเอง (แยกคำผิด เช่น ผัว)
+  //   ตอนนี้หน้าเดา/หน้าเฉลย/รายงาน อ่านการแยกคำจากคลังกลางที่ Lin ตรวจแล้วที่เดียว
   global.buildWordListForToneFinder = function (master) {
     return master.map(function (w) {
       return {
@@ -431,7 +433,8 @@
         readingEN: w.en,
         zh: w.zh,
         level: LEVEL_TXT_TO_NUM[w.level],
-        category: w.category
+        category: w.category,
+        syls: w.syls
       };
     });
   };
