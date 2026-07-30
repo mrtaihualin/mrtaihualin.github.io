@@ -211,6 +211,7 @@ returns table(test_case text, result text) language plpgsql as $$
 declare
   bkk_a timestamp;  -- เวลา Bangkok ท้องถิ่นของเคส (a) 25 ชม.ข้างหน้า
   bkk_b timestamp;  -- เวลา Bangkok ท้องถิ่นของเคส (b) ~2 ชม.ข้างหน้า
+  v_new_id uuid;    -- id ของแถวทดสอบที่เคส (a) สร้างขึ้นจริง (ต้องลบทิ้งท้ายฟังก์ชัน)
 begin
   -- สำคัญ: ต้องแปลง "อนาคต 25/2 ชม." เป็นวันที่+เวลา ตามเขต Bangkok ก่อน ไม่ใช่เอา current_date
   -- บวกชั่วโมงตรงๆ — ไม่งั้นถ้าตอนทดสอบใกล้เที่ยงคืน วันที่กับเวลาจะไม่ตรงกัน (บั๊กที่แก้แล้วรอบนี้)
@@ -242,10 +243,17 @@ begin
     return next;
   exception when others then
     test_case := 'b) ยกเลิกล่วงหน้า ~2 ชม.';
-    result := case when sqlerrm like '%24 hours%'
-                   then '✅ ผ่าน' else '⚠️ บล็อกด้วยเหตุผลอื่น (คาดว่าจะเป็น error 24 ชม.): '||sqlerrm end;
+    result := case when sqlerrm like '%hours in advance%'
+                   then '✅ ผ่าน — โดนด่าน 24 ชม.บล็อกถูกต้อง' else '⚠️ บล็อกด้วยเหตุผลอื่น (คาดว่าจะเป็นด่าน 24 ชม.): '||sqlerrm end;
     return next;
   end;
+
+  -- 🧹 เก็บกวาด: ลบแถวขยะที่เกิดจากเคส (a) ทิ้งเสมอ ไม่ให้ค้างในตารางจริง
+  if v_new_id is not null then
+    delete from public.classroom_requests where id = v_new_id;
+  end if;
+  -- เผื่อเคยรันเวอร์ชันเก่าที่ยังไม่ได้ลบ → กวาดแถวทดสอบเก่าที่ค้างอยู่ให้หมดด้วย
+  delete from public.classroom_requests where token = 'test-token-does-not-exist';
 
   -- (c) หมายเหตุ: ทดสอบ "ครูยกเลิกได้ไม่จำกัดเวลา" จริงจังทำจาก SQL Editor ไม่ได้
   --     (ไม่มี JWT จริง is_teacher_caller() จะเป็น false เสมอ) — ต้องให้ Lin ลองจากหน้าเว็บจริงแทน

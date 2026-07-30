@@ -131,20 +131,20 @@
     border-bottom: 2px solid rgba(184,134,40,0.50);
   }
   .tf-banner-counter {
+    /* Lin 2026-07-30: เปลี่ยนสไตล์ให้เหมือนเกมอ่าน (.score-bar) — สีเข้มลง + เลิกตัวหนา/letter-spacing ทั้งแถว (ตัวเลขคะแนนแยกไปหนา/เข้มกว่าที่ .tf-score-hud แทน) */
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 13px;
-    color: var(--gold-bright);
-    font-weight: 700;
-    letter-spacing: 2px;
+    color: #8B6310;
+    font-weight: 400;
     margin-bottom: 12px;
   }
   .tf-banner-word {
+    /* Lin 2026-07-30: เปลี่ยนสไตล์ให้เหมือนเกมอ่าน (.word-th) — สีน้ำตาลเข้มขึ้น + เลิก letter-spacing */
     font-family: 'Sarabun', sans-serif;
     font-size: 38px;
     font-weight: 700;
-    color: #8B6310;
-    letter-spacing: 4px;
-    line-height: 1.45;
+    color: #3a2a0a;
+    line-height: 1.5;
   }
   /* Lin 2026-07-14: คำแปลจีนใต้คำศัพท์ (เหมือนเกมอ่าน/เกมพิมพ์) ต่อกับปุ่ม 🍙/🌾 เปิด/ปิดของ shared.js */
   .word-zh {
@@ -191,18 +191,17 @@
   }
   /* Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ประโยคเต็ม (แทนที่จะโชว์แค่คำเดียว) */
   .tf-adv-sent-main {
+    /* Lin 2026-07-30: สีตามคำเดี่ยว (.tf-banner-word) ให้เข้าชุดเดียวกัน */
     font-family: 'Sarabun', sans-serif;
     font-size: 28px;
     font-weight: 700;
-    color: #8B6310;
+    color: #3a2a0a;
     line-height: 1.9;
     margin-bottom: 4px;
   }
   .tf-sent-cur-word {
-    background: #C8973A;
-    color: #fff;
-    border-radius: 6px;
-    padding: 2px 8px;
+    /* Lin 2026-07-30: เอาไฮไลท์พื้นหลังคำปัจจุบันออกตามที่ Lin สั่ง — โชว์เป็นข้อความเปล่าในสีเดียวกับประโยคทั้งหมด ไม่เน้นพิเศษแล้ว */
+    font-weight: 700;
   }
   .tf-adv-sent-ctx-zh {
     font-family: 'Noto Sans TC', sans-serif;
@@ -1462,7 +1461,7 @@
     padding: 1px 9px;
     border-radius: 999px;
     background: rgba(139,99,16,0.12);
-    color: #8B6310;
+    color: #5a3e10; /* Lin 2026-07-30: เข้มขึ้นจาก #8B6310 ให้ตัวเลขคะแนนเด่นกว่าข้อความป้ายกำกับ เหมือนตัวเลข (span) ในเกมอ่าน */
     font-weight: 800;
     font-size: 12px;
     letter-spacing: .3px;
