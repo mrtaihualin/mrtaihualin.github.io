@@ -134,5 +134,6 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initPlayBtn);
   else _initPlayBtn();
 
-  window.WordAudio = { has: has, urlFor: urlFor, play: play, createBtn: createBtn, btnHtml: btnHtml, fillSlot: fillSlot, setCurrent: setCurrent };
+  // soonToast เปิดให้เกมอื่นเรียกได้ (Lin 2026-07-30) — เกมเรียงคำใช้ตอนกดปุ่ม 🔊 ของประโยคที่ยังไม่มีไฟล์เสียง
+  window.WordAudio = { has: has, urlFor: urlFor, play: play, createBtn: createBtn, btnHtml: btnHtml, fillSlot: fillSlot, setCurrent: setCurrent, soonToast: _showSoonToast };
 })();

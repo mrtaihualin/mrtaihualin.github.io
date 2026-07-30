@@ -69,7 +69,7 @@
 <script src="data/adv-sentences.js?v=5"></script>
 <script src="data/audio-manifest.js?v=2"></script><!-- เพิ่ม 2026-07-17: เสียงประโยค 30 ประโยค (เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
-<script src="js/games/word-audio.js?v=2"></script><!-- ปุ่มลำโพงฟังเสียงประโยค — โชว์เฉพาะตอนเฉลยแล้ว -->
+<script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงประโยค — โชว์เฉพาะตอนเฉลยแล้ว -->
 <script src="js/games/word-menu.js?v=6"></script><!-- เมนู 🍚 (讀音/英文讀音/字體) — Lin 2026-07-25 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -328,7 +328,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <!-- Lin 2026-07-25: ปุ่ม 發音 (🔊) + 翻譯 (🍙/🌾) ย้ายมาอยู่ "ใต้คำที่เฉลย" แทนเมนูมุมขวาล่าง — โชว์เฉพาะตอนเฉลยแล้ว (กันสปอยล์)
        Lin 2026-07-30: เพิ่มปุ่ม 🔖 เซฟทั้งประโยคเข้า 單字庫 (คลังรวม 30 ช่องเดียวกับคำ) ตรงเฉลยนี้ด้วย -->
   <div id="wo-reveal-ctl" style="display:none;align-items:center;justify-content:center;gap:8px;margin:2px 0 6px;">
-    <button type="button" id="wo-sound-btn" class="word-audio-btn" style="display:none;" title="聽發音" aria-label="聽發音">🔊</button>
+    <button type="button" id="wo-sound-btn" class="word-audio-btn" style="display:none;" title="發音" aria-label="發音">🔊</button>
     <button type="button" id="wo-zh-toggle" class="word-ctl-btn" onclick="woToggleZh()" title="翻譯">🍙</button>
     <span id="wo-vault-btn-slot"></span>
   </div>
@@ -410,7 +410,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="js/core/shared.min.js?v=15"></script>
-<script src="js/games/word-order-app.min.js?v=7"></script>
+<script src="js/games/word-order-app.min.js?v=8"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>

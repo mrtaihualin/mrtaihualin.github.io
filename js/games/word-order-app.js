@@ -170,15 +170,17 @@
   function curSentence(){ return ADV_SENTENCES[SET[idx]]; }
 
   // เพิ่ม 2026-07-17: ปุ่มฟังเสียงประโยค — เรียกโชว์เฉพาะตอนเฉลยคำตอบแล้ว (กันสปอยล์)
+  // Lin 2026-07-30: เดิมประโยคที่ยังไม่มีไฟล์เสียง (ปิดไว้ 8 จาก 30) "ซ่อนปุ่มทิ้งไปเลย" → Lin เห็นปุ่มหายๆ โผล่ๆ นึกว่าเสีย
+  //   แก้เป็นมาตรฐานเดียวกับเกมอ่าน/เกมพิมพ์: โชว์ปุ่มเสมอ · กดแล้วยังไม่มีเสียง → ขึ้นข้อความ「即將推出」ไม่เงียบหาย
   function woShowSound(sentenceTh){
     var btn = document.getElementById('wo-sound-btn');
     if (!btn) return;
-    if (window.WordAudio && WordAudio.has(sentenceTh)) {
-      btn.style.display = '';
-      btn.onclick = function(e){ e.stopPropagation(); WordAudio.play(sentenceTh, btn); };
-    } else {
-      btn.style.display = 'none';
-    }
+    btn.style.display = '';
+    btn.onclick = function(e){
+      e.stopPropagation();
+      if (window.WordAudio && WordAudio.has(sentenceTh)) WordAudio.play(sentenceTh, btn);
+      else if (window.WordAudio && WordAudio.soonToast) WordAudio.soonToast();
+    };
   }
   function woHideSound(){
     var btn = document.getElementById('wo-sound-btn');

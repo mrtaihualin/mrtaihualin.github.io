@@ -835,10 +835,11 @@ function tfSyncReadBtns() {
     b1.title = tfPronMode ? '目前：讀音已顯示' : '目前：讀音已隱藏（點擊顯示）';
     b1.setAttribute('aria-label', b1.title);
   }
-  var b2 = document.getElementById('rg-en-toggle');
+  // Lin 2026-07-30: ปุ่ม 英文讀音 ย้ายออกจากเมนู → ไปอยู่ข้างคำในหน้าเฉลยแทน (id 'tf-result-en-btn' สร้างใน resultHtml)
+  var b2 = document.getElementById('tf-result-en-btn');
   if (b2) {
     b2.textContent = tfEnMode ? '🔡' : '🔠';
-    b2.title = tfEnMode ? '目前：英文讀音已顯示（答完聲調後才出現）' : '目前：英文讀音已隱藏（點擊顯示，答完聲調後才出現）';
+    b2.title = tfEnMode ? '目前：英文讀音已顯示（點擊隱藏）' : '目前：英文讀音已隱藏（點擊顯示）';
     b2.setAttribute('aria-label', b2.title);
   }
 }
@@ -3282,6 +3283,9 @@ function stepResult() {
   // ปุ่มลำโพงฟังเสียง — ข้างคำศัพท์ โชว์เฉพาะคำที่มีไฟล์เสียง (2026-07-16)
   // Lin 2026-07-30: เอาปุ่ม 🔖 (單字庫) ตรงหน้าเฉลยออกตามที่ Lin สั่ง — ซ้ำกับแถว 單字庫 ในเมนู 🍚 มุมขวาล่าง เหลือที่เมนูที่เดียว
   var audioBtnHtml = (window.WordAudio && S.word) ? WordAudio.btnHtml(S.word) : '';
+  // Lin 2026-07-30: ปุ่ม 英文讀音 (🔡/🔠) ย้ายจากเมนูมาอยู่ข้างปุ่ม 🔊 ในหน้าเฉลย — ใช้ได้จริงตรงจุดที่คำอ่านโรมันโผล่เท่านั้น
+  var enBtnHtml = '<button type="button" id="tf-result-en-btn" class="word-ctl-btn" onclick="event.stopPropagation();TF.toggleEn()">' +
+    (tfEnMode ? '🔡' : '🔠') + '</button>';
 
   // Lin 2026-07-12: ย้ายปุ่ม "太棒了/看看成果" ขึ้นมาอยู่เหนือส่วน 音節拆解 (ใน sessionBlock) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) เหลือแค่หน้าผลสรุปจบรอบ
   var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:14px;">'+
@@ -3296,7 +3300,7 @@ function stepResult() {
   var resultReadHtml = tfReadingLineHtml();
 
   return '<div class="result-v2">'+
-    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+'</div>'+
+    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+enBtnHtml+'</div>'+
     resultZhHtml + resultReadHtml +
 
     '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+
@@ -4085,17 +4089,23 @@ var TF = {
     try { localStorage.setItem('tf_modern_font', on ? '1' : '0'); } catch(e){}
   },
   // ── ปุ่ม 讀音 (คำอ่านไทย) / 英文讀音 (คำอ่านโรมัน) — Lin 2026-07-25 ──
-  // กดได้ตลอด — 讀音 โผล่ทันทีทุกขั้น (Lin 2026-07-30) · 英文讀音 โผล่เฉพาะหลังตอบแล้ว (tfReadingUnlocked)
+  // กดได้ตลอด — 讀音 โผล่ทันทีทุกขั้น (Lin 2026-07-30) · 英文讀音 อยู่ข้างคำในหน้าเฉลย ใช้ได้ตรงนั้น
+  // Lin 2026-07-30 (บั๊กที่ Lin เจอ): กดปุ่มตอนอยู่ "หน้าเฉลย" แล้วไม่มีอะไรเกิดขึ้น
+  //   สาเหตุ: หน้าเฉลย (step 'result') ไม่มีแบนเนอร์ → ไม่มีกล่อง #tf-read-line ให้ tfUpdateReadingLine อัปเดต
+  //           คำอ่านหน้าเฉลยถูกฝังอยู่ใน HTML ของ result เอง ต้องวาดใหม่ทั้งหน้าถึงจะเปลี่ยน
+  //   แก้: ถ้าไม่มีกล่อง #tf-read-line (= อยู่หน้าเฉลย) ให้ render() ใหม่แทน — วิธีเดียวกับปุ่ม 提示 ที่ทำอยู่แล้ว
   togglePron: function() {
     tfPronMode = !tfPronMode;
     try { localStorage.setItem('rg_pron_mode', tfPronMode ? '1' : '0'); } catch(e){}
-    tfSyncReadBtns(); tfUpdateReadingLine();
+    tfSyncReadBtns();
+    if (document.getElementById('tf-read-line')) tfUpdateReadingLine(); else render();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
   toggleEn: function() {
     tfEnMode = !tfEnMode;
     try { localStorage.setItem('rg_en_mode', tfEnMode ? '1' : '0'); } catch(e){}
-    tfSyncReadBtns(); tfUpdateReadingLine();
+    tfSyncReadBtns();
+    if (document.getElementById('tf-read-line')) tfUpdateReadingLine(); else render();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
   // ── ปุ่ม 提示 (คำใบ้) — Lin 2026-07-25 ──
