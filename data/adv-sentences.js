@@ -49,7 +49,7 @@
     {
       th: 'คุณไปไหนมา', zh: '你去哪裡了？', readingTH: 'คุน-ไป-ไหน-มา', wc: 4,
       words: [
-      { th: 'คุณ', zh: '你', syls: [{cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
+      { th: 'คุณ', zh: '你', syls: [{cons:'ค', vowel:'อุ', final:'ณ', finalRead:'น', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
       { th: 'ไป', zh: '去', syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}] },
       { th: 'ไหน', zh: '哪裡', syls: [{cons:'น', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหน', en:'nǎi'}] },
       { th: 'มา', zh: '來（了）', syls: [{cons:'ม', vowel:'อา', tone_name:'สามัญ', th:'มา', en:'maa'}] }
@@ -61,14 +61,14 @@
       { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
       { th: 'อยาก', zh: '想', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
       { th: 'เรียน', zh: '學', syls: [{cons:'ร', vowel:'เอีย', final:'น', tone_name:'สามัญ', th:'เรียน', en:'rian'}] },
-      { th: 'ภาษาไทย', zh: '泰語', syls: [{cons:'ภ', vowel:'อา', tone_name:'สามัญ', th:'ภา', en:'phaa'}, {cons:'ษ', vowel:'อา', tone_name:'จัตวา', th:'ษา', en:'sǎa'}, {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไทย', en:'thai'}] }
+      { th: 'ภาษาไทย', zh: '泰語', syls: [{cons:'ภ', consRead:'พ', vowel:'อา', tone_name:'สามัญ', th:'ภา', en:'phaa'}, {cons:'ษ', consRead:'ส', vowel:'อา', tone_name:'จัตวา', th:'ษา', en:'sǎa'}, {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไทย', en:'thai'}] }
       ]
     },
     {
       th: 'วันนี้อากาศร้อนมากเลย', zh: '今天天氣很熱', readingTH: 'วัน-นี้-อา-กาด-ร้อน-มาก-เลย', wc: 7,
       words: [
       { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
-      { th: 'อากาศ', zh: '天氣', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ก', vowel:'อา', final:'ศ', tone_name:'เอก', th:'กาศ', en:'gàat'}] },
+      { th: 'อากาศ', zh: '天氣', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ก', vowel:'อา', final:'ศ', finalRead:'ด', tone_name:'เอก', th:'กาศ', en:'gàat'}] },
       { th: 'ร้อน', zh: '熱', syls: [{cons:'ร', vowel:'ออ', tone:'้', final:'น', tone_name:'ตรี', th:'ร้อน', en:'rón'}] },
       { th: 'มาก', zh: '很', syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] },
       { th: 'เลย', zh: '（強調）', syls: [{cons:'ล', vowel:'เออ', final:'ย', tone_name:'สามัญ', th:'เลย', en:'loei'}] }
@@ -79,7 +79,7 @@
       words: [
       { th: 'เขา', zh: '他', syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
       { th: 'พูด', zh: '說', syls: [{cons:'พ', vowel:'อู', final:'ด', tone_name:'โท', th:'พูด', en:'phûut'}] },
-      { th: 'ภาษาไทย', zh: '泰語', syls: [{cons:'ภ', vowel:'อา', tone_name:'สามัญ', th:'ภา', en:'phaa'}, {cons:'ษ', vowel:'อา', tone_name:'จัตวา', th:'ษา', en:'sǎa'}, {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไทย', en:'thai'}] },
+      { th: 'ภาษาไทย', zh: '泰語', syls: [{cons:'ภ', consRead:'พ', vowel:'อา', tone_name:'สามัญ', th:'ภา', en:'phaa'}, {cons:'ษ', consRead:'ส', vowel:'อา', tone_name:'จัตวา', th:'ษา', en:'sǎa'}, {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไทย', en:'thai'}] },
       { th: 'ได้', zh: '會／能', syls: [{cons:'ด', vowel:'ไอ', tone:'้', tone_name:'โท', th:'ได้', en:'dâi'}] }
       ]
     },
@@ -117,7 +117,7 @@
     {
       th: 'เธอยังไม่กลับบ้านเหรอ', zh: '你還沒回家喔？', readingTH: 'เทอ-ยัง-ไม่-กลับ-บ้าน-เหรอ', wc: 6,
       words: [
-      { th: 'เธอ', zh: '你', syls: [{cons:'ธ', vowel:'เออ', tone_name:'สามัญ', th:'เธอ', en:'thoe'}] },
+      { th: 'เธอ', zh: '你', syls: [{cons:'ธ', consRead:'ท', vowel:'เออ', tone_name:'สามัญ', th:'เธอ', en:'thoe'}] },
       { th: 'ยัง', zh: '還', syls: [{cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง', en:'yang'}] },
       { th: 'ไม่', zh: '沒', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
       { th: 'กลับ', zh: '回', syls: [{cons:'ก', cluster:'ล', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กลับ', en:'glàp'}] },
@@ -157,7 +157,7 @@
     {
       th: 'คุณอยู่ที่ไหน', zh: '你在哪裡', readingTH: 'คุน-อยู่-ที่-ไหน', wc: 4,
       words: [
-      { th: 'คุณ', zh: '你', syls: [{cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
+      { th: 'คุณ', zh: '你', syls: [{cons:'ค', vowel:'อุ', final:'ณ', finalRead:'น', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
       { th: 'อยู่', zh: '在', syls: [{cons:'ย', lead:'อ', vowel:'อู', tone:'่', tone_name:'เอก', th:'อยู่', en:'yùu'}] },
       { th: 'ที่', zh: '地方', syls: [{cons:'ท', vowel:'อี', tone:'่', tone_name:'โท', th:'ที่', en:'thîi'}] },
       { th: 'ไหน', zh: '哪裡', syls: [{cons:'น', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหน', en:'nǎi'}] }
@@ -184,7 +184,7 @@
       th: 'วันนี้อากาศดีมาก', zh: '今天天氣很好', readingTH: 'วัน-นี้-อา-กาด-ดี-มาก', wc: 6,
       words: [
       { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
-      { th: 'อากาศ', zh: '天氣', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ก', vowel:'อา', final:'ศ', tone_name:'เอก', th:'กาศ', en:'gàat'}] },
+      { th: 'อากาศ', zh: '天氣', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ก', vowel:'อา', final:'ศ', finalRead:'ด', tone_name:'เอก', th:'กาศ', en:'gàat'}] },
       { th: 'ดี', zh: '好', syls: [{cons:'ด', vowel:'อี', tone_name:'สามัญ', th:'ดี', en:'dii'}] },
       { th: 'มาก', zh: '很/多', syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] }
       ]
@@ -192,7 +192,7 @@
     {
       th: 'ขอบคุณมากครับ', zh: '非常謝謝', readingTH: 'ขอบ-คุน-มาก-ครับ', wc: 4,
       words: [
-      { th: 'ขอบคุณ', zh: '謝謝', syls: [{cons:'ข', vowel:'ออ', final:'บ', tone_name:'เอก', th:'ขอบ', en:'khòp'}, {cons:'ค', vowel:'อุ', final:'ณ', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
+      { th: 'ขอบคุณ', zh: '謝謝', syls: [{cons:'ข', vowel:'ออ', final:'บ', tone_name:'เอก', th:'ขอบ', en:'khòp'}, {cons:'ค', vowel:'อุ', final:'ณ', finalRead:'น', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
       { th: 'มาก', zh: '很/非常', syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] },
       { th: 'ครับ', zh: '（男性禮貌詞）', syls: [{cons:'ค', cluster:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'ครับ', en:'kráp'}] }
       ]

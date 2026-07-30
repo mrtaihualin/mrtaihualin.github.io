@@ -137,33 +137,10 @@ WORDS = WORDS.concat(WORDS_HIGH);
 // กล่อง #bonus-section เหลือหน้าที่เดียว: โชว์คำอธิบายเฉลย (renderBonusReason) อัตโนมัติตอนเฉลย
 
 function buildRevealRules(w){
-  var rows=[];
-  var consDisp=w.lead?w.lead+w.cons:(w.cluster?w.cons+w.cluster:w.cons);
-  rows.push({tag:'子音',sp:false,text:consDisp+' 發音「'+w.cons+'」'});
-  var vread=VOWEL_READ[w.vowel]||w.vowel;
-  var vsym=VOWEL_SYMBOL[w.vowel]||w.vowel;
-  rows.push({tag:'母音',sp:false,
-    text:dispHTML(vsym)+' <span class="rule-arrow">→</span> '+vread});
-  if(w.final){
-    rows.push({tag:'尾音',sp:false,text:'發音「'+w.final+'」'});
-  }
-  if(w.tone){
-    if(w.tone==='์'){
-      rows.push({tag:'聲調符',sp:false,text:dispHTML(w.tone)+' = 消音符（不發音）'});
-    } else {
-      var _cls=w.th?TH_ENGINE.getInitClass(getFullSyllableSpelling(w)):null;
-      var _clsZh=TONE_CLASS_ZH[_cls==='lead'?'high':_cls]||'';
-      var _toneZh=(TONE_ZH[w.tone_name]||w.tone_name);
-      var _markLabel=_clsZh
-        ? (dispHTML(w.tone)+' + '+_clsZh+' <span class="rule-arrow">→</span> '+_toneZh)
-        : (dispHTML(w.tone)+' <span class="rule-arrow">→</span> '+_toneZh);
-      rows.push({tag:'聲調符',sp:false,text:_markLabel});
-    }
-  }
-  if(w.lead==='ห')rows.push({tag:'前導 ห',sp:true,text:'ห 置於 '+w.cons+' 前 → 提高聲調'});
-  if(w.lead==='อ')rows.push({tag:'前導 อ',sp:true,text:'อ 置於 '+w.cons+' 前 → 提高聲調'});
-  if(w.cluster)rows.push({tag:'複合音',sp:true,text:w.cons+w.cluster+'（兩個子音一起發音）'});
-  return rows;
+  // Lin 2026-07-30: เปลี่ยนมาใช้ตัวสร้างแถวเฉลยกลาง buildAnswerRows (data/tone-engine.js) — รูปแบบเดียวกัน 3 เกม
+  // (ใช้กับ 初/中 เท่านั้น — 高級 ประโยคโชว์คำแปลรายคำแบบเดิม ไม่ผ่านฟังก์ชันนี้)
+  // ลูกศรเสียง (ญ→ย, ติ→ด) มาจากฟิลด์ consRead/finalRead/finalDisp/silent ที่ Lin ตรวจ 100% ในคลังเท่านั้น
+  return buildAnswerRows(w).map(function(r){return {tag:r.tag,sp:false,text:r.text};});
 }
 
 // Lin 2026-07-15: TH_ENGINE + computeToneFromSpelling + buildToneReason ย้ายไปรวมเป็นไฟล์เดียว
@@ -502,8 +479,8 @@ function buildSyls(w){
   // พยางค์เดียวไม่มี en ของตัวเอง → ใช้ en ของทั้งคำ (w.en) แทน
   // Lin 2026-07-12: เพิ่ม read = คำอ่านของพยางค์ (จาก readingTH ตัดด้วย -) ให้ช่อง讀音โชว์ "คำอ่าน" ไม่ใช่ "ตัวเขียน" (แก้บั๊ก สนามบิน โชว์ นาม แทน สะ-หนาม-บิน)
   var _reads=(w.readingTH?String(w.readingTH).split('-'):[]);
-  if(w.syls&&w.syls.length)return w.syls.map(function(s,i){return {th:s.th,read:((_reads.length===w.syls.length&&_reads[i])?_reads[i]:s.th),cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name,en:s.en||w.en};});
-  return [{th:w.th,read:(w.readingTH||w.th),cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name,en:w.en}];
+  if(w.syls&&w.syls.length)return w.syls.map(function(s,i){return {th:s.th,read:((_reads.length===w.syls.length&&_reads[i])?_reads[i]:s.th),cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name,en:s.en||w.en,consRead:s.consRead,finalRead:s.finalRead,finalDisp:s.finalDisp,silent:s.silent};}); // 2026-07-30: พ่วงฟิลด์เฉลยเสียง (ตัวประกอบต้อง copy ทุกฟิลด์ที่เกมใช้)
+  return [{th:w.th,read:(w.readingTH||w.th),cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name,en:w.en,consRead:w.consRead,finalRead:w.finalRead,finalDisp:w.finalDisp,silent:w.silent}];
 }
 // แถบบอกพยางค์ (โชว์เฉพาะคำหลายพยางค์)
 function renderSylStrip(){
@@ -600,7 +577,7 @@ function loadWord(){
 // โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
 function loadSyl(){
   var SY=sylList[sylIdx];
-  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // 2026-07-30: พ่วงฟิลด์เฉลยเสียง
   checked=false;picks=[]; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
   comps=['cons','vowel'];
   if(W.final)comps.push('final');
@@ -1207,6 +1184,12 @@ function showReveal(){
   var _bRea=document.getElementById('bonus-reason');
   var bonusShowing=_bSec.classList.contains('show') && _bRea && _bRea.classList.contains('show') && _bRea.innerHTML.trim()!=='';
   if(!bonusShowing){
+    // 2026-07-30: หัว 📍 คำ（第X聲）ตามรูปแบบที่ Lin อนุมัติ (เหมือนคำหลายพยางค์)
+    var head=document.createElement('div');
+    head.className='rule-row';
+    head.style.cssText='font-weight:800;color:#8B6310;';
+    head.textContent='📍 '+buildAnswerHeader(W);
+    box.appendChild(head);
     var rules=buildRevealRules(W);
     rules.forEach(function(r){
       var row=document.createElement('div');row.className='rule-row';
@@ -1242,11 +1225,13 @@ function showRevealMulti(){
     });
     _finishInBox();return;
   }
-  sylList.forEach(function(SY,i){
+  // 2026-07-30: เฉลยแบ่งตาม "พยางค์อ่าน" — คำที่มี readSyls (เช่น เอกสาร = เอก/กะ/สาร) ใช้ readSyls แทน sylList
+  var ansList=(WORD&&WORD.readSyls&&WORD.readSyls.length)?WORD.readSyls:sylList;
+  ansList.forEach(function(SY,i){
     var head=document.createElement('div');
     head.className='rule-row';
     head.style.cssText='margin-top:'+(i===0?'0':'6px')+';font-weight:800;color:#8B6310;';
-    head.textContent='📍 '+SY.th+(SY.tone_name?'（'+(TONE_ZH[SY.tone_name]||SY.tone_name)+'）':'');
+    head.textContent='📍 '+buildAnswerHeader(SY);
     box.appendChild(head);
     var rules=buildRevealRules(SY);
     rules.forEach(function(r){
@@ -1917,7 +1902,7 @@ function rgContFinish(){
   RG_CONT_ON=false;
   sylIdx=sylList.length-1;
   var SY=sylList[sylIdx];
-  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name};
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // 2026-07-30: พ่วงฟิลด์เฉลยเสียง
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section'; // ซ่อนแผงถามวรรณยุกต์ ก่อนโชว์การ์ดเฉลยท้ายคำ
   rgHideTypePanelForReveal(); // Lin 2026-07-12: คำจบแล้ว ซ่อนแป้นพิมพ์+คำใบ้ที่ค้างอยู่ (บั๊กเดิม: หัวข้อ "選一下...的聲調" ค้างโชว์ทับกล่องอธิบายจนดูเหมือนไม่มีคำอธิบาย/หน้าว่างยาว)

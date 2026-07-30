@@ -33,9 +33,9 @@
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="js/games/word-menu.js?v=6"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
-<script src="data/words-data.js?v=5"></script>
-<script src="data/adv-sentences.js?v=5"></script>
-<script src="data/tone-engine.js?v=1"></script>
+<script src="data/words-data.js?v=6"></script>
+<script src="data/adv-sentences.js?v=6"></script>
+<script src="data/tone-engine.js?v=2"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -834,6 +834,12 @@
   .tf-breakdown-table { width:100%; border-collapse:collapse; }
   .tf-breakdown-table td { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#5a3e0a; padding:5px 8px; }
   .tf-bd-th { font-family:'Sarabun',sans-serif; font-size:18px; }
+  /* 2026-07-30: กล่องแถวเฉลยรูปแบบกลาง (เหมือนเกมอ่าน/เกมพิมพ์) — ใช้ในหน้าเฉลย + ป๊อปอัพตอบผิดครบ */
+  .tf-ans-rows { display:flex; flex-direction:column; gap:5px; }
+  .rule-row{display:flex;align-items:flex-start;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#5a3e10;}
+  .rule-tag{background:#f5e8c8;color:#8b6310;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+  .rule-txt{color:#5a3e10;line-height:1.5;font-family:'Sarabun','Noto Sans TC',sans-serif;font-size:14px;}
+  .rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
   .tf-soon-toast {
     position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
     background: rgba(90,62,10,0.96); color: #fff;
@@ -1903,7 +1909,7 @@
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=22"></script>
+<script src="js/games/tone-finder-game.min.js?v=23"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>

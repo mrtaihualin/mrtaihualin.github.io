@@ -177,9 +177,38 @@ var WORD_SYLS = {};
 (function () {
   for (var i = 0; i < WORD_LIST.length; i++) {
     var w = WORD_LIST[i];
-    if (w && w.word && w.syls && w.syls.length) WORD_SYLS[w.word] = w.syls;
+    // 2026-07-30: เฉลยอิง "พยางค์อ่าน" — คำที่มี readSyls (เอกสาร/โทรศัพท์/คุณภาพ/สกปรก) ใช้ readSyls ก่อน
+    var syls = (w && w.readSyls && w.readSyls.length) ? w.readSyls : (w && w.syls);
+    if (w && w.word && syls && syls.length) WORD_SYLS[w.word] = syls;
   }
 })();
+
+// 2026-07-30: หาพยางค์เฉลยปัจจุบันเป็น "syl object เต็ม" จากคลัง (ใช้กับ buildAnswerRows ตัวกลางใน tone-engine.js)
+// ลำดับหา: entry ของ session (มี syls/readSyls จากคลังแล้ว รวมคำในประโยค高級) → WORD_SYLS (โหมดวิเคราะห์อิสระ)
+// เทียบไม่ได้ = คืน null (ไม่เดา — กฎ 2026-07-30 ไม่มีข้อมูลก็ไม่โชว์ ดีกว่าโชว์ผิด)
+function currentAnswerSyl() {
+  var entry = tfCurEntry();
+  var syls = entry && ((entry.readSyls && entry.readSyls.length) ? entry.readSyls : entry.syls);
+  if (!syls || !syls.length) {
+    var parent = S.parentWord || S.word;
+    syls = WORD_SYLS[parent];
+  }
+  if (!syls || !syls.length) return null;
+  if (syls.length === 1) return syls[0];
+  if (S.selectedSyl == null || !S.syllables) return null;
+  if (S.syllables.length !== syls.length) return null;
+  return syls[S.selectedSyl];
+}
+// กล่องแถวเฉลยรูปแบบกลาง (หัว 📍 + แถว 前引字/子音/連音/母音/尾音/消音/聲調符)
+function tfAnswerRowsHtml(sy) {
+  if (!sy || typeof buildAnswerRows !== 'function') return '';
+  var rows = buildAnswerRows(sy);
+  if (!rows.length) return '';
+  return '<div class="rule-row" style="font-weight:800;color:#8B6310;">📍 ' + buildAnswerHeader(sy) + '</div>' +
+    rows.map(function (r) {
+      return '<div class="rule-row"><span class="rule-tag">' + r.tag + '</span><span class="rule-txt">' + r.text + '</span></div>';
+    }).join('');
+}
 
 // แปลงพยางค์ในคลังกลาง → รูปที่หน้าจอใช้ { c: พยัญชนะต้น, v: สระ, f: ตัวสะกด }
 function sylToPart(sy) {
@@ -1387,6 +1416,8 @@ function tfShowRevealOverlay(entry, correctTone, opts) {
       '<div class="tf-reveal-word">' + entry.word + '</div>' +
       '<div class="tf-reveal-zh">' + (entry.zh || '') + '　<span class="th">' + (entry.readingTH || '') + '</span></div>' +
       '<div class="tf-reveal-answer" style="color:' + toneColor + ';border-color:' + toneColor + '55;background:' + toneColor + '14;">正確聲調：' + toneTxt + '</div>' +
+      // 2026-07-30: ป๊อปอัพเฉลย (ตอบผิดครบ) ต้องแตกตัวอักษรครบตามรูปแบบกลางด้วย — คำสั่ง Lin
+      (function(){ var h = tfAnswerRowsHtml(currentAnswerSyl()); return h ? '<div class="tf-ans-rows" style="text-align:left;margin:10px auto 0;max-width:280px;">' + h + '</div>' : ''; })() +
       '<button class="tf-error-close" id="tf-reveal-next">' + ((isSyl && S.syllables && opts.sylIdx + 1 < S.syllables.length) ? '學會了，下一個音節 →' : '學會了，我們去下一個 →') + '</button>' +
     '</div>';
   document.body.appendChild(div);
@@ -3225,31 +3256,18 @@ function stepResult() {
     //   ที่โชว์ใต้คำศัพท์แทน (ดูบล็อกใต้ .result-v2-word ท้ายฟังก์ชันนี้) — ไม่โชว์ซ้ำ 2 ที่
 
     // Breakdown
-    // Lin 2026-07-30: หน้าเฉลยเคย "คำนวณเอง" ว่าตัวไหนเป็นตัวสะกด/สระ → แยกผิด 137 จาก 524 พยางค์
-    //   บั๊กจริงที่ Lin เจอ: ผัว โชว์เป็น ผ + อั + ตัวสะกด ว (ที่ถูกคือ ผ + สระอัว + ไม่มีตัวสะกด)
-    //   สาเหตุ: สูตรเดิมมองว่า "พยัญชนะตัวสุดท้ายในคำ = ตัวสะกด" เจอ ว/ย/อ ในสระ หรือ ล/ร ในอักษรควบ ก็นับเป็นตัวสะกดหมด
-    //   แก้เป็น: อ่านจากคลังกลาง data/words-data.js (ที่ Lin ตรวจ 100%) — ไม่มีข้อมูลก็ไม่โชว์ ดีกว่าโชว์ผิด
-    var bdPart = currentDataPart();
-    var bdRows = '';
-    function bdRow(label, val, nowrap) {
-      return '<tr><td style="font-size:13px;color:#8B6310;font-weight:600;padding:6px 10px;' + (nowrap ? 'white-space:nowrap;' : '') + '">' + label + '</td><td class="tf-bd-th" style="padding:6px 10px;">' + val + '</td></tr>';
-    }
-    if (bdPart) {
-      if (bdPart.c) bdRows += bdRow('起首子音', bdPart.c, true);
-      bdRows += bdRow('母音', bdPart.v || '—');
-      if (bdPart.f) bdRows += bdRow('尾音', bdPart.f);
-    } else if (bd.init) {
-      bdRows += bdRow('起首子音', bd.init, true);
-      bdRows += bdRow('母音', bd.vowelType === 'short' ? '短母音' : bd.vowelType === 'long' ? '長母音' : '—');
-    }
+    // Lin 2026-07-30 (รอบ 2): เปลี่ยนตารางเก่า (起首子音/母音/尾音) → กล่องแถวเฉลยรูปแบบกลางเดียวกับเกมอ่าน/เกมพิมพ์
+    //   (前引字→子音→連音→母音→尾音→消音→聲調符 + ลูกศรเสียงจากฟิลด์ที่ Lin ตรวจ 100% — ห้ามคำนวณเอง)
+    //   เทียบข้อมูลคลังไม่ได้ = ไม่โชว์ส่วนแตกตัวอักษรเลย ดีกว่าโชว์ผิด (ยกเลิก fallback getBreakdown เดิม)
+    var ansHtml = tfAnswerRowsHtml(currentAnswerSyl());
 
     sessionBlock =
       '<div style="margin-bottom:12px;">'+badge+'</div>'+
       guessRow+
-      '<div class="result-v2-bd">'+
+      (ansHtml ? '<div class="result-v2-bd">'+
         '<div class="result-v2-bd-title">音節拆解</div>'+
-        '<table class="tf-breakdown-table"><tbody>'+bdRows+'</tbody></table>'+
-      '</div>';
+        '<div class="tf-ans-rows">'+ansHtml+'</div>'+
+      '</div>' : '');
   }
 
   var isLastSessionWord = session && (session.index + 1 >= session.words.length);
@@ -3910,7 +3928,7 @@ var TF = {
       // Lin 2026-07-25: ใส่ readingEN ด้วย (ต่อ en ของทุกพยางค์) — เดิมลืมใส่ ทำให้ปุ่ม 英文讀音 ในโหมด高級 โชว์ว่างเปล่า
       //   (กฎ CLAUDE.md: ตัวประกอบต้อง copy ทุกฟิลด์ที่เกมใช้จริง)
       var _readEn = w.syls.map(function(sy){ return sy.en || ''; }).filter(Boolean).join('-');
-      return { word: w.th, readingTH: _read, readingEN: _readEn, zh: w.zh, level: 3, category: '高級句子' };
+      return { word: w.th, readingTH: _read, readingEN: _readEn, zh: w.zh, level: 3, category: '高級句子', syls: w.syls }; // 2026-07-30: แนบ syls จากคลัง — หน้าเฉลย高級ต้องแตกตัวอักษรจากข้อมูลที่ Lin ตรวจแล้ว ไม่ใช่สูตรคำนวณ
     });
     selectedLevel = 3;
     selectedCategory = '高級句子';

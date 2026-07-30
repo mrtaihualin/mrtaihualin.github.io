@@ -299,6 +299,77 @@
     };
   }
 
+  // ════════════════════════════════════════════════════════════
+  // ตัวสร้างแถวเฉลยกลาง (Lin อนุมัติรูปแบบ 2026-07-30) — ใช้ร่วม 3 เกม (เกมเสียง/เกมอ่าน/เกมพิมพ์初中)
+  // ลำดับแถว: 前引字 → 子音 → 連音 → 母音 → 尾音 → 消音 → 聲調符 · 第幾聲 อยู่หัวกล่อง
+  // กฎ: เขียน=เสียง โชว์ตัวเดียว · เขียน≠เสียง มีลูกศร (ญ → ย) จากฟิลด์ consRead/finalRead/finalDisp
+  //     ที่ Lin ตรวจ 100% แล้วในคลัง — ไม่มีการคำนวณ/เดาเสียงในโค้ดนี้เลย · ไม่มีข้อมูล = ซ่อนแถว
+  // ════════════════════════════════════════════════════════════
+  var ANSWER_VOWEL_DISP = {
+    'อะ': 'อะ（短母音）', 'อา': 'อา（長母音）', 'ออ': 'ออ',
+    'เอาะ': 'เอาะ', 'เออะ': 'เออะ（短母音）',
+    'โอ': 'โอ', 'ไอ': 'ไอ', 'ใอ': 'ใอ', 'โอะ': 'โอะ（短母音）',
+    'อุ': 'อุ（短母音）', 'อู': 'อู（長母音）',
+    'อิ': 'อิ（短母音）', 'อี': 'อี（長母音）',
+    'อือ': 'อือ（長母音）', 'อึ': 'อึ（短母音）',
+    'เอะ': 'เอะ（短母音）', 'แอะ': 'แอะ（短母音）',
+    'เอ': 'เอ（長母音）', 'แอ': 'แอ（長母音）',
+    'เออ': 'เออ', 'เอา': 'เอา',
+    'เอีย': 'เอีย', 'เอือ': 'เอือ', 'อัว': 'อัว', 'อำ': 'อำ',
+    // สระเปลี่ยนรูป → มีลูกศร รูปเต็ม → รูปที่เขียนจริง (คำสั่ง Lin 2026-07-30)
+    'อั': 'อะ <span class="rule-arrow">→</span> อั（短母音）',
+    'เอิ': 'เออ <span class="rule-arrow">→</span> เอิ（長母音）',
+    'อื': 'อือ <span class="rule-arrow">→</span> อื（長母音）',
+    'แอ็': 'แอะ <span class="rule-arrow">→</span> แอ็（短母音）',
+    'เอ็': 'เอะ <span class="rule-arrow">→</span> เอ็（短母音）',
+    'อ็': 'เอาะ <span class="rule-arrow">→</span> อ็อ（短母音）',
+    '็อ': 'เอาะ <span class="rule-arrow">→</span> อ็อ（短母音）'
+  };
+  var ARROW = ' <span class="rule-arrow">→</span> ';
+  // เครื่องหมายวรรณยุกต์ลอยๆ อ่านยาก → เกาะวงกลมประ ◌ ให้เห็นตำแหน่ง
+  function markDisp(m) { return '◌' + m; }
+
+  // เลือกชุดพยางค์สำหรับเฉลย: readSyls (แตกตามพยางค์อ่าน — 4 คำพิเศษ) มาก่อน syls เสมอ
+  function getAnswerSyls(entry) {
+    if (!entry) return [];
+    if (entry.readSyls && entry.readSyls.length) return entry.readSyls;
+    if (entry.syls && entry.syls.length) return entry.syls;
+    return [entry]; // entry เป็น syl เดี่ยวอยู่แล้ว
+  }
+
+  // หัวกล่อง: 'สาร（第五聲）'
+  function buildAnswerHeader(sy) {
+    if (!sy) return '';
+    var zh = sy.tone_name ? (TONE_ZH[sy.tone_name] || sy.tone_name) : '';
+    return (sy.th || '') + (zh ? '（' + zh + '）' : '');
+  }
+
+  // แถวเฉลย 1 พยางค์ → [{tag, text(HTML)}]
+  function buildAnswerRows(sy) {
+    if (!sy) return [];
+    var rows = [];
+    if (sy.lead) rows.push({ tag: '前引字', text: sy.lead + ' 置於 ' + (sy.cons || '') + ' 前' });
+    if (sy.cons) rows.push({ tag: '子音', text: sy.consRead ? (sy.cons + ARROW + sy.consRead) : sy.cons });
+    if (sy.cluster) rows.push({ tag: '連音', text: (sy.cons || '') + sy.cluster + '（兩個子音一起發音）' });
+    if (sy.vowel) rows.push({ tag: '母音', text: ANSWER_VOWEL_DISP[sy.vowel] || sy.vowel });
+    if (sy.final) {
+      var fDisp = sy.finalDisp || sy.final;
+      rows.push({ tag: '尾音', text: sy.finalRead ? (fDisp + ARROW + sy.finalRead) : fDisp });
+    }
+    if (sy.silent) rows.push({ tag: '消音', text: sy.silent + ' 不發音' });
+    if (sy.tone) {
+      if (sy.tone === '์') { // ์ (เผื่อข้อมูลเก่า)
+        rows.push({ tag: '聲調符', text: markDisp(sy.tone) + ' = 消音符（不發音）' });
+      } else {
+        var cls = ENGINE.getInitClass(getFullSyllableSpelling(sy));
+        var clsZh = TONE_CLASS_ZH[cls === 'lead' ? 'high' : cls] || '';
+        var toneZh = TONE_ZH[sy.tone_name] || sy.tone_name || '';
+        rows.push({ tag: '聲調符', text: clsZh ? (markDisp(sy.tone) + ' + ' + clsZh + ARROW + toneZh) : (markDisp(sy.tone) + ARROW + toneZh) });
+      }
+    }
+    return rows;
+  }
+
   global.TH = ENGINE;
   global.TH_ENGINE = ENGINE; // alias เดิม กันโค้ดหน้าเว็บที่เรียก TH_ENGINE.xxx พัง
   global.TONE_CLASS_ZH = TONE_CLASS_ZH;
@@ -311,13 +382,17 @@
   global.getToneMismatches = getToneMismatches;
   global.clearToneMismatches = clearToneMismatches;
   global.analyzeSyllable = analyzeSyllable;
+  global.getAnswerSyls = getAnswerSyls;       // 2026-07-30: ตัวสร้างแถวเฉลยกลาง
+  global.buildAnswerHeader = buildAnswerHeader;
+  global.buildAnswerRows = buildAnswerRows;
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
       TH_ENGINE: ENGINE, getFullSyllableSpelling: getFullSyllableSpelling,
       computeToneFromSpelling: computeToneFromSpelling, buildToneReason: buildToneReason,
       getToneMismatches: getToneMismatches, clearToneMismatches: clearToneMismatches,
-      analyzeSyllable: analyzeSyllable
+      analyzeSyllable: analyzeSyllable,
+      getAnswerSyls: getAnswerSyls, buildAnswerHeader: buildAnswerHeader, buildAnswerRows: buildAnswerRows
     };
   }
 })(typeof window !== 'undefined' ? window : global);
