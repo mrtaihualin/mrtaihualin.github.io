@@ -185,6 +185,7 @@
     if (btn) { btn.style.display = 'none'; btn.onclick = null; }
     var row = document.getElementById('wo-reveal-ctl'); if (row) row.style.display = 'none';
     var zh = document.getElementById('wo-zh'); if (zh) zh.innerHTML = '';
+    var vs = document.getElementById('wo-vault-btn-slot'); if (vs) vs.innerHTML = ''; // ล้างปุ่ม 🔖 ของประโยคก่อนหน้า (Lin 2026-07-30)
   }
 
   // ════════════════════════════════════════════════════════════
@@ -215,6 +216,9 @@
   // สวิตช์คำอ่าน — ใช้คีย์เดียวกับเกมอื่น (rg_pron_mode / rg_en_mode) ตั้งครั้งเดียวเหมือนกันทุกเกม
   var woPronMode = (function(){ try { return localStorage.getItem('rg_pron_mode') === '1'; } catch(e){ return false; } })();
   var woEnMode   = (function(){ try { return localStorage.getItem('rg_en_mode')   === '1'; } catch(e){ return false; } })();
+  // Lin 2026-07-30: สวิตช์คำแปลจีนรายคำ (ใต้กล่องทุกคำ เหมือน 英文讀音) — ใช้คีย์เดียวกับปุ่ม 🍙 ของเกมอื่น (games_hide_zh)
+  //   ตั้งครั้งเดียวเหมือนกันทุกเกม · ค่าเริ่มต้น = โชว์ (เหมือนเกมอื่น: ไม่มีคีย์ = ไม่ซ่อน)
+  var woZhWordOn = (function(){ try { return localStorage.getItem('games_hide_zh') !== '1'; } catch(e){ return true; } })();
   function woSyncReadBtns(){
     var b1 = document.getElementById('rg-pron-toggle');
     if (b1) {
@@ -228,18 +232,26 @@
       b2.title = woEnMode ? '目前：英文讀音已顯示（跟著詞塊一起移動）' : '目前：英文讀音已隱藏（點擊顯示）';
       b2.setAttribute('aria-label', b2.title);
     }
+    var b3 = document.getElementById('wo-zh-word-toggle');
+    if (b3) {
+      b3.textContent = woZhWordOn ? '🍙' : '🌾';
+      b3.title = woZhWordOn ? '目前：翻譯已顯示（跟著詞塊一起移動）' : '目前：翻譯已隱藏（點擊顯示）';
+      b3.setAttribute('aria-label', b3.title);
+    }
   }
-  // HTML คำอ่านที่แปะใต้คำแต่ละคำ (ใช้ทั้งไทล์ในกองและช่องที่วางแล้ว → เลื่อนตามคำเสมอ)
+  // HTML คำอ่าน+คำแปลที่แปะใต้คำแต่ละคำ (ใช้ทั้งไทล์ในกองและช่องที่วางแล้ว → เลื่อนตามคำเสมอ)
   function woReadHtml(wordIndex){
-    if (!woPronMode && !woEnMode) return '';
+    if (!woPronMode && !woEnMode && !woZhWordOn) return '';
     var s = curSentence();
     var r = woWordReads(s)[wordIndex];
     if (!r) return '';
-    var written = (s.words[wordIndex] && s.words[wordIndex].th) || '';
     var h = '';
-    // คำอ่านไทยโชว์เฉพาะตอน "อ่านไม่ตรงกับตัวเขียน" — ตรงกันแล้วโชว์ซ้ำใต้คำเดิมก็รกเปล่าๆ
-    if (woPronMode && r.th && r.th !== written) h += '<div class="wo-read-th">' + r.th + '</div>';
+    // Lin 2026-07-30: 讀音 โชว์ทุกคำเสมอ (เดิมซ่อนคำที่อ่านตรงกับตัวเขียน — ยกเลิกแล้วตามที่ Lin สั่ง)
+    if (woPronMode && r.th) h += '<div class="wo-read-th">' + r.th + '</div>';
     if (woEnMode   && r.en) h += '<div class="wo-read-en">' + r.en + '</div>';
+    // Lin 2026-07-30: คำแปลจีนรายคำ — โชว์ได้ตั้งแต่ยังไม่ตอบ (Lin ยืนยัน ไม่ถือเป็นสปอยล์)
+    var wz = (s.words[wordIndex] && s.words[wordIndex].zh) || '';
+    if (woZhWordOn && wz) h += '<div class="wo-read-zh">' + wz + '</div>';
     return h;
   }
   function woRepaintWords(){
@@ -256,6 +268,13 @@
   window.woToggleEn = function(){
     woEnMode = !woEnMode;
     try { localStorage.setItem('rg_en_mode', woEnMode ? '1' : '0'); } catch(e){}
+    woSyncReadBtns(); woRepaintWords();
+    if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  };
+  // Lin 2026-07-30: สลับคำแปลจีนรายคำ (แถว 翻譯 ในเมนู 🍚)
+  window.woToggleZhWord = function(){
+    woZhWordOn = !woZhWordOn;
+    try { localStorage.setItem('games_hide_zh', woZhWordOn ? '0' : '1'); } catch(e){}
     woSyncReadBtns(); woRepaintWords();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   };
@@ -278,11 +297,22 @@
     try { localStorage.setItem('wo_zh_on', woZhOn ? '1' : '0'); } catch(e){}
     woRenderZh();
   };
-  // เรียกตอนเฉลยทุกทาง: โชว์แถวปุ่ม (🔊 + 🍙) ใต้คำที่เฉลย + คำแปลตามสวิตช์
+  // Lin 2026-07-30: ปุ่ม 🔖 เซฟทั้งประโยคเข้า 單字庫 (คลังรวม 30 ช่องเดียวกับคำ ตามที่ Lin สั่ง) — โชว์เฉพาะตอนเฉลย
+  function woShowVault(){
+    var slot = document.getElementById('wo-vault-btn-slot');
+    if (!slot || !window.WordVault) return;
+    var s = curSentence();
+    if (!s) { slot.innerHTML = ''; return; }
+    WordVault.injectStyles();
+    slot.innerHTML = ''; // ล้างปุ่มของประโยคก่อนหน้าเสมอ กันปุ่มค้าง
+    slot.appendChild(WordVault.createSaveBtn(s.th, { zh: s.zh || '', source: 'word-order' }));
+  }
+  // เรียกตอนเฉลยทุกทาง: โชว์แถวปุ่ม (🔊 + 🍙 + 🔖) ใต้คำที่เฉลย + คำแปลตามสวิตช์
   function woRevealExtras(sentenceTh){
     var row = document.getElementById('wo-reveal-ctl'); if (row) row.style.display = 'flex';
     woShowSound(sentenceTh);
     woRenderZh();
+    woShowVault();
   }
 
   // ── 共用進度系統的這局統計：只在 finish() 時彙整一次，跟其他遊戲的「一輪結束才結算」邏輯一致 ──

@@ -450,11 +450,12 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <span id="font-toggle-slot"></span>
       </div>
       <!-- Lin 2026-07-19: ยุบปุ่มทั้ง 5 เข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
+      <!-- Lin 2026-07-30: เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 翻譯 → 英文讀音 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น) -->
       <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
         {id:'rg-sound-toggle',   label:'發音',   state:'none'},
         {id:'rg-pron-toggle',    label:'讀音',   state:'pron'},
-        {id:'rg-en-toggle',      label:'英文讀音', state:'en'},
         {id:'zh-toggle-slot',    label:'翻譯',   state:'zh'},
+        {id:'rg-en-toggle',      label:'英文讀音', state:'en'},
         {id:'rg-vault-btn-slot', label:'單字庫', state:'vault'},
         {id:'rg-guide-toggle',   label:'提示',   state:'guide'},
         {id:'font-toggle-slot',  label:'字體',   state:'font'}

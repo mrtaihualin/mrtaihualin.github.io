@@ -556,15 +556,16 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
         <span id="font-toggle-slot"></span>
       </div>
       <!-- Lin 2026-07-19: ยุบปุ่มทั้ง 6 เข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
+      <!-- Lin 2026-07-30: เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 翻譯 → 英文讀音 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น) -->
       <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
         {id:'rg-sound-toggle',   label:'發音',     state:'none'},
         {id:'rg-pron-toggle',    label:'讀音',     state:'pron'},
-        {id:'rg-en-toggle',      label:'英文讀音', state:'en'},
         {id:'zh-toggle-slot',    label:'翻譯',     state:'zh'},
+        {id:'rg-en-toggle',      label:'英文讀音', state:'en'},
         {id:'rg-vault-btn-slot', label:'單字庫',   state:'vault'},
         {id:'guide-toggle',      label:'提示',     state:'guide'},
-        {id:'rg-webkbd-toggle',  label:'螢幕鍵盤', state:'kbd'},
-        {id:'font-toggle-slot',  label:'字體',     state:'font'}
+        {id:'font-toggle-slot',  label:'字體',     state:'font'},
+        {id:'rg-webkbd-toggle',  label:'螢幕鍵盤', state:'kbd'}
       ]});});</script>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
     </div>

@@ -830,8 +830,9 @@ var tfEnMode   = (function () { try { var v = localStorage.getItem('rg_en_mode')
 function tfSyncReadBtns() {
   var b1 = document.getElementById('rg-pron-toggle');
   if (b1) {
+    // Lin 2026-07-30: 讀音 ปลดล็อกแล้ว — โชว์ใต้คำได้ตั้งแต่ก่อนตอบ เหมือนเกมอื่น (ดู tfReadingLineHtml)
     b1.textContent = tfPronMode ? '🐣' : '🥚';
-    b1.title = tfPronMode ? '目前：讀音已顯示（答完聲調後才出現）' : '目前：讀音已隱藏（點擊顯示，答完聲調後才出現）';
+    b1.title = tfPronMode ? '目前：讀音已顯示' : '目前：讀音已隱藏（點擊顯示）';
     b1.setAttribute('aria-label', b1.title);
   }
   var b2 = document.getElementById('rg-en-toggle');
@@ -852,15 +853,18 @@ function tfCurEntry() {
 //   เดิมกันแค่ขั้น 'session-guess' → ยังรั่ว เพราะกด 🤷我不太確定 แล้วเข้าขั้น推導 (s1/s2a/…) คำอ่านโชว์เลย
 //   ทั้งที่ขั้น推導 ยังถามต่อ (子音類/母音/尾音) และคำอ่านโรมันมีขีดวรรณยุกต์ = บอกคำตอบตรงๆ (nèung)
 //   แก้เป็น "ขาวลิสต์": โชว์ได้เฉพาะตอนวรรณยุกต์ถูกเฉลยจริงแล้ว = หน้าเฉลย (result) กับหน้าสรุปพยางค์ (overview)
+// Lin 2026-07-30: แก้อีกรอบตามคำสั่งใหม่ — ด่านนี้เหลือคุมแค่ 英文讀音 อย่างเดียว
+//   讀音 (ไทย) ปลดล็อก โชว์ได้ตั้งแต่ก่อนตอบ เต็มทั้งคำ คิดคะแนนปกติ (Lin ยืนยันเลือกแบบนี้เอง รับทราบแล้วว่าคำอ่านใบ้เสียงได้)
+//   英文讀音 ยังล็อกเหมือนเดิม เพราะขีดวรรณยุกต์บนสระ (nèung) = บอกคำตอบตรงเกินไป
 function tfReadingUnlocked() { return S.step === 'result' || S.step === 'overview'; }
 
 function tfReadingLineHtml() {
-  if (!tfReadingUnlocked()) return '';
-  if (!tfPronMode && !tfEnMode) return '';
+  var showEn = tfEnMode && tfReadingUnlocked();
+  if (!tfPronMode && !showEn) return '';
   var e = tfCurEntry();
   if (!e) return '';
 
-  // ── กันเฉลยข้ามพยางค์ (Lin 2026-07-25) ──
+  // ── กันเฉลยข้ามพยางค์ (Lin 2026-07-25) — เหลือใช้กับ 英文讀音 เท่านั้น (2026-07-30) ──
   // คำหลายพยางค์ถามทีละพยางค์ → ถ้าโชว์คำอ่าน "ทั้งคำ" หลังตอบพยางค์แรก = เฉลยวรรณยุกต์พยางค์ที่ยังไม่ถามด้วย
   // เลยตัดให้เหลือแค่พยางค์ที่ตอบไปแล้ว (ที่เหลือแทนด้วย …) · ถ้าจำนวนพยางค์ไม่ตรงกัน ไม่ตัด (กันข้อมูลเพี้ยน)
   var _multi = S.syllables && S.syllables.length > 1 && S.selectedSyl != null;
@@ -873,9 +877,9 @@ function tfReadingLineHtml() {
   }
 
   var html = '';
-  // คำอ่านไทยโชว์เฉพาะตอน "อ่านไม่ตรงกับตัวเขียน" — ตรงกันแล้วโชว์ซ้ำใต้คำเดิมก็รกเปล่าๆ (กติกาเดียวกับเกมเรียงคำ)
-  if (tfPronMode) { var _th = e.readingTH || ''; if (_th && _th !== e.word) html += '<div class="tf-read-th">' + _clip(_th) + '</div>'; }
-  if (tfEnMode)   { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _clip(_en) + '</div>'; }
+  // 讀音 ไทย: โชว์ทุกขั้น เต็มทั้งคำ ไม่ clip + โชว์ทุกคำแม้อ่านตรงกับตัวเขียน (Lin 2026-07-30 — กติกาเดียวกับเกมเรียงคำที่แก้รอบนี้ กันเข้าใจผิดว่าปุ่มเสีย)
+  if (tfPronMode) { var _th = e.readingTH || ''; if (_th) html += '<div class="tf-read-th">' + _th + '</div>'; }
+  if (showEn)     { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _clip(_en) + '</div>'; }
   return html;
 }
 
@@ -2014,7 +2018,7 @@ function render() {
     } else {
       mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>' + zhHtml;
     }
-    // Lin 2026-07-25: บรรทัดคำอ่าน (讀音 / 英文讀音) — โชว์เฉพาะหลังตอบวรรณยุกต์แล้ว (ดู tfReadingUnlocked)
+    // บรรทัดคำอ่าน: 讀音 โชว์ได้ทุกขั้น (Lin 2026-07-30) · 英文讀音 โชว์หลังตอบแล้วเท่านั้น (ดู tfReadingLineHtml)
     banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + tfGuideNoteHtml();
     // inject vault save button
     if (window.WordVault && S.word) {
@@ -3275,21 +3279,9 @@ function stepResult() {
       '</div>';
   }
 
-  // ปุ่มลำโพงฟังเสียง — อยู่ระหว่างคำกับปุ่มเซฟ โชว์เฉพาะคำที่มีไฟล์เสียง (2026-07-16)
+  // ปุ่มลำโพงฟังเสียง — ข้างคำศัพท์ โชว์เฉพาะคำที่มีไฟล์เสียง (2026-07-16)
+  // Lin 2026-07-30: เอาปุ่ม 🔖 (單字庫) ตรงหน้าเฉลยออกตามที่ Lin สั่ง — ซ้ำกับแถว 單字庫 ในเมนู 🍚 มุมขวาล่าง เหลือที่เมนูที่เดียว
   var audioBtnHtml = (window.WordAudio && S.word) ? WordAudio.btnHtml(S.word) : '';
-  var vaultBtnHtml = '';
-  if (window.WordVault && S.word) {
-    WordVault.injectStyles();
-    var _vaultSaved = WordVault.has(S.word);
-    vaultBtnHtml = '<button id="tf-result-vault-btn" class="vault-save-btn" data-saved="'+(_vaultSaved?'1':'0')+'" title="'+(_vaultSaved?'從單字庫移除':'儲存到單字庫')+'" onclick="(function(){'+
-      'var th=\''+S.word.replace(/'/g,"\\'") +'\';'+
-      'var meta={zh:\''+(S.zh||'').replace(/'/g,"\\'")+'\',en:\''+(S.readingEN||'').replace(/'/g,"\\'")+'\',source:\'tone-finder\'};'+
-      'if(WordVault.has(th)){WordVault.removeWord(th);this.setAttribute(\'data-saved\',\'0\');this.title=\'儲存到單字庫\';}'+
-      'else if(WordVault.isFull()){WordVault.notifyFull();return;}'+
-      'else{WordVault.addWord(th,meta);this.setAttribute(\'data-saved\',\'1\');this.title=\'從單字庫移除\';}'+
-      'if(window.WordVault&&WordVault.refreshBadges)WordVault.refreshBadges();'+
-    '}).call(this)">🔖</button>';
-  }
 
   // Lin 2026-07-12: ย้ายปุ่ม "太棒了/看看成果" ขึ้นมาอยู่เหนือส่วน 音節拆解 (ใน sessionBlock) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) เหลือแค่หน้าผลสรุปจบรอบ
   var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:14px;">'+
@@ -3304,7 +3296,7 @@ function stepResult() {
   var resultReadHtml = tfReadingLineHtml();
 
   return '<div class="result-v2">'+
-    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+vaultBtnHtml+'</div>'+
+    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+'</div>'+
     resultZhHtml + resultReadHtml +
 
     '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+
@@ -4093,7 +4085,7 @@ var TF = {
     try { localStorage.setItem('tf_modern_font', on ? '1' : '0'); } catch(e){}
   },
   // ── ปุ่ม 讀音 (คำอ่านไทย) / 英文讀音 (คำอ่านโรมัน) — Lin 2026-07-25 ──
-  // กดได้ตลอด แต่ตัวคำอ่านจะโผล่เฉพาะหลังตอบวรรณยุกต์แล้วเท่านั้น (tfReadingUnlocked)
+  // กดได้ตลอด — 讀音 โผล่ทันทีทุกขั้น (Lin 2026-07-30) · 英文讀音 โผล่เฉพาะหลังตอบแล้ว (tfReadingUnlocked)
   togglePron: function() {
     tfPronMode = !tfPronMode;
     try { localStorage.setItem('rg_pron_mode', tfPronMode ? '1' : '0'); } catch(e){}

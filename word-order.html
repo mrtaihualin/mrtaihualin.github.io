@@ -111,6 +111,8 @@
 .wo-word-th{font-family:'Sarabun',sans-serif;line-height:1.25;}
 .wo-read-th{font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;color:#993C1D;line-height:1.3;margin-top:2px;}
 .wo-read-en{font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:600;color:#8B6310;line-height:1.3;letter-spacing:0.2px;}
+/* Lin 2026-07-30: คำแปลจีนรายคำ ใต้กล่องทุกคำ (เปิด/ปิดจากแถว 翻譯 ในเมนู 🍚) — pointer-events:none กันคลิกโดนคำแปลแล้วแย่ง event ของไทล์ */
+.wo-read-zh{font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:600;color:#6b6b6b;line-height:1.3;pointer-events:none;}
 body.rg-modern-font .wo-word-th,
 body.rg-modern-font .wo-read-th{font-family:'Noto Sans Thai','Sarabun',sans-serif !important;}
 
@@ -323,23 +325,28 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <div class="wo-slots" id="wo-slots"></div>
 
-  <!-- Lin 2026-07-25: ปุ่ม 發音 (🔊) + 翻譯 (🍙/🌾) ย้ายมาอยู่ "ใต้คำที่เฉลย" แทนเมนูมุมขวาล่าง — โชว์เฉพาะตอนเฉลยแล้ว (กันสปอยล์) -->
+  <!-- Lin 2026-07-25: ปุ่ม 發音 (🔊) + 翻譯 (🍙/🌾) ย้ายมาอยู่ "ใต้คำที่เฉลย" แทนเมนูมุมขวาล่าง — โชว์เฉพาะตอนเฉลยแล้ว (กันสปอยล์)
+       Lin 2026-07-30: เพิ่มปุ่ม 🔖 เซฟทั้งประโยคเข้า 單字庫 (คลังรวม 30 ช่องเดียวกับคำ) ตรงเฉลยนี้ด้วย -->
   <div id="wo-reveal-ctl" style="display:none;align-items:center;justify-content:center;gap:8px;margin:2px 0 6px;">
     <button type="button" id="wo-sound-btn" class="word-audio-btn" style="display:none;" title="聽發音" aria-label="聽發音">🔊</button>
     <button type="button" id="wo-zh-toggle" class="word-ctl-btn" onclick="woToggleZh()" title="翻譯">🍙</button>
+    <span id="wo-vault-btn-slot"></span>
   </div>
   <div class="zh-hint" id="wo-zh"></div>
 
-  <!-- แถวปุ่มของเมนู 🍚 (ปุ่มจริงถูกย้ายเข้าเมนูตอนโหลด เหลือกล่องเปล่า) — Lin 2026-07-25 -->
+  <!-- แถวปุ่มของเมนู 🍚 (ปุ่มจริงถูกย้ายเข้าเมนูตอนโหลด เหลือกล่องเปล่า) — Lin 2026-07-25
+       Lin 2026-07-30: เพิ่มแถว 翻譯 (คำแปลรายคำ ใต้กล่องทุกคำ เหมือน 英文讀音) + เรียงลำดับกลางทุกเกม: 讀音 → 翻譯 → 英文讀音 → 字體 -->
   <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;">
     <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="woTogglePron()"></button>
+    <button id="wo-zh-word-toggle" class="word-ctl-btn" type="button" onclick="woToggleZhWord()"></button>
     <button id="rg-en-toggle" class="word-ctl-btn" type="button" onclick="woToggleEn()"></button>
     <span id="font-toggle-slot"></span>
   </div>
   <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
-    {id:'rg-pron-toggle',   label:'讀音',     state:'pron'},
-    {id:'rg-en-toggle',     label:'英文讀音', state:'en'},
-    {id:'font-toggle-slot', label:'字體',     state:'font'}
+    {id:'rg-pron-toggle',    label:'讀音',     state:'pron'},
+    {id:'wo-zh-word-toggle', label:'翻譯',     state:'zh'},
+    {id:'rg-en-toggle',      label:'英文讀音', state:'en'},
+    {id:'font-toggle-slot',  label:'字體',     state:'font'}
   ]});});</script>
 
   <div class="wo-bank" id="wo-bank"></div>
@@ -403,7 +410,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="js/core/shared.min.js?v=15"></script>
-<script src="js/games/word-order-app.min.js?v=6"></script>
+<script src="js/games/word-order-app.min.js?v=7"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>
