@@ -149,23 +149,26 @@ function buildRevealRules(w){
 // ด้านบน ได้ตัวแปร/ฟังก์ชันชื่อเดิมเป๊ะ (TH_ENGINE, computeToneFromSpelling, buildToneReason,
 // TONE_CLASS_ZH, TONE_MARK_NAME, TONE_NUM_NAME) ใช้ต่อได้โดยไม่ต้องแก้โค้ดข้างล่างนี้เลย
 
-// Lin 2026-07-10 (แก้ 2026-07-30: โชว์อัตโนมัติตอนเฉลย ไม่ต้องทายก่อนแล้ว): 把「為什麼」推導句 + 子音/母音/尾音（含前引字/複合音）拆解一起顯示在 #bonus-reason
-// buildRevealRules() 本身一律安全可顯示（純拆字），只有 buildToneReason() 對不上時才跳過那句推導句
+// Lin 2026-07-30 (แก้อีกรอบ): ทำหน้าตากล่องเฉลย 初級 ให้เหมือน 中級 เป๊ะๆ
+// (📍 หัวคำ（第X聲）+ แถวเฉลยเปล่าๆ ต่อกัน — ตัดบรรทัด 💡 เหตุผลวรรณยุกต์ทิ้ง เพราะ 中 ไม่มีบรรทัดนี้)
 function renderBonusReason(w){
   var el=document.getElementById('bonus-reason');
   if(!el)return;
   if(!w||!w.th){ el.className='bonus-reason'; return; }
-  var reason=buildToneReason(w);
+  el.innerHTML='';
+  var head=document.createElement('div');
+  head.className='rule-row';
+  head.style.cssText='margin-top:0;font-weight:800;color:#8B6310;';
+  head.textContent='📍 '+buildAnswerHeader(w);
+  el.appendChild(head);
   var rules=buildRevealRules(w);
-  var html='';
-  if(reason)html+='<div class="bonus-reason-why">💡 '+reason+'</div>';
-  if(rules&&rules.length){
-    html+='<div class="bonus-reason-rules">'+rules.map(function(r){
-      return '<div class="rule-row"><span class="rule-tag'+(r.sp?' sp':'')+'">'+r.tag+'</span><span class="rule-txt">'+r.text+'</span></div>';
-    }).join('')+'</div>';
-  }
-  if(html){ el.innerHTML=html; el.className='bonus-reason show'; }
-  else { el.className='bonus-reason'; }
+  rules.forEach(function(r){
+    var row=document.createElement('div');row.className='rule-row';
+    var tag=document.createElement('span');tag.className='rule-tag'+(r.sp?' sp':'');tag.textContent=r.tag;
+    var txt=document.createElement('span');txt.className='rule-txt';txt.innerHTML=r.text;
+    row.appendChild(tag);row.appendChild(txt);el.appendChild(row);
+  });
+  el.className='bonus-reason show';
 }
 
 // ════════════════════════════════════════════
