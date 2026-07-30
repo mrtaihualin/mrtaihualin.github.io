@@ -23,7 +23,15 @@
 --     ไม่เชื่อค่าที่ผู้ใช้ส่งมา — หลักการเดียวกับด่านครูเดิม)
 --   'reschedule' และ 'add_class' ไม่แตะ ยังทำงานเหมือนเดิมทุกอย่างสำหรับนักเรียน
 --
--- ปลอดภัยที่จะรันซ้ำ (create or replace ทั้งหมด)
+-- 🗑️ ลบเวอร์ชันเก่า 7 พารามิเตอร์ทิ้งแล้ว (ตามที่ Lin สั่ง 2026-07-30 — ยืนยันไม่มีอะไรเรียกใช้อยู่):
+--   เดิมมี submit_class_request 2 ตัวซ้อนกัน (7 พารามิเตอร์ = เวอร์ชันดั้งเดิมก่อนมี initiated_by,
+--   8 พารามิเตอร์ = ตัวที่เว็บเรียกจริงตั้งแต่มีระบบ initiated_by) ตัว 7 พารามิเตอร์เว็บเลิกเรียกไปนานแล้ว
+--   และพิสูจน์แล้วจากการทดสอบจริงว่าเรียกด้วย 7 ค่าตรงๆ ไม่ได้อยู่ดี (Postgres ฟ้อง "not unique"
+--   เพราะพารามิเตอร์ตัวที่ 8 ของอีกฟังก์ชันมีค่า default ทำให้ชนกับเวอร์ชันนี้เสมอ — ปัญหานี้มีมาตั้งแต่
+--   2026-07-19 ก่อนไฟล์นี้แล้ว ไม่เกี่ยวกับการแก้วันนี้) เก็บไว้ก็ใช้ไม่ได้จริง จึงลบทิ้งให้สะอาด
+--   เหลือ submit_class_request แค่ตัวเดียว (8 พารามิเตอร์) เท่านั้นต่อจากนี้
+--
+-- ปลอดภัยที่จะรันซ้ำ (create or replace + drop if exists ทั้งหมด)
 -- ════════════════════════════════════════════════════════════════════════════
 
 
@@ -119,62 +127,14 @@ $function$;
 
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 2) เวอร์ชันเก่า (7 พารามิเตอร์ ไม่มี p_initiated_by) — เว็บไม่เรียกแล้ว แต่คงไว้ให้ตรงกัน
---    ตัวนี้ไม่รับ initiated_by อยู่แล้ว จึงไม่มีทางพิสูจน์ว่าเป็นครูจาก p_initiated_by ได้
---    → ใช้ is_teacher_caller() ตัดสินอย่างเดียวเหมือนกัน
+-- 2) ลบเวอร์ชันเก่า (7 พารามิเตอร์ ไม่มี p_initiated_by) ทิ้ง — ตามที่ Lin สั่ง 2026-07-30
+--    ยืนยันแล้วว่าไม่มีอะไรเรียกใช้จริง (เว็บเลิกเรียกไปตั้งแต่มีเวอร์ชัน 8 พารามิเตอร์)
+--    และเรียกด้วย 7 ค่าตรงๆ ก็ไม่ได้จริงอยู่ดี เพราะชนกับ default ของตัว 8 พารามิเตอร์
+--    (ดูคำอธิบายเต็มในหมายเหตุหัวไฟล์)
 -- ────────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.submit_class_request(
-  p_token text,
-  p_student_name text,
-  p_request_type text,
-  p_original_date date,
-  p_requested_date date,
-  p_requested_time text,
-  p_note text
-)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
-declare
-  new_id uuid;
-  rl_ok  boolean := true;
-begin
-  -- ⚠️ ยกเว้นครู: ตอนเสนอหลายรอบเวลาพร้อมกัน ครูยิงฟังก์ชันนี้รัวๆ ทีละแถวโดยธรรมชาติ
-  --    ถ้าไม่ยกเว้น ครูเสนอเกิน 20 แถวในนาทีเดียวจะโดนบล็อกตัวเอง
-  if not public.is_teacher_caller()
-     and to_regprocedure('public.slink_rl_check(text,int,int)') is not null then
-    execute 'select public.slink_rl_check($1,$2,$3)' into rl_ok using 'submit_class_request', 20, 60;
-    if not rl_ok then
-      raise exception 'too many requests' using errcode = 'P0001';
-    end if;
-    -- เช็คแยกอีกตัว: ถ้ามี slink_rl_check แต่ไม่มี slink_log_fail จะพังทั้งฟังก์ชัน (undefined_function)
-    if to_regprocedure('public.slink_log_fail(text,text)') is not null
-       and not exists (select 1 from public.classroom_students where token = p_token) then
-      execute 'select public.slink_log_fail($1,$2)' using 'submit_class_request', p_token;
-    end if;
-  end if;
-
-  if p_request_type not in ('cancel', 'reschedule', 'add_class') then
-    raise exception 'invalid request_type';
-  end if;
-
-  -- ★ ด่านใหม่ (2026-07-30): overload นี้ไม่มี p_initiated_by ให้ตรวจ
-  --    ถือว่าเป็นนักเรียนเสมอ เว้นแต่ is_teacher_caller() เป็นจริง
-  if p_request_type = 'cancel' and not public.is_teacher_caller() then
-    raise exception 'students may not submit cancel requests — only the teacher can cancel a class (取消課程僅限老師操作)'
-      using errcode = 'P0001';
-  end if;
-
-  insert into public.classroom_requests
-    (token, student_name, request_type, original_date, requested_date, requested_time, note)
-  values
-    (p_token, p_student_name, p_request_type, p_original_date, p_requested_date, p_requested_time, p_note)
-  returning id into new_id;
-  return new_id;
-end;
-$function$;
+drop function if exists public.submit_class_request(
+  text, text, text, date, date, text, text
+);
 
 
 -- ────────────────────────────────────────────────────────────────────────────
@@ -186,7 +146,9 @@ revoke execute on function public.is_teacher_caller() from public, anon, authent
 
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 4) ตรวจว่าแก้สำเร็จ — ต้องเห็น 2 บรรทัด ทั้งคู่ has_teacher_guard และ has_cancel_guard = true
+-- 4) ตรวจว่าแก้สำเร็จ — ต้องเห็น "แค่ 1 บรรทัด" เท่านั้น (8 พารามิเตอร์)
+--    ตัว 7 พารามิเตอร์ถูกลบไปแล้ว ถ้ายังเห็น 2 บรรทัด แปลว่า drop function ไม่สำเร็จ
+--    ทั้ง has_teacher_guard และ has_cancel_guard ต้องเป็น true
 -- ────────────────────────────────────────────────────────────────────────────
 select p.proname,
        pg_get_function_identity_arguments(p.oid) as args,
@@ -200,35 +162,24 @@ where n.nspname = 'public' and p.proname = 'submit_class_request';
 -- ────────────────────────────────────────────────────────────────────────────
 -- 5) ทดสอบจริงว่านักเรียนยื่น "ยกเลิก" ไม่ได้แล้ว (ปลอดภัย — โดน raise exception
 --    ก่อนถึงบรรทัด insert เสมอ จึงไม่มีแถวขยะเข้าตาราง classroom_requests จริง)
---    คาดหวัง: เห็นข้อความ "✅ ผ่าน — บล็อกนักเรียนยกเลิกสำเร็จ" ทั้ง 2 บรรทัด (8 พารามิเตอร์ + 7 พารามิเตอร์)
+--    เขียนแบบคืนค่าเป็นตาราง (ไม่ใช้ raise notice) เพราะ notice ไม่โชว์ในผลลัพธ์ SQL Editor
+--    คาดหวัง: เห็น 1 แถว result = "✅ ผ่าน"
 -- ────────────────────────────────────────────────────────────────────────────
-do $$
+create or replace function public._test_cancel_guard()
+returns table(test_case text, result text) language plpgsql as $$
 begin
   begin
-    perform public.submit_class_request(
-      'test-token-does-not-exist', 'ทดสอบ', 'cancel',
-      current_date, current_date + 1, '10:00', 'test', 'student'
-    );
-    raise notice '❌ ไม่ผ่าน (8 พารามิเตอร์) — นักเรียนยกเลิกได้ ทั้งที่ไม่ควร!';
+    perform public.submit_class_request('test-token-does-not-exist','ทดสอบ','cancel',
+      current_date, current_date+1, '10:00', 'test', 'student');
+    test_case := '8 พารามิเตอร์'; result := '❌ ไม่ผ่าน — นักเรียนยกเลิกได้!';
+    return next;
   exception when others then
-    if sqlerrm like '%students may not submit cancel requests%' then
-      raise notice '✅ ผ่าน — บล็อกนักเรียนยกเลิกสำเร็จ (8 พารามิเตอร์)';
-    else
-      raise notice '⚠️ โดนบล็อกด้วยเหตุผลอื่น (8 พารามิเตอร์): %', sqlerrm;
-    end if;
+    test_case := '8 พารามิเตอร์';
+    result := case when sqlerrm like '%students may not submit cancel requests%'
+                   then '✅ ผ่าน' else '⚠️ บล็อกด้วยเหตุผลอื่น: '||sqlerrm end;
+    return next;
   end;
+end; $$;
 
-  begin
-    perform public.submit_class_request(
-      'test-token-does-not-exist', 'ทดสอบ', 'cancel',
-      current_date, current_date + 1, '10:00', 'test'
-    );
-    raise notice '❌ ไม่ผ่าน (7 พารามิเตอร์) — นักเรียนยกเลิกได้ ทั้งที่ไม่ควร!';
-  exception when others then
-    if sqlerrm like '%students may not submit cancel requests%' then
-      raise notice '✅ ผ่าน — บล็อกนักเรียนยกเลิกสำเร็จ (7 พารามิเตอร์)';
-    else
-      raise notice '⚠️ โดนบล็อกด้วยเหตุผลอื่น (7 พารามิเตอร์): %', sqlerrm;
-    end if;
-  end;
-end $$;
+select * from public._test_cancel_guard();
+drop function public._test_cancel_guard();
