@@ -890,6 +890,17 @@ function tfUpdateReadingLine() {
   if (el) el.innerHTML = tfReadingLineHtml();
 }
 
+// Lin 2026-07-30 (บั๊กจริงที่เจอตอนเทส): กดปุ่ม 讀音/英文讀音 ตอนอยู่ "หน้าเฉลย" แล้วหน้าจอไม่เปลี่ยน
+//   สาเหตุ: หน้าเฉลยซ่อนแบนเนอร์ไว้ (noBannerSteps) แต่ไม่ได้ล้างเนื้อในทิ้ง → กล่อง #tf-read-line เก่ายังค้างอยู่ใน DOM (แค่มองไม่เห็น)
+//   โค้ดเลยไปอัปเดตกล่องที่ซ่อนอยู่แทน ผู้เล่นเลยไม่เห็นอะไรเปลี่ยน
+//   แก้: อัปเดตเฉพาะบรรทัดได้ก็ต่อเมื่อแบนเนอร์ "โชว์อยู่จริง" เท่านั้น · นอกนั้นวาดใหม่ทั้งหน้า (วิธีเดียวกับปุ่ม 提示)
+function tfRepaintReading() {
+  var bn = document.getElementById('tf-banner');
+  var line = document.getElementById('tf-read-line');
+  if (line && bn && bn.style.display !== 'none') tfUpdateReadingLine();
+  else render();
+}
+
 // ════════════════════════════════════════════════════════════
 // ── โหมด 提示 (คำใบ้) ในเกมเสียง — Lin 2026-07-25
 // กติกาที่ Lin สั่ง: ใบ้ "เฉพาะขั้น推導" (บอกว่าให้เลือกตัวเลือกไหน) · หน้าเดาวรรณยุกต์แรกไม่ใบ้
@@ -4097,14 +4108,14 @@ var TF = {
     tfPronMode = !tfPronMode;
     try { localStorage.setItem('rg_pron_mode', tfPronMode ? '1' : '0'); } catch(e){}
     tfSyncReadBtns();
-    if (document.getElementById('tf-read-line')) tfUpdateReadingLine(); else render();
+    tfRepaintReading();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
   toggleEn: function() {
     tfEnMode = !tfEnMode;
     try { localStorage.setItem('rg_en_mode', tfEnMode ? '1' : '0'); } catch(e){}
     tfSyncReadBtns();
-    if (document.getElementById('tf-read-line')) tfUpdateReadingLine(); else render();
+    tfRepaintReading();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
   // ── ปุ่ม 提示 (คำใบ้) — Lin 2026-07-25 ──
