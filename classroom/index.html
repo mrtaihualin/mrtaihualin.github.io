@@ -7694,6 +7694,23 @@ async function processClassRequestInner(id, r, isCancel) {
       assertBackupOk(await backupCalendarEvent(id, r.token, 'delete', ev, null), '取消課堂');
       await deleteClassEventOnce(ev.id);
       await verifyEventDeleted(ev.id); // 2026-07-15：真的回頭確認 Calendar 上刪除成功，不是只信任 API 回應
+      // 2026-07-30 加（Lin 抓到 race condition）：以前 Calendar 刪掉之後，classroom_schedule 那筆
+      // 資料庫記錄要等 calendar-schedule-sync-cron（每 20 分鐘跑一次）才會清掉——這段空窗期內
+      // class-reminder-cron（每 5 分鐘跑一次）還是會讀到這筆「已取消」的課，照樣發「快上課了」提醒給學生。
+      // 現在 Calendar 刪除確認成功後「立刻」順手刪掉這筆，不用等 20 分鐘週期同步。
+      // Calendar 才是事實來源，這裡失敗不擋取消本身（RELIABILITY FIRST：不吞錯誤，失敗要留紀錄，
+      // 但不能因為這裡失敗就讓整個取消流程卡住/報錯給老師——20 分鐘後排程還會再清一次當保底）。
+      try {
+        const { error: schedDelErr, count: schedDelCount } = await sb.from('classroom_schedule')
+          .delete({ count: 'exact' }).eq('calendar_event_id', ev.id);
+        if (schedDelErr) {
+          console.warn('⚠️ 取消課堂：立即清 classroom_schedule 失敗（不影響取消本身，20 分鐘後排程還會再清一次）：', schedDelErr.message);
+        } else if (!schedDelCount) {
+          console.warn('ℹ️ 取消課堂：classroom_schedule 找不到 calendar_event_id=' + ev.id + ' 的資料列（可能還沒同步進去，不影響取消）');
+        }
+      } catch (e) {
+        console.warn('⚠️ 取消課堂：立即清 classroom_schedule 發生例外（不影響取消本身）：', e.message || e);
+      }
     } catch (e) {
       await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
       alert('⚠️ 刪除課堂失敗：' + (e.message || e) + '\n這筆申請還沒標記完成，請重試或手動處理。');

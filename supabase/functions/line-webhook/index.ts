@@ -1485,6 +1485,26 @@ serve(async (req) => {
         // 存一筆備份紀錄，老師網站上「↩️ 最近處理（還能復原）」才看得到這筆（best-effort，失敗不擋流程）。
         await backupCalendarEventServer(supabase, requestIdCancel, reqRowCancel.token, 'delete', delResult.eventData);
 
+        // 2026-07-30 加（Lin 抓到 race condition）：以前 Calendar 刪掉之後，classroom_schedule 那筆
+        // 資料庫記錄要等 calendar-schedule-sync-cron（每 20 分鐘跑一次）才會清掉——這段空窗期內
+        // class-reminder-cron（每 5 分鐘跑一次）還是會讀到這筆「已取消」的課，照樣發「快上課了」提醒給學生。
+        // 現在 Calendar 刪除確認成功後「立刻」順手刪掉這筆，不用等 20 分鐘週期同步。
+        // Calendar 才是事實來源，這裡失敗不擋取消本身（RELIABILITY FIRST：不吞錯誤，失敗要留紀錄，
+        // 但不能因為這裡失敗就讓整個取消流程卡住/報錯給老師——20 分鐘後排程還會再清一次當保底）。
+        try {
+          const { error: schedDelErrCancel, count: schedDelCountCancel } = await supabase
+            .from('classroom_schedule')
+            .delete({ count: 'exact' })
+            .eq('calendar_event_id', reqRowCancel.calendar_event_id);
+          if (schedDelErrCancel) {
+            console.warn('[line-webhook] ⚠️ confirm_cancel_delete: 立即清 classroom_schedule 失敗（不影響取消本身，20 分鐘後排程還會再清一次）:', schedDelErrCancel.message, 'request=', requestIdCancel);
+          } else if (!schedDelCountCancel) {
+            console.warn('[line-webhook] ℹ️ confirm_cancel_delete: classroom_schedule 找不到 calendar_event_id=' + reqRowCancel.calendar_event_id + ' 的資料列（可能還沒同步進去，不影響取消）');
+          }
+        } catch (e) {
+          console.warn('[line-webhook] ⚠️ confirm_cancel_delete: 立即清 classroom_schedule 發生例外（不影響取消本身）:', e && e.message ? e.message : e);
+        }
+
         // Calendar ลบสำเร็จแล้วจริง — ปิดสถานะ + ปลดล็อกพร้อมกันในคำสั่งเดียว (atomic)
         // 2026-07-19 加：ถ้า update นี้ล้มเหลว แปลว่า Calendar ลบสำเร็จแล้วแต่บันทึกฐานข้อมูลพัง —
         // จงใจ "ไม่ปลดล็อก" (เพราะ update ทั้งก้อนพังหมด ไม่มีฟิลด์ไหนถูกเปลี่ยนอยู่แล้ว) กันไม่ให้ใครกดซ้ำ
