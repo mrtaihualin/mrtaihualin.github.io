@@ -1417,7 +1417,8 @@ function tfShowRevealOverlay(entry, correctTone, opts) {
       '<div class="tf-reveal-zh">' + (entry.zh || '') + '　<span class="th">' + (entry.readingTH || '') + '</span></div>' +
       '<div class="tf-reveal-answer" style="color:' + toneColor + ';border-color:' + toneColor + '55;background:' + toneColor + '14;">正確聲調：' + toneTxt + '</div>' +
       // 2026-07-30: ป๊อปอัพเฉลย (ตอบผิดครบ) ต้องแตกตัวอักษรครบตามรูปแบบกลางด้วย — คำสั่ง Lin
-      (function(){ var h = tfAnswerRowsHtml(currentAnswerSyl()); return h ? '<div class="tf-ans-rows" style="text-align:left;margin:10px auto 0;max-width:280px;">' + h + '</div>' : ''; })() +
+      // 2026-07-30 (รอบ 3): ครอบด้วยกล่องเดียวกับหน้าเฉลยหลัก (.result-v2-bd/.tf-ans-inner) แทนที่จะลอยไม่มีกรอบ ให้เหมือนเกมอ่าน/เกมพิมพ์
+      (function(){ var h = tfAnswerRowsHtml(currentAnswerSyl()); return h ? '<div class="result-v2-bd" style="margin:10px auto 0;max-width:280px;"><div class="tf-ans-inner"><div class="tf-ans-rows">' + h + '</div></div></div>' : ''; })() +
       '<button class="tf-error-close" id="tf-reveal-next">' + ((isSyl && S.syllables && opts.sylIdx + 1 < S.syllables.length) ? '學會了，下一個音節 →' : '學會了，我們去下一個 →') + '</button>' +
     '</div>';
   document.body.appendChild(div);
@@ -2035,27 +2036,38 @@ function render() {
     var zhHtml = curZh ? '<div class="word-zh">' + curZh + '</div>' : '';
     var mainBoxHtml, sentCtxHtml = '';
     if (advSentenceCtx && session && session.words && session.words.length) {
-      // Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ "ประโยคเต็ม" ไฮไลต์คำที่กำลังถามอยู่ในประโยค ส่วนคำถามวรรณยุกต์ (S.word) แยกไปโชว์ด้านล่างแทน
+      // Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ "ประโยคเต็ม" ไฮไลต์คำที่กำลังถามอยู่ในประโยค + คำแปลจีน (บริบทที่เกมอ่าน/เกมพิมพ์ไม่มี เพราะเล่นทีละคำ ไม่ได้โชว์ทั้งประโยค — จุดนี้เก็บไว้เหมือนเดิม)
       var sentHtml = session.words.map(function (w, i) {
         return i === session.index ? '<span class="tf-sent-cur-word">' + w.word + '</span>' : w.word;
+      }).join('');
+      // 2026-07-30 (รอบ 3): เปลี่ยนกล่องโฟกัสคำเดียว (tf-adv-sent-focus) → แถบช่องพยางค์ (syl-strip/syl-chip) แบบเกมอ่าน/เกมพิมพ์ ตามที่ Lin สั่งกลับไปใช้กรอบกล่อง (ประโยค = แต่ละคำในประโยคทำหน้าที่เหมือนพยางค์)
+      var sentChips = session.words.map(function (w, i) {
+        var cls = 'syl-chip' + (i === session.index ? ' cur' : (i < session.index ? ' done' : ''));
+        return '<div class="' + cls + '"><span class="syl-th">' + w.word + '</span><span class="syl-n">' + (i + 1) + '/' + session.words.length + '</span></div>';
       }).join('');
       mainBoxHtml =
         '<div class="tf-adv-sent-main">' + sentHtml + '</div>' +
         '<div class="tf-adv-sent-ctx-zh">' + (advSentenceCtx.zh || '') + '</div>' +
-        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '">' + S.word + '</div>';
+        '<div class="syl-strip">' + sentChips + '</div>';
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
       // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
       // 2026-07-16: เอาแถบพยางค์ (syl-chip แบบเกมอ่าน) ออกตามที่ Lin สั่ง — เหลือแค่คำเต็ม + กล่องโฟกัส
       // 2026-07-29: เอากล่องพยางค์แยก (tf-adv-sent-focus) ออกอีกที ตามที่ Lin สั่ง — เปลี่ยนไปเน้นพยางค์ที่กำลังถามตรงคำเต็มด้านบนแทน (ตัวหนา+ขีดเส้นใต้สีทอง แทนกล่องแยก)
       // 2026-07-29 (รอบ 2): แก้บั๊ก — S.syllables แตกมาจาก readingTH (เช่น "สะ-หนาม-บิน" = คำอ่าน) เอามาต่อเป็นคำเต็มตรงๆ ไม่ได้ เพราะจะโชว์เป็นคำอ่านผิด (สนามบิน → "สะหนามบิน") ต้องใช้ตัวสะกดจริงจาก entry.syls[].th (ตัวเขียนแยกพยางค์) แทน ถ้าไม่มี/จำนวนไม่ตรง fallback โชว์คำเต็มเฉยๆไม่เน้น กันพัง
+      // 2026-07-30 (รอบ 3): Lin สั่งกลับไปใช้แถบช่องพยางค์แบบมีกรอบ (syl-chip) เหมือนเกมอ่าน/เกมพิมพ์อีกครั้ง (ย้อนการตัดสินใจ 07-16/07-29) — คำเต็มด้านบนโชว์เฉยๆไม่ไฮไลต์ ส่วนความคืบหน้าไปโชว์ที่แถบช่องด้านล่างแทน
       var entrySyls = (randomEntry && randomEntry.syls && randomEntry.syls.length === S.syllables.length) ? randomEntry.syls : null;
-      var fullWordHtml = entrySyls
-        ? entrySyls.map(function (sy, i) {
-            return '<span class="' + (i === S.selectedSyl ? 'tf-syl-cur' : 'tf-syl-dim') + '">' + sy.th + '</span>';
-          }).join('')
-        : (S.parentWord || S.syllables.join(''));
-      mainBoxHtml =
-        '<div class="tf-adv-sent-main">' + fullWordHtml + '</div>';
+      if (entrySyls) {
+        var wordChips = entrySyls.map(function (sy, i) {
+          var cls = 'syl-chip' + (i === S.selectedSyl ? ' cur' : (i < S.selectedSyl ? ' done' : ''));
+          return '<div class="' + cls + '"><span class="syl-th">' + sy.th + '</span><span class="syl-n">' + (i + 1) + '/' + entrySyls.length + '</span></div>';
+        }).join('');
+        var fullWordPlain = S.parentWord || entrySyls.map(function (sy) { return sy.th; }).join('');
+        mainBoxHtml =
+          '<div class="tf-banner-word' + goldWord + '">' + fullWordPlain + '</div>' +
+          '<div class="syl-strip">' + wordChips + '</div>';
+      } else {
+        mainBoxHtml = '<div class="tf-adv-sent-main">' + (S.parentWord || S.syllables.join('')) + '</div>';
+      }
     } else {
       mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>';
     }
@@ -3266,7 +3278,7 @@ function stepResult() {
       guessRow+
       (ansHtml ? '<div class="result-v2-bd">'+
         '<div class="result-v2-bd-title">音節拆解</div>'+
-        '<div class="tf-ans-rows">'+ansHtml+'</div>'+
+        '<div class="tf-ans-inner"><div class="tf-ans-rows">'+ansHtml+'</div></div>'+
       '</div>' : '');
   }
 
