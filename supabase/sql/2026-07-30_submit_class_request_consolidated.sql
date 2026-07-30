@@ -15,12 +15,15 @@
 --   → ไฟล์ force_initiated_by น่าจะเป็นเวอร์ชันที่ใช้งานจริงอยู่ตอนนี้ (แต่ Lin ควรกดตรวจสอบ
 --     ตามขั้นที่ 1 ก่อนรันไฟล์นี้ อธิบายไว้ในข้อความที่ Claude ส่งให้)
 --
--- ไฟล์นี้เพิ่มอะไรใหม่ (ตามที่ Lin สั่ง 2026-07-30):
---   หน้าเว็บกำลังเอาปุ่ม "นักเรียนขอยกเลิกคลาสเอง" ออกทั้งหมด (ทำอยู่อีกแชทหนึ่ง)
---   → ฝั่งฐานข้อมูลต้องปิดประตูด้วย ไม่ใช่พึ่งแค่ซ่อนปุ่มบนเว็บ (ต่อให้ซ่อนปุ่ม ใครก็ยิง API ตรงได้)
---   → เพิ่มด่าน: ถ้า request_type = 'cancel' และคนเรียกไม่ใช่ครูจริง (is_teacher_caller() = false)
---     ปฏิเสธทันที ไม่ว่าจะส่ง p_initiated_by มาเป็นอะไรก็ตาม (เชื่อ is_teacher_caller() อย่างเดียว
---     ไม่เชื่อค่าที่ผู้ใช้ส่งมา — หลักการเดียวกับด่านครูเดิม)
+-- ไฟล์นี้เพิ่มอะไรใหม่ (แก้รอบ 2, 2026-07-30 — กฎสุดท้ายที่ Lin ยืนยัน แทนที่เวอร์ชันแรกที่ห้าม
+-- นักเรียนยกเลิกเองแบบไม่มีเงื่อนไข):
+--   นักเรียนยกเลิกคลาสเองได้ ถ้าคาบเรียนยังเหลืออีก 24 ชม.ขึ้นไป
+--   ถ้าเหลือน้อยกว่า 24 ชม. → ห้าม ต้องให้ไปใช้ทาง "ขอเลื่อน/改期" แทน (ฝั่งหน้าเว็บ redirect ไปทางนั้น
+--   ทำอยู่อีกแชทหนึ่ง — งานนี้ทำแค่ฝั่งฐานข้อมูล)
+--   → ฝั่งฐานข้อมูลต้องเช็คด้วย ไม่ใช่พึ่งแค่ซ่อนปุ่ม/บล็อกบนเว็บอย่างเดียว (ต่อให้ซ่อนปุ่ม ใครก็ยิง API ตรงได้)
+--   → เพิ่มพารามิเตอร์ใหม่ p_original_time (เวลาเริ่มคาบ เช่น '14:00') เพราะ p_original_date เดิม
+--     เป็น date อย่างเดียว ไม่มีเวลา คำนวณ 24 ชม.ไม่ได้ถ้าไม่มีเวลา
+--   → ด่านครู (is_teacher_caller() = true) ไม่ถูกแตะเลย ครูยกเลิกได้ไม่จำกัดเวลาเหมือนเดิม
 --   'reschedule' และ 'add_class' ไม่แตะ ยังทำงานเหมือนเดิมทุกอย่างสำหรับนักเรียน
 --
 -- 🗑️ ลบเวอร์ชันเก่า 7 พารามิเตอร์ทิ้งแล้ว (ตามที่ Lin สั่ง 2026-07-30 — ยืนยันไม่มีอะไรเรียกใช้อยู่):
@@ -69,7 +72,8 @@ CREATE OR REPLACE FUNCTION public.submit_class_request(
   p_requested_date date,
   p_requested_time text,
   p_note text,
-  p_initiated_by text DEFAULT 'student'::text
+  p_initiated_by text DEFAULT 'student'::text,
+  p_original_time text DEFAULT NULL
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -109,11 +113,16 @@ begin
       using errcode = 'P0001';
   end if;
 
-  -- ★ ด่านใหม่ (2026-07-30): นักเรียนห้ามยื่นคำขอ "ยกเลิก" เอง — มีแค่ครูเท่านั้นที่ยกเลิกได้
-  --    เช็คด้วย is_teacher_caller() ตรงๆ ไม่ใช้ p_initiated_by (ป้องกันการปลอมค่า)
+  -- ★ ด่านใหม่ (2026-07-30 แก้รอบ 2 ตามกฎสุดท้ายที่ Lin ยืนยัน): นักเรียนยกเลิกเองได้
+  --    ถ้าคาบเรียนยังเหลืออีก 24 ชม.ขึ้นไป — ถ้าน้อยกว่านั้นห้าม (ให้ไปใช้ทางขอ "เลื่อน/改期" แทน)
+  --    เช็คด้วย is_teacher_caller() ตรงๆ ไม่ใช้ p_initiated_by (ป้องกันการปลอมค่า) — ด่านครูไม่ถูกแตะเลย
   if p_request_type = 'cancel' and not public.is_teacher_caller() then
-    raise exception 'students may not submit cancel requests — only the teacher can cancel a class (取消課程僅限老師操作)'
-      using errcode = 'P0001';
+    if p_original_time is null then
+      raise exception 'missing original_time to validate the 24-hour cancellation window' using errcode = 'P0001';
+    end if;
+    if (p_original_date::timestamp + p_original_time::time) at time zone 'Asia/Bangkok' - now() < interval '24 hours' then
+      raise exception 'students may only cancel a class 24+ hours in advance — please use reschedule instead (取消需在課堂開始前24小時，時間不夠請改用「申請改期」)' using errcode = 'P0001';
+    end if;
   end if;
 
   insert into public.classroom_requests
@@ -146,39 +155,74 @@ revoke execute on function public.is_teacher_caller() from public, anon, authent
 
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 4) ตรวจว่าแก้สำเร็จ — ต้องเห็น "แค่ 1 บรรทัด" เท่านั้น (8 พารามิเตอร์)
+-- 4) ตรวจว่าแก้สำเร็จ — ต้องเห็น "แค่ 1 บรรทัด" เท่านั้น (9 พารามิเตอร์ หลังเพิ่ม p_original_time)
 --    ตัว 7 พารามิเตอร์ถูกลบไปแล้ว ถ้ายังเห็น 2 บรรทัด แปลว่า drop function ไม่สำเร็จ
---    ทั้ง has_teacher_guard และ has_cancel_guard ต้องเป็น true
+--    has_teacher_guard และ has_cancel_guard ต้องเป็น true
 -- ────────────────────────────────────────────────────────────────────────────
 select p.proname,
        pg_get_function_identity_arguments(p.oid) as args,
        (pg_get_functiondef(p.oid) like '%is_teacher_caller%') as has_teacher_guard,
-       (pg_get_functiondef(p.oid) like '%students may not submit cancel requests%') as has_cancel_guard
+       (pg_get_functiondef(p.oid) like '%24 hours%') as has_cancel_guard
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.proname = 'submit_class_request';
 
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 5) ทดสอบจริงว่านักเรียนยื่น "ยกเลิก" ไม่ได้แล้ว (ปลอดภัย — โดน raise exception
---    ก่อนถึงบรรทัด insert เสมอ จึงไม่มีแถวขยะเข้าตาราง classroom_requests จริง)
+-- 5) ทดสอบจริง 3 เคส (ปลอดภัย — ทุกเคสโดน raise exception ก่อนถึงบรรทัด insert เสมอ
+--    ไม่มีแถวขยะเข้าตาราง classroom_requests จริง)
 --    เขียนแบบคืนค่าเป็นตาราง (ไม่ใช้ raise notice) เพราะ notice ไม่โชว์ในผลลัพธ์ SQL Editor
---    คาดหวัง: เห็น 1 แถว result = "✅ ผ่าน"
+--    คาดหวัง: (a) ไม่ใช่ error 24 ชม. (b) ต้องเป็น error 24 ชม. โดยเฉพาะ
+--    (c) หมายเหตุ: ทดสอบ "ครูข้ามด่านได้" แบบจริงไม่ได้จาก SQL Editor ตรงๆ เพราะ session ที่นี่
+--        ไม่มี JWT จริง is_teacher_caller() จะอ่านเป็น false เสมอไม่ว่า p_initiated_by จะส่งอะไรมา
+--        (ข้อจำกัดนี้มีมาตั้งแต่ก่อนแก้รอบนี้แล้ว ไม่ใช่ปัญหาใหม่ — ต้องให้ Lin ทดสอบจริงจากหน้าเว็บ
+--        ตอนล็อกอินเป็นครูจริงแทน)
 -- ────────────────────────────────────────────────────────────────────────────
 create or replace function public._test_cancel_guard()
 returns table(test_case text, result text) language plpgsql as $$
+declare
+  bkk_a timestamp;  -- เวลา Bangkok ท้องถิ่นของเคส (a) 25 ชม.ข้างหน้า
+  bkk_b timestamp;  -- เวลา Bangkok ท้องถิ่นของเคส (b) ~2 ชม.ข้างหน้า
 begin
+  -- สำคัญ: ต้องแปลง "อนาคต 25/2 ชม." เป็นวันที่+เวลา ตามเขต Bangkok ก่อน ไม่ใช่เอา current_date
+  -- บวกชั่วโมงตรงๆ — ไม่งั้นถ้าตอนทดสอบใกล้เที่ยงคืน วันที่กับเวลาจะไม่ตรงกัน (บั๊กที่แก้แล้วรอบนี้)
+  bkk_a := (now() + interval '25 hours') at time zone 'Asia/Bangkok';
+  bkk_b := (now() + interval '2 hours') at time zone 'Asia/Bangkok';
+
+  -- (a) นักเรียน ยกเลิกคาบที่ยังเหลืออีก 25 ชม. → ต้อง "ไม่ใช่" error 24 ชม.
+  --     (อาจจะพังด้วย error อื่นแทน เช่น token ไม่มีจริงในตาราง classroom_students
+  --     ทำให้ไปเจอ path บันทึกล้มเหลว/rate-limit ก่อน — ถือว่าโอเค แค่ต้องไม่ใช่ error 24 ชม.)
   begin
     perform public.submit_class_request('test-token-does-not-exist','ทดสอบ','cancel',
-      current_date, current_date+1, '10:00', 'test', 'student');
-    test_case := '8 พารามิเตอร์'; result := '❌ ไม่ผ่าน — นักเรียนยกเลิกได้!';
+      bkk_a::date, null, null, 'test', 'student', to_char(bkk_a, 'HH24:MI'));
+    test_case := 'a) ยกเลิกล่วงหน้า 25 ชม.'; result := 'ผ่านจนถึง insert (ไม่โดนบล็อกเลย) — ให้ Lin เช็คว่าตรงตามคาด';
     return next;
   exception when others then
-    test_case := '8 พารามิเตอร์';
-    result := case when sqlerrm like '%students may not submit cancel requests%'
-                   then '✅ ผ่าน' else '⚠️ บล็อกด้วยเหตุผลอื่น: '||sqlerrm end;
+    test_case := 'a) ยกเลิกล่วงหน้า 25 ชม.';
+    result := case when sqlerrm like '%24 hours%'
+                   then '❌ ไม่ผ่าน — โดนบล็อกด้วย error 24 ชม.ทั้งที่เหลือ 25 ชม.!'
+                   else '✅ ผ่าน — ไม่ใช่ error 24 ชม. (บล็อกด้วยเหตุผลอื่นที่คาดไว้: '||sqlerrm||')' end;
     return next;
   end;
+
+  -- (b) นักเรียน ยกเลิกคาบที่เหลืออีกแค่ ~2 ชม. → ต้องโดน error 24 ชม.โดยเฉพาะ
+  begin
+    perform public.submit_class_request('test-token-does-not-exist','ทดสอบ','cancel',
+      bkk_b::date, null, null, 'test', 'student', to_char(bkk_b, 'HH24:MI'));
+    test_case := 'b) ยกเลิกล่วงหน้า ~2 ชม.'; result := '❌ ไม่ผ่าน — นักเรียนยกเลิกได้ทั้งที่เหลือแค่ 2 ชม.!';
+    return next;
+  exception when others then
+    test_case := 'b) ยกเลิกล่วงหน้า ~2 ชม.';
+    result := case when sqlerrm like '%24 hours%'
+                   then '✅ ผ่าน' else '⚠️ บล็อกด้วยเหตุผลอื่น (คาดว่าจะเป็น error 24 ชม.): '||sqlerrm end;
+    return next;
+  end;
+
+  -- (c) หมายเหตุ: ทดสอบ "ครูยกเลิกได้ไม่จำกัดเวลา" จริงจังทำจาก SQL Editor ไม่ได้
+  --     (ไม่มี JWT จริง is_teacher_caller() จะเป็น false เสมอ) — ต้องให้ Lin ลองจากหน้าเว็บจริงแทน
+  test_case := 'c) ครูข้ามด่าน (ข้อจำกัด)';
+  result := 'ทดสอบจาก SQL Editor ไม่ได้จริง (ไม่มี JWT ครู) — ต้องลองจากหน้าเว็บตอนล็อกอินเป็นครูแทน';
+  return next;
 end; $$;
 
 select * from public._test_cancel_guard();

@@ -2035,6 +2035,7 @@ function render() {
     var curZh = session ? (session.words[session.index] && session.words[session.index].zh) : (randomEntry ? randomEntry.zh : (S.zh || ''));
     var zhHtml = curZh ? '<div class="word-zh">' + curZh + '</div>' : '';
     var mainBoxHtml, sentCtxHtml = '';
+    var sylStripHtml = ''; // Lin 2026-07-30: แยกกล่องพยางค์/กล่องคำในประโยคออกจาก mainBoxHtml — ต้องโชว์นอกกรอบทอง (#tf-banner) เหมือนเกมอ่าน/เกมพิมพ์ ไม่ใช่ฝังในกรอบทอง
     if (advSentenceCtx && session && session.words && session.words.length) {
       // Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ "ประโยคเต็ม" ไฮไลต์คำที่กำลังถามอยู่ในประโยค + คำแปลจีน (บริบทที่เกมอ่าน/เกมพิมพ์ไม่มี เพราะเล่นทีละคำ ไม่ได้โชว์ทั้งประโยค — จุดนี้เก็บไว้เหมือนเดิม)
       var sentHtml = session.words.map(function (w, i) {
@@ -2047,8 +2048,8 @@ function render() {
       }).join('');
       mainBoxHtml =
         '<div class="tf-adv-sent-main">' + sentHtml + '</div>' +
-        '<div class="tf-adv-sent-ctx-zh">' + (advSentenceCtx.zh || '') + '</div>' +
-        '<div class="syl-strip">' + sentChips + '</div>';
+        '<div class="tf-adv-sent-ctx-zh">' + (advSentenceCtx.zh || '') + '</div>';
+      sylStripHtml = sentChips;
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
       // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
       // 2026-07-16: เอาแถบพยางค์ (syl-chip แบบเกมอ่าน) ออกตามที่ Lin สั่ง — เหลือแค่คำเต็ม + กล่องโฟกัส
@@ -2062,9 +2063,8 @@ function render() {
           return '<div class="' + cls + '"><span class="syl-th">' + sy.th + '</span><span class="syl-n">' + (i + 1) + '/' + entrySyls.length + '</span></div>';
         }).join('');
         var fullWordPlain = S.parentWord || entrySyls.map(function (sy) { return sy.th; }).join('');
-        mainBoxHtml =
-          '<div class="tf-banner-word' + goldWord + '">' + fullWordPlain + '</div>' +
-          '<div class="syl-strip">' + wordChips + '</div>';
+        mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + fullWordPlain + '</div>';
+        sylStripHtml = wordChips;
       } else {
         mainBoxHtml = '<div class="tf-adv-sent-main">' + (S.parentWord || S.syllables.join('')) + '</div>';
       }
@@ -2074,6 +2074,12 @@ function render() {
     // บรรทัดคำอ่าน: 讀音 โชว์ได้ทุกขั้น (Lin 2026-07-30) · 英文讀音 โชว์หลังตอบแล้วเท่านั้น (ดู tfReadingLineHtml)
     // Lin 2026-07-30 (รอบ 2): เรียงใต้คำให้เหมือนกันทุกเกม → 讀音 → 英文讀音 → 翻譯 (เดิมคำแปลอยู่เหนือคำอ่าน)
     banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + tfGuideNoteHtml();
+    // Lin 2026-07-30: กล่องพยางค์/กล่องคำในประโยค 高級 อยู่นอกกรอบทอง — เติมเนื้อหาแยกจาก banner.innerHTML ข้างบน (ดู #tf-syl-strip ใน tone-finder.html)
+    var tfSylStripEl = document.getElementById('tf-syl-strip');
+    if (tfSylStripEl) {
+      if (sylStripHtml) { tfSylStripEl.style.display = 'flex'; tfSylStripEl.innerHTML = sylStripHtml; }
+      else { tfSylStripEl.style.display = 'none'; tfSylStripEl.innerHTML = ''; }
+    }
     // inject vault save button
     if (window.WordVault && S.word) {
       WordVault.injectStyles();
@@ -2094,6 +2100,8 @@ function render() {
     banner.style.display = 'none';
     var _ctlRow2 = document.getElementById('tf-word-ctl-row');
     if (_ctlRow2) _ctlRow2.style.display = 'none';
+    var tfSylStripEl2 = document.getElementById('tf-syl-strip'); // Lin 2026-07-30: ซ่อนกล่องพยางค์นอกกรอบทองด้วยตอนไม่มีคำ (เช่นหน้าเลือกระดับ/หน้าเฉลย)
+    if (tfSylStripEl2) { tfSylStripEl2.style.display = 'none'; tfSylStripEl2.innerHTML = ''; }
     document.getElementById('tf-hint').style.display = (S.step === 'level-select') ? 'block' : 'none';
   }
 
@@ -2764,7 +2772,10 @@ function tfFireStartOnce() {
 }
 
 function startSetSession(words, opts) {
-  advSentenceCtx = null; // ล้าง context ประโยค 高級 ทุกครั้งที่เริ่ม session ใหม่ (TF.startAdvSentence จะตั้งใหม่เองถ้าใช่)
+  // Lin 2026-07-30: เดิมล้าง advSentenceCtx แบบไม่มีเงื่อนไขทุกครั้ง → ตอน TF.startAdvSentence เรียกฟังก์ชันนี้ (ซึ่งเรียก render() ข้างในตั้งแต่บรรทัดท้ายฟังก์ชัน)
+  // แล้วค่อยตั้ง advSentenceCtx ใหม่ "หลัง" ฟังก์ชันนี้ return กลับไป ทำให้ render() รอบแรก (คำแรกของประโยค高級) เห็น advSentenceCtx เป็น null ก่อนเสมอ
+  // → ประโยคเต็มไม่โชว์ตั้งแต่คำแรก (โชว์แค่คำเดียว) ตามที่ Lin แจ้ง — แก้โดยให้ TF.startAdvSentence ตั้ง advSentenceCtx "ก่อน" เรียกฟังก์ชันนี้ พร้อมส่ง opts.isAdvSentence=true มากันไม่ให้บรรทัดนี้ล้างทับ
+  if (!(opts && opts.isAdvSentence)) advSentenceCtx = null; // ล้าง context ประโยค 高級 ทุกครั้งที่เริ่ม session ใหม่ที่ "ไม่ใช่" ประโยค高級 (กันของเก่าจากรอบก่อนค้าง)
   var entries = words.map(function(wd){
     if (wd && typeof wd === 'object') return wd; // 高級句子: ส่ง entry object มาตรงๆ (ข้าม lookup WORD_LIST) — Lin 2026-07-03
     for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === wd) return WORD_LIST[i];
@@ -3945,8 +3956,9 @@ var TF = {
     selectedLevel = 3;
     selectedCategory = '高級句子';
     advSentIdx = idx;
-    startSetSession(entries, { keepOrder: true });
-    advSentenceCtx = { th: s.th, zh: s.zh }; // ตั้งหลัง startSetSession (ฟังก์ชันนั้นจะล้างค่านี้ก่อนเสมอ)
+    // Lin 2026-07-30: ย้ายมาตั้ง advSentenceCtx "ก่อน" เรียก startSetSession (เดิมตั้งทีหลัง ทำให้ render() รอบแรกในนั้นเห็นค่าเป็น null → คำแรกของประโยค高級ไม่โชว์ประโยคเต็ม)
+    advSentenceCtx = { th: s.th, zh: s.zh };
+    startSetSession(entries, { keepOrder: true, isAdvSentence: true });
   },
 // Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [TF.openSearch]
   openAlpha: function() {
