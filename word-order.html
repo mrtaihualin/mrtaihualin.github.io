@@ -335,17 +335,17 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="zh-hint" id="wo-zh"></div>
 
   <!-- แถวปุ่มของเมนู 🍚 (ปุ่มจริงถูกย้ายเข้าเมนูตอนโหลด เหลือกล่องเปล่า) — Lin 2026-07-25
-       Lin 2026-07-30: เพิ่มแถว 翻譯 (คำแปลรายคำ ใต้กล่องทุกคำ เหมือน 英文讀音) + เรียงลำดับกลางทุกเกม: 讀音 → 翻譯 → 英文讀音 → 字體 -->
+       Lin 2026-07-30 (แก้รอบ 2): เพิ่มแถว 翻譯 (คำแปลรายคำ ใต้กล่องทุกคำ เหมือน 英文讀音) + เรียงลำดับกลางทุกเกม: 讀音 → 英文讀音 → 翻譯 → 字體 -->
   <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;">
     <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="woTogglePron()"></button>
-    <button id="wo-zh-word-toggle" class="word-ctl-btn" type="button" onclick="woToggleZhWord()"></button>
     <button id="rg-en-toggle" class="word-ctl-btn" type="button" onclick="woToggleEn()"></button>
+    <button id="wo-zh-word-toggle" class="word-ctl-btn" type="button" onclick="woToggleZhWord()"></button>
     <span id="font-toggle-slot"></span>
   </div>
   <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
     {id:'rg-pron-toggle',    label:'讀音',     state:'pron'},
-    {id:'wo-zh-word-toggle', label:'翻譯',     state:'zh'},
     {id:'rg-en-toggle',      label:'英文讀音', state:'en'},
+    {id:'wo-zh-word-toggle', label:'翻譯',     state:'zh'},
     {id:'font-toggle-slot',  label:'字體',     state:'font'}
   ]});});</script>
 

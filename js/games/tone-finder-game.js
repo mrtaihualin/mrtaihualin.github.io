@@ -2000,8 +2000,7 @@ function render() {
       mainBoxHtml =
         '<div class="tf-adv-sent-main">' + sentHtml + '</div>' +
         '<div class="tf-adv-sent-ctx-zh">' + (advSentenceCtx.zh || '') + '</div>' +
-        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '">' + S.word + '</div>' +
-        zhHtml;
+        '<div class="tf-banner-word tf-adv-sent-focus' + goldWord + '">' + S.word + '</div>';
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
       // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
       // 2026-07-16: เอาแถบพยางค์ (syl-chip แบบเกมอ่าน) ออกตามที่ Lin สั่ง — เหลือแค่คำเต็ม + กล่องโฟกัส
@@ -2014,13 +2013,13 @@ function render() {
           }).join('')
         : (S.parentWord || S.syllables.join(''));
       mainBoxHtml =
-        '<div class="tf-adv-sent-main">' + fullWordHtml + '</div>' +
-        zhHtml;
+        '<div class="tf-adv-sent-main">' + fullWordHtml + '</div>';
     } else {
-      mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>' + zhHtml;
+      mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>';
     }
     // บรรทัดคำอ่าน: 讀音 โชว์ได้ทุกขั้น (Lin 2026-07-30) · 英文讀音 โชว์หลังตอบแล้วเท่านั้น (ดู tfReadingLineHtml)
-    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + tfGuideNoteHtml();
+    // Lin 2026-07-30 (รอบ 2): เรียงใต้คำให้เหมือนกันทุกเกม → 讀音 → 英文讀音 → 翻譯 (เดิมคำแปลอยู่เหนือคำอ่าน)
+    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + tfGuideNoteHtml();
     // inject vault save button
     if (window.WordVault && S.word) {
       WordVault.injectStyles();
@@ -3301,7 +3300,7 @@ function stepResult() {
 
   return '<div class="result-v2">'+
     '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+enBtnHtml+'</div>'+
-    resultZhHtml + resultReadHtml +
+    resultReadHtml + resultZhHtml +   // Lin 2026-07-30 (รอบ 2): เรียง 讀音 → 英文讀音 → 翻譯 เหมือนกันทุกเกม (เดิมคำแปลอยู่ก่อนคำอ่าน)
 
     '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+
       '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:10px;letter-spacing:3px;color:'+t.color+'99;margin-bottom:8px;text-transform:uppercase;">聲調分析結果</div>'+
