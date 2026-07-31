@@ -811,6 +811,11 @@ serve(async (req) => {
         const senderIsTeacherMove = event.source && teacherUserIdMove && event.source.userId === teacherUserIdMove;
         if (!senderIsTeacherMove) {
           console.error('[line-webhook] ⚠️ confirm_reschedule_move: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdMove);
+          // 🟡 2026-07-31 เพิ่ม (งาน C13 ที่เหลือ — ลอกจากก้อน confirm_cancel_delete):
+          //   เดิมเงียบสนิท ไม่ตอบอะไรเลย → ปุ่มจะดูเหมือน "ตายสนิท" ถ้า LINE_TEACHER_USER_ID ตั้งผิด
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 這個 LINE 帳號沒有老師權限，沒有執行任何動作。');
+          }
           continue;
         }
 
@@ -842,12 +847,19 @@ serve(async (req) => {
         }
 
         // ── 原子鎖：跟 confirm_add_class／confirm_cancel_delete 同一個欄位、同一套語意 ──
+        // 🟠 2026-07-31 เพิ่ม (งาน C6 ที่เหลือ) — ล็อกเก่ากว่า 10 นาที = ถือว่าค้าง แย่งใหม่ได้เลย
+        //   เลขเดียวกับ confirm_cancel_delete (staleLockCutoffCancel) และฝั่งเว็บ claimRequestForProcessing
+        //   ทำไมที่นี่ปลอดภัย (ต่างจาก confirm_add_class ที่ตั้งใจ "ไม่" ใส่): moveCalendarEventById
+        //   คือการ "ย้าย" event เดิมไปวัน/เวลาเดิมที่ขอไว้ซ้ำ ไม่ใช่การสร้างใหม่ — กดซ้ำ/แย่งล็อกไป
+        //   ทำงานซ้ำ อย่างมากคือ PATCH ไปที่เดิมอีกรอบ ไม่ทำให้เกิดคาบซ้อนกันในปฏิทินเหมือนที่
+        //   confirm_add_class เสี่ยง จึงใช้กฎเดียวกับ confirm_cancel_delete ได้ปลอดภัย
+        const staleLockCutoffMove = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { error: claimErrMove, count: claimCountMove } = await supabase
           .from('classroom_requests')
           .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
           .eq('id', requestIdMove)
           .eq('status', 'pending')
-          .is('processing_started_at', null)
+          .or('processing_started_at.is.null,processing_started_at.lt.' + staleLockCutoffMove)
           .select('id');
 
         if (claimErrMove) {
@@ -931,6 +943,11 @@ serve(async (req) => {
         const senderIsTeacherPick = event.source && teacherUserIdPick && event.source.userId === teacherUserIdPick;
         if (!senderIsTeacherPick) {
           console.error('[line-webhook] ⚠️ confirm_reschedule_pick: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdPick);
+          // 🟡 2026-07-31 เพิ่ม (งาน C13 ที่เหลือ — ลอกจากก้อน confirm_cancel_delete):
+          //   เดิมเงียบสนิท ไม่ตอบอะไรเลย → ปุ่มจะดูเหมือน "ตายสนิท" ถ้า LINE_TEACHER_USER_ID ตั้งผิด
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 這個 LINE 帳號沒有老師權限，沒有執行任何動作。');
+          }
           continue;
         }
 
@@ -1626,12 +1643,36 @@ serve(async (req) => {
         // ทำไมเลือก "ปฏิเสธ" ไม่ใช่ "เตือนแล้วทำต่อ": ใน LINE ถามครูกลางทางไม่ได้ (กดปุ่มไปแล้วถอยไม่ได้)
         //   → ส่งไปให้ตัดสินใจที่เว็บ ซึ่งมีกล่องยืนยันให้อ่านก่อนกด (เหมือนที่ทำกับเคส "วันไม่ตรง")
         // เช็คก่อนแย่งล็อก จะได้ไม่ต้องปลดล็อกคืน
-        if (reqRowCancel.token && reqRowCancel.original_date) {
+        // 🟠 2026-07-31 เพิ่ม (งาน C10 ที่เหลือ) — original_date ว่าง → ลองคำนวณจาก Calendar event แทน
+        //   เดิม: original_date ว่าง = ข้ามด่านทั้งก้อนไปเงียบๆ ปล่อยลบไม่มีคำเตือน
+        //   พอร์ตแนวคิดเดียวกับฝั่งเว็บ (classroom/index.html:7962 — cancelDayForAtt) มาที่นี่:
+        //   ยิง GET ไปดู Calendar event ตัวเดิม (ใช้ calendar_event_id ที่มีอยู่แล้ว) แล้วแปลงเวลาเริ่ม
+        //   เป็นวันที่ไทยด้วย extractBangkokDateStr (ฟังก์ชันเดิมที่มีอยู่แล้วในไฟล์นี้)
+        //   หาไม่ได้จริงๆ (network พัง/ไม่เห็น event) ก็ไม่บล็อกอะไร แค่ข้ามด่านเหมือนพฤติกรรมเดิม
+        let attDateForCancel = reqRowCancel.original_date || null;
+        if (!attDateForCancel && reqRowCancel.calendar_event_id) {
+          try {
+            const gTokenForAtt = await getGoogleCalendarToken();
+            const calIdForAtt = Deno.env.get('GOOGLE_CALENDAR_ID');
+            if (gTokenForAtt && calIdForAtt) {
+              const evUrlForAtt = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calIdForAtt) + '/events/' + encodeURIComponent(reqRowCancel.calendar_event_id);
+              const evResForAtt = await fetch(evUrlForAtt, { headers: { Authorization: 'Bearer ' + gTokenForAtt } });
+              if (evResForAtt.ok) {
+                const evDataForAtt = await evResForAtt.json().catch(() => ({}));
+                const startIsoForAtt = evDataForAtt.start && (evDataForAtt.start.dateTime || evDataForAtt.start.date);
+                attDateForCancel = extractBangkokDateStr(startIsoForAtt) || null;
+              }
+            }
+          } catch (e) {
+            console.warn('[line-webhook] ⚠️ confirm_cancel_delete: หาวันที่จาก Calendar event แทน original_date ที่ว่างไม่สำเร็จ (ไม่บล็อก):', e && e.message ? e.message : e, 'request=', requestIdCancel);
+          }
+        }
+        if (reqRowCancel.token && attDateForCancel) {
           const { data: attRowsCancel, error: attErrCancel } = await supabase
             .from('classroom_attendance')
             .select('lesson_date')
             .eq('token', reqRowCancel.token)
-            .eq('lesson_date', reqRowCancel.original_date)
+            .eq('lesson_date', attDateForCancel)
             .limit(1);
           if (attErrCancel) {
             // อ่านไม่ได้ = ไม่รู้ → ห้ามเดาว่า "ไม่มี" แล้วลบเลย ต้องบอกครูตรงๆ (RELIABILITY FIRST)
@@ -1645,7 +1686,7 @@ serve(async (req) => {
           if (attRowsCancel && attRowsCancel.length) {
             if (channelToken && event.replyToken) {
               await replyLine(channelToken, event.replyToken,
-                '🛑 這堂課（' + reqRowCancel.original_date + '）已經有「上過課」的紀錄了，沒有刪除任何東西。\n' +
+                '🛑 這堂課（' + attDateForCancel + '）已經有「上過課」的紀錄了，沒有刪除任何東西。\n' +
                 '刪掉的話，堂數已經扣掉但 Calendar 會變空的，兩邊對不起來。\n' +
                 '請到網站確認後再決定：https://mrtaihualin.com/classroom/#req-row-' + requestIdCancel);
             }
@@ -1816,7 +1857,15 @@ serve(async (req) => {
         // 實際轉發邏輯在 handleTeacherTextMessage（收到老師下一句純文字時處理）。
         const teacherUserIdContact = Deno.env.get('LINE_TEACHER_USER_ID');
         const senderIsTeacherContact = event.source && teacherUserIdContact && event.source.userId === teacherUserIdContact;
-        if (!senderIsTeacherContact) continue; // 不是老師本人按的，安全忽略
+        if (!senderIsTeacherContact) {
+          // 🟡 2026-07-31 เพิ่ม (งาน C13 ที่เหลือ — จุดนี้เดิมแย่สุด ไม่มีแม้แต่ log):
+          //   เดิมเงียบสนิท ไม่ตอบอะไรเลย → ปุ่มจะดูเหมือน "ตายสนิท" ถ้า LINE_TEACHER_USER_ID ตั้งผิด
+          console.error('[line-webhook] ⚠️ start_contact_student: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. token=', params.get('token'));
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 這個 LINE 帳號沒有老師權限，沒有執行任何動作。');
+          }
+          continue;
+        }
         const contactToken = params.get('token');
         if (!contactToken) continue;
         const { data: stuRowContact } = await supabase.from('classroom_students').select('name').eq('token', contactToken).maybeSingle();
