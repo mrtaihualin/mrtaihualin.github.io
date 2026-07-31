@@ -115,18 +115,18 @@ function getSlotOrder(vowel,final){
 // ตอนนี้ 子音/尾音 ในหน้าเฉลย + ไทล์คำตอบ โชว์ค่าที่เก็บในข้อมูลตรงๆ ไม่มีการแปลง/ลูกศรแสดงเสียงอีกต่อไป
 // (CONS_GROUPS/VOWEL_GROUPS/FINAL_GROUPS ที่ใช้สร้างตัวลวงในเกมจับคู่ ยังอยู่เหมือนเดิม คนละระบบ)
 var VOWEL_READ={
-  'อะ':'อะ（短母音）','อา':'อา（長母音）','ออ':'ออ',
-  'เอาะ':'เอาะ','เออะ':'เออะ（短母音）',
-  'โอ':'โอ','ไอ':'ไ','ใอ':'ใ',
+  'อะ':'อะ（短母音）','อา':'อา（長母音）','ออ':'ออ（長母音）',
+  'เอาะ':'เอาะ（短母音）','เออะ':'เออะ（短母音）',
+  'โอ':'โอ（長母音）','ไอ':'ไ','ใอ':'ใ',
   'โอะ':'โอะ（短母音）',
   'อุ':'อุ（短母音）','อู':'อู（長母音）',
   'อิ':'อิ（短母音）','อี':'อี（長母音）',
   'อื':'อือ（長母音）','อึ':'อึ（短母音）',
   'เอะ':'เอะ（短母音）','แอะ':'แอะ（短母音）',
   'เอ':'เอ（長母音）','แอ':'แอ（長母音）',
-  'เออ':'เออ','เอา':'เอา',
-  'เอีย':'เอีย','เอือ':'เอือ','เอิ':'เออ',
-  'อัว':'อัว','อั':'อะ（有尾音）','อำ':'อำ',
+  'เออ':'เออ（長母音）','เอา':'เอา',
+  'เอีย':'เอีย（長母音）','เอือ':'เอือ（長母音）','เอิ':'เออ',
+  'อัว':'อัว（長母音）','อั':'อะ（有尾音）','อำ':'อำ',
   // ตัวลวงสระลดรูป (มีตัวสะกด) — Lin สั่ง 2026-07-10: ต้องโชว์เป็นสระตัวจริง ไม่ใช่รูปลดรูป
   'แอ็':'แอะ（有尾音）','เอ็':'เอะ（有尾音）','อ็':'เอาะ（有尾音）','็อ':'เอาะ（有尾音）'
 };
@@ -1847,6 +1847,9 @@ document.addEventListener('keydown',function(e){
   if(_sm && _sm.classList.contains('show'))return;
   var nextBtn=document.getElementById('btn-next');
   if(nextBtn && nextBtn.style.display!=='none' && nextBtn.offsetParent!==null){ nextBtn.click(); e.preventDefault(); return; }
+  // Lin 2026-07-31: เพิ่มปุ่ม 下一個音節→ ให้กด Enter ได้เหมือนปุ่ม 下一字→ (เดิมมีแค่ btn-next ไม่มี btn-next-syl)
+  var nextSylBtn=document.getElementById('btn-next-syl');
+  if(nextSylBtn && nextSylBtn.style.display!=='none' && nextSylBtn.offsetParent!==null){ nextSylBtn.click(); e.preventDefault(); return; }
   var checkBtn=document.getElementById('btn-check');
   if(checkBtn && checkBtn.style.display!=='none' && !checkBtn.disabled){ checkBtn.click(); e.preventDefault(); }
 });

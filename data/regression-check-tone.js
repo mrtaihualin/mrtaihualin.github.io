@@ -19,6 +19,16 @@ const W = global.WORDS_MASTER;
 const S = global.ADV_SENTENCES;
 const analyzeSyllable = global.analyzeSyllable;
 
+// ── รายการที่ Lin ยืนยันแล้วว่า "ไม่ใช่บั๊ก" (คำยืมอังกฤษ / คำที่คนไทยพูดเพี้ยนจากกฎเขียนที่รู้กันทั่วไป)
+// ตรวจสอบด้วย field "en" (คำอ่านโรมันของ Lin เอง) แล้ว — ยืนยันครบทุกจุด 2026-07-31
+// ใช้คู่ "th ของคำเต็ม|th ของพยางค์" กันชนกับพยางค์ซ้ำชื่อคำอื่น — เพิ่ม/ลดรายการนี้ได้เฉพาะที่ Lin ยืนยันเองเท่านั้น
+const KNOWN_ACCEPTED_MISMATCHES = new Set([
+  'เช็คเอาท์|เอาท์',  // คำยืมอังกฤษ (check-out) ออกเสียงไม่ตามกฎ
+  'ออฟฟิศ|ออฟ',      // คำยืมอังกฤษ (office) ออกเสียงไม่ตามกฎ
+  'เมื่อกี้|กี้',      // คนไทยพูดเพี้ยนเป็นตรีทั่วไป (ยืนยันจาก Lin 2026-07-15 + 2026-07-31)
+  'ก็|ก็'            // คนไทยพูดเพี้ยนเป็นโททั่วไป
+]);
+
 const entries = [];
 
 // ── words-data.js ──
@@ -91,10 +101,21 @@ console.log('เช็คแล้ว ' + entries.length + ' คำ/ประโ
 console.log('ไม่ตรง: ' + mismatchCount + ' คำ/ประโยค (' + mismatchSyls + ' พยางค์)');
 console.log('เขียนรายงานที่ data/tone-regression-report.json — เปิดดูรายละเอียดได้ที่ data/review-tool.html');
 if (mismatchCount > 0) {
-  console.log('\nรายการที่ไม่ตรง:');
+  var newMismatches = [];
+  var knownMismatches = [];
   entries.filter(function (e) { return e.status === 'mismatch'; }).forEach(function (e) {
     e.syllables.filter(function (s) { return s.match === false; }).forEach(function (s) {
-      console.log('  - ' + e.word + ' [' + s.th + '] Lin พิมพ์=' + s.expectedToneName + ' เครื่องคิดได้=' + (s.computedToneName || '(คำนวณไม่ได้)'));
+      var key = e.word + '|' + s.th;
+      var line = e.word + ' [' + s.th + '] Lin พิมพ์=' + s.expectedToneName + ' เครื่องคิดได้=' + (s.computedToneName || '(คำนวณไม่ได้)');
+      if (KNOWN_ACCEPTED_MISMATCHES.has(key)) knownMismatches.push(line);
+      else newMismatches.push(line);
     });
   });
+  // ⚠️ นี่คือส่วนที่งาน weekly-full-audit ควรอ่าน — ถ้า newMismatches.length > 0 = เจอจุดใหม่จริง ต้องแจ้ง Lin
+  // ถ้ามีแต่ knownMismatches = ปกติ ไม่ต้องแจ้ง (Lin ยืนยันแล้วว่าเป็นคำยืม/คำเพี้ยนเสียงที่รู้กันทั่วไป)
+  console.log('\n🔴 จุดใหม่ที่ยังไม่เคยตรวจ (' + newMismatches.length + '):');
+  if (newMismatches.length === 0) console.log('  (ไม่มี — ไม่ต้องแจ้ง Lin)');
+  newMismatches.forEach(function (l) { console.log('  - ' + l); });
+  console.log('\n🟢 จุดที่ Lin ยืนยันแล้วว่าไม่ใช่บั๊ก (' + knownMismatches.length + ', ไม่ต้องแจ้งซ้ำ):');
+  knownMismatches.forEach(function (l) { console.log('  - ' + l); });
 }

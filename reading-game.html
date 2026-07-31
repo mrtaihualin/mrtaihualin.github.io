@@ -497,10 +497,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
     <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
     <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一字 →</button>
+    <!-- Lin 2026-07-31: ย้ายปุ่ม 下一個音節 เข้ามาอยู่ในแถวเดียวกับ 已記得/檢查 (เดิมอยู่นอก .btn-row ทำให้ตกไปอีกบรรทัด) -->
+    <button class="btn btn-secondary" id="btn-next-syl" onclick="rgGotoSyl(sylIdx+1)" style="display:none">下一個音節 →</button>
   </div>
-
-  <!-- ปุ่มข้ามไปพยางค์ถัดไปแบบง่ายๆ (中級หลายพยางค์) — วางตรงกลางกดง่ายกว่าไปหาแถบ syl-strip เล็กๆ -->
-  <button class="btn btn-secondary" id="btn-next-syl" onclick="rgGotoSyl(sylIdx+1)" style="display:none;margin:2px 0 6px;">下一個音節 →</button>
 
   <!-- กล่องคำอธิบายเฉลย — Lin 2026-07-30: เอา猜聲調 (ปุ่มทายเสียง+แต้มโบนัส) ออกทั้งหมดแล้ว เหลือแค่คำอธิบาย 子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์ โชว์อัตโนมัติตอนเฉลย -->
   <div class="bonus-section" id="bonus-section" aria-live="polite">
@@ -557,7 +556,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<script src="js/games/reading-game-app.min.js?v=16"></script>
+<script src="js/games/reading-game-app.min.js?v=17"></script>
 </div><!-- /.v3-page -->
 <script src="js/core/shared.min.js?v=15"></script>
 

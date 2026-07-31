@@ -199,6 +199,20 @@ function currentAnswerSyl() {
   if (S.syllables.length !== syls.length) return null;
   return syls[S.selectedSyl];
 }
+// Lin 2026-07-31: คำหลายพยางค์ — รวมเฉลยของ "ทุกพยางค์" ไว้ที่เดียว (ใช้โชว์ตอนหน้าพยางค์สุดท้ายเท่านั้น)
+//   เทียบไม่ได้ (จำนวนพยางค์ไม่ตรงคลัง) = คืน '' เหมือน currentAnswerSyl (ไม่เดา)
+function tfAllAnswerRowsHtml() {
+  var entry = tfCurEntry();
+  var syls = entry && ((entry.readSyls && entry.readSyls.length) ? entry.readSyls : entry.syls);
+  if (!syls || !syls.length) {
+    var parent = S.parentWord || S.word;
+    syls = WORD_SYLS[parent];
+  }
+  if (!syls || !syls.length || !S.syllables || S.syllables.length !== syls.length) return '';
+  var out = '';
+  for (var i = 0; i < syls.length; i++) out += tfAnswerRowsHtml(syls[i]);
+  return out;
+}
 // กล่องแถวเฉลยรูปแบบกลาง (หัว 📍 + แถว 前引字/子音/連音/母音/尾音/消音/聲調符)
 function tfAnswerRowsHtml(sy) {
   if (!sy || typeof buildAnswerRows !== 'function') return '';
@@ -631,6 +645,20 @@ function tfWireToneKeyboard() {
   });
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireToneKeyboard); else tfWireToneKeyboard();
+
+// ── กด Enter = กดปุ่ม tf-session-next-btn (ปุ่มเดียวกัน 4 ข้อความ: 下一個音節→ / 太棒了，我們繼續→ / 來看看我們的成果吧🎉 / 分析新單字) — Lin สั่ง 2026-07-31 ──
+// ล้อกับตรรกะเดียวกับเกมอ่าน/เกมพิมพ์: ห้ามชนกับการพิมพ์ในช่อง input/textarea หรือมี popup เปิดอยู่
+function tfWireEnterNext() {
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    var tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (document.querySelector('.sg-start-overlay, .tf-ask-overlay, #tf-reveal-ov, #tf-ask-ov')) return; // popup เปิดอยู่ ห้ามชน
+    var btn = document.getElementById('tf-session-next-btn');
+    if (btn && btn.offsetParent !== null) { btn.click(); e.preventDefault(); }
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireEnterNext); else tfWireEnterNext();
 
 // ════════════════════════════════════════════════════════════
 // ===== TF_GAME ENGINE START =====  (สเตจ 2: streak/freeze/เป้า/คำทอง)
@@ -2035,6 +2063,7 @@ function render() {
     var curZh = session ? (session.words[session.index] && session.words[session.index].zh) : (randomEntry ? randomEntry.zh : (S.zh || ''));
     var zhHtml = curZh ? '<div class="word-zh">' + curZh + '</div>' : '';
     var mainBoxHtml, sentCtxHtml = '';
+    var sentCtxZhHtml = ''; // Lin 2026-07-31: คำแปลทั้งประโยค (高級) — โชว์รวมกับ 翻譯ท้ายแถว ไม่ให้แซง 讀音/英文讀音
     var sylStripHtml = ''; // Lin 2026-07-30: แยกกล่องพยางค์/กล่องคำในประโยคออกจาก mainBoxHtml — ต้องโชว์นอกกรอบทอง (#tf-banner) เหมือนเกมอ่าน/เกมพิมพ์ ไม่ใช่ฝังในกรอบทอง
     if (advSentenceCtx && session && session.words && session.words.length) {
       // Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ "ประโยคเต็ม" ไฮไลต์คำที่กำลังถามอยู่ในประโยค + คำแปลจีน (บริบทที่เกมอ่าน/เกมพิมพ์ไม่มี เพราะเล่นทีละคำ ไม่ได้โชว์ทั้งประโยค — จุดนี้เก็บไว้เหมือนเดิม)
@@ -2046,9 +2075,10 @@ function render() {
         var cls = 'syl-chip' + (i === session.index ? ' cur' : (i < session.index ? ' done' : ''));
         return '<div class="' + cls + '"><span class="syl-th">' + w.word + '</span><span class="syl-n">' + (i + 1) + '/' + session.words.length + '</span></div>';
       }).join('');
-      mainBoxHtml =
-        '<div class="tf-adv-sent-main">' + sentHtml + '</div>' +
-        '<div class="tf-adv-sent-ctx-zh">' + (advSentenceCtx.zh || '') + '</div>';
+      // Lin 2026-07-31: ย้ายคำแปลทั้งประโยค (tf-adv-sent-ctx-zh) ออกจาก mainBoxHtml
+      //   เดิมโผล่ก่อน 讀音 ทำให้ลำดับเพี้ยน (翻譯 → 讀音 → 翻譯) ตอนนี้เก็บไว้โชว์รวมกับ 翻譯 หลัง 讀音/英文讀音 แทน (ดู sentCtxZhHtml ด้านล่าง)
+      mainBoxHtml = '<div class="tf-adv-sent-main">' + sentHtml + '</div>';
+      sentCtxZhHtml = advSentenceCtx.zh ? '<div class="tf-adv-sent-ctx-zh">' + advSentenceCtx.zh + '</div>' : '';
       sylStripHtml = sentChips;
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
       // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
@@ -2073,7 +2103,7 @@ function render() {
     }
     // บรรทัดคำอ่าน: 讀音 โชว์ได้ทุกขั้น (Lin 2026-07-30) · 英文讀音 โชว์หลังตอบแล้วเท่านั้น (ดู tfReadingLineHtml)
     // Lin 2026-07-30 (รอบ 2): เรียงใต้คำให้เหมือนกันทุกเกม → 讀音 → 英文讀音 → 翻譯 (เดิมคำแปลอยู่เหนือคำอ่าน)
-    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + tfGuideNoteHtml();
+    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + sentCtxZhHtml + tfGuideNoteHtml();
     // Lin 2026-07-30: กล่องพยางค์/กล่องคำในประโยค 高級 อยู่นอกกรอบทอง — เติมเนื้อหาแยกจาก banner.innerHTML ข้างบน (ดู #tf-syl-strip ใน tone-finder.html)
     var tfSylStripEl = document.getElementById('tf-syl-strip');
     if (tfSylStripEl) {
@@ -2105,27 +2135,13 @@ function render() {
     document.getElementById('tf-hint').style.display = (S.step === 'level-select') ? 'block' : 'none';
   }
 
-  // Breadcrumb
+  // Breadcrumb — Lin 2026-07-31: ลบแถบนี้ออกจากเกมเสียงทุกระดับตามที่ Lin สั่ง (ซ่อนถาวร ไม่โชว์อีกต่อไป)
   var bc = document.getElementById('tf-bc');
-  if (S.path.length > 1 && S.step !== 'result' && !isSelectScreen) {
-    bc.style.display = 'flex';
-    bc.innerHTML = S.path.map(function(p,i){
-      return (i>0?'<span class="tf-bc-sep">›</span>':'') +
-        '<span class="tf-bc-item">'+p+'</span>';
-    }).join('');
-  } else { bc.style.display = 'none'; }
+  bc.style.display = 'none';
 
-  // Nav bar (back/forward)
+  // Nav bar (back/forward) — Lin 2026-07-31: ลบแถบนี้ออกจากเกมเสียงทุกระดับตามที่ Lin สั่ง (ซ่อนถาวร ไม่โชว์อีกต่อไป)
   var navBar = document.getElementById('tf-nav-bar');
-  var backBtn = document.getElementById('tf-back-btn');
-  var fwdBtn = document.getElementById('tf-fwd-btn');
-  if (!isSelectScreen) {
-    navBar.style.display = 'flex';
-    backBtn.disabled = (histPos <= 0 && !(session && selectedLevel));
-    fwdBtn.disabled = (histPos >= hist.length-1);
-  } else {
-    navBar.style.display = 'none';
-  }
+  navBar.style.display = 'none';
 
   // Main body
   var body = document.getElementById('tf-body');
@@ -3238,41 +3254,21 @@ function stepResult() {
     render();
   });
 
+  // Lin 2026-07-14: คำหลายพยางค์ ไหลอัตโนมัติทีละพยางค์ตามลำดับ (ไม่มีหน้าเลือกพยางค์เอง/ไม่มี回到音節總覽 อีกแล้ว)
+  //   ยังไม่ใช่พยางค์สุดท้าย → 下一個音節 (ไปพยางค์ถัดไปของคำเดิม) · พยางค์สุดท้าย → 太棒了 (โชว์สรุปทุกพยางค์ก่อนไปคำใหม่จริง)
+  var isMultiSyl = S.syllables && S.syllables.length > 1 && S.selectedSyl != null;
+  var isLastSyl = !isMultiSyl || (S.selectedSyl + 1 >= S.syllables.length);
+
   // ── Session block ──
+  // Lin 2026-07-31: ตัด badge 🎉一次就推導成功/終於找到答案了 + ช่อง "結果" ออกทั้งคู่ — สีกรอบ/ป้ายวรรณยุกต์ในการ์ดผลลัพธ์บอกถูก-ผิดอยู่แล้ว ไม่ต้องพูดซ้ำ เหลือแค่ "你的選擇" บรรทัดเดียว
   var sessionBlock = '';
   if (session) {
-    var sEntry = session.words[session.index];
-    // Lin 2026-07-25: แตกเสียงจาก "พยางค์ที่กำลังตอบ" (S.word) ไม่ใช่คำเต็ม
-    //   บั๊กเดิม: คำหลายพยางค์จะโชว์ 母音/尾音 ของท้ายคำ เช่น สว่าง ตอบพยางค์ สะ แต่ตารางขึ้น 尾音 ง (ของ หว่าง)
-    //   คำพยางค์เดียว S.word เท่ากับ sEntry.word อยู่แล้ว จึงไม่กระทบ
-    var bd = getBreakdown(S.word);
-    var noMistakes = (session.currentWordMistakes || 0) === 0;
     var initialGuess = session.initialGuess;
-    var finalAnswer = session.finalAnswer;
-    var toneColors = ['#6cb8ff','#7ec87e','#ff7c7c','#ffb347','#c39bff'];
-
-    // Performance badge
-    var badge = noMistakes
-      ? '<span class="result-v2-session-badge" style="color:#4a9a4a;background:rgba(74,154,74,0.12);">🎉 一次就推導成功，太強了！</span>'
-      : '<span class="result-v2-session-badge" style="color:#c46a00;background:rgba(196,106,0,0.12);">🎉 終於找到答案了，很棒喔捏！</span>';
-
-    // Guess comparison row
     var igTone = initialGuess && initialGuess !== 0 ? TONES[initialGuess] : null;
-    var faAnswerKey = (finalAnswer !== undefined && finalAnswer !== null) ? finalAnswer : initialGuess;
     var igLabel = initialGuess === 0 ? '不確定' : (igTone ? igTone.zh : '—');
-    var guessCorrect = faAnswerKey === S.tone || (faAnswerKey === 0 && initialGuess === S.tone);
-
-    // Lin 2026-07-25: ตัดช่อง "最終選擇" ออก — เกมถามวรรณยุกต์ครั้งเดียวก่อนเล่นแล้ว (ไม่มีถามซ้ำอีกรอบ)
-    //   ช่องนี้เลยโชว์ค่าเดียวกับ "一開始的選擇" ทุกครั้ง = ซ้ำเปล่าๆ · เปลี่ยนป้ายช่องแรกเป็น 你的選擇 ให้ตรงความจริง
-    var guessRow = '<div class="result-v2-guess-row">'+
-      '<div class="result-v2-guess-item">'+
-        '<div class="result-v2-guess-label">你的選擇</div>'+
-        '<div class="result-v2-guess-val" style="color:'+(igTone ? igTone.color : '#aaa')+';">'+igLabel+'</div>'+
-      '</div>'+
-      '<div class="result-v2-guess-item">'+
-        '<div class="result-v2-guess-label">結果</div>'+
-        '<div class="result-v2-guess-val" style="color:'+(guessCorrect?'#4a9a4a':'#c46a00')+'">'+(guessCorrect?'🎉 答對了！':'💪 我們學起來了！')+'</div>'+
-      '</div>'+
+    var guessRow = '<div style="margin-bottom:8px;">'+
+      '<span class="result-v2-guess-label" style="margin-right:5px;">你的選擇</span>'+
+      '<span class="result-v2-guess-val" style="color:'+(igTone ? igTone.color : '#aaa')+';">'+igLabel+'</span>'+
     '</div>';
 
     // Lin 2026-07-25: ตัดแถบ 中文／泰文讀音／英文拼音 ออก — ย้ายไปใช้สวิตช์ในเมนู 🍚 (翻譯 / 讀音 / 英文讀音)
@@ -3282,10 +3278,10 @@ function stepResult() {
     // Lin 2026-07-30 (รอบ 2): เปลี่ยนตารางเก่า (起首子音/母音/尾音) → กล่องแถวเฉลยรูปแบบกลางเดียวกับเกมอ่าน/เกมพิมพ์
     //   (前引字→子音→連音→母音→尾音→消音→聲調符 + ลูกศรเสียงจากฟิลด์ที่ Lin ตรวจ 100% — ห้ามคำนวณเอง)
     //   เทียบข้อมูลคลังไม่ได้ = ไม่โชว์ส่วนแตกตัวอักษรเลย ดีกว่าโชว์ผิด (ยกเลิก fallback getBreakdown เดิม)
-    var ansHtml = tfAnswerRowsHtml(currentAnswerSyl());
+    // Lin 2026-07-31: คำหลายพยางค์ — ไม่โชว์ 音節拆解 ทีละพยางค์อีกต่อไป รอไปรวมโชว์ทุกพยางค์พร้อมกันตอนหน้าพยางค์สุดท้าย (ดู multiSummaryHtml ด้านล่าง)
+    var ansHtml = isMultiSyl ? '' : tfAnswerRowsHtml(currentAnswerSyl());
 
     sessionBlock =
-      '<div style="margin-bottom:12px;">'+badge+'</div>'+
       guessRow+
       (ansHtml ? '<div class="result-v2-bd">'+
         '<div class="result-v2-bd-title">音節拆解</div>'+
@@ -3294,10 +3290,6 @@ function stepResult() {
   }
 
   var isLastSessionWord = session && (session.index + 1 >= session.words.length);
-  // Lin 2026-07-14: คำหลายพยางค์ ไหลอัตโนมัติทีละพยางค์ตามลำดับ (ไม่มีหน้าเลือกพยางค์เอง/ไม่มี回到音節總覽 อีกแล้ว)
-  //   ยังไม่ใช่พยางค์สุดท้าย → 下一個音節 (ไปพยางค์ถัดไปของคำเดิม) · พยางค์สุดท้าย → 太棒了 (โชว์สรุปทุกพยางค์ก่อนไปคำใหม่จริง)
-  var isMultiSyl = S.syllables && S.syllables.length > 1 && S.selectedSyl != null;
-  var isLastSyl = !isMultiSyl || (S.selectedSyl + 1 >= S.syllables.length);
   var nextBtnLabel, nextBtnOnclick;
   if (isMultiSyl && !isLastSyl) {
     nextBtnLabel = '下一個音節 →';
@@ -3308,12 +3300,12 @@ function stepResult() {
   }
 
   // Lin 2026-07-14: จบพยางค์สุดท้ายของคำหลายพยางค์ → โชว์การ์ดสรุปผลทุกพยางค์ก่อนไปคำใหม่
+  // Lin 2026-07-31: ตัดบรรทัด 🎉/💪 ท้ายการ์ดออก (สีกรอบแต่ละพยางค์บอกผลอยู่แล้ว) + เพิ่มเฉลย 音節拆解 รวมทุกพยางค์ไว้ในหน้านี้ที่เดียว
   var multiSummaryHtml = '';
   if (isMultiSyl && isLastSyl) {
     var summaryResults = {};
     for (var _k in (S.sylResults || {})) summaryResults[_k] = S.sylResults[_k];
     summaryResults[S.selectedSyl] = { tone: S.tone };
-    var allFirstTry = !session || session.curWordAllFirstTry !== false;
     var sylCardsHtml = S.syllables.map(function(syl, i) {
       var rt = summaryResults[i] ? TONES[summaryResults[i].tone] : null;
       return '<div style="flex:1;background:#fff;border:1.5px solid '+(rt?rt.color:'#ccc')+';border-radius:10px;padding:10px;text-align:center;">'+
@@ -3321,13 +3313,15 @@ function stepResult() {
         '<div style="font-size:12px;color:'+(rt?rt.color:'#999')+';font-weight:600;margin-top:4px;">'+(rt?'✓ '+rt.zh:'—')+'</div>'+
       '</div>';
     }).join('');
+    var allSylAnsHtml = tfAllAnswerRowsHtml();
     multiSummaryHtml =
-      '<div style="margin-bottom:14px;">'+
+      '<div style="margin-bottom:10px;">'+
         '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:8px;">音節結果</div>'+
-        '<div style="display:flex;gap:10px;margin-bottom:10px;">'+sylCardsHtml+'</div>'+
-        '<div style="text-align:center;font-size:13px;font-weight:500;color:'+(allFirstTry?'#2d6a4f':'#b45309')+';">'+
-          (allFirstTry ? '🎉 這個字全部一次就對了！' : '💪 這個字我們一起學會了！') +
-        '</div>'+
+        '<div style="display:flex;gap:10px;">'+sylCardsHtml+'</div>'+
+        (allSylAnsHtml ? '<div class="result-v2-bd" style="margin-top:10px;">'+
+          '<div class="result-v2-bd-title">音節拆解</div>'+
+          '<div class="tf-ans-inner"><div class="tf-ans-rows">'+allSylAnsHtml+'</div></div>'+
+        '</div>' : '')+
       '</div>';
   }
 
@@ -3339,8 +3333,8 @@ function stepResult() {
     (tfEnMode ? '🔡' : '🔠') + '</button>';
 
   // Lin 2026-07-12: ย้ายปุ่ม "太棒了/看看成果" ขึ้นมาอยู่เหนือส่วน 音節拆解 (ใน sessionBlock) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) เหลือแค่หน้าผลสรุปจบรอบ
-  var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:14px;">'+
-      '<button class="tf-session-next-btn" onclick="'+nextBtnOnclick+'">'+nextBtnLabel+'</button>'+
+  var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:10px;">'+
+      '<button class="tf-session-next-btn" id="tf-session-next-btn" onclick="'+nextBtnOnclick+'">'+nextBtnLabel+'</button>'+
       (session ? '' : '<button class="tf-result-secondary" onclick="'+againAct+'">↺ 重新分析</button>')+
     '</div>';
 

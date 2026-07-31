@@ -1344,68 +1344,40 @@
   /* Lin 2026-07-25: ลบ CSS ของหน้า pre-result-confirm (.prc-*) ทิ้ง — ทั้งหน้าถูกลบไปแล้ว */
 
   /* ── Redesigned Result Page v2 ── */
-  .result-v2 { text-align: center; padding: 4px 0 8px; }
+  /* Lin 2026-07-31: จัดกระชับทั้งหน้า — ตัด badge 🎉/💪 + ช่อง "結果" ทิ้ง (ลบ .result-v2-session-badge/.result-v2-guess-row/.result-v2-guess-item ที่ไม่ใช้แล้ว) ลด padding/margin ทุกจุด */
+  .result-v2 { text-align: center; padding: 4px 0 6px; }
   .result-v2-word {
     font-family: 'Sarabun', sans-serif;
-    font-size: 44px;
+    font-size: 38px;
     font-weight: 700;
     color: #1C1C1C;
     letter-spacing: 3px;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     line-height: 1.2;
   }
   .result-v2-tone-card {
-    border-radius: 16px;
-    padding: 22px 18px;
-    margin-bottom: 16px;
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
   }
   .result-v2-tone-num {
     font-family: 'Noto Serif TC', serif;
-    font-size: 38px;
+    font-size: 28px;
     font-weight: 900;
     line-height: 1;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
   .result-v2-tone-match {
     font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
+    font-size: 13px;
     opacity: 0.8;
-    margin-top: 6px;
-  }
-  .result-v2-session-badge {
-    display: inline-block;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-family: 'Noto Serif TC', serif;
-    /* บรรทัดเดียวเสมอ ย่อขนาดอักษรอัตโนมัติบนจอแคบ ไม่ตัดบรรทัด — LIN 2026-06-20 */
-    font-size: clamp(11px, 3.3vw, 14px);
-    font-weight: 700;
-    margin-bottom: 14px;
-    white-space: nowrap;
-    max-width: 100%;
-  }
-  .result-v2-guess-row {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
-  }
-  .result-v2-guess-item {
-    background: rgba(0,0,0,0.03);
-    border-radius: 10px;
-    padding: 9px 12px;
-    min-width: 85px;
-    text-align: center;
-    flex: 1;
-    max-width: 120px;
+    margin-top: 3px;
   }
   .result-v2-guess-label {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 10px;
     color: #aaa;
     letter-spacing: 1px;
-    margin-bottom: 4px;
   }
   .result-v2-guess-val {
     font-family: 'Noto Serif TC', serif;
@@ -1420,7 +1392,7 @@
     border: 1.5px dashed #f0b030;
     border-radius: 12px;
     padding: 10px 12px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     text-align: left;
   }
   .result-v2-bd-title {
@@ -1428,14 +1400,14 @@
     font-size: 10px;
     color: #aaa;
     letter-spacing: 2px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     text-transform: uppercase;
   }
   .result-v2-path {
     background: rgba(0,0,0,0.03);
     border-radius: 10px;
-    padding: 12px 16px;
-    margin-bottom: 16px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
     text-align: left;
   }
   .result-v2-path-label {
@@ -1443,7 +1415,7 @@
     font-size: 10px;
     color: #aaa;
     letter-spacing: 2px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     text-transform: uppercase;
   }
   .result-v2-actions {
@@ -1451,7 +1423,7 @@
     gap: 8px;
     justify-content: center;
     flex-wrap: wrap;
-    margin-top: 8px;
+    margin-top: 6px;
   }
 
   /* ════ สเตจ 1: ระบบคะแนน — HUD / เด้งคะแนน / คอนเฟตติ / เฉลย ════ */
@@ -1903,7 +1875,7 @@
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=25"></script>
+<script src="js/games/tone-finder-game.min.js?v=27"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
