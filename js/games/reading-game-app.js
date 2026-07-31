@@ -188,7 +188,9 @@ function renderBonusReason(w){
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-var ROUND_SIZE=10;
+// Lin 2026-07-31: จำนวนคำ/ประโยคต่อชุด แยกตามระดับ — 初/中=5 คำ, 高=1 ประโยค
+var ROUND_SIZE_BY_LEVEL={'初':5,'中':5,'高':1};
+function rgRoundSize(){return ROUND_SIZE_BY_LEVEL[curLevel]||5;}
 // ── ระบบคะแนนกลาง (Lin 2026-07-04 แก้ตามสเปกใหม่ — คำสั่ง_แก้เกมอ่าน_รอบแกน_2026-07-04.md งานที่2) ──
 // ── กฎ MASTER 2026-07-05: ตัวคูณระดับ soft = ชุดเดียวกับดาวเงิน (初1/中1.5/高2) + คูณ "ทั้งรอบตอนจบ" (เลิกคูณต่อคำ) ──
 var LEVEL_WEIGHT={'初':1,'中':1.5,'高':2};
@@ -617,10 +619,10 @@ function initGame(){
     // (เน้นคำที่เพิ่งพลาดบ่อยจาก reading_sessions ขึ้นมาก่อน ไม่ทับ/ไม่ยุ่ง SRS)
     if(window.READING_AUTH && typeof READING_AUTH.pickAdaptive==='function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()){
       var _items=pool.map(function(i){return {idx:i, th:WORDS[i].th};});
-      var _picked=READING_AUTH.pickAdaptive(_items, Math.min(ROUND_SIZE,_items.length));
+      var _picked=READING_AUTH.pickAdaptive(_items, Math.min(rgRoundSize(),_items.length));
       roundQueue=_picked.map(function(p){return p.idx;});
     } else {
-      roundQueue=shuffle(pool).slice(0,ROUND_SIZE);
+      roundQueue=shuffle(pool).slice(0,rgRoundSize());
     }
   }
   roundTotal=roundQueue.length;

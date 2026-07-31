@@ -17,6 +17,7 @@
   var LEVEL_WEIGHT = 2;              // เกมนี้ทั้งเกม=高級ล้วน → ตัวคูณระดับคงที่ ×2 คูณ "ทั้งรอบ" ตอนจบ (ข้อ2)
   var LEVEL_NUM = 3;                 // ใช้กับ GAME_ACCOUNT.addHardStars(clean, level) — 高級=3
   var SENTENCE_LIFE_START = 10;      // "ชีวิต" ของประโยคนี้ เริ่ม 10 (ก่อนคูณระดับ/คอมโบ/คำทอง) — ตรงตาราง MASTER ข้อ1
+  var WO_ROUND_SIZE = 3;             // Lin 2026-07-31: จำนวนประโยคต่อชุด
   var WRONG_DEDUCT = [3, 3, 3, 1];   // เรียงผิดครั้งที่1/2/3/4 หักเท่านี้ตามลำดับ (รวม=10 พอดี → ผิดครบ4=ตาย ตรงตาราง 10,7,4,1,0)
   var HINT_DEDUCT = 2;               // 提示 หักครั้งละ 2 เสมอ ไม่จำกัดจำนวนครั้ง (ข้อยกเว้นจาก MASTER ข้อ9 — Lin ยืนยัน 2026-07-05 ข้อ3.6)
   function woComboMult(streak){ return streak >= 8 ? 3 : (streak >= 5 ? 2 : (streak >= 3 ? 1.5 : 1)); } // คอมโบ 3/5/8×1.5/2/3 (ข้อ3)
@@ -620,10 +621,10 @@
     // (เน้นประโยคที่เพิ่งพลาดบ่อยจาก reading_sessions ขึ้นมาก่อน ไม่ทับ/ไม่ยุ่ง SRS)
     if (window.READING_AUTH && typeof READING_AUTH.pickAdaptive === 'function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()) {
       var _items = pool.map(function(i){ return {idx:i, th:ADV_SENTENCES[i].th}; });
-      var _picked = READING_AUTH.pickAdaptive(_items, _items.length);
+      var _picked = READING_AUTH.pickAdaptive(_items, Math.min(WO_ROUND_SIZE,_items.length));
       SET = _picked.map(function(p){ return p.idx; });
     } else {
-      SET = shuffle(pool);
+      SET = shuffle(pool).slice(0,WO_ROUND_SIZE);
     }
     idx = 0; score = 0; correctFirstTry = 0;
     cleanC = 0; curCombo = 0; maxCombo = 0;
