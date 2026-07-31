@@ -1087,7 +1087,7 @@ function rgDownloadReport(){
     +'<div style="background:#fff;border:1px solid #C8973A;">'
     +'<table style="width:100%;background:#1C1C1C;border-bottom:3px solid #C8973A;border-collapse:collapse;"><tr>'
     +'<td style="padding:22px 26px;vertical-align:top;">'
-    +'<div style="color:#fff;font-size:20px;font-weight:700;font-family:'+SERIF+';">泰語打字練習・本輪報告</div>'
+    +'<div style="color:#fff;font-size:20px;font-weight:700;font-family:'+SERIF+';">泰語打字練習室・本輪報告</div>'
     +'<div style="font-family:'+SANS+';font-size:9px;letter-spacing:0.2em;color:#C8973A;font-weight:700;margin-top:6px;">mrtaihualin.com</div>'
     +'</td>'
     +'<td style="padding:22px 26px;vertical-align:top;text-align:right;color:#C8973A;white-space:nowrap;">'

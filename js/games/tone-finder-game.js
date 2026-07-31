@@ -3642,7 +3642,7 @@ function buildStatsReportText(day, entries) {
   var wordCounts = countBy(entries, function(e){ return e.word; });
   var lines = [];
 
-  lines.push('泰語聲調搜尋 － 今日統計報告');
+  lines.push('泰語聲調練習室 － 今日統計報告');
   lines.push('日期：' + day);
   lines.push('今日答錯總數：' + total + ' 次');
   lines.push('');
@@ -3689,7 +3689,7 @@ function downloadStats() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = '泰語聲調搜尋_今日統計_' + day + '.txt';
+  a.download = '泰語聲調練習室_今日統計_' + day + '.txt';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -12,8 +12,8 @@
   'use strict';
 
   // ── เกมของกระดานนี้ ──
-  // v3 (LIN 2026-07-03): เพิ่ม 'word_order' (語序遊戲) — เดิมรองรับแค่ typing/reading
-  // v4 (LIN 2026-07-03): เพิ่ม 'lego' (造句遊戲) — คนละเกมกับ word_order ห้ามใช้ key ปนกัน
+  // v3 (LIN 2026-07-03): เพิ่ม 'word_order' (語序練習室) — เดิมรองรับแค่ typing/reading
+  // v4 (LIN 2026-07-03): เพิ่ม 'lego' (造句練習室) — คนละเกมกับ word_order ห้ามใช้ key ปนกัน
   var BOARD_GAME = (window.READING_BOARD_GAME === 'typing') ? 'typing'
     : (window.READING_BOARD_GAME === 'word_order') ? 'word_order'
     : (window.READING_BOARD_GAME === 'lego') ? 'lego' : 'reading';

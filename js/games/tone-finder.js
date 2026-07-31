@@ -1,5 +1,5 @@
 // ===================================================
-// 🎵 泰語聲調搜尋 · Thai Tone Analyzer
+// 🎵 泰語聲調練習室 · Thai Tone Analyzer
 // tone-finder.js — Self-contained module
 // Injects its own modal, exposes window.TF
 // ===================================================
@@ -530,7 +530,7 @@
 
           '<div class="modal-header" style="flex-shrink:0;padding:16px 24px;border-bottom:1px solid rgba(212,160,23,0.18);">' +
             '<div>' +
-              '<div class="modal-title" style="color:#D4A017;font-size:18px;">🎵 泰語聲調搜尋</div>' +
+              '<div class="modal-title" style="color:#D4A017;font-size:18px;">🎵 泰語聲調練習室</div>' +
               '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.38);margin-top:2px;letter-spacing:1px;">泰語聲調分析工具</div>' +
             '</div>' +
             '<button class="modal-close" onclick="TF.close()">✕</button>' +

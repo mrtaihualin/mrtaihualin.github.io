@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════
-// 泰語語序遊戲 (word-order.html) — Lin 2026-07-03
+// 泰語語序練習室 (word-order.html) — Lin 2026-07-03
 // 資料來源：adv-sentences.js（跟打字/拼讀/聲調遊戲共用「高級」句庫，共 10 句）
 // 玩法：點詞塊依序放入空格，湊出跟原句一樣的詞語順序
 // ── กฎ MASTER 2026-07-05 (คำสั่ง_เกมเรียงคำ_高級_2026-07-05.md): เพิ่ม SRS/ดาวเงิน/คอมโบ/คำทอง/已記得/CTA ล็อกอินเต็มระบบ
@@ -402,7 +402,7 @@
   var RG_GAME_CFG = { DAILY_GOAL_SETS: 3, STREAK_FREEZE_EARN_EVERY: 7, STREAK_FREEZE_MAX: 2 };
   var RG_CHALLENGES = [
     { id:'wo_correct30', title:'排對 30 句',     sub:'本週累積排對 30 句（第一次就對）', type:'correct', target:30, emoji:'🎯' },
-    { id:'wo_sets5',     title:'玩完 5 組',       sub:'本週完成 5 組語序遊戲',            type:'sets',    target:5,  emoji:'📚' },
+    { id:'wo_sets5',     title:'玩完 5 組',       sub:'本週完成 5 組語序練習室',            type:'sets',    target:5,  emoji:'📚' },
     { id:'wo_perfect3',  title:'3 次完美過關',   sub:'本週完美過關（10 句全對不用提示）3 次', type:'perfect', target:3, emoji:'🌟' },
     { id:'wo_combo5',    title:'連續排對 5 句',  sub:'本週連續一次就排對達 5 句',        type:'combo',   target:5,  emoji:'🔥' },
     { id:'wo_correct60', title:'排對 60 句',     sub:'本週累積排對 60 句（第一次就對）', type:'correct', target:60, emoji:'💪' }
@@ -1101,7 +1101,7 @@
       +'<div style="background:#fff;border:1px solid #C8973A;">'
       +'<table style="width:100%;background:#1C1C1C;border-bottom:3px solid #C8973A;border-collapse:collapse;"><tr>'
       +'<td style="padding:22px 26px;vertical-align:top;">'
-      +'<div style="color:#fff;font-size:20px;font-weight:700;font-family:'+SERIF+';">泰語語序遊戲・本輪報告</div>'
+      +'<div style="color:#fff;font-size:20px;font-weight:700;font-family:'+SERIF+';">泰語語序練習室・本輪報告</div>'
       +'<div style="font-family:'+SANS+';font-size:9px;letter-spacing:0.2em;color:#C8973A;font-weight:700;margin-top:6px;">mrtaihualin.com</div>'
       +'</td>'
       +'<td style="padding:22px 26px;vertical-align:top;text-align:right;color:#C8973A;white-space:nowrap;">'
@@ -1134,7 +1134,7 @@
     if (!win) { try { rgToast('請允許彈出視窗才能列印報告 🙏'); } catch(e2) { alert('請允許彈出視窗才能列印報告'); } return; }
     win.document.open();
     win.document.write(
-      '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>語序遊戲報告</title>'
+      '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>語序練習室報告</title>'
       +'<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">'
       +'<style>@page{margin:10mm;}body{margin:0;background:#fff;}</style>'
       +'</head><body>'+innerHtml+'</body></html>'
@@ -1179,7 +1179,7 @@ function rgOpenAsk() {
     if (!msg.trim()) { alert('請寫下您的問題'); return; }
     var btn = div.querySelector('#rg-ask-send'); btn.disabled = true; btn.textContent = '送出中…';
     fetch('https://api.web3forms.com/submit', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ access_key:'b0b4c37b-6fad-4e64-9a16-81c5ab2ff4c3', subject:'[語序遊戲] 學生問題', from_name:'語序遊戲', email: email||'anonymous@game', message: msg }) })
+      body: JSON.stringify({ access_key:'b0b4c37b-6fad-4e64-9a16-81c5ab2ff4c3', subject:'[語序練習室] 學生問題', from_name:'語序練習室', email: email||'anonymous@game', message: msg }) })
     .then(function(r){ return r.json(); })
     .then(function(d){ if (!d || !d.success) throw new Error((d && d.message) || 'submit failed'); btn.textContent = '✅ 已送出！'; setTimeout(function(){ div.remove(); }, 1200); })
     .catch(function(){ btn.disabled=false; btn.textContent='送出問題 →'; alert('送出失敗，請稍後再試'); });

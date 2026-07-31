@@ -43,8 +43,8 @@ var ANN = [
   { emoji:'🎵', text:'用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta:'去聽歌學泰語', href:'resources.html#songs' },
   { emoji:'📖', text:'免費泰語學習文章上線！生活情境單字、聲調技巧，隨看隨學', cta:'去讀文章', href:'blog.html#sharing' },
   { emoji:'📺', text:'YouTube 播放清單整理好了！依主題分類，找教學影片更方便', cta:'去看播放清單', href:'resources.html#playlists' }
-  // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
-  // LIN 2026-07-03: ลบสไลด์ "造句遊戲即將推出" ออกแล้ว (เกมเลโก้ออกจริงแล้ว ไม่ใช่ coming-soon อีกต่อไป)
+  // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習室」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
+  // LIN 2026-07-03: ลบสไลด์ "造句練習室即將推出" ออกแล้ว (เกมเลโก้ออกจริงแล้ว ไม่ใช่ coming-soon อีกต่อไป)
   // LIN 2026-07-03 (รอบ 4): เพิ่ม 3 สไลด์ประกาศ — เพลง/บทความ/เพลลิสต์ยูทูป ตามที่ Lin สั่ง
 ];
 
@@ -98,7 +98,7 @@ window.goHome = function() {
         '<div class="nav-drop">',
           '<span class="nav-drop-label">學習素材</span>',
           '<a href="/content.html">📚 影片與文章</a>',
-          '<a href="/games.html">🎮 泰語小遊戲</a>',
+          '<a href="/games.html">🎮 泰語遊戲練習室</a>',
           '<a href="/community.html">🇹🇭 泰語學習心聲與提問</a>',
         '</div>',
       '</li>',

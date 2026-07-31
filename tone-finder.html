@@ -41,19 +41,19 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<title>泰語聲調搜尋 — 泰華眼裡的泰語教學</title>
-<meta name="description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
+<title>泰語聲調練習室 — 泰華眼裡的泰語教學</title>
+<meta name="description" content="免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
 <link rel="canonical" href="https://mrtaihualin.com/tone-finder.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="泰華眼裡的泰語教學">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:title" content="泰語聲調搜尋練習 — 泰華眼裡的泰語教學">
-<meta property="og:description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
+<meta property="og:title" content="泰語聲調練習室 — 泰華眼裡的泰語教學">
+<meta property="og:description" content="免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
 <meta property="og:url" content="https://mrtaihualin.com/tone-finder.html">
 <meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="泰語聲調搜尋練習 — 泰華眼裡的泰語教學">
-<meta name="twitter:description" content="免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
+<meta name="twitter:title" content="泰語聲調練習室 — 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Noto+Sans+Thai:wght@400;500;700&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
@@ -1709,6 +1709,20 @@ if (document.fonts && document.fonts.load) {
   .howto-hint-bubble.show{display:block;}
   .howto-hint-close{position:absolute;top:2px;right:4px;background:none;border:none;color:#fff;opacity:.75;font-size:12px;cursor:pointer;padding:2px 4px;}
   @keyframes howtoHintPop{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  /* Lin 2026-07-24: 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用完就不再自動跳出 */
+  #gt-tour-overlay{position:fixed;inset:0;z-index:10050;display:none;}
+  #gt-tour-overlay.show{display:block;}
+  #gt-tour-spot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(28,20,6,.62);transition:top .32s ease,left .32s ease,width .32s ease,height .32s ease;pointer-events:none;}
+  #gt-tour-card{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(340px,92vw);background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 10px 32px rgba(0,0,0,.28);font-family:'Noto Sans TC',sans-serif;z-index:10051;}
+  #gt-tour-card .gt-step{font-size:11.5px;font-weight:800;color:#C8973A;letter-spacing:1px;margin-bottom:4px;}
+  #gt-tour-card .gt-title{font-size:16px;font-weight:900;color:#5a3e0a;margin-bottom:6px;}
+  #gt-tour-card .gt-text{font-size:13.5px;color:#444;line-height:1.6;margin-bottom:12px;}
+  #gt-tour-card .gt-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  #gt-tour-card .gt-skip{background:none;border:none;color:#999;font-size:12.5px;cursor:pointer;padding:6px 4px;}
+  #gt-tour-card .gt-nav{display:flex;gap:6px;}
+  #gt-tour-card .gt-btn{border:none;border-radius:999px;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
+  #gt-tour-card .gt-prev{background:#f3e4c2;color:#8B6310;}
+  #gt-tour-card .gt-next{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
 </style>
 <!-- html2pdf ถอดออก 2026-06-27: เลิกใช้แล้ว (เปลี่ยนไปใช้หน้าต่าง print) ลดการโหลดที่ไม่จำเป็น -->
 <script type="application/ld+json">
@@ -1732,8 +1746,8 @@ if (document.fonts && document.fonts.load) {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "additionalType": "https://schema.org/LearningResource",
-  "name": "泰語聲調搜尋",
-  "description": "免費泰語聲調搜尋與練習工具：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。",
+  "name": "泰語聲調練習室",
+  "description": "免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。",
   "url": "https://mrtaihualin.com/tone-finder.html",
   "applicationCategory": "EducationalApplication",
   "operatingSystem": "Web",
@@ -1771,7 +1785,7 @@ if (document.fonts && document.fonts.load) {
     {
       "@type": "ListItem",
       "position": 3,
-      "name": "泰語聲調搜尋",
+      "name": "泰語聲調練習室",
       "item": "https://mrtaihualin.com/tone-finder.html"
     }
   ]
@@ -1781,7 +1795,7 @@ if (document.fonts && document.fonts.load) {
 <body>
 
 <!-- ── NAV ── -->
-<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語小遊戲</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語遊戲練習室</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
 <!-- ── PAGE BOTTOM NAV ── -->
 <div class="page-strip">
@@ -1798,7 +1812,7 @@ if (document.fonts && document.fonts.load) {
 <!-- ── MAIN PAGE ── -->
 <div class="tf-page">
   <div class="tf-page-header">
-    <h1 class="tf-page-title" style="margin:0;">🎵 泰語聲調搜尋</h1>
+    <h1 class="tf-page-title" style="margin:0;">🎵 泰語聲調練習室</h1>
     <div class="tf-page-hint" id="tf-hint">選擇等級與主題，開始練習聲調</div>
   </div>
 
@@ -1837,7 +1851,7 @@ if (document.fonts && document.fonts.load) {
       </div>
       <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
     </div>
-    <button class="tf-tool-btn" onclick="TF.openAlpha()">🔤 字母練習區</button>
+    <button class="tf-tool-btn" id="tf-alpha-btn" onclick="TF.openAlpha()">🔤 字母練習區</button>
   </div>
 
   <div class="tf-level-tabs" id="tf-level-tabs">
@@ -1878,6 +1892,23 @@ if (document.fonts && document.fonts.load) {
     <!-- Lin 2026-07-30 (แก้รอบ 2): ย้ายกล่องพยางค์/กล่องคำในประโยค 高級 มาอยู่ "เหนือคำถามเลย" (ใต้แถบ上一步/下一步) ตามที่ Lin ยืนยันจาก mockup — เดิมอยู่เหนือแถบ上一步/下一步 (ติดกรอบทองเลย) ย้ายลงมาให้ต่อกับคำถามแทน -->
     <div class="syl-strip" id="tf-syl-strip" style="display:none"></div>
     <div class="tf-body" id="tf-body"></div>
+  </div>
+</div>
+
+<!-- 逐步導覽（滑鼠一格一格指出功能）— Lin 2026-07-24 -->
+<div id="gt-tour-overlay">
+  <div id="gt-tour-spot"></div>
+</div>
+<div id="gt-tour-card" style="display:none;">
+  <div class="gt-step" id="gt-tour-step">1 / 6</div>
+  <div class="gt-title" id="gt-tour-title"></div>
+  <div class="gt-text" id="gt-tour-text"></div>
+  <div class="gt-actions">
+    <button class="gt-skip" onclick="gtTourEnd()">跳過導覽</button>
+    <div class="gt-nav">
+      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="gtTourPrev()">‹ 上一步</button>
+      <button class="gt-btn gt-next" id="gt-tour-next" onclick="gtTourNext()">下一步 ›</button>
+    </div>
   </div>
 </div>
 
@@ -1954,30 +1985,94 @@ if (document.fonts && document.fonts.load) {
   <div class="gs-divider"></div>
   <a class="gs-tab" href="typing-game.html">⌨️ 打字練習</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="word-order.html">🔀 語序遊戲</a>
+  <a class="gs-tab" href="word-order.html">🔀 語序練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="lego.html">🧩 造句遊戲</a>
+  <a class="gs-tab" href="lego.html">🧩 造句練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="vault.html"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
-// ── 提示泡泡：第一次進來，指給玩家看「這裡有教怎麼玩」— Lin 2026-07-24 ──
+// ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-24 ──
 function dismissHowtoHint(id){
   try{ var b=document.getElementById('howto-hint-'+id); if(b) b.classList.remove('show'); }catch(e){}
   try{ localStorage.setItem('howto_hint_seen_'+id,'1'); }catch(e){}
 }
+
+// ── 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用過一次就不再自動跳出 — Lin 2026-07-24 ──
+var GT_TOUR_STEPS=[
+  {sel:'#tf-banner',       title:'這裡是題目卡', text:'顯示現在第幾題，還有現在要判斷聲調的泰文字。'},
+  {sel:'.sg-tone-grid',    title:'猜猜是第幾聲？', text:'泰語有 5 個聲調，看到字先猜猜看是第幾聲，點數字或直接按鍵盤 1–5 都可以。'},
+  {sel:'.sg-dontknow-btn', title:'不確定嗎？沒關係', text:'點這裡會帶你一步一步分析這個字的聲調規則，慢慢學會怎麼判斷，不用硬猜。'},
+  {sel:'#wm-trigger',      title:'更多功能都在這裡', text:'點 🍚 打開選單：讀音、翻譯、收藏單字、提示、換字體都在裡面。'},
+  {sel:'#tf-alpha-btn',    title:'還不熟字母嗎？', text:'可以先來這裡單獨練習泰文字母的發音，練熟了再回來玩。'},
+  {sel:'#tf-howto-btn',    title:'忘記怎麼玩？', text:'隨時點這裡 📖，可以再看一次完整的玩法說明。'}
+];
+var gtTourIdx=0;
+function gtTourPosition(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  var el=step?document.querySelector(step.sel):null;
+  var spot=document.getElementById('gt-tour-spot');
+  if(!el){ spot.style.width='0px'; spot.style.height='0px'; return; }
+  try{ el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+  setTimeout(function(){
+    var r=el.getBoundingClientRect();
+    var pad=8;
+    spot.style.top=Math.max(0,r.top-pad)+'px';
+    spot.style.left=Math.max(0,r.left-pad)+'px';
+    spot.style.width=(r.width+pad*2)+'px';
+    spot.style.height=(r.height+pad*2)+'px';
+  },260);
+}
+function gtTourRender(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  if(!step){ gtTourEnd(); return; }
+  // ข้ามจุดที่ยังไม่มีของจริงบนจอ (เช่นคำนี้ไม่มีปุ่ม🤷 บางคำเป็นคำทบทวนพิเศษ) — กันชี้จุดว่าง
+  if(!document.querySelector(step.sel)){
+    if(gtTourIdx<GT_TOUR_STEPS.length-1){ gtTourIdx++; gtTourRender(); } else { gtTourEnd(); }
+    return;
+  }
+  document.getElementById('gt-tour-step').textContent=(gtTourIdx+1)+' / '+GT_TOUR_STEPS.length;
+  document.getElementById('gt-tour-title').textContent=step.title;
+  document.getElementById('gt-tour-text').textContent=step.text;
+  document.getElementById('gt-tour-prev').style.visibility=(gtTourIdx===0)?'hidden':'visible';
+  document.getElementById('gt-tour-next').textContent=(gtTourIdx===GT_TOUR_STEPS.length-1)?'開始玩 →':'下一步 ›';
+  gtTourPosition();
+}
+function gtTourNext(){
+  if(gtTourIdx>=GT_TOUR_STEPS.length-1){ gtTourEnd(); return; }
+  gtTourIdx++; gtTourRender();
+}
+function gtTourPrev(){
+  if(gtTourIdx<=0) return;
+  gtTourIdx--; gtTourRender();
+}
+function gtTourEnd(){
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.remove('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='none';
+  try{ localStorage.setItem('howto_tour_seen_tone','1'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_tone','1'); }catch(e){} // ทัวร์สอนครบแล้ว ไม่ต้องเด้งกล่องเล็กซ้ำอีก
+}
+function gtTourStart(){
+  gtTourIdx=0;
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.add('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
+  gtTourRender();
+}
+// รอให้โจทย์ข้อแรก + ปุ่ม 🍚 (สร้างหลัง DOMContentLoaded โดย word-menu.js) พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
 (function(){
   try{
-    if(!localStorage.getItem('howto_hint_seen_tone')){
-      setTimeout(function(){
-        var b=document.getElementById('howto-hint-tone');
-        if(!b) return;
-        b.classList.add('show');
-        try{ localStorage.setItem('howto_hint_seen_tone','1'); }catch(e){}
-        setTimeout(function(){ b.classList.remove('show'); }, 8000);
-      }, 900);
-    }
+    if(localStorage.getItem('howto_tour_seen_tone')) return;
+    var tries=0;
+    var waitReady=setInterval(function(){
+      tries++;
+      var banner=document.getElementById('tf-banner');
+      var ready=document.getElementById('wm-trigger') && document.getElementById('tf-howto-btn') && banner && banner.textContent.trim()!=='' && document.querySelector('.sg-tone-grid');
+      if(ready || tries>25){
+        clearInterval(waitReady);
+        if(ready) setTimeout(gtTourStart, 500);
+      }
+    }, 300);
   }catch(e){}
 })();
 </script>
