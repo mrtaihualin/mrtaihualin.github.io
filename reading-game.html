@@ -312,6 +312,22 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .howto-hint-close{position:absolute;top:2px;right:4px;background:none;border:none;color:#fff;opacity:.75;font-size:12px;cursor:pointer;padding:2px 4px;}
 @keyframes howtoHintPop{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
 
+/* ── 逐步導覽（第一次進遊戲自動播放）— Lin 2026-07-31 ── */
+#gt-tour-overlay{position:fixed;inset:0;z-index:10050;display:none;}
+#gt-tour-overlay.show{display:block;}
+#gt-tour-spot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(28,20,6,.62);transition:top .32s ease,left .32s ease,width .32s ease,height .32s ease;pointer-events:none;}
+#gt-tour-card{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(340px,92vw);background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 10px 32px rgba(0,0,0,.28);font-family:'Noto Sans TC',sans-serif;z-index:10051;}
+#gt-tour-card .gt-step{font-size:11.5px;font-weight:800;color:#C8973A;letter-spacing:1px;margin-bottom:4px;}
+#gt-tour-card .gt-title{font-size:16px;font-weight:900;color:#5a3e0a;margin-bottom:6px;}
+#gt-tour-card .gt-text{font-size:13.5px;color:#444;line-height:1.6;margin-bottom:12px;}
+#gt-tour-card .gt-text b{color:#8B6310;}
+#gt-tour-card .gt-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#gt-tour-card .gt-skip{background:none;border:none;color:#999;font-size:12.5px;cursor:pointer;padding:6px 4px;}
+#gt-tour-card .gt-nav{display:flex;gap:6px;}
+#gt-tour-card .gt-btn{border:none;border-radius:999px;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
+#gt-tour-card .gt-prev{background:#f3e4c2;color:#8B6310;}
+#gt-tour-card .gt-next{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
+
 </style>
 <script type="application/ld+json">
 {
@@ -563,6 +579,22 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
+<div id="gt-tour-overlay">
+  <div id="gt-tour-spot"></div>
+</div>
+<div id="gt-tour-card" style="display:none;">
+  <div class="gt-step" id="gt-tour-step">1 / 5</div>
+  <div class="gt-title" id="gt-tour-title"></div>
+  <div class="gt-text" id="gt-tour-text"></div>
+  <div class="gt-actions">
+    <button class="gt-skip" onclick="gtTourEnd()">跳過導覽</button>
+    <div class="gt-nav">
+      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="gtTourPrev()">‹ 上一步</button>
+      <button class="gt-btn gt-next" id="gt-tour-next" onclick="gtTourNext()">下一步 ›</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/games/reading-game-app.min.js?v=17"></script>
 </div><!-- /.v3-page -->
 <script src="js/core/shared.min.js?v=15"></script>
@@ -591,22 +623,85 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </div>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
-// ── 提示泡泡：第一次進來，指給玩家看「這裡有教怎麼玩」— Lin 2026-07-24 ──
+// ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──
 function dismissHowtoHint(id){
   try{ var b=document.getElementById('howto-hint-'+id); if(b) b.classList.remove('show'); }catch(e){}
   try{ localStorage.setItem('howto_hint_seen_'+id,'1'); }catch(e){}
 }
+
+// ── 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用過一次就不再自動跳出 — Lin 2026-07-31 ──
+var GT_TOUR_STEPS=[
+  {sel:'#wth',              title:'這裡是要拼的字', text:'畫面會顯示現在要拼的泰文字，跟著音節拆解，一格一格拼出來。'},
+  {sel:'#slot-row',         title:'把零件拼進這裡', text:'子音、聲調符、母音、尾音，每一格都要放對零件，才能拼出正確的字。'},
+  {sel:'#pool',             title:'零件在下面選', text:'點一下下面的零件方塊，就會自動填進對的格子，填錯了可以再換一個試試。'},
+  {sel:'#wm-trigger',       title:'更多功能都在這裡', text:'點 🍚 打開選單：發音、讀音、翻譯、收藏單字、提示切換、字體切換都在裡面。'},
+  {sel:'#rg-profile-wrap',  title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
+];
+var gtTourIdx=0;
+function gtTourPosition(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  var el=step?document.querySelector(step.sel):null;
+  var spot=document.getElementById('gt-tour-spot');
+  if(!el){ spot.style.width='0px'; spot.style.height='0px'; return; }
+  try{ el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+  setTimeout(function(){
+    var r=el.getBoundingClientRect();
+    var pad=8;
+    spot.style.top=Math.max(0,r.top-pad)+'px';
+    spot.style.left=Math.max(0,r.left-pad)+'px';
+    spot.style.width=(r.width+pad*2)+'px';
+    spot.style.height=(r.height+pad*2)+'px';
+  },260);
+}
+function gtTourRender(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  if(!step){ gtTourEnd(); return; }
+  // ข้ามจุดที่ยังไม่มีของจริงบนจอ — กันชี้จุดว่าง
+  if(!document.querySelector(step.sel)){
+    if(gtTourIdx<GT_TOUR_STEPS.length-1){ gtTourIdx++; gtTourRender(); } else { gtTourEnd(); }
+    return;
+  }
+  document.getElementById('gt-tour-step').textContent=(gtTourIdx+1)+' / '+GT_TOUR_STEPS.length;
+  document.getElementById('gt-tour-title').textContent=step.title;
+  document.getElementById('gt-tour-text').innerHTML=step.text;
+  document.getElementById('gt-tour-prev').style.visibility=(gtTourIdx===0)?'hidden':'visible';
+  document.getElementById('gt-tour-next').textContent=(gtTourIdx===GT_TOUR_STEPS.length-1)?'開始玩 →':'下一步 ›';
+  gtTourPosition();
+}
+function gtTourNext(){
+  if(gtTourIdx>=GT_TOUR_STEPS.length-1){ gtTourEnd(); return; }
+  gtTourIdx++; gtTourRender();
+}
+function gtTourPrev(){
+  if(gtTourIdx<=0) return;
+  gtTourIdx--; gtTourRender();
+}
+function gtTourEnd(){
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.remove('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='none';
+  try{ localStorage.setItem('howto_tour_seen_reading','1'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_reading','1'); }catch(e){} // ทัวร์สอนครบแล้ว ไม่ต้องเด้งกล่องเล็กซ้ำอีก
+}
+function gtTourStart(){
+  gtTourIdx=0;
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.add('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
+  gtTourRender();
+}
+// รอให้โจทย์ข้อแรก + ปุ่ม 🍚 (สร้างหลัง DOMContentLoaded โดย word-menu.js) พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
 (function(){
   try{
-    if(!localStorage.getItem('howto_hint_seen_reading')){
-      setTimeout(function(){
-        var b=document.getElementById('howto-hint-reading');
-        if(!b) return;
-        b.classList.add('show');
-        try{ localStorage.setItem('howto_hint_seen_reading','1'); }catch(e){}
-        setTimeout(function(){ b.classList.remove('show'); }, 8000);
-      }, 900);
-    }
+    if(localStorage.getItem('howto_tour_seen_reading')) return;
+    var tries=0;
+    var waitReady=setInterval(function(){
+      tries++;
+      var wth=document.getElementById('wth');
+      var ready=document.getElementById('wm-trigger') && document.getElementById('rg-guide-toggle') && document.getElementById('pool') && wth && wth.textContent.trim()!=='' && wth.textContent.trim()!=='—';
+      if(ready || tries>25){
+        clearInterval(waitReady);
+        if(ready) setTimeout(gtTourStart, 500);
+      }
+    }, 300);
   }catch(e){}
 })();
 </script>

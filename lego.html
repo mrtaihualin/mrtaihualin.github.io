@@ -290,6 +290,22 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .howto-hint-bubble.show{display:block;}
 .howto-hint-close{position:absolute;top:2px;right:4px;background:none;border:none;color:#fff;opacity:.75;font-size:12px;cursor:pointer;padding:2px 4px;}
 @keyframes howtoHintPop{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── 逐步導覽（第一次進遊戲自動播放）— Lin 2026-07-31 ── */
+#gt-tour-overlay{position:fixed;inset:0;z-index:10050;display:none;}
+#gt-tour-overlay.show{display:block;}
+#gt-tour-spot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(28,20,6,.62);transition:top .32s ease,left .32s ease,width .32s ease,height .32s ease;pointer-events:none;}
+#gt-tour-card{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(340px,92vw);background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 10px 32px rgba(0,0,0,.28);font-family:'Noto Sans TC',sans-serif;z-index:10051;}
+#gt-tour-card .gt-step{font-size:11.5px;font-weight:800;color:var(--gold-bright);letter-spacing:1px;margin-bottom:4px;}
+#gt-tour-card .gt-title{font-size:16px;font-weight:900;color:var(--gold-deep);margin-bottom:6px;}
+#gt-tour-card .gt-text{font-size:13.5px;color:#444;line-height:1.6;margin-bottom:12px;}
+#gt-tour-card .gt-text b{color:var(--gold);}
+#gt-tour-card .gt-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#gt-tour-card .gt-skip{background:none;border:none;color:#999;font-size:12.5px;cursor:pointer;padding:6px 4px;}
+#gt-tour-card .gt-nav{display:flex;gap:6px;}
+#gt-tour-card .gt-btn{border:none;border-radius:999px;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
+#gt-tour-card .gt-prev{background:var(--gold-light);color:var(--gold);}
+#gt-tour-card .gt-next{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
 </style>
 <script type="application/ld+json">
 {
@@ -493,6 +509,23 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 </footer>
 
 <script src="js/core/shared.min.js?v=15"></script>
+
+<div id="gt-tour-overlay">
+  <div id="gt-tour-spot"></div>
+</div>
+<div id="gt-tour-card" style="display:none;">
+  <div class="gt-step" id="gt-tour-step">1 / 6</div>
+  <div class="gt-title" id="gt-tour-title"></div>
+  <div class="gt-text" id="gt-tour-text"></div>
+  <div class="gt-actions">
+    <button class="gt-skip" onclick="gtTourEnd()">跳過導覽</button>
+    <div class="gt-nav">
+      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="gtTourPrev()">‹ 上一步</button>
+      <button class="gt-btn gt-next" id="gt-tour-next" onclick="gtTourNext()">下一步 ›</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════ SLOTS ════════
 // adv (副詞: ที่/กับ) + advObj (跟著變：ที่→地點、กับ→誰) 配對
@@ -1599,22 +1632,87 @@ setLevel('lv1');
 refreshLegoAcctUI();
 try{ legoRenderGameBar(); }catch(e){}
 
-// ── 提示泡泡：第一次進來，指給玩家看「這裡有教怎麼玩」— Lin 2026-07-24 ──
+// ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──
 function dismissHowtoHint(id){
   try{ var b=document.getElementById('howto-hint-'+id); if(b) b.classList.remove('show'); }catch(e){}
   try{ localStorage.setItem('howto_hint_seen_'+id,'1'); }catch(e){}
 }
+
+// ── 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用過一次就不再自動跳出 — Lin 2026-07-31 ──
+var GT_TOUR_STEPS=[
+  {sel:'.out-banner',                         title:'這裡會顯示組好的句子', text:'選好的詞會自動排成完整的泰語句子，下面還會顯示中文翻譯。'},
+  {sel:'#baseplate',                          title:'點格子選詞，組出句子', text:'每一格代表一種詞性（主語、動詞、受詞…），點格子選詞，至少要選「主語」和「動詞」才能組成一句話。'},
+  {sel:'#levels',                             title:'選關卡練習', text:'從左到右關卡越來越難，練熟前面的關卡，新關卡就會解鎖。'},
+  {sel:'button[onclick="loadExample()"]',     title:'不知道怎麼組？看範例', text:'點「看範例」可以看已經組好的完整句子，照著範例的邏輯試試看。'},
+  {sel:'button[onclick="startTest()"]',       title:'組好了？來測驗拿分', text:'按「🧪 測試（拿分）」，句子會被打散成詞卡，依照正確順序點回去，排對了才算過關拿分。'},
+  {sel:'.rg-stat-row',                        title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章・📑單字庫<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
+];
+var gtTourIdx=0;
+function gtTourPosition(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  var el=step?document.querySelector(step.sel):null;
+  var spot=document.getElementById('gt-tour-spot');
+  if(!el){ spot.style.width='0px'; spot.style.height='0px'; return; }
+  try{ el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+  setTimeout(function(){
+    var r=el.getBoundingClientRect();
+    var pad=8;
+    spot.style.top=Math.max(0,r.top-pad)+'px';
+    spot.style.left=Math.max(0,r.left-pad)+'px';
+    spot.style.width=(r.width+pad*2)+'px';
+    spot.style.height=(r.height+pad*2)+'px';
+  },260);
+}
+function gtTourRender(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  if(!step){ gtTourEnd(); return; }
+  // ข้ามจุดที่ยังไม่มีของจริงบนจอ — กันชี้จุดว่าง
+  if(!document.querySelector(step.sel)){
+    if(gtTourIdx<GT_TOUR_STEPS.length-1){ gtTourIdx++; gtTourRender(); } else { gtTourEnd(); }
+    return;
+  }
+  document.getElementById('gt-tour-step').textContent=(gtTourIdx+1)+' / '+GT_TOUR_STEPS.length;
+  document.getElementById('gt-tour-title').textContent=step.title;
+  document.getElementById('gt-tour-text').innerHTML=step.text;
+  document.getElementById('gt-tour-prev').style.visibility=(gtTourIdx===0)?'hidden':'visible';
+  document.getElementById('gt-tour-next').textContent=(gtTourIdx===GT_TOUR_STEPS.length-1)?'開始玩 →':'下一步 ›';
+  gtTourPosition();
+}
+function gtTourNext(){
+  if(gtTourIdx>=GT_TOUR_STEPS.length-1){ gtTourEnd(); return; }
+  gtTourIdx++; gtTourRender();
+}
+function gtTourPrev(){
+  if(gtTourIdx<=0) return;
+  gtTourIdx--; gtTourRender();
+}
+function gtTourEnd(){
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.remove('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='none';
+  try{ localStorage.setItem('howto_tour_seen_lego','1'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_lego','1'); }catch(e){} // ทัวร์สอนครบแล้ว ไม่ต้องเด้งกล่องเล็กซ้ำอีก
+}
+function gtTourStart(){
+  gtTourIdx=0;
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.add('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
+  gtTourRender();
+}
+// รอให้ baseplate + levels พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
 (function(){
   try{
-    if(!localStorage.getItem('howto_hint_seen_lego')){
-      setTimeout(function(){
-        var b=document.getElementById('howto-hint-lego');
-        if(!b) return;
-        b.classList.add('show');
-        try{ localStorage.setItem('howto_hint_seen_lego','1'); }catch(e){}
-        setTimeout(function(){ b.classList.remove('show'); }, 8000);
-      }, 900);
-    }
+    if(localStorage.getItem('howto_tour_seen_lego')) return;
+    var tries=0;
+    var waitReady=setInterval(function(){
+      tries++;
+      var levels=document.getElementById('levels');
+      var bp=document.getElementById('baseplate');
+      var ready=levels && levels.children.length>0 && bp && bp.children.length>0 && document.querySelector('.out-banner') && document.querySelector('button[onclick="loadExample()"]') && document.querySelector('button[onclick="startTest()"]');
+      if(ready || tries>25){
+        clearInterval(waitReady);
+        if(ready) setTimeout(gtTourStart, 500);
+      }
+    }, 300);
   }catch(e){}
 })();
 </script>

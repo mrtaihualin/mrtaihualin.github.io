@@ -872,8 +872,23 @@ function tfRollGolden() {
 //  ระบบนี้ไม่มีทางเข้าถึงในเส้นทางหลักอีกแล้ว — เอา tfSetStatus/tfRecordSetResult/
 //  tfLoadSpecialWords/tfAddSpecialWords/tfSpecialProcessResults ออกทั้งหมด)
 // ── 高級: ประโยคเต็ม (Lin 2026-07-03) ──
-var advSentenceCtx = null;      // {th, zh} ของประโยคที่กำลังเล่น (null = ไม่ได้เล่นโหมด高級句子) — ใช้โชว์บนแบนเนอร์
+var advSentenceCtx = null;      // {th, zh, particle} ของประโยคที่กำลังเล่น (null = ไม่ได้เล่นโหมด高級句子) — ใช้โชว์บนแบนเนอร์ · th/zh ไม่รวมคำลงท้ายสุภาพแล้ว (2026-07-31), particle = ข้อความคำลงท้ายที่จะโชว์ต่อท้าย (หรือ null ถ้าปิดปุ่ม/ไม่มีข้อมูล)
 var advSentIdx = -1;            // index ของประโยคปัจจุบันใน ADV_SENTENCES
+
+// ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (Lin 2026-07-31) ──
+//   ไม่เกี่ยวกับคะแนน/การทายเสียงเลย — เป็นแค่ข้อความโชว์ต่อท้าย "ประโยคเต็ม" บนแบนเนอร์เท่านั้น
+//   ครับ (ชาย) ใช้ได้เหมือนกันทุกประโยค (คำเดียวไม่เปลี่ยนตามชนิดประโยค) — ต่อได้เลยไม่ต้องมีข้อมูลเพิ่ม
+//   ค่ะ/คะ (หญิง) เปลี่ยนตามประโยคบอกเล่า/คำถาม — ต้องรอ Lin ใส่ข้อมูลระบุเองทีละประโยคใน adv-sentences.js ก่อน (ยังไม่มีฟิลด์นี้ ณ ตอนนี้) จึงยังโชว์ไม่ได้
+var TF_PARTICLE_WORDS = ['ครับ', 'ค่ะ', 'คะ']; // ใช้ตัดคำลงท้ายเดิมที่เคยฝังไว้ในข้อมูล (3 ประโยคที่มีครับอยู่แล้ว) ออกจาก words[] ก่อนคำนวณ ไม่ให้ซ้ำ/ถูกนับเป็นคำที่ต้องทายเสียง
+function tfParticleMode() { try { return localStorage.getItem('games_particle_mode') || 'off'; } catch (e) { return 'off'; } }
+function tfSetParticleMode(m) { try { localStorage.setItem('games_particle_mode', m); } catch (e) {} }
+// คืนคำลงท้ายสุภาพที่จะโชว์ (หรือ null) ตามโหมดปุ่มปัจจุบัน + คำสุดท้ายจริงของประโยค s — ใช้ตอนเริ่มเล่นและตอนกดปุ่มระหว่างเล่น (ไม่รีเซ็ตรอบ)
+function tfShowParticleFor(lastW, hasParticle) {
+  var mode = tfParticleMode();
+  if (mode === 'm') return 'ครับ'; // ชายใช้ครับได้ทุกประโยคเหมือนกันหมด ไม่ต้องมีข้อมูลเพิ่ม
+  if (mode === 'f' && hasParticle && lastW.th !== 'ครับ') return lastW.th; // เผื่ออนาคต Lin เพิ่มข้อมูลค่ะ/คะ — ตอนนี้ยังไม่มีประโยคไหนมีข้อมูลนี้จริง
+  return null;
+}
 
 // ════════════════════════════════════════════════════════════
 // ── คำอ่านใต้คำศัพท์: 讀音 (ไทย 🐣/🥚) + 英文讀音 (โรมัน 🔡/🔠) — Lin 2026-07-25
@@ -2070,6 +2085,8 @@ function render() {
       var sentHtml = session.words.map(function (w, i) {
         return i === session.index ? '<span class="tf-sent-cur-word">' + w.word + '</span>' : w.word;
       }).join('');
+      // Lin 2026-07-31: ต่อคำลงท้ายสุภาพ (ครับ/ค่ะ/คะ) ท้ายประโยคเต็มตรงนี้เท่านั้น — สีจางกว่าคำอื่นๆ เพราะไม่ใช่คำที่ต้องทายเสียง ไม่ถูกไฮไลต์เป็นคำปัจจุบันเหมือนคำอื่น
+      if (advSentenceCtx.particle) sentHtml += '<span style="color:#a08a5a;">' + advSentenceCtx.particle + '</span>';
       // 2026-07-30 (รอบ 3): เปลี่ยนกล่องโฟกัสคำเดียว (tf-adv-sent-focus) → แถบช่องพยางค์ (syl-strip/syl-chip) แบบเกมอ่าน/เกมพิมพ์ ตามที่ Lin สั่งกลับไปใช้กรอบกล่อง (ประโยค = แต่ละคำในประโยคทำหน้าที่เหมือนพยางค์)
       var sentChips = session.words.map(function (w, i) {
         var cls = 'syl-chip' + (i === session.index ? ' cur' : (i < session.index ? ' done' : ''));
@@ -2079,6 +2096,10 @@ function render() {
       //   เดิมโผล่ก่อน 讀音 ทำให้ลำดับเพี้ยน (翻譯 → 讀音 → 翻譯) ตอนนี้เก็บไว้โชว์รวมกับ 翻譯 หลัง 讀音/英文讀音 แทน (ดู sentCtxZhHtml ด้านล่าง)
       mainBoxHtml = '<div class="tf-adv-sent-main">' + sentHtml + '</div>';
       sentCtxZhHtml = advSentenceCtx.zh ? '<div class="tf-adv-sent-ctx-zh">' + advSentenceCtx.zh + '</div>' : '';
+      // Lin 2026-07-31: ปุ่มเปิด/ปิดครับ/ค่ะ/คะ ท้ายประโยค — ไม่กระทบคะแนน/รอบทายเลย แค่เปลี่ยนข้อความบน sentHtml ด้านบน
+      var _pModeNow = tfParticleMode();
+      var _pLabel = _pModeNow === 'm' ? '👦 ครับ' : (_pModeNow === 'f' ? '👧 ค่ะ/คะ' : '⭕ ไม่ใส่คำลงท้าย');
+      sentCtxZhHtml += '<button onclick="TF.toggleParticleMode()" style="font-size:11px;padding:2px 10px;margin-top:6px;border:0.5px solid #c9a86a;border-radius:20px;background:transparent;color:#8B6310;cursor:pointer;">' + _pLabel + '</button>';
       sylStripHtml = sentChips;
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
       // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
@@ -3912,10 +3933,16 @@ var TF = {
   startAdvSentence: function(idx) {
     var s = ADV_SENTENCES[idx];
     if (!s) return;
+    // Lin 2026-07-31: ตัดคำลงท้ายสุภาพ (ครับ/ค่ะ/คะ) ออกจาก words[] ก่อนคำนวณเสมอ — คำนี้ไม่เกี่ยวกับการทายเสียง/คะแนนเลย
+    //   (3 ประโยคเก่ามีครับฝังอยู่เป็นคำสุดท้ายใน words[] อยู่แล้ว → ตัดออกตรงนี้ ไม่ให้กลายเป็นคำที่ต้องทายเสียง)
+    var _lastW = s.words[s.words.length - 1];
+    var _hasParticle = _lastW && TF_PARTICLE_WORDS.indexOf(_lastW.th) !== -1;
+    var coreWords = _hasParticle ? s.words.slice(0, -1) : s.words;
     // Lin 2026-07-16: ช่อง syl รายคำถูกถอดออกจาก adv-sentences.js แล้ว — คำอ่านรวมอยู่ที่ s.readingTH (ทั้งประโยค คั่น '-')
     // ตัดกลับเป็นรายคำด้วยจำนวนพยางค์ของแต่ละคำ (w.syls.length) ซึ่งตรงกันเสมอ (มีด่านเช็คใน check-data-health.js)
+    // — coreWords ไม่รวมพยางค์ของคำลงท้ายสุภาพแล้ว ตัดพยางค์ท้าย s.readingTH เกินมาไม่กระทบ เพราะ loop นี้หยุดแค่จำนวนคำใน coreWords
     var _parts = (s.readingTH || '').split('-'), _p = 0;
-    var entries = s.words.map(function(w){
+    var entries = coreWords.map(function(w){
       var _n = w.syls.length;
       var _read = _parts.slice(_p, _p + _n).join('-') || w.th; _p += _n;
       // Lin 2026-07-25: ใส่ readingEN ด้วย (ต่อ en ของทุกพยางค์) — เดิมลืมใส่ ทำให้ปุ่ม 英文讀音 ในโหมด高級 โชว์ว่างเปล่า
@@ -3927,8 +3954,22 @@ var TF = {
     selectedCategory = '高級句子';
     advSentIdx = idx;
     // Lin 2026-07-30: ย้ายมาตั้ง advSentenceCtx "ก่อน" เรียก startSetSession (เดิมตั้งทีหลัง ทำให้ render() รอบแรกในนั้นเห็นค่าเป็น null → คำแรกของประโยค高級ไม่โชว์ประโยคเต็ม)
-    advSentenceCtx = { th: s.th, zh: s.zh };
+    // Lin 2026-07-31: th ตอนนี้คือประโยคไม่รวมคำลงท้ายสุภาพแล้ว (ตัด _hasParticle ออกแล้วด้านบน) — particle คำนวณแยกตามปุ่มเปิด/ปิด ใช้โชว์ต่อท้ายบนแบนเนอร์เท่านั้น ไม่ใช่ส่วนที่ต้องทายเสียง
+    advSentenceCtx = { th: coreWords.map(function(w){ return w.th; }).join(''), zh: s.zh, particle: tfShowParticleFor(_lastW, _hasParticle) };
     startSetSession(entries, { keepOrder: true, isAdvSentence: true });
+  },
+  // Lin 2026-07-31: กดวนปิด → ครับ(ชาย) → ค่ะ/คะ(หญิง) → ปิด — ไม่กระทบคะแนน/รอบทายเลย แค่เปลี่ยนข้อความโชว์ต่อท้ายประโยคเต็ม (ไม่รีเซ็ตรอบเล่น ไม่เรียก startAdvSentence ซ้ำ)
+  toggleParticleMode: function() {
+    var cur = tfParticleMode();
+    var next = cur === 'off' ? 'm' : (cur === 'm' ? 'f' : 'off');
+    tfSetParticleMode(next);
+    if (advSentenceCtx && advSentIdx >= 0) {
+      var s = ADV_SENTENCES[advSentIdx];
+      var lastW = s.words[s.words.length - 1];
+      var hasParticle = lastW && TF_PARTICLE_WORDS.indexOf(lastW.th) !== -1;
+      advSentenceCtx.particle = tfShowParticleFor(lastW, hasParticle);
+    }
+    render();
   },
 // Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [TF.openSearch]
   openAlpha: function() {

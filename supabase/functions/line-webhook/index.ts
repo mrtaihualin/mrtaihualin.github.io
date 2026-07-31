@@ -147,6 +147,34 @@ async function pushLine(channelToken, targetUserId, text) {
   } catch (e) { /* push ไม่สำเร็จก็ไม่เป็นไร ฐานข้อมูลอัปเดตไปแล้วเป็นหลัก */ }
 }
 
+// ── 2026-07-31 เพิ่ม (งาน C2) — ตัวส่ง LINE แบบ "เช็คผลจริง" ──────────────────────
+// ต่างจาก pushLine ข้างบนตรงที่ตัวนั้นกลืน error ทุกอย่างเงียบๆ และไม่คืนค่าอะไรเลย
+// → ผู้เรียกไม่มีทางรู้ว่าส่งถึงจริงไหม ทำให้เคยตอบครูว่า "แจ้งนักเรียนแล้ว" ทั้งที่ไม่ได้ส่ง
+//
+// ทำไมสร้างตัวใหม่แทนที่จะแก้ pushLine เดิม:
+//   pushLine ถูกเรียกจากหลายที่ทั่วไฟล์นี้ รวมถึงเส้นทาง "เพิ่มคาบ" ซึ่งอยู่ในความดูแลของอีกงานหนึ่ง
+//   การเปลี่ยนพฤติกรรมตัวเดิมจะกระทบเป็นวงกว้างโดยไม่จำเป็น
+//   → ตัวนี้ใช้เฉพาะเส้นทาง "ยกเลิกคาบ" ก่อน · เส้นทางอื่นค่อยย้ายมาใช้ทีหลังได้
+//
+// ⚠️ เส้นทาง "เพิ่มคาบ" มีบั๊กเดียวกันเป๊ะอยู่ที่ก้อน confirm_add_class (ตอบ「並通知學生了」ก่อนส่งจริง)
+//    งานนี้ "ไม่แตะ" ตามที่ตกลงไว้ — ให้อีกงานหนึ่งมาแก้ โดยเปลี่ยนไปใช้ pushLineChecked ตัวนี้ได้เลย
+async function pushLineChecked(channelToken, targetUserId, text) {
+  try {
+    const res = await fetch(LINE_PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+      body: JSON.stringify({ to: targetUserId, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(function () { return ''; });
+      return { ok: false, reason: 'LINE 回應 ' + res.status + (detail ? '：' + detail.slice(0, 150) : '') };
+    }
+    return { ok: true, reason: '' };
+  } catch (e) {
+    return { ok: false, reason: (e && e.message) ? e.message : String(e) };
+  }
+}
+
 // 2026-07-19 加（Lin 要求）：老師發起取消 → 學生在 LINE 那邊按「我知道了」確認之後，
 // 原本推給老師的只是「純文字」叫老師自己去網站按「確認刪除」——現在改成直接附一顆按鈕，
 // 老師在 LINE 這裡就能直接按，不用開網站。跟 notify-line/index.ts 的 buildFlexMessage 同一套樣式規則
@@ -1515,28 +1543,63 @@ serve(async (req) => {
           .eq('id', requestIdCancel)
           .eq('status', 'pending');
 
-        if (updErrCancel) {
-          // Calendar ลบสำเร็จแล้วจริง แต่บันทึกฐานข้อมูลไม่สำเร็จ — ต้องบอกครูดังๆ ไม่ให้เข้าใจผิดว่ายังไม่ได้ลบ
-          console.error('[line-webhook] ⚠️ confirm_cancel_delete: Calendar ลบแล้วแต่อัปเดตฐานข้อมูลพัง (ล็อกจะค้างไว้ตั้งใจ ต้องเช็คมือ):', updErrCancel.message, 'request=', requestIdCancel);
+        // 🟠 2026-07-31 แก้ (งาน C3): เดิมเช็คแค่ updErrCancel
+        //    ถ้าอัปเดตได้ "0 แถว" (สถานะถูกเปลี่ยนไประหว่างทาง) จะไม่มี error แต่ก็ไม่มีอะไรถูกบันทึกเลย
+        //    → โค้ดเดิมไหลไปตอบ「✅ 已刪除」ทั้งที่ความจริงคือ: Calendar ถูกลบไปแล้วจริง
+        //      แต่คำขอยัง pending และล็อก processing_started_at ยังค้างอยู่
+        //      = คำขอนั้นตายถาวร ปลดไม่ได้ทั้งเว็บและ LINE (ทั้ง 2 ทางตอบว่า "กำลังถูกจัดการที่อื่น")
+        //      + ตัวเตือน 48 ชม.จะจิกซ้ำทุกรอบไม่มีวันจบ
+        //    ฝั่ง "เพิ่มคาบ" ทำถูกอยู่แล้ว (if (updErrAddC || !updCountAddC)) — ลอกมาให้ตรงกัน
+        if (updErrCancel || !updCountCancel) {
+          const whyCancel = updErrCancel ? updErrCancel.message : 'อัปเดตได้ 0 แถว (สถานะถูกเปลี่ยนไประหว่างทาง)';
+          console.error('[line-webhook] ⚠️ confirm_cancel_delete: Calendar ลบแล้วแต่อัปเดตฐานข้อมูลไม่สำเร็จ (ล็อกจะค้างไว้ตั้งใจ ต้องเช็คมือ):', whyCancel, 'request=', requestIdCancel);
           if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 刪除成功，但存資料庫失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdCancel + '）');
+            await replyLine(channelToken, event.replyToken,
+              '⚠️ Calendar 課程已經刪除了，但這筆申請的狀態沒有存進資料庫\n原因：' + whyCancel +
+              '\n請到 Supabase 把這筆的 status 改成 acknowledged、processing_started_at 清成空白（id: ' + requestIdCancel + '）');
           }
           continue;
         }
 
-        if (channelToken && event.replyToken) {
-          await replyLine(channelToken, event.replyToken, '✅ 已刪除 Calendar 課程，並通知學生了');
+        // 🔴 2026-07-31 แก้ (งาน C2): ย้ายการแจ้งนักเรียนมาไว้ "ก่อน" ตอบครู แล้วตอบตามผลจริง
+        //    เดิม: ตอบครูว่า「✅ 已刪除 Calendar 課程，並通知學生了」ทันที
+        //          แล้วค่อยส่งหานักเรียนทีหลัง ในกล่อง try/catch เปล่าๆ ที่กลืน error ทุกอย่าง
+        //          และไม่เคยเช็คว่านักเรียนผูก LINE ไว้หรือยัง
+        //    → นักเรียนที่ยังไม่ผูก LINE หรือ LINE ล่มชั่วคราว = ไม่ได้รับอะไรเลย
+        //      แต่ครูเชื่อสนิทใจว่าแจ้งไปแล้ว (ผิดกฎ RELIABILITY FIRST: ห้ามขึ้นว่าสำเร็จถ้ายังไม่ตรวจ)
+        //    ฝั่งเว็บทำถูกอยู่แล้ว (classroom/index.html:7797-7801) — ลอกพฤติกรรมนั้นมาทั้งชุด
+        //    ⚠️ replyToken ของ LINE ใช้ได้ครั้งเดียวต่อการกด 1 ครั้ง → ต้องรวมเป็นข้อความเดียว ห้ามยิง 2 รอบ
+        let replyMsgCancel = '✅ 已刪除 Calendar 課程，並通知學生了';
+        try {
+          if (!reqRowCancel.token) {
+            replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但這筆沒有記錄學生代碼，沒辦法通知學生，記得自己說一聲';
+          } else if (!channelToken) {
+            replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但系統缺少 LINE 金鑰，沒通知到學生，記得自己說一聲';
+          } else {
+            const { data: stuRowCancel, error: stuErrCancel } = await supabase
+              .from('classroom_students').select('line_user_id').eq('token', reqRowCancel.token).maybeSingle();
+            if (stuErrCancel) {
+              replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但查不到學生資料（' + stuErrCancel.message + '），沒通知到學生，記得自己說一聲';
+            } else if (!stuRowCancel || !stuRowCancel.line_user_id) {
+              replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但學生還沒連結 LINE，沒收到通知，記得自己說一聲';
+            } else {
+              const odateMsg = (reqRowCancel.original_date || '') + (reqRowCancel.original_time ? ' ' + reqRowCancel.original_time : '');
+              const pushResCancel = await pushLineChecked(channelToken, stuRowCancel.line_user_id,
+                '✅ 老師已確認，' + odateMsg + ' 的課程已經取消囉');
+              if (!pushResCancel.ok) {
+                console.error('[line-webhook] ⚠️ confirm_cancel_delete: แจ้งนักเรียนไม่สำเร็จ:', pushResCancel.reason, 'request=', requestIdCancel);
+                replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但 LINE 通知學生失敗（' + pushResCancel.reason + '），請自己再跟學生說一聲';
+              }
+            }
+          }
+        } catch (e) {
+          const whyNotify = (e && e.message) ? e.message : String(e);
+          console.error('[line-webhook] ⚠️ confirm_cancel_delete: แจ้งนักเรียนพังกลางคัน:', whyNotify, 'request=', requestIdCancel);
+          replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但通知學生時出錯（' + whyNotify + '），請自己再跟學生說一聲';
         }
 
-        // แจ้งนักเรียนว่ายกเลิกเรียบร้อยแล้วจริง (best-effort ไม่บล็อกถ้าหาไม่เจอ)
-        if (channelToken && reqRowCancel.token) {
-          try {
-            const { data: stuRowCancel } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowCancel.token).maybeSingle();
-            if (stuRowCancel && stuRowCancel.line_user_id) {
-              const odateMsg = (reqRowCancel.original_date || '') + (reqRowCancel.original_time ? ' ' + reqRowCancel.original_time : '');
-              await pushLine(channelToken, stuRowCancel.line_user_id, '✅ 老師已確認，' + odateMsg + ' 的課程已經取消囉');
-            }
-          } catch (e) { /* แจ้งนักเรียนไม่สำเร็จ ไม่กระทบว่าลบ Calendar สำเร็จแล้ว */ }
+        if (channelToken && event.replyToken) {
+          await replyLine(channelToken, event.replyToken, replyMsgCancel);
         }
         continue;
       }
