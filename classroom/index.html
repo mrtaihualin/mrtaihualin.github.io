@@ -2470,7 +2470,9 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
   // 這裡補上跟取消/改期同一套鎖，只有真的搶到鎖才往下建立 Calendar。
   let claimedLock = false;
   if (requestIdToFinalize) {
-    const claim = await claimRequestForProcessing(requestIdToFinalize);
+    // 🔴 2026-07-31 เปลี่ยนตัวจับล็อก: เพิ่มคาบต้องใช้ claimAddClassRequest (ห้ามแย่งล็อกค้างเอง)
+    //    ไม่ใช่ claimRequestForProcessing ที่แย่งได้เมื่อครบ 10 นาที — เหตุผลเต็มอยู่ที่ claimAddClassRequest
+    const claim = await claimAddClassRequest(requestIdToFinalize);
     if (!claim.ok) return { ok: false, error: claim.reason };
     claimedLock = true;
   }
@@ -2497,7 +2499,11 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
           headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
           // 2026-07-30 改（Lin สั่ง）：ไม่มีปุ่ม 接受/婉拒 อีกแล้ว คาบถูกเพิ่มลงปฏิทินไปเลย
           // → ข้อความต้องบอกนักเรียนให้ชัดว่า "ถ้าไม่สะดวก กดขอยกเลิกคาบเองได้"
-          body: JSON.stringify({ to: { studentToken: token }, message: '✅ 老師幫你排好一堂課：' + studentTimeLabel + '\n這堂課已經加到課表了。如果那個時間不方便，請到網站按「申請取消課堂」，或直接跟老師說一聲。' }),
+          // 2026-07-31 แก้：คาบทุกสัปดาห์ห้ามเรียกว่า「一堂課」และห้ามชี้ไปปุ่ม「申請取消課堂」
+          //   เพราะปุ่มนั้นยกเลิกได้ทีละครั้ง ไม่ใช่ทั้งชุด → ชุดคาบประจำให้ทักครูตรงๆ (ตรงกับฝั่ง LINE)
+          body: JSON.stringify({ to: { studentToken: token }, message: p.recurring
+            ? ('✅ 老師幫你排好固定課了：' + studentTimeLabel + '\n已經加到課表了。如果這個時間不方便，請直接跟老師說一聲。')
+            : ('✅ 老師幫你排好一堂課：' + studentTimeLabel + '\n這堂課已經加到課表了。如果那個時間不方便，請到網站按「申請取消課堂」，或直接跟老師說一聲。') }),
         });
         studentNotified = stuRes.ok;
         if (!stuRes.ok) studentNotifyErr = await lineNotifyErrorText(stuRes);
@@ -6167,7 +6173,7 @@ async function submitClassRequest() {
     p_initiated_by: 'student',
   });
   btn.disabled = false; btn.textContent = '📤 送出申請';
-  if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  if (res.error) { var friendlyResched = friendlyRequestError(res.error.message); alert(friendlyResched ? ('⚠️ ' + friendlyResched) : ('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。')); return; }
   if (typeof gtag === 'function') gtag('event', 'class_request_submitted', { category: 'course', request_type: 'reschedule' });
   const newId = res.data;
   // 2026-07-16 加：submit_class_request 這個 RPC 不收 proposed_options/offer_status 參數
@@ -6203,7 +6209,7 @@ async function submitClassRequestEdit(id, options, studentName) {
     requested_date: options[0].date, requested_time: options[0].time,
     proposed_options: options, offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
   }, { status: 'pending', offerStatus: 'proposed' });
-  if (res.error) { alert('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  if (res.error) { var friendlyReschedEdit = friendlyRequestError(res.error.message); alert(friendlyReschedEdit ? ('⚠️ ' + friendlyReschedEdit) : ('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。')); return; }
   if (!res.rows.length) {
     alert('ℹ️ 更新失敗，這筆申請可能已經被老師處理了，重新整理頁面看看。');
     closeClassRequestModal();
@@ -6379,7 +6385,7 @@ async function submitAddRequest() {
         p_note: note || null,
         p_initiated_by: 'student',
       });
-      if (res.error) { failedLines.push(row.newDate + ' ' + row.newTime + '：' + res.error.message); continue; }
+      if (res.error) { var friendlyAdd = friendlyRequestError(res.error.message); failedLines.push(row.newDate + ' ' + row.newTime + '：' + (friendlyAdd || res.error.message)); continue; }
       const newId = res.data;
 
       // ════════════════════════════════════════════════════════════════════════
@@ -6425,6 +6431,9 @@ async function submitAddRequest() {
   let doneMsg = '✅ 已送出 ' + created.length + ' 筆加課申請，老師確認沒有衝突後會安排進課表。';
   if (failedLines.length) doneMsg += '\n⚠️ 但有 ' + failedLines.length + ' 筆沒送出成功：\n' + failedLines.join('\n');
   alert(doneMsg);
+  // 2026-07-31：เดิมไม่ได้รีเฟรชการ์ดสถานะเลย นักเรียนเพิ่งเห็น "✅ ส่งแล้ว" แต่การ์ด "⏳ 加課申請處理中"
+  //   ไม่ขึ้นจนกว่าจะรีโหลดหน้าเอง = เหมือนคำขอหายไปไหนไม่รู้ · ทุกปุ่มอื่นของนักเรียนเรียกตัวนี้อยู่แล้ว
+  loadStudentPendingRequestStatus(token);
 }
 
 // 2026-07-13 加：學生自己頁面看「目前送出的申請」狀態
@@ -6434,7 +6443,12 @@ async function submitAddRequest() {
 const REQUEST_SLA_HOURS = 48;
 async function loadStudentPendingRequestStatus(token) {
   const el = document.getElementById('pendingRequestCard');
-  if (!el) return;
+  if (!el) {
+    // 2026-07-31：ถ้าหากล่องหลักไม่เจอ ต้องล้างการ์ดเพิ่มคาบด้วย ไม่งั้นค้างบนจอเป็นข้อมูลเก่าหลอกนักเรียน
+    var addElNoMain = document.getElementById('pendingAddRequestCard');
+    if (addElNoMain) addElNoMain.innerHTML = '';
+    return;
+  }
   try {
     // 2026-07-16 改：多撈幾筆，自己篩掉「老師發起的取消」（那個已經有專屬的
     // teacherCancelAckBanner 處理確認流程了，這裡不用重複顯示，不然學生會看到兩個一樣的東西）。
@@ -6463,6 +6477,9 @@ async function loadStudentPendingRequestStatus(token) {
     });
     var addEl = document.getElementById('pendingAddRequestCard');
     if (!addEl) {
+      // กันพังเงียบ: ถ้าหาที่วางไม่เจอ (ไม่ควรเกิด) ห้ามปล่อยให้ error ไปโดน catch ข้างล่าง
+      // ซึ่งจะล้างการ์ดหลักทิ้งโดยที่ไม่มีใครรู้ว่าทำไม
+      if (!el.parentNode) return;
       addEl = document.createElement('div');
       addEl.id = 'pendingAddRequestCard';
       el.parentNode.insertBefore(addEl, el.nextSibling);
@@ -6570,7 +6587,13 @@ async function loadStudentPendingRequestStatus(token) {
         ownCancelActions +
       '</div>';
     }
-  } catch (e) { el.innerHTML = ''; }
+  } catch (e) {
+    el.innerHTML = '';
+    // 2026-07-31：ต้องล้างการ์ดเพิ่มคาบด้วย ไม่งั้นการ์ดหลักหายไปเงียบๆ แต่การ์ดเพิ่มคาบค้างอยู่บนจอ
+    //   อาจโชว์คำขอที่นักเรียนถอนไปแล้ว (ข้อมูลเก่าค้าง = หลอกนักเรียน)
+    var addElErr = document.getElementById('pendingAddRequestCard');
+    if (addElErr) addElErr.innerHTML = '';
+  }
 }
 
 // 2026-07-16 加：把一個候選時間 {date,time} 換算成給學生/老師看的文字。
@@ -7754,6 +7777,35 @@ async function claimRequestForProcessing(id) {
   return { ok: true };
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// 🔴 2026-07-31 เพิ่ม — ล็อกเฉพาะของ "เพิ่มคาบ" ที่ห้ามแย่งเองเด็ดขาด
+//
+// ทำไมต้องมีตัวนี้แยกจาก claimRequestForProcessing ข้างบน:
+//   claimRequestForProcessing แย่งล็อกที่ค้างเกิน 10 นาทีได้เอง ซึ่ง "ถูกต้องสำหรับการยกเลิกคาบ"
+//   (ลบคาบเดิมซ้ำ = ไม่มีอะไรเพิ่มขึ้น คาบนั้นหายไปแล้ว)
+//   แต่ "ผิดมหันต์สำหรับการเพิ่มคาบ" — เพิ่มซ้ำ = ได้คาบซ้อนกัน 2 คาบจริงในปฏิทิน
+//
+//   เส้นทางเพิ่มคาบมี 3 จุดที่ "จงใจ" ทิ้งล็อกค้างไว้ เพราะ Calendar อาจถูกสร้างไปแล้ว
+//   (ดู ambiguous ใน directConfirmAddClassRow / confirmTeacherAddClass และฝั่ง LINE อีก 3 จุด)
+//   ถ้าปล่อยให้แย่งได้เมื่อครบ 10 นาที = ครูกดอีกทีแล้วได้คาบซ้ำ ซึ่งคือสิ่งที่ตั้งใจกันไว้พอดี
+//
+//   ⚠️ เจอตอนตรวจซ้ำ 2026-07-31: ตอนแรกแก้แต่ฝั่ง LINE ให้เข้ม แต่ลืมว่าฝั่งเว็บของ "เพิ่มคาบ"
+//      ยังเรียก claimRequestForProcessing ตัวที่แย่งได้อยู่ → ล็อกที่ LINE จงใจทิ้งไว้
+//      ถูกเว็บแย่งไปสร้างคาบซ้ำได้หลังผ่านไป 10 นาที (รูเดิมย้ายที่ ไม่ได้หายไป)
+//
+// ล็อกค้างเพราะเน็ตหลุดจริงๆ ปลดยังไง: ปุ่ม 🔓 解鎖這筆 บนการ์ดคิว (unlockStuckRequest ข้างล่าง)
+//   → ให้ "คน" ตัดสินใจ ปลอดภัยกว่าให้ระบบปลดเองแล้วสร้างคาบซ้อน
+// ════════════════════════════════════════════════════════════════════════════
+async function claimAddClassRequest(id) {
+  var res = await sb.from('classroom_requests')
+    .update({ processing_started_at: new Date().toISOString() })
+    .eq('id', id).eq('status', 'pending').is('processing_started_at', null)
+    .select();
+  if (res.error) return { ok: false, reason: '搶佔處理權失敗：' + res.error.message + '\n為了安全，這次先不動 Calendar，請重試一次。' };
+  if (!res.data || !res.data.length) return { ok: false, reason: '這筆申請已經在別的地方（LINE 或另一個分頁）處理中，或剛好已經處理完了，請重新整理頁面查看最新狀態，不會重複建立課堂。\n（如果確定是中途斷掉卡住的，等 10 分鐘後卡片上會出現「🔓 解鎖這筆」按鈕，按了才會解開——加課故意不自動解鎖，避免建立到重複的課堂）' };
+  return { ok: true };
+}
+
 // 🟠 2026-07-31 加（งาน C6）：ปุ่มปลดล็อกด้วยมือ สำหรับคำขอที่ค้าง "處理中" เกิน 10 นาที
 // ทำไมต้องมีทั้งที่ระบบแย่งเองได้แล้ว: ปุ่มนี้ทำให้ครู "เห็น" ว่ามีของค้างอยู่ และปลดได้ทันทีที่อยากปลด
 // ไม่ต้องรอ / ไม่ต้องเดาว่าระบบจะจัดการให้ไหม (โยงกับกฎ "ต้องกู้คืนได้เมื่อพังกลางคัน")
@@ -8259,21 +8311,37 @@ async function closeAddRequestAfterContact(id) {
   if (_inFlightRequestIds[id]) return; // 防重複點擊，跟其他處理按鈕同一套
   _inFlightRequestIds[id] = true;
   try {
-    // 🟡 2026-07-31 เพิ่ม (ข้อ #13)：ต้องแย่ง "ป้ายมีคนใช้อยู่" ก่อน เหมือนปุ่มอื่นที่แตะคำขอเดียวกัน
+    // 🟡 2026-07-31 เพิ่ม (ข้อ #13)：ปิดคำขอได้ต่อเมื่อไม่มีใครกำลังทำอยู่
     //
-    // พังยังไงถ้าไม่มี: ครูกด ✅ 確認新增 ใน LINE (ระบบจับป้ายแล้วกำลังคุยกับ Google อยู่)
+    // พังยังไงถ้าไม่มีด่านนี้: ครูกด ✅ 確認新增 ใน LINE (ระบบจับป้าย "มีคนใช้อยู่" แล้วกำลังคุยกับ Google)
     //   แล้วเผลอกด ✔️ 關掉這筆 บนโน้ตบุ๊กในไม่กี่วินาทีเดียวกัน
     //   → ฝั่งเว็บปิดคำขอสำเร็จ นักเรียนได้ LINE ว่า "เวลานั้นครูไม่สะดวก"
     //     แล้วฝั่ง LINE สร้างคาบสำเร็จ นักเรียนได้อีกข้อความว่า "จัดคาบให้แล้ว" = ขัดกันเอง
     //
+    // ⚠️ ทำไมเขียนคำสั่งเองตรงนี้ แทนที่จะ "จับป้ายก่อน แล้วค่อยเรียก finalizeRequestStatus":
+    //   ถ้าจับป้ายแล้ว finalizeRequestStatus ล้มเหลว (เช่นสถานะถูกเปลี่ยนไประหว่างทาง) ป้ายจะค้างไว้
+    //   → **นักเรียนจะกดปุ่ม 收回這筆 ของตัวเองไม่ได้อีกเลยตลอดกาล** เพราะด่านฝั่งฐานข้อมูลของนักเรียน
+    //     (student_update_own_request) บังคับว่าป้ายต้อง "ว่างเปล่า" เท่านั้น ไม่มีกฎ 10 นาทีเหมือนฝั่งครู
+    //   → ยิงคำสั่งเดียวจบ ทั้งเช็คป้ายและปิดคำขอพร้อมกัน: ไม่สำเร็จ = ไม่มีอะไรเปลี่ยน ไม่มีอะไรค้าง
+    //
     // ⚠️ ทำไมไม่ไปเติมเงื่อนไข "ป้ายต้องว่าง" ใน finalizeRequestStatus (ซึ่งดูตรงจุดกว่า):
     //   finalizeRequestStatus เป็นของใช้ร่วมทุกประเภทคำขอ (ยกเลิก/ขอเลื่อน/เพิ่มคาบ) และเส้นทางอื่น
     //   เรียกมัน "หลัง" จากที่ตัวเองจับป้ายไว้แล้ว → ถ้าบังคับว่าป้ายต้องว่าง มันจะปิดงานของตัวเองไม่ได้เลย
-    //   = พังทั้งระบบยกเลิกและระบบขอเลื่อนทันที · ปุ่มนี้แย่งป้ายเองจึงปลอดภัยกว่าและได้ผลเท่ากัน
-    var claimClose = await claimRequestForProcessing(id);
-    if (!claimClose.ok) { alert('⚠️ ' + claimClose.reason); await loadPendingClassRequests(); return; }
-
-    await finalizeRequestStatus(id, 'acknowledged'); // ตัวนี้เคลียร์ป้ายให้เองพร้อมกับเปลี่ยนสถานะ
+    //   = พังทั้งระบบยกเลิกและระบบขอเลื่อนทันที
+    var closeRes = await sb.from('classroom_requests')
+      .update({ status: 'acknowledged', processing_started_at: null })
+      .eq('id', id).eq('status', 'pending').is('processing_started_at', null)
+      .select();
+    if (closeRes.error) { alert('⚠️ 關閉失敗：' + closeRes.error.message + '\n沒有關掉任何東西，請重試一次。'); await loadPendingClassRequests(); return; }
+    if (!closeRes.data || !closeRes.data.length) {
+      alert('ℹ️ 沒有關掉這筆——可能正在別的地方處理中（例如你剛在 LINE 按了「確認新增」），或狀態剛好被改掉了。\n'
+        + '沒有送出任何 LINE 通知。請重新整理頁面看最新狀態。\n'
+        + '（如果確定是中途斷掉卡住的，等 10 分鐘後卡片上會出現「🔓 解鎖這筆」按鈕）');
+      await loadPendingClassRequests();
+      return;
+    }
+    var rowEl = document.getElementById('req-row-' + id);
+    if (rowEl) rowEl.remove();
     // 2026-07-30 加（Lin สั่ง: ทุกกรณีต้องแจ้งผลให้นักเรียนรู้）：ถ้าไม่บอก การ์ด "⏳ 加課申請處理中"
     // ของนักเรียนจะหายไปเฉยๆ เหมือนคำขอถูกกลืน นักเรียนไม่รู้เลยว่าเกิดอะไรขึ้น
     // ส่งไม่สำเร็จก็ไม่ย้อนสถานะ (คำขอปิดไปแล้วจริง) แต่ต้องบอกครูให้รู้ ห้ามเงียบ
@@ -8291,6 +8359,8 @@ async function closeAddRequestAfterContact(id) {
       notifyWarn = '\n⚠️ 找不到這位學生的資料，沒有送出 LINE 通知';
     }
     alert('ℹ️ 已關掉這筆申請' + (notifyWarn || '，也已用 LINE 告訴學生了') + '\n記得自己再跟學生說一聲比較保險');
+    // 2026-07-31：เดิม finalizeRequestStatus รีเฟรชคิวให้เอง ตอนนี้เขียนคำสั่งปิดเองแล้วจึงต้องเรียกเอง
+    await loadPendingClassRequests();
   } finally {
     delete _inFlightRequestIds[id];
   }
@@ -9128,7 +9198,8 @@ async function confirmTeacherAddClass(id) {
     // 改期已經在用的 claimRequestForProcessing 不一致，也跟 LINE 那邊 confirm_add_class 自己有
     // 搶鎖不一致）：這筆同時能從網頁「確認新增」跟 LINE「✅ 確認新增」兩邊觸發，沒搶鎖的話同時按
     // 可能真的在 Google Calendar 建立兩筆重複事件。這裡補上跟取消/改期同一套鎖。
-    const claimTeacherAdd = await claimRequestForProcessing(id);
+    // 🔴 2026-07-31 เปลี่ยนตัวจับล็อกเป็นแบบ "ห้ามแย่ง" เหมือนเส้นทางเพิ่มคาบอื่นๆ (ดู claimAddClassRequest)
+    const claimTeacherAdd = await claimAddClassRequest(id);
     if (!claimTeacherAdd.ok) { alert('⚠️ ' + claimTeacherAdd.reason); await loadPendingClassRequests(); return; }
 
     let created;
