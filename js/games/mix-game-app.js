@@ -74,6 +74,7 @@
 
   var S = {
     queue: [], total: 0, done: 0, score: 0, streak: 0, perfectCount: 0,
+    okCount: 0, badCount: 0, // 2026-07-25 รอบ7: เพิ่มให้ตรงกับ score-bar จริง (✓/✗) — Lin บอก "หน้าตาในเกมตอนเล่น" ไม่เหมือน
     cur: null, derivStep: null, typePos: 0, shiftOn: false, resolving: false
   };
 
@@ -145,7 +146,7 @@
     });
     S.queue = shuffle(cards);
     S.total = S.queue.length;
-    S.done = 0; S.score = 0; S.streak = 0; S.perfectCount = 0;
+    S.done = 0; S.score = 0; S.streak = 0; S.perfectCount = 0; S.okCount = 0; S.badCount = 0;
     nextCard();
   }
 
@@ -225,9 +226,11 @@
       S.streak++;
       pts = Math.max(1, Math.round(pts * comboMult(S.streak)));
       if (clean) S.perfectCount++;
+      S.okCount++;
     } else {
       S.streak = 0;
       pts = Math.round(pts);
+      S.badCount++;
     }
     S.score += pts;
     flashBanner(!failed, pts, failed);
@@ -254,6 +257,7 @@
   // RENDER — เปลือกเกม (ใช้ class เดียวกับเกมเดิม)
   // ════════════════════════════════════════════
   var root, card;
+  var CUR_LEVEL = '初'; // 2026-07-25 รอบ6: เพิ่มปุ่มเลือกระดับตามที่ Lin สั่ง — ตอนนี้สร้างเฉพาะ 初級ใช้งานได้จริง 中/高 ยังเป็นแค่ปุ่มรอ
   function mount(container) {
     root = container;
     root.innerHTML = '<div class="card" id="mx-card"></div>';
@@ -261,14 +265,45 @@
     startRound();
   }
 
+  // เรียกจากปุ่ม .ltab ใน mix.html — 初級ใช้งานได้จริง ส่วน 中級/高級ยังไม่ได้สร้าง (ตามที่ Lin สั่งให้เริ่มจาก 初級ก่อน)
+  // โชว์หน้า "ยังไม่เปิด" แทนการพยายามเล่น กันพังจากพูลว่าง (ตอนนี้ POOL กรองเฉพาะ level==='初' เท่านั้น)
+  function setLevel(lv) {
+    CUR_LEVEL = lv;
+    ['初', '中', '高'].forEach(function (l) {
+      var tab = document.getElementById('mx-ltab-' + l);
+      if (tab) tab.classList.toggle('active', l === lv);
+    });
+    if (S._keyHandler) { document.removeEventListener('keydown', S._keyHandler); S._keyHandler = null; }
+    if (lv === '初') { startRound(); return; }
+    card.innerHTML =
+      '<div class="mx-soon">' +
+        '<div class="emoji">🌾</div>' +
+        '<div class="msg">' + (lv === '中' ? '中級' : '高級') + '還在準備中，敬請期待 🙏<br>先玩玩看初級吧！</div>' +
+        '<div class="btn-row" style="margin-top:16px"><button class="btn btn-primary" onclick="MixGame.setLevel(\'初\')">回到初級</button></div>' +
+      '</div>';
+  }
+
+  // 2026-07-25 รอบ7: Lin บอก "หน้าตาในเกมตอนเล่น" ไม่เหมือนเกมจริง — เทียบกับ reading-game.html บรรทัด 441-462 พบว่า
+  // score-bar จริงโชว์ 第X/Y字 · ✓ok · ✗bad (ไม่มีเลขคะแนนรวม🏆โชว์สดระหว่างเล่นเลย คะแนนรวมโชว์แค่ตอนจบรอบ)
+  // และ bars-wrap จริงมี 2 แถบ: 進度 + 本題分數 (แถบเขียวโชว์ว่าข้อนี้เหลือกี่แต้มสด ๆ ตามจำนวนที่ตอบผิดไปแล้ว) — ของเดิมมีแค่ 進度 แถบเดียว
+  function curPowerPct(c) {
+    if (!c) return 100;
+    var wc = c.stage === 3 ? c.wrongCount : c.sylWrong[c.sylIdx];
+    var pts = LADDER[wc] != null ? LADDER[wc] : 0;
+    return Math.round((pts / LADDER[0]) * 100);
+  }
   function goldBannerHtml() {
     var pct = S.total ? Math.round((S.done / S.total) * 100) : 0;
+    var powerPct = curPowerPct(S.cur);
     return '<div class="gold-banner">' +
       '<div class="top-bar">' +
-        '<div class="score-bar"><span>第 ' + (S.done + 1) + '/' + S.total + ' 題</span><span>🏆<span>' + S.score + '</span></span></div>' +
+        '<div class="score-bar"><div>第 ' + (S.done + 1) + '/' + S.total + ' 題</div><div>✓ ' + S.okCount + '</div><div>✗ ' + S.badCount + '</div></div>' +
         '<div class="combo-badge' + (S.streak >= 3 ? ' show' : '') + '">🔥 連對 ' + S.streak + '</div>' +
       '</div>' +
-      '<div class="bars-wrap"><div class="bar-row"><span class="bar-label">進度</span><div class="bar-bg"><div class="bar-fill prog" style="width:' + pct + '%"></div></div></div></div>' +
+      '<div class="bars-wrap">' +
+        '<div class="bar-row"><span>進度</span><div class="bar-bg"><div class="bar-fill prog" style="width:' + pct + '%"></div></div><span class="bar-label">' + S.done + '/' + S.total + '</span></div>' +
+        '<div class="bar-row"><span>本題分數</span><div class="bar-bg"><div class="bar-fill power" style="width:' + powerPct + '%"></div></div><span class="bar-label">' + Math.round(powerPct / 10) + '/10</span></div>' +
+      '</div>' +
     '</div>';
   }
 
@@ -343,15 +378,18 @@
     else if (step === 'live') { q = '這個音節是活音節還是死音節？'; opts = [['live', '活音節'], ['dead', '死音節']]; }
     else if (step === 'vlen') { q = '母音是短音還是長音？'; opts = [['short', '短音'], ['long', '長音']]; }
 
+    // 2026-07-25 รอบ8: Lin บอก "ไม่เหมือน 100%" — เช็คพบว่าหน้า推導ของจริงไม่ได้ใช้ .bonus-section เลย
+    // (อันนั้นเป็นคนละฟีเจอร์ใน reading-game.html) หน้า推導จริงอยู่ tone-finder-game.js ใช้ .tf-mina (มาสคอต
+    // น้องมีนา 👧🏻ป๊อปพูด) + .tf-options/.tf-opt-wrap/.tf-opt แก้ให้ตรงของจริงทั้งหมด
     if (step === 'result') {
       var w2 = c.word.syls[c.sylIdx];
       var reason = buildToneReason({ th: full, tone_name: w2.tone_name, lead: w2.lead, cons: w2.cons });
       document.getElementById('mx-deriv').innerHTML =
-        '<div class="bonus-section show">' +
-          '<div class="bonus-header">結論：' + TONE_NUM_ZH[TONE_NAME_TO_NUM[w2.tone_name]] + ' (' + w2.tone_name + ')</div>' +
-          (reason ? '<div class="bonus-reason show"><div class="bonus-reason-why">' + esc(reason) + '</div></div>' : '') +
-          '<div class="opts-wrap" style="margin-top:8px"><div class="opts"><div class="opt" id="mx-deriv-done" style="font-size:16px;padding:8px 16px">懂了 →</div></div></div>' +
-        '</div>';
+        '<div class="tf-mina"><div class="tf-mina-face">👧🏻</div><div class="tf-mina-bubble">' +
+          '結論：<b>' + TONE_NUM_ZH[TONE_NAME_TO_NUM[w2.tone_name]] + ' (' + w2.tone_name + ')</b>' +
+          (reason ? '<br>' + esc(reason) : '') +
+        '</div></div>' +
+        '<div class="tf-options"><div class="tf-opt-wrap"><button class="tf-opt" id="mx-deriv-done">懂了 →</button></div></div>';
       document.getElementById('mx-deriv-done').addEventListener('click', function () { sylCorrect(c); });
       return;
     }
@@ -361,11 +399,11 @@
     // ต้องล้าง lock ทุกครั้งที่ขึ้นคำถามย่อยใหม่
     derivEl.removeAttribute('data-locked');
     derivEl.innerHTML =
-      '<div class="bonus-section show">' +
-        '<div class="bonus-header">' + q + '</div>' +
-        '<div class="bonus-opts">' + opts.map(function (o) { return '<div class="bonus-btn" data-v="' + o[0] + '">' + o[1] + '</div>'; }).join('') + '</div>' +
-      '</div>';
-    derivEl.querySelectorAll('.bonus-btn').forEach(function (btn) {
+      '<div class="tf-mina"><div class="tf-mina-face">👧🏻</div><div class="tf-mina-bubble">' + q + '</div></div>' +
+      '<div class="tf-options">' + opts.map(function (o) {
+        return '<div class="tf-opt-wrap"><button class="tf-opt" data-v="' + o[0] + '">' + o[1] + '</button></div>';
+      }).join('') + '</div>';
+    derivEl.querySelectorAll('.tf-opt').forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (document.getElementById('mx-deriv').dataset.locked) return;
         document.getElementById('mx-deriv').dataset.locked = '1';
@@ -497,17 +535,15 @@
     '</div>';
   }
 
+  // 2026-07-25 รอบ8: Lin ส่งภาพจริงมา — ตัวพิมพ์เพี้ยน ("ดื่ม" เพี้ยนเป็น "ดี"+ม) เพราะเดิมตัดทีละ "ตัวอักษร Unicode"
+  // แล้วห่อ <span> แยกทุกตัว สระ/วรรณยุกต์ลอย (ื ่ ฯลฯ) เป็นเครื่องหมายที่ต้องเกาะกับตัวพยัญชนะ "ในก้อนข้อความเดียวกัน"
+  // ถ้าห่อ span แยกกันคนละก้อน เบราว์เซอร์จัดวางเครื่องหมายเกาะผิดตำแหน่ง/ผิดตัวได้ — เทียบกับ typing-game-app.js
+  // rgTypeRenderTarget() ของจริง (บรรทัด 1727) พบว่าเกมจริงห่อแค่ 2 ก้อน (พิมพ์ไปแล้ว/ยังไม่พิมพ์) ไม่ใช่ทีละตัวอักษร
+  // แก้ตามนั้นเป๊ะ — ได้ผลพลอยได้คือไม่มีไฮไลต์ "ตัวถัดไป" อัตโนมัติแล้วด้วย (เกมจริงก็ไม่มีเช่นกัน ไม่ใช่แค่เอาตัวใบ้ออก)
   function paintType(c, target) {
-    var html = '';
-    for (var i = 0; i < target.length; i++) {
-      var col = i < S.typePos ? '#2e7d32' : (i === S.typePos ? '#d85a30' : '#c9b98a');
-      var deco = i === S.typePos ? 'border-bottom:3px solid #d85a30' : '';
-      html += '<span style="color:' + col + ';' + deco + '">' + esc(target[i]) + '</span>';
-    }
-    document.getElementById('mx-typetarget').innerHTML = html;
-    // Lin 2026-07-25: "เกมรวมไม่ต้องมีตัวใบ้เลย เล่นจริงอย่างเดียว" — เอาไฮไลต์ "ปุ่มถัดไปที่ต้องกด" ออก
-    // (เดิมไฮไลต์อัตโนมัติทุกครั้ง เท่ากับเปิดโหมดมีตัวใบ้ตลอดเวลาโดยไม่ได้ตั้งใจ ต่างจากเกมพิมพ์เดิมที่ตัวใบ้เป็นโหมดแยก ปิดเป็นค่าเริ่มต้น)
-    // ป้ายเล็กบนปุ่ม (tk-shift/tk-base) ไม่ใช่ตัวใบ้ — เป็นแค่ป้ายแป้นพิมพ์แบบคีย์บอร์ดจริงที่มี 2 ตัวอักษรต่อปุ่มเสมอ ไม่ผูกกับคำที่กำลังพิมพ์
+    var done = target.slice(0, S.typePos), rest = target.slice(S.typePos);
+    document.getElementById('mx-typetarget').innerHTML =
+      '<span style="color:#2e7d32">' + esc(done) + '</span><span style="color:#c9b98a">' + esc(rest) + '</span>';
     updateShiftKeyVisual();
   }
 
@@ -576,5 +612,5 @@
     document.getElementById('mx-again').addEventListener('click', startRound);
   }
 
-  window.MixGame = { mount: mount };
+  window.MixGame = { mount: mount, setLevel: setLevel };
 })();

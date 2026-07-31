@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>綜合遊戲 — 泰華眼裡的泰語教學</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── ก็อปมาจาก reading-game.html + typing-game.html จริง (ไม่ได้คิดสีขึ้นเอง) — Lin สั่งแก้ 2026-07-25 รอบ 2 ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EDE7D9;font-family:'Sarabun',sans-serif}
+.v3-page{max-width:640px;margin:0 auto;padding:18px 14px 60px}
+.page-header{text-align:center;margin-bottom:10px}
+.page-title{font-family:'Noto Serif TC',serif;font-size:clamp(18px,4vw,24px);font-weight:900;color:#8B6310;letter-spacing:1px}
+.page-sub{font-family:'Noto Sans TC',sans-serif;font-size:11px;color:#b08040;margin-top:3px}
+
+/* ── ปุ่มเลือกระดับ — ก็อปมาจาก reading-game.html จริง (.level-tabs/.ltab) — เพิ่ม 2026-07-25 รอบ6 ตามที่ Lin สั่ง ── */
+.level-tabs{display:flex;gap:8px;margin-bottom:12px;width:100%;max-width:640px;}
+.ltab{flex:1;padding:10px 8px;border-radius:999px;border:2px solid #d4b87a;background:#fff;color:#8b6310;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:all .15s;}
+.ltab:hover{background:#fff8ee;border-color:#c07030;}
+.ltab.active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;border-color:transparent;}
+.ltab.disabled{opacity:.5;cursor:not-allowed;}
+
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden}
+
+.gold-banner{width:calc(100% + 40px);margin:-20px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,#EFDDB4 0%,#F8F0DE 100%);border-bottom:2px solid rgba(184,134,40,.5)}
+.top-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;width:100%;margin-bottom:10px}
+.score-bar{display:flex;gap:12px;font-size:13px;color:#8B6310;font-family:'Noto Sans TC',sans-serif;font-weight:700}
+.score-bar span span{color:#5a3e10}
+.combo-badge{display:none;align-items:center;gap:4px;background:#fff3e0;border:1.5px solid #ffcc02;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;color:#e65100;font-family:'Noto Sans TC',sans-serif}
+.combo-badge.show{display:flex}
+.bars-wrap{width:100%}
+.bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050}
+.bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.bar-fill.prog{background:linear-gradient(90deg,#e8a020,#d85a30)}
+.bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047)}
+.bar-label{min-width:36px;text-align:right;font-size:11px}
+
+.rule-tag{background:#f5e8c8;color:#8b6310;border-radius:6px;padding:2px 9px;font-size:11px;font-weight:700;font-family:'Noto Sans TC',sans-serif}
+.rule-tag.sp{background:#fde8cc;color:#c05010}
+
+.word-area{text-align:center;margin:4px 0 0}
+.word-th{font-size:38px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px}
+.word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px}
+
+.result-banner{width:100%;padding:0;height:0;border-radius:11px;text-align:center;font-size:14px;font-weight:600;font-family:'Noto Sans TC',sans-serif;overflow:hidden;transition:all .2s}
+.result-banner.show{padding:9px 14px;height:auto;margin-top:2px}
+.result-banner.ok{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
+.result-banner.no{background:#fdecea;color:#c62828;border:1px solid #ef9a9a}
+
+.opts-wrap{width:100%;margin:10px 0 2px}
+.opts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:4px 0}
+@keyframes floatUp{0%{opacity:0;transform:translateY(30px) scale(.6)}65%{opacity:1;transform:translateY(0) scale(1.06)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.opt{position:relative;min-width:54px;padding:9px 12px;border-radius:14px;border:2px solid #d4b87a;background:#fff;color:#5a3e10;font-size:22px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;text-align:center;user-select:none;animation:floatUp .42s cubic-bezier(.34,1.56,.64,1) var(--delay,0s) both,bob 2.4s ease-in-out .6s infinite;will-change:transform}
+.opt:hover:not(.locked){background:#ffeedd;border-color:#c07030;transform:translateY(-4px) scale(1.08)}
+.opt.sel{border-color:#c07030;background:#fff8ee}
+.opt.correct{border-color:#4caf50;background:#e8f5e9;color:#2e7d32;animation:none}
+.opt.wrong{border-color:#f44336;background:#fdecea;color:#c62828;animation:none}
+.opt.locked{pointer-events:none}
+
+/* 2026-07-25 รอบ8: Lin ส่งภาพจริงมา บอก "ไม่เหมือน 100%" — ตรวจแล้วพบว่าหน้า 推導 (ทายเสียง) ผมเอา
+   class ผิดมาตั้งแต่แรก (ก็อป .bonus-section จาก reading-game.html ซึ่งเป็นคนละฟีเจอร์ ไม่ใช่หน้า推導จริง)
+   หน้า推導จริงอยู่ใน tone-finder.html ใช้ระบบ .tf-mina (มาสคอตน้องมีนา) + .tf-options/.tf-opt-wrap/.tf-opt
+   แก้ให้ตรงของจริงทั้งหมด (ก็อปค่าจาก tone-finder.html บรรทัด 444-482, 1662-1679 ตรงๆ) */
+.tf-mina{display:flex;align-items:flex-start;gap:10px;justify-content:center;margin:6px 0 12px;width:100%}
+.tf-mina-face{font-size:38px;line-height:1;flex-shrink:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.12));animation:tf-mina-bob 2s ease-in-out infinite}
+@keyframes tf-mina-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.tf-mina-bubble{position:relative;background:#fff;border:1.5px solid #f0e2c2;border-radius:14px;padding:10px 14px;font-size:14px;color:#5a4a2a;line-height:1.5;max-width:300px;box-shadow:0 2px 8px rgba(139,99,16,.08);text-align:left;font-family:'Noto Sans TC',sans-serif}
+.tf-mina-bubble::before{content:'';position:absolute;left:-8px;top:16px;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-right:9px solid #f0e2c2}
+.tf-options{display:flex;flex-direction:column;gap:10px;width:100%;margin-bottom:4px}
+.tf-opt-wrap{display:flex;align-items:stretch;gap:8px}
+.tf-opt{flex:1;padding:13px 18px;background:#fff;border:1.5px solid rgba(139,99,16,0.25);border-radius:10px;text-align:left;cursor:pointer;transition:border-color .18s,background .18s,transform .1s;font-family:'Noto Sans TC',sans-serif;font-size:15px;font-weight:700;color:#5a3e0a;line-height:1.4}
+.tf-opt:hover:not(.locked){border-color:rgba(139,99,16,.6);background:rgba(139,99,16,.06);transform:translateY(-1px)}
+.tf-opt.correct{border-color:#4caf50;background:#e8f5e9;color:#2e7d32}
+.tf-opt.wrong{border-color:#f44336;background:#fdecea;color:#c62828}
+.tf-opt.locked{pointer-events:none}
+
+.slot-row{width:100%;display:flex;gap:8px;justify-content:center;margin:6px 0 2px;flex-wrap:wrap}
+.slot-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:60px}
+.slot-label{font-family:'Noto Sans TC',sans-serif;font-size:10px;color:#a08050;letter-spacing:.5px}
+.slot-box{min-width:56px;min-height:52px;border:2px dashed #d4b87a;border-radius:12px;background:#fffdf7;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#3a2a0a;font-family:'Sarabun',sans-serif;transition:all .2s;padding:4px 8px}
+.slot-box.filled{border-style:solid;border-color:#e8a020;background:#fff8ee}
+.slot-box.correct{border-color:#4caf50!important;border-style:solid!important;background:#e8f5e9!important}
+.slot-box.wrong{border-color:#f44336!important;border-style:solid!important;background:#fdecea!important}
+
+.btn-row{display:flex;gap:7px;justify-content:center;width:100%;margin-top:12px;flex-wrap:wrap}
+.btn{padding:10px 18px;border-radius:999px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:transform .1s}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff}
+.btn-primary:disabled{opacity:.35;cursor:default}
+
+.type-panel{width:100%;flex-direction:column;align-items:center;gap:10px;margin:6px 0 4px}
+.type-target{font-family:'Sarabun',sans-serif;font-size:clamp(20px,5vw,30px);font-weight:700;min-height:48px;text-align:center;padding:8px 14px;border-radius:12px;background:#fffdf7;border:2px dashed #d4b87a;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0 2px;width:auto;max-width:96%;margin:0 auto}
+.type-target.shake{animation:tkshake .35s}
+@keyframes tkshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.tkbd{display:flex;flex-direction:column;gap:4px;width:100%;max-width:420px;margin:0 auto}
+.tk-row{display:flex;gap:3px;justify-content:center}
+.tk-key{flex:1;max-width:34px;min-width:20px;height:40px;border:1.5px solid #d4b87a;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;cursor:pointer;user-select:none;transition:all .1s;overflow:hidden}
+.tk-key:active{transform:scale(.92);background:#fff3d8}
+.tk-key .tk-shift{font-size:9px;color:#b89860;line-height:1}
+.tk-key .tk-base{font-size:14px;color:#3a2a0a;font-weight:700;line-height:1.15}
+.tk-shift-key{background:#fff}
+.tk-shift-key.active{background:#e8a020;border-color:#e8a020}
+.tk-shift-key.active .tk-base{color:#fff}
+
+#end{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:28px 22px;width:100%}
+#end h2{font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10}
+.end-score-big{font-family:'Noto Serif TC',serif;font-size:52px;font-weight:900;color:#d85a30}
+.end-detail{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#a08050}
+
+/* หน้าจอ "ยังไม่เปิด" สำหรับ 中級/高級 — เพิ่ม 2026-07-25 รอบ6 */
+.mx-soon{padding:40px 20px;text-align:center;width:100%}
+.mx-soon .emoji{font-size:40px;margin-bottom:10px}
+.mx-soon .msg{font-family:'Noto Sans TC',sans-serif;font-size:15px;color:#a08050;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="v3-page">
+  <div class="page-header">
+    <div class="page-title">🎮 綜合遊戲</div>
+    <div class="page-sub">目前開放初級（含2音節字）· 分數暫不會被記錄</div>
+  </div>
+  <div class="level-tabs">
+    <button class="ltab active" id="mx-ltab-初" onclick="MixGame.setLevel('初')">初級</button>
+    <button class="ltab" id="mx-ltab-中" onclick="MixGame.setLevel('中')">中級</button>
+    <button class="ltab" id="mx-ltab-高" onclick="MixGame.setLevel('高')">高級</button>
+  </div>
+  <div id="mx-root"></div>
+</div>
+
+<script src="data/words-data.js?v=4"></script>
+<script src="data/tone-engine.js?v=1"></script>
+<script src="js/games/mix-game-app.js?v=5"></script>
+<script>MixGame.mount(document.getElementById('mx-root'));</script>
+</body>
+</html>
