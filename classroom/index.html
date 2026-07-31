@@ -5572,11 +5572,18 @@ async function loadStudentNextClass(token) {
       timeStr = startTimeStr ? (startTimeStr + (endTimeStr ? '–' + endTimeStr : '')) : '';
     }
     const dayLabel = (dLabelDate.getMonth()+1) + '月' + dLabelDate.getDate() + '日（週' + dayZh[dLabelDate.getDay()] + '）';
-    const hoursUntil = (teacherTimeToDate(lessonDate, startTimeStr || '00:00').getTime() - Date.now()) / 3600000;
-    const canCancel = hoursUntil >= 24;
+    // 🟢 2026-08-01（audit #14）：以前這裡不管有沒有真的知道上課時間，一律用 00:00 代入算「剩幾小時」——
+    //   結果比實際情況「更嚴格」（例如真正 21:00 的課被當成 00:00 開始，算出來剩的時數少了 21 小時，
+    //   導致明明還來得及線上取消的課被擋掉）。現在跟「選擇要取消的課堂」清單（งาน C9，同一天稍早改的）
+    //   用同一套邏輯：不知道時間就是不知道，不能拿 00:00 冒充，也不能拿它去判斷是否<24小時。
+    var timeUnknown = !startTimeStr;
+    const hoursUntil = timeUnknown ? null : (teacherTimeToDate(lessonDate, startTimeStr).getTime() - Date.now()) / 3600000;
+    const canCancel = !timeUnknown && hoursUntil >= 24;
     // 2026-07-14：多存一份 timeStr（泰國時間 HH:MM），讓「選擇要取消的課堂」清單可以直接
     // 沿用這裡已經算好、且已經成功顯示在畫面上的下一堂課時間，不用另外重新算一次。
-    nextClassCtx = { token: token, isoDate: lessonDate, timeStr: startTimeStr || '00:00' };
+    // 🟢 2026-08-01（audit #14）：加 hasTime 旗標（純新增，不動 timeStr 原本的值/預設值，
+    //   避免影響「申請改期」等其他讀 nextClassCtx.timeStr 的地方）。
+    nextClassCtx = { token: token, isoDate: lessonDate, timeStr: startTimeStr || '00:00', hasTime: !timeUnknown };
 
     el.innerHTML =
       '<div style="background:#f8f4ea;border:1px solid #e5d9b8;border-radius:10px;padding:12px 14px;font-family:\'Noto Sans TC\',sans-serif;">' +
@@ -5593,7 +5600,13 @@ async function loadStudentNextClass(token) {
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openCancelPickerModal()">❌ 取消課堂</button>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openReschedulePickerModal()">🔄 申請改期</button>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
-        (canCancel ? '' : '<div style="width:100%;font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">⚠️ 最近這一堂距離上課不到 24 小時，無法線上取消（其他週的課仍可在「❌ 取消課堂」裡選）</div>') +
+        (canCancel ? '' : '<div style="width:100%;font-size:0.78rem;color:var(--amber);font-family:\'Noto Sans TC\',sans-serif;margin-top:2px;">'
+          // 🟢 2026-08-01（audit #14）：時間不明 vs 不到 24 小時，是兩種不同情況，訊息要分開講清楚，
+          //   不要都寫成「不到 24 小時」（那句話在時間不明的情況下是編出來的，系統其實根本不知道）。
+          + (timeUnknown
+            ? '⚠️ 這堂課系統裡沒有記錄上課時間，沒辦法自動判斷，請直接聯絡老師'
+            : '⚠️ 最近這一堂距離上課不到 24 小時，無法線上取消（其他週的課仍可在「❌ 取消課堂」裡選）')
+          + '</div>') +
       '</div>';
   } catch (e) {
     el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">載入失敗：' + (e.message || e) + '</div>';
@@ -5807,13 +5820,18 @@ async function computeUpcomingOccurrences(token, count) {
     // ดีกว่าไม่มีอะไรให้เลือกเลย แต่รู้ตัวว่าไม่แม่นสำหรับคนเรียนหลายวัน/สัปดาห์ ไม่มี calendarEventId ให้
     if (!nextClassCtx || nextClassCtx.token !== token || !nextClassCtx.isoDate) return [];
     const anchor1 = teacherTimeToDate(nextClassCtx.isoDate, nextClassCtx.timeStr || '00:00');
-    const results = [{ date: anchor1, calendarEventId: null }];
+    // 🟢 2026-08-01（audit #14）：這裡是「RPC 整個讀不到才會用到」的備援清單，本來沒有帶 hasTime，
+    //   如果剛好又遇到「這堂課時間本來就不明」，選單那邊（onCancelPickerSelectChange，งาน C9 加的）
+    //   會因為看不到 hasTime 而誤判成「知道時間」，讓人送出一筆時間是編出來的取消申請。
+    //   補上 hasTime，跟主要路徑（上面 5801-5803 那段）用同一個旗標，行為才會一致。
+    var fallbackHasTime = nextClassCtx.hasTime !== false;
+    const results = [{ date: anchor1, calendarEventId: null, hasTime: fallbackHasTime }];
     const s = studentsCache[token];
     if (s && s.pending_recurring && s.pending_start_date && s.pending_class_time) {
       const weekMs = 7 * 24 * 3600 * 1000;
       let cur = new Date(anchor1.getTime() + weekMs);
       for (let i = 1; i < (count || 6); i++) {
-        results.push({ date: cur, calendarEventId: null });
+        results.push({ date: cur, calendarEventId: null, hasTime: fallbackHasTime });
         cur = new Date(cur.getTime() + weekMs);
       }
     }
