@@ -57,6 +57,13 @@
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+/* Lin 2026-07-31: กันเครื่องหมายวรรณยุกต์ในกล่องเฉลย (聲調符) ขึ้นเป็นกล่องว่าง □□ ตอนฟอนต์ยังโหลดไม่เสร็จ — สั่งโหลดฟอนต์ที่มีเครื่องหมายวรรณยุกต์ไทยล่วงหน้าทันที ไม่ต้องรอให้ DOM ต้องใช้ก่อนค่อยโหลด */
+if (document.fonts && document.fonts.load) {
+  document.fonts.load("400 14px Sarabun", "◌่้๊๋").catch(function(){});
+  document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
+}
+</script>
 <link rel="stylesheet" href="css/shared.css?v=14">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
@@ -214,7 +221,7 @@
 .rule-row{display:flex;align-items:flex-start;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#5a3e10;}
 .rule-tag{background:#f5e8c8;color:#8b6310;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;}
 .rule-tag.sp{background:#fde8cc;color:#c05010;}
-.rule-txt{color:#5a3e10;line-height:1.5;}
+.rule-txt{color:#5a3e10;line-height:1.5;font-family:'Sarabun','Noto Sans Thai',sans-serif;}
 .rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
 
 /* ── tools-row (เหมือน tone-finder) — บรรทัดเดียวเสมอ เลื่อนซ้ายขวาได้ถ้าไม่พอ ── */

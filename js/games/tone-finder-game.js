@@ -2597,7 +2597,6 @@ function stepSessionSummary() {
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
       '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
       '<button class="tf-restart-btn" onclick="TF.reselectTopic()">' + (selectedLevel === 3 ? '🎲 再來一句' : '🎲 再來 5 字') + '</button>' +
-      (selectedLevel === 3 ? '<button class="tf-restart-btn" onclick="TF.openAdvanced()">📖 選其他句子</button>' : '') +
       '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
       '<a class="tf-restart-btn" href="leaderboard.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'leaderboard\',from:\'tone_finder\'})}catch(e){}">🏆 看排行榜</a>' +
     '</div>' +

@@ -57,6 +57,13 @@
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Noto+Sans+Thai:wght@400;500;700&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
+<script>
+/* Lin 2026-07-31: กันเครื่องหมายวรรณยุกต์ในกล่องเฉลย (聲調符) ขึ้นเป็นกล่องว่าง □□ ตอนฟอนต์ยังโหลดไม่เสร็จ — สั่งโหลดฟอนต์ที่มีเครื่องหมายวรรณยุกต์ไทยล่วงหน้าทันที ไม่ต้องรอให้ DOM ต้องใช้ก่อนค่อยโหลด */
+if (document.fonts && document.fonts.load) {
+  document.fonts.load("400 14px Sarabun", "◌่้๊๋").catch(function(){});
+  document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
+}
+</script>
 <link rel="stylesheet" href="css/shared.css?v=14">
 <style>
   /* Lin 2026-07-10: กลับมาล็อกแถบ page-strip ติดจอล่างเหมือนเดิม (ยกเลิกที่เคยปลดล็อกไว้ก่อนหน้านี้ในวันเดียวกัน) */
@@ -829,7 +836,7 @@
   .tf-ans-inner { background:#fff; border:1px solid #ecd8a8; border-radius:8px; padding:8px 10px; }
   .rule-row{display:flex;align-items:flex-start;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#5a3e10;}
   .rule-tag{background:#f5e8c8;color:#8b6310;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;}
-  .rule-txt{color:#5a3e10;line-height:1.5;font-family:'Sarabun','Noto Sans TC',sans-serif;font-size:14px;}
+  .rule-txt{color:#5a3e10;line-height:1.5;font-family:'Sarabun','Noto Sans Thai','Noto Sans TC',sans-serif;font-size:14px;}
   .rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
   .tf-soon-toast {
     position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
@@ -1875,7 +1882,7 @@
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=27"></script>
+<script src="js/games/tone-finder-game.min.js?v=28"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
