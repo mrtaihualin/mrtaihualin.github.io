@@ -109,13 +109,13 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 <div id="game-switcher">
   <a class="gs-tab" href="tone-finder.html">🎵 聲調練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="reading-game.html">📝 拼讀練習室</a>
+  <a class="gs-tab" href="reading-game.html">✍️ 拼讀練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="typing-game.html">⌨️ 打字練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="word-order.html">🔀 語序練習室</a>
+  <a class="gs-tab" href="word-order.html">🧩 語序練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="lego.html">🧩 造句練習室</a>
+  <a class="gs-tab" href="lego.html">🧱 造句練習室</a>
   <div class="gs-divider"></div>
   <span class="gs-tab gs-active">🔖 單字庫</span>
 </div>
@@ -131,7 +131,7 @@ var currentFilter = 'all';
 // หมายเหตุ: ตอนนี้การ์ดคำไม่ได้โชว์ "ที่มา" แล้ว (แทนที่ด้วยปุ่มฝึก) — เก็บ mapping นี้ไว้เผื่ออนาคต
 function sourceLabel(s){
   if(s==='tone-finder') return '🎵 聲調練習室';
-  if(s==='reading-game') return '📝 拼讀練習室';
+  if(s==='reading-game') return '✍️ 拼讀練習室';
   if(s==='typing-game') return '⌨️ 打字練習室';
   return s || '';
 }
@@ -139,7 +139,7 @@ function sourceLabel(s){
 function practiceBtnsHtml(th){
   var q='?word='+encodeURIComponent(th);
   return '<div class="vault-practice-btns">'+
-    '<a class="vault-practice-btn" href="reading-game.html'+q+'">📝 拼讀練習室</a>'+
+    '<a class="vault-practice-btn" href="reading-game.html'+q+'">✍️ 拼讀練習室</a>'+
     /* Lin 2026-07-25: ถอดปุ่ม 🎵 聲調練習室 ออก — เกมเสียงปิดโหมด 自行搜尋 แล้ว ลิงก์ ?word= ใช้ไม่ได้ (กันปุ่มพัง) */
     '<a class="vault-practice-btn" href="typing-game.html'+q+'">⌨️ 打字練習室</a>'+
     /* Lin 2026-07-25: ถอดปุ่ม 🧩 造句練習室 ออก — เกมเลโก้ไม่มีตัวรับลิงก์ ?word= กดแล้วได้ประโยคสุ่ม ไม่ใช่คำที่กด (กันปุ่มพัง เหมือนที่ถอด 聲調練習室) */

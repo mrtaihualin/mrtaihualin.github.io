@@ -14,6 +14,17 @@
 <!-- Google tag -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
+<script>
+(function(){
+  var _exitFired = false;
+  function fireExit(){
+    if (_exitFired) return; _exitFired = true;
+    try { gtag('event','lego_exit',{category:'game', transport_type:'beacon'}); } catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') fireExit(); });
+  window.addEventListener('pagehide', fireExit);
+})();
+</script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -359,7 +370,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <a href="games.html">泰語・遊戲</a>
 </div>
 
-<div onclick="openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light);border:1.5px solid var(--gold-bright);border-radius:10px;padding:13px 18px;margin:0 auto 14px;max-width:640px;font-family:'Noto Sans TC',sans-serif;box-sizing:border-box;">
+<div onclick="try{if(window.gtag)gtag('event','lego_freebie_banner_click',{category:'game'});}catch(e){}openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light);border:1.5px solid var(--gold-bright);border-radius:10px;padding:13px 18px;margin:0 auto 14px;max-width:640px;font-family:'Noto Sans TC',sans-serif;box-sizing:border-box;">
   <span style="font-size:14px;color:var(--gold-deep);font-weight:700;"><img src="assets/icons/gift-box.svg" alt="" style="width:18px;height:18px;vertical-align:-4px;margin-right:3px;">免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
   <span style="font-size:13px;background:var(--gold-bright);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
 </div>
@@ -372,13 +383,13 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
   <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
   <!-- Lin 2026-07-25: กดได้แล้ว — โชว์ดาวสะสม (ทุกเกมรวมกัน) แยกจากปุ่มวรรณยุกต์ -->
-  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="openStar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStar()}">⭐ <b id="star-count">0</b> 顆星</span>
-  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
-  <span class="tf-streak-chip" style="cursor:pointer;" onclick="legoVaultOpen()">📑 <b id="lego-vault-count">0</b>/15 單字庫</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="try{if(window.gtag)gtag('event','lego_star_modal_open',{category:'game'});}catch(e){}openStar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_star_modal_open',{category:'game'});}catch(e){}openStar()}">⭐ <b id="star-count">0</b> 顆星</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="try{if(window.gtag)gtag('event','lego_badge_modal_open',{category:'game'});}catch(e){}openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_badge_modal_open',{category:'game'});}catch(e){}openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
+  <span class="tf-streak-chip" style="cursor:pointer;" onclick="try{if(window.gtag)gtag('event','lego_vault_modal_open',{category:'game'});}catch(e){}legoVaultOpen()">📑 <b id="lego-vault-count">0</b>/15 單字庫</span>
   <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
-    <span class="tf-streak-chip" id="lego-howto-btn" style="cursor:pointer;" onclick="dismissHowtoHint('lego');document.getElementById('lego-howto-modal').style.display='flex'">📖 怎麼玩</span>
+    <span class="tf-streak-chip" id="lego-howto-btn" style="cursor:pointer;" onclick="try{if(window.gtag)gtag('event','lego_howto_modal_open',{category:'game'});}catch(e){}dismissHowtoHint('lego');document.getElementById('lego-howto-modal').style.display='flex'">📖 怎麼玩</span>
     <div class="howto-hint-bubble" id="howto-hint-lego">
-      <button class="howto-hint-close" onclick="dismissHowtoHint('lego')">✕</button>
+      <button class="howto-hint-close" onclick="try{if(window.gtag)gtag('event','lego_howto_hint_dismiss',{category:'game'});}catch(e){}dismissHowtoHint('lego')">✕</button>
       這裡有教怎麼玩喔 👆
     </div>
   </span>
@@ -391,7 +402,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 
   <header class="head">
     <span class="eyebrow">泰語句子結構 · 樂高式造句</span>
-    <h1>泰語句子組裝台</h1>
+    <h1>🧱 泰語句子組裝台</h1>
     <p>分級學習：從句子結構，到情態與否定，一步步組出完整的泰語句子。</p>
   </header>
 
@@ -422,8 +433,8 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
     </div>
     <div class="teach-prog" id="tProg"></div>
     <div class="teach-actions">
-      <button class="btn btn-line" onclick="teachPrev()">‹ 上一步</button>
-      <button class="btn btn-gold" id="tNextBtn" onclick="teachNext()">下一步 ›</button>
+      <button class="btn btn-line" onclick="try{if(window.gtag)gtag('event','lego_teach_prev',{category:'game'});}catch(e){}teachPrev()">‹ 上一步</button>
+      <button class="btn btn-gold" id="tNextBtn" onclick="try{if(window.gtag)gtag('event','lego_teach_next',{category:'game'});}catch(e){}teachNext()">下一步 ›</button>
     </div>
   </div>
 
@@ -437,9 +448,9 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
       </div>
       <div class="out-actions">
         <button class="btn btn-gold" onclick="startTest()">🧪 測試（拿分）</button>
-        <button class="btn btn-line" onclick="copySentence()">複製句子</button>
-        <button class="btn btn-line" onclick="loadExample()">看範例</button>
-        <button class="btn btn-line" onclick="clearAll()">清空</button>
+        <button class="btn btn-line" onclick="try{if(window.gtag)gtag('event','lego_copy_sentence',{category:'game'});}catch(e){}copySentence()">複製句子</button>
+        <button class="btn btn-line" onclick="try{if(window.gtag)gtag('event','lego_example_view',{category:'game'});}catch(e){}loadExample()">看範例</button>
+        <button class="btn btn-line" onclick="try{if(window.gtag)gtag('event','lego_clear_all',{category:'game'});}catch(e){}clearAll()">清空</button>
       </div>
     </div>
 
@@ -455,7 +466,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 <!-- 拆句測驗（測試通過才給分） -->
 <div class="test-overlay" id="testOverlay">
   <div class="test-box">
-    <button class="test-close" onclick="closeTest()">✕</button>
+    <button class="test-close" onclick="try{if(window.gtag)gtag('event','lego_test_modal_close',{category:'game'});}catch(e){}closeTest()">✕</button>
     <div class="test-title">🧪 拆句測驗</div>
     <div class="test-sub">把打散的詞塊，點回正確順序</div>
     <div id="testGoldenBadge" class="test-golden-badge" style="display:none;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金句 ×2</div>
@@ -469,7 +480,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
     <div class="test-bank" id="testBank"></div>
     <div class="test-banner" id="testBanner"></div>
     <div class="test-actions" id="testActions">
-      <button class="btn btn-line" onclick="resetTestAttempt()">↺ 重排</button>
+      <button class="btn btn-line" onclick="try{if(window.gtag)gtag('event','lego_test_reset',{category:'game'});}catch(e){}resetTestAttempt()">↺ 重排</button>
     </div>
     <div id="soft-cta-lego"></div>
   </div>
@@ -481,7 +492,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
     <h3>我的成就</h3>
     <div class="star-progress" id="star-prog"></div>
     <div class="star-prog-label" id="star-prog-label"></div>
-    <button class="btn btn-line" style="margin-top:16px" onclick="document.getElementById('badge-modal').classList.remove('show')">關閉</button>
+    <button class="btn btn-line" style="margin-top:16px" onclick="try{if(window.gtag)gtag('event','lego_badge_modal_close',{category:'game'});}catch(e){}document.getElementById('badge-modal').classList.remove('show')">關閉</button>
   </div>
 </div>
 
@@ -491,7 +502,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
     <h3>累積星星</h3>
     <div class="tree-area" id="star-tree-area">⭐</div>
     <div class="tree-caption" id="star-tree-caption">累積星星（全部遊戲共用）</div>
-    <button class="btn btn-line" style="margin-top:16px" onclick="document.getElementById('star-modal').classList.remove('show')">關閉</button>
+    <button class="btn btn-line" style="margin-top:16px" onclick="try{if(window.gtag)gtag('event','lego_star_modal_close',{category:'game'});}catch(e){}document.getElementById('star-modal').classList.remove('show')">關閉</button>
   </div>
 </div>
 
@@ -529,10 +540,10 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <div class="gt-title" id="gt-tour-title"></div>
   <div class="gt-text" id="gt-tour-text"></div>
   <div class="gt-actions">
-    <button class="gt-skip" onclick="gtTourEnd()">跳過導覽</button>
+    <button class="gt-skip" onclick="try{if(window.gtag)gtag('event','lego_tour_skip',{category:'game'});}catch(e){}gtTourEnd()">跳過導覽</button>
     <div class="gt-nav">
-      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="gtTourPrev()">‹ 上一步</button>
-      <button class="gt-btn gt-next" id="gt-tour-next" onclick="gtTourNext()">下一步 ›</button>
+      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="try{if(window.gtag)gtag('event','lego_tour_prev',{category:'game'});}catch(e){}gtTourPrev()">‹ 上一步</button>
+      <button class="gt-btn gt-next" id="gt-tour-next" onclick="try{if(window.gtag)gtag('event','lego_tour_next',{category:'game'});}catch(e){}gtTourNext()">下一步 ›</button>
     </div>
   </div>
 </div>
@@ -739,7 +750,7 @@ function renderLevels(){
   document.getElementById('levels').innerHTML=LV_ORDER.map(k=>{
     const L=LEVELS[k];
     const locked=!!L.locked;
-    const click=locked?`toast('👧🏻 米娜：新單字一直在加喔～先玩前面的關卡，很快回來看看吧！')`:`setLevel('${k}')`;
+    const click=locked?`(function(){try{if(window.gtag)gtag('event','lego_level_locked_click',{category:'game',level:'${k}'});}catch(e){}toast('👧🏻 米娜：新單字一直在加喔～先玩前面的關卡，很快回來看看吧！')})()`:`(function(){try{if(window.gtag)gtag('event','lego_level_select',{category:'game',level:'${k}'});}catch(e){}setLevel('${k}')})()`;
     return `<div class="lv-pill ${k==='pre'?'pre':''} ${k===curLevel?'active':''} ${locked?'locked':''}" onclick="${click}">
       ${L.name}<small>${L.sub}</small></div>`;
   }).join('');
@@ -817,10 +828,10 @@ function renderBaseplate(){
         opts+=`<div class="opt-custom"><input type="text" id="subjNameInput" maxlength="10"
           placeholder="輸入自己的名字…"
           onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomSubj();}">
-          <button onclick="addCustomSubj()">加入</button></div>`;
+          <button onclick="try{if(window.gtag)gtag('event','lego_custom_subject_add',{category:'game'});}catch(e){}addCustomSubj()">加入</button></div>`;
       }
       if(s.opt){
-        opts+=`<div class="opt-clear" role="button" tabindex="0" onclick="clearSlot('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();clearSlot('${s.id}')}">— 清除 —</div>`;
+        opts+=`<div class="opt-clear" role="button" tabindex="0" onclick="try{if(window.gtag)gtag('event','lego_slot_clear',{category:'game',slot:'${s.id}'});}catch(e){}clearSlot('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_slot_clear',{category:'game',slot:'${s.id}'});}catch(e){}clearSlot('${s.id}')}">— 清除 —</div>`;
       }
       pool.forEach(o=>{
         const sel=(w&&w.th===o.th)?' sel':'';
@@ -835,7 +846,7 @@ function renderBaseplate(){
         }
         opts+=`<div class="opt${sel}${disabled?' disabled':''}" ${disabled?'':`role="button" tabindex="0" onclick="pickWord('${s.id}','${o.th}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickWord('${s.id}','${o.th}')}"`}>
           <span class="oth">${o.th}</span><span class="ozh">${label2}</span>
-          <span class="lego-vault-save" onclick="event.stopPropagation();legoVaultSave('${o.th}','${o.zh}')" title="加入我的造句單字庫（最多15個）">${(window.LegoVault&&LegoVault.has(o.th))?'🔖':'📑'}</span></div>`;
+          <span class="lego-vault-save" onclick="event.stopPropagation();try{if(window.gtag)gtag('event','lego_vault_word_save',{category:'game',word:'${o.th}'});}catch(e){}legoVaultSave('${o.th}','${o.zh}')" title="加入我的造句單字庫（最多15個）">${(window.LegoVault&&LegoVault.has(o.th))?'🔖':'📑'}</span></div>`;
       });
     }
 
@@ -1150,7 +1161,7 @@ function legoRenderLoginCTA(){
   el.innerHTML='<div style="background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:12px;padding:12px 14px;font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;">'+
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
       '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:180px;">👧🏻 米娜：登入後才能幫你把進度存起來喔！</span>'+
-      '<button onclick="legoCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>'+
+      '<button onclick="try{if(window.gtag)gtag(\'event\',\'lego_cta_login_click\',{category:\'game\'});}catch(e){}legoCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>'+
       '<button onclick="var d=document.getElementById(\'lego-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>'+
     '</div>'+
     '<div id="lego-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">'+
@@ -1185,12 +1196,12 @@ function legoVaultOpen(){
   var rows = list.length ? list.map(function(w){
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(139,99,16,.15);">'+
       '<div><span style="font-family:Sarabun,sans-serif;font-weight:700;color:var(--gold-deep);font-size:16px;">'+w.th+'</span> <span style="color:var(--ink-muted);font-size:12.5px;">'+w.zh+'</span></div>'+
-      '<button onclick="LegoVault.removeWord(\''+w.th+'\');legoVaultOpen();try{renderBaseplate();}catch(e){}" style="border:none;background:none;color:#c4574f;cursor:pointer;font-size:13px;">移除</button></div>';
+      '<button onclick="try{if(window.gtag)gtag(\'event\',\'lego_vault_word_remove\',{category:\'game\'});}catch(e){}LegoVault.removeWord(\''+w.th+'\');legoVaultOpen();try{renderBaseplate();}catch(e){}" style="border:none;background:none;color:#c4574f;cursor:pointer;font-size:13px;">移除</button></div>';
   }).join('') : '<div style="color:var(--ink-muted);font-size:13px;text-align:center;padding:20px 0;">還沒有存任何單字，去下拉選單點📑試試看！</div>';
   ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:340px;width:100%;max-height:70vh;overflow:auto;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.3);box-sizing:border-box;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
       '<h3 style="margin:0;font-family:\'Noto Serif TC\',serif;font-size:17px;color:var(--gold-deep);">📑 造句單字庫（'+list.length+'/'+LegoVault.MAX_WORDS+'）</h3>'+
-      '<button onclick="document.getElementById(\'lego-vault-modal\').remove()" style="border:none;background:none;font-size:20px;color:#B0A080;cursor:pointer;">✕</button>'+
+      '<button onclick="try{if(window.gtag)gtag(\'event\',\'lego_vault_modal_close\',{category:\'game\'});}catch(e){}document.getElementById(\'lego-vault-modal\').remove()" style="border:none;background:none;font-size:20px;color:#B0A080;cursor:pointer;">✕</button>'+
     '</div>'+rows+'</div>';
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
@@ -1373,7 +1384,7 @@ async function startTest(){
   testWrongCount=0; testLife=SENTENCE_LIFE_START; testHintUsed=false; testFailed=false; testLocked=false;
   testGolden=legoNextTestGolden; legoNextTestGolden=false; // ใช้ครั้งเดียว — คำทองการันตีหลังจบรอบก่อนหน้าเท่านั้น (ไม่สุ่มแล้ว)
   const gb=document.getElementById('testGoldenBadge'); if(gb) gb.style.display=testGolden?'':'none';
-  document.getElementById('testActions').innerHTML='<button class="btn btn-line" id="testHintBtn" onclick="hintTest()">💡 提示 (-2)</button><button class="btn btn-line" onclick="resetTestAttempt()">↺ 重排</button>';
+  document.getElementById('testActions').innerHTML='<button class="btn btn-line" id="testHintBtn" onclick="hintTest()">💡 提示 (-2)</button><button class="btn btn-line" onclick="try{if(window.gtag)gtag(\'event\',\'lego_test_reset\',{category:\'game\'});}catch(e){}resetTestAttempt()">↺ 重排</button>';
   scrambleTest();
   document.getElementById('testBanner').className='test-banner';
   document.getElementById('testBanner').textContent='';
@@ -1462,7 +1473,7 @@ function checkTestAnswer(){
     else minaToast('correct',{throttle:true});
     renderTestUI();
     document.querySelectorAll('#testSlots .test-slot').forEach(el=>el.classList.add('correct'));
-    document.getElementById('testActions').innerHTML='<button class="btn btn-gold" onclick="closeTest()">繼續 →</button>';
+    document.getElementById('testActions').innerHTML='<button class="btn btn-gold" onclick="try{if(window.gtag)gtag(\'event\',\'lego_test_continue\',{category:\'game\'});}catch(e){}closeTest()">繼續 →</button>';
     updateTestHintWarning();
     const roundMsg=finishLegoRound();
     if(roundMsg) setTimeout(()=>toast(roundMsg),400);
@@ -1501,7 +1512,7 @@ function failTest(){
   const banner=document.getElementById('testBanner');
   banner.className='test-banner no';
   banner.textContent='這句先看答案～綠色就是正確順序，重排一次再挑戰看看吧 💪（本句不計分）';
-  document.getElementById('testActions').innerHTML='<button class="btn btn-gold" onclick="closeTest()">繼續 →</button>';
+  document.getElementById('testActions').innerHTML='<button class="btn btn-gold" onclick="try{if(window.gtag)gtag(\'event\',\'lego_test_continue\',{category:\'game\'});}catch(e){}closeTest()">繼續 →</button>';
   updateTestHintWarning();
   legoCurCombo=0;
 }
@@ -1510,6 +1521,7 @@ function failTest(){
 function hintTest(){
   if(testLocked) return;
   if(testAnswer.length>=testWords.length) return;
+  try{ if(window.gtag) gtag('event','lego_test_hint_use',{category:'game'}); }catch(e){}
   let correctPrefixLen=0;
   while(correctPrefixLen<testAnswer.length && testAnswer[correctPrefixLen]===correctPrefixLen) correctPrefixLen++;
   for(let i=testAnswer.length-1;i>=correctPrefixLen;i--) delete testUsed[testAnswer[i]];
@@ -1738,17 +1750,17 @@ function gtTourStart(){
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
-  <a class="gs-tab" href="tone-finder.html">🎵 聲調練習室</a>
+  <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'lego'})}catch(e){}">🎵 聲調練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="reading-game.html">📝 拼讀練習室</a>
+  <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'lego'})}catch(e){}">✍️ 拼讀練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="typing-game.html">⌨️ 打字練習室</a>
+  <a class="gs-tab" href="typing-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'typing_game',from:'lego'})}catch(e){}">⌨️ 打字練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="word-order.html">🔀 語序練習室</a>
+  <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'lego'})}catch(e){}">🧩 語序練習室</a>
   <div class="gs-divider"></div>
-  <span class="gs-tab gs-active">🧩 造句練習室</span>
+  <span class="gs-tab gs-active">🧱 造句練習室</span>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="vault.html"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
+  <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'lego'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>
 </body>
 </html>

@@ -2019,6 +2019,48 @@ function handleAddClassRequest(id) {
 function onAddClassDayRecurringChange(idx) {
   const checked = document.getElementById('addClassDayRecurring_' + idx).checked;
   document.getElementById('addClassDayUntilWrap_' + idx).style.display = checked ? 'block' : 'none';
+  invalidateAddClassDayCheck();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 🔴 2026-07-31 เพิ่ม (ข้อ #2 ในรายงานตรวจ) — "ผลตรวจเก่า" ต้องหมดอายุทันทีที่ครูแก้ฟอร์ม
+//
+// พังยังไงถ้าไม่มีตัวนี้:
+//   ครูกด 🔍 檢查是否衝突 กับ 8/5 20:00 → ขึ้น ✅ ไม่ชน (ระบบ "ถ่ายรูป" ค่าไว้ที่ _addClassDayPending)
+//   ครูเห็นว่าผิด แก้เป็น 21:00 → กด ✅ 確認新增
+//   → confirmAddClassDayAll อ่านแต่รูปถ่ายเก่า ไม่เคยกลับไปดูฟอร์มอีกเลย
+//   → สร้างคาบ 20:00 และส่ง LINE บอกนักเรียนว่า 20:00 ทั้งที่จอครูขึ้น 21:00 · ไม่มีอะไรบอกใบ้เลย
+//   เกิดเหมือนกันกับ: เอาติ๊ก 🔁 每週固定 ออก / กด ＋ เพิ่มแถว / กด － ลบแถว / แก้ 固定到
+//
+// ทำไมไม่แก้ให้ "อ่านฟอร์มสดตอนกดยืนยัน" แทน:
+//   การสร้างจากรูปถ่ายที่ตรวจแล้ว = ปลอดภัยกว่า เพราะสร้างเฉพาะสิ่งที่ผ่านด่านตรวจชนจริงแล้ว
+//   ถ้าเปลี่ยนไปอ่านฟอร์มสด จะกลายเป็น "สร้างของที่ไม่เคยตรวจ" ซึ่งแย่กว่าเดิม
+//   → เก็บพฤติกรรมเดิมไว้ แต่ทำให้ "จอเลิกโกหก": แก้อะไรปุ๊บ ปุ่มยืนยันตายทันที ต้องกดตรวจใหม่
+//
+// ทำไมดักที่กล่องแม่ (#addClassDayRows) ไม่ใช่ไปเติม onchange ทีละช่อง:
+//   ทุกช่องกรอกถูกสร้างด้วย addClassDayRowHtml → ถ้าเติมทีละช่อง วันหลังมีคนเพิ่มช่องใหม่
+//   จะลืมเติมแน่นอน แล้วรูนี้จะกลับมาเงียบๆ · ดักที่กล่องแม่ครั้งเดียว ครอบทุกช่องทั้งที่มีอยู่และที่จะเพิ่ม
+// ════════════════════════════════════════════════════════════════════════════
+var _addClassDayInvalidateBound = false;
+function bindAddClassDayInvalidate() {
+  if (_addClassDayInvalidateBound) return;
+  var container = document.getElementById('addClassDayRows');
+  if (!container) return;
+  container.addEventListener('input', invalidateAddClassDayCheck);
+  container.addEventListener('change', invalidateAddClassDayCheck);
+  _addClassDayInvalidateBound = true;
+}
+function invalidateAddClassDayCheck() {
+  // ไม่มีผลตรวจค้างอยู่ = ไม่มีอะไรต้องทำ (กันไปเขียนทับสรุปผลที่เพิ่งโชว์ให้ครูดู)
+  if (!_addClassDayPending) return;
+  _addClassDayPending = null;
+  // ⚠️ แตะเฉพาะ "ปุ่มยืนยัน" ตัวเดียว ห้ามล้าง addClassDayResult ทั้งกล่อง
+  //    เพราะในกล่องนั้นมีสรุปผลตรวจ/ผลสร้างคาบที่ครูยังต้องอ่านอยู่
+  var btn = document.getElementById('addClassDayConfirmBtn');
+  if (!btn) return;
+  btn.outerHTML = '<div id="addClassDayConfirmBtn" style="width:100%;margin-top:8px;padding:10px 12px;border:1.5px dashed var(--amber);'
+    + 'border-radius:10px;background:var(--cream);color:var(--amber-dark);font-family:\'Noto Sans TC\',sans-serif;'
+    + 'font-weight:700;font-size:0.86rem;text-align:center;">⚠️ 內容已修改，請重新按「🔍 檢查是否衝突」</div>';
 }
 
 // โชว์ให้ Lin เห็นว่าตอนนี้นักเรียนคนนี้มีวันประจำอะไรอยู่แล้วบ้าง (กันลืม/ซ้ำ)
@@ -2132,6 +2174,8 @@ function addClassDayAddRow(prefill, badgeKind) {
     if (prefill.untilVal) document.getElementById('addClassDayUntil_' + idx).value = prefill.untilVal;
   }
   updateAddClassDayRemoveButtons();
+  bindAddClassDayInvalidate();   // 🔴 2026-07-31：ดักการแก้ฟอร์มไว้ครั้งเดียว (ดูคำอธิบายที่ invalidateAddClassDayCheck)
+  invalidateAddClassDayCheck();  // เพิ่มแถวใหม่ = ผลตรวจเดิมใช้ไม่ได้แล้ว
   return idx;
 }
 function removeClassDayRow(idx) {
@@ -2140,6 +2184,7 @@ function removeClassDayRow(idx) {
   var el = document.getElementById('addClassDayRow_' + idx);
   if (el) el.remove();
   updateAddClassDayRemoveButtons();
+  invalidateAddClassDayCheck(); // 🔴 2026-07-31：ลบแถวแล้วผลตรวจเดิมใช้ไม่ได้ (เดิมลบแล้วยังสร้างแถวที่ลบไปแล้วได้)
 }
 function resetAddClassDayRows(prefill) {
   var container = document.getElementById('addClassDayRows');
@@ -2266,7 +2311,14 @@ async function checkAddClassDayConflict() {
               : '（已逐週檢查最近 ' + occs.length + ' 堂，更久以後的還沒檢查，請自己留意）';
           }
           previewLines.push('<div style="color:var(--gold-deep);">' + escHtml(previewText) + '</div>');
-          pendingRows.push({ token: token, dateVal: row.dateVal, startVal: row.startVal, endTime: row.endTime, recurring: row.recurring, untilVal: row.untilVal, weekday: wd });
+          // 🟡 2026-07-31 (ข้อ #21)：ติดธง "แถวนี้คือคาบที่นักเรียนขอมาเอง" ไปกับตัวแถวเลย
+          //   เดิมตอนสร้างใช้ตำแหน่ง (แถวลำดับ 0) เป็นตัวตัดสินว่าจะปิดคำขอของนักเรียนใบไหน
+          //   → พอมีแถวสร้างไม่สำเร็จแล้วระบบสร้างฟอร์มใหม่จากแถวที่เหลือ ตำแหน่งจะขยับ
+          //     แถวที่ "ครูเพิ่มเอง" อาจไปปิดคำขอของนักเรียนแทน = นักเรียนได้ LINE ว่าจัดให้แล้ว
+          //     ทั้งที่คาบที่เขาขอยังไม่ได้ถูกสร้าง
+          //   ธงติดกับตัวแถว ตำแหน่งขยับยังไงก็ไม่หลุด
+          pendingRows.push({ token: token, dateVal: row.dateVal, startVal: row.startVal, endTime: row.endTime, recurring: row.recurring, untilVal: row.untilVal, weekday: wd,
+            isStudentRow: (row.n === 1 && !!_addClassDayFromRequestId) });
         }
       } catch (e) {
         anyConflict = true; // 檢查失敗當作不能繼續，避免漏檢查到有衝突卻放行
@@ -2289,7 +2341,9 @@ async function checkAddClassDayConflict() {
     //   (ไม่มีระบบ "เสนอเวลาใหม่" ในเส้นทางเพิ่มคาบอีกต่อไป — ระบบขอเลื่อน/改期 ยังมีเหมือนเดิม ไม่แตะ)
     // → เลยเหลือปุ่มเดียว ไม่มีสาขาแยกอีกแล้ว
     // ════════════════════════════════════════════════════════════════════
-    var btnHtml = '<button class="btn-gold" style="width:100%;margin-top:8px;" onclick="confirmAddClassDayAll()">✅ 確認新增（直接排進 Calendar 並用 LINE 通知學生）</button>';
+    // 🔴 2026-07-31：ใส่ id ให้ปุ่มนี้ เพื่อให้ invalidateAddClassDayCheck() หาเจอแล้วเปลี่ยนเป็นคำเตือน
+    //    ตอนครูแก้ฟอร์มหลังกดตรวจ (แตะเฉพาะปุ่ม ไม่ล้างสรุปผลตรวจที่อยู่เหนือมัน)
+    var btnHtml = '<button id="addClassDayConfirmBtn" class="btn-gold" style="width:100%;margin-top:8px;" onclick="confirmAddClassDayAll()">✅ 確認新增（直接排進 Calendar 並用 LINE 通知學生）</button>';
     resultEl.innerHTML = previewLines.join('') + btnHtml;
   } catch (e) {
     resultEl.innerHTML = '<div style="color:#b45309;">檢查失敗：' + escHtml(e.message || String(e)) + '</div>';
@@ -2498,14 +2552,17 @@ async function confirmAddClassDayAll() {
 
   const okLines = [], warnLines = [], failLines = [];
   const leftoverRows = [];   // แถวที่ยังไม่สำเร็จ → เก็บไว้ให้ครูกดซ้ำ ไม่ต้องพิมพ์ใหม่
-  let row0Ok = false;        // แถวแรกสำเร็จไหม = คำขอของนักเรียนถูกปิดไปแล้วหรือยัง
+  // 🟡 2026-07-31 (ข้อ #21)：เปลี่ยนจาก "แถวแรกสำเร็จไหม" เป็น "แถวของนักเรียนสำเร็จไหม"
+  //   ความหมายเดิมผูกกับตำแหน่ง ซึ่งขยับได้เวลาสร้างฟอร์มใหม่หลังมีแถวพัง
+  let studentRowOk = false;  // แถวที่นักเรียนขอมาเอง สำเร็จไหม = คำขอของเขาถูกปิดไปแล้วหรือยัง
   try {
     for (let i = 0; i < rows.length; i++) {
       const p = rows[i];
       resultEl.innerHTML = '<div style="color:var(--gold-deep);">建立中…（第 ' + (i + 1) + ' / ' + rows.length + ' 筆）</div>';
       let r;
       try {
-        r = await directConfirmAddClassRow(token, p, i === 0 ? requestIdToFinalize : null);
+        // 🟡 2026-07-31 (ข้อ #21)：ผูกด้วยธงที่ติดมากับตัวแถว ไม่ใช่ตำแหน่ง (เดิมเป็น i === 0)
+        r = await directConfirmAddClassRow(token, p, p.isStudentRow ? requestIdToFinalize : null);
       } catch (e) {
         // RELIABILITY FIRST：directConfirmAddClassRow ปกติไม่โยน error ออกมา (คืน {ok:false}) แต่บางจังหวะ
         // เช่นตอนแย่งล็อก/อ่านข้อมูลนักเรียนไม่ได้ อาจหลุดออกมาได้ → ถ้าไม่ดัก หน้าจอจะค้างที่ "建立中…"
@@ -2513,7 +2570,7 @@ async function confirmAddClassDayAll() {
         r = { ok: false, error: '意外錯誤：' + (e && e.message ? e.message : String(e)) };
       }
       if (r.ok) {
-        if (i === 0) row0Ok = true;
+        if (p.isStudentRow) studentRowOk = true;
         okLines.push('✅ ' + addClassDayTimeLabel(p));
         // 🔴 RELIABILITY FIRST（沿用 2026-07-26 的原則）：不能因為「學生有連 LINE」就說通知到了，
         // 要看真的送出去沒有；沒送到一定要大聲講，不能讓老師誤會學生已經知道了。
@@ -2545,17 +2602,19 @@ async function confirmAddClassDayAll() {
   //   เดิมพอมีสักแถวสำเร็จ จะล้างทุกแถว + ลืม requestId → แถวที่พังหายไปเลย ครูต้องพิมพ์ใหม่
   //   และคำขอของนักเรียนจะไม่มีวันถูกปิดอัตโนมัติอีก ต้องไปกด「✔️ 關掉這筆」เอง
   // ตอนนี้: เก็บเฉพาะแถวที่ยังไม่สำเร็จไว้ + จำ requestId ต่อ ถ้าแถวแรกยังไม่สำเร็จ
-  if (row0Ok) _addClassDayFromRequestId = null; // ปิดคำขอไปแล้วจริงใน directConfirmAddClassRow
+  if (studentRowOk) _addClassDayFromRequestId = null; // ปิดคำขอไปแล้วจริงใน directConfirmAddClassRow
   _addClassDayPending = null; // ต้องกด「🔍 檢查是否衝突」ใหม่เสมอ ห้ามให้กดส่งซ้ำโดยไม่เช็ค
   if (leftoverRows.length) {
     // สร้างฟอร์มใหม่ให้เหลือเฉพาะแถวที่ยังไม่สำเร็จ (แถวที่สำเร็จแล้วต้องหายไป กันเผลอสร้างซ้ำ)
     const container = document.getElementById('addClassDayRows');
     container.innerHTML = '';
     _addClassDayNextIdx = 0;
-    leftoverRows.forEach(function (p, k) {
+    // 🟡 2026-07-31 (ข้อ #21)：ป้ายกำกับก็ต้องยึดธงที่ติดมากับแถว ไม่ใช่ตำแหน่งใหม่หลังจัดเรียง
+    //   เดิมใช้ k === 0 → แถวที่ครูเพิ่มเองอาจได้ป้าย "นักเรียนขอเวลานี้เอง" ไปทั้งที่ไม่ใช่
+    leftoverRows.forEach(function (p) {
       addClassDayAddRow(
         { date: p.dateVal, time: p.startVal, recurring: p.recurring, untilVal: p.untilVal },
-        (k === 0 && _addClassDayFromRequestId) ? 'student' : 'teacher'
+        (p.isStudentRow && _addClassDayFromRequestId) ? 'student' : 'teacher'
       );
     });
     updateAddClassDayRemoveButtons();
@@ -5644,9 +5703,9 @@ async function requestCancelClass(isoDate, calendarEventId, timeStr) {
   // 存不成功也不擋這次申請（老師那邊會退回舊版「姓名+日期」搜尋），只在主控台留紀錄。
   const extraFields1 = {};
   if (calendarEventId) extraFields1.calendar_event_id = calendarEventId;
-  // 2026-07-17 加（Lin 要求：改期/取消相關訊息都要講清楚原本上課的時間，不能只有日期）：
-  // 順便把原本課堂的時間也存起來，之後通知/清單顯示才有時間可以用。
-  if (timeStr) extraFields1.original_time = timeStr;
+  // 2026-07-31 拿掉（งาน C14 後續）：original_time 已經在上面 submit_class_request 送出的
+  // p_original_time 裡了，資料庫（2026-07-31_store_original_time_on_insert.sql）現在會直接存進
+  // classroom_requests，不用這裡再補一次相同的值——少一個補存失敗點。
   // 2026-07-19 修正（就是這個 bug）：舊版用 sb.from(...).update(...) 直接補存，
   // 被 RLS 靜靜擋掉「更新 0 筆」且不回 error → calendar_event_id 永遠是 null，
   // 老師按 LINE 的「✅ 確認並刪除課程」就會跳「這筆沒有記錄 Calendar 事件 ID」。
@@ -5656,7 +5715,7 @@ async function requestCancelClass(isoDate, calendarEventId, timeStr) {
     const idRes = await studentPatchRequest(nextClassCtx.token, res.data, extraFields1, {});
     if (idRes.error || !idRes.rows.length) {
       backfillOk = false;
-      console.error('⚠️ 補存 calendar_event_id/original_time 失敗：', idRes.error ? idRes.error.message : '更新 0 筆（token 對不上或該筆不存在）');
+      console.error('⚠️ 補存 calendar_event_id 失敗：', idRes.error ? idRes.error.message : '更新 0 筆（token 對不上或該筆不存在）');
     }
   }
   // 2026-07-16 加：把這筆申請的 id 一起帶給 notifyTeacherClassRequest，
@@ -6323,10 +6382,28 @@ async function submitAddRequest() {
       if (res.error) { failedLines.push(row.newDate + ' ' + row.newTime + '：' + res.error.message); continue; }
       const newId = res.data;
 
-      const payloadRes = await sb.from('classroom_requests').update({
-        proposed_end_time: row.endTime, proposed_recurring: row.recurring, proposed_until: row.untilVal, proposed_weekday: row.weekday,
-      }).eq('id', newId).select();
-      if (payloadRes.error || !payloadRes.data || !payloadRes.data.length) console.warn('⚠️ 補存加課申請的固定/固定到細節失敗（不影響申請本身，但老師端可能讀不到完整時段，請告訴 Lin/AI 手動補資料庫，可能是 RLS 靜靜擋掉更新 0 筆）：', payloadRes.error ? payloadRes.error.message : '更新 0 筆');
+      // ════════════════════════════════════════════════════════════════════════
+      // 🟠 2026-07-31 ลบทิ้ง (ข้อ #11 ในรายงานตรวจ) — คำสั่งที่ "ไม่มีทางสำเร็จ" ตั้งแต่วันแรก
+      //
+      // เดิมตรงนี้ให้นักเรียนเขียน 4 คอลัมน์ (proposed_end_time / proposed_recurring /
+      //   proposed_until / proposed_weekday) ตรงเข้าตาราง classroom_requests
+      // แต่ RLS บล็อกการเขียนตรงของนักเรียนอยู่แล้ว แบบ "0 แถว ไม่มี error เลย" (ดูคำอธิบายยาว
+      //   ที่ studentPatchRequest ด้านบน) → 4 คอลัมน์นี้ไม่เคยถูกบันทึกสักครั้งเดียว
+      //   error โผล่แค่ใน console ของเบราว์เซอร์ ส่วนนักเรียนเห็น ✅ ตามปกติ = จอโกหก
+      //
+      // ทำไม "ลบ" ไม่ใช่ "แก้ให้เขียนได้":
+      //   ค่าทั้ง 4 คำนวณกลับได้หมดอยู่แล้ว และทั้ง 2 ฝั่งทำแบบนั้นอยู่จริงตอนนี้ —
+      //     เวลาจบ  = เวลาเริ่ม + 1 ชม.  (line-webhook: addOneHourTimeStr · เว็บ: addOneHourTimeStr)
+      //     ทุกสัปดาห์ / ถึงวันไหน = นักเรียนติ๊กไม่ได้อยู่แล้ว (ดูบรรทัด "一律當單次" ด้านบน)
+      //     วันในสัปดาห์ = คิดจากวันที่ที่ขอมา (line-webhook คำนวณเองอยู่แล้ว)
+      //   ทางเลือกอีกทางคือเติม 4 คอลัมน์เข้ารายชื่ออนุญาตของ student_update_own_request
+      //     แต่ฟังก์ชันนั้น "ใช้ร่วมทั้ง 3 ระบบ" (ยกเลิก/ขอเลื่อน/เพิ่มคาบ) การแก้ต้องคัดลอกทั้งดุ้น
+      //     ถ้ามีอีกงานแก้วันเดียวกัน งานหนึ่งจะหายเงียบโดยไม่มี error (เกือบเกิดจริง 2026-07-31)
+      //   → เอาความเสี่ยงจริงไปแลกกับประโยชน์สมมติ (คาบ 90 นาทีที่ยังไม่มีจริง) ไม่คุ้ม
+      //
+      // 📌 ถ้าวันไหนมีคาบยาวไม่เท่ากัน (เช่น 90 นาที) ต้องกลับมาทำทางนั้นแทน — อย่าเอาโค้ดเดิมกลับมา
+      //    เพราะมันเขียนไม่ลงเหมือนเดิม ต้องไปเติมรายชื่ออนุญาตใน SQL แล้วเขียนผ่าน RPC เท่านั้น
+      // ════════════════════════════════════════════════════════════════════════
 
       created.push(Object.assign({ requestId: newId }, row));
     } catch (e) {
@@ -6364,25 +6441,33 @@ async function loadStudentPendingRequestStatus(token) {
     // 2026-07-18 加：同理篩掉「老師發起的加課」，改用專屬的 teacherAddAckBanner 顯示確認流程。
     // 2026-07-19 改：直接 select 會被 RLS 擋掉，永遠回空陣列（學生因此完全看不到自己的
     // 申請狀態，而且不會有任何錯誤訊息）。改走 student_get_own_requests RPC。
-    const res = await studentFetchRequests(token, { status: 'pending', limit: 5 });
+    // 🟡 2026-07-31 แก้ (ข้อ #22)：ดึงจาก 5 เป็น 10 แถว
+    //   นักเรียนที่ขอเพิ่มคาบทีเดียวหลายเวลา + มีคำขอยกเลิกค้างด้วย จะเกิน 5 ได้ง่ายมาก
+    //   แถวที่เกินโควตาหายไปเฉยๆ โดยไม่มีอะไรบอก = ถอนเองไม่ได้
+    const res = await studentFetchRequests(token, { status: 'pending', limit: 10 });
     const rows = res.rows;
-    const r = rows.find(function (x) {
-      return !(x.request_type === 'cancel' && x.initiated_by === 'teacher') &&
-        !(x.request_type === 'add_class' && x.initiated_by === 'teacher');
-    });
-    if (!r) { await loadStudentRecentAcknowledgedCancelCard(token, el); return; }
-    window._myPendingRequest = r;
-    // 🟠 2026-07-30 加（稽核發現 2 จุด）:
-    //  (1) เดิมใช้ rows.find = โชว์ได้แถวเดียว นักเรียนที่ส่งขอเพิ่มคาบทีเดียวหลายเวลา
-    //      จะเห็นแค่เวลาแรก เวลาที่เหลือหายไปเฉยๆ เหมือนไม่เคยส่ง
-    //  (2) เดิมคำขอเพิ่มคาบไม่มีปุ่มถอนเลย (มีแต่ของ "ขอยกเลิก") ส่งผิดแล้วแก้เองไม่ได้
-    //      ต้องรบกวนครูอย่างเดียว → เพิ่มปุ่ม 收回 ใช้ RPC ตัวเดียวกับที่ขอยกเลิกใช้อยู่แล้ว
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 🟡 2026-07-31 แก้ (ข้อ #22) — การ์ด "ขอเพิ่มคาบ" ต้องโชว์คู่กับการ์ดอื่นได้ ไม่ใช่แย่งที่กัน
+    //
+    // เดิม: การ์ดเพิ่มคาบโชว์เฉพาะตอนคำขอ "ใหม่สุด" บังเอิญเป็นคำขอเพิ่มคาบเท่านั้น
+    //   → นักเรียนที่มีคำขอยกเลิก 1 ใบ + ขอเพิ่มคาบ 3 ใบ จะเห็นแค่ใบยกเลิก
+    //     อีก 3 ใบหายไปเฉยๆ เหมือนไม่เคยส่ง และ "ถอนเองไม่ได้" ต้องรบกวนครูอย่างเดียว
+    //   โค้ดเดิมเขียนว่าตั้งใจ (กันการ์ดบังกัน) — เจตนาถูก แต่วิธีทำให้ของหาย
+    //
+    // ตอนนี้: แยกเป็นกล่องของตัวเองคนละใบ วางต่อท้ายกล่องเดิม → โชว์พร้อมกันได้ ไม่บังกัน
+    //   ข้อดีอีกอย่าง: ไม่ต้องแตะตรรกะการ์ดยกเลิก/ขอเลื่อนที่อยู่ข้างล่างเลยสักบรรทัด
+    // ════════════════════════════════════════════════════════════════════════
     const myAddRows = rows.filter(function (x) {
       return x.request_type === 'add_class' && x.initiated_by !== 'teacher';
     });
-    // เงื่อนไข r.request_type === 'add_class' กันเคส "มีทั้งขอยกเลิกและขอเพิ่มคาบค้างพร้อมกัน"
-    // ไม่ให้การ์ดเพิ่มคาบไปบังการ์ดขอยกเลิกที่ระบบเลือกมาโชว์ก่อน (ลำดับเดิมไม่เปลี่ยน)
-    if (myAddRows.length && r.request_type === 'add_class' && r.initiated_by !== 'teacher') {
+    var addEl = document.getElementById('pendingAddRequestCard');
+    if (!addEl) {
+      addEl = document.createElement('div');
+      addEl.id = 'pendingAddRequestCard';
+      el.parentNode.insertBefore(addEl, el.nextSibling);
+    }
+    if (myAddRows.length) {
       const addListHtml = myAddRows.map(function (x) {
         return '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:8px;">' +
           '<div style="font-size:0.85rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;">📅 ' +
@@ -6390,14 +6475,31 @@ async function loadStudentPendingRequestStatus(token) {
           '<button class="btn-sm" style="margin-top:6px;background:none;border:1px solid var(--border);color:#b45309;" onclick="studentWithdrawOwnAddRequest(\'' + token + '\',\'' + x.id + '\')">收回這筆</button>' +
         '</div>';
       }).join('');
-      el.innerHTML = '<div class="card">' +
+      addEl.innerHTML = '<div class="card">' +
         '<h2>⏳ 加課申請處理中（' + myAddRows.length + ' 筆）</h2>' +
         '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">' + hoursLeftLabel(myAddRows[0].created_at) + '</p>' +
         addListHtml +
       '</div>';
+    } else {
+      addEl.innerHTML = '';
+    }
+
+    // กล่องหลักด้านล่าง: ไม่เอาคำขอเพิ่มคาบของนักเรียนมาแสดงซ้ำอีก (มีกล่องของตัวเองแล้วข้างบน)
+    const r = rows.find(function (x) {
+      return !(x.request_type === 'cancel' && x.initiated_by === 'teacher') &&
+        !(x.request_type === 'add_class' && x.initiated_by === 'teacher') &&
+        !(x.request_type === 'add_class' && x.initiated_by !== 'teacher');
+    });
+    if (!r) {
+      // ไม่มีคำขออื่นค้าง → กล่องหลักโชว์ "คาบที่เพิ่งถูกยกเลิก" ตามเดิม
+      // (กล่องเพิ่มคาบข้างบนไม่ถูกแตะ ยังโชว์อยู่ถ้ามี)
+      await loadStudentRecentAcknowledgedCancelCard(token, el);
       return;
     }
+    window._myPendingRequest = r;
     const isCancel = r.request_type === 'cancel';
+    // 2026-07-31 หมายเหตุ: ตั้งแต่แก้ข้อ #22 ตัวนี้จะเป็น false เสมอ (คำขอเพิ่มคาบมีกล่องของตัวเองข้างบนแล้ว)
+    //   เก็บเงื่อนไขไว้เฉยๆ ไม่ลบ เผื่อวันหลังเปลี่ยนใจให้กลับมาโชว์รวมกล่องเดียว
     const isAdd = r.request_type === 'add_class';
     const isOwnCancel = isCancel && r.initiated_by !== 'teacher'; // 學生自己申請的取消（不是老師發起的）
 
@@ -7544,7 +7646,7 @@ async function loadPendingClassRequests() {
     } else if (r.offer_status === 'declined') {
       // 2026-07-18 改（Lin 要求）：改成 2 顆按鈕——
       // 「💬 聯絡學生」重用既有的 openContactStudentModal（從網站直接送 LINE 訊息給這位學生），
-      // 「✅ 已讀，知道了」單純關掉這筆申請（跟 teacherDeclineRescheduleOptions 同一套 acknowledged 模式，
+      // 「✅ 已讀，知道了」單純關掉這筆申請（finalizeRequestStatus(id,'acknowledged')，
       // 不動 Calendar）。兩顆都會關掉這張通知卡片。
       actionsHtml = '<div style="font-size:0.78rem;color:#b45309;font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">❌ 學生說這些時間都不方便，記得直接聯絡學生</div>' +
         '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\');finalizeRequestStatus(\'' + r.id + '\',\'acknowledged\')">💬 聯絡學生</button>' +
@@ -7562,7 +7664,9 @@ async function loadPendingClassRequests() {
       actionsHtml = pickOpts.map(function (opt, i) {
         return '<button class="btn-approve" onclick="teacherPickRescheduleOption(\'' + r.id + '\',' + i + ')">✅ ' + escHtml(formatOfferOptionForTeacher(opt)) + '</button>';
       }).join('') +
-        // 2026-07-19 拿掉（Lin 要求）：「都不方便，關掉這筆」按鈕移除，teacherDeclineRescheduleOptions 保留但不再從這裡呼叫。
+        // 2026-07-19 拿掉（Lin 要求）：「都不方便，關掉這筆」按鈕移除 · 2026-07-31 補：
+        // 原本保留但沒人呼叫的 teacherDeclineRescheduleOptions() 這顆函式，已確認 repo 全域沒有
+        // 任何地方呼叫，一併刪除了。
         '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>';
     } else if (isCancel && r.initiated_by === 'teacher') {
       // 2026-07-16 加（Lin 要求）：老師自己發起的取消，不再馬上刪 Calendar——現在要先等學生按
@@ -8139,20 +8243,6 @@ async function teacherPickRescheduleOption(id, optIndex) {
   }
 }
 
-// 2026-07-16 加：老師覺得學生給的選項都不方便——直接關掉這筆申請（不動 Calendar），
-// 提醒老師自己聯絡學生討論（不用再跳一次 LINE push 通知自己，人已經在網站上了）。
-async function teacherDeclineRescheduleOptions(id) {
-  if (!confirm('確定學生給的這些時間都不方便嗎？（不會動 Calendar，關掉這筆申請，記得自己聯絡學生討論）')) return;
-  if (_inFlightRequestIds[id]) return;
-  _inFlightRequestIds[id] = true;
-  try {
-    await finalizeRequestStatus(id, 'acknowledged');
-    alert('ℹ️ 已關閉這筆申請，記得直接聯絡學生討論時間');
-  } finally {
-    delete _inFlightRequestIds[id];
-  }
-}
-
 // ════════════════════════════════════════════════════════════════════════════
 // 2026-07-30 加（Lin สั่ง）：ครูรับเวลาที่นักเรียนขอมาไม่ได้ → ไม่มีระบบ "เสนอเวลาใหม่" ในเส้นทาง
 // เพิ่มคาบอีกต่อไป ให้คุยกับนักเรียนตรงๆ ใน LINE แล้วปิดคำขอทิ้ง (คิวจะได้ไม่ค้าง)
@@ -8169,7 +8259,21 @@ async function closeAddRequestAfterContact(id) {
   if (_inFlightRequestIds[id]) return; // 防重複點擊，跟其他處理按鈕同一套
   _inFlightRequestIds[id] = true;
   try {
-    await finalizeRequestStatus(id, 'acknowledged');
+    // 🟡 2026-07-31 เพิ่ม (ข้อ #13)：ต้องแย่ง "ป้ายมีคนใช้อยู่" ก่อน เหมือนปุ่มอื่นที่แตะคำขอเดียวกัน
+    //
+    // พังยังไงถ้าไม่มี: ครูกด ✅ 確認新增 ใน LINE (ระบบจับป้ายแล้วกำลังคุยกับ Google อยู่)
+    //   แล้วเผลอกด ✔️ 關掉這筆 บนโน้ตบุ๊กในไม่กี่วินาทีเดียวกัน
+    //   → ฝั่งเว็บปิดคำขอสำเร็จ นักเรียนได้ LINE ว่า "เวลานั้นครูไม่สะดวก"
+    //     แล้วฝั่ง LINE สร้างคาบสำเร็จ นักเรียนได้อีกข้อความว่า "จัดคาบให้แล้ว" = ขัดกันเอง
+    //
+    // ⚠️ ทำไมไม่ไปเติมเงื่อนไข "ป้ายต้องว่าง" ใน finalizeRequestStatus (ซึ่งดูตรงจุดกว่า):
+    //   finalizeRequestStatus เป็นของใช้ร่วมทุกประเภทคำขอ (ยกเลิก/ขอเลื่อน/เพิ่มคาบ) และเส้นทางอื่น
+    //   เรียกมัน "หลัง" จากที่ตัวเองจับป้ายไว้แล้ว → ถ้าบังคับว่าป้ายต้องว่าง มันจะปิดงานของตัวเองไม่ได้เลย
+    //   = พังทั้งระบบยกเลิกและระบบขอเลื่อนทันที · ปุ่มนี้แย่งป้ายเองจึงปลอดภัยกว่าและได้ผลเท่ากัน
+    var claimClose = await claimRequestForProcessing(id);
+    if (!claimClose.ok) { alert('⚠️ ' + claimClose.reason); await loadPendingClassRequests(); return; }
+
+    await finalizeRequestStatus(id, 'acknowledged'); // ตัวนี้เคลียร์ป้ายให้เองพร้อมกับเปลี่ยนสถานะ
     // 2026-07-30 加（Lin สั่ง: ทุกกรณีต้องแจ้งผลให้นักเรียนรู้）：ถ้าไม่บอก การ์ด "⏳ 加課申請處理中"
     // ของนักเรียนจะหายไปเฉยๆ เหมือนคำขอถูกกลืน นักเรียนไม่รู้เลยว่าเกิดอะไรขึ้น
     // ส่งไม่สำเร็จก็ไม่ย้อนสถานะ (คำขอปิดไปแล้วจริง) แต่ต้องบอกครูให้รู้ ห้ามเงียบ
@@ -8258,24 +8362,6 @@ async function sendContactStudentMessage() {
   } finally {
     btn.disabled = false; btn.textContent = '📤 傳送';
   }
-}
-
-async function cancelProposedOffer(id) {
-  if (!confirm('確定要取消這個提議嗎？（不會通知學生，之後可以重新用「處理」或「其他」處理這筆申請）')) return;
-  // 2026-07-16 加（稽核發現，ORANGE#3）：一定要加 .eq('offer_status','proposed') 當保險閘——
-  // 沒有這道閘的話，如果學生剛好在這一瞬間已經在 LINE 上按了「可以/都不方便」，
-  // 老師這邊按取消會直接把學生剛回覆的結果蓋掉，卻完全不會有警告。
-  var res = await sb.from('classroom_requests').update({ offer_status: null, offer_created_at: null, sla_reminder_sent: false }).eq('id', id).eq('offer_status', 'proposed').select();
-  if (res.error) {
-    alert('⚠️ 取消失敗：' + res.error.message);
-    return;
-  }
-  if (!res.data || !res.data.length) {
-    alert('ℹ️ 取消失敗——學生可能剛好已經回覆了，重新整理頁面看看目前狀態，不會覆蓋學生的回覆。');
-    await loadPendingClassRequests();
-    return;
-  }
-  await loadPendingClassRequests();
 }
 
 // ✅ 學生已經同意提議的新時間 → 老師按這顆才真的動 Calendar（一定要等老師開電腦，Google 授權只在老師瀏覽器裡）
@@ -9014,6 +9100,16 @@ async function confirmTeacherAddClass(id) {
     if (res.error || !res.data) { alert('⚠️ 讀取這筆加課申請失敗：' + (res.error ? res.error.message : '找不到資料')); return; }
     const r = res.data;
     if (!r.teacher_add_ack_at) { alert('ℹ️ 學生還沒按「我知道了」確認，先不能新增。'); await loadPendingClassRequests(); return; }
+
+    // 🟠 2026-07-31 เพิ่ม (ข้อ #8)：ปุ่มระบบเก่านี้เป็นปุ่มเดียวของครูที่ไม่มีด่านกันวันย้อนหลัง
+    //   (ทุกเส้นทางอื่นมีหมด — ดู assertNotPastDate ที่ checkAddClassDayConflict / processClassRequestInner /
+    //    confirmAcceptedOffer) และแถวพวกนี้คือ "คำขอค้างจากก่อน 2026-07-30" = วันที่ผ่านไปแล้วแทบทั้งหมด
+    //   → กดครั้งเดียวสร้างคาบย้อนหลังทันที ขัดกฎเหล็กที่เขียนไว้เองที่หัวข้อ assertNotPastDate ด้านบน
+    //   คิวเก่าหมดเมื่อไหร่ ลบทั้งฟังก์ชันนี้ทิ้งได้เลยตามที่ CLAUDE.md วางไว้ (ด่านนี้จะหายไปพร้อมกัน)
+    if (!assertNotPastDate(r.requested_date, '這筆舊申請的上課日期（日期已經過去了，請直接聯絡學生重新約時間）')) {
+      await loadPendingClassRequests();
+      return;
+    }
 
     const token = r.token;
     const s = studentsCache[token];

@@ -10,6 +10,17 @@
   gtag('config', 'G-DKVQE30982');
   window.GA_CATEGORY='game';
 </script>
+<script>
+(function(){
+  var _exitFired = false;
+  function fireExit(){
+    if (_exitFired) return; _exitFired = true;
+    try { gtag('event','tone_finder_exit',{category:'game', transport_type:'beacon'}); } catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') fireExit(); });
+  window.addEventListener('pagehide', fireExit);
+})();
+</script>
 <!-- Microsoft Clarity -->
 <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
@@ -1806,7 +1817,7 @@ if (document.fonts && document.fonts.load) {
 <body>
 
 <!-- ── NAV ── -->
-<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語遊戲練習室</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+<nav class="site-nav"><div class="nav-logo" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_nav_logo_click',{category:'game'});}catch(e){}goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語遊戲練習室</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_nav_menu_toggle',{category:'game'});}catch(e){}toggleMenu()"><span></span><span></span><span></span></div></nav>
 
 <!-- ── PAGE BOTTOM NAV ── -->
 <div class="page-strip">
@@ -1828,9 +1839,9 @@ if (document.fonts && document.fonts.load) {
   </div>
 
   <!-- How-to modal: เกมเสียง -->
-  <div id="tf-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+  <div id="tf-howto-modal" onclick="if(event.target===this){try{if(typeof gtag==='function')gtag('event','tone_finder_howto_close',{category:'game'});}catch(e){}this.style.display='none'}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
     <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
-      <button onclick="document.getElementById('tf-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+      <button onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_close',{category:'game'});}catch(e){}document.getElementById('tf-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
       <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🎵 怎麼玩？</div>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">背單字好無聊？玩遊戲就記得住了，而且還更好玩 😊</p>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">泰語有 5 個聲調，同一個字聲調不一樣，意思就完全不同喔！看到泰文單字，題目問什麼就回答什麼就好了 😊 不確定也沒關係，先猜猜看，玩多了自然就會有感覺的 💛</p>
@@ -1847,9 +1858,9 @@ if (document.fonts && document.fonts.load) {
       <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
       <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
       <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
-        <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
+        <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_open',{category:'game'});}catch(e){}dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
         <div class="howto-hint-bubble" id="howto-hint-tone">
-          <button class="howto-hint-close" onclick="dismissHowtoHint('tone')">✕</button>
+          <button class="howto-hint-close" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_hint_dismiss',{category:'game'});}catch(e){}dismissHowtoHint('tone')">✕</button>
           這裡有教怎麼玩喔 👆
         </div>
       </span>
@@ -1857,18 +1868,18 @@ if (document.fonts && document.fonts.load) {
       <div class="tf-stat-row" id="tf-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
         <span class="tf-streak-chip" title="連續天數">🔥 <b id="tf-streak-num">0</b></span>
         <span class="tf-streak-chip" title="護盾">🛡️ ×<b id="tf-freeze-num">0</b></span>
-        <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="TF.showStars()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showStars()}">⭐ <b id="tf-star-count">0</b></span>
-        <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="TF.showBadges()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showBadges()}"><span id="tf-badge-emoji">🌱</span> <b id="tf-badge-count">0</b></span>
+        <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_stars_view',{category:'game'});}catch(e){}TF.showStars()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showStars()}">⭐ <b id="tf-star-count">0</b></span>
+        <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_badges_view',{category:'game'});}catch(e){}TF.showBadges()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showBadges()}"><span id="tf-badge-emoji">🌱</span> <b id="tf-badge-count">0</b></span>
       </div>
       <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
     </div>
-    <button class="tf-tool-btn" id="tf-alpha-btn" onclick="TF.openAlpha()">🔤 字母練習區</button>
+    <button class="tf-tool-btn" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlpha()">🔤 字母練習區</button>
   </div>
 
   <div class="tf-level-tabs" id="tf-level-tabs">
-    <button class="tf-ltab" id="tf-ltab-1" onclick="TF.selectLevel(1)">初級</button>
-    <button class="tf-ltab" id="tf-ltab-2" onclick="TF.selectLevel(2)">中級</button>
-    <button class="tf-ltab" id="tf-ltab-3" onclick="TF.selectLevel(3)">高級</button> <!-- Lin 2026-07-16: เปิดคืนตามที่ Lin สั่ง -->
+    <button class="tf-ltab" id="tf-ltab-1" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:1});}catch(e){}TF.selectLevel(1)">初級</button>
+    <button class="tf-ltab" id="tf-ltab-2" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:2});}catch(e){}TF.selectLevel(2)">中級</button>
+    <button class="tf-ltab" id="tf-ltab-3" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:3});}catch(e){}TF.selectLevel(3)">高級</button> <!-- Lin 2026-07-16: เปิดคืนตามที่ Lin สั่ง -->
   </div>
 
   <div class="tf-card">
@@ -1878,13 +1889,13 @@ if (document.fonts && document.fonts.load) {
          แทนด้วยปุ่ม 讀音 (🐣) + 英文讀音 (🔡) ซึ่ง "โชว์เฉพาะหลังผู้เล่นตอบวรรณยุกต์ไปแล้ว" เท่านั้น
          (โน้ตเดิม 2026-07-16 บอกว่าคำอ่านจะเฉลยวรรณยุกต์ก่อนตอบ — แก้ด้วยการล็อกไม่ให้โชว์ตอนขั้นเดา session-guess) -->
     <div id="tf-word-ctl-row" style="display:none;align-items:center;justify-content:center;gap:8px;margin:0;padding:0 22px 14px;">
-      <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="TF.togglePron()"></button>
+      <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_toggle_pron',{category:'game'});}catch(e){}TF.togglePron()"></button>
       <span id="zh-toggle-slot"></span>
       <span id="tf-vault-btn-slot"></span>
-      <button id="tf-guide-toggle" class="word-ctl-btn" type="button" onclick="TF.toggleGuide()"></button>
+      <button id="tf-guide-toggle" class="word-ctl-btn" type="button" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_toggle_guide',{category:'game'});}catch(e){}TF.toggleGuide()"></button>
       <span id="font-toggle-slot"></span>
       <!-- Lin 2026-07-31: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 — เดิมลอยเป็นปุ่มเล็กใต้คำแปลจีน ย้ายมารวมในเมนู 🍚 ตามที่ Lin สั่ง · ไอคอน 🙏 = ท่าไหว้ไทย สื่อถึง "คำสุภาพ" ตรงตัว (ไม่ใช่ไอคอนทั่วไป) · render() ใน tone-finder-game.js เป็นคนตั้ง textContent/data-mode + ซ่อนแถวนี้เวลาไม่ได้เล่น高級句子 -->
-      <button id="tf-particle-toggle" class="word-ctl-btn" type="button" onclick="TF.toggleParticleMode()" style="display:none;">🙏</button>
+      <button id="tf-particle-toggle" class="word-ctl-btn" type="button" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_toggle_particle',{category:'game'});}catch(e){}TF.toggleParticleMode()" style="display:none;">🙏</button>
     </div>
     <!-- Lin 2026-07-19: ยุบปุ่มทั้งหมดเข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
     <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น)
@@ -1901,8 +1912,8 @@ if (document.fonts && document.fonts.load) {
     ]});});</script>
     <div class="tf-bc" id="tf-bc"></div>
     <div class="tf-nav-bar" id="tf-nav-bar">
-      <button class="tf-nav-btn" id="tf-back-btn" onclick="TF.back()" disabled>← 上一步</button>
-      <button class="tf-nav-btn" id="tf-fwd-btn" onclick="TF.forward()" disabled>下一步 →</button>
+      <button class="tf-nav-btn" id="tf-back-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_step_back',{category:'game'});}catch(e){}TF.back()" disabled>← 上一步</button>
+      <button class="tf-nav-btn" id="tf-fwd-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_step_forward',{category:'game'});}catch(e){}TF.forward()" disabled>下一步 →</button>
     </div>
     <!-- Lin 2026-07-30 (แก้รอบ 2): ย้ายกล่องพยางค์/กล่องคำในประโยค 高級 มาอยู่ "เหนือคำถามเลย" (ใต้แถบ上一步/下一步) ตามที่ Lin ยืนยันจาก mockup — เดิมอยู่เหนือแถบ上一步/下一步 (ติดกรอบทองเลย) ย้ายลงมาให้ต่อกับคำถามแทน -->
     <div class="syl-strip" id="tf-syl-strip" style="display:none"></div>
@@ -1919,16 +1930,16 @@ if (document.fonts && document.fonts.load) {
   <div class="gt-title" id="gt-tour-title"></div>
   <div class="gt-text" id="gt-tour-text"></div>
   <div class="gt-actions">
-    <button class="gt-skip" onclick="gtTourEnd()">跳過導覽</button>
+    <button class="gt-skip" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_tour_skip',{category:'game'});}catch(e){}gtTourEnd()">跳過導覽</button>
     <div class="gt-nav">
-      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="gtTourPrev()">‹ 上一步</button>
-      <button class="gt-btn gt-next" id="gt-tour-next" onclick="gtTourNext()">下一步 ›</button>
+      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_tour_prev',{category:'game'});}catch(e){}gtTourPrev()">‹ 上一步</button>
+      <button class="gt-btn gt-next" id="gt-tour-next" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_tour_next',{category:'game'});}catch(e){}gtTourNext()">下一步 ›</button>
     </div>
   </div>
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=33"></script>
+<script src="js/games/tone-finder-game.min.js?v=35"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
@@ -1996,15 +2007,15 @@ if (document.fonts && document.fonts.load) {
 <div id="game-switcher">
   <span class="gs-tab gs-active">🎵 聲調練習室</span>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="reading-game.html">📝 拼讀練習室</a>
+  <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'tone_finder'})}catch(e){}">✍️ 拼讀練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="typing-game.html">⌨️ 打字練習室</a>
+  <a class="gs-tab" href="typing-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'typing_game',from:'tone_finder'})}catch(e){}">⌨️ 打字練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="word-order.html">🔀 語序練習室</a>
+  <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'tone_finder'})}catch(e){}">🧩 語序練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="lego.html">🧩 造句練習室</a>
+  <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'tone_finder'})}catch(e){}">🧱 造句練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="vault.html"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
+  <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'tone_finder'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>

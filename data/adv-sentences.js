@@ -25,7 +25,7 @@
 
   var ADV_SENTENCES = [
     {
-      th: 'ผมกินข้าวอยู่ที่บ้าน', zh: '我在家吃飯', readingTH: 'ผม-กิน-ข้าว-อยู่-ที่-บ้าน', wc: 6,
+      th: 'ผมกินข้าวอยู่ที่บ้าน', zh: '我在家吃飯', readingTH: 'ผม-กิน-ข้าว-อยู่-ที่-บ้าน', wc: 6, politeF: null,
       words: [
       { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
       { th: 'กิน', zh: '吃', syls: [{cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'}] },
@@ -36,7 +36,7 @@
       ]
     },
     {
-      th: 'เขาไม่ค่อยกินผักเลย', zh: '他不太吃蔬菜', readingTH: 'เขา-ไม่-ค่อย-กิน-ผัก-เลย', wc: 6,
+      th: 'เขาไม่ค่อยกินผักเลย', zh: '他不太吃蔬菜', readingTH: 'เขา-ไม่-ค่อย-กิน-ผัก-เลย', wc: 6, politeF: 'ค่ะ',
       words: [
       { th: 'เขา', zh: '他', syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
       { th: 'ไม่', zh: '不', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
@@ -47,7 +47,7 @@
       ]
     },
     {
-      th: 'คุณไปไหนมา', zh: '你去哪裡了？', readingTH: 'คุน-ไป-ไหน-มา', wc: 4,
+      th: 'คุณไปไหนมา', zh: '你去哪裡了？', readingTH: 'คุน-ไป-ไหน-มา', wc: 4, politeF: 'คะ',
       words: [
       { th: 'คุณ', zh: '你', syls: [{cons:'ค', vowel:'อุ', final:'ณ', finalRead:'น', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
       { th: 'ไป', zh: '去', syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}] },
@@ -56,7 +56,7 @@
       ]
     },
     {
-      th: 'ผมอยากเรียนภาษาไทย', zh: '我想學泰語', readingTH: 'ผม-อยาก-เรียน-พา-สา-ไทย', wc: 6,
+      th: 'ผมอยากเรียนภาษาไทย', zh: '我想學泰語', readingTH: 'ผม-อยาก-เรียน-พา-สา-ไทย', wc: 6, politeF: null,
       words: [
       { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
       { th: 'อยาก', zh: '想', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
@@ -65,7 +65,7 @@
       ]
     },
     {
-      th: 'วันนี้อากาศร้อนมากเลย', zh: '今天天氣很熱', readingTH: 'วัน-นี้-อา-กาด-ร้อน-มาก-เลย', wc: 7,
+      th: 'วันนี้อากาศร้อนมากเลย', zh: '今天天氣很熱', readingTH: 'วัน-นี้-อา-กาด-ร้อน-มาก-เลย', wc: 7, politeF: 'ค่ะ',
       words: [
       { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'อากาศ', zh: '天氣', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ก', vowel:'อา', final:'ศ', finalRead:'ด', tone_name:'เอก', th:'กาศ', en:'gàat'}] },
@@ -75,7 +75,7 @@
       ]
     },
     {
-      th: 'เขาพูดภาษาไทยได้', zh: '他會說泰語', readingTH: 'เขา-พูด-พา-สา-ไทย-ได้', wc: 6,
+      th: 'เขาพูดภาษาไทยได้', zh: '他會說泰語', readingTH: 'เขา-พูด-พา-สา-ไทย-ได้', wc: 6, politeF: 'ค่ะ',
       words: [
       { th: 'เขา', zh: '他', syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
       { th: 'พูด', zh: '說', syls: [{cons:'พ', vowel:'อู', final:'ด', tone_name:'โท', th:'พูด', en:'phûut'}] },
@@ -84,7 +84,7 @@
       ]
     },
     {
-      th: 'ผมไม่รู้จะทำยังไง', zh: '我不知道該怎麼辦', readingTH: 'ผม-ไม่-รู้-จะ-ทำ-ยัง-ไง', wc: 7,
+      th: 'ผมไม่รู้จะทำยังไง', zh: '我不知道該怎麼辦', readingTH: 'ผม-ไม่-รู้-จะ-ทำ-ยัง-ไง', wc: 7, politeF: null,
       words: [
       { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
       { th: 'ไม่', zh: '不', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
@@ -95,7 +95,7 @@
       ]
     },
     {
-      th: 'พรุ่งนี้เราไปด้วยกันนะ', zh: '明天我們一起去喔', readingTH: 'พรุ่ง-นี้-เรา-ไป-ด้วย-กัน-นะ', wc: 7,
+      th: 'พรุ่งนี้เราไปด้วยกันนะ', zh: '明天我們一起去喔', readingTH: 'พรุ่ง-นี้-เรา-ไป-ด้วย-กัน-นะ', wc: 7, politeF: 'ค่ะ',
       words: [
       { th: 'พรุ่งนี้', zh: '明天', syls: [{cons:'พ', cluster:'ร', vowel:'อุ', tone:'่', final:'ง', tone_name:'โท', th:'พรุ่ง', en:'phrûng'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'เรา', zh: '我們', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
@@ -105,7 +105,7 @@
       ]
     },
     {
-      th: 'แกกำลังทำอะไรอยู่', zh: '你在做什麼？', readingTH: 'แก-กำ-ลัง-ทำ-อะ-ไร-อยู่', wc: 7,
+      th: 'แกกำลังทำอะไรอยู่', zh: '你在做什麼？', readingTH: 'แก-กำ-ลัง-ทำ-อะ-ไร-อยู่', wc: 7, politeF: 'คะ',
       words: [
       { th: 'แก', zh: '你（口語）', syls: [{cons:'ก', vowel:'แอ', tone_name:'สามัญ', th:'แก', en:'gae'}] },
       { th: 'กำลัง', zh: '正在', syls: [{cons:'ก', vowel:'อำ', tone_name:'สามัญ', th:'กำ', en:'gam'}, {cons:'ล', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ลัง', en:'lang'}] },
@@ -115,7 +115,7 @@
       ]
     },
     {
-      th: 'เธอยังไม่กลับบ้านเหรอ', zh: '你還沒回家喔？', readingTH: 'เทอ-ยัง-ไม่-กลับ-บ้าน-เหรอ', wc: 6,
+      th: 'เธอยังไม่กลับบ้านเหรอ', zh: '你還沒回家喔？', readingTH: 'เทอ-ยัง-ไม่-กลับ-บ้าน-เหรอ', wc: 6, politeF: 'คะ',
       words: [
       { th: 'เธอ', zh: '你', syls: [{cons:'ธ', consRead:'ท', vowel:'เออ', tone_name:'สามัญ', th:'เธอ', en:'thoe'}] },
       { th: 'ยัง', zh: '還', syls: [{cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง', en:'yang'}] },
@@ -126,7 +126,7 @@
       ]
     },
     {
-      th: 'ผมไม่ชอบกินผัก', zh: '我不喜歡吃菜', readingTH: 'ผม-ไม่-ชอบ-กิน-ผัก', wc: 5,
+      th: 'ผมไม่ชอบกินผัก', zh: '我不喜歡吃菜', readingTH: 'ผม-ไม่-ชอบ-กิน-ผัก', wc: 5, politeF: null,
       words: [
       { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
       { th: 'ไม่', zh: '不', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
@@ -136,7 +136,7 @@
       ]
     },
     {
-      th: 'เขาไปตลาดทุกวัน', zh: '他每天去市場', readingTH: 'เขา-ไป-ตะ-หลาด-ทุก-วัน', wc: 6,
+      th: 'เขาไปตลาดทุกวัน', zh: '他每天去市場', readingTH: 'เขา-ไป-ตะ-หลาด-ทุก-วัน', wc: 6, politeF: 'ค่ะ',
       words: [
       { th: 'เขา', zh: '他', syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
       { th: 'ไป', zh: '去', syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}] },
@@ -145,7 +145,7 @@
       ]
     },
     {
-      th: 'วันนี้ฝนตกหนักมาก', zh: '今天雨下很大', readingTH: 'วัน-นี้-ฝน-ตก-หนัก-มาก', wc: 6,
+      th: 'วันนี้ฝนตกหนักมาก', zh: '今天雨下很大', readingTH: 'วัน-นี้-ฝน-ตก-หนัก-มาก', wc: 6, politeF: 'ค่ะ',
       words: [
       { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'ฝน', zh: '雨', syls: [{cons:'ฝ', vowel:'โอะ', final:'น', tone_name:'จัตวา', th:'ฝน', en:'fǒn'}] },
@@ -155,7 +155,7 @@
       ]
     },
     {
-      th: 'คุณอยู่ที่ไหน', zh: '你在哪裡', readingTH: 'คุน-อยู่-ที่-ไหน', wc: 4,
+      th: 'คุณอยู่ที่ไหน', zh: '你在哪裡', readingTH: 'คุน-อยู่-ที่-ไหน', wc: 4, politeF: 'คะ',
       words: [
       { th: 'คุณ', zh: '你', syls: [{cons:'ค', vowel:'อุ', final:'ณ', finalRead:'น', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
       { th: 'อยู่', zh: '在', syls: [{cons:'ย', lead:'อ', vowel:'อู', tone:'่', tone_name:'เอก', th:'อยู่', en:'yùu'}] },
@@ -164,7 +164,7 @@
       ]
     },
     {
-      th: 'เราหิวแล้ว', zh: '我餓了', readingTH: 'เรา-หิว-แล้ว', wc: 3,
+      th: 'เราหิวแล้ว', zh: '我餓了', readingTH: 'เรา-หิว-แล้ว', wc: 3, politeF: 'ค่ะ',
       words: [
       { th: 'เรา', zh: '我', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
       { th: 'หิว', zh: '餓', syls: [{cons:'ห', vowel:'อิ', final:'ว', tone_name:'จัตวา', th:'หิว', en:'hǐw'}] },
@@ -172,7 +172,7 @@
       ]
     },
     {
-      th: 'เขาไม่มีเวลา', zh: '他沒有時間', readingTH: 'เขา-ไม่-มี-เว-ลา', wc: 5,
+      th: 'เขาไม่มีเวลา', zh: '他沒有時間', readingTH: 'เขา-ไม่-มี-เว-ลา', wc: 5, politeF: 'ค่ะ',
       words: [
       { th: 'เขา', zh: '他', syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
       { th: 'ไม่', zh: '不/沒', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
@@ -181,7 +181,7 @@
       ]
     },
     {
-      th: 'วันนี้อากาศดีมาก', zh: '今天天氣很好', readingTH: 'วัน-นี้-อา-กาด-ดี-มาก', wc: 6,
+      th: 'วันนี้อากาศดีมาก', zh: '今天天氣很好', readingTH: 'วัน-นี้-อา-กาด-ดี-มาก', wc: 6, politeF: 'ค่ะ',
       words: [
       { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'อากาศ', zh: '天氣', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ก', vowel:'อา', final:'ศ', finalRead:'ด', tone_name:'เอก', th:'กาศ', en:'gàat'}] },
@@ -190,15 +190,14 @@
       ]
     },
     {
-      th: 'ขอบคุณมากครับ', zh: '非常謝謝', readingTH: 'ขอบ-คุน-มาก-ครับ', wc: 4,
+      th: 'ขอบคุณมาก', zh: '非常謝謝', readingTH: 'ขอบ-คุน-มาก', wc: 3, politeF: 'ค่ะ',
       words: [
       { th: 'ขอบคุณ', zh: '謝謝', syls: [{cons:'ข', vowel:'ออ', final:'บ', tone_name:'เอก', th:'ขอบ', en:'khòp'}, {cons:'ค', vowel:'อุ', final:'ณ', finalRead:'น', tone_name:'สามัญ', th:'คุณ', en:'khun'}] },
-      { th: 'มาก', zh: '很/非常', syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] },
-      { th: 'ครับ', zh: '（男性禮貌詞）', syls: [{cons:'ค', cluster:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'ครับ', en:'kráp'}] }
+      { th: 'มาก', zh: '很/非常', syls: [{cons:'ม', vowel:'อา', final:'ก', tone_name:'โท', th:'มาก', en:'mâak'}] }
       ]
     },
     {
-      th: 'ร้านนี้อร่อยมาก', zh: '這家餐廳很好吃', readingTH: 'ร้าน-นี้-อะ-ร่อย-มาก', wc: 5,
+      th: 'ร้านนี้อร่อยมาก', zh: '這家餐廳很好吃', readingTH: 'ร้าน-นี้-อะ-ร่อย-มาก', wc: 5, politeF: 'ค่ะ',
       words: [
       { th: 'ร้าน', zh: '店', syls: [{cons:'ร', vowel:'อา', tone:'้', final:'น', tone_name:'ตรี', th:'ร้าน', en:'ráan'}] },
       { th: 'นี้', zh: '這', syls: [{cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
@@ -207,7 +206,7 @@
       ]
     },
     {
-      th: 'ผมอยากพักผ่อน', zh: '我想休息', readingTH: 'ผม-อยาก-พัก-ผ่อน', wc: 4,
+      th: 'ผมอยากพักผ่อน', zh: '我想休息', readingTH: 'ผม-อยาก-พัก-ผ่อน', wc: 4, politeF: null,
       words: [
       { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
       { th: 'อยาก', zh: '想', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
@@ -215,16 +214,15 @@
       ]
     },
     {
-      th: 'ขอเมนูหน่อยครับ', zh: '麻煩給我看一下菜單', readingTH: 'ขอ-เม-นู-หน่อย-ครับ', wc: 5,
+      th: 'ขอเมนูหน่อย', zh: '麻煩給我看一下菜單', readingTH: 'ขอ-เม-นู-หน่อย', wc: 4, politeF: 'ค่ะ',
       words: [
       { th: 'ขอ', zh: '請／想要', syls: [{cons:'ข', vowel:'ออ', tone_name:'จัตวา', th:'ขอ', en:'khɔ̌ɔ'}] },
       { th: 'เมนู', zh: '菜單', syls: [{cons:'ม', vowel:'เอ', tone_name:'สามัญ', th:'เม', en:'mee'}, {cons:'น', vowel:'อู', tone_name:'สามัญ', th:'นู', en:'nuu'}] },
-      { th: 'หน่อย', zh: '一下（軟化語氣）', syls: [{cons:'น', lead:'ห', vowel:'ออ', tone:'่', final:'ย', tone_name:'เอก', th:'หน่อย', en:'nɔ̀i'}] },
-      { th: 'ครับ', zh: '（男性禮貌詞）', syls: [{cons:'ค', cluster:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'ครับ', en:'khráp'}] }
+      { th: 'หน่อย', zh: '一下（軟化語氣）', syls: [{cons:'น', lead:'ห', vowel:'ออ', tone:'่', final:'ย', tone_name:'เอก', th:'หน่อย', en:'nɔ̀i'}] }
       ]
     },
     {
-      th: 'อาหารจานนี้เผ็ดไหม', zh: '這道菜辣嗎？', readingTH: 'อา-หาร-จาน-นี้-เผ็ด-ไหม', wc: 6,
+      th: 'อาหารจานนี้เผ็ดไหม', zh: '這道菜辣嗎？', readingTH: 'อา-หาร-จาน-นี้-เผ็ด-ไหม', wc: 6, politeF: 'คะ',
       words: [
       { th: 'อาหาร', zh: '食物／餐點', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาร', en:'hǎan'}] },
       { th: 'จานนี้', zh: '這盤／這道', syls: [{cons:'จ', vowel:'อา', final:'น', tone_name:'สามัญ', th:'จาน', en:'jaan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
@@ -233,7 +231,7 @@
       ]
     },
     {
-      th: 'ผมเอาข้าวผัดกุ้ง', zh: '我要蝦炒飯', readingTH: 'ผม-เอา-ข้าว-ผัด-กุ้ง', wc: 5,
+      th: 'ผมเอาข้าวผัดกุ้ง', zh: '我要蝦炒飯', readingTH: 'ผม-เอา-ข้าว-ผัด-กุ้ง', wc: 5, politeF: null,
       words: [
       { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
       { th: 'เอา', zh: '要（拿／取）', syls: [{cons:'อ', vowel:'เอา', tone_name:'สามัญ', th:'เอา', en:'ao'}] },
@@ -242,7 +240,7 @@
       ]
     },
     {
-      th: 'ไม่ใส่ผักชีนะ', zh: '不要放香菜喔', readingTH: 'ไม่-ใส่-ผัก-ชี-นะ', wc: 5,
+      th: 'ไม่ใส่ผักชีนะ', zh: '不要放香菜喔', readingTH: 'ไม่-ใส่-ผัก-ชี-นะ', wc: 5, politeF: 'ค่ะ',
       words: [
       { th: 'ไม่', zh: '不要', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
       { th: 'ใส่', zh: '放／加', syls: [{cons:'ส', vowel:'ใอ', tone:'่', tone_name:'เอก', th:'ใส่', en:'sài'}] },
@@ -251,16 +249,15 @@
       ]
     },
     {
-      th: 'เก็บเงินด้วยครับ', zh: '麻煩結帳', readingTH: 'เก็บ-เงิน-ด้วย-ครับ', wc: 4,
+      th: 'เก็บเงินด้วย', zh: '麻煩結帳', readingTH: 'เก็บ-เงิน-ด้วย', wc: 3, politeF: 'ค่ะ',
       words: [
       { th: 'เก็บ', zh: '收（款）', syls: [{cons:'ก', vowel:'เอะ', final:'บ', tone_name:'เอก', th:'เก็บ', en:'gèp'}] },
       { th: 'เงิน', zh: '錢', syls: [{cons:'ง', vowel:'เออ', final:'น', tone_name:'สามัญ', th:'เงิน', en:'ngəən'}] },
-      { th: 'ด้วย', zh: '也／請', syls: [{cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย', en:'dûay'}] },
-      { th: 'ครับ', zh: '（男性禮貌詞）', syls: [{cons:'ค', cluster:'ร', vowel:'อะ', final:'บ', tone_name:'ตรี', th:'ครับ', en:'khráp'}] }
+      { th: 'ด้วย', zh: '也／請', syls: [{cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย', en:'dûay'}] }
       ]
     },
     {
-      th: 'ผมตื่นนอนตอนหกโมงเช้า', zh: '我早上六點起床', readingTH: 'ผม-ตื่น-นอน-ตอน-หก-โมง-เช้า', wc: 7,
+      th: 'ผมตื่นนอนตอนหกโมงเช้า', zh: '我早上六點起床', readingTH: 'ผม-ตื่น-นอน-ตอน-หก-โมง-เช้า', wc: 7, politeF: null,
       words: [
       { th: 'ผม', zh: '我（男性自稱）', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
       { th: 'ตื่นนอน', zh: '起床', syls: [{cons:'ต', vowel:'อื', tone:'่', final:'น', tone_name:'เอก', th:'ตื่น', en:'dtùuen'}, {cons:'น', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'นอน', en:'norn'}] },
@@ -271,7 +268,7 @@
       ]
     },
     {
-      th: 'เขาชอบอาบน้ำก่อนนอน', zh: '他喜歡睡前洗澡', readingTH: 'เขา-ชอบ-อาบ-น้ำ-ก่อน-นอน', wc: 6,
+      th: 'เขาชอบอาบน้ำก่อนนอน', zh: '他喜歡睡前洗澡', readingTH: 'เขา-ชอบ-อาบ-น้ำ-ก่อน-นอน', wc: 6, politeF: 'ค่ะ',
       words: [
       { th: 'เขา', zh: '他', syls: [{cons:'ข', vowel:'เอา', tone_name:'จัตวา', th:'เขา', en:'khǎo'}] },
       { th: 'ชอบ', zh: '喜歡', syls: [{cons:'ช', vowel:'ออ', final:'บ', tone_name:'โท', th:'ชอบ', en:'chôp'}] },
@@ -281,7 +278,7 @@
       ]
     },
     {
-      th: 'เราดื่มกาแฟทุกเช้า', zh: '我們每天早上喝咖啡', readingTH: 'เรา-ดื่ม-กา-แฟ-ทุก-เช้า', wc: 6,
+      th: 'เราดื่มกาแฟทุกเช้า', zh: '我們每天早上喝咖啡', readingTH: 'เรา-ดื่ม-กา-แฟ-ทุก-เช้า', wc: 6, politeF: 'ค่ะ',
       words: [
       { th: 'เรา', zh: '我們', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
       { th: 'ดื่ม', zh: '喝', syls: [{cons:'ด', vowel:'อื', tone:'่', final:'ม', tone_name:'เอก', th:'ดื่ม', en:'dèum'}] },
@@ -291,7 +288,7 @@
       ]
     },
     {
-      th: 'วันนี้ผมทำงานที่บ้าน', zh: '今天我在家工作', readingTH: 'วัน-นี้-ผม-ทำ-งาน-ที่-บ้าน', wc: 7,
+      th: 'วันนี้ผมทำงานที่บ้าน', zh: '今天我在家工作', readingTH: 'วัน-นี้-ผม-ทำ-งาน-ที่-บ้าน', wc: 7, politeF: null,
       words: [
       { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'ผม', zh: '我（男性自稱）', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
@@ -301,7 +298,7 @@
       ]
     },
     {
-      th: 'เย็นนี้เรากินข้าวด้วยกันไหม', zh: '今晚我們一起吃飯嗎', readingTH: 'เย็น-นี้-เรา-กิน-ข้าว-ด้วย-กัน-ไหม', wc: 8,
+      th: 'เย็นนี้เรากินข้าวด้วยกันไหม', zh: '今晚我們一起吃飯嗎', readingTH: 'เย็น-นี้-เรา-กิน-ข้าว-ด้วย-กัน-ไหม', wc: 8, politeF: 'คะ',
       words: [
       { th: 'เย็นนี้', zh: '今晚', syls: [{cons:'ย', vowel:'เอะ', final:'น', tone_name:'สามัญ', th:'เย็น', en:'yen'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'เรา', zh: '我們', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
@@ -351,7 +348,8 @@
       // Lin 2026-07-12: เก็บ "รายคำ + คำแปล" ไว้ด้วย → เกมพิมพ์ 高 / เกมเรียงคำ ใช้โชว์คำอธิบายว่าแต่ละคำแปลว่าอะไร
       var wordMeanings = s.words.map(function (w) { return { th: w.th, zh: w.zh }; });
       // Lin 2026-07-16: ส่ง readingTH (คำอ่านจริงทั้งประโยค) ให้เกมอ่าน/เกมพิมพ์ด้วย — กล่อง讀音ต้องโชว์คำอ่าน ไม่ใช่ตัวเขียน (ห้าม fallback เป็น syls[].th)
-      return { th: s.th, zh: s.zh, en: en, readingTH: s.readingTH, level: '高', syls: flatSyls, words: wordMeanings };
+      // Lin 2026-08-01: ส่ง politeF ด้วย — ปุ่มครับ/ค่ะ/คะ ในเกมอ่าน/เกมพิมพ์ ต้องอ่านค่าเดียวกับเกมเสียง (null = ประโยคขึ้นด้วยผม บังคับครับ)
+      return { th: s.th, zh: s.zh, en: en, readingTH: s.readingTH, level: '高', syls: flatSyls, words: wordMeanings, politeF: s.politeF };
     });
   };
 })(window);

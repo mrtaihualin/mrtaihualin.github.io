@@ -875,18 +875,19 @@ function tfRollGolden() {
 var advSentenceCtx = null;      // {th, zh, particle} ของประโยคที่กำลังเล่น (null = ไม่ได้เล่นโหมด高級句子) — ใช้โชว์บนแบนเนอร์ · th/zh ไม่รวมคำลงท้ายสุภาพแล้ว (2026-07-31), particle = ข้อความคำลงท้ายที่จะโชว์ต่อท้าย (หรือ null ถ้าปิดปุ่ม/ไม่มีข้อมูล)
 var advSentIdx = -1;            // index ของประโยคปัจจุบันใน ADV_SENTENCES
 
-// ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (Lin 2026-07-31) ──
+// ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (Lin 2026-07-31 · ข้อมูล politeF เพิ่มจริง 2026-08-01) ──
 //   ไม่เกี่ยวกับคะแนน/การทายเสียงเลย — เป็นแค่ข้อความโชว์ต่อท้าย "ประโยคเต็ม" บนแบนเนอร์เท่านั้น
 //   ครับ (ชาย) ใช้ได้เหมือนกันทุกประโยค (คำเดียวไม่เปลี่ยนตามชนิดประโยค) — ต่อได้เลยไม่ต้องมีข้อมูลเพิ่ม
-//   ค่ะ/คะ (หญิง) เปลี่ยนตามประโยคบอกเล่า/คำถาม — ต้องรอ Lin ใส่ข้อมูลระบุเองทีละประโยคใน adv-sentences.js ก่อน (ยังไม่มีฟิลด์นี้ ณ ตอนนี้) จึงยังโชว์ไม่ได้
-var TF_PARTICLE_WORDS = ['ครับ', 'ค่ะ', 'คะ']; // ใช้ตัดคำลงท้ายเดิมที่เคยฝังไว้ในข้อมูล (3 ประโยคที่มีครับอยู่แล้ว) ออกจาก words[] ก่อนคำนวณ ไม่ให้ซ้ำ/ถูกนับเป็นคำที่ต้องทายเสียง
+//   ค่ะ/คะ (หญิง) อ่านจาก s.politeF ที่ Lin ตรวจ+ยืนยันแล้วทีละประโยค (adv-sentences.js) — บอกเล่า→ค่ะ / คำถาม→คะ
+//   politeF: null = ประโยคที่ขึ้นด้วย "ผม" (สรรพนามผู้ชายเท่านั้น) → Lin สั่ง 2026-08-01 บังคับโชว์ครับเสมอ แม้เลือกโหมดหญิง (ไม่ใช่ "ยังไม่ได้กรอกข้อมูล" — ชุด 30 ประโยคนี้ Lin ตรวจครบ 100% แล้ว)
+var TF_PARTICLE_WORDS = ['ครับ', 'ค่ะ', 'คะ']; // เผื่อกันเหนียว: ถ้าประโยคไหนในอนาคตดันมีคำลงท้ายฝังอยู่ใน words[] อีก ให้ตัดออกก่อนคำนวณ ไม่ให้ถูกนับเป็นคำที่ต้องทายเสียง (ปกติไม่ควรมีแล้วหลัง 2026-08-01)
 function tfParticleMode() { try { return localStorage.getItem('games_particle_mode') || 'off'; } catch (e) { return 'off'; } }
 function tfSetParticleMode(m) { try { localStorage.setItem('games_particle_mode', m); } catch (e) {} }
-// คืนคำลงท้ายสุภาพที่จะโชว์ (หรือ null) ตามโหมดปุ่มปัจจุบัน + คำสุดท้ายจริงของประโยค s — ใช้ตอนเริ่มเล่นและตอนกดปุ่มระหว่างเล่น (ไม่รีเซ็ตรอบ)
-function tfShowParticleFor(lastW, hasParticle) {
+// คืนคำลงท้ายสุภาพที่จะโชว์ (หรือ null) ตามโหมดปุ่มปัจจุบัน + ข้อมูล politeF ของประโยค s — ใช้ตอนเริ่มเล่นและตอนกดปุ่มระหว่างเล่น (ไม่รีเซ็ตรอบ)
+function tfShowParticleFor(s) {
   var mode = tfParticleMode();
   if (mode === 'm') return 'ครับ'; // ชายใช้ครับได้ทุกประโยคเหมือนกันหมด ไม่ต้องมีข้อมูลเพิ่ม
-  if (mode === 'f' && hasParticle && lastW.th !== 'ครับ') return lastW.th; // เผื่ออนาคต Lin เพิ่มข้อมูลค่ะ/คะ — ตอนนี้ยังไม่มีประโยคไหนมีข้อมูลนี้จริง
+  if (mode === 'f') return (s && s.politeF) || 'ครับ'; // มี politeF ใช้ตามนั้น (ค่ะ/คะ) · ไม่มี (ประโยคขึ้นด้วยผม) → บังคับครับต่อตามที่ Lin สั่ง
   return null;
 }
 // ปุ่มจริงอยู่ในเมนู 🍚 (#tf-particle-toggle, tone-finder.html) — นอก banner.innerHTML → ต้องซิงค์ icon/data-mode/ซ่อน-โชว์ตรงนี้ทุกครั้งที่ render() (WordMenu.js อ่าน data-mode ผ่าน READERS.particle)
@@ -2194,7 +2195,7 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+      body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
     }
   }
 
@@ -2626,11 +2627,11 @@ function stepSessionSummary() {
     ((window.READING_AUTH && READING_AUTH.user) ? '' :
       '<div style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
         '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +
-        '<button onclick="tfCtaLogin()" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
+        '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_summary_login_click\',{category:\'game\'});}catch(e){}tfCtaLogin()" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
       '</div>') +
     '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
-      '<button class="tf-session-next-btn" onclick="TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
-      '<button class="tf-restart-btn" onclick="TF.reselectTopic()">' + (selectedLevel === 3 ? '🎲 再來一句' : '🎲 再來 5 字') + '</button>' +
+      '<button class="tf-session-next-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">⬇ 下載報告 (PDF)</button>' +
+      '<button class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF.reselectTopic()">' + (selectedLevel === 3 ? '🎲 再來一句' : '🎲 再來 5 字') + '</button>' +
       '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
       '<a class="tf-restart-btn" href="leaderboard.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'leaderboard\',from:\'tone_finder\'})}catch(e){}">🏆 看排行榜</a>' +
     '</div>' +
@@ -2649,13 +2650,13 @@ function stepAlphaHome() {
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">字母練習區</div>' +
     cats.map(function(c){
-      return '<button class="tf-level-btn" onclick="'+c.fn+'">' +
+      return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_category_select\',{category:\'game\',category_name:\''+c.label+'\'});}catch(e){}'+c.fn+'">' +
         '<span class="tf-level-emoji">'+c.emoji+'</span>' +
         '<span class="tf-level-label">'+c.label+'</span>' +
         '<span class="tf-level-sub">'+c.sub+'</span>' +
       '</button>';
     }).join('') +
-    '<button class="tf-back-level-btn" onclick="TF.reset()">← 返回選擇等級</button>' +
+    '<button class="tf-back-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_back_to_level\',{category:\'game\'});}catch(e){}TF.reset()">← 返回選擇等級</button>' +
   '</div>';
 }
 
@@ -2669,12 +2670,12 @@ function stepAlphaConsonant() {
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">子音 — 選擇分類</div>' +
     btns.map(function(b){
-      return '<button class="tf-level-btn" onclick="'+b.fn+'">' +
+      return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_subcat_select\',{category:\'game\',subcat:\''+b.label+'\'});}catch(e){}'+b.fn+'">' +
         '<span class="tf-level-label">'+b.label+'</span>' +
         '<span class="tf-level-sub">'+b.sub+'</span>' +
       '</button>';
     }).join('') +
-    '<button class="tf-back-level-btn" onclick="TF.openAlpha()">← 返回字母練習區</button>' +
+    '<button class="tf-back-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_back_to_home\',{category:\'game\'});}catch(e){}TF.openAlpha()">← 返回字母練習區</button>' +
   '</div>';
 }
 
@@ -2687,12 +2688,12 @@ function stepAlphaVowel() {
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">母音 — 選擇分類</div>' +
     btns.map(function(b){
-      return '<button class="tf-level-btn" onclick="'+b.fn+'">' +
+      return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_subcat_select\',{category:\'game\',subcat:\''+b.label+'\'});}catch(e){}'+b.fn+'">' +
         '<span class="tf-level-label">'+b.label+'</span>' +
         '<span class="tf-level-sub">'+b.sub+'</span>' +
       '</button>';
     }).join('') +
-    '<button class="tf-back-level-btn" onclick="TF.openAlpha()">← 返回字母練習區</button>' +
+    '<button class="tf-back-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_back_to_home\',{category:\'game\'});}catch(e){}TF.openAlpha()">← 返回字母練習區</button>' +
   '</div>';
 }
 
@@ -2708,7 +2709,7 @@ function stepAlphaFlashcard() {
   var isEnding = !!card.exp;
   var actionBtn, expHtml = '';
   if (isEnding) {
-    actionBtn = '<button class="afc-audio-btn" onclick="TF.flashToggleExp()">📖 '+(flash.showExp?'收合發音解釋':'查看發音解釋')+'</button>';
+    actionBtn = '<button class="afc-audio-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_toggle_explanation\',{category:\'game\'});}catch(e){}TF.flashToggleExp()">📖 '+(flash.showExp?'收合發音解釋':'查看發音解釋')+'</button>';
     if (flash.showExp) {
       var e = card.exp;
       expHtml = '<div class="afc-exp">' +
@@ -2720,13 +2721,13 @@ function stepAlphaFlashcard() {
     }
     var frontTap = '點擊翻面看尾音類別';
   } else {
-    actionBtn = '<button class="afc-audio-btn" onclick="TF.flashSpeak()">🔊 播放發音</button>';
+    actionBtn = '<button class="afc-audio-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_play_audio\',{category:\'game\'});}catch(e){}TF.flashSpeak()">🔊 播放發音</button>';
     var frontTap = '點擊翻面看注音／拼音';
   }
   return '<div class="tf-level-select">' +
     '<div class="tf-level-title">'+flash.title+'</div>' +
     '<div class="afc-scene">' +
-      '<div class="afc-card'+(flash.flipped?' flipped':'')+'" id="afc-card" onclick="TF.flashFlip()">' +
+      '<div class="afc-card'+(flash.flipped?' flipped':'')+'" id="afc-card" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_flip_click\',{category:\'game\'});}catch(e){}TF.flashFlip()">' +
         '<div class="afc-inner">' +
           '<div class="afc-face afc-front">' +
             '<div class="afc-letter">'+card.ch+'</div>' +
@@ -2743,12 +2744,12 @@ function stepAlphaFlashcard() {
     actionBtn +
     expHtml +
     '<div class="afc-controls">' +
-      '<button class="afc-nav-btn" onclick="TF.flashPrev()">‹ 上一張</button>' +
+      '<button class="afc-nav-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_prev\',{category:\'game\'});}catch(e){}TF.flashPrev()">‹ 上一張</button>' +
       '<span class="afc-counter">'+(flash.index+1)+' / '+total+'</span>' +
-      '<button class="afc-nav-btn" onclick="TF.flashNext()">下一張 ›</button>' +
+      '<button class="afc-nav-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_next\',{category:\'game\'});}catch(e){}TF.flashNext()">下一張 ›</button>' +
     '</div>' +
-    '<button class="tf-cat-btn afc-shuffle" onclick="TF.flashShuffle()">🔀 隨機順序</button>' +
-    '<button class="tf-back-level-btn" onclick="'+backFn+'">← 返回</button>' +
+    '<button class="tf-cat-btn afc-shuffle" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_shuffle\',{category:\'game\'});}catch(e){}TF.flashShuffle()">🔀 隨機順序</button>' +
+    '<button class="tf-back-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_back\',{category:\'game\'});}catch(e){}'+backFn+'">← 返回</button>' +
   '</div>';
 }
 
@@ -2773,8 +2774,8 @@ function tfRenderTopBanners() {
     '<div style="font-family:\'Noto Sans TC\',sans-serif;box-sizing:border-box;text-align:left;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
         '<span style="font-size:14px;color:#633806;font-weight:700;flex:1;min-width:170px;">登入後米娜才幫你把進度記起來 🌾</span>' +
-        '<button onclick="tfCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>' +
-        '<button onclick="var d=document.getElementById(\'tf-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>' +
+        '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_top_banner_login_click\',{category:\'game\'});}catch(e){}tfCtaLogin()" style="background:#BA7517;color:#fff;border:none;font-weight:700;padding:6px 16px;border-radius:8px;font-size:13px;cursor:pointer;">登入解鎖 →</button>' +
+        '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_top_banner_detail_toggle\',{category:\'game\'});}catch(e){}var d=document.getElementById(\'tf-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>' +
       '</div>' +
       '<div id="tf-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">' +
         '✅ 登入後可以：<br>⭐ 累積星星＋泰國米勳章或其他禮物<br>🧠 智慧複習：記住你哪些字學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你學習你的弱點' +
@@ -2880,10 +2881,10 @@ function optRow(label, onclickStr, defKeys, hintKey) {
   // ── Lin 2026-07-04: ปุ่ม "?" เปลี่ยนไปเรียก TF.hint() แทน TF.tip() ตรงๆ ──
   // TF.hint() = โชว์ตารางเหมือนเดิม + ล็อกคำนี้ "ไม่สะอาด/ไม่ได้คะแนน" ครั้งแรกที่กด (ดู tfUseHint บนสุด)
   var tipBtn = defKeys && defKeys.length
-    ? '<button class="tf-tip-btn" onclick="event.stopPropagation();TF.hint(' + JSON.stringify(defKeys).replace(/"/g, '&quot;') + ')">?</button>'
+    ? '<button class="tf-tip-btn" onclick="event.stopPropagation();try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_hint_click\',{category:\'game\'});}catch(e){}TF.hint(' + JSON.stringify(defKeys).replace(/"/g, '&quot;') + ')">?</button>'
     : '';
   var hintAttr = hintKey ? ' data-hintkey="'+hintKey+'"' : '';
-  return '<div class="tf-opt-wrap"><button class="tf-opt"'+hintAttr+' onclick="'+onclickStr+'">'+label+'</button>'+tipBtn+'</div>';
+  return '<div class="tf-opt-wrap"><button class="tf-opt"'+hintAttr+' onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_opt_select\',{category:\'game\'});}catch(e){}'+onclickStr+'">'+label+'</button>'+tipBtn+'</div>';
 }
 
 function markSymbol(mark) {
@@ -2896,7 +2897,7 @@ function markSymbol(mark) {
 
 function markRow(mark, onclickStr) {
   // Lin 2026-07-25: ตัววรรณยุกต์เองคือคีย์ตัวเลือก (ตรงกับที่ส่งให้ tryNavigate) → ใช้เป็น data-hintkey ได้เลย
-  return '<button class="tf-mark-btn" data-hintkey="'+mark+'" onclick="'+onclickStr+'">' +
+  return '<button class="tf-mark-btn" data-hintkey="'+mark+'" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_select\',{category:\'game\'});}catch(e){}'+onclickStr+'">' +
     markSymbol(mark) +
   '</button>';
 }
@@ -2964,7 +2965,7 @@ function step2aHi() {
 
 function step2b() {
   return qbox('2','這個字是<strong style="color:#7ec87e;">活音</strong>還是<strong style="color:#ff7c7c;">死音</strong>？') +
-    '<button class="tf-helper-trigger" onclick="'+act(function(){ navigate('helper','開啟判斷工具'); })+'">🔎 還不確定？ 檢查活音／死音</button>' +
+    '<button class="tf-helper-trigger" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_helper_open\',{category:\'game\'});}catch(e){}'+act(function(){ navigate('helper','開啟判斷工具'); })+'">🔎 還不確定？ 檢查活音／死音</button>' +
     '<div class="tf-options">' +
       optRow('活音', act(function(){ tryNavigate('live','活音','s2b_live'); }), ['live'], 'live') +
       optRow('死音', act(function(){ tryNavigate('dead','死音','s2b_dead'); }), ['dead'], 'dead') +
@@ -3012,7 +3013,7 @@ function helperDone() {
       '<div class="tf-helper-result-label" style="color:'+col+';">'+label+'</div>' +
       '<div class="tf-helper-result-desc">這個字是「'+label+'」</div>' +
     '</div>' +
-    '<div style="text-align:center;"><button class="tf-search-btn" onclick="'+continueAct+'">繼續分析 →</button></div>';
+    '<div style="text-align:center;"><button class="tf-search-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_helper_continue\',{category:\'game\'});}catch(e){}'+continueAct+'">繼續分析 →</button></div>';
 }
 
 function s2bLive() {
@@ -3107,7 +3108,7 @@ function stepSessionGuess() {
         else navigateToInflection();  // Lin 2026-07-16: เดาผิด → เข้าหน้าตรวจ推導เลย ไม่มี popup 開始聲調推導
       }
     });
-    return '<button class="sg-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="'+clickAct+'">'+n+'</button>';
+    return '<button class="sg-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_tone_choice_click\',{category:\'game\',tone:'+n+'});}catch(e){}'+clickAct+'">'+n+'</button>';
   }).join('');
 
   var dontKnowAct = act(function(){
@@ -3129,7 +3130,7 @@ function stepSessionGuess() {
   } else if (session.curWordIsFinalSrsCheck) {
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 16) — ห้ามใช้เครื่องมือช่วยใดๆ ต้องนึกเองล้วนๆ</div>';
   } else {
-    dontKnowHtml = '<button class="sg-dontknow-btn" onclick="'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>';
+    dontKnowHtml = '<button class="sg-dontknow-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_dontknow_click\',{category:\'game\'});}catch(e){}'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>';
   }
 
   return '<div style="text-align:center;padding:4px 0 8px;">'+
@@ -3218,7 +3219,7 @@ function stepOverview() {
     var doneTag = isDone && t
       ? '<div class="syl-num" style="color:' + t.color + ';">' + t.zh + '</div>'
       : '<div class="syl-num">音節 ' + (i+1) + ' / ' + syls.length + '</div>';
-    return '<div class="tf-syl-card' + (isDone ? '" style="border-color:' + t.color + '33;' : '') + '" onclick="' + goAct + '">' +
+    return '<div class="tf-syl-card' + (isDone ? '" style="border-color:' + t.color + '33;' : '') + '" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_syllable_select\',{category:\'game\'});}catch(e){}' + goAct + '">' +
       '<div class="syl-thai">' + syl + '</div>' +
       doneTag +
     '</div>';
@@ -3244,7 +3245,7 @@ function stepOverview() {
   // Lin 2026-07-14: เอา音節拆解 (bdSection) ออก — เหลือแค่การ์ดเลือกพยางค์ กดแล้วเข้าหน้าทายวรรณยุกต์ทันที
   return '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:8px;">選擇要分析的音節</div>' +
     '<div style="text-align:center;margin-bottom:14px;">' +
-      '<button class="tf-result-restart" onclick="TF.nextWord()">⏭️ 先跳過這個字</button>' +
+      '<button class="tf-result-restart" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_word_click\',{category:\'game\'});}catch(e){}TF.nextWord()">⏭️ 先跳過這個字</button>' +
     '</div>' +
     '<div class="tf-syl-grid">' + cardsHtml + '</div>' +
     summaryHtml;
@@ -3345,13 +3346,13 @@ function stepResult() {
   // Lin 2026-07-30: เอาปุ่ม 🔖 (單字庫) ตรงหน้าเฉลยออกตามที่ Lin สั่ง — ซ้ำกับแถว 單字庫 ในเมนู 🍚 มุมขวาล่าง เหลือที่เมนูที่เดียว
   var audioBtnHtml = (window.WordAudio && S.word) ? WordAudio.btnHtml(S.word) : '';
   // Lin 2026-07-30: ปุ่ม 英文讀音 (🔡/🔠) ย้ายจากเมนูมาอยู่ข้างปุ่ม 🔊 ในหน้าเฉลย — ใช้ได้จริงตรงจุดที่คำอ่านโรมันโผล่เท่านั้น
-  var enBtnHtml = '<button type="button" id="tf-result-en-btn" class="word-ctl-btn" onclick="event.stopPropagation();TF.toggleEn()">' +
+  var enBtnHtml = '<button type="button" id="tf-result-en-btn" class="word-ctl-btn" onclick="event.stopPropagation();try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_toggle_en_reading\',{category:\'game\'});}catch(e){}TF.toggleEn()">' +
     (tfEnMode ? '🔡' : '🔠') + '</button>';
 
   // Lin 2026-07-12: ย้ายปุ่ม "太棒了/看看成果" ขึ้นมาอยู่เหนือส่วน 音節拆解 (ใน sessionBlock) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) เหลือแค่หน้าผลสรุปจบรอบ
   var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:10px;">'+
-      '<button class="tf-session-next-btn" id="tf-session-next-btn" onclick="'+nextBtnOnclick+'">'+nextBtnLabel+'</button>'+
-      (session ? '' : '<button class="tf-result-secondary" onclick="'+againAct+'">↺ 重新分析</button>')+
+      '<button class="tf-session-next-btn" id="tf-session-next-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_result_next_click\',{category:\'game\'});}catch(e){}'+nextBtnOnclick+'">'+nextBtnLabel+'</button>'+
+      (session ? '' : '<button class="tf-result-secondary" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_reanalyze_click\',{category:\'game\'});}catch(e){}'+againAct+'">↺ 重新分析</button>')+
     '</div>';
 
   // Lin 2026-07-25: คำแปล/คำอ่าน ใต้คำศัพท์ในหน้าเฉลย — คุมด้วยสวิตช์ในเมนู 🍚 (翻譯 🍙 / 讀音 🐣 / 英文讀音 🔡)
@@ -3396,7 +3397,7 @@ function showError(msg) {
     '<div class="tf-error-box">' +
       '<div class="tf-error-title">🤔 好像還不對喔，我們再確認一下</div>' +
       '<div class="tf-error-msg">' + msg.replace(/\n/g,'<br>') + '</div>' +
-      '<button class="tf-error-close" onclick="document.getElementById(\'tf-err\').remove()">好，我們再試一次 💪</button>' +
+      '<button class="tf-error-close" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_error_close\',{category:\'game\'});}catch(e){}document.getElementById(\'tf-err\').remove()">好，我們再試一次 💪</button>' +
     '</div>';
   document.body.appendChild(div);
 }
@@ -3421,7 +3422,7 @@ function showTip(keys) {
     '<div class="tf-tip-box">' +
       '<div class="tf-tip-header">' +
         '<span class="tf-tip-header-title" style="color:#000000">說明</span>' +
-        '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-tip-ov\').remove()">✕</button>' +
+        '<button class="tf-tip-close-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_tip_close\',{category:\'game\'});}catch(e){}document.getElementById(\'tf-tip-ov\').remove()">✕</button>' +
       '</div>' +
       rows +
     '</div>';
@@ -3496,7 +3497,7 @@ function showStats() {
     '<div class="tf-tip-box">' +
       '<div class="tf-tip-header">' +
         '<span class="tf-tip-header-title">今日統計</span>' +
-        '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-stats-ov\').remove()">✕</button>' +
+        '<button class="tf-tip-close-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_stats_close\',{category:\'game\'});}catch(e){}document.getElementById(\'tf-stats-ov\').remove()">✕</button>' +
       '</div>' +
       '<div class="tf-stats-summary">' +
         '<div class="tf-stats-date">'+day+'</div>' +
@@ -3504,8 +3505,8 @@ function showStats() {
       '</div>' +
       bodyHtml +
       (total ? '<div class="tf-stats-action-row">' +
-        '<button class="tf-stats-download-btn" onclick="TF.downloadStats()">💾 下載今日統計</button>' +
-        '<button class="tf-stats-clear-btn" onclick="TF.clearTodayStats()">清除今日紀錄</button>' +
+        '<button class="tf-stats-download-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_stats_download\',{category:\'game\'});}catch(e){}TF.downloadStats()">💾 下載今日統計</button>' +
+        '<button class="tf-stats-clear-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_stats_clear\',{category:\'game\'});}catch(e){}TF.clearTodayStats()">清除今日紀錄</button>' +
       '</div>' : '') +
     '</div>';
   document.body.appendChild(div);
@@ -3638,7 +3639,7 @@ function showPhonics() {
     '<div class="tf-tip-box">' +
       '<div class="tf-tip-header">' +
         '<span class="tf-tip-header-title">拼音規則：尾音與不發音子音</span>' +
-        '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-phon-ov\').remove()">✕</button>' +
+        '<button class="tf-tip-close-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_phonics_close\',{category:\'game\'});}catch(e){}document.getElementById(\'tf-phon-ov\').remove()">✕</button>' +
       '</div>' +
       '<div class="tf-stats-section">' +
         '<div class="tf-stats-section-title">8 มาตราตัวสะกด（尾音八大類）</div>' +
@@ -3756,12 +3757,14 @@ function tfShowAllMastered(pool) {
   div.addEventListener('click', function (e) { if (e.target === div) div.remove(); });
   document.body.appendChild(div);
   document.getElementById('tf-am-review').onclick = function () {
+    try{ if(typeof gtag==='function') gtag('event','tone_finder_allmastered_review_click',{category:'game'}); }catch(e){}
     div.remove();
     // ทบทวน: คำ mastered เล่นได้แต่ 0 แต้ม (via tfSoftPointsAllowed) — เอากองเดิมมาสุ่ม 5
     var words = (pool || []).slice().sort(function () { return Math.random() - 0.5; }).slice(0, 5);
     if (words.length) startSetSession(words); else if (TF && TF.backToLevelSelect) TF.backToLevelSelect();
   };
   document.getElementById('tf-am-level').onclick = function () {
+    try{ if(typeof gtag==='function') gtag('event','tone_finder_allmastered_switch_level_click',{category:'game'}); }catch(e){}
     div.remove();
     if (TF && TF.backToLevelSelect) TF.backToLevelSelect();
   };
@@ -3777,14 +3780,14 @@ function tfConfirmQuit(onYes) {
       '<div class="tf-ask-title">確定要離開嗎？ 🥺</div>' +
       '<div class="tf-ask-sub">這回合還沒結束，離開的話<b>分數不會被計算</b>，要重新開始喔～</div>' +
       '<div class="tf-ask-actions">' +
-        '<button class="tf-ask-cancel" onclick="(function(){var o=document.getElementById(\'tf-quit-ov\');if(o)o.remove();})()">繼續練習</button>' +
+        '<button class="tf-ask-cancel" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_quit_cancel\',{category:\'game\'});}catch(e){}(function(){var o=document.getElementById(\'tf-quit-ov\');if(o)o.remove();})()">繼續練習</button>' +
         '<button class="tf-ask-send" id="tf-quit-yes" style="background:#c0552f;">離開不存分</button>' +
       '</div>' +
     '</div>';
   div.addEventListener('click', function (e) { if (e.target === div) div.remove(); });
   document.body.appendChild(div);
   var yes = document.getElementById('tf-quit-yes');
-  if (yes) yes.addEventListener('click', function () { div.remove(); onYes(); });
+  if (yes) yes.addEventListener('click', function () { try{ if(typeof gtag==='function') gtag('event','tone_finder_quit_confirm',{category:'game'}); }catch(e){} div.remove(); onYes(); });
 }
 // LIN 2026-06-27: เอากล่องเตือน "จะออกจากหน้านี้ไหม?" (beforeunload) ออก
 //   เหตุผล: คนแค่แวะมาลองเล่นแล้วจะปิด เจอกล่องเตือนน่ากลัวของเบราว์เซอร์ = รู้สึกเว็บหนึบ ผลตอบแทนต่ำ
@@ -3875,7 +3878,7 @@ var TF = {
     div.onclick = function(e){ if (e.target === div) div.remove(); };
     div.innerHTML = '<div class="tf-tip-box" style="max-width:340px;text-align:center;">' +
       '<div class="tf-tip-header"><span class="tf-tip-header-title" style="color:#000;">⭐ 累積星星</span>' +
-      '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-star-ov\').remove()">✕</button></div>' +
+      '<button class="tf-tip-close-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_stars_close\',{category:\'game\'});}catch(e){}document.getElementById(\'tf-star-ov\').remove()">✕</button></div>' +
       '<div style="padding:22px;">' +
         '<div style="font-size:56px;line-height:1;margin-bottom:8px;">⭐ ' + s + '</div>' +
         '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:#a08050;">累積星星（全部遊戲共用）</div>' +
@@ -3909,7 +3912,7 @@ var TF = {
     div.onclick = function(e){ if (e.target === div) div.remove(); };
     div.innerHTML = '<div class="tf-tip-box" style="max-width:420px;">' +
       '<div class="tf-tip-header"><span class="tf-tip-header-title" style="color:#000;">🎖️ 我的徽章</span>' +
-      '<button class="tf-tip-close-btn" onclick="document.getElementById(\'tf-badges-ov\').remove()">✕</button></div>' +
+      '<button class="tf-tip-close-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_badges_close\',{category:\'game\'});}catch(e){}document.getElementById(\'tf-badges-ov\').remove()">✕</button></div>' +
       body +
       '<div style="font-size:11px;color:#a08a5a;margin-top:12px;line-height:1.6;">每枚徽章都有泰國米食文化小知識，集滿解鎖更多 🌾（圖示為暫定，之後會換成手繪版）</div>' +
     '</div>';
@@ -3970,7 +3973,7 @@ var TF = {
     // Lin 2026-07-30: ย้ายมาตั้ง advSentenceCtx "ก่อน" เรียก startSetSession (เดิมตั้งทีหลัง ทำให้ render() รอบแรกในนั้นเห็นค่าเป็น null → คำแรกของประโยค高級ไม่โชว์ประโยคเต็ม)
     // Lin 2026-07-31: th ตอนนี้คือประโยคไม่รวมคำลงท้ายสุภาพแล้ว (ตัด _hasParticle ออกแล้วด้านบน) — particle คำนวณแยกตามปุ่มเปิด/ปิด ใช้โชว์ต่อท้ายบนแบนเนอร์เท่านั้น ไม่ใช่ส่วนที่ต้องทายเสียง
     // Lin 2026-08-01: เพิ่ม readingTH (คำอ่านยาวทั้งประโยค) เก็บไว้โชว์แทนคำแปลจีนรายคำ ตามที่ Lin สั่ง — s.readingTH คือคำอ่านเต็มประโยคจากคลัง (ไม่ตัดคำลงท้ายสุภาพ แต่ไม่กระทบเพราะ core words เท่านั้นที่ถูกถาม)
-    advSentenceCtx = { th: coreWords.map(function(w){ return w.th; }).join(''), zh: s.zh, readingTH: s.readingTH || '', particle: tfShowParticleFor(_lastW, _hasParticle) };
+    advSentenceCtx = { th: coreWords.map(function(w){ return w.th; }).join(''), zh: s.zh, readingTH: s.readingTH || '', particle: tfShowParticleFor(s) };
     startSetSession(entries, { keepOrder: true, isAdvSentence: true });
   },
   // Lin 2026-07-31: กดวนปิด → ครับ(ชาย) → ค่ะ/คะ(หญิง) → ปิด — ไม่กระทบคะแนน/รอบทายเลย แค่เปลี่ยนข้อความโชว์ต่อท้ายประโยคเต็ม (ไม่รีเซ็ตรอบเล่น ไม่เรียก startAdvSentence ซ้ำ)
@@ -3980,9 +3983,7 @@ var TF = {
     tfSetParticleMode(next);
     if (advSentenceCtx && advSentIdx >= 0) {
       var s = ADV_SENTENCES[advSentIdx];
-      var lastW = s.words[s.words.length - 1];
-      var hasParticle = lastW && TF_PARTICLE_WORDS.indexOf(lastW.th) !== -1;
-      advSentenceCtx.particle = tfShowParticleFor(lastW, hasParticle);
+      advSentenceCtx.particle = tfShowParticleFor(s);
     }
     render();
   },
@@ -4197,6 +4198,7 @@ var TF = {
   },
   // ── ปุ่มถามคำถามในเกม → ส่งเข้า Gmail ของ LIN ผ่าน Web3Forms (ผู้เล่นพิมพ์เอง + แนบคำที่กำลังเล่น) ──
   openAsk: function() {
+    try{ if(typeof gtag==='function') gtag('event','tone_finder_ask_open',{category:'game'}); }catch(e){}
     var old = document.getElementById('tf-ask-ov'); if (old) old.remove();
     var lvl = ({1:'初級',2:'中級',3:'高級'})[selectedLevel] || '—';
     var ctxWord = (typeof S !== 'undefined' && S && S.word) ? S.word : '—';
@@ -4212,8 +4214,8 @@ var TF = {
         '<input class="tf-ask-input" id="tf-ask-email" type="email" placeholder="你的 Email（方便老師回覆，可留空）">' +
         '<textarea class="tf-ask-textarea" id="tf-ask-msg" placeholder="想問的問題…（例：這個字為什麼是第幾聲？）"></textarea>' +
         '<div class="tf-ask-actions">' +
-          '<button class="tf-ask-cancel" onclick="TF.closeAsk()">取消</button>' +
-          '<button class="tf-ask-send" id="tf-ask-send" onclick="TF.submitAsk()">送出問題 →</button>' +
+          '<button class="tf-ask-cancel" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_ask_cancel\',{category:\'game\'});}catch(e){}TF.closeAsk()">取消</button>' +
+          '<button class="tf-ask-send" id="tf-ask-send" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_ask_submit\',{category:\'game\'});}catch(e){}TF.submitAsk()">送出問題 →</button>' +
         '</div>' +
       '</div>';
     div.addEventListener('click', function(e){ if (e.target === div) div.remove(); });
@@ -4246,7 +4248,7 @@ var TF = {
       if (!d || !d.success) throw new Error((d && d.message) || 'submit failed');
       var box = ov.querySelector('.tf-ask-box');
       if (box) box.innerHTML = '<div class="tf-ask-ok">✅ 已送出！老師收到後會回覆你 🙏</div>' +
-        '<div class="tf-ask-actions"><button class="tf-ask-send" onclick="TF.closeAsk()">關閉</button></div>';
+        '<div class="tf-ask-actions"><button class="tf-ask-send" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_ask_close_success\',{category:\'game\'});}catch(e){}TF.closeAsk()">關閉</button></div>';
       setTimeout(function(){ TF.closeAsk(); }, 2200);
     }).catch(function(){
       if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = '送出問題 →'; }

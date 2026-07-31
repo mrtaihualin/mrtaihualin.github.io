@@ -190,7 +190,7 @@ var GOLDEN_WORD_MULT=2;                        // คำทองตอบถู
 // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
 function tgScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
 // 本題分數: คะแนนที่จะได้ของคำนี้ตอนนี้ ตามจำนวนครั้งที่ผิดสะสม · ตาย/ใช้คำใบ้=0
-function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide&&typeof guideMode!=='undefined'&&guideMode))return 0; var sc=(typeof sylList!=='undefined'&&sylList)?sylList.length:1; return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
+function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide&&typeof guideMode!=='undefined'&&guideMode))return 0; var sc=tgScoreSylCount(); return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
 function tgUpdateScoreBar(){ var max=10, sc=Math.max(0,Math.min(10,tgCurWordScore())); var pw=document.getElementById('tg-ws-fill'); if(pw){pw.style.width=Math.max(0,Math.min(100,sc/max*100))+'%'; pw.style.background=tgScoreBarColor(sc,max);} var pn=document.getElementById('tg-ws-num'); if(pn)pn.textContent=sc; }
 function rgQuotaFor(sylCount){return Math.min(4+Math.max(0,(sylCount||1)-4),9);}
 function rgWrongScore(sylCount,wrongN){
@@ -257,6 +257,40 @@ var SAVE_KEY='rgv3_save';
 var rememberStep=0,rememberTimer=null,curWordIsKnownCheck=false; // curWordIsKnownCheck: ด่านพิสูจน์ 已記得 (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
 var wordUsedGuide=false; // งาน 9: เปิดคำใบ้ระหว่างคำนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS/ดาว)
 var wordWrongTotal=0; // นับผิดสะสม "ทั้งคำ/ประโยค" (ไม่แยกพยางค์) ใช้กับ rgWrongScore()
+// ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (Lin 2026-08-01) — เกมพิมพ์ "ให้พิมพ์ได้จริง" (ต่างจากเกมอ่านที่ไม่โชว์เลย) แต่ "ไม่นับคะแนนถ้าผิด"
+//   วิธีทำ: ต่อพยางค์ synthetic เข้า sylList จริง (พิมพ์ได้ มีกล่องเฉลย子音/母音/尾音เหมือนพยางค์อื่น) แต่ isParticle:true กันไว้ไม่ให้กระทบ wordWrongTotal/sylCount ที่ใช้คิดคะแนน
+var TG_PARTICLE_SYLS={
+  'ครับ':{th:'ครับ',read:'ครับ',cons:'ค',cluster:'ร',vowel:'อะ',final:'บ',tone_name:'ตรี',en:'kráp',isParticle:true},
+  'ค่ะ':{th:'ค่ะ',read:'ค่ะ',cons:'ค',vowel:'อะ',tone:'่',tone_name:'เอก',en:'khà',isParticle:true},
+  'คะ':{th:'คะ',read:'คะ',cons:'ค',vowel:'อะ',tone_name:'ตรี',en:'khá',isParticle:true}
+};
+var tgParticleMode=(function(){try{return localStorage.getItem('games_particle_mode')||'off';}catch(e){return 'off';}})();
+function tgShowParticleFor(w){
+  if(!w) return null;
+  if(tgParticleMode==='m') return 'ครับ';
+  if(tgParticleMode==='f') return w.politeF||'ครับ'; // ไม่มี politeF (ประโยคขึ้นด้วยผม) → บังคับครับต่อ เหมือนเกมเสียง/เกมอ่าน
+  return null;
+}
+// จำนวนพยางค์ที่ใช้คิดโควต้า/คะแนนจริง — ไม่นับพยางค์ครับ/ค่ะ/คะ synthetic ที่ต่อท้าย (ถ้ามี) เพราะไม่เกี่ยวกับคะแนนเลย
+function tgScoreSylCount(){
+  if(sylList&&sylList.length&&sylList[sylList.length-1]&&sylList[sylList.length-1].isParticle) return sylList.length-1;
+  return (sylList&&sylList.length)?sylList.length:1;
+}
+function tgSyncParticleBtn(){
+  var b=document.getElementById('rg-particle-toggle');
+  if(!b) return;
+  var isHigh=(typeof WORD!=='undefined'&&WORD&&WORD.level==='高');
+  if(!isHigh){ b.style.display='none'; return; }
+  b.style.display='';
+  b.setAttribute('data-mode',tgParticleMode);
+  b.title=tgParticleMode==='m'?'目前：句尾加「ครับ」（男生禮貌詞・可以打字，但不計分）':(tgParticleMode==='f'?'目前：句尾加「ค่ะ/คะ」（女生禮貌詞・可以打字，但不計分）':'目前：不加句尾禮貌詞');
+  b.setAttribute('aria-label',b.title);
+}
+function tgToggleParticleMode(){
+  tgParticleMode=(tgParticleMode==='off')?'m':(tgParticleMode==='m'?'f':'off');
+  try{localStorage.setItem('games_particle_mode',tgParticleMode);}catch(e){}
+  loadWord(); // เปลี่ยนโหมดกลางคำ = โหลดคำนี้ใหม่ (ต่อ/ตัด syllable ครับ ออกจาก sylList จริง ต้องเริ่มพิมพ์คำนี้ใหม่)
+}
 var totalStars=0,totalBadges=0;
 var W=null;
 var WORD=null,sylList=[],sylIdx=0,wordHadWrong=false,wordFailed=false; // 中級 หลายพยางค์
@@ -388,6 +422,7 @@ function dispOpt(comp,x){
 // LEVEL SWITCH
 // ════════════════════════════════════════════
 function setLevel(lv){
+  try{ if(typeof gtag==='function') gtag('event','typing_game_level_change',{category:'game', level: lv}); }catch(e){}
   curLevel=lv;
   try{localStorage.setItem('tg_level',lv);}catch(e){} // Lin 2026-07-12: จำระดับที่เลือกไว้ → รีเฟรชแล้วไม่ต้องเลือกใหม่
   document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
@@ -554,11 +589,15 @@ function loadWord(){
   if(rb){rb.textContent='已記得';rb.style.cssText='';rb.style.display='';}
   WORD=WORDS[roundQueue[cur]];
   sylList=buildSyls(WORD);
+  // Lin 2026-08-01: ต่อพยางค์ครับ/ค่ะ/คะ synthetic เข้า sylList จริง ถ้าเป็นประโยค高級 + เปิดปุ่มไว้ — พิมพ์ได้จริงแต่ไม่นับคะแนน (ดู isParticle ใน tgScoreSylCount/wordWrongTotal guard)
+  var _tgParticle=(WORD.level==='高')?tgShowParticleFor(WORD):null;
+  if(_tgParticle && TG_PARTICLE_SYLS[_tgParticle]) sylList=sylList.concat([TG_PARTICLE_SYLS[_tgParticle]]);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;wordWrongTotal=0;wordUsedGuide=false;sylCache=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
   document.getElementById('qn').textContent=cur+1;
-  document.getElementById('wth').textContent=WORD.th;
+  document.getElementById('wth').textContent=WORD.th+(_tgParticle||''); // ต้องตรงกับ sylList จริง (รวมครับ/ค่ะ/คะ ถ้ามี) — ไม่งั้นข้อความเห็นกับสิ่งที่ต้องพิมพ์ไม่ตรงกัน
   document.getElementById('wzh').textContent=WORD.zh;
+  tgSyncParticleBtn();
   rgRenderEnLine(); // Lin 2026-07-25: คำอ่านโรมันของคำใหม่ (ถ้าเปิด 英文讀音 อยู่)
   document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดถ้าปุ่ม🐣เปิดอยู่ (แทนการล้างทิ้งเฉยๆ เดิม — ยังกันบั๊กคำอ่านค้างจากคำก่อน เพราะเซ็ตค่าใหม่ทุกคำ) · ใช้ readingTH เสมอ ห้ามใช้ syls[].th
   var _gb=document.getElementById('word-golden-badge');
@@ -570,7 +609,10 @@ function loadWord(){
   if(vslot && window.WordVault){
     WordVault.injectStyles();
     vslot.innerHTML='';
-    vslot.appendChild(WordVault.createSaveBtn(WORD.th,{zh:WORD.zh,en:WORD.en,source:'typing-game'},{}));
+    vslot.appendChild(WordVault.createSaveBtn(WORD.th,{zh:WORD.zh,en:WORD.en,source:'typing-game'},{
+      onSave: function(){ try{ gtag('event','typing_game_vault_save',{category:'game', word: WORD.th}); }catch(e){} },
+      onRemove: function(){ try{ gtag('event','typing_game_vault_remove',{category:'game', word: WORD.th}); }catch(e){} }
+    }));
     // refresh badge
     var badges=document.querySelectorAll('.vault-badge');
     badges.forEach(function(b){b.innerHTML='<img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫';});
@@ -735,7 +777,7 @@ function markSlots(){
 function finalizeWord(){
   var srsKey=rgSrsKey(WORD);var b=document.getElementById('banner');
   var loggedIn=rgLoggedIn();
-  var sylCount=sylList.length;
+  var sylCount=tgScoreSylCount(); // Lin 2026-08-01: ไม่นับพยางค์ครับ/ค่ะ/คะ synthetic ที่ต่อท้าย (ถ้ามี) เข้าโควต้าคะแนน
 
   // ── ผิดครบโควต้า (fail) — กฎ Lin 2026-07-05: เฉลย + เข้าคิว SRS วันถัดไป ไม่ recycle ในรอบเดียวกันอีกต่อไป ──
   if(wordFailed){
@@ -864,6 +906,7 @@ function finalizeWord(){
   doSave();
 }
 function check(){
+  try{ if(typeof gtag==='function') gtag('event','typing_game_check_click',{category:'game', word: (typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
   if(sylList.length>1) return rgCheckWholeWord(); // หลายพยางค์ → ตรวจทั้งคำทีเดียว (เลือกพยางค์เองได้อิสระ)
   var lastSyl=(sylIdx>=sylList.length-1);
   var allOk=comps.every(function(c){var id=slotFills[c];if(id==null)return false;var t=tileById(id);return t&&t.val===correctVal[c];});
@@ -961,13 +1004,14 @@ function tgShowAllMastered(){
     '</div></div>';
   div.addEventListener('click',function(e){if(e.target===div)div.remove();});
   document.body.appendChild(div);
-  document.getElementById('tg-am-review').onclick=function(){div.remove();};
-  document.getElementById('tg-am-level').onclick=function(){div.remove();var el=document.getElementById('end');if(el)el.style.display='none';var g=document.getElementById('game');if(g)g.style.display='none';window.scrollTo(0,0);};
+  document.getElementById('tg-am-review').onclick=function(){try{ if(typeof gtag==='function') gtag('event','typing_game_allmastered_continue',{category:'game'}); }catch(e){}div.remove();};
+  document.getElementById('tg-am-level').onclick=function(){try{ if(typeof gtag==='function') gtag('event','typing_game_allmastered_switch_level',{category:'game'}); }catch(e){}div.remove();var el=document.getElementById('end');if(el)el.style.display='none';var g=document.getElementById('game');if(g)g.style.display='none';window.scrollTo(0,0);};
 }
 
 function skip(){nextWord();} // (เลิกใช้ — ปุ่ม 跳過 ถูกลบแล้ว ตามกฎ MASTER ข้อ11) เก็บฟังก์ชันไว้กันโค้ดเดิมอ้างถึง
 // กฎ MASTER ข้อ10 (ลอกเกมอ่านเป๊ะ 2026-07-05): กดแล้ว "ไม่ตัดคำทันที" — ต้องพิมพ์คำนี้ต่อให้ผ่านแบบสะอาด (ไม่มีคำใบ้) 1 ครั้งก่อน ถึงจะตัดคำออก (ดู finalizeWord curWordIsKnownCheck)
 function remember(){
+  try{ if(typeof gtag==='function') gtag('event','typing_game_remember_click',{category:'game', word: (typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
   curWordIsKnownCheck=true;
   try{rgTypeHighlightNextKey();}catch(e){} // ซ่อนคำใบ้ที่อาจค้างอยู่ทันที
   var b=document.getElementById('banner');
@@ -976,6 +1020,7 @@ function remember(){
   if(rb)rb.style.display='none';
 }
 function next(){
+  try{ if(typeof gtag==='function') gtag('event','typing_game_next_click',{category:'game', word: (typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
   if(sylIdx<sylList.length-1){sylIdx++;loadSyl();}  // ไปพยางค์ถัดไปของคำเดิม
   else nextWord();                                   // จบคำ → คำถัดไป
 }
@@ -1041,6 +1086,7 @@ function endRound(){
 }
 
 function restart(){
+  try{ if(typeof gtag==='function') gtag('event','typing_game_restart_click',{category:'game'}); }catch(e){}
   initGame();
 }
 
@@ -1050,6 +1096,7 @@ function restart(){
 //   (เกมเสียงเคยเจอ html2canvas ออกไฟล์ว่างเปล่าบนคอม + ค้างบนมือถือ มาแล้ว เปลี่ยนเป็น print window ตั้งแต่ 2026-06-19 เสถียรกว่า)
 // ════════════════════════════════════════════
 function rgDownloadReport(){
+  try{ if(typeof gtag==='function') gtag('event','typing_game_pdf_download',{category:'game'}); }catch(e){}
   var SERIF="'Noto Serif TC','PingFang TC',serif";
   var SANS="'Noto Sans TC','PingFang TC',sans-serif";
   var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
@@ -1226,6 +1273,15 @@ function showRevealMulti(){
       var txt=document.createElement('span');txt.className='rule-txt';txt.textContent=wd.zh;
       row.appendChild(tag);row.appendChild(txt);box.appendChild(row);
     });
+    // Lin 2026-08-01: ถ้าเปิดปุ่มครับ/ค่ะ/คะ ไว้ (พิมพ์ครบรวมพยางค์นี้ด้วย) → เพิ่มแถวอธิบายคำนี้ท้ายสุดด้วย ให้เหมือนคำอื่นในกล่องเฉลย (ไม่นับคะแนน แต่ก็ยังควรมีคำอธิบายให้เข้าใจว่าคือคำอะไร)
+    var _lastSy=sylList[sylList.length-1];
+    if(_lastSy && _lastSy.isParticle){
+      var pZh=_lastSy.th==='ครับ'?'（男性禮貌詞）':(_lastSy.th==='คะ'?'（女性禮貌詞・疑問句）':'（女性禮貌詞・句尾非疑問）');
+      var prow=document.createElement('div');prow.className='rule-row';
+      var ptag=document.createElement('span');ptag.className='rule-tag';ptag.textContent=_lastSy.th;
+      var ptxt=document.createElement('span');ptxt.className='rule-txt';ptxt.textContent=pZh+'（不計分）';
+      prow.appendChild(ptag);prow.appendChild(ptxt);box.appendChild(prow);
+    }
     _finishInBox();return;
   }
   // 2026-07-30: เฉลยแบ่งตาม "พยางค์อ่าน" — คำที่มี readSyls (เช่น เอกสาร = เอก/กะ/สาร) ใช้ readSyls แทน sylList
@@ -1274,12 +1330,14 @@ var BADGE_STAGES=[
 function badgeEmoji(n){var e='🌱';BADGE_STAGES.forEach(function(s){if(n>=s.min)e=s.emoji;});return e;}
 // Lin 2026-07-25: ⭐ ปุ่มดาว แยกออกจากปุ่ม勳章(openBadge) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์
 function openStar(){
+  try{ if(typeof gtag==='function') gtag('event','typing_game_star_modal_open',{category:'game'}); }catch(e){}
   var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
   document.getElementById('star-tree-area').textContent='⭐ '+s;
   document.getElementById('star-tree-caption').textContent='累積星星（全部遊戲共用）';
   document.getElementById('star-modal').classList.add('show');
 }
 function openBadge(){
+  try{ if(typeof gtag==='function') gtag('event','typing_game_badge_modal_open',{category:'game'}); }catch(e){}
   // ⭐ แบดจ์พันธุ์ข้าว ตามดาวรวม (รวมกับเกมเสียง) — Lin 2026-06-27
   var s=(window.GAME_ACCOUNT)?GAME_ACCOUNT.getStars():totalStars;
   var badges=(window.GAME_ACCOUNT)?GAME_ACCOUNT.starBadges:[];
@@ -1567,6 +1625,7 @@ setGuideMode(guideMode); // ตั้งสถานะปุ่มตามค�
 // 無提示(挑戰)模式用: ผู้เล่นกดเองเพื่อเปิด/ปิดคีย์บอร์ดในเกม (ปกติซ่อนไว้ ให้พิมพ์ด้วยคีย์บอร์ดจริงล้วนๆ) — Lin 2026-07-12
 function rgToggleWebKbd(){
   var open=document.body.classList.toggle('tg-kbd-open');
+  try{ if(typeof gtag==='function') gtag('event', open?'typing_game_keyboard_open':'typing_game_keyboard_close', {category:'game'}); }catch(e){}
   var b=document.getElementById('rg-webkbd-toggle');
   // Lin 2026-07-19: เหลือแค่ไอคอน ⌨️ ไม่มีตัวหนังสือ — โชว์สถานะเปิด/ปิดด้วยสีปุ่มแบบเดียวกับปุ่มไข่/ข้าวปั้น (data-playing)
   if(b){ if(open){b.setAttribute('data-playing','1');}else{b.removeAttribute('data-playing');} b.title=open?'關閉螢幕鍵盤':'開啟螢幕鍵盤'; }
@@ -1768,7 +1827,7 @@ function rgTypeChar(ch){
       rgTypeHighlightNextKey();
     }
   } else {
-    RG_TYPE.wrong++;wordWrongTotal++;wordHadWrong=true;streak=0;badC++;
+    RG_TYPE.wrong++;if(!(sylList[sylIdx]&&sylList[sylIdx].isParticle))wordWrongTotal++;wordHadWrong=true;streak=0;badC++; // Lin 2026-08-01: พิมพ์ผิดพยางค์ครับ/ค่ะ/คะ ไม่นับเข้าคะแนน
     tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนพิมพ์ผิด
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     updateCombo();
@@ -1854,7 +1913,7 @@ function rgContChar(ch){
     }
   } else {
     // นับผิดรวมทั้งคำ (ไม่แยกนับทีละพยางค์แล้ว) — Lin 2026-07-03 v3: ผิดครบ 3 ครั้งไม่ว่าจะพยางค์ไหน = จบคำทันที ไม่พิมพ์ต่อ ไม่ถามวรรณยุกต์ต่อ
-    RG_CONT_WRONG++;wordWrongTotal++;wordHadWrong=true;streak=0;badC++;
+    RG_CONT_WRONG++;if(!(sylList[RG_CONT_SEG]&&sylList[RG_CONT_SEG].isParticle))wordWrongTotal++;wordHadWrong=true;streak=0;badC++; // Lin 2026-08-01: พิมพ์ผิดพยางค์ครับ/ค่ะ/คะ ไม่นับเข้าคะแนน
     tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนพิมพ์ผิด
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     updateCombo();
@@ -2201,28 +2260,31 @@ function rgToggleFont() {
   // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #rg-font-btn ออก — ปุ่มนั้นไม่มีในหน้าแล้วตั้งแต่ย้ายเข้าเมนู 🍚 (shared.js สร้างปุ่มจริงเอง อ่านสถานะจาก class บน <body>)
   var on = document.body.classList.toggle('rg-modern-font');
   try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
+  try{ if(typeof gtag==='function') gtag('event','typing_game_font_toggle',{category:'game', on: on}); }catch(e){}
 }
 (function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); } } catch(e){} })(); // Lin 2026-07-25: ตัดโค้ดตั้งปุ่มเก่า #rg-font-btn ออก (ปุ่มไม่มีในหน้าแล้ว)
 
 // ── 我有問題 ──
 function rgOpenAsk() {
+  try{ if(typeof gtag==='function') gtag('event','typing_game_ask_open',{category:'game'}); }catch(e){}
   var old = document.getElementById('rg-ask-ov'); if (old) old.remove();
   var div = document.createElement('div');
   div.id = 'rg-ask-ov';
   div.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.48);font-family:"Noto Sans TC",sans-serif;';
   div.innerHTML =
     '<div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:28px 24px;position:relative;">' +
-    '<button onclick="document.getElementById(\'rg-ask-ov\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>' +
+    '<button onclick="document.getElementById(\'rg-ask-ov\').remove();try{gtag(\'event\',\'typing_game_ask_close\',{category:\'game\'})}catch(e){}" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>' +
     '<div style="font-size:20px;font-weight:900;color:#8B6310;margin-bottom:10px;">？ 我有問題</div>' +
     '<div style="font-size:13px;color:#888;margin-bottom:14px;">在練習中卡住了嗎？把問題寫下來，老師會收到並回覆你 🙏</div>' +
     '<input id="rg-ask-email" type="email" placeholder="你的 Email（方便老師回覆，可留空）" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:16px;margin-bottom:10px;font-family:inherit;">' +
     '<textarea id="rg-ask-msg" placeholder="想問的問題…" rows="4" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:16px;resize:none;font-family:inherit;margin-bottom:14px;"></textarea>' +
     '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-    '<button onclick="document.getElementById(\'rg-ask-ov\').remove()" style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>' +
+    '<button onclick="document.getElementById(\'rg-ask-ov\').remove();try{gtag(\'event\',\'typing_game_ask_close\',{category:\'game\'})}catch(e){}" style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>' +
     '<button id="rg-ask-send" style="padding:9px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">送出問題 →</button>' +
     '</div></div>';
   document.body.appendChild(div);
   div.querySelector('#rg-ask-send').onclick = function() {
+    try{ if(typeof gtag==='function') gtag('event','typing_game_ask_submit',{category:'game'}); }catch(e){}
     var email = (document.getElementById('rg-ask-email')||{}).value || '';
     var msg   = (document.getElementById('rg-ask-msg')||{}).value || '';
     if (!msg.trim()) { alert('請寫下您的問題'); return; }
@@ -2236,4 +2298,30 @@ function rgOpenAsk() {
 }
 
 // 2026-07-13: ระบบ 🔧แจ้งปัญหา/💭รีวิว ย้ายไปทำใน shared.js แล้ว (ใช้ร่วมทุกเกม ดูรายละเอียดที่นั่น)
+
+// ── GA4 click tracking เพิ่มเติม (audit 2026-08) ──
+// 🔊 ปุ่มเสียง: word-audio.js ผูก listener ของตัวเองไว้ที่ปุ่มนี้แล้ว — เพิ่ม listener แยกอีกตัวบน element เดียวกัน
+// (หลาย listener บน node เดียวกันทำงานอิสระต่อกันเสมอ ไม่ถูกบล็อกโดย stopPropagation ของอีกตัว)
+try {
+  if (!window.__tgSoundTrackBound) {
+    window.__tgSoundTrackBound = true;
+    var _tgSoundBtn = document.getElementById('rg-sound-toggle');
+    if (_tgSoundBtn) {
+      _tgSoundBtn.addEventListener('click', function(){
+        try { gtag('event','typing_game_audio_play',{category:'game', word: (typeof WORD!=='undefined' && WORD) ? WORD.th : ''}); } catch(e){}
+      });
+    }
+  }
+} catch(e){}
+
+// 🍙/🌾 ปุ่มสลับคำแปล: shared.js สร้างปุ่มนี้แบบไดนามิก — ดักจับด้วย delegated listener แบบ capture-phase บน document
+try {
+  if (!window.__tgTranslateTrackBound) {
+    window.__tgTranslateTrackBound = true;
+    document.addEventListener('click', function(e){
+      var t = e.target.closest ? e.target.closest('.zh-fab-inline, #zh-fab-standalone') : null;
+      if (t) { try { gtag('event','typing_game_translate_toggle',{category:'game'}); } catch(e){} }
+    }, true);
+  }
+} catch(e){}
 

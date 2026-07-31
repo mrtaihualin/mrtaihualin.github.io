@@ -178,6 +178,7 @@
     btn.style.display = '';
     btn.onclick = function(e){
       e.stopPropagation();
+      try{ if(window.gtag) gtag('event','word_order_audio_play',{category:'game', sentence: sentenceTh}); }catch(e2){}
       if (window.WordAudio && WordAudio.has(sentenceTh)) WordAudio.play(sentenceTh, btn);
       else if (window.WordAudio && WordAudio.soonToast) WordAudio.soonToast();
     };
@@ -281,6 +282,41 @@
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   };
 
+  // ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค (Lin 2026-08-01) ──
+  //   เกมนี้ไม่ใช่คำที่ต้องลากเรียงเลย — ต่อท้ายอัตโนมัติ "หลังเรียงประโยคหลักถูกแล้วเท่านั้น" (หรือกดยอมแพ้/ตายแล้วเฉลย ก็นับว่า "เห็นคำตอบสมบูรณ์" เหมือนกัน)
+  //   ใช้ localStorage key เดียวกับเกมเสียง/เกมอ่าน/เกมพิมพ์ (games_particle_mode) ให้ค่าติดกันข้ามเกม
+  var woParticleMode = (function(){ try { return localStorage.getItem('games_particle_mode') || 'off'; } catch(e){ return 'off'; } })();
+  var woSentenceRevealed = false; // true เมื่อเรียงถูก/ตายแล้วเฉลย — ใช้คุมว่าจะโชว์บรรทัดครับ/ค่ะ/คะ ไหม
+  function woShowParticleFor(s){
+    if (!s) return null;
+    if (woParticleMode === 'm') return 'ครับ'; // ชายใช้ครับได้ทุกประโยคเหมือนกันหมด ไม่ต้องมีข้อมูลเพิ่ม
+    if (woParticleMode === 'f') return s.politeF || 'ครับ'; // ไม่มี politeF (ประโยคขึ้นด้วยผม) → บังคับครับต่อ เหมือนเกมอื่น
+    return null;
+  }
+  function woSyncParticleBtn(){
+    var b = document.getElementById('rg-particle-toggle');
+    if (!b) return;
+    b.setAttribute('data-mode', woParticleMode);
+    b.title = woParticleMode === 'm' ? '目前：句尾加「ครับ」（男生禮貌詞・排對後才會出現）' : (woParticleMode === 'f' ? '目前：句尾加「ค่ะ/คะ」（女生禮貌詞・排對後才會出現）' : '目前：不加句尾禮貌詞');
+    b.setAttribute('aria-label', b.title);
+  }
+  function woRenderParticleLine(){
+    var el = document.getElementById('wo-particle-line');
+    if (!el) return;
+    if (!woSentenceRevealed) { el.style.display = 'none'; el.textContent = ''; return; }
+    var s = curSentence();
+    var p = woShowParticleFor(s);
+    if (p) { el.textContent = s.th + p; el.style.display = 'block'; }
+    else { el.style.display = 'none'; el.textContent = ''; }
+  }
+  window.woToggleParticleMode = function(){
+    woParticleMode = (woParticleMode === 'off') ? 'm' : (woParticleMode === 'm' ? 'f' : 'off');
+    try { localStorage.setItem('games_particle_mode', woParticleMode); } catch(e){}
+    woSyncParticleBtn();
+    woRenderParticleLine();
+    if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  };
+
   // ── คำแปลจีนตอนเฉลย: เป็นสวิตช์ 🍙/🌾 อยู่ "ใต้คำที่เฉลย" (ไม่ได้อยู่ในเมนูมุมขวาล่าง) — Lin 2026-07-25 ──
   var woZhOn = (function(){ try { var v = localStorage.getItem('wo_zh_on'); return v === null ? true : v === '1'; } catch(e){ return true; } })();
   function woRenderZh(){
@@ -307,7 +343,10 @@
     if (!s) { slot.innerHTML = ''; return; }
     WordVault.injectStyles();
     slot.innerHTML = ''; // ล้างปุ่มของประโยคก่อนหน้าเสมอ กันปุ่มค้าง
-    slot.appendChild(WordVault.createSaveBtn(s.th, { zh: s.zh || '', source: 'word-order' }));
+    slot.appendChild(WordVault.createSaveBtn(s.th, { zh: s.zh || '', source: 'word-order' }, {
+      onSave: function(){ try{ gtag('event','word_order_vault_save',{category:'game', sentence: s.th}); }catch(e){} },
+      onRemove: function(){ try{ gtag('event','word_order_vault_remove',{category:'game', sentence: s.th}); }catch(e){} }
+    }));
   }
   // เรียกตอนเฉลยทุกทาง: โชว์แถวปุ่ม (🔊 + 🍙 + 🔖) ใต้คำที่เฉลย + คำแปลตามสวิตช์
   function woRevealExtras(sentenceTh){
@@ -628,6 +667,7 @@
     document.getElementById('wo-next-btn').disabled = true;
     document.getElementById('wo-hint-btn').disabled = false;
     document.getElementById('wo-hint-btn').style.display = '';
+    woSentenceRevealed = false; woSyncParticleBtn(); woRenderParticleLine(); // Lin 2026-08-01: ประโยคใหม่ = ยังไม่เรียงเสร็จ ซ่อนบรรทัดครับ/ค่ะ/คะ ไว้ก่อน
     var rb = document.getElementById('wo-remember-btn'); if (rb) rb.style.display = '';
     var gb = document.getElementById('wo-golden-badge'); if (gb) gb.style.display = sentenceGolden ? '' : 'none';
     updateHintWarning();
@@ -760,6 +800,7 @@
     woLogSentence({failed:true, pts:0, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
     curSentenceIsKnownCheck = false;
     curCombo = 0;
+    woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เฉลยคำตอบแล้ว (แม้เรียงแพ้) ก็ถือว่าเห็นประโยคสมบูรณ์ → โชว์บรรทัดครับ/ค่ะ/คะ ได้
   }
 
   function checkAnswer(){
@@ -794,6 +835,7 @@
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
         woLogSentence({mastered:!!passedClean, pts:0, srsDue:passedClean?'已精通':((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '')});
+        woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เรียงถูก (ด่านพิสูจน์已記得) → โชว์บรรทัดครับ/ค่ะ/คะ ได้
         return;
       }
 
@@ -849,10 +891,17 @@
       // Lin 2026-07-12: โชว์คำอธิบายว่าแต่ละคำแปลว่าอะไร (ตอนจบ)
       var _woRev=document.getElementById('wo-reveal');
       if(_woRev){
-        _woRev.innerHTML='<div style="font-size:12px;color:#8B6310;font-weight:800;margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">每個字的意思</div>'+
-          s.words.map(function(w){ return '<div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(139,99,16,0.10);"><span style="font-family:\'Sarabun\',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;min-width:74px;">'+w.th+'</span><span style="color:#666;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;">'+w.zh+'</span></div>'; }).join('');
+        var _woRevRows=s.words.map(function(w){ return '<div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(139,99,16,0.10);"><span style="font-family:\'Sarabun\',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;min-width:74px;">'+w.th+'</span><span style="color:#666;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;">'+w.zh+'</span></div>'; }).join('');
+        // Lin 2026-08-01: ถ้าเปิดปุ่มครับ/ค่ะ/คะ ไว้ → เพิ่มแถวอธิบายคำนี้ท้ายสุดด้วย (ไม่ใช่คำที่ต้องเรียง แค่โชว์ความหมายเสริม)
+        var _woPart=woShowParticleFor(s);
+        if(_woPart){
+          var _pZh=_woPart==='ครับ'?'（男性禮貌詞）':(_woPart==='คะ'?'（女性禮貌詞・疑問句）':'（女性禮貌詞・句尾非疑問）');
+          _woRevRows+='<div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(139,99,16,0.10);"><span style="font-family:\'Sarabun\',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;min-width:74px;">'+_woPart+'</span><span style="color:#666;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;">'+_pZh+'（不用排・不計分）</span></div>';
+        }
+        _woRev.innerHTML='<div style="font-size:12px;color:#8B6310;font-weight:800;margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">每個字的意思</div>'+_woRevRows;
         _woRev.style.display='block';
       }
+      woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เรียงถูกแล้ว → โชว์บรรทัดครับ/ค่ะ/คะ ได้
       // Lin 2026-07-12: คำในคลังใช้หมดแล้ว (มองไม่เห็นแต่ยังกินพื้นที่อยู่ opacity:0) → ซ่อนกล่องทั้งกล่องไปเลย กันช่องว่างเปล่าๆ ระหว่างช่องเฉลยกับ popup ผลลัพธ์
       var _wob=document.getElementById('wo-bank'); if(_wob)_wob.style.display='none';
       document.getElementById('wo-next-btn').disabled = false;
@@ -910,6 +959,7 @@
 
   window.woHint = function(){
     if (locked || curSentenceIsKnownCheck) return; // ด่านพิสูจน์ 已記得 ห้ามมี提示เด็ดขาด (MASTER ข้อ10)
+    try{ if(window.gtag) gtag('event','word_order_hint_click',{category:'game'}); }catch(e){}
     var s = curSentence();
     if (answer.length >= s.words.length) return;
     // 找出目前「從頭開始連續正確」的長度，超過這段的（放錯的）詞塊都退回下面

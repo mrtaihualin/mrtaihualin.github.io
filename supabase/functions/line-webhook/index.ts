@@ -1238,6 +1238,13 @@ serve(async (req) => {
         const senderIsTeacherChk = event.source && teacherUserIdChk && event.source.userId === teacherUserIdChk;
         if (!senderIsTeacherChk) {
           console.error('[line-webhook] ⚠️ check_conflict: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdChk);
+          // 🟡 2026-07-31 เพิ่ม (บั๊กแฝดข้อ 3 ฝั่งเพิ่มคาบ — ลอกจากก้อน confirm_cancel_delete):
+          //   เดิมเงียบสนิท ไม่ตอบอะไรเลย → ถ้าค่า LINE_TEACHER_USER_ID ตั้งผิด หรือ Lin กดจากอีกบัญชี
+          //   ปุ่มจะดูเหมือน "ตายสนิท" ไม่มีข้อความ ไม่มีเบาะแส หาสาเหตุยากมาก
+          //   ตั้งใจไม่บอกว่าบัญชีไหนถึงจะถูก — คนที่ไม่ใช่ครูก็กดปุ่มนี้ได้ ไม่ควรใบ้อะไรเพิ่ม
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 這個 LINE 帳號沒有老師權限，沒有執行任何動作。');
+          }
           continue;
         }
         const { data: reqChk } = await supabase
@@ -1280,6 +1287,12 @@ serve(async (req) => {
         const senderIsTeacherAddC = event.source && teacherUserIdAddC && event.source.userId === teacherUserIdAddC;
         if (!senderIsTeacherAddC) {
           console.error('[line-webhook] ⚠️ confirm_add_class: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdAddC);
+          // 🟡 2026-07-31 เพิ่ม (บั๊กแฝดข้อ 3 ฝั่งเพิ่มคาบ — ลอกจากก้อน confirm_cancel_delete):
+          //   เดิมเงียบสนิท ไม่ตอบอะไรเลย ทำให้ปุ่มดูเหมือนตายสนิท หาสาเหตุยากมาก
+          //   ตั้งใจไม่บอกว่าบัญชีไหนถึงจะถูก (ไม่ใบ้ให้คนนอก) — เหตุผลเดียวกับก้อนยกเลิก
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 這個 LINE 帳號沒有老師權限，沒有執行任何動作。');
+          }
           continue;
         }
 
@@ -1310,13 +1323,45 @@ serve(async (req) => {
           continue;
         }
 
+        // ── 🔴 2026-07-31 เพิ่ม — ด่านกันวันย้อนหลัง (ข้อ #3 ในรายงานตรวจ) ──────────────
+        // พังยังไงถ้าไม่มีด่านนี้: คำขอที่ค้างคิวข้ามวันหยุด วันที่ในนั้นกลายเป็นอดีตไปแล้ว
+        //   ครูกดปุ่มเดียวใน LINE = สร้างคาบย้อนหลังทันที
+        //   → ขัดกฎเหล็กที่ Lin สั่งไว้เอง และเขียนไว้ในโค้ดฝั่งเว็บแล้วที่ classroom/index.html
+        //     ("ห้ามจัด/ย้าย/ตั้งคาบไปวันย้อนหลัง ทุกจุดในแอปนี้ ไม่มีปุ่มยกเว้น")
+        //   ฝั่งเว็บกัน 2 ชั้นอยู่แล้ว (lockDateInputToFuture + assertNotPastDate) แต่ประตู LINE ไม่เคยมีเลย
+        //
+        // ทำไมเช็ค "ก่อน" แย่งล็อก: จะได้ไม่ต้องปลดล็อกคืน (หลักเดียวกับก้อน confirm_cancel_delete)
+        // ทำไมไม่มีปุ่ม "ยืนยันอีกรอบแล้วผ่าน": กฎบอกว่าไม่มีข้อยกเว้น และการทำปุ่มผ่านต้องเก็บสถานะ
+        //   "เคยเตือนแล้ว" ลงฐานข้อมูล = คอลัมน์ใหม่ + จุดพังใหม่ ไม่คุ้ม
+        //   → ส่งไปทำที่เว็บแทน (ท่าเดียวกับที่ก้อนยกเลิกใช้ตอนเจอ "คาบถูกบันทึกเข้าเรียนแล้ว")
+        const todayBkkAddC = extractBangkokDateStr(new Date().toISOString());
+        if (todayBkkAddC && String(reqRowAddC.requested_date) < todayBkkAddC) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: วันที่ย้อนหลัง ถูกปฏิเสธ.',
+            'requested=', reqRowAddC.requested_date, 'today(BKK)=', todayBkkAddC, 'request=', requestIdAddC);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken,
+              '🛑 這筆申請的日期（' + reqRowAddC.requested_date + '）已經過去了，沒有新增任何課堂。\n' +
+              '今天是 ' + todayBkkAddC + '（泰國時間）。系統一律不排已經過去的課。\n' +
+              '請跟學生約一個新的時間，或到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdAddC);
+          }
+          continue;
+        }
+
         // ── 原子鎖：跟 confirm_cancel_delete 同一個欄位、同一套語意，防止跟網站同時搶著新增 ──
+        // 🟠 2026-07-31 แก้ (บั๊กแฝดข้อ 2 ฝั่งเพิ่มคาบ): เดิมบังคับว่าช่องล็อกต้อง "ว่างเปล่า" เท่านั้นถึงจะจับได้
+        //   → ครูกดแล้วเน็ตหลุด/ปิดแอปก่อนทำเสร็จ = ล็อกค้างตลอดไป คำขอนั้นตายสนิท
+        //     ทั้งเว็บและ LINE ตอบว่า "กำลังถูกจัดการที่อื่น" ตลอดกาล
+        //   ตอนนี้: ล็อกที่เก่ากว่า 10 นาที = ถือว่าค้าง แย่งใหม่ได้เลย
+        //   ⚠️ เลข 10 นาทีนี้ "คัดลอกมา" จากก้อน confirm_cancel_delete ด้านล่าง และตรงกับฝั่งเว็บ
+        //      (classroom/index.html → STALE_LOCK_MS) — ห้ามตั้งเลขใหม่เอง ถ้า 3 ที่ใช้เลขไม่เท่ากัน
+        //      จะเข้าใจคำว่า "ล็อกค้าง" ไม่ตรงกัน = เสี่ยงสร้างคาบซ้อนกัน
+        const staleLockCutoffAddC = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { data: claimDataAddC, error: claimErrAddC, count: claimCountAddC } = await supabase
           .from('classroom_requests')
           .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
           .eq('id', requestIdAddC)
           .eq('status', 'pending')
-          .is('processing_started_at', null)
+          .or('processing_started_at.is.null,processing_started_at.lt.' + staleLockCutoffAddC)
           .select('id');
 
         if (claimErrAddC) {
@@ -1454,21 +1499,55 @@ serve(async (req) => {
           continue;
         }
 
-        if (channelToken && event.replyToken) {
-          await replyLine(channelToken, event.replyToken, '✅ 已新增 Calendar 課程，並通知學生了');
-        }
-
-        // 通知學生（best-effort，失敗不影響已經成功的新增）
-        if (channelToken && reqRowAddC.token) {
-          try {
-            const { data: stuRowAddC } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAddC.token).maybeSingle();
-            if (stuRowAddC && stuRowAddC.line_user_id) {
+        // 🔴 2026-07-31 แก้ (บั๊กแฝดข้อ 1 ฝั่งเพิ่มคาบ — ลอกทั้งชุดจากก้อน confirm_cancel_delete):
+        //    เดิม: ตอบครูว่า「✅ 已新增 Calendar 課程，並通知學生了」ทันที
+        //          แล้วค่อยส่งหานักเรียนทีหลัง ในกล่อง try/catch เปล่าๆ ที่กลืน error ทุกอย่าง
+        //          และใช้ pushLine ตัวเก่าที่ไม่คืนผลอะไรเลย
+        //    → นักเรียนที่ยังไม่ผูก LINE หรือ LINE ล่มชั่วคราว = ไม่ได้รับอะไรเลย
+        //      แต่ครูเชื่อสนิทใจว่าแจ้งไปแล้ว (ผิดกฎ RELIABILITY FIRST: ห้ามขึ้นว่าสำเร็จถ้ายังไม่ตรวจ)
+        //    ตอนนี้: ส่งก่อน → ค่อยตอบครูตามผลจริง · ใช้ pushLineChecked ที่เช็คผลได้
+        //    ⚠️ replyToken ของ LINE ใช้ได้ครั้งเดียวต่อการกด 1 ครั้ง → ต้องรวมเป็นข้อความเดียว ห้ามยิง 2 รอบ
+        let replyMsgAddC = '✅ 已新增 Calendar 課程，並通知學生了';
+        try {
+          if (!reqRowAddC.token) {
+            replyMsgAddC = '✅ 已新增 Calendar 課程\n⚠️ 但這筆沒有記錄學生代碼，沒辦法通知學生，記得自己說一聲';
+          } else if (!channelToken) {
+            replyMsgAddC = '✅ 已新增 Calendar 課程\n⚠️ 但系統缺少 LINE 金鑰，沒通知到學生，記得自己說一聲';
+          } else {
+            const { data: stuRowAddC, error: stuErrAddC } = await supabase
+              .from('classroom_students').select('line_user_id').eq('token', reqRowAddC.token).maybeSingle();
+            if (stuErrAddC) {
+              replyMsgAddC = '✅ 已新增 Calendar 課程\n⚠️ 但查不到學生資料（' + stuErrAddC.message + '），沒通知到學生，記得自己說一聲';
+            } else if (!stuRowAddC || !stuRowAddC.line_user_id) {
+              replyMsgAddC = '✅ 已新增 Calendar 課程\n⚠️ 但學生還沒連結 LINE，沒收到通知，記得自己說一聲';
+            } else {
               const timeLabelAddC = reqRowAddC.proposed_recurring
                 ? ('每週固定 ' + startTimeAddC + '–' + endTimeAddC + '（泰國時間）')
                 : (reqRowAddC.requested_date + ' ' + startTimeAddC + '（泰國時間）');
-              await pushLine(channelToken, stuRowAddC.line_user_id, '✅ 你確認的加課已經排進 Calendar 了：' + timeLabelAddC);
+              // 2026-07-31 แก้ข้อความด้วย: เส้นทางปกติตอนนี้คือ "ครูกดยืนยัน = ลงปฏิทินเลย"
+              // นักเรียนไม่ได้กดยืนยันอะไรมาก่อน ข้อความเดิม「你確認的加課」จึงไม่ตรงความจริง
+              // และต้องบอกทางออกให้นักเรียนด้วย ถ้าเวลานั้นไม่สะดวก (ตรงกับข้อความฝั่งเว็บ)
+              const pushResAddC = await pushLineChecked(channelToken, stuRowAddC.line_user_id,
+                '✅ 老師幫你排好一堂課：' + timeLabelAddC +
+                '\n這堂課已經加到課表了。如果那個時間不方便，請到網站按「申請取消課堂」，或直接跟老師說一聲。');
+              if (!pushResAddC.ok) {
+                console.error('[line-webhook] ⚠️ confirm_add_class: แจ้งนักเรียนไม่สำเร็จ:', pushResAddC.reason, 'request=', requestIdAddC);
+                replyMsgAddC = '✅ 已新增 Calendar 課程\n⚠️ 但 LINE 通知學生失敗（' + pushResAddC.reason + '），請自己再跟學生說一聲';
+              }
             }
-          } catch (e) { /* แจ้งนักเรียนไม่สำเร็จ ไม่กระทบว่าสร้าง Calendar สำเร็จแล้ว */ }
+          }
+        } catch (e) {
+          const whyNotifyAddC = (e && e.message) ? e.message : String(e);
+          console.error('[line-webhook] ⚠️ confirm_add_class: แจ้งนักเรียนพังกลางคัน:', whyNotifyAddC, 'request=', requestIdAddC);
+          replyMsgAddC = '✅ 已新增 Calendar 課程\n⚠️ 但通知學生時出錯（' + whyNotifyAddC + '），請自己再跟學生說一聲';
+        }
+
+        // 2026-07-31 加：ปุ่มนี้ไม่ได้เช็คโควตาคาบคงเหลือ (ฝั่งเว็บเช็ค) — ต้องบอกครูตรงๆ ห้ามให้เข้าใจผิด
+        //   ไม่ย้ายสูตรคิดโควตามาไว้ที่นี่ เพราะจะกลายเป็นสูตร 2 ชุดที่ต้องแก้พร้อมกันตลอดไป
+        replyMsgAddC += '\n（提醒：這顆按鈕沒有檢查剩餘堂數，要看的話請到網站加課）';
+
+        if (channelToken && event.replyToken) {
+          await replyLine(channelToken, event.replyToken, replyMsgAddC);
         }
         continue;
       }

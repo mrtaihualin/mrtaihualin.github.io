@@ -14,6 +14,17 @@
 <!-- Google tag -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
+<script>
+(function(){
+  var _exitFired = false;
+  function fireExit(){
+    if (_exitFired) return; _exitFired = true;
+    try { gtag('event','typing_game_exit',{category:'game', transport_type:'beacon'}); } catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') fireExit(); });
+  window.addEventListener('pagehide', fireExit);
+})();
+</script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -425,9 +436,9 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 </div>
 
 <!-- How-to modal: เกมพิมพ์ — ฉบับสั้น (default) + ฉบับละเอียด (กดขยาย) — Lin 2026-07-19 -->
-<div id="rg-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+<div id="rg-howto-modal" onclick="if(event.target===this){this.style.display='none';try{gtag('event','typing_game_howto_close',{category:'game'})}catch(e){}}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
   <div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:32px 30px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
-    <button onclick="document.getElementById('rg-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+    <button onclick="document.getElementById('rg-howto-modal').style.display='none';try{gtag('event','typing_game_howto_close',{category:'game'})}catch(e){}" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
     <div style="font-family:'Noto Serif TC',serif;font-size:22px;font-weight:900;color:#8B6310;margin-bottom:12px;">⌨️ 怎麼玩？</div>
 
     <ul style="font-size:15px;color:#333;line-height:2;margin:0 0 12px;padding-left:22px;">
@@ -443,7 +454,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <li>可下載 PDF 報告；登入才記錄複習進度</li>
     </ul>
 
-    <button onclick="var d=document.getElementById('rg-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
+    <button onclick="var d=document.getElementById('rg-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';try{gtag('event','typing_game_howto_detail_toggle',{category:'game',open:!open})}catch(e){}" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
 
     <div id="rg-howto-detail" style="display:none;font-size:14.5px;color:#333;line-height:1.9;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
       <p style="margin:0 0 10px;">用泰文鍵盤把泰文字打出來，練習拼字＋鍵盤操作。鍵盤已照泰文排好位置，不用自己記英文鍵對應哪個泰文字母。</p>
@@ -495,9 +506,9 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
     <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
     <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
-      <span class="tf-streak-chip" id="rg-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="dismissHowtoHint('typing');document.getElementById('rg-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
+      <span class="tf-streak-chip" id="rg-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="dismissHowtoHint('typing');document.getElementById('rg-howto-modal').style.display='flex';try{gtag('event','typing_game_howto_open',{category:'game'})}catch(e){}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
       <div class="howto-hint-bubble" id="howto-hint-typing">
-        <button class="howto-hint-close" onclick="dismissHowtoHint('typing')">✕</button>
+        <button class="howto-hint-close" onclick="dismissHowtoHint('typing');try{gtag('event','typing_game_howto_hint_dismiss',{category:'game'})}catch(e){}">✕</button>
         這裡有教怎麼玩喔 👆
       </div>
     </span>
@@ -553,27 +564,30 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <!-- แถวปุ่ม 4 อันใต้คำศัพท์: 🔊กด1ที=ฟังเสียงคำ1ที · 🐣คำอ่าน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — Lin 2026-07-16 -->
       <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 2px;flex-wrap:wrap;">
         <button id="rg-sound-toggle" class="word-ctl-btn" type="button"></button>
-        <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="setRgPronMode(!rgPronMode)"></button>
-        <button id="rg-en-toggle" class="word-ctl-btn" type="button" onclick="setRgEnMode(!rgEnMode)"></button>
+        <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="var _v=!rgPronMode;setRgPronMode(_v);try{gtag('event','typing_game_pron_toggle',{category:'game',on:_v})}catch(e){}"></button>
+        <button id="rg-en-toggle" class="word-ctl-btn" type="button" onclick="var _v=!rgEnMode;setRgEnMode(_v);try{gtag('event','typing_game_en_pron_toggle',{category:'game',on:_v})}catch(e){}"></button>
         <span id="zh-toggle-slot"></span>
         <span id="rg-vault-btn-slot"></span>
         <!-- ปุ่มวงเดียว กดสลับ 有提示/無提示 · สีเหมือนปุ่มไข่/ข้าวปั้น (Lin 2026-07-19) -->
-        <button id="guide-toggle" class="word-ctl-btn" type="button" onclick="setGuideMode(!guideMode)"></button>
+        <button id="guide-toggle" class="word-ctl-btn" type="button" onclick="var _v=!guideMode;setGuideMode(_v);try{gtag('event','typing_game_guide_mode_toggle',{category:'game',mode:(_v?'hint':'challenge')})}catch(e){}"></button>
         <!-- ปุ่มเปิด/ปิดคีย์บอร์ดบนจอ — เป็นปุ่มอิสระ ไม่ผูกกับโหมด 無提示 (Lin 2026-07-19) -->
         <button type="button" id="rg-webkbd-toggle" class="word-ctl-btn" onclick="rgToggleWebKbd()" title="開啟螢幕鍵盤">⌨️</button>
         <span id="font-toggle-slot"></span>
+        <!-- Lin 2026-08-01: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 — ยังพิมพ์ได้จริง (ต่างจากเกมอ่าน) แต่ไม่นับคะแนนถ้าผิด โผล่เฉพาะตอนเล่น高級句子เท่านั้น -->
+        <button id="rg-particle-toggle" class="word-ctl-btn" type="button" onclick="tgToggleParticleMode()" style="display:none;">🙏</button>
       </div>
       <!-- Lin 2026-07-19: ยุบปุ่มทั้ง 6 เข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
       <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น) -->
       <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
-        {id:'rg-sound-toggle',   label:'發音',     state:'none'},
-        {id:'rg-pron-toggle',    label:'讀音',     state:'pron'},
-        {id:'rg-en-toggle',      label:'英文讀音', state:'en'},
-        {id:'zh-toggle-slot',    label:'翻譯',     state:'zh'},
-        {id:'rg-vault-btn-slot', label:'單字庫',   state:'vault'},
-        {id:'guide-toggle',      label:'提示',     state:'guide'},
-        {id:'font-toggle-slot',  label:'字體',     state:'font'},
-        {id:'rg-webkbd-toggle',  label:'螢幕鍵盤', state:'kbd'}
+        {id:'rg-sound-toggle',    label:'發音',     state:'none'},
+        {id:'rg-pron-toggle',     label:'讀音',     state:'pron'},
+        {id:'rg-en-toggle',       label:'英文讀音', state:'en'},
+        {id:'zh-toggle-slot',     label:'翻譯',     state:'zh'},
+        {id:'rg-vault-btn-slot',  label:'單字庫',   state:'vault'},
+        {id:'guide-toggle',       label:'提示',     state:'guide'},
+        {id:'font-toggle-slot',   label:'字體',     state:'font'},
+        {id:'rg-webkbd-toggle',   label:'螢幕鍵盤', state:'kbd'},
+        {id:'rg-particle-toggle', label:'禮貌詞',   state:'particle'}
       ]});});</script>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
     </div>
@@ -659,22 +673,22 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
 </div>
 
-<div class="v3-modal" id="badge-modal" onclick="this.classList.remove('show')">
+<div class="v3-modal" id="badge-modal" onclick="this.classList.remove('show');try{gtag('event','typing_game_badge_modal_close',{category:'game'})}catch(e){}">
   <div class="v3-modal-box" onclick="event.stopPropagation()">
     <h3>我的成就</h3>
     <div class="star-progress" id="star-prog"></div>
     <div class="star-prog-label" id="star-prog-label"></div>
-    <button class="btn btn-secondary" style="margin-top:16px" onclick="document.getElementById('badge-modal').classList.remove('show')">關閉</button>
+    <button class="btn btn-secondary" style="margin-top:16px" onclick="document.getElementById('badge-modal').classList.remove('show');try{gtag('event','typing_game_badge_modal_close',{category:'game'})}catch(e){}">關閉</button>
   </div>
 </div>
 
 <!-- Lin 2026-07-25: ⭐ กดปุ่มดาวแยกจากปุ่มวรรณยุกต์/勳章 — ย้าย tree-area/tree-caption มาไว้ที่นี่ -->
-<div class="v3-modal" id="star-modal" onclick="this.classList.remove('show')">
+<div class="v3-modal" id="star-modal" onclick="this.classList.remove('show');try{gtag('event','typing_game_star_modal_close',{category:'game'})}catch(e){}">
   <div class="v3-modal-box" onclick="event.stopPropagation()">
     <h3>累積星星</h3>
     <div class="tree-area" id="star-tree-area">⭐</div>
     <div class="tree-caption" id="star-tree-caption">累積星星（全部遊戲共用）</div>
-    <button class="btn btn-secondary" style="margin-top:16px" onclick="document.getElementById('star-modal').classList.remove('show')">關閉</button>
+    <button class="btn btn-secondary" style="margin-top:16px" onclick="document.getElementById('star-modal').classList.remove('show');try{gtag('event','typing_game_star_modal_close',{category:'game'})}catch(e){}">關閉</button>
   </div>
 </div>
 
@@ -688,15 +702,15 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   <div class="gt-title" id="gt-tour-title"></div>
   <div class="gt-text" id="gt-tour-text"></div>
   <div class="gt-actions">
-    <button class="gt-skip" onclick="gtTourEnd()">跳過導覽</button>
+    <button class="gt-skip" onclick="gtTourEnd();try{gtag('event','typing_game_tour_skip',{category:'game'})}catch(e){}">跳過導覽</button>
     <div class="gt-nav">
-      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="gtTourPrev()">‹ 上一步</button>
-      <button class="gt-btn gt-next" id="gt-tour-next" onclick="gtTourNext()">下一步 ›</button>
+      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="gtTourPrev();try{gtag('event','typing_game_tour_prev',{category:'game'})}catch(e){}">‹ 上一步</button>
+      <button class="gt-btn gt-next" id="gt-tour-next" onclick="var _step=gtTourIdx+1;gtTourNext();try{gtag('event','typing_game_tour_next',{category:'game',step:_step})}catch(e){}">下一步 ›</button>
     </div>
   </div>
 </div>
 
-<script src="js/games/typing-game-app.min.js?v=16"></script>
+<script src="js/games/typing-game-app.min.js?v=18"></script>
 </div><!-- /.v3-page -->
 <script src="js/core/shared.min.js?v=15"></script>
 
@@ -710,17 +724,17 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
-  <a class="gs-tab" href="tone-finder.html">🎵 聲調練習室</a>
+  <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'typing_game'})}catch(e){}">🎵 聲調練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="reading-game.html">📝 拼讀練習室</a>
+  <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'typing_game'})}catch(e){}">✍️ 拼讀練習室</a>
   <div class="gs-divider"></div>
   <span class="gs-tab gs-active">⌨️ 打字練習室</span>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="word-order.html">🔀 語序練習室</a>
+  <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'typing_game'})}catch(e){}">🧩 語序練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="lego.html">🧩 造句練習室</a>
+  <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'typing_game'})}catch(e){}">🧱 造句練習室</a>
   <div class="gs-divider"></div>
-  <a class="gs-tab" href="vault.html"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
+  <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'typing_game'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
