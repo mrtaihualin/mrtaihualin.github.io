@@ -35,7 +35,7 @@
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js/progress-sync.js/tone-finder-game.js -->
 <script defer src="js/games/game-account.js?v=3"></script><!-- v3: Phase 4 ล็อก — sync remote-authoritative + เลิก upsert (เซิร์ฟเวอร์เป็นเจ้าของดาว) -->
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=9"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="js/games/reading-auth.js?v=10"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
 <script defer src="js/games/tone-companion.js?v=1"></script><!-- ส่วนที่เกมเสียงใช้เฉพาะ: เซฟคะแนน tone_sessions + ปลดล็อกเหรียญ admin + ป๊อปอัพสำรวจก่อนออกจากหน้า -->
 <script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="js/score/progress-sync.js?v=2"></script>
@@ -44,7 +44,7 @@
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
-<script src="data/words-data.js?v=7"></script>
+<script src="data/words-data.js?v=8"></script>
 <script src="data/adv-sentences.js?v=7"></script>
 <script src="data/tone-engine.js?v=3"></script>
 <meta charset="UTF-8">
@@ -1844,8 +1844,19 @@ if (document.fonts && document.fonts.load) {
       <button onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_close',{category:'game'});}catch(e){}document.getElementById('tf-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
       <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🎵 怎麼玩？</div>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">背單字好無聊？玩遊戲就記得住了，而且還更好玩 😊</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">泰語有 5 個聲調，同一個字聲調不一樣，意思就完全不同喔！看到泰文單字，題目問什麼就回答什麼就好了 😊 不確定也沒關係，先猜猜看，玩多了自然就會有感覺的 💛</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">連續答對會出現 🔥，分數還會加乘，越答越起勁！答錯不會倒扣，不過猜錯次數越多，這題能拿的分數就會變少，所以第一次就答對分數最高，放心大膽猜猜看～</p>
+      <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
+        <li>泰語有 5 個聲調，同一個字聲調不一樣，意思就完全不同喔！</li>
+        <li>看到泰文單字，題目問什麼就回答什麼就好了 😊 不確定也沒關係，先猜猜看，玩多了自然就會有感覺的 💛</li>
+        <li>連續第一次就答對會出現 🔥連擊，分數還會加乘，越答越起勁！</li>
+      </ul>
+      <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
+        <ul style="margin:0;padding-left:18px;line-height:1.9;">
+          <li>每題從 <strong>10 分</strong>開始：答錯或用「?」提示 1／2／3 次 → <strong>7／4／1 分</strong>，滿 4 次 → 0 分並直接看解答</li>
+          <li>連續第一次答對 3／5／8 次 → <strong>×1.5／×2／×3</strong></li>
+          <li>✨黃金字（約 18% 機率）答對再 <strong>×2</strong></li>
+          <li>玩完一輪 <strong>+20</strong>，整輪都第一次就答對（perfect）再 <strong>+50</strong></li>
+        </ul>
+      </div>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，分數和進度都會幫你存起來，還可以在排行榜上看到自己進步了多少喔 ⭐</p>
       <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">聲調其實是有規律的呢～想真正搞懂，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
     </div>
@@ -1939,7 +1950,7 @@ if (document.fonts && document.fonts.load) {
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=38"></script>
+<script src="js/games/tone-finder-game.min.js?v=39"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
@@ -2005,6 +2016,8 @@ if (document.fonts && document.fonts.load) {
 .tf-card{padding-bottom:132px;}}
 </style>
 <div id="game-switcher">
+  <a class="gs-tab" href="mix.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'mix',from:'tone_finder'})}catch(e){}">🎮 綜合遊戲</a>
+  <div class="gs-divider"></div>
   <span class="gs-tab gs-active">🎵 聲調練習室</span>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'tone_finder'})}catch(e){}">✍️ 拼讀練習室</a>

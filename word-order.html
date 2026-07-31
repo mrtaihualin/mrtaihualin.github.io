@@ -74,7 +74,7 @@
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/word-order-app.js -->
 <script defer src="js/games/game-account.js?v=3"></script>
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=9"></script>
+<script defer src="js/games/reading-auth.js?v=10"></script>
 <script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="js/games/word-vault.js"></script>
 <script src="data/adv-sentences.js?v=7"></script>
@@ -290,11 +290,17 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
     <button onclick="try{if(window.gtag)gtag('event','word_order_howto_close',{category:'game'});}catch(e){}document.getElementById('wo-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
     <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🧩 怎麼玩？</div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">每一句泰文都被拆成好幾個詞、順序打散了。點下面的詞塊，依照正確順序點回上面的空格裡，組成完整句子。</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">點錯了嗎？點一下上面已經填的詞塊，就可以把它放回去重排。</p>
-    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:2;">
-      每句從 <strong>10 分</strong>開始：排錯一次扣一些分（10→7→4→1），用「提示」每次扣 <strong>2 分</strong>，兩種扣分共用同一個分數 — 扣到 0 分這句就直接失敗，之後會再複習到。<br>
-      連續排對第一次會有<strong>連擊加成 ×1.5／×2／×3</strong>，偶爾出現<strong>✨黃金句</strong>乾淨過關再 <strong>×2</strong>！
+    <ul style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 12px;padding-left:20px;">
+      <li>每一句泰文都被拆成好幾個詞、順序打散了</li>
+      <li>點下面的詞塊，依照正確順序點回上面的空格裡，組成完整句子</li>
+      <li>點錯了嗎？點一下上面已經填的詞塊，就可以把它放回去重排</li>
+    </ul>
+    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
+      <ul style="margin:0;padding-left:18px;line-height:2;">
+        <li>每句從 <strong>10 分</strong>開始：排錯一次扣一些分（10→7→4→1），用「提示」每次扣 <strong>2 分</strong>，兩種扣分共用同一個分數</li>
+        <li>扣到 0 分這句就直接失敗，之後會再複習到</li>
+        <li>連續排對第一次會有<strong>連擊加成 ×1.5／×2／×3</strong>，偶爾出現<strong>✨黃金句</strong>乾淨過關再 <strong>×2</strong>！</li>
+      </ul>
     </div>
     <p style="font-size:13px;color:#2e7d32;background:#e8f5e9;border-radius:8px;padding:10px 14px;margin:0 0 12px;">🔑 <b>登入</b>後：系統會記住哪些句子學會了、哪些要複習，到期自動排進來；真的記熟還能累積 ⭐ 星星！</p>
     <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">泰語跟中文語序不一樣，多練幾次就會抓到感覺 😄 <a href="pricing.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔</a></p>
@@ -459,7 +465,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<script src="js/games/word-order-app.min.js?v=11"></script>
+<script src="js/games/word-order-app.min.js?v=12"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>
@@ -471,6 +477,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
+  <a class="gs-tab" href="mix.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'mix',from:'word_order'})}catch(e){}">🎮 綜合遊戲</a>
+  <div class="gs-divider"></div>
   <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'word_order'})}catch(e){}">🎵 聲調練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'word_order'})}catch(e){}">✍️ 拼讀練習室</a>

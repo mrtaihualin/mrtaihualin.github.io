@@ -1116,7 +1116,7 @@ function rgDownloadReport(){
   var rows=roundLog.map(function(w,i){
     return '<tr>'
       +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;">'+esc(w.th)+'</td>'
+      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(w.th)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
@@ -1128,7 +1128,7 @@ function rgDownloadReport(){
   // 弱點分析：打錯次數最多的字，排前面
   var weak=roundLog.filter(function(w){return (w.wrong||0)>0;}).sort(function(a,b){return (b.wrong||0)-(a.wrong||0);}).slice(0,8);
   var weakHtml = weak.length
-    ? weak.map(function(w){return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;">'+esc(w.th)+'（錯 '+w.wrong+' 次）</span>';}).join('')
+    ? weak.map(function(w){return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;white-space:nowrap;word-break:keep-all;">'+esc(w.th)+'（錯 '+w.wrong+' 次）</span>';}).join('')
     : '<span style="font-size:12px;color:#888;">這輪沒有打錯的字，太棒了！🎉</span>';
 
   var innerHtml =

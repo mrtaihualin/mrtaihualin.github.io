@@ -28,7 +28,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const REVIEW_POINTS = 2;
 const BUG_REPORT_POINTS = 20;
 const POINTS_CAP = 300;
-const VALID_GAMES = ['typing', 'reading', 'lego', 'word_order', 'tone_finder'];
+// 2026-07-31: เพิ่ม 'mix' (綜合遊戲/mix.html) — ต้องรัน SQL เพิ่ม 'mix' เข้า CHECK constraint ของ game_reward_events ก่อนด้วย (ดู supabase/sql/2026-07-31_add_mix_to_game_reward.sql) ไม่งั้น insert ยังตีกลับอยู่ดีแม้ผ่านด่านนี้แล้ว
+const VALID_GAMES = ['typing', 'reading', 'lego', 'word_order', 'tone_finder', 'mix'];
 
 function corsHeaders() {
   return {

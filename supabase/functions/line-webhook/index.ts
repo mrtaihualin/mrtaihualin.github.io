@@ -27,10 +27,9 @@
 //      ไม่ลบ Calendar ทันทีแล้ว ต้องรอนักเรียนกด "我知道了" ก่อน (กดฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้ อันไหน
 //      กดก่อนนับอันนั้น) → set teacher_cancel_ack_at แล้ว push แจ้งครูว่ากดยืนยันลบได้แล้ว
 //      **ไม่แตะ Google Calendar เอง** (ครูต้องกลับไปกด "確認刪除 Calendar" ที่เว็บเอง)
-//   4) action=ack_teacher_add (2026-07-18 เพิ่ม, 2026-07-20 แก้：push ตอนนี้เป็นปุ่มกดได้） —
-//      ครูสั่งเพิ่มคาบเอง (proposeAddClassDay) ไม่สร้าง Calendar ทันที ต้องรอนักเรียนกด "我知道了" ก่อน
-//      (ฝั่ง LINE นี้ หรือฝั่งเว็บก็ได้) → set teacher_add_ack_at แล้ว push แจ้งครูพร้อมปุ่ม
-//      "確認新增 Calendar" (action=confirm_add_class ด้านล่าง) กดจาก LINE ได้เลย ไม่ต้องเปิดเว็บ
+//   4) action=ack_teacher_add — 🗑️ เลิกใช้แล้ว 2026-07-31 (ระบบ "รอนักเรียนกดยอมรับก่อนเพิ่มคาบ"
+//      ถูกยกเลิกโดย Lin เมื่อ 2026-07-30) · เหลือไว้แค่ตัวตอบข้อความว่า "ปุ่มนี้เลิกใช้แล้ว" เพราะปุ่มเก่า
+//      ค้างอยู่ในประวัติแชทของนักเรียนตลอดกาล ลบออกไม่ได้ · ไม่แตะฐานข้อมูล ไม่แตะ Calendar
 //   5) action=check_conflict (2026-07-20 เพิ่ม) — ครูกดปุ่ม "🔍 檢查是否衝突" ในการ์ดคำขอเพิ่มคาบ
 //      (notifyTeacherClassRequest ฝั่งเว็บตอน type='add_class') → ใช้ service account เช็ค
 //      freeBusy ของ GOOGLE_CALENDAR_ID ในช่วงเวลาที่นักเรียนขอ แล้ว reply ผลกลับไปในแชททันที
@@ -45,14 +44,8 @@
 //      นักเรียนตอบรับก่อนถึงจะสร้างจริงได้) — ถ้า initiated_by==='student' (นักเรียนพิมพ์วันเวลาที่
 //      ต้องการเองผ่าน "➕ 申請加課") ครูกดปุ่มนี้คือการอนุมัติขั้นสุดท้ายอยู่แล้ว ไม่มีอะไรต้องรอ
 //      นักเรียนตอบรับซ้ำ ข้ามด่านนี้ไปสร้าง Calendar ได้ทันที (ดูเงื่อนไขจริงก่อน atomic lock ด้านล่าง)
-//   7) action=decline_add_class (2026-07-20 เพิ่ม, Lin ยืนยัน：「กล่องเดียว มีหลายเวลาให้เลือก มีปุ่ม
-//      ได้และไม่ได้」) — ครูเสนอเพิ่มคาบหลายช่วงเวลาในครั้งเดียว (proposeAddClassDay ฝั่งเว็บตอนนี้
-//      ส่งข้อความเดียวรวมทุกช่วงเวลา ปุ่ม "接受"/"婉拒" แยกทีละช่วง) นักเรียนกด "婉拒" ช่วงไหน →
-//      ปิดคำขอนั้น (status='acknowledged', offer_status='declined' — ไม่มีสถานะ 'declined' ใน status
-//      column เอง เพราะติด CHECK constraint classroom_requests_status_check ที่รับแค่
-//      pending/acknowledged เท่านั้น จึงยืมฟิลด์ offer_status ที่มีค่า 'declined' อยู่แล้ว (เดิมใช้กับ
-//      提議改期 เท่านั้น) มาสื่อความหมายเดียวกัน：「นักเรียนไม่เอา」) **ไม่แตะ Google Calendar เลย**
-//      (ยังไม่เคยสร้าง event ตัวนี้ เพราะครูยังไม่ได้กด "確認新增") แค่ปิดคำขอ+แจ้งทั้งสองฝ่าย
+//   7) action=decline_add_class — 🗑️ เลิกใช้แล้ว 2026-07-31 · เหตุผลเดียวกับข้อ 4 ด้านบน
+//      (รวมเป็นตัวรับเดียวกันกับ ack_teacher_add แล้ว ตอบข้อความอย่างเดียว)
 //   8) action=start_contact_student (2026-07-20 เพิ่ม, Lin ยืนยัน：「กดแล้วพิมพ์ตอบในแชทเดิมได้เลย」) —
 //      ทุกปุ่ม "💬 聯繫學生" (เดิมเป็น uri เปิดเว็บผ่าน contactStudentDeepLink) เปลี่ยนมาใช้ action นี้
 //      ทั้งหมดแล้ว: ครูกดปุ่ม → เขียนตาราง line_pending_reply (แถวเดียว id=1) จำว่า "ประโยคถัดไปที่ครูพิมพ์
@@ -455,8 +448,43 @@ async function checkFreebusyConflictService(startIso, endIso) {
       return { ok: false, reason: 'http_' + res.status, detail: detail.slice(0, 300) };
     }
     const data = await res.json();
-    const busy = (data.calendars && data.calendars[calendarId] && data.calendars[calendarId].busy) || [];
-    return { ok: true, busy };
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 2026-07-31 (รอบ 4) แก้รูใหญ่ — เดิมบรรทัดนี้เขียนว่า
+    //      const busy = (data.calendars && data.calendars[calendarId] && ...busy) || [];
+    //      return { ok: true, busy };
+    //    = ถ้าหาปฏิทินในคำตอบไม่เจอ จะ "ตอบว่าตรวจสำเร็จ และไม่มีอะไรชน" ทันที
+    //
+    //    ทำไมอันตราย: Google ตอบ HTTP 200 (สำเร็จ) แม้ตอนที่ปฏิทินใบนั้นมีปัญหา —
+    //      ปฏิทินหาไม่เจอ (notFound) · ไม่มีสิทธิ์อ่าน · เจ้าของเลิกแชร์ให้ · ชื่อปฏิทินตัวพิมพ์
+    //      ใหญ่-เล็กไม่ตรงกับที่ Google ส่งกลับมา → คำตอบจะมี errors แทน busy
+    //      พอโค้ดเดิมอ่านไม่เจอ ก็แปลว่า "ว่าง" หมด = **ด่านหลอก** ที่ปล่อยผ่านทุกครั้ง
+    //      ซึ่งแย่กว่าไม่มีด่านเลย (ครูเชื่อว่ามีคนตรวจให้แล้ว)
+    //
+    //    ตอนนี้: หาไม่เจอ / มี errors = ตอบว่า "ตรวจไม่สำเร็จ" (ok:false) → ฝั่งที่เรียกใช้
+    //      เป็นคนตัดสินใจ และก้อน confirm_add_class ตั้งไว้ว่า "ตรวจไม่ได้ = ไม่อนุญาต" (fail-closed)
+    // ══════════════════════════════════════════════════════════════════════════
+    const cals = data.calendars || {};
+    // Google อาจส่งชื่อปฏิทินกลับมาเป็นตัวพิมพ์เล็ก → หาแบบไม่สนตัวพิมพ์ใหญ่-เล็กด้วย
+    let entry = cals[calendarId];
+    if (!entry) {
+      const wantLower = String(calendarId).toLowerCase();
+      const hitKey = Object.keys(cals).find((k) => k.toLowerCase() === wantLower);
+      if (hitKey) entry = cals[hitKey];
+    }
+    if (!entry) {
+      return { ok: false, reason: 'calendar_not_in_response',
+        detail: 'Google ตอบกลับมาแต่ไม่มีปฏิทินใบนี้อยู่ในคำตอบ (ได้: ' + Object.keys(cals).join(', ') + ') — เช็คว่า GOOGLE_CALENDAR_ID ถูกไหม และแชร์ปฏิทินให้ service account แล้วหรือยัง' };
+    }
+    if (Array.isArray(entry.errors) && entry.errors.length) {
+      return { ok: false, reason: 'calendar_error_' + (entry.errors[0].reason || 'unknown'),
+        detail: JSON.stringify(entry.errors).slice(0, 200) };
+    }
+    if (!Array.isArray(entry.busy)) {
+      return { ok: false, reason: 'no_busy_field',
+        detail: 'คำตอบของ Google ไม่มีรายการช่วงเวลาที่ไม่ว่าง — ไม่กล้าตีความว่า "ว่าง"' };
+    }
+    return { ok: true, busy: entry.busy };
   } catch (e) {
     return { ok: false, reason: 'fetch_error', detail: e.message };
   }
@@ -496,7 +524,11 @@ async function createCalendarEventById(eventBody) {
     if (!actualStart || (expectedStart && Math.abs(new Date(actualStart).getTime() - new Date(expectedStart).getTime()) > 60000)) {
       return { ok: false, reason: 'verify_mismatch', detail: 'Calendar 顯示的時間跟預期不一樣（顯示：' + (actualStart || '無') + '）', eventCreatedButUnverified: ev.id };
     }
-    return { ok: true, eventId: ev.id };
+    // 🟡 2026-07-31 (รอบ 4) เพิ่ม `event`: คืน "ตัวคาบจริงที่ Calendar ยืนยันกลับมา" ออกไปด้วย
+    //   ใช้ทำแถวสำรอง (classroom_calendar_backups.old_event_json) ให้ปุ่ม ↩️ 復原 ฝั่งเว็บกดคืนได้
+    //   ต้องเป็น verifyEv (ของจริงจาก Calendar) ไม่ใช่ eventBody ที่เราส่งไป — เพราะ Google อาจเติม/
+    //   แปลงค่าเอง (เช่น recurrence, timeZone) แล้วปุ่มคืนค่าจะตัดสินใจจากข้อมูลที่ไม่ตรงของจริง
+    return { ok: true, eventId: ev.id, event: verifyEv };
   } catch (e) {
     return { ok: false, reason: 'fetch_error', detail: e.message };
   }
@@ -1113,135 +1145,28 @@ serve(async (req) => {
         continue;
       }
 
-      if (action === 'ack_teacher_add') {
-        // ── 2026-07-18 加：老師發起的加課，學生在 LINE 這邊按「我知道了」確認 ──
-        // 網站那邊也有一顆一樣功能的按鈕（見 ackTeacherAdd in classroom/index.html）
-        // 哪邊先按都算數，兩邊共用同一個欄位 teacher_add_ack_at，用 .is(null) 當保險閘。
-        // 跟 ack_teacher_cancel 同一套模式，只是欄位/文字換成加課版本。
-        const requestIdAdd = params.get('request');
-        if (!requestIdAdd) continue;
-
-        // 2026-07-19 改（稽核發現，YELLOW）：fail-closed，同上
-        const senderUserIdAckAdd = event.source && event.source.userId;
-        const { data: reqRowAckAdd } = await supabase.from('classroom_requests').select('token').eq('id', requestIdAdd).maybeSingle();
-        if (!reqRowAckAdd) continue;
-        const { data: stuRowAckAdd } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAckAdd.token).maybeSingle();
-        if (!senderUserIdAckAdd || !stuRowAckAdd || stuRowAckAdd.line_user_id !== senderUserIdAckAdd) {
-          console.error('[line-webhook] ⚠️ ack_teacher_add：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestIdAdd);
-          continue;
-        }
-
-        // 2026-07-19 加（稽核發現，ORANGE#6 同一套邏輯，加課版本）：重設 sla_reminder_sent 讓
-        // cron 可以在老師忘記按「確認新增 Calendar」時繼續提醒。
-        const { data: updatedAdd, error: errorAdd, count: countAdd } = await supabase
-          .from('classroom_requests')
-          .update({ teacher_add_ack_at: new Date().toISOString(), sla_reminder_sent: false }, { count: 'exact' })
-          .eq('id', requestIdAdd)
-          .is('teacher_add_ack_at', null)
-          .select('requested_date, requested_time');
-
+      // ══════════════════════════════════════════════════════════════════════
+      // 🗑️ 2026-07-31 (รอบ 4) — ปุ่มระบบเก่า「我知道了 / 婉拒」ของนักเรียน (เพิ่มคาบ)
+      //
+      // เดิมเป็นระบบ "ครูเสนอเวลาเพิ่มคาบ → นักเรียนกดยอมรับ/ปฏิเสธ → ครูค่อยกดลงปฏิทิน"
+      // Lin สั่งเลิกใช้ตั้งแต่ 2026-07-30 (ครูกดยืนยัน = ลงปฏิทินทันที ไม่ต้องรอนักเรียน)
+      // 2026-07-31 Lin รันเช็คแล้วคิวคำขอเก่าว่างจริง (ได้ 0) → ตรรกะทั้งหมดถูกลบทิ้งแล้ว
+      //
+      // ⚠️ แต่ "ลบทิ้งเฉยๆ ไม่ได้" — ต่างจากฝั่งเว็บ:
+      //    ปุ่มในแชท LINE ค้างอยู่ในประวัติแชทของนักเรียน "ตลอดกาล" ลบออกไม่ได้
+      //    นักเรียนเลื่อนแชทขึ้นไปเจอแล้วกดเมื่อไหร่ก็ได้ ถ้าไม่มีตัวรับ = ระบบเงียบสนิท
+      //    ไม่มีอะไรตอบเลย (ผิดกฎ RELIABILITY FIRST ข้อ 1: ห้ามเงียบ)
+      //    → เหลือไว้แค่ตัวตอบข้อความสั้นๆ บอกว่าปุ่มเลิกใช้แล้ว ไม่แตะฐานข้อมูล ไม่แตะ Calendar
+      //
+      // 🚫 ห้ามเอาตรรกะเดิมกลับมา — ดูหัวข้อ 📅 ระบบเพิ่มคาบเรียน ใน CLAUDE.md
+      // ══════════════════════════════════════════════════════════════════════
+      if (action === 'ack_teacher_add' || action === 'decline_add_class') {
+        console.warn('[line-webhook] ℹ️ มีคนกดปุ่มเก่าในประวัติแชท (' + action + ') — ตอบข้อความอย่างเดียว ไม่ทำอะไรกับข้อมูล. request=', params.get('request'));
         if (channelToken && event.replyToken) {
-          let replyTextAdd;
-          if (errorAdd) replyTextAdd = '⚠️ 確認失敗：' + errorAdd.message;
-          else if (!countAdd) replyTextAdd = 'ℹ️ 這筆通知可能已經確認過了';
-          else replyTextAdd = '✅ 已確認收到，老師會盡快處理';
-          await replyLine(channelToken, event.replyToken, replyTextAdd);
-        }
-
-        if (!errorAdd && countAdd && channelToken) {
-          const teacherUserIdAdd = Deno.env.get('LINE_TEACHER_USER_ID');
-          if (teacherUserIdAdd) {
-            const rdate = (updatedAdd && updatedAdd[0] && updatedAdd[0].requested_date) || '-';
-            const rtime = (updatedAdd && updatedAdd[0] && updatedAdd[0].requested_time) || '';
-            // 2026-07-20 改（Lin 要求：確認新增 Calendar 要能從 LINE 直接按）：跟 ack_teacher_cancel
-            // 推 confirm_cancel_delete 按鈕同一套模式，這裡附 action=confirm_add_class 的按鈕。
-            await pushLineFlex(
-              channelToken, teacherUserIdAdd,
-              '學生已確認收到加課通知',
-              '時間：' + rdate + ' ' + rtime + '\n\n可以直接按下方按鈕新增 Calendar，或到網站處理',
-              [{ label: '確認新增 Calendar', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(requestIdAdd), style: 'primary' }],
-            );
-          }
-        }
-        continue;
-      }
-
-      if (action === 'decline_add_class') {
-        // ── 2026-07-20 加（Lin 要求：老師一次提議好幾個加課時段，學生要能針對「每一個」時段
-        // 各自按接受或婉拒，不是整批一起回覆）── 跟 ack_teacher_add 同樣是學生在 LINE 這邊按的，
-        // 差別是這裡是「不要這個時段」。這個 request 本來就還沒建立 Calendar 事件（老師還沒按
-        // 「確認新增」），所以完全不用碰 Google Calendar，只需要：(1) 把這筆申請關掉，不讓老師之後
-        // 還誤按「確認新增」建立一個學生已經拒絕的時段 (2) 回覆學生 (3) 推播老師。
-        // status 欄位只有 CHECK constraint 允許的 pending/acknowledged 兩種值（同一份 constraint
-        // 見 confirm_cancel_delete 上面的說明），不能塞「declined」進 status——沿用既有的
-        // offer_status 欄位（本來就已經有 'declined' 這個值，只是原本只給改期提議用，這裡借用
-        // 同樣的語意：「學生說不要」），status 依照其他「結案」動作的慣例改成 acknowledged。
-        const requestIdDecline = params.get('request');
-        // 2026-07-20 加（除錯用）：這幾個「安全忽略」的分支以前完全不留紀錄，Lin 回報「按了婉拒，
-        // 老師完全沒收到通知」時根本查不出是卡在哪一關——現在每個分支都留 console.error，
-        // 之後到 Supabase Edge Functions 的 Logs 頁面查 line-webhook 就看得到卡在哪。
-        if (!requestIdDecline) { console.error('[line-webhook] ⚠️ decline_add_class：postback 沒帶 request id，已忽略。'); continue; }
-
-        const senderUserIdDecline = event.source && event.source.userId;
-        const { data: reqRowDecline } = await supabase
-          .from('classroom_requests')
-          .select('token,status,requested_date,requested_time,processing_started_at')
-          .eq('id', requestIdDecline)
-          .maybeSingle();
-        if (!reqRowDecline) { console.error('[line-webhook] ⚠️ decline_add_class：找不到這筆申請，已忽略。request=', requestIdDecline); continue; }
-
-        // 2026-07-20 加：跟 ack_teacher_add 同一套 fail-closed 身分檢查——按鈕點的人一定要是
-        // 這筆申請本人的學生（用 line_user_id 對照），對不上就安全忽略，不回覆任何內容。
-        const { data: stuRowDecline } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowDecline.token).maybeSingle();
-        if (!senderUserIdDecline || !stuRowDecline || stuRowDecline.line_user_id !== senderUserIdDecline) {
-          console.error('[line-webhook] ⚠️ decline_add_class：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestIdDecline);
-          continue;
-        }
-
-        if (reqRowDecline.status === 'acknowledged') {
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經處理過了');
-          continue;
-        }
-
-        // 2026-07-20 加（稽核發現 🟠 ORANGE）：以前這裡只擋 status='pending'，沒擋
-        // processing_started_at——如果老師剛好在同一瞬間按了「✅ 確認新增」（confirm_add_class 會先
-        // 搶 processing_started_at 鎖再建立 Calendar，狀態這時還是 'pending'），學生這邊「婉拒」可能
-        // 跟老師那邊的建立動作撞期，甚至在 Calendar 已經建立成功後才把這筆改成「declined」。加一樣的
-        // .is('processing_started_at', null) 閘，確保正在被處理中的申請不會被婉拒動作打斷。
-        const { data: updatedDecline, error: errorDecline, count: countDecline } = await supabase
-          .from('classroom_requests')
-          .update({ status: 'acknowledged', offer_status: 'declined', processing_started_at: null }, { count: 'exact' })
-          .eq('id', requestIdDecline)
-          .eq('status', 'pending')
-          .is('processing_started_at', null)
-          .select('requested_date, requested_time');
-
-        if (channelToken && event.replyToken) {
-          let replyTextDecline;
-          if (errorDecline) replyTextDecline = '⚠️ 婉拒失敗：' + errorDecline.message;
-          else if (!countDecline) replyTextDecline = 'ℹ️ 這筆可能剛好已經被處理過了';
-          else replyTextDecline = '已經幫你婉拒這堂課的時間了，如果有其他想約的時間可以再跟老師說';
-          await replyLine(channelToken, event.replyToken, replyTextDecline);
-        }
-
-        // 只有「這次真的成功把它關掉」（count>0）才推播老師，避免重複按/兩邊搶著按時推兩次
-        if (!errorDecline && countDecline && channelToken) {
-          const teacherUserIdDecline = Deno.env.get('LINE_TEACHER_USER_ID');
-          if (teacherUserIdDecline) {
-            const ddate = (updatedDecline && updatedDecline[0] && updatedDecline[0].requested_date) || reqRowDecline.requested_date || '-';
-            const dtime = (updatedDecline && updatedDecline[0] && updatedDecline[0].requested_time) || reqRowDecline.requested_time || '';
-            // 跟 accept_offer/decline_offer 推「都不方便」給老師同一套模式：附「💬 聯繫學生」按鈕，
-            // 不用只留純文字讓老師自己去網站找學生聯絡方式。
-            // 2026-07-20 改：這裡以前還是用舊的 #contact-student-<token> 開網站連結（跟網站那邊
-            // 4 個地方換掉的是同一個舊機制，這裡漏掉了）——換成跟其他地方一致的
-            // action=start_contact_student，按了直接在這個聊天視窗打字就能轉給學生。
-            await pushLineFlex(
-              channelToken, teacherUserIdDecline,
-              '學生婉拒了這堂加課',
-              '時間：' + ddate + ' ' + dtime + '（泰國時間）\n\n學生婉拒了這個時段，這筆申請已經關閉，不會再被誤新增，可以直接聯繫學生討論其他時間',
-              [{ label: '💬 聯繫學生', postbackData: 'action=start_contact_student&token=' + encodeURIComponent(reqRowDecline.token || '') }],
-            );
-          }
+          await replyLine(channelToken, event.replyToken,
+            'ℹ️ 這顆按鈕已經停用了（這是以前的舊訊息）。\n' +
+            '現在老師排課會直接排進課表，不需要你先按確認。\n' +
+            '如果時間不方便，請直接跟老師說一聲，或到網站按「申請取消課堂」。');
         }
         continue;
       }
@@ -1315,7 +1240,9 @@ serve(async (req) => {
 
         const { data: reqRowAddC, error: fetchErrAddC } = await supabase
           .from('classroom_requests')
-          .select('token,status,teacher_add_ack_at,requested_date,requested_time,proposed_end_time,proposed_recurring,proposed_until,proposed_weekday,student_name,initiated_by')
+          // 🗑️ 2026-07-31 (รอบ 4) เอา teacher_add_ack_at กับ initiated_by ออก — ไม่มีใครใช้แล้ว
+          //    หลังลบด่าน "ต้องรอนักเรียนกดยอมรับ" ทิ้ง (ดูคอมเมนต์ 🗑️ ด้านล่าง)
+          .select('token,status,requested_date,requested_time,proposed_end_time,proposed_recurring,proposed_until,proposed_weekday,student_name')
           .eq('id', requestIdAddC)
           .maybeSingle();
 
@@ -1331,10 +1258,12 @@ serve(async (req) => {
         // 再按一次「我知道了」）——只有「老師自己先提議時段」（initiated_by==='teacher'）才需要
         // 等 teacher_add_ack_at 這個關卡；學生自己申請的（initiated_by==='student'）跳過這關，
         // 直接往下走原子鎖＋建 Calendar。
-        if (reqRowAddC.initiated_by === 'teacher' && !reqRowAddC.teacher_add_ack_at) {
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 學生還沒按「我知道了」確認，先不能新增');
-          continue;
-        }
+        // 🗑️ 2026-07-31 (รอบ 4) ลบด่าน `initiated_by === 'teacher' && !teacher_add_ack_at` ทิ้ง
+        //   เดิม: ถ้าครูเป็นคนเสนอเวลา ต้องรอนักเรียนกด「我知道了」ก่อนถึงจะสร้างคาบได้
+        //   ตอนนี้ **ไม่มีอะไรในระบบตั้งค่า `teacher_add_ack_at` ได้อีกแล้ว** (ปุ่มฝั่งเว็บถูกลบ ปุ่มฝั่ง
+        //   LINE เหลือแต่ข้อความ) → ถ้าปล่อยด่านนี้ไว้ แถวเก่าจะติดค้างตลอดกาล ครูกดยังไงก็ได้
+        //   ข้อความ "รอนักเรียนกดยืนยัน" ที่ไม่มีวันเป็นจริง = หลอกครูเปล่าๆ
+        //   และตรงกับกฎปัจจุบันอยู่แล้ว: ครูกดยืนยัน = ลงปฏิทินทันที ไม่ต้องรอนักเรียน (Lin สั่ง 2026-07-30)
         if (!reqRowAddC.requested_date || !reqRowAddC.requested_time) {
           if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這筆申請缺少時間資料，請到網站手動處理');
           continue;
@@ -1362,6 +1291,146 @@ serve(async (req) => {
               '請跟學生約一個新的時間，或到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdAddC);
           }
           continue;
+        }
+
+        // ── 🟠 2026-07-31 (รอบ 4) เพิ่ม — ด่านตรวจชนปฏิทิน ────────────────────────────────
+        // พังยังไงถ้าไม่มีด่านนี้: ครูกดปุ่มเดียวใน LINE = สร้างคาบทับคาบที่มีอยู่แล้วได้ทันที
+        //   เงียบสนิท ไม่มีอะไรเตือน → นักเรียน 2 คนได้เวลาเดียวกัน รู้ตัวอีกทีตอนถึงคาบ
+        //   ฝั่งเว็บมีด่านนี้มาตลอด (classroom/index.html → checkFreebusyConflict + buildRowOccurrences)
+        //   แต่ประตู LINE ไม่เคยมีเลย — ปุ่ม 🔍 檢查是否衝突 มีไว้ให้ "กดเช็คเอง" เท่านั้น ไม่ได้บังคับ
+        //
+        // ✅ ยืนยันแล้ว 2026-07-31 ว่าปฏิทินที่ตรวจตรงนี้ (GOOGLE_CALENDAR_ID) เป็นใบเดียวกับที่เว็บใช้
+        //    (primary) — พิสูจน์จากของจริง: คาบที่ปุ่มนี้สร้าง (description = 系統自動建立（LINE 確認新增）
+        //    ซึ่งมีที่เดียวในระบบที่เขียนได้ คือบรรทัด ~1415 ในไฟล์นี้) ไปโผล่ใน primary จริง
+        //    ⚠️ ถ้าวันไหนมีคนเปลี่ยนค่า secret GOOGLE_CALENDAR_ID ต้องพิสูจน์ซ้ำ ไม่งั้นด่านนี้กลายเป็น
+        //       "ด่านหลอก" (ตรวจแล้วไม่เจออะไรเลยทุกครั้ง) ซึ่งแย่กว่าไม่มีด่าน
+        //
+        // ทำไมเช็ค "ก่อน" แย่งล็อก: จะได้ไม่ต้องปลดล็อกคืน (หลักเดียวกับด่านกันวันย้อนหลังข้างบน)
+        // ทำไมเช็คไม่ได้ = ไม่ให้ผ่าน (fail-closed): "เช็คไม่ได้" ต้องแปลว่า "ไม่อนุญาต" เสมอ
+        //   ถ้าปล่อยผ่านตอน Google ล่ม = ด่านจะหายไปเงียบๆ ตอนที่ต้องการมันที่สุด (ผิดกฎ RELIABILITY FIRST)
+        //   ฝั่งเว็บก็ทำแบบเดียวกัน (checkFreebusyConflict โยน error ออกมา ไม่ปล่อยผ่าน)
+        // ทำไมไม่มีปุ่ม "ยืนยันอีกรอบแล้วผ่าน": ต้องเก็บสถานะ "เคยเตือนแล้ว" ลงฐานข้อมูล = คอลัมน์ใหม่
+        //   + จุดพังใหม่ และกฎที่ Lin ตั้งไว้บอกว่าด่านจัดคาบไม่มีข้อยกเว้น → ส่งไปทำที่เว็บแทน
+        //
+        // คาบทุกสัปดาห์: ยิง Google "ครั้งเดียว" ครอบทั้งช่วง แล้วเอาช่วงไม่ว่างมาเทียบทีละสัปดาห์เอง
+        //   (ท่าเดียวกับฝั่งเว็บเป๊ะ) · ไม่ใส่ 固定到 = ไม่มีวันจบ → เช็คไปข้างหน้า 12 สัปดาห์ แล้วบอกครูตรงๆ
+        const RECURRING_CHECK_MAX_WEEKS_ADDC = 12; // ตรงกับ RECURRING_CHECK_MAX_WEEKS ฝั่งเว็บ
+        const startTimeChkAddC = reqRowAddC.requested_time;
+        const endTimeChkAddC = reqRowAddC.proposed_end_time || addOneHourTimeStr(startTimeChkAddC);
+
+        // 🔴 2026-07-31 (รอบ 4) แก้: ต้องครอบ try/catch — `bangkokToIso` ปิดท้ายด้วย .toISOString()
+        //    ซึ่ง **โยน error ทิ้ง** เมื่อเจอวันที่/เวลาที่แปลงไม่ได้ (ไม่ได้คืนค่า NaN อย่างที่เคยเข้าใจ)
+        //    เคสจริงที่เกิดได้: `proposed_end_time` เป็นคอลัมน์ text ถ้ามีค่าติดวินาทีมา ("21:00:00")
+        //    จะได้สตริงเพี้ยน "...T21:00:00:00+07:00" → โยน error → หลุดไปโดนตัวดักรวมด้านนอก
+        //    ครูจะเห็นแค่ "系統發生未預期錯誤" ซึ่งไม่บอกอะไรเลย
+        //    → ดักตรงนี้เอง แล้วบอกสาเหตุจริงๆ (ยังอยู่ก่อนแย่งล็อก ไม่มีอะไรต้องปลดคืน)
+        let firstStartMsAddC = NaN;
+        let firstEndMsAddC = NaN;
+        let untilMsAddC = null;
+        let timeParseErrAddC = '';
+        try {
+          firstStartMsAddC = new Date(bangkokToIso(reqRowAddC.requested_date, startTimeChkAddC)).getTime();
+          firstEndMsAddC = new Date(bangkokToIso(reqRowAddC.requested_date, endTimeChkAddC)).getTime();
+          if (reqRowAddC.proposed_recurring && reqRowAddC.proposed_until) {
+            // 🟡 แปลงวันจบไม่ได้ = ห้ามเดา ห้ามข้าม — ถ้าข้าม จะไปเช็คเต็ม 12 สัปดาห์เลยวันจบจริง
+            //    แล้วอาจ "เจอชน" ในสัปดาห์ที่คอร์สจบไปแล้ว = บล็อกคาบที่ไม่ควรถูกบล็อก โดยไม่มีคำอธิบาย
+            untilMsAddC = new Date(bangkokToIso(reqRowAddC.proposed_until, '23:59')).getTime();
+            if (!isFinite(untilMsAddC)) throw new Error('อ่านวันสิ้นสุด (固定到) ไม่ได้: ' + reqRowAddC.proposed_until);
+          }
+        } catch (eTimeAddC) {
+          timeParseErrAddC = (eTimeAddC && eTimeAddC.message) ? eTimeAddC.message : String(eTimeAddC);
+        }
+
+        // เวลาไม่สมเหตุสมผล = หยุดตรงนี้ ไม่ปล่อยไปสร้าง (เคสจริงที่เจอได้: คาบ 23:00 → addOneHourTimeStr
+        // คืน "00:00" ของ "วันเดียวกัน" เพราะหาร 24 → เวลาจบมาก่อนเวลาเริ่ม · ปล่อยไปต่อ Google จะตอบ 400
+        // แล้วครูจะเห็นแค่ error ดิบๆ ไม่รู้สาเหตุ — ดักตรงนี้แล้วบอกตรงๆ ดีกว่า)
+        if (timeParseErrAddC || !isFinite(firstStartMsAddC) || !isFinite(firstEndMsAddC) || firstEndMsAddC <= firstStartMsAddC) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: เวลาไม่สมเหตุสมผล ถูกปฏิเสธ.',
+            'date=', reqRowAddC.requested_date, 'start=', startTimeChkAddC, 'end=', endTimeChkAddC, 'request=', requestIdAddC);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken,
+              '🛑 這筆申請的時間怪怪的（' + reqRowAddC.requested_date + ' ' + startTimeChkAddC + '–' + endTimeChkAddC + '），沒有新增任何課堂。\n' +
+              (timeParseErrAddC ? ('原因：' + timeParseErrAddC + '\n') : '結束時間沒有比開始時間晚。\n') +
+              '請到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdAddC);
+          }
+          continue;
+        }
+
+        const occsAddC = [];
+        if (reqRowAddC.proposed_recurring) {
+          // ใช้ untilMsAddC ที่แปลงไว้แล้วข้างบน ห้ามแปลงใหม่ (สูตร 2 ชุด = วันไหนแก้ชุดเดียวก็เพี้ยน)
+          const durMsAddC = firstEndMsAddC - firstStartMsAddC;
+          for (let k = 0; k < RECURRING_CHECK_MAX_WEEKS_ADDC; k++) {
+            const sMs = firstStartMsAddC + k * 7 * 24 * 60 * 60 * 1000;
+            if (untilMsAddC !== null && sMs > untilMsAddC) break; // แปลงไม่ได้ถูกตีกลับไปแล้วข้างบน
+            occsAddC.push({ start: sMs, end: sMs + durMsAddC });
+          }
+        }
+        // กันพังแบบไม่คาดคิด: ถ้าไม่ได้สักครั้ง ถอยไปเช็คครั้งเดียว (ท่าเดียวกับ buildRowOccurrences ฝั่งเว็บ)
+        if (!occsAddC.length) occsAddC.push({ start: firstStartMsAddC, end: firstEndMsAddC });
+
+        const fbAddC = await checkFreebusyConflictService(
+          new Date(occsAddC[0].start).toISOString(),
+          new Date(occsAddC[occsAddC.length - 1].end).toISOString(),
+        );
+
+        if (!fbAddC.ok) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: ตรวจชนปฏิทินไม่สำเร็จ ถูกปฏิเสธ (fail-closed):',
+            fbAddC.reason, fbAddC.detail || '', 'request=', requestIdAddC);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken,
+              '🛑 沒辦法檢查行事曆有沒有衝突（' + (fbAddC.reason || '未知') + '），所以這次沒有新增任何課堂。\n' +
+              '「檢查不了」一律當成「不可以排」，避免不小心排到已經有課的時段。\n' +
+              '請稍後再按一次，或到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdAddC);
+          }
+          continue;
+        }
+
+        // 🟡 2026-07-31 (รอบ 4) แก้: นับ "ครั้งที่ชน" แบบไม่ซ้ำ
+        //   เดิมเก็บทุกคู่ (สัปดาห์ × ช่วงไม่ว่าง) → คาบประจำ 1 ชุดที่ชนกับคาบประจำอีกชุด
+        //   จะได้ 12 รายการ แล้วขึ้นว่า "…還有 7 筆" ทั้งที่จริงๆ ชนอยู่ชุดเดียว = ทำให้ครูตกใจเกินจริง
+        //   → รวมตามสัปดาห์ที่ชน (1 สัปดาห์นับ 1 ครั้ง) แล้วบอกจำนวนสัปดาห์ที่ชนตรงๆ
+        const hitWeeksAddC = new Map();
+        for (const ocAddC of occsAddC) {
+          for (const bAddC of (fbAddC.busy || [])) {
+            const bStart = new Date(bAddC.start).getTime();
+            const bEnd = new Date(bAddC.end).getTime();
+            // ทับกันจริงเมื่อ "เริ่มก่อนที่เราจบ" และ "จบหลังที่เราเริ่ม" (ชนขอบพอดีไม่นับว่าทับ)
+            if (bStart < ocAddC.end && bEnd > ocAddC.start && !hitWeeksAddC.has(ocAddC.start)) {
+              hitWeeksAddC.set(ocAddC.start, bAddC);
+            }
+          }
+        }
+
+        if (hitWeeksAddC.size) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: ชนกับคาบอื่น ถูกปฏิเสธ. ชน', hitWeeksAddC.size,
+            'สัปดาห์ จากทั้งหมด', occsAddC.length, 'request=', requestIdAddC);
+          if (channelToken && event.replyToken) {
+            // โชว์แค่ 5 บรรทัดแรก — ข้อความ LINE ยาวเกินจะถูกตัด แล้วบรรทัดสำคัญจะหลุดหาย
+            const entriesAddC = Array.from(hitWeeksAddC.entries());
+            const listAddC = entriesAddC.slice(0, 5).map(([ocStart, bHit]) =>
+              '・' + (formatIsoInTz(new Date(ocStart).toISOString(), 'Asia/Bangkok') || new Date(ocStart).toISOString())
+              + ' ← 撞到 ' + (formatIsoInTz(bHit.start, 'Asia/Bangkok') || bHit.start)
+              + ' – ' + (formatIsoInTz(bHit.end, 'Asia/Bangkok') || bHit.end)).join('\n');
+            await replyLine(channelToken, event.replyToken,
+              '🛑 這個時段跟行事曆上已經有的課／行程撞到了，沒有新增任何課堂（泰國時間）：\n' + listAddC +
+              (entriesAddC.length > 5 ? '\n・…還有 ' + (entriesAddC.length - 5) + ' 週也撞到' : '') +
+              '\n\n請跟學生換一個時間，或到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdAddC);
+          }
+          continue;
+        }
+
+        // 🔎 คาบทุกสัปดาห์ที่ไม่มีวันจบ = เช็คได้แค่ 12 สัปดาห์แรก ต้องบอกครูตรงๆ ห้ามให้เข้าใจผิดว่าเช็คครบ
+        //    (ถ้า 固定到 อยู่ในช่วงที่เช็คไปแล้ว = เช็คครบจริง ห้ามเตือนหลอกให้ครูตกใจฟรี)
+        let weeksNoteAddC = '';
+        if (reqRowAddC.proposed_recurring) {
+          const lastOccMsAddC = occsAddC[occsAddC.length - 1].start;
+          // ใช้ untilMsAddC ตัวเดียวกับที่ด่านตรวจชนใช้ ห้ามแปลงใหม่ (สูตร 2 ชุด = เพี้ยนได้)
+          const checkedAllAddC = untilMsAddC !== null
+            && (lastOccMsAddC + 7 * 24 * 60 * 60 * 1000 > untilMsAddC);
+          weeksNoteAddC = checkedAllAddC
+            ? '\n（已逐週檢查 ' + occsAddC.length + ' 堂，全部沒撞到）'
+            : '\n（已逐週檢查最近 ' + occsAddC.length + ' 堂，更久以後的還沒檢查，請自己留意）';
         }
 
         // ── 原子鎖：跟 confirm_cancel_delete 同一個欄位、同一套語意，防止跟網站同時搶著新增 ──
@@ -1407,8 +1476,11 @@ serve(async (req) => {
           continue;
         }
 
-        const startTimeAddC = reqRowAddC.requested_time;
-        const endTimeAddC = reqRowAddC.proposed_end_time || addOneHourTimeStr(startTimeAddC);
+        // 🔴 2026-07-31 (รอบ 4): ใช้ค่าเดียวกับที่ด่านตรวจชนใช้ ห้ามคำนวณใหม่
+        //   ถ้าคำนวณใหม่ = มีสูตรเวลา 2 ชุดในก้อนเดียวกัน วันไหนแก้ชุดเดียวจะกลายเป็น
+        //   "ตรวจชนเวลาหนึ่ง แต่สร้างจริงอีกเวลาหนึ่ง" = ด่านตรวจชนไร้ความหมายทันที
+        const startTimeAddC = startTimeChkAddC;
+        const endTimeAddC = endTimeChkAddC;
         const evBodyAddC = {
           summary: reqRowAddC.student_name || '-',
           colorId: '6', // 跟網站端 createCalendarClassEventForStudent 同一色（Tangerine），2026-07-15 就對過了
@@ -1437,6 +1509,57 @@ serve(async (req) => {
             await replyLine(channelToken, event.replyToken, '⚠️ 新增 Calendar 失敗（可以重新點一次，或到網站手動處理）\n原因：' + (createResultAddC.reason || '未知') + (createResultAddC.detail ? '\n' + createResultAddC.detail : ''));
           }
           continue;
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // 🟡 2026-07-31 (รอบ 4) เพิ่ม — สำรอง "การเพิ่มคาบจาก LINE" ไว้ให้กดคืนค่าได้
+        //
+        // เดิมไม่สมมาตร: เพิ่มคาบจาก "เว็บ" มีปุ่ม ↩️ 復原 (ทำไปแล้ววันนี้ classroom/index.html
+        //   บรรทัด ~2424 `backupCalendarEvent(null, token, 'create', ev, null)`)
+        //   แต่เพิ่มจาก "ปุ่มใน LINE" ไม่มีอะไรเลย → กดผิดต้องเปิด Google Calendar ไปลบเอง
+        //   + ต้องไปลบแถวตารางเรียนเองอีกที่ ไม่งั้นหน้าเว็บนักเรียนยังโชว์คาบนั้นอยู่
+        //
+        // ✅ ทำได้แล้วเพราะยืนยัน 2026-07-31 ว่า GOOGLE_CALENDAR_ID (ที่ตรงนี้สร้าง) กับ primary
+        //    (ที่ปุ่ม ↩️ 復原 ฝั่งเว็บสั่งลบ) เป็นปฏิทินใบเดียวกันจริง — ถ้าคนละใบ ปุ่มคืนค่าจะลบไม่ได้
+        //
+        // ⚠️ ห้ามให้ขั้นนี้ล้มแล้วหยุดทั้งงาน (ต่างจากตอนลบ/ย้าย ที่สำรองพัง = ต้องหยุดทันที)
+        //    เพราะคาบถูกสร้างขึ้นจริงไปแล้วก่อนถึงบรรทัดนี้ — ถ้าหยุดแล้วตอบว่าไม่สำเร็จ ครูจะกดซ้ำ
+        //    = ได้คาบซ้อนกัน 2 คาบจริง (หลักเดียวกับฝั่งเว็บเป๊ะ)
+        //    → สำรองไม่สำเร็จก็ไปต่อ แต่ต้อง (1) เตือนดังๆ ใน console (2) บอกครูในข้อความตอบกลับ
+        //      ว่าคาบนี้จะไม่มีปุ่มคืนค่า ห้ามเงียบ (กฎ RELIABILITY FIRST ข้อ 1)
+        // ════════════════════════════════════════════════════════════════════════════
+        let backupWarnAddC = '';
+        try {
+          const evForBackupAddC = createResultAddC.event || Object.assign({ id: createResultAddC.eventId }, evBodyAddC);
+          const oldStartAddC = (evForBackupAddC.start && (evForBackupAddC.start.dateTime || evForBackupAddC.start.date))
+            || bangkokToIso(reqRowAddC.requested_date, startTimeAddC);
+          const { data: bkDataAddC, error: bkErrAddC } = await supabase
+            .from('classroom_calendar_backups')
+            .insert({
+              request_id: requestIdAddC,
+              token: reqRowAddC.token || null,
+              action: 'create',
+              old_event_id: createResultAddC.eventId,
+              new_event_id: null,   // ฝั่งเว็บใส่ null สำหรับ action='create' เหมือนกัน (มีแต่ move ที่ใส่)
+              old_event_json: evForBackupAddC,
+              old_start: oldStartAddC,
+              new_start: null,
+            })
+            .select()
+            .maybeSingle();
+          if (bkErrAddC || !bkDataAddC) {
+            const whyBkAddC = bkErrAddC ? bkErrAddC.message : 'ไม่ได้ข้อมูลกลับมา';
+            console.error('[line-webhook] ⚠️ confirm_add_class: เพิ่มคาบสำเร็จ แต่บันทึกข้อมูลสำรองไม่สำเร็จ '
+              + '(คาบนี้จะไม่มีปุ่ม ↩️ 復原 ให้กด):', whyBkAddC, 'request=', requestIdAddC, 'calendar_event_id=', createResultAddC.eventId);
+            backupWarnAddC = '\n⚠️ 這堂課沒有存到「可復原」的紀錄（' + whyBkAddC + '），\n'
+              + '如果加錯了，要自己到 Google Calendar 刪掉。';
+          }
+        } catch (bkCatchAddC) {
+          const whyBkCatchAddC = (bkCatchAddC && bkCatchAddC.message) ? bkCatchAddC.message : String(bkCatchAddC);
+          console.error('[line-webhook] ⚠️ confirm_add_class: บันทึกข้อมูลสำรองพังกลางคัน (คาบยังอยู่ครบ):',
+            whyBkCatchAddC, 'request=', requestIdAddC, 'calendar_event_id=', createResultAddC.eventId);
+          backupWarnAddC = '\n⚠️ 這堂課沒有存到「可復原」的紀錄（' + whyBkCatchAddC + '），\n'
+            + '如果加錯了，要自己到 Google Calendar 刪掉。';
         }
 
         // Calendar 建立成功——寫進課表資料庫（recurring_days 或 schedule，看是不是每週固定）
@@ -1509,7 +1632,11 @@ serve(async (req) => {
           if (channelToken && event.replyToken) {
             // 2026-07-26 แก้：เดิมข้อความตอบกลับไม่บอกสาเหตุเลย ครูที่กดจาก LINE จะไม่มีทางรู้ว่า
             // เกิดอะไรขึ้น (โดยเฉพาะเคส "ยังไม่ได้รัน SQL" ที่มีวิธีแก้ชัดเจนอยู่ในข้อความ)
-            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經建立成功了（事件 ID: ' + createResultAddC.eventId + '），但存課表資料庫失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdAddC + '），不要重複點這顆按鈕\n\n原因：' + (dbErrAddC.message || '未知'));
+            // 🟡 2026-07-31 (รอบ 4) เติมทางออก: ตอนนี้มีแถวสำรองแล้ว → ถ้าไม่อยากแก้มือ กดปุ่มคืนค่าลบทิ้งได้
+            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經建立成功了（事件 ID: ' + createResultAddC.eventId + '），但存課表資料庫失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdAddC + '），不要重複點這顆按鈕\n\n原因：' + (dbErrAddC.message || '未知')
+              // ⚠️ ชื่อหัวข้อต้องตรงกับที่ขึ้นบนเว็บจริง = 「↩️ 最近處理」(classroom/index.html)
+              //    เขียนชื่อผิดครูจะหาไม่เจอแล้วคิดว่าไม่มีปุ่มนี้ (เคยเขียนผิดเป็น「📦 課堂備份」)
+              + (backupWarnAddC ? backupWarnAddC : '\n\n💡 不想手動處理的話，可以到網站的「↩️ 最近處理」區塊按 ↩️ 復原，把剛剛這堂課直接刪掉重來。'));
           }
           continue;
         }
@@ -1585,6 +1712,13 @@ serve(async (req) => {
         // 2026-07-31 加：ปุ่มนี้ไม่ได้เช็คโควตาคาบคงเหลือ (ฝั่งเว็บเช็ค) — ต้องบอกครูตรงๆ ห้ามให้เข้าใจผิด
         //   ไม่ย้ายสูตรคิดโควตามาไว้ที่นี่ เพราะจะกลายเป็นสูตร 2 ชุดที่ต้องแก้พร้อมกันตลอดไป
         replyMsgAddC += '\n（提醒：這顆按鈕沒有檢查剩餘堂數，要看的話請到網站加課）';
+
+        // 🟠 2026-07-31 (รอบ 4): คาบทุกสัปดาห์ที่ไม่มีวันจบ ตรวจชนได้แค่ 12 สัปดาห์แรก
+        //   ต้องบอกครูตรงๆ ห้ามให้เข้าใจผิดว่าตรวจครบตลอดกาล (ท่าเดียวกับฝั่งเว็บ)
+        if (weeksNoteAddC) replyMsgAddC += weeksNoteAddC;
+
+        // 🟡 2026-07-31 (รอบ 4): สำรองไม่สำเร็จ = ต้องบอกครูตรงๆ ห้ามเงียบ (ดูเหตุผลที่ก้อนสำรองด้านบน)
+        if (backupWarnAddC) replyMsgAddC += backupWarnAddC;
 
         if (channelToken && event.replyToken) {
           await replyLine(channelToken, event.replyToken, replyMsgAddC);

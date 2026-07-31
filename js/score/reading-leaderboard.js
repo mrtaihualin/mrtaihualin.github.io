@@ -14,11 +14,13 @@
   // ── เกมของกระดานนี้ ──
   // v3 (LIN 2026-07-03): เพิ่ม 'word_order' (語序練習室) — เดิมรองรับแค่ typing/reading
   // v4 (LIN 2026-07-03): เพิ่ม 'lego' (造句練習室) — คนละเกมกับ word_order ห้ามใช้ key ปนกัน
+  // v5 (LIN 2026-07-31): เพิ่ม 'mix' (綜合遊戲/mix-board.html) — กระดานคะแนนของเกมรวม แยกจาก 4 เกมเดิม
   var BOARD_GAME = (window.READING_BOARD_GAME === 'typing') ? 'typing'
     : (window.READING_BOARD_GAME === 'word_order') ? 'word_order'
-    : (window.READING_BOARD_GAME === 'lego') ? 'lego' : 'reading';
-  var BOARD_GAME_ZH = (BOARD_GAME === 'typing') ? '打字' : (BOARD_GAME === 'word_order') ? '語序' : (BOARD_GAME === 'lego') ? '造句' : '拼讀';
-  var BOARD_GAME_PAGE = (BOARD_GAME === 'typing') ? 'typing-game.html' : (BOARD_GAME === 'word_order') ? 'word-order.html' : (BOARD_GAME === 'lego') ? 'lego.html' : 'reading-game.html';
+    : (window.READING_BOARD_GAME === 'lego') ? 'lego'
+    : (window.READING_BOARD_GAME === 'mix') ? 'mix' : 'reading';
+  var BOARD_GAME_ZH = (BOARD_GAME === 'typing') ? '打字' : (BOARD_GAME === 'word_order') ? '語序' : (BOARD_GAME === 'lego') ? '造句' : (BOARD_GAME === 'mix') ? '綜合' : '拼讀';
+  var BOARD_GAME_PAGE = (BOARD_GAME === 'typing') ? 'typing-game.html' : (BOARD_GAME === 'word_order') ? 'word-order.html' : (BOARD_GAME === 'lego') ? 'lego.html' : (BOARD_GAME === 'mix') ? 'mix.html' : 'reading-game.html';
 
   // ── ตารางแบดจ์ (ก๊อปจาก reading-game.html อ่านอย่างเดียว เพื่อวาดบนกระดาน) — LIN 2026-06-22 ──
   var LB_BADGES = {

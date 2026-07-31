@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DKVQE30982');
+  window.GA_CATEGORY='game';
+</script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+</script>
+<!-- Supabase (กระดานจัดอันดับ) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/core/supabase-config.js?v=5"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>綜合遊戲排行榜 — 泰華眼裡的泰語教學</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/shared.css?v=14">
+</head>
+<body>
+<!-- NAV -->
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語遊戲練習室</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<!-- PAGE NAV STRIP -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="pricing.html">課程・費用</a>
+  <a href="faq.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
+<!-- CONTENT -->
+<div class="section-wrap" style="padding-top:34px;padding-bottom:60px;">
+  <div style="text-align:center;margin-bottom:8px;">
+    <span class="eyebrow" style="color:var(--gold-bright);">綜合遊戲玩家排行榜</span>
+    <h2 class="section-heading" style="margin:6px 0 0;">🏆 綜合遊戲排行榜</h2>
+  </div>
+  <!-- 登入 widget（ชื่อ/✏️/🏆/📊/登出）— LIN 2026-07-03 -->
+  <div id="lb-userslot" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 0 0;"></div>
+  <p style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-size:13px;line-height:1.8;margin:14px auto 30px;max-width:600px;text-align:center;">
+    依「累積總分」排名，每週一重置。練得越多，排名越高！
+  </p>
+
+  <div id="lb-root" style="max-width:560px;margin:0 auto;"></div>
+
+  <div style="text-align:center;margin-top:30px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="mix.html" style="display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">🎮 前往綜合遊戲累積分數</a>
+    <a href="my-progress.html" style="display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 22px;font-weight:700;font-size:14px;">📊 我的成績</a>
+  </div>
+
+  <!-- 🎯 soft CTA — LIN 2026-07-03 -->
+  <div id="soft-cta-lb-mix" style="max-width:560px;margin:0 auto;"></div>
+
+  <!-- 其他排行榜 cross-link — LIN 2026-07-02 -->
+  <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);text-align:center;margin:22px 0 0;">
+    其他排行榜：
+    <a href="all-board.html" style="color:#8B6310;font-weight:800;text-decoration:underline;text-underline-offset:3px;">🏆 總排行榜</a>
+    ·
+    <a href="leaderboard.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{category:'game',target:'leaderboard',from:'mix_board'})}catch(e){}">🎵 聲調排行榜</a>
+    ·
+    <a href="reading-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_board',from:'mix_board'})}catch(e){}">✍️ 拼讀排行榜</a>
+    ·
+    <a href="typing-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{category:'game',target:'typing_board',from:'mix_board'})}catch(e){}">⌨️ 打字排行榜</a>
+    ·
+    <a href="lego-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego_board',from:'mix_board'})}catch(e){}">🧱 造句排行榜</a>
+    ·
+    <a href="word-order-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order_board',from:'mix_board'})}catch(e){}">🧩 語序排行榜</a>
+  </p>
+</div>
+
+<div style="height:44px;background:var(--off-white);"></div>
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="js/core/shared.min.js?v=15"></script>
+<script src="js/core/auth-widget.js?v=2"></script>
+<script>window.READING_BOARD_GAME = 'mix';</script>
+<script src="js/score/reading-leaderboard.js?v=5"></script>
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  if (window.SITE_AUTH) SITE_AUTH.renderBadge('lb-userslot', { leaderboardHref: 'mix-board.html', progressHref: 'my-progress.html' });
+});
+</script>
+<script>
+// ── GA4 Event Tracking: mix-board.html ───────────────────────────
+
+// [1] คนเข้าดู leaderboard
+window.addEventListener('DOMContentLoaded', function() {
+  gtag('event','leaderboard_viewed',{category:'game', source_page: 'mix_leaderboard' });
+  if(window.renderSoftCTA) renderSoftCTA('soft-cta-lb-mix','lb_mix','想更快衝上排行榜？很多學生會搭配真人課加強聽說');
+});
+
+// [2] คลิกปุ่มกลับไปเล่นเกม — ใช้ delegation เพราะลิงก์ในกระดาน (#lb-root) ถูก JS สร้างทีหลัง
+document.addEventListener('click', function(e) {
+  var a = e.target && e.target.closest ? e.target.closest('a[href*="games.html"], a[href*="mix.html"], a[href*="tone-finder"], a[href*="reading-game"], a[href*="typing-game"]') : null;
+  if (!a || !a.closest('.section-wrap')) return; // นับเฉพาะปุ่มในเนื้อหา ไม่นับเมนูบน
+  gtag('event','play_again_click',{category:'game', source: 'mix_leaderboard' });
+});
+// ────────────────────────────────────────────────────────────────────
+</script>
+</body>
+</html>

@@ -2,13 +2,15 @@
 // Supabase Edge Function: class-reminder-cron
 // หน้าที่: รันอัตโนมัติทุก ~5 นาที (ผ่าน pg_cron ดูไฟล์ SQL_pg_cron_class-reminder_2026-07-06.sql)
 //   0. เช็คตาราง classroom_schedule ว่ามีคาบไหน "อีก 24 ชม.จะถึงเวลาเรียน" (ยังไม่เคยส่งเตือน) → ส่ง LINE เตือนล่วงหน้า
-//      (เพิ่ม 2026-07-18 — เตือนแยกอันที่ 2 ไม่ทับของเดิม)
-//   1. เช็คตาราง classroom_schedule ว่ามีคาบไหน "ใกล้ถึงเวลาเรียน" (ยังไม่เคยส่งเตือน) → ส่ง LINE เตือนก่อนเรียน (30 นาที)
-//   2. เช็คว่ามีคาบไหน "เพิ่งจบไป" (ยังไม่เคยส่งขอบคุณ) → ส่ง LINE ขอบคุณหลังเรียน
-//   3. ส่งเฉพาะนักเรียนที่ "เชื่อม LINE แล้ว" (มี line_user_id) — คนที่ยังไม่เชื่อมจะไม่ได้รับ (ไม่ error ไม่ค้าง)
-//   4. ส่งสำเร็จแล้วทำเครื่องหมาย line_reminder24h_sent / line_reminder_sent / line_followup_sent = true กันส่งซ้ำ
+//   1. ส่งเฉพาะนักเรียนที่ "เชื่อม LINE แล้ว" (มี line_user_id) — คนที่ยังไม่เชื่อมจะไม่ได้รับ (ไม่ error ไม่ค้าง)
+//   2. ส่งสำเร็จแล้วทำเครื่องหมาย line_reminder24h_sent = true กันส่งซ้ำ
 //      ⚠️ ก่อน deploy ต้องรัน supabase/sql/2026-07-18_reminder24h_column.sql ใน Supabase SQL Editor ก่อน
 //      (เพิ่มคอลัมน์ line_reminder24h_sent ให้ตาราง classroom_schedule) ไม่งั้นฟังก์ชันจะ error
+//
+// 🔴 2026-07-31 แก้ตามที่ Lin สั่ง: เอาเตือนก่อนเรียน 30 นาที + ข้อความขอบคุณหลังเรียนออกทั้งคู่
+//   (กินโควตา LINE push ฟรี 200 ครั้ง/เดือนเกินไป — เหลือแค่เตือนล่วงหน้า 24 ชม. อันเดียว)
+//   คอลัมน์ line_reminder_sent / line_followup_sent ในตาราง classroom_schedule ยังอยู่ในฐานข้อมูล
+//   (ไม่ได้ลบคอลัมน์ทิ้ง) แค่โค้ดนี้เลิกอ่าน/เขียนแล้ว ไม่กระทบอะไร
 //
 // ⚠️ เรื่องเขตเวลา (สำคัญมาก ต้องยืนยันกับ Lin ก่อนใช้จริง):
 //   lesson_date/start_time ใน classroom_schedule เป็นเวลาที่อ่านจาก Google Calendar ผ่านเบราว์เซอร์ของ Lin
@@ -48,10 +50,8 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
-const REMINDER_BEFORE_MIN = 30; // เตือนล่วงหน้ากี่นาทีก่อนเริ่มเรียน
-// 2026-07-18 加：เตือนล่วงหน้า 24 ชม. — เพิ่มเป็น "อันที่ 2" ตามที่ Lin ยืนยัน (ไม่ทับของเดิม 30 นาที)
 const REMINDER24H_BEFORE_MIN = 24 * 60;
-const FOLLOWUP_AFTER_MIN = 60;  // ถ้าไม่มี end_time ให้สมมติคาบยาวกี่นาที (ไว้คำนวณเวลา "จบแล้ว")
+const FOLLOWUP_AFTER_MIN = 60;  // ถ้าไม่มี end_time ให้สมมติคาบยาวกี่นาที (ใช้คำนวณเวลาจบ สำหรับโชว์ในข้อความเตือน 24 ชม.)
 const CATCH_WINDOW_MIN = 20;    // หน้าต่างจับเวลาหลังจุดที่ควรส่ง (กันพลาดถ้า cron รันไม่ตรงเป๊ะ)
 
 async function pushLineMessages(channelToken, targetUserId, messages) {
@@ -61,10 +61,6 @@ async function pushLineMessages(channelToken, targetUserId, messages) {
     body: JSON.stringify({ to: targetUserId, messages }),
   });
   if (!res.ok) throw new Error('LINE API ' + res.status + ': ' + (await res.text()));
-}
-
-async function pushLine(channelToken, targetUserId, message) {
-  return pushLineMessages(channelToken, targetUserId, [{ type: 'text', text: String(message).slice(0, 4900) }]);
 }
 
 // 2026-07-26 เพิ่ม："จอง" ก่อนส่ง — atomic update (WHERE field=false) ให้ Postgres เป็นคนตัดสินว่า
@@ -90,33 +86,7 @@ async function releaseReminderIds(supabase, fieldName, ids) {
   }
 }
 
-// 2026-07-11 加：上課前提醒改用 Flex Message，只留一顆按鈕「進入 Google Meet」（金色，跟網站同一套主題色）
-// 查看課表／申請改期的入口移到網站「下一堂課」卡片裡的「在 LINE 中開啟」按鈕，這裡不重複放
-function buildReminderFlex(timeLabel, meetUrl) {
-  return {
-    type: 'flex',
-    altText: '📢 再過 30 分鐘就要上課囉！',
-    contents: {
-      type: 'bubble',
-      body: {
-        type: 'box', layout: 'vertical', spacing: 'md',
-        contents: [
-          { type: 'text', text: '📢 再過 30 分鐘就要上課囉！', weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
-          { type: 'text', text: timeLabel + ' 泰語課\n點下方按鈕直接進入 Google Meet', size: 'sm', color: '#6b6b6b', wrap: true },
-        ],
-      },
-      footer: {
-        type: 'box', layout: 'vertical', spacing: 'sm',
-        contents: [
-          { type: 'button', style: 'primary', height: 'sm', color: '#8B6310',
-            action: { type: 'uri', label: '進入 Google Meet', uri: meetUrl } },
-        ],
-      },
-    },
-  };
-}
-
-// 2026-07-18 加：เตือนล่วงหน้า 24 ชม. — ข้อความคนละแบบกับ 30 นาที (บอกวันที่ด้วย เพราะเตือนข้ามวัน)
+// 2026-07-18 加：เตือนล่วงหน้า 24 ชม. (บอกวันที่ด้วย เพราะเตือนข้ามวัน)
 // ไม่มีปุ่ม Google Meet (ยังไกลเกินไป ใส่ไปก็ไม่มีประโยชน์ กันกดผิดเวลา) เป็นข้อความล้วนพอ
 function buildReminder24hFlex(dateLabel, timeLabel) {
   // 2026-07-18 加（Lin 要求）：แถบแจ้งเตือน (altText) ต้องเห็นเวลาเลยโดยไม่ต้องกดเปิด LINE ก่อน
@@ -202,9 +172,9 @@ serve(async (req) => {
 
     const { data: rows, error } = await supabase
       .from('classroom_schedule')
-      .select('id, token, lesson_date, start_time, end_time, line_reminder_sent, line_followup_sent, line_reminder24h_sent')
+      .select('id, token, lesson_date, start_time, end_time, line_reminder24h_sent')
       .in('lesson_date', [yestIso, todayIso, tomorrowIso])
-      .or('line_reminder_sent.eq.false,line_followup_sent.eq.false,line_reminder24h_sent.eq.false');
+      .eq('line_reminder24h_sent', false);
 
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     if (!rows || !rows.length) return new Response(JSON.stringify({ ok: true, processed: 0 }), { status: 200 });
@@ -250,12 +220,10 @@ serve(async (req) => {
         ? localToUtcMs(repRow.lesson_date, repRow.end_time, tz)
         : startMs + FOLLOWUP_AFTER_MIN * 60000;
 
-      const idsNeedReminder = groupRows.filter(r => !r.line_reminder_sent).map(r => r.id);
-      const idsNeedFollowup = groupRows.filter(r => !r.line_followup_sent).map(r => r.id);
       const idsNeedReminder24h = groupRows.filter(r => !r.line_reminder24h_sent).map(r => r.id);
 
-      // 0) เตือนล่วงหน้า 24 ชม.：อยู่ในหน้าต่าง [start - 24hr - CATCH_WINDOW, start - 24hr] และยังไม่เคยส่ง
-      // (เพิ่ม 2026-07-18 — เป็น "อันที่ 2" แยกจากเตือน 30 นาทีก่อน ไม่ทับกัน)
+      // เตือนล่วงหน้า 24 ชม.：อยู่ในหน้าต่าง [start - 24hr - CATCH_WINDOW, start - 24hr] และยังไม่เคยส่ง
+      // (เพิ่ม 2026-07-18 · 2026-07-31 เหลือเตือนอันนี้อันเดียว — 30 นาที + หลังเรียนถูกเอาออกแล้ว)
       if (idsNeedReminder24h.length) {
         const minutesToStart = (startMs - nowMs) / 60000;
         if (minutesToStart <= REMINDER24H_BEFORE_MIN && minutesToStart >= REMINDER24H_BEFORE_MIN - CATCH_WINDOW_MIN) {
@@ -282,69 +250,7 @@ serve(async (req) => {
           // claimed24h.length === 0 = อีกรอบ (cron ที่ทับเวลากัน) จองไปแล้ว → ข้ามเงียบๆ ไม่ใช่ error
         }
       }
-
-      // 1) เตือนก่อนเรียน：อยู่ในหน้าต่าง [start - 30min, start] และยังไม่เคยส่ง (สักแถวในกลุ่ม)
-      if (idsNeedReminder.length) {
-        const minutesToStart = (startMs - nowMs) / 60000;
-        if (minutesToStart <= REMINDER_BEFORE_MIN && minutesToStart >= -CATCH_WINDOW_MIN) {
-          // 2026-07-26 แก้：จอง (claim) ก่อนส่งเสมอ — กันส่งซ้ำถ้า cron 2 รอบทับเวลากันพอดี (ดูคอมเมนต์บนสุดไฟล์)
-          const { claimedIds: claimedReminder, error: claimErr } = await claimReminderIds(supabase, 'line_reminder_sent', idsNeedReminder);
-          if (claimErr) {
-            console.error('[class-reminder-cron] จองสิทธิ์ส่งเตือนก่อนเรียน ไม่สำเร็จ（ข้ามรอบนี้ กันส่งซ้ำ）：', claimErr.message, 'ids=', idsNeedReminder);
-            errCount++;
-          } else if (claimedReminder.length) {
-            try {
-              // 2026-07-14 改（Lin 回報學生對時區搞混，要求「一定要用學生自己的時間」）：
-              // 原本這裡直接拿老師輸入的泰國時間字串給學生看，完全沒管學生自己的時區。
-              // 現在改成：學生填過自己的時區 (pending_student_tz) 就用 startMs/endMs（已經是
-              // 絕對時間點了）換算成他自己時區的 HH:MM；沒填過時區的舊資料才退回泰國時間
-              // （沒有其他資訊可用，只能這樣，但至少不會是錯的换算）。
-              const studentTz = s.pending_student_tz;
-              const timeLabel = studentTz
-                ? formatHHMMInTz(startMs, studentTz) + (normalizedEndTime ? '–' + formatHHMMInTz(endMs, studentTz) : '')
-                : (normalizeTimeStr(repRow.start_time) || repRow.start_time) + (normalizedEndTime ? '–' + normalizedEndTime : '');
-              if (s.meet) {
-                // 2026-07-11 改：Flex Message + 一顆「進入 Google Meet」按鈕（金色主題）
-                await pushLineMessages(channelToken, s.line_user_id, [buildReminderFlex(timeLabel, s.meet)]);
-              } else {
-                // 還沒有 Meet 連結（老師還沒補上）→ 照舊發純文字，不放按鈕，避免按鈕連到空連結
-                await pushLine(channelToken, s.line_user_id,
-                  '📢 提醒：等一下 ' + timeLabel + ' 有泰語課囉！\n老師還在準備課堂連結，請直接聯絡老師 ✨');
-              }
-              sentCount++;
-            } catch (e) {
-              errCount++;
-              console.error('[class-reminder-cron] 發送上課前提醒失敗，ids=' + claimedReminder.join(',') + '：', e && e.message ? e.message : e);
-              await releaseReminderIds(supabase, 'line_reminder_sent', claimedReminder); // คืนสิทธิ์ ให้รอบหน้าลองส่งใหม่
-            }
-          }
-          // claimedReminder.length === 0 = อีกรอบ (cron ที่ทับเวลากัน) จองไปแล้ว → ข้ามเงียบๆ ไม่ใช่ error
-        }
-      }
-
-      // 2) 下課後訊息：過了下課時間，且還沒發過（分組裡任一筆）
-      if (idsNeedFollowup.length) {
-        const minutesSinceEnd = (nowMs - endMs) / 60000;
-        if (minutesSinceEnd >= 0 && minutesSinceEnd <= CATCH_WINDOW_MIN) {
-          // 2026-07-26 แก้：จอง (claim) ก่อนส่งเสมอ — กันส่งซ้ำถ้า cron 2 รอบทับเวลากันพอดี (ดูคอมเมนต์บนสุดไฟล์)
-          const { claimedIds: claimedFollowup, error: claimErr2 } = await claimReminderIds(supabase, 'line_followup_sent', idsNeedFollowup);
-          if (claimErr2) {
-            console.error('[class-reminder-cron] จองสิทธิ์ส่งข้อความหลังเรียน ไม่สำเร็จ（ข้ามรอบนี้ กันส่งซ้ำ）：', claimErr2.message, 'ids=', idsNeedFollowup);
-            errCount++;
-          } else if (claimedFollowup.length) {
-            try {
-              await pushLine(channelToken, s.line_user_id,
-                '🎉 今天的泰語課辛苦了！\n記得複習與分享學習心得喔😊\n有問題歡迎隨時問老師喔 💬');
-              sentCount++;
-            } catch (e) {
-              errCount++;
-              console.error('[class-reminder-cron] 發送下課後訊息失敗，ids=' + claimedFollowup.join(',') + '：', e && e.message ? e.message : e);
-              await releaseReminderIds(supabase, 'line_followup_sent', claimedFollowup); // คืนสิทธิ์ ให้รอบหน้าลองส่งใหม่
-            }
-          }
-          // claimedFollowup.length === 0 = อีกรอบ (cron ที่ทับเวลากัน) จองไปแล้ว → ข้ามเงียบๆ ไม่ใช่ error
-        }
-      }
+      // 🔴 2026-07-31 เอาเตือนก่อนเรียน 30 นาที + ข้อความหลังเรียนออกแล้วตามที่ Lin สั่ง (ดูคอมเมนต์บนสุดไฟล์)
     }
 
     return new Response(JSON.stringify({ ok: true, checked: rows.length, sent: sentCount, skipped: skipCount, errors: errCount }), {

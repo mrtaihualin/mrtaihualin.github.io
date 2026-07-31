@@ -535,7 +535,108 @@
   {word:"กอด", en:"gòot", zh:"擁抱", level:"初", category:"กริยา", syls:[{cons:"ก", vowel:"ออ", final:"ด", tone_name:"เอก", th:"กอด"}]},
   {word:"จูบ", en:"jùup", zh:"親吻", level:"初", category:"กริยา", syls:[{cons:"จ", vowel:"อู", final:"บ", tone_name:"เอก", th:"จูบ"}]},
   {word:"ตรวจ", readingTH:"ตรวด", spellingTH:"ตรวจ", en:"dtrùat", zh:"檢查", level:"初", category:"กริยา", syls:[{cons:"ต", cluster:"ร", vowel:"อัว", final:"จ", finalRead:"ด", tone_name:"เอก", th:"ตรวจ"}]},
-  {word:"หัน", en:"hǎn", zh:"轉/轉頭", level:"初", category:"กริยา", syls:[{cons:"ห", vowel:"อะ", final:"น", tone_name:"จัตวา", th:"หัน"}]}
+  {word:"หัน", en:"hǎn", zh:"轉/轉頭", level:"初", category:"กริยา", syls:[{cons:"ห", vowel:"อะ", final:"น", tone_name:"จัตวา", th:"หัน"}]},
+  // ── เพิ่ม 2026-07-31 (draft-batch-2026-07-31b): คำกิริยาอีก 100 คำ — ผ่าน pipeline เต็ม A-E + Lin ตรวจแก้เอง + AI 2 ตัวอิสระตรวจซ้ำ ─
+  {word:"เดินทาง", readingTH:"เดิน-ทาง", en:"dern-thaang", zh:"旅行", level:"初", category:"กริยา", syls:[{cons:"ด", vowel:"เออ", final:"น", tone_name:"สามัญ", th:"เดิน"}, {cons:"ท", vowel:"อา", final:"ง", tone_name:"สามัญ", th:"ทาง"}]},
+  {word:"เที่ยว", en:"thîaw", zh:"去玩/旅遊", level:"初", category:"กริยา", syls:[{cons:"ท", vowel:"เอีย", tone:"่", final:"ว", tone_name:"โท", th:"เที่ยว"}]},
+  {word:"หลับ", en:"làp", zh:"睡著/入睡", level:"初", category:"กริยา", syls:[{cons:"ล", lead:"ห", vowel:"อะ", final:"บ", tone_name:"เอก", th:"หลับ"}]},
+  {word:"สระผม", readingTH:"สะ-ผม", en:"sà-phǒm", zh:"洗頭", level:"中", category:"กริยา", syls:[{cons:"ส", vowel:"อะ", tone_name:"เอก", th:"สระ", silent:"ร"}, {cons:"ผ", vowel:"โอะ", final:"ม", tone_name:"จัตวา", th:"ผม"}]},
+  {word:"โกนหนวด", readingTH:"โกน-หนวด", en:"goon-nùat", zh:"刮鬍子", level:"中", category:"กริยา", syls:[{cons:"ก", vowel:"โอ", final:"น", tone_name:"สามัญ", th:"โกน"}, {cons:"น", lead:"ห", vowel:"อัว", final:"ด", tone_name:"เอก", th:"หนวด"}]},
+  {word:"แต่งหน้า", readingTH:"แต่ง-หน้า", en:"tàeng-nâa", zh:"化妝", level:"中", category:"กริยา", syls:[{cons:"ต", vowel:"แอ", tone:"่", final:"ง", tone_name:"เอก", th:"แต่ง"}, {cons:"น", lead:"ห", vowel:"อา", tone:"้", tone_name:"โท", th:"หน้า"}]},
+  {word:"เข้า", en:"khâo", zh:"進去/進入", level:"初", category:"กริยา", syls:[{cons:"ข", vowel:"เอา", tone:"้", tone_name:"โท", th:"เข้า"}]},
+  {word:"ออก", en:"òok", zh:"出去", level:"初", category:"กริยา", syls:[{cons:"อ", vowel:"ออ", final:"ก", tone_name:"เอก", th:"ออก"}]},
+  {word:"ขึ้น", en:"khêun", zh:"上（車/樓）", level:"初", category:"กริยา", syls:[{cons:"ข", vowel:"อึ", tone:"้", final:"น", tone_name:"โท", th:"ขึ้น"}]},
+  {word:"ลง", en:"long", zh:"下（車/樓）", level:"初", category:"กริยา", syls:[{cons:"ล", vowel:"โอะ", final:"ง", tone_name:"สามัญ", th:"ลง"}]},
+  {word:"ผ่าน", en:"phàan", zh:"經過", level:"初", category:"กริยา", syls:[{cons:"ผ", vowel:"อา", tone:"่", final:"น", tone_name:"เอก", th:"ผ่าน"}]},
+  {word:"ข้าม", en:"khâam", zh:"跨越", level:"初", category:"กริยา", syls:[{cons:"ข", vowel:"อา", tone:"้", final:"ม", tone_name:"โท", th:"ข้าม"}]},
+  {word:"เลี้ยว", en:"líaw", zh:"轉彎", level:"初", category:"กริยา", syls:[{cons:"ล", vowel:"เอีย", tone:"้", final:"ว", tone_name:"ตรี", th:"เลี้ยว"}]},
+  {word:"จอด", en:"jòt", zh:"停車", level:"初", category:"กริยา", syls:[{cons:"จ", vowel:"ออ", final:"ด", tone_name:"เอก", th:"จอด"}]},
+  {word:"แซง", en:"saeng", zh:"超車", level:"初", category:"กริยา", syls:[{cons:"ซ", vowel:"แอ", final:"ง", tone_name:"สามัญ", th:"แซง"}]},
+  {word:"ชน", en:"chon", zh:"撞", level:"初", category:"กริยา", syls:[{cons:"ช", vowel:"โอะ", final:"น", tone_name:"สามัญ", th:"ชน"}]},
+  {word:"ตก", en:"tòk", zh:"掉落", level:"初", category:"กริยา", syls:[{cons:"ต", vowel:"โอะ", final:"ก", tone_name:"เอก", th:"ตก"}]},
+  {word:"ล้ม", en:"lóm", zh:"跌倒", level:"初", category:"กริยา", syls:[{cons:"ล", vowel:"โอะ", tone:"้", final:"ม", tone_name:"ตรี", th:"ล้ม"}]},
+  {word:"ปีน", en:"piin", zh:"攀爬", level:"初", category:"กริยา", syls:[{cons:"ป", vowel:"อี", final:"น", tone_name:"สามัญ", th:"ปีน"}]},
+  {word:"คลาน", en:"khlaan", zh:"爬行", level:"初", category:"กริยา", syls:[{cons:"ค", cluster:"ล", vowel:"อา", final:"น", tone_name:"สามัญ", th:"คลาน"}]},
+  {word:"เล่า", en:"lâo", zh:"講述/說（故事）", level:"初", category:"กริยา", syls:[{cons:"ล", vowel:"เอา", tone:"่", tone_name:"โท", th:"เล่า"}]},
+  {word:"เถียง", en:"thǐang", zh:"爭論/頂嘴", level:"初", category:"กริยา", syls:[{cons:"ถ", vowel:"เอีย", final:"ง", tone_name:"จัตวา", th:"เถียง"}]},
+  {word:"ทะเลาะ", readingTH:"ทะ-เลาะ", en:"thá-ló", zh:"吵架", level:"中", category:"กริยา", syls:[{cons:"ท", vowel:"อะ", tone_name:"ตรี", th:"ทะ"}, {cons:"ล", vowel:"เอาะ", tone_name:"ตรี", th:"เลาะ"}]},
+  {word:"ผูก", en:"phùuk", zh:"綁/繫", level:"初", category:"กริยา", syls:[{cons:"ผ", vowel:"อู", final:"ก", tone_name:"เอก", th:"ผูก"}]},
+  {word:"แก้", en:"gâe", zh:"解決/修改", level:"初", category:"กริยา", syls:[{cons:"ก", vowel:"แอ", tone:"้", tone_name:"โท", th:"แก้"}]},
+  {word:"ทัก", en:"thák", zh:"打招呼", level:"初", category:"กริยา", syls:[{cons:"ท", vowel:"อะ", final:"ก", tone_name:"ตรี", th:"ทัก"}]},
+  {word:"ทักทาย", readingTH:"ทัก-ทาย", en:"thák-thaai", zh:"打招呼", level:"初", category:"กริยา", syls:[{cons:"ท", vowel:"อะ", final:"ก", tone_name:"ตรี", th:"ทัก"}, {cons:"ท", vowel:"อา", final:"ย", tone_name:"สามัญ", th:"ทาย"}]},
+  {word:"ชวน", en:"chuan", zh:"邀請", level:"初", category:"กริยา", syls:[{cons:"ช", vowel:"อัว", final:"น", tone_name:"สามัญ", th:"ชวน"}]},
+  {word:"เชิญ", readingTH:"เชิน", en:"choen", zh:"邀請/請", level:"初", category:"กริยา", syls:[{cons:"ช", vowel:"เออ", final:"ญ", finalRead:"น", tone_name:"สามัญ", th:"เชิญ"}]},
+  {word:"แนะนำ", readingTH:"แนะ-นำ", en:"náe-nam", zh:"介紹/建議", level:"中", category:"กริยา", syls:[{cons:"น", vowel:"แอะ", tone_name:"ตรี", th:"แนะ"}, {cons:"น", vowel:"อำ", tone_name:"สามัญ", th:"นำ"}]},
+  {word:"ติดต่อ", readingTH:"ติด-ต่อ", en:"tìt-tòr", zh:"聯絡", level:"中", category:"กริยา", syls:[{cons:"ต", vowel:"อิ", final:"ด", tone_name:"เอก", th:"ติด"}, {cons:"ต", vowel:"ออ", tone:"่", tone_name:"เอก", th:"ต่อ"}]},
+  {word:"ประกาศ", readingTH:"ประ-กาด", en:"prà-gàat", zh:"宣布/公告", level:"中", category:"กริยา", syls:[{cons:"ป", cluster:"ร", vowel:"อะ", tone_name:"เอก", th:"ประ"}, {cons:"ก", vowel:"อา", final:"ศ", finalRead:"ด", tone_name:"เอก", th:"กาศ"}]},
+  {word:"เตือน", en:"teuan", zh:"提醒/警告", level:"初", category:"กริยา", syls:[{cons:"ต", vowel:"เอือ", final:"น", tone_name:"สามัญ", th:"เตือน"}]},
+  {word:"สัญญา", readingTH:"สัน-ยา", en:"sǎn-yaa", zh:"承諾/答應", level:"中", category:"กริยา", syls:[{cons:"ส", vowel:"อะ", final:"ญ", finalRead:"น", tone_name:"จัตวา", th:"สัญ"}, {cons:"ญ", consRead:"ย", vowel:"อา", tone_name:"สามัญ", th:"ญา"}]},
+  {word:"โกหก", readingTH:"โก-หก", en:"goo-hòk", zh:"說謊", level:"初", category:"กริยา", syls:[{cons:"ก", vowel:"โอ", tone_name:"สามัญ", th:"โก"}, {cons:"ห", vowel:"โอะ", final:"ก", tone_name:"เอก", th:"หก"}]},
+  {word:"แซว", en:"saew", zh:"調侃/揶揄", level:"初", category:"กริยา", syls:[{cons:"ซ", vowel:"แอ", final:"ว", tone_name:"สามัญ", th:"แซว"}]},
+  {word:"ด่า", en:"dàa", zh:"罵", level:"初", category:"กริยา", syls:[{cons:"ด", vowel:"อา", tone:"่", tone_name:"เอก", th:"ด่า"}]},
+  {word:"รู้สึก", readingTH:"รู้-สึก", en:"rúu-sèuk", zh:"感覺", level:"初", category:"กริยา", syls:[{cons:"ร", vowel:"อู", tone:"้", tone_name:"ตรี", th:"รู้"}, {cons:"ส", vowel:"อึ", final:"ก", tone_name:"เอก", th:"สึก"}]},
+  {word:"ชอบ", en:"chôp", zh:"喜歡", level:"初", category:"กริยา", syls:[{cons:"ช", vowel:"ออ", final:"บ", tone_name:"โท", th:"ชอบ"}]},
+  {word:"เกลียด", en:"glìat", zh:"討厭/恨", level:"初", category:"กริยา", syls:[{cons:"ก", cluster:"ล", vowel:"เอีย", final:"ด", tone_name:"เอก", th:"เกลียด"}]},
+  {word:"อิจฉา", readingTH:"อิด-ฉา", en:"ìt-chǎa", zh:"嫉妒", level:"中", category:"กริยา", syls:[{cons:"อ", vowel:"อิ", final:"จ", finalRead:"ด", tone_name:"เอก", th:"อิจ"}, {cons:"ฉ", vowel:"อา", tone_name:"จัตวา", th:"ฉา"}]},
+  {word:"ภูมิใจ", readingTH:"พูม-ใจ", en:"phuum-jai", zh:"驕傲/自豪", level:"中", category:"กริยา", syls:[{cons:"ภ", consRead:"พ", vowel:"อู", final:"ม", finalDisp:"มิ", tone_name:"สามัญ", th:"ภูมิ"}, {cons:"จ", vowel:"ใอ", tone_name:"สามัญ", th:"ใจ"}]},
+  {word:"ผิดหวัง", readingTH:"ผิด-หวัง", en:"phìt-wǎng", zh:"失望", level:"中", category:"กริยา", syls:[{cons:"ผ", vowel:"อิ", final:"ด", tone_name:"เอก", th:"ผิด"}, {cons:"ว", lead:"ห", vowel:"อะ", final:"ง", tone_name:"จัตวา", th:"หวัง"}]},
+  {word:"ตื่นเต้น", readingTH:"ตื่น-เต้น", en:"tèun-tên", zh:"興奮/激動", level:"中", category:"กริยา", syls:[{cons:"ต", vowel:"อื", tone:"่", final:"น", tone_name:"เอก", th:"ตื่น"}, {cons:"ต", vowel:"เอะ", tone:"้", final:"น", tone_name:"โท", th:"เต้น"}]},
+  {word:"เบื่อ", en:"bèua", zh:"厭倦/膩", level:"初", category:"กริยา", syls:[{cons:"บ", vowel:"เอือ", tone:"่", tone_name:"เอก", th:"เบื่อ"}]},
+  {word:"สนใจ", readingTH:"สน-ใจ", en:"sǒn-jai", zh:"感興趣/在意", level:"初", category:"กริยา", syls:[{cons:"ส", vowel:"โอะ", final:"น", tone_name:"จัตวา", th:"สน"}, {cons:"จ", vowel:"ใอ", tone_name:"สามัญ", th:"ใจ"}]},
+  {word:"มั่นใจ", readingTH:"มั่น-ใจ", en:"mân-jai", zh:"有信心/確信", level:"中", category:"กริยา", syls:[{cons:"ม", vowel:"อะ", tone:"่", final:"น", tone_name:"โท", th:"มั่น"}, {cons:"จ", vowel:"ใอ", tone_name:"สามัญ", th:"ใจ"}]},
+  {word:"ไว้ใจ", readingTH:"ไว้-ใจ", en:"wái-jai", zh:"信任", level:"中", category:"กริยา", syls:[{cons:"ว", vowel:"ไอ", tone:"้", tone_name:"ตรี", th:"ไว้"}, {cons:"จ", vowel:"ใอ", tone_name:"สามัญ", th:"ใจ"}]},
+  {word:"สงสาร", readingTH:"สง-สาน", en:"sǒng-sǎan", zh:"同情/憐憫", level:"中", category:"กริยา", syls:[{cons:"ส", vowel:"โอะ", final:"ง", tone_name:"จัตวา", th:"สง"}, {cons:"ส", vowel:"อา", final:"ร", finalRead:"น", tone_name:"จัตวา", th:"สาร"}]},
+  {word:"คิดถึง", readingTH:"คิด-ถึง", en:"khít-thěung", zh:"想念", level:"初", category:"กริยา", syls:[{cons:"ค", vowel:"อิ", final:"ด", tone_name:"ตรี", th:"คิด"}, {cons:"ถ", vowel:"อึ", final:"ง", tone_name:"จัตวา", th:"ถึง"}]},
+  {word:"ยอมรับ", readingTH:"ยอม-รับ", en:"yoom-ráp", zh:"接受/承認", level:"初", category:"กริยา", syls:[{cons:"ย", vowel:"ออ", final:"ม", tone_name:"สามัญ", th:"ยอม"}, {cons:"ร", vowel:"อะ", final:"บ", tone_name:"ตรี", th:"รับ"}]},
+  {word:"ปฏิเสธ", readingTH:"ปะ-ติ-เสด", en:"pà-tì-sèet", zh:"拒絕/否認", level:"中", category:"กริยา", syls:[{cons:"ป", vowel:"อะ", tone_name:"เอก", th:"ป"}, {cons:"ฏ", consRead:"ต", vowel:"อิ", tone_name:"เอก", th:"ฏิ"}, {cons:"ส", vowel:"เอ", final:"ธ", finalRead:"ด", tone_name:"เอก", th:"เสธ"}]},
+  {word:"ทบทวน", readingTH:"ทบ-ทวน", en:"tháp-thuan", zh:"複習", level:"初", category:"กริยา", syls:[{cons:"ท", vowel:"โอะ", final:"บ", tone_name:"ตรี", th:"ทบ"}, {cons:"ท", vowel:"อัว", final:"น", tone_name:"สามัญ", th:"ทวน"}]},
+  {word:"สอบ", en:"sòop", zh:"考試", level:"初", category:"กริยา", syls:[{cons:"ส", vowel:"ออ", final:"บ", tone_name:"เอก", th:"สอบ"}]},
+  {word:"ค้นคว้า", readingTH:"ค้น-คว้า", en:"khón-khwáa", zh:"查閱/研究", level:"中", category:"กริยา", syls:[{cons:"ค", vowel:"โอะ", tone:"้", final:"น", tone_name:"ตรี", th:"ค้น"}, {cons:"ค", cluster:"ว", vowel:"อา", tone:"้", tone_name:"ตรี", th:"คว้า"}]},
+  {word:"สรุป", readingTH:"สะ-หรุบ", en:"sà-rùp", zh:"總結", level:"中", category:"กริยา", syls:[{cons:"ส", vowel:"อะ", tone_name:"เอก", th:"ส"}, {cons:"ร", lead:"ห", vowel:"อุ", final:"ป", finalRead:"บ", tone_name:"เอก", th:"รุป"}]},
+  {word:"แกว่ง", en:"gwàeng", zh:"搖晃/擺動", level:"初", category:"กริยา", syls:[{cons:"ก", cluster:"ว", vowel:"แอ", tone:"่", final:"ง", tone_name:"เอก", th:"แกว่ง"}]},
+  {word:"ตบ", en:"tòp", zh:"拍打/掌摑", level:"初", category:"กริยา", syls:[{cons:"ต", vowel:"โอะ", final:"บ", tone_name:"เอก", th:"ตบ"}]},
+  {word:"บีบ", en:"bìip", zh:"擠壓/捏", level:"初", category:"กริยา", syls:[{cons:"บ", vowel:"อี", final:"บ", tone_name:"เอก", th:"บีบ"}]},
+  {word:"เกา", en:"gao", zh:"抓（癢）", level:"初", category:"กริยา", syls:[{cons:"ก", vowel:"เอา", tone_name:"สามัญ", th:"เกา"}]},
+  {word:"จิ้ม", en:"jîm", zh:"沾/戳", level:"初", category:"กริยา", syls:[{cons:"จ", vowel:"อิ", tone:"้", final:"ม", tone_name:"โท", th:"จิ้ม"}]},
+  {word:"สัมผัส", readingTH:"สัม-ผัด", en:"sǎm-phàt", zh:"接觸/觸摸", level:"中", category:"กริยา", syls:[{cons:"ส", vowel:"อะ", final:"ม", tone_name:"จัตวา", th:"สัม"}, {cons:"ผ", vowel:"อะ", final:"ส", finalRead:"ด", tone_name:"เอก", th:"ผัส"}]},
+  {word:"มอง", en:"moong", zh:"看/望", level:"初", category:"กริยา", syls:[{cons:"ม", vowel:"ออ", final:"ง", tone_name:"สามัญ", th:"มอง"}]},
+  {word:"เห็น", en:"hěn", zh:"看見", level:"初", category:"กริยา", syls:[{cons:"ห", vowel:"เอะ", final:"น", tone_name:"จัตวา", th:"เห็น"}]},
+  {word:"ดม", en:"dom", zh:"聞（氣味）", level:"初", category:"กริยา", syls:[{cons:"ด", vowel:"โอะ", final:"ม", tone_name:"สามัญ", th:"ดม"}]},
+  {word:"ชิม", en:"chim", zh:"嚐/試吃", level:"初", category:"กริยา", syls:[{cons:"ช", vowel:"อิ", final:"ม", tone_name:"สามัญ", th:"ชิม"}]},
+  {word:"เลีย", en:"lia", zh:"舔", level:"初", category:"กริยา", syls:[{cons:"ล", vowel:"เอีย", tone_name:"สามัญ", th:"เลีย"}]},
+  {word:"กัด", en:"gàt", zh:"咬", level:"初", category:"กริยา", syls:[{cons:"ก", vowel:"อะ", final:"ด", tone_name:"เอก", th:"กัด"}]},
+  {word:"เคี้ยว", en:"khíaw", zh:"咀嚼", level:"初", category:"กริยา", syls:[{cons:"ค", vowel:"เอีย", tone:"้", final:"ว", tone_name:"ตรี", th:"เคี้ยว"}]},
+  {word:"กลืน", en:"gleun", zh:"吞/吞嚥", level:"初", category:"กริยา", syls:[{cons:"ก", cluster:"ล", vowel:"อื", final:"น", tone_name:"สามัญ", th:"กลืน"}]},
+  {word:"หายใจ", readingTH:"หาย-ใจ", en:"hǎai-jai", zh:"呼吸", level:"初", category:"กริยา", syls:[{cons:"ห", vowel:"อา", final:"ย", tone_name:"จัตวา", th:"หาย"}, {cons:"จ", vowel:"ใอ", tone_name:"สามัญ", th:"ใจ"}]},
+  {word:"ไอ", en:"ai", zh:"咳嗽", level:"初", category:"กริยา", syls:[{cons:"อ", vowel:"ไอ", tone_name:"สามัญ", th:"ไอ"}]},
+  {word:"จาม", en:"jaam", zh:"打噴嚏", level:"初", category:"กริยา", syls:[{cons:"จ", vowel:"อา", final:"ม", tone_name:"สามัญ", th:"จาม"}]},
+  {word:"หาว", en:"hǎao", zh:"打哈欠", level:"初", category:"กริยา", syls:[{cons:"ห", vowel:"อา", final:"ว", tone_name:"จัตวา", th:"หาว"}]},
+  {word:"ขุด", en:"khùt", zh:"挖", level:"初", category:"กริยา", syls:[{cons:"ข", vowel:"อุ", final:"ด", tone_name:"เอก", th:"ขุด"}]},
+  {word:"สมัคร", readingTH:"สะ-หมัก", en:"sà-màk", zh:"報名/申請", level:"中", category:"กริยา", syls:[{cons:"ส", vowel:"อะ", tone_name:"เอก", th:"ส"}, {cons:"ม", lead:"ห", vowel:"อะ", final:"ค", finalDisp:"คร", finalRead:"ก", tone_name:"เอก", th:"มัคร"}]},
+  {word:"ลาออก", readingTH:"ลา-ออก", en:"laa-òok", zh:"辭職", level:"初", category:"กริยา", syls:[{cons:"ล", vowel:"อา", tone_name:"สามัญ", th:"ลา"}, {cons:"อ", vowel:"ออ", final:"ก", tone_name:"เอก", th:"ออก"}]},
+  {word:"จ้าง", en:"jâang", zh:"僱用", level:"初", category:"กริยา", syls:[{cons:"จ", vowel:"อา", tone:"้", final:"ง", tone_name:"โท", th:"จ้าง"}]},
+  {word:"ลงทุน", readingTH:"ลง-ทุน", en:"long-thun", zh:"投資", level:"初", category:"กริยา", syls:[{cons:"ล", vowel:"โอะ", final:"ง", tone_name:"สามัญ", th:"ลง"}, {cons:"ท", vowel:"อุ", final:"น", tone_name:"สามัญ", th:"ทุน"}]},
+  {word:"ห้าม", en:"hâam", zh:"禁止", level:"初", category:"กริยา", syls:[{cons:"ห", vowel:"อา", tone:"้", final:"ม", tone_name:"โท", th:"ห้าม"}]},
+  {word:"สั่ง", en:"sàng", zh:"點餐/命令/訂購", level:"初", category:"กริยา", syls:[{cons:"ส", vowel:"อะ", tone:"่", final:"ง", tone_name:"เอก", th:"สั่ง"}]},
+  {word:"โอน", en:"oon", zh:"轉帳/匯款", level:"初", category:"กริยา", syls:[{cons:"อ", vowel:"โอ", final:"น", tone_name:"สามัญ", th:"โอน"}]},
+  {word:"ฝาก", en:"fàak", zh:"存（錢）/寄放", level:"初", category:"กริยา", syls:[{cons:"ฝ", vowel:"อา", final:"ก", tone_name:"เอก", th:"ฝาก"}]},
+  {word:"ถอน", en:"thǒn", zh:"提款/撤回", level:"初", category:"กริยา", syls:[{cons:"ถ", vowel:"ออ", final:"น", tone_name:"จัตวา", th:"ถอน"}]},
+  {word:"กู้", en:"gûu", zh:"借貸/貸款", level:"初", category:"กริยา", syls:[{cons:"ก", vowel:"อู", tone:"้", tone_name:"โท", th:"กู้"}]},
+  {word:"ผ่อน", en:"phòn", zh:"分期付款", level:"初", category:"กริยา", syls:[{cons:"ผ", vowel:"ออ", tone:"่", final:"น", tone_name:"เอก", th:"ผ่อน"}]},
+  {word:"ตากผ้า", readingTH:"ตาก-ผ้า", en:"tàak-phâa", zh:"曬衣服", level:"初", category:"กริยา", syls:[{cons:"ต", vowel:"อา", final:"ก", tone_name:"เอก", th:"ตาก"}, {cons:"ผ", vowel:"อา", tone:"้", tone_name:"โท", th:"ผ้า"}]},
+  {word:"รีดผ้า", readingTH:"รีด-ผ้า", en:"rîit-phâa", zh:"熨衣服", level:"初", category:"กริยา", syls:[{cons:"ร", vowel:"อี", final:"ด", tone_name:"โท", th:"รีด"}, {cons:"ผ", vowel:"อา", tone:"้", tone_name:"โท", th:"ผ้า"}]},
+  {word:"พับผ้า", readingTH:"พับ-ผ้า", en:"pháp-phâa", zh:"摺衣服", level:"初", category:"กริยา", syls:[{cons:"พ", vowel:"อะ", final:"บ", tone_name:"ตรี", th:"พับ"}, {cons:"ผ", vowel:"อา", tone:"้", tone_name:"โท", th:"ผ้า"}]},
+  {word:"ปลูก", en:"plùuk", zh:"種植", level:"初", category:"กริยา", syls:[{cons:"ป", cluster:"ล", vowel:"อู", final:"ก", tone_name:"เอก", th:"ปลูก"}]},
+  {word:"รดน้ำ", readingTH:"รด-น้ำ", en:"rót-náam", zh:"澆水", level:"初", category:"กริยา", syls:[{cons:"ร", vowel:"โอะ", final:"ด", tone_name:"ตรี", th:"รด"}, {cons:"น", vowel:"อำ", tone:"้", tone_name:"ตรี", th:"น้ำ"}]},
+  {word:"ทิ้ง", en:"thíng", zh:"丟/扔", level:"初", category:"กริยา", syls:[{cons:"ท", vowel:"อิ", tone:"้", final:"ง", tone_name:"ตรี", th:"ทิ้ง"}]},
+  {word:"จัด", en:"jàt", zh:"整理/安排", level:"初", category:"กริยา", syls:[{cons:"จ", vowel:"อะ", final:"ด", tone_name:"เอก", th:"จัด"}]},
+  {word:"ตกแต่ง", readingTH:"ตก-แต่ง", en:"tòk-tàeng", zh:"裝飾/佈置", level:"中", category:"กริยา", syls:[{cons:"ต", vowel:"โอะ", final:"ก", tone_name:"เอก", th:"ตก"}, {cons:"ต", vowel:"แอ", tone:"่", final:"ง", tone_name:"เอก", th:"แต่ง"}]},
+  {word:"ถีบ", en:"thìip", zh:"踢", level:"初", category:"กริยา", syls:[{cons:"ถ", vowel:"อี", final:"บ", tone_name:"เอก", th:"ถีบ"}]},
+  {word:"เตะ", en:"tè", zh:"踢", level:"初", category:"กริยา", syls:[{cons:"ต", vowel:"เอะ", tone_name:"เอก", th:"เตะ"}]},
+  {word:"ตี", en:"tii", zh:"打", level:"初", category:"กริยา", syls:[{cons:"ต", vowel:"อี", tone_name:"สามัญ", th:"ตี"}]},
+  {word:"ถ่ายรูป", readingTH:"ถ่าย-รูบ", en:"thàai-rûup", zh:"拍照", level:"中", category:"กริยา", syls:[{cons:"ถ", vowel:"อา", tone:"่", final:"ย", tone_name:"เอก", th:"ถ่าย"}, {cons:"ร", vowel:"อู", final:"ป", finalRead:"บ", tone_name:"โท", th:"รูป"}]},
+  {word:"ดาวน์โหลด", readingTH:"ดาว-โหลด", en:"daao-lòot", zh:"下載", level:"中", category:"กริยา", syls:[{cons:"ด", vowel:"อา", final:"ว", silent:"น์", tone_name:"สามัญ", th:"ดาวน์"}, {cons:"ล", lead:"ห", vowel:"โอ", final:"ด", tone_name:"เอก", th:"โหลด"}]},
+  {word:"แชร์", readingTH:"แช", en:"chae", zh:"分享", level:"初", category:"กริยา", syls:[{cons:"ช", vowel:"แอ", silent:"ร์", tone_name:"สามัญ", th:"แชร์"}]}
   ];
 
   // ════════════════════════════════════════════════════════════
@@ -568,47 +669,105 @@
       return !!exp && (Number(exp) * 1000) > Date.now();
     } catch (e) { return false; }
   }
-  var FREE_TIER_CAPS = { words: 150, sentences: 50 };   // ไม่ล็อกอิน
-  var LOGIN_TIER_CAPS = { words: 200, sentences: 100 }; // ล็อกอินแล้ว (ยังไม่จ่ายเงิน)
+  // Lin 2026-07-31 (รอบ 3 — ล็อกคำเองตามที่สั่ง): เพดานแยกเป็นคนละก้อนต่อระดับ ไม่ใช่เพดานรวมแบบเดิม
+  //   初: ไม่ล็อกอิน 150 คำ · ล็อกอินไม่จ่ายเงิน 200 คำ
+  //   中: ไม่ล็อกอิน 50 คำ · ล็อกอินไม่จ่ายเงิน 100 คำ (ตอนนี้ 中 ทั้งเว็บมีแค่ 91 คำ ยังไม่ถึง 100 — ตั้งเพดานไว้ที่ 100 เผื่ออนาคตตามที่ Lin สั่ง ตอนนี้เท่ากับได้ครบ 91 คำ)
+  var FREE_TIER_CAPS = { words_初: 150, words_中: 50, sentences: 50 };    // ไม่ล็อกอิน
+  var LOGIN_TIER_CAPS = { words_初: 200, words_中: 100, sentences: 100 }; // ล็อกอินแล้ว (ยังไม่จ่ายเงิน)
   var _tierLoggedIn = _looksLoggedInSync(); // true/false/null(=ไม่ตัด)
   global.CONTENT_TIER_IS_LOGIN_GUESS = _tierLoggedIn; // เผื่อไฟล์อื่นอยากอ่าน (debug/แสดงผล)
 
   var WORDS_MASTER_FULL = WORDS_MASTER; // เก็บชุดเต็มไว้เสมอ (ตัวตรวจข้อมูล/เครื่องมือ Lin ใช้ชุดนี้)
   global.WORDS_MASTER_FULL = WORDS_MASTER_FULL;
 
-  // Lin 2026-07-31: เดิมตัดเพดานแบบ "เอา N คำแรกตามลำดับในไฟล์" ตรงๆ — พังเพราะคำระดับ中เริ่มที่ตำแหน่ง 163
-  // (เกินเพดานคนไม่ล็อกอิน 150 คำ) ทำให้ระดับ中級ว่างเปล่า/พังทั้งเกม สำหรับคนไม่ล็อกอินทุกคน (เจอจริง 2026-07-31)
-  // แก้ใหม่: สลับคิวแบบ "หมุนตามหมวด+ระดับ" (round-robin) ก่อนตัดเพดาน ให้ทุกหมวด/ทุกระดับมีโควตากระจายเท่าๆกัน
-  // ไม่แก้/ไม่เรียงลำดับ WORDS_MASTER เดิม (ตัวตรวจข้อมูล/เครื่องมืออื่นยังอ่านลำดับเดิมได้ปกติ) — ใช้แค่ตอน "เลือกว่าใครติดโควตาเพดานฟรี" เท่านั้น
-  function buildCapOrder(list) {
-    var buckets = {}, bucketKeys = [];
-    list.forEach(function (w) {
-      var key = w.level + '|' + w.category;
-      if (!buckets[key]) { buckets[key] = []; bucketKeys.push(key); }
-      buckets[key].push(w);
+  // ── ลำดับคำที่ล็อกไว้สำหรับตัดเพดาน (Lin อนุมัติ 2026-07-31) ──
+  // แหล่งอ้างอิง (เรียงคำจาก "ใช้บ่อยในชีวิตประจำวันจริง" มากไปน้อย):
+  //   1) อันดับ 1-165 (初) / 1-26 (中): ความถี่จริงจากบทพูดหนัง/ซีรีส์ไทย (OpenSubtitles2018,
+  //      github.com/orgtre/top-open-subtitles-sentences) — Lin เลือกแหล่งนี้เพราะสะท้อน "คนไทยพูดจริง
+  //      ในชีวิตประจำวัน" ไม่ใช่แค่คลังข่าว/เอกสารทางการ
+  //   2) ที่เหลือ: fallback ด้วยความถี่จาก Thai National Corpus (TNC, ผ่าน PyThaiNLP) เพราะ
+  //      OpenSubtitles ที่ดึงมาได้ครอบคลุมแค่ ~627 อันดับแรก (ต้นทางมี 30,000 คำ ดึงมาได้ไม่หมด)
+  //      คำที่ไม่มีใน 627 อันดับนั้น จึงใช้ TNC (คลังข้อความจริงอีกชุด) แทน ไม่ใช่การเดา
+  //   3 ) ก้อนท้ายสุดที่ไม่มีข้อมูลความถี่จริงทั้งสองแหล่ง (คำใหม่/คำเฉพาะ) เรียงตามลำดับเดิมในไฟล์
+  // ห้ามคำนวณใหม่/สุ่มใหม่ — ล็อกลำดับตายตัวตามนี้ จนกว่า Lin จะสั่งเปลี่ยน
+  var CAP_ORDER_TH_初 = [
+    "คุณ","ไป","เธอ","มัน","ผม","ของ","แล้ว","อะไร","ก็","เรา",
+    "เขา","มา","ให้","อยู่","กับ","นี่","ใน","ทำ","ใช่","และ",
+    "คน","นาย","แต่","รู้","ถ้า","กัน","คิด","ดี","อยาก","บอก",
+    "นั่น","ใคร","พูด","อย่าง","แม่","จาก","ดู","พ่อ","ท่าน","ถึง",
+    "หรือ","พวกเขา","ถูก","อย่า","เพราะ","ช่วย","ไหน","แก","ก่อน","ชั้น",
+    "เพื่อ","พวกเรา","ลูก","พี่","หนู","หา","ใช้","เจอ","ตัว","เข้าใจ",
+    "เมื่อ","เด็ก","เวลา","บ้าน","ฟัง","รอ","กิน","ทำงาน","รัก","สอง",
+    "ส่ง","วันนี้","หนึ่ง","ตัวเอง","เชื่อ","คุย","ใหม่","ปล่อย","บน","ต่อ",
+    "โทร","เรียก","ใส่","ห้อง","ถาม","เงิน","ตาม","รถ","ลืม","รับ",
+    "ครั้ง","ครอบครัว","กลัว","หน้า","หมอ","เก็บ","จับ","ซื้อ","ลอง","ดื่ม",
+    "เปิด","เลือก","รีบ","นั่ง","หวัง","หัวหน้า","ชาย","เสียใจ","เดิน","ตา",
+    "คืน","จำ","สร้าง","เปลี่ยน","ใหญ่","สาม","เดี๋ยวนี้","นอน","เรียน","หลัง",
+    "จอง","เมือง","ใกล้","พรุ่งนี้","นาที","หัว","ขาย","เล็ก","เลือด","สาย",
+    "จ่าย","เขียน","ปิด","น้ำ","วาง","ความรัก","ร้าน","ครู","สงสัย","วิ่ง",
+    "ดีใจ","อ่าน","พัก","ความคิด","ชั่วโมง","ใจ","สอน","ย้าย","เต้น","โกรธ",
+    "ยืน","สูง","ตอบ","รายงาน","บิน","ร้องไห้","ตื่น","ใบ","ไกล","กระเป๋า",
+    "ฝัน","เงียบ","ร้อง","หมา","ไฟ","ผล","อัน","พบ","ดัง","มือ",
+    "เล่น","ราคา","ประชุม","สินค้า","ข้าง","น้อง","นา","วัด","กลาง","ข้าว",
+    "หัน","ยก","ต้น","สิบ","ปาก","ยิ้ม","นอก","ตรวจ","แดง","ขาว",
+    "ปลา","ร้อน","เต็ม","หยุด","ดำ","เหนือ","ใต้","สี่","ทอง","ดาว",
+    "เส้น","เย็น","หัวเราะ","ทะเล","ห้า","ร้อย","แก้ว","ชา","น้ำมัน","เนื้อ",
+    "ขา","สวน","ยาย","ฟ้า","เล่ม","พัน","เมืองไทย","เช้า","นก","โต๊ะ",
+    "ชิ้น","พิมพ์","ฝน","เป้าหมาย","เกาะ","ลม","ฝึก","แปล","ญาติ","เท้า",
+    "หู","แขน","ดนตรี","ลูกค้า","คัน","โรงแรม","คอ","ดึง","หยิบ","ดอกไม้",
+    "เสื้อผ้า","ล้าง","แผ่น","นิ้ว","สะอาด","นัด","เขียว","ท้อง","ต้นไม้","ใส",
+    "แม่น้ำ","ผัก","หก","ว่าง","กด","อก","เมีย","ซ้าย","หลาน","ไร่",
+    "วาด","แผนที่","ไก่","แพง","ข้างหน้า","ถุง","ฟัน","ตกใจ","น้ำตาล","กุ้ง",
+    "ลำ","เงินเดือน","เตียง","แต่งตัว","จาน","ปู","เหลือง","ขวา","ไข่","หมู",
+    "มืด","รองเท้า","ขับ","ย่า","แปด","ซัก","แขก","ปู่","ทอด","เจ็ด",
+    "แข็ง","กอด","ก้อน","บ่าย","นม","ค่ำ","มีด","กลางวัน","ห้องน้ำ","ขวด",
+    "ย่าง","พักผ่อน","กาแฟ","กลางคืน","อาบน้ำ","สะพาน","ต้อนรับ","กระโดด","พัด","ถอด",
+    "ส้ม","แมว","ถ้วย","ช้อน","ต้ม","ลิ้น","มื้อ","ภูเขา","เก้า","วัว",
+    "ชมพู","ขี่","ซ่อม","ทีวี","โน่น","ทางออก","โยน","ผัด","งู","เข่า",
+    "ยืม","ต่อรอง","ห้าง","ผัว","เมฆ","ม่วง","พริก","แลก","หม้อ","เกลือ",
+    "น้ำเงิน","อุ่น","กวาด","ว่ายน้ำ","ดึก","เทา","น้ำแข็ง","แกง","ข้างหลัง","จูบ",
+    "ร้านค้า","ผลัก","หั่น","กล้วย","แท็กซี่","เป็ด","ปิ้ง","เมื่อกี้","ระเบียง","กบ",
+    "เล็บ","ซุป","หมอน","เงินสด","เมนู","ถู","มด","ส้อม","หุง","เลขา",
+    "ข้าวต้ม","นัดหมาย","นึ่ง","นิ่ม","แว่นตา","ขิง","หวี","ปอก","ตะเกียบ","ของหวาน",
+    "น้ำส้ม","ส้มตำ","ต้มยำ","โจ๊ก","ทางด่วน","ข้าวผัด","ส่วนลด","แชท","เงินทอน","ห้องพัก",
+    "ช่วยด้วย","ผัดไทย","ไก่ทอด","หมูปิ้ง","น้ำชา","ช้อนส้อม","จานข้าว","เตียงนอน","ค่าห้อง","ผ้าห่ม",
+    "น้ำอุ่น","เมื่อวาน","ตรงไป","ทุกวัน","ความฝัน","แปรงฟัน","ทำความสะอาด","ล้างจาน"
+  ];
+  var CAP_ORDER_TH_中 = [
+    "ขอโทษ","ขอบคุณ","สำหรับ","เกี่ยวกับ","ไม่เป็นไร","ดังนั้น","สวัสดี","ตั้งแต่","ขนาด","ความจริง",
+    "พวกคุณ","ตำรวจ","ระหว่าง","บริษัท","อาหาร","ปัญหา","จึง","ตัดสินใจ","จนกว่า","โทรศัพท์",
+    "หาก","อธิบาย","ประเทศ","ถนน","ตำแหน่ง","โอกาส","ภาษา","ปัจจุบัน","เนื่องจาก","ตลาด",
+    "สัมภาษณ์","ฉบับ","ขณะที่","คุณภาพ","อดีต","อาชีพ","อากาศ","เอกสาร","ตะวันตก","อนาคต",
+    "แม้ว่า","พนักงาน","สถานี","ตะวันออก","ทั้งที่","สว่าง","นาฬิกา","ท่ามกลาง","ถึงแม้","เครื่องบิน",
+    "เว้นแต่","วินาที","วันหยุด","กุญแจ","ระยะทาง","สนามบิน","ของขวัญ","สกปรก","เครื่องสำอาง","สบู่",
+    "รถเมล์","ขนมปัง","รถไฟฟ้า","สะใภ้","ออฟฟิศ","ที่จอดรถ","ใบเสร็จ","สระว่ายน้ำ","นามบัตร","ยาสีฟัน",
+    "ผ้าเช็ดตัว","ทางม้าลาย","ร้านอาหาร","เช็คอิน","เช็คเอาท์","ลดราคา","ชำระเงิน","ไม่เข้าใจ","รถทัวร์","ป้ายรถเมล์",
+    "ห้องอาหาร","อาหารเช้า","งานเลี้ยง","อีเมล","โต๊ะทำงาน","ประชุมงาน","เวลางาน","กระเป๋าเงิน","รองเท้าแตะ","ความสุข",
+    "สวนสัตว์"
+  ];
+
+  function buildCapOrderObjs(fullList, thOrder) {
+    // ⚠️ WORDS_MASTER (ก่อนผ่าน adapter) เก็บตัวสะกดไว้ที่ฟิลด์ .word ไม่ใช่ .th (ฟิลด์ .th มีเฉพาะหลังผ่าน buildWordsForPhonicsGames เท่านั้น)
+    var byTh = {};
+    fullList.forEach(function (w) { if (byTh[w.word] === undefined) byTh[w.word] = w; }); // ตัวสะกดในระดับเดียวกันไม่ซ้ำกันอยู่แล้ว
+    var used = {}, order = [];
+    thOrder.forEach(function (th) {
+      if (byTh[th] && !used[th]) { order.push(byTh[th]); used[th] = true; }
     });
-    var order = [], cursor = {};
-    bucketKeys.forEach(function (k) { cursor[k] = 0; });
-    var more = true;
-    while (more) {
-      more = false;
-      for (var i = 0; i < bucketKeys.length; i++) {
-        var k = bucketKeys[i];
-        if (cursor[k] < buckets[k].length) {
-          order.push(buckets[k][cursor[k]]);
-          cursor[k]++;
-          more = true;
-        }
-      }
-    }
+    fullList.forEach(function (w) { if (!used[w.word]) { order.push(w); used[w.word] = true; } }); // เผื่อคำที่ตกหล่นจากลิสต์ล็อก (เช่นคำใหม่ที่ Lin เพิ่งเพิ่ม)
     return order;
   }
-  var WORDS_MASTER_CAP_ORDER = buildCapOrder(WORDS_MASTER_FULL);
-  global.WORDS_MASTER_CAP_ORDER = WORDS_MASTER_CAP_ORDER; // เผื่อ debug/ตรวจสอบ
+  var _words初 = WORDS_MASTER_FULL.filter(function (w) { return w.level === '初'; });
+  var _words中 = WORDS_MASTER_FULL.filter(function (w) { return w.level === '中'; });
+  var WORDS_MASTER_CAP_ORDER_初 = buildCapOrderObjs(_words初, CAP_ORDER_TH_初);
+  var WORDS_MASTER_CAP_ORDER_中 = buildCapOrderObjs(_words中, CAP_ORDER_TH_中);
+  global.WORDS_MASTER_CAP_ORDER_初 = WORDS_MASTER_CAP_ORDER_初; // เผื่อ debug/ตรวจสอบ
+  global.WORDS_MASTER_CAP_ORDER_中 = WORDS_MASTER_CAP_ORDER_中;
 
   if (_tierLoggedIn !== null) {
-    var wordCap = _tierLoggedIn ? LOGIN_TIER_CAPS.words : FREE_TIER_CAPS.words;
-    WORDS_MASTER = WORDS_MASTER_CAP_ORDER.slice(0, wordCap);
+    var caps = _tierLoggedIn ? LOGIN_TIER_CAPS : FREE_TIER_CAPS;
+    WORDS_MASTER = WORDS_MASTER_CAP_ORDER_初.slice(0, caps.words_初)
+      .concat(WORDS_MASTER_CAP_ORDER_中.slice(0, caps.words_中));
   }
   global.WORDS_MASTER = WORDS_MASTER;
 })(window);

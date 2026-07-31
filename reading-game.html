@@ -82,14 +82,14 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/reading-game-app.js -->
 <script defer src="js/games/game-account.js?v=3"></script>
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=9"></script>
+<script defer src="js/games/reading-auth.js?v=10"></script>
 <script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="js/games/word-vault.js"></script>
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
-<script src="data/words-data.js?v=7"></script>
+<script src="data/words-data.js?v=8"></script>
 <script src="data/adv-sentences.js?v=7"></script>
 <script src="data/tone-engine.js?v=3"></script>
 <style>
@@ -396,12 +396,18 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <button onclick="document.getElementById('rg-howto-modal').style.display='none';try{gtag('event','reading_game_howto_close',{category:'game'})}catch(e){}" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
     <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">✍️ 怎麼玩？</div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">背單字好無聊？來玩遊戲吧，玩著玩著就記住了 😊</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">泰文的每個字，都是由「子音＋母音＋聲調＋尾音」組合起來的喔！點一下零件，把它放進正確的格子，親手把字「拼」出來 🧩 拼幾次之後就記住了，不是死背，是用手感記住的感覺～</p>
-    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:1.9;">
-      每格一次就對 → <strong>10 分</strong>，錯 1／2／3 次 → <strong>7／4／1 分</strong>，錯 4 次 → 0 分並進入複習<br>
-      中級 ×1.5、高級 ×2 · ✨黃金字全對 <strong>×2</strong> · 連對 3／5／8 次 <strong>×1.5／×2／×3</strong><br>
-      完成一輪 <strong>+20</strong>，全對再 <strong>+50</strong> · 💡「有提示」模式純練習、不計分<br>
-      拼完自動顯示拆解：子音／母音／尾音＋為什麼是這個聲調
+    <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
+      <li>泰文的每個字，都是由「子音＋母音＋聲調＋尾音」組合起來的喔！</li>
+      <li>點一下零件，把它放進正確的格子，親手把字「拼」出來 🧩</li>
+      <li>拼幾次之後就記住了，不是死背，是用手感記住的感覺～</li>
+    </ul>
+    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
+      <ul style="margin:0;padding-left:18px;line-height:1.9;">
+        <li>每格一次就對 → <strong>10 分</strong>，錯 1／2／3 次 → <strong>7／4／1 分</strong>，錯 4 次 → 0 分並進入複習</li>
+        <li>中級 ×1.5、高級 ×2 · ✨黃金字全對 <strong>×2</strong> · 連對 3／5／8 次 <strong>×1.5／×2／×3</strong></li>
+        <li>完成一輪 <strong>+20</strong>，全對再 <strong>+50</strong> · 💡「有提示」模式純練習、不計分</li>
+        <li>拼完自動顯示拆解：子音／母音／尾音＋為什麼是這個聲調</li>
+      </ul>
     </div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐</p>
     <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">母音的種類有點多呢～想知道每個怎麼發音，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
@@ -610,7 +616,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<script src="js/games/reading-game-app.min.js?v=20"></script>
+<script src="js/games/reading-game-app.min.js?v=22"></script>
 </div><!-- /.v3-page -->
 <script src="js/core/shared.min.js?v=15"></script>
 
@@ -624,6 +630,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
+  <a class="gs-tab" href="mix.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'mix',from:'reading_game'})}catch(e){}">🎮 綜合遊戲</a>
+  <div class="gs-divider"></div>
   <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'reading_game'})}catch(e){}">🎵 聲調練習室</a>
   <div class="gs-divider"></div>
   <span class="gs-tab gs-active">✍️ 拼讀練習室</span>

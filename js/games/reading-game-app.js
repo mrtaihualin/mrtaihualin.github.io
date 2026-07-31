@@ -1211,7 +1211,7 @@ function rgDownloadReport(){
   var rows=roundLog.map(function(w,i){
     return '<tr>'
       +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;">'+esc(w.th)+'</td>'
+      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(w.th)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
@@ -1222,7 +1222,7 @@ function rgDownloadReport(){
 
   var weak=roundLog.filter(function(w){return (w.wrong||0)>0;}).sort(function(a,b){return (b.wrong||0)-(a.wrong||0);}).slice(0,8);
   var weakHtml = weak.length
-    ? weak.map(function(w){return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;">'+esc(w.th)+'（錯 '+w.wrong+' 次）</span>';}).join('')
+    ? weak.map(function(w){return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;white-space:nowrap;word-break:keep-all;">'+esc(w.th)+'（錯 '+w.wrong+' 次）</span>';}).join('')
     : '<span style="font-size:12px;color:#888;">這輪沒有打錯的字，太棒了！🎉</span>';
 
   var innerHtml =
@@ -1897,6 +1897,10 @@ function rgOpenAsk() {
 
 // กด Enter: ต่อคำ/พยางค์ถัดไปถ้าเช็คจบแล้ว (ปุ่ม 下一字/下一個音節 โผล่อยู่) หรือกดเช็คคำตอบเลยถ้าใส่ครบแล้ว
 // วรรณยุกต์เป็นแค่ตัวเลือกเพิ่ม ไม่ต้องเลือกก็เช็ค/ไปต่อได้ปกติ — Lin 2026-07-06
+// Lin 2026-07-31 (แก้บั๊ก): ต้องดักด้วย capture:true (ก่อนถึงตัวไทล์ที่กำลังโฟกัสอยู่) + stopPropagation
+// เพราะเดิมถ้าเพิ่งกดเลือกไทล์คำตอบล่าสุดด้วยเมาส์ ไทล์นั้นจะยังโฟกัสค้างอยู่ และมี onkeydown ของตัวเองที่ทำงาน
+// ก่อนอีเวนต์ลอยขึ้นมาถึง document (bubble phase) — ผลคือกด Enter แล้วไทล์ที่เพิ่งเลือกไว้ถูกกดซ้ำ (ตัวเลือกหลุด)
+// แทนที่จะกดปุ่มเช็ค ต้องกดดักตั้งแต่ต้นทาง (capture) แล้วสั่งหยุดไม่ให้ไปถึงไทล์อีก
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;
   var ae=document.activeElement;
@@ -1911,11 +1915,11 @@ document.addEventListener('keydown',function(e){
   var _sm=document.getElementById('star-modal');
   if(_sm && _sm.classList.contains('show'))return;
   var nextBtn=document.getElementById('btn-next');
-  if(nextBtn && nextBtn.style.display!=='none' && nextBtn.offsetParent!==null){ nextBtn.click(); e.preventDefault(); return; }
+  if(nextBtn && nextBtn.style.display!=='none' && nextBtn.offsetParent!==null){ nextBtn.click(); e.preventDefault(); e.stopPropagation(); return; }
   // Lin 2026-07-31: เพิ่มปุ่ม 下一個音節→ ให้กด Enter ได้เหมือนปุ่ม 下一字→ (เดิมมีแค่ btn-next ไม่มี btn-next-syl)
   var nextSylBtn=document.getElementById('btn-next-syl');
-  if(nextSylBtn && nextSylBtn.style.display!=='none' && nextSylBtn.offsetParent!==null){ nextSylBtn.click(); e.preventDefault(); return; }
+  if(nextSylBtn && nextSylBtn.style.display!=='none' && nextSylBtn.offsetParent!==null){ nextSylBtn.click(); e.preventDefault(); e.stopPropagation(); return; }
   var checkBtn=document.getElementById('btn-check');
-  if(checkBtn && checkBtn.style.display!=='none' && !checkBtn.disabled){ checkBtn.click(); e.preventDefault(); }
-});
+  if(checkBtn && checkBtn.style.display!=='none' && !checkBtn.disabled){ checkBtn.click(); e.preventDefault(); e.stopPropagation(); }
+},true);
 // (คีย์ลัดกดเลข 1-5 เลือกวรรณยุกต์ ถูกลบแล้ว — เอา猜聲調ออก 2026-07-30)

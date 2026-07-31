@@ -2004,6 +2004,9 @@ window.deleteFBComment = function(postId, idx) {
       else if (path.indexOf('lego') > -1) GAME_ID = 'lego';
       else if (path.indexOf('word-order') > -1) GAME_ID = 'word_order';
       else if (path.indexOf('tone-finder') > -1) GAME_ID = 'tone_finder';
+      else if (path.indexOf('mix.html') > -1) GAME_ID = 'mix'; // 2026-07-31: เกมรวม — ⚠️ ต้อง deploy game-reward Edge Function
+      //   ใหม่ (เพิ่ม "mix" เข้า VALID_GAMES) + รัน SQL เพิ่ม 'mix' เข้า CHECK constraint ของ game_reward_events ก่อน
+      //   ไม่งั้นปุ่มขึ้นแต่กดแล้วเซิร์ฟเวอร์ตีกลับ (Lin ต้องทำ 2 อย่างนี้เอง ดูคำสั่งที่แนบให้แยกต่างหาก)
       if (!GAME_ID) return; // หน้าเกมที่ยังไม่รู้จัก ไม่ต้องขึ้นปุ่มนี้
 
       var FN_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/game-reward';

@@ -81,14 +81,14 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/typing-game-app.js -->
 <script defer src="js/games/game-account.js?v=3"></script>
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=9"></script>
+<script defer src="js/games/reading-auth.js?v=10"></script>
 <script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="js/games/word-vault.js"></script>
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
-<script src="data/words-data.js?v=7"></script>
+<script src="data/words-data.js?v=8"></script>
 <script src="data/adv-sentences.js?v=7"></script>
 <script src="data/tone-engine.js?v=3"></script>
 <style>
@@ -710,7 +710,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
 </div>
 
-<script src="js/games/typing-game-app.min.js?v=19"></script>
+<script src="js/games/typing-game-app.min.js?v=20"></script>
 </div><!-- /.v3-page -->
 <script src="js/core/shared.min.js?v=15"></script>
 
@@ -724,6 +724,8 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
+  <a class="gs-tab" href="mix.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'mix',from:'typing_game'})}catch(e){}">🎮 綜合遊戲</a>
+  <div class="gs-divider"></div>
   <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'typing_game'})}catch(e){}">🎵 聲調練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'typing_game'})}catch(e){}">✍️ 拼讀練習室</a>

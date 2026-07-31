@@ -4810,7 +4810,7 @@ async function renderStudentView() {
     // 2026-07-16 加：老師剛發起、還沒被學生確認的取消通知放在最上面（要學生按確認的優先度更高），
     // 已經確認完成的舊版通知（純關閉用）放下面。
     '<div id="teacherCancelAckBanner"></div>' +
-    '<div id="teacherAddAckBanner"></div>' +
+    /* 🗑️ 2026-07-31 ลบ <div id="teacherAddAckBanner"> ทิ้ง — ไม่มีโค้ดไหนเขียนลงกล่องนี้อีกแล้ว */
     '<div id="teacherCancelNoticeBanner"></div>' +
     '<div class="student-hero">' +
       '<div class="student-hero-avatar">' + escHtml(sInitial) + '</div>' +
@@ -4876,7 +4876,8 @@ async function renderStudentView() {
   checkStudentSlipStatus(token);
   loadStudentNextClass(token);
   loadTeacherCancelAckBanner(token);
-  loadTeacherAddAckBanner(token);
+  // 🗑️ 2026-07-31 ลบ loadTeacherAddAckBanner(token) ทิ้ง — ระบบ "รอนักเรียนกดยอมรับก่อนเพิ่มคาบ"
+  //    เลิกใช้แล้วตั้งแต่ 2026-07-30 · เหตุผลเต็มดูที่บล็อกคอมเมนต์ 🗑️ ในไฟล์นี้ (ค้นคำว่า loadTeacherAddAckBanner)
   loadTeacherCancelNoticeBanner(token);
   loadStudentPendingRequestStatus(token);
   loadStudentSchedule(token);
@@ -6474,7 +6475,9 @@ async function loadStudentPendingRequestStatus(token) {
   try {
     // 2026-07-16 改：多撈幾筆，自己篩掉「老師發起的取消」（那個已經有專屬的
     // teacherCancelAckBanner 處理確認流程了，這裡不用重複顯示，不然學生會看到兩個一樣的東西）。
-    // 2026-07-18 加：同理篩掉「老師發起的加課」，改用專屬的 teacherAddAckBanner 顯示確認流程。
+    // 2026-07-18 加：同理篩掉「老師發起的加課」（曾經有專屬的 teacherAddAckBanner 顯示確認流程）。
+    // 🗑️ 2026-07-31：teacherAddAckBanner 那套已經整個刪掉了（系統不再產生「等學生確認」的加課申請）。
+    //    這個篩選留著只是為了萬一資料庫裡還有很久以前的舊資料，不會讓學生看到已經沒有用的卡片。
     // 2026-07-19 改：直接 select 會被 RLS 擋掉，永遠回空陣列（學生因此完全看不到自己的
     // 申請狀態，而且不會有任何錯誤訊息）。改走 student_get_own_requests RPC。
     // 🟡 2026-07-31 แก้ (ข้อ #22)：ดึงจาก 5 เป็น 10 แถว
@@ -6775,99 +6778,23 @@ async function ackTeacherCancel(token, id) {
   await loadTeacherCancelAckBanner(token);
 }
 
-// 2026-07-18 加（Lin 要求）：老師自己發起「➕ 加課堂時間」也要先讓學生確認，才會真的排進 Calendar，
-// 跟老師發起取消同一套模式（loadTeacherCancelAckBanner／ackTeacherCancel 的加課版）。
-async function loadTeacherAddAckBanner(token) {
-  var el = document.getElementById('teacherAddAckBanner');
-  if (!el) return;
-  try {
-    // 2026-07-19 改：直接 select 會被 RLS 擋掉（見 studentFetchRequests 的說明），改走 RPC。
-    // 「還沒按過我知道了」（teacher_add_ack_at is null）在這裡自己過濾。
-    var res = await studentFetchRequests(token, { requestType: 'add_class', status: 'pending', initiatedBy: 'teacher', limit: 10 });
-    if (res.error) { el.innerHTML = ''; return; }
-    var rows = res.rows.filter(function (x) { return !x.teacher_add_ack_at; }).slice(0, 5);
-    el.innerHTML = rows.map(function(r) {
-      var timeLabel = r.proposed_recurring
-        ? ('每週' + ['日','一','二','三','四','五','六'][r.proposed_weekday] + ' ' + (r.requested_time || '-') + '（泰國時間）')
-        : ((r.requested_date || '-') + ' ' + (r.requested_time || '-') + '（泰國時間）');
-      return '<div style="background:var(--gold-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-family:\'Noto Sans TC\',sans-serif;">' +
-        '<div style="font-weight:700;font-size:0.95rem;color:var(--amber-dark);margin-bottom:4px;">➕ 老師想幫你加一堂課</div>' +
-        '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:10px;">時間：' + escHtml(timeLabel) + '，請按一下確認</div>' +
-        '<div style="display:flex;gap:8px;">' +
-        '<button onclick="ackTeacherAdd(\'' + token + '\',\'' + r.id + '\')" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border:none;border-radius:999px;padding:8px 16px;font-size:0.85rem;font-weight:700;cursor:pointer;">我知道了</button>' +
-        // 2026-07-20 加（Lin 要求：沒有 LINE 的學生也要能拒絕）：以前這裡只有「我知道了」，
-        // 沒連結 LINE 的學生完全沒辦法拒絕老師提議的時間，只能在 LINE 裡按「婉拒」。
-        '<button onclick="declineTeacherAdd(\'' + token + '\',\'' + r.id + '\')" style="background:none;border:1.5px solid var(--amber);color:var(--amber-dark);border-radius:999px;padding:8px 16px;font-size:0.85rem;font-weight:700;cursor:pointer;">婉拒</button>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-  } catch (e) { el.innerHTML = ''; }
-}
-
-// 2026-07-20 加（Lin 要求：沒有 LINE 的學生也要能拒絕老師提議的加課時間）：
-// 跟 line-webhook 的 action=decline_add_class 同一套邏輯——只關掉這筆申請（status=acknowledged,
-// offer_status=declined），不動 Google Calendar（本來就還沒建立，老師還沒按「確認新增」）。
-async function declineTeacherAdd(token, id) {
-  if (!confirm('確定要婉拒老師提議的這個時間嗎？（不會動到 Calendar，老師會收到通知）')) return;
-  const res = await studentPatchRequest(token, id, { status: 'acknowledged', offer_status: 'declined' }, { status: 'pending', notProcessing: true });
-  if (res.error) { alert('⚠️ 婉拒失敗：' + res.error.message + '\n可以直接用 LINE 聯絡老師比較保險。'); return; }
-  if (!res.rows.length) {
-    alert('ℹ️ 這筆可能剛好已經被處理過了，重新整理看看目前狀態。');
-    await loadTeacherAddAckBanner(token);
-    return;
-  }
-  try {
-    const rDate = (res.rows[0].requested_date || '-') + (res.rows[0].requested_time ? ' ' + res.rows[0].requested_time : '');
-    await fetch(LINE_NOTIFY_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-      body: JSON.stringify({
-        to: 'teacher',
-        fromStudentToken: token, // 2026-07-26：หลักฐานว่าเป็นนักเรียนจริง (ฝั่งนักเรียนไม่ได้ล็อกอิน)
-        message: '學生婉拒了這堂加課提議（' + rDate + '）',
-        flex: {
-          title: '❌ 學生婉拒了這堂加課',
-          bodyText: '時間：' + rDate + '（泰國時間）\n\n學生婉拒了這個時段，這筆申請已經關閉，不會再被誤新增，可以直接在 LINE 打字聯繫學生討論其他時間',
-          buttons: [contactStudentPostbackButton(token)],
-        },
-      }),
-    });
-  } catch (e) { /* 通知老師失敗不影響學生這邊已經婉拒成功 */ }
-  await loadTeacherAddAckBanner(token);
-}
-
-async function ackTeacherAdd(token, id) {
-  // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明）→ 學生按了
-  // 「我知道了」沒存進去，老師端 confirmTeacherAddClass 會永遠卡在「學生還沒確認」。改走 RPC。
-  var res = await studentPatchRequest(token, id, { teacher_add_ack_at: new Date().toISOString() }, { nullColumn: 'teacher_add_ack_at' });
-  if (res.error) { alert('⚠️ 確認失敗：' + res.error.message + '\n可以直接用 LINE 聯絡老師比較保險。'); return; }
-  if (!res.rows.length) {
-    // count=0：可能已經在 LINE 按過了，或老師剛好收回了通知——不管哪一種，重新整理畫面看目前狀態就好
-    await loadTeacherAddAckBanner(token);
-    return;
-  }
-  try {
-    // 2026-07-20 改（Lin 要求：確認新增 Calendar 要能從 LINE 直接按）：以前這裡只推純文字叫老師
-    // 自己去網站按，現在附一顆按鈕，共用 line-webhook 的 action=confirm_add_class（跟
-    // confirm_cancel_delete 同一套模式），老師在 LINE 這裡就能直接按完成，不用開網站。
-    const rDateForFlex = (res.rows[0].requested_date || '-') + (res.rows[0].requested_time ? ' ' + res.rows[0].requested_time : '');
-    await fetch(LINE_NOTIFY_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
-      body: JSON.stringify({
-        to: 'teacher',
-        fromStudentToken: token, // 2026-07-26：หลักฐานว่าเป็นนักเรียนจริง (ฝั่งนักเรียนไม่ได้ล็อกอิน)
-        message: 'ℹ️ 學生已確認收到加課通知（' + rDateForFlex + '），可以按下方按鈕新增，或到網站按「確認新增」',
-        flex: {
-          title: '學生已確認收到加課通知',
-          bodyText: '時間：' + rDateForFlex + '\n\n可以直接按下方按鈕新增 Calendar，或到網站處理',
-          buttons: [{ label: '確認新增 Calendar', postbackData: 'action=confirm_add_class&request=' + encodeURIComponent(id), style: 'primary' }],
-        },
-      }),
-    });
-  } catch (e) { /* 通知老師失敗不影響學生這邊已經確認成功 */ }
-  await loadTeacherAddAckBanner(token);
-}
+// 🗑️ 2026-07-31 (รอบ 4) ลบทิ้ง — loadTeacherAddAckBanner / declineTeacherAdd / ackTeacherAdd
+//
+// ทั้ง 3 ตัวคือระบบเก่า "ครูเสนอเวลา → รอนักเรียนกด 我知道了/婉拒 → ครูค่อยกดลงปฏิทิน"
+// Lin สั่งเลิกใช้ตั้งแต่ 2026-07-30 (ครูกดยืนยัน = ลงปฏิทินทันที ไม่ต้องรอนักเรียน)
+// วันนั้นยังลบไม่ได้ เพราะกลัวมีคำขอเก่าค้างในฐานข้อมูล แล้วนักเรียนกลุ่มนั้นจะตอบไม่ได้เลย
+//
+// ✅ 2026-07-31 เช็คแล้ว คิวว่างจริง (Lin รันเองใน Supabase ได้ 0):
+//    select count(*) from classroom_requests
+//    where request_type='add_class' and initiated_by='teacher' and status='pending';
+//    → ไม่มีใครรออยู่แล้ว ลบได้ปลอดภัย
+//
+// ⚠️ ฝั่ง LINE ลบไม่ได้แบบนี้ — ปุ่มในแชท LINE ค้างอยู่ในประวัติแชทตลอดกาล นักเรียนเลื่อนขึ้นไป
+//    กดเมื่อไหร่ก็ได้ → ที่นั่นเปลี่ยนเป็น "ตอบข้อความบอกว่าปุ่มเลิกใช้แล้ว" แทนการลบทิ้ง
+//    (supabase/functions/line-webhook/index.ts → ack_teacher_add / decline_add_class)
+//    ที่นี่ลบเต็มๆ ได้เพราะเว็บสร้างปุ่มใหม่ทุกครั้งที่เปิดหน้า ไม่มีปุ่มเก่าค้าง
+//
+// 🚫 ห้ามเอากลับมาไม่ว่าจะดูสมเหตุสมผลแค่ไหน — ดูหัวข้อ 📅 ระบบเพิ่มคาบเรียน ใน CLAUDE.md
 
 // 2026-07-16 改（Lin 要求：最多 3 個時間選項 + 都不方便要通知老師）：
 //   accepted 現在要帶 optIndex，指出學生挑的是 proposed_options 裡第幾個——先把那個選項存成
@@ -7661,20 +7588,13 @@ async function loadPendingClassRequests() {
       : ('原本課堂：' + origLabel1 + '　→　想改到：' + (r.requested_date || '-') + (r.requested_time ? ' ' + r.requested_time : ''));
     var typeLabel = (r.initiated_by === 'teacher' ? '（老師提出）' : '') + (isCancel ? '申請取消' : isAdd ? '申請加課' : '申請改期');
     var actionsHtml;
-    if (isAdd && r.initiated_by === 'teacher') {
-      // 2026-07-18 加（Lin 要求）：老師自己想到要加課（不是核准學生送出的申請）——一樣要先等
-      // 學生按「我知道了」確認，才輪到老師按「確認新增」真的排進 Calendar，跟老師發起取消同一套。
-      // ⚠️ 2026-07-30（Lin สั่งเลิกใช้ระบบนี้แล้ว）：ตั้งแต่วันนี้ ครูกดเพิ่มคาบ = ลงปฏิทินทันที
-      // ไม่มีการสร้างคำขอแบบ "รอนักเรียนกดยอมรับ" ใหม่อีกแล้ว → โค้ดส่วนนี้เก็บไว้เฉพาะเพื่อจัดการ
-      // คำขอเก่าที่ค้างอยู่ในฐานข้อมูลตั้งแต่ก่อนวันนี้ ไม่งั้นแถวเก่าจะค้างคิวโดยไม่มีปุ่มกดจัดการ
-      // เมื่อคิวว่างแล้ว ลบบล็อกนี้ + confirmTeacherAddClass + teacherWithdrawOwnAddRequest ทิ้งได้เลย
-      actionsHtml = '<div style="font-size:0.74rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;padding:2px 0;">（舊制申請：等學生確認後才排入）</div>' + (r.teacher_add_ack_at
-        ? ('<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">✅ 學生已經確認了，可以排進 Calendar 了</div>' +
-           '<button class="btn-approve" onclick="confirmTeacherAddClass(\'' + r.id + '\')">確認新增 Calendar</button>')
-        : ('<div style="font-size:0.78rem;color:var(--gold-deep);font-family:\'Noto Sans TC\',sans-serif;padding:6px 0;">🕐 等學生按「我知道了」確認</div>' +
-           '<button class="btn-approve" onclick="viewRequestDetail(window._classRequestCache[\'' + r.id + '\'])">👁️ 查看</button>' +
-           '<button class="btn-reject" onclick="teacherWithdrawOwnAddRequest(\'' + r.id + '\')">收回這個加課</button>'));
-    } else if (isAdd) {
+    // 🗑️ 2026-07-31 (รอบ 4) ลบบล็อก `isAdd && initiated_by === 'teacher'` ทิ้ง
+    //    เดิมเป็นทางแยกของระบบเก่า "ครูเสนอเวลา → รอนักเรียนกด 我知道了 → ครูค่อยกดลงปฏิทิน"
+    //    Lin สั่งเลิกใช้ 2026-07-30 · เก็บไว้เฉพาะจัดการคำขอเก่าที่ค้างในฐานข้อมูล
+    //    ✅ 2026-07-31 Lin รันเช็คแล้วคิวว่างจริง (ได้ 0) → ลบได้ พร้อมกับ confirmTeacherAddClass
+    //       และ teacherWithdrawOwnAddRequest ที่มีแต่บล็อกนี้เรียกใช้
+    //    ตอนนี้คำขอเพิ่มคาบทุกใบ (ไม่ว่าใครเป็นคนเริ่ม) ใช้ทางเดียวกันหมด = 3 ปุ่มด้านล่าง
+    if (isAdd) {
       // 加課申請：不用「處理」（找不到既有事件），改開「➕ 加課堂時間」那套工具，
       // 先幫老師帶入學生申請的日期/時間，老師檢查沒衝突、確認新增後，這筆申請才會自動標記完成。
       // 2026-07-30 改（Lin สั่ง）：เอาปุ่ม「⚙️ 其他」ออกจากคำขอเพิ่มคาบ เพราะข้างในมี「🔁 提議新時間」
@@ -8593,6 +8513,14 @@ async function loadRecentBackups() {
     var expiry;
     if (b.action === 'move') expiry = Math.max(new Date(b.old_start).getTime(), b.new_start ? new Date(b.new_start).getTime() : 0);
     else if (b.action === 'permanent_change') expiry = b.new_start ? new Date(b.new_start).getTime() : 0;
+    // 🟠 2026-07-31 (รอบ 4) แก้: action='create' ต้องนับจาก "วันที่กดเพิ่ม" ไม่ใช่ "วันที่ของคาบ"
+    //   บั๊กเดิม (เพิ่งทำ create เข้ามาวันนี้ แล้วลืมจุดนี้): เกณฑ์หมดอายุของทุกแบบคือ "เวลาคาบเดิม"
+    //   ซึ่งถูกสำหรับ ลบ/ย้าย (คาบผ่านไปแล้ว = คืนค่าไปก็ไม่มีประโยชน์) แต่ผิดสำหรับ "เพิ่มคาบ":
+    //     · เพิ่มคาบ 09:00 ของวันนี้ ตอนบ่าย → แถวสำรองหมดอายุตั้งแต่วินาทีที่สร้าง ปุ่มคืนค่าไม่ขึ้นเลย
+    //     · คาบทุกสัปดาห์ → old_start คือครั้งแรก พอผ่านสัปดาห์แรก ปุ่มคืนค่าของทั้งชุดก็หายไป
+    //       ทั้งที่คาบอีก 11 สัปดาห์ข้างหน้ายังอยู่ในปฏิทินจริงๆ (นี่คือเคสที่ต้องใช้ปุ่มมากที่สุด)
+    //   → ใช้ created_at + 7 วันแทน (เผลอเพิ่มผิดมักรู้ตัวภายในไม่กี่วัน) · ไม่มี created_at ถอยไปใช้ของเดิม
+    else if (b.action === 'create') expiry = b.created_at ? (new Date(b.created_at).getTime() + 7 * 24 * 60 * 60 * 1000) : new Date(b.old_start).getTime();
     else expiry = new Date(b.old_start).getTime();
     return now < expiry;
   });
@@ -8719,6 +8647,26 @@ async function revertCalendarBackup(id) {
       // 🟡 2026-07-31 (ข้อ #20)：คืนค่าการเพิ่มคาบ = ลบคาบที่เพิ่งสร้างออกจากปฏิทิน
       //   410 = ถูกลบไปแล้วก่อนหน้า · 404 = ไม่มีอยู่แล้ว → ทั้งคู่คือ "ผลลัพธ์ที่ต้องการเกิดแล้ว" ผ่านได้
       //   (ท่าเดียวกับตอนคืนค่า permanent_change ที่ต้องลบชุดคาบใหม่ทิ้ง)
+      // 🔴 2026-07-31 (รอบ 4) เพิ่มด่าน "มองเห็นก่อนลบ" — ลอกจาก deleteCalendarEventById ฝั่ง LINE
+      //   บั๊กที่จับได้ตอนตรวจย้อนกลับ: ถ้า event นี้ไม่ได้อยู่ในปฏิทินที่เบราว์เซอร์นี้เห็น (เช่น วันหนึ่ง
+      //   ค่า GOOGLE_CALENDAR_ID ถูกเปลี่ยนให้ชี้คนละใบกับ primary) คำสั่งลบจะตอบ 404
+      //   ซึ่งบรรทัดล่างตีความว่า "ลบไปแล้ว = สำเร็จ" → ระบบจะลบแถวตารางเรียน, ปิดแถวสำรอง,
+      //   ขึ้นว่า「✅ 已刪除」 และส่ง LINE บอกนักเรียนว่าคาบถูกยกเลิก **ทั้งที่คาบยังอยู่ในปฏิทินจริงๆ**
+      //   = พังแบบเงียบและกลับด้าน (ระบบบอกว่าหายแล้ว ปฏิทินบอกว่ายังอยู่) ผิดกฎ RELIABILITY FIRST
+      //   → เช็คก่อนว่ามองเห็นไหม มองไม่เห็น = หยุด ไม่แตะอะไรเลย แล้วบอกครูตรงๆ
+      var preCreate = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(b.old_event_id), {
+        headers: { Authorization: 'Bearer ' + token },
+      });
+      if (preCreate.status === 404 || preCreate.status === 410) {
+        alert('🛑 找不到這堂課了，沒有做任何動作。\n\n' +
+          '可能是：(1) 已經有人手動刪掉了 (2) 這堂課建立在「另一本」行事曆上，這個帳號看不到。\n\n' +
+          '請先自己到 Google Calendar 確認一下這堂課還在不在，再決定要不要處理。');
+        return;
+      }
+      if (!preCreate.ok) {
+        throw new Error('確認這堂課是否存在時失敗（' + preCreate.status + '）：' + (await preCreate.text()).slice(0, 200) +
+          '\n為了安全，這次沒有刪除任何東西。');
+      }
       var delCreate = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(b.old_event_id), {
         method: 'DELETE', headers: { Authorization: 'Bearer ' + token },
       });
@@ -9220,123 +9168,12 @@ async function teacherWithdrawOwnCancelRequest(id) {
   }
 }
 
-// 2026-07-18 加（Lin 要求）：老師自己發起的加課提議，學生還沒確認前可以收回——跟
-// teacherWithdrawOwnCancelRequest 同一套模式，只是欄位換成 teacher_add_ack_at。
-async function teacherWithdrawOwnAddRequest(id) {
-  if (!confirm('確定要收回這個加課通知嗎？（不會排進 Calendar，學生看到的確認按鈕會消失）')) return;
-  if (_inFlightRequestIds[id]) return;
-  _inFlightRequestIds[id] = true;
-  try {
-    var res = await sb.from('classroom_requests').update({ status: 'acknowledged' })
-      .eq('id', id).eq('status', 'pending').is('teacher_add_ack_at', null).select();
-    if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
-    if (!res.data || !res.data.length) {
-      alert('ℹ️ 收回失敗——學生可能剛好已經按了確認，這種情況直接按「確認新增」排進 Calendar，或自己聯絡學生說明不加了。');
-      await loadPendingClassRequests();
-      return;
-    }
-    alert('✅ 已收回，沒有排進 Calendar');
-    await loadPendingClassRequests();
-  } finally {
-    delete _inFlightRequestIds[id];
-  }
-}
-
-// 2026-07-18 加（Lin 要求）：老師自己發起的加課，學生已經按「我知道了」確認後，老師回來
-// 這裡按「確認新增 Calendar」才會真的建立事件——共用 createCalendarClassEventForStudent
-// （跟 confirmAddClassDay 同一個核心函式，只是這裡從 classroom_requests 這筆申請讀資料，
-// 不是從 _addClassDayPending 讀）。
-async function confirmTeacherAddClass(id) {
-  if (_inFlightRequestIds[id]) return;
-  _inFlightRequestIds[id] = true;
-  try {
-    // RELIABILITY FIRST：動 Calendar 之前先回頭問資料庫一次最新狀態，不要只信任畫面快取
-    // （防止學生剛好同時收回，或這筆申請已經被別的方式關掉）。
-    const verify = await reverifyRequestState(id, null);
-    if (!verify.ok) { alert('⚠️ ' + verify.reason); await loadPendingClassRequests(); return; }
-
-    const res = await sb.from('classroom_requests').select('*').eq('id', id).maybeSingle();
-    if (res.error || !res.data) { alert('⚠️ 讀取這筆加課申請失敗：' + (res.error ? res.error.message : '找不到資料')); return; }
-    const r = res.data;
-    if (!r.teacher_add_ack_at) { alert('ℹ️ 學生還沒按「我知道了」確認，先不能新增。'); await loadPendingClassRequests(); return; }
-
-    // 🟠 2026-07-31 เพิ่ม (ข้อ #8)：ปุ่มระบบเก่านี้เป็นปุ่มเดียวของครูที่ไม่มีด่านกันวันย้อนหลัง
-    //   (ทุกเส้นทางอื่นมีหมด — ดู assertNotPastDate ที่ checkAddClassDayConflict / processClassRequestInner /
-    //    confirmAcceptedOffer) และแถวพวกนี้คือ "คำขอค้างจากก่อน 2026-07-30" = วันที่ผ่านไปแล้วแทบทั้งหมด
-    //   → กดครั้งเดียวสร้างคาบย้อนหลังทันที ขัดกฎเหล็กที่เขียนไว้เองที่หัวข้อ assertNotPastDate ด้านบน
-    //   คิวเก่าหมดเมื่อไหร่ ลบทั้งฟังก์ชันนี้ทิ้งได้เลยตามที่ CLAUDE.md วางไว้ (ด่านนี้จะหายไปพร้อมกัน)
-    if (!assertNotPastDate(r.requested_date, '這筆舊申請的上課日期（日期已經過去了，請直接聯絡學生重新約時間）')) {
-      await loadPendingClassRequests();
-      return;
-    }
-
-    const token = r.token;
-    const s = studentsCache[token];
-    if (!s) { alert('找不到學生資料'); return; }
-
-    const p = {
-      dateVal: r.requested_date,
-      startVal: r.requested_time,
-      endTime: r.proposed_end_time || addOneHourTimeStr(r.requested_time),
-      recurring: !!r.proposed_recurring,
-      untilVal: r.proposed_until,
-      weekday: r.proposed_weekday,
-    };
-
-    // 2026-07-20 加（稽核發現 🔴 RED——這裡以前完全沒搶 processing_started_at 原子鎖，跟取消/
-    // 改期已經在用的 claimRequestForProcessing 不一致，也跟 LINE 那邊 confirm_add_class 自己有
-    // 搶鎖不一致）：這筆同時能從網頁「確認新增」跟 LINE「✅ 確認新增」兩邊觸發，沒搶鎖的話同時按
-    // 可能真的在 Google Calendar 建立兩筆重複事件。這裡補上跟取消/改期同一套鎖。
-    // 🔴 2026-07-31 เปลี่ยนตัวจับล็อกเป็นแบบ "ห้ามแย่ง" เหมือนเส้นทางเพิ่มคาบอื่นๆ (ดู claimAddClassRequest)
-    const claimTeacherAdd = await claimAddClassRequest(id);
-    if (!claimTeacherAdd.ok) { alert('⚠️ ' + claimTeacherAdd.reason); await loadPendingClassRequests(); return; }
-
-    let created;
-    try {
-      created = await createCalendarClassEventForStudent(token, s, p);
-    } catch (calErr) {
-      // 只有「Calendar API 這次真的還沒建立成功」才能安全放鎖讓人重試——如果錯誤訊息顯示
-      // 「已經建立成功」或「重新確認時」代表事件可能已經真的建立了，故意不放鎖，避免重按
-      // 造成重複事件（跟 line-webhook confirm_add_class 的 eventCreatedButUnverified 同一原則）。
-      const calMsg = calErr.message || String(calErr);
-      const ambiguousAdd = /已經建立成功|重新確認時/.test(calMsg);
-      if (!ambiguousAdd) await releaseRequestClaim(id);
-      alert('❌ 新增失敗：' + calMsg + (ambiguousAdd ? '\n⚠️ Calendar 可能已經建立成功，為了安全這筆先鎖住不能重按，請直接檢查 Google Calendar／Supabase 手動確認，或告訴 Lin/AI 處理。' : ''));
-      return;
-    }
-    const start = created.start;
-
-    const addedTimeLabel = p.recurring
-      ? ('每週' + ['日','一','二','三','四','五','六'][p.weekday] + ' ' + p.startVal + '–' + p.endTime + '（泰國時間，從 ' + p.dateVal + ' 開始' + (p.untilVal ? '，固定到 ' + p.untilVal : '') + '）')
-      : formatThaiDateTimeLabel(start.toISOString()) + '（泰國時間）';
-    if (s.line_user_id) {
-      try {
-        const studentTimeLabel = p.recurring ? addedTimeLabel : studentFacingTimeLabel(start, s.pending_student_tz);
-        // 🔴 2026-07-26 (RELIABILITY FIRST)：เดิมทิ้งผลลัพธ์ ส่งไม่ถึงนักเรียนก็เงียบสนิท
-        const stuRes2 = await fetch(LINE_NOTIFY_ENDPOINT, {
-          method: 'POST',
-          // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
-          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
-          body: JSON.stringify({ to: { studentToken: token }, message: '你確認的加課已經排進 Calendar 了：' + studentTimeLabel }),
-        });
-        if (!stuRes2.ok) alert('✅ Calendar 已新增成功\n⚠️ 但通知學生失敗（' + (await lineNotifyErrorText(stuRes2)) + '），請自己跟學生說一聲');
-      } catch (e) { console.warn('⚠️ 加課完成通知學生失敗（不影響已經加成功的課）：', e.message || e); }
-    }
-    try {
-      await fetch(LINE_NOTIFY_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) }, // 2026-07-26：สาขา to:'teacher' บังคับพิสูจน์ตัวแล้ว — ฝั่งครูใช้ session จริง
-        body: JSON.stringify({ to: 'teacher', message: '✅ 已幫 ' + s.name + ' 加課：' + addedTimeLabel }),
-      }).then(async function (r) { if (!r.ok) console.warn('⚠️ 通知老師自己失敗（' + (await lineNotifyErrorText(r)) + '）'); });
-    } catch (e) { console.warn('⚠️ 加課完成通知老師自己失敗（不影響已經加成功的課）：', e.message || e); }
-
-    await finalizeRequestStatus(id, 'acknowledged');
-  } catch (e) {
-    alert('❌ 新增失敗：' + (e.message || String(e)));
-  } finally {
-    delete _inFlightRequestIds[id];
-  }
-}
+// 🗑️ 2026-07-31 (รอบ 4) ลบทิ้ง — teacherWithdrawOwnAddRequest / confirmTeacherAddClass
+//    ทั้งคู่เป็นของระบบเก่า "ครูเสนอเวลาเพิ่มคาบ → รอนักเรียนกด 我知道了 → ครูค่อยกดลงปฏิทิน"
+//    Lin สั่งเลิกใช้ 2026-07-30 · เก็บไว้เฉพาะเพื่อจัดการคำขอเก่าที่ค้างในฐานข้อมูล
+//    ✅ 2026-07-31 Lin รันเช็คแล้วคิวว่างจริง (ได้ 0) → ไม่มีแถวเก่าให้จัดการอีกแล้ว ลบได้
+//    ที่เดียวที่เรียก 2 ตัวนี้คือบล็อกปุ่มในคิวครู ซึ่งถูกลบพร้อมกันในรอบนี้ (ค้นคำว่า isAdd ในไฟล์นี้)
+//    🚫 ห้ามเอากลับมา — ดูหัวข้อ 📅 ระบบเพิ่มคาบเรียน ใน CLAUDE.md
 
 // 2026-07-16 加：老師想改成取消「另一堂」而不是原本選的那堂——更新同一筆申請的日期/Calendar
 // 事件 ID，不用整個作廢重新來一次。因為時間變了，等於是新的通知，所以重設 teacher_cancel_ack_at，

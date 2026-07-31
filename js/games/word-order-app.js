@@ -367,7 +367,10 @@
   function woLogSentence(o){
     try{
       var s = curSentence();
-      var base = {th:s?s.th:'', zh:s?s.zh:'', wrong:(typeof wrongCount!=='undefined'?wrongCount:0), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
+      // wordsArr: รายคำ (s.words[].th) ใช้ตอนทำ PDF เท่านั้น — ใส่จุดตัดคำที่มองไม่เห็น (ZWSP) ระหว่างคำ
+      // กันประโยคยาวไม่มีเว้นวรรค (เขียนไทยจริงไม่เว้นวรรคระหว่างคำ) ตกขอบหน้ากระดาษ/ถูกตัดกลางคำ — Lin 2026-07-31
+      var wordsArr = (s && s.words && s.words.length) ? s.words.map(function(w){return w.th;}) : null;
+      var base = {th:s?s.th:'', wordsArr:wordsArr, zh:s?s.zh:'', wrong:(typeof wrongCount!=='undefined'?wrongCount:0), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
     } catch(e){}
@@ -1124,6 +1127,11 @@
     var loggedIn = woLoggedIn();
 
     function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    // Lin 2026-07-31: ประโยคไทยเขียนจริงไม่เว้นวรรคระหว่างคำ (เช่น "ผมกินข้าวอยู่ที่บ้าน")
+    // ถ้าโยนดิบๆ ลง <td> ไม่มีจุดตัดคำเลย เบราว์เซอร์บางตัวจะไม่ตัดขึ้นบรรทัดใหม่ (ล้นขอบกระดาษ) หรือตัดกลางคำเวลาจนมุม
+    // แก้ด้วยการต่อคำจาก wordsArr (แยกคำมาแล้วจากข้อมูลจริง) ด้วยช่องว่างมองไม่เห็น (Zero-Width Space ​) —
+    // ให้เบราว์เซอร์ตัดบรรทัดได้ "ระหว่างคำ" เท่านั้น ไม่มีทางตัดกลางคำ + ไม่มีวรรคที่มองเห็นโผล่มา (ตัวเขียนหน้าตาเหมือนเดิมทุกอย่าง)
+    function wrapThai(w){ return (w.wordsArr && w.wordsArr.length) ? w.wordsArr.map(esc).join('​') : esc(w.th); }
     function statusLabel(w){
       if (w.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
       if (w.guide) return '<span style="color:#b06020;">💡 用提示</span>';
@@ -1133,7 +1141,7 @@
     var rows = roundLog.map(function(w, i){
       return '<tr>'
         +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-        +'<td style="padding:7px 6px;font-size:14px;font-weight:700;">'+esc(w.th)+'</td>'
+        +'<td style="padding:7px 6px;font-size:14px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
@@ -1144,7 +1152,7 @@
 
     var weak = roundLog.filter(function(w){ return (w.wrong||0) > 0; }).sort(function(a,b){ return (b.wrong||0)-(a.wrong||0); }).slice(0,8);
     var weakHtml = weak.length
-      ? weak.map(function(w){ return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;">'+esc(w.th)+'（錯 '+w.wrong+' 次）</span>'; }).join('')
+      ? weak.map(function(w){ return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'（錯 '+w.wrong+' 次）</span>'; }).join('')
       : '<span style="font-size:12px;color:#888;">這輪沒有排錯的句子，太棒了！🎉</span>';
 
     var innerHtml =

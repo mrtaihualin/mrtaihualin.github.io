@@ -74,7 +74,7 @@
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js -->
 <script defer src="js/core/auth-widget.js?v=2"></script>
 <script defer src="js/games/game-account.js?v=3"></script>
-<script defer src="js/games/reading-auth.js?v=9"></script>
+<script defer src="js/games/reading-auth.js?v=10"></script>
 <script defer src="js/games/lego-vault.js?v=1"></script>
 <style>
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -512,12 +512,19 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
     <button onclick="document.getElementById('lego-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
     <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🧱 怎麼玩？</div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">自己動手，把泰語句子一塊一塊組出來，比死背文法有感覺多了 😊</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">「句子底板」上每一格代表一種詞性（時間／主語／否定／文法／動詞／受詞…），點格子選詞，一格一格把句子組起來。至少要選「主語」和「動詞」才能組成一句話，其他格子都可以先不填。</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">組好之後按「🧪 測試（拿分）」，句子會被打散成一塊一塊的詞卡，把它們依照正確順序點回去，排對了才算過關拿分。點錯了？點一下格子裡的詞卡，就能拿回來重排。</p>
-    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:2;">
-      每句從 <strong>10 分</strong>開始：排錯一次扣一些分（10→7→4→1），用「提示」每次扣 <strong>2 分</strong>，兩種扣分共用同一個分數 — 扣到 0 分這句就直接看解答，本句 0 分，可以重排再挑戰。<br>
-      完成一輪（<strong>5 句</strong>）過關 <strong>+20</strong>，如果整輪 5 句都第一次就排對、沒用提示（乾淨過關）再 <strong>+50</strong>。<br>
-      每完成一輪後，<strong>下一句保證是 ✨黃金句 ×2</strong>！乾淨過關分數直接翻倍，記得把握。
+    <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
+      <li>「句子底板」上每一格代表一種詞性（時間／主語／否定／文法／動詞／受詞…），點格子選詞組句子</li>
+      <li>至少要選「主語」和「動詞」才能組成一句話，其他格子都可以先不填</li>
+      <li>組好之後按「🧪 測試（拿分）」，把打散的詞卡依照正確順序點回去，排對了才算過關拿分</li>
+      <li>點錯了？點一下格子裡的詞卡，就能拿回來重排</li>
+    </ul>
+    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
+      <ul style="margin:0;padding-left:18px;line-height:2;">
+        <li>每句從 <strong>10 分</strong>開始：排錯一次扣一些分（10→7→4→1），用「提示」每次扣 <strong>2 分</strong>，兩種扣分共用同一個分數</li>
+        <li>扣到 0 分這句就直接看解答，本句 0 分，可以重排再挑戰</li>
+        <li>完成一輪（<strong>5 句</strong>）過關 <strong>+20</strong>，整輪 5 句都第一次就排對、沒用提示（乾淨過關）再 <strong>+50</strong></li>
+        <li>每完成一輪後，<strong>下一句保證是 ✨黃金句 ×2</strong>！乾淨過關分數直接翻倍，記得把握</li>
+      </ul>
     </div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;">句子底板上的詞卡可以按 📑 加進「單字庫」（最多 15 個），方便之後複習。</p>
     <p style="font-size:13px;color:#2e7d32;background:#e8f5e9;border-radius:8px;padding:10px 14px;margin:0 0 12px;">🔑 <b>登入</b>後：系統會記住連續練習天數、護盾，還有你收藏的單字庫，下次回來接著練 ⭐</p>
@@ -1750,6 +1757,8 @@ function gtTourStart(){
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
+  <a class="gs-tab" href="mix.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'mix',from:'lego'})}catch(e){}">🎮 綜合遊戲</a>
+  <div class="gs-divider"></div>
   <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'lego'})}catch(e){}">🎵 聲調練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'lego'})}catch(e){}">✍️ 拼讀練習室</a>

@@ -1,10 +1,47 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>綜合遊戲 — 泰華眼裡的泰語教學</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Google tag -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="robots" content="noindex"><!-- 綜合遊戲還在測試階段（初級限定）— 先不給搜尋引擎收錄，跟其他 -board.html 排行榜頁一樣的做法 -->
+<title>綜合遊戲練習室 — 泰華眼裡的泰語教學</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+if (document.fonts && document.fonts.load) {
+  document.fonts.load("400 14px Sarabun", "◌่้๊๋").catch(function(){});
+  document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
+}
+</script>
+<link rel="stylesheet" href="css/shared.css?v=14">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/core/supabase-config.js?v=5"></script>
+<script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
+<script defer src="js/games/game-account.js?v=3"></script>
+<script defer src="js/core/auth-widget.js?v=2"></script>
+<script defer src="js/games/reading-auth.js?v=10"></script><!-- v10: เพิ่มสาขาเกม 'mix' — Lin 2026-07-31 -->
+<script defer src="js/games/tone-server.js?v=1"></script>
+<script src="js/games/word-vault.js"></script>
+<script src="data/audio-manifest.js?v=2"></script>
+<script src="data/audio-disabled.js?v=1"></script>
+<script src="js/games/word-audio.js?v=3"></script>
+<script src="js/games/word-menu.js?v=8"></script>
+<script src="data/words-data.js?v=8"></script>
+<script src="data/tone-engine.js?v=3"></script>
 <style>
 /* ── ก็อปมาจาก reading-game.html + typing-game.html จริง (ไม่ได้คิดสีขึ้นเอง) — Lin สั่งแก้ 2026-07-25 รอบ 2 ── */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -13,6 +50,13 @@ body{background:#EDE7D9;font-family:'Sarabun',sans-serif}
 .page-header{text-align:center;margin-bottom:10px}
 .page-title{font-family:'Noto Serif TC',serif;font-size:clamp(18px,4vw,24px);font-weight:900;color:#8B6310;letter-spacing:1px}
 .page-sub{font-family:'Noto Sans TC',sans-serif;font-size:11px;color:#b08040;margin-top:3px}
+
+/* ── แถวสถานะบัญชี (ล็อกอิน+ดาว+streak) — ก็อปจาก reading-game.html จริง (.rg-tools-row/.rg-stat-row/.tf-streak-chip) — เพิ่ม 2026-07-31 ── */
+.rg-tools-row{display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:640px;padding-bottom:2px}
+.rg-stat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0;width:auto;max-width:none}
+.rg-stat-row .tf-streak-chip{font-size:12.5px;padding:6px 14px}
+.rg-stat-row .tf-streak-chip b{font-weight:800;color:#5a3e0a}
+.tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:#7a5510;border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px}
 
 /* ── ปุ่มเลือกระดับ — ก็อปมาจาก reading-game.html จริง (.level-tabs/.ltab) — เพิ่ม 2026-07-25 รอบ6 ตามที่ Lin สั่ง ── */
 .level-tabs{display:flex;gap:8px;margin-bottom:12px;width:100%;max-width:640px;}
@@ -43,6 +87,17 @@ body{background:#EDE7D9;font-family:'Sarabun',sans-serif}
 .word-area{text-align:center;margin:4px 0 0}
 .word-th{font-size:38px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px}
 .word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px}
+.rev-pron{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;min-height:16px}
+.rev-en{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#b09070;min-height:14px}
+
+/* ── ฟ้อนต์โมเดิร์น (เหมือน reading-game.html/typing-game.html) — ก็อป .rg-modern-font ตรงๆ เพิ่ม 2026-07-31 ── */
+body.rg-modern-font .word-th,
+body.rg-modern-font .opt,
+body.rg-modern-font .slot-box,
+body.rg-modern-font .tf-opt,
+body.rg-modern-font .btn,
+body.rg-modern-font .type-target,
+body.rg-modern-font .tk-key { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
 
 .result-banner{width:100%;padding:0;height:0;border-radius:11px;text-align:center;font-size:14px;font-weight:600;font-family:'Noto Sans TC',sans-serif;overflow:hidden;transition:all .2s}
 .result-banner.show{padding:9px 14px;height:auto;margin-top:2px}
@@ -60,10 +115,6 @@ body{background:#EDE7D9;font-family:'Sarabun',sans-serif}
 .opt.wrong{border-color:#f44336;background:#fdecea;color:#c62828;animation:none}
 .opt.locked{pointer-events:none}
 
-/* 2026-07-25 รอบ8: Lin ส่งภาพจริงมา บอก "ไม่เหมือน 100%" — ตรวจแล้วพบว่าหน้า 推導 (ทายเสียง) ผมเอา
-   class ผิดมาตั้งแต่แรก (ก็อป .bonus-section จาก reading-game.html ซึ่งเป็นคนละฟีเจอร์ ไม่ใช่หน้า推導จริง)
-   หน้า推導จริงอยู่ใน tone-finder.html ใช้ระบบ .tf-mina (มาสคอตน้องมีนา) + .tf-options/.tf-opt-wrap/.tf-opt
-   แก้ให้ตรงของจริงทั้งหมด (ก็อปค่าจาก tone-finder.html บรรทัด 444-482, 1662-1679 ตรงๆ) */
 .tf-mina{display:flex;align-items:flex-start;gap:10px;justify-content:center;margin:6px 0 12px;width:100%}
 .tf-mina-face{font-size:38px;line-height:1;flex-shrink:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.12));animation:tf-mina-bob 2s ease-in-out infinite}
 @keyframes tf-mina-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
@@ -114,25 +165,108 @@ body{background:#EDE7D9;font-family:'Sarabun',sans-serif}
 .mx-soon{padding:40px 20px;text-align:center;width:100%}
 .mx-soon .emoji{font-size:40px;margin-bottom:10px}
 .mx-soon .msg{font-family:'Noto Sans TC',sans-serif;font-size:15px;color:#a08050;line-height:1.7}
+
+/* ── #game-switcher ลอยมุมล่าง — ก็อปเป๊ะจาก reading-game.html (js/core/shared.js จะย้ายเข้าไปรวมกับปุ่ม 🎮/⛶/🍙 อัตโนมัติ) — เพิ่ม 2026-07-31 ── */
+#game-switcher{position:fixed;bottom:64px;left:50%;right:auto;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+.gs-tab{padding:9px 18px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.gs-tab:hover{background:rgba(139,99,16,0.08);}
+.gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
+.gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
+@media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 </head>
 <body>
+
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語遊戲練習室</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="pricing.html">課程・費用</a>
+  <a href="faq.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
 <div class="v3-page">
   <div class="page-header">
     <div class="page-title">🎮 綜合遊戲</div>
-    <div class="page-sub">目前開放初級（含2音節字）· 分數暫不會被記錄</div>
+    <div class="page-sub">目前開放初級（含2音節字）· 分數暫不會被記錄到「累積總分」以外的排行</div>
   </div>
+
+  <!-- How-to modal: เกมรวม（簡化版，沒有逐步導覽，只有靜態說明）— เพิ่ม 2026-07-31 -->
+  <div id="mx-howto-modal" onclick="if(event.target===this){this.style.display='none';}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+      <button onclick="document.getElementById('mx-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+      <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🎮 怎麼玩？</div>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">綜合遊戲把「聲調練習室」「拼讀練習室」「打字練習室」3 個關卡合在一起，一個字連續玩過一輪三種玩法。</p>
+      <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;line-height:1.9;">
+        第 1 關 🎵 猜聲調 · 第 2 關 ✍️ 拼字 · 第 3 關 ⌨️ 打字<br>
+        答對直接過關，答錯會晚點再考一次；同一格錯滿 4 次會直接公佈答案<br>
+        ✨黃金字全對 <strong>×2</strong> 分 · 連對 3／5／8 次 <strong>×1.5／×2／×3</strong>
+      </div>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;">登入的話，這輪的分數會記錄到「綜合遊戲排行榜」，累積星星、連續天數也跟其他遊戲共用一個帳號。</p>
+      <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">目前只開放初級，中級／高級還在準備中 🙏</p>
+    </div>
+  </div>
+
+  <div class="rg-tools-row">
+    <div id="rg-profile-wrap" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
+      <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
+      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="document.getElementById('mx-howto-modal').style.display='flex';">📖 玩法</span>
+      <div class="rg-stat-row" id="rg-stat-row" style="display:none;">
+        <span class="tf-streak-chip" title="連續天數">🔥 <b id="rg-streak-num">0</b></span>
+        <span class="tf-streak-chip" title="累積星星（全部遊戲共用）">⭐ <b id="star-count">0</b></span>
+        <span class="tf-streak-chip" title="勳章"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b></span>
+      </div>
+      <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
+    </div>
+  </div>
+
   <div class="level-tabs">
     <button class="ltab active" id="mx-ltab-初" onclick="MixGame.setLevel('初')">初級</button>
     <button class="ltab" id="mx-ltab-中" onclick="MixGame.setLevel('中')">中級</button>
     <button class="ltab" id="mx-ltab-高" onclick="MixGame.setLevel('高')">高級</button>
   </div>
-  <div id="mx-root"></div>
+
+  <div class="card" id="mx-card">
+    <div id="mx-dynamic"></div>
+    <!-- แถวปุ่มใต้คำศัพท์ (คงที่ ไม่ถูกลบ/สร้างใหม่ทุกคำ — เกมต่อ WordAudio.setCurrent()/เติม vault ปุ่มเข้ามาเองทุกครั้งที่เปลี่ยนคำ) — เพิ่ม 2026-07-31 -->
+    <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 2px;flex-wrap:wrap;">
+      <button id="rg-sound-toggle" class="word-ctl-btn" type="button"></button>
+      <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="MixGame.setPronMode(!MixGame.pronMode())"></button>
+      <button id="rg-en-toggle" class="word-ctl-btn" type="button" onclick="MixGame.setEnMode(!MixGame.enMode())"></button>
+      <span id="zh-toggle-slot"></span>
+      <span id="rg-vault-btn-slot"></span>
+      <span id="font-toggle-slot"></span>
+    </div>
+  </div>
 </div>
 
-<script src="data/words-data.js?v=4"></script>
-<script src="data/tone-engine.js?v=1"></script>
-<script src="js/games/mix-game-app.js?v=5"></script>
-<script>MixGame.mount(document.getElementById('mx-root'));</script>
+<div id="game-switcher">
+  <span class="gs-tab gs-active">🎮 綜合遊戲</span>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'mix_game'})}catch(e){}">🎵 聲調練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'mix_game'})}catch(e){}">✍️ 拼讀練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="typing-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'typing_game',from:'mix_game'})}catch(e){}">⌨️ 打字練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'mix_game'})}catch(e){}">🧩 語序練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'mix_game'})}catch(e){}">🧱 造句練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'mix_game'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
+</div>
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="js/games/mix-game-app.js?v=6"></script>
+<script>MixGame.mount();</script>
+<script src="js/core/shared.min.js?v=15"></script>
 </body>
 </html>
