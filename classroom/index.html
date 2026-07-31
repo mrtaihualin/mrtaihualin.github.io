@@ -2408,6 +2408,28 @@ async function createCalendarClassEventForStudent(token, s, p) {
     throw new Error('Calendar 事件建立的 API 有回應，但重新確認時發現不對勁：' + (verErr.message || verErr) + '\n請自己到 Calendar 檢查一次是否真的建立成功，先不寫入資料庫（避免資料庫記了一個不確定存在的事件）。');
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // 🟡 2026-07-31 เพิ่ม (ข้อ #20 ในรายงานตรวจ) — สำรอง "การเพิ่มคาบ" ไว้ให้กดคืนค่าได้
+  //
+  // เดิมระบบสำรองรองรับแค่ ลบ / ย้าย / เก็บเข้ากรุ / แก้ถาวร → ไม่สมมาตร:
+  //   ลบคาบผิด  → กด ↩️ 復原 ได้
+  //   เพิ่มคาบผิด → ไม่มีปุ่มอะไรเลย ต้องเปิด Google Calendar ไปลบเอง
+  //
+  // ⚠️ ต่างจากที่อื่น: ตรงนี้ "ห้ามใช้ assertBackupOk" ที่โยน error ออกไป
+  //   เพราะคาบถูกสร้างขึ้นจริงไปแล้วก่อนถึงบรรทัดนี้ — ถ้าโยน error ครูจะเข้าใจว่าเพิ่มไม่สำเร็จ
+  //   แล้วกดซ้ำ = ได้คาบซ้อนกัน 2 คาบ (ตรงข้ามกับตอนลบ/ย้าย ที่สำรองพัง = ต้องหยุด ห้ามแตะ Calendar)
+  //   → สำรองไม่สำเร็จก็ปล่อยผ่าน แต่ต้องเตือนดังๆ ใน console ห้ามเงียบสนิท
+  // ════════════════════════════════════════════════════════════════════════════
+  try {
+    var addBk = await backupCalendarEvent(null, token, 'create', ev, null);
+    if (!addBk || addBk.error || !addBk.data) {
+      console.warn('⚠️ เพิ่มคาบสำเร็จ แต่บันทึกข้อมูลสำรองไม่สำเร็จ — คาบนี้จะไม่มีปุ่ม ↩️ 復原 ให้กด '
+        + '(ถ้าเพิ่มผิดต้องไปลบเองใน Google Calendar):', addBk && addBk.error ? addBk.error.message : 'ไม่ได้ข้อมูลกลับมา');
+    }
+  } catch (bkErr) {
+    console.warn('⚠️ เพิ่มคาบสำเร็จ แต่บันทึกข้อมูลสำรองพังกลางคัน (คาบยังอยู่ครบ ไม่กระทบอะไร):', bkErr.message || bkErr);
+  }
+
   // RELIABILITY FIRST：Calendar 事件已經真的建立了（且重新確認過）→ 資料庫這步失敗也要講清楚「Calendar 上已經有了」，
   // 不能讓 Lin 誤會沒成功而重按一次（會建立重複事件）。
   if (p.recurring) {
@@ -8596,7 +8618,8 @@ async function loadRecentBackups() {
   var showList = window._backupShowAll ? visible.concat(expiredNotDismissed) : visible;
   window._backupCache = {};
   showList.forEach(function(b) { window._backupCache[b.id] = b; });
-  var actionLabel = { move: '🔄 已移動課堂', delete: '❌ 已取消課堂', permanent_change: '📌 已永久變更課表' };
+  // 🟡 2026-07-31 เพิ่ม create（ข้อ #20）：ป้ายของ "คาบที่เพิ่งเพิ่ม" — กดคืนค่า = ลบคาบนั้นทิ้ง
+  var actionLabel = { move: '🔄 已移動課堂', delete: '❌ 已取消課堂', permanent_change: '📌 已永久變更課表', create: '➕ 已新增課堂' };
   var rows = showList.map(function(b) {
     var s = studentsCache[b.token];
     var name = s ? s.name : (b.token || '-');
@@ -8635,9 +8658,36 @@ async function revertCalendarBackup(id) {
   if (!b) return;
   _revertNewEventId = null;
   _revertWasRecurring = false;
-  var msg = b.action === 'delete'
+  // 🟡 2026-07-31 เพิ่มสาขา create（ข้อ #20）：คืนค่าการ "เพิ่มคาบ" = ลบคาบนั้นทิ้ง (ตรงข้ามกับสาขาอื่น)
+  //   ต้องเขียนให้ชัดว่ากำลังจะ "ลบ" ไม่ใช่ "สร้างกลับ" ไม่งั้นครูกดผิดแน่นอน
+  var isRecurCreate = !!(b.action === 'create' && b.old_event_json && b.old_event_json.recurrence);
+  var msg = b.action === 'create'
+    ? ('確定要復原嗎？這會把剛剛新增的課堂「刪掉」：' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）'
+       + (isRecurCreate ? '\n\n⚠️ 這是「每週固定課」——刪掉的話整組都會不見，不是只有這一次。' : '')
+       + '\n\n系統也會通知學生這堂課取消了。')
+    : b.action === 'delete'
     ? ('確定要復原嗎？會重新建立回原本的課堂：' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）')
     : ('確定要復原嗎？會把課堂移回原本時間：' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）');
+
+  // 🔴 ด่านเดียวกับตอนยกเลิกคาบ (งาน C10)：ถ้าคาบนี้ถูกบันทึกว่า "เรียนไปแล้ว" ห้ามลบเงียบๆ
+  //   ลบทิ้ง = โควตาถูกหักไปแล้วแต่ปฏิทินว่างเปล่า = ข้อมูล 2 ฝั่งไม่ตรงกัน (กับดักเดิมของเคส 育郁)
+  if (b.action === 'create' && b.token && b.old_start) {
+    try {
+      var createDateStr = formatInTz(new Date(b.old_start), TEACHER_TZ).dateStr;
+      var attCreate = await sb.from('classroom_attendance').select('lesson_date')
+        .eq('token', b.token).eq('lesson_date', createDateStr).limit(1);
+      if (attCreate.error) {
+        msg += '\n\n⚠️ 查不到上課紀錄（' + attCreate.error.message + '），請自己確認過再繼續。';
+      } else if (attCreate.data && attCreate.data.length) {
+        alert('🛑 這堂課（' + createDateStr + '）已經有「上過課」的紀錄了，沒有刪除任何東西。\n\n'
+          + '刪掉的話，堂數已經扣掉但 Calendar 會變空的，兩邊對不起來。\n'
+          + '如果真的要刪，請自己到 Google Calendar 處理，並記得一起調整上課紀錄。');
+        return;
+      }
+    } catch (e) {
+      msg += '\n\n⚠️ 檢查上課紀錄時出錯（' + (e.message || e) + '），請自己確認過再繼續。';
+    }
+  }
   // 🔴 2026-07-26 加：復原「永久變更」會把新課表整組刪掉。如果新課表那段期間已經有「上過課」的紀錄，
   // 代表那幾堂是真的上過的，刪掉會讓 Calendar 跟上課紀錄對不起來（就是這次 育郁 事件的同一個坑）。
   // → 先查 classroom_attendance，有就把日期列出來，讓 Lin 知道自己在刪什麼再決定。
@@ -8665,7 +8715,18 @@ async function revertCalendarBackup(id) {
   if (!confirm(msg)) return;
   try {
     var token = await gdGetToken();
-    if (b.action === 'delete') {
+    if (b.action === 'create') {
+      // 🟡 2026-07-31 (ข้อ #20)：คืนค่าการเพิ่มคาบ = ลบคาบที่เพิ่งสร้างออกจากปฏิทิน
+      //   410 = ถูกลบไปแล้วก่อนหน้า · 404 = ไม่มีอยู่แล้ว → ทั้งคู่คือ "ผลลัพธ์ที่ต้องการเกิดแล้ว" ผ่านได้
+      //   (ท่าเดียวกับตอนคืนค่า permanent_change ที่ต้องลบชุดคาบใหม่ทิ้ง)
+      var delCreate = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(b.old_event_id), {
+        method: 'DELETE', headers: { Authorization: 'Bearer ' + token },
+      });
+      if (!delCreate.ok && delCreate.status !== 410 && delCreate.status !== 404) {
+        throw new Error('刪除這堂新增的課失敗（' + delCreate.status + '）：' + (await delCreate.text()).slice(0, 200));
+      }
+      await verifyEventDeleted(b.old_event_id); // ไม่เชื่อแค่ API ตอบ ok — กลับไปดูของจริงว่าหายแล้วจริง
+    } else if (b.action === 'delete') {
       var body = Object.assign({}, b.old_event_json);
       // 🟡 2026-07-31 หมายเหตุ (งาน C11): 2 ตัวที่ตัดทิ้งนี้คือตัวที่บอกว่า "คาบนี้เป็นสมาชิกของชุดคาบประจำ"
       //   Google Calendar ไม่ยอมให้สร้างคาบใหม่กลับ "เข้าชุดเดิม" ที่ถูกลบไปแล้ว (ข้อจำกัดของ Google เอง)
@@ -8730,6 +8791,27 @@ async function revertCalendarBackup(id) {
   //   (3) คาบประจำที่กู้กลับมากลายเป็นคาบเดี่ยว แต่ไม่มีใครบอกครู (แก้ไม่ได้จริง แต่ต้องบอก)
   // ══════════════════════════════════════════════════════════════════════════
   var revertExtraWarn = '';
+
+  // 🟡 2026-07-31 (ข้อ #20)：ลบคาบออกจากปฏิทินแล้ว ต้องลบแถวในตารางเรียนตามด้วย
+  //   ไม่งั้นหน้าเว็บนักเรียนจะยังโชว์คาบนี้อยู่ (นานสุด 20 นาทีกว่า cron จะมาเก็บกวาด)
+  //   ใช้ calendar_event_id เป็นตัวชี้ ไม่เดาจาก "ชื่อ+วันที่" (ท่าเดียวกับที่ระบบยกเลิกใช้)
+  if (b.action === 'create') {
+    var isRecurRevert = !!(b.old_event_json && b.old_event_json.recurrence);
+    var tableToClean = isRecurRevert ? 'classroom_recurring_days' : 'classroom_schedule';
+    try {
+      var cleanRes = await sb.from(tableToClean).delete().eq('calendar_event_id', b.old_event_id).select();
+      if (cleanRes.error) {
+        revertExtraWarn += '\n⚠️ 課堂已經從 Calendar 刪掉了，但課表那筆沒清乾淨（' + cleanRes.error.message
+          + '）。學生頁面可能還會看到它，最慢 20 分鐘後會自己修正。';
+      }
+    } catch (e) {
+      revertExtraWarn += '\n⚠️ 課堂已經從 Calendar 刪掉了，但清課表時出錯（' + (e.message || e) + '）。最慢 20 分鐘後會自己修正。';
+    }
+    if (isRecurRevert) {
+      revertExtraWarn += '\n\n⚠️ 這是「每週固定課」，整組都已經刪掉了，不是只有這一次。';
+    }
+  }
+
   if (b.action === 'delete' && _revertNewEventId) {
     // (1) เขียนแถวตารางเรียนกลับทันที ไม่ต้องรอ cron รอบถัดไป
     try {
@@ -8769,22 +8851,29 @@ async function revertCalendarBackup(id) {
         + '（其他週的課完全不受影響）如果希望它回到系列裡，要自己到 Google Calendar 調整。';
     }
   }
-  if (revertExtraWarn) alert('✅ 課堂已復原' + revertExtraWarn);
+  // 2026-07-31：สาขา create ต้องขึ้นข้อความว่า "ลบแล้ว" ไม่ใช่ "คืนค่าแล้ว" (ครูจะเข้าใจผิดว่าคาบยังอยู่)
+  if (b.action === 'create') alert('✅ 已刪除剛剛新增的課堂' + revertExtraWarn);
+  else if (revertExtraWarn) alert('✅ 課堂已復原' + revertExtraWarn);
 
   // 2026-07-17 加（Lin 要求）：復原之後也要跟取消/改期/加課一樣，用 LINE 通知學生和老師自己一份，
   // 三種復原類型（取消復原/改期復原/永久變更復原）各自用不同文案講清楚剛剛發生了什麼。
   // 通知失敗不影響已經完成的 Calendar 復原動作（跟其他通知一樣，只在主控台留紀錄）。
   var sForRevert = studentsCache[b.token];
+  // 🟡 2026-07-31 เพิ่มสาขา create（ข้อ #20）：ห้ามบอกนักเรียนว่า "คืนค่าแล้ว" ทั้งที่คาบถูก "ลบทิ้ง"
+  //   นักเรียนอ่านแล้วจะเข้าใจว่ายังมีคาบอยู่ แล้วมารอเรียน → ต้องเขียนตรงๆ ว่าคาบนั้นถูกยกเลิก
   var revertLabelForStudent = { delete: '這堂課復原了', move: '課堂復原回原本時間了', permanent_change: '固定課表復原回原本時間了' }[b.action] || '已經復原了';
-  var revertLabelForTeacher = { delete: '已復原取消', move: '已把課復原回原本時間', permanent_change: '已復原固定課表' }[b.action] || '已復原';
+  var revertLabelForTeacher = { delete: '已復原取消', move: '已把課復原回原本時間', permanent_change: '已復原固定課表', create: '已刪除剛剛新增的課堂' }[b.action] || '已復原';
   if (sForRevert && sForRevert.line_user_id) {
     try {
       var studentOldTimeLabel = studentFacingTimeLabel(b.old_start, sForRevert.pending_student_tz);
+      var revertStudentMsg = b.action === 'create'
+        ? ('ℹ️ 抱歉，老師剛剛新增的那堂課取消了：' + studentOldTimeLabel + '\n這堂課不會上，如有疑問請直接聯絡老師。')
+        : ('老師剛剛把之前的操作復原了，' + revertLabelForStudent + '：' + studentOldTimeLabel + '，如有疑問請直接聯絡老師');
       await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
-        body: JSON.stringify({ to: { studentToken: b.token }, message: '老師剛剛把之前的操作復原了，' + revertLabelForStudent + '：' + studentOldTimeLabel + '，如有疑問請直接聯絡老師' }),
+        body: JSON.stringify({ to: { studentToken: b.token }, message: revertStudentMsg }),
       });
     } catch (e) { console.warn('⚠️ 復原通知學生失敗（不影響已經完成的復原）：', e.message || e); }
   }

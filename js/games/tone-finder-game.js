@@ -2114,7 +2114,9 @@ function render() {
       // Lin 2026-08-01: ประโยค高級 — เอาคำแปลจีนรายคำ (zhHtml, เช่น "天氣") ออก เพราะแปลแค่คำเดียวโดดๆ ไม่มีบริบท
       //   เปลี่ยนไปโชว์คำอ่านยาวทั้งประโยคแทน (ตำแหน่งเดิมของ zhHtml) — คำแปลจีนทั้งประโยค (sentCtxZhHtml) ยังอยู่เหมือนเดิม
       zhHtml = '';
-      sentReadingHtml = advSentenceCtx.readingTH ? '<div class="tf-adv-sent-reading">' + advSentenceCtx.readingTH + '</div>' : '';
+      // Lin 2026-07-31 (บั๊กที่ Lin เจอ): ปุ่ม 讀音 กดปิดแล้วคำอ่านทั้งประโยคยังโชว์อยู่ทุกครั้ง (ดูเหมือนปุ่มค้าง)
+      //   สาเหตุ: บรรทัดนี้ลืมเช็ค tfPronMode (จุดอื่นในเกมเช็คครบหมดแล้ว) — แก้ให้เช็คเหมือนจุดอื่น (ดู tfReadingLineHtml บรรทัด 967)
+      sentReadingHtml = (tfPronMode && advSentenceCtx.readingTH) ? '<div class="tf-adv-sent-reading">' + advSentenceCtx.readingTH + '</div>' : '';
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
       // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
       // 2026-07-16: เอาแถบพยางค์ (syl-chip แบบเกมอ่าน) ออกตามที่ Lin สั่ง — เหลือแค่คำเต็ม + กล่องโฟกัส
