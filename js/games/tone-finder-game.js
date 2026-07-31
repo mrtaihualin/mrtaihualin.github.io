@@ -982,7 +982,10 @@ function tfUpdateReadingLine() {
 function tfRepaintReading() {
   var bn = document.getElementById('tf-banner');
   var line = document.getElementById('tf-read-line');
-  if (line && bn && bn.style.display !== 'none') tfUpdateReadingLine();
+  // Lin 2026-07-31 (บั๊กที่เจอตอนเทสสด — ตัวที่ 2): โหมดประโยค高級 คำอ่านทั้งประโยค (tf-adv-sent-reading)
+  //   ฝังอยู่ใน banner.innerHTML ตรงๆ ไม่ได้อยู่ใน #tf-read-line → กดปุ่ม 讀音 แล้วอัปเดตแค่ #tf-read-line (คำอ่านรายคำ)
+  //   คำอ่านทั้งประโยคเลยไม่หายไปด้วย ต้องบังคับวาดใหม่ทั้งหน้า (render()) เฉพาะตอนอยู่ในโหมดประโยค高級
+  if (!advSentenceCtx && line && bn && bn.style.display !== 'none') tfUpdateReadingLine();
   else render();
 }
 
