@@ -21,6 +21,8 @@
     sangyod:     { emoji: '🔴', img: 'assets/badges/sangyod.svg',     zh: '紅米' },
     riceberry:   { emoji: '🟣', img: 'assets/badges/riceberry.svg',   zh: '紫米 Riceberry' }
   };
+  var LB_PACER_AVATARS = ['🐱', '🦊', '🐼', '🐯', '🐸', '🐥', '🦉', '🐰'];
+
   var cfg = window.SUPABASE_CONFIG || {};
   var ready = cfg.url && cfg.anonKey &&
               cfg.url.indexOf('YOUR_') === -1 &&
@@ -35,6 +37,50 @@
   var currentUser = null;
   var myNick = null;
   var period = 'week'; // 'week' | 'all'
+
+  // ── ตั้งค่า "คู่ซ้อม" (pacer / หน้าม้า) v2 — ปรับได้ตรงนี้ ──────────
+  // v2 (LIN 2026-07-31): เพิ่ม "เพดานบน" (ceilWeek/ceilAll) กันคะแนนโป่งเวอร์ตามคะแนนจริงที่ผิดปกติ
+  // (บทเรียนจากรอบก่อน: มีคะแนนจริงพุ่ง 177,000 แต้ม/4 เกม ทำให้หน้าม้าโป่งตามเป็นแสน เล่น 16,717 เกม ดูปลอมชัด)
+  // ทำงาน: คะแนนอิงกับ "ผู้นำจริง" เสมอ (แต่ไม่เกินเพดาน) จึงมีเป้าให้ไล่ตลอด + ตัวเลขยังสมเหตุสมผล
+  // ปิดทั้งหมดได้โดยตั้ง enabled:false
+  var PACER = {
+    enabled: true,
+    count: 4,
+    // ชื่อปลอม: ชื่อสไตล์ไต้หวันแท้ๆ (ชื่อเต็ม 2-3 พยางค์ ไม่ใช่ชื่อเล่นกลางๆ แบบเดิม) — เปลี่ยน/เพิ่มได้ตามใจ
+    names: ['家豪', '怡君', '冠宇', '佳穎', '承翰', '雅婷', '俊傑', '淑芬'],
+    // ตัวคูณคะแนน "เทียบกับผู้นำจริง" — ทุกตัว < 1 จึงอยู่ "ใต้" ผู้เล่นจริงเสมอ (ไล่ตามอยู่ข้างหลัง)
+    factors: [0.85, 0.62, 0.42, 0.25],
+    // ค่าฐานเมื่อยังไม่มีผู้เล่นจริง (กันกระดานว่าง) — ตั้งต่ำให้เหมือนชุมชนเพิ่งเริ่ม
+    floorWeek: 18, floorAll: 70,
+    // เพดานบนสุดที่ยอมให้ "ผู้นำจริง" ดันคะแนนหน้าม้าขึ้นไปได้ — กันคะแนนจริงผิดปกติทำให้หน้าม้าโป่งเวอร์ (Lin ยืนยัน 2026-07-31)
+    ceilWeek: 500, ceilAll: 5000
+  };
+
+  function buildPacers(realRows) {
+    if (!PACER.enabled) return [];
+    var topReal = (realRows && realRows.length) ? (realRows[0].total_score || 0) : 0;
+    var floor = (period === 'week') ? PACER.floorWeek : PACER.floorAll;
+    var ceil = (period === 'week') ? PACER.ceilWeek : PACER.ceilAll;
+    // ถ้ามีผู้เล่นจริง → ยึดคะแนนผู้นำจริงเป็นฐาน (แต่ไม่เกินเพดาน) แล้ว pacer วิ่งตามอยู่ใต้เขา (ผู้เล่นจริงได้เป็นที่ 1)
+    // ถ้ายังไม่มีใคร → ใช้ค่าฐานเตี้ยๆ กันกระดานว่าง
+    var anchor = (topReal > 0) ? Math.min(topReal, ceil) : floor;
+    // แต้มเฉลี่ยต่อเกมของหน้าม้า — อิงจากค่าเฉลี่ยจริงที่เจอบนกระดาน (ไม่ใช่เลขเดาลอยๆ)
+    var per = (period === 'week') ? 100 : 150;
+    // เพดานจำนวนเกม กันเผื่อกรณีขอบ (แม้ตอนนี้เพดานคะแนนด้านบนกันไว้แล้วก็ตาม)
+    var maxGames = (period === 'week') ? 20 : 150;
+    return PACER.names.slice(0, PACER.count).map(function (nm, i) {
+      var f = PACER.factors[i % PACER.factors.length];
+      var sc = Math.max(1, Math.round(anchor * f));
+      var games = Math.min(maxGames, Math.max(2, Math.round(sc / per)));
+      return { user_id: 'pacer-' + period + '-' + i, nickname: nm, avatar: LB_PACER_AVATARS[i % LB_PACER_AVATARS.length], badge_id: '', total_score: sc, games: games, _bot: true };
+    });
+  }
+
+  function mergePacers(realRows) {
+    var merged = (realRows || []).concat(buildPacers(realRows));
+    merged.sort(function (a, b) { return (b.total_score || 0) - (a.total_score || 0); });
+    return merged.slice(0, 100);
+  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -140,7 +186,7 @@
       wireTabs();
       return;
     }
-    renderBoard(res.data || []);
+    renderBoard(mergePacers(res.data || []));
   }
 
   function medal(rank) {

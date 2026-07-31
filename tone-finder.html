@@ -1717,6 +1717,7 @@ if (document.fonts && document.fonts.load) {
   #gt-tour-card .gt-step{font-size:11.5px;font-weight:800;color:#C8973A;letter-spacing:1px;margin-bottom:4px;}
   #gt-tour-card .gt-title{font-size:16px;font-weight:900;color:#5a3e0a;margin-bottom:6px;}
   #gt-tour-card .gt-text{font-size:13.5px;color:#444;line-height:1.6;margin-bottom:12px;}
+  #gt-tour-card .gt-text b{color:#8B6310;}
   #gt-tour-card .gt-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   #gt-tour-card .gt-skip{background:none;border:none;color:#999;font-size:12.5px;cursor:pointer;padding:6px 4px;}
   #gt-tour-card .gt-nav{display:flex;gap:6px;}
@@ -2006,7 +2007,7 @@ var GT_TOUR_STEPS=[
   {sel:'.sg-dontknow-btn', title:'不確定嗎？沒關係', text:'點這裡會帶你一步一步分析這個字的聲調規則，慢慢學會怎麼判斷，不用硬猜。'},
   {sel:'#wm-trigger',      title:'更多功能都在這裡', text:'點 🍚 打開選單：讀音、翻譯、收藏單字、提示、換字體都在裡面。'},
   {sel:'#tf-alpha-btn',    title:'還不熟字母嗎？', text:'可以先來這裡單獨練習泰文字母的發音，練熟了再回來玩。'},
-  {sel:'#tf-howto-btn',    title:'忘記怎麼玩？', text:'隨時點這裡 📖，可以再看一次完整的玩法說明。'}
+  {sel:'#rg-profile-wrap', title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
 ];
 var gtTourIdx=0;
 function gtTourPosition(){
@@ -2034,7 +2035,7 @@ function gtTourRender(){
   }
   document.getElementById('gt-tour-step').textContent=(gtTourIdx+1)+' / '+GT_TOUR_STEPS.length;
   document.getElementById('gt-tour-title').textContent=step.title;
-  document.getElementById('gt-tour-text').textContent=step.text;
+  document.getElementById('gt-tour-text').innerHTML=step.text;
   document.getElementById('gt-tour-prev').style.visibility=(gtTourIdx===0)?'hidden':'visible';
   document.getElementById('gt-tour-next').textContent=(gtTourIdx===GT_TOUR_STEPS.length-1)?'開始玩 →':'下一步 ›';
   gtTourPosition();
