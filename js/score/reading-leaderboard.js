@@ -34,8 +34,6 @@
     sangyod:     { emoji: '🔴', img: 'assets/badges/sangyod.svg',     zh: '紅米' },
     riceberry:   { emoji: '🟣', img: 'assets/badges/riceberry.svg',   zh: '紫米 Riceberry' }
   };
-  var LB_PACER_AVATARS = ['🐱', '🦊', '🐼', '🐯', '🐸', '🐥', '🦉', '🐰'];
-
   var cfg = window.SUPABASE_CONFIG || {};
   var ready = cfg.url && cfg.anonKey &&
               cfg.url.indexOf('YOUR_') === -1 &&
@@ -50,41 +48,6 @@
   var currentUser = null;
   var myNick = null;
   var period = 'week'; // 'week' | 'all'
-
-  // ── ตั้งค่า "คู่ซ้อม" (pacer / หน้าม้า) — ปรับได้ตรงนี้ ──────────
-  // ทำงานแบบยืดหยุ่น: คะแนนอิงกับ "ผู้นำจริง" เสมอ จึงมีเป้าให้ไล่ตลอด
-  // ปิดทั้งหมดได้โดยตั้ง enabled:false
-  var PACER = {
-    enabled: true,
-    count: 4,
-    // ชื่อปลอม: ภาษาจีนล้วน (กลุ่มผู้เรียนชาวไต้หวัน) — เปลี่ยน/เพิ่มได้ตามใจ
-    names: ['小美', '阿明', '學泰文的小宇', '美玲', '阿華', '泰文初學者', '宥廷', '思妤'],
-    // ตัวคูณคะแนน "เทียบกับผู้นำจริง" — ทุกตัว < 1 จึงอยู่ "ใต้" ผู้เล่นจริงเสมอ (ไล่ตามอยู่ข้างหลัง)
-    factors: [0.85, 0.62, 0.42, 0.25],
-    // ค่าฐานเมื่อยังไม่มีผู้เล่นจริง (กันกระดานว่าง) — ตั้งต่ำให้เหมือนชุมชนเพิ่งเริ่ม
-    floorWeek: 18, floorAll: 70
-  };
-
-  function buildPacers(realRows) {
-    if (!PACER.enabled) return [];
-    var topReal = (realRows && realRows.length) ? (realRows[0].total_score || 0) : 0;
-    var floor = (period === 'week') ? PACER.floorWeek : PACER.floorAll;
-    // ถ้ามีผู้เล่นจริง → ยึดคะแนนผู้นำจริงเป็นฐาน แล้ว pacer วิ่งตามอยู่ใต้เขา (ผู้เล่นจริงได้เป็นที่ 1)
-    // ถ้ายังไม่มีใคร → ใช้ค่าฐานเตี้ยๆ กันกระดานว่าง
-    var anchor = (topReal > 0) ? topReal : floor;
-    var per = (period === 'week') ? 6 : 9; // คะแนนเฉลี่ยต่อรอบ (ใช้ประมาณจำนวนรอบ)
-    return PACER.names.slice(0, PACER.count).map(function (nm, i) {
-      var f = PACER.factors[i % PACER.factors.length];
-      var sc = Math.max(1, Math.round(anchor * f));
-      return { user_id: 'pacer-' + period + '-' + i, nickname: nm, avatar: LB_PACER_AVATARS[i % LB_PACER_AVATARS.length], badge_id: '', total_score: sc, games: Math.max(2, Math.round(sc / per)), _bot: true };
-    });
-  }
-
-  function mergePacers(realRows) {
-    var merged = (realRows || []).concat(buildPacers(realRows));
-    merged.sort(function (a, b) { return (b.total_score || 0) - (a.total_score || 0); });
-    return merged.slice(0, 100);
-  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -212,7 +175,7 @@
       wireTabs();
       return;
     }
-    renderBoard(mergePacers(res.data || []));
+    renderBoard(res.data || []);
   }
 
   function medal(rank) {
