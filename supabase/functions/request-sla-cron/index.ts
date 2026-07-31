@@ -195,7 +195,7 @@ serve(async (req) => {
       if (!r.offer_status) {
         const hrs = (nowMs - new Date(r.created_at).getTime()) / 3600000;
         if (hrs < SLA_HOURS) continue;
-        const sinceLabel = (r.request_type === 'cancel' ? '取消' : '改期') + '申請';
+        const sinceLabel = (r.request_type === 'cancel' ? '取消' : r.request_type === 'add_class' ? '加課' : '改期') + '申請';
         try {
           if (teacherUserId) {
             await pushLine(channelToken, teacherUserId,
