@@ -2046,7 +2046,7 @@ function render() {
 
   // Word banner
   var banner = document.getElementById('tf-banner');
-  var isSelectScreen = (S.step === 'level-select' || S.step === 'advanced' || S.step === 'adv-cat-select' || S.step === 'adv-sent-select' || S.step === 'adv-summary' || S.step === 'session-summary' || S.step === 'alpha-home' || S.step === 'alpha-consonant' || S.step === 'alpha-vowel' || S.step === 'alpha-flashcard');
+  var isSelectScreen = (S.step === 'level-select' || S.step === 'adv-cat-select' || S.step === 'adv-sent-select' || S.step === 'adv-summary' || S.step === 'session-summary' || S.step === 'alpha-home' || S.step === 'alpha-consonant' || S.step === 'alpha-vowel' || S.step === 'alpha-flashcard');
   var noBannerSteps = ['result'];
   if (S.word && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
@@ -2201,7 +2201,6 @@ function buildStep() {
     case 'alpha-consonant': return stepAlphaConsonant();
     case 'alpha-vowel':     return stepAlphaVowel();
     case 'alpha-flashcard': return stepAlphaFlashcard();
-    case 'advanced':        return stepAdvanced();
     case 'adv-cat-select':  return stepAdvCatSelect();
     case 'adv-sent-select': return stepAdvSentSelect();
     case 'adv-summary':     return stepAdvSummary();
@@ -2600,23 +2599,6 @@ function stepSessionSummary() {
       '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
       '<a class="tf-restart-btn" href="leaderboard.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'leaderboard\',from:\'tone_finder\'})}catch(e){}">🏆 看排行榜</a>' +
     '</div>' +
-  '</div>';
-}
-
-function stepAdvanced() {
-  // \u9ad8\u7d1a\uff1a\u9078\u4e00\u53e5\u5b8c\u6574\u53e5\u5b50\uff0c\u4f9d\u5e8f\u5538\u51fa\u6bcf\u500b\u8a5e\u7684\u8b80\u97f3\uff08\u542b\u8072\u8abf\uff09\u2014 Lin 2026-07-03
-  var cards = ADV_SENTENCES.map(function(s, i){
-    return '<button class="tf-level-btn tf-lvl-adv" onclick="TF.startAdvSentence('+i+')" style="text-align:left;">' +
-      '<span class="tf-level-emoji">\ud83d\udcd6</span>' +
-      '<span class="tf-level-label" style="font-family:\'Sarabun\',sans-serif;">'+s.th+'</span>' +
-      '<span class="tf-level-sub">'+s.zh+'</span>' +
-    '</button>';
-  }).join('');
-  return '<div class="tf-level-select">'+
-    '<div class="tf-level-title">\u9ad8\u7d1a\uff1a\u5b8c\u6574\u53e5\u5b50</div>'+
-    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12.5px;color:#a08a5a;text-align:center;margin:-4px 0 8px;">\u9078\u4e00\u53e5\uff0c\u4f9d\u5e8f\u5538\u51fa\u6bcf\u500b\u8a5e\u7684\u8b80\u97f3\uff08\u542b\u8072\u8abf\uff09</div>'+
-    cards +
-    '<button class="tf-back-level-btn" onclick="TF.reset()">\u2190 \u8fd4\u56de</button>'+
   '</div>';
 }
 
@@ -3923,11 +3905,6 @@ var TF = {
       S = { word: w, step: 'session-guess', path: [w], tone: null };
     }
     hist.push(S); histPos++;
-    render();
-  },
-  openAdvanced: function() {
-    S = { word:'', step:'advanced', path:[], tone:null };
-    hist = [S]; histPos = 0;
     render();
   },
   // 高級：เริ่มเล่นประโยคเต็ม 1 ประโยค — words[] ของประโยคกลายเป็น session เดียว (Lin 2026-07-03)
