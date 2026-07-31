@@ -575,9 +575,40 @@
 
   var WORDS_MASTER_FULL = WORDS_MASTER; // เก็บชุดเต็มไว้เสมอ (ตัวตรวจข้อมูล/เครื่องมือ Lin ใช้ชุดนี้)
   global.WORDS_MASTER_FULL = WORDS_MASTER_FULL;
+
+  // Lin 2026-07-31: เดิมตัดเพดานแบบ "เอา N คำแรกตามลำดับในไฟล์" ตรงๆ — พังเพราะคำระดับ中เริ่มที่ตำแหน่ง 163
+  // (เกินเพดานคนไม่ล็อกอิน 150 คำ) ทำให้ระดับ中級ว่างเปล่า/พังทั้งเกม สำหรับคนไม่ล็อกอินทุกคน (เจอจริง 2026-07-31)
+  // แก้ใหม่: สลับคิวแบบ "หมุนตามหมวด+ระดับ" (round-robin) ก่อนตัดเพดาน ให้ทุกหมวด/ทุกระดับมีโควตากระจายเท่าๆกัน
+  // ไม่แก้/ไม่เรียงลำดับ WORDS_MASTER เดิม (ตัวตรวจข้อมูล/เครื่องมืออื่นยังอ่านลำดับเดิมได้ปกติ) — ใช้แค่ตอน "เลือกว่าใครติดโควตาเพดานฟรี" เท่านั้น
+  function buildCapOrder(list) {
+    var buckets = {}, bucketKeys = [];
+    list.forEach(function (w) {
+      var key = w.level + '|' + w.category;
+      if (!buckets[key]) { buckets[key] = []; bucketKeys.push(key); }
+      buckets[key].push(w);
+    });
+    var order = [], cursor = {};
+    bucketKeys.forEach(function (k) { cursor[k] = 0; });
+    var more = true;
+    while (more) {
+      more = false;
+      for (var i = 0; i < bucketKeys.length; i++) {
+        var k = bucketKeys[i];
+        if (cursor[k] < buckets[k].length) {
+          order.push(buckets[k][cursor[k]]);
+          cursor[k]++;
+          more = true;
+        }
+      }
+    }
+    return order;
+  }
+  var WORDS_MASTER_CAP_ORDER = buildCapOrder(WORDS_MASTER_FULL);
+  global.WORDS_MASTER_CAP_ORDER = WORDS_MASTER_CAP_ORDER; // เผื่อ debug/ตรวจสอบ
+
   if (_tierLoggedIn !== null) {
     var wordCap = _tierLoggedIn ? LOGIN_TIER_CAPS.words : FREE_TIER_CAPS.words;
-    WORDS_MASTER = WORDS_MASTER_FULL.slice(0, wordCap);
+    WORDS_MASTER = WORDS_MASTER_CAP_ORDER.slice(0, wordCap);
   }
   global.WORDS_MASTER = WORDS_MASTER;
 })(window);

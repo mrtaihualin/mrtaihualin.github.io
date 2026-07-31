@@ -2273,15 +2273,27 @@ function buildStep() {
 // ════════════════════════════════════════════════════════════
 // SESSION: TONE COMPUTATION + TTS + PHONEME BREAKDOWN
 // ════════════════════════════════════════════════════════════
-// TONE OVERRIDES — คำทับศัพท์ที่ไม่ตามกฎมาตรฐาน ระบุเสียงตรงๆ
+// TONE OVERRIDES — คำทับศัพท์/คำเพี้ยนเสียงที่ไม่ตามกฎมาตรฐาน ระบุเสียงตรงๆ (Lin ยืนยันแล้วทุกตัว 2026-07-31)
+// ── 2026-07-31 (Lin ตรวจสอบ): ลบ 'คีย์'(สามัญ) และ 'ญาติ'(โท) ออก — เช็คด้วยเครื่องคิดกฎมาตรฐาน (tone-engine.js)
+//    แล้วพบว่ากฎมาตรฐานคำนวณได้ตรงกับ Lin กำหนดอยู่แล้ว ไม่ใช่คำพิเศษจริง ปล่อยให้เดิน推導ปกติได้
+//    เพิ่ม 'กี้'/'ก็'/'แชท' เข้ามาแทน — Lin ยืนยันว่าเป็นคำพิเศษจริง (เดิมไม่มีอยู่ในนี้ = บั๊ก เกมตัดสินคำตอบถูกว่าผิด)
 var TONE_OVERRIDE = {
   'เอาท์': 4,  // เช็คเอาท์ → พยางค์ 2 เสียงตรี
-  'คีย์':  1,  // คีย์การ์ด → พยางค์ 1 เสียงสามัญ
-  'การ์ด': 4,  // คีย์การ์ด → พยางค์ 2 เสียงตรี
+  'การ์ด': 4,  // คีย์การ์ด → พยางค์ 2 เสียงตรี (รอ Lin เพิ่มคำนี้เข้าคลังคำศัพท์จริง)
   'ออฟ':  4,  // ออฟฟิศ   → พยางค์ 1 เสียงตรี
   'ออบ':  4,  // ออฟฟิศ (คำอ่าน ออบ) → พยางค์ 1 เสียงตรี (Lin 2026-07-04)
-  'ญาติ': 3   // สะกดพิเศษ (ิ ไม่ออกเสียง) → ยา-ตา เสียงโท
+  'กี้':  4,  // เมื่อกี้ → พยางค์ 2 เสียงตรี (คนไทยพูดเพี้ยนเป็นตรีทั่วไป)
+  'ก็':   3,  // เสียงโท (คนไทยพูดเพี้ยนเป็นโททั่วไป)
+  'แชท':  4   // คำยืมอังกฤษ (chat) เสียงตรี (แช็ท เสียงสั้น) ไม่ใช่โทตามกฎเขียนปกติ
 };
+
+// คำในนี้ = ไม่มีกฎมาตรฐานอธิบายได้จริง → ข้ามขั้นตอน推導ทั้งหมด (ตอบผิด = เฉลยทันที เหมือน day16/known-check)
+// แต่ตอบถูกครั้งแรกยังได้คะแนนเต็มปกติ (ไม่ใช่ noSoftPoints แบบ known-check)
+function tfCurWordIsToneSpecial() {
+  if (!session) return false;
+  var w = (typeof S !== 'undefined' && S.word) || (session.words[session.index] && session.words[session.index].word);
+  return !!(w && TONE_OVERRIDE[w] !== undefined);
+}
 
 function computeTone(word) {
   if (TONE_OVERRIDE[word] !== undefined) return TONE_OVERRIDE[word];
@@ -3109,7 +3121,8 @@ function stepSessionGuess() {
         if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // เดาผิด → ตัดสิทธิ์ first-try + คอมโบขาด
         // ── Lin 2026-07-04: วันที่ 16 (day16 final check) หรือ known-check (กด "✓ 已記得") = ไม่มี推導ให้เลย ผิดปุ๊บนับ fail ทันที รีเซ็ต SRS กลับ day1 ──
         // (เดิมทุกคำ ผิด/ไม่มั่นใจ จะเข้า推導สอนทีละขั้น แต่ day16/known-check ต้องนึกเองล้วนๆ ไม่มีเครื่องมือช่วยใดๆ)
-        if (tfCurWordNoTools()) tfForceRevealZero();
+        // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ก็เฉลยทันทีเหมือนกัน — ไม่มีกฎมาตรฐานให้推導จริง เดินขั้นไปก็สอนผิด
+        if (tfCurWordNoTools() || tfCurWordIsToneSpecial()) tfForceRevealZero();
         else navigateToInflection();  // Lin 2026-07-16: เดาผิด → เข้าหน้าตรวจ推導เลย ไม่มี popup 開始聲調推導
       }
     });
@@ -3134,6 +3147,9 @@ function stepSessionGuess() {
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✓ 記憶確認 — 答對一次即可移除這個字（不給獎勵）· ห้ามใช้เครื่องมือช่วย ต้องนึกเองครั้งเดียว</div>';
   } else if (session.curWordIsFinalSrsCheck) {
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 16) — ห้ามใช้เครื่องมือช่วยใดๆ ต้องนึกเองล้วนๆ</div>';
+  } else if (tfCurWordIsToneSpecial()) {
+    // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ไม่มีปุ่ม "ไม่มั่นใจ/ท้าทาย" ให้กด — ไม่มีกฎมาตรฐานให้推導 ต้องจำเสียงไว้ตรงๆ
+    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✨ 特殊詞（不按規則）— 答對得全部分數，答錯直接看答案，用背的就好</div>';
   } else {
     dontKnowHtml = '<button class="sg-dontknow-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_dontknow_click\',{category:\'game\'});}catch(e){}'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>';
   }
