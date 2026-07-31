@@ -303,7 +303,10 @@ async function getGoogleCalendarToken() {
 //               ฝั่งเว็บ) ไม่เชื่อแค่ status code ของ DELETE เฉยๆ
 // ต้องตั้ง secret ก่อนใช้: supabase secrets set GOOGLE_CALENDAR_ID=mr.taihualin@gmail.com (อีเมล
 // ปฏิทินจริงของครูที่แชร์ให้ service account ไว้แล้ว)
-async function deleteCalendarEventById(eventId) {
+// 🟠 2026-07-31 (งาน C4): เพิ่มช่องรับค่าตัวที่ 2 "expectedDateStr" (ไม่ใส่ = ข้ามการเทียบ เหมือนเดิมทุกอย่าง)
+//    ใส่มาเมื่อไหร่ = "ลบได้ต่อเมื่อคาบยังอยู่วันนี้จริงเท่านั้น"
+//    ตรวจแล้วว่าฟังก์ชันนี้มีที่เรียกจุดเดียวทั้งไฟล์ (ก้อน confirm_cancel_delete) จึงไม่กระทบใคร
+async function deleteCalendarEventById(eventId, expectedDateStr) {
   const token = await getGoogleCalendarToken();
   if (!token) return { ok: false, reason: 'no_token' };
   const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
@@ -331,6 +334,30 @@ async function deleteCalendarEventById(eventId) {
     if (preRes.ok) {
       preEventData = await preRes.json().catch(() => ({}));
       if (preEventData.status === 'cancelled') return { ok: true, eventData: preEventData }; // ถูกลบไปแล้วจากที่อื่นก่อนหน้านี้
+
+      // 🟠 2026-07-31 เพิ่ม (งาน C4) — เทียบวันก่อนลบเสมอ ถ้าผู้เรียกส่งวันที่คาดหวังมาด้วย
+      //
+      // พังยังไงถ้าไม่มีด่านนี้ (เจอจริงตอนตรวจระบบ 2026-07-31):
+      //   นักเรียนขอยกเลิกคาบวันที่ 5 → ระหว่างรอ คาบนั้นถูกเลื่อนไปวันที่ 7
+      //   → เลขอ้างอิงคาบยังเป็นตัวเดิม (ใช้ได้อยู่) แต่ตอนนี้มันชี้ไป "วันที่ 7" แล้ว
+      //   → ครูกดปุ่มเก่าใน LINE = ลบคาบวันที่ 7 ทิ้งเงียบๆ แล้วส่งบอกนักเรียนว่า "วันที่ 5 ยกเลิกแล้ว"
+      //
+      // ฝั่งเว็บมีด่านนี้อยู่แล้วตั้งแต่ 2026-07-26 (classroom/index.html:7663-7674)
+      // แต่ฝั่งเว็บ "ถามครูก่อนได้" ว่าจะใช้วันใหม่ต่อไหม — ใน LINE ถามแบบนั้นไม่ได้ (กดไปแล้วถอยไม่ได้)
+      // → ที่นี่เลือก "ปฏิเสธไปเลย" แล้วให้ครูไปทำที่เว็บ ปลอดภัยกว่าเดาเอง
+      if (expectedDateStr) {
+        const preStartIso = preEventData.start && (preEventData.start.dateTime || preEventData.start.date);
+        const preDateStr = extractBangkokDateStr(preStartIso);
+        if (preDateStr && preDateStr !== expectedDateStr) {
+          return {
+            ok: false,
+            reason: 'date_mismatch',
+            expectedDate: expectedDateStr,
+            actualDate: preDateStr,
+            detail: 'คำขอเขียนว่า ' + expectedDateStr + ' แต่คาบใน Calendar ตอนนี้อยู่วันที่ ' + preDateStr + ' — ยังไม่ได้แตะ Calendar เลย',
+          };
+        }
+      }
     } else {
       const detail = await preRes.text().catch(() => '');
       return { ok: false, reason: 'pre_check_http_' + preRes.status, detail: detail.slice(0, 300) };
@@ -491,6 +518,17 @@ function formatIsoInTz(iso, tz) {
 
 // 從一個 UTC ISO 字串取出「泰國時間（UTC+7，全年固定不變）」的 HH:MM，給 moveCalendarEventById
 // 在學生沒指定新時間（理論上不該發生，防呆用）時，沿用原本事件的時間點。
+// ── 2026-07-31 เพิ่ม (งาน C4) — แปลงเวลา ISO เป็น "วันที่ตามเวลาไทย" (YYYY-MM-DD) ──
+// ใช้เทียบว่าคาบใน Calendar ยังอยู่วันเดียวกับที่นักเรียนขอไว้ไหม
+// คาบแบบ "ทั้งวัน" (all-day) Google ส่งมาเป็น YYYY-MM-DD อยู่แล้ว ใช้ได้เลยไม่ต้องแปลง
+function extractBangkokDateStr(iso) {
+  if (!iso) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return new Date(d.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
 function extractBangkokTimeStr(iso) {
   const d = new Date(iso);
   const totalMin = (d.getUTCHours() * 60 + d.getUTCMinutes() + 7 * 60) % (24 * 60);
@@ -1447,6 +1485,13 @@ serve(async (req) => {
         const senderIsTeacher = event.source && teacherUserIdCheck && event.source.userId === teacherUserIdCheck;
         if (!senderIsTeacher) {
           console.error('[line-webhook] ⚠️ confirm_cancel_delete: ผู้กดไม่ใช่ครู ถูกปฏิเสธ. request=', requestIdCancel);
+          // 🟡 2026-07-31 เพิ่ม (งาน C13): เดิมเงียบสนิท ไม่ตอบอะไรเลย
+          //   → ถ้าค่า LINE_TEACHER_USER_ID ตั้งผิด หรือ Lin กดจากอีกบัญชี ปุ่มจะดูเหมือน "ตายสนิท"
+          //     ไม่มีข้อความ ไม่มีเบาะแส หาสาเหตุยากมาก
+          //   ตั้งใจไม่บอกว่าบัญชีไหนถึงจะถูก — คนที่ไม่ใช่ครูก็กดปุ่มนี้ได้ ไม่ควรใบ้อะไรเพิ่ม
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken, '⚠️ 這個 LINE 帳號沒有老師權限，沒有執行任何動作。');
+          }
           continue;
         }
 
@@ -1469,6 +1514,43 @@ serve(async (req) => {
           continue;
         }
 
+        // 🟡 2026-07-31 เพิ่ม (งาน C10) — เช็คก่อนว่าคาบนี้ "ถูกบันทึกว่าเรียนไปแล้ว" หรือยัง
+        //
+        // พังยังไงถ้าไม่มีด่านนี้: คาบที่บันทึกเข้าเรียนแล้ว = โควตาถูกหักไปแล้ว
+        //   ถ้าลบออกจากปฏิทิน จะกลายเป็น "โควตาหาย แต่ปฏิทินว่างเปล่า" = ข้อมูล 2 ฝั่งไม่ตรงกัน
+        //   (กับดักเดียวกับตอนเคส 育郁 ซึ่งฝั่ง "กู้คืน" มีคำเตือนไว้แล้วที่ classroom/index.html:8355-8375
+        //    แต่ตอน "ยกเลิก" กลับไม่เคยเช็คเลยทั้งฝั่งเว็บและ LINE)
+        //
+        // ทำไมเลือก "ปฏิเสธ" ไม่ใช่ "เตือนแล้วทำต่อ": ใน LINE ถามครูกลางทางไม่ได้ (กดปุ่มไปแล้วถอยไม่ได้)
+        //   → ส่งไปให้ตัดสินใจที่เว็บ ซึ่งมีกล่องยืนยันให้อ่านก่อนกด (เหมือนที่ทำกับเคส "วันไม่ตรง")
+        // เช็คก่อนแย่งล็อก จะได้ไม่ต้องปลดล็อกคืน
+        if (reqRowCancel.token && reqRowCancel.original_date) {
+          const { data: attRowsCancel, error: attErrCancel } = await supabase
+            .from('classroom_attendance')
+            .select('lesson_date')
+            .eq('token', reqRowCancel.token)
+            .eq('lesson_date', reqRowCancel.original_date)
+            .limit(1);
+          if (attErrCancel) {
+            // อ่านไม่ได้ = ไม่รู้ → ห้ามเดาว่า "ไม่มี" แล้วลบเลย ต้องบอกครูตรงๆ (RELIABILITY FIRST)
+            console.error('[line-webhook] ⚠️ confirm_cancel_delete: อ่านบันทึกเข้าเรียนไม่ได้:', attErrCancel.message, 'request=', requestIdCancel);
+            if (channelToken && event.replyToken) {
+              await replyLine(channelToken, event.replyToken,
+                '⚠️ 查不到上課紀錄（' + attErrCancel.message + '），為了安全沒有刪除任何東西。\n請到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdCancel);
+            }
+            continue;
+          }
+          if (attRowsCancel && attRowsCancel.length) {
+            if (channelToken && event.replyToken) {
+              await replyLine(channelToken, event.replyToken,
+                '🛑 這堂課（' + reqRowCancel.original_date + '）已經有「上過課」的紀錄了，沒有刪除任何東西。\n' +
+                '刪掉的話，堂數已經扣掉但 Calendar 會變空的，兩邊對不起來。\n' +
+                '請到網站確認後再決定：https://mrtaihualin.com/classroom/#req-row-' + requestIdCancel);
+            }
+            continue;
+          }
+        }
+
         // ── 2026-07-19 เพิ่ม（แก้ ORANGE：ครูกดลบจาก LINE กับเว็บพร้อมกัน ชนกันได้）──
         // เดิม: เช็คแค่ status ด้านบน (อ่านเฉยๆ ไม่ atomic) แล้วยิงลบ Calendar เลย → ถ้าเว็บกับ LINE
         // อ่านผ่านพร้อมกันภายในไม่กี่วินาที ทั้งคู่จะยิง deleteCalendarEventById ซ้อนกันจริง
@@ -1476,12 +1558,22 @@ serve(async (req) => {
         // status (status มี CHECK constraint classroom_requests_status_check รองรับแค่
         // pending/acknowledged เท่านั้น เอามาใช้เป็นล็อกที่ 3 ไม่ได้) ฝั่งเว็บ (classroom/index.html
         // claimRequestForProcessing) ใช้ล็อกคอลัมน์เดียวกัน ความหมายเดียวกัน
+        // 🟠 2026-07-31 แก้ (งาน C6 — ล็อกค้างถาวร): เดิมบังคับว่าช่องล็อกต้อง "ว่างเปล่า" เท่านั้นถึงจะจับได้
+        //   → ถ้าครูกดแล้วคอมพับ/ปิดแท็บ/เน็ตหลุดก่อนทำเสร็จ ล็อกจะค้างตลอดไป
+        //     คำขอนั้นตายสนิท ทั้งเว็บและ LINE ตอบว่า "กำลังถูกจัดการที่อื่น" ตลอดกาล
+        //     ทางออกเดียวคือให้ Lin เข้าไปแก้มือใน Supabase
+        //   ตอนนี้: ล็อกที่เก่ากว่า 10 นาที = ถือว่าค้าง แย่งใหม่ได้เลย
+        //   ทำไม 10 นาที: งานจริงที่ยาวที่สุดในเส้นทางนี้ (อ่าน Calendar + ลบ + ตรวจซ้ำ + ส่ง LINE)
+        //     ปกติจบใน 5-10 วินาที · เผื่อไว้ 10 นาทีคือเผื่อเกินร้อยเท่า ปลอดภัยกว่าตั้งสั้น
+        //   ⚠️ ต้องแก้ "ทั้ง 2 ฝั่ง" ให้ใช้เลขเดียวกัน (ฝั่งเว็บ classroom/index.html claimRequestForProcessing)
+        //      ถ้าแก้ฝั่งเดียว เว็บกับ LINE จะเข้าใจคำว่า "ล็อกค้าง" ไม่ตรงกัน = อันตรายกว่าเดิม
+        const staleLockCutoffCancel = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { data: claimDataCancel, error: claimErrCancel, count: claimCountCancel } = await supabase
           .from('classroom_requests')
           .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
           .eq('id', requestIdCancel)
           .eq('status', 'pending')
-          .is('processing_started_at', null)
+          .or('processing_started_at.is.null,processing_started_at.lt.' + staleLockCutoffCancel)
           .select('id');
 
         if (claimErrCancel) {
@@ -1495,7 +1587,9 @@ serve(async (req) => {
           continue;
         }
 
-        const delResult = await deleteCalendarEventById(reqRowCancel.calendar_event_id);
+        // 🟠 2026-07-31 (งาน C4): ส่ง original_date ไปด้วย = "ลบได้ต่อเมื่อคาบยังอยู่วันเดิมจริงเท่านั้น"
+        //    ค่านี้ถูกอ่านมาตั้งแต่บรรทัดต้นก้อนแล้ว แต่เดิมเอาไปใช้แค่ตอนพิมพ์ข้อความบอกนักเรียนเท่านั้น
+        const delResult = await deleteCalendarEventById(reqRowCancel.calendar_event_id, reqRowCancel.original_date || null);
         if (!delResult.ok) {
           console.error('[line-webhook] ⚠️ confirm_cancel_delete 刪除 Calendar 失敗:', JSON.stringify(delResult), 'request=', requestIdCancel);
           // Calendar ยังไม่ถูกแตะจริง (API ล้มเหลว) → ปลดล็อกคืน ให้กดใหม่/ไปทำที่เว็บได้โดยไม่ติดล็อกค้าง
@@ -1504,7 +1598,17 @@ serve(async (req) => {
           if (channelToken && event.replyToken) {
             // 2026-07-19 加：把失敗原因直接秀給老師看（不用再翻 log），先前遇過「回覆✅但其實沒刪到」
             // 的假成功，之後任何失敗都要讓老師當場看到原因，不能只說「失敗，去網站處理」含糊帶過
-            await replyLine(channelToken, event.replyToken, '⚠️ 刪除 Calendar 失敗（不要重複點這顆按鈕，請到網站手動處理）\n原因：' + (delResult.reason || '未知') + (delResult.detail ? '\n' + delResult.detail : ''));
+            // 🟠 2026-07-31 (งาน C4): เคส "วันไม่ตรง" ไม่ใช่ความล้มเหลว — เป็นการหยุดไว้ก่อนโดยตั้งใจ
+            //    ใช้ข้อความคนละชุด ไม่ให้ครูเข้าใจผิดว่าระบบพัง และบอกให้ชัดว่า "ยังไม่ได้ลบอะไรเลย"
+            if (delResult.reason === 'date_mismatch') {
+              await replyLine(channelToken, event.replyToken,
+                '⚠️ 對不上，所以沒有刪除任何東西\n' +
+                '這筆申請寫的原本課堂是 ' + (delResult.expectedDate || '—') + '，\n' +
+                '但 Calendar 上這堂課現在的日期是 ' + (delResult.actualDate || '—') + '（中間可能已經被改期過了）。\n' +
+                '請到網站處理比較安全：https://mrtaihualin.com/classroom/#req-row-' + requestIdCancel);
+            } else {
+              await replyLine(channelToken, event.replyToken, '⚠️ 刪除 Calendar 失敗（不要重複點這顆按鈕，請到網站手動處理）\n原因：' + (delResult.reason || '未知') + (delResult.detail ? '\n' + delResult.detail : ''));
+            }
           }
           continue;
         }

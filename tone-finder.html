@@ -32,7 +32,7 @@
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
-<script src="js/games/word-menu.js?v=6"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
+<script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="data/words-data.js?v=6"></script>
 <script src="data/adv-sentences.js?v=6"></script>
 <script src="data/tone-engine.js?v=3"></script>
@@ -216,6 +216,16 @@ if (document.fonts && document.fonts.load) {
     color: #a08050;
     margin-bottom: 14px;
   }
+  /* Lin 2026-08-01: คำอ่านยาวทั้งประโยค (高級) — แทนคำแปลจีนรายคำเดิม (word-zh) */
+  .tf-adv-sent-reading {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #993C1D;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  body.tf-modern-font .tf-adv-sent-reading { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif !important; }
   /* 2026-07-30 (รอบ 3): Lin สั่งกลับไปใช้แถบช่องพยางค์แบบมีกรอบ (syl-chip) เหมือนเกมอ่าน/เกมพิมพ์
      — เอา .tf-adv-sent-focus/.tf-syl-cur/.tf-syl-dim (กล่องโฟกัสเดี่ยว/ขีดเส้นใต้ ที่เคยเปลี่ยนมา 2 รอบ 07-16, 07-29) ออก
      ใช้ .syl-strip/.syl-chip ชุดเดียวกับเกมอ่าน/เกมพิมพ์แทน (สีค่าตรงกันเป๊ะ) */
@@ -1873,17 +1883,21 @@ if (document.fonts && document.fonts.load) {
       <span id="tf-vault-btn-slot"></span>
       <button id="tf-guide-toggle" class="word-ctl-btn" type="button" onclick="TF.toggleGuide()"></button>
       <span id="font-toggle-slot"></span>
+      <!-- Lin 2026-07-31: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 — เดิมลอยเป็นปุ่มเล็กใต้คำแปลจีน ย้ายมารวมในเมนู 🍚 ตามที่ Lin สั่ง · ไอคอน 🙏 = ท่าไหว้ไทย สื่อถึง "คำสุภาพ" ตรงตัว (ไม่ใช่ไอคอนทั่วไป) · render() ใน tone-finder-game.js เป็นคนตั้ง textContent/data-mode + ซ่อนแถวนี้เวลาไม่ได้เล่น高級句子 -->
+      <button id="tf-particle-toggle" class="word-ctl-btn" type="button" onclick="TF.toggleParticleMode()" style="display:none;">🙏</button>
     </div>
     <!-- Lin 2026-07-19: ยุบปุ่มทั้งหมดเข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
     <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น)
          เกมเสียงไม่มีแถว 英文讀音 ในเมนูแล้ว — ย้ายไปเป็นปุ่ม 🔡 ข้างคำในหน้าเฉลย (คู่กับปุ่ม 🔊) ตามที่ Lin สั่ง
-         เหตุผล: คำอ่านโรมันมีขีดวรรณยุกต์ = เฉลยคำตอบ เลยใช้ได้เฉพาะตอนเฉลย ปุ่มอยู่ในเมนูตลอดเวลาแล้วกดไม่เห็นผล ทำให้งง -->
+         เหตุผล: คำอ่านโรมันมีขีดวรรณยุกต์ = เฉลยคำตอบ เลยใช้ได้เฉพาะตอนเฉลย ปุ่มอยู่ในเมนูตลอดเวลาแล้วกดไม่เห็นผล ทำให้งง
+         禮貌詞 (ครับ/ค่ะ/คะ) อยู่ท้ายสุด — เกี่ยวกับ高級句子เท่านั้น เกมอื่น/ระดับอื่นไม่มีแถวนี้โผล่ (ปุ่มถูกซ่อนอัตโนมัติ) -->
     <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'tf-word-ctl-row',items:[
-      {id:'rg-pron-toggle',    label:'讀音',   state:'pron'},
-      {id:'zh-toggle-slot',    label:'翻譯',   state:'zh'},
-      {id:'tf-vault-btn-slot', label:'單字庫', state:'vault'},
-      {id:'tf-guide-toggle',   label:'提示',   state:'guide'},
-      {id:'font-toggle-slot',  label:'字體',   state:'font'}
+      {id:'rg-pron-toggle',      label:'讀音',   state:'pron'},
+      {id:'zh-toggle-slot',      label:'翻譯',   state:'zh'},
+      {id:'tf-vault-btn-slot',   label:'單字庫', state:'vault'},
+      {id:'tf-guide-toggle',     label:'提示',   state:'guide'},
+      {id:'font-toggle-slot',    label:'字體',   state:'font'},
+      {id:'tf-particle-toggle',  label:'禮貌詞', state:'particle'}
     ]});});</script>
     <div class="tf-bc" id="tf-bc"></div>
     <div class="tf-nav-bar" id="tf-nav-bar">
@@ -1914,7 +1928,7 @@ if (document.fonts && document.fonts.load) {
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=30"></script>
+<script src="js/games/tone-finder-game.min.js?v=33"></script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>

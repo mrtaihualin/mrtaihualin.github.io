@@ -889,6 +889,17 @@ function tfShowParticleFor(lastW, hasParticle) {
   if (mode === 'f' && hasParticle && lastW.th !== 'ครับ') return lastW.th; // เผื่ออนาคต Lin เพิ่มข้อมูลค่ะ/คะ — ตอนนี้ยังไม่มีประโยคไหนมีข้อมูลนี้จริง
   return null;
 }
+// ปุ่มจริงอยู่ในเมนู 🍚 (#tf-particle-toggle, tone-finder.html) — นอก banner.innerHTML → ต้องซิงค์ icon/data-mode/ซ่อน-โชว์ตรงนี้ทุกครั้งที่ render() (WordMenu.js อ่าน data-mode ผ่าน READERS.particle)
+function tfSyncParticleBtn() {
+  var b = document.getElementById('tf-particle-toggle');
+  if (!b) return;
+  if (!advSentenceCtx) { b.style.display = 'none'; return; } // ไม่ได้เล่น高級句子 → ซ่อนแถวนี้ในเมนู🍚 ไปเลย (WordMenu ซ่อนแถวอัตโนมัติเมื่อปุ่ม display:none)
+  b.style.display = '';
+  var mode = tfParticleMode();
+  b.setAttribute('data-mode', mode);
+  b.title = mode === 'm' ? '目前：句尾加「ครับ」（男生禮貌詞）' : (mode === 'f' ? '目前：句尾加「ค่ะ/คะ」（女生禮貌詞）' : '目前：不加句尾禮貌詞');
+  b.setAttribute('aria-label', b.title);
+}
 
 // ════════════════════════════════════════════════════════════
 // ── คำอ่านใต้คำศัพท์: 讀音 (ไทย 🐣/🥚) + 英文讀音 (โรมัน 🔡/🔠) — Lin 2026-07-25
@@ -951,7 +962,8 @@ function tfReadingLineHtml() {
 
   var html = '';
   // 讀音 ไทย: โชว์ทุกขั้น เต็มทั้งคำ ไม่ clip + โชว์ทุกคำแม้อ่านตรงกับตัวเขียน (Lin 2026-07-30 — กติกาเดียวกับเกมเรียงคำที่แก้รอบนี้ กันเข้าใจผิดว่าปุ่มเสีย)
-  if (tfPronMode) { var _th = e.readingTH || ''; if (_th) html += '<div class="tf-read-th">' + _th + '</div>'; }
+  // Lin 2026-08-01: โหมดประโยค高級 ไม่โชว์คำอ่านรายคำ (tf-read-th) ตรงนี้แล้ว — ซ้อนกับคำอ่านยาวทั้งประโยค (sentReadingHtml/tf-adv-sent-reading) ที่โชว์อยู่ด้านล่างอยู่แล้ว (ซึ่งมีคำอ่านของคำนี้รวมอยู่ในนั้นแล้ว)
+  if (tfPronMode && !advSentenceCtx) { var _th = e.readingTH || ''; if (_th) html += '<div class="tf-read-th">' + _th + '</div>'; }
   if (showEn)     { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _clip(_en) + '</div>'; }
   return html;
 }
@@ -2079,6 +2091,7 @@ function render() {
     var zhHtml = curZh ? '<div class="word-zh">' + curZh + '</div>' : '';
     var mainBoxHtml, sentCtxHtml = '';
     var sentCtxZhHtml = ''; // Lin 2026-07-31: คำแปลทั้งประโยค (高級) — โชว์รวมกับ 翻譯ท้ายแถว ไม่ให้แซง 讀音/英文讀音
+    var sentReadingHtml = ''; // Lin 2026-08-01: คำอ่านยาวทั้งประโยค (高級) — โชว์แทนคำแปลจีนรายคำ (zhHtml) ตามที่ Lin สั่ง เพราะแปลรายคำโดดๆ ไม่มีบริบท
     var sylStripHtml = ''; // Lin 2026-07-30: แยกกล่องพยางค์/กล่องคำในประโยคออกจาก mainBoxHtml — ต้องโชว์นอกกรอบทอง (#tf-banner) เหมือนเกมอ่าน/เกมพิมพ์ ไม่ใช่ฝังในกรอบทอง
     if (advSentenceCtx && session && session.words && session.words.length) {
       // Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ "ประโยคเต็ม" ไฮไลต์คำที่กำลังถามอยู่ในประโยค + คำแปลจีน (บริบทที่เกมอ่าน/เกมพิมพ์ไม่มี เพราะเล่นทีละคำ ไม่ได้โชว์ทั้งประโยค — จุดนี้เก็บไว้เหมือนเดิม)
@@ -2096,11 +2109,11 @@ function render() {
       //   เดิมโผล่ก่อน 讀音 ทำให้ลำดับเพี้ยน (翻譯 → 讀音 → 翻譯) ตอนนี้เก็บไว้โชว์รวมกับ 翻譯 หลัง 讀音/英文讀音 แทน (ดู sentCtxZhHtml ด้านล่าง)
       mainBoxHtml = '<div class="tf-adv-sent-main">' + sentHtml + '</div>';
       sentCtxZhHtml = advSentenceCtx.zh ? '<div class="tf-adv-sent-ctx-zh">' + advSentenceCtx.zh + '</div>' : '';
-      // Lin 2026-07-31: ปุ่มเปิด/ปิดครับ/ค่ะ/คะ ท้ายประโยค — ไม่กระทบคะแนน/รอบทายเลย แค่เปลี่ยนข้อความบน sentHtml ด้านบน
-      var _pModeNow = tfParticleMode();
-      var _pLabel = _pModeNow === 'm' ? '👦 ครับ' : (_pModeNow === 'f' ? '👧 ค่ะ/คะ' : '⭕ ไม่ใส่คำลงท้าย');
-      sentCtxZhHtml += '<button onclick="TF.toggleParticleMode()" style="font-size:11px;padding:2px 10px;margin-top:6px;border:0.5px solid #c9a86a;border-radius:20px;background:transparent;color:#8B6310;cursor:pointer;">' + _pLabel + '</button>';
       sylStripHtml = sentChips;
+      // Lin 2026-08-01: ประโยค高級 — เอาคำแปลจีนรายคำ (zhHtml, เช่น "天氣") ออก เพราะแปลแค่คำเดียวโดดๆ ไม่มีบริบท
+      //   เปลี่ยนไปโชว์คำอ่านยาวทั้งประโยคแทน (ตำแหน่งเดิมของ zhHtml) — คำแปลจีนทั้งประโยค (sentCtxZhHtml) ยังอยู่เหมือนเดิม
+      zhHtml = '';
+      sentReadingHtml = advSentenceCtx.readingTH ? '<div class="tf-adv-sent-reading">' + advSentenceCtx.readingTH + '</div>' : '';
     } else if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null) {
       // Lin 2026-07-16: คำหลายพยางค์ (初/中級 ปกติ) — โชว์ "คำเต็ม" ด้านบน + กล่องพยางค์ที่กำลังถามด้านล่าง (ไล่จากพยางค์แรกเสมอ)
       // 2026-07-16: เอาแถบพยางค์ (syl-chip แบบเกมอ่าน) ออกตามที่ Lin สั่ง — เหลือแค่คำเต็ม + กล่องโฟกัส
@@ -2124,13 +2137,14 @@ function render() {
     }
     // บรรทัดคำอ่าน: 讀音 โชว์ได้ทุกขั้น (Lin 2026-07-30) · 英文讀音 โชว์หลังตอบแล้วเท่านั้น (ดู tfReadingLineHtml)
     // Lin 2026-07-30 (รอบ 2): เรียงใต้คำให้เหมือนกันทุกเกม → 讀音 → 英文讀音 → 翻譯 (เดิมคำแปลอยู่เหนือคำอ่าน)
-    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + sentCtxZhHtml + tfGuideNoteHtml();
+    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + sentReadingHtml + sentCtxZhHtml + tfGuideNoteHtml();
     // Lin 2026-07-30: กล่องพยางค์/กล่องคำในประโยค 高級 อยู่นอกกรอบทอง — เติมเนื้อหาแยกจาก banner.innerHTML ข้างบน (ดู #tf-syl-strip ใน tone-finder.html)
     var tfSylStripEl = document.getElementById('tf-syl-strip');
     if (tfSylStripEl) {
       if (sylStripHtml) { tfSylStripEl.style.display = 'flex'; tfSylStripEl.innerHTML = sylStripHtml; }
       else { tfSylStripEl.style.display = 'none'; tfSylStripEl.innerHTML = ''; }
     }
+    tfSyncParticleBtn(); // Lin 2026-07-31: ปุ่มครับ/ค่ะ/คะ ในเมนู🍚 — โชว์เฉพาะตอนเล่น高級句子เท่านั้น (ปุ่มจริงอยู่นอก banner ต้องซิงค์ทุกครั้งที่ render)
     // inject vault save button
     if (window.WordVault && S.word) {
       WordVault.injectStyles();
@@ -3955,7 +3969,8 @@ var TF = {
     advSentIdx = idx;
     // Lin 2026-07-30: ย้ายมาตั้ง advSentenceCtx "ก่อน" เรียก startSetSession (เดิมตั้งทีหลัง ทำให้ render() รอบแรกในนั้นเห็นค่าเป็น null → คำแรกของประโยค高級ไม่โชว์ประโยคเต็ม)
     // Lin 2026-07-31: th ตอนนี้คือประโยคไม่รวมคำลงท้ายสุภาพแล้ว (ตัด _hasParticle ออกแล้วด้านบน) — particle คำนวณแยกตามปุ่มเปิด/ปิด ใช้โชว์ต่อท้ายบนแบนเนอร์เท่านั้น ไม่ใช่ส่วนที่ต้องทายเสียง
-    advSentenceCtx = { th: coreWords.map(function(w){ return w.th; }).join(''), zh: s.zh, particle: tfShowParticleFor(_lastW, _hasParticle) };
+    // Lin 2026-08-01: เพิ่ม readingTH (คำอ่านยาวทั้งประโยค) เก็บไว้โชว์แทนคำแปลจีนรายคำ ตามที่ Lin สั่ง — s.readingTH คือคำอ่านเต็มประโยคจากคลัง (ไม่ตัดคำลงท้ายสุภาพ แต่ไม่กระทบเพราะ core words เท่านั้นที่ถูกถาม)
+    advSentenceCtx = { th: coreWords.map(function(w){ return w.th; }).join(''), zh: s.zh, readingTH: s.readingTH || '', particle: tfShowParticleFor(_lastW, _hasParticle) };
     startSetSession(entries, { keepOrder: true, isAdvSentence: true });
   },
   // Lin 2026-07-31: กดวนปิด → ครับ(ชาย) → ค่ะ/คะ(หญิง) → ปิด — ไม่กระทบคะแนน/รอบทายเลย แค่เปลี่ยนข้อความโชว์ต่อท้ายประโยคเต็ม (ไม่รีเซ็ตรอบเล่น ไม่เรียก startAdvSentence ซ้ำ)

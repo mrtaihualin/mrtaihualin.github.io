@@ -31,7 +31,8 @@
       '.wm-row:hover{background:rgba(139,99,16,0.10);}' +
       '.wm-row-label{flex:1;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}' +
       '.wm-pill{font-family:\'Noto Sans TC\',sans-serif;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}' +
-      '.wm-pill.on{color:#2d6a4f;background:#e8f5e9;}' +
+      // Lin 2026-08-01: ป้ายสถานะ "เปิด" เดิมใช้สีเขียว (#2d6a4f/#e8f5e9) ไม่ตรงธีมทองของเว็บ — เปลี่ยนเป็นโทนทองเข้ม/ครีมทอง (--gold-deep/--gold-light) ให้เข้าธีมทุกเกมที่ใช้เมนู 🍚 นี้ร่วมกัน (เกมเสียง/เกมอ่าน/เกมพิมพ์)
+      '.wm-pill.on{color:#5a3e0a;background:#F3E4C2;}' +
       '.wm-pill.off{color:#6b6b6b;background:rgba(139,99,16,0.10);}' +
       // ปุ่มเดิมที่ถูกย้ายเข้ามาในแถว — เดิมคงหน้าตาวงกลมขาวไว้ ตอนนี้ทำเป็นวงกลมไล่สีทองเหมือน .ico ของเมนูอื่น (สถานะเปิด/ปิดยังเห็นได้จากป้าย wm-pill ข้างๆ อยู่แล้ว ไม่ต้องพึ่งสีพื้นปุ่ม)
       '.wm-row .word-ctl-btn,.wm-row .word-audio-btn,.wm-row .vault-save-btn,.wm-row .rg-ctl-fab{' +
@@ -61,12 +62,15 @@
     guide: function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('💡') !== -1; },
     kbd:   function (el) { var b = el.querySelector('button') || el; return b.getAttribute && b.getAttribute('data-playing') === '1'; },
     // Lin 2026-07-25: แถวสลับฟอนต์ — อ่านจาก class บน <body> โดยตรง (rg-modern-font=พิมพ์/อ่าน · tf-modern-font=เกมเสียง) แม่นกว่าอ่านจากไอคอนปุ่ม
-    font:  function () { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
+    font:  function () { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); },
+    // Lin 2026-07-31: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 — 3 สถานะ (off/m/f) ไม่ใช่ 開/關 ธรรมดา → คืนเป็น string ตรงๆ (ดู refresh() ด้านล่าง รองรับทั้ง boolean และ string)
+    particle: function (el) { var b = el.querySelector('button') || el; return (b.getAttribute && b.getAttribute('data-mode')) || 'off'; }
   };
   // ข้อความป้ายสถานะของแต่ละแบบ (ไม่ใช่ 開/關 หมดทุกอัน — ให้อ่านแล้วเข้าใจทันที)
   var PILL_TEXT = {
     vault: { on: '已收藏', off: '未收藏' },
     font:  { on: '現代字', off: '標準字' },
+    particle: { off: '關', m: '男生（ครับ）', f: '女生（ค่ะ/คะ）' },
     _default: { on: '開', off: '關' }
   };
 
@@ -178,8 +182,14 @@
         if (on === null || typeof on === 'undefined') { w.pill.style.display = 'none'; return; }
         w.pill.style.display = '';
         var txt = PILL_TEXT[w.state] || PILL_TEXT._default;
-        w.pill.textContent = on ? txt.on : txt.off;
-        w.pill.className = 'wm-pill ' + (on ? 'on' : 'off');
+        if (typeof on === 'boolean') {
+          w.pill.textContent = on ? txt.on : txt.off;
+          w.pill.className = 'wm-pill ' + (on ? 'on' : 'off');
+        } else {
+          // Lin 2026-07-31: reader คืนเป็น string (เช่น particle: 'off'/'m'/'f') — ไม่ใช่ boolean 開/關 ธรรมดา
+          w.pill.textContent = txt[on] || on;
+          w.pill.className = 'wm-pill ' + (on === 'off' ? 'off' : 'on');
+        }
       });
       // ตัวเลือกไหนที่ช่องเสียบยังว่าง (สคริปต์เจ้าของยังไม่เติมปุ่ม/เกมนั้นปิดฟีเจอร์) → ซ่อนแถวนั้นไว้ก่อน
       watched.forEach(function (w) {

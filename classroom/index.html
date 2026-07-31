@@ -5542,6 +5542,34 @@ function requireLineLinkedOrPrompt(token) {
 // 用法：回傳 { rows, error }。rows.length === 0 代表「沒改到任何一筆」
 //（通常是被老師搶先處理了），呼叫端一定要自己判斷，不能只看 error。
 // ════════════════════════════════════════════════════════════
+// 🟡 2026-07-31 加（งาน C12）：แปลง error ดิบจากฐานข้อมูลเป็นภาษาจีนสั้นๆ ที่นักเรียนอ่านรู้เรื่อง
+//
+// ปัญหาเดิม: หน้าเว็บเอาข้อความ error จากฐานข้อมูลมาโชว์ตรงๆ นักเรียนที่กดพอดีตอนข้ามเส้น 24 ชม.
+//   จะเห็นข้อความปนอังกฤษยาวๆ เช่น
+//   "students may only cancel a class 24+ hours in advance — please use reschedule instead (...)"
+//
+// ⚠️ ตั้งใจ "ไม่ซ่อน" error ที่ไม่รู้จัก — ยังโชว์ของเดิมต่อไป
+//   ถ้าซ่อนหมด วันไหนพังจริงจะหาสาเหตุไม่เจอเลย (ผิดกฎ RELIABILITY FIRST)
+//
+// ⚠️ เทียบด้วย "คำกลางประโยค" ไม่ใช่ทั้งประโยค — บทเรียนจริงจากไฟล์ consolidated.sql:199-201
+//   ที่เคยเทียบคำว่า '24 hours' แล้วพลาด เพราะข้อความจริงเขียน '24+ hours' (มีเครื่องหมาย +)
+function friendlyRequestError(msg) {
+  var m = String(msg || '');
+  if (m.indexOf('hours in advance') >= 0) {
+    return '這堂課距離上課不到 24 小時，沒辦法線上取消。\n你可以改用「🔄 申請改期」，或直接聯絡老師。';
+  }
+  if (m.indexOf('missing original_time') >= 0) {
+    return '這堂課系統裡沒有記錄上課時間，沒辦法自動判斷，請直接聯絡老師。';
+  }
+  if (m.indexOf('too many requests') >= 0) {
+    return '操作太頻繁了，請等一下再試一次。';
+  }
+  if (m.indexOf('invalid student token') >= 0) {
+    return '找不到你的學生資料，請從老師給你的專屬連結重新進入這個頁面。';
+  }
+  return null; // ไม่รู้จัก → ให้ผู้เรียกโชว์ข้อความเดิม
+}
+
 async function studentPatchRequest(token, id, patch, guards) {
   const g = guards || {};
   const res = await sb.rpc('student_update_own_request', {
@@ -5604,7 +5632,12 @@ async function requestCancelClass(isoDate, calendarEventId, timeStr) {
     // ห้ามเอาเวลาของ "คาบถัดไป" มาใช้แทนเด็ดขาด (คนละคาบกัน ด่าน 24 ชม.จะคำนวณจากเวลาผิด)
     p_original_time: timeStr || (isoDate ? null : (nextClassCtx && nextClassCtx.timeStr) || null),
   });
-  if (res.error) { alert('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  // 🟡 2026-07-31 แก้（งาน C12）：แปลง error ที่รู้จักเป็นภาษาจีนก่อนโชว์ให้นักเรียน
+  if (res.error) {
+    var friendlySubmit = friendlyRequestError(res.error.message);
+    alert(friendlySubmit ? ('⚠️ ' + friendlySubmit) : ('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'));
+    return;
+  }
   if (typeof gtag === 'function') gtag('event', 'class_request_submitted', { category: 'course', request_type: 'cancel' });
   // 2026-07-16 加：submit_class_request 這個 RPC 目前不收 calendar_event_id 參數（不想動資料庫
   // 函式本身，風險比較低），改成插入成功後馬上補一個 update 把真正的事件 ID 存上去。
@@ -5672,8 +5705,14 @@ async function computeUpcomingOccurrences(token, count) {
       console.warn('⚠️ get_student_schedule 沒有回傳 calendar_event_id，取消申請會退回用姓名+日期比對（不夠準），請跟 Lin 確認這個 RPC 的 SELECT 欄位。');
     }
     return sliced.map(function(r) {
-      var t = (r.start_time && /^\d{1,2}:\d{2}/.test(r.start_time)) ? r.start_time : '00:00';
-      return { date: teacherTimeToDate(r.lesson_date, t), calendarEventId: r.calendar_event_id || null };
+      // 🟡 2026-07-31 แก้（งาน C9）：เดิมคาบที่ "ไม่มีเวลาเริ่ม" ถูกเดาเป็น 00:00 แล้วเอาไปคิดเป็นเวลาจริง
+      //   พังพร้อมกัน 3 อย่าง: (1) จอโชว์คาบตอนเที่ยงคืน (2) การนับ 24 ชม.คิดจากเที่ยงคืน =
+      //   "เข้มกว่าความจริง" (คาบ 21:00 ถูกมองว่าเริ่มเร็วขึ้น 21 ชม. → คาบที่ยกเลิกได้จริงกลับโดนปฏิเสธ)
+      //   (3) ข้อความที่นักเรียนได้เขียนเวลาผิดเป็น 00:00
+      //   ตอนนี้: ติดธง hasTime ไว้ แล้วให้ปลายทางซ่อนปุ่มยกเลิกออนไลน์ของแถวนั้นไปเลย ดีกว่าเดา
+      var hasTime = !!(r.start_time && /^\d{1,2}:\d{2}/.test(r.start_time));
+      var t = hasTime ? r.start_time : '00:00';
+      return { date: teacherTimeToDate(r.lesson_date, t), calendarEventId: r.calendar_event_id || null, hasTime: hasTime };
     });
   } catch (e) {
     // Fallback：ข้อมูลจริงยังดึงไม่ได้ (RPC พัง/ยังไม่ sync) → ใช้วิธีเดิม (+7 วันจากคาบเดียว)
@@ -5744,7 +5783,9 @@ async function renderCancelPickerSelect() {
   sel.innerHTML = occurrences.map(function(occ, i) {
     const disp = studentTz ? formatInTz(occ.date, studentTz) : formatInTz(occ.date, TEACHER_TZ); // 學生自己時區 → 顯示用
     const d = new Date(disp.dateStr + 'T00:00:00');
-    const label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）' + disp.timeStr;
+    // 🟡 2026-07-31（งาน C9）：คาบที่ไม่มีเวลาเริ่ม ห้ามโชว์ 00:00 หลอกตา — บอกตรงๆ ว่าไม่รู้เวลา
+    const label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）'
+      + (occ.hasTime === false ? '（時間未知）' : disp.timeStr);
     return '<option value="' + i + '">' + escHtml(label) + '</option>';
   }).join('');
   onCancelPickerSelectChange();
@@ -5763,10 +5804,17 @@ function onCancelPickerSelectChange() {
     contactBtn.style.display = 'none';
     return;
   }
+  // 🟡 2026-07-31 แก้（งาน C9）：คาบที่ไม่รู้เวลาเริ่ม ห้ามให้ยกเลิกออนไลน์
+  //   เพราะถ้าปล่อยผ่าน จะส่งคำขอที่ไม่มีเวลา → ฐานข้อมูลคำนวณ 24 ชม.ไม่ได้ (จะตีกลับเป็น error อังกฤษ)
+  //   และข้อความที่นักเรียนได้รับจะเขียนเวลาผิด → ให้ไปคุยกับครูโดยตรงแทน ชัดเจนกว่า
   const hoursUntil = (chosen.date.getTime() - Date.now()) / 3600000;
-  const canCancel = hoursUntil >= 24;
+  const timeUnknown = chosen.hasTime === false;
+  const canCancel = !timeUnknown && hoursUntil >= 24;
   hint.style.display = canCancel ? 'none' : 'block';
-  hint.textContent = canCancel ? '' : '⚠️ 這堂距離上課不到 24 小時，無法線上取消，請直接聯絡老師';
+  hint.textContent = canCancel ? ''
+    : timeUnknown
+      ? '⚠️ 這堂課系統裡沒有記錄上課時間，沒辦法自動判斷，請直接聯絡老師取消'
+      : '⚠️ 這堂距離上課不到 24 小時，無法線上取消，請直接聯絡老師';
   submitBtn.style.display = canCancel ? '' : 'none';
   contactBtn.style.display = canCancel ? 'none' : '';
   contactBtn.href = LINE_OA_URL;
@@ -5798,7 +5846,12 @@ async function editCancelRequestChoice(id, isoDate, calendarEventId, timeStr) {
   if (timeStr) updateFields.original_time = timeStr;
   // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
   const res = await studentPatchRequest(token, id, updateFields, { status: 'pending' });
-  if (res.error) { alert('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'); return; }
+  // 🟡 2026-07-31 แก้（งาน C12）：จุดนี้คือที่ด่านใหม่ของงาน C1 จะตีกลับมา ต้องแปลงเป็นภาษาคน
+  if (res.error) {
+    var friendlyEdit = friendlyRequestError(res.error.message);
+    alert(friendlyEdit ? ('⚠️ ' + friendlyEdit) : ('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'));
+    return;
+  }
   if (!res.rows.length) {
     alert('ℹ️ 更新失敗，這筆申請可能已經被老師處理了，重新整理頁面看看。');
     closeCancelPickerModal();
@@ -7537,6 +7590,27 @@ async function loadPendingClassRequests() {
         '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>' +
         '<button class="btn-reject" onclick="openOtherOptionsModal(\'' + r.id + '\')">⚙️ 其他</button>';
     }
+    // 🟠 2026-07-31 加（งาน C6 — ล็อกค้างถาวร）：ถ้าคำขอนี้มี "ล็อกกันกดซ้ำ" ค้างอยู่ ต้องโชว์ให้ครูเห็น
+    // เดิมล็อกนี้มองไม่เห็นจากหน้าจอเลย และไม่มีวันหมดอายุ — ครูกดแล้วคอมพับ/เน็ตหลุด = คำขอตายสนิท
+    // ทั้งเว็บและ LINE ตอบว่า "กำลังถูกจัดการที่อื่น" ตลอดกาล ทางออกเดียวคือเข้าไปแก้มือใน Supabase
+    // ตอนนี้ทำ 2 ชั้น: (1) เกิน 10 นาที ระบบถือว่าค้าง แย่งใหม่ได้เอง (2) มีปุ่มให้ครูปลดเองได้ทันที
+    var lockNoticeHtml = '';
+    if (r.processing_started_at) {
+      var lockMs = Date.now() - new Date(r.processing_started_at).getTime();
+      var lockMin = Math.max(0, Math.floor(lockMs / 60000));
+      var lockIsStale = lockMs >= 10 * 60 * 1000;
+      lockNoticeHtml =
+        '<div style="font-size:0.74rem;font-family:\'Noto Sans TC\',sans-serif;padding:4px 0;color:' + (lockIsStale ? 'var(--amber-dark)' : 'var(--ink-muted)') + ';">' +
+          (lockIsStale
+            ? '🔓 這筆卡在「處理中」已經 ' + lockMin + ' 分鐘了，應該是中途斷掉沒跑完'
+            : '⏳ 這筆正在處理中（' + lockMin + ' 分鐘前開始）') +
+        '</div>' +
+        (lockIsStale
+          ? '<button class="btn-sm" style="background:none;border:1px solid var(--amber);color:var(--amber-dark);" onclick="unlockStuckRequest(\'' + r.id + '\')">🔓 解鎖這筆</button>'
+          : '');
+    }
+    actionsHtml = lockNoticeHtml + actionsHtml;
+
     return '<div class="slip-row" id="req-row-' + r.id + '">' +
       '<div class="slip-thumb-placeholder">' + (isCancel ? '❌' : isAdd ? '➕' : '🔄') + '</div>' +
       '<div class="slip-info">' +
@@ -7558,13 +7632,44 @@ async function loadPendingClassRequests() {
 // 不是拿 status 來用（status 有 CHECK constraint classroom_requests_status_check，只准
 // pending/acknowledged 兩種值，不能塞第三種當鎖）。LINE 那邊（line-webhook/index.ts 的
 // confirm_cancel_delete）用同一個欄位、同一套語意。
+// 🟠 2026-07-31 แก้（งาน C6 — ล็อกค้างถาวร）：เดิมบังคับว่าช่องล็อกต้อง "ว่างเปล่า" เท่านั้นถึงจะจับได้
+//   → ครูกด ✅ 處理 แล้วคอมพับ/ปิดแท็บ/เน็ตหลุดก่อนทำเสร็จ = ล็อกค้างตลอดไป คำขอนั้นตายสนิท
+//   ตอนนี้: ล็อกที่เก่ากว่า 10 นาที ถือว่า "ค้าง" แย่งใหม่ได้เลย
+//   ⚠️ ต้องใช้เลข 10 นาทีเท่ากับฝั่ง LINE เป๊ะ (supabase/functions/line-webhook/index.ts ก้อน confirm_cancel_delete)
+//      ถ้า 2 ฝั่งใช้เลขไม่เท่ากัน จะเข้าใจคำว่า "ล็อกค้าง" ไม่ตรงกัน = เสี่ยงลบ Calendar ซ้อนกัน
+var STALE_LOCK_MS = 10 * 60 * 1000;
 async function claimRequestForProcessing(id) {
+  var staleCutoff = new Date(Date.now() - STALE_LOCK_MS).toISOString();
   var res = await sb.from('classroom_requests')
     .update({ processing_started_at: new Date().toISOString() })
-    .eq('id', id).eq('status', 'pending').is('processing_started_at', null).select();
+    .eq('id', id).eq('status', 'pending')
+    .or('processing_started_at.is.null,processing_started_at.lt.' + staleCutoff)
+    .select();
   if (res.error) return { ok: false, reason: '搶佔處理權失敗：' + res.error.message + '\n為了安全，這次先不動 Calendar，請重試一次。' };
-  if (!res.data || !res.data.length) return { ok: false, reason: '這筆申請已經在別的地方（LINE 或另一個分頁）處理中，或剛好已經處理完了，請重新整理頁面查看最新狀態，不會重複動 Calendar。' };
+  if (!res.data || !res.data.length) return { ok: false, reason: '這筆申請已經在別的地方（LINE 或另一個分頁）處理中，或剛好已經處理完了，請重新整理頁面查看最新狀態，不會重複動 Calendar。\n（如果確定是中途斷掉卡住的，等 10 分鐘後卡片上會出現「🔓 解鎖這筆」按鈕）' };
   return { ok: true };
+}
+
+// 🟠 2026-07-31 加（งาน C6）：ปุ่มปลดล็อกด้วยมือ สำหรับคำขอที่ค้าง "處理中" เกิน 10 นาที
+// ทำไมต้องมีทั้งที่ระบบแย่งเองได้แล้ว: ปุ่มนี้ทำให้ครู "เห็น" ว่ามีของค้างอยู่ และปลดได้ทันทีที่อยากปลด
+// ไม่ต้องรอ / ไม่ต้องเดาว่าระบบจะจัดการให้ไหม (โยงกับกฎ "ต้องกู้คืนได้เมื่อพังกลางคัน")
+async function unlockStuckRequest(id) {
+  var r = (window._classRequestCache || {})[id];
+  var lockMin = (r && r.processing_started_at)
+    ? Math.max(0, Math.floor((Date.now() - new Date(r.processing_started_at).getTime()) / 60000)) : 0;
+  if (!confirm('確定要解鎖這筆申請嗎？\n\n它卡在「處理中」已經 ' + lockMin + ' 分鐘了。\n\n' +
+      '解鎖只是把「處理中」的記號清掉，讓這筆可以重新被處理，\n不會動到 Google Calendar，也不會通知學生。\n\n' +
+      '⚠️ 如果剛剛真的有人正在處理它（例如你在手機 LINE 上按了按鈕還沒跑完），\n請先等一下再解鎖，避免兩邊同時動同一堂課。')) return;
+  var res = await sb.from('classroom_requests')
+    .update({ processing_started_at: null })
+    .eq('id', id).eq('status', 'pending').select();
+  if (res.error) { alert('⚠️ 解鎖失敗：' + res.error.message); return; }
+  if (!res.data || !res.data.length) {
+    alert('ℹ️ 沒有解鎖到任何東西——這筆的狀態剛剛可能已經被改掉了（例如已經處理完），重新整理看看。');
+  } else {
+    alert('✅ 已解鎖，這筆申請可以重新處理了');
+  }
+  await loadPendingClassRequests();
 }
 
 // 只在「Calendar API 還沒真的成功」就失敗時呼叫——把鎖放開，讓之後還能重試。
@@ -7693,7 +7798,27 @@ async function processClassRequestInner(id, r, isCancel) {
   var newStartIsoForNotify = null; // 2026-07-15 加：改期時記下新時間，處理完要通知學生用
 
   if (isCancel) {
-    if (!confirm('確定要取消這堂課嗎？\n\n學生：' + r.student_name + '\n原本時間：' + oldStartLabel + '（泰國時間 Asia/Bangkok）\n\n只會刪除 Google Calendar 上「這一次」的課堂，不影響其他週的固定課程。刪除前會先備份，之後可以復原。確定嗎？')) return;
+    // 🟡 2026-07-31 加（งาน C10）：เช็คก่อนว่าคาบนี้ "ถูกบันทึกว่าเรียนไปแล้ว" หรือยัง
+    //   ถ้าเรียนไปแล้ว = โควตาถูกหักไปแล้ว · ลบออกจากปฏิทิน = โควตาหายแต่ปฏิทินว่าง ข้อมูล 2 ฝั่งไม่ตรงกัน
+    //   (กับดักเดียวกับเคส 育郁 — ฝั่ง "กู้คืน" เตือนไว้แล้วที่ revertCalendarBackup แต่ตอน "ยกเลิก" ไม่เคยเช็ค)
+    //   ใช้วิธีเดียวกับที่ revertCalendarBackup ทำอยู่แล้ว: อ่านไม่ได้ = เตือนแล้วให้ครูตัดสินใจเอง ไม่บล็อก
+    var cancelAttWarn = '';
+    var cancelDayForAtt = r.original_date || (oldStartIso ? formatInTz(new Date(oldStartIso), TEACHER_TZ).dateStr : null);
+    if (cancelDayForAtt && r.token) {
+      try {
+        var attCancel = await sb.from('classroom_attendance').select('lesson_date')
+          .eq('token', r.token).eq('lesson_date', cancelDayForAtt).limit(1);
+        if (attCancel.error) {
+          cancelAttWarn = '\n\n⚠️ 讀不到上課紀錄（' + attCancel.error.message + '），沒辦法確認這堂是不是已經上過了，請自己確認過再繼續。';
+        } else if (attCancel.data && attCancel.data.length) {
+          cancelAttWarn = '\n\n🛑 注意：這堂課（' + cancelDayForAtt + '）已經有「上過課」的紀錄了。\n'
+            + '刪掉的話，堂數已經扣掉但 Calendar 會變成空的，兩邊會對不起來。\n真的要繼續嗎？';
+        }
+      } catch (e) {
+        cancelAttWarn = '\n\n⚠️ 檢查上課紀錄時出錯（' + (e.message || e) + '），請自己確認過再繼續。';
+      }
+    }
+    if (!confirm('確定要取消這堂課嗎？\n\n學生：' + r.student_name + '\n原本時間：' + oldStartLabel + '（泰國時間 Asia/Bangkok）\n\n只會刪除 Google Calendar 上「這一次」的課堂，不影響其他週的固定課程。刪除前會先備份，之後可以復原。確定嗎？' + cancelAttWarn)) return;
     var recheck1 = await reverifyRequestState(id, r);
     if (!recheck1.ok) { alert('⚠️ ' + recheck1.reason); await loadPendingClassRequests(); return; }
     // 2026-07-19 加：動 Calendar 前先搶原子鎖，防止跟 LINE 那邊的「確認刪除 Calendar」按鈕撞期
@@ -8344,9 +8469,16 @@ function toggleAllBackups() {
   loadRecentBackups();
 }
 
+// 🟡 2026-07-31 (งาน C11): ตัวแปรพักค่าระหว่างกู้คืน — เลขคาบใหม่ที่เพิ่งสร้าง + คาบนี้เคยเป็นคาบประจำไหม
+// ประกาศไว้นอกฟังก์ชันเพราะถูกตั้งค่าในบล็อก try แล้วเอาไปใช้ต่อหลังบล็อกจบ
+var _revertNewEventId = null;
+var _revertWasRecurring = false;
+
 async function revertCalendarBackup(id) {
   var b = (window._backupCache || {})[id];
   if (!b) return;
+  _revertNewEventId = null;
+  _revertWasRecurring = false;
   var msg = b.action === 'delete'
     ? ('確定要復原嗎？會重新建立回原本的課堂：' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）')
     : ('確定要復原嗎？會把課堂移回原本時間：' + formatThaiDateTimeLabel(b.old_start) + '（泰國時間）');
@@ -8379,11 +8511,29 @@ async function revertCalendarBackup(id) {
     var token = await gdGetToken();
     if (b.action === 'delete') {
       var body = Object.assign({}, b.old_event_json);
+      // 🟡 2026-07-31 หมายเหตุ (งาน C11): 2 ตัวที่ตัดทิ้งนี้คือตัวที่บอกว่า "คาบนี้เป็นสมาชิกของชุดคาบประจำ"
+      //   Google Calendar ไม่ยอมให้สร้างคาบใหม่กลับ "เข้าชุดเดิม" ที่ถูกลบไปแล้ว (ข้อจำกัดของ Google เอง)
+      //   → ตัดทิ้งเป็นทางเดียวที่สร้างกลับมาได้จริง แต่ผลคือคาบที่กู้มาจะกลายเป็น "คาบเดี่ยว" หลุดออกจากชุด
+      //   ไม่ฝืนแก้ แต่ต้องบอกครูตรงๆ ตอนจบ (ดูข้อความเตือนท้ายฟังก์ชัน) — ห้ามเงียบ
+      var wasRecurringOccurrence = !!(b.old_event_json && (b.old_event_json.recurringEventId || b.old_event_json.originalStartTime));
       ['id', 'etag', 'iCalUID', 'htmlLink', 'created', 'updated', 'creator', 'organizer', 'recurringEventId', 'originalStartTime', 'sequence'].forEach(function(k) { delete body[k]; });
       var r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
         method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       });
       if (!r.ok) throw new Error('重新建立課堂失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
+      // 🟡 2026-07-31 加（งาน C11 — RELIABILITY FIRST）：เดิมเช็คแค่ r.ok แล้วถือว่าเสร็จ
+      //   เป็นจุดเดียวในไฟล์นี้ที่เขียน Calendar แล้วไม่ย้อนกลับไปดูของจริง (ที่อื่นตรวจซ้ำหมด)
+      //   ตอนนี้: อ่านกลับมาว่าคาบใหม่มีอยู่จริง + เก็บเลขคาบใหม่ไว้ใช้ต่อ
+      var createdEv = await r.json().catch(function () { return null; });
+      _revertNewEventId = (createdEv && createdEv.id) || null;
+      _revertWasRecurring = wasRecurringOccurrence;
+      if (!_revertNewEventId) throw new Error('重新建立課堂後拿不到新的事件 ID，請自己到 Calendar 確認一下');
+      var reGet = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(_revertNewEventId), {
+        headers: { Authorization: 'Bearer ' + token },
+      });
+      if (!reGet.ok) throw new Error('課堂建立了，但回頭確認的時候讀不到（' + reGet.status + '）：請自己到 Calendar 確認一下');
+      var reGetEv = await reGet.json().catch(function () { return {}; });
+      if (reGetEv.status === 'cancelled') throw new Error('課堂建立了，但回頭確認的時候顯示已取消，請自己到 Calendar 確認一下');
     } else {
       var patchBody = { start: b.old_event_json.start, end: b.old_event_json.end };
       if (b.old_event_json.recurrence) patchBody.recurrence = b.old_event_json.recurrence;
@@ -8414,6 +8564,56 @@ async function revertCalendarBackup(id) {
   if (res.error || !res.data || !res.data.length) {
     alert('⚠️ Calendar 已經復原了，但資料庫標記失敗，請通知開發者檢查（' + (res.error ? res.error.message : 'RLS 可能擋住') + '）');
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🟡 2026-07-31 加（งาน C11）：กู้คืน "คาบที่ถูกยกเลิก" ให้ครบ ไม่ใช่แค่สร้างกลับใน Calendar
+  //
+  // เดิมขาด 3 อย่าง (ทำให้กู้แล้วเหมือนยังไม่กู้ในสายตานักเรียน):
+  //   (1) ไม่เขียนแถวตารางเรียนกลับ → นานสุด 20 นาที (รอ cron) ที่หน้าเว็บนักเรียนยังมองไม่เห็นคาบนี้เลย
+  //   (2) ไม่อัปเดตเลขคาบใหม่ลงคำขอเดิม → ถ้าครูจะยกเลิกซ้ำอีกครั้ง จะชี้ไปเลขเก่าที่ตายแล้ว
+  //   (3) คาบประจำที่กู้กลับมากลายเป็นคาบเดี่ยว แต่ไม่มีใครบอกครู (แก้ไม่ได้จริง แต่ต้องบอก)
+  // ══════════════════════════════════════════════════════════════════════════
+  var revertExtraWarn = '';
+  if (b.action === 'delete' && _revertNewEventId) {
+    // (1) เขียนแถวตารางเรียนกลับทันที ไม่ต้องรอ cron รอบถัดไป
+    try {
+      var revStart = b.old_start ? formatInTz(new Date(b.old_start), TEACHER_TZ) : null;
+      var revEndStr = '';
+      try {
+        var revOldEnd = b.old_event_json && b.old_event_json.end && (b.old_event_json.end.dateTime || b.old_event_json.end.date);
+        if (revOldEnd) revEndStr = formatInTz(new Date(revOldEnd), TEACHER_TZ).timeStr;
+      } catch (e) { /* ไม่มีเวลาจบก็ไม่เป็นไร ปล่อยว่าง */ }
+      if (revStart && b.token) {
+        var schedRes = await sb.from('classroom_schedule').upsert({
+          token: b.token,
+          lesson_date: revStart.dateStr,
+          start_time: revStart.timeStr || '',
+          end_time: revEndStr,
+          title: (studentsCache[b.token] && studentsCache[b.token].name) || '',
+          calendar_event_id: _revertNewEventId,
+        }, { onConflict: 'token,lesson_date,start_time' }).select();
+        if (schedRes.error || !schedRes.data || !schedRes.data.length) {
+          revertExtraWarn += '\n⚠️ 課堂復原了，但課表沒有馬上寫回去（' + (schedRes.error ? schedRes.error.message : '寫入 0 筆')
+            + '）。學生頁面最慢 20 分鐘後會自己補上。';
+        }
+      }
+    } catch (e) {
+      revertExtraWarn += '\n⚠️ 課堂復原了，但寫回課表時出錯（' + (e.message || e) + '）。學生頁面最慢 20 分鐘後會自己補上。';
+    }
+    // (2) อัปเดตเลขคาบใหม่ลงคำขอเดิม (ถ้าหาเจอ) — คำขอเดิมยังเก็บเลขคาบเก่าที่ถูกลบไปแล้ว
+    try {
+      if (b.request_id) {
+        await sb.from('classroom_requests').update({ calendar_event_id: _revertNewEventId }).eq('id', b.request_id);
+      }
+    } catch (e) { console.warn('⚠️ อัปเดตเลขคาบใหม่ลงคำขอไม่สำเร็จ (ไม่กระทบการกู้คืน):', e.message || e); }
+    // (3) คาบประจำ → บอกครูตรงๆ ว่าตอนนี้กลายเป็นคาบเดี่ยวแล้ว
+    if (_revertWasRecurring) {
+      revertExtraWarn += '\n\n⚠️ 這堂原本是「每週固定課」裡的其中一次。\nGoogle 不允許把課塞回已經刪掉的那組固定課，'
+        + '所以復原回來的這一堂現在是「單獨一堂」，不在原本的每週系列裡了。\n'
+        + '（其他週的課完全不受影響）如果希望它回到系列裡，要自己到 Google Calendar 調整。';
+    }
+  }
+  if (revertExtraWarn) alert('✅ 課堂已復原' + revertExtraWarn);
 
   // 2026-07-17 加（Lin 要求）：復原之後也要跟取消/改期/加課一樣，用 LINE 通知學生和老師自己一份，
   // 三種復原類型（取消復原/改期復原/永久變更復原）各自用不同文案講清楚剛剛發生了什麼。
@@ -10013,7 +10213,14 @@ async function connectCalendar() {
         const dayLabel = parseInt(startParts.dateStr.slice(5,7),10) + '月' + parseInt(startParts.dateStr.slice(8,10),10) + '日（週' + dayZh[startParts.weekday] + '）';
         const isToday = dayKey === todayKey;
         if (isToday && attendedTodayTokens.has(token)) return; // 今天已記錄出席過 → 不再顯示這張卡
-        matched.push({ token, s, startTime, endTime, dayKey, isoDate, dayLabel, isToday });
+        // 🟠 2026-07-31 加（งาน C5 — RELIABILITY）：เดิมตรงนี้ทิ้ง ev.id ไปเฉยๆ ทั้งที่มีอยู่ในมือแล้ว
+        // ทำให้แถวที่ "เบราว์เซอร์ครู" เขียนลงตาราง ไม่มีเลขอ้างอิงคาบของ Google Calendar ติดไปด้วย
+        // → นักเรียนที่กดขอยกเลิกในจังหวะนั้น (ก่อน cron รอบถัดไป) จะได้คำขอที่ไม่มีเลขคาบ
+        //   ครูกดจัดการแล้วระบบต้องถอยไปเดาจาก "ชื่อ+วัน" ซึ่งถ้าเจอ 0 หรือ 2 รายการจะไม่ยอมทำอะไรเลย
+        //   ส่วนปุ่มใน LINE ไม่มีทางถอยเลย ตอบ「請到網站手動處理」อย่างเดียว
+        // ตัว cron แก้จุดนี้ไปแล้วตั้งแต่ 2026-07-19 (calendar-schedule-sync-cron/index.ts:166)
+        // แต่ฝั่งเบราว์เซอร์ไม่ได้แก้ตาม — อันนี้คือแก้ให้ตรงกัน ใช้วิธีเดียวกันเป๊ะ
+        matched.push({ token, s, startTime, endTime, dayKey, isoDate, dayLabel, isToday, eventId: ev.id || null });
       });
     });
 
@@ -10104,7 +10311,9 @@ async function syncScheduleToSupabase(matched) {
     const rowMap = new Map();
     matched.forEach(function(m) {
       const key = m.token + '|' + m.isoDate + '|' + (m.startTime || '');
-      rowMap.set(key, { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.s.name });
+      // 🟠 2026-07-31 加（งาน C5）：เก็บเลขอ้างอิงคาบของ Google Calendar ลงไปด้วย
+      // เขียนแบบเดียวกับตัว cron เป๊ะ (calendar-schedule-sync-cron/index.ts:175) เพื่อให้ 2 ฝั่งไม่ตีกัน
+      rowMap.set(key, { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.s.name, calendar_event_id: m.eventId || null });
     });
     const rows = Array.from(rowMap.values());
     // 2026-07-15 แก้（Lin ตรวจเจอ classroom_schedule มีแถวซ้ำเป็นร้อย ทุก token）：

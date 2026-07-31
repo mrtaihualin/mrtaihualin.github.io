@@ -279,6 +279,51 @@ serve(async (req) => {
             status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
           });
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // 🟠 2026-07-31 เพิ่ม (งาน C8) — เกราะชั้นที่ 2: ตรวจว่าปุ่ม "ชี้ไปคำขอของใคร"
+        //
+        // ช่องโหว่เดิม: ด้านบนตรวจแค่ "ชื่อปุ่ม" ว่าอยู่ในรายการอนุญาตไหม
+        //   แต่ไม่เคยตรวจว่า "เลขคำขอ" ที่ฝังในปุ่มเป็นของนักเรียนคนที่ส่งมาจริงหรือเปล่า
+        //   ฝั่งรับ (line-webhook) ก็ตรวจแค่ "คนกดคือครูไหม"
+        //   → นักเรียน ก. แต่งการ์ดที่ดูน่าเชื่อ ให้ปุ่มชี้ไปคำขอของนักเรียน ข.
+        //     Lin กดเอง = คาบของ ข. ถูกลบ/สร้าง/ย้าย และทุกด่านปลายทางผ่านหมด เพราะครูเป็นคนกดจริง
+        //   ข้อจำกัดที่ทำให้ยังไม่ใช่สีแดง: ต้องรู้เลขคำขอ (UUID) ของคนอื่นก่อน ซึ่งเดาไม่ได้
+        //   แต่นี่คือปุ่มที่อันตรายที่สุดในระบบ ควรมีเกราะชั้นสอง
+        //
+        // กฎที่ใช้: ปุ่มไหน "ไม่มีเลขคำขอ" → ปล่อยผ่านเหมือนเดิม (การ์ดปกติของนักเรียนต้องส่งได้)
+        //          ปุ่มไหน "มีเลขคำขอ" → แถวนั้นต้องเป็นของ token คนที่ส่งมาเท่านั้น
+        // ⚠️ อ่านฐานข้อมูลไม่ได้ = ปฏิเสธ (ปลอดภัยไว้ก่อน) และเขียน log ทุกครั้ง ห้ามเงียบ
+        // ══════════════════════════════════════════════════════════════════════
+        const requestIdsInButtons = [];
+        for (const btn of allButtons) {
+          if (!btn || btn.uri) continue;
+          const rid = new URLSearchParams(String(btn.postbackData || '')).get('request');
+          if (rid) requestIdsInButtons.push(rid);
+        }
+        if (requestIdsInButtons.length) {
+          const uniqueIds = [...new Set(requestIdsInButtons)];
+          const { data: ownRows, error: ownErr } = await admin
+            .from('classroom_requests')
+            .select('id, token')
+            .in('id', uniqueIds);
+          if (ownErr) {
+            console.error('[notify-line] ⚠️ ตรวจเจ้าของคำขอไม่ได้ → ปฏิเสธไว้ก่อน:', ownErr.message);
+            return new Response(JSON.stringify({ error: 'cannot verify request ownership' }), {
+              status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+            });
+          }
+          const foundIds = new Set((ownRows || []).map((r) => String(r.id)));
+          const notMine = (ownRows || []).filter((r) => r.token !== fromStudentToken);
+          const missing = uniqueIds.filter((id) => !foundIds.has(String(id)));
+          if (notMine.length || missing.length) {
+            console.error('[notify-line] 🛑 ปฏิเสธ: ปุ่มชี้ไปคำขอที่ไม่ใช่ของผู้ส่ง. token=',
+              String(fromStudentToken).slice(0, 6), 'ไม่ใช่ของตัวเอง=', notMine.length, 'หาไม่เจอ=', missing.length);
+            return new Response(JSON.stringify({ error: 'button targets a request that does not belong to you' }), {
+              status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+            });
+          }
+        }
       }
     } else if (to && typeof to === 'object' && to.studentToken) {
       // 2026-07-19 加（SECURITY FIRST，稽核發現）：เดิมสาขานี้ไม่มีการตรวจสิทธิ์เลย — ใครก็ยิง
