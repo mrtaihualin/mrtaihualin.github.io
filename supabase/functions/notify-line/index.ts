@@ -324,6 +324,28 @@ serve(async (req) => {
             });
           }
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // 🟠 2026-07-31 เพิ่ม (แก้จุดที่เกราะด้านบนจับไม่ถึง) — ปุ่ม 💬 聯繫學生
+        // (action=start_contact_student) ไม่ได้ใช้ request= เหมือนปุ่มอื่น แต่ใช้ token=
+        // (บอกว่าครูจะพิมพ์ข้อความหาใคร) → ด่าน requestIdsInButtons ด้านบนจับไม่ถึงปุ่มนี้
+        // ถ้าไม่เช็ก นักเรียน ก. อาจแต่งการ์ดให้ token= ชี้ไปนักเรียน ข. แทน
+        // Lin กดปุ่มแล้วพิมพ์ข้อความ → ข้อความหลุดไปหา ข. แทน (ไม่กระทบปฏิทิน แค่ข้อความผิดคน)
+        // กฎ: ปุ่ม start_contact_student ทุกปุ่ม token= ต้องตรงกับ fromStudentToken (คนที่ยิง request นี้) เท่านั้น
+        // ══════════════════════════════════════════════════════════════════════
+        for (const btn of allButtons) {
+          if (!btn || btn.uri) continue;
+          const params = new URLSearchParams(String(btn.postbackData || ''));
+          if (params.get('action') !== 'start_contact_student') continue;
+          const btnToken = params.get('token') || '';
+          if (btnToken !== fromStudentToken) {
+            console.error('[notify-line] 🛑 ปฏิเสธ: ปุ่ม 聯繫學生 token ไม่ตรงกับผู้ส่ง. fromToken=',
+              String(fromStudentToken).slice(0, 6));
+            return new Response(JSON.stringify({ error: 'contact button targets a token that does not belong to you' }), {
+              status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+            });
+          }
+        }
       }
     } else if (to && typeof to === 'object' && to.studentToken) {
       // 2026-07-19 加（SECURITY FIRST，稽核發現）：เดิมสาขานี้ไม่มีการตรวจสิทธิ์เลย — ใครก็ยิง
