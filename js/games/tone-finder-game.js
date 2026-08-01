@@ -1031,7 +1031,6 @@ function tfGuideNoteHtml() {
 
 // ── สถิติคำที่ตอบผิดรายคำ (localStorage) + หน้า 全部 แบบ 50/50 เน้นคำที่ยังไม่แม่น — LIN 2026-06-20 ──
 var TF_WORD_WRONG_KEY = 'tf_word_wrong_v1';
-function tfShuffleArr(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 function tfLoadWordWrong() { try { return JSON.parse(localStorage.getItem(TF_WORD_WRONG_KEY) || '{}') || {}; } catch (e) { return {}; } }
 function tfRecordWordWrong(results) {
   if (!results) return;
@@ -2262,7 +2261,6 @@ function buildStep() {
     case 's2b_dl':          return s2bDeadLow();
     case 'session-guess':   return stepSessionGuess();
     case 'result':          return stepResult();
-    case 'overview':        return stepOverview();
     default: return '';
   }
 }
@@ -2528,15 +2526,6 @@ function buildReportHTML() {
     +'<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">'
     +'<style>@page{margin:10mm;}body{margin:0;background:#fff;}</style>'
     +'</head><body>'+buildReportInner()+'</body></html>';
-}
-// ตรวจว่าเป็นมือถือ/แท็บเล็ตไหม (ใช้เลือกวิธีออก PDF ให้เสถียร)
-function tfIsMobile() {
-  try {
-    var ua = navigator.userAgent || '';
-    var byUA = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(ua);
-    var byTouch = (('ontouchstart' in window) && window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
-    return byUA || byTouch;
-  } catch (e) { return false; }
 }
 function openReportPrint() {
   var win = window.open('', '_blank');
@@ -3183,32 +3172,6 @@ function stepSessionGuess() {
   '</div>';
 }
 
-function showStartInflection(callback) {
-  var old = document.getElementById('sg-start-ov');
-  if (old) old.remove();
-  var div = document.createElement('div');
-  div.id = 'sg-start-ov';
-  div.className = 'sg-start-overlay';
-  div.innerHTML =
-    '<div class="sg-start-popup">'+
-      '<div class="sg-start-thai">開始聲調推導</div>'+
-      '<div class="sg-start-zh">點擊開始分析這個字的聲調</div>'+
-      '<button class="sg-start-btn" id="sg-start-go" type="button">開始 →</button>'+
-    '</div>';
-  document.body.appendChild(div);
-  // Click OUTSIDE the popup (on the overlay) → just close, stay on this page.
-  div.addEventListener('click', function(e){
-    if (e.target === div) div.remove();
-  });
-  // Click the button → close popup and continue.
-  var goBtn = document.getElementById('sg-start-go');
-  if (goBtn) goBtn.addEventListener('click', function(e){
-    e.stopPropagation();
-    div.remove();
-    if (callback) callback();
-  });
-}
-
 function navigateToInflection() {
   var w = S.word;
   // Lin 2026-07-16: เข้าหน้าตรวจ推導 = รีเซ็ตประวัติให้ s1 เป็นฐาน → กดย้อนกลับไปหน้าเดาวรรณยุกต์ไม่ได้ (กันย้อนไปเดาใหม่จนถูก)
@@ -3232,64 +3195,6 @@ function goToResult(finalAnswer) {
 }
 
 // ── RESULT ──
-function stepOverview() {
-  var syls = S.syllables || [];
-  var results = S.sylResults || {};
-  var allDone = syls.length > 0 && syls.every(function(_, i){ return results[i] != null; });
-
-  // Lin 2026-07-14: กดการ์ดพยางค์ปุ๊บ เข้าหน้าทายวรรณยุกต์ทันที ไม่ต้องผ่านกล่อง已選音節+ปุ่มแยกอีกที
-  var cardsHtml = syls.map(function(syl, i) {
-    var isDone = results[i] != null;
-    var t = isDone ? TONES[results[i].tone] : null;
-    var captureI = i;
-    var capChosen = syl;
-    var goAct = act(function() {
-      hist = hist.slice(0, histPos+1);
-      // รีเซ็ตตัวนับกดผิดรายพยางค์ (เพดาน 3 ครั้ง + การหัก คิดแยกต่อพยางค์)
-      // Lin 2026-07-04: ปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ก็ใช้หลักเดียวกัน — รีเซ็ตให้กดได้ใหม่ทุกพยางค์ (ไม่ใช่ใช้ได้ครั้งเดียวทั้งประโยค)
-      if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
-      // ในเกม (มี session) ใช้ flow ทาย; ในโหมดเสิร์ช (ไม่มี session) ใช้ flow วิเคราะห์อิสระ s1 — กันหน้าว่าง
-      var sylStep = session ? 'session-guess' : 's1';
-      var ns = { word: capChosen, step: sylStep, path: [capChosen], tone: null, syllables: syls, selectedSyl: captureI, sylResults: results, parentWord: S.word };
-      hist.push(ns); histPos++;
-      S = ns;
-      render();
-    });
-    var doneTag = isDone && t
-      ? '<div class="syl-num" style="color:' + t.color + ';">' + t.zh + '</div>'
-      : '<div class="syl-num">音節 ' + (i+1) + ' / ' + syls.length + '</div>';
-    return '<div class="tf-syl-card' + (isDone ? '" style="border-color:' + t.color + '33;' : '') + '" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_syllable_select\',{category:\'game\'});}catch(e){}' + goAct + '">' +
-      '<div class="syl-thai">' + syl + '</div>' +
-      doneTag +
-    '</div>';
-  }).join('');
-
-  var summaryHtml = '';
-  if (allDone) {
-    summaryHtml =
-      '<div style="margin-top:18px;border:1.5px solid rgba(212,160,23,0.35);padding:16px 18px;">' +
-        '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:12px;">聲調總覽</div>' +
-        '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
-          syls.map(function(syl, i) {
-            var t = TONES[results[i].tone];
-            return '<div style="text-align:center;">' +
-              '<div style="font-family:\'Sarabun\',sans-serif;font-size:22px;color:#5a3e0a;">' + syl + '</div>' +
-              '<div style="font-size:12px;color:' + (t ? t.color : '#fff') + ';margin-top:2px;">' + (t ? t.zh : '?') + '</div>' +
-            '</div>';
-          }).join('<div style="color:rgba(139,99,16,0.35);align-self:center;font-size:18px;">+</div>') +
-        '</div>' +
-      '</div>';
-  }
-
-  // Lin 2026-07-14: เอา音節拆解 (bdSection) ออก — เหลือแค่การ์ดเลือกพยางค์ กดแล้วเข้าหน้าทายวรรณยุกต์ทันที
-  return '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:8px;">選擇要分析的音節</div>' +
-    '<div style="text-align:center;margin-bottom:14px;">' +
-      '<button class="tf-result-restart" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_word_click\',{category:\'game\'});}catch(e){}TF.nextWord()">⏭️ 先跳過這個字</button>' +
-    '</div>' +
-    '<div class="tf-syl-grid">' + cardsHtml + '</div>' +
-    summaryHtml;
-}
-
 function stepResult() {
   var t = TONES[S.tone];
   if (!t) return '';
@@ -3560,156 +3465,6 @@ function clearTodayStats() {
   showStats();
 }
 
-// ── 拼音規則：8 มาตราตัวสะกด ＋ ตัวการันต์ 特殊不發音規則 ──
-function showPhonics() {
-  var old = document.getElementById('tf-phon-ov');
-  if (old) old.remove();
-
-  var MATRA = [
-    { name:'แม่กก', sound:'尾音 -k', chars:'ก ข ค ฆ' },
-    { name:'แม่กด', sound:'尾音 -t', chars:'จ ฉ ช ซ ฌ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส' },
-    { name:'แม่กบ', sound:'尾音 -p', chars:'บ ป ผ ฝ พ ฟ ภ' },
-    { name:'แม่กง', sound:'尾音 -ng', chars:'ง' },
-    { name:'แม่กน', sound:'尾音 -n', chars:'น ณ ญ ร ล ฬ' },
-    { name:'แม่กม', sound:'尾音 -m', chars:'ม' },
-    { name:'แม่เกย', sound:'尾音 -i / -y', chars:'ย' },
-    { name:'แม่เกอว', sound:'尾音 -o / -w', chars:'ว' }
-  ];
-  var matraRows = MATRA.map(function(m){
-    return '<div class="tf-phon-row">' +
-      '<div class="tf-phon-name"><b>'+m.name+'</b><br>'+m.sound+'</div>' +
-      '<div class="tf-phon-chars">'+m.chars+'</div>' +
-    '</div>';
-  }).join('');
-
-  var SPECIAL = [
-    { th:'ทราบ', read:'ซาบ', note:'字首「ทร」讀作「ซ」' },
-    { th:'ทรง', read:'ซง', note:'字首「ทร」讀作「ซ」' },
-    { th:'เศร้า', read:'เส้า', note:'「ศร」讀作「ซ」' },
-    { th:'สร้อย', read:'ส้อย', note:'「สร」讀作「ซ」' },
-    { th:'กรรไกร', read:'กัน-ไกร', note:'「รร」（ร หัน）讀作 -ั + 後面子音的尾音（此處為 -น）' },
-    { th:'ธรรมดา', read:'ทัม-มะ-ดา', note:'「รร」在此讀作 -ั + ม（尾音 -m）' },
-    { th:'ธรรมชาติ', read:'ทัม-มะ-ชาด', note:'「รร」讀作 -ั + ม；字尾「ชาติ」的 -ิ 是沉默母音，讀作 -ด（แม่กด）' },
-    { th:'วันสารทจีน', read:'วัน-สาด-จีน', note:'「สารท」中的 ร 是 รร 減寫，讀 -า + 後面尾音 ท → -ด（แม่กด）' }
-  ];
-  var specialRows = SPECIAL.map(function(s){
-    return '<div class="tf-phon-example">' +
-      '<span class="tf-phon-th">'+s.th+'</span>' +
-      '<span class="tf-phon-arrow">→</span>' +
-      '<span class="tf-phon-read">'+s.read+'</span>' +
-      '<div class="tf-phon-note">'+s.note+'</div>' +
-    '</div>';
-  }).join('');
-
-  var KARAN1 = [
-    { th:'สัตว์', read:'สัด', note:'「ว์」不發音' },
-    { th:'วันอาทิตย์', read:'วัน-อา-ทิด', note:'「ย์」不發音' }
-  ];
-  var karan1Rows = KARAN1.map(function(s){
-    return '<div class="tf-phon-example">' +
-      '<span class="tf-phon-th">'+s.th+'</span>' +
-      '<span class="tf-phon-arrow">→</span>' +
-      '<span class="tf-phon-read">'+s.read+'</span>' +
-      '<div class="tf-phon-note">'+s.note+'</div>' +
-    '</div>';
-  }).join('');
-
-  var KARAN2 = [
-    { th:'เวทมนตร์', read:'เวด-มน', note:'「ตร์」兩個子音一起不發音' },
-    { th:'วันจันทร์', read:'วัน-จัน', note:'「ทร์」兩個子音一起不發音' },
-    { th:'สัญลักษณ์', read:'สัน-ยะ-ลัก', note:'「ษณ์」兩個子音一起不發音' },
-    { th:'นิรันดร์', read:'นิ-รัน', note:'「ดร์」兩個子音一起不發音' },
-    { th:'กาญจน์', read:'กาน', note:'「จน์」兩個子音一起不發音' },
-    { th:'ภาพยนตร์', read:'พาบ-พะ-ยน', note:'「ตร์」兩個子音一起不發音' },
-    { th:'เผ่าพันธุ์', read:'เผ่า-พัน', note:'「ธุ์」子音＋母音一起不發音' },
-    { th:'ศักดิ์สิทธิ์', read:'สัก-สิด', note:'一個字裡有兩處การันต์：「ดิ์」與「ทิ์」都不發音' }
-  ];
-  var karan2Rows = KARAN2.map(function(s){
-    return '<div class="tf-phon-example">' +
-      '<span class="tf-phon-th">'+s.th+'</span>' +
-      '<span class="tf-phon-arrow">→</span>' +
-      '<span class="tf-phon-read">'+s.read+'</span>' +
-      '<div class="tf-phon-note">'+s.note+'</div>' +
-    '</div>';
-  }).join('');
-
-  // ── สระจม（沉默母音）──
-  var SARA_JOM = [
-    { th:'ธรรมชาติ', read:'ทัม-มะ-ชาด', note:'字尾「ติ」的 -ิ（สระ อิ）沉默，讀作 -ด（แม่กด）' },
-    { th:'ประวัติศาสตร์', read:'ประ-หวัด-สาด', note:'「วัติ」的 -ิ 沉默，讀 -ด；「ศาสตร์」的 ตร์ 不發音' },
-    { th:'จักรพรรดิ', read:'จัก-กระ-พัด', note:'字尾「ดิ」的 -ิ 沉默，讀作 -ด（แม่กด）' },
-    { th:'เหตุผล', read:'เหด-ผน', note:'「เหตุ」的 -ุ（สระ อุ）沉默，讀作 -ด（แม่กด）' },
-    { th:'เมรุ', read:'เมน', note:'「เมรุ」的 -ุ 沉默，ร 作尾音讀 -น（แม่กน）' }
-  ];
-  var saraJomRows = SARA_JOM.map(function(s){
-    return '<div class="tf-phon-example">' +
-      '<span class="tf-phon-th">'+s.th+'</span>' +
-      '<span class="tf-phon-arrow">→</span>' +
-      '<span class="tf-phon-read">'+s.read+'</span>' +
-      '<div class="tf-phon-note">'+s.note+'</div>' +
-    '</div>';
-  }).join('');
-
-  // ── คำโบราณ / ตัว ร ไม่ออกเสียง（古語・ร 不發音）──
-  var ANCIENT = [
-    { th:'สมัคร', read:'สะ-หมัก', note:'字尾 ร 不發音，คร 收音作 แม่ก๊ก (-ก)' },
-    { th:'เพชร', read:'เพ็ด', note:'ชร 合為尾音 แม่กด (-ด)，ร 不單獨發音' },
-    { th:'สามารถ', read:'สา-มาด', note:'รถ 合為尾音 แม่กด (-ด)，ร 不單獨發音' },
-    { th:'เกษตร', read:'กะ-เสด', note:'ตร 合為尾音 แม่กด (-ด)，ร 不單獨發音' },
-    { th:'เครื่องจักร', read:'เครื่อง-จัก', note:'กร 合為尾音 แม่ก๊ก (-ก)，ร 不單獨發音' },
-    { th:'บัณฑิต', read:'บัน-ดิด', note:'ณ 作 แม่กน（-น）；ฑ 讀作 ด；字尾 ต 讀作 -ด（แม่กด）' },
-    { th:'กอปร', read:'กอบ', note:'รก 兩音合併只留尾音 แม่กบ (-บ)，古語寫法' },
-    { th:'ผลลัพธ์', read:'ผน-ลับ', note:'พธ์ 中 ธ์ 作 การันต์ 不發音，พ 作 แม่กบ（-บ）；ผล 讀 ผน' }
-  ];
-  var ancientRows = ANCIENT.map(function(s){
-    return '<div class="tf-phon-example">' +
-      '<span class="tf-phon-th">'+s.th+'</span>' +
-      '<span class="tf-phon-arrow">→</span>' +
-      '<span class="tf-phon-read">'+s.read+'</span>' +
-      '<div class="tf-phon-note">'+s.note+'</div>' +
-    '</div>';
-  }).join('');
-
-  var div = document.createElement('div');
-  div.id = 'tf-phon-ov';
-  div.className = 'tf-tip-overlay';
-  div.onclick = function(e){ if (e.target===div) div.remove(); };
-  div.innerHTML =
-    '<div class="tf-tip-box">' +
-      '<div class="tf-tip-header">' +
-        '<span class="tf-tip-header-title">拼音規則：尾音與不發音子音</span>' +
-        '<button class="tf-tip-close-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_phonics_close\',{category:\'game\'});}catch(e){}document.getElementById(\'tf-phon-ov\').remove()">✕</button>' +
-      '</div>' +
-      '<div class="tf-stats-section">' +
-        '<div class="tf-stats-section-title">8 มาตราตัวสะกด（尾音八大類）</div>' +
-        '<div class="tf-phon-intro">無論單字結尾是哪個子音，發音時都會歸入下面 8 種尾音之一：</div>' +
-        matraRows +
-      '</div>' +
-      '<div class="tf-stats-section">' +
-        '<div class="tf-stats-section-title">ตัวสะกดพิเศษ（特殊讀法）</div>' +
-        specialRows +
-      '</div>' +
-      '<div class="tf-stats-section">' +
-        '<div class="tf-stats-section-title">ตัวการันต์ ์（不發音記號）－ 單一子音不發音</div>' +
-        karan1Rows +
-      '</div>' +
-      '<div class="tf-stats-section">' +
-        '<div class="tf-stats-section-title">ตัวการันต์ ์－ 兩個符號一起不發音</div>' +
-        karan2Rows +
-      '</div>' +
-      '<div class="tf-stats-section">' +
-        '<div class="tf-stats-section-title">สระจม（沉默母音）－ 字尾母音不發音</div>' +
-        '<div class="tf-phon-intro">某些字的字尾母音（-ิ 或 -ุ）完全不發音，子音直接收尾：</div>' +
-        saraJomRows +
-      '</div>' +
-      '<div class="tf-stats-section">' +
-        '<div class="tf-stats-section-title">คำโบราณ（古語）－ ร ไม่ออกเสียง / ตัวสะกดพิเศษ</div>' +
-        '<div class="tf-phon-intro">古語或梵文借詞，字尾 ร 不單獨發音，與前面子音合為一個尾音：</div>' +
-        ancientRows +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(div);
-}
 
 function buildStatsReportText(day, entries) {
   var total = entries.length;

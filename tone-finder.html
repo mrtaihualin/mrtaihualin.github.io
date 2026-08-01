@@ -259,15 +259,6 @@ if (document.fonts && document.fonts.load) {
     align-items: center;
     font-size: 12px;
   }
-  .tf-bc-item {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 11px;
-    background: rgba(139,99,16,0.10);
-    color: rgba(139,99,16,0.70);
-    padding: 2px 9px;
-    border-radius: 999px;
-  }
-  .tf-bc-sep { color: rgba(139,99,16,0.25); font-size: 11px; }
 
   /* ── Nav bar (history back/forward) ── */
   .tf-nav-bar {
@@ -383,19 +374,6 @@ if (document.fonts && document.fonts.load) {
 
   .tf-stats-action-row { padding: 14px 22px 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
-  /* ── Phonics (拼音規則) overlay ── */
-  .tf-phon-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-  .tf-phon-row:last-child { border-bottom: none; }
-  .tf-phon-name { font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: #555; min-width: 96px; }
-  .tf-phon-name b { color: #8B6310; }
-  .tf-phon-chars { font-family: 'Sarabun', sans-serif; font-size: 16px; color: #1C1C1C; text-align: right; letter-spacing: 1px; }
-  .tf-phon-example { padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-family: 'Noto Sans TC', sans-serif; }
-  .tf-phon-example:last-child { border-bottom: none; }
-  .tf-phon-th { font-family: 'Sarabun', sans-serif; font-size: 17px; color: #8B6310; letter-spacing: 0.5px; }
-  .tf-phon-arrow { color: #aaa; font-size: 12px; margin: 0 6px; }
-  .tf-phon-read { font-family: 'Sarabun', sans-serif; font-size: 15px; color: #333; }
-  .tf-phon-note { font-size: 12px; color: #888; line-height: 1.7; margin-top: 4px; }
-  .tf-phon-intro { font-size: 13px; color: #666; line-height: 1.7; margin-bottom: 12px; }
   .tf-stats-clear-btn, .tf-stats-download-btn {
     background: none;
     border: 1px solid rgba(0,0,0,0.12);
@@ -615,12 +593,6 @@ if (document.fonts && document.fonts.load) {
     color: #999;
     letter-spacing: 0.5px;
   }
-  .tf-cat-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-  }
   .tf-cat-btn {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 14px;
@@ -669,76 +641,6 @@ if (document.fonts && document.fonts.load) {
   .tf-lvl-search { background: linear-gradient(180deg,#E0D8C4 0%,#FFFFFF 100%); border-color: rgba(90,62,10,0.22); }
   .tf-lvl-search:hover { border-color: rgba(90,62,10,0.40); background: linear-gradient(180deg,#D4CAAE 0%,#FAF8F4 100%); }
 
-  /* ══ 高級 MODE CSS ══════════════════════════════════════════ */
-  /* หน้าเลือกหมวด */
-  .adv-cat-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 16px;
-  }
-  .adv-cat-btn {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px; padding: 16px 8px; border: 1.5px solid rgba(216,90,48,0.35);
-    border-radius: 14px; background: linear-gradient(180deg,#FDF6F3,#fff);
-    cursor: pointer; transition: all 0.18s; font-family: 'Noto Sans TC', sans-serif;
-  }
-  .adv-cat-btn:hover { border-color: rgba(216,90,48,0.7); background: linear-gradient(180deg,#F4C8B0,#FDF6F3); }
-  .adv-cat-emoji { font-size: 26px; line-height: 1; }
-  .adv-cat-label { font-size: 14px; font-weight: 700; color: #993C1D; }
-  .adv-cat-sub   { font-size: 11px; color: #b05a3a; }
-  /* หัวข้อหมวด */
-  .adv-title { font-family:'Noto Sans TC',sans-serif; font-size:17px; font-weight:700; color:#993C1D; text-align:center; margin-bottom:4px; }
-  .adv-subtitle { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#b05a3a; text-align:center; margin-bottom:14px; }
-  /* การ์ดประโยค */
-  .adv-sent-list { display:flex; flex-direction:column; gap:8px; margin:0 0 14px; }
-  .adv-sent-btn {
-    display:flex; flex-direction:column; gap:3px; padding:13px 14px;
-    border:1.5px solid rgba(216,90,48,0.25); border-radius:12px;
-    background:#fff; cursor:pointer; text-align:left; transition:all 0.15s;
-  }
-  .adv-sent-btn:hover { border-color:rgba(216,90,48,0.6); background:#FDF6F3; }
-  .adv-sent-th  { font-family:'Sarabun',sans-serif; font-size:18px; color:#5a3e0a; font-weight:700; }
-  .adv-sent-zh  { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#8B6310; }
-  .adv-sent-words { font-size:11px; color:#b05a3a; font-family:'Sarabun',sans-serif; }
-  /* ปุ่มสุ่ม */
-  .adv-random-btn {
-    width:100%; padding:12px; border:2px dashed rgba(216,90,48,0.5);
-    border-radius:12px; background:linear-gradient(180deg,#FDF6F3,#fff);
-    color:#993C1D; font-family:'Noto Sans TC',sans-serif; font-weight:700; font-size:14px;
-    cursor:pointer; margin-bottom:10px; transition:all 0.15s;
-  }
-  .adv-random-btn:hover { background:linear-gradient(180deg,#F4C8B0,#FDF6F3); border-color:rgba(216,90,48,0.8); }
-  /* banner ประโยคด้านบนขณะเล่น */
-  .adv-sent-banner {
-    background:linear-gradient(180deg,#FDF0E8,#fff); border:1px solid rgba(216,90,48,0.25);
-    border-radius:12px; padding:10px 14px; margin:0 0 12px; text-align:center;
-  }
-  .adv-sent-banner-full { font-family:'Sarabun',sans-serif; font-size:16px; line-height:1.7; color:#5a3e0a; }
-  .adv-sent-banner-full .adv-word-chip {
-    display:inline-block; padding:1px 6px; border-radius:6px; margin:0 1px;
-    border: 1.5px solid transparent; transition:all 0.2s;
-  }
-  .adv-sent-banner-full .adv-word-active { border-color:#D85A30; background:#FDE8DC; font-weight:700; }
-  .adv-sent-banner-full .adv-word-done   { border-color:rgba(100,180,100,0.6); background:#F0FBF0; color:#3a7a3a; }
-  .adv-sent-banner-zh { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#8B6310; margin-top:4px; }
-  /* progress bar ประโยค */
-  .adv-progress-bar { height:4px; border-radius:2px; background:#eee4cc; margin:8px 0 14px; }
-  .adv-progress-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#D85A30,#F4A76A); transition:width 0.3s; }
-  /* หน้าสรุปประโยค */
-  .adv-summary-box {
-    background:linear-gradient(180deg,#FDF6F3,#fff); border:1.5px solid rgba(216,90,48,0.3);
-    border-radius:16px; padding:18px 16px; margin:0 0 14px;
-  }
-  .adv-summary-title { font-family:'Noto Sans TC',sans-serif; font-size:15px; font-weight:700; color:#993C1D; text-align:center; margin-bottom:12px; }
-  .adv-summary-word-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(216,90,48,0.12); }
-  .adv-summary-word-row:last-child { border-bottom:none; }
-  .adv-summary-thai { font-family:'Sarabun',sans-serif; font-size:20px; color:#5a3e0a; font-weight:700; min-width:80px; }
-  .adv-summary-tone { font-size:13px; font-weight:700; min-width:52px; }
-  .adv-summary-result { font-size:18px; }
-  .adv-summary-zh { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#8B6310; flex:1; }
-  /* มาสคอตช้าง */
-  .adv-mascot { text-align:center; font-size:42px; margin:10px 0 4px; }
-  .adv-mascot-msg { text-align:center; font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#993C1D; font-weight:600; margin-bottom:14px; }
-  .adv-score-bonus { text-align:center; font-family:'Noto Sans TC',sans-serif; font-size:16px; font-weight:700; color:#8B6310; margin-bottom:8px; }
-  /* ══ END 高級 CSS ══════════════════════════════════════════ */
 
   /* ── 字母字卡 (Flashcards) ── */
   .afc-scene { perspective: 1000px; display:flex; justify-content:center; margin: 6px 0 14px; }
@@ -787,20 +689,6 @@ if (document.fonts && document.fonts.load) {
   .afc-exp-row:last-child { margin-bottom:0; }
   .afc-exp-k { display:inline-block; font-weight:700; color:#a07a28; margin-right:6px; }
 
-  /* ── Session Quiz ── */
-  .tf-session-quiz { text-align: center; padding: 8px 0; }
-  .tf-session-progress { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#aaa; letter-spacing:2px; margin-bottom:12px; }
-  .tf-session-word { font-family:'Sarabun',sans-serif; font-size:56px; color:#5a3e0a; margin: 8px 0 16px; }
-  .tf-session-question { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#888; margin-bottom:16px; letter-spacing:1px; }
-  /* 2026-07-30 (รอบ 3): ลบ .tf-tone-guess-grid/btn/zh/sub ทิ้ง — เช็คแล้วไม่มีที่ไหนเรียกใช้จริงในโค้ด (เศษ CSS ค้างจากปุ่มทายเสียงเก่าที่ถูกถอดออกไปแล้ว) */
-  /* ── Session Result ── */
-  .tf-session-result { text-align:center; padding:4px 0; }
-  .tf-session-result-badge { font-family:'Noto Serif TC',serif; font-size:22px; font-weight:700; padding:10px 24px; border-radius:24px; display:inline-block; margin-bottom:10px; }
-  .tf-session-result-badge.correct { color:#4a9a4a; background:rgba(74,154,74,0.1); }
-  .tf-session-result-badge.wrong   { color:#cc4444; background:rgba(204,68,68,0.1); }
-  .tf-session-correction { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#666; margin-bottom:10px; }
-  .tf-session-answer-word { font-family:'Sarabun',sans-serif; font-size:48px; color:#5a3e0a; margin:8px 0 4px; }
-  /* Lin 2026-07-25: ลบกฎซ่อนปุ่มเสียง + ตัวปุ่มเสียงสังเคราะห์ทั้งหมดออกถาวรแล้ว (ไม่ต้องซ่อนอะไรอีก) */
 
   /* ── แถบเครื่องมือในเกม (สลับฟอนต์ / ถามคำถาม) ── */
   .tf-tools-row { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:14px; flex-wrap:wrap; }
@@ -842,15 +730,6 @@ if (document.fonts && document.fonts.load) {
   .tf-ask-send:disabled { opacity:0.5; cursor:default; }
   .tf-ask-cancel { background:none; border:1.5px solid rgba(139,99,16,0.30); border-radius:9px; padding:9px 16px; font-size:14px; cursor:pointer; color:#7a5510; }
   .tf-ask-ok { text-align:center; padding:10px 0; color:#4a9a4a; font-size:15px; font-weight:700; }
-  .tf-session-info-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
-  .tf-session-info-item { background:#f9f6f0; border-radius:8px; padding:8px 14px; min-width:80px; }
-  .tf-session-info-label { font-family:'Noto Sans TC',sans-serif; font-size:10px; color:#aaa; letter-spacing:1px; margin-bottom:2px; }
-  .tf-session-info-val { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#5a3e0a; font-weight:600; }
-  .tf-session-info-val.tf-th { font-family:'Sarabun',sans-serif; }
-  .tf-breakdown-section { background:#f5f2ec; border-radius:10px; padding:12px 16px; margin-bottom:14px; text-align:left; }
-  .tf-breakdown-title { font-family:'Noto Sans TC',sans-serif; font-size:11px; color:#aaa; letter-spacing:2px; margin-bottom:8px; }
-  .tf-breakdown-table { width:100%; border-collapse:collapse; }
-  .tf-breakdown-table td { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#5a3e0a; padding:5px 8px; }
   .tf-bd-th { font-family:'Sarabun',sans-serif; font-size:18px; }
   /* 2026-07-30: กล่องแถวเฉลยรูปแบบกลาง (เหมือนเกมอ่าน/เกมพิมพ์) — ใช้ในหน้าเฉลย + ป๊อปอัพตอบผิดครบ */
   .tf-ans-rows { display:flex; flex-direction:column; gap:5px; }
@@ -887,84 +766,7 @@ if (document.fonts && document.fonts.load) {
   .tf-sum-th { font-family:'Sarabun',sans-serif; font-size:16px; }
   .tf-sum-analysis { background:#f5f2ec; border-radius:10px; padding:12px 16px; font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#5a3e0a; line-height:1.7; }
   .tf-sum-analysis p { margin:4px 0; }
-  /* ── RESULT page ── */
-  .tf-result { text-align: center; }
-  .tf-result-word {
-    font-family: 'Sarabun', sans-serif;
-    font-size: 42px;
-    font-weight: 700;
-    color: #1C1C1C;
-    margin-bottom: 28px;
-    letter-spacing: 4px;
-  }
-  .tf-result-card {
-    border: 2.5px solid;
-    border-radius: 20px;
-    padding: 22px 20px;
-    margin-bottom: 22px;
-  }
-  .tf-result-label {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 15px;
-    color: #999;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-  .tf-result-tone-num {
-    font-family: 'Noto Serif TC', serif;
-    font-size: 52px;
-    font-weight: 900;
-    line-height: 1;
-    margin-bottom: 12px;
-  }
-  .tf-result-tone-name {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 20px;
-  }
-  .tf-result-divider {
-    height: 1px;
-    background: rgba(255,255,255,0.1);
-    margin: 18px 0;
-  }
-  .tf-result-match-label {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13px;
-    color: #999;
-    letter-spacing: 2px;
-    margin-bottom: 8px;
-  }
-  .tf-result-match {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 18px;
-    color: #444;
-    font-weight: 500;
-    line-height: 1.6;
-  }
-  .tf-result-path {
-    background: #FFFFFF;
-    border-radius: 14px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    text-align: left;
-  }
-  .tf-result-path-title {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    color: #888;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-  }
-  .tf-result-path-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    align-items: center;
-  }
+  /* ── RESULT page (path chip + reanalyze button still used by stepResult()) ── */
   .tf-result-path-item {
     font-family: 'Noto Sans TC', sans-serif;
     font-size: 12px;
@@ -974,19 +776,6 @@ if (document.fonts && document.fonts.load) {
     border-radius: 999px;
   }
   .tf-result-path-sep { color: rgba(139,99,16,0.30); font-size: 12px; }
-  .tf-result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .tf-result-primary {
-    padding: 14px 34px;
-    background: linear-gradient(135deg, #C8973A, #8B6310);
-    color: #fff;
-    border: none;
-    border-radius: 999px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    letter-spacing: 1px;
-  }
   .tf-result-secondary {
     padding: 14px 24px;
     background: rgba(139,99,16,0.05);
@@ -997,69 +786,6 @@ if (document.fonts && document.fonts.load) {
     font-size: 14px;
     cursor: pointer;
   }
-  .tf-result-restart {
-    margin-top: 16px;
-    padding: 12px 28px;
-    background: none;
-    color: #aaa;
-    border: 1px solid rgba(0,0,0,0.10);
-    border-radius: 999px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13px;
-    cursor: pointer;
-    width: 100%;
-    letter-spacing: 1px;
-  }
-  .tf-result-restart:hover { color: #666; border-color: #ccc; }
-
-  /* ── Multi-syllable overview ── */
-  .tf-syl-grid {
-    display: flex;
-    gap: 10px;
-    margin: 18px 0 10px;
-    flex-wrap: wrap;
-  }
-  .tf-syl-card {
-    flex: 1;
-    min-width: 90px;
-    background: rgba(0,0,0,0.03);
-    border: 1.5px solid rgba(0,0,0,0.12);
-    border-radius: 12px;
-    padding: 16px 12px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
-  }
-  .tf-syl-card:hover { border-color: rgba(139,99,16,0.50); background: rgba(139,99,16,0.08); }
-  .tf-syl-card.active { border-color: #8B6310; background: rgba(139,99,16,0.12); }
-  .tf-syl-card .syl-thai { font-family: 'Sarabun', sans-serif; font-size: 30px; color: #1C1C1C; line-height: 1.3; }
-  .tf-syl-card .syl-num { font-size: 11px; color: #aaa; margin-top: 4px; letter-spacing: 1px; }
-  .tf-syl-detail {
-    border: 1.5px solid rgba(139,99,16,0.25);
-    padding: 16px 18px;
-    margin-top: 4px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
-    color: #555;
-    line-height: 1.5;
-  }
-  .tf-syl-detail-title { font-size: 11px; color: #aaa; letter-spacing: 2px; margin-bottom: 8px; }
-  .tf-syl-detail-word { font-family: 'Sarabun', sans-serif; font-size: 28px; color: #8B6310; margin-bottom: 10px; }
-  .tf-syl-analyze-btn {
-    margin-top: 14px;
-    padding: 10px 20px;
-    background: rgba(139,99,16,0.12);
-    border: 1.5px solid rgba(139,99,16,0.40);
-    color: #8B6310;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    width: 100%;
-    letter-spacing: 1px;
-    transition: background 0.18s;
-  }
-  .tf-syl-analyze-btn:hover { background: rgba(139,99,16,0.20); }
 
   /* ── Error overlay ── */
   .tf-error-overlay {
@@ -1191,16 +917,6 @@ if (document.fonts && document.fonts.load) {
   }
 
   /* ── Session Guess Page (New Page 1) ── */
-  .sg-word {
-    font-family: 'Sarabun', sans-serif;
-    font-size: 72px;
-    font-weight: 700;
-    color: #5a3e0a;
-    text-align: center;
-    margin: 4px 0 18px;
-    letter-spacing: 4px;
-    line-height: 1.2;
-  }
   .sg-breakdown {
     display: flex;
     justify-content: center;
@@ -1224,12 +940,6 @@ if (document.fonts && document.fonts.load) {
     letter-spacing: 1px;
     margin-bottom: 5px;
   }
-  .sg-bd-sub {
-    font-family: 'Noto Sans TC', 'Sarabun', sans-serif;
-    font-size: 11px;
-    color: #a08050;
-    margin-top: 4px;
-  }
   .sg-bd-wrap { margin: 4px 0 14px; }
   .sg-bd-group { margin-bottom: 12px; }
   .sg-syl-head {
@@ -1239,15 +949,6 @@ if (document.fonts && document.fonts.load) {
     color: #8B6310;
     text-align: center;
     margin-bottom: 7px;
-  }
-  .sg-ov-bd-title {
-    font-family: 'Noto Sans TC', 'Sarabun', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    color: #8B6310;
-    letter-spacing: 1px;
-    text-align: center;
-    margin: 4px 0 10px;
   }
   .sg-bd-value {
     font-family: 'Sarabun', sans-serif;
@@ -1314,59 +1015,6 @@ if (document.fonts && document.fonts.load) {
   }
   .sg-dontknow-btn:hover { background: rgba(0,0,0,0.05); color: #555; }
 
-  /* ── Start Inflection Overlay (popup) ── */
-  .sg-start-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.45);
-    z-index: 9900;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .sg-start-popup {
-    background: linear-gradient(135deg, #8B6310 0%, #5a3e0a 100%);
-    border-radius: 20px;
-    padding: 32px 52px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-    animation: sgPopupIn 0.25s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  @keyframes sgPopupIn { from { transform: scale(0.82); opacity:0; } to { transform: scale(1); opacity:1; } }
-  .sg-start-thai {
-    font-family: 'Sarabun', sans-serif;
-    font-size: 34px;
-    font-weight: 700;
-    color: #fff;
-    margin-bottom: 8px;
-    letter-spacing: 2px;
-  }
-  .sg-start-zh {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
-    color: rgba(255,255,255,0.7);
-    letter-spacing: 3px;
-  }
-  .sg-start-btn {
-    margin-top: 22px;
-    font-family: 'Noto Sans TC', 'Sarabun', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: #5a3e0a;
-    background: #fff;
-    border: none;
-    border-radius: 24px;
-    padding: 12px 38px;
-    cursor: pointer;
-    letter-spacing: 1px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .sg-start-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.32); }
-  .sg-start-btn:active { transform: translateY(0); }
 
   /* ── Pre-Result Confirm Page ── */
   /* Lin 2026-07-25: ลบ CSS ของหน้า pre-result-confirm (.prc-*) ทิ้ง — ทั้งหน้าถูกลบไปแล้ว */

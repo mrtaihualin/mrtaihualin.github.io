@@ -166,9 +166,6 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .slot-btn.dep-locked:hover{opacity:.6;transform:none;border-style:dashed;}
 .slot-btn.dep-locked .splus{font-size:13px;opacity:.7;}
 
-/* slot pair: visually connect adv→advObj */
-.slot-pair{display:flex;align-items:flex-end;gap:4px;}
-.slot-pair-arrow{font-size:14px;color:var(--ink-muted);opacity:.4;margin-bottom:10px;flex:none;align-self:center;margin-top:18px;}
 
 /* ── DROPDOWN ── */
 .slot-menu{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:8px;
@@ -266,11 +263,9 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
 .bar-fill.prog{background:linear-gradient(90deg,#e8a020,#d85a30);}
-.bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047);}
 .bar-label{min-width:52px;text-align:right;font-size:11px;}
 
 /* ── 共用進度系統：星星／勳章／連續天數／每週挑戰（跟其他遊戲共用同一套帳號＋同一個 streak key）── */
-.rg-top-row{display:flex;align-items:center;justify-content:flex-start;max-width:640px;margin:0 auto 10px;}
 .rg-stat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;max-width:640px;margin:0 auto 14px;}
 .tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:#7a5510;border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;}
 .tf-streak-chip b{font-weight:800;color:var(--gold-deep);}
@@ -985,13 +980,6 @@ function clearAll(){
   openSlot=null;render();toast('已清空');
 }
 
-function newSession(){
-  SLOTS.forEach(s=>state[s.id]=null);
-  openSlot=null;
-  createSessionPool();
-  render();
-  toast('🔀 新一輪！詞庫已重新抽取');
-}
 
 function loadExample(){
   const pool=EXAMPLES.filter(e=>(LEVELS[curLevel].exTags||[]).includes(e.tag));

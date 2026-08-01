@@ -358,11 +358,11 @@
   var POOL = buildWordsForPhonicsGames(WORDS_MASTER).filter(function (w) { return w.level === '初'; });
 
   var S = {
-    queue: [], total: 0, done: 0, score: 0, streak: 0, maxStreak: 0, perfectCount: 0,
+    queue: [], total: 0, done: 0, score: 0, streak: 0, perfectCount: 0,
     okCount: 0, badCount: 0,
-    cur: null, typePos: 0, shiftOn: false, resolving: false, awaitingNext: false,
+    cur: null, typePos: 0, shiftOn: false, resolving: false,
     wrongCounts: {}, wordStageDone: {}, lastWordTh: null, _keyHandler: null,
-    deriv: null, s2: null
+    deriv: null
   };
 
   function makeCard(w, st, golden) {
@@ -382,7 +382,7 @@
     });
     S.queue = shuffle(cards);
     S.total = S.queue.length;
-    S.done = 0; S.score = 0; S.streak = 0; S.maxStreak = 0; S.perfectCount = 0; S.okCount = 0; S.badCount = 0;
+    S.done = 0; S.score = 0; S.streak = 0; S.perfectCount = 0; S.okCount = 0; S.badCount = 0;
     S.wrongCounts = {}; S.wordStageDone = {}; S.lastWordTh = null;
     var endEl = $('end'); if (endEl) endEl.style.display = 'none';
     var cardEl = $('mx-card'); if (cardEl) cardEl.style.display = 'flex';
@@ -390,7 +390,7 @@
   }
 
   function nextCard() {
-    S.deriv = null; S.s2 = null; S.typePos = 0; S.resolving = false; S.awaitingNext = false;
+    S.deriv = null; S.typePos = 0; S.resolving = false;
     detachKeys();
     if (S.queue.length === 0) { renderEnd(); return; }
     S.cur = S.queue.shift();
@@ -471,7 +471,6 @@
     if (!failed && card.golden && clean) pts = pts * GOLDEN_MULT;
     if (!failed) {
       S.streak++;
-      if (S.streak > S.maxStreak) S.maxStreak = S.streak;
       pts = Math.max(1, Math.round(pts * comboMult(S.streak)));
       if (clean) S.perfectCount++;
       S.okCount++;
@@ -495,7 +494,6 @@
     flashBanner(!failed, pts, failed);
     updateHeader();
     showRevealBox(card);
-    S.awaitingNext = true;
     renderBtnRow([{ id: 'mx-next', cls: 'btn btn-primary', label: '下一題 →', fn: nextCard }]);
   }
 

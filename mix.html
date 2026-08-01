@@ -155,10 +155,7 @@ if (document.fonts && document.fonts.load) {
   transition:transform .12s;
 }
 .opt.sel{border-color:#c07030;background:#fff8ee;}
-.opt.correct{border-color:#4caf50;background:#e8f5e9;color:#2e7d32;animation:none;}
-.opt.wrong{border-color:#f44336;background:#fdecea;color:#c62828;animation:none;}
 .opt.locked{pointer-events:none;}
-.opt.hint{border-color:#e8a020;background:#fff3d8;box-shadow:0 0 0 2px rgba(232,160,32,.35);}
 
 /* ── ป้ายผล/คำใบ้ลองใหม่ — ก็อปจาก reading-game.html:206-215 ── */
 .retry-hint{width:100%;padding:7px 14px;border-radius:10px;text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#e65100;background:#fff3e0;border:1px solid #ffcc80;display:none;margin-top:2px;}
@@ -166,7 +163,6 @@ if (document.fonts && document.fonts.load) {
 .result-banner{width:100%;padding:9px 14px;border-radius:11px;text-align:center;font-size:14px;font-weight:600;font-family:'Noto Sans TC',sans-serif;display:none;margin-top:4px;}
 .result-banner.show{display:block;}
 .result-banner.ok  {background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;}
-.result-banner.half{background:#fff8e1;color:#f57f17;border:1px solid #ffe082;}
 .result-banner.no  {background:#fdecea;color:#c62828;border:1px solid #ef9a9a;}
 
 /* ── กล่องเฉลย 子音/母音/尾音 — ก็อปจาก reading-game.html:218-238 ── */
@@ -174,18 +170,12 @@ if (document.fonts && document.fonts.load) {
 .bonus-section.show{display:block;}
 .bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:0;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
 .bonus-reason.show{display:block;}
-.reveal{text-align:left;margin-top:4px;display:none;width:100%;}
-.reveal.show{display:block;}
-.reveal-word-row{text-align:center;margin-bottom:8px;}
-.rev-word{font-size:30px;font-weight:700;color:#5a3e10;line-height:1.5;}
 .rev-pron{font-size:16px;font-weight:600;color:#993C1D;font-family:'Noto Sans TC',sans-serif;}
 .rev-en{font-size:14px;font-weight:600;color:#8B6310;font-family:'Noto Sans TC',sans-serif;letter-spacing:0.3px;}
-.reveal-rules{background:#fffdf5;border:1px solid #e8d8b0;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;}
 .rule-row{display:flex;align-items:flex-start;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#5a3e10;}
 .rule-tag{background:#f5e8c8;color:#8b6310;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;}
 .rule-tag.sp{background:#fde8cc;color:#c05010;}
 .rule-txt{color:#5a3e10;line-height:1.5;font-family:'Sarabun','Noto Sans Thai',sans-serif;}
-.rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
 
 /* ── ปุ่ม — ก็อปจาก reading-game.html:285-292 ── */
 .btn-row{display:flex;gap:7px;justify-content:center;width:100%;margin-top:12px;flex-wrap:wrap;}
@@ -194,7 +184,6 @@ if (document.fonts && document.fonts.load) {
 .btn-primary  {background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
 .btn-primary:disabled{opacity:.35;cursor:default;}
 .btn-secondary{background:#f0e8d8;color:#8b6310;}
-.btn-remember {background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;}
 
 /* ── เอฟเฟกต์คะแนน/ดาว/โทสต์ — ก็อปจาก reading-game.html:268,294-299 ── */
 .score-pop{position:fixed;top:26%;left:50%;transform:translateX(-50%);font-family:'Noto Serif TC',serif;font-weight:900;color:#d9a400;pointer-events:none;z-index:60;opacity:0;font-size:44px;animation:spop 1.8s cubic-bezier(.22,1,.36,1) forwards;}

@@ -81,12 +81,6 @@
     save(a);
     return { stars: n, capped: false };
   }
-  // เช็กว่าระดับนี้ชนเพดานดาวเงินหรือยัง (ไม่นับดาว แต่คำยัง mastered/ตัดออกจาก SRS ได้ตามปกติ)
-  function hardCapReached(level, levelWordCount) {
-    var a = load();
-    return wordsCounted(a, level) >= effectiveCap(level, levelWordCount);
-  }
-
   // แบดจ์พันธุ์ข้าว ตามดาวรวมสะสม (รูป SVG จริงใน assets/badges/)
   var STAR_BADGES = [
     { at: 10,  id: 'hommali',   img: 'assets/badges/hommali.svg',   zh: '茉莉香米', th: 'ข้าวหอมมะลิ',  emoji: '🍚' },
@@ -134,11 +128,6 @@
 
     // ── สเปก 2026-07-03: ดาวเงิน (hard currency) จาก SRS mastery เท่านั้น ──
     addHardStars: addHardStars,        // (clean:boolean, level:1|2|3) → {stars, capped}
-    hardCapReached: hardCapReached,    // (level) → true ถ้าระดับนี้ชนเพดานตลอดชีพแล้ว
-    getHardWordsCounted: function (level) { return wordsCounted(load(), level); },
-    hardCaps: HARD_CAPS,
-    levelTotalWords: LEVEL_TOTAL_WORDS,   // Lin 2026-07-04: จำนวนคำรวมทุกเกมต่อระดับ (ฐานคิดเพดาน 10%)
-    effectiveCap: function (level) { return effectiveCap(level); },  // เพดานจริงต่อระดับ (min(10%, HARD_CAPS))
 
     // ── เฟส 2: sync ขึ้น Supabase (ถาวร + ข้ามเครื่อง) เมื่อล็อกอิน — Lin 2026-06-27 ──
     // merge แบบ "เอาค่ามากสุด" กันข้อมูลหายตอนสลับเครื่อง · ปลอดภัยถ้ายังไม่มีตาราง (no-op)

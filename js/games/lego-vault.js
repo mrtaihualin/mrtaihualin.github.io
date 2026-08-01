@@ -46,7 +46,6 @@
   function has(th) { return load().some(function(w){ return w.th === th; }); }
   function count() { return load().length; }
   function isFull() { return load().length >= MAX_WORDS; }
-  function clear() { save([]); }
 
   global.LegoVault = {
     MAX_WORDS: MAX_WORDS,
@@ -55,8 +54,7 @@
     getAll: getAll,
     has: has,
     count: count,
-    isFull: isFull,
-    clear: clear
+    isFull: isFull
   };
 
 })(window);

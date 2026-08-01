@@ -76,14 +76,6 @@
     save(list);
   }
 
-  /** กรองคำตาม tag */
-  function filterByTag(tag) {
-    return load().filter(function(w){ return w.tags && w.tags.indexOf(tag) !== -1; });
-  }
-
-  /** ล้างคลังทั้งหมด */
-  function clear() { save([]); }
-
   // ── UI Helper ─────────────────────────────────────────────────
 
   /**
@@ -169,25 +161,6 @@
     t._timer = setTimeout(function(){ t.style.opacity = '0'; }, 3000);
   }
 
-  /**
-   * สร้าง/อัปเดต badge "คลัง X คำ" ที่ element ที่ระบุ
-   * @param {string} containerId  id ของ element ที่จะวาง badge
-   */
-  function mountBadge(containerId) {
-    var el = document.getElementById(containerId);
-    if (!el) return;
-    var badge = document.getElementById('vault-badge-' + containerId);
-    if (!badge) {
-      badge = document.createElement('a');
-      badge.id = 'vault-badge-' + containerId;
-      badge.href = 'vault.html';
-      badge.className = 'vault-badge';
-      badge.title = '前往我的單字庫';
-      el.appendChild(badge);
-    }
-    _refreshBadge(badge);
-  }
-
   var BADGE_HTML = '<img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫';
 
   function _refreshBadge(badge) {
@@ -233,10 +206,7 @@
     isFull: isFull,
     notifyFull: _showFullToast,
     setTag: setTag,
-    filterByTag: filterByTag,
-    clear: clear,
     createSaveBtn: createSaveBtn,
-    mountBadge: mountBadge,
     refreshBadges: _notifyBadges,
     injectStyles: injectStyles
   };

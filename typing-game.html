@@ -113,10 +113,6 @@ if (document.fonts && document.fonts.load) {
 .bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047);}
 .bar-label{min-width:52px;text-align:right;font-size:11px;}
 
-.meta-row{width:100%;max-width:640px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;}
-.stars-txt{font-weight:700;color:#d9a400;font-size:14px;}
-.badge-btn{cursor:pointer;font-size:13px;transition:transform .12s;display:flex;align-items:center;gap:4px;}
-.badge-btn:hover{transform:scale(1.1);}
 .badge-emoji{font-size:22px;}
 
 .card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:640px;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden;}
@@ -217,14 +213,10 @@ if (document.fonts && document.fonts.load) {
 .bonus-section.show{display:block;}
 .bonus-reason{font-family:'Noto Sans TC',sans-serif;font-size:12px;line-height:1.6;color:#7a5a20;text-align:left;margin-top:0;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #ecd8a8;display:none;}
 .bonus-reason.show{display:block;}
-.bonus-reason-why{margin-bottom:6px;}
-.bonus-reason-rules{display:flex;flex-direction:column;gap:5px;}
 
 /* ── Enhanced reveal ── */
 .reveal{text-align:left;margin-top:4px;display:none;width:100%;}
 .reveal.show{display:block;}
-.reveal-word-row{text-align:center;margin-bottom:8px;}
-.rev-word{font-size:30px;font-weight:700;color:#5a3e10;line-height:1.5;}
 .rev-pron{font-size:16px;font-weight:600;color:#993C1D;font-family:'Noto Sans TC',sans-serif;}
 /* Lin 2026-07-25: คำอ่านโรมัน (英文讀音) — แถวใหม่ใต้คำอ่านไทย สีทองเข้มให้ต่างจากคำอ่านไทย */
 .rev-en{font-size:14px;font-weight:600;color:#8B6310;font-family:'Noto Sans TC',sans-serif;letter-spacing:0.3px;}
@@ -237,12 +229,6 @@ if (document.fonts && document.fonts.load) {
 
 /* ── tools-row (เหมือน tone-finder) — บรรทัดเดียวเสมอ เลื่อนซ้ายขวาได้ถ้าไม่พอ ── */
 .rg-tools-row{display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:640px;padding-bottom:2px;}
-.rg-tool-btn{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);border-radius:20px;padding:6px 14px;cursor:pointer;color:#7a5510;transition:all .15s;white-space:nowrap;flex-shrink:0;}
-.rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
-@media(max-width:480px){.rg-tool-btn{font-size:11.5px;padding:5px 11px;}}
-.rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
-.rg-tool-btn.hl{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;border:none;font-weight:900;box-shadow:0 3px 10px rgba(216,90,48,.35);}
-.rg-tool-btn.hl:hover{background:linear-gradient(135deg,#e8a020,#d85a30);filter:brightness(1.06);}
 /* ── Weekly challenge banner (เหมือน tone-finder) ── */
 .tf-challenge-banner{background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;margin:0;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;}
 .tf-challenge-banner.done{background:linear-gradient(180deg,#E9F9ED,#D2F0D9);border-color:#4caf50;}
@@ -256,7 +242,6 @@ if (document.fonts && document.fonts.load) {
 .tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
 .tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
 /* ── Streak chips ── */
-.rg-home-streak{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 12px;width:100%;max-width:640px;}
 .rg-stat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0 14px;width:100%;max-width:640px;}
 .rg-stat-row .tf-streak-chip{font-size:12.5px;padding:6px 14px;}
 .rg-stat-row .tf-streak-chip b{font-weight:800;color:#5a3e0a;}
@@ -265,10 +250,6 @@ if (document.fonts && document.fonts.load) {
 /* ── Toast ── */
 .rg-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:rgba(45,42,34,0.96);color:#fff;padding:12px 20px;border-radius:24px;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,0.3);z-index:10001;max-width:88%;text-align:center;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
 .rg-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.rg-tool-btn:hover{background:rgba(139,99,16,0.10);border-color:rgba(139,99,16,0.55);}
-.rg-tool-btn.active{background:#C8973A;color:#fff;border-color:#C8973A;}
-.rg-tool-btn.hl{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;border:none;font-weight:900;box-shadow:0 3px 10px rgba(216,90,48,.35);}
-.rg-tool-btn.hl:hover{background:linear-gradient(135deg,#e8a020,#d85a30);filter:brightness(1.06);}
 /* ── ฟอนต์โมเดิร์น (ไม่มีหัว) — ครอบทุก element ที่เป็น Thai text ── */
 /* Lin 2026-07-12: เดิมครอบไม่ครบ เหลือหลายจุดเป็นฟอนต์เดิม (กล่องพิมพ์เป้าหมาย/คำอ่าน/คำอธิบาย/คีย์บอร์ด) — เพิ่มให้ครบทุกจุดที่มีตัวอักษรไทยในหน้านี้ */
 body.rg-modern-font .word-th,

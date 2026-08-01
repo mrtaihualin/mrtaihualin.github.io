@@ -1728,20 +1728,61 @@ async function verifyEventMoved(eventId, expectedStartIso) {
   return true;
 }
 
-// 2026-07-13 加：檢查新時段是否跟其他事件重疊（排除自己本身）。查不到就當作沒有衝突（不擋主要流程），
-// 有查到才回傳清單讓呼叫端在確認視窗裡明確列出來，讓老師自己決定要不要硬是重疊排課。
+// 2026-07-13 加：檢查新時段是否跟其他事件重疊（排除自己本身）。
+// 🔴 2026-08-01 แก้ (audit ระบบเลื่อนคาบ ข้อ A7 — "เช็คไม่ได้" ห้ามแปลว่า "ไม่ชน")：
+//   เดิมทุกกรณีที่เช็คไม่สำเร็จ (token หมดอายุ / 403 / เน็ตหลุด / โควตา Google หมด) จะ `return []`
+//   ซึ่งปลายทางแปลว่า "ไม่มีอะไรชน" แล้วโชว์กล่องยืนยันสะอาดเอี่ยมให้ครูกด = ครูเข้าใจว่าเช็คแล้ว
+//   ทั้งที่ไม่เคยเช็คสำเร็จเลย (ผิดกฎ RELIABILITY FIRST ข้อ "ห้ามขึ้นว่าสำเร็จถ้ายังไม่ได้ตรวจ")
+//   เทียบกับฝั่งเพิ่มคาบ (checkFreebusyConflict) ที่ throw เสียงดังมาตั้งแต่แรก — คนละมาตรฐานในระบบเดียวกัน
+//   ตอนนี้: คืนค่าเป็น { ok, items, reason } — ok=false แปลว่า "ยังไม่รู้" ไม่ใช่ "ไม่ชน"
+//   ปลายทางต้องเขียนให้ครูเห็นตรงๆ ในกล่องยืนยันว่าเช็คไม่สำเร็จ (ไม่บล็อก เพราะครูตัดสินใจเองได้
+//   และมองเห็นปฏิทินจริงอยู่แล้ว — ต่างจากฝั่ง LINE ที่ไม่มีกล่องให้อ่าน จึงตั้งเป็น "ไม่ผ่าน = ไม่ย้าย")
+// ⚠️ maxResults เดิม 10 — วันที่ครูมีนัดเยอะ อาจถูกตัดจนมองไม่เห็นคาบที่ชนจริง ขยับเป็น 50
 async function findConflictingEvents(newStartIso, newEndIso, excludeEventId) {
   try {
     const token = await gdGetToken();
     const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
       + '?timeMin=' + encodeURIComponent(newStartIso)
       + '&timeMax=' + encodeURIComponent(newEndIso)
-      + '&singleEvents=true&orderBy=startTime&maxResults=10';
+      + '&singleEvents=true&orderBy=startTime&maxResults=50';
     const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-    if (!r.ok) return [];
+    if (!r.ok) return { ok: false, items: [], reason: 'Calendar API ' + r.status };
     const data = await r.json();
-    return (data.items || []).filter(function(ev) { return ev.id !== excludeEventId && ev.status !== 'cancelled'; });
-  } catch (e) { return []; }
+    return { ok: true, items: (data.items || []).filter(function(ev) { return ev.id !== excludeEventId && ev.status !== 'cancelled'; }), reason: null };
+  } catch (e) { return { ok: false, items: [], reason: (e && e.message) || String(e) }; }
+}
+
+// 🔴 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A7)：ข้อความเตือนเรื่องคาบชน สำหรับใส่ในกล่องยืนยัน
+// รวมไว้ที่เดียวเพื่อให้ทุกเส้นทาง (ขอเลื่อนของนักเรียน / ยืนยันหลังนักเรียนตอบรับ) พูดเหมือนกันเป๊ะ
+function conflictWarnText(res) {
+  if (!res) return '';
+  if (!res.ok) {
+    return '\n\n⚠️ 系統這次「沒能檢查」這個時間有沒有跟其他行程撞到（' + (res.reason || '原因不明') + '）。\n'
+      + '這不代表沒有撞到——請自己先看一眼 Google Calendar 再決定。';
+  }
+  if (!res.items.length) return '';
+  return '\n\n⚠️ 這個新時間跟其他行事曆事件重疊：\n' + res.items.map(function (c) { return '・' + (c.summary || '(無標題)'); }).join('\n');
+}
+
+// 🔴 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A8 — ด่านกันอดีต "ระดับชั่วโมง")
+// ทำไมต้องมีตัวใหม่ ไม่ไปแก้ assertNotPastDate เดิม:
+//   assertNotPastDate ถูกใช้ร่วมทั่วทั้งแอป (เพิ่มคาบ / เปลี่ยนตารางถาวร / เสนอเวลา) และหลายจุด
+//   ตั้งใจให้ "วันนี้" ผ่านได้ — ถ้าไปเพิ่มเงื่อนไขเวลาเข้าไปในตัวเดิม จะกระทบเส้นทางอื่นที่ไม่เกี่ยวกัน
+//   ตัวนี้ใช้เฉพาะ "ตอนกำลังจะย้ายคาบจริงๆ" ซึ่งเป็นจังหวะเดียวที่รู้ทั้งวันและเวลาแน่นอน
+// รูที่อุด: 20:00 น. ครูยังกดย้ายคาบไป "วันนี้ 14:00" ได้ (ผ่าน min ของช่อง input, ผ่าน assertNotPastDate,
+//   และตัวเช็คคาบชนก็ไม่เจออะไรเพราะช่วงนั้นว่างจริง) → คาบไปโผล่ในอดีต ระบบเตือนก่อนเรียนไม่มีวันยิง
+function assertNotPastDateTime(dateStr, timeStr, label) {
+  var name = label || '要改到的時間';
+  if (!dateStr) { alert('⚠️ ' + name + '：還沒選日期'); return false; }
+  var target = teacherTimeToDate(dateStr, timeStr || '00:00');
+  if (!target || isNaN(target.getTime())) { alert('⚠️ ' + name + '：日期或時間格式怪怪的（' + dateStr + ' ' + (timeStr || '') + '），為了安全不處理。'); return false; }
+  if (target.getTime() <= Date.now()) {
+    alert('⚠️ ' + name + ' 已經是過去的時間了。\n\n你要移到的是 ' + dateStr + ' ' + (timeStr || '') + '（泰國時間），現在已經過了。\n\n'
+      + '（系統一律不動已經過去的課——之前就是這樣把上過的課整批從 Calendar 刪掉的。\n'
+      + '真的需要處理過去的課，請直接到 Google Calendar 手動調整。）');
+    return false;
+  }
+  return true;
 }
 
 // 2026-07-14 加：封存學生時停掉「往後」的固定課，但「已經上過」的課堂紀錄一定要保留 —
@@ -5656,6 +5697,16 @@ function requireLineLinkedOrPrompt(token) {
 //   ที่เคยเทียบคำว่า '24 hours' แล้วพลาด เพราะข้อความจริงเขียน '24+ hours' (มีเครื่องหมาย +)
 function friendlyRequestError(msg) {
   var m = String(msg || '');
+  // 🔴 2026-08-01 ต้องอยู่ "ก่อน" กฎ 'hours in advance' ข้างล่างเสมอ
+  //   ข้อความของด่านใหม่คือ 'students may only reschedule a class 6+ hours in advance ...'
+  //   ซึ่งมีคำว่า 'hours in advance' อยู่ด้วย → ถ้าเรียงสลับกัน นักเรียนที่ขอ "เลื่อน" ไม่ทัน
+  //   จะได้ข้อความของ "ยกเลิก" ที่บอกให้ไปใช้ปุ่มขอเลื่อน = วนเป็นงูกินหาง
+  if (m.indexOf('only reschedule') >= 0) {
+    return '這堂課距離上課不到 6 小時，沒辦法線上改期。\n請直接用 LINE 聯絡老師。';
+  }
+  if (m.indexOf('6-hour reschedule window') >= 0) {
+    return '這堂課系統裡沒有記錄上課時間，沒辦法自動判斷，請直接聯絡老師改期。';
+  }
   if (m.indexOf('hours in advance') >= 0) {
     return '這堂課距離上課不到 24 小時，沒辦法線上取消。\n你可以改用「🔄 申請改期」，或直接聯絡老師。';
   }
@@ -6041,6 +6092,9 @@ async function renderReschedulePickerSelect() {
   if (!occurrences.length) {
     sel.innerHTML = '<option value="">目前沒有排定的課堂</option>';
     if (nextBtn) nextBtn.disabled = true;
+    // 2026-08-01：ต้องล้างข้อความเตือนของรอบก่อนด้วย ไม่งั้นค้างบนจอทั้งที่ไม่มีคาบให้เลือกแล้ว
+    var hintEmpty = document.getElementById('reschedulePickerHint');
+    if (hintEmpty) { hintEmpty.style.display = 'none'; hintEmpty.textContent = ''; }
     return;
   }
   if (nextBtn) nextBtn.disabled = false;
@@ -6048,17 +6102,72 @@ async function renderReschedulePickerSelect() {
   sel.innerHTML = occurrences.map(function(occ, i) {
     const disp = studentTz ? formatInTz(occ.date, studentTz) : formatInTz(occ.date, TEACHER_TZ);
     const d = new Date(disp.dateStr + 'T00:00:00');
-    const label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）' + disp.timeStr;
+    // 🔴 2026-08-01（audit ข้อ A5）：คาบที่ไม่รู้เวลาเริ่ม ห้ามโชว์ 00:00 หลอกตา — ท่าเดียวกับ picker ของการยกเลิก
+    const label = (d.getMonth()+1) + '月' + d.getDate() + '日（週' + dayZh[d.getDay()] + '）'
+      + (occ.hasTime === false ? '（時間未知）' : disp.timeStr);
     return '<option value="' + i + '">' + escHtml(label) + '</option>';
   }).join('');
+  onReschedulePickerSelectChange();
 }
 
-function onReschedulePickerSelectChange() { /* 改期沒有 24 小時限制，留這個 function 只是保留跟取消申請一致的結構，方便以後要加規則 */ }
+// ════════════════════════════════════════════════════════════════════════════
+// 🔴 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A5 — Lin เลือกกฎ "ต้องเหลืออย่างน้อย 6 ชั่วโมง")
+//
+// รูเดิม: การขอเลื่อนคาบ "ไม่มีด่านเวลาเลยแม้แต่ชั้นเดียว" —
+//   get_student_schedule กรองแค่ "วันที่ ≥ วันนี้" (ไม่ดูเวลา) + ฟังก์ชันในฐานข้อมูลข้าม reschedule ทั้งอัน
+//   → ตอน 3 ทุ่ม นักเรียนยังเลือก "คาบ 9 โมงเช้าวันนี้ที่เรียนจบไปแล้ว" มาขอเลื่อนได้
+//     หรือคาบที่จะเริ่มอีก 10 นาที (ครูเตรียมสอน/เข้าห้องรออยู่แล้ว)
+//
+// กฎที่ Lin ตัดสินใจ 2026-08-01: ขอเลื่อนได้ถ้าเหลืออย่างน้อย 6 ชั่วโมงก่อนคาบเริ่ม
+//   (เทียบกับการ "ยกเลิก" ที่เข้มกว่า = 24 ชม. เพราะยกเลิกคือทิ้งคาบไปเลย)
+// ⚠️ ต้องมี 3 ชั้นเสมอ ห้ามมีแค่ชั้นเดียว (ซ่อนปุ่มไม่ใช่การป้องกัน):
+//   ชั้น 1 = ตรงนี้ (ปิดปุ่ม "下一步" + บอกเหตุผลบนจอ)
+//   ชั้น 2 = proceedToRescheduleTimeOptions (เช็คซ้ำตอนกด)
+//   ชั้น 3 = ฐานข้อมูล submit_class_request (ดู supabase/sql/2026-08-01_reschedule_guards.sql)
+//   เลข 6 ต้องตรงกันทั้ง 3 ชั้น — แก้ที่ไหนต้องแก้ให้ครบ ไม่งั้นนักเรียนจะเจอ error ดิบจากฐานข้อมูล
+// ════════════════════════════════════════════════════════════════════════════
+var RESCHEDULE_MIN_HOURS = 6;
+
+// คืนค่า { canGo, reason } — ใช้ร่วมกันทั้งชั้น 1 และชั้น 2 จะได้ตัดสินเหมือนกันเป๊ะ
+function rescheduleOccurrenceGate(occ) {
+  if (!occ) return { canGo: false, reason: '' };
+  if (occ.hasTime === false) {
+    return { canGo: false, reason: '⚠️ 這堂課系統裡沒有記錄上課時間，沒辦法自動判斷，請直接聯絡老師改期' };
+  }
+  var hoursUntil = (occ.date.getTime() - Date.now()) / 3600000;
+  if (hoursUntil < RESCHEDULE_MIN_HOURS) {
+    return {
+      canGo: false,
+      reason: hoursUntil <= 0
+        ? '⚠️ 這堂課的時間已經過了，沒辦法線上改期，請直接聯絡老師'
+        : '⚠️ 這堂距離上課不到 ' + RESCHEDULE_MIN_HOURS + ' 小時，沒辦法線上改期，請直接用 LINE 聯絡老師',
+    };
+  }
+  return { canGo: true, reason: '' };
+}
+
+function onReschedulePickerSelectChange() {
+  const sel = document.getElementById('reschedulePickerSelect');
+  const hint = document.getElementById('reschedulePickerHint');
+  const nextBtn = document.getElementById('reschedulePickerNextBtn');
+  if (!sel) return;
+  const chosen = _reschedulePickerOptions[sel.value];
+  const gate = rescheduleOccurrenceGate(chosen);
+  if (hint) {
+    hint.style.display = gate.reason ? 'block' : 'none';
+    hint.textContent = gate.reason;
+  }
+  if (nextBtn) nextBtn.disabled = !gate.canGo;
+}
 
 function proceedToRescheduleTimeOptions() {
   const sel = document.getElementById('reschedulePickerSelect');
   const chosen = _reschedulePickerOptions[sel.value];
   if (!chosen) { alert('請先選一堂課'); return; }
+  // 🔴 2026-08-01 ชั้นที่ 2 (audit ข้อ A5)：ปุ่มถูกปิดอยู่แล้วก็จริง แต่ปุ่มที่ปิดไม่ใช่ด่านความปลอดภัย
+  //   (แก้ DOM ก็กดได้ / เวลาผ่านไประหว่างที่เปิดหน้าค้างไว้ก็ทะลุได้) → เช็คซ้ำตอนกดจริงเสมอ
+  const gate = rescheduleOccurrenceGate(chosen);
+  if (!gate.canGo) { alert(gate.reason || '⚠️ 這堂課沒辦法線上改期，請直接聯絡老師'); return; }
   const thai = formatInTz(chosen.date, TEACHER_TZ); // 泰國時間 → 存資料庫/給老師看用
   _rescheduleChosenOccurrence = { isoDate: thai.dateStr, time: thai.timeStr, calendarEventId: chosen.calendarEventId };
   closeReschedulePickerModal();
@@ -6161,6 +6270,15 @@ function collectClassRequestOptions() {
         newDate = thai.dateStr; newTime = thai.timeStr;
       } catch (e) { /* 換算失敗就照原樣送出（當泰國時間），至少不會整個卡住 */ }
     }
+    // 🔴 2026-08-01 加 (audit ระบบเลื่อนคาบ ข้อ A12 — ด่านกันอดีตต้องเช็ค "หลังแปลงเป็นเวลาไทย" ด้วย)
+    //   รูเดิม: ด่านข้างบน (assertNotPastDate) เทียบกับ "วันนี้ของนักเรียนเอง" แล้วค่อยแปลงเป็นเวลาไทยทีหลัง
+    //   ไต้หวัน UTC+8 / ไทย UTC+7 → นักเรียนไต้หวันเลือก "วันนี้ 00:30" ผ่านด่าน แต่ถูกเก็บลงฐานข้อมูล
+    //   เป็น "เมื่อวาน 23:30 เวลาไทย" = วันที่ในอดีต → ฝั่งครูบนเว็บจับได้ แต่ปุ่มใน LINE เคยไม่จับ
+    //   ตอนนี้เช็คซ้ำด้วยค่าที่จะเก็บจริง (เวลาไทย) ตั้งแต่ต้นทาง จะได้ไม่มีคำขอแบบนี้เกิดขึ้นเลย
+    //   ⚠️ เช็คเฉพาะกรณี "มีเวลา" เท่านั้น — กรณีไม่กรอกเวลา ค่าที่เก็บคือวันที่ที่นักเรียนเลือกตรงๆ
+    //   (ไม่มีการแปลงเขตเวลาเกิดขึ้นเลย) ด่านข้างบนที่เทียบกับ "วันนี้ของนักเรียนเอง" ถูกต้องอยู่แล้ว
+    //   ถ้าดันไปเทียบกับวันนี้ของไทยซ้ำ นักเรียนที่อยู่โซนเวลาช้ากว่าไทยจะโดนบล็อกวันที่ยังไม่ถึงของเขา
+    if (newTime && !assertNotPastDateTime(newDate, newTime, '選項 ' + i + ' 換算成泰國時間後的時間')) return null;
     options.push({ date: newDate, time: newTime });
   }
   // 2026-07-16 加（稽核發現，GREEN）：避免學生不小心把 2-3 個選項填成完全一樣的日期時間，
@@ -6212,14 +6330,26 @@ async function submitClassRequest() {
     // 2026-07-14 加：同上（requestCancelClass 那顆）—— 一定要帶 p_initiated_by，
     // 不然資料庫裡兩個版本的 submit_class_request 會分不出來選哪個，送出失敗。
     p_initiated_by: 'student',
+    // 🔴 2026-08-01 加（สำคัญมาก — ต้องมาคู่กับ supabase/sql/2026-08-01_reschedule_guards.sql）：
+    //   ฐานข้อมูลมีด่านใหม่ "ขอเลื่อนคาบต้องเหลืออย่างน้อย 6 ชั่วโมง" ซึ่งต้องรู้ว่าคาบเดิมเริ่มกี่โมง
+    //   ไม่ส่งค่านี้ = ฐานข้อมูลตอบ 'missing original_time...' → นักเรียนขอเลื่อนไม่ได้เลยสักคน
+    //   (ท่าเดียวกับที่ requestCancelClass ทำอยู่แล้วสำหรับด่าน 24 ชม.)
+    //   ผลพลอยได้: ฐานข้อมูลเก็บ original_time ให้ตั้งแต่ตอน INSERT เลย ไม่ต้องรอเขียนรอบ 2
+    //   = ลดจุดพังไปอีกหนึ่งจุด (ดูคอมเมนต์ backfillOk2 ข้างล่าง)
+    p_original_time: originalTimeToUse || null,
   });
-  btn.disabled = false; btn.textContent = '📤 送出申請';
-  if (res.error) { var friendlyResched = friendlyRequestError(res.error.message); alert(friendlyResched ? ('⚠️ ' + friendlyResched) : ('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。')); return; }
+  // 🔴 2026-08-01 แก้ (audit ระบบเลื่อนคาบ ข้อ A4)：เดิมปลดล็อกปุ่มตรงนี้ ซึ่งเร็วไปหนึ่งจังหวะ —
+  //   หลังบรรทัดนี้ยังมี await อีกอย่างน้อย 1 ครั้ง (เขียนฐานข้อมูลรอบ 2) กว่ากล่องจะปิด
+  //   ระหว่างนั้นปุ่มกดได้ = กดรัว 2 ทีได้คำขอ 2 ใบจริงๆ → ย้ายไปปลดตอนจบ (ทุกทางออก)
+  const submitTokenForCard = nextClassCtx.token;
+  function releaseSubmitBtn() { btn.disabled = false; btn.textContent = '📤 送出申請'; }
+  if (res.error) { releaseSubmitBtn(); var friendlyResched = friendlyRequestError(res.error.message); alert(friendlyResched ? ('⚠️ ' + friendlyResched) : ('送出失敗：' + res.error.message + '\n請直接聯絡老師比較保險。')); return; }
   if (typeof gtag === 'function') gtag('event', 'class_request_submitted', { category: 'course', request_type: 'reschedule' });
   const newId = res.data;
   // 2026-07-16 加：submit_class_request 這個 RPC 不收 proposed_options/offer_status 參數
   // （不想動資料庫函式本身），插入成功後馬上補一個 update 存上完整選項清單 + 設 offer_status。
-  // 存不成功也不擋這次申請，只在主控台留紀錄（老師那邊會退回看單一 requested_date 當保底）。
+  // 🔴 2026-08-01 (audit ข้อ A3)：ไม่มี newId = ไม่มีทางเขียนรอบ 2 ได้เลย → ถือว่า "ไม่สำเร็จ" ตั้งแต่ต้น
+  let backfillOk2 = !!newId;
   if (newId) {
     const updFields = {
       proposed_options: options, offer_status: 'proposed', offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
@@ -6228,36 +6358,71 @@ async function submitClassRequest() {
     // 事件 ID 存起來，老師端就能直接用 ID 搬課，不用再靠「姓名+日期」猜哪一筆（以前改期申請
     // 完全沒有存過這個欄位）。拿不到 ID（例如舊版 fallback）就不存，退回原本的姓名+日期比對。
     if (chosenCalendarEventId) updFields.calendar_event_id = chosenCalendarEventId;
-    // 2026-07-17 加（Lin 要求）：原本課堂的時間也存起來，之後通知/清單顯示才不會只有日期沒有時間。
-    if (originalTimeToUse) updFields.original_time = originalTimeToUse;
+    // 2026-08-01 拿掉 original_time：ตอนนี้ส่งไปกับ p_original_time ตั้งแต่ตอน INSERT แล้ว
+    //   (ฐานข้อมูลเก็บให้เองตั้งแต่ 2026-07-31_store_original_time_on_insert.sql)
+    //   → ลดของที่ต้อง "เขียนรอบ 2" ลงอีกหนึ่งอย่าง = จุดพังน้อยลง (ท่าเดียวกับที่ requestCancelClass ทำไปแล้ว)
     // 2026-07-19 改：直接 update 會被 RLS 靜靜擋掉（更新 0 筆又不回 error），
     // 導致 proposed_options／calendar_event_id 從來沒存進去過。改走 RPC + 檢查筆數。
-    const upd = await studentPatchRequest(nextClassCtx.token, newId, updFields, {});
+    const upd = await studentPatchRequest(submitTokenForCard, newId, updFields, {});
     if (upd.error || !upd.rows.length) {
+      backfillOk2 = false;
       console.error('⚠️ 補存選項清單失敗：', upd.error ? upd.error.message : '更新 0 筆');
     }
   }
-  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: originalDateToUse, originalTime: originalTimeToUse, options: options, requestId: newId });
+  // ════════════════════════════════════════════════════════════════════════
+  // 🔴 2026-08-01 แก้ (audit ระบบเลื่อนคาบ ข้อ A3 — ผิดกฎ RELIABILITY FIRST ที่ Lin ตั้งเอง)
+  //
+  // เดิม: การเขียนรอบ 2 พังแล้วเขียนลง console อย่างเดียว แล้วขึ้น "✅ ส่งแล้ว" ทุกกรณี
+  //   บนมือถือไม่มีใครเปิด console → นักเรียนไม่มีทางรู้ และพังพร้อมกัน 4 อย่าง:
+  //   (1) ตัวเลือกที่ 2-3 หายไป (เหลือแต่อันแรกที่ฝังมากับ INSERT)
+  //   (2) offer_status ยังว่าง → การ์ดของนักเรียนตกไปกิ่งทั่วไป = ปุ่ม ✏️ แก้ / 收回 หายถาวร
+  //   (3) calendar_event_id ไม่ถูกเก็บ → ครูต้องเดาชื่อ+วัน และปุ่มใน LINE ปฏิเสธทันที
+  //   (4) การ์ดใน LINE ที่ครูได้รับ "โกหก" — โชว์ 3 ปุ่มจากตัวเลือกในเครื่องนักเรียน
+  //       แต่ฐานข้อมูลมีอันเดียว → ครูกดปุ่มที่ 2/3 แล้วเจอ "選項已失效"
+  //
+  // ตอนนี้: เขียนรอบ 2 ไม่สำเร็จ = ส่งการ์ดแบบ "ตัวเลือกเดียว" (ตรงกับฐานข้อมูลจริง) + บอกนักเรียนตรงๆ
+  //   ท่าเดียวกับ backfillOk ของฝั่งยกเลิก (requestCancelClass) ที่ทำถูกอยู่แล้วตั้งแต่ 2026-07-19
+  // ════════════════════════════════════════════════════════════════════════
+  notifyTeacherClassRequest({
+    type: 'reschedule', name: studentName, token: submitTokenForCard,
+    originalDate: originalDateToUse, originalTime: originalTimeToUse,
+    options: backfillOk2 ? options : [options[0]],
+    requestId: newId,
+  });
   closeClassRequestModal();
-  alert('✅ 已送出改期申請，老師確認後會回覆你。');
+  releaseSubmitBtn();
+  alert(backfillOk2
+    ? '✅ 已送出改期申請，老師確認後會回覆你。'
+    : '✅ 已送出改期申請（老師收到的是第 1 個時間）。\n⚠️ 其他備選時間這次沒存進去，如果第 1 個時間老師不方便，請直接用 LINE 告訴老師其他時間。');
+  // 🔴 2026-08-01 加 (audit ข้อ A4)：เดิมส่งเสร็จไม่ได้รีเฟรชการ์ดสถานะเลย (ต่างจากทางแก้/ถอนที่รีเฟรชหมด)
+  //   → หน้าจอยังโล่ง ปุ่ม 🔄 申請改期 ยังอยู่ นักเรียนนึกว่ายังไม่ได้ส่ง แล้วกดส่งซ้ำอีกใบ
+  //   และการ์ดโชว์ได้ใบเดียว ใบเก่าจะถูกซ่อน = ถอนเองไม่ได้ตลอดกาล
+  loadStudentPendingRequestStatus(submitTokenForCard);
 }
 
 // 2026-07-16 加：學生修改自己已送出、老師還沒回覆的改期申請——重新給 1-3 個新選項，
 // 用 .eq('offer_status','proposed') 當保險閘：如果老師剛好在這一刻已經處理了，這裡就會抓不到。
 async function submitClassRequestEdit(id, options, studentName) {
   // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
+  // 🔴 2026-08-01 加 notProcessing (audit ระบบเลื่อนคาบ ข้อ A2)：ด่านชั้นที่ 2 แบบเดียวกับฝั่งยกเลิก
+  //   ถ้าครูกำลังจับล็อกและกำลังคุยกับ Google Calendar อยู่ (processing_started_at ไม่ว่าง)
+  //   ห้ามให้นักเรียนแก้ตัวเลือกทับเข้าไปได้ — ไม่งั้นครูกดปุ่มที่เขียนว่า "8/5 14:00"
+  //   แต่คาบไปลงเวลาใหม่ที่นักเรียนเพิ่งเปลี่ยน โดยไม่มีใครรู้ทั้งสองฝ่าย
   const res = await studentPatchRequest(nextClassCtx.token, id, {
     requested_date: options[0].date, requested_time: options[0].time,
     proposed_options: options, offer_created_at: new Date().toISOString(), sla_reminder_sent: false,
-  }, { status: 'pending', offerStatus: 'proposed' });
+  }, { status: 'pending', offerStatus: 'proposed', notProcessing: true });
   if (res.error) { var friendlyReschedEdit = friendlyRequestError(res.error.message); alert(friendlyReschedEdit ? ('⚠️ ' + friendlyReschedEdit) : ('⚠️ 更新失敗：' + res.error.message + '\n請直接聯絡老師比較保險。')); return; }
   if (!res.rows.length) {
-    alert('ℹ️ 更新失敗，這筆申請可能已經被老師處理了，重新整理頁面看看。');
+    // 🔴 2026-08-01 แก้ข้อความ (audit ข้อ A2)：ตอนนี้มีอีกสาเหตุหนึ่งที่ทำให้แก้ไม่ได้ = ครูกำลังจัดการอยู่
+    alert('ℹ️ 更新失敗——老師可能正在處理這筆（或已經處理完了）。\n請重新整理頁面看最新狀態，需要的話直接用 LINE 聯絡老師。');
     closeClassRequestModal();
     loadStudentPendingRequestStatus(nextClassCtx.token);
     return;
   }
-  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: res.rows[0].original_date, options: options, requestId: id });
+  // 🟡 2026-08-01 加 originalTime (audit ข้อ A11 เดิม)：เดิมทางแก้คำขอไม่ส่งเวลาคาบเดิมไปด้วย
+  //   ครูจึงเห็นใน LINE แค่ "原本：2026-08-05" ไม่มีเวลา ทั้งที่ตอนส่งครั้งแรกมี (ผิดกฎ 2026-07-17)
+  notifyTeacherClassRequest({ type: 'reschedule', name: studentName, token: nextClassCtx.token, originalDate: res.rows[0].original_date, originalTime: res.rows[0].original_time, options: options, requestId: id });
   closeClassRequestModal();
   alert('✅ 已更新，老師確認後會回覆你。');
   loadStudentPendingRequestStatus(nextClassCtx.token);
@@ -6268,10 +6433,15 @@ async function submitClassRequestEdit(id, options, studentName) {
 async function studentWithdrawOwnRescheduleRequest(token, id) {
   if (!confirm('確定要收回這個改期申請嗎？（這堂課維持原本安排）')) return;
   // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
-  const res = await studentPatchRequest(token, id, { status: 'acknowledged', offer_status: null }, { status: 'pending', offerStatus: 'proposed' });
+  // 🔴 2026-08-01 加 notProcessing (audit ระบบเลื่อนคาบ ข้อ A2 — รูที่อันตรายที่สุดข้อหนึ่ง)
+  //   ฝั่ง "ยกเลิกคาบ" มีด่านนี้มาตั้งแต่ 2026-07-19 แล้ว แต่ฝั่ง "เลื่อนคาบ" ถูกลืม
+  //   ตอนครูกดปุ่ม ระบบจับล็อกโดยไม่เปลี่ยน status (ยังเป็น pending) → ด่าน 2 อันเดิมของนักเรียนผ่านหมด
+  //   ผลจริง: คาบถูกย้ายไปแล้ว แต่หน้าจอนักเรียนขึ้น "✅ 已收回，這堂課維持原本安排"
+  //   = นักเรียนไปรอเวลาเดิม แล้วขาดเรียน (ช่วงเสี่ยงไม่กี่วินาที แต่ผลหนักที่สุดในระบบนี้)
+  const res = await studentPatchRequest(token, id, { status: 'acknowledged', offer_status: null }, { status: 'pending', offerStatus: 'proposed', notProcessing: true });
   if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
   if (!res.rows.length) {
-    alert('ℹ️ 收回失敗——老師可能剛好已經處理了，請直接用 LINE 聯絡老師確認狀況。');
+    alert('ℹ️ 收回失敗——老師可能正在處理這筆（或剛好已經處理完了）。\n這堂課的安排可能已經被更動，請直接用 LINE 聯絡老師確認狀況。');
     loadStudentPendingRequestStatus(token);
     return;
   }
@@ -6631,7 +6801,21 @@ async function loadStudentPendingRequestStatus(token) {
       '</div>';
     }
   } catch (e) {
-    el.innerHTML = '';
+    // 🔴 2026-08-01 แก้ (audit ระบบเลื่อนคาบ ข้อ A9 — "หายเงียบ" คือสิ่งที่ห้ามที่สุด)
+    //   เดิมพังตรงไหนก็ล้างการ์ดทิ้งทั้งใบแบบไม่มีคำอธิบาย (เช่น proposed_options มีวันที่รูปแบบแปลก
+    //   → formatInTz เจอ Invalid Date → throw ทั้งฟังก์ชัน) → นักเรียนเห็นจอโล่ง สรุปเองว่า "ไม่ได้ส่ง"
+    //   แล้วส่งใหม่ซ้ำอีกใบ (ไปเจอปัญหาการ์ดโชว์ได้ใบเดียว = ใบเก่าถอนไม่ได้อีกต่อไป)
+    //   ตอนนี้: บอกตรงๆ ว่าจอนี้โหลดไม่ขึ้น + ย้ำว่าคำขอที่ส่งไปแล้วยังอยู่ + ให้ทางออกที่ปลอดภัย
+    console.error('⚠️ 載入申請狀態卡片失敗：', e && (e.message || e));
+    //   (ข้อความตั้งใจไม่ฟันธงว่า "มีคำขอค้างอยู่" เพราะ error นี้เกิดตอนเน็ตหลุดก็ได้
+    //    คนที่ไม่เคยส่งคำขอเลยจะได้ไม่ตกใจว่าตัวเองมีคำขอค้าง)
+    el.innerHTML = '<div class="card" style="border-color:var(--amber);">' +
+      '<h2>⚠️ 這個區塊載入失敗</h2>' +
+      '<p style="font-size:0.85rem;color:var(--ink);font-family:\'Noto Sans TC\',sans-serif;">' +
+        '這裡暫時讀不到資料。<b>如果你剛剛送出過申請，它還在，不會不見。</b><br>' +
+        '請先重新整理頁面；如果還是一樣，直接用 LINE 問老師目前的狀態，不要重複送出申請。' +
+      '</p>' +
+    '</div>';
     // 2026-07-31：ต้องล้างการ์ดเพิ่มคาบด้วย ไม่งั้นการ์ดหลักหายไปเงียบๆ แต่การ์ดเพิ่มคาบค้างอยู่บนจอ
     //   อาจโชว์คำขอที่นักเรียนถอนไปแล้ว (ข้อมูลเก่าค้าง = หลอกนักเรียน)
     var addElErr = document.getElementById('pendingAddRequestCard');
@@ -6835,7 +7019,10 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
     if (!chosenOpt) { alert('⚠️ 這個選項好像已經失效了（老師可能剛修改過提議），請重新整理頁面看最新的選項再選一次。'); return; }
     // 2026-07-19 改：直接 update 會被 RLS 靜靜擋掉（更新 0 筆又不回 error）→ 學生挑的新時間
     // 根本沒存進去，老師之後看到的還是舊時間，而且完全沒有警告。改走 RPC + 檢查筆數。
-    const upd = await studentPatchRequest(token, requestId, { requested_date: chosenOpt.date, requested_time: chosenOpt.time }, { offerStatus: 'proposed' });
+    // 🔴 2026-08-01 加 notProcessing (audit ระบบเลื่อนคาบ)：ถ้าครูกำลังจับล็อกและกำลังย้ายคาบอยู่
+    //   ห้ามให้นักเรียนเขียนเวลาที่เลือกทับเข้าไป — ครูจะย้ายไปเวลาหนึ่ง แต่ฐานข้อมูลบันทึกอีกเวลาหนึ่ง
+    //   (ฐานข้อมูลฝั่ง respond_to_offer_as_student ก็มีด่านเดียวกันแล้ว ดู 2026-08-01_reschedule_guards.sql)
+    const upd = await studentPatchRequest(token, requestId, { requested_date: chosenOpt.date, requested_time: chosenOpt.time }, { offerStatus: 'proposed', notProcessing: true });
     if (upd.error) { alert('⚠️ 儲存選擇失敗：' + upd.error.message + '\n請直接聯絡老師比較保險。'); return; }
     if (!upd.rows.length) { alert('⚠️ 儲存選擇失敗（這個提議可能已經被老師改過或處理掉了），請重新整理頁面看最新狀態。'); return; }
   }
@@ -7057,12 +7244,20 @@ function notifyTeacherClassRequest(d) {
       // 學生給的 1-3 個候選時間，每個各一行＋一顆「確認搬到這個時間」按鈕，直接在 LINE 完成
       // （沿用新增的 action=confirm_reschedule_pick，跟網站端 teacherPickRescheduleOption 同一套邏輯：
       // 用 calendar_event_id 直接搬，不用姓名+日期猜）。「💬 聯繫學生」保留在下面當備援。
+      // 🔴 2026-08-01 加 &d=&t= (audit ระบบเลื่อนคาบ ข้อ B6 — การ์ดเก่าค้างในแชท LINE)
+      //   ปุ่มใน LINE ลบไม่ได้ ค้างอยู่ในประวัติแชทตลอดกาล — เดิมปุ่มพกไปแค่ "เลขตัวเลือกที่เท่าไหร่"
+      //   แล้วฝั่ง webhook ไปเปิดดูตัวเลือกจากฐานข้อมูล ณ ตอนกด → ถ้านักเรียนแก้ตัวเลือกทีหลัง
+      //   ครูกดปุ่มที่เขียนว่า "8/5 14:00" แต่คาบไปลงเวลาใหม่ที่นักเรียนเพิ่งเปลี่ยน โดยไม่มีใครรู้
+      //   ตอนนี้ปุ่มพก "เวลาที่สัญญาไว้บนหน้าปุ่ม" ไปด้วย ฝั่ง webhook เทียบก่อนย้าย ไม่ตรง = ไม่ย้าย
+      //   ⚠️ รูปแบบนี้ต้องตรงกับ supabase/functions/line-webhook/index.ts (ก้อน confirm_reschedule_pick) เป๊ะ
+      //      d = วันที่ (YYYY-MM-DD) · t = เวลา (HH:MM) · ไม่มีเวลา = ส่ง t ว่าง
+      //      การ์ดที่ส่งไปก่อนหน้านี้ (ไม่มี d) ฝั่ง webhook ยังรับได้ แต่จะบอกครูว่าเทียบไม่ได้
       d.options.forEach(function (opt, i) {
         var label = (opt.date || '-') + ' ' + (opt.time || '');
         flexRows.push({
           label: label,
           buttons: [
-            { label: '確認搬到這個時間', postbackData: 'action=confirm_reschedule_pick&request=' + encodeURIComponent(d.requestId) + '&opt=' + i, style: 'primary' },
+            { label: '確認搬到這個時間', postbackData: 'action=confirm_reschedule_pick&request=' + encodeURIComponent(d.requestId) + '&opt=' + i + '&d=' + encodeURIComponent(opt.date || '') + '&t=' + encodeURIComponent(opt.time || ''), style: 'primary' },
           ],
         });
       });
@@ -7584,6 +7779,26 @@ async function loadPendingClassRequests() {
   window._classRequestCache = {};
   data.forEach(function(r) { window._classRequestCache[r.id] = r; });
 
+  // ════════════════════════════════════════════════════════════════════════
+  // 🟡 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A11 — Lin เลือก "ไม่จำกัดจำนวนครั้ง แต่ครูต้องเห็นสถิติ")
+  //   นับ "จำนวนครั้งที่นักเรียนคนนี้เคยขอเลื่อน" (นับทุกสถานะ รวมใบที่ถอนเอง = ถือว่าเคยขอ)
+  //   ยิงครั้งเดียวสำหรับทั้งคิว ไม่ยิงทีละใบ · อ่านไม่ได้ = ไม่โชว์ตัวเลข ไม่บล็อกอะไร (แค่ข้อมูลประกอบ)
+  //   ⚠️ ตั้งใจไม่นับจาก classroom_calendar_backups (action='move') เพราะแถวสำรองถูกเขียน "ก่อน" ย้าย
+  //      ครั้งที่ย้ายไม่สำเร็จก็จะมีแถว = ตัวเลขจะเกินความจริง ผิดกฎ "ห้ามแต่งตัวเลข"
+  // ════════════════════════════════════════════════════════════════════════
+  var reschedCountByToken = {};
+  try {
+    var histRes = await sb.from('classroom_requests').select('token')
+      .eq('request_type', 'reschedule').eq('initiated_by', 'student').limit(2000);
+    if (histRes.error) {
+      console.warn('ℹ️ 讀取改期次數統計失敗（不影響處理申請）：', histRes.error.message);
+    } else {
+      (histRes.data || []).forEach(function (x) {
+        if (x && x.token) reschedCountByToken[x.token] = (reschedCountByToken[x.token] || 0) + 1;
+      });
+    }
+  } catch (e) { console.warn('ℹ️ 讀取改期次數統計發生例外（不影響處理申請）：', e && (e.message || e)); }
+
   function calendarDayUrl(dateStr) {
     if (!dateStr || !/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return null;
     var p = dateStr.split('-');
@@ -7647,10 +7862,19 @@ async function loadPendingClassRequests() {
       actionsHtml = pickOpts.map(function (opt, i) {
         return '<button class="btn-approve" onclick="teacherPickRescheduleOption(\'' + r.id + '\',' + i + ')">✅ ' + escHtml(formatOfferOptionForTeacher(opt)) + '</button>';
       }).join('') +
-        // 2026-07-19 拿掉（Lin 要求）：「都不方便，關掉這筆」按鈕移除 · 2026-07-31 補：
-        // 原本保留但沒人呼叫的 teacherDeclineRescheduleOptions() 這顆函式，已確認 repo 全域沒有
-        // 任何地方呼叫，一併刪除了。
-        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>';
+        // 🔴 2026-08-01 คืนปุ่มปิดคำขอ (audit ระบบเลื่อนคาบ ข้อ A1 — คิวตันถาวร)
+        //   ประวัติ: 2026-07-19 ถอดปุ่ม「都不方便，關掉這筆」ออกตามที่ Lin สั่ง · 2026-07-31 ลบฟังก์ชัน
+        //   teacherDeclineRescheduleOptions ทิ้งเพราะไม่มีใครเรียก → กิ่งนี้เหลือแต่ปุ่ม ✅ ทีละตัวเลือก
+        //   กับ 💬 聯絡學生 (ซึ่ง "ไม่ปิด" คำขอ ต่างจากกิ่ง declined ที่ปิดให้ด้วย)
+        //   ผลจริง: ถ้าเวลาที่นักเรียนเสนอมา 1-3 อัน ครูรับไม่ได้สักอัน = คำขอค้าง pending ตลอดกาล
+        //   ป้ายเลขแดงค้าง + request-sla-cron ยังนับใบนี้ ทางออกเดียวคือเข้าไปแก้มือใน Supabase
+        //   กฎที่ Lin ยืนยัน 2026-08-01: "คุยใน LINE แล้วกดปิด" (ไม่มีปิงปองเสนอเวลากลับในเส้นทางนี้)
+        //   = โครงเดียวกับระบบเพิ่มคาบเป๊ะ (💬 聯繫學生 / ✔️ 關掉這筆)
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>' +
+        // ⚠️ 2026-08-01：กิ่งนี้ในทางทฤษฎีคำขอ "ยกเลิก" ก็ตกมาได้ (ถ้าครูเคยกด ⚙️ 其他 → 提議新時間
+        //   ใส่คำขอยกเลิก) — ข้อความ LINE ของปุ่มนี้เขียนไว้สำหรับ "ขอเลื่อน" โดยเฉพาะ
+        //   จึงโชว์เฉพาะคำขอที่ไม่ใช่การยกเลิก ไม่งั้นนักเรียนจะได้ข้อความผิดเรื่อง
+        (isCancel ? '' : '<button class="btn-reject" onclick="closeRescheduleRequestAfterContact(\'' + r.id + '\')">✔️ 關掉這筆</button>');
     } else if (isCancel && r.initiated_by === 'teacher') {
       // 2026-07-16 加（Lin 要求）：老師自己發起的取消，不再馬上刪 Calendar——現在要先等學生按
       // 「我知道了」確認收到，才輪到老師按「確認刪除」真的動 Calendar。學生確認前，老師這裡可以
@@ -7703,6 +7927,11 @@ async function loadPendingClassRequests() {
       '<div class="slip-info">' +
         '<div class="slip-name">' + escHtml(r.student_name || '-') + '　' + typeLabel + '</div>' +
         '<div class="slip-course">' + escHtml(detail) + '</div>' +
+        // 🟡 2026-08-01 (audit ข้อ A11)：โชว์เฉพาะคนที่ขอเลื่อนมากกว่า 1 ครั้ง จะได้ไม่รกโดยไม่จำเป็น
+        //   ไม่บล็อกอะไรทั้งสิ้น (Lin เลือก "ไม่จำกัดจำนวนครั้ง") แค่ให้ครูเห็นภาพก่อนตัดสินใจ
+        ((!isCancel && !isAdd && reschedCountByToken[r.token] > 1)
+          ? '<div class="slip-course" style="color:var(--amber-dark);">🔁 這位學生累計提出改期 ' + reschedCountByToken[r.token] + ' 次（含這筆）</div>'
+          : '') +
         (r.note ? '<div class="slip-course" style="color:var(--gold-deep);">📝 ' + escHtml(r.note) + '</div>' : '') +
       '</div>' +
       '<div class="slip-actions" style="flex-direction:column;gap:6px;">' + actionsHtml + '</div>' +
@@ -7975,10 +8204,14 @@ async function processClassRequestInner(id, r, isCancel) {
     var oldEndIso = ev.end && (ev.end.dateTime || ev.end.date);
     var durationMs = (new Date(oldEndIso).getTime() - new Date(oldStartIso).getTime()) || 3600000;
     var newTimeStr = r.requested_time || formatInTz(new Date(oldStartIso), TEACHER_TZ).timeStr;
+    // 🔴 2026-08-01 加 (audit ข้อ A8)：ด่านบนเช็คได้แค่ "วัน" — เวลา 20:00 ย้ายไป "วันนี้ 14:00" ยังทะลุได้
+    //   ตรงนี้รู้เวลาจริงแล้ว (newTimeStr) จึงเช็คซ้ำระดับชั่วโมงได้ ก่อนแตะ Calendar
+    if (!assertNotPastDateTime(r.requested_date, newTimeStr, '這筆申請要改到的時間')) return;
     var newStartIso = teacherTimeToDate(r.requested_date, newTimeStr).toISOString();
     var newStartLabel = formatThaiDateTimeLabel(newStartIso);
+    // 🔴 2026-08-01 แก้ (audit ข้อ A7)：เดิมเช็คไม่สำเร็จ = เงียบ (ครูเห็นกล่องสะอาดเหมือนเช็คผ่าน)
     var conflicts1 = await findConflictingEvents(newStartIso, new Date(new Date(newStartIso).getTime() + durationMs).toISOString(), ev.id);
-    var conflictWarn1 = (conflicts1 && conflicts1.length) ? ('\n\n⚠️ 這個新時間跟其他行事曆事件重疊：\n' + conflicts1.map(function(c){ return '・' + (c.summary || '(無標題)'); }).join('\n')) : '';
+    var conflictWarn1 = conflictWarnText(conflicts1);
     if (!confirm('確定要把這堂課移到新時間嗎？\n\n學生：' + r.student_name + '\n原本：' + oldStartLabel + '（泰國時間）\n改到：' + newStartLabel + '（泰國時間）' + conflictWarn1 + '\n\n只會移動「這一次」的課堂，不影響其他週的固定課程。移動前會先備份，之後可以復原。確定嗎？')) return;
     var recheck2 = await reverifyRequestState(id, r);
     if (!recheck2.ok) { alert('⚠️ ' + recheck2.reason); await loadPendingClassRequests(); return; }
@@ -8130,6 +8363,35 @@ async function submitProposeTime() {
   var options = collectProposeTimeOptions();
   if (options === null) return; // 格式錯誤，collectProposeTimeOptions 已經 alert 過了
   if (!options.length) { alert('請至少填選項 1 的日期'); return; }
+  // ════════════════════════════════════════════════════════════════════════
+  // 🟠 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ — "เสนอเวลาใหม่" ไม่เคยเช็คคาบชนเลย)
+  //   เดิม: ครูเสนอ 1-3 เวลา → ส่งให้นักเรียนทันที → รู้ตัวว่าชนอีกทีตอนนักเรียน "ตอบตกลงไปแล้ว"
+  //   (ตัวเช็คชนอยู่ที่ confirmAcceptedOfferInner ซึ่งเกิดหลังนักเรียนรับปากแล้ว = สายไป ต้องขอโทษนักเรียน)
+  //   เทียบกับระบบเพิ่มคาบที่บังคับกด 🔍 檢查是否衝突 ก่อนเสมอ — มาตรฐานคนละแบบในระบบเดียวกัน
+  //   ตอนนี้: เช็คให้ก่อนส่ง แล้วรายงานตรงๆ ในกล่องยืนยัน (เตือนอย่างเดียว ไม่บล็อก เพราะบางทีครูตั้งใจซ้อน)
+  //   ⚠️ ประเมินความยาวคาบเป็น 1 ชม. เพราะตอนเสนอยังไม่รู้คาบจริงยาวเท่าไหร่ — เขียนบอกครูไว้ในกล่องด้วย
+  // ════════════════════════════════════════════════════════════════════════
+  // 2026-08-01：ปิดปุ่มก่อนเริ่มเช็ค — การเช็ค 3 ตัวเลือกอาจใช้เวลาหลายวินาที (แต่ละครั้งมี timeout
+  //   ของการขอสิทธิ์ Google 6 วิ) ถ้าไม่ปิดปุ่มไว้ ครูจะเห็นหน้าจอค้างแล้วกดซ้ำ
+  var btnPre = document.getElementById('proposeSubmitBtn');
+  if (btnPre) { btnPre.disabled = true; btnPre.textContent = '檢查時間中…'; }
+  var proposeConflictLines = [];
+  for (var pi = 0; pi < options.length; pi++) {
+    var pOpt = options[pi];
+    if (!pOpt.time) { proposeConflictLines.push('選項' + (pi + 1) + '：沒有填時間，沒辦法檢查會不會撞課'); continue; }
+    var pStartIso = teacherTimeToDate(pOpt.date, pOpt.time).toISOString();
+    var pConf = await findConflictingEvents(pStartIso, new Date(new Date(pStartIso).getTime() + 3600000).toISOString(), r.calendar_event_id || null);
+    if (!pConf.ok) {
+      proposeConflictLines.push('選項' + (pi + 1) + '：這次沒能檢查（' + (pConf.reason || '原因不明') + '）');
+    } else if (pConf.items.length) {
+      proposeConflictLines.push('選項' + (pi + 1) + '：跟「' + pConf.items.map(function (c) { return c.summary || '(無標題)'; }).join('、') + '」重疊');
+    }
+  }
+  if (btnPre) { btnPre.disabled = false; btnPre.textContent = '📤 傳送給學生'; }
+  if (proposeConflictLines.length) {
+    if (!confirm('⚠️ 傳出去之前先看一下（以 1 小時課長估算）：\n\n' + proposeConflictLines.join('\n')
+      + '\n\n學生一旦選了，你就要照這個時間上課。\n還是要把這些時間傳給學生嗎？')) return;
+  }
   var rStudent = studentsCache[r.token];
   if (!rStudent || !rStudent.line_user_id) {
     if (!confirm('⚠️ 這位學生還沒連結 LINE，系統沒辦法傳送提議通知。\n\n還是要儲存這筆提議嗎？（要自己另外聯絡學生說一聲）')) return;
@@ -8250,6 +8512,65 @@ async function teacherPickRescheduleOption(id, optIndex) {
   try {
     var rWithChoice = Object.assign({}, r, { requested_date: chosen.date, requested_time: chosen.time });
     return await processClassRequestInner(id, rWithChoice, false);
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 🔴 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A1)：ปิดคำขอ "ขอเลื่อนคาบ" ที่ครูรับเวลาไหนไม่ได้เลย
+//
+// กฎที่ Lin ยืนยัน 2026-08-01: เวลาที่นักเรียนเสนอมา 1-3 อัน ถ้าครูรับไม่ได้สักอัน
+//   → คุยกันใน LINE (ปุ่ม 💬 聯絡學生) แล้วกดปิดคำขอนี้ทิ้ง — ไม่มีระบบ "เสนอเวลากลับ" ในเส้นทางนี้
+//   (โครงเดียวกับที่ Lin สั่งไว้กับระบบเพิ่มคาบเมื่อ 2026-07-30 เป๊ะ)
+//
+// ⚠️ เขียนคำสั่งปิดเองแทนการเรียก finalizeRequestStatus ด้วยเหตุผลเดียวกับ closeAddRequestAfterContact:
+//   ต้องเช็ค "ไม่มีใครกำลังจับล็อกอยู่" ไปพร้อมกับการปิดในคำสั่งเดียว (atomic) —
+//   ถ้าจับล็อกก่อนแล้วปิดพลาด ล็อกจะค้าง แล้วนักเรียนจะกด 收回申請 ของตัวเองไม่ได้อีกเลยตลอดกาล
+//   (ด่านฝั่งนักเรียนบังคับว่าล็อกต้องว่าง ไม่มีกฎ 10 นาทีเหมือนฝั่งครู)
+// ⚠️ ห้ามไปเติมเงื่อนไข "ล็อกต้องว่าง" ใน finalizeRequestStatus เด็ดขาด — เส้นทางอื่นเรียกมัน
+//   "หลัง" จับล็อกของตัวเองแล้ว ถ้าบังคับแบบนั้นจะปิดงานตัวเองไม่ได้ = พังทั้งระบบยกเลิก+ขอเลื่อน
+// ════════════════════════════════════════════════════════════════════════════
+async function closeRescheduleRequestAfterContact(id) {
+  var r = (window._classRequestCache || {})[id];
+  var origLabelClose = r ? ((r.original_date || '-') + (r.original_time ? ' ' + r.original_time : '')) : '-';
+  if (!confirm('確定要關掉這筆改期申請嗎？\n\n・不會動 Google Calendar，這堂課維持原本時間（' + origLabelClose + '）\n'
+    + '・會傳一則 LINE 告訴學生「這些時間老師都沒辦法，老師會直接聯絡你」\n'
+    + '・建議先用「💬 聯絡學生」跟學生討論過再關掉')) return;
+  if (_inFlightRequestIds[id]) return; // 防重複點擊，跟其他處理按鈕同一套
+  _inFlightRequestIds[id] = true;
+  try {
+    var closeRes2 = await sb.from('classroom_requests')
+      .update({ status: 'acknowledged', processing_started_at: null })
+      .eq('id', id).eq('status', 'pending').is('processing_started_at', null)
+      .select();
+    if (closeRes2.error) { alert('⚠️ 關閉失敗：' + closeRes2.error.message + '\n沒有關掉任何東西，請重試一次。'); await loadPendingClassRequests(); return; }
+    if (!closeRes2.data || !closeRes2.data.length) {
+      alert('ℹ️ 沒有關掉這筆——可能正在別的地方處理中（例如你剛在 LINE 按了某個時間），或狀態剛好被改掉了。\n'
+        + '沒有送出任何 LINE 通知。請重新整理頁面看最新狀態。\n'
+        + '（如果確定是中途斷掉卡住的，等 10 分鐘後卡片上會出現「🔓 解鎖這筆」按鈕）');
+      await loadPendingClassRequests();
+      return;
+    }
+    var rowEl2 = document.getElementById('req-row-' + id);
+    if (rowEl2) rowEl2.remove();
+    // ต้องบอกนักเรียนเสมอ ไม่งั้นการ์ด "⏳ 改期申請處理中" ของเขาหายไปเฉยๆ เหมือนคำขอถูกกลืน
+    // ส่งไม่สำเร็จก็ไม่ย้อนสถานะ (ปิดไปแล้วจริง) แต่ต้องบอกครูให้รู้ ห้ามเงียบ
+    var notifyWarn2 = '';
+    if (r && r.token) {
+      try {
+        var nres2 = await fetch(LINE_NOTIFY_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
+          body: JSON.stringify({ to: { studentToken: r.token }, message: 'ℹ️ 關於你申請改期的那堂課（原本 ' + origLabelClose + '）：你提的這些時間老師都沒辦法，這堂課先維持原本時間，老師會直接跟你聯絡討論。' }),
+        });
+        if (!nres2.ok) notifyWarn2 = '\n⚠️ 但 LINE 通知學生沒送出去（' + (await lineNotifyErrorText(nres2)) + '）';
+      } catch (e) { notifyWarn2 = '\n⚠️ 但 LINE 通知學生沒送出去（' + (e.message || e) + '）'; }
+    } else {
+      notifyWarn2 = '\n⚠️ 找不到這位學生的資料，沒有送出 LINE 通知';
+    }
+    alert('ℹ️ 已關掉這筆改期申請（課堂維持原本時間）' + (notifyWarn2 || '，也已用 LINE 告訴學生了') + '\n記得自己再跟學生說一聲比較保險');
+    await loadPendingClassRequests();
   } finally {
     delete _inFlightRequestIds[id];
   }
@@ -8408,28 +8729,60 @@ async function confirmAcceptedOffer(id) {
 }
 
 async function confirmAcceptedOfferInner(id, r) {
-  var matches;
-  try {
-    matches = await findClassEventForRequest(r.student_name, r.original_date);
-  } catch (e) {
-    alert('⚠️ 搜尋 Google Calendar 失敗：' + (e.message || e));
-    return;
+  // 🔴 2026-08-01 แก้ (audit ระบบเลื่อนคาบ ข้อ A6)：เดิมเส้นทางนี้ "ไม่เคยใช้" calendar_event_id ที่เก็บไว้เลย
+  //   ใช้วิธีเดา "ชื่อ + วันที่" อย่างเดียว ทั้งที่ initiateTeacherReschedule_chosenInner เก็บ ID ไว้ให้แล้ว
+  //   พังจริงเมื่อ: นักเรียนคนหนึ่งมี 2 คาบในวันเดียวกัน (รองรับตั้งแต่ 2026-07-26) → เจอ 2 แถว →
+  //   ปุ่มนี้ปฏิเสธถาวร กดยังไงก็ไม่ผ่าน ขณะที่ปุ่มใน LINE (ใช้ ID) ทำงานได้ปกติ = 2 ทางให้ผลไม่ตรงกัน
+  //   ตอนนี้: มี ID ใช้ ID ก่อน (ตรงกว่า) → ไม่มี/ID ตายแล้ว ค่อยถอยไปค้นหาแบบเดิม (ไม่พังของเดิม)
+  var ev = null;
+  if (r.calendar_event_id) {
+    try {
+      ev = await getClassEventById(r.calendar_event_id);
+    } catch (e) {
+      alert('⚠️ 讀取 Google Calendar 失敗：' + (e.message || e) + '\n請自己到 Calendar 手動調整，調整完用「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。');
+      return;
+    }
+    // ด่านเดียวกับ processClassRequestInner: ID ยังใช้ได้ แต่คาบอาจถูกย้ายวันไปแล้วหลังจากนั้น
+    if (ev && r.original_date) {
+      var evDayChk2 = ev.start && (ev.start.dateTime || ev.start.date);
+      var evDayStr2 = evDayChk2 ? formatInTz(new Date(evDayChk2), TEACHER_TZ).dateStr : null;
+      if (evDayStr2 && evDayStr2 !== r.original_date) {
+        if (!confirm('⚠️ 對不上，請先確認再繼續。\n\n這筆提議寫的原本課堂是 ' + r.original_date + '，\n'
+          + '但 Calendar 上這筆課堂現在的日期是 ' + evDayStr2 + '（可能中間已經被改期過了）。\n\n'
+          + '按「確定」= 就用 Calendar 上這筆（' + evDayStr2 + '）繼續處理\n'
+          + '按「取消」= 先不動，自己到 Calendar 確認清楚（比較安全）')) {
+          return;
+        }
+      }
+    }
   }
-  if (matches.length !== 1) {
-    alert((matches.length === 0 ? '⚠️ 在 Calendar 找不到符合的課堂事件' : '⚠️ 找到 ' + matches.length + ' 筆疑似符合的課堂，不確定是哪一筆') +
-      '，請自己到 Calendar 手動調整，調整完用「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。');
-    return;
+  if (!ev) {
+    var matches;
+    try {
+      matches = await findClassEventForRequest(r.student_name, r.original_date);
+    } catch (e) {
+      alert('⚠️ 搜尋 Google Calendar 失敗：' + (e.message || e));
+      return;
+    }
+    if (matches.length !== 1) {
+      alert((matches.length === 0 ? '⚠️ 在 Calendar 找不到符合的課堂事件' : '⚠️ 找到 ' + matches.length + ' 筆疑似符合的課堂，不確定是哪一筆') +
+        '，請自己到 Calendar 手動調整，調整完用「⚙️ 其他 → 我會自己聯絡學生」關掉這筆。');
+      return;
+    }
+    ev = matches[0];
   }
-  var ev = matches[0];
   // 🔴 2026-07-26 加（同 processClassRequestInner）：นักเรียนกด "ตกลง" ไว้นานแล้ว วันที่นั้นอาจกลายเป็นอดีต
   if (!assertNotPastDate(r.requested_date, '要改到的日期（這筆提議的日期已經過去了，請重新提議一個未來的時間）')) return;
   var oldStartIso = ev.start && (ev.start.dateTime || ev.start.date);
   var oldEndIso = ev.end && (ev.end.dateTime || ev.end.date);
   var durationMs = (new Date(oldEndIso).getTime() - new Date(oldStartIso).getTime()) || 3600000;
   var newTimeStr = r.requested_time || formatInTz(new Date(oldStartIso), TEACHER_TZ).timeStr;
+  // 🔴 2026-08-01 加 (audit ข้อ A8)：เช็คซ้ำระดับชั่วโมง (ด่านบนเช็คได้แค่ระดับวัน)
+  if (!assertNotPastDateTime(r.requested_date, newTimeStr, '要改到的時間')) return;
   var newStartIso = teacherTimeToDate(r.requested_date, newTimeStr).toISOString();
+  // 🔴 2026-08-01 แก้ (audit ข้อ A7)：เช็คคาบชนไม่สำเร็จ ต้องบอกครูตรงๆ ห้ามเงียบเหมือน "ไม่ชน"
   var conflicts = await findConflictingEvents(newStartIso, new Date(new Date(newStartIso).getTime() + durationMs).toISOString(), ev.id);
-  var conflictWarn = (conflicts && conflicts.length) ? ('\n\n⚠️ 這個新時間跟其他行事曆事件重疊：\n' + conflicts.map(function(c){ return '・' + (c.summary || '(無標題)'); }).join('\n')) : '';
+  var conflictWarn = conflictWarnText(conflicts);
 
   if (!confirm('學生已經同意了，確定要把課堂移到新時間嗎？\n\n學生：' + r.student_name + '\n原本：' + formatThaiDateTimeLabel(oldStartIso) + '（泰國時間）\n改到：' + formatThaiDateTimeLabel(newStartIso) + '（泰國時間）' + conflictWarn + '\n\n只會移動這一次課堂，動手前會先備份，之後可以復原。確定嗎？')) return;
   var recheck3 = await reverifyRequestState(id, r);
@@ -8599,7 +8952,25 @@ function toggleAllBackups() {
 var _revertNewEventId = null;
 var _revertWasRecurring = false;
 
+// ════════════════════════════════════════════════════════════════════════════
+// 🔴 2026-08-01 เพิ่มตัวครอบ (audit ระบบเลื่อนคาบ ข้อ A10 — ปุ่มกู้ภัยเองไม่มีตัวกู้ภัย)
+//   ปุ่ม ↩️ 復原 เป็น "ตาข่ายรองสุดท้าย" ของทั้งระบบ แต่กลับเป็นจุดที่มีด่านน้อยที่สุด:
+//   ไม่มีล็อกกันกดซ้ำเลย (ทุกปุ่มอื่นในไฟล์นี้มี _inFlightRequestIds กันหมด)
+//   → กดรัว/เปิด 2 แท็บ = ยิง PATCH ซ้อนกัน แล้วคำสั่งที่ 2 จะขึ้น "資料庫標記失敗"
+//     ซึ่งอ่านแล้วเหมือนพัง ทั้งที่คืนค่าสำเร็จไปแล้ว (ครูอาจไปกู้ซ้ำอีกรอบเพราะเข้าใจผิด)
+// ════════════════════════════════════════════════════════════════════════════
+var _inFlightBackupIds = {};
 async function revertCalendarBackup(id) {
+  if (_inFlightBackupIds[id]) return;
+  _inFlightBackupIds[id] = true;
+  try {
+    return await revertCalendarBackupInner(id);
+  } finally {
+    delete _inFlightBackupIds[id];
+  }
+}
+
+async function revertCalendarBackupInner(id) {
   var b = (window._backupCache || {})[id];
   if (!b) return;
   _revertNewEventId = null;
@@ -8657,6 +9028,21 @@ async function revertCalendarBackup(id) {
     } catch (e) {
       msg += '\n\n⚠️ 檢查上課紀錄時出錯（' + (e.message || e) + '），請自己確認過再繼續。';
     }
+  }
+  // ════════════════════════════════════════════════════════════════════════
+  // 🔴 2026-08-01 เพิ่มด่านกันอดีต (audit ระบบเลื่อนคาบ ข้อ A10)
+  //   เคสจริงที่เกิดได้ทุกสัปดาห์: คาบวันอังคาร → ครูย้ายไปวันศุกร์ → วันพุธเปิดหน้าจอเจอการ์ด
+  //   ↩️ 復原 ยังอยู่ (เพราะการ์ดจะอยู่จนกว่าจะถึงเวลาใหม่ = วันศุกร์) → กดกู้คืน
+  //   = คาบถูกย้ายกลับไป "วันอังคารที่ผ่านไปแล้ว" ซึ่งคือสิ่งที่ Lin สั่งห้ามทั้งแอป (ดู index.html:1403)
+  //   ผลตามมา: ระบบเตือนก่อนเรียนไม่มีวันยิง + คาบหลุดจากตารางเรียน (get_student_schedule กรองวันอดีต)
+  //   ⚠️ ตั้งใจใส่ด่านนี้เฉพาะ action='move' — สาขา delete (สร้างคาบกลับ) แค่ "เตือน" ไม่บล็อก
+  //      เพราะการสร้างคาบที่เคยมีอยู่แล้วกลับมาเป็นการกู้ข้อมูล ไม่ใช่การจัดคาบใหม่ในอดีต
+  // ════════════════════════════════════════════════════════════════════════
+  if (b.action === 'move' && b.old_start && new Date(b.old_start).getTime() <= Date.now()) {
+    alert('🛑 沒辦法復原，因為原本的時間（' + formatThaiDateTimeLabel(b.old_start) + '，泰國時間）已經過去了。\n\n'
+      + '系統一律不把課堂移回已經過去的時間（會讓提醒不會發、課表也看不到這堂）。\n\n'
+      + '如果真的需要，請直接到 Google Calendar 手動調整。');
+    return;
   }
   if (!confirm(msg)) return;
   try {
@@ -8724,6 +9110,13 @@ async function revertCalendarBackup(id) {
         method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(patchBody),
       });
       if (!r2.ok) throw new Error('復原失敗（' + r2.status + '）：' + (await r2.text()).slice(0, 200));
+      // 🔴 2026-08-01 加 (audit ระบบเลื่อนคาบ ข้อ A10 — RELIABILITY FIRST)
+      //   เดิมเชื่อแค่ว่า API ตอบ ok แล้วถือว่าคืนค่าสำเร็จ — เป็นจุดสุดท้ายในไฟล์นี้ที่ยังทำแบบนั้น
+      //   (ทุกที่อื่นที่แตะ Calendar อ่านกลับมาตรวจซ้ำหมดแล้ว ตั้งแต่ 2026-07-15/2026-07-26/2026-07-31)
+      //   บนปุ่มที่เป็น "ตาข่ายรองสุดท้าย" ยิ่งห้ามเดา — ถ้าตรวจแล้วไม่ตรง ต้องโยน error ออกไปเลย
+      var revertExpectedStart = b.old_event_json && b.old_event_json.start
+        && (b.old_event_json.start.dateTime || b.old_event_json.start.date);
+      if (revertExpectedStart) await verifyEventMoved(b.old_event_id, revertExpectedStart);
       if (b.action === 'permanent_change' && b.new_event_id) {
         // 🔴 2026-07-26 แก้ (RELIABILITY FIRST)：เดิมเป็น .catch(function(){}) = กลืน error เงียบสนิท
         // ถ้าลบชุดคาบใหม่ไม่สำเร็จ ครูจะเหลือ "คาบเก่า + คาบใหม่" ซ้อนกัน 2 ชุดในปฏิทิน
@@ -9448,8 +9841,11 @@ async function submitPermanentChangeInner(token) {
   var newEnd = new Date(newStart.getTime() + oldDurationMs);
   var newStartIso = newStart.toISOString();
 
+  // 🔴 2026-08-01 แก้ตามการเปลี่ยนสัญญาของ findConflictingEvents (audit ข้อ A7)
+  //   ตัวนั้นคืนค่าเป็น { ok, items, reason } แล้ว — "เช็คไม่สำเร็จ" ต้องไม่ถูกแปลว่า "ไม่ชน" อีกต่อไป
+  //   จุดนี้คือ "เปลี่ยนตารางถาวร" ซึ่งกระทบทุกสัปดาห์ ยิ่งต้องบอกครูตรงๆ ว่าเช็คไม่ได้
   var conflicts = await findConflictingEvents(newStartIso, newEnd.toISOString(), null);
-  var conflictWarn = (conflicts && conflicts.length) ? ('\n\n⚠️ 這個新時段跟其他事件重疊：\n' + conflicts.map(function(c) { return '・' + (c.summary || '(無標題)'); }).join('\n')) : '';
+  var conflictWarn = conflictWarnText(conflicts);
 
   if (!confirm('確定要「永久」把 ' + studentName + ' 的固定上課時間改成每週 ' + formatThaiDateTimeLabel(newStartIso) + '（泰國時間）開始嗎？' + conflictWarn + '\n\n這會影響「往後所有週」的課，不是只有這一次。舊課表會保留備份，第一堂新時間的課上完之前都能復原。')) return;
   if (!confirm('再次確認：真的要永久變更嗎？這個動作影響範圍比一般改期大很多，請確定學生已經同意再繼續。')) return;
