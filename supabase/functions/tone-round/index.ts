@@ -653,9 +653,10 @@ Deno.serve(async (req: Request) => {
 
   // ── game: แยก SRS ต่อเกม (default 'tone' = backward-compatible กับ client เกมเสียงเดิม) ──
   // 2026-07-31: เพิ่ม "mix" (綜合遊戲/mix.html) — Lin เลือกให้แยกชุด SRS/ดาวต่างหาก ไม่ปนกับ 4 เกมเดิม
+  // 2026-08-01: เปลี่ยนชื่อไฟล์ mix.html → games-challenge.html + เปลี่ยน id "mix" → "challenge"
   //   ⚠️ ต้อง deploy ไฟล์นี้ใหม่ (supabase functions deploy tone-round) ก่อนถึงจะเริ่มแจกดาว/จำ SRS ให้เกมรวมได้จริง
   const game = String(body.game || "tone");
-  if (!["tone", "reading", "typing", "wordorder", "mix"].includes(game)) return json({ error: "bad game" }, 400);
+  if (!["tone", "reading", "typing", "wordorder", "challenge"].includes(game)) return json({ error: "bad game" }, 400);
   const spellingGame = game !== "tone"; // อ่าน/พิมพ์/เรียงประโยค = trust-clean (เซิร์ฟเวอร์ตรวจเองไม่ได้ → เชื่อ flag clean)
 
   // ── อ่าน state จริงจาก DB (source of truth) ──

@@ -1032,7 +1032,7 @@
         '✅ 登入後可以：<br>⭐ 累積星星＋泰國米勳章或其他禮物<br>🧠 智慧複習：記住你哪些句子學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你練你的弱點' +
       '</div></div>';
   }
-  window.woCtaLogin = function(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} if(window.READING_AUTH&&READING_AUTH.openLogin)READING_AUTH.openLogin(); };
+  window.woCtaLogin = function(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} };
 
   function finish(){
     document.getElementById('game').style.display = 'none';

@@ -1446,7 +1446,7 @@ function rgRenderLoginCTA(){
     '</div></div>';
 }
 // เปิด modal ล็อกอิน (ใช้ปุ่มล็อกอินเดิมของ auth-widget)
-function rgCtaLogin(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} if(window.READING_AUTH&&READING_AUTH.openLogin)READING_AUTH.openLogin(); }
+function rgCtaLogin(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} }
 
 // render challenge banner + streak chips
 function rgRenderGameBar() {

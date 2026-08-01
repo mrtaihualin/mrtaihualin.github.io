@@ -84,7 +84,8 @@
   //   (เดิมเกมเสียงใช้ supabase-auth.js แยกของตัวเอง) — คะแนนเกมเสียงยังเก็บคนละตาราง (tone_sessions) ไม่ผ่าน saveScore() ที่นี่
   //   เพิ่มแค่ branch นี้ให้ badge/🏆 ลิงก์ถูกที่ ไม่กระทบ 4 เกมเดิม
   // v7 (LIN 2026-07-31): เพิ่ม 'mix' (綜合遊戲/mix.html) — ให้ล็อกอิน+เซฟคะแนนใช้ระบบเดียวกับ 5 เกมเดิม
-  //   คะแนนเกมรวมเก็บใน reading_sessions.game='mix' (คนละแถวจาก reading/typing/lego/word_order เดิม แยกกระดานของตัวเอง
+  // v8 (LIN 2026-08-01): เปลี่ยนชื่อไฟล์ mix.html → games-challenge.html + เปลี่ยน id 'mix' → 'challenge'
+  //   คะแนนเกมรวมเก็บใน reading_sessions.game='challenge' (คนละแถวจาก reading/typing/lego/word_order เดิม แยกกระดานของตัวเอง
   //   mix-board.html) — ไม่กระทบ 5 เกมเดิมเลย (เพิ่ม branch ใหม่เฉยๆ ไม่แก้ของเดิม)
   function pageGame() {
     var p = location.pathname || '';
@@ -92,7 +93,7 @@
     if (/typing-game/i.test(p)) return 'typing';
     if (/word-order/i.test(p)) return 'word_order';
     if (/lego/i.test(p)) return 'lego';
-    if (/\bmix/i.test(p)) return 'mix';
+    if (/games-challenge/i.test(p) || /\bmix/i.test(p)) return 'challenge';
     return 'reading';
   }
   function boardHref() {
@@ -101,7 +102,7 @@
     if (g === 'typing') return 'typing-board.html';
     if (g === 'word_order') return 'word-order-board.html';
     if (g === 'lego') return 'lego-board.html';
-    if (g === 'mix') return 'mix-board.html';
+    if (g === 'challenge') return 'mix-board.html';
     return 'reading-board.html';
   }
 
@@ -480,7 +481,7 @@
       console.info('[board] admin account — score not saved (excluded from leaderboard)');
       return;
     }
-    var gm = (game === 'typing' || game === 'reading' || game === 'word_order' || game === 'lego' || game === 'mix') ? game : pageGame();
+    var gm = (game === 'typing' || game === 'reading' || game === 'word_order' || game === 'lego' || game === 'challenge') ? game : pageGame();
     var base = { user_id: API.user.id, score: (score || 0) | 0, games: (games || 1) | 0 };
     var withGame = { user_id: base.user_id, score: base.score, games: base.games, game: gm };
     var full = { user_id: withGame.user_id, score: withGame.score, games: withGame.games, game: withGame.game, wrong_items: Array.isArray(wrongItems) ? wrongItems : [] };

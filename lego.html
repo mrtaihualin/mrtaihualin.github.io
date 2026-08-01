@@ -290,12 +290,6 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .tree-caption{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-top:6px;}
 .star-progress{font-size:16px;letter-spacing:2px;margin:10px 0 4px;}
 .star-prog-label{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);}
-/* Lin 2026-07-24: 提示泡泡 — 第一次進遊戲，指給玩家看「這裡有教怎麼玩」，看過一次就不再出現 */
-.howto-hint-bubble{display:none;position:absolute;top:calc(100% + 8px);left:0;background:var(--gold-deep);color:#fff;font-size:12.5px;font-weight:700;padding:8px 28px 8px 12px;border-radius:10px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:50;animation:howtoHintPop .25s ease;}
-.howto-hint-bubble::before{content:'';position:absolute;top:-6px;left:16px;border:6px solid transparent;border-bottom-color:var(--gold-deep);}
-.howto-hint-bubble.show{display:block;}
-.howto-hint-close{position:absolute;top:2px;right:4px;background:none;border:none;color:#fff;opacity:.75;font-size:12px;cursor:pointer;padding:2px 4px;}
-@keyframes howtoHintPop{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
 
 /* ── 逐步導覽（第一次進遊戲自動播放）— Lin 2026-07-31 ── */
 #gt-tour-overlay{position:fixed;inset:0;z-index:10050;display:none;}
@@ -381,13 +375,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="try{if(window.gtag)gtag('event','lego_star_modal_open',{category:'game'});}catch(e){}openStar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_star_modal_open',{category:'game'});}catch(e){}openStar()}">⭐ <b id="star-count">0</b> 顆星</span>
   <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="try{if(window.gtag)gtag('event','lego_badge_modal_open',{category:'game'});}catch(e){}openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_badge_modal_open',{category:'game'});}catch(e){}openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
   <span class="tf-streak-chip" style="cursor:pointer;" onclick="try{if(window.gtag)gtag('event','lego_vault_modal_open',{category:'game'});}catch(e){}legoVaultOpen()">📑 <b id="lego-vault-count">0</b>/15 單字庫</span>
-  <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
-    <span class="tf-streak-chip" id="lego-howto-btn" style="cursor:pointer;" onclick="try{if(window.gtag)gtag('event','lego_howto_modal_open',{category:'game'});}catch(e){}dismissHowtoHint('lego');document.getElementById('lego-howto-modal').style.display='flex'">📖 怎麼玩</span>
-    <div class="howto-hint-bubble" id="howto-hint-lego">
-      <button class="howto-hint-close" onclick="try{if(window.gtag)gtag('event','lego_howto_hint_dismiss',{category:'game'});}catch(e){}dismissHowtoHint('lego')">✕</button>
-      這裡有教怎麼玩喔 👆
-    </div>
-  </span>
+  <span class="tf-streak-chip" id="lego-howto-btn" style="cursor:pointer;" onclick="try{if(window.gtag)gtag('event','lego_howto_modal_open',{category:'game'});}catch(e){}dismissHowtoHint('lego');document.getElementById('lego-howto-modal').style.display='flex'">📖 怎麼玩</span>
 </div>
 
 <!-- Lin 2026-07-06: CTA ชวนล็อกอิน (MASTER ข้อ13) — เดิมเลโก้ไม่มี เพิ่มให้เหมือนเกมอื่น -->
@@ -1015,7 +1003,7 @@ function legoWrongItemsFromLog(){
 // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
 function legoScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
 // 本題分數: โชว์ "ชีวิต" ที่เหลือของข้อทดสอบนี้ 10→0 ไล่สีทอง→แดง (sc ว่าง = ข้อใหม่ เต็ม 10)
-function updateLegoScoreBar(sc){ var max=SENTENCE_LIFE_START||10; if(sc==null)sc=max; sc=Math.max(0,sc); var col=legoScoreBarColor(sc,max), w=Math.max(0,Math.min(100,sc/max*100))+'%'; ['lego-ws-fill','lego-test-ws-fill'].forEach(function(id){var pw=document.getElementById(id); if(pw){pw.style.width=w; pw.style.background=col;}}); ['lego-ws-num','lego-test-ws-num'].forEach(function(id){var pn=document.getElementById(id); if(pn)pn.textContent=sc;}); }
+function updateLegoScoreBar(sc){ var max=SENTENCE_LIFE_START||10; if(sc==null)sc=max; sc=Math.max(0,sc); var col=legoScoreBarColor(sc,max), w=Math.max(0,Math.min(100,sc/max*100))+'%'; var pw=document.getElementById('lego-test-ws-fill'); if(pw){pw.style.width=w; pw.style.background=col;} var pn=document.getElementById('lego-test-ws-num'); if(pn)pn.textContent=sc; }
 // อัปเดตหลอด 進度 + 本題分數 บนหน้าเกม (ไม่แตะ logic ดาว/streak เดิม)
 function legoRefreshBars(){
   const pf=document.getElementById('lego-pf');
@@ -1163,7 +1151,7 @@ function legoRenderLoginCTA(){
       '✅ 登入後可以：<br>💾 把你的進度和連續紀錄存起來<br>🔖 造句單字庫：把喜歡的單字存起來（最多15個）<br>🧠 智慧複習，記住你學會了哪些句子<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接練你的弱點' +
     '</div></div>';
 }
-function legoCtaLogin(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} if(window.READING_AUTH&&READING_AUTH.openLogin)READING_AUTH.openLogin(); }
+function legoCtaLogin(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} }
 
 // Lin 2026-07-07 (4.4): 造句單字庫 — คลังคำเฉพาะเลโก้ 15 คำ (แยกจาก word-vault ปกติ) · ต้องล็อกอินก่อน
 function legoVaultSave(th, zh){
@@ -1745,7 +1733,7 @@ function gtTourStart(){
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher">
-  <a class="gs-tab" href="mix.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'mix',from:'lego'})}catch(e){}">🎮 綜合遊戲</a>
+  <a class="gs-tab" href="games-challenge.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'challenge',from:'lego'})}catch(e){}">🎮 綜合遊戲</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'lego'})}catch(e){}">🎵 聲調練習室</a>
   <div class="gs-divider"></div>

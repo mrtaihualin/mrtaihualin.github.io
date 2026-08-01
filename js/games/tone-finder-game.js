@@ -2241,9 +2241,6 @@ function buildStep() {
     case 'alpha-consonant': return stepAlphaConsonant();
     case 'alpha-vowel':     return stepAlphaVowel();
     case 'alpha-flashcard': return stepAlphaFlashcard();
-    case 'adv-cat-select':  return stepAdvCatSelect();
-    case 'adv-sent-select': return stepAdvSentSelect();
-    case 'adv-summary':     return stepAdvSummary();
     case 'session-summary': return stepSessionSummary();
     case 's1':        return step1();
     case 's2a':       return step2a();

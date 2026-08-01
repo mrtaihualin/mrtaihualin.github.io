@@ -53,9 +53,6 @@
   /** คืน true ถ้าคำนี้อยู่ในคลังแล้ว */
   function has(th) { return load().some(function(w){ return w.th === th; }); }
 
-  /** จำนวนคำในคลัง */
-  function count() { return load().length; }
-
   /** เต็ม 30/30 หรือยัง */
   function isFull() { return load().length >= MAX_WORDS; }
 
@@ -202,12 +199,8 @@
     removeWord: removeWord,
     getAll: getAll,
     has: has,
-    count: count,
-    isFull: isFull,
-    notifyFull: _showFullToast,
     setTag: setTag,
     createSaveBtn: createSaveBtn,
-    refreshBadges: _notifyBadges,
     injectStyles: injectStyles
   };
 

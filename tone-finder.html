@@ -1372,12 +1372,6 @@ if (document.fonts && document.fonts.load) {
   #tf-banner .bar-fill.prog { background:linear-gradient(90deg,#e8a020,#d85a30); }
   #tf-banner .bar-fill.power { background:linear-gradient(90deg,#66bb6a,#43a047); }
   #tf-banner .bar-label { min-width:52px; text-align:right; font-size:11px; }
-  /* Lin 2026-07-24: 提示泡泡 — 第一次進遊戲，指給玩家看「這裡有教怎麼玩」，看過一次就不再出現 */
-  .howto-hint-bubble{display:none;position:absolute;top:calc(100% + 8px);left:0;background:#5a3e0a;color:#fff;font-size:12.5px;font-weight:700;padding:8px 28px 8px 12px;border-radius:10px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:50;animation:howtoHintPop .25s ease;}
-  .howto-hint-bubble::before{content:'';position:absolute;top:-6px;left:16px;border:6px solid transparent;border-bottom-color:#5a3e0a;}
-  .howto-hint-bubble.show{display:block;}
-  .howto-hint-close{position:absolute;top:2px;right:4px;background:none;border:none;color:#fff;opacity:.75;font-size:12px;cursor:pointer;padding:2px 4px;}
-  @keyframes howtoHintPop{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
   /* Lin 2026-07-24: 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用完就不再自動跳出 */
   #gt-tour-overlay{position:fixed;inset:0;z-index:10050;display:none;}
   #gt-tour-overlay.show{display:block;}
@@ -1516,13 +1510,7 @@ if (document.fonts && document.fonts.load) {
     <div id="rg-profile-wrap" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
       <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
       <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
-      <span class="howto-hint-wrap" style="position:relative;display:inline-block;">
-        <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_open',{category:'game'});}catch(e){}dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
-        <div class="howto-hint-bubble" id="howto-hint-tone">
-          <button class="howto-hint-close" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_hint_dismiss',{category:'game'});}catch(e){}dismissHowtoHint('tone')">✕</button>
-          這裡有教怎麼玩喔 👆
-        </div>
-      </span>
+      <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_open',{category:'game'});}catch(e){}dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
       <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
       <div class="tf-stat-row" id="tf-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
         <span class="tf-streak-chip" title="連續天數">🔥 <b id="tf-streak-num">0</b></span>
@@ -1664,7 +1652,7 @@ if (document.fonts && document.fonts.load) {
 .tf-card{padding-bottom:132px;}}
 </style>
 <div id="game-switcher">
-  <a class="gs-tab" href="mix.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'mix',from:'tone_finder'})}catch(e){}">🎮 綜合遊戲</a>
+  <a class="gs-tab" href="games-challenge.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'challenge',from:'tone_finder'})}catch(e){}">🎮 綜合遊戲</a>
   <div class="gs-divider"></div>
   <span class="gs-tab gs-active">🎵 聲調練習室</span>
   <div class="gs-divider"></div>
