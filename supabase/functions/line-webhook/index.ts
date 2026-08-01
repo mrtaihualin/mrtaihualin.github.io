@@ -315,7 +315,11 @@ async function getGoogleCalendarToken() {
 // 🟠 2026-07-31 (งาน C4): เพิ่มช่องรับค่าตัวที่ 2 "expectedDateStr" (ไม่ใส่ = ข้ามการเทียบ เหมือนเดิมทุกอย่าง)
 //    ใส่มาเมื่อไหร่ = "ลบได้ต่อเมื่อคาบยังอยู่วันนี้จริงเท่านั้น"
 //    ตรวจแล้วว่าฟังก์ชันนี้มีที่เรียกจุดเดียวทั้งไฟล์ (ก้อน confirm_cancel_delete) จึงไม่กระทบใคร
-async function deleteCalendarEventById(eventId, expectedDateStr) {
+// 🔴 2026-08-01 (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 2): เพิ่มช่องรับค่าตัวที่ 3 "beforeDeleteHook"
+//    = งานที่ต้อง "ทำให้สำเร็จก่อน" ถึงจะยอมลบ (ใช้เขียนแถวสำรองก่อนลบ) · ไม่ใส่ = ข้ามไป เหมือนเดิมทุกอย่าง
+//    ต้องคืนค่า { ok: true } เท่านั้นถึงจะลบต่อ · คืน ok:false = ไม่แตะ Calendar เลยสักนิด
+//    ตรวจแล้วว่าฟังก์ชันนี้มีที่เรียกจุดเดียวทั้งไฟล์ (ก้อน confirm_cancel_delete) จึงไม่กระทบใคร
+async function deleteCalendarEventById(eventId, expectedDateStr, beforeDeleteHook) {
   const token = await getGoogleCalendarToken();
   if (!token) return { ok: false, reason: 'no_token' };
   const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
@@ -342,7 +346,13 @@ async function deleteCalendarEventById(eventId, expectedDateStr) {
     }
     if (preRes.ok) {
       preEventData = await preRes.json().catch(() => ({}));
-      if (preEventData.status === 'cancelled') return { ok: true, eventData: preEventData }; // ถูกลบไปแล้วจากที่อื่นก่อนหน้านี้
+      if (preEventData.status === 'cancelled') {
+        // ถูกลบไปแล้วจากที่อื่นก่อนหน้านี้ — เราไม่ได้ลบอะไรเลย
+        // ยังเรียก hook ให้เขียนแถวสำรองเหมือนพฤติกรรมเดิมก่อน 2026-08-01 แต่ **พังได้ไม่เป็นไร**
+        // เพราะไม่มีอะไรถูกลบในรอบนี้ จึงไม่มีอะไรต้องกู้คืน
+        if (beforeDeleteHook) { try { await beforeDeleteHook(preEventData); } catch (_e) { /* ตั้งใจปล่อยผ่าน */ } }
+        return { ok: true, eventData: preEventData };
+      }
 
       // 🟠 2026-07-31 เพิ่ม (งาน C4) — เทียบวันก่อนลบเสมอ ถ้าผู้เรียกส่งวันที่คาดหวังมาด้วย
       //
@@ -372,6 +382,33 @@ async function deleteCalendarEventById(eventId, expectedDateStr) {
       return { ok: false, reason: 'pre_check_http_' + preRes.status, detail: detail.slice(0, 300) };
     }
 
+    // ── 🔴 2026-08-01 เพิ่ม (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 2) — สำรองข้อมูล "ก่อน" ลบ ──────────────
+    // พังยังไงถ้าไม่มีด่านนี้ (ของเดิมเป็นแบบนั้นจริง):
+    //   เดิมลบ Calendar ไปก่อน แล้วค่อยเขียนแถวสำรองทีหลังแบบ "พังก็ช่างมัน" (ไม่รับค่ากลับมาด้วยซ้ำ)
+    //   → ถ้าเขียนแถวสำรองไม่สำเร็จ (RLS / เน็ต / ด่าน CHECK ของตาราง) = **คาบหายจาก Calendar แล้ว
+    //     แต่ไม่มีแถวใน ↩️ 復原 = กู้คืนไม่ได้ตลอดกาล** และครูเห็นแต่คำว่า "✅ 已刪除" ไม่รู้เลยว่ามีปัญหา
+    //   ผิดกฎ RELIABILITY FIRST ตรงๆ (ห้ามขึ้นว่าสำเร็จถ้ายังไม่ตรวจ + ของสำคัญต้องมีสำรอง)
+    // ฝั่งเว็บทำถูกมาตลอด (classroom/index.html → assertBackupOk(backupCalendarEvent(...)) ก่อน
+    //   deleteClassEventOnce) และเส้นทาง "ย้ายคาบ" ในไฟล์นี้ก็แก้ไปแล้ว (insertMoveBackupBeforeMove)
+    //   → เส้นทาง "ลบคาบ" คือจุดสุดท้ายที่ยังเป็นของเก่า ตอนนี้ลอกหลักการเดียวกันมาครบ
+    // ทำไมวางตรงนี้: ผ่านด่าน "มองเห็น event จริง" + ด่าน "วันตรงกัน" มาแล้ว จึงสำรองของที่ถูกตัวจริง
+    //   และยัง **ไม่ได้แตะ Calendar เลยสักนิด** ถ้าสำรองพัง = ถอยออกได้สะอาด ไม่มีอะไรค้าง
+    if (beforeDeleteHook) {
+      let hookRes = null;
+      try {
+        hookRes = await beforeDeleteHook(preEventData);
+      } catch (hookErr) {
+        hookRes = { ok: false, why: (hookErr && hookErr.message) ? hookErr.message : String(hookErr) };
+      }
+      if (!hookRes || !hookRes.ok) {
+        return {
+          ok: false,
+          reason: 'backup_failed',
+          detail: 'สำรองข้อมูลคาบก่อนลบไม่สำเร็จ (' + ((hookRes && hookRes.why) || 'ไม่ทราบสาเหตุ') + ') — ยังไม่ได้แตะ Calendar เลย คาบยังอยู่ครบ',
+        };
+      }
+    }
+
     const delRes = await fetch(eventUrl, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
     if (!delRes.ok && delRes.status !== 404 && delRes.status !== 410) {
       const detail = await delRes.text().catch(() => '');
@@ -396,17 +433,22 @@ async function deleteCalendarEventById(eventId, expectedDateStr) {
 // 2026-07-20 加：把伺服器端（service account）動 Calendar 的紀錄也存進 classroom_calendar_backups，
 // 跟網站端 backupCalendarEvent 用同一張表、同一組欄位——這樣不管老師是從網站按「✅ 處理」還是從
 // LINE 按按鈕完成，老師網站上「↩️ 最近處理（還能復原）」那張持久通知卡片都看得到、都能復原。
-// best-effort：備份失敗不擋主流程（Calendar 已經真的動了），只留 log 讓 Lin 之後手動補。
 // ℹ️ 2026-08-01：เส้นทาง "ย้ายคาบ" (action='move') **ไม่ใช้ตัวนี้แล้ว** — ย้ายไปสำรอง "ก่อน" แตะ Calendar
 //    ด้วย insertMoveBackupBeforeMove แทน (ย้ายไปแล้วค่อยสำรองพัง = คืนค่าไม่ได้ตลอดกาล)
 //    ตัวนี้เหลือใช้ที่เส้นทาง "ลบคาบ" (confirm_cancel_delete) ที่เดียว — ห้ามลบทิ้ง
+//
+// 🔴 2026-08-01 แก้ (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 2) — เลิกเป็น best-effort แล้ว:
+//    เดิมคืนค่า undefined เฉยๆ + เจอ error ก็แค่ console.error → **ผู้เรียกไม่มีทางรู้ว่าสำเร็จไหม**
+//    ตอนนี้คืน { ok, why } เสมอ และถูกเรียก "ก่อน" ลบ (ดู beforeDeleteHook ใน deleteCalendarEventById)
+//    สำรองไม่สำเร็จ = ไม่ลบ Calendar เลย · เขียนแล้วต้องอ่านกลับมาตรวจว่าได้แถวจริง (.select())
+//    ไม่ใช่เชื่อแค่ว่า "ไม่มี error" — ท่าเดียวกับที่ก้อนเพิ่มคาบใช้อยู่แล้ว
 async function backupCalendarEventServer(supabase, requestId, token, action, eventObj, newStartIso) {
-  if (!eventObj) return;
+  if (!eventObj) return { ok: false, why: 'ไม่มีข้อมูลคาบให้สำรอง' };
   try {
     const oldStartIso = eventObj.start && (eventObj.start.dateTime || eventObj.start.date);
     // 2026-07-22 加：action='move' 時跟網站端 backupCalendarEvent 一樣多存 new_event_id（搬移沒換 ID，
     // 就是同一個事件）+ new_start，「↩️ 最近處理（還能復原）」卡片才看得到「舊時間 → 新時間」。
-    const { error } = await supabase.from('classroom_calendar_backups').insert({
+    const { data, error } = await supabase.from('classroom_calendar_backups').insert({
       request_id: requestId || null,
       token: token || null,
       action: action,
@@ -415,10 +457,19 @@ async function backupCalendarEventServer(supabase, requestId, token, action, eve
       old_event_json: eventObj,
       old_start: oldStartIso,
       new_start: newStartIso || null,
-    });
-    if (error) console.error('[line-webhook] ⚠️ 備份 Calendar 事件失敗（不影響已經完成的操作，但老師網站上「最近處理」看不到這筆）：', error.message);
+    }).select().maybeSingle();
+    if (error || !data) {
+      const why = error ? error.message : 'เขียนแล้วแต่ไม่ได้ข้อมูลกลับมา';
+      console.error('[line-webhook] ⚠️ 備份 Calendar 事件失敗（會擋住刪除，Calendar 不會被動到）：', why);
+      return { ok: false, why: why };
+    }
+    // คืน id ของแถวสำรองด้วย — ผู้เรียกต้องเอาไปลบทิ้งถ้าสุดท้ายลบ Calendar ไม่สำเร็จ
+    // (ไม่งั้นจะเหลือแถว "เคยลบคาบนี้" ทั้งที่คาบยังอยู่ → กด ↩️ 復原 = ได้คาบซ้ำ 2 คาบ)
+    return { ok: true, backupId: data.id };
   } catch (e) {
-    console.error('[line-webhook] ⚠️ 備份 Calendar 事件時發生例外：', e && e.message ? e.message : e);
+    const why = (e && e.message) ? e.message : String(e);
+    console.error('[line-webhook] ⚠️ 備份 Calendar 事件時發生例外：', why);
+    return { ok: false, why: why };
   }
 }
 
@@ -966,7 +1017,23 @@ async function handleTeacherTextMessage(supabase, channelToken, event) {
   }
 
   const textToSend = event.message.text || '';
-  await pushLine(channelToken, stuRow.line_user_id, textToSend);
+  // 🟠 2026-08-01 แก้ (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 5) — เดิมใช้ pushLine ซึ่ง "กลืน error ทุกอย่าง"
+  //   แล้วล้างข้อความค้างทิ้งทันที แล้วตอบครูว่า "✅ 已經幫你轉給「X」了" ทุกกรณี
+  //   → LINE ปฏิเสธ (นักเรียนบล็อก OA / LINE ล่ม / โควตาหมด) = นักเรียนไม่ได้รับอะไรเลย
+  //     ครูเชื่อสนิทว่าส่งแล้ว และข้อความก็ถูกลบทิ้งไปแล้วด้วย พิมพ์ใหม่ไม่ได้เพราะไม่รู้ตัว
+  //   ผิดกฎ RELIABILITY FIRST (ห้ามขึ้นว่าสำเร็จถ้ายังไม่ตรวจ) — เส้นทางเพิ่มคาบ/ลบคาบย้ายมาใช้
+  //   pushLineChecked หมดแล้ว เหลือปุ่ม 💬 聯繫學生 เป็นจุดสุดท้าย
+  //   ส่งไม่สำเร็จ = **ไม่ล้างข้อความค้าง** ครูพิมพ์ใหม่ได้เลยโดยไม่ต้องกดปุ่มใหม่
+  const fwdRes = await pushLineChecked(channelToken, stuRow.line_user_id, textToSend);
+  if (!fwdRes.ok) {
+    console.error('[line-webhook] ⚠️ 轉傳訊息給學生失敗（沒有清掉待回覆狀態，老師可以直接再打一次）：', fwdRes.reason);
+    if (channelToken && event.replyToken) {
+      await replyLine(channelToken, event.replyToken,
+        '⚠️ 沒送出去，學生沒收到這則訊息\n原因：' + fwdRes.reason +
+        '\n（還在「回覆「' + (stuRow.name || pending.student_name || '這位學生') + '」」的狀態，直接再打一次就好，不用重按按鈕）');
+    }
+    return;
+  }
   // 送出後立刻清掉，避免老師下一句閒聊被誤轉給同一個學生
   await supabase.from('line_pending_reply').update({ student_token: null, student_name: null, set_at: null }).eq('id', 1);
   if (channelToken && event.replyToken) {
@@ -1610,6 +1677,14 @@ serve(async (req) => {
           .from('classroom_requests')
           .update({ teacher_cancel_ack_at: new Date().toISOString(), sla_reminder_sent: false }, { count: 'exact' })
           .eq('id', requestId)
+          // 🟠 2026-08-01 เพิ่ม (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 10) — คำขอต้องยัง "เปิดอยู่" เท่านั้น
+          //   พังยังไงถ้าไม่มีด่านนี้: ปุ่มใน LINE ค้างในประวัติแชทของนักเรียนตลอดกาล ลบออกไม่ได้
+          //   ครูส่งแจ้งยกเลิกไปแล้วเปลี่ยนใจ กด 收回這個取消 (ฝั่งเว็บตั้ง status='acknowledged'
+          //   แต่ไม่ได้แตะช่อง teacher_cancel_ack_at) → นักเรียนเลื่อนแชทขึ้นไปกดปุ่ม「我知道了」เก่า
+          //   → ด่านเดิมเช็คแค่ "ช่อง ack ยังว่าง" ซึ่งยังว่างอยู่จริง = ผ่าน!
+          //   → ครูได้ LINE ว่า「學生已確認收到取消通知」พร้อมปุ่ม 確認刪除 Calendar ที่กดได้จริง
+          //     ทั้งที่การยกเลิกนั้นถูกถอนไปแล้ว = ครูได้ข้อมูลผิด เสี่ยงกดลบคาบที่ไม่ควรลบ
+          .eq('status', 'pending')
           .is('teacher_cancel_ack_at', null)
           .select('original_date');
 
@@ -1846,6 +1921,31 @@ serve(async (req) => {
               '🛑 這筆申請的時間怪怪的（' + reqRowAddC.requested_date + ' ' + startTimeChkAddC + '–' + endTimeChkAddC + '），沒有新增任何課堂。\n' +
               (timeParseErrAddC ? ('原因：' + timeParseErrAddC + '\n') : '結束時間沒有比開始時間晚。\n') +
               '請到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdAddC);
+          }
+          continue;
+        }
+
+        // ── 🟠 2026-08-01 เพิ่ม (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 7) — ห้ามลงคาบย้อนหลัง "ระดับชั่วโมง" ──
+        // ด่านข้างบนเทียบแค่ "สตริงวันที่" (requested_date < todayBkk) → รูที่เหลือคือ **วันนี้ แต่เวลาผ่านไปแล้ว**
+        // เคสจริง: นักเรียนขอคาบ "วันนี้ 09:00" ไว้ตั้งแต่เมื่อคืน ครูเปิด LINE ตอน 20:00 แล้วกดยืนยัน
+        //   → ด่านวันที่ผ่าน (วันนี้ = วันนี้) → สร้างคาบในปฏิทินที่ผ่านไปแล้ว
+        //   → ตรวจชนก็ไม่เจออะไร (เวลาผ่านไปแล้ว ว่างอยู่แล้ว) → นักเรียนได้ LINE ว่า "จัดคาบให้แล้ว"
+        // เส้นทาง "ย้ายคาบ" ในไฟล์นี้กันระดับชั่วโมงมาตั้งแต่ต้น (if (newStartMs <= Date.now()))
+        //   เส้นทาง "เพิ่มคาบ" ไม่เคยมี — ตอนนี้ใช้เกณฑ์เดียวกันแล้วทั้งไฟล์
+        // วางตรงนี้เพราะ firstStartMsAddC ผ่านการตรวจว่าอ่านค่าได้จริงมาแล้ว และยังอยู่ **ก่อนแย่งล็อก**
+        //   จึงไม่มีอะไรต้องปลดคืน (หลักเดียวกับ 2 ด่านข้างบน)
+        // ⚠️ ยกเว้น "คาบทุกสัปดาห์" (ตรวจซ้ำ 2026-08-01): ชุดคาบประจำที่เริ่ม "วันนี้ แต่เวลาผ่านไปแล้ว"
+        //    เป็นการตั้งชุดคาบปกติ ครั้งถัดไป (+7 วัน) เป็นอนาคตทั้งหมด ของเดิมทำได้มาตลอด
+        //    ถ้าบล็อกด้วย จะกลายเป็นห้าม Lin ตั้งคาบประจำตอนเย็นโดยไม่มีเหตุผล = พังของที่เคยใช้ได้
+        //    (ด่านระดับ "วัน" ยังกันวันย้อนหลังของชุดคาบประจำอยู่เหมือนเดิม ไม่ได้หายไปไหน)
+        if (!reqRowAddC.proposed_recurring && firstStartMsAddC <= Date.now()) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: เวลาย้อนหลัง (วันนี้แต่เวลาผ่านไปแล้ว) ถูกปฏิเสธ.',
+            'date=', reqRowAddC.requested_date, 'start=', startTimeChkAddC, 'request=', requestIdAddC);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken,
+              '🛑 這個時間（' + reqRowAddC.requested_date + ' ' + startTimeChkAddC + ' 泰國時間）已經過去了，沒有新增任何課堂。\n' +
+              '系統一律不排已經過去的時間。請跟學生約一個新的時間，或到網站處理：\n' +
+              'https://mrtaihualin.com/classroom/#req-row-' + requestIdAddC);
           }
           continue;
         }
@@ -2360,8 +2460,31 @@ serve(async (req) => {
 
         // 🟠 2026-07-31 (งาน C4): ส่ง original_date ไปด้วย = "ลบได้ต่อเมื่อคาบยังอยู่วันเดิมจริงเท่านั้น"
         //    ค่านี้ถูกอ่านมาตั้งแต่บรรทัดต้นก้อนแล้ว แต่เดิมเอาไปใช้แค่ตอนพิมพ์ข้อความบอกนักเรียนเท่านั้น
-        const delResult = await deleteCalendarEventById(reqRowCancel.calendar_event_id, reqRowCancel.original_date || null);
+        // 🔴 2026-08-01 (ข้อ 2): ส่งงาน "เขียนแถวสำรอง" เข้าไปให้ทำ **ก่อน** ลบ
+        //    สำรองไม่สำเร็จ = ฟังก์ชันจะคืน ok:false reason='backup_failed' โดยไม่แตะ Calendar เลย
+        //    → ตกไปเข้าก้อน if (!delResult.ok) ข้างล่าง ซึ่งปลดล็อกคืนและบอกสาเหตุกับครูอยู่แล้ว
+        let backupIdCancel = null;
+        const delResult = await deleteCalendarEventById(
+          reqRowCancel.calendar_event_id,
+          reqRowCancel.original_date || null,
+          async function (preEventData) {
+            const bk = await backupCalendarEventServer(supabase, requestIdCancel, reqRowCancel.token, 'delete', preEventData);
+            if (bk && bk.ok) backupIdCancel = bk.backupId || null;
+            return bk;
+          },
+        );
         if (!delResult.ok) {
+          // 🔴 2026-08-01 (ตรวจซ้ำ): สำรองเขียนไปแล้ว แต่สุดท้ายลบ Calendar ไม่สำเร็จ (Google 5xx / ยืนยันไม่ได้)
+          //   → ต้องเก็บแถวสำรองนั้นทิ้ง ไม่งั้นจะเหลือหลักฐานว่า "เคยลบคาบนี้" ทั้งที่คาบยังอยู่ครบ
+          //   → การ์ด ↩️ 最近處理（還能復原）จะโชว์ให้กด แล้วสร้างคาบเดิมกลับมาอีกใบ = **คาบซ้อนกัน 2 คาบ**
+          //   (นี่คือราคาที่ต้องจ่ายของการ "สำรองก่อนลบ" — ถ้าไม่เก็บกวาด จะกลายเป็นบั๊กใหม่แทนบั๊กเก่า)
+          if (backupIdCancel) {
+            const { error: bkDelErr } = await supabase.from('classroom_calendar_backups').delete().eq('id', backupIdCancel);
+            if (bkDelErr) {
+              console.error('[line-webhook] ⚠️ confirm_cancel_delete: ลบแถวสำรองที่ไม่ได้ใช้ทิ้งไม่สำเร็จ '
+                + '(อาจมีปุ่ม ↩️ 復原 ขึ้นทั้งที่คาบยังอยู่ — กดแล้วจะได้คาบซ้ำ ห้ามกด):', bkDelErr.message, 'backup=', backupIdCancel);
+            }
+          }
           console.error('[line-webhook] ⚠️ confirm_cancel_delete 刪除 Calendar 失敗:', JSON.stringify(delResult), 'request=', requestIdCancel);
           // Calendar ยังไม่ถูกแตะจริง (API ล้มเหลว) → ปลดล็อกคืน ให้กดใหม่/ไปทำที่เว็บได้โดยไม่ติดล็อกค้าง
           const { error: unlockErrCancel } = await supabase.from('classroom_requests').update({ processing_started_at: null }).eq('id', requestIdCancel);
@@ -2371,7 +2494,16 @@ serve(async (req) => {
             // 的假成功，之後任何失敗都要讓老師當場看到原因，不能只說「失敗，去網站處理」含糊帶過
             // 🟠 2026-07-31 (งาน C4): เคส "วันไม่ตรง" ไม่ใช่ความล้มเหลว — เป็นการหยุดไว้ก่อนโดยตั้งใจ
             //    ใช้ข้อความคนละชุด ไม่ให้ครูเข้าใจผิดว่าระบบพัง และบอกให้ชัดว่า "ยังไม่ได้ลบอะไรเลย"
-            if (delResult.reason === 'date_mismatch') {
+            // 🔴 2026-08-01 (ข้อ 2): สำรองไม่สำเร็จ = ไม่ใช่ระบบพัง แต่เป็นการ "หยุดไว้ก่อนโดยตั้งใจ"
+            //    ต้องบอกให้ชัดว่ายังไม่ได้ลบอะไรเลย และกดใหม่ได้ (ต่างจากเคสอื่นที่ห้ามกดซ้ำ)
+            if (delResult.reason === 'backup_failed') {
+              await replyLine(channelToken, event.replyToken,
+                '🛑 沒有刪除任何東西，這堂課還在。\n' +
+                '原因：刪除前要先存一筆「可復原」的備份，但這次存不進去。\n' +
+                (delResult.detail || '') + '\n' +
+                '（如果沒有備份就刪掉，之後就再也救不回來了，所以系統故意先停手）\n' +
+                '可以再按一次試試，還是不行請到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdCancel);
+            } else if (delResult.reason === 'date_mismatch') {
               await replyLine(channelToken, event.replyToken,
                 '⚠️ 對不上，所以沒有刪除任何東西\n' +
                 '這筆申請寫的原本課堂是 ' + (delResult.expectedDate || '—') + '，\n' +
@@ -2384,9 +2516,9 @@ serve(async (req) => {
           continue;
         }
 
-        // 2026-07-20 加：跟網站端 processClassRequestInner 一樣，Calendar 真的刪除成功之後
-        // 存一筆備份紀錄，老師網站上「↩️ 最近處理（還能復原）」才看得到這筆（best-effort，失敗不擋流程）。
-        await backupCalendarEventServer(supabase, requestIdCancel, reqRowCancel.token, 'delete', delResult.eventData);
+        // 🗑️ 2026-08-01 (ข้อ 2): ลบการเรียกสำรอง "หลังลบ" ตรงนี้ทิ้ง — ย้ายไปทำ "ก่อนลบ" แล้ว
+        //    (ดู beforeDeleteHook ที่ส่งเข้า deleteCalendarEventById ข้างบน) — ห้ามเอากลับมา
+        //    เหตุผลเหมือนเส้นทางย้ายคาบเป๊ะ: ลบไปแล้วค่อยสำรองพัง = กู้คืนไม่ได้ตลอดกาล
 
         // 2026-07-30 加（Lin 抓到 race condition）：以前 Calendar 刪掉之後，classroom_schedule 那筆
         // 資料庫記錄要等 calendar-schedule-sync-cron（每 20 分鐘跑一次）才會清掉——這段空窗期內

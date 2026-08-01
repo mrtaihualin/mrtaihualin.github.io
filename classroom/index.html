@@ -2260,6 +2260,17 @@ async function checkAddClassDayConflict() {
     if (!assertNotPastDate(dateVal, '第 ' + n + ' 筆的日期')) return;
     if (recurring && untilVal && !assertNotPastDate(untilVal, '第 ' + n + ' 筆的「固定到」日期')) return;
     if (!isValidTimeStr(startVal)) { alert('⚠️ 第 ' + n + ' 筆：開始時間格式不對，請用 HH:MM，例如 20:00'); return; }
+    // 🟠 2026-08-01 เพิ่มด่านชั้นที่ 3 (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 7) — เทียบถึง "ชั่วโมง" ไม่ใช่แค่วัน
+    //   assertNotPastDate ข้างบนเทียบแค่วัน → รูที่เหลือคือ "วันนี้ แต่เวลาผ่านไปแล้ว"
+    //   เคสจริง: ตอน 20:00 ครูกดยืนยันคาบ "วันนี้ 09:00" ได้สบายๆ = คาบในปฏิทินที่ผ่านไปแล้ว
+    //     + นักเรียนได้ LINE ว่า "จัดคาบให้แล้ว" ทั้งที่เวลานั้นผ่านไปตั้งนานแล้ว
+    //   ระบบเลื่อนคาบอัปเกรดมาใช้ assertNotPastDateTime แล้วตั้งแต่ 2026-08-01 (ปัญหาเดียวกันเป๊ะ)
+    //     ระบบเพิ่มคาบเพิ่งตามมาวันนี้ · ฝั่ง LINE (confirm_add_class) ก็เพิ่มด่านคู่กันแล้ว
+    //   ต้องเช็ค "หลัง" isValidTimeStr เพราะต้องมั่นใจก่อนว่าเวลาอ่านออกจริง
+    //   ⚠️ ยกเว้นคาบทุกสัปดาห์ (ตรวจซ้ำ 2026-08-01): ตั้งชุดคาบประจำที่เริ่ม "วันนี้ แต่เวลาผ่านไปแล้ว"
+    //      เป็นเรื่องปกติ ครั้งถัดไป +7 วันเป็นอนาคตหมด · ของเดิมทำได้มาตลอด ห้ามไปห้ามเขา
+    //      (ด่านระดับ "วัน" ข้างบนยังกันวันย้อนหลังของชุดคาบประจำอยู่เหมือนเดิม)
+    if (!recurring && !assertNotPastDateTime(dateVal, startVal, '第 ' + n + ' 筆的時間')) return;
     const endTime = addOneHourTimeStr(startVal);
     const startAbs = teacherTimeToDate(dateVal, startVal);
     // 2026-07-23 修正 bug（Lin 回報開始時間選 23:00 一定跳「結束時間要晚於開始時間」）：
@@ -2526,6 +2537,17 @@ async function createCalendarClassEventForStudent(token, s, p) {
 async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
   const s = studentsCache[token];
   if (!s) return { ok: false, error: '找不到學生資料' };
+  // 🟠 2026-08-01 เพิ่ม (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 7 — ด่านชั้นสุดท้าย ตรวจ ณ วินาทีที่จะสร้างจริง)
+  //   ด่านในหน้าฟอร์ม (checkAddClassDayConflict) เช็คตอน "กดตรวจ" แต่ครูอาจกดยืนยันทีหลังเป็นชั่วโมง
+  //   เคสจริง: กดตรวจ 19:55 สำหรับคาบ "วันนี้ 20:00" ✅ ผ่าน → ไปกินข้าว → กลับมากดยืนยัน 20:30
+  //   = สร้างคาบที่เวลาผ่านไปแล้ว โดยไม่มีด่านไหนทัก (ด่านแรกตรวจไปนานแล้ว)
+  //   ตรงนี้อยู่ "ก่อนแย่งล็อกและก่อนแตะ Calendar" จึงถอยออกได้สะอาด ไม่มีอะไรค้าง
+  //   คืน {ok:false} แทนการ alert เพราะผู้เรียกรวบผลทุกแถวไปแจ้งครูทีเดียวอยู่แล้ว
+  //   ⚠️ ยกเว้นคาบทุกสัปดาห์ (เหตุผลเดียวกับด่านในหน้าฟอร์ม — ตั้งชุดคาบประจำตอนเย็นต้องทำได้)
+  const startAbsCheck = teacherTimeToDate(p.dateVal, p.startVal);
+  if (!startAbsCheck || isNaN(startAbsCheck.getTime()) || (!p.recurring && startAbsCheck.getTime() <= Date.now())) {
+    return { ok: false, error: '這個時間（' + p.dateVal + ' ' + p.startVal + ' 泰國時間）已經過去了，沒有建立任何課堂。請改成未來的時間再檢查一次。' };
+  }
   // 2026-07-20 加（稽核發現 🔴 RED——這裡以前完全沒搶 processing_started_at 原子鎖，跟取消/改期
   // 走的 claimRequestForProcessing/releaseRequestClaim 不一樣，也跟 LINE 那邊 confirm_add_class
   // 自己有搶鎖不一致）：網頁跟 LINE 兩邊都能觸發「確認新增」，如果剛好同時按（例如電腦開著網頁、
@@ -6002,7 +6024,13 @@ async function editCancelRequestChoice(id, isoDate, calendarEventId, timeStr) {
   if (calendarEventId) updateFields.calendar_event_id = calendarEventId;
   if (timeStr) updateFields.original_time = timeStr;
   // 2026-07-19 改：直接 update 會被 RLS 擋掉（見 studentPatchRequest 的說明），改走 RPC
-  const res = await studentPatchRequest(token, id, updateFields, { status: 'pending' });
+  // 🟠 2026-08-01 เพิ่ม notProcessing (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 8):
+  //   เดิมขาดด่านนี้ ทั้งที่ปุ่มถอนคำขอข้างๆ (studentWithdrawOwnRequest / studentWithdrawOwnAddRequest)
+  //   มีครบทั้งคู่ — และเคสนี้เกิดจากการใช้งานปกติ ไม่ต้องมีใครแฮ็ก:
+  //   ครูกด ✅ 處理 ระบบจับล็อกแล้วกำลังคุยกับ Google อยู่ → นักเรียนกด ✏️ 改選課堂 เปลี่ยนไปคาบอื่นพอดี
+  //   → ครูลบ "คาบ A" ไปแล้วจริง แต่คำขอในฐานข้อมูลกลายเป็น "คาบ B" และนักเรียนเห็นว่า "✅ 已更新"
+  //   = คาบผิดหายไป 1 คาบ โดยทั้ง 2 ฝ่ายเข้าใจคนละเรื่อง
+  const res = await studentPatchRequest(token, id, updateFields, { status: 'pending', notProcessing: true });
   // 🟡 2026-07-31 แก้（งาน C12）：จุดนี้คือที่ด่านใหม่ของงาน C1 จะตีกลับมา ต้องแปลงเป็นภาษาคน
   if (res.error) {
     var friendlyEdit = friendlyRequestError(res.error.message);
@@ -7871,10 +7899,14 @@ async function loadPendingClassRequests() {
         //   กฎที่ Lin ยืนยัน 2026-08-01: "คุยใน LINE แล้วกดปิด" (ไม่มีปิงปองเสนอเวลากลับในเส้นทางนี้)
         //   = โครงเดียวกับระบบเพิ่มคาบเป๊ะ (💬 聯繫學生 / ✔️ 關掉這筆)
         '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>' +
-        // ⚠️ 2026-08-01：กิ่งนี้ในทางทฤษฎีคำขอ "ยกเลิก" ก็ตกมาได้ (ถ้าครูเคยกด ⚙️ 其他 → 提議新時間
-        //   ใส่คำขอยกเลิก) — ข้อความ LINE ของปุ่มนี้เขียนไว้สำหรับ "ขอเลื่อน" โดยเฉพาะ
-        //   จึงโชว์เฉพาะคำขอที่ไม่ใช่การยกเลิก ไม่งั้นนักเรียนจะได้ข้อความผิดเรื่อง
-        (isCancel ? '' : '<button class="btn-reject" onclick="closeRescheduleRequestAfterContact(\'' + r.id + '\')">✔️ 關掉這筆</button>');
+        // 🟠 2026-08-01 แก้ (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 13):
+        //   เดิมซ่อนปุ่มปิดเมื่อเป็นคำขอ "ยกเลิก" เพราะกลัวข้อความ LINE เขียนผิดเรื่อง
+        //   แต่ผลข้างเคียงร้ายกว่ามาก: คำขอยกเลิกที่หลุดมากิ่งนี้ (offer_status='proposed') จะ
+        //   **ไม่มีปุ่มไหนปิดได้เลยตลอดกาล** ค้าง pending ถาวร ต้องแก้มือใน Supabase
+        //   ตอนนี้แสดงปุ่มปิดเสมอ แต่ "เลือกฟังก์ชันให้ตรงชนิดคำขอ" → ข้อความที่นักเรียนได้ถูกต้องทั้ง 2 แบบ
+        //   (ฝั่งฐานข้อมูลก็เพิ่งอุดไม่ให้คำขอยกเลิกถูกตั้ง offer_status ได้อีกแล้ว — ดูไฟล์
+        //    supabase/sql/2026-08-01_cancel_add_guards.sql — ตรงนี้คือด่านที่ 2 กันของเก่าที่ค้างอยู่)
+        '<button class="btn-reject" onclick="' + (isCancel ? 'closeCancelRequestAfterContact' : 'closeRescheduleRequestAfterContact') + '(\'' + r.id + '\')">✔️ 關掉這筆</button>';
     } else if (isCancel && r.initiated_by === 'teacher') {
       // 2026-07-16 加（Lin 要求）：老師自己發起的取消，不再馬上刪 Calendar——現在要先等學生按
       // 「我知道了」確認收到，才輪到老師按「確認刪除」真的動 Calendar。學生確認前，老師這裡可以
@@ -7892,8 +7924,14 @@ async function loadPendingClassRequests() {
       // 搜尋，找不到/找到多筆的機率大幅降低，所以「🔗 開 Calendar」這個手動備援按鈕先拿掉。
       // 「⚙️ 其他」的兩個選項（自己聯絡學生／提議新時間）取消申請用不到「提議新時間」，
       // 「自己聯絡學生」也被新的「💬 聯絡學生」取代掉了，所以整顆一起拿掉。
+      // 🔴 2026-08-01 เพิ่มปุ่มที่ 3 (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 3 — คำขอยกเลิกตันถาวร)
+      //   เดิมมีแค่ 2 ปุ่มนี้ = **ไม่มีทางปิดคำขอเลย** ถ้าคาบถูกลบไปทางอื่นก่อน (กด ✅ 處理 จะหาคาบ
+      //   ไม่เจอแล้วขึ้นกล่องเตือนจบ ไม่ปิดคำขอ) → ป้ายเลขแดงค้างตลอดกาล ต้องแก้มือใน Supabase
+      //   ตอนนี้มีโครงเดียวกับคำขอเพิ่มคาบและคำขอเลื่อนเป๊ะ: จัดการได้ / คุยกับนักเรียน / ปิดคำขอ
+      //   ⚠️ ปุ่มปิดไม่แตะ Calendar เลย (ดูคอมเมนต์ยาวที่ closeCancelRequestAfterContact)
       actionsHtml = '<button class="btn-approve" onclick="processClassRequest(\'' + r.id + '\')">✅ 處理</button>' +
-        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>';
+        '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--gold-deep);" onclick="openContactStudentModal(\'' + r.token + '\')">💬 聯絡學生</button>' +
+        '<button class="btn-reject" onclick="closeCancelRequestAfterContact(\'' + r.id + '\')">✔️ 關掉這筆</button>';
     } else {
       // 改期申請：保留完整 4 顆——「⚙️ 其他 → 提議新時間」是回覆改期申請唯一的入口，不能拿掉。
       actionsHtml = (calUrl ? '<a class="btn-approve" style="text-decoration:none;text-align:center;" href="' + calUrl + '" target="_blank" rel="noopener">🔗 開 Calendar</a>' : '') +
@@ -8570,6 +8608,93 @@ async function closeRescheduleRequestAfterContact(id) {
       notifyWarn2 = '\n⚠️ 找不到這位學生的資料，沒有送出 LINE 通知';
     }
     alert('ℹ️ 已關掉這筆改期申請（課堂維持原本時間）' + (notifyWarn2 || '，也已用 LINE 告訴學生了') + '\n記得自己再跟學生說一聲比較保險');
+    await loadPendingClassRequests();
+  } finally {
+    delete _inFlightRequestIds[id];
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 🔴 2026-08-01 เพิ่ม (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 3 — คำขอยกเลิกตันถาวร)
+//
+// พังยังไงถ้าไม่มีปุ่มนี้ (ของเดิมเป็นแบบนั้นจริง):
+//   การ์ดคำขอ "ยกเลิก" มีแค่ 2 ปุ่ม ✅ 處理 กับ 💬 聯絡學生 — **ไม่มีปุ่มปิดคำขอเลย**
+//   (คำขอเพิ่มคาบและคำขอเลื่อนมีปุ่ม ✔️ 關掉這筆 ทั้งคู่ มีแต่คำขอยกเลิกที่ไม่มี)
+//   ถ้าคาบถูกลบไปทางอื่นก่อน (ครูลบเองใน Google Calendar / LINE ลบสำเร็จแต่บันทึกฐานข้อมูลพัง)
+//   → กด ✅ 處理 จะหาคาบไม่เจอ แล้วขึ้นกล่องเตือนจบเลย ไม่ปิดคำขอ (ดู processClassRequestInner)
+//   → คำขอค้าง pending **ตลอดกาล**: ป้ายเลขแดงในคิวไม่มีวันหาย + ตัวเตือน 48 ชม.นับใบนี้ตลอด
+//     ทางออกเดียวคือเข้าไปแก้มือใน Supabase (โค้ดเดิมเขียนยอมรับไว้เองในข้อความ fallbackHint)
+//   เป็นอาการเดียวกับ "คิวตัน A1" ที่เพิ่งแก้ในระบบเลื่อนคาบเมื่อ 2026-08-01 เป๊ะ
+//
+// ลอกโครงจาก closeRescheduleRequestAfterContact ทุกอย่าง (ด่านล็อก · เช็คจำนวนแถว · แจ้งนักเรียนเสมอ)
+// ต่างอย่างเดียว: คำขอยกเลิกมีผลลัพธ์ได้ 2 แบบจริงๆ จึงต้องถามครูก่อนว่าจะบอกนักเรียนแบบไหน
+//   ห้ามเดาเอง — ส่งข้อความผิดคือเรื่องใหญ่กว่าถามเพิ่ม 1 กล่อง
+// ⚠️ ปุ่มนี้ **ไม่แตะ Google Calendar เลย** ไม่ว่าครูจะเลือกอะไร (การลบจริงมีทางเดียวคือปุ่ม ✅ 處理)
+// ════════════════════════════════════════════════════════════════════════════
+async function closeCancelRequestAfterContact(id) {
+  var r = (window._classRequestCache || {})[id];
+  var origLabelCC = r ? ((r.original_date || '-') + (r.original_time ? ' ' + r.original_time : '')) : '-';
+  if (!confirm('確定要關掉這筆取消申請嗎？（這堂課：' + origLabelCC + '）\n\n'
+    + '・這顆按鈕「完全不會動」Google Calendar\n'
+    + '・只是把這筆申請從待處理清單關掉，讓紅色數字消失\n'
+    + '・會傳一則 LINE 告訴學生結果（下一步會問你要告訴他哪一種）\n'
+    + '・建議先用「💬 聯絡學生」跟學生說清楚再關掉')) return;
+  // 2 กรณีนี้ต่างกันคนละเรื่อง ถ้าเดาผิดนักเรียนจะเข้าใจผิดว่ามีคาบ/ไม่มีคาบ → ถามให้ชัด
+  // ⚠️ ทิศทางของคำถามสำคัญมาก (ตรวจซ้ำ 2026-08-01): กด Esc / คลิกนอกกล่อง / เผลอเคาะ Enter
+  //    กล่อง confirm จะคืนค่า false เสมอ → ค่า false **ต้องเป็นคำตอบที่ปลอดภัย** เท่านั้น
+  //    ปุ่มนี้ไม่แตะ Calendar เลย ดังนั้นคำตอบที่ปลอดภัย = "คาบยังอยู่ ไม่ได้ยกเลิก"
+  //    ถ้าถามกลับทาง (false = บอกนักเรียนว่ายกเลิกแล้ว) เผลอกดพลาดครั้งเดียว = นักเรียนไม่มาเรียนทั้งที่มีคาบ
+  var classCancelledCC = confirm('這堂課「已經取消」了嗎？\n\n'
+    + '按「確定」= 對，我已經自己到 Google Calendar 刪掉了\n'
+    + '按「取消」= 沒有，課堂維持原本時間（最常見；不確定就選這個）');
+  var classKeptCC = !classCancelledCC;
+  if (_inFlightRequestIds[id]) return; // 防重複點擊，跟其他處理按鈕同一套
+  _inFlightRequestIds[id] = true;
+  try {
+    // ด่าน .is('processing_started_at', null) สำคัญมาก: กันเคสครูกด「確認刪除」ใน LINE อยู่พอดี
+    // (ระบบจับล็อกแล้วกำลังคุยกับ Google) แล้วเผลอมากดปิดในเว็บ → นักเรียนจะได้ 2 ข้อความขัดกันเอง
+    // ยิงคำสั่งเดียวจบ ทั้งเช็คล็อกและปิดคำขอ: ไม่สำเร็จ = ไม่มีอะไรเปลี่ยน ไม่มีล็อกค้าง
+    // (เหตุผลเต็มเหมือน closeAddRequestAfterContact — อ่านคอมเมนต์ยาวที่นั่น)
+    var closeResCC = await sb.from('classroom_requests')
+      .update({ status: 'acknowledged', processing_started_at: null })
+      .eq('id', id).eq('status', 'pending').is('processing_started_at', null)
+      .select();
+    if (closeResCC.error) { alert('⚠️ 關閉失敗：' + closeResCC.error.message + '\n沒有關掉任何東西，請重試一次。'); await loadPendingClassRequests(); return; }
+    if (!closeResCC.data || !closeResCC.data.length) {
+      alert('ℹ️ 沒有關掉這筆——可能正在別的地方處理中（例如你剛在 LINE 按了「確認刪除 Calendar」），或狀態剛好被改掉了。\n'
+        + '沒有送出任何 LINE 通知。請重新整理頁面看最新狀態。\n'
+        + '（如果確定是中途斷掉卡住的，等 10 分鐘後卡片上會出現「🔓 解鎖這筆」按鈕）');
+      await loadPendingClassRequests();
+      return;
+    }
+    var rowElCC = document.getElementById('req-row-' + id);
+    if (rowElCC) rowElCC.remove();
+    // ต้องบอกนักเรียนเสมอ ไม่งั้นการ์ด "⏳ 取消申請處理中" ของเขาหายไปเฉยๆ เหมือนคำขอถูกกลืน
+    // ส่งไม่สำเร็จก็ไม่ย้อนสถานะ (ปิดไปแล้วจริง) แต่ต้องบอกครูให้รู้ ห้ามเงียบ
+    var notifyWarnCC = '';
+    if (r && r.token) {
+      try {
+        var nresCC = await fetch(LINE_NOTIFY_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
+          // คำขอที่ "ครูเป็นคนเริ่ม" นักเรียนไม่ได้ยื่นอะไรมาเลย → ห้ามเขียนว่า "ที่คุณขอยกเลิก"
+          // (ตรวจซ้ำ 2026-08-01: กิ่ง isProposed ทำให้คำขอที่ครูเริ่มไหลมาถึงปุ่มนี้ได้)
+          body: JSON.stringify({ to: { studentToken: r.token }, message: (function () {
+            var whichCC = (r && r.initiated_by === 'teacher')
+              ? ('老師之前說要取消的那堂課（' + origLabelCC + '）')
+              : ('你申請取消的那堂課（' + origLabelCC + '）');
+            return classKeptCC
+              ? ('ℹ️ 關於' + whichCC + '：這堂課先維持原本時間，沒有取消，老師會直接跟你聯絡說明。')
+              : ('✅ 關於' + whichCC + '：老師已經幫你取消了，課表上不會再有這堂課。');
+          })() }),
+        });
+        if (!nresCC.ok) notifyWarnCC = '\n⚠️ 但 LINE 通知學生沒送出去（' + (await lineNotifyErrorText(nresCC)) + '）';
+      } catch (e) { notifyWarnCC = '\n⚠️ 但 LINE 通知學生沒送出去（' + (e.message || e) + '）'; }
+    } else {
+      notifyWarnCC = '\n⚠️ 找不到這位學生的資料，沒有送出 LINE 通知';
+    }
+    alert('ℹ️ 已關掉這筆取消申請（' + (classKeptCC ? '課堂維持原本時間' : '已告訴學生課堂取消了') + '）'
+      + (notifyWarnCC || '，也已用 LINE 告訴學生了') + '\n記得自己再跟學生說一聲比較保險');
     await loadPendingClassRequests();
   } finally {
     delete _inFlightRequestIds[id];

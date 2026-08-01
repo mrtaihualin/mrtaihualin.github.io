@@ -204,36 +204,111 @@ serve(async (req) => {
       if (dropped >= 3 && dropped / beforeCount >= 0.3) isAnomalousDrop = true;
     }
 
+    // ── 🔴 2026-08-01 แก้ (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 4) — ด่านนี้เคยเป็น "กับดักที่ออกเองไม่ได้" ──
+    //
+    // พังยังไงของเดิม (2 ชั้นพร้อมกัน):
+    //   ของเดิมเจอความผิดปกติ = **ข้ามทั้งรอบ** (ไม่เขียนใหม่ ไม่เก็บกวาด) + push LINE เตือนครู
+    //   โดยไม่มีตัวกันเตือนซ้ำเลยสักตัว
+    //   (1) LINE เตือนซ้ำทุกรอบ (20 นาทีครั้ง ≈ 72 ครั้ง/วัน) กินโควตาฟรี 200 ข้อความ/เดือนหมดในวันเดียว
+    //   (2) ร้ายกว่า: "ข้ามทั้งรอบ" แปลว่าไม่เก็บกวาดด้วย → แถวเก่าที่ควรถูกลบยังอยู่ → รอบหน้าเทียบ
+    //       ก็ยังเจอว่าหายเยอะเท่าเดิม → **ติดกับดักตัวเองไปเรื่อยๆ ไม่มีวันหลุด**
+    //       ผลจริง: นักเรียนได้ข้อความ "พรุ่งนี้มีคาบเรียน" ของคาบที่ไม่มีอยู่จริงแล้ว ไปตลอด
+    //
+    // ทำไมเดิมถึงตั้งใจให้ข้าม: กันเคส Google ตอบข้อมูลไม่ครบ "ชั่วคราว" แล้วตารางสำเนาโดนล้างทิ้ง
+    //   → เจตนาถูกต้อง แต่ "ชั่วคราว" ต้องหายได้เองในรอบเดียว ไม่ใช่ค้างถาวร
+    //
+    // ตอนนี้: นับว่าเจอผิดปกติ "ติดกันกี่รอบแล้ว" เก็บไว้ในตาราง cron_state
+    //   รอบที่ 1 (และ 2) = อาจเป็นอาการชั่วคราวจริง → หยุดไว้ก่อน + เตือนครู **แค่รอบแรกรอบเดียว**
+    //   รอบที่ 3 ขึ้นไป (ผ่านไป ~40 นาทีแล้วยังเหมือนเดิม) = ไม่ใช่อาการชั่วคราว ของหายจริง
+    //     → ทำงานตามปกติ (เขียนใหม่ + เก็บกวาด) ไม่เตือนซ้ำ = หลุดจากกับดักได้เอง
+    //   กลับมาปกติเมื่อไหร่ = ล้างตัวนับทิ้ง พร้อมเตือนใหม่ได้ถ้าเกิดอีก
+    // ⚠️ ถ้ายังไม่ได้รัน supabase/sql/2026-08-01_cancel_add_guards.sql (ไม่มีตาราง cron_state)
+    //    ระบบจะถอยไปทำงานแบบเดิมทุกอย่างโดยอัตโนมัติ (ไม่พัง แต่กับดักกับ LINE ซ้ำยังอยู่)
+    const ANOMALY_KEY = 'calendar_sync_anomaly';
+    const ANOMALY_ROUNDS_BEFORE_ACCEPT = 3; // เจอติดกันครบเท่านี้รอบ = ยอมรับว่าของหายจริง
+    let anomalyStrikes = 0, anomalyStateOk = true;
+    {
+      const { data: stRow, error: stErr } = await supabase.from('cron_state').select('value').eq('key', ANOMALY_KEY).maybeSingle();
+      if (stErr) {
+        anomalyStateOk = false;
+        console.error('[calendar-schedule-sync-cron] ⚠️ อ่านตาราง cron_state ไม่ได้ (' + stErr.message + ') → ถอยไปใช้พฤติกรรมเดิม '
+          + '(ข้ามทุกรอบที่ผิดปกติ + เตือน LINE ซ้ำ). รัน supabase/sql/2026-08-01_cancel_add_guards.sql เพื่อเปิดตัวกันกับดักนี้');
+      } else if (stRow && stRow.value && typeof stRow.value.strikes === 'number') {
+        anomalyStrikes = stRow.value.strikes;
+      }
+    }
+    async function saveAnomalyStrikes(n) {
+      if (!anomalyStateOk) return;
+      const { error: e } = await supabase.from('cron_state')
+        .upsert({ key: ANOMALY_KEY, value: { strikes: n }, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (e) console.error('[calendar-schedule-sync-cron] ⚠️ บันทึกตัวนับความผิดปกติไม่สำเร็จ:', e.message);
+    }
+
     let dropAlertSent = false;
+    let anomalyAccepted = false;
     if (isAnomalousDrop) {
-      console.error('[calendar-schedule-sync-cron] ⚠️ จำนวนคาบหายผิดปกติ (30 วันข้างหน้า): ก่อน=' + beforeCount + ' หลัง=' + rowsInWindow + ' (หาย ' + dropped + ' แถว, ' + Math.round((dropped / beforeCount) * 100) + '%) — ข้ามรอบนี้ ไม่ลบ/ไม่เขียนทับ เก็บข้อมูลรอบก่อนหน้าไว้ก่อน');
-      const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
-      const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
-      if (channelToken && teacherUserId) {
-        try {
-          await fetch('https://api.line.me/v2/bot/message/push', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
-            body: JSON.stringify({
-              to: teacherUserId,
-              messages: [{ type: 'text', text: '⚠️ ตารางเรียนหายผิดปกติ (auto-sync, ภายใน 30 วัน)\nก่อน: ' + beforeCount + ' คาบ → รอบนี้เจอ: ' + rowsInWindow + ' คาบ (หาย ' + dropped + ' คาบ)\n\nGoogle Calendar ตัวจริงไม่ได้ถูกแตะ ข้อมูลยังอยู่ครบ — รอบนี้ระบบข้ามการอัปเดตตารางสำเนาไปก่อน (ของเดิมยังอยู่) เพราะจับคู่ชื่อ/ดึงข้อมูลรอบนี้อาจพลาด แนะนำเปิดเว็บเช็คตารางเรียนอีกที' }],
-            }),
-          });
-          dropAlertSent = true;
-        } catch (e) { console.error('[calendar-schedule-sync-cron] แจ้งเตือนครูไม่สำเร็จ:', e); }
+      const strikesNow = anomalyStateOk ? anomalyStrikes + 1 : 1;
+      await saveAnomalyStrikes(strikesNow);
+      anomalyAccepted = anomalyStateOk && strikesNow >= ANOMALY_ROUNDS_BEFORE_ACCEPT;
+      console.error('[calendar-schedule-sync-cron] ⚠️ จำนวนคาบหายผิดปกติ (30 วันข้างหน้า): ก่อน=' + beforeCount + ' หลัง=' + rowsInWindow
+        + ' (หาย ' + dropped + ' แถว, ' + Math.round((dropped / beforeCount) * 100) + '%) — เจอติดกันรอบที่ ' + strikesNow
+        + (anomalyAccepted ? ' → ไม่ใช่อาการชั่วคราวแล้ว ทำงานตามปกติต่อ (เขียนใหม่ + เก็บกวาด)' : ' → ข้ามรอบนี้ ไม่ลบ/ไม่เขียนทับ เก็บข้อมูลรอบก่อนหน้าไว้ก่อน'));
+
+      // เตือน LINE **เฉพาะรอบแรกที่เจอ** เท่านั้น (รอบถัดๆ ไปไม่เตือนซ้ำ กันโควตาฟรีหมด)
+      if (strikesNow === 1) {
+        const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
+        const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
+        if (channelToken && teacherUserId) {
+          try {
+            await fetch('https://api.line.me/v2/bot/message/push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+              body: JSON.stringify({
+                to: teacherUserId,
+                // ⚠️ ห้ามสัญญาว่า "ส่งครั้งเดียว" ถ้าตัวนับใช้งานไม่ได้ (ยังไม่ได้รัน SQL) — จะกลายเป็นโกหก
+                //    เพราะในสถานะนั้นระบบจะเตือนซ้ำทุกรอบเหมือนเดิมจริงๆ
+                messages: [{ type: 'text', text: '⚠️ ตารางเรียนหายผิดปกติ (auto-sync, ภายใน 30 วัน)\nก่อน: ' + beforeCount + ' คาบ → รอบนี้เจอ: ' + rowsInWindow + ' คาบ (หาย ' + dropped + ' คาบ)\n\nGoogle Calendar ตัวจริงไม่ได้ถูกแตะ ข้อมูลยังอยู่ครบ — รอบนี้ระบบข้ามการอัปเดตตารางสำเนาไปก่อน (ของเดิมยังอยู่) เพราะจับคู่ชื่อ/ดึงข้อมูลรอบนี้อาจพลาด แนะนำเปิดเว็บเช็คตารางเรียนอีกที\n\n' + (anomalyStateOk ? '(ข้อความนี้ส่งครั้งเดียวเท่านั้น ถ้าอีก ~40 นาทียังเหมือนเดิม ระบบจะถือว่าคาบหายไปจริงแล้วอัปเดตตารางตามนั้น)' : '⚠️ (ยังไม่ได้รัน supabase/sql/2026-08-01_cancel_add_guards.sql → ข้อความนี้จะส่งซ้ำทุก 20 นาทีจนกว่าจะหายเอง)') }],
+              }),
+            });
+            dropAlertSent = true;
+          } catch (e) { console.error('[calendar-schedule-sync-cron] แจ้งเตือนครูไม่สำเร็จ:', e); }
+        }
       }
 
-      return new Response(JSON.stringify({
-        ok: true,
-        skipped: true,
-        reason: 'anomalous_drop',
-        events_checked: events.length,
-        students_checked: (students || []).length,
-        matched_rows: rows.length,
-        before_count_30d: beforeCount,
-        after_count_30d: rowsInWindow,
-        drop_alert_sent: dropAlertSent,
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      // 🔴 ครบกำหนดแล้ว = กำลังจะเขียนทับ + ลบแถวเก่าจริงๆ → ต้องบอกครูอีกครั้ง ห้ามทำเงียบ
+      //    (ตรวจซ้ำ 2026-08-01: เดิมเตือนแค่รอบแรกอย่างเดียว ตอนที่ "ยังไม่ได้ลบอะไร"
+      //     แล้วรอบที่ลบจริงกลับเงียบสนิท = ผิดกฎ RELIABILITY FIRST ข้อ "ห้ามเงียบ")
+      if (anomalyAccepted) {
+        const chTok2 = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
+        const teachId2 = Deno.env.get('LINE_TEACHER_USER_ID');
+        if (chTok2 && teachId2) {
+          try {
+            await fetch('https://api.line.me/v2/bot/message/push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + chTok2 },
+              body: JSON.stringify({ to: teachId2, messages: [{ type: 'text', text: 'ℹ️ ตารางเรียนที่หายไปเมื่อกี้ — ผ่านมา ~40 นาทีแล้วยังหายเหมือนเดิม\nระบบถือว่า "คาบหายไปจริง" แล้ว และอัปเดตตารางสำเนาตามที่เห็นใน Google Calendar ตอนนี้ (เหลือ ' + rowsInWindow + ' คาบใน 30 วันข้างหน้า)\n\nGoogle Calendar ตัวจริงไม่ได้ถูกแตะ — ถ้าคาบพวกนั้นควรจะยังอยู่ ให้เช็คว่าหัวข้อคาบใน Calendar ยังมีชื่อนักเรียนตรงกับในระบบไหม' }] }),
+            });
+          } catch (e) { console.error('[calendar-schedule-sync-cron] แจ้งเตือนครู (รอบยอมรับ) ไม่สำเร็จ:', e); }
+        }
+      }
+
+      if (!anomalyAccepted) {
+        return new Response(JSON.stringify({
+          ok: true,
+          skipped: true,
+          reason: 'anomalous_drop',
+          anomaly_strikes: strikesNow,
+          events_checked: events.length,
+          students_checked: (students || []).length,
+          matched_rows: rows.length,
+          before_count_30d: beforeCount,
+          after_count_30d: rowsInWindow,
+          drop_alert_sent: dropAlertSent,
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      // anomalyAccepted = true → ไหลลงไปทำงานตามปกติข้างล่าง (นี่คือทางออกจากกับดัก)
+    } else if (anomalyStrikes > 0) {
+      await saveAnomalyStrikes(0); // กลับมาปกติแล้ว ล้างตัวนับ พร้อมเตือนใหม่ถ้าเกิดอีก
     }
 
     // 🔴 2026-07-20 แก้บั๊กสำคัญ (Lin เจอ：ข้อความเตือนก่อนเรียนส่งซ้ำ 2 รอบทุกครั้ง — ทั้งเตือน 24 ชม.
@@ -290,6 +365,8 @@ serve(async (req) => {
       before_count_30d: beforeCount,
       after_count_30d: rowsInWindow,
       drop_alert_sent: dropAlertSent,
+      // 2026-08-01: บอกด้วยว่ารอบนี้เป็น "รอบที่ยอมรับว่าคาบหายจริงแล้ว" ไหม (หลุดจากกับดักเมื่อไหร่จะเห็นตรงนี้)
+      anomaly_accepted: anomalyAccepted,
       error: upsertError ? upsertError.message : null,
     }), { status: upsertError ? 500 : 200, headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
