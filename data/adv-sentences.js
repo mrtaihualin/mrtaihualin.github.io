@@ -95,7 +95,7 @@
       ]
     },
     {
-      th: 'พรุ่งนี้เราไปด้วยกันนะ', zh: '明天我們一起去喔', readingTH: 'พรุ่ง-นี้-เรา-ไป-ด้วย-กัน-นะ', wc: 7, politeF: 'ค่ะ',
+      th: 'พรุ่งนี้เราไปด้วยกันนะ', zh: '明天我們一起去喔', readingTH: 'พรุ่ง-นี้-เรา-ไป-ด้วย-กัน-นะ', wc: 7, politeF: 'คะ',
       words: [
       { th: 'พรุ่งนี้', zh: '明天', syls: [{cons:'พ', cluster:'ร', vowel:'อุ', tone:'่', final:'ง', tone_name:'โท', th:'พรุ่ง', en:'phrûng'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'เรา', zh: '我們', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
@@ -240,7 +240,7 @@
       ]
     },
     {
-      th: 'ไม่ใส่ผักชีนะ', zh: '不要放香菜喔', readingTH: 'ไม่-ใส่-ผัก-ชี-นะ', wc: 5, politeF: 'ค่ะ',
+      th: 'ไม่ใส่ผักชีนะ', zh: '不要放香菜喔', readingTH: 'ไม่-ใส่-ผัก-ชี-นะ', wc: 5, politeF: 'คะ',
       words: [
       { th: 'ไม่', zh: '不要', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
       { th: 'ใส่', zh: '放／加', syls: [{cons:'ส', vowel:'ใอ', tone:'่', tone_name:'เอก', th:'ใส่', en:'sài'}] },

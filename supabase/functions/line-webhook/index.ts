@@ -977,6 +977,8 @@ async function handleTeacherTextMessage(supabase, channelToken, event) {
 serve(async (req) => {
   // LINE จะยิง GET มาตอนกด "Verify" ในหน้า console ครั้งแรก ให้ตอบ 200 เฉยๆ ก็พอ
   if (req.method !== 'POST') {
+    // 2026-08-01 เพิ่ม log — จะได้แยกออกว่า "ที่บูตขึ้นมาเมื่อกี้" คือ LINE กด Verify หรือคนกดปุ่มจริง
+    console.log('[line-webhook] ℹ️ ได้รับ request ที่ไม่ใช่ POST (' + req.method + ') → ตอบ ok เฉยๆ (ปกติคือตอน LINE กด Verify)');
     return new Response('ok', { status: 200 });
   }
 
@@ -1000,11 +1002,23 @@ serve(async (req) => {
   {
     const sig = req.headers.get('x-line-signature') || '';
     const ok = await verifySignature(rawBody, sig, channelSecret);
-    if (!ok) return new Response('invalid signature', { status: 401 });
+    // 🔴 2026-08-01 เพิ่ม log (เจอจริง: กดปุ่มแล้วเงียบสนิท หาสาเหตุไม่ได้เลย)
+    //   เดิมบรรทัดนี้ return 401 แบบ "ไม่พูดอะไรสักคำ" → ใน log เห็นแค่ booted/shutdown
+    //   แยกไม่ออกเลยว่า "LINE ไม่เคยยิงมา" กับ "ยิงมาแล้วแต่ลายเซ็นไม่ผ่าน" ซึ่งแก้คนละวิธีกันคนละเรื่อง
+    //   ⚠️ ห้าม log ตัว secret หรือลายเซ็นเต็มๆ — log แค่ "มีหัวลายเซ็นมาไหม / ยาวเท่าไหร่" ก็พอวินิจฉัยแล้ว
+    if (!ok) {
+      console.error('[line-webhook] 🛑 ลายเซ็นไม่ผ่าน — ปฏิเสธ (401) ไม่ได้ทำอะไรเลย'
+        + ' · มีหัว x-line-signature ไหม: ' + (sig ? 'มี (' + sig.length + ' ตัวอักษร)' : 'ไม่มี')
+        + ' · ขนาด body: ' + rawBody.length + ' ตัวอักษร'
+        + ' · แปลว่าค่า LINE_CHANNEL_SECRET ไม่ตรงกับ channel นี้ (หรือมีช่องว่าง/ขึ้นบรรทัดใหม่ติดมาตอนตั้งค่า)');
+      return new Response('invalid signature', { status: 401 });
+    }
   }
 
   let payload;
   try { payload = JSON.parse(rawBody); } catch (e) {
+    // 2026-08-01 เพิ่ม log ด้วยเหตุผลเดียวกับด้านบน — เดิมเงียบสนิท
+    console.error('[line-webhook] 🛑 อ่าน JSON ที่ส่งมาไม่ได้ — ปฏิเสธ (400):', e && e.message ? e.message : e);
     return new Response('bad json', { status: 400 });
   }
 
