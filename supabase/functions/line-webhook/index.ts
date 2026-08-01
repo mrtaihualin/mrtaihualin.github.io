@@ -1043,6 +1043,10 @@ serve(async (req) => {
       const params = new URLSearchParams(data);
       const action = params.get('action');
       actionForLog = action || 'unknown';
+      // 🔴 2026-08-01 เพิ่ม log (เจอจริง: กดปุ่มแล้วเงียบสนิท ไล่หาสาเหตุไม่ได้)
+      //   ปุ่มที่ระบบไม่รู้จักจะตกไปที่ท้ายสุด "ไม่ทำอะไรเลย" แบบเงียบๆ (ดูคอมเมนต์ท้าย loop)
+      //   บรรทัดนี้ทำให้รู้ทันทีว่า "ปุ่มถูกกดจริง และชื่อปุ่มที่ส่งมาคืออะไร"
+      console.log('[line-webhook] 📩 ได้รับการกดปุ่ม action=' + actionForLog + ' · data=' + String(data).slice(0, 200));
 
       // 2026-07-19 移除（Lin 確認過 LINE 裡已經沒有任何舊版 approve/deny 按鈕的訊息了）：
       // 原本這裡有 action==='approve'||'deny' 的舊版分支，是 2026-07-10 之前發送的按鈕，
@@ -2509,6 +2513,13 @@ serve(async (req) => {
       }
 
       // action 未知的類型 → 忽略，不讓整個 webhook 掛掉
+      // 🔴 2026-08-01 เพิ่ม log + ตอบกลับ (เจอจริง: ปุ่มเงียบสนิทหาสาเหตุไม่เจอ)
+      //   เดิมมาถึงตรงนี้แล้วจบเงียบๆ ไม่มี log ไม่มีข้อความ = แยกไม่ออกจาก "ระบบไม่ได้ทำงานเลย"
+      //   ผิดกฎ RELIABILITY FIRST ข้อ "ห้ามเงียบ" — ครูกดปุ่มแล้วต้องได้คำตอบเสมอ ไม่ว่าผลจะเป็นอะไร
+      console.error('[line-webhook] ⚠️ ไม่รู้จักปุ่มนี้ (action=' + actionForLog + ') → ไม่ได้ทำอะไรเลย');
+      if (channelToken && event.replyToken) {
+        await replyLine(channelToken, event.replyToken, 'ℹ️ 系統不認得這顆按鈕（' + actionForLog + '），沒有做任何動作。可能是很舊的訊息，請到網站處理。');
+      }
     } catch (e) {
       // 2026-07-19 加（稽核發現，RED#3）：以前這裡完全靜默——如果 Calendar 已經刪除成功，
       // 但後面存資料庫/回覆 LINE 那段忽然發生未預期的錯誤，老師畫面上什麼都不會看到，
