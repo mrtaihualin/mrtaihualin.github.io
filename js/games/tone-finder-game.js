@@ -1494,7 +1494,9 @@ function tfAfterForcedRevealSyl(idx, tone) {
   var results = S.sylResults || {};
   results[idx] = { tone: tone };
   var syls = S.syllables;
-  var parentWord = S.parentWord || (syls ? syls.join('') : S.word);
+  // Lin 2026-08-02: ใช้ fallback แบบเดียวกับ nextSyllable() — ถ้า parentWord หาย ลองต่อตัวสะกดจริงจาก tfCurEntry() ก่อน ไม่ใช่ต่อคำอ่านดิบๆ
+  var _curEntryForParent2 = tfCurEntry();
+  var parentWord = S.parentWord || ((syls && _curEntryForParent2 && _curEntryForParent2.syls && _curEntryForParent2.syls.length === syls.length) ? _curEntryForParent2.syls.map(function(sy){ return sy.th; }).join('') : (syls ? syls.join('') : S.word));
   if (idx + 1 < syls.length) {
     if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
     var sylStep = session ? 'session-guess' : 's1';
@@ -1794,11 +1796,13 @@ function navigate(nextStep, label, toneNum) {
   // Apply new state
   var newPath = label ? S.path.concat([label]) : S.path.slice();
   var newTone = (toneNum !== undefined) ? toneNum : null;
-  S = { word:S.word, step:nextStep, path:newPath, tone:newTone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults };
+  // Lin 2026-08-02 (บั๊กจริงที่ Lin เจอ — จุดที่ 2 ของบั๊กเดียวกับ goToResult()): จุดนี้ก็ลืมใส่ parentWord ต่อเหมือนกัน
+  //   navigate() คือทางที่ใช้จริงบ่อยกว่า goToResult() อีก (ทุกครั้งที่ตอบผิด/กด推導 ก็ผ่านจุดนี้) — ไม่ใส่ไว้ = คำเต็มด้านบนพัง (โชว์คำอ่านผิด) ได้ง่ายกว่าที่คิด
+  S = { word:S.word, step:nextStep, path:newPath, tone:newTone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults, parentWord:S.parentWord };
   // Lin 2026-07-04: เข้าขั้น推導ใหม่ (s1/s2*) = รีเซ็ตสิทธิ์ free peek รายขั้น (กดผิด/แอบดูในขั้นก่อนไม่ติดมา)
   if (session && /^s[12]/.test(nextStep)) TF_WORDSCORE.onNextStep(session);
   // Save to history
-  hist.push({ step:S.step, path:S.path.slice(), tone:S.tone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults });
+  hist.push({ step:S.step, path:S.path.slice(), tone:S.tone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults, parentWord:S.parentWord });
   histPos = hist.length-1;
   // สเตจ 1: ผ่าน推導มาถึงผลลัพธ์ → ให้คะแนนฐาน 50 หักตามที่กดผิด (กันให้คะแนนซ้ำด้วย currentWordScored)
   if (nextStep === 'result' && session && !session.currentWordScored) {
@@ -3222,7 +3226,7 @@ function stepResult() {
     hist=[]; histPos=-1;
     hist.push({step:'s1',path:[w],tone:null});
     histPos=0;
-    S={word:w,step:'s1',path:[w],tone:null};
+    S={word:w,step:'s1',path:[w],tone:null,parentWord:S.parentWord};
     render();
   });
 
