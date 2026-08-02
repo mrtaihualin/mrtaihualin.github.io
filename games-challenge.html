@@ -34,14 +34,14 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/games/game-account.js?v=3"></script>
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=10"></script><!-- v10: เพิ่มสาขาเกม 'challenge' — Lin 2026-08-01 (เดิมชื่อ 'mix' ก่อนเปลี่ยนชื่อไฟล์ mix.html→games-challenge.html) -->
+<script defer src="js/games/reading-auth.js?v=11"></script><!-- v10: เพิ่มสาขาเกม 'challenge' — Lin 2026-08-01 (เดิมชื่อ 'mix' ก่อนเปลี่ยนชื่อไฟล์ mix.html→games-challenge.html) -->
 <script defer src="js/games/tone-server.js?v=1"></script>
 <script src="js/games/word-vault.js"></script>
 <script src="data/audio-manifest.js?v=2"></script>
 <script src="data/audio-disabled.js?v=1"></script>
 <script src="js/games/word-audio.js?v=3"></script>
 <script src="js/games/word-menu.js?v=8"></script>
-<script src="data/words-data.js?v=9"></script>
+<script src="js/games/game-content-client.js?v=1"></script>
 <script src="data/tone-engine.js?v=3"></script>
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
@@ -502,6 +502,8 @@ body:not(.tg-kbd-open) .tkbd{display:none !important;}
   <div class="gs-divider"></div>
   <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'challenge_game'})}catch(e){}">🧱 造句練習室</a>
   <div class="gs-divider"></div>
+  <a class="gs-tab" href="listening-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'listening_game',from:'challenge_game'})}catch(e){}">🎧 聽力練習室</a>
+  <div class="gs-divider"></div>
   <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'challenge_game'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>
 
@@ -510,7 +512,7 @@ body:not(.tg-kbd-open) .tkbd{display:none !important;}
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="js/games/games-challenge-app.js?v=1"></script>
+<script>GameContentLoader.boot(['js/games/games-challenge-app.js?v=1']);</script>
 <script src="js/core/shared.min.js?v=16"></script>
 <!-- mount() ต้องรันหลัง shared.min.js เหมือนเกมเดี่ยวทุกเกม (เดิมรันก่อน — หน้าเดียวในเว็บที่ทำแบบนี้) -->
 <script>document.addEventListener('DOMContentLoaded',function(){MixGame.mount();});</script>

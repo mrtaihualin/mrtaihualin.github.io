@@ -26,6 +26,12 @@
 <link rel="stylesheet" href="css/shared.css?v=14">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+<!-- Lin 2026-08-02: เพิ่มแถบสถานะผู้ใช้ (badge ล็อกอิน) ให้เหมือนหน้าเกมอื่น — ใช้ระบบกลางเดียวกันทุกอย่าง ไม่เขียนใหม่ -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/core/supabase-config.js?v=5"></script>
+<script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/shared.js -->
+<script defer src="js/core/auth-widget.js?v=2"></script>
+<script defer src="js/games/reading-auth.js?v=11"></script>
 <script src="js/games/word-vault.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -87,6 +93,8 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 <body>
 <div class="vault-page">
 
+  <div id="rg-login-slot" style="display:flex;align-items:center;margin-bottom:12px;"></div>
+
   <div class="vault-header">
     <!-- ปุ่มกลับ: ถ้ามีประวัติให้ back ปกติ · เปิดหน้านี้ตรงๆ (ไม่มีประวัติ) → ไป games.html กันติดตัน — LIN 2026-07-02 -->
     <a class="vault-back" href="games.html" onclick="if(document.referrer&&history.length>1){history.back();return false;}">← 返回</a>
@@ -118,6 +126,8 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
   <a class="gs-tab" href="word-order.html">🧩 語序練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="lego.html">🧱 造句練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="listening-game.html">🎧 聽力練習室</a>
   <div class="gs-divider"></div>
   <span class="gs-tab gs-active">🔖 單字庫</span>
 </div>

@@ -94,6 +94,7 @@
     if (/word-order/i.test(p)) return 'word_order';
     if (/lego/i.test(p)) return 'lego';
     if (/games-challenge/i.test(p) || /\bmix/i.test(p)) return 'challenge';
+    if (/vault/i.test(p)) return 'vault'; // Lin 2026-08-02: หน้า單字庫ไม่ใช่เกมมีคะแนน กันปุ่ม🏆ในbadgeชี้ผิดไปreading-board.html
     return 'reading';
   }
   function boardHref() {
@@ -103,6 +104,7 @@
     if (g === 'word_order') return 'word-order-board.html';
     if (g === 'lego') return 'lego-board.html';
     if (g === 'challenge') return 'mix-board.html';
+    if (g === 'vault') return 'games.html'; // ไม่มีกระดานคะแนนของตัวเอง ส่งไปหน้าเลือกเกมแทน
     return 'reading-board.html';
   }
 

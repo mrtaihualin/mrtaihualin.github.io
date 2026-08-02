@@ -118,7 +118,15 @@ serve(async (req) => {
     while (evData.nextPageToken && pageGuard < 20) {
       pageGuard++;
       const pageRes = await fetch(calUrl + '&pageToken=' + encodeURIComponent(evData.nextPageToken), { headers: { Authorization: 'Bearer ' + accessToken } });
-      if (!pageRes.ok) break;
+      // 🔴 2026-08-02 แก้ (รอบตรวจ 3 ระบบ Q2) — เดิม `break` เงียบสนิท ไม่มี log สักบรรทัด
+      //   ผลจริง: คาบหน้าที่ 2 เป็นต้นไปหายทั้งหมด → ถ้าจำนวนที่หายไม่ถึงเกณฑ์ด่านกันคาบหาย
+      //   (ต้อง ≥3 แถว และ ≥30%) ระบบจะ **ลบคาบพวกนั้นออกจากตารางเงียบๆ** โดยไม่มีใครรู้เลย
+      //   ตอนนี้: โยน error ออกไปเลย = รอบนี้ไม่แตะฐานข้อมูลอะไรทั้งสิ้น (ตัวดักด้านนอกรับไว้แล้ว)
+      //   ดีกว่าทำงานต่อด้วยข้อมูลที่รู้อยู่แล้วว่าไม่ครบ (RELIABILITY FIRST)
+      if (!pageRes.ok) {
+        throw new Error('ดึงคาบหน้าถัดไปจาก Google ไม่สำเร็จ (' + pageRes.status + ') — รอบนี้ข้อมูลไม่ครบ จึงไม่แตะตารางเรียนเลย: '
+          + (await pageRes.text().catch(() => '')).slice(0, 200));
+      }
       evData = await pageRes.json();
       events = events.concat(evData.items || []);
     }
@@ -175,6 +183,27 @@ serve(async (req) => {
       rowMap.set(key, { token: m.token, lesson_date: m.isoDate, start_time: m.startTime || '', end_time: m.endTime || '', title: m.name, calendar_event_id: m.eventId || null });
     });
     const rows = Array.from(rowMap.values());
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 🔴 2026-08-02 ย้ายด่านนี้ขึ้นมา (รอบตรวจ 3 ระบบ ข้อ 4.2) — เดิมอยู่ "หลัง" บล็อกความผิดปกติ
+    //
+    // 🕳️ กับดักที่ของเดิมสร้างขึ้น:
+    //   จับคู่ชื่อไม่ได้เลยสักคาบ (ชื่อใน Calendar เพี้ยน / ตารางนักเรียนว่าง) → rows = 0
+    //   → rowsInWindow = 0 → นับเป็น "คาบหายผิดปกติ" → strike เดินขึ้นทุกรอบ
+    //   → ครบ 3 รอบ ระบบ "ยอมรับว่าคาบหายจริง" แล้ว **ส่ง LINE บอกครูว่าอัปเดตตารางแล้ว**
+    //   → แต่พอไหลลงมาถึงด่านนี้ (ที่เดิมอยู่ข้างล่าง) กลับ return skip ไม่ได้อัปเดตอะไรเลย
+    //   → รอบถัดไป strike = 4, 5, 6... ยังเข้าเงื่อนไข ">= 3" ตลอด และบล็อกนั้นไม่มีตัวกันส่งซ้ำ
+    //   = **ข้อความเท็จยิงซ้ำทุก 20 นาที ตลอดกาล** (~72 ครั้ง/วัน) กินโควตา LINE ฟรีหมดในวันเดียว
+    //
+    // ✅ ย้ายขึ้นมาก่อน = "จับคู่ไม่ได้เลย" จบตั้งแต่ตรงนี้ ไม่เข้าไปยุ่งกับตัวนับความผิดปกติเลย
+    //    (เคสนี้ไม่ใช่ "คาบหาย" แต่คือ "อ่านข้อมูลไม่ได้" ซึ่งคนละเรื่องกัน)
+    // ════════════════════════════════════════════════════════════════════════
+    if (!rows.length) {
+      console.warn('[calendar-schedule-sync-cron] รอบนี้จับคู่คาบไม่ได้เลย → ไม่แตะฐานข้อมูล (กันลบตารางทิ้งทั้งหมด)');
+      return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'no_matched_rows', events_checked: events.length }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // 2026-07-19 加（Lin สั่ง）：ก่อนลบของเก่า เก็บ "จำนวนเดิม" ไว้เทียบก่อน — ฟังก์ชันนี้ลบตารางอนาคต
     // ทั้งหมดแล้วเขียนใหม่ทุกรอบ (ทุก 15-20 นาที) ถ้ารอบไหนจับคู่ชื่อพลาดผิดปกติ (เช่น Calendar API
@@ -241,7 +270,17 @@ serve(async (req) => {
       if (!anomalyStateOk) return;
       const { error: e } = await supabase.from('cron_state')
         .upsert({ key: ANOMALY_KEY, value: { strikes: n }, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-      if (e) console.error('[calendar-schedule-sync-cron] ⚠️ บันทึกตัวนับความผิดปกติไม่สำเร็จ:', e.message);
+      if (e) {
+        // 🔴 2026-08-02 แก้ (รอบตรวจ 3 ระบบ ข้อ 4.3) — เดิมแค่ console.error แล้วปล่อยผ่าน
+        //   กับดักที่เกิด: อ่านตารางได้ (anomalyStateOk ยัง true) แต่เขียนไม่ได้ (RLS/สิทธิ์)
+        //   → ตัวนับค้างที่ 0 ตลอด → strikesNow = 1 ทุกรอบ → ไม่มีวันถึง 3
+        //   = ตารางไม่ถูกอัปเดตตลอดกาล + LINE เตือนทุกรอบ (เพราะ strikesNow === 1 เสมอ)
+        //   แถมข้อความยังเขียนว่า「ส่งครั้งเดียวเท่านั้น」= โกหกครู
+        //   ตอนนี้: เขียนไม่ได้ = ถือว่าตัวนับใช้ไม่ได้ → ข้อความจะบอกครูตรงๆ ว่าจะเตือนซ้ำ
+        anomalyStateOk = false;
+        console.error('[calendar-schedule-sync-cron] ⚠️ บันทึกตัวนับความผิดปกติไม่สำเร็จ → ถือว่าตัวนับใช้ไม่ได้ '
+          + '(ข้อความเตือนจะบอกครูว่าจะส่งซ้ำ ไม่โกหกว่าส่งครั้งเดียว):', e.message);
+      }
     }
 
     let dropAlertSent = false;
@@ -278,7 +317,12 @@ serve(async (req) => {
       // 🔴 ครบกำหนดแล้ว = กำลังจะเขียนทับ + ลบแถวเก่าจริงๆ → ต้องบอกครูอีกครั้ง ห้ามทำเงียบ
       //    (ตรวจซ้ำ 2026-08-01: เดิมเตือนแค่รอบแรกอย่างเดียว ตอนที่ "ยังไม่ได้ลบอะไร"
       //     แล้วรอบที่ลบจริงกลับเงียบสนิท = ผิดกฎ RELIABILITY FIRST ข้อ "ห้ามเงียบ")
-      if (anomalyAccepted) {
+      // 🔴 2026-08-02 เพิ่ม `strikesNow === ANOMALY_ROUNDS_BEFORE_ACCEPT` (รอบตรวจ 3 ระบบ ข้อ 4.2)
+      //   เดิมเงื่อนไขเป็นแค่ `if (anomalyAccepted)` ซึ่งเป็นจริงตั้งแต่รอบที่ 3 ไปเรื่อยๆ (4, 5, 6...)
+      //   และบล็อกนี้ **ไม่มีตัวกันส่งซ้ำเลย** ต่างจากบล็อกเตือนรอบแรกที่เช็ค `strikesNow === 1`
+      //   → ถ้าสถานการณ์ยังผิดปกติต่อเนื่อง ครูจะได้ข้อความเดิมทุก 20 นาทีไม่มีวันจบ
+      //   ตอนนี้: ส่ง "รอบที่ 3 รอบเดียว" เท่านั้น (รอบที่ยอมรับจริงรอบแรก)
+      if (anomalyAccepted && strikesNow === ANOMALY_ROUNDS_BEFORE_ACCEPT) {
         const chTok2 = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
         const teachId2 = Deno.env.get('LINE_TEACHER_USER_ID');
         if (chTok2 && teachId2) {
@@ -321,12 +365,8 @@ serve(async (req) => {
     //   "เขียนของใหม่ให้สำเร็จก่อน (upsert ทับเฉพาะ title/end_time/calendar_event_id ไม่แตะคอลัมน์
     //   เตือน เพราะไม่ได้ส่งค่าคอลัมน์เตือนเข้าไปใน payload เลย) แล้วค่อยลบเฉพาะแถวที่หายไปจาก
     //   Calendar จริงๆ ทีละ id" — ไม่มีวินาทีไหนที่ตารางว่าง และคอลัมน์เตือนของคาบที่ยังอยู่จะไม่ถูกแตะเลย
-    if (!rows.length) {
-      console.warn('[calendar-schedule-sync-cron] รอบนี้จับคู่คาบไม่ได้เลย → ไม่แตะฐานข้อมูล (กันลบตารางทิ้งทั้งหมด)');
-      return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'no_matched_rows', events_checked: events.length }), {
-        status: 200, headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    // 🗑️ 2026-08-02: ด่าน `if (!rows.length)` ที่เคยอยู่ตรงนี้ ถูกย้ายขึ้นไปไว้ "ก่อน" บล็อกความผิดปกติแล้ว
+    //    (ดูคอมเมนต์ยาวที่จุดใหม่) — ห้ามย้ายกลับลงมา จะกลายเป็นกับดักส่งข้อความเท็จซ้ำตลอดกาล
 
     let upsertError = null;
     {

@@ -35,7 +35,7 @@
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js/progress-sync.js/tone-finder-game.js -->
 <script defer src="js/games/game-account.js?v=3"></script><!-- v3: Phase 4 ล็อก — sync remote-authoritative + เลิก upsert (เซิร์ฟเวอร์เป็นเจ้าของดาว) -->
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=10"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="js/games/reading-auth.js?v=11"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
 <script defer src="js/games/tone-companion.js?v=1"></script><!-- ส่วนที่เกมเสียงใช้เฉพาะ: เซฟคะแนน tone_sessions + ปลดล็อกเหรียญ admin + ป๊อปอัพสำรวจก่อนออกจากหน้า -->
 <script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="js/score/progress-sync.js?v=2"></script>
@@ -44,8 +44,7 @@
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
-<script src="data/words-data.js?v=9"></script>
-<script src="data/adv-sentences.js?v=7"></script>
+<script src="js/games/game-content-client.js?v=1"></script>
 <script src="data/tone-engine.js?v=3"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1512,10 +1511,43 @@ document.addEventListener('contextmenu', function(e){
           <li>連續第一次答對 3／5／8 次 → <strong>×1.5／×2／×3</strong></li>
           <li>✨黃金字（約 18% 機率）答對再 <strong>×2</strong></li>
           <li>玩完一輪 <strong>+20</strong>，整輪都第一次就答對（perfect）再 <strong>+50</strong></li>
+          <li>玩完一輪可下載 📄 PDF 報告</li>
         </ul>
       </div>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，分數和進度都會幫你存起來，還可以在排行榜上看到自己進步了多少喔 ⭐</p>
-      <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">聲調其實是有規律的呢～想真正搞懂，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
+
+      <button onclick="var d=document.getElementById('tf-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';try{if(typeof gtag==='function')gtag('event','tone_finder_howto_detail_toggle',{category:'game',open:!open});}catch(e){}" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
+
+      <div id="tf-howto-detail" style="display:none;font-size:14.5px;color:#333;line-height:1.9;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
+        <div style="font-weight:700;color:#8B6310;margin:0 0 4px;">📚 三個等級</div>
+        <p style="margin:0 0 10px;"><strong>初級</strong>：單音節字為主。<strong>中級</strong>：2 音節以上的字。<strong>高級</strong>：整句話，猜完整句的聲調規則。三個等級都是每輪隨機出題（高級是一整句）。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🎵 怎麼推導聲調</div>
+        <p style="margin:0 0 10px;">看到泰文單字，會一步一步問你規則問題（子音類型、活音死音之類的），照著問題選答案，一步步推導出這個字的聲調。不確定也沒關係，先猜猜看，玩多了自然會有感覺。每一步答錯可以按「？」偷看一下，同一步第一次偷看不扣分，之後每次偷看扣 1 級分數。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡🔥 兩種模式</div>
+        <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：每一步會反白正確答案，方便熟悉規則——這個模式整輪都不計分、不算星星、不算複習進度，純粹拿來練習規則用。<strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己推導，答對才有分數。畫面上按鈕可以切換。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
+        <p style="margin:0 0 10px;">覺得這個字已經很熟，可按「已記得」跳過推導直接自測。不會加分、不會加星星，純粹標記「已精通」，用在複習系統。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
+        <p style="margin:0 0 10px;">點 🍚 圖示展開直式清單：讀音顯示・翻譯顯示・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・字體切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響推導或計分）。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔤 字母練習區</div>
+        <p style="margin:0 0 10px;">另外還有獨立的「字母練習區」，用一張張字卡練習子音、母音、尾音的發音，可以聽真人語音，跟主遊戲的推導模式是分開的功能。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章／連續天數勳章</div>
+        <p style="margin:0 0 10px;">星星是這個字經過複習真的「精通」了才拿到（跟其他遊戲共用），累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。這個遊戲另外還有「連續天數」勳章，照每天登入練習的連續天數解鎖：稻種（3天）→ 秧苗（7天）→ 幼穗（14天）→ 金穗（30天）→ 金色稻田（100天）。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 下載 PDF 報告</div>
+        <p style="margin:0 0 10px;">玩完一輪可以下載 PDF 報告，裡面有這輪總分、有沒有解鎖新勳章、每個字的表現（讀音／結果／得分），還有「弱點分析」列出需要加強的聲調規則。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
+        <p style="margin:0;">推導錯過或偷看過「？」的字，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。</p>
+      </div>
+
+      <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:16px 0 0;">聲調其實是有規律的呢～想真正搞懂，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
     </div>
   </div>
 
@@ -1601,7 +1633,7 @@ document.addEventListener('contextmenu', function(e){
 </div>
 
 <!-- ── SCRIPTS ── -->
-<script src="js/games/tone-finder-game.min.js?v=39"></script>
+<script>GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=40']);</script>
 
 <div style="height:44px;background:#0A0804;"></div>
 <footer>
@@ -1678,6 +1710,8 @@ document.addEventListener('contextmenu', function(e){
   <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'tone_finder'})}catch(e){}">🧩 語序練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'tone_finder'})}catch(e){}">🧱 造句練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="listening-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'listening_game',from:'tone_finder'})}catch(e){}">🎧 聽力練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'tone_finder'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>

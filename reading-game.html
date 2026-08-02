@@ -82,15 +82,14 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/reading-game-app.js -->
 <script defer src="js/games/game-account.js?v=3"></script>
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=10"></script>
+<script defer src="js/games/reading-auth.js?v=11"></script>
 <script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="js/games/word-vault.js"></script>
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
 <script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
-<script src="data/words-data.js?v=9"></script>
-<script src="data/adv-sentences.js?v=7"></script>
+<script src="js/games/game-content-client.js?v=1"></script>
 <script src="data/tone-engine.js?v=3"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -390,10 +389,40 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <li>中級 ×1.5、高級 ×2 · ✨黃金字全對 <strong>×2</strong> · 連對 3／5／8 次 <strong>×1.5／×2／×3</strong></li>
         <li>完成一輪 <strong>+20</strong>，全對再 <strong>+50</strong> · 💡「有提示」模式純練習、不計分</li>
         <li>拼完自動顯示拆解：子音／母音／尾音＋為什麼是這個聲調</li>
+        <li>每輪結束可下載 📄 PDF 報告</li>
       </ul>
     </div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐</p>
-    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">母音的種類有點多呢～想知道每個怎麼發音，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
+
+    <button onclick="var d=document.getElementById('rg-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';try{gtag('event','reading_game_howto_detail_toggle',{category:'game',open:!open})}catch(e){}" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
+
+    <div id="rg-howto-detail" style="display:none;font-size:14.5px;color:#333;line-height:1.9;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
+      <div style="font-weight:700;color:#8B6310;margin:0 0 4px;">📚 三個等級</div>
+      <p style="margin:0 0 10px;"><strong>初級</strong>：以單音節字為主。<strong>中級</strong>：以 2 音節以上的字為主，一次要拼好幾個音節。<strong>高級</strong>：整句話，一句一句拼、練習連續理解。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧩 怎麼拼字</div>
+      <p style="margin:0 0 10px;">畫面顯示要拼的字，下面是打散的零件（子音、母音、聲調符，有的字還有尾音）。點零件會自動填進對的格子，填錯了可以再點別的換掉。多音節字（中級／高級）畫面上方有一排音節切換鈕，可以自己選要先拼哪個音節。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡🔥 兩種模式</div>
+      <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：零件區會反白提示這一步該點哪個，方便剛學或想穩基礎時用——但只要看過提示的音節，那個音節這次會直接算 0 分，也不算進複習進度。<strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己拼，答對才有分數、複習進度。畫面上按鈕可以隨時切換兩種模式。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
+      <p style="margin:0 0 10px;">覺得這個字已經很熟，可按「已記得」跳過提示直接自測。不會加分、不會加星星，就算全拼對也一樣——純粹標記「已精通」，用在複習系統。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
+      <p style="margin:0 0 10px;">點 🍚 圖示展開直式清單：🔊發音（AI 語音）・讀音顯示・英文讀音・翻譯顯示・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・字體切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響拼字或計分）。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章</div>
+      <p style="margin:0 0 10px;">星星不是拼對一次就有，是這個字經過複習、真的「精通」了才拿到（跟其他遊戲共用）。星星累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 下載 PDF 報告</div>
+      <p style="margin:0 0 10px;">每輪結束可以按「下載 PDF 報告」，裡面有這輪總分、答對題數、每個字的狀況（是否精通、用過提示、拼錯幾次、得幾分、下次複習日期），還有「弱點分析」列出這輪拼錯最多的字。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
+      <p style="margin:0;">拼錯或用過提示的字，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。不登入的話，每次進來都是全部字重新開始，沒有記憶功能。</p>
+    </div>
+
+    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:16px 0 0;">母音的種類有點多呢～想知道每個怎麼發音，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
   </div>
 </div>
 
@@ -593,7 +622,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<script src="js/games/reading-game-app.min.js?v=22"></script>
+<script>GameContentLoader.boot(['js/games/reading-game-app.min.js?v=22']);</script>
 </div><!-- /.v3-page -->
 <script src="js/core/shared.min.js?v=16"></script>
 
@@ -618,6 +647,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'reading_game'})}catch(e){}">🧩 語序練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'reading_game'})}catch(e){}">🧱 造句練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="listening-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'listening_game',from:'reading_game'})}catch(e){}">🎧 聽力練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'reading_game'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>

@@ -2150,18 +2150,28 @@ function render() {
       else { tfSylStripEl.style.display = 'none'; tfSylStripEl.innerHTML = ''; }
     }
     tfSyncParticleBtn(); // Lin 2026-07-31: ปุ่มครับ/ค่ะ/คะ ในเมนู🍚 — โชว์เฉพาะตอนเล่น高級句子เท่านั้น (ปุ่มจริงอยู่นอก banner ต้องซิงค์ทุกครั้งที่ render)
+    // Lin 2026-08-02: จุดเดียวกับบั๊กที่แก้ใน stepResult() แต่เป็นช่วง "ก่อนตอบ" — S.word ของพยางค์ที่ 2 ขึ้นไปคือคำอ่าน ไม่ใช่ตัวสะกดจริง
+    //   กันหลุดเข้าไปในปุ่มบันทึกคำศัพท์ (🔖 單字庫) + ตัวบอกคำปัจจุบันของระบบเสียง
+    //   (แก้รอบ 2 — รอบแรกใช้ entrySyls ที่คำนวณไว้ด้านบน แต่ entrySyls คำนวณเฉพาะกิ่งคำหลายพยางค์ปกติเท่านั้น
+    //    ไม่ครอบกิ่งประโยค高級 (advSentenceCtx) ซึ่งคำในประโยคก็มีหลายพยางค์ได้เหมือนกัน เช่น "ภาษาไทย" ในประโยค
+    //    เปลี่ยนมาใช้ tfCurEntry() แบบเดียวกับ stepResult() แทน เพราะ tfCurEntry() คืนค่าถูกทั้ง 2 โหมด)
+    var _vaEntry = tfCurEntry();
+    var _vaultAudioWord = S.word;
+    if (S.syllables && S.syllables.length > 1 && S.selectedSyl != null && _vaEntry && _vaEntry.syls && _vaEntry.syls.length === S.syllables.length && _vaEntry.syls[S.selectedSyl] && _vaEntry.syls[S.selectedSyl].th) {
+      _vaultAudioWord = _vaEntry.syls[S.selectedSyl].th;
+    }
     // inject vault save button
-    if (window.WordVault && S.word) {
+    if (window.WordVault && _vaultAudioWord) {
       WordVault.injectStyles();
       var slot = document.getElementById('tf-vault-btn-slot');
       if (slot) {
         slot.innerHTML = '';
         var meta = { zh: S.zh || '', en: S.readingEN || '', source: 'tone-finder' };
-        slot.appendChild(WordVault.createSaveBtn(S.word, meta));
+        slot.appendChild(WordVault.createSaveBtn(_vaultAudioWord, meta));
       }
     }
     // บอกระบบเสียงว่าคำปัจจุบันคือคำไหน — ปุ่ม 🔊 กด 1 ที = เล่นเสียงคำนี้ 1 ที (2026-07-16)
-    if (window.WordAudio) WordAudio.setCurrent(S.word);
+    if (window.WordAudio) WordAudio.setCurrent(_vaultAudioWord);
     // แถวปุ่มใต้คำศัพท์ (อยู่นอก banner เพื่อไม่โดน innerHTML ล้างปุ่ม 🍙 ของ shared.js ทิ้ง) — โชว์คู่กับ banner เสมอ
     var _ctlRow = document.getElementById('tf-word-ctl-row');
     if (_ctlRow) _ctlRow.style.display = S.word ? 'flex' : 'none';
@@ -3217,6 +3227,14 @@ function stepResult() {
   var isMultiSyl = S.syllables && S.syllables.length > 1 && S.selectedSyl != null;
   var isLastSyl = !isMultiSyl || (S.selectedSyl + 1 >= S.syllables.length);
 
+  // Lin 2026-08-02 (บั๊กจริงที่ Lin เจอ): S.syllables/S.word ถูกแตกมาจาก readingTH (เช่น "ขอ-โทด") เพื่อใช้คำนวณวรรณยุกต์ภายในเท่านั้น
+  //   ไม่ใช่ตัวสะกดจริงสำหรับโชว์ — คำหลายพยางค์ พยางค์ที่ 2 ขึ้นไป เลยโชว์ "คำอ่าน" (โทด) แทน "ตัวสะกดจริง" (โทษ) ทั้งหัวข้อผลลัพธ์และการ์ดสรุปพยางค์
+  //   แก้: ถ้ามีข้อมูลตัวสะกดจริงจาก entry.syls (จำนวนพยางค์ตรงกัน) ให้โชว์อันนั้นแทนเสมอ
+  var _curEntryForDisp = tfCurEntry();
+  var _entrySylsForDisp = (_curEntryForDisp && _curEntryForDisp.syls && S.syllables && _curEntryForDisp.syls.length === S.syllables.length) ? _curEntryForDisp.syls : null;
+  function tfDispSyl(i, fallback) { return (_entrySylsForDisp && _entrySylsForDisp[i] && _entrySylsForDisp[i].th) ? _entrySylsForDisp[i].th : fallback; }
+  var dispWord = isMultiSyl ? tfDispSyl(S.selectedSyl, S.word) : S.word;
+
   // ── Session block ──
   // Lin 2026-07-31: ตัด badge 🎉一次就推導成功/終於找到答案了 + ช่อง "結果" ออกทั้งคู่ — สีกรอบ/ป้ายวรรณยุกต์ในการ์ดผลลัพธ์บอกถูก-ผิดอยู่แล้ว ไม่ต้องพูดซ้ำ เหลือแค่ "你的選擇" บรรทัดเดียว
   var sessionBlock = '';
@@ -3267,7 +3285,7 @@ function stepResult() {
     var sylCardsHtml = S.syllables.map(function(syl, i) {
       var rt = summaryResults[i] ? TONES[summaryResults[i].tone] : null;
       return '<div style="flex:1;background:#fff;border:1.5px solid '+(rt?rt.color:'#ccc')+';border-radius:10px;padding:10px;text-align:center;">'+
-        '<div style="font-family:\'Sarabun\',sans-serif;font-size:18px;color:#1C1C1C;">'+syl+'</div>'+
+        '<div style="font-family:\'Sarabun\',sans-serif;font-size:18px;color:#1C1C1C;">'+tfDispSyl(i, syl)+'</div>'+
         '<div style="font-size:12px;color:'+(rt?rt.color:'#999')+';font-weight:600;margin-top:4px;">'+(rt?'✓ '+rt.zh:'—')+'</div>'+
       '</div>';
     }).join('');
@@ -3285,7 +3303,7 @@ function stepResult() {
 
   // ปุ่มลำโพงฟังเสียง — ข้างคำศัพท์ โชว์เฉพาะคำที่มีไฟล์เสียง (2026-07-16)
   // Lin 2026-07-30: เอาปุ่ม 🔖 (單字庫) ตรงหน้าเฉลยออกตามที่ Lin สั่ง — ซ้ำกับแถว 單字庫 ในเมนู 🍚 มุมขวาล่าง เหลือที่เมนูที่เดียว
-  var audioBtnHtml = (window.WordAudio && S.word) ? WordAudio.btnHtml(S.word) : '';
+  var audioBtnHtml = (window.WordAudio && dispWord) ? WordAudio.btnHtml(dispWord) : '';
   // Lin 2026-07-30: ปุ่ม 英文讀音 (🔡/🔠) ย้ายจากเมนูมาอยู่ข้างปุ่ม 🔊 ในหน้าเฉลย — ใช้ได้จริงตรงจุดที่คำอ่านโรมันโผล่เท่านั้น
   var enBtnHtml = '<button type="button" id="tf-result-en-btn" class="word-ctl-btn" onclick="event.stopPropagation();try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_toggle_en_reading\',{category:\'game\'});}catch(e){}TF.toggleEn()">' +
     (tfEnMode ? '🔡' : '🔠') + '</button>';
@@ -3303,7 +3321,7 @@ function stepResult() {
   var resultReadHtml = tfReadingLineHtml();
 
   return '<div class="result-v2">'+
-    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+S.word+audioBtnHtml+enBtnHtml+'</div>'+
+    '<div class="result-v2-word" style="display:inline-flex;align-items:center;gap:8px;">'+dispWord+audioBtnHtml+enBtnHtml+'</div>'+
     resultReadHtml + resultZhHtml +   // Lin 2026-07-30 (รอบ 2): เรียง 讀音 → 英文讀音 → 翻譯 เหมือนกันทุกเกม (เดิมคำแปลอยู่ก่อนคำอ่าน)
 
     '<div class="result-v2-tone-card" style="background:'+t.color+'18;border:2px solid '+t.color+'44;">'+

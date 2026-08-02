@@ -310,32 +310,16 @@
     }
   ];
 
-  // v1 (LIN 2026-07-26): เพดานเนื้อหาฟรี — ไม่ล็อกอิน 50 ประโยค · ล็อกอิน (ยังไม่จ่ายเงิน) 100 ประโยค
-  // ตรรกะเดียวกับ data/words-data.js เป๊ะ (ดูคอมเมนต์เต็มที่ไฟล์นั้น) — ต้องแยกเช็คในไฟล์นี้เองอีกรอบ
-  // เพราะแต่ละไฟล์รันเป็น IIFE ของตัวเอง ไม่แชร์ตัวแปรภายในกัน
-  function _sb26StorageKeyS() {
-    var url = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url) || 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
-    var ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || 'qzkxlhpcputsvbqmtqfi';
-    return 'sb-' + ref + '-auth-token';
-  }
-  function _looksLoggedInSyncS() {
-    if (typeof localStorage === 'undefined') return null; // node (data/check-data-health.js ฯลฯ) → ไม่ตัดเลย
-    try {
-      var raw = localStorage.getItem(_sb26StorageKeyS());
-      if (!raw) return false;
-      var t = JSON.parse(raw);
-      var exp = t && (t.expires_at || (t.currentSession && t.currentSession.expires_at));
-      return !!exp && (Number(exp) * 1000) > Date.now();
-    } catch (e) { return false; }
-  }
-  var _tierLoggedInS = _looksLoggedInSyncS();
+  // v2 (LIN 2026-08-02): เพดานเนื้อหาจริงย้ายไปทำฝั่งเซิร์ฟเวอร์แล้ว — Edge Function
+  // `game-content` อ่านประโยคจากตาราง game_sentences ใน Supabase (client แตะตรงๆ ไม่ได้เลย)
+  // แล้วตัดโควตาตามสิทธิ์จริงที่เช็คจาก JWT ก่อนส่งกลับ — ของเดิม (เดา login จาก localStorage
+  // แล้วตัดอาร์เรย์ตรงนี้) เป็นแค่ "เพดานนุ่ม" ฝั่ง browser ไม่ใช่ด่านความปลอดภัยจริง
+  // เกมทั้ง 6 หน้าเลิกโหลดไฟล์นี้แล้วด้วย (ดู js/games/game-content-client.js ที่โหลดแทน) —
+  // ไฟล์นี้เหลือหน้าที่เดียว: เป็นต้นฉบับที่ Lin แก้ประโยคผ่านสกิลร่างเดิม แล้วซิงก์เข้า Supabase
+  // ด้วย scripts/migrate-game-content.js ทีหลัง (rank = ลำดับตามไฟล์นี้ตรงๆ, Lin ยืนยัน 2026-08-02)
   var ADV_SENTENCES_FULL = ADV_SENTENCES; // ชุดเต็มเสมอ — ตัวตรวจข้อมูล/เครื่องมือ Lin ใช้ชุดนี้
   global.ADV_SENTENCES_FULL = ADV_SENTENCES_FULL;
-  if (_tierLoggedInS !== null) {
-    var sentCap = _tierLoggedInS ? 100 : 50;
-    ADV_SENTENCES = ADV_SENTENCES_FULL.slice(0, sentCap);
-  }
-  global.ADV_SENTENCES = ADV_SENTENCES;
+  global.ADV_SENTENCES = ADV_SENTENCES; // ไม่ตัดเพดานในไฟล์นี้อีกต่อไป — ด่านจริงอยู่ฝั่งเซิร์ฟเวอร์แล้ว
 
   // ════════════════════════════════════════════════════════════
   // ADAPTER — สำหรับเกมอ่าน/เกมพิมพ์ ที่ต้องการ WORDS_HIGH แบบแบน (syls รวมทั้งประโยค ไม่แยกกลุ่มตามคำ)

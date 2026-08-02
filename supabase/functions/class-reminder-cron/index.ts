@@ -101,8 +101,32 @@ async function releaseReminderIds(supabase, fieldName, ids) {
 //   → คาบที่ 2 ไม่มีวันได้รับเตือนอีกเลย = นักเรียนขาดเรียนโดยไม่มีใครรู้
 //   ตอนนี้รับเป็น "รายการคาบ" [{dateLabel, timeLabel}, ...] แล้วเขียนครบทุกคาบในข้อความเดียว
 //   ⚠️ กรณีมีคาบเดียว (เกือบทุกครั้ง) ข้อความออกมา "เหมือนเดิมทุกตัวอักษร" — ตั้งใจไม่แตะของที่ใช้ได้ดีอยู่แล้ว
-function buildReminder24hFlex(entries) {
+// 🔴 2026-08-02 เพิ่มช่องรับค่าที่ 2 `isLate` (รอบตรวจ 3 ระบบ ข้อ 4.11)
+//   ไม่ใส่ = พฤติกรรมเดิมทุกตัวอักษร (ข้อความ「明天…」เหมือนเดิมเป๊ะ ไม่แตะของที่ใช้ได้ดีอยู่แล้ว)
+//   ใส่ true = คาบนี้เพิ่งถูกย้าย/เพิ่งถูกเพิ่ม เหลือเวลาน้อยกว่า 22.5 ชม.แล้ว → ห้ามเขียนว่า「明天」
+//   เพราะคาบอาจเป็น "วันนี้" ก็ได้ นักเรียนอ่านแล้วจะเข้าใจผิดวันทันที
+function buildReminder24hFlex(entries, isLate) {
   const list = Array.isArray(entries) ? entries : [entries];
+  if (isLate) {
+    const lines = list.map(function (e) { return '・' + e.dateLabel + ' ' + e.timeLabel; }).join('\n');
+    const alt = list.length === 1
+      ? '📅 快上課囉！' + list[0].dateLabel + ' ' + list[0].timeLabel + ' 有泰語課'
+      : '📅 快上課囉！接下來有 ' + list.length + ' 堂泰語課';
+    return {
+      type: 'flex',
+      altText: alt.slice(0, 380),
+      contents: {
+        type: 'bubble',
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'md',
+          contents: [
+            { type: 'text', text: '📅 快上課囉，別忘記！', weight: 'bold', size: 'md', wrap: true, color: '#1C1C1C' },
+            { type: 'text', text: lines + '\n（這堂課是最近才排定／調整的，所以現在才通知你）', size: 'sm', color: '#6b6b6b', wrap: true },
+          ],
+        },
+      },
+    };
+  }
   // วันของนักเรียนอาจไม่ตรงกันได้ ถ้าคาบดึกข้ามเที่ยงคืนในเขตเวลาของนักเรียน (เช่น ไทย 23:30 = ไต้หวัน 00:30 วันถัดไป)
   // → เหมือนกันหมด = เขียนวันครั้งเดียว · ไม่เหมือน = เขียนวันกำกับทุกบรรทัด
   const oneDate = list.every(function (e) { return e.dateLabel === list[0].dateLabel; });
@@ -248,7 +272,16 @@ serve(async (req) => {
     for (const key in groups) {
       const groupRows = groups[key];
       const s = studentMap[groupRows[0].token];
-      if (!s || !s.line_user_id) { skipCount += groupRows.length; continue; } // ยังไม่เชื่อม LINE → ข้าม ไม่ error
+      // 🟡 2026-08-02 เพิ่ม log (รอบตรวจ 3 ระบบ Q2) — เดิมข้ามเงียบสนิท ไม่มีร่องรอยที่ไหนเลย
+      //   ครูไม่มีทางรู้ว่านักเรียนคนนี้ไม่เคยได้รับข้อความเตือนสักครั้ง
+      //   (ตัวเตือน 48 ชม. request-sla-cron บอกครูในเคสเดียวกัน — ที่นี่ไม่เคยบอก)
+      //   ไม่ push LINE หาครูตรงนี้ เพราะ cron ตัวนี้รันทุก 5 นาที = จะกลายเป็นสแปมทันที
+      if (!s || !s.line_user_id) {
+        console.warn('[class-reminder-cron] ℹ️ ข้ามกลุ่ม ' + key + ' — นักเรียนยังไม่ได้ผูก LINE จึงไม่ได้รับข้อความเตือน '
+          + '(token=' + (groupRows[0] && groupRows[0].token) + ', ' + groupRows.length + ' แถว)');
+        skipCount += groupRows.length;
+        continue;
+      }
 
       // แยกแถวในกลุ่มออกเป็น "คาบ" ตามเวลาเริ่ม：เวลาเริ่มเท่ากัน = แถวซ้ำ ยุบเป็นคาบเดียว (id เก็บไว้ทุกอัน
       // เพื่อปั๊ม "ส่งแล้ว" ให้ครบ) · เวลาเริ่มต่างกัน = คนละคาบจริง ต้องขึ้นในข้อความแยกบรรทัด
@@ -288,7 +321,28 @@ serve(async (req) => {
         const minutesToStart = (c.startMs - nowMs) / 60000;
         return minutesToStart <= REMINDER24H_BEFORE_MIN && minutesToStart >= REMINDER24H_BEFORE_MIN - CATCH_WINDOW_MIN;
       });
-      if (anyInWindow) {
+      // ════════════════════════════════════════════════════════════════════
+      // 🔴 2026-08-02 เพิ่ม (รอบตรวจ 3 ระบบ ข้อ 4.11) — คาบที่ "เกิดขึ้นกระชั้นกว่า 22.5 ชม."
+      //
+      // 🕳️ รูเดิม: หน้าต่างส่งคือ "เหลือ 1350–1440 นาที" เท่านั้น
+      //    คาบที่ถูก **ย้าย** หรือ **เพิ่มใหม่** ให้เหลือน้อยกว่า 22.5 ชม. จะไม่มีวันเข้าหน้าต่างนี้เลย
+      //    → ธงถูกรีเซ็ตเป็น false แล้วก็จริง แต่แถวนั้นถูกดึงมาเช็คทุก 5 นาทีแล้วไม่ทำอะไรตลอดไป
+      //    = **นักเรียนไม่ได้รับข้อความเตือนเลย และไม่มีใครถูกบอกว่าไม่ได้รับ**
+      //    เกิดได้ทุกครั้งที่ครูย้ายคาบมาใกล้ๆ หรือเพิ่มคาบให้วันนี้/พรุ่งนี้ตอนเย็น
+      //
+      // ✅ ทางแก้: ถ้าคาบยัง "ไม่เริ่ม" แต่เลยหน้าต่าง 24 ชม.ไปแล้ว → ส่งทันทีครั้งเดียว
+      //    ใช้ธงตัวเดียวกัน (line_reminder24h_sent) และท่าจอง (claim) ชุดเดียวกัน = ไม่มีทางส่งซ้ำ
+      //    ⚠️ ไม่ส่งถ้าคาบเริ่มไปแล้ว (minutesToStart <= 0) — เตือนคาบที่ผ่านไปแล้วไม่มีประโยชน์ กวนเปล่าๆ
+      // ════════════════════════════════════════════════════════════════════
+      const anyLate = !anyInWindow && classes.some(function (c) {
+        const minutesToStart = (c.startMs - nowMs) / 60000;
+        return minutesToStart > 0 && minutesToStart < REMINDER24H_BEFORE_MIN - CATCH_WINDOW_MIN;
+      });
+      if (anyLate) {
+        console.log('[class-reminder-cron] ℹ️ กลุ่ม ' + key + ' เลยหน้าต่าง 24 ชม.ไปแล้ว แต่คาบยังไม่เริ่ม '
+          + '→ ส่งเตือนแบบ "คาบใกล้ถึงแล้ว" ทันที (คาบนี้น่าจะเพิ่งถูกย้าย/เพิ่งถูกเพิ่ม)');
+      }
+      if (anyInWindow || anyLate) {
         // ยิงทีเดียวจบทั้งวัน: ปั๊ม "ส่งแล้ว" ทุกคาบในกลุ่ม เพราะข้อความที่ส่งออกไปเขียนครบทุกคาบแล้วจริง
         const idsNeedReminder24h = classes.reduce(function (acc, c) { return acc.concat(c.ids); }, []);
         // 2026-07-26 แก้：จอง (claim) ก่อนส่งเสมอ — กันส่งซ้ำถ้า cron 2 รอบทับเวลากันพอดี (ดูคอมเมนต์บนสุดไฟล์)
@@ -314,7 +368,7 @@ serve(async (req) => {
                 };
               });
             if (!entries.length) throw new Error('จองสิทธิ์ได้แต่ประกอบรายการคาบไม่ได้สักคาบ (ไม่ควรเกิด)');
-            await pushLineMessages(channelToken, s.line_user_id, [buildReminder24hFlex(entries)]);
+            await pushLineMessages(channelToken, s.line_user_id, [buildReminder24hFlex(entries, anyLate)]);
             sentCount++;
           } catch (e) {
             errCount++;

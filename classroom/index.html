@@ -1789,7 +1789,20 @@ async function findConflictingEvents(newStartIso, newEndIso, excludeEventId) {
     const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
     if (!r.ok) return { ok: false, items: [], reason: 'Calendar API ' + r.status };
     const data = await r.json();
-    return { ok: true, items: (data.items || []).filter(function(ev) { return ev.id !== excludeEventId && ev.status !== 'cancelled'; }), reason: null };
+    // 🟡 2026-08-02 แก้ตัวกรองให้ตรงกับฝั่ง LINE (ตรวจ 3 ระบบ ข้อ 4.16)
+    //   เดิมต่างจาก filterCandidateEvents ใน line-webhook 2 เรื่อง = ระบบเดียวกันตัดสินคนละแบบ:
+    //   (1) ไม่ตัด recurringEventId → ถ้าเลขที่จำไว้เป็น "เลขชุดคาบประจำ" ระบบจะเห็นตัวเองเป็นสิ่งกีดขวาง
+    //       แล้วเตือนครูว่า "ชนกับตัวเอง" ทุกครั้งที่ย้ายคาบในชุด
+    //   (2) ไม่ข้าม transparency==='transparent' → รายการที่ครูตั้งเองว่า "ว่าง/ไม่ติดธุระ"
+    //       (freeBusy ไม่นับ, ฝั่ง LINE ไม่นับ) แต่ที่นี่นับ = เตือนหลอก
+    //   ⚠️ ตรรกะต้องตรงกับ supabase/functions/line-webhook/index.ts → filterCandidateEvents เป๊ะ
+    return { ok: true, items: (data.items || []).filter(function(ev) {
+      if (!ev) return false;
+      if (ev.status === 'cancelled') return false;
+      if (ev.transparency === 'transparent') return false;
+      if (excludeEventId && (ev.id === excludeEventId || ev.recurringEventId === excludeEventId)) return false;
+      return true;
+    }), reason: null };
   } catch (e) { return { ok: false, items: [], reason: (e && e.message) || String(e) }; }
 }
 
@@ -2513,14 +2526,22 @@ async function createCalendarClassEventForStudent(token, s, p) {
   //   แล้วกดซ้ำ = ได้คาบซ้อนกัน 2 คาบ (ตรงข้ามกับตอนลบ/ย้าย ที่สำรองพัง = ต้องหยุด ห้ามแตะ Calendar)
   //   → สำรองไม่สำเร็จก็ปล่อยผ่าน แต่ต้องเตือนดังๆ ใน console ห้ามเงียบสนิท
   // ════════════════════════════════════════════════════════════════════════════
+  // 🟠 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.15)：เดิมเขียนแค่ console.warn = ครูไม่มีทางรู้
+  //   (บนมือถือ/แท็บปกติไม่มีใครเปิด console) · ฝั่ง LINE บอกครูในข้อความตอบกลับมาตั้งแต่ 2026-07-31
+  //   → คืนคำเตือนออกไปให้ผู้เรียกเอาไปโชว์ในสรุปผล (confirmAddClassDayAll)
+  var addBackupWarn = '';
   try {
     var addBk = await backupCalendarEvent(null, token, 'create', ev, null);
     if (!addBk || addBk.error || !addBk.data) {
+      var whyAddBk = (addBk && addBk.error) ? addBk.error.message : 'ไม่ได้ข้อมูลกลับมา';
       console.warn('⚠️ เพิ่มคาบสำเร็จ แต่บันทึกข้อมูลสำรองไม่สำเร็จ — คาบนี้จะไม่มีปุ่ม ↩️ 復原 ให้กด '
-        + '(ถ้าเพิ่มผิดต้องไปลบเองใน Google Calendar):', addBk && addBk.error ? addBk.error.message : 'ไม่ได้ข้อมูลกลับมา');
+        + '(ถ้าเพิ่มผิดต้องไปลบเองใน Google Calendar):', whyAddBk);
+      addBackupWarn = '這堂課沒有存到「可復原」的紀錄（' + whyAddBk + '），加錯的話要自己到 Google Calendar 刪掉';
     }
   } catch (bkErr) {
-    console.warn('⚠️ เพิ่มคาบสำเร็จ แต่บันทึกข้อมูลสำรองพังกลางคัน (คาบยังอยู่ครบ ไม่กระทบอะไร):', bkErr.message || bkErr);
+    var whyAddBk2 = bkErr.message || String(bkErr);
+    console.warn('⚠️ เพิ่มคาบสำเร็จ แต่บันทึกข้อมูลสำรองพังกลางคัน (คาบยังอยู่ครบ ไม่กระทบอะไร):', whyAddBk2);
+    addBackupWarn = '這堂課沒有存到「可復原」的紀錄（' + whyAddBk2 + '），加錯的話要自己到 Google Calendar 刪掉';
   }
 
   // RELIABILITY FIRST：Calendar 事件已經真的建立了（且重新確認過）→ 資料庫這步失敗也要講清楚「Calendar 上已經有了」，
@@ -2567,7 +2588,8 @@ async function createCalendarClassEventForStudent(token, s, p) {
       .upsert({ token: token, lesson_date: p.dateVal, start_time: p.startVal, end_time: p.endTime, title: s.name, calendar_event_id: ev.id }, { onConflict: 'token,lesson_date,start_time' });
     if (error) throw new Error('Calendar 事件已經建立成功，但存進資料庫失敗：' + error.message + '\n（不要重按一次，Calendar 上已經有這個事件了，請告訴 Lin/AI 手動補資料庫）');
   }
-  return { ev: ev, start: start, end: end };
+  // 2026-08-02: backupWarn = ข้อความเตือนถ้าสำรองไม่สำเร็จ (ว่าง = สำรองสำเร็จปกติ)
+  return { ev: ev, start: start, end: end, backupWarn: addBackupWarn };
 }
 
 // 2026-07-20 再改（Lin 要求：per-row 直接排 vs 送出等確認能同時發生於同一次送出）：把「單筆
@@ -2648,7 +2670,8 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
     if (requestIdToFinalize) {
       try { await finalizeRequestStatus(requestIdToFinalize, 'acknowledged'); } catch (e) { /* 標記失敗不影響已經建立成功的課堂，loadPendingClassRequests 下次刷新還會看到這筆，可以再按一次 */ }
     }
-    return { ok: true, hasLine: !!s.line_user_id, studentNotified: studentNotified, studentNotifyErr: studentNotifyErr };
+    // 2026-08-02 (ข้อ 4.15): ส่ง backupWarn ออกไปด้วย ให้ผู้เรียกเอาไปโชว์ให้ครูเห็น ห้ามเงียบ
+    return { ok: true, hasLine: !!s.line_user_id, studentNotified: studentNotified, studentNotifyErr: studentNotifyErr, backupWarn: created.backupWarn || '' };
   } catch (e) {
     // 只有「Calendar API 這次真的還沒建立成功」才能安全放鎖讓人重試——如果錯誤訊息顯示
     // 「已經建立成功」或「重新確認時」代表 createCalendarClassEventForStudent 裡 Calendar 事件
@@ -2708,6 +2731,8 @@ async function confirmAddClassDayAll() {
         // 要看真的送出去沒有；沒送到一定要大聲講，不能讓老師誤會學生已經知道了。
         if (!r.hasLine) warnLines.push('⚠️ ' + addClassDayShortLabel(p) + '：學生還沒連結 LINE，沒收到通知');
         else if (!r.studentNotified) warnLines.push('⚠️ ' + addClassDayShortLabel(p) + '：LINE 通知學生沒送出去（' + (r.studentNotifyErr || '原因不明') + '）');
+        // 🟠 2026-08-02 (ข้อ 4.15)：สำรองไม่สำเร็จ = ต้องบอกครูตรงๆ ห้ามซ่อนไว้ใน console (ฝั่ง LINE บอกมาตั้งแต่ 07-31)
+        if (r.backupWarn) warnLines.push('⚠️ ' + addClassDayShortLabel(p) + '：' + r.backupWarn);
       } else {
         leftoverRows.push(p);
         failLines.push('❌ ' + addClassDayShortLabel(p) + '：' + r.error);
@@ -3239,16 +3264,36 @@ async function refreshStudentList() {
 // 2026-08-02 加：一次抓「全部學生」的每週固定上課日，給สารบัญ的副標題用（週X HH:MM）。
 //   只抓一次、不分學生查，避免每個學生各自查一次（見 CLAUDE.md「檢查再做，不要重複查」）。
 //   同一個學生如果排多天，只取抓到的第一筆當簡短顯示，不影響「⚙️ 每週固定上課日」設定本身的完整資料。
+// 2026-08-02 修 bug（Lin 指出）：原本只查 classroom_recurring_days（那是「加課堂時間」功能加的補充課表），
+//   完全沒讀 classroom_students.pending_class_time/pending_recurring/pending_start_date（新生設定時填的
+//   「原本的固定課」，真正的主要來源）——導致大部分還沒按過「⚙️ 每週固定上課日」的學生完全不顯示時間，
+//   即使資料庫裡其實有。這兩個來源不是互相取代的關係、是「原本的固定課」+「後來額外加的」並存
+//   （同樣的並存邏輯可以對照 renderAddClassDayExistingList() 那邊兩份資料一起列出來的寫法，行號約 2149）。
+//   pending_* 不用另外查表：refreshStudentList() 一定會先呼叫 fetchStudents()（select('*')）把它整包
+//   存進 studentsCache 了，這裡直接讀快取即可，全部人只需要 1 個 query（classroom_recurring_days）。
 async function loadRosterScheduleMeta() {
   try {
-    var rd = (await sb.from('classroom_recurring_days').select('token,weekday,start_time').order('weekday').order('start_time')).data || [];
     var dayZh = ['日','一','二','三','四','五','六'];
     var byTok = {};
+
+    // 來源 1（主表，優先顯示）：studentsCache 裡的 pending_* —— 不用查資料庫，fetchStudents() 已經抓好了
+    Object.keys(studentsCache).forEach(function(token) {
+      var s = studentsCache[token];
+      if (s && s.pending_recurring && s.pending_start_date && s.pending_class_time) {
+        var wd = thaiDateWeekday(s.pending_start_date);
+        var t = String(s.pending_class_time).slice(0, 5);
+        byTok[token] = '週' + dayZh[wd] + (t ? ' ' + t : '');
+      }
+    });
+
+    // 來源 2（補充表）：classroom_recurring_days —— 只補「來源 1 沒有」的學生
+    var rd = (await sb.from('classroom_recurring_days').select('token,weekday,start_time').order('weekday').order('start_time')).data || [];
     rd.forEach(function(r) {
       if (byTok[r.token] || !r.token) return;
       var t = (r.start_time || '').slice(0, 5);
       byTok[r.token] = '週' + dayZh[r.weekday] + (t ? ' ' + t : '');
     });
+
     window._rosterScheduleByToken = byTok;
   } catch (e) { console.warn('讀取固定上課日失敗（不影響其他功能，只是สารบัญ副標題會少顯示上課時間）：', e && (e.message || e)); }
 }
@@ -7240,7 +7285,15 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
       bodyPayload.flex = {
         title: 'ℹ️ 學生已經選好新時間',
         bodyText: '時間：' + timeLabelForTeacher + '（泰國時間）\n\n可以直接按下方按鈕搬 Calendar，或到網站處理',
-        buttons: [{ label: '✅ 確認並搬 Calendar', postbackData: 'action=confirm_reschedule_move&request=' + encodeURIComponent(requestId), style: 'primary' }],
+        // 🔴 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.8): พก d/t = "เวลาที่เขียนอยู่บนการ์ดใบนี้" ไปด้วยเสมอ
+        //   ปุ่มใน LINE ค้างในประวัติแชทตลอดกาล — ถ้าเวลาที่ขอถูกแก้ทีหลัง ครูกดปุ่มเก่าแล้วคาบจะไป
+        //   โผล่เวลาใหม่โดยไม่มีใครรู้ · ฝั่ง webhook (confirm_reschedule_move) เทียบก่อนย้าย ไม่ตรง = ไม่ย้าย
+        //   ⚠️ รูปแบบต้องตรงกับ supabase/functions/line-webhook/index.ts ก้อน confirm_reschedule_move เป๊ะ
+        buttons: [{ label: '✅ 確認並搬 Calendar',
+          postbackData: 'action=confirm_reschedule_move&request=' + encodeURIComponent(requestId)
+            + '&d=' + encodeURIComponent((chosenOpt && chosenOpt.date) || '')
+            + '&t=' + encodeURIComponent((chosenOpt && chosenOpt.time) || ''),
+          style: 'primary' }],
       };
     } else {
       bodyPayload.flex = {
@@ -8216,6 +8269,59 @@ async function claimAddClassRequest(id) {
   return { ok: true };
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// 🔴 2026-08-02 เพิ่ม (ตรวจ 3 ระบบ ข้อ 4.12) — ล็อกเฉพาะของ "เลื่อนคาบ" ที่ห้ามแย่งเช่นกัน
+//
+// เดิมเส้นทางเลื่อนคาบฝั่งเว็บใช้ claimRequestForProcessing (แย่งล็อกค้าง 10 นาทีได้)
+// ซึ่งถูกสำหรับ "ยกเลิกคาบ" (ลบซ้ำ = คาบหายไปแล้ว ไม่มีอะไรเพิ่ม)
+// แต่ผิดสำหรับ "เลื่อนคาบ" — เส้นทางนี้มี 2 จุดที่ **จงใจทิ้งล็อกค้างไว้** เพราะคาบอาจย้ายไปแล้ว:
+//   (1) movePatchSent1 / movePatchSent2 — ส่งคำสั่งย้ายไปแล้วแต่ตรวจซ้ำไม่ได้
+//   (2) finalizeRequestStatus ล้มเหลว — ย้ายสำเร็จแล้วแต่บันทึกไม่ได้
+// ปล่อยให้แย่งได้เมื่อครบ 10 นาที = จุดที่ตั้งใจกันไว้กลายเป็นช่องโหว่ (ย้ายซ้ำ + แถวสำรองขยะ)
+//
+// ⚠️ ต้องคู่กับฝั่ง LINE เสมอ (line-webhook → confirm_reschedule_move / confirm_reschedule_pick
+//    ตอนนี้ใช้ .is('processing_started_at', null) ทั้งคู่แล้ว)
+//    แก้ฝั่งเดียว = รูแค่ย้ายที่ ไม่ได้หาย (บทเรียนจริง 2026-07-31 ของระบบเพิ่มคาบ)
+// ล็อกค้างเพราะเน็ตหลุดจริง → ปุ่ม 🔓 解鎖這筆 บนการ์ดคิว (unlockStuckRequest ข้างล่าง)
+// ════════════════════════════════════════════════════════════════════════════
+async function claimRescheduleRequest(id) {
+  var res = await sb.from('classroom_requests')
+    .update({ processing_started_at: new Date().toISOString() })
+    .eq('id', id).eq('status', 'pending').is('processing_started_at', null)
+    .select();
+  if (res.error) return { ok: false, reason: '搶佔處理權失敗：' + res.error.message + '\n為了安全，這次先不動 Calendar，請重試一次。' };
+  if (!res.data || !res.data.length) return { ok: false, reason: '這筆申請已經在別的地方（LINE 或另一個分頁）處理中，或剛好已經處理完了，請重新整理頁面查看最新狀態，不會重複搬課堂。\n（如果確定是中途斷掉卡住的，等 10 分鐘後卡片上會出現「🔓 解鎖這筆」按鈕，按了才會解開——改期故意不自動解鎖，避免同一堂課被搬兩次）' };
+  return { ok: true };
+}
+
+// ── 2026-08-02 เพิ่ม (ตรวจ 3 ระบบ ข้อ 4.13) — ย้ายคาบสำเร็จแล้ว อัปเดตตารางเรียนทันที ──────
+// ลอกตรรกะมาจากฝั่ง LINE (line-webhook → syncScheduleRowAfterMove) ให้ 2 ประตูทำเหมือนกันเป๊ะ
+// ทำไมต้องมี: เดิมฝั่งเว็บพึ่ง refreshTodayScheduleSection() ที่ซิงค์ตารางใหม่ "ทั้งก้อน"
+//   ซึ่ง (ก) ทำงานเฉพาะตอนเบราว์เซอร์เชื่อม Google อยู่ (ข) มีกล่องยืนยันที่ครูกด Cancel ได้ 2 จุด
+//   (ค) ล้มเหลวได้เงียบๆ → ระหว่างนั้น class-reminder-cron (รันทุก 5 นาที) อ่านเวลาเก่า = เตือนผิดเวลา
+// ต้องรีเซ็ตธง "เตือนไปแล้ว" ด้วย ไม่งั้นคาบที่เคยถูกเตือนตอนเวลาเก่า จะไม่ถูกเตือนในเวลาใหม่เลย
+// ⚠️ ล้มเหลวที่นี่ห้ามย้อนการย้ายคาบ (Calendar คือความจริงหลัก) แต่ต้องคืนข้อความเตือนออกไป ห้ามเงียบ
+async function syncScheduleRowAfterMoveWeb(calendarEventId, newDateStr, newStartTimeStr, newEndTimeStr) {
+  var baseFields = { lesson_date: newDateStr, start_time: newStartTimeStr || '', end_time: newEndTimeStr || '', line_reminder24h_sent: false };
+  var withLegacy = Object.assign({}, baseFields, { line_reminder_sent: false, line_followup_sent: false });
+  try {
+    var r1 = await sb.from('classroom_schedule').update(withLegacy, { count: 'exact' }).eq('calendar_event_id', calendarEventId);
+    // คอลัมน์ธงรุ่นเก่าอาจถูกลบไปแล้ว → ลองใหม่เฉพาะตัวที่ใช้จริง (ท่าเดียวกับฝั่ง LINE)
+    if (r1.error && (r1.error.code === 'PGRST204' || r1.error.code === '42703'
+        || /column .* does not exist|could not find the .* column/i.test(r1.error.message || ''))) {
+      r1 = await sb.from('classroom_schedule').update(baseFields, { count: 'exact' }).eq('calendar_event_id', calendarEventId);
+    }
+    if (r1.error) {
+      return '\n⚠️ 課堂已經搬好了，但課表資料庫還沒更新成新時間（' + r1.error.message + '）。'
+        + '\n最慢 30 分鐘後排程會自己修好；這段期間學生看到的時間、上課提醒可能還是舊的。';
+    }
+    if (!r1.count) console.warn('ℹ️ 搬課堂：classroom_schedule 找不到 calendar_event_id=' + calendarEventId + ' 的資料列（可能還沒同步進去，不影響搬課本身）');
+    return '';
+  } catch (e) {
+    return '\n⚠️ 課堂已經搬好了，但更新課表時出錯（' + (e.message || e) + '）。最慢 30 分鐘後排程會自己修好。';
+  }
+}
+
 // 🟠 2026-07-31 加（งาน C6）：ปุ่มปลดล็อกด้วยมือ สำหรับคำขอที่ค้าง "處理中" เกิน 10 นาที
 // ทำไมต้องมีทั้งที่ระบบแย่งเองได้แล้ว: ปุ่มนี้ทำให้ครู "เห็น" ว่ามีของค้างอยู่ และปลดได้ทันทีที่อยากปลด
 // ไม่ต้องรอ / ไม่ต้องเดาว่าระบบจะจัดการให้ไหม (โยงกับกฎ "ต้องกู้คืนได้เมื่อพังกลางคัน")
@@ -8313,6 +8419,7 @@ async function processClassRequest(id) {
 
 async function processClassRequestInner(id, r, isCancel) {
   var ev = null;
+  var moveSchedWarn1 = ''; // 2026-08-02 (ข้อ 4.13): คำเตือนเรื่องตารางเรียน ถ้าอัปเดตไม่สำเร็จ
   // 2026-07-16 加：取消申請的「🔗 開 Calendar」「⚙️ 其他」按鈕拿掉了（Lin 要求簡化成 2 顆），
   // 這裡的手動備援文字改成不提那兩顆按鈕——取消申請卡住的話，改期申請仍然保留完整 4 顆按鈕。
   var fallbackHint = isCancel
@@ -8437,7 +8544,9 @@ async function processClassRequestInner(id, r, isCancel) {
     var recheck2 = await reverifyRequestState(id, r);
     if (!recheck2.ok) { alert('⚠️ ' + recheck2.reason); await loadPendingClassRequests(); return; }
     // 2026-07-19 加：動 Calendar 前先搶原子鎖，防止跟 LINE 那邊或其他分頁撞期
-    var claim2 = await claimRequestForProcessing(id);
+    // 🔴 2026-08-02 เปลี่ยนตัวจับล็อก (ตรวจ 3 ระบบ ข้อ 4.12): เลื่อนคาบต้องใช้ claimRescheduleRequest
+    //    (ห้ามแย่งล็อกค้างเอง) ไม่ใช่ claimRequestForProcessing ที่แย่งได้เมื่อครบ 10 นาที
+    var claim2 = await claimRescheduleRequest(id);
     if (!claim2.ok) { alert('⚠️ ' + claim2.reason); await loadPendingClassRequests(); return; }
     // 🔴 2026-08-02 加 (ตรวจซ้ำ)：แยก "ยังไม่ได้แตะ Calendar" ออกจาก "แตะไปแล้วแต่ตรวจซ้ำไม่ได้"
     //   รูเดิม: catch ก้อนเดียวปลดล็อกทุกกรณี + บอกครูว่า "移動失敗，請重試"
@@ -8453,6 +8562,10 @@ async function processClassRequestInner(id, r, isCancel) {
       movePatchSent1 = true; // Google รับคำสั่งย้ายแล้ว — ตั้งแต่บรรทัดนี้ไป "ห้ามปลดล็อก"
       await verifyEventMoved(ev.id, newStartIso); // 2026-07-15：真的回頭確認 Calendar 上時間真的改了，不是只信任 API 回應
       newStartIsoForNotify = newStartIso;
+      // 🔴 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.13)：อัปเดตตารางเรียนทันที ไม่ต้องรอ cron/รอ resync ทั้งก้อน
+      moveSchedWarn1 = await syncScheduleRowAfterMoveWeb(
+        ev.id, r.requested_date, newTimeStr,
+        formatInTz(new Date(new Date(newStartIso).getTime() + durationMs), TEACHER_TZ).timeStr);
     } catch (e) {
       if (movePatchSent1) {
         // ล็อกคาไว้โดยตั้งใจ (เหมือนฝั่ง LINE) — กันคนอื่นแย่งไปย้ายซ้ำบนคาบที่อาจย้ายไปแล้ว
@@ -8508,10 +8621,13 @@ async function processClassRequestInner(id, r, isCancel) {
 
   try { await refreshTodayScheduleSection(); } catch (e) { console.warn('⚠️ 課表 resync 失敗（不影響 Calendar 本身）：', e.message || e); }
 
+  // 🔴 2026-08-02 (ข้อ 4.13)：คำเตือนเรื่องตารางเรียนต้องขึ้นให้ครูเห็นเสมอ แม้ทุกอย่างอื่นสำเร็จ
   if (!sForNotify || !sForNotify.line_user_id) {
-    alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
+    alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）' + moveSchedWarn1);
   } else if (!notifySent) {
-    alert('✅ Calendar 已處理完成\n⚠️ 但 LINE 通知學生失敗（' + notifyError + '），請自己再跟學生說一聲');
+    alert('✅ Calendar 已處理完成\n⚠️ 但 LINE 通知學生失敗（' + notifyError + '），請自己再跟學生說一聲' + moveSchedWarn1);
+  } else if (moveSchedWarn1) {
+    alert('✅ Calendar 已處理完成，也通知學生了' + moveSchedWarn1);
   }
 }
 
@@ -8661,6 +8777,11 @@ async function submitProposeTime() {
     }
     return;
   }
+  // 🔴 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.5)：เดิมยิง LINE แล้ว "ทิ้งผลลัพธ์" ไม่เคยเช็ค res.ok เลย
+  //   → notify-line ตอบ 401 (session ครูหมดอายุ) / 500 = นักเรียนไม่ได้รับการ์ดสักใบ
+  //     แต่ครูเห็น「✅ 已傳送提議，等學生在 LINE 上點選回覆」แล้วนั่งรอ 48 ชม.จนกว่า cron จะเตือน
+  //   เป็นจุดสุดท้ายในไฟล์นี้ที่ยังขึ้นว่า "สำเร็จ" โดยไม่ตรวจ (ที่อื่นเช็คหมดแล้วตั้งแต่ 2026-07-26)
+  var proposeNotifyWarn = '';
   if (rStudent && rStudent.line_user_id) {
     try {
       // 2026-07-14 加：老師輸入的日期/時間是泰國時間（老師自己時區），
@@ -8682,7 +8803,7 @@ async function submitProposeTime() {
         ? bareTimeLabel(teacherTimeToDate(r.original_date, r.original_time || '00:00'), rStudent.pending_student_tz)
         : '-';
       const tzFooter = rStudent.pending_student_tz ? '（以上時間都是你的當地時間）' : '（以上時間都是泰國時間，你還沒設定時區，可能跟你的當地時間不同）';
-      await fetch(LINE_NOTIFY_ENDPOINT, {
+      var proposeRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
@@ -8696,13 +8817,16 @@ async function submitProposeTime() {
           },
         }),
       });
+      if (!proposeRes.ok) proposeNotifyWarn = '\n⚠️ 但 LINE 通知學生沒送出去（' + (await lineNotifyErrorText(proposeRes)) + '），請自己再跟學生說一聲';
     } catch (e) {
-      alert('⚠️ 提議已存檔，但 LINE 通知傳送失敗，請自己再跟學生說一聲：' + (e.message || e));
+      proposeNotifyWarn = '\n⚠️ 但 LINE 通知學生沒送出去（' + (e.message || e) + '），請自己再跟學生說一聲';
     }
   }
   closeProposeTimeModal();
   alert(rStudent && rStudent.line_user_id
-    ? '✅ 已傳送提議，等學生在 LINE 上點選回覆（超過 48 小時沒回覆會提醒你追蹤）'
+    ? ((proposeNotifyWarn
+        ? '✅ 提議已存檔（學生還看得到網站上的提議）'
+        : '✅ 已傳送提議，等學生在 LINE 上點選回覆（超過 48 小時沒回覆會提醒你追蹤）') + proposeNotifyWarn)
     : '✅ 提議已存檔（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
   await loadPendingClassRequests();
 }
@@ -9115,11 +9239,13 @@ async function confirmAcceptedOfferInner(id, r) {
   var recheck3 = await reverifyRequestState(id, r);
   if (!recheck3.ok) { alert('⚠️ ' + recheck3.reason); await loadPendingClassRequests(); return; }
   // 2026-07-19 加：動 Calendar 前先搶原子鎖，防止跟 LINE 那邊或其他分頁撞期
-  var claim3 = await claimRequestForProcessing(id);
+  // 🔴 2026-08-02 เปลี่ยนตัวจับล็อก (ตรวจ 3 ระบบ ข้อ 4.12) — เหตุผลเดียวกับ processClassRequestInner
+  var claim3 = await claimRescheduleRequest(id);
   if (!claim3.ok) { alert('⚠️ ' + claim3.reason); await loadPendingClassRequests(); return; }
   // 🔴 2026-08-02 加 (ตรวจซ้ำ)：แยก 2 กรณีเหมือน processClassRequestInner ด้านบน
   //   "ยังไม่ได้แตะ Calendar" = ปลดล็อกได้ · "ส่งคำสั่งย้ายไปแล้วแต่ตรวจซ้ำไม่ได้" = ห้ามปลดล็อก
   var movePatchSent2 = false;
+  var moveSchedWarn2 = ''; // 2026-08-02 (ข้อ 4.13): คำเตือนเรื่องตารางเรียน ถ้าอัปเดตไม่สำเร็จ
   try {
     assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
     await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
@@ -9127,6 +9253,10 @@ async function confirmAcceptedOfferInner(id, r) {
     // 🟠 2026-07-26 加：เส้นทางนี้ (นักเรียนกดตกลงแล้วครูยืนยัน) ลืมเรียก verifyEventMoved
     // ต่างจากอีกเส้นทางที่มีอยู่แล้ว → เดิมเชื่อแค่ API ตอบ ok แล้วเดินหน้าแจ้งนักเรียนเลย
     await verifyEventMoved(ev.id, newStartIso);
+    // 🔴 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.13)：อัปเดตตารางเรียนทันที (ท่าเดียวกับฝั่ง LINE)
+    moveSchedWarn2 = await syncScheduleRowAfterMoveWeb(
+      ev.id, r.requested_date, newTimeStr,
+      formatInTz(new Date(new Date(newStartIso).getTime() + durationMs), TEACHER_TZ).timeStr);
   } catch (e) {
     if (movePatchSent2) {
       alert('⚠️ 指令已經送出去了，但回頭確認 Calendar 的時候失敗：' + (e.message || e) + '\n\n'
@@ -9173,10 +9303,13 @@ async function confirmAcceptedOfferInner(id, r) {
 
   try { await refreshTodayScheduleSection(); } catch (e) { console.warn('⚠️ 課表 resync 失敗（不影響 Calendar 本身）：', e.message || e); }
 
+  // 🔴 2026-08-02 (ข้อ 4.13)：คำเตือนเรื่องตารางเรียนต้องขึ้นให้ครูเห็นเสมอ แม้ทุกอย่างอื่นสำเร็จ
   if (!sForNotify2 || !sForNotify2.line_user_id) {
-    alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）');
+    alert('✅ 已處理完成（學生還沒連結 LINE，沒收到通知，記得自己說一聲）' + moveSchedWarn2);
   } else if (!notifySent2) {
-    alert('✅ Calendar 已處理完成\n⚠️ 但 LINE 通知學生失敗（' + notifyError2 + '），請自己再跟學生說一聲');
+    alert('✅ Calendar 已處理完成\n⚠️ 但 LINE 通知學生失敗（' + notifyError2 + '），請自己再跟學生說一聲' + moveSchedWarn2);
+  } else if (moveSchedWarn2) {
+    alert('✅ Calendar 已處理完成，也通知學生了' + moveSchedWarn2);
   }
 }
 
@@ -9258,7 +9391,12 @@ async function loadRecentBackups() {
   window._backupCache = {};
   showList.forEach(function(b) { window._backupCache[b.id] = b; });
   // 🟡 2026-07-31 เพิ่ม create（ข้อ #20）：ป้ายของ "คาบที่เพิ่งเพิ่ม" — กดคืนค่า = ลบคาบนั้นทิ้ง
-  var actionLabel = { move: '🔄 已移動課堂', delete: '❌ 已取消課堂', permanent_change: '📌 已永久變更課表', create: '➕ 已新增課堂' };
+  // 🟠 2026-08-02 เพิ่ม archive_student (ตรวจ 3 ระบบ ข้อ 4.6)
+  //   เดิมไม่มีคีย์นี้ → การ์ดโชว์คำดิบว่า "archive_student" ซึ่งครูอ่านไม่ออก
+  //   และปุ่ม ↩️ 復原 ของ action นี้ **ใช้ไม่ได้จริง** (ไม่มีสาขาของตัวเอง → ตกไปสาขา move
+  //   → PATCH คาบที่ถูกลบไปแล้ว → 404/410 → ขึ้น「復原失敗」ทุกครั้ง)
+  //   → ซ่อนปุ่มคืนค่าของ action นี้ไปเลย (ดูตรงที่ประกอบปุ่มด้านล่าง) แทนที่จะให้ครูกดแล้วเจอ error
+  var actionLabel = { move: '🔄 已移動課堂', delete: '❌ 已取消課堂', permanent_change: '📌 已永久變更課表', create: '➕ 已新增課堂', archive_student: '🗄️ 封存學生時關掉的課' };
   var rows = showList.map(function(b) {
     var s = studentsCache[b.token];
     var name = s ? s.name : (b.token || '-');
@@ -9270,7 +9408,12 @@ async function loadRecentBackups() {
         '<div class="slip-course">' + formatThaiDateTimeLabel(b.old_start) + (b.new_start ? ('　→　' + formatThaiDateTimeLabel(b.new_start)) : '') + '（泰國時間）</div>' +
       '</div>' +
       '<div class="slip-actions">' +
-        '<button class="btn-reject" onclick="revertCalendarBackup(\'' + b.id + '\')">↩️ 復原</button>' +
+        // 🟠 2026-08-02 (ข้อ 4.6): action='archive_student' ไม่มีทางคืนค่าอัตโนมัติได้
+        //   (คาบเดี่ยวถูกลบไปแล้ว · ชุดคาบประจำถูกตัด RRULE · แถว classroom_recurring_days ถูกล้างทิ้ง)
+        //   → ห้ามโชว์ปุ่มที่กดแล้วขึ้น error ทุกครั้ง บอกทางที่ทำได้จริงแทน
+        (b.action === 'archive_student'
+          ? '<div style="font-size:0.74rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;max-width:190px;">備份留著了，但不能一鍵復原。<br>要救的話請按「恢復學生」，再自己到 Calendar 重排。</div>'
+          : '<button class="btn-reject" onclick="revertCalendarBackup(\'' + b.id + '\')">↩️ 復原</button>') +
         '<button onclick="dismissBackupNotice(\'' + b.id + '\')" title="關閉這則通知（復原功能不受影響）" style="background:none;border:none;cursor:pointer;font-size:1.05rem;color:var(--ink-muted);opacity:0.6;padding:2px 6px;">✕</button>' +
       '</div>' +
     '</div>';
@@ -9543,6 +9686,40 @@ async function revertCalendarBackupInner(id) {
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🟠 2026-08-02 เพิ่ม (ตรวจ 3 ระบบ ข้อ 4.7) — คืนค่า「永久變更」ต้องคืนตารางเรียนของนักเรียนด้วย
+  //   ตอนกดเปลี่ยนถาวร ระบบเขียน pending_start_date/pending_class_time/pending_recurring ทับไว้
+  //   (submitPermanentChangeInner) แต่ตอนคืนค่าไม่เคยมีใครเขียนกลับเลย
+  //   → Calendar กลับชุดเก่า แต่หน้าเว็บนักเรียนยังคำนวณจากเวลาใหม่ตลอดกาล = คนละเรื่องกันทั้ง 2 ฝั่ง
+  //   ⚠️ แถวสำรองเก่า (ก่อน 2026-08-02) ไม่มี _pendingBefore → ข้ามไป + บอกครูตรงๆ ห้ามเดาค่า
+  //   ⚠️ ล้มเหลวที่นี่ "ห้ามย้อนการคืนค่า" — Calendar คือความจริงหลัก แต่ต้องบอกครู ห้ามเงียบ
+  // ══════════════════════════════════════════════════════════════════════════
+  if (b.action === 'permanent_change') {
+    var pendBefore = b.old_event_json && b.old_event_json._pendingBefore;
+    if (!pendBefore) {
+      revertExtraWarn += '\n⚠️ 這筆備份是舊版的，沒有存到「學生課表設定」的原始值，'
+        + '所以學生頁面上的固定上課時間還是新的那個。請到學生資料裡自己改回來。';
+    } else {
+      try {
+        var pendRes = await sb.from('classroom_students').update({
+          pending_start_date: pendBefore.pending_start_date,
+          pending_class_time: pendBefore.pending_class_time,
+          pending_recurring: pendBefore.pending_recurring,
+        }).eq('token', b.token).select();
+        if (pendRes.error || !pendRes.data || !pendRes.data.length) {
+          revertExtraWarn += '\n⚠️ 課表已經復原了，但學生頁面的固定上課時間沒改回去（'
+            + (pendRes.error ? pendRes.error.message : '更新 0 筆') + '），請自己到學生資料改回來。';
+        } else if (studentsCache[b.token]) {
+          studentsCache[b.token].pending_start_date = pendBefore.pending_start_date;
+          studentsCache[b.token].pending_class_time = pendBefore.pending_class_time;
+          studentsCache[b.token].pending_recurring = pendBefore.pending_recurring;
+        }
+      } catch (e) {
+        revertExtraWarn += '\n⚠️ 課表已經復原了，但改回學生頁面的固定上課時間時出錯（' + (e.message || e) + '），請自己確認一下。';
+      }
+    }
+  }
+
   // 🟡 2026-07-31 (ข้อ #20)：ลบคาบออกจากปฏิทินแล้ว ต้องลบแถวในตารางเรียนตามด้วย
   //   ไม่งั้นหน้าเว็บนักเรียนจะยังโชว์คาบนี้อยู่ (นานสุด 20 นาทีกว่า cron จะมาเก็บกวาด)
   //   ใช้ calendar_event_id เป็นตัวชี้ ไม่เดาจาก "ชื่อ+วันที่" (ท่าเดียวกับที่ระบบยกเลิกใช้)
@@ -9580,6 +9757,11 @@ async function revertCalendarBackupInner(id) {
           end_time: revEndStr,
           title: (studentsCache[b.token] && studentsCache[b.token].name) || '',
           calendar_event_id: _revertNewEventId,
+          // 🟡 2026-08-02 เพิ่ม (ตรวจ 3 ระบบ ข้อ 4.14) — ต้องรีเซ็ตธง "เตือนไปแล้ว" ด้วย
+          //   ถ้าแถวเดิมยังอยู่ (ลบตอนยกเลิกไม่สำเร็จ) upsert จะไปทับแถวเดิมที่ธงเป็น true อยู่
+          //   → คาบที่กู้กลับมาจะไม่มีวันได้รับข้อความเตือนอีกเลย
+          //   สาขา move ทำถูกมาแล้ว (ดูก้อน revBase ด้านบน) ที่นี่คือจุดสุดท้ายที่ยังขาด
+          line_reminder24h_sent: false,
         }, { onConflict: 'token,lesson_date,start_time' }).select();
         if (schedRes.error || !schedRes.data || !schedRes.data.length) {
           revertExtraWarn += '\n⚠️ 課堂復原了，但課表沒有馬上寫回去（' + (schedRes.error ? schedRes.error.message : '寫入 0 筆')
@@ -9610,6 +9792,7 @@ async function revertCalendarBackupInner(id) {
   // 三種復原類型（取消復原/改期復原/永久變更復原）各自用不同文案講清楚剛剛發生了什麼。
   // 通知失敗不影響已經完成的 Calendar 復原動作（跟其他通知一樣，只在主控台留紀錄）。
   var sForRevert = studentsCache[b.token];
+  var revertNotifyWarn = ''; // 2026-08-02: ผลการแจ้งนักเรียน (ว่าง = ส่งถึงจริง)
   // 🟡 2026-07-31 เพิ่มสาขา create（ข้อ #20）：ห้ามบอกนักเรียนว่า "คืนค่าแล้ว" ทั้งที่คาบถูก "ลบทิ้ง"
   //   นักเรียนอ่านแล้วจะเข้าใจว่ายังมีคาบอยู่ แล้วมารอเรียน → ต้องเขียนตรงๆ ว่าคาบนั้นถูกยกเลิก
   var revertLabelForStudent = { delete: '這堂課復原了', move: '課堂復原回原本時間了', permanent_change: '固定課表復原回原本時間了' }[b.action] || '已經復原了';
@@ -9620,14 +9803,25 @@ async function revertCalendarBackupInner(id) {
       var revertStudentMsg = b.action === 'create'
         ? ('ℹ️ 抱歉，老師剛剛新增的那堂課取消了：' + studentOldTimeLabel + '\n這堂課不會上，如有疑問請直接聯絡老師。')
         : ('老師剛剛把之前的操作復原了，' + revertLabelForStudent + '：' + studentOldTimeLabel + '，如有疑問請直接聯絡老師');
-      await fetch(LINE_NOTIFY_ENDPOINT, {
+      // 🟠 2026-08-02 (ตรวจ 3 ระบบ Q1 ข้อ 2)：เดิมยิงทิ้ง ไม่เช็ค res.ok และไม่บอกครู
+      //   → คาบถูกลบ/ย้ายกลับไปแล้วจริง แต่นักเรียนอาจไม่รู้เลย และไม่มีใครรู้ว่าเขาไม่รู้
+      //   สาขา create ยิ่งหนัก: คาบถูก "ลบทิ้ง" นักเรียนต้องรู้แน่ๆ ไม่งั้นมารอเรียน
+      var revertNotifyRes = await fetch(LINE_NOTIFY_ENDPOINT, {
         method: 'POST',
         // 2026-07-19 แก้（SECURITY FIRST）：notify-line สาขา to:{studentToken} ตอนนี้บังคับต้องมี session จริงของครู
         headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
         body: JSON.stringify({ to: { studentToken: b.token }, message: revertStudentMsg }),
       });
-    } catch (e) { console.warn('⚠️ 復原通知學生失敗（不影響已經完成的復原）：', e.message || e); }
+      if (!revertNotifyRes.ok) revertNotifyWarn = '\n⚠️ 但 LINE 通知學生沒送出去（' + (await lineNotifyErrorText(revertNotifyRes)) + '），請自己再跟學生說一聲';
+    } catch (e) {
+      console.warn('⚠️ 復原通知學生失敗（不影響已經完成的復原）：', e.message || e);
+      revertNotifyWarn = '\n⚠️ 但 LINE 通知學生沒送出去（' + (e.message || e) + '），請自己再跟學生說一聲';
+    }
+  } else {
+    revertNotifyWarn = '\n⚠️ 這位學生還沒連結 LINE，沒收到通知，記得自己說一聲';
   }
+  // 🟠 2026-08-02：ถ้าแจ้งนักเรียนไม่สำเร็จ ต้องเด้งบอกครูเสมอ (ข้อความสรุปด้านบนอาจไม่ได้ขึ้นเลยถ้าไม่มีคำเตือนอื่น)
+  if (revertNotifyWarn) alert('ℹ️ ' + (b.action === 'create' ? '已刪除剛剛新增的課堂' : '課堂已復原') + revertNotifyWarn);
   try {
     await fetch(LINE_NOTIFY_ENDPOINT, {
       method: 'POST',
@@ -10306,10 +10500,22 @@ async function submitPermanentChangeInner(token) {
   // 明確警告 Lin 自己到 Calendar 處理（新課表不用重建、也不會重複）。
   var backupOk = true, backupErrMsg = '';
   try {
+    // 🟠 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.7): เก็บ "ค่าตารางเรียนเดิมของนักเรียน" ไว้ในแถวสำรองด้วย
+    //   เดิมสำรองแต่ตัว Calendar event → กดคืนค่าแล้ว Calendar กลับชุดเก่าจริง
+    //   แต่ classroom_students.pending_start_date/pending_class_time/pending_recurring ยังเป็นเวลาใหม่
+    //   **ตลอดกาล** → หน้าเว็บนักเรียนโชว์คาบผิดวันไปเรื่อยๆ โดยไม่มีใครรู้
+    //   เก็บใส่ old_event_json (ไม่ต้องเพิ่มคอลัมน์ใหม่ = ไม่ต้องแก้ฐานข้อมูล) ใต้คีย์ที่ Google ไม่ใช้
+    var permBackupJson = Object.assign({}, masterEv, {
+      _pendingBefore: {
+        pending_start_date: (s && s.pending_start_date) || null,
+        pending_class_time: (s && s.pending_class_time) || null,
+        pending_recurring: (s && typeof s.pending_recurring !== 'undefined') ? s.pending_recurring : null,
+      },
+    });
     var bkRes2 = await sb.from('classroom_calendar_backups').insert({
       request_id: null, token: token, action: 'permanent_change',
       old_event_id: masterEv.id, new_event_id: newEventId,
-      old_event_json: masterEv, old_start: oldStartIso, new_start: newStartIso,
+      old_event_json: permBackupJson, old_start: oldStartIso, new_start: newStartIso,
     });
     if (bkRes2.error) { backupOk = false; backupErrMsg = bkRes2.error.message; }
   } catch (e) { backupOk = false; backupErrMsg = e.message || String(e); }

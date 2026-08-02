@@ -74,13 +74,19 @@ serve(async (req) => {
     const slaCutoffIso = new Date(Date.now() - SLA_HOURS * 3600000).toISOString();
     // 🗑️ 2026-07-31 (รอบ 4) เอา teacher_add_ack_at ออก — ก้อนที่ใช้มันถูกลบไปแล้ว ไม่มีใครอ่านอีก
     //    (teacher_cancel_ack_at ยังอยู่ ใช้จริงในก้อนยกเลิกคาบด้านล่าง อย่าเผลอลบตาม)
-    const BASE_COLS = 'id, token, student_name, request_type, offer_status, offer_created_at, offer_accepted_at, created_at, initiated_by, teacher_cancel_ack_at';
+    // 🟡 2026-08-02 เพิ่ม sla_reminder_sent เข้ามาด้วย — ใช้ตัดสิน "เคยเตือนไปแล้วหรือยัง" (ดูตัวแปร isRepeat)
+    const BASE_COLS = 'id, token, student_name, request_type, offer_status, offer_created_at, offer_accepted_at, created_at, initiated_by, teacher_cancel_ack_at, sla_reminder_sent';
     let rows = null, error = null, hasRepeatCol = true;
     {
       const rTry = await supabase.from('classroom_requests')
         .select(BASE_COLS + ', sla_reminder_last_sent_at')
         .eq('status', 'pending')
-        .or('sla_reminder_sent.eq.false,sla_reminder_last_sent_at.lt.' + slaCutoffIso);
+        // 🔴 2026-08-02 เพิ่มเงื่อนไขที่ 3 (รอบตรวจ 3 ระบบ ข้อ 4.10)
+        //   เดิมมี 2 ข้าง: sent=false  หรือ  last_sent_at < cutoff
+        //   → แถวที่ sent=true แต่ last_sent_at ว่าง จะ **ไม่เข้าเงื่อนไขทั้ง 2 ข้าง** (NULL < x = NULL)
+        //     = หายจากระบบเตือนตลอดกาล · เกิดได้จริงจาก fallback ของ markReminderSent (ดูข้างล่าง)
+        //   เพิ่ม `sla_reminder_last_sent_at.is.null` มาเป็นตาข่ายรับ
+        .or('sla_reminder_sent.eq.false,sla_reminder_last_sent_at.is.null,sla_reminder_last_sent_at.lt.' + slaCutoffIso);
       if (rTry.error && (rTry.error.code === '42703' || rTry.error.code === 'PGRST204' || /sla_reminder_last_sent_at/.test(rTry.error.message || ''))) {
         console.warn('[request-sla-cron] ⚠️ ยังไม่มีคอลัมน์ sla_reminder_last_sent_at → ถอยไปใช้ธงเดิม (เตือนได้ครั้งเดียวเหมือนก่อน). '
           + 'รัน supabase/sql/2026-08-01_cancel_add_guards.sql เพื่อเปิดการเตือนซ้ำทุก 48 ชม.');
@@ -117,7 +123,10 @@ serve(async (req) => {
     //     ใบที่ค้างเกิน 14 วันคือเรื่องที่ต้องคุยกันตรงๆ แล้ว ไม่ใช่เรื่องที่ตัวเตือนอัตโนมัติช่วยได้
     const REPEAT_MAX_DAYS = 14;
     for (const r of rows) {
-      const isRepeat = !!r.sla_reminder_last_sent_at;
+      // 🟡 2026-08-02 แก้ (รอบตรวจ 3 ระบบ ข้อ 4.10 ต่อ): เดิมดูแค่ `sla_reminder_last_sent_at`
+      //   แถวที่ปั๊มธงสำเร็จแต่เขียนเวลาไม่สำเร็จ (fallback) จะถูกมองว่า "ยังไม่เคยเตือน" ตลอดกาล
+      //   → ทวงไม่มีวันจบ เกินกฎ 14 วันไปเรื่อยๆ · ตอนนี้นับ "เคยเตือนแล้ว" จากธงด้วย
+      const isRepeat = !!r.sla_reminder_last_sent_at || r.sla_reminder_sent === true;
       if (isRepeat && (nowMs - new Date(r.created_at).getTime()) > REPEAT_MAX_DAYS * 86400000) {
         continue; // เคยเตือนไปแล้ว และเก่าเกิน 14 วัน → หยุดทวง
       }
@@ -257,7 +266,32 @@ serve(async (req) => {
           if (markErr) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗，可能會重複提醒：', markErr.message, 'id=', r.id); errCount++; }
           sent++;
         } catch (e) { errCount++; console.error('[request-sla-cron] 提醒雙方（一般情況）失敗，id=' + r.id + '：', e && e.message ? e.message : e); }
+        continue;
       }
+
+      // ══════════════════════════════════════════════════════════════════════
+      // 🟡 2026-08-02 เพิ่ม (รอบตรวจ 3 ระบบ ข้อ 4.18) — ทางออกสุดท้ายที่เดิม "เงียบสนิท"
+      //
+      // แถวที่ตกมาถึงตรงนี้คือแถวที่ไม่มีกิ่งไหนรับเลย เกิดได้จริง 2 แบบ:
+      //   (1) offer_status='proposed' แต่ offer_created_at ว่าง   ← เกิดเมื่อการเขียนรอบ 2 ตอนส่งคำขอพังครึ่งทาง
+      //   (2) offer_status='accepted' แต่ offer_accepted_at ว่าง
+      // ของเดิม loop จบไปเฉยๆ = คำขอนั้นไม่มีใครเตือนอีกเลยตลอดกาล และไม่มีร่องรอยที่ไหน
+      // ตอนนี้: เตือนครูโดยใช้ created_at เป็นตัวจับเวลาแทน (ทำได้เสมอ) + เขียน log ให้ตามหาได้
+      // ══════════════════════════════════════════════════════════════════════
+      const hrsFallback = (nowMs - new Date(r.created_at).getTime()) / 3600000;
+      if (hrsFallback < SLA_HOURS) continue;
+      console.warn('[request-sla-cron] ⚠️ แถวนี้ไม่เข้ากิ่งไหนเลย (ข้อมูลเวลาไม่ครบ) → เตือนครูด้วย created_at แทน. id=' + r.id
+        + ' offer_status=' + (r.offer_status || '(ว่าง)')
+        + ' offer_created_at=' + (r.offer_created_at || '(ว่าง)')
+        + ' offer_accepted_at=' + (r.offer_accepted_at || '(ว่าง)'));
+      try {
+        await pushLine(channelToken, teacherUserId,
+          '⏰ 提醒：' + (r.student_name || '學生') + ' 的申請已經超過 48 小時還沒處理，記得到網站看一下\n'
+          + '（這筆的時間資料不完整，系統沒辦法判斷卡在哪一步，請直接開網站確認）');
+        const markErrFb = await markReminderSent(r.id);
+        if (markErrFb) { console.error('[request-sla-cron] 標記 sla_reminder_sent 失敗（กิ่งสำรอง）：', markErrFb.message, 'id=', r.id); errCount++; }
+        sent++;
+      } catch (e) { errCount++; console.error('[request-sla-cron] เตือนครู (กิ่งสำรอง) ไม่สำเร็จ, id=' + r.id + '：', e && e.message ? e.message : e); }
     }
 
     return new Response(JSON.stringify({ ok: true, checked: rows.length, sent, errors: errCount }), { status: 200 });

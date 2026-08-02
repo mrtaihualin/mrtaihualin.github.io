@@ -1193,7 +1193,13 @@ serve(async (req) => {
         // requested_date/requested_time（老師「確認並搬 Calendar」讀的就是這兩欄，
         // 完全不用改那段既有的搬 Calendar 邏輯）。
         const requestId = params.get('request');
-        if (!requestId) continue;
+        // 🟡 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.17): เดิม `continue` เงียบสนิท ครูกดแล้วไม่มีอะไรตอบเลย
+        //   แยกไม่ออกจาก "ระบบตายทั้งระบบ" — ท้าย loop มีตัวตอบ "ไม่รู้จักปุ่มนี้" อยู่แล้ว ตรงนี้ก็ต้องตอบเหมือนกัน
+        if (!requestId) {
+          console.error('[line-webhook] ⚠️ accept/decline_offer: ปุ่มไม่มีข้อมูลที่จำเป็นติดมา (ปุ่มเสียหาย/ข้อความเก่ามาก)');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這顆按鈕的資料不完整（沒有帶申請編號），沒有做任何動作。請到網站處理。');
+          continue;
+        }
         const newOfferStatus = action === 'accept_offer' ? 'accepted' : 'declined';
 
         // 2026-07-16 加（稽核發現，ORANGE#5）：先查這筆申請屬於哪個學生（token），連同
@@ -1284,7 +1290,14 @@ serve(async (req) => {
               // action=confirm_reschedule_move（跟 confirm_add_class／confirm_cancel_delete 同一套模式）。
               const timeLabel = chosenOpt ? (chosenOpt.date + (chosenOpt.time ? ' ' + chosenOpt.time : '')) : '（時間資料異常，請到網站確認）';
               await pushLineFlex(channelToken, teacherUserId, 'ℹ️ 學生已經選好新時間', '時間：' + timeLabel + '（泰國時間）\n\n可以直接按下方按鈕搬 Calendar，或到網站處理',
-                [{ label: '✅ 確認並搬 Calendar', postbackData: 'action=confirm_reschedule_move&request=' + encodeURIComponent(requestId), style: 'primary' }]);
+                // 🔴 2026-08-02 (ข้อ 4.8): พก d/t = "เวลาที่เขียนอยู่บนการ์ดใบนี้" ไปด้วยเสมอ
+                //   ปุ่มค้างในแชทตลอดกาล ถ้าเวลาถูกแก้ทีหลัง ฝั่ง webhook จะเทียบแล้วปฏิเสธ
+                //   ⚠️ รูปแบบต้องตรงกับก้อน confirm_reschedule_move ในไฟล์นี้เป๊ะ
+                [{ label: '✅ 確認並搬 Calendar',
+                   postbackData: 'action=confirm_reschedule_move&request=' + encodeURIComponent(requestId)
+                     + '&d=' + encodeURIComponent((chosenOpt && chosenOpt.date) || '')
+                     + '&t=' + encodeURIComponent((chosenOpt && chosenOpt.time) || ''),
+                   style: 'primary' }]);
             } else {
               // 2026-07-20 加（Lin 要求：都不方便要能直接聯繫學生）：跟網站端 respondToOfferAsStudent
               // 同一套改法，從純文字警告改成附一顆「💬 聯繫學生」按鈕。
@@ -1306,7 +1319,19 @@ serve(async (req) => {
         // requested_date/requested_time）。用 ID 直接動，不像網站舊版 confirmAcceptedOfferInner
         // 那樣用姓名+日期搜尋（更準、也不用等找不到/找到多筆的情況）。
         const requestIdMove = params.get('request');
-        if (!requestIdMove) continue;
+        // 🟡 2026-08-02 (รอบตรวจ 3 ระบบ ข้อ 4.17): เดิม `continue` เงียบสนิท ครูกดแล้วไม่มีอะไรตอบเลย
+        if (!requestIdMove) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_move: ปุ่มไม่มีเลขคำขอติดมา (ปุ่มเสียหาย/ข้อความเก่ามาก)');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這顆按鈕的資料不完整（沒有帶申請編號），沒有做任何動作。請到網站處理。');
+          continue;
+        }
+        // 🔴 2026-08-02 เพิ่ม (รอบตรวจ 3 ระบบ ข้อ 4.8) — ปุ่มต้องพก "เวลาที่ตัวเองสัญญาไว้" มาด้วย
+        //   ท่าเดียวกับ confirm_reschedule_pick ที่ทำไปแล้วเมื่อ 2026-08-01 (งาน B6) แต่ก้อนนี้ถูกลืม
+        //   พังยังไง: นักเรียนกดรับเวลา A → การ์ด「確認並搬 Calendar」ถูกส่งหาครู (ค้างในแชทตลอดกาล)
+        //     → นักเรียนแก้ requested_date เป็น B ได้ (ตราบใดที่คำขอยัง pending และล็อกยังว่าง)
+        //     → ครูกดปุ่มเก่า = คาบไปโผล่เวลา B โดยไม่มีใครรู้ ทั้งที่ปุ่มเขียนว่า A
+        const promisedDateMove = params.get('d');
+        const promisedTimeMove = params.get('t');
 
         const teacherUserIdMove = Deno.env.get('LINE_TEACHER_USER_ID');
         const senderIsTeacherMove = event.source && teacherUserIdMove && event.source.userId === teacherUserIdMove;
@@ -1348,6 +1373,32 @@ serve(async (req) => {
           continue;
         }
 
+        // ── 🔴 2026-08-02 (ข้อ 4.8) — เทียบ "เวลาที่ปุ่มสัญญาไว้" กับฐานข้อมูลตอนนี้ ────────────
+        //   ค่าที่ปุ่มพกมาใช้เป็นตัว "เทียบ" เท่านั้น ฐานข้อมูลยังเป็นความจริงหลักเสมอ
+        //   ⚠️ ปุ่มที่ถูกสร้างก่อนวันนี้จะไม่มี d/t ติดมา — ห้ามทำให้การ์ดที่ค้างในแชทพัง
+        //      ไม่มี d เลย = การ์ดรุ่นเก่า ยังให้ผ่าน แต่ต้องบอกครูตรงๆ ว่าเทียบไม่ได้ (ห้ามเงียบ)
+        let oldCardNoteMove = '';
+        if (promisedDateMove) {
+          const sameDateMove = String(promisedDateMove) === String(reqRowMove.requested_date || '');
+          const sameTimeMove = String(promisedTimeMove || '').slice(0, 5) === String(reqRowMove.requested_time || '').slice(0, 5);
+          if (!sameDateMove || !sameTimeMove) {
+            console.error('[line-webhook] ⚠️ confirm_reschedule_move: ปุ่มสัญญา', promisedDateMove, promisedTimeMove,
+              'แต่ฐานข้อมูลตอนนี้เป็น', reqRowMove.requested_date, reqRowMove.requested_time, '→ ปฏิเสธ. request=', requestIdMove);
+            if (channelToken && event.replyToken) {
+              await replyLine(channelToken, event.replyToken,
+                '⚠️ 這張卡片已經過期了，沒有搬任何課堂。\n' +
+                '按鈕上寫的是 ' + promisedDateMove + ' ' + (promisedTimeMove || '') + '，\n' +
+                '但學生現在選的時間是 ' + (reqRowMove.requested_date || '-') + ' ' + (reqRowMove.requested_time || '') + '（中間被改過了）。\n' +
+                '請到網站看最新的申請內容再處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdMove);
+            }
+            continue;
+          }
+        } else {
+          console.warn('[line-webhook] ℹ️ confirm_reschedule_move: การ์ดรุ่นเก่า (ไม่มี d/t ในปุ่ม) เทียบเวลาที่สัญญาไว้ไม่ได้. request=', requestIdMove);
+          oldCardNoteMove = '\nℹ️ 這是舊版卡片（按鈕沒帶時間），系統沒辦法核對「按鈕上寫的時間」跟「學生現在選的時間」是不是同一個。\n' +
+            '這次是照學生目前選的時間（' + (reqRowMove.requested_date || '-') + ' ' + (reqRowMove.requested_time || '') + '）搬的。';
+        }
+
         // ── 🔴 2026-08-01 เพิ่ม (งาน B2/B3/B4) — ด่านตรวจก่อนแตะ Calendar ────────────────
         // อยู่ "ก่อน" แย่งล็อกทั้งหมด (อ่านอย่างเดียว ไม่แตะอะไร) → ปฏิเสธแล้วไม่มีอะไรต้องปลดคืน
         // รายละเอียดว่าทำไมต้องมีแต่ละด่าน อ่านที่ precheckRescheduleMoveTarget ด้านบน
@@ -1360,20 +1411,28 @@ serve(async (req) => {
           continue;
         }
 
-        // ── 原子鎖：跟 confirm_add_class／confirm_cancel_delete 同一個欄位、同一套語意 ──
-        // 🟠 2026-07-31 เพิ่ม (งาน C6 ที่เหลือ) — ล็อกเก่ากว่า 10 นาที = ถือว่าค้าง แย่งใหม่ได้เลย
-        //   เลขเดียวกับ confirm_cancel_delete (staleLockCutoffCancel) และฝั่งเว็บ claimRequestForProcessing
-        //   ทำไมที่นี่ปลอดภัย (ต่างจาก confirm_add_class ที่ตั้งใจ "ไม่" ใส่): moveCalendarEventById
-        //   คือการ "ย้าย" event เดิมไปวัน/เวลาเดิมที่ขอไว้ซ้ำ ไม่ใช่การสร้างใหม่ — กดซ้ำ/แย่งล็อกไป
-        //   ทำงานซ้ำ อย่างมากคือ PATCH ไปที่เดิมอีกรอบ ไม่ทำให้เกิดคาบซ้อนกันในปฏิทินเหมือนที่
-        //   confirm_add_class เสี่ยง จึงใช้กฎเดียวกับ confirm_cancel_delete ได้ปลอดภัย
-        const staleLockCutoffMove = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        // ── 原子鎖：跟 confirm_reschedule_pick 同一套（ห้ามแย่ง）──
+        // 🔴 2026-08-02 แก้ (รอบตรวจ 3 ระบบ ข้อ 4.12) — เดิมที่นี่ "แย่งล็อกค้าง 10 นาทีได้"
+        //
+        // 🕳️ ทำไมของเดิมอันตราย: ก้อนนี้มี 2 จุดที่ **จงใจทิ้งล็อกค้างไว้** เพราะคาบอาจถูกย้ายไปแล้ว
+        //     (1) moveResult.eventMovedButUnverified — ส่งคำสั่งย้ายไปแล้วแต่ตรวจซ้ำไม่ได้
+        //     (2) ย้ายสำเร็จ แต่ปิดคำขอไม่สำเร็จ
+        //   พอใช้กฎ "แย่งได้เมื่อครบ 10 นาที" = ล็อกที่ตั้งใจกันไว้ 2 จุดนั้นถูกปลดเองอัตโนมัติ
+        //   → ทั้งเว็บและ LINE เข้าไปย้ายซ้ำได้ · ด่านที่กันไว้คือ B4 (เทียบ original_date)
+        //     แต่ B4 **ข้ามทั้งด่านถ้า original_date ว่าง** → ย้ายซ้ำ + ได้แถวสำรองขยะเพิ่ม
+        //   เหตุผลเดิมที่เขียนไว้ว่า "ย้ายซ้ำไม่อันตราย" ใช้ไม่ได้กับ 2 จุดนั้น เพราะตอนนั้น
+        //   ฐานข้อมูลกับ Calendar ไม่ตรงกันอยู่แล้ว การย้ายซ้ำจึงทำให้สับสนหนักกว่าเดิม
+        //
+        // ✅ ตอนนี้ใช้กฎเดียวกับ pick / confirm_add_class: ห้ามแย่ง
+        //   ล็อกค้างเพราะเน็ตหลุดจริง ปลดด้วยปุ่ม 🔓 解鎖這筆 บนการ์ดคิวฝั่งเว็บ (ขึ้นเองเมื่อค้าง > 10 นาที)
+        // ⚠️ ต้องแก้ฝั่งเว็บพร้อมกันเสมอ (classroom/index.html → claimRescheduleRequest)
+        //    ไม่งั้นรูแค่ย้ายที่ จาก LINE→LINE ไปเป็น LINE→เว็บ (บทเรียนจริง 2026-07-31)
         const { error: claimErrMove, count: claimCountMove } = await supabase
           .from('classroom_requests')
           .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
           .eq('id', requestIdMove)
           .eq('status', 'pending')
-          .or('processing_started_at.is.null,processing_started_at.lt.' + staleLockCutoffMove)
+          .is('processing_started_at', null)
           .select('id');
 
         if (claimErrMove) {
@@ -1487,7 +1546,7 @@ serve(async (req) => {
             await replyLine(channelToken, event.replyToken,
               '⚠️ Calendar 已經搬成功了' + (studentWarnMove ? '' : '，學生也通知過了') +
               '，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdMove + '）' +
-              schedWarnMove + studentWarnMove);
+              schedWarnMove + oldCardNoteMove + studentWarnMove);
           }
           continue;
         }
@@ -1496,7 +1555,7 @@ serve(async (req) => {
           // 2026-08-01: ต่อท้ายด้วยคำเตือนเรื่องตารางเรียน/แจ้งนักเรียน (ถ้ามี)
           //   ห้ามขึ้น "สำเร็จ" เฉยๆ ทั้งที่มีบางส่วนพลาด
           await replyLine(channelToken, event.replyToken,
-            '✅ 已把課搬到新時間' + (studentWarnMove ? '' : '，並通知學生了') + schedWarnMove + studentWarnMove);
+            '✅ 已把課搬到新時間' + (studentWarnMove ? '' : '，並通知學生了') + schedWarnMove + oldCardNoteMove + studentWarnMove);
         }
         continue;
       }
@@ -1520,7 +1579,13 @@ serve(async (req) => {
         //   (ฐานข้อมูลยังเป็นความจริงหลักเสมอ ปุ่มเป็นแค่หลักฐานว่าตอนนั้นสัญญาอะไรไว้)
         const promisedDatePick = params.get('d');
         const promisedTimePick = params.get('t');
-        if (!requestIdPick) continue;
+        // 🟡 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.17): เดิม `continue` เงียบสนิท ครูกดแล้วไม่มีอะไรตอบเลย
+        //   แยกไม่ออกจาก "ระบบตายทั้งระบบ" — ท้าย loop มีตัวตอบ "ไม่รู้จักปุ่มนี้" อยู่แล้ว ตรงนี้ก็ต้องตอบเหมือนกัน
+        if (!requestIdPick) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_pick: ปุ่มไม่มีข้อมูลที่จำเป็นติดมา (ปุ่มเสียหาย/ข้อความเก่ามาก)');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這顆按鈕的資料不完整（沒有帶申請編號），沒有做任何動作。請到網站處理。');
+          continue;
+        }
 
         const teacherUserIdPick = Deno.env.get('LINE_TEACHER_USER_ID');
         const senderIsTeacherPick = event.source && teacherUserIdPick && event.source.userId === teacherUserIdPick;
@@ -1738,7 +1803,13 @@ serve(async (req) => {
         // 哪邊先按都算數，兩邊共用同一個欄位 teacher_cancel_ack_at，用 .is(null) 當保險閘
         // 防止兩邊同時按/重複按 push 兩次通知給老師。
         const requestId = params.get('request');
-        if (!requestId) continue;
+        // 🟡 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.17): เดิม `continue` เงียบสนิท ครูกดแล้วไม่มีอะไรตอบเลย
+        //   แยกไม่ออกจาก "ระบบตายทั้งระบบ" — ท้าย loop มีตัวตอบ "ไม่รู้จักปุ่มนี้" อยู่แล้ว ตรงนี้ก็ต้องตอบเหมือนกัน
+        if (!requestId) {
+          console.error('[line-webhook] ⚠️ ack_teacher_cancel: ปุ่มไม่มีข้อมูลที่จำเป็นติดมา (ปุ่มเสียหาย/ข้อความเก่ามาก)');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這顆按鈕的資料不完整（沒有帶申請編號），沒有做任何動作。請到網站處理。');
+          continue;
+        }
 
         // 2026-07-16 加（稽核發現，ORANGE#5）：跟 accept/decline_offer 一樣，多加一層確認
         // 按按鈕的人是不是這筆通知真正要給的那個學生。
@@ -1826,7 +1897,13 @@ serve(async (req) => {
         // ── 2026-07-20 加（Lin 要求：申請加課的 LINE 卡片也要能直接查衝突，不用開網站）──
         // 只有老師能按（跟其他會碰 Calendar/資料庫的 postback 一樣，fail-closed 檢查身分）。
         const requestIdChk = params.get('request');
-        if (!requestIdChk) continue;
+        // 🟡 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.17): เดิม `continue` เงียบสนิท ครูกดแล้วไม่มีอะไรตอบเลย
+        //   แยกไม่ออกจาก "ระบบตายทั้งระบบ" — ท้าย loop มีตัวตอบ "ไม่รู้จักปุ่มนี้" อยู่แล้ว ตรงนี้ก็ต้องตอบเหมือนกัน
+        if (!requestIdChk) {
+          console.error('[line-webhook] ⚠️ check_conflict: ปุ่มไม่มีข้อมูลที่จำเป็นติดมา (ปุ่มเสียหาย/ข้อความเก่ามาก)');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這顆按鈕的資料不完整（沒有帶申請編號），沒有做任何動作。請到網站處理。');
+          continue;
+        }
         const teacherUserIdChk = Deno.env.get('LINE_TEACHER_USER_ID');
         const senderIsTeacherChk = event.source && teacherUserIdChk && event.source.userId === teacherUserIdChk;
         if (!senderIsTeacherChk) {
@@ -1874,7 +1951,13 @@ serve(async (req) => {
         // OAuth scope 是完整的 https://www.googleapis.com/auth/calendar，不是唯讀也不是只能刪除，
         // 建立事件（POST .../events）本來就在同一個 scope 裡，不需要額外授權。
         const requestIdAddC = params.get('request');
-        if (!requestIdAddC) continue;
+        // 🟡 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.17): เดิม `continue` เงียบสนิท ครูกดแล้วไม่มีอะไรตอบเลย
+        //   แยกไม่ออกจาก "ระบบตายทั้งระบบ" — ท้าย loop มีตัวตอบ "ไม่รู้จักปุ่มนี้" อยู่แล้ว ตรงนี้ก็ต้องตอบเหมือนกัน
+        if (!requestIdAddC) {
+          console.error('[line-webhook] ⚠️ confirm_add_class: ปุ่มไม่มีข้อมูลที่จำเป็นติดมา (ปุ่มเสียหาย/ข้อความเก่ามาก)');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這顆按鈕的資料不完整（沒有帶申請編號），沒有做任何動作。請到網站處理。');
+          continue;
+        }
 
         const teacherUserIdAddC = Deno.env.get('LINE_TEACHER_USER_ID');
         const senderIsTeacherAddC = event.source && teacherUserIdAddC && event.source.userId === teacherUserIdAddC;
@@ -2407,7 +2490,13 @@ serve(async (req) => {
         // เดิมทำไม่ได้เพราะไม่มี OAuth token ของครู (ดูคอมเมนต์บรรทัด 26-30) ตอนนี้มี service account แล้ว
         // ใช้ calendar_event_id ตรงตัว ไม่เดาจากชื่อ+วันที่ (เหมือน deleteClassEventOnce ฝั่งเว็บ)
         const requestIdCancel = params.get('request');
-        if (!requestIdCancel) continue;
+        // 🟡 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.17): เดิม `continue` เงียบสนิท ครูกดแล้วไม่มีอะไรตอบเลย
+        //   แยกไม่ออกจาก "ระบบตายทั้งระบบ" — ท้าย loop มีตัวตอบ "ไม่รู้จักปุ่มนี้" อยู่แล้ว ตรงนี้ก็ต้องตอบเหมือนกัน
+        if (!requestIdCancel) {
+          console.error('[line-webhook] ⚠️ confirm_cancel_delete: ปุ่มไม่มีข้อมูลที่จำเป็นติดมา (ปุ่มเสียหาย/ข้อความเก่ามาก)');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這顆按鈕的資料不完整（沒有帶申請編號），沒有做任何動作。請到網站處理。');
+          continue;
+        }
 
         // เฉพาะครูเท่านั้นที่กดปุ่มนี้ได้ (กันคนอื่นกดสั่งลบ Calendar ของครูได้)
         const teacherUserIdCheck = Deno.env.get('LINE_TEACHER_USER_ID');
@@ -2709,7 +2798,13 @@ serve(async (req) => {
           continue;
         }
         const contactToken = params.get('token');
-        if (!contactToken) continue;
+        // 🟡 2026-08-02 (ตรวจ 3 ระบบ ข้อ 4.17): เดิม `continue` เงียบสนิท ครูกดแล้วไม่มีอะไรตอบเลย
+        //   แยกไม่ออกจาก "ระบบตายทั้งระบบ" — ท้าย loop มีตัวตอบ "ไม่รู้จักปุ่มนี้" อยู่แล้ว ตรงนี้ก็ต้องตอบเหมือนกัน
+        if (!contactToken) {
+          console.error('[line-webhook] ⚠️ start_contact_student: ปุ่มไม่มีข้อมูลที่จำเป็นติดมา (ปุ่มเสียหาย/ข้อความเก่ามาก)');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 這顆按鈕的資料不完整（沒有帶學生代碼），沒有做任何動作。請到網站處理。');
+          continue;
+        }
         const { data: stuRowContact } = await supabase.from('classroom_students').select('name').eq('token', contactToken).maybeSingle();
         const contactName = (stuRowContact && stuRowContact.name) || decodeURIComponent(params.get('name') || '') || '這位學生';
         const { error: pendingErr } = await supabase

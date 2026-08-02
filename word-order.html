@@ -74,10 +74,10 @@
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/word-order-app.js -->
 <script defer src="js/games/game-account.js?v=3"></script>
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=10"></script>
+<script defer src="js/games/reading-auth.js?v=11"></script>
 <script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="js/games/word-vault.js"></script>
-<script src="data/adv-sentences.js?v=7"></script>
+<script src="js/games/game-content-client.js?v=1"></script>
 <script src="data/audio-manifest.js?v=2"></script><!-- เพิ่ม 2026-07-17: เสียงประโยค 30 ประโยค (เสียง th-TH-Chirp3-HD-Leda) -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
 <script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงประโยค — โชว์เฉพาะตอนเฉลยแล้ว -->
@@ -287,10 +287,40 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <li>每句從 <strong>10 分</strong>開始：排錯一次扣一些分（10→7→4→1），用「提示」每次扣 <strong>2 分</strong>，兩種扣分共用同一個分數</li>
         <li>扣到 0 分這句就直接失敗，之後會再複習到</li>
         <li>連續排對第一次會有<strong>連擊加成 ×1.5／×2／×3</strong>，偶爾出現<strong>✨黃金句</strong>乾淨過關再 <strong>×2</strong>！</li>
+        <li>玩完一輪可下載 📄 PDF 報告</li>
       </ul>
     </div>
     <p style="font-size:13px;color:#2e7d32;background:#e8f5e9;border-radius:8px;padding:10px 14px;margin:0 0 12px;">🔑 <b>登入</b>後：系統會記住哪些句子學會了、哪些要複習，到期自動排進來；真的記熟還能累積 ⭐ 星星！</p>
-    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">泰語跟中文語序不一樣，多練幾次就會抓到感覺 😄 <a href="pricing.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔</a></p>
+
+    <button onclick="var d=document.getElementById('wo-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';try{if(window.gtag)gtag('event','word_order_howto_detail_toggle',{category:'game',open:!open});}catch(e){}" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
+
+    <div id="wo-howto-detail" style="display:none;font-size:14.5px;color:#333;line-height:1.9;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
+      <div style="font-weight:700;color:#8B6310;margin:0 0 4px;">🧩 這個遊戲在練什麼</div>
+      <p style="margin:0 0 10px;">每一句泰文都被拆成好幾個詞、順序打散了，要照正確順序把詞塊點回上面的空格裡，組成完整句子。全部都是完整句子，練習泰語跟中文不一樣的語序感覺。點錯了嗎？點一下上面已經填的詞塊，就可以把它放回去重排。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💰 計分怎麼算</div>
+      <p style="margin:0 0 10px;">每句從 10 分（這句的「命」）開始：排錯一次扣分（第 1／2／3 次各扣 3 分，第 4 次扣 1 分，剛好扣完 10 分），按「提示」每次固定扣 2 分，兩種扣分共用同一個分數池，扣到 0 分這句就直接失敗（之後會排進複習）。答對時拿到的分數，就是當下剩下的「命」還有多少。連續整句都乾淨過關，會有連擊加成（連續 3／5／8 句 ×1.5／×2／×3），偶爾出現的 ✨黃金句乾淨過關再 ×2。玩完一輪 +20 分，全程都乾淨過關（perfect）再加 +50 分。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡 提示按鈕怎麼用</div>
+      <p style="margin:0 0 10px;">「提示」不是切換模式，是隨點隨扣分的按鈕，可以按很多次，但每按一次都扣 2 分，扣到 0 分一樣算失敗。要慢慢想清楚順序，或直接用提示拿低分過關，都可以自己拿捏。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
+      <p style="margin:0 0 10px;">覺得這句已經很熟，可按「已記得」跳過重排直接自測。不會加分、不會加星星，純粹標記「已精通」，用在複習系統。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
+      <p style="margin:0 0 10px;">點 🍚 圖示展開直式清單：讀音顯示・英文讀音・翻譯顯示・字體切換・🙏禮貌詞（切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響排序或計分）。跟其他遊戲不一樣的是，句子還在重排的時候禮貌詞不會出現，要等排對、或失敗看解答之後才會顯示，跟句子的中文意思解說放在一起。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章</div>
+      <p style="margin:0 0 10px;">星星是這句真正靠複習「精通」了才拿到（跟其他遊戲共用），累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 下載 PDF 報告</div>
+      <p style="margin:0 0 10px;">玩完一輪可以下載 PDF 報告，裡面有這輪總分、乾淨過關的句數、每句的表現（句子／意思／狀態／錯幾次／得分／下次複習日期），還有「弱點分析」列出這輪錯最多的句子。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
+      <p style="margin:0;">排錯或用過提示的句子，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。不登入的話，每次進來都是全部句子重新開始，沒有記憶功能。</p>
+    </div>
+
+    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:16px 0 0;">泰語跟中文語序不一樣，多練幾次就會抓到感覺 😄 <a href="pricing.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔</a></p>
   </div>
 </div>
 
@@ -446,7 +476,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<script src="js/games/word-order-app.min.js?v=12"></script>
+<script>GameContentLoader.boot(['js/games/word-order-app.min.js?v=12']);</script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>
@@ -469,6 +499,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <span class="gs-tab gs-active">🧩 語序練習室</span>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'word_order'})}catch(e){}">🧱 造句練習室</a>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="listening-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'listening_game',from:'word_order'})}catch(e){}">🎧 聽力練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'word_order'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>

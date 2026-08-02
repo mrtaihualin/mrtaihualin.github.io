@@ -74,7 +74,7 @@
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js -->
 <script defer src="js/core/auth-widget.js?v=2"></script>
 <script defer src="js/games/game-account.js?v=3"></script>
-<script defer src="js/games/reading-auth.js?v=10"></script>
+<script defer src="js/games/reading-auth.js?v=11"></script>
 <script defer src="js/games/lego-vault.js?v=1"></script>
 <style>
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -1744,6 +1744,8 @@ function gtTourStart(){
   <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'lego'})}catch(e){}">🧩 語序練習室</a>
   <div class="gs-divider"></div>
   <span class="gs-tab gs-active">🧱 造句練習室</span>
+  <div class="gs-divider"></div>
+  <a class="gs-tab" href="listening-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'listening_game',from:'lego'})}catch(e){}">🎧 聽力練習室</a>
   <div class="gs-divider"></div>
   <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'lego'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
 </div>

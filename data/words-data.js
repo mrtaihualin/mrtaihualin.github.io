@@ -640,45 +640,24 @@
   ];
 
   // ════════════════════════════════════════════════════════════
-  // v1 (LIN 2026-07-26): เพดานเนื้อหาฟรี — ไม่ล็อกอิน 150 คำ · ล็อกอิน (ยังไม่จ่ายเงิน) 200 คำ
-  // (ตัวเลขที่ Lin กำหนด 2026-07-26 — ระบบสมาชิกจ่ายเงินยังไม่ทำตอนนี้ พักไว้ทำอนาคต ตามที่ Lin สั่ง)
-  // ตัดเอาแค่ N คำแรกตามลำดับที่มีอยู่แล้วในไฟล์นี้ (ไม่สุ่ม/ไม่คัดเอง — เรียงตามที่เขียนไว้)
+  // v2 (LIN 2026-08-02): เพดานเนื้อหาจริงย้ายไปทำฝั่งเซิร์ฟเวอร์แล้ว — Edge Function
+  // `game-content` อ่านคำจากตาราง game_words ใน Supabase (client แตะตารางนั้นตรงๆ ไม่ได้เลย
+  // ไม่มี grant ให้ anon/authenticated) แล้วค่อยตัดโควตาตามสิทธิ์จริงที่เช็คจาก JWT ฝั่งเซิร์ฟเวอร์
+  // ก่อนส่งกลับ — ของเดิม (เช็ค localStorage เดา login แล้วตัดอาร์เรย์ตรงนี้) เป็นแค่ "เพดานนุ่ม"
+  // ฝั่ง browser เท่านั้น ไม่ใช่ด่านความปลอดภัยจริง (ใครเปิด URL ไฟล์นี้ตรงๆ ก็เห็นครบทุกคำอยู่ดี)
   //
-  // ⚠️ เช็คสถานะล็อกอินแบบ sync ตอนไฟล์นี้โหลด (ไม่รอ Supabase client resolve เพราะเป็น async ช้ากว่านี้)
-  // โดยอ่าน token ที่ Supabase เก็บไว้ใน localStorage เอง (เดากับที่มีอยู่แล้วในเครื่อง ณ ตอนนี้)
-  // แม่นเกือบทุกกรณีจริง ยกเว้นเคส "เพิ่งล็อกอินครั้งแรกในแท็บนี้เอง" ซึ่งจะเห็นเพดานไม่ล็อกอินไปก่อน
-  // จนกว่าจะรีเฟรชหน้าอีกที — ยอมรับได้ เพราะนี่คือ "เพดานนุ่ม" ฝั่ง client เท่านั้น (ตามที่ Lin ตกลง
-  // 2026-07-26) ไม่ใช่ระบบล็อกเนื้อหาจริงจัง (ล็อกจริงต้องเสิร์ฟผ่าน Edge Function — ดู
-  // _แผนงาน/ทำต่อในอนาคต.md หัวข้อ "🔒 Freemium เกม")
+  // เกมทั้ง 6 หน้าเลิกโหลดไฟล์นี้แล้วด้วย (ดู js/games/game-content-client.js ที่โหลดแทน) —
+  // ไฟล์นี้เหลือหน้าที่เดียว: เป็นต้นฉบับที่ Lin แก้คำ/หมวด/การออกเสียงผ่านสกิลร่างเดิมทุกอย่าง
+  // เหมือนเดิม แล้วซิงก์เข้า Supabase ด้วย scripts/migrate-game-content.js ทีหลัง (ดูวิธีรันที่หัวไฟล์นั้น)
   //
-  // ⚠️ สำคัญ: ถ้าไม่มี localStorage เลย (เช่นรันผ่าน node data/check-data-health.js ตรวจสุขภาพข้อมูล)
-  // ต้อง "ไม่ตัด" ปล่อยเต็มเสมอ — ไม่งั้นตัวตรวจข้อมูลจะเช็คแค่ 150 คำแรก แล้วมองไม่เห็นคำใหม่ที่ Lin
-  // เพิ่มไว้ท้ายไฟล์เลย (คำใหม่ ๆ อยู่ท้ายไฟล์เกือบทุกครั้ง) — อันตรายมาก ต้องกันไว้ก่อน
-  function _sb26StorageKey() {
-    var url = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url) || 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
-    var ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || 'qzkxlhpcputsvbqmtqfi';
-    return 'sb-' + ref + '-auth-token';
-  }
-  function _looksLoggedInSync() {
-    if (typeof localStorage === 'undefined') return null; // ไม่ใช่เบราว์เซอร์จริง (เช่น node) → null = ไม่ตัดเลย
-    try {
-      var raw = localStorage.getItem(_sb26StorageKey());
-      if (!raw) return false;
-      var t = JSON.parse(raw);
-      var exp = t && (t.expires_at || (t.currentSession && t.currentSession.expires_at));
-      return !!exp && (Number(exp) * 1000) > Date.now();
-    } catch (e) { return false; }
-  }
-  // Lin 2026-07-31 (รอบ 4 — 中 เพิ่มครบ 114 คำแล้ว): เพดานแยกเป็นคนละก้อนต่อระดับ ไม่ใช่เพดานรวมแบบเดิม
-  //   初: ไม่ล็อกอิน 150 คำ · ล็อกอินไม่จ่ายเงิน 200 คำ
-  //   中: ไม่ล็อกอิน 50 คำ · ล็อกอินไม่จ่ายเงิน 100 คำ (中 ทั้งเว็บตอนนี้มี 114 คำ → ครบ 100 พอดีสำหรับคนล็อกอิน · 14 คำที่เกิน (อันดับ 101-114) กันไว้เป็นโควตาคนจ่ายเงินในอนาคต ตามที่ Lin ยืนยัน 2026-07-31)
-  var FREE_TIER_CAPS = { words_初: 150, words_中: 50, sentences: 50 };    // ไม่ล็อกอิน
-  var LOGIN_TIER_CAPS = { words_初: 200, words_中: 100, sentences: 100 }; // ล็อกอินแล้ว (ยังไม่จ่ายเงิน)
-  var _tierLoggedIn = _looksLoggedInSync(); // true/false/null(=ไม่ตัด)
-  global.CONTENT_TIER_IS_LOGIN_GUESS = _tierLoggedIn; // เผื่อไฟล์อื่นอยากอ่าน (debug/แสดงผล)
+  // เพดานจริงตอนนี้ (Lin ยืนยัน 2026-08-02 — แก้ได้ที่ supabase/functions/game-content/index.ts เท่านั้น):
+  //   初: ไม่ล็อกอิน 50 คำ · ล็อกอินไม่จ่ายเงิน 100 คำ
+  //   中: ไม่ล็อกอิน 50 คำ · ล็อกอินไม่จ่ายเงิน 100 คำ
+  // ════════════════════════════════════════════════════════════
 
   var WORDS_MASTER_FULL = WORDS_MASTER; // เก็บชุดเต็มไว้เสมอ (ตัวตรวจข้อมูล/เครื่องมือ Lin ใช้ชุดนี้)
   global.WORDS_MASTER_FULL = WORDS_MASTER_FULL;
+  global.WORDS_MASTER = WORDS_MASTER; // ไม่ตัดเพดานในไฟล์นี้อีกต่อไป — ด่านจริงอยู่ฝั่งเซิร์ฟเวอร์แล้ว
 
   // ── ลำดับคำที่ล็อกไว้สำหรับตัดเพดาน (Lin อนุมัติ 2026-07-31) ──
   // แหล่งอ้างอิง (เรียงคำจาก "ใช้บ่อยในชีวิตประจำวันจริง" มากไปน้อย):
@@ -751,30 +730,12 @@
     "สมัคร","ตกแต่ง","ถ่ายรูป","ดาวน์โหลด"
   ];
 
-  function buildCapOrderObjs(fullList, thOrder) {
-    // ⚠️ WORDS_MASTER (ก่อนผ่าน adapter) เก็บตัวสะกดไว้ที่ฟิลด์ .word ไม่ใช่ .th (ฟิลด์ .th มีเฉพาะหลังผ่าน buildWordsForPhonicsGames เท่านั้น)
-    var byTh = {};
-    fullList.forEach(function (w) { if (byTh[w.word] === undefined) byTh[w.word] = w; }); // ตัวสะกดในระดับเดียวกันไม่ซ้ำกันอยู่แล้ว
-    var used = {}, order = [];
-    thOrder.forEach(function (th) {
-      if (byTh[th] && !used[th]) { order.push(byTh[th]); used[th] = true; }
-    });
-    fullList.forEach(function (w) { if (!used[w.word]) { order.push(w); used[w.word] = true; } }); // เผื่อคำที่ตกหล่นจากลิสต์ล็อก (เช่นคำใหม่ที่ Lin เพิ่งเพิ่ม)
-    return order;
-  }
-  var _words初 = WORDS_MASTER_FULL.filter(function (w) { return w.level === '初'; });
-  var _words中 = WORDS_MASTER_FULL.filter(function (w) { return w.level === '中'; });
-  var WORDS_MASTER_CAP_ORDER_初 = buildCapOrderObjs(_words初, CAP_ORDER_TH_初);
-  var WORDS_MASTER_CAP_ORDER_中 = buildCapOrderObjs(_words中, CAP_ORDER_TH_中);
-  global.WORDS_MASTER_CAP_ORDER_初 = WORDS_MASTER_CAP_ORDER_初; // เผื่อ debug/ตรวจสอบ
-  global.WORDS_MASTER_CAP_ORDER_中 = WORDS_MASTER_CAP_ORDER_中;
-
-  if (_tierLoggedIn !== null) {
-    var caps = _tierLoggedIn ? LOGIN_TIER_CAPS : FREE_TIER_CAPS;
-    WORDS_MASTER = WORDS_MASTER_CAP_ORDER_初.slice(0, caps.words_初)
-      .concat(WORDS_MASTER_CAP_ORDER_中.slice(0, caps.words_中));
-  }
-  global.WORDS_MASTER = WORDS_MASTER;
+  // buildCapOrderObjs() (ตัวจัดเรียงคำตาม CAP_ORDER_TH_初/中 + fallback ท้ายลิสต์) ย้ายไปอยู่ใน
+  // scripts/migrate-game-content.js แล้ว (2026-08-02) — ในไฟล์นี้ไม่มีใครใช้ผลลัพธ์การจัดเรียง
+  // อีกต่อไป (เกมเลิกโหลดไฟล์นี้แล้ว) เหลือแค่ต้องส่งออก CAP_ORDER_TH_初/中 (ลำดับดิบ) ให้สคริปต์
+  // นั้นอ่านไปคำนวณ rank เอง — ห้ามลบ 2 บรรทัดข้างล่างนี้ ไม่งั้น migrate script พังเพราะหา rank ไม่ได้
+  global.CAP_ORDER_TH_初 = CAP_ORDER_TH_初;
+  global.CAP_ORDER_TH_中 = CAP_ORDER_TH_中;
 })(window);
 
 // ════════════════════════════════════════════════════════════

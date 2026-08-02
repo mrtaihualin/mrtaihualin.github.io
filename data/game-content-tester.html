@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<title>ตัวทดสอบ game-content (Lin ใช้เอง — ไม่ผูกกับเมนูเว็บ)</title>
+<!--
+  data/game-content-tester.html — Lin 2026-08-02
+  ────────────────────────────────────────────────────────────
+  ไม่ใช่หน้าเว็บสาธารณะ ไม่ผูกกับเมนู games.html — เปิดตรงๆ จากไฟล์ หรือ URL ตรงเท่านั้น
+  (แบบเดียวกับ data/review-tool.html)
+
+  ใช้ตรวจ Edge Function game-content หลัง deploy ว่าล็อกจริง ไม่ใช่ล็อกปลอม — ทดสอบ 4 แบบ:
+    1) ไม่ล็อกอิน (ส่งแค่ anon key)                → ต้องได้ tier=anon,  初=50,  中=50,  ประโยค=20
+    2) token ปลอม/หมดอายุ                          → ต้องถูกปฏิเสธเป็นคนไม่ล็อกอิน (ไม่ใช่ error/crash)
+    3) ล็อกอินจริง (auto จาก localStorage ถ้ามี หรือวางเองด้านล่าง) → tier=login, 初=100, 中=100, ประโยค=40
+    4) ปลอม tier ใน body ({"tier":"login"}) ทั้งที่ไม่ได้ล็อกอิน → ต้องถูกเมิน ยังได้ tier=anon เหมือนเดิม
+  บวกเช็คอัตโนมัติ: ยิง PostgREST ตรงๆ ไปที่ game_words/game_sentences ด้วย anon key
+  (ไม่ผ่าน Edge Function) ต้องโดนปฏิเสธ/ได้ 0 แถว — นี่คือหลักฐานว่าด่านล็อกจริง ไม่ใช่ล็อกปลอม
+  ────────────────────────────────────────────────────────────
+-->
+<style>
+  body { font-family: sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; line-height: 1.6; }
+  h1 { font-size: 20px; }
+  .cfg label { display:block; margin-top:8px; font-size: 13px; color:#555; }
+  .cfg input { width: 100%; padding: 6px; box-sizing: border-box; font-family: monospace; font-size: 12px; }
+  button { margin: 4px 6px 4px 0; padding: 8px 14px; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 13px; }
+  td, th { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .pass { color: #16a34a; font-weight: bold; }
+  .fail { color: #dc2626; font-weight: bold; }
+  .pending { color: #999; }
+  pre { white-space: pre-wrap; word-break: break-all; background: #f5f5f5; padding: 6px; font-size: 11px; max-height: 120px; overflow:auto; }
+</style>
+</head>
+<body>
+<h1>🔒 ตัวทดสอบ game-content — Lin ใช้เอง</h1>
+<p>เช็คว่า Edge Function <code>game-content</code> ล็อกเนื้อหาจริง (ไม่ใช่แค่เพดานปลอมฝั่ง browser แบบเดิม)</p>
+
+<div class="cfg">
+  <label>Supabase URL <input id="sbUrl" value="https://qzkxlhpcputsvbqmtqfi.supabase.co"></label>
+  <label>anon key <input id="sbAnon" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw"></label>
+  <label>access token คนล็อกอินจริง (เว้นว่าง = ลองอ่านจาก localStorage อัตโนมัติ ถ้าเปิดหน้านี้บนโดเมนเว็บจริงและ Lin ล็อกอินอยู่)
+    <input id="realToken" placeholder="วาง access_token จาก Supabase session ที่ล็อกอินแล้ว (ถ้าต้องการบังคับ)"></label>
+</div>
+
+<p>
+  <button onclick="runAll()">▶ รันทดสอบทั้งหมด</button>
+  <button onclick="runTest1()">1) ไม่ล็อกอิน</button>
+  <button onclick="runTest2()">2) token ปลอม</button>
+  <button onclick="runTest3()">3) ล็อกอินจริง</button>
+  <button onclick="runTest4()">4) ปลอม tier ใน body</button>
+  <button onclick="runTest5()">5) PostgREST ตรงๆ (ต้องโดนปฏิเสธ)</button>
+</p>
+
+<table id="resultsTable">
+  <thead><tr><th>ทดสอบ</th><th>คาดหวัง</th><th>ผลจริง</th><th>สถานะ</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<h2 style="margin-top:32px;">เช็คด้วยมือ (ทำนอกหน้านี้ หลัง deploy จริง)</h2>
+<ol>
+  <li>เปิด <code>https://mrtaihualin.com/data/words-data.js</code> และ <code>.../data/adv-sentences.js</code> ตรงๆ —
+    ⚠️ Lin ยืนยันแล้ว (2026-08-02) ว่าไฟล์นี้ยังฝากไว้บน GitHub เหมือนเดิม (ง่ายกว่า ไม่กระทบสกิลร่างคำ/ประโยค)
+    ดังนั้น "เปิด URL ตรงๆ ยังเห็นคำครบ" คือของที่ยอมรับแล้ว — สิ่งที่ต้องเช็คจริงคือ "เกมทั้ง 6 หน้าไม่โหลดไฟล์นี้อีกต่อไป"
+    (ดู View Source ของแต่ละหน้าเกม ต้องไม่มี <code>&lt;script src="data/words-data.js"&gt;</code> หรือ
+    <code>data/adv-sentences.js</code> หลงเหลืออยู่)</li>
+  <li>เล่นเกมทั้ง 6 หน้าจริง (games-challenge / reading-game / tone-finder / typing-game / word-order /
+    listening-game) — ต้องขึ้นแถบ "กำลังโหลดข้อมูลเกม..." สั้นๆ แล้วเล่นได้ปกติ (คำ/ประโยค/เสียง/ปุ่มพยางค์ครบ)</li>
+  <li>ลองปิดเน็ตแล้วเปิดหน้าเกม (หรือบล็อก URL game-content ผ่าน devtools) — ต้องเห็นแถบแดง
+    "โหลดข้อมูลเกมไม่สำเร็จ" ชัดเจน ห้ามเจอหน้าเกมว่างเปล่าเงียบๆ</li>
+</ol>
+
+<script>
+const tbody = document.querySelector('#resultsTable tbody');
+function addRow(name, expected, actual, ok) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${name}</td><td>${expected}</td><td><pre>${actual}</pre></td><td class="${ok===null?'pending':(ok?'pass':'fail')}">${ok===null?'…':(ok?'✅ ผ่าน':'❌ ไม่ผ่าน')}</td>`;
+  tbody.appendChild(tr);
+  return tr;
+}
+
+function sbStorageKey(url) {
+  const ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || 'qzkxlhpcputsvbqmtqfi';
+  return 'sb-' + ref + '-auth-token';
+}
+function autoDetectRealToken(url) {
+  try {
+    const raw = localStorage.getItem(sbStorageKey(url));
+    if (!raw) return null;
+    const t = JSON.parse(raw);
+    const exp = t && (t.expires_at || (t.currentSession && t.currentSession.expires_at));
+    const token = t && (t.access_token || (t.currentSession && t.currentSession.access_token));
+    if (!exp || !token) return null;
+    return (Number(exp) * 1000) > Date.now() ? token : null;
+  } catch (e) { return null; }
+}
+
+async function callGameContent(authToken, body) {
+  const url = document.getElementById('sbUrl').value.trim();
+  const anon = document.getElementById('sbAnon').value.trim();
+  const res = await fetch(url + '/functions/v1/game-content', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: 'Bearer ' + authToken },
+    body: JSON.stringify(body || {}),
+  });
+  let data;
+  try { data = await res.json(); } catch (e) { data = { error: 'ตอบกลับไม่ใช่ JSON (HTTP ' + res.status + ')' }; }
+  return { status: res.status, data };
+}
+
+function summarize(r) {
+  if (r.data && r.data.error) return 'HTTP ' + r.status + ' — error: ' + r.data.error;
+  const w = r.data.words || [];
+  const s = r.data.sentences || [];
+  const c初 = w.filter(x => x.level === '初').length;
+  const c中 = w.filter(x => x.level === '中').length;
+  return 'HTTP ' + r.status + ' — tier=' + r.data.tier + ' · 初=' + c初 + ' · 中=' + c中 + ' · ประโยค=' + s.length;
+}
+
+async function runTest1() {
+  const url = document.getElementById('sbUrl').value.trim();
+  const anon = document.getElementById('sbAnon').value.trim();
+  const row = addRow('1) ไม่ล็อกอิน', 'tier=anon · 初=50 · 中=50 · ประโยค=20', 'กำลังยิง...', null);
+  try {
+    const r = await callGameContent(anon, {});
+    const w = r.data.words || [], s = r.data.sentences || [];
+    const c初 = w.filter(x => x.level === '初').length, c中 = w.filter(x => x.level === '中').length;
+    const ok = r.data.tier === 'anon' && c初 === 50 && c中 === 50 && s.length === 20;
+    row.children[2].innerHTML = '<pre>' + summarize(r) + '</pre>';
+    row.children[3].className = ok ? 'pass' : 'fail'; row.children[3].textContent = ok ? '✅ ผ่าน' : '❌ ไม่ผ่าน';
+  } catch (e) { row.children[2].innerHTML = '<pre>network error: ' + e.message + '</pre>'; row.children[3].className='fail'; row.children[3].textContent='❌ ไม่ผ่าน'; }
+}
+
+async function runTest2() {
+  const row = addRow('2) token ปลอม/หมดอายุ', 'ไม่ error/crash · ตกไปเป็น tier=anon เหมือนไม่ล็อกอิน', 'กำลังยิง...', null);
+  try {
+    const r = await callGameContent('this.is.not.a.valid.jwt.at.all', {});
+    const ok = r.status === 200 && r.data.tier === 'anon';
+    row.children[2].innerHTML = '<pre>' + summarize(r) + '</pre>';
+    row.children[3].className = ok ? 'pass' : 'fail'; row.children[3].textContent = ok ? '✅ ผ่าน' : '❌ ไม่ผ่าน';
+  } catch (e) { row.children[2].innerHTML = '<pre>network error: ' + e.message + '</pre>'; row.children[3].className='fail'; row.children[3].textContent='❌ ไม่ผ่าน'; }
+}
+
+async function runTest3() {
+  const url = document.getElementById('sbUrl').value.trim();
+  const manual = document.getElementById('realToken').value.trim();
+  const token = manual || autoDetectRealToken(url);
+  const row = addRow('3) ล็อกอินจริง', 'tier=login · 初=100 · 中=100 · ประโยค=40', 'กำลังยิง...', null);
+  if (!token) {
+    row.children[2].innerHTML = '<pre>ไม่พบ session ที่ล็อกอินอยู่ — ต้องล็อกอินในเบราว์เซอร์นี้ก่อน (บนโดเมนเว็บจริง) หรือวาง access token เองในช่องด้านบน</pre>';
+    row.children[3].className = 'fail'; row.children[3].textContent = '❌ ข้ามไม่ได้ทดสอบ';
+    return;
+  }
+  try {
+    const r = await callGameContent(token, {});
+    const w = r.data.words || [], s = r.data.sentences || [];
+    const c初 = w.filter(x => x.level === '初').length, c中 = w.filter(x => x.level === '中').length;
+    const ok = r.data.tier === 'login' && c初 === 100 && c中 === 100 && s.length === 40;
+    row.children[2].innerHTML = '<pre>' + summarize(r) + '</pre>';
+    row.children[3].className = ok ? 'pass' : 'fail'; row.children[3].textContent = ok ? '✅ ผ่าน' : '❌ ไม่ผ่าน';
+  } catch (e) { row.children[2].innerHTML = '<pre>network error: ' + e.message + '</pre>'; row.children[3].className='fail'; row.children[3].textContent='❌ ไม่ผ่าน'; }
+}
+
+async function runTest4() {
+  const url = document.getElementById('sbUrl').value.trim();
+  const anon = document.getElementById('sbAnon').value.trim();
+  const row = addRow('4) ปลอม tier ใน body ({tier:"login"}) โดยไม่ล็อกอินจริง', 'ต้องถูกเมิน — ยังได้ tier=anon · 初=50 · 中=50 · ประโยค=20', 'กำลังยิง...', null);
+  try {
+    const r = await callGameContent(anon, { tier: 'login', isLoggedIn: true, user: { id: 'fake' } });
+    const w = r.data.words || [], s = r.data.sentences || [];
+    const c初 = w.filter(x => x.level === '初').length, c中 = w.filter(x => x.level === '中').length;
+    const ok = r.data.tier === 'anon' && c初 === 50 && c中 === 50 && s.length === 20;
+    row.children[2].innerHTML = '<pre>' + summarize(r) + '</pre>';
+    row.children[3].className = ok ? 'pass' : 'fail'; row.children[3].textContent = ok ? '✅ ผ่าน (server เมิน body)' : '❌ ไม่ผ่าน (server เชื่อ body!)';
+  } catch (e) { row.children[2].innerHTML = '<pre>network error: ' + e.message + '</pre>'; row.children[3].className='fail'; row.children[3].textContent='❌ ไม่ผ่าน'; }
+}
+
+async function runTest5() {
+  const url = document.getElementById('sbUrl').value.trim();
+  const anon = document.getElementById('sbAnon').value.trim();
+  const row = addRow('5) PostgREST ตรงๆ ไป game_words (ไม่ผ่าน Edge Function)', 'ต้องโดนปฏิเสธ หรือได้ 0 แถว', 'กำลังยิง...', null);
+  try {
+    const res = await fetch(url + '/rest/v1/game_words?select=word&limit=5', {
+      headers: { apikey: anon, Authorization: 'Bearer ' + anon },
+    });
+    const text = await res.text();
+    const ok = res.status === 401 || res.status === 403 || (res.status === 200 && (text === '[]' || JSON.parse(text).length === 0));
+    row.children[2].innerHTML = '<pre>HTTP ' + res.status + ' — ' + text.slice(0, 300) + '</pre>';
+    row.children[3].className = ok ? 'pass' : 'fail'; row.children[3].textContent = ok ? '✅ ผ่าน (ล็อกจริง)' : '❌ ไม่ผ่าน (อ่านตรงๆ ได้! อันตราย)';
+  } catch (e) { row.children[2].innerHTML = '<pre>network error: ' + e.message + '</pre>'; row.children[3].className='fail'; row.children[3].textContent='❌ ไม่ผ่าน'; }
+}
+
+async function runAll() {
+  tbody.innerHTML = '';
+  await runTest1();
+  await runTest2();
+  await runTest3();
+  await runTest4();
+  await runTest5();
+}
+</script>
+</body>
+</html>
