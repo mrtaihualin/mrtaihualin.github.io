@@ -89,7 +89,10 @@ function addRow(name, expected, actual, ok) {
 // ข้อ 3 (ล็อกอินจริง) อ่านบัตรล็อกอินจาก localStorage ซึ่งผูกกับโดเมนเสมอ
 // เปิดจากไฟล์ในเครื่อง (file://) หรือโดเมนอื่น = อ่านไม่เจอแน่นอน 100% ไม่ว่าจะล็อกอินอยู่หรือไม่
 var SITE_ORIGIN = 'https://mrtaihualin.com';
-var SITE_TESTER_URL = SITE_ORIGIN + '/data/game-content-tester.html';
+// 🔧 2026-08-02 (รอบ 2): ต่อ ?v=timestamp กันแคช 10 นาทีของ GitHub Pages (Cache-Control: max-age=600)
+// เจอจริง: Lin กด reload ธรรมดา (⌘R) แล้วเบราว์เซอร์ใช้ไฟล์เก่าที่แคชไว้ ทั้งที่ของใหม่ deploy ไปแล้ว
+// ใส่ query string ที่เปลี่ยนทุกครั้งที่โหลดหน้า = บังคับดึงของใหม่เสมอ ไม่ต้องพึ่งจำ hard refresh
+var SITE_TESTER_URL = SITE_ORIGIN + '/data/game-content-tester.html?v=' + Date.now();
 function isOffSiteOrigin() {
   return location.protocol === 'file:' || location.origin !== SITE_ORIGIN;
 }
