@@ -1,0 +1,423 @@
+  :root {
+    --gold: #8B6310; --gold-bright: #C8973A; --gold-light: #F3E4C2; --gold-deep: #5a3e0a;
+    --ink: #1C1C1C; --ink-soft: #333333; --ink-muted: #6b6b6b;
+    --bg: #EDE7D9; --cream: #FAF4E8; --border: rgba(139,99,16,0.18);
+    --amber: #b45309; --amber-dark: #78350f; --amber-muted: #92400e;
+    --slate: #7c6f61; --slate-dark: #5c5148;
+    /* 2026-08-02 加（學生管理改成「สารบัญ」清單，需要 badge 顏色）：沿用官方色票 --green 系列
+       （見 Developer/mrtaihualin.github.io/CLAUDE.md 顏色規則的 :root 範例），紅色沿用檔案裡本來
+       就有在用的 #dc2626/#b91c1c/#fee2e2（例如刪除按鈕、警告），不是新發明的色。 */
+    --green: #2d6a4f; --green-dark: #1b4332; --green-light: #e7f2ec;
+    --red: #dc2626; --red-dark: #b91c1c; --red-light: #fee2e2;
+    --radius: 14px; --shadow: 0 4px 24px rgba(90,62,10,0.10), 0 1px 4px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse at 20% 0%, rgba(200,151,58,0.12) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 100%, rgba(139,99,16,0.08) 0%, transparent 60%);
+    color: var(--ink); font-family: 'Noto Serif TC', serif; min-height: 100vh; padding: 0 16px 56px;
+  }
+
+  /* ── Header ─────────────────────────────── */
+  header {
+    text-align: center; position: relative; padding: 36px 56px 28px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, transparent 100%);
+  }
+  header::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent 0%, var(--gold-bright) 30%, var(--gold) 50%, var(--gold-bright) 70%, transparent 100%);
+  }
+  header h1 { font-size: 2rem; font-weight: 900; color: var(--gold-deep); letter-spacing: 3px; text-shadow: 0 1px 0 rgba(255,255,255,0.8); }
+  header .subtitle { color: var(--ink-muted); margin-top: 6px; font-size: 0.82rem; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 0.05em; }
+  header .student-name { color: var(--gold-deep); font-size: 1.05rem; font-weight: 700; margin-top: 8px; font-family: 'Noto Sans TC', sans-serif; }
+
+  .settings-btn { position: absolute; top: 32px; right: 16px; background: rgba(255,255,255,0.7); border: 1px solid var(--border); color: var(--ink-muted); border-radius: 10px; padding: 7px 14px; cursor: pointer; font-size: 0.82rem; font-family: 'Noto Sans TC', sans-serif; transition: all 0.15s; backdrop-filter: blur(4px); }
+  .settings-btn:hover { background: var(--gold-light); color: var(--gold-deep); border-color: var(--gold-bright); }
+
+  .container { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── Cards ───────────────────────────────── */
+  .card {
+    background: linear-gradient(160deg, #ffffff 0%, var(--cream) 100%);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 28px;
+    box-shadow: var(--shadow);
+    border-top: 2px solid var(--gold-bright);
+  }
+  .card h2 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-bright); margin-bottom: 18px; font-family: 'Noto Sans TC', sans-serif; display: flex; align-items: center; gap: 8px; }
+  .card h2::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Meet button ─────────────────────────── */
+  .meet-btn {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%);
+    color: #fff; text-decoration: none; border-radius: 12px; padding: 18px 28px;
+    font-size: 1.1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif;
+    letter-spacing: 1px; box-shadow: 0 6px 24px rgba(139,99,16,0.35), 0 1px 4px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s; margin-bottom: 4px;
+  }
+  .meet-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(139,99,16,0.45); }
+  .meet-btn:active { transform: translateY(0); }
+  .meet-btn svg { width: 28px; height: 28px; flex-shrink: 0; }
+  .meet-link-text { margin-top: 10px; text-align: center; font-size: 0.77rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; }
+
+  /* ── Teacher panel ───────────────────────── */
+  .teacher-panel {
+    background: linear-gradient(160deg, #ffffff 0%, #fdf8f0 100%);
+    border: 1px solid var(--border); border-top: 2px solid var(--gold-bright);
+    border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow);
+  }
+  .teacher-panel h2 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-bright); margin-bottom: 18px; font-family: 'Noto Sans TC', sans-serif; display: flex; align-items: center; gap: 8px; }
+  .teacher-panel h2::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Student list ────────────────────────── */
+  .student-list { display: flex; flex-direction: column; gap: 10px; }
+  .student-item {
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; display: flex; align-items: flex-start; gap: 14px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  .student-item:hover { box-shadow: 0 4px 16px rgba(139,99,16,0.10); border-color: var(--gold-bright); }
+  .student-avatar {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+    color: #fff; font-size: 1.15rem; font-weight: 900; font-family: 'Noto Serif TC', serif;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(139,99,16,0.25);
+  }
+  .student-info { flex: 1; min-width: 0; }
+  .student-item-name { font-weight: 700; font-size: 1rem; color: var(--gold-deep); font-family: 'Noto Sans TC', sans-serif; }
+  .student-item-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+  /* Pill-style small buttons */
+  /* 2026-07-19：手機實測只有 91x29px，太小很容易誤按（旁邊就是「取消課堂」）→ 高度拉到 Apple 建議的 44px */
+  .btn-sm { display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: none; border-radius: 20px; padding: 5px 14px; min-height: 44px; font-size: 0.77rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .btn-sm:hover { transform: translateY(-1px); filter: brightness(0.94); }
+  .btn-sm-copy    { background: var(--gold-light); color: var(--gold-deep); }
+  .btn-sm-copy.copied { background: var(--gold-light); color: var(--gold-deep); }
+  .btn-sm-preview { background: #e0f2fe; color: #0369a1; }
+  .btn-sm-meet    { background: var(--gold-light); color: var(--gold-deep); }
+  .btn-sm-edit    { background: #fef9c3; color: #854d0e; }
+  /* 2026-07-14 改：這顆按鈕現在是「封存」不是永久刪除了，改用琥珀色不用刺眼的紅色警示色
+     （紅色會讓人誤以為是不可逆的危險操作，跟品牌色也不搭 — 見 CLAUDE.md 顏色規則） */
+  .btn-sm-delete  { background: #fdf0da; color: var(--amber-dark, #78350f); }
+
+  .empty-state { text-align: center; padding: 28px 0 12px; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; font-size: 0.87rem; }
+
+  /* ── 2026-08-02 加：學生管理「สารบัญ」清單（取代原本的下拉選單） ── */
+  .roster-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+  .roster-item {
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .roster-item:hover { box-shadow: 0 3px 12px rgba(139,99,16,0.10); border-color: var(--gold-bright); }
+  .roster-item.roster-item-active { border-color: var(--gold-bright); background: var(--gold-light); box-shadow: 0 3px 12px rgba(139,99,16,0.15); }
+  .roster-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+    color: #fff; font-size: 1rem; font-weight: 900; font-family: 'Noto Serif TC', serif;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .roster-info { flex: 1; min-width: 0; }
+  .roster-name { font-weight: 700; font-size: 0.92rem; color: var(--gold-deep); font-family: 'Noto Sans TC', sans-serif; }
+  .roster-sub { font-size: 0.74rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .roster-badge {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px;
+    border-radius: 20px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700;
+    font-family: 'Noto Sans TC', sans-serif; white-space: nowrap;
+  }
+  .roster-badge-normal     { background: var(--green-light); color: var(--green-dark); }
+  .roster-badge-reschedule { background: var(--gold-light); color: var(--amber-dark); }
+  .roster-badge-cancel     { background: var(--red-light); color: var(--red-dark); }
+  .roster-badge-add        { background: var(--gold-light); color: var(--gold-deep); }
+  .roster-badge-lowquota   { background: var(--red-light); color: var(--red-dark); }
+
+  /* ── 2026-08-02（รอบ 4）加：原生 <select> 換不了顏色/排版（瀏覽器自己畫），
+     改成自己刻的「假 dropdown」——上面 trigger 按鈕＋下面用絕對定位打開的清單面板，
+     面板裡沿用上面已經有的 .roster-item 卡片版型（頭像＋姓名/時間靠左＋狀態 badge 靠右）。 ── */
+  .roster-dropdown { position: relative; }
+  .roster-trigger {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: #fff; border: 1px solid var(--border); color: var(--ink); border-radius: 8px;
+    padding: 10px 14px; font-size: 0.87rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer; text-align: left; transition: border-color 0.15s;
+  }
+  .roster-trigger:hover, .roster-trigger.open { border-color: var(--gold-bright); }
+  .roster-trigger-arrow { flex-shrink: 0; color: var(--gold-bright); font-size: 0.7rem; transition: transform 0.15s; }
+  .roster-trigger.open .roster-trigger-arrow { transform: rotate(180deg); }
+  .roster-panel {
+    display: none; position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 40;
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 10px 32px rgba(139,99,16,0.18); padding: 8px; max-height: 320px; overflow-y: auto;
+  }
+  .roster-panel.open { display: block; }
+
+  .btn-add-student {
+    width: 100%; margin-top: 16px;
+    background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%);
+    color: #fff; border: none; border-radius: 12px; padding: 18px 28px;
+    font-size: 1.1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif;
+    cursor: pointer; letter-spacing: 1px; box-shadow: 0 6px 24px rgba(139,99,16,0.35), 0 1px 4px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-add-student:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(139,99,16,0.45); }
+
+  /* ── Student hero card ────────────────────── */
+  .student-hero {
+    text-align: center; padding: 28px 20px 20px;
+    background: linear-gradient(160deg, #fff 0%, #fdf8f0 100%);
+    border: 1px solid var(--border); border-top: 3px solid var(--gold-bright);
+    border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  .student-hero-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+    color: #fff; font-size: 1.6rem; font-weight: 900; font-family: 'Noto Serif TC', serif;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px; box-shadow: 0 4px 16px rgba(139,99,16,0.3);
+  }
+  .student-hero-name {
+    font-size: 1.3rem; font-weight: 900; color: var(--gold-deep);
+    font-family: 'Noto Serif TC', serif; letter-spacing: 1px;
+  }
+  .student-hero-sub { font-size: 0.8rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-top: 5px; }
+
+  /* ── Buttons ─────────────────────────────── */
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 9px; padding: 10px 18px; font-size: 0.9rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-record { background: var(--amber); color: #fff; box-shadow: 0 3px 10px rgba(180,83,9,0.25); }
+  .btn-record:hover:not(:disabled) { background: var(--amber-muted); transform: translateY(-1px); }
+  .btn-record.recording { background: var(--amber-dark); animation: pulse 1.2s infinite; }
+  .btn-stop { background: var(--slate); color: #fff; }
+  .btn-stop:hover:not(:disabled) { background: var(--slate-dark); }
+  .btn-download { background: var(--gold); color: #fff; box-shadow: 0 3px 10px rgba(139,99,16,0.25); }
+  .btn-download:hover:not(:disabled) { background: var(--gold-deep); transform: translateY(-1px); }
+  .btn-gold { background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%); color: #fff; border: none; border-radius: 12px; padding: 18px 28px; cursor: pointer; font-size: 1.1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 1px; box-shadow: 0 6px 24px rgba(139,99,16,0.35), 0 1px 4px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; }
+  .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(139,99,16,0.45); }
+
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(180,83,9,0.35);} 50%{box-shadow:0 0 0 8px rgba(180,83,9,0);} }
+
+  .status { font-size: 0.8rem; color: var(--ink-muted); min-height: 16px; font-family: 'Noto Sans TC', sans-serif; }
+  .status.active { color: var(--amber); font-weight: 600; }
+  .status.done   { color: var(--gold-deep); font-weight: 600; }
+
+  .timer { font-family: monospace; font-size: 1rem; color: var(--gold-deep); font-weight: 700; display: none; }
+  .timer.visible { display: inline-block; }
+
+  .audio-section { margin-top: 12px; display: none; }
+  .audio-section.visible { display: block; }
+  audio { width: 100%; border-radius: 8px; margin-bottom: 6px; }
+  .video-section { margin-top: 12px; display: none; }
+  .video-section.visible { display: block; }
+  video { width: 100%; border-radius: 10px; background: #1a1210; max-height: 280px; margin-bottom: 6px; }
+
+  /* ── Recording section ───────────────────── */
+  .rec-mode-toggle { display: flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; margin-bottom: 14px; }
+  .rec-mode-opt { flex: 1; }
+  .rec-mode-opt input[type="radio"] { display: none; }
+  .rec-mode-opt span { display: block; padding: 9px 10px; text-align: center; cursor: pointer; font-size: 0.8rem; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-muted); transition: all 0.15s; border-right: 1px solid var(--border); }
+  .rec-mode-opt:last-child span { border-right: none; }
+  .rec-mode-opt input:checked + span { background: var(--gold-light); color: var(--gold-deep); font-weight: 700; }
+  .rec-hint { font-size: 0.76rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-bottom: 14px; line-height: 1.5; }
+  .rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rec-card { background: linear-gradient(160deg,#fff 0%,#fdf8f0 100%); border: 1px solid var(--border); border-top: 2px solid var(--gold-bright); border-radius: 11px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .rec-card-header { display: flex; align-items: center; gap: 8px; }
+  .rec-card-icon { font-size: 1.3rem; }
+  .rec-card-title { font-weight: 700; font-family: 'Noto Sans TC', sans-serif; font-size: 0.95rem; color: var(--ink-soft); flex: 1; }
+  .rec-card-btns { display: flex; gap: 7px; }
+  .rec-card-btns .btn-record { flex: 1; justify-content: center; font-size: 0.8rem; padding: 8px 6px; border-radius: 8px; }
+  @media(max-width:480px){ .rec-grid { grid-template-columns: 1fr; } }
+
+  .radio-group { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+  .radio-group label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 0.88rem; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-soft); }
+  .radio-group input[type="radio"] { accent-color: var(--gold); width: 16px; height: 16px; }
+  .hint { font-size: 0.78rem; color: var(--ink-muted); margin-top: 4px; line-height: 1.6; font-family: 'Noto Sans TC', sans-serif; }
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  .pref-badge { display: inline-block; font-size: 0.7rem; padding: 2px 7px; border-radius: 20px; margin-left: 8px; font-weight: 600; font-family: 'Noto Sans TC', sans-serif; vertical-align: middle; }
+  .pref-badge.never  { background: #e5e7eb; color: #6b7280; }
+  .pref-badge.always { background: var(--gold-light); color: var(--gold-deep); }
+  .pref-badge.ask    { background: var(--gold-light); color: var(--gold-deep); }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,28,0.6); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--cream); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; max-width: 420px; width: 100%; max-height: calc(100vh - 32px); overflow-y: auto; animation: slideUp 0.2s ease; box-shadow: 0 8px 40px rgba(139,99,16,0.15); -webkit-overflow-scrolling: touch; }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0;} to{transform:translateY(0);opacity:1;} }
+  .modal h3 { font-size: 1.1rem; font-weight: 900; margin-bottom: 8px; color: var(--gold-deep); }
+  .modal p  { color: var(--ink-muted); font-size: 0.87rem; line-height: 1.7; margin-bottom: 18px; font-family: 'Noto Sans TC', sans-serif; }
+  .pref-options { display: flex; flex-direction: column; gap: 10px; }
+  .pref-btn { display: flex; align-items: flex-start; gap: 14px; background: #fff; border: 2px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s; color: var(--ink); width: 100%; font-family: 'Noto Sans TC', sans-serif; }
+  .pref-btn:hover { border-color: var(--gold-bright); background: var(--gold-light); }
+  .pref-btn.selected { border-color: var(--gold); background: var(--gold-light); }
+  .pref-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+  .pref-label { font-weight: 700; font-size: 0.9rem; }
+  .pref-desc  { font-size: 0.77rem; color: var(--ink-muted); margin-top: 2px; }
+  .modal-footer { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--ink-muted); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 0.87rem; font-family: 'Noto Sans TC', sans-serif; }
+  .btn-ghost:hover { background: var(--gold-light); color: var(--ink); }
+  .settings-input { width: 100%; background: #fff; border: 1px solid var(--border); color: var(--ink); border-radius: 8px; padding: 9px 12px; font-size: 0.87rem; font-family: 'Noto Sans TC', sans-serif; margin-bottom: 12px; }
+  .settings-input:focus { outline: none; border-color: var(--gold); }
+  .settings-label { font-size: 0.8rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-bottom: 5px; display: block; }
+
+  .tag { display: inline-block; background: var(--gold-light); color: var(--gold-deep); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; font-family: 'Noto Sans TC', sans-serif; margin-left: 6px; vertical-align: middle; }
+
+  /* Add student modal specifics */
+  .add-modal-hint { font-size: 0.78rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-top: -6px; margin-bottom: 14px; line-height: 1.6; }
+  .token-preview { background: var(--gold-light); border-radius: 7px; padding: 8px 12px; font-size: 0.78rem; font-family: monospace; color: var(--gold-deep); margin-top: 6px; display: none; }
+
+  /* Course cards */
+  .course-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .course-card { background: #fff; border: 2px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: left; font-family: 'Noto Sans TC', sans-serif; }
+  .course-card:hover { border-color: var(--gold-bright); background: var(--gold-light); }
+  .course-card.selected { border-color: var(--gold); background: var(--gold-light); }
+  .course-card .c-name { font-weight: 700; font-size: 0.88rem; color: var(--ink); }
+  .course-card .c-desc { font-size: 0.72rem; color: var(--ink-muted); margin-top: 2px; }
+  .course-card .c-price { font-size: 0.8rem; color: var(--gold-deep); font-weight: 700; margin-top: 4px; }
+
+  /* Payment total box */
+  .pay-total-box { background: var(--gold-light); border: 1px solid var(--gold-bright); border-radius: 10px; padding: 12px 16px; margin: 12px 0; display: none; }
+  .pay-total-box .big { font-size: 1.4rem; font-weight: 900; color: var(--gold-deep); }
+  .pay-total-box .sub { font-size: 0.78rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-top: 3px; }
+  .pay-form-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .pay-form-row .settings-input { margin-bottom: 0; }
+  select.settings-input { cursor: pointer; }
+
+  /* Attendance section */
+  /* ── Today schedule ─────────────────────── */
+  .attend-card { background: linear-gradient(180deg,#fff 0%,#faf4e8 100%); border: 1px solid rgba(139,99,16,0.2); border-top: 2px solid var(--gold-bright); border-radius: var(--radius); padding: 20px; }
+  .attend-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-bright); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(139,99,16,0.15); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .attend-card h2::after { content: ''; flex: 1; height: 1px; background: rgba(139,99,16,0.15); }
+  .attend-list { display: flex; flex-direction: column; gap: 7px; }
+  .today-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #fff; border-radius: 10px; border: 1px solid var(--border); font-family: 'Noto Sans TC', sans-serif; gap: 10px; }
+  .today-row .t-name { font-weight: 700; font-size: 0.95rem; color: var(--ink-soft); flex: 1; }
+  .today-done { display: inline-flex; align-items: center; gap: 6px; background: var(--gold-light); color: var(--gold-deep); border-radius: 20px; padding: 5px 12px; font-size: 0.78rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; border: none; transition: filter 0.15s; white-space: nowrap; }
+  .today-done:hover { filter: brightness(0.93); }
+  .today-count { font-size: 0.72rem; font-weight: 400; opacity: 0.8; }
+  .empty-attend { text-align: center; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; padding: 12px 0; }
+
+  /* ── Attendance history modal ────────────── */
+  .hist-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; margin: 14px 0; }
+  .hist-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #f9f9f9; border-radius: 8px; font-family: 'Noto Sans TC', sans-serif; }
+  .hist-num { font-size: 0.72rem; color: var(--ink-muted); min-width: 36px; }
+  .hist-date { flex: 1; font-size: 0.88rem; font-weight: 600; color: var(--ink-soft); }
+  .hist-today-tag { font-size: 0.7rem; background: var(--gold-light); color: var(--gold-deep); border-radius: 10px; padding: 2px 7px; font-weight: 700; }
+  .hist-del { background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 1rem; padding: 2px 6px; border-radius: 6px; transition: all 0.15s; }
+  .hist-del:hover { background: #fee2e2; color: #b91c1c; }
+  .hist-edit { background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 0.9rem; padding: 2px 6px; border-radius: 6px; transition: all 0.15s; }
+  .hist-edit:hover { background: var(--gold-light); color: var(--gold-deep); }
+  .hist-summary { font-family: 'Noto Sans TC', sans-serif; font-size: 0.8rem; color: var(--ink-muted); text-align: center; padding: 6px 0; border-top: 1px solid var(--border); margin-top: 4px; }
+  .stat-box { flex: 1; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
+  .stat-box .s-num { font-size: 1.5rem; font-weight: 900; color: var(--gold-deep); }
+  .stat-box .s-lbl { font-size: 0.72rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; }
+  .empty-attend { text-align: center; color: var(--ink-muted); font-size: 0.85rem; font-family: 'Noto Sans TC', sans-serif; padding: 12px 0; }
+
+  /* Btn pay / attend on student card */
+  .btn-sm-pay    { background: #fef3c7; color: #92400e; }
+  .btn-sm-pay:hover { background: #fde68a; }
+  .btn-sm-attend { background: var(--gold-light); color: var(--gold-deep); }
+  .btn-sm-attend:hover { background: var(--gold-bright); color: #fff; }
+  .btn-sm-slip   { background: #ede9fe; color: #5b21b6; }
+  .btn-sm-slip:hover { background: #ddd6fe; }
+
+  /* Slip upload area */
+  .slip-upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; margin-bottom: 12px; transition: border-color 0.15s, background 0.15s; }
+  .slip-upload-area:hover { border-color: var(--gold-bright); background: var(--gold-light); }
+  .slip-upload-area.has-image { border-style: solid; border-color: var(--gold); }
+
+  /* Pending slips section */
+  .pending-card { background: linear-gradient(180deg,#fff 0%,#fefce8 100%); border: 1px solid rgba(202,138,4,0.3); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .pending-card h2 { font-size: 0.83rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-deep); margin-bottom: 14px; font-family: 'Noto Sans TC', sans-serif; border-bottom: 1px solid rgba(202,138,4,0.2); padding-bottom: 10px; }
+  .slip-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #fff; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 8px; }
+  .slip-row .slip-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); flex-shrink: 0; }
+  .slip-row .slip-thumb-placeholder { width: 48px; height: 48px; background: var(--gold-light); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+  .slip-row .slip-info { flex: 1; font-family: 'Noto Sans TC', sans-serif; }
+  .slip-row .slip-name { font-weight: 700; font-size: 0.88rem; }
+  .slip-row .slip-course { font-size: 0.78rem; color: var(--ink-muted); margin-top: 2px; }
+  .slip-row .slip-actions { display: flex; gap: 6px; }
+  .btn-approve { background: var(--gold-light); color: var(--gold-deep); border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; }
+  .btn-approve:hover { background: var(--gold-bright); color: #fff; }
+  .btn-reject  { background: var(--gold-light); color: var(--slate-dark); border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; }
+  .btn-reject:hover { filter: brightness(0.93); }
+  .pending-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--amber); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; font-weight: 700; margin-left: 6px; }
+
+  /* Slip full-size viewer */
+  .slip-viewer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; align-items: center; justify-content: center; cursor: zoom-out; }
+  .slip-viewer-overlay.open { display: flex; }
+  .slip-viewer-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+
+  /* ── Student dropdown selector ──────────── */
+  .stu-selector-wrap { margin-bottom: 14px; }
+  .stu-selector { width: 100%; background: #fff; border: 2px solid var(--gold-bright); color: var(--gold-deep); border-radius: 10px; padding: 11px 14px; font-size: 1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23C8973A' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  .stu-selector:focus { outline: none; border-color: var(--gold-deep); }
+  .stu-panel { background: linear-gradient(160deg,#fff 0%,#fdf8f0 100%); border: 1px solid var(--border); border-top: 2px solid var(--gold-bright); border-radius: 12px; padding: 18px; display: none; }
+  .stu-panel.visible { display: block; }
+  .stu-panel-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .stu-acc-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep)); color: #fff; font-size: 1.1rem; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+  .stu-panel-name { font-weight: 900; font-size: 1.1rem; color: var(--gold-deep); font-family: 'Noto Serif TC', serif; }
+  .stu-acc-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .btn-start-class { display: flex; align-items: center; justify-content: center; gap: 14px; background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-deep) 100%); color: #fff; border: none; border-radius: 12px; padding: 18px 28px; font-size: 1.1rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; box-shadow: 0 6px 24px rgba(139,99,16,0.35), 0 1px 4px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; width: 100%; letter-spacing: 1px; margin-bottom: 12px; }
+  .btn-start-class:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(139,99,16,0.45); }
+
+  /* ── Class actions row (3 buttons side-by-side) ─── */
+  .class-actions-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .class-actions-row .btn-start-class { width: auto; flex: 1 1 0; margin-bottom: 0; padding: 14px 12px; font-size: 0.92rem; gap: 6px; white-space: nowrap; }
+  @media (max-width: 480px) {
+    .class-actions-row { flex-direction: column; }
+    .class-actions-row .btn-start-class { flex: initial; }
+  }
+
+  /* ── Notepad popup modal ─────────────────── */
+  .notepad-overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,28,0.65); z-index: 150; align-items: center; justify-content: center; padding: 16px; }
+  .notepad-overlay.open { display: flex; }
+  .notepad-modal { background: var(--cream); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 860px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 12px 48px rgba(90,62,10,0.22); animation: slideUp 0.2s ease; overflow: hidden; }
+  .notepad-modal-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg,#fff 0%,#fdf8f0 100%); flex-shrink: 0; }
+  .notepad-modal-title { font-size: 1rem; font-weight: 900; color: var(--gold-deep); font-family: 'Noto Serif TC', serif; flex: 1; }
+  .notepad-modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--ink-muted); padding: 4px 8px; border-radius: 8px; transition: all 0.15s; }
+  .notepad-modal-close:hover { background: var(--gold-light); color: var(--gold-deep); }
+  .notepad-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 14px; background: var(--gold-light); border-bottom: 1px solid var(--border); align-items: center; flex-shrink: 0; }
+  .tb-btn { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 0.83rem; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-soft); transition: all 0.12s; min-width: 32px; text-align: center; }
+  .tb-btn:hover { background: var(--gold-light); border-color: var(--gold-bright); color: var(--gold-deep); }
+  .tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 3px; flex-shrink: 0; }
+  .tb-color-btn { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 0 0 1px var(--border); transition: transform 0.12s; flex-shrink: 0; }
+  .tb-color-btn:hover { transform: scale(1.25); }
+  .tb-label { font-size: 0.72rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; white-space: nowrap; }
+  .tb-select { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 4px 7px; font-size: 0.8rem; font-family: 'Noto Sans TC', sans-serif; color: var(--ink-soft); cursor: pointer; }
+  .tb-select:focus { outline: none; border-color: var(--gold); }
+  .notepad-editor { flex: 1; overflow-y: auto; background: #fffdf7; padding: 20px 24px; font-size: 1.05rem; font-family: 'Noto Serif TC', serif; color: var(--ink); line-height: 1.9; outline: none; min-height: 200px; }
+  .notepad-editor:empty::before { content: attr(data-placeholder); color: var(--ink-muted); pointer-events: none; }
+  .notepad-modal-footer { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--border); background: linear-gradient(0deg,#fff 0%,#fdf8f0 100%); flex-shrink: 0; }
+  .btn-save-note { background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 0.9rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; }
+  .btn-save-note:hover { background: var(--gold-deep); }
+  .note-save-status { font-size: 0.82rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; flex: 1; }
+  .btn-open-note { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 0.85rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; color: var(--gold-deep); cursor: pointer; transition: all 0.15s; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); width: 100%; justify-content: center; }
+  .btn-open-note:hover { background: var(--gold-light); border-color: var(--gold-bright); }
+
+  /* ── 課堂錄製 gold theme ───────────────────── */
+  .rec-card-gold { background: linear-gradient(160deg, #fff 0%, #fdf8f0 100%); border: 1px solid var(--border); border-top: 2px solid var(--gold-bright); border-radius: 11px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .btn-rec-start { background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep)); color: #fff; border: none; border-radius: 9px; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; box-shadow: 0 3px 10px rgba(139,99,16,0.3); transition: all 0.2s; flex: 1; }
+  .btn-rec-start:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(139,99,16,0.4); }
+  .btn-rec-start:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-rec-stop { background: var(--slate); color: #fff; border: none; border-radius: 9px; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.15s; flex: 1; }
+  .btn-rec-stop:hover:not(:disabled) { background: var(--slate-dark); }
+  .btn-rec-stop:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Course schedule (student page) ─────── */
+  .schedule-table { width: 100%; border-collapse: collapse; font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; }
+  .schedule-table th { text-align: left; padding: 8px 10px; color: var(--gold-bright); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); }
+  .schedule-table td { padding: 9px 10px; border-bottom: 1px solid rgba(139,99,16,0.07); color: var(--ink-soft); }
+  .schedule-table tr:last-child td { border-bottom: none; }
+  .lesson-badge { display: inline-block; background: var(--gold-light); color: var(--gold-deep); border-radius: 20px; padding: 2px 9px; font-size: 0.75rem; font-weight: 700; }
+
+  /* ── Drive files (student page) ─────────── */
+  .drive-file-list { display: flex; flex-direction: column; gap: 8px; }
+  .drive-file-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #fff; border: 1px solid var(--border); border-radius: 9px; font-family: 'Noto Sans TC', sans-serif; }
+  .drive-file-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .drive-file-name { flex: 1; font-size: 0.85rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drive-file-dl { background: var(--gold-light); color: var(--gold-deep); border: none; border-radius: 7px; padding: 5px 11px; font-size: 0.77rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-block; }
+/* ── moved from inline <style> เดิม (upload spinner keyframe) ── */
+@keyframes upspin{to{transform:rotate(360deg)}} .upload-spin{animation:upspin 1.2s linear infinite}
