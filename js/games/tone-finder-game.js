@@ -1810,7 +1810,8 @@ function navigate(nextStep, label, toneNum) {
 function restoreState(pos) {
   histPos = pos;
   var snap = hist[pos];
-  S = { word:S.word, step:snap.step, path:snap.path.slice(), tone:snap.tone, syllables:snap.syllables, selectedSyl:snap.selectedSyl, sylResults:snap.sylResults };
+  // Lin 2026-08-02: เติม parentWord ให้ด้วย (จุดเดียวกับที่แก้ goToResult()) กันเผื่อในอนาคตแถบ back/forward กลับมาใช้งานอีก
+  S = { word:S.word, step:snap.step, path:snap.path.slice(), tone:snap.tone, syllables:snap.syllables, selectedSyl:snap.selectedSyl, sylResults:snap.sylResults, parentWord: snap.parentWord || S.parentWord };
   render();
 }
 
@@ -3195,8 +3196,11 @@ function goToResult(finalAnswer) {
   if (session) session.finalAnswer = finalAnswer;
   hist = hist.slice(0, histPos+1);
   var tone = S.tone;
-  S = { word: S.word, step: 'result', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults };
-  hist.push({ step: 'result', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults });
+  // Lin 2026-08-02 (บั๊กจริงที่ Lin เจอ): จุดนี้ลืมใส่ parentWord ต่อ (จุดพี่น้องกัน navigateToInflection() ด้านบนใส่ไว้ถูกอยู่แล้ว)
+  //   ผลคือพอตอบพยางค์ 1 ถูก → เข้าหน้าเฉลย → กด "ต่อ" ไปพยางค์ 2 (TF.nextSyllable()) → S.parentWord หายไปแล้ว
+  //   nextSyllable() เลย fallback ไปต่อคำจาก S.syllables (คำอ่านจาก readingTH) แทน = แบนเนอร์คำเต็มด้านบนโชว์ "ขอบคุน" ผิด แทน "ขอบคุณ"
+  S = { word: S.word, step: 'result', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults, parentWord: S.parentWord };
+  hist.push({ step: 'result', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults, parentWord: S.parentWord });
   histPos = hist.length - 1;
   render();
 }
@@ -3906,7 +3910,10 @@ var TF = {
     results[S.selectedSyl] = { tone: S.tone };
     var nextIdx = S.selectedSyl + 1;
     var syls = S.syllables;
-    var parentWord = S.parentWord || syls.join('');
+    // Lin 2026-08-02: กันกันไว้อีกชั้น เผื่อ S.parentWord หายไปจากจุดอื่นในอนาคต (เจอจริงจาก goToResult() ที่แก้ไปแล้ว)
+    //   — เดิม fallback ไปต่อ syls.join('') คือต่อ "คำอ่าน" (จาก readingTH) ผิด ควรใช้ตัวสะกดจริงจากฐานข้อมูลแทน
+    var _curEntryForParent = tfCurEntry();
+    var parentWord = S.parentWord || ((_curEntryForParent && _curEntryForParent.syls && _curEntryForParent.syls.length === syls.length) ? _curEntryForParent.syls.map(function(sy){ return sy.th; }).join('') : syls.join(''));
     if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
     var sylStep = session ? 'session-guess' : 's1';
     var ns = { word: syls[nextIdx], step: sylStep, path: [syls[nextIdx]], tone: null, syllables: syls, selectedSyl: nextIdx, sylResults: results, parentWord: parentWord };
