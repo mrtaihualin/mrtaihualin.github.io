@@ -635,23 +635,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
-<div id="game-switcher">
-  <a class="gs-tab" href="games-challenge.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'challenge',from:'reading_game'})}catch(e){}">🎮 綜合遊戲</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'reading_game'})}catch(e){}">🎵 聲調練習室</a>
-  <div class="gs-divider"></div>
-  <span class="gs-tab gs-active">✍️ 拼讀練習室</span>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="typing-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'typing_game',from:'reading_game'})}catch(e){}">⌨️ 打字練習室</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'reading_game'})}catch(e){}">🧩 語序練習室</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'reading_game'})}catch(e){}">🧱 造句練習室</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="listening-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'listening_game',from:'reading_game'})}catch(e){}">🎧 聽力練習室</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'reading_game'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
-</div>
+<div id="game-switcher" data-current="reading_game"></div>
+<script src="js/games/game-switcher.js?v=1"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──

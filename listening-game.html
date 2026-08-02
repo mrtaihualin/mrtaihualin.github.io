@@ -338,23 +338,8 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 .gs-divider{width:1.5px;background:var(--gold-bright);margin:8px 0;flex-shrink:0;}
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
-<div id="game-switcher">
-  <a class="gs-tab" href="games-challenge.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'challenge',from:'listening_game'})}catch(e){}">🎮 綜合遊戲</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="tone-finder.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'listening_game'})}catch(e){}">🎵 聲調練習室</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="reading-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_game',from:'listening_game'})}catch(e){}">✍️ 拼讀練習室</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="typing-game.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'typing_game',from:'listening_game'})}catch(e){}">⌨️ 打字練習室</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="word-order.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'word_order',from:'listening_game'})}catch(e){}">🧩 語序練習室</a>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="lego.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'lego',from:'listening_game'})}catch(e){}">🧱 造句練習室</a>
-  <div class="gs-divider"></div>
-  <span class="gs-tab gs-active">🎧 聽力練習室</span>
-  <div class="gs-divider"></div>
-  <a class="gs-tab" href="vault.html" onclick="try{gtag('event','game_link_click',{category:'game',target:'vault',from:'listening_game'})}catch(e){}"><img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫</a>
-</div>
+<div id="game-switcher" data-current="listening_game"></div>
+<script src="js/games/game-switcher.js?v=1"></script>
 
 <script>GameContentLoader.boot(['js/games/listening-game-app.js?v=1']);</script>
 </body>
