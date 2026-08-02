@@ -4169,9 +4169,9 @@ const HL_COLORS    = ['#fef08a','#bbf7d0','#bfdbfe','#f5d0fe','#fed7aa','#fecaca
 
 // 2026-07-14 加：已封存（archived_at 有值）的學生不列進「選擇學生」下拉選單裡 —
 //   要看/恢復舊生要點下面的「📦 舊生列表」才會展開
-// 2026-08-02 改（Lin 要求）：原本是下拉選單，改成「สารบัญ」清單——每個學生一行，
-//   顯示大頭貼/姓名/副標題（上課時間＋剩餘堂數）＋右邊狀態 badge（正常/改期/取消/加課/課程快上完）。
-//   點一行＝原本「選了下拉選單」的效果，一樣呼叫 selectStudent()，詳細卡片邏輯完全沒動。
+// 2026-08-02 改（Lin 要求）：原本改成สารบัญ清單（每個學生一行卡片＋彩色 badge）試用後，
+//   Lin 決定改回下拉選單，但要保留狀態提醒——因為原生 <select><option> 不能塞 HTML/顏色 badge，
+//   改成把狀態文字直接接在選項文字後面（見 rosterOptionText()），選了照樣呼叫 selectStudent()。
 function renderStudentListHTML() {
   const allEntries = Object.entries(studentsCache);
   if (allEntries.length === 0) return '<div class="empty-state">尚未新增學生<br>點擊下方按鈕新增第一位學生</div>';
@@ -4179,21 +4179,16 @@ function renderStudentListHTML() {
   const entries = allEntries.filter(function(e) { return !e[1].archived_at; });
   const archived = allEntries.filter(function(e) { return e[1].archived_at; });
 
-  const rows = entries.map(function(entry) {
+  const options = entries.map(function(entry) {
     const token = entry[0], s = entry[1];
-    const t = token.replace(/'/g, '');
-    const initial = s.name ? s.name.charAt(0) : '?';
-    return '<div class="roster-item" id="rosterItem-' + t + '" onclick="selectStudent(\'' + t + '\')">' +
-      '<div class="roster-avatar">' + escHtml(initial) + '</div>' +
-      '<div class="roster-info">' +
-        '<div class="roster-name">' + escHtml(s.name) + '</div>' +
-        '<div class="roster-sub" data-roster-sub="' + t + '">' + escHtml(rosterSubText(token)) + '</div>' +
-      '</div>' +
-      '<div class="roster-badge-wrap" data-roster-badge="' + t + '">' + renderRosterBadgeHtml(token) + '</div>' +
-    '</div>';
+    const statusText = rosterOptionText(token);
+    const optLabel = s.name + (statusText ? ' — ' + statusText : '');
+    return '<option value="' + escHtml(token) + '" data-roster-token="' + escHtml(token) + '">' + escHtml(optLabel) + '</option>';
   }).join('');
 
-  return '<div class="roster-list">' + (rows || '<div class="empty-state" style="padding:16px;">尚無在學學生</div>') + '</div>' +
+  return '<select class="settings-input" id="studentSelect" onchange="selectStudent(this.value)" style="margin-bottom:0;">' +
+    '<option value="">— 選擇學生 —</option>' + options +
+  '</select>' +
   '<div class="stu-panel" id="stuPanel"></div>' +
   '<div style="margin-top:14px;text-align:right;">' +
     '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="toggleArchivedStudents()" id="archivedToggleBtn">📦 舊生列表（' + archived.length + '）</button>' +
@@ -4231,17 +4226,31 @@ function renderRosterBadgeHtml(token) {
   var b = computeRosterBadge(token);
   return '<span class="roster-badge ' + b.cls + '">' + (b.icon ? b.icon + ' ' : '') + escHtml(b.label) + '</span>';
 }
-// 2026-08-02 加：申請清單／剩餘堂數這些非同步資料載入完之後，補畫已經在畫面上的สารบัญ每一行——
-//   直接改個別 badge/副標題的 innerHTML，不整個重畫清單，這樣如果老師正打開某個學生的詳細卡片
-//   （<div id="stuPanel">）不會被清掉。
+// 2026-08-02 加：下拉選單版的狀態文字——原生 <select><option> 不能塞顏色 badge，
+//   所以有申請/課程快上完時直接顯示 computeRosterBadge() 算好的圖示+文字（純文字，不套色），
+//   平常（沒有申請、堂數也還夠）就顯示 rosterSubText()（上課時間＋剩餘堂數，或「尚未排課」）。
+//   注意：不重算 computeRosterBadge()/rosterSubText() 的邏輯，只是把結果轉成一行文字。
+function rosterOptionText(token) {
+  var b = computeRosterBadge(token);
+  if (b.cls !== 'roster-badge-normal') {
+    return (b.icon ? b.icon : '') + b.label;
+  }
+  return rosterSubText(token);
+}
+// 2026-08-02 改：原本補畫สารบัญ清單每一行的 badge/副標題 <div>，現在改回下拉選單後，
+//   改成補畫 <select id="studentSelect"> 裡每個 <option> 的文字（用 data-roster-token 對應是哪位學生）。
+//   不整個重畫 <select>，這樣如果老師正打開某個學生的詳細卡片（<div id="stuPanel">）不會被清掉，
+//   選單目前選到誰也不會被重設。
 function refreshAllRosterMeta() {
-  document.querySelectorAll('[data-roster-badge]').forEach(function(el) {
-    var tk = el.getAttribute('data-roster-badge');
-    el.innerHTML = renderRosterBadgeHtml(tk);
-  });
-  document.querySelectorAll('[data-roster-sub]').forEach(function(el) {
-    var tk = el.getAttribute('data-roster-sub');
-    el.textContent = rosterSubText(tk);
+  var sel = document.getElementById('studentSelect');
+  if (!sel) return;
+  Array.prototype.forEach.call(sel.options, function(opt) {
+    var tk = opt.getAttribute('data-roster-token');
+    if (!tk) return; // 「— 選擇學生 —」那個空白選項沒有 data-roster-token，跳過
+    var s = studentsCache[tk];
+    if (!s) return;
+    var statusText = rosterOptionText(tk);
+    opt.textContent = s.name + (statusText ? ' — ' + statusText : '');
   });
 }
 
