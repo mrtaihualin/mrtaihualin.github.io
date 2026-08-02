@@ -207,3 +207,9 @@ if (errors.length) {
 } else {
   console.log('✅ ผ่านหมด — คำ ' + W.length + ' คำ + ประโยค ' + S.length + ' ประโยค ตรวจแล้วโอเค');
 }
+
+// ── เปิดช่องให้เทส (data/tests-check-data-health.js) เรียกฟังก์ชันไปทดสอบแยกได้ ──
+// (แพทเทิร์นเดียวกับ tone-engine.js) ไม่กระทบตอนรันตรงๆ ด้วย `node data/check-data-health.js` เลย
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { sylCount, isHardReading, expectedLevel, checkFinalSound, checkConsIsWritten };
+}
