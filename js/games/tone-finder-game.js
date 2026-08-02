@@ -3148,9 +3148,9 @@ function stepSessionGuess() {
   // ผิด/ไม่รู้ = ต้องเดา แล้วถ้าผิดก็ fail ทันที (ดูตัน clickAct ข้างบน) ไม่ใช่มีทางลัดไปเข้า推導 อีกทาง
   var dontKnowHtml;
   if (session.curWordIsKnownCheck) {
-    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✓ 記憶確認 — 答對一次即可移除這個字（不給獎勵）· ห้ามใช้เครื่องมือช่วย ต้องนึกเองครั้งเดียว</div>';
+    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✓ 記憶確認 — 答對一次即可移除這個字（不給獎勵）· 禁止使用任何輔助工具，只能憑記憶作答一次</div>';
   } else if (session.curWordIsFinalSrsCheck) {
-    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 16) — ห้ามใช้เครื่องมือช่วยใดๆ ต้องนึกเองล้วนๆ</div>';
+    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 16) — 禁止使用任何輔助工具，完全憑記憶作答</div>';
   } else if (tfCurWordIsToneSpecial()) {
     // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ไม่มีปุ่ม "ไม่มั่นใจ/ท้าทาย" ให้กด — ไม่มีกฎมาตรฐานให้推導 ต้องจำเสียงไว้ตรงๆ
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✨ 特殊詞（不按規則）— 答對得全部分數，答錯直接看答案，用背的就好</div>';

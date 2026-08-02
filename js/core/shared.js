@@ -694,7 +694,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
       ov.style.cssText='position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(40,30,10,0.45);font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
       ov.innerHTML=
         '<div style="position:relative;background:#fff;max-width:360px;width:100%;border-radius:18px;padding:28px 24px 22px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">'+
-          '<button id="vp-x" aria-label="關閉 / ปิด" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>'+
+          '<button id="vp-x" aria-label="關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>'+
           '<div style="font-size:40px;line-height:1;margin-bottom:10px;">📖</div>'+
           '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">玩得不錯！送你單字速查表 🎁</h2>'+
           '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">老師精選 <b>60 個常用泰語單字</b>（含子音・母音・尾音・拼音・中文對照）。留 Email 免費領取，<b>關掉也能繼續玩</b>～</p>'+
@@ -711,7 +711,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
       var inp=ov.querySelector('#vp-email'), err=ov.querySelector('#vp-err');
       function submit(){
         var em=(inp.value||'').trim();
-        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ err.textContent='Email 格式不正確 / อีเมลไม่ถูกต้อง'; err.style.display='block'; return; }
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ err.textContent='Email 格式不正確'; err.style.display='block'; return; }
         try{ if(window.saveLead) saveLead({ email:em, source:'遊戲・單字表' }); }catch(e){}
         try{ localStorage.setItem(LEAD_KEY,'1'); }catch(e){}
         try{ if(typeof gtag==='function') gtag('event','lead_magnet_submit',{category:window.GA_CATEGORY||'unknown', source:'遊戲・單字表' }); }catch(e){}
@@ -1329,7 +1329,7 @@ if (typeof openSSModal === 'undefined') {
     document.getElementById('ss-detail-view').style.display = 'block';
     var _ssb=document.getElementById('ss-back-btn');if(_ssb)_ssb.style.display='';
     document.getElementById('ss-detail-view').scrollTop = 0;
-    document.getElementById('ss-detail-label').textContent = '詞彙學習 · คำศัพท์';
+    document.getElementById('ss-detail-label').textContent = '詞彙學習';
     var html = '';
     if (a.vocabulary && a.vocabulary.length) {
       html += '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:var(--gold-bright);letter-spacing:3px;margin-bottom:14px;text-transform:uppercase;">1 · Vocabulary & Useful Phrases</div>';

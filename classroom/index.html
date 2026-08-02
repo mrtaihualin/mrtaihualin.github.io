@@ -29,6 +29,11 @@
     --bg: #EDE7D9; --cream: #FAF4E8; --border: rgba(139,99,16,0.18);
     --amber: #b45309; --amber-dark: #78350f; --amber-muted: #92400e;
     --slate: #7c6f61; --slate-dark: #5c5148;
+    /* 2026-08-02 加（學生管理改成「สารบัญ」清單，需要 badge 顏色）：沿用官方色票 --green 系列
+       （見 Developer/mrtaihualin.github.io/CLAUDE.md 顏色規則的 :root 範例），紅色沿用檔案裡本來
+       就有在用的 #dc2626/#b91c1c/#fee2e2（例如刪除按鈕、警告），不是新發明的色。 */
+    --green: #2d6a4f; --green-dark: #1b4332; --green-light: #e7f2ec;
+    --red: #dc2626; --red-dark: #b91c1c; --red-light: #fee2e2;
     --radius: 14px; --shadow: 0 4px 24px rgba(90,62,10,0.10), 0 1px 4px rgba(0,0,0,0.04);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -125,6 +130,35 @@
   .btn-sm-delete  { background: #fdf0da; color: var(--amber-dark, #78350f); }
 
   .empty-state { text-align: center; padding: 28px 0 12px; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; font-size: 0.87rem; }
+
+  /* ── 2026-08-02 加：學生管理「สารบัญ」清單（取代原本的下拉選單） ── */
+  .roster-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+  .roster-item {
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .roster-item:hover { box-shadow: 0 3px 12px rgba(139,99,16,0.10); border-color: var(--gold-bright); }
+  .roster-item.roster-item-active { border-color: var(--gold-bright); background: var(--gold-light); box-shadow: 0 3px 12px rgba(139,99,16,0.15); }
+  .roster-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+    color: #fff; font-size: 1rem; font-weight: 900; font-family: 'Noto Serif TC', serif;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .roster-info { flex: 1; min-width: 0; }
+  .roster-name { font-weight: 700; font-size: 0.92rem; color: var(--gold-deep); font-family: 'Noto Sans TC', sans-serif; }
+  .roster-sub { font-size: 0.74rem; color: var(--ink-muted); font-family: 'Noto Sans TC', sans-serif; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .roster-badge {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px;
+    border-radius: 20px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700;
+    font-family: 'Noto Sans TC', sans-serif; white-space: nowrap;
+  }
+  .roster-badge-normal     { background: var(--green-light); color: var(--green-dark); }
+  .roster-badge-reschedule { background: var(--gold-light); color: var(--amber-dark); }
+  .roster-badge-cancel     { background: var(--red-light); color: var(--red-dark); }
+  .roster-badge-add        { background: var(--gold-light); color: var(--gold-deep); }
+  .roster-badge-lowquota   { background: var(--red-light); color: var(--red-dark); }
 
   .btn-add-student {
     width: 100%; margin-top: 16px;
@@ -1088,6 +1122,13 @@ const sb = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CON
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
 let studentsCache = {}; // { token: <ทุกคอลัมน์ของแถวนักเรียนจาก classroom_students, ไม่ใช่แค่ name/meet> }
+// 2026-08-02 加（學生管理改成「สารบัญ」清單）：目前在「學生詳細卡片」打開的是哪個學生（沒開就是 null）——
+//   loadPendingClassRequests() 每次重新整理完申請清單，都要知道要不要順便重畫目前打開這張卡片裡的
+//   「待處理申請」區塊，所以需要一個全域變數記著「現在打開的是誰」。
+let currentTeacherPanelToken = null;
+window._pendingRequestsByToken = {}; // { token: [{id, type, html}] } — 每個學生自己的待處理申請（改期/取消/加課）
+window._rosterQuotaByToken = {};     // { token: {hasCourse, remain} } — 由 loadLowQuotaBanner() 順便算給สารบัญ用
+window._rosterScheduleByToken = {};  // { token: '週X HH:MM' } — 由 loadRosterScheduleMeta() 一次抓全部學生的固定上課日
 
 function generateToken(name) {
   const slug = name.replace(/[^a-zA-Z0-9一-鿿]/g, '').slice(0, 4) || 's';
@@ -3190,7 +3231,26 @@ async function refreshStudentList() {
   if (!el) return;
   el.innerHTML = '<div class="empty-state">載入中…</div>';
   await fetchStudents();
+  await loadRosterScheduleMeta(); // 2026-08-02 加：สารบัญ副標題要顯示上課時間，一次抓全部學生的固定上課日
   el.innerHTML = renderStudentListHTML();
+  refreshAllRosterMeta(); // 補上「之前已經算好」的 badge/剩餘堂數資料（例如切換頁籤回來重畫清單時）
+}
+
+// 2026-08-02 加：一次抓「全部學生」的每週固定上課日，給สารบัญ的副標題用（週X HH:MM）。
+//   只抓一次、不分學生查，避免每個學生各自查一次（見 CLAUDE.md「檢查再做，不要重複查」）。
+//   同一個學生如果排多天，只取抓到的第一筆當簡短顯示，不影響「⚙️ 每週固定上課日」設定本身的完整資料。
+async function loadRosterScheduleMeta() {
+  try {
+    var rd = (await sb.from('classroom_recurring_days').select('token,weekday,start_time').order('weekday').order('start_time')).data || [];
+    var dayZh = ['日','一','二','三','四','五','六'];
+    var byTok = {};
+    rd.forEach(function(r) {
+      if (byTok[r.token] || !r.token) return;
+      var t = (r.start_time || '').slice(0, 5);
+      byTok[r.token] = '週' + dayZh[r.weekday] + (t ? ' ' + t : '');
+    });
+    window._rosterScheduleByToken = byTok;
+  } catch (e) { console.warn('讀取固定上課日失敗（不影響其他功能，只是สารบัญ副標題會少顯示上課時間）：', e && (e.message || e)); }
 }
 
 // ============================================================
@@ -4064,6 +4124,9 @@ const HL_COLORS    = ['#fef08a','#bbf7d0','#bfdbfe','#f5d0fe','#fed7aa','#fecaca
 
 // 2026-07-14 加：已封存（archived_at 有值）的學生不列進「選擇學生」下拉選單裡 —
 //   要看/恢復舊生要點下面的「📦 舊生列表」才會展開
+// 2026-08-02 改（Lin 要求）：原本是下拉選單，改成「สารบัญ」清單——每個學生一行，
+//   顯示大頭貼/姓名/副標題（上課時間＋剩餘堂數）＋右邊狀態 badge（正常/改期/取消/加課/課程快上完）。
+//   點一行＝原本「選了下拉選單」的效果，一樣呼叫 selectStudent()，詳細卡片邏輯完全沒動。
 function renderStudentListHTML() {
   const allEntries = Object.entries(studentsCache);
   if (allEntries.length === 0) return '<div class="empty-state">尚未新增學生<br>點擊下方按鈕新增第一位學生</div>';
@@ -4071,22 +4134,70 @@ function renderStudentListHTML() {
   const entries = allEntries.filter(function(e) { return !e[1].archived_at; });
   const archived = allEntries.filter(function(e) { return e[1].archived_at; });
 
-  const options = entries.map(function(entry) {
+  const rows = entries.map(function(entry) {
     const token = entry[0], s = entry[1];
-    return '<option value="' + token.replace(/"/g,'') + '">' + s.name + '</option>';
+    const t = token.replace(/'/g, '');
+    const initial = s.name ? s.name.charAt(0) : '?';
+    return '<div class="roster-item" id="rosterItem-' + t + '" onclick="selectStudent(\'' + t + '\')">' +
+      '<div class="roster-avatar">' + escHtml(initial) + '</div>' +
+      '<div class="roster-info">' +
+        '<div class="roster-name">' + escHtml(s.name) + '</div>' +
+        '<div class="roster-sub" data-roster-sub="' + t + '">' + escHtml(rosterSubText(token)) + '</div>' +
+      '</div>' +
+      '<div class="roster-badge-wrap" data-roster-badge="' + t + '">' + renderRosterBadgeHtml(token) + '</div>' +
+    '</div>';
   }).join('');
 
-  return '<div class="stu-selector-wrap">' +
-    '<select class="stu-selector" id="stuDropdown" onchange="selectStudent(this.value)">' +
-      '<option value="">— 選擇學生 —</option>' +
-      options +
-    '</select>' +
-  '</div>' +
+  return '<div class="roster-list">' + (rows || '<div class="empty-state" style="padding:16px;">尚無在學學生</div>') + '</div>' +
   '<div class="stu-panel" id="stuPanel"></div>' +
   '<div style="margin-top:14px;text-align:right;">' +
     '<button class="btn-sm" style="background:none;border:1px solid var(--border);color:var(--ink-muted);" onclick="toggleArchivedStudents()" id="archivedToggleBtn">📦 舊生列表（' + archived.length + '）</button>' +
   '</div>' +
   '<div id="archivedStudentsPanel" style="display:none;margin-top:8px;"></div>';
+}
+
+// 2026-08-02 加：สารบัญ副標題文字（上課時間 + 剩餘堂數），quota 資料還沒載入時只顯示上課時間。
+function rosterSubText(token) {
+  var sched = (window._rosterScheduleByToken && window._rosterScheduleByToken[token]) || '';
+  var q = (window._rosterQuotaByToken && window._rosterQuotaByToken[token]) || null;
+  var quotaText = (q && q.hasCourse) ? ('剩 ' + (q.remain < 0 ? 0 : q.remain) + ' 堂') : '';
+  if (sched && quotaText) return sched + '　·　' + quotaText;
+  return sched || quotaText || '尚未排課';
+}
+
+// 2026-08-02 加：算這位學生右邊的狀態 badge——優先順序（Lin 指定）：
+//   有申請（取消 > 改期 > 加課）> 課程快上完（≤1堂）> 正常。一人只顯示一個 badge。
+function computeRosterBadge(token) {
+  var reqs = (window._pendingRequestsByToken && window._pendingRequestsByToken[token]) || [];
+  if (reqs.length) {
+    var hasCancel = reqs.some(function(r) { return r.type === 'cancel'; });
+    var hasReschedule = reqs.some(function(r) { return r.type === 'reschedule'; });
+    if (hasCancel) return { cls: 'roster-badge-cancel', icon: '❌', label: '取消申請' };
+    if (hasReschedule) return { cls: 'roster-badge-reschedule', icon: '🔄', label: '改期申請' };
+    return { cls: 'roster-badge-add', icon: '➕', label: '加課申請' };
+  }
+  var q = (window._rosterQuotaByToken && window._rosterQuotaByToken[token]) || null;
+  if (q && q.hasCourse && q.remain <= 1) {
+    return { cls: 'roster-badge-lowquota', icon: '⏰', label: '剩' + (q.remain < 0 ? 0 : q.remain) + '堂' };
+  }
+  return { cls: 'roster-badge-normal', icon: '', label: '正常' };
+}
+function renderRosterBadgeHtml(token) {
+  var b = computeRosterBadge(token);
+  return '<span class="roster-badge ' + b.cls + '">' + (b.icon ? b.icon + ' ' : '') + escHtml(b.label) + '</span>';
+}
+// 2026-08-02 加：申請清單／剩餘堂數這些非同步資料載入完之後，補畫已經在畫面上的สารบัญ每一行——
+//   直接改個別 badge/副標題的 innerHTML，不整個重畫清單，這樣如果老師正打開某個學生的詳細卡片
+//   （<div id="stuPanel">）不會被清掉。
+function refreshAllRosterMeta() {
+  document.querySelectorAll('[data-roster-badge]').forEach(function(el) {
+    var tk = el.getAttribute('data-roster-badge');
+    el.innerHTML = renderRosterBadgeHtml(tk);
+  });
+  document.querySelectorAll('[data-roster-sub]').forEach(function(el) {
+    var tk = el.getAttribute('data-roster-sub');
+    el.textContent = rosterSubText(tk);
+  });
 }
 
 // 2026-07-14 加：展開/收合「舊生列表」面板 — 每次展開都重新從 studentsCache 畫一次，
@@ -4174,6 +4285,13 @@ async function openStudentDriveFolder(name) {
 function selectStudent(token) {
   const panel = document.getElementById('stuPanel');
   if (!panel) return;
+  // 2026-08-02 加：สารบัญ清單裡框起來目前選到的那一行（原本下拉選單自己會顯示選到誰，不用額外處理）
+  currentTeacherPanelToken = token || null;
+  document.querySelectorAll('.roster-item.roster-item-active').forEach(function(el) { el.classList.remove('roster-item-active'); });
+  if (token) {
+    var activeRosterEl = document.getElementById('rosterItem-' + token.replace(/'/g, ''));
+    if (activeRosterEl) activeRosterEl.classList.add('roster-item-active');
+  }
   if (!token) { panel.classList.remove('visible'); panel.innerHTML = ''; return; }
 
   const s = studentsCache[token];
@@ -4224,12 +4342,16 @@ function selectStudent(token) {
       '</div>' +
     '</div>' +
     '<div id="teacherNextClass-' + t + '"></div>' +
-    '<div id="stuInfo-' + t + '" style="margin-top:12px;"></div>';
+    '<div id="stuInfo-' + t + '" style="margin-top:12px;"></div>' +
+    // 2026-08-02 加（原本在最上面「學生申請改期/取消」清單被拆掉，改成搬到這位學生自己的詳細卡片
+    // 最下面）：只有這位學生有待處理申請時才會有內容，資料來自 loadPendingClassRequests()（見該函式）。
+    '<div id="stuPendingReq-' + t + '" style="margin-top:12px;"></div>';
 
   panel.classList.add('visible');
   loadTeacherStudentInfo(token);
   loadMaterialLinks(token);
   loadTeacherNextClassBox(token);
+  renderStudentPendingRequestsBlock(token); // 資料可能還沒載入完（畫面上就先空著），loadPendingClassRequests() 跑完會自動補上
 
   // Auto-save to localStorage on input
   var editor = document.getElementById('note-' + t);
@@ -4239,6 +4361,21 @@ function selectStudent(token) {
     });
     editor.focus();
   }
+}
+
+// 2026-08-02 加：畫「這位學生的待處理申請」區塊（改期/取消/加課）——內容（每筆申請的按鈕邏輯）
+//   100% 沿用 loadPendingClassRequests() 裡算好的 actionsHtml，這裡只負責「挑出這個學生的份，畫出來」。
+//   沒有待處理申請就清空這個區塊，不留空卡片。
+function renderStudentPendingRequestsBlock(token) {
+  if (!token) return;
+  var el = document.getElementById('stuPendingReq-' + token.replace(/'/g, ''));
+  if (!el) return;
+  var reqs = (window._pendingRequestsByToken && window._pendingRequestsByToken[token]) || [];
+  if (!reqs.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="pending-card">' +
+    '<h2>📋 待處理申請 <span class="pending-badge">' + reqs.length + '</span></h2>' +
+    reqs.map(function(x) { return x.html; }).join('') +
+  '</div>';
 }
 
 let currentNoteToken = '';
@@ -4423,9 +4560,11 @@ function getDismissedLowQuota() {
   try { return JSON.parse(localStorage.getItem('dismissedLowQuota') || '{}'); } catch (e) { return {}; }
 }
 
+// 2026-08-02 改（Lin 要求拿掉最上面的課程快上完橫幅）：這支函式現在不找 #lowQuotaBanner 畫東西了
+// （那個 div 已經拿掉），但底下算出來的「每個學生剩餘堂數」還是要留著——搬去給 學生管理สารบัญ
+// 的副標題／狀態 badge 用（見 window._rosterQuotaByToken）。renderLowQuotaBanner() 那支還在，
+// 但 el 一定是 null，會直接跳出，不影響——沒有動它，保留舊行為當保險。
 async function loadLowQuotaBanner() {
-  var el = document.getElementById('lowQuotaBanner');
-  if (!el) return;
   try {
     var pays = (await sb.from('classroom_payments').select('token,lessons,bonus_lessons,status,start_date').in('status', ['pending', 'done'])).data || [];
     var atts = (await sb.from('classroom_attendance').select('token,lesson_date,lessons')).data || [];
@@ -4434,18 +4573,22 @@ async function loadLowQuotaBanner() {
     atts.forEach(function(a) { (byA[a.token] = byA[a.token] || []).push(a); });
     var dismissed = getDismissedLowQuota();
     var low = [];
+    var quotaByToken = {};
     Object.keys(byP).forEach(function(tk) {
       var q = computeCurrentCourse(byP[tk], byA[tk] || []);
+      quotaByToken[tk] = { hasCourse: q.hasCourse, remain: q.remain }; // 2026-08-02 加：给สารบัญ用，不管有沒有關過提醒都要顯示真實堂數
       if (q.hasCourse && q.remain <= 1) {
         var remain = q.remain < 0 ? 0 : q.remain;
-        if (dismissed[tk] === remain) return; // 這個堂數已經關過提醒了，狀況沒變就不再顯示
+        if (dismissed[tk] === remain) return; // 這個堂數已經關過提醒了，狀況沒變就不再顯示（只影響舊橫幅，不影響สารบัญ badge）
         var s = studentsCache[tk];
         low.push({ token: tk, name: s ? s.name : tk, remain: remain });
       }
     });
+    window._rosterQuotaByToken = quotaByToken;
     lowQuotaList = low;
     lowQuotaIdx = 0;
     renderLowQuotaBanner();
+    refreshAllRosterMeta(); // 2026-08-02 加：剩餘堂數算好了，補畫สารบัญ每一行的副標題／badge
   } catch (e) {}
 }
 
@@ -4697,13 +4840,15 @@ async function loadActionNeededBanner() {
 async function renderTeacherView() {
   document.getElementById('studentNameDisplay').textContent = '👩‍🏫 教師管理頁面';
   document.getElementById('mainContainer').innerHTML =
-    '<div id="lowQuotaBanner"></div>' +
     '<div id="newFeedbackBanner"></div>' +
     '<div id="actionNeededBanner"></div>' +
-    // 2026-07-16 加（Lin 要求）：學生申請（取消/改期/加課，全部類型一起）搬到最上面，
-    // 就在標題底下，不用再往下滑才看到——本來排在「學生管理」清單之後，現在整個區塊移到最前面。
-    // 主要是為了配合 LINE 通知只留一顆按鈕、點了直接跳到這裡的新做法（見 notifyTeacherClassRequest）。
-    '<div id="pendingRequestsSection" style="margin-bottom:16px;"></div>' +
+    // 2026-08-02 改（Lin 要求）：原本這裡有「課程快上完提醒」(lowQuotaBanner) 和「學生申請
+    // 改期/取消/加課」(pendingRequestsSection) 兩個區塊，現在整個拿掉——改成下面「學生管理」
+    // 的สารบัญ清單，每個學生自己那一行右邊直接顯示狀態 badge（改期/取消/加課/課程快上完），
+    // 點進那位學生的詳細卡片，最下面會有完整的「待處理申請」區塊（按鈕邏輯跟以前一模一樣，
+    // 只是位置搬過去了）。
+    // loadLowQuotaBanner() / loadPendingClassRequests() 兩個函式都還在跑（見下面），只是不再
+    // 找 #lowQuotaBanner / #pendingRequestsSection 這兩個 id 畫東西了，資料改成順便算給สารบัญ用。
     '<div class="teacher-panel">' +
       '<h2>👩‍🏫 學生管理 <span class="tag">教師專用</span></h2>' +
       '<div id="studentListContainer"><div class="empty-state">載入中…</div></div>' +
@@ -5723,6 +5868,11 @@ function friendlyRequestError(msg) {
   //   ข้อความของด่านใหม่คือ 'students may only reschedule a class 6+ hours in advance ...'
   //   ซึ่งมีคำว่า 'hours in advance' อยู่ด้วย → ถ้าเรียงสลับกัน นักเรียนที่ขอ "เลื่อน" ไม่ทัน
   //   จะได้ข้อความของ "ยกเลิก" ที่บอกให้ไปใช้ปุ่มขอเลื่อน = วนเป็นงูกินหาง
+  // 🔴 2026-08-02 เพิ่ม — ด่านใหม่ในฐานข้อมูล "ห้ามแก้เวลาที่ขอ ตอนครูกำลังจัดการอยู่"
+  //   (supabase/sql/2026-08-01_reschedule_guards.sql ป้าย ★★★) ต้องแปลเป็นภาษาคนก่อนโชว์
+  if (m.indexOf('locked or already closed') >= 0) {
+    return '老師正在處理這筆申請，或這筆已經處理完了，現在沒辦法再改時間。\n請重新整理頁面看最新狀態，需要的話直接用 LINE 聯絡老師。';
+  }
   if (m.indexOf('only reschedule') >= 0) {
     return '這堂課距離上課不到 6 小時，沒辦法線上改期。\n請直接用 LINE 聯絡老師。';
   }
@@ -7051,7 +7201,12 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
     //   ห้ามให้นักเรียนเขียนเวลาที่เลือกทับเข้าไป — ครูจะย้ายไปเวลาหนึ่ง แต่ฐานข้อมูลบันทึกอีกเวลาหนึ่ง
     //   (ฐานข้อมูลฝั่ง respond_to_offer_as_student ก็มีด่านเดียวกันแล้ว ดู 2026-08-01_reschedule_guards.sql)
     const upd = await studentPatchRequest(token, requestId, { requested_date: chosenOpt.date, requested_time: chosenOpt.time }, { offerStatus: 'proposed', notProcessing: true });
-    if (upd.error) { alert('⚠️ 儲存選擇失敗：' + upd.error.message + '\n請直接聯絡老師比較保險。'); return; }
+    // 🟡 2026-08-02 加：แปล error ที่รู้จักเป็นภาษาคนก่อนโชว์ (ด่านใหม่ในฐานข้อมูลจะตีกลับมาที่นี่)
+    if (upd.error) {
+      var friendlyPick = friendlyRequestError(upd.error.message);
+      alert(friendlyPick ? ('⚠️ ' + friendlyPick) : ('⚠️ 儲存選擇失敗：' + upd.error.message + '\n請直接聯絡老師比較保險。'));
+      return;
+    }
     if (!upd.rows.length) { alert('⚠️ 儲存選擇失敗（這個提議可能已經被老師改過或處理掉了），請重新整理頁面看最新狀態。'); return; }
   }
   const res = await sb.rpc('respond_to_offer_as_student', { p_request_id: requestId, p_token: token, p_response: response });
@@ -7765,6 +7920,15 @@ function scrollToRequestFromHash() {
     }
     if (hash.indexOf('#req-row-') !== 0) return;
     var elId = decodeURIComponent(hash.slice(1));
+    // 2026-08-02 加：申請卡片現在收在「那位學生的詳細卡片」裡面，不是一直都在畫面上——
+    // 要先用 requestId 反查是哪個學生（window._classRequestCache，loadPendingClassRequests()
+    // 已經備妥），呼叫 selectStudent() 把他的卡片打開（裡面會順便呼叫
+    // renderStudentPendingRequestsBlock() 把申請卡片畫出來），這個 #req-row-xxx 的 id 才會出現在畫面上。
+    var reqIdFromHash = elId.slice('req-row-'.length);
+    var reqFromHash = window._classRequestCache && window._classRequestCache[reqIdFromHash];
+    if (reqFromHash && reqFromHash.token && studentsCache[reqFromHash.token]) {
+      selectStudent(reqFromHash.token);
+    }
     var el = document.getElementById(elId);
     if (!el) return;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -7796,16 +7960,30 @@ function subscribePendingClassRequestsRealtime() {
     .subscribe();
 }
 
+// 2026-08-02 改（Lin 要求拿掉最上面的「學生申請改期/取消」清單）：這支函式不再找
+// #pendingRequestsSection 畫一整塊清單了——改成把每筆申請按 token 分組存進
+// window._pendingRequestsByToken，讓 (1) สารบัญ清單的狀態 badge、(2) 打開中的那位學生詳細卡片
+// 最下面的「待處理申請」區塊，都能各自去讀自己那份。actionsHtml 的按鈕邏輯完全沒動，
+// 只是把「畫一整塊清單」改成「分組存起來，讓別的地方畫」。
 async function loadPendingClassRequests() {
-  var container = document.getElementById('pendingRequestsSection');
-  if (!container) return;
   var res = await sb.from('classroom_requests').select('*')
     .eq('status', 'pending').order('created_at', { ascending: true });
   var data = res.data || [];
-  if (res.error) { container.innerHTML = ''; console.warn('讀取學生申請失敗：', res.error.message); return; }
-  if (data.length === 0) { container.innerHTML = ''; return; }
+  if (res.error) {
+    console.warn('讀取學生申請失敗：', res.error.message);
+    window._pendingRequestsByToken = {};
+    refreshAllRosterMeta();
+    if (currentTeacherPanelToken) renderStudentPendingRequestsBlock(currentTeacherPanelToken);
+    return;
+  }
   window._classRequestCache = {};
   data.forEach(function(r) { window._classRequestCache[r.id] = r; });
+  if (data.length === 0) {
+    window._pendingRequestsByToken = {};
+    refreshAllRosterMeta();
+    if (currentTeacherPanelToken) renderStudentPendingRequestsBlock(currentTeacherPanelToken);
+    return;
+  }
 
   // ════════════════════════════════════════════════════════════════════════
   // 🟡 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A11 — Lin เลือก "ไม่จำกัดจำนวนครั้ง แต่ครูต้องเห็นสถิติ")
@@ -7833,7 +8011,8 @@ async function loadPendingClassRequests() {
     return 'https://calendar.google.com/calendar/r/day/' + parseInt(p[0], 10) + '/' + parseInt(p[1], 10) + '/' + parseInt(p[2], 10);
   }
 
-  var rows = data.map(function(r) {
+  var byToken = {};
+  data.forEach(function(r) {
     var isCancel = r.request_type === 'cancel';
     // 2026-07-15 加：request_type='add_class'（學生自己申請加課，沒有「原本課堂」）獨立處理，
     // 不能走「處理」（那顆是找既有 Calendar 事件搬/刪，加課沒有既有事件可找）。
@@ -7960,7 +8139,7 @@ async function loadPendingClassRequests() {
     }
     actionsHtml = lockNoticeHtml + actionsHtml;
 
-    return '<div class="slip-row" id="req-row-' + r.id + '">' +
+    var rowHtml = '<div class="slip-row" id="req-row-' + r.id + '">' +
       '<div class="slip-thumb-placeholder">' + (isCancel ? '❌' : isAdd ? '➕' : '🔄') + '</div>' +
       '<div class="slip-info">' +
         '<div class="slip-name">' + escHtml(r.student_name || '-') + '　' + typeLabel + '</div>' +
@@ -7974,10 +8153,14 @@ async function loadPendingClassRequests() {
       '</div>' +
       '<div class="slip-actions" style="flex-direction:column;gap:6px;">' + actionsHtml + '</div>' +
     '</div>';
-  }).join('');
-  container.innerHTML = '<div class="pending-card">' +
-    '<h2>📋 學生申請改期/取消 <span class="pending-badge">' + data.length + '</span></h2>' +
-    rows + '</div>';
+
+    var reqType = isCancel ? 'cancel' : isAdd ? 'add_class' : 'reschedule'; // 2026-08-02 加：給สารบัญ badge 分類用
+    (byToken[r.token] = byToken[r.token] || []).push({ id: r.id, type: reqType, html: rowHtml });
+  });
+
+  window._pendingRequestsByToken = byToken;
+  refreshAllRosterMeta(); // 更新每一位學生สารบัญ那一行的狀態 badge
+  if (currentTeacherPanelToken) renderStudentPendingRequestsBlock(currentTeacherPanelToken); // 如果現在正打開某個學生的詳細卡片，順便補上/更新他的「待處理申請」區塊
 }
 
 // ── 2026-07-19 加（稽核 ORANGE：跨管道 (LINE vs 網站) 搶著刪/搬同一筆 Calendar 事件的競爭問題）──
@@ -8256,14 +8439,33 @@ async function processClassRequestInner(id, r, isCancel) {
     // 2026-07-19 加：動 Calendar 前先搶原子鎖，防止跟 LINE 那邊或其他分頁撞期
     var claim2 = await claimRequestForProcessing(id);
     if (!claim2.ok) { alert('⚠️ ' + claim2.reason); await loadPendingClassRequests(); return; }
+    // 🔴 2026-08-02 加 (ตรวจซ้ำ)：แยก "ยังไม่ได้แตะ Calendar" ออกจาก "แตะไปแล้วแต่ตรวจซ้ำไม่ได้"
+    //   รูเดิม: catch ก้อนเดียวปลดล็อกทุกกรณี + บอกครูว่า "移動失敗，請重試"
+    //   แต่ถ้า moveClassEventOnce ผ่านแล้ว (Google รับคำสั่งย้ายไปแล้วจริง) แค่ verifyEventMoved
+    //   อ่านกลับมาไม่ได้ (เน็ตหลุด/403/โควตาหมด) → **คาบอาจย้ายไปแล้วจริง**
+    //   ปลดล็อก = ครูกดซ้ำ หรือฝั่ง LINE แย่งล็อกไปย้ายอีกรอบได้ทันที
+    //   ฝั่ง LINE ทำถูกมาตั้งแต่ 2026-08-01 แล้ว (eventMovedButUnverified = คาล็อกไว้ ไม่ให้กดซ้ำ)
+    //   ที่นี่ทำให้ตรงกัน
+    var movePatchSent1 = false;
     try {
       assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
       await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
+      movePatchSent1 = true; // Google รับคำสั่งย้ายแล้ว — ตั้งแต่บรรทัดนี้ไป "ห้ามปลดล็อก"
       await verifyEventMoved(ev.id, newStartIso); // 2026-07-15：真的回頭確認 Calendar 上時間真的改了，不是只信任 API 回應
       newStartIsoForNotify = newStartIso;
     } catch (e) {
-      await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
-      alert('⚠️ 移動課堂失敗：' + (e.message || e) + '\n這筆申請還沒標記完成，請重試或手動處理。');
+      if (movePatchSent1) {
+        // ล็อกคาไว้โดยตั้งใจ (เหมือนฝั่ง LINE) — กันคนอื่นแย่งไปย้ายซ้ำบนคาบที่อาจย้ายไปแล้ว
+        alert('⚠️ 指令已經送出去了，但回頭確認 Calendar 的時候失敗：' + (e.message || e) + '\n\n'
+          + '⚠️ 這堂課有可能「已經真的搬過去了」，所以系統故意不解鎖，避免又被搬第二次。\n\n'
+          + '請自己到 Google Calendar 看一眼這堂課現在在哪個時間：\n'
+          + '・已經在新時間了 → 這筆申請請到 Supabase 手動標記成 acknowledged（id: ' + id + '）\n'
+          + '・還在原本時間 → 卡片上等 10 分鐘後會出現「🔓 解鎖這筆」，解鎖後再按一次');
+      } else {
+        await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
+        alert('⚠️ 移動課堂失敗：' + (e.message || e) + '\n這筆申請還沒標記完成，請重試或手動處理。');
+      }
+      await loadPendingClassRequests();
       return;
     }
   }
@@ -8915,15 +9117,28 @@ async function confirmAcceptedOfferInner(id, r) {
   // 2026-07-19 加：動 Calendar 前先搶原子鎖，防止跟 LINE 那邊或其他分頁撞期
   var claim3 = await claimRequestForProcessing(id);
   if (!claim3.ok) { alert('⚠️ ' + claim3.reason); await loadPendingClassRequests(); return; }
+  // 🔴 2026-08-02 加 (ตรวจซ้ำ)：แยก 2 กรณีเหมือน processClassRequestInner ด้านบน
+  //   "ยังไม่ได้แตะ Calendar" = ปลดล็อกได้ · "ส่งคำสั่งย้ายไปแล้วแต่ตรวจซ้ำไม่ได้" = ห้ามปลดล็อก
+  var movePatchSent2 = false;
   try {
     assertBackupOk(await backupCalendarEvent(id, r.token, 'move', ev, newStartIso), '改期課堂');
     await moveClassEventOnce(ev.id, r.requested_date, newTimeStr, durationMs);
+    movePatchSent2 = true; // Google รับคำสั่งย้ายแล้ว — ตั้งแต่บรรทัดนี้ไป "ห้ามปลดล็อก"
     // 🟠 2026-07-26 加：เส้นทางนี้ (นักเรียนกดตกลงแล้วครูยืนยัน) ลืมเรียก verifyEventMoved
     // ต่างจากอีกเส้นทางที่มีอยู่แล้ว → เดิมเชื่อแค่ API ตอบ ok แล้วเดินหน้าแจ้งนักเรียนเลย
     await verifyEventMoved(ev.id, newStartIso);
   } catch (e) {
-    await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
-    alert('⚠️ 移動課堂失敗：' + (e.message || e));
+    if (movePatchSent2) {
+      alert('⚠️ 指令已經送出去了，但回頭確認 Calendar 的時候失敗：' + (e.message || e) + '\n\n'
+        + '⚠️ 這堂課有可能「已經真的搬過去了」，所以系統故意不解鎖，避免又被搬第二次。\n\n'
+        + '請自己到 Google Calendar 看一眼這堂課現在在哪個時間：\n'
+        + '・已經在新時間了 → 這筆申請請到 Supabase 手動標記成 acknowledged（id: ' + id + '）\n'
+        + '・還在原本時間 → 卡片上等 10 分鐘後會出現「🔓 解鎖這筆」，解鎖後再按一次');
+    } else {
+      await releaseRequestClaim(id); // Calendar 還沒真的成功，放開鎖讓之後可以重試
+      alert('⚠️ 移動課堂失敗：' + (e.message || e));
+    }
+    await loadPendingClassRequests();
     return;
   }
 
@@ -9275,6 +9490,58 @@ async function revertCalendarBackupInner(id) {
   //   (3) คาบประจำที่กู้กลับมากลายเป็นคาบเดี่ยว แต่ไม่มีใครบอกครู (แก้ไม่ได้จริง แต่ต้องบอก)
   // ══════════════════════════════════════════════════════════════════════════
   var revertExtraWarn = '';
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 2026-08-02 เพิ่ม (จากการตรวจซ้ำ) — คืนค่า "การย้ายคาบ" ต้องแก้ตารางเรียนกลับด้วย
+  //
+  // 🕳️ รูที่อุด: สาขา create ลบแถวตารางเรียนให้ · สาขา delete เขียนแถวคืนให้ ·
+  //    **มีแต่สาขา move ที่ไม่ทำอะไรเลย** → กดคืนค่าแล้วปฏิทินกลับไปเวลาเดิมจริง
+  //    แต่แถวใน classroom_schedule ยังเป็น "เวลาใหม่" จนกว่า cron จะมาแก้ (นานสุด 15-30 นาที)
+  //    ระหว่างนั้น class-reminder-cron (รันทุก 5 นาที) อ่านเวลาผิด = เตือนนักเรียนผิดเวลา
+  //    และหน้าเว็บนักเรียนก็ยังเห็นเวลาใหม่ที่ถูกยกเลิกไปแล้ว
+  //
+  // ⚠️ ทำไมเพิ่งมาเป็นปัญหาชัดตอนนี้: ก่อน 2026-08-01 ไม่มีใครเขียนตารางเรียนตอนย้ายคาบ
+  //    แถวจึงมักยังเป็นเวลาเก่าอยู่ → กดคืนค่าแล้ว "บังเอิญตรง"
+  //    พอเพิ่ม syncScheduleRowAfterMove ฝั่ง LINE (line-webhook:904) แถวถูกเขียนเป็นเวลาใหม่
+  //    ทุกครั้งแน่นอน → ช่องว่างนี้กลายเป็น "เกิดขึ้นทุกครั้งที่กดคืนค่า" แทนที่จะเป็น "บางครั้ง"
+  //
+  // 🔑 ใช้ calendar_event_id เป็นตัวชี้ (ย้ายคาบไม่เปลี่ยนเลข = แถวเดิม) ไม่เดาจาก "ชื่อ+วันที่"
+  //    ต้องรีเซ็ตธง "เตือนไปแล้ว" ด้วย ไม่งั้นคาบที่เคยถูกเตือนตอนเวลาใหม่ จะไม่ถูกเตือนอีกเลย
+  //    (ตรรกะเดียวกับ syncScheduleRowAfterMove ฝั่ง LINE เป๊ะ รวมทั้งการถอยเมื่อคอลัมน์เก่าถูกลบ)
+  // ⚠️ ล้มเหลวที่นี่ "ห้ามย้อนการคืนค่า" — Calendar คือความจริงหลัก และ cron จะตามแก้ให้เอง
+  //    แต่ต้องบอกครูตรงๆ ห้ามเงียบ
+  // ══════════════════════════════════════════════════════════════════════════
+  if (b.action === 'move' && b.old_event_id) {
+    try {
+      var revBackStart = b.old_start ? formatInTz(new Date(b.old_start), TEACHER_TZ) : null;
+      var revBackEndStr = '';
+      try {
+        var revBackOldEnd = b.old_event_json && b.old_event_json.end && (b.old_event_json.end.dateTime || b.old_event_json.end.date);
+        if (revBackOldEnd) revBackEndStr = formatInTz(new Date(revBackOldEnd), TEACHER_TZ).timeStr;
+      } catch (e) { /* ไม่มีเวลาจบก็ไม่เป็นไร ปล่อยว่าง */ }
+      if (!revBackStart) {
+        revertExtraWarn += '\n⚠️ 課堂已經搬回原本時間了，但備份裡沒有原本的時間資料，課表沒有跟著改回去。'
+          + '\n最慢 30 分鐘後排程會自己修正。';
+      } else {
+        var revBase = { lesson_date: revBackStart.dateStr, start_time: revBackStart.timeStr || '', end_time: revBackEndStr, line_reminder24h_sent: false };
+        var revWithLegacy = Object.assign({}, revBase, { line_reminder_sent: false, line_followup_sent: false });
+        var revUpd = await sb.from('classroom_schedule').update(revWithLegacy, { count: 'exact' }).eq('calendar_event_id', b.old_event_id);
+        // คอลัมน์ธงรุ่นเก่าอาจถูกลบไปแล้ว → ลองใหม่เฉพาะตัวที่ใช้จริง (ท่าเดียวกับฝั่ง LINE)
+        if (revUpd.error && (revUpd.error.code === 'PGRST204' || revUpd.error.code === '42703'
+            || /column .* does not exist|could not find the .* column/i.test(revUpd.error.message || ''))) {
+          revUpd = await sb.from('classroom_schedule').update(revBase, { count: 'exact' }).eq('calendar_event_id', b.old_event_id);
+        }
+        if (revUpd.error) {
+          revertExtraWarn += '\n⚠️ 課堂已經搬回原本時間了，但課表資料庫還是新時間（' + revUpd.error.message + '）。'
+            + '\n最慢 30 分鐘後排程會自己修正；這段期間學生看到的時間、上課提醒可能還是錯的。';
+        } else if (!revUpd.count) {
+          console.warn('ℹ️ 復原改期：classroom_schedule 找不到 calendar_event_id=' + b.old_event_id + ' 的資料列（可能還沒同步進去，不影響復原本身）');
+        }
+      }
+    } catch (e) {
+      revertExtraWarn += '\n⚠️ 課堂已經搬回原本時間了，但改課表時出錯（' + (e.message || e) + '）。最慢 30 分鐘後排程會自己修正。';
+    }
+  }
 
   // 🟡 2026-07-31 (ข้อ #20)：ลบคาบออกจากปฏิทินแล้ว ต้องลบแถวในตารางเรียนตามด้วย
   //   ไม่งั้นหน้าเว็บนักเรียนจะยังโชว์คาบนี้อยู่ (นานสุด 20 นาทีกว่า cron จะมาเก็บกวาด)

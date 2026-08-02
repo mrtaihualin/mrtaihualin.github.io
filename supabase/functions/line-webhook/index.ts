@@ -744,6 +744,91 @@ async function moveCalendarEventById(eventId, newDateStr, newTimeStrOrNull) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// 🔴 2026-08-02 เพิ่ม (จากการตรวจซ้ำด้วยสายตาใหม่ — แทนที่ freeBusy ในเส้นทาง "ย้ายคาบ")
+//
+// 🕳️ รูที่อุด: freeBusy บอกได้แค่ "ช่วงไหนไม่ว่าง" **บอกไม่ได้ว่าเป็นของ event ไหน**
+//    เส้นทางย้ายคาบต้อง "ตัดคาบตัวเองออก" ให้ได้ (ไม่งั้นเลื่อน 10:00→10:30 จะเห็นตัวเองเป็นสิ่งกีดขวาง)
+//    ของเดิมจึงเดาว่า "ช่วงที่อยู่ในกรอบเวลาเดิมของคาบนี้ = ตัวเอง"
+//    → **นัดอื่นของครูที่บังเอิญอยู่ในกรอบเวลาเดิม ก็ถูกตัดทิ้งไปด้วย**
+//      เคสจริง: คาบ 10:00-11:00 · ครูมีนัดหมอ 10:15-10:45 · นักเรียนขอเลื่อนเป็น 10:30
+//      → ระบบบอก "ไม่ชน" แล้วย้ายทับนัดหมอ (พิสูจน์ด้วยการรันสูตรจริงแล้ว 2026-08-02)
+//    เขียนเงื่อนไขให้เก่งแค่ไหนก็แก้ไม่ได้ เพราะข้อมูลที่ freeBusy ให้มาไม่มีเลข event ติดมาเลย
+//
+// ✅ ทางแก้: ใช้ events.list แทน — ได้ "รายการคาบจริง" พร้อมเลข id → ตัดตัวเองออกด้วยเลข ไม่ต้องเดา
+//    (ท่าเดียวกับฝั่งเว็บที่ทำถูกมาตลอด: findConflictingEvents ใน classroom/index.html:1751)
+//    service account มีสิทธิ์ https://www.googleapis.com/auth/calendar เต็มอยู่แล้ว ไม่ต้องขอเพิ่ม
+//
+// 🛑 ตั้งใจ "ไม่" ไปแก้ checkFreebusyConflictService ตัวเดิม — ตัวนั้นระบบ "เพิ่มคาบ" ใช้อยู่
+//    (ปุ่ม 🔍 檢查是否衝突 + confirm_add_class) ซึ่งเป็นคนละระบบที่คนอื่นดูแล และที่นั่น "ไม่มีตัวเอง
+//    ให้ต้องตัดออก" อยู่แล้ว (คาบยังไม่ถูกสร้าง) → freeBusy ที่นั่นถูกต้องดีอยู่แล้ว ห้ามแตะ
+//
+// ⚠️ fail-closed เหมือนเดิม: อ่านไม่ได้ = { ok:false } ผู้เรียกต้องแปลว่า "ห้ามย้าย"
+// ⚠️ ข้าม 2 อย่างเพื่อให้ผลใกล้เคียง freeBusy เดิม ไม่ให้เข้มขึ้นจนใช้งานไม่ได้:
+//    · `status === 'cancelled'` (คาบที่ถูกลบไปแล้ว ไม่ใช่สิ่งกีดขวาง)
+//    · `transparency === 'transparent'` (รายการที่ครูตั้งเองว่า "ว่าง/ไม่ติดธุระ" — freeBusy ก็ไม่นับ)
+// ════════════════════════════════════════════════════════════════════════════
+// ── ตัวกรอง 2 ตัวข้างล่างแยกออกมาเป็นฟังก์ชันบริสุทธิ์โดยตั้งใจ (ไม่ยิงเน็ต ไม่แตะฐานข้อมูล) ──
+//   เพื่อให้ตัวทดสอบกดได้จริง (_dev/ตัวทดสอบด่านตรวจคาบชน_2026-08-02.html) "ดูดโค้ดจริง" ไปรันได้ตรงๆ
+//   ตามกฎข้อ 13 ของ Lin — ไม่ใช่พิมพ์ตรรกะเลียนแบบขึ้นมาใหม่ (ซึ่งวันหนึ่งจะไม่ตรงกับของจริง)
+//   ⚠️ แก้ตรรกะตรงนี้เมื่อไหร่ ให้รัน `node _dev/สร้างตัวทดสอบด่านตรวจคาบชน.js` ใหม่ทุกครั้ง
+
+// เลือกเฉพาะรายการที่ "นับเป็นสิ่งกีดขวางจริง" ออกมาจากคำตอบของ Google
+function filterCandidateEvents(items, excludeEventId) {
+  return (items || []).filter((ev) => {
+    if (!ev) return false;
+    if (ev.status === 'cancelled') return false;              // คาบที่ถูกลบไปแล้ว
+    if (ev.transparency === 'transparent') return false;      // รายการที่ตั้งไว้เองว่า "ว่าง" (freeBusy ก็ไม่นับ)
+    // ตัด "ตัวเอง" ออกด้วยเลขจริง — ทั้งเลขของคาบครั้งนั้น และเลขชุดคาบประจำที่มันสังกัดอยู่
+    if (excludeEventId && (ev.id === excludeEventId || ev.recurringEventId === excludeEventId)) return false;
+    return true;
+  });
+}
+
+// ในบรรดารายการที่เหลือ อันไหน "ทับกันจริง" กับช่วงเวลาใหม่
+// ทับกันจริง = เริ่มก่อนที่เราจบ และ จบหลังที่เราเริ่ม (ชนขอบพอดีไม่นับว่าทับ)
+function pickOverlappingEvents(items, newStartMs, newEndMs) {
+  const hits = [];
+  for (const ev of (items || [])) {
+    const evStartRaw = ev.start && (ev.start.dateTime || ev.start.date);
+    const evEndRaw = ev.end && (ev.end.dateTime || ev.end.date);
+    if (!evStartRaw || !evEndRaw) continue;
+    const eS = new Date(evStartRaw).getTime();
+    const eE = new Date(evEndRaw).getTime();
+    if (!isFinite(eS) || !isFinite(eE)) continue;
+    if (!(eS < newEndMs && eE > newStartMs)) continue;
+    hits.push({ summary: ev.summary || '(無標題)', start: evStartRaw, end: evEndRaw });
+  }
+  return hits;
+}
+
+async function listConflictingEventsService(startIso, endIso, excludeEventId) {
+  const token = await getGoogleCalendarToken();
+  if (!token) return { ok: false, reason: 'no_token' };
+  const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
+  if (!calendarId) return { ok: false, reason: 'no_calendar_id' };
+  const url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events'
+    + '?timeMin=' + encodeURIComponent(startIso)
+    + '&timeMax=' + encodeURIComponent(endIso)
+    + '&singleEvents=true&orderBy=startTime&maxResults=50';
+  try {
+    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      return { ok: false, reason: 'http_' + res.status, detail: detail.slice(0, 300) };
+    }
+    const data = await res.json().catch(() => null);
+    // อ่านคำตอบไม่ออก / ไม่มีช่อง items = ไม่กล้าตีความว่า "ว่าง" (บทเรียนเดียวกับ freeBusy 2026-07-31)
+    if (!data || !Array.isArray(data.items)) {
+      return { ok: false, reason: 'no_items_field',
+        detail: 'คำตอบของ Google ไม่มีรายการคาบ — ไม่กล้าตีความว่าช่วงเวลานั้นว่าง' };
+    }
+    return { ok: true, items: filterCandidateEvents(data.items, excludeEventId) };
+  } catch (e) {
+    return { ok: false, reason: 'fetch_error', detail: e.message };
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // 2026-08-01 เพิ่ม (งาน B2 + B3 + B4) — ด่านตรวจก่อน "ย้ายคาบ" จากปุ่มใน LINE
 //
 // เดิมปุ่ม ✅ 確認並搬 Calendar / 確認搬到這個時間 ใน LINE **ไม่มีด่านอะไรเลย** ก่อนย้ายจริง —
@@ -837,47 +922,27 @@ async function precheckRescheduleMoveTarget(eventId, targetDate, targetTimeOrNul
   }
 
   // ── B3：เวลาใหม่ชนกับคาบ/ธุระอื่นไหม ───────────────────────────────────────
-  // ใช้ตัวเดียวกับปุ่ม 🔍 檢查是否衝突 (checkFreebusyConflictService) ซึ่ง fail-closed อยู่แล้ว
-  // ⚠️ ข้อจำกัดของ freeBusy: มันบอกได้แค่ "ช่วงไหนไม่ว่าง" บอกไม่ได้ว่าเป็นคาบไหน และ
-  //    **กันคาบของตัวเองออกไม่ได้** (ฝั่งเว็บใช้ findConflictingEvents ที่ตัด ev.id ออกได้)
-  //    → เคสจริงที่จะเจอ: ย้ายคาบไปเวลาที่คาบเดิมของตัวเองยังคาบเกี่ยวอยู่ (เช่น 10:00 → 10:30)
-  //      จะเห็น "ตัวเอง" เป็นสิ่งกีดขวางแล้วปฏิเสธทั้งที่ไม่ควร
-  //    → แก้โดยตัดช่วงที่ "ตรงกับเวลาเดิมของคาบนี้เป๊ะ" ออก (คลาดเคลื่อนได้ไม่เกิน 1 นาที)
-  //      กันเฉพาะตัวมันเอง ไม่ได้ผ่อนให้คาบอื่น
-  const fb = await checkFreebusyConflictService(times.newStartIso, times.newEndIso);
-  if (!fb.ok) {
+  // 🔴 2026-08-02 เปลี่ยนวิธี (จากการตรวจซ้ำ) — เดิมใช้ freeBusy แล้ว "เดา" ว่าอันไหนคือตัวเอง
+  //   ซึ่งเดาผิดได้จริง: นัดอื่นที่บังเอิญอยู่ในกรอบเวลาเดิมของคาบ จะถูกตัดทิ้งไปด้วย = ชนแล้วมองไม่เห็น
+  //   ตอนนี้ใช้ listConflictingEventsService (events.list) ที่ตัดตัวเองออกด้วย "เลข event จริง"
+  //   ไม่ต้องเดาอีกต่อไป — เหตุผลเต็มอยู่ที่หัวฟังก์ชันนั้น
+  // ⚠️ fail-closed เหมือนเดิม: ตรวจไม่ได้ = ไม่ย้าย (ห้ามตีความว่า "ไม่ชน")
+  const selfIdForExclude = (preEvent && preEvent.id) || eventId;
+  const cf = await listConflictingEventsService(times.newStartIso, times.newEndIso, selfIdForExclude);
+  if (!cf.ok) {
     return {
       ok: false,
-      logReason: 'freebusy_failed_' + (fb.reason || 'unknown'),
-      replyText: '🛑 沒辦法檢查行事曆有沒有衝突（' + (fb.reason || '未知') + '），所以這次沒有搬任何課堂。\n' +
-        (fb.detail ? fb.detail + '\n' : '') +
+      logReason: 'conflictcheck_failed_' + (cf.reason || 'unknown'),
+      replyText: '🛑 沒辦法檢查行事曆有沒有衝突（' + (cf.reason || '未知') + '），所以這次沒有搬任何課堂。\n' +
+        (cf.detail ? cf.detail + '\n' : '') +
         '「檢查不了」一律當成「不可以搬」，避免不小心搬到已經有課的時段。\n' +
         '請稍後再按一次，或到網站處理：' + siteLink,
     };
   }
-  const selfStartMs = times.oldStartIso ? new Date(times.oldStartIso).getTime() : NaN;
-  const selfEndMs = times.oldEndIso ? new Date(times.oldEndIso).getTime() : NaN;
-  const hits = [];
-  for (const b of (fb.busy || [])) {
-    const bStart = new Date(b.start).getTime();
-    const bEnd = new Date(b.end).getTime();
-    if (!isFinite(bStart) || !isFinite(bEnd)) continue;
-    // ทับกันจริงเมื่อ "เริ่มก่อนที่เราจบ" และ "จบหลังที่เราเริ่ม" (ชนขอบพอดีไม่นับว่าทับ)
-    if (!(bStart < newEndMs && bEnd > newStartMs)) continue;
-    // 🔴 2026-08-01 (แก้รอบตรวจซ้ำ) — เดิมเทียบว่า "ขอบตรงกันเป๊ะ ±1 นาที" ซึ่งผิด
-    //   Google ตัดช่วงเวลาที่ตอบกลับมาให้อยู่ในกรอบที่เราถามเสมอ (timeMin/timeMax = เวลาใหม่)
-    //   → ย้ายคาบ 10:00-11:00 ไป 10:30-11:30 จะได้ช่วงของตัวเองกลับมาเป็น 10:30-11:00 (ถูกตัดหัว)
-    //     ขอบทั้งสองข้างไม่ตรงกับของเดิมเลย → ระบบนึกว่าเป็นคาบคนอื่น → ปฏิเสธการเลื่อนแบบ
-    //     "ขยับ 30 นาที" ซึ่งเป็นกรณีที่ใช้บ่อยที่สุด (ปุ่มใน LINE จะกดไม่ผ่านตลอด)
-    //   ถูกต้องคือ: ช่วงที่ "อยู่ในกรอบเวลาเดิมของคาบนี้" = ตัวมันเอง (เผื่อคลาด 1 นาที)
-    const isSelf = isFinite(selfStartMs) && isFinite(selfEndMs)
-      && bStart >= selfStartMs - 60000 && bEnd <= selfEndMs + 60000;
-    if (isSelf) continue;
-    hits.push(b);
-  }
+  const hits = pickOverlappingEvents(cf.items, newStartMs, newEndMs);
   if (hits.length) {
-    const listTxt = hits.slice(0, 5).map((b) =>
-      '・' + (formatIsoInTz(b.start, 'Asia/Bangkok') || b.start) + ' – ' + (formatIsoInTz(b.end, 'Asia/Bangkok') || b.end)).join('\n');
+    const listTxt = hits.slice(0, 5).map((h) =>
+      '・' + h.summary + '　' + (formatIsoInTz(h.start, 'Asia/Bangkok') || h.start)).join('\n');
     return {
       ok: false,
       logReason: 'conflict',
@@ -1375,27 +1440,17 @@ serve(async (req) => {
           console.warn('[line-webhook] ℹ️ confirm_reschedule_move: classroom_schedule ไม่พบแถว calendar_event_id=' + reqRowMove.calendar_event_id + ' (อาจยังไม่เคยซิงค์เข้ามา ไม่กระทบการย้าย)');
         }
 
-        // Calendar 搬成功——關單+解鎖同一個 atomic update（跟 confirm_add_class／confirm_cancel_delete 一樣）
-        const { error: updErrMove, count: updCountMove } = await supabase
-          .from('classroom_requests')
-          .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
-          .eq('id', requestIdMove)
-          .eq('status', 'pending');
-
-        if (updErrMove || !updCountMove) {
-          console.error('[line-webhook] ⚠️ confirm_reschedule_move: Calendar 搬成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrMove ? updErrMove.message : '更新 0 筆', 'request=', requestIdMove);
-          if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經搬成功了，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdMove + '）');
-          }
-          continue;
-        }
-
         // 通知學生（best-effort，失敗不影響已經成功的搬課）——換算成學生自己的時區，跟網站端
         // confirmAcceptedOfferInner 用 studentFacingTimeLabel 同樣的邏輯，沒有時區資料就退回泰國時間。
         // 🔴 2026-08-01 ย้ายบล็อกนี้ขึ้นมา "ก่อน" ตอบกลับครู (RELIABILITY FIRST)
         //   เดิมตอบครูว่า「並通知學生了」ไปก่อน แล้วค่อยส่งหานักเรียนทีหลังแบบเงียบๆ
         //   → ส่งไม่สำเร็จ (นักเรียนบล็อก LINE OA / ยังไม่เชื่อม / LINE ล่ม) ครูก็ยังเห็นว่าแจ้งแล้ว
         //     = นักเรียนไม่รู้เรื่องว่าคาบถูกย้าย และไม่มีใครรู้ว่าไม่รู้ (ผิดกฎ "ห้ามขึ้นว่าสำเร็จถ้ายังไม่ได้ตรวจ")
+        // 🔴 2026-08-02 ย้ายขึ้นอีกครั้ง — คราวนี้ขึ้นมาก่อน "การปิดคำขอ" ด้วย (จากการตรวจซ้ำ)
+        //   รูเดิม: ปิดคำขอไม่สำเร็จ (เน็ตสะดุด / RLS / คำขอเพิ่งถูกแตะ) → โค้ด `continue` ข้ามไปเลย
+        //   → **นักเรียนไม่ได้รับแจ้งสักคำ ทั้งที่คาบถูกย้ายไปจริงแล้วในปฏิทิน** = ไปเรียนเวลาเก่า ขาดเรียน
+        //   ลำดับที่ถูกคือ: คาบขยับจริงเมื่อไหร่ นักเรียนต้องรู้ทันที ไม่ต้องรอว่าเก็บงานเรียบร้อยไหม
+        //   (ฝั่งเว็บทำถูกมาตลอด — แจ้งนักเรียนก่อน finalizeRequestStatus, classroom/index.html:8236)
         let studentWarnMove = '';
         if (channelToken && reqRowMove.token) {
           try {
@@ -1415,6 +1470,26 @@ serve(async (req) => {
             console.warn('[line-webhook] ⚠️ confirm_reschedule_move: แจ้งนักเรียนไม่สำเร็จ (คาบย้ายสำเร็จแล้ว):', (e && e.message) || e);
             studentWarnMove = '\n⚠️ 但 LINE 通知學生失敗（' + ((e && e.message) || e) + '），請自己再跟學生說一聲';
           }
+        }
+
+        // Calendar 搬成功——關單+解鎖同一個 atomic update（跟 confirm_add_class／confirm_cancel_delete 一樣）
+        // 2026-08-02：ย้ายลงมาไว้ "หลัง" การแจ้งนักเรียน — ดูเหตุผลในคอมเมนต์ก้อนแจ้งนักเรียนด้านบน
+        const { error: updErrMove, count: updCountMove } = await supabase
+          .from('classroom_requests')
+          .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
+          .eq('id', requestIdMove)
+          .eq('status', 'pending');
+
+        if (updErrMove || !updCountMove) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_move: Calendar 搬成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrMove ? updErrMove.message : '更新 0 筆', 'request=', requestIdMove);
+          if (channelToken && event.replyToken) {
+            // 2026-08-02：ต้องบอกด้วยว่า "นักเรียนได้รับแจ้งแล้วหรือยัง" ไม่งั้นครูไม่รู้ว่าต้องตามบอกเองไหม
+            await replyLine(channelToken, event.replyToken,
+              '⚠️ Calendar 已經搬成功了' + (studentWarnMove ? '' : '，學生也通知過了') +
+              '，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdMove + '）' +
+              schedWarnMove + studentWarnMove);
+          }
+          continue;
         }
 
         if (channelToken && event.replyToken) {
@@ -1606,22 +1681,11 @@ serve(async (req) => {
           console.warn('[line-webhook] ℹ️ confirm_reschedule_pick: classroom_schedule ไม่พบแถว calendar_event_id=' + reqRowPick.calendar_event_id + ' (อาจยังไม่เคยซิงค์เข้ามา ไม่กระทบการย้าย)');
         }
 
-        const { error: updErrPick, count: updCountPick } = await supabase
-          .from('classroom_requests')
-          .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
-          .eq('id', requestIdPick)
-          .eq('status', 'pending');
-
-        if (updErrPick || !updCountPick) {
-          console.error('[line-webhook] ⚠️ confirm_reschedule_pick: Calendar 搬成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrPick ? updErrPick.message : '更新 0 筆', 'request=', requestIdPick);
-          if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken, '⚠️ Calendar 已經搬成功了，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdPick + '）');
-          }
-          continue;
-        }
-
         // 🔴 2026-08-01 ย้ายบล็อกแจ้งนักเรียนขึ้นมา "ก่อน" ตอบกลับครู (เหตุผลเดียวกับก้อน confirm_reschedule_move)
         //   เดิมตอบครูว่า「並通知學生了」ก่อน แล้วค่อยส่งหานักเรียนแบบเงียบๆ — ส่งไม่สำเร็จก็ไม่มีใครรู้
+        // 🔴 2026-08-02 ย้ายขึ้นอีกครั้ง ให้มาอยู่ก่อน "การปิดคำขอ" ด้วย
+        //   ปิดคำขอไม่สำเร็จ = เดิม `continue` ข้ามการแจ้งนักเรียนไปเลย ทั้งที่คาบย้ายไปจริงแล้ว
+        //   (เหตุผลเต็มอยู่ในก้อน confirm_reschedule_move ด้านบน — ต้องแก้คู่กันเสมอ 2 ก้อนนี้)
         let studentWarnPick = '';
         if (channelToken && reqRowPick.token) {
           try {
@@ -1640,6 +1704,24 @@ serve(async (req) => {
             console.warn('[line-webhook] ⚠️ confirm_reschedule_pick: แจ้งนักเรียนไม่สำเร็จ (คาบย้ายสำเร็จแล้ว):', (e && e.message) || e);
             studentWarnPick = '\n⚠️ 但 LINE 通知學生失敗（' + ((e && e.message) || e) + '），請自己再跟學生說一聲';
           }
+        }
+
+        // 2026-08-02：ปิดคำขอ "หลัง" แจ้งนักเรียนแล้ว (ดูเหตุผลในคอมเมนต์ก้อนแจ้งนักเรียนด้านบน)
+        const { error: updErrPick, count: updCountPick } = await supabase
+          .from('classroom_requests')
+          .update({ status: 'acknowledged', processing_started_at: null }, { count: 'exact' })
+          .eq('id', requestIdPick)
+          .eq('status', 'pending');
+
+        if (updErrPick || !updCountPick) {
+          console.error('[line-webhook] ⚠️ confirm_reschedule_pick: Calendar 搬成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrPick ? updErrPick.message : '更新 0 筆', 'request=', requestIdPick);
+          if (channelToken && event.replyToken) {
+            await replyLine(channelToken, event.replyToken,
+              '⚠️ Calendar 已經搬成功了' + (studentWarnPick ? '' : '，學生也通知過了') +
+              '，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdPick + '）' +
+              schedWarnPick + oldCardNotePick + studentWarnPick);
+          }
+          continue;
         }
 
         if (channelToken && event.replyToken) {

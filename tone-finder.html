@@ -1387,7 +1387,22 @@ if (document.fonts && document.fonts.load) {
   #gt-tour-card .gt-btn{border:none;border-radius:999px;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
   #gt-tour-card .gt-prev{background:#f3e4c2;color:#8B6310;}
   #gt-tour-card .gt-next{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
+
+  /* Lin 2026-08-02: กันลากนิ้ว/เมาส์เลือกคำศัพท์ + กันเมนูกดค้างบนมือถือ (ห้ามพจนานุกรมเครื่องฟังเสียงก่อนตอบ = โกง) */
+  .tf-word-banner, .tf-banner-word, .tf-read-th, .tf-read-en {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+  }
 </style>
+<script>
+/* Lin 2026-08-02: ปิดเมนูคลิกขวาบนกล่องคำศัพท์ (คอม) — กันฟีเจอร์ "อ่านออกเสียง/ค้นหา" ในเมนูคลิกขวาของบาง browser */
+document.addEventListener('contextmenu', function(e){
+  if (e.target.closest && e.target.closest('#tf-banner')) e.preventDefault();
+});
+</script>
 <!-- html2pdf ถอดออก 2026-06-27: เลิกใช้แล้ว (เปลี่ยนไปใช้หน้าต่าง print) ลดการโหลดที่ไม่จำเป็น -->
 <script type="application/ld+json">
 {
@@ -1679,7 +1694,7 @@ var GT_TOUR_STEPS=[
   {sel:'#tf-banner',       title:'這裡是題目卡', text:'顯示現在第幾題，還有現在要判斷聲調的泰文字。'},
   {sel:'.sg-tone-grid',    title:'猜猜是第幾聲？', text:'泰語有 5 個聲調，看到字先猜猜看是第幾聲，點數字或直接按鍵盤 1–5 都可以。'},
   {sel:'.sg-dontknow-btn', title:'不確定嗎？沒關係', text:'點這裡會帶你一步一步分析這個字的聲調規則，慢慢學會怎麼判斷，不用硬猜。'},
-  {sel:'#wm-trigger',      title:'更多功能都在這裡', text:'點 🍚 打開選單：讀音、翻譯、收藏單字、提示、換字體都在裡面。'},
+  {sel:'#wm-trigger',      title:'更多功能都在這裡', text:'點 🍚 打開選單：讀音、翻譯、收藏單字、提示、換字體、🙏禮貌詞（高級句子專用）都在裡面。'},
   {sel:'#tf-alpha-btn',    title:'還不熟字母嗎？', text:'可以先來這裡單獨練習泰文字母的發音，練熟了再回來玩。'},
   {sel:'#rg-profile-wrap', title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
 ];

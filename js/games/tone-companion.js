@@ -79,12 +79,12 @@
     sb.from('tone_sessions').insert(row).then(function (res) {
       if (res.error) {
         console.warn('[tone-finder] บันทึกไม่สำเร็จ:', res.error.message);
-        showScoreToast('⚠️ บันทึกคะแนนไม่สำเร็จ: ' + res.error.message, false);
+        showScoreToast('⚠️ 分數儲存失敗：' + res.error.message, false);
         try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: res.error.message, mode: s.mode || '' }); } catch (e) {}
       } else {
         console.info('[tone-finder] บันทึกผลแล้ว score=' + s.score);
         if (lastSession === s) lastSession = null;   // บันทึกสำเร็จ → เคลียร์ค้าง กันบันทึกซ้ำ
-        showScoreToast('✅ บันทึกคะแนน ' + (s.score || 0) + ' 分 สำเร็จ', true);
+        showScoreToast('✅ 已儲存分數 ' + (s.score || 0) + ' 分', true);
         try { if (window.gtag) gtag('event','score_saved',{category:'game', score: s.score || 0, mode: s.mode || '' }); } catch (e) {}
       }
     });
