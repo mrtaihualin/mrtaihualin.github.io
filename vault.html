@@ -38,11 +38,12 @@
 body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;padding-bottom:80px;}
 .vault-page{max-width:680px;margin:0 auto;padding:16px;}
 
-/* header */
-.vault-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
-.vault-title{font-size:22px;font-weight:700;color:#5a3e0a;font-family:'Noto Sans TC',sans-serif;}
+/* header — page-header/page-title ก็อปสไตล์เดียวกับหน้าเกมอื่นทุกหน้า (reading-game.html เป็นต้น) — Lin 2026-08-02 */
+.page-header{text-align:center;margin-bottom:10px;}
+.page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
+/* ไม่มี JS เติมข้อความให้เลย (เช็คแล้ว) ปล่อย display:none ไว้เหมือนเดิม กันเห็นเป็นเม็ดยาว่างๆ */
 .vault-count-chip{font-size:13px;background:rgba(139,99,16,0.12);color:#8B6310;border-radius:20px;padding:3px 12px;display:none;}
-.vault-back{font-size:13px;color:#8B6310;text-decoration:none;display:flex;align-items:center;gap:4px;margin-right:auto;}
+.vault-back{font-size:13px;color:#8B6310;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:12px;}
 .vault-back:hover{text-decoration:underline;}
 
 /* filter bar */
@@ -91,14 +92,29 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 </style>
 </head>
 <body>
+
+<!-- Lin 2026-08-02: เพิ่ม nav บนสุด + page-strip ล่างสุด ให้เหมือนหน้าเกมอื่นทุกหน้า (ก็อปจาก reading-game.html เป๊ะ) -->
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語遊戲練習室</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="pricing.html">課程・費用</a>
+  <a href="faq.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
 <div class="vault-page">
 
   <div id="rg-login-slot" style="display:flex;align-items:center;margin-bottom:12px;"></div>
 
-  <div class="vault-header">
-    <!-- ปุ่มกลับ: ถ้ามีประวัติให้ back ปกติ · เปิดหน้านี้ตรงๆ (ไม่มีประวัติ) → ไป games.html กันติดตัน — LIN 2026-07-02 -->
-    <a class="vault-back" href="games.html" onclick="if(document.referrer&&history.length>1){history.back();return false;}">← 返回</a>
-    <span class="vault-title">🔖 我的單字庫</span>
+  <!-- ปุ่มกลับ: ถ้ามีประวัติให้ back ปกติ · เปิดหน้านี้ตรงๆ (ไม่มีประวัติ) → ไป games.html กันติดตัน — LIN 2026-07-02 -->
+  <a class="vault-back" href="games.html" onclick="if(document.referrer&&history.length>1){history.back();return false;}">← 返回</a>
+
+  <div class="page-header">
+    <h1 class="page-title" style="margin:0;">🔖 我的單字庫</h1>
     <span class="vault-count-chip" id="vault-total-count"></span>
   </div>
 
