@@ -15,12 +15,39 @@
   <meta name="description" content="泰華眼裡的泰語教學網站使用條款：服務說明、使用規範、智慧財產權與免責聲明。">
   <link rel="canonical" href="https://mrtaihualin.com/terms.html">
   <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="stylesheet" href="/css/legal-page.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/shared.css?v=14">
+  <style>
+    .legal-wrap{max-width:760px;margin:0 auto;padding:64px 24px 100px;font-family:'Noto Sans TC',sans-serif;}
+    .legal-wrap h1{font-family:'Noto Serif TC',serif;font-size:clamp(28px,5vw,44px);font-weight:900;color:var(--ink);margin-bottom:10px;line-height:1.25;}
+    .legal-updated{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-muted);margin-bottom:44px;}
+    .legal-wrap h2{font-family:'Noto Serif TC',serif;font-size:21px;font-weight:900;color:var(--ink);margin-top:44px;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--gold);}
+    .legal-wrap p{font-size:15px;line-height:1.9;color:var(--ink-soft);}
+    .legal-wrap a{color:var(--gold);text-decoration:none;font-weight:700;}
+    .legal-wrap a:hover{color:var(--gold-bright);text-decoration:underline;}
+    .legal-backfoot{margin-top:56px;padding-top:24px;border-top:1px solid var(--border);text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:14px;}
+    .legal-backfoot a{font-weight:700;}
+  </style>
 </head>
 <body>
-  <div class="topbar"><a href="/index.html">← 回首頁 · 泰華眼裡的泰語教學</a></div>
+
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語遊戲練習室</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<!-- ════════════ BOTTOM PAGE NAV ════════════ -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="pricing.html">課程・費用</a>
+  <a href="faq.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
+<main class="legal-wrap">
   <h1>使用條款 Terms of Service</h1>
-  <p>最後更新：2026年6月25日</p>
+  <p class="legal-updated">最後更新：2026年6月25日</p>
   <h2>1. 服務說明</h2>
   <p>本網站（mrtaihualin.com）由泰華眼裡的泰語教學經營，提供泰語學習課程及相關教學內容。</p>
   <h2>2. 使用規範</h2>
@@ -31,6 +58,14 @@
   <p>本網站盡力確保內容的準確性，但不對任何因使用本網站而產生的損失負責。</p>
   <h2>5. 聯絡方式</h2>
   <p>如有任何問題，請聯絡：<a href="mailto:mr.taihualin@gmail.com">mr.taihualin@gmail.com</a></p>
-  <div class="backfoot"><a href="/index.html">← 回首頁</a>　·　<a href="/privacy.html">隱私權政策</a></div>
+  <div class="legal-backfoot"><a href="/index.html">← 回首頁</a>　·　<a href="/privacy.html">隱私權政策</a></div>
+</main>
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="js/core/shared.min.js?v=16"></script>
 </body>
 </html>
