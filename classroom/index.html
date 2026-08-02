@@ -711,6 +711,7 @@ window.SUPABASE_CONFIG = {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Google Identity Services（課堂錄影自動上傳 Drive 用）-->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="../js/classroom/datetime-utils.js"></script>
 <script>
 // ============================================================
 // SUPABASE + STUDENT DATA
@@ -1022,15 +1023,9 @@ const SCHEDULE_SYNC_DAYS = 180;
 // ห้ามใช้ new Date(dateStr+'T'+timeStr) เฉยๆ เพราะ browser จะตีความตาม timezone ของเครื่องที่รันโค้ด
 // (พังทันทีถ้าโค้ดรันบนเครื่อง/browser ของนักเรียนที่ timezone ไม่ตรงกับครู)
 const TEACHER_TZ = 'Asia/Bangkok';
-function teacherTimeToDate(dateStr, timeStr) {
-  return new Date(dateStr + 'T' + timeStr + ':00+07:00');
-}
 // 2026-07-10 เพิ่ม："วันนี้" ของครูต้องนับตามเวลาไทยเสมอ ห้ามใช้ new Date().toISOString().slice(0,10)
 // เพราะอันนั้นตอบเป็นวันที่แบบ UTC เสมอ — เที่ยงคืนถึงตี 7 เวลาไทยของทุกวัน UTC จะยังเป็น "เมื่อวาน"
 // อยู่ ถ้าเอาไปบันทึก/เทียบวันที่ตรงๆ จะพลาดวันที่ในช่วงนั้นทุกครั้ง (ไม่เกี่ยวกับ timezone เครื่องผิด)
-function teacherToday() {
-  return formatInTz(new Date(), TEACHER_TZ).dateStr;
-}
 
 // 🔴 2026-07-26 เพิ่ม (Lin สั่ง หลังเคสจริง: คาบของ 育郁 ที่สอนไปแล้ว 5 คาบ หายจาก Google Calendar)
 // ────────────────────────────────────────────────────────────────────────────────
@@ -1049,10 +1044,6 @@ function teacherToday() {
 // ⚠️ เพิ่มช่องวันที่ใหม่ในอนาคต ต้องต่อ 2 ชั้นนี้ด้วยเสมอ (อย่าเขียนเช็คเองซ้ำ ใช้ตัวกลางนี้)
 //   ยกเว้นช่องที่ "บันทึกสิ่งที่เกิดขึ้นไปแล้ว" ไม่ใช่การจัดคาบ (approvalStart / payStart / แก้วันที่ของ
 //   คาบที่บันทึกเข้าเรียนไปแล้ว) — พวกนั้นต้องเลือกวันย้อนหลังได้ตามปกติ ห้ามใส่ด่านนี้
-function todayInTz(tz) {
-  try { return formatInTz(new Date(), tz || TEACHER_TZ).dateStr; }
-  catch (e) { return formatInTz(new Date(), TEACHER_TZ).dateStr; } // tz พัง → ถอยมาใช้เวลาไทย ไม่ปล่อยหลุด
-}
 function lockDateInputToFuture(elOrId, tz) {
   var node = (typeof elOrId === 'string') ? document.getElementById(elOrId) : elOrId;
   if (node) node.min = todayInTz(tz);
@@ -1223,18 +1214,10 @@ async function createMeetLinkForStudent(studentName, opts) {
 // ── 2026-07-13 新增：處理「學生申請改期/取消」時，自動搜尋/移動/刪除 Calendar 事件 ──
 // 全部用 teacherTimeToDate / TEACHER_TZ（固定泰國時間）計算，理由跟上面 createMeetLinkForStudent 一樣：
 // 不信任瀏覽器當下時區設定，避免時間跑掉。
-function formatThaiDateTimeLabel(isoOrDateStr) {
-  if (!isoOrDateStr) return '-';
-  var f = formatInTz(new Date(isoOrDateStr), TEACHER_TZ);
-  return f.dateStr + ' ' + f.timeStr;
-}
 
 // 2026-07-15 改（Lin 要求）：上課時間欄位改回「下拉選單」（小時 00-23 + 分鐘只有 00/30），
 // 不讓老師/學生自己打字了，改用兩個 <select> + 一個隱藏 <input>（id 不變，值="HH:MM"）同步，
 // 這樣下面所有讀 .value 的地方完全不用改，isValidTimeStr() 還是拿來做最後一道防線。
-function isValidTimeStr(str) {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test((str || '').trim());
-}
 
 // 小時+分鐘其中一個沒選 → 隱藏 input 清空；兩個都選了 → 組成 "HH:MM" 寫回隱藏 input，
 // 再手動 dispatch input/change event，讓原本掛在隱藏 input 上的 oninput/onchange 屬性照常觸發。
@@ -1405,15 +1388,6 @@ async function findConflictingEvents(newStartIso, newEndIso, excludeEventId) {
 
 // 🔴 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A7)：ข้อความเตือนเรื่องคาบชน สำหรับใส่ในกล่องยืนยัน
 // รวมไว้ที่เดียวเพื่อให้ทุกเส้นทาง (ขอเลื่อนของนักเรียน / ยืนยันหลังนักเรียนตอบรับ) พูดเหมือนกันเป๊ะ
-function conflictWarnText(res) {
-  if (!res) return '';
-  if (!res.ok) {
-    return '\n\n⚠️ 系統這次「沒能檢查」這個時間有沒有跟其他行程撞到（' + (res.reason || '原因不明') + '）。\n'
-      + '這不代表沒有撞到——請自己先看一眼 Google Calendar 再決定。';
-  }
-  if (!res.items.length) return '';
-  return '\n\n⚠️ 這個新時間跟其他行事曆事件重疊：\n' + res.items.map(function (c) { return '・' + (c.summary || '(無標題)'); }).join('\n');
-}
 
 // 🔴 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A8 — ด่านกันอดีต "ระดับชั่วโมง")
 // ทำไมต้องมีตัวใหม่ ไม่ไปแก้ assertNotPastDate เดิม:
@@ -1601,27 +1575,10 @@ var _addClassDayFromRequestId = null; // 2026-07-15 加：ถ้าเปิด�
 // → กำหนดเพดานไว้ 12 สัปดาห์ (~3 เดือน) ครอบคอร์สปกติของ Lin ได้สบาย และยิง Google แค่ครั้งเดียวต่อแถว
 var RECURRING_CHECK_MAX_WEEKS = 12;
 
-function thaiDateWeekday(dateStr) {
-  return new Date(dateStr + 'T12:00:00+07:00').getUTCDay(); // 0=日 ... 6=六（เที่ยงกันขอบวันเพี้ยน）
-}
 
 // 2026-07-30 加：กาง 1 แถวที่ครูกรอก ออกเป็น "คาบจริงทุกครั้ง" (คาบเดี่ยว = 1 ครั้ง, ทุกสัปดาห์ = หลายครั้ง)
 // ใช้ 2 ที่: (1) เช็คว่าชนกันเองในชุดเดียวกันไหม (2) เช็คว่าชนกับ Google Calendar ไหม
 // กรุงเทพไม่มี daylight saving และ teacherTimeToDate ตรึง +07:00 ไว้ → บวกทีละ 7 วันได้ตรงเป๊ะเสมอ
-function buildRowOccurrences(row) {
-  const occs = [];
-  if (row.recurring) {
-    const untilMs = row.untilVal ? teacherTimeToDate(row.untilVal, '23:59').getTime() : null;
-    for (let k = 0; k < RECURRING_CHECK_MAX_WEEKS; k++) {
-      const oStart = new Date(row.startAbs.getTime() + k * 7 * 24 * 60 * 60 * 1000);
-      if (untilMs !== null && oStart.getTime() > untilMs) break;
-      occs.push({ start: oStart, end: new Date(oStart.getTime() + 60 * 60 * 1000) });
-    }
-  }
-  // กันพังแบบไม่คาดคิด: ถ้าไม่ได้สักครั้ง (ไม่ควรเกิด เพราะเช็ค 固定到 < 開課日 ไปแล้ว) ถอยไปครั้งเดียว
-  if (!occs.length) occs.push({ start: row.startAbs, end: row.endAbs });
-  return occs;
-}
 
 async function checkFreebusyConflict(startIso, endIso) {
   let calToken = await gdGetToken();
@@ -1780,11 +1737,6 @@ async function renderAddClassDayExistingList(token) {
   }
 }
 
-function addOneHourTimeStr(timeStr) {
-  const parts = timeStr.split(':');
-  const h = (parseInt(parts[0], 10) + 1) % 24;
-  return String(h).padStart(2, '0') + ':' + parts[1];
-}
 
 // ════════════════════════════════════════════════════════════
 // 2026-07-20 加（Lin 要求：加課要能一次加好幾筆時間，不用重複開視窗好幾次）
@@ -2905,13 +2857,9 @@ const isTeacher = !studentToken;
 // --- security helpers: escape HTML + whitelist URL scheme (กัน XSS) ---
 // Lin 2026-07-26: รับเฉพาะรูปจริง — data:image/... หรือ https:// เท่านั้น
 // กัน src="javascript:..." หรือ data:text/html ที่คนนอกยัดมาทาง submit_payment_slip (anon RPC)
-function safeImgSrc(u){ u=String(u==null?'':u); return /^(data:image\/[a-z0-9.+-]+;base64,|https:\/\/)/i.test(u) ? escHtml(u) : ''; }
-function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 // 2026-07-19 加（AI 稽核）：要把字串塞進 onclick="fn('這裡')" 這種地方時用這支。
 // 舊寫法只有 .replace(/'/g,"\\'")，字串裡若含有雙引號 " 就會跳出 HTML 屬性 → 可被注入。
 // 先做 JS 字串跳脫（\ 和 '），再做 HTML 跳脫（" 會變 &quot;，瀏覽器解回來剛好是安全的）。
-function escAttrJs(s){ return escHtml(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")); }
-function safeHref(u){var s=String(u==null?'':u).trim();return /^https:\/\//i.test(s)?s:'#';}
 // 2026-07-08 修 bug：以前學生姓名都是從網址 ?n=base64 這個參數解出來的，
 // 但「入班連結」現在已經改成只給 ?s=token（不再帶 n），如果還照舊去解 n 會拿到空字串，
 // 導致送出繳費通知/請假申請時老師那邊看到的學生姓名是空的，甚至讓「確認收款」以為姓名是空的而跳過建立 Meet/Drive。
@@ -3010,62 +2958,22 @@ function populateGenStudentTzDropdown() {
     TZ_OPTIONS.map(function(t) { return '<option value="' + t.v + '">' + t.label + '</option>'; }).join('');
 }
 // 把一個絕對時間點（Date 物件）換算成某個時區當地的日期／時間／星期幾
-function formatInTz(date, tz) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'short'
-  }).formatToParts(date);
-  const get = function(t) { const p = parts.find(function(x) { return x.type === t; }); return p ? p.value : ''; };
-  let hour = get('hour'); if (hour === '24') hour = '00'; // 某些瀏覽器午夜會給 24:xx
-  const weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
-  return {
-    dateStr: get('year') + '-' + get('month') + '-' + get('day'),
-    timeStr: hour + ':' + get('minute'),
-    weekday: weekdayMap[get('weekday')] !== undefined ? weekdayMap[get('weekday')] : new Date(date).getDay()
-  };
-}
 
 // 2026-07-14 加：跟 teacherTimeToDate 相反方向——把「某個時區的 wall-clock 時間」換算成
 // 絕對時間點（Date）。teacherTimeToDate 只能處理泰國（固定 +07:00，泰國沒有日光節約時間，
 // 這樣寫死沒問題），但學生可能在任何時區（可能有日光節約時間），所以要用「查那一天那個時區
 // 實際的 UTC 偏移量」的寫法（跟 supabase/functions/class-reminder-cron/index.ts 的
 // localToUtcMs 同一招）。
-function parseInTzToDate(dateStr, timeStr, tz) {
-  const probe = new Date(dateStr + 'T' + timeStr + ':00Z');
-  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' });
-  const parts = fmt.formatToParts(probe);
-  const offsetPart = parts.find(function(p) { return p.type === 'timeZoneName'; });
-  let offsetMin = 0;
-  if (offsetPart) {
-    const m = offsetPart.value.match(/GMT([+-]\d{1,2})(?::?(\d{2}))?/);
-    if (m) offsetMin = (parseInt(m[1], 10) * 60) + (m[1].startsWith('-') ? -1 : 1) * (parseInt(m[2] || '0', 10));
-  }
-  return new Date(new Date(dateStr + 'T' + timeStr + ':00Z').getTime() - offsetMin * 60000);
-}
 
 // 2026-07-14 加（Lin 要求）：任何要「傳給學生看」的時間，一律換算成學生自己的時區顯示 —
 //   不管是誰改的時間、用哪個功能改的，都要一致。傳給「老師自己」看的維持泰國時間不變
 //   （老師習慣用泰國時間工作，這是老師自己要的）。
 //   studentTz 有填 → 換算成他自己的時間（不用特別標時區名字，反正就是他自己的時間，不會搞混）
 //   studentTz 沒填（舊資料/還沒設定過）→ 退回泰國時間，並清楚標「泰國時間」提醒可能跟學生本地時間不同
-function studentFacingTimeLabel(dateOrIso, studentTz) {
-  const d = (dateOrIso instanceof Date) ? dateOrIso : new Date(dateOrIso);
-  if (studentTz) {
-    const conv = formatInTz(d, studentTz);
-    return conv.dateStr + ' ' + conv.timeStr + '（你的當地時間）';
-  }
-  const thai = formatInTz(d, TEACHER_TZ);
-  return thai.dateStr + ' ' + thai.timeStr + '（泰國時間 — 尚未設定你的時區，可能跟你的當地時間不同）';
-}
 
 // 2026-07-17 加（Lin 要求）：跟 studentFacingTimeLabel 一樣換算時區，但不附加「（你的當地時間）」
 // 這種註記——給「列出好幾個時間」的地方用（例如老師提議的 1-3 個新時間），註記只要在最後
 // 統一寫一次就好，不用每一行都重複講一次是不是本地時間。
-function bareTimeLabel(dateOrIso, studentTz) {
-  const d = (dateOrIso instanceof Date) ? dateOrIso : new Date(dateOrIso);
-  const conv = studentTz ? formatInTz(d, studentTz) : formatInTz(d, TEACHER_TZ);
-  return conv.dateStr + ' ' + conv.timeStr;
-}
 
 let genLinkGenerated = false; // true = 連結已產生，按鈕變成「關閉」
 
@@ -9919,11 +9827,6 @@ function viewRequestDetail(r) {
 
 // 📌 永久變更：關閉舊的每週固定課、從新日期開始開一組新的每週固定課（技術上叫「this and following」，
 // Google Calendar API 沒有直接支援，用「舊系列加 UNTIL 結束、另開新系列」達成同樣效果）
-function buildIcalUntilUtc(date) {
-  var d = new Date(date);
-  var pad = function(n) { return String(n).padStart(2, '0'); };
-  return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + 'T' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
-}
 // 🟠 2026-07-26 เพิ่ม：ตอน "永久變更" เดิมชุดคาบใหม่ถูกสร้างด้วย ['RRULE:FREQ=WEEKLY'] ล้วนๆ
 // → เงื่อนไข "จบเมื่อไหร่" ของคอร์สเดิม (UNTIL = จบวันไหน / COUNT = ทั้งหมดกี่ครั้ง / INTERVAL = ทุกกี่สัปดาห์)
 //   หายหมด คอร์สที่มีวันจบชัดเจนกลายเป็น "เรียนไปเรื่อยๆ ไม่มีวันจบ" ในปฏิทิน
@@ -9993,11 +9896,6 @@ function buildNewSeriesRecurrence(oldRecurrenceArr, oldStartIso, cutMs, newStart
   return { ok: true, recurrence: ['RRULE:' + parts.join(';')] };
 }
 // แปลงค่า UNTIL แบบ iCal (20261231T120000Z หรือ 20261231) เป็น timestamp — แปลงไม่ได้คืน null
-function icalUntilToMs(v) {
-  var m = String(v || '').match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})Z?)?$/);
-  if (!m) return null;
-  return Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 23), +(m[5] || 59), +(m[6] || 59));
-}
 function setRruleUntil(recurrenceArr, untilUtcStr) {
   return (recurrenceArr || []).map(function(rule) {
     if (rule.indexOf('RRULE') !== 0) return rule;
@@ -10683,7 +10581,6 @@ const COURSE_TYPES = [
   { id:'pair_basic', label:'雙人 Basic',    priceNTD:1100, priceTHB:1100, packs:[10,20,30], desc:'Basic 雙人共學・每人' },
   { id:'pair_std',   label:'雙人 Standard', priceNTD:1200, priceTHB:1200, packs:[10,20,30], desc:'Standard 雙人共學・每人' },
 ];
-function slipBonusFor(n) { return n >= 30 ? 3 : n >= 20 ? 1 : 0; }
 
 let payToken = null;
 let paySelectedCourse = null;
@@ -11544,7 +11441,6 @@ let recLastDataTs=0, recWatchdogID=null, recHiddenSince=0, recHiddenWarned=false
 const REC_STALL_MS=15000;    // 超過15秒沒收到任何錄影資料 → 判定卡住
 const REC_HIDDEN_WARN_MS=180000;  // 分頁被切到背景超過3分鐘 → 提醒（怕被 Chrome 關掉分頁）
 
-function recFmtTime(sec){ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
 function recSetStatus(t,cls){ const e=document.getElementById('recStatus'); if(e){ e.textContent=t; e.className='status'+(cls?' '+cls:''); } }
 function recToggleStartBtns(disabled){ /* 一鍵錄製：開始鈕在學生面板（startClassRec 內已用 recState 防重複），此處無需切換 */ }
 
@@ -11936,7 +11832,12 @@ async function recRecoverDownload(id, meta, keys, msgElId){
       try{ blob=await window.ysFixWebmDuration(blob, keys.length*1000, {logger:false}); }catch(e){}
     }
     const ext = isVideo ? (mime.includes('mp4')?'mp4':'webm') : (mime.includes('mp4')?'m4a':(mime.includes('ogg')?'ogg':'webm'));
-    const name='救回_'+(isVideo?'video':'audio')+'_'+new Date(meta&&meta.startTs||Date.now()).toISOString().slice(0,19).replace(/[:T]/g,'-')+'.'+ext;
+    const _rNow=new Date(meta&&meta.startTs||Date.now());
+    const _rp=new Intl.DateTimeFormat('en-CA',{timeZone:TEACHER_TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(_rNow);
+    const _rg=t=>{const x=_rp.find(p=>p.type===t);return x?x.value:'';};
+    let _rhh=_rg('hour'); if(_rhh==='24')_rhh='00';
+    const _rTsTH=_rg('year')+'-'+_rg('month')+'-'+_rg('day')+'-'+_rhh+'-'+_rg('minute')+'-'+_rg('second');
+    const name='救回_'+(isVideo?'video':'audio')+'_'+_rTsTH+'.'+ext;
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
     if(msg) msg.innerHTML='✅ 已救回（'+(blob.size/1048576).toFixed(1)+' MB）並開始下載。下載確認沒問題後可按「刪除這段備份」清空。';
@@ -12087,7 +11988,12 @@ async function finalizeSegment(chunksArg, mimeArg, startTimeArg, backupIdArg){
   document.getElementById('recOutSection').classList.add('visible');
   const sizeMB=(blob.size/1048576).toFixed(1);
   const prefix = isVideo?'video':'audio';
-  const name=prefix+'_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+(recPartCount>1?'_part'+recPartCount:'')+'.'+ext;
+  const _now=new Date();
+  const _p=new Intl.DateTimeFormat('en-CA',{timeZone:TEACHER_TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(_now);
+  const _g=t=>{const x=_p.find(p=>p.type===t);return x?x.value:'';};
+  let _hh=_g('hour'); if(_hh==='24')_hh='00';
+  const _tsTH=_g('year')+'-'+_g('month')+'-'+_g('day')+'-'+_hh+'-'+_g('minute')+'-'+_g('second');
+  const name=prefix+'_'+_tsTH+(recPartCount>1?'_part'+recPartCount:'')+'.'+ext;
   const a=document.createElement('a');
   a.href=url; a.download=name; a.className='btn btn-download';
   a.style.cssText='width:100%;justify-content:center;margin-top:8px;display:flex;';
