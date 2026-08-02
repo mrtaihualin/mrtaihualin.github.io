@@ -85,6 +85,27 @@ function addRow(name, expected, actual, ok) {
   return tr;
 }
 
+// ── 2026-08-02 เพิ่ม: รู้ให้ได้ว่า "หน้านี้ถูกเปิดจากที่ถูกที่หรือเปล่า" ────────────────────
+// ข้อ 3 (ล็อกอินจริง) อ่านบัตรล็อกอินจาก localStorage ซึ่งผูกกับโดเมนเสมอ
+// เปิดจากไฟล์ในเครื่อง (file://) หรือโดเมนอื่น = อ่านไม่เจอแน่นอน 100% ไม่ว่าจะล็อกอินอยู่หรือไม่
+var SITE_ORIGIN = 'https://mrtaihualin.com';
+var SITE_TESTER_URL = SITE_ORIGIN + '/data/game-content-tester.html';
+function isOffSiteOrigin() {
+  return location.protocol === 'file:' || location.origin !== SITE_ORIGIN;
+}
+// เตือนตั้งแต่เปิดหน้า ไม่ต้องรอให้กดทดสอบแล้วงงว่าทำไมข้อ 3 ไม่ผ่าน
+window.addEventListener('DOMContentLoaded', function () {
+  if (!isOffSiteOrigin()) return;
+  var b = document.createElement('div');
+  b.setAttribute('style', 'background:#fdf0e4;border:2px solid #b45309;color:#78350f;border-radius:9px;'
+    + 'padding:12px 14px;margin:0 0 16px;font-weight:700;line-height:1.7;');
+  b.innerHTML = '⚠️ หน้านี้เปิดจาก ' + (location.protocol === 'file:' ? '<b>ไฟล์ในเครื่อง</b>' : '<b>' + location.origin + '</b>')
+    + ' → <b>ข้อ 3 (ล็อกอินจริง) จะทดสอบไม่ได้</b><br>'
+    + '<span style="font-weight:400;">อีก 4 ข้อทดสอบได้ปกติ · ข้อ 3 ต้องเปิดจากโดเมนจริงเท่านั้น เพราะบัตรล็อกอินผูกกับโดเมน</span><br>'
+    + '<a href="' + SITE_TESTER_URL + '" style="color:#8B6310;">👉 เปิดหน้านี้จากโดเมนจริง แล้วกดใหม่</a>';
+  document.body.insertBefore(b, document.body.firstChild);
+});
+
 function sbStorageKey(url) {
   const ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || 'qzkxlhpcputsvbqmtqfi';
   return 'sb-' + ref + '-auth-token';
@@ -169,7 +190,19 @@ async function runTest3() {
   //   คำ 初/中 ยังบังคับ 100 เป๊ะเหมือนเดิม เพราะในฐานข้อมูลมีเกิน 100 อยู่แล้วทั้ง 2 ระดับ
   const row = addRow('3) ล็อกอินจริง', 'tier=login · 初=100 · 中=100 · ประโยค ≤ 40 (มีในฐานข้อมูลเท่าไหร่ก็เท่านั้น)', 'กำลังยิง...', null);
   if (!token) {
-    row.children[2].innerHTML = '<pre>ไม่พบ session ที่ล็อกอินอยู่ — ต้องล็อกอินในเบราว์เซอร์นี้ก่อน (บนโดเมนเว็บจริง) หรือวาง access token เองในช่องด้านบน</pre>';
+    // 🔧 2026-08-02 แก้ข้อความ (เจอจริง: Lin กดแล้วขึ้น "ไม่พบ session" 3 รอบติด ทั้งที่ล็อกอินอยู่)
+    //   สาเหตุจริงคือ "เปิดไฟล์นี้จากในเครื่อง (file://)" ไม่ใช่ "ไม่ได้ล็อกอิน"
+    //   เบราว์เซอร์เก็บบัตรล็อกอินแยกตามโดเมน — เปิดจากไฟล์ = คนละบ้านกับ mrtaihualin.com เลยอ่านไม่เจอ
+    //   ข้อความเดิมบอกให้ "ไปล็อกอิน" ซึ่งแก้ไม่ตรงจุด ทำให้วนอยู่อย่างนั้น
+    //   → แยก 2 สาเหตุออกจากกันให้ชัด แล้วบอกวิธีแก้ที่ตรงกับสาเหตุจริง
+    row.children[2].innerHTML = isOffSiteOrigin()
+      ? '<pre>🛑 หน้านี้เปิดจาก ' + (location.protocol === 'file:' ? 'ไฟล์ในเครื่อง (file://)' : location.origin) + '\n\n'
+        + 'ข้อ 3 ทดสอบไม่ได้จากที่นี่ — ไม่ใช่เพราะไม่ได้ล็อกอิน แต่เพราะเบราว์เซอร์เก็บบัตรล็อกอิน\n'
+        + 'แยกตามโดเมน และห้ามให้ไฟล์ในเครื่อง/เว็บอื่นอ่านข้ามบ้านกัน (กันเว็บอันตรายขโมยบัตร)\n\n'
+        + '👉 เปิดหน้านี้จากโดเมนจริงแทน แล้วกดใหม่:\n'
+        + SITE_TESTER_URL + '</pre>'
+      : '<pre>ไม่พบ session ที่ล็อกอินอยู่ (หรือบัตรหมดอายุแล้ว) — ล็อกอินในเบราว์เซอร์นี้ก่อน แล้วรีเฟรชหน้านี้ '
+        + 'หรือวาง access token เองในช่องด้านบน</pre>';
     row.children[3].className = 'fail'; row.children[3].textContent = '❌ ข้ามไม่ได้ทดสอบ';
     return;
   }
