@@ -1,0 +1,46 @@
+# ════════════════════════════════════════════════════════════
+# GitHub Actions: sync game content to Supabase — Lin 2026-08-02
+# ────────────────────────────────────────────────────────────
+# ทำงานอัตโนมัติทุกครั้งที่ Lin push ไฟล์ data/words-data.js หรือ data/adv-sentences.js
+# ขึ้น branch main — รัน scripts/migrate-game-content.js ให้เอง ไม่ต้องเปิด terminal พิมพ์เอง
+# อีกต่อไป (ดูหัวข้อ 🔒 ระบบล็อกเนื้อหาเกมจริง (game-content) ใน CLAUDE.md)
+#
+# ⚠️ ตั้งค่าที่ต้องทำ 1 ครั้ง (Lin ทำเองใน GitHub เว็บ — AI ตั้งให้ไม่ได้ เพราะต้อง login GitHub ของ Lin):
+#   1. เข้า repo นี้บน GitHub → Settings → Secrets and variables → Actions
+#   2. กด "New repository secret"
+#      Name:  SUPABASE_SERVICE_ROLE_KEY
+#      Value: (คัดจาก Supabase Dashboard → Project Settings → API → "service_role" key)
+#   3. กด Save — เสร็จแล้ว ไม่ต้องทำอีก (secret นี้เก็บแบบเข้ารหัส ไม่มีใครเรียกดูค่ากลับได้แม้แต่ Lin เอง)
+#
+# หลังตั้ง secret เสร็จ: push แก้ data/words-data.js หรือ data/adv-sentences.js ปกติ แล้วรอ ~1 นาที
+# เช็กผลได้ที่แท็บ Actions ของ repo (มีติ๊กเขียว = สำเร็จ)
+#
+# อยากสั่งรันเองทันทีโดยไม่ต้องแก้ไฟล์ก็ได้: เข้าแท็บ Actions → เลือก workflow นี้ → "Run workflow"
+# ════════════════════════════════════════════════════════════
+name: Sync game content to Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/words-data.js'
+      - 'data/adv-sentences.js'
+  workflow_dispatch: {}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Migrate game content to Supabase
+        env:
+          SUPABASE_URL: https://qzkxlhpcputsvbqmtqfi.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/migrate-game-content.js
