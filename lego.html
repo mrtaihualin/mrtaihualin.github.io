@@ -334,18 +334,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 }
 </script>
 </head>
-<body style="overflow:hidden;">
-
-<!-- 🚧 ปิดเกมชั่วคราว (正在更新) — Lin สั่ง 2026-07-31 ให้ลิงก์เดิมทุกที่ยังใช้ได้ปกติ แต่กดเข้ามาแล้วเจอหน้านี้แทนตัวเกม — ลบ <div id="lego-maintenance-overlay">...</div> ก้อนนี้ทิ้ง + เอา style="overflow:hidden" ออกจาก <body> เพื่อเปิดกลับคืน -->
-<div id="lego-maintenance-overlay" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#FAF4E8,#F3E4C2);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:'Noto Sans TC',sans-serif;">
-  <div style="max-width:380px;">
-    <div style="font-size:56px;margin-bottom:12px;line-height:1;">🧱</div>
-    <div style="font-family:'Noto Serif TC',serif;font-size:24px;font-weight:900;color:#5a3e0a;margin-bottom:10px;">造句練習室 測試中</div>
-    <div style="font-size:14.5px;color:#7a5510;line-height:1.7;margin-bottom:20px;">這個遊戲正在測試中，稍後再回來玩喔 🙏<br>可以先去玩玩其他遊戲！</div>
-    <a href="games.html" style="display:inline-block;background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;text-decoration:none;font-weight:700;padding:11px 26px;border-radius:999px;font-size:14px;">看其他遊戲 🎮</a>
-  </div>
-</div>
-
+<body>
 
 <nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a></li><li><a href="javascript:void(0)" class="has-drop">關於老師與學生</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">了解課程</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a></div></li><li><a href="javascript:void(0)" class="has-drop">資源分享</a><div class="nav-drop"><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/games.html">🎮 泰語遊戲練習室</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">專業服務</a><div class="nav-drop"><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">預約免費體驗課</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">預約免費體驗課</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
