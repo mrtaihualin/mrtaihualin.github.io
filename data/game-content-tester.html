@@ -12,8 +12,13 @@
 
   ใช้ตรวจ Edge Function game-content หลัง deploy ว่าล็อกจริง ไม่ใช่ล็อกปลอม — ทดสอบ 4 แบบ:
     1) ไม่ล็อกอิน (ส่งแค่ anon key)                → ต้องได้ tier=anon,  初=50,  中=50,  ประโยค=20
-    2) token ปลอม/หมดอายุ                          → ต้องถูกปฏิเสธเป็นคนไม่ล็อกอิน (ไม่ใช่ error/crash)
-    3) ล็อกอินจริง (auto จาก localStorage ถ้ามี หรือวางเองด้านล่าง) → tier=login, 初=100, 中=100, ประโยค=40
+    2) token ปลอม/หมดอายุ                          → ต้องถูกตีกลับ (401/403) หรือตกเป็น tier=anon
+       ⚠️ แก้ 2026-08-02: ของเดิมเขียนว่า "ต้องตกเป็น anon" อย่างเดียว แล้วขึ้น ❌ ทุกครั้ง
+          ของจริง Supabase มียามหน้าประตูอีกชั้น ตีกลับ 401 ตั้งแต่ก่อนถึงโค้ดเรา = เข้มกว่า ไม่ใช่หลวมกว่า
+          สิ่งที่ห้ามเกิดคือ "ได้ tier=login" เท่านั้น
+    3) ล็อกอินจริง (auto จาก localStorage ถ้ามี หรือวางเองด้านล่าง) → tier=login, 初=100, 中=100, ประโยค ≤ 40
+       ⚠️ แก้ 2026-08-02: เพดานคือ "ไม่เกิน 40" ไม่ใช่ "ต้องได้ 40 พอดี"
+          ในฐานข้อมูลมีประโยคเท่าไหร่ก็ได้เท่านั้น (ตอนนี้ 30) · ได้ "เกิน" 40 ต่างหากที่เป็นเรื่องใหญ่
     4) ปลอม tier ใน body ({"tier":"login"}) ทั้งที่ไม่ได้ล็อกอิน → ต้องถูกเมิน ยังได้ tier=anon เหมือนเดิม
   บวกเช็คอัตโนมัติ: ยิง PostgREST ตรงๆ ไปที่ game_words/game_sentences ด้วย anon key
   (ไม่ผ่าน Edge Function) ต้องโดนปฏิเสธ/ได้ 0 แถว — นี่คือหลักฐานว่าด่านล็อกจริง ไม่ใช่ล็อกปลอม
@@ -132,13 +137,25 @@ async function runTest1() {
   } catch (e) { row.children[2].innerHTML = '<pre>network error: ' + e.message + '</pre>'; row.children[3].className='fail'; row.children[3].textContent='❌ ไม่ผ่าน'; }
 }
 
+// 🔧 2026-08-02 แก้ช่อง "คาดหวัง" ให้ตรงกับความจริง (ของเดิมเขียนไว้ผิด ทำให้ขึ้น ❌ ทุกครั้งทั้งที่ระบบปกติ)
+//   เดิมคาดว่า: token ปลอม → ตกไปเป็น tier=anon แล้วได้คำ 50 คำ
+//   ของจริง:   Supabase มียามอยู่หน้าประตูอีกชั้น เจอ token ปลอม/หมดอายุแล้วตีกลับ 401
+//              **ตั้งแต่ก่อนถึงโค้ดเราเลย** = เข้มกว่าที่คาดไว้ ไม่ใช่หลวมกว่า
+//   ทำไมอันตรายถ้าไม่แก้: ❌ ค้างถาวรทั้งที่ปกติ → วันที่พังจริงจะแยกไม่ออกจากวันปกติ
+//   ⚠️ ผ่านได้ 2 แบบเท่านั้น: ถูกตีกลับ (401/403) หรือ ตกลงมาเป็น anon จริงๆ
+//      ได้ tier=login เมื่อไหร่ = 🔴 อันตรายจริง (แปลว่ายอมรับ token ปลอม)
 async function runTest2() {
-  const row = addRow('2) token ปลอม/หมดอายุ', 'ไม่ error/crash · ตกไปเป็น tier=anon เหมือนไม่ล็อกอิน', 'กำลังยิง...', null);
+  const row = addRow('2) token ปลอม/หมดอายุ',
+    'ต้องถูกตีกลับ (401/403) หรือตกเป็น tier=anon — ห้ามได้ tier=login เด็ดขาด', 'กำลังยิง...', null);
   try {
     const r = await callGameContent('this.is.not.a.valid.jwt.at.all', {});
-    const ok = r.status === 200 && r.data.tier === 'anon';
-    row.children[2].innerHTML = '<pre>' + summarize(r) + '</pre>';
-    row.children[3].className = ok ? 'pass' : 'fail'; row.children[3].textContent = ok ? '✅ ผ่าน' : '❌ ไม่ผ่าน';
+    const blocked = r.status === 401 || r.status === 403;
+    const fellBackToAnon = r.status === 200 && r.data.tier === 'anon';
+    const ok = blocked || fellBackToAnon;
+    row.children[2].innerHTML = '<pre>' + summarize(r) + (blocked
+      ? '\n\n→ ถูกยามของ Supabase ตีกลับตั้งแต่หน้าประตู (ปลอดภัยกว่าที่คาดไว้)' : '') + '</pre>';
+    row.children[3].className = ok ? 'pass' : 'fail';
+    row.children[3].textContent = ok ? (blocked ? '✅ ผ่าน (ถูกตีกลับ)' : '✅ ผ่าน (ตกเป็น anon)') : '❌ ไม่ผ่าน (ยอมรับ token ปลอม!)';
   } catch (e) { row.children[2].innerHTML = '<pre>network error: ' + e.message + '</pre>'; row.children[3].className='fail'; row.children[3].textContent='❌ ไม่ผ่าน'; }
 }
 
@@ -146,7 +163,11 @@ async function runTest3() {
   const url = document.getElementById('sbUrl').value.trim();
   const manual = document.getElementById('realToken').value.trim();
   const token = manual || autoDetectRealToken(url);
-  const row = addRow('3) ล็อกอินจริง', 'tier=login · 初=100 · 中=100 · ประโยค=40', 'กำลังยิง...', null);
+  // 🔧 2026-08-02 แก้ช่อง "คาดหวัง" (ของเดิมบังคับให้ประโยคต้องได้ 40 พอดี = ผิด)
+  //   เพดานคือ "ได้ไม่เกิน 40" ไม่ใช่ "ต้องได้ 40" — ในฐานข้อมูลมีประโยคแค่ 30 ก็ต้องได้ 30 ถึงจะถูก
+  //   ได้ "น้อยกว่า" เพดาน = ปกติ (ของยังไม่พอ) · ได้ "เกิน" เพดาน = 🔴 อันตรายจริง
+  //   คำ 初/中 ยังบังคับ 100 เป๊ะเหมือนเดิม เพราะในฐานข้อมูลมีเกิน 100 อยู่แล้วทั้ง 2 ระดับ
+  const row = addRow('3) ล็อกอินจริง', 'tier=login · 初=100 · 中=100 · ประโยค ≤ 40 (มีในฐานข้อมูลเท่าไหร่ก็เท่านั้น)', 'กำลังยิง...', null);
   if (!token) {
     row.children[2].innerHTML = '<pre>ไม่พบ session ที่ล็อกอินอยู่ — ต้องล็อกอินในเบราว์เซอร์นี้ก่อน (บนโดเมนเว็บจริง) หรือวาง access token เองในช่องด้านบน</pre>';
     row.children[3].className = 'fail'; row.children[3].textContent = '❌ ข้ามไม่ได้ทดสอบ';
@@ -156,9 +177,12 @@ async function runTest3() {
     const r = await callGameContent(token, {});
     const w = r.data.words || [], s = r.data.sentences || [];
     const c初 = w.filter(x => x.level === '初').length, c中 = w.filter(x => x.level === '中').length;
-    const ok = r.data.tier === 'login' && c初 === 100 && c中 === 100 && s.length === 40;
-    row.children[2].innerHTML = '<pre>' + summarize(r) + '</pre>';
-    row.children[3].className = ok ? 'pass' : 'fail'; row.children[3].textContent = ok ? '✅ ผ่าน' : '❌ ไม่ผ่าน';
+    const sentOver = s.length > 40; // เกินเพดาน = อันตรายจริง
+    const ok = r.data.tier === 'login' && c初 === 100 && c中 === 100 && !sentOver;
+    row.children[2].innerHTML = '<pre>' + summarize(r)
+      + (!sentOver && s.length < 40 ? '\n\n→ ประโยคได้ ' + s.length + ' (น้อยกว่าเพดาน 40 เพราะในฐานข้อมูลมีเท่านี้ = ปกติ)' : '') + '</pre>';
+    row.children[3].className = ok ? 'pass' : 'fail';
+    row.children[3].textContent = ok ? '✅ ผ่าน' : (sentOver ? '❌ ไม่ผ่าน (ประโยคเกินเพดาน!)' : '❌ ไม่ผ่าน');
   } catch (e) { row.children[2].innerHTML = '<pre>network error: ' + e.message + '</pre>'; row.children[3].className='fail'; row.children[3].textContent='❌ ไม่ผ่าน'; }
 }
 
