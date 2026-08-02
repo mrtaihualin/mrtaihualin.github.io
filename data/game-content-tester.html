@@ -109,6 +109,32 @@ window.addEventListener('DOMContentLoaded', function () {
   document.body.insertBefore(b, document.body.firstChild);
 });
 
+// ── 2026-08-02 (รอบ 2) เพิ่ม: ตรวจจับ "หน้านี้เป็นเวอร์ชันเก่าที่ค้างในแคชเบราว์เซอร์" ──────────
+// เจอจริง: Lin เปิดหน้านี้ค้างไว้ก่อนแก้เสร็จ → กด reload ธรรมดา (⌘R) ไม่ดึงของใหม่
+// (GitHub Pages ตั้ง Cache-Control: max-age=600 → รีโหลดปกติภายใน 10 นาทีอาจใช้ของเก่าจากแคช เงียบๆ)
+// วิธีตรวจ: ทุกครั้งที่เปิดหน้า ยิง fetch แบบ cache:'no-store' ไปเอาไฟล์สดจริงจากเซิร์ฟเวอร์มาเทียบ
+// BUILD_ID กับของที่กำลังรันอยู่ตอนนี้ ถ้าไม่ตรงกัน = หน้าที่เห็นอยู่เป็นของเก่า เตือนดังๆ ทันที
+var BUILD_ID = '2026-08-02-02';
+window.addEventListener('DOMContentLoaded', async function () {
+  if (isOffSiteOrigin()) return; // เช็คแบบนี้ได้เฉพาะบนโดเมนจริง (file:// ไม่มีอะไรให้ fetch เทียบ)
+  try {
+    var res = await fetch(location.pathname, { cache: 'no-store' });
+    var freshText = await res.text();
+    var m = freshText.match(/var BUILD_ID = '([^']+)'/);
+    var freshBuildId = m && m[1];
+    if (freshBuildId && freshBuildId !== BUILD_ID) {
+      var b = document.createElement('div');
+      b.setAttribute('style', 'background:#fee2e2;border:2px solid #dc2626;color:#7f1d1d;border-radius:9px;'
+        + 'padding:12px 14px;margin:0 0 16px;font-weight:700;line-height:1.7;');
+      b.innerHTML = '🔴 หน้านี้เป็น<b>เวอร์ชันเก่าที่ค้างในแคช</b> (เบราว์เซอร์ยังไม่ดึงของใหม่ล่าสุดมา)<br>'
+        + '<span style="font-weight:400;">ผลทดสอบด้านล่างอาจไม่ตรงกับความจริง — อย่าเพิ่งเชื่อ</span><br>'
+        + '<button onclick="location.href=location.pathname+\'?v=\'+Date.now()" '
+        + 'style="margin-top:6px;padding:8px 14px;cursor:pointer;font-weight:700;">🔄 โหลดของใหม่เดี๋ยวนี้</button>';
+      document.body.insertBefore(b, document.body.firstChild);
+    }
+  } catch (e) { /* เช็คไม่ได้ก็ปล่อยผ่าน ไม่ใช่ด่านบังคับ แค่ช่วยเตือน */ }
+});
+
 function sbStorageKey(url) {
   const ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || 'qzkxlhpcputsvbqmtqfi';
   return 'sb-' + ref + '-auth-token';
