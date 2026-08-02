@@ -1203,7 +1203,13 @@
     setTimeout(function(){ try{ win.print(); }catch(e){} }, 600);
   };
 
-  document.addEventListener('DOMContentLoaded', init);
+  // Lin 2026-08-02: เดิมใช้ document.addEventListener('DOMContentLoaded', init) ตรงๆ — ใช้ได้ตอนสคริปต์นี้
+  // โหลดแบบ <script src=...> ธรรมดา (มาก่อน DOMContentLoaded เสมอ) แต่ตั้งแต่เปลี่ยนมาโหลดผ่าน
+  // game-content-client.js (fetch ข้อมูลจากเน็ตก่อน แล้วค่อยฉีดสคริปต์นี้เข้ามาทีหลัง) จังหวะไม่แน่นอนอีกต่อไป —
+  // ถ้า DOMContentLoaded ยิงไปแล้วก่อนที่บรรทัดนี้จะรัน (เช่น ไม่ล็อกอิน/เน็ตไว โหลดเสร็จเร็ว) listener นี้จะไม่มีวันถูกเรียก
+  // เลย = init() ไม่รันเลย เกมค้างที่หน้าเปล่า (ตัวเลข 0/10 ที่เห็นเป็นค่า default ใน HTML ไม่ใช่ค่าจริงจาก JS)
+  // แก้โดยใช้ woReinitSafe() (มีอยู่แล้วในไฟล์นี้ ใช้ปลอดภัยกับจังหวะแบบนี้อยู่แล้วในจุดอื่น) เช็ค document.readyState ก่อนเสมอ
+  woReinitSafe();
 })();
 
 // ── 換現代字體（跟其他遊戲共用同一個 localStorage key，切一次全站都套用）──
