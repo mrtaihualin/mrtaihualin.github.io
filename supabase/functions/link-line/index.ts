@@ -187,47 +187,62 @@ serve(async (req) => {
     //   ห่อ try/catch ทั้งคู่ + log error ไว้เสมอ (เช็คได้จาก Supabase Dashboard → Edge Functions → Logs)
     //   — ส่งข้อความไม่ได้ ก็ห้ามทำให้การผูกบัญชีล้มเหลว (ผูกบัญชีสำคัญกว่า)
     if (isFirstOrChangedLink && channelAccessToken) {
-      const welcomeText = '帳號連結成功 🎉\n你好！我是泰華 🙏\n之後的上課提醒、改期通知，都會從這裡自動傳給你\n有任何課程問題，直接在這裡留言就可以囉 😊';
-      const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
-      let teacherOk = true;
-      if (teacherUserId) {
-        try {
-          await fetch('https://api.line.me/v2/bot/message/push', {
-            method: 'POST',
-            headers: { Authorization: 'Bearer ' + channelAccessToken, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: teacherUserId,
-              messages: [{ type: 'text', text: '📋 ' + studentLabel + ' 剛連結 LINE 帳號成功，已發送以下歡迎訊息給他：\n\n' + welcomeText }],
-            }),
-          });
-        } catch (e) {
-          teacherOk = false;
-          console.error('[link-line] ส่งสำเนาให้ครูไม่สำเร็จ — ข้ามไม่ส่งข้อความต้อนรับหานักเรียนรอบนี้ (welcome-retry-cron จะลองใหม่ให้เอง):', e);
-        }
-      }
-      if (teacherOk) {
-        let studentOk = true;
-        try {
-          await fetch('https://api.line.me/v2/bot/message/push', {
-            method: 'POST',
-            headers: { Authorization: 'Bearer ' + channelAccessToken, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: welcomeText }] }),
-          });
-        } catch (e) {
-          studentOk = false;
-          console.error('[link-line] ส่งข้อความต้อนรับให้นักเรียนไม่สำเร็จ (welcome-retry-cron จะลองใหม่ให้เอง):', e);
-        }
-        if (studentOk) {
-          // สำเร็จทั้งคู่ → มาร์คกันไม่ให้ welcome-retry-cron ส่งซ้ำอีกทีหลัง
-          const { error: markError } = await supabase
-            .from('classroom_students')
-            .update({ welcome_msg_sent_at: new Date().toISOString() })
-            .eq('token', token);
-          if (markError) {
-            console.error('[link-line] มาร์ค welcome_msg_sent_at ไม่สำเร็จ (นักเรียนอาจได้ข้อความต้อนรับซ้ำอีกรอบจาก retry-cron):', markError);
+      // 🔒 2026-08-03 เพิ่ม (RELIABILITY FIRST — เจอแบบเดียวกับ low-quota-cron: ข้อความต้อนรับส่งซ้ำได้)
+      //   เดิม: ตัดสินด้วย isFirstOrChangedLink ที่อ่านมาก่อน update (บรรทัด 142) แล้วค่อยส่ง LINE แล้วค่อย
+      //   mark welcome_msg_sent_at ทีหลังสุด — ไม่ atomic เลย ถ้านักเรียนกดปุ่มผูกบัญชีซ้ำเร็วๆ (double-tap)
+      //   หรือ welcome-retry-cron (สแกนทุกชั่วโมงหาแถวที่ welcome_msg_sent_at ยังว่าง) ทำงานชนกับตอนผูกสดๆ พอดี
+      //   ทั้ง 2 ทางจะเห็นแถวยังว่างพร้อมกัน แล้วส่งซ้ำกันทั้งคู่ก่อนจะ mark — race เดียวกับ low-quota-cron เป๊ะ
+      // แก้เป็น claim ก่อนด้วย UPDATE...WHERE welcome_msg_sent_at is null แบบ atomic ก่อนส่งอะไรทั้งสิ้น
+      const { data: claimedWelcome, error: claimWelcomeErr } = await supabase
+        .from('classroom_students')
+        .update({ welcome_msg_sent_at: new Date().toISOString() })
+        .eq('token', token)
+        .is('welcome_msg_sent_at', null)
+        .select('token');
+      if (claimWelcomeErr) {
+        console.error('[link-line] claim ข้อความต้อนรับไม่สำเร็จ ข้ามรอบนี้ (welcome-retry-cron จะลองใหม่ให้เอง):', claimWelcomeErr.message);
+      } else if (claimedWelcome && claimedWelcome.length) {
+        const welcomeText = '帳號連結成功 🎉\n你好！我是泰華 🙏\n之後的上課提醒、改期通知，都會從這裡自動傳給你\n有任何課程問題，直接在這裡留言就可以囉 😊';
+        const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID');
+        let teacherOk = true;
+        if (teacherUserId) {
+          try {
+            await fetch('https://api.line.me/v2/bot/message/push', {
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + channelAccessToken, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: teacherUserId,
+                messages: [{ type: 'text', text: '📋 ' + studentLabel + ' 剛連結 LINE 帳號成功，已發送以下歡迎訊息給他：\n\n' + welcomeText }],
+              }),
+            });
+          } catch (e) {
+            teacherOk = false;
+            console.error('[link-line] ส่งสำเนาให้ครูไม่สำเร็จ — ข้ามไม่ส่งข้อความต้อนรับหานักเรียนรอบนี้ (welcome-retry-cron จะลองใหม่ให้เอง):', e);
           }
         }
+        if (!teacherOk) {
+          // ปลด claim คืนเป็น null ให้ welcome-retry-cron ลองใหม่ได้ (พฤติกรรมเดิมก่อนแก้ race)
+          await supabase.from('classroom_students').update({ welcome_msg_sent_at: null }).eq('token', token);
+        } else {
+          let studentOk = true;
+          try {
+            await fetch('https://api.line.me/v2/bot/message/push', {
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + channelAccessToken, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text: welcomeText }] }),
+            });
+          } catch (e) {
+            studentOk = false;
+            console.error('[link-line] ส่งข้อความต้อนรับให้นักเรียนไม่สำเร็จ (welcome-retry-cron จะลองใหม่ให้เอง):', e);
+          }
+          if (!studentOk) {
+            // ปลด claim คืนเป็น null ให้ welcome-retry-cron ลองใหม่ได้ (พฤติกรรมเดิมก่อนแก้ race)
+            await supabase.from('classroom_students').update({ welcome_msg_sent_at: null }).eq('token', token);
+          }
+          // สำเร็จทั้งคู่ → claim ที่ตั้งไว้ตั้งแต่ต้น (welcome_msg_sent_at = now()) ใช้เป็นตัวมาร์คได้เลย ไม่ต้อง mark ซ้ำ
+        }
       }
+      // claimedWelcome ว่าง = มีอีกการเรียกหนึ่งเคลมไปก่อนแล้ว (กำลังส่งอยู่ หรือส่งสำเร็จไปแล้ว) ข้ามเงียบๆ ไม่ใช่ error
     }
 
     return new Response(JSON.stringify({ ok: true }), {

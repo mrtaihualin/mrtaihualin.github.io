@@ -74,6 +74,24 @@ serve(async (req) => {
     for (const s of (pending || [])) {
       const studentLabel = s.name || s.token;
 
+      // 🔒 2026-08-03 เพิ่ม (RELIABILITY FIRST — ร่วมกับ link-line เจอบั๊กเดียวกับ low-quota-cron)
+      //   เดิม: select แถวที่ welcome_msg_sent_at ยังว่างมาก่อน (อ่านครั้งเดียวตอนต้นฟังก์ชัน) แล้วค่อยส่ง LINE
+      //   แล้วค่อย mark ทีหลัง — ไม่ atomic ถ้ารอบนี้ทำงานชนกับ link-line ที่กำลังส่งสดให้คนเดียวกันพอดี
+      //   (หรือ cron ตัวนี้เองถูกเรียกซ้อนกัน 2 รอบ) ทั้งคู่จะเห็นแถวว่างพร้อมกัน แล้วส่งซ้ำกันทั้งคู่ก่อนจะ mark
+      // แก้เป็น claim ก่อนด้วย UPDATE...WHERE welcome_msg_sent_at is null แบบ atomic ต่อแถว ก่อนส่งอะไรทั้งสิ้น
+      const { data: claimedRows, error: claimErr } = await supabase
+        .from('classroom_students')
+        .update({ welcome_msg_sent_at: new Date().toISOString() })
+        .eq('token', s.token)
+        .is('welcome_msg_sent_at', null)
+        .select('token');
+      if (claimErr) {
+        console.error('[welcome-retry-cron] claim ไม่สำเร็จ (' + studentLabel + ') ข้ามรอบนี้ กันส่งซ้ำ:', claimErr.message);
+        skipped++;
+        continue;
+      }
+      if (!claimedRows || !claimedRows.length) { skipped++; continue; } // มีอีกการเรียกหนึ่งเคลมไปก่อนแล้ว
+
       let teacherOk = true;
       if (teacherUserId) {
         try {
@@ -83,7 +101,10 @@ serve(async (req) => {
           console.error('[welcome-retry-cron] ส่งสำเนาให้ครูไม่สำเร็จ (' + studentLabel + ') — ข้ามรอบนี้ ลองใหม่รอบหน้า:', e);
         }
       }
-      if (!teacherOk) { skipped++; continue; }
+      if (!teacherOk) {
+        await supabase.from('classroom_students').update({ welcome_msg_sent_at: null }).eq('token', s.token);
+        skipped++; continue;
+      }
 
       let studentOk = true;
       try {
@@ -92,16 +113,12 @@ serve(async (req) => {
         studentOk = false;
         console.error('[welcome-retry-cron] ส่งข้อความต้อนรับให้นักเรียนไม่สำเร็จ (' + studentLabel + ') — ลองใหม่รอบหน้า:', e);
       }
-      if (!studentOk) { skipped++; continue; }
-
-      // สำเร็จทั้งคู่ → มาร์คกันส่งซ้ำ
-      const { error: updError } = await supabase
-        .from('classroom_students')
-        .update({ welcome_msg_sent_at: new Date().toISOString() })
-        .eq('token', s.token);
-      if (updError) {
-        console.error('[welcome-retry-cron] มาร์ค welcome_msg_sent_at ไม่สำเร็จ (' + studentLabel + ') — รอบหน้าอาจส่งซ้ำอีกครั้ง:', updError);
+      if (!studentOk) {
+        await supabase.from('classroom_students').update({ welcome_msg_sent_at: null }).eq('token', s.token);
+        skipped++; continue;
       }
+
+      // claim ไว้ตั้งแต่ต้น (mark true) แล้ว ส่งครบทั้งคู่สำเร็จ ไม่ต้อง mark ซ้ำอีกรอบ
       sent++;
     }
 
