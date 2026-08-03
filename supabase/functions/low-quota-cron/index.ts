@@ -137,6 +137,26 @@ serve(async (req) => {
       const curPayment = (pays || []).find((p) => p.id === q.paymentId);
       if (!curPayment || curPayment.low_quota_notified) continue; // ส่งไปแล้วรอบนี้ ไม่ส่งซ้ำ
 
+      // 🔒 2026-08-03 เพิ่ม (RELIABILITY FIRST — บั๊กจริงที่ Lin เจอ: ครู 1 คนได้ข้อความซ้ำ 2 รอบติดกัน)
+      // เดิม: เช็ค low_quota_notified (อ่านอย่างเดียว) ก่อน แล้วค่อยยิง LINE แล้วค่อย mark true ทีหลังสุด
+      //   → ฟังก์ชันนี้ถูกเรียกได้ 2 ทาง (cron รายวัน + recordAttendance() ยิงทันทีตอนบันทึกเข้าเรียน)
+      //   ถ้า 2 ทางนี้ทำงานพร้อมกันพอดี (เช่น ครูบันทึกเข้าเรียนตอน cron กำลังรันอยู่) ทั้งคู่จะอ่านเจอ false
+      //   พร้อมกัน แล้วยิง LINE ซ้ำกันทั้งคู่ก่อนจะ mark — เป็น race condition ไม่ใช่ปัญหาที่ dedup เดิมกันได้
+      // แก้เป็น claim ก่อนด้วย UPDATE...WHERE low_quota_notified=false แบบ atomic ให้ Postgres ตัดสินว่าใครมาก่อน
+      //   claim ไม่ติด = มีอีกการเรียกหนึ่งกำลังจัดการ/จัดการไปแล้ว ข้ามคนนี้ทันที ไม่ยิง LINE เลยแม้แต่ครั้งเดียว
+      const { data: claimedRows, error: claimErr } = await supabase
+        .from('classroom_payments')
+        .update({ low_quota_notified: true })
+        .eq('id', curPayment.id)
+        .eq('low_quota_notified', false)
+        .select('id');
+      if (claimErr) {
+        console.error('[low-quota-cron] claim ไม่สำเร็จ ข้ามคนนี้ไปก่อน กันส่งซ้ำ:', claimErr.message, 'payment_id=', curPayment.id);
+        errCount++;
+        continue;
+      }
+      if (!claimedRows || !claimedRows.length) continue; // มีอีกการเรียกหนึ่งเคลมไปก่อนแล้ว (กำลังส่งอยู่ หรือส่งสำเร็จไปแล้ว)
+
       const remain = q.remain < 0 ? 0 : q.remain;
       // 2026-07-18 改（Lin 要求）：改成「今天是最後一堂」的措辭，因為現在只在今天真的有排課時才會發
       const messageText = '☀️ 早安！提醒你：今天的泰語課是這一期最後一堂課囉！記得跟老師約續課時間，才不會中斷學習喔 😊';
@@ -159,21 +179,22 @@ serve(async (req) => {
             console.warn('[low-quota-cron] ส่งให้ครูไม่สำเร็จ — ยังไม่ส่งหานักเรียน รอลองใหม่พรุ่งนี้:', e);
           }
         }
-        if (!teacherOk) { errCount++; continue; }
+        if (!teacherOk) {
+          // 🔒 2026-08-03：ตอนนี้ claim (mark true) ไปก่อนแล้วตั้งแต่บรรทัดบน ถ้าส่งครูไม่สำเร็จต้อง
+          //   ปลด claim คืน (mark false) เพื่อให้รอบถัดไป (วันเดียวกัน) ลองใหม่ได้ — พฤติกรรมเดิมก่อนแก้ race
+          //   คือไม่เคย mark true จนกว่าจะส่งนักเรียนสำเร็จ ข้อนี้ทำให้เหมือนเดิม
+          await supabase.from('classroom_payments').update({ low_quota_notified: false }).eq('id', curPayment.id);
+          errCount++;
+          continue;
+        }
 
         await pushLine(channelToken, s.line_user_id, messageText);
         sent++;
-
-        // RELIABILITY FIRST：一定要檢查有沒有真的標記成功，不然會每天重複發送
-        const { error: markErr } = await supabase
-          .from('classroom_payments')
-          .update({ low_quota_notified: true })
-          .eq('id', curPayment.id);
-        if (markErr) {
-          console.error('[low-quota-cron] 標記 low_quota_notified 失敗，可能會重複提醒：', markErr.message, 'payment_id=', curPayment.id);
-          errCount++;
-        }
+        // claim ไว้ตั้งแต่ต้น (mark true) แล้ว ส่งครบทั้งคู่สำเร็จ ไม่ต้อง mark ซ้ำอีกรอบ
       } catch (e) {
+        // ส่งหานักเรียนพัง (claim ไว้เป็น true แล้ว) → ปลด claim คืนเป็น false เหมือนพฤติกรรมเดิม
+        //   ให้รอบถัดไปวันเดียวกันลองใหม่ได้ (ครูอาจได้ข้อความซ้ำ 1 รอบ แต่ยอมรับความเสี่ยงนี้ตามคอมเมนต์เดิมด้านบน)
+        await supabase.from('classroom_payments').update({ low_quota_notified: false }).eq('id', curPayment.id);
         // 🟡 2026-08-02 เพิ่ม log + แจ้งครู (รอบตรวจ 3 ระบบ Q2) — เดิม catch นี้ "ไม่มี log สักบรรทัด"
         //   เป็นจุดที่เงียบที่สุดในทั้ง 4 cron: ส่งหานักเรียนพัง = ไม่มีร่องรอยอยู่ที่ไหนเลย
         //   ⚠️ และเคสนี้ "ลองใหม่พรุ่งนี้" ไม่ได้จริง เพราะ cron ตัวนี้เลือกเฉพาะคนที่ "มีคาบวันนี้"
