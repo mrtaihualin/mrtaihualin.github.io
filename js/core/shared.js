@@ -1,5 +1,19 @@
 // ===================================================================
-// ⚡ โหมดเบา (lite) สำหรับ in-app browser ที่อ่อน (LINE / FB / IG)
+// 🗂️ FILE MAP — เรียงตามลำดับการรัน (do not reorder without regression tests)
+//
+//   01. Browser mode + shared panel registry
+//   02. Announcement, navigation, and shared modal markup
+//   03. Shared UI helpers, forms, leads, and content modals
+//   04. Exit survey + analytics tracking
+//   05. Game-only fullscreen and word controls
+//   06. Game feedback/rewards, stats, and fallback word menu
+//
+// ไฟล์นี้เปิดเผย global หลายตัวบน window และบาง block รันทันทีตามลำดับที่โหลด
+// การจัดหมวดหมู่จึงใช้หัวข้อแทนการย้ายโค้ด เพื่อคงพฤติกรรมเดิม
+// ===================================================================
+
+// ===================================================================
+// [01.1] ⚡ LITE BROWSER MODE — in-app browser (LINE / FB / IG)
 //   ตรวจจาก User-Agent → ใส่ class "lite" ที่ <html>
 //   CSS จะปิด backdrop-filter + หยุด animation วิ่งวน "เฉพาะตอน lite" เท่านั้น
 //   → Safari / Chrome / desktop ยังได้เอฟเฟกต์ครบเหมือนเดิม
@@ -15,7 +29,7 @@
 })();
 
 // ===================================================================
-// 📦 GamePanels — ที่กลางให้กล่อง/เมนู popup ทุกชนิดในหน้าเกม "รู้จักกัน"
+// [01.2] 📦 GAME PANEL REGISTRY — ให้ popup ทุกชนิดในหน้าเกม "รู้จักกัน"
 //   Lin 2026-07-24: เจอปัญหาเปิดพร้อมกันได้ 2 กล่อง (เช่น 🍚 เมนูคำศัพท์ + 🎮 เมนูเกม) ทับกันบนจอ
 //   → กติกาใหม่: ก่อนกล่องไหนจะเปิด ต้องเรียก closeOthers(ตัวเอง) ก่อนเสมอ → กล่องอื่นที่เปิดอยู่จะถูกปิดหมด เหลือเปิดได้ทีละกล่อง
 //   ใช้ pattern "window.GamePanels = window.GamePanels || ..." กันปัญหาลำดับโหลดไฟล์ (shared.js/word-menu.js ใครโหลดก่อนก็สร้างอันเดียวกันได้)
@@ -33,7 +47,7 @@ window.GamePanels = window.GamePanels || (function () {
 })();
 
 // ===================================================================
-// 📢 แถบประกาศหมุนเวียน (rotating announcement) — โชว์ทุกหน้า, หมุนทุก 6 วิ
+// [02.1] 📢 ROTATING ANNOUNCEMENT — โชว์ทุกหน้า, หมุนทุก 6 วิ
 //   เพิ่ม/แก้/ลบประกาศได้ที่ array ด้านล่างนี้ที่เดียว มีผลทุกหน้า
 //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล
 // ===================================================================
@@ -49,7 +63,7 @@ var ANN = [
 ];
 
 // ===================================================================
-// 🧭 SHARED NAV  — edit here to update navigation on ALL pages
+// [02.2] 🧭 SHARED NAV — edit here to update navigation on ALL pages
 // ===================================================================
 window.goHome = function() {
   var p = window.location.pathname;
@@ -231,7 +245,7 @@ window.goHome = function() {
 })();
 
 // ===================================================================
-// 🪟 SHARED MODALS — injected on EVERY page (single source of truth)
+// [02.3] 🪟 SHARED MODAL MARKUP — injected on EVERY page (single source of truth)
 //    แก้ modal ที่นี่ที่เดียว มีผลทุกหน้า
 // ===================================================================
 (function injectModals(){
@@ -429,7 +443,7 @@ window.goHome = function() {
 })();
 
 // ===================================================================
-// 🎯 SOFT CTA CARD — การ์ดชวนจองคาบเรียนแบบนุ่มนวล ไม่รบกวน
+// [02.4] 🎯 SOFT CTA CARD — การ์ดชวนจองคาบเรียนแบบนุ่มนวล ไม่รบกวน
 //   ใช้ตอนจบรอบ/บนหน้ารายการ・ปิดได้ (✕) → จำไว้ 7 วันไม่โชว์ซ้ำ (ต่อหน้า ผ่าน pageKey)
 //   เรียกใช้: renderSoftCTA('container-id', 'page_key', 'ข้อความเฉพาะหน้านั้น')
 // ===================================================================
@@ -450,7 +464,10 @@ window.renderSoftCTA = function(containerId, pageKey, message){
 };
 
 // ===================================================================
-
+// [03] 🧰 SHARED UI + DATA HELPERS — globals used across site pages
+//   Reveal/FAQ, modal controls, booking, quiz, mobile menu, forms,
+//   lead capture, content loaders, and shared content interactions.
+// ===================================================================
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => { if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target);} });
   }, {threshold:0.15});
@@ -899,7 +916,7 @@ window.renderSoftCTA = function(containerId, pageKey, message){
 
 document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><a class="avail-cta" href="javascript:void(0)" onclick="openModal(\'modal-line-qr\')">立即預約</a></div></div>'; });
 
-// ===== 📬 Contact / LINE QR / Social Modal Injection =====
+// ----- [03.1] 📬 Contact / LINE QR / Social Modal Injection -----
 (function injectSharedModals() {
   var modalsHTML = '';
 
@@ -1104,7 +1121,7 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
   }
 })();
 
-// ===== 📺 YouTube Video Modal =====
+// ----- [03.2] 📺 YouTube Video Modal -----
 if (typeof openYTVideoModal === 'undefined') {
   var YT_CHANNEL_HANDLE = 'mrtaihua';
   var YT_FALLBACK = [];
@@ -1189,7 +1206,7 @@ if (typeof openYTVideoModal === 'undefined') {
   };
 }
 
-// ===== 🚀 FB Posts Modal =====
+// ----- [03.3] 🚀 FB Posts Modal -----
 if (typeof openFBPostModal === 'undefined') {
   var _fbDetailPostId = null;
   var SITE_URL = 'https://mrtaihualin.com';
@@ -1291,7 +1308,7 @@ if (typeof openFBPostModal === 'undefined') {
   };
 }
 
-// ===== 📖 Self-Study Modal =====
+// ----- [03.4] 📖 Self-Study Modal -----
 if (typeof openSSModal === 'undefined') {
   window._ssCurrentId = null;
 
@@ -1387,7 +1404,7 @@ if (typeof openSSModal === 'undefined') {
   };
 }
 
-// ===== 🔗 Share Popup =====
+// ----- [03.5] 🔗 Share Popup -----
 if (typeof openSharePopup === 'undefined') {
   window.openSharePopup = function(title, preview) {
     var SITE_URL = window.SITE_URL || 'https://mrtaihualin.com';
@@ -1421,7 +1438,7 @@ if (typeof openSharePopup === 'undefined') {
   };
 }
 
-// ===== 🔗 openLinkedSSFromPost — always available on all pages =====
+// ----- [03.6] 🔗 openLinkedSSFromPost — available on all pages -----
 window.openLinkedSSFromPost = function() {
   var postId = typeof _fbDetailPostId !== 'undefined' ? _fbDetailPostId : window._fbDetailPostId;
   var arts = typeof SELFSTUDY_ARTICLES !== 'undefined' ? SELFSTUDY_ARTICLES : [];
@@ -1431,7 +1448,7 @@ window.openLinkedSSFromPost = function() {
   if (art && window.showSSDetail) showSSDetail(art.id);
 };
 
-// ===== 🗑️ Delete comment — always available =====
+// ----- [03.7] 🗑️ Delete comment — available on all pages -----
 window.deleteFBComment = function(postId, idx) {
   var getFn = window._getFBComments || function(id) { try { return JSON.parse(localStorage.getItem('fbcmt_' + id)) || []; } catch(e) { return []; } };
   var saveFn = window._saveFBComments || function(id, arr) { try { localStorage.setItem('fbcmt_' + id, JSON.stringify(arr)); } catch(e) {} };
@@ -1443,7 +1460,7 @@ window.deleteFBComment = function(postId, idx) {
 };
 
 // ════════════════════════════════════════════════════════════════════
-// 📋 Exit-intent survey — ทุกหน้า ยกเว้นหน้าเกม 5 ไฟล์ + หน้าดาวน์โหลดชีต (LIN 2026-07-07)
+// [04.1] 📋 EXIT-INTENT SURVEY — ทุกหน้า ยกเว้นหน้าเกม 5 ไฟล์ + หน้าดาวน์โหลดชีต
 //   Desktop: mouseout ขอบบน (exit-intent มาตรฐาน)
 //   มือถือ/สำรอง: idle timer 45 วิ (จับ exit-intent มือถือไม่ได้จริง)
 //   โชว์เป็นแถบเล็กด้านล่าง ไม่บล็อกจอ · โชว์ครั้งเดียวตลอดไปต่อเบราว์เซอร์ (localStorage)
@@ -1531,7 +1548,7 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ════════════════════════════════════════════════════════════════════
-// 📊 GA4: Scroll depth + time-on-page tracking — เฉพาะหน้าบทความ (LIN 2026-07-07)
+// [04.2] 📊 GA4 ARTICLE TRACKING — scroll depth + time on page
 //   ยิง article_scroll_depth (25/50/75/100%) + article_time_on_page (15/30/60/120 วิ)
 // ════════════════════════════════════════════════════════════════════
 (function(){
@@ -1578,7 +1595,7 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ════════════════════════════════════════════════════════════════════
-// 📊 GA4: YouTube 影片互動 tracking — ต่อยอด modal-videos เดิม (LIN 2026-07-07)
+// [04.3] 📊 GA4 YOUTUBE TRACKING — 影片互動ต่อยอด modal-videos เดิม
 //   ไม่แก้ openYTVideoModal/loadRandomYTVideo/shuffleYTVideo เดิม แค่ "ห่อทับ" (wrap) เพื่อความปลอดภัย
 //   ยิงตามธรรมเนียม GA4 enhanced-measurement: youtube_play / youtube_progress(25/50/75%) / youtube_complete
 // ════════════════════════════════════════════════════════════════════
@@ -1687,7 +1704,7 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ===================================================================
-// 📱 โหมด "เหมือน fullscreen" เฉพาะหน้าเกม — Lin 2026-07-07
+// [05.1] 📱 GAME PSEUDO-FULLSCREEN MODE
 // ปัญหา: หน้าเกม (typing-game/reading-game/tone-finder/word-order/vault) มี nav บนสุด (.site-nav)
 // + หัวข้อหน้า (.page-header) + แถบหมวดหมู่ (.page-strip) + แถบสลับเกม (#game-switcher) ล้อมรอบเกม
 // บนมือถือจอเล็กกินพื้นที่เยอะ ดูอึดอัด ทับกัน (ตามภาพที่ Lin ส่งมา)
@@ -1824,7 +1841,7 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ===================================================================
-// 🍙 ปุ่มเปิด/ปิดคำแปลจีน + สลับฟอนต์ (ทุกหน้าเกม) — Lin 2026-07-13, เปลี่ยนเป็นดรอปดาวน์ 2026-07-25
+// [05.2] 🍙 GAME TRANSLATION + FONT CONTROLS
 // ค่า default: จำไว้ด้วย localStorage (คีย์ games_hide_zh — แยกจาก textbook/controls-ui.js โดยตั้งใจ ตามที่ Lin เลือก)
 // ระหว่างเล่น: คลิกที่กล่องคำแปลแต่ละกล่อง เปิด/ปิดเฉพาะจุดนั้นได้ (ไม่กระทบค่า default)
 // ทำงานเฉพาะหน้าเกม (มี #game-switcher) เหมือนปุ่มเต็มจอด้านบน — หน้าอื่นในเว็บไม่กระทบ
@@ -1963,7 +1980,7 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ════════════════════════════════════════════════════════════
-// 🪧 แจ้งปัญหา / รีวิวเกม — ได้แต้มสะสม (แยกจากคะแนนอันดับ/ดาว 100%) — Lin 2026-07-13
+// [06.1] 🪧 GAME FEEDBACK + REWARDS
 // ใช้ร่วมทุกเกม (typing/reading/lego/word_order/tone_finder) — ต่อเข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap)
 // รีวิว: ได้ 2 แต้มทันที (จำกัด 1 ครั้ง/เกม/วัน) · แจ้งปัญหา: รอ Lin ตรวจ ถ้าจริง+แก้แล้วได้ 20 แต้ม · เพดานสะสม 300 แต้ม
 // prefix ฟังก์ชัน/id ทั้งหมดใช้ "grw" (Game ReWard) กันชนกับ "rg"/"lg" ฯลฯ ที่แต่ละเกมใช้เป็นของตัวเองอยู่แล้ว
@@ -2161,7 +2178,7 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ════════════════════════════════════════════════════════════
-// 🔥⭐ แถบสถิติ (連續/護盾/星星/勳章) — ย้ายไปติดกับ "個人檔案" (ปุ่มชื่อ) แล้ว — Lin 2026-07-24
+// [06.2] 🔥⭐ AUTHENTICATED GAME STATS BAR
 // เดิมแถบนี้โชว์ตลอดแม้ไม่ล็อกอิน (ขึ้น 0 หมด) — Lin สั่งให้ไม่ล็อกอิน = ไม่โชว์เลย
 // ตัวเลข/logic เดิมของแต่ละเกม (rgRenderGameBar/refreshUI/TF.xxx) ไม่แตะเลย — ที่นี่แค่โชว์/ซ่อนทั้งแถบตามสถานะล็อกอิน
 // ════════════════════════════════════════════════════════════
@@ -2181,7 +2198,7 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ════════════════════════════════════════════════════════════
-// 💬 ป๊อปอัปอธิบายไอคอนสถิติ (🔥連續天數 / 🛡️護盾 / ⭐星星) — Lin 2026-07-24
+// [06.3] 💬 GAME STAT EXPLANATION POPUP
 // ปัญหาเดิม: ไอคอนพวกนี้มีแค่ title= (hover ถึงเห็น) → บนมือถือแตะแล้วไม่มีอะไรเกิดขึ้นเลย
 // แก้: แตะแล้วเด้งกล่องคำอธิบายสั้นๆ ธีมทองเหมือนเว็บ ใกล้ๆ ไอคอนที่กด แตะที่อื่น/รอ 3 วิ = ปิดเอง
 // ไม่แตะ 📖(วิธีเล่น) กับ 🌱(勳章) — 2 อันนี้กดแล้วเปิด modal จริงอยู่แล้ว (มีฟังก์ชันจริง ไม่ใช่แค่โชว์ค่า) ไม่ต้องมี popup ซ้อน
@@ -2256,7 +2273,7 @@ window.deleteFBComment = function(postId, idx) {
 })();
 
 // ════════════════════════════════════════════════════════════
-// 🍚 เมนูตัวเลือกใต้คำ — สำหรับหน้าเกมที่ยังไม่มี WordMenu ของตัวเอง (เกมเรียงคำ/เกมเลโก้) — Lin 2026-07-25
+// [06.4] 🍚 FALLBACK WORD MENU — สำหรับเกมที่ยังไม่มี WordMenu ของตัวเอง
 // Lin สั่ง: "ทุกเกมต้องมีเมนูแบบนี้ ใส่มาก่อน ถ้ายังทำงานไม่ได้ไม่เป็นไร ให้เป็นปุ่มเปล่าๆ"
 // → ทุกหน้าเกมโชว์เมนู 🍚 เหมือนกันหมด 8 แถว (發音/讀音/英文讀音/翻譯/單字庫/提示/螢幕鍵盤/字體) — เพิ่ม 英文讀音 2026-07-25
 //   แถวไหนมีฟังก์ชันจริงอยู่แล้วในหน้านั้น (翻譯/字體) ผูกให้ทำงานจริง — ที่เหลือเป็นปุ่มเปล่า (จางลง กดไม่มีผล) รอเพิ่มฟีเจอร์ทีหลัง

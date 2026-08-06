@@ -1,4 +1,5 @@
 
+// FILE MAP: finalize/save segment → recording stop/result handling → stream cleanup
 async function finalizeSegment(chunksArg, mimeArg, startTimeArg, backupIdArg){
   // 用呼叫端傳進來的 chunks/mime/開始時間（該片段自己的 closure），不要讀共用全域變數 ——
   // 因為格式自動切換是非同步重啟下一段，全域 recChunks/recMime/recStartTime 這時可能已經被下一段覆寫掉了，

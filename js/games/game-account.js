@@ -3,6 +3,7 @@
 // เก็บใน localStorage (same-origin → 2 เกมแชร์กันได้ ไม่ต้องล็อกอิน)
 // ดาว = หน่วยกลางรวม 2 เกม · แต้ม (分) แยกเกม ไม่เกี่ยวกับไฟล์นี้
 // Lin 2026-06-27
+// FILE MAP: [01] storage/date → [02] hard-star rules/caps → [03] badges → [04] public API
 // ============================================================
 (function () {
   var KEY = 'thai_game_acct_v1';

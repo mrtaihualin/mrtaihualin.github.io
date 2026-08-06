@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: next class/contact → request API → cancel picker → reschedule picker → add-class flow
 // 學生：下一堂課（唯讀，資料來自老師端同步的 Google Calendar）
 // 2026-07-06 新增：只顯示，學生不能自己改課表本身；要改期/取消 → 送「申請」給老師，
 // 老師收到通知後自己去 Google Calendar 手動調整（系統不會自動改老師的行事曆）
@@ -1855,4 +1856,3 @@ async function loadStudentRecordings(token){
   }).join('');
   card.style.display='';
 }
-

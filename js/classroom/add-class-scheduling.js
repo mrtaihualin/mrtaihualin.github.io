@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: modal/quota/rows → conflicts → Calendar creation → confirmation → backup/verification
 // ➕ 加課堂時間（2026-07-15 新增）
 // 用途：(1) Danny 這種「一週上好幾天課」的學生 → 加第 2、第 3 個固定星期幾
 //       (2) Edward／米線 這種「不固定，偶爾約課」的學生 → 排單次課

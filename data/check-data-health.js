@@ -1,5 +1,6 @@
 /**
  * check-data-health.js — ตัวตรวจสุขภาพข้อมูลคำ+ประโยค (data/words-data.js + data/adv-sentences.js)
+ * ROLE/MAP: Node validation tool → load datasets → reusable validators → full audit/report → module exports
  * รันก่อน push ทุกครั้งที่แตะ data/words-data.js หรือ data/adv-sentences.js (ตามกฎ CLAUDE.md หัวข้อ 🗄️ ฐานข้อมูลเกมกลาง)
  *
  * วิธีรัน: node data/check-data-health.js

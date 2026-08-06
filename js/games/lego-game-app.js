@@ -1,4 +1,5 @@
 // js/games/lego-game-app.js — ตรรกะเกมเลโก้ (泰語造句練習室)
+// FILE MAP: slots/words/examples/levels → state/render/actions → scoring/account → sentence test → teaching/tour/init
 // แยกออกมาจาก lego.html (เดิมฝัง inline <script> 1,182 บรรทัด) — Lin สั่ง 2026-08-02 ให้แยก logic ออกจาก UI ตามแพทเทิร์นเกมอื่น
 // ย้ายมาแบบคัดลอกตรงๆ ไม่มีการแก้ logic ใดๆ — พฤติกรรมต้องเหมือนเดิม 100%
 // ════════ SLOTS ════════

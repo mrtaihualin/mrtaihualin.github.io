@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: attendance/schedule sync → history/edit/delete → slip status → teacher session/OTP boot
 // ATTENDANCE SYSTEM
 // ============================================================
 async function recordAttendance(token) {
@@ -650,4 +651,3 @@ try {
   if (el) el.innerHTML = '<div style="background:#fef3c7;border:1px solid #d97706;border-radius:12px;padding:20px;margin:20px 0;font-family:monospace;font-size:0.85rem;color:#78350f;">' +
     '<strong>⚠️ Error（請截圖傳給老師）</strong><br><br>' + e.message + '</div>';
 }
-

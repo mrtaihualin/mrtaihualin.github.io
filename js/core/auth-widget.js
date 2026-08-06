@@ -17,10 +17,18 @@
 //
 // เฟส 1 (LIN 2026-07-03): รวม widget ให้ tone-finder / reading-game / typing-game /
 //   word-order / my-progress ก่อน (เฟสถัดไปค่อยเติมหน้าที่ยังไม่มี widget เลย)
+//
+// FILE MAP (keep runtime order):
+//   [01] Bootstrap + public API
+//   [02] Profile state + auth listeners
+//   [03] Profile editor
+//   [04] Badge rendering + modal visibility
+//   [05] Session logging + auth boot
 // ════════════════════════════════════════════════════════════
 (function () {
   'use strict';
 
+  // ----- [01] BOOTSTRAP + PUBLIC API -----
   var cfg = window.SUPABASE_CONFIG || {};
   var ready = cfg.url && cfg.anonKey &&
               cfg.url.indexOf('YOUR_') === -1 &&
@@ -71,7 +79,8 @@
     });
   }
 
-  // ── โปรไฟล์ผู้เล่น: ชื่อ+รูป+แบดจ์ เก็บใน profiles (คีย์ user_id) + localStorage แคชสำรอง ──
+  // ----- [02] PROFILE STATE + AUTH LISTENERS -----
+  // โปรไฟล์ผู้เล่น: ชื่อ+รูป+แบดจ์ เก็บใน profiles (คีย์ user_id) + localStorage แคชสำรอง
   // ⚠️ ใช้คีย์ localStorage เดิมจาก supabase-auth.js ('tf_avatar'/'tf_pinned_badge') ตั้งใจ
   //    ไม่เปลี่ยน กันผู้ใช้เดิมที่เคยตั้งรูป/แบดจ์ไว้แล้วดูเหมือน "หาย"
   var myNick = null, myAvatar = null, myBadge = null;
@@ -152,7 +161,8 @@
       });
   }
 
-  // ── ป๊อปอัปแก้โปรไฟล์: ชื่อ + รูปอิโมจิสำเร็จรูป + เลือกแบดจ์ที่ปลดล็อกแล้ว (sync ผ่าน profiles) ──
+  // ----- [03] PROFILE EDITOR -----
+  // ป๊อปอัปแก้โปรไฟล์: ชื่อ + รูปอิโมจิสำเร็จรูป + เลือกแบดจ์ที่ปลดล็อกแล้ว (sync ผ่าน profiles)
   // (ก๊อปมาจาก supabase-auth.js เดิมทั้งดุ้น — ตัวนี้สมบูรณ์ที่สุด ใช้เป็นต้นแบบกลาง)
   var profileModal = null;
   function openProfileEditor() {
@@ -295,7 +305,8 @@
     };
   }
 
-  // ── มี modal อื่นเปิดอยู่ไหม (จองเรียน/QR ฯลฯ) → ถ้าเปิด ซ่อน badge กันทับปุ่มกากบาท ──
+  // ----- [04] BADGE RENDERING + MODAL VISIBILITY -----
+  // มี modal อื่นเปิดอยู่ไหม (จองเรียน/QR ฯลฯ) → ถ้าเปิด ซ่อน badge กันทับปุ่มกากบาท
   function anyModalOpen() { try { return !!document.querySelector('.modal-overlay.open'); } catch (e) { return false; } }
 
   // ── badge ต่อหน้า: แต่ละหน้าเรียก renderBadge(containerId, opts) ครั้งเดียวตอน init ──
@@ -377,7 +388,8 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _startObserve); else _startObserve();
   } catch (e) {}
 
-  // ── กันหลายบัญชี Phase 5: ส่ง fingerprint+IP ไปเก็บที่เซิร์ฟเวอร์ (throttle 1 ครั้ง/6 ชม./เครื่อง) ──
+  // ----- [05] SESSION LOGGING + AUTH BOOT -----
+  // กันหลายบัญชี Phase 5: ส่ง fingerprint+IP ไปเก็บที่เซิร์ฟเวอร์ (throttle 1 ครั้ง/6 ชม./เครื่อง)
   //   ข้าม admin (Lin เอง) · fingerprint โหลด lazy จาก FingerprintJS OSS ฟรี · พังก็ยังส่ง IP อย่างเดียว
   var LOGSESS_KEY = 'tf_logsess_at';
   function shouldLogSession() {

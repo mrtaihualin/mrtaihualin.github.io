@@ -1,3 +1,4 @@
+// FILE MAP: next-class/lesson picker → reschedule/cancel → requests/series changes → slips/receipts/setup
 async function loadTeacherNextClassBox(token) {
   var t = token.replace(/'/g, '');
   var el = document.getElementById('teacherNextClass-' + t);
@@ -1112,4 +1113,3 @@ async function rejectSlip(id) {
   document.getElementById('slipApprovalModal').classList.remove('open');
   await loadPendingSlips();
 }
-

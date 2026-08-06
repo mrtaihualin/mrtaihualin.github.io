@@ -1,5 +1,6 @@
 /**
  * tests-tone-engine.js — เทสง่ายๆ (input→output ชัดเจน) คุ้มกันไม่ให้ tone-engine.js พังตอนแก้โค้ดครั้งหน้า
+ * ROLE: Node unit-test entrypoint for stable Thai tone-rule examples
  * ต่างจาก data/regression-check-tone.js (เช็คคำทั้งคลัง 288+ คำจริงใน words-data.js) — ไฟล์นี้เช็คแค่
  * "กฎวรรณยุกต์พื้นฐาน" ด้วยคำจริงที่คนไทยทุกคนรู้จักเสียงแน่นอน (ไม่ใช่คำศัพท์ที่ต้องรอ Lin ยืนยันเนื้อหา
  * — กฎวรรณยุกต์เป็นกฎภาษาไทยมาตรฐาน ไม่ใช่ "เนื้อหาเกม" ตามกฎ 16) ไม่แก้ tone-engine.js เลย แค่เรียกใช้

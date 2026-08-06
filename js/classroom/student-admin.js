@@ -1,3 +1,4 @@
+// FILE MAP: enrollment/config → creation/link → edit/repair Meet → auth guards → archive/restore/sync
 // GEN LINK MODAL（入班連結：姓名+Meet+課程資訊 → 建立學生 + 產生附課程摘要的連結）
 // ============================================================
 let genPendingToken = '';

@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: personalized material URLs → lesson progress → student schedule sheet → recurring-time summaries
 // 教材連結（老師貼連結 → 存進 classroom_recordings → 學生「課堂資料下載」自動出現）
 // 如果是自己網站的頁面（mrtaihualin.com／mrtaihualin.github.io）→ 自動加上
 // ?s=token&n=學生姓名（base64），讓 拼音規則上課用.html 那類頁面知道「這是哪位學生」
@@ -152,4 +153,3 @@ async function loadRosterScheduleMeta() {
     window._rosterScheduleByToken = byTok;
   } catch (e) { console.warn('讀取固定上課日失敗（不影響其他功能，只是สารบัญ副標題會少顯示上課時間）：', e && (e.message || e)); }
 }
-

@@ -1,3 +1,4 @@
+// ROLE: generated runtime asset manifest; do not hand-edit or reorganize entries
 // data/audio-manifest.js — เสียงคำศัพท์+ประโยคไทย (generate อัตโนมัติ ห้ามแก้มือ)
 // voice: th-TH-Chirp3-HD-Leda · อัปเดตล่าสุด: 2026-07-17 · sentences คีย์ด้วยตัวข้อความจริง (เหมือน words)
 window.AUDIO_MANIFEST = {

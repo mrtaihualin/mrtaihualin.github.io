@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: config/state → alerts/wake lock/watchdog → class entry → media setup/start/split → stop/cleanup
 // 課堂錄製引擎（統一：只錄聲音 / 雙人聲音 / 影片）
 //   - 聲音：Opus ~24kbps（約 11 MB/小時，最低可聽）
 //   - 影片：~80kbps，約 45–50 MB/小時；滿 1 小時自動切檔續錄

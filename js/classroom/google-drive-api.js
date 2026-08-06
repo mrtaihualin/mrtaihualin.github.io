@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: OAuth token/client → Drive API helpers → Docs formatting → folder cache/operations → resumable uploads
 // GOOGLE DRIVE 自動上傳（課堂錄影 → 各學生資料夾）
 // drive.file scope：App 只看得到自己建立的檔案/資料夾
 // ============================================================

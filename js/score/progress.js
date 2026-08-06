@@ -1,5 +1,6 @@
 // ════════════════════════════════════════════════════════════
 // progress.js — หน้า "คะแนนสะสมของฉัน" (my-progress.html)
+// FILE MAP: auth/bootstrap → session aggregation → summary/charts → history/stats rendering → auth binding/init
 // ต้องล็อกอินก่อน แล้วดึงข้อมูลจากตาราง tone_sessions มาสรุป
 // ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, Chart.js, auth-widget.js
 // Lin 2026-07-03 (v4): header badge (👤 ชื่อ/✏️/🏆/📊/登出) เปลี่ยนไปใช้ window.SITE_AUTH

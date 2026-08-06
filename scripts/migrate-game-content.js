@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * scripts/migrate-game-content.js
+ * FILE MAP: sandboxed data-file loader → row adapters/ranking → REST upsert/prune → environment validation + main
  * ────────────────────────────────────────────────────────────
  * ซิงก์คำ/ประโยคจาก data/words-data.js + data/adv-sentences.js (ต้นฉบับที่ Lin แก้เอง
  * ผ่านสกิลร่าง thai-vocab-draft-batch / thai-sentence-draft-batch เหมือนเดิมทุกอย่าง —

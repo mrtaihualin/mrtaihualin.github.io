@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: payment/course config → modal type/package/currency selection → totals → close/reset
 // PAYMENT SYSTEM
 // ============================================================
 // ⚠️ 老師填這裡：匯款帳戶（留空會顯示「待老師填寫」）。改完直接 push 即可
@@ -219,4 +220,3 @@ async function submitPayment() {
   alert('✅ 已記錄！\n' + (s ? s.name : '') + ' · ' + courseLabel + ' · ' + cur + ' ' + total.toLocaleString()
     + (receipt ? '\n\n🧾 收據已存到學生「課表 & 收據」資料夾\n編號：' + receipt.receiptNo : '\n\n（收據產生失敗，請確認已用 Google 登入授權後再試）') + receiptDbWarn);
 }
-

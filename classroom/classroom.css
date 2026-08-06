@@ -414,8 +414,6 @@
   .lesson-badge { display: inline-block; background: var(--gold-light); color: var(--gold-deep); border-radius: 20px; padding: 2px 9px; font-size: 0.75rem; font-weight: 700; }
 
   /* ── Drive files (student page) ─────────── */
-  .drive-file-list { display: flex; flex-direction: column; gap: 8px; }
-  .drive-file-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #fff; border: 1px solid var(--border); border-radius: 9px; font-family: 'Noto Sans TC', sans-serif; }
   .drive-file-icon { font-size: 1.2rem; flex-shrink: 0; }
   .drive-file-name { flex: 1; font-size: 0.85rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .drive-file-dl { background: var(--gold-light); color: var(--gold-deep); border: none; border-radius: 7px; padding: 5px 11px; font-size: 0.77rem; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-block; }

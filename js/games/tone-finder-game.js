@@ -1,4 +1,5 @@
 // ════════════════════════════════════════════════════════════
+// FILE MAP: definitions/data → score + word-score → SRS → game engine → Mina/badges → UI/session flow → analytics/init
 // DEFINITIONS
 // ════════════════════════════════════════════════════════════
 var DEFS = {

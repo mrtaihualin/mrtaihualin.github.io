@@ -1,5 +1,6 @@
 // ============================================================
 // reading-auth.js — ล็อกอิน + เซฟแต้มเกมอ่าน/เกมพิมพ์/เกมเรียงประโยค (ลีกรายสัปดาห์)
+// FILE MAP: [01] bootstrap/environment → [02] login UI/providers/OTP → [03] user/adaptive state → [04] score save → [05] session/OAuth return
 // ใช้ session ร่วมกับเกมเสียง (same-origin) → ล็อกอินที่เกมไหนก็รู้จักกัน
 // guard เต็ม: ถ้า Supabase/ตารางยังไม่พร้อม → เกมเล่นได้ปกติ ไม่พัง
 // ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, game-account.js, auth-widget.js

@@ -1,5 +1,6 @@
 // ════════════════════════════════════════════════════════════
 // tone-companion.js — ส่วนที่ "เกมเสียง" (tone-finder.html) ใช้เฉพาะ ไม่มีในอีก 4 เกม
+// FILE MAP: [01] GA event bridge → [02] tone session persistence → [03] score feedback → [04] admin unlock → [05] auth binding
 // Lin 2026-07-16: แยกออกมาจาก supabase-auth.js ตอนรวมระบบล็อกอินของเกมเสียงเข้ากับ reading-auth.js
 //   (เดิมเกมเสียงมีระบบล็อกอิน/ปุ่ม/modal เป็นของตัวเอง แยกจากอีก 4 เกม — ตอนนี้ใช้ไฟล์เดียวกันหมดแล้ว
 //    ปุ่ม/modal ล็อกอินทั้งหมดอยู่ใน reading-auth.js ไฟล์นี้ไม่มีปุ่ม/modal ล็อกอินเลย)

@@ -1,4 +1,5 @@
 // ── Drive: get/create student folder + small-file upload ───────
+// FILE MAP: student folder/archive → sharing → manual upload UI/progress → upload/overwrite → legacy-file sync
 async function gdGetStudentFolderId(studentName) {
   const rootId = await gdEnsureFolder(DRIVE_ROOT_FOLDER, null);
   return await gdEnsureFolder(studentName, rootId);

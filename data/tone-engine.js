@@ -1,5 +1,6 @@
 /**
  * tone-engine.js — เครื่องคิดวรรณยุกต์กลาง ใช้ร่วมกันทุกเกม (Lin 2026-07-15)
+ * FILE MAP: Thai character/rule tables → spelling normalization → tone calculation → explanation helpers → browser/Node exports
  * ใช้ใน: tone-finder.html (เกมเสียง) · reading-game.html (เกมอ่าน) · typing-game.html (เกมพิมพ์)
  *
  * มาจากการรวม 3 ก็อปปี้ที่ก่อนหน้านี้แยกกันคนละไฟล์ (TH ใน tone-finder.html + TH_ENGINE ใน

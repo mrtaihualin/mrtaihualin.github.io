@@ -1,5 +1,6 @@
 /**
  * words-data.js — คลังคำเดี่ยวกลาง ใช้ร่วมกันทุกเกม (Lin 2026-07-11)
+ * ROLE: authoritative runtime word data + browser adapters; preserve entry order and use the approved content workflow
  * ใช้ใน: tone-finder.html (เกมเสียง) · reading-game.html (เกมอ่าน) · typing-game.html (เกมพิมพ์)
  *
  * รวมมาจาก WORD_LIST (tone-finder.html เดิม) + WORDS (reading-game.html เดิม) — ตรวจแล้วเป็นคำชุดเดียวกันครบ 288 คำ

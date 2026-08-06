@@ -1,3 +1,4 @@
+// DATA SCHEMA: FB_POSTS[] = { id, date, title, image, text, url }
 // ===== 🚀 貼文分享區資料 =====
 // เพิ่มโพสใหม่ที่นี่ โดย copy รูปแบบด้านล่าง
 

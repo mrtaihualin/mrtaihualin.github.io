@@ -1,4 +1,5 @@
 // js/classroom/datetime-utils.js
+// FILE MAP: teacher/student timezone conversion → safe HTML/URL helpers → iCal conversion → display calculations
 // ย้ายมาจาก classroom/index.html เฟส 4 (2026-08-02) — ฟังก์ชันช่วยล้วนๆ ไม่แตะ Supabase/Calendar/ล็อก
 // เนื้อโค้ดเหมือนต้นฉบับ 100% (ตรวจด้วย diff แล้ว) แค่ย้ายตำแหน่งไฟล์
 function teacherTimeToDate(dateStr, timeStr) {

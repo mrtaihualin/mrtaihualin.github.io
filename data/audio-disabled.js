@@ -1,3 +1,4 @@
+// ROLE: hand-maintained runtime denylist; exact Thai text keys consumed by WordAudio
 // data/audio-disabled.js — รายการคำ/ประโยคที่ "ปิดเสียง TTS" ชั่วคราว (ปุ่ม 🔊 จะไม่โชว์ให้คำ/ประโยคพวกนี้)
 // ไฟล์นี้ Lin แก้เองได้ตรงๆ — ไม่ถูกเขียนทับตอน thai-word-tts-sync sync เสียงคำใหม่ (สคริปต์นั้นแตะแค่ audio-manifest.js)
 // วิธีใช้: เพิ่ม/ลบ ข้อความ (ตัวสะกดจริงเป๊ะๆ เหมือนใน words-data.js / adv-sentences.js) ในลิสต์ด้านล่าง

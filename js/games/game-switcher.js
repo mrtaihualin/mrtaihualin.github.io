@@ -2,6 +2,7 @@
 // รวมเป็นไฟล์กลาง ฉีดรายการแท็บตอนรันจริง (แพทเทิร์นเดียวกับ js/games/word-menu.js)
 // กติกา: <div id="game-switcher"> ยังอยู่ตำแหน่ง/CSS เดิมทุกหน้า (ไม่แตะ CSS เลย) — ไฟล์นี้แค่เติมรายการแท็บข้างในแทนการก๊อปวาง
 // ลำดับ+label+href ตรวจ diff กับของเดิมทุกหน้าแล้ว (byte ต่อ byte หลังตัด whitespace) ก่อนสร้างไฟล์นี้ — ตรงกันครบ 8 หน้า (2026-08-02)
+// FILE MAP: [01] tab config → [02] render → [03] DOM-ready init
 (function () {
   var TABS = [
     { id: 'challenge',      href: 'games-challenge.html', label: '🎮 綜合遊戲',   selfFrom: 'challenge_game' }, // ของเดิม games-challenge.html ใช้ from:'challenge_game' (ไม่ใช่ 'challenge' เหมือนหน้าอื่นอ้างถึง) — คงพฤติกรรมเดิมไว้ ไม่แก้

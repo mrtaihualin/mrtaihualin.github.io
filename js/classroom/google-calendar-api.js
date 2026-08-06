@@ -4,6 +4,7 @@
 // 2026-07-18 Lin สั่งเปลี่ยนกลับเป็น 3 วัน: การ์ดนักเรียนใช้ classroom_schedule (sync 90 วัน) แยกกันอยู่แล้ว
 // ไม่ได้พึ่ง SCHEDULE_DAYS ตัวนี้ (มีจุดเรียก calFetchUpcomingEvents() แค่จุดเดียว ระบุ SCHEDULE_SYNC_DAYS เสมอ)
 // ตัวนี้คุมแค่ "近期課表" ที่ครูเห็นบนหน้าจอเท่านั้น ปลอดภัยที่จะแก้
+// FILE MAP: date guards → event fetch/create → time controls → find/move/delete/verify → conflicts/archive cleanup
 const SCHEDULE_DAYS = 3; // "近期課表" ที่ครูเห็นบนหน้าจอ แสดงกี่วัน
 // 2026-07-15 เพิ่ม：ข้อมูลที่ sync ลง classroom_schedule (ให้นักเรียนใช้เลือก "คาบจะยกเลิก")
 // ต้องมองไกลกว่าที่ครูเห็นบนจอ ไม่งั้นนักเรียนที่เรียนหลายวัน/สัปดาห์จะเห็นแค่ 1-2 คาบให้เลือก

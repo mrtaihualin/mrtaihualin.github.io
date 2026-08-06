@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: slip form/submission → pending queues → claims/verification → request processing → alternatives
 // SLIP SYSTEM (student-initiated payment)
 // ============================================================
 let slipToken = null, slipType = null, slipLessons = null, slipBonus = 0, slipImageData = null, slipCurrency = null;
@@ -2248,4 +2249,3 @@ async function revertCalendarBackupInner(id) {
 // 放在老師選到某學生時的面板裡（跟學生自己頁面看到的「下一堂課」同樣邏輯，只是給老師用）
 // ════════════════════════════════════════════════════════════
 var _teacherNextClassCtx = {};
-

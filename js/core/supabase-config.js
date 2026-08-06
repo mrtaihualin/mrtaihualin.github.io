@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-// Supabase config — ใส่ค่าของโปรเจกต์คุณตรงนี้
+// [01] SUPABASE PUBLIC CONFIG — ใส่ค่าของโปรเจกต์คุณตรงนี้
 // หาได้จาก: Supabase → Project Settings → Data API / API Keys
 //   url     = "Project URL"  (เช่น https://abcd1234.supabase.co)
 //   anonKey = "anon public"  key (ยาวๆ ขึ้นต้น eyJ...)
@@ -23,7 +23,7 @@ window.SUPABASE_CONFIG = {
 };
 
 // ════════════════════════════════════════════════════════════
-// Shared Supabase client (singleton) — กัน warning "Multiple GoTrueClient instances"
+// [02] SHARED SUPABASE CLIENT (singleton) — กัน warning "Multiple GoTrueClient instances"
 // ทุกไฟล์ควรเรียก window.getSupabaseClient() แทนการ createClient เอง
 // คืน client ตัวเดิมเสมอ (สร้างครั้งเดียวต่อหน้า) · คืน null ถ้ายังตั้งค่าไม่พร้อม
 // ════════════════════════════════════════════════════════════

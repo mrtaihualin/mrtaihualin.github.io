@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-// supabase-fetch-cache.js — cache กลางกันยิง Supabase ซ้ำในโหลดหน้าเดียว
+// SUPABASE FETCH CACHE — cache กลางกันยิง Supabase ซ้ำในโหลดหน้าเดียว
 // dedupe fetch 2026-07-20 (Lin สั่ง แก้ audit: profiles/game_reward_points/tone_srs_state/tone_progress
 //   โดนยิงซ้ำ 2-7 ครั้งต่อโหลดหน้าเดียว เพราะ SITE_AUTH.fireChange() ยิงหลายจุด
 //   (getSession resolve + onAuthStateChange initial fire + revalidate ตอนสลับ/กลับมาที่แท็บ)
@@ -12,6 +12,7 @@
 // ต้องโหลดไฟล์นี้ "ก่อน" auth-widget.js / shared.js / progress-sync.js / เกมไฟล์ทั้ง 4 (*-game-app.js ฯลฯ)
 // ════════════════════════════════════════════════════════════
 (function () {
+  // ----- [01] CACHE STORAGE + DEDUPED FETCH -----
   window.SB_FETCH_CACHE = window.SB_FETCH_CACHE || {};
 
   window.getCachedFetch = function (key, fetchFn) {
@@ -28,6 +29,7 @@
     return cache[key];
   };
 
+  // ----- [02] EXPLICIT CACHE INVALIDATION -----
   // เผื่ออนาคตอยากบังคับ refetch (เช่น หลังแก้โปรไฟล์) — ยังไม่มีจุดไหนเรียกใช้ตอนนี้ ใส่ไว้กันต้องแก้ไฟล์นี้ซ้ำทีหลัง
   window.clearCachedFetch = function (keyPrefix) {
     var cache = window.SB_FETCH_CACHE;

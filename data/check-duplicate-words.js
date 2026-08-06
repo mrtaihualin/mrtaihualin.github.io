@@ -1,5 +1,6 @@
 /**
  * check-duplicate-words.js — เช็คคำซ้ำในคลังคำ (ระบบถาวร ไม่ใช่ one-time เหมือน regression-check-tone.js)
+ * ROLE/MAP: Node audit tool → load authoritative words → optional draft input → duplicate classification/report
  * Lin สั่ง 2026-07-15: "ต้องมีระบบเช็กไม่ให้คำศัพท์ในเกมซ้ำ เก่าใหม่ต้องเช็กหมด"
  *
  * ใช้ 2 แบบ:

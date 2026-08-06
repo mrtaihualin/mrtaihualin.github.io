@@ -1,5 +1,6 @@
 /* =====================================================================
    nav-ui-solo.js — 「上課專用」單頁版：只留 補充說明 + PDF 按鈕
+ * FILE MAP: personalization → floating notes editor → formatting/shortcuts → PDF → Drive save → lifecycle guards
    ⚠️ 這是 nav-ui.js 的精簡版，故意拿掉「☰ 目錄」漢堡選單
    （目錄選單會連去其他章節／回到教材目錄，上課專用頁不放）
    只給特定學生的單一頁面用，不影響 nav-ui.js／其他教材頁面

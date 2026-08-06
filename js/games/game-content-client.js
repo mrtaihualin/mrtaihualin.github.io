@@ -1,5 +1,6 @@
 /**
  * game-content-client.js — Lin 2026-08-02
+ * FILE MAP: [01] data adapters → [02] auth token lookup → [03] content fetch → [04] loading/error UI → [05] script injection + public loader
  * ────────────────────────────────────────────────────────────
  * แทนที่ <script src="data/words-data.js"> / <script src="data/adv-sentences.js"> เดิม
  * ในหน้าเกมทั้ง 6 หน้า (games-challenge / reading-game / tone-finder / typing-game /

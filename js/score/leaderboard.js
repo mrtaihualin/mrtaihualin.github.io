@@ -1,5 +1,6 @@
 // ════════════════════════════════════════════════════════════
 // leaderboard.js — กระดานจัดอันดับ (leaderboard.html)
+// FILE MAP: badge definitions → Supabase/RPC load → weekly/all-time rendering → auth + tab events/init
 // จัดอันดับด้วย "คะแนนสะสมรวม" 2 แท็บ: รายสัปดาห์ / ตลอดกาล
 // ดึงผ่าน RPC (security definer) — เห็นเฉพาะชื่อเล่น+คะแนน ไม่เห็นอีเมล
 // ต้องโหลดหลัง: supabase-js CDN, supabase-config.js

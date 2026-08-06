@@ -1,3 +1,4 @@
+// DATA MAP: metadata/schema → THAI_SONGS entries (lyrics, vocabulary, article)
 // ===== 🎵 เพลงไทย · Thai Songs Data =====
 // เพิ่มเพลงใหม่ได้โดย copy รูปแบบ entry ด้านล่าง
 // workflow: Lin วาง YouTube URL → Claude ช่วยสร้าง entry ใหม่

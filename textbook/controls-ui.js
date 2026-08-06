@@ -1,5 +1,6 @@
 /* =====================================================================
    controls-ui.js — 控制列（字體 / 拼音 / 分音節 / 代詞）
+ * FILE MAP: controls markup → romanization/rendering → pronoun modes → persisted preferences → layout/public rerender
    共用元件：從第三頁起每頁引入，修改這裡全部頁面同步更新
 
    使用方式：

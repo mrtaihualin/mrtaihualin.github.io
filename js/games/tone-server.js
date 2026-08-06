@@ -6,6 +6,7 @@
 //   • เน็ตล่ม/ไม่ล็อกอิน → คืน {ok:false} · เกมไม่พัง · ดาว/SRS ฝั่งเซิร์ฟเวอร์ไม่ขยับ
 //     → คำนั้น "ยังไม่เลื่อนขั้น" ฝั่งเซิร์ฟเวอร์ → คราวหน้าเล่นซ้ำได้ (กู้คืนได้ ไม่มีดาวหาย/ปลอม)
 //   • ห้ามโชว์ "ได้ดาว" ถ้าเซิร์ฟเวอร์ยังไม่ยืนยัน
+// FILE MAP: [01] client lookup → [02] finish round → [03] feedback/status → [04] public API
 (function () {
   function client() {
     try { return window.getSupabaseClient ? window.getSupabaseClient() : null; } catch (e) { return null; }

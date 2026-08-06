@@ -1,5 +1,6 @@
 // ════════════════════════════════════════════════════════════════
 // 泰語語序練習室 (word-order.html) — Lin 2026-07-03
+// FILE MAP: config/state/SRS → sentence selection → tile ordering + hints → scoring/results → account/UI controls → init
 // 資料來源：adv-sentences.js（跟打字/拼讀/聲調遊戲共用「高級」句庫，共 10 句）
 // 玩法：點詞塊依序放入空格，湊出跟原句一樣的詞語順序
 // ── กฎ MASTER 2026-07-05 (คำสั่ง_เกมเรียงคำ_高級_2026-07-05.md): เพิ่ม SRS/ดาวเงิน/คอมโบ/คำทอง/已記得/CTA ล็อกอินเต็มระบบ

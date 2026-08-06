@@ -2,6 +2,7 @@
 // Lin 要求：學生送出感想時，老師一登入首頁就要看到提醒，不用點進每個學生才看得到。
 // 設計跟 lowQuotaBanner 同一套模式：已關閉過的用 localStorage 記住（本機裝置），
 // 不動資料庫欄位、不需要額外 schema — classroom_feedback 本身沒有「已讀」欄位。
+// FILE MAP: teacher alerts/view → student view/joining → quota/receipts/feedback → schedule/files
 var newFeedbackList = [];
 var newFeedbackIdx = 0;
 var newFeedbackRotateTimer = null;
@@ -393,66 +394,6 @@ async function renderStudentView() {
   loadStudentQuota(token);
   loadStudentReceipts(token);
   loadStudentPayments(token);
-  // 2026-07-18 拿掉「連結遊戲帳號」卡片（Lin 要求不需要這功能了）→ 不再呼叫 loadGameLinkStatus
-  // 2026-07-18 拿掉「課堂資料下載」的直接列表（Lin 要求只留 Drive 按鈕）→ 不再呼叫 loadStudentFiles
-}
-
-// ── 連結遊戲帳號（把 classroom token 跟遊戲登入帳號綁在一起）──
-// 2026-07-13 Lin：讓老師之後能看到學生在小遊戲的練習狀況（弱點字/準確率）
-// 綁定寫入交給 RPC（link_game_account / unlink_game_account）處理，
-// 用 auth.uid() 當事人自己驗證身分，不直接開放 classroom_game_links 表給 anon 寫。
-async function loadGameLinkStatus(token) {
-  var el = document.getElementById('gameLinkCard');
-  if (!el || !token) return;
-  try {
-    var statusRes = await sb.rpc('get_game_link_status', { p_token: token });
-    var row = statusRes.data && statusRes.data[0];
-    if (row && row.linked) {
-      el.innerHTML =
-        '<div style="display:flex;align-items:center;gap:8px;background:var(--gold-light);border-radius:9px;padding:10px 12px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--gold-deep);font-weight:600;">' +
-          '✅ 已連結：' + escHtml(row.email || '') +
-        '</div>' +
-        '<button onclick="unlinkGameAccount(\'' + token + '\')" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--ink-muted);border-radius:999px;padding:8px 16px;font-size:0.8rem;font-family:\'Noto Sans TC\',sans-serif;cursor:pointer;">解除連結</button>';
-      return;
-    }
-    var sessRes = await sb.auth.getSession();
-    var user = sessRes.data && sessRes.data.session && sessRes.data.session.user;
-    if (user) {
-      el.innerHTML =
-        '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:8px;">目前登入的遊戲帳號：<b>' + escHtml(user.email || '') + '</b></p>' +
-        '<button class="btn-gold" style="display:block;margin:0 auto;" onclick="linkGameAccount(\'' + token + '\')">🔗 連結這個帳號</button>';
-    } else {
-      el.innerHTML =
-        '<p style="font-size:0.82rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;margin-bottom:8px;">請先登入你玩遊戲用的帳號，才能連結。</p>' +
-        '<button class="btn-gold" style="display:block;margin:0 auto;" onclick="gameLoginForLink(\'' + token + '\')">使用 Google 登入</button>';
-    }
-  } catch (e) {
-    el.innerHTML = '<p style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">⚠️ 載入失敗，稍後再試</p>';
-  }
-}
-async function linkGameAccount(token) {
-  var el = document.getElementById('gameLinkCard');
-  try {
-    var res = await sb.rpc('link_game_account', { p_token: token });
-    if (res.error) throw res.error;
-    loadGameLinkStatus(token);
-  } catch (e) {
-    alert('連結失敗：' + (e.message || e));
-  }
-}
-async function unlinkGameAccount(token) {
-  if (!confirm('確定要解除連結嗎？')) return;
-  try {
-    var res = await sb.rpc('unlink_game_account', { p_token: token });
-    if (res.error) throw res.error;
-    loadGameLinkStatus(token);
-  } catch (e) {
-    alert('解除失敗：' + (e.message || e));
-  }
-}
-function gameLoginForLink(token) {
-  try { sessionStorage.setItem('classroomLinkToken', token); } catch (e) {}
-  sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
 }
 
 // ── 「入班前 / 等待老師確認收款」頁面 ──────────────────────
@@ -774,152 +715,6 @@ async function loadStudentSchedule(token) {
   }
 }
 
-var studentFilesData = {};
-
-async function loadStudentFiles(token) {
-  const el = document.getElementById('filesList');
-  if (!el) return;
-  try {
-    const { data, error } = await sb.rpc('get_student_recordings', { p_token: token });
-    if (error || !data || !data.length) {
-      studentFilesData[token] = [];
-      el.innerHTML = '<div style="text-align:center;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;padding:8px 0;">尚無課堂資料<br><span style="font-size:0.78rem;">課後老師上傳後即可在此下載</span></div>';
-      return;
-    }
-    studentFilesData[token] = data;
-    renderStudentFiles(token);
-  } catch(e) {
-    el.innerHTML = '<div style="color:var(--ink-muted);font-size:0.83rem;text-align:center;padding:8px 0;">載入失敗</div>';
-  }
-}
-
-// กดที่ไหนในแถวก็เปิดลิงก์ได้เลย ยกเว้นกดโดนช่องติ๊ก / ปุ่มลบ / ปุ่ม 開啟 เอง (ให้อันนั้นทำงานของตัวเองตามปกติ ไม่เปิดซ้ำ)
-function openFileRow(e, url) {
-  if (e.target.closest('a,button,input')) return;
-  var u = String(url || '').trim();
-  if (/^https:\/\//i.test(u)) window.open(u, '_blank', 'noopener');
-}
-
-// สร้าง 1 แถวไฟล์ (ใช้ index เดิมของ data → checkbox / bulk ทำงานถูกทุกกลุ่ม)
-function fileRowHTML(r, i, tid) {
-  var name = r.name || '';
-  var isLink = name.startsWith('教材_') || name.startsWith('教材');
-  var icon = (name.includes('筆記') || name.includes('note') || name.includes('補充說明')) ? '📝'
-           : isLink ? '📖'
-           : '🎬';
-  var d = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }) : '';
-  var sz = r.size_mb ? ' · ' + r.size_mb + ' MB' : '';
-  var label = isLink ? name.replace(/^教材_/, '') : (name || (d + ' 課堂錄影' + sz));
-  var safeUrl = escAttrJs(r.url || '');
-  var actionLabel = isLink ? '🔗 開啟' : '⬇ 下載';
-  var rowClickAttr = safeHref(r.url) !== '#'
-    ? ' style="cursor:pointer;" onclick="openFileRow(event,\'' + safeUrl + '\')"'
-    : '';
-  return '<div class="drive-file-row"' + rowClickAttr + '>' +
-    '<input type="checkbox" class="file-cb" data-token="' + tid + '" data-idx="' + i + '" onchange="onFileCbChange(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--gold-deep);">' +
-    '<span class="drive-file-icon">' + icon + '</span>' +
-    '<span class="drive-file-name">' + label + '</span>' +
-    '<a class="drive-file-dl" href="' + escHtml(safeHref(r.url)) + '" target="_blank" rel="noopener">' + actionLabel + '</a>' +
-    '<button onclick="deleteStudentFile(\'' + tid + '\',\'' + safeUrl + '\',this)" title="從清單移除" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;margin-left:4px;opacity:0.55;">🗑</button>' +
-  '</div>';
-}
-
-function fileSectionHead(txt) {
-  return '<div style="font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:0.82rem;color:var(--gold-deep);letter-spacing:0.5px;margin:2px 0 8px;padding-bottom:5px;border-bottom:1.5px solid var(--border);">' + txt + '</div>';
-}
-
-function renderStudentFiles(token) {
-  const el = document.getElementById('filesList');
-  if (!el) return;
-  const data = studentFilesData[token] || [];
-  var tid = token.replace(/'/g, '');
-
-  // แยกเป็น 2 หมวด: 教科書 (ลิงค์教材) กับ ไฟล์อื่น ๆ
-  var bookRows = [], otherRows = [];
-  data.forEach(function(r, i) {
-    var name = r.name || '';
-    var isLink = name.startsWith('教材_') || name.startsWith('教材');
-    (isLink ? bookRows : otherRows).push(fileRowHTML(r, i, tid));
-  });
-
-  var body = '';
-  if (bookRows.length) {
-    body += fileSectionHead('📖 教科書') +
-      '<div class="drive-file-list" style="margin-bottom:16px;">' + bookRows.join('') + '</div>';
-  }
-  if (otherRows.length) {
-    body += fileSectionHead('🎬 上課錄影 & 資料') +
-      '<div class="drive-file-list">' + otherRows.join('') + '</div>';
-  }
-
-  el.innerHTML =
-    '<div id="fileBulkBar_' + tid + '" style="display:none;align-items:center;gap:8px;padding:7px 10px;background:var(--gold-light);border:1px solid var(--border);border-radius:9px;margin-bottom:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.82rem;">' +
-      '<input type="checkbox" id="fileSelectAll_' + tid + '" onchange="toggleSelectAll(\'' + tid + '\')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold-deep);" title="全選">' +
-      '<span id="fileSelCount_' + tid + '" style="flex:1;color:var(--gold-deep);font-weight:700;"></span>' +
-      '<button onclick="bulkDownloadFiles(\'' + tid + '\')" style="background:var(--gold-deep);color:#fff;border:none;border-radius:7px;padding:5px 11px;cursor:pointer;font-size:0.77rem;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;">⬇ 下載</button>' +
-      '<button onclick="bulkDeleteFiles(\'' + tid + '\')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:5px 11px;cursor:pointer;font-size:0.77rem;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;">🗑 移除</button>' +
-    '</div>' +
-    body;
-}
-
-function onFileCbChange(token) {
-  var checked = document.querySelectorAll('.file-cb[data-token="' + token + '"]:checked');
-  var total   = document.querySelectorAll('.file-cb[data-token="' + token + '"]');
-  var bar     = document.getElementById('fileBulkBar_' + token);
-  var countEl = document.getElementById('fileSelCount_' + token);
-  var allCb   = document.getElementById('fileSelectAll_' + token);
-  if (bar)     bar.style.display = checked.length ? 'flex' : 'none';
-  if (countEl) countEl.textContent = '已選 ' + checked.length + ' 個';
-  if (allCb)   allCb.checked = checked.length > 0 && checked.length === total.length;
-  if (allCb)   allCb.indeterminate = checked.length > 0 && checked.length < total.length;
-}
-
-function toggleSelectAll(token) {
-  var allCb = document.getElementById('fileSelectAll_' + token);
-  var cbs   = document.querySelectorAll('.file-cb[data-token="' + token + '"]');
-  cbs.forEach(function(cb) { cb.checked = allCb.checked; });
-  onFileCbChange(token);
-}
-
-function bulkDownloadFiles(token) {
-  var checked = document.querySelectorAll('.file-cb[data-token="' + token + '"]:checked');
-  var data = studentFilesData[token] || [];
-  checked.forEach(function(cb) {
-    var r = data[parseInt(cb.dataset.idx)];
-    if (r && r.url) window.open(safeHref(r.url), '_blank', 'noopener');
-  });
-}
-
-async function bulkDeleteFiles(token) {
-  var checked = document.querySelectorAll('.file-cb[data-token="' + token + '"]:checked');
-  if (!checked.length) return;
-  if (!confirm('確定要從清單移除這 ' + checked.length + ' 個檔案嗎？\n（Google 雲端硬碟原始檔不刪）')) return;
-  var data = studentFilesData[token] || [];
-  var indices = Array.from(checked).map(function(cb) { return parseInt(cb.dataset.idx); });
-  var failed = 0;
-  for (var i = 0; i < indices.length; i++) {
-    var r = data[indices[i]];
-    if (!r || !r.url) continue;
-    try {
-      var res = await sb.rpc('delete_student_recording', { p_token: token, p_url: r.url });
-      if (res.error) failed++;
-    } catch(e) { failed++; }
-  }
-  if (failed) alert(failed + ' 個移除失敗');
-  loadStudentFiles(token);
-}
-
-// 學生：從清單移除某筆檔案（雲端硬碟原檔不刪，老師仍可救回）
-async function deleteStudentFile(token, url, btn) {
-  if (!confirm('確定要從清單移除這個檔案嗎？\n（Google 雲端硬碟裡的原始檔不會被刪除）')) return;
-  if (btn) btn.disabled = true;
-  try {
-    const { error } = await sb.rpc('delete_student_recording', { p_token: token, p_url: url });
-    if (error) { alert('移除失敗：' + error.message); if (btn) btn.disabled = false; return; }
-    loadStudentFiles(token);
-  } catch(e) { alert('移除失敗：' + (e.message || e)); if (btn) btn.disabled = false; }
-}
-
 // 學生：「課堂資料下載」卡片裡的教科書網頁連結（老師在「📚 教材連結」貼的，name 開頭是 教材_/教材）
 // 2026-07-18 加回（Lin 要求）：拿掉檔案清單那次順手把這個也拿掉了，教科書網頁連結是老師/學生
 // 常用的東西，要單獨留一顆按鈕（不是塞回整份檔案清單）
@@ -940,7 +735,6 @@ async function loadStudentTextbookLinks(token) {
 
 // 學生：顯示「開啟我的 Google Drive 資料夾」連結（老師上傳後才會有）
 // 2026-07-18 改（Lin 要求）：這張卡現在只留這顆 Drive 按鈕，不再直接列檔案清單/下載鈕
-// （之前的檔案清單邏輯還留在 loadStudentFiles/renderStudentFiles，只是不再呼叫，之後要恢復也還在）
 async function loadStudentFolderLink(token) {
   const el = document.getElementById('driveFolderLink');
   if (!el) return;
@@ -954,4 +748,3 @@ async function loadStudentFolderLink(token) {
       '<p class="meet-link-text" style="margin-top:6px;">這裡有老師上傳的所有課堂資料</p>';
   } catch(e) { el.innerHTML = ''; }
 }
-

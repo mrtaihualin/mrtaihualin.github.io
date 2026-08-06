@@ -1,5 +1,6 @@
 
 // ============================================================
+// FILE MAP: notes document lifecycle → editor/autosave → low-quota calculation → selected-student quota/payment view
 // 課堂筆記 = 直接開該生 Google 文件來打字（Docs 原生即時自動儲存，最穩）
 //   每位學生固定一份「學生名 — 課堂筆記」文件，放在該生 學習內容 資料夾，
 //   分享給學生可看，並記錄到「課堂資料下載」。
@@ -309,4 +310,3 @@ async function loadTeacherStudentInfo(token) {
     console.warn('loadTeacherStudentInfo failed:', e);
   }
 }
-

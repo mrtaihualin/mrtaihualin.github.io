@@ -1,4 +1,5 @@
 // listening-game-app.js — 泰語聽力練習室 (listening-game.html)
+// FILE MAP: [01] display preferences → [02] DOM/utilities/pool → [03] mode + round flow → [04] answers/reveal → [05] results/init
 // สร้าง 2026-08-02 · เกมที่ 6 ของเว็บ: ฟังเสียงคำศัพท์จริง (WordAudio) แล้วเลือก/พิมพ์คำตอบ
 // กติกาสำคัญ: ใช้เฉพาะคำใน WORDS_MASTER ที่ "มีไฟล์เสียงจริงอยู่แล้ว" (WordAudio.has()) เท่านั้น
 // ห้ามใช้เสียงสังเคราะห์ของเบราว์เซอร์เด็ดขาด (เว็บปิดฟีเจอร์นี้ถาวรตามคำสั่ง Lin 2026-06-18) — ใช้ไฟล์เสียงจริงผ่าน WordAudio เท่านั้น

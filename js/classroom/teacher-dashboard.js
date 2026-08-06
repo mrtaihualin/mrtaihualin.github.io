@@ -1,4 +1,5 @@
 // ============================================================
+// FILE MAP: student links/recording → roster/filtering → archive/delete/Drive → selection/requests → notes
 // TEACHER ACTIONS
 // ============================================================
 function buildStudentUrl(token) {

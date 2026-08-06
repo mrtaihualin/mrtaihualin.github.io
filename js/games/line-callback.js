@@ -10,6 +10,7 @@
 //
 // เริ่มต้น flow ที่ reading-auth.js (ฟังก์ชัน startLineLogin) — หน้านั้นเป็นคนสร้าง
 // state/nonce/return_to เก็บใน sessionStorage ก่อน redirect ไป LINE
+// FILE MAP: [01] safe output/return URL → [02] callback validation → [03] token exchange + redirect
 // ════════════════════════════════════════════════════════════
 (function () {
   'use strict';

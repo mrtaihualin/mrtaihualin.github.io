@@ -1,5 +1,6 @@
 /* =====================================================================
    nav-ui.js — 浮動目錄 & 補充說明按鈕
+ * FILE MAP: page navigation → floating notes editor → formatting/shortcuts → PDF → menu + lifecycle guards
    共用 JS 元件：修改這裡，全部頁面同步更新
    ===================================================================== */
 (function () {

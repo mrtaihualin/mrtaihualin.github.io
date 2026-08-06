@@ -1,4 +1,5 @@
 // progress-sync.js — ซิงก์ความก้าวหน้าผู้เล่น (แบดจ์/สตรีค/ล็อกชุด/คำพิเศษ/สถิติคำผิด) ขึ้น Supabase
+// FILE MAP: client/auth state → local-state keys/merge → pull → debounced push → auth binding
 //   LIN 2026-06-20 · ต้องมีตาราง public.tone_progress + RLS (ดู _แผนงาน/Supabase_sync_progress_2026-06-20.md)
 //   ออกแบบให้ "ปลอดภัยเสมอ": ถ้ายังไม่ล็อกอิน / ไม่มีตาราง / เน็ตล่ม → ไม่พัง เล่นต่อด้วย localStorage ปกติ
 (function () {

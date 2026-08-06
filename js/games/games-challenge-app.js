@@ -1,5 +1,6 @@
 /**
  * games-challenge-app.js — เกมรวม (綜合遊戲練習室) — Lin
+ * FILE MAP: shared helpers/state → tone stage → reading stage → typing stage → scoring/effects → round/results → controls/init
  * ขอบเขต: เฉพาะ 初級ทั้งหมด (พยางค์เดียว + 2 พยางค์) · 3 ด่านต่อคำ: ทายเสียง → ต่อพยางค์ → พิมพ์
  *
  * ════════════════════════════════════════════════════════════════════════════

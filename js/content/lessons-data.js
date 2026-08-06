@@ -1,3 +1,4 @@
+// FILE MAP: [01] interactive self-study articles → [02] full blog article links
 // ===== 📖 自學專區資料 =====
 // เพิ่มบทเรียนใหม่ที่นี่ โดย copy รูปแบบด้านล่าง
 // vocabulary[]: { thai, phonetic, meaning, note, examples[{thai,zh}] }

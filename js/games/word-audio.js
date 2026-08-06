@@ -2,6 +2,7 @@
 // สร้าง 2026-07-16 · ไอคอน 🔊 ชั่วคราว (Lin จะเลือกไอคอนธีมข้าวทีหลัง — กฎ 17)
 // กติกา: ปุ่มโชว์ "เฉพาะคำที่มีไฟล์เสียงจริง" ใน AUDIO_MANIFEST (data/audio-manifest.js)
 // ไม่มีไฟล์เสียง = ไม่มีปุ่ม (ไม่ใช้ Web Speech API — เว็บปิดเสียงสังเคราะห์ตามคำสั่ง Lin 2026-06-18)
+// FILE MAP: [01] manifests/URL → [02] styles/playback → [03] button helpers → [04] current-word control → [05] API
 (function () {
   var _cache = {};    // url -> Audio (โหลดครั้งเดียว เล่นซ้ำได้ทันที)
   var _current = null;

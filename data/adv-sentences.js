@@ -1,5 +1,6 @@
 /**
  * adv-sentences.js — ประโยค 高級 ใช้ร่วมกันทุกเกม (Lin 2026-07-02, ขยายสคีมา 2026-07-11)
+ * ROLE: authoritative runtime sentence data + browser adapters; edit entries only through the approved content workflow
  * ใช้ใน: typing-game.html (เกมพิมพ์) · reading-game.html (เกมอ่าน) · tone-finder.html (เกมเสียง) · word-order.html (เกมลำดับคำ)
  *
  * ⚠️ 2026-07-11: ก่อนหน้านี้ reading-game.html และ typing-game.html แยกไป copy ข้อมูล 10 ประโยคนี้เก็บเองในไฟล์ (ไม่ sync กับไฟล์นี้)

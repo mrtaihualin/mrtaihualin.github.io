@@ -2,6 +2,7 @@
  * word-vault.js — คลังคำร่วม (Shared Word Vault)
  * ใช้ร่วมกันทุกเกม: tone-finder, reading-game, typing-game, lego-game (อนาคต)
  * เก็บข้อมูลใน localStorage ภายใต้ key "linvault_v1"
+ * FILE MAP: [01] storage → [02] vault API → [03] UI helpers → [04] badge/styles → [05] export
  */
 
 (function(global) {

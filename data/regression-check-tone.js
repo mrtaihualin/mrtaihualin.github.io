@@ -1,5 +1,6 @@
 /**
  * regression-check-tone.js — ตรวจครั้งเดียว: เครื่องคิดวรรณยุกต์ (ที่แก้บั๊กแล้ว) เทียบกับคำตอบที่ Lin พิมพ์ไว้
+ * ROLE/MAP: one-off Node regression generator → load data/engine → compare syllables → write review report
  * ใช้ครั้งเดียว ไม่ใช่ระบบถาวร (System 1 ตาม _แผนงาน/2026-07-13_ออกแบบ2ระบบ...)
  *
  * วิธีรัน: node data/regression-check-tone.js

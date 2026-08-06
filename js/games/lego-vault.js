@@ -3,6 +3,7 @@
  * แยกจาก word-vault.js (linvault_v1) โดยตั้งใจ — คนละ key คนละเพดาน
  * ใช้ได้เฉพาะใน lego.html เท่านั้น · ต้องล็อกอินก่อนถึงจะเซฟได้ (เช็คที่ฝั่ง lego.html)
  * เก็บข้อมูลใน localStorage ภายใต้ key "lego_vault_v1" เพดานสูงสุด 15 คำ
+ * FILE MAP: [01] storage → [02] vault operations → [03] public API
  */
 
 (function(global) {

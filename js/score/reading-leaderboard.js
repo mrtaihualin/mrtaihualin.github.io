@@ -1,5 +1,6 @@
 // ════════════════════════════════════════════════════════════
 // reading-leaderboard.js — กระดานเกมอ่าน+เกมพิมพ์ (reading-board.html / typing-board.html)
+// FILE MAP: board/game config → badge rendering → RPC/fallback loading → weekly/all-time UI → auth/tabs/init
 // mirror ของ leaderboard.js · จัดอันดับด้วย "คะแนนสะสมรวม" 2 แท็บ: รายสัปดาห์ / ตลอดกาล
 // ดึงผ่าน RPC (security definer) — เห็นเฉพาะชื่อเล่น+คะแนน ไม่เห็นอีเมล
 // v2 (LIN 2026-07-02): แยกกระดานตามเกม — หน้า typing-board ตั้ง

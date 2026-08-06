@@ -1,4 +1,5 @@
 // ════════════════════════════════════════════
+// FILE MAP: display helpers → config/state/scoring/SRS → sync + round selection → typing/answer UI → results/account → controls/analytics/init
 // TONE MARK DISPLAY HELPER
 // renders tone mark without ◌ — uses hidden ก as base via CSS ::before
 // ════════════════════════════════════════════
@@ -2325,4 +2326,3 @@ try {
     }, true);
   }
 } catch(e){}
-

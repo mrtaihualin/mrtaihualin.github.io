@@ -1,4 +1,5 @@
 // ════════════════════════════════════════════════════════════
+// PUBLIC CONFIG ONLY: LINE Login channel LIFF id; no runtime logic in this file
 // LIFF config (2026-07-06 ใส่ค่าจริงแล้ว)
 // ⚠️ อัปเดต: LINE เปลี่ยนกฎ (มีผลก่อนวันที่ตั้งค่านี้) — สร้าง LIFF ใน channel แบบ
 //    "Messaging API" ตรงๆ ไม่ได้แล้ว ต้องสร้าง channel แยกแบบ "LINE Login"

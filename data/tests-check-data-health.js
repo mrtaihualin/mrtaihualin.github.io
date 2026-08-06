@@ -1,5 +1,6 @@
 /**
  * tests-check-data-health.js — เทสง่ายๆ (input→output ชัดเจน) ให้ฟังก์ชันย่อยของ check-data-health.js
+ * ROLE: Node unit-test entrypoint; fixtures are synthetic and never shipped as game content
  * ใช้ "คำสมมติ" ที่แต่งขึ้นมาเองเพื่อทดสอบ logic เท่านั้น (ไม่ใช่เนื้อหาเกมจริง ไม่แตะ words-data.js เลย —
  * ไม่ขัดกฎ 16 เพราะเป็นแค่ fixture ทดสอบโค้ด ไม่เคยถูกโชว์ให้นักเรียนเห็น)
  *
