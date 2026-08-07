@@ -214,6 +214,9 @@ function isPlaceholder(value) {
   if (/^(?:example|placeholder|redacted|changeme|not[-_ ]?set)$/i.test(normalized)) return true;
   if (/^(?:\.{3,}|x{4,})$/i.test(normalized)) return true;
   if (/^[([]/.test(normalized)) return true;
+  // ค่าลับจริง (JWT/hex/base64/token) เป็นตัวอักษรละตินเสมอ ไม่มีทางมีตัวอักษรไทย
+  // ข้อความคำแนะนำในคอมเมนต์ เช่น "ใส่ค่าที่ได้จาก Google Cloud" จึงไม่ใช่ค่าลับจริงแน่นอน
+  if (/[฀-๿]/.test(clean)) return true;
   return /^(?:YOUR|REPLACE|INSERT|EXAMPLE|PLACEHOLDER)[-_ A-Z0-9]+$/i.test(normalized);
 }
 
@@ -294,7 +297,7 @@ function scanTokens(relative, text, findings, seen) {
 
 function assignmentMatches(text, names, includeUnquoted = true) {
   const escaped = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  const quoted = new RegExp(`["']?(${escaped})["']?\\s*(?:=|:)\\s*(["'\\x60])([^"'\\x60\\r\\n]*)\\2`, 'gi');
+  const quoted = new RegExp(`["']?\\b(${escaped})\\b["']?\\s*(?:=|:)\\s*(["'\\x60])([^"'\\x60\\r\\n]*)\\2`, 'gi');
   const unquoted = new RegExp(`\\b(${escaped})\\b\\s*(?:=|:)\\s*([^\\s#;,"'\\x60]+)`, 'gi');
   const matches = [...text.matchAll(quoted)].map((match) => ({ match, quoted: true }));
   if (includeUnquoted) matches.push(...[...text.matchAll(unquoted)].map((match) => ({ match, quoted: false })));
