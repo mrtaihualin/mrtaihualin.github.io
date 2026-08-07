@@ -20,10 +20,17 @@
 --   ห้ามรวบรันทั้งไฟล์ทีเดียว เพราะหัวข้อ D สลับ cron จริงและต้องพิสูจน์ทีละงานก่อนไปงานถัดไป
 --   ทุกคำสั่งเขียนให้รันซ้ำได้ (idempotent) — รันซ้ำไม่พัง ไม่สร้างของซ้ำ
 --
--- 📌 สถานะ ณ 2026-08-07 (ทำไปแล้วบางส่วนผ่าน SQL Editor ก่อนมีไฟล์นี้):
---   ✅ schema private, extension supabase_vault, secret ของ welcome-retry + request-sla
---   ✅ job 10 (welcome-retry-cron-hourly) สลับไปใช้ฟังก์ชันแล้ว พิสูจน์ว่ารันอัตโนมัติได้จริง
---   ⬜ job 8, 9, 5, 14 ยังไม่ย้าย
+-- ✅ สถานะ 2026-08-07: ทำครบทุกงานแล้ว — cron ทั้ง 6 งานที่เหลือไม่มีค่าลับในคำสั่งอีกต่อไป
+--   | job | ชื่อ | หลักฐาน HTTP |
+--   |-----|------|--------------|
+--   |  5  | class-reminder-every-5-min  | 200 (req 12917, 12920 — รอบอัตโนมัติ) |
+--   |  8  | request-sla-reminder        | 200 (req 12916 — รอบอัตโนมัติ) |
+--   |  9  | low-quota-daily             | 200 (req 12923 — เรียกด้วยมือ · รอบอัตโนมัติรอตี 2) |
+--   | 10  | welcome-retry-cron-hourly   | 200 (req 12889 + รอบอัตโนมัติ 02:55) |
+--   | 13  | star-fraud-daily            | ไม่เกี่ยว — SQL ล้วน ไม่เรียก Edge Function |
+--   | 14  | calendar-schedule-sync-cron | 200 (req 12922) |
+--   🗑️ job 12 (low-quota-cron-daily) ลบทิ้งแล้ว — พิสูจน์ตรงด้วย req 12926 ว่าคำสั่งของมัน
+--      (ไม่มี auth header เลย) ถูก gateway ตอบ 401 เสมอ = ไม่เคยทำงานจริงตั้งแต่ตั้งมา
 -- ============================================================================
 
 
@@ -119,7 +126,7 @@ select vault.create_secret(
   'cron_class_reminder_key'
 );
 
--- B5. calendar-schedule-sync-cron (job 14) — ใช้ header 'apikey' ไม่ใช่ 'Authorization'
+-- B5. calendar-schedule-sync-cron (job 14) — anon key ใช้ทั้ง 'apikey' และ 'Authorization'
 --     ⚠️ ฟังก์ชันปลายทางปิด Verify JWT และไม่มีด่านตรวจผู้เรียกเอง
 --        การย้ายเข้า Vault ทำให้ Dashboard ไม่เห็นค่า แต่ "ไม่ได้ปิดช่องที่ใครก็เรียก endpoint ได้"
 --        เรื่องนั้นเป็นงานแยก ต้องขออนุมัติ Lin ต่างหาก (ดูแผน 16 หัวข้อ 6 หมายเหตุ)
@@ -286,7 +293,13 @@ begin
 end;
 $$;
 
--- C5. calendar-schedule-sync-cron (job 14) — ใช้ header 'apikey' ตามของเดิม
+-- C5. calendar-schedule-sync-cron (job 14)
+--     🔴 ต้องส่ง header ครบ 2 ตัว: 'apikey' และ 'Authorization' (ค่าเดียวกัน = anon key)
+--        ยืนยันจากต้นฉบับ `2026-07-17_pg_cron_calendar_schedule_sync.sql:21-25`
+--        บทเรียน 2026-08-07: เขียนครั้งแรกส่งแค่ 'apikey' ตัวเดียว → Supabase gateway ตอบ 401
+--        ทุกรอบ (ทุก 5 นาที) = ระบบซิงก์ตารางเรียนหยุดทำงานเงียบๆ
+--        สาเหตุ: ดูคำสั่งเดิมจากหน้าจอที่ค่าถูกปิดบังไว้ แล้วเดาโครงสร้าง header เอง
+--                แทนที่จะเปิดไฟล์ต้นฉบับในเครื่องอ่านก่อน
 create or replace function private.call_calendar_sync_cron()
 returns void
 language plpgsql
@@ -309,7 +322,8 @@ begin
     url     := 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/calendar-schedule-sync-cron',
     headers := jsonb_build_object(
                  'Content-Type', 'application/json',
-                 'apikey', v_key
+                 'apikey', v_key,
+                 'Authorization', 'Bearer ' || v_key
                ),
     body    := '{}'::jsonb
   ) into v_request_id;
@@ -355,8 +369,12 @@ select cron.alter_job(5, command := $$select private.call_class_reminder_cron();
 --     ยืนยันแล้ว 2026-08-07: header มีแค่ Content-Type ไม่มี Authorization/apikey เลย
 --     ปลายทาง low-quota-cron เปิด Verify JWT → request นี้ต้องโดนปฏิเสธทุกครั้ง
 --     = เป็นงานซ้ำที่ไม่เคยทำงานจริง (ตัวจริงคือ job 9)
---     🔴 ก่อนรัน: ยืนยันด้วย E3 ก่อนว่า job 12 ไม่เคยยิงสำเร็จจริง
--- select cron.unschedule(12);
+--     ✅ ทำแล้ว 2026-08-07 · พิสูจน์ตรงก่อนลบด้วยการยิงคำสั่งเดียวกับ job 12 เป๊ะๆ:
+--        select net.http_post(
+--          url := 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/low-quota-cron',
+--          headers := '{"Content-Type":"application/json"}'::jsonb
+--        ) as request_id;   -- ได้ req 12926 → net._http_response บอก status_code = 401
+select cron.unschedule(12);
 
 
 -- ============================================================================
@@ -439,7 +457,7 @@ order by p.proname;
 -- select cron.alter_job(14, command := format($$
 --   select net.http_post(
 --     url := 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/calendar-schedule-sync-cron',
---     headers := jsonb_build_object('Content-Type','application/json','apikey','%s'),
+--     headers := jsonb_build_object('Content-Type','application/json','apikey','%1$s','Authorization','Bearer %1$s'),
 --     body := '{}'::jsonb
 --   );
 -- $$, (select decrypted_secret from vault.decrypted_secrets where name = 'cron_calendar_sync_key')));
