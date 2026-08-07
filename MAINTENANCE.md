@@ -1,5 +1,31 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-07 — P3-A: regenerate .min.js ที่ล้าหลัง 5 คู่ไฟล์
+
+สถานะ: **✅ เสร็จแล้ว**
+
+ปัญหาที่แก้: `.min.js` ของเกม 5 ไฟล์ล้าหลังต้นฉบับ `.js` 1-8 วัน (เจอจากรายงาน P3 `24f_ผลลัพธ์_P3_min-js-sync.md`) ผู้เล่นทุกคนโหลดแต่ `.min.js` เท่านั้น แปลว่าเห็นโค้ดเก่ากว่าที่แก้ไว้จริง
+
+วิธีแก้: ติดตั้ง `terser` ผ่าน `npx --yes terser` (ไม่แก้ `package.json` — repo นี้ไม่เคยมี `package.json`/`node_modules` มาก่อน การเพิ่มเข้าไปจะเปลี่ยนโครงสร้าง repo เกินขอบเขตงานนี้ และ `npx` ใช้ได้ตรงๆ โดยไม่ต้องติดตั้งถาวร) รัน `terser <ไฟล์>.js --compress --mangle -o <ไฟล์>.min.js` ทับของเดิมทั้ง 5 คู่
+
+**สิ่งที่น่าสนใจที่พบระหว่างตรวจ:** ไฟล์ `js/core/shared.min.js` และ `js/games/tone-finder-game.min.js` ที่ regenerate ใหม่ **ตรงกับของเดิมทุกไบต์ (md5 เหมือนกัน)** ทั้งที่ต้นฉบับ `.js` ถูกแก้หลังสุด (mtime ใหม่กว่า) — ตรวจซ้ำด้วยการรัน terser แยกต่างหากยืนยันผลเดิม แปลว่าการแก้ต้นฉบับช่วงนั้นเป็นแค่ comment/formatting ที่ไม่กระทบ logic จริง (terser ตัดคอมเมนต์ออกอยู่แล้ว) ไม่ใช่บั๊กของกระบวนการ — อีก 3 ไฟล์ (reading-game-app, typing-game-app, word-order-app) ได้ไฟล์ใหม่ที่ต่างจากเดิมจริง ขนาดใกล้เคียงเดิม (ต่าง <1%)
+
+ผลตรวจ:
+- `node --check` ผ่านทุกไฟล์ (syntax ไม่พัง)
+- ขนาดไฟล์ใหม่เทียบเดิมสมเหตุสมผล ไม่มีไฟล์ไหนต่างเกิน 2-3 เท่า
+- `node scripts/check-site.js` ผ่านทั้งหมด (817 ไฟล์)
+- `node scripts/check-minified-sync.js` ยืนยัน `.min.js` ใหม่กว่า `.js` แล้วทุกคู่ (MISMATCH ยังขึ้นตามปกติ เพราะวิธีเทียบแบบ exact-match ใช้ยืนยัน "เหมือนกันจริง" ไม่ได้อยู่แล้ว — ดูคอมเมนต์ในสคริปต์)
+
+งานที่ทำ:
+- Regenerate `js/core/shared.min.js`, `js/games/reading-game-app.min.js`, `js/games/typing-game-app.min.js`, `js/games/word-order-app.min.js`, `js/games/tone-finder-game.min.js`
+- เพิ่ม `scripts/build-minjs.sh` — รัน terser กับทั้ง 5 คู่ไฟล์ในคำสั่งเดียว (`bash scripts/build-minjs.sh`) ใช้ซ้ำได้ทุกครั้งที่แก้ต้นฉบับ
+
+**⚠️ กฎใหม่ — แก้ไฟล์ `.js` ต้นฉบับ 5 ไฟล์นี้แล้ว ต้องรัน `bash scripts/build-minjs.sh` ก่อน push ทุกครั้ง:**
+`js/core/shared.js`, `js/games/reading-game-app.js`, `js/games/typing-game-app.js`, `js/games/word-order-app.js`, `js/games/tone-finder-game.js`
+(เว็บทุกหน้าโหลดแต่ `.min.js` เท่านั้น ไม่มีหน้าไหนโหลด `.js` ตัวเต็มเลย — ไม่รันตามนี้ = ผู้เล่นเห็นโค้ดเก่า)
+
+รายงานเต็ม: `Bussiness Idea/ระบบเว็บไซต์/25a_ผลลัพธ์_regenerate-minjs.md`
+
 ## 2026-08-07 — P3 รวมผล: ตัวทดสอบคุ้มกันพฤติกรรมเดิม (6 แชทคู่ขนาน)
 
 สถานะ: **ทำแล้วบางส่วน** (P3-01/02/03/05/06/08 มีของแล้ว · P3-04 integration tests ของจริงยังไม่มี ต้องมือ · P3-07 ย้ายแค่ 1 ไฟล์ ยังไม่ปรับโครงสร้างเต็ม)

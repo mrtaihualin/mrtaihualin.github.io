@@ -77,7 +77,7 @@ login_events · payout_ledger · reading_sessions · star_fraud_alerts · star_l
 
 ตรวจแล้วพบว่าโครงการนี้ **ไม่มีระบบ migration เลย** — ยืนยัน 2 ชั้น: ตาราง `supabase_migrations.schema_migrations` ไม่มีอยู่จริง และรายชื่อ schema ทั้งหมดก็ไม่มี `supabase_migrations`
 
-มีไฟล์ `supabase/sql/2026-08-07_migration_tracking.sql` เตรียมไว้แล้ว (สร้างตาราง `private.sql_run_log`) — Lin อนุมัติแล้ว 2026-08-07 **แต่สถานะว่ารันจริงหรือยังยังไม่ยืนยัน** (เอกสารขัดกันเอง ดูรายละเอียดที่ `Bussiness Idea/ระบบเว็บไซต์/20_ผลตรวจ_P2_database_rls.md` ข้อ 4) — รอ Lin รัน `select to_regclass('private.sql_run_log');` เพื่อยืนยันก่อน
+✅ **ปิดงานแล้ว 2026-08-07** — ตาราง `private.sql_run_log` (จากไฟล์ `supabase/sql/2026-08-07_migration_tracking.sql`) ยืนยันแล้วว่ามีอยู่จริง (Lin รัน `select to_regclass('private.sql_run_log');` ได้ผลกลับมา)
 
 ### 3. จุดสีแดง 3 จุดในฟังก์ชันที่เพิ่งกู้มา — ✅ แก้แล้ว 2026-08-07
 
