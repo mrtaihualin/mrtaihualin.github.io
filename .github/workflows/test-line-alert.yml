@@ -1,0 +1,48 @@
+name: test-line-alert
+
+# ตัวทดสอบอย่างเดียว — ส่งข้อความ LINE ทดสอบ 1 ข้อความหาครู แล้วจบ
+# มีไว้พิสูจน์ว่า "ทางแจ้งเตือนตอนระบบสำรองพัง" ใช้งานได้จริง ไม่ใช่แค่คิดว่าใช้ได้ (กฎ RELIABILITY FIRST)
+# ไม่แตะฐานข้อมูล ไม่แตะ Google Drive ไม่แตะระบบสำรองจริงเลย · กดรันมือเท่านั้น ไม่มีตารางเวลา
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  test-alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: ส่ง LINE ทดสอบ แล้วตรวจว่า LINE ตอบรับจริง
+        env:
+          LINE_TOKEN: ${{ secrets.BACKUP_LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.BACKUP_LINE_TEACHER_USER_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${LINE_TOKEN:-}" ]; then
+            echo "::error::ไม่มี secret BACKUP_LINE_CHANNEL_ACCESS_TOKEN"
+            exit 1
+          fi
+          if [ -z "${LINE_USER_ID:-}" ]; then
+            echo "::error::ไม่มี secret BACKUP_LINE_TEACHER_USER_ID"
+            exit 1
+          fi
+
+          HTTP_CODE=$(curl -s -o /tmp/line_resp.txt -w '%{http_code}' \
+            -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer $LINE_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"to":"'"$LINE_USER_ID"'","messages":[{"type":"text","text":"🧪 ทดสอบระบบแจ้งเตือน — ถ้าเห็นข้อความนี้ แปลว่าเวลาระบบสำรองข้อมูลพัง จะมี LINE แจ้งเตือนถึงจริง"}]}')
+
+          echo "LINE ตอบกลับ HTTP $HTTP_CODE"
+          cat /tmp/line_resp.txt || true
+          echo ""
+
+          # ⚠️ ห้ามถือว่าสำเร็จเพราะ curl ทำงานจบ — ต้องดูรหัสตอบกลับจาก LINE จริงเท่านั้น
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::LINE ปฏิเสธ (HTTP $HTTP_CODE) — โทเคนผิด/หมดอายุ หรือ user id ไม่ถูกต้อง ดูข้อความตอบกลับด้านบน"
+            exit 1
+          fi
+          echo "✅ LINE ตอบ 200 = ส่งถึงจริง — ไปเช็คในแอป LINE ว่าได้รับข้อความหรือยัง"
