@@ -24,6 +24,24 @@ _backup_*/
 # node_modules (ถ้ามี)
 node_modules/
 
+# ค่าลับและ credential เฉพาะเครื่อง — ห้ามเข้า repository
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*service-account*.json
+*service_account*.json
+credentials*.json
+.npmrc
+.pypirc
+.netrc
+
 # metadata ที่ Supabase CLI สร้างใหม่ได้ในแต่ละเครื่อง
 supabase/.temp/
 

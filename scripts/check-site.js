@@ -5,16 +5,11 @@ const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');
 const vm = require('vm');
+const { formatFinding, listRepositoryFiles, scanProject } = require('./secret-scanner');
 
 const root = path.resolve(__dirname, '..');
 const failures = [];
 const warnings = [];
-
-function trackedFiles() {
-  const tracked = cp.execFileSync('git', ['ls-files', '-z'], { cwd: root }).toString();
-  const newFiles = cp.execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], { cwd: root }).toString();
-  return [...new Set((tracked + newFiles).split('\0').filter(Boolean))];
-}
 
 function existsAsWebTarget(target) {
   if (fs.existsSync(target)) return true;
@@ -54,7 +49,13 @@ function runTest(args, label) {
   else console.log(`✓ ${label}`);
 }
 
-const files = trackedFiles().filter((file) => fs.existsSync(path.join(root, file)));
+const secretScan = scanProject(root);
+secretScan.findings.forEach((finding) => failures.push(`secret scan: ${formatFinding(finding)}`));
+// fail-closed (2026-08-07): ไฟล์ >2MB ที่ไม่เคยถูกสแกน = "ยังไม่ได้ตรวจ" ต้องนับเป็นไม่ผ่าน ห้ามปล่อยให้ exit 0 เงียบๆ
+secretScan.skippedLargeFiles.forEach((file) => failures.push(`secret scan: ไฟล์ข้อความขนาดใหญ่เกิน 2MB ไม่เคยถูกสแกนหาค่าลับ (fail-closed) — ${file}`));
+if (secretScan.findings.length === 0 && secretScan.skippedLargeFiles.length === 0) console.log(`✓ ตรวจค่าลับ ${secretScan.scannedFiles} ไฟล์`);
+
+const files = listRepositoryFiles(root).filter((file) => fs.existsSync(path.join(root, file)));
 const jsFiles = files.filter((file) => file.endsWith('.js'));
 const htmlFiles = files.filter((file) => file.endsWith('.html'));
 const cssFiles = files.filter((file) => file.endsWith('.css'));
@@ -104,6 +105,7 @@ runTest(['data/tests-tone-engine.js'], 'tone engine tests');
 runTest(['data/tests-check-data-health.js'], 'data-health tests');
 runTest(['data/check-duplicate-words.js'], 'duplicate-word check');
 runTest(['data/check-data-health.js'], 'data-health check');
+runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 
 if (warnings.length) {
   console.log(`\nคำเตือน ${warnings.length} รายการ:`);
