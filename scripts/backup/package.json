@@ -1,0 +1,8 @@
+{
+  "name": "backup-database-to-drive-helper",
+  "private": true,
+  "description": "ตัวช่วยของ .github/workflows/backup-database-to-drive.yml — อัปโหลดไฟล์สำรองฐานข้อมูลขึ้น Google Drive ของ Lin แล้วตรวจสอบว่าสำเร็จจริง ก่อนลบของเก่าที่เกินกำหนด (P2-07) — รันจาก GitHub Actions เท่านั้น ไม่ต้องรันในเครื่อง Lin",
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}

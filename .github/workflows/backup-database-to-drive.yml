@@ -1,0 +1,120 @@
+name: backup-database-to-drive
+
+# P2-07 — สำรองฐานข้อมูล Supabase ขึ้น Google Drive ของ Lin ทุกวัน
+# ดูแผนเต็มที่: Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/21_ระบบสำรองข้อมูล.md
+# คู่มือตั้งค่า: _dev/2026-08-07_คู่มือตั้งค่าระบบสำรองข้อมูล.md
+#
+# ⚠️ ห้าม push ไฟล์นี้เข้า GitHub ก่อนตั้งค่า secret ครบทุกตัวตามคู่มือ
+#    ไม่งั้นตี 3 คืนแรกจะรันแล้วพังทันที (ยังไม่มี error ร้ายแรง แค่จะได้ LINE แจ้งพังฟรีๆ)
+
+on:
+  workflow_dispatch: {} # กดรันมือได้จากแท็บ Actions ตอนทดสอบ
+  schedule:
+    - cron: '0 19 * * *' # 03:00 น. เวลาไทย (UTC+7) ทุกวัน
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: ดึงเฉพาะสคริปต์ที่ต้องใช้ (ไม่ต้อง checkout ทั้ง repo)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/backup
+          sparse-checkout-cone-mode: false
+
+      - name: ติดตั้ง postgresql-client + gpg
+        run: sudo apt-get update -y && sudo apt-get install -y postgresql-client gnupg
+
+      - name: ติดตั้ง Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: ติดตั้ง dependency ของสคริปต์อัปโหลด
+        working-directory: scripts/backup
+        run: npm install --no-save
+
+      - name: ดึงข้อมูลฐานข้อมูล (สิทธิ์ผู้ใช้ / โครงตาราง / ข้อมูล) ผ่าน Session Pooler
+        env:
+          DB_URL: ${{ secrets.BACKUP_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DB_URL:-}" ]; then
+            echo "::error::ไม่มี secret BACKUP_DB_URL — ตั้งค่าก่อนตามคู่มือ"
+            exit 1
+          fi
+          mkdir -p dump
+          pg_dumpall --dbname="$DB_URL" --roles-only -f dump/roles.sql
+          pg_dump    --dbname="$DB_URL" --schema-only -f dump/schema.sql
+          pg_dump    --dbname="$DB_URL" --data-only    -f dump/data.sql
+          for f in dump/roles.sql dump/schema.sql dump/data.sql; do
+            size=$(stat -c%s "$f")
+            echo "$f = $size bytes"
+            if [ "$size" -lt 100 ]; then
+              echo "::error::$f มีขนาดแค่ $size ไบต์ ผิดปกติมาก หยุดทันที ไม่ไปต่อ"
+              exit 1
+            fi
+          done
+
+      - name: บีบอัดรวมเป็นไฟล์เดียว (เข้ารหัสด้วยถ้าตั้งรหัสผ่านไว้)
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u -d '+7 hours' +'%Y-%m-%d_%H%M')-th
+          tar -czf "backup_${STAMP}.tar.gz" -C dump roles.sql schema.sql data.sql
+          if [ -n "${PASSPHRASE:-}" ]; then
+            gpg --batch --yes --passphrase "$PASSPHRASE" -c "backup_${STAMP}.tar.gz"
+            rm -f "backup_${STAMP}.tar.gz"
+            echo "FINAL_FILE=backup_${STAMP}.tar.gz.gpg" >> "$GITHUB_ENV"
+            echo "เข้ารหัสไฟล์แล้ว"
+          else
+            echo "FINAL_FILE=backup_${STAMP}.tar.gz" >> "$GITHUB_ENV"
+            echo "ไม่ได้เข้ารหัส (ไม่ได้ตั้ง secret BACKUP_ENCRYPT_PASSPHRASE)"
+          fi
+        env:
+          PASSPHRASE: ${{ secrets.BACKUP_ENCRYPT_PASSPHRASE }}
+
+      - name: อัปโหลดขึ้น Google Drive + ตรวจสอบขนาดไฟล์ + ลบของเก่าที่เกิน 30 วัน
+        working-directory: .
+        env:
+          GDRIVE_CLIENT_ID: ${{ secrets.BACKUP_GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.BACKUP_GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.BACKUP_GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_FOLDER_ID: ${{ secrets.BACKUP_GDRIVE_FOLDER_ID }}
+          RETENTION_DAYS: '30'
+          FILE_PATH: ${{ env.FINAL_FILE }}
+        run: node scripts/backup/upload-and-rotate.js
+
+      - name: แจ้งเตือน LINE ทันทีถ้าขั้นตอนไหนพัง
+        if: failure()
+        env:
+          LINE_TOKEN: ${{ secrets.BACKUP_LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.BACKUP_LINE_TEACHER_USER_ID }}
+        run: |
+          if [ -z "${LINE_TOKEN:-}" ] || [ -z "${LINE_USER_ID:-}" ]; then
+            echo "::error::ไม่มี secret LINE ไว้แจ้งเตือน — ไปดู log ใน tab Actions แทน"
+            exit 0
+          fi
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer $LINE_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"⚠️ ระบบสำรองข้อมูล (P2-07) รันไม่สำเร็จวันนี้ ตรวจ log ด่วน: ${RUN_URL}\"}]}"
+
+      - name: แจ้งสรุปรายสัปดาห์ (ทุกวันจันทร์ เมื่อสำเร็จ)
+        if: success()
+        env:
+          LINE_TOKEN: ${{ secrets.BACKUP_LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.BACKUP_LINE_TEACHER_USER_ID }}
+        run: |
+          DOW=$(date -u -d '+7 hours' +%u)
+          if [ "$DOW" = "1" ] && [ -n "${LINE_TOKEN:-}" ] && [ -n "${LINE_USER_ID:-}" ]; then
+            curl -s -X POST https://api.line.me/v2/bot/message/push \
+              -H "Authorization: Bearer $LINE_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"to":"'"$LINE_USER_ID"'","messages":[{"type":"text","text":"✅ ระบบสำรองข้อมูล (P2-07) ทำงานปกติสัปดาห์นี้ — ตรวจไฟล์ล่าสุดได้ในโฟลเดอร์ Google Drive"}]}'
+          fi
