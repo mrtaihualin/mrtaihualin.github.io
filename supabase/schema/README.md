@@ -77,13 +77,11 @@ login_events · payout_ledger · reading_sessions · star_fraud_alerts · star_l
 
 ตรวจแล้วพบว่าโครงการนี้ **ไม่มีระบบ migration เลย** — ยืนยัน 2 ชั้น: ตาราง `supabase_migrations.schema_migrations` ไม่มีอยู่จริง และรายชื่อ schema ทั้งหมดก็ไม่มี `supabase_migrations`
 
-มีไฟล์ `supabase/sql/2026-08-07_migration_tracking.sql` เตรียมไว้แล้ว (สร้างตาราง `private.sql_run_log`) แต่ **ยังไม่ได้รันจริง**
+มีไฟล์ `supabase/sql/2026-08-07_migration_tracking.sql` เตรียมไว้แล้ว (สร้างตาราง `private.sql_run_log`) — Lin อนุมัติแล้ว 2026-08-07 **แต่สถานะว่ารันจริงหรือยังยังไม่ยืนยัน** (เอกสารขัดกันเอง ดูรายละเอียดที่ `Bussiness Idea/ระบบเว็บไซต์/20_ผลตรวจ_P2_database_rls.md` ข้อ 4) — รอ Lin รัน `select to_regclass('private.sql_run_log');` เพื่อยืนยันก่อน
 
-### 3. จุดสีแดง 3 จุดในฟังก์ชันที่เพิ่งกู้มา — ยังไม่แก้
+### 3. จุดสีแดง 3 จุดในฟังก์ชันที่เพิ่งกู้มา — ✅ แก้แล้ว 2026-08-07
 
-`submit_payment_slip` · `delete_student_recording` · `get_game_link_status` ทั้ง 3 ตัวเป็น `SECURITY DEFINER` ที่คนไม่ล็อกอินเรียกได้ และ**ไม่มียามเฝ้าประตูเลย** (ไม่มี rate limit ไม่เช็ค token) ต่างจาก RPC นักเรียนตัวอื่นที่มีครบ
-
-เก็บโค้ดของจริงไว้ตามเดิมทุกตัวอักษร ไม่แก้อะไร — รอ Lin ตัดสินใจก่อน (ดูรายงาน `20_ผลตรวจ_P2_database_rls.md`)
+`submit_payment_slip` · `delete_student_recording` · `get_game_link_status` เคยเป็น `SECURITY DEFINER` ที่คนไม่ล็อกอินเรียกได้โดยไม่มียามเฝ้าประตูเลย — แก้แล้วด้วย `supabase/sql/2026-08-07_add_guards_to_3_rpcs.sql` (Lin รันจริงแล้ว + ทดสอบใช้งานจริงผ่านครบ ดู `00_ศูนย์บัญชาการ_START-HERE.md`)
 
 ---
 
