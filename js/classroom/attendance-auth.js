@@ -442,7 +442,15 @@ async function openAttendanceHistory(token) {
     ? '<div style="background:#fbf6ea;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.86rem;color:' + (q.remain <= 1 ? '#b45309' : 'var(--gold-deep)') + ';font-weight:700;">本輪剩餘 ' + remain + ' 堂 <span style="font-weight:400;color:var(--ink-muted);">（本輪 ' + q.bought + ' · 已上 ' + q.used + '）</span></div>'
     : '<div style="background:#faf7f0;border:1px solid #e9dcb8;border-radius:9px;padding:9px 13px;margin-bottom:10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;color:var(--ink-muted);">剩餘堂數：尚未購課</div>';
 
+  // 2026-08-07 加（Lin 要求）：ครูลืมกด「✅ 今日上課」ตอนวันนั้น → เพิ่มปุ่มให้บันทึกย้อนหลังเองได้
+  const backfillHtml =
+    '<div style="margin-bottom:10px;">' +
+      '<button class="btn-gold" style="font-size:0.82rem;padding:6px 14px;" onclick="toggleBackfillPicker(\'' + token + '\')">➕ 補登上課</button>' +
+      '<div id="backfillPicker-' + t + '" style="display:none;margin-top:8px;"></div>' +
+    '</div>';
+
   const html =
+    backfillHtml +
     quotaHtml +
     '<div style="color:var(--gold-deep);font-weight:700;font-family:\'Noto Sans TC\',sans-serif;font-size:0.88rem;padding:4px 0;">📖 本期課程' + (currentMergedDates.length ? '（共 ' + currentMergedDates.length + ' 堂）' : '') + '</div>' +
     '<div style="margin-top:8px;">' + courseTableHtml() + '</div>' +
@@ -452,6 +460,75 @@ async function openAttendanceHistory(token) {
     '</details>';
 
   panel.innerHTML = html;
+}
+
+// 2026-08-07 加（Lin 要求）：「✅ 今日上課」只能記錄今天，老師忘記按當天就沒辦法補了
+// → 加「➕ 補登上課」讓老師自己選日期補記錄。同一顆 RPC (record_attendance_increment)，
+// 只是 p_lesson_date 換成老師選的日期，資料庫本來就沒有「必須是今天」的限制（已確認，見 CLAUDE.md 2026-08-07）。
+function toggleBackfillPicker(token) {
+  const t = String(token).replace(/'/g, '');
+  const box = document.getElementById('backfillPicker-' + t);
+  if (!box) return;
+  if (box.style.display === 'none' || !box.innerHTML) {
+    // 預設昨天（最常見忘記按的情況），且不能選未來
+    const todayStr = teacherToday();
+    const yesterday = formatInTz(new Date(teacherTimeToDate(todayStr, '00:00').getTime() - 24 * 3600 * 1000), TEACHER_TZ).dateStr;
+    box.innerHTML =
+      '<input type="date" id="backfillDate-' + t + '" value="' + yesterday + '" max="' + todayStr + '" ' +
+        'style="border:1.5px solid var(--gold);border-radius:6px;padding:6px 9px;font-size:0.95rem;color:var(--ink);background:#fff;" /> ' +
+      '<button class="btn-gold" id="backfillConfirmBtn-' + t + '" style="font-size:0.82rem;padding:6px 12px;margin-left:6px;" onclick="submitBackfillAttendance(\'' + token + '\')">確認補登</button> ' +
+      '<button class="hist-del" style="font-size:0.82rem;" onclick="toggleBackfillPicker(\'' + token + '\')">取消</button>';
+    box.style.display = '';
+  } else {
+    box.style.display = 'none';
+    box.innerHTML = '';
+  }
+}
+
+async function submitBackfillAttendance(token) {
+  const t = String(token).replace(/'/g, '');
+  const inp = document.getElementById('backfillDate-' + t);
+  if (!inp) return;
+  const dateStr = inp.value;
+  if (!dateStr) { alert('請選擇日期'); return; }
+  const todayStr = teacherToday();
+  if (dateStr > todayStr) { alert('不能補登未來的日期'); return; } // 前端擋一層，防呆用（資料庫本身沒有這個限制）
+
+  const s = studentsCache[token];
+  const name = s ? s.name : token;
+
+  if (!(await ensureTeacherSession('補登上課'))) return;
+
+  // 補登前先查這天有沒有記錄過 — RPC 是 insert-or-increment，如果已經有記錄，會直接把堂數 +1
+  // 怕老師手滑選錯天（例如那天其實已經記過了），先問清楚再送
+  const { data: existing, error: checkErr } = await sb.from('classroom_attendance')
+    .select('lessons').eq('token', token).eq('lesson_date', dateStr).maybeSingle();
+  if (checkErr) { alert(await writeErrorMessage(checkErr.message, '補登上課')); return; }
+  if (existing) {
+    const cur = existing.lessons || 1;
+    const d = new Date(dateStr + 'T12:00:00');
+    const dayZh = ['日','一','二','三','四','五','六'];
+    const dateLabel = (d.getMonth() + 1) + '/' + d.getDate() + '（週' + dayZh[d.getDay()] + '）';
+    const ok = confirm(dateLabel + ' 已經有 ' + cur + ' 堂記錄了\n確定要補登，變成 ' + (cur + 1) + ' 堂嗎？');
+    if (!ok) return;
+  }
+
+  const btn = document.getElementById('backfillConfirmBtn-' + t);
+  if (btn) { btn.disabled = true; btn.textContent = '記錄中…'; }
+
+  const attRes = await sb.rpc('record_attendance_increment', {
+    p_token: token, p_student_name: name, p_lesson_date: dateStr
+  });
+  if (attRes.error || !attRes.data || !attRes.data.length) {
+    alert(await writeErrorMessage(attRes.error ? attRes.error.message : '資料庫沒有回傳結果', '補登上課'));
+    if (btn) { btn.disabled = false; btn.textContent = '確認補登'; }
+    return;
+  }
+
+  await refreshTodayScheduleSection();
+  await openAttendanceHistory(token);
+  loadLowQuotaBanner();
+  loadTeacherStudentInfo(token);
 }
 
 // 改某一天的堂數（例如一天上 2 堂）
