@@ -27,8 +27,24 @@ jobs:
             scripts/backup
           sparse-checkout-cone-mode: false
 
-      - name: ติดตั้ง postgresql-client + gpg
-        run: sudo apt-get update -y && sudo apt-get install -y postgresql-client gnupg
+      - name: ติดตั้ง postgresql-client 17 + gpg
+        # ⚠️ ต้องเป็นเวอร์ชัน 17 ให้ตรงกับฐานข้อมูลจริง (Supabase = Postgres 17.x)
+        #    ตัวที่ Ubuntu ให้มาเองเป็น 16 → pg_dump จะปฏิเสธทันที "server version mismatch"
+        #    (เจอจริง 2026-08-07: server 17.6 vs pg_dumpall 16.14)
+        #    วันไหน Supabase อัปเป็น 18 ต้องกลับมาแก้เลข 17 ตรงนี้ให้ตรงด้วย
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y gnupg curl ca-certificates
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client-17
+          pg_dump --version
+          pg_dumpall --version
 
       - name: ติดตั้ง Node.js
         uses: actions/setup-node@v4
