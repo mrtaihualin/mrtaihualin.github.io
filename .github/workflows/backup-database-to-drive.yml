@@ -40,18 +40,26 @@ jobs:
         run: npm install --no-save
 
       - name: ดึงข้อมูลฐานข้อมูล (สิทธิ์ผู้ใช้ / โครงตาราง / ข้อมูล) ผ่าน Session Pooler
+        # ⚠️ ตั้งใจไม่ใช้ connection string แบบ URI (postgresql://user:pass@host/db)
+        #    เพราะถ้ารหัสผ่านมีสัญลักษณ์พิเศษ (@ / # % + = & ?) URI จะถูกตีความผิดแล้วล็อกอินไม่ผ่าน
+        #    (เจอจริง 2026-08-07: password authentication failed ทั้งที่รหัสถูก)
+        #    วิธีนี้ส่งรหัสผ่านผ่าน PGPASSWORD ตรงๆ ไม่ต้อง encode อะไรเลย = ไม่มีทางพลาดจากสัญลักษณ์
         env:
-          DB_URL: ${{ secrets.BACKUP_DB_URL }}
+          PGHOST: aws-1-ap-southeast-2.pooler.supabase.com
+          PGPORT: '5432'
+          PGDATABASE: postgres
+          PGUSER: postgres.qzkxlhpcputsvbqmtqfi
+          PGPASSWORD: ${{ secrets.BACKUP_DB_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -z "${DB_URL:-}" ]; then
-            echo "::error::ไม่มี secret BACKUP_DB_URL — ตั้งค่าก่อนตามคู่มือ"
+          if [ -z "${PGPASSWORD:-}" ]; then
+            echo "::error::ไม่มี secret BACKUP_DB_PASSWORD — ตั้งค่าก่อนตามคู่มือ (ใส่เฉพาะรหัสผ่าน ไม่ใช่ connection string ทั้งบรรทัด)"
             exit 1
           fi
           mkdir -p dump
-          pg_dumpall --dbname="$DB_URL" --roles-only -f dump/roles.sql
-          pg_dump    --dbname="$DB_URL" --schema-only -f dump/schema.sql
-          pg_dump    --dbname="$DB_URL" --data-only    -f dump/data.sql
+          pg_dumpall --roles-only  -f dump/roles.sql
+          pg_dump    --schema-only -f dump/schema.sql
+          pg_dump    --data-only   -f dump/data.sql
           for f in dump/roles.sql dump/schema.sql dump/data.sql; do
             size=$(stat -c%s "$f")
             echo "$f = $size bytes"
