@@ -22,17 +22,10 @@
 --   · ไม่รวมข้อมูลข้างในตาราง (ไฟล์นี้สร้างได้แค่ "ตู้เปล่า" ต้องมีระบบสำรองข้อมูลแยก)
 --   · ไม่รวมฟังก์ชัน/RPC — อยู่ในไฟล์อื่นใน supabase/sql/
 --
--- 🔴 ช่องโหว่ที่รู้ตัวแล้วและยังไม่ได้อุด (พบ 2026-08-07 ตอนตรวจไฟล์ที่เพิ่งสร้าง):
---   9 ตารางด้านล่างมีคอลัมน์ `id bigint not null` แต่ **ไม่มีตัวนับเลขอัตโนมัติติดมาด้วย**
---     classroom_recording_issues · classroom_recordings · game_sentences · game_words
---     login_events · payout_ledger · reading_sessions · star_fraud_alerts · star_ledger
---   สาเหตุ: คำสั่งที่ใช้ดึงโครงสร้างจับ default แบบ nextval() ได้ แต่จับแบบ
---   `generated always as identity` ไม่ได้ (คนละกลไกกัน)
---   ผลถ้าเอาไฟล์นี้ไปสร้างฐานข้อมูลใหม่ตอนนี้: 9 ตารางนั้นจะเพิ่มแถวใหม่ไม่ได้
---   (ฟ้องว่า id เป็นค่าว่างไม่ได้) ต้องรันคำสั่งเพิ่ม 1 ตัวก่อน แล้วเติมส่วนนี้ให้ครบ
---   ดูวิธี: หัวข้อ "ยังทำไม่เสร็จ" ใน supabase/schema/README.md
+-- ✅ อุดช่องโหว่แล้ว 2026-08-07 (บ่าย): ตัวนับเลขอัตโนมัติของ 9 ตาราง และคอลัมน์คำนวณ
+--    ของ game_reward_events.event_date ถูกเติมครบแล้ว (ยืนยันจาก pg_attribute.attidentity
+--    และ attgenerated ของฐานข้อมูลจริง) — รอบแรกจับไม่ได้เพราะดูแต่ default แบบ nextval
 --
-
 -- ============================================================
 -- [10] ตัวนับเลขอัตโนมัติ (sequence) — ต้องสร้างก่อนตาราง
 -- ============================================================
@@ -159,7 +152,7 @@ create table if not exists public.classroom_payments (
 
 -- ── classroom_recording_issues ──
 create table if not exists public.classroom_recording_issues (
-  id bigint not null,
+  id bigint generated always as identity not null,
   token text,
   event_type text not null,
   detail text,
@@ -171,7 +164,7 @@ create table if not exists public.classroom_recording_issues (
 
 -- ── classroom_recordings ──
 create table if not exists public.classroom_recordings (
-  id bigint not null,
+  id bigint generated always as identity not null,
   token text not null,
   name text,
   file_id text,
@@ -294,7 +287,7 @@ create table if not exists public.game_reward_events (
   admin_note text,
   created_at timestamp with time zone not null default now(),
   reviewed_at timestamp with time zone,
-  event_date date default ((created_at AT TIME ZONE 'Asia/Taipei'::text))::date
+  event_date date generated always as ((created_at AT TIME ZONE 'Asia/Taipei'::text)::date) stored
 );
 
 -- ── game_reward_points ──
@@ -307,7 +300,7 @@ create table if not exists public.game_reward_points (
 
 -- ── game_sentences ──
 create table if not exists public.game_sentences (
-  id bigint not null,
+  id bigint generated always as identity not null,
   th text not null,
   zh text,
   reading_th text,
@@ -321,7 +314,7 @@ create table if not exists public.game_sentences (
 
 -- ── game_words ──
 create table if not exists public.game_words (
-  id bigint not null,
+  id bigint generated always as identity not null,
   word text not null,
   en text,
   zh text,
@@ -369,7 +362,7 @@ create table if not exists public.line_pending_reply (
 
 -- ── login_events ──
 create table if not exists public.login_events (
-  id bigint not null,
+  id bigint generated always as identity not null,
   user_id uuid not null,
   email text,
   ip text,
@@ -381,7 +374,7 @@ create table if not exists public.login_events (
 
 -- ── payout_ledger ──
 create table if not exists public.payout_ledger (
-  id bigint not null,
+  id bigint generated always as identity not null,
   user_id uuid not null,
   stars_redeemed integer not null,
   amount numeric(10,2) not null,
@@ -406,7 +399,7 @@ create table if not exists public.profiles (
 
 -- ── reading_sessions ──
 create table if not exists public.reading_sessions (
-  id bigint not null,
+  id bigint generated always as identity not null,
   user_id uuid not null,
   score integer not null default 0,
   games integer not null default 1,
@@ -442,7 +435,7 @@ create table if not exists public.slink_rl (
 
 -- ── star_fraud_alerts ──
 create table if not exists public.star_fraud_alerts (
-  id bigint not null,
+  id bigint generated always as identity not null,
   checked_at timestamp with time zone not null default now(),
   user_id uuid,
   stars_now integer,
@@ -453,7 +446,7 @@ create table if not exists public.star_fraud_alerts (
 
 -- ── star_ledger ──
 create table if not exists public.star_ledger (
-  id bigint not null,
+  id bigint generated always as identity not null,
   user_id uuid not null,
   word text not null,
   level smallint not null,
