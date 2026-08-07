@@ -95,6 +95,18 @@ async function getAccessToken() {
 
 serve(async (req) => {
   try {
+    // 🔒 2026-08-07 เพิ่ม — กันคนนอกยิง URL เปล่าๆ สั่งงานได้ (Lin อนุมัติ 2026-08-07 หลัง Codex ตรวจพบ)
+    //   Verify JWT อย่างเดียวกันไม่ได้จริง เพราะ anon key เปิดเผยอยู่ในหน้าเว็บ (supabase-config.js)
+    //   ใครก็ copy ไปยิงเหมือน cron ได้ ต้องมีรหัสลับที่ "ไม่เปิดเผยต่อสาธารณะ" อีกชั้น
+    //   cron เรียกผ่าน private.call_calendar_sync_cron() ซึ่งส่ง header นี้มาจาก Vault แล้ว
+    //   (ดู supabase/sql/2026-08-07_cron_shared_secret.sql) — ถ้าไม่ตรง/ไม่มี ปฏิเสธทันที ไม่ทำอะไรต่อ
+    const cronSecret = Deno.env.get('CRON_INTERNAL_SECRET');
+    if (!cronSecret || req.headers.get('x-cron-secret') !== cronSecret) {
+      return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const accessToken = await getAccessToken();
     const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
 
