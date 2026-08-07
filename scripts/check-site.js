@@ -106,6 +106,14 @@ runTest(['data/tests-check-data-health.js'], 'data-health tests');
 runTest(['data/check-duplicate-words.js'], 'duplicate-word check');
 runTest(['data/check-data-health.js'], 'data-health check');
 runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
+// เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
+runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');
+runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
+runTest(['scripts/check-mobile-accessibility.js'], 'mobile/accessibility check (warning-only)');
+// ⚠️ scripts/check-minified-sync.js ตั้งใจ "ไม่" ใส่ในนี้ — สคริปต์นั้นเทียบเนื้อหาแบบ exact-match
+// ซึ่งจะ MISMATCH เสมอกับไฟล์ที่ผ่าน minifier จริง (ดูคอมเมนต์ในไฟล์นั้น) ถ้าใส่ที่นี่จะ fail ทุกครั้ง
+// ทั้งที่โค้ดอาจไม่มีปัญหาจริง — ให้รันแยกด้วยมือ: node scripts/check-minified-sync.js
+// (ใช้ดู mtime ว่า .js ต้นฉบับใหม่กว่า .min.js ไหม ไม่ใช่ด่านที่บล็อก push)
 
 if (warnings.length) {
   console.log(`\nคำเตือน ${warnings.length} รายการ:`);
