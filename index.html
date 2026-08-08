@@ -86,17 +86,7 @@
 </head>
 <body>
 <!-- Videos -->
-<!-- Share Popup -->
-<div id="share-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;" onclick="closeSharePopup()"></div>
-<div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(200,151,58,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
-  <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
-  <textarea id="share-text-area" aria-label="分享文字內容" readonly rows="7" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.85);font-family:'Noto Sans TC',sans-serif;font-size:13px;line-height:1.8;padding:12px 14px;resize:none;outline:none;box-sizing:border-box;"></textarea>
-  <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:rgba(255,255,255,0.25);margin:8px 0 14px;">⚠️ 請勿刪除連結，分享時請保留完整內容，感謝您🙏</div>
-  <div style="display:flex;gap:8px;">
-    <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">一鍵複製</button>
-    <button onclick="closeSharePopup()" style="padding:12px 20px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;cursor:pointer;">取消</button>
-  </div>
-</div>
+<!-- Share Popup (แทรกอัตโนมัติจาก injectSharedModals() ใน js/core/shared.js) -->
 
 <!-- Facebook Posts -->
 <!-- Self-Study -->
@@ -420,7 +410,7 @@
 <script src="js/acquisition/index-content-modals.js"></script>
 <script src="js/acquisition/posts-data.js"></script>
 <script src="js/acquisition/lessons-data.js"></script>
-<script src="js/core/shared.min.js?v=16"></script>
+<script src="js/core/shared.min.js?v=17"></script>
 <script src="js/acquisition/index-analytics.js"></script>
 </body>
 </html>

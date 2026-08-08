@@ -1114,6 +1114,25 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
 </div>`;
   }
 
+  if (!document.getElementById('share-bg')) {
+    modalsHTML += `
+<!-- Share Popup -->
+<div id="share-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;" onclick="closeSharePopup()"></div>
+<div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(200,151,58,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+  <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <button onclick="shareToFB()" aria-label="分享到 Facebook" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:6px;color:${_snsColor.facebook};cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:700;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">${_snsIcon.facebook}<span style="color:rgba(255,255,255,0.75);">Facebook</span></button>
+    <button onclick="shareToLine()" aria-label="分享到 LINE" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:6px;color:${_snsColor.line};cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:700;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">${_snsIcon.line}<span style="color:rgba(255,255,255,0.75);">LINE</span></button>
+  </div>
+  <textarea id="share-text-area" aria-label="分享文字內容" readonly rows="7" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.85);font-family:'Noto Sans TC',sans-serif;font-size:13px;line-height:1.8;padding:12px 14px;resize:none;outline:none;box-sizing:border-box;"></textarea>
+  <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:rgba(255,255,255,0.25);margin:8px 0 14px;">⚠️ 請勿刪除連結，分享時請保留完整內容，感謝您🙏</div>
+  <div style="display:flex;gap:8px;">
+    <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">一鍵複製</button>
+    <button onclick="closeSharePopup()" style="padding:12px 20px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;cursor:pointer;">取消</button>
+  </div>
+</div>`;
+  }
+
   if (modalsHTML) {
     var wrapper = document.createElement('div');
     wrapper.innerHTML = modalsHTML;
@@ -1406,13 +1425,20 @@ if (typeof openSSModal === 'undefined') {
 
 // ----- [03.5] 🔗 Share Popup -----
 if (typeof openSharePopup === 'undefined') {
-  window.openSharePopup = function(title, preview) {
-    var SITE_URL = window.SITE_URL || 'https://mrtaihualin.com';
+  // 2026-08-08: openSharePopup 新增第 3 個參數 url（選填）— 沒有傳就跟以前一樣用 SITE_URL 首頁
+  //   讓文章分享用得到「這篇文章自己的網址」，同時舊的呼叫方式（只傳 title/preview）完全不受影響
+  window._shareCurrentUrl = window.SITE_URL || 'https://mrtaihualin.com';
+  window._shareCurrentTitle = '';
+
+  window.openSharePopup = function(title, preview, url) {
+    var articleUrl = url || window.SITE_URL || 'https://mrtaihualin.com';
+    window._shareCurrentUrl = articleUrl;
+    window._shareCurrentTitle = title || '';
     var text = '我在「泰華眼裡的泰語教學」發現了一個很實用的泰語學習資源！\n\n'
       + '📌 ' + title + '\n'
       + (preview ? preview + '\n\n' : '\n')
       + '🌐 更多文章內容及免費泰語課程與學習內容：\n'
-      + SITE_URL + '\n\n'
+      + articleUrl + '\n\n'
       + '學泰語沒有你想的那麼難！每天一句，去泰國旅遊再也不怕了 🇹🇭 快來一起學！';
     document.getElementById('share-text-area').value = text;
     document.getElementById('share-copy-btn').textContent = '一鍵複製';
@@ -1436,6 +1462,61 @@ if (typeof openSharePopup === 'undefined') {
     document.getElementById('share-popup').style.display = 'none';
     document.body.style.overflow = '';
   };
+
+  // 分享 popup 裡的 Facebook / LINE 快捷鍵 — 直接開該平台官方分享網址，帶目前分享的文章連結
+  window.shareToFB = function() {
+    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://mrtaihualin.com');
+    window.open('https://www.facebook.com/sharer/sharer.php?u=' + u, '_blank', 'noopener');
+  };
+  window.shareToLine = function() {
+    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://mrtaihualin.com');
+    var t = encodeURIComponent(window._shareCurrentTitle || '');
+    window.open('https://social-plugins.line.me/lineit/share?url=' + u + '&text=' + t, '_blank', 'noopener');
+  };
+}
+
+// ----- [03.6] 📰 BLOG ARTICLE SHARE BUTTON — Web Share API 優先，失敗/不支援才跳分享 popup -----
+//   2026-08-08: Lin 核准「全部合一」設計 — 手機支援原生分享就叫原生的，桌機或失敗都退回舊的分享 popup（含 FB/LINE 捷徑）
+//   自動幫 blog/ 資料夾底下每一篇文章加分享按鈕，不用逐一改 44 個檔案：讀那篇文章自己的 <title>/meta description/canonical 網址
+if (typeof shareBlogArticle === 'undefined') {
+  window.shareBlogArticle = function(title, text, url) {
+    if (navigator.share) {
+      navigator.share({ title: title, text: text, url: url }).catch(function(){
+        openSharePopup(title, text, url);
+      });
+    } else {
+      openSharePopup(title, text, url);
+    }
+  };
+
+  (function autoInjectBlogShareButton(){
+    try {
+      if (!/\/blog\//.test(location.pathname)) return; // 只在 blog/ 資料夾底下的文章頁執行
+      if (document.getElementById('blog-share-btn-wrap')) return;
+      var host = document.querySelector('.related-articles');
+      if (!host || !host.parentNode) return;
+
+      var canonicalEl = document.querySelector('link[rel="canonical"]');
+      var url = canonicalEl ? canonicalEl.href : location.href;
+      var descEl = document.querySelector('meta[name="description"]');
+      var text = descEl ? descEl.content : '';
+      var title = (document.title || '').split('|')[0].trim();
+
+      var wrap = document.createElement('div');
+      wrap.id = 'blog-share-btn-wrap';
+      wrap.style.cssText = 'text-align:center;margin:30px 0 6px;';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'blog-btn alt';
+      btn.textContent = '🔗 分享這篇文章';
+      btn.addEventListener('click', function(){
+        if (window.gtag) gtag('event','article_share_click',{category:window.GA_CATEGORY||'article', source_page: location.pathname});
+        shareBlogArticle(title, text, url);
+      });
+      wrap.appendChild(btn);
+      host.parentNode.insertBefore(wrap, host);
+    } catch(e) {}
+  })();
 }
 
 // ----- [03.6] 🔗 openLinkedSSFromPost — available on all pages -----

@@ -107,6 +107,20 @@
   function doLogout() {
     // onAuthStateChange จะเคลียร์ user + สั่ง re-render ให้เองอัตโนมัติ
     sb.auth.signOut();
+    // 2026-08-08 (P6-09~12 ก้อน 1): เคลียร์ localStorage cache ที่ไม่ใช่ session token ด้วย
+    //   sb.auth.signOut() ลบแค่ token ของ Supabase เอง ไม่ลบ cache ที่แอปเขียนเองพวกนี้
+    //   ผลถ้าไม่เคลียร์: บนเครื่องสาธารณะ/ใช้ร่วมกัน คนถัดไปที่เปิดเว็บ (ก่อนล็อกอิน) จะยังเห็น
+    //   avatar/badge/hint "上次登入方式" ของคนก่อนหน้าค้างอยู่ (ไม่ใช่ข้อมูลลับ แต่ไม่ควรค้าง)
+    //   AVATAR_KEY/PIN_BADGE_KEY/NICK_PROMPT_KEY/LOGSESS_KEY ประกาศอยู่ในไฟล์นี้แล้ว
+    //   'rg_last_login_provider' เป็นคีย์ของ reading-auth.js (คนละไฟล์ คนละ closure) — เขียนตรงๆ
+    //   ที่นี่แทนเพราะ localStorage เป็นที่เก็บกลางของเบราว์เซอร์ ไม่ต้องพึ่งฟังก์ชันไฟล์นั้น
+    try {
+      localStorage.removeItem(AVATAR_KEY);
+      localStorage.removeItem(PIN_BADGE_KEY);
+      localStorage.removeItem(NICK_PROMPT_KEY);
+      localStorage.removeItem(LOGSESS_KEY);
+      localStorage.removeItem('rg_last_login_provider');
+    } catch (e) {}
   }
 
   // เคยเด้งชวนตั้งชื่อเล่นให้ user นี้ไปแล้วหรือยัง — จำถาวร (ไม่ใช่แค่ในหน่วยความจำ)

@@ -1,8 +1,53 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-08 (P6-09~12 ก้อน 1 บางส่วน) — เคลียร์ localStorage cache ตอน logout
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin push** (คนละ commit จากงานอื่นวันนี้)
+
+ปัญหา: `doLogout()` ใน `js/core/auth-widget.js` เดิมเรียกแค่ `sb.auth.signOut()` ซึ่งลบแค่ session token ของ Supabase เอง ไม่ลบ localStorage cache อื่นที่แอปเขียนเอง (`tf_avatar`, `tf_pinned_badge`, `sa_nick_prompted`, `tf_logsess_at`, `rg_last_login_provider`) — บนเครื่องสาธารณะ/ใช้ร่วมกัน คนถัดไปที่เปิดเว็บก่อนล็อกอินจะยังเห็น avatar/badge/hint "上次登入方式" ของคนก่อนหน้าค้างอยู่ (ไม่ใช่ข้อมูลลับ แต่ไม่ควรค้าง) — พบระหว่างตรวจสเปกระบบบัญชีผู้เล่นที่ Lin ส่งมา (ดู `Bussiness Idea/ระบบเว็บไซต์/49_P6-09to12_...md`)
+
+วิธีแก้: เพิ่ม `localStorage.removeItem(...)` ทั้ง 5 คีย์เข้าไปใน `doLogout()` (4 คีย์แรกประกาศอยู่ในไฟล์เดียวกันอยู่แล้ว ส่วน `rg_last_login_provider` เป็นคีย์ของ `js/games/reading-auth.js` — เขียน literal string ตรงๆ แทนเพราะ localStorage เป็นที่เก็บกลางของเบราว์เซอร์ ไม่ต้องพึ่งฟังก์ชันไฟล์นั้น)
+
+ไฟล์ที่แก้: `js/core/auth-widget.js` (ไม่มี `.min.js` คู่กัน ไม่ต้อง rebuild)
+
+ผลตรวจ: `node --check js/core/auth-widget.js` ผ่าน · `node scripts/check-site.js` ผ่านทั้งหมด (818 ไฟล์)
+
+**ยังไม่ได้ทดสอบ (ต้องให้ Lin เปิดเบราว์เศร์จริง):** ล็อกอิน → ตั้ง avatar/badge → logout → เปิด DevTools (F12) → Application → Local Storage → เช็คว่า 5 คีย์ข้างต้นหายไปจริง
+
+**หมายเหตุ:** นี่คือแค่ส่วน "เคลียร์ cache" ของ P6-09~12 ก้อน 1 เท่านั้น — ส่วนปุ่ม "ยกเลิกการเชื่อมบัญชี" (Unlink) ยังไม่ได้ทำ เพราะมีคำถามออกแบบที่ต้องรอ Lin ตัดสินใจก่อน (ดู `52_คำสั่งเปิดแชทสอง_...md` เรื่องที่ 4)
+
+## 2026-08-08 (SEO) — เพิ่มปุ่มแชร์บทความให้ 44 บทความใน `blog/`
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin ทดสอบมือถือจริง + push**
+
+Lin อนุมัติดีไซน์แบบรวม: ปุ่มเดียว "🔗 分享這篇文章" ท้ายบทความ → เบราว์เซอร์ที่รองรับ Web Share API เด้งเมนูแชร์ของเครื่องเลย → ไม่รองรับ/ถูกยกเลิก ตกไปที่กล่อง popup เดิม (ที่เพิ่งซ่อมบั๊กด้านล่าง) ซึ่งเพิ่มไอคอน Facebook/LINE ให้กดแชร์ตรงไปแต่ละช่องทางได้เลย
+
+วิธีทำให้ครบ 44 บทความโดยไม่ต้องแก้ทีละไฟล์: เพิ่ม `autoInjectBlogShareButton()` ใน `js/core/shared.js` ทำงานเฉพาะหน้าที่ path มี `/blog/` อ่าน title/description/canonical URL ของหน้านั้นเองมาแทรกปุ่มอัตโนมัติหน้า `.related-articles`
+
+ไฟล์ที่แก้: `js/core/shared.js` (+ regenerate `shared.min.js`), bump cache-buster `?v=16→17` ใน 76 หน้าที่โหลดไฟล์นี้ (ไม่ได้แก้เนื้อหาไฟล์บทความเองเลย)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด · ยืนยัน `openSharePopup()` ที่เพิ่ม parameter `url` แล้ว ยัง backward compatible กับจุดเรียกเดิม (`shareFBPost()`/`shareSSArticle()` ที่ยังไม่ส่ง url มา)
+
+**ยังไม่ได้ทดสอบ (ต้องให้ Lin ทำบนมือถือ+คอมจริง):** ดูหัวข้อ "เรื่องที่ 1ข" ใน `Bussiness Idea/ระบบเว็บไซต์/52_คำสั่งเปิดแชทสอง_...md`
+
+## 2026-08-08 (แก้บั๊กปุ่มแชร์) — ปุ่ม 🔗 分享本文 error บนเกือบทุกหน้า
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin push**
+
+ปัญหา: กดปุ่ม "🔗 分享本文" (แชร์โพสต์) แล้ว error `TypeError: null is not an object` บนเกือบทุกหน้าของเว็บ — ใช้ได้แค่ 4 หน้า (`index.html`, `resources.html`, `pricing.html`, `faq.html`)
+
+สาเหตุ: กล่อง popup แชร์ (`share-bg` / `share-popup` / `share-text-area` / `share-copy-btn`) เป็น static HTML ที่ก็อปวางตรงๆ ไว้แค่ 4 หน้าเดิม ไม่ได้อยู่ในระบบแทรก modal อัตโนมัติ `injectSharedModals()` เหมือนกล่องอื่น (`modal-contact`, `modal-fbposts` ฯลฯ) — ปุ่ม "🔗 分享本文" เองถูกสร้างจากโค้ดกลางใน `shared.js` (ใช้ร่วมทุกหน้า) ดังนั้นหน้าไหนก็กดปุ่มนี้ได้ แต่พอ `openSharePopup()` ไปหา `document.getElementById('share-text-area')` ในหน้าที่ไม่มีกล่อง static ก็ได้ `null` ทันที
+
+วิธีแก้: ย้าย HTML ของกล่องแชร์เข้าไปเป็นส่วนหนึ่งของ `injectSharedModals()` ใน `js/core/shared.js` (คัดลอกมาจากเวอร์ชันของ `index.html` เป๊ะ พร้อม guard `if (!document.getElementById('share-bg'))` แบบเดียวกับกล่องอื่น) แล้วลบ static HTML ของกล่องนี้ออกจาก 4 หน้าเดิมที่เคยมี (กัน id ซ้ำ) — ตอนนี้ทั้ง 76 หน้าที่โหลด `shared.js`/`shared.min.js` จะได้กล่องแชร์จากจุดเดียวกันหมด ไม่มีหน้าไหนขาด
+
+ไฟล์ที่แก้: `js/core/shared.js` (+ regenerate `js/core/shared.min.js` ด้วย `scripts/build-minjs.sh`), `index.html`, `resources.html`, `pricing.html`, `faq.html` (ลบ static HTML กล่องแชร์ออก)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (818 ไฟล์ ไม่มีค่าลับหลุด) · ตรวจด้วยตาว่า HTML ของกล่องแชร์ที่ย้ายเข้า `shared.js` ตรงกับต้นฉบับ `index.html` ทุกตัวอักษร (สี/ปุ่ม/hover ใช้ตัวแปรธีม `--gold` เดิม) · ยืนยันด้วย grep ว่าไม่มี `share-bg` static เหลือค้างซ้ำในไฟล์ไหนแล้ว
+**ยังไม่ได้ทดสอบ (ต้องให้ Lin เปิดเบราว์เซอร์จริง):** กดปุ่ม "🔗 分享本文" บนหน้าที่เคยพัง เช่น `blog.html`, `games.html`, `tone-finder.html` แล้วดูว่ากล่องแชร์เปิดขึ้นมาไม่ error + ปุ่ม "一鍵複製" คัดลอกได้จริง
+
 ## 2026-08-08 (รอบดึกสุด) — "กลุ่ม 2": จำกัด CORS / แยก inline script index.html / เพิ่ม GA4+meta / ต่อ GA4 event เจอเพดาน
 
-สถานะ: **โค้ดเสร็จแล้วรอ Lin push** (ข้อ CORS ต้อง deploy Edge Function เพิ่ม 6 ตัวหลัง push · ข้อแยก inline script ยังไม่ได้ตรวจด้วยเบราว์เซอร์จริง ขอ Lin เช็คเอง)
+สถานะ: **✅ Lin push ขึ้น GitHub แล้ว + deploy CORS ครบ 6/6 ตัวแล้ว 2026-08-08** (ยืนยันจาก log จริง ทุกตัว "Deployed Functions on project qzkxlhpcputsvbqmtqfi") — เหลือ 1 อย่างที่ Lin ต้องทำเอง: เปิด mrtaihualin.com เช็คด้วยตาว่า modal วิดีโอ/FB/self-study ยังทำงานปกติ (AI ตรวจด้วยเบราว์เซอร์ไม่ได้รอบนี้)
 
 Lin อนุมัติ "กลุ่ม 2" ทั้งชุดพร้อมกัน ("ทำเลย ทีเดียวให้หมด") สั่งทำคู่ขนาน 4 แชท (ไฟล์ไม่ชนกัน):
 
