@@ -20,7 +20,8 @@
 
   function returnTo() {
     var t = '';
-    try { t = sessionStorage.getItem('line_login_return_to') || ''; } catch (e) {}
+    // 2026-08-08: localStorage แทน sessionStorage (ดูเหตุผลเต็มที่ reading-auth.js ตรง startLineLogin)
+    try { t = localStorage.getItem('line_login_return_to') || ''; } catch (e) {}
     // กัน open-redirect: ต้องเป็น path ในเว็บเราเอง (ขึ้นต้นด้วย / หรือเป็นชื่อไฟล์ .html เท่านั้น) ไม่ใช่ URL เต็มไปเว็บอื่น
     if (!t || /^https?:\/\//i.test(t) || t.indexOf('//') === 0) return 'games.html';
     return t;
@@ -54,9 +55,9 @@
     var state = qs.get('state');
     var savedState = '', nonce = '', linkMode = false;
     try {
-      savedState = sessionStorage.getItem('line_login_state') || '';
-      nonce = sessionStorage.getItem('line_login_nonce') || '';
-      linkMode = sessionStorage.getItem('line_login_link') === '1';
+      savedState = localStorage.getItem('line_login_state') || '';
+      nonce = localStorage.getItem('line_login_nonce') || '';
+      linkMode = localStorage.getItem('line_login_link') === '1';
     } catch (e) {}
 
     if (!code || !state || !savedState || state !== savedState) {
@@ -65,9 +66,9 @@
     }
     // state/nonce/link flag ใช้ครั้งเดียว — ลบทิ้งทันทีกันเอาไปใช้ซ้ำ (replay)
     try {
-      sessionStorage.removeItem('line_login_state');
-      sessionStorage.removeItem('line_login_nonce');
-      sessionStorage.removeItem('line_login_link');
+      localStorage.removeItem('line_login_state');
+      localStorage.removeItem('line_login_nonce');
+      localStorage.removeItem('line_login_link');
     } catch (e) {}
 
     var redirectUri = location.origin + location.pathname; // ต้องตรงเป๊ะกับตอนขอ code (ไม่มี query/hash)

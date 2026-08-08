@@ -280,10 +280,17 @@
     var state = randomToken(16);
     var nonce = randomToken(16);
     try {
-      sessionStorage.setItem('line_login_state', state);
-      sessionStorage.setItem('line_login_nonce', nonce);
-      sessionStorage.setItem('line_login_return_to', location.pathname + location.search);
-      if (linkMode) sessionStorage.setItem('line_login_link', '1'); else sessionStorage.removeItem('line_login_link');
+      // 2026-08-08: เปลี่ยนจาก sessionStorage → localStorage — เจอบั๊กจริงจาก Lin ทดสอบบนซาฟารี
+      //   (Mac ที่ลงแอป LINE เดสก์ท็อปไว้ด้วย): ซาฟารีส่งต่อการล็อกอิน LINE ไปให้แอป LINE จัดการแทน
+      //   แล้วเปิดหน้า redirect_uri กลับมาเป็น "แท็บ/หน้าต่างใหม่" ไม่ใช่แท็บเดิมที่กดปุ่มไว้ —
+      //   sessionStorage ผูกกับแท็บเดิมเท่านั้นเลยหายไป ทำให้เช็ค state ใน line-callback.js พังทุกครั้ง
+      //   (ใช้งานได้ปกติในเบราว์เซอร์ในแอป LINE เพราะไม่มีการสลับแท็บแบบนี้)
+      //   localStorage ผูกกับ origin ไม่ใช่แท็บ ใช้ร่วมกันได้ทุกแท็บ/หน้าต่างของเบราว์เซอร์เดียวกัน แก้ปัญหานี้ได้
+      //   ยังลบทิ้งทันทีหลังใช้ครั้งเดียวเหมือนเดิม (กัน replay) — ดู line-callback.js
+      localStorage.setItem('line_login_state', state);
+      localStorage.setItem('line_login_nonce', nonce);
+      localStorage.setItem('line_login_return_to', location.pathname + location.search);
+      if (linkMode) localStorage.setItem('line_login_link', '1'); else localStorage.removeItem('line_login_link');
     } catch (e) {}
     var redirectUri = location.origin + '/line-callback.html';
     var url = 'https://access.line.me/oauth2/v2.1/authorize'
