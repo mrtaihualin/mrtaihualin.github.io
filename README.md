@@ -15,7 +15,9 @@
 | `blog/`, `en/` | หน้าบทความและหน้าภาษาอังกฤษ |
 | `classroom/` | หน้าระบบห้องเรียนและ CSS เฉพาะระบบ |
 | `css/` | CSS ส่วนกลางของเว็บ |
-| `data/` | คลังคำ ประโยค และตัวตรวจข้อมูล |
+| `data/` | คลังคำ/ประโยคจริง (`words-data.js`, `adv-sentences.js`, `tone-engine.js` ฯลฯ) + หน้าแอดมิน 2 หน้า (ตั้งใจไม่ย้าย — ผูกโดเมนจริง ดู `data/game-content-tester.html`, `data/review-tool.html`) |
+| `data/tools/` | ตัวตรวจ/ตัวทดสอบข้อมูลเกม (`check-data-health.js`, `tests-*.js`, `regression-check-tone.js` ฯลฯ) — ย้ายออกจาก `data/` แล้ว 2026-08-08 |
+| `data/reports/` | รายงาน/เอกสารที่ตัวตรวจสร้างหรือใช้ (`tone-regression-report.json`, `game-behavioral-checklist-manual.md`) — ย้ายออกจาก `data/` แล้ว 2026-08-08 |
 | `js/core/` | ระบบกลาง เช่น auth, shared UI และ Supabase |
 | `js/classroom/` | logic ระบบห้องเรียน |
 | `js/acquisition/` | ข้อมูลเนื้อหาที่แสดงบนหน้าเว็บ |

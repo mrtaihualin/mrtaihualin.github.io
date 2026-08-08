@@ -123,7 +123,20 @@ serve(async (req) => {
     const words = w1.data.map(toWord).concat(w2.data.map(toWord));
     const sentences = sent.data.map(toSentence);
 
-    return json({ tier, words, sentences }, 200, origin);
+    // ── สัญญาณ "ชนเพดานฟรีแล้ว" (เพิ่ม 2026-08-08 ตาม P6-08 ข้อ 1) — เป็นการประมาณต้นทุนต่ำ ──
+    // ไม่ได้ query "จำนวนทั้งหมดที่มีจริงในตาราง" (ต้องยิง count เพิ่ม 1-3 ครั้งต่อ request ซึ่งไม่คุ้ม
+    // สำหรับ signal ระดับนี้) แค่เช็คว่า "จำนวนแถวที่ตัดส่งกลับ = เพดานของ tier นี้พอดี" — ถ้าใช่ แปลว่า
+    // อย่างน้อยมีของเหลืออีก (เท่ากับ/มากกว่า) เพดาน จึงถือว่า "น่าจะชนเพดานแล้ว" ได้แม่นยำเพียงพอ
+    // (ยกเว้นกรณีขอบ: มีคำ/ประโยคพอดีเท่าเพดานเป๊ะ ไม่มีเหลือเลย — ถือว่า capped=true ก็ยังถูกต้องอยู่
+    // เพราะผู้เล่นได้ครบทุกอันที่ tier นี้ "ควรได้" แล้วจริงๆ ไม่มีของเพิ่มให้ tier นี้อีก)
+    // ห้าม client ใช้ field นี้แทนการเช็คสิทธิ์ใดๆ — เป็นแค่สัญญาณ UI/analytics เท่านั้น ไม่ใช่ด่านความปลอดภัย
+    const capped = {
+      '初': w1.data.length >= caps['初'],
+      '中': w2.data.length >= caps['中'],
+      sentences: sent.data.length >= caps.sentences,
+    };
+
+    return json({ tier, words, sentences, capped }, 200, origin);
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500, origin);
   }

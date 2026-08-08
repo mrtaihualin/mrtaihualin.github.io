@@ -1,8 +1,29 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-08 (รอบดึก) — P6-17 + P7-03 + P6-08: แก้หน้า error เกม / ล็อกเวอร์ชัน backup / เพิ่มจุดวัดเจอเพดาน
+
+สถานะ: **โค้ดเสร็จแล้วรอ Lin push** (ยกเว้นข้อ D ที่ต้อง deploy Edge Function เพิ่มอีกขั้นหลัง push)
+
+Lin อนุมัติ 4 งานย่อยแบบแยกเรื่อง (A/B/C/D) พร้อมกัน สั่งทำแบบคู่ขนาน 3 แชท (ไฟล์ไม่ชนกัน):
+
+1. **A+B — แก้หน้า error เกม (`js/games/game-content-client.js` ไฟล์เดียว โหลดทั้ง 6 หน้าเกม):** เปลี่ยนสีแถบโหลด/error จากฟ้า/แดงทั่วไปเป็นชุดสีทองตาม CLAUDE.md · แปล error ดิบ (เช่น `game-content HTTP 500`) เป็นภาษาไทยง่ายๆ ให้ผู้เล่นเห็น (ข้อความดิบยังอยู่ใน `console.error` เพื่อ debug) · เพิ่มปุ่ม "🔙 กลับหน้าเกมทั้งหมด" + "💬 ทัก LINE ครู" (ใช้ลิงก์ LINE เดิมที่มีอยู่แล้วใน `js/core/shared.js`) · เพิ่ม global crash handler (`window.onerror`/`unhandledrejection`) ที่ไม่เคยมีมาก่อนบนหน้าเกมเลยสักหน้า ใช้แถบ error เดียวกับข้อ A · ไม่มี `.min.js` คู่กัน ไม่ต้อง build · หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/41_ผลลัพธ์_P6-17_แก้หน้าerror.md`
+2. **C — ล็อกเวอร์ชัน dependency ตัวสำรองข้อมูล:** สร้าง `scripts/backup/package-lock.json` จริงจาก `npm install` (ไม่ได้เขียนมือ, ตรึง `googleapis@144.0.0`) + เปลี่ยน `.github/workflows/backup-database-to-drive.yml` จาก `npm install --no-save` เป็น `npm ci` กันดึงเวอร์ชันแปลกปลอมตอน cron รันตี 3 ที่มี secret Google/LINE อยู่ในเครื่อง · พบเพิ่ม (ไม่ได้แก้ นอกขอบเขต): `npm audit` เจอ 4 moderate vulnerability จาก `uuid` ที่ลึกอยู่ใน `googleapis` ต้องอัป major version ถึงจะหาย — บันทึกรอ Lin ตัดสินใจ หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/42_ผลลัพธ์_P7-03_backup-lockfile.md`
+3. **D — เพิ่มจุดวัด "เจอเพดานแล้ว" ใน `supabase/functions/game-content/index.ts`:** เพิ่ม field `capped: {初, 中, sentences}` ใน response (additive ไม่ลบ/ไม่เปลี่ยนชื่อ field เดิม, ไม่แตะ CAPS/tier-detection logic) ตรวจแล้วว่า client (`game-content-client.js`) ไม่พังจากการเพิ่ม field นี้ — **⚠️ ยังไม่ deploy เป็นแค่โค้ดในเครื่อง Lin ต้องรัน `supabase functions deploy game-content` เองหลัง push** หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/43_ผลลัพธ์_P6-08_เพิ่มจุดวัดเจอเพดาน.md`
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้ง 3 งาน (816 ไฟล์) ไม่มีค่าลับใหม่หลุด
+
+Commit message แนะนำ (3 ข้อความแยกกัน หรือรวม commit เดียวก็ได้ — Lin เลือกเอง แล้ว push เองผ่าน GitHub Desktop):
+```
+แก้หน้าแจ้งข้อผิดพลาดเกม: เปลี่ยนสีให้ตรงธีมทอง แปล error เป็นภาษาคน เพิ่มปุ่มกลับ games.html/LINE และเพิ่มระบบดัก JS พังกลางเกมทั้ง 6 หน้า (P6-17)
+
+fix(backup): เพิ่ม package-lock.json ให้ scripts/backup + เปลี่ยน npm install เป็น npm ci กัน supply-chain attack ตอนรัน cron ทุกคืน
+
+เพิ่ม field capped ใน game-content response บอกว่าเจอเพดานฟรีแล้วหรือยัง (ยังไม่ deploy)
+```
+
 ## 2026-08-08 (รอบเย็น) — P4-04: แยก `data/` ที่ปนกัน (ตัวตรวจ+รายงาน → `data/tools/`, `data/reports/`)
 
-สถานะ: **✅ เสร็จแล้ว — Lin อนุมัติเปิดหลายแชทได้ แต่พบว่างานนี้ทำในแชทเดียวได้ปลอดภัยกว่า (ไฟล์ที่แก้ทับกันหมด) เลยทำตรงนี้เอง**
+สถานะ: **✅ เสร็จแล้ว + Lin push ขึ้น GitHub แล้ว** — Lin อนุมัติเปิดหลายแชทได้ แต่พบว่างานนี้ทำในแชทเดียวได้ปลอดภัยกว่า (ไฟล์ที่แก้ทับกันหมด) เลยทำตรงนี้เอง
 
 ย้าย 7 ไฟล์ออกจาก `data/` (คงเหลือแค่ข้อมูลจริง: `words-data.js`/`adv-sentences.js`/`tone-engine.js`/`audio-*.js` + หน้าแอดมิน 2 หน้าที่ยังไม่ย้าย รอ Lin ตอบคำถามเข้าถึงยังไง):
 - → `data/tools/`: `tests-tone-engine.js`, `tests-check-data-health.js`, `check-duplicate-words.js`, `check-data-health.js`, `regression-check-tone.js`

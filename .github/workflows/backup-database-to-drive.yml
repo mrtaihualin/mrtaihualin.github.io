@@ -52,8 +52,13 @@ jobs:
           node-version: '20'
 
       - name: ติดตั้ง dependency ของสคริปต์อัปโหลด
+        # P7-03: เปลี่ยนจาก `npm install --no-save` เป็น `npm ci`
+        #   npm ci ยึด package-lock.json เป๊ะ (เวอร์ชัน + integrity hash ตรงเป๊ะทุกตัว รวม dependency ย่อย)
+        #   ถ้า lockfile กับ package.json ไม่ตรงกัน จะ error ทันที ไม่ใช่เงียบๆ ติดตั้งเวอร์ชันใหม่แทน
+        #   กันเคสที่มีคนแฮ็ก patch เวอร์ชันใหม่ของ googleapis ขึ้น npm registry แล้วโดนดึงมาใช้
+        #   ระหว่างที่ workflow นี้ถือ secret ของ Google Drive/LINE อยู่ใน environment จริง
         working-directory: scripts/backup
-        run: npm install --no-save
+        run: npm ci
 
       - name: ดึงข้อมูลฐานข้อมูล (สิทธิ์ผู้ใช้ / โครงตาราง / ข้อมูล) ผ่าน Session Pooler
         # ⚠️ ตั้งใจไม่ใช้ connection string แบบ URI (postgresql://user:pass@host/db)
