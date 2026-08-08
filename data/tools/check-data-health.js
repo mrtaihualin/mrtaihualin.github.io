@@ -3,7 +3,7 @@
  * ROLE/MAP: Node validation tool → load datasets → reusable validators → full audit/report → module exports
  * รันก่อน push ทุกครั้งที่แตะ data/words-data.js หรือ data/adv-sentences.js (ตามกฎ CLAUDE.md หัวข้อ 🗄️ ฐานข้อมูลเกมกลาง)
  *
- * วิธีรัน: node data/check-data-health.js
+ * วิธีรัน: node data/tools/check-data-health.js
  * ผ่าน = ไม่มี error พิมพ์ออกมา (exit code 0)
  * ไม่ผ่าน = พิมพ์รายการที่ผิด (exit code 1) — ห้าม push จนกว่าจะแก้หมด
  *
@@ -32,7 +32,7 @@
  * ⚠️ ต้องรันไฟล์นี้ก่อน push ทุกครั้งที่แตะ data/words-data.js หรือ data/adv-sentences.js ไฟล์ใดไฟล์หนึ่ง
  */
 global.window = global;
-require('./words-data.js');
+require('../words-data.js');
 const W = global.WORDS_MASTER;
 
 let errors = [];
@@ -164,7 +164,7 @@ W.forEach(function (w) {
 // เช็คไฟล์ประโยค adv-sentences.js (ADV_SENTENCES) — เพิ่ม 2026-07-16
 // โครงสร้างต่างจากไฟล์คำ: ประโยค → words[] → syls[] เลยต้องไล่เข้าไปอีกชั้น
 // ════════════════════════════════════════════════════════════
-require('./adv-sentences.js');
+require('../adv-sentences.js');
 const S = global.ADV_SENTENCES;
 
 S.forEach(function (sent) {
@@ -209,8 +209,8 @@ if (errors.length) {
   console.log('✅ ผ่านหมด — คำ ' + W.length + ' คำ + ประโยค ' + S.length + ' ประโยค ตรวจแล้วโอเค');
 }
 
-// ── เปิดช่องให้เทส (data/tests-check-data-health.js) เรียกฟังก์ชันไปทดสอบแยกได้ ──
-// (แพทเทิร์นเดียวกับ tone-engine.js) ไม่กระทบตอนรันตรงๆ ด้วย `node data/check-data-health.js` เลย
+// ── เปิดช่องให้เทส (data/tools/tests-check-data-health.js) เรียกฟังก์ชันไปทดสอบแยกได้ ──
+// (แพทเทิร์นเดียวกับ tone-engine.js) ไม่กระทบตอนรันตรงๆ ด้วย `node data/tools/check-data-health.js` เลย
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { sylCount, isHardReading, expectedLevel, checkFinalSound, checkConsIsWritten };
 }

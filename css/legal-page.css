@@ -1,9 +1,0 @@
-/* หน้ากฎหมาย/เอกสารแบบ standalone (ไม่โหลด shared.css) — ใช้ร่วมกับ terms.html / privacy.html
-   คัดลอกมาจาก inline <style> เดิมทุกตัวอักษร ห้ามเปลี่ยนค่าใดๆ โดยไม่ได้รับอนุมัติจาก Lin ก่อน */
-body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 0 20px 60px; line-height: 1.8; color: #333; }
-h1 { color: #1a1a1a; }
-h2 { color: #444; margin-top: 2em; }
-.topbar { padding: 18px 0; border-bottom: 1px solid #eee; margin-bottom: 28px; }
-.topbar a { color: #A07A1E; text-decoration: none; font-weight: 700; }
-.backfoot { margin-top: 48px; padding-top: 22px; border-top: 1px solid #eee; text-align: center; }
-.backfoot a { color: #A07A1E; text-decoration: none; font-weight: 700; }

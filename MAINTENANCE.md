@@ -1,5 +1,25 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-08 (รอบเย็น) — P4-04: แยก `data/` ที่ปนกัน (ตัวตรวจ+รายงาน → `data/tools/`, `data/reports/`)
+
+สถานะ: **✅ เสร็จแล้ว — Lin อนุมัติเปิดหลายแชทได้ แต่พบว่างานนี้ทำในแชทเดียวได้ปลอดภัยกว่า (ไฟล์ที่แก้ทับกันหมด) เลยทำตรงนี้เอง**
+
+ย้าย 7 ไฟล์ออกจาก `data/` (คงเหลือแค่ข้อมูลจริง: `words-data.js`/`adv-sentences.js`/`tone-engine.js`/`audio-*.js` + หน้าแอดมิน 2 หน้าที่ยังไม่ย้าย รอ Lin ตอบคำถามเข้าถึงยังไง):
+- → `data/tools/`: `tests-tone-engine.js`, `tests-check-data-health.js`, `check-duplicate-words.js`, `check-data-health.js`, `regression-check-tone.js`
+- → `data/reports/`: `tone-regression-report.json`, `game-behavioral-checklist-manual.md`
+
+แก้ path ในไฟล์ที่อ้างอิงครบ (เจอมากกว่าที่แผนเดิมคาดไว้ — เจอ `scripts/migrate-game-content.js` และ `CLAUDE.md` เองก็อ้างอิง path เดิมด้วย): `scripts/check-site.js` (4 บรรทัด runTest), `scripts/tests-game-behavioral.js` (คอมเมนต์), `data/review-tool.html` (fetch path หา report), `CLAUDE.md` (2 บรรทัดกฎถาวร), requires ภายในไฟล์ที่ย้าย (`./words-data.js` → `../words-data.js` ฯลฯ), `data/tools/regression-check-tone.js` เขียนไฟล์ output ไปที่ `../reports/` แทน · **ยังไม่ได้แก้:** สคริปต์ scheduled task รายสัปดาห์ `weekly-full-audit-product-security-games-schedule` (CHECK 3B อ้าง path เดิม `node data/regression-check-tone.js`) — ไฟล์นั้นอยู่นอก repo (`/Users/taihualin/Documents/Claude/Scheduled/`) AI เข้าไม่ถึงโดยตรง ต้องแก้ผ่านเครื่องมือจัดการ scheduled task ต่างหาก (งานตอนนี้ปิดอยู่ ไม่ได้รันอัตโนมัติ ไม่เร่งด่วน)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด + รัน `node data/tools/regression-check-tone.js` ด้วยมือ 1 ครั้งยืนยันเขียนไฟล์ไปที่ `data/reports/tone-regression-report.json` ถูกจุดจริง
+
+## 2026-08-08 — P4-01: เริ่มจัดโฟลเดอร์ (เปลี่ยนชื่อ js/content → js/acquisition + เก็บไฟล์สารบัญซ้ำเข้ากรุ)
+
+สถานะ: **✅ เสร็จ 2 จุดที่ Lin อนุมัติแล้ว — เหลืออีกหลายจุดรอ Lin ตัดสินใจ (ดู `27_แผน_P4-P5_จัดโฟลเดอร์.md`)**
+
+ทำ 2 อย่างตามที่ Lin อนุมัติ: (1) เปลี่ยนชื่อโฟลเดอร์ `js/content/` → `js/acquisition/` ให้ตรงชื่อเป้าหมายในแผนหลัก P4 (โค้ดเดิมไม่เปลี่ยน แค่ย้ายที่ + แก้ `src=` ใน 6 หน้า: `blog.html`, `faq.html`, `index.html`, `pricing.html`, `resources.html`, `tone-finder.html` + คอมเมนต์ในตัวไฟล์ + `README.md`) (2) ย้ายไฟล์สารบัญที่ซ้ำกัน `00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` ฉบับ root (เก่ากว่า ข้อมูลไม่ตรงของจริง) เข้า `_archive/` (กันไว้ ไม่ push ขึ้น GitHub) เหลือฉบับจริงที่ `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` ที่เดียว
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (816 ไฟล์ ไม่มี error/failure) รันหลังย้ายไฟล์เสร็จ
+
 ## 2026-08-07 — เพิ่มปุ่ม 補登上課 (บันทึกเข้าเรียนย้อนหลัง)
 
 สถานะ: **✅ เสร็จแล้ว — Lin push แล้วและยืนยันใช้งานได้จริงบนเว็บ**
@@ -46,7 +66,7 @@
 
 งานที่ทำ:
 
-- เพิ่มสคริปต์ทดสอบใหม่ 4 ตัว รวมเข้า `scripts/check-site.js` แล้ว (รันอัตโนมัติทุกครั้งที่รัน `node scripts/check-site.js`): `scripts/tests-marketing-behavioral.js`, `scripts/tests-game-behavioral.js`, `scripts/check-mobile-accessibility.js` (warning-only), `data/game-behavioral-checklist-manual.md` (checklist มือคู่กัน)
+- เพิ่มสคริปต์ทดสอบใหม่ 4 ตัว รวมเข้า `scripts/check-site.js` แล้ว (รันอัตโนมัติทุกครั้งที่รัน `node scripts/check-site.js`): `scripts/tests-marketing-behavioral.js`, `scripts/tests-game-behavioral.js`, `scripts/check-mobile-accessibility.js` (warning-only), `data/reports/game-behavioral-checklist-manual.md` (checklist มือคู่กัน — ย้ายจาก `data/` เข้า `data/reports/` แล้ว 2026-08-08)
 - `scripts/check-minified-sync.js` สร้างแล้วแต่**ตั้งใจไม่รวม**เข้า `check-site.js` เพราะวิธี exact-match จะ MISMATCH เสมอกับไฟล์ที่ผ่าน minifier จริง (ไม่ใช่ด่านที่บล็อก push ได้ — รันแยกด้วยมือ)
 - สร้าง `supabase/tests/` ตามข้อเสนอ P2-06 · ย้ายเฉพาะไฟล์ที่ยังใช้งานจริง `2026-08-02_reschedule_lock_guard_TEST.sql` เข้ามา (อัปเดต path ใน `CLAUDE.md` และ `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` แล้ว) — ไฟล์ `_TEST.sql` อีก 2 ไฟล์ที่อยู่ใน `archive/` (เลิกใช้แล้ว) ไม่ย้าย เพราะเป็นของเก่าที่ถูกแทนที่แล้ว ไม่ใช่ตัวทดสอบที่ยังใช้งาน
 - สร้าง `_dev/2026-08-07_behavioral-guard-cancel-addclass.html` และ `_dev/ตัวทดสอบระบบเลื่อนคาบ_P3_2026-08-07.html` (เปิดเบราว์เซอร์รันเอง — ไม่ผูกกับ `check-site.js`)

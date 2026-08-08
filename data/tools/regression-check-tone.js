@@ -3,8 +3,8 @@
  * ROLE/MAP: one-off Node regression generator → load data/engine → compare syllables → write review report
  * ใช้ครั้งเดียว ไม่ใช่ระบบถาวร (System 1 ตาม _แผนงาน/2026-07-13_ออกแบบ2ระบบ...)
  *
- * วิธีรัน: node data/regression-check-tone.js
- * ผลลัพธ์: เขียนไฟล์ data/tone-regression-report.json (schema เดียวกับที่ review-tool.html อ่าน —
+ * วิธีรัน: node data/tools/regression-check-tone.js
+ * ผลลัพธ์: เขียนไฟล์ data/reports/tone-regression-report.json (schema เดียวกับที่ review-tool.html อ่าน —
  *          ดูรายละเอียด schema ที่คอมเมนต์บนสุดของ data/review-tool.html)
  *
  * เช็คทุกพยางค์ใน:
@@ -12,9 +12,9 @@
  *   - data/adv-sentences.js (ADV_SENTENCES, 10 ประโยค, มี syls อยู่แล้วเดิม)
  */
 global.window = global;
-require('./words-data.js');
-require('./adv-sentences.js');
-require('./tone-engine.js');
+require('../words-data.js');
+require('../adv-sentences.js');
+require('../tone-engine.js');
 
 const W = global.WORDS_MASTER;
 const S = global.ADV_SENTENCES;
@@ -99,11 +99,11 @@ const report = {
 };
 
 const fs = require('fs');
-fs.writeFileSync(__dirname + '/tone-regression-report.json', JSON.stringify(report, null, 2), 'utf8');
+fs.writeFileSync(__dirname + '/../reports/tone-regression-report.json', JSON.stringify(report, null, 2), 'utf8');
 
 console.log('เช็คแล้ว ' + entries.length + ' คำ/ประโยค (' + totalSyls + ' พยางค์)');
 console.log('ไม่ตรง: ' + mismatchCount + ' คำ/ประโยค (' + mismatchSyls + ' พยางค์)');
-console.log('เขียนรายงานที่ data/tone-regression-report.json — เปิดดูรายละเอียดได้ที่ data/review-tool.html');
+console.log('เขียนรายงานที่ data/reports/tone-regression-report.json — เปิดดูรายละเอียดได้ที่ data/review-tool.html');
 if (mismatchCount > 0) {
   var newMismatches = [];
   var knownMismatches = [];

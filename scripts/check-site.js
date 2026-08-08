@@ -101,10 +101,10 @@ cssFiles.forEach((relative) => {
 });
 console.log(`✓ ตรวจ CSS ${cssFiles.length} ไฟล์`);
 
-runTest(['data/tests-tone-engine.js'], 'tone engine tests');
-runTest(['data/tests-check-data-health.js'], 'data-health tests');
-runTest(['data/check-duplicate-words.js'], 'duplicate-word check');
-runTest(['data/check-data-health.js'], 'data-health check');
+runTest(['data/tools/tests-tone-engine.js'], 'tone engine tests');
+runTest(['data/tools/tests-check-data-health.js'], 'data-health tests');
+runTest(['data/tools/check-duplicate-words.js'], 'duplicate-word check');
+runTest(['data/tools/check-data-health.js'], 'data-health check');
 runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 // เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');

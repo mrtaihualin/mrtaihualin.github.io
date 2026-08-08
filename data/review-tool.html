@@ -9,7 +9,7 @@
   ไม่ใช่หน้าเว็บสาธารณะ ไม่ผูกกับเมนู games.html — เปิดตรงๆ จากไฟล์ หรือ URL ตรงเท่านั้น
 
   งานที่ 1 — ตรวจคลังคำเดิม (System 1, ครั้งเดียว):
-    เปิดไฟล์ data/tone-regression-report.json (สร้างจาก `node data/regression-check-tone.js`)
+    เปิดไฟล์ data/reports/tone-regression-report.json (สร้างจาก `node data/tools/regression-check-tone.js`)
     ดูว่าคำ/ประโยคไหนที่ Lin พิมพ์คำตอบไว้ ไม่ตรงกับที่เครื่องคิด (คำนวณจาก data/tone-engine.js จริง
     ไม่ใช่ mock) — คลิกเข้าไปดูเหตุผลทีละพยางค์ได้
 
@@ -121,7 +121,7 @@
 <div class="wrap">
   <header class="top">
     <h1>🌾 เครื่องมือตรวจวรรณยุกต์ (Lin ใช้คนเดียว)</h1>
-    <p id="modeDesc">โหลด data/tone-regression-report.json อัตโนมัติ ถ้าโหลดไม่ได้ให้กด "เลือกไฟล์ JSON" เอง</p>
+    <p id="modeDesc">โหลด data/reports/tone-regression-report.json อัตโนมัติ ถ้าโหลดไม่ได้ให้กด "เลือกไฟล์ JSON" เอง</p>
   </header>
 
   <div class="panel">
@@ -362,7 +362,7 @@
   // โหลด default report อัตโนมัติถ้าเปิดผ่าน http(s) (เปิดตรงจากไฟล์ file:// อาจโดน CORS บล็อก — ใช้ปุ่มเลือกไฟล์แทนได้)
   // เช็ค typeof fetch ก่อนกันพัง (environment ที่ไม่มี fetch เลย — เผื่อไว้ ไม่ควรเกิดในเบราว์เซอร์จริง)
   if (typeof fetch === 'function') {
-    fetch('tone-regression-report.json').then(function (r) {
+    fetch('reports/tone-regression-report.json').then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     }).then(function (obj) {

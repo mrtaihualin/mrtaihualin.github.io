@@ -4,7 +4,7 @@
  * ใช้ "คำสมมติ" ที่แต่งขึ้นมาเองเพื่อทดสอบ logic เท่านั้น (ไม่ใช่เนื้อหาเกมจริง ไม่แตะ words-data.js เลย —
  * ไม่ขัดกฎ 16 เพราะเป็นแค่ fixture ทดสอบโค้ด ไม่เคยถูกโชว์ให้นักเรียนเห็น)
  *
- * วิธีรัน: node data/tests-check-data-health.js
+ * วิธีรัน: node data/tools/tests-check-data-health.js
  * ผ่าน = "✅ ผ่านหมด" + exit code 0 / ไม่ผ่าน = พิมพ์เคสที่พังทีละอัน + exit code 1
  */
 const H = require('./check-data-health.js');
@@ -38,7 +38,7 @@ check('expectedLevel(3 พยางค์ ไม่ว่าอ่านง่�
 // ── checkFinalSound / checkConsIsWritten ──
 // หมายเหตุ: checkFinalSound/checkConsIsWritten เขียนผลลง errors[] ที่เป็นตัวแปรภายในไฟล์ (ไม่ได้ return
 // ค่า) — เทสตรงนี้เรียกแค่ยืนยันว่า "เรียกได้ไม่ throw" กับพยางค์ปกติ/ผิดปกติ ส่วนผลจริง (errors ยาวขึ้น
-// ไหม) ถูกคุมด้วย data/check-data-health.js เองตอนรันกับข้อมูลจริงอยู่แล้ว (ผ่าน 735 คำ 30 ประโยคล่าสุด)
+// ไหม) ถูกคุมด้วย data/tools/check-data-health.js เองตอนรันกับข้อมูลจริงอยู่แล้ว (ผ่าน 735 คำ 30 ประโยคล่าสุด)
 try {
   H.checkFinalSound('เทส', { th: 'บ้าน', final: 'น' }); // final ถูกกฎ (มาตรา กน)
   H.checkConsIsWritten('เทส', { th: 'บ้าน', cons: 'บ' }); // cons ปรากฏในตัวเขียนจริง

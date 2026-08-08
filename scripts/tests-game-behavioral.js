@@ -4,7 +4,7 @@
  * scripts/tests-game-behavioral.js — Lin P3 (2026-08-07)
  * ────────────────────────────────────────────────────────────
  * ตรวจ "พฤติกรรมเกม" แบบ static (อ่านโค้ด ไม่ยิงเน็ตจริง) — คนละเรื่องกับ
- * data/tests-tone-engine.js / data/tests-check-data-health.js ที่ตรวจ "ข้อมูล" (คำ/ประโยค/วรรณยุกต์)
+ * data/tools/tests-tone-engine.js / data/tools/tests-check-data-health.js ที่ตรวจ "ข้อมูล" (คำ/ประโยค/วรรณยุกต์)
  *
  * ตรวจ 3 กลุ่ม:
  *   A) เกมทั้ง 6 หน้า (games-challenge/reading-game/tone-finder/typing-game/word-order/listening-game)

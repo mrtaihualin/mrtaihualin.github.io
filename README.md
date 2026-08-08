@@ -18,7 +18,7 @@
 | `data/` | คลังคำ ประโยค และตัวตรวจข้อมูล |
 | `js/core/` | ระบบกลาง เช่น auth, shared UI และ Supabase |
 | `js/classroom/` | logic ระบบห้องเรียน |
-| `js/content/` | ข้อมูลเนื้อหาที่แสดงบนหน้าเว็บ |
+| `js/acquisition/` | ข้อมูลเนื้อหาที่แสดงบนหน้าเว็บ |
 | `js/games/` | logic ของเกมทั้งหมด |
 | `js/score/` | คะแนน ความคืบหน้า และ leaderboard |
 | `js/vendor/` | library ภายนอก ห้ามจัดรูปแบบหรือแก้โดยไม่จำเป็น |

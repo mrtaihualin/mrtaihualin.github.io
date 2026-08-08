@@ -6,11 +6,11 @@
  * ใช้ 2 แบบ:
  *
  * แบบที่ 1 — เช็คคลังเดิมเอง (audit): เช็คว่า data/words-data.js เองมีคำซ้ำกันไหม (เผื่อมีคนพิมพ์คำเดิมซ้ำ 2 ที่)
- *   วิธีรัน: node data/check-duplicate-words.js
+ *   วิธีรัน: node data/tools/check-duplicate-words.js
  *
  * แบบที่ 2 — เช็คคำร่างใหม่ (System 2 ก่อน Step D "เสนอ Lin"): เช็คว่าคำที่ AI ร่างมาใหม่
  *   ไปซ้ำกับคำที่มีอยู่แล้วในคลังไหม ก่อนเอาไปโชว์ Lin
- *   วิธีรัน: node data/check-duplicate-words.js path/to/ai-draft.json
+ *   วิธีรัน: node data/tools/check-duplicate-words.js path/to/ai-draft.json
  *   (ไฟล์ต้องเป็น schema เดียวกับ review-tool.html mode:"ai-draft" — อ่านฟิลด์ entries[].word)
  *
  * เช็คคำซ้ำ 2 ระดับ:
@@ -19,7 +19,7 @@
  * ไม่เช็ค "ความหมายซ้ำ" (คำต่างกันแต่แปลเหมือนกัน) — อันนั้นต้อง Lin ดูเองหรือให้ AI ช่วยอ่านตอน Step B/C
  */
 global.window = global;
-require('./words-data.js');
+require('../words-data.js');
 const fs = require('fs');
 const path = require('path');
 
