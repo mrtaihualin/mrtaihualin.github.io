@@ -1475,12 +1475,19 @@ if (typeof openSharePopup === 'undefined') {
   };
 }
 
-// ----- [03.6] 📰 BLOG ARTICLE SHARE BUTTON — Web Share API 優先，失敗/不支援才跳分享 popup -----
+// ----- [03.6] 📰 BLOG ARTICLE SHARE BUTTON — 手機用原生分享，桌機一律用分享 popup -----
 //   2026-08-08: Lin 核准「全部合一」設計 — 手機支援原生分享就叫原生的，桌機或失敗都退回舊的分享 popup（含 FB/LINE 捷徑）
 //   自動幫 blog/ 資料夾底下每一篇文章加分享按鈕，不用逐一改 44 個檔案：讀那篇文章自己的 <title>/meta description/canonical 網址
+//
+//   2026-08-08 (rev2, Lin 測試後決定): 原本只檢查「有沒有 navigator.share」— 但桌機新版 Safari/Chrome
+//   也支援 navigator.share()，導致桌機也先跳系統分享選單；使用者若按叉關掉那個選單（沒選任何管道），
+//   navigator.share().catch() 會把「使用者取消」跟「裝置不支援」當同一種錯誤處理，接著又跳出分享 popup
+//   （FB/LINE 那個）= 疊出 2 個視窗。改成先判斷「是不是手機」— 是手機才走 navigator.share，
+//   桌機（Safari/Chrome/Firefox 都算）一律直接開分享 popup，不經過 navigator.share
 if (typeof shareBlogArticle === 'undefined') {
   window.shareBlogArticle = function(title, text, url) {
-    if (navigator.share) {
+    var isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+    if (isMobileDevice && navigator.share) {
       navigator.share({ title: title, text: text, url: url }).catch(function(){
         openSharePopup(title, text, url);
       });

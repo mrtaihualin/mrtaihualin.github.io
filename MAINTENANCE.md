@@ -1,5 +1,21 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-08 (P5-A ปรับตามผลทดสอบ Lin) — ปุ่มแชร์บทความ: คอมทุกเบราว์เซอร์ให้ไปกล่อง popup ตรงๆ
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin ทดสอบซ้ำ (iPhone Safari + คอม Safari + คอม Chrome) แล้ว push**
+
+ปัญหาที่ Lin ทดสอบเจอ: `shareBlogArticle()` เดิมเช็คแค่ "เบราว์เซอร์มี `navigator.share` ไหม" — คอมเดสก์ท็อปรุ่นใหม่ (Safari/Chrome) ก็มี `navigator.share` เหมือนกัน ไม่ใช่แค่มือถือ เลยขึ้นเมนูแชร์ของเครื่อง (native share sheet) ก่อนบนคอมด้วย ถ้า Lin กดปิดเมนูนั้น (ไม่ได้เลือกช่องทางไหน) `navigator.share().catch()` จับ error ทุกแบบรวมถึง "คนกดยกเลิก" เลยเด้งกล่อง popup (FB/LINE) ตามมาซ้อนอีกกล่อง = ได้ 2 กล่องซ้อนกัน
+
+การตัดสินใจของ Lin: คอมทุกเบราว์เซอร์ (Safari/Chrome/Firefox) ให้ใช้กล่อง popup (FB/LINE) เสมอ ไม่ผ่าน `navigator.share` เลย ส่วนมือถือให้คงเดิม (ขึ้นเมนูเครื่องก่อน — ทดสอบผ่านแล้วบน iPhone Safari)
+
+วิธีแก้: เปลี่ยนเงื่อนไขจาก "มี `navigator.share` ไหม" เป็น "เป็นมือถือไหม (`/Android|iPhone|iPad|iPod/i` ตรวจ user agent) และมี `navigator.share`" — เป็นมือถือถึงจะเรียก `navigator.share()` เดสก์ท็อปทุกเบราว์เซอร์ไป `openSharePopup()` ตรงๆ
+
+ไฟล์ที่แก้: `js/core/shared.js` (หัวข้อ `[03.6] BLOG ARTICLE SHARE BUTTON`) → รัน `scripts/build-minjs.sh` แล้ว → `shared.min.js` อัปเดตแล้ว
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (819 ไฟล์)
+
+**สิ่งที่ Lin ต้องทำเอง:** ทดสอบซ้ำ 3 จุดก่อน push — iPhone Safari (ต้องขึ้นเมนูเครื่องเหมือนเดิม) + คอม Safari (ต้องขึ้นกล่อง popup FB/LINE ทันที ไม่มีเมนูเครื่องมาก่อน) + คอม Chrome (แบบเดียวกัน) ผ่านครบแล้ว push ผ่าน GitHub Desktop (client-side ล้วน ไม่ต้อง deploy อะไรเพิ่ม)
+
 ## 2026-08-08 (บั๊กจริง #2) — เชื่อม LINE ในซาฟารีพัง "連結可能已經用過" (ใช้ได้ปกติในแอป LINE)
 
 สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin push แล้วทดสอบซ้ำในซาฟารี**
