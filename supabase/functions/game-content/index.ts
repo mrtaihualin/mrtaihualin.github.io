@@ -89,11 +89,16 @@ serve(async (req) => {
     const xff = req.headers.get('x-forwarded-for') || '';
     const ip = (xff.split(',')[0] || '').trim() || 'unknown';
     const rlKey = user ? ('user:' + user.id) : ('ip:' + ip);
-    const { data: rlOk, error: rlErr } = await admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 });
-    if (!rlErr && rlOk === false) return json({ error: 'rate_limited — 請稍後再試' }, 429, origin);
 
     // ── ดึงคำ 初/中 + ประโยค高 ตามเพดานของ tier นี้ (order by rank = ลำดับความสำคัญที่ล็อกไว้แล้ว) ──
-    const [w1, w2, sent] = await Promise.all([
+    // 2026-08-07: เดิม rate-limit RPC รอจบก่อนค่อยเริ่ม query คำ/ประโยค (2 รอบไปกลับ Supabase เรียงกัน)
+    // วัดจริงจาก Network tab (Chrome MCP) พบว่า game-content ทั้งก้อนกินเวลา 700ms-2900ms ต่อครั้ง สุ่มมาก
+    // ไม่ผูกกับเกมไหนเกมหนึ่ง (เกมเสียง/เกมอ่านเจอพอกัน เพราะเรียก Edge Function ตัวเดียวกัน) → ยิง
+    // rate-limit RPC พร้อมกับ query ข้อมูลไปเลย (ไม่รอให้ rate-limit ผ่านก่อน) ตัดไปได้ 1 รอบไปกลับ ยังเช็ค
+    // ผล rate-limit ก่อน "ส่งข้อมูลออกไป" เหมือนเดิม (ถ้าโดน rate limit ข้อมูลที่ query มาจะถูกทิ้ง ไม่ส่งกลับ
+    // ไม่กระทบความปลอดภัย แค่กิน DB เกินจำเป็นเล็กน้อยเฉพาะตอนโดนบล็อกเท่านั้น)
+    const [rl, w1, w2, sent] = await Promise.all([
+      admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 }),
       admin.from('game_words').select('word,en,zh,level,category,syls,reading_th,read_syls')
         .eq('level', '初').order('rank', { ascending: true }).limit(caps['初']),
       admin.from('game_words').select('word,en,zh,level,category,syls,reading_th,read_syls')
@@ -101,6 +106,7 @@ serve(async (req) => {
       admin.from('game_sentences').select('th,zh,reading_th,wc,polite_f,words')
         .order('rank', { ascending: true }).limit(caps.sentences),
     ]);
+    if (!rl.error && rl.data === false) return json({ error: 'rate_limited — 請稍後再試' }, 429, origin);
     if (w1.error) throw w1.error;
     if (w2.error) throw w2.error;
     if (sent.error) throw sent.error;
