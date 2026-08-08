@@ -34,7 +34,7 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/games/game-account.js?v=3"></script>
 <script defer src="js/core/auth-widget.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=11"></script><!-- v10: เพิ่มสาขาเกม 'challenge' — Lin 2026-08-01 (เดิมชื่อ 'mix' ก่อนเปลี่ยนชื่อไฟล์ mix.html→games-challenge.html) -->
+<script defer src="js/games/reading-auth.js?v=12"></script><!-- v10: เพิ่มสาขาเกม 'challenge' — Lin 2026-08-01 (เดิมชื่อ 'mix' ก่อนเปลี่ยนชื่อไฟล์ mix.html→games-challenge.html) -->
 <script defer src="js/games/tone-server.js?v=1"></script>
 <script src="js/games/word-vault.js"></script>
 <script src="data/audio-manifest.js?v=2"></script>
@@ -498,7 +498,7 @@ body:not(.tg-kbd-open) .tkbd{display:none !important;}
 </footer>
 
 <script>GameContentLoader.boot(['js/games/games-challenge-app.js?v=1']);</script>
-<script src="js/core/shared.min.js?v=17"></script>
+<script src="js/core/shared.min.js?v=18"></script>
 <!-- mount() ต้องรันหลัง shared.min.js เหมือนเกมเดี่ยวทุกเกม (เดิมรันก่อน — หน้าเดียวในเว็บที่ทำแบบนี้) -->
 <script>document.addEventListener('DOMContentLoaded',function(){MixGame.mount();});</script>
 </body>
