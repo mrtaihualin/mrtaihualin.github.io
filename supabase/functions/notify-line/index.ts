@@ -41,13 +41,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-}
+// 2026-08-08 (P7-03 defense-in-depth): จำกัด CORS จาก '*' เป็นโดเมนจริงของเว็บเท่านั้น —
+// ตรวจแล้วฟังก์ชันนี้เรียกจาก classroom/index.html (ทั้งฝั่งครูล็อกอินตรง และฝั่งนักเรียน ?s=token)
+// classroom/index.html ไม่มี LIFF SDK ฝังอยู่เลย (แม้บางครั้งนักเรียนจะเปิดหน้านี้ผ่านลิงก์ liff.line.me
+// ที่ redirect เข้ามาก่อน — พอ redirect เสร็จ หน้านี้ก็เป็นหน้าเว็บปกติบนโดเมนเราเองแล้ว ไม่มี liff.init())
+// + มีด่านตรวจตัวตนจริงอยู่แล้ว (ครู JWT หรือ fromStudentToken ที่มีจริง + notify_line_gate)
+// CORS ผ่อนปรนเดิมไม่ได้ช่วยข้ามด่านนั้นได้ ดูรายงาน P7-03:
+// Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md
+const ALLOWED_ORIGINS = [
+  'https://mrtaihualin.com',
+  'https://www.mrtaihualin.com',
+  'https://mrtaihualin.github.io',
+];
 
 async function pushLineMessages(channelToken, targetUserId, messages) {
   const res = await fetch(LINE_PUSH_URL, {
@@ -139,6 +144,16 @@ function buildFlexMessage(title, bodyText, buttons, rows) {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin') || '';
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  function corsHeaders() {
+    return {
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Vary': 'Origin',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    };
+  }
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'method not allowed' }), {

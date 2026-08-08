@@ -33,19 +33,15 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-}
-function json(body, status) {
-  return new Response(JSON.stringify(body), {
-    status: status || 200,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
-  });
-}
+// 2026-08-08 (P7-03 defense-in-depth): จำกัด CORS จาก '*' เป็นโดเมนจริงของเว็บเท่านั้น —
+// ตรวจแล้วฟังก์ชันนี้เรียกจาก js/games/lego-game-app.js (lego.html) ล้วน ๆ ไม่มี LIFF SDK เกี่ยวข้อง
+// (ฟังก์ชันนี้มีด่านตรวจตัวตนจริง — JWT/IP hash — CORS ผ่อนปรนเดิมไม่ได้ช่วยข้ามด่านนั้นได้ แค่ล็อกให้แคบลงเป็นชั้นป้องกันที่สอง)
+// ดู Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md
+const ALLOWED_ORIGINS = [
+  'https://mrtaihualin.com',
+  'https://www.mrtaihualin.com',
+  'https://mrtaihualin.github.io',
+];
 
 // วันนี้ตามเวลาไต้หวัน (Asia/Taipei) — ให้วันขึ้นวันใหม่ตรงกับที่เว็บใช้อยู่แล้วทั้งเว็บ (streak/ดาว)
 // ไม่ใช้เวลาเครื่อง server เอง (อาจเป็น UTC) กันวันเพี้ยน
@@ -73,6 +69,22 @@ function clientIp(req) {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin') || '';
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  function corsHeaders() {
+    return {
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Vary': 'Origin',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    };
+  }
+  function json(body, status) {
+    return new Response(JSON.stringify(body), {
+      status: status || 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+    });
+  }
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 

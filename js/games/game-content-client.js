@@ -208,6 +208,39 @@
     });
   }
 
+  // ════════════════════════════════════════════════════════════
+  // GA4: game_content_cap_hit — เพิ่ม 2026-08-08 (P6-08 ข้อ 1 ในหัวข้อ 5 ของ
+  // 39_P6-08_ตัววัดผลเกมแยกจากคลาส.md) — ยิงเมื่อ Edge Function บอกว่าระดับนั้น "ชนเพดาน
+  // เนื้อหาฟรีแล้ว" (data.capped['初'/'中']/.sentences === true) เป็นสัญญาณ conversion
+  // (กี่คน/สัปดาห์เล่นจนคลังฟรีหมด = กลุ่มเป้าหมายที่พร้อมจ่ายมากที่สุด)
+  //
+  // ยิงสูงสุด "1 ครั้งต่อระดับ ต่อ session ของแท็บนี้" ผ่าน sessionStorage (ไม่ใช่
+  // localStorage — เป็นสัญญาณระดับ session ไม่ใช่ถาวร) กันไม่ให้ผู้เล่นที่ชนเพดานแล้วเปิด/
+  // รีโหลดหน้าเกมซ้ำๆ ยิง event ท่วม analytics — รูปแบบ dedup เดียวกับ book_trial_click ใน
+  // js/core/shared.js:484-492 (เช็ค sessionStorage.getItem ก่อนยิง แล้วค่อย setItem หลังยิง)
+  //
+  // กลไกยิง GA4 ใช้แบบเดียวกับทั้งเว็บ (เช่น reading-game-app.js:633-634,
+  // game-switcher.js:32): เช็ค typeof gtag==='function' ก่อนเรียกเสมอ + ครอบ try/catch —
+  // กันเกมพังถ้า gtag ยังไม่โหลด/ถูกบล็อกด้วย ad blocker (ตาม CONSTRAINTS: ต้อง defensive)
+  // ────────────────────────────────────────────────────────────
+  function fireCapHitEvents(data) {
+    try {
+      if (!data || !data.capped || typeof gtag !== 'function') return;
+      var tier = data.tier;
+      ['初', '中', 'sentences'].forEach(function (level) {
+        try {
+          if (!data.capped[level]) return;
+          var key = 'gc_cap_fired_' + level;
+          if (sessionStorage.getItem(key) === '1') return;
+          gtag('event', 'game_content_cap_hit', { category: 'game', level: level, tier: tier });
+          sessionStorage.setItem(key, '1');
+        } catch (e2) { /* ห้ามให้ระดับหนึ่งพังจนกระทบระดับอื่น */ }
+      });
+    } catch (e) {
+      // ห้ามให้ analytics พังจนกระทบการโหลดเกม
+    }
+  }
+
   // เรียกจากหน้าเกม: GameContentLoader.boot(['js/games/reading-game-app.min.js?v=22'])
   global.GameContentLoader = {
     boot: function (appScriptSrcs) {
@@ -215,6 +248,7 @@
       else document.addEventListener('DOMContentLoaded', showLoadingBanner);
 
       fetchGameContent().then(function (data) {
+        fireCapHitEvents(data);
         global.WORDS_MASTER = data.words;
         global.ADV_SENTENCES = data.sentences;
         var chain = Promise.resolve();

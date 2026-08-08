@@ -47,19 +47,19 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-}
-function json(body, status) {
-  return new Response(JSON.stringify(body), {
-    status: status || 200,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
-  });
-}
+// 2026-08-08 (P7-03 defense-in-depth): จำกัด CORS จาก '*' เป็นโดเมนจริงของเว็บเท่านั้น —
+// ตรวจโค้ดแล้ว: ฟังก์ชันนี้เรียกจาก line-callback.html (หน้าที่ root ของเว็บ) เท่านั้น เป็น OAuth
+// redirect_uri แบบมาตรฐาน (access.line.me → เด้งกลับมาที่หน้านี้บนโดเมนเราเอง) ไม่ใช้ LIFF SDK เลย
+// (คนละระบบกับ link-line/find-line-student ที่ใช้ liff.init() จริง — ดูรายงาน P7-03 รอบนี้)
+// รายชื่อโดเมนใช้ชุดเดียวกับ allowedHosts (เช็ค redirect_uri) ด้านล่าง — มีด่านตรวจ redirect_uri นี้
+// เป็นด่านความปลอดภัยจริงอยู่แล้วอิสระจาก CORS ด้วย
+// ดู Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md
+const ALLOWED_ORIGINS = [
+  'https://mrtaihualin.com',
+  'https://www.mrtaihualin.com',
+  'https://mrtaihualin.github.io',
+];
+
 // อีเมล synthetic คำนวณจาก line_user_id เสมอ (deterministic ไม่ต้องเก็บซ้ำที่ไหน)
 // ใช้โดเมน .invalid ตั้งใจ (สงวนไว้ตาม RFC 2606 ข้อ 2) รับประกันว่าไม่มีทางส่งอีเมลไปโดนใครจริงๆ
 // ไม่ใช่อีเมลจริง — ใช้แค่เป็น key ให้ Supabase auth.users เท่านั้น (ไม่เคยส่งเมลออกจริง)
@@ -68,6 +68,22 @@ function syntheticEmail(lineUserId) {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin') || '';
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  function corsHeaders() {
+    return {
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Vary': 'Origin',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    };
+  }
+  function json(body, status) {
+    return new Response(JSON.stringify(body), {
+      status: status || 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+    });
+  }
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 

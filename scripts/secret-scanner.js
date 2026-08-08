@@ -52,7 +52,8 @@ const PUBLIC_CONTEXTS = Object.freeze({
     'index.html',
     'resources.html',
     'js/core/shared.js',
-    'js/core/shared.min.js'
+    'js/core/shared.min.js',
+    'js/acquisition/index-content-modals.js'
   ]),
   web3forms: new Set([
     'classroom/pay.html',

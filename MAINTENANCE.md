@@ -1,5 +1,41 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-08 (รอบดึกสุด) — "กลุ่ม 2": จำกัด CORS / แยก inline script index.html / เพิ่ม GA4+meta / ต่อ GA4 event เจอเพดาน
+
+สถานะ: **โค้ดเสร็จแล้วรอ Lin push** (ข้อ CORS ต้อง deploy Edge Function เพิ่ม 6 ตัวหลัง push · ข้อแยก inline script ยังไม่ได้ตรวจด้วยเบราว์เซอร์จริง ขอ Lin เช็คเอง)
+
+Lin อนุมัติ "กลุ่ม 2" ทั้งชุดพร้อมกัน ("ทำเลย ทีเดียวให้หมด") สั่งทำคู่ขนาน 4 แชท (ไฟล์ไม่ชนกัน):
+
+1. **CORS Edge Function:** จำกัดจาก `*` เหลือเฉพาะโดเมนเว็บ 6 ตัว (`lego-daily-limit`, `restore-line-student`, `unlink-line-student`, `sync-line-menu`, `notify-line`, `line-login`) ตรวจโค้ดแล้วว่าไม่มีตัวไหนรันในบริบท LIFF · ตั้งใจ**ไม่แตะ** `link-line`/`find-line-student` เพราะรันใน LIFF จริง เสี่ยงพัง LINE ถ้าจำกัด Origin ผิด — **⚠️ ยังไม่ live ต้องรัน `supabase functions deploy <ชื่อ>` ทีละตัวทั้ง 6:**
+   ```
+   supabase functions deploy lego-daily-limit
+   supabase functions deploy restore-line-student
+   supabase functions deploy unlink-line-student
+   supabase functions deploy sync-line-menu
+   supabase functions deploy notify-line
+   supabase functions deploy line-login
+   ```
+   หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md`
+
+2. **แยก inline script `index.html`:** ย้าย ~406 บรรทัดออกเป็น `js/acquisition/index-content-modals.js` (modal วิดีโอ/FB/self-study/share) + `js/acquisition/index-analytics.js` (GA4 tracking เฉพาะหน้า) วางตำแหน่ง `<script src>` เป๊ะจุดเดิม ไม่เปลี่ยนพฤติกรรม — **⚠️ เครื่องมือเบราว์เซอร์ใช้ไม่ได้ในรอบนี้ ตรวจได้แค่อ่านโค้ดซ้ำ ยังไม่ได้กดทดสอบจริง ขอ Lin เปิดหน้าแรกลองกด modal วิดีโอ/FB เช็ค console error สัก 1 นาทีก่อนหรือหลัง push** หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/45_ผลลัพธ์_P5-A_แยกinlineScript.md`
+
+3. **เพิ่ม GA4 + meta:** เพิ่ม GA4 ให้ 12 หน้าที่ไม่เคยมีเลย (`en/*` ทั้ง 7 หน้า, `links.html`, `vocab-cheatsheet.html`, `privacy.html`, `terms.html`, `404.html`) ใช้ Measurement ID จริงตัวเดียวที่ใช้ทั้งเว็บ · แก้หมวด GA4 ของบทความจาก `course` เป็น `article` ครบ 44/44 ไฟล์ · เพิ่ม meta description/og ให้ `vocab-cheatsheet.html` ตามเนื้อหาจริง หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/46_ผลลัพธ์_P5-A_GA4และmeta.md`
+
+4. **ต่อ GA4 event `game_content_cap_hit`:** ใน `js/games/game-content-client.js` ใช้ field `capped` ที่ deploy ไปแล้วก่อนหน้า ยิง event เมื่อผู้เล่นเจอเพดานเนื้อหาฟรี ครั้งเดียวต่อระดับต่อ session (กันสแปม ใช้ `sessionStorage`) ใช้กลไก `gtag()` แบบเดียวกับเกมอื่น หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/47_ผลลัพธ์_P6-08_GA4event_capHit.md`
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้ง 4 งาน (818 ไฟล์) ไม่มีค่าลับหลุด
+
+Commit message แนะนำ (Lin เลือกรวม/แยกเอง แล้ว push ผ่าน GitHub Desktop):
+```
+จำกัด CORS ของ Edge Function 6 ตัวให้เหลือเฉพาะโดเมนเว็บ (เว้น 2 ตัวที่รันใน LIFF ไว้ตามเดิม) — ยังไม่ deploy
+
+refactor(index): ย้าย inline script 2 บล็อก (YT/FB/self-study/share modal + GA4 event tracking) ออกจาก index.html ไป js/acquisition/ ตำแหน่งเดิมเป๊ะ ไม่เปลี่ยนพฤติกรรม
+
+เพิ่ม GA4 ให้ 12 หน้าที่ไม่เคยมี + แก้หมวดบทความจาก course เป็น article ครบ 44 ไฟล์ + เพิ่ม meta ให้ vocab-cheatsheet.html
+
+เพิ่ม GA4 event game_content_cap_hit ยิงตอนผู้เล่นชนเพดานเนื้อหาฟรี (1 ครั้ง/ระดับ/session)
+```
+
 ## 2026-08-08 (รอบดึก) — P6-17 + P7-03 + P6-08: แก้หน้า error เกม / ล็อกเวอร์ชัน backup / เพิ่มจุดวัดเจอเพดาน
 
 สถานะ: **โค้ดเสร็จแล้วรอ Lin push** (ยกเว้นข้อ D ที่ต้อง deploy Edge Function เพิ่มอีกขั้นหลัง push)
@@ -8,7 +44,7 @@ Lin อนุมัติ 4 งานย่อยแบบแยกเรื่�
 
 1. **A+B — แก้หน้า error เกม (`js/games/game-content-client.js` ไฟล์เดียว โหลดทั้ง 6 หน้าเกม):** เปลี่ยนสีแถบโหลด/error จากฟ้า/แดงทั่วไปเป็นชุดสีทองตาม CLAUDE.md · แปล error ดิบ (เช่น `game-content HTTP 500`) เป็นภาษาไทยง่ายๆ ให้ผู้เล่นเห็น (ข้อความดิบยังอยู่ใน `console.error` เพื่อ debug) · เพิ่มปุ่ม "🔙 กลับหน้าเกมทั้งหมด" + "💬 ทัก LINE ครู" (ใช้ลิงก์ LINE เดิมที่มีอยู่แล้วใน `js/core/shared.js`) · เพิ่ม global crash handler (`window.onerror`/`unhandledrejection`) ที่ไม่เคยมีมาก่อนบนหน้าเกมเลยสักหน้า ใช้แถบ error เดียวกับข้อ A · ไม่มี `.min.js` คู่กัน ไม่ต้อง build · หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/41_ผลลัพธ์_P6-17_แก้หน้าerror.md`
 2. **C — ล็อกเวอร์ชัน dependency ตัวสำรองข้อมูล:** สร้าง `scripts/backup/package-lock.json` จริงจาก `npm install` (ไม่ได้เขียนมือ, ตรึง `googleapis@144.0.0`) + เปลี่ยน `.github/workflows/backup-database-to-drive.yml` จาก `npm install --no-save` เป็น `npm ci` กันดึงเวอร์ชันแปลกปลอมตอน cron รันตี 3 ที่มี secret Google/LINE อยู่ในเครื่อง · พบเพิ่ม (ไม่ได้แก้ นอกขอบเขต): `npm audit` เจอ 4 moderate vulnerability จาก `uuid` ที่ลึกอยู่ใน `googleapis` ต้องอัป major version ถึงจะหาย — บันทึกรอ Lin ตัดสินใจ หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/42_ผลลัพธ์_P7-03_backup-lockfile.md`
-3. **D — เพิ่มจุดวัด "เจอเพดานแล้ว" ใน `supabase/functions/game-content/index.ts`:** เพิ่ม field `capped: {初, 中, sentences}` ใน response (additive ไม่ลบ/ไม่เปลี่ยนชื่อ field เดิม, ไม่แตะ CAPS/tier-detection logic) ตรวจแล้วว่า client (`game-content-client.js`) ไม่พังจากการเพิ่ม field นี้ — **⚠️ ยังไม่ deploy เป็นแค่โค้ดในเครื่อง Lin ต้องรัน `supabase functions deploy game-content` เองหลัง push** หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/43_ผลลัพธ์_P6-08_เพิ่มจุดวัดเจอเพดาน.md`
+3. **D — เพิ่มจุดวัด "เจอเพดานแล้ว" ใน `supabase/functions/game-content/index.ts`:** เพิ่ม field `capped: {初, 中, sentences}` ใน response (additive ไม่ลบ/ไม่เปลี่ยนชื่อ field เดิม, ไม่แตะ CAPS/tier-detection logic) ตรวจแล้วว่า client (`game-content-client.js`) ไม่พังจากการเพิ่ม field นี้ — **✅ Lin deploy แล้ว 2026-08-08 (`supabase functions deploy game-content` สำเร็จ, project `qzkxlhpcputsvbqmtqfi`) live จริงแล้ว** หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/43_ผลลัพธ์_P6-08_เพิ่มจุดวัดเจอเพดาน.md`
 
 ผลตรวจ: `node scripts/check-site.js` ผ่านทั้ง 3 งาน (816 ไฟล์) ไม่มีค่าลับใหม่หลุด
 
