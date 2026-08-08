@@ -1,5 +1,19 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-08 (บั๊กจริง) — เชื่อม LINE พังทันที "invalid_client / invalid client_secret"
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin ตั้ง secret ชื่อใหม่ใน Supabase + deploy `line-login` ใหม่**
+
+ปัญหา: Lin ทดสอบเชื่อม LINE หลัง deploy ก้อน 2 (audit log) แล้วพังทันทีด้วย `{"error":"invalid_client","error_description":"invalid client_secret"}` — ข้อความนี้มาจาก LINE เองตรงๆ (ไม่ใช่โค้ดเรา) ตอนแลก code เป็น token
+
+สาเหตุที่แท้จริง (ตรวจโค้ดแล้ว ไม่ใช่บั๊กจาก audit log): `line-login/index.ts` และ `line-webhook/index.ts` อ่าน secret ชื่อเดียวกันคือ `LINE_CHANNEL_SECRET` ทั้งคู่ แต่เป็นคนละ LINE channel กัน (line-login = channel "LINE Login" · line-webhook = channel "Messaging API" ของบอท) — Supabase Edge Function secrets เป็นของกลางทั้งโปรเจกต์ ไม่แยกตามฟังก์ชัน ใครก็ตามที่เคยตั้ง `LINE_CHANNEL_SECRET` ใหม่เพื่อแก้ line-webhook (มีบันทึกไว้จริงตอน 2026-08-01) จะเขียนทับค่าที่ line-login ต้องใช้แบบไม่รู้ตัว
+
+วิธีแก้: เปลี่ยนชื่อ env var ที่ `line-login/index.ts` อ่าน จาก `LINE_CHANNEL_SECRET` → `LINE_LOGIN_CHANNEL_SECRET` กันชนกันถาวร (ไม่แตะ `line-webhook` เลย ยังใช้ชื่อเดิม)
+
+ไฟล์ที่แก้: `supabase/functions/line-login/index.ts`
+
+**สิ่งที่ Lin ต้องทำเอง:** ดูขั้นตอนเต็มใน `Bussiness Idea/ระบบเว็บไซต์/52_คำสั่งเปิดแชทสอง_...md` เรื่องที่ 6 (ตั้ง secret ชื่อใหม่จาก channel "LINE Login" + deploy ใหม่)
+
 ## 2026-08-08 (P6-09~12 ก้อน 2) — Account audit log + ต่อสายเข้า Link LINE/Facebook
 
 สถานะ: **โค้ดพร้อมแล้ว รอ Lin รัน SQL ใน Supabase ก่อนถึงจะทำงานได้จริง + deploy `line-login` ใหม่**

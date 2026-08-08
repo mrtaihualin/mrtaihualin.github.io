@@ -32,13 +32,23 @@
 //   ก่อน: supabase/sql/2026-08-08_account_audit_log.sql ไม่งั้น RPC นี้จะไม่มีอยู่ (แต่ไม่ทำให้การผูก
 //   LINE พังเพราะห่อด้วย try/catch — ไม่ critical ถ้าบันทึก audit พลาด)
 //
+// v4 (LIN 2026-08-08, บั๊กจริง): แก้ปัญหา "invalid_client / invalid client_secret" — เจอจาก Lin ทดสอบ
+//   เชื่อม LINE จริงหลัง deploy v3 แล้วพังทันที ตรวจโค้ดแล้วพบว่า `line-webhook/index.ts` ก็อ่านชื่อ
+//   secret เดียวกันคือ LINE_CHANNEL_SECRET (บรรทัด ~1119) แต่เป็นคนละ LINE channel กัน:
+//     - line-login (ไฟล์นี้)  ต้องใช้ secret ของ channel ประเภท "LINE Login"
+//     - line-webhook          ต้องใช้ secret ของ channel ประเภท "Messaging API" (บอทที่คุยกับครู/นักเรียน)
+//   Supabase Edge Function secrets เป็นของกลางทั้งโปรเจกต์ (ไม่แยกตามฟังก์ชัน) — ใครก็ตามที่เคยรัน
+//   `supabase secrets set LINE_CHANNEL_SECRET=...` เพื่อแก้ line-webhook (มีบันทึกไว้ใน CLAUDE.md ว่า
+//   ทำแบบนี้จริงตอน 2026-08-01) จะเขียนทับค่าที่ line-login ต้องใช้แบบไม่รู้ตัว → เปลี่ยนชื่อ env var
+//   ของไฟล์นี้เป็น LINE_LOGIN_CHANNEL_SECRET กันชนกันถาวร (line-webhook ไม่ต้องแก้ ยังใช้ชื่อเดิม)
+//
 // วิธี deploy:
 //   1. ต้องรัน SQL migration ก่อน: supabase/sql/2026-07-26_line_identities.sql
 //      (Supabase Dashboard → SQL Editor → วางทั้งไฟล์ → Run)
 //   2. Supabase Dashboard → Edge Functions → Secrets → เพิ่ม:
-//        LINE_CHANNEL_ID = (ตัวเลข Channel ID จาก LINE Developers Console channel "LINE Login")
-//        LINE_CHANNEL_SECRET = (Channel secret ของ channel เดียวกัน)
-//      (ค่าเดิมที่เคยใส่ใน Supabase custom provider "line" ตอนก่อนหน้านี้ เอามาใช้ซ้ำได้เลย)
+//        LINE_CHANNEL_ID          = (ตัวเลข Channel ID จาก LINE Developers Console channel "LINE Login")
+//        LINE_LOGIN_CHANNEL_SECRET = (Channel secret ของ channel "LINE Login" เดียวกัน — คนละอันกับ
+//                                      LINE_CHANNEL_SECRET ที่ line-webhook ใช้ ห้ามใช้ค่าเดียวกัน)
 //   3. Supabase Dashboard → Edge Functions → New Function → ชื่อ "line-login" → วางโค้ดไฟล์นี้ → Deploy
 //      (ไม่ต้องตั้ง SUPABASE_SERVICE_ROLE_KEY เอง — Supabase ใส่ให้อัตโนมัติทุก Edge Function อยู่แล้ว)
 //   4. LINE Developers Console → channel "LINE Login" → แท็บ "LINE Login" → Callback URL →
@@ -97,9 +107,11 @@ serve(async (req) => {
     if (!code || !redirect_uri || !nonce) return json({ error: 'missing code/redirect_uri/nonce' }, 400);
 
     const channelId = Deno.env.get('LINE_CHANNEL_ID');
-    const channelSecret = Deno.env.get('LINE_CHANNEL_SECRET');
+    // v4 (LIN 2026-08-08): เปลี่ยนชื่อจาก LINE_CHANNEL_SECRET → LINE_LOGIN_CHANNEL_SECRET กันชนกับ
+    // secret ของ line-webhook (คนละ LINE channel กัน แต่เคยใช้ชื่อ env var เดียวกัน — ดูอธิบายด้านบนหัวไฟล์)
+    const channelSecret = Deno.env.get('LINE_LOGIN_CHANNEL_SECRET');
     if (!channelId || !channelSecret) {
-      return json({ error: 'server not configured: missing LINE_CHANNEL_ID/LINE_CHANNEL_SECRET' }, 500);
+      return json({ error: 'server not configured: missing LINE_CHANNEL_ID/LINE_LOGIN_CHANNEL_SECRET' }, 500);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
