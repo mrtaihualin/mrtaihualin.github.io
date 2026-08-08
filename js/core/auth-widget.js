@@ -87,6 +87,9 @@
   var nickPromptedFor = null;
   var PRESET_AVATARS = ['🐘', '🐱', '🐶', '🐰', '🦊', '🐼', '🐯', '🐸', '🐥', '🦉', '🐲', '🥭'];
   var AVATAR_KEY = 'tf_avatar', PIN_BADGE_KEY = 'tf_pinned_badge';
+  // 2026-08-08 (P6-09~12 ก้อน 2): คีย์ sessionStorage เก็บสถานะ "ก่อนเชื่อม Facebook" ชั่วคราว
+  //   ระหว่าง redirect ไป Facebook แล้วกลับมา (ดู checkPendingFacebookLinkAudit ด้านล่าง)
+  var FB_LINK_PENDING_KEY = 'sa_fb_link_pending';
   function getAvatarCache() { try { return localStorage.getItem(AVATAR_KEY) || ''; } catch (e) { return ''; } }
   function setAvatarCache(v) { try { if (v) localStorage.setItem(AVATAR_KEY, v); else localStorage.removeItem(AVATAR_KEY); } catch (e) {} }
   function getPinBadgeCache() { try { return localStorage.getItem(PIN_BADGE_KEY) || ''; } catch (e) { return ''; } }
@@ -271,18 +274,28 @@
     if (linkFbBtn) linkFbBtn.onclick = function () {
       linkFbBtn.disabled = true; linkFbBtn.style.opacity = '0.6';
       if (linkFbMsg) linkFbMsg.style.display = 'none';
+      // 2026-08-08 (P6-09~12 ก้อน 2): เก็บสถานะ "ก่อนเชื่อม" ไว้ใน sessionStorage ก่อน redirect ไป
+      //   Facebook เพราะกดสำเร็จ Supabase จะเปลี่ยนหน้าไปเลย (ไม่กลับมาทำงานต่อใน .then() ด้านล่าง)
+      //   ต้องตรวจตอน redirect กลับมาที่หน้านี้แทน (ดู checkPendingFacebookLinkAudit ใน boot())
+      try {
+        var providersBeforeFb = (API.user.identities || []).map(function (i) { return i.provider; });
+        sessionStorage.setItem(FB_LINK_PENDING_KEY, JSON.stringify({ user_id: API.user.id, providers_before: providersBeforeFb }));
+      } catch (e) {}
       try {
         sb.auth.linkIdentity({ provider: 'facebook', options: { redirectTo: location.href } }).then(function (res) {
           if (res && res.error) {
+            try { sessionStorage.removeItem(FB_LINK_PENDING_KEY); } catch (e2) {}
             linkFbBtn.disabled = false; linkFbBtn.style.opacity = '1';
             if (linkFbMsg) { linkFbMsg.style.display = 'block'; linkFbMsg.textContent = '⚠️ 連接失敗：' + (res.error.message || '請稍後再試'); }
           }
           // 成功的話 Supabase 會直接把頁面導去 Facebook，不會執行到這裡
         }, function (e) {
+          try { sessionStorage.removeItem(FB_LINK_PENDING_KEY); } catch (e2) {}
           linkFbBtn.disabled = false; linkFbBtn.style.opacity = '1';
           if (linkFbMsg) { linkFbMsg.style.display = 'block'; linkFbMsg.textContent = '⚠️ 連接失敗：' + (e && e.message || '請稍後再試'); }
         });
       } catch (e) {
+        try { sessionStorage.removeItem(FB_LINK_PENDING_KEY); } catch (e2) {}
         linkFbBtn.disabled = false; linkFbBtn.style.opacity = '1';
         if (linkFbMsg) { linkFbMsg.style.display = 'block'; linkFbMsg.textContent = '⚠️ 連接失敗：' + (e && e.message || String(e)); }
       }
@@ -427,6 +440,37 @@
     } catch (e) { send(''); }
   }
 
+  // 2026-08-08 (P6-09~12 ก้อน 2): ตรวจว่าเพิ่ง redirect กลับมาจากการเชื่อม Facebook สำเร็จไหม แล้ว
+  //   บันทึก audit log ผ่าน RPC log_account_audit — ไม่มีจุด server-side ให้เกาะแบบ LINE (Facebook
+  //   ใช้ sb.auth.linkIdentity() มาตรฐานของ Supabase ตรงๆ ไม่ผ่าน Edge Function ของเราเอง) จึงต้อง
+  //   ตรวจฝั่ง client แทน — ใช้ครั้งเดียวแล้วลบทิ้งทันที (กันบันทึกซ้ำถ้า boot()/onAuthStateChange
+  //   ยิงมากกว่า 1 ครั้งหลัง redirect กลับมา) ไม่ critical ถ้าพลาด (การเชื่อมจริงสำเร็จอยู่แล้วไม่เกี่ยวกัน)
+  function checkPendingFacebookLinkAudit() {
+    var raw;
+    try { raw = sessionStorage.getItem(FB_LINK_PENDING_KEY); } catch (e) { return; }
+    if (!raw) return;
+    try { sessionStorage.removeItem(FB_LINK_PENDING_KEY); } catch (e) {} // ใช้ครั้งเดียว อ่านแล้วลบทันที
+    if (!API.user) return;
+    var pending;
+    try { pending = JSON.parse(raw); } catch (e) { return; }
+    if (!pending || pending.user_id !== API.user.id) return; // คนละบัญชี/session ไม่เชื่อ
+    var providersAfter = (API.user.identities || []).map(function (i) { return i.provider; });
+    if (providersAfter.indexOf('facebook') === -1) return; // เชื่อมไม่สำเร็จ/ถูกยกเลิกที่หน้า Facebook ไม่ต้องบันทึก
+    try {
+      sb.rpc('log_account_audit', {
+        p_user_id: API.user.id,
+        p_event_type: 'link',
+        p_provider: 'facebook',
+        p_before_state: { providers: pending.providers_before || [] },
+        p_after_state: { providers: providersAfter },
+        p_actor_type: 'user',
+        p_actor_id: API.user.id
+      }).then(function (res) {
+        if (res && res.error) console.error('log_account_audit failed (facebook link)', res.error);
+      }).catch(function (e) { console.error('log_account_audit threw (facebook link)', e); });
+    } catch (e) {}
+  }
+
   // ── init: session เดียว ฟังเดียว (client กลาง) ใช้ร่วมกันทุกหน้าที่โหลดไฟล์นี้ ──
   function boot() {
     sb.auth.getSession().then(function (res) {
@@ -434,7 +478,7 @@
       API.authResolved = true;
       fireChange();
       fetchProfile();
-      if (API.user) logSession();
+      if (API.user) { logSession(); checkPendingFacebookLinkAudit(); }
     });
     sb.auth.onAuthStateChange(function (_event, session) {
       API.user = (session && session.user) || null;
@@ -442,7 +486,7 @@
       myNick = myAvatar = myBadge = null; // เคลียร์โปรไฟล์เดิม แล้วดึงของ user ปัจจุบันใหม่
       fireChange();
       fetchProfile();
-      if (API.user) logSession();
+      if (API.user) { logSession(); checkPendingFacebookLinkAudit(); }
     });
   }
 

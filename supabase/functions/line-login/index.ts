@@ -27,6 +27,11 @@
 //   เองก่อนเสมอ (ไม่เชื่อ user id ที่ client ส่งมาตรงๆ) ถ้า deploy ครั้งแรกไปแล้ว ให้กลับมา
 //   copy โค้ดไฟล์นี้ไปวางทับ + Deploy ใหม่อีกรอบ (ไม่ต้องตั้งอะไรเพิ่มใน Dashboard)
 //
+// v3 (LIN 2026-08-08, P6-09~12 ก้อน 2): โหมด "link" ที่เพิ่งผูกสำเร็จครั้งแรกจะบันทึก audit log
+//   ผ่าน RPC public.log_account_audit() ด้วย (ตาราง account_audit_log) — ต้องรัน SQL migration ใหม่
+//   ก่อน: supabase/sql/2026-08-08_account_audit_log.sql ไม่งั้น RPC นี้จะไม่มีอยู่ (แต่ไม่ทำให้การผูก
+//   LINE พังเพราะห่อด้วย try/catch — ไม่ critical ถ้าบันทึก audit พลาด)
+//
 // วิธี deploy:
 //   1. ต้องรัน SQL migration ก่อน: supabase/sql/2026-07-26_line_identities.sql
 //      (Supabase Dashboard → SQL Editor → วางทั้งไฟล์ → Run)
@@ -183,7 +188,8 @@ serve(async (req) => {
         // LINE นี้ผูกกับบัญชีอื่นไปแล้ว — กันคนละบัญชีมาแย่งผูก LINE เดียวกันซ้ำ
         return json({ error: 'already_linked_to_other_account' }, 409);
       }
-      if (!existingLink) {
+      const isNewLink = !existingLink;
+      if (isNewLink) {
         const { error: mapErr } = await supabase
           .from('line_identities')
           .insert({ line_user_id: lineUserId, user_id: linkUserId });
@@ -195,6 +201,26 @@ serve(async (req) => {
           app_metadata: { line_linked: true, line_user_id: lineUserId },
         });
       } catch (e) {}
+      // 2026-08-08 (P6-09~12 ก้อน 2): บันทึก audit log เฉพาะตอนที่ "เพิ่งผูกจริงครั้งแรก" เท่านั้น
+      //   (กดปุ่ม "連接 LINE 帳號" ซ้ำตอนผูกกับบัญชีเดิมอยู่แล้ว ไม่ใช่การเปลี่ยนสถานะจริง ไม่ต้องบันทึก)
+      //   เรียกจากฝั่งเซิร์ฟเวอร์ (service_role) น่าเชื่อถือกว่าเรียกจาก client เพราะ client อาจถูกปิดหน้าต่าง
+      //   ก่อนเรียกสำเร็จ — ไม่ critical ถ้าบันทึกพลาด (การผูกจริงสำเร็จไปแล้วตั้งแต่ insert ด้านบน) แต่ log ไว้เสมอ
+      if (isNewLink) {
+        try {
+          const { error: auditErr } = await supabase.rpc('log_account_audit', {
+            p_user_id: linkUserId,
+            p_event_type: 'link',
+            p_provider: 'line',
+            p_before_state: { was_linked: false },
+            p_after_state: { line_user_id: lineUserId },
+            p_actor_type: 'user',
+            p_actor_id: linkUserId,
+          });
+          if (auditErr) console.error('log_account_audit failed (line link)', auditErr);
+        } catch (e) {
+          console.error('log_account_audit threw (line link)', e);
+        }
+      }
       return json({ ok: true, linked: true });
     }
 

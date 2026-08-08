@@ -1,5 +1,21 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-08 (P6-09~12 ก้อน 2) — Account audit log + ต่อสายเข้า Link LINE/Facebook
+
+สถานะ: **โค้ดพร้อมแล้ว รอ Lin รัน SQL ใน Supabase ก่อนถึงจะทำงานได้จริง + deploy `line-login` ใหม่**
+
+ปัญหา: ระบบบัญชีผู้เล่นไม่มีตาราง audit/history เลยแม้แต่แถวเดียว — ถ้ามีปัญหาบัญชี Lin ตรวจย้อนหลังไม่ได้ว่าเกิดอะไรขึ้น (สเปกข้อ 14 ที่ Lin ให้มาบังคับว่าต้องมี)
+
+วิธีแก้: สร้างตาราง `public.account_audit_log` (`user_id`, `event_type` — CHECK จำกัด 8 ค่าตามสเปก, `provider`, `before_state`/`after_state` jsonb, `actor_type`/`actor_id`, `created_at`) เปิด RLS แบบไม่มี policy ตั้งใจ (fail-closed) เขียนได้ทางเดียวผ่านฟังก์ชัน `log_account_audit()` (SECURITY DEFINER) ต่อสายเข้ากับจุด "เชื่อมบัญชีสำเร็จ" ที่มีอยู่แล้วจริง 2 จุด: LINE (บันทึกฝั่ง server ใน Edge Function น่าเชื่อถือกว่า) และ Facebook (บันทึกฝั่ง client เพราะไม่มี Edge Function คั่นกลาง — มีข้อจำกัด: ปิดแท็บ/เน็ตหลุดตอน redirect กลับจาก Facebook จะไม่มี log แม้เชื่อมสำเร็จจริง เป็นข้อจำกัดของสถาปัตยกรรมเดิม ไม่ใช่บั๊กใหม่)
+
+ไฟล์ที่แก้/สร้าง: 🆕 `supabase/sql/2026-08-08_account_audit_log.sql`, `supabase/functions/line-login/index.ts`, `js/core/auth-widget.js`, `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md`
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (ไม่มี `.min.js` คู่กันสำหรับ 3 ไฟล์นี้)
+
+**สิ่งที่ Lin ต้องทำเอง (ดูขั้นตอนเต็มที่ `Bussiness Idea/ระบบเว็บไซต์/52_คำสั่งเปิดแชทสอง_...md`):** รัน SQL ไฟล์นี้ใน Supabase SQL Editor ก่อน แล้ว deploy `line-login` ใหม่อีกรอบ — ถ้ายังไม่ทำ ปุ่มเชื่อม LINE/Facebook ยังใช้งานได้ปกติเหมือนเดิมทุกอย่าง แค่ยังไม่มี log บันทึก (ห่อด้วย try/catch ไม่ทำให้พัง)
+
+**ยังไม่ครอบคลุม:** Unlink (ยังไม่สร้างฟีเจอร์ รอ Lin ตัดสินใจก่อน) และ event อื่นในสเปก (เปลี่ยนอีเมล/admin correction ฯลฯ — ยังไม่มีฟีเจอร์พวกนั้นให้ log)
+
 ## 2026-08-08 (P6-09~12 ก้อน 1 บางส่วน) — เคลียร์ localStorage cache ตอน logout
 
 สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin push** (คนละ commit จากงานอื่นวันนี้)
