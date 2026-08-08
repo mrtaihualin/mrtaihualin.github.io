@@ -263,6 +263,7 @@
         linkFacebookHtml +
         linkLineHtml +
         '<button id="sap-save" style="width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;">儲存</button>' +
+        '<button id="sap-open-manage" style="width:100%;border:none;background:none;color:#A07A1E;font-size:12px;padding:10px 0 0;cursor:pointer;text-decoration:underline;">⚙️ 帳號管理（匯出資料 / 解除連結 / 刪除帳號）</button>' +
       '</div>';
     document.body.appendChild(profileModal);
     var linkLineBtn = profileModal.querySelector('#sap-link-line');
@@ -302,6 +303,7 @@
     };
 
     function closeModal() { if (profileModal) { profileModal.remove(); profileModal = null; } }
+    profileModal.querySelector('#sap-open-manage').onclick = function () { closeModal(); openAccountManageModal(); };
     profileModal.querySelector('#sap-close').onclick = closeModal;
     profileModal.addEventListener('click', function (e) { if (e.target === profileModal) closeModal(); });
     [].forEach.call(profileModal.querySelectorAll('.sap-av'), function (btn) {
@@ -331,6 +333,320 @@
       });
     };
   }
+
+  // ----- [03b] ACCOUNT MANAGEMENT MODAL (匯出資料 / 解除連結 / 登出所有裝置 / 刪除帳號) -----
+  // เพิ่ม 2026-08-08 ตามที่ Lin อนุมัติให้เริ่มสร้าง (docs/ACCOUNT_DATA_SAFETY_GAPS.md ข้อ 1/3/6)
+  // เรียก Edge Function 3 ตัวที่เตรียมไว้แล้ว: account-export / account-unlink / account-delete
+  // ⚠️ ทั้ง 3 ฟังก์ชันยังเป็น "ร่าง" ยังไม่ได้ deploy — โค้ดฝั่งนี้พร้อมเรียกได้ทันทีที่ Lin ตรวจ +
+  //   deploy เสร็จ ไม่ต้องแก้อะไรเพิ่ม ถ้ายังไม่ deploy ปุ่มพวกนี้จะขึ้น error "ไม่พบฟังก์ชัน" ตามปกติ
+  //
+  // 🆕 2026-08-08 (รอบ 2): ลบบัญชีเปลี่ยนเป็น cooldown 7 วัน ตามที่ Lin ตัดสินใจ — account-delete
+  //   ฝั่งเซิร์ฟเวอร์เปลี่ยน action จาก 'confirm' (ลบทันที) เป็น 'request' (เข้าคิวรอ 7 วัน) + เพิ่ม
+  //   action 'cancel' ใหม่ (ยกเลิกคำขอ) โค้ดฝั่งนี้แก้ตามให้ตรงแล้ว: เปิด modal ปุ๊บเช็คทันทีว่ามีคำขอ
+  //   ค้างอยู่ไหม (renderDangerZone) ถ้ามี → โชว์ banner + ปุ่มยกเลิก แทนปุ่ม "🗑️ 刪除帳號" ปกติ
+  var manageModal = null;
+  function closeManageModal() { if (manageModal) { manageModal.remove(); manageModal = null; } }
+
+  function accountFnUrl(name) { return cfg.url + '/functions/v1/' + name; }
+
+  // 🆕 2026-08-08: สร้าง Error จาก response ที่ !res.ok ให้ตรงกับรูปแบบใหม่ของ 3 ฟังก์ชันฝั่งเซิร์ฟเวอร์
+  // ({ error: '<code คงที่>', message: '<ข้อความคนอ่านได้>' }) — err.message ใช้ json.message (โชว์ผู้ใช้ได้
+  // ตรงๆ) ส่วน err.code เก็บ json.error (raw code) ไว้ log/debug เท่านั้น ไม่โชว์ผู้ใช้ตรงๆ อีกต่อไป
+  // (เดิมไฟล์นี้ใช้ json.error เป็น err.message ตรงๆ ทำให้ผู้ใช้เห็น code ดิบ เช่น "open_payout_exists")
+  function accountFnError(name, res, json) {
+    var code = (json && json.error) || ('http_' + res.status);
+    var friendly = (json && json.message) || (json && json.error) || ('เกิดข้อผิดพลาด (HTTP ' + res.status + ')');
+    var err = new Error(friendly);
+    err.code = code;
+    err.status = res.status;
+    err.body = json;
+    console.error('[account-fn] ' + name + ' failed — code:', code, 'detail:', json);
+    return err;
+  }
+
+  // เรียก Edge Function ธรรมดา (ไม่ต้องการ JWT สดใหม่) — ใช้ access_token ปัจจุบันของ session ตรงๆ
+  function callAccountFn(name, body) {
+    return sb.auth.getSession().then(function (sres) {
+      var token = sres && sres.data && sres.data.session && sres.data.session.access_token;
+      if (!token) return Promise.reject(new Error('ยังไม่ได้ล็อกอิน หรือ session หมดอายุ — กรุณาล็อกอินใหม่'));
+      return fetch(accountFnUrl(name), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
+        body: JSON.stringify(body || {})
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (json) {
+          if (!res.ok) throw accountFnError(name, res, json);
+          return json;
+        });
+      });
+    });
+  }
+
+  // account-delete ต้องการ JWT ที่ "เพิ่งออกใหม่จริง" (iat ไม่เกิน 5 นาที ตามที่ฟังก์ชันฝั่งเซิร์ฟเวอร์เช็ค)
+  // สั่ง refreshSession() ก่อนเสมอเพื่อให้ได้ access_token ใหม่จริง (Supabase ออก token ใหม่จริงตอน
+  // refresh ไม่ใช่แค่ยืดอายุของเดิม) — ฟังก์ชันฝั่งเซิร์ฟเวอร์เขียนคอมเมนต์ไว้ชัดว่ายอมรับวิธีนี้แทนการบังคับ
+  // ให้ผู้ใช้ล็อกอินซ้ำเต็มรูปแบบผ่าน OAuth redirect ได้ (ง่ายกว่ามากฝั่ง UI ไม่ต้องพา redirect ออกนอกหน้า)
+  function callAccountFnFresh(name, body) {
+    return sb.auth.refreshSession().then(function (r) {
+      var token = r && r.data && r.data.session && r.data.session.access_token;
+      if (!token) throw new Error('ไม่สามารถต่อ session ได้ — กรุณาออกจากระบบแล้วล็อกอินใหม่ก่อนลองอีกครั้ง');
+      return fetch(accountFnUrl(name), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
+        body: JSON.stringify(body || {})
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (json) {
+          if (!res.ok) throw accountFnError(name, res, json);
+          return json;
+        });
+      });
+    });
+  }
+
+  // ── ข้อ 6: ออกจากระบบทุกอุปกรณ์ (ต่างจาก doLogout() ปกติที่ signOut scope 'local' แค่เครื่องนี้) ──
+  function doLogoutAllDevices() {
+    return sb.auth.signOut({ scope: 'global' }).then(function () {
+      try {
+        localStorage.removeItem(AVATAR_KEY);
+        localStorage.removeItem(PIN_BADGE_KEY);
+        localStorage.removeItem(NICK_PROMPT_KEY);
+        localStorage.removeItem(LOGSESS_KEY);
+        localStorage.removeItem('rg_last_login_provider');
+      } catch (e) {}
+    });
+  }
+  API.doLogoutAllDevices = doLogoutAllDevices;
+
+  // ── ข้อ 2: ส่งออกข้อมูลของตัวเอง (JSON) ──
+  function doExportMyData(btn, msgEl) {
+    btn.disabled = true; btn.textContent = '匯出中…';
+    if (msgEl) { msgEl.style.display = 'none'; }
+    callAccountFn('account-export', {}).then(function (data) {
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'mrtaihualin-export-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      btn.disabled = false; btn.textContent = '📦 匯出我的資料';
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = '📦 匯出我的資料';
+      // 2026-08-08: e.message ตอนนี้คือข้อความที่เซิร์ฟเวอร์ตั้งใจให้ผู้ใช้อ่าน (json.message) แล้ว
+      // ไม่ใช่ raw error code อีกต่อไป — code ดิบ (e.code) ถูก console.error ไว้แล้วใน accountFnError()
+      if (msgEl) { msgEl.style.display = 'block'; msgEl.textContent = '⚠️ 匯出失敗：' + (e && e.message || String(e)); }
+    });
+  }
+
+  // ── ข้อ 3: ถอดช่องทางล็อกอิน (server จะปฏิเสธเองถ้าถอดแล้วไม่เหลือช่องทางล็อกอิน) ──
+  // 2026-08-08: เปลี่ยนมาใช้ callAccountFnFresh (เหมือน account-delete) ตามที่ Lin สั่งให้บังคับ
+  // JWT สดใหม่ก่อนถอดช่องทางล็อกอินด้วย — ฝั่งเซิร์ฟเวอร์เข้มขึ้นแล้ว ฝั่งนี้ต้องตามให้ทัน ไม่งั้นจะเจอ
+  // 401 stale_session ทุกครั้งที่ session ค้างเกิน 5 นาที
+  function doUnlinkProvider(provider, btn, msgEl) {
+    btn.disabled = true;
+    if (msgEl) { msgEl.style.display = 'none'; }
+    callAccountFnFresh('account-unlink', { provider: provider }).then(function () {
+      // สำเร็จ — ปิด modal แล้วเปิดใหม่ให้ดึงข้อมูล identities ปัจจุบันกลับมาแสดงใหม่ (ง่ายกว่า patch DOM เอง)
+      closeManageModal();
+      openAccountManageModal();
+    }).catch(function (e) {
+      btn.disabled = false;
+      // 2026-08-08: เดิมมี special-case เช็ค e.body.error === 'would_leave_zero_login_methods' แยกข้อความ
+      // เอง — ตอนนี้เซิร์ฟเวอร์ส่ง message ที่เป็นมิตรมาให้ทุก error code แล้ว (รวมเคสนี้ด้วย) เลยไม่ต้อง
+      // hardcode ซ้ำในนี้อีก ใช้ e.message ตรงๆ ได้เลยทุกกรณี (raw code ยัง log ไว้แล้วใน accountFnError())
+      if (msgEl) {
+        msgEl.style.display = 'block';
+        msgEl.textContent = '⚠️ 解除失敗：' + (e && e.message || String(e));
+      }
+    });
+  }
+
+  // ── 2026-08-08 (รอบ 2): จุดเดียวที่ตัดสินว่า danger zone จะโชว์อะไร — เรียกทันทีตอนเปิด modal
+  //   (ไม่ใช่รอผู้ใช้กดปุ่มก่อนเหมือนเดิม) เพราะ Lin สั่งว่า "ต้องแสดงให้ผู้ใช้เห็นชัดว่าบัญชีกำลังรอลบ"
+  //   — ถ้ารอให้กดปุ่มก่อนถึงจะรู้ ผู้ใช้ที่มีคำขอค้างอยู่แล้วจะไม่เห็น banner เลยจนกว่าจะกดปุ่มลบซ้ำ
+  //   ใช้ preview เดิมตัวเดียวกัน (มี field pending_deletion ติดมาด้วยอยู่แล้วจากฝั่งเซิร์ฟเวอร์) ไม่ต้อง
+  //   เพิ่ม action ใหม่แค่เพื่อเช็คสถานะ — แลกกับ fresh-JWT refresh 1 ครั้งทุกครั้งที่เปิด modal (ยอมรับได้
+  //   เพราะ refreshSession() เร็ว ไม่ใช่ full OAuth redirect)
+  function renderDangerZone(container) {
+    container.innerHTML = '<div style="font-size:12px;color:#8B7340;padding:4px 0;">檢查帳號狀態中…</div>';
+    callAccountFnFresh('account-delete', { action: 'preview' }).then(function (preview) {
+      if (preview.pending_deletion) {
+        renderPendingDeletionBanner(container, preview.pending_deletion);
+      } else {
+        renderDeleteStartButton(container);
+      }
+    }).catch(function (e) {
+      container.innerHTML = '<div style="font-size:13px;color:#b91c1c;font-weight:700;margin-bottom:8px;">危險區域</div>' +
+        '<div style="font-size:12px;color:#b45309;">⚠️ 讀取帳號狀態失敗：' + esc(e && e.message || String(e)) + '</div>';
+    });
+  }
+
+  // 帳號正在等待刪除 — 顯示明確的 banner + 倒數日期 + 取消按鈕（Lin 要求：cooldown 期間必須讓使用者
+  // 清楚看到帳號正在等待刪除，以及排定刪除的日期）
+  function renderPendingDeletionBanner(container, pending) {
+    var when = new Date(pending.scheduled_delete_at);
+    var whenText = isNaN(when.getTime()) ? pending.scheduled_delete_at : when.toLocaleString('zh-TW', { dateStyle: 'long', timeStyle: 'short' });
+    container.innerHTML =
+      '<div style="font-size:13px;color:#b91c1c;font-weight:700;margin-bottom:8px;">危險區域</div>' +
+      '<div style="border:1.5px solid #b91c1c;background:#FEF2F2;border-radius:10px;padding:12px 14px;margin-bottom:10px;">' +
+        '<div style="font-size:13px;color:#991b1b;font-weight:800;margin-bottom:4px;">⏳ 帳號已排定刪除</div>' +
+        '<div style="font-size:12.5px;color:#7f1d1d;line-height:1.6;">將於 <b>' + esc(whenText) + '</b> 之後的系統例行處理中永久刪除（系統每日執行一次，不會提前，但可能略晚於此時間點），屆時資料將無法復原。</div>' +
+        '<div style="font-size:12px;color:#7f1d1d;line-height:1.6;margin-top:4px;">期限前隨時可以取消，帳號會立即恢復正常，資料完全不受影響。</div>' +
+      '</div>' +
+      '<div id="sap-cancel-msg" style="display:none;font-size:12px;color:#b45309;margin-bottom:10px;line-height:1.5;"></div>' +
+      '<button id="sap-cancel-go" style="width:100%;border:none;background:#2d6a4f;color:#fff;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;">取消刪除帳號</button>';
+    var goBtn = container.querySelector('#sap-cancel-go');
+    var msgEl = container.querySelector('#sap-cancel-msg');
+    goBtn.onclick = function () {
+      goBtn.disabled = true; goBtn.textContent = '取消中…';
+      // cancel ไม่บังคับ fresh JWT ฝั่งเซิร์ฟเวอร์ (ดูเหตุผลใน account-delete/index.ts) แต่ใช้
+      // callAccountFnFresh เหมือนกันเพื่อความง่าย (fresh JWT ผ่านได้อยู่แล้วเสมอ ไม่มีผลเสีย)
+      callAccountFnFresh('account-delete', { action: 'cancel' }).then(function () {
+        container.innerHTML = '<div style="font-size:13px;color:#2d6a4f;font-weight:700;">✅ 已取消刪除帳號請求，帳號已恢復正常。</div>';
+        setTimeout(function () { renderDeleteStartButton(container); }, 1600);
+      }).catch(function (e) {
+        goBtn.disabled = false; goBtn.textContent = '取消刪除帳號';
+        msgEl.style.display = 'block';
+        msgEl.textContent = '⚠️ 取消失敗：' + (e && e.message || String(e)) + '（可安全重新點擊再試一次）';
+      });
+    };
+  }
+
+  // สถานะปกติ (ไม่มีคำขอลบค้างอยู่) — โชว์ปุ่ม "🗑️ 刪除帳號" แบบเดิม
+  function renderDeleteStartButton(container) {
+    container.innerHTML =
+      '<div style="font-size:13px;color:#b91c1c;font-weight:700;margin-bottom:8px;">危險區域</div>' +
+      '<button id="sam-delete-start" style="width:100%;border:1.5px solid #b91c1c;background:#fff;color:#b91c1c;border-radius:10px;padding:10px;font-size:13.5px;font-weight:700;cursor:pointer;">🗑️ 刪除帳號</button>';
+    container.querySelector('#sam-delete-start').onclick = function () { openDeleteAccountFlow(container); };
+  }
+
+  // ── ข้อ 1: ยื่นคำขอลบบัญชี — 2 ขั้น (preview → พิมพ์ยืนยัน → request เข้า cooldown 7 วัน) ──
+  // 🆕 2026-08-08 (รอบ 2): เดิม action='confirm' ลบทันที เปลี่ยนเป็น action='request' เข้าคิวรอ 7 วัน
+  //   ไม่ลบอะไรจริงในขั้นนี้ — ตั้งใจไม่เปลี่ยนชื่อ field 'confirm' ใน body (ยังต้องส่ง confirm:true เหมือน
+  //   เดิม) ฝั่งเซิร์ฟเวอร์ยังใช้ field นี้เป็นด่านกันกดพลาดเหมือนเดิม แค่ action เปลี่ยนความหมาย
+  function openDeleteAccountFlow(container) {
+    container.innerHTML = '<div style="font-size:12.5px;color:#8B7340;padding:8px 0;">正在讀取將被刪除的資料…</div>';
+    callAccountFnFresh('account-delete', { action: 'preview' }).then(function (preview) {
+      if (preview.pending_deletion) {
+        // race: อีกแท็บ/อุปกรณ์เพิ่งยื่นคำขอไปพอดีระหว่างที่ modal นี้เปิดค้างไว้ — โชว์ banner แทน
+        renderPendingDeletionBanner(container, preview.pending_deletion);
+        return;
+      }
+      var rows = '';
+      function line(label, obj) {
+        Object.keys(obj || {}).forEach(function (k) {
+          var v = obj[k];
+          rows += '<div style="display:flex;justify-content:space-between;font-size:12px;color:#8B7340;padding:2px 0;"><span>' + esc(label) + '：' + esc(k) + '</span><span>' + esc(typeof v === 'object' ? (v && v.error ? '無法確認' : JSON.stringify(v)) : v) + '</span></div>';
+        });
+      }
+      line('將永久刪除', preview.will_delete);
+      line('將移除個資後保留', preview.will_anonymize);
+      line('將一併清除', preview.will_cascade_delete);
+      container.innerHTML =
+        '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:6px;">刪除帳號後，以下資料會受影響：</div>' +
+        '<div style="max-height:160px;overflow:auto;border:1px solid #E5D9B8;border-radius:8px;padding:8px 10px;margin-bottom:10px;">' + rows + '</div>' +
+        '<div style="font-size:12px;color:#b45309;margin-bottom:10px;line-height:1.6;">⚠️ 送出後帳號會進入 7 天等待期，期限前可隨時取消；逾期未取消，系統將於之後的例行處理中（每日一次）永久刪除且無法復原。請在下方輸入「刪除帳號」以確認：</div>' +
+        '<input id="sap-del-confirm-text" placeholder="輸入：刪除帳號" style="width:100%;box-sizing:border-box;margin-bottom:10px;padding:10px 12px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:14px;">' +
+        '<div id="sap-del-msg" style="display:none;font-size:12px;color:#b45309;margin-bottom:10px;line-height:1.5;"></div>' +
+        '<button id="sap-del-go" disabled style="width:100%;border:none;background:#9CA3AF;color:#fff;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:not-allowed;">送出刪除請求</button>';
+      var input = container.querySelector('#sap-del-confirm-text');
+      var goBtn = container.querySelector('#sap-del-go');
+      var msgEl = container.querySelector('#sap-del-msg');
+      input.oninput = function () {
+        var ok = input.value.trim() === '刪除帳號';
+        goBtn.disabled = !ok;
+        goBtn.style.background = ok ? '#b91c1c' : '#9CA3AF';
+        goBtn.style.cursor = ok ? 'pointer' : 'not-allowed';
+      };
+      goBtn.onclick = function () {
+        goBtn.disabled = true; goBtn.textContent = '送出中…';
+        callAccountFnFresh('account-delete', { action: 'request', confirm: true }).then(function (result) {
+          renderPendingDeletionBanner(container, { scheduled_delete_at: result.scheduled_delete_at });
+        }).catch(function (e) {
+          goBtn.disabled = false; goBtn.textContent = '送出刪除請求';
+          msgEl.style.display = 'block';
+          msgEl.textContent = '⚠️ 送出失敗：' + (e && e.message || String(e)) + '（可安全重新點擊再試一次）';
+        });
+      };
+    }).catch(function (e) {
+      container.innerHTML = '<div style="font-size:12.5px;color:#b45309;">⚠️ 讀取失敗：' + esc(e && e.message || String(e)) + '</div>';
+    });
+  }
+
+  function manageProviderRow(provider, label) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;color:#5C4410;">' +
+      '<span>' + esc(label) + '</span>' +
+      '<button class="sap-unlink-btn" data-provider="' + esc(provider) + '" style="border:1px solid #E5D9B8;background:#fff;color:#8B7340;border-radius:8px;padding:4px 10px;font-size:11.5px;cursor:pointer;">解除連結</button>' +
+      '</div>';
+  }
+
+  function openAccountManageModal() {
+    if (!API.user) return;
+    closeManageModal();
+    manageModal = document.createElement('div');
+    manageModal.id = 'sa-manage-modal';
+    manageModal.style.cssText = 'position:fixed;inset:0;z-index:100002;display:flex;align-items:center;justify-content:center;padding:18px;' +
+      'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);font-family:"Noto Sans TC",sans-serif;';
+
+    var identities = API.user.identities || [];
+    var linkedProviders = identities.map(function (i) { return i.provider; });
+    var isSyntheticLineEmail = /^line-.+@users\.line\.invalid$/i.test(API.user.email || '');
+    var hasLine = !!(API.user.app_metadata && (API.user.app_metadata.line_linked || API.user.app_metadata.line_user_id));
+    var providerLabel = { google: 'Google', facebook: 'Facebook', email: 'Email' };
+    var providerRows = '';
+    linkedProviders.forEach(function (p) {
+      if (p === 'email' && isSyntheticLineEmail) return; // อีเมลปลอมของ LINE — ไม่โชว์ให้ถอด (server ก็ปฏิเสธอยู่แล้ว)
+      if (!providerLabel[p]) return;
+      providerRows += manageProviderRow(p, providerLabel[p]);
+    });
+    if (hasLine) providerRows += manageProviderRow('line', 'LINE');
+    if (!providerRows) providerRows = '<div style="font-size:12px;color:#A07A1E;">找不到已連結的登入方式資料</div>';
+
+    manageModal.innerHTML =
+      '<div style="background:#fff;max-width:380px;width:100%;border-radius:18px;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,0.35);max-height:88vh;overflow:auto;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+          '<h2 style="margin:0;font-size:17px;color:#5C4410;font-weight:800;">帳號管理</h2>' +
+          '<button id="sam-close" style="border:none;background:none;font-size:20px;color:#C3B594;cursor:pointer;line-height:1;">✕</button>' +
+        '</div>' +
+
+        '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:6px;">登入方式</div>' +
+        '<div id="sam-providers" style="margin-bottom:8px;">' + providerRows + '</div>' +
+        '<div id="sam-unlink-msg" style="display:none;font-size:12px;color:#b45309;margin-bottom:14px;line-height:1.5;"></div>' +
+
+        '<div style="height:1px;background:#F0E6CC;margin:14px 0;"></div>' +
+
+        '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:8px;">我的資料</div>' +
+        '<button id="sam-export" style="width:100%;border:1.5px solid #C8973A;background:#fff;color:#8B6310;border-radius:10px;padding:10px;font-size:13.5px;font-weight:700;cursor:pointer;margin-bottom:8px;">📦 匯出我的資料</button>' +
+        '<div id="sam-export-msg" style="display:none;font-size:12px;color:#b45309;margin-bottom:6px;line-height:1.5;"></div>' +
+        '<button id="sam-logout-all" style="width:100%;border:1.5px solid #E5D9B8;background:#fff;color:#8B7340;border-radius:10px;padding:10px;font-size:13.5px;font-weight:700;cursor:pointer;">📴 登出所有裝置</button>' +
+
+        '<div style="height:1px;background:#F0E6CC;margin:14px 0;"></div>' +
+
+        '<div id="sam-danger-zone"><div style="font-size:12px;color:#8B7340;padding:4px 0;">檢查帳號狀態中…</div></div>' +
+      '</div>';
+    document.body.appendChild(manageModal);
+
+    function closeM() { closeManageModal(); }
+    manageModal.querySelector('#sam-close').onclick = closeM;
+    manageModal.addEventListener('click', function (e) { if (e.target === manageModal) closeM(); });
+
+    var unlinkMsg = manageModal.querySelector('#sam-unlink-msg');
+    [].forEach.call(manageModal.querySelectorAll('.sap-unlink-btn'), function (btn) {
+      btn.onclick = function () { doUnlinkProvider(btn.getAttribute('data-provider'), btn, unlinkMsg); };
+    });
+
+    var exportBtn = manageModal.querySelector('#sam-export');
+    var exportMsg = manageModal.querySelector('#sam-export-msg');
+    exportBtn.onclick = function () { doExportMyData(exportBtn, exportMsg); };
+
+    manageModal.querySelector('#sam-logout-all').onclick = function () {
+      doLogoutAllDevices().then(closeM);
+    };
+
+    // 🆕 2026-08-08 (รอบ 2): เช็คสถานะคำขอลบทันทีตอนเปิด modal (ดูเหตุผลที่ renderDangerZone ด้านบน)
+    // แทนที่จะรอผู้ใช้กดปุ่มก่อนเหมือนเดิม — เพื่อให้เห็น banner "กำลังรอลบ" ได้ทันทีถ้ามีคำขอค้างอยู่
+    renderDangerZone(manageModal.querySelector('#sam-danger-zone'));
+  }
+  API.openAccountManageModal = openAccountManageModal;
 
   // ----- [04] BADGE RENDERING + MODAL VISIBILITY -----
   // มี modal อื่นเปิดอยู่ไหม (จองเรียน/QR ฯลฯ) → ถ้าเปิด ซ่อน badge กันทับปุ่มกากบาท

@@ -1,8 +1,20 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-08 (Account Deletion รอบ 3) — เปลี่ยนลบบัญชีเป็น cooldown 7 วัน + อีเมลยืนยัน 3 จุด
+
+สถานะ: **โค้ดพร้อมแล้ว (local prep เท่านั้น) — ยังไม่ deploy/ยังไม่รัน SQL รอ Mandatory Pre-Deploy Test + เลือก email provider ก่อน**
+
+Lin ตัดสินใจเปลี่ยนจาก "confirm แล้วลบทันที" เป็น cooldown 7 วัน: ยื่นคำขอ → รอ 7 วัน (login ได้ปกติ ต้องกดยกเลิกเอง) → ครบกำหนด → cron ลบถาวรจริง (รันทุกวัน 20:00 UTC ไม่ใช่ลบตรงวินาทีที่ครบกำหนด)
+
+ไฟล์ที่แก้/สร้าง: `supabase/functions/account-delete/index.ts` (เขียนใหม่ทั้งไฟล์ — preview/request/cancel), 🆕 `account-delete-cron/index.ts` (ลบจริงเมื่อครบกำหนด + retry อีเมลที่ส่งพลาดอย่างปลอดภัย ไม่กระทบผลการลบ), 🆕 `send-transactional-email/index.ts` (ยังไม่เลือก provider), `js/core/auth-widget.js` (banner + ปุ่มยกเลิก), 🆕 `supabase/sql/2026-08-08_account_deletion_cooldown.sql`, 🆕 `docs/ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md`
+
+ผลตรวจ: `node --check` ผ่านทุกไฟล์ + `node scripts/check-site.js` ผ่านครบ (6 รายการไม่ผ่านเป็นของเดิมในโฟลเดอร์ `เลิกใช้แล้ว_ห้ามรัน` ไม่เกี่ยวกับรอบนี้)
+
+**สิ่งที่ Lin ต้องทำเอง:** (1) เลือก email provider + สมัคร/ตั้ง secret เอง (2) ทำ Mandatory Pre-Deploy Test ให้ครบตาม checklist ด้วยบัญชีทดสอบเท่านั้น (3) ตรวจโค้ด + deploy เอง (4) รัน SQL หลัง deploy `account-delete-cron` แล้วเท่านั้น
+
 ## 2026-08-08 (P5-A รอบ 3 — แก้แคชเก่าค้าง) — ปุ่มแชร์บทความ blog/ ยังขึ้น popup ซ้อน 2 กล่องหลัง push แล้ว
 
-สถานะ: **แก้แล้ว รอ Lin hard refresh + ทดสอบซ้ำ 3 จุดแล้ว push**
+สถานะ: **✅ Lin push ผ่าน GitHub Desktop แล้ว — รอ Lin hard refresh + ทดสอบซ้ำ 3 จุด**
 
 ปัญหา: หลัง push commit รอบ 2 (แก้ให้คอมทุกเบราว์เซอร์ไป popup ตรงๆ ไม่ผ่าน `navigator.share`) แล้ว Lin ทดสอบซ้ำบนคอม (บทความใน `blog/`) ยังเจออาการเดิม — ขึ้น popup ซ้อนกัน 2 กล่อง
 
@@ -38,7 +50,14 @@
 
 ## 2026-08-08 (บั๊กจริง #2 รอบ 3) — Lin push+รอแล้ว ยังขึ้น error เดิมบนมือถือ → เจอสาเหตุจริง: ลืม bump cache-buster
 
-สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin push แล้วทดสอบซ้ำอีกครั้ง (บนมือถือ ตามที่เพิ่งพัง)**
+สถานะ: **✅ ปิดแล้ว — Lin ยืนยันทดสอบเชื่อม LINE ผ่านซาฟารี/มือถือสำเร็จหลัง push + hard refresh**
+
+**สรุปทั้งเรื่อง "เชื่อม LINE ไม่สำเร็จ" (3 รอบ) — ปิดจบแล้ว 2026-08-08:**
+1. รอบ 1 `invalid_client` — สาเหตุ: `line-login`/`line-webhook` อ่าน secret ชื่อชนกัน → แก้แยกชื่อ `LINE_LOGIN_CHANNEL_SECRET`
+2. รอบ 2 `連結可能已經用過` (ซาฟารีคอม) — สาเหตุ: `sessionStorage` ผูกกับแท็บเดิม พังตอนสลับไปแอป LINE เดสก์ท็อปแล้วเปิดกลับมาเป็นแท็บใหม่ → เปลี่ยนเป็น `localStorage`
+3. รอบ 3 error เดิมซ้ำบนมือถือ แม้ push+รอแล้ว — สาเหตุ: รอบ 2 ลืม bump cache-buster `?v=` เบราว์เซอร์/CDN เลยยังเสิร์ฟไฟล์เก่าค้าง → bump `reading-auth.js` v11→12 + `line-callback.js` v3→4
+
+ไม่มีอะไรต้องติดตามต่อสำหรับเรื่อง "เชื่อม LINE" นี้โดยเฉพาะ — เรื่องปุ่มแชร์บทความ (`blog/`, ดูหัวข้อ P5-A ด้านบน) และ Account audit log เป็นคนละเรื่อง ติดตามแยกต่างหาก (ไม่ใช่ขอบเขตของแชทนี้)
 
 ปัญหา: Lin push commit ของรอบ 2 (sessionStorage→localStorage) แล้ว รอสักครู่ค่อยทดสอบเชื่อม LINE บนมือถือ แต่ยังขึ้น error เดิม "這個連結可能已經用過"
 
@@ -84,17 +103,17 @@
 
 ## 2026-08-08 (P6-09~12 ก้อน 2) — Account audit log + ต่อสายเข้า Link LINE/Facebook
 
-สถานะ: **โค้ดพร้อมแล้ว รอ Lin รัน SQL ใน Supabase ก่อนถึงจะทำงานได้จริง + deploy `line-login` ใหม่**
+สถานะ: ✅ **เสร็จจริงแล้ว** — Lin ยืนยัน (2026-08-08 ผ่านแชท decision queue): รัน SQL สร้างตาราง `account_audit_log` แล้ว + deploy `line-login` ใหม่แล้ว (deploy ไปแล้ว ~6 ชม.ก่อนหน้าจุดยืนยันนี้ มี 4 invocations ไม่มี error) ปุ่มเชื่อม LINE/Facebook บันทึก log จริงแล้ว **ไม่ต้องทำอะไรเพิ่ม**
 
-ปัญหา: ระบบบัญชีผู้เล่นไม่มีตาราง audit/history เลยแม้แต่แถวเดียว — ถ้ามีปัญหาบัญชี Lin ตรวจย้อนหลังไม่ได้ว่าเกิดอะไรขึ้น (สเปกข้อ 14 ที่ Lin ให้มาบังคับว่าต้องมี)
+ปัญหา (เดิม): ระบบบัญชีผู้เล่นไม่มีตาราง audit/history เลยแม้แต่แถวเดียว — ถ้ามีปัญหาบัญชี Lin ตรวจย้อนหลังไม่ได้ว่าเกิดอะไรขึ้น (สเปกข้อ 14 ที่ Lin ให้มาบังคับว่าต้องมี)
 
 วิธีแก้: สร้างตาราง `public.account_audit_log` (`user_id`, `event_type` — CHECK จำกัด 8 ค่าตามสเปก, `provider`, `before_state`/`after_state` jsonb, `actor_type`/`actor_id`, `created_at`) เปิด RLS แบบไม่มี policy ตั้งใจ (fail-closed) เขียนได้ทางเดียวผ่านฟังก์ชัน `log_account_audit()` (SECURITY DEFINER) ต่อสายเข้ากับจุด "เชื่อมบัญชีสำเร็จ" ที่มีอยู่แล้วจริง 2 จุด: LINE (บันทึกฝั่ง server ใน Edge Function น่าเชื่อถือกว่า) และ Facebook (บันทึกฝั่ง client เพราะไม่มี Edge Function คั่นกลาง — มีข้อจำกัด: ปิดแท็บ/เน็ตหลุดตอน redirect กลับจาก Facebook จะไม่มี log แม้เชื่อมสำเร็จจริง เป็นข้อจำกัดของสถาปัตยกรรมเดิม ไม่ใช่บั๊กใหม่)
 
-ไฟล์ที่แก้/สร้าง: 🆕 `supabase/sql/2026-08-08_account_audit_log.sql`, `supabase/functions/line-login/index.ts`, `js/core/auth-widget.js`, `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md`
+ไฟล์ที่แก้/สร้าง: `supabase/sql/2026-08-08_account_audit_log.sql`, `supabase/functions/line-login/index.ts`, `js/core/auth-widget.js`, `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md`
 
 ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (ไม่มี `.min.js` คู่กันสำหรับ 3 ไฟล์นี้)
 
-**สิ่งที่ Lin ต้องทำเอง (ดูขั้นตอนเต็มที่ `Bussiness Idea/ระบบเว็บไซต์/52_คำสั่งเปิดแชทสอง_...md`):** รัน SQL ไฟล์นี้ใน Supabase SQL Editor ก่อน แล้ว deploy `line-login` ใหม่อีกรอบ — ถ้ายังไม่ทำ ปุ่มเชื่อม LINE/Facebook ยังใช้งานได้ปกติเหมือนเดิมทุกอย่าง แค่ยังไม่มี log บันทึก (ห่อด้วย try/catch ไม่ทำให้พัง)
+**อัปเดต 2026-08-08 (รอบตรวจสอบ audit อิสระ):** เดิมหัวข้อนี้เขียนค้างไว้ว่า "รอ Lin รัน SQL" ทั้งที่ Lin ทำไปแล้วจริงระหว่างวัน — เอกสารไม่ได้อัปเดตย้อนหลัง แก้ให้ตรงสถานะจริงแล้ว
 
 **ยังไม่ครอบคลุม:** Unlink (ยังไม่สร้างฟีเจอร์ รอ Lin ตัดสินใจก่อน) และ event อื่นในสเปก (เปลี่ยนอีเมล/admin correction ฯลฯ — ยังไม่มีฟีเจอร์พวกนั้นให้ log)
 

@@ -1,6 +1,7 @@
 // ════════════════════════════════════════════════════════════
 // Supabase Edge Function: calendar-schedule-sync-cron
-// หน้าที่: รันอัตโนมัติทุก 15-30 นาที (ผ่าน pg_cron — ดู supabase/sql/2026-07-17_pg_cron_calendar_schedule_sync.sql)
+// หน้าที่: รันอัตโนมัติทุก 15-30 นาที (ผ่าน pg_cron — ตั้งค่าปัจจุบันอยู่ที่ supabase/sql/2026-08-07_p1-06_cron_vault.sql
+//   ไฟล์ตั้ง cron ตัวเก่า 2026-07-17_pg_cron_calendar_schedule_sync.sql ถูกแทนที่แล้ว ย้ายเข้า เลิกใช้แล้ว_ห้ามรัน/)
 //   ไปอ่าน Google Calendar ของครูตรงๆ (ไม่ต้องรอครูเปิดเว็บ) แล้วซิงค์ลง classroom_schedule
 //   ทำเหมือน connectCalendar() + syncScheduleToSupabase() ใน classroom/index.html ทุกประการ
 //   (คัดลอกสูตร matching/dedupe มาตรงๆ ห้ามคิดใหม่ — กันพลาดแบบที่เคยเกิดกับ low-quota-cron)
@@ -20,8 +21,8 @@
 //        supabase secrets set GOOGLE_CLIENT_SECRET=...
 //        supabase secrets set GOOGLE_CALENDAR_REFRESH_TOKEN=...
 //   2. supabase functions deploy calendar-schedule-sync-cron
-//   3. ตั้ง pg_cron ให้เรียกทุก 15-30 นาที (รัน SQL ใน supabase/sql/2026-07-17_pg_cron_calendar_schedule_sync.sql
-//      ใน Supabase SQL Editor)
+//   3. ตั้ง pg_cron ให้เรียกทุก 15-30 นาที (รัน SQL ใน supabase/sql/2026-08-07_p1-06_cron_vault.sql
+//      ใน Supabase SQL Editor — ไฟล์เก่า 2026-07-17 ที่เคยเขียนไว้ตรงนี้ถูกแทนที่แล้ว)
 //   4. ทดสอบ: เปิด Supabase → Edge Functions → calendar-schedule-sync-cron → Logs ดูว่ารันสำเร็จไหม
 //      (เรียกด้วยมือครั้งแรกได้ผ่าน "Invoke" ปุ่มในหน้า Supabase ไม่ต้องรอ cron รอบแรก)
 //
