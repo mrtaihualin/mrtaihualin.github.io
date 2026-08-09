@@ -73,6 +73,8 @@ const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',
   'https://mrtaihualin.github.io',
+  // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify — ใช้ทดสอบระบบล็อกอินก่อนขึ้นเว็บจริงเท่านั้น
+  'https://gentle-moxie-bf64ad.netlify.app',
 ];
 
 // อีเมล synthetic คำนวณจาก line_user_id เสมอ (deterministic ไม่ต้องเก็บซ้ำที่ไหน)
@@ -137,7 +139,7 @@ serve(async (req) => {
     // (LINE เองก็เช็คตรงนี้อยู่แล้วตอนแลก token แต่เช็คซ้ำฝั่งเราด้วย กันเผื่อ/ชัดเจนกว่า)
     let allowedHost = '';
     try { allowedHost = new URL(redirect_uri).hostname; } catch (e) { /* ปล่อยว่าง → ไม่ผ่านเช็คด้านล่าง */ }
-    const allowedHosts = ['mrtaihualin.com', 'www.mrtaihualin.com', 'mrtaihualin.github.io'];
+    const allowedHosts = ['mrtaihualin.com', 'www.mrtaihualin.com', 'mrtaihualin.github.io', 'gentle-moxie-bf64ad.netlify.app'];
     if (!allowedHosts.includes(allowedHost) || !redirect_uri.endsWith('/line-callback.html')) {
       return json({ error: 'invalid redirect_uri' }, 400);
     }
