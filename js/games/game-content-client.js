@@ -242,12 +242,19 @@
   }
 
   // เรียกจากหน้าเกม: GameContentLoader.boot(['js/games/reading-game-app.min.js?v=22'])
+  // 🆕 2026-08-08 (P6-28): boot() ตอนนี้ "return" Promise ออกไปด้วย (เดิมไม่ return อะไรเลย)
+  // เหตุผล: ปุ่มเล่นเกมทั้งหมดใช้ onclick="ฟังก์ชัน()" inline ซึ่งกดได้ทันทีตั้งแต่หน้าโหลดเสร็จ
+  // แต่ฟังก์ชันจริงมาจากสคริปต์เกมที่เพิ่งถูกแปะเข้าไปตรงนี้ (async รอ fetch ได้ถึง 15 วิ) —
+  // กดปุ่มก่อนหน้านี้จะเจอ error "ฟังก์ชันไม่มีอยู่จริง" หน้าเกมแต่ละหน้าจึงต้อง .then()/.catch()
+  // ต่อจาก boot() เพื่อรู้ว่าจะ "เปิดปุ่ม" เมื่อไหร่ (ดู gcGateButtons() ในแต่ละไฟล์ HTML)
+  // ยังคงยิง showErrorBanner() ที่นี่เหมือนเดิมเมื่อพัง (ห้ามเงียบ) แล้ว "throw ต่อ" ให้ผู้เรียก
+  // รู้ด้วยว่าพัง (ผู้เรียกไม่ต้องแสดง error ซ้ำ แค่ปล่อยปุ่มเป็น disabled ต่อไปตามที่ CSS ทำอยู่แล้ว)
   global.GameContentLoader = {
     boot: function (appScriptSrcs) {
       if (document.body) showLoadingBanner();
       else document.addEventListener('DOMContentLoaded', showLoadingBanner);
 
-      fetchGameContent().then(function (data) {
+      return fetchGameContent().then(function (data) {
         fireCapHitEvents(data);
         global.WORDS_MASTER = data.words;
         global.ADV_SENTENCES = data.sentences;
@@ -260,6 +267,7 @@
         hideLoadingBanner();
       }).catch(function (err) {
         showErrorBanner(err);
+        throw err;
       });
     },
   };
