@@ -396,24 +396,18 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
     <button onclick="document.getElementById('rg-howto-modal').style.display='none';try{gtag('event','reading_game_howto_close',{category:'game'})}catch(e){}" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
     <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">✍️ 怎麼玩？</div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">背單字好無聊？來玩遊戲吧，玩著玩著就記住了 😊</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">泰文字不是整個背起來的！看懂一個字有哪些字母、放在哪裡，慢慢就能自己讀、寫、打字 😊</p>
     <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
       <li>泰文的每個字，都是由「子音＋母音＋聲調＋尾音」組合起來的喔！</li>
       <li>點一下零件，把它放進正確的格子，親手把字「拼」出來 🧩</li>
       <li>拼幾次之後就記住了，不是死背，是用手感記住的感覺～</li>
     </ul>
     <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
-      <ul style="margin:0;padding-left:18px;line-height:1.9;">
-        <li>每格一次就對 → <strong>10 分</strong>，錯 1／2／3 次 → <strong>7／4／1 分</strong>，錯 4 次 → 0 分並進入複習</li>
-        <li>中級 ×1.5、高級 ×2 · ✨黃金字全對 <strong>×2</strong> · 連對 3／5／8 次 <strong>×1.5／×2／×3</strong></li>
-        <li>完成一輪 <strong>+20</strong>，全對再 <strong>+50</strong> · 💡「有提示」模式純練習、不計分</li>
-        <li>拼完自動顯示拆解：子音／母音／尾音＋為什麼是這個聲調</li>
-        <li>每輪結束可下載 📄 PDF 報告</li>
-      </ul>
+      <p style="margin:0;">拼對可以得分，連續答對還有加成；完整玩法與計分方式請看下方說明。</p>
     </div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐</p>
 
-    <button onclick="var d=document.getElementById('rg-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';try{gtag('event','reading_game_howto_detail_toggle',{category:'game',open:!open})}catch(e){}" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
+    <button onclick="var d=document.getElementById('rg-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 查看完整玩法與計分方式 ▼':'📖 收起完整版說明 ▲';try{gtag('event','reading_game_howto_detail_toggle',{category:'game',open:!open})}catch(e){}" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 查看完整玩法與計分方式 ▼</button>
 
     <div id="rg-howto-detail" style="display:none;font-size:14.5px;color:#333;line-height:1.9;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
       <div style="font-weight:700;color:#8B6310;margin:0 0 4px;">📚 三個等級</div>
