@@ -42,8 +42,12 @@
 //      log_account_audit, profiles, game_accounts, login_events) ไม่มีไฟล์ SQL แนบมาด้วยรอบนี้
 //   2. ตั้ง secret กุญแจแอดมินใหม่ (ห้ามใช้ค่าเดียวกับ GAME_REWARD_ADMIN_KEY):
 //      supabase secrets set ADMIN_PLAYER_ACCOUNTS_KEY=xxxxxxxx   (ตั้งเองเป็นค่าอะไรก็ได้ที่จำง่ายแต่คนอื่นเดาไม่ได้)
-//   3. supabase functions deploy admin-player-accounts   (ไม่ต้องใส่ --no-verify-jwt — หน้านี้ไม่ได้เรียก
-//      จาก LINE ตรงๆ เรียกจาก fetch() ธรรมดาในเบราว์เซอร์ของ Lin เท่านั้น)
+//   3. supabase functions deploy admin-player-accounts --no-verify-jwt
+//      🆕 แก้ 2026-08-09 (พิสูจน์จริงจาก Invocations log): ต้องใส่ --no-verify-jwt เสมอ — เข้าใจผิดตอนแรกว่า
+//      "ไม่ต้องใส่เพราะเรียกจาก fetch() ธรรมดา ไม่ใช่ LINE" แต่ Supabase เช็ค Verify JWT จากทุก request
+//      ไม่ว่าที่มาจะเป็นอะไร ถ้าไม่มี Authorization header ที่ Supabase ยอมรับ (JWT/anon key) จะโดน 401
+//      ตั้งแต่ประตูแรกก่อนถึงโค้ดเราเลย — หน้านี้ยิง fetch() ธรรมดาไม่แนบ header นั้น ต้องปิด Verify JWT
+//      แล้วให้ x-admin-key เป็นด่านสิทธิ์เดียวแทน (เหมือน line-webhook ที่เจอปัญหาเดียวกันมาก่อน)
 //   4. เปิด admin-player-accounts.html ในเบราว์เซอร์ กรอก Edge Function URL + admin key เหมือนหน้า
 //      admin-game-reports.html เดิม
 // ════════════════════════════════════════════════════════════════════════════
