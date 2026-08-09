@@ -144,7 +144,7 @@
     bannerEl = document.createElement('div');
     bannerEl.id = 'gc-loading-banner';
     bannerEl.setAttribute('style', 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,' + THEME.goldBright + ',' + THEME.goldDeep + ');color:' + THEME.cream + ';text-align:center;padding:8px 12px;font-size:14px;font-family:' + FONT_STACK + ';');
-    bannerEl.textContent = 'กำลังโหลดข้อมูลเกม...';
+    bannerEl.textContent = '遊戲資料載入中...';
     document.body.appendChild(bannerEl);
   }
   function hideLoadingBanner() {
@@ -159,12 +159,12 @@
   function friendlyGameContentError(err) {
     var raw = String((err && err.message) || err || '');
     if (/Failed to fetch|NetworkError|Load failed|abort/i.test(raw)) {
-      return 'เชื่อมต่อเน็ตไม่ได้ ลองเช็คสัญญาณอินเทอร์เน็ตแล้วกดลองใหม่';
+      return '無法連線，請檢查網路訊號後再試一次';
     }
     if (/HTTP \d|game-content:|โหลดสคริปต์เกมไม่สำเร็จ/i.test(raw)) {
-      return 'ระบบเกมมีปัญหาชั่วคราว ลองใหม่อีกครั้ง หรือถ้ายังไม่ได้ให้ทัก LINE บอกครู';
+      return '遊戲系統暫時出問題，請再試一次，如果還是不行請用LINE跟老師說';
     }
-    return 'โหลดข้อมูลเกมไม่สำเร็จ ลองใหม่อีกครั้ง';
+    return '遊戲資料載入失敗，請再試一次';
   }
 
   // แถบ error กลาง — ใช้ร่วมกันทั้งตอนโหลดข้อมูลพัง (showErrorBanner) และตอน JS พังกลางเกม
@@ -178,9 +178,9 @@
     el.setAttribute('style', 'position:fixed;top:0;left:0;right:0;z-index:99999;background:' + THEME.amberDark + ';color:' + THEME.cream + ';text-align:center;padding:14px 12px;font-size:15px;font-family:' + FONT_STACK + ';');
     el.innerHTML = '⚠️ ' + friendlyMessage +
       '<div style="margin-top:8px;">' +
-      '<button type="button" id="gc-error-retry" style="margin:2px 6px;padding:5px 14px;border:none;border-radius:5px;background:linear-gradient(90deg,' + THEME.goldBright + ',' + THEME.goldDeep + ');color:' + THEME.cream + ';font-weight:bold;font-family:' + FONT_STACK + ';cursor:pointer;">🔄 ลองใหม่</button>' +
-      '<a href="' + GAMES_HOME_HREF + '" style="display:inline-block;margin:2px 6px;padding:5px 14px;border-radius:5px;background:rgba(255,255,255,.16);color:' + THEME.cream + ';text-decoration:none;font-family:' + FONT_STACK + ';">🔙 กลับหน้าเกมทั้งหมด</a>' +
-      '<a href="' + LINE_CONTACT_HREF + '" target="_blank" rel="noopener" style="display:inline-block;margin:2px 6px;padding:5px 14px;border-radius:5px;background:rgba(255,255,255,.16);color:' + THEME.cream + ';text-decoration:none;font-family:' + FONT_STACK + ';">💬 ทัก LINE ครู</a>' +
+      '<button type="button" id="gc-error-retry" style="margin:2px 6px;padding:5px 14px;border:none;border-radius:5px;background:linear-gradient(90deg,' + THEME.goldBright + ',' + THEME.goldDeep + ');color:' + THEME.cream + ';font-weight:bold;font-family:' + FONT_STACK + ';cursor:pointer;">🔄 重新載入</button>' +
+      '<a href="' + GAMES_HOME_HREF + '" style="display:inline-block;margin:2px 6px;padding:5px 14px;border-radius:5px;background:rgba(255,255,255,.16);color:' + THEME.cream + ';text-decoration:none;font-family:' + FONT_STACK + ';">🔙 返回遊戲總覽</a>' +
+      '<a href="' + LINE_CONTACT_HREF + '" target="_blank" rel="noopener" style="display:inline-block;margin:2px 6px;padding:5px 14px;border-radius:5px;background:rgba(255,255,255,.16);color:' + THEME.cream + ';text-decoration:none;font-family:' + FONT_STACK + ';">💬 用LINE問老師</a>' +
       '</div>';
     document.body.appendChild(el);
     el.querySelector('#gc-error-retry').addEventListener('click', function () { location.reload(); });
@@ -195,7 +195,7 @@
   // เรียกตอน JS พังกลางเกม (สถานการณ์ที่ 3) — ดู installCrashHandler ท้ายไฟล์
   function showCrashBanner(err) {
     console.error('[game-content-client] เกิดข้อผิดพลาดกลางเกม:', err);
-    renderErrorBanner('เกิดข้อผิดพลาดในเกม ขออภัยในความไม่สะดวก ลองโหลดหน้าใหม่อีกครั้ง');
+    renderErrorBanner('遊戲發生錯誤，造成不便敬請見諒，請重新整理頁面');
   }
 
   function injectScript(src) {
