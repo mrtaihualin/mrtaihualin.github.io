@@ -36,7 +36,7 @@
 
 ---
 
-## 3) Account Deletion — ⚠️ PARTIAL (cooldown 7 วัน — โค้ดพร้อมแล้ว รอ Mandatory Pre-Deploy Test)
+## 3) Account Deletion — ⚠️ PARTIAL (cooldown 7 วัน — deploy+ทดสอบผ่านครบแล้ว รอแค่ push โค้ดขึ้น GitHub)
 
 **🆕 อัปเดต 2026-08-08 (รอบ 3 — เปลี่ยนสถาปัตยกรรมทั้งหมด):** Lin ตัดสินใจเปลี่ยนจาก "ลบทันทีตอน confirm"
 เป็น **cooldown 7 วัน** (ผ่านแชท decision queue): ยื่นคำขอ → รอ 7 วัน (login/เล่นเกมได้ปกติ, login ไม่ถือเป็น
@@ -57,8 +57,9 @@
   Resend ไว้เป็น reference เท่านั้น มีตารางเทียบ Resend/Postmark/SendGrid ท้ายไฟล์รอ Lin เลือก
 - `js/core/auth-widget.js` — เปิด modal ปุ๊บเช็คทันทีว่ามีคำขอค้างไหม (`renderDangerZone`) ถ้ามีโชว์
   banner แดง + วันที่ + ปุ่ม "取消刪除帳號" แทนปุ่มลบปกติ
-- 🆕 `supabase/sql/2026-08-08_account_deletion_cooldown.sql` — DRAFT ยังไม่ได้รัน — ตาราง
-  `account_deletion_requests` + ขยาย CHECK ของ `account_audit_log` + [C] ตั้ง pg_cron (Vault-based)
+- 🆕 `supabase/sql/2026-08-08_account_deletion_cooldown.sql` — ✅ รันครบแล้วทั้ง [A]/[B]/[C] 2026-08-09 —
+  ตาราง `account_deletion_requests` + ขยาย CHECK ของ `account_audit_log` + pg_cron `account-delete-daily`
+  (jobid 15, active=true, Vault-based) ยืนยันแล้วด้วย `select * from cron.job`
 - 🆕 `docs/ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md` — เช็กลิสต์ทดสอบก่อน deploy แบบบังคับ (ใช้บัญชี
   ทดสอบเท่านั้น) ดูหัวข้อถัดไป
 
@@ -85,13 +86,14 @@
 cron/ลบถาวรจริง/ตรวจ DB+Auth+audit log ครบ 4 event/ล็อกอินซ้ำเป็นบัญชีใหม่/อีเมลครบ 4 ฉบับ) ไม่พบบั๊ก
 รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 
-**🚫 ยังเหลือก่อน deploy จริงรอบสุดท้าย:**
-1. 🔴 **ตั้ง `EMAIL_PROVIDER_API_KEY` กลับเป็นค่า Resend จริง** — ตอนนี้ยังเป็นค่าผิด (`wrong_value_temp`)
-   จากการทดสอบ failure-path ของอีเมล (ไม่บังคับ) ที่หยุดค้างกลางคัน 2026-08-09
-2. ตัดสินใจทำ failure-path test ต่อให้จบไหม (ไม่บังคับ)
-3. รัน SQL หัวข้อ [C] ใน `2026-08-08_account_deletion_cooldown.sql` (ตั้ง pg_cron ให้รันอัตโนมัติทุกวัน —
-   ปลอดภัยแล้วเพราะไม่มีแถว pending ทดสอบค้างอยู่)
-4. Push `js/core/auth-widget.js` และไฟล์เว็บที่เกี่ยวข้องขึ้น GitHub ผ่าน GitHub Desktop
+**✅ อัปเดต 2026-08-09 (รอบ 2):**
+1. ✅ **`EMAIL_PROVIDER_API_KEY` คืนเป็นค่า Resend จริงแล้ว**
+2. ⏸️ failure-path test ยังค้างไว้ (ไม่บังคับ — Lin ยังไม่ตัดสินใจว่าจะทำต่อให้จบไหม)
+3. ✅ **รัน SQL หัวข้อ [C] แล้ว** — cron `account-delete-daily` ทำงานจริง (jobid 15, active=true)
+
+**🚫 ยังเหลือก่อนปิดรอบจริง:**
+1. Push `js/core/auth-widget.js` และไฟล์เว็บที่เกี่ยวข้องขึ้น GitHub ผ่าน GitHub Desktop
+2. (ไม่บังคับ) ตัดสินใจทำ failure-path test ของอีเมลต่อให้จบไหม
 3. B.5a (LINE-only synthetic email) — ✅ ปิดแล้ว ดูหัวข้อ B ด้านล่าง (ผ่านครบ 2026-08-09)
 
 ---

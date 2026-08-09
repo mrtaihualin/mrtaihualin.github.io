@@ -12,9 +12,10 @@
 > ✅ **อัปเดต 2026-08-09 — ข้อ 1-9 (บังคับ) ทดสอบผ่านครบสมบูรณ์แล้ว** ด้วยบัญชีทดสอบ
 > `mr.taihualin+test2@gmail.com` (`user_id: c619ba7b-97b2-470c-bf45-846af2b01bf2`) — ไม่พบบั๊ก
 > รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
-> เหลือ: ทดสอบ failure path ของอีเมล (ไม่บังคับ) หยุดค้างกลางคัน — 🔴 `EMAIL_PROVIDER_API_KEY`
-> ยังเป็นค่าผิดอยู่ ต้องตั้งกลับเป็นค่าจริงก่อนทำอะไรต่อ + ยังไม่ได้รัน SQL [C] (ตั้ง pg_cron อัตโนมัติ)
-> + ยังไม่ได้ push โค้ด
+>
+> ✅ **อัปเดต 2026-08-09 (รอบ 2):** `EMAIL_PROVIDER_API_KEY` คืนเป็นค่า Resend จริงแล้ว + รัน SQL [C]
+> แล้ว (cron `account-delete-daily` jobid 15 active=true ยืนยันจริงด้วย `select * from cron.job`)
+> เหลือ: (ไม่บังคับ) ทดสอบ failure path ของอีเมลต่อให้จบไหม + **ยังไม่ได้ push โค้ดขึ้น GitHub**
 
 ---
 
@@ -75,9 +76,8 @@ Lin เลือก **Resend** โดเมน `mrtaihualin.com` verify แล�
 
 **งานที่เหลือก่อนขอ Lin กด deploy จริงรอบสุดท้าย** (ดูรายละเอียดเต็มที่
 `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`):
-1. 🔴 ตั้ง `EMAIL_PROVIDER_API_KEY` กลับเป็นค่า Resend จริง (ตอนนี้ยังเป็นค่าผิดจากการทดสอบ failure path
-   ที่หยุดค้างกลางคัน)
-2. ตัดสินใจทำ failure-path test ต่อให้จบไหม (ไม่บังคับ)
-3. รัน SQL หัวข้อ [C] ใน `2026-08-08_account_deletion_cooldown.sql` (ตั้ง pg_cron อัตโนมัติทุกวัน)
-4. อัปเดต `docs/ACCOUNT_DATA_SAFETY_GAPS.md` หัวข้อ 3/10 ว่าเทสผ่านแล้ว
-5. Push `js/core/auth-widget.js` และไฟล์ที่เกี่ยวข้องขึ้น GitHub ผ่าน GitHub Desktop
+1. ✅ ตั้ง `EMAIL_PROVIDER_API_KEY` กลับเป็นค่า Resend จริงแล้ว — เสร็จ 2026-08-09
+2. ⏸️ ตัดสินใจทำ failure-path test ต่อให้จบไหม (ไม่บังคับ — ยังค้าง)
+3. ✅ รัน SQL หัวข้อ [C] แล้ว (cron `account-delete-daily` jobid 15 active=true) — เสร็จ 2026-08-09
+4. ✅ อัปเดต `docs/ACCOUNT_DATA_SAFETY_GAPS.md` หัวข้อ 3 แล้วว่าเทสผ่านแล้ว — เสร็จ 2026-08-09
+5. 🚫 Push `js/core/auth-widget.js` และไฟล์ที่เกี่ยวข้องขึ้น GitHub ผ่าน GitHub Desktop — **ยังไม่ทำ**
