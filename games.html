@@ -71,6 +71,22 @@
   .gh-cta-wide .gh-body{align-items:center;}
   .gh-cta-inline{max-width:none;margin:0;padding:18px 16px;flex-direction:row;align-items:center;justify-content:center;text-align:left;gap:14px;}
   .gh-cta-inline .gh-body{align-items:flex-start;}
+  .gh-section-label{font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:#5a3e10;margin:36px 0 14px;text-align:left;}
+  /* 🔍 Search MVP (2026-08-09) — กล่องค้นหาเฉพาะเกม */
+  .gh-search-wrap{max-width:600px;margin:0 auto 30px;text-align:left;}
+  .gh-search-prompt{font-size:15px;font-weight:700;color:#5a3e10;margin-bottom:10px;text-align:center;}
+  .gh-search-row{display:flex;gap:8px;}
+  .gh-search-input{flex:1;padding:13px 16px;border:1.5px solid #e0d2a8;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;}
+  .gh-search-input:focus{outline:none;border-color:#C8973A;}
+  .gh-search-btn{padding:13px 22px;background:#C8973A;color:#1C1C1C;border:none;border-radius:6px;font-weight:900;font-size:13.5px;cursor:pointer;white-space:nowrap;}
+  .gh-search-btn:hover{background:#b07820;}
+  .gh-search-result{display:none;margin-top:14px;background:#fff;border:1.5px solid #e0d2a8;border-radius:12px;padding:16px 18px;}
+  .gh-search-primary{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:900;color:#5a3e10;margin-bottom:4px;}
+  .gh-search-reason{font-size:12.5px;color:#8b6310;margin-bottom:10px;}
+  .gh-search-secondary{font-size:12px;color:#8b8060;margin-top:10px;padding-top:10px;border-top:1px solid #f0e6cc;}
+  .gh-search-secondary a{color:#8b6310;font-weight:700;text-decoration:underline;}
+  .gh-search-empty{font-size:13px;color:#8b8060;line-height:1.8;}
+  @media(max-width:600px){.gh-search-row{flex-direction:column;} .gh-search-btn{width:100%;}}
 </style>
 <script type="application/ld+json">
 {
@@ -190,7 +206,7 @@
 </head>
 <body>
 
-<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html">遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><span class="nav-drop-label">課程資訊</span><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/pricing.html#how">上課方式</a><a href="/pricing.html#pricing">費用方案</a><a href="/faq.html#faq">常見問題</a><div class="nav-drop-divider"></div><a href="/faq.html#rules">上課須知</a><span class="nav-drop-label">學習素材</span><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">關於我</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html">遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">關於我</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
 <!-- PAGE NAV STRIP -->
 <div class="page-strip">
@@ -207,6 +223,17 @@
   <h1>🎮 泰語遊戲練習室</h1>
   <p class="gh-sub">邊玩邊學泰文！選一個遊戲開始。</p>
 
+  <!-- 🔍 Search MVP (2026-08-09) — กล่องค้นหาเฉพาะเกม -->
+  <div class="gh-search-wrap">
+    <div class="gh-search-prompt">今天想改善哪個泰語問題？</div>
+    <div class="gh-search-row">
+      <input type="text" id="gameSearchInput" class="gh-search-input" placeholder="例如：聽不懂泰國人說話、打字很慢、語序排不對">
+      <button type="button" id="gameSearchBtn" class="gh-search-btn">搜尋</button>
+    </div>
+    <div id="gameSearchResult" class="gh-search-result"></div>
+  </div>
+
+  <!-- IA reorder 2026-08-09 (ตาม 73_CLAUDE_UPDATE หัวข้อ E): Search → 5 เกมเล็ก → Challenge → Lego -->
   <div class="gh-grid">
     <a class="gh-card" href="tone-finder.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'tone_finder',from:'games_hub'})">
       <div class="gh-emoji">🎵</div>
@@ -226,6 +253,18 @@
       </div>
     </a>
 
+    <!-- ▼ 泰語聽力練習室卡片 — ย้ายมาอยู่ในแถว 5 เกมเล็กตามลำดับ 聲調→拼讀→聽力→打字→語序 (2026-08-09) ▼ -->
+    <a class="gh-card" href="listening-game.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'listening_game',from:'games_hub'})">
+      <span class="gh-badge">測試中</span>
+      <div class="gh-emoji">🎧</div>
+      <div class="gh-body">
+        <div class="gh-title">泰語聽力練習室</div>
+        <div class="gh-desc">聽發音，選出來或打出來。<br>練耳朵也練拼寫，聽力不再猜。</div>
+        <span class="gh-go">開始玩 →</span>
+      </div>
+    </a>
+    <!-- ▲ 聽力練習室卡片 ▲ -->
+
     <a class="gh-card" href="typing-game.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'typing_game',from:'games_hub'})">
       <div class="gh-emoji">⌨️</div>
       <div class="gh-body">
@@ -243,29 +282,11 @@
         <span class="gh-go">開始玩 →</span>
       </div>
     </a>
+  </div>
 
-    <a class="gh-card" href="lego.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'lego',from:'games_hub'})">
-      <div class="gh-emoji">🧱</div>
-      <div class="gh-body">
-        <div class="gh-title">泰語造句練習室</div>
-        <div class="gh-desc">像積木一樣挑詞組成句子。<br>能拆句測驗檢查自己的句子。</div>
-        <span class="gh-go">開始玩 →</span>
-      </div>
-    </a>
-
-    <!-- ▼ 泰語聽力練習室卡片 — 新增 2026-08-02，第 6 款遊戲 ▼ -->
-    <a class="gh-card" href="listening-game.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'listening_game',from:'games_hub'})">
-      <span class="gh-badge">測試中</span>
-      <div class="gh-emoji">🎧</div>
-      <div class="gh-body">
-        <div class="gh-title">泰語聽力練習室</div>
-        <div class="gh-desc">聽發音，選出來或打出來。<br>練耳朵也練拼寫，聽力不再猜。</div>
-        <span class="gh-go">開始玩 →</span>
-      </div>
-    </a>
-    <!-- ▲ 聽力練習室卡片 ▲ -->
-
-    <!-- ▼ 泰語遊戲挑戰室卡片 — LIN 2026-08-01，取代原本這格的 泰語開口練習室（該卡片已移到下方單獨放大） ▼ -->
+  <!-- ▼ Challenge — แยก section ตามที่ Lin สั่ง (ไม่ใช่การ์ดที่ 6 ในแถวเกมเล็กอีกต่อไป) ▼ -->
+  <div class="gh-section-label">🌟 挑戰模式</div>
+  <div class="gh-grid" style="grid-template-columns:1fr;">
     <a class="gh-card gh-challenge" href="games-challenge.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'challenge_game',from:'games_hub'})">
       <span class="gh-badge">測試中</span>
       <div class="gh-emoji">🌟</div>
@@ -275,19 +296,33 @@
         <span class="gh-go">開始玩 →</span>
       </div>
     </a>
-    <!-- ▲ 挑戰室卡片 ▲ -->
+  </div>
+  <!-- ▲ Challenge ▲ -->
 
-    <!-- ▼ 預約體驗課卡片（遊戲 → 預約 橋樑）— LIN 2026-07-02，2026-08-02 移回格子內，跟挑戰室同一排 ▼ -->
-    <a class="gh-cta-wide gh-cta-inline" href="pricing.html?from=games_hub#pricing" onclick="if(window.bookFromGame){bookFromGame('games_hub','hub_card');return false;}">
-      <div class="gh-emoji">🗣️</div>
+  <!-- ▼ Lego — แยก section ของตัวเอง (ไม่ใช่เกมเล็กที่ 6 ตามที่ Lin สั่ง) ▼ -->
+  <div class="gh-section-label">🧱 造句工具</div>
+  <div class="gh-grid" style="grid-template-columns:1fr;">
+    <a class="gh-card" href="lego.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'lego',from:'games_hub'})">
+      <div class="gh-emoji">🧱</div>
       <div class="gh-body">
-        <div class="gh-title">泰語開口練習室</div>
-        <div class="gh-desc">一對一中文授課，量身安排進度。<br>30 分鐘免費體驗課，先聊聊再決定。</div>
-        <span class="gh-go">預約免費體驗課 →</span>
+        <div class="gh-title">泰語造句練習室</div>
+        <div class="gh-desc">像積木一樣挑詞組成句子。<br>能拆句測驗檢查自己的句子。</div>
+        <span class="gh-go">開始玩 →</span>
       </div>
     </a>
-    <!-- ▲ CTA ▲ -->
   </div>
+  <!-- ▲ Lego ▲ -->
+
+  <!-- ▼ 預約體驗課卡片（遊戲 → 預約 橋樑）— LIN 2026-07-02 ▼ -->
+  <a class="gh-cta-wide" href="pricing.html?from=games_hub#pricing" style="margin-top:26px;" onclick="if(window.bookFromGame){bookFromGame('games_hub','hub_card');return false;}">
+    <div class="gh-emoji">🗣️</div>
+    <div class="gh-body">
+      <div class="gh-title">泰語開口練習室</div>
+      <div class="gh-desc">一對一中文授課，量身安排進度。<br>30 分鐘免費體驗課，先聊聊再決定。</div>
+      <span class="gh-go">預約免費體驗課 →</span>
+    </div>
+  </a>
+  <!-- ▲ CTA ▲ -->
 
   <p style="margin:28px 0 0;font-size:16px;">
     <a href="all-board.html" style="display:inline-block;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-weight:800;text-decoration:none;border-radius:999px;padding:10px 26px;box-shadow:0 3px 10px rgba(139,99,16,0.28);" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'combined_board',from:'games_hub'})">🏆 總排行榜（全部遊戲）</a>
@@ -314,6 +349,9 @@
 </footer>
 
 <script src="data/nav-template.js?v=1"></script>
+<script src="data/search-index.js?v=1"></script>
+<script src="js/core/search-engine.js?v=1"></script>
+<script src="js/games/games-search-ui.js?v=1"></script>
 <script src="js/core/shared.min.js?v=19"></script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
