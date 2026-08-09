@@ -36,7 +36,7 @@
 
 ---
 
-## 3) Account Deletion — ⚠️ PARTIAL (cooldown 7 วัน — deploy+ทดสอบผ่านครบแล้ว รอแค่ push โค้ดแก้บั๊กล่าสุดขึ้น GitHub)
+## 3) Account Deletion — ✅ DONE (cooldown 7 วัน — deploy+ทดสอบ+push ครบแล้ว 2026-08-09)
 
 **🆕 อัปเดต 2026-08-08 (รอบ 3 — เปลี่ยนสถาปัตยกรรมทั้งหมด):** Lin ตัดสินใจเปลี่ยนจาก "ลบทันทีตอน confirm"
 เป็น **cooldown 7 วัน** (ผ่านแชท decision queue): ยื่นคำขอ → รอ 7 วัน (login/เล่นเกมได้ปกติ, login ไม่ถือเป็น
@@ -99,9 +99,9 @@ cron/ลบถาวรจริง/ตรวจ DB+Auth+audit log ครบ 4 e
 อีเมลยืนยันอาจไม่ถูกส่งซ้ำ แก้แล้วโดยเอา early return ออก ทดสอบยืนยัน retry ทำงานถูกต้องแล้ว
 รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 
-**🚫 ยังเหลือก่อนปิดรอบจริง:**
-1. Push `supabase/functions/account-delete-cron/index.ts` (โค้ดแก้บั๊กวันนี้) ขึ้น GitHub ผ่าน GitHub Desktop
-2. B.5a (LINE-only synthetic email) — ✅ ปิดแล้ว ดูหัวข้อ B ด้านล่าง (ผ่านครบ 2026-08-09)
+**✅ ปิดงานสมบูรณ์แล้ว** — push `auth-widget.js` และ `account-delete-cron/index.ts` ขึ้น GitHub ผ่าน
+GitHub Desktop เรียบร้อยแล้วทั้งคู่ (ยืนยันจาก Lin 2026-08-09) — ไม่มีงานค้างของหัวข้อนี้อีก
+- B.5a (LINE-only synthetic email) — ✅ ปิดแล้ว ดูหัวข้อ B ด้านล่าง (ผ่านครบ 2026-08-09)
 
 ---
 

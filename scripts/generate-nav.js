@@ -22,8 +22,8 @@ const NAV = require('../data/nav-template.js');
 
 const ROOT = path.join(__dirname, '..');
 
-// รายชื่อหน้าที่มี <nav class="site-nav"> จริง (ตรวจจาก grep ของจริงในโค้ด 2026-08-09)
-const PAGES = [
+// รายชื่อหน้า root ที่มี <nav class="site-nav"> จริง (ตรวจจาก grep ของจริงในโค้ด 2026-08-09)
+const ROOT_PAGES = [
   'all-board.html', 'blog.html', 'community.html', 'content.html', 'faq.html',
   'games-challenge.html', 'games.html', 'index.html', 'leaderboard.html',
   'lego-board.html', 'lego.html', 'listening-game.html', 'mix-board.html',
@@ -34,11 +34,34 @@ const PAGES = [
   'word-order-board.html', 'word-order.html'
 ];
 
+// 🆕 2026-08-10 — หน้าในโฟลเดอร์ย่อยก็ต้องรวมด้วย (เจอบั๊กจริง):
+//   รอบ 2026-08-09 รายชื่อด้านบนมีแต่หน้า root เลย "ตกหล่นหน้า blog/ ทั้ง 44 ไฟล์"
+//   ทั้งที่ทุกไฟล์มี <nav class="site-nav"> จริง → เว็บมีเมนู 2 ชุดไม่ตรงกันอยู่พักหนึ่ง
+//   รอบนี้เปลี่ยนเป็น "ให้สคริปต์หาเอง" แทนการพิมพ์รายชื่อมือ เพื่อไม่ให้บทความใหม่ในอนาคตตกหล่นซ้ำอีก
+function findNavPagesIn(dir) {
+  const full = path.join(ROOT, dir);
+  if (!fs.existsSync(full)) return [];
+  return fs.readdirSync(full)
+    .filter(function (f) { return f.endsWith('.html'); })
+    .filter(function (f) {
+      return fs.readFileSync(path.join(full, f), 'utf8').indexOf('<nav class="site-nav"') !== -1;
+    })
+    .map(function (f) { return dir + '/' + f; })
+    .sort();
+}
+
+const PAGES = ROOT_PAGES.concat(findNavPagesIn('blog'));
+
 // ตัด <nav class="site-nav" ...> ... </nav> ตัวแรกที่เจอ (nav ไม่ nest กันในหน้าพวกนี้
 // ตรวจแล้วว่ามีแค่ตัวเดียวต่อหน้าจริงตอนสำรวจ 2026-08-09)
 const NAV_RE = /<nav class="site-nav"[^>]*>[\s\S]*?<\/nav>/;
-const NAV_TEMPLATE_TAG = '<script src="data/nav-template.js?v=1"></script>';
-const SHARED_MIN_RE = /<script src="js\/core\/shared\.min\.js[^"]*"><\/script>/;
+// path ของ <script> ต้องขึ้นกับความลึกของไฟล์ (root = data/... · blog/ = ../data/...)
+// ทุก href ใน nav-template.js เป็น absolute (/games.html) อยู่แล้ว จึงใช้จากโฟลเดอร์ย่อยได้ตรงๆ
+function navTemplateTagFor(file) {
+  const depth = file.split('/').length - 1;
+  return '<script src="' + '../'.repeat(depth) + 'data/nav-template.js?v=1"></script>';
+}
+const SHARED_MIN_RE = /<script src="(?:\.\.\/)*js\/core\/shared\.min\.js[^"]*"><\/script>/;
 
 let filesChanged = 0;
 let scriptTagAdded = 0;
@@ -60,7 +83,8 @@ PAGES.forEach(function (file) {
   // เติม <script src="data/nav-template.js"> ก่อน shared.min.js ถ้ายังไม่มี (idempotent)
   if (next.indexOf('data/nav-template.js') === -1) {
     if (SHARED_MIN_RE.test(next)) {
-      next = next.replace(SHARED_MIN_RE, function (m) { return NAV_TEMPLATE_TAG + '\n' + m; });
+      const tag = navTemplateTagFor(file);
+      next = next.replace(SHARED_MIN_RE, function (m) { return tag + '\n' + m; });
       scriptTagAdded++;
     } else {
       problems.push(file + '  ← ไม่พบ <script src="js/core/shared.min.js">  — ไม่ได้เพิ่ม nav-template.js อัตโนมัติ ต้องตรวจมือ');

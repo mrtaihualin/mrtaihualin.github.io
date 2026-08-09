@@ -13,10 +13,10 @@
 > `mr.taihualin+test2@gmail.com` (`user_id: c619ba7b-97b2-470c-bf45-846af2b01bf2`) — ไม่พบบั๊ก
 > รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 >
-> ✅ **อัปเดต 2026-08-09 (รอบ 2) — ปิดครบทุกข้อ:** `EMAIL_PROVIDER_API_KEY` คืนเป็นค่า Resend จริงแล้ว +
-> รัน SQL [C] แล้ว (cron `account-delete-daily` jobid 15 active=true) + ทดสอบ failure-path ของอีเมลจนจบ
-> (เจอบั๊กจริง 1 จุด แก้ + deploy ขึ้น production แล้ว) + push `auth-widget.js` แล้ว
-> เหลือ: push `supabase/functions/account-delete-cron/index.ts` (โค้ดแก้บั๊กวันนี้) ขึ้น GitHub
+> ✅ **ปิดงานสมบูรณ์ 2026-08-09 (รอบ 2):** `EMAIL_PROVIDER_API_KEY` คืนเป็นค่า Resend จริงแล้ว + รัน SQL [C]
+> แล้ว (cron `account-delete-daily` jobid 15 active=true) + ทดสอบ failure-path ของอีเมลจนจบ (เจอบั๊กจริง
+> 1 จุด แก้ + deploy ขึ้น production แล้ว) + push `auth-widget.js` และ `account-delete-cron/index.ts`
+> ขึ้น GitHub ผ่าน GitHub Desktop เรียบร้อยแล้วทั้งคู่ (Lin ยืนยัน push สำเร็จ) — **ไม่มีงานค้างแล้ว**
 
 ---
 
@@ -85,5 +85,6 @@ Lin เลือก **Resend** โดเมน `mrtaihualin.com` verify แล�
 4. ✅ อัปเดต `docs/ACCOUNT_DATA_SAFETY_GAPS.md` หัวข้อ 3 แล้วว่าเทสผ่านแล้ว
 5. ✅ Push `js/core/auth-widget.js` ขึ้น GitHub ผ่าน GitHub Desktop แล้ว
 
-**🚫 เหลือ 1 อย่างสุดท้าย:** Push `supabase/functions/account-delete-cron/index.ts` (โค้ดแก้บั๊ก retry
-pass ของวันนี้) ขึ้น GitHub ผ่าน GitHub Desktop — deploy ขึ้น production แล้วจริง แต่ยังไม่ได้ push เข้า repo
+**✅ ปิดงานครบ 100% แล้ว** — ไฟล์ทุกไฟล์ที่แก้วันนี้ (`auth-widget.js`, `account-delete-cron/index.ts`)
+push ขึ้น GitHub ผ่าน GitHub Desktop เรียบร้อยแล้ว (ยืนยันจาก Lin 2026-08-09) — ไม่มีงานค้างของฟีเจอร์
+account-delete แล้ว
