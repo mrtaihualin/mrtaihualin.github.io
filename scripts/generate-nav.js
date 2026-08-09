@@ -1,0 +1,89 @@
+#!/usr/bin/env node
+/**
+ * generate-nav.js
+ * "พิมพ์ทับ" nav block (<nav class="site-nav">...</nav>) ในทุกหน้า HTML
+ * ให้ตรงกับ data/nav-template.js (single source of truth) ทุกครั้งที่รัน
+ *
+ * ทำไมต้องมีสคริปต์นี้ (แทนที่จะฉีดเมนูด้วย JS ล้วนๆ):
+ *   2026-07-24 เคยตัดสินใจ hard-code เมนูในทุกหน้า HTML เพื่อให้ crawler
+ *   (Google/AI) เห็นลิงก์แบบ static ได้เลยไม่ต้องรอ JS รัน (SEO/GEO)
+ *   สคริปต์นี้ทำให้ "แก้เมนูจุดเดียว" ได้จริงโดยไม่ย้อนกลับไปเสี่ยง SEO —
+ *   เพราะหน้าเว็บที่ push ขึ้นจริงยังเป็น static HTML ปกติทุกประการ
+ *
+ * ใช้เมื่อไหร่: ทุกครั้งที่แก้ data/nav-template.js ต้องรันไฟล์นี้ก่อน push เสมอ
+ * วิธีใช้: node scripts/generate-nav.js
+ *
+ * Idempotent: รันซ้ำกี่ครั้งก็ได้ ถ้า nav-template.js ไม่เปลี่ยน ไฟล์ HTML จะไม่ถูกเขียนทับซ้ำ
+ * (เทียบเนื้อหาก่อน-หลังก่อน write เสมอ)
+ */
+const fs = require('fs');
+const path = require('path');
+const NAV = require('../data/nav-template.js');
+
+const ROOT = path.join(__dirname, '..');
+
+// รายชื่อหน้าที่มี <nav class="site-nav"> จริง (ตรวจจาก grep ของจริงในโค้ด 2026-08-09)
+const PAGES = [
+  'all-board.html', 'blog.html', 'community.html', 'content.html', 'faq.html',
+  'games-challenge.html', 'games.html', 'index.html', 'leaderboard.html',
+  'lego-board.html', 'lego.html', 'listening-game.html', 'mix-board.html',
+  'my-progress.html', 'new-student.html', 'page-services.html', 'pricing.html',
+  'reading-board.html', 'reading-game.html', 'resources.html', 'sns.html',
+  'terms.html', 'thank-you.html', 'tone-finder.html', 'trial.html',
+  'typing-board.html', 'typing-game.html', 'vault.html', 'vocab-thank-you.html',
+  'word-order-board.html', 'word-order.html'
+];
+
+// ตัด <nav class="site-nav" ...> ... </nav> ตัวแรกที่เจอ (nav ไม่ nest กันในหน้าพวกนี้
+// ตรวจแล้วว่ามีแค่ตัวเดียวต่อหน้าจริงตอนสำรวจ 2026-08-09)
+const NAV_RE = /<nav class="site-nav"[^>]*>[\s\S]*?<\/nav>/;
+const NAV_TEMPLATE_TAG = '<script src="data/nav-template.js?v=1"></script>';
+const SHARED_MIN_RE = /<script src="js\/core\/shared\.min\.js[^"]*"><\/script>/;
+
+let filesChanged = 0;
+let scriptTagAdded = 0;
+const skipped = [];
+const problems = [];
+
+PAGES.forEach(function (file) {
+  const full = path.join(ROOT, file);
+  if (!fs.existsSync(full)) { skipped.push(file + '  ← ไม่พบไฟล์ (เช็คว่าลบ/ย้ายไปหรือยัง)'); return; }
+
+  const original = fs.readFileSync(full, 'utf8');
+
+  const navMatches = original.match(new RegExp(NAV_RE.source, 'g'));
+  if (!navMatches) { skipped.push(file + '  ← ไม่พบ <nav class="site-nav"> ในไฟล์'); return; }
+  if (navMatches.length > 1) { problems.push(file + '  ← เจอ <nav class="site-nav"> มากกว่า 1 ที่ ('+navMatches.length+') — ข้ามไฟล์นี้ ต้องตรวจมือก่อน'); return; }
+
+  let next = original.replace(NAV_RE, '<nav class="site-nav">' + NAV.renderNavHTML(file) + '</nav>');
+
+  // เติม <script src="data/nav-template.js"> ก่อน shared.min.js ถ้ายังไม่มี (idempotent)
+  if (next.indexOf('data/nav-template.js') === -1) {
+    if (SHARED_MIN_RE.test(next)) {
+      next = next.replace(SHARED_MIN_RE, function (m) { return NAV_TEMPLATE_TAG + '\n' + m; });
+      scriptTagAdded++;
+    } else {
+      problems.push(file + '  ← ไม่พบ <script src="js/core/shared.min.js">  — ไม่ได้เพิ่ม nav-template.js อัตโนมัติ ต้องตรวจมือ');
+    }
+  }
+
+  if (next !== original) {
+    fs.writeFileSync(full, next, 'utf8');
+    filesChanged++;
+  }
+});
+
+console.log('=== generate-nav.js เสร็จแล้ว ===');
+console.log('ตรวจทั้งหมด: ' + PAGES.length + ' หน้า');
+console.log('แก้ไฟล์จริง: ' + filesChanged + ' หน้า');
+console.log('เพิ่ม <script data/nav-template.js>: ' + scriptTagAdded + ' หน้า');
+
+if (skipped.length) {
+  console.log('\n⚠️ ข้าม (ไม่พบไฟล์/ไม่พบ nav):');
+  skipped.forEach(function (s) { console.log('  - ' + s); });
+}
+if (problems.length) {
+  console.log('\n🔴 ต้องตรวจมือ (โครงสร้างไม่ตรงที่คาด):');
+  problems.forEach(function (s) { console.log('  - ' + s); });
+  process.exitCode = 1;
+}

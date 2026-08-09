@@ -77,11 +77,12 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 const SITE_NAME = '泰華眼裡的泰語教學';
 const SUPPORT_EMAIL = 'mr.taihualin@gmail.com';
 
-function fmtDateTH(iso) {
-  // โชว์วันที่แบบอ่านง่าย ผูกกับ locale ไทย (ผู้ใช้เว็บนี้เป็นคนไทยเรียนภาษาจีนเป็นหลัก) — ถ้า parse
-  // ไม่ได้ (ค่าที่ส่งมาผิดรูปแบบ) คืนค่าดิบกลับไปแทนที่จะพังทั้งอีเมล (ทางปลอดภัยกว่า)
+function fmtDateZhTW(iso) {
+  // โชว์วันที่แบบอ่านง่าย ผูกกับ locale จีนตัวเต็ม (ผู้ใช้เว็บนี้เป็นคนไต้หวัน/ฮ่องกงเรียนภาษาไทยเป็นหลัก
+  // — แก้บั๊ก 2026-08-09: เดิมใช้ th-TH ทำให้วันที่โผล่เป็นภาษาไทยแทรกอยู่กลางอีเมลภาษาจีนทั้งฉบับ)
+  // ถ้า parse ไม่ได้ (ค่าที่ส่งมาผิดรูปแบบ) คืนค่าดิบกลับไปแทนที่จะพังทั้งอีเมล (ทางปลอดภัยกว่า)
   try {
-    return new Date(iso).toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Bangkok' });
+    return new Date(iso).toLocaleString('zh-TW', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Taipei' });
   } catch (e) {
     return String(iso);
   }
@@ -107,7 +108,7 @@ const TEMPLATES = {
     html: function (data) {
       return wrapHtml(
         '<p style="font-size:14px;line-height:1.7;">我們已收到您刪除帳號的請求。</p>' +
-        '<p style="font-size:14px;line-height:1.7;">帳號將於 <b>' + fmtDateTH(data.scheduled_delete_at) + '</b> 之後的系統例行處理中永久刪除（系統每日執行一次，實際刪除時間可能略晚於此時間點，但不會提前），屆時所有資料將無法復原。</p>' +
+        '<p style="font-size:14px;line-height:1.7;">帳號將於 <b>' + fmtDateZhTW(data.scheduled_delete_at) + '</b> 之後的系統例行處理中永久刪除（系統每日執行一次，實際刪除時間可能略晚於此時間點，但不會提前），屆時所有資料將無法復原。</p>' +
         '<p style="font-size:14px;line-height:1.7;">如果這不是您本人的操作，或您改變主意了，請在期限前登入帳號，於「帳號管理」頁面點擊「取消刪除」即可保留帳號，資料完全不受影響。</p>'
       );
     },
@@ -144,8 +145,16 @@ function corsHeaders() {
   return { 'Content-Type': 'application/json' };
 }
 
-// ── ตรวจว่าผู้เรียกเป็น service_role จริง (decode JWT อ่าน claim `role` — ผ่านเกตเวย์ verify_jwt ของ
-//    Supabase มาก่อนหน้านี้แล้ว แปลว่าลายเซ็นถูกต้องแน่นอน จึงอ่าน claim ตรงๆ ได้อย่างปลอดภัย) ──────
+// ── ตรวจว่าผู้เรียกเป็น service_role จริง ──────────────────────────────────────────
+//   🆕 2026-08-09 (แก้บั๊กจริงที่เจอตอนทดสอบ): เดิมเช็คด้วยการ decode JWT อ่าน claim `role` เท่านั้น
+//   แต่ Supabase เปลี่ยนระบบ API key เป็นแบบใหม่ (`sb_secret_...`) ซึ่ง "ไม่ใช่ JWT" (ไม่มี 3 ส่วนคั่นด้วย
+//   จุดแบบ JWT) → decode ไม่ได้เลย ตกไปที่ forbidden เสมอแม้ใช้ key ถูกต้อง (พิสูจน์จริงจาก curl ทดสอบ
+//   2026-08-09: ได้ error "forbidden" ทั้งที่ใช้ secret key ใหม่ที่ถูกต้องจริง)
+//   แก้โดยเช็ค 2 ทางควบคู่กัน (ผ่านทางใดทางหนึ่งพอ ไม่ลดความปลอดภัย เพราะทั้งคู่ต้องรู้ค่าลับจริงเท่านั้น):
+//     (1) เทียบ raw string ตรงๆ กับ SUPABASE_SERVICE_ROLE_KEY ที่ Supabase inject ให้ทุก Edge Function
+//         อัตโนมัติอยู่แล้ว (ใช้ได้ทั้ง key แบบเก่า (JWT) และแบบใหม่ (sb_secret_...) เพราะเทียบ string ตรงๆ
+//         ไม่ต้อง decode) — เป็นทางหลักที่ควรผ่านตอนนี้
+//     (2) decode JWT อ่าน claim role (ของเดิม) — เก็บไว้เผื่อ Supabase project ไหนยังใช้ key แบบเก่าอยู่
 function decodeJwtPayloadUnsafe(jwt) {
   try {
     const parts = String(jwt || '').split('.');
@@ -156,6 +165,12 @@ function decodeJwtPayloadUnsafe(jwt) {
   } catch (e) {
     return null;
   }
+}
+function isServiceRoleCaller(jwt) {
+  const envKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (envKey && jwt && jwt === envKey) return true;
+  const claims = decodeJwtPayloadUnsafe(jwt);
+  return !!(claims && claims.role === 'service_role');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -195,8 +210,7 @@ serve(async (req) => {
     // ── ต้องเป็น service_role เท่านั้น (ดูเหตุผลเต็มในหัวไฟล์) ──
     const authHeader = req.headers.get('Authorization') || '';
     const jwt = authHeader.replace(/^Bearer\s+/i, '');
-    const claims = decodeJwtPayloadUnsafe(jwt);
-    if (!claims || claims.role !== 'service_role') {
+    if (!isServiceRoleCaller(jwt)) {
       return json({ error: 'forbidden', message: 'ฟังก์ชันนี้เรียกได้เฉพาะจาก server อื่นในระบบเท่านั้น' }, 401);
     }
 

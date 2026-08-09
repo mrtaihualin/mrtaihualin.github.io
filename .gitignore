@@ -45,6 +45,9 @@ credentials*.json
 # metadata ที่ Supabase CLI สร้างใหม่ได้ในแต่ละเครื่อง
 supabase/.temp/
 
+# ค่า config ของ staging (P7-02) — มี staging URL/anon key เฉพาะเครื่องทดสอบ ห้าม commit
+supabase-config.staging.js
+
 # ไฟล์สำรองจากการสร้างไฟล์ย่อ ไม่ใช่ไฟล์ที่เว็บโหลด
 *.min.js.bak
 

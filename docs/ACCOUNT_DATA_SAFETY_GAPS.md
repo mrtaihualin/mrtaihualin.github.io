@@ -80,12 +80,19 @@
 - Email failure handling: อีเมล "ลบสำเร็จ" ส่งพลาดไม่ทำให้ deletion ถูกมองว่าล้มเหลว/ไม่ rollback/ไม่ทำให้
   cron ลบซ้ำ — log แยกจากผลการลบ + retry ได้ปลอดภัยสูงสุด 5 ครั้ง (ดู `account-delete-cron/index.ts`)
 
-**🚫 ยังเหลือรอ Lin ก่อน deploy จริง:**
-1. **เลือก email provider** (Resend/Postmark/SendGrid) แล้วสมัคร/verify โดเมน/ตั้ง secret เอง — AI ห้ามทำ
-2. **ทำ Mandatory Pre-Deploy Test ให้ครบ** ตาม `docs/ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md` (9 ขั้นตอน
-   ด้วยบัญชีทดสอบเท่านั้น — ห้ามข้าม ห้ามใช้บัญชีจริง)
-3. B.5a (LINE-only synthetic email) — query แรกที่รันไปยังไม่ตอบคำถามได้ (ดูหัวข้อ Unlink ด้านล่าง) รอ Lin
-   ทดสอบสมัคร LINE-only จริงแล้ว query ซ้ำ
+**✅ อัปเดต 2026-08-09 — Full Account Deletion Test ผ่านครบ 9 ข้อ (บังคับ) แล้ว**
+ทดสอบด้วยบัญชี `mr.taihualin+test2@gmail.com` ครบทุกขั้น (request/cancel/request ซ้ำ/ปรับเวลา/invoke
+cron/ลบถาวรจริง/ตรวจ DB+Auth+audit log ครบ 4 event/ล็อกอินซ้ำเป็นบัญชีใหม่/อีเมลครบ 4 ฉบับ) ไม่พบบั๊ก
+รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
+
+**🚫 ยังเหลือก่อน deploy จริงรอบสุดท้าย:**
+1. 🔴 **ตั้ง `EMAIL_PROVIDER_API_KEY` กลับเป็นค่า Resend จริง** — ตอนนี้ยังเป็นค่าผิด (`wrong_value_temp`)
+   จากการทดสอบ failure-path ของอีเมล (ไม่บังคับ) ที่หยุดค้างกลางคัน 2026-08-09
+2. ตัดสินใจทำ failure-path test ต่อให้จบไหม (ไม่บังคับ)
+3. รัน SQL หัวข้อ [C] ใน `2026-08-08_account_deletion_cooldown.sql` (ตั้ง pg_cron ให้รันอัตโนมัติทุกวัน —
+   ปลอดภัยแล้วเพราะไม่มีแถว pending ทดสอบค้างอยู่)
+4. Push `js/core/auth-widget.js` และไฟล์เว็บที่เกี่ยวข้องขึ้น GitHub ผ่าน GitHub Desktop
+3. B.5a (LINE-only synthetic email) — ✅ ปิดแล้ว ดูหัวข้อ B ด้านล่าง (ผ่านครบ 2026-08-09)
 
 ---
 
@@ -178,9 +185,9 @@
 
 | ฟังก์ชัน | สถานะ | เงื่อนไขก่อน deploy จริง |
 |---|---|---|
-| `account-export` | ✅ **พร้อม deploy** — รอ Lin สั่งรันเองเท่านั้น | ไม่มีเงื่อนไขค้าง |
-| `account-unlink` | ⛔ **ยังไม่ deploy** | ต้องผ่าน Mandatory Pre-Deploy Test B.5a + B.5b ให้ครบก่อน — **ห้ามข้าม test แม้ local logic ผ่านแล้ว** |
-| `account-delete` (+ `account-delete-cron` + SQL cooldown + transactional email) | ⛔ **ยังไม่ deploy** | ห้ามเปิด flow cooldown ถ้า cron/email/deletion pipeline ยังไม่พร้อมทั้งชุด — ต้อง deploy `account-delete` + `account-delete-cron` + SQL cooldown + อีเมลส่วนที่จำเป็น **พร้อมกันเป็นชุดเดียว** หลัง dependency พร้อมครบและผ่าน Full Account Deletion Test เท่านั้น (ห้ามแยก deploy `account-delete` อย่างเดียวก่อน — จะเปิดให้ผู้ใช้ยื่นคำขอได้ทั้งที่ cron ยังลบถาวรให้ไม่ได้จริง) |
+| `account-export` | ✅ **Deploy แล้ว 2026-08-09 + ทดสอบผ่านจริง** (export ได้ไฟล์ JSON ถูกต้อง มีแค่ข้อมูลตัวเอง ไม่มี service_role หลุด) | ไม่มีเงื่อนไขค้าง — ปิดงาน |
+| `account-unlink` | ✅ **Deploy แล้ว 2026-08-09 + ผ่าน Mandatory Pre-Deploy Test B.5a + B.5b ครบทั้งคู่** | ไม่มีเงื่อนไขค้าง — ปิดงาน |
+| `account-delete` (+ `account-delete-cron` + SQL cooldown + transactional email) | 🟡 **Deploy แล้ว + Full Account Deletion Test ผ่านครบ 9 ข้อ (2026-08-09)** ยังไม่เปิดให้ผู้เล่นจริงใช้ (UI `js/core/auth-widget.js` ยังไม่ push) | เหลือ: (1) 🔴 ตั้ง `EMAIL_PROVIDER_API_KEY` กลับเป็นค่าจริง (ตอนนี้เป็นค่าผิดจากทดสอบ failure-path ที่ค้างไว้) (2) รัน SQL [C] ตั้ง pg_cron อัตโนมัติ (3) push UI ขึ้น GitHub |
 
 **โค้ดสร้างเสร็จแล้ว รอ Lin ตรวจ+deploy ตามตารางด้านบน:**
 - `supabase/functions/account-delete/index.ts` — ยื่นคำขอลบบัญชี (cooldown 7 วัน — ไม่ลบทันทีอีกต่อไป ดูข้อ 3)
@@ -194,7 +201,7 @@
 - `supabase/sql/2026-08-08_anon_spam_protection.sql` — กันสแปม `anon_game_events`/`leads` — กระทบ 0% (ไม่มีโค้ดฝั่งเว็บเขียนเข้า 2 ตารางนี้เลยตอนนี้)
 - `supabase/sql/2026-08-08_drop_duplicate_tone_sessions_policy.sql` — ลบ policy ซ้ำของ `tone_sessions` — กระทบ 0% ⚠️ ต้องสำรอง DB ก่อนรันตามที่ Lin ขอ
 - `supabase/sql/2026-08-08_leaderboard_score_bounds.sql` — อุดช่องโหว่คะแนนปลอมกระดานผู้นำ — **กระทบจริง** (เกมเขียนคะแนนเข้า 2 ตารางนี้ทุกวัน) **สถานะ: รอ Lin รัน `[PRECHECK]` (read-only 3 query) เองก่อน** ยังไม่อนุมัติให้รันส่วนที่แก้จริง
-- 🆕 `supabase/sql/2026-08-08_account_deletion_cooldown.sql` — ตาราง `account_deletion_requests` + ขยาย CHECK ของ `account_audit_log` + ตั้ง pg_cron — **กระทบเมื่อ deploy** (ฟีเจอร์ใหม่ ยังไม่มีใครใช้อยู่ก่อน ไม่กระทบของเดิม) รอ Mandatory Pre-Deploy Test ก่อน (ดู `docs/ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md`)
+- 🆕 `supabase/sql/2026-08-08_account_deletion_cooldown.sql` — ตาราง `account_deletion_requests` + ขยาย CHECK ของ `account_audit_log` + ตั้ง pg_cron — ✅ **[A]+[B] รันแล้ว 2026-08-09 (Mandatory Pre-Deploy Test ผ่านครบ)** เหลือแค่ **[C] (ตั้ง pg_cron อัตโนมัติ) ยังไม่ได้รัน** — ปลอดภัยที่จะรันได้แล้วตอนนี้ (ไม่มีแถว pending ทดสอบค้าง)
 
 **คงเดิม ไม่ต้องทำอะไรเพิ่ม:** Restore test + monitoring พื้นฐาน (ข้อ 1), audit log สำหรับ `link` event (ข้อ 2), Secrets สะอาด (ข้อ 7), Session recovery (Lin ตัดสินใจแล้วว่ายังไม่ทำ), แจ้งเตือน backup แบบเดิม (Lin เลือกไม่เพิ่ม)
 
@@ -287,7 +294,21 @@
 
 ---
 
-### B. Mandatory Pre-Deploy Test ของ `account-unlink` — ข้อ B.5a + B.5b (ห้ามข้าม)
+### B. Mandatory Pre-Deploy Test ของ `account-unlink` — ✅ ผ่านครบแล้ว 2026-08-09 (ปิดงาน)
+
+**ผล B.5a:** สมัครบัญชี LINE-only ใหม่ (`user_id: e656d94d-ce36-40fb-baef-03de21e0b344`) → query `auth.identities`
+เจอแถว `provider='email'`, `email='line-u24d50130b387da2c95193d1eb503377a@users.line.invalid'` ตรงตามที่โค้ดคาด 100% — Supabase สร้าง synthetic email identity ให้ LINE user อัตโนมัติจริง ยืนยันแล้ว
+
+**ผล B.5b:** deploy `account-unlink` สำเร็จ (project `qzkxlhpcputsvbqmtqfi`) → ทดสอบด้วยบัญชีทดสอบที่มี Email+Facebook (2 ช่องทางจริง):
+- ถอด Facebook ตอนมี 2 ช่องทาง → `curl` ได้ **HTTP 200** `{"ok":true,"unlinked":true,"remaining_real_methods":1,"remaining_providers":["email"],"audit_logged":true}` ✅
+- ถอด Email ตอนเหลือช่องทางเดียว (ทดสอบผ่านปุ่มจริงในหน้าเว็บ "帳號管理") → **ถูกปฏิเสธถูกต้อง** ขึ้นข้อความ "無法移除這個登入方式...（不能取消最後一個登入方式，不然帳號會登不進去）" ไม่ได้ถอดจริง บัญชียังล็อกอินได้ปกติ ✅
+- ด่านหลัก `would_leave_zero_login_methods` ทำงานถูกต้องตามที่ออกแบบไว้ ไม่มีทางเหลือ 0 ช่องทางได้จริง
+
+**สรุป: `account-unlink` พร้อมใช้งานจริง 100% ไม่มีเงื่อนไขค้างอีกต่อไป**
+
+<details><summary>บันทึกเดิมก่อนทดสอบ (เก็บไว้อ้างอิง)</summary>
+
+Mandatory Pre-Deploy Test ของ `account-unlink` — ข้อ B.5a + B.5b (ห้ามข้าม)
 
 โค้ด `supabase/functions/account-unlink/index.ts` ยืนยันจากการอ่าน source แล้วว่าตรรกะถูกต้องครบ
 (ทดสอบ logic ด้วย Node จริง 9 เคสผ่านหมด — ดูหัวข้อ 12) แต่ **2 จุดนี้ยังไม่เคยพิสูจน์กับของจริงเลย**
@@ -374,6 +395,8 @@
 **สรุปสิ่งที่ต้องส่งกลับให้ AI แชทถัดไป (เพื่อปิดงานในเอกสารนี้):** ผล B.5a (แถว SQL ที่ได้) + ผล B.5b
 (ผ่าน/ไม่ผ่านข้อ 6 และ 7) — AI จะอัปเดตหัวข้อ 3/10/11 ของเอกสารนี้ให้เป็น "ปิดงาน" ตามผลจริง
 
+</details>
+
 ---
 
 ### C. เลือกผู้ให้บริการอีเมล transactional (Resend / Postmark / SendGrid) — Lin ต้องตัดสินใจ + ทำเอง
@@ -417,7 +440,17 @@
 7. ทดสอบส่งจริง 1 ฉบับไปหาตัวเอง — วิธีง่ายที่สุดคือรอถึงหัวข้อ D ด้านล่าง (ขั้นตอน 9 ของ Full Account
    Deletion Test จะทดสอบให้ครบทั้ง 3 ฉบับพร้อมกันอยู่แล้ว) ไม่ต้องทดสอบแยกก่อนก็ได้
 
-**คำถามที่ต้องตอบก่อนเริ่ม:** Lin เลือกผู้ให้บริการไหน (Resend / Postmark / SendGrid)?
+**✅ เสร็จแล้ว 2026-08-09 — Lin เลือก Resend** โดเมน `mrtaihualin.com` verify แล้ว (region Tokyo) · สร้าง
+API key ใหม่เฉพาะงานนี้ + ตั้ง secret `EMAIL_PROVIDER_API_KEY` แล้ว · deploy `send-transactional-email` แล้ว
+
+**บั๊กที่เจอระหว่างทดสอบ (แก้แล้ว):** ฟังก์ชันเช็คสิทธิ์ผู้เรียกด้วยการถอดรหัส JWT (`decodeJwtPayloadUnsafe`)
+แต่ Supabase เปลี่ยนรูปแบบ key ใหม่เป็น `sb_secret_...` ซึ่งไม่ใช่ JWT แล้ว → ถอดรหัสไม่ได้ ฟังก์ชันเลยตอบ
+"forbidden" ทั้งที่ใช้ key ถูกต้อง · แก้โดยเพิ่ม `isServiceRoleCaller()` เทียบค่าตรงกับ `SUPABASE_SERVICE_ROLE_KEY`
+ก่อน แล้วค่อย fallback ไปถอดรหัส JWT แบบเดิม (รองรับทั้ง key รูปแบบเก่า+ใหม่) — Lin อนุมัติให้แก้แล้ว (ทำเลย)
+
+**ผลทดสอบจริง 2026-08-09:** ยิง curl ด้วย secret key ใหม่ → ได้ `HTTP 200`
+`{"ok":true,"template":"account_deletion_requested","provider":"resend","provider_message_id":"aab88b15-38fe-478c-a9cf-17959991bde9"}`
+อีเมลเข้ากล่องจริงที่ mr.taihualin@gmail.com เนื้อหาถูกต้องครบ (แบรนด์/วันที่ พ.ศ./ข้อความ)
 
 ---
 

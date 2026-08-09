@@ -78,65 +78,20 @@ window.goHome = function() {
   var navEls = document.querySelectorAll('nav.site-nav');
   if (!navEls.length) return;
 
-  var H = [
-    '<div class="nav-logo" onclick="goHome()">',
-      '<span class="logo-accent">泰華</span>',
-      '<span class="logo-dim">眼裡的</span>',
-      '<span class="logo-main">泰語教學</span>',
-    '</div>',
-    '<ul class="nav-links">',
-      '<li><a href="javascript:void(0)" onclick="openModal(\'modal-quiz\')">程度測驗</a></li>',
-      '<li>',
-        '<a href="javascript:void(0)" class="has-drop">關於老師與學生</a>',
-        '<div class="nav-drop">',
-          '<span class="nav-drop-label">老師與學生</span>',
-          '<a href="/index.html#teacher">關於老師</a>',
-          '<a href="/pricing.html#testimonials">學生回饋</a>',
-          '<a href="/faq.html#feedback-section">分享你的經驗</a>',
-        '</div>',
-      '</li>',
-      '<li>',
-        '<a href="javascript:void(0)" class="has-drop">了解課程</a>',
-        '<div class="nav-drop">',
-          '<span class="nav-drop-label">課程資訊</span>',
-          '<a href="/index.html#problems">學習困境</a>',
-          '<a href="/pricing.html#how">上課方式</a>',
-          '<a href="/pricing.html#pricing">費用方案</a>',
-          '<a href="/faq.html#faq">常見問題</a>',
-          '<div class="nav-drop-divider"></div>',
-          '<a href="/faq.html#rules">上課須知</a>',
-        '</div>',
-      '</li>',
-      '<li>',
-        '<a href="javascript:void(0)" class="has-drop">資源分享</a>',
-        '<div class="nav-drop">',
-          '<span class="nav-drop-label">學習素材</span>',
-          '<a href="/content.html">📚 影片與文章</a>',
-          '<a href="/games.html">🎮 泰語遊戲練習室</a>',
-          '<a href="/community.html">🇹🇭 泰語學習心聲與提問</a>',
-        '</div>',
-      '</li>',
-      '<li>',
-        '<a href="javascript:void(0)" class="has-drop">專業服務</a>',
-        '<div class="nav-drop">',
-          '<span class="nav-drop-label">專業服務</span>',
-          '<a href="/page-services.html#tour-guide">🗺️ 導遊服務</a>',
-          '<a href="/page-services.html#drama">🎬 字幕翻譯</a>',
-          '<a href="/page-services.html#interpret">🎙️ 口譯服務</a>',
-          '<div class="nav-drop-divider"></div>',
-          '<a href="/page-services.html#quote-form">📋 索取報價</a>',
-        '</div>',
-      '</li>',
-      '<li><a href="javascript:void(0)" onclick="openModal(\'modal-contact\')">聯絡我們</a></li>',
-      '<li><a href="javascript:void(0)" onclick="openModal(\'modal-line-qr\')" class="nav-cta">預約免費體驗課</a></li>',
-    '</ul>',
-    '<button class="nav-mobile-cta" onclick="openModal(\'modal-line-qr\')">預約免費體驗課</button>',
-    '<div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div>',
-  ].join('');
+  // 2026-08-09: เมนูย้ายมาเป็น single source ที่ data/nav-template.js แล้ว
+  // (window.NAV_TEMPLATE) — ไฟล์นี้แค่เรียกใช้ ไม่ hardcode markup ซ้ำอีกต่อไป
+  // ถ้าหน้าไหนลืมใส่ <script src="data/nav-template.js"> จะ fallback เป็นไม่เติมอะไร
+  // (ปลอดภัยกว่าใช้เมนูเก่าที่อาจไม่ตรง data ปัจจุบัน) — เห็น warning ใน console ชัดเจน
+  var H = '';
+  if (window.NAV_TEMPLATE && typeof window.NAV_TEMPLATE.renderNavHTML === 'function') {
+    H = window.NAV_TEMPLATE.renderNavHTML(window.location.pathname);
+  } else {
+    console.warn('[shared.js] NAV_TEMPLATE ไม่ถูกโหลด — เพิ่ม <script src="data/nav-template.js"> ก่อน shared.min.js ในหน้านี้');
+  }
 
   // 2026-07-24 (SEO/GEO audit): เมนูตอนนี้ hard-code ไว้ในไฟล์ HTML แต่ละหน้าแล้ว (ให้ crawler เห็นลิงก์แบบ static ได้เลย)
   // ตรงนี้แค่ "เติมให้" เฉพาะหน้าที่ยังไม่มี (เช่นหน้าที่สร้างใหม่ในอนาคตแล้วลืมใส่) กันเผื่อ ไม่ overwrite ของที่มีอยู่แล้ว
-  navEls.forEach(function(el) { if (!el.innerHTML || !el.innerHTML.trim()) el.innerHTML = H; });
+  if (H) navEls.forEach(function(el) { if (!el.innerHTML || !el.innerHTML.trim()) el.innerHTML = H; });
 
   // ไฮไลต์ลิงก์ในเมนูที่ตรงกับหน้าปัจจุบัน (ไม่ว่าเมนูจะมาจาก static HTML หรือเติมด้วย JS ข้างบน)
   (function setActiveNav(){
@@ -204,31 +159,12 @@ window.goHome = function() {
     annStart();
   }
 
-  // Bottom nav bar (mobile only)
+  // Bottom nav bar (mobile only) — ดึงจาก data/nav-template.js single source เหมือนกัน (2026-08-09)
   var bottomBar = document.createElement('nav');
   bottomBar.id = 'bottom-nav';
-  bottomBar.innerHTML = [
-    '<a href="/index.html" class="bn-item">',
-      '<span class="bn-icon">🏠</span>',
-      '<span class="bn-label">首頁</span>',
-    '</a>',
-    '<a href="/pricing.html" class="bn-item">',
-      '<span class="bn-icon">📚</span>',
-      '<span class="bn-label">課程</span>',
-    '</a>',
-    '<a href="/games.html" class="bn-item">',
-      '<span class="bn-icon">🎮</span>',
-      '<span class="bn-label">遊戲</span>',
-    '</a>',
-    '<a href="/page-services.html" class="bn-item">',
-      '<span class="bn-icon">🌐</span>',
-      '<span class="bn-label">專業服務</span>',
-    '</a>',
-    '<a href="javascript:void(0)" onclick="openModal(\'modal-line-qr\')" class="bn-item bn-cta">',
-      '<span class="bn-icon">📞</span>',
-      '<span class="bn-label">預約</span>',
-    '</a>',
-  ].join('');
+  if (window.NAV_TEMPLATE && typeof window.NAV_TEMPLATE.renderBottomNavHTML === 'function') {
+    bottomBar.innerHTML = window.NAV_TEMPLATE.renderBottomNavHTML();
+  }
   document.body.appendChild(bottomBar);
 
   var bnStyle = document.createElement('style');
