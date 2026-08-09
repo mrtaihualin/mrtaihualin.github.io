@@ -172,11 +172,21 @@
 
 ## 10) สรุปรวม — สถานะล่าสุด (อัปเดต 2026-08-08 หลังรอบตรวจซ้ำ)
 
-**โค้ดสร้างเสร็จแล้ว รอ Lin ตรวจ+deploy (ยังไม่ deploy สักตัว):**
+**สถานะ deploy 3 ฟังก์ชันหลัก — ยืนยันจาก Lin แล้ว 2026-08-08 (บันทึกแยกกันชัดเจน กันเถียงซ้ำ):**
+
+> หลักการที่ Lin ย้ำ: **ห้าม deploy feature แบบครึ่ง flow** ที่ผู้ใช้เริ่ม action ได้แต่ระบบทำให้จบไม่ได้
+
+| ฟังก์ชัน | สถานะ | เงื่อนไขก่อน deploy จริง |
+|---|---|---|
+| `account-export` | ✅ **พร้อม deploy** — รอ Lin สั่งรันเองเท่านั้น | ไม่มีเงื่อนไขค้าง |
+| `account-unlink` | ⛔ **ยังไม่ deploy** | ต้องผ่าน Mandatory Pre-Deploy Test B.5a + B.5b ให้ครบก่อน — **ห้ามข้าม test แม้ local logic ผ่านแล้ว** |
+| `account-delete` (+ `account-delete-cron` + SQL cooldown + transactional email) | ⛔ **ยังไม่ deploy** | ห้ามเปิด flow cooldown ถ้า cron/email/deletion pipeline ยังไม่พร้อมทั้งชุด — ต้อง deploy `account-delete` + `account-delete-cron` + SQL cooldown + อีเมลส่วนที่จำเป็น **พร้อมกันเป็นชุดเดียว** หลัง dependency พร้อมครบและผ่าน Full Account Deletion Test เท่านั้น (ห้ามแยก deploy `account-delete` อย่างเดียวก่อน — จะเปิดให้ผู้ใช้ยื่นคำขอได้ทั้งที่ cron ยังลบถาวรให้ไม่ได้จริง) |
+
+**โค้ดสร้างเสร็จแล้ว รอ Lin ตรวจ+deploy ตามตารางด้านบน:**
 - `supabase/functions/account-delete/index.ts` — ยื่นคำขอลบบัญชี (cooldown 7 วัน — ไม่ลบทันทีอีกต่อไป ดูข้อ 3)
 - 🆕 `supabase/functions/account-delete-cron/index.ts` — ลบถาวรจริงเมื่อครบกำหนด (รันทุกวัน)
 - 🆕 `supabase/functions/send-transactional-email/index.ts` — ส่งอีเมล 3 จุดของ flow ลบบัญชี (รอเลือก provider)
-- `supabase/functions/account-export/index.ts` — export ข้อมูลตัวเอง
+- `supabase/functions/account-export/index.ts` — export ข้อมูลตัวเอง (พร้อม deploy แล้ว)
 - `supabase/functions/account-unlink/index.ts` — ถอดช่องทางล็อกอิน (กันเหลือ 0 ช่องทาง)
 - ต่อ UI ครบแล้วใน `js/core/auth-widget.js` (ปุ่มอยู่ในหน้าต่าง "帳號管理" ใหม่) — logout ทุกอุปกรณ์ใช้งานได้ทันทีที่ push (ไม่ต้อง deploy) ส่วนปุ่มอื่นต้อง deploy Edge Function ก่อน
 
@@ -232,10 +242,300 @@
 
 1. **PRECHECK ของ leaderboard** — รอผลตัวเลขจาก Lin ก่อนถึงจะประเมินต่อว่าจะรัน `[A][B][C]` ได้ไหม
 2. **สั่งรัน SQL ที่เหลือ** (spam protection / tone_sessions dedupe / 🆕 account_deletion_cooldown) — พร้อมรันได้ทันทีที่ Lin สั่ง (tone_sessions ต้องกด backup workflow ก่อน · account_deletion_cooldown ต้อง deploy `account-delete-cron` ให้เสร็จก่อนรันหัวข้อ [C])
-3. **ตรวจโค้ด 5 Edge Function แล้ว deploy** (account-delete/account-delete-cron/send-transactional-email/account-export/account-unlink) — 🔴 account-delete* ต้องทำ Mandatory Pre-Deploy Test ให้ครบก่อน (ดู `docs/ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md`)
+3. **ตรวจโค้ด 5 Edge Function แล้ว deploy** — ✅ **Lin ตัดสินใจสถานะแต่ละตัวแล้ว 2026-08-08** (ดูตารางสถานะ deploy ในหัวข้อ 10 ด้านบน): `account-export` พร้อม deploy รอ Lin สั่งเอง · `account-unlink` รอผ่าน B.5a/B.5b ก่อน · `account-delete`+`account-delete-cron`+SQL cooldown+email ต้อง deploy พร้อมกันเป็นชุดเดียวหลังผ่าน Full Account Deletion Test เท่านั้น (ห้าม deploy ครึ่ง flow)
 4. **เลือก email provider** (Resend/Postmark/SendGrid) — AI ห้ามเลือก/สมัคร/ตั้ง secret เอง (ตารางเทียบอยู่ท้าย `send-transactional-email/index.ts`)
 5. **account-unlink:** ยังเหลือ 2 จุด 🔴 ที่โค้ดยอมรับเองว่ายังไม่เคยทดสอบกับของจริง — (ก) query B.5a ที่ Lin รันไปแล้วยังไม่ตอบคำถามได้ (แถวเดียวที่เจอไม่ใช่ LINE-only จริง) ต้องทดสอบสมัคร LINE-only ใหม่แล้ว query ซ้ำ (ข) ยังไม่เคยยิง GoTrue REST endpoint จริงทดสอบเลย ต้องทดสอบกับบัญชีทดสอบก่อน deploy — ✅ **fresh JWT เพิ่มไปแล้วจริงในโค้ด (ไม่ใช่คำถามเปิดอีกต่อไป)**
 6. Cookie consent banner — ยังไม่ทำตามที่ Lin สั่ง รอผลตรวจ (ส่งไปแล้วรอบก่อน — GA4 87 หน้า/Clarity 79 หน้า/พบวิดีโอ YouTube โหมดตั้งคุกกี้ 4 จุดเพิ่ม)
 7. ตัวเลือกเสริม (ไม่เร่งด่วน): ตั้งอายุ JWT/refresh token ให้สั้นลง, แจ้งเตือน LINE ทุกวันที่ backup สำเร็จ, เพิ่มกฎ staging/peer-review ให้ migration, ย้าย 3 ไฟล์ cron ที่ยืนยันว่าเลิกใช้เข้าโฟลเดอร์ห้ามรัน
 
 **🚫 นอกขอบเขตงานนี้โดยตั้งใจ (ไม่แตะ):** Payment/billing setup, อัตราค่าธรรมเนียม ECPay/NewebPay, ภาษีส่งออกฮ่องกง, `payout_ledger`
+
+---
+
+## 13) ขั้นตอนละเอียดพร้อมใช้ — ปิดรอบ Account/Auth deploy (เพิ่ม 2026-08-08)
+
+> ตรวจโค้ดจริงทั้ง 5 ไฟล์ + checklist ก่อนเขียนหัวข้อนี้ — ไม่มีเงื่อนไขค้างที่ AI เจอเพิ่มนอกจากที่บันทึกไว้
+> ในหัวข้อ 10 อยู่แล้ว **ยกเว้นเรื่องเดียวที่ต้องแจ้งตรงๆ ก่อนเริ่ม:** repo นี้ไม่มี staging/dev project
+> แยกจาก production เลย (ดูหัวข้อ 11 ข้อ 1) แปลว่าการทดสอบทั้งหมดด้านล่างต้องทำกับโปรเจกต์ Supabase จริง
+> ของ Lin โดยตรง — ปลอดภัยได้เพราะ **หน้าเว็บที่มีปุ่มเรียกใช้ฟังก์ชันพวกนี้ (`js/core/auth-widget.js`)
+> ยังไม่เคย push ขึ้น GitHub เลย** (อยู่ในเครื่องเท่านั้น) → นักเรียน/ผู้เล่นจริงยังเข้าไม่ถึงปุ่มพวกนี้แน่นอน
+> ต่อให้ deploy ฟังก์ชันขึ้น Supabase แล้วก็ตาม **กฎสำคัญ: อย่าเพิ่ง push `js/core/auth-widget.js` และไฟล์
+> เว็บที่เกี่ยวข้องขึ้น GitHub จนกว่าจะทำครบทุกข้อในหัวข้อนี้แล้ว**
+
+### A. Deploy `account-export` (ไม่มีเงื่อนไขค้าง — ทำได้เลย)
+
+ตรวจแล้วจาก `supabase/functions/account-export/index.ts`: โค้ดสมบูรณ์ อ่านข้อมูลอย่างเดียว (read-only)
+ไม่แก้/ลบอะไร ไม่ต้องรัน SQL เพิ่ม ไม่ต้องตั้ง secret เพิ่ม
+
+**ขั้นตอน (เปิด Terminal บนเครื่อง Mac ของ Lin เอง — ไม่ใช่ sandbox):**
+
+1. เปิด Terminal → พิมพ์คำสั่งนี้เพื่อไปที่โฟลเดอร์เว็บ แล้ว Enter:
+   ```
+   cd /Users/taihualin/Developer/mrtaihualin.github.io
+   ```
+2. พิมพ์คำสั่งนี้แล้ว Enter (ถ้าเคย login/link โปรเจกต์ Supabase ผ่าน CLI มาก่อนแล้ว จะรันผ่านทันที ถ้าขึ้น
+   error ว่ายังไม่ login ให้บอก AI แชทถัดไปเพื่อเตรียมขั้นตอน login ให้เพิ่ม):
+   ```
+   supabase functions deploy account-export
+   ```
+3. รอจนขึ้นคำว่า deploy สำเร็จ (มักมีลิงก์ Dashboard โผล่มาให้กดดู)
+4. ตรวจว่าขึ้นจริงใน Dashboard: เปิด https://supabase.com/dashboard/project/qzkxlhpcputsvbqmtqfi/functions
+   → ต้องเห็นชื่อ `account-export` ในลิสต์ พร้อมเวลา deploy ล่าสุด
+
+**หลังจากนี้:** ฟังก์ชันขึ้นแล้วแต่ยังไม่มีใครเรียกใช้ได้ (ปุ่มในเว็บยังไม่ได้ push) ปลอดภัย ไม่ต้องรีบทดสอบ
+ตอนนี้ก็ได้ — จะไปทดสอบพร้อมกับตอน push ปุ่ม "📦 匯出我的資料" ในรอบถัดไปก็ได้
+
+---
+
+### B. Mandatory Pre-Deploy Test ของ `account-unlink` — ข้อ B.5a + B.5b (ห้ามข้าม)
+
+โค้ด `supabase/functions/account-unlink/index.ts` ยืนยันจากการอ่าน source แล้วว่าตรรกะถูกต้องครบ
+(ทดสอบ logic ด้วย Node จริง 9 เคสผ่านหมด — ดูหัวข้อ 12) แต่ **2 จุดนี้ยังไม่เคยพิสูจน์กับของจริงเลย**
+(ดูคอมเมนต์ท้ายไฟล์บรรทัด 452-459) — ต้องทำให้ครบก่อน deploy จริง
+
+#### B.5a — พิสูจน์ว่า user LINE-only มี "email identity ปลอม" จริงตามที่โค้ดคาด
+
+**เหตุผลที่ต้องทำ:** ฟังก์ชันนี้ต้อง "กรองอีเมลปลอมของ LINE ออกจากการนับช่องทางล็อกอินจริง" ถ้าพฤติกรรม
+จริงของ Supabase ต่างจากที่คาด (เช่น ไม่สร้าง email identity ให้อัตโนมัติ) ต้องรู้ก่อน deploy
+
+**ขั้นตอน:**
+
+1. เปิดเว็บ (ไฟล์ในเครื่อง ยังไม่ต้อง push ก็ทดสอบได้ถ้าเปิดผ่าน local server หรือ mrtaihualin.github.io
+   เวอร์ชันปัจจุบันที่มีปุ่ม LINE Login อยู่แล้ว) → กด "เข้าสู่ระบบด้วย LINE" ด้วย **บัญชี LINE ทดสอบที่ไม่เคย
+   สมัครเว็บนี้มาก่อนเลย** (ห้ามใช้บัญชี LINE ส่วนตัวที่เคยผูก Google/Facebook/Email ไว้แล้ว — ต้องเป็นบัญชี
+   ใหม่เอี่ยมที่ล็อกอินครั้งแรกด้วย LINE ล้วนๆ เท่านั้น ถึงจะทดสอบเคส "LINE-only" ได้จริง)
+2. ล็อกอินสำเร็จแล้ว เปิด Supabase Dashboard → SQL Editor →
+   https://supabase.com/dashboard/project/qzkxlhpcputsvbqmtqfi/sql/new
+   วางคำสั่งนี้แล้วกด Run:
+   ```sql
+   select id as user_id, email from auth.users where email like 'line-%@users.line.invalid';
+   ```
+3. ต้องเจออย่างน้อย 1 แถว (คือบัญชีทดสอบที่เพิ่งสมัคร) — คัดลอก `user_id` ของแถวนั้นมาใช้ในขั้นถัดไป
+4. วางคำสั่งนี้ (แทน `<user_id>` ด้วยค่าที่คัดลอกมา) แล้วกด Run:
+   ```sql
+   select provider, identity_data->>'email' as email
+   from auth.identities
+   where user_id = '<user_id>';
+   ```
+5. **ผลที่ต้องเห็นถึงจะถือว่าผ่าน:** มีแถว `provider = 'email'` โดย `email` ตรงรูปแบบ
+   `line-<ตัวเลข>@users.line.invalid` (โดเมน `.invalid` ต้องขึ้นตรงๆ) — ถ้าเจอแบบนี้ = โค้ดคาดถูก
+   ไปต่อ B.5b ได้เลย
+   - **ถ้าไม่เจอแถว `provider='email'` เลย** (มีแค่ provider อื่น หรือไม่มีแถวไหนเลย) = พฤติกรรมจริงของ
+     Supabase ต่างจากที่โค้ดคาดไว้ → **หยุดตรงนี้ อย่า deploy** แล้วเอาผลลัพธ์จริงที่ได้ (สกรีนช็อตหรือ
+     copy ผลตาราง) ไปให้ AI แชทถัดไปดู เพื่อแก้ `account-unlink/index.ts` ให้ตรงกับพฤติกรรมจริงก่อน
+
+#### B.5b — ทดสอบยิง GoTrue REST endpoint จริง (ตัวถอดช่องทางล็อกอินจริง)
+
+**เหตุผลที่ต้องทำ:** ฟังก์ชันนี้เรียก `DELETE {SUPABASE_URL}/auth/v1/user/identities/{identity_id}` ตรงๆ
+(ไม่ผ่าน SDK) ยังไม่เคยพิสูจน์ว่า field ชื่อ `identity_id` ที่โค้ดใช้ตรงกับของจริงไหม
+
+**ขั้นตอนเตรียมก่อน:**
+
+1. Deploy ฟังก์ชันก่อน (ยังไม่มีใครเรียกได้จนกว่าจะมี UI/curl มายิงเอง จึงปลอดภัย): ใน Terminal
+   (ที่ `cd /Users/taihualin/Developer/mrtaihualin.github.io` แล้ว) พิมพ์:
+   ```
+   supabase functions deploy account-unlink
+   ```
+2. เตรียม **บัญชีทดสอบที่มี ≥2 ช่องทางล็อกอินจริง** (เช่น ล็อกอินด้วย Google ก่อน แล้วกดผูก LINE เพิ่มทีหลัง
+   ในหน้า "帳號管理" ของเว็บ — ห้ามใช้บัญชีนักเรียนจริง)
+3. หา **anon key** ของโปรเจกต์: Supabase Dashboard → Project Settings → API →
+   https://supabase.com/dashboard/project/qzkxlhpcputsvbqmtqfi/settings/api → คัดลอกค่า "anon public"
+
+**หา access token ของบัญชีทดสอบ (ทำตอนล็อกอินอยู่ในเว็บ):**
+
+4. เปิดเว็บ ล็อกอินด้วยบัญชีทดสอบที่มี ≥2 ช่องทางแล้ว → กด F12 (เปิด Developer Tools) → แท็บ Console →
+   วางคำสั่งนี้แล้ว Enter:
+   ```js
+   const s = await supabaseClient.auth.getSession(); console.log(s.data.session.access_token);
+   ```
+   (ถ้าตัวแปรไคลเอนต์ในเว็บชื่ออื่นไม่ใช่ `supabaseClient` ให้บอก AI แชทถัดไปมาช่วยหาชื่อตัวแปรที่ถูกต้องจาก
+   `js/core/auth-widget.js` หรือ `shared.js` ก่อน) → คัดลอกค่าที่พิมพ์ออกมา (เป็นตัวอักษรยาวๆ ขึ้นต้น `eyJ`)
+
+**ยิงคำขอทดสอบจริง (เปิด Terminal อีกแท็บ หรือใช้ Postman ก็ได้):**
+
+5. แทนค่า `<access_token>` และ `<anon_key>` ด้วยค่าที่คัดลอกมา แล้วรันคำสั่งนี้:
+   ```
+   curl -i -X POST https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/account-unlink \
+     -H "Authorization: Bearer <access_token>" \
+     -H "apikey: <anon_key>" \
+     -H "Content-Type: application/json" \
+     -d '{"provider":"google"}'
+   ```
+   (เปลี่ยน `"provider":"google"` เป็นช่องทางอื่นที่บัญชีทดสอบมีจริงได้ เช่น `"line"` หรือ `"facebook"`)
+6. **ผลที่ต้องเห็นถึงจะถือว่าผ่าน:** ได้ HTTP 200 กับ body `{"ok":true,"unlinked":true,...}` — แล้วเปิด
+   Supabase Dashboard → Authentication → Users → คลิกบัญชีทดสอบนั้น → ต้องเห็นว่าช่องทางที่ถอดหายไปจริง
+   (เหลือแค่ช่องทางที่เหลือ)
+7. **ทดสอบด่านสำคัญด้วย (ห้ามข้าม):** ถอดจนเหลือช่องทางเดียว แล้วลองยิงคำสั่งเดิมถอดช่องทางสุดท้ายอีกครั้ง
+   → ต้องได้ **HTTP 409** กับ `{"error":"would_leave_zero_login_methods",...}` (ไม่ใช่ 200) — ถ้าได้ 200
+   แปลว่าด่านหลักพัง **ห้าม deploy ต่อ ห้ามปล่อยให้ผู้เล่นจริงใช้** ต้องแจ้ง AI แชทถัดไปทันที
+8. ถ้าผ่านครบทั้งข้อ 6 และ 7 → `account-unlink` deploy เสร็จสมบูรณ์แล้ว (deploy ไปแล้วตั้งแต่ข้อ 1) พร้อม
+   ใช้งานจริง เหลือแค่รอทีมสร้างปุ่ม UI มาต่อ (คนละงานแยกตามที่บันทึกไว้ท้ายไฟล์โค้ด)
+
+**สรุปสิ่งที่ต้องส่งกลับให้ AI แชทถัดไป (เพื่อปิดงานในเอกสารนี้):** ผล B.5a (แถว SQL ที่ได้) + ผล B.5b
+(ผ่าน/ไม่ผ่านข้อ 6 และ 7) — AI จะอัปเดตหัวข้อ 3/10/11 ของเอกสารนี้ให้เป็น "ปิดงาน" ตามผลจริง
+
+---
+
+### C. เลือกผู้ให้บริการอีเมล transactional (Resend / Postmark / SendGrid) — Lin ต้องตัดสินใจ + ทำเอง
+
+ตารางเปรียบเทียบเต็มอยู่ท้ายไฟล์ `supabase/functions/send-transactional-email/index.ts` (บรรทัด 240-257)
+สรุปให้เข้าใจง่าย:
+
+| ผู้ให้บริการ | จุดเด่น | เหมาะกับเว็บนี้ไหม |
+|---|---|---|
+| **Resend** | ใช้ง่ายที่สุด (โค้ดตัวอย่างในไฟล์เขียนไว้ให้แล้ว ไม่ต้องแก้อะไรเพิ่มถ้าเลือกตัวนี้) มี free tier | ✅ ถ้าอยากเริ่มเร็วที่สุด ไม่อยากยุ่งกับการตั้งค่าเยอะ |
+| **Postmark** | ขึ้นชื่อเรื่องอีเมลไม่ตกถังขยะ (deliverability ดีมาก) แยกโควตา transactional/marketing ให้เองในตัว ตรงกับกฎที่ Lin สั่งว่า "ห้ามมี marketing email" อยู่แล้ว | ✅ ถ้าอยากชัวร์ที่สุดว่าอีเมลลูกค้าไม่หาย |
+| **SendGrid** | ผู้เล่นใหญ่/เก่าแก่สุด มี free tier แต่ตั้งค่ายุ่งกว่า 2 ตัวบน | ⚠️ เลือกได้ถ้าคุ้นเคยอยู่แล้ว ไม่ใช่ตัวแนะนำอันดับแรก |
+
+**คำแนะนำ (ไม่ใช่การตัดสินใจแทน — Lin เลือกเองได้):** ถ้าไม่มีเหตุผลพิเศษ **Resend** เร็วสุดเพราะโค้ดพร้อม
+อยู่แล้ว ถ้าอยากได้ deliverability สูงสุดสำหรับอีเมลสำคัญแบบ "แจ้งลบบัญชี" (พลาดแล้วนักเรียนไม่รู้ว่าบัญชี
+กำลังจะถูกลบ) **Postmark** ปลอดภัยกว่าในระยะยาว
+
+**ขั้นตอนที่ Lin ต้องทำเอง (AI ห้ามทำแทนตามกฎ — เลือก 1 ใน 3 แล้วทำตามนี้):**
+
+1. สมัครบัญชีที่เว็บของผู้ให้บริการที่เลือก (resend.com / postmarkapp.com / sendgrid.com) ด้วยอีเมล
+   `mr.taihualin@gmail.com`
+2. Verify โดเมนส่งเมล `mrtaihualin.com` — แต่ละที่จะให้ Lin เพิ่ม DNS record (TXT/CNAME) เข้าไปที่จุด
+   จัดการ DNS ของโดเมน (ที่ไหนก็ตามที่ Lin จดโดเมน mrtaihualin.com ไว้) ขั้นตอนละเอียดแต่ละที่มีคู่มือของ
+   ตัวเองในหน้าเว็บหลัง login (ค้นหา "Domain verification" หรือ "Sending domain" ในเมนู)
+3. สร้าง API key ในหน้าเว็บของผู้ให้บริการ (มักอยู่ในเมนู "API Keys")
+4. เปิด Terminal → `cd /Users/taihualin/Developer/mrtaihualin.github.io` → ตั้งค่าลับด้วยคำสั่งนี้
+   (แทน `<API_KEY>` ด้วยค่าที่คัดลอกมา — **ห้ามพิมพ์ค่านี้ไว้ในไฟล์ไหนใน repo เด็ดขาด** พิมพ์ในคำสั่ง Terminal
+   เท่านั้น):
+   ```
+   supabase secrets set EMAIL_PROVIDER_API_KEY=<API_KEY>
+   ```
+5. ถ้าเลือก **Resend**: ไม่ต้องแก้โค้ดอะไรเพิ่ม (ไฟล์เขียนรองรับ Resend ไว้แล้วเป็นค่าเริ่มต้น) ข้ามไปข้อ 6
+   ได้เลย
+   ถ้าเลือก **Postmark หรือ SendGrid**: ต้องให้ AI แชทถัดไปแก้ฟังก์ชัน `sendViaProvider()` ใน
+   `supabase/functions/send-transactional-email/index.ts` (บรรทัด 166-185) ให้ตรงกับรูปแบบ API ของ
+   ผู้ให้บริการนั้นก่อน — ส่วนอื่นทั้งไฟล์ไม่ต้องแก้ (ออกแบบให้สลับ provider จุดเดียวแล้ว)
+6. Deploy ฟังก์ชัน:
+   ```
+   supabase functions deploy send-transactional-email
+   ```
+7. ทดสอบส่งจริง 1 ฉบับไปหาตัวเอง — วิธีง่ายที่สุดคือรอถึงหัวข้อ D ด้านล่าง (ขั้นตอน 9 ของ Full Account
+   Deletion Test จะทดสอบให้ครบทั้ง 3 ฉบับพร้อมกันอยู่แล้ว) ไม่ต้องทดสอบแยกก่อนก็ได้
+
+**คำถามที่ต้องตอบก่อนเริ่ม:** Lin เลือกผู้ให้บริการไหน (Resend / Postmark / SendGrid)?
+
+---
+
+### D. Full Account Deletion Test — นำทำทีละขั้นตามเช็กลิสต์ `docs/ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md`
+
+> 🔴 **กฎเหล็กซ้ำอีกครั้ง:** ใช้บัญชีทดสอบเท่านั้น ห้ามใช้บัญชีนักเรียนจริงเด็ดขาด — ขั้นตอนด้านล่างจะ
+> "ลบบัญชีทดสอบถาวรจริง กู้คืนไม่ได้" เป็นส่วนหนึ่งของการทดสอบ
+
+**ลำดับที่ปลอดภัยที่สุด (ต่างจากลำดับดิบในไฟล์ checklist เล็กน้อย — จัดกลุ่มให้ทำเป็นชุดไม่สลับไปมา):**
+
+#### ขั้นที่ 1 — เตรียมฐานข้อมูล + deploy ฟังก์ชัน (ทำครั้งเดียว)
+
+1. เปิด Supabase SQL Editor → เปิดไฟล์ `supabase/sql/2026-08-08_account_deletion_cooldown.sql` ในเครื่อง
+   → คัดลอกเฉพาะหัวข้อ **[A]** (สร้างตาราง) → วางรัน → ตรวจว่าไม่มี error
+2. คัดลอกเฉพาะหัวข้อ **[B]** (ขยาย CHECK constraint) → วางรัน → ตรวจว่าไม่มี error
+   ⚠️ **ยังไม่ต้องรันหัวข้อ [C] ตอนนี้** (ตั้ง pg_cron ให้รันอัตโนมัติทุกวัน) — รอให้ทดสอบผ่านครบก่อนค่อยรัน
+   ทีหลัง กันไม่ให้ cron อัตโนมัติมาแทรกกลางการทดสอบมือ
+3. Terminal → `cd /Users/taihualin/Developer/mrtaihualin.github.io` → deploy 2 ฟังก์ชัน:
+   ```
+   supabase functions deploy account-delete
+   supabase functions deploy account-delete-cron
+   ```
+4. ตรวจ Dashboard → Edge Functions ว่าเห็นทั้ง 2 ชื่อขึ้นแล้ว
+
+#### ขั้นที่ 2 — เตรียมบัญชีทดสอบ + หา access token (แบบเดียวกับหัวข้อ B.5b ด้านบน)
+
+5. ล็อกอินเว็บด้วย **บัญชีทดสอบใหม่** (ไม่ใช่บัญชีที่ใช้ทดสอบ unlink ไปแล้วก็ได้ ใช้ซ้ำได้ถ้าสะดวก)
+6. หา access token ด้วยวิธีเดียวกับหัวข้อ B.5b ข้อ 4 (เปิด F12 → Console → `getSession()`)
+
+#### ขั้นที่ 3 — ทำตามเช็กลิสต์ข้อ 1-8 ของ `ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md`
+
+7. **ข้อ 1 (Request):** ยิง curl (แทนค่า token/anon key เหมือนหัวข้อ B):
+   ```
+   curl -i -X POST https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/account-delete \
+     -H "Authorization: Bearer <access_token>" \
+     -H "apikey: <anon_key>" \
+     -H "Content-Type: application/json" \
+     -d '{"action":"request","confirm":true}'
+   ```
+   ตรวจว่าได้ `ok:true, requested:true, scheduled_delete_at` กลับมา + ไปดูใน SQL Editor:
+   ```sql
+   select * from public.account_deletion_requests order by id desc limit 5;
+   ```
+   ต้องเห็นแถวใหม่ `status='pending'`
+8. **ข้อ 2 (ตรวจ pending state):** เว็บยังไม่มี UI ให้กด (ยังไม่ push) — ข้ามการเปิดหน้าเว็บดู banner ไปก่อน
+   ได้ ถือว่าผ่านจากการเห็นแถว `pending` ในขั้นที่ 7 แล้ว (จะกลับมาตรวจ UI จริงตอน push ฟีเจอร์เต็มรอบหน้า)
+9. **ข้อ 3 (Cancel):** ยิง curl action=cancel:
+   ```
+   curl -i -X POST https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/account-delete \
+     -H "Authorization: Bearer <access_token>" \
+     -H "apikey: <anon_key>" \
+     -H "Content-Type: application/json" \
+     -d '{"action":"cancel"}'
+   ```
+   ตรวจ SQL ว่าแถวเปลี่ยนเป็น `status='cancelled'`, `cancelled_at` ไม่ว่าง + ลองล็อกอิน/เล่นเกมด้วยบัญชี
+   ทดสอบนี้ต่อ → ต้องใช้งานได้ปกติ
+10. **ข้อ 4 (Request ใหม่):** ยิง curl action=request ซ้ำเหมือนข้อ 7 → ตรวจว่ามีแถว `pending` แถวเดียว
+    (ไม่ซ้อนกัน 2 แถว) ด้วย:
+    ```sql
+    select count(*) from public.account_deletion_requests
+    where user_id = '<user_id ของบัญชีทดสอบ>' and status = 'pending';
+    ```
+    ต้องได้ 1
+11. **ข้อ 5 (ปรับเวลาด้วยมือ — 🔴 ตรวจ user_id ให้ตรงก่อนกด Run ทุกครั้ง):**
+    ```sql
+    update public.account_deletion_requests
+    set scheduled_delete_at = now() - interval '1 hour'
+    where user_id = '<uuid ของบัญชีทดสอบเท่านั้น>' and status = 'pending';
+    ```
+12. **ข้อ 6 (Invoke cron ด้วยมือ):** เปิด Dashboard → Edge Functions → `account-delete-cron` → กดปุ่ม
+    "Invoke" (ไม่ต้องใส่ body พิเศษ ปล่อย `{}` ได้) — หรือยิง curl ด้วย service_role key ก็ได้ถ้าถนัดกว่า:
+    ```
+    curl -i -X POST https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/account-delete-cron \
+      -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
+      -H "Content-Type: application/json" -d '{}'
+    ```
+    (หา SERVICE_ROLE_KEY ที่ Dashboard → Project Settings → API → "service_role" — **เป็นค่าลับสูงสุด
+    ห้ามแปะไว้ในไฟล์ไหนเลย ใช้แล้วปิดหน้าต่างทิ้ง**)
+13. **ข้อ 7 (ตรวจ DB/Auth/audit log ให้ครบ):**
+    - `select * from public.account_deletion_requests where user_id='<user_id>' order by id desc limit 1;`
+      → ต้อง `status='completed'`, `completed_at` ไม่ว่าง, `contact_email_snapshot` มีค่า
+    - Dashboard → Authentication → Users → ค้นหาอีเมล/LINE ของบัญชีทดสอบ → **ต้องหาไม่เจอแล้ว**
+    - `select * from public.account_audit_log where user_id='<user_id>' order by created_at;` → ต้องเห็น
+      `account_deletion_requested` (2 ครั้งจากข้อ 7+10), `account_deletion_cancelled` (จากข้อ 9),
+      `account_deletion` (`actor_type='system'`)
+    - ตรวจ `game_accounts`/`profiles` ของ user_id นี้ → ต้องหาไม่เจอแล้วเช่นกัน (ถูกลบไปพร้อมบัญชี)
+14. **ข้อ 8 (ลองล็อกอินซ้ำ):** ลองล็อกอินด้วยบัญชีทดสอบเดิมอีกครั้ง (Google/LINE เดิม) → ต้องเข้าเหมือน
+    เป็นบัญชีใหม่ทั้งหมด ไม่มีดาว/ประวัติเดิมเหลือ
+
+#### ขั้นที่ 4 — ทดสอบอีเมล (ข้อ 9) — ทำหลังหัวข้อ C เสร็จแล้วเท่านั้น
+
+15. ทำซ้ำขั้นที่ 3 ทั้งหมดอีกรอบด้วยบัญชีทดสอบใหม่ (เพราะบัญชีเดิมถูกลบไปแล้วในข้อ 14) — คราวนี้หลังแต่ละ
+    ขั้นให้ไปเช็คอีเมลที่บัญชีทดสอบใช้สมัคร (หรืออีเมลของ Lin เองถ้าทดสอบด้วยบัญชี Google/Email ของตัวเอง)
+    - หลังข้อ "request" (7/10) → ต้องได้อีเมล "已收到您的刪除帳號請求"
+    - หลังข้อ "cancel" (9) → ต้องได้อีเมล "刪除帳號請求已取消"
+    - หลังข้อ "invoke cron" (12) → ต้องได้อีเมล "帳號已永久刪除" (ส่งไปที่อีเมลที่แคชไว้ตอนก่อนลบ)
+16. **ทดสอบ failure path (ถ้ามีเวลา ไม่บังคับ 100% แต่แนะนำให้ทำ):** ตั้ง secret เป็นค่าผิดชั่วคราว
+    (`supabase secrets set EMAIL_PROVIDER_API_KEY=wrong_value_temp`) → ทำซ้ำรอบ invoke cron อีกครั้งกับ
+    บัญชีทดสอบอื่น → ตรวจว่า `status` ยัง `completed` ปกติ (ไม่ rollback) แต่ `completed_email_sent_at`
+    เป็น null + `completed_email_attempts` เพิ่มขึ้น → ตั้ง secret กลับเป็นค่าจริง → invoke cron รอบถัดไป
+    → ตรวจว่า retry ส่งสำเร็จเอง
+
+#### ขั้นที่ 5 — ปิดงานจริง (ทำหลังทดสอบผ่านครบทุกข้อ)
+
+17. รัน SQL หัวข้อ **[C]** ในไฟล์ `2026-08-08_account_deletion_cooldown.sql` (ตั้ง pg_cron ให้รันอัตโนมัติ
+    ทุกวัน 20:00 UTC) — ตอนนี้ค่อยปลอดภัยเพราะไม่มีแถว `pending` ทดสอบค้างอยู่แล้ว (ลบไปหมดในขั้นที่ 3-4)
+18. บอก AI แชทถัดไปว่าทดสอบผ่านครบ → ให้ AI อัปเดต `ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md` (ติ๊ก ✅
+    ทุกข้อ) + อัปเดตหัวข้อ 3/10 ของเอกสารนี้
+19. ถึงตอนนี้ค่อย push `js/core/auth-widget.js` และไฟล์เว็บที่เกี่ยวข้องขึ้น GitHub ผ่าน GitHub Desktop
+    (พร้อม commit message ที่ AI เตรียมให้)
+
+**คำถามที่ต้องตอบก่อนเริ่มขั้นที่ 4:** เลือก provider อีเมลแล้วหรือยัง (ดูหัวข้อ C ด้านบน) ถ้ายัง ทำขั้นที่
+1-3 (ข้อ 1-14) ก่อนได้เลย ไม่ต้องรอ ข้อ 9/15/16 เท่านั้นที่ต้องรอ provider พร้อม
+
+---
+
+**สรุปคำถามที่ต้องให้ Lin ตอบ/ตัดสินใจก่อนเริ่มหัวข้อนี้ทั้งหมด:**
+1. เลือกผู้ให้บริการอีเมลไหน (Resend แนะนำถ้าอยากเริ่มเร็ว / Postmark ถ้าอยากได้ deliverability สูงสุด)
+2. พร้อมเจียดเวลาทำ Full Account Deletion Test (ขั้นที่ 1-5 ด้านบน ใช้เวลาประมาณ 30-60 นาทีถ้าไม่ติดปัญหา)
+   เมื่อไหร่ — เป็นงานที่ต้องนั่งทำต่อเนื่องเป็นชุด ไม่ควรทำครึ่งๆ กลางๆ แล้วปล่อยค้าง (มีคำขอลบทดสอบค้างใน
+   ระบบระหว่างนั้น)
