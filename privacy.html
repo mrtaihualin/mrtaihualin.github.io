@@ -7,6 +7,9 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
+  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
+  var savedConsent = localStorage.getItem('cookieConsent');
+  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });
   gtag('config', 'G-DKVQE30982');
   window.GA_CATEGORY='course';
 </script>
@@ -17,6 +20,8 @@
         t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "xkbihw56tf");
+    // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)
+    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }
 </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,6 +33,9 @@
     body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 0 20px 60px; line-height: 1.8; color: #333; }
     h1 { color: #1a1a1a; }
     h2 { color: #444; margin-top: 2em; }
+    h3 { color: #555; margin-top: 1.4em; font-size: 1.05em; }
+    ul { padding-left: 1.4em; }
+    li { margin-bottom: 6px; }
     .topbar { padding: 18px 0; border-bottom: 1px solid #eee; margin-bottom: 28px; }
     .topbar a { color: #A07A1E; text-decoration: none; font-weight: 700; }
     .backfoot { margin-top: 48px; padding-top: 22px; border-top: 1px solid #eee; text-align: center; }
@@ -37,18 +45,145 @@
 <body>
   <div class="topbar"><a href="/index.html">← 回首頁 · 泰華眼裡的泰語教學</a></div>
   <h1>隱私權政策 Privacy Policy</h1>
-  <p>最後更新：2026年6月25日</p>
-  <h2>1. 資料蒐集</h2>
-  <p>本網站僅蒐集您主動提供的資訊（如預約課程時填寫的姓名與聯絡方式），用於提供教學服務。</p>
-  <p>若您登入遊戲帳號，為了防止作弊與濫用（例如同一人建立多個帳號），本網站會在您登入時記錄您的 IP 位址與裝置識別資訊。這些資訊僅用於安全防護，不會用於其他用途，也不會提供給第三方。</p>
-  <h2>2. 資料使用</h2>
-  <p>您的個人資料僅用於課程安排與聯繫，不會出售或提供給第三方。</p>
-  <h2>3. Cookie</h2>
-  <p>本網站可能使用 Cookie 改善使用體驗及統計流量，您可透過瀏覽器設定拒絕 Cookie。</p>
-  <h2>4. 資料安全</h2>
-  <p>我們採取合理措施保護您的個人資料，防止未經授權的存取或洩露。</p>
-  <h2>5. 聯絡方式</h2>
-  <p>如有隱私相關問題，請聯絡：<a href="mailto:mr.taihualin@gmail.com">mr.taihualin@gmail.com</a></p>
+  <p>最後更新：2026年8月9日</p>
+  <p>本網站（mrtaihualin.com）由「泰華眼裡的泰語教學」經營。我們重視您的個人資料與隱私，以下說明本網站蒐集、使用及保護資料的方式。</p>
+
+  <h2>1. 我們蒐集的資料</h2>
+  <p>依您使用的服務不同，本網站可能蒐集以下資料：</p>
+  <h3>課程與聯絡資料</h3>
+  <p>當您預約課程、填寫表單或主動與我們聯繫時，我們可能蒐集您提供的姓名、Email、聯絡方式及訊息內容，用於課程安排、回覆及提供相關服務。</p>
+  <h3>遊戲帳號資料</h3>
+  <p>若您註冊或登入遊戲帳號，可使用 Email 驗證碼、Google、Facebook 或 LINE 登入。</p>
+  <p>使用 Google 或 Facebook 登入時，我們會依您的授權及該平台實際提供的資訊，取得姓名、Email、大頭貼等基本帳號資料。</p>
+  <p>使用 LINE 登入時，由於 LINE 不一定提供真實 Email，系統可能自動產生一組僅供內部帳號識別使用的虛擬 Email（例如 line-〔識別碼〕@users.line.invalid）。此 Email 不會用於實際寄送信件，也不是您的真實電子信箱。</p>
+  <h3>遊戲與學習資料</h3>
+  <p>當您使用遊戲帳號時，本網站可能記錄與帳號相關的學習進度、遊戲結果、分數、已儲存內容及其他與遊戲功能相關的資料，以提供學習紀錄及帳號功能。</p>
+  <h3>安全與系統紀錄</h3>
+  <p>為維護帳號及網站安全、防止作弊、濫用或異常操作，本網站可能記錄 IP 位址、裝置相關資訊、登入紀錄及必要的安全紀錄。</p>
+  <p>若您進行帳號連接（Link）、取消連接（Unlink）或其他重要帳號操作，系統可能記錄操作時間及相關內容，以協助確認帳號狀態、排查異常及進行必要的復原。</p>
+
+  <h2>2. 資料使用方式</h2>
+  <p>我們可能將上述資料用於：</p>
+  <ul>
+    <li>提供及管理泰語課程與相關服務</li>
+    <li>建立及管理遊戲帳號</li>
+    <li>保存學習進度、遊戲結果及使用者設定</li>
+    <li>提供登入、帳號驗證及帳號安全功能</li>
+    <li>防止作弊、濫用、未授權存取及其他異常行為</li>
+    <li>回覆使用者詢問及處理帳號問題</li>
+    <li>分析網站及遊戲的整體使用情況，以改善服務</li>
+    <li>履行依法應負的義務</li>
+  </ul>
+  <p>本網站不會出售您的個人資料。</p>
+
+  <h2>3. Cookie 與分析工具</h2>
+  <p>本網站可能使用 Cookie、本機儲存或其他類似技術，以提供登入、帳號安全及網站基本功能。</p>
+  <p>必要的技術可能在網站正常運作所需的範圍內使用。</p>
+  <p>此外，本網站使用以下分析工具：</p>
+  <ul>
+    <li><strong>Google Analytics 4（GA4）</strong>：用於了解網站及遊戲的瀏覽、點擊及其他整體使用情況。</li>
+    <li><strong>Microsoft Clarity</strong>：用於分析頁面互動情況，例如點擊、滑動、熱點圖及操作流程，以協助改善使用體驗。</li>
+  </ul>
+  <p>分析用途的 Cookie／類似技術會依您的 Cookie 選擇進行設定。</p>
+  <p>您可以選擇接受或拒絕分析用途的 Cookie，並可之後透過網站提供的「<a href="javascript:void(0)" onclick="window.__reopenCookieConsent && window.__reopenCookieConsent()">Cookie 設定</a>」重新調整選擇。</p>
+  <p>拒絕分析用途的 Cookie 不會影響網站及遊戲的基本功能。</p>
+
+  <h2>4. 第三方服務與資料處理</h2>
+  <p>為提供網站及遊戲功能，本網站可能使用第三方服務供應商，例如：</p>
+  <ul>
+    <li>Google</li>
+    <li>Meta（Facebook）</li>
+    <li>LINE</li>
+    <li>Microsoft（Clarity）</li>
+    <li>網站、資料庫、驗證及其他必要的技術服務供應商</li>
+  </ul>
+  <p>上述服務供應商可能依其服務內容，在提供登入驗證、網站分析、系統運作或安全防護所必要的範圍內處理相關資料。</p>
+  <p>部分第三方服務供應商可能於台灣以外的國家或地區處理或儲存相關資料。若涉及跨境資料傳輸，我們將依適用法律及相關資料保護要求進行處理。</p>
+
+  <h2>5. 資料保存期間</h2>
+  <p>我們僅在提供服務、安全防護、處理爭議、履行法律義務或其他合法必要目的所需的期間內保存個人資料。</p>
+  <p>不同類型資料的保存期間可能有所不同，例如：</p>
+  <ul>
+    <li>帳號及學習資料可能於帳號存續期間內保存。</li>
+    <li>安全及操作紀錄可能於防止濫用、處理異常或系統安全所需期間內保存。</li>
+    <li>第三方分析工具所產生的資料，依各服務的實際設定及其資料保存機制處理。</li>
+  </ul>
+  <p>當資料不再具有保存必要時，我們會依實際情況刪除、匿名化或以其他適當方式處理；法律另有規定或為處理安全、爭議等必要情況者除外。</p>
+
+  <h2>6. 您的權利</h2>
+  <p>依適用的個人資料保護法律及實際情況，您可能享有以下權利：</p>
+  <ul>
+    <li>查詢或請求存取您的個人資料</li>
+    <li>請求更正不正確或不完整的資料</li>
+    <li>請求刪除或匿名化您的個人資料</li>
+    <li>請求限制特定資料處理</li>
+    <li>對特定資料處理提出異議</li>
+    <li>在適用情況下請求取得或移轉您的資料</li>
+    <li>撤回您先前提供的同意</li>
+  </ul>
+  <p>您也可以申請刪除遊戲帳號。部分因法律義務、安全防護、爭議處理或系統備份而必須暫時保留的資料，可能無法立即完全刪除。</p>
+  <p>若您希望行使上述權利或詢問個人資料相關事項，可透過本政策所列聯絡方式與我們聯繫。</p>
+
+  <h2>7. 資料安全</h2>
+  <p>我們會採取合理的技術及管理措施，保護您的個人資料，並降低資料遭未授權存取、變更、洩露、遺失或濫用的風險。</p>
+  <p>然而，任何網路或電子資料傳輸與儲存方式均無法保證絕對安全。</p>
+
+  <h2>8. 隱私政策更新</h2>
+  <p>我們可能因網站功能、服務內容、使用的技術或法律要求變更而更新本政策。</p>
+  <p>更新後的版本會公布於本頁面，並更新「最後更新」日期。若變更對您的權利或資料處理方式有重大影響，我們會視實際情況提供適當通知。</p>
+
+  <h2>9. 聯絡方式</h2>
+  <p>如對本隱私權政策、您的個人資料或帳號資料處理有任何問題，請聯絡：</p>
+  <p><strong>Email：</strong><a href="mailto:mr.taihualin@gmail.com">mr.taihualin@gmail.com</a></p>
+
   <div class="backfoot"><a href="/index.html">← 回首頁</a>　·　<a href="/terms.html">使用條款</a></div>
+
+<!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+  background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
+  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
+  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
+    <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="window.__cookieConsentDecide(false)"
+        style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
+        拒絕
+      </button>
+      <button onclick="window.__cookieConsentDecide(true)"
+        style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
+        接受
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  window.__cookieConsentDecide = function(granted) {
+    localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    }
+    if (typeof window.clarity === 'function') {
+      window.clarity('consent', granted);
+    }
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'none';
+  };
+  // เปิด banner ขึ้นมาใหม่ได้ทุกเมื่อ (ใช้จากลิงก์ "Cookie 設定" ใน privacy.html)
+  window.__reopenCookieConsent = function() {
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'block';
+  };
+  if (!localStorage.getItem('cookieConsent')) {
+    var __b0 = document.getElementById('cookieConsentBanner');
+    if (__b0) __b0.style.display = 'block';
+  }
+</script>
+
 </body>
 </html>

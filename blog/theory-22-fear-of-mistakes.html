@@ -7,6 +7,9 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
+  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
+  var savedConsent = localStorage.getItem('cookieConsent');
+  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });
   gtag('config', 'G-DKVQE30982');
   window.GA_CATEGORY='article';
 </script>
@@ -17,6 +20,8 @@
         t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "xkbihw56tf");
+    // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)
+    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -166,5 +171,53 @@
 </footer>
 
 <script src="../js/core/shared.min.js?v=18"></script>
+
+<!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+  background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
+  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
+  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
+    <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="window.__cookieConsentDecide(false)"
+        style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
+        拒絕
+      </button>
+      <button onclick="window.__cookieConsentDecide(true)"
+        style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
+        接受
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  window.__cookieConsentDecide = function(granted) {
+    localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    }
+    if (typeof window.clarity === 'function') {
+      window.clarity('consent', granted);
+    }
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'none';
+  };
+  // เปิด banner ขึ้นมาใหม่ได้ทุกเมื่อ (ใช้จากลิงก์ "Cookie 設定" ใน privacy.html)
+  window.__reopenCookieConsent = function() {
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'block';
+  };
+  if (!localStorage.getItem('cookieConsent')) {
+    var __b0 = document.getElementById('cookieConsentBanner');
+    if (__b0) __b0.style.display = 'block';
+  }
+</script>
+
 </body>
 </html>
