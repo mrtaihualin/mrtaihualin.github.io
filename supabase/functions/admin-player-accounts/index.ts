@@ -110,7 +110,16 @@ async function buildLoginMethods(admin, authUser, lineRows) {
 // ── ดึงข้อมูลสรุปของ 1 user_id (login methods + profile + game_accounts) ──────────────────────
 async function loadAccountSummary(admin, userId) {
   const { data: authData, error: authErr } = await admin.auth.admin.getUserById(userId);
-  if (authErr || !authData || !authData.user) return null;
+  if (authErr) {
+    // 🆕 2026-08-09: เดิมเงียบไม่ log เลย ทำให้หาสาเหตุ "ค้นหาไม่เจอ" ไม่ได้ (ขัดกฎ RELIABILITY FIRST
+    // ห้ามความล้มเหลวเงียบ) — เพิ่ม log ถาวรไว้ ไม่ใช่แค่ debug ชั่วคราว
+    console.error('[admin-player-accounts] getUserById failed', { userId, error: authErr.message || String(authErr) });
+    return null;
+  }
+  if (!authData || !authData.user) {
+    console.error('[admin-player-accounts] getUserById returned no user', { userId });
+    return null;
+  }
   const authUser = authData.user;
 
   const { data: lineRows } = await admin.from('line_identities').select('line_user_id').eq('user_id', userId);
@@ -197,6 +206,7 @@ serve(async (req) => {
       }
 
       userIds = Array.from(new Set(userIds)).slice(0, 30);
+      console.log('[admin-player-accounts] search_accounts', { qType, q, matched_user_ids_before_summary: userIds.length });
       const results = [];
       for (const uid of userIds) {
         const summary = await loadAccountSummary(admin, uid);
