@@ -1,5 +1,25 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-09 — Navigation รวม + Search MVP + จัดระเบียบ games.html IA
+
+สถานะ: **✅ push ขึ้นเว็บจริงแล้ว (ยืนยันจาก GitHub Desktop ไม่มีคอมมิตค้าง) — แต่ยังไม่เปิดเว็บจริงตรวจตาหลัง push และ Gemini fallback search ยังไม่ deploy**
+
+Lin สั่งรวมเมนูเว็บที่เดิม hardcode ซ้ำอยู่ 31 ไฟล์ HTML แยกกัน ให้เหลือจุดแก้เดียว พร้อมลดหัวข้อเมนูบนสุดจาก 6 หมวดเหลือ 3 หมวด และเพิ่มระบบค้นหาที่เว็บไม่เคยมีมาก่อน
+
+**Navigation:** สร้าง `data/nav-template.js` เป็น single source of truth ของเมนู (desktop dropdown + hamburger + mobile bottom-nav) แล้วเขียน `scripts/generate-nav.js` พิมพ์ทับ nav block ในไฟล์ `.html` ทุกหน้าที่เกี่ยวข้อง (30 ไฟล์) — เลือกทางนี้แทนการฉีดด้วย JS ล้วนๆ เพื่อคงเป็น static HTML ไว้ (กัน SEO/GEO เสีย ตรงกับ decision เดิมของ repo เมื่อ 2026-07-24) เมนูบนสุดเหลือ 3 หัวข้อ (遊戲/學習資源/關於我) เดิม 6 หมวด (程度測驗/關於老師/了解課程/資源分享/專業服務/聯絡我們) ยุบเป็น dropdown ย่อยใต้ 學習資源 กับ 關於我 แทน ไม่มี URL ไหนถูกย้าย · CTA เปลี่ยนจาก "預約免費體驗課" เป็น "免費試聽" · bottom-nav มือถือเหลือ 4 ปุ่ม (首頁/試聽/遊戲/我的) ปุ่ม 我的 ผูกกับ `my-progress.html` เดิม
+
+**Search MVP:** สร้างจากศูนย์ — `data/search-index.js` (index รวมเกม/บทความ/FAQ/คอร์ส) + `js/core/search-engine.js` (rule-based matcher ฝั่ง client) + `js/core/search-ui.js` (กล่องค้นหาหน้าแรก) + `js/games/games-search-ui.js` (กล่องค้นหาเฉพาะเกมใน games.html) ทำงานได้ทันทีหลัง push ไม่ต้อง deploy อะไรเพิ่ม เพราะเป็น client-side ล้วน
+
+**games.html IA:** แยก grid เดิมที่รวม 7 การ์ดปนกันเป็น 3 ส่วน (5 เกมเล็ก / Challenge / Lego แยก section ชัดเจน) copy การ์ดเดิมไม่เปลี่ยน แค่ย้ายตำแหน่ง
+
+ไฟล์ที่แก้/สร้าง: `data/nav-template.js`, `scripts/generate-nav.js` (ใหม่), `data/search-index.js` (ใหม่), `js/core/search-engine.js`/`search-ui.js` (ใหม่), `js/games/games-search-ui.js` (ใหม่), `games.html`, `index.html`, `supabase/functions/search-gemini/index.ts` (ใหม่ — ยังเป็นโครงร่าง), และไฟล์ `.html` อีก 28 หน้าที่มี nav (nav block เท่านั้น)
+
+ผลตรวจ: ยืนยัน diff จริงทีละไฟล์ผ่าน GitHub Desktop ก่อน commit (ไม่ใช่เดาจาก mtime) แยกเป็น 2 commit ตามงาน (nav 30 ไฟล์ / search+IA 7 ไฟล์) push สำเร็จยืนยันจาก GitHub Desktop ขึ้น "No local changes"
+
+**สิ่งที่ยังไม่ทำงานจริง — ต้อง Lin ทำต่อ:** Gemini fallback search (`supabase/functions/search-gemini`) เป็นแค่โครงร่าง คอมเมนต์หัวไฟล์เขียนเองว่า "🔴 ยังไม่ deploy" และ `js/core/search-engine.js` ยังไม่มีโค้ดเรียก Edge Function นี้เลย (`geminiFallback()` เป็น stub) ต้อง (1) `supabase login` + link project (2) ตั้ง secret `GEMINI_API_KEY` จริง (3) `supabase functions deploy search-gemini` (4) เพิ่ม rate limit กัน cost บาน (5) ต่อโค้ดฝั่ง client ให้เรียกจริง — รายละเอียดเต็มที่ `Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/78_ผลลัพธ์_Navigation-Search-gamesIA_push_2026-08-09.md`
+
+**สิ่งที่ Lin ต้องทำเอง:** เปิดเว็บจริงดู 2-3 หน้า (มือถือ+คอม) ยืนยันเมนูใหม่ขึ้นถูกหลัง GitHub Pages build เสร็จ (~1-2 นาทีหลัง push) — ยังไม่มีใครตรวจด้วยตาหลัง push รอบนี้
+
 ## 2026-08-08 (Account Deletion รอบ 3) — เปลี่ยนลบบัญชีเป็น cooldown 7 วัน + อีเมลยืนยัน 3 จุด
 
 สถานะ: **โค้ดพร้อมแล้ว (local prep เท่านั้น) — ยังไม่ deploy/ยังไม่รัน SQL รอ Mandatory Pre-Deploy Test + เลือก email provider ก่อน**
