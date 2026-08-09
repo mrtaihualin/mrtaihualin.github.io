@@ -160,11 +160,18 @@ window.goHome = function() {
   }
 
   // Bottom nav bar (mobile only) — ดึงจาก data/nav-template.js single source เหมือนกัน (2026-08-09)
+  // 🔒 ด่านกัน "แถบเปล่า" (เพิ่ม 2026-08-10 — เจอจริงในหน้า blog/ 44 หน้า):
+  //    ของเดิมถ้าหน้านั้นลืมโหลด data/nav-template.js จะยังสร้าง <nav id="bottom-nav"> เปล่าๆ
+  //    ต่อท้าย body + CSS ยังดัน body{padding-bottom:60px} บนมือถืออยู่
+  //    = ได้ช่องว่างท้ายหน้า 60px โดยไม่มีปุ่มสักปุ่ม และเงียบสนิทไม่มีใครรู้
+  //    ตอนนี้: ไม่มี template = ไม่สร้างแถบ ไม่ใส่ CSS เลย + เตือนดังๆ ใน console (ห้ามเงียบ)
+  if (!window.NAV_TEMPLATE || typeof window.NAV_TEMPLATE.renderBottomNavHTML !== 'function') {
+    try { console.warn('[bottom-nav] หน้านี้ไม่ได้โหลด data/nav-template.js → ข้ามการสร้างแถบเมนูล่างมือถือ'); } catch (e) {}
+    return;
+  }
   var bottomBar = document.createElement('nav');
   bottomBar.id = 'bottom-nav';
-  if (window.NAV_TEMPLATE && typeof window.NAV_TEMPLATE.renderBottomNavHTML === 'function') {
-    bottomBar.innerHTML = window.NAV_TEMPLATE.renderBottomNavHTML();
-  }
+  bottomBar.innerHTML = window.NAV_TEMPLATE.renderBottomNavHTML();
   document.body.appendChild(bottomBar);
 
   var bnStyle = document.createElement('style');

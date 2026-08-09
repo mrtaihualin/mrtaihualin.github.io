@@ -13,9 +13,10 @@
 > `mr.taihualin+test2@gmail.com` (`user_id: c619ba7b-97b2-470c-bf45-846af2b01bf2`) — ไม่พบบั๊ก
 > รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 >
-> ✅ **อัปเดต 2026-08-09 (รอบ 2):** `EMAIL_PROVIDER_API_KEY` คืนเป็นค่า Resend จริงแล้ว + รัน SQL [C]
-> แล้ว (cron `account-delete-daily` jobid 15 active=true ยืนยันจริงด้วย `select * from cron.job`)
-> เหลือ: (ไม่บังคับ) ทดสอบ failure path ของอีเมลต่อให้จบไหม + **ยังไม่ได้ push โค้ดขึ้น GitHub**
+> ✅ **อัปเดต 2026-08-09 (รอบ 2) — ปิดครบทุกข้อ:** `EMAIL_PROVIDER_API_KEY` คืนเป็นค่า Resend จริงแล้ว +
+> รัน SQL [C] แล้ว (cron `account-delete-daily` jobid 15 active=true) + ทดสอบ failure-path ของอีเมลจนจบ
+> (เจอบั๊กจริง 1 จุด แก้ + deploy ขึ้น production แล้ว) + push `auth-widget.js` แล้ว
+> เหลือ: push `supabase/functions/account-delete-cron/index.ts` (โค้ดแก้บั๊กวันนี้) ขึ้น GitHub
 
 ---
 
@@ -56,10 +57,11 @@
 
 - [x] **9. ตรวจ transactional email ครบ 3 ฉบับ** — ✅ **ผ่าน 2026-08-09** เข้ากล่องจริงครบ 4 ฉบับ (request×2
       เพราะขอ 2 รอบ, cancelled×1, deleted×1) เนื้อหา/แบรนด์/วันที่ถูกต้อง
-      - ⏸️ **ทดสอบ failure path (ไม่บังคับ) — หยุดค้างกลางคัน 2026-08-09**: ตั้ง
-        `EMAIL_PROVIDER_API_KEY=wrong_value_temp` ไปแล้ว **ยังไม่ได้ตั้งกลับเป็นค่าจริง** 🔴 ต้องแก้ก่อน
-        ทำอะไรอื่นที่ใช้อีเมล — ดูขั้นตอนทำต่อ/แก้กลับที่
-        `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
+      - ✅ **ทดสอบ failure path — ผ่านครบ 2026-08-09 (รอบ 2)** ด้วยบัญชี `mr.taihualin+test4@gmail.com`:
+        ตั้งกุญแจผิด → invoke cron → `email_sent:false` (ลบสำเร็จปกติ ไม่ rollback) → ตั้งกุญแจกลับ → invoke
+        cron → **เจอบั๊กจริง 1 จุด** (retry pass ไม่ทำงานถ้าไม่มีบัญชีใหม่ให้ลบ) → แก้ + deploy ขึ้น
+        production แล้ว → ทดสอบซ้ำ retry ส่งสำเร็จ (`sent:1`, ยืนยันด้วย `completed_email_sent_at` ใน DB)
+        รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 
 ---
 
@@ -74,10 +76,14 @@ Lin เลือก **Resend** โดเมน `mrtaihualin.com` verify แล�
 
 ✅ **ทำแล้ว 2026-08-09** — ติ๊ก ✅ ครบทุกข้อ 1-9 ด้านบนแล้ว
 
-**งานที่เหลือก่อนขอ Lin กด deploy จริงรอบสุดท้าย** (ดูรายละเอียดเต็มที่
+**✅ ปิดครบทุกข้อแล้ว 2026-08-09 (รอบ 2)** (ดูรายละเอียดเต็มที่
 `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`):
-1. ✅ ตั้ง `EMAIL_PROVIDER_API_KEY` กลับเป็นค่า Resend จริงแล้ว — เสร็จ 2026-08-09
-2. ⏸️ ตัดสินใจทำ failure-path test ต่อให้จบไหม (ไม่บังคับ — ยังค้าง)
-3. ✅ รัน SQL หัวข้อ [C] แล้ว (cron `account-delete-daily` jobid 15 active=true) — เสร็จ 2026-08-09
-4. ✅ อัปเดต `docs/ACCOUNT_DATA_SAFETY_GAPS.md` หัวข้อ 3 แล้วว่าเทสผ่านแล้ว — เสร็จ 2026-08-09
-5. 🚫 Push `js/core/auth-widget.js` และไฟล์ที่เกี่ยวข้องขึ้น GitHub ผ่าน GitHub Desktop — **ยังไม่ทำ**
+1. ✅ ตั้ง `EMAIL_PROVIDER_API_KEY` กลับเป็นค่า Resend จริงแล้ว
+2. ✅ ทำ failure-path test จนจบแล้ว — เจอบั๊กจริง 1 จุด (retry pass อีเมลไม่ทำงานถ้าไม่มีบัญชีใหม่ให้ลบ)
+   แก้ + deploy ขึ้น production แล้ว + ทดสอบซ้ำผ่าน
+3. ✅ รัน SQL หัวข้อ [C] แล้ว (cron `account-delete-daily` jobid 15 active=true)
+4. ✅ อัปเดต `docs/ACCOUNT_DATA_SAFETY_GAPS.md` หัวข้อ 3 แล้วว่าเทสผ่านแล้ว
+5. ✅ Push `js/core/auth-widget.js` ขึ้น GitHub ผ่าน GitHub Desktop แล้ว
+
+**🚫 เหลือ 1 อย่างสุดท้าย:** Push `supabase/functions/account-delete-cron/index.ts` (โค้ดแก้บั๊ก retry
+pass ของวันนี้) ขึ้น GitHub ผ่าน GitHub Desktop — deploy ขึ้น production แล้วจริง แต่ยังไม่ได้ push เข้า repo

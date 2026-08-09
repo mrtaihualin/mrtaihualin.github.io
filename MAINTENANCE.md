@@ -1,5 +1,41 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-10 — สืบต่อเรื่อง bottom-nav มือถือ: ทฤษฎี "แคช" ผิด · เจอบั๊กจริงคนละตัวในหน้า blog/ 44 หน้า
+
+สถานะ: **✅ แก้แล้ว รอ Lin push + เปิดมือถือดูยืนยัน**
+
+**ทฤษฎีเดิม (bump cache-buster) ตรวจแล้วว่าไม่ใช่สาเหตุ — ห้ามเชื่อซ้ำ:**
+`MAINTENANCE.md` (2026-08-08 บรรทัด 61 ตอนนั้น) บันทึกว่าเคย bump `v=17→v=18` **ครบทั้ง 76 ไฟล์** → ก่อน push 2026-08-09 ทุกไฟล์อยู่ที่ `v=18` เท่ากันหมด แล้ว 31 ไฟล์ (รวม `index.html`) ถูก bump เป็น `v=19` ตอน push เมื่อวาน = **URL ที่เบราว์เซอร์ Lin ไม่เคยโหลดมาก่อนเลย** แคชเก่าจึงไม่มีทางถูกใช้ · ตรวจของจริงบนเว็บซ้ำแล้วด้วย: `https://mrtaihualin.com/data/nav-template.js?v=1` และ `shared.min.js?v=19` มีอยู่จริง (200) และเมนูบนสุดชุดใหม่ (遊戲/學習資源/關於我 + 免費試聽) ขึ้นบนเว็บสดแล้ว
+→ **สาเหตุที่น่าจะเป็นที่สุดของอาการเมื่อวาน: Lin เปิดดูเร็วเกินไป** GitHub Pages build ใช้เวลา 1-2 นาที ถ้าเปิดตอนนั้นจะได้ `index.html` ตัวเก่า (v=18 ไม่มี `nav-template.js`) → `#bottom-nav` ถูกสร้างแต่ว่างเปล่า → เห็น `.page-strip` 6 ปุ่มเดิมพอดีเป๊ะกับอาการ
+
+**บั๊กจริงที่เจอระหว่างสืบ (คนละเรื่อง แต่ต้องแก้):**
+มี **44 ไฟล์ `.html` (เกือบทั้งหมดคือ `blog/`)** ที่โหลด `shared.min.js?v=18` แต่ **ไม่โหลด `data/nav-template.js` เลย** (commit เมื่อวานแตะแค่ 31 ไฟล์ที่มี nav block) → `shared.js` หา `window.NAV_TEMPLATE` ไม่เจอ → สร้าง `<nav id="bottom-nav">` **เปล่าๆ** ต่อท้าย body แต่ CSS ยังดัน `body{padding-bottom:60px}` บนมือถืออยู่ = **ทุกหน้าบล็อกมีช่องว่าง 60px ท้ายหน้าบนมือถือ โดยไม่มีปุ่มสักปุ่ม และเงียบสนิท**
+
+**สิ่งที่แก้:**
+1. เพิ่ม `<script src="../data/nav-template.js?v=1"></script>` ก่อน `shared.min.js` ใน 44 ไฟล์บล็อก → ตอนนี้ทุกหน้าที่โหลด `shared.min.js` มี `nav-template.js` ครบ 75/75 ไฟล์
+2. `js/core/shared.js` — เพิ่มด่านกัน "แถบเปล่า": ไม่มี `NAV_TEMPLATE` = **ไม่สร้างแถบ ไม่ใส่ CSS เลย** + `console.warn` เตือนดังๆ (กฎ RELIABILITY FIRST ข้อ "ห้ามเงียบ") เดิมสร้างแถบเปล่าแล้วปล่อยผ่าน · regenerate `shared.min.js` ด้วย `bash scripts/build-minjs.sh` (terser)
+3. bump `shared.min.js?v=18`/`v=19` → **`v=20` ครบทั้ง 75 ไฟล์** (เนื้อหา `shared.min.js` เปลี่ยนจริงรอบนี้ จึงต้อง bump ตามธรรมเนียม) · `nav-template.js` ไม่ได้แก้เนื้อหา จึงคง `v=1`
+
+**หลักฐาน:** `node scripts/check-site.js` ผ่านทุกหมวด (JS syntax 85 ไฟล์ · HTML 109 ไฟล์) — ที่ไม่ผ่าน 6 รายการเป็นของเดิมมาก่อนรอบนี้ทั้งหมด (secret scan เจอ JWT ในไฟล์เก่าโฟลเดอร์ `supabase/sql/เลิกใช้แล้ว_ห้ามรัน/` ยังไม่ได้ล้าง) · ตรวจซ้ำว่าไม่มีไฟล์ไหนโหลด `shared.min.js` แล้วขาด `nav-template.js` (ผลว่าง) · `require('./data/nav-template.js').renderBottomNavHTML()` คืน 4 ปุ่ม 首頁/試聽/遊戲/我的 ยาว 477 ตัวอักษร
+
+**ยังไม่ยืนยัน:** ยังไม่ได้เปิด mrtaihualin.com บนมือถือจริงหลังรอบนี้ (ต้อง push ก่อน) — ถ้า push แล้วรอ 2 นาที เปิดมือถือแล้วยังไม่เห็น 4 ปุ่ม ขั้นต่อไปคือต่อ iPhone เข้า Mac ด้วยสาย → Safari บน Mac → เมนู Develop → เลือกเครื่อง → เปิด Web Inspector ของแท็บนั้น ดู error จริงบนเครื่องนั้น (แม่นกว่าเดา)
+
+**ไฟล์ที่แก้:** `js/core/shared.js` + `js/core/shared.min.js` · 44 ไฟล์ใน `blog/` (เพิ่ม script tag + bump v) · 31 ไฟล์เดิม (bump v อย่างเดียว)
+
+## 2026-08-09 (ต่อ) — แก้ error/loading message ในเกมที่เป็นภาษาไทยผิด ให้เป็นภาษาจีน + เจอ + ยังไม่ปิดเรื่อง bottom-nav มือถือ
+
+สถานะ: **✅ ส่วนภาษาไทย→จีน push แล้วยืนยันจริง (fetch ไฟล์สดจากเว็บตรวจ) — ⚠️ ส่วน bottom-nav มือถือยังไม่ปิด ส่งต่อแชทใหม่**
+
+Lin ตรวจเว็บหลัง push Navigation+Search MVP แล้วเจอ 2 เรื่อง:
+
+**(1) error/loading message ในเกมเป็นภาษาไทย — แก้เสร็จแล้ว:** `js/games/game-content-client.js` (สร้าง 2026-08-02) เขียนข้อความที่โชว์ให้ผู้เล่นเห็น (loading banner, error banner, ปุ่ม retry/กลับหน้าเกม/ทัก LINE) เป็นภาษาไทยทั้งหมด ทั้งที่เว็บนี้สอนคนไต้หวัน/ฮ่องกงใช้ภาษาจีนล้วน — แปลเป็นภาษาจีนครบทุกจุดที่ผู้เล่นเห็น (comment/console.error ภายในเก็บภาษาเดิมไว้ ไม่กระทบผู้เล่น) push แล้ว ยืนยันด้วย `fetch('/js/games/game-content-client.js').then(r=>r.text())` เช็คว่ามีคำว่า "遊戲資料載入中" จริงบนเว็บสด
+
+**(2) bottom-nav มือถือ (4 ปุ่มใหม่) ไม่ขึ้นบนมือถือจริง — ยังไม่ปิด ส่งต่อแชทใหม่แล้ว:** ตรวจบนคอม (DevTools, จำลองจอแคบ, ยืนยัน context เป็น index.html จริง) พบว่าโค้ดถูกต้องครบ — `renderBottomNavHTML()` คืนค่าถูก, `#bottom-nav` มีเนื้อหา 477 ตัวอักษรจริง, CSS media query `@media(max-width:768px){#bottom-nav{display:flex}}` ทำงานถูก (`getComputedStyle().display === 'flex'` เมื่อจอแคบจริง) — แต่บนมือถือจริง (iPhone Safari) แม้ล้างแคชเต็มรูปแบบ (Settings→Safari→Clear History and Website Data) + พิมพ์ URL ใหม่ ก็ยังเห็นแถบเก่า 6 ปุ่ม (`.page-strip`, ฟีเจอร์เดิมแยกต่างหาก ไม่เกี่ยวกับ bottom-nav) สงสัยว่าอาจมีแคชอีกเลเยอร์ที่ล้างในเครื่องมือถือไม่ถึง (เช่น CDN edge cache) — เตรียมคำสั่งเปิดแชทใหม่ให้แล้ว แนะนำให้ลอง bump cache-buster (`shared.min.js?v=19→20`, `nav-template.js?v=1→2`) เป็นตัวแรกที่ลอง ก่อนสืบลึกกว่านั้นด้วย Safari Web Inspector ผ่านสาย USB
+
+**สิ่งที่ตรวจแล้ว ไม่ใช่บั๊ก (กันสับสนซ้ำ):** หน้าเกมจริง (มี `#game-switcher`) ซ่อน `#bottom-nav` ถาวรด้วย `!important` ตั้งใจไว้ตั้งแต่ 2026-07-12 — ไม่เกี่ยวกับปัญหานี้ (index.html ไม่มี `#game-switcher`)
+
+**ไฟล์ที่เกี่ยวข้อง:** `js/games/game-content-client.js` (แก้แล้ว) · `js/core/shared.js`/`shared.min.js`, `data/nav-template.js`, `css/shared.css` (`.page-strip`) — รอแชทใหม่ตรวจต่อ
+
 ## 2026-08-09 — Navigation รวม + Search MVP + จัดระเบียบ games.html IA
 
 สถานะ: **✅ push ขึ้นเว็บจริงแล้ว (ยืนยันจาก GitHub Desktop ไม่มีคอมมิตค้าง) — แต่ยังไม่เปิดเว็บจริงตรวจตาหลัง push และ Gemini fallback search ยังไม่ deploy**

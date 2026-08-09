@@ -245,12 +245,12 @@ serve(async (req) => {
       console.error('[account-delete-cron] หาแถวที่ครบกำหนดไม่สำเร็จ', dueErr);
       return json({ ok: false, error: 'query_due_rows_failed', detail: dueErr.message }, 500);
     }
-    if (!dueRows || dueRows.length === 0) {
-      return json({ ok: true, processed: 0, message: 'ไม่มีคำขอที่ครบกำหนดลบในรอบนี้' });
-    }
-
+    // 🆕 2026-08-09 (แก้บั๊กที่เจอตอนทดสอบ failure-path): เดิมโค้ดตรงนี้ return ทันทีถ้าไม่มีบัญชีใหม่ที่
+    //   ครบกำหนดลบ — ทำให้ retry pass ของอีเมลที่เคยพลาด (ด้านล่าง) "ไม่ได้ทำงานเลย" ในรอบที่ไม่มีบัญชีใหม่
+    //   ขัดกับที่ตั้งใจไว้ว่า retry pass เป็นงานอิสระ ไม่ต้องรอมีบัญชีใหม่ — แก้โดยเอา early return ออก
+    //   ปล่อยให้โค้ดไหลผ่านไปถึง retry pass เสมอ (ถ้าไม่มีแถวใหม่ ลูปข้างล่างแค่ไม่ทำอะไร results จะว่าง)
     const results = [];
-    for (const row of dueRows) {
+    for (const row of dueRows || []) {
       // claim แถวนี้ก่อนลงมือ — optimistic: อัปเดตแล้วเช็คว่าเราเป็นคนได้จริง (กัน 2 รอบ cron ชนกัน)
       const { data: claimRows, error: claimErr } = await admin
         .from('account_deletion_requests')
