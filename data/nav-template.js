@@ -36,28 +36,19 @@
     // 1) 遊戲 — เดิมอยู่ใต้ 資源分享 → 遊戲練習室 ยกขึ้นมาเป็นเมนูหลักตรงตามที่ตกลง
     { type: 'link', label: '遊戲', href: '/games.html' },
 
-    // 2) 學習資源 — รวม 程度測驗 + 了解課程 + (資源分享 ตัด 遊戲練習室 ออกเพราะย้ายขึ้นข้อ 1 แล้ว)
+    // 2) 學習資源 — decision อัปเดต 2026-08-09 (รอบ 2): เหลือแค่ 4 รายการ
+    //    ของฝั่งคอร์ส (上課方式/費用方案/常見問題/上課須知) ถอดออกจาก dropdown นี้แล้ว
+    //    ตามที่ Lin สั่ง — ยังเข้าถึงได้ปกติผ่านหน้า pricing.html/faq.html เอง
+    //    (URL เดิมไม่ได้ย้าย แค่ไม่มีลิงก์ตรงจาก dropdown อีกต่อไป)
     {
       type: 'dropdown',
       label: '學習資源',
       groups: [
         {
-          label: '課程資訊',
+          // ไม่มี sub-label เพราะเหลือแค่ 4 รายการ ไม่จำเป็นต้องแบ่งกลุ่มย่อยอีก
           items: [
             { modal: 'modal-quiz', label: '程度測驗' },
             { href: '/index.html#problems', label: '學習困境' },
-            { href: '/pricing.html#how', label: '上課方式' },
-            { href: '/pricing.html#pricing', label: '費用方案' },
-            { href: '/faq.html#faq', label: '常見問題' }
-          ],
-          dividerAfter: true,
-          moreItems: [
-            { href: '/faq.html#rules', label: '上課須知' }
-          ]
-        },
-        {
-          label: '學習素材',
-          items: [
             { href: '/content.html', label: '📚 影片與文章' },
             { href: '/community.html', label: '🇹🇭 泰語學習心聲與提問' }
           ]
