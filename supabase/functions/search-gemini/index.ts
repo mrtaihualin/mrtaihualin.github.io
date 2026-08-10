@@ -325,7 +325,11 @@ const DESTINATIONS = [
 const ALLOWED_DESTINATION_IDS = DESTINATIONS.map(function (d) { return d.id; });
 
 // รุ่นโมเดล — ปรับได้ผ่าน secret GEMINI_MODEL โดยไม่ต้อง deploy โค้ดใหม่ (default ใช้ตัวประหยัด/เร็ว)
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
+// 🔴 2026-08-10: เดิม default เป็น 'gemini-2.0-flash' ซึ่ง Google เลิกใช้ไปแล้ว (deprecated ก.พ. 2026,
+// ปิดจริง 3 มี.ค. 2026) ทำให้โดน 429 ทุกครั้งที่เรียก — เจอจริงตอนทดสอบ Search MVP วันนี้ แก้โดยตั้ง
+// secret GEMINI_MODEL=gemini-3.5-flash-lite ก่อน (ไม่ต้อง deploy) แล้วอัปเดต default ตรงนี้ให้ตรงด้วย
+// กันลืมถ้าวันหลังมีคนลบ secret ทิ้งจะได้ไม่ย้อนกลับไปพังแบบเดิม
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
 // กัน cost บาน — ปรับตัวเลขได้ตรงนี้ที่เดียว (reuse game_content_rl_check เดิม ไม่ต้องสร้าง SQL ใหม่)
 const RATE_LIMIT = {

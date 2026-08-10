@@ -452,12 +452,10 @@
   #bottom-nav .bn-label{font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:0.5px;}
   #bottom-nav .bn-item:hover,.bn-item:active{color:var(--gold);}
   @media(max-width:768px){#bottom-nav{display:flex;}body{padding-bottom:60px;}}
-  /* หน้าเกม (มี #game-switcher) ซ่อนแถบล่างถาวรตามที่ Lin สั่งไว้ตั้งแต่ 2026-07-12
-     ⚠️ ต้องเขียนไว้ที่นี่ (static) ด้วย ไม่ใช่ปล่อยให้ js/core/shared.js ซ่อนอย่างเดียว
-     เพราะตอนนี้ตัวแถบเป็น static HTML แล้ว ถ้ารอ JS มาซ่อน แถบจะโผล่ให้เห็นแวบนึงก่อนทุกครั้ง
-     (กฎใน shared.js ยังคงไว้เหมือนเดิม ไม่ได้ลบ — ทำงานซ้ำกันได้ ไม่มีผลเสีย) */
-  body:has(#game-switcher) #bottom-nav{display:none !important;}
-  @media(max-width:768px){body:has(#game-switcher){padding-bottom:0 !important;}}
+  /* 🔑 2026-08-10 (Lin สั่ง: "ทำทุกหน้าให้เป็น 4 ไปเลย") — หน้าเกมก็มีแถบ 4 ไอคอนเหมือนหน้าอื่นทั้งเว็บ
+     ยกเลิกกฎเดิม 2026-07-12 ที่ซ่อนแถบล่างถาวรบนหน้าเกม (ตอนนั้นแถบล่างยังเป็นชุดเก่า 5-6 ปุ่มข้อความ กินที่เยอะ)
+     แถบชุดใหม่ 4 ไอคอนเล็กกว่า/สะอาดกว่า จึงไม่ต้องซ่อนอีก
+     ⚠️ ที่ยังซ่อนอยู่คือตอน "โหมดเต็มจอ" (body.rg-fake-fullscreen) เท่านั้น — กฎนั้นอยู่ใน js/core/shared.js ห้ามลบ */
 
   /* ═══════════════════════════════════════════
      COLOR HIGHLIGHTS & SUBTLE GRADIENTS
