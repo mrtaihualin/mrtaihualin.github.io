@@ -73,7 +73,7 @@
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=16">
+<link rel="stylesheet" href="css/shared.css?v=17">
 <script src="js/games/word-vault.js"></script><!-- คลังคำ 🔖 -->
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว -->
@@ -214,6 +214,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 </script>
 </head>
 <body>
+<!--ANN-BAND:START--><script>try{if(sessionStorage.getItem('annDismissed')==='1')document.documentElement.classList.add('ann-off');}catch(e){}</script><div class="avail-band" id="ann-band" style="position:relative"><div class="avail-row"><span class="avail-dot"></span><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><button class="avail-cta" onclick="openModal('modal-line-qr')">立即預約</button></div><div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;"><button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button><div style="display:flex;align-items:center;gap:6px;"><span onclick="annGoTo(0)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:var(--gold);transition:background 0.2s;"></span><span onclick="annGoTo(1)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(2)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(3)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(4)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span></div><button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button></div><button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button></div><!--ANN-BAND:END-->
 
 <nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html">遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">關於我</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
 
@@ -332,8 +333,8 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
 
-<script src="data/nav-template.js?v=1"></script>
-<script src="js/core/shared.min.js?v=22"></script>
+<script src="data/nav-template.js?v=2"></script>
+<script src="js/core/shared.min.js?v=23"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>

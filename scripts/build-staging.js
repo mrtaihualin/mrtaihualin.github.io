@@ -24,11 +24,13 @@ const OUT = path.join(ROOT, '_staging-build');
 const EXCLUDE_NAMES = new Set([
   '.git', '.github', '.DS_Store', '_staging-build', '_archive', '_to_delete',
   'CLAUDE.md', 'scripts', 'supabase', 'node_modules', '_แผนงาน',
+  '_dev', '_บทความ-เตรียมเขียน',
 ]);
 
 function shouldExclude(name) {
   if (EXCLUDE_NAMES.has(name)) return true;
   if (name.startsWith('.fuse_hidden')) return true;
+  if (name.startsWith('_staging-build')) return true; // กันโฟลเดอร์ทดสอบเก่า (เช่น _staging-build-verify) หลุดเข้าไปซ้อนในสำเนาใหม่
   return false;
 }
 
@@ -71,7 +73,11 @@ function patchHtmlFiles(dir) {
 
 function main() {
   console.log('🧹 ลบ _staging-build เดิม (ถ้ามี) ...');
-  fs.rmSync(OUT, { recursive: true, force: true });
+  try {
+    fs.rmSync(OUT, { recursive: true, force: true });
+  } catch (err) {
+    console.warn('⚠️  ลบโฟลเดอร์เดิมไม่หมด (' + err.message + ') — จะคัดลอกทับแทน ถ้ามีปัญหาให้ลบ _staging-build/ เองใน Finder ก่อนรันใหม่');
+  }
 
   console.log('📦 กำลังคัดลอกเว็บทั้งหมดไป _staging-build/ ...');
   copyRecursive(ROOT, OUT);

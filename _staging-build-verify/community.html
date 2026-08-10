@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
+  var savedConsent = localStorage.getItem('cookieConsent');
+  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });
+  gtag('config', 'G-DKVQE30982');
+  window.GA_CATEGORY='course';
+</script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+    // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)
+    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>泰語學習心聲與提問 | 泰華眼裡的泰語教學</title>
+<meta name="description" content="分享你的泰語學習心聲、提問，或請求影片主題。泰華老師親自回覆！">
+<link rel="canonical" href="https://mrtaihualin.com/community.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="泰華眼裡的泰語教學">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="泰語學習心聲與提問 — 泰華眼裡的泰語教學">
+<meta property="og:description" content="分享你的泰語學習心聲、提問，或請求影片主題。泰華老師親自回覆！">
+<meta property="og:url" content="https://mrtaihualin.com/community.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="泰語學習心聲與提問 — 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="分享你的泰語學習心聲、提問，或請求影片主題。泰華老師親自回覆！">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/shared.css?v=17">
+<style>
+  /* ── Hero ── */
+  .community-hero {
+    background: var(--ink);
+    padding: 100px 24px 80px;
+    text-align: center;
+  }
+  .community-hero .eyebrow {
+    display: block;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .community-hero h1 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 900;
+    color: var(--off-white);
+    margin: 0 0 20px;
+    line-height: 1.25;
+  }
+  .community-hero .subtitle {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 16px;
+    color: rgba(255,255,255,0.65);
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.8;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Form section ── */
+  .community-form-section {
+    background: var(--off-white);
+    border-top: 3px solid var(--ink);
+    padding: 72px 24px;
+  }
+  .community-form-inner {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .community-form-section .eyebrow {
+    display: block;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .community-form-section h2 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(22px, 3.5vw, 32px);
+    font-weight: 900;
+    color: var(--ink);
+    margin: 0 0 36px;
+    line-height: 1.3;
+  }
+  .cf-field {
+    margin-bottom: 20px;
+  }
+  .cf-label {
+    display: block;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 7px;
+    letter-spacing: 0.5px;
+  }
+  .cf-label .opt {
+    font-weight: 400;
+    color: #888;
+    font-size: 12px;
+    margin-left: 6px;
+  }
+  .cf-input,
+  .cf-select,
+  .cf-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1.5px solid rgba(0,0,0,0.18);
+    border-radius: 6px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .cf-input:focus,
+  .cf-select:focus,
+  .cf-textarea:focus {
+    border-color: var(--gold);
+  }
+  .cf-textarea {
+    resize: vertical;
+    min-height: 130px;
+    line-height: 1.7;
+  }
+  .cf-submit {
+    display: inline-block;
+    background: var(--gold);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 6px;
+    padding: 14px 40px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    margin-top: 8px;
+  }
+  .cf-submit:hover { background: var(--gold-bright); transform: translateY(-1px); }
+  .cf-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .cf-success {
+    display: none;
+    background: rgba(74,154,74,0.10);
+    border: 1.5px solid #4a9a4a;
+    border-radius: 8px;
+    padding: 20px 24px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    color: #2e6e2e;
+    text-align: center;
+    margin-top: 24px;
+    line-height: 1.8;
+  }
+
+  /* ── Featured questions ── */
+  .community-featured {
+    background: var(--ink);
+    padding: 72px 24px;
+  }
+  .community-featured-inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .community-featured .eyebrow {
+    display: block;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .community-featured h2 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(22px, 3.5vw, 32px);
+    font-weight: 900;
+    color: var(--off-white);
+    text-align: center;
+    margin: 0 0 48px;
+  }
+  .featured-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 20px;
+  }
+  .featured-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(200,151,58,0.35);
+    border-radius: 10px;
+    padding: 26px 28px;
+    backdrop-filter: blur(6px);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .featured-card:hover {
+    border-color: rgba(200,151,58,0.7);
+    background: rgba(255,255,255,0.07);
+  }
+  .featured-card-quote {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--off-white);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .featured-card-author {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html">遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">關於我</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<!-- ════════════ BOTTOM PAGE NAV ════════════ -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="pricing.html">課程・費用</a>
+  <a href="faq.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
+<!-- ── Section 1: Hero ── -->
+<section class="community-hero">
+  <span class="eyebrow reveal">學習心聲與提問</span>
+  <h1 class="reveal">說說你的泰語學習故事</h1>
+  <p class="subtitle reveal">分享心聲・提出問題・請求影片主題，老師親自閱讀每一則留言</p>
+</section>
+
+<!-- ── Section 2: Submit Form ── -->
+<section class="community-form-section">
+  <div class="community-form-inner">
+    <span class="eyebrow reveal">留下你的話</span>
+    <h2 class="reveal">什麼都可以說！</h2>
+    <form id="community-form" action="https://api.web3forms.com/submit" method="POST" novalidate>
+      <input type="hidden" name="access_key" value="b3bfdb97-19dd-4910-bd15-89720be846c2">
+      <input type="hidden" name="subject" value="泰語學習心聲與提問">
+      <input type="hidden" name="from_name" value="泰華眼裡的泰語教學">
+
+      <div class="cf-field reveal">
+        <label class="cf-label" for="cf-name">你的名字</label>
+        <input class="cf-input" id="cf-name" name="name" type="text" placeholder="隨意填，暱稱也可以">
+      </div>
+
+      <div class="cf-field reveal">
+        <label class="cf-label" for="cf-email">電子信箱 <span class="opt">選填</span></label>
+        <input class="cf-input" id="cf-email" name="email" type="email" placeholder="選填，若想收到老師回覆請填寫">
+      </div>
+
+      <div class="cf-field reveal">
+        <label class="cf-label" for="cf-type">類型</label>
+        <select class="cf-select" id="cf-type" name="type">
+          <option value="學習心聲">學習心聲</option>
+          <option value="提問">提問</option>
+          <option value="請求影片主題">請求影片主題</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+
+      <div class="cf-field reveal">
+        <label class="cf-label" for="cf-message">內容 <span class="opt" style="color:#c0392b;">必填</span></label>
+        <textarea class="cf-textarea" id="cf-message" name="message" required placeholder="什麼都可以說！學泰語的困難、有趣的發現、想學的主題……"></textarea>
+      </div>
+
+      <div class="reveal">
+        <button class="cf-submit" id="cf-submit" type="submit">送出留言</button>
+      </div>
+    </form>
+    <div class="cf-success" id="cf-success">
+      ✅ 已收到你的留言，謝謝你！<br>
+      老師會親自閱讀每一則，若你有留信箱，會盡快回覆你。
+    </div>
+  </div>
+</section>
+
+<!-- ── Section 3: Featured Questions ── -->
+<section class="community-featured">
+  <div class="community-featured-inner">
+    <span class="eyebrow reveal">精選留言</span>
+    <h2 class="reveal">大家都在問</h2>
+    <div class="featured-grid">
+      <div class="featured-card reveal">
+        <div class="featured-card-quote">「泰語的聲調好難，有什麼記憶技巧嗎？」</div>
+        <div class="featured-card-author">— 台灣學員</div>
+      </div>
+      <div class="featured-card reveal">
+        <div class="featured-card-quote">「想去泰國自助旅行，最基本要學什麼？」</div>
+        <div class="featured-card-author">— 台中學員</div>
+      </div>
+      <div class="featured-card reveal">
+        <div class="featured-card-quote">「泰劇裡的字幕跟真正說的差很多，為什麼？」</div>
+        <div class="featured-card-author">— 高雄學員</div>
+      </div>
+      <div class="featured-card reveal">
+        <div class="featured-card-quote">「老師，可以出一集專門教泰語數字的影片嗎？」</div>
+        <div class="featured-card-author">— 新竹學員</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div style="height:44px;background:var(--ink);"></div>
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script>
+(function(){
+  var form = document.getElementById('community-form');
+  var btn  = document.getElementById('cf-submit');
+  var success = document.getElementById('cf-success');
+  if (!form) return;
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var msg = document.getElementById('cf-message');
+    if (!msg || !msg.value.trim()) {
+      msg && msg.focus();
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = '傳送中…';
+    var data = new FormData(form);
+    fetch('https://api.web3forms.com/submit', { method: 'POST', body: data })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res.success) {
+          form.style.display = 'none';
+          success.style.display = 'block';
+          if (typeof gtag === 'function') {
+            gtag('event','community_form_submit',{category:'course',type: document.getElementById('cf-type') ? document.getElementById('cf-type').value : ''});
+          }
+        } else {
+          btn.disabled = false;
+          btn.textContent = '送出留言';
+          alert('送出失敗，請稍後再試。');
+        }
+      })
+      .catch(function(){
+        btn.disabled = false;
+        btn.textContent = '送出留言';
+        alert('網路錯誤，請確認後再試。');
+      });
+  });
+})();
+</script>
+
+<script src="data/nav-template.js?v=2"></script>
+<script src="js/core/shared.min.js?v=23"></script>
+<script>
+(function(){
+  var els = document.querySelectorAll('.reveal');
+  if (!els.length) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (en.isIntersecting) { en.target.classList.add('visible'); obs.unobserve(en.target); }
+    });
+  }, {threshold: 0.12});
+  els.forEach(function(el){ obs.observe(el); });
+})();
+</script>
+
+<!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+  background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
+  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
+  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
+    <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="window.__cookieConsentDecide(false)"
+        style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
+        拒絕
+      </button>
+      <button onclick="window.__cookieConsentDecide(true)"
+        style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
+        接受
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  window.__cookieConsentDecide = function(granted) {
+    localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    }
+    if (typeof window.clarity === 'function') {
+      window.clarity('consent', granted);
+    }
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'none';
+  };
+  // เปิด banner ขึ้นมาใหม่ได้ทุกเมื่อ (ใช้จากลิงก์ "Cookie 設定" ใน privacy.html)
+  window.__reopenCookieConsent = function() {
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'block';
+  };
+  if (!localStorage.getItem('cookieConsent')) {
+    var __b0 = document.getElementById('cookieConsentBanner');
+    if (__b0) __b0.style.display = 'block';
+  }
+</script>
+
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">我的</span></a></nav>
+</body>
+</html>

@@ -51,16 +51,11 @@ window.GamePanels = window.GamePanels || (function () {
 //   เพิ่ม/แก้/ลบประกาศได้ที่ array ด้านล่างนี้ที่เดียว มีผลทุกหน้า
 //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล
 // ===================================================================
-var ANN = [
-  { emoji:'🎁', text:'首堂 30 分鐘體驗課免費・中文授課', cta:'立即預約', modal:'modal-line-qr' },
-  { emoji:'🎮', text:'5 款免費泰語遊戲上線！聲調・拼讀・打字・造句・語序，每款都有排行榜可以比賽', cta:'前往遊戲', href:'games.html' },
-  { emoji:'🎵', text:'用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta:'去聽歌學泰語', href:'resources.html#songs' },
-  { emoji:'📖', text:'免費泰語學習文章上線！生活情境單字、聲調技巧，隨看隨學', cta:'去讀文章', href:'blog.html#sharing' },
-  { emoji:'📺', text:'YouTube 播放清單整理好了！依主題分類，找教學影片更方便', cta:'去看播放清單', href:'resources.html#playlists' }
-  // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習室」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
-  // LIN 2026-07-03: ลบสไลด์ "造句練習室即將推出" ออกแล้ว (เกมเลโก้ออกจริงแล้ว ไม่ใช่ coming-soon อีกต่อไป)
-  // LIN 2026-07-03 (รอบ 4): เพิ่ม 3 สไลด์ประกาศ — เพลง/บทความ/เพลลิสต์ยูทูป ตามที่ Lin สั่ง
-];
+// 🔴 2026-08-10 (Lin อนุมัติ): ข้อความประกาศย้ายไปอยู่ที่ data/nav-template.js แล้ว (single source เดียวกับเมนู)
+//    เพื่อให้ scripts/generate-nav.js เขียนแถบนี้ลง HTML ทุกหน้าเป็น static ได้ ไม่ต้องรอ JS
+//    ✏️ แก้ข้อความประกาศที่ data/nav-template.js เท่านั้น แล้วรัน `node scripts/generate-nav.js`
+//    ตรงนี้เหลือแค่ "อ่านค่ามาใช้" — หน้าไหนไม่ได้โหลด nav-template.js จะได้ array ว่าง (ไม่มีแถบ ไม่พัง)
+var ANN = (window.NAV_TEMPLATE && window.NAV_TEMPLATE.ANN) || [];
 
 // ===================================================================
 // [02.2] 🧭 SHARED NAV — edit here to update navigation on ALL pages
@@ -109,38 +104,30 @@ window.goHome = function() {
     }catch(e){}
   })();
 
-  // 📢 แถบประกาศหมุนเวียน — ฉีดเข้าทุกหน้า (แก้ข้อความที่ตัวแปร ANN ด้านบนสุด)
+  // 📢 แถบประกาศหมุนเวียน — ✏️ แก้ข้อความที่ data/nav-template.js (ตัวแปร ANN) แล้วรัน scripts/generate-nav.js
+  //
+  // 🔴 2026-08-10 (Lin อนุมัติ) — เปลี่ยนเป็น "static HTML มาก่อน JS เป็นแค่ตัวหมุนสไลด์":
+  //    เดิม JS สร้าง <div class="avail-band"> แล้ว insertBefore เข้าเป็นลูกตัวแรกของ body
+  //    → พอ shared.min.js (~115KB) โหลดเสร็จ เนื้อหาทั้งหน้าถูกดันลงมาทีเดียว
+  //    = ตาเห็นเป็น "หน้ากระพริบ/โหลด 2 รอบ" ทุกครั้งที่เปลี่ยนหน้าบนมือถือ (Lin เจอจริง 2026-08-10)
+  //    ตอนนี้ generate-nav.js เขียนแถบนี้ลง HTML ทุกหน้าแล้ว (พร้อมสไลด์แรก) → ไม่มีการขยับ layout อีก
+  //    ตรงนี้เหลือหน้าที่แค่ "หมุนสไลด์ + ปุ่มลูกศร + ปุ่มปิด" เท่านั้น
   if (typeof ANN !== 'undefined' && ANN.length && sessionStorage.getItem('annDismissed') !== '1') {
     var annIdx = 0, annTimer;
-    var band = document.createElement('div');
-    band.className = 'avail-band';
-    band.id = 'ann-band';
-    band.style.position = 'relative';
+    // ถ้ามีแถบ static จาก HTML อยู่แล้ว → ใช้ตัวนั้นเลย ห้ามสร้างใหม่/ห้ามแทรกซ้ำ
+    var band = document.getElementById('ann-band');
+    var bandIsStatic = !!band;
+    if (!band) {
+      // ทางสำรอง: หน้าที่ยังไม่ได้ผ่าน generate-nav.js (เช่นหน้าใหม่ที่เพิ่งสร้าง) — พฤติกรรมเดิมทุกอย่าง
+      band = document.createElement('div');
+      band.className = 'avail-band';
+      band.id = 'ann-band';
+      band.style.position = 'relative';
+    }
 
     function annRender(i) {
-      var a = ANN[i];
-      var cta = '';
-      if (a.modal) {
-        cta = '<button class="avail-cta" onclick="openModal(\'' + a.modal + '\')">' + a.cta + '</button>';
-      } else if (a.href) {
-        var tgt = a.href.indexOf('http') === 0 ? ' target="_blank" rel="noopener"' : '';
-        cta = '<a class="avail-cta" href="' + a.href + '"' + tgt + '>' + a.cta + '</a>';
-      }
-      var dots = ANN.map(function(_, j) {
-        return '<span onclick="annGoTo(' + j + ')" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:' + (j === i ? 'var(--gold)' : 'rgba(139,99,16,0.30)') + ';transition:background 0.2s;"></span>';
-      }).join('');
-      band.innerHTML =
-        '<div class="avail-row">' +
-          '<span class="avail-dot"></span>' +
-          '<span class="avail-text">' + a.emoji + ' ' + a.text + '</span>' +
-          cta +
-        '</div>' +
-        (ANN.length > 1 ? '<div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;">' +
-            '<button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button>' +
-            '<div style="display:flex;align-items:center;gap:6px;">' + dots + '</div>' +
-            '<button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button>' +
-          '</div>' : '') +
-        '<button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button>';
+      // ใช้ตัว render ตัวเดียวกับที่ generate-nav.js ใช้ตอนเขียน HTML → ผลลัพธ์ตรงกันเป๊ะ ไม่มีกระตุกตอนสไลด์เปลี่ยน
+      band.innerHTML = window.NAV_TEMPLATE.renderAnnRowHTML(i);
     }
 
     function annStart() {
@@ -154,8 +141,11 @@ window.goHome = function() {
     window.annNext = function() { annIdx = (annIdx + 1) % ANN.length; annRender(annIdx); annStart(); };
     window.annDismiss = function() { try { sessionStorage.setItem('annDismissed', '1'); } catch(e){} band.remove(); };
 
-    annRender(0);
-    document.body.insertBefore(band, document.body.firstChild);
+    // แถบ static มีสไลด์แรกวาดไว้แล้ว — ไม่ต้อง render ซ้ำ (กันการเขียนทับ DOM โดยไม่จำเป็น)
+    if (!bandIsStatic) {
+      annRender(0);
+      document.body.insertBefore(band, document.body.firstChild);
+    }
     annStart();
   }
 

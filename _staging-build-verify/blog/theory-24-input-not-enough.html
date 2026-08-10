@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
+  var savedConsent = localStorage.getItem('cookieConsent');
+  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });
+  gtag('config', 'G-DKVQE30982');
+  window.GA_CATEGORY='article';
+</script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+    // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)
+    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>泰劇看了一整天，泰語還是講不出口？「只有輸入」為什麼永遠不夠 | 泰華眼裡的泰語教學</title>
+<meta name="description" content="每天追泰劇、聽泰語 Podcast，理解力愈來愈好，開口卻還是卡住？語言學裡的輸入假說跟輸出假說，說明為什麼只吸收不產出，永遠練不出開口的能力。">
+<link rel="canonical" href="https://mrtaihualin.com/blog/theory-24-input-not-enough.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="泰華眼裡的泰語教學">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="泰劇看了一整天，泰語還是講不出口？「只有輸入」為什麼永遠不夠">
+<meta property="og:description" content="理解力進步不代表開口能力進步。輸入假說跟輸出假說，說明兩者為什麼是不同的能力。">
+<meta property="og:url" content="https://mrtaihualin.com/blog/theory-24-input-not-enough.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="泰劇看了一整天，泰語還是講不出口？「只有輸入」為什麼永遠不夠">
+<meta name="twitter:description" content="理解力進步不代表開口能力進步。輸入假說跟輸出假說，說明兩者為什麼是不同的能力。">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/shared.css?v=17">
+<style>
+  .blog-wrap{max-width:760px;margin:0 auto;padding:40px 22px 64px;font-family:'Noto Sans TC',sans-serif;color:#2d2a22;line-height:1.85;}
+  .blog-wrap h1{font-family:'Noto Serif TC',serif;font-size:clamp(26px,5vw,40px);font-weight:900;line-height:1.3;margin:0 0 10px;color:#2d2a22;}
+  .blog-lead{font-size:17px;color:#5c5648;margin-bottom:28px;}
+  .blog-wrap h2{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:#8B6310;margin:34px 0 12px;}
+  .blog-wrap p{margin:0 0 14px;font-size:16.5px;}
+  .blog-wrap ul,.blog-wrap ol{margin:0 0 14px;padding-left:22px;}
+  .blog-wrap li{margin-bottom:7px;}
+  .blog-wrap strong{color:#8B6310;}
+  .tone-th{font-family:'Sarabun',sans-serif;font-weight:700;color:#C8973A;}
+  .blog-table{width:100%;border-collapse:collapse;margin:14px 0 18px;font-size:15.5px;border:1px solid #e0d2a8;border-radius:10px;overflow:hidden;}
+  .blog-table th{background:#C8973A;color:#fff;padding:10px 12px;text-align:left;font-size:14px;}
+  .blog-table td{padding:10px 12px;border-top:1px solid #eee3c8;vertical-align:top;}
+  .blog-cta{background:linear-gradient(135deg,#fff6e9,#ffe9d6);border:1.5px solid #f0c89a;border-radius:16px;padding:22px;margin:34px 0 10px;text-align:center;}
+  .blog-cta .t{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:900;color:#5a3e10;margin-bottom:6px;}
+  .blog-cta .s{font-size:14px;color:#a06a30;margin-bottom:14px;}
+  .blog-btn{display:inline-block;background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:11px 22px;border-radius:999px;margin:4px;cursor:pointer;border:none;}
+  .blog-btn.alt{background:#f0e8d8;color:#8b6310;}
+  .related-articles{margin:34px 0 8px;padding-top:22px;border-top:1px solid #eee3c8;}
+  .related-articles .ra-title{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:900;color:#8B6310;margin-bottom:12px;}
+  .related-articles .ra-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;}
+  .related-articles .ra-list li a{color:#5a3e10;font-size:14.5px;line-height:1.6;text-decoration:none;border-bottom:1px dashed rgba(139,99,16,0.35);padding-bottom:2px;transition:color .15s,border-color .15s;}
+  .related-articles .ra-list li a:hover{color:#C8973A;border-color:#C8973A;}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "泰劇看了一整天，泰語還是講不出口？「只有輸入」為什麼永遠不夠",
+  "description": "每天追泰劇、聽泰語 Podcast，理解力愈來愈好，開口卻還是卡住？語言學裡的輸入假說跟輸出假說，說明為什麼只吸收不產出，永遠練不出開口的能力。",
+  "inLanguage": "zh-TW",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://mrtaihualin.com/blog/theory-24-input-not-enough.html"
+  },
+  "image": "https://mrtaihualin.com/assets/share-card.png",
+  "datePublished": "2026-08-01",
+  "dateModified": "2026-08-01",
+  "author": {
+    "@type": "Person",
+    "name": "泰華 Mr. Tai Hua",
+    "url": "https://mrtaihualin.com/index.html#teacher"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "泰華眼裡的泰語教學",
+    "url": "https://mrtaihualin.com/"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://mrtaihualin.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "部落格",
+      "item": "https://mrtaihualin.com/blog.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "泰劇看了一整天，泰語還是講不出口？「只有輸入」為什麼永遠不夠",
+      "item": "https://mrtaihualin.com/blog/theory-24-input-not-enough.html"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html">遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">關於我</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<main class="blog-wrap">
+  <h1>泰劇看了一整天，泰語還是講不出口？「只有輸入」為什麼永遠不夠</h1>
+  <p class="blog-lead">每天下班追一集泰劇，通勤時間聽泰語 Podcast，這樣持續幾個月之後，聽力理解確實進步了不少——聽泰國人講話愈來愈能抓到大意。可是真的要自己開口講一句完整的話，卻還是卡住，好像進步的只有耳朵，嘴巴完全沒有跟上。這個落差不是錯覺，語言學裡有明確的解釋。</p>
+
+  <h2>Krashen 的輸入假說，只講對了一半</h2>
+  <p>語言學家 Krashen 的<strong>可理解輸入假說（comprehensible input hypothesis）</strong>影響很大，主張大量接觸「聽得懂七八成」的內容，語言能力自然會成長。這個理論很吸引人，因為它意味著只要多聽多看就好，不需要痛苦地練習開口。但後續研究，尤其是同樣重要的<strong>輸出假說（output hypothesis）</strong>，指出這個理論漏掉了關鍵的一塊。</p>
+  <p>語言學家 Swain 的輸出假說指出：<strong>輸入只能讓你知道「聽起來對不對」，只有輸出才會逼你發現「自己講不出來的地方」</strong>。聽泰劇的時候，你的大腦在做的是辨識、比對、理解——這些是被動歷程，你不需要自己組出一句話，也不需要自己選字、排語序、決定聲調。而開口說話，需要的是主動生成，是完全不同的認知歷程。輸入練得再多，練的都是被動歷程，跟開口需要的主動生成能力，根本不是同一條肌肉。</p>
+
+  <h2>為什麼「聽得懂」的錯覺特別容易騙到自己</h2>
+  <p>聽力進步的感覺很真實，也很容易被誤認成「整體泰語進步了」，因為理解力提升確實會讓你更有自信、更享受追劇的過程。但理解跟產出使用的是不同的能力系統，這也是為什麼很多學生聽力測驗成績很好，開口卻還在第一階段——他們把大量時間投資在了其中一種能力，卻誤以為那筆投資會自動轉移到另一種能力上。</p>
+
+  <h2>輸入還要不要做？當然要，但不能只做這個</h2>
+  <ul>
+    <li><strong>輸入是必要條件，不是充分條件</strong>：沒有足夠輸入，你連該講什麼、該怎麼講都不知道。但輸入到位之後，還需要專門的產出練習，這一步不會自動發生。</li>
+    <li><strong>刻意安排「輸出時段」</strong>：追劇歸追劇，另外留時間做「自己組句、自己講出來」的練習，兩者不能互相取代。</li>
+    <li><strong>輸出之後最好有回饋</strong>：光是自己講不太夠，因為自己聽不太出來哪裡卡住；有人指出具體問題，輸出練習的效果會快很多。</li>
+    <li><strong>把追劇當成「輸入的素材來源」，而不是「練口說的方法」</strong>：追劇是很好的輸入，但它不是輸出練習，這兩件事要分開安排時間。</li>
+  </ul>
+  <p>聽跟講是兩種能力，一種靠輸入養大，一種靠輸出練出來。只投資其中一種，另一種永遠不會自己長出來。</p>
+
+  <div class="blog-cta">
+    <div class="t">想補上「輸出」這一塊，不只是輸入？</div>
+    <div class="s">樂高造句練習室專練自己組句、自己講出來的輸出能力，開放免費體驗；30 分鐘免費體驗課由老師用中文一對一，當場給你輸出時最缺的具體回饋。</div>
+    <a class="blog-btn" href="../lego.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'course',target:'lego',from:'blog_theory_24'})">玩樂高造句練習室 🧱</a>
+    <a class="blog-btn alt" href="../games.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'course',target:'games',from:'blog_theory_24'})">看全部遊戲</a>
+    <button class="blog-btn alt" onclick="if(window.openModal)openModal('modal-line-qr')">預約免費體驗課</button>
+  </div>
+
+  <div class="related-articles">
+    <div class="ra-title">相關文章</div>
+    <ul class="ra-list">
+      <li><a href="theory-13-receptive-vs-productive.html">單字量明明很大，講話卻常常詞窮？「認得出」跟「叫得出來」是兩種不同的字彙量</a></li>
+      <li><a href="theory-17-immediate-feedback.html">練錯了自己不會發現——為什麼「立刻被糾正」是學泰語進步最快的方法</a></li>
+      <li><a href="theory-01-memorize-vs-use.html">泰語單字背了幾百個，為什麼還是講不出來？「記得住」跟「用得出來」是兩種記憶</a></li>
+      <li><a href="../blog.html">查看全部文章 →</a></li>
+    </ul>
+  </div>
+</main>
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="../terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="../data/nav-template.js?v=2"></script>
+<script src="../js/core/shared.min.js?v=23"></script>
+
+<!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+  background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
+  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
+  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
+    <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="window.__cookieConsentDecide(false)"
+        style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
+        拒絕
+      </button>
+      <button onclick="window.__cookieConsentDecide(true)"
+        style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
+        接受
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  window.__cookieConsentDecide = function(granted) {
+    localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    }
+    if (typeof window.clarity === 'function') {
+      window.clarity('consent', granted);
+    }
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'none';
+  };
+  // เปิด banner ขึ้นมาใหม่ได้ทุกเมื่อ (ใช้จากลิงก์ "Cookie 設定" ใน privacy.html)
+  window.__reopenCookieConsent = function() {
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'block';
+  };
+  if (!localStorage.getItem('cookieConsent')) {
+    var __b0 = document.getElementById('cookieConsentBanner');
+    if (__b0) __b0.style.display = 'block';
+  }
+</script>
+
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">我的</span></a></nav>
+</body>
+</html>

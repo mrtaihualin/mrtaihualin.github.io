@@ -1,0 +1,2432 @@
+// ===================================================================
+// 🗂️ FILE MAP — เรียงตามลำดับการรัน (do not reorder without regression tests)
+//
+//   01. Browser mode + shared panel registry
+//   02. Announcement, navigation, and shared modal markup
+//   03. Shared UI helpers, forms, leads, and content modals
+//   04. Exit survey + analytics tracking
+//   05. Game-only fullscreen and word controls
+//   06. Game feedback/rewards, stats, and fallback word menu
+//
+// ไฟล์นี้เปิดเผย global หลายตัวบน window และบาง block รันทันทีตามลำดับที่โหลด
+// การจัดหมวดหมู่จึงใช้หัวข้อแทนการย้ายโค้ด เพื่อคงพฤติกรรมเดิม
+// ===================================================================
+
+// ===================================================================
+// [01.1] ⚡ LITE BROWSER MODE — in-app browser (LINE / FB / IG)
+//   ตรวจจาก User-Agent → ใส่ class "lite" ที่ <html>
+//   CSS จะปิด backdrop-filter + หยุด animation วิ่งวน "เฉพาะตอน lite" เท่านั้น
+//   → Safari / Chrome / desktop ยังได้เอฟเฟกต์ครบเหมือนเดิม
+// ===================================================================
+(function(){
+  try{
+    var ua = navigator.userAgent || '';
+    var inApp = /\bLine\//i.test(ua) ||          // LINE
+                /FBAN|FBAV|FB_IAB/i.test(ua) ||  // Facebook / Messenger
+                /Instagram/i.test(ua);           // Instagram
+    if(inApp) document.documentElement.classList.add('lite');
+  }catch(e){}
+})();
+
+// ===================================================================
+// [01.2] 📦 GAME PANEL REGISTRY — ให้ popup ทุกชนิดในหน้าเกม "รู้จักกัน"
+//   Lin 2026-07-24: เจอปัญหาเปิดพร้อมกันได้ 2 กล่อง (เช่น 🍚 เมนูคำศัพท์ + 🎮 เมนูเกม) ทับกันบนจอ
+//   → กติกาใหม่: ก่อนกล่องไหนจะเปิด ต้องเรียก closeOthers(ตัวเอง) ก่อนเสมอ → กล่องอื่นที่เปิดอยู่จะถูกปิดหมด เหลือเปิดได้ทีละกล่อง
+//   ใช้ pattern "window.GamePanels = window.GamePanels || ..." กันปัญหาลำดับโหลดไฟล์ (shared.js/word-menu.js ใครโหลดก่อนก็สร้างอันเดียวกันได้)
+window.GamePanels = window.GamePanels || (function () {
+  var list = [];
+  return {
+    // panel = { isOpen: function(){return bool}, close: function(){} }
+    add: function (panel) { list.push(panel); },
+    closeOthers: function (except) {
+      list.forEach(function (p) {
+        if (p !== except && p.isOpen()) p.close();
+      });
+    }
+  };
+})();
+
+// ===================================================================
+// [02.1] 📢 ROTATING ANNOUNCEMENT — โชว์ทุกหน้า, หมุนทุก 6 วิ
+//   เพิ่ม/แก้/ลบประกาศได้ที่ array ด้านล่างนี้ที่เดียว มีผลทุกหน้า
+//   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล
+// ===================================================================
+var ANN = [
+  { emoji:'🎁', text:'首堂 30 分鐘體驗課免費・中文授課', cta:'立即預約', modal:'modal-line-qr' },
+  { emoji:'🎮', text:'5 款免費泰語遊戲上線！聲調・拼讀・打字・造句・語序，每款都有排行榜可以比賽', cta:'前往遊戲', href:'games.html' },
+  { emoji:'🎵', text:'用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta:'去聽歌學泰語', href:'resources.html#songs' },
+  { emoji:'📖', text:'免費泰語學習文章上線！生活情境單字、聲調技巧，隨看隨學', cta:'去讀文章', href:'blog.html#sharing' },
+  { emoji:'📺', text:'YouTube 播放清單整理好了！依主題分類，找教學影片更方便', cta:'去看播放清單', href:'resources.html#playlists' }
+  // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習室」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
+  // LIN 2026-07-03: ลบสไลด์ "造句練習室即將推出" ออกแล้ว (เกมเลโก้ออกจริงแล้ว ไม่ใช่ coming-soon อีกต่อไป)
+  // LIN 2026-07-03 (รอบ 4): เพิ่ม 3 สไลด์ประกาศ — เพลง/บทความ/เพลลิสต์ยูทูป ตามที่ Lin สั่ง
+];
+
+// ===================================================================
+// [02.2] 🧭 SHARED NAV — edit here to update navigation on ALL pages
+// ===================================================================
+window.goHome = function() {
+  var p = window.location.pathname;
+  if (p.endsWith('index.html') || p === '/' || p.endsWith('/')) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    window.location.href = '/index.html';
+  }
+};
+
+(function injectNav() {
+  var navEls = document.querySelectorAll('nav.site-nav');
+  if (!navEls.length) return;
+
+  // 2026-08-09: เมนูย้ายมาเป็น single source ที่ data/nav-template.js แล้ว
+  // (window.NAV_TEMPLATE) — ไฟล์นี้แค่เรียกใช้ ไม่ hardcode markup ซ้ำอีกต่อไป
+  // ถ้าหน้าไหนลืมใส่ <script src="data/nav-template.js"> จะ fallback เป็นไม่เติมอะไร
+  // (ปลอดภัยกว่าใช้เมนูเก่าที่อาจไม่ตรง data ปัจจุบัน) — เห็น warning ใน console ชัดเจน
+  var H = '';
+  if (window.NAV_TEMPLATE && typeof window.NAV_TEMPLATE.renderNavHTML === 'function') {
+    H = window.NAV_TEMPLATE.renderNavHTML(window.location.pathname);
+  } else {
+    console.warn('[shared.js] NAV_TEMPLATE ไม่ถูกโหลด — เพิ่ม <script src="data/nav-template.js"> ก่อน shared.min.js ในหน้านี้');
+  }
+
+  // 2026-07-24 (SEO/GEO audit): เมนูตอนนี้ hard-code ไว้ในไฟล์ HTML แต่ละหน้าแล้ว (ให้ crawler เห็นลิงก์แบบ static ได้เลย)
+  // ตรงนี้แค่ "เติมให้" เฉพาะหน้าที่ยังไม่มี (เช่นหน้าที่สร้างใหม่ในอนาคตแล้วลืมใส่) กันเผื่อ ไม่ overwrite ของที่มีอยู่แล้ว
+  if (H) navEls.forEach(function(el) { if (!el.innerHTML || !el.innerHTML.trim()) el.innerHTML = H; });
+
+  // ไฮไลต์ลิงก์ในเมนูที่ตรงกับหน้าปัจจุบัน (ไม่ว่าเมนูจะมาจาก static HTML หรือเติมด้วย JS ข้างบน)
+  (function setActiveNav(){
+    try{
+      var path = window.location.pathname;
+      var gamePages = ['/tone-finder.html','/reading-game.html','/typing-game.html','/word-order.html','/lego.html','/games.html'];
+      document.querySelectorAll('nav.site-nav a[href]').forEach(function(a){
+        var href = a.getAttribute('href');
+        if(!href || href.indexOf('javascript:') === 0) return;
+        var hrefPath = href.split('#')[0];
+        if(!hrefPath) return;
+        var isActive = (hrefPath === path) || (hrefPath === '/games.html' && gamePages.indexOf(path) !== -1);
+        if(isActive) a.classList.add('nav-current');
+      });
+    }catch(e){}
+  })();
+
+  // 📢 แถบประกาศหมุนเวียน — ฉีดเข้าทุกหน้า (แก้ข้อความที่ตัวแปร ANN ด้านบนสุด)
+  if (typeof ANN !== 'undefined' && ANN.length && sessionStorage.getItem('annDismissed') !== '1') {
+    var annIdx = 0, annTimer;
+    var band = document.createElement('div');
+    band.className = 'avail-band';
+    band.id = 'ann-band';
+    band.style.position = 'relative';
+
+    function annRender(i) {
+      var a = ANN[i];
+      var cta = '';
+      if (a.modal) {
+        cta = '<button class="avail-cta" onclick="openModal(\'' + a.modal + '\')">' + a.cta + '</button>';
+      } else if (a.href) {
+        var tgt = a.href.indexOf('http') === 0 ? ' target="_blank" rel="noopener"' : '';
+        cta = '<a class="avail-cta" href="' + a.href + '"' + tgt + '>' + a.cta + '</a>';
+      }
+      var dots = ANN.map(function(_, j) {
+        return '<span onclick="annGoTo(' + j + ')" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:' + (j === i ? 'var(--gold)' : 'rgba(139,99,16,0.30)') + ';transition:background 0.2s;"></span>';
+      }).join('');
+      band.innerHTML =
+        '<div class="avail-row">' +
+          '<span class="avail-dot"></span>' +
+          '<span class="avail-text">' + a.emoji + ' ' + a.text + '</span>' +
+          cta +
+        '</div>' +
+        (ANN.length > 1 ? '<div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;">' +
+            '<button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button>' +
+            '<div style="display:flex;align-items:center;gap:6px;">' + dots + '</div>' +
+            '<button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button>' +
+          '</div>' : '') +
+        '<button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button>';
+    }
+
+    function annStart() {
+      if (ANN.length < 2) return;
+      clearInterval(annTimer);
+      annTimer = setInterval(function() { annIdx = (annIdx + 1) % ANN.length; annRender(annIdx); }, 4000);
+    }
+
+    window.annGoTo = function(i) { annIdx = i; annRender(i); annStart(); };
+    window.annPrev = function() { annIdx = (annIdx - 1 + ANN.length) % ANN.length; annRender(annIdx); annStart(); };
+    window.annNext = function() { annIdx = (annIdx + 1) % ANN.length; annRender(annIdx); annStart(); };
+    window.annDismiss = function() { try { sessionStorage.setItem('annDismissed', '1'); } catch(e){} band.remove(); };
+
+    annRender(0);
+    document.body.insertBefore(band, document.body.firstChild);
+    annStart();
+  }
+
+  // Bottom nav bar (mobile only) — ดึงจาก data/nav-template.js single source เหมือนกัน (2026-08-09)
+  //
+  // 🔴 2026-08-10 (Lin อนุมัติ) — เปลี่ยนเป็น "static HTML มาก่อน JS เป็นแค่ตัวสำรอง":
+  //    ตอนนี้ scripts/generate-nav.js เขียน <nav id="bottom-nav">...</nav> ลงไฟล์ .html ทุกหน้าแล้ว
+  //    (แนวทางเดียวกับเมนูบนสุด <nav class="site-nav"> ตาม decision 2026-07-24 เรื่อง SEO/GEO)
+  //    และย้ายกฎ CSS ทั้งชุดไปไว้ที่ css/shared.css ด้วย
+  //    → แถบมาพร้อมหน้าตั้งแต่วินาทีแรก ไม่ต้องรอ shared.min.js (~115KB) โหลดเสร็จอีกต่อไป
+  //    แก้อาการที่ Lin เจอจริง: กด 遊戲/首頁 แล้วหน้าใหม่ "กระพริบ/เหมือนโหลด 2 รอบ"
+  //    (เพราะเดิมแถบถูกยัดเข้า DOM ทีหลัง = layout ขยับ 1 ครั้งเสมอทุกครั้งที่เปลี่ยนหน้า)
+  //
+  // ถ้าหน้านั้นมี <nav id="bottom-nav"> จาก HTML อยู่แล้ว = ไม่ต้องทำอะไรเลย (ห้ามสร้างซ้ำ ห้ามใส่ CSS ซ้ำ)
+  if (document.getElementById('bottom-nav')) return;
+  // ── ต่อจากนี้เป็นทาง "สำรอง" เท่านั้น: ใช้กับหน้าที่ยังไม่ได้ผ่าน generate-nav.js (เช่นหน้าใหม่ที่เพิ่งสร้าง) ──
+  //
+  // 🔒 ด่านกัน "แถบเปล่า" (เพิ่ม 2026-08-10 — เจอจริงในหน้า blog/ 44 หน้า):
+  //    ของเดิมถ้าหน้านั้นลืมโหลด data/nav-template.js จะยังสร้าง <nav id="bottom-nav"> เปล่าๆ
+  //    ต่อท้าย body + CSS ยังดัน body{padding-bottom:60px} บนมือถืออยู่
+  //    = ได้ช่องว่างท้ายหน้า 60px โดยไม่มีปุ่มสักปุ่ม และเงียบสนิทไม่มีใครรู้
+  //    ตอนนี้: ไม่มี template = ไม่สร้างแถบ ไม่ใส่ CSS เลย + เตือนดังๆ ใน console (ห้ามเงียบ)
+  if (!window.NAV_TEMPLATE || typeof window.NAV_TEMPLATE.renderBottomNavHTML !== 'function') {
+    try { console.warn('[bottom-nav] หน้านี้ไม่ได้โหลด data/nav-template.js → ข้ามการสร้างแถบเมนูล่างมือถือ'); } catch (e) {}
+    return;
+  }
+  var bottomBar = document.createElement('nav');
+  bottomBar.id = 'bottom-nav';
+  bottomBar.innerHTML = window.NAV_TEMPLATE.renderBottomNavHTML();
+  document.body.appendChild(bottomBar);
+
+  var bnStyle = document.createElement('style');
+  bnStyle.textContent = [
+    // 🔴 2026-08-10 (บั๊กจริง เจอจากทดสอบเครื่อง Lin ตรง): css/shared.css มี selector `nav{top:0;...}` (เผื่อไว้ให้ .site-nav)
+    //    แต่เขียนเป็น `nav` เฉยๆ ไม่ใช่ `.site-nav` เลยจับกับ <nav id="bottom-nav"> ที่นี่ด้วย (เป็นแท็ก <nav> เหมือนกัน)
+    //    #bottom-nav ไม่เคยเขียน `top` เอง → top:0 จากกฎเดิมหลุดมาทับ ผสมกับ bottom:0+height:60px = over-constrained
+    //    ตามสเปก CSS "top" ชนะเสมอ "bottom" ถูกเมิน → แถบเลยไปโผล่ที่ขอบบนจอแทนขอบล่าง (ยืนยันด้วย getBoundingClientRect() จริงบนเครื่อง Lin)
+    //    แก้ด้วยการประกาศ top:auto ทับตรงนี้ชัดเจน กันไม่ให้ nav{top:0} ของเดิมหลุดมาอีก
+    '#bottom-nav{display:none;position:fixed;top:auto;bottom:0;left:0;right:0;background:rgba(17,17,17,0.97);border-top:1px solid rgba(200,151,58,0.3);z-index:998;padding:0;padding-bottom:env(safe-area-inset-bottom);}',
+    '#bottom-nav .bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:8px 4px;text-decoration:none;color:rgba(255,255,255,0.6);gap:3px;}',
+    '#bottom-nav .bn-item.bn-cta{color:var(--gold);}',
+    '#bottom-nav .bn-icon{font-size:20px;line-height:1;}',
+    '#bottom-nav .bn-label{font-family:\'Noto Sans TC\',sans-serif;font-size:10px;letter-spacing:0.5px;}',
+    '#bottom-nav .bn-item:hover,.bn-item:active{color:var(--gold);}',
+    '@media(max-width:768px){#bottom-nav{display:flex;}body{padding-bottom:60px;}}',
+  ].join('');
+  document.head.appendChild(bnStyle);
+})();
+
+// ===================================================================
+// [02.3] 🪟 SHARED MODAL MARKUP — injected on EVERY page (single source of truth)
+//    แก้ modal ที่นี่ที่เดียว มีผลทุกหน้า
+// ===================================================================
+(function injectModals(){
+  if (document.getElementById('modal-quiz')) return; // หน้าไหนมีอยู่แล้วข้าม
+  var wrap = document.createElement('div');
+  wrap.id = 'shared-modals';
+  wrap.innerHTML = `
+<div class="modal-overlay" id="modal-quiz" onclick="closeModalOutside(event,'modal-quiz')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">🎯 快速程度測驗</div>
+      <button class="modal-close" onclick="closeModal('modal-quiz')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="quiz-wrap" id="quiz-wrap">
+        <!-- Step 1 -->
+        <div class="quiz-step active" id="q1">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你目前的泰文程度是？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">🆕 完全零基礎，從來沒學過</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',0)">📖 學過一點點（知道一些單字或發音）</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',1)">🗣️ 可以簡單對話，但常卡關</button>
+            <button class="quiz-opt" onclick="quizNext('q1','q2',2)">✅ 能日常溝通，想精進特定部分</button>
+          </div>
+        </div>
+        <!-- Step 2 -->
+        <div class="quiz-step" id="q2">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你最大的學習困境是什麼？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">🔤 不了解聲調系統，不確定自己發音對不對</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',0)">📝 看不懂泰文文字，不知如何開始</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',1)">🧱 單字認識不少，但說不出完整句子</button>
+            <button class="quiz-opt" onclick="quizNext('q2','q3',2)">🎯 有特定溝通場景需要突破（工作/旅遊/追星）</button>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="quiz-step" id="q3">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot"></div></div>
+          <div class="quiz-q-text">你希望多快開始說出第一句泰語？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">🚀 越快越好，第一堂就想開口</button>
+            <button class="quiz-opt" onclick="quizNext('q3','q4',0)">📅 1–2 個月內穩定打好基礎</button>
+            <button class="quiz-opt" onclick="quizNext('q3','q4',1)">🧘 慢慢來，重視紮實理解</button>
+          </div>
+        </div>
+        <!-- Step 4 -->
+        <div class="quiz-step" id="q4">
+          <div class="quiz-progress"><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div><div class="quiz-prog-dot done"></div></div>
+          <div class="quiz-q-text">你每週大概可以投入多少學習時間？</div>
+          <div class="quiz-options">
+            <button class="quiz-opt" onclick="quizResult(0)">⏱️ 每週 1–2 小時（上課為主）</button>
+            <button class="quiz-opt" onclick="quizResult(1)">📚 每週 3–5 小時（上課＋課後複習）</button>
+            <button class="quiz-opt" onclick="quizResult(2)">🔥 每週 5 小時以上（密集學習）</button>
+          </div>
+        </div>
+        <!-- Results -->
+        <div class="quiz-result" id="result-basic">
+          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
+          <div class="quiz-result-title">建議從 Basic 開始</div>
+          <div class="quiz-result-desc">根據你的答案，目前最適合從零開始系統性建立發音與語感基礎。<br>Basic 課程會讓你在 10 堂內真正開口說出第一句完整的泰語。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，無任何壓力。</span></div>
+          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
+          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
+        </div>
+        <div class="quiz-result" id="result-standard">
+          <div class="quiz-result-badge" style="background:var(--gold-light);color:var(--gold);border:1.5px solid var(--gold);">適合你的方案</div>
+          <div class="quiz-result-title">建議選擇 Standard</div>
+          <div class="quiz-result-desc">你已有一定基礎，Standard 課程的客製化設計能精準鎖定你的弱點，突破目前的停滯期，讓進步更有效率。<br><span style="color:var(--gold);font-weight:700;">體驗課 30 分鐘完全免費，馬上確認你的程度。</span></div>
+          <button class="contact-cta" onclick="closeModal('modal-quiz');openModal('modal-line-qr')">預約免費體驗課</button>
+          <br><button class="quiz-restart" onclick="quizReset()" style="margin-top:14px;">重新測驗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-schedule" onclick="closeModalOutside(event,'modal-schedule')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📅 預約上課時段</div>
+      <button class="modal-close" onclick="closeModal('modal-schedule')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="coming-soon-wrap">
+        <span class="coming-soon-icon">🗓️</span>
+        <div class="coming-soon-title">線上排課系統</div>
+        <p class="coming-soon-sub">即將推出可視化時段選擇介面<br>讓你直接挑選最方便的上課時間<br>無需來回確認，一鍵完成預約</p>
+        <div class="coming-soon-badge">即將推出 · Coming Soon</div>
+        <p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-muted);margin-top:24px;line-height:1.8;">目前請透過下方聯絡方式預約體驗課，我們將盡快為你安排時間。</p>
+        <button class="contact-cta" style="margin-top:16px;" onclick="closeModal('modal-schedule');openModal('modal-contact')">立即聯絡預約 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-blog" onclick="closeModalOutside(event,'modal-blog')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📚 泰文學習知識庫</div>
+      <button class="modal-close" onclick="closeModal('modal-blog')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="coming-soon-wrap">
+        <span class="coming-soon-icon">✍️</span>
+        <div class="coming-soon-title">學習文章與資源</div>
+        <p class="coming-soon-sub">即將推出泰文學習專欄<br>涵蓋發音技巧、聲調解析、常用句型<br>以及台灣人最常犯的學習盲點</p>
+        <div class="coming-soon-badge">即將推出 · Coming Soon</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-videos" onclick="closeModalOutside(event,'modal-videos');stopYTVideo();">
+  <div class="modal-box dark" style="max-width:720px;width:95vw;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--white)">📺 泰語影片學習庫</div>
+      <button class="modal-close" onclick="stopYTVideo();closeModal('modal-videos')">✕</button>
+    </div>
+    <div class="modal-body" style="padding-top:0;">
+      <!-- Video Player -->
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;background:#111;margin-bottom:16px;">
+        <iframe id="yt-player"
+          style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"
+          frameborder="0" allowfullscreen
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+        </iframe>
+        <div id="yt-empty-state" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+          <span style="font-size:48px;">📺</span>
+          <div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:rgba(255,255,255,0.5);text-align:center;">影片即將上線<br>敬請期待！</div>
+        </div>
+      </div>
+      <!-- Video Info -->
+      <div id="yt-title" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;color:var(--white);font-weight:700;margin-bottom:4px;line-height:1.5;min-height:22px;"></div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--gold);letter-spacing:1px;margin-bottom:16px;">Mr. Tai Hua · 泰語老師</div>
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button id="yt-shuffle-btn" onclick="shuffleYTVideo()" style="flex:1;min-width:130px;padding:12px 20px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔀 換一部影片</button>
+        <a href="https://www.youtube.com/@mrtaihua" target="_blank" style="flex:1;min-width:130px;padding:12px 20px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">▶ 前往 YouTube 頻道</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-fbposts" onclick="closeModalOutside(event,'modal-fbposts')">
+  <div class="modal-box" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
+    <!-- Header -->
+    <div class="modal-header" style="flex-shrink:0;padding:16px 22px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="modal-title" style="color:var(--ink)">🚀 貼文分享區</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-fbposts')">✕</button>
+    </div>
+
+    <!-- LIST VIEW -->
+    <div id="fb-list-view" style="overflow-y:auto;flex:1;padding:8px 0 16px;"></div>
+
+    <!-- DETAIL VIEW -->
+    <div id="fb-detail-view" style="display:none;overflow-y:auto;flex:1;">
+      <div id="fb-detail-img-wrap" style="display:none;">
+        <img id="fb-detail-img" src="" alt="" style="width:100%;display:block;max-height:340px;object-fit:cover;">
+      </div>
+      <div style="padding:22px 28px 20px;border-bottom:1px solid rgba(200,151,58,0.2);">
+        <div id="fb-detail-date" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--gold);letter-spacing:2px;margin-bottom:14px;"></div>
+        <div id="fb-detail-text" style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:2;color:var(--ink);white-space:pre-wrap;word-break:break-word;"></div>
+      </div>
+      <!-- Action Buttons -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:16px 28px;border-bottom:1px solid var(--border);">
+        <button onclick="openLinkedSSFromPost()" style="padding:12px 8px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">📖 看文章學泰文</button>
+        <button onclick="shareFBPost()" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(139,99,16,0.14)'" onmouseout="this.style.background='var(--gold-light)'">🔗 分享本文</button>
+        <button onclick="closeModal('modal-fbposts');openModal('modal-line-qr')" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(139,99,16,0.14)'" onmouseout="this.style.background='var(--gold-light)'">🙋 前往提問</button>
+      </div></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-selfstudy" onclick="closeModalOutside(event,'modal-selfstudy')">
+  <div class="modal-box" style="max-width:800px;width:96vw;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;padding:16px 22px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="modal-title" style="color:var(--ink)">📖 自學專區</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-selfstudy')">✕</button>
+    </div>
+    <!-- LIST VIEW -->
+    <div id="ss-list-view" style="overflow-y:auto;flex:1;padding:8px 0 16px;"></div>
+    <!-- DETAIL VIEW -->
+    <div id="ss-detail-view" style="display:none;overflow-y:auto;flex:1;padding:22px 26px 28px;">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:16px;" id="ss-detail-label"></div>
+      <div id="ss-vocab-card" style="border-radius:12px;overflow:hidden;margin-bottom:20px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <button id="ss-read-btn" onclick="openLinkedFBPost(window._ssCurrentId)" style="padding:12px 8px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">📄 閱讀文章</button>
+        <button id="ss-share-btn" onclick="shareSSArticle()" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(139,99,16,0.14)'" onmouseout="this.style.background='var(--gold-light)'">🔗 分享詞彙</button>
+        <button onclick="closeModal('modal-selfstudy');openModal('modal-line-qr')" style="padding:12px 8px;background:var(--gold-light);color:var(--gold-deep);border:1px solid rgba(139,99,16,0.35);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:background 0.2s;" onmouseover="this.style.background='rgba(139,99,16,0.14)'" onmouseout="this.style.background='var(--gold-light)'">🙋 前往提問</button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+  while (wrap.firstChild) document.body.appendChild(wrap.firstChild);
+})();
+
+// ===================================================================
+// [02.4] 🎯 SOFT CTA CARD — การ์ดชวนจองคาบเรียนแบบนุ่มนวล ไม่รบกวน
+//   ใช้ตอนจบรอบ/บนหน้ารายการ・ปิดได้ (✕) → จำไว้ 7 วันไม่โชว์ซ้ำ (ต่อหน้า ผ่าน pageKey)
+//   เรียกใช้: renderSoftCTA('container-id', 'page_key', 'ข้อความเฉพาะหน้านั้น')
+// ===================================================================
+window.renderSoftCTA = function(containerId, pageKey, message){
+  var KEY = 'cta_dismissed_' + pageKey;
+  var last = parseInt(localStorage.getItem(KEY) || '0', 10);
+  if (Date.now() - last < 7*24*60*60*1000) return; // เพิ่งปิดไปไม่นาน → เงียบไว้
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML =
+    '<div class="soft-cta-card" style="background:var(--gold-light,#F3E4C2);border:1.5px solid var(--gold-bright,#C8973A);border-radius:12px;padding:14px 16px;margin:16px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+      '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:var(--gold-deep,#5a3e0a);font-weight:700;line-height:1.5;">' + message + '</span>' +
+      '<span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">' +
+        '<button onclick="window.gtag&&gtag(\'event\',\'soft_cta_click\',{category:window.GA_CATEGORY||\'unknown\',source:\'' + pageKey + '\'});openModal(\'modal-line-qr\')" style="background:var(--gold-bright,#C8973A);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:\'Noto Sans TC\',sans-serif;font-weight:900;font-size:12.5px;cursor:pointer;white-space:nowrap;">預約免費體驗課</button>' +
+        '<button onclick="localStorage.setItem(\'' + KEY + '\',Date.now());document.getElementById(\'' + containerId + '\').innerHTML=\'\';" aria-label="關閉" style="background:none;border:none;color:var(--gold-deep,#5a3e0a);opacity:0.6;font-size:16px;cursor:pointer;padding:2px 4px;">✕</button>' +
+      '</span>' +
+    '</div>';
+};
+
+// ===================================================================
+// [03] 🧰 SHARED UI + DATA HELPERS — globals used across site pages
+//   Reveal/FAQ, modal controls, booking, quiz, mobile menu, forms,
+//   lead capture, content loaders, and shared content interactions.
+// ===================================================================
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target);} });
+  }, {threshold:0.15});
+  document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
+
+  function toggleFaq(btn) {
+    const a = btn.nextElementSibling, open = btn.classList.contains('open');
+    document.querySelectorAll('.faq-q').forEach(b => {b.classList.remove('open');b.nextElementSibling.classList.remove('open');});
+    if(!open){btn.classList.add('open');a.classList.add('open');}
+  }
+
+  function openModal(id){ document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden';
+    if(id==='modal-line-qr'){
+      // book_trial_click: นับ "ครั้งเดียวต่อหน้า/เซสชัน" กันการเปิด modal ซ้ำทำตัวเลขพอง
+      if(typeof gtag==='function'){
+        try{
+          var _k='btc_'+location.pathname;
+          if(sessionStorage.getItem(_k)!=='1'){
+            gtag('event','book_trial_click',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname });
+            sessionStorage.setItem(_k,'1');
+          }
+        }catch(e){ gtag('event','book_trial_click',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }
+      }
+      window.mountCalInline('#cal-embed-modal');
+    }
+  }
+  // ── ปุ่มจองจาก "การ์ดในเกม" → ยิง event ละเอียด (game + placement) แล้วเปิด modal จอง ──
+  //    book_trial_click (source_page) ยังยิงตามปกติใน openModal → ดูได้ว่าจองมาจากหน้าไหน
+  //    book_cta_click เพิ่มให้รู้ลึกว่า "การ์ดในเกมไหน/ตำแหน่งไหน" เป็นตัวพาไปจอง
+  window.bookFromGame = function(game, placement){
+    try{ if(typeof gtag==='function') gtag('event','book_cta_click',{category:window.GA_CATEGORY||'unknown', game:game, placement:placement }); }catch(e){}
+    openModal('modal-line-qr');
+  };
+  // ── Cal.com inline embed (ทางการ) — ฝัง embed.js ครั้งเดียว แล้ว mount ตาม selector ──
+  //    สำคัญ: ต้องใช้ embed.js (ไม่ใช่ <iframe> ดิบ) เพื่อให้ event bookingSuccessful
+  //    ส่ง postMessage กลับมาที่หน้าแม่ → ยิง book_trial_submit ได้จริง (เดิม iframe ดิบจับไม่ได้)
+  var _calLibLoaded = false, _calBound = false, _calMounted = {};
+  function _loadCalLib(){
+    if(_calLibLoaded) return;
+    _calLibLoaded = true;
+    (function(C,A,L){let p=function(a,ar){a.q.push(ar);};let d=C.document;C.Cal=C.Cal||function(){let cal=C.Cal;let ar=arguments;if(!cal.loaded){cal.ns={};cal.q=cal.q||[];d.head.appendChild(d.createElement('script')).src=A;cal.loaded=true;}if(ar[0]===L){const api=function(){p(api,arguments);};const ns=ar[1];api.q=api.q||[];typeof ns==='string'?(cal.ns[ns]=api)&&p(api,ar):p(cal,ar);return;}p(cal,ar);};})(window,'https://app.cal.com/embed/embed.js','init');
+    Cal('init',{origin:'https://cal.com'});
+  }
+  // ── ซ่อน loading spinner ตอนปฏิทิน Cal.com พร้อมโชว์แล้ว (เพิ่ม 2026-07-11 กัน modal ค้างขาวว่าง) ──
+  function _hideCalLoading(){
+    ['cal-embed-modal-loading','cal-embed-inline-loading'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.style.display='none';
+    });
+  }
+  function _bindCalSuccess(){
+    if(_calBound) return;
+    _calBound = true;
+    // linkReady = ปฏิทินโหลดเสร็จพร้อมโชว์แล้ว (event ทางการของ Cal.com embed)
+    Cal('on',{action:'linkReady',callback:_hideCalLoading});
+    Cal('on',{action:'bookingSuccessful',callback:function(){
+      // ✅ การจองสำเร็จจริง → ยิง GA4 (เดิมไม่เคยยิงเพราะใช้ iframe ดิบ)
+      if(typeof gtag==='function'){ gtag('event','book_trial_submit',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }
+      _hideCalLoading();
+      var bv=document.getElementById('cal-booking-view');
+      var sv=document.getElementById('cal-success-view');
+      if(bv) bv.style.display='none';
+      if(sv) sv.style.display='block';
+    }});
+  }
+  window.mountCalInline = function(selector){
+    selector = selector || '#cal-embed-modal';
+    var el = document.querySelector(selector);
+    if(!el || _calMounted[selector]) return;
+    _calMounted[selector] = true;
+    _loadCalLib();
+    _bindCalSuccess();
+    Cal('inline',{elementOrSelector:selector,calLink:'mrtaihualin/trial',config:{layout:'month_view',theme:'light'}});
+    // กันเหนียว: บั๊กที่รู้กันของ Cal.com คือบางทีไม่ยิง linkReady ให้ → ซ่อน loading เองหลัง 5 วิ กันโชว์ค้างตลอดไป
+    setTimeout(_hideCalLoading, 5000);
+  };
+  // หน้า trial.html ฝังปฏิทินแบบ inline บนหน้า (#cal-embed-inline) → mount อัตโนมัติเมื่อโหลด
+  (function(){
+    function _autoMountInlineCal(){ if(window.mountCalInline) window.mountCalInline('#cal-embed-inline'); }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', _autoMountInlineCal); }
+    else { _autoMountInlineCal(); }
+  })();
+  function closeModal(id){ document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
+  function closeModalOutside(e,id){ if(e.target===document.getElementById(id)) closeModal(id); }
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); document.body.style.overflow=''; if(typeof stopYTVideo==='function') stopYTVideo(); } });
+
+  // Quiz logic — state persisted via localStorage
+  (function() {
+    var STORE_KEY = 'mrtaihua_quiz';
+
+    function loadState() {
+      try { return JSON.parse(localStorage.getItem(STORE_KEY)) || null; } catch(e) { return null; }
+    }
+    function saveState(state) {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+    }
+    function clearState() {
+      try { localStorage.removeItem(STORE_KEY); } catch(e) {}
+    }
+
+    // Restore state on page load
+    function restoreQuiz() {
+      var st = loadState();
+      if (!st) return;
+      // Restore visible step or result
+      document.querySelectorAll('.quiz-step').forEach(function(s){ s.classList.remove('active'); });
+      document.querySelectorAll('.quiz-result').forEach(function(r){ r.classList.remove('active'); });
+      if (st.result) {
+        var el = document.getElementById(st.result);
+        if (el) el.classList.add('active');
+      } else if (st.step) {
+        var el = document.getElementById(st.step);
+        if (el) el.classList.add('active');
+      }
+    }
+
+    window.quizScore = 0;
+
+    window.quizNext = function(currentId, nextId, score) {
+      window.quizScore += score;
+      document.getElementById(currentId).classList.remove('active');
+      document.getElementById(nextId).classList.add('active');
+      saveState({ step: nextId, score: window.quizScore, result: null });
+    };
+
+    window.quizResult = function(score) {
+      window.quizScore += score;
+      document.getElementById('q4').classList.remove('active');
+      var result = window.quizScore >= 3 ? 'result-standard' : 'result-basic';
+      document.getElementById(result).classList.add('active');
+      saveState({ step: null, score: window.quizScore, result: result });
+    };
+
+    window.quizReset = function() {
+      window.quizScore = 0;
+      clearState();
+      document.querySelectorAll('.quiz-step').forEach(function(s){ s.classList.remove('active'); });
+      document.querySelectorAll('.quiz-result').forEach(function(r){ r.classList.remove('active'); });
+      document.getElementById('q1').classList.add('active');
+    };
+
+    // Run restore after DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', restoreQuiz);
+    } else {
+      restoreQuiz();
+    }
+  })();
+
+  function toggleMenu() {
+    const links = document.querySelector('.nav-links');
+    const isOpen = links.style.display === 'flex';
+    if(isOpen){
+      links.style.display='none';
+    } else {
+      links.style.cssText='display:flex;flex-direction:column;position:fixed;top:60px;left:0;right:0;background:rgba(17,17,17,0.98);padding:16px 24px 24px;gap:0;border-bottom:1px solid rgba(212,160,23,0.2);z-index:998;overflow-y:auto;max-height:calc(100vh - 60px);';
+      // Expand all dropdowns flat on mobile
+      links.querySelectorAll('.nav-drop').forEach(d => d.style.cssText='display:block;position:static;border:none;padding:0 0 0 12px;background:none;');
+      links.querySelectorAll('.nav-links > li > a').forEach(a => a.style.cssText='padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);');
+      links.querySelectorAll('.nav-drop a').forEach(a => a.style.cssText='padding:7px 0;font-size:12px;color:rgba(255,255,255,0.55);');
+    }
+  }
+
+  // 學生回饋直接寄到老師信箱（透過 Web3Forms，免後端）
+  var WEB3FORMS_KEY = 'b3bfdb97-19dd-4910-bd15-89720be846c2';
+
+  // 把索取速查表的 Email 同步寫進 Google Sheet（Apps Script Web App，免費）
+  var SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzrxlkCg5zjA55L74od84QlI2_X7D-YcUrl-TR71XOUZU1K6-2uW_oteS0ybkd3jZcA/exec';
+  window.sheetLog = function(fields){
+    try{
+      if(!SHEETS_ENDPOINT) return;
+      var body = new URLSearchParams(fields || {});
+      if(navigator.sendBeacon){
+        navigator.sendBeacon(SHEETS_ENDPOINT, body);
+      } else {
+        fetch(SHEETS_ENDPOINT, {method:'POST', mode:'no-cors', keepalive:true,
+          headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+          body: body.toString()});
+      }
+    }catch(e){}
+  };
+
+  // ════════════════════════════════════════════════════════════
+  // เก็บ lead ลง Supabase (ฐานข้อมูลหลัก) + Google Sheet (สำรอง)
+  //   - anonKey เปิดเผยในเว็บได้ เพราะตาราง public.leads เปิด RLS:
+  //     anon "insert" ได้อย่างเดียว "select" ไม่ได้ → ใครเปิด View Source ก็อ่านอีเมลคนอื่นไม่ได้
+  //   - ค่าเดียวกับ supabase-config.js (fallback เผื่อหน้าที่ไม่ได้โหลด config นั้น เช่น index)
+  //   - ทุกอย่าง best-effort: ไม่ throw ไม่บล็อกการพาไปหน้าดาวน์โหลด
+  // ════════════════════════════════════════════════════════════
+  var SB_LEAD_CFG = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url) ? window.SUPABASE_CONFIG : {
+    url:     'https://qzkxlhpcputsvbqmtqfi.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw'
+  };
+  // เก็บ lead: ยิงทั้ง Supabase + Google Sheet พร้อมกัน, ไม่บล็อก, ไม่ throw
+  //   - ใช้ Supabase REST API ตรงๆ + fetch keepalive → insert ยิงทันที
+  //     และ "รอดแม้หน้าจะเปลี่ยนไป thank-you" (ไม่มี race กับ redirect)
+  //   - ไม่ต้องโหลด supabase-js SDK → เบากว่า + ไม่ต้องรอ CDN
+  window.saveLead = function(fields){
+    fields = fields || {};
+    // 1) Supabase (ฐานข้อมูลหลัก)
+    try{
+      if(SB_LEAD_CFG.url && SB_LEAD_CFG.anonKey){
+        fetch(SB_LEAD_CFG.url + '/rest/v1/leads', {
+          method:'POST',
+          keepalive:true,
+          headers:{
+            'Content-Type':'application/json',
+            'apikey': SB_LEAD_CFG.anonKey,
+            'Authorization':'Bearer ' + SB_LEAD_CFG.anonKey,
+            'Prefer':'return=minimal'
+          },
+          body: JSON.stringify({ email:fields.email||'', name:fields.name||null, source:fields.source||null })
+        }).then(function(res){
+          // 2026-07-14 加：以前 .catch(function(){}) 完全吞掉錯誤，insert 失敗也沒人知道
+          // （RELIABILITY FIRST：不能悄悄失敗）現在至少把失敗印到 console，留紀錄可查
+          // （Google Sheet 備份 + email 通知老師還是照樣會跑，不會整條線都斷掉）
+          if(!res.ok){ console.error('[saveLead] Supabase insert 失敗，狀態碼 ' + res.status + '（email: ' + (fields.email||'-') + '）'); }
+        }).catch(function(e){ console.error('[saveLead] Supabase 網路錯誤：', e, '（email: ' + (fields.email||'-') + '）'); });
+      }
+    }catch(e){}
+    // 2) Google Sheet (สำรอง) — sendBeacon รอดแม้หน้าเปลี่ยน
+    try{ if(typeof sheetLog==='function') sheetLog({ email:fields.email||'', name:fields.name||'', source:fields.source||'' }); }catch(e){}
+  };
+
+  // ── 單字速查表 邀請彈窗（兩個遊戲共用・玩約 5 回合後出現「一次」・可關閉繼續玩・免費）LIN 2026-06-27 ──
+  // เกมยังเล่นฟรีไม่จำกัด — popup เป็นแค่คำเชิญ ปิดได้เล่นต่อ · เกมเรียก window.VocabPopup.maybe() ตอนจบรอบ
+  // ใช้ key 'tf_lead_captured' ตัวเดียวกับ supabase-auth.js → ถ้าให้อีเมลที่ใดที่หนึ่งแล้วจะไม่กวนซ้ำ
+  (function(){
+    var ROUNDS_KEY='vocab_popup_rounds', SHOWN_KEY='vocab_popup_shown', LEAD_KEY='tf_lead_captured', TRIGGER=5;
+    function getRounds(){ try{ return parseInt(localStorage.getItem(ROUNDS_KEY)||'0',10)||0; }catch(e){ return 0; } }
+    function bumpRounds(){ var n=getRounds()+1; try{ localStorage.setItem(ROUNDS_KEY,String(n)); }catch(e){} return n; }
+    function alreadyShown(){ try{ return localStorage.getItem(SHOWN_KEY)==='1'; }catch(e){ return false; } }
+    function markShown(){ try{ localStorage.setItem(SHOWN_KEY,'1'); }catch(e){} }
+    function leadCaptured(){ try{ return localStorage.getItem(LEAD_KEY)==='1'; }catch(e){ return false; } }
+    function show(){
+      if(document.getElementById('vp-pop')) return;
+      markShown();
+      try{ if(typeof gtag==='function') gtag('event','vocab_popup_show',{category:window.GA_CATEGORY||'unknown',}); }catch(e){}
+      var ov=document.createElement('div');
+      ov.id='vp-pop';
+      ov.style.cssText='position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(40,30,10,0.45);font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
+      ov.innerHTML=
+        '<div style="position:relative;background:#fff;max-width:360px;width:100%;border-radius:18px;padding:28px 24px 22px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">'+
+          '<button id="vp-x" aria-label="關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>'+
+          '<div style="font-size:40px;line-height:1;margin-bottom:10px;">📖</div>'+
+          '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">玩得不錯！送你單字速查表 🎁</h2>'+
+          '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">老師精選 <b>60 個常用泰語單字</b>（含子音・母音・尾音・拼音・中文對照）。留 Email 免費領取，<b>關掉也能繼續玩</b>～</p>'+
+          '<input id="vp-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:16px;color:#5C4410;outline:none;">'+
+          '<div id="vp-err" style="display:none;color:#C0392B;font-size:12px;margin:6px 0 0;text-align:left;"></div>'+
+          '<button id="vp-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">免費領取 →</button>'+
+          '<p style="margin:12px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">輸入 Email 代表同意<a href="/terms.html" style="color:#A07A1E;">服務條款與資料收集</a>，只用來寄學習資訊，不會外流</p>'+
+          '<p style="margin:8px 0 0;font-size:12px;color:#A07A1E;">點右上角 ✕ 可關閉繼續玩</p>'+
+        '</div>';
+      document.body.appendChild(ov);
+      function close(){ try{ ov.remove(); }catch(e){} try{ if(typeof gtag==='function') gtag('event','vocab_popup_close',{category:window.GA_CATEGORY||'unknown',}); }catch(e){} }
+      ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+      ov.querySelector('#vp-x').onclick=close;
+      var inp=ov.querySelector('#vp-email'), err=ov.querySelector('#vp-err');
+      function submit(){
+        var em=(inp.value||'').trim();
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ err.textContent='Email 格式不正確'; err.style.display='block'; return; }
+        try{ if(window.saveLead) saveLead({ email:em, source:'遊戲・單字表' }); }catch(e){}
+        try{ localStorage.setItem(LEAD_KEY,'1'); }catch(e){}
+        try{ if(typeof gtag==='function') gtag('event','lead_magnet_submit',{category:window.GA_CATEGORY||'unknown', source:'遊戲・單字表' }); }catch(e){}
+        location.href='/vocab-thank-you.html';
+      }
+      ov.querySelector('#vp-go').onclick=submit;
+      inp.addEventListener('keydown',function(ev){ if(ev.key==='Enter') submit(); });
+    }
+    // เรียกตอนจบรอบ: นับ +1 ครบ TRIGGER และยังไม่เคยโชว์ + ยังไม่เคยให้อีเมล → เด้งครั้งเดียว
+    window.VocabPopup={
+      maybe:function(){
+        var n=bumpRounds();
+        if(alreadyShown()) return;
+        if(leadCaptured()){ markShown(); return; }
+        if(n<TRIGGER) return;
+        show();
+      }
+    };
+  })();
+  async function submitFeedback() {
+    const nameEl = document.getElementById('fb-name');
+    const textEl = document.getElementById('fb-text');
+    const fbMsg  = document.getElementById('fb-msg');
+    const name = nameEl ? nameEl.value.trim() : '';
+    const text = textEl ? textEl.value.trim() : '';
+    if(!text){ alert('請填寫感想內容'); return; }
+
+    const btn = document.querySelector('#feedback-section button[onclick*="submitFeedback"], button[onclick*="submitFeedback"]');
+    if(btn){ btn.disabled = true; btn.dataset._t = btn.textContent; btn.textContent = '送出中…'; }
+
+    const show = function(t){ if(fbMsg){ fbMsg.textContent=t; fbMsg.style.display='inline'; setTimeout(()=>{fbMsg.style.display='none';},5000); } };
+    const restore = function(){ if(btn){ btn.disabled=false; if(btn.dataset._t) btn.textContent=btn.dataset._t; } };
+
+    try {
+      const res = await fetch('https://api.web3forms.com/submit', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          subject: '【學生回饋】來自泰華網站',
+          from_name: '泰華網站・學生回饋',
+          '姓名': name || '匿名',
+          '回饋內容': text
+        })
+      });
+      const data = await res.json();
+      if(data && data.success){
+        if(nameEl) nameEl.value=''; if(textEl) textEl.value='';
+        show('✅ 感謝你的回饋，已成功送出給老師！');
+        if(typeof _showSentPopup==='function') _showSentPopup();
+      } else {
+        show('⚠️ 送出失敗，請稍後再試，或透過 LINE 與我們聯絡。');
+      }
+    } catch(e){
+      show('⚠️ 網路連線問題，送出失敗，請稍後再試。');
+    } finally {
+      restore();
+    }
+  }
+
+  // ===== 通用 Web3Forms 送出（聯絡表單／索取資源共用）=====
+  window.web3Send = async function(opts){
+    opts = opts || {};
+    var btn = opts.btn, statusEl = opts.statusEl;
+    var show = function(t,ok){ if(statusEl){ statusEl.textContent=t; statusEl.style.display='block'; statusEl.style.color = ok ? 'var(--gold-deep)' : '#b00'; } };
+    if(btn){ btn.disabled=true; btn.dataset._t=btn.textContent; btn.textContent='送出中…'; }
+    try{
+      var body = Object.assign({ access_key: WEB3FORMS_KEY }, opts.fields || {});
+      // web3forms ใช้ email (lowercase) เพื่อ validate spam — copy จาก 'Email' field ถ้ายังไม่มี
+      if(body['Email'] && !body['email']) body.email = body['Email'];
+      var res = await fetch('https://api.web3forms.com/submit', {
+        method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body: JSON.stringify(body)
+      });
+      var data = await res.json();
+      if(data && data.success){ if(opts.onsuccess) opts.onsuccess(); show(opts.successMsg || '✅ 已送出，謝謝！', true); return true; }
+      console.error('[web3forms] 送出失敗:', data);
+      show('⚠️ 送出失敗，請稍後再試，或改用 LINE 聯絡。', false); return false;
+    }catch(e){ console.error('[web3forms] 網路錯誤:', e); show('⚠️ 網路問題，送出失敗，請稍後再試。', false); return false; }
+    finally{ if(btn){ btn.disabled=false; if(btn.dataset._t) btn.textContent=btn.dataset._t; } }
+  };
+
+  // 聯絡表單
+  window.submitContact = function(){
+    var name=document.getElementById('c-name'), email=document.getElementById('c-email'), msg=document.getElementById('c-msg');
+    var v=function(el){return el?el.value.trim():'';};
+    if(!v(email) || !v(msg)){ alert('請填寫 Email 與訊息內容'); return; }
+    web3Send({
+      btn: document.querySelector('#modal-contact button[onclick*="submitContact"]'),
+      statusEl: document.getElementById('c-status'),
+      successMsg: '✅ 已送出！我們會於 1–2 個工作天內回覆你的信箱。',
+      fields: { subject:'【網站聯絡】來自泰華網站', from_name:'泰華網站・聯絡表單', '姓名':v(name)||'未填', 'Email':v(email), '訊息':v(msg) },
+      onsuccess: function(){ if(name)name.value=''; if(email)email.value=''; if(msg)msg.value=''; _showSentPopup(); }
+    });
+  };
+
+  // 索取聲調速查表（lead magnet・彈窗）
+  // ลำดับใหม่: เก็บ lead ก่อนเสมอ → พาไปหน้าดาวน์โหลดทุกกรณี (ไม่ผูกกับ web3forms)
+  window.submitFreebie = function(){
+    var name=document.getElementById('lm-name'), email=document.getElementById('lm-email');
+    var v=function(el){return el?el.value.trim():'';};
+    if(!v(email)){ alert('請填寫 Email'); return; }
+    var nm=v(name), em=v(email);
+    var btn=document.querySelector('#modal-freebie button[onclick*="submitFreebie"]');
+    var statusEl=document.getElementById('lm-status');
+    if(btn){ btn.disabled=true; btn.textContent='處理中…'; }
+    if(statusEl){ statusEl.textContent='✅ 謝謝！正在帶你前往下載頁面…'; statusEl.style.display='block'; statusEl.style.color='var(--gold-deep)'; }
+    if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }
+    saveLead({ email:em, name:nm, source:'彈窗・索取速查表' });                       // 1) เก็บ lead (Supabase + Sheet)
+    try{ web3Send({ fields:{ subject:'【索取】泰語聲調速查表', from_name:'泰華網站・索取速查表', '姓名':nm||'未填', 'Email':em } }); }catch(e){} // 2) แจ้งครู (best-effort)
+    if(name)name.value=''; if(email)email.value='';
+    setTimeout(function(){ location.href='/thank-you.html'; }, 700);                  // 3) ไปดาวน์โหลดเสมอ
+  };
+
+  // 首頁速查表索取（inline 表單）
+  window.submitHomeFreebie = function(){
+    var email=document.getElementById('hm-email');
+    var em=email?email.value.trim():'';
+    if(!em){ alert('請填寫 Email'); return; }
+    var btn=document.querySelector('button[onclick*="submitHomeFreebie"]');
+    var statusEl=document.getElementById('hm-status');
+    if(btn){ btn.disabled=true; btn.textContent='處理中…'; }
+    if(statusEl){ statusEl.textContent='✅ 謝謝！正在帶你前往下載頁面…'; statusEl.style.display='block'; statusEl.style.color='var(--gold-deep)'; }
+    if(typeof gtag==='function'){ gtag('event','lead_magnet_submit',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }
+    saveLead({ email:em, source:'首頁橫幅・索取速查表' });
+    try{ web3Send({ fields:{ subject:'【索取】泰語聲調速查表（首頁）', from_name:'泰華網站・索取速查表', 'Email':em } }); }catch(e){}
+    if(email)email.value='';
+    setTimeout(function(){ location.href='/thank-you.html'; }, 700);
+  };
+
+  // 預約體驗課（留言版）
+  window.submitBooking = function(){
+    var name=document.getElementById('b-name'), email=document.getElementById('b-email'), when=document.getElementById('b-when');
+    var v=function(el){return el?el.value.trim():'';};
+    if(!v(email)){ alert('請填寫 Email 以便回覆你'); return; }
+    web3Send({
+      btn: document.querySelector('#modal-line-qr button[onclick*="submitBooking"]'),
+      statusEl: document.getElementById('b-status'),
+      successMsg: '✅ 已收到你的預約！我們會盡快與你聯絡安排體驗課。',
+      fields: { subject:'【預約體驗課】來自泰華網站', from_name:'泰華網站・預約體驗課', '姓名':v(name)||'未填', 'Email':v(email), '方便時段':v(when)||'未填' },
+      onsuccess: function(){ if(typeof gtag==='function'){ gtag('event','book_trial_submit',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); } if(name)name.value=''; if(email)email.value=''; if(when)when.value=''; }
+    });
+  };
+
+  function toggleWac(btn) {
+    const body = btn.nextElementSibling;
+    const isOpen = btn.classList.contains('open');
+    // Optionally close others
+    btn.closest('.work-accordion').querySelectorAll('.wac-btn.open').forEach(b => {
+      b.classList.remove('open');
+      b.nextElementSibling.classList.remove('open');
+    });
+    if(!isOpen){ btn.classList.add('open'); body.classList.add('open'); }
+  }
+
+  function openLightbox(img) {
+    var lb = document.getElementById('lightbox');
+    document.getElementById('lightbox-img').src = img.src;
+    lb.style.display = 'flex';
+    requestAnimationFrame(function(){ lb.classList.add('lb-open'); });
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    var lb = document.getElementById('lightbox');
+    lb.classList.remove('lb-open');
+    setTimeout(function(){ lb.style.display = 'none'; }, 380);
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeLightbox();
+  });
+  // ===== 🎉 Sent popup (ส่งแล้วนะ) =====
+  window._showSentPopup = function() {
+    var el = document.getElementById('_sent-popup');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '_sent-popup';
+      el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.85);z-index:19999;background:#fff;border:2px solid var(--gold-bright);border-radius:16px;padding:36px 40px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.22);font-family:\'Noto Sans TC\',sans-serif;opacity:0;transition:opacity 0.2s,transform 0.2s;min-width:240px;';
+      el.innerHTML = '<div style="font-size:40px;margin-bottom:10px;">✅</div><div style="font-size:20px;font-weight:900;color:var(--ink);margin-bottom:6px;">已成功送出，謝謝你！</div><button onclick="document.getElementById(\'_sent-popup\').style.opacity=\'0\';setTimeout(function(){var e=document.getElementById(\'_sent-popup\');if(e)e.remove();},200);" style="background:var(--gold);color:#fff;border:none;border-radius:8px;padding:10px 28px;font-family:\'Noto Sans TC\',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">確認</button>';
+      document.body.appendChild(el);
+    }
+    requestAnimationFrame(function(){ el.style.opacity='1'; el.style.transform='translate(-50%,-50%) scale(1)'; });
+    setTimeout(function(){ if(el){ el.style.opacity='0'; el.style.transform='translate(-50%,-50%) scale(0.85)'; setTimeout(function(){if(el)el.remove();},200); } }, 4000);
+  };
+
+document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><a class="avail-cta" href="javascript:void(0)" onclick="openModal(\'modal-line-qr\')">立即預約</a></div></div>'; });
+
+// ----- [03.1] 📬 Contact / LINE QR / Social Modal Injection -----
+(function injectSharedModals() {
+  var modalsHTML = '';
+
+  // ไอคอนแบรนด์ SNS — โลโก้ขาวบนชิปสีทอง ให้เข้าธีมเว็บ (เลิกใช้สีแบรนด์ที่แตกธีม)
+  var _snsIcon = {
+    facebook: '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg>',
+    youtube: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>',
+    instagram: '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>',
+    tiktok: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>',
+    threads: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.781 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.745-1.757-.51-.586-1.297-.883-2.34-.89h-.031c-.834 0-1.965.225-2.687 1.299l-1.689-1.135c.967-1.434 2.538-2.222 4.376-2.222h.048c3.071.02 4.9 1.92 5.081 5.237.103.044.205.09.305.138 1.44.677 2.493 1.704 3.044 2.972.766 1.764.836 4.642-1.5 6.929-1.785 1.748-3.951 2.546-7.011 2.567Zm1.043-9.7c-.213 0-.428.007-.646.02-1.835.103-2.977.946-2.912 2.149.069 1.262 1.461 1.848 2.8 1.775 1.231-.067 2.836-.546 3.106-3.671a10.27 10.27 0 0 0-2.348-.272Z"/></svg>',
+    line: '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.07 9.436-6.971C23.176 14.393 24 12.458 24 10.314"/></svg>'
+  };
+  // สีแบรนด์ของไอคอน (ตัดสีให้ไม่ทองจนโมโนโทน)
+  var _snsColor = { facebook:'#1877F2', youtube:'#FF0000', instagram:'#E1306C', tiktok:'#111111', threads:'#111111', line:'#C8973A' };
+  // การ์ดลิงก์ SNS — ชิปขาวขอบทอง + ไอคอนสีแบรนด์ (ตัดสี แต่ยังเข้าธีม)
+  var _snsRow = function(url,bg,ic,name,sub,ch){
+    return '<a href="'+url+'" target="_blank" rel="noopener" onclick="window.gtag&&gtag(\'event\',\'sns_click\',{category:window.GA_CATEGORY||\'unknown\',ch:\''+ch+'\'})" '+
+      'style="display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));border:1px solid rgba(200,151,58,0.32);border-radius:12px;padding:9px 13px;box-shadow:0 1px 4px rgba(140,100,20,0.05);transition:border-color .15s,box-shadow .15s,transform .15s;" onmouseover="this.style.borderColor=\'rgba(200,151,58,0.75)\';this.style.boxShadow=\'0 5px 16px rgba(140,100,20,0.14)\';this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.borderColor=\'rgba(200,151,58,0.32)\';this.style.boxShadow=\'0 1px 4px rgba(140,100,20,0.05)\';this.style.transform=\'none\'">'+
+      '<span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(200,151,58,0.35);box-shadow:0 1px 4px rgba(140,100,20,0.09);color:'+(_snsColor[ch]||'#C8973A')+';">'+(_snsIcon[ch]||'')+'</span>'+
+      '<span style="min-width:0;flex:1;"><span style="display:block;font-family:\'Noto Serif TC\',serif;font-weight:700;color:#5C4410;font-size:14.5px;line-height:1.25;">'+name+'</span>'+
+      '<span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-size:11.5px;color:#A0895A;margin-top:1px;">'+sub+'</span></span>'+
+      '<span style="color:var(--gold-bright,#C8973A);font-size:18px;opacity:.5;flex-shrink:0;line-height:1;">›</span></a>';
+  };
+
+  // ไอคอนทั่วไป (เส้นขาว) สำหรับการ์ดข้อมูลใน 聯絡我們
+  var _miscIcon = {
+    email: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="m3 6 9 6 9-6"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>',
+    gift: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>'
+  };
+  // การ์ดข้อมูลทั่วไป (เข้าธีมทอง) — href มี = คลิกได้, ไม่มี = แสดงเฉยๆ
+  var _infoCard = function(iconHtml, label, value, href, iconColor){
+    var base = 'display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));border:1px solid rgba(200,151,58,0.32);border-radius:12px;padding:9px 13px;box-shadow:0 1px 4px rgba(140,100,20,0.05);';
+    var chip = '<span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(200,151,58,0.35);box-shadow:0 1px 4px rgba(140,100,20,0.09);color:'+(iconColor||'#C8973A')+';">'+iconHtml+'</span>';
+    var txt = '<span style="min-width:0;flex:1;"><span style="display:block;font-family:\'Noto Sans TC\',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#A0895A;text-transform:uppercase;">'+label+'</span>'+
+      '<span style="display:block;font-family:\'Noto Serif TC\',serif;font-weight:700;color:#5C4410;font-size:14px;line-height:1.3;margin-top:1px;overflow-wrap:anywhere;">'+value+'</span></span>';
+    if (href) {
+      var hov = ' onmouseover="this.style.borderColor=\'rgba(200,151,58,0.75)\';this.style.boxShadow=\'0 5px 16px rgba(140,100,20,0.14)\';this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.borderColor=\'rgba(200,151,58,0.32)\';this.style.boxShadow=\'0 1px 4px rgba(140,100,20,0.05)\';this.style.transform=\'none\'"';
+      var tgt = href.indexOf('http')===0 ? ' target="_blank" rel="noopener"' : '';
+      return '<a href="'+href+'"'+tgt+' style="'+base+'transition:border-color .15s,box-shadow .15s,transform .15s;"'+hov+'>'+chip+txt+'<span style="color:var(--gold-bright,#C8973A);font-size:18px;opacity:.5;flex-shrink:0;line-height:1;">›</span></a>';
+    }
+    return '<div style="'+base+'">'+chip+txt+'</div>';
+  };
+
+  if (!document.getElementById('modal-contact')) {
+    modalsHTML += `
+<!-- Contact -->
+<div class="modal-overlay" id="modal-contact" onclick="closeModalOutside(event,'modal-contact')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--ink);">📬 聯絡我們</div>
+      <button class="modal-close" onclick="closeModal('modal-contact')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="contact-grid" style="display:flex;flex-direction:column;gap:9px;">
+        ${_infoCard(_snsIcon.line, 'LINE', '點此加入 LINE 聯絡', 'https://lin.ee/yVBgvywy', '#C8973A')}
+        <div style="display:flex;align-items:stretch;gap:8px;">
+          <div style="flex:1;">${_infoCard(_miscIcon.email, '電子郵件', 'mr.taihualin@gmail.com', 'mailto:mr.taihualin@gmail.com')}</div>
+          <button onclick="navigator.clipboard.writeText('mr.taihualin@gmail.com').then(function(){var b=document.getElementById('copy-email-btn');if(b){b.textContent='✅ 已複製';setTimeout(function(){b.textContent='複製';},2000);}}).catch(function(){prompt('複製此 Email：','mr.taihualin@gmail.com');})" id="copy-email-btn" style="flex-shrink:0;padding:0 14px;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));color:#5C4410;border:1px solid rgba(200,151,58,0.32);border-radius:12px;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 4px rgba(140,100,20,0.05);">複製</button>
+        </div>
+        ${_snsRow('https://www.facebook.com/mrtaihua','','','Facebook','粉絲頁・泰語教學貼文','facebook')}
+        ${_snsRow('https://www.youtube.com/@mrtaihua','','','YouTube','教學影片・聲調解析','youtube')}
+        ${_snsRow('https://www.instagram.com/mrtaihua','','','Instagram','每日一字・學習花絮','instagram')}
+        ${_snsRow('https://www.tiktok.com/@mrtaihua','','','TikTok','短影音・快速學泰語','tiktok')}
+        ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','','','Threads','學習筆記・互動討論','threads')}
+        ${_infoCard(_miscIcon.clock, '回覆時間', '通常於 1–2 個工作天內回覆')}
+        <a href="javascript:void(0)" onclick="closeModal('modal-contact');openModal('modal-line-qr');" style="display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(180deg,#fff,var(--cream,#FBF5E7));border:1px solid rgba(200,151,58,0.32);border-radius:12px;padding:9px 13px;box-shadow:0 1px 4px rgba(140,100,20,0.05);transition:border-color .15s,box-shadow .15s,transform .15s;" onmouseover="this.style.borderColor='rgba(200,151,58,0.75)';this.style.boxShadow='0 5px 16px rgba(140,100,20,0.14)';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='rgba(200,151,58,0.32)';this.style.boxShadow='0 1px 4px rgba(140,100,20,0.05)';this.style.transform='none'"><span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid rgba(200,151,58,0.35);box-shadow:0 1px 4px rgba(140,100,20,0.09);color:#C8973A;">${_miscIcon.gift}</span><span style="min-width:0;flex:1;"><span style="display:block;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1px;color:#A0895A;text-transform:uppercase;">免費體驗</span><span style="display:block;font-family:'Noto Serif TC',serif;font-weight:700;color:#5C4410;font-size:14px;line-height:1.3;margin-top:1px;">首堂體驗課 30 分鐘完全免費，無壓力</span></span><span style="color:var(--gold-bright,#C8973A);font-size:18px;opacity:.5;flex-shrink:0;line-height:1;">›</span></a>
+      </div>
+      <div style="border-top:1px solid var(--warm-line);margin:18px 0 14px;padding-top:18px;">
+        <div class="contact-label" style="margin-bottom:10px;display:block;">不方便加 LINE？直接留言給老師（寄到信箱）</div>
+        <input id="c-name" type="text" placeholder="你的名字（可填暱稱）" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
+        <input id="c-email" type="email" placeholder="你的 Email" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
+        <textarea id="c-msg" rows="3" placeholder="想詢問的內容…" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;resize:vertical;margin-bottom:10px;"></textarea>
+        <button class="contact-cta" style="background:var(--gold);" onclick="submitContact()">送出訊息 →</button>
+        <span id="c-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-align:center;margin-top:10px;"></span>
+      </div>
+    </div>
+  </div>
+</div>`;
+  }
+
+  if (!document.getElementById('modal-sns')) {
+    modalsHTML += `
+<!-- SNS LIST -->
+<div class="modal-overlay" id="modal-sns" onclick="closeModalOutside(event,'modal-sns')">
+  <div class="modal-box" style="max-width:340px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--ink);font-size:17px;">📲 追蹤我們</div>
+      <button class="modal-close" onclick="closeModal('modal-sns')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:var(--ink-muted);line-height:1.6;margin:0 0 12px;">每天學一點泰語，第一時間收到新課程與聲調小技巧 ✨</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${_snsRow('https://www.facebook.com/mrtaihua','#1877F2','f','Facebook','粉絲頁・泰語教學貼文','facebook')}
+        ${_snsRow('https://www.youtube.com/@mrtaihua','#FF0000','▶','YouTube','教學影片・聲調解析','youtube')}
+        ${_snsRow('https://www.instagram.com/mrtaihua','linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)','📷','Instagram','每日一字・學習花絮','instagram')}
+        ${_snsRow('https://www.tiktok.com/@mrtaihua','#000','🎵','TikTok','短影音・快速學泰語','tiktok')}
+        ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','#000','@','Threads','學習筆記・互動討論','threads')}
+        ${_snsRow('https://lin.ee/yVBgvywy','#C8973A','💬','LINE','預約免費體驗課・私訊諮詢','line')}
+      </div>
+    </div>
+  </div>
+</div>`;
+  }
+
+  if (!document.getElementById('modal-freebie')) {
+    modalsHTML += `
+<!-- FREEBIE / LEAD MAGNET -->
+<div class="modal-overlay" id="modal-freebie" onclick="closeModalOutside(event,'modal-freebie')">
+  <div class="modal-box" style="max-width:430px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--ink);">🎁 免費領取・泰語聲調速查表</div>
+      <button class="modal-close" onclick="closeModal('modal-freebie')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);line-height:1.9;margin-bottom:18px;">留下 Email，馬上免費下載「泰語聲調速查表」 — 用台灣人熟悉的中文聲調，一張表搞懂泰語五個聲調與判斷規則。</p>
+      <input id="lm-name" type="text" placeholder="你的名字（可填暱稱）" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:10px;">
+      <input id="lm-email" type="email" placeholder="你的 Email" style="font-family:'Noto Sans TC',sans-serif;font-size:16px;padding:11px 13px;border:1.5px solid var(--gold-bright);border-radius:6px;background:var(--cream);color:var(--ink);width:100%;box-sizing:border-box;margin-bottom:14px;">
+      <button class="contact-cta" onclick="submitFreebie()">馬上免費下載 →</button>
+      <span id="lm-status" style="display:none;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;text-align:center;margin-top:12px;"></span>
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:var(--ink-muted);text-align:center;margin-top:14px;">我們不會寄垃圾信，隨時可取消。</p>
+    </div>
+  </div>
+</div>`;
+  }
+
+  if (!document.getElementById('modal-line-qr')) {
+    modalsHTML += `
+<!-- CAL.COM BOOKING MODAL -->
+<div class="modal-overlay" id="modal-line-qr" onclick="closeModalOutside(event,'modal-line-qr')">
+  <div class="modal-box" style="max-width:520px;overflow-y:auto;overflow-x:hidden;border:3px solid var(--gold-bright);border-radius:16px;padding:0;">
+    <div style="background:var(--ink);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--gold-bright);font-weight:700;display:block;margin-bottom:4px;">預約免費體驗課</span>
+        <div style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:var(--white);">首堂 30 分鐘・完全免費</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-line-qr')" style="position:static;color:rgba(255,255,255,0.5);font-size:22px;background:none;border:none;cursor:pointer;padding:4px 8px;">✕</button>
+    </div>
+    <div style="background:#fff;position:relative;">
+      <div id="cal-embed-modal-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#fff;z-index:1;">
+        <div style="width:34px;height:34px;border:3px solid var(--gold-light,#F3E4C2);border-top-color:var(--gold-bright,#C8973A);border-radius:50%;animation:cal-spin .8s linear infinite;"></div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted,#6b6b6b);">正在載入預約日曆⋯</div>
+      </div>
+      <div id="cal-embed-modal" style="width:100%;min-height:480px;position:relative;z-index:0;"></div>
+    </div>
+    <div style="padding:14px 20px 18px;border-top:1px solid var(--border,rgba(139,99,16,0.18));display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=https://lin.ee/yVBgvywy" alt="LINE QR" style="width:38px;height:38px;border-radius:4px;opacity:.8;" loading="lazy">
+      <a href="https://lin.ee/yVBgvywy" target="_blank" rel="noopener" onclick="window.gtag&&gtag('event','add_line',{category:window.GA_CATEGORY||'unknown',source:'modal_line_qr'})" style="font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted,#6b6b6b);text-decoration:underline;">或先加 LINE 問老師 →</a>
+    </div>
+  </div>
+</div>
+<style>@keyframes cal-spin{to{transform:rotate(360deg)}}</style>`;
+  }
+
+  if (!document.getElementById('modal-social')) {
+    modalsHTML += `
+<!-- SOCIAL MODAL -->
+<div class="modal-overlay" id="modal-social" onclick="closeModalOutside(event,'modal-social')">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--ink);">📲 關注我們的社群</div>
+      <button class="modal-close" onclick="closeModal('modal-social')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 28px 28px;">
+      <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-bottom:20px;line-height:1.8;">追蹤社群，獲取最新課程資訊、泰文學習技巧與活動消息</p>
+      <div style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border);">
+        <a href="https://www.instagram.com/mrtaihua" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;border-bottom:1px solid var(--border);transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
+          <span style="font-size:22px;width:30px;text-align:center;">📸</span>
+          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">Instagram</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">@mrtaihua</div></div>
+          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
+        </a>
+        <a href="https://www.tiktok.com/@mrtaihua" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;border-bottom:1px solid var(--border);transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
+          <span style="font-size:22px;width:30px;text-align:center;">🎵</span>
+          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">TikTok</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">@mrtaihua</div></div>
+          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
+        </a>
+        <a href="https://www.youtube.com/@mrtaihua" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;border-bottom:1px solid var(--border);transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
+          <span style="font-size:22px;width:30px;text-align:center;">▶️</span>
+          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">YouTube</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">@mrtaihua</div></div>
+          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
+        </a>
+        <a href="https://www.facebook.com/mrtaihua" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;border-bottom:1px solid var(--border);transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
+          <span style="font-size:22px;width:30px;text-align:center;">👍</span>
+          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">Facebook</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">mrtaihua</div></div>
+          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
+        </a>
+        <a href="https://www.threads.com/@mrtaihua?invite=0" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
+          <span style="font-size:22px;width:30px;text-align:center;">🔗</span>
+          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">Threads</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">@mrtaihua</div></div>
+          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>`;
+  }
+
+  if (!document.getElementById('share-bg')) {
+    modalsHTML += `
+<!-- Share Popup -->
+<div id="share-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;" onclick="closeSharePopup()"></div>
+<div id="share-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1c1a16;border:1px solid rgba(200,151,58,0.45);border-radius:12px;padding:22px;width:92%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+  <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:14px;">🔗 分享這篇文章</div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <button onclick="shareToFB()" aria-label="分享到 Facebook" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:6px;color:${_snsColor.facebook};cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:700;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">${_snsIcon.facebook}<span style="color:rgba(255,255,255,0.75);">Facebook</span></button>
+    <button onclick="shareToLine()" aria-label="分享到 LINE" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:6px;color:${_snsColor.line};cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:700;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">${_snsIcon.line}<span style="color:rgba(255,255,255,0.75);">LINE</span></button>
+  </div>
+  <textarea id="share-text-area" aria-label="分享文字內容" readonly rows="7" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.85);font-family:'Noto Sans TC',sans-serif;font-size:13px;line-height:1.8;padding:12px 14px;resize:none;outline:none;box-sizing:border-box;"></textarea>
+  <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:rgba(255,255,255,0.25);margin:8px 0 14px;">⚠️ 請勿刪除連結，分享時請保留完整內容，感謝您🙏</div>
+  <div style="display:flex;gap:8px;">
+    <button id="share-copy-btn" onclick="execShareCopy()" style="flex:1;padding:12px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">一鍵複製</button>
+    <button onclick="closeSharePopup()" style="padding:12px 20px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;cursor:pointer;">取消</button>
+  </div>
+</div>`;
+  }
+
+  if (modalsHTML) {
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = modalsHTML;
+    while (wrapper.firstChild) document.body.appendChild(wrapper.firstChild);
+  }
+})();
+
+// ----- [03.2] 📺 YouTube Video Modal -----
+if (typeof openYTVideoModal === 'undefined') {
+  var YT_CHANNEL_HANDLE = 'mrtaihua';
+  var YT_FALLBACK = [];
+  var _ytVideos = [];
+  var _ytCurrentIndex = -1;
+  var _ytLoaded = false;
+
+  window.openYTVideoModal = async function() {
+    openModal('modal-videos');
+    if (!_ytLoaded) {
+      _showYTState('loading');
+      var fetched = await _fetchYTVideos();
+      _ytVideos = (fetched && fetched.length) ? fetched : YT_FALLBACK;
+      _ytLoaded = true;
+    }
+    loadRandomYTVideo();
+  };
+
+  window._fetchYTVideos = async function() {
+    var API_KEY = 'AIzaSyBIY9Mg41RXLNkgDTq1ZyiJnCMrp_3BEeI';
+    try {
+      var r1 = await fetch('https://www.googleapis.com/youtube/v3/channels?key=' + API_KEY + '&forHandle=' + YT_CHANNEL_HANDLE + '&part=contentDetails&maxResults=1');
+      var d1 = await r1.json();
+      if (d1.error) throw new Error(d1.error.message);
+      var uploadsId = d1.items && d1.items[0] && d1.items[0].contentDetails.relatedPlaylists.uploads;
+      if (!uploadsId) throw new Error('no uploads playlist');
+      var r2 = await fetch('https://www.googleapis.com/youtube/v3/playlistItems?key=' + API_KEY + '&playlistId=' + uploadsId + '&part=snippet&maxResults=50');
+      var d2 = await r2.json();
+      if (d2.error) throw new Error(d2.error.message);
+      var items = d2.items || [];
+      if (!items.length) throw new Error('no videos');
+      return items.map(function(item) { return { id: item.snippet.resourceId.videoId, title: item.snippet.title }; });
+    } catch(e) { console.warn('[YT] API failed:', e.message); return null; }
+  };
+
+  window._showYTState = function(state) {
+    var player = document.getElementById('yt-player');
+    var emptyEl = document.getElementById('yt-empty-state');
+    var titleEl = document.getElementById('yt-title');
+    var shuffleBtn = document.getElementById('yt-shuffle-btn');
+    if (state === 'loading') {
+      if (player) { player.src = ''; player.style.display = 'none'; }
+      if (emptyEl) { emptyEl.style.display = 'flex'; emptyEl.innerHTML = '<span style="font-size:36px;">⏳</span><div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:rgba(255,255,255,0.45);margin-top:10px;">載入中...</div>'; }
+      if (titleEl) titleEl.textContent = '';
+      if (shuffleBtn) shuffleBtn.style.display = 'none';
+    } else if (state === 'empty') {
+      if (player) { player.src = ''; player.style.display = 'none'; }
+      if (emptyEl) { emptyEl.style.display = 'flex'; emptyEl.innerHTML = '<span style="font-size:48px;">📺</span><div style="font-family:\'Noto Sans TC\',sans-serif;font-size:14px;color:rgba(255,255,255,0.5);text-align:center;margin-top:10px;">影片即將上線<br>敬請期待！</div>'; }
+      if (titleEl) titleEl.textContent = '';
+      if (shuffleBtn) shuffleBtn.style.display = 'none';
+    }
+  };
+
+  window.loadRandomYTVideo = function() {
+    var player = document.getElementById('yt-player');
+    var titleEl = document.getElementById('yt-title');
+    var emptyEl = document.getElementById('yt-empty-state');
+    var shuffleBtn = document.getElementById('yt-shuffle-btn');
+    if (!player) return;
+    if (!_ytVideos.length) { _showYTState('empty'); return; }
+    var idx;
+    if (_ytVideos.length === 1) { idx = 0; }
+    else { do { idx = Math.floor(Math.random() * _ytVideos.length); } while (idx === _ytCurrentIndex); }
+    _ytCurrentIndex = idx;
+    var v = _ytVideos[idx];
+    player.style.display = '';
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (shuffleBtn) shuffleBtn.style.display = '';
+    player.src = 'https://www.youtube.com/embed/' + v.id + '?autoplay=1&rel=0';
+    if (titleEl) titleEl.textContent = v.title || '';
+  };
+
+  window.shuffleYTVideo = function() {
+    var player = document.getElementById('yt-player');
+    if (player) player.src = '';
+    setTimeout(loadRandomYTVideo, 80);
+  };
+
+  window.stopYTVideo = function() {
+    var player = document.getElementById('yt-player');
+    if (player) player.src = '';
+  };
+}
+
+// ----- [03.3] 🚀 FB Posts Modal -----
+if (typeof openFBPostModal === 'undefined') {
+  var _fbDetailPostId = null;
+  var SITE_URL = 'https://mrtaihualin.com';
+
+  window.openFBPostModal = function() { openModal('modal-fbposts'); showFBList(); };
+
+  window.openLinkedFBPost = function(postId) {
+    closeModal('modal-selfstudy');
+    openModal('modal-fbposts');
+    showFBDetail(postId);
+  };
+
+  window.showFBList = function() {
+    document.getElementById('fb-list-view').style.display = 'block';
+    document.getElementById('fb-detail-view').style.display = 'none';
+    var _fbb=document.getElementById('fb-back-btn');if(_fbb)_fbb.style.display='none';
+    _renderFBList();
+  };
+
+  window._renderFBList = function() {
+    var list = document.getElementById('fb-list-view');
+    if (!list) return;
+    if (!FB_POSTS.length) { list.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);">尚無文章</div>'; return; }
+    list.innerHTML = FB_POSTS.map(function(p) {
+      var count = _getFBComments(p.id).length;
+      return '<div onclick="showFBDetail(\'' + p.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(212,160,23,0.07)\'" onmouseout="this.style.background=\'\'">'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--gold-bright);letter-spacing:1px;margin-bottom:5px;">' + p.date + '</div>'
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:15px;font-weight:700;color:var(--ink);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.title + '</div>'
+        + (count ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--ink-muted);margin-top:4px;">💬 ' + count + ' 則留言</div>' : '')
+        + '</div>'
+        + '<div style="color:rgba(212,160,23,0.7);font-size:20px;margin-left:16px;flex-shrink:0;">›</div>'
+        + '</div>';
+    }).join('');
+  };
+
+  window.showFBDetail = function(postId) {
+    var post = FB_POSTS.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    _fbDetailPostId = postId;
+    document.getElementById('fb-list-view').style.display = 'none';
+    document.getElementById('fb-detail-view').style.display = 'block';
+    var _fbb=document.getElementById('fb-back-btn');if(_fbb)_fbb.style.display='';
+    document.getElementById('fb-detail-view').scrollTop = 0;
+    document.getElementById('fb-detail-date').textContent = post.date;
+    document.getElementById('fb-detail-text').textContent = post.text;
+    var imgWrap = document.getElementById('fb-detail-img-wrap');
+    var img = document.getElementById('fb-detail-img');
+    if (post.image) { img.src = post.image; imgWrap.style.display = 'block'; }
+    else { imgWrap.style.display = 'none'; }
+    _renderFBComments(postId);
+  };
+
+  window._getFBComments = function(postId) {
+    try { return JSON.parse(localStorage.getItem('fbcmt_' + postId)) || []; } catch(e) { return []; }
+  };
+  window._saveFBComments = function(postId, arr) {
+    try { localStorage.setItem('fbcmt_' + postId, JSON.stringify(arr)); } catch(e) {}
+  };
+
+  window._renderFBComments = function(postId) {
+    var comments = _getFBComments(postId);
+    var el = document.getElementById('fb-comments-list');
+    if (!el) return;
+    if (!comments.length) { el.innerHTML = '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:var(--ink-muted);text-align:center;padding:8px 0;">成為第一個留言的人！</div>'; return; }
+    el.innerHTML = comments.map(function(c, i) {
+      return '<div style="background:rgba(139,99,16,0.06);border-left:3px solid var(--gold-bright);border-radius:0 6px 6px 0;padding:12px 14px;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+        + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:var(--gold-bright);">' + (c.name || '匿名讀者') + '</span>'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
+        + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--ink-muted);">' + c.date + '</span>'
+        + '<button onclick="deleteFBComment(\'' + postId + '\',' + i + ')" style="background:none;border:none;color:rgba(139,99,16,0.45);cursor:pointer;font-size:14px;padding:0;line-height:1;" onmouseover="this.style.color=\'#ff6b6b\'" onmouseout="this.style.color=\'rgba(139,99,16,0.4)\'">✕</button>'
+        + '</div>'
+        + '</div>'
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:13px;line-height:1.7;color:var(--ink-soft);">' + c.text.replace(/</g,'&lt;') + '</div>'
+        + '</div>';
+    }).join('');
+  };
+
+  window.submitFBComment = function() {
+    var name = (document.getElementById('fb-comment-name').value || '').trim();
+    var text = (document.getElementById('fb-comment-text').value || '').trim();
+    if (!text) { alert('請填寫留言內容'); return; }
+    var comments = _getFBComments(_fbDetailPostId);
+    var now = new Date();
+    comments.push({ name: name, text: text, date: now.getFullYear() + '/' + (now.getMonth()+1) + '/' + now.getDate() });
+    _saveFBComments(_fbDetailPostId, comments);
+    document.getElementById('fb-comment-name').value = '';
+    document.getElementById('fb-comment-text').value = '';
+    _renderFBComments(_fbDetailPostId);
+    _renderFBList();
+  };
+
+  window.shareFBPost = function() {
+    var post = FB_POSTS.find(function(p) { return p.id === _fbDetailPostId; });
+    if (!post) return;
+    var preview = post.text ? post.text.substring(0, 65).replace(/\n/g,' ') + '...' : '';
+    openSharePopup(post.title, preview);
+  };
+}
+
+// ----- [03.4] 📖 Self-Study Modal -----
+if (typeof openSSModal === 'undefined') {
+  window._ssCurrentId = null;
+
+  window.openSSModal = function() { openModal('modal-selfstudy'); showSSList(); };
+
+  window.showSSList = function() {
+    document.getElementById('ss-list-view').style.display = 'block';
+    document.getElementById('ss-detail-view').style.display = 'none';
+    var _ssb=document.getElementById('ss-back-btn');if(_ssb)_ssb.style.display='none';
+    _renderSSList();
+  };
+
+  window._renderSSList = function() {
+    var list = document.getElementById('ss-list-view');
+    if (!list) return;
+    if (!SELFSTUDY_ARTICLES.length) { list.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;color:var(--ink-muted);">尚無文章</div>'; return; }
+    list.innerHTML = SELFSTUDY_ARTICLES.map(function(a) {
+      var vocabCount = (a.vocabulary || []).length;
+      return '<div onclick="showSSDetail(\'' + a.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(212,160,23,0.07)\'" onmouseout="this.style.background=\'\'">'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--gold-bright);letter-spacing:1px;margin-bottom:5px;">' + a.date + '</div>'
+        + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:15px;font-weight:700;color:var(--ink);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + a.title + '</div>'
+        + (vocabCount ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--ink-muted);margin-top:4px;">📚 ' + vocabCount + ' 個詞彙</div>' : '')
+        + '</div>'
+        + '<div style="color:rgba(212,160,23,0.7);font-size:20px;margin-left:16px;flex-shrink:0;">›</div>'
+        + '</div>';
+    }).join('');
+  };
+
+  window.showSSDetail = function(articleId) {
+    var a = SELFSTUDY_ARTICLES.find(function(x) { return x.id === articleId; });
+    if (!a) return;
+    window._ssCurrentId = a.linkedPostId;
+    document.getElementById('ss-list-view').style.display = 'none';
+    document.getElementById('ss-detail-view').style.display = 'block';
+    var _ssb=document.getElementById('ss-back-btn');if(_ssb)_ssb.style.display='';
+    document.getElementById('ss-detail-view').scrollTop = 0;
+    document.getElementById('ss-detail-label').textContent = '詞彙學習';
+    var html = '';
+    if (a.vocabulary && a.vocabulary.length) {
+      html += '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:var(--gold-bright);letter-spacing:3px;margin-bottom:14px;text-transform:uppercase;">1 · Vocabulary & Useful Phrases</div>';
+      a.vocabulary.forEach(function(v) {
+        html += '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px;">'
+          + '<div style="background:rgba(139,99,16,0.05);padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;">'
+          + '<span style="font-family:\'Sarabun\',sans-serif;font-size:28px;font-weight:700;color:var(--gold-bright);">' + v.thai + '</span>'
+          + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--ink-muted);letter-spacing:1px;">' + v.phonetic + '</span>'
+          + '<span style="font-family:\'Noto Sans TC\',sans-serif;font-size:14px;font-weight:700;color:var(--ink-soft);margin-left:auto;">' + v.meaning + '</span>'
+          + '</div>'
+          + '<div style="padding:12px 20px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--ink-muted);line-height:1.7;border-bottom:1px solid var(--border);">💡 ' + v.note + '</div>'
+          + '<div style="padding:12px 20px 16px;">'
+          + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--gold-bright);letter-spacing:2px;margin-bottom:10px;">📌 例句</div>';
+        v.examples.forEach(function(ex, ei) {
+          html += '<div style="margin-bottom:' + (ei < v.examples.length-1 ? '12' : '0') + 'px;">'
+            + '<div style="font-family:\'Sarabun\',sans-serif;font-size:16px;color:var(--ink);">' + ex.thai + '</div>'
+            + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--ink-muted);margin-top:2px;">' + ex.zh + '</div>'
+            + '</div>';
+        });
+        html += '</div></div>';
+      });
+    }
+    if (a.conversation) {
+      var cv = a.conversation;
+      html += '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;font-weight:700;color:var(--gold-bright);letter-spacing:3px;margin:22px 0 14px;text-transform:uppercase;">2 · Real-life Conversation</div>';
+      html += '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">'
+        + '<div style="background:rgba(139,99,16,0.05);padding:12px 20px;border-bottom:1px solid var(--border);font-family:\'Noto Sans TC\',sans-serif;font-size:13px;color:var(--ink-soft);">' + cv.situation + '</div>'
+        + '<div style="padding:14px 20px;display:flex;flex-direction:column;gap:14px;">';
+      cv.lines.forEach(function(line) {
+        var isYou = line.speaker === '你';
+        html += '<div style="display:flex;gap:10px;' + (isYou ? 'flex-direction:row-reverse;' : '') + '">'
+          + '<div style="flex-shrink:0;font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:var(--gold-bright);padding-top:4px;min-width:36px;text-align:' + (isYou ? 'left' : 'right') + ';">' + line.speaker + '</div>'
+          + '<div style="background:' + (isYou ? 'rgba(212,160,23,0.12)' : 'rgba(139,99,16,0.06)') + ';border-radius:8px;padding:10px 14px;max-width:85%;">'
+          + '<div style="font-family:\'Sarabun\',sans-serif;font-size:15px;color:var(--ink);margin-bottom:3px;">' + line.thai + '</div>'
+          + '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:var(--ink-muted);">' + line.zh + '</div>'
+          + '</div></div>';
+      });
+      html += '</div></div>';
+    }
+    document.getElementById('ss-vocab-card').innerHTML = html;
+    var readBtn = document.getElementById('ss-read-btn');
+    if (readBtn) readBtn.style.display = a.linkedPostId ? '' : 'none';
+  };
+
+  window.shareSSArticle = function() {
+    var a = SELFSTUDY_ARTICLES.find(function(x) { return x.linkedPostId === window._ssCurrentId; });
+    if (!a) return;
+    var preview = '';
+    if (a.vocabulary && a.vocabulary.length) {
+      var v = a.vocabulary[0];
+      preview = v.thai + '（' + v.phonetic + '）= ' + v.meaning + '\n'
+        + '例：' + v.examples[0].thai + '\n　　' + v.examples[0].zh;
+    }
+    openSharePopup(a.title, preview);
+  };
+}
+
+// ----- [03.5] 🔗 Share Popup -----
+if (typeof openSharePopup === 'undefined') {
+  // 2026-08-08: openSharePopup 新增第 3 個參數 url（選填）— 沒有傳就跟以前一樣用 SITE_URL 首頁
+  //   讓文章分享用得到「這篇文章自己的網址」，同時舊的呼叫方式（只傳 title/preview）完全不受影響
+  window._shareCurrentUrl = window.SITE_URL || 'https://mrtaihualin.com';
+  window._shareCurrentTitle = '';
+
+  window.openSharePopup = function(title, preview, url) {
+    var articleUrl = url || window.SITE_URL || 'https://mrtaihualin.com';
+    window._shareCurrentUrl = articleUrl;
+    window._shareCurrentTitle = title || '';
+    var text = '我在「泰華眼裡的泰語教學」發現了一個很實用的泰語學習資源！\n\n'
+      + '📌 ' + title + '\n'
+      + (preview ? preview + '\n\n' : '\n')
+      + '🌐 更多文章內容及免費泰語課程與學習內容：\n'
+      + articleUrl + '\n\n'
+      + '學泰語沒有你想的那麼難！每天一句，去泰國旅遊再也不怕了 🇹🇭 快來一起學！';
+    document.getElementById('share-text-area').value = text;
+    document.getElementById('share-copy-btn').textContent = '一鍵複製';
+    document.getElementById('share-bg').style.display = 'block';
+    document.getElementById('share-popup').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.execShareCopy = function() {
+    var ta = document.getElementById('share-text-area');
+    ta.select();
+    try {
+      document.execCommand('copy');
+      document.getElementById('share-copy-btn').textContent = '✅ 已複製！';
+      setTimeout(function(){ document.getElementById('share-copy-btn').textContent = '一鍵複製'; }, 2000);
+    } catch(e) { ta.select(); }
+  };
+
+  window.closeSharePopup = function() {
+    document.getElementById('share-bg').style.display = 'none';
+    document.getElementById('share-popup').style.display = 'none';
+    document.body.style.overflow = '';
+  };
+
+  // 分享 popup 裡的 Facebook / LINE 快捷鍵 — 直接開該平台官方分享網址，帶目前分享的文章連結
+  window.shareToFB = function() {
+    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://mrtaihualin.com');
+    window.open('https://www.facebook.com/sharer/sharer.php?u=' + u, '_blank', 'noopener');
+  };
+  window.shareToLine = function() {
+    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://mrtaihualin.com');
+    var t = encodeURIComponent(window._shareCurrentTitle || '');
+    window.open('https://social-plugins.line.me/lineit/share?url=' + u + '&text=' + t, '_blank', 'noopener');
+  };
+}
+
+// ----- [03.6] 📰 BLOG ARTICLE SHARE BUTTON — 手機用原生分享，桌機一律用分享 popup -----
+//   2026-08-08: Lin 核准「全部合一」設計 — 手機支援原生分享就叫原生的，桌機或失敗都退回舊的分享 popup（含 FB/LINE 捷徑）
+//   自動幫 blog/ 資料夾底下每一篇文章加分享按鈕，不用逐一改 44 個檔案：讀那篇文章自己的 <title>/meta description/canonical 網址
+//
+//   2026-08-08 (rev2, Lin 測試後決定): 原本只檢查「有沒有 navigator.share」— 但桌機新版 Safari/Chrome
+//   也支援 navigator.share()，導致桌機也先跳系統分享選單；使用者若按叉關掉那個選單（沒選任何管道），
+//   navigator.share().catch() 會把「使用者取消」跟「裝置不支援」當同一種錯誤處理，接著又跳出分享 popup
+//   （FB/LINE 那個）= 疊出 2 個視窗。改成先判斷「是不是手機」— 是手機才走 navigator.share，
+//   桌機（Safari/Chrome/Firefox 都算）一律直接開分享 popup，不經過 navigator.share
+if (typeof shareBlogArticle === 'undefined') {
+  window.shareBlogArticle = function(title, text, url) {
+    var isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+    if (isMobileDevice && navigator.share) {
+      navigator.share({ title: title, text: text, url: url }).catch(function(){
+        openSharePopup(title, text, url);
+      });
+    } else {
+      openSharePopup(title, text, url);
+    }
+  };
+
+  (function autoInjectBlogShareButton(){
+    try {
+      if (!/\/blog\//.test(location.pathname)) return; // 只在 blog/ 資料夾底下的文章頁執行
+      if (document.getElementById('blog-share-btn-wrap')) return;
+      var host = document.querySelector('.related-articles');
+      if (!host || !host.parentNode) return;
+
+      var canonicalEl = document.querySelector('link[rel="canonical"]');
+      var url = canonicalEl ? canonicalEl.href : location.href;
+      var descEl = document.querySelector('meta[name="description"]');
+      var text = descEl ? descEl.content : '';
+      var title = (document.title || '').split('|')[0].trim();
+
+      var wrap = document.createElement('div');
+      wrap.id = 'blog-share-btn-wrap';
+      wrap.style.cssText = 'text-align:center;margin:30px 0 6px;';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'blog-btn alt';
+      btn.textContent = '🔗 分享這篇文章';
+      btn.addEventListener('click', function(){
+        if (window.gtag) gtag('event','article_share_click',{category:window.GA_CATEGORY||'article', source_page: location.pathname});
+        shareBlogArticle(title, text, url);
+      });
+      wrap.appendChild(btn);
+      host.parentNode.insertBefore(wrap, host);
+    } catch(e) {}
+  })();
+}
+
+// ----- [03.6] 🔗 openLinkedSSFromPost — available on all pages -----
+window.openLinkedSSFromPost = function() {
+  var postId = typeof _fbDetailPostId !== 'undefined' ? _fbDetailPostId : window._fbDetailPostId;
+  var arts = typeof SELFSTUDY_ARTICLES !== 'undefined' ? SELFSTUDY_ARTICLES : [];
+  var art = arts.find(function(a) { return a.linkedPostId === postId; });
+  closeModal('modal-fbposts');
+  if (window.openSSModal) openSSModal();
+  if (art && window.showSSDetail) showSSDetail(art.id);
+};
+
+// ----- [03.7] 🗑️ Delete comment — available on all pages -----
+window.deleteFBComment = function(postId, idx) {
+  var getFn = window._getFBComments || function(id) { try { return JSON.parse(localStorage.getItem('fbcmt_' + id)) || []; } catch(e) { return []; } };
+  var saveFn = window._saveFBComments || function(id, arr) { try { localStorage.setItem('fbcmt_' + id, JSON.stringify(arr)); } catch(e) {} };
+  var comments = getFn(postId);
+  comments.splice(idx, 1);
+  saveFn(postId, comments);
+  if (window._renderFBComments) _renderFBComments(postId);
+  if (window._renderFBList) _renderFBList();
+};
+
+// ════════════════════════════════════════════════════════════════════
+// [04.1] 📋 EXIT-INTENT SURVEY — ทุกหน้า ยกเว้นหน้าเกม 5 ไฟล์ + หน้าดาวน์โหลดชีต
+//   Desktop: mouseout ขอบบน (exit-intent มาตรฐาน)
+//   มือถือ/สำรอง: idle timer 45 วิ (จับ exit-intent มือถือไม่ได้จริง)
+//   โชว์เป็นแถบเล็กด้านล่าง ไม่บล็อกจอ · โชว์ครั้งเดียวตลอดไปต่อเบราว์เซอร์ (localStorage)
+//   ส่งคำตอบ: web3forms (เข้าอีเมล Lin) + GA4 — ไม่ต้องสร้างตาราง Supabase (ตามที่ Lin เคาะ)
+// ════════════════════════════════════════════════════════════════════
+(function(){
+  var SHOWN_KEY = 'exit_survey_shown_v1';
+  var EXCLUDE = ['tone-finder.html','reading-game.html','typing-game.html','word-order.html','lego.html',
+                 'vocab-thank-you.html','thank-you.html','vocab-cheatsheet.html'];
+  var page = (location.pathname.split('/').pop() || 'index.html');
+  if (EXCLUDE.indexOf(page) !== -1) return;
+
+  function shown(){ try{ return localStorage.getItem(SHOWN_KEY)==='1'; }catch(e){ return false; } }
+  function markShown(){ try{ localStorage.setItem(SHOWN_KEY,'1'); }catch(e){} }
+  if (shown()) return;
+
+  var ES_WEB3FORMS_KEY = 'b3bfdb97-19dd-4910-bd15-89720be846c2'; // key เดียวกับ WEB3FORMS_KEY ด้านบน
+  var armed = false, triggered = false;
+
+  function showBar(){
+    if (triggered || shown() || document.getElementById('exit-survey-bar')) return;
+    triggered = true; markShown();
+    try{ if (typeof gtag === 'function') gtag('event','exit_survey_show',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }catch(e){}
+
+    var bar = document.createElement('div');
+    bar.id = 'exit-survey-bar';
+    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#fff;border-top:2px solid #C8973A;box-shadow:0 -6px 24px rgba(0,0,0,.14);padding:14px 18px;font-family:"Noto Sans TC",sans-serif;transform:translateY(110%);transition:transform .3s ease;';
+    var opts = ['還在比較','時間喬不攏','想先自己練習','價格考量','其他'];
+    var optsHTML = opts.map(function(t){
+      return '<button class="es-opt" data-v="'+t+'" style="background:#FBF6EA;border:1px solid #EADFBF;border-radius:999px;padding:6px 13px;font-size:12.5px;color:#5C4410;cursor:pointer;">'+t+'</button>';
+    }).join('');
+    bar.innerHTML =
+      '<div style="max-width:720px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">'+
+        '<button id="es-x" aria-label="關閉" style="order:9;margin-left:auto;border:none;background:none;font-size:16px;color:#B0A080;cursor:pointer;line-height:1;">✕</button>'+
+        '<span style="font-size:13.5px;font-weight:700;color:#5C4410;flex:1 1 100%;">要離開了嗎？花 3 秒告訴老師為什麼 🙏</span>'+
+        '<div id="es-opts" style="display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%;">'+optsHTML+'</div>'+
+      '</div>';
+    document.body.appendChild(bar);
+    requestAnimationFrame(function(){ bar.style.transform='translateY(0)'; });
+
+    function closeBar(){ bar.style.transform='translateY(110%)'; setTimeout(function(){ try{ bar.remove(); }catch(e){} }, 320); }
+
+    var xBtn = bar.querySelector('#es-x');
+    if (xBtn) xBtn.onclick = function(){
+      try{ if (typeof gtag === 'function') gtag('event','exit_survey_dismiss',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }catch(e){}
+      closeBar();
+    };
+    bar.querySelectorAll('.es-opt').forEach(function(btn){
+      btn.onclick = function(){
+        var val = btn.getAttribute('data-v');
+        try{ if (typeof gtag === 'function') gtag('event','exit_survey_submit',{category:window.GA_CATEGORY||'unknown', reason: val, source_page: location.pathname }); }catch(e){}
+        try{
+          fetch('https://api.web3forms.com/submit', {
+            method:'POST', keepalive:true,
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify({ access_key: ES_WEB3FORMS_KEY, subject:'【離站調查】來自泰華網站', from_name:'泰華網站・離站調查', email:'exit-survey@mrtaihualin.com', '原因':val, '頁面':location.pathname })
+          }).then(function(r){ return r.json(); }).then(function(data){
+            if(!data || !data.success) console.error('[exit-survey] web3forms送出失敗:', data);
+          }).catch(function(e){ console.error('[exit-survey] 網路錯誤:', e); });
+        }catch(e){}
+        bar.innerHTML = '<div style="max-width:720px;margin:0 auto;text-align:center;font-size:13.5px;color:#5C4410;padding:4px 0;">✅ 謝謝你的回饋！</div>';
+        setTimeout(closeBar, 1600);
+      };
+    });
+  }
+
+  function armTriggers(){
+    if (armed) return;
+    armed = true;
+    // Desktop: exit-intent — เมาส์ออกทางขอบบนจอ (มาตรฐาน exit-intent)
+    document.addEventListener('mouseout', function(e){
+      if (e.clientY <= 0 && !e.relatedTarget && !e.toElement) showBar();
+    });
+    // สำรอง/มือถือ: idle timer (จับ mouse-leave บนมือถือไม่ได้จริง)
+    var idleTimer;
+    function resetIdle(){ clearTimeout(idleTimer); idleTimer = setTimeout(showBar, 45000); }
+    ['scroll','touchstart','click','keydown'].forEach(function(ev){
+      window.addEventListener(ev, resetIdle, {passive:true});
+    });
+    resetIdle();
+  }
+
+  // รอ engagement ขั้นต่ำ 8 วิ ก่อนเริ่มจับ (กัน bounce ไว โชว์ทันทีจนน่ารำคาญ)
+  setTimeout(armTriggers, 8000);
+})();
+
+// ════════════════════════════════════════════════════════════════════
+// [04.2] 📊 GA4 ARTICLE TRACKING — scroll depth + time on page
+//   ยิง article_scroll_depth (25/50/75/100%) + article_time_on_page (15/30/60/120 วิ)
+// ════════════════════════════════════════════════════════════════════
+(function(){
+  var ARTICLE_PAGES = ['blog.html','content.html','resources.html']; // หน้าฮับ/หน้ารวม — บทความจริงทุกไฟล์ใต้ /blog/ เช็คแยกด้านล่าง (ไม่ต้องเพิ่มชื่อไฟล์เองทุกสัปดาห์)
+  var page = (location.pathname.split('/').pop() || 'index.html');
+  var isArticlePath = /^\/blog\//.test(location.pathname); // ครอบคลุมบทความใหม่ทุกไฟล์ใต้ /blog/ อัตโนมัติ (path ต้องขึ้นต้นด้วย /blog/)
+  if (!isArticlePath && ARTICLE_PAGES.indexOf(page) === -1) return;
+
+  var startTime = Date.now();
+  var scrollFlags = {}, timeFlags = {};
+  var TIME_MARKS = [15, 30, 60, 120];
+
+  function pctScrolled(){
+    var doc = document.documentElement;
+    var scrollTop = window.scrollY || doc.scrollTop || 0;
+    var height = (doc.scrollHeight - doc.clientHeight) || 1;
+    return Math.min(100, Math.round((scrollTop / height) * 100));
+  }
+  function checkScroll(){
+    var pct = pctScrolled();
+    [25,50,75,100].forEach(function(p){
+      if (pct >= p && !scrollFlags[p]) {
+        scrollFlags[p] = true;
+        try{ if (typeof gtag === 'function') gtag('event','article_scroll_depth',{category:window.GA_CATEGORY||'unknown', percent_scrolled:p, source_page: location.pathname }); }catch(e){}
+      }
+    });
+  }
+  window.addEventListener('scroll', function(){ try{ checkScroll(); }catch(e){} }, {passive:true});
+
+  function checkTime(){
+    var sec = Math.round((Date.now() - startTime) / 1000);
+    TIME_MARKS.forEach(function(t){
+      if (sec >= t && !timeFlags[t]) {
+        timeFlags[t] = true;
+        try{ if (typeof gtag === 'function') gtag('event','article_time_on_page',{category:window.GA_CATEGORY||'unknown', seconds:t, source_page: location.pathname }); }catch(e){}
+      }
+    });
+  }
+  setInterval(function(){ try{ checkTime(); }catch(e){} }, 5000);
+
+  window.addEventListener('pagehide', function(){
+    try{ if (typeof gtag === 'function') gtag('event','article_time_final',{category:window.GA_CATEGORY||'unknown', seconds: Math.round((Date.now()-startTime)/1000), source_page: location.pathname, transport_type:'beacon' }); }catch(e){}
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════════
+// [04.3] 📊 GA4 YOUTUBE TRACKING — 影片互動ต่อยอด modal-videos เดิม
+//   ไม่แก้ openYTVideoModal/loadRandomYTVideo/shuffleYTVideo เดิม แค่ "ห่อทับ" (wrap) เพื่อความปลอดภัย
+//   ยิงตามธรรมเนียม GA4 enhanced-measurement: youtube_play / youtube_progress(25/50/75%) / youtube_complete
+// ════════════════════════════════════════════════════════════════════
+(function(){
+  var _ytApiInjected = false, _ytPlayerObj = null;
+  var _ytFlags = {}, _ytPollTimer = null, _ytCurVideoId = null;
+
+  function ensureYTApi(cb){
+    if (window.YT && window.YT.Player) { cb(); return; }
+    if (!_ytApiInjected) {
+      _ytApiInjected = true;
+      try{
+        var tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      }catch(e){}
+    }
+    var prevReady = window.onYouTubeIframeAPIReady;
+    var called = false;
+    window.onYouTubeIframeAPIReady = function(){
+      try{ if (typeof prevReady === 'function') prevReady(); }catch(e){}
+      if (!called) { called = true; cb(); }
+    };
+    var tries = 0;
+    var iv = setInterval(function(){
+      tries++;
+      if (window.YT && window.YT.Player) { clearInterval(iv); if (!called) { called = true; cb(); } }
+      if (tries > 100) clearInterval(iv); // เลิกรอหลัง ~20 วิ
+    }, 200);
+  }
+
+  function clearPoll(){ if (_ytPollTimer) { clearInterval(_ytPollTimer); _ytPollTimer = null; } }
+
+  function fireMilestones(){
+    try{
+      if (!_ytPlayerObj || typeof _ytPlayerObj.getDuration !== 'function') return;
+      var dur = _ytPlayerObj.getDuration() || 0;
+      var cur = _ytPlayerObj.getCurrentTime ? _ytPlayerObj.getCurrentTime() : 0;
+      if (!dur) return;
+      var pct = (cur / dur) * 100;
+      [25,50,75].forEach(function(p){
+        if (pct >= p && !_ytFlags[p]) {
+          _ytFlags[p] = true;
+          if (typeof gtag === 'function') gtag('event','youtube_progress',{category:window.GA_CATEGORY||'unknown', percent_progress:p, video_id:_ytCurVideoId, source_page: location.pathname });
+        }
+      });
+    }catch(e){}
+  }
+
+  function onPlayerStateChange(e){
+    try{
+      var YTState = window.YT ? window.YT.PlayerState : {};
+      if (e.data === YTState.PLAYING) {
+        if (!_ytFlags.started) {
+          _ytFlags.started = true;
+          if (typeof gtag === 'function') gtag('event','youtube_play',{category:window.GA_CATEGORY||'unknown', video_id:_ytCurVideoId, source_page: location.pathname });
+        }
+        clearPoll();
+        _ytPollTimer = setInterval(fireMilestones, 2000);
+      } else if (e.data === YTState.ENDED) {
+        clearPoll();
+        if (!_ytFlags[100]) {
+          _ytFlags[100] = true;
+          if (typeof gtag === 'function') gtag('event','youtube_complete',{category:window.GA_CATEGORY||'unknown', video_id:_ytCurVideoId, source_page: location.pathname });
+        }
+      } else if (e.data === YTState.PAUSED) {
+        clearPoll();
+      }
+    }catch(e2){}
+  }
+
+  function initTrackingForCurrentVideo(){
+    try{
+      var iframe = document.getElementById('yt-player');
+      if (!iframe || !iframe.src) return;
+      if (iframe.src.indexOf('enablejsapi=1') === -1) {
+        iframe.src = iframe.src + (iframe.src.indexOf('?') > -1 ? '&' : '?') + 'enablejsapi=1';
+      }
+      var m = iframe.src.match(/embed\/([^?&]+)/);
+      _ytCurVideoId = m ? m[1] : null;
+      _ytFlags = {};
+      clearPoll();
+      ensureYTApi(function(){
+        try{
+          if (_ytPlayerObj && _ytPlayerObj.destroy) { try{ _ytPlayerObj.destroy(); }catch(e){} }
+          _ytPlayerObj = new YT.Player('yt-player', { events: { onStateChange: onPlayerStateChange } });
+        }catch(e){}
+      });
+    }catch(e3){}
+  }
+
+  ['loadRandomYTVideo','shuffleYTVideo'].forEach(function(fnName){
+    var orig = window[fnName];
+    if (typeof orig !== 'function') return;
+    window[fnName] = function(){
+      var r = orig.apply(this, arguments);
+      setTimeout(initTrackingForCurrentVideo, 300); // รอ src ของ iframe เซ็ตเสร็จก่อนค่อยผูก tracking
+      return r;
+    };
+  });
+
+  var origStopYT = window.stopYTVideo;
+  if (typeof origStopYT === 'function') {
+    window.stopYTVideo = function(){ clearPoll(); return origStopYT.apply(this, arguments); };
+  }
+})();
+
+// ===================================================================
+// [05.1] 📱 GAME PSEUDO-FULLSCREEN MODE
+// ปัญหา: หน้าเกม (typing-game/reading-game/tone-finder/word-order/vault) มี nav บนสุด (.site-nav)
+// + หัวข้อหน้า (.page-header) + แถบหมวดหมู่ (.page-strip) + แถบสลับเกม (#game-switcher) ล้อมรอบเกม
+// บนมือถือจอเล็กกินพื้นที่เยอะ ดูอึดอัด ทับกัน (ตามภาพที่ Lin ส่งมา)
+// เบราว์เซอร์มือถือไม่ให้เว็บสั่ง fullscreen จริงเองอัตโนมัติได้ (ต้องมาจากผู้ใช้กด) และ iPhone/Safari
+// ไม่รองรับ fullscreen API กับ div ทั่วไปเลย (รองรับแค่วิดีโอ) — ทางแก้คือ "ปลอมเป็น fullscreen" ด้วย CSS:
+// กดปุ่มแล้วซ่อนทุกอย่างที่ไม่ใช่ตัวเกม เหลือแต่การ์ดเกม+คีย์บอร์ด เต็มจอ ใช้ได้ทั้งแนวตั้ง/แนวนอน ทุกเบราว์เซอร์รวม iPhone
+// ทำงานเฉพาะหน้าที่มี #game-switcher เท่านั้น (หน้าอื่นในเว็บไม่กระทบ) — จำสถานะไว้ด้วย localStorage
+// ===================================================================
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      var gs = document.getElementById('game-switcher');
+      if (!gs) return; // เอาแค่หน้าเกมจริงๆ (มี #game-switcher) — หน้าอื่นในเว็บไม่กระทบ
+
+      // Lin 2026-07-12: ห่อชื่อเกมด้วย .gs-lbl (ให้จัดสไตล์ได้) — โชว์ชื่อเสมอทั้งคอม+มือถือ (เลิกโหมดไอคอนล้วนแล้ว)
+      // Lin 2026-07-25: เปลี่ยนไอคอนนำหน้าให้เป็นวงกลมไล่สีทอง (.ico) ให้หน้าตาเหมือนการ์ด .grw-item ของเมนู 🪧
+      try {
+        gs.querySelectorAll('.gs-tab').forEach(function (t) {
+          if (t.querySelector('.gs-lbl')) return;
+          // Lin 2026-07-25: แท็บ "單字庫" ใช้ <img> แทนอิโมจิ (ไม่มีช่องว่างให้ split) → เดิมเลยไม่โดนห่อวงกลมทอง แก้แยกเคสนี้
+          var img = t.querySelector('img');
+          if (img) {
+            var lbl = (t.textContent || '').trim();
+            t.innerHTML = '<span class="ico">' + img.outerHTML + '</span><span class="gs-lbl">' + lbl + '</span>';
+            return;
+          }
+          var raw = (t.textContent || '').trim();
+          var sp = raw.indexOf(' ');
+          if (sp > 0) {
+            t.innerHTML = '<span class="ico">' + raw.slice(0, sp) + '</span><span class="gs-lbl">' + raw.slice(sp + 1) + '</span>';
+          }
+        });
+      } catch (e) {}
+      // ดรอปดาวน์แนวตั้งไม่ใช้เส้นคั่นแนวนอนเดิม → เอาออก
+      try { gs.querySelectorAll('.gs-divider').forEach(function (d) { d.remove(); }); } catch (e) {}
+
+      var KEY = 'rg_fake_fullscreen';
+      var on = false;
+      try { on = localStorage.getItem(KEY) === '1'; } catch (e) {}
+
+      var style = document.createElement('style');
+      style.textContent =
+        // ── Lin 2026-07-12: ชุดปุ่มลอยมุมขวาล่าง (🎮 เมนูเกม + ⛶ เต็มจอ) ซ้อนแนวตั้ง — เมนูเป็นดรอปดาวน์ กดปุ่มเปิด/ปิด ──
+        // คอม: ตำแหน่งเดิม (bottom 60px) · มือถือ: ลงมาชิดล่างขึ้นอีกสเตป (เดิมลอยสูงไปทับกัน) แค่พ้น bottom-nav (60px) นิดเดียว
+        '.rg-ctl-wrap{position:fixed;right:12px;bottom:calc(60px + env(safe-area-inset-bottom,0px));z-index:100000;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}' +
+        '@media(max-width:768px){.rg-ctl-wrap{bottom:calc(68px + env(safe-area-inset-bottom,0px));}}' +
+        // Lin 2026-07-12: เฉพาะตอนเต็มจอ → ย้ายชุดปุ่ม (🎮+⛶) ลงไปติดขอบล่างสุด · ออกจากเต็มจอแล้วเด้งกลับที่เดิม
+        // Lin 2026-07-25: กดเต็มจอแล้ว "ชุดปุ่มขวาห้ามขยับที่" ในคอม — เดิมเลื่อนลงขอบล่าง (6px) ทุกขนาดจอ
+        //   ตอนนี้ให้เลื่อนเฉพาะมือถือ (≤768px) ที่แถบล่างหายไปจริงและพื้นที่จอน้อย · คอม (>768px) อยู่ที่เดิมตลอด ไม่กระโดด
+        '@media(max-width:768px){.rg-ctl-wrap.rg-ctl-fs,body.rg-fake-fullscreen .rg-ctl-wrap{bottom:calc(6px + env(safe-area-inset-bottom,0px)) !important;}}' +
+        '.rg-ctl-fab{width:44px;height:44px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;flex-shrink:0;}' +
+        '.rg-ctl-fab:active{transform:scale(.92);}' +
+        // ── ดรอปดาวน์เมนูเกม (แนวตั้ง) — ซ่อนไว้ กดปุ่ม 🎮 ถึงเปิด · ทับสไตล์แถบเดิมของทุกเกมด้วย !important ──
+        // Lin 2026-07-25 v2: panel เดิมพื้นขาว/ขอบ #d4b87a ไม่ตรงกับการ์ด .grw-menu ของเมนู 🪧 (พื้นครีม #FAF4E8/ขอบทองอ่อน) — แก้ให้เหมือนกันเป๊ะๆ ตามที่ Lin ขอ
+        '#game-switcher{position:static !important;transform:none !important;left:auto !important;right:auto !important;bottom:auto !important;top:auto !important;max-width:none !important;width:auto !important;flex-direction:column !important;align-items:stretch !important;gap:6px !important;background:#FAF4E8 !important;border:1.5px solid rgba(139,99,16,0.25) !important;border-radius:14px !important;box-shadow:0 6px 24px rgba(90,62,10,0.22) !important;overflow-y:auto !important;overflow-x:hidden !important;max-height:60vh;padding:8px !important;display:none !important;min-width:150px;}' +
+        '#game-switcher.gs-open{display:flex !important;}' +
+        // Lin 2026-07-25: ปรับหน้าตาแถวเมนูให้เหมือนการ์ด .grw-item ของเมนู 🪧 (ไอคอนในวงกลมไล่สีทอง + ป้ายชื่อ) แทนแถวขีดเส้นใต้แบบเดิม
+        '#game-switcher .gs-tab{display:flex !important;align-items:center;gap:8px;padding:8px 12px !important;min-height:22px;border-radius:10px;text-align:left;white-space:nowrap;font-size:13px;color:#5a3e0a;text-decoration:none;font-weight:700;}' +
+        '#game-switcher .gs-tab.gs-active{background:rgba(200,151,58,0.18);color:#8b6310;}' +
+        '#game-switcher .gs-tab:hover{background:rgba(139,99,16,0.10);}' +
+        '#game-switcher .gs-lbl{display:inline !important;}' +
+        '#game-switcher .gs-tab .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}' +
+        '#game-switcher .gs-tab .ico img{width:15px;height:19px;filter:brightness(0) invert(1);}' + // Lin 2026-07-25: ไอคอน單字庫เป็น svg สีเข้ม → ทำขาวให้เข้าธีมวงกลมทอง เหมือนอิโมจิอื่นๆ ในเมนู
+        // ── โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม (ชุดปุ่มลอย .rg-ctl-wrap ไม่โดนซ่อน = เมนู+เต็มจอกดได้ตลอด) ──
+        'body.rg-fake-fullscreen .site-nav,' +
+        'body.rg-fake-fullscreen #bottom-nav,' +
+        'body.rg-fake-fullscreen .avail-band,' +
+        'body.rg-fake-fullscreen .page-strip,' +
+        'body.rg-fake-fullscreen .page-header,' +
+        'body.rg-fake-fullscreen #vault-hero,' +
+        'body.rg-fake-fullscreen footer' + // Lin 2026-07-14: ลืมใส่ footer ไว้ในลิสต์ซ่อน → ตอนเต็มจอเหลือแถบ footer ค้างอยู่ล่างสุด (ทั้งคอม+มือถือ) แก้ที่นี่ทีเดียวครบทุกเกม
+        '{display:none !important;}' +
+        // Lin 2026-07-12 (แก้ที่เข้าใจผิด): แถบ nav บนสุด (site-nav) ต้อง "มี" ทั้งคอม+มือถือ (เดิมเผลอซ่อนผิดตัว) → คืนมา ซ่อนแค่ตอนเต็มจอ
+        // ตัวที่ Lin บอกว่าไม่ใช้ = แถบไอคอน 5 อันล่างมือถือ (#bottom-nav / 首頁課程...) → ซ่อนถาวรบนหน้าเกม + คืนพื้นที่ padding ล่าง
+        '#bottom-nav{display:none !important;}' +
+        '@media(max-width:768px){body{padding-bottom:0 !important;}}' +
+        // Lin 2026-07-12: บนมือถือ ปุ่มลอย 🎮/⛶ (มุมขวาล่าง) เคยทับข้อความ footer (泰華眼裡的泰語教學) → ดัน footer ขึ้นให้พ้นโซนปุ่ม
+        // Lin 2026-07-13: เพิ่มปุ่มที่ 3 (🈶/🈚 เปิด/ปิดคำแปล) เข้าชุดเดียวกัน → ชุดปุ่มสูงขึ้นอีก ~54px ดันระยะ footer เพิ่มตาม
+        '@media(max-width:768px){footer{padding-bottom:calc(204px + env(safe-area-inset-bottom,0px)) !important;}}' +
+        'body.rg-fake-fullscreen{padding-bottom:0 !important;padding-top:0 !important;overflow-y:auto;}' +
+        'body.rg-fake-fullscreen .v3-page{padding-top:6px !important;}';
+      document.head.appendChild(style);
+
+      // ── ชุดปุ่มลอย (wrapper) ──
+      var wrap = document.createElement('div');
+      wrap.className = 'rg-ctl-wrap';
+
+      // ปุ่มเมนูเกม 🎮 → เปิด/ปิดดรอปดาวน์
+      var menuBtn = document.createElement('button');
+      menuBtn.type = 'button';
+      menuBtn.className = 'rg-ctl-fab';
+      menuBtn.textContent = '🎮';
+      menuBtn.setAttribute('aria-label', '遊戲選單');
+      menuBtn.title = '遊戲選單';
+      function closeMenu() { gs.classList.remove('gs-open'); }
+      var gsPanel = { isOpen: function () { return gs.classList.contains('gs-open'); }, close: closeMenu };
+      window.GamePanels.add(gsPanel);
+      menuBtn.onclick = function (e) {
+        e.stopPropagation();
+        var opening = !gs.classList.contains('gs-open');
+        if (opening) window.GamePanels.closeOthers(gsPanel); // Lin 2026-07-24: เปิดตัวนี้ → ปิดกล่องอื่นที่เปิดค้างอยู่ก่อน
+        gs.classList.toggle('gs-open');
+      };
+      // เลือกเกมแล้ว หรือคลิกที่อื่น → ปิดดรอปดาวน์
+      gs.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.gs-tab')) closeMenu(); });
+      document.addEventListener('click', function (e) { if (e.target !== menuBtn && !gs.contains(e.target)) closeMenu(); });
+
+      // ปุ่มเต็มจอ ⛶
+      var fab = document.createElement('button');
+      fab.type = 'button';
+      fab.className = 'rg-ctl-fab';
+      fab.setAttribute('aria-label', '全螢幕模式');
+      function renderFab() { fab.textContent = on ? '✕' : '⛶'; fab.title = on ? '離開全螢幕模式' : '全螢幕模式（隱藏其他選單）'; }
+      function applyState() {
+        document.body.classList.toggle('rg-fake-fullscreen', on);
+        try { wrap.classList.toggle('rg-ctl-fs', on); } catch (e) {} // Lin 2026-07-12: เต็มจอ = ชุดปุ่มลงขอบล่างสุด
+        renderFab();
+        try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
+      }
+      fab.onclick = function () { on = !on; applyState(); };
+
+      // ประกอบ: ดรอปดาวน์บนสุด → ปุ่ม 🎮 → ปุ่ม ⛶ ล่างสุด (wrap ยึดขอบล่าง เปิดเมนูแล้วโตขึ้นด้านบน)
+      wrap.appendChild(gs);
+      wrap.appendChild(menuBtn);
+      wrap.appendChild(fab);
+      document.body.appendChild(wrap);
+      applyState();
+    } catch (e) {}
+  });
+})();
+
+// ===================================================================
+// [05.2] 🍙 GAME TRANSLATION + FONT CONTROLS
+// ค่า default: จำไว้ด้วย localStorage (คีย์ games_hide_zh — แยกจาก textbook/controls-ui.js โดยตั้งใจ ตามที่ Lin เลือก)
+// ระหว่างเล่น: คลิกที่กล่องคำแปลแต่ละกล่อง เปิด/ปิดเฉพาะจุดนั้นได้ (ไม่กระทบค่า default)
+// ทำงานเฉพาะหน้าเกม (มี #game-switcher) เหมือนปุ่มเต็มจอด้านบน — หน้าอื่นในเว็บไม่กระทบ
+// ⚠️ กล่องที่ "ซ้อนอยู่ในปุ่ม/เมนูที่มี onclick อื่นของเกม" (เช่น .ozh/.szh ในเกมเลโก้, .tf-level-sub ในเมนูเลือกประโยค高級)
+//    เปิด/ปิดได้เฉพาะจากปุ่ม default เท่านั้น — ไม่ผูกคลิกรายจุดให้ เพราะจะไปชนกับฟังก์ชันเลือกคำ/เปิดเมนูของเกมเอง
+// Lin 2026-07-25 v2: ปุ่ม 🍙/🌾 = กดสลับคำแปลทันที (เหมือนเดิม) · ปุ่มสลับฟอนต์ "換現代字體/換回標準字體" ย้ายจากเมนู 🎮
+//    มาเป็น "อีกแถวหนึ่งในเมนู 🍚 (WordMenu)" ผ่านช่อง #font-toggle-slot ในหน้า (ตามที่ Lin สั่ง)
+//    ⚠️ v1 เคยทำ 🍙 เป็นดรอปดาวน์ซ้อนในเมนู 🍚 → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ (บั๊ก) แก้เป็น v2 นี้แล้ว
+// Lin 2026-07-25 v3: หน้าเกมเรียงลำดับคำ (word-order) ไม่มีปุ่ม 🍙 (บั๊กเดิม: กล่องคำแปลไม่ตอบสนอง) → ย้ายปุ่มสลับฟอนต์ของหน้านี้
+//    ไปอยู่ในเมนู 🍚 stub ตัวใหม่แทน (ดูบล็อก "🍚 เมนูตัวเลือกใต้คำ สำหรับหน้าที่ยังไม่มี WordMenu" ท้ายไฟล์นี้) ไม่ต้องมีซ้ำ 2 ที่ (เดิมอยู่ในเมนู 🎮)
+// ===================================================================
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      var gs = document.getElementById('game-switcher');
+      if (!gs) return; // เอาแค่หน้าเกมจริงๆ
+
+      function callFontToggle() {
+        if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
+        if (window.TF && typeof window.TF.toggleFont === 'function') { window.TF.toggleFont(); return true; }
+        return false;
+      }
+      // rg-modern-font = word-order/typing/reading, tf-modern-font = ทำนอง/เกมเสียง — เช็คทั้งคู่ เพราะแต่ละเกมตั้งชื่อ class เองคนละอัน
+      function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
+      var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
+
+      // ── ✍️ ปุ่มสลับฟอนต์ = อีกแถวหนึ่งในเมนู 🍚 (ช่อง #font-toggle-slot ในหน้า) — Lin 2026-07-25 v2
+      //    ย้ายมาจากเมนู 🎮 เดิม (ตามที่ Lin สั่ง) — ใส่เป็นแถวปกติในเมนู ไม่ทำดรอปดาวน์ซ้อน
+      //    Lin 2026-07-25 v4: ย้ายขึ้นมาไว้ "ก่อนด่าน isWordOrder return" — เกมเรียงคำมีเมนู 🍚 ของตัวเองแล้ว
+      //    ต้องได้ปุ่ม 字體 ด้วย แต่ยังไม่เอาปุ่ม 翻譯 (คำแปลคุมด้วยปุ่ม 🍙 ใต้คำที่เฉลยแทน)
+      var fontSlot = document.getElementById('font-toggle-slot');
+      if (fontSlot && hasFontToggle && !fontSlot.querySelector('button')) {
+        var fontOn = isFontOn();
+        var fontBtn = document.createElement('button');
+        fontBtn.type = 'button';
+        fontBtn.className = 'word-ctl-btn';
+        var renderFontBtn = function () {
+          fontBtn.textContent = '\u270D\uFE0F';   // Lin 2026-07-25: เดิมสลับเป็น ✅ ตอนเปิด — ✅ เป็นเครื่องหมายถูกทั่วไป ไม่สื่อว่า "ฟอนต์" และไม่ผูกแบรนด์ (กฎ 16) · สถานะดูจากป้าย 標準字/現代字 ข้างๆ ได้แล้ว
+          fontBtn.title = fontOn ? '目前：現代字體（點擊換回標準）' : '目前：標準字體（點擊換現代）';
+          fontBtn.setAttribute('aria-label', fontBtn.title);
+        };
+        renderFontBtn();
+        fontBtn.onclick = function (e) {
+          e.stopPropagation();
+          if (callFontToggle()) {
+            fontOn = isFontOn();
+            renderFontBtn();
+            if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+          }
+        };
+        fontSlot.appendChild(fontBtn);
+      }
+
+      var isWordOrder = (location.pathname || '').toLowerCase().indexOf('word-order') > -1;
+
+      // Lin 2026-07-16: ปุ่ม 🍙/🌾 กดแล้วไม่มีผลในเกมเรียงคำ (กล่องคำแปล .zh-hint#wo-zh ไม่ได้อยู่ในลิสต์ ZH_ALL) → ไม่มีปุ่ม 🍙 ในหน้านี้
+      // ปุ่มสลับฟอนต์ของหน้านี้ย้ายไปอยู่ในเมนู 🍚 stub ตัวใหม่แล้ว (Lin 2026-07-25 v3) → จบงานของบล็อกนี้แค่นี้พอ ไม่ต้องสร้างอะไรเพิ่ม
+      if (isWordOrder) return;
+
+      var KEY = 'games_hide_zh';
+      var hideOn = false;
+      try { hideOn = localStorage.getItem(KEY) === '1'; } catch (e) {}
+
+      // กล่องคำแปลที่ "ยืนคนเดียว" ไม่ได้ซ้อนอยู่ในปุ่ม/เมนูอื่น → เปิด/ปิดรายจุดด้วยคลิกได้
+      var ZH_CLICKABLE = ['.word-zh', '.out-zh', '.out-zh-full', '.pzh', '.tf-adv-sent-ctx-zh'];
+      // กล่องคำแปลที่ซ้อนอยู่ในปุ่มเลือกคำ/เมนูของเกม → ซ่อน/โชว์ตามค่า default อย่างเดียว ห้ามผูกคลิก (กันชนฟังก์ชันเกม)
+      var ZH_GLOBAL_ONLY = ['.tf-lvl-adv .tf-level-sub', '.ozh', '.szh'];
+      var ZH_ALL = ZH_CLICKABLE.concat(ZH_GLOBAL_ONLY);
+
+      var style = document.createElement('style');
+      style.textContent =
+        ZH_ALL.map(function (s) { return 'body.games-hide-zh ' + s; }).join(', ') + ' { display:none !important; }' +
+        // คลิกรายจุด: บังคับโชว์ทั้งที่ default ปิดอยู่ (div/box)
+        '.word-zh.zh-shown, .out-zh.zh-shown, .out-zh-full.zh-shown, .tf-adv-sent-ctx-zh.zh-shown { display:block !important; }' +
+        // .pzh เป็น span (inline) ต้องคืนเป็น inline ไม่ใช่ block
+        '.pzh.zh-shown { display:inline !important; }' +
+        // คลิกรายจุด: บังคับซ่อนทั้งที่ default เปิดอยู่
+        ZH_CLICKABLE.map(function (s) { return s + '.zh-hidden-solo'; }).join(', ') + ' { display:none !important; }' +
+        ZH_CLICKABLE.join(', ') + ' { cursor:pointer; }' +
+        // ปุ่ม 🍙/🌾 แบบ "ในแถวปุ่มใต้คำศัพท์" (มี #zh-toggle-slot ในหน้า) — หน้าตากลมขาวเหมือนปุ่มเซฟ/ลำโพง — Lin 2026-07-16
+        '.rg-ctl-fab.zh-fab-inline{width:34px;height:34px;background:#fff;border:1.5px solid rgba(139,99,16,0.30);box-shadow:none;font-size:17px;}' +
+        '.rg-ctl-fab.zh-fab-inline:hover{transform:scale(1.12);background:rgba(139,99,16,0.10);}';
+      document.head.appendChild(style);
+
+      function applyGlobal() {
+        document.body.classList.toggle('games-hide-zh', hideOn);
+        // เปลี่ยนค่า default → ล้างการปรับรายจุดทั้งหมด เริ่มนับใหม่ตาม default ปัจจุบัน
+        document.querySelectorAll('.zh-shown,.zh-hidden-solo').forEach(function (el) {
+          el.classList.remove('zh-shown', 'zh-hidden-solo');
+        });
+        try { localStorage.setItem(KEY, hideOn ? '1' : '0'); } catch (e) {}
+        renderFab();
+      }
+
+      // ── ปุ่ม 🍙/🌾 = กดสลับคำแปลทันที (ไม่มีดรอปดาวน์ซ้อน) — Lin 2026-07-25 v2
+      //    (v1 เคยทำเป็นดรอปดาวน์ซ้อนในเมนู 🍚 → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ = บั๊ก · v2 คืนเป็นกดสลับตรงๆ เหมือนเดิม)
+      var fab = document.createElement('button');
+      fab.type = 'button';
+      fab.className = 'rg-ctl-fab';
+      // ไอคอน: ผูกธีมน้องมีนา (มีนา=ข้าว) — 🍙 ข้าวปั้นพร้อมกิน = คำแปลโชว์อยู่ · 🌾 รวงข้าวยังไม่สี = คำแปลซ่อนอยู่ — Lin เลือก 2026-07-13
+      function renderFab() {
+        fab.textContent = hideOn ? '🌾' : '🍙';
+        fab.title = hideOn ? '目前：翻譯已關閉（點擊開啟）' : '目前：翻譯已開啟（點擊關閉）';
+        fab.setAttribute('aria-label', fab.title);
+      }
+      renderFab();
+      fab.onclick = function () { hideOn = !hideOn; applyGlobal(); };
+
+      // Lin 2026-07-16: ถ้าหน้านั้นมี #zh-toggle-slot (แถวปุ่มใต้คำศัพท์ ในเกมเสียง/เกมอ่าน/เกมพิมพ์) → ย้ายปุ่มไปอยู่ในแถวแทนมุมขวาล่าง
+      var inlineSlot = document.getElementById('zh-toggle-slot');
+      if (inlineSlot) {
+        fab.classList.add('zh-fab-inline');
+        inlineSlot.appendChild(fab);
+      } else {
+        // lego (ไม่มีช่องแถวปุ่มใต้คำ + ไม่มีสลับฟอนต์) → ต่อ 🍙 เข้าชุดปุ่มลอยเดิมไปก่อน (.rg-ctl-wrap)
+        // Lin 2026-07-25 v3: ตั้ง id ไว้ให้บล็อก "🍚 เมนูตัวเลือกใต้คำ สำหรับหน้าที่ยังไม่มี WordMenu" (ท้ายไฟล์นี้) มาย้ายปุ่มนี้เข้าไปเป็นแถว "翻譯" แทนที่จะลอยเดี่ยว
+        fab.id = 'zh-fab-standalone';
+        var wrap2 = document.querySelector('.rg-ctl-wrap');
+        if (wrap2) { wrap2.appendChild(fab); } else { document.body.appendChild(fab); }
+      }
+      applyGlobal();
+
+      // คลิกรายจุด: event delegation (กันคำใหม่ที่ยังไม่เกิดตอนโหลดหน้า)
+      document.addEventListener('click', function (e) {
+        var el = e.target.closest(ZH_CLICKABLE.join(', '));
+        if (!el) return;
+        if (hideOn) el.classList.toggle('zh-shown');
+        else el.classList.toggle('zh-hidden-solo');
+      });
+    } catch (e) {}
+  });
+})();
+
+// ════════════════════════════════════════════════════════════
+// [06.1] 🪧 GAME FEEDBACK + REWARDS
+// ใช้ร่วมทุกเกม (typing/reading/lego/word_order/tone_finder) — ต่อเข้าชุดปุ่มลอยเดิม (.rg-ctl-wrap)
+// รีวิว: ได้ 2 แต้มทันที (จำกัด 1 ครั้ง/เกม/วัน) · แจ้งปัญหา: รอ Lin ตรวจ ถ้าจริง+แก้แล้วได้ 20 แต้ม · เพดานสะสม 300 แต้ม
+// prefix ฟังก์ชัน/id ทั้งหมดใช้ "grw" (Game ReWard) กันชนกับ "rg"/"lg" ฯลฯ ที่แต่ละเกมใช้เป็นของตัวเองอยู่แล้ว
+// ต้อง deploy Edge Function "game-reward" ก่อนถึงจะใช้งานได้จริง (ดูไฟล์ supabase/functions/game-reward/index.ts)
+// ════════════════════════════════════════════════════════════
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      if (!document.getElementById('game-switcher')) return; // เอาแค่หน้าเกมจริงๆ เหมือนชุดปุ่มลอยเดิม
+
+      // Lin 2026-07-25 (hardening): .grw-menu/.grw-item/.ico เป็นสไตล์กลางที่ปุ่ม 🍙 ก็ใช้ร่วมด้วย
+      // ต้อง inject ก่อนเช็ค GAME_ID (ซึ่งอาจ return ก่อนถึงบรรทัดนี้) กันปุ่ม 🍙 ไม่มีสไตล์ถ้าเจอหน้าเกมที่ยังไม่รู้จัก
+      if (!document.getElementById('grw-shared-style')) {
+        var baseStyle = document.createElement('style');
+        baseStyle.id = 'grw-shared-style';
+        baseStyle.textContent =
+          '.grw-menu{display:none;flex-direction:column;gap:6px;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.25);border-radius:14px;padding:8px;box-shadow:0 6px 24px rgba(90,62,10,0.22);margin-bottom:4px;}' +
+          '.grw-menu.gs-open{display:flex;}' +
+          '.grw-menu .grw-item{display:flex;align-items:center;gap:8px;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}' +
+          '.grw-menu .grw-item:hover{background:rgba(139,99,16,0.10);}' +
+          '.grw-menu .grw-item .ico{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C8973A,#8B6310);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}' +
+          // Lin 2026-07-25 v3: ปุ่มจริงเดิม (เช่น 🍙 ที่ย้ายจากลอยเดี่ยวเข้ามาเป็นแถวในเมนู) → ทำให้หน้าตาเป็นวงกลมทองเหมือน .ico
+          '.grw-menu .grw-item .rg-ctl-fab{position:static!important;width:26px!important;height:26px!important;border-radius:50%!important;background:linear-gradient(135deg,#C8973A,#8B6310)!important;border:none!important;color:#fff!important;font-size:13px!important;box-shadow:none!important;margin:0!important;flex-shrink:0;}' +
+          // Lin 2026-07-25 v3: แถวเปล่า (ฟีเจอร์ยังไม่มีในหน้านี้) — จางลงนิดหน่อย บอกใบ้ว่ายังกดไม่ได้จริง ตามที่ Lin สั่ง "ใส่มาก่อน ถ้ายังทำงานไม่ได้ไม่เป็นไร ให้เป็นปุ่มเปล่าๆ"
+          '.grw-menu .grw-item.stub{opacity:0.5;cursor:default;}' +
+          '.grw-menu .grw-item.stub:hover{background:none;}';
+        document.head.appendChild(baseStyle);
+      }
+
+      var path = (location.pathname || '').toLowerCase();
+      var GAME_ID = null;
+      if (path.indexOf('typing-game') > -1) GAME_ID = 'typing';
+      else if (path.indexOf('reading-game') > -1) GAME_ID = 'reading';
+      else if (path.indexOf('lego') > -1) GAME_ID = 'lego';
+      else if (path.indexOf('word-order') > -1) GAME_ID = 'word_order';
+      else if (path.indexOf('tone-finder') > -1) GAME_ID = 'tone_finder';
+      else if (path.indexOf('games-challenge.html') > -1) GAME_ID = 'challenge'; // 2026-08-01: เกมรวม (เดิม mix.html/'mix' เปลี่ยนชื่อเป็น games-challenge.html/'challenge') — ⚠️ ต้อง deploy game-reward Edge Function
+      //   ใหม่ (เพิ่ม "challenge" เข้า VALID_GAMES) + รัน SQL เพิ่ม 'challenge' เข้า CHECK constraint ของ game_reward_events ก่อน
+      //   ไม่งั้นปุ่มขึ้นแต่กดแล้วเซิร์ฟเวอร์ตีกลับ (Lin ต้องทำ 2 อย่างนี้เอง ดูคำสั่งที่แนบให้แยกต่างหาก)
+      if (!GAME_ID) return; // หน้าเกมที่ยังไม่รู้จัก ไม่ต้องขึ้นปุ่มนี้
+
+      var FN_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/game-reward';
+
+      var style = document.createElement('style');
+      style.textContent =
+        '.grw-fab{position:relative;}' +
+        '#grw-pts{position:absolute;top:-6px;left:-8px;background:#FAF4E8;border:1.5px solid #C8973A;color:#8B6310;font-size:10px;font-weight:800;border-radius:999px;padding:2px 6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);}';
+      document.head.appendChild(style);
+
+      // ── ปุ่มหลัก 🪧 (หน้าตาเหมือน .rg-ctl-fab ของ 🎮/⛶/🍙) ──
+      var fab = document.createElement('button');
+      fab.type = 'button';
+      fab.className = 'rg-ctl-fab grw-fab';
+      fab.setAttribute('aria-label', '回報問題 / 心得分享');
+      fab.title = '回報問題 / 心得分享（累積點數）';
+      fab.innerHTML = '🪧<span id="grw-pts" style="display:none;"></span>';
+
+      // ── เมนูป๊อปอัพ (แจ้งปัญหา/รีวิว) — โผล่เหนือชุดปุ่มทั้งหมดเหมือนดรอปดาวน์ #game-switcher ──
+      // Lin 2026-07-24: 「我有問題」（問老師的問答框，跟「回報問題」bug report 不一樣）合併進這個選單 — 只有頁面有 rgOpenAsk()/TF.openAsk() 才加這個項目（lego 目前還沒做這功能，先不顯示）
+      function callAsk() {
+        if (typeof window.rgOpenAsk === 'function') { window.rgOpenAsk(); return true; }
+        if (window.TF && typeof window.TF.openAsk === 'function') { window.TF.openAsk(); return true; }
+        return false;
+      }
+      var hasAsk = typeof window.rgOpenAsk === 'function' || (window.TF && typeof window.TF.openAsk === 'function');
+
+      var menu = document.createElement('div');
+      menu.className = 'grw-menu';
+      menu.innerHTML =
+        (hasAsk ? '<div class="grw-item" data-act="ask"><span class="ico">💬</span>有問題想問老師</div>' : '') +
+        '<div class="grw-item" data-act="report"><span class="ico">🔧</span>回報問題</div>' +
+        '<div class="grw-item" data-act="review"><span class="ico">💭</span>心得 / 學到了什麼</div>';
+      menu.addEventListener('click', function (e) {
+        var it = e.target.closest('.grw-item');
+        if (!it) return;
+        menu.classList.remove('gs-open');
+        if (it.dataset.act === 'ask') callAsk();
+        else if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
+        else grwOpenReview(GAME_ID, FN_URL);
+      });
+      // Lin 2026-07-25: เมนูนี้ไม่เคยลงทะเบียนกับ GamePanels กลางมาก่อน → เปิด 🪧 พร้อม 🎮/🍚 ค้างไว้ได้ ซ้อนทับกันบนจอ (บั๊กจริงที่ Lin เจอ)
+      // แก้: ลงทะเบียนเหมือนกล่องอื่น กันซ้อนทั้ง 2 ทาง (เปิด 🪧 ต้องปิดกล่องอื่นก่อน + กล่องอื่นเปิดต้องปิด 🪧 ได้ด้วย)
+      var grwPanel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: function () { menu.classList.remove('gs-open'); } };
+      if (window.GamePanels) window.GamePanels.add(grwPanel);
+      fab.onclick = function (e) {
+        e.stopPropagation();
+        var opening = !menu.classList.contains('gs-open');
+        if (opening && window.GamePanels) window.GamePanels.closeOthers(grwPanel);
+        menu.classList.toggle('gs-open');
+      };
+      document.addEventListener('click', function (e) {
+        if (e.target !== fab && !fab.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
+      });
+
+      var wrap = document.querySelector('.rg-ctl-wrap');
+      if (wrap) { wrap.insertBefore(menu, wrap.firstChild); wrap.appendChild(fab); }
+      else { document.body.appendChild(menu); document.body.appendChild(fab); } // เผื่อกรณีชุดปุ่มเดิมยังไม่ถูกสร้าง (ไม่ควรเกิด แต่กันพัง)
+
+      grwRefreshBalance();
+      try { if (window.SITE_AUTH && window.SITE_AUTH.onChange) window.SITE_AUTH.onChange(grwRefreshBalance); } catch (e) {}
+    } catch (e) {}
+  });
+
+  // โหลด/แสดงยอดแต้มสะสม (แสดงเฉพาะตอนล็อกอินแล้ว)
+  function grwRefreshBalance() {
+    try {
+      var sb = window.getSupabaseClient && window.getSupabaseClient();
+      var badge = document.getElementById('grw-pts');
+      if (!sb || !badge) return;
+      if (!window.SITE_AUTH || !window.SITE_AUTH.user) { badge.style.display = 'none'; return; }
+      // dedupe fetch 2026-07-20: grwRefreshBalance ถูกเรียกทุกครั้งที่ SITE_AUTH.fireChange() ยิง (หลายรอบต่อโหลดหน้าเดียว)
+      //   ห่อด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม (ไม่เปลี่ยนพฤติกรรม แค่กันยิงซ้ำ)
+      var _uid = window.SITE_AUTH.user.id;
+      var _fetchGrw = window.getCachedFetch
+        ? window.getCachedFetch('game_reward_points:' + _uid, function () { return sb.from('game_reward_points').select('points').eq('user_id', _uid).maybeSingle(); })
+        : sb.from('game_reward_points').select('points').eq('user_id', _uid).maybeSingle();
+      _fetchGrw
+        .then(function (res) {
+          var pts = (res && res.data && res.data.points) || 0;
+          badge.textContent = pts; badge.style.display = 'block';
+        }).catch(function () {});
+    } catch (e) {}
+  }
+
+  // เรียก Edge Function พร้อมแนบ token ผู้ใช้ที่ล็อกอินอยู่ (ต้องล็อกอินก่อนเสมอ กันสวมรอย)
+  function grwRewardCall(gameId, fnUrl, action, payload, cb) {
+    var sb = window.getSupabaseClient && window.getSupabaseClient();
+    if (!sb || !window.SITE_AUTH || !window.SITE_AUTH.user) {
+      cb({ error: '請先登入才能使用這個功能喔（點右上角的名字/登入）' }); return;
+    }
+    sb.auth.getSession().then(function (res) {
+      var token = res && res.data && res.data.session && res.data.session.access_token;
+      if (!token) { cb({ error: '登入已過期，請重新登入' }); return; }
+      var body = Object.assign({ action: action, game: gameId }, payload || {});
+      fetch(fnUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) { cb(data); })
+        .catch(function () { cb({ error: '送出失敗，請檢查網路後再試一次' }); });
+    }).catch(function () { cb({ error: '無法確認登入狀態，請重新整理頁面' }); });
+  }
+
+  function grwModal(id, titleHtml, descHtml, placeholder, minLen, minLenMsg, onSend) {
+    var old = document.getElementById(id); if (old) old.remove();
+    var div = document.createElement('div'); div.id = id;
+    div.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.48);font-family:"Noto Sans TC",sans-serif;';
+    div.innerHTML =
+      '<div style="background:#fff;border-radius:20px;max-width:380px;width:100%;padding:28px 24px;position:relative;">' +
+      '<button data-close style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>' +
+      '<div style="font-size:20px;font-weight:900;color:#8B6310;margin-bottom:10px;">' + titleHtml + '</div>' +
+      '<div style="font-size:13px;color:#888;margin-bottom:14px;line-height:1.6;">' + descHtml + '</div>' +
+      '<textarea data-msg placeholder="' + placeholder + '" rows="4" style="width:100%;border:1.5px solid #e0d0b0;border-radius:10px;padding:9px 12px;font-size:13px;resize:none;font-family:inherit;margin-bottom:14px;box-sizing:border-box;"></textarea>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+      '<button data-close style="padding:9px 18px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#888;font-size:13px;cursor:pointer;">取消</button>' +
+      '<button data-send style="padding:9px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">送出 →</button>' +
+      '</div></div>';
+    document.body.appendChild(div);
+    div.querySelectorAll('[data-close]').forEach(function (b) { b.onclick = function () { div.remove(); }; });
+    var btn = div.querySelector('[data-send]');
+    btn.onclick = function () {
+      var msg = (div.querySelector('[data-msg]') || {}).value || '';
+      if (msg.trim().length < minLen) { alert(minLenMsg); return; }
+      btn.disabled = true; btn.textContent = '送出中…';
+      onSend(msg.trim(), btn, div);
+    };
+  }
+
+  function grwOpenReport(gameId, fnUrl) {
+    grwModal('grw-report-ov', '🔧 回報問題',
+      '發現 bug 或怪怪的地方嗎？寫下來告訴老師。<br><b style="color:#b45309;">確認後最高可得 20 點 🎉</b><br><span style="color:#aaa;">（點數與排行榜分數分開算，需等老師確認）</span>',
+      '請描述你遇到的狀況，是怎麼發生的...', 5, '請再詳細描述一下問題喔',
+      function (msg, btn, div) {
+        grwRewardCall(gameId, fnUrl, 'submit_bug_report', { content: msg }, function (res) {
+          if (res.error) { btn.disabled = false; btn.textContent = '送出 →'; alert(res.error); return; }
+          btn.textContent = '✅ 已送出，謝謝你！'; setTimeout(function () { div.remove(); }, 1400);
+        });
+      });
+  }
+
+  function grwOpenReview(gameId, fnUrl) {
+    grwModal('grw-review-ov', '💭 心得 / 學到了什麼',
+      '今天學到了什麼？簡短寫幾句就好。<br><b style="color:#2e7d32;">馬上得 2 點</b>（每天限 1 次）<br><span style="color:#aaa;">（點數與排行榜分數分開算）</span>',
+      '例如：今天記住了第二聲符號在 J 鍵...', 20, '請再寫長一點喔（至少 20 個字）',
+      function (msg, btn, div) {
+        grwRewardCall(gameId, fnUrl, 'submit_review', { content: msg }, function (res) {
+          if (res.error) { btn.disabled = false; btn.textContent = '送出 →'; alert(res.error); return; }
+          btn.textContent = '✅ ' + (res.message || '獲得點數了！'); grwRefreshBalance();
+          setTimeout(function () { div.remove(); }, 1600);
+        });
+      });
+  }
+})();
+
+// ════════════════════════════════════════════════════════════
+// [06.2] 🔥⭐ AUTHENTICATED GAME STATS BAR
+// เดิมแถบนี้โชว์ตลอดแม้ไม่ล็อกอิน (ขึ้น 0 หมด) — Lin สั่งให้ไม่ล็อกอิน = ไม่โชว์เลย
+// ตัวเลข/logic เดิมของแต่ละเกม (rgRenderGameBar/refreshUI/TF.xxx) ไม่แตะเลย — ที่นี่แค่โชว์/ซ่อนทั้งแถบตามสถานะล็อกอิน
+// ════════════════════════════════════════════════════════════
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      var row = document.getElementById('rg-stat-row') || document.getElementById('tf-stat-row');
+      if (!row) return;
+      function apply(user) { row.style.display = user ? 'flex' : 'none'; }
+      if (window.SITE_AUTH && window.SITE_AUTH.onChange) window.SITE_AUTH.onChange(apply);
+    } catch (e) {}
+  });
+})();
+
+// ════════════════════════════════════════════════════════════
+// [06.3] 💬 GAME STAT EXPLANATION POPUP
+// ปัญหาเดิม: ไอคอนพวกนี้มีแค่ title= (hover ถึงเห็น) → บนมือถือแตะแล้วไม่มีอะไรเกิดขึ้นเลย
+// แก้: แตะแล้วเด้งกล่องคำอธิบายสั้นๆ ธีมทองเหมือนเว็บ ใกล้ๆ ไอคอนที่กด แตะที่อื่น/รอ 3 วิ = ปิดเอง
+// ไม่แตะ 📖(วิธีเล่น) กับ 🌱(勳章) — 2 อันนี้กดแล้วเปิด modal จริงอยู่แล้ว (มีฟังก์ชันจริง ไม่ใช่แค่โชว์ค่า) ไม่ต้องมี popup ซ้อน
+// ใช้ title= เดิมเป็นกุญแจ (ไม่ผูกกับ id) → เกมเดียวกันครบ 5 หน้าได้ฟีเจอร์นี้พร้อมกันจากไฟล์นี้ไฟล์เดียว
+// ════════════════════════════════════════════════════════════
+(function () {
+  var EXPLAIN = {
+    '連續天數': { emoji: '🔥', desc: '連續玩遊戲的天數，每天玩一次就會累積，斷了會歸零' },
+    '護盾':     { emoji: '🛡️', desc: '護盾可以保護連續天數，就算斷一天也不會馬上歸零' },
+    '累積星星': { emoji: '⭐', desc: '玩遊戲賺到的星星，代表你練習過的量' }
+  };
+  var bubble = null, hideTimer = null;
+  var panel = {
+    isOpen: function () { return !!bubble; },
+    close: function () {
+      if (bubble) { bubble.remove(); bubble = null; }
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    }
+  };
+  if (window.GamePanels) window.GamePanels.add(panel);
+
+  function showBubble(target, info) {
+    panel.close();
+    if (window.GamePanels) window.GamePanels.closeOthers(panel);
+    bubble = document.createElement('div');
+    bubble.className = 'tf-stat-explain';
+    bubble.innerHTML = '<span style="font-size:15px;margin-right:4px;">' + info.emoji + '</span>' + info.desc;
+    document.body.appendChild(bubble);
+    var r = target.getBoundingClientRect();
+    var bw = bubble.offsetWidth, vw = window.innerWidth;
+    var left = r.left + r.width / 2;
+    if (left - bw / 2 < 8) left = 8 + bw / 2;
+    if (left + bw / 2 > vw - 8) left = vw - 8 - bw / 2;
+    bubble.style.left = left + 'px';
+    bubble.style.top = (r.bottom + 8) + 'px';
+    hideTimer = setTimeout(panel.close, 3200);
+  }
+
+  // Lin 2026-07-25: คอม (มีเมาส์จริง) → เอาเมาส์ไปแตะ (hover) ก็ขึ้นเลย ไม่ต้องคลิก · มือถือ (แตะจอ) → ใช้วิธีแตะ/คลิกเหมือนเดิม
+  var isDesktop = false;
+  try { isDesktop = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
+
+  if (isDesktop) {
+    document.addEventListener('mouseover', function (e) {
+      var chip = e.target.closest && e.target.closest('.tf-streak-chip[title]');
+      if (chip && !chip.onclick && EXPLAIN[chip.getAttribute('title')]) showBubble(chip, EXPLAIN[chip.getAttribute('title')]);
+    });
+    document.addEventListener('mouseout', function (e) {
+      var chip = e.target.closest && e.target.closest('.tf-streak-chip[title]');
+      if (chip && EXPLAIN[chip.getAttribute('title')] && !chip.contains(e.relatedTarget)) panel.close();
+    });
+  } else {
+    document.addEventListener('click', function (e) {
+      var chip = e.target.closest && e.target.closest('.tf-streak-chip[title]');
+      if (chip && !chip.onclick && EXPLAIN[chip.getAttribute('title')]) {
+        e.stopPropagation();
+        showBubble(chip, EXPLAIN[chip.getAttribute('title')]);
+        return;
+      }
+      if (bubble && (!e.target.closest || !e.target.closest('.tf-stat-explain'))) panel.close();
+    }, true);
+  }
+
+  var style = document.createElement('style');
+  style.textContent =
+    // กล่องคำอธิบาย — โทนทอง/ครีมตามธีมเว็บ
+    '.tf-stat-explain{position:fixed;transform:translateX(-50%);z-index:100002;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:12px;padding:9px 14px;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;font-weight:700;color:#5a3e0a;box-shadow:0 6px 18px rgba(90,62,10,0.25);max-width:min(78vw,260px);line-height:1.5;white-space:normal;}' +
+    // Lin 2026-07-24: ไอคอนในแถบ (สถิติ+โปรไฟล์) กึ่งกลางไม่พอดี → บังคับ line-height:1 กันอิโมจิ/ตัวเลขเยื้องแนวตั้ง
+    '.tf-streak-chip{line-height:1;}' +
+    '#rg-login-slot,#tf-login-slot{display:flex;align-items:center;}';
+  document.head.appendChild(style);
+})();
+
+// ════════════════════════════════════════════════════════════
+// [06.4] 🍚 FALLBACK WORD MENU — สำหรับเกมที่ยังไม่มี WordMenu ของตัวเอง
+// Lin สั่ง: "ทุกเกมต้องมีเมนูแบบนี้ ใส่มาก่อน ถ้ายังทำงานไม่ได้ไม่เป็นไร ให้เป็นปุ่มเปล่าๆ"
+// → ทุกหน้าเกมโชว์เมนู 🍚 เหมือนกันหมด 8 แถว (發音/讀音/英文讀音/翻譯/單字庫/提示/螢幕鍵盤/字體) — เพิ่ม 英文讀音 2026-07-25
+//   แถวไหนมีฟังก์ชันจริงอยู่แล้วในหน้านั้น (翻譯/字體) ผูกให้ทำงานจริง — ที่เหลือเป็นปุ่มเปล่า (จางลง กดไม่มีผล) รอเพิ่มฟีเจอร์ทีหลัง
+// หน้าที่มี WordMenu ของตัวเองแล้ว (typing/reading/tone-finder ผ่าน word-menu.js) → บล็อกนี้ข้ามไปเลย ไม่ทำซ้ำ
+// ════════════════════════════════════════════════════════════
+(function () {
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    try {
+      if (!document.getElementById('game-switcher')) return;
+      if (document.getElementById('word-ctl-row') || document.getElementById('tf-word-ctl-row')) return; // หน้านี้มี WordMenu จริงอยู่แล้ว
+
+      function callFontToggle() {
+        if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
+        if (window.TF && typeof window.TF.toggleFont === 'function') { window.TF.toggleFont(); return true; }
+        return false;
+      }
+      function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
+      var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
+
+      var wrap = document.querySelector('.rg-ctl-wrap');
+      if (!wrap) return; // ไม่ควรเกิด (ทุกหน้าเกมมีชุดปุ่มลอยนี้อยู่แล้ว) แต่กันพังไว้
+
+      function stubRow(icon, label) {
+        var d = document.createElement('div');
+        d.className = 'grw-item stub';
+        d.innerHTML = '<span class="ico">' + icon + '</span>' + label;
+        d.title = '這個功能這頁還沒開放';
+        return d;
+      }
+
+      var menu = document.createElement('div');
+      menu.className = 'grw-menu';
+
+      // ── 翻譯 ── ถ้าหน้านี้มีปุ่ม 🍙/🌾 ลอยเดี่ยวอยู่แล้ว (เช่นเกมเลโก้) → ย้ายเข้ามาเป็นแถวในเมนูนี้แทน (ทำงานจริง ไม่ใช่ปุ่มเปล่า)
+      var existingZhFab = document.getElementById('zh-fab-standalone');
+      var zhRow;
+      if (existingZhFab) {
+        zhRow = document.createElement('div');
+        zhRow.className = 'grw-item';
+        zhRow.appendChild(existingZhFab);
+        var zhLbl = document.createElement('span');
+        zhLbl.textContent = '翻譯';
+        zhRow.appendChild(zhLbl);
+        zhRow.addEventListener('click', function (e) {
+          if (e.target === existingZhFab || existingZhFab.contains(e.target)) return; // ปุ่มจริงจัดการคลิกของตัวเองอยู่แล้ว กันสั่งซ้ำ
+          existingZhFab.click();
+        });
+      } else {
+        zhRow = stubRow('🍙', '翻譯'); // เช่นหน้าเกมเรียงคำ — บั๊กเดิมทำให้ยังไม่มีปุ่มจริงให้ย้าย (ดูคอมเมนต์ 2026-07-16 ด้านบนไฟล์นี้)
+      }
+
+      // ── 字體 ── ถ้าหน้านี้มีฟังก์ชันสลับฟอนต์จริง (เช่นเกมเรียงคำ) → ผูกให้ทำงานจริง ไม่งั้นเป็นปุ่มเปล่า (เช่นเกมเลโก้ ยังไม่มีฟีเจอร์นี้)
+      var fontRow;
+      if (hasFontToggle) {
+        var fontOn = isFontOn();
+        fontRow = document.createElement('div');
+        fontRow.className = 'grw-item';
+        function renderFontRow() {
+          fontRow.innerHTML = '<span class="ico">' + (fontOn ? '✅' : '✍️') + '</span>' + (fontOn ? '換回標準字體' : '換現代字體');
+        }
+        renderFontRow();
+        fontRow.addEventListener('click', function () {
+          if (callFontToggle()) { fontOn = isFontOn(); renderFontRow(); }
+        });
+      } else {
+        fontRow = stubRow('✍️', '字體');
+      }
+
+      menu.appendChild(stubRow('🔊', '發音'));
+      menu.appendChild(stubRow('🐣', '讀音'));
+      menu.appendChild(stubRow('🔡', '英文讀音')); // Lin 2026-07-25: 2 เกมนี้ยังไม่มีระบบโชว์คำอ่าน → ใส่แถวเปล่าไว้ก่อนให้เมนูเหมือนกันทุกเกม
+      menu.appendChild(zhRow);
+      menu.appendChild(stubRow('🔖', '單字庫'));
+      menu.appendChild(stubRow('💡', '提示'));
+      menu.appendChild(stubRow('⌨️', '螢幕鍵盤'));
+      menu.appendChild(fontRow);
+
+      var trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'rg-ctl-fab';
+      trigger.textContent = '🍚';
+      trigger.title = '更多功能';
+      trigger.setAttribute('aria-label', '更多功能');
+
+      var panel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: function () { menu.classList.remove('gs-open'); } };
+      if (window.GamePanels) window.GamePanels.add(panel);
+      trigger.onclick = function (e) {
+        e.stopPropagation();
+        var opening = !menu.classList.contains('gs-open');
+        if (opening && window.GamePanels) window.GamePanels.closeOthers(panel);
+        menu.classList.toggle('gs-open');
+      };
+      document.addEventListener('click', function (e) {
+        if (e.target !== trigger && !trigger.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
+      });
+
+      // Lin 2026-07-25: ปุ่ม 🍚 ต้องอยู่ "ติดกลุ่มปุ่ม บนสุด" เหมือนเกมอื่น (เดิม appendChild = ไปอยู่ล่างสุดใต้ปุ่มอื่นหมด)
+      var _menuBtn = wrap.querySelector('.rg-ctl-fab[aria-label="遊戲選單"]'); // ปุ่ม 🎮 — จุดอ้างอิงเดียวกับ word-menu.js
+      wrap.insertBefore(trigger, _menuBtn || null);
+      wrap.insertBefore(menu, trigger);
+    } catch (e) {}
+  });
+})();

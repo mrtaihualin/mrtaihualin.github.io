@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
+  var savedConsent = localStorage.getItem('cookieConsent');
+  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });
+  gtag('config', 'G-DKVQE30982');
+  window.GA_CATEGORY='article';
+</script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+    // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)
+    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>背了快 1,000 個泰語單字，聊個簡單話題還是卡住？問題出在「功能詞塊」不是單字量 | 泰華眼裡的泰語教學</title>
+<meta name="description" content="單字量破千卻聊不起來簡單話題？真正決定能不能開口聊天的，不是你認識多少單字，而是有沒有練過打招呼、點餐、閒聊這些日常情境專用的整組詞塊。這篇說明為什麼單字量跟聊天能力是兩回事。">
+<link rel="canonical" href="https://mrtaihualin.com/blog/theory-21-vocab-vs-chat.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="泰華眼裡的泰語教學">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="背了快 1,000 個泰語單字，聊個簡單話題還是卡住？問題出在「功能詞塊」不是單字量">
+<meta property="og:description" content="單字量不等於聊天能力。真正卡住的是日常情境專用的整組詞塊沒練過，不是你背得不夠多。">
+<meta property="og:url" content="https://mrtaihualin.com/blog/theory-21-vocab-vs-chat.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="背了快 1,000 個泰語單字，聊個簡單話題還是卡住？問題出在「功能詞塊」不是單字量">
+<meta name="twitter:description" content="單字量不等於聊天能力。真正卡住的是日常情境專用的整組詞塊沒練過，不是你背得不夠多。">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/shared.css?v=17">
+<style>
+  .blog-wrap{max-width:760px;margin:0 auto;padding:40px 22px 64px;font-family:'Noto Sans TC',sans-serif;color:#2d2a22;line-height:1.85;}
+  .blog-wrap h1{font-family:'Noto Serif TC',serif;font-size:clamp(26px,5vw,40px);font-weight:900;line-height:1.3;margin:0 0 10px;color:#2d2a22;}
+  .blog-lead{font-size:17px;color:#5c5648;margin-bottom:28px;}
+  .blog-wrap h2{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;color:#8B6310;margin:34px 0 12px;}
+  .blog-wrap p{margin:0 0 14px;font-size:16.5px;}
+  .blog-wrap ul,.blog-wrap ol{margin:0 0 14px;padding-left:22px;}
+  .blog-wrap li{margin-bottom:7px;}
+  .blog-wrap strong{color:#8B6310;}
+  .tone-th{font-family:'Sarabun',sans-serif;font-weight:700;color:#C8973A;}
+  .blog-table{width:100%;border-collapse:collapse;margin:14px 0 18px;font-size:15.5px;border:1px solid #e0d2a8;border-radius:10px;overflow:hidden;}
+  .blog-table th{background:#C8973A;color:#fff;padding:10px 12px;text-align:left;font-size:14px;}
+  .blog-table td{padding:10px 12px;border-top:1px solid #eee3c8;vertical-align:top;}
+  .blog-cta{background:linear-gradient(135deg,#fff6e9,#ffe9d6);border:1.5px solid #f0c89a;border-radius:16px;padding:22px;margin:34px 0 10px;text-align:center;}
+  .blog-cta .t{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:900;color:#5a3e10;margin-bottom:6px;}
+  .blog-cta .s{font-size:14px;color:#a06a30;margin-bottom:14px;}
+  .blog-btn{display:inline-block;background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:11px 22px;border-radius:999px;margin:4px;cursor:pointer;border:none;}
+  .blog-btn.alt{background:#f0e8d8;color:#8b6310;}
+  .related-articles{margin:34px 0 8px;padding-top:22px;border-top:1px solid #eee3c8;}
+  .related-articles .ra-title{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:900;color:#8B6310;margin-bottom:12px;}
+  .related-articles .ra-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;}
+  .related-articles .ra-list li a{color:#5a3e10;font-size:14.5px;line-height:1.6;text-decoration:none;border-bottom:1px dashed rgba(139,99,16,0.35);padding-bottom:2px;transition:color .15s,border-color .15s;}
+  .related-articles .ra-list li a:hover{color:#C8973A;border-color:#C8973A;}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "背了快 1,000 個泰語單字，聊個簡單話題還是卡住？問題出在「功能詞塊」不是單字量",
+  "description": "單字量破千卻聊不起來簡單話題？真正決定能不能開口聊天的，不是你認識多少單字，而是有沒有練過打招呼、點餐、閒聊這些日常情境專用的整組詞塊。這篇說明為什麼單字量跟聊天能力是兩回事。",
+  "inLanguage": "zh-TW",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://mrtaihualin.com/blog/theory-21-vocab-vs-chat.html"
+  },
+  "image": "https://mrtaihualin.com/assets/share-card.png",
+  "datePublished": "2026-08-01",
+  "dateModified": "2026-08-01",
+  "author": {
+    "@type": "Person",
+    "name": "泰華 Mr. Tai Hua",
+    "url": "https://mrtaihualin.com/index.html#teacher"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "泰華眼裡的泰語教學",
+    "url": "https://mrtaihualin.com/"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://mrtaihualin.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "部落格",
+      "item": "https://mrtaihualin.com/blog.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "背了快 1,000 個泰語單字，聊個簡單話題還是卡住？問題出在「功能詞塊」不是單字量",
+      "item": "https://mrtaihualin.com/blog/theory-21-vocab-vs-chat.html"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html">遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">關於我</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<main class="blog-wrap">
+  <h1>背了快 1,000 個泰語單字，聊個簡單話題還是卡住？問題出在「功能詞塊」不是單字量</h1>
+  <p class="blog-lead">單字卡背到快一千張，隨便考自己都答得出來，可是坐到泰國朋友面前，連「今天天氣不錯」「你等一下要幹嘛」這種閒聊都組不出來。很多學生因此懷疑自己「單字還背得不夠多」，於是繼續加背新字，結果聊天能力還是原地踏步。問題其實從一開始就問錯了方向。</p>
+
+  <h2>聊天靠的不是「單字庫」，是「情境成套句」</h2>
+  <p>語言學家 Nattinger 跟 DeCarrico 提出「詞彙片語（lexical phrases）」的概念：日常對話裡有大量固定的功能性語句，是整組被學會、整組被叫出來用的，不是每次臨場用單字現組。打招呼有打招呼的固定說法、點餐有點餐的固定套路、閒聊天氣有閒聊天氣的固定開場——這些「整組」的東西，跟你單字表裡一個一個獨立的詞，是完全不同的知識單位。</p>
+  <p>換句話說，<span class="tone-th">อากาศ</span>（天氣）、<span class="tone-th">วันนี้</span>（今天）、<span class="tone-th">ดี</span>（好）三個字你都認識，不代表你自動就會講「今天天氣不錯」這句話。這句話本身是一個需要單獨學、單獨練的「成套組件」。</p>
+
+  <h2>為什麼單字量跟聊天能力會脫鉤</h2>
+  <p>一般背單字卡的練法，練的是「單字對應意思」——看到字，想到意思；看到意思，想到字。這個技能對閱讀、對考試很有用，但聊天現場需要的是另一種能力：<strong>在零點幾秒內，把一整句符合當下情境的話原封不動地叫出來</strong>。如果你的知識庫裡從來沒有存過「整句」，只存過「單字」，那麼每次聊天都等於要你臨場即席造句——這正是大部分人卡住、腦袋一片空白的真正原因，不是單字量不夠。</p>
+
+  <h2>怎麼補「詞塊」這一層</h2>
+  <ul>
+    <li><strong>把最常用的十幾個情境句型當一個單位背，不要拆開背裡面的字</strong>：打招呼、問近況、點餐、問路、道別，各準備兩三句熟到不用想。</li>
+    <li><strong>練「整句叫出來」，不要只練「認得單字」</strong>：看到情境（例如朋友問你今天過得如何），要能立刻反射出整句回應，而不是先想單字再現場拼。</li>
+    <li><strong>用會被拆解、被重組的方式練句子，不是死記單一固定句</strong>：句子練習室這類工具的價值，正是讓你反覆把單字組裝成完整句子，練出「組句」這個技能本身，而不是只背一句死板的範例。</li>
+  </ul>
+  <p>單字量是原料庫，功能詞塊才是端得出來的成品。原料庫再大，沒練過把料組成一道菜的手感，上桌還是一片空白。</p>
+
+  <div class="blog-cta">
+    <div class="t">想練出「整句叫得出來」的反射能力，不只是認單字？</div>
+    <div class="s">樂高造句練習室專練把單字組裝成完整句子，反覆練到組句變成反射動作，開放免費體驗；30 分鐘免費體驗課由老師用中文一對一，直接教你幾組最實用的情境句型。</div>
+    <a class="blog-btn" href="../lego.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'course',target:'lego',from:'blog_theory_21'})">玩樂高造句練習室 🧱</a>
+    <a class="blog-btn alt" href="../games.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'course',target:'games',from:'blog_theory_21'})">看全部遊戲</a>
+    <button class="blog-btn alt" onclick="if(window.openModal)openModal('modal-line-qr')">預約免費體驗課</button>
+  </div>
+
+  <div class="related-articles">
+    <div class="ra-title">相關文章</div>
+    <ul class="ra-list">
+      <li><a href="theory-09-word-to-sentence.html">從單字到句子，中間到底要練什麼？「詞塊」是被跳過的那一步</a></li>
+      <li><a href="theory-13-receptive-vs-productive.html">單字量明明很大，講話卻常常詞窮？「認得出」跟「叫得出來」是兩種不同的字彙量</a></li>
+      <li><a href="theory-01-memorize-vs-use.html">泰語單字背了幾百個，為什麼還是講不出來？「記得住」跟「用得出來」是兩種記憶</a></li>
+      <li><a href="../blog.html">查看全部文章 →</a></li>
+    </ul>
+  </div>
+</main>
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="../terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="../data/nav-template.js?v=2"></script>
+<script src="../js/core/shared.min.js?v=23"></script>
+
+<!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+  background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
+  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
+  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
+    <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="window.__cookieConsentDecide(false)"
+        style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
+        拒絕
+      </button>
+      <button onclick="window.__cookieConsentDecide(true)"
+        style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
+        接受
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  window.__cookieConsentDecide = function(granted) {
+    localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    }
+    if (typeof window.clarity === 'function') {
+      window.clarity('consent', granted);
+    }
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'none';
+  };
+  // เปิด banner ขึ้นมาใหม่ได้ทุกเมื่อ (ใช้จากลิงก์ "Cookie 設定" ใน privacy.html)
+  window.__reopenCookieConsent = function() {
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'block';
+  };
+  if (!localStorage.getItem('cookieConsent')) {
+    var __b0 = document.getElementById('cookieConsentBanner');
+    if (__b0) __b0.style.display = 'block';
+  }
+</script>
+
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">我的</span></a></nav>
+</body>
+</html>

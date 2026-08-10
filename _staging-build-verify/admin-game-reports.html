@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>แจ้งปัญหา/รีวิวเกม — หน้าแอดมิน (ใช้ส่วนตัว ไม่ต้องแชร์)</title>
+<style>
+  :root{--gold:#8B6310;--gold-bright:#C8973A;--gold-light:#F3E4C2;--gold-deep:#5a3e0a;--ink:#1C1C1C;--ink-soft:#333333;--ink-muted:#6b6b6b;--bg:#EDE7D9;--cream:#FAF4E8;--border:rgba(139,99,16,0.18);--green:#2d6a4f;--amber:#b45309;}
+  *{box-sizing:border-box;}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:24px 16px 60px;}
+  h1{font-family:'Noto Serif TC',serif;color:var(--gold-deep);font-size:22px;margin:0 0 4px;}
+  p.sub{color:var(--ink-muted);font-size:13px;margin:0 0 20px;}
+  .keybar{display:flex;gap:8px;margin-bottom:20px;max-width:520px;}
+  .keybar input{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;}
+  .keybar button{border:none;border-radius:10px;padding:9px 16px;background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;font-weight:700;font-size:13px;cursor:pointer;}
+  .card{background:var(--cream);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px;max-width:640px;}
+  .card .meta{font-size:12px;color:var(--ink-muted);margin-bottom:6px;}
+  .card .content{font-size:14px;line-height:1.6;white-space:pre-wrap;margin-bottom:12px;}
+  .card .actions{display:flex;gap:8px;align-items:center;}
+  .card input.pts{width:64px;border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:13px;}
+  .btn{border:none;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-approve{background:var(--green);color:#fff;}
+  .btn-reject{background:#fff;color:var(--amber);border:1.5px solid var(--amber);}
+  .empty{color:var(--ink-muted);font-size:14px;padding:20px 0;}
+  .status{font-size:12px;margin-top:8px;}
+</style>
+</head>
+<body>
+  <h1>🔧 คำร้องแจ้งปัญหาที่รอตรวจ (เกม)</h1>
+  <p class="sub">หน้านี้ใช้ส่วนตัวเท่านั้น ไม่ต้องแชร์ลิงก์ให้ใคร — ต้องใส่ GAME_REWARD_ADMIN_KEY (ตั้งไว้ตอน deploy Edge Function) ก่อนถึงจะใช้ได้</p>
+
+  <div class="keybar">
+    <input id="edge-url" placeholder="Edge Function URL เช่น https://xxxx.supabase.co/functions/v1/game-reward" />
+  </div>
+  <div class="keybar">
+    <input id="admin-key" type="password" placeholder="GAME_REWARD_ADMIN_KEY" />
+    <button onclick="rgAdminInit()">โหลดรายการ</button>
+  </div>
+
+  <div id="list"></div>
+
+<script>
+function rgAdminSaved(){
+  try{
+    var u=localStorage.getItem('rg_admin_edge_url'); var k=localStorage.getItem('rg_admin_key');
+    if(u) document.getElementById('edge-url').value=u;
+    if(k) document.getElementById('admin-key').value=k;
+  }catch(e){}
+}
+rgAdminSaved();
+
+function rgAdminInit(){
+  var url=document.getElementById('edge-url').value.trim();
+  var key=document.getElementById('admin-key').value.trim();
+  if(!url||!key){ alert('กรอก URL กับ admin key ก่อน'); return; }
+  try{ localStorage.setItem('rg_admin_edge_url',url); localStorage.setItem('rg_admin_key',key); }catch(e){}
+  rgAdminLoad(url,key);
+}
+
+function rgAdminLoad(url,key){
+  var list=document.getElementById('list');
+  list.innerHTML='<div class="empty">กำลังโหลด...</div>';
+  fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({action:'list_pending'})})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.error){ list.innerHTML='<div class="empty">โหลดไม่สำเร็จ: '+data.error+'</div>'; return; }
+      var items=data.items||[];
+      if(!items.length){ list.innerHTML='<div class="empty">ไม่มีรายการรอตรวจตอนนี้ 🎉</div>'; return; }
+      list.innerHTML='';
+      items.forEach(function(ev){
+        var card=document.createElement('div'); card.className='card';
+        card.innerHTML=
+          '<div class="meta">เกม: '+ev.game+' · '+new Date(ev.created_at).toLocaleString('zh-TW')+' · user_id: '+ev.user_id+'</div>'+
+          '<div class="content"></div>'+
+          '<div class="actions">'+
+          '<span>ให้แต้ม:</span><input class="pts" type="number" value="20" min="0" max="100">'+
+          '<button class="btn btn-approve">✅ อนุมัติ (บั๊กจริง+แก้แล้ว)</button>'+
+          '<button class="btn btn-reject">✕ ไม่นับ</button>'+
+          '</div><div class="status"></div>';
+        card.querySelector('.content').textContent=ev.content; // ใช้ textContent กัน XSS จากข้อความที่นักเรียนพิมพ์เอง
+        var statusEl=card.querySelector('.status');
+        card.querySelector('.btn-approve').onclick=function(){
+          var pts=Number(card.querySelector('.pts').value)||20;
+          statusEl.textContent='กำลังบันทึก...';
+          fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({action:'approve_report',event_id:ev.id,points:pts})})
+            .then(function(r){return r.json();})
+            .then(function(res){
+              if(res.error){ statusEl.textContent='❌ '+res.error; return; }
+              statusEl.textContent='✅ ให้ '+pts+' แต้มแล้ว';
+              card.style.opacity='.5';
+            })
+            .catch(function(){ statusEl.textContent='❌ ส่งไม่สำเร็จ ลองใหม่'; });
+        };
+        card.querySelector('.btn-reject').onclick=function(){
+          statusEl.textContent='กำลังบันทึก...';
+          fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({action:'reject_report',event_id:ev.id})})
+            .then(function(r){return r.json();})
+            .then(function(res){
+              if(res.error){ statusEl.textContent='❌ '+res.error; return; }
+              statusEl.textContent='ปิดรายการแล้ว (ไม่ให้แต้ม)';
+              card.style.opacity='.5';
+            })
+            .catch(function(){ statusEl.textContent='❌ ส่งไม่สำเร็จ ลองใหม่'; });
+        };
+        list.appendChild(card);
+      });
+    })
+    .catch(function(){ list.innerHTML='<div class="empty">โหลดไม่สำเร็จ เช็ค URL/เน็ต</div>'; });
+}
+</script>
+</body>
+</html>

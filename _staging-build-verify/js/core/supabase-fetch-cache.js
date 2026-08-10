@@ -1,0 +1,40 @@
+// ════════════════════════════════════════════════════════════
+// SUPABASE FETCH CACHE — cache กลางกันยิง Supabase ซ้ำในโหลดหน้าเดียว
+// dedupe fetch 2026-07-20 (Lin สั่ง แก้ audit: profiles/game_reward_points/tone_srs_state/tone_progress
+//   โดนยิงซ้ำ 2-7 ครั้งต่อโหลดหน้าเดียว เพราะ SITE_AUTH.fireChange() ยิงหลายจุด
+//   (getSession resolve + onAuthStateChange initial fire + revalidate ตอนสลับ/กลับมาที่แท็บ)
+//   — ดูหมายเหตุจริงที่ reading-auth.js บรรทัด ~189 ที่เคยเจอปัญหาเดียวกันมาก่อนแล้ว)
+//
+// วิธีใช้: getCachedFetch(key, fetchFn) → เรียกซ้ำด้วย key เดิม (ตาราง+เงื่อนไข+user id)
+//   ได้ promise เดิมกลับมาเลย ไม่ยิง network ซ้ำ · key เปลี่ยน (เช่น เปลี่ยน user) = fetch ใหม่ตามจริง
+//   cache เก็บใน window ธรรมดา → รีเฟรช/เปิดหน้าใหม่ = ล้างเอง ไม่ต้องเคลียร์เอง
+//
+// ต้องโหลดไฟล์นี้ "ก่อน" auth-widget.js / shared.js / progress-sync.js / เกมไฟล์ทั้ง 4 (*-game-app.js ฯลฯ)
+// ════════════════════════════════════════════════════════════
+(function () {
+  // ----- [01] CACHE STORAGE + DEDUPED FETCH -----
+  window.SB_FETCH_CACHE = window.SB_FETCH_CACHE || {};
+
+  window.getCachedFetch = function (key, fetchFn) {
+    var cache = window.SB_FETCH_CACHE;
+    if (!cache[key]) {
+      // แก้บั๊ก 2026-07-21 (เจอจริงตอนเทสบนเว็บจริงผ่าน Chrome MCP หลัง push รอบแรก — ยังยิงซ้ำ 3-4 ครั้งเหมือนเดิม):
+      //   builder ของ Supabase (sb.from(...).select(...)) เป็นแค่ "thenable" ไม่ใช่ Promise จริง
+      //   ทุกครั้งที่มีคนเรียก .then() บน object เดิม มันจะยิง request ใหม่ซ้ำอีกรอบ (ไม่ได้จำผลไว้เอง)
+      //   ก่อนหน้านี้เก็บ builder ดิบๆ ไว้ใน cache แล้วให้หลายจุดเรียก .then() ต่อ = ยิงซ้ำเท่าจำนวนจุดที่เรียก
+      //   แก้ด้วย Promise.resolve(...) ห่อครั้งเดียว → บังคับให้ทำงานจริงแค่ครั้งเดียว แล้ว native Promise
+      //   จะแจกผลลัพธ์เดิมให้ทุก .then() ที่ตามมาโดยไม่ยิง network ซ้ำ
+      cache[key] = Promise.resolve(fetchFn());
+    }
+    return cache[key];
+  };
+
+  // ----- [02] EXPLICIT CACHE INVALIDATION -----
+  // เผื่ออนาคตอยากบังคับ refetch (เช่น หลังแก้โปรไฟล์) — ยังไม่มีจุดไหนเรียกใช้ตอนนี้ ใส่ไว้กันต้องแก้ไฟล์นี้ซ้ำทีหลัง
+  window.clearCachedFetch = function (keyPrefix) {
+    var cache = window.SB_FETCH_CACHE;
+    Object.keys(cache).forEach(function (k) {
+      if (!keyPrefix || k.indexOf(keyPrefix) === 0) delete cache[k];
+    });
+  };
+})();

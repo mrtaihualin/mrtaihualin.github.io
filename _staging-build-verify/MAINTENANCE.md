@@ -1,0 +1,732 @@
+# ประวัติงานดูแลเว็บ
+
+## 2026-08-10 — P7-02 staging: OAuth 3 ทาง (Google/Facebook/LINE) ทดสอบผ่านจริง + แก้โดเมน staging 15 edge functions (คนละ track กับ bottom-nav ด้านล่าง)
+
+สถานะ: 🟡 **โค้ดแก้เสร็จแล้ว ยังไม่ push ขึ้น GitHub** (รอ Lin กด push เองผ่าน GitHub Desktop) — deploy ขึ้น staging project จริงแล้วแค่ 1 ใน 15 ไฟล์
+
+**สิ่งที่แก้:** เพิ่มโดเมน staging (`https://gentle-moxie-bf64ad.netlify.app`) เข้า allow-list (`ALLOWED_ORIGINS`/`allowedHosts`/`Access-Control-Allow-Origin`) ใน 15 ไฟล์ edge function:
+`supabase/functions/line-login/index.ts`, `game-content/index.ts`, `search-gemini/index.ts`, `account-export/index.ts`, `account-delete/index.ts`, `account-unlink/index.ts`, `unlink-line-student/index.ts`, `restore-line-student/index.ts`, `notify-line/index.ts`, `sync-line-menu/index.ts`, `lego-daily-limit/index.ts`, `log-session/index.ts`, `tone-round/index.ts`, `admin-player-accounts/index.ts`, `game-reward/index.ts`
+
+4 ไฟล์สุดท้าย (`log-session`, `tone-round`, `admin-player-accounts`, `game-reward`) เดิมล็อกโดเมนเดียวแบบ hardcode ไม่มีระบบ allow-list เลย — ปรับให้เป็นแพตเทิร์นเดียวกับไฟล์อื่น (คำนวณ `Access-Control-Allow-Origin` จาก `Origin` header ของ request เทียบกับ allow-list ต่อ request ไม่ใช้ตัวแปร module-level ร่วมข้ามคำขอ กันปัญหา concurrent request คนละ origin ชนกัน)
+
+**Commit message เตรียมไว้:** `เพิ่มโดเมน staging (Netlify) เข้ารายชื่อที่อนุญาตใน 15 edge functions เพื่อทดสอบ P7-02`
+
+**ไฟล์ใหม่ (ไม่ถูก push แน่นอน — อยู่ .gitignore):** `js/core/supabase-config.staging.js`
+
+**ทดสอบผ่านจริง:** ล็อกอิน Google/Facebook/LINE บนหน้าทดสอบ staging สำเร็จครบ (ดูหลักฐานเต็มที่ `Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/72_เช็คลิสต์_เตรียม_staging_ก่อนรัน_P7-02.md`) — **ยังไม่ใช่การทดสอบเว็บจริงทั้งเว็บ** เพราะหน้าเว็บจริงทุกหน้ายังโหลด `js/core/supabase-config.js` (production) เหมือนเดิม ไม่กระทบผู้ใช้จริงเลยรอบนี้
+
+**งานค้าง:** (1) push 15 ไฟล์ขึ้น GitHub (2) deploy อีก 14 edge function ขึ้น staging project (3) หาวิธีให้สำเนาเว็บทดสอบทั้งเว็บโหลด `supabase-config.staging.js` แทนโดยไม่แตะเว็บจริง
+
+---
+
+## 2026-08-10 — สืบต่อเรื่อง bottom-nav มือถือ: ทฤษฎี "แคช" ผิด · เจอบั๊กจริงคนละตัวในหน้า blog/ 44 หน้า
+
+สถานะ: **🟢 เจอ root cause จริงแล้ว + แก้โค้ด local เสร็จแล้ว (รอบ 4) — รอ Lin push + verify บนเครื่องจริง** (รอบ 1-2 push ไปแล้ว `dd367e7`/`322120b` แต่เป็นคนละบั๊ก ไม่ได้แก้เรื่องนี้ — บั๊กจริงของ "#bottom-nav ไปโผล่ขอบบนแทนขอบล่าง" เพิ่งเจอและแก้ในรอบ 4 นี้เอง ดูหัวข้อ "ROOT CAUSE เจอแล้ว" ด้านล่าง)
+
+| เรื่อง | สถานะ |
+|---|---|
+| หน้า `blog/` 44 หน้าไม่โหลด `nav-template.js` (แถบล่างเปล่า + ช่องว่าง 60px) | ✅ แก้แล้ว push แล้ว |
+| หน้า `blog/` 44 หน้าเมนูบนสุดเป็นชุดเก่า | ✅ แก้แล้ว **ยืนยันจากเว็บสดจริง** — `https://mrtaihualin.com/blog/typing-guide.html` เมนูเป็นชุดใหม่ (遊戲/學習資源/關於我 + `免費試聽`) แล้ว |
+| **`#bottom-nav` 4 ปุ่มบนมือถือ Lin** | 🔴 **ยังไม่หาย — Lin ยืนยัน 2026-08-10 หลัง push ครบ 2 รอบว่า "ยังเป็น 6"** |
+
+### รอบ 2 (วันเดียวกัน) — เจอตอนเช็กหลัง push: หน้า `blog/` 44 หน้ายังเป็นเมนูบนสุดชุดเก่า → แก้แล้ว
+
+เปิดเว็บสด `https://mrtaihualin.com/blog/tone-guide.html` ตรวจแล้วพบว่า **หน้าบล็อกยังโชว์เมนูบนสุดชุดเก่า 6 หมวด** (程度測驗/關於老師與學生/了解課程/資源分享/專業服務/聯絡我們 + CTA `預約免費體驗課`) ขณะที่หน้าอื่นเป็นชุดใหม่ 3 หัวข้อแล้ว = **เว็บมีเมนู 2 ชุดไม่ตรงกัน**
+
+**สาเหตุ:** `scripts/generate-nav.js` มีรายชื่อไฟล์ **พิมพ์มือตายตัว 31 หน้า (root ล้วน) ไม่รวม `blog/` เลยสักไฟล์** ทั้งที่หน้าบล็อกมี `<nav class="site-nav">` จริงครบ 44/44 (คอมเมนต์ในสคริปต์เขียนว่า "ตรวจจาก grep ของจริง" แต่ตกหล่น)
+
+**แก้ยังไง:** เปลี่ยนจาก "พิมพ์รายชื่อมือ" เป็น **ให้สคริปต์หาไฟล์เอง** (`findNavPagesIn('blog')` — สแกน `.html` ที่มี `<nav class="site-nav">` จริง) เพื่อไม่ให้บทความใหม่ในอนาคตตกหล่นซ้ำอีก · และทำ path ของ `<script src="data/nav-template.js">` ให้ขึ้นกับความลึกโฟลเดอร์ (`navTemplateTagFor()` → `../data/...` สำหรับ `blog/`) พร้อมขยาย `SHARED_MIN_RE` ให้รับ `../` ด้วย · `href` ใน `nav-template.js` เป็น absolute (`/games.html`) อยู่แล้ว จึงใช้จากโฟลเดอร์ย่อยได้ตรงๆ ไม่ต้องแก้อะไรเพิ่ม
+
+**หลักฐาน:** `node scripts/generate-nav.js` → ตรวจ 75 หน้า แก้จริง 44 หน้า · เทียบ **md5 ของ nav block ทุกไฟล์ในเว็บ** (ปิดงานที่ค้างจาก 2026-08-09 ข้อ "ยังไม่ตรวจ md5 nav") ได้ **74 ไฟล์ตรงกันเป๊ะทุกไบต์** ส่วนที่ต่าง 8 ไฟล์เป็นของที่ตั้งใจทั้งหมด:
+- `tone-finder.html` — มี GA tracking พิเศษติดกับ logo/hamburger ตาม `PAGE_OVERRIDES` (ตั้งใจ)
+- `en/*.html` 7 ไฟล์ — เว็บเวอร์ชันภาษาอังกฤษ มีเมนูอังกฤษของตัวเอง **ต้องไม่ถูกทับด้วยเมนูจีน** · ตรวจแล้วไม่โหลด `shared.min.js`/`nav-template.js` และไม่มี `#bottom-nav`/`.page-strip` เลย (0/7) จึงไม่กระทบอะไร
+
+`node scripts/check-site.js` ผ่านทุกหมวดเหมือนเดิม (ที่ไม่ผ่าน 6 รายการเป็น secret scan ในไฟล์ SQL เก่าโฟลเดอร์ `เลิกใช้แล้ว_ห้ามรัน/` ของเดิมก่อนรอบนี้)
+
+**ไฟล์ที่แก้รอบ 2:** `scripts/generate-nav.js` · 44 ไฟล์ใน `blog/` (nav block) · `MAINTENANCE.md`
+
+---
+
+### 🔴 เรื่องที่ยังไม่จบ — `#bottom-nav` 4 ปุ่มยังไม่ขึ้นบนมือถือ Lin (สรุปให้แชทถัดไป)
+
+**อาการ:** Lin เปิดเว็บบน iPhone Safari แล้วแถบล่างยังเป็น **6 ปุ่มข้อความ** (老師・介紹 / 課程・費用 / 須知・分享 / 導遊・翻譯 / 泰語・分享 / 泰語・遊戲) ไม่ใช่ 4 ไอคอนใหม่ (🏠首頁 / 📞試聽 / 🎮遊戲 / 👤我的) · ยืนยันซ้ำ 2026-08-10 หลัง push ครบ 2 รอบแล้ว
+
+**⛔ ทฤษฎีที่ตรวจแล้วว่า "ไม่ใช่" — ห้ามเสียเวลาไล่ซ้ำ:**
+
+1. **แคช / bump `?v=`** — 2026-08-08 เคย bump ครบทั้ง 76 ไฟล์เป็น `v=18` เท่ากันหมด แล้ว push 08-09 bump 31 ไฟล์เป็น `v=19` = URL ใหม่ที่เบราว์เซอร์ไม่เคยโหลดมาก่อน · รอบนี้ bump เป็น `v=20` ทั้งเว็บอีกครั้งแล้วก็ยังไม่หาย · Lin ก็ล้างแคชเต็มรูปแบบไปแล้วด้วย (Settings→Safari→Clear History and Website Data)
+2. **ไฟล์ไม่ได้ขึ้นเว็บ / push ไม่สำเร็จ** — ตรวจ `.git/refs` ทั้ง 2 รอบ local = origin ตรงกัน · เว็บสดตอบ 200 ทั้ง `data/nav-template.js` และ `js/core/shared.min.js` · เมนูบนสุดชุดใหม่ขึ้นบนเว็บสดจริงทั้งหน้า root และหน้า blog
+3. **`shared.min.js` ไม่ตรงกับ `shared.js`** — regenerate ด้วย `bash scripts/build-minjs.sh` (terser) แล้ว · `renderBottomNavHTML` มีอยู่ในไฟล์ min จริง
+4. **Service Worker / PWA cache** — ตรวจแล้ว repo นี้ **ไม่มี** `sw.js` / `service-worker.js` / `manifest.json` และไม่มีโค้ดเรียก `navigator.serviceWorker` เลยสักไฟล์
+5. **โค้ดมี syntax ที่ Safari เก่ารับไม่ได้** — ไล่ `?.` / `??` / `.at()` / `replaceAll` / arrow function / template literal ใน `nav-template.js`, `search-index.js`, `search-engine.js`, `search-ui.js` แล้ว **ไม่เจอเลย เป็น ES5 ล้วนทั้งหมด**
+6. **`.page-strip` บังแถบใหม่** — เป็นไปไม่ได้ตามโค้ด: `#bottom-nav` z-index **998** สูงกว่า `.page-strip` z-index **990** และสูงกว่า (~60px vs 48px) ทั้งคู่ `position:fixed;bottom:0` → ถ้า `#bottom-nav` ถูกสร้างจริงต้องบังมิด · **ที่ Lin เห็น 6 ปุ่ม = `.page-strip` แปลว่า `#bottom-nav` ไม่ถูกสร้างบนเครื่องนั้น**
+7. **หน้าเกมซ่อน `#bottom-nav` ด้วย `!important`** — จริง แต่เฉพาะหน้าที่มี `#game-switcher` (ตั้งใจตั้งแต่ 2026-07-12) · `index.html` ไม่มี → ไม่เกี่ยว
+
+**ทางเข้าเดียวในโค้ดที่จะทำให้แถบไม่ถูกสร้าง** (ไล่ครบแล้ว): `js/core/shared.js` บรรทัด 77-79 — `injectNav()` จะ `return` ทันทีถ้าหน้านั้น **ไม่มี `<nav class="site-nav">`** · ตรวจแล้ว `index.html` มี 1 อัน ไม่ควรเข้ากรณีนี้
+
+### รอบ 3 (วันเดียวกัน 2026-08-10) — ทดสอบแยกปัญหาบนเครื่อง Lin จริงทีละจุด ตัดออกได้ครบ 6 ข้อเพิ่ม (รวมเป็น 13 ทฤษฎีที่ไม่ใช่)
+
+Lin ทดสอบบนเครื่องจริงตามลำดับที่แนะนำ ผลทุกข้อคือ **ปัญหายังอยู่ ไม่หาย**:
+
+8. **เปิด `https://mrtaihualin.com/blog/typing-guide.html` (หน้าที่ไม่มี `.page-strip` ในโค้ดเลย)** — ยังเห็น 6 ปุ่มเดิม (老師・介紹/課程・費用/須知・分享/導遊・翻譯/泰語・分享/泰語・遊戲) → **สำคัญมาก:** พิสูจน์ว่าเครื่อง Lin ไม่ได้รัน HTML/JS ของหน้านี้จริงเลย เพราะ label พวกนี้ไม่มีอยู่ใน `blog/typing-guide.html` ต้นทาง (ตรวจซ้ำด้วย `grep -rl` ทั้ง repo — ไม่มี label 6 ปุ่มเดิมหลงเหลืออยู่ในหน้า `blog/` แม้แต่ไฟล์เดียว มีแต่ใน root-level 31 หน้าที่เป็น `.page-strip` ตั้งใจคนละจุด)
+9. **สลับเครือข่าย (WiFi → 4G/5G) แล้วเปิดซ้ำ** — ยังเห็น 6 ปุ่มเดิม → ตัด router/ISP เฉพาะ WiFi บ้านออก (ถ้าเป็น proxy เฉพาะเครือข่ายใดเครือข่ายหนึ่ง อีกเครือข่ายต้องหาย)
+10. **เช็ค iCloud Private Relay** (ตั้งค่า > [ชื่อ Apple ID] > iCloud) — **ปิดอยู่** → ตัดออก
+11. **เช็ค VPN** (ตั้งค่า > VPN) — **ไม่มีตัวเปิด** → ตัดออก
+12. **เช็คแอป DNS-filter** (NextDNS/AdGuard/1.1.1.1 ฯลฯ) — **ไม่มีลงไว้** → ตัดออก
+13. **ปิดแท็บ Safari เดิมทิ้งทั้งหมด (สไลด์ทิ้งจริง ไม่ใช่แค่ reload) แล้วเปิดแท็บใหม่พิมพ์ URL เอง** — ยังเห็น 6 ปุ่มทุกหน้า → ตัดทฤษฎี "แท็บเก่าค้าง ไม่ได้โหลดใหม่จริง" ออก
+14. **เช็ค Safari Extensions** (ตั้งค่า > Safari > Extensions) — **ว่างเปล่า ไม่มีเปิดสักตัว** → ตัดออก (ตัดทฤษฎี content-blocker/แปลภาษา extension แก้ไข response)
+15. **เช็ค Configuration Profile / MDM** (ตั้งค่า > ทั่วไป > VPN และการจัดการอุปกรณ์) — **ไม่มีโปรไฟล์ติดตั้งอยู่เลย** → ตัดออก
+
+**สรุปสถานะหลังรอบ 3:** ทฤษฎีที่ตรวจได้จากภายนอก (โค้ด/เซิร์ฟเวอร์/เครือข่าย/การตั้งค่าเครื่อง) **หมดแล้วทุกข้อ ไม่มีเหลือ** — ยืนยันแล้วว่า:
+- โค้ดในเว็บถูกต้อง 100% (ไม่มี label/โครงสร้าง 6 ปุ่มเดิมหลงเหลือในหน้าที่ทดสอบ)
+- ไม่ใช่ปัญหาเครือข่าย/proxy/DNS/VPN/Private Relay (สลับเครือข่ายแล้วอาการเหมือนเดิม)
+- ไม่ใช่แท็บ/แคชที่ Safari เคลียร์ปกติเคลียร์ถึง (ปิดแท็บจริง+เปิดใหม่แล้วอาการเหมือนเดิม)
+- ไม่ใช่ extension หรือ profile บนเครื่อง
+
+**🎯 ขั้นตอนเดียวที่เหลือ — ต้องดู DOM/Console/Network จริงบนเครื่อง Lin เท่านั้น (ทดสอบแบบอื่นหมดแล้ว):**
+
+ต่อ iPhone เข้า Mac ด้วยสาย USB/Lightning แล้วใช้ Safari Web Inspector:
+1. **บนไอโฟน:** ตั้งค่า → Safari → เลื่อนลงล่างสุด → Advanced → เปิด **Web Inspector**
+2. เสียบสาย iPhone เข้า Mac ถ้าขึ้น "Trust This Computer?" ให้กด Trust + ใส่รหัสมือถือ
+3. **บน Mac:** เปิดแอป Safari (ของ Mac ไม่ใช่ของมือถือ) → เมนู Safari (มุมบนซ้าย) → Settings → แท็บ Advanced → ติ๊ก "Show features for web developers" (หรือชื่อคล้ายกันแล้วแต่เวอร์ชัน macOS)
+4. **บนไอโฟน:** เปิดแท็บใหม่ พิมพ์ `https://mrtaihualin.com/blog/typing-guide.html`
+5. **บน Mac:** เมนู Develop (จะโผล่มาหลังข้อ 3) → หาชื่อเครื่อง iPhone ของ Lin ในลิสต์ → จะเห็นรายชื่อแท็บที่เปิดอยู่บนมือถือ → คลิกแท็บที่เปิดหน้านี้
+6. จะเปิดหน้าต่าง Web Inspector ขึ้นมา (เห็น DOM/Console/Network ของหน้านั้นบนเครื่อง Lin จริง) ให้ Lin (หรือใครที่ทำตามขั้นตอนนี้อยู่) พิมพ์ในช่อง Console: `document.getElementById('bottom-nav')` แล้วกด Enter — **บอกผลลัพธ์ที่ได้ตรงๆ** (null / element ว่างเปล่า / element ที่มีปุ่มข้างใน)
+7. เลื่อนดูแท็บ **Console** ว่ามีข้อความสีแดง (error) หรือคำว่า `[bottom-nav]` (คำเตือนที่โค้ดเขียนไว้เอง) โผล่มาไหม — คัดลอกข้อความเต็มๆ มา
+8. เลื่อนดูแท็บ **Network** หา request ชื่อ `nav-template.js` กับ `shared.min.js` — สถานะ (status code) ของทั้งคู่คืออะไร ถ้าคลิกดู Response เห็นเนื้อหาจริงไหม
+
+**เป้าหมาย:** ผล 3 อย่างนี้ (DOM ของ `#bottom-nav` / Console error / Network status) จะบอก root cause ได้ชัวร์ที่สุด เพราะเป็นสิ่งที่เกิดขึ้นจริงบนเครื่อง Lin ไม่ใช่การเดาจากภายนอกอีกต่อไป
+
+### รอบ 4 (วันเดียวกัน 2026-08-10) — เจอ root cause จริงด้วย bookmarklet บนเครื่อง Lin โดยตรง (ไม่ต้องต่อสาย)
+
+ใช้ bookmarklet (`javascript:` ผูกกับ Safari Bookmark) แทนการต่อสาย USB — เร็วกว่าและ Lin ทำเองได้จากมือถือ:
+```
+javascript:(function(){var nt=(typeof window.NAV_TEMPLATE)+'';var bn=document.getElementById('bottom-nav');var bnInfo=bn?('EXISTS len='+bn.innerHTML.length):'NULL';var ps=document.querySelector('.page-strip')?'EXISTS':'NULL';var nav=document.querySelector('nav.site-nav')?'EXISTS':'NULL';alert('NAV_TEMPLATE: '+nt+'\nbottom-nav: '+bnInfo+'\npage-strip: '+ps+'\nsite-nav: '+nav);})();
+```
+
+**ผลจริงบนเครื่อง Lin (`blog/typing-guide.html`):**
+```
+NAV_TEMPLATE: object
+bottom-nav: EXISTS len=477
+page-strip: NULL
+site-nav: EXISTS
+```
+
+**🎯 พลิกทฤษฎีเดิมทั้งหมด — ไม่ใช่ปัญหา "โหลด/รัน JS ไม่สำเร็จ" อีกต่อไป:**
+
+`#bottom-nav` **ถูกสร้างสำเร็จจริงในเครื่อง Lin** เนื้อหายาว 477 ตัวอักษร (ตรงกับที่ `renderBottomNavHTML()` ควรคืนค่าเป๊ะ — เทียบกับที่เคยรันด้วย Node ไว้ก่อนหน้านี้) — แปลว่า `data/nav-template.js` โหลดสำเร็จ, `shared.js`/`shared.min.js` รันสำเร็จ, DOM มีครบทุกอย่างถูกต้อง **ปัญหาทั้งหมดที่ตรวจมา (รอบ 1-3) เป็นการไล่ผิดทาง — ไม่ใช่ JS/network/cache/device-setting เลยสักอย่าง**
+
+**ทฤษฎีใหม่ที่ต้องตรวจต่อ (ยังไม่ยืนยัน):** ปัญหาน่าจะเป็นแค่ **"มองไม่เห็นด้วยตา" ไม่ใช่ "ไม่มีอยู่จริง"** — สงสัยว่าแถบเครื่องมือ Safari เอง (ที่ลอยอยู่ล่างสุดจอ ยุบ/ขยายได้ มี URL bar + ปุ่มย้อนกลับ/รีเฟรช) **บังทับ `#bottom-nav` อยู่ทางสายตา** เพราะเป็นเลเยอร์ของระบบ iOS ที่วาดทับเหนือเนื้อหาเว็บ ไม่ใช่ z-index ของหน้าเว็บเอง — ภาพหน้าจอที่ Lin ส่งมาทั้ง 2 ครั้ง (ทั้งตอนเห็น "ไม่มีแถบเลย" ที่หน้า blog) ถ่ายตอนแถบเครื่องมือ Safari กำลังโชว์อยู่ล่างสุดพอดีทุกครั้ง ยังไม่เคยเห็นภาพตอนแถบเครื่องมือ Safari ยุบ/หายไปเลยสักครั้ง
+
+**ยังไม่ได้ตรวจ:** ให้ Lin เลื่อนหน้าจอ (swipe อ่านเนื้อหา) ให้แถบเครื่องมือ Safari ยุบ/หายไปเอง แล้วดูว่า `#bottom-nav` โผล่ออกมาไหม — ถ้าโผล่ = ยืนยันทฤษฎีนี้ถูก (ไม่ใช่บั๊กโค้ด แต่เป็นพฤติกรรม UI ของ Safari ที่ทับกันพอดี ต้องแก้ด้วย CSS เพิ่ม เช่น เผื่อระยะจาก `env(safe-area-inset-bottom)` ให้พอกับความสูงแถบเครื่องมือ Safari ด้วย)
+
+**ผลจริง:** Lin เลื่อนจอจนแถบเครื่องมือ Safari ยุบเหลือแค่ pill เล็กๆ ลอยกลางจอ (ไม่บังพื้นที่ล่างสุดแล้ว) — **`#bottom-nav` ก็ยังไม่โผล่ขึ้นมา** → **ตัดทฤษฎี "Safari toolbar บัง" ออกด้วย** ยืนยันจากภาพหน้าจอจริงว่าพื้นที่ล่างสุดของหน้าเป็นพื้นครีมเปล่าๆ ไม่มีแถบดำของ `#bottom-nav` เลย ทั้งที่ DOM ยืนยันว่ามีอยู่จริง (รอบ 4) — สรุปว่าเป็นปัญหา **CSS ทำให้แสดงผลไม่ได้จริง (display/position/z-index หรือ element หลุดจอ)** ไม่ใช่ toolbar บัง
+
+**ตรวจโค้ดเจอจุดต้องสงสัยเพิ่ม (ยังไม่ยืนยันว่าใช่ root cause ของหน้านี้):** `js/core/shared.js` บรรทัด ~1806-1817 มีการสร้างกฎ CSS สำหรับหน้าเกม (ทำงานเฉพาะหน้าที่มี `#game-switcher` เท่านั้น — เช็คแล้ว `blog/typing-guide.html` ไม่มี `#game-switcher` เลย โค้ดส่วนนี้ไม่ควรรันบนหน้านี้) แต่พบว่าบรรทัด `'#bottom-nav{display:none !important;}'` (บรรทัด 1817) **ไม่ได้ใส่ prefix `body.rg-fake-fullscreen` เหมือนบรรทัดข้างบน** (1807-1813 ใส่ `body.rg-fake-fullscreen` หน้าทุกตัวถูกต้อง) — เป็นการ**ตั้งใจ**ให้ซ่อนถาวรบนหน้าเกม (ตามคอมเมนต์บรรทัด 1816) ไม่ใช่บั๊ก แต่เป็นจุดเสี่ยงที่ควรจดไว้เผื่อวันหลังมีหน้าไหนดันมี `#game-switcher` ติดไปโดยไม่ตั้งใจ
+
+**ขั้นต่อไป:** ต้องดู computed style จริง (`display`/`position`/`bottom`/bounding rect) ของ `#bottom-nav` บนเครื่อง Lin ตรงๆ — ใช้ bookmarklet ตัวที่ 2 (ดูข้อความคุยกับ Lin)
+
+**ผลจริง (bookmarklet ตัวที่ 2 — computed style):**
+```
+display:flex · visibility:visible · opacity:1 · z-index:998 · bottom:0px · height:60px
+rect.top:0 · rect.bottom:60 · rect.height:60
+window.innerH:775 · visualViewportH:775
+```
+
+**🎯 เจอจุดผิดปกติชัดเจน:** CSS ทุกค่าถูกต้องหมด (`display:flex`, `visibility:visible`, `opacity:1`, `bottom:0px` ตามที่ตั้งใจ) **แต่ bounding rect กลับอยู่ที่ `top:0 → bottom:60`** (มุมบนสุดของจอ) **ไม่ใช่ `top:715 → bottom:775`** (มุมล่างสุดของจอ ตามที่ `position:fixed;bottom:0` ควรจะเป็นเมื่อ viewport สูง 775px)
+
+**แปลว่า:** `#bottom-nav` ถูกดันไปวางไว้ที่ "บนสุด" ของ containing block แทนที่จะเป็น "ล่างสุดของจอ" — ทฤษฎีที่เป็นไปได้มากที่สุด: มี ancestor บางตัว (`body`/`html` หรือ element ที่ห่อ) ตั้งค่า `transform`/`filter`/`perspective`/`will-change:transform`/`contain` ทำให้กลายเป็น containing block ใหม่ของ `position:fixed` (เป็นพฤติกรรมมาตรฐานของ CSS ที่คนไม่ค่อยรู้ — ถ้า ancestor มีคุณสมบัติเหล่านี้ `position:fixed` จะยึดตำแหน่งกับ ancestor นั้นแทนวิวพอร์ต) **ยังไม่ยืนยันตัวการจริง ต้องเช็คต่อ**
+
+**ขั้นต่อไป:** bookmarklet ตัวที่ 3 — ไล่ดู ancestor ของ `#bottom-nav` ทีละชั้นว่าตัวไหนมี transform/filter/perspective/will-change/contain ติดอยู่
+
+**ตรวจโค้ดเพิ่ม (ระหว่างรอผล):** ไล่หา `transform`/`filter`/`perspective`/`will-change`/`contain` บน `body`/`html` ทั้ง `css/shared.css` และ `js/core/shared.js` แล้ว **ไม่เจอเลยสักจุด** (`grep` ทั้ง 2 ไฟล์ว่าง) — ตัดทฤษฎี "containing block จาก transform" ออกแบบตรงไปตรงมาไม่ได้
+
+**🎯 ทฤษฎีใหม่ที่น่าจะเป็นไปได้สูง (ยังไม่ยืนยัน แต่มีหลักฐานทางอ้อมสนับสนุน):** `css/shared.css` บรรทัด 15 — **`body { ... overflow-x:hidden; ... }`** — นี่คือบั๊กเก่าที่มีการบันทึกไว้ใน WebKit/iOS Safari: การตั้ง `overflow` (โดยเฉพาะ `overflow-x`) ไว้ที่ `<body>` หรือ `<html>` โดยตรง **ทำให้ `position:fixed` ของลูกหลานเพี้ยน** กลายเป็นเหมือน `position:absolute` ที่ยึดกับเอกสารทั้งหน้าแทนวิวพอร์ต — ตรงกับอาการเป๊ะ: ถ้า scroll อยู่ที่บนสุดตอนรัน bookmarklet (`rect.top:0`) จะได้ผลแบบที่เห็นพอดี (เหมือนอยู่ที่จุดเริ่มต้นของเอกสาร ไม่ใช่จุดเริ่มต้นของจอ)
+
+**วิธียืนยัน (เชื่อถือได้ที่สุด — ไม่ต้องเดา):** ให้ Lin **เลื่อนหน้าจอลงไปกลางบทความ** แล้วรัน bookmarklet ตัวที่ 2 (computed style) **ซ้ำอีกครั้ง** — ถ้า `rect.top`/`rect.bottom` เปลี่ยนตามตำแหน่ง scroll (เช่นกลายเป็นค่าติดลบมากๆ) = ยืนยันว่า `#bottom-nav` "เลื่อนไปกับหน้า" ไม่ใช่ "ลอยตรึงกับจอ" จริง ⇒ ตัวการคือ `overflow-x:hidden` บน `body` แน่นอน 100%
+
+**ผลจริง:** เลื่อนจอลงไปกลางบทความแล้วรันซ้ำ — ได้ค่า **เดิมเป๊ะทุกตัวเลข** (`rect.top:0 / rect.bottom:60` เท่ากับตอนอยู่บนสุดของหน้า) → **ตัดทฤษฎี `overflow-x:hidden` ออก** เพราะถ้าใช่ ค่าต้องเปลี่ยนตาม scroll แต่ไม่เปลี่ยนเลย = พิสูจน์ว่า `#bottom-nav` ยึดติดกับจอจริง (`position:fixed` ทำงานถูกต้อง) เพียงแต่ยึดกับ **"บนสุดของจอ" ไม่ใช่ "ล่างสุดของจอ"**
+
+### 🎯 ROOT CAUSE เจอแล้ว — ยืนยันด้วยโค้ดจริง (ไม่ใช่การเดา)
+
+`css/shared.css` **บรรทัด 18** มี selector ที่เป็น **`nav` เฉยๆ (bare tag selector ไม่ใช่ `.site-nav`)**:
+```css
+nav { position:fixed; top:0; left:0; right:0; height:var(--nav-h); ...; z-index:999; ... }
+```
+กฎนี้ตั้งใจไว้สำหรับแถบ nav บนสุด (`<nav class="site-nav">`) แต่เพราะเขียนเป็น `nav` เฉยๆ (ไม่ใส่ `.site-nav`) **มันจึงจับกับ `<nav>` ทุกตัวในหน้า** รวมถึง `#bottom-nav` ด้วย — เพราะ `#bottom-nav` ที่ `js/core/shared.js` สร้างขึ้นก็เป็นแท็ก `<nav>` เหมือนกัน (`document.createElement('nav')`)
+
+**ทำไมถึงเพี้ยนแบบนี้:** CSS ให้แต้ม specificity **แยกทีละ property** ไม่ใช่ทั้งก้อน — กฎ `#bottom-nav{...}` ที่ `shared.js` ฉีดเข้าไป (ID selector specificity สูงกว่า tag selector) เขียนแค่ `bottom:0;height:60px;z-index:998` **ไม่เคยเขียน `top` เลยสักครั้ง** ดังนั้น `top:0` จากกฎ `nav{}` ตัวเดิม (specificity ต่ำกว่า) จึงไม่ถูกทับ ยังหลงเหลืออยู่ — ผลคือ `#bottom-nav` มีทั้ง `top:0` และ `bottom:0` และ `height:60px` พร้อมกัน (over-constrained) ซึ่งตามสเปก CSS มาตรฐาน **`top` ชนะเสมอ `bottom` ถูกเมิน** → เรนเดอร์ที่ `top:0 → height:60px` (บนสุดของจอ) แทนที่จะเป็น `bottom:0` (ล่างสุดของจอ) **ตรงกับผลทดสอบทุกตัวเลขเป๊ะ** (`rect.top:0, rect.bottom:60` ทั้ง 2 รอบ ไม่ว่าจะ scroll ตำแหน่งไหน — เพราะ `position:fixed` ทำงานถูกต้องจริง แค่ยึดผิดขอบ)
+
+**ทำไมหน้า root (index.html ฯลฯ) ถึงเห็น "6 ปุ่มเดิม":** เพราะ `#bottom-nav` ไปเรนเดอร์อยู่ที่ขอบบนของจอ (ทับ/ปนกับ `.site-nav` เดิมที่ก็อยู่ขอบบนเหมือนกัน จอเล็กอาจมองไม่ทันสังเกตว่ามี 2 ชั้นซ้อนกัน) — ส่วนขอบล่างที่ควรมี `#bottom-nav` ว่างเปล่า จึงเห็น `.page-strip` (โค้ดเดิม ไม่เกี่ยวกับบั๊กนี้ อยู่ขอบล่างจริงตามที่ตั้งใจ z-index 990) โผล่แทน — หน้า blog ไม่มี `.page-strip` เลย ขอบล่างเลยว่างเปล่าสนิท ตรงกับทุกอาการที่ Lin เจอ
+
+**⚠️ นี่ไม่ใช่บั๊กเฉพาะเครื่อง Lin — เป็นบั๊กที่กระทบผู้เข้าชมเว็บทุกคนบนมือถือ ทุกเบราว์เซอร์ ตั้งแต่ deploy ฟีเจอร์นี้ 2026-08-09** (เป็นกฎ CSS ล้วนๆ ไม่เกี่ยวกับ cache/เครือข่าย/อุปกรณ์ใดๆ เลย) — สาเหตุที่ตรวจก่อนหน้านี้ (รอบ 1-4) ไม่เจอเพราะเคยเช็คแค่ `getComputedStyle().display === 'flex'` (ว่า "โชว์ไหม") ไม่เคยเช็ค `getBoundingClientRect()` (ว่า "โชว์ตรงไหน") มาก่อนเลย
+
+**วิธีแก้ (จุดเดียว ตรงต้นเหตุ):** เพิ่ม `top:auto;` เข้าไปในกฎ `#bottom-nav{...}` ที่ `js/core/shared.js` (บรรทัด 179) เพื่อทับค่า `top:0` ที่รั่วมาจากกฎ `nav{}` ของ `css/shared.css` อย่างชัดเจน — ไม่แตะ `css/shared.css` เลย (กันกระทบ `.site-nav` เดิม)
+
+**✅ แก้แล้ว (โค้ด local เท่านั้น — ยังไม่ push):**
+1. `js/core/shared.js` บรรทัด 179 — เพิ่ม `top:auto;` ในกฎ `#bottom-nav{...}` พร้อมคอมเมนต์อธิบาย root cause ไว้กันลืม
+2. รัน `npx terser js/core/shared.js --compress --mangle` ใหม่ → `js/core/shared.min.js` (เช็คแล้วมีคำว่า `top:auto` อยู่ในไฟล์ minify ด้วย)
+3. bump cache-buster `shared.min.js?v=20 → v=21` ครบ 77 ไฟล์ (รวมไฟล์ backup ใน `_dev/` ที่เดิมค้างที่ `v=18` ด้วย เพื่อความสม่ำเสมอ — ไฟล์ `_dev/` ไม่ถูก track โดย git อยู่แล้วตาม `.gitignore`)
+4. `node scripts/check-site.js` ผ่านทุกหมวด (JS syntax 86 ไฟล์ / HTML 109 ไฟล์ / CSS 6 ไฟล์ / data-health / secret-scanner) — ที่ไม่ผ่าน 6 รายการเป็น secret scan เก่าในโฟลเดอร์ `เลิกใช้แล้ว_ห้ามรัน/` ไม่เกี่ยวกับรอบนี้ (เดิมเป็นแบบนี้อยู่แล้วก่อนแก้)
+
+**ยังไม่ได้ทำ (รอ Lin):**
+- ~~push ผ่าน GitHub Desktop~~ ✅ **push สำเร็จจริงแล้ว** — commit `9236882` · ยืนยันจาก `.git/refs/heads/main` = `.git/refs/remotes/origin/main` ตรงกันเป๊ะ + มีบรรทัด `update by push` ล่าสุดชี้ไปที่ commit นี้จริง
+  > ⚠️ **บทเรียน:** รอบแรก Lin บอกว่า "push แล้ว" แต่ตรวจ `.git/logs/refs/remotes/origin/main` พบว่า commit ยังค้างอยู่ในเครื่อง — GitHub Desktop มี 2 ปุ่มแยกกัน (Commit to main → Push origin) กด commit แล้วยังไม่ได้กด push · **ครั้งหน้าที่ Lin บอกว่า push แล้วแต่เว็บยังไม่เปลี่ยน ให้เช็ค 2 ไฟล์นี้ก่อนเป็นอันดับแรกเสมอ ใช้เวลา 5 วินาที ตัดปัญหาได้ทันทีโดยไม่ต้องไล่หาสาเหตุอื่น**
+- **ยังไม่ยืนยัน:** เปิดเว็บจริงบนเครื่อง Lin ดูว่า `#bottom-nav` ขึ้นที่ขอบล่างจริงหรือยัง (รอ GitHub Pages build ~1-2 นาทีหลัง push ก่อน แล้วเปิด `blog/typing-guide.html` — URL ใหม่ v=21 ไม่ต้องกลัวแคชเก่า)
+- ลบ bookmark `DEBUG` ทิ้งได้ (ใช้เสร็จภารกิจแล้ว)
+
+### รอบ 5 (2026-08-10) — ปิดเคส: แถบ 4 ไอคอนขึ้นแล้วจริง + แก้อาการ "แถบ 6 ปุ่มเก่าแว้บตอนโหลดหน้า"
+
+**✅ ยืนยันจากเครื่อง Lin จริง:** หลัง push commit `9236882` แถบ `#bottom-nav` 4 ไอคอนขึ้นที่ขอบล่างถูกต้องแล้ว — **ปิดเคสหลักที่ค้างมาตั้งแต่ 2026-08-09**
+
+**อาการต่อเนื่องที่ Lin เจอหลังจากนั้น:** กด 🏠 首頁 หรือ 🎮 遊戲 แล้วระหว่างหน้าใหม่กำลังโหลด จะเห็น **แถบ 6 ปุ่มเก่า (`.page-strip`) แว้บโผล่ขึ้นมาก่อนแป๊บนึง แล้วหายไปเอง**
+
+**สาเหตุ (ยืนยันแล้ว ไม่ใช่การเดา):** `.page-strip` เขียนเป็น static HTML อยู่ในไฟล์ `.html` ตรงๆ → เบราว์เซอร์วาดออกมา**ทันที**ตั้งแต่วินาทีแรกที่หน้าเริ่มโหลด · ส่วน `#bottom-nav` ถูกสร้างด้วย JS ต้องรอ `shared.min.js` (~115KB) โหลด+รันเสร็จก่อน → **ช่วงรอยต่อนี้จึงเห็นแถบเก่าก่อนเสมอ** (บนมือถือเน็ตช้ายิ่งเห็นชัด)
+
+**วิธีแก้ (Lin อนุมัติ 2026-08-10):** ซ่อน `.page-strip` บนจอมือถือด้วย CSS static ใน `css/shared.css` — เพิ่มบล็อก `@media(max-width:768px){ .page-strip{display:none;} body:has(.page-strip){padding-bottom:0;} }`
+- CSS ทำงานทันทีตั้งแต่วินาทีแรก ไม่ต้องรอ JS → อาการแว้บหายสนิท
+- **บนมือถือไม่มีอะไรหายไปจากสายตาเลย** เพราะเดิม `.page-strip` ถูก `#bottom-nav` บังมิดอยู่แล้ว (สูง 60px ทับ 48px · z-index 998 ทับ 990)
+- คอม (>768px) ไม่กระทบเลย — `.page-strip` ยังอยู่ครบเหมือนเดิม เพราะ `#bottom-nav` ไม่โชว์บนคอมอยู่แล้ว
+
+> 🔑 **กฎถาวรที่ต้องจำ:** breakpoint ของ `.page-strip{display:none}` (`css/shared.css`) **ต้องตรงกับ** `@media(max-width:768px){#bottom-nav{display:flex}}` (`js/core/shared.js`) **เสมอ** — ถ้าวันหลังแก้ตัวใดตัวหนึ่งโดยไม่แก้อีกตัว จะเกิด "ช่วงความกว้างจอที่ไม่มีแถบล่างเลย" หรือ "มี 2 แถบซ้อนกัน" (เขียนคอมเมนต์เตือนไว้ในไฟล์ทั้ง 2 จุดแล้ว)
+
+**ไฟล์ที่แก้รอบ 5:** `css/shared.css` (เพิ่มบล็อก media query 768px) · bump `shared.css?v=14 → v=15` ครบ 77 ไฟล์ · `MAINTENANCE.md`
+
+**ผลตรวจ:** `node scripts/check-site.js` ผ่านทุกหมวด (JS 87 ไฟล์ / HTML 109 ไฟล์ / CSS 6 ไฟล์ / data-health / behavioral tests)
+- ไม่ผ่าน 7 รายการ **ไม่เกี่ยวกับรอบนี้ทั้งหมด**: 6 รายการเป็น secret scan เก่าในโฟลเดอร์ `supabase/sql/เลิกใช้แล้ว_ห้ามรัน/` (มีมาก่อนหน้านี้) · อีก 1 รายการคือ `js/core/supabase-config.staging.js` ซึ่งเป็นไฟล์ของงาน staging (P7-02) **ที่ `.gitignore` บรรทัด 49 ล็อกไว้ไม่ให้ commit อยู่แล้ว** จึงไม่มีค่าลับหลุดขึ้น GitHub — เป็น false positive ของตัวสแกน (สแกนไฟล์ในเครื่องทั้งหมดไม่ได้เช็ค .gitignore)
+
+### รอบ 6 (2026-08-10) — ย้ายแถบล่างมือถือเป็น static HTML ทุกหน้า (แก้อาการ "กระพริบ/โหลด 2 รอบ")
+
+**อาการ (Lin เจอหลังรอบ 5):** กดปุ่ม 🎮 遊戲 แล้วเข้าหน้า `games.html` ถูกต้อง **แต่หน้ากระพริบเหมือนโหลด 2 รอบ**
+
+**สาเหตุ (โครงสร้าง ไม่ใช่บั๊กพิมพ์ผิด):** `#bottom-nav` ถูกสร้างด้วย JS ใน `shared.js` → ต้องรอ `shared.min.js` (~115KB) โหลด+รันเสร็จก่อนเสมอ · ทุกครั้งที่เปลี่ยนหน้าบนมือถือ layout จะขยับ 1 ครั้ง (แถบสูง 60px โผล่เพิ่มเข้ามา + `body{padding-bottom}` เปลี่ยน) = ตาเห็นเป็น "กระพริบ" · `games.html` เห็นชัดสุดเพราะโหลดสคริปต์อื่นคั่นก่อน `shared.min.js` ถึง 4 ตัว
+
+**วิธีแก้ (Lin เลือกเอง 2026-08-10 — ทางที่แก้ที่ต้นเหตุจริง):** ทำให้แถบล่างเป็น **static HTML + static CSS เหมือนเมนูบนสุด** ไม่ต้องรอ JS อีกต่อไป (แนวทางเดียวกับ decision 2026-07-24 เรื่อง SEO/GEO)
+1. **`scripts/generate-nav.js`** — เพิ่มหน้าที่ใหม่: เขียน `<nav id="bottom-nav">…</nav>` ลงก่อน `</body>` ของทุกหน้า (มีอยู่แล้วให้พิมพ์ทับ ยังไม่มีให้แทรก) · ยังคง idempotent (รันซ้ำแล้วไม่แก้ไฟล์ซ้ำ — ทดสอบแล้ว รอบ 2 ขึ้น "แก้ไฟล์จริง: 0 หน้า")
+2. **`css/shared.css`** — ย้ายกฎ CSS ของ `#bottom-nav` ทั้ง 7 บรรทัดมาจาก `shared.js` **แบบคัดลอกตรงตัวทุกอักขระ** (หน้าตาเหมือนเดิมเป๊ะ ไม่เปลี่ยนอะไรเลย) · ⚠️ ขั้นตอนนี้ขาดไม่ได้ ถ้าเขียน HTML แต่ไม่ย้าย CSS แถบจะโผล่มาแบบ "ไม่มีสไตล์" เป็นก้อนลิงก์ต่อท้ายหน้าก่อน แล้วค่อยกระโดดไปขอบล่าง = กระพริบหนักกว่าเดิม
+3. **`css/shared.css`** — เพิ่ม `body:has(#game-switcher) #bottom-nav{display:none !important;}` ให้หน้าเกม 8 หน้าซ่อนแถบตั้งแต่วินาทีแรก (เดิมพึ่ง JS ซ่อนอย่างเดียว ซึ่งพอแถบเป็น static แล้วจะเห็นแวบก่อนถูกซ่อน) · กฎเดิมใน `shared.js` คงไว้ ไม่ได้ลบ (ทำงานซ้ำกันได้ ไม่มีผลเสีย)
+4. **`js/core/shared.js`** — เพิ่มด่านบรรทัดเดียวบนสุดของก้อนนี้: `if (document.getElementById('bottom-nav')) return;` (มีอยู่แล้วในหน้า = ไม่สร้างซ้ำ ไม่ใส่ CSS ซ้ำ) · โค้ดสร้างแถบเดิม**เก็บไว้เป็นทางสำรอง** สำหรับหน้าใหม่ในอนาคตที่ยังไม่ได้ผ่าน `generate-nav.js`
+
+**หลักฐาน:** `node scripts/generate-nav.js` → ตรวจ 75 หน้า เพิ่ม `<nav id="bottom-nav">` ใหม่ 75/75 หน้า · รันซ้ำได้ 0 การเปลี่ยนแปลง (idempotent จริง) · ตรวจทุกไฟล์แล้วไม่มีหน้าไหนมี `<nav id="bottom-nav">` เกิน 1 อัน · ยืนยันด่านกันสร้างซ้ำมีอยู่ใน `shared.min.js` จริงหลัง minify · `node scripts/check-site.js` ผ่านทุกหมวด (7 รายการที่ไม่ผ่านเป็นของเดิมทั้งหมด ไม่เกี่ยวรอบนี้)
+
+**ไฟล์ที่แก้รอบ 6:** `scripts/generate-nav.js` · `css/shared.css` · `js/core/shared.js` + `js/core/shared.min.js` (rebuild ด้วย terser) · ไฟล์ `.html` 75 หน้า (เพิ่มแถบล่าง + bump `?v=`) · bump `shared.min.js v=21→v=22` และ `shared.css v=15→v=16` ครบ 77 ไฟล์
+
+**ยังไม่ยืนยัน:** ยังไม่ได้ทดสอบบนมือถือจริงหลังรอบนี้ (ต้อง push ก่อน) — สิ่งที่ต้องเช็ค: (1) กด 首頁/遊戲 สลับไปมา ไม่กระพริบแล้ว (2) หน้าเกม 8 หน้า (เช่น `tone-finder.html`) **ต้องไม่มี**แถบล่างโผล่เลยแม้แต่แวบเดียว (3) คอมยังเห็นแถบ 6 ปุ่ม `.page-strip` เหมือนเดิม
+
+**ทฤษฎีเดิม (bump cache-buster) ตรวจแล้วว่าไม่ใช่สาเหตุ — ห้ามเชื่อซ้ำ:**
+`MAINTENANCE.md` (2026-08-08 บรรทัด 61 ตอนนั้น) บันทึกว่าเคย bump `v=17→v=18` **ครบทั้ง 76 ไฟล์** → ก่อน push 2026-08-09 ทุกไฟล์อยู่ที่ `v=18` เท่ากันหมด แล้ว 31 ไฟล์ (รวม `index.html`) ถูก bump เป็น `v=19` ตอน push เมื่อวาน = **URL ที่เบราว์เซอร์ Lin ไม่เคยโหลดมาก่อนเลย** แคชเก่าจึงไม่มีทางถูกใช้ · ตรวจของจริงบนเว็บซ้ำแล้วด้วย: `https://mrtaihualin.com/data/nav-template.js?v=1` และ `shared.min.js?v=19` มีอยู่จริง (200) และเมนูบนสุดชุดใหม่ (遊戲/學習資源/關於我 + 免費試聽) ขึ้นบนเว็บสดแล้ว
+→ **สาเหตุที่น่าจะเป็นที่สุดของอาการเมื่อวาน: Lin เปิดดูเร็วเกินไป** GitHub Pages build ใช้เวลา 1-2 นาที ถ้าเปิดตอนนั้นจะได้ `index.html` ตัวเก่า (v=18 ไม่มี `nav-template.js`) → `#bottom-nav` ถูกสร้างแต่ว่างเปล่า → เห็น `.page-strip` 6 ปุ่มเดิมพอดีเป๊ะกับอาการ
+
+**บั๊กจริงที่เจอระหว่างสืบ (คนละเรื่อง แต่ต้องแก้):**
+มี **44 ไฟล์ `.html` (เกือบทั้งหมดคือ `blog/`)** ที่โหลด `shared.min.js?v=18` แต่ **ไม่โหลด `data/nav-template.js` เลย** (commit เมื่อวานแตะแค่ 31 ไฟล์ที่มี nav block) → `shared.js` หา `window.NAV_TEMPLATE` ไม่เจอ → สร้าง `<nav id="bottom-nav">` **เปล่าๆ** ต่อท้าย body แต่ CSS ยังดัน `body{padding-bottom:60px}` บนมือถืออยู่ = **ทุกหน้าบล็อกมีช่องว่าง 60px ท้ายหน้าบนมือถือ โดยไม่มีปุ่มสักปุ่ม และเงียบสนิท**
+
+**สิ่งที่แก้:**
+1. เพิ่ม `<script src="../data/nav-template.js?v=1"></script>` ก่อน `shared.min.js` ใน 44 ไฟล์บล็อก → ตอนนี้ทุกหน้าที่โหลด `shared.min.js` มี `nav-template.js` ครบ 75/75 ไฟล์
+2. `js/core/shared.js` — เพิ่มด่านกัน "แถบเปล่า": ไม่มี `NAV_TEMPLATE` = **ไม่สร้างแถบ ไม่ใส่ CSS เลย** + `console.warn` เตือนดังๆ (กฎ RELIABILITY FIRST ข้อ "ห้ามเงียบ") เดิมสร้างแถบเปล่าแล้วปล่อยผ่าน · regenerate `shared.min.js` ด้วย `bash scripts/build-minjs.sh` (terser)
+3. bump `shared.min.js?v=18`/`v=19` → **`v=20` ครบทั้ง 75 ไฟล์** (เนื้อหา `shared.min.js` เปลี่ยนจริงรอบนี้ จึงต้อง bump ตามธรรมเนียม) · `nav-template.js` ไม่ได้แก้เนื้อหา จึงคง `v=1`
+
+**หลักฐาน:** `node scripts/check-site.js` ผ่านทุกหมวด (JS syntax 85 ไฟล์ · HTML 109 ไฟล์) — ที่ไม่ผ่าน 6 รายการเป็นของเดิมมาก่อนรอบนี้ทั้งหมด (secret scan เจอ JWT ในไฟล์เก่าโฟลเดอร์ `supabase/sql/เลิกใช้แล้ว_ห้ามรัน/` ยังไม่ได้ล้าง) · ตรวจซ้ำว่าไม่มีไฟล์ไหนโหลด `shared.min.js` แล้วขาด `nav-template.js` (ผลว่าง) · `require('./data/nav-template.js').renderBottomNavHTML()` คืน 4 ปุ่ม 首頁/試聽/遊戲/我的 ยาว 477 ตัวอักษร
+
+**ยังไม่ยืนยัน:** ยังไม่ได้เปิด mrtaihualin.com บนมือถือจริงหลังรอบนี้ (ต้อง push ก่อน) — ถ้า push แล้วรอ 2 นาที เปิดมือถือแล้วยังไม่เห็น 4 ปุ่ม ขั้นต่อไปคือต่อ iPhone เข้า Mac ด้วยสาย → Safari บน Mac → เมนู Develop → เลือกเครื่อง → เปิด Web Inspector ของแท็บนั้น ดู error จริงบนเครื่องนั้น (แม่นกว่าเดา)
+
+**ไฟล์ที่แก้:** `js/core/shared.js` + `js/core/shared.min.js` · 44 ไฟล์ใน `blog/` (เพิ่ม script tag + bump v) · 31 ไฟล์เดิม (bump v อย่างเดียว)
+
+## 2026-08-09 (ต่อ) — แก้ error/loading message ในเกมที่เป็นภาษาไทยผิด ให้เป็นภาษาจีน + เจอ + ยังไม่ปิดเรื่อง bottom-nav มือถือ
+
+สถานะ: **✅ ส่วนภาษาไทย→จีน push แล้วยืนยันจริง (fetch ไฟล์สดจากเว็บตรวจ) — ⚠️ ส่วน bottom-nav มือถือยังไม่ปิด ส่งต่อแชทใหม่**
+
+Lin ตรวจเว็บหลัง push Navigation+Search MVP แล้วเจอ 2 เรื่อง:
+
+**(1) error/loading message ในเกมเป็นภาษาไทย — แก้เสร็จแล้ว:** `js/games/game-content-client.js` (สร้าง 2026-08-02) เขียนข้อความที่โชว์ให้ผู้เล่นเห็น (loading banner, error banner, ปุ่ม retry/กลับหน้าเกม/ทัก LINE) เป็นภาษาไทยทั้งหมด ทั้งที่เว็บนี้สอนคนไต้หวัน/ฮ่องกงใช้ภาษาจีนล้วน — แปลเป็นภาษาจีนครบทุกจุดที่ผู้เล่นเห็น (comment/console.error ภายในเก็บภาษาเดิมไว้ ไม่กระทบผู้เล่น) push แล้ว ยืนยันด้วย `fetch('/js/games/game-content-client.js').then(r=>r.text())` เช็คว่ามีคำว่า "遊戲資料載入中" จริงบนเว็บสด
+
+**(2) bottom-nav มือถือ (4 ปุ่มใหม่) ไม่ขึ้นบนมือถือจริง — ยังไม่ปิด ส่งต่อแชทใหม่แล้ว:** ตรวจบนคอม (DevTools, จำลองจอแคบ, ยืนยัน context เป็น index.html จริง) พบว่าโค้ดถูกต้องครบ — `renderBottomNavHTML()` คืนค่าถูก, `#bottom-nav` มีเนื้อหา 477 ตัวอักษรจริง, CSS media query `@media(max-width:768px){#bottom-nav{display:flex}}` ทำงานถูก (`getComputedStyle().display === 'flex'` เมื่อจอแคบจริง) — แต่บนมือถือจริง (iPhone Safari) แม้ล้างแคชเต็มรูปแบบ (Settings→Safari→Clear History and Website Data) + พิมพ์ URL ใหม่ ก็ยังเห็นแถบเก่า 6 ปุ่ม (`.page-strip`, ฟีเจอร์เดิมแยกต่างหาก ไม่เกี่ยวกับ bottom-nav) สงสัยว่าอาจมีแคชอีกเลเยอร์ที่ล้างในเครื่องมือถือไม่ถึง (เช่น CDN edge cache) — เตรียมคำสั่งเปิดแชทใหม่ให้แล้ว แนะนำให้ลอง bump cache-buster (`shared.min.js?v=19→20`, `nav-template.js?v=1→2`) เป็นตัวแรกที่ลอง ก่อนสืบลึกกว่านั้นด้วย Safari Web Inspector ผ่านสาย USB
+
+**สิ่งที่ตรวจแล้ว ไม่ใช่บั๊ก (กันสับสนซ้ำ):** หน้าเกมจริง (มี `#game-switcher`) ซ่อน `#bottom-nav` ถาวรด้วย `!important` ตั้งใจไว้ตั้งแต่ 2026-07-12 — ไม่เกี่ยวกับปัญหานี้ (index.html ไม่มี `#game-switcher`)
+
+**ไฟล์ที่เกี่ยวข้อง:** `js/games/game-content-client.js` (แก้แล้ว) · `js/core/shared.js`/`shared.min.js`, `data/nav-template.js`, `css/shared.css` (`.page-strip`) — รอแชทใหม่ตรวจต่อ
+
+## 2026-08-09 — Navigation รวม + Search MVP + จัดระเบียบ games.html IA
+
+สถานะ: **✅ push ขึ้นเว็บจริงแล้ว (ยืนยันจาก GitHub Desktop ไม่มีคอมมิตค้าง) — แต่ยังไม่เปิดเว็บจริงตรวจตาหลัง push และ Gemini fallback search ยังไม่ deploy**
+
+Lin สั่งรวมเมนูเว็บที่เดิม hardcode ซ้ำอยู่ 31 ไฟล์ HTML แยกกัน ให้เหลือจุดแก้เดียว พร้อมลดหัวข้อเมนูบนสุดจาก 6 หมวดเหลือ 3 หมวด และเพิ่มระบบค้นหาที่เว็บไม่เคยมีมาก่อน
+
+**Navigation:** สร้าง `data/nav-template.js` เป็น single source of truth ของเมนู (desktop dropdown + hamburger + mobile bottom-nav) แล้วเขียน `scripts/generate-nav.js` พิมพ์ทับ nav block ในไฟล์ `.html` ทุกหน้าที่เกี่ยวข้อง (30 ไฟล์) — เลือกทางนี้แทนการฉีดด้วย JS ล้วนๆ เพื่อคงเป็น static HTML ไว้ (กัน SEO/GEO เสีย ตรงกับ decision เดิมของ repo เมื่อ 2026-07-24) เมนูบนสุดเหลือ 3 หัวข้อ (遊戲/學習資源/關於我) เดิม 6 หมวด (程度測驗/關於老師/了解課程/資源分享/專業服務/聯絡我們) ยุบเป็น dropdown ย่อยใต้ 學習資源 กับ 關於我 แทน ไม่มี URL ไหนถูกย้าย · CTA เปลี่ยนจาก "預約免費體驗課" เป็น "免費試聽" · bottom-nav มือถือเหลือ 4 ปุ่ม (首頁/試聽/遊戲/我的) ปุ่ม 我的 ผูกกับ `my-progress.html` เดิม
+
+**Search MVP:** สร้างจากศูนย์ — `data/search-index.js` (index รวมเกม/บทความ/FAQ/คอร์ส) + `js/core/search-engine.js` (rule-based matcher ฝั่ง client) + `js/core/search-ui.js` (กล่องค้นหาหน้าแรก) + `js/games/games-search-ui.js` (กล่องค้นหาเฉพาะเกมใน games.html) ทำงานได้ทันทีหลัง push ไม่ต้อง deploy อะไรเพิ่ม เพราะเป็น client-side ล้วน
+
+**games.html IA:** แยก grid เดิมที่รวม 7 การ์ดปนกันเป็น 3 ส่วน (5 เกมเล็ก / Challenge / Lego แยก section ชัดเจน) copy การ์ดเดิมไม่เปลี่ยน แค่ย้ายตำแหน่ง
+
+ไฟล์ที่แก้/สร้าง: `data/nav-template.js`, `scripts/generate-nav.js` (ใหม่), `data/search-index.js` (ใหม่), `js/core/search-engine.js`/`search-ui.js` (ใหม่), `js/games/games-search-ui.js` (ใหม่), `games.html`, `index.html`, `supabase/functions/search-gemini/index.ts` (ใหม่ — ยังเป็นโครงร่าง), และไฟล์ `.html` อีก 28 หน้าที่มี nav (nav block เท่านั้น)
+
+ผลตรวจ: ยืนยัน diff จริงทีละไฟล์ผ่าน GitHub Desktop ก่อน commit (ไม่ใช่เดาจาก mtime) แยกเป็น 2 commit ตามงาน (nav 30 ไฟล์ / search+IA 7 ไฟล์) push สำเร็จยืนยันจาก GitHub Desktop ขึ้น "No local changes"
+
+**สิ่งที่ยังไม่ทำงานจริง — ต้อง Lin ทำต่อ:** Gemini fallback search (`supabase/functions/search-gemini`) เป็นแค่โครงร่าง คอมเมนต์หัวไฟล์เขียนเองว่า "🔴 ยังไม่ deploy" และ `js/core/search-engine.js` ยังไม่มีโค้ดเรียก Edge Function นี้เลย (`geminiFallback()` เป็น stub) ต้อง (1) `supabase login` + link project (2) ตั้ง secret `GEMINI_API_KEY` จริง (3) `supabase functions deploy search-gemini` (4) เพิ่ม rate limit กัน cost บาน (5) ต่อโค้ดฝั่ง client ให้เรียกจริง — รายละเอียดเต็มที่ `Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/78_ผลลัพธ์_Navigation-Search-gamesIA_push_2026-08-09.md`
+
+**สิ่งที่ Lin ต้องทำเอง:** เปิดเว็บจริงดู 2-3 หน้า (มือถือ+คอม) ยืนยันเมนูใหม่ขึ้นถูกหลัง GitHub Pages build เสร็จ (~1-2 นาทีหลัง push) — ยังไม่มีใครตรวจด้วยตาหลัง push รอบนี้
+
+## 2026-08-08 (Account Deletion รอบ 3) — เปลี่ยนลบบัญชีเป็น cooldown 7 วัน + อีเมลยืนยัน 3 จุด
+
+สถานะ: **โค้ดพร้อมแล้ว (local prep เท่านั้น) — ยังไม่ deploy/ยังไม่รัน SQL รอ Mandatory Pre-Deploy Test + เลือก email provider ก่อน**
+
+Lin ตัดสินใจเปลี่ยนจาก "confirm แล้วลบทันที" เป็น cooldown 7 วัน: ยื่นคำขอ → รอ 7 วัน (login ได้ปกติ ต้องกดยกเลิกเอง) → ครบกำหนด → cron ลบถาวรจริง (รันทุกวัน 20:00 UTC ไม่ใช่ลบตรงวินาทีที่ครบกำหนด)
+
+ไฟล์ที่แก้/สร้าง: `supabase/functions/account-delete/index.ts` (เขียนใหม่ทั้งไฟล์ — preview/request/cancel), 🆕 `account-delete-cron/index.ts` (ลบจริงเมื่อครบกำหนด + retry อีเมลที่ส่งพลาดอย่างปลอดภัย ไม่กระทบผลการลบ), 🆕 `send-transactional-email/index.ts` (ยังไม่เลือก provider), `js/core/auth-widget.js` (banner + ปุ่มยกเลิก), 🆕 `supabase/sql/2026-08-08_account_deletion_cooldown.sql`, 🆕 `docs/ACCOUNT_DELETION_PRE_DEPLOY_CHECKLIST.md`
+
+ผลตรวจ: `node --check` ผ่านทุกไฟล์ + `node scripts/check-site.js` ผ่านครบ (6 รายการไม่ผ่านเป็นของเดิมในโฟลเดอร์ `เลิกใช้แล้ว_ห้ามรัน` ไม่เกี่ยวกับรอบนี้)
+
+**สิ่งที่ Lin ต้องทำเอง:** (1) เลือก email provider + สมัคร/ตั้ง secret เอง (2) ทำ Mandatory Pre-Deploy Test ให้ครบตาม checklist ด้วยบัญชีทดสอบเท่านั้น (3) ตรวจโค้ด + deploy เอง (4) รัน SQL หลัง deploy `account-delete-cron` แล้วเท่านั้น
+
+## 2026-08-08 (P5-A รอบ 3 — แก้แคชเก่าค้าง) — ปุ่มแชร์บทความ blog/ ยังขึ้น popup ซ้อน 2 กล่องหลัง push แล้ว
+
+สถานะ: **✅ เสร็จสมบูรณ์ — Lin push แล้ว + hard refresh ทดสอบผ่านครบ 3 จุด (iPhone Safari / คอม Safari / คอม Chrome) ยืนยันด้วยภาพหน้าจอจริงว่าคอมขึ้น popup ตรงๆ ไม่ซ้อนแล้ว**
+
+ปัญหา: หลัง push commit รอบ 2 (แก้ให้คอมทุกเบราว์เซอร์ไป popup ตรงๆ ไม่ผ่าน `navigator.share`) แล้ว Lin ทดสอบซ้ำบนคอม (บทความใน `blog/`) ยังเจออาการเดิม — ขึ้น popup ซ้อนกัน 2 กล่อง
+
+ตรวจโค้ดจริงแล้วพบว่า: `js/core/shared.js` (source) และ `js/core/shared.min.js` (minified) ในเครื่องมีโค้ดแก้รอบ 2 ถูกต้องครบแล้วจริง (มี `isMobileDevice` guard, ตรวจว่าเป็นมือถือก่อนถึงจะเรียก `navigator.share`) และเป็น commit ล่าสุดในเครื่อง (`e6c96de`) ตรงกับที่ Lin ยืนยันว่า push แล้ว — โค้ดฝั่งไฟล์ไม่มีปัญหา
+
+สาเหตุที่แท้จริง: commit รอบ 2 **ไม่ได้ขยับเลข cache-buster `?v=` ของ `shared.min.js`** (ยังเป็น `v=17` เท่าเดิมกับก่อนแก้) — เบราว์เซอร์ของ Lin ที่เคยโหลดหน้าเว็บมาก่อนหน้านี้แล้ว จะแคชไฟล์ `shared.min.js?v=17` (เวอร์ชันเก่าก่อนแก้รอบ 2) ไว้ที่ URL เดิม ต่อให้เนื้อหาไฟล์บน GitHub เปลี่ยนไปแล้ว เบราว์เซอร์ก็ไม่รู้ว่าต้องโหลดใหม่เพราะ URL (รวม query string) เหมือนเดิมทุกตัวอักษร เลยยังรันโค้ดเก่าที่เช็คแค่ "มี `navigator.share` ไหม" อยู่ — ตรงกับอาการที่ Lin เจอเป๊ะ (คอมมี `navigator.share` เลยขึ้นเมนูเครื่องก่อน กดปิดแล้ว `.catch()` เด้ง popup ตามมาซ้อนอีกกล่อง)
+
+ตรวจเพิ่มเติมเพื่อตัดสาเหตุอื่นออก: หน้าบทความใน `blog/` ไม่มีปุ่ม/handler แชร์ซ้ำซ้อนกันเอง (มีจุดเรียกเดียวจาก `shared.min.js` เท่านั้น) และ `openSharePopup()` เองก็ไม่มีการเรียก `navigator.share` ซ้อนอยู่ข้างในเลย — ยืนยันว่าไม่ใช่บั๊กจากตรรกะโค้ด แต่เป็นแคชเก่าค้างล้วนๆ
+
+วิธีแก้: ขยับเลข cache-buster ของ `shared.min.js` จาก `?v=17` → `?v=18` ให้ครบทุกหน้าที่โหลดไฟล์นี้ (76 ไฟล์ — ตรวจด้วย grep ว่าไม่มี `v=17` เหลือค้างแล้ว) ไม่ได้แก้เนื้อหา `shared.js`/`shared.min.js` เพิ่มเติม เพราะโค้ดถูกอยู่แล้ว แค่ต้องบังคับให้เบราว์เซอร์โหลดไฟล์ใหม่
+
+ไฟล์ที่แก้: ไฟล์ `.html` ทั้ง 76 ไฟล์ที่มี `<script src="...shared.min.js?v=17">` (bump เป็น `v=18` เท่านั้น ไม่แตะเนื้อหาอื่น)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (819 ไฟล์)
+
+**สิ่งที่ Lin ต้องทำเอง:** push ผ่าน GitHub Desktop แล้ว **hard refresh** (Cmd+Shift+R บน Mac หรือปิด-เปิดแท็บใหม่) ก่อนทดสอบซ้ำ 3 จุด: iPhone Safari (ต้องขึ้นเมนูเครื่อง) / คอม Safari (ต้องเป็น popup ตรงๆ ไม่มีเมนูเครื่องมาก่อน) / คอม Chrome (แบบเดียวกัน) — ถ้ายังเจอปัญหาเดิมหลัง hard refresh แปลว่าไม่ใช่แคชแล้ว ต้องแจ้งกลับพร้อมบอกว่า hard refresh แล้วจริงหรือยัง
+
+## 2026-08-08 (P5-A ปรับตามผลทดสอบ Lin) — ปุ่มแชร์บทความ: คอมทุกเบราว์เซอร์ให้ไปกล่อง popup ตรงๆ
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin ทดสอบซ้ำ (iPhone Safari + คอม Safari + คอม Chrome) แล้ว push**
+
+ปัญหาที่ Lin ทดสอบเจอ: `shareBlogArticle()` เดิมเช็คแค่ "เบราว์เซอร์มี `navigator.share` ไหม" — คอมเดสก์ท็อปรุ่นใหม่ (Safari/Chrome) ก็มี `navigator.share` เหมือนกัน ไม่ใช่แค่มือถือ เลยขึ้นเมนูแชร์ของเครื่อง (native share sheet) ก่อนบนคอมด้วย ถ้า Lin กดปิดเมนูนั้น (ไม่ได้เลือกช่องทางไหน) `navigator.share().catch()` จับ error ทุกแบบรวมถึง "คนกดยกเลิก" เลยเด้งกล่อง popup (FB/LINE) ตามมาซ้อนอีกกล่อง = ได้ 2 กล่องซ้อนกัน
+
+การตัดสินใจของ Lin: คอมทุกเบราว์เซอร์ (Safari/Chrome/Firefox) ให้ใช้กล่อง popup (FB/LINE) เสมอ ไม่ผ่าน `navigator.share` เลย ส่วนมือถือให้คงเดิม (ขึ้นเมนูเครื่องก่อน — ทดสอบผ่านแล้วบน iPhone Safari)
+
+วิธีแก้: เปลี่ยนเงื่อนไขจาก "มี `navigator.share` ไหม" เป็น "เป็นมือถือไหม (`/Android|iPhone|iPad|iPod/i` ตรวจ user agent) และมี `navigator.share`" — เป็นมือถือถึงจะเรียก `navigator.share()` เดสก์ท็อปทุกเบราว์เซอร์ไป `openSharePopup()` ตรงๆ
+
+ไฟล์ที่แก้: `js/core/shared.js` (หัวข้อ `[03.6] BLOG ARTICLE SHARE BUTTON`) → รัน `scripts/build-minjs.sh` แล้ว → `shared.min.js` อัปเดตแล้ว
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (819 ไฟล์)
+
+**สิ่งที่ Lin ต้องทำเอง:** ทดสอบซ้ำ 3 จุดก่อน push — iPhone Safari (ต้องขึ้นเมนูเครื่องเหมือนเดิม) + คอม Safari (ต้องขึ้นกล่อง popup FB/LINE ทันที ไม่มีเมนูเครื่องมาก่อน) + คอม Chrome (แบบเดียวกัน) ผ่านครบแล้ว push ผ่าน GitHub Desktop (client-side ล้วน ไม่ต้อง deploy อะไรเพิ่ม)
+
+## 2026-08-08 (บั๊กจริง #2 รอบ 3) — Lin push+รอแล้ว ยังขึ้น error เดิมบนมือถือ → เจอสาเหตุจริง: ลืม bump cache-buster
+
+สถานะ: **✅ ปิดแล้ว — Lin ยืนยันทดสอบเชื่อม LINE ผ่านซาฟารี/มือถือสำเร็จหลัง push + hard refresh**
+
+**สรุปทั้งเรื่อง "เชื่อม LINE ไม่สำเร็จ" (3 รอบ) — ปิดจบแล้ว 2026-08-08:**
+1. รอบ 1 `invalid_client` — สาเหตุ: `line-login`/`line-webhook` อ่าน secret ชื่อชนกัน → แก้แยกชื่อ `LINE_LOGIN_CHANNEL_SECRET`
+2. รอบ 2 `連結可能已經用過` (ซาฟารีคอม) — สาเหตุ: `sessionStorage` ผูกกับแท็บเดิม พังตอนสลับไปแอป LINE เดสก์ท็อปแล้วเปิดกลับมาเป็นแท็บใหม่ → เปลี่ยนเป็น `localStorage`
+3. รอบ 3 error เดิมซ้ำบนมือถือ แม้ push+รอแล้ว — สาเหตุ: รอบ 2 ลืม bump cache-buster `?v=` เบราว์เซอร์/CDN เลยยังเสิร์ฟไฟล์เก่าค้าง → bump `reading-auth.js` v11→12 + `line-callback.js` v3→4
+
+ไม่มีอะไรต้องติดตามต่อสำหรับเรื่อง "เชื่อม LINE" นี้โดยเฉพาะ — เรื่องปุ่มแชร์บทความ (`blog/`, ดูหัวข้อ P5-A ด้านบน) และ Account audit log เป็นคนละเรื่อง ติดตามแยกต่างหาก (ไม่ใช่ขอบเขตของแชทนี้)
+
+ปัญหา: Lin push commit ของรอบ 2 (sessionStorage→localStorage) แล้ว รอสักครู่ค่อยทดสอบเชื่อม LINE บนมือถือ แต่ยังขึ้น error เดิม "這個連結可能已經用過"
+
+ตรวจโค้ดจริงแล้ว: เนื้อหาไฟล์ `js/games/reading-auth.js` และ `js/games/line-callback.js` เปลี่ยนเป็น `localStorage` ครบถ้วนถูกต้องแล้วจริง (ไม่ใช่บั๊กใหม่ในโค้ด) — แต่พบว่ารอบแก้ 2 **ลืม bump เลขเวอร์ชัน cache-buster** ที่ต่อท้าย URL ตอนโหลดไฟล์ (เช่น `reading-auth.js?v=11`) ทั้งที่เว็บนี้มีธรรมเนียมต้อง bump ทุกครั้งที่แก้เนื้อหาไฟล์ (เคยทำมาก่อนกับ `shared.js` bump `v=16→17`) — เลขเวอร์ชันคงเดิมทำให้เบราว์เซอร์/CDN อาจยังเสิร์ฟไฟล์เก่า (มี sessionStorage) ซ้ำภายใต้ URL เดียวกัน แม้ push โค้ดใหม่ไปแล้วจริงก็ตาม ตรงกับอาการที่ Lin เจอ (error เดิมซ้ำแม้รอแล้วค่อยทดสอบ)
+
+วิธีแก้: bump เลขเวอร์ชันใน 8 หน้า — `reading-auth.js?v=11→12` (vault.html, reading-game.html, tone-finder.html, games-challenge.html, lego.html, typing-game.html, word-order.html) + `line-callback.js?v=3→4` (line-callback.html) — ไม่แตะเนื้อหาไฟล์ JS เอง (ถูกอยู่แล้วจากรอบ 2)
+
+ไฟล์ที่แก้: `vault.html`, `reading-game.html`, `tone-finder.html`, `games-challenge.html`, `lego.html`, `typing-game.html`, `word-order.html`, `line-callback.html` (แก้แค่เลข `?v=` ในแท็ก `<script>`)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (819 ไฟล์)
+
+**สิ่งที่ Lin ต้องทำเอง:** push ผ่าน GitHub Desktop (client-side ล้วน ไม่ต้อง deploy Edge Function) รอเว็บอัปเดตแล้วทดสอบเชื่อม LINE บนมือถืออีกครั้ง (เบราว์เซอร์เดิมที่เพิ่งพัง) — ถ้ายังไม่หายอีก ให้ส่งภาพหน้าจอ error จริง + บอกว่าเปิดจากในแอป LINE หรือเปิดจาก Safari/Chrome บนมือถือ
+
+## 2026-08-08 (บั๊กจริง #2) — เชื่อม LINE ในซาฟารีพัง "連結可能已經用過" (ใช้ได้ปกติในแอป LINE)
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin push แล้วทดสอบซ้ำในซาฟารี**
+
+ปัญหา: หลังแก้บั๊ก invalid_client เสร็จ Lin ทดสอบเชื่อม LINE ในแอป LINE (in-app browser) สำเร็จ แต่ในซาฟารีบน Mac (เครื่องที่ลงแอป LINE เดสก์ท็อปไว้ด้วย) พังด้วย error "這個連結可能已經用過" ทุกครั้งแม้กดปุ่มสดๆ ไม่ได้เปิดลิงก์เก่าซ้ำ
+
+สาเหตุที่แท้จริง: `line_login_state`/`nonce`/`return_to`/`link` เดิมเก็บด้วย `sessionStorage` ซึ่งผูกกับ**แท็บเดิม**เท่านั้น — ซาฟารีบนเครื่องที่มีแอป LINE เดสก์ท็อปติดตั้งอยู่ ส่งต่อการล็อกอินไปให้แอป LINE จัดการแทน แล้วเปิดหน้า redirect กลับมาเป็น**แท็บ/หน้าต่างใหม่** ไม่ใช่แท็บที่กดปุ่มไว้ตอนแรก → sessionStorage ของแท็บเดิมเข้าไม่ถึง ทำให้เช็ค state ใน `line-callback.js` พังทุกครั้ง (ไม่เกิดในแอป LINE เพราะไม่มีการสลับแท็บแบบนี้)
+
+วิธีแก้: เปลี่ยนทั้ง 4 คีย์จาก `sessionStorage` → `localStorage` (ผูกกับ origin ไม่ใช่แท็บ ใช้ร่วมกันได้ทุกแท็บ/หน้าต่างของเบราว์เซอร์เดียวกัน) ยังลบทิ้งทันทีหลังใช้ครั้งเดียวเหมือนเดิม (กัน replay)
+
+ไฟล์ที่แก้: `js/games/reading-auth.js`, `js/games/line-callback.js` (ไม่มี `.min.js` คู่กัน ไม่ต้อง rebuild)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (819 ไฟล์)
+
+**สิ่งที่ Lin ต้องทำเอง:** push ผ่าน GitHub Desktop (client-side ล้วน ไม่ต้อง deploy Edge Function) รอเว็บอัปเดตแล้วทดสอบเชื่อม LINE ในซาฟารีอีกครั้ง
+
+## 2026-08-08 (บั๊กจริง) — เชื่อม LINE พังทันที "invalid_client / invalid client_secret"
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin ตั้ง secret ชื่อใหม่ใน Supabase + deploy `line-login` ใหม่**
+
+ปัญหา: Lin ทดสอบเชื่อม LINE หลัง deploy ก้อน 2 (audit log) แล้วพังทันทีด้วย `{"error":"invalid_client","error_description":"invalid client_secret"}` — ข้อความนี้มาจาก LINE เองตรงๆ (ไม่ใช่โค้ดเรา) ตอนแลก code เป็น token
+
+สาเหตุที่แท้จริง (ตรวจโค้ดแล้ว ไม่ใช่บั๊กจาก audit log): `line-login/index.ts` และ `line-webhook/index.ts` อ่าน secret ชื่อเดียวกันคือ `LINE_CHANNEL_SECRET` ทั้งคู่ แต่เป็นคนละ LINE channel กัน (line-login = channel "LINE Login" · line-webhook = channel "Messaging API" ของบอท) — Supabase Edge Function secrets เป็นของกลางทั้งโปรเจกต์ ไม่แยกตามฟังก์ชัน ใครก็ตามที่เคยตั้ง `LINE_CHANNEL_SECRET` ใหม่เพื่อแก้ line-webhook (มีบันทึกไว้จริงตอน 2026-08-01) จะเขียนทับค่าที่ line-login ต้องใช้แบบไม่รู้ตัว
+
+วิธีแก้: เปลี่ยนชื่อ env var ที่ `line-login/index.ts` อ่าน จาก `LINE_CHANNEL_SECRET` → `LINE_LOGIN_CHANNEL_SECRET` กันชนกันถาวร (ไม่แตะ `line-webhook` เลย ยังใช้ชื่อเดิม)
+
+ไฟล์ที่แก้: `supabase/functions/line-login/index.ts`
+
+**สิ่งที่ Lin ต้องทำเอง:** ดูขั้นตอนเต็มใน `Bussiness Idea/ระบบเว็บไซต์/52_คำสั่งเปิดแชทสอง_...md` เรื่องที่ 6 (ตั้ง secret ชื่อใหม่จาก channel "LINE Login" + deploy ใหม่)
+
+## 2026-08-08 (P6-09~12 ก้อน 2) — Account audit log + ต่อสายเข้า Link LINE/Facebook
+
+สถานะ: ✅ **เสร็จจริงแล้ว** — Lin ยืนยัน (2026-08-08 ผ่านแชท decision queue): รัน SQL สร้างตาราง `account_audit_log` แล้ว + deploy `line-login` ใหม่แล้ว (deploy ไปแล้ว ~6 ชม.ก่อนหน้าจุดยืนยันนี้ มี 4 invocations ไม่มี error) ปุ่มเชื่อม LINE/Facebook บันทึก log จริงแล้ว **ไม่ต้องทำอะไรเพิ่ม**
+
+ปัญหา (เดิม): ระบบบัญชีผู้เล่นไม่มีตาราง audit/history เลยแม้แต่แถวเดียว — ถ้ามีปัญหาบัญชี Lin ตรวจย้อนหลังไม่ได้ว่าเกิดอะไรขึ้น (สเปกข้อ 14 ที่ Lin ให้มาบังคับว่าต้องมี)
+
+วิธีแก้: สร้างตาราง `public.account_audit_log` (`user_id`, `event_type` — CHECK จำกัด 8 ค่าตามสเปก, `provider`, `before_state`/`after_state` jsonb, `actor_type`/`actor_id`, `created_at`) เปิด RLS แบบไม่มี policy ตั้งใจ (fail-closed) เขียนได้ทางเดียวผ่านฟังก์ชัน `log_account_audit()` (SECURITY DEFINER) ต่อสายเข้ากับจุด "เชื่อมบัญชีสำเร็จ" ที่มีอยู่แล้วจริง 2 จุด: LINE (บันทึกฝั่ง server ใน Edge Function น่าเชื่อถือกว่า) และ Facebook (บันทึกฝั่ง client เพราะไม่มี Edge Function คั่นกลาง — มีข้อจำกัด: ปิดแท็บ/เน็ตหลุดตอน redirect กลับจาก Facebook จะไม่มี log แม้เชื่อมสำเร็จจริง เป็นข้อจำกัดของสถาปัตยกรรมเดิม ไม่ใช่บั๊กใหม่)
+
+ไฟล์ที่แก้/สร้าง: `supabase/sql/2026-08-08_account_audit_log.sql`, `supabase/functions/line-login/index.ts`, `js/core/auth-widget.js`, `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md`
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (ไม่มี `.min.js` คู่กันสำหรับ 3 ไฟล์นี้)
+
+**อัปเดต 2026-08-08 (รอบตรวจสอบ audit อิสระ):** เดิมหัวข้อนี้เขียนค้างไว้ว่า "รอ Lin รัน SQL" ทั้งที่ Lin ทำไปแล้วจริงระหว่างวัน — เอกสารไม่ได้อัปเดตย้อนหลัง แก้ให้ตรงสถานะจริงแล้ว
+
+**ยังไม่ครอบคลุม:** Unlink (ยังไม่สร้างฟีเจอร์ รอ Lin ตัดสินใจก่อน) และ event อื่นในสเปก (เปลี่ยนอีเมล/admin correction ฯลฯ — ยังไม่มีฟีเจอร์พวกนั้นให้ log)
+
+## 2026-08-08 (P6-09~12 ก้อน 1 บางส่วน) — เคลียร์ localStorage cache ตอน logout
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin push** (คนละ commit จากงานอื่นวันนี้)
+
+ปัญหา: `doLogout()` ใน `js/core/auth-widget.js` เดิมเรียกแค่ `sb.auth.signOut()` ซึ่งลบแค่ session token ของ Supabase เอง ไม่ลบ localStorage cache อื่นที่แอปเขียนเอง (`tf_avatar`, `tf_pinned_badge`, `sa_nick_prompted`, `tf_logsess_at`, `rg_last_login_provider`) — บนเครื่องสาธารณะ/ใช้ร่วมกัน คนถัดไปที่เปิดเว็บก่อนล็อกอินจะยังเห็น avatar/badge/hint "上次登入方式" ของคนก่อนหน้าค้างอยู่ (ไม่ใช่ข้อมูลลับ แต่ไม่ควรค้าง) — พบระหว่างตรวจสเปกระบบบัญชีผู้เล่นที่ Lin ส่งมา (ดู `Bussiness Idea/ระบบเว็บไซต์/49_P6-09to12_...md`)
+
+วิธีแก้: เพิ่ม `localStorage.removeItem(...)` ทั้ง 5 คีย์เข้าไปใน `doLogout()` (4 คีย์แรกประกาศอยู่ในไฟล์เดียวกันอยู่แล้ว ส่วน `rg_last_login_provider` เป็นคีย์ของ `js/games/reading-auth.js` — เขียน literal string ตรงๆ แทนเพราะ localStorage เป็นที่เก็บกลางของเบราว์เซอร์ ไม่ต้องพึ่งฟังก์ชันไฟล์นั้น)
+
+ไฟล์ที่แก้: `js/core/auth-widget.js` (ไม่มี `.min.js` คู่กัน ไม่ต้อง rebuild)
+
+ผลตรวจ: `node --check js/core/auth-widget.js` ผ่าน · `node scripts/check-site.js` ผ่านทั้งหมด (818 ไฟล์)
+
+**ยังไม่ได้ทดสอบ (ต้องให้ Lin เปิดเบราว์เศร์จริง):** ล็อกอิน → ตั้ง avatar/badge → logout → เปิด DevTools (F12) → Application → Local Storage → เช็คว่า 5 คีย์ข้างต้นหายไปจริง
+
+**หมายเหตุ:** นี่คือแค่ส่วน "เคลียร์ cache" ของ P6-09~12 ก้อน 1 เท่านั้น — ส่วนปุ่ม "ยกเลิกการเชื่อมบัญชี" (Unlink) ยังไม่ได้ทำ เพราะมีคำถามออกแบบที่ต้องรอ Lin ตัดสินใจก่อน (ดู `52_คำสั่งเปิดแชทสอง_...md` เรื่องที่ 4)
+
+## 2026-08-08 (SEO) — เพิ่มปุ่มแชร์บทความให้ 44 บทความใน `blog/`
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin ทดสอบมือถือจริง + push**
+
+Lin อนุมัติดีไซน์แบบรวม: ปุ่มเดียว "🔗 分享這篇文章" ท้ายบทความ → เบราว์เซอร์ที่รองรับ Web Share API เด้งเมนูแชร์ของเครื่องเลย → ไม่รองรับ/ถูกยกเลิก ตกไปที่กล่อง popup เดิม (ที่เพิ่งซ่อมบั๊กด้านล่าง) ซึ่งเพิ่มไอคอน Facebook/LINE ให้กดแชร์ตรงไปแต่ละช่องทางได้เลย
+
+วิธีทำให้ครบ 44 บทความโดยไม่ต้องแก้ทีละไฟล์: เพิ่ม `autoInjectBlogShareButton()` ใน `js/core/shared.js` ทำงานเฉพาะหน้าที่ path มี `/blog/` อ่าน title/description/canonical URL ของหน้านั้นเองมาแทรกปุ่มอัตโนมัติหน้า `.related-articles`
+
+ไฟล์ที่แก้: `js/core/shared.js` (+ regenerate `shared.min.js`), bump cache-buster `?v=16→17` ใน 76 หน้าที่โหลดไฟล์นี้ (ไม่ได้แก้เนื้อหาไฟล์บทความเองเลย)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด · ยืนยัน `openSharePopup()` ที่เพิ่ม parameter `url` แล้ว ยัง backward compatible กับจุดเรียกเดิม (`shareFBPost()`/`shareSSArticle()` ที่ยังไม่ส่ง url มา)
+
+**ยังไม่ได้ทดสอบ (ต้องให้ Lin ทำบนมือถือ+คอมจริง):** ดูหัวข้อ "เรื่องที่ 1ข" ใน `Bussiness Idea/ระบบเว็บไซต์/52_คำสั่งเปิดแชทสอง_...md`
+
+## 2026-08-08 (แก้บั๊กปุ่มแชร์) — ปุ่ม 🔗 分享本文 error บนเกือบทุกหน้า
+
+สถานะ: **โค้ดแก้เสร็จแล้ว รอ Lin push**
+
+ปัญหา: กดปุ่ม "🔗 分享本文" (แชร์โพสต์) แล้ว error `TypeError: null is not an object` บนเกือบทุกหน้าของเว็บ — ใช้ได้แค่ 4 หน้า (`index.html`, `resources.html`, `pricing.html`, `faq.html`)
+
+สาเหตุ: กล่อง popup แชร์ (`share-bg` / `share-popup` / `share-text-area` / `share-copy-btn`) เป็น static HTML ที่ก็อปวางตรงๆ ไว้แค่ 4 หน้าเดิม ไม่ได้อยู่ในระบบแทรก modal อัตโนมัติ `injectSharedModals()` เหมือนกล่องอื่น (`modal-contact`, `modal-fbposts` ฯลฯ) — ปุ่ม "🔗 分享本文" เองถูกสร้างจากโค้ดกลางใน `shared.js` (ใช้ร่วมทุกหน้า) ดังนั้นหน้าไหนก็กดปุ่มนี้ได้ แต่พอ `openSharePopup()` ไปหา `document.getElementById('share-text-area')` ในหน้าที่ไม่มีกล่อง static ก็ได้ `null` ทันที
+
+วิธีแก้: ย้าย HTML ของกล่องแชร์เข้าไปเป็นส่วนหนึ่งของ `injectSharedModals()` ใน `js/core/shared.js` (คัดลอกมาจากเวอร์ชันของ `index.html` เป๊ะ พร้อม guard `if (!document.getElementById('share-bg'))` แบบเดียวกับกล่องอื่น) แล้วลบ static HTML ของกล่องนี้ออกจาก 4 หน้าเดิมที่เคยมี (กัน id ซ้ำ) — ตอนนี้ทั้ง 76 หน้าที่โหลด `shared.js`/`shared.min.js` จะได้กล่องแชร์จากจุดเดียวกันหมด ไม่มีหน้าไหนขาด
+
+ไฟล์ที่แก้: `js/core/shared.js` (+ regenerate `js/core/shared.min.js` ด้วย `scripts/build-minjs.sh`), `index.html`, `resources.html`, `pricing.html`, `faq.html` (ลบ static HTML กล่องแชร์ออก)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (818 ไฟล์ ไม่มีค่าลับหลุด) · ตรวจด้วยตาว่า HTML ของกล่องแชร์ที่ย้ายเข้า `shared.js` ตรงกับต้นฉบับ `index.html` ทุกตัวอักษร (สี/ปุ่ม/hover ใช้ตัวแปรธีม `--gold` เดิม) · ยืนยันด้วย grep ว่าไม่มี `share-bg` static เหลือค้างซ้ำในไฟล์ไหนแล้ว
+**ยังไม่ได้ทดสอบ (ต้องให้ Lin เปิดเบราว์เซอร์จริง):** กดปุ่ม "🔗 分享本文" บนหน้าที่เคยพัง เช่น `blog.html`, `games.html`, `tone-finder.html` แล้วดูว่ากล่องแชร์เปิดขึ้นมาไม่ error + ปุ่ม "一鍵複製" คัดลอกได้จริง
+
+## 2026-08-08 (รอบดึกสุด) — "กลุ่ม 2": จำกัด CORS / แยก inline script index.html / เพิ่ม GA4+meta / ต่อ GA4 event เจอเพดาน
+
+สถานะ: **✅ Lin push ขึ้น GitHub แล้ว + deploy CORS ครบ 6/6 ตัวแล้ว 2026-08-08** (ยืนยันจาก log จริง ทุกตัว "Deployed Functions on project qzkxlhpcputsvbqmtqfi") — เหลือ 1 อย่างที่ Lin ต้องทำเอง: เปิด mrtaihualin.com เช็คด้วยตาว่า modal วิดีโอ/FB/self-study ยังทำงานปกติ (AI ตรวจด้วยเบราว์เซอร์ไม่ได้รอบนี้)
+
+Lin อนุมัติ "กลุ่ม 2" ทั้งชุดพร้อมกัน ("ทำเลย ทีเดียวให้หมด") สั่งทำคู่ขนาน 4 แชท (ไฟล์ไม่ชนกัน):
+
+1. **CORS Edge Function:** จำกัดจาก `*` เหลือเฉพาะโดเมนเว็บ 6 ตัว (`lego-daily-limit`, `restore-line-student`, `unlink-line-student`, `sync-line-menu`, `notify-line`, `line-login`) ตรวจโค้ดแล้วว่าไม่มีตัวไหนรันในบริบท LIFF · ตั้งใจ**ไม่แตะ** `link-line`/`find-line-student` เพราะรันใน LIFF จริง เสี่ยงพัง LINE ถ้าจำกัด Origin ผิด — **⚠️ ยังไม่ live ต้องรัน `supabase functions deploy <ชื่อ>` ทีละตัวทั้ง 6:**
+   ```
+   supabase functions deploy lego-daily-limit
+   supabase functions deploy restore-line-student
+   supabase functions deploy unlink-line-student
+   supabase functions deploy sync-line-menu
+   supabase functions deploy notify-line
+   supabase functions deploy line-login
+   ```
+   หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md`
+
+2. **แยก inline script `index.html`:** ย้าย ~406 บรรทัดออกเป็น `js/acquisition/index-content-modals.js` (modal วิดีโอ/FB/self-study/share) + `js/acquisition/index-analytics.js` (GA4 tracking เฉพาะหน้า) วางตำแหน่ง `<script src>` เป๊ะจุดเดิม ไม่เปลี่ยนพฤติกรรม — **⚠️ เครื่องมือเบราว์เซอร์ใช้ไม่ได้ในรอบนี้ ตรวจได้แค่อ่านโค้ดซ้ำ ยังไม่ได้กดทดสอบจริง ขอ Lin เปิดหน้าแรกลองกด modal วิดีโอ/FB เช็ค console error สัก 1 นาทีก่อนหรือหลัง push** หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/45_ผลลัพธ์_P5-A_แยกinlineScript.md`
+
+3. **เพิ่ม GA4 + meta:** เพิ่ม GA4 ให้ 12 หน้าที่ไม่เคยมีเลย (`en/*` ทั้ง 7 หน้า, `links.html`, `vocab-cheatsheet.html`, `privacy.html`, `terms.html`, `404.html`) ใช้ Measurement ID จริงตัวเดียวที่ใช้ทั้งเว็บ · แก้หมวด GA4 ของบทความจาก `course` เป็น `article` ครบ 44/44 ไฟล์ · เพิ่ม meta description/og ให้ `vocab-cheatsheet.html` ตามเนื้อหาจริง หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/46_ผลลัพธ์_P5-A_GA4และmeta.md`
+
+4. **ต่อ GA4 event `game_content_cap_hit`:** ใน `js/games/game-content-client.js` ใช้ field `capped` ที่ deploy ไปแล้วก่อนหน้า ยิง event เมื่อผู้เล่นเจอเพดานเนื้อหาฟรี ครั้งเดียวต่อระดับต่อ session (กันสแปม ใช้ `sessionStorage`) ใช้กลไก `gtag()` แบบเดียวกับเกมอื่น หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/47_ผลลัพธ์_P6-08_GA4event_capHit.md`
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้ง 4 งาน (818 ไฟล์) ไม่มีค่าลับหลุด
+
+Commit message แนะนำ (Lin เลือกรวม/แยกเอง แล้ว push ผ่าน GitHub Desktop):
+```
+จำกัด CORS ของ Edge Function 6 ตัวให้เหลือเฉพาะโดเมนเว็บ (เว้น 2 ตัวที่รันใน LIFF ไว้ตามเดิม) — ยังไม่ deploy
+
+refactor(index): ย้าย inline script 2 บล็อก (YT/FB/self-study/share modal + GA4 event tracking) ออกจาก index.html ไป js/acquisition/ ตำแหน่งเดิมเป๊ะ ไม่เปลี่ยนพฤติกรรม
+
+เพิ่ม GA4 ให้ 12 หน้าที่ไม่เคยมี + แก้หมวดบทความจาก course เป็น article ครบ 44 ไฟล์ + เพิ่ม meta ให้ vocab-cheatsheet.html
+
+เพิ่ม GA4 event game_content_cap_hit ยิงตอนผู้เล่นชนเพดานเนื้อหาฟรี (1 ครั้ง/ระดับ/session)
+```
+
+## 2026-08-08 (รอบดึก) — P6-17 + P7-03 + P6-08: แก้หน้า error เกม / ล็อกเวอร์ชัน backup / เพิ่มจุดวัดเจอเพดาน
+
+สถานะ: **โค้ดเสร็จแล้วรอ Lin push** (ยกเว้นข้อ D ที่ต้อง deploy Edge Function เพิ่มอีกขั้นหลัง push)
+
+Lin อนุมัติ 4 งานย่อยแบบแยกเรื่อง (A/B/C/D) พร้อมกัน สั่งทำแบบคู่ขนาน 3 แชท (ไฟล์ไม่ชนกัน):
+
+1. **A+B — แก้หน้า error เกม (`js/games/game-content-client.js` ไฟล์เดียว โหลดทั้ง 6 หน้าเกม):** เปลี่ยนสีแถบโหลด/error จากฟ้า/แดงทั่วไปเป็นชุดสีทองตาม CLAUDE.md · แปล error ดิบ (เช่น `game-content HTTP 500`) เป็นภาษาไทยง่ายๆ ให้ผู้เล่นเห็น (ข้อความดิบยังอยู่ใน `console.error` เพื่อ debug) · เพิ่มปุ่ม "🔙 กลับหน้าเกมทั้งหมด" + "💬 ทัก LINE ครู" (ใช้ลิงก์ LINE เดิมที่มีอยู่แล้วใน `js/core/shared.js`) · เพิ่ม global crash handler (`window.onerror`/`unhandledrejection`) ที่ไม่เคยมีมาก่อนบนหน้าเกมเลยสักหน้า ใช้แถบ error เดียวกับข้อ A · ไม่มี `.min.js` คู่กัน ไม่ต้อง build · หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/41_ผลลัพธ์_P6-17_แก้หน้าerror.md`
+2. **C — ล็อกเวอร์ชัน dependency ตัวสำรองข้อมูล:** สร้าง `scripts/backup/package-lock.json` จริงจาก `npm install` (ไม่ได้เขียนมือ, ตรึง `googleapis@144.0.0`) + เปลี่ยน `.github/workflows/backup-database-to-drive.yml` จาก `npm install --no-save` เป็น `npm ci` กันดึงเวอร์ชันแปลกปลอมตอน cron รันตี 3 ที่มี secret Google/LINE อยู่ในเครื่อง · พบเพิ่ม (ไม่ได้แก้ นอกขอบเขต): `npm audit` เจอ 4 moderate vulnerability จาก `uuid` ที่ลึกอยู่ใน `googleapis` ต้องอัป major version ถึงจะหาย — บันทึกรอ Lin ตัดสินใจ หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/42_ผลลัพธ์_P7-03_backup-lockfile.md`
+3. **D — เพิ่มจุดวัด "เจอเพดานแล้ว" ใน `supabase/functions/game-content/index.ts`:** เพิ่ม field `capped: {初, 中, sentences}` ใน response (additive ไม่ลบ/ไม่เปลี่ยนชื่อ field เดิม, ไม่แตะ CAPS/tier-detection logic) ตรวจแล้วว่า client (`game-content-client.js`) ไม่พังจากการเพิ่ม field นี้ — **✅ Lin deploy แล้ว 2026-08-08 (`supabase functions deploy game-content` สำเร็จ, project `qzkxlhpcputsvbqmtqfi`) live จริงแล้ว** หลักฐาน `Bussiness Idea/ระบบเว็บไซต์/43_ผลลัพธ์_P6-08_เพิ่มจุดวัดเจอเพดาน.md`
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้ง 3 งาน (816 ไฟล์) ไม่มีค่าลับใหม่หลุด
+
+Commit message แนะนำ (3 ข้อความแยกกัน หรือรวม commit เดียวก็ได้ — Lin เลือกเอง แล้ว push เองผ่าน GitHub Desktop):
+```
+แก้หน้าแจ้งข้อผิดพลาดเกม: เปลี่ยนสีให้ตรงธีมทอง แปล error เป็นภาษาคน เพิ่มปุ่มกลับ games.html/LINE และเพิ่มระบบดัก JS พังกลางเกมทั้ง 6 หน้า (P6-17)
+
+fix(backup): เพิ่ม package-lock.json ให้ scripts/backup + เปลี่ยน npm install เป็น npm ci กัน supply-chain attack ตอนรัน cron ทุกคืน
+
+เพิ่ม field capped ใน game-content response บอกว่าเจอเพดานฟรีแล้วหรือยัง (ยังไม่ deploy)
+```
+
+## 2026-08-08 (รอบเย็น) — P4-04: แยก `data/` ที่ปนกัน (ตัวตรวจ+รายงาน → `data/tools/`, `data/reports/`)
+
+สถานะ: **✅ เสร็จแล้ว + Lin push ขึ้น GitHub แล้ว** — Lin อนุมัติเปิดหลายแชทได้ แต่พบว่างานนี้ทำในแชทเดียวได้ปลอดภัยกว่า (ไฟล์ที่แก้ทับกันหมด) เลยทำตรงนี้เอง
+
+ย้าย 7 ไฟล์ออกจาก `data/` (คงเหลือแค่ข้อมูลจริง: `words-data.js`/`adv-sentences.js`/`tone-engine.js`/`audio-*.js` + หน้าแอดมิน 2 หน้าที่ยังไม่ย้าย รอ Lin ตอบคำถามเข้าถึงยังไง):
+- → `data/tools/`: `tests-tone-engine.js`, `tests-check-data-health.js`, `check-duplicate-words.js`, `check-data-health.js`, `regression-check-tone.js`
+- → `data/reports/`: `tone-regression-report.json`, `game-behavioral-checklist-manual.md`
+
+แก้ path ในไฟล์ที่อ้างอิงครบ (เจอมากกว่าที่แผนเดิมคาดไว้ — เจอ `scripts/migrate-game-content.js` และ `CLAUDE.md` เองก็อ้างอิง path เดิมด้วย): `scripts/check-site.js` (4 บรรทัด runTest), `scripts/tests-game-behavioral.js` (คอมเมนต์), `data/review-tool.html` (fetch path หา report), `CLAUDE.md` (2 บรรทัดกฎถาวร), requires ภายในไฟล์ที่ย้าย (`./words-data.js` → `../words-data.js` ฯลฯ), `data/tools/regression-check-tone.js` เขียนไฟล์ output ไปที่ `../reports/` แทน · **ยังไม่ได้แก้:** สคริปต์ scheduled task รายสัปดาห์ `weekly-full-audit-product-security-games-schedule` (CHECK 3B อ้าง path เดิม `node data/regression-check-tone.js`) — ไฟล์นั้นอยู่นอก repo (`/Users/taihualin/Documents/Claude/Scheduled/`) AI เข้าไม่ถึงโดยตรง ต้องแก้ผ่านเครื่องมือจัดการ scheduled task ต่างหาก (งานตอนนี้ปิดอยู่ ไม่ได้รันอัตโนมัติ ไม่เร่งด่วน)
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด + รัน `node data/tools/regression-check-tone.js` ด้วยมือ 1 ครั้งยืนยันเขียนไฟล์ไปที่ `data/reports/tone-regression-report.json` ถูกจุดจริง
+
+## 2026-08-08 — P4-01: เริ่มจัดโฟลเดอร์ (เปลี่ยนชื่อ js/content → js/acquisition + เก็บไฟล์สารบัญซ้ำเข้ากรุ)
+
+สถานะ: **✅ เสร็จ 2 จุดที่ Lin อนุมัติแล้ว — เหลืออีกหลายจุดรอ Lin ตัดสินใจ (ดู `27_แผน_P4-P5_จัดโฟลเดอร์.md`)**
+
+ทำ 2 อย่างตามที่ Lin อนุมัติ: (1) เปลี่ยนชื่อโฟลเดอร์ `js/content/` → `js/acquisition/` ให้ตรงชื่อเป้าหมายในแผนหลัก P4 (โค้ดเดิมไม่เปลี่ยน แค่ย้ายที่ + แก้ `src=` ใน 6 หน้า: `blog.html`, `faq.html`, `index.html`, `pricing.html`, `resources.html`, `tone-finder.html` + คอมเมนต์ในตัวไฟล์ + `README.md`) (2) ย้ายไฟล์สารบัญที่ซ้ำกัน `00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` ฉบับ root (เก่ากว่า ข้อมูลไม่ตรงของจริง) เข้า `_archive/` (กันไว้ ไม่ push ขึ้น GitHub) เหลือฉบับจริงที่ `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` ที่เดียว
+
+ผลตรวจ: `node scripts/check-site.js` ผ่านทั้งหมด (816 ไฟล์ ไม่มี error/failure) รันหลังย้ายไฟล์เสร็จ
+
+## 2026-08-07 — เพิ่มปุ่ม 補登上課 (บันทึกเข้าเรียนย้อนหลัง)
+
+สถานะ: **✅ เสร็จแล้ว — Lin push แล้วและยืนยันใช้งานได้จริงบนเว็บ**
+
+ปัญหาที่แก้: ปุ่ม "✅ 今日上課" ผูกกับวันนี้ตายตัว ถ้าครูลืมกดวันนั้นไม่มีทางย้อนกลับไปบันทึกได้เลย
+
+วิธีแก้: เพิ่มปุ่ม "➕ 補登上課" ในกล่อง "📅 上課記錄" ของนักเรียนแต่ละคน (อยู่บนสุดของกล่องที่กางออกมา) กดแล้วเลือกวันที่ย้อนหลังได้เอง (ค่าเริ่มต้น = เมื่อวาน, กันไม่ให้เลือกวันอนาคต) ใช้ RPC เดิม `record_attendance_increment` ไม่ต้องแก้ฐานข้อมูล/ไม่ต้องรัน SQL — ถ้าวันนั้นมีบันทึกอยู่แล้วจะเด้งเตือนก่อนว่าจะเพิ่มเป็นกี่ชั่วโมง กันกดพลาดซ้ำ
+
+ไฟล์ที่แก้: `js/classroom/attendance-auth.js` (เพิ่มฟังก์ชัน `toggleBackfillPicker` + `submitBackfillAttendance`, ไม่แตะฟังก์ชันเดิม) — ไม่อยู่ในกลุ่ม 5 ไฟล์ที่ต้องรัน `build-minjs.sh`
+
+ผลตรวจ: `node --check` ผ่าน (syntax ไม่พัง) · Lin ทดสอบใช้งานจริงบนเว็บแล้วยืนยันว่าใช้ได้
+
+## 2026-08-07 — P3-A: regenerate .min.js ที่ล้าหลัง 5 คู่ไฟล์
+
+สถานะ: **✅ เสร็จแล้ว**
+
+ปัญหาที่แก้: `.min.js` ของเกม 5 ไฟล์ล้าหลังต้นฉบับ `.js` 1-8 วัน (เจอจากรายงาน P3 `24f_ผลลัพธ์_P3_min-js-sync.md`) ผู้เล่นทุกคนโหลดแต่ `.min.js` เท่านั้น แปลว่าเห็นโค้ดเก่ากว่าที่แก้ไว้จริง
+
+วิธีแก้: ติดตั้ง `terser` ผ่าน `npx --yes terser` (ไม่แก้ `package.json` — repo นี้ไม่เคยมี `package.json`/`node_modules` มาก่อน การเพิ่มเข้าไปจะเปลี่ยนโครงสร้าง repo เกินขอบเขตงานนี้ และ `npx` ใช้ได้ตรงๆ โดยไม่ต้องติดตั้งถาวร) รัน `terser <ไฟล์>.js --compress --mangle -o <ไฟล์>.min.js` ทับของเดิมทั้ง 5 คู่
+
+**สิ่งที่น่าสนใจที่พบระหว่างตรวจ:** ไฟล์ `js/core/shared.min.js` และ `js/games/tone-finder-game.min.js` ที่ regenerate ใหม่ **ตรงกับของเดิมทุกไบต์ (md5 เหมือนกัน)** ทั้งที่ต้นฉบับ `.js` ถูกแก้หลังสุด (mtime ใหม่กว่า) — ตรวจซ้ำด้วยการรัน terser แยกต่างหากยืนยันผลเดิม แปลว่าการแก้ต้นฉบับช่วงนั้นเป็นแค่ comment/formatting ที่ไม่กระทบ logic จริง (terser ตัดคอมเมนต์ออกอยู่แล้ว) ไม่ใช่บั๊กของกระบวนการ — อีก 3 ไฟล์ (reading-game-app, typing-game-app, word-order-app) ได้ไฟล์ใหม่ที่ต่างจากเดิมจริง ขนาดใกล้เคียงเดิม (ต่าง <1%)
+
+ผลตรวจ:
+- `node --check` ผ่านทุกไฟล์ (syntax ไม่พัง)
+- ขนาดไฟล์ใหม่เทียบเดิมสมเหตุสมผล ไม่มีไฟล์ไหนต่างเกิน 2-3 เท่า
+- `node scripts/check-site.js` ผ่านทั้งหมด (817 ไฟล์)
+- `node scripts/check-minified-sync.js` ยืนยัน `.min.js` ใหม่กว่า `.js` แล้วทุกคู่ (MISMATCH ยังขึ้นตามปกติ เพราะวิธีเทียบแบบ exact-match ใช้ยืนยัน "เหมือนกันจริง" ไม่ได้อยู่แล้ว — ดูคอมเมนต์ในสคริปต์)
+
+งานที่ทำ:
+- Regenerate `js/core/shared.min.js`, `js/games/reading-game-app.min.js`, `js/games/typing-game-app.min.js`, `js/games/word-order-app.min.js`, `js/games/tone-finder-game.min.js`
+- เพิ่ม `scripts/build-minjs.sh` — รัน terser กับทั้ง 5 คู่ไฟล์ในคำสั่งเดียว (`bash scripts/build-minjs.sh`) ใช้ซ้ำได้ทุกครั้งที่แก้ต้นฉบับ
+
+**⚠️ กฎใหม่ — แก้ไฟล์ `.js` ต้นฉบับ 5 ไฟล์นี้แล้ว ต้องรัน `bash scripts/build-minjs.sh` ก่อน push ทุกครั้ง:**
+`js/core/shared.js`, `js/games/reading-game-app.js`, `js/games/typing-game-app.js`, `js/games/word-order-app.js`, `js/games/tone-finder-game.js`
+(เว็บทุกหน้าโหลดแต่ `.min.js` เท่านั้น ไม่มีหน้าไหนโหลด `.js` ตัวเต็มเลย — ไม่รันตามนี้ = ผู้เล่นเห็นโค้ดเก่า)
+
+รายงานเต็ม: `Bussiness Idea/ระบบเว็บไซต์/25a_ผลลัพธ์_regenerate-minjs.md`
+
+## 2026-08-07 — P3 รวมผล: ตัวทดสอบคุ้มกันพฤติกรรมเดิม (6 แชทคู่ขนาน)
+
+สถานะ: **ทำแล้วบางส่วน** (P3-01/02/03/05/06/08 มีของแล้ว · P3-04 integration tests ของจริงยังไม่มี ต้องมือ · P3-07 ย้ายแค่ 1 ไฟล์ ยังไม่ปรับโครงสร้างเต็ม)
+
+รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/24_แผน_P3_behavioral_guards_สรุปรวม.md`
+
+งานที่ทำ:
+
+- เพิ่มสคริปต์ทดสอบใหม่ 4 ตัว รวมเข้า `scripts/check-site.js` แล้ว (รันอัตโนมัติทุกครั้งที่รัน `node scripts/check-site.js`): `scripts/tests-marketing-behavioral.js`, `scripts/tests-game-behavioral.js`, `scripts/check-mobile-accessibility.js` (warning-only), `data/reports/game-behavioral-checklist-manual.md` (checklist มือคู่กัน — ย้ายจาก `data/` เข้า `data/reports/` แล้ว 2026-08-08)
+- `scripts/check-minified-sync.js` สร้างแล้วแต่**ตั้งใจไม่รวม**เข้า `check-site.js` เพราะวิธี exact-match จะ MISMATCH เสมอกับไฟล์ที่ผ่าน minifier จริง (ไม่ใช่ด่านที่บล็อก push ได้ — รันแยกด้วยมือ)
+- สร้าง `supabase/tests/` ตามข้อเสนอ P2-06 · ย้ายเฉพาะไฟล์ที่ยังใช้งานจริง `2026-08-02_reschedule_lock_guard_TEST.sql` เข้ามา (อัปเดต path ใน `CLAUDE.md` และ `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` แล้ว) — ไฟล์ `_TEST.sql` อีก 2 ไฟล์ที่อยู่ใน `archive/` (เลิกใช้แล้ว) ไม่ย้าย เพราะเป็นของเก่าที่ถูกแทนที่แล้ว ไม่ใช่ตัวทดสอบที่ยังใช้งาน
+- สร้าง `_dev/2026-08-07_behavioral-guard-cancel-addclass.html` และ `_dev/ตัวทดสอบระบบเลื่อนคาบ_P3_2026-08-07.html` (เปิดเบราว์เซอร์รันเอง — ไม่ผูกกับ `check-site.js`)
+
+⚠️ พบเรื่องสำคัญที่ไม่ใช่ของ P3 โดยตรง แต่ต้องแจ้ง Lin:
+
+1. **`.min.js` ล้าหลัง `.js` ต้นฉบับทั้ง 5 คู่ไฟล์เกม** (ห่างกัน 1–8 วัน) — เว็บทุกหน้าโหลดแต่ `.min.js` เท่านั้น แปลว่าผู้เล่นเห็นโค้ดเก่ากว่าที่แก้ไว้ล่าสุดจริง ต้อง regenerate `.min.js` ทั้ง 5 ไฟล์ก่อน push รอบถัดไป (ไม่ได้แก้ในรอบนี้ นอกขอบเขต P3)
+2. `node scripts/check-site.js` ยัง**ไม่ผ่าน 100%** — ติด secret scan 2 จุดที่ `_dev/2026-08-07_ขอ_google_drive_refresh_token.js:19,22` ตรวจแล้วเป็น **false positive** (เป็นข้อความบอกให้ Lin ใส่ค่าเอง `"ใส่ค่าที่ได้จาก Google Cloud"` ไม่ใช่ค่าลับจริง) — ไฟล์นี้อยู่ใน `_dev/` ที่ `.gitignore` กันไว้แล้ว ไม่หลุดขึ้น GitHub แต่ตัวสแกนยังฟ้องผิดอยู่ ควรให้ Lin ตัดสินใจว่าจะปรับ regex ตัวสแกนหรือปล่อยไว้ (ไม่ได้แก้ในรอบนี้ เพราะแก้ตัวสแกนความปลอดภัยนอกขอบเขตงาน P3)
+
+## 2026-08-07 — P1-06 ย้ายค่าลับออกจากคำสั่ง cron ไปเก็บใน Supabase Vault
+
+สถานะ: **✅ เสร็จครบแล้ว — cron ทุกงานย้ายเข้า Vault และพิสูจน์ด้วย HTTP 2xx จริงแล้ว**
+
+ปัญหาที่แก้: `pg_cron` เก็บคำสั่งเป็นข้อความในตาราง `cron.job` ใครเปิด Dashboard → Database → Cron เห็น token ที่ฝังใน header ทั้งก้อน — ยืนยันจากของจริงแล้วว่า job 5 (`class-reminder-every-5-min`) และ job 9 (`low-quota-daily`) ฝัง **service_role JWT** เต็มๆ อ่านได้จากหน้าจอ
+
+วิธีแก้: เก็บ token ใน **Supabase Vault** (เข้ารหัสด้วย pgsodium) แล้วให้ cron เรียกฟังก์ชัน `private.call_*_cron()` แทน → คำสั่งใน `cron.job` เหลือแค่ `select private.call_xxx();`
+
+ผลตรวจจากระบบจริง (2026-08-07 · อ่านอย่างเดียวก่อนแก้):
+
+- job 5, 9 = `service_role` (อ่านจาก JWT payload — **ขัดกับไฟล์ `2026-07-18_pg_cron_low_quota_daily.sql` ที่เขียนว่า `anon`** ไฟล์ในเครื่องเป็นข้อมูลเก่า/ผิด)
+- job 8 `request-sla-reminder` = **placeholder ไม่ใช่ JWT จริง** → ตัวเตือนครู 48 ชม. **ไม่เคยทำงานเลยสักครั้ง** ตั้งแต่ตั้ง cron มา (บั๊กที่กระทบงานสอนจริง ไม่ใช่แค่เรื่องความปลอดภัย)
+- job 12 `low-quota-cron-daily` = header มีแค่ `Content-Type` ไม่มี Authorization เลย + ปลายทางเปิด Verify JWT → **ไม่เคยเรียกสำเร็จ** เป็นงานซ้ำที่ตายแล้ว (ตัวจริงคือ job 9) ควร `unschedule` ทิ้ง
+- job 10 สลับเป็น Vault แล้ว ทดสอบด้วยการเร่ง schedule เป็นทุกนาทีชั่วคราว → `cron.job_run_details` ยืนยัน `succeeded` ที่ 02:55 และคืน schedule เดิมแล้ว
+
+งานที่ทำ:
+
+- เพิ่ม `supabase/sql/2026-08-07_p1-06_cron_vault.sql` เป็นต้นฉบับเดียวของงานนี้ (schema `private`, ตาราง `private.cron_http_log`, ฟังก์ชัน `private.call_*_cron()` 5 ตัว, คำสั่งสลับ cron ทีละงาน, คำสั่งตรวจ, คำสั่ง rollback) — **ไม่มีค่าลับในไฟล์** ค่าเข้า Vault ด้วยคำสั่งที่ดึงจาก `cron.job` โดยตรง
+- เพิ่มตาราง `private.cron_http_log` เก็บ `request_id` ที่ `net.http_post` คืนมา → join กับ `net._http_response` ได้ตรงๆ **แก้ปัญหาที่เดิมต้องเดาว่าแถว HTTP ไหนมาจาก cron ตัวไหน** (`net._http_response` ไม่มีคอลัมน์บอกที่มา)
+- เปิด RLS ให้ `private.cron_http_log` โดยไม่มี policy (fail-closed) + trigger ลบ log เก่ากว่า 30 วันอัตโนมัติ
+- ฟังก์ชันทุกตัวใช้ `security definer` + `set search_path = ''` และ **หยุดทำงานพร้อม error ถ้าหาค่าใน Vault ไม่เจอ** (ไม่ยิง request ด้วย header ว่าง)
+- เพิ่มกฎถาวรใน `CLAUDE.md`: SQL ทุกคำสั่งที่เปลี่ยนระบบต้องมีไฟล์ต้นฉบับใน `supabase/sql/` ห้ามพิมพ์ใน Dashboard ตรงๆ
+- อัปเดตสารบัญ `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` ในคอมมิตเดียวกันตามกฎเดิม
+
+ผลตรวจ:
+
+- `node scripts/check-site.js` ผ่านทั้งหมด — ตรวจค่าลับ 846 ไฟล์ (เพิ่มจาก 845 คือไฟล์ SQL ใหม่), JavaScript 71 ไฟล์, HTML 108 ไฟล์, CSS 7 ไฟล์, ไฟล์โปรเจกต์ 794 ไฟล์
+- ตัวกันค่าลับ P1-08 สแกนไฟล์ SQL ใหม่แล้วไม่พบค่าลับ
+
+ผลสุดท้าย — cron ทุกงานพิสูจน์ด้วย HTTP จริงแล้ว (ไม่ใช่แค่ `succeeded` ของ pg_cron):
+
+| job | ชื่อ | หลักฐาน |
+|---|---|---|
+| 5 | `class-reminder-every-5-min` | 200 (req 12917, 12920 — รอบอัตโนมัติ) |
+| 8 | `request-sla-reminder` | 200 (req 12916 — รอบอัตโนมัติ) |
+| 9 | `low-quota-daily` | 200 (req 12923 — เรียกด้วยมือ) |
+| 10 | `welcome-retry-cron-hourly` | 200 (req 12889 + รอบอัตโนมัติ 02:55) |
+| 13 | `star-fraud-daily` | ไม่เกี่ยว — SQL ล้วน ไม่เรียก Edge Function |
+| 14 | `calendar-schedule-sync-cron` | 200 (req 12922) |
+
+🗑️ **ลบ job 12 `low-quota-cron-daily` ทิ้งแล้ว** — พิสูจน์ตรงก่อนลบด้วยการยิงคำสั่งเดียวกับมันเป๊ะๆ (ไม่มี auth header) ได้ req 12926 → 401 = ไม่เคยทำงานจริงตั้งแต่ตั้งมา เป็นงานซ้ำของ job 9
+
+บั๊ก 2 จุดที่เจอระหว่างทำ (ทั้งคู่เกิดจากเดาแทนที่จะเปิดของจริงดูก่อน — บันทึกไว้กันซ้ำ):
+
+1. **ฟังก์ชัน `call_calendar_sync_cron` ส่ง header ไม่ครบ → 401 ทุกรอบ ทุก 5 นาที** — ต้นฉบับ `2026-07-17_pg_cron_calendar_schedule_sync.sql:21-25` ส่ง anon key ทั้งใน `apikey` **และ** `Authorization` แต่ตอนเขียนดูจากหน้าจอที่ค่าถูกปิดบังไว้ เห็นแค่ `apikey` เลยเขียนตกไปหนึ่งตัว · แก้แล้ว
+2. **ค่าใน Vault ถูกเขียนทับด้วย placeholder** — สั่ง `vault.update_secret` ทั้งที่ค่าเดิมถูกอยู่แล้ว (regex ดึงมาถูกตั้งแต่แรก) แล้ววาง `__ANON_KEY__` ลงไปจริง (`length = 12`) · แก้โดยก็อปค่าจาก `cron_welcome_retry_key` ที่เป็น anon key ตัวเดียวกันและพิสูจน์แล้วว่าใช้ได้
+
+ข้อจำกัดที่ยังเหลือ:
+
+- job 9 ยืนยันด้วยการเรียกด้วยมือ ยังไม่เห็นรอบอัตโนมัติ (รันวันละครั้งตี 2)
+- `calendar-schedule-sync-cron` และ `welcome-retry-cron` ยังปิด Verify JWT และไม่มีด่านตรวจผู้เรียกในฟังก์ชันเอง — **การย้ายเข้า Vault ไม่ได้ปิดช่องนี้** เป็นงานแยกที่ต้องขออนุมัติต่างหาก
+- ยังไม่ได้ rotate ค่าใดทั้งสิ้น (`P1-07`) ค่าเดิมทั้งหมดยังใช้งานได้ตามปกติ
+
+## 2026-08-07 — อุดช่องว่าง fail-open ของตัวกันค่าลับ P1-08 (แชท A ในชุดงานคู่ขนาน)
+
+สถานะ: **แก้และทดสอบในเครื่องแล้ว รอแชทผู้สั่งการตรวจซ้ำก่อนปิดงาน P1-08 — ยังไม่ประกาศว่า P1-08 เสร็จ**
+
+ตรวจโค้ดจริงพบ 3 จุดที่ตัวกันค่าลับ (ติดตั้ง 2026-08-06) ยัง "fail-open" คือปล่อยผ่านแทนที่จะเตือน:
+
+1. `scripts/secret-scanner.js` เดิมข้าม (ไม่สแกนเลย) ทั้งโฟลเดอร์ `_dev`, `_แผนงาน`, `_บทความ-เตรียมเขียน`, `_archive`, `_to_delete` — ยืนยันแล้วว่า `_dev`/`_แผนงาน` มีไฟล์เอกสารจริงของ Lin อยู่ (เช่น `_แผนงาน/ทำต่อในอนาคต.md`) ถ้ามีค่าลับหลุดไปแปะในไฟล์พวกนี้ระหว่างทำงาน จะไม่มีวันถูกตรวจพบ — พึ่ง `.gitignore` อย่างเดียวไม่พอ เพราะกันได้แค่ `git add` ไม่ได้กันไม่ให้ค่าลับนอนอยู่ในไฟล์เงียบๆ
+   **แก้:** แยกเป็น 2 ชุดโฟลเดอร์ที่ข้าม — `SITE_VALIDATION_SKIP_DIRECTORY_NAMES` (ใช้กับตรวจ syntax/ลิงก์เว็บใน `check-site.js` เท่านั้น ยังข้าม 5 โฟลเดอร์นี้เหมือนเดิม เพราะไม่ใช่ไฟล์เว็บที่ deploy จริง) กับ `SECRET_SCAN_SKIP_DIRECTORY_NAMES` (ใช้กับตัวกันค่าลับ ข้ามแค่ `.git`/`node_modules`) — ตอนนี้ตัวกันค่าลับสแกนทุกไฟล์เอกสารจริงใน 5 โฟลเดอร์นั้นด้วยแล้ว (845 ไฟล์ จากเดิม 810)
+2. ไฟล์ข้อความ >2MB ถูกข้าม (ไม่อ่านเนื้อหาเลย) แล้วโชว์แค่ "คำเตือน" — `check-site.js` เอาไปใส่ `warnings` ไม่ใช่ `failures` ทำให้ `exit 0` ได้ทั้งที่มีไฟล์ที่ไม่เคยถูกสแกนหาค่าลับจริง
+   **แก้:** เปลี่ยนเป็น fail-closed ทั้ง `check-site.js` (ย้ายไป `failures`) และ CLI ตรง `node scripts/secret-scanner.js` (ย้ายจาก `console.warn` เป็น `console.error` + `process.exitCode = 1`) — ไฟล์ >2MB ที่ไม่เคยถูกสแกน = นับเป็น "ไม่ผ่าน" เสมอ ไม่ใช่แค่เตือน (ตอนนี้ในเครื่องยังไม่มีไฟล์ข้อความไหนเกิน 2MB จริง จึงยังไม่กระทบผลตรวจปัจจุบัน)
+3. `scripts/tests-secret-scanner.js` เดิมมีแค่ 2 เทสต์ ไม่มีเทสต์คุ้มกัน 2 ช่องว่างข้างบนเลย
+   **แก้:** เพิ่ม 2 เทสต์ใหม่ (ใช้ fixture ในโฟลเดอร์ temp เหมือนเทสต์เดิม ไม่มีค่าลับจริง) — เทสต์ที่ 3 ยืนยันว่าค่าลับปลอมในไฟล์ใต้ `_dev`/`_แผนงาน`/`_บทความ-เตรียมเขียน` ถูกตรวจพบ, เทสต์ที่ 4 สร้างไฟล์ปลอม >2MB ที่มีค่าลับปลอม ยืนยันว่าถูกข้ามจริง (ไม่ถูกอ่าน) และ CLI ต้อง exit ไม่เป็น 0 เพราะ fail-closed
+
+ไฟล์ที่แก้: `scripts/secret-scanner.js`, `scripts/check-site.js`, `scripts/tests-secret-scanner.js` — ไม่แก้ `.gitignore` (ตรวจแล้วไม่มีช่องว่างเพิ่มเติมนอกจาก 2 ข้อบนที่แก้ในตัวสแกน)
+
+ผลตรวจ:
+
+- `node scripts/tests-secret-scanner.js` ผ่าน (รวม 2 เทสต์ใหม่ ใช้เวลา ~0.15 วินาที ไม่ค้าง)
+- `node scripts/check-site.js` ผ่านทั้งหมด — ตรวจค่าลับ 845 ไฟล์ (เพิ่มจาก 810 เพราะสแกน `_dev`/`_แผนงาน`/`_บทความ-เตรียมเขียน`/`_archive`/`_to_delete` แล้ว), JavaScript 71 ไฟล์, HTML 108 ไฟล์, CSS 7 ไฟล์, ไฟล์โปรเจกต์สำหรับตรวจ syntax/ลิงก์เว็บยังเป็น 793 ไฟล์เท่าเดิม (ไม่กระทบ เพราะแยกชุด skip แล้ว)
+- ไม่พบค่าลับจริงในรอบสแกนที่ขยายไปถึง `_dev`/`_แผนงาน`/`_บทความ-เตรียมเขียน`
+
+สิ่งที่ยังยืนยันไม่ได้: ยังไม่มีการสแกนไฟล์ข้อความจริงที่ขนาด >2MB (ยังไม่มีไฟล์แบบนั้นในเครื่อง) ว่า fail-closed จะไม่รบกวนงานจริงในอนาคตแค่ไหน — ถ้าเกิดขึ้นจริงต้องตัดสินใจว่าจะเพิ่มเพดานหรือหาวิธีสแกนไฟล์ใหญ่แบบปลอดภัย
+
+## 2026-08-06 — ติดตั้งตัวกันค่าลับ P1-08
+
+สถานะ: **ติดตั้งและทดสอบในเครื่องแล้ว รอ Lin ตรวจและ push**
+
+งานที่ทำ:
+
+- เพิ่มกฎ `.gitignore` กัน `.env`, private key, service-account/credential JSON และไฟล์ credential มาตรฐาน พร้อมยกเว้น `.env.example` กับ `.env.template`
+- เพิ่ม `scripts/secret-scanner.js` ตรวจชื่อไฟล์และรูปแบบค่าลับใน source, config, SQL, เอกสาร และ log โดยรายงานเฉพาะชนิด ไฟล์ และบรรทัด
+- แยกกุญแจฝั่ง browser ที่เปิดเผยตามหน้าที่ด้วย allowlist แบบชนิด + บริบท + path ไม่เก็บค่าจริงหรือ digest
+- เพิ่ม `scripts/tests-secret-scanner.js` ใช้ค่าปลอม ทดสอบการตรวจพบ การปิดบังค่า ชื่อไฟล์ต้องห้าม path ที่มีช่องว่าง และค่าฝั่ง browser ที่อนุญาต
+- เปลี่ยน `scripts/check-site.js` ให้รวบรวมไฟล์จากระบบไฟล์โดยตรง ไม่เรียก Git และรวม secret scan + tests ไว้ในคำสั่งกลาง
+- ไม่แก้หน้าเว็บ พฤติกรรมเว็บไซต์ ระบบภายนอก หรือ deploy
+
+ผลตรวจ:
+
+- `node scripts/tests-secret-scanner.js` ผ่าน
+- `node scripts/secret-scanner.js` ผ่าน 810 ไฟล์ โดยไม่แสดงค่าที่ตรวจ
+- `node scripts/check-site.js` ผ่าน: JavaScript 71 ไฟล์, HTML 108 ไฟล์, CSS 7 ไฟล์ และไฟล์โปรเจกต์ 793 ไฟล์
+- ตรวจคำสั่งกลางและคำสั่งย่อยแล้วไม่พบการเรียก Git ก่อนรัน
+
+ข้อจำกัด:
+
+- ตัวตรวจจับค่าที่มีรูปแบบ ชื่อ หรือโครงสร้างสำคัญได้ แต่ไม่สามารถรับประกันการจับสตริงสุ่มที่ไม่มีบริบททุกชนิด
+- ไฟล์ข้อความเกิน 2 MB จะถูกข้ามพร้อมคำเตือน และ binary ไม่ถูกอ่านเนื้อหา
+- การผ่านตัวตรวจไม่ยืนยัน RLS, referrer restriction, อายุของ key หรือค่าบนระบบ production
+
+## 2026-08-06 — รวมสเปกสมาชิกเกมเข้ากับแผนกลาง
+
+สถานะ: **เอกสารและกฎส่งต่องานอัปเดตแล้ว รอ Lin push**
+
+งานที่ทำ:
+
+- อ่านไฟล์สมาชิกเกม 5 ไฟล์และแยกทิศทางผลิตภัณฑ์ออกจากสถานะที่ต้องตรวจโค้ดจริง
+- สร้าง `04_สเปกสมาชิกเกม_CURRENT.md` เป็นแหล่งกลางของสิทธิ์ guest, free และ paid
+- ปรับ P6 ให้เริ่มจาก audit แบบอ่านอย่างเดียว ก่อนทำ entitlement และ payment
+- เพิ่มกฎให้ Codex อ่านสเปกกลางเมื่อทำงานสมาชิกเกม
+- ไม่แก้โค้ดเกม ฐานข้อมูล ระบบภายนอก หรือ deploy
+
+ผลตรวจ:
+
+- `node scripts/check-site.js` ผ่านทั้งหมด 791 ไฟล์
+
+## 2026-08-06 — เพิ่มแผนงานกลางและกฎส่งต่องานข้ามแชท
+
+สถานะ: **เตรียมเอกสารและกฎเสร็จแล้ว รอ Lin push**
+
+งานที่ทำ:
+
+- เพิ่ม `AGENTS.md` ให้ Codex อ่านกฎ ศูนย์บัญชาการ และแผนงานหลักก่อนเริ่ม
+- กำหนดให้ Codex และ Claude อัปเดตสถานะ หลักฐาน และงานถัดไปก่อนจบแชทที่มีงานจริง
+- สร้างแผนงานหลัก P0–P7 จากจัดระบบเดิมไปถึง beta และเปิดขายเกม
+- เชื่อมศูนย์บัญชาการให้ชี้มาที่แผนหลักฉบับเดียว
+
+ผลตรวจ:
+
+- `node scripts/check-site.js` ผ่านทั้งหมด 791 ไฟล์
+- ไม่ได้ย้ายโค้ด ไม่ได้เปลี่ยนระบบภายนอก และไม่ได้ deploy
+
+## 2026-08-06 — จัดระบบโค้ดและโครงสร้างทั้งเว็บ
+
+สถานะ: **ทำเสร็จและ push แล้วโดย Lin**
+
+งานที่ทำ:
+
+- จัดหมวดและเพิ่มแผนที่ไฟล์ให้ JavaScript ส่วน core, classroom, content, games, score และ textbook
+- เริ่มจัดจาก `js/core/shared.js` แล้วตรวจต่อทั้งชุด
+- ลบโค้ดตายของระบบเชื่อมบัญชีเกมและรายการไฟล์นักเรียนแบบเก่าที่ไม่มีจุดเรียก
+- ลบ placeholder ว่าง ไฟล์ทดสอบขยะ ไฟล์สำรอง `.min.js.bak` และ metadata ชั่วคราวของ Supabase
+- เพิ่มกฎ `.gitignore` ป้องกันไฟล์ชั่วคราวกลับเข้า Git
+- เพิ่ม `README.md` อธิบายโครงสร้างและกติกาความปลอดภัยของโปรเจกต์
+- เพิ่ม `scripts/check-site.js` สำหรับตรวจเว็บแบบรวมด้วยคำสั่งเดียว
+
+ผลตรวจหลังทำ:
+
+- JavaScript syntax ผ่าน 69 ไฟล์
+- HTML และ inline JavaScript ผ่าน 108 หน้า
+- CSS และลิงก์ไฟล์ภายในผ่าน 7 ไฟล์
+- ชุดทดสอบ tone engine ผ่าน 24/24
+- ชุดทดสอบ data health ผ่าน 11/11
+- คลังข้อมูล 735 คำและ 30 ประโยคผ่าน
+- ไม่พบคำซ้ำในคลัง 735 คำ
+- เปิดผ่าน local server ครบ 108 หน้า ได้ HTTP 200 ทุกหน้า
+- ทดสอบหน้าแรก เกมหลัก ห้องเรียน และหน้าความคืบหน้าในเบราว์เซอร์ ไม่พบ JavaScript error
+
+ข้อจำกัดที่ตั้งใจรักษาไว้:
+
+- ไม่ย้ายหน้า HTML เพื่อป้องกัน URL สาธารณะเสีย
+- ไม่ลบ public/compatibility API ที่ยังอาจมีผู้เรียกภายนอก
+- ไม่แก้ข้อมูลจริง ไม่ส่งรหัสล็อกอิน และไม่ deploy ระหว่างการจัดระบบ
+
+คำสั่งตรวจรอบต่อไป:
+
+```bash
+node scripts/check-site.js
+```

@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+    // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)
+    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google tag -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());
+  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
+  var savedConsent = localStorage.getItem('cookieConsent');
+  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
+<script>
+(function(){
+  var _exitFired = false;
+  function fireExit(){
+    if (_exitFired) return; _exitFired = true;
+    try { gtag('event','word_order_exit',{category:'game', transport_type:'beacon'}); } catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') fireExit(); });
+  window.addEventListener('pagehide', fireExit);
+})();
+</script>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>泰語語序練習室 — 泰華眼裡的泰語教學</title>
+<meta name="description" content="免費泰語語序練習：把打散的詞語點回正確順序，練習泰語高級句型的語序邏輯。專為台灣人設計的泰語學習遊戲。">
+<link rel="canonical" href="https://mrtaihualin.com/word-order.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="泰華眼裡的泰語教學">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="泰語語序練習室 — 泰華眼裡的泰語教學">
+<meta property="og:description" content="把打散的詞語點回正確順序，練習泰語高級句型的語序邏輯。">
+<meta property="og:url" content="https://mrtaihualin.com/word-order.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "additionalType": "https://schema.org/LearningResource",
+  "name": "泰語語序練習室",
+  "description": "免費泰語語序練習：把打散的詞語點回正確順序，練習泰語高級句型的語序邏輯。專為台灣人設計的泰語學習遊戲。",
+  "url": "https://mrtaihualin.com/word-order.html",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Web",
+  "inLanguage": ["th", "zh-TW"],
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TWD"
+  },
+  "provider": {
+    "@type": "Organization",
+    "name": "泰華眼裡的泰語教學",
+    "url": "https://mrtaihualin.com/"
+  }
+}
+</script>
+<meta name="twitter:title" content="泰語語序練習室 — 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="把打散的詞語點回正確順序，練習泰語高級句型的語序邏輯。">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/shared.css?v=17">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/core/supabase-config.js?v=5"></script>
+<script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/word-order-app.js -->
+<script defer src="js/games/game-account.js?v=3"></script>
+<script defer src="js/core/auth-widget.js?v=2"></script>
+<script defer src="js/games/reading-auth.js?v=12"></script>
+<script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
+<script src="js/games/word-vault.js"></script>
+<script src="js/games/game-content-client.js?v=1"></script>
+<script src="data/audio-manifest.js?v=2"></script><!-- เพิ่ม 2026-07-17: เสียงประโยค 30 ประโยค (เสียง th-TH-Chirp3-HD-Leda) -->
+<script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
+<script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงประโยค — โชว์เฉพาะตอนเฉลยแล้ว -->
+<script src="js/games/word-menu.js?v=6"></script><!-- เมนู 🍚 (讀音/英文讀音/字體) — Lin 2026-07-25 -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+/* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (word-order-app.min.js โหลดแบบ async ผ่าน
+   GameContentLoader.boot()) ต้องกดไม่ได้ก่อนสคริปต์โหลดเสร็จ — ดูสคริปต์ปลดล็อกท้ายไฟล์ */
+html:not(.gc-ready) [onclick*="woDownloadReport("],html:not(.gc-ready) [onclick*="woHint("],
+html:not(.gc-ready) [onclick*="woNext("],html:not(.gc-ready) [onclick*="woRemember("],
+html:not(.gc-ready) [onclick*="woResetSentence("],html:not(.gc-ready) [onclick*="woRestart("],
+html:not(.gc-ready) [onclick*="woToggleEn("],html:not(.gc-ready) [onclick*="woToggleParticleMode("],
+html:not(.gc-ready) [onclick*="woTogglePron("],html:not(.gc-ready) [onclick*="woToggleZh("],
+html:not(.gc-ready) [onclick*="woToggleZhWord("],html:not(.gc-ready) [onclick*="openBadge("],
+html:not(.gc-ready) [onclick*="openStar("]{
+  pointer-events:none!important;opacity:.45;filter:grayscale(35%);cursor:not-allowed!important;
+}
+/* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
+.v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
+
+.page-header{text-align:center;margin-bottom:10px;}
+.page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
+.page-sub{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#b08040;margin-top:3px;}
+
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(90,62,10,.1);width:100%;max-width:640px;padding:22px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden;}
+
+/* Lin 2026-07-11: การ์ดหัวเกมสีทอง เหมือน tone-finder.html (.tf-word-banner) — รวมคะแนน + 進度/本題分數 ไว้ในการ์ดเดียว */
+.gold-banner{width:calc(100% + 40px);margin:-22px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,#EFDDB4 0%,#F8F0DE 100%);border-bottom:2px solid rgba(184,134,40,.5);}
+.gold-banner .bars-wrap{margin-bottom:0;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:10px;}
+.score-bar{display:flex;gap:12px;font-size:13px;color:#8B6310;font-family:'Noto Sans TC',sans-serif;}
+.score-bar span{font-weight:700;color:#5a3e10;}
+
+.zh-hint{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#888;margin:2px 0 6px;text-align:center;min-height:18px;}
+.zh-hint b{color:#5a3e10;}
+
+/* ── answer strip (slots) ── */
+.wo-slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;min-height:64px;width:100%;margin-bottom:8px;padding:8px;border-radius:14px;background:#fffdf7;border:1.5px dashed #d4b87a;}
+.wo-slot{min-width:64px;min-height:48px;border-radius:12px;border:2px solid #e3d4b0;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;font-size:24px;font-weight:700;color:#3a2a0a;padding:4px 10px;cursor:pointer;transition:all .15s;}
+.wo-slot.empty{border-style:dashed;background:transparent;}
+.wo-slot.filled:hover{border-color:#d85a30;background:#fff3e0;}
+.wo-slot.correct{border-color:#4caf50;background:#e8f5e9;color:#2e7d32;cursor:default;}
+.wo-slot.wrong{border-color:#f44336;background:#fdecea;animation:woshake .35s;}
+@keyframes woshake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+
+/* ── word bank (tap to place) ── */
+.wo-bank{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;width:100%;margin-bottom:4px;}
+.wo-tile{min-width:56px;padding:10px 16px;border-radius:14px;border:2px solid #d4b87a;background:#fff;color:#5a3e10;font-size:22px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;text-align:center;user-select:none;transition:transform .1s,opacity .15s;}
+.wo-tile:hover{background:#ffeedd;border-color:#c07030;transform:translateY(-2px);}
+.wo-tile.used{opacity:0;pointer-events:none;transform:scale(.6);position:absolute;}/* Lin 2026-07-12: เอาออกจาก flow เลย ไม่ให้เหลือช่องว่างค้างในแถบตัวเลือกคำ */
+/* Lin 2026-07-25: คำอ่าน (讀音 / 英文讀音) แปะใต้คำแต่ละคำ — ติดไปกับคำ ย้ายไปวางช่องไหนก็ตามไปด้วย */
+.wo-slot.filled{flex-direction:column;gap:1px;}
+.wo-word-th{font-family:'Sarabun',sans-serif;line-height:1.25;}
+.wo-read-th{font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;color:#993C1D;line-height:1.3;margin-top:2px;}
+.wo-read-en{font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:600;color:#8B6310;line-height:1.3;letter-spacing:0.2px;}
+/* Lin 2026-07-30: คำแปลจีนรายคำ ใต้กล่องทุกคำ (เปิด/ปิดจากแถว 翻譯 ในเมนู 🍚) — pointer-events:none กันคลิกโดนคำแปลแล้วแย่ง event ของไทล์ */
+.wo-read-zh{font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:600;color:#6b6b6b;line-height:1.3;pointer-events:none;}
+body.rg-modern-font .wo-word-th,
+body.rg-modern-font .wo-read-th{font-family:'Noto Sans Thai','Sarabun',sans-serif !important;}
+
+.result-banner{width:100%;padding:9px 14px;border-radius:11px;text-align:center;font-size:14px;font-weight:600;font-family:'Noto Sans TC',sans-serif;display:none;margin-top:6px;}
+.result-banner.show{display:block;}
+.result-banner.ok{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;}
+.result-banner.no{background:#fdecea;color:#c62828;border:1px solid #ef9a9a;}
+
+.btn-row{display:flex;gap:8px;justify-content:center;width:100%;margin-top:14px;flex-wrap:wrap;}
+.btn{padding:10px 20px;border-radius:999px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:transform .1s;}
+.btn:active{transform:scale(.96);}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn-primary{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
+.btn-secondary{background:#f0e8d8;color:#8b6310;}
+
+
+/* ── 工具列（跟其他遊戲共用同一套按鈕樣式，不要留大空白）── */
+.rg-tools-row{display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:640px;padding-bottom:2px;}
+
+/* ── 換現代字體（跟其他遊戲共用同一個 localStorage 設定，切一次全部遊戲都套用）── */
+body.rg-modern-font .wo-slot,
+body.rg-modern-font .wo-tile,
+body.rg-modern-font .zh-hint,
+body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
+
+.score-pop{position:fixed;top:26%;left:50%;transform:translateX(-50%);font-family:'Noto Serif TC',serif;font-weight:900;color:#d9a400;pointer-events:none;z-index:60;opacity:0;font-size:40px;animation:wospop 1.8s cubic-bezier(.22,1,.36,1) forwards;}
+/* ยืดเวลาเห็นคะแนนชัดๆ ให้นานพอ (Lin 2026-07-07): เพิ่มช่วง "ค้างเต็มดวง" ก่อนค่อยจางหาย */
+@keyframes wospop{0%{opacity:0;transform:translate(-50%,10px) scale(.8);}15%{opacity:1;transform:translate(-50%,-8px) scale(1.08);}65%{opacity:1;transform:translate(-50%,-20px) scale(1.04);}100%{opacity:0;transform:translate(-50%,-46px) scale(1);}}
+
+#end{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:26px 20px;}
+#end h2{font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10;}
+.end-score-big{font-family:'Noto Serif TC',serif;font-size:50px;font-weight:900;color:#d85a30;}
+.end-detail{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#a08050;}
+.book-cta{width:100%;background:linear-gradient(135deg,#fff6e9,#ffe9d6);border:1.5px solid #f0c89a;border-radius:16px;padding:14px 16px 16px;margin-top:6px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.book-cta-title{font-family:'Noto Serif TC',serif;font-size:16px;font-weight:900;color:#5a3e10;}
+.book-cta-sub{font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:#a06a30;line-height:1.5;}
+.btn-book{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;text-decoration:none;margin-top:4px;box-shadow:0 3px 10px rgba(216,90,48,.3);}
+.end-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px;}
+.end-actions .btn{text-decoration:none;}
+
+/* ── 共用進度系統：星星／勳章／連續天數／每週挑戰（跟其他遊戲共用同一套帳號＋同一個 streak key）── */
+.rg-stat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0 14px;width:100%;max-width:640px;}
+.tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:#7a5510;border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;}
+.tf-streak-chip.done{background:rgba(74,154,74,0.14);color:#3f8f3f;}
+.tf-streak-chip b{font-weight:800;color:#5a3e0a;}
+
+.bars-wrap{width:100%;max-width:640px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
+.bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
+.bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
+.bar-fill.prog{background:linear-gradient(90deg,#e8a020,#d85a30);}
+.bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047);}
+.bar-label{min-width:52px;text-align:right;font-size:11px;}
+
+.tf-challenge-banner{background:linear-gradient(180deg,#FFF6E6,#FDEBC8);border:1.5px solid #E0B84A;border-radius:14px;padding:11px 14px;margin:0 0 12px;font-family:'Noto Sans TC',sans-serif;width:100%;max-width:640px;box-sizing:border-box;}
+.tf-challenge-banner.done{background:linear-gradient(180deg,#E9F9ED,#D2F0D9);border-color:#4caf50;}
+.tf-ch-top{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.tf-ch-emoji{font-size:18px;line-height:1;}
+.tf-ch-title{flex:1;font-size:13.5px;font-weight:800;color:#8a5a12;}
+.tf-challenge-banner.done .tf-ch-title{color:#1d7a36;}
+.tf-ch-left{font-size:11px;font-weight:700;color:#b07a1e;white-space:nowrap;}
+.tf-ch-bar{height:7px;border-radius:4px;background:#f0e2c2;overflow:hidden;}
+.tf-ch-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#E8973A,#F4C24A);transition:width .4s;}
+.tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
+.tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
+
+.btn-remember{background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;}
+.wo-hint-warn{width:100%;color:#c62828;font-size:12px;font-weight:700;text-align:center;margin-top:6px;background:#fdecea;border:1px solid #ef9a9a;border-radius:8px;padding:6px 10px;}
+
+.rg-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:rgba(45,42,34,0.96);color:#fff;padding:12px 20px;border-radius:24px;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,0.3);z-index:10001;max-width:88%;text-align:center;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
+.rg-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.star-burst{position:fixed;top:50%;left:50%;pointer-events:none;z-index:70;opacity:0;font-size:90px;animation:sburst 2s ease forwards;}
+@keyframes sburst{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-20deg);}30%{opacity:1;transform:translate(-50%,-50%) scale(1.25) rotate(5deg);}60%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0deg);}100%{opacity:0;transform:translate(-50%,-70%) scale(.9);}}
+
+.v3-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:200;align-items:center;justify-content:center;}
+.v3-modal.show{display:flex;}
+.v3-modal-box{background:#fff;border-radius:24px;padding:28px 22px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.22);}
+.v3-modal-box h3{font-family:'Noto Serif TC',serif;font-size:19px;color:#5a3e10;margin-bottom:12px;}
+.tree-area{font-size:88px;line-height:1;margin:6px 0;}
+.tree-caption{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#a08050;margin-top:6px;}
+.star-progress{font-size:16px;letter-spacing:2px;margin:10px 0 4px;}
+.star-prog-label{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
+
+/* ── 逐步導覽（第一次進遊戲自動播放）— Lin 2026-07-31 ── */
+#gt-tour-overlay{position:fixed;inset:0;z-index:10050;display:none;}
+#gt-tour-overlay.show{display:block;}
+#gt-tour-spot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(28,20,6,.62);transition:top .32s ease,left .32s ease,width .32s ease,height .32s ease;pointer-events:none;}
+#gt-tour-card{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(340px,92vw);background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 10px 32px rgba(0,0,0,.28);font-family:'Noto Sans TC',sans-serif;z-index:10051;}
+#gt-tour-card .gt-step{font-size:11.5px;font-weight:800;color:#C8973A;letter-spacing:1px;margin-bottom:4px;}
+#gt-tour-card .gt-title{font-size:16px;font-weight:900;color:#5a3e0a;margin-bottom:6px;}
+#gt-tour-card .gt-text{font-size:13.5px;color:#444;line-height:1.6;margin-bottom:12px;}
+#gt-tour-card .gt-text b{color:#8B6310;}
+#gt-tour-card .gt-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#gt-tour-card .gt-skip{background:none;border:none;color:#999;font-size:12.5px;cursor:pointer;padding:6px 4px;}
+#gt-tour-card .gt-nav{display:flex;gap:6px;}
+#gt-tour-card .gt-btn{border:none;border-radius:999px;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
+#gt-tour-card .gt-prev{background:#f3e4c2;color:#8B6310;}
+#gt-tour-card .gt-next{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://mrtaihualin.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "遊戲",
+      "item": "https://mrtaihualin.com/games.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "泰語語序練習室",
+      "item": "https://mrtaihualin.com/word-order.html"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html">遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">關於我</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="pricing.html">課程・費用</a>
+  <a href="faq.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
+<div class="v3-page">
+
+<div class="page-header">
+  <h1 class="page-title" style="margin:0;">🧩 泰語語序練習室</h1>
+  <div class="page-sub">把打散的詞語，點回正確的句子順序（高級句型）</div>
+</div>
+
+<!-- How-to modal -->
+<div id="wo-howto-modal" onclick="if(event.target===this){try{if(window.gtag)gtag('event','word_order_howto_close',{category:'game'});}catch(e){}this.style.display='none'}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+    <button onclick="try{if(window.gtag)gtag('event','word_order_howto_close',{category:'game'});}catch(e){}document.getElementById('wo-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+    <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🧩 怎麼玩？</div>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">泰語的語序跟中文不完全一樣！把打亂的詞重新排好，慢慢建立自然的泰語語序感。</p>
+    <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
+      <li>每一句泰文都被拆成好幾個詞、順序打散了</li>
+      <li>點下面的詞塊，依照正確順序點回上面的空格裡，組成完整句子</li>
+      <li>點錯了嗎？點一下上面已經填的詞塊，就可以把它放回去重排</li>
+    </ul>
+    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
+      <ul style="margin:0;padding-left:18px;line-height:2;">
+        <li>每句從 <strong>10 分</strong>開始：排錯一次扣一些分（10→7→4→1），用「提示」每次扣 <strong>2 分</strong>，兩種扣分共用同一個分數</li>
+        <li>扣到 0 分這句就直接失敗，之後會再複習到</li>
+        <li>連續排對第一次會有<strong>連擊加成 ×1.5／×2／×3</strong>，偶爾出現<strong>✨黃金句</strong>乾淨過關再 <strong>×2</strong>！</li>
+        <li>玩完一輪可下載 📄 PDF 報告</li>
+      </ul>
+    </div>
+    <p style="font-size:13px;color:#2e7d32;background:#e8f5e9;border-radius:8px;padding:10px 14px;margin:0 0 12px;">🔑 <b>登入</b>後：系統會記住哪些句子學會了、哪些要複習，到期自動排進來；真的記熟還能累積 ⭐ 星星！</p>
+
+    <button onclick="var d=document.getElementById('wo-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 看完整版說明 ▼':'📖 收起完整版說明 ▲';try{if(window.gtag)gtag('event','word_order_howto_detail_toggle',{category:'game',open:!open});}catch(e){}" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 看完整版說明 ▼</button>
+
+    <div id="wo-howto-detail" style="display:none;font-size:14.5px;color:#333;line-height:1.9;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
+      <div style="font-weight:700;color:#8B6310;margin:0 0 4px;">🧩 這個遊戲在練什麼</div>
+      <p style="margin:0 0 10px;">每一句泰文都被拆成好幾個詞、順序打散了，要照正確順序把詞塊點回上面的空格裡，組成完整句子。全部都是完整句子，練習泰語跟中文不一樣的語序感覺。點錯了嗎？點一下上面已經填的詞塊，就可以把它放回去重排。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💰 計分怎麼算</div>
+      <p style="margin:0 0 10px;">每句從 10 分（這句的「命」）開始：排錯一次扣分（第 1／2／3 次各扣 3 分，第 4 次扣 1 分，剛好扣完 10 分），按「提示」每次固定扣 2 分，兩種扣分共用同一個分數池，扣到 0 分這句就直接失敗（之後會排進複習）。答對時拿到的分數，就是當下剩下的「命」還有多少。連續整句都乾淨過關，會有連擊加成（連續 3／5／8 句 ×1.5／×2／×3），偶爾出現的 ✨黃金句乾淨過關再 ×2。玩完一輪 +20 分，全程都乾淨過關（perfect）再加 +50 分。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡 提示按鈕怎麼用</div>
+      <p style="margin:0 0 10px;">「提示」不是切換模式，是隨點隨扣分的按鈕，可以按很多次，但每按一次都扣 2 分，扣到 0 分一樣算失敗。要慢慢想清楚順序，或直接用提示拿低分過關，都可以自己拿捏。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
+      <p style="margin:0 0 10px;">覺得這句已經很熟，可按「已記得」跳過重排直接自測。不會加分、不會加星星，純粹標記「已精通」，用在複習系統。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
+      <p style="margin:0 0 10px;">點 🍚 圖示展開直式清單：讀音顯示・英文讀音・翻譯顯示・字體切換・🙏禮貌詞（切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響排序或計分）。跟其他遊戲不一樣的是，句子還在重排的時候禮貌詞不會出現，要等排對、或失敗看解答之後才會顯示，跟句子的中文意思解說放在一起。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章</div>
+      <p style="margin:0 0 10px;">星星是這句真正靠複習「精通」了才拿到（跟其他遊戲共用），累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 下載 PDF 報告</div>
+      <p style="margin:0 0 10px;">玩完一輪可以下載 PDF 報告，裡面有這輪總分、乾淨過關的句數、每句的表現（句子／意思／狀態／錯幾次／得分／下次複習日期），還有「弱點分析」列出這輪錯最多的句子。</p>
+
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
+      <p style="margin:0;">排錯或用過提示的句子，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。不登入的話，每次進來都是全部句子重新開始，沒有記憶功能。</p>
+    </div>
+
+    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:16px 0 0;">泰語跟中文語序不一樣，多練幾次就會抓到感覺 😄 <a href="pricing.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔</a></p>
+  </div>
+</div>
+
+<div class="rg-tools-row">
+  <div id="rg-profile-wrap" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
+    <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
+    <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
+    <span class="tf-streak-chip" id="wo-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="try{if(window.gtag)gtag('event','word_order_howto_open',{category:'game'});}catch(e){}dismissHowtoHint('wordorder');document.getElementById('wo-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
+    <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
+    <div class="rg-stat-row" id="rg-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
+      <span class="tf-streak-chip" title="連續天數">🔥 <b id="rg-streak-num">0</b></span>
+      <span class="tf-streak-chip" title="護盾">🛡️ ×<b id="rg-freeze-num">0</b></span>
+      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="try{if(window.gtag)gtag('event','word_order_star_modal_open',{category:'game'});}catch(e){}openStar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStar()}">⭐ <b id="star-count">0</b></span>
+      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="try{if(window.gtag)gtag('event','word_order_badge_modal_open',{category:'game'});}catch(e){}openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b></span>
+    </div>
+    <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
+  </div>
+</div>
+
+
+<!-- GAME -->
+<div id="game" class="card">
+  <div class="gold-banner">
+    <div class="top-bar">
+      <div class="score-bar">
+        <div>分數：<span id="wo-score">0</span></div>
+      </div>
+      <button class="btn btn-secondary" id="wo-hint-btn" onclick="woHint()" style="padding:6px 14px;font-size:12.5px;">💡 提示 (-2)</button>
+    </div>
+    <div class="bars-wrap" id="bars-wrap">
+      <div class="bar-row">
+        <span>進度</span>
+        <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
+        <span class="bar-label" id="prog-txt">0/10</span>
+      </div>
+      <div class="bar-row">
+        <span>本題分數</span>
+        <div class="bar-bg"><div class="bar-fill power" id="wo-ws-fill" style="width:100%"></div></div>
+        <span class="bar-label"><span id="wo-ws-num">10</span>/10</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="wo-golden-badge" style="display:none;width:100%;text-align:center;font-size:12px;color:#C8973A;font-weight:800;margin-bottom:4px;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金句 ×2</div>
+  <div id="wo-hint-warn" class="wo-hint-warn" style="display:none;">💡 再用一次提示分數就會歸零囉～這句之後會再複習到，別擔心 🌱</div>
+
+  <div class="wo-slots" id="wo-slots"></div>
+  <!-- Lin 2026-08-01: บรรทัดครับ/ค่ะ/คะ ต่อท้ายประโยค — ไม่ใช่คำที่ต้องลากเรียงเลย โผล่เฉพาะ "หลังเรียงถูก/เฉลยแล้ว" เท่านั้น ซ่อนไว้ก่อนตอนกำลังเรียง -->
+  <div id="wo-particle-line" style="display:none;text-align:center;font-family:'Sarabun',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;margin:-4px 0 8px;"></div>
+
+  <!-- Lin 2026-07-25: ปุ่ม 發音 (🔊) + 翻譯 (🍙/🌾) ย้ายมาอยู่ "ใต้คำที่เฉลย" แทนเมนูมุมขวาล่าง — โชว์เฉพาะตอนเฉลยแล้ว (กันสปอยล์)
+       Lin 2026-07-30: เพิ่มปุ่ม 🔖 เซฟทั้งประโยคเข้า 單字庫 (คลังรวม 30 ช่องเดียวกับคำ) ตรงเฉลยนี้ด้วย -->
+  <div id="wo-reveal-ctl" style="display:none;align-items:center;justify-content:center;gap:8px;margin:2px 0 6px;">
+    <button type="button" id="wo-sound-btn" class="word-audio-btn" style="display:none;" title="發音" aria-label="發音">🔊</button>
+    <button type="button" id="wo-zh-toggle" class="word-ctl-btn" onclick="try{if(window.gtag)gtag('event','word_order_translate_toggle',{category:'game'});}catch(e){}woToggleZh()" title="翻譯">🍙</button>
+    <span id="wo-vault-btn-slot"></span>
+  </div>
+  <div class="zh-hint" id="wo-zh"></div>
+
+  <!-- แถวปุ่มของเมนู 🍚 (ปุ่มจริงถูกย้ายเข้าเมนูตอนโหลด เหลือกล่องเปล่า) — Lin 2026-07-25
+       Lin 2026-07-30 (แก้รอบ 2): เพิ่มแถว 翻譯 (คำแปลรายคำ ใต้กล่องทุกคำ เหมือน 英文讀音) + เรียงลำดับกลางทุกเกม: 讀音 → 英文讀音 → 翻譯 → 字體 -->
+  <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;">
+    <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="try{if(window.gtag)gtag('event','word_order_pron_toggle',{category:'game'});}catch(e){}woTogglePron()"></button>
+    <button id="rg-en-toggle" class="word-ctl-btn" type="button" onclick="try{if(window.gtag)gtag('event','word_order_en_toggle',{category:'game'});}catch(e){}woToggleEn()"></button>
+    <button id="wo-zh-word-toggle" class="word-ctl-btn" type="button" onclick="try{if(window.gtag)gtag('event','word_order_zh_word_toggle',{category:'game'});}catch(e){}woToggleZhWord()"></button>
+    <span id="font-toggle-slot"></span>
+    <!-- Lin 2026-08-01: ปุ่มครับ/ค่ะ/คะ — ไม่ใช่คำที่ต้องลากเรียง ต่อท้ายอัตโนมัติหลังเรียงถูก/เฉลยแล้วเท่านั้น -->
+    <button id="rg-particle-toggle" class="word-ctl-btn" type="button" onclick="woToggleParticleMode()">🙏</button>
+  </div>
+  <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
+    {id:'rg-pron-toggle',     label:'讀音',     state:'pron'},
+    {id:'rg-en-toggle',       label:'英文讀音', state:'en'},
+    {id:'wo-zh-word-toggle',  label:'翻譯',     state:'zh'},
+    {id:'font-toggle-slot',   label:'字體',     state:'font'},
+    {id:'rg-particle-toggle', label:'禮貌詞',   state:'particle'}
+  ]});});</script>
+
+  <div class="wo-bank" id="wo-bank"></div>
+
+  <div class="result-banner" id="wo-banner"></div>
+
+  <!-- Lin 2026-07-12: อธิบายว่าแต่ละคำในประโยคแปลว่าอะไร (โชว์ตอนจบ มาตรฐานเดียวกับเกมพิมพ์ 高) -->
+  <div id="wo-reveal" style="display:none;width:100%;margin-top:8px;background:#fffbf0;border:1.5px dashed #f0b030;border-radius:12px;padding:10px 14px;box-sizing:border-box;"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-remember" id="wo-remember-btn" onclick="try{if(window.gtag)gtag('event','word_order_remember_click',{category:'game'});}catch(e){}woRemember()">已記得</button>
+    <button class="btn btn-secondary" onclick="try{if(window.gtag)gtag('event','word_order_reset_sentence',{category:'game'});}catch(e){}woResetSentence()">↺ 重排這句</button>
+    <button class="btn btn-primary" id="wo-next-btn" onclick="try{if(window.gtag)gtag('event','word_order_next_click',{category:'game'});}catch(e){}woNext()" disabled>下一句 →</button>
+  </div>
+</div>
+
+<!-- END SCREEN -->
+<div id="end" class="card">
+  <h2>🎉 全部完成！</h2>
+  <div class="end-score-big" id="wo-end-score">0</div>
+  <div class="end-detail" id="wo-end-detail"></div>
+
+  <div class="book-cta">
+    <div class="book-cta-title">語序抓到感覺了嗎？</div>
+    <div class="book-cta-sub">一對一中文授課，直接針對你常排錯的句型練習</div>
+    <a class="btn btn-book" href="pricing.html?from=word_order#pricing" onclick="if(window.bookFromGame){bookFromGame('word_order','end_screen');return false;}">預約免費體驗課 →</a>
+  </div>
+
+  <div class="end-actions">
+    <button class="btn btn-primary" onclick="try{if(window.gtag)gtag('event','word_order_restart_click',{category:'game'});}catch(e){}woRestart()">🔁 再玩一次</button>
+    <button class="btn btn-secondary" id="wo-pdf-btn" onclick="try{if(window.gtag)gtag('event','word_order_pdf_download',{category:'game'});}catch(e){}woDownloadReport()">📄 下載 PDF 報告</button>
+    <a class="btn btn-secondary" href="games.html">🎮 回遊戲總覽</a>
+  </div>
+</div>
+
+<!-- 成就（星星累積勳章）modal — 跟其他遊戲共用同一套 GAME_ACCOUNT 資料 -->
+<div class="v3-modal" id="badge-modal" onclick="try{if(window.gtag)gtag('event','word_order_badge_modal_close',{category:'game'});}catch(e){}this.classList.remove('show')">
+  <div class="v3-modal-box" onclick="event.stopPropagation()">
+    <h3>我的成就</h3>
+    <div class="star-progress" id="star-prog"></div>
+    <div class="star-prog-label" id="star-prog-label"></div>
+    <button class="btn btn-secondary" style="margin-top:16px" onclick="try{if(window.gtag)gtag('event','word_order_badge_modal_close',{category:'game'});}catch(e){}document.getElementById('badge-modal').classList.remove('show')">關閉</button>
+  </div>
+</div>
+
+<!-- Lin 2026-07-25: ⭐ กดปุ่มดาวแยกจากปุ่ม勳章 — ย้าย tree-area/tree-caption มาไว้ที่นี่ -->
+<div class="v3-modal" id="star-modal" onclick="try{if(window.gtag)gtag('event','word_order_star_modal_close',{category:'game'});}catch(e){}this.classList.remove('show')">
+  <div class="v3-modal-box" onclick="event.stopPropagation()">
+    <h3>累積星星</h3>
+    <div class="tree-area" id="star-tree-area">⭐</div>
+    <div class="tree-caption" id="star-tree-caption">累積星星（全部遊戲共用）</div>
+    <button class="btn btn-secondary" style="margin-top:16px" onclick="try{if(window.gtag)gtag('event','word_order_star_modal_close',{category:'game'});}catch(e){}document.getElementById('star-modal').classList.remove('show')">關閉</button>
+  </div>
+</div>
+
+</div><!-- /v3-page -->
+
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+
+<script src="data/nav-template.js?v=2"></script>
+<script src="js/core/shared.min.js?v=23"></script>
+
+<div id="gt-tour-overlay">
+  <div id="gt-tour-spot"></div>
+</div>
+<div id="gt-tour-card" style="display:none;">
+  <div class="gt-step" id="gt-tour-step">1 / 5</div>
+  <div class="gt-title" id="gt-tour-title"></div>
+  <div class="gt-text" id="gt-tour-text"></div>
+  <div class="gt-actions">
+    <button class="gt-skip" onclick="try{if(window.gtag)gtag('event','word_order_tour_skip',{category:'game'});}catch(e){}gtTourEnd()">跳過導覽</button>
+    <div class="gt-nav">
+      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="try{if(window.gtag)gtag('event','word_order_tour_prev',{category:'game'});}catch(e){}gtTourPrev()">‹ 上一步</button>
+      <button class="gt-btn gt-next" id="gt-tour-next" onclick="try{if(window.gtag)gtag('event','word_order_tour_next',{category:'game'});}catch(e){}gtTourNext()">下一步 ›</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // P6-28 (2026-08-08): ปิดปุ่มเกม (ดู CSS ต้นไฟล์) จนกว่า GameContentLoader.boot() จะโหลดสคริปต์เกมสำเร็จจริง
+  var GC_SEL = '[onclick*="woDownloadReport("],[onclick*="woHint("],[onclick*="woNext("],[onclick*="woRemember("],'
+    + '[onclick*="woResetSentence("],[onclick*="woRestart("],[onclick*="woToggleEn("],[onclick*="woToggleParticleMode("],'
+    + '[onclick*="woTogglePron("],[onclick*="woToggleZh("],[onclick*="woToggleZhWord("],[onclick*="openBadge("],[onclick*="openStar("]';
+  function gcGate(){
+    document.querySelectorAll(GC_SEL).forEach(function(el){
+      el.setAttribute('data-gc-gated','1');
+      if (el.tagName === 'BUTTON') { el.disabled = true; }
+      else {
+        if (el.hasAttribute('tabindex')) el.setAttribute('data-gc-orig-tabindex', el.getAttribute('tabindex'));
+        el.setAttribute('tabindex','-1');
+      }
+    });
+  }
+  function gcRelease(){
+    document.documentElement.classList.add('gc-ready');
+    document.querySelectorAll('[data-gc-gated="1"]').forEach(function(el){
+      el.removeAttribute('data-gc-gated');
+      if (el.tagName === 'BUTTON') { el.disabled = false; }
+      else if (el.hasAttribute('data-gc-orig-tabindex')) { el.setAttribute('tabindex', el.getAttribute('data-gc-orig-tabindex')); el.removeAttribute('data-gc-orig-tabindex'); }
+      else { el.removeAttribute('tabindex'); }
+    });
+  }
+  gcGate();
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=13']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+})();
+</script>
+
+<!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
+<style>
+#game-switcher{position:fixed;bottom:64px;left:50%;right:auto;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+.gs-tab{padding:9px 18px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.gs-tab:hover{background:rgba(139,99,16,0.08);}
+.gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
+.gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
+@media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
+</style>
+<div id="game-switcher" data-current="word_order"></div>
+<script src="js/games/game-switcher.js?v=1"></script>
+<script>
+// ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──
+function dismissHowtoHint(id){
+  try{ var b=document.getElementById('howto-hint-'+id); if(b) b.classList.remove('show'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_'+id,'1'); }catch(e){}
+}
+
+// ── 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用過一次就不再自動跳出 — Lin 2026-07-31 ──
+var GT_TOUR_STEPS=[
+  {sel:'#wo-slots',        title:'這裡是答案排列區', text:'空格會依照正確順序，一格一格被填滿，先看清楚有幾個空格。'},
+  {sel:'#wo-bank',         title:'點詞塊排順序', text:'下面的詞塊被打散了，照正確的泰語語序，依序點回上面的空格裡。'},
+  {sel:'#wo-hint-btn',     title:'卡住了嗎？按提示', text:'點這裡會扣 2 分，但可以幫你填對一個位置，卡住的時候可以用。'},
+  {sel:'#wm-trigger',      title:'更多功能都在這裡', text:'點 🍚 打開選單：讀音、翻譯、字體切換、🙏禮貌詞（高級句子專用）都在裡面。'},
+  {sel:'#rg-profile-wrap', title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
+];
+var gtTourIdx=0;
+function gtTourPosition(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  var el=step?document.querySelector(step.sel):null;
+  var spot=document.getElementById('gt-tour-spot');
+  if(!el){ spot.style.width='0px'; spot.style.height='0px'; return; }
+  try{ el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+  setTimeout(function(){
+    var r=el.getBoundingClientRect();
+    var pad=8;
+    spot.style.top=Math.max(0,r.top-pad)+'px';
+    spot.style.left=Math.max(0,r.left-pad)+'px';
+    spot.style.width=(r.width+pad*2)+'px';
+    spot.style.height=(r.height+pad*2)+'px';
+  },260);
+}
+function gtTourRender(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  if(!step){ gtTourEnd(); return; }
+  // ข้ามจุดที่ยังไม่มีของจริงบนจอ — กันชี้จุดว่าง
+  if(!document.querySelector(step.sel)){
+    if(gtTourIdx<GT_TOUR_STEPS.length-1){ gtTourIdx++; gtTourRender(); } else { gtTourEnd(); }
+    return;
+  }
+  document.getElementById('gt-tour-step').textContent=(gtTourIdx+1)+' / '+GT_TOUR_STEPS.length;
+  document.getElementById('gt-tour-title').textContent=step.title;
+  document.getElementById('gt-tour-text').innerHTML=step.text;
+  document.getElementById('gt-tour-prev').style.visibility=(gtTourIdx===0)?'hidden':'visible';
+  document.getElementById('gt-tour-next').textContent=(gtTourIdx===GT_TOUR_STEPS.length-1)?'開始玩 →':'下一步 ›';
+  gtTourPosition();
+}
+function gtTourNext(){
+  if(gtTourIdx>=GT_TOUR_STEPS.length-1){ gtTourEnd(); return; }
+  gtTourIdx++; gtTourRender();
+}
+function gtTourPrev(){
+  if(gtTourIdx<=0) return;
+  gtTourIdx--; gtTourRender();
+}
+function gtTourEnd(){
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.remove('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='none';
+  try{ localStorage.setItem('howto_tour_seen_wordorder','1'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_wordorder','1'); }catch(e){} // ทัวร์สอนครบแล้ว ไม่ต้องเด้งกล่องเล็กซ้ำอีก
+}
+function gtTourStart(){
+  gtTourIdx=0;
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.add('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
+  gtTourRender();
+}
+// รอให้ประโยคแรก + ปุ่ม 🍚 (สร้างหลัง DOMContentLoaded โดย word-menu.js) พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
+(function(){
+  try{
+    if(localStorage.getItem('howto_tour_seen_wordorder')) return;
+    var tries=0;
+    var waitReady=setInterval(function(){
+      tries++;
+      var slots=document.getElementById('wo-slots');
+      var bank=document.getElementById('wo-bank');
+      var ready=document.getElementById('wm-trigger') && document.getElementById('wo-hint-btn') && slots && slots.children.length>0 && bank && bank.children.length>0;
+      if(ready || tries>25){
+        clearInterval(waitReady);
+        if(ready) setTimeout(gtTourStart, 500);
+      }
+    }, 300);
+  }catch(e){}
+})();
+</script>
+
+<!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+  background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
+  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
+  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
+    <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="window.__cookieConsentDecide(false)"
+        style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
+        拒絕
+      </button>
+      <button onclick="window.__cookieConsentDecide(true)"
+        style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
+        接受
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  window.__cookieConsentDecide = function(granted) {
+    localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    }
+    if (typeof window.clarity === 'function') {
+      window.clarity('consent', granted);
+    }
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'none';
+  };
+  // เปิด banner ขึ้นมาใหม่ได้ทุกเมื่อ (ใช้จากลิงก์ "Cookie 設定" ใน privacy.html)
+  window.__reopenCookieConsent = function() {
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'block';
+  };
+  if (!localStorage.getItem('cookieConsent')) {
+    var __b0 = document.getElementById('cookieConsentBanner');
+    if (__b0) __b0.style.display = 'block';
+  }
+</script>
+
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">我的</span></a></nav>
+</body>
+</html>

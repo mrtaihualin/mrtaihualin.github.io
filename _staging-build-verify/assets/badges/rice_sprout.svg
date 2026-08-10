@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240"><defs><linearGradient id="ringL1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C8973A"/><stop offset="1" stop-color="#B07820"/></linearGradient>
+    <linearGradient id="bevL1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/><stop offset="0.42" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.58" stop-color="#000000" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity="0.4"/></linearGradient>
+    <linearGradient id="rimgL1" x1="0.1" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#FFF3C4"/><stop offset="0.28" stop-color="#EAC36B"/><stop offset="0.5" stop-color="#C8973A"/><stop offset="0.72" stop-color="#F0D27E"/><stop offset="1" stop-color="#8A5E12"/></linearGradient>
+    <radialGradient id="discL1" cx="0.42" cy="0.36" r="0.72"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FBF5E7"/></radialGradient>
+    <radialGradient id="insL1" cx="0.5" cy="0.46" r="0.55"><stop offset="0.76" stop-color="#4A3308" stop-opacity="0"/><stop offset="1" stop-color="#4A3308" stop-opacity="0.34"/></radialGradient>
+    <radialGradient id="hlL1" cx="0.5" cy="0.45" r="0.46"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.34"/><stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0.08"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+    <pattern id="pakL1" width="30" height="30" patternUnits="userSpaceOnUse" patternTransform="rotate(8)"><g fill="none" stroke="#2E7D4F" stroke-width="0.9" opacity="0.095"><path d="M5 27 C5 15 12 8 21 10 C14 12 12 18 15 21 C18 24 22 21 22 16"/><path d="M21 10 c3 -2 6 -1 7 3"/><path d="M2 14 c4 -2 7 1 6 5"/></g></pattern>
+    <clipPath id="clL1"><circle cx="120" cy="120" r="90"/></clipPath>
+    <clipPath id="clcL1"><circle cx="120" cy="120" r="113"/></clipPath>
+    <radialGradient id="shL1" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#000" stop-opacity="0.20"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <linearGradient id="grL1" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#6FCB86"/><stop offset="0.5" stop-color="#46B377"/><stop offset="1" stop-color="#2E7D4F"/></linearGradient></defs>
+  <ellipse cx="120" cy="206" rx="96" ry="16" fill="#000" opacity="0.13"/>
+  <circle cx="120" cy="123" r="114" fill="#000" opacity="0.16"/>
+  <circle cx="120" cy="120" r="113" fill="url(#ringL1)"/>
+  <circle cx="120" cy="120" r="113" fill="url(#bevL1)"/>
+  <circle cx="120" cy="120" r="113.5" fill="none" stroke="#5A3E0A" stroke-width="2.5"/>
+  <circle cx="120" cy="120" r="110" fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="1.4"/>
+  <g fill="#EAC36B" stroke="#8A5E12" stroke-width="0.8" opacity="0.98"><path d="M120 9 l7 12 -7 6 -7 -6 z"/><path d="M120 231 l7 -12 -7 -6 -7 6 z"/><path d="M9 120 l12 7 6 -7 -6 -7 z"/><path d="M231 120 l-12 7 -6 -7 6 -7 z"/></g>
+  <circle cx="120" cy="120" r="97" fill="url(#rimgL1)"/>
+  <circle cx="120" cy="120" r="97" fill="url(#bevL1)"/>
+  <path d="M120 23 A 97 97 0 0 0 47 84" stroke="#FFFFFF" stroke-width="3.4" opacity="0.55" fill="none" stroke-linecap="round"/>
+  <path d="M150 218 A 97 97 0 0 0 204 150" stroke="#FFFFFF" stroke-width="2" opacity="0.3" fill="none" stroke-linecap="round"/>
+  <circle cx="120" cy="120" r="97" fill="none" stroke="#6E4A10" stroke-width="1.6"/>
+  <circle cx="120" cy="120" r="90" fill="url(#discL1)"/>
+  <g clip-path="url(#clL1)"><rect x="30" y="30" width="180" height="180" fill="url(#pakL1)"/></g>
+  <g clip-path="url(#clL1)"><circle cx="120" cy="120" r="90" fill="url(#insL1)"/></g>
+  <g clip-path="url(#clL1)"><ellipse cx="94" cy="82" rx="52" ry="30" fill="#FFFFFF" opacity="0.18" transform="rotate(-25 94 82)"/></g>
+  <circle cx="120" cy="120" r="90" fill="none" stroke="#6E4A10" stroke-width="2.4"/>
+  <circle cx="120" cy="120" r="85.5" fill="none" stroke="#F6E2A0" stroke-width="1.6" opacity="0.85"/>
+  <circle cx="120" cy="118" r="60" fill="url(#hlL1)"/>
+  <ellipse cx="120" cy="182" rx="40" ry="8" fill="url(#shL1)"/>
+  <path d="M120 168 V108" stroke="#2E7D4F" stroke-width="6.5" stroke-linecap="round"/><path d="M120 124 C90 120 80 94 82 76 C108 80 122 102 120 124 Z" fill="url(#grL1)" stroke="#2E7D4F" stroke-width="2.2"/><path d="M120 112 C150 108 160 82 158 64 C132 68 118 90 120 112 Z" fill="url(#grL1)" stroke="#2E7D4F" stroke-width="2.2"/><path d="M96 132 C104 126 112 126 120 130" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.4"/><path d="M104 170 q16 7 32 0" stroke="#B07820" stroke-width="3" fill="none" opacity="0.45"/>
+  <g transform="translate(62,72)"><circle r="16.2" fill="#FFF6D0" opacity="0.30"/><path d="M0 -9 L2.16 -2.16 L9 0 L2.16 2.16 L0 9 L-2.16 2.16 L-9 0 L-2.16 -2.16 Z" fill="#FFFFFF"/><path d="M0 -9 L2.16 -2.16 L9 0 L2.16 2.16 L0 9 L-2.16 2.16 L-9 0 L-2.16 -2.16 Z" fill="#FBE38C" transform="scale(0.42)"/></g><g transform="translate(44,128)"><circle r="8.1" fill="#FFF6D0" opacity="0.30"/><path d="M0 -4.5 L1.08 -1.08 L4.5 0 L1.08 1.08 L0 4.5 L-1.08 1.08 L-4.5 0 L-1.08 -1.08 Z" fill="#FFFFFF"/><path d="M0 -4.5 L1.08 -1.08 L4.5 0 L1.08 1.08 L0 4.5 L-1.08 1.08 L-4.5 0 L-1.08 -1.08 Z" fill="#FBE38C" transform="scale(0.42)"/></g><g transform="translate(176,154)"><circle r="10.8" fill="#FFF6D0" opacity="0.30"/><path d="M0 -6 L1.44 -1.44 L6 0 L1.44 1.44 L0 6 L-1.44 1.44 L-6 0 L-1.44 -1.44 Z" fill="#FFFFFF"/><path d="M0 -6 L1.44 -1.44 L6 0 L1.44 1.44 L0 6 L-1.44 1.44 L-6 0 L-1.44 -1.44 Z" fill="#FBE38C" transform="scale(0.42)"/></g><g transform="translate(90,184)"><circle r="7.2" fill="#FFF6D0" opacity="0.30"/><path d="M0 -4 L0.96 -0.96 L4 0 L0.96 0.96 L0 4 L-0.96 0.96 L-4 0 L-0.96 -0.96 Z" fill="#FFFFFF"/><path d="M0 -4 L0.96 -0.96 L4 0 L0.96 0.96 L0 4 L-0.96 0.96 L-4 0 L-0.96 -0.96 Z" fill="#FBE38C" transform="scale(0.42)"/></g><g transform="translate(154,76)"><circle r="6.3" fill="#FFF6D0" opacity="0.30"/><path d="M0 -3.5 L0.84 -0.84 L3.5 0 L0.84 0.84 L0 3.5 L-0.84 0.84 L-3.5 0 L-0.84 -0.84 Z" fill="#FFFFFF"/><path d="M0 -3.5 L0.84 -0.84 L3.5 0 L0.84 0.84 L0 3.5 L-0.84 0.84 L-3.5 0 L-0.84 -0.84 Z" fill="#FBE38C" transform="scale(0.42)"/></g>
+</svg>

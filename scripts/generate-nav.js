@@ -59,7 +59,7 @@ const NAV_RE = /<nav class="site-nav"[^>]*>[\s\S]*?<\/nav>/;
 // ทุก href ใน nav-template.js เป็น absolute (/games.html) อยู่แล้ว จึงใช้จากโฟลเดอร์ย่อยได้ตรงๆ
 function navTemplateTagFor(file) {
   const depth = file.split('/').length - 1;
-  return '<script src="' + '../'.repeat(depth) + 'data/nav-template.js?v=1"></script>';
+  return '<script src="' + '../'.repeat(depth) + 'data/nav-template.js?v=2"></script>';
 }
 const SHARED_MIN_RE = /<script src="(?:\.\.\/)*js\/core\/shared\.min\.js[^"]*"><\/script>/;
 
@@ -71,10 +71,24 @@ const SHARED_MIN_RE = /<script src="(?:\.\.\/)*js\/core\/shared\.min\.js[^"]*"><
 const BOTTOM_NAV_RE = /<nav id="bottom-nav"[^>]*>[\s\S]*?<\/nav>/;
 const BODY_CLOSE_RE = /<\/body>/i;
 
+// 🆕 2026-08-10 (Lin อนุมัติ) — แถบประกาศด้านบน (.avail-band) ก็ต้องเป็น static เหมือนกัน
+//   เดิม JS แทรกเข้าเป็นลูกตัวแรกของ <body> ตอน shared.min.js โหลดเสร็จ → เนื้อหาทั้งหน้าถูกดันลง
+//   = "หน้ากระพริบ" ทุกครั้งที่เปลี่ยนหน้าบนมือถือ (สาเหตุที่เหลืออยู่หลังแก้แถบล่างไปแล้ว)
+//   ก้อนที่เขียนลงไป = <script> เช็ค sessionStorage + <div class="avail-band" id="ann-band">สไลด์แรก</div>
+//   ห่อด้วยคอมเมนต์ START/END เพื่อพิมพ์ทับได้แม่นยำ (ห้ามใช้ regex จับ <div>…</div> เพราะข้างในมี <div> ซ้อนหลายชั้น)
+const ANN_BLOCK_RE = new RegExp(
+  NAV.ANN_MARK_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+  '[\\s\\S]*?' +
+  NAV.ANN_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+);
+const BODY_OPEN_RE = /<body[^>]*>/i;
+
 let filesChanged = 0;
 let scriptTagAdded = 0;
 let bottomNavAdded = 0;
 let bottomNavUpdated = 0;
+let annBandAdded = 0;
+let annBandUpdated = 0;
 const skipped = [];
 const problems = [];
 
@@ -99,6 +113,19 @@ PAGES.forEach(function (file) {
     } else {
       problems.push(file + '  ← ไม่พบ <script src="js/core/shared.min.js">  — ไม่ได้เพิ่ม nav-template.js อัตโนมัติ ต้องตรวจมือ');
     }
+  }
+
+  // ── แถบประกาศด้านบน (static) — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกต่อจาก <body> ──
+  const annBlockHTML = NAV.renderAnnBandBlockHTML();
+  if (ANN_BLOCK_RE.test(next)) {
+    const beforeAnn = next;
+    next = next.replace(ANN_BLOCK_RE, annBlockHTML);
+    if (next !== beforeAnn) annBandUpdated++;
+  } else if (BODY_OPEN_RE.test(next)) {
+    next = next.replace(BODY_OPEN_RE, function (m) { return m + '\n' + annBlockHTML; });
+    annBandAdded++;
+  } else {
+    problems.push(file + '  ← ไม่พบ <body> — แทรกแถบประกาศอัตโนมัติไม่ได้ ต้องตรวจมือ');
   }
 
   // ── แถบล่างมือถือ (static) — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกก่อน </body> ──
@@ -129,6 +156,8 @@ console.log('แก้ไฟล์จริง: ' + filesChanged + ' หน้�
 console.log('เพิ่ม <script data/nav-template.js>: ' + scriptTagAdded + ' หน้า');
 console.log('เพิ่ม <nav id="bottom-nav"> ใหม่: ' + bottomNavAdded + ' หน้า');
 console.log('พิมพ์ทับ <nav id="bottom-nav"> เดิม: ' + bottomNavUpdated + ' หน้า');
+console.log('เพิ่มแถบประกาศ (ann-band) ใหม่: ' + annBandAdded + ' หน้า');
+console.log('พิมพ์ทับแถบประกาศเดิม: ' + annBandUpdated + ' หน้า');
 
 if (skipped.length) {
   console.log('\n⚠️ ข้าม (ไม่พบไฟล์/ไม่พบ nav):');

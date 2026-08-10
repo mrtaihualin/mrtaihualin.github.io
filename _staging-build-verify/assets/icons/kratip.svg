@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><defs>
+<radialGradient id="ring" cx="0.4" cy="0.32" r="0.75"><stop offset="0" stop-color="#F3E4C2"/><stop offset="0.5" stop-color="#C8973A"/><stop offset="1" stop-color="#8B6310"/></radialGradient>
+<linearGradient id="bev" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="0.58" stop-color="#000000" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity="0.35"/></linearGradient>
+<linearGradient id="rimg" x1="0.1" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#FFF3C4"/><stop offset="0.3" stop-color="#EAC36B"/><stop offset="0.5" stop-color="#C8973A"/><stop offset="0.72" stop-color="#F0D27E"/><stop offset="1" stop-color="#8A5E12"/></linearGradient>
+<radialGradient id="disc" cx="0.42" cy="0.36" r="0.72"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FBF5E7"/></radialGradient>
+<radialGradient id="ins" cx="0.5" cy="0.46" r="0.55"><stop offset="0.72" stop-color="#4A3308" stop-opacity="0"/><stop offset="1" stop-color="#4A3308" stop-opacity="0.3"/></radialGradient>
+<radialGradient id="hl" cx="0.5" cy="0.42" r="0.48"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.32"/><stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0.08"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+<linearGradient id="basket" x1="0" y1="0" x2="1" y2="0.2"><stop offset="0" stop-color="#B98A3E"/><stop offset="0.5" stop-color="#DDB061"/><stop offset="1" stop-color="#9A6B26"/></linearGradient>
+</defs>
+<g transform="translate(120,120)">
+<circle r="100" fill="url(#ring)" stroke="#5A3E0A" stroke-width="2"/>
+<circle r="100" fill="url(#bev)"/>
+<g fill="#EAC36B" stroke="#8A5E12" stroke-width="0.8"><path d="M0 -92 l6 10 -6 5 -6 -5 z"/><path d="M0 92 l6 -10 -6 -5 -6 5 z"/><path d="M-92 0 l10 6 5 -6 -5 -6 z"/><path d="M92 0 l-10 6 -5 -6 5 -6 z"/></g>
+<circle r="85" fill="url(#rimg)"/>
+<circle r="85" fill="url(#bev)"/>
+<circle r="76" fill="url(#disc)"/>
+<circle r="76" fill="url(#ins)"/>
+<circle cy="-2" r="52" fill="url(#hl)"/>
+<g transform="translate(0,6)">
+<path d="M-14 -4 L-14 28 Q-14 34 0 34 Q14 34 14 28 L14 -4 Z" fill="url(#basket)" stroke="#6B4A10" stroke-width="2.2"/>
+<path d="M-14 4 L6 -4 M-14 14 L14 4 M-14 24 L14 14 M-6 34 L14 24" fill="none" stroke="#6B4A10" stroke-width="1" opacity="0.5"/>
+<path d="M-14 -4 L10 34 M-4 -4 L14 24" fill="none" stroke="#6B4A10" stroke-width="1" opacity="0.35"/>
+<ellipse cy="-4" rx="15" ry="4.5" fill="#E9C87A" stroke="#6B4A10" stroke-width="2"/>
+<path d="M-5 -4 Q0 -10 5 -4" fill="none" stroke="#6B4A10" stroke-width="1.6"/>
+</g>
+<g transform="translate(-52,-58)"><path d="M0 -8 L1.9 -1.9 L8 0 L1.9 1.9 L0 8 L-1.9 1.9 L-8 0 L-1.9 -1.9 Z" fill="#FFFFFF"/></g>
+<g transform="translate(50,-48)"><path d="M0 -5.5 L1.3 -1.3 L5.5 0 L1.3 1.3 L0 5.5 L-1.3 1.3 L-5.5 0 L-1.3 -1.3 Z" fill="#FFFFFF"/></g>
+</g>
+</svg>

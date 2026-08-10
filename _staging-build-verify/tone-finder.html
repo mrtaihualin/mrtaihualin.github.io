@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
+  var savedConsent = localStorage.getItem('cookieConsent');
+  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });
+  gtag('config', 'G-DKVQE30982');
+  window.GA_CATEGORY='game';
+</script>
+<script>
+(function(){
+  var _exitFired = false;
+  function fireExit(){
+    if (_exitFired) return; _exitFired = true;
+    try { gtag('event','tone_finder_exit',{category:'game', transport_type:'beacon'}); } catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') fireExit(); });
+  window.addEventListener('pagehide', fireExit);
+})();
+</script>
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+    // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)
+    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }
+</script>
+<!-- Supabase: ล็อกอิน + เก็บคะแนนรายหัว (ทำงานคู่กับ GA4) -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/core/supabase-config.js?v=5"></script>
+<script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js/progress-sync.js/tone-finder-game.js -->
+<script defer src="js/games/game-account.js?v=3"></script><!-- v3: Phase 4 ล็อก — sync remote-authoritative + เลิก upsert (เซิร์ฟเวอร์เป็นเจ้าของดาว) -->
+<script defer src="js/core/auth-widget.js?v=2"></script>
+<script defer src="js/games/reading-auth.js?v=12"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="js/games/tone-companion.js?v=1"></script><!-- ส่วนที่เกมเสียงใช้เฉพาะ: เซฟคะแนน tone_sessions + ปลดล็อกเหรียญ admin + ป๊อปอัพสำรวจก่อนออกจากหน้า -->
+<script defer src="js/games/tone-server.js?v=1"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
+<script defer src="js/score/progress-sync.js?v=2"></script>
+<script src="js/games/word-vault.js"></script>
+<script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS (337 คำ, เสียง th-TH-Chirp3-HD-Leda) -->
+<script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว — เพิ่ม 2026-07-17 -->
+<script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ — 2026-07-16 -->
+<script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
+<script src="js/games/game-content-client.js?v=1"></script>
+<script src="data/tone-engine.js?v=3"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<title>泰語聲調練習室 — 泰華眼裡的泰語教學</title>
+<meta name="description" content="免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
+<link rel="canonical" href="https://mrtaihualin.com/tone-finder.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="泰華眼裡的泰語教學">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="泰語聲調練習室 — 泰華眼裡的泰語教學">
+<meta property="og:description" content="免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
+<meta property="og:url" content="https://mrtaihualin.com/tone-finder.html">
+<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="泰語聲調練習室 — 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。">
+<meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Noto+Sans+Thai:wght@400;500;700&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
+<script>
+/* Lin 2026-07-31: กันเครื่องหมายวรรณยุกต์ในกล่องเฉลย (聲調符) ขึ้นเป็นกล่องว่าง □□ ตอนฟอนต์ยังโหลดไม่เสร็จ — สั่งโหลดฟอนต์ที่มีเครื่องหมายวรรณยุกต์ไทยล่วงหน้าทันที ไม่ต้องรอให้ DOM ต้องใช้ก่อนค่อยโหลด */
+if (document.fonts && document.fonts.load) {
+  document.fonts.load("400 14px Sarabun", "◌่้๊๋").catch(function(){});
+  document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
+}
+</script>
+<link rel="stylesheet" href="css/shared.css?v=17">
+<style>
+  /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
+     ผ่าน GameContentLoader.boot()) ต้องกดไม่ได้ก่อนสคริปต์โหลดเสร็จ — ดูสคริปต์ปลดล็อกท้ายไฟล์ */
+  html:not(.gc-ready) [onclick*="TF."]{
+    pointer-events:none!important;opacity:.45;filter:grayscale(35%);cursor:not-allowed!important;
+  }
+  /* Lin 2026-07-10: กลับมาล็อกแถบ page-strip ติดจอล่างเหมือนเดิม (ยกเลิกที่เคยปลดล็อกไว้ก่อนหน้านี้ในวันเดียวกัน) */
+  /* ซ่อนเฉพาะตอนเบราว์เซอร์เข้าโหมดเต็มจอจริง (Fullscreen API) — ดู JS ท้ายไฟล์ */
+  body.tf-is-fullscreen .page-strip{display:none;}
+  body.tf-is-fullscreen{padding-bottom:0;}
+  body { background: #F5F0E8; color: #1C1C1C; }
+
+  /* ── Page wrapper ── */
+  .tf-page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: calc(var(--nav-h) + 24px) 16px 112px;
+    min-height: 100vh;
+  }
+
+  /* ── Page header ── */
+  .tf-page-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .tf-page-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 900;
+    color: #8B6310;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .tf-page-hint {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: clamp(13px, 2vw, 15px);
+    color: #a08050; /* Lin 2026-07-10: เดิม #666 เทา ปรับให้เข้าโทนทองเหมือน .page-sub ของอีก 4 เกม */
+    letter-spacing: 1px;
+    line-height: 1.7;
+  }
+  .tf-page-note {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: #8B6310;
+    background: rgba(139,99,16,0.10);
+    border: 1px solid rgba(139,99,16,0.30);
+    border-radius: 20px;
+  }
+
+  /* ── Main card ── */
+  .tf-card {
+    background: #FFFFFF;
+    border: 1.5px solid rgba(139,99,16,0.15);
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(90,62,10,0.10);
+    overflow: hidden;
+    /* LIN 2026-07-04: กันแถบสลับเกม (#game-switcher = fixed อยู่ล่างจอ) บังปุ่มตอบล่างสุด */
+    padding-bottom: 104px;
+  }
+
+  /* ── Word banner ── */
+  .tf-word-banner {
+    display: none;
+    padding: 16px 22px 10px;
+    background: linear-gradient(180deg, #EFDDB4 0%, #F8F0DE 100%);
+    /* Lin 2026-07-16: เส้นขอบทองล่างย้ายไปอยู่ใต้แถวปุ่ม #tf-word-ctl-row แทน — ให้ปุ่มอยู่ "ในกรอบทอง" เดียวกับคำศัพท์ */
+    text-align: center;
+  }
+  /* Lin 2026-07-16: แถวปุ่มใต้คำศัพท์เป็นส่วนหนึ่งของกรอบทอง (พื้นสีเดียวกับปลาย gradient ของ banner + เส้นขอบทองปิดท้าย) */
+  #tf-word-ctl-row {
+    background: #F8F0DE;
+    border-bottom: 2px solid rgba(184,134,40,0.50);
+  }
+  .tf-banner-counter {
+    /* Lin 2026-07-30: เปลี่ยนสไตล์ให้เหมือนเกมอ่าน (.score-bar) — สีเข้มลง + เลิกตัวหนา/letter-spacing ทั้งแถว (ตัวเลขคะแนนแยกไปหนา/เข้มกว่าที่ .tf-score-hud แทน) */
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #8B6310;
+    font-weight: 400;
+    margin-bottom: 12px;
+  }
+  .tf-banner-word {
+    /* Lin 2026-07-30: เปลี่ยนสไตล์ให้เหมือนเกมอ่าน (.word-th) — สีน้ำตาลเข้มขึ้น + เลิก letter-spacing */
+    font-family: 'Sarabun', sans-serif;
+    font-size: 38px;
+    font-weight: 700;
+    color: #3a2a0a;
+    line-height: 1.5;
+  }
+  /* Lin 2026-07-14: คำแปลจีนใต้คำศัพท์ (เหมือนเกมอ่าน/เกมพิมพ์) ต่อกับปุ่ม 🍙/🌾 เปิด/ปิดของ shared.js */
+  .word-zh {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    color: #a08050;
+    margin-top: 6px;
+    cursor: pointer;
+  }
+  /* Lin 2026-07-25: แถวคำอ่าน (讀音 ไทย / 英文讀音 โรมัน) ใต้คำศัพท์ — โชว์เฉพาะหลังตอบวรรณยุกต์แล้ว */
+  .tf-read-th {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #993C1D;
+    margin-top: 4px;
+  }
+  .tf-read-en {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #8B6310;
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+  }
+  body.tf-modern-font .tf-read-th { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif !important; }
+  /* Lin 2026-07-25: ป้ายบอกว่ากำลังอยู่โหมด 提示 (ไม่คิดคะแนน) + ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 */
+  .tf-guide-note {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    color: #92400e;   /* Lin 2026-07-25: ใส่สีตรงๆ — หน้านี้ไม่ได้นิยาม --amber-muted (ค่าเดียวกับ --amber-muted ในชุดธีม) */
+    background: rgba(200,151,58,0.16);
+    border: 1px solid rgba(184,134,40,0.45);
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin: 8px auto 0;
+    display: inline-block;
+  }
+  .tf-opt.tf-opt-hint,
+  .tf-mark-btn.tf-opt-hint {
+    border-color: var(--gold-bright) !important;
+    background: rgba(200,151,58,0.20) !important;
+    box-shadow: 0 0 0 3px rgba(200,151,58,0.28);
+  }
+  /* Lin 2026-07-14: 高級句子 — ช่องคำศัพท์หลักโชว์ประโยคเต็ม (แทนที่จะโชว์แค่คำเดียว) */
+  .tf-adv-sent-main {
+    /* Lin 2026-07-30: สีตามคำเดี่ยว (.tf-banner-word) ให้เข้าชุดเดียวกัน + ขนาดตัวอักษรเท่าคำเดี่ยว (38px, เดิม 28px เล็กกว่า) — วัดจริงแล้วประโยคยาวสุดในระบบ (27 ตัวอักษร) กว้าง 425px ยังพอดีกับกรอบการ์ด (~596px) ไม่ล้นจอคอม/แท็บเล็ต จอมือถือแคบมากอาจขึ้น 2 บรรทัดได้บ้างเฉพาะประโยคยาวสุด ถือเป็นเรื่องปกติ */
+    font-family: 'Sarabun', sans-serif;
+    font-size: 38px;
+    font-weight: 700;
+    color: #3a2a0a;
+    line-height: 1.5;
+    margin-bottom: 4px;
+  }
+  .tf-sent-cur-word {
+    /* Lin 2026-07-30: เอาไฮไลท์พื้นหลังคำปัจจุบันออกตามที่ Lin สั่ง — โชว์เป็นข้อความเปล่าในสีเดียวกับประโยคทั้งหมด ไม่เน้นพิเศษแล้ว */
+    font-weight: 700;
+  }
+  .tf-adv-sent-ctx-zh {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #a08050;
+    margin-bottom: 14px;
+  }
+  /* Lin 2026-08-01: คำอ่านยาวทั้งประโยค (高級) — แทนคำแปลจีนรายคำเดิม (word-zh) */
+  .tf-adv-sent-reading {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #993C1D;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  body.tf-modern-font .tf-adv-sent-reading { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif !important; }
+  /* 2026-07-30 (รอบ 3): Lin สั่งกลับไปใช้แถบช่องพยางค์แบบมีกรอบ (syl-chip) เหมือนเกมอ่าน/เกมพิมพ์
+     — เอา .tf-adv-sent-focus/.tf-syl-cur/.tf-syl-dim (กล่องโฟกัสเดี่ยว/ขีดเส้นใต้ ที่เคยเปลี่ยนมา 2 รอบ 07-16, 07-29) ออก
+     ใช้ .syl-strip/.syl-chip ชุดเดียวกับเกมอ่าน/เกมพิมพ์แทน (สีค่าตรงกันเป๊ะ) */
+  .syl-strip{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:6px 0 8px;}
+  .syl-chip{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 12px;border-radius:12px;border:2px solid #e3d4b0;background:#fffdf7;font-family:'Sarabun',sans-serif;min-width:46px;}
+  .syl-chip .syl-th{font-size:22px;font-weight:700;color:#8a7a55;line-height:1.45;}
+  .syl-chip .syl-n{font-size:10px;color:#bbb;font-family:'Noto Sans TC',sans-serif;}
+  .syl-chip.cur{border-color:#e8a020;background:#fff3d8;}
+  .syl-chip.cur .syl-th{color:#3a2a0a;}
+  .syl-chip.done{border-color:#9ccc65;background:#eef7e3;}
+  .syl-chip.done .syl-th{color:#3b6d11;}
+  /* ── Breadcrumb ── */
+  .tf-bc {
+    display: none;
+    padding: 8px 28px;
+    background: rgba(0,0,0,0.04);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  /* ── Nav bar (history back/forward) ── */
+  .tf-nav-bar {
+    display: none;
+    padding: 10px 28px;
+    background: rgba(0,0,0,0.03);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    gap: 8px;
+    align-items: center;
+  }
+  .tf-nav-btn {
+    background: rgba(139,99,16,0.04);
+    border: 1px solid rgba(139,99,16,0.20);
+    border-radius: 999px;
+    color: #8B6310;
+    font-size: 14px;
+    padding: 5px 14px;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: all 0.15s;
+  }
+  .tf-nav-btn:hover { background: rgba(139,99,16,0.10); color: #1C1C1C; }
+  .tf-nav-btn:disabled { opacity: 0.25; cursor: default; }
+
+  /* ── Body ── */
+  .tf-body { padding: 20px 22px 18px; }
+
+  /* Lin 2026-07-25: ลบ CSS ของโหมด 自行搜尋 ที่ปิดไปแล้ว */
+  .tf-search-btn {
+    margin-top: 16px;
+    padding: 11px 30px;
+    background: linear-gradient(135deg, #C8973A, #8B6310);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: opacity 0.2s;
+  }
+  .tf-search-btn:hover { opacity: 0.88; }
+
+  /* ── Stats button (page header) ── */
+  .tf-stats-btn {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 16px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: #666;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tf-stats-btn:hover { color: #8B6310; border-color: rgba(139,99,16,0.35); }
+
+  /* ── Stats overlay ── */
+  .tf-stats-summary {
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .tf-stats-date { font-size: 12px; letter-spacing: 2px; color: #999; margin-bottom: 6px; }
+  .tf-stats-count { font-size: 22px; font-weight: 900; color: #8B6310; }
+  .tf-stats-count span { font-size: 13px; font-weight: 500; color: #888; margin-left: 4px; }
+  .tf-stats-entry { padding: 14px 22px; border-bottom: 1px solid rgba(0,0,0,0.07); font-family: 'Noto Sans TC', sans-serif; }
+  .tf-stats-entry:last-child { border-bottom: none; }
+  .tf-stats-entry-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .tf-stats-word { font-family: 'Sarabun', sans-serif; font-size: 18px; color: #1C1C1C; letter-spacing: 1px; }
+  .tf-stats-time { font-size: 11px; color: #aaa; }
+  .tf-stats-step { font-size: 12px; color: #8B6310; margin-bottom: 4px; letter-spacing: 0.5px; }
+  .tf-stats-choice { font-size: 12px; color: #777; line-height: 1.6; }
+  .tf-stats-empty { padding: 28px 22px; text-align: center; font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: #999; letter-spacing: 1px; }
+
+  /* ── Stats: section blocks ── */
+  .tf-stats-section { padding: 16px 22px; border-bottom: 1px solid rgba(0,0,0,0.07); font-family: 'Noto Sans TC', sans-serif; }
+  .tf-stats-section-title { font-size: 11px; letter-spacing: 3px; color: #999; margin-bottom: 12px; text-transform: uppercase; }
+  .tf-stats-bar-row { margin-bottom: 10px; }
+  .tf-stats-bar-row:last-child { margin-bottom: 0; }
+  .tf-stats-bar-label { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: #555; margin-bottom: 4px; line-height: 1.5; }
+  .tf-stats-bar-label b { color: #8B6310; font-weight: 700; white-space: nowrap; }
+  .tf-stats-bar-track { height: 6px; background: rgba(0,0,0,0.04); border-radius: 4px; overflow: hidden; }
+  .tf-stats-bar-fill { height: 100%; background: #8B6310; border-radius: 4px; }
+  .tf-stats-words { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tf-stats-word-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.10);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+    color: #1C1C1C;
+  }
+  .tf-stats-word-chip b { font-family: 'Noto Sans TC', sans-serif; font-size: 11px; font-weight: 700; color: #8B6310; }
+  .tf-stats-lesson {
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    background: rgba(139,99,16,0.06);
+    border-left: 3px solid #8B6310;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #444;
+  }
+  .tf-stats-lesson:last-child { margin-bottom: 0; }
+  .tf-stats-lesson b { color: #8B6310; }
+
+  .tf-stats-action-row { padding: 14px 22px 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .tf-stats-clear-btn, .tf-stats-download-btn {
+    background: none;
+    border: 1px solid rgba(0,0,0,0.12);
+    color: #999;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 8px 18px;
+    cursor: pointer;
+    border-radius: 999px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tf-stats-clear-btn:hover { color: #f44336; border-color: rgba(244,67,54,0.4); }
+  .tf-stats-download-btn { color: #8B6310; border-color: rgba(139,99,16,0.35); }
+  .tf-stats-download-btn:hover { background: rgba(139,99,16,0.10); }
+
+  /* ── Step badge ── */
+  .tf-step-badge {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #8B6310;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ── Question box ── */
+  .tf-qbox {
+    padding: 16px 20px;
+    background: linear-gradient(180deg,#FBF5E7 0%,#FFFFFF 100%);
+    border: 1px solid rgba(139,99,16,0.15);
+    border-left: 4px solid var(--gold-bright);
+    border-radius: 12px;
+    margin-bottom: 22px;
+  }
+  .tf-qtext {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #5a3e0a;
+    line-height: 1.7;
+  }
+
+  /* ── Options ── */
+  .tf-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .tf-opt-wrap { display: flex; align-items: stretch; gap: 8px; }
+  .tf-opt {
+    flex: 1;
+    padding: 13px 18px;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.25);
+    border-radius: 10px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s, transform 0.1s;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #5a3e0a;
+    line-height: 1.4;
+  }
+  .tf-opt:hover { border-color: rgba(139,99,16,0.6); background: rgba(139,99,16,0.06); transform: translateY(-1px); }
+
+  /* ── Tip button ── */
+  .tf-tip-btn {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    align-self: center;
+    background: rgba(139,99,16,0.10);
+    border: 1.5px solid rgba(139,99,16,0.30);
+    border-radius: 50%;
+    color: #8B6310;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .tf-tip-btn:hover { background: rgba(139,99,16,0.18); }
+
+  /* ── Tone mark buttons ── */
+  .tf-mark-opts { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .tf-mark-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 24px 10px;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.25);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s, transform 0.1s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .tf-mark-btn:hover { border-color: rgba(139,99,16,0.6); background: rgba(139,99,16,0.06); transform: translateY(-1px); }
+  .tf-mark-symbol {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 46px;
+    font-weight: 700;
+    color: #8B6310;
+    line-height: 1;
+  }
+
+  /* ── Helper banner ── */
+  .tf-helper-banner {
+    background: rgba(139,99,16,0.07);
+    border: 1px solid rgba(139,99,16,0.15);
+    border-radius: 16px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #8B6310;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  /* ── Helper trigger button ── */
+  .tf-helper-trigger {
+    display: block;
+    width: 100%;
+    margin-bottom: 18px;
+    padding: 10px 20px;
+    background: rgba(139,99,16,0.07);
+    color: #8B6310;
+    border: 1px solid rgba(139,99,16,0.22);
+    border-radius: 16px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-align: center;
+    transition: background 0.15s;
+  }
+  .tf-helper-trigger:hover { background: rgba(139,99,16,0.14); }
+
+  /* ── Helper result ── */
+  .tf-helper-result {
+    border: 2px solid;
+    border-radius: 16px;
+    padding: 22px;
+    text-align: center;
+    margin-bottom: 22px;
+  }
+  .tf-helper-result-label {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 28px;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+  .tf-helper-result-desc {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    color: #666;
+  }
+
+  /* ── Footer buttons ── */
+  .tf-footer { text-align: center; padding-top: 4px; }
+  .tf-restart-btn {
+    background: none;
+    border: none;
+    color: #a08050;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .tf-restart-btn:hover { color: #8B6310; }
+
+  /* ── Level / Category selection ── */
+  .tf-level-select {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 0 4px;
+  }
+  .tf-level-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    color: #8B6310;
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .tf-level-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 18px 16px;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.22);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tf-level-btn:hover { border-color: rgba(139,99,16,0.6); background: rgba(139,99,16,0.04); }
+  .tf-level-emoji { font-size: 22px; }
+  .tf-level-label {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #5a3e0a;
+  }
+  .tf-level-sub {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    color: #999;
+    letter-spacing: 0.5px;
+  }
+  .tf-cat-btn {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    color: #5a3e0a;
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.28);
+    border-radius: 8px;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tf-cat-btn:hover { border-color: rgba(139,99,16,0.65); background: rgba(139,99,16,0.05); }
+  .tf-back-level-btn {
+    background: none;
+    border: none;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    color: #bbb;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-top: 4px;
+  }
+  .tf-back-level-btn:hover { color: #888; }
+
+  /* ── 字母練習區 入口 ── */
+  .tf-alpha-entry {
+    background: linear-gradient(180deg, #F5E9BC 0%, #FFFFFF 100%);
+    border-color: rgba(184,134,40,0.40);
+  }
+  .tf-alpha-entry:hover { border-color: rgba(184,134,40,0.65); background: linear-gradient(180deg, #F0E0A8 0%, #FDFAF2 100%); }
+
+  /* ── 依難度漸層配色 difficulty colour-grading ── */
+  /* 初級 beginner — green */
+  .tf-lvl-1 { background: linear-gradient(180deg,#D4ECAC 0%,#FFFFFF 100%); border-color: rgba(99,153,34,0.35); }
+  .tf-lvl-1:hover { border-color: rgba(99,153,34,0.60); background: linear-gradient(180deg,#C4E494 0%,#F6FCF0 100%); }
+  .tf-lvl-1 .tf-level-label { color: #3B6D11; }
+  /* 中級 intermediate — amber/gold */
+  .tf-lvl-2 { background: linear-gradient(180deg,#F0DBA0 0%,#FFFFFF 100%); border-color: rgba(186,117,23,0.38); }
+  .tf-lvl-2:hover { border-color: rgba(186,117,23,0.65); background: linear-gradient(180deg,#E8CF88 0%,#FDFAF0 100%); }
+  .tf-lvl-2 .tf-level-label { color: #854F0B; }
+  /* 高級 advanced — coral/terracotta */
+  .tf-lvl-adv { background: linear-gradient(180deg,#F4C8B0 0%,#FFFFFF 100%); border-color: rgba(216,90,48,0.35); }
+  .tf-lvl-adv:hover { border-color: rgba(216,90,48,0.60); background: linear-gradient(180deg,#EDBA9C 0%,#FDF6F3 100%); }
+  .tf-lvl-adv .tf-level-label { color: #993C1D; }
+  /* 自行搜尋 search — neutral warm */
+  .tf-lvl-search { background: linear-gradient(180deg,#E0D8C4 0%,#FFFFFF 100%); border-color: rgba(90,62,10,0.22); }
+  .tf-lvl-search:hover { border-color: rgba(90,62,10,0.40); background: linear-gradient(180deg,#D4CAAE 0%,#FAF8F4 100%); }
+
+
+  /* ── 字母字卡 (Flashcards) ── */
+  .afc-scene { perspective: 1000px; display:flex; justify-content:center; margin: 6px 0 14px; }
+  .afc-card {
+    width: 250px; cursor: pointer;
+    transform-style: preserve-3d; transition: transform 0.5s;
+    position: relative;
+  }
+  .afc-card.flipped { transform: rotateY(180deg); }
+  .afc-inner { width:100%; display:grid; transform-style: preserve-3d; }
+  .afc-face {
+    grid-area:1/1; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    min-height:230px; padding:22px 18px; box-sizing:border-box;
+    border:1.5px solid rgba(139,99,16,0.3); border-radius:18px;
+    box-shadow: 0 4px 14px rgba(139,99,16,0.12);
+  }
+  .afc-front { background:#fff; }
+  .afc-back  { background:linear-gradient(180deg,#FBF5E7,#F3E4C2); transform: rotateY(180deg); }
+  .afc-letter { font-family:'Sarabun',sans-serif; font-size:96px; line-height:1; color:#5a3e0a; }
+  .afc-tap { font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#bba26a; letter-spacing:1px; }
+  .afc-zhuyin { font-family:'Noto Sans TC',sans-serif; font-size:46px; font-weight:700; color:#5a3e0a; }
+  .afc-pinyin { font-family:'Sarabun',sans-serif; font-size:26px; color:#8B6310; }
+  .afc-note { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#7a5510; margin-top:4px; }
+  .afc-mem  { font-family:'Sarabun',sans-serif; font-size:13px; color:#9a7a3a; padding:0 6px; text-align:center; line-height:1.7; max-width:100%; word-break:break-word; }
+  .afc-audio-btn {
+    display:block; margin:0 auto 10px; font-family:'Noto Sans TC',sans-serif; font-size:14px;
+    background:rgba(139,99,16,0.10); border:1px solid rgba(139,99,16,0.3); border-radius:22px;
+    padding:8px 22px; cursor:pointer; color:#7a5510;
+  }
+  .afc-audio-btn:hover { background:rgba(139,99,16,0.2); }
+  .afc-controls { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:10px; }
+  .afc-nav-btn {
+    font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#5a3e0a; background:#fff;
+    border:1.5px solid rgba(139,99,16,0.28); border-radius:8px; padding:8px 16px; cursor:pointer;
+  }
+  .afc-nav-btn:hover { border-color:rgba(139,99,16,0.65); background:rgba(139,99,16,0.05); }
+  .afc-counter { font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#999; min-width:54px; text-align:center; }
+  .afc-shuffle { align-self:center; }
+  .afc-exp {
+    background:#fff; border:1.5px solid rgba(139,99,16,0.25); border-radius:12px;
+    padding:14px 16px; margin:0 auto 12px; max-width:340px; text-align:left;
+  }
+  .afc-exp-cat { font-family:'Noto Serif TC',serif; font-size:14px; font-weight:700; color:#8B6310; margin-bottom:8px; letter-spacing:1px; }
+  .afc-exp-row { font-family:'Noto Sans TC',sans-serif; font-size:13.5px; color:#5a3e0a; line-height:1.7; margin-bottom:6px; }
+  .afc-exp-row:last-child { margin-bottom:0; }
+  .afc-exp-k { display:inline-block; font-weight:700; color:#a07a28; margin-right:6px; }
+
+
+  /* ── แถบเครื่องมือในเกม (สลับฟอนต์ / ถามคำถาม) ── */
+  .tf-tools-row { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:14px; flex-wrap:wrap; }
+  .tf-tool-btn { font-family:'Noto Sans TC',sans-serif; font-size:12.5px; background:#fff; border:1.5px solid rgba(139,99,16,0.30); border-radius:20px; padding:6px 14px; cursor:pointer; color:#7a5510; transition:all .15s; }
+  .tf-tool-btn:hover { background:rgba(139,99,16,0.10); border-color:rgba(139,99,16,0.55); }
+  .tf-tool-btn.active { background:#C8973A; color:#fff; border-color:#C8973A; }
+  .tf-tool-btn.hl { background:linear-gradient(135deg,#e8a020,#d85a30); color:#fff; border:none; font-weight:900; box-shadow:0 3px 10px rgba(216,90,48,.35); }
+  .tf-tool-btn.hl:hover { background:linear-gradient(135deg,#e8a020,#d85a30); filter:brightness(1.06); }
+
+  /* ── แคปซูลเลือกระดับ 初級/中級/高級 (Lin 2026-07-10 ย้ายขึ้นมาไว้เหนือการ์ด) ── */
+  .tf-level-tabs { display:flex; gap:8px; width:100%; max-width:640px; margin:0 0 16px; }
+  .tf-ltab { flex:1; padding:10px 8px; border-radius:999px; border:2px solid #d4b87a; background:#fff; color:#8b6310; font-size:14px; font-weight:700; cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; }
+  .tf-ltab:hover { background:#fff8ee; border-color:#c07030; }
+  .tf-ltab.active { background:linear-gradient(135deg,#e8a020,#d85a30); color:#fff; border-color:transparent; }
+
+  /* ── ฟอนต์โมเดิร์น (ไม่มีหัว) สลับได้ — เปลี่ยนชื่อฟอนต์ตรง 'Noto Sans Thai' จุดเดียว ── */
+  body.tf-modern-font .tf-banner-word,
+  body.tf-modern-font .result-v2-word,
+  body.tf-modern-font .syl-thai,
+  body.tf-modern-font .tf-syl-detail-word,
+  body.tf-modern-font .tf-sum-th,
+  body.tf-modern-font .tf-bd-th,
+  body.tf-modern-font .sg-bd-value,
+  body.tf-modern-font .tf-session-answer-word,
+  body.tf-modern-font .afc-front-char,
+  body.tf-modern-font .adv-sentence, body.tf-modern-font .adv-word,
+  body.tf-modern-font .th { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
+
+  /* ── กล่องถามคำถาม (ส่งเข้า Gmail ผ่าน Web3Forms) ── */
+  .tf-ask-overlay { position:fixed; inset:0; background:rgba(45,42,34,0.55); display:flex; align-items:center; justify-content:center; z-index:9999; padding:18px; }
+  .tf-ask-box { background:#fdfcf8; border-radius:16px; max-width:420px; width:100%; padding:22px 22px 18px; box-shadow:0 12px 40px rgba(0,0,0,0.25); font-family:'Noto Sans TC',sans-serif; }
+  .tf-ask-title { font-size:17px; font-weight:700; color:#5a3e0a; margin-bottom:4px; }
+  .tf-ask-sub { font-size:12.5px; color:#9a8a6a; margin-bottom:14px; line-height:1.5; }
+  .tf-ask-ctx { font-size:12px; background:rgba(200,151,58,0.12); border:1px solid rgba(200,151,58,0.30); border-radius:8px; padding:7px 11px; margin-bottom:12px; color:#7a5510; }
+  .tf-ask-input, .tf-ask-textarea { width:100%; border:1.5px solid rgba(139,99,16,0.25); border-radius:9px; padding:9px 11px; font-size:16px; font-family:'Noto Sans TC',sans-serif; margin-bottom:10px; background:#fff; }
+  .tf-ask-textarea { min-height:90px; resize:vertical; }
+  .tf-ask-actions { display:flex; gap:10px; justify-content:flex-end; }
+  .tf-ask-send { background:#C8973A; color:#fff; border:none; border-radius:9px; padding:9px 20px; font-size:14px; font-weight:700; cursor:pointer; }
+  .tf-ask-send:disabled { opacity:0.5; cursor:default; }
+  .tf-ask-cancel { background:none; border:1.5px solid rgba(139,99,16,0.30); border-radius:9px; padding:9px 16px; font-size:14px; cursor:pointer; color:#7a5510; }
+  .tf-ask-ok { text-align:center; padding:10px 0; color:#4a9a4a; font-size:15px; font-weight:700; }
+  .tf-bd-th { font-family:'Sarabun',sans-serif; font-size:18px; }
+  /* 2026-07-30: กล่องแถวเฉลยรูปแบบกลาง (เหมือนเกมอ่าน/เกมพิมพ์) — ใช้ในหน้าเฉลย + ป๊อปอัพตอบผิดครบ */
+  .tf-ans-rows { display:flex; flex-direction:column; gap:5px; }
+  .tf-ans-inner { background:#fff; border:1px solid #ecd8a8; border-radius:8px; padding:8px 10px; }
+  .rule-row{display:flex;align-items:flex-start;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#5a3e10;}
+  .rule-tag{background:#f5e8c8;color:#8b6310;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+  .rule-txt{color:#5a3e10;line-height:1.5;font-family:'Sarabun','Noto Sans Thai','Noto Sans TC',sans-serif;font-size:14px;}
+  .rule-arrow{color:#c07030;font-weight:700;margin:0 3px;}
+  .tf-soon-toast {
+    position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
+    background: rgba(90,62,10,0.96); color: #fff;
+    font-family: 'Noto Sans TC', 'Sarabun', sans-serif; font-size: 14px; letter-spacing: 0.5px;
+    padding: 12px 24px; border-radius: 24px; z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3); animation: tfSoonIn 0.2s ease;
+  }
+  @keyframes tfSoonIn { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+  .tf-set-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .tf-set-num { font-family:'Noto Sans TC',sans-serif; font-size:22px; font-weight:800; color:#5a3e0a; }
+  .tf-set-count { font-family:'Noto Sans TC','Sarabun',sans-serif; font-size:12px; color:#a08050; }
+  .tf-known-bar { text-align:center; margin-top:18px; }
+  .tf-known-btn { font-family:'Noto Sans TC','Sarabun',sans-serif; font-size:13px; background:rgba(126,200,126,0.12); border:1.5px solid rgba(110,170,110,0.5); color:#3f7a3f; border-radius:22px; padding:9px 22px; cursor:pointer; transition:background 0.15s; }
+  .tf-known-btn:hover { background:rgba(126,200,126,0.22); }
+  .tf-soon-card { font-family:'Noto Sans TC','Sarabun',sans-serif; font-size:16px; font-weight:700; color:#8B6310; background:linear-gradient(180deg,#F3E4C2,#FBF5E7); border:1.5px solid rgba(184,134,40,0.4); border-radius:14px; padding:18px; text-align:center; margin-bottom:16px; }
+  .tf-adv-note { font-family:'Noto Sans TC','Sarabun',sans-serif; font-size:12px; color:#8a7a5a; line-height:1.7; background:rgba(139,99,16,0.06); border:1px solid rgba(139,99,16,0.18); border-radius:12px; padding:12px 14px; margin:14px 0; }
+  .tf-session-next-btn { font-family:'Noto Serif TC',serif; font-size:15px; background:linear-gradient(135deg,#c9a227,#8B6310); color:#fff; border:none; border-radius:10px; padding:12px 28px; cursor:pointer; margin-top:4px; }
+  .tf-session-next-btn:hover { opacity:0.88; }
+  /* ── Session Summary ── */
+  .tf-session-summary { padding:4px 0; }
+  .tf-sum-score { font-family:'Noto Serif TC',serif; font-size:48px; font-weight:900; color:#8B6310; text-align:center; }
+  .tf-sum-score-label { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:#aaa; text-align:center; margin-bottom:16px; letter-spacing:1px; }
+  .tf-sum-table { width:100%; border-collapse:collapse; margin-bottom:14px; font-family:'Noto Sans TC',sans-serif; font-size:13px; }
+  .tf-sum-table th { color:#8B6310; font-weight:600; padding:6px 8px; border-bottom:1px solid rgba(139,99,16,0.2); text-align:left; }
+  .tf-sum-table td { padding:6px 8px; border-bottom:1px solid rgba(0,0,0,0.05); }
+  .tf-sum-th { font-family:'Sarabun',sans-serif; font-size:16px; }
+  .tf-sum-analysis { background:#f5f2ec; border-radius:10px; padding:12px 16px; font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#5a3e0a; line-height:1.7; }
+  .tf-sum-analysis p { margin:4px 0; }
+  /* ── RESULT page (path chip + reanalyze button still used by stepResult()) ── */
+  .tf-result-path-item {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12px;
+    background: rgba(139,99,16,0.10);
+    color: rgba(139,99,16,0.70);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .tf-result-path-sep { color: rgba(139,99,16,0.30); font-size: 12px; }
+  .tf-result-secondary {
+    padding: 14px 24px;
+    background: rgba(139,99,16,0.05);
+    color: #8B6310;
+    border: 1px solid rgba(139,99,16,0.25);
+    border-radius: 999px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* ── Error overlay ── */
+  .tf-error-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .tf-error-box {
+    background: #fff;
+    border: 1.5px solid rgba(244,67,54,0.4);
+    border-top: 3px solid #f44336;
+    border-radius: 16px;
+    padding: 28px 28px 24px;
+    max-width: 440px;
+    width: 100%;
+  }
+  .tf-error-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #f44336;
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tf-error-msg {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    color: rgba(0,0,0,0.75);
+    line-height: 1.7;
+    margin-bottom: 22px;
+  }
+  .tf-error-close {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #C8973A, #8B6310);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .tf-error-close:hover { opacity: 0.88; }
+
+  /* ── Tip overlay ── */
+  .tf-tip-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .tf-tip-box {
+    background: #fff;
+    border: 1.5px solid rgba(139,99,16,0.25);
+    border-top: 3px solid #8B6310;
+    border-radius: 16px;
+    padding: 0;
+    max-width: 440px;
+    width: 100%;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .tf-tip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 22px 14px;
+    border-bottom: 1px solid rgba(139,99,16,0.15);
+  }
+  .tf-tip-header-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 15px;
+    color: #8B6310;
+    letter-spacing: 2px;
+    font-weight: 900;
+  }
+  .tf-tip-close-btn {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+  }
+  .tf-tip-close-btn:hover { color: #444; }
+  .tf-tip-entry { margin: 0; padding: 18px 22px 16px; border-bottom: 1px solid rgba(0,0,0,0.07); }
+  .tf-tip-entry:last-child { border-bottom: none; }
+  .tf-tip-zh {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #8B6310;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .tf-tip-chars {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 20px;
+    color: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.02);
+    padding: 14px 16px;
+    border-radius: 10px;
+    line-height: 2.4;
+    border-left: 3px solid rgba(139,99,16,0.30);
+  }
+  .tf-tip-desc {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    color: rgba(0,0,0,0.75);
+    line-height: 2;
+    white-space: pre-line;
+    margin-top: 10px;
+  }
+
+  /* ── Session Guess Page (New Page 1) ── */
+  .sg-breakdown {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .sg-bd-chip {
+    background: rgba(139,99,16,0.07);
+    border: 1px solid rgba(139,99,16,0.15);
+    border-radius: 10px;
+    padding: 9px 14px;
+    text-align: center;
+    min-width: 68px;
+  }
+  .sg-bd-label {
+    font-family: 'Noto Sans TC', 'Sarabun', sans-serif;
+    font-size: 11px;
+    color: #8B6310;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+  .sg-bd-wrap { margin: 4px 0 14px; }
+  .sg-bd-group { margin-bottom: 12px; }
+  .sg-syl-head {
+    font-family: 'Sarabun', 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #8B6310;
+    text-align: center;
+    margin-bottom: 7px;
+  }
+  .sg-bd-value {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 22px;
+    color: #5a3e0a;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .sg-bd-value.zh {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  /* Lin 2026-07-25: ลบ CSS แถบปุ่ม 泰文讀音/英文讀音 ในหน้าเดา (.sg-toggle-*/.sg-info-box) — ย้ายไปเมนู 🍚 แล้ว */
+  .sg-divider { height: 1px; background: rgba(0,0,0,0.07); margin: 16px 0; }
+  .sg-question {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: #5a3e0a;
+    text-align: center;
+    margin-bottom: 18px;
+    letter-spacing: 1px;
+  }
+  .sg-tone-grid {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .sg-tone-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2.5px solid;
+    background: #fff;
+    font-family: 'Noto Serif TC', serif;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .sg-tone-btn:hover { transform: scale(1.12); box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+  .sg-dontknow-btn {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+    padding: 11px 20px;
+    background: rgba(0,0,0,0.02);
+    border: 1.5px dashed rgba(0,0,0,0.18);
+    border-radius: 10px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    color: #888;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .sg-dontknow-btn:hover { background: rgba(0,0,0,0.05); color: #555; }
+
+
+  /* ── Pre-Result Confirm Page ── */
+  /* Lin 2026-07-25: ลบ CSS ของหน้า pre-result-confirm (.prc-*) ทิ้ง — ทั้งหน้าถูกลบไปแล้ว */
+
+  /* ── Redesigned Result Page v2 ── */
+  /* Lin 2026-07-31: จัดกระชับทั้งหน้า — ตัด badge 🎉/💪 + ช่อง "結果" ทิ้ง (ลบ .result-v2-session-badge/.result-v2-guess-row/.result-v2-guess-item ที่ไม่ใช้แล้ว) ลด padding/margin ทุกจุด */
+  .result-v2 { text-align: center; padding: 4px 0 6px; }
+  .result-v2-word {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 38px;
+    font-weight: 700;
+    color: #1C1C1C;
+    letter-spacing: 3px;
+    margin-bottom: 3px;
+    line-height: 1.2;
+  }
+  .result-v2-tone-card {
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+  }
+  .result-v2-tone-num {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .result-v2-tone-match {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    opacity: 0.8;
+    margin-top: 3px;
+  }
+  .result-v2-guess-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 1px;
+  }
+  .result-v2-guess-val {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  /* Lin 2026-07-25: ลบ CSS แถบ 中文/泰文讀音/英文拼音 (.result-v2-info-*) — ย้ายไปใช้สวิตช์ในเมนู 🍚 ใต้คำศัพท์แทน */
+  /* 2026-07-30 (รอบ 3): เปลี่ยนกรอบให้เหมือนกล่องเฉลยเกมอ่าน/เกมพิมพ์ (เส้นประสีทอง+พื้นครีม) แทนกรอบทึบจางๆ เดิม */
+  .result-v2-bd {
+    background: #fffbf0;
+    border: 1.5px dashed #f0b030;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    text-align: left;
+  }
+  .result-v2-bd-title {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .result-v2-path {
+    background: rgba(0,0,0,0.03);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    text-align: left;
+  }
+  .result-v2-path-label {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 10px;
+    color: #aaa;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .result-v2-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  /* ════ สเตจ 1: ระบบคะแนน — HUD / เด้งคะแนน / คอนเฟตติ / เฉลย ════ */
+  .tf-score-hud {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: rgba(139,99,16,0.12);
+    color: #5a3e10; /* Lin 2026-07-30: เข้มขึ้นจาก #8B6310 ให้ตัวเลขคะแนนเด่นกว่าข้อความป้ายกำกับ เหมือนตัวเลข (span) ในเกมอ่าน */
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: .3px;
+  }
+  .tf-combo-hud {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: rgba(255,124,124,0.16);
+    color: #e0552f;
+    font-weight: 800;
+    font-size: 12px;
+    animation: tf-combo-pulse .6s ease infinite alternate;
+  }
+  @keyframes tf-combo-pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
+
+  /* แบนเนอร์เขียว "เล่นฟรี" หน้าเลือกระดับ — LIN 2026-06-20 */
+  .tf-free-banner {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:linear-gradient(180deg,#E9F9ED,#D2F0D9);
+    border:1.5px solid #4caf50; border-radius:12px;
+    padding:11px 14px; margin:0 0 14px;
+    font-family:'Noto Sans TC',sans-serif; font-size:13.5px; font-weight:700; color:#1d7a36;
+    box-shadow:0 2px 8px rgba(76,175,80,0.15);
+  }
+  .tf-free-banner b { color:#15692c; }
+
+  /* แบนเนอร์ชาเลนจ์รายสัปดาห์ — LIN 2026-06-20 */
+  .tf-challenge-banner {
+    background:linear-gradient(180deg,#FFF6E6,#FDEBC8);
+    border:1.5px solid #E0B84A; border-radius:14px; padding:11px 14px; margin:0 0 14px; width:100%; box-sizing:border-box;
+    font-family:'Noto Sans TC',sans-serif;
+  }
+  .tf-challenge-banner.done { background:linear-gradient(180deg,#E9F9ED,#D2F0D9); border-color:#4caf50; }
+  .tf-ch-top { display:flex; align-items:center; gap:7px; margin-bottom:8px; }
+  .tf-ch-emoji { font-size:18px; line-height:1; }
+  .tf-ch-title { flex:1; font-size:13.5px; font-weight:800; color:#8a5a12; }
+  .tf-challenge-banner.done .tf-ch-title { color:#1d7a36; }
+  .tf-ch-left { font-size:11px; font-weight:700; color:#b07a1e; white-space:nowrap; }
+  .tf-ch-bar { height:7px; border-radius:4px; background:#f0e2c2; overflow:hidden; }
+  .tf-ch-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#E8973A,#F4C24A); transition:width .4s; }
+  .tf-challenge-banner.done .tf-ch-fill { background:linear-gradient(90deg,#4caf50,#7ed07e); }
+  .tf-ch-sub { font-size:11px; color:#a07a3a; margin-top:5px; }
+
+  /* toast แจ้งเตือน (เช่น กดชุดที่ล็อก) — LIN 2026-06-20 */
+  .tf-toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px);
+    background: rgba(45,42,34,0.96); color: #fff; padding: 12px 20px; border-radius: 24px;
+    font-family: 'Noto Sans TC', sans-serif; font-size: 14px; font-weight: 600;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.3); z-index: 10001; max-width: 88%; text-align: center;
+    opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none;
+  }
+  .tf-toast.tf-toast-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* การ์ดชุดที่ล็อก/精熟 (จางลง) */
+  .tf-set-btn.tf-set-locked, .tf-set-btn.tf-set-retired { filter: grayscale(1); opacity: 0.55; }
+  .tf-set-status { display:block; font-size:11px; font-weight:800; margin-top:4px; }
+  .tf-set-locked .tf-set-status { color:#8a7a5a; }
+  .tf-set-retired .tf-set-status { color:#3a7a3a; }
+  /* ปุ่มเข้าห้องคำพิเศษ ⭐ */
+  .tf-special-entry {
+    background: linear-gradient(180deg,#FFF6DC,#FDEEC0) !important;
+    border-color: #E0B84A !important;
+  }
+
+  /* เด้งคะแนน: ช้าลง+เด่นขึ้น เด้งใหญ่แบบสปริง แล้วป้ายตัวคูณค่อยจางเข้ามาทีหลัง 0.5s — LIN 2026-06-20 */
+  .tf-score-pop {
+    position: fixed;
+    left: 50%;
+    top: 32%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    pointer-events: none;
+    font-weight: 900;
+    color: #d9a400;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    animation: tf-score-float 1.9s cubic-bezier(.22,1,.36,1) forwards;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .tf-score-pop-num { font-size: 44px; }
+  .tf-score-pop-mult {
+    font-size: 24px;
+    color: #B07820;
+    font-weight: 900;
+    opacity: 0;
+    animation: tf-score-label-in 0.45s ease-out 0.5s forwards;
+  }
+  .tf-score-pop-big .tf-score-pop-num { font-size: 62px; color: #d9a400; }
+  @keyframes tf-score-float {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(20px) scale(.5); }
+    20%  { opacity: 1; transform: translateX(-50%) translateY(-6px) scale(1.38); }
+    34%  { transform: translateX(-50%) translateY(2px) scale(1.02); }
+    46%  { transform: translateX(-50%) translateY(-3px) scale(1.14); }
+    60%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.05); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-72px) scale(1); }
+  }
+  @keyframes tf-score-label-in {
+    from { opacity: 0; transform: translateY(5px) scale(.85); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  /* แบนเนอร์คอมโบเด้งใหญ่แบบเกมออนไลน์ — LIN 2026-06-20 */
+  /* คอมโบเด้ง: ย้ายลงล่าง (top 52%) กันทับป๊อปคะแนน +N ที่ลอยขึ้นจาก 32% — Lin 2026-07-10 */
+  .tf-combo-flash {
+    position: fixed; left: 50%; top: 52%; transform: translateX(-50%);
+    z-index: 10000; pointer-events: none; text-align: center;
+    animation: tf-combo-flash-anim 1.6s cubic-bezier(.18,.9,.3,1.3) forwards;
+  }
+  .tf-combo-flash-x {
+    font-size: 64px; font-weight: 900; line-height: 1;
+    color: #C8973A; -webkit-text-stroke: 2px #fff;
+    text-shadow: 0 4px 18px rgba(176,120,32,0.55), 0 0 2px #fff;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .tf-combo-flash-main {
+    font-size: 26px; font-weight: 900; color: #B07820; margin-top: 2px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.18); font-family: 'Noto Sans TC', sans-serif;
+  }
+  .tf-combo-flash-sub {
+    font-size: 15px; font-weight: 800; color: #8B6310; margin-top: 4px;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  @keyframes tf-combo-flash-anim {
+    0%   { opacity: 0; transform: translateX(-50%) scale(.3) rotate(-8deg); }
+    14%  { opacity: 1; transform: translateX(-50%) scale(1.25) rotate(3deg); }
+    26%  { transform: translateX(-50%) scale(.95) rotate(-2deg); }
+    38%  { transform: translateX(-50%) scale(1.08) rotate(0deg); }
+    50%  { opacity: 1; transform: translateX(-50%) scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-40px); }
+  }
+  .tf-combo-hud.tf-combo-bump { animation: tf-combo-pulse .26s ease-in-out 3 alternate; }
+
+  .tf-confetti-wrap {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9998; overflow: hidden;
+  }
+  .tf-confetti {
+    position: absolute;
+    top: -12px;
+    width: 9px; height: 14px;
+    border-radius: 2px;
+    opacity: .95;
+    animation: tf-confetti-fall 1.6s linear forwards;
+  }
+  @keyframes tf-confetti-fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(105vh) rotate(540deg); opacity: 0; }
+  }
+
+  .tf-reveal-box { text-align: center; }
+  .tf-reveal-title { font-size: 18px; font-weight: 800; color: #c46a00; margin-bottom: 4px; }
+  .tf-reveal-sub { font-size: 13px; color: #7a6a4a; margin-bottom: 12px; line-height: 1.5; }
+  .tf-reveal-word { font-size: 40px; font-weight: 800; color: #2b2b2b; margin: 4px 0; font-family: 'Sarabun','Noto Sans Thai',sans-serif; }
+  .tf-reveal-zh { font-size: 14px; color: #555; margin-bottom: 12px; }
+  .tf-reveal-zh .th { color: #8B6310; }
+  .tf-reveal-answer {
+    display: inline-block;
+    padding: 8px 18px;
+    border: 2px solid;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+
+  .tf-score-summary { text-align: center; margin-bottom: 6px; }
+  .tf-score-summary-total {
+    font-size: 44px; font-weight: 900; color: #8B6310; line-height: 1;
+  }
+  .tf-score-summary-total span { font-size: 18px; font-weight: 700; }
+  .tf-score-summary-bonus {
+    display: inline-block; margin-top: 8px; padding: 4px 14px;
+    border-radius: 999px; background: rgba(217,164,0,0.16);
+    color: #b07d00; font-weight: 800; font-size: 14px;
+  }
+
+  /* ════ สเตจ 2: คำทอง + streak ════ */
+  .tf-golden-hud {
+    display:inline-block; margin-left:6px; padding:1px 9px; border-radius:999px;
+    background:linear-gradient(90deg,#ffe9a8,#ffcf5a); color:#8a5a00; font-weight:800; font-size:12px;
+    animation: tf-combo-pulse .7s ease infinite alternate;
+  }
+  .tf-banner-word-gold {
+    background:linear-gradient(90deg,#d9a400,#ffd24a,#d9a400);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    text-shadow:0 0 18px rgba(255,200,60,0.35);
+  }
+  .tf-score-pop-gold .tf-score-pop-num { color:#d9a400; }
+  .tf-streak-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:10px 0 4px; }
+  .tf-streak-chip {
+    font-size:13px; font-weight:800; padding:5px 13px; border-radius:999px;
+    background:rgba(139,99,16,0.10); color:#8B6310;
+  }
+  .tf-streak-chip.done { background:rgba(74,154,74,0.14); color:#3f8f3f; }
+
+  /* ════ สเตจ 3: น้องมีนา + แบดจ์ ════ */
+  .tf-mina { display:flex; align-items:flex-start; gap:10px; justify-content:center; margin:6px 0 12px; }
+  .tf-mina-big { margin:10px 0 16px; }
+  .tf-mina-face {
+    font-size:38px; line-height:1; flex-shrink:0;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.12));
+    animation: tf-mina-bob 2s ease-in-out infinite;
+  }
+  .tf-mina-big .tf-mina-face { font-size:50px; }
+  @keyframes tf-mina-bob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+  .tf-mina-bubble {
+    position:relative; background:#fff; border:1.5px solid #f0e2c2; border-radius:14px;
+    padding:10px 14px; font-size:14px; color:#5a4a2a; line-height:1.5; max-width:300px;
+    box-shadow:0 2px 8px rgba(139,99,16,.08); text-align:left;
+  }
+  .tf-mina-bubble::before {
+    content:''; position:absolute; left:-8px; top:16px; width:0; height:0;
+    border-top:7px solid transparent; border-bottom:7px solid transparent; border-right:9px solid #f0e2c2;
+  }
+  /* น้องมีนา — ป๊อปพูดสดระหว่างเล่น (มุมล่างซ้าย ไม่ทับคะแนนกลางจอ) — Lin 2026-07-10 */
+  .tf-mina-toast {
+    position:fixed; left:14px; bottom:18px; z-index:10002; max-width:min(300px,78vw);
+    display:flex; align-items:flex-end; gap:8px; pointer-events:none;
+    opacity:0; transform:translateY(14px); transition:opacity .32s, transform .32s;
+  }
+  .tf-mina-toast.show { opacity:1; transform:translateY(0); }
+  .tf-mina-toast-face { font-size:34px; line-height:1; flex-shrink:0; filter:drop-shadow(0 2px 4px rgba(0,0,0,.12)); }
+  .tf-mina-toast-bubble {
+    background:#FAF4E8; border:1.5px solid var(--gold-light,#F3E4C2); border-radius:14px;
+    padding:9px 13px; font-family:'Noto Sans TC',sans-serif; font-size:13.5px; color:#5a4a2a; line-height:1.5;
+    box-shadow:0 4px 14px rgba(139,99,16,.14);
+  }
+  .tf-badge-unlock {
+    margin:8px 0 14px; padding:14px; border-radius:14px;
+    background:linear-gradient(135deg,#fbf3df,#fff8ec); border:1px solid #ecdfc4; text-align:center;
+  }
+  .tf-badge-unlock-title { font-size:15px; font-weight:800; color:#b07d00; margin-bottom:10px; }
+  .tf-badge-unlock-grid { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .tf-badge-card {
+    width:96px; padding:12px 8px; border-radius:14px; background:#fff;
+    border:1.5px solid #e6d3a0; box-shadow:0 3px 10px rgba(139,99,16,.10);
+    animation: tf-badge-pop .5s cubic-bezier(.2,1.2,.3,1) both;
+  }
+  @keyframes tf-badge-pop { 0%{transform:scale(.5);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+  .tf-badge-emoji { font-size:34px; line-height:1; }
+  .tf-badge-zh { font-size:13px; font-weight:800; color:#5C4410; margin-top:5px; }
+  .tf-badge-th { font-family:'Sarabun',sans-serif; font-size:12px; color:#8B7340; }
+  .tf-badge-need { font-size:10px; color:#b0a080; margin-top:4px; }
+
+  .tf-home-streak { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 0 14px; }
+  .tf-stat-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; width:100%; max-width:640px; margin:18px 0 14px; }
+  .tf-stat-row .tf-streak-chip { font-size:12.5px; padding:6px 14px; }
+  .tf-stat-row .tf-streak-chip b { font-weight:800; color:#5a3e0a; }
+  .tf-badge-link { border:none; cursor:pointer; }
+  .tf-badge-link:active { transform:scale(.97); }
+  .tf-badge-tier-title { font-size:13px; font-weight:800; color:#8B6310; margin:14px 0 8px; }
+  .tf-badge-card.locked { opacity:.45; filter:grayscale(1); }
+  /* 進度/⚡ bars — เพิ่ม 2026-07-03, สไตล์เดียวกับ reading-game.html/typing-game.html (bars-wrap/bar-row/bar-fill) */
+  /* หมายเหตุ: scope ด้วย #tf-banner (ตัว element จริงคือ id="tf-banner" class="tf-word-banner" — ใช้ id ให้ชัวร์ที่สุด) */
+  #tf-banner .bars-wrap { width:100%; max-width:640px; margin:6px 0 4px; display:flex; flex-direction:column; gap:6px; }
+  #tf-banner .bar-row { display:flex; align-items:center; gap:8px; font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#a08050; }
+  #tf-banner .bar-bg { flex:1; height:7px; background:#ede0c8; border-radius:4px; overflow:hidden; }
+  #tf-banner .bar-fill { height:100%; border-radius:4px; transition:width .4s ease; }
+  #tf-banner .bar-fill.prog { background:linear-gradient(90deg,#e8a020,#d85a30); }
+  #tf-banner .bar-fill.power { background:linear-gradient(90deg,#66bb6a,#43a047); }
+  #tf-banner .bar-label { min-width:52px; text-align:right; font-size:11px; }
+  /* Lin 2026-07-24: 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用完就不再自動跳出 */
+  #gt-tour-overlay{position:fixed;inset:0;z-index:10050;display:none;}
+  #gt-tour-overlay.show{display:block;}
+  #gt-tour-spot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(28,20,6,.62);transition:top .32s ease,left .32s ease,width .32s ease,height .32s ease;pointer-events:none;}
+  #gt-tour-card{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(340px,92vw);background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 10px 32px rgba(0,0,0,.28);font-family:'Noto Sans TC',sans-serif;z-index:10051;}
+  #gt-tour-card .gt-step{font-size:11.5px;font-weight:800;color:#C8973A;letter-spacing:1px;margin-bottom:4px;}
+  #gt-tour-card .gt-title{font-size:16px;font-weight:900;color:#5a3e0a;margin-bottom:6px;}
+  #gt-tour-card .gt-text{font-size:13.5px;color:#444;line-height:1.6;margin-bottom:12px;}
+  #gt-tour-card .gt-text b{color:#8B6310;}
+  #gt-tour-card .gt-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  #gt-tour-card .gt-skip{background:none;border:none;color:#999;font-size:12.5px;cursor:pointer;padding:6px 4px;}
+  #gt-tour-card .gt-nav{display:flex;gap:6px;}
+  #gt-tour-card .gt-btn{border:none;border-radius:999px;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
+  #gt-tour-card .gt-prev{background:#f3e4c2;color:#8B6310;}
+  #gt-tour-card .gt-next{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
+
+  /* Lin 2026-08-02: กันลากนิ้ว/เมาส์เลือกคำศัพท์ + กันเมนูกดค้างบนมือถือ (ห้ามพจนานุกรมเครื่องฟังเสียงก่อนตอบ = โกง) */
+  .tf-word-banner, .tf-banner-word, .tf-read-th, .tf-read-en {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+  }
+</style>
+<script>
+/* Lin 2026-08-02: ปิดเมนูคลิกขวาบนกล่องคำศัพท์ (คอม) — กันฟีเจอร์ "อ่านออกเสียง/ค้นหา" ในเมนูคลิกขวาของบาง browser */
+document.addEventListener('contextmenu', function(e){
+  if (e.target.closest && e.target.closest('#tf-banner')) e.preventDefault();
+});
+</script>
+<!-- html2pdf ถอดออก 2026-06-27: เลิกใช้แล้ว (เปลี่ยนไปใช้หน้าต่าง print) ลดการโหลดที่ไม่จำเป็น -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "泰華眼裡的泰語教學",
+  "alternateName": "Mr. Tai Hua",
+  "url": "https://mrtaihualin.com/",
+  "logo": "https://mrtaihualin.com/assets/apple-touch-icon.png",
+  "image": "https://mrtaihualin.com/assets/share-card.png",
+  "description": "專為台灣人設計的線上一對一泰語課程，中文授課，從聲調到對話真正開口說泰語。",
+  "sameAs": [
+    "https://www.youtube.com/@mrtaihua",
+    "https://www.facebook.com/mrtaihua"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "additionalType": "https://schema.org/LearningResource",
+  "name": "泰語聲調練習室",
+  "description": "免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。",
+  "url": "https://mrtaihualin.com/tone-finder.html",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Web",
+  "inLanguage": ["th", "zh-TW"],
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TWD"
+  },
+  "provider": {
+    "@type": "Organization",
+    "name": "泰華眼裡的泰語教學",
+    "url": "https://mrtaihualin.com/"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://mrtaihualin.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "遊戲",
+      "item": "https://mrtaihualin.com/games.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "泰語聲調練習室",
+      "item": "https://mrtaihualin.com/tone-finder.html"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="site-nav"><div class="nav-logo" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_nav_logo_click',{category:'game'});}catch(e){}goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html">遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">關於我</a><div class="nav-drop"><span class="nav-drop-label">老師與學生</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/faq.html#feedback-section">分享你的經驗</a><span class="nav-drop-label">專業服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊服務</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯服務</a><div class="nav-drop-divider"></div><a href="/page-services.html#quote-form">📋 索取報價</a><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_nav_menu_toggle',{category:'game'});}catch(e){}toggleMenu()"><span></span><span></span><span></span></div></nav>
+
+<!-- ── PAGE BOTTOM NAV ── -->
+<div class="page-strip">
+  <span class="page-strip-label">頁面</span>
+  <a href="index.html">老師・介紹</a>
+  <a href="pricing.html">課程・費用</a>
+  <a href="faq.html">須知・分享</a>
+  <a href="page-services.html">導遊・翻譯</a>
+  <a href="content.html">泰語・分享</a>
+  <a href="games.html">泰語・遊戲</a>
+</div>
+
+<!-- ── MINIMAL MODALS (for nav modal triggers) ── -->
+<!-- ── MAIN PAGE ── -->
+<div class="tf-page">
+  <div class="tf-page-header">
+    <h1 class="tf-page-title" style="margin:0;">🎵 泰語聲調練習室</h1>
+    <div class="tf-page-hint" id="tf-hint">選擇等級與主題，開始練習聲調</div>
+  </div>
+
+  <!-- How-to modal: เกมเสียง -->
+  <div id="tf-howto-modal" onclick="if(event.target===this){try{if(typeof gtag==='function')gtag('event','tone_finder_howto_close',{category:'game'});}catch(e){}this.style.display='none'}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
+      <button onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_close',{category:'game'});}catch(e){}document.getElementById('tf-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
+      <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🎵 怎麼玩？</div>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">泰語聲調其實有規律！跟著遊戲一步一步推導，慢慢就能自己判斷聲調 😊</p>
+      <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
+        <li>泰語有 5 個聲調，同一個字聲調不一樣，意思就完全不同喔！</li>
+        <li>看到泰文單字，題目問什麼就回答什麼就好了 😊 不確定也沒關係，先猜猜看，玩多了自然就會有感覺的 💛</li>
+        <li>連續第一次就答對會出現 🔥連擊，分數還會加乘，越答越起勁！</li>
+      </ul>
+      <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
+        <ul style="margin:0;padding-left:18px;line-height:1.9;">
+          <li>每題從 <strong>10 分</strong>開始：答錯或用「?」提示 1／2／3 次 → <strong>7／4／1 分</strong>，滿 4 次 → 0 分並直接看解答</li>
+          <li>連續第一次答對 3／5／8 次 → <strong>×1.5／×2／×3</strong></li>
+          <li>✨黃金字（約 18% 機率）答對再 <strong>×2</strong></li>
+          <li>玩完一輪 <strong>+20</strong>，整輪都第一次就答對（perfect）再 <strong>+50</strong></li>
+          <li>玩完一輪可下載 📄 PDF 報告</li>
+        </ul>
+      </div>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，分數和進度都會幫你存起來，還可以在排行榜上看到自己進步了多少喔 ⭐</p>
+
+      <button onclick="var d=document.getElementById('tf-howto-detail');var open=d.style.display==='block';d.style.display=open?'none':'block';this.textContent=open?'📖 查看完整玩法與計分方式 ▼':'📖 收起完整版說明 ▲';try{if(typeof gtag==='function')gtag('event','tone_finder_howto_detail_toggle',{category:'game',open:!open});}catch(e){}" style="width:100%;background:var(--gold-light,#F3E4C2);border:1px solid var(--gold-bright,#C8973A);color:#8B6310;font-weight:700;font-size:13px;border-radius:8px;padding:9px 0;cursor:pointer;margin:4px 0 4px;">📖 查看完整玩法與計分方式 ▼</button>
+
+      <div id="tf-howto-detail" style="display:none;font-size:14.5px;color:#333;line-height:1.9;margin-top:10px;border-top:1px dashed rgba(139,99,16,0.25);padding-top:14px;">
+        <div style="font-weight:700;color:#8B6310;margin:0 0 4px;">📚 三個等級</div>
+        <p style="margin:0 0 10px;"><strong>初級</strong>：單音節字為主。<strong>中級</strong>：2 音節以上的字。<strong>高級</strong>：整句話，猜完整句的聲調規則。三個等級都是每輪隨機出題（高級是一整句）。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🎵 怎麼推導聲調</div>
+        <p style="margin:0 0 10px;">看到泰文單字，會一步一步問你規則問題（子音類型、活音死音之類的），照著問題選答案，一步步推導出這個字的聲調。不確定也沒關係，先猜猜看，玩多了自然會有感覺。每一步答錯可以按「？」偷看一下，同一步第一次偷看不扣分，之後每次偷看扣 1 級分數。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡🔥 兩種模式</div>
+        <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：每一步會反白正確答案，方便熟悉規則——這個模式整輪都不計分、不算星星、不算複習進度，純粹拿來練習規則用。<strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己推導，答對才有分數。畫面上按鈕可以切換。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
+        <p style="margin:0 0 10px;">覺得這個字已經很熟，可按「已記得」跳過推導直接自測。不會加分、不會加星星，純粹標記「已精通」，用在複習系統。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
+        <p style="margin:0 0 10px;">點 🍚 圖示展開直式清單：讀音顯示・翻譯顯示・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・字體切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響推導或計分）。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔤 字母練習區</div>
+        <p style="margin:0 0 10px;">另外還有獨立的「字母練習區」，用一張張字卡練習子音、母音、尾音的發音，可以聽真人語音，跟主遊戲的推導模式是分開的功能。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章／連續天數勳章</div>
+        <p style="margin:0 0 10px;">星星是這個字經過複習真的「精通」了才拿到（跟其他遊戲共用），累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。這個遊戲另外還有「連續天數」勳章，照每天登入練習的連續天數解鎖：稻種（3天）→ 秧苗（7天）→ 幼穗（14天）→ 金穗（30天）→ 金色稻田（100天）。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 下載 PDF 報告</div>
+        <p style="margin:0 0 10px;">玩完一輪可以下載 PDF 報告，裡面有這輪總分、有沒有解鎖新勳章、每個字的表現（讀音／結果／得分），還有「弱點分析」列出需要加強的聲調規則。</p>
+
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
+        <p style="margin:0;">推導錯過或偷看過「？」的字，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。</p>
+      </div>
+
+      <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:16px 0 0;">聲調其實是有規律的呢～想真正搞懂，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
+    </div>
+  </div>
+
+  <div id="tf-newword-banner" style="width:100%;"></div>
+
+  <div class="tf-tools-row">
+    <div id="rg-profile-wrap" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
+      <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
+      <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
+      <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_open',{category:'game'});}catch(e){}dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
+      <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
+      <div class="tf-stat-row" id="tf-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
+        <span class="tf-streak-chip" title="連續天數">🔥 <b id="tf-streak-num">0</b></span>
+        <span class="tf-streak-chip" title="護盾">🛡️ ×<b id="tf-freeze-num">0</b></span>
+        <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_stars_view',{category:'game'});}catch(e){}TF.showStars()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showStars()}">⭐ <b id="tf-star-count">0</b></span>
+        <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_badges_view',{category:'game'});}catch(e){}TF.showBadges()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showBadges()}"><span id="tf-badge-emoji">🌱</span> <b id="tf-badge-count">0</b></span>
+      </div>
+      <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
+    </div>
+    <button class="tf-tool-btn" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlpha()">🔤 字母練習區</button>
+  </div>
+
+  <div class="tf-level-tabs" id="tf-level-tabs">
+    <button class="tf-ltab" id="tf-ltab-1" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:1});}catch(e){}TF.selectLevel(1)">初級</button>
+    <button class="tf-ltab" id="tf-ltab-2" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:2});}catch(e){}TF.selectLevel(2)">中級</button>
+    <button class="tf-ltab" id="tf-ltab-3" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:3});}catch(e){}TF.selectLevel(3)">高級</button> <!-- Lin 2026-07-16: เปิดคืนตามที่ Lin สั่ง -->
+  </div>
+
+  <div class="tf-card">
+    <div class="tf-word-banner" id="tf-banner"></div>
+    <!-- แถวปุ่มใต้คำศัพท์: 🐣คำอ่านไทย · 🔡คำอ่านโรมัน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ
+         Lin 2026-07-25: ถอดปุ่ม 發音 (🔊) ออกตามที่ Lin สั่ง — ฟังเสียงแล้วรู้วรรณยุกต์ทันที = เฉลยก่อนตอบ
+         แทนด้วยปุ่ม 讀音 (🐣) + 英文讀音 (🔡) ซึ่ง "โชว์เฉพาะหลังผู้เล่นตอบวรรณยุกต์ไปแล้ว" เท่านั้น
+         (โน้ตเดิม 2026-07-16 บอกว่าคำอ่านจะเฉลยวรรณยุกต์ก่อนตอบ — แก้ด้วยการล็อกไม่ให้โชว์ตอนขั้นเดา session-guess) -->
+    <div id="tf-word-ctl-row" style="display:none;align-items:center;justify-content:center;gap:8px;margin:0;padding:0 22px 14px;">
+      <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_toggle_pron',{category:'game'});}catch(e){}TF.togglePron()"></button>
+      <span id="zh-toggle-slot"></span>
+      <span id="tf-vault-btn-slot"></span>
+      <button id="tf-guide-toggle" class="word-ctl-btn" type="button" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_toggle_guide',{category:'game'});}catch(e){}TF.toggleGuide()"></button>
+      <span id="font-toggle-slot"></span>
+      <!-- Lin 2026-07-31: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 — เดิมลอยเป็นปุ่มเล็กใต้คำแปลจีน ย้ายมารวมในเมนู 🍚 ตามที่ Lin สั่ง · ไอคอน 🙏 = ท่าไหว้ไทย สื่อถึง "คำสุภาพ" ตรงตัว (ไม่ใช่ไอคอนทั่วไป) · render() ใน tone-finder-game.js เป็นคนตั้ง textContent/data-mode + ซ่อนแถวนี้เวลาไม่ได้เล่น高級句子 -->
+      <button id="tf-particle-toggle" class="word-ctl-btn" type="button" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_toggle_particle',{category:'game'});}catch(e){}TF.toggleParticleMode()" style="display:none;">🙏</button>
+    </div>
+    <!-- Lin 2026-07-19: ยุบปุ่มทั้งหมดเข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
+    <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น)
+         เกมเสียงไม่มีแถว 英文讀音 ในเมนูแล้ว — ย้ายไปเป็นปุ่ม 🔡 ข้างคำในหน้าเฉลย (คู่กับปุ่ม 🔊) ตามที่ Lin สั่ง
+         เหตุผล: คำอ่านโรมันมีขีดวรรณยุกต์ = เฉลยคำตอบ เลยใช้ได้เฉพาะตอนเฉลย ปุ่มอยู่ในเมนูตลอดเวลาแล้วกดไม่เห็นผล ทำให้งง
+         禮貌詞 (ครับ/ค่ะ/คะ) อยู่ท้ายสุด — เกี่ยวกับ高級句子เท่านั้น เกมอื่น/ระดับอื่นไม่มีแถวนี้โผล่ (ปุ่มถูกซ่อนอัตโนมัติ) -->
+    <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'tf-word-ctl-row',items:[
+      {id:'rg-pron-toggle',      label:'讀音',   state:'pron'},
+      {id:'zh-toggle-slot',      label:'翻譯',   state:'zh'},
+      {id:'tf-vault-btn-slot',   label:'單字庫', state:'vault'},
+      {id:'tf-guide-toggle',     label:'提示',   state:'guide'},
+      {id:'font-toggle-slot',    label:'字體',   state:'font'},
+      {id:'tf-particle-toggle',  label:'禮貌詞', state:'particle'}
+    ]});});</script>
+    <div class="tf-bc" id="tf-bc"></div>
+    <div class="tf-nav-bar" id="tf-nav-bar">
+      <button class="tf-nav-btn" id="tf-back-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_step_back',{category:'game'});}catch(e){}TF.back()" disabled>← 上一步</button>
+      <button class="tf-nav-btn" id="tf-fwd-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_step_forward',{category:'game'});}catch(e){}TF.forward()" disabled>下一步 →</button>
+    </div>
+    <!-- Lin 2026-07-30 (แก้รอบ 2): ย้ายกล่องพยางค์/กล่องคำในประโยค 高級 มาอยู่ "เหนือคำถามเลย" (ใต้แถบ上一步/下一步) ตามที่ Lin ยืนยันจาก mockup — เดิมอยู่เหนือแถบ上一步/下一步 (ติดกรอบทองเลย) ย้ายลงมาให้ต่อกับคำถามแทน -->
+    <div class="syl-strip" id="tf-syl-strip" style="display:none"></div>
+    <div class="tf-body" id="tf-body"></div>
+  </div>
+</div>
+
+<!-- 逐步導覽（滑鼠一格一格指出功能）— Lin 2026-07-24 -->
+<div id="gt-tour-overlay">
+  <div id="gt-tour-spot"></div>
+</div>
+<div id="gt-tour-card" style="display:none;">
+  <div class="gt-step" id="gt-tour-step">1 / 6</div>
+  <div class="gt-title" id="gt-tour-title"></div>
+  <div class="gt-text" id="gt-tour-text"></div>
+  <div class="gt-actions">
+    <button class="gt-skip" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_tour_skip',{category:'game'});}catch(e){}gtTourEnd()">跳過導覽</button>
+    <div class="gt-nav">
+      <button class="gt-btn gt-prev" id="gt-tour-prev" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_tour_prev',{category:'game'});}catch(e){}gtTourPrev()">‹ 上一步</button>
+      <button class="gt-btn gt-next" id="gt-tour-next" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_tour_next',{category:'game'});}catch(e){}gtTourNext()">下一步 ›</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCRIPTS ── -->
+<script>
+(function(){
+  // P6-28 (2026-08-08): ปิดปุ่มเกม (ดู CSS ต้นไฟล์) จนกว่า GameContentLoader.boot() จะโหลดสคริปต์เกมสำเร็จจริง
+  var GC_SEL = '[onclick*="TF."]';
+  function gcGate(){
+    document.querySelectorAll(GC_SEL).forEach(function(el){
+      el.setAttribute('data-gc-gated','1');
+      if (el.tagName === 'BUTTON') { el.disabled = true; }
+      else {
+        if (el.hasAttribute('tabindex')) el.setAttribute('data-gc-orig-tabindex', el.getAttribute('tabindex'));
+        el.setAttribute('tabindex','-1');
+      }
+    });
+  }
+  function gcRelease(){
+    document.documentElement.classList.add('gc-ready');
+    document.querySelectorAll('[data-gc-gated="1"]').forEach(function(el){
+      el.removeAttribute('data-gc-gated');
+      if (el.tagName === 'BUTTON') { el.disabled = false; }
+      else if (el.hasAttribute('data-gc-orig-tabindex')) { el.setAttribute('tabindex', el.getAttribute('data-gc-orig-tabindex')); el.removeAttribute('data-gc-orig-tabindex'); }
+      else { el.removeAttribute('tabindex'); }
+    });
+  }
+  gcGate();
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=42']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+})();
+</script>
+
+<div style="height:44px;background:#0A0804;"></div>
+<footer>
+  專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+</footer>
+<script src="js/acquisition/posts-data.js"></script>
+<script src="js/acquisition/lessons-data.js"></script>
+<script src="data/nav-template.js?v=2"></script>
+<script src="js/core/shared.min.js?v=23"></script>
+<script>
+// ── GA4 Extra Events: tone-finder.html ──────────────────────────────
+// (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)
+
+// [1] Lead magnet banner คลิก
+(function() {
+  var banner = document.querySelector('[onclick="openModal(\'modal-freebie\')"]');
+  if (banner) {
+    banner.addEventListener('click', function() {
+      gtag('event', 'lead_magnet_click', {category:'game',  source_page: 'tone_finder' });
+    });
+  }
+})();
+
+// [2] Scroll depth (50% / 90%)
+(function() {
+  var fired = {};
+  window.addEventListener('scroll', function() {
+    var h = document.body.scrollHeight - window.innerHeight;
+    if (h <= 0) return;
+    var pct = Math.round((window.scrollY / h) * 100);
+    [50, 90].forEach(function(m) {
+      if (pct >= m && !fired[m]) {
+        fired[m] = true;
+        gtag('event', 'scroll_depth', {category:'game',  depth_percent: m, page: 'tone_finder' });
+      }
+    });
+  }, { passive: true });
+})();
+
+// [3] Time on page (60s / 180s)
+(function() {
+  var t = 0;
+  var iv = setInterval(function() {
+    t += 30;
+    if (t === 60 || t === 180) {
+      gtag('event', 'time_on_page', {category:'game',  seconds: t, page: 'tone_finder' });
+    }
+    if (t >= 300) clearInterval(iv);
+  }, 30000);
+})();
+// ────────────────────────────────────────────────────────────────────
+</script>
+
+<!-- ── Game Switcher (fixed pill) ── -->
+<style>
+#game-switcher{position:fixed;bottom:64px;left:50%;right:auto;transform:translateX(-50%);display:flex;gap:0;background:rgba(255,255,255,0.97);border:1.5px solid #d4b87a;border-radius:999px;box-shadow:0 4px 20px rgba(90,62,10,0.18);z-index:999;max-width:94vw;overflow-x:auto;-webkit-overflow-scrolling:touch;font-family:'Noto Sans TC',sans-serif;backdrop-filter:blur(8px);}
+.gs-tab{padding:9px 18px;font-size:13px;font-weight:700;color:#8b6310;text-decoration:none;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.gs-tab:hover{background:rgba(139,99,16,0.08);}
+.gs-tab.gs-active{background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;pointer-events:none;}
+.gs-divider{width:1.5px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
+@media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}
+/* LIN 2026-07-04: มือถือแถบสลับเกมลอยสูงกว่า → เพิ่มที่ว่างล่างการ์ดกันบังปุ่มตอบ */
+.tf-card{padding-bottom:132px;}}
+</style>
+<div id="game-switcher" data-current="tone_finder"></div>
+<script src="js/games/game-switcher.js?v=1"></script>
+<!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
+<script>
+// ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-24 ──
+function dismissHowtoHint(id){
+  try{ var b=document.getElementById('howto-hint-'+id); if(b) b.classList.remove('show'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_'+id,'1'); }catch(e){}
+}
+
+// ── 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用過一次就不再自動跳出 — Lin 2026-07-24 ──
+var GT_TOUR_STEPS=[
+  {sel:'#tf-banner',       title:'這裡是題目卡', text:'顯示現在第幾題，還有現在要判斷聲調的泰文字。'},
+  {sel:'.sg-tone-grid',    title:'猜猜是第幾聲？', text:'泰語有 5 個聲調，看到字先猜猜看是第幾聲，點數字或直接按鍵盤 1–5 都可以。'},
+  {sel:'.sg-dontknow-btn', title:'不確定嗎？沒關係', text:'點這裡會帶你一步一步分析這個字的聲調規則，慢慢學會怎麼判斷，不用硬猜。'},
+  {sel:'#wm-trigger',      title:'更多功能都在這裡', text:'點 🍚 打開選單：讀音、翻譯、收藏單字、提示、換字體、🙏禮貌詞（高級句子專用）都在裡面。'},
+  {sel:'#tf-alpha-btn',    title:'還不熟字母嗎？', text:'可以先來這裡單獨練習泰文字母的發音，練熟了再回來玩。'},
+  {sel:'#rg-profile-wrap', title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
+];
+var gtTourIdx=0;
+function gtTourPosition(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  var el=step?document.querySelector(step.sel):null;
+  var spot=document.getElementById('gt-tour-spot');
+  if(!el){ spot.style.width='0px'; spot.style.height='0px'; return; }
+  try{ el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+  setTimeout(function(){
+    var r=el.getBoundingClientRect();
+    var pad=8;
+    spot.style.top=Math.max(0,r.top-pad)+'px';
+    spot.style.left=Math.max(0,r.left-pad)+'px';
+    spot.style.width=(r.width+pad*2)+'px';
+    spot.style.height=(r.height+pad*2)+'px';
+  },260);
+}
+function gtTourRender(){
+  var step=GT_TOUR_STEPS[gtTourIdx];
+  if(!step){ gtTourEnd(); return; }
+  // ข้ามจุดที่ยังไม่มีของจริงบนจอ (เช่นคำนี้ไม่มีปุ่ม🤷 บางคำเป็นคำทบทวนพิเศษ) — กันชี้จุดว่าง
+  if(!document.querySelector(step.sel)){
+    if(gtTourIdx<GT_TOUR_STEPS.length-1){ gtTourIdx++; gtTourRender(); } else { gtTourEnd(); }
+    return;
+  }
+  document.getElementById('gt-tour-step').textContent=(gtTourIdx+1)+' / '+GT_TOUR_STEPS.length;
+  document.getElementById('gt-tour-title').textContent=step.title;
+  document.getElementById('gt-tour-text').innerHTML=step.text;
+  document.getElementById('gt-tour-prev').style.visibility=(gtTourIdx===0)?'hidden':'visible';
+  document.getElementById('gt-tour-next').textContent=(gtTourIdx===GT_TOUR_STEPS.length-1)?'開始玩 →':'下一步 ›';
+  gtTourPosition();
+}
+function gtTourNext(){
+  if(gtTourIdx>=GT_TOUR_STEPS.length-1){ gtTourEnd(); return; }
+  gtTourIdx++; gtTourRender();
+}
+function gtTourPrev(){
+  if(gtTourIdx<=0) return;
+  gtTourIdx--; gtTourRender();
+}
+function gtTourEnd(){
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.remove('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='none';
+  try{ localStorage.setItem('howto_tour_seen_tone','1'); }catch(e){}
+  try{ localStorage.setItem('howto_hint_seen_tone','1'); }catch(e){} // ทัวร์สอนครบแล้ว ไม่ต้องเด้งกล่องเล็กซ้ำอีก
+}
+function gtTourStart(){
+  gtTourIdx=0;
+  var ov=document.getElementById('gt-tour-overlay'); if(ov) ov.classList.add('show');
+  var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
+  gtTourRender();
+}
+// รอให้โจทย์ข้อแรก + ปุ่ม 🍚 (สร้างหลัง DOMContentLoaded โดย word-menu.js) พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
+(function(){
+  try{
+    if(localStorage.getItem('howto_tour_seen_tone')) return;
+    var tries=0;
+    var waitReady=setInterval(function(){
+      tries++;
+      var banner=document.getElementById('tf-banner');
+      var ready=document.getElementById('wm-trigger') && document.getElementById('tf-howto-btn') && banner && banner.textContent.trim()!=='' && document.querySelector('.sg-tone-grid');
+      if(ready || tries>25){
+        clearInterval(waitReady);
+        if(ready) setTimeout(gtTourStart, 500);
+      }
+    }, 300);
+  }catch(e){}
+})();
+</script>
+
+<!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+  background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
+  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
+  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
+    <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="window.__cookieConsentDecide(false)"
+        style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
+        拒絕
+      </button>
+      <button onclick="window.__cookieConsentDecide(true)"
+        style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
+        接受
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  window.__cookieConsentDecide = function(granted) {
+    localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    }
+    if (typeof window.clarity === 'function') {
+      window.clarity('consent', granted);
+    }
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'none';
+  };
+  // เปิด banner ขึ้นมาใหม่ได้ทุกเมื่อ (ใช้จากลิงก์ "Cookie 設定" ใน privacy.html)
+  window.__reopenCookieConsent = function() {
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'block';
+  };
+  if (!localStorage.getItem('cookieConsent')) {
+    var __b0 = document.getElementById('cookieConsentBanner');
+    if (__b0) __b0.style.display = 'block';
+  }
+</script>
+
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">我的</span></a></nav>
+</body>
+</html>

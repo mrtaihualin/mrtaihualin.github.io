@@ -1,0 +1,242 @@
+// word-menu.js — เมนู dropdown ตัวเลือกใต้คำศัพท์ (แบบ A: รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ)
+// FILE MAP: [01] styles → [02] state readers/labels → [03] menu init + wiring → [04] public API
+// สร้าง 2026-07-19 ตามที่ Lin เลือก (แบบ A) — ใช้ร่วม 3 เกม: เกมเสียง / เกมอ่าน / เกมพิมพ์
+//
+// แนวคิดสำคัญ (กันพัง): ไม่สร้างปุ่มใหม่ ไม่แตะ wiring เดิมเลย
+//   → ย้าย "ปุ่ม/ช่องเสียบเดิม" (element เดิม id เดิม) เข้าไปอยู่ในแต่ละแถวของเมนู
+//   → สคริปต์เดิม (word-audio.js / word-vault.js / shared.js / *-app.js) ยังหาเจอด้วย id เดิม ทำงานเหมือนเดิมทุกอย่าง
+//   → ช่องเสียบ (span slot) ที่ถูกเติมทีหลัง/เติมซ้ำทุกคำ ก็ยังเติมลงในเมนูได้เอง เพราะเราย้ายตัว slot ไป ไม่ใช่ตัวปุ่ม
+//
+// สถานะ 開/關 อ่านจากตัวปุ่มจริง (ไอคอน/attribute ที่สคริปต์เดิมเป็นคนตั้ง) แล้วเฝ้าด้วย MutationObserver
+//   → ไม่ต้องแก้ตรรกะเกม ไม่ต้องซิงค์ตัวแปรซ้ำ = ไม่มีทางหลุดจากของจริง
+(function () {
+  var _styled = false;
+
+  function injectStyles() {
+    if (_styled || document.getElementById('word-menu-css')) { _styled = true; return; }
+    var s = document.createElement('style');
+    s.id = 'word-menu-css';
+    s.textContent =
+      // Lin 2026-07-25 v2: เปลี่ยนหน้าตาแผงทั้งหมดให้เหมือนการ์ด .grw-menu/.grw-item ของเมนู 🪧 เป๊ะๆ ตามที่ Lin ขอ
+      // (เดิม: พื้นขาว + วงกลมขาวขอบบาง + ป้าย 開/關 → ใหม่: พื้นครีม #FAF4E8 + วงกลมไล่สีทอง + ป้ายชื่อตัวหนา เหมือนกันทุกเมนู)
+      '.wm-wrap{position:relative;display:inline-block;}' +
+      '.wm-panel{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);' +
+        'min-width:200px;background:#FAF4E8;border:1.5px solid rgba(139,99,16,0.25);border-radius:14px;' +
+        'box-shadow:0 6px 24px rgba(90,62,10,0.22);z-index:99990;display:none;flex-direction:column;gap:6px;padding:8px;text-align:left;' +
+        // Lin 2026-07-25 (แก้หลังตรวจเว็บจริง): ใส่เพดานความสูง + เลื่อนได้ — เดิมไม่มีเพดาน เมนูยาว (เกมพิมพ์ 8 แถว)
+        // จะโตทะลุขอบจอบน แถวบนสุด (發音) หลุดหายกดไม่ได้เลยบนจอเตี้ย · ใช้ 60vh เท่ากับเมนู 🎮 (#game-switcher)
+        'max-height:60vh;overflow-y:auto;overflow-x:hidden;}' +
+      '.wm-panel.wm-open{display:flex;}' +
+      '.wm-row{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;' +
+        'border-radius:10px;background:none;transition:background .12s;}' +
+      '.wm-row:hover{background:rgba(139,99,16,0.10);}' +
+      '.wm-row-label{flex:1;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;font-weight:700;color:#5a3e0a;white-space:nowrap;}' +
+      '.wm-pill{font-family:\'Noto Sans TC\',sans-serif;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}' +
+      // Lin 2026-08-01: ป้ายสถานะ "เปิด" เดิมใช้สีเขียว (#2d6a4f/#e8f5e9) ไม่ตรงธีมทองของเว็บ — เปลี่ยนเป็นโทนทองเข้ม/ครีมทอง (--gold-deep/--gold-light) ให้เข้าธีมทุกเกมที่ใช้เมนู 🍚 นี้ร่วมกัน (เกมเสียง/เกมอ่าน/เกมพิมพ์)
+      '.wm-pill.on{color:#5a3e0a;background:#F3E4C2;}' +
+      '.wm-pill.off{color:#6b6b6b;background:rgba(139,99,16,0.10);}' +
+      // ปุ่มเดิมที่ถูกย้ายเข้ามาในแถว — เดิมคงหน้าตาวงกลมขาวไว้ ตอนนี้ทำเป็นวงกลมไล่สีทองเหมือน .ico ของเมนูอื่น (สถานะเปิด/ปิดยังเห็นได้จากป้าย wm-pill ข้างๆ อยู่แล้ว ไม่ต้องพึ่งสีพื้นปุ่ม)
+      '.wm-row .word-ctl-btn,.wm-row .word-audio-btn,.wm-row .vault-save-btn,.wm-row .rg-ctl-fab{' +
+        'flex:0 0 auto;position:static!important;margin:0!important;width:26px!important;height:26px!important;' +
+        'border-radius:50%!important;background:linear-gradient(135deg,#C8973A,#8B6310)!important;border:none!important;' +
+        'color:#fff!important;font-size:13px!important;box-shadow:none!important;}' +
+      '.wm-row:hover .word-ctl-btn,.wm-row:hover .word-audio-btn,.wm-row:hover .vault-save-btn,.wm-row:hover .rg-ctl-fab{transform:none;}' +
+      // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปรวมกับเมนูลอยมุมขวาล่าง (🎮/⛶/🍙/🪧)
+      // Lin 2026-07-25 (v2): รอบแรกลองผูกตำแหน่ง fixed ตายตัวเอง (bottom:280px) แต่ Lin เจอว่าเมนูอื่น (🎮/🪧) ยังโผล่คนละที่ (เหนือปุ่มตัวเองเฉยๆ) ไม่ตรงกัน
+      // แก้ใหม่ให้ตรงกับที่ Lin ต้องการจริง: "โผล่เหนือปุ่มทั้ง 4 เสมอ ไม่ว่าจะเปิดอันไหน" → ใช้วิธีเดียวกับเมนู 🎮(#game-switcher) กับ 🪧(.grw-menu) เป๊ะๆ
+      // คือทำแผงเป็น flex item ปกติของ .rg-ctl-wrap เอง (ไม่ใช้ position:fixed/absolute) แล้ว insert ไว้บนสุดของชุดปุ่มเสมอ
+      // เพราะกล่องอื่นที่ไม่ได้เปิด = display:none (สูง 0) เวลาเปิดกล่องไหน จะเห็นเป็น item บนสุดที่ "แสดงอยู่จริง" เสมอ = โผล่เหนือปุ่มทั้ง 4 พอดี ทุกกล่อง ทุกหน้า เหมือนกันหมด
+      '.wm-panel.wm-panel-side{position:static;top:auto;left:auto;right:auto;bottom:auto;transform:none;width:auto;min-width:150px;box-sizing:border-box;}';
+    document.head.appendChild(s);
+    _styled = true;
+  }
+
+  // ── ตัวอ่านสถานะของแต่ละตัวเลือก — อ่านจาก "ของจริง" ที่สคริปต์เดิมตั้งไว้ ──
+  // คืน true=เปิด, false=ปิด, null=ไม่ต้องโชว์ป้ายสถานะ (เป็นปุ่มสั่งงาน ไม่ใช่สวิตช์)
+  var READERS = {
+    none:  function () { return null; },
+    pron:  function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('🐣') !== -1; },
+    // Lin 2026-07-25: แถวคำอ่านโรมัน (英文讀音) — 🔡 = เปิด · 🔠 = ปิด (ไอคอนตามที่ Lin เลือก)
+    en:    function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('🔡') !== -1; },
+    zh:    function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('🍙') !== -1; },
+    vault: function (el) { var b = el.querySelector('button') || el; return b.getAttribute && b.getAttribute('data-saved') === '1'; },
+    guide: function (el) { var b = el.querySelector('button') || el; return b.textContent.indexOf('💡') !== -1; },
+    kbd:   function (el) { var b = el.querySelector('button') || el; return b.getAttribute && b.getAttribute('data-playing') === '1'; },
+    // Lin 2026-07-25: แถวสลับฟอนต์ — อ่านจาก class บน <body> โดยตรง (rg-modern-font=พิมพ์/อ่าน · tf-modern-font=เกมเสียง) แม่นกว่าอ่านจากไอคอนปุ่ม
+    font:  function () { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); },
+    // Lin 2026-07-31: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 — 3 สถานะ (off/m/f) ไม่ใช่ 開/關 ธรรมดา → คืนเป็น string ตรงๆ (ดู refresh() ด้านล่าง รองรับทั้ง boolean และ string)
+    particle: function (el) { var b = el.querySelector('button') || el; return (b.getAttribute && b.getAttribute('data-mode')) || 'off'; }
+  };
+  // ข้อความป้ายสถานะของแต่ละแบบ (ไม่ใช่ 開/關 หมดทุกอัน — ให้อ่านแล้วเข้าใจทันที)
+  var PILL_TEXT = {
+    vault: { on: '已收藏', off: '未收藏' },
+    font:  { on: '現代字', off: '標準字' },
+    particle: { off: '關', m: '男生（ครับ）', f: '女生（ค่ะ/คะ）' },
+    _default: { on: '開', off: '關' }
+  };
+
+  /**
+   * สร้างเมนูจากแถวปุ่มเดิม
+   * @param {object} cfg
+   *   cfg.rowId  — id ของแถวปุ่มเดิม (เช่น 'word-ctl-row' / 'tf-word-ctl-row')
+   *   cfg.items  — [{ id:'rg-sound-toggle', label:'發音', state:'none' }, ...] เรียงตามลำดับที่อยากให้โชว์
+   */
+  function init(cfg) {
+    if (!cfg || !cfg.rowId || !cfg.items) return;
+    var row = document.getElementById(cfg.rowId);
+    if (!row || row.getAttribute('data-wm-done') === '1') return;
+    injectStyles();
+
+    var panel = document.createElement('div');
+    panel.className = 'wm-panel';
+    panel.setAttribute('role', 'menu');
+
+    var watched = []; // [{el, reader, pill}]
+
+    cfg.items.forEach(function (item) {
+      var ctl = document.getElementById(item.id);
+      if (!ctl) return; // เกมนี้ไม่มีตัวเลือกนี้ → ข้ามไปเลย (ตามจำนวนปุ่มที่เกมนั้นมีจริง)
+
+      var r = document.createElement('div');
+      r.className = 'wm-row';
+      r.setAttribute('role', 'menuitem');
+      r.setAttribute('data-wm-item', item.id);
+
+      r.appendChild(ctl); // ★ ย้ายของเดิมเข้ามา (ไม่ clone — clone แล้ว event เดิมหาย)
+
+      var lab = document.createElement('span');
+      lab.className = 'wm-row-label';
+      lab.textContent = item.label;
+      r.appendChild(lab);
+
+      var reader = READERS[item.state] || READERS.none;
+      var pill = null;
+      if (item.state && item.state !== 'none') {
+        pill = document.createElement('span');
+        pill.className = 'wm-pill off';
+        r.appendChild(pill);
+      }
+
+      // กดตรงไหนของแถวก็ได้ = กดปุ่มจริงข้างใน (แต่ถ้ากดโดนปุ่มอยู่แล้ว อย่าสั่งซ้ำ)
+      r.addEventListener('click', function (e) {
+        var realBtn = ctl.tagName === 'BUTTON' ? ctl : ctl.querySelector('button');
+        if (!realBtn) return;
+        if (e.target === realBtn || realBtn.contains(e.target)) return; // ปุ่มจัดการเองแล้ว
+        realBtn.click();
+      });
+
+      panel.appendChild(r);
+      watched.push({ el: ctl, reader: reader, pill: pill, state: item.state });
+    });
+
+    if (!panel.children.length) return; // ไม่มีตัวเลือกเลย → ไม่ต้องมีเมนู
+
+    // ปุ่มเปิดเมนู 🍚 (ธีมมีนา=ข้าว ตามที่ Lin เลือก — กฎ 17)
+    var trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.id = 'wm-trigger';
+    trigger.className = 'word-ctl-btn';
+    trigger.textContent = '🍚';
+    trigger.title = '更多功能（發音／拼音／翻譯／收藏）';
+    trigger.setAttribute('aria-label', '更多功能');
+    trigger.setAttribute('aria-haspopup', 'true');
+    trigger.setAttribute('aria-expanded', 'false');
+
+    var wrap = document.createElement('span');
+    wrap.className = 'wm-wrap';
+    wrap.appendChild(trigger);
+    wrap.appendChild(panel);
+
+    // Lin 2026-07-24: ย้ายปุ่ม 🍚 ไปอยู่กับเมนูลอยมุมขวาล่าง (ชุดเดียวกับ 🎮/⛶/🍙/🪧) แทนที่จะฝังอยู่ใต้คำศัพท์
+    // .rg-ctl-wrap สร้างโดย shared.js ซึ่งโหลด/รันทีหลังไฟล์นี้ในทุกหน้าเกม → ต้องรอ/ลองใหม่จนกว่าจะเจอ
+    // Lin 2026-07-25 (v3): บั๊กที่ Lin เจอ — ปุ่ม 🍚 เด้งขึ้นข้างบนตอนเปิดเมนู 🎮 สาเหตุคือตอนแทรกปุ่ม 🍚 ไว้ "บนสุดของทั้งชุด"
+      // (sideWrap.firstChild) ดันไปแทรกไว้เหนือ #game-switcher (แผงดรอปดาวน์ของปุ่ม 🎮 เอง ไม่ใช่ปุ่ม) — พอแผงนั้นเปิด/โตขึ้น
+      // สิ่งที่อยู่ "เหนือมัน" ในลำดับ DOM จะถูกดันขึ้นตาม (กลไกธรรมชาติของ flex column ที่ยึดขอบล่างตายตัว) ปุ่ม 🍚 เลยเด้ง
+      // แก้จริง: ปุ่มทุกปุ่มต้อง "อยู่ติดกันเป็นกลุ่มเดียว" ห้ามมีแผงเมนูอื่นแทรกกลาง → แทรกปุ่ม 🍚 ไว้ "ก่อนหน้าปุ่ม 🎮 ทันที" แทน (ใต้ #game-switcher แต่เหนือปุ่ม 🎮)
+      // ส่วนแผงตัวเลือกของ 🍚 เอง ยังแทรกเหนือปุ่ม 🍚 เหมือนเดิม (ไม่กระทบปุ่มไหนเพราะปิดอยู่ตลอดเวลาที่ไม่ได้ใช้ = สูง 0)
+    function moveToSideMenu() {
+      var sideWrap = document.querySelector('.rg-ctl-wrap');
+      if (!sideWrap) return false;
+      trigger.classList.remove('word-ctl-btn');
+      trigger.classList.add('rg-ctl-fab');
+      panel.classList.add('wm-panel-side');
+      var menuBtn = sideWrap.querySelector('.rg-ctl-fab[aria-label="遊戲選單"]'); // ปุ่ม 🎮 — จุดอ้างอิงที่ปุ่ม 🍚 ต้องอยู่ "ติดกัน" ด้วย
+      sideWrap.insertBefore(trigger, menuBtn || sideWrap.firstChild); // ปุ่ม 🍚 → ติดกับปุ่ม 🎮 เป็นกลุ่มเดียวกัน (ไม่แทรกเหนือแผง #game-switcher)
+      sideWrap.insertBefore(panel, trigger);                          // แผงตัวเลือกของ 🍚 → เหนือปุ่ม 🍚 ของตัวเองเท่านั้น
+      return true;
+    }
+    if (!moveToSideMenu()) {
+      // Lin 2026-07-25: ซ่อนไว้ก่อนระหว่างรอ — เดิมโผล่ใต้คำศัพท์แวบนึงแล้วกระโดดไปมุมขวา ดูสะดุดตา
+      trigger.style.visibility = 'hidden';
+      row.appendChild(wrap); // ที่อยู่ชั่วคราว ระหว่างรอเมนูขวาสร้างเสร็จ (กันปุ่มหายไปเฉยๆ)
+      var moveTries = 0;
+      var moveIv = setInterval(function () {
+        moveTries++;
+        if (moveToSideMenu() || moveTries > 40) { trigger.style.visibility = ''; clearInterval(moveIv); } // ลองนาน ~4 วิ แล้วเลิก (เผื่อหน้าไหนไม่มีเมนูขวาจริงๆ) — โชว์ปุ่มตอนย้ายเสร็จ/เลิกลองแล้ว
+      }, 100);
+    }
+
+    function refresh() {
+      watched.forEach(function (w) {
+        if (!w.pill) return;
+        var on = w.reader(w.el);
+        if (on === null || typeof on === 'undefined') { w.pill.style.display = 'none'; return; }
+        w.pill.style.display = '';
+        var txt = PILL_TEXT[w.state] || PILL_TEXT._default;
+        if (typeof on === 'boolean') {
+          w.pill.textContent = on ? txt.on : txt.off;
+          w.pill.className = 'wm-pill ' + (on ? 'on' : 'off');
+        } else {
+          // Lin 2026-07-31: reader คืนเป็น string (เช่น particle: 'off'/'m'/'f') — ไม่ใช่ boolean 開/關 ธรรมดา
+          w.pill.textContent = txt[on] || on;
+          w.pill.className = 'wm-pill ' + (on === 'off' ? 'off' : 'on');
+        }
+      });
+      // ตัวเลือกไหนที่ช่องเสียบยังว่าง (สคริปต์เจ้าของยังไม่เติมปุ่ม/เกมนั้นปิดฟีเจอร์) → ซ่อนแถวนั้นไว้ก่อน
+      watched.forEach(function (w) {
+        var r = w.el.closest('.wm-row');
+        if (!r) return;
+        var empty = w.el.tagName !== 'BUTTON' && !w.el.querySelector('button');
+        var hiddenCtl = w.el.tagName === 'BUTTON' && w.el.style.display === 'none';
+        r.style.display = (empty || hiddenCtl) ? 'none' : '';
+      });
+    }
+
+    // เฝ้าของจริง: ไอคอน/attribute เปลี่ยนเมื่อไหร่ ป้ายสถานะอัปเดตตามทันที
+    try {
+      var mo = new MutationObserver(refresh);
+      watched.forEach(function (w) {
+        mo.observe(w.el, { childList: true, subtree: true, characterData: true,
+                           attributes: true, attributeFilter: ['data-saved', 'data-playing', 'style', 'class'] });
+      });
+    } catch (e) {}
+    refresh();
+    setTimeout(refresh, 300);   // เผื่อปุ่มที่ถูกเติมทีหลัง (vault/zh) ยังมาไม่ทันตอนโหลด
+    setTimeout(refresh, 1200);
+
+    // Lin 2026-07-25 (v2): ปุ่ม/แผงแยกเป็นคนละ element ของ .rg-ctl-wrap แล้ว (ไม่ได้อยู่ใน wrap เดียวกันเสมอไป — เฉพาะโหมด fallback ที่ยังอยู่ด้วยกัน)
+    // เลยเช็คสถานะเปิด/ปิดจาก class บนตัว panel เองแทน ไม่พึ่ง wrap
+    function close() { panel.classList.remove('wm-open'); trigger.setAttribute('aria-expanded', 'false'); }
+    // แผงนี้เป็น item ปกติในชุดปุ่มลอยแล้ว (ไม่ใช้ position:fixed) → ยังเสี่ยงซ้อนกับกล่องลอยอื่น (🎮/🪧) ถ้าเปิดพร้อมกัน
+    // ลงทะเบียนกับ GamePanels กลาง กันซ้อนแบบเดียวกับกล่องอื่นๆ ในหน้าเกม
+    var wmPanel = { isOpen: function () { return panel.classList.contains('wm-open'); }, close: close };
+    if (window.GamePanels) window.GamePanels.add(wmPanel);
+    function open() { refresh(); if (window.GamePanels) window.GamePanels.closeOthers(wmPanel); panel.classList.add('wm-open'); trigger.setAttribute('aria-expanded', 'true'); }
+
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (panel.classList.contains('wm-open')) close(); else open();
+    });
+    // กดที่อื่นในหน้า / กด Esc = ปิดเมนู
+    document.addEventListener('click', function (e) { if (!trigger.contains(e.target) && !panel.contains(e.target)) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    // กันคีย์บอร์ดมือถือหุบตอนแตะเมนู (เกมพิมพ์) — วิธีเดียวกับ rgNoFocusSteal ในเกม
+    trigger.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    panel.addEventListener('mousedown', function (e) { e.preventDefault(); });
+
+    row.setAttribute('data-wm-done', '1');
+    window.WordMenu.refresh = refresh;
+  }
+
+  window.WordMenu = { init: init, refresh: function () {} };
+})();

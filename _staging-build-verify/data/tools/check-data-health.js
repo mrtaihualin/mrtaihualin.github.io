@@ -1,0 +1,216 @@
+/**
+ * check-data-health.js — ตัวตรวจสุขภาพข้อมูลคำ+ประโยค (data/words-data.js + data/adv-sentences.js)
+ * ROLE/MAP: Node validation tool → load datasets → reusable validators → full audit/report → module exports
+ * รันก่อน push ทุกครั้งที่แตะ data/words-data.js หรือ data/adv-sentences.js (ตามกฎ CLAUDE.md หัวข้อ 🗄️ ฐานข้อมูลเกมกลาง)
+ *
+ * วิธีรัน: node data/tools/check-data-health.js
+ * ผ่าน = ไม่มี error พิมพ์ออกมา (exit code 0)
+ * ไม่ผ่าน = พิมพ์รายการที่ผิด (exit code 1) — ห้าม push จนกว่าจะแก้หมด
+ *
+ * เช็คอะไรบ้าง (เพิ่มหลังเจอบั๊ก 2026-07-14: syls[].th ดันใส่คำอ่านแทนตัวสะกดจริง เช่น
+ * รถทัวร์ → th:'รด'+'ทัว' แทนที่จะเป็น th:'รถ'+'ทัวร์' → ตอนพิมพ์เกมพิมพ์เลยให้พิมพ์ผิดคำ):
+ *   1. syls[].th ต่อกันแล้วต้อง = word เป๊ะ (ตัวพิมพ์เป็นตัวสะกดจริงเท่านั้น ห้ามใส่คำอ่าน/พยางค์แทรก)
+ *      — เช็คทุกคำเสมอ (2026-07-15: หลังรวม schema ทุกคำมี syls แล้ว รวมคำพยางค์เดียวด้วย ไม่ใช่แค่คำหลายพยางค์)
+ *   2. คำ 2 พยางค์ขึ้นไป ต้องมี readingTH ด้วย (ใช้แยกกับ syls โดยเจตนา — คำอ่านอยู่ readingTH
+ *      อย่างเดียว ไม่ผูกกับจำนวน/เนื้อหาของ syls อีกต่อไป ตามที่ Lin ยืนยัน 2026-07-14)
+ *   3. ทุกพยางค์ใน syls ต้องมี th (ไม่เว้นว่าง)
+ *   4. ระดับ (level) ต้องตรงกฎที่ Lin ตั้ง 2026-07-14:
+ *      - 1 พยางค์ → 初 เสมอ
+ *      - 2 พยางค์ + อ่านตรงตัว (readingTH ตัด - แล้ว = ตัวสะกด, ง่าย) → 初
+ *      - 2 พยางค์ + อ่านไม่ตรงตัว (ยาก เช่น ถนน อ่าน ถะ-หนน) → 中
+ *      - 3 พยางค์ขึ้นไป (ไม่ว่าง่ายหรือยาก) → 中
+ *
+ * 2026-07-15: รวม schema words-data.js แล้ว (คำพยางค์เดียวห่อ syls:[{...}] เหมือนคำหลายพยางค์ทั้งหมด)
+ * sylCount() เลยอ่าน w.syls.length ตรงๆ ได้เลย ไม่ต้อง fallback เป็น 1 อีกต่อไป และเช็ค 1 (concat)
+ * รันได้กับทุกคำจริงๆ (เดิมมี early-return ข้ามคำพยางค์เดียวเพราะใช้ "มี/ไม่มี syls" เป็นตัวเช็คจำนวนพยางค์
+ * — บั๊กคลาสเดียวกับที่พบใน reading-game.html/typing-game.html inLevel())
+ *
+ * 2026-07-16: เพิ่มเช็ค data/adv-sentences.js (ADV_SENTENCES) ด้วย — หลังพบว่าบั๊กคลาสเดียวกัน
+ * (syls[].th สะกดผิด เช่น ภาษาไทย/อร่อย 9 จุด) หลุดเข้ามาในไฟล์ประโยค 高級 เพราะตัวตรวจเดิมเช็ค
+ * แค่ words-data.js อย่างเดียว ไม่ได้แตะไฟล์ประโยคเลย โครงสร้างไฟล์ประโยคต่างจากไฟล์คำ
+ * (ประโยค → words[] → syls[]) จึงต้องเช็คแยกอีกก้อนหนึ่ง แต่ใช้กติกาเดิม (syls[].th ต่อกัน = th จริง)
+ * ⚠️ ต้องรันไฟล์นี้ก่อน push ทุกครั้งที่แตะ data/words-data.js หรือ data/adv-sentences.js ไฟล์ใดไฟล์หนึ่ง
+ */
+global.window = global;
+require('../words-data.js');
+const W = global.WORDS_MASTER;
+
+let errors = [];
+
+// เช็ค 5 (เพิ่ม 2026-07-27 ตามที่ Lin สั่ง — "ห้ามเงียบและคิดเอง ตั้งเป็นกฎสำหรับเกมโดยเฉพาะ"):
+// syls[].final ทุกตัวต้องเป็นตัวอักษรเดียวที่ถูกต้องตามกฎ "8 มาตราตัวสะกด" มาตรฐาน — อัปเดต 2026-07-27
+// (รอบ 2): เกมอ่าน/เกมพิมพ์เลิกใช้ตาราง FINAL_SOUND แปลงเสียงแล้ว (Lin สั่งเอาออกทั้งหมด) แต่ final
+// ยังต้องเป็นตัวอักษรเดียวที่ถูกต้อง เพราะ FINAL_GROUPS (ระบบสร้างตัวลวงในเกมจับคู่) ต้องใช้ค่านี้จับคู่กลุ่ม
+// ถ้าเจอ final ที่ไม่ตรงกฎ (เช่น สะกดเกิน 1 ตัวอักษร) ต้องฟ้องออกมาทุกครั้งที่รันเช็ก ห้ามเงียบ/ห้ามเดาเอง
+// — รอ Lin ยืนยันแล้วแก้เองผ่านไฟล์ตรวจ (ป้องกันบั๊กแบบ ญาติ/นามบัตร ที่หลุดไปแบบไม่มีใครรู้)
+const FINAL_SOUND_8_MATRA = {
+  'ก': 'ก', 'ข': 'ก', 'ค': 'ก', 'ฆ': 'ก', 'ง': 'ง',
+  'จ': 'ด', 'ช': 'ด', 'ซ': 'ด', 'ฉ': 'ด', 'ฌ': 'ด',
+  'ต': 'ด', 'ถ': 'ด', 'ท': 'ด', 'ธ': 'ด', 'ด': 'ด', 'ฎ': 'ด', 'ฏ': 'ด',
+  'ฐ': 'ด', 'ฑ': 'ด', 'ฒ': 'ด', 'ศ': 'ด', 'ษ': 'ด', 'ส': 'ด',
+  'น': 'น', 'ณ': 'น', 'ญ': 'น', 'ร': 'น', 'ล': 'น', 'ฬ': 'น',
+  'บ': 'บ', 'พ': 'บ', 'ภ': 'บ', 'ฟ': 'บ', 'ป': 'บ', 'ผ': 'บ', 'ฝ': 'บ',
+  'ม': 'ม', 'ย': 'ย', 'ว': 'ว',
+  'ห': '（不發音）', 'อ': '（不發音）'
+};
+function checkFinalSound(label, syl) {
+  if (!syl.final) return;
+  if (FINAL_SOUND_8_MATRA[syl.final] === undefined) {
+    errors.push(label + ' → final:\'' + syl.final + '\' (พยางค์ "' + syl.th + '") ไม่ตรงกับกฎ 8 มาตราตัวสะกดมาตรฐาน — ต้องรอ Lin ยืนยันเสียงจริงก่อน (ห้ามเดาเอง)');
+  }
+}
+
+// เช็ค 6 (เพิ่ม 2026-07-27 ตามที่ Lin สั่ง): syls[].cons ต้อง "เป็นตัวเขียนจริง" ที่ปรากฏอยู่ใน syls[].th
+// เท่านั้น — ห้ามเก็บเป็นเสียงที่แปลงแล้ว (เช่น cons:'พ' ทั้งที่ตัวเขียนจริงคือ 'ภ') เพราะ cons ถูกโชว์เป็น
+// "ตัวเขียน" ตรงๆ ในหน้าเฉลย/ไทล์คำตอบ (CONS_SOUND เอาไว้แปลงเป็นเสียงต่างหากอยู่แล้ว ไม่ต้องแปลงซ้ำตรงนี้)
+// พบจริง 2026-07-27: สัมภาษณ์(ภาษณ์ cons:'พ'), นาฬิกา(ฬิ cons:'ล'), ภาษา×2(ภา cons:'พ', ษา cons:'ส')
+// — บั๊กแพทเทิร์นเดียวกับ final ของ ญาติ/นามบัตร (เอาเสียงมาใส่แทนตัวเขียนจริง) ห้ามเดา/ห้ามเงียบเหมือนกัน
+function checkConsIsWritten(label, syl) {
+  if (!syl.cons || !syl.th) return;
+  if (syl.th.indexOf(syl.cons) < 0) {
+    errors.push(label + ' → cons:\'' + syl.cons + '\' (พยางค์ "' + syl.th + '") ไม่ปรากฏในตัวเขียนจริงเลย — น่าจะเก็บเป็นเสียงแปลงแล้วแทนตัวเขียน ต้องรอ Lin ยืนยันก่อน (ห้ามเดาเอง)');
+  }
+}
+
+function sylCount(w) { return w.syls.length; }
+function isHardReading(w) {
+  if (w.readingTH === undefined) return false;
+  return w.readingTH.split('-').join('') !== w.word;
+}
+function expectedLevel(w) {
+  const n = sylCount(w);
+  if (n === 1) return '初';
+  if (n === 2) return isHardReading(w) ? '中' : '初';
+  return '中';
+}
+
+// Lin ยืนยันแล้ว 2026-07-16 ว่า 4 คำนี้ให้คง level เดิมไว้ตามนี้เสมอ (ขัดกับกฎอัตโนมัติด้านบน
+// โดยตั้งใจ) — ไม่ต้องถามซ้ำ ไม่ต้องฟ้องเป็น error อีก
+// เพิ่ม 2026-07-27: อีเมล/วันหยุด ยืนยันแล้วว่าตั้งใจให้เป็น 中 (ขัดกับกฎอัตโนมัติโดยตั้งใจเหมือนกัน)
+// เพิ่ม 2026-07-30: คำไวยากรณ์ (สรรพนาม/บุพบท/สันธาน) — Lin ยืนยันให้เป็น 中 ตามความเป็นทางการ/
+// ความซับซ้อนของมโนทัศน์ ไม่ใช่ตามกฎนับพยางค์/อ่านง่าย-ยากปกติ (ดู reference log 2026-07-30)
+const LEVEL_OVERRIDE_CONFIRMED = {
+  'เครื่องบิน': '中',
+  'ตำแหน่ง': '中',
+  'งานเลี้ยง': '中',
+  'น้ำตาล': '初',
+  'อีเมล': '中',
+  'วันหยุด': '中',
+  'จึง': '中',
+  'หาก': '中',
+  'ระหว่าง': '中',
+  'สำหรับ': '中',
+  'เกี่ยวกับ': '中',
+  'ท่ามกลาง': '中',
+  'ดังนั้น': '中',
+  'เนื่องจาก': '中',
+  'แม้ว่า': '中',
+  'ถึงแม้': '中',
+  'จนกว่า': '中',
+  'ตั้งแต่': '中',
+  'เว้นแต่': '中',
+  'ทั้งที่': '中',
+  'ทำความสะอาด': '初',
+  // เพิ่ม 2026-07-31 (draft-batch-2026-07-31b, คำกิริยา 100 คำ) — Lin ยืนยันให้เป็น 中 โดยตั้งใจ
+  // แม้อ่านตรงตัวสะกด (ขัดกฎอัตโนมัติ 2 พยางค์อ่านง่าย=初) — ยืนยันสุดท้ายในแชท "เอาตามที่ผมให้ไปไม่ต้องแก้แล้ว"
+  'โกนหนวด': '中',
+  'แต่งหน้า': '中',
+  'แนะนำ': '中',
+  'ติดต่อ': '中',
+  'ผิดหวัง': '中',
+  'ตื่นเต้น': '中',
+  'มั่นใจ': '中',
+  'ไว้ใจ': '中',
+  'ค้นคว้า': '中',
+  'ตกแต่ง': '中',
+  'ทะเลาะ': '中'
+};
+
+W.forEach(function (w) {
+  // เช็ค 4: ระดับตรงกฎไหม (ข้ามคำที่ Lin ยืนยัน override ไว้แล้ว)
+  const exp = expectedLevel(w);
+  const isConfirmedOverride = LEVEL_OVERRIDE_CONFIRMED[w.word] !== undefined && LEVEL_OVERRIDE_CONFIRMED[w.word] === w.level;
+  if (w.level !== exp && !isConfirmedOverride) {
+    errors.push(w.word + ' → level เป็น "' + w.level + '" แต่ควรเป็น "' + exp + '" (' + sylCount(w) + ' พยางค์, ' + (isHardReading(w) ? 'อ่านยาก' : 'อ่านง่าย') + ')');
+  }
+
+  if (!w.syls || !w.syls.length) {
+    errors.push(w.word + ' → ไม่มี syls เลย (schema ต้องห่อ syls ทุกคำหลังรวม 2026-07-15)');
+    return;
+  }
+
+  // เช็ค 1: syls[].th ต่อกัน = word จริง — เช็คทุกคำ (พยางค์เดียวก็เช็คด้วย)
+  const missingTh = w.syls.some(function (s) { return !s.th; });
+  if (missingTh) {
+    errors.push(w.word + ' → มีพยางค์ที่ไม่มี th');
+    return;
+  }
+  const concat = w.syls.map(function (s) { return s.th; }).join('');
+  if (concat !== w.word) {
+    errors.push(w.word + ' → syls.th ต่อกันได้ "' + concat + '" ไม่ตรงกับคำจริง (พิมพ์เกมพิมพ์จะผิด)');
+  }
+
+  // เช็ค 2: คำ 2 พยางค์ขึ้นไปต้องมี readingTH (พยางค์เดียวไม่บังคับ เพราะคำอ่าน = ตัวสะกดอยู่แล้วปกติ)
+  if (sylCount(w) > 1 && w.readingTH === undefined) {
+    errors.push(w.word + ' → มีหลายพยางค์แต่ไม่มี readingTH (กล่องวรรณยุกต์จะโชว์คำอ่านไม่ได้)');
+  }
+
+  // เช็ค 5: final ทุกพยางค์ต้องตรงกฎ 8 มาตราตัวสะกด
+  // เช็ค 6: cons ต้องเป็นตัวเขียนจริง ไม่ใช่เสียงแปลงแล้ว
+  w.syls.forEach(function (s) { checkFinalSound(w.word, s); checkConsIsWritten(w.word, s); });
+});
+
+// ════════════════════════════════════════════════════════════
+// เช็คไฟล์ประโยค adv-sentences.js (ADV_SENTENCES) — เพิ่ม 2026-07-16
+// โครงสร้างต่างจากไฟล์คำ: ประโยค → words[] → syls[] เลยต้องไล่เข้าไปอีกชั้น
+// ════════════════════════════════════════════════════════════
+require('../adv-sentences.js');
+const S = global.ADV_SENTENCES;
+
+S.forEach(function (sent) {
+  // เช็ค readingTH ระดับประโยค — เพิ่ม 2026-07-16 (ช่อง syl รายคำถูกถอดออก คำอ่านรวมอยู่ที่ readingTH ที่เดียว)
+  const totalSyls = sent.words.reduce(function (n, w) { return n + ((w.syls && w.syls.length) || 0); }, 0);
+  if (!sent.readingTH) {
+    errors.push('[ประโยค] "' + sent.th + '" → ไม่มี readingTH (กล่อง讀音/เกมเสียงจะไม่มีคำอ่านใช้)');
+  } else if (sent.readingTH.split('-').length !== totalSyls) {
+    errors.push('[ประโยค] "' + sent.th + '" → readingTH มี ' + sent.readingTH.split('-').length + ' พยางค์ ไม่เท่าผลรวม syls (' + totalSyls + ') — เกมจะจับคำอ่านเข้าพยางค์ผิดตำแหน่ง');
+  }
+  if (sent.wc !== totalSyls) {
+    errors.push('[ประโยค] "' + sent.th + '" → wc=' + sent.wc + ' ไม่เท่าผลรวม syls (' + totalSyls + ')');
+  }
+  sent.words.forEach(function (w) {
+    if (!w.syls || !w.syls.length) {
+      errors.push('[ประโยค] "' + sent.th + '" → คำ "' + w.th + '" ไม่มี syls เลย');
+      return;
+    }
+    const missingTh = w.syls.some(function (s) { return !s.th; });
+    if (missingTh) {
+      errors.push('[ประโยค] "' + sent.th + '" → คำ "' + w.th + '" มีพยางค์ที่ไม่มี th');
+      return;
+    }
+    const concat = w.syls.map(function (s) { return s.th; }).join('');
+    if (concat !== w.th) {
+      errors.push('[ประโยค] "' + sent.th + '" → คำ "' + w.th + '" syls.th ต่อกันได้ "' + concat + '" ไม่ตรงกับตัวสะกดจริง (' + w.th + ')');
+    }
+    // เช็ค 5: final ทุกพยางค์ต้องตรงกฎ 8 มาตราตัวสะกด
+    // เช็ค 6: cons ต้องเป็นตัวเขียนจริง ไม่ใช่เสียงแปลงแล้ว
+    w.syls.forEach(function (s) {
+      checkFinalSound('[ประโยค] "' + sent.th + '" คำ "' + w.th + '"', s);
+      checkConsIsWritten('[ประโยค] "' + sent.th + '" คำ "' + w.th + '"', s);
+    });
+  });
+});
+
+if (errors.length) {
+  console.log('❌ พบปัญหา ' + errors.length + ' จุด:\n');
+  errors.forEach(function (e) { console.log('- ' + e); });
+  process.exitCode = 1;
+} else {
+  console.log('✅ ผ่านหมด — คำ ' + W.length + ' คำ + ประโยค ' + S.length + ' ประโยค ตรวจแล้วโอเค');
+}
+
+// ── เปิดช่องให้เทส (data/tools/tests-check-data-health.js) เรียกฟังก์ชันไปทดสอบแยกได้ ──
+// (แพทเทิร์นเดียวกับ tone-engine.js) ไม่กระทบตอนรันตรงๆ ด้วย `node data/tools/check-data-health.js` เลย
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { sylCount, isHardReading, expectedLevel, checkFinalSound, checkConsIsWritten };
+}

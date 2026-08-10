@@ -227,6 +227,11 @@
   /* AVAILABILITY BAND */
 
   .avail-band { background:var(--gold-light); border-top:3px solid var(--gold); border-bottom:3px solid var(--gold); padding:10px 16px; display:flex; flex-direction:column; gap:8px; }
+  /* 🔴 2026-08-10: แถบประกาศเป็น static HTML แล้ว (มาพร้อมหน้าตั้งแต่แรก ไม่ต้องรอ JS)
+     คนที่เคยกดปิดประกาศไปแล้วในเซสชันนี้ ต้องไม่เห็นมันแวบขึ้นมาอีกก่อน JS จะมาลบทิ้ง
+     → มี <script> เล็กๆ อยู่ก่อนแถบใน HTML ทุกหน้า คอยเช็ค sessionStorage แล้วติดคลาสนี้ให้ทันทีตอน parse
+     (เขียนโดย scripts/generate-nav.js · ต้นฉบับอยู่ใน data/nav-template.js → renderAnnBandBlockHTML) */
+  html.ann-off #ann-band { display:none; }
   .avail-row { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:nowrap; overflow:hidden; }
   .avail-row + .avail-row { padding-top:8px; border-top:1px solid rgba(139,99,16,0.18); }
   a.avail-row { text-decoration:none; cursor:pointer; transition:opacity 0.2s; }
