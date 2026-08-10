@@ -93,10 +93,12 @@ if (document.fonts && document.fonts.load) {
   body { background: #F5F0E8; color: #1C1C1C; }
 
   /* ── Page wrapper ── */
+  /* P6-B4 (2026-08-10): max-width/margin/padding ซ้าย-ขวาถอดออกแล้ว ให้ .gsh-shell (css/shared.css)
+     เป็นคนคุมความกว้าง/จัดกึ่งกลาง/padding ซ้าย-ขวาแทน — เหลือแค่ padding บน-ล่างกับ min-height ที่ .tf-page
+     ยังต้องคุมเอง (เฉพาะไฟล์นี้ใช้ .tf-page เท่านั้น ตรวจแล้วด้วย grep ทั่ว repo) */
   .tf-page {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: calc(var(--nav-h) + 24px) 16px 112px;
+    padding-top: calc(var(--nav-h) + 24px);
+    padding-bottom: 112px;
     min-height: 100vh;
   }
 
@@ -709,6 +711,11 @@ if (document.fonts && document.fonts.load) {
 
   /* ── แคปซูลเลือกระดับ 初級/中級/高級 (Lin 2026-07-10 ย้ายขึ้นมาไว้เหนือการ์ด) ── */
   .tf-level-tabs { display:flex; gap:8px; width:100%; max-width:640px; margin:0 0 16px; }
+  /* Phase C.1 (2026-08-10): เมื่ออยู่ใน .gsh-session-header (ดู #tf-level-tabs ด้านล่างในไฟล์นี้) ตัด margin เดิมออก
+     ให้ padding ของ .gsh-session-header คุมระยะห่างแทน + #tf-session-counter ใช้สไตล์เดียวกับ .tf-banner-counter เดิม
+     แต่ตัด margin-bottom (12px เดิมมีไว้สำหรับตอนอยู่ใน #tf-banner เท่านั้น) */
+  .gsh-session-header .tf-level-tabs { margin:0; }
+  .gsh-session-header .tf-banner-counter { margin-bottom:0; }
   .tf-ltab { flex:1; padding:10px 8px; border-radius:999px; border:2px solid #d4b87a; background:#fff; color:#8b6310; font-size:14px; font-weight:700; cursor:pointer; font-family:'Noto Sans TC',sans-serif; transition:all .15s; }
   .tf-ltab:hover { background:#fff8ee; border-color:#c07030; }
   .tf-ltab.active { background:linear-gradient(135deg,#e8a020,#d85a30); color:#fff; border-color:transparent; }
@@ -1499,7 +1506,10 @@ document.addEventListener('contextmenu', function(e){
 
 <!-- ── MINIMAL MODALS (for nav modal triggers) ── -->
 <!-- ── MAIN PAGE ── -->
-<div class="tf-page">
+<!-- P6-B4 (Shared Game UI, 2026-08-10): class gsh-shell (ดู css/shared.css) มีผลจริงแล้ว — .tf-page เดิมนิยาม
+     max-width/margin/padding ซ้าย-ขวาทับ .gsh-shell (specificity เท่ากันแต่มาทีหลัง) ตอนนี้ถอด 3 อย่างนั้นออกจาก
+     .tf-page แล้ว (เหลือแค่ padding บน-ล่าง + min-height) ให้ .gsh-shell คุมความกว้าง/จัดกึ่งกลาง/padding ซ้าย-ขวาแทน -->
+<div class="tf-page gsh-shell">
   <div class="tf-page-header">
     <h1 class="tf-page-title" style="margin:0;">🎵 泰語聲調練習室</h1>
     <div class="tf-page-hint" id="tf-hint">選擇等級與主題，開始練習聲調</div>
@@ -1565,10 +1575,10 @@ document.addEventListener('contextmenu', function(e){
   <div id="tf-newword-banner" style="width:100%;"></div>
 
   <div class="tf-tools-row">
-    <div id="rg-profile-wrap" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
+    <div id="rg-profile-wrap" class="gsh-player-status" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
       <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
       <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
-      <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_open',{category:'game'});}catch(e){}dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
+      <span class="tf-streak-chip" id="tf-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_open',{category:'game'});}catch(e){}dismissHowtoHint('tone');document.getElementById('tf-howto-modal').style.display='flex';if(window.__tfHowtoModalReg)window.__tfHowtoModalReg.notifyOpen(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
       <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
       <div class="tf-stat-row" id="tf-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
         <span class="tf-streak-chip" title="連續天數">🔥 <b id="tf-streak-num">0</b></span>
@@ -1581,13 +1591,22 @@ document.addEventListener('contextmenu', function(e){
     <button class="tf-tool-btn" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlpha()">🔤 字母練習區</button>
   </div>
 
-  <div class="tf-level-tabs" id="tf-level-tabs">
-    <button class="tf-ltab" id="tf-ltab-1" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:1});}catch(e){}TF.selectLevel(1)">初級</button>
-    <button class="tf-ltab" id="tf-ltab-2" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:2});}catch(e){}TF.selectLevel(2)">中級</button>
-    <button class="tf-ltab" id="tf-ltab-3" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:3});}catch(e){}TF.selectLevel(3)">高級</button> <!-- Lin 2026-07-16: เปิดคืนตามที่ Lin สั่ง -->
+  <!-- Phase C.1 (2026-08-10): #tf-session-counter (進度/🏆分數/🔥combo/黃金米題) ย้ายมาอยู่กลุ่มเดียวกับระดับ初/中/高
+       เดิมทั้งก้อนนี้ถูกสร้างเป็น string ฝังอยู่ใน #tf-banner (banner.innerHTML) ผ่าน counterHtml ใน render()
+       (tone-finder-game.js) — แก้ render() ให้แยก counterHtml ออกมาใส่ container นี้แทน ส่วนหลอด進度/⚡ (tfBarsHtml())
+       ยังคงอยู่ใน #tf-banner เหมือนเดิมทุกประการ (presentation only — ไม่แตะ scoring/session/推導 logic เลย)
+       ตรวจแล้ว: .tf-score-pop (เด้งคะแนน +N) เป็น position:fixed กลางจอ ไม่ได้ผูกตำแหน่งกับ #tf-score-hud เดิม
+       จึงย้ายที่ตั้ง #tf-score-hud ได้โดยไม่กระทบ animation -->
+  <div class="gsh-session-header">
+    <div class="tf-level-tabs" id="tf-level-tabs">
+      <button class="tf-ltab" id="tf-ltab-1" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:1});}catch(e){}TF.selectLevel(1)">初級</button>
+      <button class="tf-ltab" id="tf-ltab-2" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:2});}catch(e){}TF.selectLevel(2)">中級</button>
+      <button class="tf-ltab" id="tf-ltab-3" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:3});}catch(e){}TF.selectLevel(3)">高級</button> <!-- Lin 2026-07-16: เปิดคืนตามที่ Lin สั่ง -->
+    </div>
+    <div class="tf-banner-counter" id="tf-session-counter"></div>
   </div>
 
-  <div class="tf-card">
+  <div class="tf-card gsh-gameplay">
     <div class="tf-word-banner" id="tf-banner"></div>
     <!-- แถวปุ่มใต้คำศัพท์: 🐣คำอ่านไทย · 🔡คำอ่านโรมัน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ
          Lin 2026-07-25: ถอดปุ่ม 發音 (🔊) ออกตามที่ Lin สั่ง — ฟังเสียงแล้วรู้วรรณยุกต์ทันที = เฉลยก่อนตอบ
@@ -1668,7 +1687,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=42']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=43']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -1680,7 +1699,7 @@ document.addEventListener('contextmenu', function(e){
 <script src="js/acquisition/posts-data.js"></script>
 <script src="js/acquisition/lessons-data.js"></script>
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=25"></script>
+<script src="js/core/shared.min.js?v=26"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)
@@ -1822,6 +1841,41 @@ function gtTourStart(){
     }, 300);
   }catch(e){}
 })();
+</script>
+
+<!-- P6-B1 (Shared Game UI, 2026-08-10): ลงทะเบียน modal "รอง" (help/star/badge/ask) กับ window.GamePanels
+     ผ่าน window.registerGameModal (ดู js/core/shared.js) — กันเปิดซ้อนกับเมนู 🎮/🍚/🪧 ของ shared.js
+     ตั้งใจเขียนไว้ในไฟล์ .html นี้เท่านั้น (ไม่แตะ js/games/tone-finder-game.js) เพราะหน้านี้โหลด
+     tone-finder-game.min.js เท่านั้น (ดูคอมเมนต์เหนือ #tf-level-tabs) — isOpen()/close() ด้านล่าง
+     แค่ "อ่าน" DOM ที่มีอยู่แล้ว (element id / TF.closeAsk()) ไม่เปลี่ยนกลไกเปิด-ปิดเดิมของ modal ใดเลย
+     ⛔ ไม่แตะ #tf-reveal-ov (เฉลยบังคับ) และ .tf-error-overlay (error) เพราะเป็นส่วนหนึ่งของ gameplay loop โดยตรง -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.registerGameModal) return;
+  // 📖 怎麼玩 (how-to modal) — เปิด/ปิดด้วย style.display เดิม (flex/none) ไม่เปลี่ยน
+  window.__tfHowtoModalReg = window.registerGameModal({
+    isOpen: function () { var m = document.getElementById('tf-howto-modal'); return !!m && m.style.display !== 'none' && m.style.display !== ''; },
+    close: function () { var m = document.getElementById('tf-howto-modal'); if (m) m.style.display = 'none'; }
+  });
+  // ⭐ 累積星星 (TF.showStars() สร้าง <div id="tf-star-ov"> แล้ว appendChild เข้า body — ไม่มีฟังก์ชันปิดเฉพาะ ปิดด้วย .remove() ตรงๆ เหมือนของเดิม)
+  window.__tfStarModalReg = window.registerGameModal({
+    isOpen: function () { return !!document.getElementById('tf-star-ov'); },
+    close: function () { var o = document.getElementById('tf-star-ov'); if (o) o.remove(); }
+  });
+  // 🎖️ 我的徽章 (TF.showBadges() สร้าง <div id="tf-badges-ov"> เหมือนกัน)
+  window.__tfBadgesModalReg = window.registerGameModal({
+    isOpen: function () { return !!document.getElementById('tf-badges-ov'); },
+    close: function () { var o = document.getElementById('tf-badges-ov'); if (o) o.remove(); }
+  });
+  // ❓ 我有問題 (TF.openAsk()/TF.closeAsk() — เรียกฟังก์ชันปิดเดิมของเกมตรงๆ ถ้ามี ไม่งั้น fallback ไป .remove())
+  window.__tfAskModalReg = window.registerGameModal({
+    isOpen: function () { return !!document.getElementById('tf-ask-ov'); },
+    close: function () {
+      if (window.TF && typeof TF.closeAsk === 'function') { TF.closeAsk(); return; }
+      var o = document.getElementById('tf-ask-ov'); if (o) o.remove();
+    }
+  });
+});
 </script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->

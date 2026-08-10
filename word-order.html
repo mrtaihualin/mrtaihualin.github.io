@@ -101,7 +101,8 @@ html:not(.gc-ready) [onclick*="openStar("]{
   pointer-events:none!important;opacity:.45;filter:grayscale(35%);cursor:not-allowed!important;
 }
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
-.v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
+/* P.C 2026-08-10: เอา max-width/padding แนวนอนออก ให้ .gsh-shell (css/shared.css) เป็นคนคุมความกว้าง+ระยะขอบซ้ายขวาแทน — เหลือแค่ font/flex/ระยะขอบบน-ล่างของหน้านี้เอง */
+.v3-page{font-family:'Sarabun',sans-serif;display:flex;flex-direction:column;align-items:center;padding-top:8px;padding-bottom:112px;}
 
 .page-header{text-align:center;margin-bottom:10px;}
 .page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
@@ -113,6 +114,8 @@ html:not(.gc-ready) [onclick*="openStar("]{
 .gold-banner{width:calc(100% + 40px);margin:-22px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,#EFDDB4 0%,#F8F0DE 100%);border-bottom:2px solid rgba(184,134,40,.5);}
 .gold-banner .bars-wrap{margin-bottom:0;}
 .top-bar{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:10px;}
+/* Phase C.1 (2026-08-10): .gsh-session-header ซ้อนอยู่ใน .top-bar เดิม (คู่กับปุ่ม 提示 ที่ยังอยู่นอก header) — ตัด padding เริ่มต้นออกกันซ้ำกับ margin-bottom ของ .top-bar */
+.top-bar .gsh-session-header{padding:0;}
 .score-bar{display:flex;gap:12px;font-size:13px;color:#8B6310;font-family:'Noto Sans TC',sans-serif;}
 .score-bar span{font-weight:700;color:#5a3e10;}
 
@@ -282,7 +285,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <a href="games.html">泰語・遊戲</a>
 </div>
 
-<div class="v3-page">
+<div class="v3-page gsh-shell"><!-- Shared Game UI Phase A+C (2026-08-10): .gsh-shell มีผลจริงแล้ว (แก้ .v3-page ด้านบนให้เลิกชน max-width/padding แนวนอน) -->
 
 <div class="page-header">
   <h1 class="page-title" style="margin:0;">🧩 泰語語序練習室</h1>
@@ -343,7 +346,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </div>
 
 <div class="rg-tools-row">
-  <div id="rg-profile-wrap" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
+  <div id="rg-profile-wrap" class="gsh-player-status" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
     <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
     <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
     <span class="tf-streak-chip" id="wo-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="try{if(window.gtag)gtag('event','word_order_howto_open',{category:'game'});}catch(e){}dismissHowtoHint('wordorder');document.getElementById('wo-howto-modal').style.display='flex'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
@@ -360,11 +363,17 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 
 <!-- GAME -->
-<div id="game" class="card">
+<div id="game" class="card gsh-gameplay">
   <div class="gold-banner">
+    <!-- Phase C.1 (2026-08-10): เพิ่ม Session Header ใหม่ (เดิมไม่มีเลย) — ดึงจาก state จริงที่มีอยู่แล้วเท่านั้น
+         (wo-score = คะแนนรวม, wo-qn/wo-qt = ตำแหน่งประโยคปัจจุบัน ใช้ idx/SET.length ตัวเดียวกับ #prog-txt)
+         ไม่มี difficulty (เกมนี้ไม่มีระบบระดับ ไม่ได้สร้างเพิ่ม) · ปุ่ม提示 (-2) ไม่ใส่ใน header เพราะเป็น action ไม่ใช่สถานะ -->
     <div class="top-bar">
-      <div class="score-bar">
-        <div>分數：<span id="wo-score">0</span></div>
+      <div class="gsh-session-header">
+        <div class="score-bar">
+          <div>第 <span id="wo-qn">1</span>/<span id="wo-qt">10</span> 句</div>
+          <div>分數：<span id="wo-score">0</span></div>
+        </div>
       </div>
       <button class="btn btn-secondary" id="wo-hint-btn" onclick="woHint()" style="padding:6px 14px;font-size:12.5px;">💡 提示 (-2)</button>
     </div>
@@ -393,7 +402,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
        Lin 2026-07-30: เพิ่มปุ่ม 🔖 เซฟทั้งประโยคเข้า 單字庫 (คลังรวม 30 ช่องเดียวกับคำ) ตรงเฉลยนี้ด้วย -->
   <div id="wo-reveal-ctl" style="display:none;align-items:center;justify-content:center;gap:8px;margin:2px 0 6px;">
     <button type="button" id="wo-sound-btn" class="word-audio-btn" style="display:none;" title="發音" aria-label="發音">🔊</button>
-    <button type="button" id="wo-zh-toggle" class="word-ctl-btn" onclick="try{if(window.gtag)gtag('event','word_order_translate_toggle',{category:'game'});}catch(e){}woToggleZh()" title="翻譯">🍙</button>
+    <button type="button" id="wo-zh-toggle" class="word-ctl-btn" onclick="try{if(window.gtag)gtag('event','word_order_translate_toggle',{category:'game'});}catch(e){}woToggleZh()" title="翻譯整句" aria-label="翻譯整句">🍙</button>
     <span id="wo-vault-btn-slot"></span>
   </div>
   <div class="zh-hint" id="wo-zh"></div>
@@ -411,7 +420,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
     {id:'rg-pron-toggle',     label:'讀音',     state:'pron'},
     {id:'rg-en-toggle',       label:'英文讀音', state:'en'},
-    {id:'wo-zh-word-toggle',  label:'翻譯',     state:'zh'},
+    {id:'wo-zh-word-toggle',  label:'逐字翻譯', state:'zh'},
     {id:'font-toggle-slot',   label:'字體',     state:'font'},
     {id:'rg-particle-toggle', label:'禮貌詞',   state:'particle'}
   ]});});</script>
@@ -477,7 +486,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=25"></script>
+<script src="js/core/shared.min.js?v=26"></script>
 
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>
@@ -521,7 +530,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/word-order-app.min.js?v=13']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=15']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -619,6 +628,27 @@ function gtTourStart(){
     }, 300);
   }catch(e){}
 })();
+</script>
+
+<!-- Shared Game UI Phase B1 (2026-08-10): ลงทะเบียน modal เดิม 3 ใบกับ window.GamePanels ผ่าน registerGameModal —
+     ไม่แตะ HTML/onclick เดิมของ modal เลย แค่ "ห่อ" isOpen/close ของเดิมไว้ กันเปิดซ้อนกับเมนู 🎮/🍚/🪧 ของ shared.js
+     ยังไม่ผูก notifyOpen(triggerEl) (เป็นของแถม ข้ามไว้ก่อนเพื่อไม่ต้องแตะ onclick ที่มีอยู่แล้ว) -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.registerGameModal) return;
+  window.__woHowtoModalReg = window.registerGameModal({
+    isOpen: function () { var m = document.getElementById('wo-howto-modal'); return !!m && m.style.display === 'flex'; },
+    close: function () { var m = document.getElementById('wo-howto-modal'); if (m) m.style.display = 'none'; }
+  });
+  window.__woStarModalReg = window.registerGameModal({
+    isOpen: function () { var m = document.getElementById('star-modal'); return !!m && m.classList.contains('show'); },
+    close: function () { var m = document.getElementById('star-modal'); if (m) m.classList.remove('show'); }
+  });
+  window.__woBadgeModalReg = window.registerGameModal({
+    isOpen: function () { var m = document.getElementById('badge-modal'); return !!m && m.classList.contains('show'); },
+    close: function () { var m = document.getElementById('badge-modal'); if (m) m.classList.remove('show'); }
+  });
+});
 </script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->

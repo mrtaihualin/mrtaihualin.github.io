@@ -82,7 +82,7 @@
 <script src="js/games/game-content-client.js?v=3"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-.v3-page{font-family:'Sarabun',sans-serif;max-width:680px;margin:0 auto;display:flex;flex-direction:column;align-items:center;padding:8px 16px 112px;}
+.v3-page{font-family:'Sarabun',sans-serif;display:flex;flex-direction:column;align-items:center;padding-top:8px;padding-bottom:112px;}
 
 .page-header{text-align:center;margin-bottom:10px;}
 .page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:var(--gold);letter-spacing:2px;}
@@ -99,7 +99,7 @@
 /* ── gold banner (คะแนน/ความคืบหน้า) — เหมือน tone-finder/typing-game ── */
 .gold-banner{width:calc(100% + 40px);margin:-22px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,var(--gold-light) 0%,var(--cream) 100%);border-bottom:2px solid rgba(139,99,16,.5);}
 .gold-banner .bars-wrap{margin-bottom:0;}
-.top-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;width:100%;margin-bottom:10px;}
+.top-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;width:100%;margin-bottom:10px;}
 .score-bar{display:flex;gap:12px;font-size:13px;color:var(--gold);font-family:'Noto Sans TC',sans-serif;}
 .score-bar span{font-weight:700;color:var(--gold-deep);}
 
@@ -228,7 +228,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <a href="games.html">泰語・遊戲</a>
 </div>
 
-<div class="v3-page">
+<div class="v3-page gsh-shell">
 
 <div class="page-header">
   <h1 class="page-title" style="margin:0;">🎧 測試</h1>
@@ -256,9 +256,9 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 </div>
 
 <!-- GAME SCREEN -->
-<div id="lg-game" class="card" style="display:none;">
+<div id="lg-game" class="card gsh-gameplay" style="display:none;">
   <div class="gold-banner">
-    <div class="top-bar">
+    <div class="top-bar gsh-session-header">
       <div class="score-bar">
         <div>第 <span id="lg-qn">1</span>/<span id="lg-qt">10</span> 題</div>
         <div>✓ <span id="lg-ok">0</span></div>
@@ -334,7 +334,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 </footer>
 
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=25"></script>
+<script src="js/core/shared.min.js?v=26"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>

@@ -606,3 +606,66 @@
 /* Lin 2026-07-12: footer มือถือ = ตัดเป็น 2 บรรทัดตรงกลาง (หลัง 設計的泰文課) · คอม = บรรทัดเดียวมี · คั่นเหมือนเดิม */
 .foot-mbr{display:none;}
 @media(max-width:768px){ footer .foot-sep{display:none;} footer .foot-mbr{display:inline !important;} }
+
+/* ===================================================================
+   🎮 SHARED GAME SHELL — Phase A (Shared Game UI, Lin 2026-08-10)
+   โครงกลาง 4 ชั้นที่ 5 เกมฝึก (聲調/拼讀/聽力/打字/語序) ใช้ร่วมกัน:
+     Utility(.rg-ctl-wrap เดิมจาก shared.js — ไม่แตะ) → Player Status → Session Header → Gameplay
+   หลักการ: เป็น "ชุด class เสริม" (.gsh-*) แปะเข้า container ที่มีอยู่แล้วของแต่ละเกม
+   ไม่มีการย้าย/รื้อ DOM เดิม ไม่แตะ id เดิม ไม่ชนกับ selector อื่นในเว็บ (prefix .gsh- ไม่ซ้ำใคร)
+   อ้างอิง: Audit 2026-08-10 (2026-08-10_Audit_5เกม_ปุ่มUtility_ก่อนShared-Game-UI.md) หัวข้อ §6 Shared Page Structure
+   ระวัง: ไฟล์นี้โหลดทุกหน้าของเว็บ (ไม่ใช่แค่หน้าเกม) — กฎ prefix .gsh- ต้องรักษาไว้เสมอกันกระทบหน้าอื่น
+   =================================================================== */
+
+/* กรอบกว้างของพื้นที่เกม — desktop โฟกัสตรงกลาง ไม่ยืดเต็มจอ, mobile margin ~16px ไม่ overflow */
+.gsh-shell { max-width:640px; margin:0 auto; padding:0 16px; width:100%; }
+@media(min-width:900px){ .gsh-shell { max-width:720px; padding:0 24px; } }
+@media(min-width:1200px){ .gsh-shell { max-width:760px; } }
+
+/* Player Status — compact, กลางจอ, ไม่แย่ง Gameplay */
+.gsh-player-status {
+  display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+  gap:6px 14px; padding:6px 0; font-family:'Noto Sans TC',sans-serif; font-size:12.5px; color:var(--ink-muted);
+}
+.gsh-player-status [role="button"] { cursor:pointer; }
+
+/* Session Header — compact 1-2 แถว บน desktop, wrap ได้บน mobile แต่ลำดับข้อมูลต้องเหมือน desktop
+   ลำดับที่แนะนำ (ตาม §10): game title → difficulty/category → progress → score */
+.gsh-session-header {
+  display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+  gap:4px 16px; padding:4px 0 10px; font-family:'Noto Sans TC',sans-serif; font-size:13px; color:var(--ink-muted);
+  text-align:center;
+}
+.gsh-session-header .gsh-title { font-family:'Noto Serif TC',serif; font-weight:900; color:var(--ink); font-size:15px; }
+.gsh-session-header .gsh-sep { opacity:0.4; }
+
+/* Gameplay — เด่นที่สุดเสมอ ไม่มีการ์ดซ้อนการ์ด ไม่มี sidebar/leaderboard/promotion ข้างๆ */
+.gsh-gameplay { margin-top:4px; width:100%; }
+
+@media(max-width:600px){
+  .gsh-shell { padding:0 16px; }
+  .gsh-player-status { font-size:12px; gap:5px 10px; }
+  .gsh-session-header { font-size:12px; gap:3px 10px; }
+  .gsh-session-header .gsh-title { font-size:14px; }
+}
+@media(max-width:390px){
+  .gsh-shell { padding:0 14px; }
+}
+
+/* Feedback inline — reserve พื้นที่กันจอกระโดดแรง (§12) ใช้แปะเสริม container feedback เดิมของแต่ละเกม
+   ไม่ได้แทนที่ banner/class เดิม แค่กำหนด min-height เผื่อไว้ + transition นุ่มๆ */
+.gsh-feedback-slot { min-height:1.6em; transition:opacity 200ms ease, transform 200ms ease; }
+
+/* 查看詳細解說 — ปุ่ม/กล่องรายละเอียดที่ผู้เล่นเลือกเปิดเอง (§13) ใช้เป็น visual มาตรฐานร่วมกัน 5 เกม */
+.gsh-detail-toggle {
+  font-family:'Noto Sans TC',sans-serif; font-size:12.5px; font-weight:700; color:var(--gold-deep);
+  background:none; border:1px solid var(--warm-line); border-radius:20px; padding:5px 14px; cursor:pointer;
+}
+.gsh-detail-toggle:hover { background:rgba(139,99,16,0.08); }
+.gsh-detail-box { margin-top:8px; }
+
+/* End Game — visual hierarchy มาตรฐานร่วมกัน 5 เกม (§18) */
+.gsh-end-title { font-family:'Noto Serif TC',serif; font-weight:900; font-size:clamp(20px,4vw,26px); text-align:center; }
+.gsh-end-score { text-align:center; font-family:'Noto Serif TC',serif; font-weight:900; font-size:clamp(28px,6vw,40px); color:var(--gold-deep); }
+.gsh-end-actions { display:flex; flex-direction:column; gap:10px; align-items:stretch; max-width:320px; margin:16px auto 0; }
+@media(min-width:600px){ .gsh-end-actions { flex-direction:row; flex-wrap:wrap; justify-content:center; max-width:none; } }

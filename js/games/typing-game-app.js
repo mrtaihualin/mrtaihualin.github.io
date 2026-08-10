@@ -2326,3 +2326,28 @@ try {
     }, true);
   }
 } catch(e){}
+
+// ── Shared Game UI: ลงทะเบียน modal ของเกมนี้กับ registerGameModal (shared.js) ──
+// กันเปิดซ้อนกับเมนู 🎮/🍚/🪧 ของ shared.js — ไม่เปลี่ยนกลไกเดิมของ modal เลย แค่ให้ shared.js
+// รู้จักปิด modal เหล่านี้ได้เมื่อมีอย่างอื่นเปิดพร้อมกัน · registerGameModal อาจยังไม่ถูกโหลด (เป็นของเสริม) จึงห่อ try/catch
+try {
+  if (window.registerGameModal) {
+    window.__tgHowtoModalReg = window.registerGameModal({
+      isOpen: function () { var m = document.getElementById('rg-howto-modal'); return !!m && m.style.display === 'flex'; },
+      close: function () { var m = document.getElementById('rg-howto-modal'); if (m) { m.style.display = 'none'; try { gtag('event','typing_game_howto_close',{category:'game'}); } catch(e){} } }
+    });
+    window.__tgStarModalReg = window.registerGameModal({
+      isOpen: function () { var m = document.getElementById('star-modal'); return !!m && m.classList.contains('show'); },
+      close: function () { var m = document.getElementById('star-modal'); if (m) { m.classList.remove('show'); try { gtag('event','typing_game_star_modal_close',{category:'game'}); } catch(e){} } }
+    });
+    window.__tgBadgeModalReg = window.registerGameModal({
+      isOpen: function () { var m = document.getElementById('badge-modal'); return !!m && m.classList.contains('show'); },
+      close: function () { var m = document.getElementById('badge-modal'); if (m) { m.classList.remove('show'); try { gtag('event','typing_game_badge_modal_close',{category:'game'}); } catch(e){} } }
+    });
+    // rg-ask-ov (我有問題) ถูกสร้าง/ลบทั้ง element ด้วย rgOpenAsk() — ไม่มี show/hide class ให้เช็ค แค่เช็คว่ามี element อยู่ไหม
+    window.__tgAskModalReg = window.registerGameModal({
+      isOpen: function () { return !!document.getElementById('rg-ask-ov'); },
+      close: function () { var m = document.getElementById('rg-ask-ov'); if (m) m.remove(); }
+    });
+  }
+} catch(e){}

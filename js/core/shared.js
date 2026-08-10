@@ -47,6 +47,46 @@ window.GamePanels = window.GamePanels || (function () {
 })();
 
 // ===================================================================
+// [01.3] 🪟 GAME MODAL REGISTRY HELPER — Shared Game UI Phase B1 (Lin 2026-08-10)
+//   Audit 2026-08-10 เจอว่า modal ของแต่ละเกมเอง (howto/star/badge/ask ฯลฯ) ไม่เคยลงทะเบียนกับ
+//   window.GamePanels ด้านบน ([01.2]) → เปิดซ้อนกับเมนู 🎮/🍚/🪧 ของ shared.js ได้ (เคยเป็นบั๊กจริงมาแล้วกับ 🪧 เอง)
+//   ฟังก์ชันนี้ "ห่อ" ของเดิมไว้เฉยๆ — ไม่แตะ HTML/CSS/เนื้อหา modal เดิมเลย แต่ละเกมยังเปิด/ปิด modal
+//   ด้วยฟังก์ชันเดิมของตัวเอง (style.display / classList / remove()) เหมือนเดิมทุกอย่าง แค่เพิ่ม 2 จุด:
+//     1) เรียก registerGameModal({...}) ครั้งเดียวตอน DOM พร้อม (ได้ handle กลับมา)
+//     2) เรียก handle.notifyOpen(triggerEl) ตอน "เปิด" modal สำเร็จ (ใน onclick/ฟังก์ชันเปิดเดิม)
+//   ผลที่ได้ฟรี: กันเปิดซ้อนกับกล่องอื่น (ผ่าน GamePanels เดิม) + ปิดด้วย Esc ได้ (ถ้ายังไม่มี) + คืน focus ให้ปุ่มที่กดเปิด
+// ===================================================================
+window.registerGameModal = window.registerGameModal || function (opts) {
+  if (!opts || typeof opts.isOpen !== 'function' || typeof opts.close !== 'function') return null;
+  var closeOnEsc = opts.closeOnEsc !== false; // default true — ปิดได้ด้วย Esc เว้นแต่ระบุ false ชัดเจน
+  var lastTrigger = null;
+
+  var panel = {
+    isOpen: opts.isOpen,
+    close: function () {
+      opts.close();
+      if (lastTrigger && typeof lastTrigger.focus === 'function') { try { lastTrigger.focus(); } catch (e) {} }
+      lastTrigger = null;
+    }
+  };
+  if (window.GamePanels) window.GamePanels.add(panel);
+
+  if (closeOnEsc) {
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && opts.isOpen()) panel.close();
+    });
+  }
+
+  return {
+    // เรียกตอน modal เพิ่งเปิดสำเร็จ — triggerEl (ปุ่มที่กดเปิด) เป็น optional เผื่อคืน focus ตอนปิด
+    notifyOpen: function (triggerEl) {
+      lastTrigger = triggerEl || document.activeElement;
+      if (window.GamePanels) window.GamePanels.closeOthers(panel);
+    }
+  };
+};
+
+// ===================================================================
 // [02.1] 📢 ROTATING ANNOUNCEMENT — โชว์ทุกหน้า, หมุนทุก 6 วิ
 //   เพิ่ม/แก้/ลบประกาศได้ที่ array ด้านล่างนี้ที่เดียว มีผลทุกหน้า
 //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์  หรือ  modal = id โมดัล
@@ -1972,7 +2012,10 @@ window.deleteFBComment = function(postId, idx) {
       try { hideOn = localStorage.getItem(KEY) === '1'; } catch (e) {}
 
       // กล่องคำแปลที่ "ยืนคนเดียว" ไม่ได้ซ้อนอยู่ในปุ่ม/เมนูอื่น → เปิด/ปิดรายจุดด้วยคลิกได้
-      var ZH_CLICKABLE = ['.word-zh', '.out-zh', '.out-zh-full', '.pzh', '.tf-adv-sent-ctx-zh'];
+      // Lin 2026-08-10 (Shared Game UI Phase B2): เพิ่ม '.lg-rev-zh' (กล่อง意思 ของเกมฟัง) เข้าลิสต์นี้
+      // เดิมปุ่ม 🍙/🌾 ในเกมฟังโผล่แต่กดแล้วไม่ toggle อะไรเลย เพราะ class จริงของเกมฟังไม่เคยอยู่ในลิสต์นี้ (ดู Audit 2026-08-10)
+      // '.lg-rev-zh' เป็นกล่อง "ยืนคนเดียว" ไม่ได้ซ้อนอยู่ในปุ่ม/เมนูอื่นของเกมฟัง จึงจัดเป็น CLICKABLE ได้ปลอดภัย (คลิกรายจุดได้ด้วย เหมือนกล่องอื่นในกลุ่มนี้)
+      var ZH_CLICKABLE = ['.word-zh', '.out-zh', '.out-zh-full', '.pzh', '.tf-adv-sent-ctx-zh', '.lg-rev-zh'];
       // กล่องคำแปลที่ซ้อนอยู่ในปุ่มเลือกคำ/เมนูของเกม → ซ่อน/โชว์ตามค่า default อย่างเดียว ห้ามผูกคลิก (กันชนฟังก์ชันเกม)
       var ZH_GLOBAL_ONLY = ['.tf-lvl-adv .tf-level-sub', '.ozh', '.szh'];
       var ZH_ALL = ZH_CLICKABLE.concat(ZH_GLOBAL_ONLY);
@@ -1981,7 +2024,7 @@ window.deleteFBComment = function(postId, idx) {
       style.textContent =
         ZH_ALL.map(function (s) { return 'body.games-hide-zh ' + s; }).join(', ') + ' { display:none !important; }' +
         // คลิกรายจุด: บังคับโชว์ทั้งที่ default ปิดอยู่ (div/box)
-        '.word-zh.zh-shown, .out-zh.zh-shown, .out-zh-full.zh-shown, .tf-adv-sent-ctx-zh.zh-shown { display:block !important; }' +
+        '.word-zh.zh-shown, .out-zh.zh-shown, .out-zh-full.zh-shown, .tf-adv-sent-ctx-zh.zh-shown, .lg-rev-zh.zh-shown { display:block !important; }' +
         // .pzh เป็น span (inline) ต้องคืนเป็น inline ไม่ใช่ block
         '.pzh.zh-shown { display:inline !important; }' +
         // คลิกรายจุด: บังคับซ่อนทั้งที่ default เปิดอยู่

@@ -2086,14 +2086,19 @@ function render() {
   var noBannerSteps = ['result'];
   if (S.word && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
+    // Phase C.1 (2026-08-10): counterHtml (第X/Y字＋🏆分數＋🔥combo＋黃金米題) แยกออกจาก banner.innerHTML
+    // ไปฉีดใส่ #tf-session-counter (อยู่แถวเดียวกับปุ่มระดับ初/中/高 — ดู tone-finder.html) แทน
+    // barsHtml (หลอด進度/⚡) ยังอยู่ใน banner เหมือนเดิมทุกประการ — ไม่แตะ scoring/session logic เลย แค่ตำแหน่งแสดงผล
     var counterHtml = (session && session.words && session.words.length)
       ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字'
         + '<span id="tf-score-hud" class="tf-score-hud">🏆 ' + (session.score || 0) + ' 分</span>'
         + (session.combo >= 3 ? '<span class="tf-combo-hud">🔥 ×' + TF_SCORE.comboMultiplier(session.combo) + '</span>' : '')
         + (session.currentWordGolden ? '<span class="tf-golden-hud"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金米題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')
         + '</div>'
-        + tfBarsHtml()
       : '';
+    var barsHtml = (session && session.words && session.words.length) ? tfBarsHtml() : '';
+    var _tfCounterEl = document.getElementById('tf-session-counter');
+    if (_tfCounterEl) _tfCounterEl.innerHTML = counterHtml;
     var goldWord = (session && session.currentWordGolden) ? ' tf-banner-word-gold' : '';
     // Lin 2026-07-14: คำแปลจีนใต้คำศัพท์ เหมือนเกมอ่าน/เกมพิมพ์ — ใช้ class "word-zh" เดียวกัน ต่อเข้าปุ่ม 🍙/🌾 เดิม (shared.js) อัตโนมัติ ไม่ต้องทำปุ่มใหม่
     var curZh = session ? (session.words[session.index] && session.words[session.index].zh) : (randomEntry ? randomEntry.zh : (S.zh || ''));
@@ -2148,7 +2153,7 @@ function render() {
     }
     // บรรทัดคำอ่าน: 讀音 โชว์ได้ทุกขั้น (Lin 2026-07-30) · 英文讀音 โชว์หลังตอบแล้วเท่านั้น (ดู tfReadingLineHtml)
     // Lin 2026-07-30 (รอบ 2): เรียงใต้คำให้เหมือนกันทุกเกม → 讀音 → 英文讀音 → 翻譯 (เดิมคำแปลอยู่เหนือคำอ่าน)
-    banner.innerHTML = sentCtxHtml + counterHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + sentReadingHtml + sentCtxZhHtml + tfGuideNoteHtml();
+    banner.innerHTML = sentCtxHtml + barsHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + sentReadingHtml + sentCtxZhHtml + tfGuideNoteHtml();
     // Lin 2026-07-30: กล่องพยางค์/กล่องคำในประโยค 高級 อยู่นอกกรอบทอง — เติมเนื้อหาแยกจาก banner.innerHTML ข้างบน (ดู #tf-syl-strip ใน tone-finder.html)
     var tfSylStripEl = document.getElementById('tf-syl-strip');
     if (tfSylStripEl) {
@@ -2188,6 +2193,10 @@ function render() {
     if (_ctlRow2) _ctlRow2.style.display = 'none';
     var tfSylStripEl2 = document.getElementById('tf-syl-strip'); // Lin 2026-07-30: ซ่อนกล่องพยางค์นอกกรอบทองด้วยตอนไม่มีคำ (เช่นหน้าเลือกระดับ/หน้าเฉลย)
     if (tfSylStripEl2) { tfSylStripEl2.style.display = 'none'; tfSylStripEl2.innerHTML = ''; }
+    // Phase C.1 (2026-08-10): ไม่มีคำที่กำลังเล่นอยู่ (เช่นหน้าเลือกระดับ/หน้าเฉลย) → ล้าง #tf-session-counter
+    // กันเลขเก่าจากคำถามก่อนหน้าค้างโชว์ทั้งที่ .tf-level-tabs แถบนี้อยู่เหนือการ์ดตลอด ไม่เคยถูกซ่อน
+    var _tfCounterEl2 = document.getElementById('tf-session-counter');
+    if (_tfCounterEl2) _tfCounterEl2.innerHTML = '';
     document.getElementById('tf-hint').style.display = (S.step === 'level-select') ? 'block' : 'none';
   }
 

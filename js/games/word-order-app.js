@@ -240,7 +240,9 @@
     var b3 = document.getElementById('wo-zh-word-toggle');
     if (b3) {
       b3.textContent = woZhWordOn ? '🍙' : '🌾';
-      b3.title = woZhWordOn ? '目前：翻譯已顯示（跟著詞塊一起移動）' : '目前：翻譯已隱藏（點擊顯示）';
+      // Lin 2026-08-10 (Shared Game UI Phase B3): เดิม title ใช้คำว่า "翻譯" เฉยๆ ซ้ำกับปุ่ม #wo-zh-toggle (แปลทั้งประโยค)
+      // ผู้เล่นแยกไม่ออกว่า 2 ปุ่มนี้คุมคนละอย่าง — เปลี่ยนข้อความให้ชัดว่านี่คือ "รายคำ" (ไม่แตะ logic/state เดิมเลย)
+      b3.title = woZhWordOn ? '目前：逐字翻譯已顯示（跟著詞塊一起移動）' : '目前：逐字翻譯已隱藏（點擊顯示）';
       b3.setAttribute('aria-label', b3.title);
     }
   }
@@ -328,7 +330,9 @@
     var b = document.getElementById('wo-zh-toggle');
     if (b) {
       b.textContent = woZhOn ? '🍙' : '🌾';
-      b.title = woZhOn ? '目前：翻譯已開啟（點擊關閉）' : '目前：翻譯已關閉（點擊開啟）';
+      // Lin 2026-08-10 (Shared Game UI Phase B3): เดิม title ใช้คำว่า "翻譯" เฉยๆ ซ้ำกับปุ่ม #wo-zh-word-toggle (แปลรายคำ)
+      // ผู้เล่นแยกไม่ออกว่า 2 ปุ่มนี้คุมคนละอย่าง — เปลี่ยนข้อความให้ชัดว่านี่คือ "ทั้งประโยค" (ไม่แตะ logic/state เดิมเลย)
+      b.title = woZhOn ? '目前：整句翻譯已開啟（點擊關閉）' : '目前：整句翻譯已關閉（點擊開啟）';
       b.setAttribute('aria-label', b.title);
     }
   }
@@ -680,6 +684,11 @@
     // 進度條：目前已完成幾句／全部幾句
     document.getElementById('pf').style.width = (idx / SET.length * 100) + '%';
     document.getElementById('prog-txt').textContent = idx + '/' + SET.length;
+    // Phase C.1 (2026-08-10): #wo-qn/#wo-qt ใน Session Header (第X/Y句) — เลขเดียวกับ idx/SET.length ข้างบน
+    // เปลี่ยนมุมมองจาก "ทำไปแล้วกี่ข้อ" (idx) เป็น "กำลังทำข้อที่เท่าไหร่" (idx+1) ให้ตรงกับรูปแบบ 第X/Y字 ของเกมอื่น
+    // (ข้อมูลจริงชุดเดียวกัน ไม่ได้สร้างใหม่ — ไม่แตะ life/hint/scoring logic เลย)
+    var _woQn = document.getElementById('wo-qn'); if (_woQn) _woQn.textContent = idx + 1;
+    var _woQt = document.getElementById('wo-qt'); if (_woQt) _woQt.textContent = SET.length;
     updatePowerBar(s);
 
     renderSlots(s);
@@ -1040,6 +1049,8 @@
     document.getElementById('end').style.display = 'flex';
     document.getElementById('pf').style.width = '100%';
     document.getElementById('prog-txt').textContent = SET.length + '/' + SET.length;
+    var _woQnEnd = document.getElementById('wo-qn'); if (_woQnEnd) _woQnEnd.textContent = SET.length;
+    var _woQtEnd = document.getElementById('wo-qt'); if (_woQtEnd) _woQtEnd.textContent = SET.length;
 
     // GA4: ยิงทุกครั้งที่จบรอบ ไม่ว่าจะ practiceMode หรือไม่ (แก้บั๊กเดิม: game_complete เคยยิงหลัง if(practiceMode) เท่านั้น ทำให้คนที่จำครบแล้วไม่ถูกนับ)
     try{ if(window.gtag) gtag('event','word_order_complete',{category:'game',practice: !!practiceMode}); }catch(e){}
