@@ -86,6 +86,37 @@ window.registerGameModal = window.registerGameModal || function (opts) {
   };
 };
 
+// ═══════════════════════════════════════════════════════════
+// GameResume — shared guest-resume helper (Phase E3, 2026-08-10)
+// เก็บ "active session ล่าสุด 1 session ต่อเกม" ไว้ใน localStorage ให้ guest กลับมาเล่นต่อได้
+// ⚠️ ใช้ได้เฉพาะ guest-local resume เท่านั้น — ห้ามใช้แทน Free-account resume (server-side)
+//    เพราะยังไม่มี backend รองรับ (ตรวจแล้ว 2026-08-10 — ดูรายงาน Phase E4)
+// key แยกตามเกม (gameId) กัน state ปนกัน — save ซ้ำ = แทนที่ของเก่าเสมอ (ไม่เก็บหลายรอบ ไม่ sync ข้ามเครื่อง)
+// ═══════════════════════════════════════════════════════════
+window.GameResume = window.GameResume || (function () {
+  function key(gameId) { return 'gsh_resume_' + gameId; }
+  return {
+    // state: ก้อนข้อมูลที่จำเป็นจริงในการกลับมาเล่นต่อ (เช่น {level, idx, total, score, ...}) — แต่ละเกมกำหนดฟิลด์เอง
+    save: function (gameId, state) {
+      try {
+        var payload = state ? JSON.parse(JSON.stringify(state)) : {};
+        payload._savedAt = Date.now();
+        localStorage.setItem(key(gameId), JSON.stringify(payload));
+      } catch (e) {}
+    },
+    load: function (gameId) {
+      try {
+        var raw = localStorage.getItem(key(gameId));
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) { return null; }
+    },
+    clear: function (gameId) {
+      try { localStorage.removeItem(key(gameId)); } catch (e) {}
+    }
+  };
+})();
+
 // ===================================================================
 // [02.1] 📢 ROTATING ANNOUNCEMENT — โชว์ทุกหน้า, หมุนทุก 6 วิ
 //   เพิ่ม/แก้/ลบประกาศได้ที่ array ด้านล่างนี้ที่เดียว มีผลทุกหน้า

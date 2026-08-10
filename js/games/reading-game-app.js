@@ -230,6 +230,38 @@ function rgWrongItemsFromLog(){
   try{ return roundLog.filter(function(w){return (w.wrong||0)>0||w.failed;}).map(function(w){return {th:w.th,zh:w.zh,wrong:w.wrong||0};}); }
   catch(e){ return []; }
 }
+// F2 (2026-08-10 Shared Game UI Phase F): 查看錯題 — 唯讀畫面，重用 rgWrongItemsFromLog() 一樣的篩選規則（wrong>0 || failed）
+// 直接讀 roundLog 本人（不是它做完 map 的簡化版），因為要多顯示 guide/mastered 狀態文字
+function rgEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function rgBuildMistakeList(){
+  try{ return roundLog.filter(function(w){return (w.wrong||0)>0||w.failed;}); }
+  catch(e){ return []; }
+}
+function rgShowMistakes(){
+  try{ if(typeof gtag==='function') gtag('event','reading_game_mistakes_view',{category:'game'}); }catch(e){}
+  var wrap=document.getElementById('rg-mistake-list');
+  if(wrap){
+    var items=rgBuildMistakeList();
+    if(!items.length){
+      wrap.innerHTML='<div class="gsh-mistake-item" style="text-align:center;color:#888;">這輪沒有拼錯的字，太棒了 🎉</div>';
+    } else {
+      wrap.innerHTML=items.map(function(w){
+        var statusTxt=w.failed?'✗ 待加強（之後會再複習到）':(w.guide?'💡 用了提示（不計分）':'✓ 後來拼對了');
+        return '<div class="gsh-mistake-item gsh-mistake-wrong">'
+          +'<div class="gsh-mistake-q">'+rgEsc(w.th)+'</div>'
+          +'<div class="gsh-mistake-row">'+rgEsc(w.zh||'')+'</div>'
+          +'<div class="gsh-mistake-row">狀態：<b>'+statusTxt+'</b>　拼錯 <b>'+(w.wrong||0)+'</b> 次</div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+  var endEl=document.getElementById('end'); if(endEl)endEl.style.display='none';
+  var m=document.getElementById('rg-mistakes'); if(m)m.style.display='flex';
+}
+function rgBackToEndFromMistakes(){
+  var m=document.getElementById('rg-mistakes'); if(m)m.style.display='none';
+  var endEl=document.getElementById('end'); if(endEl)endEl.style.display='flex';
+}
 var roundHadGuide=false; // (เลิกใช้แล้ว — คำใบ้เป็นรายคำ) เก็บตัวแปรไว้กันโค้ดเดิมอ้างถึง
 var isWordPractice=false; // ?word= ฝึกคำเดียว / ทบทวนหลังจำครบ = ไม่คิดคะแนน/ลีก (G + กฎ15)
 var rgAllMasteredPending=false; // กฎ15: รอเด้งหน้าฉลอง 全部精通
@@ -421,6 +453,78 @@ function loadSave(){
 }
 function doSave(){
   try{localStorage.setItem(SAVE_KEY,JSON.stringify({srsRecords,totalStars,totalBadges}));}catch(e){}
+}
+
+// ════════════════════════════════════════════
+// E3 (2026-08-10 Shared Game UI Phase E): 訪客本機續玩 — window.GameResume (js/core/shared.js)
+// เก็บแค่ "ระดับ + รายชื่อคำในรอบนี้ + ตำแหน่งที่ทำถึง + คะแนนสะสม" ไม่ใช่ SRS/ดาว/สถิติถาวร (พวกนั้นมี doSave()/GAME_ACCOUNT อยู่แล้ว)
+// เป็น local-only ไม่ sync เซิร์ฟเวอร์ ไม่ผูกกับบัญชีล็อกอิน — ผู้เล่นล็อกอินก็ยังใช้กลไกนี้ได้เหมือนกัน (แค่เป็นคนละระบบกับ SRS ที่ sync เซิร์ฟเวอร์)
+// ไม่แตะ granularity ระดับพยางค์/ไทล์ที่กำลังลากอยู่ — resume กลับไปที่ "จุดเริ่มคำที่ค้างไว้" เท่านั้น (ตามที่สเปกอนุญาต)
+// ════════════════════════════════════════════
+var RG_RESUME_ID='reading-game';
+function rgSaveResumeState(){
+  try{
+    if(isWordPractice)return; // ?word= ฝึกคำเดียว/ทบทวน全部精通 — ไม่ใช่ "รอบ" จริง ไม่ต้องจำ
+    if(!window.GameResume)return;
+    if(!roundQueue||!roundQueue.length)return;
+    GameResume.save(RG_RESUME_ID,{
+      level:curLevel,
+      wordIds:roundQueue.map(function(i){return WORDS[i]?WORDS[i].th:null;}),
+      cur:cur,okC:okC,badC:badC,streak:streak,maxStreak:maxStreak,
+      roundScore:roundScore,cleanC:cleanC,roundTotal:roundTotal
+    });
+  }catch(e){}
+}
+function rgClearResumeState(){ try{ if(window.GameResume) GameResume.clear(RG_RESUME_ID); }catch(e){} }
+// เรียกครั้งเดียวตอนโหลดหน้า (แทน initGame() ตรงๆ) — เจอ state ค้างไว้จริง → โชว์แบนเนอร์ถามก่อน ไม่เจอ → คืน false ให้ผู้เรียกไป initGame() ตามปกติ
+function rgTryLoadResumeBanner(){
+  var banner=document.getElementById('rg-resume-banner');
+  if(!banner||!window.GameResume)return false;
+  var st=null;
+  try{ st=GameResume.load(RG_RESUME_ID); }catch(e){ st=null; }
+  if(!st||!st.wordIds||!st.wordIds.length||typeof st.cur!=='number'||st.cur>=st.wordIds.length){
+    banner.style.display='none';
+    return false;
+  }
+  window.__rgPendingResume=st;
+  var lvName=(st.level==='中')?'中級':(st.level==='高')?'高級':'初級';
+  var detail=document.getElementById('rg-resume-detail');
+  if(detail)detail.textContent=lvName+' · 第 '+(st.cur+1)+'/'+st.wordIds.length+' 字';
+  banner.style.display='';
+  return true;
+}
+function rgResumeContinue(){
+  try{ if(typeof gtag==='function') gtag('event','reading_game_resume_continue',{category:'game'}); }catch(e){}
+  var banner=document.getElementById('rg-resume-banner'); if(banner)banner.style.display='none';
+  var st=window.__rgPendingResume; window.__rgPendingResume=null;
+  if(!st){ initGame(); return; }
+  curLevel=st.level||curLevel;
+  try{localStorage.setItem('rg_reading_level',curLevel);}catch(e){}
+  document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
+  var lt=document.getElementById('ltab-'+curLevel); if(lt)lt.classList.add('active');
+  // สร้าง roundQueue ใหม่จากรายชื่อคำที่บันทึกไว้ (th+level) — คำไหนหาไม่เจอ (Lin แก้/ลบคำไปแล้วระหว่างนี้) ก็ข้ามไปเฉยๆ
+  var rq=[];
+  (st.wordIds||[]).forEach(function(th){
+    for(var i=0;i<WORDS.length;i++){ if(WORDS[i].th===th && WORDS[i].level===st.level){ rq.push(i); return; } }
+  });
+  if(!rq.length){ rgClearResumeState(); initGame(); return; } // ข้อมูลเปลี่ยนไปมากจนหาคำเดิมไม่เจอเลย → เริ่มรอบใหม่แทน ปลอดภัยกว่าเล่นรอบว่าง
+  roundQueue=rq; roundTotal=roundQueue.length;
+  cur=Math.min(st.cur||0,roundQueue.length-1);
+  okC=st.okC||0;badC=st.badC||0;streak=st.streak||0;maxStreak=st.maxStreak||0;
+  roundScore=st.roundScore||0;cleanC=st.cleanC||0;
+  isWordPractice=false;
+  roundLog=[]; // หมายเหตุ: log รายคำของช่วงก่อนปิดหน้าไม่ได้ถูกเก็บไว้ (เก็บแค่ตัวเลขสรุป) → รายงานท้ายรอบหลัง resume จะเริ่มนับตั้งแต่จุดนี้เท่านั้น ไม่ใช่บั๊ก
+  document.getElementById('end').style.display='none';
+  document.getElementById('game').style.display='flex';
+  refreshUI();
+  loadWord();
+}
+function rgResumeRestart(){
+  try{ if(typeof gtag==='function') gtag('event','reading_game_resume_restart',{category:'game'}); }catch(e){}
+  var banner=document.getElementById('rg-resume-banner'); if(banner)banner.style.display='none';
+  window.__rgPendingResume=null;
+  rgClearResumeState();
+  initGame();
 }
 
 // ════════════════════════════════════════════
@@ -708,6 +812,7 @@ function loadWord(){
     var badges=document.querySelectorAll('.vault-badge');
     badges.forEach(function(b){b.innerHTML='<img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫';});
   }
+  rgSaveResumeState(); // E3: จำ "กำลังอยู่คำที่กี่/รอบไหน" ไว้ทุกครั้งที่เริ่มคำใหม่ (guest-only, local)
   loadSyl();
 }
 // โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
@@ -731,6 +836,7 @@ function loadSyl(){
   document.getElementById('banner').className='result-banner';
   document.getElementById('reveal').className='reveal';
   document.getElementById('bonus-reason').className='bonus-reason';
+  rgResetDetailToggle(); // D2: พยางค์/คำใหม่ → ปิดกล่องคำอธิบายเฉลย+ซ่อนปุ่มไว้ก่อนเสมอ
   document.getElementById('ok').textContent=okC;
   document.getElementById('bad').textContent=badC;
   renderSylStrip();
@@ -1024,6 +1130,7 @@ function check(){
     checked=true;
     markOpts();markSlots();
     evaluateBonus();showReveal();renderSylStrip();
+    rgSyncDetailToggle();
     document.getElementById('retry-hint').className='retry-hint';
     setGameBtns('done');
     if(lastSyl){
@@ -1067,6 +1174,7 @@ function check(){
       wordFailed=true;checked=true;
       markOpts();markSlots();
       evaluateBonus();showReveal();renderSylStrip();
+      rgSyncDetailToggle();
       document.getElementById('retry-hint').className='retry-hint';
       setGameBtns('done');
       if(lastSyl){
@@ -1096,6 +1204,40 @@ function evaluateBonus(){
   renderBonusReason(W);
 }
 
+// ── D2 (2026-08-10 Shared Game UI Phase D): กล่องคำอธิบายเฉลยเปลี่ยนจาก "โชว์อัตโนมัติ" → "กดดูเอง" ──
+// การคำนวณเนื้อหา (evaluateBonus/showReveal/showRevealMulti ด้านบน/ล่าง) ไม่ถูกแตะเลย ยังเซ็ต className 'show'
+// ให้ #bonus-section/#reveal เหมือนเดิมทุกอย่าง — ฟังก์ชันนี้แค่ "อ่าน" ว่ามีเนื้อหาจริงหรือยัง แล้วโชว์/ซ่อนปุ่ม
+// ส่วนตัวกล่องจริง (#rg-detail-box) เริ่มปิดไว้เสมอ ผู้เล่นต้องกดปุ่มเองถึงจะเห็น (ปุ่มเปิด/ปิด = rgToggleDetail())
+function rgSyncDetailToggle(){
+  var btn=document.getElementById('rg-detail-toggle'), box=document.getElementById('rg-detail-box');
+  if(!btn||!box)return;
+  var bonusEl=document.getElementById('bonus-section'), revealEl=document.getElementById('reveal');
+  var hasContent=(bonusEl&&bonusEl.classList.contains('show'))||(revealEl&&revealEl.classList.contains('show'));
+  if(hasContent){
+    btn.style.display='';
+  } else {
+    // ไม่มีเนื้อหาจริง (เช่นข้อมูลคำนี้ยังไม่มี tone_name/reveal rules) → ไม่โชว์ปุ่มเปล่าๆ
+    btn.style.display='none';
+    box.style.display='none';
+    btn.textContent='查看詳細解說';btn.setAttribute('aria-expanded','false');
+  }
+}
+// รีเซ็ตกล่อง/ปุ่มกลับเป็น "ปิดไว้ก่อน" ทุกครั้งที่เริ่มพยางค์/คำใหม่ (เนื้อหาเก่าไม่เกี่ยวกับพยางค์ใหม่แล้ว)
+function rgResetDetailToggle(){
+  var btn=document.getElementById('rg-detail-toggle'), box=document.getElementById('rg-detail-box');
+  if(btn){btn.style.display='none';btn.textContent='查看詳細解說';btn.setAttribute('aria-expanded','false');}
+  if(box)box.style.display='none';
+}
+function rgToggleDetail(){
+  var btn=document.getElementById('rg-detail-toggle'), box=document.getElementById('rg-detail-box');
+  if(!btn||!box)return;
+  var isOpen=(box.style.display==='block');
+  if(isOpen){ box.style.display='none';btn.textContent='查看詳細解說';btn.setAttribute('aria-expanded','false'); }
+  else { box.style.display='block';btn.textContent='收起詳細解說 ▲';btn.setAttribute('aria-expanded','true');
+    try{ if(typeof gtag==='function') gtag('event','reading_game_detail_toggle',{category:'game'}); }catch(e){}
+  }
+}
+
 // งานที่7 (2026-07-04 แบบเข้ม ลอกเกมเสียง markKnown()): กดแล้ว "ไม่ตัดคำทันที" —
 // ต้องตอบคำนี้ต่อให้ผ่านแบบสะอาด (ไม่ผิดเลย ไม่ใช้คำใบ้) 1 ครั้งก่อน ถึงจะตัดคำออก (ดู finalizeWord curWordIsKnownCheck)
 function remember(){
@@ -1120,6 +1262,7 @@ function nextWord(){
 }
 
 function endRound(){
+  rgClearResumeState(); // E3: จบรอบแล้ว ไม่มีอะไรให้ "續玩" ต่ออีก
   document.getElementById('game').style.display='none';
   document.getElementById('end').style.display='flex';
   document.getElementById('pf').style.width='100%';
@@ -1184,7 +1327,9 @@ function endRound(){
   setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
 }
 
-function restart(){try{ if(typeof gtag==='function') gtag('event','reading_game_restart_click',{category:'game'}); }catch(e){}initGame();}
+// E2 (2026-08-10): 「再玩一次」只出現在結束畫面（這輪已經算完分/存完檔了，沒有「還沒存的進度」可能弄丟）→ 不需要二次確認彈窗，直接重開一輪
+// F5: initGame() 本來就會用 shuffle(pool).slice(...) 重新洗牌、curLevel 不變 — 這裡沒有另外改動
+function restart(){try{ if(typeof gtag==='function') gtag('event','reading_game_restart_click',{category:'game'}); }catch(e){}rgClearResumeState();initGame();}
 
 // ════════════════════════════════════════════
 // PDF 報告（本輪打過的字 + 錯誤分析 + SRS下次複習日期）— Lin 2026-07-07
@@ -1690,6 +1835,7 @@ function rgAllSylsFilled(){
 // ตอนสลับพยางค์ (ยังไม่เฉลย) — ซ่อนกล่องคำอธิบายเฉลยไว้ก่อน (Lin 2026-07-30: เอา猜聲調ออกแล้ว กล่องนี้เหลือแค่คำอธิบาย)
 function rgRenderBonusForSyl(){
   document.getElementById('bonus-section').className='bonus-section';
+  rgResetDetailToggle(); // D2: สลับไปพยางค์ที่ยังไม่เฉลย → ปิดกล่อง/ซ่อนปุ่มไว้ก่อน
 }
 function rgRestoreSylState(st){
   W=st.W; comps=st.comps.slice();
@@ -1771,6 +1917,7 @@ function rgCheckWholeWord(){
     // Lin 2026-07-30: เอา猜聲調ออกแล้ว — ทุกระดับ (中/高) จบคำเหมือนกันเลย ไม่มีขั้นถามวรรณยุกต์ต่อ
     // Lin 2026-07-12: ประโยค/คำหลายพยางค์ → โชว์สรุปรวมทุกพยางค์ ไม่ใช่แค่พยางค์สุดท้าย
     markOpts();markSlots();(sylList.length>1?showRevealMulti():showReveal());renderSylStrip();
+    rgSyncDetailToggle();
     document.getElementById('retry-hint').className='retry-hint';
     setGameBtns('done');
     finalizeWord();
@@ -1808,6 +1955,7 @@ function rgCheckWholeWord(){
       checked=true; // ต้องตั้งหลังสลับพยางค์ เหตุผลเดียวกับด้านบน
       rgFinalizeAllBonuses();
       markOpts();markSlots();showReveal();renderSylStrip();
+      rgSyncDetailToggle();
       document.getElementById('retry-hint').className='retry-hint';
       setGameBtns('done');
       finalizeWord();
@@ -1829,7 +1977,8 @@ try{
   }
 }catch(e){}
 loadSave();
-initGame();
+// E3: มี "รอบที่ยังเล่นไม่จบ" ค้างอยู่จาก session ก่อน (localStorage, guest-only) → โชว์แบนเนอร์ให้เลือกก่อน ไม่งั้นเริ่มรอบใหม่ตามปกติ
+if(!rgTryLoadResumeBanner()){ initGame(); }
 try { rgRenderGameBar(); } catch(e){}
 
 // ── GA: ปุ่ม/องค์ประกอบที่สร้างโดยโมดูลกลาง (word-audio.js/word-menu.js/shared.js) — ผูก listener แยกต่างหาก ไม่แก้ไฟล์โมดูลกลาง ──

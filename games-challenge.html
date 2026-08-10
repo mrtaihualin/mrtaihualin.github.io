@@ -532,13 +532,24 @@ body:not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/games-challenge-app.js?v=1']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  // 2026-08-10 (P7-02 hotfix — บั๊กที่ตรวจพบตอนทดสอบ staging): เดิม MixGame.mount() ถูกเรียกแยกจาก
+  // DOMContentLoaded ท้ายไฟล์ โดยไม่รอ boot() ให้เสร็จก่อน — ถ้า DOMContentLoaded มาถึงก่อนสคริปต์เกม
+  // (games-challenge-app.js) โหลดเสร็จ (เกิดขึ้นเกือบทุกครั้งที่ทดสอบจริง) MixGame ยังไม่ถูกประกาศ
+  // → ReferenceError: MixGame is not defined ทั้งหน้าพังทันที
+  // แก้โดยรอทั้ง 2 เงื่อนไขพร้อมกันด้วย Promise ที่มีอยู่แล้ว (ไม่ใช้ setTimeout/polling เดา):
+  //   (1) boot() สำเร็จ → MixGame ถูกประกาศแล้วจริง
+  //   (2) DOMContentLoaded → shared.min.js (โหลดหลังบล็อกนี้) รันเสร็จแล้ว ตามที่ mount() ต้องการเดิม
+  var domReady = new Promise(function(resolve){
+    if (document.readyState !== 'loading') { resolve(); }
+    else { document.addEventListener('DOMContentLoaded', resolve); }
+  });
+  var bootDone = GameContentLoader.boot(['js/games/games-challenge-app.js?v=1']).then(gcRelease);
+  Promise.all([bootDone, domReady]).then(function(){ MixGame.mount(); })
+    .catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=26"></script>
-<!-- mount() ต้องรันหลัง shared.min.js เหมือนเกมเดี่ยวทุกเกม (เดิมรันก่อน — หน้าเดียวในเว็บที่ทำแบบนี้) -->
-<script>document.addEventListener('DOMContentLoaded',function(){MixGame.mount();});</script>
+<script src="js/core/shared.min.js?v=27"></script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
 <div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;

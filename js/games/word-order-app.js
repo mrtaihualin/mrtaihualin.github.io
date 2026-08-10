@@ -341,6 +341,17 @@
     try { localStorage.setItem('wo_zh_on', woZhOn ? '1' : '0'); } catch(e){}
     woRenderZh();
   };
+
+  // D2 (Shared Game UI, 2026-08-10): ปุ่ม [ 查看詳細解說 ] opt-in ครอบตาราง "每個字的意思" ใน #wo-reveal
+  //   ก็อปแพทเทิร์นจาก tone-finder-game.js toggleAnswerDetail — ไม่แตะข้อมูล/การคำนวณใดๆ แค่ show/hide DOM ที่ checkAnswer() สร้างไว้แล้ว
+  window.woToggleDetail = function(btn){
+    if (!btn) return;
+    var box = btn.nextElementSibling;
+    if (!box) return;
+    var isOpen = box.style.display !== 'none';
+    box.style.display = isOpen ? 'none' : '';
+    btn.textContent = isOpen ? '查看詳細解說' : '收起詳細解說';
+  };
   // Lin 2026-07-30: ปุ่ม 🔖 เซฟทั้งประโยคเข้า 單字庫 (คลังรวม 30 ช่องเดียวกับคำ ตามที่ Lin สั่ง) — โชว์เฉพาะตอนเฉลย
   function woShowVault(){
     var slot = document.getElementById('wo-vault-btn-slot');
@@ -384,6 +395,59 @@
   function rgWrongItemsFromLog(){
     try{ return roundLog.filter(function(w){return (w.wrong||0)>0||w.failed;}).map(function(w){return {th:w.th,zh:w.zh,wrong:w.wrong||0};}); }
     catch(e){ return []; }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // F2 (Shared Game UI, 2026-08-10): 查看錯題 — read-only, ดึงจาก roundLog จริงเท่านั้น (ตัวกรองเดียวกับ rgWrongItemsFromLog)
+  // ════════════════════════════════════════════════════════════
+  window.woShowMistakes = function(){
+    try{ if(window.gtag) gtag('event','word_order_mistakes_open',{category:'game'}); }catch(e){}
+    var items = roundLog.filter(function(w){ return (w.wrong||0)>0 || w.failed; });
+    var list = document.getElementById('wo-mistake-list');
+    if (list) {
+      list.innerHTML = items.length
+        ? items.map(function(w){
+            return '<div class="gsh-mistake-item gsh-mistake-wrong">'
+              + '<div class="gsh-mistake-q">' + woEsc(w.th) + '</div>'
+              + '<div class="gsh-mistake-row">' + woEsc(w.zh) + '</div>'
+              + '<div class="gsh-mistake-row">排錯 <b>' + (w.wrong||0) + '</b> 次' + (w.failed ? '・這句沒排出來，直接看了答案' : '') + '</div>'
+              + '</div>';
+          }).join('')
+        : '<div class="gsh-mistake-item" style="text-align:center;color:#888;">這輪沒有排錯的句子，太棒了！🎉</div>';
+    }
+    var norm = document.getElementById('wo-end-normal'); if (norm) norm.style.display = 'none';
+    var mv = document.getElementById('wo-mistake-view'); if (mv) mv.style.display = 'block';
+  };
+  window.woHideMistakes = function(){
+    try{ if(window.gtag) gtag('event','word_order_mistakes_close',{category:'game'}); }catch(e){}
+    var norm = document.getElementById('wo-end-normal'); if (norm) norm.style.display = 'flex';
+    var mv = document.getElementById('wo-mistake-view'); if (mv) mv.style.display = 'none';
+  };
+
+  // เล็กๆ ใช้ escape HTML ก่อนแปะข้อความประโยค/คำแปลลง DOM (เนื้อหามาจาก adv-sentences.js ที่ Lin ตรวจแล้ว แต่ escape ไว้กันเหนียว)
+  function woEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ════════════════════════════════════════════════════════════
+  // E3 (Shared Game UI, 2026-08-10): guest-resume — บันทึกความคืบหน้าไว้ให้กลับมาเล่นต่อได้
+  //   ใช้ window.GameResume (js/core/shared.js) เก็บใน localStorage ฝั่งเครื่องนี้เท่านั้น ไม่ sync ข้ามเครื่อง/เซิร์ฟเวอร์
+  //   บันทึกทุกครั้งที่ "ประโยคหนึ่งจบลง" (ตอบถูก/ตาย/ผ่านด่านพิสูจน์已記得) — อ่านค่าที่มีอยู่แล้วไปเก็บ ไม่แตะ life/hint/scoring เลย
+  //   ข้าม practiceMode (ทบทวนฟรีไม่คิดคะแนน ไม่มีอะไรน่าเสียดายถ้าปิดแท็บกลางคัน)
+  // ════════════════════════════════════════════════════════════
+  function woSaveResume(){
+    try{
+      if (practiceMode || !window.GameResume || !SET.length) return;
+      if (idx >= SET.length) return; // จบรอบแล้ว ไม่ต้อง save (finish() จะ clear เอง)
+      GameResume.save('word-order', {
+        sentenceIds: SET.map(function(i){ return ADV_SENTENCES[i].th; }),
+        idx: idx,
+        score: score,
+        correctFirstTry: correctFirstTry,
+        cleanC: cleanC
+      });
+    }catch(e){}
+  }
+  function woClearResume(){
+    try{ if (window.GameResume) GameResume.clear('word-order'); }catch(e){}
   }
 
   function shuffle(arr){
@@ -600,6 +664,55 @@
     }catch(e){_minaToastBusy=false;}
   }
 
+  // E3 (Shared Game UI, 2026-08-10): ล็อกอินหรือไม่ก็ตาม — GameResume เป็นแค่กันเหนียวฝั่งเครื่องนี้ (localStorage)
+  //   กันปิดแท็บ/รีเฟรชกลางรอบแล้วต้องเริ่มใหม่ทั้งชุด · ไม่ใช่ระบบ resume ฝั่งเซิร์ฟเวอร์ (ยังไม่มี backend รองรับ)
+  var _woPendingResume = null; // {state, restoredSet} — รอผู้เล่นเลือกตอนโชว์ .gsh-resume-banner
+  function hideResumeBanner(){
+    var b = document.getElementById('wo-resume-banner'); if (b) b.style.display = 'none';
+  }
+  function showResumeBanner(state, restoredSet){
+    _woPendingResume = { state: state, restoredSet: restoredSet };
+    var b = document.getElementById('wo-resume-banner');
+    if (!b) { startFreshRound(); return; } // DOM ไม่พร้อม (ไม่ควรเกิด) → กันเงียบ เริ่มรอบใหม่แทนดีกว่าค้าง
+    var savedIdx = Math.min(Math.max(0, state.idx||0), restoredSet.length-1);
+    var t = document.getElementById('wo-resume-title'); if (t) t.textContent = '上次還沒玩完，要繼續嗎？';
+    var d = document.getElementById('wo-resume-detail');
+    if (d) d.textContent = '進度：第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句・目前分數 ' + (state.score||0) + ' 分';
+    var g = document.getElementById('game'); if (g) g.style.display = 'none';
+    var e = document.getElementById('end'); if (e) e.style.display = 'none';
+    b.style.display = '';
+  }
+  window.woResumeContinueClick = function(){
+    if (!_woPendingResume) { hideResumeBanner(); startFreshRound(); return; }
+    try{ if(window.gtag) gtag('event','word_order_resume_continue',{category:'game'}); }catch(e){}
+    var p = _woPendingResume; _woPendingResume = null;
+    woResumeContinue(p.state, p.restoredSet);
+  };
+  window.woResumeRestartClick = function(){
+    try{ if(window.gtag) gtag('event','word_order_resume_restart',{category:'game'}); }catch(e){}
+    _woPendingResume = null;
+    woClearResume();
+    startFreshRound();
+  };
+  function woResumeContinue(state, restoredSet){
+    hideResumeBanner();
+    SET = restoredSet;
+    idx = Math.min(Math.max(0, state.idx||0), SET.length-1);
+    score = state.score||0;
+    correctFirstTry = state.correctFirstTry||0;
+    cleanC = state.cleanC||0;
+    curCombo = 0; maxCombo = 0; // ไม่ serialize คอมโบระหว่างประโยค (ตามที่ยอมรับ granularity — resume สดที่ตำแหน่งประโยคนั้น ไม่ใช่ resume กลางการลาก)
+    roundLog = [];              // รายงานท้ายรอบจะมีเฉพาะประโยคที่เล่นหลัง resume (ของก่อนปิดแท็บไม่ได้ serialize ไว้)
+    practiceMode = false;
+    if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
+    refreshUI();
+    try { rgRenderGameBar(); } catch(e){}
+    document.getElementById('end').style.display = 'none';
+    document.getElementById('game').style.display = 'flex';
+    try{ if(window.gtag) gtag('event','game_start',{category:'game',game:'word_order',resumed:true}); }catch(e){}
+    loadSentence();
+  }
+
   function init(){
     if (!window.ADV_SENTENCES || !ADV_SENTENCES.length) {
       document.getElementById('game').innerHTML = '<p style="font-family:\'Noto Sans TC\',sans-serif;color:#c62828;">句庫載入失敗，請重新整理頁面。</p>';
@@ -608,6 +721,26 @@
     woLoadSrs();
     woSyncReadBtns();   // Lin 2026-07-25: ตั้งไอคอนปุ่ม 讀音/英文讀音 ตามค่าที่จำไว้
     woRenderZh();       // ตั้งไอคอนปุ่ม 翻譯 (🍙/🌾) ใต้คำที่เฉลย
+
+    var _resumeState = null;
+    try{ _resumeState = window.GameResume ? GameResume.load('word-order') : null; }catch(e){ _resumeState = null; }
+    if (_resumeState && _resumeState.sentenceIds && _resumeState.sentenceIds.length && typeof _resumeState.idx === 'number' && _resumeState.idx < _resumeState.sentenceIds.length) {
+      var _restoredSet = _resumeState.sentenceIds.map(function(th){
+        for (var i=0;i<ADV_SENTENCES.length;i++){ if (ADV_SENTENCES[i].th===th) return i; }
+        return -1;
+      });
+      if (_restoredSet.indexOf(-1) === -1) {
+        showResumeBanner(_resumeState, _restoredSet);
+        return; // รอผู้เล่นเลือก 繼續練習/重新開始 ก่อน — ยังไม่เริ่มรอบใหม่ทับ
+      }
+      woClearResume(); // ประโยคที่บันทึกไว้หายไปจาก adv-sentences.js แล้ว (ผี) → ทิ้งไปเลย ไม่เดา
+    }
+
+    startFreshRound();
+  }
+
+  function startFreshRound(){
+    hideResumeBanner();
     var now = Date.now();
     var allIdx = ADV_SENTENCES.map(function(_, i){ return i; });
     practiceMode = false;
@@ -671,7 +804,7 @@
     document.getElementById('wo-zh').innerHTML = '';
     woHideSound(); // ประโยคใหม่ = ซ่อนปุ่มฟังเสียงจนกว่าจะเฉลย (กันสปอยล์)
     var _woRev0=document.getElementById('wo-reveal'); if(_woRev0){_woRev0.style.display='none';_woRev0.innerHTML='';} // ประโยคใหม่ = ล้างคำอธิบายเก่า
-    document.getElementById('wo-banner').className = 'result-banner';
+    document.getElementById('wo-banner').className = 'result-banner gsh-feedback-slot';
     document.getElementById('wo-banner').textContent = '';
     document.getElementById('wo-next-btn').disabled = true;
     document.getElementById('wo-hint-btn').disabled = false;
@@ -773,7 +906,7 @@
     answer.splice(slotIndex, 1);
     delete used[orig];
     var s = curSentence();
-    document.getElementById('wo-banner').className = 'result-banner';
+    document.getElementById('wo-banner').className = 'result-banner gsh-feedback-slot';
     renderSlots(s);
     renderBank();
     updatePowerBar(s);
@@ -795,7 +928,7 @@
     renderSlots(s); updatePowerBar(s);
     Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
     var banner = document.getElementById('wo-banner');
-    banner.className = 'result-banner no show';
+    banner.className = 'result-banner no show gsh-feedback-slot';
     banner.textContent = wasProof
       ? '看來這句還沒完全記熟，先留在複習清單裡 🔁'
       : '這句先看答案～綠色就是正確順序，我們下一句再加油 💪（本句不計分）';
@@ -812,6 +945,7 @@
       woServerFinish(s.th, false); // Phase 4: ตาย/ล้มเหลว = รีเซ็ตฝั่งเซิร์ฟเวอร์ด้วย
     }
     woLogSentence({failed:true, pts:0, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
+    woSaveResume();
     curSentenceIsKnownCheck = false;
     curCombo = 0;
     woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เฉลยคำตอบแล้ว (แม้เรียงแพ้) ก็ถือว่าเห็นประโยคสมบูรณ์ → โชว์บรรทัดครับ/ค่ะ/คะ ได้
@@ -841,7 +975,7 @@
           woSaveSrs();
           woServerFinish(s.th, passedClean, {knownCheck:true}); // Phase 4: 已記得 → mastered ไม่ให้ดาว
         }
-        banner.className = passedClean ? 'result-banner ok show' : 'result-banner no show';
+        banner.className = (passedClean ? 'result-banner ok show' : 'result-banner no show') + ' gsh-feedback-slot';
         banner.textContent = passedClean ? '真的記得！這句標記為熟練 ✓（不計分、不加星）' : '中途排錯過，這句先留在複習清單裡 🔁';
                 woRevealExtras(s.th);
         document.getElementById('wo-next-btn').disabled = false;
@@ -849,6 +983,7 @@
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
         woLogSentence({mastered:!!passedClean, pts:0, srsDue:passedClean?'已精通':((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '')});
+        woSaveResume();
         woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เรียงถูก (ด่านพิสูจน์已記得) → โชว์บรรทัดครับ/ค่ะ/คะ ได้
         return;
       }
@@ -899,21 +1034,32 @@
         woSaveSrs();
       }
 
-      banner.className = 'result-banner ok show';
+      banner.className = 'result-banner ok show gsh-feedback-slot';
       banner.textContent = '✅ 排對了！+' + pts + ' 分' + (golden ? ' ✨黃金句' : '') + (cmult > 1 ? ' 🔥連對×' + cmult : '') + (hintUsedThisSentence ? '（用了提示）' : '');
             woRevealExtras(s.th);
       // Lin 2026-07-12: โชว์คำอธิบายว่าแต่ละคำแปลว่าอะไร (ตอนจบ)
+      // D2 (Shared Game UI, 2026-08-10): เดิมโชว์ตารางนี้อัตโนมัติเสมอ → เปลี่ยนเป็นปุ่ม [ 查看詳細解說 ] แบบ opt-in
+      //   (.gsh-detail-toggle/.gsh-detail-box ใน css/shared.css — ก็อปแพทเทิร์นจาก tone-finder-game.js toggleAnswerDetail)
+      //   เนื้อหา/การคำนวณตารางเหมือนเดิมทุกประการ แค่ซ่อนไว้ก่อนจนกว่าจะกดดู · ปุ่มยูทิลิตี้ (🔊/🍙/🔖 ใน #wo-reveal-ctl) เป็นคนละกล่อง ไม่แตะ
       var _woRev=document.getElementById('wo-reveal');
       if(_woRev){
-        var _woRevRows=s.words.map(function(w){ return '<div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(139,99,16,0.10);"><span style="font-family:\'Sarabun\',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;min-width:74px;">'+w.th+'</span><span style="color:#666;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;">'+w.zh+'</span></div>'; }).join('');
-        // Lin 2026-08-01: ถ้าเปิดปุ่มครับ/ค่ะ/คะ ไว้ → เพิ่มแถวอธิบายคำนี้ท้ายสุดด้วย (ไม่ใช่คำที่ต้องเรียง แค่โชว์ความหมายเสริม)
-        var _woPart=woShowParticleFor(s);
-        if(_woPart){
-          var _pZh=_woPart==='ครับ'?'（男性禮貌詞）':(_woPart==='คะ'?'（女性禮貌詞・疑問句）':'（女性禮貌詞・句尾非疑問）');
-          _woRevRows+='<div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(139,99,16,0.10);"><span style="font-family:\'Sarabun\',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;min-width:74px;">'+_woPart+'</span><span style="color:#666;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;">'+_pZh+'（不用排・不計分）</span></div>';
+        if (s.words && s.words.length) {
+          var _woRevRows=s.words.map(function(w){ return '<div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(139,99,16,0.10);"><span style="font-family:\'Sarabun\',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;min-width:74px;">'+w.th+'</span><span style="color:#666;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;">'+w.zh+'</span></div>'; }).join('');
+          // Lin 2026-08-01: ถ้าเปิดปุ่มครับ/ค่ะ/คะ ไว้ → เพิ่มแถวอธิบายคำนี้ท้ายสุดด้วย (ไม่ใช่คำที่ต้องเรียง แค่โชว์ความหมายเสริม)
+          var _woPart=woShowParticleFor(s);
+          if(_woPart){
+            var _pZh=_woPart==='ครับ'?'（男性禮貌詞）':(_woPart==='คะ'?'（女性禮貌詞・疑問句）':'（女性禮貌詞・句尾非疑問）');
+            _woRevRows+='<div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(139,99,16,0.10);"><span style="font-family:\'Sarabun\',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;min-width:74px;">'+_woPart+'</span><span style="color:#666;font-family:\'Noto Sans TC\',sans-serif;font-size:13px;">'+_pZh+'（不用排・不計分）</span></div>';
+          }
+          _woRev.innerHTML='<button type="button" class="gsh-detail-toggle" onclick="woToggleDetail(this)">查看詳細解說</button>'
+            +'<div class="gsh-detail-box" style="display:none;">'
+            +'<div style="font-size:12px;color:#8B6310;font-weight:800;margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">每個字的意思</div>'+_woRevRows
+            +'</div>';
+          _woRev.style.display='block';
+        } else {
+          _woRev.style.display='none';
+          _woRev.innerHTML='';
         }
-        _woRev.innerHTML='<div style="font-size:12px;color:#8B6310;font-weight:800;margin-bottom:6px;font-family:\'Noto Sans TC\',sans-serif;">每個字的意思</div>'+_woRevRows;
-        _woRev.style.display='block';
       }
       woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เรียงถูกแล้ว → โชว์บรรทัดครับ/ค่ะ/คะ ได้
       // Lin 2026-07-12: คำในคลังใช้หมดแล้ว (มองไม่เห็นแต่ยังกินพื้นที่อยู่ opacity:0) → ซ่อนกล่องทั้งกล่องไปเลย กันช่องว่างเปล่าๆ ระหว่างช่องเฉลยกับ popup ผลลัพธ์
@@ -932,6 +1078,7 @@
         el.classList.add('correct');
       });
       woLogSentence({guide:!!hintUsedThisSentence, pts:pts, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
+      woSaveResume();
       try{ if(window.gtag) gtag('event','word_order_correct',{category:'game',sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
       try{ if(window.gtag) gtag('event','game_correct',{category:'game',game:'word_order'}); }catch(e){}
     } else {
@@ -946,7 +1093,7 @@
         failSentence(s, wasProof);
         try{ if(window.gtag) gtag('event','word_order_fail',{category:'game',sentence:s.th, wrongs:wrongCount}); }catch(e){}
       } else {
-        banner.className = 'result-banner no show';
+        banner.className = 'result-banner no show gsh-feedback-slot';
         banner.textContent = '👧🏻 還沒對喔，別擔心～點一下格子裡的詞塊，再排排看 💕';
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot.filled'), function(el){
           el.classList.add('wrong');
@@ -1006,14 +1153,14 @@
     var rb = document.getElementById('wo-remember-btn'); if (rb) rb.style.display = 'none';
     updateHintWarning();
     var banner = document.getElementById('wo-banner');
-    banner.className = 'result-banner show';
+    banner.className = 'result-banner show gsh-feedback-slot';
     banner.textContent = '證明你真的記得：接下來不會有提示，排對才會標記熟練 ✓';
   };
 
   window.woResetSentence = function(){
     if (locked) return;
     answer = []; used = {};
-    document.getElementById('wo-banner').className = 'result-banner';
+    document.getElementById('wo-banner').className = 'result-banner gsh-feedback-slot';
     renderSlots(curSentence());
     renderBank();
     updatePowerBar(curSentence());
@@ -1045,6 +1192,7 @@
   window.woCtaLogin = function(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} };
 
   function finish(){
+    woClearResume(); // E3: จบรอบแล้ว ไม่มีอะไรให้ resume ต่อ
     document.getElementById('game').style.display = 'none';
     document.getElementById('end').style.display = 'flex';
     document.getElementById('pf').style.width = '100%';
@@ -1123,7 +1271,7 @@
     setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   }
 
-  window.woRestart = function(){ init(); };
+  window.woRestart = function(){ woClearResume(); init(); }; // E3: กดจากหน้าจบผลเท่านั้น (ไม่มีอะไรค้างให้ resume อยู่แล้ว) ล้างกันเหนียว
   window.woRerenderBar = rgRenderGameBar; // Lin 2026-07-12: ให้ reading-auth.js เรียก re-render แถบชวนล็อกอินได้ตอน auth เสร็จ (กันการ์ด "登入解鎖" ค้างทั้งที่ล็อกอินแล้ว)
 
   // ════════════════════════════════════════════

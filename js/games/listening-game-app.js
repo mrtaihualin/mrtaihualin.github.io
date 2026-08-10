@@ -49,7 +49,9 @@
     idx: 0,
     correct: 0,
     wrong: 0,
-    answered: false
+    answered: false,
+    log: [],        // Phase F2/F4: ประวัติทุกข้อของรอบนี้ {th, zh, userAnswer, correct} — เติมทีละข้อ ไม่แตะ logic ตรวจคำตอบ
+    _pendingResume: null // Phase E3: รอบที่กู้มาจาก GameResume แต่ผู้เล่นยังไม่กด 繼續練習/重新開始
   };
 
   var el = {};
@@ -83,6 +85,18 @@
     el.pronToggle = qs('lg-pron-toggle');
     el.enToggle = qs('lg-en-toggle');
     el.vaultSlot = qs('rg-vault-btn-slot');
+    // Phase E3: guest resume banner
+    el.resumeBanner = qs('lg-resume-banner');
+    el.resumeDetail = qs('lg-resume-detail');
+    el.resumeContinueBtn = qs('lg-resume-continue');
+    el.resumeRestartBtn = qs('lg-resume-restart');
+    // Phase F2: 查看錯題
+    el.mistakeScreen = qs('lg-mistakes');
+    el.mistakeList = qs('lg-mistake-list');
+    el.mistakeBtn = qs('lg-mistake-btn');
+    el.mistakeBackBtn = qs('lg-mistake-back');
+    // Phase F3/F4: 列印／儲存學習紀錄
+    el.printBtn = qs('lg-print-btn');
   }
 
   // ── util ──
@@ -149,6 +163,10 @@
     state.idx = 0;
     state.correct = 0;
     state.wrong = 0;
+    state.log = [];
+    state._pendingResume = null;
+    if (el.resumeBanner) el.resumeBanner.style.display = 'none';
+    try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // เริ่มรอบใหม่แบบสด = ล้างรอบค้างเก่าทิ้ง (ไม่ให้มีของค้าง 2 รอบชนกัน)
 
     if (state.pool.length < ROUND_SIZE) {
       el.poolNote.textContent = '目前題庫只有 ' + state.pool.length + ' 題有發音，一樣可以開始！';
@@ -252,6 +270,7 @@
   function handleMCPick(choice, btn, correctWord) {
     state.answered = true;
     var isCorrect = choice.th === correctWord.th;
+    state.log.push({ th: correctWord.th, zh: correctWord.zh, userAnswer: choice.th, correct: isCorrect }); // Phase F2/F4: บันทึกผลข้อนี้ไว้ดูย้อนหลัง — ไม่แตะการคำนวณ isCorrect ด้านบน
     Array.prototype.forEach.call(el.mcWrap.querySelectorAll('.lg-opt'), function (b) {
       b.classList.add('locked');
       if (b.textContent === correctWord.th) b.classList.add('correct');
@@ -290,6 +309,7 @@
     if (!val) return;
     state.answered = true;
     var isCorrect = val === w.th;
+    state.log.push({ th: w.th, zh: w.zh, userAnswer: val, correct: isCorrect }); // Phase F2/F4: บันทึกผลข้อนี้ไว้ดูย้อนหลัง — ไม่แตะการคำนวณ isCorrect ด้านบน
     el.typeInput.disabled = true;
     el.typeSubmitBtn.disabled = true;
     el.typeInput.classList.add(isCorrect ? 'lg-correct' : 'lg-wrong');
@@ -325,6 +345,8 @@
     el.nextBtn.style.display = 'inline-flex';
     el.nextBtn.disabled = false;
     el.nextBtn.textContent = (state.idx + 1 >= state.round.length) ? '看結果 →' : '下一題 →';
+
+    saveResumeState(); // Phase E3: กันหายถ้าปิดแท็บ/รีเฟรชก่อนกด 下一題
   }
 
   function goNext() {
@@ -333,8 +355,99 @@
     if (state.idx >= state.round.length) {
       showEnd();
     } else {
+      saveResumeState(); // Phase E3: บันทึกตำแหน่งข้อถัดไปที่ยังไม่ตอบ
       showQuestion();
     }
+  }
+
+  // ── Phase E3: guest resume (localStorage ผ่าน window.GameResume) ──
+  // เก็บเฉพาะข้อมูลจริงที่ต้องใช้กู้รอบกลับมา ไม่แตะ logic การเล่น/ตรวจคำตอบเลย
+  function saveResumeState() {
+    try {
+      if (!window.GameResume || !state.round.length) return;
+      window.GameResume.save('listening-game', {
+        mode: state.mode,
+        wordIds: state.round.map(function (w) { return w.th; }),
+        idx: state.idx,
+        correct: state.correct,
+        wrong: state.wrong,
+        log: state.log
+      });
+    } catch (e) {}
+  }
+
+  // เอา wordIds ที่บันทึกไว้ กลับไปจับคู่กับ pool ปัจจุบันเป็นลำดับเดิม — ถ้าคำไหนหายไปจาก pool (เช่นเสียงถูกปิด) ให้ถือว่ากู้ไม่ได้ทั้งรอบ
+  function rebuildRoundFromIds(wordIds, pool) {
+    var byTh = {};
+    pool.forEach(function (w) { byTh[w.th] = w; });
+    var round = [];
+    for (var i = 0; i < wordIds.length; i++) {
+      if (byTh[wordIds[i]]) round.push(byTh[wordIds[i]]);
+    }
+    return round;
+  }
+
+  function tryShowResumeBanner() {
+    if (!window.GameResume || !el.resumeBanner) return;
+    var saved;
+    try { saved = window.GameResume.load('listening-game'); } catch (e) { saved = null; }
+    if (!saved || !saved.wordIds || !saved.wordIds.length) return;
+    if (typeof saved.idx !== 'number' || saved.idx < 0 || saved.idx >= saved.wordIds.length) {
+      try { window.GameResume.clear('listening-game'); } catch (e) {}
+      return;
+    }
+    var pool = buildPool();
+    var round = rebuildRoundFromIds(saved.wordIds, pool);
+    if (round.length !== saved.wordIds.length) {
+      // คำในรอบเดิมบางคำหายไปจาก pool แล้ว (เช่นเสียงถูกปิด) — กู้แบบเพี้ยนดีกว่าไม่กู้เลย ไม่คุ้ม ล้างทิ้ง
+      try { window.GameResume.clear('listening-game'); } catch (e) {}
+      return;
+    }
+    state._pendingResume = {
+      mode: saved.mode === 'type' ? 'type' : 'mc',
+      round: round,
+      idx: saved.idx,
+      correct: typeof saved.correct === 'number' ? saved.correct : 0,
+      wrong: typeof saved.wrong === 'number' ? saved.wrong : 0,
+      log: Array.isArray(saved.log) ? saved.log : []
+    };
+    if (el.resumeDetail) {
+      el.resumeDetail.textContent = '模式：' + (state._pendingResume.mode === 'type' ? '輸入答案' : '選擇答案') +
+        '・進度：第 ' + (saved.idx + 1) + '/' + saved.wordIds.length + ' 題';
+    }
+    el.resumeBanner.style.display = 'block';
+  }
+
+  function resumeContinue() {
+    var pend = state._pendingResume;
+    el.resumeBanner.style.display = 'none';
+    if (!pend) return;
+    state.pool = buildPool();
+    state.round = pend.round;
+    state.idx = pend.idx;
+    state.correct = pend.correct;
+    state.wrong = pend.wrong;
+    state.log = pend.log;
+    state._pendingResume = null;
+    setMode(pend.mode);
+
+    el.poolNote.style.display = 'none';
+    el.startScreen.style.display = 'none';
+    el.endScreen.style.display = 'none';
+    el.gameScreen.style.display = 'flex';
+    el.qt.textContent = String(state.round.length);
+    el.okCount.textContent = String(state.correct);
+    el.badCount.textContent = String(state.wrong);
+
+    try { if (window.gtag) gtag('event', 'listening_game_resume', { category: 'game', mode: pend.mode }); } catch (e) {}
+    showQuestion(); // ใช้ flow เดิมเป๊ะ (รวมการเล่นเสียงอัตโนมัติ) ไม่สร้างเส้นทางเล่นเสียงใหม่ซ้อน
+  }
+
+  function resumeRestart() {
+    el.resumeBanner.style.display = 'none';
+    state._pendingResume = null;
+    try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
+    try { if (window.gtag) gtag('event', 'listening_game_resume_discard', { category: 'game' }); } catch (e) {}
   }
 
   function showEnd() {
@@ -345,13 +458,108 @@
     el.endScoreBig.textContent = state.correct + ' / ' + state.round.length;
     var pct = state.round.length ? Math.round((state.correct / state.round.length) * 100) : 0;
     el.endDetail.textContent = '答對 ' + state.correct + ' 題，答錯 ' + state.wrong + ' 題（正確率 ' + pct + '%）';
+    try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // รอบจบแล้ว ไม่มีอะไรต้องกู้ต่อ
     try { if (window.gtag) gtag('event', 'listening_game_complete', { category: 'game', mode: state.mode, score: state.correct, total: state.round.length }); } catch (e) {}
+  }
+
+  // ── Phase F2: 查看錯題 (read-only, ใช้ state.log ที่เก็บจริงระหว่างเล่นเท่านั้น) ──
+  function renderMistakes() {
+    if (!el.mistakeList) return;
+    var wrongEntries = state.log.filter(function (e) { return !e.correct; });
+    if (!wrongEntries.length) {
+      el.mistakeList.innerHTML = '<div style="text-align:center;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:var(--ink-muted);padding:20px 10px;">這輪沒有答錯的題目，太棒了！🎉</div>';
+      return;
+    }
+    el.mistakeList.innerHTML = wrongEntries.map(function (e) {
+      return '<div class="gsh-mistake-item gsh-mistake-wrong">'
+        + '<div class="gsh-mistake-q">' + escapeHtml(e.th) + '</div>'
+        + '<div class="gsh-mistake-row">你的答案：<b>' + escapeHtml(e.userAnswer || '（空白）') + '</b></div>'
+        + '<div class="gsh-mistake-row">正確答案：<b>' + escapeHtml(e.th) + '</b></div>'
+        + '<div class="gsh-mistake-row">意思：' + escapeHtml(e.zh || '') + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function showMistakes() {
+    renderMistakes();
+    el.endScreen.style.display = 'none';
+    el.mistakeScreen.style.display = 'flex';
+    try { if (window.gtag) gtag('event', 'listening_game_view_mistakes', { category: 'game', count: state.log.filter(function (e) { return !e.correct; }).length }); } catch (e) {}
+  }
+
+  function backToEndFromMistakes() {
+    el.mistakeScreen.style.display = 'none';
+    el.endScreen.style.display = 'flex';
+  }
+
+  // ── Phase F3/F4: 列印／儲存學習紀錄 — ก๊อปแพทเทิร์นเดียวกับเกมอื่น (window.open + document.write + print) ไม่ใช้ library ใดๆ ──
+  function printListeningReport() {
+    var SERIF = "'Noto Serif TC',serif";
+    var SANS = "'Noto Sans TC',sans-serif";
+    var today = new Date().toLocaleDateString('zh-TW');
+    var pct = state.round.length ? Math.round((state.correct / state.round.length) * 100) : 0;
+
+    var rows = state.log.map(function (e, i) {
+      return '<tr>'
+        + '<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">' + (i + 1) + '</td>'
+        + '<td style="padding:7px 6px;font-size:15px;font-weight:700;">' + escapeHtml(e.th) + '</td>'
+        + '<td style="padding:7px 6px;font-size:12px;color:#666;">' + escapeHtml(e.zh || '') + '</td>'
+        + '<td style="padding:7px 6px;font-size:13px;">' + escapeHtml(e.userAnswer || '（空白）') + '</td>'
+        + '<td style="padding:7px 6px;font-size:12px;text-align:center;">' + (e.correct ? '<span style="color:#2e7d32;">✓ 答對</span>' : '<span style="color:#c62828;">✗ 答錯</span>') + '</td>'
+        + '</tr>';
+    }).join('');
+
+    var innerHtml =
+      '<div style="max-width:640px;margin:0 auto;padding:24px;background:#FBF5E7;box-sizing:border-box;font-family:' + SERIF + ';color:#1C1C1C;">'
+      + '<div style="background:#fff;border:1px solid #C8973A;">'
+      + '<table style="width:100%;background:#1C1C1C;border-bottom:3px solid #C8973A;border-collapse:collapse;"><tr>'
+      + '<td style="padding:22px 26px;vertical-align:top;">'
+      + '<div style="color:#fff;font-size:20px;font-weight:700;font-family:' + SERIF + ';">泰語聽力練習・本輪報告</div>'
+      + '<div style="font-family:' + SANS + ';font-size:9px;letter-spacing:0.2em;color:#C8973A;font-weight:700;margin-top:6px;">mrtaihualin.com</div>'
+      + '</td>'
+      + '<td style="padding:22px 26px;vertical-align:top;text-align:right;color:#C8973A;white-space:nowrap;">'
+      + '<div style="font-family:' + SANS + ';font-size:11px;">' + escapeHtml(today) + '</div>'
+      + '<div style="font-family:' + SANS + ';font-size:11px;">' + (state.mode === 'type' ? '輸入答案' : '選擇答案') + '</div>'
+      + '</td></tr></table>'
+      + '<div style="padding:20px 26px;">'
+      + '<table style="width:100%;font-family:' + SANS + ';font-size:12px;color:#8B6310;"><tr>'
+      + '<td>答對題數</td><td style="text-align:right;font-size:20px;font-weight:700;color:#5a3e0a;">' + state.correct + ' / ' + state.round.length + '</td>'
+      + '</tr><tr><td>正確率</td><td style="text-align:right;">' + pct + '%</td></tr></table>'
+      + '<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
+      + '<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:1.5px solid #C8973A;">'
+      + '<th style="font-size:11px;color:#8B6310;padding:5px;">#</th>'
+      + '<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">正確答案</th>'
+      + '<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">意思</th>'
+      + '<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">你的答案</th>'
+      + '<th style="font-size:11px;color:#8B6310;padding:5px;">結果</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>'
+      + '</div></div>'
+      + '<div style="text-align:center;font-family:' + SANS + ';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'
+      + '</div>';
+
+    var win = window.open('', '_blank');
+    if (!win) {
+      try { alert('請允許彈出視窗才能列印／儲存學習紀錄 🙏'); } catch (e2) {}
+      return;
+    }
+    win.document.open();
+    win.document.write(
+      '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>聽力練習紀錄</title>'
+      + '<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">'
+      + '<style>@page{margin:10mm;}body{margin:0;background:#fff;}</style>'
+      + '</head><body>' + innerHtml + '</body></html>'
+    );
+    win.document.close();
+    win.focus();
+    setTimeout(function () { try { win.print(); } catch (e) {} }, 600);
+    try { if (window.gtag) gtag('event', 'listening_game_print_report', { category: 'game' }); } catch (e) {}
   }
 
   function restart() {
     el.endScreen.style.display = 'none';
     el.gameScreen.style.display = 'none';
     el.startScreen.style.display = 'flex';
+    try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // เผื่อกดจากทางอื่นในอนาคต ล้างซ้ำไว้ก็ไม่มีผลเสีย
     try { if (window.gtag) gtag('event', 'listening_game_restart_click', { category: 'game' }); } catch (e) {}
   }
 
@@ -387,6 +595,13 @@
         try { if (window.gtag) gtag('event', 'listening_game_en_pron_toggle', { category: 'game', on: rgEnMode }); } catch (err) {}
       });
     }
+    if (el.resumeContinueBtn) el.resumeContinueBtn.addEventListener('click', resumeContinue);
+    if (el.resumeRestartBtn) el.resumeRestartBtn.addEventListener('click', resumeRestart);
+    if (el.mistakeBtn) el.mistakeBtn.addEventListener('click', showMistakes);
+    if (el.mistakeBackBtn) el.mistakeBackBtn.addEventListener('click', backToEndFromMistakes);
+    if (el.printBtn) el.printBtn.addEventListener('click', printListeningReport);
+
+    tryShowResumeBanner(); // Phase E3: เช็คตอนเปิดหน้าครั้งเดียว ก่อนผู้เล่นกดอะไรทั้งนั้น
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

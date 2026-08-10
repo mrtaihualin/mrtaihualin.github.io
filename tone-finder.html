@@ -1561,8 +1561,9 @@ document.addEventListener('contextmenu', function(e){
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章／連續天數勳章</div>
         <p style="margin:0 0 10px;">星星是這個字經過複習真的「精通」了才拿到（跟其他遊戲共用），累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。這個遊戲另外還有「連續天數」勳章，照每天登入練習的連續天數解鎖：稻種（3天）→ 秧苗（7天）→ 幼穗（14天）→ 金穗（30天）→ 金色稻田（100天）。</p>
 
-        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 下載 PDF 報告</div>
-        <p style="margin:0 0 10px;">玩完一輪可以下載 PDF 報告，裡面有這輪總分、有沒有解鎖新勳章、每個字的表現（讀音／結果／得分），還有「弱點分析」列出需要加強的聲調規則。</p>
+        <!-- F3 (2026-08-10): 修正措辭 — 這個功能其實是開新視窗印出來（可用瀏覽器的「另存為 PDF」），不是直接下載檔案，改成準確的說法 -->
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 列印／儲存學習紀錄</div>
+        <p style="margin:0 0 10px;">玩完一輪可以列印或儲存這輪的學習紀錄，裡面有這輪總分、有沒有解鎖新勳章、每個字的表現（讀音／結果／得分），還有「弱點分析」列出需要加強的聲調規則。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
         <p style="margin:0;">推導錯過或偷看過「？」的字，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。</p>
@@ -1590,6 +1591,10 @@ document.addEventListener('contextmenu', function(e){
     </div>
     <button class="tf-tool-btn" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlpha()">🔤 字母練習區</button>
   </div>
+
+  <!-- E3 (2026-08-10): แถบชวนกลับไปเล่นชุดคำ/ประโยคที่ค้างไว้ (guest-only, localStorage ผ่าน window.GameResume ใน shared.js)
+       ซ่อนอยู่โดย default — tone-finder-game.js เป็นคนสั่งโชว์ (tfShowResumeBannerIfAny) เฉพาะตอนเจอ resume state ค้างจริงเท่านั้น -->
+  <div class="gsh-resume-banner" id="tf-resume-banner" style="display:none;"></div>
 
   <!-- Phase C.1 (2026-08-10): #tf-session-counter (進度/🏆分數/🔥combo/黃金米題) ย้ายมาอยู่กลุ่มเดียวกับระดับ初/中/高
        เดิมทั้งก้อนนี้ถูกสร้างเป็น string ฝังอยู่ใน #tf-banner (banner.innerHTML) ผ่าน counterHtml ใน render()
@@ -1641,7 +1646,8 @@ document.addEventListener('contextmenu', function(e){
     </div>
     <!-- Lin 2026-07-30 (แก้รอบ 2): ย้ายกล่องพยางค์/กล่องคำในประโยค 高級 มาอยู่ "เหนือคำถามเลย" (ใต้แถบ上一步/下一步) ตามที่ Lin ยืนยันจาก mockup — เดิมอยู่เหนือแถบ上一步/下一步 (ติดกรอบทองเลย) ย้ายลงมาให้ต่อกับคำถามแทน -->
     <div class="syl-strip" id="tf-syl-strip" style="display:none"></div>
-    <div class="tf-body" id="tf-body"></div>
+    <!-- D1 (2026-08-10): เพิ่ม gsh-feedback-slot (css/shared.css) — จอง min-height + transition กัน layout กระตุกตอนสลับหน้าคำถาม/ผลลัพธ์ ไม่แตะ logic/step ใดๆ -->
+    <div class="tf-body gsh-feedback-slot" id="tf-body"></div>
   </div>
 </div>
 
@@ -1687,7 +1693,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=43']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=44']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -1699,7 +1705,7 @@ document.addEventListener('contextmenu', function(e){
 <script src="js/acquisition/posts-data.js"></script>
 <script src="js/acquisition/lessons-data.js"></script>
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=26"></script>
+<script src="js/core/shared.min.js?v=27"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)

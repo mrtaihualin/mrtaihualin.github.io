@@ -109,7 +109,10 @@ html:not(.gc-ready) [onclick*="rgToggleParticleMode("],html:not(.gc-ready) [oncl
 html:not(.gc-ready) [onclick*="setRgGuideMode("],html:not(.gc-ready) [onclick*="setRgPronMode("],
 html:not(.gc-ready) [onclick*="rgDownloadReport("],html:not(.gc-ready) [onclick*="openBadge("],
 html:not(.gc-ready) [onclick*="openStar("],html:not(.gc-ready) [onclick*="trackBookCTA("],
-html:not(.gc-ready) [onclick*="trackToneLink("]{
+html:not(.gc-ready) [onclick*="trackToneLink("],
+html:not(.gc-ready) [onclick*="rgToggleDetail("],html:not(.gc-ready) [onclick*="rgResumeContinue("],
+html:not(.gc-ready) [onclick*="rgResumeRestart("],html:not(.gc-ready) [onclick*="rgShowMistakes("],
+html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
   pointer-events:none!important;opacity:.45;filter:grayscale(35%);cursor:not-allowed!important;
 }
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
@@ -415,7 +418,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <li>中級 ×1.5、高級 ×2 · ✨黃金字全對 <strong>×2</strong> · 連對 3／5／8 次 <strong>×1.5／×2／×3</strong></li>
         <li>完成一輪 <strong>+20</strong>，全對再 <strong>+50</strong> · 💡「有提示」模式純練習、不計分</li>
         <li>拼完自動顯示拆解：子音／母音／尾音＋為什麼是這個聲調</li>
-        <li>每輪結束可下載 📄 PDF 報告</li>
+        <li>每輪結束可列印／儲存 📄 學習紀錄</li>
       </ul>
     </div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">登入的話，系統會幫你記住哪些字學會了、哪些還需要複習，下次打開就直接從弱點練起 ⭐</p>
@@ -441,8 +444,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章</div>
       <p style="margin:0 0 10px;">星星不是拼對一次就有，是這個字經過複習、真的「精通」了才拿到（跟其他遊戲共用）。星星累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。</p>
 
-      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 下載 PDF 報告</div>
-      <p style="margin:0 0 10px;">每輪結束可以按「下載 PDF 報告」，裡面有這輪總分、答對題數、每個字的狀況（是否精通、用過提示、拼錯幾次、得幾分、下次複習日期），還有「弱點分析」列出這輪拼錯最多的字。</p>
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 列印／儲存學習紀錄</div>
+      <p style="margin:0 0 10px;">每輪結束可以按「列印／儲存學習紀錄」，裡面有這輪總分、答對題數、每個字的狀況（是否精通、用過提示、拼錯幾次、得幾分、下次複習日期），還有「弱點分析」列出這輪拼錯最多的字。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
       <p style="margin:0;">拼錯或用過提示的字，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。不登入的話，每次進來都是全部字重新開始，沒有記憶功能。</p>
@@ -485,6 +488,17 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <div>✗ <span id="bad">0</span></div>
     </div>
     <div class="combo-badge" id="cb">🔥 <span id="cn">0</span></div>
+  </div>
+</div>
+
+<!-- E3 (2026-08-10 Shared Game UI Phase E): 訪客本機續玩提示 — 只存在瀏覽器 localStorage（window.GameResume），不跨裝置/不跟登入帳號同步
+     只有偵測到「上次離開時還沒打完的一輪」才會顯示；沒有的話 rgTryLoadResumeBanner() 回傳 false，直接照舊開新的一輪 -->
+<div class="gsh-resume-banner" id="rg-resume-banner" style="display:none;max-width:640px;">
+  <div class="gsh-resume-title">要繼續上次的練習嗎？</div>
+  <div class="gsh-resume-detail" id="rg-resume-detail"></div>
+  <div class="gsh-resume-actions">
+    <button type="button" class="gsh-resume-continue" onclick="rgResumeContinue()">繼續練習</button>
+    <button type="button" class="gsh-resume-restart" onclick="rgResumeRestart()">重新開始</button>
   </div>
 </div>
 
@@ -581,27 +595,35 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <button class="btn btn-secondary" id="btn-next-syl" onclick="try{gtag('event','reading_game_syllable_nav',{category:'game',syllable:sylIdx+2})}catch(e){}rgGotoSyl(sylIdx+1)" style="display:none">下一個音節 →</button>
   </div>
 
-  <!-- กล่องคำอธิบายเฉลย — Lin 2026-07-30: เอา猜聲調 (ปุ่มทายเสียง+แต้มโบนัส) ออกทั้งหมดแล้ว เหลือแค่คำอธิบาย 子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์ โชว์อัตโนมัติตอนเฉลย -->
-  <div class="bonus-section" id="bonus-section" aria-live="polite">
-    <div class="bonus-reason" id="bonus-reason"></div>
+  <!-- D1 (2026-08-10 Shared Game UI Phase D): ห่อ retry-hint+banner ด้วย .gsh-feedback-slot (css/shared.css) กันจอกระโดดตอนข้อความโผล่/หาย -->
+  <div class="gsh-feedback-slot">
+    <div class="retry-hint" id="retry-hint">沒關係～再看看，換一個試試 🌱</div>
+    <div class="result-banner" id="banner"></div>
   </div>
 
-  <div class="retry-hint" id="retry-hint">沒關係～再看看，換一個試試 🌱</div>
-  <div class="result-banner" id="banner"></div>
-
-  <!-- Reveal -->
-  <div class="reveal" id="reveal">
-    <div class="reveal-rules" id="reveal-rules"></div>
+  <!-- D2 (2026-08-10 Shared Game UI Phase D): กล่องคำอธิบายเฉลย (子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์) เปลี่ยนจากโชว์อัตโนมัติ → ต้องกด「查看詳細解說」เอง
+       เนื้อหาข้างในคำนวณเหมือนเดิมทุกอย่าง (renderBonusReason/buildRevealRules/showRevealMulti ไม่ถูกแตะเลย) แค่ห่อด้วยกล่องที่ปิดไว้ก่อน + ปุ่มเปิด/ปิด
+       ปุ่มซ่อนอยู่ (display:none) จนกว่า rgSyncDetailToggle() จะเจอเนื้อหาจริงหลังเฉลย — กัน "กดแล้วไม่มีอะไรเกิดขึ้น" -->
+  <button type="button" class="gsh-detail-toggle" id="rg-detail-toggle" style="display:none;" onclick="rgToggleDetail()" aria-expanded="false">查看詳細解說</button>
+  <div class="gsh-detail-box" id="rg-detail-box" style="display:none;">
+    <div class="bonus-section" id="bonus-section" aria-live="polite">
+      <div class="bonus-reason" id="bonus-reason"></div>
+    </div>
+    <!-- Reveal -->
+    <div class="reveal" id="reveal">
+      <div class="reveal-rules" id="reveal-rules"></div>
+    </div>
   </div>
 </div>
 
 <div class="card" id="end">
   <div style="font-size:48px">🎉</div>
-  <h2 style="font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10;">這輪練習完成！</h2>
-  <div class="end-score-big" id="end-score">—</div>
+  <!-- F1 (2026-08-10 Shared Game UI Phase F): เพิ่ม .gsh-end-title/.gsh-end-score/.gsh-end-actions ต่อของเดิม (ไม่ลบ class เดิม กันสีตกธีมของหน้านี้) -->
+  <h2 class="gsh-end-title" style="font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10;">這輪練習完成！</h2>
+  <div class="gsh-end-score end-score-big" id="end-score">—</div>
   <div class="end-detail" id="end-detail"></div>
 
-  <!-- ▼ 預約體驗課 CTA（遊戲 → 預約 橋樑）▼ -->
+  <!-- ▼ 預約體驗課 CTA（遊戲 → 預約 橋樑）▼ — F1: 保留（跟 Lin 既有的預約導流決策一致，新版規格「結果頁中間不放促銷CTA」在這裡有衝突，詳見交接報告 ▼ -->
   <div class="book-cta">
     <div class="book-cta-title">想把泰文唸得標準嗎？🇹🇭</div>
     <div class="book-cta-sub">跟 老師 1 對 1，聲調發音一次到位</div>
@@ -609,12 +631,22 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
   <!-- ▲ CTA ▲ -->
 
-  <div class="end-actions">
+  <div class="gsh-end-actions end-actions">
     <button class="btn btn-primary" onclick="restart()">再玩一次</button>
-    <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 下載 PDF 報告</button>
+    <!-- F3 (2026-08-10): 改文字 — 機制其實是開新視窗 print()，不是真的下載檔案，原本「下載PDF」字樣不準確 -->
+    <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 列印／儲存學習紀錄</button>
+    <!-- F2 (2026-08-10): 查看錯題 — 唯讀檢視這輪 roundLog 裡答錯/失敗的字，不影響分數/狀態 -->
+    <button class="btn btn-secondary" onclick="rgShowMistakes()">📋 查看錯題</button>
     <a class="btn btn-secondary" href="reading-board.html" onclick="try{gtag('event', 'game_link_click', {category:'game', target:'reading_board',from:'reading_game'})}catch(e){}">🏆 看排行榜</a>
     <a class="btn btn-secondary" href="games.html" onclick="trackToneLink()">看其他遊戲 🎮</a>
   </div>
+</div>
+
+<!-- F2 (2026-08-10 Shared Game UI Phase F): 查看錯題 — 唯讀畫面，資料來源 = roundLog（reading-game-app.js 既有，未新增/未改任何計分邏輯） -->
+<div class="card" id="rg-mistakes" style="display:none;">
+  <h2 class="gsh-end-title" style="font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10;">這輪拼錯的字</h2>
+  <div class="gsh-mistake-list" id="rg-mistake-list"></div>
+  <button type="button" class="btn btn-secondary gsh-mistake-back" onclick="rgBackToEndFromMistakes()">← 返回結果</button>
 </div>
 
 <div class="v3-modal" id="badge-modal" onclick="this.classList.remove('show');try{gtag('event','reading_game_badge_modal_close',{category:'game'})}catch(e){}">
@@ -658,7 +690,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   var GC_SEL = '[onclick*="check("],[onclick*="next("],[onclick*="remember("],[onclick*="restart("],'
     + '[onclick*="setLevel("],[onclick*="rgGotoSyl("],[onclick*="rgToggleParticleMode("],[onclick*="setRgEnMode("],'
     + '[onclick*="setRgGuideMode("],[onclick*="setRgPronMode("],[onclick*="rgDownloadReport("],[onclick*="openBadge("],'
-    + '[onclick*="openStar("],[onclick*="trackBookCTA("],[onclick*="trackToneLink("]';
+    + '[onclick*="openStar("],[onclick*="trackBookCTA("],[onclick*="trackToneLink("],'
+    + '[onclick*="rgToggleDetail("],[onclick*="rgResumeContinue("],[onclick*="rgResumeRestart("],'
+    + '[onclick*="rgShowMistakes("],[onclick*="rgBackToEndFromMistakes("]';
   function gcGate(){
     document.querySelectorAll(GC_SEL).forEach(function(el){
       el.setAttribute('data-gc-gated','1');
@@ -679,12 +713,12 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=22']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=23']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=26"></script>
+<script src="js/core/shared.min.js?v=27"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

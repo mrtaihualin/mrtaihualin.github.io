@@ -1568,6 +1568,7 @@ function tfCommitWordAndAdvance(opts) {
   session.initialGuess = undefined;
   session.finalAnswer = undefined;
   session.currentWordGolden = false;
+  tfSaveResumeState(); // E3: อัปเดต resume ทุกครั้งที่ทำคำ/พยางค์เสร็จ 1 คำ (จะถูกล้างอีกทีถ้า session จบตอน tfGoToSummary ด้านล่าง)
   if (session.index >= session.words.length) {
     tfGoToSummary();
   } else {
@@ -1710,6 +1711,7 @@ function tfSetupNextWord() {
 
 // เข้าหน้าสรุป + คิดโบนัสจบชุด/perfect (ครั้งเดียว)
 function tfGoToSummary() {
+  tfClearResumeState(); // E3: จบรอบปกติแล้ว ไม่ต้องเสนอ resume อีก (F5/F1 ก็เรียก session ใหม่ต่อซึ่งจะ save ทับเองอยู่แล้ว)
   tfApplySessionBonus();
   S = { word: '', step: 'session-summary', path: [], tone: null };
   hist.push({ step: 'session-summary' }); histPos++;
@@ -2267,6 +2269,7 @@ function buildStep() {
     case 'alpha-vowel':     return stepAlphaVowel();
     case 'alpha-flashcard': return stepAlphaFlashcard();
     case 'session-summary': return stepSessionSummary();
+    case 'mistake-review': return stepMistakeReview(); // F2 (2026-08-10)
     case 's1':        return step1();
     case 's2a':       return step2a();
     case 's2a_low':   return step2aLow();
@@ -2653,15 +2656,21 @@ function stepSessionSummary() {
       '<div style="font-size:12px;color:#A08A5A;margin-top:2px;">累積共 ' + _stars + ' 顆星（全部遊戲共用・私人，不上排行榜）</div></div>';
   }
 
+  // F2 (2026-08-10): ปุ่ม 查看錯題 — โชว์เฉพาะเมื่อมีผลอย่างน้อย 1 คำ (ปกติมีเสมอถ้าเล่นจบรอบจริง)
+  var mistakeBtnHtml = total > 0
+    ? '<button type="button" class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mistake_review_open\',{category:\'game\'});}catch(e){}TF.showMistakeReview()">📋 查看錯題</button>'
+    : '';
   return '<div class="tf-session-summary">' +
     minaBlock +
     scoreSummary +
     streakBlock +
     badgeBlock +
     starBlock +
-    '<div class="tf-sum-score">'+perfectCount+' / '+total+'</div>' +
-    '<div class="tf-sum-score-label">'+(perfectCount===total?'全部一次答對！太厲害了 🎉':'我們一起繼續加油！💪')+'</div>' +
+    // F1 (2026-08-10): เพิ่ม class gsh-end-score/gsh-end-title (css/shared.css) ให้ตรงกับเกมอื่น — ยังคง class เดิม (tf-sum-score/tf-sum-score-label) ไว้ด้วย ไม่ลบของเดิม ไม่เปลี่ยนเนื้อหา/ตำแหน่ง
+    '<div class="tf-sum-score gsh-end-score">'+perfectCount+' / '+total+'</div>' +
+    '<div class="tf-sum-score-label gsh-end-title">'+(perfectCount===total?'全部一次答對！太厲害了 🎉':'我們一起繼續加油！💪')+'</div>' +
     // ⭐ การ์ดชวนจอง — ดันขึ้นมาก่อนตารางคะแนน เพื่อให้ผู้เล่นเห็นก่อนปิดหน้า
+    // Lin/spec ข้อ F1 บอกว่า "ห้ามใส่ promotion/sales CTA กลาง result" แต่การ์ดนี้เป็นการ์ดจองคอร์สที่ตั้งใจมีอยู่แล้วทั้งเว็บ (นโยบายธุรกิจ ไม่ใช่ของที่ UI spec รอบนี้จะสั่งถอดเองได้) — คงไว้ตามเดิมทุกประการ ไม่แตะ
     '<div style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
       '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
       '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
@@ -2675,12 +2684,38 @@ function stepSessionSummary() {
         '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +
         '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_summary_login_click\',{category:\'game\'});}catch(e){}tfCtaLogin()" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
       '</div>') +
-    '<div style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
-      '<button class="tf-session-next-btn" id="tf-pdf-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 下載 PDF 報告</button>' +
+    // F1 (2026-08-10): แถวปุ่มท้ายผลลัพธ์ เปลี่ยนจาก inline flex style เดิม → class gsh-end-actions (shared.css: column บนมือถือ, row บนจอใหญ่ ≥600px) เพิ่มปุ่ม 查看錯題 (F2) เข้าแถวเดียวกัน — ปุ่ม/ลิงก์เดิมทุกปุ่มยังอยู่ครบ ไม่มีปุ่มไหนถูกลบ ไม่เปลี่ยน onclick/href ใดๆ เลย
+    '<div class="gsh-end-actions">' +
+      '<button class="tf-session-next-btn" id="tf-pdf-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 列印／儲存學習紀錄</button>' +
+      mistakeBtnHtml +
       '<button class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF.reselectTopic()">' + (selectedLevel === 3 ? '🎲 再來一句' : '🎲 再來 5 字') + '</button>' +
       '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
       '<a class="tf-restart-btn" href="leaderboard.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'leaderboard\',from:\'tone_finder\'})}catch(e){}">🏆 看排行榜</a>' +
     '</div>' +
+  '</div>';
+}
+
+// ── F2 (2026-08-10): 查看錯題 — หน้าอ่านอย่างเดียว (read-only) ใช้ session.results ที่มีอยู่แล้วเท่านั้น ไม่คำนวณ/แก้คะแนนใดๆ ──
+function stepMistakeReview() {
+  if (!session || !session.results) return '';
+  var results = session.results;
+  var reviewList = results.filter(function (r) { return r.needReview; });
+  var listSource = reviewList.length ? reviewList : results; // ไม่มีคำที่ต้อง複習เลย (完美) → โชว์รายการทั้งหมดแทนหน้าว่างเปล่า
+  var itemsHtml = listSource.map(function (r) {
+    var correctTone = TONES[r.tone] || {};
+    var guessTone = (r.finalAnswer != null && r.finalAnswer !== 0 && TONES[r.finalAnswer]) ? TONES[r.finalAnswer] : null;
+    var isWrong = !!(r.needReview);
+    return '<div class="gsh-mistake-item' + (isWrong ? ' gsh-mistake-wrong' : '') + '">' +
+      '<div class="gsh-mistake-q">' + (r.entry && r.entry.word || '—') + (r.entry && r.entry.zh ? '　<span style="font-weight:400;color:#999;font-size:13px;">' + r.entry.zh + '</span>' : '') + '</div>' +
+      '<div class="gsh-mistake-row">正確聲調：<b>' + (correctTone.zh || '—') + '</b></div>' +
+      (guessTone ? '<div class="gsh-mistake-row">你的答案：<b>' + guessTone.zh + '</b></div>' : '') +
+      '<div class="gsh-mistake-row">錯誤次數：<b>' + (r.mistakes || 0) + '</b>' + (r.golden ? '　🌟 黃金米題' : '') + (r.forced ? '　📌 已顯示答案' : '') + '</div>' +
+    '</div>';
+  }).join('');
+  return '<div class="tf-session-summary">' +
+    '<div class="gsh-end-title">' + (reviewList.length ? '📋 錯題複習' : '📋 練習紀錄（這輪全部一次答對，沒有錯題）') + '</div>' +
+    '<div class="gsh-mistake-list">' + (itemsHtml || '<div style="text-align:center;color:#999;font-size:13px;">沒有紀錄</div>') + '</div>' +
+    '<button type="button" class="gsh-mistake-back tf-restart-btn" onclick="TF.backToMistakeSummary()">← 返回結果</button>' +
   '</div>';
 }
 
@@ -2850,6 +2885,62 @@ function tfFireStartOnce() {
   }
 }
 
+// ── E3 (2026-08-10): Guest-only local resume (window.GameResume ใน shared.js) ──
+// เก็บ "level + รายชื่อคำ/ประโยคที่กำลังเล่นอยู่ + ทำไปถึงข้อไหน" ไว้ให้ guest กลับมาเล่นต่อได้หลัง refresh/ปิดแท็บ
+// ระดับความละเอียด: "เล่นชุดคำ/ประโยคเดิมซ้ำตั้งแต่ต้น" (ไม่ replay กลางพยางค์/คะแนนสะสมกลางรอบ — ดูรายละเอียดในรายงานที่ส่งให้ orchestrator)
+// ไม่เกี่ยวกับ SRS/ดาว/แบดจ์/Free-account resume ฝั่งเซิร์ฟเวอร์ใดๆ ทั้งสิ้น
+function tfSaveResumeState() {
+  try {
+    if (!window.GameResume || !session || !session.words || !session.words.length) return;
+    GameResume.save('tone-finder', {
+      level: selectedLevel,
+      wordIds: session.words.map(function (w) { return w.word; }),
+      index: session.index,
+      total: session.words.length,
+      advSentIdx: (selectedLevel === 3) ? advSentIdx : null
+    });
+  } catch (e) {}
+}
+function tfClearResumeState() {
+  try { if (window.GameResume) GameResume.clear('tone-finder'); } catch (e) {}
+}
+// เก็บ snapshot ที่อ่านได้ตอนโหลดหน้า (ก่อนที่ auto-start ระดับ 1 จะเขียนทับ localStorage) ไว้ให้ปุ่ม 繼續練習 ใช้
+var __tfResumeSnapshot = null;
+function tfResumeLevelLabel(level) {
+  return ({1:'初級',2:'中級',3:'高級'})[level] || '練習';
+}
+function tfHideResumeBanner() {
+  var el = document.getElementById('tf-resume-banner');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  __tfResumeSnapshot = null;
+}
+// เรียกครั้งเดียวตอนท้ายไฟล์ (หลัง TF.selectLevel(1) auto-start) — โชว์แถบชวนกลับไปเล่นชุดเดิมถ้ามีของค้างจริง
+function tfShowResumeBannerIfAny(data) {
+  try {
+    if (!data || !data.wordIds || !data.wordIds.length) return;
+    var total = data.total || data.wordIds.length;
+    if (!total) return;
+    var done = Math.min(data.index || 0, total);
+    if (done >= total) return; // เล่นครบชุดไปแล้วก่อนปิดหน้า ไม่ต้องเสนอ resume (ปกติ tfGoToSummary จะ clear ไปแล้วอยู่แล้ว กันเหนียวอีกชั้น)
+    // ข้อมูลเก่าเกิน 3 วัน — ไม่ยัดเยียดของเก่าเกินไปให้ผู้เล่น
+    if (data._savedAt && (Date.now() - data._savedAt) > (3 * 24 * 60 * 60 * 1000)) { tfClearResumeState(); return; }
+    var el = document.getElementById('tf-resume-banner');
+    if (!el) return;
+    var lvl = tfResumeLevelLabel(data.level);
+    var unitLabel = (data.level === 3) ? '句子' : (total + ' 個字');
+    el.innerHTML =
+      '<div class="gsh-resume-title">▶️ 你有練習到一半的紀錄</div>' +
+      '<div class="gsh-resume-detail">' + lvl + ' · ' + unitLabel + '　已完成 ' + done + ' / ' + total + '</div>' +
+      '<div class="gsh-resume-actions">' +
+        '<button type="button" class="gsh-resume-continue" onclick="TF.resumeSavedSession()">繼續練習</button>' +
+        '<button type="button" class="gsh-resume-restart" onclick="TF.dismissResumeBanner()">重新開始</button>' +
+      '</div>';
+    el.style.display = 'block';
+    __tfResumeSnapshot = data;
+    try { if (typeof gtag === 'function') gtag('event','tone_finder_resume_shown',{category:'game'}); } catch (e) {}
+  } catch (e) {}
+}
+
 function startSetSession(words, opts) {
   // Lin 2026-07-30: เดิมล้าง advSentenceCtx แบบไม่มีเงื่อนไขทุกครั้ง → ตอน TF.startAdvSentence เรียกฟังก์ชันนี้ (ซึ่งเรียก render() ข้างในตั้งแต่บรรทัดท้ายฟังก์ชัน)
   // แล้วค่อยตั้ง advSentenceCtx ใหม่ "หลัง" ฟังก์ชันนี้ return กลับไป ทำให้ render() รอบแรก (คำแรกของประโยค高級) เห็น advSentenceCtx เป็น null ก่อนเสมอ
@@ -2894,6 +2985,7 @@ function startSetSession(words, opts) {
     S = { word:w, step:'session-guess', path:[w], tone:null };
   }
   hist.push(S); histPos = 0;
+  tfSaveResumeState(); // E3: บันทึก resume ทุกครั้งที่เริ่ม session ใหม่ (ทับของเก่าเสมอ — 1 session ล่าสุดต่อเกม)
   render();
   // น้องมีนาทักทายตอนเริ่มเล่น (เฉพาะรอบแรกของหน้า กันทักซ้ำทุกชุด) — Lin 2026-07-10
   if (!window._tfMinaWelcomed) { window._tfMinaWelcomed = true; setTimeout(function () { tfMinaToast('welcome', { dur: 3400 }); }, 700); }
@@ -3275,11 +3367,16 @@ function stepResult() {
     // Lin 2026-07-31: คำหลายพยางค์ — ไม่โชว์ 音節拆解 ทีละพยางค์อีกต่อไป รอไปรวมโชว์ทุกพยางค์พร้อมกันตอนหน้าพยางค์สุดท้าย (ดู multiSummaryHtml ด้านล่าง)
     var ansHtml = isMultiSyl ? '' : tfAnswerRowsHtml(currentAnswerSyl());
 
+    // D2 (2026-08-10): เดิมโชว์ 音節拆解 อัตโนมัติทุกครั้ง → เปลี่ยนเป็นปุ่ม [ 查看詳細解說 ] แบบ opt-in (.gsh-detail-toggle/.gsh-detail-box ใน shared.css)
+    //   เนื้อหา/การคำนวณ ansHtml เหมือนเดิมทุกประการ แค่ซ่อนไว้ก่อนจนกว่าจะกดดู
     sessionBlock =
       guessRow+
       (ansHtml ? '<div class="result-v2-bd">'+
-        '<div class="result-v2-bd-title">音節拆解</div>'+
-        '<div class="tf-ans-inner"><div class="tf-ans-rows">'+ansHtml+'</div></div>'+
+        '<button type="button" class="gsh-detail-toggle" onclick="TF.toggleAnswerDetail(this)">查看詳細解說</button>'+
+        '<div class="gsh-detail-box" style="display:none;">'+
+          '<div class="result-v2-bd-title">音節拆解</div>'+
+          '<div class="tf-ans-inner"><div class="tf-ans-rows">'+ansHtml+'</div></div>'+
+        '</div>'+
       '</div>' : '');
   }
 
@@ -3308,13 +3405,17 @@ function stepResult() {
       '</div>';
     }).join('');
     var allSylAnsHtml = tfAllAnswerRowsHtml();
+    // D2 (2026-08-10): เหมือนกับ ansHtml ด้านบน — เปลี่ยนจากโชว์อัตโนมัติเป็นปุ่ม [ 查看詳細解說 ] opt-in
     multiSummaryHtml =
       '<div style="margin-bottom:10px;">'+
         '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#8B6310;font-weight:600;letter-spacing:2px;margin-bottom:8px;">音節結果</div>'+
         '<div style="display:flex;gap:10px;">'+sylCardsHtml+'</div>'+
         (allSylAnsHtml ? '<div class="result-v2-bd" style="margin-top:10px;">'+
-          '<div class="result-v2-bd-title">音節拆解</div>'+
-          '<div class="tf-ans-inner"><div class="tf-ans-rows">'+allSylAnsHtml+'</div></div>'+
+          '<button type="button" class="gsh-detail-toggle" onclick="TF.toggleAnswerDetail(this)">查看詳細解說</button>'+
+          '<div class="gsh-detail-box" style="display:none;">'+
+            '<div class="result-v2-bd-title">音節拆解</div>'+
+            '<div class="tf-ans-inner"><div class="tf-ans-rows">'+allSylAnsHtml+'</div></div>'+
+          '</div>'+
         '</div>' : '')+
       '</div>';
   }
@@ -3633,6 +3734,7 @@ var TF = {
   reset: function() {
     var self = this;
     tfConfirmQuit(function () {
+      tfClearResumeState(); // E3: ผู้เล่นเลือก "ออกไม่เก็บคะแนน/เริ่มใหม่" เอง → ไม่ต้องเสนอ resume รอบเก่าอีก
       hist=[]; histPos=-1;
       S = { word:'', step:'level-select', path:[], tone:null };
       randomEntry = null;
@@ -3646,6 +3748,7 @@ var TF = {
   // Re-select TOPIC: keep the chosen level, go back to the 選擇主題 (category) page.
   reselectTopic: function() {
     tfConfirmQuit(function () {
+      tfClearResumeState(); // E3: กำลังจะเริ่มชุดคำ/ประโยคใหม่ (สุ่มใหม่) — ล้างของเก่าก่อน (ของใหม่จะถูก save ทับเองใน startSetSession อยู่แล้วถ้ามี session ใหม่)
       hist=[]; histPos=-1;
       randomEntry = null; session = null;
       if (selectedLevel) {
@@ -3678,6 +3781,8 @@ var TF = {
       TF.startAdvSentence(Math.floor(Math.random() * ADV_SENTENCES.length));
       return;
     }
+    // F5 (2026-08-10): จำ "คำสุดท้ายของชุดก่อนหน้า" ไว้ก่อนที่ session ตัวแปรจะถูกทับด้วยชุดใหม่ (ใช้กันคำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อน)
+    var _prevLastWord = (session && session.words && session.words.length) ? session.words[session.words.length - 1].word : null;
     var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
     if (!pool.length) { tfToast('找不到單字，請試試其他等級'); return; }
     // Lin 2026-07-04: ถ้าจำได้ครบทุกคำในระดับนี้ (全部精通) → เด้งหน้าฉลองก่อน (ไม่เริ่มชุดอัตโนมัติให้เล่นวนเปล่าๆ)
@@ -3691,6 +3796,11 @@ var TF = {
     }
     pool = tfExcludeMasteredWords(pool, 5); // Lin 2026-07-04: กันคำที่จำได้แล้ว (mastered) โผล่ซ้ำในสุ่ม 5 คำ
     var words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
+    // F5 (2026-08-10): พยายามไม่ให้คำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อนหน้า — สลับที่กับคำถัดไปในชุด (แค่ลองครั้งเดียว)
+    //   pool เล็กจนเลี่ยงไม่ได้ (เหลือคำเดียว/ทุกคำในชุดใหม่คือคำเดิม) ก็ปล่อยให้ซ้ำได้ตามที่ Lin ยืนยัน ไม่ใช่ด่านบังคับ
+    if (_prevLastWord && words.length > 1 && words[0] === _prevLastWord) {
+      var _tmp = words[0]; words[0] = words[1]; words[1] = _tmp;
+    }
     startSetSession(words);
   },
   // Lin 2026-07-04: ตัด selectCategory/selectSet/openSpecial ทิ้งแล้ว — หน้าเลือกหมวด/ชุด + 特訓區 ไม่ใช้แล้ว
@@ -4026,6 +4136,55 @@ var TF = {
     render();   // วาดใหม่ทั้งหน้า: ป้ายบอกโหมด + ไฮไลต์ตัวเลือก อัปเดตพร้อมกัน
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
+  // ── D2 (2026-08-10): ปุ่ม [ 查看詳細解說 ] opt-in ในหน้าเฉลย — สลับเปิด/ปิดกล่อง .gsh-detail-box ที่อยู่ถัดจากปุ่มนี้ ──
+  //   ไม่แตะข้อมูล/การคำนวณ ansHtml ใดๆ แค่ show/hide DOM ที่ render() สร้างไว้แล้ว
+  toggleAnswerDetail: function(btn) {
+    if (!btn) return;
+    var box = btn.nextElementSibling;
+    if (!box) return;
+    var isOpen = box.style.display !== 'none';
+    box.style.display = isOpen ? 'none' : '';
+    btn.textContent = isOpen ? '查看詳細解說' : '收起詳細解說';
+  },
+  // ── E3 (2026-08-10): ปุ่ม 繼續練習 บนแถบ resume — เล่น "ชุดคำ/ประโยคเดิม" ซ้ำตั้งแต่ต้น (ไม่ replay กลางพยางค์/คะแนนสะสม — ดูหมายเหตุที่ tfSaveResumeState) ──
+  resumeSavedSession: function() {
+    var data = __tfResumeSnapshot;
+    tfHideResumeBanner();
+    if (!data) return;
+    try { if (typeof gtag === 'function') gtag('event','tone_finder_resume_continue',{category:'game'}); } catch (e) {}
+    if (data.level === 3) {
+      if (data.advSentIdx != null && data.advSentIdx >= 0 && window.ADV_SENTENCES && ADV_SENTENCES[data.advSentIdx]) {
+        TF.startAdvSentence(data.advSentIdx);
+      } else {
+        TF._startRandom5(); // หาประโยคเดิมไม่เจอ (ข้อมูลเปลี่ยน/เพี้ยน) — สุ่มประโยค高級ใหม่แทน ดีกว่าค้าง
+      }
+      return;
+    }
+    var entries = (data.wordIds || []).map(function (wid) {
+      for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === wid) return WORD_LIST[i];
+      return null;
+    }).filter(Boolean);
+    if (!entries.length) { TF._startRandom5(); return; } // คำในชุดเดิมหาไม่เจอสักคำ (ข้อมูลเปลี่ยน) — สุ่มชุดใหม่แทน ดีกว่าค้าง
+    selectedLevel = data.level || 1;
+    selectedCategory = 'ทั้งหมด';
+    startSetSession(entries, { keepOrder: true });
+  },
+  // ปุ่ม 重新開始 บนแถบ resume — แค่ทิ้งข้อมูล resume เก่า (session ที่ auto-start ไปแล้วตอนโหลดหน้าเล่นต่อได้ปกติ ไม่ต้องทำอะไรเพิ่ม)
+  dismissResumeBanner: function() {
+    try { if (typeof gtag === 'function') gtag('event','tone_finder_resume_dismiss',{category:'game'}); } catch (e) {}
+    tfClearResumeState();
+    tfHideResumeBanner();
+  },
+  // ── F2 (2026-08-10): เปิด/ปิดหน้า 查看錯題 — แค่สลับ S.step ไปมา ไม่แตะ session/hist/score เลย (อ่านอย่างเดียว) ──
+  showMistakeReview: function() {
+    if (!session) return;
+    S = { word: '', step: 'mistake-review', path: [], tone: null };
+    render();
+  },
+  backToMistakeSummary: function() {
+    S = { word: '', step: 'session-summary', path: [], tone: null };
+    render();
+  },
   // ── ปุ่มถามคำถามในเกม → ส่งเข้า Gmail ของ LIN ผ่าน Web3Forms (ผู้เล่นพิมพ์เอง + แนบคำที่กำลังเล่น) ──
   openAsk: function() {
     try{ if(typeof gtag==='function') gtag('event','tone_finder_ask_open',{category:'game'}); }catch(e){}
@@ -4153,8 +4312,12 @@ function tfRenderExtBar() {
 }
 
 // Lin 2026-07-10: เข้าเกมมาให้เริ่มเล่น 初級 คำแรกทันทีเหมือนเกมอื่น (ไม่ต้องกดเลือกระดับก่อน)
+// E3 (2026-08-10): อ่าน resume ที่ค้างไว้ "ก่อน" TF.selectLevel(1) เสมอ — เพราะ selectLevel(1) จะเรียก
+// startSetSession() ซึ่ง save resume ของ session ใหม่ทับ localStorage ทันที ถ้าไปอ่านทีหลังจะเจอแต่ของใหม่ ไม่เจอของเก่า
+try { __tfResumeSnapshot = (window.GameResume && GameResume.load('tone-finder')) || null; } catch (e) { __tfResumeSnapshot = null; }
 TF.selectLevel(1);
 setTimeout(tfRenderExtBar, 0);
+if (__tfResumeSnapshot) { var __tfResumeCaptured = __tfResumeSnapshot; setTimeout(function () { tfShowResumeBannerIfAny(__tfResumeCaptured); }, 0); }
 
 // Lin 2026-07-10: ซ่อนแถบ page-strip ล่างจอเฉพาะตอนเบราว์เซอร์เข้าโหมดเต็มจอจริง (Fullscreen API)
 (function () {

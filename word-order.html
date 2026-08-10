@@ -362,6 +362,16 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </div>
 
 
+<!-- E3 (Shared Game UI, 2026-08-10): guest-resume banner — ซ่อนไว้ก่อนเสมอ โชว์เฉพาะ init() เจอรอบค้างจริงใน localStorage (window.GameResume) -->
+<div class="gsh-resume-banner" id="wo-resume-banner" style="display:none;">
+  <div class="gsh-resume-title" id="wo-resume-title"></div>
+  <div class="gsh-resume-detail" id="wo-resume-detail"></div>
+  <div class="gsh-resume-actions">
+    <button class="gsh-resume-continue" onclick="woResumeContinueClick()">▶️ 繼續練習</button>
+    <button class="gsh-resume-restart" onclick="woResumeRestartClick()">🔁 重新開始</button>
+  </div>
+</div>
+
 <!-- GAME -->
 <div id="game" class="card gsh-gameplay">
   <div class="gold-banner">
@@ -427,7 +437,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <div class="wo-bank" id="wo-bank"></div>
 
-  <div class="result-banner" id="wo-banner"></div>
+  <div class="result-banner gsh-feedback-slot" id="wo-banner"></div>
 
   <!-- Lin 2026-07-12: อธิบายว่าแต่ละคำในประโยคแปลว่าอะไร (โชว์ตอนจบ มาตรฐานเดียวกับเกมพิมพ์ 高) -->
   <div id="wo-reveal" style="display:none;width:100%;margin-top:8px;background:#fffbf0;border:1.5px dashed #f0b030;border-radius:12px;padding:10px 14px;box-sizing:border-box;"></div>
@@ -441,20 +451,31 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 <!-- END SCREEN -->
 <div id="end" class="card">
-  <h2>🎉 全部完成！</h2>
-  <div class="end-score-big" id="wo-end-score">0</div>
-  <div class="end-detail" id="wo-end-detail"></div>
+  <!-- F1 (Shared Game UI, 2026-08-10): .gsh-end-title/.gsh-end-score/.gsh-end-actions — light class-only restyle, ไม่แตะ #wo-end-score/#wo-end-detail/perfect-star-burst logic เลย -->
+  <!-- F2: ห่อเนื้อหาเดิมทั้งหมดไว้ใน #wo-end-normal (แทนที่ layout เดิม display:flex/column/gap:12px ของ #end เอง เพราะตอนนี้ #end มีลูกโดยตรงเพิ่มเป็น 2 ก้อน) -->
+  <div id="wo-end-normal" style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;">
+    <h2 class="gsh-end-title">🎉 全部完成！</h2>
+    <div class="end-score-big gsh-end-score" id="wo-end-score">0</div>
+    <div class="end-detail" id="wo-end-detail"></div>
 
-  <div class="book-cta">
-    <div class="book-cta-title">語序抓到感覺了嗎？</div>
-    <div class="book-cta-sub">一對一中文授課，直接針對你常排錯的句型練習</div>
-    <a class="btn btn-book" href="pricing.html?from=word_order#pricing" onclick="if(window.bookFromGame){bookFromGame('word_order','end_screen');return false;}">預約免費體驗課 →</a>
+    <div class="book-cta">
+      <div class="book-cta-title">語序抓到感覺了嗎？</div>
+      <div class="book-cta-sub">一對一中文授課，直接針對你常排錯的句型練習</div>
+      <a class="btn btn-book" href="pricing.html?from=word_order#pricing" onclick="if(window.bookFromGame){bookFromGame('word_order','end_screen');return false;}">預約免費體驗課 →</a>
+    </div>
+
+    <div class="end-actions gsh-end-actions">
+      <button class="btn btn-primary" onclick="try{if(window.gtag)gtag('event','word_order_restart_click',{category:'game'});}catch(e){}woRestart()">🔁 再玩一次</button>
+      <button class="btn btn-secondary" onclick="woShowMistakes()">📋 查看錯題</button>
+      <button class="btn btn-secondary" id="wo-pdf-btn" onclick="try{if(window.gtag)gtag('event','word_order_pdf_download',{category:'game'});}catch(e){}woDownloadReport()">📄 列印／儲存學習紀錄</button>
+      <a class="btn btn-secondary" href="games.html">🎮 回遊戲總覽</a>
+    </div>
   </div>
 
-  <div class="end-actions">
-    <button class="btn btn-primary" onclick="try{if(window.gtag)gtag('event','word_order_restart_click',{category:'game'});}catch(e){}woRestart()">🔁 再玩一次</button>
-    <button class="btn btn-secondary" id="wo-pdf-btn" onclick="try{if(window.gtag)gtag('event','word_order_pdf_download',{category:'game'});}catch(e){}woDownloadReport()">📄 下載 PDF 報告</button>
-    <a class="btn btn-secondary" href="games.html">🎮 回遊戲總覽</a>
+  <!-- F2: 查看錯題 — read-only, 資料來自 roundLog（同一輪內打過的句子），跟結果畫面互斥顯示 -->
+  <div id="wo-mistake-view" style="display:none;width:100%;">
+    <div class="gsh-mistake-list" id="wo-mistake-list"></div>
+    <button class="btn btn-secondary gsh-mistake-back" onclick="woHideMistakes()">← 返回結果</button>
   </div>
 </div>
 
@@ -486,7 +507,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=26"></script>
+<script src="js/core/shared.min.js?v=27"></script>
 
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>
@@ -530,7 +551,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/word-order-app.min.js?v=15']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=16']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

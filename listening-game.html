@@ -246,6 +246,16 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <button class="mtab" data-mode="type" type="button">輸入答案</button>
 </div>
 
+<!-- RESUME BANNER — โชว์เฉพาะเมื่อมีรอบที่เล่นค้างไว้จริงใน localStorage (Phase E3) -->
+<div class="gsh-resume-banner" id="lg-resume-banner" style="display:none;">
+  <div class="gsh-resume-title">你有一輪還沒做完的聽力練習</div>
+  <div class="gsh-resume-detail" id="lg-resume-detail"></div>
+  <div class="gsh-resume-actions">
+    <button class="gsh-resume-continue" id="lg-resume-continue" type="button">繼續練習</button>
+    <button class="gsh-resume-restart" id="lg-resume-restart" type="button">重新開始</button>
+  </div>
+</div>
+
 <!-- START SCREEN -->
 <div id="lg-start" class="card">
   <div class="lg-start-emoji">🎧</div>
@@ -300,7 +310,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
     <button class="btn btn-primary" id="lg-type-submit" type="button">送出答案</button>
   </div>
 
-  <div class="result-banner" id="lg-result-banner"></div>
+  <div class="result-banner gsh-feedback-slot" id="lg-result-banner"></div>
   <div class="lg-reveal" id="lg-reveal"></div>
 
   <div class="btn-row">
@@ -310,8 +320,8 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 
 <!-- END SCREEN -->
 <div id="lg-end" class="card">
-  <h2>🎉 這輪聽力練習完成！</h2>
-  <div class="end-score-big" id="lg-end-score">0 / 10</div>
+  <h2 class="gsh-end-title">🎉 這輪聽力練習完成！</h2>
+  <div class="end-score-big gsh-end-score" id="lg-end-score">0 / 10</div>
   <div class="end-detail" id="lg-end-detail"></div>
 
   <div class="book-cta">
@@ -320,10 +330,19 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
     <a class="btn btn-book" href="pricing.html?from=listening_game#pricing" onclick="if(window.bookFromGame){bookFromGame('listening_game','end_screen');return false;}">預約免費體驗課 →</a>
   </div>
 
-  <div class="end-actions">
+  <div class="end-actions gsh-end-actions">
     <button class="btn btn-primary lg-restart-btn" type="button">🔁 再玩一次</button>
+    <button class="btn btn-secondary" id="lg-mistake-btn" type="button">📕 查看錯題</button>
+    <button class="btn btn-secondary" id="lg-print-btn" type="button">📄 列印／儲存學習紀錄</button>
     <a class="btn btn-secondary" href="games.html">🎮 回遊戲總覽</a>
   </div>
+</div>
+
+<!-- MISTAKE REVIEW SCREEN — 查看錯題 (Phase F2) -->
+<div id="lg-mistakes" class="card" style="display:none;">
+  <h2 class="gsh-end-title">📕 這輪答錯的題目</h2>
+  <div class="gsh-mistake-list" id="lg-mistake-list"></div>
+  <button class="btn btn-secondary gsh-mistake-back" id="lg-mistake-back" type="button">← 返回結果</button>
 </div>
 
 </div><!-- /v3-page -->
@@ -334,7 +353,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 </footer>
 
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=26"></script>
+<script src="js/core/shared.min.js?v=27"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>
@@ -348,7 +367,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 <div id="game-switcher" data-current="listening_game"></div>
 <script src="js/games/game-switcher.js?v=1"></script>
 
-<script>GameContentLoader.boot(['js/games/listening-game-app.js?v=1']);</script>
+<script>GameContentLoader.boot(['js/games/listening-game-app.js?v=2']);</script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
 <div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;

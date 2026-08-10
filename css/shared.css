@@ -669,3 +669,47 @@
 .gsh-end-score { text-align:center; font-family:'Noto Serif TC',serif; font-weight:900; font-size:clamp(28px,6vw,40px); color:var(--gold-deep); }
 .gsh-end-actions { display:flex; flex-direction:column; gap:10px; align-items:stretch; max-width:320px; margin:16px auto 0; }
 @media(min-width:600px){ .gsh-end-actions { flex-direction:row; flex-wrap:wrap; justify-content:center; max-width:none; } }
+
+/* ═══════════════════════════════════════════════════════════
+   Phase D/E/F (2026-08-10) — เพิ่มชุด class ใหม่ 3 กลุ่ม ใช้ prefix .gsh- ต่อจากชุดเดิมด้านบน
+   หลักการเดิม: แปะเข้า container ที่มีอยู่แล้วของแต่ละเกม ไม่รื้อ DOM ไม่ชน id เดิม
+   ═══════════════════════════════════════════════════════════ */
+
+/* Restart confirmation overlay — ใช้ร่วมกัน 5 เกม (§15, Phase E2) ข้อความจริงกำหนดจาก JS ของแต่ละเกม */
+.gsh-confirm-overlay {
+  position:fixed; inset:0; background:rgba(28,20,6,0.55); z-index:10050;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.gsh-confirm-box {
+  background:var(--cream); border-radius:16px; padding:24px 22px; max-width:340px; width:100%;
+  text-align:center; font-family:'Noto Sans TC',sans-serif; box-shadow:0 12px 40px rgba(0,0,0,0.25);
+}
+.gsh-confirm-title { font-family:'Noto Serif TC',serif; font-weight:900; font-size:17px; color:var(--ink); margin-bottom:8px; }
+.gsh-confirm-sub { font-size:13px; color:var(--ink-muted); margin-bottom:18px; line-height:1.6; }
+.gsh-confirm-actions { display:flex; gap:10px; }
+.gsh-confirm-actions button { flex:1; padding:10px 12px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; font-family:'Noto Sans TC',sans-serif; border:none; }
+.gsh-confirm-cancel { background:#fff; border:1.5px solid var(--border) !important; color:var(--ink-soft); }
+.gsh-confirm-ok { background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep)); color:#fff; }
+
+/* Guest resume banner — ใช้ร่วมกัน 5 เกม (§16, Phase E3) โชว์เฉพาะเมื่อมี session ค้างจริงใน localStorage */
+.gsh-resume-banner {
+  width:100%; max-width:640px; margin:0 auto 14px; box-sizing:border-box;
+  background:linear-gradient(180deg,#FFF6E6,#FDEBC8); border:1.5px solid var(--gold-bright); border-radius:14px;
+  padding:14px 16px; font-family:'Noto Sans TC',sans-serif; text-align:center;
+}
+.gsh-resume-title { font-weight:800; font-size:14px; color:var(--gold-deep); margin-bottom:4px; }
+.gsh-resume-detail { font-size:13px; color:var(--ink-soft); margin-bottom:12px; }
+.gsh-resume-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.gsh-resume-actions button { padding:9px 18px; border-radius:999px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:'Noto Sans TC',sans-serif; border:none; }
+.gsh-resume-continue { background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep)); color:#fff; }
+.gsh-resume-restart { background:#fff; border:1.5px solid var(--border) !important; color:var(--ink-soft); }
+@media(max-width:600px){ .gsh-resume-actions button{ flex:1; } }
+
+/* 查看錯題 mistake review — ใช้ร่วมกัน 5 เกม (§21, Phase F2) read-only แสดงจาก roundLog/state จริงเท่านั้น */
+.gsh-mistake-list { display:flex; flex-direction:column; gap:10px; width:100%; max-width:640px; margin:0 auto; }
+.gsh-mistake-item { background:#fff; border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; text-align:left; font-family:'Noto Sans TC',sans-serif; }
+.gsh-mistake-q { font-family:'Sarabun',sans-serif; font-size:16px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+.gsh-mistake-row { font-size:12.5px; color:var(--ink-muted); margin-top:2px; }
+.gsh-mistake-row b { color:var(--ink-soft); }
+.gsh-mistake-item.gsh-mistake-wrong { border-color:#e0a0a0; background:#fdf5f5; }
+.gsh-mistake-back { margin:14px auto 0; display:block; }

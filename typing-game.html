@@ -536,6 +536,16 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
 </div>
 
+<!-- Shared Game UI Phase E3 (2026-08-10): guest-only resume prompt — โชว์เฉพาะตอนพบ session ที่เล่นค้างไว้จริงใน localStorage (window.GameResume, ดู tgTryResume) เฉพาะผู้เล่นที่ไม่ได้ล็อกอิน (ผู้ล็อกอินใช้ระบบ SRS ฝั่งเซิร์ฟเวอร์เลือกคำใหม่ทุกครั้งอยู่แล้ว) -->
+<div class="gsh-resume-banner" id="tg-resume-banner" style="display:none;">
+  <div class="gsh-resume-title">上次練習還沒完成</div>
+  <div class="gsh-resume-detail" id="tg-resume-detail"></div>
+  <div class="gsh-resume-actions">
+    <button type="button" class="gsh-resume-continue" onclick="tgResumeContinue()">▶️ 繼續練習</button>
+    <button type="button" class="gsh-resume-restart" onclick="tgResumeRestart()">🔄 重新開始</button>
+  </div>
+</div>
+
 <div class="card" id="game">
   <div class="gold-banner gsh-gameplay">
     <div class="bars-wrap" id="bars-wrap">
@@ -629,34 +639,43 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 
   <div class="opts-wrap"><div class="opts" id="pool"></div></div>
 
-  <!-- ปุ่มแอ็คชัน — อยู่เหนือกล่องคำอธิบายเฉลย (Lin 2026-07-10) -->
+  <!-- ปุ่มแอ็คชัน — อยู่เหนือแบนเนอร์ผลลัพธ์ (Lin 2026-07-10) -->
   <div class="btn-row">
     <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
     <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
     <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一字 →</button>
   </div>
 
-  <!-- กล่องคำอธิบายเฉลย — Lin 2026-07-30: เอา猜聲調 (ปุ่มทายเสียง+แต้มโบนัส) ออกทั้งหมดแล้ว เหลือแค่คำอธิบาย 子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์ โชว์อัตโนมัติตอนเฉลย -->
-  <div class="bonus-section" id="bonus-section" aria-live="polite">
-    <div class="bonus-reason" id="bonus-reason"></div>
-  </div>
-
   <div class="retry-hint" id="retry-hint">沒關係～再看看，換一個試試 🌱</div>
-  <div class="result-banner" id="banner"></div>
+  <div class="result-banner gsh-feedback-slot" id="banner"></div>
 
-  <!-- Reveal -->
-  <div class="reveal" id="reveal">
-    <div class="reveal-rules" id="reveal-rules"></div>
+  <!-- Shared Game UI Phase D2 (2026-08-10): กล่องคำอธิบายเฉลย (子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์) เปลี่ยนจาก
+       "โชว์อัตโนมัติตอนเฉลย" เป็น opt-in — เนื้อหาที่คำนวณ (evaluateBonus/showReveal/showRevealMulti) ไม่เปลี่ยนเลย
+       แค่ผู้เล่นต้องกดดูเอง ปุ่มโผล่เองเฉพาะรอบที่มีเนื้อหาจริง (ดู tgSyncDetailToggle ใน typing-game-app.js) -->
+  <button type="button" class="gsh-detail-toggle" id="tg-detail-toggle" style="display:none;" onclick="tgToggleDetail()">🔍 查看詳細解說</button>
+  <div class="gsh-detail-box" id="tg-detail-box" style="display:none;">
+    <!-- กล่องคำอธิบายเฉลย — Lin 2026-07-30: เอา猜聲調 (ปุ่มทายเสียง+แต้มโบนัส) ออกทั้งหมดแล้ว เหลือแค่คำอธิบาย 子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์ -->
+    <div class="bonus-section" id="bonus-section" aria-live="polite">
+      <div class="bonus-reason" id="bonus-reason"></div>
+    </div>
+
+    <!-- Reveal -->
+    <div class="reveal" id="reveal">
+      <div class="reveal-rules" id="reveal-rules"></div>
+    </div>
   </div>
 </div>
 
+<!-- Shared Game UI Phase F1 (2026-08-10): gsh-end-title/gsh-end-score/gsh-end-actions เพิ่มควบคู่กับ class เดิม
+     (end-score-big/end-actions) โดยตั้งใจไม่ลบ class เดิมออก — class เดิมโหลดทีหลัง shared.css ใน cascade
+     จึงยังคุมหน้าตาจริงเหมือนเดิม 100% กันความเสี่ยงเปลี่ยน layout โดยไม่มีทางทดสอบเบราว์เซอร์จริงตอนนี้ -->
 <div class="card" id="end">
   <div style="font-size:48px">🎉</div>
-  <h2 style="font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10;">這輪練習完成！</h2>
-  <div class="end-score-big" id="end-score">—</div>
+  <h2 class="gsh-end-title" style="font-family:'Noto Serif TC',serif;font-size:22px;color:#5a3e10;">這輪練習完成！</h2>
+  <div class="end-score-big gsh-end-score" id="end-score">—</div>
   <div class="end-detail" id="end-detail"></div>
 
-  <!-- ▼ 預約體驗課 CTA（遊戲 → 預約 橋樑）▼ -->
+  <!-- ▼ 預約體驗課 CTA（遊戲 → 預約 橋樑）▼ Lin 2026-08-10 (F1): 這是既有的商業決策（結果頁引導預約），跟 Shared UI 規格「結果頁不促銷」衝突，保留不動，只回報衝突不擅自移除 -->
   <div class="book-cta">
     <div class="book-cta-title">想把泰文唸得標準嗎？🇹🇭</div>
     <div class="book-cta-sub">跟 老師 1 對 1，聲調發音一次到位</div>
@@ -664,12 +683,21 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
   <!-- ▲ CTA ▲ -->
 
-  <div class="end-actions">
+  <div class="end-actions gsh-end-actions">
     <button class="btn btn-primary" onclick="restart()">再玩一次</button>
-    <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 下載 PDF 報告</button>
+    <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 列印／儲存學習紀錄</button>
+    <!-- Shared Game UI Phase F2 (2026-08-10): 查看錯題 — 只在這輪有打錯的字才出現（見 endRound 裡的 tg-mistakes-btn 顯示邏輯） -->
+    <button class="btn btn-secondary" id="tg-mistakes-btn" onclick="tgShowMistakes()" style="display:none;">📝 查看錯題</button>
     <a class="btn btn-secondary" href="typing-board.html" onclick="try{gtag('event', 'game_link_click', {category:'game', target:'typing_board',from:'typing_game'})}catch(e){}">🏆 看排行榜</a>
     <a class="btn btn-secondary" href="games.html" onclick="trackToneLink()">看其他遊戲 🎮</a>
   </div>
+</div>
+
+<!-- Shared Game UI Phase F2 (2026-08-10): 查看錯題 — read-only，只從 roundLog 讀，不能改分數/答案 -->
+<div class="card" id="tg-mistakes-panel" style="display:none;">
+  <h2 class="gsh-end-title" style="font-family:'Noto Serif TC',serif;font-size:20px;color:#5a3e10;">📝 這輪打錯的字</h2>
+  <div class="gsh-mistake-list" id="tg-mistakes-list"></div>
+  <button type="button" class="btn btn-secondary gsh-mistake-back" onclick="tgHideMistakes()">← 返回結果</button>
 </div>
 
 <div class="v3-modal" id="badge-modal" onclick="this.classList.remove('show');try{gtag('event','typing_game_badge_modal_close',{category:'game'})}catch(e){}">
@@ -736,12 +764,12 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=21']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=22']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=26"></script>
+<script src="js/core/shared.min.js?v=27"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
