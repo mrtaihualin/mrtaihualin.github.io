@@ -1,5 +1,28 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-10 — Navigation IA รอบใหญ่ + games.html ปรับเป็นหน้า hub (games-practice.html ใหม่) + แก้ responsive nav
+
+สถานะ: ✅ เสร็จแล้ว — push ครบผ่าน GitHub Desktop ยืนยัน "No local changes" (local = origin)
+
+**สิ่งที่ทำ (หลายเฟสในแชทเดียว):**
+1. เปลี่ยนเมนูบนสุดเป็น 🎮遊戲(ปุ่มรอง)/學習資源/更多▾(3 กลุ่ม + เส้นคั่นก่อน聯絡我們)/免費試聽 CTA — แก้ที่ `data/nav-template.js` ที่เดียว แล้ว regen ทุกหน้าผ่าน `scripts/generate-nav.js` (ไม่มี href ใหม่ ไม่ย้าย URL ไหน)
+2. แก้บั๊กเมนูหายเร็วเกินไปตอนย่อหน้าต่าง — เดิม `@media(max-width:900px)` ตายตัวกว้างเกินจริง เปลี่ยนเป็น `window.__navFit()` วัดความกว้างจริงของ DOM แล้วสลับ `.nav-compact` เอง ผูก resize/orientationchange (debounce 120ms) + `document.fonts.ready` ใน `js/core/shared.js` · เหลือ CSS safety-net ที่ `max-width:480px` (ต้องอยู่ต่ำกว่าเกณฑ์ JS เสมอ กันแย่งกันตัดสินใจ)
+3. `games.html` จากลิสต์ 5 เกมแบนๆ → หน้า hub: Search เดิม (ไม่แตะ logic) + 3 การ์ดหลักเท่ากัน (泰語遊戲練習室→`games-practice.html` / 綜合挑戰=ปิดใช้งานอยู่ / 造句練習→`lego.html`)
+4. สร้างหน้าใหม่ `games-practice.html` เก็บ 5 เกมเดิม (聲調/拼讀/聽力/打字/語序) เป็นการ์ดเท่ากัน + ปุ่ม "← 返回遊戲中心" — URL เกมทุกตัวเหมือนเดิมทุกตัวอักษร
+5. final polish: แก้ title/meta/OG/Twitter ของ `games.html` ให้ตรงกับ hub ใหม่ (เลิกบอกว่า 綜合挑戰 เล่นได้), จัดโครง JSON-LD ใหม่ (ย้าย ItemList เกมจริงไป `games-practice.html` + เพิ่มรายการ 聽力 ที่เคยตกหล่นจาก schema เดิม, ตัด `games.html` ให้เหลือแค่ปลายทางที่กดได้จริง 2 ปลายทาง, แก้ breadcrumb เป็น 3 ระดับ), บังคับความสูงการ์ดเท่ากันด้วย CSS `-webkit-line-clamp`/`min-height` ล้วน (ไม่แก้คำบรรยายเกม), ลบบล็อก `page-strip` เก่า (ไม่ใช่ของ generator ควบคุม) ออกจาก 2 หน้านี้
+
+**ไม่แตะ:** Search logic/Search Index/Gemini fallback/routingTitle, game content/vocabulary/sentences, URL เกมเดิมทุกตัว
+
+**ทดสอบผ่านครบ:** `scripts/check-site.js`, `scripts/check-nav-consistency.js`, `scripts/tests-search-behavioral.js`
+
+**🔴 บทเรียนตอน push — เจอ "16 changed files" ที่ไม่ใช่ไฟล์ที่เพิ่งแก้ ทำให้กลัวว่างานหาย:** ตรวจใน GitHub Desktop (ผ่าน computer-use) พบว่า **ไม่ใช่ปัญหา git worktree คนละโฟลเดอร์** (path ของ Main Worktree ตรงกับ `/Users/taihualin/Developer/mrtaihualin.github.io` เป๊ะ ยืนยันด้วยการ copy path มาวาง) แท้จริงงานหลักของแชทนี้ (nav IA/games.html/games-practice.html/responsive nav) **ถูก commit + push ไปแล้วจริงหลายรอบระหว่างทางงาน** (ยืนยันจาก History tab + กด Fetch origin แล้วไม่มีเลขค้าง push) ส่วน "16 ไฟล์" ที่เห็นค้างเป็น**คนละก้อนงาน**ที่ไม่เกี่ยวกัน: 15 หน้า HTML ที่ nav ยังไม่ถูกซิงค์เป็นแบบใหม่ (ตกหล่นจากรอบ commit ก่อนหน้า) + `js/core/auth-widget.js` (แก้บั๊กปุ่ม LINE login งาน P7-02 คนละเรื่อง มีคอมเมนต์ `2026-08-10 (P7-02...)` กำกับชัดเจน) — ตรวจ diff ทั้งคู่แล้วปลอดภัย/สมบูรณ์ Lin commit+push รวมไปด้วยแล้ว
+
+**ไฟล์ที่แก้:** `games.html`, 🆕 `games-practice.html`, `css/shared.css`, `data/nav-template.js`, `js/core/shared.js`+`.min.js`, `js/games/games-search-ui.js`, `scripts/generate-nav.js`, `scripts/check-nav-consistency.js` + 15 หน้า HTML (nav sync) + `js/core/auth-widget.js` (คนละงาน)
+
+**⚠️ ยังไม่ push:** entry นี้ใน `MAINTENANCE.md` และ entry คู่กันใน `CLAUDE.md` (หัวข้อ "อัปเดตล่าสุด: 2026-08-10 (รอบ 5)") — เป็นไฟล์เอกสารล้วน ไม่กระทบเว็บที่ deploy จริง แต่ยังต้อง Lin push เองรอบถัดไป
+
+---
+
 ## 2026-08-10 — `privacy.html` ตกหล่นจาก nav generator + เพิ่ม automated nav consistency checker
 
 สถานะ: ✅ เสร็จแล้ว — push แล้ว เปิดเว็บจริงยืนยันแล้วว่า `privacy.html` มีแถบประกาศ+เมนูล่างครบเหมือนหน้าอื่น
