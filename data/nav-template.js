@@ -33,8 +33,9 @@
   var CTA_MODAL = 'modal-line-qr';
 
   var TOP_ITEMS = [
-    // 1) 遊戲 — เดิมอยู่ใต้ 資源分享 → 遊戲練習室 ยกขึ้นมาเป็นเมนูหลักตรงตามที่ตกลง
-    { type: 'link', label: '遊戲', href: '/games.html' },
+    // 1) 🎮 遊戲 — decision 2026-08-10: ต้องเด่นกว่าลิงก์ธรรมดา เป็น secondary CTA
+    //    (ปุ่มกรอบทอง คนละแบบกับ 免費試聽 ที่เป็นปุ่มทึบทอง primary CTA)
+    { type: 'link', label: '🎮 遊戲', href: '/games.html', className: 'nav-cta-secondary' },
 
     // 2) 學習資源 — decision อัปเดต 2026-08-09 (รอบ 2): เหลือแค่ 4 รายการ
     //    ของฝั่งคอร์ส (上課方式/費用方案/常見問題/上課須知) ถอดออกจาก dropdown นี้แล้ว
@@ -56,35 +57,43 @@
       ]
     },
 
-    // 3) 關於我 — รวม 關於老師與學生 + 專業服務 + 聯絡我們 (เดิมเป็นปุ่มเดี่ยวบนสุด ย้ายเข้ามาเป็นรายการท้ายสุด)
+    // 3) 更多 ▾ — decision 2026-08-10: เดิมชื่อ 關於我 เปลี่ยนชื่อ+จัดกลุ่มใหม่ 3 กลุ่ม
+    //    (課程與老師 / 常見資訊 / 其他服務) + 聯絡我們 หลัง divider — ใช้ href เดิมที่มีอยู่จริงทั้งหมด
+    //    ไม่มี URL ไหนถูกย้าย แค่จัดกลุ่ม/ชื่อป้ายใหม่
     {
       type: 'dropdown',
-      label: '關於我',
+      label: '更多',
       groups: [
         {
-          label: '老師與學生',
+          label: '課程與老師',
           items: [
             { href: '/index.html#teacher', label: '關於老師' },
             { href: '/pricing.html#testimonials', label: '學生回饋' },
-            { href: '/faq.html#feedback-section', label: '分享你的經驗' }
+            { href: '/pricing.html#pricing', label: '費用方案' },
+            { href: '/pricing.html#how', label: '上課方式' }
           ]
         },
         {
-          label: '專業服務',
+          label: '常見資訊',
           items: [
-            { href: '/page-services.html#tour-guide', label: '🗺️ 導遊服務' },
-            { href: '/page-services.html#drama', label: '🎬 字幕翻譯' },
-            { href: '/page-services.html#interpret', label: '🎙️ 口譯服務' }
-          ],
-          dividerAfter: true,
-          moreItems: [
-            { href: '/page-services.html#quote-form', label: '📋 索取報價' }
+            { href: '/faq.html#faq', label: 'FAQ' },
+            { href: '/faq.html#rules', label: '上課須知' },
+            { href: '/faq.html#feedback-section', label: '分享經驗' }
           ]
         },
         {
-          // ไม่มี label กลุ่ม เพราะเป็นรายการเดี่ยว (เดิมเป็นปุ่ม 聯絡我們 แยกอยู่บนสุด)
+          label: '其他服務',
+          items: [
+            { href: '/page-services.html#tour-guide', label: '🗺️ 導遊' },
+            { href: '/page-services.html#drama', label: '🎬 字幕翻譯' },
+            { href: '/page-services.html#interpret', label: '🎙️ 口譯' },
+            { href: '/page-services.html#quote-form', label: '📋 報價' }
+          ],
+          dividerAfter: true
+        },
+        {
+          // ไม่มี label กลุ่ม เพราะเป็นรายการเดี่ยวหลัง divider (聯絡我們)
           items: [],
-          dividerAfter: false,
           standaloneModal: { modal: 'modal-contact', label: '聯絡我們' }
         }
       ]
@@ -154,7 +163,8 @@
 
   function renderTopItem(item) {
     if (item.type === 'link') {
-      return '<li><a href="' + item.href + '">' + esc(item.label) + '</a></li>';
+      var cls = item.className ? ' class="' + item.className + '"' : '';
+      return '<li><a href="' + item.href + '"' + cls + '>' + esc(item.label) + '</a></li>';
     }
     if (item.type === 'modal') {
       return '<li><a href="javascript:void(0)" onclick="openModal(\'' + item.modal + '\')">' + esc(item.label) + '</a></li>';
@@ -250,6 +260,29 @@
            ANN_MARK_END;
   }
 
+  // ── 📐 NAV RESPONSIVE AUTO-FIT (inline script ทันทีหลัง </nav>) ──────
+  //   เพิ่ม 2026-08-10 — แก้บั๊ก "เมนู desktop หายเร็วเกินไปตอนย่อหน้าต่าง"
+  //   เดิมใช้ breakpoint ตายตัว 900px ซึ่งกว้างเกินความจำเป็นจริงมาก
+  //   ตอนนี้วัดความกว้างจริงของ logo+เมนูเทียบกับพื้นที่จริงของ <nav> แทนการเดา —
+  //   พอดี = อยู่โหมด desktop ต่อ ไม่พอดี = เติม class "nav-compact" (css/shared.css มีด่านสำรอง
+  //   @media(max-width:640px) เผื่อ JS ไม่ทำงานอยู่แล้ว)
+  //   ต้องเป็น script แบบ sync วางทันทีหลัง <nav> (ไม่ใช่รอ shared.min.js ท้ายหน้า) กันกระพริบ
+  //   ตอนโหลดหน้าแรก — แพทเทิร์นเดียวกับ ANN_MARK_START/END ด้านบน (ห่อ marker ให้พิมพ์ทับได้แม่นยำ)
+  //   js/core/shared.js ผูก resize/font-load เรียก window.__navFit ซ้ำหลังจากนี้
+  var NAVFIT_MARK_START = '<!--NAV-FIT:START-->';
+  var NAVFIT_MARK_END = '<!--NAV-FIT:END-->';
+  function renderNavFitScriptHTML() {
+    return NAVFIT_MARK_START +
+      '<script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;' +
+      'var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;' +
+      'n.classList.remove("nav-compact");k.style.cssText="";' +
+      'var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;' +
+      'var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;' +
+      'if(need>avail){n.classList.add("nav-compact");}}' +
+      'window.__navFit=f;f();}catch(e){}})();<\/script>' +
+      NAVFIT_MARK_END;
+  }
+
   return {
     CTA_LABEL: CTA_LABEL,
     CTA_MODAL: CTA_MODAL,
@@ -259,9 +292,12 @@
     ANN: ANN,
     ANN_MARK_START: ANN_MARK_START,
     ANN_MARK_END: ANN_MARK_END,
+    NAVFIT_MARK_START: NAVFIT_MARK_START,
+    NAVFIT_MARK_END: NAVFIT_MARK_END,
     renderNavHTML: renderNavHTML,
     renderBottomNavHTML: renderBottomNavHTML,
     renderAnnRowHTML: renderAnnRowHTML,
-    renderAnnBandBlockHTML: renderAnnBandBlockHTML
+    renderAnnBandBlockHTML: renderAnnBandBlockHTML,
+    renderNavFitScriptHTML: renderNavFitScriptHTML
   };
 });

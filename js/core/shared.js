@@ -104,6 +104,27 @@ window.goHome = function() {
     }catch(e){}
   })();
 
+  // 📐 NAV RESPONSIVE AUTO-FIT — 2026-08-10 (Lin อนุมัติ)
+  // ปัญหาเดิม: breakpoint ตายตัว 900px กว้างเกินความจำเป็นจริงมาก ทำให้เมนู desktop
+  // "หายไป" เร็วเกินไปตอนย่อหน้าต่าง (เนื้อหา 4 รายการบนสุดพอดีได้ตั้งแต่แคบกว่านั้นมาก)
+  // ไม่เดา breakpoint ใหม่ — window.__navFit() (ฝัง inline ทันทีหลัง <nav> โดย
+  // scripts/generate-nav.js กันกระพริบตอนโหลดหน้าแรก) วัดความกว้างจริงของ logo+เมนู
+  // เทียบกับพื้นที่จริงทุกครั้ง ตรงนี้แค่ผูก resize/เปลี่ยนแนวจอ/ฟอนต์โหลดเสร็จ ให้เรียกซ้ำ
+  // (ฟอนต์ Noto Sans/Serif TC อาจโหลดเสร็จทีหลัง ทำให้ความกว้างจริงเปลี่ยนจากตอนวัดครั้งแรก)
+  (function () {
+    if (typeof window.__navFit !== 'function') return; // หน้าที่ยังไม่ผ่าน generate-nav.js รอบใหม่ — ไม่มี inline fit script ให้เรียก ข้ามอย่างปลอดภัย (ใช้ @media(max-width:640px) ใน css/shared.css แทน)
+    var navFitTimer;
+    function scheduleNavFit() {
+      clearTimeout(navFitTimer);
+      navFitTimer = setTimeout(function () { try { window.__navFit(); } catch (e) {} }, 120);
+    }
+    window.addEventListener('resize', scheduleNavFit);
+    window.addEventListener('orientationchange', scheduleNavFit);
+    if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+      document.fonts.ready.then(function () { try { window.__navFit(); } catch (e) {} })['catch'](function () {});
+    }
+  })();
+
   // 📢 แถบประกาศหมุนเวียน — ✏️ แก้ข้อความที่ data/nav-template.js (ตัวแปร ANN) แล้วรัน scripts/generate-nav.js
   //
   // 🔴 2026-08-10 (Lin อนุมัติ) — เปลี่ยนเป็น "static HTML มาก่อน JS เป็นแค่ตัวหมุนสไลด์":

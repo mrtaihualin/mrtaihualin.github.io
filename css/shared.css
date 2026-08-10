@@ -15,19 +15,22 @@
   body { background:#F5F0E8; color:var(--ink); font-family:'Noto Serif TC',serif; overflow-x:hidden; padding-top:var(--nav-h); }
 
   /* NAV */
-  nav { position:fixed; top:0; left:0; right:0; height:var(--nav-h); background:rgba(17,17,17,0.97); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:space-between; padding:0 32px; z-index:999; border-bottom:1px solid rgba(200,151,58,0.2); }
+  /* 2026-08-10: padding ไหลลื่น (clamp) แทนค่าคงที่ 32px — ยิ่งจอแคบยิ่งลด padding ลงเอง
+     ก่อนจะถึงจุดที่ต้องสลับเป็นโหมดมือถือ (ดู .nav-compact / @media ท้ายบล็อกนี้) */
+  nav { position:fixed; top:0; left:0; right:0; height:var(--nav-h); background:rgba(17,17,17,0.97); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:space-between; padding:0 clamp(16px,3vw,32px); z-index:999; border-bottom:1px solid rgba(200,151,58,0.2); }
   .nav-logo { font-family:'Noto Serif TC',serif; font-size:15px; font-weight:900; letter-spacing:1px; cursor:pointer; flex-shrink:0; }
   .nav-logo .logo-main { color:var(--white); }
   .nav-logo .logo-accent { color:var(--gold-bright); }
   .nav-logo .logo-dim { color:var(--gold-bright); font-weight:900; }
 
-  /* top-level nav items */
-  .nav-links { display:flex; gap:4px; list-style:none; align-items:center; }
+  /* top-level nav items — flex-shrink:0 กันข้อความถูกบีบเบี้ยวระหว่างที่ JS กำลังวัดความกว้างจริง
+     (ดู __navFit() ใน js/core/shared.js) ถ้าพอดี = แถวเดียวไม่ตัดคำ ถ้าไม่พอดี JS จะสลับเป็นโหมดมือถือให้เอง */
+  .nav-links { display:flex; flex-shrink:0; gap:clamp(2px,0.6vw,4px); list-style:none; align-items:center; }
   .nav-links > li { position:relative; }
   .nav-links > li > a {
     font-family:'Noto Sans TC',sans-serif; font-size:12px; font-weight:500;
     color:rgba(255,255,255,0.72); text-decoration:none; letter-spacing:0.5px;
-    transition:color 0.2s; white-space:nowrap; padding:6px 10px; display:block;
+    transition:color 0.2s; white-space:nowrap; padding:6px clamp(6px,1vw,10px); display:block;
   }
   .nav-links > li > a:hover { color:var(--gold-bright); }
   .nav-links > li > a.has-drop::after { content:'▾'; font-size:9px; margin-left:4px; opacity:0.5; }
@@ -55,12 +58,32 @@
   .nav-links > li > a.nav-current { color:var(--gold-bright); font-weight:700; }
   .nav-drop a.nav-current { color:var(--gold-bright); background:rgba(200,151,58,0.08); }
 
-  .nav-cta { background:var(--gold-bright) !important; color:var(--ink) !important; font-weight:700 !important; padding:8px 18px !important; font-size:12px !important; }
+  .nav-cta { background:var(--gold-bright) !important; color:var(--ink) !important; font-weight:700 !important; padding:8px clamp(10px,1.6vw,18px) !important; font-size:12px !important; }
   .nav-cta:hover { background:#b07820 !important; color:var(--ink) !important; }
+  /* 2026-08-10: 遊戲 = secondary CTA — เด่นกว่าลิงก์ธรรมดาแต่ไม่แย่งซีน 免費試聽 (primary CTA ทึบทอง) */
+  .nav-cta-secondary { border:1px solid var(--gold-bright) !important; color:var(--gold-bright) !important; font-weight:700 !important; padding:6px clamp(8px,1.3vw,14px) !important; border-radius:4px; }
+  .nav-cta-secondary:hover { background:rgba(200,151,58,0.12) !important; color:var(--gold-bright) !important; }
   .hamburger { display:none; flex-direction:column; gap:5px; cursor:pointer; padding:4px; }
   .hamburger span { display:block; width:22px; height:2px; background:rgba(255,255,255,0.8); }
   .nav-mobile-cta { display:none; }
-  @media(max-width:900px){ .nav-links{display:none;} .hamburger{display:flex;} nav{padding:0 20px;} .nav-mobile-cta{display:inline-block;background:var(--gold-bright);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:11px;padding:7px 14px;letter-spacing:1px;text-decoration:none;cursor:pointer;border:none;white-space:nowrap;margin-right:10px;} }
+
+  /* 2026-08-10: RESPONSIVE NAV — แก้บั๊ก "เมนู desktop หายเร็วเกินไปตอนย่อหน้าต่าง"
+     เดิม breakpoint ตายตัวที่ 900px กว้างเกินความจำเป็นจริงมาก (คำนวณจากความกว้างจริงของ
+     ตัวอักษร/ปุ่มแล้ว 4 รายการบนสุด 🎮遊戲/學習資源/更多/免費試聽 พอดีได้ตั้งแต่ ~500-520px)
+     ตอนนี้ตัวตัดสินใจหลักคือ JS: __navFit() (ฝัง inline ทันทีหลัง <nav> ทุกหน้า โดย
+     scripts/generate-nav.js กันกระพริบตอนโหลดหน้าแรก + ผูก resize ซ้ำใน shared.js)
+     วัดความกว้างจริงของ logo+เมนู เทียบกับพื้นที่จริงของ <nav> ทุกครั้ง ไม่เดา breakpoint —
+     พอดี = อยู่โหมด desktop ต่อ ไม่พอดี = เติม class "nav-compact" ให้ nav ทันที
+     @media ด้านล่างนี้เป็นแค่ "ตาข่ายนิรภัย" เผื่อ JS ไม่ทำงาน (ปิด JS ในเบราว์เซอร์) เท่านั้น —
+     ⚠️ ต้องตั้งให้ "ต่ำกว่า" ความกว้างที่เนื้อหาจริงต้องการ (~500-520px) เสมอ ไม่งั้น
+     @media จะไปกันไม่ให้ JS ขยายโหมด desktop ลงไปถึงจุดที่พื้นที่ยังพอจริงๆ (480px มีระยะกันชน
+     ประมาณ 20-40px ต่ำกว่าจุดที่เนื้อหาต้องการจริง + สูงกว่าจุดทดสอบมือถือจริง 390px) ห้ามลบทิ้ง */
+  @media(max-width:480px){ .nav-links{display:none;} .hamburger{display:flex;} nav{padding:0 20px;} .nav-mobile-cta{display:inline-block;background:var(--gold-bright);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:11px;padding:7px 14px;letter-spacing:1px;text-decoration:none;cursor:pointer;border:none;white-space:nowrap;margin-right:10px;} }
+  /* class เดียวกับที่ __navFit() เติม/ถอดจริง ตามผลวัดความกว้างจริง (ใช้ declaration ชุดเดียวกับ media query ข้างบน) */
+  nav.nav-compact .nav-links { display:none; }
+  nav.nav-compact .hamburger { display:flex; }
+  nav.nav-compact { padding:0 20px; }
+  nav.nav-compact .nav-mobile-cta { display:inline-block; background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:11px; padding:7px 14px; letter-spacing:1px; text-decoration:none; cursor:pointer; border:none; white-space:nowrap; margin-right:10px; }
 
   /* SHARED */
   .section-wrap { max-width:1080px; margin:0 auto; padding:96px 32px; }

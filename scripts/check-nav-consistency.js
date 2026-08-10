@@ -49,6 +49,12 @@ const ANN_BLOCK_RE = new RegExp(
   '[\\s\\S]*?' +
   NAV.ANN_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 );
+// 🆕 2026-08-10 — nav responsive auto-fit inline script (ดู data/nav-template.js)
+const NAVFIT_RE = new RegExp(
+  NAV.NAVFIT_MARK_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+  '[\\s\\S]*?' +
+  NAV.NAVFIT_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+);
 
 // ── 1. หาไฟล์ HTML "ทั้ง repo" (ไม่รวม _staging-build ที่เป็น build output ชั่วคราว, node_modules, .git) ──
 function walk(dir, out) {
@@ -107,6 +113,14 @@ SCOPE_PAGES.forEach((file) => {
 
   if (text.indexOf('data/nav-template.js') === -1) {
     mismatches.push({ file, kind: 'ไม่มี <script data/nav-template.js>', detail: '' });
+  }
+
+  const navFitMatch = text.match(NAVFIT_RE);
+  const expectedNavFit = NAV.renderNavFitScriptHTML();
+  if (!navFitMatch) {
+    mismatches.push({ file, kind: 'nav-fit script ไม่พบ', detail: 'ไม่พบ NAV-FIT marker' });
+  } else if (navFitMatch[0] !== expectedNavFit) {
+    mismatches.push({ file, kind: 'nav-fit script เนื้อหาไม่ตรง', detail: '' });
   }
 
   const annMatch = text.match(ANN_BLOCK_RE);

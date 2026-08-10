@@ -84,12 +84,22 @@ const ANN_BLOCK_RE = new RegExp(
 );
 const BODY_OPEN_RE = /<body[^>]*>/i;
 
+// 🆕 2026-08-10 — nav responsive auto-fit script (ดูรายละเอียดใน data/nav-template.js)
+// ต้องวางทันทีหลัง </nav> ตัวจริง (sync, กันกระพริบตอนโหลดหน้าแรก) — ห่อ marker เหมือน ANN_BLOCK
+const NAVFIT_RE = new RegExp(
+  NAV.NAVFIT_MARK_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+  '[\\s\\S]*?' +
+  NAV.NAVFIT_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+);
+
 let filesChanged = 0;
 let scriptTagAdded = 0;
 let bottomNavAdded = 0;
 let bottomNavUpdated = 0;
 let annBandAdded = 0;
 let annBandUpdated = 0;
+let navFitAdded = 0;
+let navFitUpdated = 0;
 const skipped = [];
 const problems = [];
 
@@ -103,7 +113,25 @@ PAGES.forEach(function (file) {
   if (!navMatches) { skipped.push(file + '  ← ไม่พบ <nav class="site-nav"> ในไฟล์'); return; }
   if (navMatches.length > 1) { problems.push(file + '  ← เจอ <nav class="site-nav"> มากกว่า 1 ที่ ('+navMatches.length+') — ข้ามไฟล์นี้ ต้องตรวจมือก่อน'); return; }
 
-  let next = original.replace(NAV_RE, '<nav class="site-nav">' + NAV.renderNavHTML(file) + '</nav>');
+  const navBlockHTML = '<nav class="site-nav">' + NAV.renderNavHTML(file) + '</nav>';
+  let next = original.replace(NAV_RE, navBlockHTML);
+
+  // ── nav responsive auto-fit script — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกทันทีหลัง </nav> ──
+  const navFitHTML = NAV.renderNavFitScriptHTML();
+  if (NAVFIT_RE.test(next)) {
+    const beforeFit = next;
+    next = next.replace(NAVFIT_RE, navFitHTML);
+    if (next !== beforeFit) navFitUpdated++;
+  } else {
+    const navIdx = next.indexOf(navBlockHTML);
+    if (navIdx !== -1) {
+      const insertAt = navIdx + navBlockHTML.length;
+      next = next.slice(0, insertAt) + navFitHTML + next.slice(insertAt);
+      navFitAdded++;
+    } else {
+      problems.push(file + '  ← หา nav block ไม่เจอหลังแทน — แทรก nav-fit script ไม่ได้ ต้องตรวจมือ');
+    }
+  }
 
   // เติม <script src="data/nav-template.js"> ก่อน shared.min.js ถ้ายังไม่มี (idempotent)
   if (next.indexOf('data/nav-template.js') === -1) {
@@ -159,6 +187,8 @@ console.log('เพิ่ม <nav id="bottom-nav"> ใหม่: ' + bottomNavAd
 console.log('พิมพ์ทับ <nav id="bottom-nav"> เดิม: ' + bottomNavUpdated + ' หน้า');
 console.log('เพิ่มแถบประกาศ (ann-band) ใหม่: ' + annBandAdded + ' หน้า');
 console.log('พิมพ์ทับแถบประกาศเดิม: ' + annBandUpdated + ' หน้า');
+console.log('เพิ่ม nav-fit script ใหม่: ' + navFitAdded + ' หน้า');
+console.log('พิมพ์ทับ nav-fit script เดิม: ' + navFitUpdated + ' หน้า');
 
 if (skipped.length) {
   console.log('\n⚠️ ข้าม (ไม่พบไฟล์/ไม่พบ nav):');
