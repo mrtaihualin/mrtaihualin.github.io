@@ -61,3 +61,6 @@ check_old_tmp*
 
 # โฟลเดอร์ขยะรอลบ (lock ค้าง + workflow เก่าที่ลบไปแล้ว) — กันไม่ให้หลุดขึ้น repo public
 _to_delete/
+
+# สำเนาเว็บที่สร้างจาก scripts/build-staging.js (P7-02) — ใช้ deploy ขึ้น Netlify staging เท่านั้น ห้าม commit
+_staging-build/
