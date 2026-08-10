@@ -63,8 +63,18 @@ function navTemplateTagFor(file) {
 }
 const SHARED_MIN_RE = /<script src="(?:\.\.\/)*js\/core\/shared\.min\.js[^"]*"><\/script>/;
 
+// 🆕 2026-08-10 (Lin อนุมัติ) — แถบล่างมือถือ 4 ไอคอน ต้องเขียนลง HTML เป็น static ด้วย
+//   เดิมสร้างด้วย JS ใน shared.js → มาทีหลัง shared.min.js (~115KB) เสมอ
+//   ทำให้ทุกครั้งที่เปลี่ยนหน้าบนมือถือ layout ขยับ 1 ครั้ง = เห็นเป็น "กระพริบ/โหลด 2 รอบ" (Lin เจอจริง)
+//   ตอนนี้เขียนลง HTML ตรงๆ เหมือนเมนูบนสุด + ย้าย CSS ไป css/shared.css → ไม่ต้องรอ JS เลย
+//   (shared.js มีด่าน `if (document.getElementById('bottom-nav')) return;` กันสร้างซ้ำแล้ว)
+const BOTTOM_NAV_RE = /<nav id="bottom-nav"[^>]*>[\s\S]*?<\/nav>/;
+const BODY_CLOSE_RE = /<\/body>/i;
+
 let filesChanged = 0;
 let scriptTagAdded = 0;
+let bottomNavAdded = 0;
+let bottomNavUpdated = 0;
 const skipped = [];
 const problems = [];
 
@@ -91,6 +101,22 @@ PAGES.forEach(function (file) {
     }
   }
 
+  // ── แถบล่างมือถือ (static) — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกก่อน </body> ──
+  const bottomNavHTML = '<nav id="bottom-nav">' + NAV.renderBottomNavHTML() + '</nav>';
+  const bnMatches = next.match(new RegExp(BOTTOM_NAV_RE.source, 'g'));
+  if (bnMatches && bnMatches.length > 1) {
+    problems.push(file + '  ← เจอ <nav id="bottom-nav"> มากกว่า 1 ที่ (' + bnMatches.length + ') — ไม่แตะแถบล่างของไฟล์นี้ ต้องตรวจมือก่อน');
+  } else if (bnMatches) {
+    const before = next;
+    next = next.replace(BOTTOM_NAV_RE, bottomNavHTML);
+    if (next !== before) bottomNavUpdated++;
+  } else if (BODY_CLOSE_RE.test(next)) {
+    next = next.replace(BODY_CLOSE_RE, bottomNavHTML + '\n</body>');
+    bottomNavAdded++;
+  } else {
+    problems.push(file + '  ← ไม่พบ </body> — แทรกแถบล่างมือถืออัตโนมัติไม่ได้ ต้องตรวจมือ');
+  }
+
   if (next !== original) {
     fs.writeFileSync(full, next, 'utf8');
     filesChanged++;
@@ -101,6 +127,8 @@ console.log('=== generate-nav.js เสร็จแล้ว ===');
 console.log('ตรวจทั้งหมด: ' + PAGES.length + ' หน้า');
 console.log('แก้ไฟล์จริง: ' + filesChanged + ' หน้า');
 console.log('เพิ่ม <script data/nav-template.js>: ' + scriptTagAdded + ' หน้า');
+console.log('เพิ่ม <nav id="bottom-nav"> ใหม่: ' + bottomNavAdded + ' หน้า');
+console.log('พิมพ์ทับ <nav id="bottom-nav"> เดิม: ' + bottomNavUpdated + ' หน้า');
 
 if (skipped.length) {
   console.log('\n⚠️ ข้าม (ไม่พบไฟล์/ไม่พบ nav):');

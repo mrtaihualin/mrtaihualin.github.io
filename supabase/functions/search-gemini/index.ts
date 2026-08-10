@@ -23,6 +23,13 @@
 //     game_content_rl_check ที่มีอยู่แล้วใน DB (ไม่ต้องสร้างตาราง/ฟังก์ชันใหม่เลย
 //     ดู supabase/sql/2026-08-02_game_content_schema.sql) — ปรับตัวเลขได้ที่ RATE_LIMIT ด้านล่าง
 //
+// 🆕 2026-08-10 (รอบ 2 — ตามที่ Lin สั่งหลัง deploy รอบแรกสำเร็จ): เดิม Gemini ตอบ "none"
+//   เฉยๆ เวลาคำค้นกำกวม (เช่น "想練聲" ขาดคำว่า 調) ทำให้ผู้ใช้เห็นแค่ "ไม่เจอ" ทั้งที่มีตัว
+//   ใกล้เคียงอยู่ — เปลี่ยนให้ Gemini ต้องเลือก id ที่ใกล้เคียงที่สุดเสมอ (ห้ามเลือก "none" อีกต่อไป)
+//   พร้อมส่ง confident:true/false มาด้วย — ฝั่ง client โชว์เป็นการ์ด "🤔 เดาว่าอาจจะ..." เวลา
+//   confident:false แทนที่จะเงียบ ⚠️ **ไฟล์นี้ต้อง deploy ใหม่อีกรอบ** (ดูขั้นตอนด้านล่าง)
+//   ก่อนการเปลี่ยนแปลงนี้จะมีผลจริงบนเว็บ
+//
 // วิธี deploy ตอนพร้อม (Lin ทำเอง):
 //   1. supabase secrets set GEMINI_API_KEY=<key จริงจาก Google AI Studio>
 //   2. supabase functions deploy search-gemini
@@ -328,13 +335,13 @@ const RATE_LIMIT = {
 
 const SYSTEM_INSTRUCTION = [
   '你是一個嚴格的分類器,不是聊天機器人,也不能自由對話。',
-  '使用者會輸入一段中文搜尋文字(可能有錯字、口語、或字詞順序顛倒)。',
-  '你的唯一任務：從「候選清單」裡選出最符合使用者意圖的一個 id。',
+  '使用者會輸入一段中文搜尋文字(可能有錯字、口語、字詞順序顛倒,或資訊不完整)。',
+  '你的任務：從「候選清單」裡選出最符合使用者意圖的一個 id,並且誠實判斷你有多確定。',
   '規則(必須嚴格遵守)：',
-  '1. 只能回傳候選清單裡出現過的 id,一個字元都不能改、不能自己編造。',
-  '2. 如果清單裡沒有任何一個選項夠接近使用者的意圖,回傳 "none"。',
+  '1. id 只能是候選清單裡出現過的值,一個字元都不能改、不能自己編造 — 即使不確定,也要選一個最接近的,不能留空。',
+  '2. confident 為 true 表示你相當確定使用者就是要找這個;confident 為 false 表示你只是最接近的猜測,並不確定。',
   '3. 不可以回答任何清單以外的內容、網址、或建議。',
-  '4. 只回傳一個 JSON 物件 { "id": "..." },不要有其他文字。',
+  '4. 只回傳一個 JSON 物件 { "id": "...", "confident": true/false },不要有其他文字。',
 ].join('\n');
 
 function corsHeaders(origin) {
@@ -415,8 +422,11 @@ serve(async (req) => {
         responseMimeType: 'application/json',
         responseSchema: {
           type: 'OBJECT',
-          properties: { id: { type: 'STRING', enum: ALLOWED_DESTINATION_IDS.concat(['none']) } },
-          required: ['id'],
+          properties: {
+            id: { type: 'STRING', enum: ALLOWED_DESTINATION_IDS },
+            confident: { type: 'BOOLEAN' },
+          },
+          required: ['id', 'confident'],
         },
       },
     };
@@ -456,12 +466,15 @@ serve(async (req) => {
     }
 
     const pickedId = parsed && parsed.id;
+    const pickedConfident = !!(parsed && parsed.confident);
     // ด่านสุดท้าย — ไม่เชื่อ Gemini เฉยๆ ต้องอยู่ใน whitelist จริงเท่านั้นถึงจะส่งกลับ
-    if (!pickedId || pickedId === 'none' || ALLOWED_DESTINATION_IDS.indexOf(pickedId) === -1) {
+    if (!pickedId || ALLOWED_DESTINATION_IDS.indexOf(pickedId) === -1) {
       return json({ ok: true, matched: false, reason: 'no confident match' }, 200, origin);
     }
 
-    return json({ ok: true, matched: true, id: pickedId }, 200, origin);
+    // matched:true เสมอถ้า id อยู่ใน whitelist — confident:false = ให้ฝั่ง client โชว์เป็น "เดา" มีป้ายกำกับ
+    // (2026-08-10 รอบ 2 ตามที่ Lin สั่ง: อยากให้บอกว่า "เดา" แทนตอบไม่เจอเงียบๆ เวลาคำค้นกำกวม)
+    return json({ ok: true, matched: true, id: pickedId, confident: pickedConfident }, 200, origin);
   } catch (e) {
     console.error('search-gemini: unexpected error', String((e && e.message) || e));
     return json({ ok: false, error: 'internal error' }, 500, origin);

@@ -79,7 +79,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=15">
+<link rel="stylesheet" href="css/shared.css?v=16">
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
      ผ่าน GameContentLoader.boot()) ต้องกดไม่ได้ก่อนสคริปต์โหลดเสร็จ — ดูสคริปต์ปลดล็อกท้ายไฟล์ */
@@ -1679,7 +1679,7 @@ document.addEventListener('contextmenu', function(e){
 <script src="js/acquisition/posts-data.js"></script>
 <script src="js/acquisition/lessons-data.js"></script>
 <script src="data/nav-template.js?v=1"></script>
-<script src="js/core/shared.min.js?v=21"></script>
+<script src="js/core/shared.min.js?v=22"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)
@@ -1870,5 +1870,6 @@ function gtTourStart(){
   }
 </script>
 
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">我的</span></a></nav>
 </body>
 </html>

@@ -18,6 +18,9 @@
     '</a>';
   }
 
+  // 2026-08-10 (รอบ 2): label ของกล่อง "推薦給你" เปลี่ยนเป็น "เดา" เวลา Gemini ไม่มั่นใจ
+  // (confident:false) — กันไม่ให้ผู้ใช้เข้าใจผิดว่าระบบมั่นใจทั้งที่จริงๆ เดามาให้
+
   function relatedGroupHTML(catKey, label, items) {
     if (!items || !items.length) return '';
     return '<div class="hs-group">' +
@@ -81,12 +84,13 @@
     // rule-based ไม่มั่นใจ → ลองถาม Gemini fallback ก่อนค่อยยอมแพ้ (73_CLAUDE_UPDATE หัวข้อ C)
     // ยังไม่ deploy Edge Function ก็ปลอดภัย — geminiFallback คืน null เฉยๆ ตกไปที่ renderEmpty ปกติ
     out.innerHTML = '<div class="hs-empty">搜尋中…</div>';
-    window.SearchEngine.geminiFallback(query).then(function (entry) {
-      if (!entry) { renderEmpty(out); return; }
+    window.SearchEngine.geminiFallback(query).then(function (result) {
+      if (!result || !result.entry) { renderEmpty(out); return; }
       if (typeof gtag === 'function') {
-        try { gtag('event', 'site_search_gemini_match', { category: window.GA_CATEGORY || 'unknown' }); } catch (e) {}
+        try { gtag('event', 'site_search_gemini_match', { category: window.GA_CATEGORY || 'unknown', confident: result.confident }); } catch (e) {}
       }
-      out.innerHTML = '<div class="hs-recommended"><div class="hs-section-label">推薦給你</div>' + cardHTML(entry) + '</div>';
+      var label = result.confident ? '推薦給你' : '🤔 不確定，猜你可能是想找';
+      out.innerHTML = '<div class="hs-recommended"><div class="hs-section-label">' + esc(label) + '</div>' + cardHTML(result.entry) + '</div>';
     }).catch(function () { renderEmpty(out); });
   }
 

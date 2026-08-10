@@ -81,7 +81,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=15">
+<link rel="stylesheet" href="css/shared.css?v=16">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/reading-game-app.js -->
@@ -673,7 +673,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=1"></script>
-<script src="js/core/shared.min.js?v=21"></script>
+<script src="js/core/shared.min.js?v=22"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -825,5 +825,6 @@ function gtTourStart(){
   }
 </script>
 
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">我的</span></a></nav>
 </body>
 </html>

@@ -423,8 +423,36 @@
      คอม (>768px) ไม่กระทบ — .page-strip ยังอยู่ครบเหมือนเดิม เพราะ #bottom-nav ไม่โชว์บนคอม */
   @media(max-width:768px){
     .page-strip{display:none;}
-    body:has(.page-strip){padding-bottom:0;} /* #bottom-nav ตั้ง body{padding-bottom:60px} ให้เองอยู่แล้ว ไม่ต้องเผื่อซ้ำ */
+    /* เผื่อที่ว่างให้ #bottom-nav (60px) แทนที่ของเดิมที่เผื่อให้ .page-strip (48px)
+       ต้องเขียน selector `body:has(.page-strip)` ซ้ำตรงนี้ด้วย เพราะกฎเดิมในบล็อก 600px
+       มี specificity สูงกว่า `body{}` เฉยๆ ถ้าไม่ทับตรงนี้ หน้าที่มี .page-strip จะได้ 48px
+       แล้วเนื้อหาท้ายหน้าจะถูกแถบล่างบังไป 12px */
+    body:has(.page-strip){padding-bottom:60px;}
   }
+
+  /* ═══════════════════════════════════════════
+     BOTTOM NAV (มือถือ) — แถบ 4 ไอคอน 首頁/試聽/遊戲/我的
+     ═══════════════════════════════════════════
+     🔴 2026-08-10 (Lin อนุมัติ): ย้ายกฎชุดนี้มาจาก js/core/shared.js มาไว้ที่นี่
+     เหตุผล: ตัวแถบเองถูกเขียนลง HTML ทุกหน้าเป็น static แล้ว (scripts/generate-nav.js)
+     ถ้าปล่อยให้ CSS ยังมาจาก JS เหมือนเดิม แถบจะโผล่มาแบบ "ไม่มีสไตล์" ก่อนแป๊บนึง
+     (เป็นก้อนลิงก์ธรรมดาต่อท้ายหน้า) แล้วค่อยกระโดดไปอยู่ขอบล่าง = กระพริบหนักกว่าเดิม
+     ตอนนี้ HTML + CSS มาพร้อมกันตั้งแต่วินาทีแรก ไม่ต้องรอ JS เลย
+     ⚠️ กฎทุกบรรทัดคัดลอกมาจาก shared.js แบบตรงตัวทุกอักขระ เพื่อให้หน้าตาเหมือนเดิมเป๊ะ ไม่เปลี่ยนอะไร
+     ⚠️ `top:auto` ห้ามลบ — กัน `nav{top:0}` (บรรทัด 18) หลุดมาทับ แล้วแถบจะเด้งไปขอบบนจอ (บั๊กจริง 2026-08-10) */
+  #bottom-nav{display:none;position:fixed;top:auto;bottom:0;left:0;right:0;background:rgba(17,17,17,0.97);border-top:1px solid rgba(200,151,58,0.3);z-index:998;padding:0;padding-bottom:env(safe-area-inset-bottom);}
+  #bottom-nav .bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:8px 4px;text-decoration:none;color:rgba(255,255,255,0.6);gap:3px;}
+  #bottom-nav .bn-item.bn-cta{color:var(--gold);}
+  #bottom-nav .bn-icon{font-size:20px;line-height:1;}
+  #bottom-nav .bn-label{font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:0.5px;}
+  #bottom-nav .bn-item:hover,.bn-item:active{color:var(--gold);}
+  @media(max-width:768px){#bottom-nav{display:flex;}body{padding-bottom:60px;}}
+  /* หน้าเกม (มี #game-switcher) ซ่อนแถบล่างถาวรตามที่ Lin สั่งไว้ตั้งแต่ 2026-07-12
+     ⚠️ ต้องเขียนไว้ที่นี่ (static) ด้วย ไม่ใช่ปล่อยให้ js/core/shared.js ซ่อนอย่างเดียว
+     เพราะตอนนี้ตัวแถบเป็น static HTML แล้ว ถ้ารอ JS มาซ่อน แถบจะโผล่ให้เห็นแวบนึงก่อนทุกครั้ง
+     (กฎใน shared.js ยังคงไว้เหมือนเดิม ไม่ได้ลบ — ทำงานซ้ำกันได้ ไม่มีผลเสีย) */
+  body:has(#game-switcher) #bottom-nav{display:none !important;}
+  @media(max-width:768px){body:has(#game-switcher){padding-bottom:0 !important;}}
 
   /* ═══════════════════════════════════════════
      COLOR HIGHLIGHTS & SUBTLE GRADIENTS

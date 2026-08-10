@@ -7,11 +7,12 @@
 //     3. Gemini เลือกได้เฉพาะ destination ที่ระบบกำหนด ห้ามสร้าง URL เอง
 //     4. ไม่มั่นใจ = ไม่เดา (คืนค่า null ให้ UI โชว์ข้อความสุภาพแทนการเดา)
 //
-//   🔴 geminiFallback() เรียก Edge Function search-gemini จริงแล้ว (2026-08-10)
-//   แต่ฟังก์ชันนั้นยัง "ไม่ได้ deploy" (ต้อง Lin ทำเอง — ดูคอมเมนต์หัวไฟล์
-//   supabase/functions/search-gemini/index.ts) ระหว่างที่ยังไม่ deploy ฟังก์ชัน
-//   นี้จะ fetch พลาด (404/network) แล้ว catch คืน null ให้เหมือน stub เดิม
-//   ไม่พังอะไร แค่ยังไม่ได้ผลลัพธ์จริงจนกว่าจะ deploy
+//   geminiFallback() เรียก Edge Function search-gemini จริง — deploy แล้ว (2026-08-10)
+//   คืนค่า Promise<{entry, confident} | null> — entry = รายการจริงจาก SEARCH_INDEX,
+//   confident:false = Gemini เองก็ไม่มั่นใจ 100% (เดาตัวใกล้เคียงที่สุด) ให้ UI โชว์
+//   ป้ายกำกับว่า "เดา" เสมอเมื่อ confident:false (2026-08-10 รอบ 2 ตามที่ Lin สั่ง —
+//   เดิม Gemini ตอบ "none" เงียบๆ เวลาคำค้นกำกวม เปลี่ยนให้บอกผู้ใช้ว่ากำลังเดาแทน)
+//   ถ้า Edge Function ยัง deploy ไม่ติด/เครือข่ายพัง จะ catch คืน null เหมือนเดิม ไม่พังอะไร
 // ===================================================================
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -171,7 +172,9 @@
       if (!data || !data.matched || !data.id) return null;
       var pool = (SEARCH_INDEX ? SEARCH_INDEX.ALL : []);
       for (var i = 0; i < pool.length; i++) {
-        if (pool[i].id === data.id) return pool[i]; // ต้องเจอตัวจริงใน index เท่านั้นถึงจะเชื่อ
+        // ต้องเจอตัวจริงใน index เท่านั้นถึงจะเชื่อ — ส่ง confident กลับไปด้วยให้ UI ตัดสินใจ
+        // ว่าจะโชว์เป็นคำแนะนำมั่นใจ หรือโชว์เป็น "เดา" มีป้ายกำกับ (2026-08-10 รอบ 2)
+        if (pool[i].id === data.id) return { entry: pool[i], confident: !!data.confident };
       }
       return null; // Gemini/เครือข่ายส่ง id ที่ระบบไม่รู้จัก — ไม่เดา ไม่เชื่อ
     }).catch(function () {

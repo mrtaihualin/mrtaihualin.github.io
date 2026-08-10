@@ -15,8 +15,9 @@
     out.innerHTML = '<div class="gh-search-empty">還沒抓到你的意思 — 換個說法試試，或直接從下面 5 款遊戲挑一個開始玩。</div>';
   }
 
-  function entryHTML(entry) {
-    return '<div class="gh-search-primary">👉 ' + esc(entry.title) + '</div>' +
+  // isGuess=true → Gemini ไม่มั่นใจ 100% (2026-08-10 รอบ 2) — เปลี่ยน emoji+ข้อความให้รู้ว่าเป็นการเดา
+  function entryHTML(entry, isGuess) {
+    return '<div class="gh-search-primary">' + (isGuess ? '🤔 不確定，猜你可能是想找：' : '👉 ') + esc(entry.title) + '</div>' +
       '<div class="gh-search-reason">' + esc(entry.desc) + '</div>' +
       '<a class="gh-go" href="' + esc(entry.href) + '">開始玩 →</a>';
   }
@@ -50,12 +51,12 @@
     // rule-based ไม่มั่นใจ → ลองถาม Gemini fallback ก่อนค่อยยอมแพ้ (เฉพาะ pool เกม 7 ตัว)
     // ยังไม่ deploy Edge Function ก็ปลอดภัย — geminiFallback คืน null เฉยๆ ตกไปที่ renderEmpty ปกติ
     out.innerHTML = '<div class="gh-search-empty">搜尋中…</div>';
-    window.SearchEngine.geminiFallback(query).then(function (entry) {
-      if (!entry || entry.category !== 'practice') { renderEmpty(out); return; } // เกมค้นหาเฉพาะเกม ไม่พาไปหน้าอื่น
+    window.SearchEngine.geminiFallback(query).then(function (result) {
+      if (!result || !result.entry || result.entry.category !== 'practice') { renderEmpty(out); return; } // เกมค้นหาเฉพาะเกม ไม่พาไปหน้าอื่น
       if (typeof gtag === 'function') {
-        try { gtag('event', 'game_search_gemini_match', { category: 'game' }); } catch (e) {}
+        try { gtag('event', 'game_search_gemini_match', { category: 'game', confident: result.confident }); } catch (e) {}
       }
-      out.innerHTML = entryHTML(entry);
+      out.innerHTML = entryHTML(result.entry, !result.confident);
     }).catch(function () { renderEmpty(out); });
   }
 
