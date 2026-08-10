@@ -453,6 +453,25 @@
       // 2026-08-08: เดิมมี special-case เช็ค e.body.error === 'would_leave_zero_login_methods' แยกข้อความ
       // เอง — ตอนนี้เซิร์ฟเวอร์ส่ง message ที่เป็นมิตรมาให้ทุก error code แล้ว (รวมเคสนี้ด้วย) เลยไม่ต้อง
       // hardcode ซ้ำในนี้อีก ใช้ e.message ตรงๆ ได้เลยทุกกรณี (raw code ยัง log ไว้แล้วใน accountFnError())
+      //
+      // 🆕 2026-08-10 (P7-02 staging บั๊กที่เจอจริง — "ปุ่มผี"): เว็บตัดสินว่าบัญชีนี้ผูก LINE ไว้หรือยัง
+      // จาก app_metadata ใน JWT ของผู้ใช้ (ดู openAccountManageModal) แต่ฝั่งเซิร์ฟเวอร์ตัดสินจากตาราง
+      // line_identities จริง — 2 ที่นี้ไม่ตรงกันได้ (เจอจริง: JWT ค้างค่าเก่า ทั้งที่แถวใน line_identities
+      // เป็นของ user คนอื่น) ผลคือแถวนั้นโชว์ปุ่ม "解除連結" ให้กด แต่กดกี่ครั้งก็ล้มเหลวตลอดกาล
+      // ผู้ใช้ไม่มีทางรู้ว่าต้องทำยังไงต่อ — เจอ not_linked เมื่อไหร่ = เซิร์ฟเวอร์ยืนยันแล้วว่าช่องทางนี้
+      // ไม่มีอยู่จริง จึงเอาแถวนั้นออกจากหน้าจอทันที (ฝั่งเซิร์ฟเวอร์เป็นความจริงหลักเสมอ ไม่ใช่ JWT)
+      var code = e && e.body && e.body.error;
+      if (code === 'not_linked') {
+        try {
+          var row = btn.parentNode;
+          if (row && row.parentNode) row.parentNode.removeChild(row);
+        } catch (e2) {}
+        if (msgEl) {
+          msgEl.style.display = 'block';
+          msgEl.textContent = '這個登入方式其實沒有連接在這個帳號上（畫面上是舊資料），已經幫你從清單移除了';
+        }
+        return;
+      }
       if (msgEl) {
         msgEl.style.display = 'block';
         msgEl.textContent = '⚠️ 解除失敗：' + (e && e.message || String(e));
@@ -781,6 +800,30 @@
       setTimeout(function () { if (d.parentNode) d.remove(); }, 6000);
     } catch (e) {}
   }
+  // 2026-08-10 (P7-02 staging บั๊กร้ายแรงกว่าที่คิดตอนแรก): ถ้า Facebook ที่กด "連接" ผูกกับบัญชีอื่น
+  // ไปแล้ว Supabase ไม่ได้ตอบ error กลับมาเฉยๆ (กรณีที่ showFbLinkFailToast ด้านบนดัก) — แต่ "สลับ session
+  // ไปเป็นบัญชีที่ Facebook นั้นผูกอยู่แล้วให้เงียบๆ" แทน ผู้เล่นจะเห็น badge/ชื่อ/คะแนนของอีกบัญชีนึงทันที
+  // โดยไม่รู้ตัวว่าโดนสลับบัญชี (พิสูจน์จริง 2026-08-10: user_id หลัง redirect กลับมาไม่ตรงกับก่อนกด "連接")
+  // อันตรายกว่าแค่ "เชื่อมไม่สำเร็จ" เพราะดูเหมือนสำเร็จ (ปุ่มเปลี่ยนเป็น "✅ 已連接") ทั้งที่จริงคือคนละบัญชี
+  // เดิม (ก่อน 2026-08-10 รอบ 2) โค้ดจุดนี้ return เงียบๆ เพราะ user_id ไม่ตรง — ตอนนี้ต้องแยกเช็คแล้วเตือนดังๆ
+  function showAccountSwitchedToast() {
+    try {
+      var old = document.getElementById('sa-fb-switch-toast');
+      if (old) old.remove();
+      var d = document.createElement('div');
+      d.id = 'sa-fb-switch-toast';
+      d.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:100002;' +
+        'max-width:92vw;width:340px;background:#78350f;color:#fff;border-radius:12px;padding:14px 16px;' +
+        'font-size:13px;font-family:"Noto Sans TC",sans-serif;line-height:1.6;text-align:center;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+      d.innerHTML = '⚠️ 這個 Facebook 帳號已經連接過別的帳號——系統剛剛把你切換到那個帳號了，<b>不是你原本在用的帳號</b><br>' +
+        '<button id="sa-fb-switch-logout" style="margin-top:10px;border:none;background:#fff;color:#78350f;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;">登出，換回原本帳號</button>';
+      document.body.appendChild(d);
+      var btn = document.getElementById('sa-fb-switch-logout');
+      if (btn) btn.onclick = function () { doLogout(); };
+      // ข้อความนี้สำคัญกว่า toast ทั่วไป — ไม่หายเองอัตโนมัติ ให้ผู้เล่นกดปิด/กดปุ่มเองเท่านั้น
+    } catch (e) {}
+  }
   function checkPendingFacebookLinkAudit() {
     var raw;
     try { raw = sessionStorage.getItem(FB_LINK_PENDING_KEY); } catch (e) { return; }
@@ -789,7 +832,8 @@
     if (!API.user) return;
     var pending;
     try { pending = JSON.parse(raw); } catch (e) { return; }
-    if (!pending || pending.user_id !== API.user.id) return; // คนละบัญชี/session ไม่เชื่อ
+    if (!pending) return;
+    if (pending.user_id !== API.user.id) { showAccountSwitchedToast(); return; } // โดนสลับบัญชีเงียบๆ — ต้องเตือนดังๆ
     var providersAfter = (API.user.identities || []).map(function (i) { return i.provider; });
     if (providersAfter.indexOf('facebook') === -1) { showFbLinkFailToast(); return; } // เชื่อมไม่สำเร็จ — ต้องบอกผู้เล่นตรงๆ ห้ามเงียบ
     try {
