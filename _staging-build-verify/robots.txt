@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://mrtaihualin.com/sitemap.xml
-# redeploy trigger 2026-07-04 (retry #2)
