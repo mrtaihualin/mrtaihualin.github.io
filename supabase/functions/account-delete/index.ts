@@ -297,11 +297,29 @@ serve(async (req) => {
         return json({ error: 'no_pending_request', message: 'ไม่มีคำขอลบบัญชีที่กำลังรออยู่ ไม่มีอะไรต้องยกเลิก' }, 400);
       }
       // claim ก่อนแก้ — กันกดยกเลิกซ้ำซ้อนพร้อมกัน 2 แท็บ (เขียนซ้ำไม่มีอันตราย แต่กันข้อความ/อีเมลซ้ำ)
+      // 🔴 2026-08-10 (P7-02 F.6c — แก้บั๊กจริงที่พบระหว่างทดสอบ race กับ cron): เดิมเงื่อนไข optimistic
+      // เช็คแค่ status='pending' ตัวเดียว — ถ้า cron (account-delete-cron/index.ts) claim แถวนี้ไปแล้ว
+      // (ตั้ง processing_started_at) แต่ยังไม่ทันเปลี่ยน status เป็น 'completed' (ระหว่างกำลังลบจริง
+      // ขั้นตอน a-d) การ cancel ตรงนี้จะ "ผ่านสำเร็จ" หลอกๆ (status→'cancelled', ตอบผู้ใช้ว่า "ยกเลิกสำเร็จ
+      // บัญชีกลับสถานะปกติแล้ว") ทั้งที่ cron กำลังลบอยู่จริงและจะลบสำเร็จในอีกไม่กี่ขั้นตอนถัดไป (cron เขียน
+      // status='completed' ทับ 'cancelled' อีกทีตอนจบโดยไม่เช็คสถานะก่อน — ดูคอมเมนต์คู่กันใน
+      // account-delete-cron/index.ts) — พิสูจน์แล้วจริงบน staging 2026-08-10: ยิง cron กับ cancel เกือบพร้อม
+      // กัน ได้ผลลัพธ์ cancel ตอบ 200 "ยกเลิกสำเร็จ" แต่ query auth.users ยืนยันบัญชีถูกลบถาวรไปแล้วจริง
+      // (still_exists=0) — ผู้ใช้จะเข้าใจผิดว่าบัญชีปลอดภัยทั้งที่ข้อมูลหายถาวรแล้ว
+      // แก้โดยเพิ่มเงื่อนไข: cancel ผ่านได้ก็ต่อเมื่อยังไม่มีใคร claim (processing_started_at เป็น null)
+      // หรือ claim นั้นค้างเกิน stale cutoff แล้ว (แปลว่า cron ตายกลางทาง ไม่ได้กำลังลบอยู่จริง) — ใช้ค่า
+      // เดียวกับ STALE_LOCK_MINUTES=15 ใน account-delete-cron/index.ts (ต้องแก้คู่กันเสมอถ้าจะปรับค่านี้
+      // ในอนาคต) ถ้า cron กำลัง claim อยู่จริง (ยังไม่ stale) → cancel จะไม่เจอแถวให้แก้เลย (updRows ว่าง)
+      // แล้วตอบ 409 cancel_race_lost ที่โค้ดเตรียมไว้อยู่แล้วด้านล่าง (ของเดิมมี handler นี้อยู่แล้วแต่ไม่เคย
+      // ถูกเรียกใช้จริงเพราะเงื่อนไข WHERE เดิมไม่ครอบคลุมเคสนี้)
+      const STALE_LOCK_MINUTES_CANCEL = 15;
+      const staleCutoffIsoCancel = new Date(Date.now() - STALE_LOCK_MINUTES_CANCEL * 60 * 1000).toISOString();
       const { data: updRows, error: updErr } = await admin
         .from('account_deletion_requests')
         .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
         .eq('id', pending.id)
         .eq('status', 'pending') // ← เงื่อนไข optimistic กันแก้ทับกัน
+        .or('processing_started_at.is.null,processing_started_at.lt.' + staleCutoffIsoCancel) // 🔴 ใหม่ — กัน cancel ทับ cron ที่กำลังลบอยู่จริง
         .select();
       if (updErr) {
         return json({ error: 'cancel_failed', message: 'ยกเลิกคำขอลบบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', detail: updErr.message }, 500);

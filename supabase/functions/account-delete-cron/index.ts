@@ -293,10 +293,24 @@ serve(async (req) => {
       }
 
       // ลบสำเร็จจริง — ปิดคำขอ + ส่งอีเมลแจ้งด้วยอีเมลที่แคชไว้ (ไม่ query DB ใหม่ เพราะ auth user หายแล้ว)
-      const { error: closeErr } = await admin
+      // 🔴 2026-08-10 (P7-02 F.6c — ป้องกันชั้นที่ 2 คู่กับ account-delete/index.ts การแก้ cancel):
+      // เดิมบรรทัดนี้ update ไม่มีเงื่อนไข status เลย ทำให้ถ้า user กด cancel ระหว่างที่ cron กำลังลบอยู่
+      // (แถวถูกเปลี่ยนเป็น 'cancelled' ไปแล้วจากอีก request) โค้ดตรงนี้จะเขียนทับกลับเป็น 'completed' เงียบๆ
+      // โดยไม่มีใครรู้ — เพิ่ม .eq('status','pending') เป็นเงื่อนไข ถ้าไม่ตรง (แปลว่ามีอะไรมาเปลี่ยนสถานะ
+      // แถวนี้ระหว่างทางแล้ว) ให้โวยดังๆ แทนการเขียนทับเงียบๆ (บัญชีลบไปแล้วจริงไม่ว่ากรณีไหน แก้ได้แค่ที่ฝั่ง
+      // cancel เท่านั้นที่กันไม่ให้เกิดเคสนี้ตั้งแต่ต้น — จุดนี้เป็นแค่เกราะสำรอง ป้องกันไม่ให้ status ในฐานข้อมูล
+      // โกหกสถานะจริงถ้ามีทางอื่นในอนาคตที่ไปแก้ status ของแถวนี้โดยไม่ผ่าน account-delete/index.ts)
+      const { error: closeErr, data: closeRows } = await admin
         .from('account_deletion_requests')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', row.id);
+        .eq('id', row.id)
+        .eq('status', 'pending')
+        .select();
+      if (!closeErr && (!closeRows || closeRows.length === 0)) {
+        console.error('[account-delete-cron] 🔴 บัญชีลบสำเร็จจริงแล้ว (auth user หายแล้ว) แต่แถว status ไม่ใช่ pending ตอนจะปิดคำขอ (id=' + row.id + ', user_id=' + row.user_id + ') — น่าจะมีคน cancel ระหว่างทาง ต้องตรวจมือ: บัญชีถูกลบถาวรไปแล้วจริง แต่ status ในตารางอาจไม่ตรงกับความจริง (เช่นค้างเป็น cancelled)');
+        results.push({ id: row.id, user_id: row.user_id, ok: true, deleted: true, status_close_race_detected: true });
+        continue;
+      }
       if (closeErr) {
         // 🔴 เคสอันตราย: ลบบัญชีสำเร็จแล้วจริง แต่ปิดคำขอไม่สำเร็จ — ต้องโวยดังๆ (ไม่งั้นแถวนี้จะค้าง
         // status='pending' ตลอดกาลทั้งที่บัญชีหายไปแล้วจริง รอบหน้า cron จะพยายามลบซ้ำแล้วพังที่ deleteUser
