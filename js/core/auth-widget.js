@@ -761,6 +761,26 @@
   //   ใช้ sb.auth.linkIdentity() มาตรฐานของ Supabase ตรงๆ ไม่ผ่าน Edge Function ของเราเอง) จึงต้อง
   //   ตรวจฝั่ง client แทน — ใช้ครั้งเดียวแล้วลบทิ้งทันที (กันบันทึกซ้ำถ้า boot()/onAuthStateChange
   //   ยิงมากกว่า 1 ครั้งหลัง redirect กลับมา) ไม่ critical ถ้าพลาด (การเชื่อมจริงสำเร็จอยู่แล้วไม่เกี่ยวกัน)
+  // 2026-08-10 (P7-02 staging บั๊กที่เจอจริง): เดิมถ้าเชื่อม Facebook ไม่สำเร็จ (เช่น Facebook คนนี้
+  // ผูกกับบัญชีอื่นไปแล้ว — Supabase ปฏิเสธฝั่ง server หลัง redirect กลับมา) ฟังก์ชันนี้แค่ return เงียบๆ
+  // ไม่มีข้อความอะไรบอกผู้เล่นเลยว่าทำไมปุ่มยังโชว์ "連接 Facebook 帳號" เหมือนเดิม ผิดกฎ "ห้ามพังเงียบ"
+  // (เจอจริง 2026-08-10: Lin ทดสอบด้วย Facebook ที่เคยผูกกับอีกบัญชีไปแล้ว กดเชื่อมแล้วไม่มีอะไรขึ้นเลย)
+  // แก้โดยโชว์ toast สีธีมเว็บ (ไม่ใช้สีแดง/เขียวทั่วไป) บอกเหตุผลที่เป็นไปได้มากที่สุดตรงๆ
+  function showFbLinkFailToast() {
+    try {
+      var old = document.getElementById('sa-fb-link-fail-toast');
+      if (old) old.remove();
+      var d = document.createElement('div');
+      d.id = 'sa-fb-link-fail-toast';
+      d.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:100001;' +
+        'max-width:88vw;background:#78350f;color:#fff;border-radius:12px;padding:10px 16px;' +
+        'font-size:13px;font-family:"Noto Sans TC",sans-serif;line-height:1.6;text-align:center;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,0.28);';
+      d.textContent = '⚠️ 連接 Facebook 帳號失敗——這個 Facebook 帳號可能已經連接過其他帳號了';
+      document.body.appendChild(d);
+      setTimeout(function () { if (d.parentNode) d.remove(); }, 6000);
+    } catch (e) {}
+  }
   function checkPendingFacebookLinkAudit() {
     var raw;
     try { raw = sessionStorage.getItem(FB_LINK_PENDING_KEY); } catch (e) { return; }
@@ -771,7 +791,7 @@
     try { pending = JSON.parse(raw); } catch (e) { return; }
     if (!pending || pending.user_id !== API.user.id) return; // คนละบัญชี/session ไม่เชื่อ
     var providersAfter = (API.user.identities || []).map(function (i) { return i.provider; });
-    if (providersAfter.indexOf('facebook') === -1) return; // เชื่อมไม่สำเร็จ/ถูกยกเลิกที่หน้า Facebook ไม่ต้องบันทึก
+    if (providersAfter.indexOf('facebook') === -1) { showFbLinkFailToast(); return; } // เชื่อมไม่สำเร็จ — ต้องบอกผู้เล่นตรงๆ ห้ามเงียบ
     try {
       sb.rpc('log_account_audit', {
         p_user_id: API.user.id,

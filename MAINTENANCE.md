@@ -1,5 +1,25 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-10 — เก็บกวาด `_staging-build-verify/` ที่หลุดขึ้น repo public (375 ไฟล์)
+
+สถานะ: ✅ เสร็จแล้ว — ตรวจแล้วไม่มีค่าลับรั่ว (`supabase-config.staging.js` ไม่ได้ขึ้นไปด้วย ไม่มี `service_role` key)
+
+**สาเหตุ:** งาน P7-02 (staging บน Netlify) สร้างโฟลเดอร์สำเนาเว็บ 2 อัน — `_staging-build/` ถูก `.gitignore` ล็อกไว้แล้ว แต่ `_staging-build-verify/` (สำเนาตรวจซ้ำ) ลืมล็อก → หลุดขึ้น GitHub ไป 375 ไฟล์
+
+**สิ่งที่ทำ:**
+1. เพิ่ม `_staging-build-verify/` เข้า `.gitignore` (ต่อจาก `_staging-build/`)
+2. ตรวจแล้ว `scripts/build-staging.js` สร้างสำเนาแบบนี้ใหม่ได้เสมอ (โค้ดมีคอมเมนต์กันโฟลเดอร์นี้ซ้อนอยู่แล้วบรรทัด 33) → ลบโฟลเดอร์ `_staging-build-verify/` ออกจากเครื่องแล้ว
+3. ตรวจไม่มีโฟลเดอร์สำเนาอื่นชื่อ `_staging-build-*` หลงเหลืออีก
+
+**ผล `check-site.js` (secret scan):** ก่อนลบ 93 รายการไม่ผ่าน (43 จาก `_staging-build-verify/` + 43 จาก `_staging-build/` + 7 ของเว็บจริง) → หลังลบเหลือ 50 รายการ (43 จาก `_staging-build/` ที่ยังอยู่บนเครื่อง + 7 ของเว็บจริง)
+⚠️ **ยังไม่ใช่ 7 ตามที่คาด** เพราะ `_staging-build/` (ที่ล็อกถูกแล้วและห้ามแตะ) ยังอยู่บนเครื่องจริงตอนรัน — `check-site.js` ไม่ได้ยกเว้นโฟลเดอร์นี้ตอนสแกน ถ้าลบ `_staging-build/` ออกชั่วคราว (เช่นหลัง deploy ขึ้น Netlify เสร็จแล้ว) แล้วรันใหม่ น่าจะเหลือ 7 รายการตรงตามคาด (6 จาก `supabase/sql/เลิกใช้แล้ว_ห้ามรัน/` + 1 จาก `js/core/supabase-config.staging.js`)
+
+**Commit message เตรียมไว้:** `เพิ่ม _staging-build-verify/ เข้า .gitignore และลบสำเนาที่หลุดขึ้น repo (375 ไฟล์) — ไม่มีค่าลับรั่ว`
+
+**ไฟล์ที่แก้:** `.gitignore`, `MAINTENANCE.md` (ลบ `_staging-build-verify/` ออกจากเครื่อง — ไม่ใช่ไฟล์เว็บ)
+
+---
+
 ## 2026-08-10 — Gemini fallback ของ Search MVP (`search-gemini`) ปิดงานสมบูรณ์ — deploy สำเร็จ + แก้ 3 จุดที่เจอตอนทดสอบ
 
 สถานะ: **✅ ปิดเคสแล้ว** — ทดสอบผ่านจริงด้วย curl (`matched:true, confident:false`) + Lin push ครบทุกไฟล์แล้ว
@@ -33,6 +53,35 @@
 **ทดสอบผ่านจริง:** ล็อกอิน Google/Facebook/LINE บนหน้าทดสอบ staging สำเร็จครบ (ดูหลักฐานเต็มที่ `Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/72_เช็คลิสต์_เตรียม_staging_ก่อนรัน_P7-02.md`) — **ยังไม่ใช่การทดสอบเว็บจริงทั้งเว็บ** เพราะหน้าเว็บจริงทุกหน้ายังโหลด `js/core/supabase-config.js` (production) เหมือนเดิม ไม่กระทบผู้ใช้จริงเลยรอบนี้
 
 **งานค้าง:** (1) push 15 ไฟล์ขึ้น GitHub (2) deploy อีก 14 edge function ขึ้น staging project (3) หาวิธีให้สำเนาเว็บทดสอบทั้งเว็บโหลด `supabase-config.staging.js` แทนโดยไม่แตะเว็บจริง
+
+---
+
+## 2026-08-10 (แชทถัดมา) — เชื่อมเว็บจริงทั้งเว็บเข้ากับ staging สำเร็จ + เจอ+แก้บั๊ก OAuth redirect จริง 1 จุด
+
+สถานะ: 🟡 **ทดสอบผ่านจริงแล้ว โค้ดแก้เสร็จแล้ว ยังไม่ push ขึ้น GitHub**
+
+**สิ่งที่สร้างใหม่:** `scripts/build-staging.js` (Node, รันด้วย `node scripts/build-staging.js`) — copy ทั้งเว็บ (ยกเว้น `.git`/`.github`/`CLAUDE.md`/`supabase/`/`_dev/`/`scripts/`/`_archive/`/`_to_delete/`/`_แผนงาน/`/`_บทความ-เตรียมเขียน/`) ไปโฟลเดอร์ `_staging-build/` แล้วแก้เฉพาะในสำเนานั้นให้ 19 หน้าที่มีปุ่มล็อกอินโหลด `js/core/supabase-config.staging.js` แทน `supabase-config.js` — ไม่แตะไฟล์เว็บจริงเลย · เพิ่ม `_staging-build/` เข้า `.gitignore` แล้ว · deploy โฟลเดอร์ผลลัพธ์ขึ้น Netlify แบบลาก-วาง (Lin ทำเอง)
+
+**ทดสอบผ่านจริง:** เปิดหน้าเกมจริง `vault.html` บน `https://gentle-moxie-bf64ad.netlify.app` (ผ่าน `_staging-build` ไม่ใช่หน้าทดสอบแยกแบบรอบก่อน) กดปุ่ม "登入保存分數" → Google → ล็อกอินสำเร็จ
+
+**🔴 บั๊กจริงที่เจอระหว่างทดสอบ + แก้แล้ว (Lin อนุมัติ):** `js/games/reading-auth.js` ฟังก์ชัน `oauthLogin()` เดิมส่ง `redirectTo: location.href` ให้ Supabase ตรงๆ — ถ้า URL ของหน้าเว็บมี `#` ค้างอยู่ก่อนแล้ว (เช่น เคยกดลิงก์ `href="#"` ในหน้า) `location.href` จะลงท้ายด้วย `#` เปล่าๆ แล้ว Supabase เอาไปต่อท้ายด้วย `#access_token=...` ตอน redirect กลับ กลายเป็น URL ผิดรูปแบบ `.../##access_token=...` → **Google ปฏิเสธคำขอ login ตรงๆ ด้วยหน้า error "400. That's an error. Your client has issued a malformed or illegal request."** (ยืนยันจาก URL จริงที่ capture ได้ตอนเกิด error เห็น `redirect_to=...%2F%23%23access_token%3D...`)
+
+แก้โดยตัด `#` เดิมออกก่อนส่งเสมอ:
+```js
+var cleanRedirect = location.href.split('#')[0];
+sb.auth.signInWithOAuth({ provider: supabaseProvider, options: { redirectTo: cleanRedirect } })
+```
+
+⚠️ **`reading-auth.js` ใช้ร่วม 14 หน้า รวมเว็บจริงด้วย** (ไม่ใช่แค่ staging) — บั๊กนี้อาจเกิดกับผู้เล่นจริงที่บังเอิญมี `#` ค้างใน URL ตอนกด login เช่นกัน ยังไม่ push
+
+**Commit message เตรียมไว้ (รวมกับของเดิม เป็น 16 ไฟล์):**
+```
+เพิ่ม scripts/build-staging.js สำหรับสร้างสำเนาเว็บทดสอบ staging + แก้บั๊ก OAuth redirect ใน reading-auth.js (ตัด # เดิมออกก่อนส่งให้ Supabase กัน Google ปฏิเสธ URL ผิดรูปแบบ) + เพิ่มโดเมน staging เข้ารายชื่อที่อนุญาตใน 15 edge functions
+```
+
+**งานค้าง:** (1) deploy อีก 14 edge function ขึ้น staging project (2) push โค้ด 16 ไฟล์ขึ้น GitHub (3) เตรียม 2 อีเมลทดสอบ (4) เริ่มรัน test case จริงตาม `68_ผลลัพธ์_P7-02_e2e-test-plan.md` — รายละเอียด/หลักฐานเต็มที่ `Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/72_เช็คลิสต์_เตรียม_staging_ก่อนรัน_P7-02.md`
+
+**หมายเหตุความปลอดภัย:** ระหว่างดีบัก Lin เคยส่ง URL ที่มี access token/refresh token ของบัญชีทดสอบ staging ติดมาด้วยในแชทนี้ — เป็นบัญชีทดสอบของ Lin เอง ความเสี่ยงต่ำ แต่แจ้ง Lin แล้วว่าไม่ควรส่ง URL ลักษณะนี้ซ้ำ
 
 ---
 

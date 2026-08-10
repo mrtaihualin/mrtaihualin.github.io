@@ -71,6 +71,44 @@ function patchHtmlFiles(dir) {
   return patched;
 }
 
+// 2026-08-10 (P7-02 staging บั๊กที่เจอจริง): game-content-client.js มีค่า URL/anonKey ของ
+// "โปรดักชัน" ฝังเป็นค่าสำรอง (fallback) ไว้ในตัว — ตั้งใจให้ใช้ค่าจาก window.SUPABASE_CONFIG
+// ก่อนเสมอ แต่เพราะ <script defer src="supabase-config.js"> รันช้ากว่า <script src="game-content-client.js">
+// (ไม่มี defer) ที่โหลดทีหลังในหน้า HTML — ทุกหน้าเกมเลยอ่านค่า SUPABASE_CONFIG ไม่ทัน
+// ตกไปใช้ค่าสำรองที่เป็นโปรดักชันเสมอ ไม่ว่าจะสลับ config เป็น staging ให้แค่ไหน
+// (บนเว็บจริงไม่มีใครสังเกตเพราะค่าสำรอง = ค่าโปรดักชันจริงพอดี)
+// แก้โดย "แก้เฉพาะในสำเนา _staging-build" ให้ค่าสำรอง 2 ตัวนี้ชี้เป็น staging แทน
+// ไม่แตะไฟล์ต้นทางจริงเลย (เหมือนเดิมทั้งไฟล์ อ่านค่า staging จาก supabase-config.staging.js เอง
+// ไม่ hardcode ซ้ำสองที่ กันค่าเพี้ยนกันเองถ้า Lin เปลี่ยน staging project ทีหลัง)
+function patchGameContentClientFallback(outDir, stagingConfigContent) {
+  const targetPath = path.join(outDir, 'js', 'games', 'game-content-client.js');
+  if (!fs.existsSync(targetPath)) {
+    console.warn('⚠️  ไม่พบ js/games/game-content-client.js ใน _staging-build — ข้ามขั้นนี้ (ถ้าหน้าเกมพัง ให้เช็คไฟล์นี้)');
+    return false;
+  }
+  const urlMatch = stagingConfigContent.match(/url:\s*'([^']+)'/);
+  const anonMatch = stagingConfigContent.match(/anonKey:\s*'([^']+)'/);
+  if (!urlMatch || !anonMatch) {
+    console.error('❌ อ่านค่า url/anonKey จาก supabase-config.staging.js ไม่ได้ — ตรวจรูปแบบไฟล์นั้นก่อน');
+    process.exit(1);
+  }
+  const stagingUrl = urlMatch[1];
+  const stagingAnonKey = anonMatch[1];
+
+  const original = fs.readFileSync(targetPath, 'utf8');
+  const OLD_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
+  const OLD_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw';
+
+  if (!original.includes(OLD_URL) || !original.includes(OLD_ANON)) {
+    console.error('❌ ไม่เจอค่าสำรอง production เดิมใน game-content-client.js — โค้ดอาจถูกแก้ไปแล้ว ต้องตรวจซ้ำก่อนเชื่อผล build นี้');
+    process.exit(1);
+  }
+
+  const patched = original.split(OLD_URL).join(stagingUrl).split(OLD_ANON).join(stagingAnonKey);
+  fs.writeFileSync(targetPath, patched, 'utf8');
+  return true;
+}
+
 function main() {
   console.log('🧹 ลบ _staging-build เดิม (ถ้ามี) ...');
   try {
@@ -87,9 +125,13 @@ function main() {
     console.error('❌ ไม่พบ js/core/supabase-config.staging.js — สร้างไฟล์นี้ก่อนแล้วรันใหม่');
     process.exit(1);
   }
+  const stagingConfigContent = fs.readFileSync(stagingConfigPath, 'utf8');
 
   console.log('🔧 กำลังแก้หน้าเว็บใน _staging-build/ ให้โหลดค่า staging ...');
   const patched = patchHtmlFiles(OUT);
+
+  console.log('🔧 กำลังแก้ค่าสำรอง production ที่ฝังใน game-content-client.js ให้เป็น staging ...');
+  patchGameContentClientFallback(OUT, stagingConfigContent);
 
   console.log(`✅ เสร็จแล้ว — แก้ ${patched} หน้า ให้โหลด supabase-config.staging.js`);
   console.log(`📁 โฟลเดอร์พร้อม deploy: ${OUT}`);

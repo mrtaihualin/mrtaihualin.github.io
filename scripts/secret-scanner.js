@@ -44,9 +44,11 @@ const PUBLIC_CONTEXTS = Object.freeze({
     'js/core/supabase-config.js',
     'js/games/game-content-client.js',
     'pricing.html',
-    'supabase/sql/2026-07-17_pg_cron_calendar_schedule_sync.sql',
-    'supabase/sql/2026-07-18_pg_cron_low_quota_daily.sql',
-    'supabase/sql/2026-07-30_shorten_calendar_schedule_sync_interval.sql'
+    // 2026-08-10: 3 ไฟล์นี้ถูกย้ายเข้าโฟลเดอร์ "เลิกใช้แล้ว_ห้ามรัน/" แล้ว (ไฟล์เก่าไม่ได้รันจริง)
+    // แก้ path ให้ตรงตำแหน่งปัจจุบัน — เนื้อหา/anon key เดิมไม่เปลี่ยน แค่ที่อยู่ไฟล์เปลี่ยน
+    'supabase/sql/เลิกใช้แล้ว_ห้ามรัน/2026-07-17_pg_cron_calendar_schedule_sync.sql',
+    'supabase/sql/เลิกใช้แล้ว_ห้ามรัน/2026-07-18_pg_cron_low_quota_daily.sql',
+    'supabase/sql/เลิกใช้แล้ว_ห้ามรัน/2026-07-30_shorten_calendar_schedule_sync_interval.sql'
   ]),
   youtube: new Set([
     'index.html',

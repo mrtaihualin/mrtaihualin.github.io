@@ -28,6 +28,7 @@ const ROOT_PAGES = [
   'games-challenge.html', 'games.html', 'index.html', 'leaderboard.html',
   'lego-board.html', 'lego.html', 'listening-game.html', 'mix-board.html',
   'my-progress.html', 'new-student.html', 'page-services.html', 'pricing.html',
+  'privacy.html',
   'reading-board.html', 'reading-game.html', 'resources.html', 'sns.html',
   'terms.html', 'thank-you.html', 'tone-finder.html', 'trial.html',
   'typing-board.html', 'typing-game.html', 'vault.html', 'vocab-thank-you.html',

@@ -111,6 +111,8 @@ runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests')
 runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
 // เพิ่ม 2026-08-10 — ตัวทดสอบคุ้มกันพฤติกรรมเดิมของ Search MVP
 runTest(['scripts/tests-search-behavioral.js'], 'search behavioral tests');
+// เพิ่ม 2026-08-10 — ตรวจว่า nav/แถบประกาศ/bottom-nav ทุกหน้าตรงกับ data/nav-template.js (read-only)
+runTest(['scripts/check-nav-consistency.js'], 'nav consistency check');
 runTest(['scripts/check-mobile-accessibility.js'], 'mobile/accessibility check (warning-only)');
 // ⚠️ scripts/check-minified-sync.js ตั้งใจ "ไม่" ใส่ในนี้ — สคริปต์นั้นเทียบเนื้อหาแบบ exact-match
 // ซึ่งจะ MISMATCH เสมอกับไฟล์ที่ผ่าน minifier จริง (ดูคอมเมนต์ในไฟล์นั้น) ถ้าใส่ที่นี่จะ fail ทุกครั้ง
