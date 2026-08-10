@@ -414,6 +414,17 @@
     .page-strip-label{display:none;}
     .page-strip a{margin:0;padding:8px 1px;text-align:center;font-size:clamp(9px,2.6vw,11px);letter-spacing:0;}
   }
+  /* 🔴 2026-08-10 (Lin อนุมัติ): บนมือถือ ซ่อน .page-strip ทิ้ง — แถบ #bottom-nav (4 ไอคอน) ทำหน้าที่แทนแล้ว
+     เหตุผล: .page-strip เขียนใน HTML ตรงๆ เบราว์เซอร์วาดทันทีที่เริ่มโหลด แต่ #bottom-nav ต้องรอ shared.min.js
+     โหลดเสร็จก่อนถึงถูกสร้าง → ช่วงรอยต่อจะเห็นแถบ 6 ปุ่มเก่าแว้บขึ้นมาก่อนทุกครั้งที่เปลี่ยนหน้า (Lin เจอจริงบนมือถือ)
+     บนมือถือแถบนี้ถูก #bottom-nav บังมิดอยู่แล้ว (60px ทับ 48px · z-index 998 ทับ 990) = ซ่อนไปไม่มีอะไรหายไปจากสายตา
+     ⚠️ breakpoint ต้องตรงกับ `@media(max-width:768px){#bottom-nav{display:flex}}` ใน js/core/shared.js เสมอ
+        ถ้าวันหลังแก้ตัวใดตัวหนึ่ง ต้องแก้อีกตัวให้ตรงกันด้วย ไม่งั้นจะมีช่วงจอที่ไม่มีแถบล่างเลย หรือมี 2 แถบซ้อน
+     คอม (>768px) ไม่กระทบ — .page-strip ยังอยู่ครบเหมือนเดิม เพราะ #bottom-nav ไม่โชว์บนคอม */
+  @media(max-width:768px){
+    .page-strip{display:none;}
+    body:has(.page-strip){padding-bottom:0;} /* #bottom-nav ตั้ง body{padding-bottom:60px} ให้เองอยู่แล้ว ไม่ต้องเผื่อซ้ำ */
+  }
 
   /* ═══════════════════════════════════════════
      COLOR HIGHLIGHTS & SUBTLE GRADIENTS
