@@ -283,14 +283,59 @@
   // window.onerror ตรงๆ — กันไม่ให้ไปเบียด/ทับ handler อื่นถ้ามีในอนาคต และไม่ preventDefault
   // ไม่ throw ต่อ ไม่ยุ่งกับ try/catch ภายในโค้ดเกมเอง (แค่ "ฟังเฉยๆ" แล้วโชว์แถบแจ้งเตือน)
   // ทุกจุดครอบด้วย try/catch กันตัว handler เองพังซ้อนจนทำให้สถานการณ์แย่ลงไปอีก
+  //
+  // 🆕 2026-08-10 (แก้บั๊กที่เจอตอนทดสอบ staging): เดิม handler ดักจับ "ทุก error/
+  // unhandledrejection ที่เกิดบนหน้า" แบบไม่กรองต้นตอ — เจอจริงว่า error ที่ไม่เกี่ยวกับ
+  // เกมเลย (เช่น พิมพ์คำสั่ง fetch() มือใน DevTools Console แล้วพังเพราะขาด header) ก็โดน
+  // เหมารวมเป็น "遊戲發生錯誤" ไปด้วย ทั้งที่เกมยังทำงานปกติ — ผู้เล่นจริงที่เจอ error จาก
+  // ส่วนขยายเบราว์เซอร์ (ad blocker ฯลฯ) ก็จะเจอแถบแดงหลอกแบบเดียวกัน
+  // ตอนนี้กรองก่อนโชว์แถบ: ต้องสืบย้อนไปหาไฟล์ที่มาจาก origin เดียวกับเว็บเราเท่านั้น
+  // (evt.filename ของ 'error' / evt.reason.stack ของ 'unhandledrejection') — error จาก
+  // สคริปต์อื่น (extension, eval ใน console, cross-origin) จะถูกข้าม "ไม่โชว์แถบ" แต่ยังคง
+  // console.error ไว้เสมอ (ห้ามเงียบสนิทตามกฎ RELIABILITY FIRST — เก็บร่องรอยให้ debug ได้)
   // ────────────────────────────────────────────────────────────
+  function isSameOriginSource(url) {
+    if (!url) return false;
+    try {
+      return new URL(String(url), global.location.href).origin === global.location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+  // stack trace ของ error ที่มาจากไฟล์เว็บเราเอง จะมีบรรทัดที่ระบุ URL เต็ม (origin เดียวกับ
+  // location.origin) — error จาก console เอง (eval/VM/debugger eval code) หรือ extension
+  // (chrome-extension://) จะไม่มีบรรทัดแบบนี้เลย
+  function stackHasSameOriginFrame(stack) {
+    if (!stack || typeof stack !== 'string') return false;
+    try {
+      var origin = global.location.origin;
+      return stack.indexOf(origin) !== -1;
+    } catch (e) {
+      return false;
+    }
+  }
   function installCrashHandler() {
     try {
       global.addEventListener('error', function (evt) {
-        try { showCrashBanner((evt && (evt.error || evt.message)) || evt); } catch (e2) { /* ห้ามให้ handler เองพังซ้อน */ }
+        try {
+          var err = (evt && (evt.error || evt.message)) || evt;
+          if (!isSameOriginSource(evt && evt.filename)) {
+            console.error('[game-content-client] error ที่ไม่ได้มาจากสคริปต์เว็บเรา (ข้ามไม่โชว์แถบแดง):', err, evt && evt.filename);
+            return;
+          }
+          showCrashBanner(err);
+        } catch (e2) { /* ห้ามให้ handler เองพังซ้อน */ }
       });
       global.addEventListener('unhandledrejection', function (evt) {
-        try { showCrashBanner(evt && evt.reason); } catch (e2) { /* ห้ามให้ handler เองพังซ้อน */ }
+        try {
+          var reason = evt && evt.reason;
+          var stack = reason && reason.stack;
+          if (!stackHasSameOriginFrame(stack)) {
+            console.error('[game-content-client] unhandledrejection ที่ไม่ได้มาจากสคริปต์เว็บเรา (ข้ามไม่โชว์แถบแดง):', reason);
+            return;
+          }
+          showCrashBanner(reason);
+        } catch (e2) { /* ห้ามให้ handler เองพังซ้อน */ }
       });
     } catch (e) {
       // ไม่ใช่จุดสำคัญพอจะหยุดทั้งหน้าเกม แค่ไม่มี safety net เพิ่มเท่านั้น
