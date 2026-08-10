@@ -367,7 +367,12 @@
     render();
     // Lin 2026-07-12: auth เพิ่งเสร็จ/เปลี่ยน (getSession เป็น async) → สั่งเกม re-render แถบชวนล็อกอิน "登入解鎖"
     // แก้บั๊ก: ตอนโหลดหน้า auth ยังไม่เสร็จ การ์ดเลยโชว์ค้าง ทั้งที่จริงล็อกอินอยู่ (ผู้เล่นนึกว่าต้องล็อกอินใหม่ทุกครั้ง)
-    ['rgRenderGameBar','legoRenderGameBar','woRerenderBar','mxRenderGameBar'].forEach(function(fn){ if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){} } });
+    // 🆕 2026-08-10: เพิ่ม 'tfRenderTopBanners' (เกมเสียง/tone-finder.html) — ตอนรวมระบบล็อกอิน
+    // เข้ามาใช้ไฟล์นี้ (v6, 2026-07-16) ลืมเติมชื่อฟังก์ชันรีเฟรชแบนเนอร์ของเกมเสียงเข้าลิสต์นี้
+    // ผลที่เจอจริง: กด 登出 แล้ว #rg-login-slot ถูกซ่อนด้วย hideDup (เพราะมี #rg-cta-login ค้างอยู่ในหน้า)
+    // แต่ #rg-cta-login เองก็ไม่ถูกรีเฟรชให้โชว์ปุ่ม 登入解鎖 กลับมา (เพราะ tfRenderTopBanners ไม่ถูกเรียก)
+    // → ทั้งสองจุดที่ควรมีปุ่มล็อกอินกลายเป็นว่างเปล่าพร้อมกัน = "แถบล็อคอินหายไปทั้งแถบ" หลังกด 登出
+    ['rgRenderGameBar','legoRenderGameBar','woRerenderBar','mxRenderGameBar','tfRenderTopBanners'].forEach(function(fn){ if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){} } });
     var uid = (API.user && API.user.id) || null;
     if (uid === lastAdaptiveUserId) return; // user เดิม (หรือยังไม่ล็อกอินเหมือนเดิม) — ไม่ต้องยิงซ้ำ
     lastAdaptiveUserId = uid;

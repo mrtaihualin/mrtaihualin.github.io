@@ -109,6 +109,8 @@ runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 // เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');
 runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
+// เพิ่ม 2026-08-10 — ตัวทดสอบคุ้มกันพฤติกรรมเดิมของ Search MVP
+runTest(['scripts/tests-search-behavioral.js'], 'search behavioral tests');
 runTest(['scripts/check-mobile-accessibility.js'], 'mobile/accessibility check (warning-only)');
 // ⚠️ scripts/check-minified-sync.js ตั้งใจ "ไม่" ใส่ในนี้ — สคริปต์นั้นเทียบเนื้อหาแบบ exact-match
 // ซึ่งจะ MISMATCH เสมอกับไฟล์ที่ผ่าน minifier จริง (ดูคอมเมนต์ในไฟล์นั้น) ถ้าใส่ที่นี่จะ fail ทุกครั้ง
