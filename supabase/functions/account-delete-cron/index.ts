@@ -108,9 +108,44 @@ async function sendDeletionEmail(SUPABASE_URL, SERVICE_KEY, template, to, data) 
 // ── ลบบัญชี 1 ราย ให้ครบขั้นตอน (a)-(d) เหมือน account-delete/index.ts เวอร์ชันก่อนหน้าทุกประการ
 //    (ย้ายมาไว้ที่นี่ ดูเหตุผลในหัวไฟล์) — คืนค่า {ok, completed_steps, error?} ไม่ throw ออกไปนอกฟังก์ชัน
 //    เพื่อให้ loop หลักประมวลผล user คนถัดไปต่อได้แม้คนนี้พัง (1 คนพัง ไม่ควรทำให้ทั้งรอบ cron หยุด) ──
-async function deleteOneAccount(admin, userId, cachedEmail) {
+
+// 🔴🔴 2026-08-10 (P7-02 F.6c รอบ 2 — ปิดช่องโหว่ทางทฤษฎีที่เหลือ หลังตรวจ concurrency ละเอียดตามที่ Lin สั่ง):
+//   การ claim ตอนต้น loop (processing_started_at) การันตี exclusivity "ตราบใดที่ยัง stale ไม่ถึง 15 นาที"
+//   แต่ deleteOneAccount() เดิมไม่เคยเช็คซ้ำเลยระหว่างขั้นตอน (a)-(d) — ถ้า 1 คำขอใช้เวลานานผิดปกติจริง
+//   (เช่น RPC ค้าง/network ช้าเกิน 15 นาทีแต่ process ยังไม่ตาย) ระหว่างนั้นผู้ใช้กด cancel สำเร็จได้ (เพราะ
+//   processing_started_at กลายเป็น stale ในสายตาของ cancel แล้ว) แต่ cron ตัวเดิมยังทำงานต่อด้วย state เก่า
+//   ในหน่วยความจำ ไม่รู้ตัวว่าถูกยกเลิกไปแล้ว แล้วจะเดินหน้าลบข้อมูล/auth user ต่อ — เพิ่มด่านอ่านฐานข้อมูล
+//   กลับมาเช็คซ้ำว่า "การ claim ของเรายังเป็นเจ้าของแถวนี้อยู่จริง" (status ยังเป็น pending + processing_
+//   started_at ยังตรงกับเวลาที่เรา claim ไว้เป๊ะ — ใช้ exact-match ไม่ใช่แค่ "not null" กันเคสที่คนละ cron
+//   invocation แย่ง claim ซ้อนกันไปแล้วด้วย) ก่อนขั้นตอนทำลายข้อมูลทุกขั้น (ไม่ใช่แค่ก่อนลบ auth user
+//   ขั้นตอนเดียว เพราะ (a)-(c) ก็ทำลายข้อมูลถาวรเช่นกัน ต่อให้ (d) ไม่ทำงานสุดท้าย)
+//   ในทางปฏิบัติ Edge Function มี timeout ที่สั้นกว่า 15 นาทีมากอยู่แล้ว (ช่องโหว่นี้แทบเป็นไปไม่ได้ให้เกิดจริง)
+//   แต่ด่านนี้ทำให้ invariant เป็นจริงเสมอไม่ว่า runtime constraint จะเปลี่ยนไปในอนาคตแค่ไหนก็ตาม
+async function verifyStillOwnedByUs(admin, requestId, claimedAtIso) {
+  const { data, error } = await admin
+    .from('account_deletion_requests')
+    .select('id')
+    .eq('id', requestId)
+    .eq('status', 'pending')
+    .eq('processing_started_at', claimedAtIso)
+    .limit(1);
+  if (error) return { ok: false, ownershipError: true, detail: error.message };
+  return { ok: !!(data && data.length > 0) };
+}
+
+async function deleteOneAccount(admin, userId, cachedEmail, requestId, claimedAtIso) {
   const completedSteps = [];
   const resultCounts = { deleted: {}, anonymized: {} };
+
+  // 🔴 ด่านที่ 1 — เช็คก่อนเริ่มขั้นตอนทำลายข้อมูลใดๆ เลย (ก่อน (a))
+  {
+    const gate = await verifyStillOwnedByUs(admin, requestId, claimedAtIso);
+    if (gate.ownershipError) return { ok: false, error: 'final_ownership_gate_check_failed', detail: gate.detail, completed_steps: completedSteps };
+    if (!gate.ok) {
+      console.error('[account-delete-cron] 🔴🔴 หยุดก่อนเริ่มลบข้อมูลใดๆ เพราะ claim ของเราไม่ใช่เจ้าของแถวนี้แล้ว (id=' + requestId + ', user_id=' + userId + ') — มีคนเปลี่ยนสถานะ/แย่ง claim ไปแล้วระหว่างทาง (เช่น ผู้ใช้กด cancel ตอน claim เดิม stale)');
+      return { ok: false, error: 'cancelled_before_point_of_no_return', completed_steps: completedSteps };
+    }
+  }
 
   // (a) ลบตารางที่มี FK แบบ RESTRICT ก่อนเสมอ
   for (const table of HARD_DELETE_TABLES) {
@@ -162,6 +197,17 @@ async function deleteOneAccount(admin, userId, cachedEmail) {
     completedSteps.push('audit_log_written');
   } else {
     completedSteps.push('audit_log_already_written (retry)');
+  }
+
+  // 🔴 ด่านที่ 2 — เช็คซ้ำอีกครั้งก่อนขั้นตอนที่ย้อนกลับไม่ได้ที่สุด (ลบ auth user) แม้ด่านที่ 1 ผ่านไปแล้ว
+  // เพราะ (a)-(c) ข้างบนกินเวลาเพิ่ม ต่อให้น้อยมากก็ตาม — เช็คสดอีกทีก่อนจุดที่ไม่มีทางย้อนกลับจริงๆ
+  {
+    const gate = await verifyStillOwnedByUs(admin, requestId, claimedAtIso);
+    if (gate.ownershipError) return { ok: false, error: 'final_ownership_gate_check_failed', detail: gate.detail, completed_steps: completedSteps };
+    if (!gate.ok) {
+      console.error('[account-delete-cron] 🔴🔴 หยุดก่อนลบ auth user จริง เพราะ claim ของเราไม่ใช่เจ้าของแถวนี้แล้ว (id=' + requestId + ', user_id=' + userId + ') — ข้อมูลบางส่วนใน (a)-(c) อาจถูกลบ/anonymize ไปแล้วก่อนหน้านี้ แต่ auth user (ตัวบัญชี) ยังไม่ถูกแตะ');
+      return { ok: false, error: 'cancelled_before_point_of_no_return', completed_steps: completedSteps };
+    }
   }
 
   // (d) ลบ auth user จริง — ทำเป็นลำดับสุดท้ายเสมอ
@@ -282,7 +328,7 @@ serve(async (req) => {
         if (snapshotErr) console.error('[account-delete-cron] เขียน contact_email_snapshot ไม่สำเร็จ (ไม่หยุดกระบวนการลบ แต่ retry อีเมลทีหลังจะทำไม่ได้) id=' + row.id, snapshotErr);
       }
 
-      const delResult = await deleteOneAccount(admin, row.user_id, cachedEmail);
+      const delResult = await deleteOneAccount(admin, row.user_id, cachedEmail, row.id, nowIso);
 
       if (!delResult.ok) {
         // ลบไม่สำเร็จ — ปล่อย processing_started_at ค้างไว้ (จะถูก stale-lock cutoff แย่งคืนได้เองใน
