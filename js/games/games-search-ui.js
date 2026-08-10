@@ -11,6 +11,16 @@
     });
   }
 
+  function renderEmpty(out) {
+    out.innerHTML = '<div class="gh-search-empty">還沒抓到你的意思 — 換個說法試試，或直接從下面 5 款遊戲挑一個開始玩。</div>';
+  }
+
+  function entryHTML(entry) {
+    return '<div class="gh-search-primary">👉 ' + esc(entry.title) + '</div>' +
+      '<div class="gh-search-reason">' + esc(entry.desc) + '</div>' +
+      '<a class="gh-go" href="' + esc(entry.href) + '">開始玩 →</a>';
+  }
+
   function render(query) {
     var out = document.getElementById('gameSearchResult');
     if (!out) return;
@@ -28,20 +38,25 @@
       try { gtag('event', 'game_search', { category: 'game', confident: result.confident }); } catch (e) {}
     }
 
-    if (!result.confident) {
-      out.innerHTML = '<div class="gh-search-empty">還沒抓到你的意思 — 換個說法試試，或直接從下面 5 款遊戲挑一個開始玩。</div>';
+    if (result.confident) {
+      var html = entryHTML(result.primary);
+      if (result.secondary) {
+        html += '<div class="gh-search-secondary">也可以試試：<a href="' + esc(result.secondary.href) + '">' + esc(result.secondary.title) + '</a></div>';
+      }
+      out.innerHTML = html;
       return;
     }
 
-    var html = '<div class="gh-search-primary">👉 ' + esc(result.primary.title) + '</div>' +
-      '<div class="gh-search-reason">' + esc(result.primary.desc) + '</div>' +
-      '<a class="gh-go" href="' + esc(result.primary.href) + '">開始玩 →</a>';
-
-    if (result.secondary) {
-      html += '<div class="gh-search-secondary">也可以試試：<a href="' + esc(result.secondary.href) + '">' + esc(result.secondary.title) + '</a></div>';
-    }
-
-    out.innerHTML = html;
+    // rule-based ไม่มั่นใจ → ลองถาม Gemini fallback ก่อนค่อยยอมแพ้ (เฉพาะ pool เกม 7 ตัว)
+    // ยังไม่ deploy Edge Function ก็ปลอดภัย — geminiFallback คืน null เฉยๆ ตกไปที่ renderEmpty ปกติ
+    out.innerHTML = '<div class="gh-search-empty">搜尋中…</div>';
+    window.SearchEngine.geminiFallback(query).then(function (entry) {
+      if (!entry || entry.category !== 'practice') { renderEmpty(out); return; } // เกมค้นหาเฉพาะเกม ไม่พาไปหน้าอื่น
+      if (typeof gtag === 'function') {
+        try { gtag('event', 'game_search_gemini_match', { category: 'game' }); } catch (e) {}
+      }
+      out.innerHTML = entryHTML(entry);
+    }).catch(function () { renderEmpty(out); });
   }
 
   function init() {

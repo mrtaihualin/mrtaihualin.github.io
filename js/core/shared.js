@@ -176,7 +176,12 @@ window.goHome = function() {
 
   var bnStyle = document.createElement('style');
   bnStyle.textContent = [
-    '#bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(17,17,17,0.97);border-top:1px solid rgba(200,151,58,0.3);z-index:998;padding:0;padding-bottom:env(safe-area-inset-bottom);}',
+    // 🔴 2026-08-10 (บั๊กจริง เจอจากทดสอบเครื่อง Lin ตรง): css/shared.css มี selector `nav{top:0;...}` (เผื่อไว้ให้ .site-nav)
+    //    แต่เขียนเป็น `nav` เฉยๆ ไม่ใช่ `.site-nav` เลยจับกับ <nav id="bottom-nav"> ที่นี่ด้วย (เป็นแท็ก <nav> เหมือนกัน)
+    //    #bottom-nav ไม่เคยเขียน `top` เอง → top:0 จากกฎเดิมหลุดมาทับ ผสมกับ bottom:0+height:60px = over-constrained
+    //    ตามสเปก CSS "top" ชนะเสมอ "bottom" ถูกเมิน → แถบเลยไปโผล่ที่ขอบบนจอแทนขอบล่าง (ยืนยันด้วย getBoundingClientRect() จริงบนเครื่อง Lin)
+    //    แก้ด้วยการประกาศ top:auto ทับตรงนี้ชัดเจน กันไม่ให้ nav{top:0} ของเดิมหลุดมาอีก
+    '#bottom-nav{display:none;position:fixed;top:auto;bottom:0;left:0;right:0;background:rgba(17,17,17,0.97);border-top:1px solid rgba(200,151,58,0.3);z-index:998;padding:0;padding-bottom:env(safe-area-inset-bottom);}',
     '#bottom-nav .bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:8px 4px;text-decoration:none;color:rgba(255,255,255,0.6);gap:3px;}',
     '#bottom-nav .bn-item.bn-cta{color:var(--gold);}',
     '#bottom-nav .bn-icon{font-size:20px;line-height:1;}',

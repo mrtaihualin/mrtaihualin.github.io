@@ -7,10 +7,11 @@
 //     3. Gemini เลือกได้เฉพาะ destination ที่ระบบกำหนด ห้ามสร้าง URL เอง
 //     4. ไม่มั่นใจ = ไม่เดา (คืนค่า null ให้ UI โชว์ข้อความสุภาพแทนการเดา)
 //
-//   ⚠️ geminiFallback() ตอนนี้เป็นแค่ stub — ยังต่อไม่ได้จริง เพราะต้อง
-//   deploy Edge Function ใหม่ขึ้น Supabase (ต้องมีสิทธิ์ deploy จริงที่
-//   Claude ไม่มีในเซสชันนี้) + ต้องมี GEMINI_API_KEY จริง ดูรายละเอียด
-//   ที่คอมเมนต์ก่อนฟังก์ชัน geminiFallback ด้านล่าง
+//   🔴 geminiFallback() เรียก Edge Function search-gemini จริงแล้ว (2026-08-10)
+//   แต่ฟังก์ชันนั้นยัง "ไม่ได้ deploy" (ต้อง Lin ทำเอง — ดูคอมเมนต์หัวไฟล์
+//   supabase/functions/search-gemini/index.ts) ระหว่างที่ยังไม่ deploy ฟังก์ชัน
+//   นี้จะ fetch พลาด (404/network) แล้ว catch คืน null ให้เหมือน stub เดิม
+//   ไม่พังอะไร แค่ยังไม่ได้ผลลัพธ์จริงจนกว่าจะ deploy
 // ===================================================================
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -134,19 +135,49 @@
   }
 
   // ────────────────────────────────────────────────────────────────
-  // 🔴 ยังเป็นแค่ stub — บล็อกเพราะ:
-  //   1) ต้อง deploy Edge Function ใหม่ขึ้น Supabase (ต้องมีสิทธิ์ deploy จริง
-  //      ที่ Claude ไม่มีในเซสชันนี้ เหมือนที่บล็อก P7-02/N5 อยู่)
-  //   2) ต้องมี GEMINI_API_KEY จริงตั้งเป็น secret ฝั่งเซิร์ฟเวอร์ (ห้ามอยู่ฝั่ง client เด็ดขาด)
-  //   3) รายการ keyword/synonym ที่ใช้ตอนนี้ Claude ร่างจาก title/desc ของหน้าจริง
-  //      ยังไม่ผ่าน Lin ตรวจทีละรายการ — ควรให้ Lin ตรวจก่อน publish จริง
-  //      (แนวทางเดียวกับกฎ "ข้อมูลเกมต้องผ่าน Lin ตรวจ" แม้เนื้อหานี้จะเป็น
-  //      metadata การค้นหา ไม่ใช่คำศัพท์เกมโดยตรงก็ตาม)
-  //   ตอนนี้ถ้า rule-based หาไม่เจอ (ไม่มั่นใจ) → คืน null ให้ UI โชว์ข้อความ
-  //   สุภาพแทน ไม่เดา ไม่ยิง API ไหนทั้งสิ้น
+  // เรียก Edge Function search-gemini จริง — คืนค่า entry ตัวจริงจาก
+  // SEARCH_INDEX (ไม่ใช่แค่ id ดิบจาก network) หรือ null ถ้าไม่มั่นใจ/พัง/
+  // ยัง deploy ไม่เสร็จ ไม่มีกรณีไหนที่ throw ออกไปให้ UI ต้องจัดการเอง
+  //
+  // ด่านความปลอดภัย 2 ชั้น (กัน Gemini/เครือข่ายหลอกพาไปหน้าไม่จริง):
+  //   1) Edge Function เองตรวจ id ที่ Gemini ตอบว่าอยู่ใน whitelist ก่อนส่งกลับ
+  //   2) ฝั่งนี้ตรวจซ้ำอีกชั้น — id ที่ได้ต้องมีอยู่จริงใน SEARCH_INDEX.ALL
+  //      ของเบราว์เซอร์ ณ ตอนนั้นเท่านั้น ถึงจะคืนค่าเป็น entry ให้ UI แสดงผล
+  //
+  // ⚠️ ยังไม่ต้อง deploy Edge Function ให้ทำงานเลยถึงจะปลอดภัย — ถ้ายัง
+  // ไม่ deploy fetch จะพลาด (404/network error) แล้ว catch คืน null เฉยๆ
+  // เหมือน stub เดิมทุกอย่าง ไม่มีอะไรพัง
   // ────────────────────────────────────────────────────────────────
   function geminiFallback(query) {
-    return Promise.resolve(null);
+    var hasBrowser = (typeof window !== 'undefined' && typeof window.fetch === 'function');
+    if (!hasBrowser) return Promise.resolve(null); // Node/test context — ไม่มี fetch จริง ไม่เดา
+
+    var cfg = window.SUPABASE_CONFIG || {};
+    if (!cfg.url || !cfg.anonKey) return Promise.resolve(null); // ยังไม่โหลด config พร้อม — ไม่เดา ไม่พัง
+
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 8000) : null;
+
+    return fetch(cfg.url + '/functions/v1/search-gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + cfg.anonKey },
+      body: JSON.stringify({ query: String(query || '').slice(0, 200) }),
+      signal: ctrl ? ctrl.signal : undefined,
+    }).then(function (res) {
+      if (timer) clearTimeout(timer);
+      if (!res.ok) return null; // ยังไม่ deploy (404) หรือฟังก์ชัน error — ไม่เดา
+      return res.json();
+    }).then(function (data) {
+      if (!data || !data.matched || !data.id) return null;
+      var pool = (SEARCH_INDEX ? SEARCH_INDEX.ALL : []);
+      for (var i = 0; i < pool.length; i++) {
+        if (pool[i].id === data.id) return pool[i]; // ต้องเจอตัวจริงใน index เท่านั้นถึงจะเชื่อ
+      }
+      return null; // Gemini/เครือข่ายส่ง id ที่ระบบไม่รู้จัก — ไม่เดา ไม่เชื่อ
+    }).catch(function () {
+      if (timer) clearTimeout(timer);
+      return null; // เครือข่ายพัง/timeout/ยังไม่ deploy → ไม่เดา คืน null เหมือน stub เดิม
+    });
   }
 
   return {

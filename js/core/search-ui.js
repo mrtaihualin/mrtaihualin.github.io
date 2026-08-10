@@ -28,6 +28,34 @@
     '</div>';
   }
 
+  function renderEmpty(out) {
+    out.innerHTML = '<div class="hs-empty">還沒找到符合的內容 — 換個說法試試，或直接逛逛：' +
+      '<div class="hs-empty-links">' +
+        '<a href="games.html">🎮 遊戲練習室</a>' +
+        '<a href="blog.html">📚 學習文章</a>' +
+        '<a href="trial.html">🎯 預約免費體驗課</a>' +
+      '</div></div>';
+  }
+
+  function renderConfident(out, result) {
+    var html = '<div class="hs-recommended">' +
+      '<div class="hs-section-label">推薦給你</div>' +
+      result.recommended.map(cardHTML).join('') +
+    '</div>';
+
+    var relatedHTML =
+      relatedGroupHTML('practice', '練習', result.related.practice) +
+      relatedGroupHTML('content', '學習內容', result.related.content) +
+      relatedGroupHTML('course', '課程', result.related.course) +
+      relatedGroupHTML('site', '網站使用', result.related.site);
+
+    if (relatedHTML) {
+      html += '<div class="hs-related"><div class="hs-section-label">相關內容</div>' + relatedHTML + '</div>';
+    }
+
+    out.innerHTML = html;
+  }
+
   function render(query) {
     var out = document.getElementById('homeSearchResults');
     if (!out) return;
@@ -45,32 +73,21 @@
       try { gtag('event', 'site_search', { category: window.GA_CATEGORY || 'unknown', confident: result.confident }); } catch (e) {}
     }
 
-    if (!result.confident) {
-      out.innerHTML = '<div class="hs-empty">還沒找到符合的內容 — 換個說法試試，或直接逛逛：' +
-        '<div class="hs-empty-links">' +
-          '<a href="games.html">🎮 遊戲練習室</a>' +
-          '<a href="blog.html">📚 學習文章</a>' +
-          '<a href="trial.html">🎯 預約免費體驗課</a>' +
-        '</div></div>';
+    if (result.confident) {
+      renderConfident(out, result);
       return;
     }
 
-    var html = '<div class="hs-recommended">' +
-      '<div class="hs-section-label">推薦給你</div>' +
-      result.recommended.map(cardHTML).join('') +
-    '</div>';
-
-    var relatedHTML =
-      relatedGroupHTML('practice', '練習', result.related.practice) +
-      relatedGroupHTML('content', '學習內容', result.related.content) +
-      relatedGroupHTML('course', '課程', result.related.course) +
-      relatedGroupHTML('site', '網站使用', result.related.site);
-
-    if (relatedHTML) {
-      html += '<div class="hs-related"><div class="hs-section-label">相關內容</div>' + relatedHTML + '</div>';
-    }
-
-    out.innerHTML = html;
+    // rule-based ไม่มั่นใจ → ลองถาม Gemini fallback ก่อนค่อยยอมแพ้ (73_CLAUDE_UPDATE หัวข้อ C)
+    // ยังไม่ deploy Edge Function ก็ปลอดภัย — geminiFallback คืน null เฉยๆ ตกไปที่ renderEmpty ปกติ
+    out.innerHTML = '<div class="hs-empty">搜尋中…</div>';
+    window.SearchEngine.geminiFallback(query).then(function (entry) {
+      if (!entry) { renderEmpty(out); return; }
+      if (typeof gtag === 'function') {
+        try { gtag('event', 'site_search_gemini_match', { category: window.GA_CATEGORY || 'unknown' }); } catch (e) {}
+      }
+      out.innerHTML = '<div class="hs-recommended"><div class="hs-section-label">推薦給你</div>' + cardHTML(entry) + '</div>';
+    }).catch(function () { renderEmpty(out); });
   }
 
   function init() {
