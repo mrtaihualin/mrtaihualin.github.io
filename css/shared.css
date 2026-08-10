@@ -112,12 +112,21 @@
   .hero-slogan { font-family:'Noto Sans TC',sans-serif; font-size:clamp(14px,1.8vw,18px); color:var(--ink-muted); letter-spacing:2px; margin-bottom:14px; opacity:0; animation:fadeUp 0.5s 0.5s forwards; }
   .hero-slogan .slogan-accent { background:linear-gradient(90deg,var(--gold),#C8973A); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:700; letter-spacing:3px; }
   .hero-sub { font-family:'Noto Sans TC',sans-serif; font-size:clamp(16px,2.2vw,20px); color:var(--ink-soft); line-height:1.85; max-width:480px; margin-bottom:48px; opacity:0; animation:fadeUp 0.6s 0.6s forwards; }
-  .hero-cta { background:var(--gold); color:#fff; font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:19px; padding:22px 64px; border:none; cursor:pointer; letter-spacing:1.5px; transition:all 0.25s; opacity:0; animation:fadeUp 0.6s 0.75s forwards, heroPulse 2.4s 1.4s ease-in-out infinite; box-shadow:0 6px 32px rgba(139,99,16,0.40); border-radius:4px; }
+  .hero-cta { background:var(--gold); color:#fff; font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:19px; padding:22px 64px; border:none; cursor:pointer; letter-spacing:1.5px; transition:all 0.25s; opacity:0; animation:fadeUp 0.6s 0.95s forwards, heroPulse 2.4s 1.6s ease-in-out infinite; box-shadow:0 6px 32px rgba(139,99,16,0.40); border-radius:4px; margin-top:20px; }
   .hero-cta:hover { background:#7a5510; transform:translateY(-3px); box-shadow:0 14px 36px rgba(139,99,16,0.50); }
   @keyframes heroPulse { 0%,100%{box-shadow:0 6px 32px rgba(139,99,16,0.40);} 50%{box-shadow:0 6px 42px rgba(139,99,16,0.65);} }
   .scroll-hint { position:absolute; bottom:36px; left:0; right:0; display:flex; flex-direction:column; align-items:center; gap:8px; opacity:0; animation:fadeUp 0.5s 1.2s forwards; }
   .scroll-hint span { font-family:'Noto Sans TC',sans-serif; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:rgba(139,99,16,0.45); }
   .scroll-hint .line { width:1px; height:40px; background:linear-gradient(to bottom,rgba(139,99,16,0.4),transparent); animation:pulse 2s infinite; }
+  /* Search ต้องเห็นทันทีในจอมือถือทั่วไปโดยไม่ต้อง scroll — ลดช่องว่างของ Hero เฉพาะบนมือถือ (2026-08-10) */
+  @media(max-width:600px){
+    #home { padding:56px 20px 80px; }
+    .badge { margin-bottom:16px; }
+    .hero-title { margin-bottom:12px; }
+    .hero-slogan { margin-bottom:10px; }
+    .hero-sub { margin-bottom:20px; }
+    .hero-cta { padding:16px 40px; font-size:16px; margin-top:16px; }
+  }
 
   /* PROBLEMS */
   #problems { background:var(--off-white); border-top:3px solid var(--ink); border-bottom:3px solid var(--ink); }
