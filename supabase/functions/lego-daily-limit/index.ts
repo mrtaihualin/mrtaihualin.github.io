@@ -41,6 +41,8 @@ const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',
   'https://mrtaihualin.github.io',
+  // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
+  'https://gentle-moxie-bf64ad.netlify.app',
 ];
 
 // วันนี้ตามเวลาไต้หวัน (Asia/Taipei) — ให้วันขึ้นวันใหม่ตรงกับที่เว็บใช้อยู่แล้วทั้งเว็บ (streak/ดาว)

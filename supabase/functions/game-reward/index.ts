@@ -32,16 +32,11 @@ const POINTS_CAP = 300;
 // 2026-08-01: เปลี่ยนชื่อไฟล์ mix.html → games-challenge.html + เปลี่ยน id 'mix' → 'challenge' — ต้องรัน supabase/sql/2026-08-01_rename_mix_to_challenge.sql ก่อนด้วย ไม่งั้น insert ยังตีกลับอยู่ดี
 const VALID_GAMES = ['typing', 'reading', 'lego', 'word_order', 'tone_finder', 'challenge'];
 
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': 'https://mrtaihualin.com',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-key',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-}
-function json(body, status) {
-  return new Response(JSON.stringify(body), { status: status || 200, headers: { 'Content-Type': 'application/json', ...corsHeaders() } });
-}
+// 2026-08-10 (P7-02 staging): เพิ่มโดเมนหน้าทดสอบ staging บน Netlify เข้ารายชื่อที่อนุญาต
+const ALLOWED_ORIGINS = [
+  'https://mrtaihualin.com',
+  'https://gentle-moxie-bf64ad.netlify.app',
+];
 
 // เช็คว่าข้อความดูเหมือนพิมพ์มั่ว/สแปมไหม (กันเคสพิมพ์อะไรก็ได้ 20 ตัวอักษรเพื่อเอาแต้ม) — Lin 2026-07-13
 // รันอัตโนมัติทุกครั้งที่ submit_review ฝั่งเซิร์ฟเวอร์ (client แก้ไม่ได้) ไม่ต้องรอ Lin นั่งตรวจเอง
@@ -73,6 +68,20 @@ async function addPoints(admin, userId, amount) {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin') || '';
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  function corsHeaders() {
+    return {
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Vary': 'Origin',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-key',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    };
+  }
+  function json(body, status) {
+    return new Response(JSON.stringify(body), { status: status || 200, headers: { 'Content-Type': 'application/json', ...corsHeaders() } });
+  }
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 

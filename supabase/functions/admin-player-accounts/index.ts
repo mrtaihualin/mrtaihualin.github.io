@@ -72,16 +72,11 @@ const OWNER_EMAIL = 'mr.taihualin@gmail.com';
 const MAX_USERS_SCAN = 2000; // เพดานกันดึงผู้ใช้ทั้งหมดมากเกินไปตอนหา duplicate (ระบบนี้ยังเป็นสเกลเล็ก ปรับเพิ่มได้ทีหลังถ้าจำนวนผู้เล่นเกินนี้)
 const USERS_PER_PAGE = 200;
 
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': 'https://mrtaihualin.com',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-key',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-}
-function json(body, status) {
-  return new Response(JSON.stringify(body), { status: status || 200, headers: { 'Content-Type': 'application/json', ...corsHeaders() } });
-}
+// 2026-08-10 (P7-02 staging): เพิ่มโดเมนหน้าทดสอบ staging บน Netlify เข้ารายชื่อที่อนุญาต
+const ALLOWED_ORIGINS = [
+  'https://mrtaihualin.com',
+  'https://gentle-moxie-bf64ad.netlify.app',
+];
 
 function checkAdminKey(req) {
   const adminKey = req.headers.get('x-admin-key');
@@ -146,6 +141,20 @@ async function loadAccountSummary(admin, userId) {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin') || '';
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  function corsHeaders() {
+    return {
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Vary': 'Origin',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-key',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    };
+  }
+  function json(body, status) {
+    return new Response(JSON.stringify(body), { status: status || 200, headers: { 'Content-Type': 'application/json', ...corsHeaders() } });
+  }
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed', message: 'ใช้ POST เท่านั้น' }, 405);
 

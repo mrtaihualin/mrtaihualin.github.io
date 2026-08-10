@@ -177,6 +177,8 @@ const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',
   'https://mrtaihualin.github.io',
+  // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
+  'https://gentle-moxie-bf64ad.netlify.app',
 ];
 
 // ── บังคับ JWT สดใหม่ก่อนถอดช่องทางล็อกอิน (เพิ่ม 2026-08-08 ตามที่ Lin สั่ง — เดิมไฟล์นี้ไม่มีด่านนี้
