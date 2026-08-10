@@ -22,7 +22,9 @@
 
   var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
   // v16 (LIN 2026-07-26): startLineLink ให้หน้าอื่น (auth-widget.js ปุ่ม "連接 LINE 帳號") เรียกได้
-  var API = { ready: true, user: null, saveScore: saveScore, render: render, startLineLink: function () { startLineLogin(true); } };
+  // v18 (LIN 2026-08-10, P7-02 C.5): openLoginGate ให้หน้าอื่น (game-content-client.js แถบแจ้ง
+  //   "เนื้อหาฟรีหมดแล้ว") เปิด modal ล็อกอินเดียวกันนี้ได้ตรงๆ โดยไม่ต้องหาปุ่ม #rg-login-btn เอง
+  var API = { ready: true, user: null, saveScore: saveScore, render: render, startLineLink: function () { startLineLogin(true); }, openLoginGate: openGate };
   window.READING_AUTH = API;
 
   function slot() { return document.getElementById('rg-login-slot'); }

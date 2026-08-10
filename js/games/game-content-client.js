@@ -241,6 +241,92 @@
     }
   }
 
+  // ════════════════════════════════════════════════════════════
+  // C.5 (P7-02, เพิ่ม 2026-08-10): แถบแจ้ง "เนื้อหาฟรีหมดแล้ว" + ทางไปต่อ
+  // เดิม data.capped ใช้แค่ยิง GA4 เฉยๆ (fireCapHitEvents ด้านบน) ไม่มี UI บอกผู้เล่นเลย —
+  // ผู้เล่นที่เล่นจนครบคลังคำ/ประโยคของสิทธิ์ตัวเองจะไม่รู้ตัวว่า "หมดแล้ว" (คิดว่าเกมมีปัญหา
+  // แทน) นี่คือ gap ที่บล็อกการเปิดขาย (ดู 72_เช็คลิสต์...md หัวข้อ "ค้างไว้")
+  //
+  // ข้อความแยกตาม tier ตรงตามความจริง (ห้ามโกหก/ห้ามเสนอของที่ยังไม่มี — ยังไม่มีระบบสมาชิก
+  // จ่ายเงิน ตาม CLAUDE.md หัวข้อ 🔒 ระบบล็อกเนื้อหาเกมจริง):
+  //   - tier=anon → ชวนล็อกอิน (ฟรี 100% ไม่ใช่ขายของ) ปลดล็อกเพดานที่สูงกว่า
+  //   - tier=login → บอกตรงๆ ว่าเปิดครบเท่าที่มีตอนนี้แล้ว กำลังเพิ่มคลังเรื่อยๆ (ไม่มีปุ่ม
+  //     "อัปเกรด" หลอกๆ เพราะระบบจ่ายเงินยังไม่เปิด)
+  //
+  // โชว์ครั้งเดียวต่อ session ต่อแท็บ (sessionStorage เหมือน dedup ของ GA4 event ด้านบน)
+  // ปุ่ม 🔑 登入 พยายามเรียก window.READING_AUTH.openLoginGate() ก่อน (มีในเกม 6 ใน 7 หน้าที่
+  // โหลดไฟล์นี้) ถ้าหน้านั้นไม่มีระบบล็อกอินเลย (เช่น listening-game.html ตอนนี้ยังไม่มี
+  // reading-auth.js) ให้พาไปหน้า reading-game.html แทนกันปุ่มกดแล้วไม่มีอะไรเกิดขึ้น
+  // ────────────────────────────────────────────────────────────
+  var CAP_BANNER_SESSION_KEY = 'gc_cap_banner_shown_v1';
+  var LOGIN_FALLBACK_HREF = 'reading-game.html';
+
+  function anyCapped(capped) {
+    return !!(capped && (capped['初'] || capped['中'] || capped.sentences));
+  }
+
+  function loginGateReady() {
+    return !!(global.READING_AUTH && global.READING_AUTH.ready && typeof global.READING_AUTH.openLoginGate === 'function');
+  }
+
+  // reading-auth.js โหลดแบบ defer อาจยังไม่ set window.READING_AUTH ตอนที่ผู้เล่นกดปุ่ม (ไวมาก) —
+  // ลองรอสูงสุด ~4.5 วิ (15 ครั้ง x 300ms) ก่อนถอยไปใช้ทางสำรอง (คลิกปุ่ม #rg-login-btn ถ้ามี
+  // หรือพาไปหน้าที่มีระบบล็อกอินแทน) ไม่ปล่อยให้ปุ่มเงียบเฉยๆ (ตามกฎ RELIABILITY FIRST)
+  function triggerLoginGate() {
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      if (loginGateReady()) {
+        clearInterval(timer);
+        global.READING_AUTH.openLoginGate();
+        return;
+      }
+      if (tries >= 15) {
+        clearInterval(timer);
+        var btn = document.getElementById('rg-login-btn');
+        if (btn) { btn.click(); return; }
+        global.location.href = LOGIN_FALLBACK_HREF;
+      }
+    }, 300);
+  }
+
+  function showCapBanner(data) {
+    try {
+      if (!anyCapped(data && data.capped)) return;
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(CAP_BANNER_SESSION_KEY) === '1') return;
+
+      var isAnon = data.tier === 'anon';
+      var msg = isAnon
+        ? '🎉 免費內容你都練過一輪囉！登入帳號（完全免費）可以解鎖更多單字和句子'
+        : '📚 目前開放的內容你都練過了，我們持續在新增題庫，敬請期待';
+
+      var el = document.createElement('div');
+      el.id = 'gc-cap-banner';
+      el.setAttribute('style', 'position:fixed;left:12px;right:12px;bottom:12px;z-index:99998;max-width:480px;margin:0 auto;' +
+        'background:linear-gradient(135deg,' + THEME.goldBright + ',' + THEME.goldDeep + ');color:' + THEME.cream + ';' +
+        'border-radius:14px;padding:12px 14px;font-family:' + FONT_STACK + ';font-size:13.5px;line-height:1.5;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;');
+      el.innerHTML =
+        '<div style="flex:1;">' + msg + '</div>' +
+        (isAnon ? '<button type="button" id="gc-cap-login-btn" style="flex-shrink:0;padding:7px 14px;border:none;border-radius:20px;' +
+          'background:' + THEME.cream + ';color:' + THEME.goldDeep + ';font-weight:700;font-family:' + FONT_STACK + ';cursor:pointer;white-space:nowrap;">🔑 登入</button>' : '') +
+        '<button type="button" id="gc-cap-close-btn" aria-label="關閉" style="flex-shrink:0;background:none;border:none;color:' + THEME.cream + ';font-size:18px;line-height:1;cursor:pointer;padding:2px 4px;">✕</button>';
+      document.body.appendChild(el);
+      try { sessionStorage.setItem(CAP_BANNER_SESSION_KEY, '1'); } catch (e2) { /* ไม่ใช่จุดสำคัญพอจะหยุด */ }
+
+      var closeBtn = document.getElementById('gc-cap-close-btn');
+      if (closeBtn) closeBtn.addEventListener('click', function () { if (el.parentNode) el.parentNode.removeChild(el); });
+
+      if (isAnon) {
+        var loginBtn = document.getElementById('gc-cap-login-btn');
+        if (loginBtn) loginBtn.addEventListener('click', triggerLoginGate);
+      }
+    } catch (e) {
+      console.error('[game-content-client] showCapBanner error:', e);
+      // ห้ามให้แถบนี้พังจนกระทบการโหลดเกม
+    }
+  }
+
   // เรียกจากหน้าเกม: GameContentLoader.boot(['js/games/reading-game-app.min.js?v=22'])
   // 🆕 2026-08-08 (P6-28): boot() ตอนนี้ "return" Promise ออกไปด้วย (เดิมไม่ return อะไรเลย)
   // เหตุผล: ปุ่มเล่นเกมทั้งหมดใช้ onclick="ฟังก์ชัน()" inline ซึ่งกดได้ทันทีตั้งแต่หน้าโหลดเสร็จ
@@ -256,6 +342,7 @@
 
       return fetchGameContent().then(function (data) {
         fireCapHitEvents(data);
+        showCapBanner(data);
         global.WORDS_MASTER = data.words;
         global.ADV_SENTENCES = data.sentences;
         var chain = Promise.resolve();
