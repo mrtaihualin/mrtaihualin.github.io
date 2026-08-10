@@ -22,7 +22,7 @@ const ROOT = path.join(__dirname, '..');
 // ── คัดลอก scope logic มาจาก scripts/generate-nav.js เป๊ะ (ห้ามแก้ต้นฉบับ) ──
 const ROOT_PAGES = [
   'all-board.html', 'blog.html', 'community.html', 'content.html', 'faq.html',
-  'games-challenge.html', 'games.html', 'index.html', 'leaderboard.html',
+  'games-challenge.html', 'games-practice.html', 'games.html', 'index.html', 'leaderboard.html',
   'lego-board.html', 'lego.html', 'listening-game.html', 'mix-board.html',
   'my-progress.html', 'new-student.html', 'page-services.html', 'pricing.html',
   'privacy.html',

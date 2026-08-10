@@ -11,8 +11,10 @@
     });
   }
 
+  // 2026-08-10: ข้อความอ้างอิง "下面 5 款遊戲" ใช้ไม่ได้แล้วหลัง games.html เปลี่ยนเป็น 3 การ์ดหลัก
+  // (5 เกมย้ายไปอยู่ใน games-practice.html) — แก้แค่ข้อความอ้างอิงจุดหมายปลายทาง ไม่แตะ logic/behavior ใดๆ
   function renderEmpty(out) {
-    out.innerHTML = '<div class="gh-search-empty">還沒抓到你的意思 — 換個說法試試，或直接從下面 5 款遊戲挑一個開始玩。</div>';
+    out.innerHTML = '<div class="gh-search-empty">還沒抓到你的意思 — 換個說法試試，或直接去下面的「泰語遊戲練習室」選一個開始玩。</div>';
   }
 
   // isGuess=true → Gemini ไม่มั่นใจ 100% (2026-08-10 รอบ 2) — เปลี่ยน emoji+ข้อความให้รู้ว่าเป็นการเดา
