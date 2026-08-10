@@ -1,5 +1,23 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-10 — `privacy.html` ตกหล่นจาก nav generator + เพิ่ม automated nav consistency checker
+
+สถานะ: ✅ เสร็จแล้ว — push แล้ว เปิดเว็บจริงยืนยันแล้วว่า `privacy.html` มีแถบประกาศ+เมนูล่างครบเหมือนหน้าอื่น
+
+**สาเหตุ:** `scripts/generate-nav.js` มี `ROOT_PAGES` 31 หน้า ขาด `privacy.html` ไปหน้าเดียว (ไม่ได้อยู่ในรายการตั้งแต่แรก) ทำให้หน้านี้ไม่เคยได้รับแถบประกาศบนสุด + เมนูล่างมือถือที่เปิดใช้เมื่อ 2026-08-10 (รอบเช้า) — nav บนสุดถูกต้องอยู่แล้วเพราะมี `<script src="data/nav-template.js">` ค้างจากรอบก่อน แต่ 2 ส่วนใหม่ที่เพิ่งเปิดใช้ไม่เคยถูกแทรกเข้าไปเลย
+
+**สิ่งที่ทำ:**
+1. เพิ่ม `privacy.html` เข้า `ROOT_PAGES` ใน `scripts/generate-nav.js`
+2. Generate เฉพาะ `privacy.html` ไฟล์เดียว (ไม่รัน `generate-nav.js` เต็มรูปแบบ เพราะตอนนั้นมีงาน Search/Staging รันคู่ขนานแตะไฟล์เกม/scripts อยู่หลายไฟล์ — เลี่ยงความเสี่ยงชนงาน)
+3. สร้าง `scripts/check-nav-consistency.js` (read-only ล้วน ไม่เขียนทับ HTML) เทียบ nav/แถบประกาศ/bottom-nav ทุกหน้าที่อยู่ใน scope กับสิ่งที่ `data/nav-template.js` ควรสร้างจริง + หาไฟล์ที่มี `<nav class="site-nav">` แต่ไม่อยู่ใน scope (กันหน้าใหม่ตกหล่นซ้ำแบบนี้ในอนาคต) — ผูกเข้า `scripts/check-site.js` แล้ว
+4. ยืนยันว่า `en/*.html` (7 ไฟล์) มี class `site-nav` ซ้ำชื่อ แต่เป็นเมนูภาษาอังกฤษคนละโครงสร้างจริง ไม่ใช่บั๊ก — checker ไม่นับเป็น mismatch
+
+**ผลตรวจ:** `node scripts/check-nav-consistency.js` → PASS ครบ 76 หน้า (75 เดิม + privacy.html) · `node scripts/tests-search-behavioral.js` → PASS (ไม่กระทบ Search MVP) · `node scripts/check-site.js` → ผ่านทุกหมวดที่เกี่ยวกับเว็บนี้ ที่ไม่ผ่าน 45 รายการเป็น secret-scan ใน `_staging-build/` (ของ staging job คนละงาน ไม่แตะ)
+
+**ไฟล์ที่แก้:** `scripts/generate-nav.js`, `privacy.html`, `scripts/check-site.js`, 🆕 `scripts/check-nav-consistency.js`
+
+---
+
 ## 2026-08-10 — เก็บกวาด `_staging-build-verify/` ที่หลุดขึ้น repo public (375 ไฟล์)
 
 สถานะ: ✅ เสร็จแล้ว — ตรวจแล้วไม่มีค่าลับรั่ว (`supabase-config.staging.js` ไม่ได้ขึ้นไปด้วย ไม่มี `service_role` key)
