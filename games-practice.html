@@ -63,14 +63,17 @@
 
   .gh-grid{display:grid;grid-template-columns:repeat(1,1fr);gap:14px;}
   @media(min-width:640px){.gh-grid{grid-template-columns:repeat(3,1fr);}}
-  .gh-card{position:relative;background:#fff;border:1.5px solid #e0d2a8;border-radius:18px;padding:18px 16px;text-decoration:none;color:inherit;display:flex;flex-direction:row;align-items:center;text-align:left;gap:14px;box-shadow:0 4px 20px rgba(90,62,10,.08);transition:transform .15s,box-shadow .15s;}
+  .gh-card{position:relative;background:#fff;border:1.5px solid #e0d2a8;border-radius:18px;padding:18px 16px;text-decoration:none;color:inherit;display:flex;flex-direction:row;align-items:center;text-align:left;gap:14px;box-shadow:0 4px 20px rgba(90,62,10,.08);transition:transform .15s,box-shadow .15s;height:100%;}
   .gh-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(90,62,10,.16);}
   .gh-card:focus-visible{outline:3px solid #C8973A;outline-offset:2px;}
   .gh-emoji{font-size:40px;line-height:1;flex-shrink:0;}
-  .gh-title{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:900;color:#5a3e10;}
-  .gh-desc{font-size:12.5px;color:#8b6310;line-height:1.5;}
+  /* 🆕 2026-08-10 (polish): บังคับ title=1 บรรทัด, desc=สูงสุด 2 บรรทัดแต่ "จองพื้นที่คงที่" เสมอ
+     (min-height เท่ากับ 2 บรรทัดพอดี) เพื่อให้ปุ่ม action อยู่ตำแหน่งเดียวกันทุกใบในแถวเดียวกัน
+     ไม่ว่าข้อความจริงจะสั้นแค่ไหน — ไม่แตะ/ไม่เปลี่ยนข้อความ description เดิมเลย แก้แค่ CSS */
+  .gh-title{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:900;color:#5a3e10;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .gh-desc{font-size:12.5px;color:#8b6310;line-height:1.5;min-height:2.25em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .gh-go{margin-top:4px;background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;font-weight:700;font-size:13px;padding:7px 18px;border-radius:999px;display:inline-block;}
-  .gh-body{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
+  .gh-body{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0;width:100%;}
   .gh-soon{opacity:.55;}
   .gh-soon .gh-go{background:#d8d0c0;}
   .gh-badge{position:absolute;top:-9px;right:12px;background:#8B6310;color:#F3E4C2;font-size:10px;font-weight:900;padding:3px 9px;border-radius:999px;}
@@ -121,22 +124,141 @@
   .gh-search-empty{font-size:13px;color:#8b8060;line-height:1.8;}
   @media(max-width:600px){.gh-search-row{flex-direction:column;} .gh-search-btn{width:100%;}}
 </style>
+<!-- 🆕 2026-08-10 (polish): ย้าย ItemList 5 เกมมาจาก games.html ตาม visible IA ใหม่ (5 เกมอยู่หน้านี้จริง)
+     + เพิ่ม 聽力 (listening-game.html) ที่ตกหล่นจาก ItemList เดิม — description ทุกอันใช้ของเดิมที่มีอยู่แล้ว
+     (4 อันก็อปจาก games.html ต้นฉบับตรงๆ · 聽力 ใช้ desc จาก data/search-index.js entry game-listening ห่อ
+     ด้วย template ประโยคเดียวกับอีก 4 อัน ไม่ได้แต่ง learning content ใหม่) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "泰語遊戲練習室",
+  "description": "泰語聲調、拼讀、聽力、打字、語序練習室，5 款免費遊戲邊玩邊學泰文，免費試玩。",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "WebApplication",
+        "additionalType": "https://schema.org/LearningResource",
+        "name": "泰語聲調練習室",
+        "description": "免費泰語聲調練習室：選擇等級與主題，練習泰文聲調與發音。專為台灣人設計的泰語學習工具。",
+        "url": "https://mrtaihualin.com/tone-finder.html",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["th", "zh-TW"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
+        "provider": { "@type": "Organization", "name": "泰華眼裡的泰語教學", "url": "https://mrtaihualin.com/" }
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "WebApplication",
+        "additionalType": "https://schema.org/LearningResource",
+        "name": "泰語拼讀練習室",
+        "description": "免費泰語拼讀練習室：把子音、母音、聲調、尾音一格一格拼成正確的字，邊玩邊學泰文拼讀規則。專為台灣人設計的泰語學習遊戲。",
+        "url": "https://mrtaihualin.com/reading-game.html",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["th", "zh-TW"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
+        "provider": { "@type": "Organization", "name": "泰華眼裡的泰語教學", "url": "https://mrtaihualin.com/" }
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "item": {
+        "@type": "WebApplication",
+        "additionalType": "https://schema.org/LearningResource",
+        "name": "泰語聽力練習室",
+        "description": "免費泰語聽力練習室：聽發音選出來或打出來，練耳朵也練拼寫。專為台灣人設計的泰語學習遊戲。",
+        "url": "https://mrtaihualin.com/listening-game.html",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["th", "zh-TW"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
+        "provider": { "@type": "Organization", "name": "泰華眼裡的泰語教學", "url": "https://mrtaihualin.com/" }
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 4,
+      "item": {
+        "@type": "WebApplication",
+        "additionalType": "https://schema.org/LearningResource",
+        "name": "泰語打字練習室",
+        "description": "免費泰語打字練習室：照泰文鍵盤（Kedmanee）打出單字，邊打字邊記住拼寫與鍵盤位置。專為台灣人設計的泰語學習遊戲。",
+        "url": "https://mrtaihualin.com/typing-game.html",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["th", "zh-TW"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
+        "provider": { "@type": "Organization", "name": "泰華眼裡的泰語教學", "url": "https://mrtaihualin.com/" }
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 5,
+      "item": {
+        "@type": "WebApplication",
+        "additionalType": "https://schema.org/LearningResource",
+        "name": "泰語語序練習室",
+        "description": "免費泰語語序練習：把打散的詞語點回正確順序，練習泰語高級句型的語序邏輯。專為台灣人設計的泰語學習遊戲。",
+        "url": "https://mrtaihualin.com/word-order.html",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["th", "zh-TW"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
+        "provider": { "@type": "Organization", "name": "泰華眼裡的泰語教學", "url": "https://mrtaihualin.com/" }
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://mrtaihualin.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "遊戲中心",
+      "item": "https://mrtaihualin.com/games.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "泰語遊戲練習室",
+      "item": "https://mrtaihualin.com/games-practice.html"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <!--ANN-BAND:START--><script>try{if(sessionStorage.getItem('annDismissed')==='1')document.documentElement.classList.add('ann-off');}catch(e){}</script><div class="avail-band" id="ann-band" style="position:relative"><div class="avail-row"><span class="avail-dot"></span><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><button class="avail-cta" onclick="openModal('modal-line-qr')">立即預約</button></div><div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;"><button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button><div style="display:flex;align-items:center;gap:6px;"><span onclick="annGoTo(0)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:var(--gold);transition:background 0.2s;"></span><span onclick="annGoTo(1)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(2)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(3)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(4)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span></div><button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button></div><button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button></div><!--ANN-BAND:END-->
 
 <nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
 
-<!-- PAGE NAV STRIP -->
-<div class="page-strip">
-  <span class="page-strip-label">頁面</span>
-  <a href="index.html">老師・介紹</a>
-  <a href="pricing.html">課程・費用</a>
-  <a href="faq.html">須知・分享</a>
-  <a href="page-services.html">導遊・翻譯</a>
-  <a href="content.html">泰語・分享</a>
-  <a href="games.html">泰語・遊戲</a>
-</div>
+<!-- 🗑️ 2026-08-10 (polish): เอา page-strip ออกตาม UX Decision — ตรวจแล้วไม่ได้ถูกควบคุมจาก generator/source-of-truth ใดๆ
+     (ไม่มีใน data/nav-template.js, scripts/generate-nav.js, scripts/check-nav-consistency.js เลย)
+     เป็น static HTML เขียนตรงในแต่ละหน้าเท่านั้น ลบมือได้ปลอดภัย ไม่มีความเสี่ยงถูก generator ใส่กลับมา
+     เอาออกเฉพาะ games.html + games-practice.html ตามที่ Lin สั่ง — หน้าอื่นยังมี page-strip เหมือนเดิม ไม่แตะ -->
 
 <main class="gh-wrap">
   <!-- ← 返回遊戲中心 — ชิดซ้าย, priority ต่ำกว่าหัวข้อ, ไม่ใช่ CTA ใหญ่ (Decision 2026-08-10) -->
