@@ -2183,7 +2183,15 @@ async function revertCalendarBackupInner(id) {
     // (2) อัปเดตเลขคาบใหม่ลงคำขอเดิม (ถ้าหาเจอ) — คำขอเดิมยังเก็บเลขคาบเก่าที่ถูกลบไปแล้ว
     try {
       if (b.request_id) {
-        await sb.from('classroom_requests').update({ calendar_event_id: _revertNewEventId }).eq('id', b.request_id);
+        // 2026-08-11 加 .select() + เช็กจำนวนแถว (จุดสุดท้ายที่ตกหล่นจากรายการ「ฝั่งครู UPDATE ไม่เช็กแถว」
+        //   ที่เก็บครบ 4 จุดไปแล้วเมื่อ 2026-07-20)：RLS ที่บล็อกจะแก้ 0 แถวเงียบๆ ไม่คืน error
+        //   ผลถ้าพลาด: คำขอเดิมยังชี้ไปเลขคาบเก่าที่ถูกลบไปแล้ว → ปุ่มต่อๆ ไปหาคาบไม่เจอ
+        //   ไม่ขัดจังหวะการกู้คืน (ทำสำเร็จไปแล้ว) แค่ต้องไม่เงียบ
+        var revReqUpd = await sb.from('classroom_requests').update({ calendar_event_id: _revertNewEventId }).eq('id', b.request_id).select();
+        if (revReqUpd.error || !revReqUpd.data || !revReqUpd.data.length) {
+          console.warn('⚠️ อัปเดตเลขคาบใหม่ลงคำขอไม่สำเร็จ (ไม่กระทบการกู้คืน) request_id=' + b.request_id + '：',
+            revReqUpd.error ? revReqUpd.error.message : '更新 0 筆');
+        }
       }
     } catch (e) { console.warn('⚠️ อัปเดตเลขคาบใหม่ลงคำขอไม่สำเร็จ (ไม่กระทบการกู้คืน):', e.message || e); }
     // (3) คาบประจำ → บอกครูตรงๆ ว่าตอนนี้กลายเป็นคาบเดี่ยวแล้ว

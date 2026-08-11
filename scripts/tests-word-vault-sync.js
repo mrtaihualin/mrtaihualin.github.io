@@ -24,6 +24,14 @@ function ok(name, cond, extra) {
   fails.push(name + (extra ? ' → ' + extra : ''));
 }
 
+/** อ่านแถวแรกของ log[i] แบบปลอดภัย — คืน {} ถ้าไม่มี
+ *  จำเป็นจริง: ถ้า indexing ตรงๆ แล้วโค้ดพัง เทสจะ crash เป็น TypeError
+ *  แทนที่จะรายงานว่าข้อไหนไม่ผ่าน (เจอจริงตอนทดสอบย้อนกลับ 2026-08-11) */
+function firstRow(logArr, i) {
+  const batch = (logArr || [])[i || 0];
+  return (batch && batch[0]) || {};
+}
+
 // ── จำลองเบราว์เซอร์เท่าที่ word-vault.js ต้องใช้ ────────────────────────────
 function makeWindow() {
   const store = {};
@@ -65,17 +73,32 @@ function loadVault() {
 /** client ปลอมที่จดไว้ว่าถูกสั่งทำอะไร + ตอบผลตามที่กำหนด */
 function makeClient(remoteRows, opts) {
   opts = opts || {};
-  const log = { upserts: [], deletes: [], selects: 0 };
+  const log = { upserts: [], deletes: [], selects: 0, tombstones: [], selectedCols: [] };
   const client = {
     from() {
       const b = {
-        select() { log.selects++; b._mode = 'select'; return b; },
-        upsert(rows) { log.upserts.push(rows); b._mode = 'upsert'; return b; },
+        select(cols) {
+          log.selects++; log.selectedCols.push(cols); b._mode = 'select'; b._cols = cols; return b;
+        },
+        upsert(rows) {
+          // แยก "ปั๊มตราการลบ" (มี deleted_at เป็นเวลา) ออกจากการเซฟคำปกติ (deleted_at = null)
+          b._rows = rows;
+          if (rows.length && rows[0].deleted_at) log.tombstones.push(rows);
+          else log.upserts.push(rows);
+          b._mode = 'upsert'; return b;
+        },
         delete() { b._mode = 'delete'; return b; },
         eq(col, val) { (b._eq = b._eq || []).push([col, val]); return b; },
         then(onOk) {
           if (b._mode === 'select') {
+            // จำลองฐานข้อมูลที่ยังไม่ได้รัน SQL: ขอคอลัมน์ deleted_at แล้วโดนปฏิเสธ
+            if (opts.noTombstoneColumn && String(b._cols || '').indexOf('deleted_at') !== -1) {
+              onOk({ error: { code: '42703', message: 'column learning_saved_items.deleted_at does not exist' } });
+              return b;
+            }
             onOk(opts.selectError ? { error: { message: opts.selectError } } : { data: remoteRows, error: null });
+          } else if (b._mode === 'upsert' && opts.noTombstoneColumn && b._rows && b._rows[0] && b._rows[0].deleted_at) {
+            onOk({ error: { code: '42703', message: 'column learning_saved_items.deleted_at does not exist' } });
           } else if (b._mode === 'delete') {
             log.deletes.push(b._eq.slice());
             onOk({ error: null });
@@ -121,7 +144,7 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   vault.sync(client, UID);
   ok('2a ส่งคำใหม่ขึ้นเซิร์ฟเวอร์ครบ 2 คำ', log.upserts.length === 1 && log.upserts[0].length === 2,
      JSON.stringify(log.upserts));
-  const row = log.upserts[0][0];
+  const row = firstRow(log.upserts, 0);
   ok('2b แถวที่ส่งมี user_id + vault_key + word_th ถูกต้อง',
      row.user_id === UID && row.vault_key === 'linvault' && row.word_th === 'ข้าว', JSON.stringify(row));
   ok('2c ส่ง source ดิบลง source_raw (ไม่ใช่ source_surface ที่มี FK)',
@@ -216,11 +239,13 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   const { client, log } = makeClient([{ word_th: 'ข้าว', zh: '飯', tags: [] }]);
   vault.sync(client, UID);
   vault.removeWord('ข้าว');
-  ok('7a ส่งคำสั่งลบไปเซิร์ฟเวอร์ 1 ครั้ง', log.deletes.length === 1, JSON.stringify(log.deletes));
-  const cols = (log.deletes[0] || []).map((p) => p[0]);
-  ok('7b ลบแบบเจาะจง user + vault_key + คำ (ไม่ลบเหวี่ยง)',
-     cols.indexOf('user_id') !== -1 && cols.indexOf('vault_key') !== -1 && cols.indexOf('word_th') !== -1,
-     JSON.stringify(cols));
+  ok('7a ปั๊มตราการลบขึ้นเซิร์ฟเวอร์ 1 ครั้ง (ไม่ลบแถวทิ้ง)',
+     log.tombstones.length === 1 && log.deletes.length === 0,
+     'tombstones=' + JSON.stringify(log.tombstones) + ' deletes=' + JSON.stringify(log.deletes));
+  const tomb = firstRow(log.tombstones, 0);
+  ok('7b ตราระบุเจาะจง user + vault_key + คำ และมีเวลาที่ลบ',
+     tomb.user_id === UID && tomb.vault_key === 'linvault' && tomb.word_th === 'ข้าว' && !!tomb.deleted_at,
+     JSON.stringify(tomb));
   ok('7c คำหายจากเครื่องด้วย', vault.count() === 0);
 }
 
@@ -252,6 +277,135 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   const b = makeClient([]);
   vault.addWord('กิน', { zh: '吃' });
   ok('9b เพิ่มคำหลังล็อกเอาท์ได้ และไม่ยิงเซิร์ฟเวอร์', vault.count() === 2 && b.log.upserts.length === 0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 10) 🔴 ลบข้ามเครื่อง — หัวใจของรอบนี้
+//     เครื่อง A ลบคำ → ปั๊มตราบนเซิร์ฟเวอร์ → เครื่อง B ต้องลบตาม แต่คำอื่นต้องอยู่ครบ
+// ════════════════════════════════════════════════════════════════════════════
+{
+  // ── เครื่อง A: มี 2 คำ sync ขึ้นแล้ว จากนั้นลบ 1 คำ ──
+  const A = loadVault();
+  A.vault.addWord('ข้าว', { zh: '飯' });
+  A.vault.addWord('กิน', { zh: '吃' });
+  const a1 = makeClient([]);
+  A.vault.sync(a1.client, UID);
+  A.vault.removeWord('ข้าว');
+  ok('10a A: ปั๊มตราการลบขึ้นเซิร์ฟเวอร์', a1.log.tombstones.length === 1);
+  ok('10b A: คำที่ลบหายจากเครื่อง A · คำอื่นอยู่ครบ',
+     !A.vault.has('ข้าว') && A.vault.has('กิน') && A.vault.count() === 1);
+
+  // ── สภาพเซิร์ฟเวอร์หลัง A ลบ: 'กิน' ยังอยู่ · 'ข้าว' มีตราการลบ ──
+  const serverAfterDelete = [
+    { word_th: 'กิน', zh: '吃', tags: [], deleted_at: null },
+    { word_th: 'ข้าว', zh: '飯', tags: [], deleted_at: '2026-08-11T10:00:00Z' }
+  ];
+
+  // ── เครื่อง B: มีทั้ง 2 คำค้างอยู่ และเคย sync มาแล้ว ──
+  const B = loadVault();
+  B.vault.addWord('ข้าว', { zh: '飯' });
+  B.vault.addWord('กิน', { zh: '吃' });
+  const b0 = makeClient([]);
+  B.vault.sync(b0.client, UID);              // ทำให้ทั้ง 2 คำเป็น synced
+  ok('10c B: ก่อน sync ยังเห็นคำที่ A ลบอยู่', B.vault.has('ข้าว') && B.vault.count() === 2);
+
+  const b1 = makeClient(serverAfterDelete);
+  B.vault.sync(b1.client, UID);
+  ok('10d 🔴 B: คำที่เจ้าของลบ หายจากเครื่อง B แล้ว', !B.vault.has('ข้าว'),
+     JSON.stringify(B.vault.getAll().map((w) => w.th)));
+  ok('10e 🔴 B: คำอื่นที่ไม่ได้ลบ ยังอยู่ครบ', B.vault.has('กิน') && B.vault.count() === 1);
+  ok('10f B: ไม่ส่งคำที่ถูกลบกลับขึ้นเซิร์ฟเวอร์', b1.log.upserts.length === 0,
+     JSON.stringify(b1.log.upserts));
+  ok('10g B: ไม่เผลอลบแถวจริงบนเซิร์ฟเวอร์', b1.log.deletes.length === 0);
+
+  // ── sync ซ้ำอีกรอบ ต้องได้ผลเหมือนเดิม (idempotent) และห้าม resurrect ──
+  const b2 = makeClient(serverAfterDelete);
+  B.vault.sync(b2.client, UID);
+  ok('10h 🔴 sync ซ้ำ: คำที่ลบไม่กลับมาเกิดใหม่', !B.vault.has('ข้าว') && B.vault.count() === 1);
+  ok('10i sync ซ้ำ: ไม่ส่งอะไรขึ้นซ้ำ', b2.log.upserts.length === 0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 11) 🔴 อ่านเซิร์ฟเวอร์มาไม่ครบ (ไม่มีตราการลบ) → ห้ามลบคำในเครื่องเด็ดขาด
+//     นี่คือกรณีที่แยกออกจาก "เจ้าของลบจริง" ไม่ได้ถ้าไม่มีระบบตรา
+// ════════════════════════════════════════════════════════════════════════════
+{
+  const { vault } = loadVault();
+  vault.addWord('ข้าว', { zh: '飯' });
+  vault.addWord('กิน', { zh: '吃' });
+  vault.addWord('โรงแรม', { zh: '飯店' });
+  const first = makeClient([]);
+  vault.sync(first.client, UID);                       // ทั้ง 3 คำเป็น synced แล้ว
+
+  // เซิร์ฟเวอร์ตอบกลับมาแค่ 1 คำ (อ่านไม่ครบ) และ **ไม่มีตราการลบเลย**
+  const partial = makeClient([{ word_th: 'ข้าว', zh: '飯', tags: [], deleted_at: null }]);
+  vault.sync(partial.client, UID);
+  ok('11a 🔴 อ่านมาไม่ครบ → คำในเครื่องต้องอยู่ครบทั้ง 3 คำ', vault.count() === 3,
+     'ได้ ' + vault.count() + ' ' + JSON.stringify(vault.getAll().map((w) => w.th)));
+  ok('11b ไม่ส่งคำที่หายไปขึ้นซ้ำ (กันเขียนทับของที่อาจมีอยู่จริง)', partial.log.upserts.length === 0);
+
+  // เซิร์ฟเวอร์ตอบว่าง (เช่นตารางเพิ่งถูกล้าง/อ่านพลาด) และไม่มีตรา → ห้ามลบ
+  const empty = makeClient([]);
+  vault.sync(empty.client, UID);
+  ok('11c 🔴 เซิร์ฟเวอร์ตอบว่างแต่ไม่มีตรา → คำในเครื่องยังอยู่ครบ', vault.count() === 3);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 12) ผู้ใช้เซฟคำเดิมใหม่ที่อีกเครื่อง หลังมีตราการลบอยู่แล้ว → ของใหม่ต้องชนะ
+// ════════════════════════════════════════════════════════════════════════════
+{
+  const { vault } = loadVault();
+  vault.addWord('ข้าว', { zh: '飯' });                  // เพิ่งเซฟที่เครื่องนี้ ยังไม่เคย sync
+  const c = makeClient([{ word_th: 'ข้าว', zh: '飯', tags: [], deleted_at: '2026-08-11T09:00:00Z' }]);
+  vault.sync(c.client, UID);
+  ok('12a คำที่ผู้ใช้เพิ่งเซฟใหม่ ไม่ถูกตราเก่าลบทิ้ง', vault.has('ข้าว') && vault.count() === 1);
+  ok('12b ส่งขึ้นเซิร์ฟเวอร์เพื่อล้างตราการลบ', c.log.upserts.length === 1,
+     JSON.stringify(c.log.upserts));
+  ok('12c แถวที่ส่งล้างตรา (deleted_at = null)', firstRow(c.log.upserts, 0).deleted_at === null,
+     JSON.stringify(firstRow(c.log.upserts, 0)));
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 13) กดลบซ้ำ / retry → ต้องไม่ทำข้อมูลเสีย
+// ════════════════════════════════════════════════════════════════════════════
+{
+  const { vault } = loadVault();
+  vault.addWord('ข้าว', { zh: '飯' });
+  vault.addWord('กิน', { zh: '吃' });
+  const c = makeClient([]);
+  vault.sync(c.client, UID);
+  vault.removeWord('ข้าว');
+  vault.removeWord('ข้าว');                              // กดซ้ำ (หรือ retry)
+  ok('13a กดลบซ้ำ: ปั๊มตรา 2 ครั้ง ไม่ error ไม่พัง', c.log.tombstones.length === 2);
+  ok('13b กดลบซ้ำ: คำอื่นยังอยู่ครบ', vault.has('กิน') && vault.count() === 1);
+  ok('13c ตราทั้ง 2 ครั้งชี้คำเดิม (คีย์เดียวกัน = upsert ทับ ไม่เกิดแถวซ้ำ)',
+     firstRow(c.log.tombstones, 0).word_th === 'ข้าว' && firstRow(c.log.tombstones, 1).word_th === 'ข้าว',
+     JSON.stringify(c.log.tombstones));
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 14) ฐานข้อมูลยังไม่ได้รัน SQL (ไม่มีคอลัมน์ deleted_at) → ต้องถอยไปทำงานแบบเดิม
+//     สำคัญ: โค้ดนี้ถูก push ขึ้นเว็บก่อน Lin รัน SQL บน production ได้
+// ════════════════════════════════════════════════════════════════════════════
+{
+  const { vault } = loadVault();
+  vault.addWord('ข้าว', { zh: '飯' });
+  vault.addWord('กิน', { zh: '吃' });
+  const c = makeClient([], { noTombstoneColumn: true });
+  let threw = false;
+  try { vault.sync(c.client, UID); } catch (e) { threw = true; }
+  ok('14a ไม่โยน error ออกมา', threw === false);
+  ok('14b sync ยังทำงาน (ลองใหม่ด้วยคอลัมน์ชุดเดิม)',
+     c.log.selectedCols.length === 2
+     && c.log.selectedCols[0].indexOf('deleted_at') !== -1
+     && c.log.selectedCols[1].indexOf('deleted_at') === -1,
+     JSON.stringify(c.log.selectedCols));
+  ok('14c ยังส่งคำขึ้นเซิร์ฟเวอร์ได้ตามปกติ', c.log.upserts.length === 1 && c.log.upserts[0].length === 2);
+  ok('14d คำในเครื่องอยู่ครบ', vault.count() === 2);
+  vault.removeWord('ข้าว');
+  ok('14e การลบถอยไปใช้วิธีเดิม (ลบแถวจริง) ไม่เงียบ ไม่พัง',
+     c.log.deletes.length === 1, 'deletes=' + JSON.stringify(c.log.deletes));
+  ok('14f คำหายจากเครื่อง', !vault.has('ข้าว') && vault.count() === 1);
 }
 
 // ── สรุป ────────────────────────────────────────────────────────────────────

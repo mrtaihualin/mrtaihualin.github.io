@@ -960,7 +960,14 @@ async function studentWithdrawOwnRescheduleRequest(token, id) {
   //   ผลจริง: คาบถูกย้ายไปแล้ว แต่หน้าจอนักเรียนขึ้น "✅ 已收回，這堂課維持原本安排"
   //   = นักเรียนไปรอเวลาเดิม แล้วขาดเรียน (ช่วงเสี่ยงไม่กี่วินาที แต่ผลหนักที่สุดในระบบนี้)
   const res = await studentPatchRequest(token, id, { status: 'acknowledged', offer_status: null }, { status: 'pending', offerStatus: 'proposed', notProcessing: true });
-  if (res.error) { alert('⚠️ 收回失敗：' + res.error.message); return; }
+  // 🟡 2026-08-11 加：แปล error ที่รู้จักเป็นภาษาคนก่อนโชว์ (จุดที่ตกหล่นจากรอบ C12/2026-07-31)
+  //   เส้นทางนี้ยิง RPC ที่มีด่าน rate limit + ด่าน 'locked or already closed' อยู่จริง
+  //   → นักเรียนที่กดถี่ๆ หรือกดตอนครูกำลังจับล็อก จะเห็นข้อความอังกฤษดิบจากฐานข้อมูล
+  if (res.error) {
+    var friendlyWithdrawResched = friendlyRequestError(res.error.message);
+    alert(friendlyWithdrawResched ? ('⚠️ ' + friendlyWithdrawResched) : ('⚠️ 收回失敗：' + res.error.message + '\n請直接聯絡老師比較保險。'));
+    return;
+  }
   if (!res.rows.length) {
     alert('ℹ️ 收回失敗——老師可能正在處理這筆（或剛好已經處理完了）。\n這堂課的安排可能已經被更動，請直接用 LINE 聯絡老師確認狀況。');
     loadStudentPendingRequestStatus(token);
@@ -1554,7 +1561,12 @@ async function respondToOfferAsStudent(requestId, response, optIndex) {
   }
   const res = await sb.rpc('respond_to_offer_as_student', { p_request_id: requestId, p_token: token, p_response: response });
   if (res.error || res.data !== true) {
-    alert('⚠️ 回覆失敗，可能是這個提議已經處理過了，重新整理頁面看看：' + (res.error ? res.error.message : ''));
+    // 🟡 2026-08-11 加：แปล error ที่รู้จักเป็นภาษาคนก่อนโชว์ (จุดที่ตกหล่นจากรอบ C12/2026-07-31)
+    //   RPC ตัวนี้มีด่าน rate limit (เพิ่ม 2026-08-02 ข้อ 4.9) + ด่านล็อก/สถานะ ที่ตีกลับเป็นอังกฤษดิบ
+    //   ⚠️ res.data !== true (ไม่มี error) = ด่านในฐานข้อมูลปฏิเสธเงียบๆ → คงข้อความเดิมไว้
+    var friendlyOfferResp = res.error ? friendlyRequestError(res.error.message) : null;
+    if (friendlyOfferResp) alert('⚠️ ' + friendlyOfferResp);
+    else alert('⚠️ 回覆失敗，可能是這個提議已經處理過了，重新整理頁面看看：' + (res.error ? res.error.message : ''));
     return;
   }
   // 2026-07-16 加（稽核發現，ORANGE#4）：學生接受後，重開 48 小時計時器讓「老師確認搬 Calendar」

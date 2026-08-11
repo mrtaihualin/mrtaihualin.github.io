@@ -22,19 +22,30 @@
  *   · ที่เก็บฝั่งเซิร์ฟเวอร์ — ตาราง `learning_saved_items` (จาก supabase/sql/2026-08-11_learning_foundation.sql)
  *   · รูปแบบ remote-authoritative — ท่าเดียวกับ `GAME_ACCOUNT.sync()`
  *
- * 🔑 กฎการรวม (3 กรณี ครอบคลุมทุกสถานะ — ออกแบบให้ "ไม่มีทางทำข้อมูลหาย" เป็นหลัก):
- *   ก. คำที่มีทั้งในเครื่องและบนเซิร์ฟเวอร์  → เก็บไว้ ปั๊มว่า synced แล้ว
- *   ข. คำที่มีแต่ในเครื่อง **ยังไม่เคย synced** → ของใหม่จากเครื่องนี้ → ส่งขึ้นเซิร์ฟเวอร์
- *   ค. คำที่มีแต่ในเครื่อง **เคย synced แล้ว**  → เจ้าของลบจากเครื่องอื่น
- *       → **เก็บไว้ในเครื่องนี้เหมือนเดิม · ไม่ลบ · และไม่ส่งขึ้นซ้ำ**
- *   ง. คำที่มีแต่บนเซิร์ฟเวอร์ → ดึงลงมา (ไม่ตัดทิ้งแม้รวมกันเกิน 30)
+ * 🔑 กฎการรวม 6 กรณี — ยึดหลักเดียว: **"ไม่มีข้อมูลบนเซิร์ฟเวอร์" ห้ามแปลว่า "ถูกลบ"**
+ *   ลบคำในเครื่องได้ทางเดียวคือ "เห็นตราการลบ (deleted_at) ชัดเจน" เท่านั้น
  *
- * ⚠️ ผลข้างเคียงของกรณี ค. ที่ตั้งใจยอมรับ (รอ Lin ตัดสินภายหลัง):
- *   ลบคำที่เครื่อง A → หายจากเครื่อง A และจากเซิร์ฟเวอร์จริง แต่ **เครื่อง B ที่มีคำนั้นค้างอยู่จะยังเห็นอยู่**
- *   (แค่ไม่ sync ต่อ) · ทางแก้ให้หายทุกเครื่องต้องทำ "ทะเบียนคำที่ถูกลบ" (tombstone) ฝั่งเซิร์ฟเวอร์
- *   ซึ่งเป็นกลไกใหม่ ยังไม่มี Decision → รอบนี้ไม่ทำ
- *   เลือกทางนี้เพราะทางกลับกัน (ลบในเครื่อง B ตามเซิร์ฟเวอร์) เสี่ยง "คำหายจริง"
- *   ถ้าวันไหนอ่านเซิร์ฟเวอร์ได้ไม่ครบ — ผิดกฎข้อ 3 ที่ Lin สั่งไว้ตรงๆ
+ *   ก. มีทั้ง 2 ฝั่ง ยังใช้งานอยู่                → เก็บไว้ ปั๊มว่า synced แล้ว
+ *   ข. มีตราลบ + คำในเครื่อง **เคย synced แล้ว**  → เจ้าของสั่งลบจริง → **ลบในเครื่องด้วย**
+ *   ค. มีตราลบ + คำในเครื่อง **ยังไม่เคย synced** → ผู้ใช้เพิ่งเซฟใหม่ที่เครื่องนี้ → เก็บไว้ + ส่งขึ้น
+ *                                                   (ของใหม่ชนะตราเก่า · `_rowFor` ล้างตราให้เอง)
+ *   ง. ไม่มีแถวเลย + **เคย synced แล้ว**          → อาจเป็นเพราะอ่านมาไม่ครบ → **เก็บไว้ ไม่ลบ ไม่ส่งซ้ำ**
+ *   จ. ไม่มีแถวเลย + ยังไม่เคย synced             → ของใหม่จากเครื่องนี้ → ส่งขึ้น
+ *   ฉ. มีแต่บนเซิร์ฟเวอร์ (ยังใช้งานอยู่)          → ดึงลงมา (ไม่ตัดทิ้งแม้รวมกันเกิน 30)
+ *
+ * แยก 4 สถานการณ์ที่หน้าตาคล้ายกันออกจากกันได้เพราะหลักข้างบน:
+ *   1. เจ้าของสั่งลบจริง       → มีแถว + deleted_at ไม่ว่าง → ลบตาม (กรณี ข.)
+ *   2. เซิร์ฟเวอร์ยังไม่มีข้อมูล → ไม่มีแถวเลย              → เก็บไว้ + ส่งขึ้น (กรณี จ.)
+ *   3. อ่านมาไม่ครบ             → แถวบางส่วนหาย            → เก็บไว้ ไม่ลบ (กรณี ง.)
+ *   4. เน็ตหลุด/อ่านพลาด        → select ตอบ error          → ไม่แตะอะไรเลย (`_readRemote`)
+ *
+ * 🗑️ การลบ: ผู้ใช้กดลบ → **ปั๊มตรา `deleted_at`** ไม่ลบแถวทิ้ง (ดู `_deleteRemote`)
+ *   ถ้าลบแถวทิ้ง เครื่องอื่นจะเห็นแค่ "ไม่มีแถว" ซึ่งแยกไม่ออกจากกรณี 3 → คำที่ลบแล้วจะไม่หายจริง
+ *   ระบบไม่เคยลบคำเองอัตโนมัติ (ห้ามลบเพราะเกินเพดาน — เกินแล้วบล็อกการเพิ่มใหม่แทน)
+ *
+ * ⚠️ ต้องรัน `supabase/sql/2026-08-11_word_vault_deletion_sync.sql` ก่อน การลบข้ามเครื่องจึงทำงาน
+ *   ถ้ายังไม่รัน โค้ดนี้ **ถอยไปทำงานแบบเดิมเองอัตโนมัติ** (sync ปกติ แต่ยังไม่ลบข้ามเครื่อง)
+ *   ไม่พัง ไม่เงียบ — เขียน console.warn บอกไว้ (ดู `_isMissingTombstoneColumn`)
  *
  * ✅ ปลอดภัยแม้ยังไม่ได้รันไฟล์ SQL: ถ้าตาราง `learning_saved_items` ยังไม่มี
  *    ทุก query จะ error แล้วถูกกลืนเงียบ (เขียน console.warn ไว้ให้ debug) → คลังคำทำงานแบบเดิม 100%
@@ -52,6 +63,13 @@
   var VAULT_KEY = 'linvault';        // ตรงกับคอลัมน์ vault_key (คลังของเกมเลโก้ใช้ 'lego_vault' — ยังไม่แตะรอบนี้)
   var _sb = null;                    // supabase client (null = ยังไม่ล็อกอิน / ไม่มี client)
   var _uid = null;                   // user id ที่ล็อกอินอยู่
+  // ฐานข้อมูลนี้มีคอลัมน์ deleted_at (ตราการลบ) แล้วหรือยัง
+  //   null = ยังไม่รู้ · true = มี · false = ยังไม่มี (ยังไม่ได้รัน 2026-08-11_word_vault_deletion_sync.sql)
+  // ต้องมีตัวนี้เพราะโค้ดฝั่งเว็บถูก push ขึ้นเว็บก่อนที่ Lin จะรัน SQL บน production ได้
+  // → ถ้าไม่เผื่อไว้ sync จะพังทั้งระบบระหว่างช่วงรอยต่อนั้น (แย่กว่าเดิม)
+  var _tombstoneOk = null;
+  var COLS_WITH_TOMBSTONE = 'word_th,zh,en,source_raw,tags,saved_at,deleted_at';
+  var COLS_LEGACY        = 'word_th,zh,en,source_raw,tags,saved_at';
 
   // ── โหลด/บันทึก ──────────────────────────────────────────────
   function load() {
@@ -94,7 +112,11 @@
       zh: w.zh || null,
       en: w.en || null,
       source_raw: w.source || null,
-      tags: (w.tags && w.tags.length) ? w.tags : []
+      tags: (w.tags && w.tags.length) ? w.tags : [],
+      // 🔑 คำที่อยู่ในคลังของผู้ใช้ = ต้อง "ล้างตราการลบ" ทิ้งเสมอ
+      //    เคสจริง: ลบคำที่เครื่อง A (ติดตรา) แล้วผู้ใช้เซฟคำเดิมใหม่ที่เครื่อง B
+      //    ถ้าไม่ล้างตรา คำที่เพิ่งเซฟจะถูกลบทิ้งตอน sync รอบหน้า (ผู้ใช้งงว่าเซฟไม่ติด)
+      deleted_at: null
     };
   }
 
@@ -109,14 +131,50 @@
     } catch (e) { _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e); }
   }
 
-  /** ลบคำออกจากเซิร์ฟเวอร์ — เรียกเฉพาะตอน "ผู้ใช้กดลบเอง" เท่านั้น (ไม่ใช่การลบอัตโนมัติ) */
-  function _deleteRemote(th) {
-    if (!_sb || !_uid) return;
+  /** error นี้แปลว่า "ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at" ใช่ไหม
+   *  (ท่าเดียวกับ isMissingGameColumn ใน js/games/reading-auth.js ที่ใช้มาก่อนแล้ว) */
+  function _isMissingTombstoneColumn(err) {
+    if (!err) return false;
+    var msg = String(err.message || err || '');
+    return err.code === '42703' || msg.indexOf('deleted_at') !== -1;
+  }
+
+  /** ลบคำแบบเก่า (ลบแถวทิ้งจริง) — ใช้เฉพาะฐานข้อมูลที่ยังไม่มีคอลัมน์ deleted_at */
+  function _hardDeleteRemote(th) {
     try {
       _sb.from(TABLE).delete().eq('user_id', _uid).eq('vault_key', VAULT_KEY).eq('word_th', th)
         .then(function (r) { if (r && r.error) _warn('ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', r.error); },
               function (e) { _warn('ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', e); });
     } catch (e) { _warn('ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', e); }
+  }
+
+  /** ผู้ใช้กดลบคำเอง → **ปั๊มตราว่าถูกลบ** ไม่ลบแถวทิ้ง
+   *  เหตุผล: ถ้าลบแถวทิ้ง เครื่องอื่นจะเห็นแค่ "ไม่มีแถว" ซึ่งแยกไม่ออกจาก "อ่านมาไม่ครบ"
+   *  → ต้องเก็บของไว้เพื่อความปลอดภัย = คำที่ลบแล้วไม่หายจากเครื่องอื่น (ปัญหาที่รอบนี้แก้)
+   *  เรียกเฉพาะตอนผู้ใช้กดลบเองเท่านั้น ระบบไม่เคยลบเอง (ห้ามลบอัตโนมัติเพราะเกินเพดาน) */
+  function _deleteRemote(th) {
+    if (!_sb || !_uid) return;
+    if (_tombstoneOk === false) { _hardDeleteRemote(th); return; }
+    var row = { user_id: _uid, vault_key: VAULT_KEY, word_th: th, deleted_at: new Date().toISOString() };
+    try {
+      // upsert = ปั๊มตราได้ทั้งกรณีมีแถวอยู่แล้ว และกรณีคำนั้นยังไม่เคยขึ้นเซิร์ฟเวอร์
+      // (กรณีหลังสำคัญ: กันเครื่องอื่นที่มีคำนั้นค้างอยู่เอากลับขึ้นมาใหม่)
+      // ส่งแค่ 4 ช่อง → คำแปล/ป้ายกำกับเดิมบนเซิร์ฟเวอร์ไม่ถูกล้างทิ้ง
+      _sb.from(TABLE).upsert([row], { onConflict: 'user_id,vault_key,word_th' }).then(function (r) {
+        if (r && r.error) {
+          if (_isMissingTombstoneColumn(r.error)) {
+            // ยังไม่ได้รันไฟล์ SQL → ถอยไปใช้วิธีเดิม (ลบข้ามเครื่องยังไม่ทำงาน แต่ไม่พัง)
+            _tombstoneOk = false;
+            _warn('ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at — ถอยไปลบแบบเดิม (ยังไม่ได้รัน 2026-08-11_word_vault_deletion_sync.sql)', r.error);
+            _hardDeleteRemote(th);
+          } else {
+            _warn('ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', r.error);
+          }
+          return;
+        }
+        _tombstoneOk = true;
+      }, function (e) { _warn('ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', e); });
+    } catch (e) { _warn('ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', e); }
   }
 
   /** ปั๊มว่าคำเหล่านี้ขึ้นเซิร์ฟเวอร์แล้ว (อ่าน localStorage ใหม่ตอนเขียน กันทับของที่เพิ่งเปลี่ยนระหว่างรอ network) */
@@ -139,51 +197,92 @@
     _uid = userId || null;
     if (!_sb || !_uid) { _sb = null; _uid = null; return; }   // guest → ทำงานแบบ local เหมือนเดิมทุกอย่าง
 
+    _readRemote(function (remote) { _mergeWith(remote); });
+  }
+
+  /** อ่านคลังคำจากเซิร์ฟเวอร์ — ลองแบบมีตราการลบก่อน ถ้าฐานข้อมูลยังไม่มีคอลัมน์ค่อยถอยไปแบบเดิม */
+  function _readRemote(onRows) {
+    var cols = (_tombstoneOk === false) ? COLS_LEGACY : COLS_WITH_TOMBSTONE;
     try {
-      _sb.from(TABLE).select('word_th,zh,en,source_raw,tags,saved_at')
-        .eq('user_id', _uid).eq('vault_key', VAULT_KEY)
+      _sb.from(TABLE).select(cols).eq('user_id', _uid).eq('vault_key', VAULT_KEY)
         .then(function (r) {
-          // อ่านไม่สำเร็จ (ตารางยังไม่มี / เน็ตหลุด / สิทธิ์ไม่พอ) → ไม่แตะอะไรเลย ปลอดภัยที่สุด
-          if (!r || r.error) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', r && r.error); return; }
-          var remote = r.data || [];
-          var local = load();
-
-          var onRemote = {};
-          remote.forEach(function (x) { if (x && x.word_th) onRemote[x.word_th] = x; });
-          var inLocal = {};
-          local.forEach(function (w) { if (w && w.th) inLocal[w.th] = true; });
-
-          var merged = [], toPush = [];
-
-          // กรณี ก./ข./ค. — ไล่ของที่อยู่ในเครื่องนี้ (ไม่ลบอะไรออกเลยแม้แต่คำเดียว)
-          local.forEach(function (w) {
-            if (!w || !w.th) return;
-            if (onRemote[w.th]) { w.synced = true; merged.push(w); return; }        // ก. มีทั้ง 2 ฝั่ง
-            if (w.synced === true) { merged.push(w); return; }                       // ค. เจ้าของลบจากเครื่องอื่น → เก็บไว้ ไม่ส่งขึ้นซ้ำ
-            merged.push(w); toPush.push(w);                                          // ข. ของใหม่จากเครื่องนี้ → ส่งขึ้น
-          });
-
-          // กรณี ง. — ของที่มีแต่บนเซิร์ฟเวอร์ ดึงลงมาให้ครบ (ห้ามตัดทิ้งแม้รวมกันเกินเพดาน)
-          remote.forEach(function (x) {
-            if (!x || !x.word_th || inLocal[x.word_th]) return;
-            var ts = Date.now();
-            if (x.saved_at) { var p = Date.parse(x.saved_at); if (!isNaN(p)) ts = p; }
-            merged.push({
-              th: x.word_th, zh: x.zh || '', en: x.en || '', source: x.source_raw || '',
-              saved_at: ts, tags: (x.tags && x.tags.length) ? x.tags : [], synced: true
-            });
-          });
-
-          save(merged);
-          _notifyBadges();
-          _fireChanged();
-
-          if (toPush.length) {
-            var pushed = toPush.map(function (w) { return w.th; });
-            _pushRows(toPush.map(_rowFor), function (err) { if (!err) _markSynced(pushed); });
+          if (r && r.error) {
+            if (cols === COLS_WITH_TOMBSTONE && _isMissingTombstoneColumn(r.error)) {
+              // ยังไม่ได้รันไฟล์ SQL บนฐานข้อมูลนี้ → ถอยไปอ่านแบบเดิม (sync ยังทำงาน ไม่พัง)
+              _tombstoneOk = false;
+              _warn('ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at — sync ทำงานแบบเดิมไปก่อน (ยังไม่มีการลบข้ามเครื่อง)', r.error);
+              _readRemote(onRows);
+              return;
+            }
+            // อ่านไม่สำเร็จจริง (เน็ตหลุด/สิทธิ์ไม่พอ/ตารางยังไม่มี) → ไม่แตะอะไรเลย ปลอดภัยที่สุด
+            _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', r.error);
+            return;
           }
+          if (!r) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', 'ไม่มีผลลัพธ์'); return; }
+          if (cols === COLS_WITH_TOMBSTONE) _tombstoneOk = true;
+          onRows(r.data || []);
         }, function (e) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); });
-    } catch (e) { _warn('sync ล้มเหลว', e); }
+    } catch (e) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); }
+  }
+
+  /** รวมของในเครื่องกับของบนเซิร์ฟเวอร์ตามกฎ 5 กรณี (ดูหัวไฟล์) */
+  function _mergeWith(remote) {
+    var local = load();
+
+    // แยกของบนเซิร์ฟเวอร์เป็น 2 กอง: คำที่ยังอยู่ vs ตราการลบ
+    var activeRemote = {}, deletedRemote = {};
+    remote.forEach(function (x) {
+      if (!x || !x.word_th) return;
+      if (x.deleted_at) deletedRemote[x.word_th] = x; else activeRemote[x.word_th] = x;
+    });
+    var inLocal = {};
+    local.forEach(function (w) { if (w && w.th) inLocal[w.th] = true; });
+
+    var merged = [], toPush = [], removedByOwner = 0;
+
+    local.forEach(function (w) {
+      if (!w || !w.th) return;
+      // ก. มีทั้ง 2 ฝั่ง และยังใช้งานอยู่ → เก็บไว้
+      if (activeRemote[w.th]) { w.synced = true; merged.push(w); return; }
+
+      if (deletedRemote[w.th]) {
+        // ข. เจ้าของสั่งลบคำนี้ (มีตราชัดเจน) และคำในเครื่องนี้เคยขึ้นเซิร์ฟเวอร์แล้ว
+        //    = "local copy เก่า" → ลบตามได้ นี่เป็น **ทางเดียว** ที่ระบบลบคำในเครื่อง
+        if (w.synced === true) { removedByOwner++; return; }
+        // ค. มีตราลบ แต่คำในเครื่องนี้ "ยังไม่เคยขึ้นเซิร์ฟเวอร์" = ผู้ใช้เพิ่งเซฟใหม่ที่เครื่องนี้
+        //    ของใหม่ต้องชนะตราเก่า → เก็บไว้ + ส่งขึ้น (_rowFor ล้างตราให้เอง)
+        merged.push(w); toPush.push(w); return;
+      }
+
+      // ง. ไม่มีแถวบนเซิร์ฟเวอร์เลย — **ห้ามแปลว่าถูกลบ** (อาจเป็นเพราะอ่านมาไม่ครบ)
+      if (w.synced === true) { merged.push(w); return; }   // เคยขึ้นแล้วแต่หายไป → เก็บไว้ ไม่ส่งซ้ำ
+      merged.push(w); toPush.push(w);                       // จ. ของใหม่จากเครื่องนี้ → ส่งขึ้น
+    });
+
+    // ฉ. ของที่มีแต่บนเซิร์ฟเวอร์ (และยังใช้งานอยู่) ดึงลงมาให้ครบ
+    //    ห้ามตัดทิ้งแม้รวมกันเกินเพดาน · ตราการลบไม่ต้องดึงลงมาเก็บ
+    remote.forEach(function (x) {
+      if (!x || !x.word_th || x.deleted_at || inLocal[x.word_th]) return;
+      var ts = Date.now();
+      if (x.saved_at) { var p = Date.parse(x.saved_at); if (!isNaN(p)) ts = p; }
+      merged.push({
+        th: x.word_th, zh: x.zh || '', en: x.en || '', source: x.source_raw || '',
+        saved_at: ts, tags: (x.tags && x.tags.length) ? x.tags : [], synced: true
+      });
+    });
+
+    save(merged);
+    if (removedByOwner) {
+      // ห้ามเงียบ: บอกไว้ใน console ว่าลบไปกี่คำ เพราะเจ้าของสั่งลบจากเครื่องอื่น
+      _warn('ลบคำในเครื่องนี้ ' + removedByOwner + ' คำ เพราะเจ้าของสั่งลบไว้จากเครื่องอื่น', 'ok');
+    }
+    _notifyBadges();
+    _fireChanged();
+
+    if (toPush.length) {
+      var pushed = toPush.map(function (w) { return w.th; });
+      _pushRows(toPush.map(_rowFor), function (err) { if (!err) _markSynced(pushed); });
+    }
   }
 
   // ── [03] API หลัก ─────────────────────────────────────────────

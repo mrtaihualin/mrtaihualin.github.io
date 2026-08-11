@@ -88,6 +88,10 @@ const ANONYMIZE_TABLES = ['login_events', 'star_ledger'];
 const CASCADE_TABLES = [
   'game_accounts', 'profiles', 'reading_sessions', 'tone_progress',
   'tone_sessions', 'tone_srs_state', 'line_identities', 'classroom_game_links',
+  // 2026-08-11 เพิ่ม: คลังคำ (learning_saved_items) — ข้อมูลถูกลบจริงถูกต้องอยู่แล้วผ่าน
+  //   FK on delete cascade (ดู supabase/sql/2026-08-11_learning_foundation.sql:459) แต่หน้า preview
+  //   ไม่เคยบอกผู้ใช้ว่าคลังคำจะหายไปด้วย → เติมเพื่อให้ตัวเลขที่โชว์ก่อนกดยืนยันตรงกับของจริง
+  'learning_saved_items',
 ];
 
 function corsHeadersFor(origin) {

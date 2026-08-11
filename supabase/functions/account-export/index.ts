@@ -96,6 +96,39 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // ตามกฎ RELIABILITY FIRST ข้อ "ห้ามขึ้นว่าสำเร็จ/ครบถ้าไม่ได้ตรวจว่าครบจริง")
 const HISTORY_ROW_CAP = 20000;
 
+// 🆕 2026-08-11 — คลังคำ (單字庫) ที่ sync ขึ้นเซิร์ฟเวอร์แล้ว ต้องอยู่ในไฟล์ export ด้วย
+//   (Product Decision ที่ล็อกแล้ว: "นักเรียนต้องดาวน์โหลดข้อมูลการเรียนของตัวเองได้")
+//   ตาราง learning_saved_items มี SELECT policy `auth.uid() = user_id` อยู่แล้ว → ใช้ชั้นที่ 1
+//   (userClient) ได้เลย ไม่ต้องพึ่ง service_role
+const VAULT_COLS_WITH_TOMBSTONE = 'vault_key,word_th,zh,en,source_raw,tags,saved_at,updated_at,deleted_at';
+const VAULT_COLS_LEGACY         = 'vault_key,word_th,zh,en,source_raw,tags,saved_at,updated_at';
+
+/** error นี้แปลว่า "ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at" ใช่ไหม */
+function isMissingTombstoneColumn(err) {
+  if (!err) return false;
+  const msg = String(err.message || err || '');
+  return err.code === '42703' || msg.indexOf('deleted_at') !== -1;
+}
+
+/** ดึงคลังคำของผู้เรียก — ลองแบบมีตราการลบก่อน ถ้าฐานข้อมูลยังไม่ได้รัน
+ *  supabase/sql/2026-08-11_word_vault_deletion_sync.sql ค่อยถอยไปแบบเดิม
+ *  🔴 จำเป็นจริง: ฟังก์ชันนี้อาจถูก deploy ก่อนที่ SQL จะถูกรันบน production
+ *     ถ้าไม่เผื่อไว้ การขอไฟล์ข้อมูลจะพังทั้งระบบในช่วงรอยต่อนั้น (แย่กว่าไม่มีคลังคำใน export) */
+async function fetchWordVault(userClient, callerUid) {
+  let res = await userClient.from('learning_saved_items')
+    .select(VAULT_COLS_WITH_TOMBSTONE).eq('user_id', callerUid)
+    .order('saved_at', { ascending: false }).limit(HISTORY_ROW_CAP);
+  let tombstonesSupported = true;
+  if (res.error && isMissingTombstoneColumn(res.error)) {
+    console.warn('[account-export] ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at — export คลังคำแบบไม่มีรายการที่ถูกลบ');
+    tombstonesSupported = false;
+    res = await userClient.from('learning_saved_items')
+      .select(VAULT_COLS_LEGACY).eq('user_id', callerUid)
+      .order('saved_at', { ascending: false }).limit(HISTORY_ROW_CAP);
+  }
+  return { res, tombstonesSupported };
+}
+
 // โดเมนจริงของเว็บ (ตรงกับ ALLOWED_ORIGINS ใน game-content/index.ts)
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
@@ -183,6 +216,7 @@ serve(async (req) => {
       profileRes, gameAccountRes, rewardPointsRes, starLedgerRes,
       toneProgressRes, toneSessionsRes, toneSrsRes, readingSessionsRes, rewardEventsRes,
       lineIdentityRes, auditLogRes,
+      wordVaultWrap,
     ] = await Promise.all([
       // ── ชั้นที่ 1: RLS-scoped client (ผูก Authorization ของผู้เรียก) — Postgres กรอง auth.uid()=user_id ให้เอง ──
       userClient.from('profiles').select('nickname,avatar,badge_id,updated_at').eq('user_id', callerUid).maybeSingle(),
@@ -199,7 +233,12 @@ serve(async (req) => {
       // เองด้วยมือทุกครั้ง callerUid มาจาก auth.getUser() ด้านบนเท่านั้น ไม่ใช่จาก body/query string ──
       admin.from('line_identities').select('line_user_id,created_at').eq('user_id', callerUid),
       admin.from('account_audit_log').select('event_type,provider,created_at').eq('user_id', callerUid).order('created_at', { ascending: false }).limit(HISTORY_ROW_CAP),
+
+      // 🆕 คลังคำ (單字庫) — ชั้นที่ 1 เหมือนกลุ่มบน (มี SELECT policy auth.uid()=user_id แล้ว)
+      //    ห่อด้วยตัวช่วยเพราะต้องรองรับฐานข้อมูลที่ยังไม่มีคอลัมน์ deleted_at
+      fetchWordVault(userClient, callerUid),
     ]);
+    const wordVaultRes = wordVaultWrap.res;
 
     // ── เช็ค error ทุกตัวแยกกัน พังจุดไหนก็ throw ทันที ห้ามส่งข้อมูลบางส่วนออกไปเงียบๆ ──
     for (const [label, res] of [
@@ -207,6 +246,7 @@ serve(async (req) => {
       ['star_ledger', starLedgerRes], ['tone_progress', toneProgressRes], ['tone_sessions', toneSessionsRes],
       ['tone_srs_state', toneSrsRes], ['reading_sessions', readingSessionsRes], ['game_reward_events', rewardEventsRes],
       ['line_identities', lineIdentityRes], ['account_audit_log', auditLogRes],
+      ['learning_saved_items', wordVaultRes],
     ]) {
       if (res.error) {
         // 🆕 2026-08-08: แปะ .code/.label ไว้บน Error object เพื่อให้ catch ด้านล่างแยก "ดึงข้อมูลพลาด"
@@ -232,6 +272,19 @@ serve(async (req) => {
       provider: r.provider || null,
     }));
 
+    // ── คลังคำ: แยก "คำที่ยังอยู่ในคลัง" ออกจาก "คำที่เจ้าตัวลบไปแล้ว" ──
+    //   คำที่ลบแล้วยังเก็บแถวไว้บนเซิร์ฟเวอร์ (tombstone) เพื่อให้การลบตามไปทุกเครื่องได้
+    //   → ถือเป็น "ข้อมูลของผู้ใช้" ที่ยังอยู่ในระบบจริง จึงต้องบอกให้เจ้าตัวรู้ด้วย (ความโปร่งใส)
+    //   แต่ **แยกออกจากรายการหลัก** เพราะถ้าปนกันผู้ใช้จะเข้าใจผิดว่าคำที่ลบแล้วยังอยู่ในคลัง
+    const vaultRows = wordVaultRes.data || [];
+    const vaultActive = vaultRows.filter((r) => !r.deleted_at).map((r) => ({
+      vault_key: r.vault_key, word: r.word_th, zh: r.zh, en: r.en,
+      from_game: r.source_raw, tags: r.tags, saved_at: r.saved_at,
+    }));
+    const vaultDeleted = vaultRows.filter((r) => !!r.deleted_at).map((r) => ({
+      vault_key: r.vault_key, word: r.word_th, deleted_at: r.deleted_at,
+    }));
+
     // ── สรุปตัวเลขคร่าวๆ ให้อ่านง่ายบนหน้าแรกของไฟล์ ──
     const summary = {
       total_stars_now: gameAccountRes.data ? gameAccountRes.data.stars : 0,
@@ -241,6 +294,7 @@ serve(async (req) => {
       total_star_ledger_entries: starLedgerRes.data.length,
       total_words_in_srs: toneSrsRes.data.length,
       linked_login_methods: providers.length + lineIdentityRes.data.length,
+      total_saved_words: vaultActive.length,   // 🆕 คำในคลังคำที่ยังอยู่ (ไม่นับคำที่ลบแล้ว)
     };
 
     // ── ธงเตือน "อาจโดนตัดที่เพดาน" — ไม่ปล่อยให้ผู้ใช้เข้าใจผิดว่าได้ประวัติครบ 100% เงียบๆ ──
@@ -251,6 +305,7 @@ serve(async (req) => {
       reading_sessions: readingSessionsRes.data.length >= HISTORY_ROW_CAP,
       game_reward_events: rewardEventsRes.data.length >= HISTORY_ROW_CAP,
       account_history: accountHistory.length >= HISTORY_ROW_CAP,
+      word_vault: vaultRows.length >= HISTORY_ROW_CAP,   // 🆕
     };
     const anyCapped = Object.values(capped).some(Boolean);
     if (anyCapped) {
@@ -278,6 +333,15 @@ serve(async (req) => {
         reading_sessions: readingSessionsRes.data,
         game_reward_events: rewardEventsRes.data,
         account_changes: accountHistory, // สรุปภาษาคนจาก account_audit_log — ไม่ใช่แถวดิบ
+      },
+      // 🆕 2026-08-11 — คลังคำ (單字庫) ที่ sync ข้ามเครื่อง
+      //   เป็นคีย์ใหม่ระดับบนสุด (เพิ่มเข้ามา ไม่แก้คีย์เดิมสักตัว) → ไฟล์ export รูปแบบเก่าไม่พัง
+      word_vault: {
+        active: vaultActive,     // คำที่ยังอยู่ในคลัง — export ครบตามจริง ไม่ตัดที่ 30
+        deleted: vaultDeleted,   // คำที่เจ้าตัวลบไปแล้ว (ระบบยังเก็บตราไว้เพื่อ sync การลบข้ามเครื่อง)
+        // false = ฐานข้อมูลยังไม่ได้รัน 2026-08-11_word_vault_deletion_sync.sql
+        //   → รายการ deleted จะว่างเสมอ ไม่ใช่เพราะไม่มีข้อมูล แต่เพราะระบบยังไม่รองรับ (ห้ามเข้าใจผิด)
+        deletion_tracking_supported: wordVaultWrap.tombstonesSupported,
       },
       summary,
       capped, // true ที่ไหน = ประวัติกลุ่มนั้นถูกตัดที่เพดาน HISTORY_ROW_CAP ไม่ใช่ทั้งหมด
