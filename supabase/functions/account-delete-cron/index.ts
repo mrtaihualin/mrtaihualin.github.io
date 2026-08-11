@@ -187,6 +187,7 @@ async function deleteOneAccount(admin, userId, cachedEmail, requestId, claimedAt
     if (!gate.ok) {
       console.error('[account-delete-cron] 🔴🔴 หยุดก่อนลบ auth user จริง เพราะ claim ของเราไม่ใช่เจ้าของแถวนี้แล้ว (id=' + requestId + ', user_id=' + userId + ') — ข้อมูลบางส่วนใน (a)-(b) อาจถูกลบ/anonymize ไปแล้วก่อนหน้านี้ แต่ auth user (ตัวบัญชี) ยังไม่ถูกแตะ');
       return { ok: false, error: 'cancelled_before_point_of_no_return', completed_steps: completedSteps };
+    }
   }
 
   // (c) ลบ auth user จริง — ทำเป็นลำดับสุดท้ายเสมอ
