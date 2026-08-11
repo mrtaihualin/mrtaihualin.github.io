@@ -129,6 +129,11 @@ runTest(['scripts/audit-learning-content.js'], 'learning content audit');
 // ทดสอบย้อนกลับแล้ว 3 แบบว่าจับของพังได้จริง (ไม่ใช่ด่านหลอก)
 runTest(['scripts/tests-word-vault-sync.js'], 'word-vault sync tests');
 runTest(['scripts/check-mobile-accessibility.js'], 'mobile/accessibility check (warning-only)');
+// เพิ่ม 2026-08-11 — ตรวจ SEO metadata ของ "หน้าสาธารณะที่ให้ Google เก็บ" + sitemap เทียบไฟล์จริง
+// บล็อกเฉพาะ ERROR (sitemap ชี้ไฟล์ที่ไม่มี · หน้า admin/noindex หลุดเข้า sitemap · URL ซ้ำ · lastmod อนาคต)
+// หน้าสาธารณะขาด description/canonical/OG = WARNING เฉยๆ ไม่บล็อก (กันหนี้เก่าบล็อกทั้งเว็บ)
+// ทดสอบย้อนกลับแล้วว่าจับได้จริงทั้ง 3 แบบ ไม่ใช่ด่านหลอก · ดูครบ: node scripts/check-seo-sitemap.js --full
+runTest(['scripts/check-seo-sitemap.js'], 'seo/sitemap check');
 // ⚠️ scripts/check-minified-sync.js ตั้งใจ "ไม่" ใส่ในนี้ — สคริปต์นั้นเทียบเนื้อหาแบบ exact-match
 // ซึ่งจะ MISMATCH เสมอกับไฟล์ที่ผ่าน minifier จริง (ดูคอมเมนต์ในไฟล์นั้น) ถ้าใส่ที่นี่จะ fail ทุกครั้ง
 // ทั้งที่โค้ดอาจไม่มีปัญหาจริง — ให้รันแยกด้วยมือ: node scripts/check-minified-sync.js

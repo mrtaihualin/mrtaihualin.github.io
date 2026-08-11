@@ -40,6 +40,32 @@ node scripts/check-site.js
 
 คำสั่งนี้ตรวจ syntax ของ JavaScript, ลิงก์ไฟล์ภายใน HTML/CSS, ID ซ้ำ และชุดทดสอบข้อมูล โดยไม่แก้ไฟล์และไม่ deploy
 
+### แต่ละตัวตรวจอะไร · ไม่ผ่านแปลว่าอะไร
+
+`check-site.js` เป็นตัวรวม — เรียกตัวตรวจย่อยด้านล่างให้ทั้งหมด (รันแยกทีละตัวก็ได้)
+
+| ตัวตรวจ | ตรวจอะไร | ไม่ผ่าน = อะไร |
+|---|---|---|
+| secret scan | ค่าลับ/โทเค็นในไฟล์ที่ git ติดตาม · **fail-closed** (ไฟล์ >2MB หรือมีไบต์ NUL ที่สแกนไม่ได้ นับว่าไม่ผ่าน) | 🔴 อาจมีค่าลับหลุดขึ้น repo — หยุดแล้วตรวจก่อน push |
+| JS / inline script syntax | `node --check` ทุกไฟล์ `.js` + `<script>` ในหน้า HTML | 🔴 โค้ดพัง หน้าเว็บจะเจ๊งจริง |
+| ลิงก์ HTML/CSS | `href`/`src`/`url()` ที่ชี้ไปไฟล์ในเครื่อง ต้องมีไฟล์จริง | 🔴 ลิงก์เสีย/รูปไม่ขึ้นจริง |
+| ID ซ้ำ | `id=` ซ้ำในหน้าเดียวกัน | ⚠️ คำเตือน (ไม่บล็อก) |
+| `check-seo-sitemap.js` | SEO ของ **หน้าสาธารณะที่ให้ Google เก็บเท่านั้น** + sitemap เทียบไฟล์จริง | 🔴 ERROR = sitemap ชี้ไฟล์ที่ไม่มี · หน้า admin/noindex หลุดเข้า sitemap · URL ซ้ำ · lastmod เป็นวันในอนาคต ⚠️ WARNING = ขาด description/canonical/OG (ไม่บล็อก) |
+| `check-nav-consistency.js` | เมนู/แถบประกาศ/เมนูล่างทุกหน้า ตรงกับ `data/nav-template.js` | 🔴 มีหน้าตกหล่นจาก generator |
+| `check-mobile-accessibility.js` | `<img>` ไม่มี `alt` · ปุ่มไม่มีชื่อที่โปรแกรมอ่านหน้าจอเรียกได้ ฯลฯ | ⚠️ คำเตือนล้วน ไม่บล็อก |
+| `tests-*-behavioral.js` | กฎที่ **เคยพังมาแล้วจริง** ของ marketing / เกม / ห้องเรียน / Search / คลังคำ | 🔴 มีคนแก้โค้ดจนกฎเดิมหาย |
+| `data/tools/*` | ความถูกต้องของคลังคำ/ประโยค + เครื่องคิดวรรณยุกต์ | 🔴 ข้อมูลเกมพัง |
+
+```bash
+node scripts/check-seo-sitemap.js --full   # ดูรายการ SEO/sitemap ครบทุกบรรทัด
+node scripts/audit-learning-content.js --full
+node scripts/check-minified-sync.js        # ต้องรันมือ (ไม่อยู่ใน check-site.js — ดูคอมเมนต์ในไฟล์)
+```
+
+> 📌 ปัจจุบัน `check-site.js` จะรายงาน **"ไม่ผ่าน 44 รายการ" เป็นปกติ** ทั้งหมดเป็น secret scan ใน
+> `_staging-build/` และ `js/core/supabase-config.staging.js` ซึ่งถูก `.gitignore` กันไม่ให้ขึ้น GitHub อยู่แล้ว
+> **ตั้งใจไม่ถอดด่านนี้ออก** (fail-closed เผื่อมีคน force-add ทีหลัง) — ให้ดูว่ามี "รายการใหม่" เพิ่มมาไหมแทน
+
 ## กติกาความปลอดภัย
 
 - ห้ามใส่ secret, service-role key, token หรือข้อมูลนักเรียนใน repository

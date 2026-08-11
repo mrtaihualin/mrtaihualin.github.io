@@ -1702,8 +1702,19 @@ document.addEventListener('contextmenu', function(e){
   專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
   <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
 </footer>
-<script src="js/acquisition/posts-data.js"></script>
-<script src="js/acquisition/lessons-data.js"></script>
+<!-- 🗑️ 2026-08-11 เอาออก: posts-data.js (FB_POSTS) + lessons-data.js (SELFSTUDY_ARTICLES/FULL_ARTICLES)
+     รวม ~18KB และเป็นสคริปต์ที่ "บล็อกการวาดหน้า" 2 ก้อน แต่หน้านี้ไม่มีอะไรใช้มันเลย
+     พิสูจน์ครบ 4 ทางก่อนเอาออก (ไม่ได้เดา):
+       1. ทั้ง tone-finder.html และ js/games/tone-finder-game.js ไม่อ้างชื่อ FB_POSTS /
+          SELFSTUDY_ARTICLES / FULL_ARTICLES เลยสักที่
+       2. ฟังก์ชันหน้าต่างเนื้อหาที่ shared.js เปิดออกมา 17 ตัว (openFBPostModal / openSSModal /
+          showFBList / shareSSArticle ฯลฯ) ไม่ถูกเรียกในหน้านี้สักตัวเดียว
+       3. หน้านี้ไม่มีกล่องของหน้าต่างพวกนั้นอยู่ในหน้าเลย (ตัวสร้างจริงคือ index-content-modals.js
+          ซึ่งโหลดเฉพาะ index.html) — ตัว render ใน shared.js ก็ `if (!list) return;` อยู่แล้ว
+       4. หลักฐานจากของจริง: reading-game / typing-game / word-order / listening-game โหลด
+          shared.min.js เหมือนกันเป๊ะ แต่ "ไม่เคย" โหลด 2 ไฟล์นี้ และใช้งานได้ปกติมาตลอด
+          → หน้านี้เป็นหน้าเดียวที่ผิดแถว = ของค้างจากตอนอัปโหลดชุดแรก (git: 6a10c58)
+     ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=2"></script>
 <script src="js/core/shared.min.js?v=27"></script>
 <script>
