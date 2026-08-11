@@ -134,6 +134,27 @@ async function verifySignature(rawBody, signatureHeader, channelSecret) {
   return computed === signatureHeader;
 }
 
+// 🟡 2026-08-11 เพิ่ม — ข้อความเดียวที่ใช้ตอบ "ปุ่มฝั่งนักเรียนที่ใช้ไม่ได้แล้ว" ทุกกรณี
+//
+// ทำไมต้องเป็น "ข้อความเดียวกันเป๊ะ" ทั้ง 2 กรณี (หาคำขอไม่เจอ · คนกดไม่ใช่เจ้าของคำขอ):
+//   เดิมทั้ง 2 กรณีนี้ `continue` เงียบสนิท ไม่ตอบอะไรเลย — เจตนาเดิมถูกต้องครึ่งเดียว คือ
+//   กันไม่ให้คนที่ไม่ใช่เจ้าของรู้ว่า "คำขอเลขนี้มีอยู่จริงไหม" (ดูคอมเมนต์ 2026-07-16 ORANGE#5)
+//   แต่ผลข้างเคียงคือ **เจ้าของตัวจริง** ที่กดปุ่มเก่าในประวัติแชท (คำขอถูกลบ/เคลียร์ไปแล้ว)
+//   ก็ไม่ได้รับอะไรเลยเหมือนกัน = ปุ่ม "ตายสนิท" ผิดกฎ RELIABILITY FIRST ข้อ 1 (ห้ามเงียบ)
+//   ซึ่งเป็นบั๊กชนิดเดียวกับที่ไล่อุดฝั่งครูไปแล้วครบทุกปุ่มเมื่อ 2026-07-31 / 2026-08-02
+//
+//   ตอบ "ข้อความเดียวกัน" ทั้ง 2 กรณี = ได้ทั้ง 2 อย่างพร้อมกัน:
+//     · เจ้าของตัวจริงได้ข้อความบอกว่าเกิดอะไรขึ้น + ทางไปต่อ (ไม่เงียบอีกต่อไป)
+//     · คนที่ไม่ใช่เจ้าของยังแยกไม่ออกอยู่ดีว่าคำขอนั้นมีจริงหรือไม่ (คำตอบเหมือนกันเป๊ะทั้ง 2 ทาง)
+//       → ระดับการเปิดเผยข้อมูลเท่าเดิมกับของเดิมทุกประการ ไม่ได้เปิดช่องใหม่
+//
+// 🚫 ห้ามแยกข้อความ 2 กรณีนี้ออกจากกันเด็ดขาด (เช่นเติมว่า "ไม่พบคำขอนี้" เฉพาะกรณีแรก)
+//    ทำแบบนั้นเมื่อไหร่ = กลับมาเปิดช่องให้เดาว่าคำขอเลขไหนมีอยู่จริงทันที
+const STUDENT_BUTTON_UNAVAILABLE_MSG =
+  'ℹ️ 這顆按鈕已經無法使用了。\n'
+  + '可能是這筆申請已經處理完了，或這是很久以前的舊訊息。\n'
+  + '沒有做任何動作。請到網站看目前的課表狀況，或直接跟老師說一聲。';
+
 async function replyLine(channelToken, replyToken, text) {
   try {
     await fetch(LINE_REPLY_URL, {
@@ -1209,7 +1230,14 @@ serve(async (req) => {
           .select('token,proposed_options,requested_date,requested_time')
           .eq('id', requestId)
           .maybeSingle();
-        if (!reqRow) continue; // 這筆申請不存在，安全忽略，不用回覆什麼
+        // 🟡 2026-08-11 แก้ — เดิม `continue` เงียบสนิท (คอมเมนต์เก่า: 「這筆申請不存在，安全忽略，不用回覆什麼」)
+        //   เจ้าของคำขอตัวจริงที่กดปุ่มเก่าหลังคำขอถูกเคลียร์ไปแล้ว จะไม่ได้รับอะไรเลย = ปุ่มตายสนิท
+        //   ตอบด้วยข้อความกลางตัวเดียวกับกรณี "คนกดไม่ใช่เจ้าของ" → ไม่รั่วว่าคำขอนี้มีจริงไหม
+        if (!reqRow) {
+          console.warn('[line-webhook] ℹ️ accept/decline_offer: หาคำขอไม่เจอ (ถูกลบ/เคลียร์ไปแล้ว). request=', requestId);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, STUDENT_BUTTON_UNAVAILABLE_MSG);
+          continue;
+        }
 
         // 2026-07-16 加（稽核發現，ORANGE#5）：以前這裡只認 request id，沒有確認按按鈕的
         // LINE 使用者是不是這筆申請真正的學生本人——多加這層防護（防禦性加強，不是因為
@@ -1222,6 +1250,10 @@ serve(async (req) => {
         const { data: stuRow } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRow.token).maybeSingle();
         if (!senderUserId || !stuRow || stuRow.line_user_id !== senderUserId) {
           console.error('[line-webhook] ⚠️ accept/decline_offer：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestId);
+          // 🟡 2026-08-11 เพิ่ม — ตอบข้อความกลาง "ตัวเดียวกันเป๊ะ" กับกรณีหาคำขอไม่เจอด้านบน
+          //   ยังไม่ทำอะไรกับข้อมูลเหมือนเดิมทุกประการ (สิทธิ์ไม่เปลี่ยน) แค่ไม่เงียบ
+          //   และเพราะข้อความเหมือนกัน คนที่ไม่ใช่เจ้าของก็ยังแยกไม่ออกว่าคำขอนี้มีอยู่จริงไหม
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, STUDENT_BUTTON_UNAVAILABLE_MSG);
           continue;
         }
 
@@ -1816,10 +1848,17 @@ serve(async (req) => {
         // 2026-07-19 改（稽核發現，YELLOW）：fail-closed，不能因為 senderUserIdAck 空值就跳過檢查
         const senderUserIdAck = event.source && event.source.userId;
         const { data: reqRowAck } = await supabase.from('classroom_requests').select('token').eq('id', requestId).maybeSingle();
-        if (!reqRowAck) continue;
+        // 🟡 2026-08-11 แก้ — เดิม `continue` เงียบสนิท (บั๊กเดียวกับ accept/decline_offer ด้านบน)
+        if (!reqRowAck) {
+          console.warn('[line-webhook] ℹ️ ack_teacher_cancel: หาคำขอไม่เจอ (ถูกลบ/เคลียร์ไปแล้ว). request=', requestId);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, STUDENT_BUTTON_UNAVAILABLE_MSG);
+          continue;
+        }
         const { data: stuRowAck } = await supabase.from('classroom_students').select('line_user_id').eq('token', reqRowAck.token).maybeSingle();
         if (!senderUserIdAck || !stuRowAck || stuRowAck.line_user_id !== senderUserIdAck) {
           console.error('[line-webhook] ⚠️ ack_teacher_cancel：LINE 使用者跟這筆申請的學生對不起來，已忽略。request=', requestId);
+          // 🟡 2026-08-11 เพิ่ม — ข้อความกลางตัวเดียวกันเป๊ะกับกรณีด้านบน (ไม่รั่วว่าคำขอมีจริงไหม)
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, STUDENT_BUTTON_UNAVAILABLE_MSG);
           continue;
         }
 
