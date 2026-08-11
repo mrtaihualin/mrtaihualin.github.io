@@ -24,6 +24,15 @@
 **คีย์เดิมไม่แก้สักตัว** → ไฟล์ export รูปแบบเก่าไม่พัง · ใช้ `userClient` (RLS กรอง `auth.uid()=user_id` ที่ตัวฐานข้อมูล) ไม่พึ่ง service_role
 คำที่ลบแล้วแยกไว้กอง `deleted` ต่างหาก — ยังอยู่ในระบบจริงจึงต้องบอกเจ้าตัว แต่ไม่ปนกองหลักเพราะจะเข้าใจผิดว่ายังอยู่ในคลัง
 
+### 3. (งานคู่ขนานจากอีกแชท รวมอยู่ commit เดียวกัน) แปล error ภาษาอังกฤษดิบ + อุดจุด UPDATE ไม่เช็กแถวฝั่งครู ในระบบเลื่อนคาบ (改期)
+
+ขอบเขต: อุดจุดเสี่ยงที่ตกหล่นจากรายการเดิม 4 จุด (3 จุดถูกอุดไปแล้วในรอบก่อนหน้า เหลือจุดนี้จุดเดียวที่มี 3 ที่ต้องแก้จริง) — ไม่แตะ logic การล็อก/ด่านเวลา/การย้าย Calendar เลย
+
+1. `js/classroom/student-requests.js` — `studentWithdrawOwnRescheduleRequest` (กดถอนคำขอ) และ `respondToOfferAsStudent` (กดตอบรับ/ปฏิเสธเวลาที่ครูเสนอ) เดิมโชว์ error อังกฤษดิบตรงๆ เวลาโดนด่าน rate limit หรือกดตอนครูจับล็อกอยู่ → ครอบด้วย `friendlyRequestError()` แล้ว (จุดที่ 2 มีเงื่อนไขพิเศษ `res.data !== true` ต้องคงข้อความเดิม เพราะด่านในฐานข้อมูลปฏิเสธเงียบๆ ไม่มี error ให้แปล)
+2. `js/classroom/teacher-request-admin.js` — `revertCalendarBackupInner` (ปุ่ม ↩️ 復原) เดิม UPDATE เลขคาบใหม่ลงคำขอเดิมโดยไม่เช็กว่าแก้ได้กี่แถว ถ้าโดน RLS บล็อกจะเงียบสนิท (0 แถว ไม่มี error) → เพิ่ม `.select()` + เช็กจำนวนแถว ไม่ครบ = เขียน `console.warn` (ไม่กระทบการกู้คืนคาบเอง ซึ่งสำเร็จไปก่อนขั้นนี้แล้ว)
+
+ดูรายละเอียดเต็ม + โค้ด diff ที่ `CLAUDE.md` หัวข้อ "🔄 ระบบขอเลื่อนคาบ (改期)"
+
 ### ทดสอบ
 - `scripts/tests-word-vault-sync.js` **32 → 56 ข้อ** (เพิ่มลบข้ามเครื่อง/อ่านมาไม่ครบ/ลบซ้ำ/sync ซ้ำ/เซฟใหม่หลังมีตรา/ฐานข้อมูลยังไม่ได้รัน SQL)
 - `supabase/tests/2026-08-11_word_vault_sync_TEST.sql` **8 → 14 ข้อ** — รันบน staging ผ่าน 14/14
@@ -41,12 +50,12 @@
 เพิ่ม `'learning_saved_items'` เข้า `CASCADE_TABLES` ใน `supabase/functions/account-delete/index.ts`
 **ไม่เปลี่ยน behavior การลบจริงเลย** — พิสูจน์แล้ว 3 ชั้น: (ก) `CASCADE_TABLES` ถูกใช้ที่เดียวคือ loop นับเลขในเส้นทาง `preview` (บรรทัด 88 นิยาม · 255 ใช้) (ข) ตัวนับคือ `countRows()` = `select count head:true` **อ่านอย่างเดียว ไม่มี delete** (ค) ตัวลบจริงคือ `account-delete-cron/index.ts` ซึ่ง **ไม่มี `CASCADE_TABLES` เลย** (ใช้ `HARD_DELETE_TABLES`/`ANONYMIZE_TABLES` ของตัวเอง + พึ่ง FK cascade)
 ข้อมูลคลังคำถูกลบถูกต้องอยู่แล้วมาตลอดผ่าน FK `on delete cascade` — ที่เพิ่มคือ **ตัวเลขที่โชว์ก่อนกดยืนยัน** ให้ตรงกับของจริง
-🔴 **ต้อง deploy `account-delete` ใหม่** ถึงจะเห็นผล (ไม่ deploy = preview ยังไม่บอกเรื่องคลังคำ · ไม่มีผลเสียอื่น)
+✅ deploy แล้ว 2026-08-11 (ผ่าน Supabase Dashboard) + smoke test ด้วย token ผู้ใช้จริง (fresh JWT) — `preview` คืน `will_cascade_delete.learning_saved_items` ตัวเลขถูกต้อง ตัวนับอื่นไม่เปลี่ยน `can_delete:true`
 
-### ยังเหลือ
-ทดสอบ 2 เครื่องด้วยบัญชีจริง (sync + ลบ) — **ยังไม่ถือว่าปิดงานจนข้อนี้ผ่าน**
+### ✅ ปิดงานแล้ว 2026-08-11 — Lin ทดสอบ 2 เครื่องจริงผ่านทั้ง sync และ delete
+เจอปัญหาระหว่างทาง: "เพิ่มข้ามเครื่องได้ แต่ลบไม่ข้าม" — สาเหตุคือโค้ด tombstone ใน `word-vault.js` ยัง **ไม่ได้ push** (ค้างใน git เท่านั้น) เว็บจริงยังรันโค้ดเก่า พอ push แล้ว retest ผ่านครบทั้ง 2 อย่าง
 
-**ไฟล์ที่แก้:** `js/games/word-vault.js` · `supabase/functions/account-export/index.ts` · 🆕`supabase/sql/2026-08-11_word_vault_deletion_sync.sql` · `supabase/tests/2026-08-11_word_vault_sync_TEST.sql` · `scripts/tests-word-vault-sync.js` · 7 หน้า HTML (cache-buster v=2→3) · `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` · `MAINTENANCE.md`
+**ไฟล์ที่แก้:** `js/games/word-vault.js` · `supabase/functions/account-export/index.ts` · `supabase/functions/account-delete/index.ts` (เพิ่ม `learning_saved_items` เข้า `CASCADE_TABLES`) · 🆕`supabase/sql/2026-08-11_word_vault_deletion_sync.sql` · `supabase/tests/2026-08-11_word_vault_sync_TEST.sql` · `scripts/tests-word-vault-sync.js` · 7 หน้า HTML (cache-buster v=2→3) · `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` · `MAINTENANCE.md` · `js/classroom/student-requests.js` · `js/classroom/teacher-request-admin.js` (2 ไฟล์หลังเป็นงานคู่ขนานคนละแชท ดูหัวข้อ 3 ด้านบน) · `CLAUDE.md`
 
 ---
 
