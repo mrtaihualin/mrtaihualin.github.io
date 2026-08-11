@@ -107,7 +107,7 @@ async function upsertRows(baseUrl, key, table, rows, conflictCols) {
 }
 
 // ลบแถวในตารางที่ "ไม่มีอยู่แล้ว" ในไฟล์ต้นฉบับปัจจุบัน (เช่น Lin ลบคำ/ประโยคทิ้งจากไฟล์)
-async function pruneStale(baseUrl, key, table, currentRows, keyCols) {
+async function pruneStale(baseUrl, key, table, currentRows, keyCols, allowPrune) {
   const selectCols = ['id'].concat(keyCols).join(',');
   const res = await fetch(baseUrl + '/rest/v1/' + table + '?select=' + selectCols, {
     headers: { apikey: key, Authorization: 'Bearer ' + key },
@@ -115,9 +115,43 @@ async function pruneStale(baseUrl, key, table, currentRows, keyCols) {
   if (!res.ok) throw new Error('อ่าน ' + table + ' เพื่อหาแถวเก่าล้มเหลว (HTTP ' + res.status + '): ' + (await res.text()));
   const existing = await res.json();
 
-  const keyOf = (obj) => keyCols.map((c) => String(obj[c])).join(' ');
+  const keyOf = (obj) => keyCols.map((c) => String(obj[c])).join('\u0000');
   const currentKeySet = new Set(currentRows.map(keyOf));
-  const staleIds = existing.filter((row) => !currentKeySet.has(keyOf(row))).map((row) => row.id);
+  const existingKeySet = new Set(existing.map(keyOf));
+  const staleRows = existing.filter((row) => !currentKeySet.has(keyOf(row)));
+  const staleIds = staleRows.map((row) => row.id);
+  const addedKeys = [...currentKeySet].filter((k) => !existingKeySet.has(k));
+
+  // 🔴 ด่านกัน "ประวัติการเรียนของนักเรียนขาดเงียบๆ" (เพิ่ม 2026-08-11 — งาน Learning Foundation)
+  //    ตัวตนของคำในระบบนี้คือ "ตัวหนังสือไทย" (game_words unique(word,level) · tone_srs_state
+  //    คีย์ด้วย word · star_ledger เก็บ word เป็น text · learning_items.content_key)
+  //    → ถ้า Lin แก้ typo ของคำหนึ่ง ฟังก์ชันนี้จะเห็นเป็น "คำเก่าหาย + คำใหม่โผล่" แล้วลบคำเก่าทิ้ง
+  //      = ประวัติ/ดาว/SRS/คลังคำของนักเรียนที่ผูกกับคำเดิม ขาดถาวรโดยไม่มีใครรู้
+  //      และคำที่แก้แล้วเริ่มนับใหม่จากศูนย์
+  //    → เจอกรณีกำกวมนี้ = หยุดก่อน ไม่ลบ ให้ Lin ยืนยันว่าแก้ตัวสะกด หรือลบคำทิ้งจริง
+  //    ⚠️ ขั้น upsert ทำไปแล้วก่อนถึงจุดนี้ = ของใหม่เข้าคลังครบ ไม่มีอะไรหาย
+  //       สภาพที่ค้างไว้คือ "มีทั้งคำเก่าและคำใหม่ในคลัง" ซึ่งปลอดภัยและแก้ต่อได้ตลอด
+  if (staleIds.length && addedKeys.length && !allowPrune) {
+    const show = (arr) => arr.slice(0, 10).join(' · ') + (arr.length > 10 ? ' …' : '');
+    console.error('');
+    console.error('🛑 หยุดก่อน — ' + table + ' มีทั้งของหายและของใหม่ในรอบเดียว');
+    console.error('   อาจเป็นการ "แก้ตัวสะกด" ไม่ใช่ "ลบทิ้ง" จึงยังไม่ลบอะไรเลย');
+    console.error('   หายไปจากไฟล์ต้นฉบับ ' + staleRows.length + ' แถว: ' + show(staleRows.map(keyOf)));
+    console.error('   โผล่มาใหม่ ' + addedKeys.length + ' แถว: ' + show(addedKeys));
+    console.error('');
+    console.error('   ⚠️ ถ้านี่คือการแก้ตัวสะกดคำเดิม แล้วปล่อยให้ลบ = ประวัติการเรียน/ดาว/คลังคำ');
+    console.error('      ของนักเรียนที่ผูกกับคำเดิมขาดถาวร และคำที่แก้แล้วเริ่มนับใหม่จากศูนย์');
+    console.error('   ✅ ของใหม่เข้าคลังแล้วเรียบร้อย ไม่มีอะไรหาย — ตอนนี้แค่ "ยังไม่ลบของเก่า"');
+    console.error('      เว็บใช้งานได้ปกติ (อาจเห็นทั้งคำเก่าและคำใหม่ชั่วคราว)');
+    console.error('');
+    console.error('   เลือกทางต่อไป:');
+    console.error('   1) เป็นการ "แก้ตัวสะกด" → จดการเปลี่ยนชื่อลง learning_item_key_history ก่อน');
+    console.error('      (ดู supabase/sql/2026-08-11_learning_foundation.sql หัวข้อ [B2])');
+    console.error('      แล้วรันซ้ำด้วย: node scripts/migrate-game-content.js --allow-prune');
+    console.error('   2) เป็นการ "ลบคำทิ้งจริง" → รันซ้ำด้วย: node scripts/migrate-game-content.js --allow-prune');
+    console.error('');
+    throw new Error('ต้องให้ Lin ยืนยันก่อนว่าเป็นการแก้ตัวสะกดหรือลบทิ้ง (อ่านข้อความข้างบน)');
+  }
 
   if (!staleIds.length) {
     console.log('  ' + table + ': ไม่มีแถวเก่าที่ต้องลบ');
@@ -136,6 +170,8 @@ async function pruneStale(baseUrl, key, table, currentRows, keyCols) {
 }
 
 async function main() {
+  // --allow-prune = Lin ยืนยันแล้วว่าของที่หายไปคือ "ลบทิ้งจริง" ไม่ใช่การแก้ตัวสะกด
+  const ALLOW_PRUNE = process.argv.slice(2).includes('--allow-prune');
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_KEY) {
@@ -170,12 +206,12 @@ async function main() {
   console.log('→ upsert game_words ...');
   await upsertRows(SUPABASE_URL, SERVICE_KEY, 'game_words', wordRows, 'word,level');
   console.log('→ เช็คแถวเก่าใน game_words ...');
-  await pruneStale(SUPABASE_URL, SERVICE_KEY, 'game_words', wordRows, ['word', 'level']);
+  await pruneStale(SUPABASE_URL, SERVICE_KEY, 'game_words', wordRows, ['word', 'level'], ALLOW_PRUNE);
 
   console.log('→ upsert game_sentences ...');
   await upsertRows(SUPABASE_URL, SERVICE_KEY, 'game_sentences', sentRows, 'th');
   console.log('→ เช็คแถวเก่าใน game_sentences ...');
-  await pruneStale(SUPABASE_URL, SERVICE_KEY, 'game_sentences', sentRows, ['th']);
+  await pruneStale(SUPABASE_URL, SERVICE_KEY, 'game_sentences', sentRows, ['th'], ALLOW_PRUNE);
 
   console.log('✅ เสร็จแล้ว — game_words ' + wordRows.length + ' แถว · game_sentences ' + sentRows.length + ' แถว');
 }

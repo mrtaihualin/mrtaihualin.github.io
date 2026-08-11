@@ -359,6 +359,13 @@ function scanProject(scanRoot) {
   const findings = [];
   const seen = new Set();
   const skippedLargeFiles = [];
+  // fail-closed (2026-08-11): ไฟล์ "ข้อความ" (.js/.ts/.sql/…) ที่มีไบต์ NUL ปนอยู่จะถูกข้ามที่บรรทัด
+  // `if (buffer.includes(0)) continue;` ข้างล่าง = ไม่เคยถูกสแกนหาค่าลับเลย แต่เดิมข้ามแบบเงียบสนิท
+  // เจอจริง 2026-08-11: scripts/migrate-game-content.js มีไบต์ NUL 1 ตัวใน join('')
+  //   → เป็นไฟล์เดียวในโปรเจกต์ที่รับ SUPABASE_SERVICE_ROLE_KEY และเป็นไฟล์เดียวที่ไม่เคยถูกสแกน
+  //   (แก้ต้นเหตุแล้วโดยเปลี่ยนไบต์ดิบเป็น escape  — ผลตอนรันเหมือนเดิมเป๊ะ)
+  // ไฟล์ binary จริง (.png/.mp3/…) ยังข้ามเหมือนเดิม ไม่นับเป็นปัญหา เพราะไม่ใช่ไฟล์ข้อความ
+  const skippedBinaryTextFiles = [];
 
   for (const relative of allFiles) {
     const filenameType = forbiddenFilenameType(relative);
@@ -384,12 +391,16 @@ function scanProject(scanRoot) {
     } catch (_) {
       continue;
     }
-    if (buffer.includes(0)) continue;
+    if (buffer.includes(0)) {
+      // ไฟล์ข้อความที่มีไบต์ NUL = สแกนไม่ได้ ต้องฟ้อง ห้ามเงียบ (ดูเหตุผลที่หัวฟังก์ชัน)
+      if (isTextCandidate(relative)) skippedBinaryTextFiles.push(relative);
+      continue;
+    }
     scanText(relative, buffer.toString('utf8'), findings, seen);
   }
 
   findings.sort((a, b) => a.file.localeCompare(b.file) || (a.line || 0) - (b.line || 0) || a.type.localeCompare(b.type));
-  return { findings, scannedFiles: allFiles.length, skippedLargeFiles };
+  return { findings, scannedFiles: allFiles.length, skippedLargeFiles, skippedBinaryTextFiles };
 }
 
 function formatFinding(finding) {
@@ -411,6 +422,13 @@ function runCli() {
     // เดิมแค่ warn แล้วปล่อยผ่าน (exit 0 ได้) — ถือว่า "ยังไม่ได้ตรวจ" ต้องนับเป็นไม่ผ่าน ห้ามเงียบ
     console.error(`ไม่ผ่าน: มีไฟล์ข้อความขนาดใหญ่เกิน 2MB ที่ไม่เคยถูกสแกนหาค่าลับ ${result.skippedLargeFiles.length} ไฟล์:`);
     for (const file of result.skippedLargeFiles) console.error(`- ${file}`);
+    process.exitCode = 1;
+  }
+  if (result.skippedBinaryTextFiles.length) {
+    // fail-closed (2026-08-11) — เหตุผลเดียวกับข้างบน: "ยังไม่ได้ตรวจ" ต้องนับเป็นไม่ผ่าน
+    console.error(`ไม่ผ่าน: มีไฟล์ข้อความที่มีไบต์ NUL ปนอยู่ จึงไม่เคยถูกสแกนหาค่าลับ ${result.skippedBinaryTextFiles.length} ไฟล์:`);
+    for (const file of result.skippedBinaryTextFiles) console.error(`- ${file}`);
+    console.error('  วิธีแก้: หาไบต์ NUL ในไฟล์แล้วเปลี่ยนเป็น escape (เช่น \\u0000) ผลตอนรันเหมือนเดิม แต่ไฟล์กลับเป็นข้อความปกติ');
     process.exitCode = 1;
   }
 }

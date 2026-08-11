@@ -53,7 +53,9 @@ const secretScan = scanProject(root);
 secretScan.findings.forEach((finding) => failures.push(`secret scan: ${formatFinding(finding)}`));
 // fail-closed (2026-08-07): ไฟล์ >2MB ที่ไม่เคยถูกสแกน = "ยังไม่ได้ตรวจ" ต้องนับเป็นไม่ผ่าน ห้ามปล่อยให้ exit 0 เงียบๆ
 secretScan.skippedLargeFiles.forEach((file) => failures.push(`secret scan: ไฟล์ข้อความขนาดใหญ่เกิน 2MB ไม่เคยถูกสแกนหาค่าลับ (fail-closed) — ${file}`));
-if (secretScan.findings.length === 0 && secretScan.skippedLargeFiles.length === 0) console.log(`✓ ตรวจค่าลับ ${secretScan.scannedFiles} ไฟล์`);
+// fail-closed (2026-08-11): ไฟล์ข้อความที่มีไบต์ NUL ปนอยู่ ตัวสแกนจะข้ามเงียบๆ = "ยังไม่ได้ตรวจ"
+secretScan.skippedBinaryTextFiles.forEach((file) => failures.push(`secret scan: ไฟล์ข้อความมีไบต์ NUL จึงไม่เคยถูกสแกนหาค่าลับ (fail-closed) — ${file}`));
+if (secretScan.findings.length === 0 && secretScan.skippedLargeFiles.length === 0 && secretScan.skippedBinaryTextFiles.length === 0) console.log(`✓ ตรวจค่าลับ ${secretScan.scannedFiles} ไฟล์`);
 
 const files = listRepositoryFiles(root).filter((file) => fs.existsSync(path.join(root, file)));
 const jsFiles = files.filter((file) => file.endsWith('.js'));
@@ -118,6 +120,10 @@ runTest(['scripts/tests-classroom-behavioral.js'], 'classroom behavioral tests')
 runTest(['scripts/tests-search-behavioral.js'], 'search behavioral tests');
 // เพิ่ม 2026-08-10 — ตรวจว่า nav/แถบประกาศ/bottom-nav ทุกหน้าตรงกับ data/nav-template.js (read-only)
 runTest(['scripts/check-nav-consistency.js'], 'nav consistency check');
+// เพิ่ม 2026-08-11 — ตรวจความพร้อมคลังเนื้อหาสำหรับระบบเรียนกลาง (อ่านอย่างเดียว)
+// บล็อกเมื่อ metadata ที่ระบบต้องใช้ขาด (zh/category/level) · ช่องว่างอื่นเป็นรายงานให้ Lin ไม่บล็อก
+// ดูรายการเต็ม: node scripts/audit-learning-content.js --full
+runTest(['scripts/audit-learning-content.js'], 'learning content audit');
 runTest(['scripts/check-mobile-accessibility.js'], 'mobile/accessibility check (warning-only)');
 // ⚠️ scripts/check-minified-sync.js ตั้งใจ "ไม่" ใส่ในนี้ — สคริปต์นั้นเทียบเนื้อหาแบบ exact-match
 // ซึ่งจะ MISMATCH เสมอกับไฟล์ที่ผ่าน minifier จริง (ดูคอมเมนต์ในไฟล์นั้น) ถ้าใส่ที่นี่จะ fail ทุกครั้ง

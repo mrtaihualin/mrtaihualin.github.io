@@ -1,5 +1,34 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-08-11 — วางโครงกลางระบบข้อมูลการเรียน (Learning System Foundation) + อุด 2 รูที่เจอระหว่างทาง
+
+**ขอบเขต:** วางโครงฐานข้อมูลกลางเท่านั้น · **ไม่แตะไฟล์ที่ผู้ใช้เห็นแม้แต่ไฟล์เดียว** (ไม่แก้ `.html`/`.css`/ไฟล์เกม/ห้องเรียน) · ไม่แตะตารางเดิมใน Supabase · ไม่ deploy Edge Function
+
+**ของใหม่**
+- 🆕 `supabase/sql/2026-08-11_learning_foundation.sql` — ตารางใหม่ 23 ตาราง (ยังไม่ได้รัน รอ Lin รัน staging ก่อน)
+  - ตัวตนเนื้อหากลาง `learning_items` (word/sentence/pattern · ระดับความยากกลาง 1 ชุด · Master vs Personal แยกด้วย `owner_user_id`)
+  - `learning_item_key_history` — แก้ typo แล้วประวัติการเรียนไม่ขาด
+  - จัดหมวด 2 แกน many-to-many (詞類/情境) · ความสัมพันธ์คำ↔ประโยค↔句型 · ความเข้ากันได้กับแต่ละเกม
+  - `practice_events` (หลักฐานดิบ) แยกจาก `learning_memory` (สถานะที่คำนวณมา) · แยก เกม/แบบฝึก/ทักษะ เป็น 3 ชั้น
+  - `learning_saved_items` — ที่เก็บฝั่งเซิร์ฟเวอร์ให้คลังคำ sync ข้ามเครื่อง (ยังไม่ต่อสายกับเว็บ)
+  - ฟรี/จ่ายเงินแยก Plan · Price · Entitlement (ไม่ใช่ `paid=true`)
+- 🆕 `supabase/tests/2026-08-11_learning_foundation_TEST.sql` — ตัวทดสอบ 8 ข้อ (`begin…rollback` ไม่เขียนของจริง)
+- 🆕 `scripts/audit-learning-content.js` — รายงานช่องว่างคลังเนื้อหา (อ่านอย่างเดียว) ผูกเข้า `check-site.js` แล้ว
+
+**ทดสอบจริงแล้ว (ไม่ใช่แค่อ่านโค้ด):** ยกฐานข้อมูล Postgres 17 ชั่วคราวขึ้นในเครื่อง จำลอง `auth.users`/`anon`/`authenticated`/`game_words`/`game_sentences` แล้วรันไฟล์จริง 2 รอบ (พิสูจน์รันซ้ำได้) · ทดสอบด่าน RLS ด้วยผู้ใช้ 2 คน: อ่านของกันไม่ได้ · ยัดคำใส่บัญชีคนอื่นไม่ได้ · ลบของคนอื่นไม่ได้ · ปั้มสถานะ 掌握 ให้ตัวเองไม่ได้ · ยัดแพ็กเกจจ่ายเงินให้ตัวเองไม่ได้ · ตัวทดสอบผ่าน ✅ 8/8 และ **ทดสอบย้อนกลับ 3 แบบยืนยันว่าจับของพังได้จริง**
+
+**2 รูที่เจอระหว่างทาง (ไม่ได้ตั้งใจหา แต่เจอแล้วต้องอุด)**
+1. `scripts/migrate-game-content.js` ขั้น `pruneStale()` **ลบคำเก่าทิ้งเงียบๆ เวลา Lin แก้ typo** → ประวัติ/ดาว/SRS/คลังคำของนักเรียนที่ผูกกับคำเดิมขาดถาวร · เพิ่มด่าน: เจอทั้ง "ของหาย + ของใหม่" ในรอบเดียว = หยุดก่อน ไม่ลบ ต้องยืนยันด้วย `--allow-prune`
+2. 🔒 ไฟล์นี้มี **ไบต์ NUL** 1 ตัวใน `join()` → `scripts/secret-scanner.js:387` ข้ามไฟล์ที่มีไบต์ NUL **เงียบๆ** = ไฟล์เดียวในโปรเจกต์ที่รับ `SUPABASE_SERVICE_ROLE_KEY` คือไฟล์เดียวที่ไม่เคยถูกสแกนหาค่าลับเลย · แก้ต้นเหตุ (เปลี่ยนเป็น escape `\u0000` ผลตอนรันเหมือนเดิมเป๊ะ) + ทำให้ตัวสแกน **fail-closed** เหมือนกฎไฟล์ใหญ่เกิน 2MB ของ 2026-08-07 · ตรวจทั้ง repo แล้ว เหลือ 0 ไฟล์ข้อความที่สแกนไม่ได้ (ด่านใหม่จับ NUL ที่เผลอพิมพ์เข้าไปเองได้ทันทีจริง)
+
+**ผลตรวจ:** `node scripts/check-site.js` ผ่าน 15 หัวข้อ · ยังไม่ผ่าน 44 รายการเดิมใน `_staging-build/` (ของเดิมที่ยืนยันแล้วว่าไม่ใช่บั๊ก เพราะอยู่ใน `.gitignore`) ไม่มีรายการใหม่เพิ่ม
+
+**ยังไม่ทำ (ติด Decision ของ Lin — ไม่เดา):** รายชื่อ 詞類/情境 · รายชื่อ Skill · สูตร Mastery · ราคา/แพ็กเกจ · ความเข้ากันได้ของ item กับแต่ละเกม · การต่อสายคลังคำข้ามเครื่องเข้ากับเว็บ (ติดคำถามเพดาน 30 คำเวลารวม 2 เครื่อง)
+
+**ไฟล์ที่แก้:** 🆕`supabase/sql/2026-08-11_learning_foundation.sql` · 🆕`supabase/tests/2026-08-11_learning_foundation_TEST.sql` · 🆕`scripts/audit-learning-content.js` · `scripts/migrate-game-content.js` · `scripts/secret-scanner.js` · `scripts/check-site.js` · `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` · `supabase/schema/README.md` · `MAINTENANCE.md`
+
+---
+
 ## 2026-08-10 — Navigation IA รอบใหญ่ + games.html ปรับเป็นหน้า hub (games-practice.html ใหม่) + แก้ responsive nav
 
 สถานะ: ✅ เสร็จแล้ว — push ครบผ่าน GitHub Desktop ยืนยัน "No local changes" (local = origin)
