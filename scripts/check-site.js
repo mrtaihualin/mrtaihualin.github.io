@@ -109,6 +109,11 @@ runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 // เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');
 runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
+// เพิ่ม 2026-08-11 (P5-B) — ตัวทดสอบคุ้มกันกฎห้องเรียนที่เคยพังมาแล้วจริง
+// (กฎล็อกเพิ่ม/เลื่อน/ยกเลิก · สำรองก่อนแตะ Calendar · ตรวจคาบชนตอนย้าย · p_original_time ·
+//  ซิงค์ตารางหลังย้าย · ระบบเก่าที่ลบถาวรห้ามกลับมา · รีเซ็ตธงเตือน · ปุ่ม LINE พก d=/t=)
+// ทดสอบแล้วว่าจับ regression ได้จริง (negative test 2 แบบ) ไม่ใช่ด่านหลอก
+runTest(['scripts/tests-classroom-behavioral.js'], 'classroom behavioral tests');
 // เพิ่ม 2026-08-10 — ตัวทดสอบคุ้มกันพฤติกรรมเดิมของ Search MVP
 runTest(['scripts/tests-search-behavioral.js'], 'search behavioral tests');
 // เพิ่ม 2026-08-10 — ตรวจว่า nav/แถบประกาศ/bottom-nav ทุกหน้าตรงกับ data/nav-template.js (read-only)
