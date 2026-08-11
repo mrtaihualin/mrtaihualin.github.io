@@ -124,6 +124,10 @@ runTest(['scripts/check-nav-consistency.js'], 'nav consistency check');
 // บล็อกเมื่อ metadata ที่ระบบต้องใช้ขาด (zh/category/level) · ช่องว่างอื่นเป็นรายงานให้ Lin ไม่บล็อก
 // ดูรายการเต็ม: node scripts/audit-learning-content.js --full
 runTest(['scripts/audit-learning-content.js'], 'learning content audit');
+// เพิ่ม 2026-08-11 — คุ้มกันกติกาคลังคำ sync ข้ามเครื่องที่ Lin สั่งไว้ (ผิดแล้วคำของนักเรียนหายถาวร):
+// รวมคำได้แม้เกินเพดาน · ห้ามลบคำอัตโนมัติ · ห้ามข้อมูลเดิมหาย · guest/local ต้องไม่พัง
+// ทดสอบย้อนกลับแล้ว 3 แบบว่าจับของพังได้จริง (ไม่ใช่ด่านหลอก)
+runTest(['scripts/tests-word-vault-sync.js'], 'word-vault sync tests');
 runTest(['scripts/check-mobile-accessibility.js'], 'mobile/accessibility check (warning-only)');
 // ⚠️ scripts/check-minified-sync.js ตั้งใจ "ไม่" ใส่ในนี้ — สคริปต์นั้นเทียบเนื้อหาแบบ exact-match
 // ซึ่งจะ MISMATCH เสมอกับไฟล์ที่ผ่าน minifier จริง (ดูคอมเมนต์ในไฟล์นั้น) ถ้าใส่ที่นี่จะ fail ทุกครั้ง

@@ -461,7 +461,20 @@ create table if not exists public.learning_saved_items (
   item_id        uuid references public.learning_items(item_id) on delete set null,
   zh             text,
   en             text,
+
+  -- ⚠️ 2 ช่องนี้แยกกันโดยตั้งใจ (แก้ 2026-08-11 ตอนต่อสายกับเว็บจริง — ก่อนรันที่ไหนทั้งนั้น)
+  --   `source_raw`     = ค่าที่ฝั่งเว็บเก็บอยู่จริงในคลังคำ เช่น 'tone-finder' / 'reading-game' /
+  --                      'typing-game' / 'word-order' / 'listening-game' / 'games-challenge'
+  --                      **ไม่มี FK โดยตั้งใจ** — เก็บดิบไว้ตรงๆ เพื่อให้ดึงกลับไปโชว์ป้าย "ที่มา"
+  --                      ในหน้า vault.html ได้เหมือนเดิมเป๊ะ (ฟังก์ชัน sourceLabel() ใช้ค่าชุดนี้)
+  --   `source_surface` = รหัสเกมมาตรฐานของระบบใหม่ (`practice_surfaces.code` เช่น 'tone_finder')
+  --                      **ตอนนี้ปล่อย null เสมอ** ฝั่งเว็บไม่เขียนช่องนี้
+  -- 🔴 เหตุผลที่ต้องแยก: ชื่อ 2 ชุดนี้ "ไม่ตรงกัน" (`tone-finder` ขีดกลาง vs `tone_finder` ขีดล่าง)
+  --    ถ้าเอาค่าจากคลังคำยัดลง source_surface ตรงๆ = ผิด FK แล้วเซฟคำไม่สำเร็จทุกครั้ง
+  --    การจับคู่ 2 ชุดนี้ทำทีหลังฝั่งเซิร์ฟเวอร์ได้ (ดู legacy_codes ใน practice_surfaces)
+  source_raw     text,
   source_surface text references public.practice_surfaces(code),
+
   vault_key      text not null default 'linvault',   -- 'linvault' (คลังรวม) | 'lego_vault' (คลังเลโก้)
   tags           text[] not null default '{}',
   saved_at       timestamptz not null default now(),
@@ -696,14 +709,28 @@ where not exists (
 -- ⚠️ แถวนี้บอกแค่ว่า "ไฟล์นี้ถูกรันแล้ว" — **ยังไม่ใช่คำยืนยันว่าถูกต้อง**
 --    ต้องรันหัวข้อ [M] ให้ผ่านครบ 4 ข้อก่อน แล้วค่อยกลับมาอัปเดต verified_method ด้วยมือเป็น
 --    'ผ่านหัวข้อ [M] ครบ 4 ข้อ' — ห้ามถือว่าสำเร็จก่อนตรวจ (กฎ RELIABILITY FIRST)
-insert into private.sql_run_log (file_name, file_date, verified_active_at, verified_method, note)
-values ('sql/2026-08-11_learning_foundation.sql', '2026-08-11', current_date,
-        'รันไฟล์แล้ว — ยังไม่ได้ตรวจหัวข้อ [M]',
-        'ต้นฉบับตารางโครงระบบเรียนกลาง 23 ตาราง (Learning Item / Practice Event / Learning Memory / Saved Items / Plan-Price-Entitlement)')
-on conflict (file_name) do update
-  set verified_active_at = excluded.verified_active_at,
-      verified_method    = excluded.verified_method,
-      note               = excluded.note;
+--
+-- 🔑 ห่อด้วย "ถ้ามีตารางนั้นอยู่" โดยตั้งใจ (แก้ 2026-08-11 หลังเจอของจริงบน staging):
+--    ตาราง private.sql_run_log มาจากไฟล์ 2026-08-07_migration_tracking.sql ซึ่ง **มีอยู่บน
+--    production แต่ยังไม่มีบน staging** → ถ้าเขียนคำสั่ง insert ตรงๆ ไฟล์นี้จะพังทั้งไฟล์
+--    บนทุกฐานข้อมูลที่ยังไม่มีตารางนั้น (staging / sandbox / ตอนกู้คืนจากศูนย์ที่ลำดับไฟล์ต่างไป)
+--    ตอนนี้: ไม่มีตารางนั้น = ข้ามการจดบันทึกไป แล้วขึ้นข้อความบอกตรงๆ (ไม่เงียบ) ส่วนตาราง
+--    ทั้ง 23 ตัวถูกสร้างครบเหมือนเดิม
+do $$
+begin
+  if to_regclass('private.sql_run_log') is null then
+    raise notice '⚠️ ข้ามการจดบันทึกลง private.sql_run_log เพราะยังไม่มีตารางนั้นในฐานข้อมูลนี้ (ปกติสำหรับ staging/sandbox) — ตารางทั้ง 23 ตัวถูกสร้างครบแล้ว ถ้าต้องการระบบติดตาม migration ให้รัน supabase/sql/2026-08-07_migration_tracking.sql ก่อน แล้วรันไฟล์นี้ซ้ำ';
+    return;
+  end if;
+  insert into private.sql_run_log (file_name, file_date, verified_active_at, verified_method, note)
+  values ('sql/2026-08-11_learning_foundation.sql', '2026-08-11', current_date,
+          'รันไฟล์แล้ว — ยังไม่ได้ตรวจหัวข้อ [M]',
+          'ต้นฉบับตารางโครงระบบเรียนกลาง 23 ตาราง (Learning Item / Practice Event / Learning Memory / Saved Items / Plan-Price-Entitlement)')
+  on conflict (file_name) do update
+    set verified_active_at = excluded.verified_active_at,
+        verified_method    = excluded.verified_method,
+        note               = excluded.note;
+end $$;
 
 
 -- ════════════════════════════════════════════════════════════════════════════

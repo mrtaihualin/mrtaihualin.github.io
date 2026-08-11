@@ -391,6 +391,14 @@
     if (API.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
       try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}
     }
+    // 🆕 2026-08-11: คลังคำ (單字庫) sync ข้ามเครื่อง — เกาะจุดเดียวกับ GAME_ACCOUNT.sync
+    //   ใช้ client + ด่านกันยิงซ้ำ (lastAdaptiveUserId) ชุดเดียวกัน ไม่สร้างระบบ session ใหม่
+    //   ⚠️ เรียก "ทุกครั้ง" ไม่ใส่ if (API.user) เพราะตอนล็อกเอาท์ต้องส่ง uid = null เข้าไป
+    //      เพื่อให้ WordVault เลิกเขียนขึ้นเซิร์ฟเวอร์ (ถ้าไม่ส่ง จะค้าง session เก่าไว้)
+    //      ส่ง null = กลับไปทำงานแบบ local เหมือนเดิม ไม่ลบคำในเครื่องทิ้ง
+    if (window.WordVault && WordVault.sync) {
+      try { WordVault.sync(sb, uid); } catch (e) {}
+    }
     loadAdaptiveHistory(); // 2026-07-13 Lin：ล็อกอิน/สลับบัญชี → โหลดประวัติคำพลาดของเกมนี้ใหม่
   }
 
