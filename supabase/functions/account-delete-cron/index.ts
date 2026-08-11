@@ -179,7 +179,74 @@ async function deleteOneAccount(admin, userId, cachedEmail, requestId, claimedAt
     completedSteps.push('anonymize:star_ledger (no-op — ไม่มีคอลัมน์ระบุตัวตน)');
   }
 
-  // (c) เขียน audit log สุดท้าย "ก่อน" ลบ auth user เสมอ — idempotent เหมือนเดิม (กัน retry เขียนซ้ำ)
+  // 🔴 ด่านที่ 2 — เช็คซ้ำอีกครั้งก่อนขั้นตอนที่ย้อนกลับไม่ได้ที่สุด (ลบ auth user) แม้ด่านที่ 1 ผ่านไปแล้ว
+  // เพราะ (a)-(b) ข้างบนกินเวลาเพิ่ม ต่อให้น้อยมากก็ตาม — เช็คสดอีกทีก่อนจุดที่ไม่มีทางย้อนกลับจริงๆ
+  {
+    const gate = await verifyStillOwnedByUs(admin, requestId, claimedAtIso);
+    if (gate.ownershipError) return { ok: false, error: 'final_ownership_gate_check_failed', detail: gate.detail, completed_steps: completedSteps };
+    if (!gate.ok) {
+      console.error('[account-delete-cron] 🔴🔴 หยุดก่อนลบ auth user จริง เพราะ claim ของเราไม่ใช่เจ้าของแถวนี้แล้ว (id=' + requestId + ', user_id=' + userId + ') — ข้อมูลบางส่วนใน (a)-(b) อาจถูกลบ/anonymize ไปแล้วก่อนหน้านี้ แต่ auth user (ตัวบัญชี) ยังไม่ถูกแตะ');
+      return { ok: false, error: 'cancelled_before_point_of_no_return', completed_steps: completedSteps };
+  }
+
+  // (c) ลบ auth user จริง — ทำเป็นลำดับสุดท้ายเสมอ
+  // 🔴🔴 2026-08-10 (P7-02 F.6c รอบ 3 — Risk B, ตามที่ Lin สั่งหลัง VERIFIED DONE ON STAGING): เดิม deleteUser()
+  //   คืน error = สรุปว่า "ลบไม่สำเร็จ" ทันทีโดยไม่เช็คซ้ำ — แต่ error จาก deleteUser() อาจเป็นแค่ "response หาย
+  //   ระหว่างทาง" (network/timeout) ทั้งที่ฝั่ง Supabase ลบสำเร็จแล้วจริง ถ้าเจอเคสนี้ retry รอบถัดไปจะเรียก
+  //   deleteUser() กับ user ที่ไม่มีอยู่แล้วซ้ำอีก → error อีก → วนซ้ำแบบนี้ตลอดกาล ไม่มีวันปิดคำขอได้ (แถวค้าง
+  //   pending ตลอดไปทั้งที่บัญชีหายไปแล้วจริงตั้งแต่รอบแรก) — และเดิม getUserById() ตอน verify ถ้า "ตัวมันเอง
+  //   error" (เช่น network) จะถูกตีความว่า stillExists=false (เพราะ !checkErr สั้นๆ) = เดาว่าลบสำเร็จทันที โดย
+  //   ไม่ได้ยืนยันจริง — เสี่ยงเขียนสถานะ completed ทั้งที่ยังไม่ชัวร์
+  //   แก้ให้ครบทั้ง 2 ทิศทาง: (1) deleteUser() error → เช็คซ้ำด้วย getUserById() ก่อนสรุป ถ้ายืนยันว่า user
+  //   หายไปแล้วจริง = ถือว่าลบสำเร็จ (ปิดช่อง retry วนตลอดกาล) (2) การเช็คซ้ำ (ไม่ว่าจะมาจากทางไหน) ถ้าตัวมันเอง
+  //   error ต่อ (ไม่รู้จริงๆ ว่าหายหรือยัง) ห้ามเดาไปทางใดทางหนึ่งเด็ดขาด ต้องคืน ok:false แบบแยกเหตุผลชัดเจน
+  //   (delete_verify_ambiguous) ให้ retry รอบหน้าเป็นคนตัดสินแทน (รอบหน้า deleteUser() จะบอกความจริงเองจากผล
+  //   จริง: error "not found" = ยืนยันว่าลบไปแล้วจริงตั้งแต่รอบก่อน, หรือสำเร็จอีกที = เพิ่งลบสำเร็จรอบนี้)
+  async function verifyAuthUserGone() {
+    const { data, error } = await admin.auth.admin.getUserById(userId);
+    if (error) {
+      // 🔴🔴 2026-08-10 (P7-02 F.6c รอบ 3 — Risk B แก้รอบ 2 หลังเจอบั๊กจริงตอนทดสอบ chaos mode บน staging):
+      //   getUserById() ของ user ที่หายไปแล้วจริง "ไม่คืนค่าว่างเฉยๆ" แต่คืน error จริง (ยืนยันจากการยิงตรง
+      //   ผ่าน Admin API บน staging: status 404, error_code 'user_not_found') — เดิมโค้ดตรงนี้ถือว่า error
+      //   ทุกแบบ = ambiguous หมด ทำให้เคส "ลบสำเร็จจริงแล้ว" ถูกเข้าใจผิดว่า "ไม่รู้" ทุกครั้ง กลายเป็น retry
+      //   วนไม่จบสักที (ค้าง pending ตลอดกาลทั้งที่บัญชีหายไปแล้วจริงตั้งแต่รอบแรก) — ต้องแยก "หาไม่เจอจริง"
+      //   (status 404 / code user_not_found = ยืนยันว่าหายไปแล้วจริง) ออกจาก error แบบอื่น (network/timeout/
+      //   500 = ไม่รู้จริงๆ ต้อง ambiguous) เช็คทั้ง status และ code (และข้อความสำรอง) กันชื่อฟิลด์เปลี่ยนใน
+      //   อนาคต
+      const isNotFound = error.status === 404 || error.code === 'user_not_found' || /not.?found/i.test(error.message || '');
+      if (isNotFound) return { confirmed: true, ambiguous: false };
+      return { confirmed: false, ambiguous: true, detail: error.message };
+    }
+    if (data?.user) return { confirmed: false, ambiguous: false };
+    return { confirmed: true, ambiguous: false };
+  }
+  const { error: delUserErr } = await admin.auth.admin.deleteUser(userId);
+  const verify = await verifyAuthUserGone();
+
+  if (verify.ambiguous) {
+    return {
+      ok: false, error: 'delete_verify_ambiguous', detail: verify.detail,
+      delete_call_error: delUserErr ? delUserErr.message : null, completed_steps: completedSteps,
+    };
+  }
+  if (!verify.confirmed) {
+    // เช็คซ้ำได้จริง (ไม่ error) และยืนยันชัดเจนว่า user ยังอยู่จริง — ลบไม่สำเร็จจริง ไม่ใช่แค่ response หาย
+    return {
+      ok: false, error: delUserErr ? 'delete_auth_user_failed' : 'delete_auth_user_unverified',
+      detail: delUserErr ? delUserErr.message : undefined, completed_steps: completedSteps,
+    };
+  }
+  // verify.confirmed === true — ยืนยันแล้วว่า user หายไปจริง (ไม่ว่า deleteUser() รอบนี้จะตอบ error หรือไม่)
+  if (delUserErr) {
+    console.error('[account-delete-cron] deleteUser() คืน error แต่เช็คซ้ำยืนยันว่า user หายไปแล้วจริง (ลบสำเร็จ response เดิมหายระหว่างทาง หรือถูกลบไปแล้วจากรอบก่อน) user_id=' + userId, delUserErr);
+  }
+  completedSteps.push('auth_user_deleted');
+
+  // (d) เขียน audit log — 🔴🔴 2026-08-10 (P7-02 F.6c รอบ 3 — Risk A): ย้ายมาไว้ "หลัง" ยืนยันว่าลบ auth user
+  //   สำเร็จจริงแล้วเท่านั้น (เดิมเขียนก่อน (c) จะลบด้วยซ้ำ) เหตุผล: audit log ต้องไม่มีทางบอกว่า "ลบสำเร็จ
+  //   แล้ว" ก่อนที่จะลบสำเร็จจริง — ถ้า deleteUser() พังจริง (ไม่ใช่แค่ response หาย) ฟังก์ชันจะ return ok:false
+  //   ไปตั้งแต่บรรทัดข้างบนแล้ว ไม่มีทางไหลมาเขียน audit log ตรงนี้ได้เลย จึงรับประกันว่า audit_log event_type=
+  //   'account_deletion' เกิดขึ้นก็ต่อเมื่อบัญชีถูกลบยืนยันแล้วจริงเท่านั้น (idempotent เหมือนเดิม กัน retry เขียนซ้ำ)
   let auditAlreadyWritten = false;
   {
     const { data: existingAudit, error: existingAuditErr } = await admin.from('account_audit_log').select('id').eq('user_id', userId).eq('event_type', 'account_deletion').limit(1);
@@ -191,33 +258,13 @@ async function deleteOneAccount(admin, userId, cachedEmail, requestId, claimedAt
       p_user_id: userId, p_event_type: 'account_deletion', p_provider: null,
       p_before_state: { account_existed: true, email: cachedEmail },
       p_after_state: { account_deleted: true, deleted_at: new Date().toISOString(), deleted_counts: resultCounts.deleted, anonymized_counts: resultCounts.anonymized },
-      p_actor_type: 'system', p_actor_id: null, // 🆕 actor_type='system' — cron ลบ ไม่ใช่ user กดปุ่มเองตรงนี้อีกต่อไป (ต่างจากเวอร์ชันก่อนหน้าที่ actor_type='user' เพราะตอนนั้น user คือคนกด confirm เอง)
+      p_actor_type: 'system', p_actor_id: null, // actor_type='system' — cron ลบ ไม่ใช่ user กดปุ่มเองตรงนี้
     });
     if (auditErr) return { ok: false, error: 'audit_log_failed', detail: auditErr.message, completed_steps: completedSteps };
     completedSteps.push('audit_log_written');
   } else {
     completedSteps.push('audit_log_already_written (retry)');
   }
-
-  // 🔴 ด่านที่ 2 — เช็คซ้ำอีกครั้งก่อนขั้นตอนที่ย้อนกลับไม่ได้ที่สุด (ลบ auth user) แม้ด่านที่ 1 ผ่านไปแล้ว
-  // เพราะ (a)-(c) ข้างบนกินเวลาเพิ่ม ต่อให้น้อยมากก็ตาม — เช็คสดอีกทีก่อนจุดที่ไม่มีทางย้อนกลับจริงๆ
-  {
-    const gate = await verifyStillOwnedByUs(admin, requestId, claimedAtIso);
-    if (gate.ownershipError) return { ok: false, error: 'final_ownership_gate_check_failed', detail: gate.detail, completed_steps: completedSteps };
-    if (!gate.ok) {
-      console.error('[account-delete-cron] 🔴🔴 หยุดก่อนลบ auth user จริง เพราะ claim ของเราไม่ใช่เจ้าของแถวนี้แล้ว (id=' + requestId + ', user_id=' + userId + ') — ข้อมูลบางส่วนใน (a)-(c) อาจถูกลบ/anonymize ไปแล้วก่อนหน้านี้ แต่ auth user (ตัวบัญชี) ยังไม่ถูกแตะ');
-      return { ok: false, error: 'cancelled_before_point_of_no_return', completed_steps: completedSteps };
-    }
-  }
-
-  // (d) ลบ auth user จริง — ทำเป็นลำดับสุดท้ายเสมอ
-  const { error: delUserErr } = await admin.auth.admin.deleteUser(userId);
-  if (delUserErr) return { ok: false, error: 'delete_auth_user_failed', detail: delUserErr.message, completed_steps: completedSteps };
-
-  const { data: checkUser, error: checkErr } = await admin.auth.admin.getUserById(userId);
-  const stillExists = !checkErr && checkUser?.user;
-  if (stillExists) return { ok: false, error: 'delete_auth_user_unverified', completed_steps: completedSteps };
-  completedSteps.push('auth_user_deleted');
 
   return { ok: true, completed_steps: completedSteps, deleted: resultCounts.deleted, anonymized: resultCounts.anonymized };
 }
