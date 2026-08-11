@@ -122,7 +122,7 @@
 | **เกมฟัง** (listening) | ❌ **ไม่มีอะไรเลยฝั่งเซิร์ฟเวอร์** · มีแค่ `state.log` ในหน่วยความจำ + `gsh_resume_*` ใน localStorage + GA4 | **โดดเดี่ยว** — `listening-game.html` ไม่โหลด `supabase-config.js`/`reading-auth.js`/`tone-server.js` เลย | ทุกอย่าง: ไม่มีคะแนน ไม่มี SRS ไม่มีดาว ไม่มีประวัติ ไม่มีล็อกอิน | 🔴 **สูงสุด** — Listening เป็น 1 ใน 4 Skill หลัก (หมวด 6) แต่ระบบไม่มีหลักฐานเลยแม้แต่แถวเดียว | ต่อเข้า auth กลางก่อน แล้วค่อยเขียน evidence — **ต้องมี Decision ก่อน** ว่าคะแนนเกมฟังเข้าตารางไหน |
 | **เกมเลโก้** (lego) | `reading_sessions`(game='lego', wrong_items) · `lego_daily_limits`(นับโควตาต่อวันฝั่งเซิร์ฟเวอร์) · `lego_vault_v1`(localStorage) · `LEGO_CH_KEY`(challenge รายสัปดาห์ localStorage) | **ครึ่งๆ** — ใช้ `saveScore` ร่วม แต่ไม่ใช้ `tone-server` (ไม่มี SRS/ดาว) และใช้คลังคำของตัวเอง | ไม่มี SRS · ไม่มีตัวตน item · คลังคำแยก · challenge รายสัปดาห์เก็บในเครื่องล้วน | 🟠 ผลการฝึกสร้างประโยคหายเมื่อล้างเบราว์เซอร์ | ให้ `lego-vault` ใช้ `learning_saved_items` (`vault_key='lego_vault'` เตรียมไว้แล้ว) |
 | **Challenge** (games-challenge) | `reading_sessions`(game='challenge') · `tone_srs_state`(game='challenge') · ไม่มีปุ่ม 💡 ตั้งแต่แรก | **Shared** | ไม่มี unlock gate · ไม่มี timer · ไม่มี Challenge history แยก · ไม่มีการเทียบกับ game evidence | 🟡 中級/高級 ยังปิด (`games.html` การ์ด `gh-disabled`) | รอ Decision — เกือบทุกอย่างของหมวด 8 ยังไม่ล็อก |
-| **Progress** | `progress.js` อ่าน `tone_sessions` อย่างเดียว | **Unique** | ไม่เห็น 5 เกมที่เหลือ · ไม่มี Skill layer · ไม่มี Next Action | 🔴 นักเรียนเล่นเกมอ่าน 50 รอบ หน้า Progress ยังว่าง | ดูข้อ H — SAFE NOW |
+| **Progress** | `progress.js` อ่าน `tone_sessions` อย่างเดียว | **Unique** | ไม่เห็น 5 เกมที่เหลือ · ไม่มี Skill layer · ไม่มี Next Action | 🔴 นักเรียนเล่นเกมอ่าน 50 รอบ หน้า Progress ยังว่าง | 🔴 **BLOCKED** (Lin ตัดสิน 2026-08-11) — ห้าม normalize 2 ตารางเอง รอ shared progress/evidence model |
 | **History** | ไม่มีหน้า History แยก — มีแต่ตารางใน `my-progress.html` | — | ไม่มี Progress ≠ History ตามหมวด 9.2 | 🟡 | รอ Decision |
 | **Word Vault** | `learning_saved_items`(user, word_th, zh, en, source_raw, vault_key, tags, saved_at, deleted_at) sync ข้ามเครื่องจริง | **Shared** ✅ | ไม่มี `item_id` (ปล่อย null) · ไม่มี `source_surface` (ปล่อย null โดยตั้งใจ) · ไม่ตอบว่า "อะไรควร review" | 🟢 ต่ำ — ทำงานถูกต้องอยู่ | เติม `item_id` ย้อนหลังได้ (จับคู่ `word_th` กับ `learning_items.content_key`) |
 | **Learning Memory** | `tone_srs_state` = Learning Memory เวอร์ชันแรกที่มีจริง · `learning_memory` ตารางใหม่ยัง **ว่าง** | **แยกกัน 2 ชุด** | `tone_srs_state` คีย์ = (user, **game**, level, **word ตัวหนังสือ**) → ผูกชื่อเกม + ผูกตัวหนังสือ (ขัดหมวด 1 + 6) | 🟠 แก้ typo คำหนึ่ง = SRS ของคำนั้นขาด | **ห้ามย้ายจนกว่ามี Skill taxonomy + สูตร Mastery** (จดไว้แล้วในหัวไฟล์ SQL) |
@@ -366,7 +366,7 @@ Any ─────────► AI / Future
 | G2 | **คลังคำ 2 ระบบ** | `js/games/word-vault.js:58` (`linvault_v1`, MAX 30, sync) · `js/games/lego-vault.js:12` (`lego_vault_v1`, MAX 15, ไม่ sync) | คำที่เซฟในเลโก้หายเมื่อล้างเบราว์เซอร์ · ตาราง `learning_saved_items` **มี `vault_key='lego_vault'` เตรียมไว้แล้ว** แต่ยังไม่มีใครใช้ |
 | G3 | **Learning Memory 2 ชุด** | `tone_srs_state` (ใช้จริง, คีย์ user+game+level+word) · `learning_memory` (ตารางใหม่, ว่าง, คีย์ user+item_id+skill) | ถ้าเริ่มเขียนตัวใหม่โดยไม่วางแผน จะกลายเป็น source of truth 2 ชุดถาวร |
 | G4 | **ตัวตนของเนื้อหา 2 ชุด** | `game_words` unique(`word`,`level`) + `scripts/migrate-game-content.js` มี `pruneStale()` ที่ลบแถวจริง · `learning_items.item_id` (uuid, นิ่ง) | แก้ typo = ประวัติขาด (ปัญหานี้ถูกจดไว้แล้วในหัวไฟล์ SQL — ยังไม่ได้แก้) |
-| G5 | **ชื่อเกม 3 ชุด** | `word_order` (`reading-auth.js:513`) · `wordorder` (`tone-round/index.ts`) · `word_order` (GA4) · `tone-finder` (source_raw ในคลังคำ) vs `tone_finder` (`practice_surfaces.code`) | จับคู่ข้อมูลข้ามระบบพลาดได้ — **มีตัวช่วยแล้ว** (`practice_surfaces.legacy_codes`) แต่ยังไม่มีใครเรียกใช้ |
+| G5 | **ชื่อเกม 3 ชุด** | `word_order` (`reading-auth.js:513`) · `wordorder` (`tone-round/index.ts`) · `word_order` (GA4) · `tone-finder` (source_raw ในคลังคำ) vs `tone_finder` (`practice_surfaces.code`) | จับคู่ข้อมูลข้ามระบบพลาดได้ — **มีตัวช่วยแล้ว** (`practice_surfaces.legacy_codes`) แต่ยังไม่มีใครเรียกใช้<br>🆕 **อัปเดต 2026-08-11:** ตารางจับคู่ครบแล้วทุกค่า (`sql/2026-08-11_practice_surface_vault_aliases.sql` — รอ Lin รัน) · **แต่ยังไม่มีโค้ดไหนอ่าน `legacy_codes` เลย** ตัวปัญหาจริงจึงยังอยู่ รอ Decision ว่าจะให้ระบบไหนเริ่มใช้ก่อน |
 | G6 | **สถานะ mastery 2 แบบ** | `tone_srs_state.mastered` (boolean 2 ค่า) · `learning_memory_states` (5 สถานะ) | ถ้าเขียนสูตรใหม่โดยไม่แปลงของเก่า จะมีคำตอบ 2 แบบสำหรับคำถามเดียวกัน |
 | G7 | **Search UI logic ก๊อป 2 ชุด** | `js/core/search-ui.js` · `js/games/games-search-ui.js` — โครงเหมือนกันเกือบบรรทัดต่อบรรทัด | engine ไม่ซ้ำ ✅ แต่ presentation ซ้ำ · surface ที่ 3 = ก๊อปชุดที่ 3 |
 | G8 | **เพดานสิทธิ์กระจาย 3 ที่** | `CAPS` ใน `game-content/index.ts` · `MAX_WORDS` ใน `word-vault.js`/`lego-vault.js` · `lego_daily_limits` | ยังไม่มี entitlement กลาง |
@@ -383,6 +383,11 @@ Any ─────────► AI / Future
 # H. Safe-to-Implement Queue
 
 ## ✅ SAFE NOW — ทำได้เลย ไม่ต้องมี Product Decision ใหม่
+
+> 🔴 **อัปเดต 2026-08-11 (หลัง Lin ตัดสิน) — 3 ข้อในตารางนี้ถูกถอนออกแล้ว ห้ามหยิบไปทำ:**
+> · **S1 (Progress) → BLOCKED** — Lin ตัดสินว่า `tone_sessions` กับ `reading_sessions` โครงต่างกัน **ห้าม normalize เอง** ต้องรอ shared progress/evidence model ก่อน
+> · **S7 + S8 (Search logging) → BLOCKED** — Lin ตัดสินว่าห้ามสร้าง table/implementation/analytics event ของ Search เพิ่มทั้งหมด จนกว่าจะเคลียร์เรื่อง Privacy/Data (ดู N3)
+> · **S3 ยังค้างอยู่** — ตารางจับคู่ชื่อพร้อมแล้ว (`sql/2026-08-11_practice_surface_vault_aliases.sql`) แต่ **ยังไม่ได้ backfill `source_surface`** และยังไม่มีโค้ดไหนอ่าน `legacy_codes` (ดู G5)
 
 > ทั้งหมดนี้ **ยังไม่ได้แก้ในรอบนี้** ตามคำสั่ง — รายงานไว้ให้ Lin สั่งรอบถัดไป
 
@@ -412,6 +417,9 @@ Any ─────────► AI / Future
 | N8 | **เพดานคลังคำเวลารวมข้ามเครื่อง** | เครื่อง A 30 คำ + เครื่อง B 25 คำไม่ซ้ำ = 55 คำ เกิน 30 → ทำยังไงโดยไม่ทำข้อมูลหาย | จดค้างไว้แล้วในหัวไฟล์ SQL · ห้าม AI ตัดทิ้งเอง |
 | N9 | **`anon_game_events` จะใช้ไหม** | เก็บพฤติกรรม guest จริงไหม (LOCK 14.7) หรือลบตารางทิ้ง? | ตารางเปิด insert ให้ทุกคนอยู่ — ปล่อยทิ้งไว้เฉยๆ ก็เป็นความเสี่ยง |
 | N10 | **CTA ขายคอร์สบนหน้าจบเกม** | (ค้างจากรอบก่อน) สเปกใหม่ห้ามมี promotion กลาง result แต่ของเดิมยังอยู่ | เป็นการตัดสินใจธุรกิจ |
+| N11 🆕 | **ชื่อจีนของ Skill 10 ตัว** | `learning_skills.label_zh` เป็น **NOT NULL** แต่ §19 ระบุว่า `exact wording ภาษาจีน` ยังไม่ล็อก · Lin ให้ชื่อมาเป็นอังกฤษ (Tone / Word Recall / Syntax …) | เติมภาษาจีนเอง = ขัดกฎ 16 + §19 · **ตราบใดที่ยังไม่มีคำจีน `learning_skills` เขียนไม่ได้ → `learning_memory` ก็เขียนไม่ได้** (blocker ใหญ่สุดยังคาอยู่) |
+| N12 🆕 | **เก็บกลุ่มของ Skill 4 กลุ่มยังไง** | Lin ล็อก 4 กลุ่ม (Recognition/Recall/Structure/Output) แต่ `learning_skills` **ไม่มีคอลัมน์เก็บกลุ่ม** · เพิ่มคอลัมน์ = structural change | ทางที่ไม่แตะ schema คือยัดชื่อกลุ่มลงช่อง `note` แต่จะ query แบบมีโครงสร้างไม่ได้ — Lin เลือกก่อน |
+| N13 🔴 🆕 | **STATE CONFLICT: `未開始` vs `未練習`** | เอกสาร 14 หมวด (หมวด 6) เขียน `未開始` · แต่ `learning_foundation.sql` ที่ **รันขึ้น staging + production ไปแล้ว** เขียน `未練習` (แถว `not_started` ใน `learning_memory_states`) | เป็นถ้อยคำจีนที่ยังไม่ล็อก + แก้แล้วกระทบค่าที่ deploy ไปแล้ว · **ยังไม่แก้ทั้ง schema และ production รอ Lin ชี้ว่าอันไหนถูก** |
 
 ## 🔒 FUTURE — ยังไม่ควรแตะ
 

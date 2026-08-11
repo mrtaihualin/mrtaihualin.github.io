@@ -37,13 +37,37 @@
 
 | Function | ด่านในโค้ด | สรุป |
 |---|---|---|
-| `calendar-schedule-sync-cron` | ✅ มี `x-cron-secret` fail-closed | **PARTIAL** — โค้ดพร้อม แต่ยืนยันจาก repo ไม่ได้ว่า production ตั้ง secret + deploy แล้ว |
-| `welcome-retry-cron` | ✅ มี `x-cron-secret` fail-closed | **PARTIAL** — เหตุผลเดียวกัน |
-| `class-reminder-cron` · `request-sla-cron` · `low-quota-cron` | ❌ ไม่มีด่านของตัวเอง | **PARTIAL** — พึ่ง Verify JWT + service_role อย่างเดียว (ชั้นเดียว) |
+| `calendar-schedule-sync-cron` | ✅ มี `x-cron-secret` fail-closed | 🟢 **SAFE — ยืนยันจาก production จริงแล้ว** (ดูกล่องด้านล่าง) |
+| `welcome-retry-cron` | ✅ มี `x-cron-secret` fail-closed | 🟢 **SAFE — ยืนยันจาก production จริงแล้ว** |
+| `class-reminder-cron` · `request-sla-cron` · `low-quota-cron` | ❌ ไม่มีด่านของตัวเอง | 🟡 **PARTIAL** — พึ่ง Verify JWT + service_role อย่างเดียว (ชั้นเดียว) |
 
 🔑 **ผลสำคัญ: รายงานเก่าที่ว่า 2 ตัวแรก "ไม่มีการป้องกัน" — ไม่จริงแล้ว** โค้ดมีด่านครบตั้งแต่ 2026-08-07
 (`supabase/sql/2026-08-07_cron_shared_secret.sql`) · **ไม่ได้เขียนระบบซ้ำ ไม่แตะโค้ด 5 ตัวนี้เลย**
-เหลือแค่ให้ Lin ยืนยันฝั่ง production (ดู MANUAL ACTION ท้ายหัวข้อ)
+
+> ### ✅ ปิดเคส cron 2 ตัวแล้ว — ยืนยันจาก production ของจริง (ตรวจเพิ่ม 2026-08-11 รอบปิดงาน)
+>
+> รอบก่อนสรุปได้แค่ PARTIAL เพราะดูจาก repo อย่างเดียว · รอบนี้ตรวจจาก production ตรงๆ ด้วย
+> **Supabase CLI (อ่านอย่างเดียว ไม่ deploy ไม่รัน SQL ไม่ยิง URL ทดสอบ)** ได้หลักฐาน 3 ชั้น:
+>
+> 1. `supabase functions list --project-ref qzkxlhpcputsvbqmtqfi` →
+>    ทั้ง 2 ตัว **`verify_jwt: true`** แล้ว (ขั้นตอนที่ 3 ของไฟล์ SQL ทำครบแล้ว)
+>    `calendar-schedule-sync-cron` v34 · `welcome-retry-cron` v29 · **deploy ทั้งคู่ 2026-08-07 11:35–11:36**
+>    (= วันเดียวกับที่เพิ่มด่านในโค้ด → ตรงกัน)
+> 2. `supabase functions download <slug> --project-ref qzkxlhpcputsvbqmtqfi` → เปิดโค้ด **ที่รันอยู่จริงบน production**
+>    เจอด่านครบทั้ง 2 ตัว: `const cronSecret = Deno.env.get('CRON_INTERNAL_SECRET');`
+>    `if (!cronSecret || req.headers.get('x-cron-secret') !== cronSecret) → 403`
+>    (`calendar-schedule-sync-cron` บรรทัด 103–104 · `welcome-retry-cron` บรรทัด 53–54)
+> 3. เป็นด่านแบบ **fail-closed** → ต่อให้ `CRON_INTERNAL_SECRET` หาย ก็ปฏิเสธทุกคำขอ ไม่ใช่ปล่อยผ่าน
+>    ⇒ **ไม่มีทางที่คนนอกยิง URL เปล่าๆ แล้วสั่งงานได้อีกแล้ว** ไม่ว่าค่า secret จะตั้งไว้หรือไม่
+>
+> 🔴 **ตั้งใจไม่ทดสอบด้วยการยิง URL จริง** — ถ้าบังเอิญด่านไม่ทำงาน คำขอนั้นจะ**ทำงานจริง**
+> (ซิงก์ปฏิทินทับตารางเรียน / ส่ง LINE หานักเรียนจริง) การอ่านโค้ดที่ deploy อยู่ให้หลักฐานที่แน่นกว่าและไม่มีผลข้างเคียง
+>
+> ⚠️ **ยังเหลืออย่างเดียว (ไม่ใช่เรื่องความปลอดภัย แต่เป็นเรื่อง "cron ยังทำงานอยู่ไหม"):**
+> ยังไม่ได้ดูว่า cron รันรอบล่าสุดได้ **200** จริงไหม — ถ้า `cron_shared_secret` ใน Vault กับ
+> `CRON_INTERNAL_SECRET` ใน Edge Function **ไม่ตรงกัน** ระบบจะปลอดภัยดี แต่ **cron จะตายเงียบ (403 ทุกรอบ)**
+> ตรวจได้ 2 ทาง: Dashboard → Edge Functions → แท็บ **Invocations** (ไม่ใช่แท็บ Logs)
+> หรือ `select * from private.cron_http_log order by id desc limit 20;`
 
 ### 4. account-export เทียบ Learning Foundation 23 ตาราง — ✅ ถูกต้องอยู่แล้ว ไม่ต้องแก้
 
@@ -94,18 +118,40 @@
   ใน `_staging-build/` (baseline เดิมที่ยืนยันแล้วว่าไม่ใช่บั๊ก เพราะอยู่ใน `.gitignore`) **ไม่มีรายการใหม่**
 - `node --check` ผ่านทั้ง `line-webhook/index.ts` (คัดลอกเป็น `.mjs` ตามบทเรียน 2026-08-11)
 
-### 🔴 MANUAL ACTION สำหรับ Lin (AI ทำเองไม่ได้ตามกฎ)
-1. **deploy `line-webhook`** เพื่อให้ปุ่มฝั่งนักเรียนเลิกเงียบ — 🔴 **ต้องใส่ `--no-verify-jwt` เสมอ**
-   `supabase functions deploy line-webhook --no-verify-jwt`
-2. **ยืนยันสถานะ cron 2 ตัวบน production** (ตอบให้ได้ว่า PARTIAL → SAFE จริงไหม):
-   - รันหัวข้อ `[A]` ของ `supabase/sql/2026-08-07_cron_shared_secret.sql` ดูว่ามี `cron_shared_secret` ใน Vault แล้วหรือยัง
-   - ตั้ง `CRON_INTERNAL_SECRET` ใน Edge Function แล้วหรือยัง (ค่าต้องตรงกับใน Vault)
-   - Supabase → Edge Functions → `calendar-schedule-sync-cron` / `welcome-retry-cron` → แท็บ **Invocations**
-     (ไม่ใช่แท็บ Logs) ต้องเห็น **200 ต่อเนื่อง** ถ้าเห็น 403 = มีขั้นตอนตกหล่น
-   ⚠️ **ลำดับสำคัญ:** ตั้ง secret ก่อน → แล้วค่อย deploy · สลับลำดับ = cron ตาย 403 เงียบๆ
-3. **พิจารณาว่าจะเพิ่มด่าน `x-cron-secret` ให้ cron อีก 3 ตัวไหม** (`class-reminder` / `request-sla` / `low-quota`)
-   — **ยังไม่ได้แก้โค้ดให้ เพราะต้อง deploy + แก้ SQL พร้อมกัน** ถ้าทำครึ่งเดียว cron จะตายเงียบ
-   (นักเรียนไม่ได้รับข้อความเตือนก่อนเรียน) รอ Lin สั่งก่อน
+### 🔴 MANUAL ACTION สำหรับ Lin — งานรอบถัดไป (Lin สั่งปิดรอบนี้ไว้ก่อน 2026-08-11)
+
+**1. deploy `line-webhook` → ยังไม่ทำ (Lin สั่งเลื่อน)** — สถานะ: 🟡 **CODE READY · PROD PENDING**
+
+ตรวจความพร้อมครบแล้ว เหลือแค่กดจริง:
+- โค้ดอยู่ใน `main` แล้ว (คอมมิต `3d39391`) · `tests-classroom-behavioral.js` ผ่าน · `node --check` ผ่าน
+- production ตอนนี้เป็น **v64 · deploy ล่าสุด 2026-08-02** · `verify_jwt: false` (ถูกต้องแล้ว ห้ามเปลี่ยน)
+- ✅ **โหลดโค้ดที่ deploy อยู่จริงมาเทียบกับ repo แล้ว — ต่างกันแค่การแก้รอบนี้เท่านั้น**
+  (เพิ่มค่าคงที่ + 4 จุดที่ตอบข้อความ · ลบ `continue` เงียบ 2 บรรทัด) **ไม่มีของค้างอื่นติดไปด้วย** → deploy ได้สะอาด
+
+🔴 **กับดักที่เพิ่งเจอ 2026-08-11 — ต้องใส่ `--project-ref` ด้วย:**
+เครื่องนี้ `supabase link` ผูกไว้กับ **STAGING** (`xufxvwcelbovzsxywawg`) ไม่ใช่ production
+→ **คำสั่งที่ไม่ใส่ `--project-ref` จะไปลง staging เงียบๆ** แล้วเข้าใจผิดว่า deploy production แล้ว
+(staging ไม่ได้ต่อกับ LINE OA จริง = กดปุ่มทดสอบก็ไม่มีอะไรเกิดขึ้น)
+
+```
+supabase functions deploy line-webhook --no-verify-jwt --project-ref qzkxlhpcputsvbqmtqfi
+```
+⚠️ `--no-verify-jwt` ห้ามลืมเด็ดขาด (LINE ยิงมาโดยไม่มี token — ลืม = ปุ่มตายทั้งระบบ)
+
+**ทดสอบหลัง deploy:** ให้นักเรียน (หรือบัญชีทดสอบ) เลื่อนแชทขึ้นไปกดปุ่มเก่าที่คำขอถูกเคลียร์ไปแล้ว
+→ ต้องได้ข้อความ「ℹ️ 這顆按鈕已經無法使用了。」· ตรวจ **Invocations** ต้องเป็น 200 · ต้องไม่ตอบซ้ำ 2 ข้อความ
+
+**2. cron 2 ตัว → ✅ ปิดเคสแล้ว ไม่ต้องทำอะไร** (ดูกล่องหลักฐานในหัวข้อ 3 ด้านบน)
+เหลือแค่ถ้าอยากสบายใจว่า cron ยัง**ทำงาน**อยู่ (คนละเรื่องกับความปลอดภัย):
+`select * from private.cron_http_log order by id desc limit 20;` หรือดูแท็บ **Invocations**
+
+**3. cron อีก 3 ตัว (`class-reminder` / `request-sla` / `low-quota`) — ยังคง 🟡 PARTIAL รอ Lin ตัดสิน**
+ทั้ง 3 ตัว `verify_jwt: true` (ยืนยันจาก production แล้ว) และ cron ส่ง **service_role** เป็น Bearer
+→ **ไม่ใช่ช่องโหว่ที่คนนอกเข้าถึงได้** (ต้องมี service_role ก่อน ซึ่งถ้าหลุด = พังทั้งระบบอยู่แล้ว ไม่ใช่แค่ cron นี้)
+เป็นแค่ "ป้องกันชั้นเดียว" ไม่เท่า 2 ตัวแรกที่มี 2 ชั้น
+🔴 **ยังไม่แก้ให้ เพราะต้องทำ 4 อย่างพร้อมกัน** (แก้โค้ด 3 ไฟล์ + แก้ 3 ฟังก์ชัน `private.call_*` ให้ส่ง header +
+ตั้ง secret + deploy) **ทำครึ่งเดียว = cron ตายเงียบ 403 → นักเรียนไม่ได้รับข้อความเตือนก่อนเรียน**
+ถ้า Lin สั่งทำ ให้เปิดรอบใหม่แล้วทำครบทีเดียว
 
 **ไฟล์ที่แก้:** `supabase/functions/line-webhook/index.ts` · `scripts/tests-classroom-behavioral.js` ·
 🆕`scripts/check-seo-sitemap.js` · `scripts/check-site.js` · `sitemap.xml` · `privacy.html` · `terms.html` ·
@@ -120,6 +166,33 @@
 - 📌 `CLAUDE.md` และ `_แผนงาน/` อยู่ใน `.gitignore` (เอกสารในเครื่อง ไม่ขึ้น GitHub) จึงไม่โผล่ใน git status
 - 📖 อ่านคู่กับรายงานของอีกแชทที่เข้ามาระหว่างทาง: `2026-08-11_PRODUCT_ARCHITECTURE_READINESS_AUDIT.md`
   (ตรวจแล้วไม่ขัดกับงานรอบนี้ · รายการ SAFE NOW S1–S9 ในนั้นเป็นงาน Product คนละก้อน รอบนี้ไม่แตะเลย)
+
+---
+
+### 🔚 รอบปิดงาน (2026-08-11 ช่วงท้าย) — ตรวจยืนยันอย่างเดียว ไม่แก้ source สักไฟล์
+
+Lin สั่งปิดรอบก่อน deploy · รอบนี้จึง **ไม่ deploy · ไม่รัน SQL · ไม่ยิง URL ทดสอบ · ไม่แก้โค้ดเว็บเลย**
+ใช้ Supabase CLI แบบ **อ่านอย่างเดียว** (`functions list` / `functions download`) เพื่อเก็บหลักฐาน production
+
+**สรุปสถานะที่ปิดได้จริงรอบนี้**
+
+| เรื่อง | สถานะ | หลักฐาน |
+|---|---|---|
+| `calendar-schedule-sync-cron` | 🟢 **SAFE — VERIFIED** | โค้ดที่ deploy อยู่จริงมีด่าน fail-closed (บรรทัด 103–104) · `verify_jwt: true` |
+| `welcome-retry-cron` | 🟢 **SAFE — VERIFIED** | โค้ดที่ deploy อยู่จริงมีด่าน fail-closed (บรรทัด 53–54) · `verify_jwt: true` |
+| cron อีก 3 ตัว | 🟡 **PARTIAL** (ไม่ใช่ช่องโหว่ที่คนนอกเข้าถึงได้) | `verify_jwt: true` ทั้ง 3 · cron ส่ง service_role |
+| `line-webhook` | 🟡 **CODE READY · PROD PENDING** | production ยังเป็น v64 (2026-08-02) · diff กับ repo = เฉพาะการแก้รอบนี้ |
+| ชื่อ+วัน หาคาบ | ✅ **CLOSED — DO NOT CHANGE** | นักเรียน 1 คนมีหลายคาบในวันเดียวได้ (multi-slot) |
+| account-export vs 23 ตาราง | ✅ **AUDITED — NO ISSUE** | บันทึกไว้แล้วใน `CLAUDE.md` หัวข้อ 🧱 Learning Foundation |
+| tone-finder ลด 18KB | 🟡 **ยังไม่ VERIFIED ด้วยเบราว์เซอร์** | ส่วนขยาย Chrome ไม่ได้เชื่อมต่อทั้ง 2 รอบ · หลักฐานยังเป็นการอ่านโค้ด 4 ทาง + `check-site.js` ผ่าน |
+
+🔴 **ค้างไปรอบหน้า:** (1) deploy `line-webhook` (ดู MANUAL ACTION ข้อ 1 — **อย่าลืม `--project-ref`**)
+(2) เปิดเบราว์เซอร์จริงทดสอบ `tone-finder.html` ทั้ง desktop และมือถือ 375–390px
+(3) ตัดสินใจเรื่อง cron 3 ตัว
+
+⚠️ **ตอนปิดรอบเจอว่ามีอีกแชททำงานคู่ขนานอยู่** (ไฟล์ค้างแก้ที่ **ไม่ใช่ของรอบนี้**):
+`2026-08-11_PRODUCT_ARCHITECTURE_READINESS_AUDIT.md` · `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` ·
+🆕`supabase/sql/2026-08-11_practice_surface_vault_aliases.sql` — **ไม่แตะเลยตามกฎ**
 
 ---
 
