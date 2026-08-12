@@ -7,12 +7,12 @@
 อ่านหนึ่งครั้งต่อแชทและห้ามอ่านซ้ำถ้า Context ยังครบ:
 
 1. `/Users/taihualin/Documents/Claude/Projects/CLAUDE.md` — กฎกลางของ Lin
-2. `/Users/taihualin/Documents/Claude/Projects/AI_EFFICIENCY_RULES.md` — กฎประหยัด Usage, Context, Reasoning และ Output สำหรับ Codex และ Claude
+2. `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/AI_EFFICIENCY_RULES.md` — กฎประหยัด Usage, Context, Reasoning และ Output สำหรับ Codex และ Claude
 
 อ่านเพิ่มตามงานเท่านั้น:
 
-3. งานตามแผน งานสถานะ งานส่งต่อ หรือการแก้เว็บไซต์: อ่านส่วนล่าสุดที่เกี่ยวข้องใน `/Users/taihualin/Documents/Claude/Projects/Bussiness Idea/00_ศูนย์บัญชาการ_START-HERE.md` และ `/Users/taihualin/Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
-4. งานสมาชิกเกม สิทธิ์ เนื้อหาจ่ายเงิน หรือการชำระเงิน: อ่าน `/Users/taihualin/Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/04_สเปกสมาชิกเกม_CURRENT.md`
+3. งานตามแผน งานสถานะ งานส่งต่อ หรือการแก้เว็บไซต์: อ่านส่วนล่าสุดที่เกี่ยวข้องใน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md` และ `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
+4. งานสมาชิกเกม สิทธิ์ เนื้อหาจ่ายเงิน หรือการชำระเงิน: อ่าน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/04_สเปกสมาชิกเกม_CURRENT.md`
 5. ก่อนแตะโค้ด: อ่านส่วนที่เกี่ยวข้องใน `CLAUDE.md`; อ่าน `README.md` หรือ `MAINTENANCE.md` เมื่อจำเป็นต่อโครงสร้าง พฤติกรรมเดิม หรือผลตรวจล่าสุด
 
 หากข้อมูลขัดกัน ให้ตรวจโค้ดและระบบจริง แล้วบันทึกความขัดแย้ง ห้ามเลือกคำตอบเองจากเอกสารเก่า
@@ -71,8 +71,8 @@
 ### จบแชทที่มีงานจริง
 
 1. รันทดสอบตามความเสี่ยง
-2. อัปเดตสถานะและหลักฐานใน `/Users/taihualin/Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
-3. อัปเดตงานถัดไปใน `/Users/taihualin/Documents/Claude/Projects/Bussiness Idea/00_ศูนย์บัญชาการ_START-HERE.md`
+2. อัปเดตสถานะและหลักฐานใน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
+3. อัปเดตงานถัดไปใน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md`
 4. อัปเดต `MAINTENANCE.md` เมื่อโค้ดหรือโครงสร้างเว็บเปลี่ยน
 5. เก็บงานที่พักไว้ใน `/Users/taihualin/Developer/mrtaihualin.github.io/_แผนงาน/ทำต่อในอนาคต.md` เพียงที่เดียว
 6. สรุปให้ Lin ว่าเสร็จอะไร เหลืออะไร และควรเปลี่ยนแชทหรือไม่
