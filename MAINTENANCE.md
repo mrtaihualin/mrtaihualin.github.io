@@ -1,5 +1,6 @@
 # ประวัติงานดูแลเว็บ
 
+**Updated: 2026-08-12 15:39 Asia/Bangkok** — Status Parity note: Lego Weekly Challenge scheduling mechanics flagged as under active Lin review, not Locked (see note inline below)
 **Updated: 2026-08-12 14:54 Asia/Bangkok**
 
 ## 2026-08-12 — Security patch + Learning label fix + Lego Weekly Challenge rebuild (Lin อนุมัติทีละจุดก่อนแก้)
@@ -82,6 +83,11 @@ first-choice-is-immediate (ครั้งแรกใช้ทันทีไ�
 · pending-request-overwrites-and-resets-timer (ขอเปลี่ยนซ้ำระหว่างรอ = รีเซ็ตนับ 14 วันใหม่)
 · progress-resets-when-cycle-boundary-shifts · challenge-type-rotation คำนวณจาก `cycle_start` ของแต่ละคนแยกกัน
 (คนละคนอาจเห็นชนิดชาเลนจ์ต่างกันในช่วงเวลาเหลื่อมกัน) · timezone Asia/Taipei (ก็อปจากของเดิม ไม่ใช่ตัดสินใหม่)
+
+🔴 **[UPDATE 2026-08-12 15:39 Asia/Bangkok]** Lin กำลังทบทวนกติกาเปลี่ยนวันทั้งชุดใหม่ (ไม่ใช่แค่ 5 รายการย่อยข้างบน) —
+รวมถึงตัวเลข 7 วัน/สัปดาห์ และ 14 วันรอเปลี่ยนวันเอง **ห้ามถือว่ากติกาที่ implement ไปแล้วเป็น Locked Decision สุดท้าย**
+จนกว่า Lin จะยืนยันอีกครั้ง — Feature ยังคง `IMPLEMENTED` ปกติ, Guest ต้อง login ถึงเล่น Weekly Challenge ได้ (Lego ปกติ
+เล่นได้เสมอ) ไม่ถูกกระทบเพราะเป็นกฎคนละเรื่อง
 
 **ไฟล์ที่แก้:** `js/games/lego-game-app.js` (ลบ `legoWeekIndex`/`legoActiveChallenge`/`LEGO_CH_KEY`/
 `legoLoadChallenge`/`legoChallengeState()`เดิม/`legoSaveChallenge`/`legoChallengeBump` ทั้งหมด — grep ยืนยันไม่มี
