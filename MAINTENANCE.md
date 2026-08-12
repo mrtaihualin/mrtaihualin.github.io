@@ -1,5 +1,123 @@
 # ประวัติงานดูแลเว็บ
 
+**Updated: 2026-08-12 14:54 Asia/Bangkok**
+
+## 2026-08-12 — Security patch + Learning label fix + Lego Weekly Challenge rebuild (Lin อนุมัติทีละจุดก่อนแก้)
+
+**ขอบเขต:** 3 งานที่ Lin อนุมัติเป็นลายลักษณ์อักษรทีละจุด (SQL/plan เตรียมไว้ก่อน แล้ว Lin สั่ง "ทำเลย" ทีหลัง) —
+ปิดช่องโหว่ 3 database view, แก้ label สถานะความจำ, สร้าง Lego Weekly Challenge ใหม่ทั้งระบบ
+
+**ตรวจก่อนเริ่ม:** `git status` สะอาด · ไม่มี worktree/agent อื่นชนงาน 3 ไฟล์นี้
+
+### 1. ปิดช่องโหว่ 3 SECURITY DEFINER view — เจอจาก Supabase security advisors ไม่เคยมีในเอกสารไหนมาก่อน
+
+`approved_testimonials` (view สาธารณะที่ `pricing.html` ใช้อ่านรีวิวลูกค้าจริง อ่านจาก `classroom_feedback`
+ที่ RLS ล็อกไว้ให้ครูอ่านได้คนเดียว) เป็น **auto-updatable view** และมี grant เขียน (`INSERT`/`UPDATE`/`DELETE`/
+`TRUNCATE`) ตกค้างให้ `anon`/`authenticated` มาตั้งแต่สร้าง view — เพราะ owner เป็น `postgres` ที่
+`rolbypassrls=true` การเขียนผ่าน view นี้จึง**บายพาส RLS ของ `classroom_feedback` ทั้งหมด**: ใครก็ตามที่ไม่ล็อกอิน
+สามารถ **แก้ไข/ลบรีวิวลูกค้าที่อนุมัติแล้วได้ทุกอัน** ทั้งที่ `classroom_feedback` ไม่มีนโยบาย DELETE เลยแม้แต่ข้อเดียว
+(ตั้งใจ) และ UPDATE ปกติจำกัดครูคนเดียว — ยืนยันด้วยการยิง PATCH/DELETE จริงก่อนแก้ ได้ 200/สำเร็จ
+
+`v_unexplained_stars` (เครื่องมือตรวจทุจริตดาวภายใน เทียบ `game_accounts` กับ backup snapshot หา `user_id`
+ที่มีดาวเกินจริง) กับ `v_stars_overview` (สถิติรวม) มี SELECT grant ให้ `anon`/`authenticated` ทั้งที่ grep ทั้ง repo
+ไม่พบว่ามีหน้าเว็บไหนเรียกใช้เลย — internal-only tool ที่หลุดสู่สาธารณะโดยไม่ตั้งใจ
+
+**แก้ด้วย REVOKE ล้วน ไม่แตะ view definition** (ต้องคง bypass RLS ไว้สำหรับ SELECT ของ `approved_testimonials`
+เพราะเป็นทางเดียวที่คนไม่ล็อกอินอ่านรีวิวได้): `revoke insert, update, delete, truncate on approved_testimonials
+from anon, authenticated` + `revoke select on v_unexplained_stars, v_stars_overview from anon, authenticated`
+
+**ยืนยันหลังแก้ด้วยการยิง HTTP จริงด้วย anon key สาธารณะ (ไม่ใช่แค่ query grants):** SELECT `approved_testimonials`
+= 200 เหมือนเดิม (pricing.html ไม่พัง) · PATCH/DELETE `approved_testimonials` = 401 (ปิดช่องโหว่แล้ว) ·
+SELECT `v_unexplained_stars`/`v_stars_overview` = 401 ทั้งคู่ · ตรวจซ้ำอีกครั้งวันเดียวกันหลัง commit ยืนยันไม่มี drift
+
+**ไฟล์:** 🆕 `supabase/sql/2026-08-12_revoke_view_write_bypass.sql` (มีบล็อก `[A]`ตรวจก่อน/`[B][C]`แก้/`[D]`ตรวจหลัง/
+`[Z]`rollback ครบตามกฎ) · อัปเดตสารบัญ `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md`
+
+### 2. แก้ label สถานะความจำ `未練習` → `未開始`
+
+Decision ล่าสุด (Lin ยืนยัน 2026-08-12) ล็อกว่า initial mastery label มาตรฐานคือ `未開始` แต่
+`learning_memory_states.code='not_started'` ที่ seed มาจาก `2026-08-11_learning_foundation.sql` ยังเป็น `未練習`
+**Safety-gate บังคับก่อนแก้เสมอ:** `select count(*) from learning_memory` ต้องได้ 0 ก่อนไปต่อ (ยืนยันได้ 0 จริง —
+ไม่มีข้อมูลผู้เรียนผูกกับ label นี้เลย จึงปลอดภัย 100%) → รัน `update ... set label_zh='未開始' where code='not_started'
+and label_zh='未練習'` → ตรวจหลังแก้: เหลือแค่แถวนี้เปลี่ยน อีก 4 แถว (`learning`/`needs_work`/`stable`/`mastered`)
+ไม่กระทบเลย
+
+**ไฟล์:** 🆕 `supabase/sql/2026-08-12_fix_learning_memory_state_label.sql` (มี safety-gate `[A]` + rollback `[Z]`
+ในตัว) · อัปเดตสารบัญ
+
+### 3. Lego Weekly Challenge — เขียนใหม่ทั้งระบบให้ตรง Decision
+
+**ของเดิม (ก่อน 2026-08-12):** `js/games/lego-game-app.js:684-741` — `legoWeekIndex()` คำนวณจาก `Date.now()` ล้วน
+(epoch week, **global** ไม่ personalize), เก็บ progress ใน `localStorage` (`LEGO_CH_KEY='lego_challenge_v1'`) ไม่ผูก
+บัญชี ไม่ sync ข้ามเครื่อง ไม่มีให้เลือกวัน ไม่มีกฎ 14 วันเลยแม้แต่จุดเดียว (ยืนยันจาก grep ทั้งไฟล์ก่อนแก้) — **ไม่ตรง
+Decision** (ผู้เรียนเลือก weekday เอง · 1 ครั้ง/สัปดาห์ · เปลี่ยนวันรอ 14 วัน)
+
+**Guest decision (Lin อนุมัติ 2026-08-12):** เล่น Lego ปกติได้เต็มที่ แต่ Weekly Challenge ต้อง login เท่านั้น —
+**ห้ามมีระบบ localStorage คู่ขนานสำหรับ guest** Free Login และ Paid ใช้ระบบเดียวกัน
+
+**ของใหม่:** ย้าย state ทั้งหมดไปฝั่งเซิร์ฟเวอร์ — ตาราง `lego_challenge_state` (1 แถว/user, RLS `select own`
+เท่านั้น ไม่มี insert/update/delete policy ให้ client เลย) + `lego_challenge_defs` (mirror ของ `LEGO_CHALLENGES`
+เดิม 5 ชนิด ใช้ตรวจสอบฝั่งเซิร์ฟเวอร์กันโกง) + ฟังก์ชัน SQL แบบ `SECURITY DEFINER` 3 ตัวที่ client เรียกผ่าน `.rpc()`
+ตรงๆ (ก็อป pattern เดียวกับ `submit_class_request`/`respond_to_offer_as_student` ที่มีอยู่แล้วในระบบเรียน แทนที่จะ
+สร้าง Edge Function ใหม่ที่ต้อง deploy แยก — deploy ผ่านการรัน SQL ที่ Lin อนุมัติได้ทันที ไม่ต้องรอ
+`supabase functions deploy`):
+- `lego_challenge_get_state()` — อ่านสถานะปัจจุบัน
+- `lego_challenge_set_weekday(smallint)` — เลือกครั้งแรก (ใช้ทันที) / ขอเปลี่ยน (เข้าคิว 14 วัน enforce
+  ฝั่งเซิร์ฟเวอร์ล้วน — เขียนทับ pending เดิมถ้ามี = รีเซ็ตนับใหม่)
+- `lego_challenge_record_progress(int,int,int)` — บันทึกความคืบหน้าหลังทดสอบผ่าน 1 รอบ (mirror ตรรกะ
+  `legoChallengeBump` เดิมเป๊ะ: correct/sets/perfect/combo) — no-op ถ้า `done=true` แล้ว (เล่นซ้ำ cycle เดิมไม่ได้)
+
+Timezone ใช้ `Asia/Taipei` ให้ตรงกับ `lego-daily-limit/index.ts` (`todayTaipei()`) ที่มีอยู่แล้วในระบบเลโก้เดียวกัน
+— ไม่ใช่ Bangkok
+
+**ตรวจสูตรคำนวณ cycle_start ก่อนเชื่อว่าใช้ได้จริง:** รันสูตรจริงกับวันตัวอย่าง (2026-08-12=พุธ) ครบทั้ง 7 กรณี
+weekday 0-6 ได้วันที่ย้อนกลับถูกต้องทุกกรณี (ตรวจด้วยชื่อวันจริงเทียบกัน)
+
+**Live evidence:** มีบัญชีทดสอบจริง 1 บัญชีเลือก weekday แล้วขอเปลี่ยนวัน → ระบบเข้าคิว `pending` ถูกต้อง (กฎ 14 วัน
+ทำงานจริง ไม่ถูกข้าม) 🔴 **แต่เส้นทาง "เล่นจบรอบ→progress ขึ้น→เห็นข้อความ complete" ยังไม่ถูกทดสอบจบ**
+(`progress=0` อยู่บนแถวทดสอบนั้น) — **สถานะ `IMPLEMENTED / E2E PARTIAL` ห้ามเขียนว่า VERIFIED COMPLETE**
+
+**5 implementation-detail choices ที่ยังไม่ได้รับการยืนยันจาก Lin (`NEED LIN REVIEW` ไม่ใช่ Decision):**
+first-choice-is-immediate (ครั้งแรกใช้ทันทีไม่ต้องรอ 14 วัน — ตีความเอาจากคำว่า "เปลี่ยน" ว่าใช้เฉพาะการเปลี่ยน)
+· pending-request-overwrites-and-resets-timer (ขอเปลี่ยนซ้ำระหว่างรอ = รีเซ็ตนับ 14 วันใหม่)
+· progress-resets-when-cycle-boundary-shifts · challenge-type-rotation คำนวณจาก `cycle_start` ของแต่ละคนแยกกัน
+(คนละคนอาจเห็นชนิดชาเลนจ์ต่างกันในช่วงเวลาเหลื่อมกัน) · timezone Asia/Taipei (ก็อปจากของเดิม ไม่ใช่ตัดสินใหม่)
+
+**ไฟล์ที่แก้:** `js/games/lego-game-app.js` (ลบ `legoWeekIndex`/`legoActiveChallenge`/`LEGO_CH_KEY`/
+`legoLoadChallenge`/`legoChallengeState()`เดิม/`legoSaveChallenge`/`legoChallengeBump` ทั้งหมด — grep ยืนยันไม่มี
+จุดไหนอ้างชื่อเก่าเหล่านี้เหลือ นอกจากในคอมเมนต์อธิบายประวัติ · เพิ่ม `legoChallengeRefresh`/
+`legoChallengeChooseWeekday`/`legoChallengeRecordProgress`/`legoRenderChallengeBanner`/`legoWeekdayPickerHtml` ·
+`legoRenderGameBar()` เหลือแค่ streak/freeze rendering + เรียก `legoChallengeRefresh()` ต่อท้าย ผูกกับ hook เดิมที่
+`reading-auth.js` เรียกอยู่แล้วทุกครั้งที่ auth state เปลี่ยน ไม่ต้องแก้ `reading-auth.js` เลย) · `lego.html`
+(CSS ใหม่ 6 คลาสใช้ theme เดิม + cache bump `lego-game-app.js?v=1→2`) · 🆕
+`supabase/sql/2026-08-12_lego_weekly_challenge_schema.sql` · อัปเดตสารบัญ
+
+**Mini-Game Challenge (`games-challenge.html`) ไม่ถูกแตะเลยแม้แต่บรรทัดเดียว** — grep ยืนยันไม่มีไฟล์ของงานนี้ทับซ้อน
+กับไฟล์ระบบนั้น
+
+### สรุปรวม 3 งาน
+
+**Tests:** `node --check js/games/lego-game-app.js` ผ่าน · `node scripts/check-site.js` ผ่านครบทุกหัวข้อ ✓ —
+63 รายการที่ไม่ผ่านทั้งหมดเป็นของเดิมไม่เกี่ยวกับงานนี้ (`_staging-build/`+`supabase-config.staging.js` ที่ยืนยันแล้ว
+ว่าไม่ใช่บั๊กมาก่อนหน้านี้ + โฟลเดอร์ `finance/` ที่ไม่ใช่ของแชทนี้) — **ไม่มีไฟล์ที่แก้ในรอบนี้ปรากฏในรายการไม่ผ่านเลย**
+
+**Production change ที่รันจริงแล้ว (ไม่ใช่แค่เตรียมไฟล์):** 3 SQL migration รันครบทุกบรรทัดบน production
+(`qzkxlhpcputsvbqmtqfi`) — REVOKE 5 คำสั่ง, UPDATE label 1 แถว, CREATE TABLE×2 + FUNCTION×4 ของ Lego Weekly
+Challenge — ตรวจยืนยันซ้ำอีกครั้งวันเดียวกันหลัง commit ไม่มี drift
+
+**git:** commit `ead14cb` "เพิ่ม Lego Weekly Challenge แบบผูกบัญชี (เลือกวัน+รอ14วัน) + ปิดช่องโหว่ 3 SECURITY
+DEFINER view + แก้ label 未練習→未開始" — push แล้วผ่าน GitHub Desktop ยืนยัน `git status`=clean ตรงกับ `origin/main`
+
+**ค้างรอ Lin:** (1) ทดสอบ E2E เส้นทาง progress-recording ของ Lego Weekly Challenge ให้จบ (2) ยืนยัน 5
+implementation-detail choices ด้านบน (3) เติม wording guest-clause เข้า Decision Master doc อย่างเป็นทางการ (Lin
+พูดชัดแล้วในแชท แต่ยังไม่เขียนลง Decision text ของ `CURRENT_SOURCE_OF_TRUTH`/`DECISION_MASTER_RECOVERED`)
+
+**รายละเอียดเต็ม + evidence ทุกจุด (รวมช่องโหว่ security ที่ไม่ควร public):**
+`FOR_GPT_CLAUDE_RESULT_2026-08-12.md` — ไม่ได้เก็บใน repo นี้ อยู่ที่
+`/Users/taihualin/Downloads/CLAUDE_HANDOFF_PACKAGE_2026-08-12/`
+
+---
+
 ## 2026-08-11 (รอบ 4) — รอบดูแล/ความปลอดภัย/คุณภาพเว็บ (ไม่แตะ Product Decision)
 
 **ขอบเขต:** เก็บงานส่วนที่ทำต่อได้โดยไม่ต้องรอสถาปัตยกรรม Product ที่ Lin กำลังออกแบบ
