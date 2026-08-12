@@ -287,6 +287,14 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
 .tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
 
+/* ── Lego Weekly Challenge — 選日/更改日/鎖定提示 — 2026-08-12 ── */
+.tf-challenge-banner.locked{background:linear-gradient(180deg,#F3E4C2,#EDE7D9);border-color:var(--gold);}
+.tf-ch-pending{font-size:11px;color:#b07a1e;margin-top:6px;background:rgba(139,99,16,0.08);border-radius:8px;padding:5px 9px;}
+.lego-wd-picker{display:flex;flex-wrap:wrap;gap:6px;}
+.lego-wd-btn{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:#fff;color:#8a5a12;border:1.5px solid #E0B84A;border-radius:999px;padding:5px 12px;cursor:pointer;}
+.lego-wd-btn.active{background:linear-gradient(90deg,#E8973A,#F4C24A);color:#fff;border-color:#E8973A;}
+.lego-wd-change-btn{font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:700;background:transparent;color:var(--gold-deep);border:1px solid #E0B84A;border-radius:8px;padding:3px 10px;cursor:pointer;}
+
 .v3-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:600;align-items:center;justify-content:center;}
 .v3-modal.show{display:flex;}
 .v3-modal-box{background:#fff;border-radius:24px;padding:28px 22px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.22);}
@@ -534,7 +542,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   </div>
 </div>
 
-<script src="js/games/lego-game-app.js?v=1"></script>
+<script src="js/games/lego-game-app.js?v=2"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 — Lin 2026-07-08: เลโก้ขาดแถบนี้ไปเดิม เพิ่มให้ครบเหมือนเกมอื่น ── -->
 <style>

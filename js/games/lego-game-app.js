@@ -541,7 +541,7 @@ function finishLegoRound(){
   legoNextTestGolden=true; // กฎ2026-07-05: ทดสอบผ่านครบรอบแล้ว → ประโยคถัดไป (ที่6) การันตีคำทอง ×2
   legoRefreshBars();
   if(window.GAME_ACCOUNT){GAME_ACCOUNT.bumpStreakToday();}
-  try{ legoChallengeBump(cleanCount,count,comboSnapshot); }catch(e){}
+  try{ legoChallengeRecordProgress(cleanCount,count,comboSnapshot); }catch(e){}
   // 存分數到共用排行榜（'lego' key 已在 reading-auth.js 註冊，跟 word_order 分開算，不會混榜）
   try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'lego',legoWrongItemsFromLog()); }catch(e){}   // เฟส 3: แนบประโยคที่พลาด — 2026-07-13
   legoRoundLog=[]; // ล้างรอบ กันข้อมูลรอบเก่าค้างไปติดรอบถัดไป
@@ -681,26 +681,6 @@ function openBadge(){
 // 連續天數／護盾：跟聲調・拼讀・打字・語序練習室共用同一個 key，練哪個遊戲都算連續天數
 const TF_STREAK_KEY='tf_streak_v1';
 const LEGO_GAME_CFG={STREAK_FREEZE_EARN_EVERY:7,STREAK_FREEZE_MAX:2};
-const LEGO_CHALLENGES=[
-  {id:'lego_correct15',title:'測驗過關 15 句',sub:'本週拆句測驗累積過關 15 句',type:'correct',target:15,emoji:'🎯'},
-  {id:'lego_rounds3',  title:'完成 3 輪測驗', sub:'本週完成 3 輪（每輪 '+SENTENCES_PER_ROUND+' 句）拆句測驗',type:'sets',target:3,emoji:'📚'},
-  {id:'lego_perfect2', title:'2 輪全對過關',  sub:'本週有 2 輪測驗，'+SENTENCES_PER_ROUND+' 句都第一次就排對',type:'perfect',target:2,emoji:'🌟'},
-  {id:'lego_combo5',   title:'連續排對 5 句', sub:'本週連續一次就測驗排對達 5 句',type:'combo',target:5,emoji:'🔥'},
-  {id:'lego_correct30',title:'測驗過關 30 句',sub:'本週拆句測驗累積過關 30 句',type:'correct',target:30,emoji:'💪'}
-];
-const LEGO_WEEK_MS=7*24*60*60*1000;
-function legoWeekIndex(){return Math.floor(Date.now()/LEGO_WEEK_MS);}
-function legoWeekEndMs(){return (legoWeekIndex()+1)*LEGO_WEEK_MS;}
-function legoActiveChallenge(){return LEGO_CHALLENGES[legoWeekIndex()%LEGO_CHALLENGES.length];}
-const LEGO_CH_KEY='lego_challenge_v1';
-function legoLoadChallenge(){try{return JSON.parse(localStorage.getItem(LEGO_CH_KEY)||'{}')||{};}catch(e){return {};}}
-function legoChallengeState(){
-  const ch=legoActiveChallenge(), wk=legoWeekIndex();
-  let saved=legoLoadChallenge();
-  if(saved.week!==wk||saved.id!==ch.id) saved={week:wk,id:ch.id,progress:0,done:false};
-  return {ch,st:saved};
-}
-function legoSaveChallenge(st){try{localStorage.setItem(LEGO_CH_KEY,JSON.stringify(st));}catch(e){}}
 
 function legoLoadStreak(){try{return JSON.parse(localStorage.getItem(TF_STREAK_KEY)||'{}')||{};}catch(e){return {};}}
 function legoSaveStreak(s){try{localStorage.setItem(TF_STREAK_KEY,JSON.stringify(s));}catch(e){}}
@@ -723,41 +703,163 @@ function legoApplyStreak(){
   return {state:s, events:streakEv};
 }
 
-function legoChallengeBump(cleanCount,totalCount,comboSnapshot){
-  const pack=legoChallengeState(), ch=pack.ch, st=pack.st;
-  if(st.done){legoSaveChallenge(st);return;}
-  let add=0;
-  if(ch.type==='correct') add=cleanCount;
-  else if(ch.type==='sets') add=1;
-  else if(ch.type==='perfect') add=(cleanCount===totalCount)?1:0;
-  else if(ch.type==='combo') add=(comboSnapshot||0)>=ch.target?ch.target:0;
-  if(ch.type==='combo') st.progress=Math.max(st.progress,add);
-  else st.progress+=add;
-  if(st.progress>=ch.target&&!st.done){
-    st.done=true;
-    toast('🎉 完成本週挑戰：'+ch.title+'！');
+// ════════ Lego Weekly Challenge — 2026-08-12 REBUILD (Lin อนุมัติ) ════════
+// เดิม (ก่อน 2026-08-12): global auto-rotate ตาม Date.now() ล้วน, เก็บ progress ใน localStorage
+// (LEGO_CH_KEY='lego_challenge_v1') ไม่ผูกบัญชี ไม่ sync ข้ามเครื่อง ไม่มีให้เลือกวัน — ไม่ตรง Decision
+// (ผู้เรียนเลือก weekday เอง · 1 ครั้ง/สัปดาห์ · เปลี่ยนวันรอ 14 วัน)
+// ตอนนี้: state ทั้งหมดอยู่ฝั่งเซิร์ฟเวอร์ (ตาราง lego_challenge_state + RPC 3 ตัว — ดู
+// supabase/sql/2026-08-12_lego_weekly_challenge_schema.sql) กฎ 14 วัน enforce ในฟังก์ชัน SQL
+// (SECURITY DEFINER) เท่านั้น ไม่เชื่อ client — Guest ไม่มีระบบคู่ขนานอีกต่อไปตามที่ Lin สั่งชัดเจน
+// (เล่น Lego ปกติได้เต็มที่ แต่ Weekly Challenge ต้อง login เท่านั้น ไม่มี fallback localStorage)
+// LEGO_CHALLENGES ยังเก็บไว้เป็นแหล่งข้อความแสดงผล (title/sub/emoji) — target/type จริงตัดสินที่
+// lego_challenge_defs ฝั่งฐานข้อมูล (กันโกงผ่านยิง RPC ตรง) 🔑 แก้เนื้อหาชาเลนจ์ในอนาคตต้องแก้ 2 ที่พร้อมกัน
+const LEGO_CHALLENGES=[
+  {id:'lego_correct15',title:'測驗過關 15 句',sub:'本週拆句測驗累積過關 15 句',type:'correct',target:15,emoji:'🎯'},
+  {id:'lego_rounds3',  title:'完成 3 輪測驗', sub:'本週完成 3 輪（每輪 '+SENTENCES_PER_ROUND+' 句）拆句測驗',type:'sets',target:3,emoji:'📚'},
+  {id:'lego_perfect2', title:'2 輪全對過關',  sub:'本週有 2 輪測驗，'+SENTENCES_PER_ROUND+' 句都第一次就排對',type:'perfect',target:2,emoji:'🌟'},
+  {id:'lego_combo5',   title:'連續排對 5 句', sub:'本週連續一次就測驗排對達 5 句',type:'combo',target:5,emoji:'🔥'},
+  {id:'lego_correct30',title:'測驗過關 30 句',sub:'本週拆句測驗累積過關 30 句',type:'correct',target:30,emoji:'💪'}
+];
+const LEGO_WEEKDAY_NAMES=['週日','週一','週二','週三','週四','週五','週六'];
+
+let legoChallengeState=null;          // cache ล่าสุดจากเซิร์ฟเวอร์ (jsonb จาก lego_challenge_get_state)
+let legoChallengeLoading=false;
+let legoChallengeLastLoginState=null; // กันยิง RPC ซ้ำถ้า login state ไม่เปลี่ยนและมี cache อยู่แล้ว
+
+function legoChallengeDefById(id){ return LEGO_CHALLENGES.find(function(c){return c.id===id;}); }
+
+// เรียกได้บ่อย (ทุกครั้งที่ legoRenderGameBar ทำงาน) — มี guard กันยิงซ้ำในตัวแล้ว
+async function legoChallengeRefresh(force){
+  var loggedIn=legoLoggedIn();
+  if(!loggedIn){
+    legoChallengeState=null;
+    legoChallengeLastLoginState=false;
+    legoRenderChallengeBanner();
+    return;
   }
-  legoSaveChallenge(st);
+  if(!force && legoChallengeLastLoginState===true && legoChallengeState){ legoRenderChallengeBanner(); return; }
+  if(legoChallengeLoading) return;
+  legoChallengeLoading=true;
+  try{
+    var res=await window.__SB_CLIENT.rpc('lego_challenge_get_state');
+    if(res.error) throw res.error;
+    legoChallengeState=res.data;
+    legoChallengeLastLoginState=true;
+  }catch(e){
+    legoChallengeState=null;
+    try{ console.warn('[lego-challenge] get_state failed', e); }catch(_e){}
+  }
+  legoChallengeLoading=false;
+  legoRenderChallengeBanner();
 }
 
-function legoRenderGameBar(){
-  const cp=legoChallengeState(), st=legoLoadStreak();
-  const pct=Math.min(100,Math.round(cp.st.progress/cp.ch.target*100));
-  const daysLeft=Math.max(0,Math.ceil((legoWeekEndMs()-Date.now())/86400000));
-  const alive=st.streak>0&&(st.lastPlay===legoTodayStr()||legoYestStr()===st.lastPlay);
-  const ban=document.getElementById('rg-challenge-banner');
-  if(ban) ban.innerHTML=
-    '<div class="tf-challenge-banner'+(cp.st.done?' done':'')+'">'+
+async function legoChallengeChooseWeekday(weekday){
+  if(!legoLoggedIn()){ legoCtaLogin(); return; }
+  try{
+    var res=await window.__SB_CLIENT.rpc('lego_challenge_set_weekday',{p_weekday:weekday});
+    if(res.error) throw res.error;
+    legoChallengeState=res.data;
+    legoChallengeLastLoginState=true;
+    legoRenderChallengeBanner();
+  }catch(e){
+    toast('設定失敗，請稍後再試 🙏',true);
+    try{ console.warn('[lego-challenge] set_weekday failed', e); }catch(_e){}
+  }
+}
+
+// เรียกจาก finishLegoRound() แทน legoChallengeBump เดิม — Guest ไม่ทำอะไรเลย (ตั้งใจ ไม่มี fallback)
+async function legoChallengeRecordProgress(cleanCount,totalCount,comboSnapshot){
+  if(!legoLoggedIn()) return;
+  try{
+    var res=await window.__SB_CLIENT.rpc('lego_challenge_record_progress',{
+      p_clean_count:cleanCount, p_total_count:totalCount, p_combo_snapshot:comboSnapshot
+    });
+    if(res.error) throw res.error;
+    var wasNotDone=!(legoChallengeState&&legoChallengeState.done);
+    legoChallengeState=res.data;
+    if(res.data&&res.data.just_completed&&wasNotDone){
+      var def=legoChallengeDefById(res.data.challenge_id);
+      toast('🎉 完成本週挑戰：'+(def?def.title:'')+'！');
+    }
+    legoRenderChallengeBanner();
+  }catch(e){
+    // ล้มเหลวเงียบๆ ไม่ block gameplay หลัก (คะแนน/SRS ยังบันทึกปกติทางอื่นแยกจากกัน) แต่ log ไว้ debug
+    try{ console.warn('[lego-challenge] record_progress failed', e); }catch(_e){}
+  }
+}
+
+function legoWeekdayPickerHtml(currentActive){
+  var btns='';
+  for(var i=0;i<7;i++){
+    var active=(currentActive===i)?' active':'';
+    btns+='<button type="button" class="lego-wd-btn'+active+'" onclick="legoChallengeChooseWeekday('+i+')">'+LEGO_WEEKDAY_NAMES[i]+'</button>';
+  }
+  return '<div class="lego-wd-picker">'+btns+'</div>';
+}
+
+function legoChallengeToggleWeekdayPicker(){
+  var el=document.getElementById('lego-wd-picker-slot');
+  if(el) el.style.display=(el.style.display==='none')?'block':'none';
+}
+
+function legoRenderChallengeBanner(){
+  var ban=document.getElementById('rg-challenge-banner');
+  if(!ban) return;
+
+  if(!legoLoggedIn()){
+    ban.innerHTML='<div class="tf-challenge-banner locked">'+
+      '<div class="tf-ch-top"><span class="tf-ch-emoji">🔒</span>'+
+      '<span class="tf-ch-title">登入後可設定每週挑戰日</span></div>'+
+      '<div class="tf-ch-sub">造句遊戲隨時都能玩，但「每週挑戰」要先登入才能開始 💪'+
+      '<button type="button" onclick="legoCtaLogin()" class="lego-wd-change-btn" style="margin-left:8px;background:#BA7517;color:#fff;">登入解鎖 →</button></div>'+
+    '</div>';
+    return;
+  }
+
+  var st=legoChallengeState;
+  if(!st){
+    ban.innerHTML='<div class="tf-challenge-banner"><div class="tf-ch-sub">每週挑戰載入中…</div></div>';
+    return;
+  }
+
+  if(!st.has_weekday){
+    ban.innerHTML='<div class="tf-challenge-banner">'+
+      '<div class="tf-ch-top"><span class="tf-ch-emoji">📅</span><span class="tf-ch-title">選一天當作你的「每週挑戰日」</span></div>'+
+      '<div class="tf-ch-sub">選好之後每到這天挑戰會重新開始一次（之後要換日期，需要等 14 天才會生效）</div>'+
+      legoWeekdayPickerHtml(null)+
+    '</div>';
+    return;
+  }
+
+  var def=legoChallengeDefById(st.challenge_id);
+  var target=(def&&def.target)||st.target||0;
+  var pct=target?Math.min(100,Math.round(st.progress/target*100)):0;
+  var cycleEndMs=st.cycle_end?new Date(st.cycle_end+'T00:00:00+08:00').getTime():0; // Asia/Taipei = UTC+8
+  var daysLeft=cycleEndMs?Math.max(0,Math.ceil((cycleEndMs-Date.now())/86400000)):0;
+  var pendingHtml='';
+  if(st.pending_weekday!==null&&st.pending_weekday!==undefined){
+    pendingHtml='<div class="tf-ch-pending">⏳ 已申請改成'+LEGO_WEEKDAY_NAMES[st.pending_weekday]+'，還要等 '+st.pending_days_left+' 天才會生效</div>';
+  }
+  ban.innerHTML='<div class="tf-challenge-banner'+(st.done?' done':'')+'">'+
       '<div class="tf-ch-top">'+
-        '<span class="tf-ch-emoji">'+cp.ch.emoji+'</span>'+
-        '<span class="tf-ch-title">本週挑戰：'+cp.ch.title+(cp.st.done?' ✅ 完成！':'')+'</span>'+
+        '<span class="tf-ch-emoji">'+(def?def.emoji:'🎯')+'</span>'+
+        '<span class="tf-ch-title">本週挑戰：'+(def?def.title:'')+(st.done?' ✅ 完成！':'')+'</span>'+
         '<span class="tf-ch-left">⏳ '+daysLeft+' 天</span>'+
       '</div>'+
       '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:'+pct+'%;"></div></div>'+
-      '<div class="tf-ch-sub">'+cp.ch.sub+'　'+cp.st.progress+' / '+cp.ch.target+'</div>'+
+      '<div class="tf-ch-sub">'+(def?def.sub:'')+'　'+st.progress+' / '+target+
+        ' <button type="button" class="lego-wd-change-btn" onclick="legoChallengeToggleWeekdayPicker()">更改挑戰日</button></div>'+
+      pendingHtml+
+      '<div id="lego-wd-picker-slot" style="display:none;margin-top:8px;">'+legoWeekdayPickerHtml(st.active_weekday)+'</div>'+
     '</div>';
+}
+
+function legoRenderGameBar(){
+  const st=legoLoadStreak();
+  const alive=st.streak>0&&(st.lastPlay===legoTodayStr()||legoYestStr()===st.lastPlay);
   const sn=document.getElementById('rg-streak-num'); if(sn) sn.textContent=(alive?(st.streak||0):0);
   const fn=document.getElementById('rg-freeze-num'); if(fn) fn.textContent=(st.freezes||0);
+  try{ legoChallengeRefresh(); }catch(e){} // ผูกกับ hook เดิมที่ reading-auth.js เรียกอยู่แล้วทุกครั้งที่ auth state เปลี่ยน
 }
 
 // ════════ TEST: 拆句測驗（點打散的詞塊排回原順序，通過才計入 SENTENCES_PER_ROUND） ════════
