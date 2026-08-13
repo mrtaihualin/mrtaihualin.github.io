@@ -288,7 +288,7 @@ supabase functions deploy line-webhook --no-verify-jwt --project-ref qzkxlhpcput
   ⚠️ **แต่ยังไม่ได้ deploy** → ปุ่มฝั่งนักเรียนบน LINE ยังเงียบอยู่จนกว่าจะ deploy (ดู MANUAL ACTION ข้อ 1)
 - ⏳ ที่เหลือยังไม่ได้ commit — รอ Lin กดเองผ่าน GitHub Desktop
 - 📌 `CLAUDE.md` และ `_แผนงาน/` อยู่ใน `.gitignore` (เอกสารในเครื่อง ไม่ขึ้น GitHub) จึงไม่โผล่ใน git status
-- 📖 อ่านคู่กับรายงานของอีกแชทที่เข้ามาระหว่างทาง: `2026-08-11_PRODUCT_ARCHITECTURE_READINESS_AUDIT.md`
+- 📖 อ่านคู่กับรายงานของอีกแชทที่เข้ามาระหว่างทาง: `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/AUDIT_VERIFY/website/2026-08-11_PRODUCT_ARCHITECTURE_READINESS_AUDIT.md`
   (ตรวจแล้วไม่ขัดกับงานรอบนี้ · รายการ SAFE NOW S1–S9 ในนั้นเป็นงาน Product คนละก้อน รอบนี้ไม่แตะเลย)
 
 ---
@@ -315,7 +315,7 @@ Lin สั่งปิดรอบก่อน deploy · รอบนี้จ�
 (3) ตัดสินใจเรื่อง cron 3 ตัว
 
 ⚠️ **ตอนปิดรอบเจอว่ามีอีกแชททำงานคู่ขนานอยู่** (ไฟล์ค้างแก้ที่ **ไม่ใช่ของรอบนี้**):
-`2026-08-11_PRODUCT_ARCHITECTURE_READINESS_AUDIT.md` · `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` ·
+`/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/AUDIT_VERIFY/website/2026-08-11_PRODUCT_ARCHITECTURE_READINESS_AUDIT.md` · `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md` ·
 🆕`supabase/sql/2026-08-11_practice_surface_vault_aliases.sql` — **ไม่แตะเลยตามกฎ**
 
 ---
