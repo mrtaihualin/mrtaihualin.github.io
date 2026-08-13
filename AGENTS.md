@@ -2,20 +2,24 @@
 
 ไฟล์นี้ใช้กับทั้ง repository `/Users/taihualin/Developer/mrtaihualin.github.io/`
 
-## ต้องอ่านก่อนเริ่ม
+## Startup Gate — ต้องผ่านก่อนแก้ไฟล์
 
-อ่านหนึ่งครั้งต่อแชทและห้ามอ่านซ้ำถ้า Context ยังครบ:
+กฎ Startup Gate ฉบับ canonical สำหรับ Claude + Codex อยู่ที่ `/Users/taihualin/Documents/Claude/Projects/AGENTS.md` หัวข้อ **Startup Gate กลาง** — ห้ามคัดลอกกฎซ้ำมาไว้ในไฟล์นี้
 
-1. `/Users/taihualin/Documents/Claude/Projects/CLAUDE.md` — กฎกลางของ Lin
-2. `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/AI_EFFICIENCY_RULES.md` — กฎประหยัด Usage, Context, Reasoning และ Output สำหรับ Codex และ Claude
+ก่อนเริ่มทุกงานใน repo นี้:
 
-อ่านเพิ่มตามงานเท่านั้น:
+0. โหลดหรือยืนยันว่า Context มี `AGENTS.md` ไฟล์นี้และ `/Users/taihualin/Developer/mrtaihualin.github.io/00_START_HERE.md` แล้ว
+1. โหลด Shared Rules canonical ที่ `/Users/taihualin/Documents/Claude/Projects/AGENTS.md` และกฎประหยัดที่ `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/AI_EFFICIENCY_RULES.md` ถ้ายังไม่มีใน Context
+2. ทำ Startup Gate ตาม canonical rule และรายงาน `STARTUP GATE: PASS` แบบสั้นก่อน `edit / create / move / delete`
+3. ถ้า Context ยังครบและไฟล์ไม่เปลี่ยน ห้ามอ่านซ้ำโดยไม่มีเหตุ
+
+หลังผ่านขั้นอ่านกฎ ให้เปิดเฉพาะ Current Source ที่เกี่ยวกับงาน:
 
 3. งานตามแผน งานสถานะ งานส่งต่อ หรือการแก้เว็บไซต์: อ่านส่วนล่าสุดที่เกี่ยวข้องใน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md` และ `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
 4. งานสมาชิกเกม สิทธิ์ เนื้อหาจ่ายเงิน หรือการชำระเงิน: อ่าน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/04_สเปกสมาชิกเกม_CURRENT.md`
 5. ก่อนแตะโค้ด: อ่านส่วนที่เกี่ยวข้องใน `CLAUDE.md`; อ่าน `README.md` หรือ `MAINTENANCE.md` เมื่อจำเป็นต่อโครงสร้าง พฤติกรรมเดิม หรือผลตรวจล่าสุด
 
-หากข้อมูลขัดกัน ให้ตรวจโค้ดและระบบจริง แล้วบันทึกความขัดแย้ง ห้ามเลือกคำตอบเองจากเอกสารเก่า
+ห้ามเปิด Master, History หรือ Audit ทั้งหมดโดยอัตโนมัติ หากข้อมูลขัดกัน ให้ตรวจโค้ดและระบบจริง แล้วบันทึกความขัดแย้ง ห้ามเลือกคำตอบเองจากเอกสารเก่า
 
 ## วิธีคุยกับ Lin
 
