@@ -11,7 +11,7 @@
 >
 > ✅ **อัปเดต 2026-08-09 — ข้อ 1-9 (บังคับ) ทดสอบผ่านครบสมบูรณ์แล้ว** ด้วยบัญชีทดสอบ
 > `mr.taihualin+test2@gmail.com` (`user_id: c619ba7b-97b2-470c-bf45-846af2b01bf2`) — ไม่พบบั๊ก
-> รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
+> รายละเอียดเต็ม: `/Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 >
 > ✅ **ปิดงานสมบูรณ์ 2026-08-09 (รอบ 2):** `EMAIL_PROVIDER_API_KEY` คืนเป็นค่า Resend จริงแล้ว + รัน SQL [C]
 > แล้ว (cron `account-delete-daily` jobid 15 active=true) + ทดสอบ failure-path ของอีเมลจนจบ (เจอบั๊กจริง
@@ -61,7 +61,7 @@
         ตั้งกุญแจผิด → invoke cron → `email_sent:false` (ลบสำเร็จปกติ ไม่ rollback) → ตั้งกุญแจกลับ → invoke
         cron → **เจอบั๊กจริง 1 จุด** (retry pass ไม่ทำงานถ้าไม่มีบัญชีใหม่ให้ลบ) → แก้ + deploy ขึ้น
         production แล้ว → ทดสอบซ้ำ retry ส่งสำเร็จ (`sent:1`, ยืนยันด้วย `completed_email_sent_at` ใน DB)
-        รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
+        รายละเอียดเต็ม: `/Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 
 ---
 
@@ -77,7 +77,7 @@ Lin เลือก **Resend** โดเมน `mrtaihualin.com` verify แล�
 ✅ **ทำแล้ว 2026-08-09** — ติ๊ก ✅ ครบทุกข้อ 1-9 ด้านบนแล้ว
 
 **✅ ปิดครบทุกข้อแล้ว 2026-08-09 (รอบ 2)** (ดูรายละเอียดเต็มที่
-`Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`):
+`/Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`):
 1. ✅ ตั้ง `EMAIL_PROVIDER_API_KEY` กลับเป็นค่า Resend จริงแล้ว
 2. ✅ ทำ failure-path test จนจบแล้ว — เจอบั๊กจริง 1 จุด (retry pass อีเมลไม่ทำงานถ้าไม่มีบัญชีใหม่ให้ลบ)
    แก้ + deploy ขึ้น production แล้ว + ทดสอบซ้ำผ่าน

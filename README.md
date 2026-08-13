@@ -4,7 +4,7 @@
 
 ประวัติงานจัดระบบและผลตรวจล่าสุดอยู่ใน [MAINTENANCE.md](MAINTENANCE.md)
 
-กฎสำหรับ Codex อยู่ใน [AGENTS.md](AGENTS.md) และแผนงานหลักจากจัดระบบถึงเปิดขายเกมอยู่ที่ `/Users/taihualin/Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
+กฎสำหรับ Codex อยู่ใน [AGENTS.md](AGENTS.md) และแผนงานหลักจากจัดระบบถึงเปิดขายเกมอยู่ที่ `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
 
 ## โครงสร้างหลัก
 

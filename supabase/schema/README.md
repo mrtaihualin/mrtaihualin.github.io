@@ -1,7 +1,7 @@
 # 📐 supabase/schema/ — แบบแปลนย้อนหลังของฐานข้อมูล
 
 > สร้าง 2026-08-07 · งาน `P2-05`
-> รายงานต้นทาง: `Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/20_ผลตรวจ_P2_database_rls.md`
+> รายงานต้นทาง: `/Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/website/2026-08/20_ผลตรวจ_P2_database_rls.md`
 
 ---
 

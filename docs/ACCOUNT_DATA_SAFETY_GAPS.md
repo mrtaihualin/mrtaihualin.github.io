@@ -84,7 +84,7 @@
 **✅ อัปเดต 2026-08-09 — Full Account Deletion Test ผ่านครบ 9 ข้อ (บังคับ) แล้ว**
 ทดสอบด้วยบัญชี `mr.taihualin+test2@gmail.com` ครบทุกขั้น (request/cancel/request ซ้ำ/ปรับเวลา/invoke
 cron/ลบถาวรจริง/ตรวจ DB+Auth+audit log ครบ 4 event/ล็อกอินซ้ำเป็นบัญชีใหม่/อีเมลครบ 4 ฉบับ) ไม่พบบั๊ก
-รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
+รายละเอียดเต็ม: `/Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 
 **✅ อัปเดต 2026-08-09 (รอบ 2) — ปิดครบเกือบทั้งหมด:**
 1. ✅ **`EMAIL_PROVIDER_API_KEY` คืนเป็นค่า Resend จริงแล้ว**
@@ -97,7 +97,7 @@ cron/ลบถาวรจริง/ตรวจ DB+Auth+audit log ครบ 4 e
 `account-delete-cron/index.ts` เดิม return ทันทีถ้าไม่มีบัญชีใหม่ครบกำหนดลบในรอบนั้น ทำให้ retry pass ของ
 อีเมลที่เคยส่งพลาด **ไม่ทำงานเลยถ้าไม่มีบัญชีใหม่ให้ลบพร้อมกัน** — ไม่กระทบข้อมูล/ความปลอดภัย กระทบแค่
 อีเมลยืนยันอาจไม่ถูกส่งซ้ำ แก้แล้วโดยเอา early return ออก ทดสอบยืนยัน retry ทำงานถูกต้องแล้ว
-รายละเอียดเต็ม: `Bussiness Idea/ระบบเว็บไซต์/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
+รายละเอียดเต็ม: `/Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/72_ผลลัพธ์_account-delete_FullDeletionTest+งานค้าง.md`
 
 **✅ ปิดงานสมบูรณ์แล้ว** — push `auth-widget.js` และ `account-delete-cron/index.ts` ขึ้น GitHub ผ่าน
 GitHub Desktop เรียบร้อยแล้วทั้งคู่ (ยืนยันจาก Lin 2026-08-09) — ไม่มีงานค้างของหัวข้อนี้อีก
