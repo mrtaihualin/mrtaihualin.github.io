@@ -28,7 +28,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // 2026-08-08 (P7-03 defense-in-depth): จำกัด CORS จาก '*' เป็นโดเมนจริงของเว็บเท่านั้น —
 // ตรวจแล้วฟังก์ชันนี้เรียกจาก js/classroom/student-admin.js (หน้าครู classroom/index.html แบบล็อกอินตรง
 // ไม่ผ่าน LIFF SDK) เท่านั้น + มีด่านตรวจ JWT ครูจริงอยู่แล้ว CORS ผ่อนปรนเดิมไม่ได้ช่วยข้ามด่านนั้นได้
-// ดู Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md
+// ดู /Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/44_ผลลัพธ์_P7-03_จำกัดCORS.md
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',

@@ -47,7 +47,7 @@ const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 // ที่ redirect เข้ามาก่อน — พอ redirect เสร็จ หน้านี้ก็เป็นหน้าเว็บปกติบนโดเมนเราเองแล้ว ไม่มี liff.init())
 // + มีด่านตรวจตัวตนจริงอยู่แล้ว (ครู JWT หรือ fromStudentToken ที่มีจริง + notify_line_gate)
 // CORS ผ่อนปรนเดิมไม่ได้ช่วยข้ามด่านนั้นได้ ดูรายงาน P7-03:
-// Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md
+// /Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/44_ผลลัพธ์_P7-03_จำกัดCORS.md
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',

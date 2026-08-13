@@ -9,7 +9,7 @@
  * ใช้ซ้ำได้ในอนาคต — รันซ้ำได้ (idempotent) ถ้าไฟล์มี banner อยู่แล้วจะข้าม
  *
  * วิธีรัน: node scripts/apply-cookie-consent.js
- * อ้างอิงโค้ดต้นแบบ: Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/
+ * อ้างอิงโค้ดต้นแบบ: /Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/
  *   66_ผลลัพธ์_P6-24_privacy-terms+cookie.md หัวข้อ 4 ตัวเลือกที่ 2
  */
 

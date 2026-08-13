@@ -68,7 +68,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // (คนละระบบกับ link-line/find-line-student ที่ใช้ liff.init() จริง — ดูรายงาน P7-03 รอบนี้)
 // รายชื่อโดเมนใช้ชุดเดียวกับ allowedHosts (เช็ค redirect_uri) ด้านล่าง — มีด่านตรวจ redirect_uri นี้
 // เป็นด่านความปลอดภัยจริงอยู่แล้วอิสระจาก CORS ด้วย
-// ดู Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md
+// ดู /Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/44_ผลลัพธ์_P7-03_จำกัดCORS.md
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',

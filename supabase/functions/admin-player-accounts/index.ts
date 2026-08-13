@@ -5,7 +5,7 @@
 // (ตามกฎเว็บ CLAUDE.md ข้อ "เว็บต้องผ่าน Lin ก่อนเสมอ")
 //
 // รหัสงาน: P6-09~12 ก้อน 4 — Admin tool ขั้นต่ำสำหรับดู/แก้บัญชีผู้เล่น
-// อ้างอิง: Bussiness Idea/ระบบเว็บไซต์/64_ผลลัพธ์_P6-09to12_ก้อน3_ตรวจจับบัญชีซ้ำ.md (query A/B/C ต้นแบบ
+// อ้างอิง: /Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/PLANS/website/64_ผลลัพธ์_P6-09to12_ก้อน3_ตรวจจับบัญชีซ้ำ.md (query A/B/C ต้นแบบ
 // ที่ย้ายมา implement เป็น action ในฟังก์ชันนี้) และ 49_P6-09to12_ตรวจของจริง_เทียบสเปกบัญชีผู้เล่น.md
 //
 // หน้าที่: จุดเดียวที่หน้า admin-player-accounts.html (คนละไฟล์ในโฟลเดอร์ root ของเว็บ) เรียกใช้
@@ -247,7 +247,7 @@ serve(async (req) => {
     // ══════════════════════════════════════════════════════════════════════
     // action: list_duplicate_candidates — Query A (อีเมลจริงซ้ำ) + Query C (fingerprint ซ้ำ)
     // คำนวณสดทุกครั้ง (ไม่มีตาราง cache ในเวอร์ชันขั้นต่ำนี้) — ดูรายละเอียด query ต้นแบบ SQL ใน
-    // Bussiness Idea/ระบบเว็บไซต์/64_ผลลัพธ์_P6-09to12_ก้อน3_ตรวจจับบัญชีซ้ำ.md
+    // /Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/PLANS/website/64_ผลลัพธ์_P6-09to12_ก้อน3_ตรวจจับบัญชีซ้ำ.md
     // ══════════════════════════════════════════════════════════════════════
     if (action === 'list_duplicate_candidates') {
       // ── ดึงผู้ใช้ทั้งหมด (จำกัดเพดาน MAX_USERS_SCAN) พร้อม native identities ──────────────

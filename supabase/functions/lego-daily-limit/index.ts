@@ -36,7 +36,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // 2026-08-08 (P7-03 defense-in-depth): จำกัด CORS จาก '*' เป็นโดเมนจริงของเว็บเท่านั้น —
 // ตรวจแล้วฟังก์ชันนี้เรียกจาก js/games/lego-game-app.js (lego.html) ล้วน ๆ ไม่มี LIFF SDK เกี่ยวข้อง
 // (ฟังก์ชันนี้มีด่านตรวจตัวตนจริง — JWT/IP hash — CORS ผ่อนปรนเดิมไม่ได้ช่วยข้ามด่านนั้นได้ แค่ล็อกให้แคบลงเป็นชั้นป้องกันที่สอง)
-// ดู Documents/Claude/Projects/Bussiness Idea/ระบบเว็บไซต์/44_ผลลัพธ์_P7-03_จำกัดCORS.md
+// ดู /Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/44_ผลลัพธ์_P7-03_จำกัดCORS.md
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',
