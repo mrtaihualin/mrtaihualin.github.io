@@ -6,7 +6,7 @@
 //
 // รหัสงาน: P6-09~12 ก้อน 4 — Admin tool ขั้นต่ำสำหรับดู/แก้บัญชีผู้เล่น
 // อ้างอิง: /Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/PLANS/website/64_ผลลัพธ์_P6-09to12_ก้อน3_ตรวจจับบัญชีซ้ำ.md (query A/B/C ต้นแบบ
-// ที่ย้ายมา implement เป็น action ในฟังก์ชันนี้) และ 49_P6-09to12_ตรวจของจริง_เทียบสเปกบัญชีผู้เล่น.md
+// ที่ย้ายมา implement เป็น action ในฟังก์ชันนี้) และ /Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/website/2026-08/49_P6-09to12_ตรวจของจริง_เทียบสเปกบัญชีผู้เล่น.md
 //
 // หน้าที่: จุดเดียวที่หน้า admin-player-accounts.html (คนละไฟล์ในโฟลเดอร์ root ของเว็บ) เรียกใช้
 //   เพื่อค้นหา/ดู/บันทึกหมายเหตุของบัญชีผู้เล่น — ทุกอย่างอ่าน/เขียนผ่าน service_role เท่านั้น (เหมือน
