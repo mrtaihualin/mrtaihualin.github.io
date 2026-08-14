@@ -86,7 +86,7 @@ serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY); // service_role — ข้าม RLS ได้ ใช้อ่านตารางล็อกเท่านั้น
 
-    // ── rate limit เกราะเสริม (fail-open เหมือน rl_check/slink_rl_check เดิม) — กันสคริปต์ดูดข้อมูลรัวๆ ──
+    // ── rate limit เกราะเสริมแบบ fail-closed — ถ้าด่านตรวจล่ม ห้ามปล่อยข้อมูลออก ──
     // คนล็อกอิน → คีย์ตาม user id (ปลอมไม่ได้) · คนไม่ล็อกอิน → คีย์ตาม IP (x-forwarded-for)
     const xff = req.headers.get('x-forwarded-for') || '';
     const ip = (xff.split(',')[0] || '').trim() || 'unknown';
@@ -108,7 +108,8 @@ serve(async (req) => {
       admin.from('game_sentences').select('th,zh,reading_th,wc,polite_f,words')
         .order('rank', { ascending: true }).limit(caps.sentences),
     ]);
-    if (!rl.error && rl.data === false) return json({ error: 'rate_limited — 請稍後再試' }, 429, origin);
+    if (rl.error) return json({ error: 'rate_limit_unavailable — 請稍後再試' }, 503, origin);
+    if (rl.data !== true) return json({ error: 'rate_limited — 請稍後再試' }, 429, origin);
     if (w1.error) throw w1.error;
     if (w2.error) throw w2.error;
     if (sent.error) throw sent.error;
@@ -122,8 +123,21 @@ serve(async (req) => {
       th: r.th, zh: r.zh, readingTH: r.reading_th, wc: r.wc, politeF: r.polite_f, words: r.words,
     });
 
-    const words = w1.data.map(toWord).concat(w2.data.map(toWord));
-    const sentences = sent.data.map(toSentence);
+    const words = (w1.data || []).map(toWord).concat((w2.data || []).map(toWord));
+    const sentences = (sent.data || []).map(toSentence);
+    if (!words.length || !sentences.length) {
+      return json({ error: 'content_unavailable — empty required dataset' }, 503, origin);
+    }
+
+    // Audio availability is derived server-side from private metadata and filtered to this response's
+    // entitled content. Never return storage paths, hashes, filenames, or a catalog-wide manifest.
+    const entitledTexts = new Set(words.map((row) => row.word).concat(sentences.map((row) => row.th)));
+    const { data: audioRows, error: audioError } = await admin.from('audio_assets')
+      .select('text_th').in('status', ['generated', 'approved']).not('storage_path', 'is', null);
+    if (audioError) return json({ error: 'audio_availability_unavailable' }, 503, origin);
+    const audioAvailable = Array.from(new Set((audioRows || [])
+      .map((row) => row.text_th)
+      .filter((text) => entitledTexts.has(text))));
 
     // ── สัญญาณ "ชนเพดานฟรีแล้ว" (เพิ่ม 2026-08-08 ตาม P6-08 ข้อ 1) — เป็นการประมาณต้นทุนต่ำ ──
     // ไม่ได้ query "จำนวนทั้งหมดที่มีจริงในตาราง" (ต้องยิง count เพิ่ม 1-3 ครั้งต่อ request ซึ่งไม่คุ้ม
@@ -138,7 +152,7 @@ serve(async (req) => {
       sentences: sent.data.length >= caps.sentences,
     };
 
-    return json({ tier, words, sentences, capped }, 200, origin);
+    return json({ tier, words, sentences, audioAvailable, capped }, 200, origin);
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500, origin);
   }
