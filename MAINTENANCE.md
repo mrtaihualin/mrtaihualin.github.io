@@ -1,6 +1,17 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-14 15:13 Asia/Bangkok** — Game Result / Resume / Gamification / SRS local implementation + verification; no deploy/production/Git/SQL
+**Updated: 2026-08-14 19:43 Asia/Bangkok** — WEBSITE category verification partial: S02 fixed local, S04 controlled production form tested once; category not closed
+
+## 2026-08-14 — WEBSITE Category Verification (`INCOMPLETE`)
+
+- Reused current evidence for S01/S05 without re-reading or repeating verification: both remain `PASS_PRODUCTION`.
+- S04 controlled production test submitted once with clearly fake test email; browser reached the subscription-success/download page and console warning/error log was empty. Supabase remained at Sign in in the controlled Browser, so current grants/RLS and the downstream test record are still `NV`; S04 is not closed.
+- S02 root cause: `sitemap.xml` retained manual historical `lastmod` values while WEBSITE pages had changed on 2026-08-14; the checker validated only format/future dates and therefore did not flag stale values.
+- Updated `lastmod` to `2026-08-14` for 13 in-scope WEBSITE pages only: home, pricing, FAQ, content/resources, services, community, trial/new-student, vocab cheatsheet, SNS, Terms and Privacy. `blog.html` and every Article/文章 entry were intentionally untouched.
+- Local verification: SEO/sitemap 66/66, 0 errors, 0 warnings; `node scripts/check-site.js` PASS 881 files; 404 recovery copy/links preserved.
+- No deploy, Git, SQL, Supabase mutation by Codex, or production sitemap change. S02 remains `PASS_LOCAL / PRODUCTION NV`; WEBSITE Category Closeout remains incomplete.
+
+**Inherited: 2026-08-14 15:13 Asia/Bangkok** — Game Result / Resume / Gamification / SRS local implementation + verification; no deploy/production/Git/SQL
 
 ## 2026-08-14 — Game Result / Resume / Gamification / SRS (`PASS_LOCAL / PRODUCTION NV`)
 

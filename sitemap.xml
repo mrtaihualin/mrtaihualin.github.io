@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://mrtaihualin.com/index.html</loc><lastmod>2026-07-24</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://mrtaihualin.com/pricing.html</loc><lastmod>2026-07-24</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://mrtaihualin.com/faq.html</loc><lastmod>2026-07-24</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://mrtaihualin.com/content.html</loc><lastmod>2026-07-24</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://mrtaihualin.com/resources.html</loc><lastmod>2026-07-24</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mrtaihualin.com/index.html</loc><lastmod>2026-08-14</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://mrtaihualin.com/pricing.html</loc><lastmod>2026-08-14</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://mrtaihualin.com/faq.html</loc><lastmod>2026-08-14</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mrtaihualin.com/content.html</loc><lastmod>2026-08-14</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mrtaihualin.com/resources.html</loc><lastmod>2026-08-14</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://mrtaihualin.com/blog.html</loc><lastmod>2026-07-24</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://mrtaihualin.com/page-services.html</loc><lastmod>2026-07-24</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://mrtaihualin.com/community.html</loc><lastmod>2026-07-24</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://mrtaihualin.com/trial.html</loc><lastmod>2026-07-24</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://mrtaihualin.com/new-student.html</loc><lastmod>2026-07-26</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mrtaihualin.com/page-services.html</loc><lastmod>2026-08-14</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mrtaihualin.com/community.html</loc><lastmod>2026-08-14</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mrtaihualin.com/trial.html</loc><lastmod>2026-08-14</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mrtaihualin.com/new-student.html</loc><lastmod>2026-08-14</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://mrtaihualin.com/games.html</loc><lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mrtaihualin.com/games-practice.html</loc><lastmod>2026-08-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://mrtaihualin.com/tone-finder.html</loc><lastmod>2026-07-24</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
@@ -62,8 +62,8 @@
   <url><loc>https://mrtaihualin.com/blog/theory-23-mental-translation.html</loc><lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://mrtaihualin.com/blog/theory-24-input-not-enough.html</loc><lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://mrtaihualin.com/blog/theory-25-adults-vs-kids.html</loc><lastmod>2026-08-01</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://mrtaihualin.com/vocab-cheatsheet.html</loc><lastmod>2026-07-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://mrtaihualin.com/sns.html</loc><lastmod>2026-07-24</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://mrtaihualin.com/terms.html</loc><lastmod>2026-06-27</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://mrtaihualin.com/privacy.html</loc><lastmod>2026-06-27</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://mrtaihualin.com/vocab-cheatsheet.html</loc><lastmod>2026-08-14</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mrtaihualin.com/sns.html</loc><lastmod>2026-08-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://mrtaihualin.com/terms.html</loc><lastmod>2026-08-14</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://mrtaihualin.com/privacy.html</loc><lastmod>2026-08-14</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
