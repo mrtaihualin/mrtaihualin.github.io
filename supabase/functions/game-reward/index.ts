@@ -28,9 +28,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const REVIEW_POINTS = 2;
 const BUG_REPORT_POINTS = 20;
 const POINTS_CAP = 300;
-// 2026-07-31: เพิ่ม 'mix' (綜合遊戲/mix.html) — ต้องรัน SQL เพิ่ม 'mix' เข้า CHECK constraint ของ game_reward_events ก่อนด้วย (ดู supabase/sql/2026-07-31_add_mix_to_game_reward.sql)
-// 2026-08-01: เปลี่ยนชื่อไฟล์ mix.html → games-challenge.html + เปลี่ยน id 'mix' → 'challenge' — ต้องรัน supabase/sql/2026-08-01_rename_mix_to_challenge.sql ก่อนด้วย ไม่งั้น insert ยังตีกลับอยู่ดี
-const VALID_GAMES = ['typing', 'reading', 'lego', 'word_order', 'tone_finder', 'challenge'];
+// Phase 1: Challenge and all Star/reward behavior are Paid/Future, so Free runtime rejects Challenge.
+const VALID_GAMES = ['typing', 'reading', 'lego', 'word_order', 'tone_finder'];
 
 // 2026-08-10 (P7-02 staging): เพิ่มโดเมนหน้าทดสอบ staging บน Netlify เข้ารายชื่อที่อนุญาต
 const ALLOWED_ORIGINS = [

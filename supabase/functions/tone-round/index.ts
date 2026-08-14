@@ -650,11 +650,12 @@ Deno.serve(async (req: Request) => {
 
   // ── rate limit: กันสคริปต์ยิงรัวถล่ม DB (เพดานดาว+ปฏิทินกันดาวเกินอยู่แล้ว อันนี้เกราะเสริม) ──
   //   60 รอบ/นาที/คน — คนเล่นเร็วสุด ~20-30/นาที, สคริปต์ยิงเป็นพัน → 60 ไม่บล็อกคนจริง
-  //   fail-open โดยตั้งใจ: ถ้า rl_check พัง/หาย จะไม่บล็อกใคร (rate limit ไม่ใช่ด่านหลัก)
+  //   fail-closed: ถ้าด่านตรวจล่ม ให้หยุดก่อนเขียน SRS/ดาว ป้องกันการยิงข้าม rate limit
   const { data: rlOk, error: rlErr } = await admin.rpc("rl_check", {
     p_user: user.id, p_fn: "tone-round", p_limit: 60, p_window: 60,
   });
-  if (!rlErr && rlOk === false) return json({ error: "rate_limited" }, 429);
+  if (rlErr) return json({ error: "rate_limit_unavailable" }, 503);
+  if (rlOk !== true) return json({ error: "rate_limited" }, 429);
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
@@ -664,11 +665,9 @@ Deno.serve(async (req: Request) => {
   if (!word || ![1, 2, 3].includes(level)) return json({ error: "bad word/level" }, 400);
 
   // ── game: แยก SRS ต่อเกม (default 'tone' = backward-compatible กับ client เกมเสียงเดิม) ──
-  // 2026-07-31: เพิ่ม "mix" (綜合遊戲/mix.html) — Lin เลือกให้แยกชุด SRS/ดาวต่างหาก ไม่ปนกับ 4 เกมเดิม
-  // 2026-08-01: เปลี่ยนชื่อไฟล์ mix.html → games-challenge.html + เปลี่ยน id "mix" → "challenge"
-  //   ⚠️ ต้อง deploy ไฟล์นี้ใหม่ (supabase functions deploy tone-round) ก่อนถึงจะเริ่มแจกดาว/จำ SRS ให้เกมรวมได้จริง
+  // Phase 1: Mini-Game Challenge is Paid-only. Paid entitlement does not exist yet, so fail closed.
   const game = String(body.game || "tone");
-  if (!["tone", "reading", "listening", "typing", "wordorder", "challenge"].includes(game)) return json({ error: "bad game" }, 400);
+  if (!["tone", "reading", "listening", "typing", "wordorder"].includes(game)) return json({ error: "bad game" }, 400);
   const spellingGame = game !== "tone"; // อ่าน/พิมพ์/เรียงประโยค = trust-clean (เซิร์ฟเวอร์ตรวจเองไม่ได้ → เชื่อ flag clean)
 
   // ── อ่าน state จริงจาก DB (source of truth) ──
