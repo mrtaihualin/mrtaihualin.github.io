@@ -1,4 +1,4 @@
-// personal-content.js — Phase 1 我的內容: one page, two tabs and Login-only Personal Search.
+// personal-content.js — Phase 1 我的內容: one page, two tabs, no search/filter.
 (function () {
   'use strict';
 
@@ -6,7 +6,6 @@
   if (!root) return;
   var user = null;
   var activeTab = 'words';
-  var searchQuery = '';
   try { activeTab = sessionStorage.getItem('personal_content_tab') || 'words'; } catch (e) {}
   if (location.hash === '#sentences') activeTab = 'sentences';
   if (location.hash === '#words') activeTab = 'words';
@@ -127,38 +126,14 @@
     open.onclick = function () { details.hidden = !details.hidden; open.textContent = details.hidden ? '查看' : '收起'; };
     return card;
   }
-  function renderList(container, items, kind, hasQuery) {
+  function renderList(container, items, kind) {
     if (!items.length) {
-      var message = hasQuery
-        ? '找不到符合的個人內容。請試試泰文、中文、拼音或來源名稱。'
-        : kind === 'sentence' ? '還沒有儲存句子。去語序練習室，按 🔖 就能加入。' : '還沒有儲存單字。玩遊戲時按 🔖 就能加入。';
-      var empty = el('div', 'pc-empty', message);
+      var empty = el('div', 'pc-empty', kind === 'sentence' ? '還沒有儲存句子。去語序練習室，按 🔖 就能加入。' : '還沒有儲存單字。玩遊戲時按 🔖 就能加入。');
       container.appendChild(empty); return;
     }
     items.slice().sort(function (a, b) { return (b.saved_at || 0) - (a.saved_at || 0); }).forEach(function (item) {
       container.appendChild(itemCard(item, kind));
     });
-  }
-  function searchControls(onSearch) {
-    var wrapper = el('div', 'pc-search');
-    var label = el('label', 'pc-search-label', '搜尋我的內容');
-    var input = el('input', 'pc-search-input');
-    input.type = 'search'; input.value = searchQuery;
-    input.placeholder = '輸入泰文、中文、拼音或來源';
-    input.setAttribute('autocomplete', 'off');
-    label.appendChild(input); wrapper.appendChild(label);
-    var clear = el('button', 'pc-search-clear', '清除'); clear.type = 'button';
-    clear.hidden = !searchQuery;
-    var status = el('p', 'pc-search-status'); status.setAttribute('aria-live', 'polite');
-    function apply() {
-      searchQuery = input.value;
-      clear.hidden = !searchQuery;
-      onSearch(status);
-    }
-    input.addEventListener('input', apply);
-    clear.onclick = function () { input.value = ''; apply(); input.focus(); };
-    wrapper.appendChild(clear); wrapper.appendChild(status);
-    return { node: wrapper, status: status };
   }
   function renderAccount() {
     root.innerHTML = '';
@@ -173,23 +148,16 @@
     }
     wordsButton.onclick = function () { select('words'); }; sentencesButton.onclick = function () { select('sentences'); };
     tabs.appendChild(wordsButton); tabs.appendChild(sentencesButton); root.appendChild(tabs);
-    var kind = activeTab === 'sentences' ? 'sentence' : 'word';
-    var items = kind === 'sentence'
-      ? (window.SentenceVault ? SentenceVault.getAll() : [])
-      : (window.WordVault ? WordVault.getAll() : []);
     var list = el('section', 'pc-list'); root.appendChild(list);
-    function update(status) {
-      list.innerHTML = '';
-      var max = kind === 'sentence' ? SentenceVault.MAX_SENTENCES : WordVault.MAX_WORDS;
-      renderLimit(list, items.length, max);
-      var matches = window.PersonalSearch ? PersonalSearch.filter(items, searchQuery, SOURCE_LABELS) : items.slice();
-      var hasQuery = !!(window.PersonalSearch && PersonalSearch.normalize(searchQuery));
-      status.textContent = hasQuery ? '找到 ' + matches.length + ' / ' + items.length + ' 項' : '共 ' + items.length + ' 項';
-      renderList(list, matches, kind, hasQuery);
+    if (activeTab === 'sentences') {
+      var sentences = window.SentenceVault ? SentenceVault.getAll() : [];
+      renderLimit(list, sentences.length, SentenceVault.MAX_SENTENCES);
+      renderList(list, sentences, 'sentence');
+    } else {
+      var words = window.WordVault ? WordVault.getAll() : [];
+      renderLimit(list, words.length, WordVault.MAX_WORDS);
+      renderList(list, words, 'word');
     }
-    var controls = searchControls(update);
-    root.insertBefore(controls.node, list);
-    update(controls.status);
   }
   function render() { if (!user) renderGuest(); else renderAccount(); }
   function applyUser(nextUser) { user = nextUser || null; render(); }

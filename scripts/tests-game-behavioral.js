@@ -7,7 +7,7 @@
  * data/tools/tests-tone-engine.js / data/tools/tests-check-data-health.js ที่ตรวจ "ข้อมูล" (คำ/ประโยค/วรรณยุกต์)
  *
  * ตรวจ 3 กลุ่ม:
- *   A) เกม Free ทั้ง 5 หน้า (reading-game/tone-finder/typing-game/word-order/listening-game)
+ *   A) เกมทั้ง 6 หน้า (games-challenge/reading-game/tone-finder/typing-game/word-order/listening-game)
  *      โหลดข้อมูลผ่าน game-content-client.js เท่านั้น ไม่มี <script src="data/words-data.js"> หลงเหลือ
  *   B) ยามเฝ้าประตูถูกเรียกจริงในจุดที่ควรบล็อกก่อนให้เล่น/ให้แต้ม
  *      (lego-daily-limit ก่อน startTest, TONE_SERVER.finishRound ในเกมที่มี SRS/ดาว)
@@ -37,9 +37,10 @@ function ok(label) { console.log(`✓ ${label}`); }
 function fail(label, detail) { failures.push(`${label}${detail ? ': ' + detail : ''}`); }
 
 // ════════════════════════════════════════════════════════════
-// A) เกม Free ทั้ง 5 หน้าโหลดข้อมูลผ่าน game-content-client.js เท่านั้น
+// A) เกมทั้ง 6 หน้าโหลดข้อมูลผ่าน game-content-client.js เท่านั้น
 // ════════════════════════════════════════════════════════════
 const GAME_PAGES = [
+  'games-challenge.html',
   'reading-game.html',
   'tone-finder.html',
   'typing-game.html',
@@ -121,6 +122,7 @@ GAME_PAGES.forEach((page) => {
     'js/games/typing-game-app.js': 'เกมพิมพ์',
     'js/games/word-order-app.js': 'เกมลำดับคำ',
     'js/games/tone-finder-game.js': 'เกมเสียง',
+    'js/games/games-challenge-app.js': 'เกมรวม/Challenge',
   };
   Object.keys(GAMES_WITH_SRS).forEach((file) => {
     const text = read(file);
@@ -166,27 +168,14 @@ GAME_PAGES.forEach((page) => {
     else ok('C: game-content/index.ts ตัดสิน tier จาก auth.getUser() ของ JWT เท่านั้น');
     if (readsBodyForTier) fail('C: game-content/index.ts', 'พบการอ่าน body.tier/isLoggedIn — เสี่ยงเปิดช่องให้ client ปลอม tier');
     else ok('C: game-content/index.ts ไม่อ่าน tier/isLoggedIn จาก body ที่ client ส่งมา (กันปลอม tier)');
-    if (!/if \(rl\.error\) return json\(\{ error: 'rate_limit_unavailable/.test(fn)) fail('C: game-content/index.ts', 'rate-limit error ยังไม่ fail-closed');
-    else ok('C: game-content rate-limit error fail-closed ด้วย HTTP 503');
-    if (!/if \(!words\.length \|\| !sentences\.length\)/.test(fn)) fail('C: game-content/index.ts', 'ไม่บล็อก required dataset ที่ว่าง');
-    else ok('C: game-content ไม่ส่ง required dataset ว่างเข้าเกม');
   }
-}
-
-{
-  const client = read('js/games/game-content-client.js');
-  const audio = read('js/games/word-audio.js');
-  if (!client || !/!data\.words\.length \|\| !data\.sentences\.length/.test(client)) fail('C: game-content-client.js', 'ไม่ reject required dataset ว่าง');
-  else ok('C: client reject required dataset ว่างก่อน boot เกม');
-  if (!audio || !/_showErrorToast/.test(audio) || !/音檔播放失敗/.test(audio)) fail('C: word-audio.js', 'audio failure ยังเงียบต่อผู้ใช้');
-  else ok('C: audio failure แสดงข้อความให้ผู้ใช้และยังคืน false ให้ caller');
 }
 
 // ════════════════════════════════════════════════════════════
 // D) Known issue ที่บันทึกไว้ใน P2 — ตรวจซ้ำว่ายังไม่ได้แก้จริง (กันรายงานเก่ากับของจริงไม่ตรงกัน)
 // ════════════════════════════════════════════════════════════
 {
-  const boardPages = ['leaderboard.html', 'all-board.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html', 'lego-board.html'];
+  const boardPages = ['leaderboard.html', 'all-board.html', 'reading-board.html', 'typing-board.html', 'word-order-board.html', 'lego-board.html', 'mix-board.html'];
   boardPages.forEach((page) => {
     const text = read(page);
     if (text === null) return; // ไม่ fail — บางไฟล์อาจไม่มีจริงแล้วก็ได้ ให้ known-issue เช็คเท่าที่เจอ

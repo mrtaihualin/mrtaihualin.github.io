@@ -142,25 +142,25 @@ function toggleFaq(btn) {
 </script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
-<div id="cookieConsentBanner" role="dialog" aria-label="Cookie and analytics settings" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
   background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
-  padding:18px 20px;font-family:Arial,sans-serif;">
+  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
   <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
     <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
-      🍪 We use <strong>Google Analytics</strong> and <strong>Microsoft Clarity</strong> to improve the website and games.
-      Microsoft Clarity uses analytics cookies only after you consent. If you reject, limited cookieless tracking or measurement may still occur under Consent API V2. See our
-      <a href="/en/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">Privacy Policy</a>.
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
     </p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <button onclick="window.__cookieConsentDecide(false)"
         style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
-        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:Arial,sans-serif;">
-        Reject
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
+        拒絕
       </button>
       <button onclick="window.__cookieConsentDecide(true)"
         style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
-        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:Arial,sans-serif;">
-        Accept
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
+        接受
       </button>
     </div>
   </div>
@@ -172,8 +172,7 @@ function toggleFaq(btn) {
       gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
     }
     if (typeof window.clarity === 'function') {
-      window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: granted ? 'granted' : 'denied' });
-      if (!granted) window.clarity('consent', false); // erase any cookies from an earlier grant
+      window.clarity('consent', granted);
     }
     var __b = document.getElementById('cookieConsentBanner');
     if (__b) __b.style.display = 'none';

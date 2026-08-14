@@ -41,26 +41,20 @@
     // 2) 學習 → ปลายทางชื่อ 學習中心
     { type: 'link', label: '學習', href: '/my-progress.html' },
 
-    // 3) 學習資源 — 2026-08-14: content.html เป็น Hub หลักและมีทางเข้าตรงครบ 3 หมวด
-    //    URL เดิมของ blog/resources/content คงเดิมทั้งหมด
+    // 3) 學習資源 — decision อัปเดต 2026-08-09 (รอบ 2): เหลือแค่ 4 รายการ
+    //    ของฝั่งคอร์ส (上課方式/費用方案/常見問題/上課須知) ถอดออกจาก dropdown นี้แล้ว
+    //    ตามที่ Lin สั่ง — ยังเข้าถึงได้ปกติผ่านหน้า pricing.html/faq.html เอง
+    //    (URL เดิมไม่ได้ย้าย แค่ไม่มีลิงก์ตรงจาก dropdown อีกต่อไป)
     {
       type: 'dropdown',
       label: '學習資源',
       groups: [
         {
-          label: '泰語學習資源',
-          items: [
-            { href: '/content.html', label: '📚 泰語學習資源' },
-            { href: '/blog.html#articles', label: '📝 泰語學習文章' },
-            { href: '/resources.html#video-learning', label: '🎬 影音學習' },
-            { href: '/blog.html#selfstudy', label: '📖 自學資源' }
-          ]
-        },
-        {
-          label: '其他學習入口',
+          // ไม่มี sub-label เพราะเหลือแค่ 4 รายการ ไม่จำเป็นต้องแบ่งกลุ่มย่อยอีก
           items: [
             { modal: 'modal-quiz', label: '程度測驗' },
             { href: '/index.html#problems', label: '學習困境' },
+            { href: '/content.html', label: '📚 影片與文章' },
             { href: '/community.html', label: '🇹🇭 泰語學習心聲與提問' }
           ]
         }
@@ -120,7 +114,7 @@
     { emoji: '🎁', text: '首堂 30 分鐘體驗課免費・中文授課', cta: '立即預約', modal: 'modal-line-qr' },
     { emoji: '🎮', text: '5 款免費泰語遊戲上線！聲調・拼讀・打字・造句・語序，每款都有排行榜可以比賽', cta: '前往遊戲', href: 'games.html' },
     { emoji: '🎵', text: '用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta: '去聽歌學泰語', href: 'resources.html#songs' },
-    { emoji: '📖', text: '免費泰語學習文章上線！生活情境單字、聲調技巧，隨看隨學', cta: '去讀文章', href: 'blog.html#articles' },
+    { emoji: '📖', text: '免費泰語學習文章上線！生活情境單字、聲調技巧，隨看隨學', cta: '去讀文章', href: 'blog.html#sharing' },
     { emoji: '📺', text: 'YouTube 播放清單整理好了！依主題分類，找教學影片更方便', cta: '去看播放清單', href: 'resources.html#playlists' }
     // ปิดชั่วคราว ยังไม่เปิดใช้ — { emoji:'✍️', text:'全新「泰語拼讀練習室」上線！分組練習拼讀規則，讀對每個音節', cta:'前往練習', href:'reading-game.html' },
     // LIN 2026-07-03: ลบสไลด์ "造句練習室即將推出" ออกแล้ว (เกมเลโก้ออกจริงแล้ว ไม่ใช่ coming-soon อีกต่อไป)

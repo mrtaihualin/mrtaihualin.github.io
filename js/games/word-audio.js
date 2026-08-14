@@ -36,20 +36,6 @@
 
   function has(th) { return !!urlFor(th); }
 
-  var _errorToastAt = 0;
-  function _showErrorToast() {
-    if (Date.now() - _errorToastAt < 1800) return;
-    _errorToastAt = Date.now();
-    var old = document.getElementById('wa-error-toast');
-    if (old) old.remove();
-    var d = document.createElement('div');
-    d.id = 'wa-error-toast';
-    d.textContent = '⚠️ 音檔播放失敗，請檢查網路後再試一次';
-    d.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#78350f;border:1.5px solid #C8973A;color:#FAF4E8;font-family:\'Noto Sans TC\',sans-serif;font-size:14px;font-weight:700;padding:9px 16px;border-radius:20px;z-index:100001;box-shadow:0 4px 14px rgba(90,62,10,0.25);';
-    document.body.appendChild(d);
-    setTimeout(function () { if (d) d.remove(); }, 2600);
-  }
-
   function injectStyles() {
     if (_styled || document.getElementById('word-audio-css')) { _styled = true; return; }
     var s = document.createElement('style');
@@ -77,16 +63,15 @@
       if (btn) btn.setAttribute('data-playing', '1');
       var done = function () { if (btn) btn.setAttribute('data-playing', '0'); };
       a.onended = done;
-      a.onerror = function () { done(); _showErrorToast(); };
+      a.onerror = done;
       a.currentTime = 0;
       var p = a.play();
       if (p && p.then) {
-        return p.then(function () { return true; }).catch(function () { done(); _showErrorToast(); return false; });
+        return p.then(function () { return true; }).catch(function () { done(); return false; });
       }
       return Promise.resolve(true);
     } catch (e) {
       if (btn) btn.setAttribute('data-playing', '0');
-      _showErrorToast();
       return Promise.resolve(false);
     }
   }
@@ -157,5 +142,5 @@
   else _initPlayBtn();
 
   // soonToast เปิดให้เกมอื่นเรียกได้ (Lin 2026-07-30) — เกมเรียงคำใช้ตอนกดปุ่ม 🔊 ของประโยคที่ยังไม่มีไฟล์เสียง
-  window.WordAudio = { has: has, urlFor: urlFor, play: play, createBtn: createBtn, btnHtml: btnHtml, fillSlot: fillSlot, setCurrent: setCurrent, soonToast: _showSoonToast, errorToast: _showErrorToast };
+  window.WordAudio = { has: has, urlFor: urlFor, play: play, createBtn: createBtn, btnHtml: btnHtml, fillSlot: fillSlot, setCurrent: setCurrent, soonToast: _showSoonToast };
 })();

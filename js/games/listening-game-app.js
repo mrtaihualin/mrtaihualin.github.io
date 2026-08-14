@@ -63,9 +63,6 @@
   };
 
   var el = {};
-  var listeningSrs = {};
-  var listeningSrsSynced = false;
-  var listeningSrsSyncPromise = null;
 
   function qs(id) { return document.getElementById(id); }
 
@@ -142,56 +139,6 @@
     return shuffle(pool).slice(0, Math.min(n, pool.length));
   }
 
-  function srsKey(word) { return (word && word.th || '') + '@' + levelNumber(word); }
-  function taipeiDate(value) {
-    var d = value == null ? new Date() : new Date(value);
-    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); }
-    catch (e) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
-  }
-  function isSrsDue(word) {
-    var rec = listeningSrs[srsKey(word)];
-    return !!(rec && !rec.mastered && rec.dueDate && rec.dueDate <= taipeiDate());
-  }
-  function syncListeningSrs(force) {
-    if (!force && listeningSrsSynced) return Promise.resolve(true);
-    if (!window.READING_AUTH || !READING_AUTH.user) return Promise.resolve(false);
-    if (listeningSrsSyncPromise) return listeningSrsSyncPromise;
-    var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
-    if (!sb || !sb.from) return Promise.resolve(false);
-    listeningSrsSyncPromise = sb.from('tone_srs_state')
-      .select('level, word, stage, due_date, ever_failed, mastered')
-      .eq('game', 'listening')
-      .then(function (res) {
-        if (res.error || !res.data) return false;
-        listeningSrs = {};
-        res.data.forEach(function (row) {
-          listeningSrs[(row.word || '') + '@' + (row.level || 0)] = {
-            stage: row.stage || 0, dueDate: row.due_date || '',
-            everFailed: !!row.ever_failed, mastered: !!row.mastered
-          };
-        });
-        listeningSrsSynced = true;
-        return true;
-      }).catch(function () { return false; }).then(function (ok) {
-        listeningSrsSyncPromise = null;
-        return ok;
-      });
-    return listeningSrsSyncPromise;
-  }
-
-  function allocateListeningRound(pool, n) {
-    if (!window.READING_AUTH || !READING_AUTH.user || !window.GameFlow || !GameFlow.allocateSrs) return sampleRound(pool, n);
-    var due = shuffle(pool.filter(isSrsDue));
-    var regular = shuffle(pool.filter(function (word) {
-      var rec = listeningSrs[srsKey(word)];
-      return !isSrsDue(word) && !(rec && rec.mastered);
-    }));
-    return GameFlow.allocateSrs({
-      tier: 'free', total: Math.min(n, due.length + regular.length),
-      due: due, regular: regular, idOf: srsKey, scope: 'listening'
-    }).items;
-  }
-
   function pickDistractors(correctWord, pool, n) {
     var others = pool.filter(function (w) { return w.th !== correctWord.th; });
     return shuffle(others).slice(0, Math.min(n, others.length));
@@ -221,14 +168,6 @@
 
   // ── round flow ──
   function startRound() {
-    if (window.READING_AUTH && READING_AUTH.user && !listeningSrsSynced) {
-      syncListeningSrs(true).then(startRoundNow);
-      return;
-    }
-    startRoundNow();
-  }
-
-  function startRoundNow() {
     state.pool = buildPool();
     if (!state.pool.length) {
       el.poolNote.textContent = '目前還沒有可以用的題目（缺少語音檔），麻煩告訴老師 Lin。';
@@ -236,7 +175,7 @@
       return;
     }
     var n = Math.min(ROUND_SIZE, state.pool.length);
-    state.round = allocateListeningRound(state.pool, n);
+    state.round = sampleRound(state.pool, n);
     state.idx = 0;
     state.correct = 0;
     state.wrong = 0;
@@ -494,7 +433,6 @@
           game: 'listening', word: word.th, level: levelNumber(word),
           clean: primaryScore === 10
         }).then(function (res) {
-          if (res && res.ok) listeningSrsSynced = false;
           if (res && !res.ok && res.reason !== 'below_entry_score' && res.reason !== 'not_due' && window.console) {
             console.log('[listening-srs] server not-ok:', res.reason);
           }
@@ -877,13 +815,6 @@
     if (el.mistakeBtn) el.mistakeBtn.addEventListener('click', showMistakes);
     if (el.mistakeBackBtn) el.mistakeBackBtn.addEventListener('click', backToEndFromMistakes);
     if (el.printBtn) el.printBtn.addEventListener('click', printListeningReport);
-
-    if (window.SITE_AUTH && SITE_AUTH.onChange) {
-      SITE_AUTH.onChange(function () {
-        listeningSrs = {}; listeningSrsSynced = false; listeningSrsSyncPromise = null;
-        if (window.READING_AUTH && READING_AUTH.user) syncListeningSrs(true);
-      });
-    }
 
     tryShowResumeBanner(); // Phase E3: เช็คตอนเปิดหน้าครั้งเดียว ก่อนผู้เล่นกดอะไรทั้งนั้น
   }

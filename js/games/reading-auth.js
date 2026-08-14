@@ -104,7 +104,7 @@
   function boardHref() {
     var g = pageGame();
     if (g === 'tone_finder') return 'leaderboard.html';
-    if (g === 'listening') return 'listening-board.html';
+    if (g === 'listening') return 'games.html';
     if (g === 'typing') return 'typing-board.html';
     if (g === 'word_order') return 'word-order-board.html';
     if (g === 'lego') return 'lego-board.html';
@@ -514,15 +514,13 @@
   // ต้องรัน SQL เพิ่มคอลัมน์ wrong_items ก่อน (ไฟล์ SQL แยก) — ถ้ายังไม่รัน จะ fallback เซฟแบบไม่มีคอลัมน์นี้ ให้คะแนนไม่หาย
   function saveScore(score, games, game, wrongItems) {
     if (!API.user) return; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
-    // Phase 1 fail-closed: Challenge is Paid-only and has no Leaderboard. Paid runtime is not launched.
-    if (game === 'challenge' || pageGame() === 'challenge') return;
     // v11 (LIN 2026-07-25, audit): ใช้ window.isSiteAdmin (ตรวจทั้ง email + user id) แทนเช็ค email อย่างเดียว
     //   กัน Facebook/LINE ของแอดมินเอง (อาจไม่มี email) หลุดรอดเข้า leaderboard ตอนทดสอบ
     if ((window.isSiteAdmin && window.isSiteAdmin(API.user)) || (API.user.email || '').toLowerCase() === ADMIN_EMAIL) {
       console.info('[board] admin account — score not saved (excluded from leaderboard)');
       return;
     }
-    var gm = (game === 'typing' || game === 'reading' || game === 'listening' || game === 'word_order' || game === 'lego') ? game : pageGame();
+    var gm = (game === 'typing' || game === 'reading' || game === 'listening' || game === 'word_order' || game === 'lego' || game === 'challenge') ? game : pageGame();
     var base = { user_id: API.user.id, score: (score || 0) | 0, games: (games || 1) | 0 };
     var withGame = { user_id: base.user_id, score: base.score, games: base.games, game: gm };
     var full = { user_id: withGame.user_id, score: withGame.score, games: withGame.games, game: withGame.game, wrong_items: Array.isArray(wrongItems) ? wrongItems : [] };

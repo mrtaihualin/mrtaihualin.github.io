@@ -63,7 +63,13 @@
       desc: '像積木一樣挑詞組成句子，能拆句測驗檢查自己的句子。',
       keywords: ['造句','組句子','積木','自己造句','句子結構']
     },
-    // Mini-Game Challenge is Paid-only and excluded until Paid runtime launches.
+    {
+      id: 'game-challenge', category: 'practice', access: 'free',
+      title: '泰語遊戲挑戰室', href: '/games-challenge.html',
+      routingTitle: '【遊戲】泰語綜合挑戰關卡 — 同一個字連闖三關',
+      desc: '同一個字連闖三關，一次練到底，目前開放初級關卡。',
+      keywords: ['挑戰','連闖三關','綜合練習','混合題型','闖關']
+    }
   ];
 
   // ── 課程 (免費試聽/課程資訊) ──
@@ -100,9 +106,8 @@
 
   // ── 學習內容 (資源 — 歌曲/影片) ──
   var CONTENT_RESOURCES = [
-    { id: 'res-songs', category: 'content', resourceType: 'video', access: 'free', title: '用歌曲學泰語', href: '/resources.html#songs', desc: '精選泰文歌曲逐句拆解歌詞，邊聽邊學發音。', keywords: ['歌曲','唱歌學泰語','歌詞','泰文歌'] },
-    { id: 'res-videos', category: 'content', resourceType: 'video', access: 'free', title: '泰語教學影片', href: '/resources.html#videos', desc: '從現有教學影片選擇想學的泰語主題。', keywords: ['影片','YouTube','教學影片','影音學習'] },
-    { id: 'res-playlists', category: 'content', resourceType: 'video', access: 'free', title: 'YouTube 教學影片播放清單', href: '/resources.html#playlists', desc: '依主題分類的教學影片清單。', keywords: ['影片','YouTube','教學影片','播放清單'] }
+    { id: 'res-songs', category: 'content', access: 'free', title: '用歌曲學泰語', href: '/resources.html#songs', desc: '精選泰文歌曲逐句拆解歌詞，邊聽邊學發音。', keywords: ['歌曲','唱歌學泰語','歌詞','泰文歌'] },
+    { id: 'res-playlists', category: 'content', access: 'free', title: 'YouTube 教學影片播放清單', href: '/resources.html#playlists', desc: '依主題分類的教學影片清單。', keywords: ['影片','YouTube','教學影片','播放清單'] }
   ];
 
   // ── 學習內容 (บทความ 44 篇 — title/desc คัดจาก <title>/<meta description> ของแต่ละหน้าจริง) ──
@@ -153,25 +158,13 @@
     { id:'a-word-segmentation', category:'content', access:'free', title:'泰文字全部黏在一起，根本看不出哪裡斷句？連電腦都會卡住', href:'/blog/word-segmentation-guide.html', desc:'泰文本來就沒有空格分詞，連電腦的翻譯軟體都會卡住。', keywords:['字黏在一起','看不出斷句','分不出詞'] }
   ];
 
-  // 自學專區รายการจริงจาก js/acquisition/lessons-data.js
-  // ใช้ URL ของ category เดิม + query/hash เพื่อเปิดรายการเดิม ไม่สร้างหน้าหรือย้าย URL ใหม่
-  var SELFSTUDY = [
-    { id:'selfstudy-vocab-cilantro', category:'content', resourceType:'selfstudy', access:'free', title:'香菜就是 ผักชี！泰語餐廳必備句', href:'/blog.html?study=vocab-cilantro#selfstudy', desc:'泰式料理常見的配菜裝飾，但泰國人對它其實沒有特別喜愛，只是習慣放而已。', keywords:['香菜','ผักชี','餐廳泰語','不要香菜'] },
-    { id:'selfstudy-vocab-cilantro-root', category:'content', resourceType:'selfstudy', access:'free', title:'泰式料理的靈魂！學會「สามเกลอ三兄弟」', href:'/blog.html?study=vocab-cilantro-root#selfstudy', desc:'香菜根才是泰式料理的調味重點，不是葉子！熬湯、醃肉都少不了它。', keywords:['香菜根','三兄弟','สามเกลอ','泰式料理'] },
-    { id:'selfstudy-vocab-isaan', category:'content', resourceType:'selfstudy', access:'free', title:'泰國東北人 คนอีสาน：他們是誰？為什麼到處都有他們？', href:'/blog.html?study=vocab-isaan#selfstudy', desc:'อีสาน位於泰國東北部，與寮國、柬埔寨相鄰，有自己的語言與文化。', keywords:['泰國東北','อีสาน','คนอีสาน','泰國文化'] }
-  ];
-
-  ARTICLES.forEach(function (entry) { entry.resourceType = 'article'; });
-
-  var RESOURCES = [].concat(CONTENT_RESOURCES, ARTICLES, SELFSTUDY);
-  var ALL = [].concat(GAMES, COURSE, FAQ, RESOURCES);
+  var ALL = [].concat(GAMES, COURSE, FAQ, CONTENT_RESOURCES, ARTICLES);
 
   var CATEGORY_LABEL = { practice: '練習', content: '學習內容', course: '課程', site: '網站使用' };
 
   return {
     ALL: ALL,
     GAMES: GAMES,
-    RESOURCES: RESOURCES,
     CATEGORY_LABEL: CATEGORY_LABEL
   };
 });

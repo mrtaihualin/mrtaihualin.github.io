@@ -21,32 +21,30 @@
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "xkbihw56tf");
     // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)
-    var claritySavedConsent = localStorage.getItem('cookieConsent');
-    window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: claritySavedConsent === 'granted' ? 'granted' : 'denied' });
+    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<title>影音學習 — 泰語歌曲、影片與播放清單 | 泰華眼裡的泰語教學</title>
-<meta name="description" content="泰語影音學習：用歌曲學泰語、泰語教學影片與 YouTube 播放清單。">
+<title>泰語・分享 — 泰華眼裡的泰語教學</title>
+<meta name="description" content="泰語學習影片、實用貼文與自學專區。跟著泰華老師學道地泰語、認識泰國文化。">
 <link rel="canonical" href="https://mrtaihualin.com/resources.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="泰華眼裡的泰語教學">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:title" content="影音學習 — 泰語歌曲、影片與播放清單">
-<meta property="og:description" content="用歌曲、泰語教學影片與播放清單一起學泰語。">
+<meta property="og:title" content="泰語影片・貼文・自學專區 — 泰華眼裡的泰語教學">
+<meta property="og:description" content="泰語學習影片、實用貼文與自學專區。跟著泰華老師學道地泰語、認識泰國文化。">
 <meta property="og:url" content="https://mrtaihualin.com/resources.html">
 <meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="影音學習 — 泰語歌曲、影片與播放清單">
-<meta name="twitter:description" content="用歌曲、泰語教學影片與播放清單一起學泰語。">
+<meta name="twitter:title" content="泰語影片・貼文・自學專區 — 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="泰語學習影片、實用貼文與自學專區。跟著泰華老師學道地泰語、認識泰國文化。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/shared.css?v=18">
-<link rel="stylesheet" href="css/resource-hub.css?v=1">
 <style>
 
 /* ══════════════════════════════════════
@@ -378,22 +376,6 @@ details[open] > .p4-acc-sum .p4-acc-chev { transform: rotate(180deg); }
 .p4-vocab-tbl th { background:var(--gold-light); border:1px solid var(--border); padding:7px 10px; font-family:'Noto Sans TC',sans-serif; font-weight:700; color:var(--gold-deep); text-align:left; }
 .p4-vocab-tbl td { border:1px solid var(--border); padding:7px 10px; color:var(--ink-soft); }
 .p4-vocab-tbl td:first-child { font-family:'Sarabun',sans-serif; font-size:16px; color:var(--ink); font-weight:700; }
-
-/* Phase 1 minimum usable Resource Search */
-.resource-search{max-width:820px;margin:24px auto 8px;padding:0 20px;font-family:'Noto Sans TC',sans-serif;}
-.resource-search-label{display:block;font-weight:800;color:var(--ink);margin-bottom:9px;}
-.resource-search-row{display:flex;gap:9px;}
-.resource-search-input{flex:1;min-width:0;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font:inherit;color:var(--ink);background:#fff;}
-.resource-search-input:focus{outline:3px solid rgba(200,151,58,.28);border-color:var(--gold);}
-.resource-search-button{border:0;border-radius:10px;padding:12px 22px;background:var(--gold);color:#fff;font:inherit;font-weight:800;cursor:pointer;}
-.resource-search-results{display:none;margin-top:12px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;}
-.resource-search-results.is-open{display:block;}
-.resource-search-result{display:block;border-radius:8px;padding:10px 12px;color:var(--ink);text-decoration:none;}
-.resource-search-result:hover,.resource-search-result:focus-visible{background:var(--gold-light);outline:none;}
-.resource-search-result strong{display:block;}
-.resource-search-result span{display:block;color:var(--ink-soft);font-size:12px;margin-top:2px;}
-.resource-search-empty{padding:12px;color:var(--ink-soft);line-height:1.7;}
-@media(max-width:520px){.resource-search-row{flex-direction:column}.resource-search-button{width:100%}}
 </style>
 <script type="application/ld+json">
 {
@@ -414,6 +396,7 @@ details[open] > .p4-acc-sum .p4-acc-chev { transform: rotate(180deg); }
 </head>
 <body>
 <!--ANN-BAND:START--><script>try{if(sessionStorage.getItem('annDismissed')==='1')document.documentElement.classList.add('ann-off');}catch(e){}</script><div class="avail-band" id="ann-band" style="position:relative"><div class="avail-row"><span class="avail-dot"></span><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><button class="avail-cta" onclick="openModal('modal-line-qr')">立即預約</button></div><div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;"><button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button><div style="display:flex;align-items:center;gap:6px;"><span onclick="annGoTo(0)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:var(--gold);transition:background 0.2s;"></span><span onclick="annGoTo(1)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(2)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(3)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(4)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span></div><button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button></div><button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button></div><!--ANN-BAND:END-->
+<h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">泰語學習資源與教學影片 — 泰華眼裡的泰語教學</h1>
 <!-- ════════════ MODALS ════════════ -->
 
 <!-- Thai Q&A Modal -->
@@ -425,7 +408,7 @@ details[open] > .p4-acc-sum .p4-acc-chev { transform: rotate(180deg); }
 <!-- Share Popup (แทรกอัตโนมัติจาก injectSharedModals() ใน js/core/shared.js) -->
 
 <!-- ════════════ NAV ════════════ -->
-<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="/my-progress.html">學習</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><span class="nav-drop-label">泰語學習資源</span><a href="/content.html">📚 泰語學習資源</a><a href="/blog.html#articles">📝 泰語學習文章</a><a href="/resources.html#video-learning">🎬 影音學習</a><a href="/blog.html#selfstudy">📖 自學資源</a><span class="nav-drop-label">其他學習入口</span><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="/my-progress.html">學習</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
 
 <!-- ════════════ BOTTOM PAGE NAV ════════════ -->
 <div class="page-strip">
@@ -437,28 +420,6 @@ details[open] > .p4-acc-sum .p4-acc-chev { transform: rotate(180deg); }
   <a href="content.html" class="active">泰語・分享</a>
   <a href="games.html">泰語・遊戲</a>
 </div>
-
-<header class="rh-resource-head" id="video-learning">
-  <nav class="rh-breadcrumb" aria-label="麵包屑">
-    <a href="/index.html">首頁</a><span aria-hidden="true">›</span><a href="/content.html">泰語學習資源</a><span aria-hidden="true">›</span><span aria-current="page">影音學習</span>
-  </nav>
-  <h1>影音學習</h1>
-  <p>用歌曲、教學影片與播放清單學泰語。三個入口都可以直接開啟。</p>
-  <div class="rh-quick-links" aria-label="影音學習分類">
-    <a href="#songs">用歌曲學泰語</a>
-    <a href="#videos">泰語教學影片</a>
-    <a href="#playlists">全部播放清單</a>
-  </div>
-</header>
-
-<section class="resource-search" aria-labelledby="resource-search-label">
-  <label class="resource-search-label" id="resource-search-label" for="resource-search-input">搜尋影音學習資源</label>
-  <div class="resource-search-row">
-    <input class="resource-search-input" id="resource-search-input" type="search" autocomplete="off" placeholder="例如：歌曲、發音、教學影片、播放清單">
-    <button class="resource-search-button" id="resource-search-button" type="button">搜尋</button>
-  </div>
-  <div class="resource-search-results" id="resource-search-results" role="status" aria-live="polite"></div>
-</section>
 
 <!-- ════════════ SECTION 2 · TWO-COLUMN LIST ════════════ -->
 <!-- 貼文分享區 + 自學專區 ย้ายไปที่ blog.html (📝 泰語學習文章) แล้ว — Lin 2026-07-03 -->
@@ -969,28 +930,22 @@ var P4 = (function () {
   };
 })();
 
-document.addEventListener('DOMContentLoaded', function () {
-  P4.init();
-  var target = document.getElementById((location.hash || '').slice(1));
-  var details = target && target.querySelector ? target.querySelector('details') : null;
-  if (details) details.open = true;
-});
+document.addEventListener('DOMContentLoaded', function () { P4.init(); });
 </script>
 
-<script src="js/acquisition/resource-search.js?v=1"></script>
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=30"></script>
 <!-- ปุ่มลอย "學習筆記" — จดโน้ตขณะดูคลิป + เซฟอัตโนมัติ + ดาวน์โหลด PDF (ลายน้ำ) · Lin 2026-07-03 -->
 <script defer src="js/acquisition/notes-tool.js?v=20260716"></script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
-<div id="cookieConsentBanner" role="dialog" aria-label="Cookie 與分析設定" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
   background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
   padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
   <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
     <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
-      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 協助改善網站與遊戲體驗。
-      Microsoft Clarity 僅在您同意後使用分析 Cookie；若您拒絕，仍可能依 Consent API V2 進行有限的無 Cookie（cookieless）追蹤或衡量。詳見
+      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
+      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
       <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
     </p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1014,8 +969,7 @@ document.addEventListener('DOMContentLoaded', function () {
       gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
     }
     if (typeof window.clarity === 'function') {
-      window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: granted ? 'granted' : 'denied' });
-      if (!granted) window.clarity('consent', false); // erase any cookies from an earlier grant
+      window.clarity('consent', granted);
     }
     var __b = document.getElementById('cookieConsentBanner');
     if (__b) __b.style.display = 'none';
