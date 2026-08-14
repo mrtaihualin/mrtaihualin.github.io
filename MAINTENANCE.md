@@ -1,5 +1,141 @@
 # ประวัติงานดูแลเว็บ
 
+**Updated: 2026-08-14 15:13 Asia/Bangkok** — Game Result / Resume / Gamification / SRS local implementation + verification; no deploy/production/Git/SQL
+
+## 2026-08-14 — Game Result / Resume / Gamification / SRS (`PASS_LOCAL / PRODUCTION NV`)
+
+- เพิ่ม shared result `答對 X / N`, SRS reassurance, exact feedback 4 สถานะโดยไม่แสดง numeric comparison, 7-second replay countdown และ cancel เมื่อกด result action ใด ๆ.
+- Resume 5 เกมมี Continue / restart same / new round, แสดง game+position และกู้ round log ที่มี; same-device รองรับ guest/login โดยไม่อ้าง cross-device.
+- Round Detail แสดง full real round log; current Print/Save-as-PDF ใช้ data source เดียวกันและเพิ่ม available question/user/correct/status โดยไม่ redesign.
+- Guest ไม่เขียน persistent streak; result แสดง Streak/Badge ไม่เกิน 2 highlight. XP ไม่ทำเพราะสูตรยังไม่มี.
+- SRS allocator: Free 20%/Review1, Paid architecture 30%/max4, fractional carry, Due carry-over, dedupe และ distributed placement; Paid runtime ไม่เปิด.
+- rebuild `shared.min.js`, Reading, Typing, Word Order และ Tone minified; bump cache เฉพาะ 5 หน้า; Listening ใช้ source app ตรงและ bump version.
+- `check-site.js` ผ่าน 881 files และ targeted Game Flow/Shared/SRS/Reading/Listening/Typing/Word Order/Tone/behavioral ผ่าน. Local browser โหลด assets/actions ได้ แต่ full gameplay NV เพราะ external game-content fetch unavailable.
+- Cross-device resume, XP formula, Listening independent Due source, Paid runtime, Final Gameplay/Responsive/Edge/PDF redesign/Master Spec และ production ยัง BLOCKED/NV. ไม่ใช้ Git/deploy/SQL/Supabase/production.
+
+**Inherited: 2026-08-14 14:33 Asia/Bangkok** — Website Contact / Social Entry Points implementation + verification + central closeout; preserves Footer 14:28; no deploy/production/Git
+
+## 2026-08-14 — Website Contact / Social Entry Points (`PASS_LOCAL / PRODUCTION NV`)
+
+- คง `sns.html` เป็น intentionally standalone โดยไม่มี Navigation entry ใหม่; Contact modal เป็น primary Contact/Social entry point และ single clear owner.
+- ลบ duplicate/dead `modal-sns` กับ `modal-social`; เติม `rel="noopener"` ให้ external `_blank` ใน scope โดยไม่เปลี่ยน URL, CTA หรือ layout.
+- rebuild `shared.min.js`, bump cache เป็น `v30` ครบ generated pages 77 หน้า และเพิ่ม behavioral regression สำหรับ URLs, modal ownership, nav exclusion และ noopener.
+- Browser desktop/mobile ผ่าน Contact, `免費試聽`, Cal.com, hamburger/bottom-nav, direct `sns.html` และ no horizontal overflow; nav 77/77 และ full-site ผ่าน 881 ไฟล์.
+- Footer คง intentionally ไม่มี Contact/Social; ไม่แตะ Meta/Threads credential, OAuth, provider config, production, deploy, SQL, Supabase หรือ Git.
+
+**Inherited: 2026-08-14 14:28 Asia/Bangkok** — Website Footer / External Links standardization + central closeout; preserves Favicon 14:25; no deploy/production/Git
+
+## 2026-08-14 — Website Footer / External Links (`PASS_LOCAL / PRODUCTION NV`)
+
+- ล็อก Footer Final Standard: `使用條款與著作權聲明`, `隱私權政策`, `© 2026 mrtaihualin.com`; Contact/Social ไม่อยู่ใน Footer โดยตั้งใจ.
+- ทำมาตรฐานครบ Public Shell 78/78 หน้า รวม `vault.html` และ `vocab-cheatsheet.html`; Terms/Privacy ใช้ current-item แบบไม่ลิงก์กลับตัวเองโดยไม่ redesign.
+- เพิ่ม `scripts/tests-footer-standard.js` และผูกกับ `scripts/check-site.js`; Footer 78/78, nav 77, desktop/mobile, horizontal overflow และ mobile bottom-nav clearance ผ่าน; full-site ผ่าน 881 ไฟล์.
+- เพิ่ม CSS เท่าที่จำเป็นและแก้ overflow เดิมของตาราง cheatsheet บนมือถือ; ไม่แตะ 404 exception, instructional Textbook/Classroom footers, Contact/Social systems, future English pages หรือ `_dev`.
+- Shared Footer generator/component บันทึกเป็น Future Work; ไม่มี deploy, production mutation, SQL, Supabase หรือ Git.
+
+## 2026-08-14 — Favicon / Browser Identity (`PASS_LOCAL / PRODUCTION NV`)
+
+- ใช้ browser identity มาตรฐานเดียวกัน: `/favicon.ico`, `/assets/favicon-32.png`, `/assets/apple-touch-icon.png`.
+- เติมชุดมาตรฐานให้ `vocab-cheatsheet.html`, Terms, Privacy, English 7 หน้า, Textbook 11 หน้า และ Classroom 7 หน้า; แก้ Vault ให้ใช้ root-absolute icon trio.
+- แก้แบรนด์อังกฤษ `Taihua` → `Tai Hua` เฉพาะ English preview โดยรักษา SEO strategy, metadata, `noindex`, navigation และพฤติกรรมเดิม.
+- Verification: scope exact coverage ผ่าน, sitemap 66/66, icon files เปิดได้ HTTP 200, desktop/default + mobile 390×844 + subpage ต่อ section ผ่านและไม่ล้น; `node scripts/check-site.js` ผ่าน 881 ไฟล์.
+- `PWA_NOT_REQUIRED_NOW`; `PWA_FUTURE_WORK=AFTER_PAID_LAUNCH`. ไม่สร้าง manifest/service worker/install/offline/push และไม่ deploy/production/SQL/Supabase/Git.
+
+**Updated: 2026-08-14 14:13 Asia/Bangkok** — Website SEO Basics / Metadata local remediation + central closeout; no deploy/production/Git
+
+## 2026-08-14 — Website SEO Basics / Metadata (`PASS_LOCAL_WITH_EXTERNAL_NV`)
+
+- แก้ malformed `og:image`/Twitter tag structure ใน `content.html`, `new-student.html`, `sns.html`, `thank-you.html`, `vocab-thank-you.html`; เติม Twitter metadata ให้ `blog.html` และ `og:url` ให้ `new-student.html`/`trial.html` โดยไม่เปลี่ยน SEO copy.
+- ตาม Lin Decision เพิ่ม `noindex,nofollow` ให้ `classroom/liff-open.html`, `classroom/line-link.html` และหน้า `上課用` 3 หน้า.
+- ปรับ `scripts/check-seo-sitemap.js` ให้ enumerate HTML จาก filesystem โดยไม่เรียก Git และเพิ่ม checks สำหรับ malformed metadata, OG/Twitter และ internal/admin `noindex`.
+- Verification: checker ผ่าน public/sitemap `66/66`, 0 error/0 warning; negative fixtures จับ malformed/noindex/Twitter regressions ครบ; `node scripts/check-site.js` ผ่าน 881 ไฟล์.
+- `DEFER_TO_FAVICON_SYSTEM`; `SITEMAP_LASTMOD_VERIFICATION=PENDING`; production/Search Console/crawler ยัง NV; `PENDING ARTICLE PRODUCT DECISION`; S02 คง `not-verified`. ไม่แก้ sitemap/robots/favicons/404/Footer/Contact/Social layout และไม่ deploy/SQL/Supabase/Git.
+
+## 2026-08-14 — Textbook Temporary Code Gate + Student Portal Future Direction
+
+## 2026-08-14 — Textbook Temporary Code Gate (`PASS_LOCAL / PRODUCTION NV`)
+
+- เพิ่ม client-side code gate ชั่วคราวให้ `textbook/index.html` และบทเรียนทั้ง 10 บท; direct URL ทุกบทถูก gate ก่อนผ่านรหัส และสถานะที่ผ่านแล้วใช้ร่วมกันผ่าน `localStorage` ใน browser เดียวกัน.
+- รองรับ wrong code = blocked, correct code = access, refresh = จำสถานะ และ reset ผ่าน `?reset-textbook-access=1` หรือ `window.TextbookAccessGate.clear()`; gate นี้ตั้งใจเป็น access deterrent ที่ bypass ได้ ไม่ใช่ security/authentication จริง.
+- Teaching Pages ใน `classroom/*上課用.html` ไม่ถูก gate และไม่มีการแก้ Teaching Pages หรือระบบสมุดโน้ตเดิม.
+- เพิ่ม `scripts/tests-textbook-access-gate.js` และผูกเข้า `scripts/check-site.js`; ตรวจ coverage 11/11, direct chapter 10/10, Teaching Pages ungated 3/3, notes/controls/navigation/PDF UI, desktop/mobile และ console error = 0 ผ่าน.
+- `node scripts/check-site.js` ผ่านทั้งหมด 880 files. ไม่มี deploy, SQL, Supabase, Git หรือ production mutation; production จึงยัง `NV`.
+- Future Direction ที่ Lin ล็อกไว้: Student Portal ใช้ Google Login และรวมข้อมูลนักเรียนที่เกี่ยวข้องไว้ในระบบเดียว โดยยังไม่ออกแบบรายละเอียดและไม่ implement รอบนี้.
+
+## 2026-08-14 — Locked Game Flow Delta (`PASS_WITH_EXPLICIT_NV`)
+
+- เพิ่ม `js/games/game-flow.js` เป็น flow กลางของ Tone/Reading/Listening/Typing/Word Order: feedback สั้น, countdown `3→2→1`, auto-next, ปุ่ม `下一題` และ `暫停`.
+- ใช้ Result semantic marker กลางบนโครง `gsh-end-*` เดิมโดยไม่ redesign Final Result; ปรับ feedback เป็นแนวให้กำลังใจด้วย provisional Chinese copy.
+- Resume เหลือ action เดียว `繼續上次練習`; เก็บ same-device safe point ตาม architecture เดิม และเพิ่ม selector เลือก latest successfully saved state แบบไม่ merge. ไม่ลบ Progress/SRS/Mastered และไม่เปลี่ยนสูตรคะแนน.
+- Rebuild minified runtime ที่เกี่ยวข้องและ bump asset version ของเกมทั้ง 5; เพิ่ม `scripts/tests-game-flow-delta.js` เข้า full-site gate.
+- หลักฐาน: delta test, game behavior, Reading, Typing, Word Order, Listening และ SRS ผ่าน; `node scripts/check-site.js` ผ่าน 877 files. Browser 1280×720/390×844 ทั้ง 5 หน้าไม่ล้น; isolated flow ผ่าน pause/immediate next/auto-next และไม่มี console error จาก flow ใหม่.
+- `NV`: local browser โหลด external Game Content API ไม่ได้ จึงยังไม่ยืนยัน full gameplay E2E. `BLOCKED`: remote cross-device resume สำหรับ Login Free ต้องรอ authorization ของ persistence architecture/schema/production. ไม่มี deploy, SQL, schema, production mutation หรือ Git.
+
+## 2026-08-14 — Locked Phase 1 `學習中心 / 我的內容`
+
+- เปลี่ยน navigation เป็น `學習` และหน้าปลายทางเป็น `學習中心`; แยก Account/Profile และทำ Guest Login-introduction ตาม copy/CTA ที่ Lin ล็อกไว้.
+- รวม Progress + SRS/Review ใน `學習進度`, แสดง 5 skills พร้อมลิงก์ฝึกตรง; ตัด `下一步`, separate main `複習`, readiness 0–100 และ overall formula.
+- สร้าง `我的內容` หน้าเดียว 2 tabs, limit 20 words / 10 sentences, near/full gate, no Search/Filter, optional item details, per-item practice/save provenance และ Delete เฉพาะ saved relation.
+- เพิ่ม account-backed Sentence Vault โดย reuse `learning_saved_items`; Word Order Save เก็บ sentence และรองรับ direct `?sentence=` practice. Duplicate Save จากพื้นผิวใหม่เพิ่ม provenance โดยไม่สร้างรายการซ้ำ.
+- เพิ่ม `sentence_vault_v1` ใน account boundary/sync/export path และเพิ่ม regression tests สำหรับ learning center/personal content/provenance.
+- แก้ regression ที่ browser พบจริง: shared runtime สร้าง `#bottom-nav` ก่อน parser เจอ static nav ทำให้มือถือมี 2 ชุด; เปลี่ยน fallback ให้ตรวจหลัง DOMContentLoaded, rebuild `shared.min.js`, bump cache v28 ครบ 77 หน้า และยืนยัน runtime count = 1.
+- Rebuild minified runtime เฉพาะ shared, Word Order และ Tone. ไม่แตะ Reading/Typing เพราะมีงานภายนอกแก้ source ชุดเดียวกันอยู่; สองคู่นี้ยัง source ใหม่กว่า min และต้องทำรอบแยกหลัง collision จบ.
+- หลักฐาน: account boundary 22/22, learning center 24/24, personal content 21/21, SRS 17/17, word vault 59/59, account export 7/7, nav consistency 77 หน้า; local browser Guest/Login/mobile/direct tabs ผ่านและ console error = 0; `node scripts/check-site.js` ผ่านทั้งหมด 875 files.
+- ไม่มี deploy, production SQL/RLS/schema, manual/intentional Supabase mutation, Paid pricing/quota/Challenge/formula, Git, commit หรือ push. เปิด authenticated local surface แบบอ่านอย่างเดียวและไม่กด Save/Delete; cross-device sentence behavior ยัง `NV` ต่อ production.
+
+**Updated: 2026-08-13 22:06 Asia/Bangkok** — Central Routing Cleanup เอกสาร/authority เท่านั้น; ไม่แก้ code/runtime, ไม่ deploy, ไม่รัน SQL และไม่ใช้ Git
+
+## 2026-08-13 — Central Routing Cleanup
+
+- เชื่อม startup path เป็น `repo → Projects/00_START_HERE → Website Command Center → authority ตามประเภทงาน` ให้ Claude/Codex ใช้สายเดียวกัน
+- กำหนด BrandKey, GPT Product Current, Main Implementation Plan, Product Pending/Verify, active operational plan และ future backlog ให้มี authority คนละหน้าที่
+- แยก `PRODUCT NEXT` ออกจาก `AUTHORIZED IMPLEMENTATION NEXT`; Product NEXT ไม่อนุมัติให้ implement
+- แก้ GPT Current/Verify pointer ให้ชี้ current และ exact Archive/Handoff path; ติดป้ายชุดวันที่ 12 ส.ค. และ Pending รุ่นเก่าเป็น `SUPERSEDED / HISTORY` โดยไม่ลบหรือย้ายไฟล์
+- `node scripts/check-site.js` ผ่านทั้งหมด: secret scan 1,109 ไฟล์, JavaScript 105, HTML 110, CSS 6 และสรุป 874 ไฟล์โปรเจกต์ที่มีอยู่ในเครื่อง
+
+**Updated: 2026-08-13 21:45 Asia/Bangkok** — Phase 1 Guest Free + Login Free: ทำและตรวจในเครื่องเท่านั้น (ไม่ deploy, ไม่รัน SQL, ไม่ใช้ Git)
+
+## 2026-08-13 — Phase 1 Guest Free + Login Free (local only)
+
+**ขอบเขตและความปลอดภัย:** แก้เฉพาะโค้ดในเครื่องตาม Phase 1 ที่อนุมัติแล้ว ไม่แตะ production, migration/RLS,
+secret, deploy หรือ Git และไม่แก้เอกสารศูนย์บัญชาการ/แผนกลาง เพราะมีงาน audit ของอีกแชทกำลังดูไฟล์ชุดนั้น
+
+### สิ่งที่ทำ
+
+- แยกข้อมูล Guest/บัญชีให้ชัด: เปลี่ยนบัญชีหรือออกจากระบบแล้วล้าง cache ส่วนตัว, ป้องกันการ replay ผล Guest
+  เข้าบัญชี, ผูก progress/SRS/vault กับเจ้าของบัญชีที่ยืนยันแล้ว และกัน event ซ้ำใน session
+- ปรับ `我的學習`: Guest เห็นหน้าชวนเข้าสู่ระบบโดยไม่แสดง dashboard ศูนย์ปลอม; ผู้ล็อกอินเห็น 5 ทักษะ,
+  SRS แบบอ่านอย่างเดียว, `我的單字` และสถานะโหลด/ข้อมูลบางส่วนล้มเหลวโดยไม่ปนบัญชี
+- ล็อก SRS Phase 1 ที่ `[1, 7]` วัน และกำหนดว่าคะแนนใหม่ต่ำกว่า 10 ยังไม่สร้าง SRS; รองรับหลักฐาน `listening`
+- ปรับ 5 เกม: Listening ใช้สูตรคะแนน/จำนวนครั้งฟังที่ล็อกแล้ว, Typing คะแนน 0 ต้องแก้จนถูก,
+  Reading ล็อกคะแนนครั้งตรวจแรก, Word Order เข้า SRS เฉพาะรอบฐาน 10 ที่ไม่ผิด/ไม่ใช้ hint,
+  Tone ป้องกันผล Guest ไหลเข้าบัญชี
+- ทำ Word Vault และ Lego Vault เป็นข้อมูลส่วนตัวของบัญชีและ sync ข้ามอุปกรณ์ผ่าน `learning_saved_items`;
+  Guest ไม่เห็น/เพิ่ม/ลบข้อมูลส่วนตัว
+- ตรวจ account export ว่ารวม session, SRS และ vault ทุกชนิดแบบผูกเจ้าของจาก JWT และ fail closed
+- เพิ่ม `玩法` ของ Listening, ปรับ responsive/ข้อความกู้คืน และตรวจทั้ง 5 เกมที่ desktop, tablet,
+  mobile portrait/landscape: มี auth slot เดียว, ไม่มีแนวนอนล้น, ย้อนกลับ/ไปข้างหน้า/refresh ยังถูกต้อง
+- อนุญาต publishable key เฉพาะไฟล์ staging ที่ระบุชื่อเต็มใน secret scanner; ไม่อนุญาต wildcard และยังจับ
+  service-role/secret key ตามเดิม
+
+### หลักฐานตรวจ
+
+- เพิ่ม automated regression tests สำหรับ account boundary, 我的學習, SRS, Listening, Typing, Reading,
+  Word Order, account export และ shared game shell รวมกับชุด Word Vault เป็น 166 assertions
+- สร้างไฟล์ minified ใหม่ด้วย `bash scripts/build-minjs.sh`; syntax ผ่านทุกไฟล์
+- `node scripts/check-site.js` ผ่านทั้งหมด: secret scan 1,108 ไฟล์, JS 105, HTML 110, CSS 6 และ
+  สรุป 873 ไฟล์โปรเจกต์ที่มีอยู่ในเครื่อง
+
+### สิ่งที่ยังไม่ล็อก/ยังไม่ทำ
+
+- ต้องให้ Lin ตัดสินใจ: schema/ความหมายของ `practice_events` และ `learning_memory`, `我的句子`, สูตรแปลง
+  component error เป็นคะแนน Reading, ลำดับ `下一步`, overall %, gamification และรูปแบบ tutorial animation ของ Listening
+- การแก้ Edge Function (`tone-round`) ต้อง deploy จึงจะมีผลจริง; งานนี้ยังไม่ deploy
+- การทดสอบ gameplay/login/sync ข้ามอุปกรณ์กับข้อมูลจริงยังทำไม่ได้ใน local browser เพราะ Game Content API
+  ภายนอกตอบ `Failed to fetch`; UI แสดงทางกู้คืนถูกต้องแล้ว แต่ยังต้องทดสอบ production/manual E2E
+- พบ pointer ในเอกสารกลางชี้ package เก่าใน Downloads ที่ไม่มีแล้ว; ใช้ source-of-truth ล่าสุดแบบ read-only และยังไม่แก้
+  pointer เพราะมีอีกแชท audit เอกสารกลางอยู่
+
 **Updated: 2026-08-12 15:39 Asia/Bangkok** — Status Parity note: Lego Weekly Challenge scheduling mechanics flagged as under active Lin review, not Locked (see note inline below)
 **Updated: 2026-08-12 14:54 Asia/Bangkok**
 

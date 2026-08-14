@@ -6,18 +6,25 @@
 
 กฎ Startup Gate ฉบับ canonical สำหรับ Claude + Codex อยู่ที่ `/Users/taihualin/Documents/Claude/Projects/AGENTS.md` หัวข้อ **Startup Gate กลาง** — ห้ามคัดลอกกฎซ้ำมาไว้ในไฟล์นี้
 
+กฎเลือกบ้านเอกสาร canonical อยู่ไฟล์เดียวกัน หัวข้อ **Document Output Boundary — Projects vs Repository** — Audit, Planning, Recovery, Handoff และ Business documents ทั่วไปห้ามใช้ repo เป็น default destination; repo รับเฉพาะ technical exception ที่พิสูจน์ dependency ได้ โดยคง exact-path exception `/Users/taihualin/Developer/mrtaihualin.github.io/_แผนงาน/ทำต่อในอนาคต.md`
+
+ตั้งแต่ 2026-08-14 งานต่อของ `mrtaihualin.com` ใช้ **Codex เท่านั้นเป็น executing agent**. ต้องคง Claude routing compatibility แต่ห้ามเสนอหรือส่ง implementation task ให้ Claude เว้นแต่ Lin เปลี่ยนกฎ canonical ใน Shared Rules ภายหลัง
+
 ก่อนเริ่มทุกงานใน repo นี้:
 
 0. โหลดหรือยืนยันว่า Context มี `AGENTS.md` ไฟล์นี้และ `/Users/taihualin/Developer/mrtaihualin.github.io/00_START_HERE.md` แล้ว
 1. โหลด Shared Rules canonical ที่ `/Users/taihualin/Documents/Claude/Projects/AGENTS.md` และกฎประหยัดที่ `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/AI_EFFICIENCY_RULES.md` ถ้ายังไม่มีใน Context
-2. ทำ Startup Gate ตาม canonical rule และรายงาน `STARTUP GATE: PASS` แบบสั้นก่อน `edit / create / move / delete`
-3. ถ้า Context ยังครบและไฟล์ไม่เปลี่ยน ห้ามอ่านซ้ำโดยไม่มีเหตุ
+2. ตาม routing เดียวกับ Claude: repo `00_START_HERE.md` → `/Users/taihualin/Documents/Claude/Projects/00_START_HERE.md` → `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md` → authority ตามประเภทงาน
+3. ทำ Startup Gate ตาม canonical rule และรายงาน `STARTUP GATE: PASS` แบบสั้นก่อน `edit / create / move / delete`
+4. ถ้า Context ยังครบและไฟล์ไม่เปลี่ยน ห้ามอ่านซ้ำโดยไม่มีเหตุ
 
 หลังผ่านขั้นอ่านกฎ ให้เปิดเฉพาะ Current Source ที่เกี่ยวกับงาน:
 
 3. งานตามแผน งานสถานะ งานส่งต่อ หรือการแก้เว็บไซต์: อ่านส่วนล่าสุดที่เกี่ยวข้องใน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md` และ `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
 4. งานสมาชิกเกม สิทธิ์ เนื้อหาจ่ายเงิน หรือการชำระเงิน: อ่าน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/04_สเปกสมาชิกเกม_CURRENT.md`
 5. ก่อนแตะโค้ด: อ่านส่วนที่เกี่ยวข้องใน `CLAUDE.md`; อ่าน `README.md` หรือ `MAINTENANCE.md` เมื่อจำเป็นต่อโครงสร้าง พฤติกรรมเดิม หรือผลตรวจล่าสุด
+
+งาน Product Decision, UX, Product NEXT, Pending หรือ Verify ต้องตาม GPT Current ที่ Website Command Center ชี้ก่อนเสมอ; Product NEXT ไม่ใช่ authorization ให้ implement.
 
 ห้ามเปิด Master, History หรือ Audit ทั้งหมดโดยอัตโนมัติ หากข้อมูลขัดกัน ให้ตรวจโค้ดและระบบจริง แล้วบันทึกความขัดแย้ง ห้ามเลือกคำตอบเองจากเอกสารเก่า
 
@@ -89,7 +96,7 @@
 
 ## เมื่องานแบ่งทำหลายแชทได้
 
-- ถ้างานมีส่วนอิสระเพียงพอ ให้จัดชุด 5–7 แชท เขียนคำสั่งพร้อมใช้ทั้งหมด และให้แชทที่ไม่มี dependency เริ่มพร้อมกัน
+- ถ้างานมีส่วนอิสระเพียงพอ ให้จัดชุด 5–7 แชท Codex เขียนคำสั่งพร้อมใช้ทั้งหมด และให้แชทที่ไม่มี dependency เริ่มพร้อมกัน
 - แบ่งตามผลลัพธ์หรือเจ้าของไฟล์ ห้ามหลายแชทตรวจ วิเคราะห์ หรือแก้เรื่องเดียวกันซ้ำโดยไม่มีเหตุ
 - งานที่ไฟล์ชนกัน ต้องรับผลจากงานก่อน หรือการแยกทำให้ย้อนตรวจและแก้ซ้ำ ให้ทำตามลำดับ ลดจำนวนแชท หรือทำในแชทเดียว
 - จำนวน 5–7 เป็นเป้าหมายเมื่อแยกได้จริง ห้ามฝืนให้ครบถ้าทำให้ซ้ำซ้อน คุณภาพลด หรือความเสี่ยงเพิ่ม
