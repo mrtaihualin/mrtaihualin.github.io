@@ -16,8 +16,9 @@
     var sb = client();
     if (!sb || !sb.functions) return { ok: false, reason: 'no_client' };
     try {
-      var r = await sb.functions.invoke('tone-round', {
-        body: {
+      if (!window.NetworkGuard || typeof window.NetworkGuard.request !== 'function') return { ok: false, reason: 'network_guard_unavailable' };
+      var r = await window.NetworkGuard.request(function () {
+        return sb.functions.invoke('tone-round', { body: {
           word: args.word,
           level: args.level,
           game: args.game,                    // 'tone'(default)/'reading'/'typing'/'wordorder' — แยก SRS ต่อเกม
@@ -27,8 +28,8 @@
           syllables: args.syllables,          // คำหลายพยางค์ (ถ้ามี)
           guesses: args.guesses,              // คำเดารายพยางค์ (ถ้ามี)
           knownCheck: !!args.knownCheck
-        }
-      });
+        } });
+      }, 'tone-round', {}, 12000, null);
       if (r.error) {
         // Phase 5: โดน rate limit (429 = ยิงเกิน 60 รอบ/นาที) → บอกคนเล่นตรงๆ ว่ารอแป๊บ
         var st = 0;

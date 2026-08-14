@@ -31,7 +31,8 @@ check('account boundary owns sentence local cache', /'sentence_vault_v1'/.test(a
 check('auth syncs sentence vault on account transition', /SentenceVault\.sync\(sb, uid\)/.test(readingAuth));
 check('one page has word and sentence tabs', /personal-content-root/.test(page) && /我的單字/.test(ui) && /我的句子/.test(ui));
 check('direct links open the requested personal-content tab', /location\.hash === '#sentences'/.test(ui) && /history\.replaceState\(null, '', '#' \+ tab\)/.test(ui));
-check('old filter UI is superseded and not executable', /type="text\/plain" data-superseded="phase1-personal-content"/.test(page) && !/Search|搜尋/.test(ui));
+check('old tag filter UI is superseded and not executable', /type="text\/plain" data-superseded="phase1-personal-content"/.test(page) && !/currentFilter|vtag-btn/.test(ui));
+check('Personal Search stays inside the account render path', /function renderAccount\(\)[\s\S]*searchControls\(update\)/.test(ui) && !/function renderGuest\(\)[\s\S]{0,600}searchControls/.test(ui));
 check('near-limit and full-gate messages exist', /remaining <= 3/.test(ui) && /已達免費儲存上限/.test(ui));
 check('full gate offers management and disabled upgrade', /管理已儲存內容/.test(ui) && /升級方案/.test(ui) && /upgrade\.disabled = true/.test(ui));
 check('item detail exposes three optional information fields', /คำอ่านไทย/.test(ui) && /Romanization/.test(ui) && /中文翻譯/.test(ui));

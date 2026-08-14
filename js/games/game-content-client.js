@@ -77,24 +77,28 @@
   // เหตุผล: ไฟล์นี้ต้องรันได้ "ก่อน" supabase-config.js/auth-widget.js เสมอ เพราะ 2 ไฟล์นั้นโหลด
   // แบบ defer (รันหลัง HTML parse เสร็จ) แต่ไฟล์นี้ต้องรันแบบปกติ (บล็อก) ที่ตำแหน่งเดิมของ
   // data/words-data.js เพื่อให้ลำดับการโหลดสคริปต์ในหน้าเว็บเหมือนเดิมมากที่สุด — anonKey ไม่ใช่
-  // ความลับ (public โดยตั้งใจ ตามคอมเมนต์ใน supabase-config.js) จึงคัดลอกซ้ำได้อย่างปลอดภัย
-  // ⚠️ ถ้า Lin เคยหมุน (rotate) anon key ใน Supabase ต้องแก้ค่าตรงนี้ให้ตรงกับ supabase-config.js ด้วย
-  var SB_URL = (global.SUPABASE_CONFIG && global.SUPABASE_CONFIG.url) || 'https://qzkxlhpcputsvbqmtqfi.supabase.co';
-  var SB_ANON_KEY = (global.SUPABASE_CONFIG && global.SUPABASE_CONFIG.anonKey) ||
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6a3hsaHBjcHV0c3ZicW10cWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjI1NDksImV4cCI6MjA5NzIzODU0OX0.1g80zxHfduq9RLdpus10hBDSEYWIXu2Jnqb6LsvqXpw';
+  // Resolve browser config only when boot runs (after deferred supabase-config.js executed).
+  // No embedded production fallback: a missing/mismatched config must fail closed.
+  function currentConfig() {
+    var cfg = global.SUPABASE_CONFIG || {};
+    if (!cfg.url || !cfg.anonKey || /YOUR_/.test(cfg.url) || /YOUR_/.test(cfg.anonKey)) {
+      throw new Error('game-content: Supabase config unavailable');
+    }
+    return { url: cfg.url, anonKey: cfg.anonKey };
+  }
 
-  function sbStorageKey() {
-    var ref = (String(SB_URL).match(/https?:\/\/([^.]+)\./) || [])[1] || 'qzkxlhpcputsvbqmtqfi';
+  function sbStorageKey(url) {
+    var ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || '';
     return 'sb-' + ref + '-auth-token';
   }
 
   // อ่าน access_token จาก session ที่ล็อกอินไว้แล้ว (ถ้ามีและยังไม่หมดอายุ) — ไม่ต้องรอ
   // supabase-js/auth-widget.js โหลดเสร็จก่อน (แค่ "เดา" ก่อนเพื่อความเร็ว) ถ้าไม่เจอ/หมดอายุ
   // ก็ยังส่งคำขอได้ปกติ (ส่ง anon key แทน) — ฝั่งเซิร์ฟเวอร์เป็นคนตัดสิน tier จริงอยู่ดี
-  function readAccessTokenGuess() {
+  function readAccessTokenGuess(url) {
     if (typeof localStorage === 'undefined') return null;
     try {
-      var raw = localStorage.getItem(sbStorageKey());
+      var raw = localStorage.getItem(sbStorageKey(url));
       if (!raw) return null;
       var t = JSON.parse(raw);
       var exp = t && (t.expires_at || (t.currentSession && t.currentSession.expires_at));
@@ -105,21 +109,26 @@
   }
 
   function fetchGameContent() {
-    var token = readAccessTokenGuess() || SB_ANON_KEY;
-    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null; // 15 วิ กันค้างเงียบๆ
-    return fetch(SB_URL + '/functions/v1/game-content', {
+    var cfg = currentConfig();
+    var token = readAccessTokenGuess(cfg.url) || cfg.anonKey;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return Promise.reject(new Error('NETWORK_OFFLINE'));
+    }
+    if (!global.NetworkGuard || typeof global.NetworkGuard.request !== 'function') {
+      return Promise.reject(new Error('NETWORK_GUARD_UNAVAILABLE'));
+    }
+    return global.NetworkGuard.request(fetch, cfg.url + '/functions/v1/game-content', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: SB_ANON_KEY, Authorization: 'Bearer ' + token },
-      body: '{}',
-      signal: ctrl ? ctrl.signal : undefined,
-    }).then(function (res) {
-      if (timer) clearTimeout(timer);
+      headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
+      body: '{}'
+    }, 15000).then(function (res) {
       if (!res.ok) throw new Error('game-content HTTP ' + res.status);
       return res.json();
     }).then(function (data) {
       if (!data || data.error) throw new Error((data && data.error) || 'game-content: ข้อมูลว่างเปล่า');
       if (!Array.isArray(data.words) || !Array.isArray(data.sentences)) throw new Error('game-content: รูปแบบข้อมูลผิดปกติ');
+      if (!data.words.length || !data.sentences.length) throw new Error('game-content: ชุดข้อมูลที่จำเป็นว่างเปล่า');
+      if (!Array.isArray(data.audioAvailable)) throw new Error('game-content: audio entitlement contract unavailable');
       return data;
     });
   }
@@ -158,7 +167,7 @@
   // ข้อความดิบจริงยังเก็บไว้ใน console.error เสมอ ไม่ทิ้งไปเฉยๆ (เผื่อต้อง debug)
   function friendlyGameContentError(err) {
     var raw = String((err && err.message) || err || '');
-    if (/Failed to fetch|NetworkError|Load failed|abort/i.test(raw)) {
+    if (/NETWORK_TIMEOUT|NETWORK_OFFLINE|Failed to fetch|NetworkError|Load failed|abort/i.test(raw)) {
       return '無法連線，請檢查網路訊號後再試一次';
     }
     if (/HTTP \d|game-content:|โหลดสคริปต์เกมไม่สำเร็จ/i.test(raw)) {
@@ -343,6 +352,9 @@
       return fetchGameContent().then(function (data) {
         fireCapHitEvents(data);
         showCapBanner(data);
+        if (global.WordAudio && typeof global.WordAudio.setAvailability === 'function') {
+          global.WordAudio.setAvailability(data.audioAvailable);
+        }
         global.WORDS_MASTER = data.words;
         global.ADV_SENTENCES = data.sentences;
         var chain = Promise.resolve();

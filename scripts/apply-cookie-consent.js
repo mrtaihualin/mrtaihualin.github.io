@@ -3,10 +3,10 @@
  * apply-cookie-consent.js
  *
  * เพิ่ม Google Consent Mode v2 (default deny) ให้ GA4 + Clarity
- * และแทรก cookie consent banner (接受/拒絕) ก่อน </body>
+ * และ sync cookie consent banner ภาษาจีน/อังกฤษก่อน </body>
  * ในทุกไฟล์ .html ที่มี snippet GA4 (id=G-DKVQE30982)
  *
- * ใช้ซ้ำได้ในอนาคต — รันซ้ำได้ (idempotent) ถ้าไฟล์มี banner อยู่แล้วจะข้าม
+ * ใช้ซ้ำได้ในอนาคต — รันซ้ำได้ (idempotent) และอัปเดต banner เดิมให้ตรงต้นฉบับ
  *
  * วิธีรัน: node scripts/apply-cookie-consent.js
  * อ้างอิงโค้ดต้นแบบ: /Users/taihualin/Documents/Claude/Backup/PROJECTS_ARCHIVE/HISTORY/2026-08-12_inbox-review-cleared/website/
@@ -32,6 +32,8 @@ const GA_ID = 'G-DKVQE30982';
 const CLARITY_ID = 'xkbihw56tf';
 
 const MARKER = 'cookieConsentBanner'; // ใช้เช็ค idempotent
+const BANNER_COMMENT = '<!-- Cookie consent banner (Google Consent Mode v2)';
+const BANNER_BLOCK_RE = /<!-- Cookie consent banner \(Google Consent Mode v2\)[\s\S]*?<\/script>/;
 
 // regex จับ gtag('js', new Date()); ทั้งแบบเว้นวรรค และแบบ minify (คนละ quote ก็จับได้)
 const GTAG_JS_CALL_RE = /gtag\(\s*(['"])js\1\s*,\s*new Date\(\)\s*\)\s*;/;
@@ -68,33 +70,43 @@ function buildConsentDefaultSnippet() {
 
 function buildClaritySnippet() {
   return (
-    `\n    // บอก Clarity ว่ายังไม่ได้รับความยินยอม จนกว่าจะกดยอมรับ (แทรกอัตโนมัติ apply-cookie-consent.js)\n` +
-    `    if (localStorage.getItem('cookieConsent') !== 'granted') { window.clarity('consent', false); }`
+    `\n    // Clarity Consent API v2 — ส่ง stored/default state ทุก page view; ads ไม่เปิดใน Phase 1\n` +
+    `    var claritySavedConsent = localStorage.getItem('cookieConsent');\n` +
+    `    window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: claritySavedConsent === 'granted' ? 'granted' : 'denied' });`
   );
 }
 
-function buildBannerBlock() {
+function buildBannerBlock(isEnglish) {
+  const fontFamily = isEnglish ? "Arial,sans-serif" : "'Noto Sans TC',sans-serif";
+  const dialogLabel = isEnglish ? 'Cookie and analytics settings' : 'Cookie 與分析設定';
+  const copy = isEnglish
+    ? `🍪 We use <strong>Google Analytics</strong> and <strong>Microsoft Clarity</strong> to improve the website and games.
+      Microsoft Clarity uses analytics cookies only after you consent. If you reject, limited cookieless tracking or measurement may still occur under Consent API V2. See our
+      <a href="/en/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">Privacy Policy</a>.`
+    : `🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 協助改善網站與遊戲體驗。
+      Microsoft Clarity 僅在您同意後使用分析 Cookie；若您拒絕，仍可能依 Consent API V2 進行有限的無 Cookie（cookieless）追蹤或衡量。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。`;
+  const rejectLabel = isEnglish ? 'Reject' : '拒絕';
+  const acceptLabel = isEnglish ? 'Accept' : '接受';
   return `
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
-<div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+<div id="cookieConsentBanner" role="dialog" aria-label="${dialogLabel}" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
   background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
-  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
+  padding:18px 20px;font-family:${fontFamily};">
   <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
     <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
-      🍪 我們使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 蒐集匿名使用行為資料，
-      協助改善網站與遊戲體驗。您可以選擇是否同意。詳見
-      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+      ${copy}
     </p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <button onclick="window.__cookieConsentDecide(false)"
         style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;
-        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">
-        拒絕
+        padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:${fontFamily};">
+        ${rejectLabel}
       </button>
       <button onclick="window.__cookieConsentDecide(true)"
         style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;
-        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;">
-        接受
+        padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;font-family:${fontFamily};">
+        ${acceptLabel}
       </button>
     </div>
   </div>
@@ -106,7 +118,8 @@ function buildBannerBlock() {
       gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
     }
     if (typeof window.clarity === 'function') {
-      window.clarity('consent', granted);
+      window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: granted ? 'granted' : 'denied' });
+      if (!granted) window.clarity('consent', false); // erase any cookies from an earlier grant
     }
     var __b = document.getElementById('cookieConsentBanner');
     if (__b) __b.style.display = 'none';
@@ -138,9 +151,26 @@ function processFile(filePath) {
     return { status: 'not-applicable', rel };
   }
 
-  // idempotent: มี banner อยู่แล้ว -> ข้าม
-  if (content.includes(MARKER)) {
+  // Vault ใช้ delayed-load gate เฉพาะของตัวเอง ไม่ sync ด้วย standard banner
+  if (rel === 'vault.html') {
     return { status: 'already-applied', rel };
+  }
+
+  const isEnglish = rel.startsWith(`en${path.sep}`);
+
+  // มี standard banner อยู่แล้ว -> sync copy/runtime ให้ตรง canonical source
+  if (content.includes(MARKER)) {
+    if (!content.includes(BANNER_COMMENT) || !BANNER_BLOCK_RE.test(content)) {
+      return { status: 'skipped', rel, reason: 'มี cookieConsentBanner แต่ไม่ใช่ standard banner ที่รู้จัก' };
+    }
+    const out = content.replace(BANNER_BLOCK_RE, buildBannerBlock(isEnglish).trim());
+    if (out === content) return { status: 'already-applied', rel };
+    try {
+      fs.writeFileSync(filePath, out, 'utf8');
+    } catch (e) {
+      return { status: 'error', rel, reason: `เขียนไฟล์ไม่ได้: ${e.message}` };
+    }
+    return { status: 'modified', rel, hasClarity: content.includes(CLARITY_CLOSE_LITERAL) };
   }
 
   if (!content.includes('</body>')) {
@@ -164,7 +194,7 @@ function processFile(filePath) {
 
   // 3) แทรก banner ก่อน </body> ตัวสุดท้าย (กันไฟล์ที่มีหลายจุด ป้องกันพลาด)
   const lastBodyIdx = out.lastIndexOf('</body>');
-  out = out.slice(0, lastBodyIdx) + buildBannerBlock() + '\n' + out.slice(lastBodyIdx);
+  out = out.slice(0, lastBodyIdx) + buildBannerBlock(isEnglish) + '\n' + out.slice(lastBodyIdx);
 
   try {
     fs.writeFileSync(filePath, out, 'utf8');

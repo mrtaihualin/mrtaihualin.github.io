@@ -36,12 +36,26 @@
               window.supabase && window.supabase.createClient;
 
   if (!ready) {
-    // Supabase ยังไม่พร้อม/โหลดไม่ได้ → คืน API เปล่า กันหน้าเว็บพัง (เกมยังเล่นได้ปกติ)
+    // Supabase ยังไม่พร้อม/โหลดไม่ได้ → แจ้งชัดและใช้ Guest ต่อได้ โดยไม่แตะ account cache.
+    function renderUnavailable(containerId) {
+      var host = document.getElementById(containerId);
+      if (!host) return;
+      var id = 'sa-auth-unavailable-' + containerId;
+      if (document.getElementById(id)) return;
+      var status = document.createElement('span'); status.id = id;
+      status.setAttribute('role', 'status');
+      status.style.cssText = 'display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;color:#78350f;background:#fff3d8;border:1px solid #C8973A;border-radius:12px;padding:7px 10px;font:700 12px "Noto Sans TC",sans-serif;';
+      status.appendChild(document.createTextNode('登入服務暫時無法連線，可先使用訪客模式。'));
+      var retry = document.createElement('button'); retry.type = 'button'; retry.textContent = '重新載入';
+      retry.style.cssText = 'border:1px solid #8B6310;border-radius:999px;background:#fff;color:#8B6310;padding:4px 9px;cursor:pointer;font:inherit;';
+      retry.onclick = function () { location.reload(); };
+      status.appendChild(retry); host.appendChild(status);
+    }
     window.SITE_AUTH = {
-      ready: false, user: null, authResolved: false,
+      ready: false, user: null, authResolved: true, authError: 'unavailable',
       learningOwnerChanged: false, learningOwnerEpoch: 0, learningOwnerId: null,
-      onChange: function () {}, doLogout: function () {},
-      openProfileEditor: function () {}, renderBadge: function () {}
+      onChange: function (cb) { if (typeof cb === 'function') cb(null); }, doLogout: function () {},
+      openProfileEditor: function () {}, renderBadge: renderUnavailable
     };
     return;
   }
@@ -67,6 +81,7 @@
     ready: true,
     user: null,
     authResolved: false,
+    authError: null,
     learningOwnerChanged: false,
     learningOwnerEpoch: 0,
     learningOwnerId: null,
@@ -726,6 +741,14 @@
     var badgeId = 'sa-badge-' + containerId;
     var el = document.getElementById(badgeId);
 
+    if (API.authError) {
+      if (!el) { el = document.createElement('span'); el.id = badgeId; host.appendChild(el); }
+      el.style.display = 'inline-flex'; el.setAttribute('role', 'status');
+      el.innerHTML = '<span style="color:#78350f;background:#fff3d8;border:1px solid #C8973A;border-radius:12px;padding:7px 10px;font:700 12px Noto Sans TC,sans-serif;">登入狀態暫時無法確認，可先使用訪客模式。 <button type="button" class="sa-auth-retry" style="border:1px solid #8B6310;border-radius:999px;background:#fff;color:#8B6310;padding:4px 9px;cursor:pointer;font:inherit;">重新載入</button></span>';
+      el.querySelector('.sa-auth-retry').onclick = function () { location.reload(); };
+      return;
+    }
+
     if (!API.user) {
       if (el) { el.style.display = 'none'; el.innerHTML = ''; }
       return;
@@ -889,16 +912,28 @@
   }
 
   // ── init: session เดียว ฟังเดียว (client กลาง) ใช้ร่วมกันทุกหน้าที่โหลดไฟล์นี้ ──
+  function handleInitialSessionError(error) {
+    // Session is unknown, not logged out. Never bind null/clear account-owned local cache here.
+    console.warn('[auth] getSession failed:', (error && error.message) || error);
+    API.user = null; API.authResolved = true; API.authError = 'session_unavailable';
+    fireChange();
+  }
+
   function boot() {
     sb.auth.getSession().then(function (res) {
+      // Supabase can resolve the promise with { error }. Only an error-free null session
+      // is a confirmed logged-out state and may cross the learning-owner boundary.
+      if (res && res.error) { handleInitialSessionError(res.error); return; }
+      API.authError = null;
       API.user = (res.data && res.data.session && res.data.session.user) || null;
       API.authResolved = true;
       bindLearningOwner(API.user);
       fireChange();
       fetchProfile();
       if (API.user) { logSession(); checkPendingFacebookLinkAudit(); }
-    });
+    }, handleInitialSessionError);
     sb.auth.onAuthStateChange(function (_event, session) {
+      API.authError = null;
       API.user = (session && session.user) || null;
       API.authResolved = true;
       bindLearningOwner(API.user);
