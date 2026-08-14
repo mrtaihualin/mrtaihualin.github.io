@@ -60,7 +60,7 @@ const NAV_RE = /<nav class="site-nav"[^>]*>[\s\S]*?<\/nav>/;
 // ทุก href ใน nav-template.js เป็น absolute (/games.html) อยู่แล้ว จึงใช้จากโฟลเดอร์ย่อยได้ตรงๆ
 function navTemplateTagFor(file) {
   const depth = file.split('/').length - 1;
-  return '<script src="' + '../'.repeat(depth) + 'data/nav-template.js?v=2"></script>';
+  return '<script src="' + '../'.repeat(depth) + 'data/nav-template.js?v=3"></script>';
 }
 const SHARED_MIN_RE = /<script src="(?:\.\.\/)*js\/core\/shared\.min\.js[^"]*"><\/script>/;
 
@@ -115,6 +115,8 @@ PAGES.forEach(function (file) {
 
   const navBlockHTML = '<nav class="site-nav">' + NAV.renderNavHTML(file) + '</nav>';
   let next = original.replace(NAV_RE, navBlockHTML);
+  next = next.replace(/data\/nav-template\.js\?v=\d+/g, 'data/nav-template.js?v=3');
+  next = next.replace(/js\/core\/shared\.min\.js\?v=\d+/g, 'js/core/shared.min.js?v=30');
 
   // ── nav responsive auto-fit script — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกทันทีหลัง </nav> ──
   const navFitHTML = NAV.renderNavFitScriptHTML();

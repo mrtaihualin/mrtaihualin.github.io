@@ -24,6 +24,9 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <title>泰語拼讀速查表・60 字 | 泰華眼裡的泰語教學</title>
 <meta name="description" content="泰語拼讀速查表，收錄 50 個單音節字（依五聲分類）+ 10 個多音節字，看子音、母音、尾音、聲調就能唸出泰文，適合初學者隨身複習或列印。">
 <link rel="canonical" href="https://mrtaihualin.com/vocab-cheatsheet.html">
@@ -69,6 +72,7 @@
   .fin{color:var(--gold-deep);font-weight:600;}
   .rom{font-size:12px;color:#9a7d3a;font-style:italic;white-space:nowrap;}
   .zh{font-size:13px;color:var(--ink);}
+  .hard{max-width:100%;overflow-x:auto;}
   .hard table{border:1px solid var(--line);border-radius:12px;overflow:hidden;}
   .hard th{font-size:11px;color:var(--muted);font-weight:700;padding:8px 10px;background:#fcfaf3;border-bottom:1px solid var(--line);text-align:left;}
   .hard td{padding:9px 10px;border-bottom:1px solid #f3ecd9;}
@@ -79,8 +83,9 @@
   .plus{color:var(--gold);margin:0 6px;font-weight:700;}
   .foot{margin-top:34px;text-align:center;border-top:1px solid var(--line);padding-top:18px;font-size:13px;color:var(--muted);}
   .foot a{color:var(--gold-deep);font-weight:700;text-decoration:none;}
+  .foot .foot-mbr{display:none;}.foot .footer-copyright{display:inline-block;margin-top:3px;}
   .cta{display:inline-block;margin-top:10px;background:#5C3D0A;color:#FBF6EA;padding:9px 20px;border-radius:999px;font-weight:700;font-size:13px;text-decoration:none;border:2px solid #8B6310;}
-  @media(max-width:680px){.tone-grid{grid-template-columns:1fr;}.wrap{padding:20px 14px 40px;}h1{font-size:24px;}}
+  @media(max-width:680px){.tone-grid{grid-template-columns:1fr;}.wrap{padding:20px 14px 40px;}h1{font-size:24px;}.foot .foot-sep{display:none;}.foot .foot-mbr{display:inline;}}
   @media print{.cta{display:none;}body{font-size:12px;}.wrap{padding:0;}@page{margin:1.2cm;}}
 </style></head>
 <body><div class="wrap">
@@ -533,13 +538,11 @@
     </tr></tbody></table>
   </div>
 
-  <div class="foot">
-    這份單字表來自「泰華眼裡的泰語教學的小遊戲」<br>
-    想學更多・想真正開口說泰語？<br>
-    <a href="https://mrtaihualin.com">mrtaihualin.com</a> — 專為台灣人設計的一對一泰文課<br>
-    從今天起，做那個能開口的人。
-    <br><a class="cta" href="https://mrtaihualin.com/trial.html">預約 30 分鐘免費體驗課 →</a>
-  </div>
+  <footer class="foot">
+    專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
+    <span class="footer-legal"><a href="/terms.html" style="color:inherit;text-decoration:underline;">使用條款與著作權聲明</a><span aria-hidden="true"> · </span><a href="/privacy.html" style="color:inherit;text-decoration:underline;">隱私權政策</a></span><br>
+    <span class="footer-copyright">© 2026 mrtaihualin.com</span>
+  </footer>
 </div>
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
 <div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;

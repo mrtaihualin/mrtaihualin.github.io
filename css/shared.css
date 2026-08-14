@@ -396,6 +396,7 @@
 
   /* FOOTER */
   footer { text-align:center; padding:28px 24px 72px; font-family:'Noto Sans TC',sans-serif; font-size:12px; letter-spacing:2px; color:var(--ink-muted); background:var(--off-white); border-top:1px solid var(--border); }
+  footer .footer-copyright { display:inline-block; margin-top:3px; }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);} }
   @keyframes pulse { 0%,100%{opacity:0.3;}50%{opacity:0.8;} }
@@ -656,6 +657,27 @@
    ไม่ได้แทนที่ banner/class เดิม แค่กำหนด min-height เผื่อไว้ + transition นุ่มๆ */
 .gsh-feedback-slot { min-height:1.6em; transition:opacity 200ms ease, transform 200ms ease; }
 
+/* Locked game flow 2026-08-14: short feedback → 3/2/1 → automatic next.
+   Existing next buttons remain available for immediate progress; pause cancels only the countdown. */
+.gsh-next-countdown {
+  display:inline-flex; align-items:center; justify-content:center; min-width:2.25rem; min-height:2.25rem;
+  border-radius:999px; background:var(--gold-light); color:var(--gold-deep); font-weight:900;
+  font-family:'Noto Sans TC',sans-serif; font-size:15px;
+}
+.gsh-next-countdown:empty { display:none; }
+.gsh-pause-btn[hidden] { display:none !important; }
+.gsh-shared-result { width:100%; }
+.gsh-result-meta { display:flex; flex-direction:column; align-items:center; gap:6px; width:100%; margin:10px auto 4px; font-family:'Noto Sans TC',sans-serif; text-align:center; }
+.gsh-result-correct { font-size:18px; font-weight:900; color:var(--gold-deep); }
+.gsh-result-srs { font-size:13px; color:var(--ink-soft); }
+.gsh-result-feedback { font-size:15px; font-weight:800; color:var(--ink); }
+.gsh-result-highlight { display:inline-flex; padding:5px 11px; border-radius:999px; background:var(--gold-light); color:var(--gold-deep); font-size:12px; font-weight:800; }
+.gsh-result-countdown { min-height:1.4em; font-size:13px; font-weight:800; color:var(--gold-deep); }
+@media(max-width:600px){
+  .gsh-next-countdown { order:-1; flex-basis:2.25rem; }
+  .gsh-pause-btn { min-width:88px; }
+}
+
 /* 查看詳細解說 — ปุ่ม/กล่องรายละเอียดที่ผู้เล่นเลือกเปิดเอง (§13) ใช้เป็น visual มาตรฐานร่วมกัน 5 เกม */
 .gsh-detail-toggle {
   font-family:'Noto Sans TC',sans-serif; font-size:12.5px; font-weight:700; color:var(--gold-deep);
@@ -703,6 +725,7 @@
 .gsh-resume-actions button { padding:9px 18px; border-radius:999px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:'Noto Sans TC',sans-serif; border:none; }
 .gsh-resume-continue { background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep)); color:#fff; }
 .gsh-resume-restart { background:#fff; border:1.5px solid var(--border) !important; color:var(--ink-soft); }
+.gsh-resume-new { background:transparent; border:1.5px solid var(--gold-bright) !important; color:var(--gold-deep); }
 @media(max-width:600px){ .gsh-resume-actions button{ flex:1; } }
 
 /* 查看錯題 mistake review — ใช้ร่วมกัน 5 เกม (§21, Phase F2) read-only แสดงจาก roundLog/state จริงเท่านั้น */

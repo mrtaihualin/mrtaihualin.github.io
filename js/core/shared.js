@@ -87,10 +87,9 @@ window.registerGameModal = window.registerGameModal || function (opts) {
 };
 
 // ═══════════════════════════════════════════════════════════
-// GameResume — shared guest-resume helper (Phase E3, 2026-08-10)
-// เก็บ "active session ล่าสุด 1 session ต่อเกม" ไว้ใน localStorage ให้ guest กลับมาเล่นต่อได้
-// ⚠️ ใช้ได้เฉพาะ guest-local resume เท่านั้น — ห้ามใช้แทน Free-account resume (server-side)
-//    เพราะยังไม่มี backend รองรับ (ตรวจแล้ว 2026-08-10 — ดูรายงาน Phase E4)
+// GameResume — shared local-device resume helper
+// เก็บ "active session ล่าสุด 1 session ต่อเกม" ไว้ใน localStorage ให้กลับมาเล่นต่อบนเครื่องเดิม
+// ⚠️ ไม่ใช่ Free-account cross-device resume; server adapter/schema ยัง BLOCKED จนได้รับอนุมัติ
 // key แยกตามเกม (gameId) กัน state ปนกัน — save ซ้ำ = แทนที่ของเก่าเสมอ (ไม่เก็บหลายรอบ ไม่ sync ข้ามเครื่อง)
 // ═══════════════════════════════════════════════════════════
 window.GameResume = window.GameResume || (function () {
@@ -251,6 +250,9 @@ window.goHome = function() {
   //    แก้อาการที่ Lin เจอจริง: กด 遊戲/首頁 แล้วหน้าใหม่ "กระพริบ/เหมือนโหลด 2 รอบ"
   //    (เพราะเดิมแถบถูกยัดเข้า DOM ทีหลัง = layout ขยับ 1 ครั้งเสมอทุกครั้งที่เปลี่ยนหน้า)
   //
+  // shared.min.js บางหน้าถูกโหลดก่อน parser อ่านถึง static bottom nav ที่อยู่ท้าย <body>
+  // จึงต้องรอ DOMContentLoaded ก่อนตรวจ มิฉะนั้น fallback จะสร้างซ้ำอีก 1 ชุด
+  function ensureBottomNavFallback() {
   // ถ้าหน้านั้นมี <nav id="bottom-nav"> จาก HTML อยู่แล้ว = ไม่ต้องทำอะไรเลย (ห้ามสร้างซ้ำ ห้ามใส่ CSS ซ้ำ)
   if (document.getElementById('bottom-nav')) return;
   // ── ต่อจากนี้เป็นทาง "สำรอง" เท่านั้น: ใช้กับหน้าที่ยังไม่ได้ผ่าน generate-nav.js (เช่นหน้าใหม่ที่เพิ่งสร้าง) ──
@@ -285,6 +287,13 @@ window.goHome = function() {
     '@media(max-width:768px){#bottom-nav{display:flex;}body{padding-bottom:60px;}}',
   ].join('');
   document.head.appendChild(bnStyle);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureBottomNavFallback);
+  } else {
+    ensureBottomNavFallback();
+  }
 })();
 
 // ===================================================================
@@ -424,7 +433,7 @@ window.goHome = function() {
       <!-- Action Buttons -->
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button id="yt-shuffle-btn" onclick="shuffleYTVideo()" style="flex:1;min-width:130px;padding:12px 20px;background:var(--gold);color:#1a1a1a;border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🔀 換一部影片</button>
-        <a href="https://www.youtube.com/@mrtaihua" target="_blank" style="flex:1;min-width:130px;padding:12px 20px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">▶ 前往 YouTube 頻道</a>
+        <a href="https://www.youtube.com/@mrtaihua" target="_blank" rel="noopener" style="flex:1;min-width:130px;padding:12px 20px;background:rgba(255,255,255,0.07);color:var(--white);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">▶ 前往 YouTube 頻道</a>
       </div>
     </div>
   </div>
@@ -1041,30 +1050,6 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
 </div>`;
   }
 
-  if (!document.getElementById('modal-sns')) {
-    modalsHTML += `
-<!-- SNS LIST -->
-<div class="modal-overlay" id="modal-sns" onclick="closeModalOutside(event,'modal-sns')">
-  <div class="modal-box" style="max-width:340px;">
-    <div class="modal-header">
-      <div class="modal-title" style="color:var(--ink);font-size:17px;">📲 追蹤我們</div>
-      <button class="modal-close" onclick="closeModal('modal-sns')">✕</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:var(--ink-muted);line-height:1.6;margin:0 0 12px;">每天學一點泰語，第一時間收到新課程與聲調小技巧 ✨</p>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        ${_snsRow('https://www.facebook.com/mrtaihua','#1877F2','f','Facebook','粉絲頁・泰語教學貼文','facebook')}
-        ${_snsRow('https://www.youtube.com/@mrtaihua','#FF0000','▶','YouTube','教學影片・聲調解析','youtube')}
-        ${_snsRow('https://www.instagram.com/mrtaihua','linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)','📷','Instagram','每日一字・學習花絮','instagram')}
-        ${_snsRow('https://www.tiktok.com/@mrtaihua','#000','🎵','TikTok','短影音・快速學泰語','tiktok')}
-        ${_snsRow('https://www.threads.com/@mrtaihua?invite=0','#000','@','Threads','學習筆記・互動討論','threads')}
-        ${_snsRow('https://lin.ee/yVBgvywy','#C8973A','💬','LINE','預約免費體驗課・私訊諮詢','line')}
-      </div>
-    </div>
-  </div>
-</div>`;
-  }
-
   if (!document.getElementById('modal-freebie')) {
     modalsHTML += `
 <!-- FREEBIE / LEAD MAGNET -->
@@ -1112,49 +1097,6 @@ document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTM
   </div>
 </div>
 <style>@keyframes cal-spin{to{transform:rotate(360deg)}}</style>`;
-  }
-
-  if (!document.getElementById('modal-social')) {
-    modalsHTML += `
-<!-- SOCIAL MODAL -->
-<div class="modal-overlay" id="modal-social" onclick="closeModalOutside(event,'modal-social')">
-  <div class="modal-box" style="max-width:420px;">
-    <div class="modal-header">
-      <div class="modal-title" style="color:var(--ink);">📲 關注我們的社群</div>
-      <button class="modal-close" onclick="closeModal('modal-social')">✕</button>
-    </div>
-    <div class="modal-body" style="padding:20px 28px 28px;">
-      <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-bottom:20px;line-height:1.8;">追蹤社群，獲取最新課程資訊、泰文學習技巧與活動消息</p>
-      <div style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border);">
-        <a href="https://www.instagram.com/mrtaihua" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;border-bottom:1px solid var(--border);transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
-          <span style="font-size:22px;width:30px;text-align:center;">📸</span>
-          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">Instagram</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">@mrtaihua</div></div>
-          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
-        </a>
-        <a href="https://www.tiktok.com/@mrtaihua" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;border-bottom:1px solid var(--border);transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
-          <span style="font-size:22px;width:30px;text-align:center;">🎵</span>
-          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">TikTok</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">@mrtaihua</div></div>
-          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
-        </a>
-        <a href="https://www.youtube.com/@mrtaihua" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;border-bottom:1px solid var(--border);transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
-          <span style="font-size:22px;width:30px;text-align:center;">▶️</span>
-          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">YouTube</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">@mrtaihua</div></div>
-          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
-        </a>
-        <a href="https://www.facebook.com/mrtaihua" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;border-bottom:1px solid var(--border);transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
-          <span style="font-size:22px;width:30px;text-align:center;">👍</span>
-          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">Facebook</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">mrtaihua</div></div>
-          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
-        </a>
-        <a href="https://www.threads.com/@mrtaihua?invite=0" target="_blank" style="display:flex;align-items:center;gap:16px;padding:16px 20px;text-decoration:none;transition:background 0.2s;" onmouseover="this.style.background='var(--gold-light)'" onmouseout="this.style.background=''">
-          <span style="font-size:22px;width:30px;text-align:center;">🔗</span>
-          <div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2px;">Threads</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);">@mrtaihua</div></div>
-          <span style="margin-left:auto;font-size:12px;color:var(--ink-muted);">→</span>
-        </a>
-      </div>
-    </div>
-  </div>
-</div>`;
   }
 
   if (!document.getElementById('share-bg')) {

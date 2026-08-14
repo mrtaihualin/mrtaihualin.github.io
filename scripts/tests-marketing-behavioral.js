@@ -245,6 +245,68 @@ if (failures.length === 0) pass(`ไฟล์ในขอบเขตครบ $
   }
 })();
 
+// ── 7) Contact/Social owner + standalone SNS + external-link safety ────────
+(function checkContactSocialEntryPoints() {
+  const shared = readFile('js/core/shared.js');
+  const sns = readFile('sns.html');
+  const nav = readFile('data/nav-template.js');
+  if (!shared || !sns || !nav) {
+    fail('อ่านไฟล์ Contact/Social ที่จำเป็นไม่ครบ');
+    return;
+  }
+
+  if (!/id=["']modal-contact["']/.test(shared)) {
+    fail('js/core/shared.js: ไม่พบ Contact modal ซึ่งเป็น owner หลัก');
+  } else if (!['LINE', '電子郵件', 'Facebook', 'YouTube', 'Instagram', 'TikTok', 'Threads'].every((label) => shared.includes(label))) {
+    fail('js/core/shared.js: Contact modal มีช่องทาง Contact/Social ไม่ครบ');
+  } else {
+    pass('Contact modal เป็น owner หลักและมีช่องทาง Contact/Social ครบ');
+  }
+
+  const expectedSocialUrls = [
+    'https://lin.ee/yVBgvywy',
+    'https://www.facebook.com/mrtaihua',
+    'https://www.youtube.com/@mrtaihua',
+    'https://www.instagram.com/mrtaihua',
+    'https://www.tiktok.com/@mrtaihua',
+    'https://www.threads.com/@mrtaihua?invite=0',
+  ];
+  const missingContactUrls = expectedSocialUrls.filter((url) => !shared.includes(url));
+  const missingStandaloneUrls = expectedSocialUrls.filter((url) => !sns.includes(url));
+  if (missingContactUrls.length || missingStandaloneUrls.length || !shared.includes('mailto:mr.taihualin@gmail.com') || !shared.includes("calLink:'mrtaihualin/trial'")) {
+    fail('Contact/Social destination URL เปลี่ยนหรือหาย', `Contact ขาด: ${missingContactUrls.join(', ') || 'ไม่มี'}; sns.html ขาด: ${missingStandaloneUrls.join(', ') || 'ไม่มี'}`);
+  } else {
+    pass('LINE/Email/Facebook/YouTube/Instagram/TikTok/Threads/Cal.com ใช้ destination เดิมครบ');
+  }
+
+  if (/modal-(?:sns|social)/.test(shared)) {
+    fail('js/core/shared.js: ยังพบ modal-sns หรือ modal-social ที่ซ้ำกับ Contact modal');
+  } else {
+    pass('ไม่เหลือ social modal ซ้ำใน shared.js');
+  }
+
+  if (/sns\.html/.test(nav)) {
+    fail('data/nav-template.js: พบ Navigation entry ไป sns.html ทั้งที่หน้าเป็น intentionally standalone');
+  } else {
+    pass('sns.html คงเป็น intentionally standalone และไม่ถูกเพิ่มใน Navigation');
+  }
+
+  [
+    ['js/core/shared.js', shared],
+    ['sns.html', sns],
+  ].forEach(([rel, text]) => {
+    const unsafe = [];
+    for (const match of text.matchAll(/<a\b[^>]*\btarget=["']_blank["'][^>]*>/gi)) {
+      if (!/\brel=["'][^"']*\bnoopener\b[^"']*["']/i.test(match[0])) unsafe.push(match[0]);
+    }
+    if (unsafe.length) {
+      fail(`${rel}: พบ target="_blank" ที่ไม่มี rel="noopener" ${unsafe.length} จุด`);
+    } else {
+      pass(`${rel}: target="_blank" มี rel="noopener" ครบ`);
+    }
+  });
+})();
+
 // ── สรุปผล ──────────────────────────────────────────────────────────────
 if (warnings.length) {
   console.log(`\nคำเตือน ${warnings.length} รายการ (ไม่บล็อก ต้องตรวจด้วยตา):`);

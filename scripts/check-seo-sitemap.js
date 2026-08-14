@@ -30,8 +30,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const cp = require('child_process');
-
 const root = path.resolve(__dirname, '..');
 const SITE = 'https://mrtaihualin.com';
 const showFull = process.argv.includes('--full');
@@ -40,10 +38,24 @@ const errors = [];
 const warns = [];
 const infos = [];
 
-// ── รายชื่อไฟล์ HTML ที่ git ติดตามจริง (ใช้ -z กัน path ภาษาจีน/ไทยถูก quote จนพัง) ──
-function trackedHtml() {
-  const out = cp.execFileSync('git', ['ls-files', '-z', '*.html'], { cwd: root, encoding: 'buffer' });
-  return out.toString('utf8').split('\0').filter(Boolean);
+// อ่านจาก filesystem โดยตรงเพื่อให้ checker ไม่เรียก Git ผ่าน Terminal
+const WALK_SKIP_DIRS = new Set([
+  '.git', '.agents', '.codex', 'node_modules',
+  '_staging-build', '_staging-build-verify', '_archive', '_dev', '_to_delete'
+]);
+
+function filesystemHtml(dir = root) {
+  const result = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) continue;
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (!WALK_SKIP_DIRS.has(entry.name)) result.push(...filesystemHtml(abs));
+    } else if (entry.isFile() && entry.name.endsWith('.html')) {
+      result.push(path.relative(root, abs).split(path.sep).join('/'));
+    }
+  }
+  return result.sort();
 }
 
 const SKIP_DIRS = ['_staging-build/', '_staging-build-verify/', '_archive/', '_dev/', '_to_delete/', 'data/'];
@@ -58,7 +70,7 @@ function classify(rel, html) {
 }
 
 const pages = new Map(); // rel -> { cat, html }
-for (const rel of trackedHtml()) {
+for (const rel of filesystemHtml()) {
   const abs = path.join(root, rel);
   if (!fs.existsSync(abs)) continue;
   const html = fs.readFileSync(abs, 'utf8');
@@ -76,6 +88,35 @@ function head(html) {
 }
 
 const canonicalOf = new Map();
+
+function metaContent(h, key, value) {
+  const re = new RegExp(`<meta[^>]+${key}=["']${value}["'][^>]*>`, 'i');
+  const tag = h.match(re);
+  if (!tag) return '';
+  const content = tag[0].match(/\bcontent=["']([^"']+)["']/i);
+  return content ? content[1].trim() : '';
+}
+
+// malformed one-line metadata tags can swallow the following social tag.
+for (const [rel, info] of pages) {
+  if (info.cat === 'E-dev') continue;
+  const h = head(info.html);
+  h.split(/\r?\n/).forEach((line, index) => {
+    const trimmed = line.trim();
+    if (/^<meta\b/i.test(trimmed) && !/>\s*$/.test(trimmed)) {
+      errors.push(`${rel}: malformed <meta> ที่ head บรรทัด ${index + 1}`);
+    }
+  });
+}
+
+// internal/admin pages must explicitly prevent indexing even though they are omitted from sitemap.
+for (const [rel, info] of pages) {
+  if (info.cat !== 'D-admin') continue;
+  const robots = head(info.html).match(/<meta[^>]+name=["']robots["'][^>]*content=["']([^"']+)["']/i);
+  if (!robots || !/noindex/i.test(robots[1])) {
+    errors.push(`${rel}: หน้า internal/admin ไม่มี meta robots noindex`);
+  }
+}
 
 for (const rel of publicPages) {
   const html = pages.get(rel).html;
@@ -104,8 +145,21 @@ for (const rel of publicPages) {
 
   if (!/<meta[^>]+name=["']viewport["']/i.test(h)) warns.push(`${rel}: ไม่มี meta viewport`);
 
-  if (!/<meta[^>]+property=["']og:title["']/i.test(h)) warns.push(`${rel}: ไม่มี og:title`);
-  if (!/<meta[^>]+property=["']og:description["']/i.test(h)) warns.push(`${rel}: ไม่มี og:description`);
+  if (!metaContent(h, 'property', 'og:title')) warns.push(`${rel}: ไม่มี og:title`);
+  if (!metaContent(h, 'property', 'og:description')) warns.push(`${rel}: ไม่มี og:description`);
+  const ogUrl = metaContent(h, 'property', 'og:url');
+  if (!ogUrl) warns.push(`${rel}: ไม่มี og:url`);
+  else {
+    const expect = SITE + '/' + rel;
+    if (ogUrl !== expect && !(rel === 'index.html' && ogUrl === SITE + '/')) {
+      warns.push(`${rel}: og:url ไม่ตรงหน้าตัวเอง — ${ogUrl}`);
+    }
+  }
+  if (!metaContent(h, 'property', 'og:image')) warns.push(`${rel}: ไม่มี og:image`);
+  if (!metaContent(h, 'name', 'twitter:card')) warns.push(`${rel}: ไม่มี twitter:card`);
+  if (!metaContent(h, 'name', 'twitter:title')) warns.push(`${rel}: ไม่มี twitter:title`);
+  if (!metaContent(h, 'name', 'twitter:description')) warns.push(`${rel}: ไม่มี twitter:description`);
+  if (!metaContent(h, 'name', 'twitter:image')) warns.push(`${rel}: ไม่มี twitter:image`);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
