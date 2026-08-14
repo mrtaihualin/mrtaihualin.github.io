@@ -25,6 +25,7 @@ corePages.forEach((page) => {
 const client = read('js/games/game-content-client.js');
 check('content client ไม่มี embedded Supabase production fallback', !/\.supabase\.co/.test(client) && !/eyJ[A-Za-z0-9_-]{20,}/.test(client));
 check('content client fail-closed เมื่อ config ไม่มี', /function currentConfig\(\)/.test(client) && /Supabase config unavailable/.test(client));
+check('content client รอ deferred config ก่อน fetch', /function whenDeferredConfigReady\(\)/.test(client) && /whenDeferredConfigReady\(\)\.then\(fetchGameContent\)/.test(client));
 check('content client ต้องได้ audioAvailable contract', /Array\.isArray\(data\.audioAvailable\)/.test(client));
 check('content client ส่ง availability ให้ protected audio ก่อน boot เกม', /WordAudio\.setAvailability\(data\.audioAvailable\)/.test(client));
 

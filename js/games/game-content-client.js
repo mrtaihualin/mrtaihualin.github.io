@@ -87,6 +87,17 @@
     return { url: cfg.url, anonKey: cfg.anonKey };
   }
 
+  // หน้าเกมบางหน้าเรียก boot() จาก inline script ก่อน HTML parse จบ ขณะที่
+  // supabase-config.js โหลดแบบ defer และจะรันหลัง parse เสร็จ การรอ DOMContentLoaded
+  // ตรง loader กลางทำให้ทุกเกมเห็น config ชุดเดียวกันก่อนยิง Edge Function โดยยังคง
+  // fail closed หากไฟล์ config หายหรือค่าผิดจริง
+  function whenDeferredConfigReady() {
+    if (document.readyState !== 'loading') return Promise.resolve();
+    return new Promise(function (resolve) {
+      document.addEventListener('DOMContentLoaded', resolve, { once: true });
+    });
+  }
+
   function sbStorageKey(url) {
     var ref = (String(url).match(/https?:\/\/([^.]+)\./) || [])[1] || '';
     return 'sb-' + ref + '-auth-token';
@@ -349,7 +360,7 @@
       if (document.body) showLoadingBanner();
       else document.addEventListener('DOMContentLoaded', showLoadingBanner);
 
-      return fetchGameContent().then(function (data) {
+      return whenDeferredConfigReady().then(fetchGameContent).then(function (data) {
         fireCapHitEvents(data);
         showCapBanner(data);
         if (global.WordAudio && typeof global.WordAudio.setAvailability === 'function') {
