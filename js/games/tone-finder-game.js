@@ -300,7 +300,7 @@ var TF_SCORE_CFG = {
   //   ทุกคนเริ่ม 10 เท่ากัน · ผิด 1=7 · 2=4 · 3=1 · 4=0(fail เฉลย+SRS รีเซ็ต day1)
   //   "กดผิด" = เดาวรรณยุกต์ผิดตอนแรก + กดผิดในทุกขั้น推導 + กดปุ่มแอบดู(?) · กด "🤷 ไม่มั่นใจ" ไม่นับผิด
   WRONG_LADDER: [10, 7, 4, 1, 0],
-  SRS_REVIEW_BONUS: [3, 2, 1],  // Lin 2026-07-04: โบนัสตอนผ่านรอบทบทวน SRS สะอาด — รอบ1(day1)+3 · รอบ2(day7)+2 · รอบ3(day16)+1
+  SRS_REVIEW_BONUS: [3, 2, 1],  // Phase 1: โบนัสรอบสะอาด — เริ่มเส้นทาง+3 · Day 1+2 · รอบตัดสิน Day 7+1
   SCORE_DEDUCE_BASE: 5,      // (เลิกใช้แล้ว — เก็บไว้กันโค้ดเก่าอ้างถึง)
   SCORE_MIN_PER_WORD: 1,     // (เลิกใช้แล้ว)
   SCORE_FAIL_ZERO: 0,        // ผิดครบเพดาน (fail) = 0 pt เสมอ
@@ -445,7 +445,7 @@ function tfUpdateWordScoreGauge() {
 // ทำงานเฉพาะตอนล็อกอิน (เช็กที่จุดเรียกใช้ ไม่ใช่ในเอนจิ้นนี้ — เอนจิ้นนี้ pure logic เทสต์ได้)
 // ════════════════════════════════════════════════════════════
 var TF_SRS_CFG = {
-  INTERVALS: [1, 7, 16],   // วัน: รอบ1=+1วัน · รอบ2=+7วัน · รอบ3(day16)=make-sure check → mastered
+  INTERVALS: [1, 7],       // Phase 1: New → Day 1 → Day 7 → Mastered (รอบสุดท้าย mastered ทันที)
   CLEAN_ROUNDS_TO_MASTER: 3
 };
 
@@ -488,7 +488,7 @@ var TF_SRS = {
     return true;                                           // ยังไม่เคยตั้งกำหนด = พร้อมเล่นทันที
   },
 
-  // นี่คือรอบ "day 16" (การเช็คครั้งสุดท้ายก่อน mastered) ไหม — stage 2 คือรอบที่ 3 (0-based)
+  // นี่คือรอบตัดสิน Day 7 ก่อน mastered ไหม — stage 2 คือรอบที่ 3 (0-based)
   isFinalCheck: function (rec) {
     return !!rec && rec.stage === (this.cfg.CLEAN_ROUNDS_TO_MASTER - 1);
   },
@@ -496,8 +496,8 @@ var TF_SRS = {
   // ตอบถูก "สะอาด" (ไม่แอบดู ไม่ผิดในรอบนี้) → เลื่อนขั้นถัดไป หรือ mastered ถ้าครบ 3 รอบ
   // คืน { rec, justMastered, clean } — clean = mastered แบบไม่เคย fail/peek เลยตลอดเส้นทาง (จำเอง)
   // หมายเหตุ index: รอบที่เพิ่งผ่าน (stage ก่อนบวก) กำหนดว่ารออีกกี่วันถึงรอบถัดไป
-  //   stage 0 ผ่าน (รอบ1) → รออีก INTERVALS[0]=1 วัน ก่อนรอบ2 · stage 1 ผ่าน (รอบ2) → รออีก INTERVALS[1]=7 วัน ก่อนรอบ3(day16)
-  //   stage 2 ผ่าน (รอบ3/day16 final check) → mastered ทันที ไม่ต้องรอ
+  //   stage 0 ผ่าน (New) → รอ 1 วัน · stage 1 ผ่าน (Day 1) → รอ 7 วัน
+  //   stage 2 ผ่าน (รอบตัดสิน Day 7) → mastered ทันที ไม่ต้องรอ
   advanceOnClean: function (rec, nowMs) {
     rec = rec || this.blank();
     nowMs = nowMs || Date.now();
@@ -514,7 +514,7 @@ var TF_SRS = {
     return { rec: rec, justMastered: false, clean: !rec.everFailed };
   },
 
-  // ตอบผิด (หรือแอบดู/day16 พลาด) → รีเซ็ตกลับ stage 0 (day 1) เข้าคิว SRS ใหม่ + จำว่าเคยพลาด (กู้กลับมาได้ ไม่ใช่จำเอง)
+  // ตอบผิด (หรือใช้ตัวช่วยในรอบตัดสิน Day 7) → รีเซ็ตกลับ stage 0 เข้าคิว SRS ใหม่
   resetOnFail: function (rec) {
     rec = rec || this.blank();
     rec.stage = 0;
@@ -1118,6 +1118,7 @@ function tfSaveStreak(s) {
 }
 // เรียกเมื่อเล่นจบ 1 ชุด → อัปเดต streak + คืน events ให้หน้าสรุปโชว์
 function tfApplyStreakOnSetComplete() {
+  if(!tfSrsLoggedIn())return {state:{streak:0,freezes:0,setsToday:0},events:{goalMetToday:false,freezeUsed:false,freezeEarned:0}};
   var res = TF_STREAK.applySetComplete(tfLoadStreak(), todayStr(), TF_GAME_CFG);
   tfSaveStreak(res.state);
   return { state: res.state, events: res.events };
@@ -1154,7 +1155,7 @@ function tfCurWordIsMulti() {
 }
 
 // ── Lin 2026-07-04: คำปัจจุบัน "ห้ามใช้เครื่องมือช่วย + ห้ามให้แต้ม" ไหม ──
-// จริงเมื่อ: (ก) day16 final check  หรือ  (ข) กดปุ่ม "✓ 已記得" แล้วเข้าโหมดพิสูจน์ 1 ครั้ง (known-check)
+// จริงเมื่อ: (ก) รอบตัดสิน Day 7 หรือ (ข) กดปุ่ม "✓ 已記得" แล้วเข้าโหมดพิสูจน์ 1 ครั้ง
 // ทั้งสองกรณีใช้ UI/กติกาเดียวกัน (ไม่มี推導 ไม่มีใบ้ ไม่มีแต้ม ผิดปุ๊บ fail) ต่างกันแค่ตอน commit SRS
 function tfCurWordNoTools() {
   return !!(session && (session.curWordIsFinalSrsCheck || session.curWordIsKnownCheck));
@@ -1307,7 +1308,7 @@ function tfExcludeMasteredWords(words, minKeep) {
 
 function tfScoreFirstTry() {
   if (!session) return;
-  // ── Lin 2026-07-05: แยกกฎ day16 ออกจาก known-check แล้ว — day16 (curWordIsFinalSrsCheck) ได้คะแนนฐานตามปกติ (ไหลเข้า pipeline คะแนนปกติด้านล่าง)
+  // รอบตัดสิน Day 7 ได้คะแนนฐานตามปกติ ส่วน known-check แยกกฎต่างหาก
   //    ส่วน known-check (curWordIsKnownCheck = กด "已記得") ยังคงไม่ได้แต้มเลย ตามกฎ MASTER ข้อ10 (ไม่ได้ดาว/แต้ม/bump เพดาน แม้ผ่านสะอาด) · คำ mastered ที่เอามาทบทวนซ้ำก็ยังไม่ได้แต้ม (กันฟาร์ม)
   var noSoftPoints = !!(session.curWordIsKnownCheck) || !tfSoftPointsAllowed(session.words[session.index]);
   if (noSoftPoints) {
@@ -1354,7 +1355,7 @@ function tfScoreFirstTry() {
 // ให้คะแนน "ผ่าน推導สำเร็จ" (เรียกตอน navigate ไปถึง step 'result')
 function tfScoreDeduce() {
   if (!session) return;
-  // ── Lin 2026-07-05: แยกกฎ day16 ออกจาก known-check แล้ว (เหมือน tfScoreFirstTry ด้านบน) — day16 ไม่มี推導ให้เข้าอยู่แล้วปกติ แต่กันไว้เผื่อ edge case คำหลายพยางค์ ──
+  // รอบตัดสิน Day 7 แยกจาก known-check และไม่มี推導
   var noSoftPoints = !!(session.curWordIsKnownCheck) || !tfSoftPointsAllowed(session.words[session.index]);
   if (noSoftPoints) {
     if (tfCurWordIsMulti()) { if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true; session.curWordAllFirstTry = false; }
@@ -1593,10 +1594,11 @@ function tfLevelWordCount(level) {
 
 // ── สเปก 2026-07-03 ข้อ 3+4+5: อัปเดต SRS ของคำ/ประโยคนี้ตอนจบ (เรียกจาก tfCommitWordAndAdvance) ──
 // "สะอาด" ต้องถูกครั้งแรกทั้งหน่วย (ทุกพยางค์/ทุกคำในประโยค) + ไม่แอบดู + ไม่นับ forced (เฉลยเพราะผิดครบ 3)
-// clean round → เลื่อนขั้น SRS (1→7→16 วัน) → ครบ 3 รอบติด = mastered ตัดออกจาก SRS ถาวร + แจกดาวเงิน
+// clean round → New → Day 1 → Day 7 → Mastered ตาม Phase 1
 // ไม่ clean (ผิด/แอบดู/forced) → รีเซ็ตกลับ day 1 เข้าคิวใหม่ (กันโกงข้อ 5: ห้ามเร่งขั้นเร็วกว่ากำหนด)
 function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (!entry || !entry.word) return;
+  if (!tfSrsLoggedIn()) return; // Guest Free ไม่มี SRS และห้ามนำรอบก่อน Login ไปนับย้อนหลัง
   if (tfGuideMode) return;   // Lin 2026-07-25: โหมด 提示 = ไม่แตะ SRS เลย (ไม่ได้ดาว ไม่ขยับความคืบหน้า และไม่โดนรีเซ็ตด้วย)
   var wasFinalCheck = !!(session && session.curWordIsFinalSrsCheck);
   var wasKnownCheck = !!(session && session.curWordIsKnownCheck);
@@ -1630,7 +1632,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   var rec = tfGetSrsRecord(entry.word, selectedLevel);
   if (!rec) rec = TF_SRS.blank();
 
-  // ── Lin 2026-07-04: known-check (กดปุ่ม "✓ 已記得") = พิสูจน์ 1 ครั้ง แบบ day16 ──
+  // known-check (กดปุ่ม "✓ 已記得") = พิสูจน์ 1 ครั้งแบบรอบตัดสิน (กฎเดิม ไม่ใช่ SRS checkpoint ปกติ)
   //   ตอบถูกสะอาดครั้งเดียว → ตัดคำออกถาวร (mastered) แต่ "ห้ามแจกดาวเงิน/แต้ม/bump เพดาน" (ต่างจาก mastered จริงที่ผ่านครบ 3 รอบ)
   //   ตอบผิด/แอบดู/forced → resetOnFail กลับ day1 เข้าคิว SRS ปกติ (ไม่ตัดคำ)
   if (wasKnownCheck) {
@@ -1648,7 +1650,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
     var passedStage = rec.stage;   // Lin 2026-07-04: stage ก่อนเลื่อน (0/1/2) = รอบทบทวนที่เพิ่งผ่าน
     var res = TF_SRS.advanceOnClean(rec, Date.now());
     rec = res.rec;
-    // ── Lin 2026-07-04: โบนัสผ่านรอบทบทวน SRS สะอาด (+3 รอบ1/day1 · +2 รอบ2/day7 · +1 รอบ3/day16) — ให้รางวัลคนกลับมาทบทวนตามนัด ──
+    // โบนัสรอบสะอาด 3 ขั้นของ Phase 1 (New / Day 1 / รอบตัดสิน Day 7)
     try {
       var rb = (TF_SCORE.cfg.SRS_REVIEW_BONUS || [])[passedStage] || 0;
       if (rb > 0 && session) {
@@ -1670,7 +1672,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
       } catch (e) {}
     }
   } else {
-    // ผิด/แอบดู/forced (รวมถึงตอบผิดใน day16 final check) → กลับ day 1 เข้าคิวใหม่
+    // ผิด/แอบดู/forced (รวมถึงรอบตัดสิน Day 7) → กลับจุดเริ่ม SRS เข้าคิวใหม่
     rec = TF_SRS.resetOnFail(rec);
   }
   tfSetSrsRecord(entry.word, selectedLevel, rec);
@@ -1678,8 +1680,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (session) { session.curWordIsFinalSrsCheck = false; }
 }
 
-// ── สเปก 2026-07-03 ข้อ 2.5+3: เช็กว่าคำที่กำลังจะเล่นเป็น "day 16 final check" ไหม ──
-// day16 final check = SRS record ของคำนี้อยู่ stage สุดท้ายก่อน mastered (ผ่านมาแล้ว 2 รอบสะอาดติดกัน)
+// เช็กว่าคำที่กำลังจะเล่นเป็นรอบตัดสิน Day 7 ก่อน Mastered หรือไม่
 // ผลตอนเช็ก: ปิดปุ่มแอบดู + ไม่ให้แต้มเกม (soft) ไม่ว่าถูกหรือผิด — ดูจุดใช้งานที่ tfScoreFirstTry/tfScoreDeduce/stepSessionGuess
 function tfSetupSrsFlagsForCurrentWord() {
   session.curWordIsFinalSrsCheck = false;
@@ -1697,7 +1698,7 @@ function tfSetupNextWord() {
   randomEntry = nx;
   var w = nx.word;
   session.currentWordGolden = tfRollGolden();
-  tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check ก่อนตั้งคำถัดไป
+  tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 ก่อนตั้งคำถัดไป
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย ไล่ตามลำดับอัตโนมัติ
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
     var _syls0 = nx.readingTH.split('-');
@@ -2213,6 +2214,23 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
+  if (window.GameFlow) {
+    GameFlow.cancel('tone-finder');
+    if (S.step === 'result' && session) {
+      setTimeout(function () { GameFlow.start({ key: 'tone-finder', nextButton: '#tf-session-next-btn', delaySeconds: 3 }); }, 0);
+    }
+    if (S.step === 'session-summary') {
+      GameFlow.markResult(body);
+      setTimeout(function(){
+        var actions=body.querySelector('.gsh-end-actions');
+        var correct=session&&session.results?session.results.filter(function(r){return (r.mistakes||0)===0;}).length:0;
+        var total=session&&session.results?session.results.length:0;
+        var hl=[];
+        if(tfSrsLoggedIn()&&window.GAME_ACCOUNT){var gs=GAME_ACCOUNT.getStreak();if(gs)hl.push('🔥 連續 '+gs+' 天');if(session&&session.newBadges&&session.newBadges.length)hl.push('🎖️ '+session.newBadges[session.newBadges.length-1].zh);}
+        GameFlow.enhanceResult({key:'tone-result',root:body,actions:actions,correct:correct,total:total,highlights:hl,onReplay:function(){TF._startRandom5();}});
+      },0);
+    }
+  }
   tfApplyGuideHints();   // Lin 2026-07-25: โหมด 提示 เปิดอยู่ → ไฮไลต์ตัวเลือกที่ถูกในขั้น推導
   // Lin 2026-07-11: หลอด本題分數 ย้ายไปโชว์ในการ์ดทอง (#tf-banner) แล้ว — เลิก prepend ซ้ำเข้า body ตรงนี้ (กันโชว์ซ้อน 2 หลอด)
   var practiceSteps = ['session-guess','overview'];
@@ -2310,7 +2328,7 @@ var TONE_OVERRIDE = {
   'แชท':  4   // คำยืมอังกฤษ (chat) เสียงตรี (แช็ท เสียงสั้น) ไม่ใช่โทตามกฎเขียนปกติ
 };
 
-// คำในนี้ = ไม่มีกฎมาตรฐานอธิบายได้จริง → ข้ามขั้นตอน推導ทั้งหมด (ตอบผิด = เฉลยทันที เหมือน day16/known-check)
+// คำในนี้ = ไม่มีกฎมาตรฐานอธิบายได้จริง → ข้ามขั้นตอน推導 (เหมือน final-check/known-check)
 // แต่ตอบถูกครั้งแรกยังได้คะแนนเต็มปกติ (ไม่ใช่ noSoftPoints แบบ known-check)
 function tfCurWordIsToneSpecial() {
   if (!session) return false;
@@ -2471,7 +2489,7 @@ function buildReportInner() {
   var rows = results.map(function(r,i){
     return '<tr>'
       +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(r.entry.word)+'</td>'
+      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(r.entry.word)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(r.finalAnswer&&TONES[r.finalAnswer]?TONES[r.finalAnswer].zh:'（未保留）')+'<br>正解：'+esc(TONES[r.tone]?TONES[r.tone].zh:'—')+'</div></td>'
       +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(r.entry.zh)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(r)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(r.mistakes||0)+'</td>'
@@ -2658,7 +2676,7 @@ function stepSessionSummary() {
 
   // F2 (2026-08-10): ปุ่ม 查看錯題 — โชว์เฉพาะเมื่อมีผลอย่างน้อย 1 คำ (ปกติมีเสมอถ้าเล่นจบรอบจริง)
   var mistakeBtnHtml = total > 0
-    ? '<button type="button" class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mistake_review_open\',{category:\'game\'});}catch(e){}TF.showMistakeReview()">📋 查看錯題</button>'
+    ? '<button type="button" class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mistake_review_open\',{category:\'game\'});}catch(e){}TF.showMistakeReview()">查看本輪詳細紀錄</button>'
     : '';
   return '<div class="tf-session-summary">' +
     minaBlock +
@@ -2688,9 +2706,9 @@ function stepSessionSummary() {
     '<div class="gsh-end-actions">' +
       '<button class="tf-session-next-btn" id="tf-pdf-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 列印／儲存學習紀錄</button>' +
       mistakeBtnHtml +
-      '<button class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF.reselectTopic()">' + (selectedLevel === 3 ? '🎲 再來一句' : '🎲 再來 5 字') + '</button>' +
-      '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">🎮 看其他遊戲</a>' +
-      '<a class="tf-restart-btn" href="leaderboard.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'leaderboard\',from:\'tone_finder\'})}catch(e){}">🏆 看排行榜</a>' +
+      '<button class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF._startRandom5()">再玩一輪</button>' +
+      '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">換個遊戲</a>' +
+      '<a class="tf-restart-btn" href="index.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">回到首頁</a>' +
     '</div>' +
   '</div>';
 }
@@ -2700,7 +2718,7 @@ function stepMistakeReview() {
   if (!session || !session.results) return '';
   var results = session.results;
   var reviewList = results.filter(function (r) { return r.needReview; });
-  var listSource = reviewList.length ? reviewList : results; // ไม่มีคำที่ต้อง複習เลย (完美) → โชว์รายการทั้งหมดแทนหน้าว่างเปล่า
+  var listSource = results;
   var itemsHtml = listSource.map(function (r) {
     var correctTone = TONES[r.tone] || {};
     var guessTone = (r.finalAnswer != null && r.finalAnswer !== 0 && TONES[r.finalAnswer]) ? TONES[r.finalAnswer] : null;
@@ -2708,12 +2726,12 @@ function stepMistakeReview() {
     return '<div class="gsh-mistake-item' + (isWrong ? ' gsh-mistake-wrong' : '') + '">' +
       '<div class="gsh-mistake-q">' + (r.entry && r.entry.word || '—') + (r.entry && r.entry.zh ? '　<span style="font-weight:400;color:#999;font-size:13px;">' + r.entry.zh + '</span>' : '') + '</div>' +
       '<div class="gsh-mistake-row">正確聲調：<b>' + (correctTone.zh || '—') + '</b></div>' +
-      (guessTone ? '<div class="gsh-mistake-row">你的答案：<b>' + guessTone.zh + '</b></div>' : '') +
-      '<div class="gsh-mistake-row">錯誤次數：<b>' + (r.mistakes || 0) + '</b>' + (r.golden ? '　🌟 黃金米題' : '') + (r.forced ? '　📌 已顯示答案' : '') + '</div>' +
+      '<div class="gsh-mistake-row">你的答案：<b>' + (guessTone ? guessTone.zh : '（未保留逐次答案）') + '</b></div>' +
+      '<div class="gsh-mistake-row">再練次數：<b>' + (r.mistakes || 0) + '</b>' + (r.golden ? '　🌟 黃金米題' : '') + (r.forced ? '　📌 已顯示答案' : '') + '</div>' +
     '</div>';
   }).join('');
   return '<div class="tf-session-summary">' +
-    '<div class="gsh-end-title">' + (reviewList.length ? '📋 錯題複習' : '📋 練習紀錄（這輪全部一次答對，沒有錯題）') + '</div>' +
+    '<div class="gsh-end-title">📋 本輪詳細紀錄</div>' +
     '<div class="gsh-mistake-list">' + (itemsHtml || '<div style="text-align:center;color:#999;font-size:13px;">沒有紀錄</div>') + '</div>' +
     '<button type="button" class="gsh-mistake-back tf-restart-btn" onclick="TF.backToMistakeSummary()">← 返回結果</button>' +
   '</div>';
@@ -2897,7 +2915,12 @@ function tfSaveResumeState() {
       wordIds: session.words.map(function (w) { return w.word; }),
       index: session.index,
       total: session.words.length,
-      advSentIdx: (selectedLevel === 3) ? advSentIdx : null
+      advSentIdx: (selectedLevel === 3) ? advSentIdx : null,
+      results: session.results || [],
+      score: session.score || 0,
+      combo: session.combo || 0,
+      maxCombo: session.maxCombo || 0,
+      hardStarsEarned: session.hardStarsEarned || 0
     });
   } catch (e) {}
 }
@@ -2929,16 +2952,31 @@ function tfShowResumeBannerIfAny(data) {
     var lvl = tfResumeLevelLabel(data.level);
     var unitLabel = (data.level === 3) ? '句子' : (total + ' 個字');
     el.innerHTML =
-      '<div class="gsh-resume-title">▶️ 你有練習到一半的紀錄</div>' +
-      '<div class="gsh-resume-detail">' + lvl + ' · ' + unitLabel + '　已完成 ' + done + ' / ' + total + '</div>' +
+      '<div class="gsh-resume-title">上次的安全進度還在</div>' +
+      '<div class="gsh-resume-detail">遊戲：聲調練習・' + lvl + '・' + unitLabel + '・第 ' + (done + 1) + ' / ' + total + '</div>' +
       '<div class="gsh-resume-actions">' +
-        '<button type="button" class="gsh-resume-continue" onclick="TF.resumeSavedSession()">繼續練習</button>' +
-        '<button type="button" class="gsh-resume-restart" onclick="TF.dismissResumeBanner()">重新開始</button>' +
+        '<button type="button" class="gsh-resume-continue" onclick="TF.resumeSavedSession()">繼續上次練習</button>' +
+        '<button type="button" class="gsh-resume-restart" onclick="TF.restartSavedSession()">重新開始本次練習</button>' +
+        '<button type="button" class="gsh-resume-new" onclick="TF.startNewFromResume()">開始新一輪</button>' +
       '</div>';
     el.style.display = 'block';
     __tfResumeSnapshot = data;
     try { if (typeof gtag === 'function') gtag('event','tone_finder_resume_shown',{category:'game'}); } catch (e) {}
   } catch (e) {}
+}
+
+function tfRestoreSavedProgress(data) {
+  if (!session || !data) return;
+  var idx = Math.min(Math.max(0, Number(data.index) || 0), Math.max(0, session.words.length - 1));
+  session.index = idx;
+  session.results = Array.isArray(data.results) ? data.results : [];
+  session.score = Number(data.score) || 0;
+  session.combo = Number(data.combo) || 0;
+  session.maxCombo = Number(data.maxCombo) || 0;
+  session.hardStarsEarned = Number(data.hardStarsEarned) || 0;
+  hist = []; histPos = -1;
+  tfSetupNextWord();
+  tfSaveResumeState();
 }
 
 function startSetSession(words, opts) {
@@ -2955,10 +2993,8 @@ function startSetSession(words, opts) {
   if (!(opts && opts.keepOrder)) {
     entries = entries.slice().sort(function(){ return Math.random() - 0.5; });  // สุ่มลำดับใหม่ทุกครั้ง (高級句子 ข้ามขั้นนี้ ต้องเรียงตามประโยคจริง)
   }
-  // ── สเปก 2026-07-03 ข้อ 3: คำที่ครบกำหนดทบทวน SRS แล้ว → ดันขึ้นหน้าคิว (ไม่ทับ 75/25 เดิม แค่จัดลำดับก่อนเริ่ม) ──
-  if (!(opts && opts.keepOrder) && tfSrsLoggedIn()) {
-    entries = tfPrioritizeDueSrs(entries);
-  }
+  // SRS quota ordering is decided before this function. Do not regroup Due here,
+  // because the shared allocator deliberately spreads review items through a round.
   session = {
     words: entries, index: 0, results: [], currentWordMistakes: 0, currentWordDeduct: 0, stepWrong: false, stepFreePeekUsed: false,
     // ── สเตจ 1: ฟิลด์คะแนน ──
@@ -2975,7 +3011,7 @@ function startSetSession(words, opts) {
     startFired: false
   };
   hist = []; histPos = -1;
-  tfSetupSrsFlagsForCurrentWord();   // สเปก 2026-07-03: เช็ก day16 final check สำหรับคำแรกของ session
+  tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 สำหรับคำแรกของ session
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
   if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
@@ -3240,8 +3276,8 @@ function stepSessionGuess() {
       } else {
         // Lin 2026-07-04: เดาวรรณยุกต์ผิดตอนแรก + กด "🤷 ไม่มั่นใจ" = "ไม่นับกดผิด" (ฟรี) — เสียแค่คอมโบ · คะแนนหักเฉพาะกดผิดในขั้น推導 + ปุ่มแอบดู
         if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // เดาผิด → ตัดสิทธิ์ first-try + คอมโบขาด
-        // ── Lin 2026-07-04: วันที่ 16 (day16 final check) หรือ known-check (กด "✓ 已記得") = ไม่มี推導ให้เลย ผิดปุ๊บนับ fail ทันที รีเซ็ต SRS กลับ day1 ──
-        // (เดิมทุกคำ ผิด/ไม่มั่นใจ จะเข้า推導สอนทีละขั้น แต่ day16/known-check ต้องนึกเองล้วนๆ ไม่มีเครื่องมือช่วยใดๆ)
+        // รอบตัดสิน Day 7 หรือ known-check ไม่มี推導; ผิดแล้วรีเซ็ต SRS ทันที
+        // รอบปกติยังเข้า推導ทีละขั้นได้ แต่ final-check/known-check ต้องนึกเองโดยไม่มีเครื่องมือช่วย
         // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ก็เฉลยทันทีเหมือนกัน — ไม่มีกฎมาตรฐานให้推導จริง เดินขั้นไปก็สอนผิด
         if (tfCurWordNoTools() || tfCurWordIsToneSpecial()) tfForceRevealZero();
         else navigateToInflection();  // Lin 2026-07-16: เดาผิด → เข้าหน้าตรวจ推導เลย ไม่มี popup 開始聲調推導
@@ -3261,13 +3297,13 @@ function stepSessionGuess() {
   // ── Lin 2026-07-04: หน้านี้ไม่มีปุ่ม "?" /แอบดูเลย (ยังไม่เข้า推導) — เดามั่ว/ท้าทายตรงๆ เท่านั้น ──
   // ปุ่ม "?" (= ปุ่มแอบดู ตามที่ Lin ยืนยันว่าเป็นตัวเดียวกัน) อยู่ใน 10 ขั้นย่อยของ推導 ผ่าน optRow()/TF.hint() เท่านั้น
 
-  // ── Lin 2026-07-04: day16 final check = ไม่มีตัวเลือก "ไม่มั่นใจ/ท้าทาย" (推導) ให้กด — มีแต่เดาวรรณยุกต์ตรงๆ 5 ปุ่มเท่านั้น ──
+  // รอบตัดสิน Day 7 ไม่มีตัวเลือก "ไม่มั่นใจ/ท้าทาย" — มีเพียงคำตอบเสียงวรรณยุกต์ 5 ปุ่ม
   // ผิด/ไม่รู้ = ต้องเดา แล้วถ้าผิดก็ fail ทันที (ดูตัน clickAct ข้างบน) ไม่ใช่มีทางลัดไปเข้า推導 อีกทาง
   var dontKnowHtml;
   if (session.curWordIsKnownCheck) {
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✓ 記憶確認 — 答對一次即可移除這個字（不給獎勵）· 禁止使用任何輔助工具，只能憑記憶作答一次</div>';
   } else if (session.curWordIsFinalSrsCheck) {
-    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 16) — 禁止使用任何輔助工具，完全憑記憶作答</div>';
+    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 7) — 禁止使用任何輔助工具，完全憑記憶作答</div>';
   } else if (tfCurWordIsToneSpecial()) {
     // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ไม่มีปุ่ม "ไม่มั่นใจ/ท้าทาย" ให้กด — ไม่มีกฎมาตรฐานให้推導 ต้องจำเสียงไว้ตรงๆ
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✨ 特殊詞（不按規則）— 答對得全部分數，答錯直接看答案，用背的就好</div>';
@@ -3795,13 +3831,21 @@ var TF = {
       }
     }
     pool = tfExcludeMasteredWords(pool, 5); // Lin 2026-07-04: กันคำที่จำได้แล้ว (mastered) โผล่ซ้ำในสุ่ม 5 คำ
-    var words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
+    var words;
+    if (tfSrsLoggedIn() && window.GameFlow && GameFlow.allocateSrs) {
+      var _now=Date.now();
+      var _due=pool.filter(function(w){var r=tfGetSrsRecord(w,tfWordLevel(w));return !!(r&&!r.mastered&&TF_SRS.isDue(r,_now));});
+      var _regular=pool.filter(function(w){return _due.indexOf(w)===-1;});
+      words=GameFlow.allocateSrs({tier:'free',total:Math.min(5,pool.length),due:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return w;},scope:'tone-'+selectedLevel}).items;
+    } else {
+      words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
+    }
     // F5 (2026-08-10): พยายามไม่ให้คำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อนหน้า — สลับที่กับคำถัดไปในชุด (แค่ลองครั้งเดียว)
     //   pool เล็กจนเลี่ยงไม่ได้ (เหลือคำเดียว/ทุกคำในชุดใหม่คือคำเดิม) ก็ปล่อยให้ซ้ำได้ตามที่ Lin ยืนยัน ไม่ใช่ด่านบังคับ
     if (_prevLastWord && words.length > 1 && words[0] === _prevLastWord) {
       var _tmp = words[0]; words[0] = words[1]; words[1] = _tmp;
     }
-    startSetSession(words);
+    startSetSession(words,{keepOrder:true});
   },
   // Lin 2026-07-04: ตัด selectCategory/selectSet/openSpecial ทิ้งแล้ว — หน้าเลือกหมวด/ชุด + 特訓區 ไม่ใช้แล้ว
   // ⭐ Lin 2026-07-25: ปุ่มดาว แยกออกจากปุ่ม勳章(showBadges) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์
@@ -3857,7 +3901,7 @@ var TF = {
   },
   // ── Lin 2026-07-04: "✓ 已記得這個字" แบบเข้ม (กันปั๊ม) ──
   //   เดิม: กดแล้วข้ามคำเฉยๆ (ไม่ตัดคำ ไม่ได้ดาว)
-  //   ใหม่: กดแล้ว "ไม่ตัดคำทันที" → เข้าโหมดพิสูจน์คำนี้ 1 ครั้ง แบบ day16 (ไม่มี推導 ไม่มีใบ้ ตอบครั้งเดียว)
+  // กดแล้วไม่ตัดคำทันที → เข้าโหมดพิสูจน์ 1 ครั้งแบบ final-check (ไม่มี推導/ใบ้)
   //     ถูกสะอาด → ตัดคำออกถาวร (mastered) แต่ "ไม่แจกดาว/แต้ม/bump เพดาน" (ดู tfProcessSrsOnWordCommit)
   //     ผิด → resetOnFail กลับ day1 เข้าคิว SRS ปกติ แล้วไปคำถัดไป
   markKnown: function() {
@@ -4146,7 +4190,7 @@ var TF = {
     box.style.display = isOpen ? 'none' : '';
     btn.textContent = isOpen ? '查看詳細解說' : '收起詳細解說';
   },
-  // ── E3 (2026-08-10): ปุ่ม 繼續練習 บนแถบ resume — เล่น "ชุดคำ/ประโยคเดิม" ซ้ำตั้งแต่ต้น (ไม่ replay กลางพยางค์/คะแนนสะสม — ดูหมายเหตุที่ tfSaveResumeState) ──
+  // Resume saved safe point: restore completed evidence and continue at the saved word.
   resumeSavedSession: function() {
     var data = __tfResumeSnapshot;
     tfHideResumeBanner();
@@ -4155,6 +4199,7 @@ var TF = {
     if (data.level === 3) {
       if (data.advSentIdx != null && data.advSentIdx >= 0 && window.ADV_SENTENCES && ADV_SENTENCES[data.advSentIdx]) {
         TF.startAdvSentence(data.advSentIdx);
+        tfRestoreSavedProgress(data);
       } else {
         TF._startRandom5(); // หาประโยคเดิมไม่เจอ (ข้อมูลเปลี่ยน/เพี้ยน) — สุ่มประโยค高級ใหม่แทน ดีกว่าค้าง
       }
@@ -4168,6 +4213,17 @@ var TF = {
     selectedLevel = data.level || 1;
     selectedCategory = 'ทั้งหมด';
     startSetSession(entries, { keepOrder: true });
+    tfRestoreSavedProgress(data);
+  },
+  restartSavedSession: function() {
+    var data=__tfResumeSnapshot;tfHideResumeBanner();if(!data)return;
+    selectedLevel=data.level||1;
+    if(data.level===3&&data.advSentIdx!=null&&window.ADV_SENTENCES&&ADV_SENTENCES[data.advSentIdx]){TF.startAdvSentence(data.advSentIdx);return;}
+    var entries=(data.wordIds||[]).map(function(wid){for(var i=0;i<WORD_LIST.length;i++)if(WORD_LIST[i].word===wid)return WORD_LIST[i];return null;}).filter(Boolean);
+    if(entries.length)startSetSession(entries,{keepOrder:true});else TF._startRandom5();
+  },
+  startNewFromResume: function() {
+    var data=__tfResumeSnapshot;tfHideResumeBanner();tfClearResumeState();selectedLevel=(data&&data.level)||selectedLevel||1;TF._startRandom5();
   },
   // ปุ่ม 重新開始 บนแถบ resume — แค่ทิ้งข้อมูล resume เก่า (session ที่ auto-start ไปแล้วตอนโหลดหน้าเล่นต่อได้ปกติ ไม่ต้องทำอะไรเพิ่ม)
   dismissResumeBanner: function() {

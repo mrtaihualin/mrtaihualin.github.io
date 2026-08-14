@@ -1736,7 +1736,7 @@ function notifyTeacherClassRequest(d) {
     // 2026-07-22 改（Lin 回報：申請改期系統不完整）：改期以前說「需要老師先選新時間，沒辦法一鍵完成」，
     // 現在改成「每個候選時間各一顆按鈕」（見下面 flexRows 組裝＋action=confirm_reschedule_pick），
     // 老師直接在 LINE 挑一個按下去就搬 Calendar，也能一鍵完成了。
-    // 2026-07-20 改（Lin 檢查 mockup 後要求，見 _แผนงาน/ทำต่อ_2026-07-20.md）：
+    // 2026-07-20 改（Lin 檢查 mockup 後要求；目前行為與後續變更見 MAINTENANCE.md）：
     //   ・申請加課：加「🔍 檢查是否衝突」（LINE 內直接查 Google Calendar，服務帳號有讀取權限）
     //     跟「💬 聯繫學生」（開網站聯絡視窗），跟網站上請求佇列卡片的按鈕看齊；
     //     「📋 到網站處理」保留當備援——實際「排進 Calendar」還是要開「➕ 加課堂時間」那個小視窗，

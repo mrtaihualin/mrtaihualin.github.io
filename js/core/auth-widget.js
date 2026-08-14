@@ -39,6 +39,7 @@
     // Supabase ยังไม่พร้อม/โหลดไม่ได้ → คืน API เปล่า กันหน้าเว็บพัง (เกมยังเล่นได้ปกติ)
     window.SITE_AUTH = {
       ready: false, user: null, authResolved: false,
+      learningOwnerChanged: false, learningOwnerEpoch: 0, learningOwnerId: null,
       onChange: function () {}, doLogout: function () {},
       openProfileEditor: function () {}, renderBadge: function () {}
     };
@@ -66,12 +67,48 @@
     ready: true,
     user: null,
     authResolved: false,
+    learningOwnerChanged: false,
+    learningOwnerEpoch: 0,
+    learningOwnerId: null,
     onChange: onChange,
     doLogout: doLogout,
     openProfileEditor: openProfileEditor,
     renderBadge: renderBadge
   };
   window.SITE_AUTH = API;
+
+  // Phase 1 Guest/Login boundary (Lin 2026-08-13): learning state before Login
+  // must never become account Progress/SRS/Mastered data. These keys contain
+  // account-scoped learning state; GameResume and display preferences are
+  // intentionally excluded so Guest can still continue the active practice.
+  var LEARNING_OWNER_KEY = 'phase1_learning_owner_v1';
+  var ACCOUNT_LEARNING_KEYS = [
+    'tf_srs_v1', 'rgv3_save', 'wo_srs_v1',
+    'tf_badges_v1', 'tf_streak_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1',
+    'thai_game_acct_v1', 'linvault_v1', 'sentence_vault_v1', 'lego_vault_v1'
+  ];
+  function bindLearningOwner(user) {
+    var uid = (user && user.id) ? String(user.id) : '';
+    var owner = '';
+    try { owner = localStorage.getItem(LEARNING_OWNER_KEY) || ''; } catch (e) {}
+    var changed = owner !== uid;
+    if (changed) {
+      try {
+        ACCOUNT_LEARNING_KEYS.forEach(function (key) { localStorage.removeItem(key); });
+        if (uid) localStorage.setItem(LEARNING_OWNER_KEY, uid);
+        else localStorage.removeItem(LEARNING_OWNER_KEY);
+      } catch (e) {}
+      API.learningOwnerEpoch += 1;
+    }
+    API.learningOwnerChanged = changed;
+    API.learningOwnerId = uid || null;
+    return changed;
+  }
+  window.PHASE1_ACCOUNT_BOUNDARY = {
+    bind: bindLearningOwner,
+    ownerKey: LEARNING_OWNER_KEY,
+    learningKeys: ACCOUNT_LEARNING_KEYS.slice()
+  };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -856,6 +893,7 @@
     sb.auth.getSession().then(function (res) {
       API.user = (res.data && res.data.session && res.data.session.user) || null;
       API.authResolved = true;
+      bindLearningOwner(API.user);
       fireChange();
       fetchProfile();
       if (API.user) { logSession(); checkPendingFacebookLinkAudit(); }
@@ -863,6 +901,7 @@
     sb.auth.onAuthStateChange(function (_event, session) {
       API.user = (session && session.user) || null;
       API.authResolved = true;
+      bindLearningOwner(API.user);
       myNick = myAvatar = myBadge = null; // เคลียร์โปรไฟล์เดิม แล้วดึงของ user ปัจจุบันใหม่
       fireChange();
       fetchProfile();

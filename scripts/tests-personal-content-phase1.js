@@ -1,0 +1,85 @@
+#!/usr/bin/env node
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const word = read('js/games/word-vault.js');
+const sentence = read('js/games/sentence-vault.js');
+const page = read('vault.html');
+const ui = read('js/score/personal-content.js');
+const auth = read('js/core/auth-widget.js');
+const readingAuth = read('js/games/reading-auth.js');
+const wordOrder = read('js/games/word-order-app.js');
+const exportFn = read('supabase/functions/account-export/index.ts');
+const failures = [];
+let passes = 0;
+function check(label, condition) {
+  if (condition) { passes++; console.log('✓ ' + label); }
+  else failures.push(label);
+}
+
+check('Login Free word limit = 20', /var MAX_WORDS = 20;/.test(word));
+check('Login Free sentence limit = 10', /var MAX_SENTENCES = 10;/.test(sentence));
+check('Guest cannot add word/sentence personal content', /if \(!_accountReady\(\)\) \{ _requireLogin\(\); return false; \}/.test(word) && /if \(!ready\(\)\) \{ requireLogin\(\); return false; \}/.test(sentence));
+check('sentence library reuses account-backed saved-items table', /var TABLE = 'learning_saved_items'/.test(sentence) && /var VAULT_KEY = 'sentence_vault'/.test(sentence));
+check('same content merges provenance instead of duplicating', /_mergeMetaIntoWord\(existing, meta\)/.test(word) && /mergeMeta\(existing, meta\)/.test(sentence));
+check('Save from a new surface adds provenance before delete behavior', /!_hasSource\(th, meta\.source\)/.test(word) && /!hasSource\(th, meta\.source\)/.test(sentence));
+check('delete uses tombstone and does not touch SRS/history tables', /deleted_at: new Date\(\)\.toISOString\(\)/.test(sentence) && !/tone_srs_state|learning_memory|practice_events/.test(sentence));
+check('account boundary owns sentence local cache', /'sentence_vault_v1'/.test(auth));
+check('auth syncs sentence vault on account transition', /SentenceVault\.sync\(sb, uid\)/.test(readingAuth));
+check('one page has word and sentence tabs', /personal-content-root/.test(page) && /我的單字/.test(ui) && /我的句子/.test(ui));
+check('direct links open the requested personal-content tab', /location\.hash === '#sentences'/.test(ui) && /history\.replaceState\(null, '', '#' \+ tab\)/.test(ui));
+check('old filter UI is superseded and not executable', /type="text\/plain" data-superseded="phase1-personal-content"/.test(page) && !/Search|搜尋/.test(ui));
+check('near-limit and full-gate messages exist', /remaining <= 3/.test(ui) && /已達免費儲存上限/.test(ui));
+check('full gate offers management and disabled upgrade', /管理已儲存內容/.test(ui) && /升級方案/.test(ui) && /upgrade\.disabled = true/.test(ui));
+check('item detail exposes three optional information fields', /คำอ่านไทย/.test(ui) && /Romanization/.test(ui) && /中文翻譯/.test(ui));
+check('practice records and save provenance are per item', /練習紀錄/.test(ui) && /儲存資訊/.test(ui) && /provenance\(item\)/.test(ui));
+check('word-order Save writes sentence library', /SentenceVault\.createSaveBtn/.test(wordOrder) && !/WordVault\.createSaveBtn\(s\.th/.test(wordOrder));
+check('sentence direct practice reuses existing practice mode', /location\.search\.match\(\/\[\?&\]sentence=/.test(wordOrder) && /practiceMode = true;[\s\S]{0,160}SET = \[requestedIndex\]/.test(wordOrder));
+check('account export includes every vault key, not only words', /from\('learning_saved_items'\)/.test(exportFn) && !/eq\('vault_key', 'linvault'\)/.test(exportFn));
+
+// Execute the real sentence-vault implementation: duplicate content must stay
+// one row while the second Save surface is appended to provenance and upserted.
+{
+  const store = {};
+  const win = {
+    localStorage: {
+      getItem: (key) => Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null,
+      setItem: (key, value) => { store[key] = String(value); },
+      removeItem: (key) => { delete store[key]; }
+    },
+    dispatchEvent() {}, CustomEvent: function () {}
+  };
+  const upserts = [];
+  const client = {
+    from() {
+      let mode = '';
+      return {
+        select() { mode = 'select'; return this; },
+        eq() { return this; },
+        upsert(rows) { mode = 'upsert'; upserts.push(rows); return this; },
+        then(resolve) { resolve(mode === 'select' ? { data: [], error: null } : { error: null }); return this; }
+      };
+    }
+  };
+  const document = { createElement: () => ({ style: {}, setAttribute() {}, addEventListener() {} }), getElementById: () => null, body: { appendChild() {} } };
+  const loadSentence = new Function('window', 'localStorage', 'document', 'CustomEvent', 'console', sentence + '\nreturn window.SentenceVault;');
+  const vault = loadSentence(win, win.localStorage, document, win.CustomEvent, { warn() {} });
+  vault.sync(client, 'user-1');
+  vault.addSentence('ฉันกินข้าว', { zh: '我吃飯', source: 'word-order' });
+  vault.addSentence('ฉันกินข้าว', { zh: '我吃飯', source: 'reading-game' });
+  const saved = vault.getAll();
+  const sources = (saved[0] && saved[0].provenance || []).map((row) => row.source).sort();
+  check('sentence duplicate runtime stays one item with both provenance rows', saved.length === 1 && sources.join(',') === 'reading-game,word-order');
+  const last = upserts[upserts.length - 1] && upserts[upserts.length - 1][0];
+  check('sentence duplicate provenance is upserted to account storage', !!(last && JSON.parse(last.source_raw).provenance.length === 2));
+}
+
+if (failures.length) {
+  console.error('\n❌ 我的內容 Phase 1 ไม่ผ่าน ' + failures.length + ' ข้อ:');
+  failures.forEach((failure) => console.error('- ' + failure));
+  process.exit(1);
+}
+console.log('\n✅ 我的內容 Phase 1 ผ่านครบ ' + passes + ' ข้อ');

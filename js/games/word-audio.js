@@ -54,7 +54,7 @@
 
   function play(th, btn) {
     var url = urlFor(th);
-    if (!url) return;
+    if (!url) return Promise.resolve(false);
     try {
       if (_current) { try { _current.pause(); _current.currentTime = 0; } catch (e) {} }
       var a = _cache[url];
@@ -66,8 +66,14 @@
       a.onerror = done;
       a.currentTime = 0;
       var p = a.play();
-      if (p && p.catch) p.catch(done);
-    } catch (e) { if (btn) btn.setAttribute('data-playing', '0'); }
+      if (p && p.then) {
+        return p.then(function () { return true; }).catch(function () { done(); return false; });
+      }
+      return Promise.resolve(true);
+    } catch (e) {
+      if (btn) btn.setAttribute('data-playing', '0');
+      return Promise.resolve(false);
+    }
   }
 
   // สร้างปุ่มแบบ DOM element (ใช้กับ slot ใน เกมอ่าน/เกมพิมพ์/แบนเนอร์เกมเสียง)

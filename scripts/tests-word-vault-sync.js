@@ -5,7 +5,7 @@
  * ตัวทดสอบคุ้มกัน "คลังคำ sync ข้ามเครื่อง" (js/games/word-vault.js)
  *
  * ทำไมต้องมี: กติกาที่ Lin สั่งไว้มีข้อที่ผิดแล้วเสียหายถาวร —
- *   "ห้ามลบคำอัตโนมัติ" · "ห้ามทำข้อมูลเดิมหาย" · "Guest/local เดิมต้องไม่พัง"
+ *   "ห้ามลบคำอัตโนมัติ" · "ห้ามทำข้อมูลเดิมหาย" · "Guest ห้ามสร้าง personal library"
  * ถ้าวันหลังมีคนแก้กฎการรวมคำผิดไปนิดเดียว คำของนักเรียนหายได้จริงโดยไม่มีใครรู้
  * ไฟล์นี้โหลด word-vault.js ตัวจริง (ไม่ก๊อป logic มาเขียนซ้ำ) แล้วป้อนสถานการณ์จริงให้
  *
@@ -57,7 +57,7 @@ function makeWindow() {
 }
 
 /** โหลด word-vault.js ตัวจริงเข้า sandbox (คนละชุดต่อการทดสอบ 1 เคส) */
-function loadVault() {
+function loadVault(guest) {
   const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'games', 'word-vault.js'), 'utf8');
   const win = makeWindow();
   const sandboxGlobals = {
@@ -67,6 +67,9 @@ function loadVault() {
   // word-vault.js เป็น IIFE ที่รับ global เข้าไป — ยิง (window) ให้ตรงกับของจริงในเบราว์เซอร์
   const fn = new Function(...Object.keys(sandboxGlobals), src + '\n;return window.WordVault;');
   const vault = fn(...Object.values(sandboxGlobals));
+  // Account tests start from a verified Login owner. The offline write response
+  // leaves newly-added words unsynced so the following explicit sync can test retry/merge.
+  if (!guest) vault.sync(makeClient([], { upsertError: 'offline' }).client, UID);
   return { vault, win };
 }
 
@@ -118,19 +121,17 @@ const UID = 'user-1';
 const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w));
 
 // ════════════════════════════════════════════════════════════════════════════
-// 1) Guest (ยังไม่ล็อกอิน) — ต้องทำงานแบบเดิม 100% และไม่ยิงเซิร์ฟเวอร์เลย
+// 1) Guest (ยังไม่ล็อกอิน) — ไม่มี personal library และไม่ยิงเซิร์ฟเวอร์
 // ════════════════════════════════════════════════════════════════════════════
 {
-  const { vault } = loadVault();
-  vault.addWord('ข้าว', { zh: '飯', source: 'reading-game' });
+  const { vault } = loadVault(true);
+  const added = vault.addWord('ข้าว', { zh: '飯', source: 'reading-game' });
   const { client, log } = makeClient([]);
   vault.sync(client, null);                    // ไม่มี user = guest
-  ok('1a guest: คำในเครื่องยังอยู่', vault.count() === 1);
+  ok('1a guest: ไม่สร้างคลังคำส่วนตัว', added === false && vault.count() === 0);
   ok('1b guest: ไม่ยิงเซิร์ฟเวอร์เลย', log.selects === 0 && log.upserts.length === 0);
-  vault.addWord('กิน', { zh: '吃' });
-  ok('1c guest: เพิ่มคำต่อได้ปกติ', vault.count() === 2);
-  vault.removeWord('กิน');
-  ok('1d guest: ลบคำได้ปกติ', vault.count() === 1 && !vault.has('กิน'));
+  ok('1c guest: API เพิ่มคำตอบ false', vault.addWord('กิน', { zh: '吃' }) === false);
+  ok('1d guest: API ลบคำตอบ false', vault.removeWord('กิน') === false && vault.count() === 0);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -147,8 +148,9 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   const row = firstRow(log.upserts, 0);
   ok('2b แถวที่ส่งมี user_id + vault_key + word_th ถูกต้อง',
      row.user_id === UID && row.vault_key === 'linvault' && row.word_th === 'ข้าว', JSON.stringify(row));
-  ok('2c ส่ง source ดิบลง source_raw (ไม่ใช่ source_surface ที่มี FK)',
-     row.source_raw === 'reading-game' && row.source_surface === undefined, JSON.stringify(row));
+  const sourceMeta = JSON.parse(row.source_raw);
+  ok('2c ส่ง provenance ลง source_raw โดยไม่ใช้ source_surface ที่มี FK',
+     sourceMeta.kind === 'word' && sourceMeta.provenance[0].source === 'reading-game' && row.source_surface === undefined, JSON.stringify(row));
   ok('2d คำในเครื่องไม่หาย', vault.count() === 2);
 }
 
@@ -209,25 +211,25 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// 6) 🔴 รวมคำ 2 เครื่องแล้วเกินเพดาน 30 — ห้ามตัดคำทิ้ง ให้บล็อกการเพิ่มใหม่แทน
+// 6) 🔴 รวมคำ 2 เครื่องแล้วเกินเพดาน Login Free 20 — ห้ามตัดคำทิ้ง ให้บล็อกการเพิ่มใหม่แทน
 // ════════════════════════════════════════════════════════════════════════════
 {
   const { vault } = loadVault();
-  for (let i = 0; i < 30; i++) vault.addWord('คำA' + i, { zh: 'A' + i });   // เครื่องนี้เต็ม 30
+  for (let i = 0; i < 20; i++) vault.addWord('คำA' + i, { zh: 'A' + i });   // เครื่องนี้เต็ม 20
   const remote = [];
   for (let i = 0; i < 25; i++) remote.push({ word_th: 'คำB' + i, zh: 'B' + i, tags: [] }); // เครื่องอื่นอีก 25
   const { client } = makeClient(remote);
   vault.sync(client, UID);
-  ok('6a รวมคำได้ครบทั้ง 55 คำ แม้เกินเพดาน 30', vault.count() === 55, 'ได้ ' + vault.count());
-  ok('6b ไม่มีคำไหนถูกตัดทิ้ง (เครื่องนี้ครบ 30)',
-     vault.has('คำA0') && vault.has('คำA29'));
+  ok('6a รวมคำได้ครบทั้ง 45 คำ แม้เกินเพดาน 20', vault.count() === 45, 'ได้ ' + vault.count());
+  ok('6b ไม่มีคำไหนถูกตัดทิ้ง (เครื่องนี้ครบ 20)',
+     vault.has('คำA0') && vault.has('คำA19'));
   ok('6c ของเครื่องอื่นครบ 25', vault.has('คำB0') && vault.has('คำB24'));
   ok('6d เกินเพดาน = ถือว่าเต็ม', vault.isFull() === true);
   const added = vault.addWord('คำใหม่', { zh: 'new' });
   ok('6e บล็อกการเพิ่มคำใหม่ชั่วคราว (ไม่ใช่ตัดคำเก่าทิ้ง)',
-     added === false && vault.count() === 55 && !vault.has('คำใหม่'));
+     added === false && vault.count() === 45 && !vault.has('คำใหม่'));
   vault.removeWord('คำA0');
-  ok('6f ผู้ใช้ลบเองได้ตามปกติ (ทางออกจากสถานะเกินเพดาน)', vault.count() === 54 && !vault.has('คำA0'));
+  ok('6f ผู้ใช้ลบเองได้ตามปกติ (ทางออกจากสถานะเกินเพดาน)', vault.count() === 44 && !vault.has('คำA0'));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -265,7 +267,7 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// 9) ล็อกเอาท์ (uid = null หลังเคยล็อกอิน) → กลับเป็น local ไม่ลบคำทิ้ง
+// 9) ล็อกเอาท์ (uid = null หลังเคยล็อกอิน) → ซ่อน/ล้าง account cache และห้ามเพิ่มคำ
 // ════════════════════════════════════════════════════════════════════════════
 {
   const { vault } = loadVault();
@@ -273,10 +275,9 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   const a = makeClient([]);
   vault.sync(a.client, UID);
   vault.sync(a.client, null);                 // ล็อกเอาท์
-  ok('9a คำในเครื่องยังอยู่หลังล็อกเอาท์', vault.count() === 1);
+  ok('9a ล็อกเอาท์แล้วไม่เห็น account library', vault.count() === 0);
   const b = makeClient([]);
-  vault.addWord('กิน', { zh: '吃' });
-  ok('9b เพิ่มคำหลังล็อกเอาท์ได้ และไม่ยิงเซิร์ฟเวอร์', vault.count() === 2 && b.log.upserts.length === 0);
+  ok('9b เพิ่มคำหลังล็อกเอาท์ไม่ได้และไม่ยิงเซิร์ฟเวอร์', vault.addWord('กิน', { zh: '吃' }) === false && vault.count() === 0 && b.log.upserts.length === 0);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -406,6 +407,26 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   ok('14e การลบถอยไปใช้วิธีเดิม (ลบแถวจริง) ไม่เงียบ ไม่พัง',
      c.log.deletes.length === 1, 'deletes=' + JSON.stringify(c.log.deletes));
   ok('14f คำหายจากเครื่อง', !vault.has('ข้าว') && vault.count() === 1);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 15) บันทึกคำเดิมจากเกมใหม่ → 1 รายการ แต่ provenance ต้องมีครบทุกแหล่ง
+// ════════════════════════════════════════════════════════════════════════════
+{
+  const { vault } = loadVault();
+  vault.addWord('ข้าว', { zh: '飯', source: 'reading-game' });
+  const c = makeClient([]);
+  vault.sync(c.client, UID);
+  vault.addWord('ข้าว', { zh: '飯', source: 'typing-game' });
+  const all = vault.getAll();
+  const sources = (all[0] && all[0].provenance || []).map((row) => row.source).sort();
+  ok('15a คำซ้ำยังมีเพียง 1 รายการ', all.length === 1, JSON.stringify(all));
+  ok('15b provenance รวมแหล่งเดิมและแหล่งใหม่',
+     sources.join(',') === 'reading-game,typing-game', JSON.stringify(sources));
+  const lastBatch = c.log.upserts[c.log.upserts.length - 1] || [];
+  const pushedMeta = lastBatch[0] && JSON.parse(lastBatch[0].source_raw);
+  ok('15c provenance ใหม่ถูกส่งขึ้นบัญชี',
+     pushedMeta && pushedMeta.provenance.length === 2, JSON.stringify(lastBatch));
 }
 
 // ── สรุป ────────────────────────────────────────────────────────────────────

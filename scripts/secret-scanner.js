@@ -42,6 +42,9 @@ const PUBLIC_CONTEXTS = Object.freeze({
     'js/core/shared.js',
     'js/core/shared.min.js',
     'js/core/supabase-config.js',
+    // Phase 1 staging: publishable key เป็น browser key โดยหน้าที่ แต่ล็อก path แบบ exact ไว้ไฟล์เดียว
+    // ไฟล์นี้ถูก .gitignore อยู่แล้ว; allowlist นี้ไม่ครอบ sb_secret_/service_role และไม่ใช้ wildcard
+    'js/core/supabase-config.staging.js',
     'js/games/game-content-client.js',
     'pricing.html',
     // 2026-08-10: ใช้ anon key เดิม (public) ฝังไว้ตั้งใจ เป็นค่าอ้างอิงสำหรับแทนที่

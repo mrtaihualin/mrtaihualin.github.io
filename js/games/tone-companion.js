@@ -35,7 +35,8 @@
   // ════════ 1) เซฟคะแนนรอบเล่นลง tone_sessions (ดักจาก GA4 events ที่เกมยิงอยู่แล้ว) ════════
   var sessionMode = null;
   var wrongBuffer = [];
-  var lastSession = null;   // snapshot รอบล่าสุด เผื่อ login ทีหลัง → บันทึกย้อนหลัง
+  var sessionSeq = 0;
+  var saveStates = {};      // กัน event complete ซ้ำในรอบเดียวกัน
 
   var origGtag = window.gtag || function () {};
   window.gtag = function () {
@@ -47,29 +48,33 @@
 
   function handleEvent(name, params) {
     if (name === 'tone_finder_start') {
+      sessionSeq++;
       sessionMode = params.mode || null;
       wrongBuffer = [];
     } else if (name === 'tone_answer_wrong') {
       wrongBuffer.push({ word: params.word, selected: params.selected, correct: params.correct });
     } else if (name === 'tone_finder_complete') {
-      lastSession = {
+      var completedSession = {
+        _client_session_seq: sessionSeq,
         mode: sessionMode,
         score: typeof params.score === 'number' ? params.score : null,
         total: typeof params.total === 'number' ? params.total : null,
         wrong_words: wrongBuffer.slice()
       };
-      saveSession(lastSession);
+      saveSession(completedSession);
     }
   }
 
   function saveSession(s) {
-    s = s || lastSession;
     if (!s) return;
     var u = window.READING_AUTH && READING_AUTH.user;
-    if (!u) return; // ยังไม่ล็อกอิน → คะแนนค้างใน lastSession รอ login มาบันทึกย้อนหลัง (GA4 ยังนับภาพรวมให้)
+    if (!u) return; // Guest รอบนี้ไม่นับย้อนหลังหลัง Login (Lin 2026-08-13)
+    var saveKey = String(u.id) + ':' + String(s._client_session_seq || 0);
+    if (saveStates[saveKey]) return;
+    saveStates[saveKey] = 'pending';
     // v2 (LIN 2026-07-25, audit): ใช้ window.isSiteAdmin (email + user id) แทนเช็ค email อย่างเดียว
     //   กัน Facebook/LINE ของแอดมิน (อาจไม่มี email) หลุดรอดเข้า leaderboard เกมเสียง
-    if ((window.isSiteAdmin && window.isSiteAdmin(u)) || (u.email || '') === ADMIN_EMAIL) { lastSession = null; return; } // admin: ไม่นับคะแนนใน ranking
+    if ((window.isSiteAdmin && window.isSiteAdmin(u)) || (u.email || '') === ADMIN_EMAIL) { saveStates[saveKey] = 'done'; return; } // admin: ไม่นับคะแนนใน ranking
     var row = {
       user_id: u.id,
       mode: s.mode,
@@ -79,12 +84,13 @@
     };
     sb.from('tone_sessions').insert(row).then(function (res) {
       if (res.error) {
+        delete saveStates[saveKey]; // อนุญาต retry ของรอบบัญชีเดิมหลัง error
         console.warn('[tone-finder] บันทึกไม่สำเร็จ:', res.error.message);
         showScoreToast('⚠️ 分數儲存失敗：' + res.error.message, false);
         try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: res.error.message, mode: s.mode || '' }); } catch (e) {}
       } else {
         console.info('[tone-finder] บันทึกผลแล้ว score=' + s.score);
-        if (lastSession === s) lastSession = null;   // บันทึกสำเร็จ → เคลียร์ค้าง กันบันทึกซ้ำ
+        saveStates[saveKey] = 'done';
         showScoreToast('✅ 已儲存分數 ' + (s.score || 0) + ' 分', true);
         try { if (window.gtag) gtag('event','score_saved',{category:'game', score: s.score || 0, mode: s.mode || '' }); } catch (e) {}
       }
@@ -127,13 +133,13 @@
     } catch (e) {}
   }
 
-  // ── ผูกกับ SITE_AUTH: ล็อกอิน/สลับบัญชี → ปลดล็อก admin + บันทึกคะแนนค้าง (ถ้ามี) ──
+  // ── ผูกกับ SITE_AUTH: ล็อกอิน/สลับบัญชี → ปลดล็อก admin เท่านั้น
+  // ห้ามบันทึกรอบ Guest ย้อนหลังหลัง Login ตาม Phase 1 boundary
   try {
     if (window.SITE_AUTH && SITE_AUTH.onChange) {
       SITE_AUTH.onChange(function (u) {
         if (!u) return;
         adminUnlockAll(u.email || '');
-        if (lastSession) saveSession(lastSession);
       });
     }
   } catch (e) {}

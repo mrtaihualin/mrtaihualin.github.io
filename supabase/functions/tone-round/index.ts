@@ -200,7 +200,7 @@ function computeTone(word) {
 // ════════════════════════════════════════════════════════════
 
 var TF_SRS_CFG = {
-  INTERVALS: [1, 7, 16],   // วัน: รอบ1=+1วัน · รอบ2=+7วัน · รอบ3(day16)=make-sure check → mastered
+  INTERVALS: [1, 7],       // Phase 1: New → Day 1 → Day 7 → Mastered
   CLEAN_ROUNDS_TO_MASTER: 3
 };
 
@@ -243,7 +243,7 @@ var TF_SRS = {
     return true;                                           // ยังไม่เคยตั้งกำหนด = พร้อมเล่นทันที
   },
 
-  // นี่คือรอบ "day 16" (การเช็คครั้งสุดท้ายก่อน mastered) ไหม — stage 2 คือรอบที่ 3 (0-based)
+  // นี่คือรอบตัดสิน Day 7 ก่อน mastered ไหม — stage 2 คือรอบที่ 3 (0-based)
   isFinalCheck: function (rec) {
     return !!rec && rec.stage === (this.cfg.CLEAN_ROUNDS_TO_MASTER - 1);
   },
@@ -251,8 +251,8 @@ var TF_SRS = {
   // ตอบถูก "สะอาด" (ไม่แอบดู ไม่ผิดในรอบนี้) → เลื่อนขั้นถัดไป หรือ mastered ถ้าครบ 3 รอบ
   // คืน { rec, justMastered, clean } — clean = mastered แบบไม่เคย fail/peek เลยตลอดเส้นทาง (จำเอง)
   // หมายเหตุ index: รอบที่เพิ่งผ่าน (stage ก่อนบวก) กำหนดว่ารออีกกี่วันถึงรอบถัดไป
-  //   stage 0 ผ่าน (รอบ1) → รออีก INTERVALS[0]=1 วัน ก่อนรอบ2 · stage 1 ผ่าน (รอบ2) → รออีก INTERVALS[1]=7 วัน ก่อนรอบ3(day16)
-  //   stage 2 ผ่าน (รอบ3/day16 final check) → mastered ทันที ไม่ต้องรอ
+  //   stage 0 ผ่าน (New) → รอ 1 วัน · stage 1 ผ่าน (Day 1) → รอ 7 วัน
+  //   stage 2 ผ่าน (รอบตัดสิน Day 7) → mastered ทันที
   advanceOnClean: function (rec, nowMs) {
     rec = rec || this.blank();
     nowMs = nowMs || Date.now();
@@ -269,7 +269,7 @@ var TF_SRS = {
     return { rec: rec, justMastered: false, clean: !rec.everFailed };
   },
 
-  // ตอบผิด (หรือแอบดู/day16 พลาด) → รีเซ็ตกลับ stage 0 (day 1) เข้าคิว SRS ใหม่ + จำว่าเคยพลาด (กู้กลับมาได้ ไม่ใช่จำเอง)
+  // ตอบผิด (รวมรอบตัดสิน Day 7) → รีเซ็ตกลับ stage 0 เข้าคิว SRS ใหม่
   resetOnFail: function (rec) {
     rec = rec || this.blank();
     rec.stage = 0;
@@ -297,7 +297,7 @@ var TF_SCORE_CFG = {
   //   ทุกคนเริ่ม 10 เท่ากัน · ผิด 1=7 · 2=4 · 3=1 · 4=0(fail เฉลย+SRS รีเซ็ต day1)
   //   "กดผิด" = เดาวรรณยุกต์ผิดตอนแรก + กดผิดในทุกขั้น推導 + กดปุ่มแอบดู(?) · กด "🤷 ไม่มั่นใจ" ไม่นับผิด
   WRONG_LADDER: [10, 7, 4, 1, 0],
-  SRS_REVIEW_BONUS: [3, 2, 1],  // Lin 2026-07-04: โบนัสตอนผ่านรอบทบทวน SRS สะอาด — รอบ1(day1)+3 · รอบ2(day7)+2 · รอบ3(day16)+1
+  SRS_REVIEW_BONUS: [3, 2, 1],  // Phase 1: New+3 · Day 1+2 · รอบตัดสิน Day 7+1
   SCORE_DEDUCE_BASE: 5,      // (เลิกใช้แล้ว — เก็บไว้กันโค้ดเก่าอ้างถึง)
   SCORE_MIN_PER_WORD: 1,     // (เลิกใช้แล้ว)
   SCORE_FAIL_ZERO: 0,        // ผิดครบเพดาน (fail) = 0 pt เสมอ
@@ -539,7 +539,8 @@ function resolveRound(input) {
   if (!level) return reject('bad_level', account);
   if (!word)  return reject('bad_word', account);
 
-  var rec = input.srsRecord ? cloneRec(input.srsRecord) : TF_SRS.blank();
+  var hadSrsRecord = !!input.srsRecord;
+  var rec = hadSrsRecord ? cloneRec(input.srsRecord) : TF_SRS.blank();
 
   // มาสเตอร์ไปแล้ว = ไม่ต้องเล่นซ้ำ (กันฟาร์มคำที่ตัดออกจาก SRS แล้ว)
   if (rec.mastered) return reject('already_mastered', account, { newSrsRecord: rec });
@@ -592,6 +593,10 @@ function resolveRound(input) {
     }
     return ok('advanced', true, false, 0, false, res.rec, account);
   }
+
+  // Phase 1 entry rule: คะแนนต่ำกว่า 10/10 ของ item ใหม่ยังอยู่ Normal Pool
+  // และต้องไม่สร้างแถว SRS/Mastered evidence ขึ้นมาก่อน ผ่าน 10/10 ครั้งแรก
+  if (!hadSrsRecord) return reject('below_entry_score', account, { newSrsRecord: null });
 
   // เดาผิด/ไม่มั่นใจ/คำนวณไม่ได้ → รีเซ็ต SRS กลับ day1 (everFailed=true → คราวหน้าได้แค่ "กู้กลับมา"=1 ดาว)
   return ok('reset', false, false, 0, false, TF_SRS.resetOnFail(rec), account);
@@ -663,7 +668,7 @@ Deno.serve(async (req: Request) => {
   // 2026-08-01: เปลี่ยนชื่อไฟล์ mix.html → games-challenge.html + เปลี่ยน id "mix" → "challenge"
   //   ⚠️ ต้อง deploy ไฟล์นี้ใหม่ (supabase functions deploy tone-round) ก่อนถึงจะเริ่มแจกดาว/จำ SRS ให้เกมรวมได้จริง
   const game = String(body.game || "tone");
-  if (!["tone", "reading", "typing", "wordorder", "challenge"].includes(game)) return json({ error: "bad game" }, 400);
+  if (!["tone", "reading", "listening", "typing", "wordorder", "challenge"].includes(game)) return json({ error: "bad game" }, 400);
   const spellingGame = game !== "tone"; // อ่าน/พิมพ์/เรียงประโยค = trust-clean (เซิร์ฟเวอร์ตรวจเองไม่ได้ → เชื่อ flag clean)
 
   // ── อ่าน state จริงจาก DB (source of truth) ──

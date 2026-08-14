@@ -73,11 +73,20 @@
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=18">
-<script src="js/games/word-vault.js?v=3"></script><!-- คลังคำ 🔖 -->
+<link rel="stylesheet" href="css/shared.css?v=20">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/core/supabase-config.js?v=5"></script>
+<script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
+<script defer src="js/core/auth-widget.js?v=6"></script>
+<script defer src="js/games/game-account.js?v=3"></script>
+<script defer src="js/games/reading-auth.js?v=17"></script>
+<script defer src="js/games/tone-server.js?v=2"></script>
+<script defer src="js/games/typing-score.js?v=1"></script>
+<script defer src="js/games/listening-score.js?v=1"></script>
+<script src="js/games/word-vault.js?v=5"></script><!-- คลังคำ 🔖 -->
 <script src="data/audio-manifest.js?v=2"></script><!-- รายชื่อคำที่มีไฟล์เสียง TTS -->
 <script src="data/audio-disabled.js?v=1"></script><!-- คำ/ประโยคที่ปิดเสียงชั่วคราว -->
-<script src="js/games/word-audio.js?v=3"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ -->
+<script src="js/games/word-audio.js?v=4"></script><!-- ปุ่มลำโพงฟังเสียงคำศัพท์ -->
 <script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ -->
 <script src="js/games/game-content-client.js?v=3"></script>
 <style>
@@ -216,7 +225,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 <body>
 <!--ANN-BAND:START--><script>try{if(sessionStorage.getItem('annDismissed')==='1')document.documentElement.classList.add('ann-off');}catch(e){}</script><div class="avail-band" id="ann-band" style="position:relative"><div class="avail-row"><span class="avail-dot"></span><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><button class="avail-cta" onclick="openModal('modal-line-qr')">立即預約</button></div><div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;"><button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button><div style="display:flex;align-items:center;gap:6px;"><span onclick="annGoTo(0)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:var(--gold);transition:background 0.2s;"></span><span onclick="annGoTo(1)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(2)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(3)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(4)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span></div><button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button></div><button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button></div><!--ANN-BAND:END-->
 
-<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="/my-progress.html">學習</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/content.html">📚 影片與文章</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
 
 <div class="page-strip">
   <span class="page-strip-label">頁面</span>
@@ -231,13 +240,28 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 <div class="v3-page gsh-shell">
 
 <div class="page-header">
-  <h1 class="page-title" style="margin:0;">🎧 測試</h1>
+  <h1 class="page-title" style="margin:0;">🎧 聽力練習室</h1>
   <div class="page-sub">聽發音，選出來或打出來</div>
+</div>
+
+<div id="lg-howto-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:18px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:24px 22px;position:relative;font-family:'Noto Sans TC',sans-serif;color:#333;line-height:1.75;">
+    <button type="button" aria-label="關閉玩法" onclick="document.getElementById('lg-howto-modal').style.display='none'" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:#888;min-width:32px;min-height:32px;">✕</button>
+    <div style="font-family:'Noto Serif TC',serif;font-size:22px;font-weight:900;color:var(--gold);margin-bottom:10px;">🎧 怎麼玩？</div>
+    <p style="margin:0 0 10px;">先在每輪開始前選擇模式，開始後模式會鎖定到本輪結束。每題可以按 🔊 重聽；只有聲音播放成功才會計入聆聽次數。</p>
+    <p style="margin:0 0 6px;"><strong>選擇答案</strong>：從四個泰文字中選答案。聽第 1–2 次得 5 分，第 3／4／5／6 次為 3／2／1／0 分。</p>
+    <p style="margin:0 0 6px;"><strong>輸入答案（1–2 個詞）</strong>：聽第 1–2 次得 10 分，第 3／4／5／6 次為 7／4／1／0 分。</p>
+    <p style="margin:0 0 10px;"><strong>輸入答案（3 個詞以上）</strong>：聽第 1–3 次得 10 分，第 4／5／6／7 次為 7／4／1／0 分。</p>
+    <p style="margin:0 0 10px;">輸入模式另有獨立的打字加分。打字加分降到 0，仍要繼續輸入到正確；但聽力分數降到 0，這次作答會公布答案並把題目排回後面再練。</p>
+    <p style="margin:0;">登入後才會把這輪記入你的學習紀錄與聽力 SRS；訪客仍可免費玩，登入時不會把登入前的活動倒灌進帳號。</p>
+  </div>
 </div>
 
 <div class="rg-tools-row">
   <div style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:var(--cream);border:1.5px solid var(--gold-bright);border-radius:16px;padding:10px 12px;">
     <span class="tf-streak-chip">🎧 一輪 10 題，聽音辨字</span>
+    <button class="tf-streak-chip" type="button" onclick="document.getElementById('lg-howto-modal').style.display='flex'" style="border:0;cursor:pointer;">📖 玩法</button>
+    <span id="rg-login-slot" style="margin-left:auto;"></span>
   </div>
 </div>
 
@@ -248,11 +272,12 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 
 <!-- RESUME BANNER — โชว์เฉพาะเมื่อมีรอบที่เล่นค้างไว้จริงใน localStorage (Phase E3) -->
 <div class="gsh-resume-banner" id="lg-resume-banner" style="display:none;">
-  <div class="gsh-resume-title">你有一輪還沒做完的聽力練習</div>
+  <div class="gsh-resume-title">上次的安全進度還在</div>
   <div class="gsh-resume-detail" id="lg-resume-detail"></div>
   <div class="gsh-resume-actions">
-    <button class="gsh-resume-continue" id="lg-resume-continue" type="button">繼續練習</button>
-    <button class="gsh-resume-restart" id="lg-resume-restart" type="button">重新開始</button>
+    <button class="gsh-resume-continue" id="lg-resume-continue" type="button">繼續上次練習</button>
+    <button class="gsh-resume-restart" id="lg-resume-restart" type="button">重新開始本次練習</button>
+    <button class="gsh-resume-new" id="lg-resume-new" type="button">開始新一輪</button>
   </div>
 </div>
 
@@ -273,6 +298,8 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
         <div>第 <span id="lg-qn">1</span>/<span id="lg-qt">10</span> 題</div>
         <div>✓ <span id="lg-ok">0</span></div>
         <div>✗ <span id="lg-bad">0</span></div>
+        <div>總分 <span id="lg-score">0</span></div>
+        <div>聽 <span id="lg-listens">0</span></div>
       </div>
     </div>
     <div class="bars-wrap">
@@ -331,16 +358,17 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   </div>
 
   <div class="end-actions gsh-end-actions">
-    <button class="btn btn-primary lg-restart-btn" type="button">🔁 再玩一次</button>
-    <button class="btn btn-secondary" id="lg-mistake-btn" type="button">📕 查看錯題</button>
+    <button class="btn btn-primary lg-restart-btn" id="lg-replay-btn" type="button">再玩一輪</button>
+    <button class="btn btn-secondary" id="lg-mistake-btn" type="button">📕 查看本輪詳細紀錄</button>
     <button class="btn btn-secondary" id="lg-print-btn" type="button">📄 列印／儲存學習紀錄</button>
-    <a class="btn btn-secondary" href="games.html">🎮 回遊戲總覽</a>
+    <a class="btn btn-secondary" href="games.html">換個遊戲</a>
+    <a class="btn btn-secondary" href="index.html">回到首頁</a>
   </div>
 </div>
 
 <!-- MISTAKE REVIEW SCREEN — 查看錯題 (Phase F2) -->
 <div id="lg-mistakes" class="card" style="display:none;">
-  <h2 class="gsh-end-title">📕 這輪答錯的題目</h2>
+  <h2 class="gsh-end-title">📕 本輪詳細紀錄</h2>
   <div class="gsh-mistake-list" id="lg-mistake-list"></div>
   <button class="btn btn-secondary gsh-mistake-back" id="lg-mistake-back" type="button">← 返回結果</button>
 </div>
@@ -349,11 +377,13 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 
 <footer>
   專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>
-  <a href="terms.html" style="color:var(--ink-muted);text-decoration:underline;">使用條款與著作權聲明</a>
+  <span class="footer-legal"><a href="/terms.html" style="color:inherit;text-decoration:underline;">使用條款與著作權聲明</a><span aria-hidden="true"> · </span><a href="/privacy.html" style="color:inherit;text-decoration:underline;">隱私權政策</a></span><br>
+  <span class="footer-copyright">© 2026 mrtaihualin.com</span>
 </footer>
 
-<script src="data/nav-template.js?v=2"></script>
-<script src="js/core/shared.min.js?v=27"></script>
+<script src="data/nav-template.js?v=3"></script>
+<script src="js/core/shared.min.js?v=31"></script>
+<script src="js/games/game-flow.js?v=2"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>
@@ -367,7 +397,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 <div id="game-switcher" data-current="listening_game"></div>
 <script src="js/games/game-switcher.js?v=1"></script>
 
-<script>GameContentLoader.boot(['js/games/listening-game-app.js?v=2']);</script>
+<script>document.addEventListener('DOMContentLoaded',function(){GameContentLoader.boot(['js/games/listening-game-app.js?v=6']);});</script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
 <div id="cookieConsentBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
@@ -416,6 +446,6 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   }
 </script>
 
-<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">我的</span></a></nav>
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">📚</span><span class="bn-label">學習</span></a></nav>
 </body>
 </html>

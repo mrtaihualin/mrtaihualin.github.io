@@ -111,15 +111,33 @@ runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 // เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');
 runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
+// เพิ่ม 2026-08-13 — Guest activity ห้ามกลายเป็น account Progress/SRS/Mastered หลัง Login
+runTest(['scripts/tests-phase1-account-boundary.js'], 'Phase 1 Guest/Login account-boundary tests');
+runTest(['scripts/tests-my-learning-phase1.js'], 'Phase 1 我的學習 tests');
+runTest(['scripts/tests-personal-content-phase1.js'], 'Phase 1 我的內容 tests');
+runTest(['scripts/tests-phase1-srs.js'], 'Phase 1 SRS tests');
+runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
+runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');
+runTest(['scripts/tests-reading-phase1.js'], 'Phase 1 Reading tests');
+runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
+runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export tests');
+runTest(['scripts/tests-shared-games-phase1.js'], 'Phase 1 shared-game-system tests');
+runTest(['scripts/tests-game-flow-delta.js'], 'Locked five-game flow tests');
 // เพิ่ม 2026-08-11 (P5-B) — ตัวทดสอบคุ้มกันกฎห้องเรียนที่เคยพังมาแล้วจริง
 // (กฎล็อกเพิ่ม/เลื่อน/ยกเลิก · สำรองก่อนแตะ Calendar · ตรวจคาบชนตอนย้าย · p_original_time ·
 //  ซิงค์ตารางหลังย้าย · ระบบเก่าที่ลบถาวรห้ามกลับมา · รีเซ็ตธงเตือน · ปุ่ม LINE พก d=/t=)
 // ทดสอบแล้วว่าจับ regression ได้จริง (negative test 2 แบบ) ไม่ใช่ด่านหลอก
 runTest(['scripts/tests-classroom-behavioral.js'], 'classroom behavioral tests');
+// เพิ่ม 2026-08-14 — Textbook temporary client-side gate ต้องครอบสารบัญ+10 บท
+// และห้ามลามไปล็อก Teaching Pages ใน classroom/
+runTest(['scripts/tests-textbook-access-gate.js'], 'Textbook temporary gate tests');
 // เพิ่ม 2026-08-10 — ตัวทดสอบคุ้มกันพฤติกรรมเดิมของ Search MVP
 runTest(['scripts/tests-search-behavioral.js'], 'search behavioral tests');
 // เพิ่ม 2026-08-10 — ตรวจว่า nav/แถบประกาศ/bottom-nav ทุกหน้าตรงกับ data/nav-template.js (read-only)
 runTest(['scripts/check-nav-consistency.js'], 'nav consistency check');
+// เพิ่ม 2026-08-14 — Footer มาตรฐานต้องครอบทุกหน้า Public Shell + vocab cheatsheet
+// และต้องมี Terms, Privacy, copyright โดยไม่มี Contact/Social ใน Footer
+runTest(['scripts/tests-footer-standard.js'], 'footer standard tests');
 // เพิ่ม 2026-08-11 — ตรวจความพร้อมคลังเนื้อหาสำหรับระบบเรียนกลาง (อ่านอย่างเดียว)
 // บล็อกเมื่อ metadata ที่ระบบต้องใช้ขาด (zh/category/level) · ช่องว่างอื่นเป็นรายงานให้ Lin ไม่บล็อก
 // ดูรายการเต็ม: node scripts/audit-learning-content.js --full

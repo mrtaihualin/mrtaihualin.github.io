@@ -15,6 +15,14 @@
   var KEYS = ['tf_badges_v1', 'tf_streak_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1'];
   var STATS_KEEP_DAYS = 30; // ต้องตรงกับ STATS_KEEP_DAYS ใน tone-finder.html (ตัดเก็บแค่ 30 วันล่าสุดหลัง merge)
 
+  function ownerReady() {
+    if (!user || !window.PHASE1_ACCOUNT_BOUNDARY) return false;
+    try {
+      window.PHASE1_ACCOUNT_BOUNDARY.bind(user);
+      return localStorage.getItem(window.PHASE1_ACCOUNT_BOUNDARY.ownerKey) === String(user.id);
+    } catch (e) { return false; }
+  }
+
   function lsGet(k) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function maxNum(a, b) { return Math.max(a || 0, b || 0); }
@@ -80,7 +88,7 @@
 
   // ── ดึงจาก Supabase → merge เข้า local → เขียนกลับขึ้น Supabase (ตอนล็อกอิน) ──
   function pull() {
-    if (!sb || !user) return;
+    if (!sb || !user || !ownerReady()) return;
     // dedupe fetch 2026-07-20: pull() ถูกเรียกทั้งจาก getSession().then และ onAuthStateChange (ยิงหลายรอบต่อโหลดหน้าเดียว)
     //   ห่อ SELECT ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม (ตัว merge/push ด้านล่างยังทำงานเหมือนเดิมทุกครั้งที่เรียก)
     var _fetchTP = window.getCachedFetch
@@ -99,7 +107,7 @@
   // ── ดันความก้าวหน้าปัจจุบันขึ้น Supabase (ตอนจบรอบ) ──
   var pushTimer = null;
   function push() {
-    if (!sb || !user) return;
+    if (!sb || !user || !ownerReady()) return;
     var row = { user_id: user.id, data: collectLocal(), updated_at: new Date().toISOString() };
     sb.from('tone_progress').upsert(row, { onConflict: 'user_id' }).then(function () {}, function () {});
   }
@@ -109,10 +117,12 @@
   if (sb) {
     sb.auth.getSession().then(function (r) {
       user = (r && r.data && r.data.session && r.data.session.user) || null;
+      if (!user && window.PHASE1_ACCOUNT_BOUNDARY) window.PHASE1_ACCOUNT_BOUNDARY.bind(null);
       if (user && !pulled) pull();
     }, function () {});
     sb.auth.onAuthStateChange(function (_evt, session) {
       user = (session && session.user) || null;
+      if (!user && window.PHASE1_ACCOUNT_BOUNDARY) window.PHASE1_ACCOUNT_BOUNDARY.bind(null);
       if (user) pull();
     });
   }

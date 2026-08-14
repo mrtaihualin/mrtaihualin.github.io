@@ -111,8 +111,8 @@ function getSlotOrder(vowel,final){
 // PHONETIC MAPS
 // ════════════════════════════════════════════
 // Lin 2026-07-27: เอาระบบ CONS_SOUND + FINAL_SOUND ออกทั้งหมด (ทั้งสองตาราง ไม่เหลือแม้แต่ส่วนมาตรฐาน)
-// เหตุผล: Lin จะตรวจ+แก้ฟิลด์ cons/vowel/final ในข้อมูลเองให้ถูกต้องโดยตรงทีละคำ (ผ่านไฟล์
-// 2026-07-27_คลังคำศัพท์ทั้งหมด_ให้Linตรวจ.xlsx) แทนที่จะให้เกมคอย "แปลงเสียง" ผ่านตารางอีกชั้น —
+// เหตุผล: Lin จะตรวจ+แก้ฟิลด์ cons/vowel/final ในข้อมูลเองให้ถูกต้องโดยตรงทีละคำ (ผ่าน Current Content source
+// data/words-data.js + data/adv-sentences.js) แทนที่จะให้เกมคอย "แปลงเสียง" ผ่านตารางอีกชั้น —
 // ตอนนี้ 子音/尾音 ในหน้าเฉลย + ไทล์คำตอบ โชว์ค่าที่เก็บในข้อมูลตรงๆ ไม่มีการแปลง/ลูกศรแสดงเสียงอีกต่อไป
 // (CONS_GROUPS/VOWEL_GROUPS/FINAL_GROUPS ที่ใช้สร้างตัวลวงในเกมจับคู่ ยังอยู่เหมือนเดิม คนละระบบ)
 var VOWEL_READ={
@@ -197,7 +197,7 @@ function rgRoundSize(){return ROUND_SIZE_BY_LEVEL[curLevel]||5;}
 var LEVEL_WEIGHT={'初':1,'中':1.5,'高':2};
 var COMBO_TIERS={3:1.5,5:2,8:3};               // คอมโบตอบสะอาดติดกัน → ตัวคูณแต้ม (ลอกเกมเสียง)
 function rgComboMult(streak){return streak>=8?3:(streak>=5?2:(streak>=3?1.5:1));}
-var SRS_REVIEW_BONUS=[3,2,1];                   // โบนัสผ่านรอบทบทวน SRS สะอาด: รอบ1(day1)+3 · รอบ2(day7)+2 · รอบ3(day16)+1
+var SRS_REVIEW_BONUS=[3,2,1];                   // Phase 1: New+3 · Day 1+2 · รอบตัดสิน Day 7+1
 var ROUND_COMPLETE_BONUS=20;                   // จบรอบ +20
 var ROUND_PERFECT_BONUS=50;                    // จบรอบแบบ perfect เพิ่มอีก +50 (รวม 70)
 var GOLDEN_WORD_CHANCE=0.18;                   // โอกาสคำทอง ~18%/คำ (สเปกเดียวกับเกมเสียง)
@@ -208,10 +208,24 @@ var SYL_SCORE=[10,7,4,1];
 function rgSyllableScore(wc){return SYL_SCORE[Math.min(wc||0,3)];}
 // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
 function rgScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
-// 本題分數: คะแนนของ "พยางค์ที่กำลังทำ" ตามจำนวนครั้งที่ผิด (บันได 10/7/4/1) · ตาย(fail)=0
-function rgCurSyllableScore(){ try{ if(typeof wordFailed!=='undefined'&&wordFailed)return 0; var wc=(sylWrongCount&&sylWrongCount.length)?(sylWrongCount[(typeof sylIdx!=='undefined'?sylIdx:0)]||0):(typeof wrongCount!=='undefined'?wrongCount:0); return rgSyllableScore(wc);}catch(e){return 10;} }
+// 本題分數: ก่อนกดครั้งแรกใช้ preview เดิม; หลังกด 檢查 ครั้งแรกต้องแสดงคะแนนที่ล็อกแล้วตลอด attempt
+function rgCurSyllableScore(){ try{ if(readingAttemptScore!=null)return readingAttemptScore; if(typeof wordFailed!=='undefined'&&wordFailed)return 0; var wc=(sylWrongCount&&sylWrongCount.length)?(sylWrongCount[(typeof sylIdx!=='undefined'?sylIdx:0)]||0):(typeof wrongCount!=='undefined'?wrongCount:0); return rgSyllableScore(wc);}catch(e){return 10;} }
 var HIGH_RAW_START_IDX=7;      // 0-based → พยางค์ที่ 8 เป็นต้นไป (เฉพาะ高／ประโยคยาว) ไม่เอาเข้าเฉลี่ย ไม่คูณ weight
 var HIGH_RAW_BONUS_PER_SYL=2;  // +2 ดิบ/พยางค์ (ถ้าพยางค์นั้นถูกในที่สุด — ไม่สเกลตามจำนวนผิด)
+var readingAttemptScore=null;  // Phase 1: snapshot จาก 檢查 ครั้งแรกเท่านั้น; correction ห้ามเขียนทับ
+var readingCorrectionAttempts=0;
+var readingFirstCheckDone=false;
+// ใช้สูตรเดิมของเกมเท่านั้น เพราะ exact component-error mapping ยังรอ Lin re-lock; ฟังก์ชันนี้แค่ snapshot ไม่สร้างสูตรใหม่
+function rgSnapshotExistingAttemptScore(){
+  if(wordUsedGuide)return 0;
+  var n=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.length:1;
+  var avgCount=Math.max(1,Math.min(n,HIGH_RAW_START_IDX));
+  var sum=0,i;
+  for(i=0;i<avgCount;i++)sum+=rgSyllableScore((sylWrongCount&&sylWrongCount[i])||0);
+  var rawBonus=0;
+  for(i=HIGH_RAW_START_IDX;i<n;i++)rawBonus+=HIGH_RAW_BONUS_PER_SYL;
+  return Math.max(0,Math.round(sum/avgCount+rawBonus));
+}
 var RG_LEVEL_TO_NUM={'初':1,'中':2,'高':3}; // map ให้ตรงกับ GAME_ACCOUNT.addHardStars(clean, level:1|2|3)
 var curLevel='初';
 var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,roundTotal=0;
@@ -220,21 +234,22 @@ function rgLogWord(o){
   try{
     var idx=roundQueue[cur];
     var w=WORDS[idx];
-    var base={th:w?w.th:'',zh:w?w.zh:'',wrong:(typeof wrongCount!=='undefined'?wrongCount:0),failed:false,guide:false,pts:0,srsDue:'',mastered:false};
+    var totalWrong=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.reduce(function(a,b){return a+(b||0);},0):(typeof wrongCount!=='undefined'?wrongCount:0);
+    var base={th:w?w.th:'',zh:w?w.zh:'',reading:w&&w.readingTH?w.readingTH:'',userAnswer:(picks||[]).join(' + '),correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
   }catch(e){}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
 function rgWrongItemsFromLog(){
-  try{ return roundLog.filter(function(w){return (w.wrong||0)>0||w.failed;}).map(function(w){return {th:w.th,zh:w.zh,wrong:w.wrong||0};}); }
+  try{ return roundLog.filter(function(w){return (w.wrong||0)>0||w.failed;}).map(function(w){return {th:w.th,zh:w.zh,wrong:w.wrong||0,attemptScore:w.attemptScore,correctionAttempts:w.correctionAttempts||0};}); }
   catch(e){ return []; }
 }
 // F2 (2026-08-10 Shared Game UI Phase F): 查看錯題 — 唯讀畫面，重用 rgWrongItemsFromLog() 一樣的篩選規則（wrong>0 || failed）
 // 直接讀 roundLog 本人（不是它做完 map 的簡化版），因為要多顯示 guide/mastered 狀態文字
 function rgEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function rgBuildMistakeList(){
-  try{ return roundLog.filter(function(w){return (w.wrong||0)>0||w.failed;}); }
+  try{ return roundLog.slice(); }
   catch(e){ return []; }
 }
 function rgShowMistakes(){
@@ -246,10 +261,13 @@ function rgShowMistakes(){
       wrap.innerHTML='<div class="gsh-mistake-item" style="text-align:center;color:#888;">這輪沒有拼錯的字，太棒了 🎉</div>';
     } else {
       wrap.innerHTML=items.map(function(w){
-        var statusTxt=w.failed?'✗ 待加強（之後會再複習到）':(w.guide?'💡 用了提示（不計分）':'✓ 後來拼對了');
-        return '<div class="gsh-mistake-item gsh-mistake-wrong">'
+        var statusTxt=w.failed?'✗ 待加強（之後會再複習到）':(w.guide?'💡 用了提示（不計分）':((w.wrong||0)>0?'✓ 修正後答對':'✓ 答對'));
+        return '<div class="gsh-mistake-item'+((w.wrong||0)>0||w.failed?' gsh-mistake-wrong':'')+'">'
           +'<div class="gsh-mistake-q">'+rgEsc(w.th)+'</div>'
           +'<div class="gsh-mistake-row">'+rgEsc(w.zh||'')+'</div>'
+          +(w.reading?'<div class="gsh-mistake-row">讀音：<b>'+rgEsc(w.reading)+'</b></div>':'')
+          +'<div class="gsh-mistake-row">你的作答：<b>'+rgEsc(w.userAnswer||'（未保留逐次答案）')+'</b></div>'
+          +'<div class="gsh-mistake-row">正確答案：<b>'+rgEsc(w.correctAnswer||w.th)+'</b></div>'
           +'<div class="gsh-mistake-row">狀態：<b>'+statusTxt+'</b>　拼錯 <b>'+(w.wrong||0)+'</b> 次</div>'
           +'</div>';
       }).join('');
@@ -274,7 +292,7 @@ var curWordIsKnownCheck=false; // งานที่7: กำลังอยู�
 function rgLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
 // ── SRS ใหม่ (งานที่4 — ลอกจาก TF_SRS ในเกมเสียง tone-finder.html ~2939-3018 ทุกจุด) ──
 // แทนที่ masteredSet/correctCountMap/reviewDates เดิม (นับถูกติดกันธรรมดา ไม่รีเซ็ตเมื่อผิด) ด้วย stage-based 1→7→16 วัน
-var RG_SRS_CFG={INTERVALS:[1,7,16],CLEAN_ROUNDS_TO_MASTER:3};
+var RG_SRS_CFG={INTERVALS:[1,7],CLEAN_ROUNDS_TO_MASTER:3}; // New → Day 1 → Day 7 → Mastered
 var RG_SRS={
   cfg:RG_SRS_CFG,
   twDate:function(ms){var d=(ms==null)?new Date():new Date(ms);try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(d);}catch(e){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}},
@@ -472,6 +490,7 @@ function rgSaveResumeState(){
       wordIds:roundQueue.map(function(i){return WORDS[i]?WORDS[i].th:null;}),
       cur:cur,okC:okC,badC:badC,streak:streak,maxStreak:maxStreak,
       roundScore:roundScore,cleanC:cleanC,roundTotal:roundTotal
+      ,roundLog:roundLog
     });
   }catch(e){}
 }
@@ -489,7 +508,7 @@ function rgTryLoadResumeBanner(){
   window.__rgPendingResume=st;
   var lvName=(st.level==='中')?'中級':(st.level==='高')?'高級':'初級';
   var detail=document.getElementById('rg-resume-detail');
-  if(detail)detail.textContent=lvName+' · 第 '+(st.cur+1)+'/'+st.wordIds.length+' 字';
+  if(detail)detail.textContent='遊戲：閱讀練習・'+lvName+'・第 '+(st.cur+1)+'/'+st.wordIds.length+' 字';
   banner.style.display='';
   return true;
 }
@@ -513,19 +532,31 @@ function rgResumeContinue(){
   okC=st.okC||0;badC=st.badC||0;streak=st.streak||0;maxStreak=st.maxStreak||0;
   roundScore=st.roundScore||0;cleanC=st.cleanC||0;
   isWordPractice=false;
-  roundLog=[]; // หมายเหตุ: log รายคำของช่วงก่อนปิดหน้าไม่ได้ถูกเก็บไว้ (เก็บแค่ตัวเลขสรุป) → รายงานท้ายรอบหลัง resume จะเริ่มนับตั้งแต่จุดนี้เท่านั้น ไม่ใช่บั๊ก
+  roundLog=Array.isArray(st.roundLog)?st.roundLog:[];
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
   refreshUI();
   loadWord();
 }
-function rgResumeRestart(){
+function rgResumeRestartSame(){
+  var st=window.__rgPendingResume;
+  if(!st){ rgResumeNewRound(); return; }
+  var rq=[];
+  (st.wordIds||[]).forEach(function(th){for(var i=0;i<WORDS.length;i++){if(WORDS[i].th===th&&WORDS[i].level===st.level){rq.push(i);return;}}});
+  if(!rq.length){rgResumeNewRound();return;}
+  var banner=document.getElementById('rg-resume-banner');if(banner)banner.style.display='none';
+  curLevel=st.level||curLevel;roundQueue=rq;roundTotal=rq.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundLog=[];isWordPractice=false;
+  window.__rgPendingResume=null;rgSaveResumeState();
+  document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';refreshUI();loadWord();
+}
+function rgResumeNewRound(){
   try{ if(typeof gtag==='function') gtag('event','reading_game_resume_restart',{category:'game'}); }catch(e){}
   var banner=document.getElementById('rg-resume-banner'); if(banner)banner.style.display='none';
   window.__rgPendingResume=null;
   rgClearResumeState();
   initGame();
 }
+function rgResumeRestart(){rgResumeNewRound();}
 
 // ════════════════════════════════════════════
 // ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='reading') → merge เข้า srsRecords ──
@@ -538,6 +569,14 @@ function rgSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stag
 function rgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=rgSrsRank(a),rb=rgSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
 var __rgSrsSyncPromise=null;
 window.__rgSrsSyncedOnce=false;
+var __rgLearningOwnerEpoch=0;
+function rgResetAccountStateAtBoundary(){
+  var epoch=(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
+  if(!epoch||epoch===__rgLearningOwnerEpoch)return false;
+  __rgLearningOwnerEpoch=epoch;srsRecords={};totalStars=0;totalBadges=0;
+  __rgSrsSyncPromise=null;window.__rgSrsSyncedOnce=false;
+  return true;
+}
 function rgSyncSrsFromServer(force){
   try{ if(!force && !rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
   if(__rgSrsSyncPromise) return __rgSrsSyncPromise;
@@ -577,6 +616,7 @@ function rgWireSrsSync(){
   try{
     if(window.SITE_AUTH && SITE_AUTH.onChange){
       SITE_AUTH.onChange(function(u){
+        rgResetAccountStateAtBoundary();
         if(!u) return;
         if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
         else { __rgSrsSyncPromise=null; rgSyncSrsFromServer(true); }
@@ -701,15 +741,17 @@ function initGame(){
     // งานที่4: กรองด้วย SRS ใหม่ (stage-based) — เฉพาะตอนล็อกอินเท่านั้น (ลอกกฎเกมเสียง: SRS ทำงานเฉพาะล็อกอิน)
     // ไม่ล็อกอิน = เล่นได้ทุกคำเสมอ ไม่มีการจำ mastered/cooldown ในเครื่อง (ตรงสเปกข้อ0 ทั้งสองเกม)
     var pool;
+    var _srsAllocated=false;
     if(rgLoggedIn()){
-      pool=allIdx.filter(function(i){
+      var _dueIdx=allIdx.filter(function(i){
         var rec=srsRecords[rgSrsKey(WORDS[i])];
-        if(rec&&rec.mastered)return false;      // เชี่ยวชาญแล้ว (ตัดออกถาวร)
-        if(rec&&!RG_SRS.isDue(rec,now))return false; // ยังไม่ครบกำหนดทบทวน
-        return true;
+        return !!(rec&&!rec.mastered&&RG_SRS.isDue(rec,now));
       });
-      // ถ้าไม่มีคำพร้อม → เปิด cooldown words ก่อน (ยกเว้น mastered)
-      if(pool.length===0)pool=allIdx.filter(function(i){var rec=srsRecords[rgSrsKey(WORDS[i])];return !(rec&&rec.mastered);});
+      var _regularIdx=allIdx.filter(function(i){var rec=srsRecords[rgSrsKey(WORDS[i])];return !(rec&&rec.mastered)&&_dueIdx.indexOf(i)===-1;});
+      if(window.GameFlow&&GameFlow.allocateSrs&&(_dueIdx.length||_regularIdx.length)){
+        pool=GameFlow.allocateSrs({tier:'free',total:Math.min(rgRoundSize(),_dueIdx.length+_regularIdx.length),due:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return rgSrsKey(WORDS[i]);},scope:'reading-'+curLevel}).items;
+        _srsAllocated=true;
+      }else pool=_dueIdx.concat(_regularIdx);
       // ถ้า mastered ทั้งหมดในระดับนี้ (全部精通) → มาร์คคำครบ + ทบทวนแบบ 0 แต้ม + เด้งหน้าฉลอง (กฎ15)
       if(pool.length===0){
         try{ if(window.GAME_ACCOUNT) GAME_ACCOUNT.markLevelSeen('reading',RG_LEVEL_TO_NUM[curLevel]||1, allIdx.length); }catch(e){}
@@ -722,7 +764,9 @@ function initGame(){
     }
     // Lin 2026-07-13: SRS กรอง pool ก่อนแล้ว (ข้างบน) — เลือก "ลำดับ" ในรอบด้วย pickAdaptive
     // (เน้นคำที่เพิ่งพลาดบ่อยจาก reading_sessions ขึ้นมาก่อน ไม่ทับ/ไม่ยุ่ง SRS)
-    if(window.READING_AUTH && typeof READING_AUTH.pickAdaptive==='function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()){
+    if(_srsAllocated){
+      roundQueue=pool.slice();
+    } else if(window.READING_AUTH && typeof READING_AUTH.pickAdaptive==='function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()){
       var _items=pool.map(function(i){return {idx:i, th:WORDS[i].th};});
       var _picked=READING_AUTH.pickAdaptive(_items, Math.min(rgRoundSize(),_items.length));
       roundQueue=_picked.map(function(p){return p.idx;});
@@ -787,6 +831,7 @@ function loadWord(){
   sylList=buildSyls(WORD);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;sylCache=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   sylWrongCount=new Array(sylList.length).fill(0); // งานที่1: ตัวนับผิดแยกรายพยางค์ (คำใหม่ = ล้าง)
+  readingAttemptScore=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;
   wordUsedGuide=false;curWordIsKnownCheck=false;    // งานที่3+7: ล้างสถานะต่อคำใหม่
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
   document.getElementById('qn').textContent=cur+1;
@@ -1000,7 +1045,10 @@ function finalizeWord(){
     } else {
       b.textContent='綠色才是正確答案 — 這個字之後會再複習到';b.className='result-banner show no';
     }
-    rgLogWord({failed:true,pts:0,srsDue:(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
+    // Phase 1: การเลือก reveal หลัง correction ไม่เปลี่ยนคะแนนที่ first check ล็อกไว้
+    var failedLockedScore=readingAttemptScore==null?0:readingAttemptScore;
+    if(failedLockedScore>0)roundScore+=failedLockedScore;
+    rgLogWord({failed:true,pts:failedLockedScore,srsDue:(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
     doSave();
     return;
   }
@@ -1047,7 +1095,7 @@ function finalizeWord(){
   var avg=sum/avgCount;
   var rawBonus=0;
   for(i=HIGH_RAW_START_IDX;i<n;i++) rawBonus+=HIGH_RAW_BONUS_PER_SYL;
-  var pts=Math.max(1,Math.round(avg+rawBonus));
+  var pts=readingAttemptScore==null?Math.max(1,Math.round(avg+rawBonus)):readingAttemptScore;
 
   var clean=!wordHadWrong; // "สะอาด" ของ SRS = ไม่พลาดแม้ครั้งเดียวทั้งหน่วย (ตรงเกมเสียง) — ต่างจากคะแนนที่ยังให้บางส่วนได้แม้พลาด
   if(clean)cleanC++;
@@ -1058,7 +1106,7 @@ function finalizeWord(){
   var cmult=rgComboMult(streak);
   if(cmult>1)pts=Math.max(1,Math.round(pts*cmult));
 
-  // ── กฎ MASTER ข้อ7 (แก้ 2026-07-05 ตาม Lin ยืนยัน): วันที่16 (ด่านตัดสินสุดท้ายของ SRS นำไปสู่ดาวเงินจริง) ได้คะแนนฐานตามปกติ ไม่ zero — ต่างจาก 已記得 (known-check) ที่ยังคง 0 แต้มเสมอ (ดูจุด curWordIsKnownCheck ด้านบน) ──
+  // รอบตัดสิน Day 7 ได้คะแนนฐานตามปกติ ต่างจาก 已記得 (known-check) ที่ยังคง 0 แต้ม
   var basePtsAwarded=pts;
   roundScore+=basePtsAwarded;okC++;
   try{ if(typeof gtag==='function') gtag('event','reading_game_correct',{category:'game',word: WORD.th, pts: basePtsAwarded}); }catch(e){}
@@ -1084,7 +1132,7 @@ function finalizeWord(){
       var passedStage=rec.stage; // stage ก่อนเลื่อน = รอบทบทวนที่เพิ่งผ่าน (0/1/2)
       var res=RG_SRS.advanceOnClean(rec,Date.now());
       rec=res.rec;
-      // โบนัสผ่านรอบทบทวน SRS สะอาด (+3/+2/+1) — เฉพาะ "ลูปแรกที่ผ่าน" (advanceOnClean เกิดครั้งเดียว/วัน) — day16 ยังได้ตามกฎข้อ6 แม้ฐานเป็น 0 (กฎข้อ7)
+      // โบนัสรอบสะอาด (+3/+2/+1) ตาม New / Day 1 / รอบตัดสิน Day 7
       var _rb=SRS_REVIEW_BONUS[passedStage]||0;
       if(_rb>0){ roundScore+=_rb; srsBonusAwarded=_rb; } // Lin 2026-07-10: เลิกยิง pop() แยก — รวมไปโชว์ก้อนเดียวกับคะแนนหลักด้านล่าง (เลือกแบบ C: ไม่มีไอคอน 🔁)
       if(res.justMastered){
@@ -1125,8 +1173,11 @@ function check(){
   if(sylList.length>1) return rgCheckWholeWord(); // หลายพยางค์ → ตรวจทั้งคำทีเดียว (เลือกพยางค์เองได้อิสระ)
   var lastSyl=(sylIdx>=sylList.length-1);
   var allOk=comps.every(function(c){var id=slotFills[c];if(id==null)return false;var t=tileById(id);return t&&t.val===correctVal[c];});
+  var isCorrectionCheck=readingFirstCheckDone;
+  if(isCorrectionCheck)readingCorrectionAttempts++;
 
   if(allOk){
+    if(!readingFirstCheckDone){readingFirstCheckDone=true;readingAttemptScore=rgSnapshotExistingAttemptScore();}
     checked=true;
     markOpts();markSlots();
     evaluateBonus();showReveal();renderSylStrip();
@@ -1146,6 +1197,7 @@ function check(){
   } else {
     wrongCount++;wordHadWrong=true;streak=0;badC++;
     sylWrongCount[0]=wrongCount; // งานที่1: sylList.length===1 เสมอในพาธนี้ → พยางค์เดียว = sylIdx 0
+    if(!readingFirstCheckDone){readingFirstCheckDone=true;readingAttemptScore=rgSnapshotExistingAttemptScore();}
     try{ if(typeof gtag==='function') gtag('event','reading_game_wrong',{category:'game',word: WORD.th, wrongs: wrongCount}); }catch(e){}
     try{ if(typeof gtag==='function') gtag('event','game_wrong',{category:'game',game:'reading_game'}); }catch(e){}
     refreshUI(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนกดผิด
@@ -1265,6 +1317,7 @@ function endRound(){
   rgClearResumeState(); // E3: จบรอบแล้ว ไม่มีอะไรให้ "續玩" ต่ออีก
   document.getElementById('game').style.display='none';
   document.getElementById('end').style.display='flex';
+  if(window.GameFlow)GameFlow.markResult('#end');
   document.getElementById('pf').style.width='100%';
   document.getElementById('prog-txt').textContent=roundQueue.length+'/'+roundQueue.length;
   // กฎ MASTER: คำใบ้เป็น "รายคำ" แล้ว (คำที่ใช้ใบ้ได้ 0 แต้ม เอง) — ไม่มี void ทั้งรอบอีกต่อไป
@@ -1288,6 +1341,7 @@ function endRound(){
     document.getElementById('end-detail').textContent='💡 單字練習・本輪不計分（想拿分數，請從遊戲首頁開始一輪）';
     try { rgRenderGameBar(); } catch(e){}
     refreshUI();
+    if(window.GameFlow)GameFlow.enhanceResult({key:'reading-result',root:'#end',actions:'#end .gsh-end-actions',correct:cleanC,total:roundTotal,onReplay:restart});
     setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
     return;
   }
@@ -1323,6 +1377,11 @@ function endRound(){
   } catch(e){}
   try { rgRenderGameBar(); } catch(e){}
   refreshUI();
+  if(window.GameFlow){
+    var _hl=[];
+    if(rgLoggedIn()&&window.GAME_ACCOUNT){var _gs=GAME_ACCOUNT.getStreak();if(_gs)_hl.push('🔥 連續 '+_gs+' 天');var _gb=GAME_ACCOUNT.earnedBadges();if(_gb.length)_hl.push('🎖️ '+_gb[_gb.length-1].zh);}
+    GameFlow.enhanceResult({key:'reading-result',root:'#end',actions:'#end .gsh-end-actions',correct:cleanC,total:roundTotal,highlights:_hl,onReplay:restart});
+  }
   // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมเสียง)
   setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
 }
@@ -1355,7 +1414,7 @@ function rgDownloadReport(){
   var rows=roundLog.map(function(w,i){
     return '<tr>'
       +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(w.th)+'</td>'
+      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(w.th)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div></td>'
       +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
@@ -1479,8 +1538,13 @@ function setGameBtns(mode){
   var re=document.getElementById('btn-remember');
   var ch=document.getElementById('btn-check');
   var nx=document.getElementById('btn-next');
-  if(mode==='normal'){if(re)re.style.display='';ch.style.display='';ch.disabled=true;nx.style.display='none';}
-  else               {if(re)re.style.display='none';ch.style.display='none';nx.style.display='';}
+  if(mode==='normal'){
+    if(re)re.style.display='';ch.style.display='';ch.disabled=true;nx.style.display='none';
+    if(window.GameFlow)GameFlow.cancel('reading-game');
+  } else {
+    if(re)re.style.display='none';ch.style.display='none';nx.style.display='';
+    if(window.GameFlow)setTimeout(function(){GameFlow.start({key:'reading-game',nextButton:nx,delaySeconds:3});},0);
+  }
 }
 
 function markOpts(){
@@ -1648,6 +1712,7 @@ function rgSaveStreak(s) { try { localStorage.setItem(TF_STREAK_KEY, JSON.string
 // งานที่8 (2026-07-04): ล็อก timezone ไต้หวัน (Asia/Taipei) ทุกจุดที่ตัดสินวัน — เดิมใช้เวลาเครื่องผู้เล่นตรงๆ (ผิดสเปกข้อ0)
 function rgTodayStr() { try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date()); }catch(e){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); } }
 function rgApplyStreak() {
+  if(!rgLoggedIn())return {state:{streak:0,freezes:0,setsToday:0},events:{goalMetToday:false,freezeUsed:false,freezeEarned:0}};
   var s = rgLoadStreak(), cfg = RG_GAME_CFG, today = rgTodayStr();
   var yest = RG_SRS.twDatePlusDays(Date.now(),-1);
   s.setsToday = (s.lastPlay === today) ? ((s.setsToday || 0) + 1) : 1;
@@ -1911,6 +1976,8 @@ function rgCheckWholeWord(){
     if(!ok){ wrongIdx=i; break; }
   }
   if(wrongIdx===-1){
+    if(readingFirstCheckDone)readingCorrectionAttempts++;
+    else{readingFirstCheckDone=true;readingAttemptScore=rgSnapshotExistingAttemptScore();}
     rgJumpForCheck(sylList.length-1); // ให้ sylIdx จบที่พยางค์สุดท้ายเสมอ กัน next() งงว่าไปพยางค์ถัดไปหรือคำถัดไป
     checked=true; // ต้องตั้งหลังสลับพยางค์ เพราะ loadSyl() (ถ้าพยางค์นี้ยังไม่เคยแวะ) จะ reset checked=false ทับ
     rgFinalizeAllBonuses();
@@ -1925,9 +1992,12 @@ function rgCheckWholeWord(){
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     refreshUI();
   } else {
+    var wasCorrectionCheck=readingFirstCheckDone;
     wordHadWrong=true;streak=0;badC++;
     // งานที่1: นับผิดแยกรายพยางค์ (พยางค์ไหนโผล่มาว่าผิด ก็ +1 เฉพาะพยางค์นั้น) แทนนับรวมทั้งคำแบบเดิม
     sylWrongCount[wrongIdx]=(sylWrongCount[wrongIdx]||0)+1;
+    if(wasCorrectionCheck)readingCorrectionAttempts++;
+    else{readingFirstCheckDone=true;readingAttemptScore=rgSnapshotExistingAttemptScore();}
     try{ if(typeof gtag==='function') gtag('event','reading_game_wrong',{category:'game',word: WORD.th, wrongs: sylWrongCount[wrongIdx], syllable: wrongIdx+1}); }catch(e){}
     try{ if(typeof gtag==='function') gtag('event','game_wrong',{category:'game',game:'reading_game'}); }catch(e){}
     wrongCount=sylWrongCount[wrongIdx]; // ให้ retry-hint อ้างอิงจำนวนผิดของพยางค์นี้เอง

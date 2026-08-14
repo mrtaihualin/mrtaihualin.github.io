@@ -93,6 +93,7 @@
   function pageGame() {
     var p = location.pathname || '';
     if (/tone-finder/i.test(p)) return 'tone_finder';
+    if (/listening-game/i.test(p)) return 'listening';
     if (/typing-game/i.test(p)) return 'typing';
     if (/word-order/i.test(p)) return 'word_order';
     if (/lego/i.test(p)) return 'lego';
@@ -103,6 +104,7 @@
   function boardHref() {
     var g = pageGame();
     if (g === 'tone_finder') return 'leaderboard.html';
+    if (g === 'listening') return 'games.html';
     if (g === 'typing') return 'typing-board.html';
     if (g === 'word_order') return 'word-order-board.html';
     if (g === 'lego') return 'lego-board.html';
@@ -399,6 +401,12 @@
     if (window.WordVault && WordVault.sync) {
       try { WordVault.sync(sb, uid); } catch (e) {}
     }
+    if (window.SentenceVault && SentenceVault.sync) {
+      try { SentenceVault.sync(sb, uid); } catch (e) {}
+    }
+    if (window.LegoVault && LegoVault.sync) {
+      try { LegoVault.sync(sb, uid); } catch (e) {}
+    }
     loadAdaptiveHistory(); // 2026-07-13 Lin：ล็อกอิน/สลับบัญชี → โหลดประวัติคำพลาดของเกมนี้ใหม่
   }
 
@@ -421,7 +429,9 @@
         res.data.forEach(function (row) {
           (row.wrong_items || []).forEach(function (w) {
             var key = w && w.th; if (!key) return;
-            adaptiveWrongCounts[key] = (adaptiveWrongCounts[key] || 0) + (w.wrong || 1);
+            var wrongN = Number(w.wrong);
+            if (!(wrongN > 0)) return; // correct evidence (เช่น Listening score detail) ไม่ใช่จุดอ่อน
+            adaptiveWrongCounts[key] = (adaptiveWrongCounts[key] || 0) + wrongN;
           });
         });
       }
@@ -510,7 +520,7 @@
       console.info('[board] admin account — score not saved (excluded from leaderboard)');
       return;
     }
-    var gm = (game === 'typing' || game === 'reading' || game === 'word_order' || game === 'lego' || game === 'challenge') ? game : pageGame();
+    var gm = (game === 'typing' || game === 'reading' || game === 'listening' || game === 'word_order' || game === 'lego' || game === 'challenge') ? game : pageGame();
     var base = { user_id: API.user.id, score: (score || 0) | 0, games: (games || 1) | 0 };
     var withGame = { user_id: base.user_id, score: base.score, games: base.games, game: gm };
     var full = { user_id: withGame.user_id, score: withGame.score, games: withGame.games, game: withGame.game, wrong_items: Array.isArray(wrongItems) ? wrongItems : [] };

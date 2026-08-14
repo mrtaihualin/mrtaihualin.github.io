@@ -43,6 +43,7 @@ function testDetectsFakeSecretsAndForbiddenNames() {
   const supabaseSecret = ['sb_', 'secret_', 'E'.repeat(24)].join('');
   const googleOauthSecret = ['GOC', 'SPX-', 'F'.repeat(24)].join('');
   const refreshToken = ['refresh-', 'G'.repeat(24)].join('');
+  const publishableWrongPath = ['sb_', 'publishable_', 'Q'.repeat(24)].join('');
 
   write(root, '.env.production', 'SAFE_TEST_PLACEHOLDER=1\n');
   write(root, '.npmrc', 'SAFE_TEST_PLACEHOLDER=1\n');
@@ -57,6 +58,7 @@ function testDetectsFakeSecretsAndForbiddenNames() {
     client_email: 'fixture@example.invalid'
   }, null, 2));
   write(root, 'config/app settings.yaml', `refresh_token: ${refreshToken}\n`);
+  write(root, 'source/not-approved-browser-config.js', `const key = "${publishableWrongPath}";\n`);
   write(root, 'logs with spaces/auth leak.log', [
     `github=${githubToken}`,
     `stripe=${stripeToken}`,
@@ -81,13 +83,14 @@ function testDetectsFakeSecretsAndForbiddenNames() {
   assert(types.includes('AWS access key'));
   assert(types.includes('Supabase server secret'));
   assert(types.includes('Google OAuth client secret'));
+  assert(types.includes('Supabase publishable key นอกบริบทที่อนุญาต'));
   assert(types.includes('ค่า refresh_token ที่ฝังในไฟล์'));
   assert(result.findings.some((finding) => finding.file === 'logs with spaces/auth leak.log'));
 
   const cli = cp.spawnSync(process.execPath, [path.join(__dirname, 'secret-scanner.js'), root], { encoding: 'utf8' });
   const output = `${cli.stdout}${cli.stderr}`;
   assert.notStrictEqual(cli.status, 0);
-  for (const forbiddenValue of [embedded, serviceRoleJwt, githubToken, stripeToken, slackToken, awsToken, supabaseSecret, googleOauthSecret, refreshToken, 'TEST-ONLY']) {
+  for (const forbiddenValue of [embedded, serviceRoleJwt, githubToken, stripeToken, slackToken, awsToken, supabaseSecret, googleOauthSecret, refreshToken, publishableWrongPath, 'TEST-ONLY']) {
     assert(!output.includes(forbiddenValue), 'output leaked a fake secret value');
   }
 }
@@ -105,6 +108,8 @@ function testAllowsApprovedBrowserValuesAndReferences() {
     `const SUPABASE_ANON_KEY = "${anonJwt}";`,
     `const SUPABASE_PUBLISHABLE_KEY = "${supabasePublishable}";`
   ].join('\n'));
+  write(root, 'js/core/supabase-config.staging.js',
+    `const SUPABASE_PUBLISHABLE_KEY = "${supabasePublishable}";\n`);
   write(root, 'index.html', `<script>const API_KEY = "${youtubeKey}"; fetch("https://www.googleapis.com/youtube/v3/search");</script>\n`);
   write(root, 'community.html', `<form action="https://api.web3forms.com/submit"><input name="access_key" value="${web3formsKey}"></form>\n`);
   write(root, 'supabase/functions/example/index.ts', [

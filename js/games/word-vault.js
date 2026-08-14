@@ -8,12 +8,12 @@
  * 🔄 sync ข้ามเครื่อง (เพิ่ม 2026-08-11 ตามกติกาที่ Lin กำหนด)
  * ────────────────────────────────────────────────────────────────────────
  * กติกาที่ Lin สั่งไว้ (ยึดตามนี้ทุกข้อ):
- *   1. รวมคำจากทุกเครื่องเข้าบัญชีเดียวกันได้ **แม้จำนวนรวมเกินเพดาน 30**
+ *   1. รวมคำจากทุกเครื่องเข้าบัญชีเดียวกันได้ **แม้จำนวนรวมเกินเพดาน Login Free 20**
  *   2. **ห้ามลบคำอัตโนมัติเพื่อบังคับเพดาน**
  *   3. **ห้ามทำข้อมูลเดิมหาย**
  *   4. เกินเพดาน → **บล็อกการเพิ่มคำใหม่ชั่วคราว** (ไม่ใช่ตัดคำทิ้ง)
  *   5. ใช้ระบบ account/database/sync เดิม ห้ามสร้างระบบซ้ำ
- *   6. Guest/local เดิมต้องไม่พัง
+ *   6. Phase 1: คลังส่วนตัวเริ่มหลัง Login เท่านั้น และห้าม import ของ Guest ย้อนหลัง
  *
  * ของเดิมที่ใช้ต่อ ไม่สร้างใหม่:
  *   · client + session — `window.getSupabaseClient()` / `window.SITE_AUTH` ตัวเดียวกับทุกหน้า
@@ -56,7 +56,8 @@
   'use strict';
 
   var STORAGE_KEY = 'linvault_v1';
-  var MAX_WORDS = 30;
+  // Phase 1 Login Free limit — Lin 2026-08-14. Paid quota remains Future.
+  var MAX_WORDS = 20;
 
   // ── ค่าที่ใช้คุยกับเซิร์ฟเวอร์ ──
   var TABLE = 'learning_saved_items';
@@ -70,6 +71,19 @@
   var _tombstoneOk = null;
   var COLS_WITH_TOMBSTONE = 'word_th,zh,en,source_raw,tags,saved_at,deleted_at';
   var COLS_LEGACY        = 'word_th,zh,en,source_raw,tags,saved_at';
+
+  function _accountReady() {
+    return !!(_sb && _uid);
+  }
+
+  function _requireLogin() {
+    _showToast('登入後才能使用「我的單字」');
+    try {
+      if (global.READING_AUTH && global.READING_AUTH.openLoginGate) {
+        global.READING_AUTH.openLoginGate();
+      }
+    } catch (e) {}
+  }
 
   // ── โหลด/บันทึก ──────────────────────────────────────────────
   function load() {
@@ -104,6 +118,57 @@
   /** แปลงคำในเครื่อง → แถวสำหรับเซิร์ฟเวอร์
    *  ⚠️ source ของคลังคำ ('tone-finder') คนละรูปแบบกับรหัสเกมมาตรฐาน ('tone_finder')
    *     จึงลงช่อง source_raw (ไม่มี FK) ไม่ใช่ source_surface — ถ้ายัดผิดช่องจะผิด FK แล้วเซฟไม่สำเร็จ */
+  function _provenanceFor(w) {
+    var rows = Array.isArray(w && w.provenance) ? w.provenance.slice() : [];
+    if (!rows.length && w && w.source) rows.push({ source: w.source, saved_at: w.saved_at || Date.now() });
+    return rows.filter(function (row) { return row && row.source; });
+  }
+
+  function _sourceRawFor(w) {
+    return JSON.stringify({
+      kind: 'word',
+      readingTH: (w && w.readingTH) || '',
+      provenance: _provenanceFor(w)
+    });
+  }
+
+  function _decodeSourceRaw(raw, savedAt) {
+    var result = { source: '', readingTH: '', provenance: [] };
+    if (!raw) return result;
+    try {
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        result.readingTH = parsed.readingTH || '';
+        result.provenance = Array.isArray(parsed.provenance) ? parsed.provenance.filter(function (row) { return row && row.source; }) : [];
+        result.source = result.provenance.length ? result.provenance[0].source : '';
+        return result;
+      }
+    } catch (e) {}
+    result.source = String(raw);
+    result.provenance = [{ source: result.source, saved_at: savedAt || Date.now() }];
+    return result;
+  }
+
+  function _mergeMetaIntoWord(w, meta) {
+    meta = meta || {};
+    var changed = false;
+    if (!w.zh && meta.zh) { w.zh = meta.zh; changed = true; }
+    if (!w.en && meta.en) { w.en = meta.en; changed = true; }
+    if (!w.readingTH && meta.readingTH) { w.readingTH = meta.readingTH; changed = true; }
+    var source = meta.source || '';
+    if (source) {
+      var provenance = _provenanceFor(w);
+      var exists = provenance.some(function (row) { return row.source === source; });
+      if (!exists) {
+        provenance.push({ source: source, saved_at: Date.now() });
+        w.provenance = provenance;
+        if (!w.source) w.source = source;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   function _rowFor(w) {
     return {
       user_id: _uid,
@@ -111,7 +176,7 @@
       word_th: w.th,
       zh: w.zh || null,
       en: w.en || null,
-      source_raw: w.source || null,
+      source_raw: _sourceRawFor(w),
       tags: (w.tags && w.tags.length) ? w.tags : [],
       // 🔑 คำที่อยู่ในคลังของผู้ใช้ = ต้อง "ล้างตราการลบ" ทิ้งเสมอ
       //    เคสจริง: ลบคำที่เครื่อง A (ติดตรา) แล้วผู้ใช้เซฟคำเดิมใหม่ที่เครื่อง B
@@ -193,9 +258,19 @@
    * @param {string} userId — user id ที่ล็อกอินอยู่ · ส่ง null/undefined = ออกจากระบบ (กลับเป็น local เหมือนเดิม)
    */
   function sync(client, userId) {
+    var nextUid = userId || null;
+    var previousUid = _uid;
+    try {
+      if (global.PHASE1_ACCOUNT_BOUNDARY && global.PHASE1_ACCOUNT_BOUNDARY.bind) {
+        global.PHASE1_ACCOUNT_BOUNDARY.bind(nextUid ? { id: nextUid } : null);
+      } else if (previousUid !== nextUid) {
+        // fallback เมื่อ auth-widget ไม่พร้อม: ห้ามนำ cache ของ Guest/account อื่นไปอัปโหลด
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (e) {}
     _sb = (client && client.from) ? client : null;
-    _uid = userId || null;
-    if (!_sb || !_uid) { _sb = null; _uid = null; return; }   // guest → ทำงานแบบ local เหมือนเดิมทุกอย่าง
+    _uid = nextUid;
+    if (!_sb || !_uid) { _sb = null; _uid = null; _fireChanged(); return; }
 
     _readRemote(function (remote) { _mergeWith(remote); });
   }
@@ -243,7 +318,20 @@
     local.forEach(function (w) {
       if (!w || !w.th) return;
       // ก. มีทั้ง 2 ฝั่ง และยังใช้งานอยู่ → เก็บไว้
-      if (activeRemote[w.th]) { w.synced = true; merged.push(w); return; }
+      if (activeRemote[w.th]) {
+        var remoteMeta = _decodeSourceRaw(activeRemote[w.th].source_raw, activeRemote[w.th].saved_at);
+        _mergeMetaIntoWord(w, {
+          zh: activeRemote[w.th].zh || '', en: activeRemote[w.th].en || '',
+          readingTH: remoteMeta.readingTH || '', source: remoteMeta.source || ''
+        });
+        (remoteMeta.provenance || []).forEach(function (row) {
+          if (!row || !row.source) return;
+          var provenance = _provenanceFor(w);
+          if (!provenance.some(function (existing) { return existing.source === row.source; })) provenance.push(row);
+          w.provenance = provenance;
+        });
+        w.synced = true; merged.push(w); return;
+      }
 
       if (deletedRemote[w.th]) {
         // ข. เจ้าของสั่งลบคำนี้ (มีตราชัดเจน) และคำในเครื่องนี้เคยขึ้นเซิร์ฟเวอร์แล้ว
@@ -265,8 +353,10 @@
       if (!x || !x.word_th || x.deleted_at || inLocal[x.word_th]) return;
       var ts = Date.now();
       if (x.saved_at) { var p = Date.parse(x.saved_at); if (!isNaN(p)) ts = p; }
+      var sourceMeta = _decodeSourceRaw(x.source_raw, ts);
       merged.push({
-        th: x.word_th, zh: x.zh || '', en: x.en || '', source: x.source_raw || '',
+        th: x.word_th, zh: x.zh || '', en: x.en || '', source: sourceMeta.source,
+        readingTH: sourceMeta.readingTH, provenance: sourceMeta.provenance,
         saved_at: ts, tags: (x.tags && x.tags.length) ? x.tags : [], synced: true
       });
     });
@@ -293,15 +383,29 @@
    * @returns {boolean} true = เพิ่งเซฟใหม่, false = มีอยู่แล้ว
    */
   function addWord(th, meta) {
+    if (!_accountReady()) { _requireLogin(); return false; }
     var list = load();
-    if (list.some(function(w){ return w.th === th; })) return false;
-    if (list.length >= MAX_WORDS) { _showFullToast(); return false; } // เต็ม 30/30 — บล็อก ห้าม auto-delete
+    var existing = null;
+    list.some(function(w){ if (w.th === th) { existing = w; return true; } return false; });
+    if (existing) {
+      // Same content remains one item. A newly observed Save source is appended
+      // to provenance and synced onto the existing row instead of duplicating it.
+      if (_mergeMetaIntoWord(existing, meta)) {
+        save(list);
+        if (_sb && _uid) _pushRows([_rowFor(existing)], null);
+        _fireChanged();
+      }
+      return false;
+    }
+    if (list.length >= MAX_WORDS) { _showFullToast(); return false; }
     var entry = {
       th: th,
       zh: (meta && meta.zh) || '',
       en: (meta && meta.en) || '',
+      readingTH: (meta && meta.readingTH) || '',
       source: (meta && meta.source) || '',   // 'tone-finder' | 'reading-game' | 'typing-game' | ...
       saved_at: Date.now(),
+      provenance: (meta && meta.source) ? [{ source: meta.source, saved_at: Date.now() }] : [],
       tags: []
     };
     list.push(entry);
@@ -316,18 +420,28 @@
 
   /** ลบคำออกจากคลัง — เป็นการลบที่ "ผู้ใช้สั่งเอง" เท่านั้น (ระบบไม่เคยลบเองอัตโนมัติ) */
   function removeWord(th) {
+    if (!_accountReady()) { _requireLogin(); return false; }
     save(load().filter(function(w){ return w.th !== th; }));
     _deleteRemote(th);   // ล็อกอินอยู่ → ลบบนเซิร์ฟเวอร์ด้วย ไม่ให้กลับมาตอน sync รอบหน้า
+    return true;
   }
 
   /** คืนรายการคำทั้งหมด */
-  function getAll() { return load(); }
+  function getAll() { return _accountReady() ? load() : []; }
 
   /** คืน true ถ้าคำนี้อยู่ในคลังแล้ว */
-  function has(th) { return load().some(function(w){ return w.th === th; }); }
+  function has(th) { return _accountReady() && load().some(function(w){ return w.th === th; }); }
 
-  /** เต็ม 30/30 หรือยัง */
-  function isFull() { return load().length >= MAX_WORDS; }
+  /** คืน true เมื่อรายการเดิมบันทึก provenance ของพื้นผิวนี้ไว้แล้ว */
+  function _hasSource(th, source) {
+    if (!source) return true;
+    var match = null;
+    load().some(function(w){ if (w.th === th) { match = w; return true; } return false; });
+    return !!(match && _provenanceFor(match).some(function(row){ return row.source === source; }));
+  }
+
+  /** เต็มเพดาน Login Free 20 หรือยัง */
+  function isFull() { return _accountReady() && load().length >= MAX_WORDS; }
 
   /** เพิ่ม/ลบ tag ในคำ
    * @param {string} th
@@ -335,6 +449,7 @@
    * @param {boolean} [on=true]  true=เพิ่ม, false=ลบ
    */
   function setTag(th, tag, on) {
+    if (!_accountReady()) { _requireLogin(); return false; }
     var list = load();
     var changed = null;
     list.forEach(function(w) {
@@ -348,6 +463,7 @@
     save(list);
     // ป้ายกำกับต้องตามไปทุกเครื่องด้วย (upsert ทับแถวเดิม ไม่สร้างซ้ำ)
     if (changed && _sb && _uid) _pushRows([_rowFor(changed)], null);
+    return !!changed;
   }
 
   // ── UI Helper ─────────────────────────────────────────────────
@@ -368,14 +484,25 @@
 
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
+      if (!_accountReady()) { _requireLogin(); return; }
       if (has(th)) {
-        removeWord(th);
-        _updateBtnState(btn, false);
-        _notifyBadges();
-        if (opts.onRemove) opts.onRemove(th);
-        _showToast('已移除「' + th + '」');  // popup ตอนเอาออก เหมือนตอนบันทึก (Lin 2026-07-02)
+        // รายการเดียวกันที่มาจากเกมใหม่ต้องคงเป็น 1 รายการและเพิ่มที่มา
+        // การกดครั้งถัดไปจากพื้นผิวเดิมจึงค่อยหมายถึง "ลบ" ตามสถานะปุ่มปกติ
+        if (meta && meta.source && !_hasSource(th, meta.source)) {
+          addWord(th, meta);
+          _updateBtnState(btn, true);
+          _notifyBadges();
+          if (opts.onSave) opts.onSave(th);
+          _showToast('已更新「' + th + '」的儲存來源');
+        } else {
+          removeWord(th);
+          _updateBtnState(btn, false);
+          _notifyBadges();
+          if (opts.onRemove) opts.onRemove(th);
+          _showToast('已移除「' + th + '」');  // popup ตอนเอาออก เหมือนตอนบันทึก (Lin 2026-07-02)
+        }
       } else {
-        if (isFull()) { _showFullToast(); return; } // เต็ม 30/30 — บล็อก ไม่บันทึก ไม่ auto-delete
+        if (isFull()) { _showFullToast(); return; }
         addWord(th, meta);
         _updateBtnState(btn, true);
         _notifyBadges();
@@ -413,7 +540,7 @@
     t._timer = setTimeout(function(){ t.style.opacity = '0'; }, 2000);
   }
 
-  /** แสดง toast ตอนคลังเต็ม 30/30 — คลิกได้ ไปหน้า vault.html */
+  /** แสดง full gate — ห้ามเพิ่มและห้ามลบของเก่าอัตโนมัติ */
   function _showFullToast() {
     var t = document.getElementById('vault-toast-full');
     if (!t) {
@@ -429,10 +556,10 @@
       ].join(';');
       document.body.appendChild(t);
     }
-    // โชว์จำนวนจริง ไม่ใช่ '30/30' ตายตัว — หลังรวมคำจาก 2 เครื่องอาจเกินเพดานได้จริง (เช่น 42/30)
+    // โชว์จำนวนจริง — หลังรวมคำจาก 2 เครื่องอาจเกินเพดานได้จริง (เช่น 32/20)
     // ตามกติกาที่ Lin สั่ง: เกินเพดาน = บล็อกการเพิ่มคำใหม่ชั่วคราว **ห้ามตัดคำทิ้งเอง**
     var n = load().length;
-    t.textContent = '單字庫已滿（' + n + '/' + MAX_WORDS + '）請先刪除舊單字';
+    t.textContent = '已達免費儲存上限。請管理已儲存內容後再新增，或升級方案以儲存更多。';
     t.style.opacity = '1';
     clearTimeout(t._timer);
     t._timer = setTimeout(function(){ t.style.opacity = '0'; }, 3000);
@@ -480,7 +607,7 @@
     getAll: getAll,
     has: has,
     isFull: isFull,
-    count: function () { return load().length; },
+    count: function () { return _accountReady() ? load().length : 0; },
     MAX_WORDS: MAX_WORDS,
     setTag: setTag,
     createSaveBtn: createSaveBtn,

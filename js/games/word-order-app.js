@@ -14,7 +14,7 @@
   var ROUND_PERFECT_BONUS  = 50;     // perfect (ทุกประโยคสะอาด) +50 เพิ่ม (ข้อ5)
   var GOLDEN_SENTENCE_CHANCE = 0.18; // คำทอง 18%/ประโยค (ข้อ4)
   var GOLDEN_SENTENCE_MULT   = 2;    // คำทองสะอาด×2 (ข้อ4)
-  var SRS_REVIEW_BONUS = [3, 2, 1];  // ผ่านทบทวนสะอาด: day1+3 · day7+2 · day16+1 (ข้อ6)
+  var SRS_REVIEW_BONUS = [3, 2, 1];  // Phase 1: New+3 · Day 1+2 · รอบตัดสิน Day 7+1
   var LEVEL_WEIGHT = 2;              // เกมนี้ทั้งเกม=高級ล้วน → ตัวคูณระดับคงที่ ×2 คูณ "ทั้งรอบ" ตอนจบ (ข้อ2)
   var LEVEL_NUM = 3;                 // ใช้กับ GAME_ACCOUNT.addHardStars(clean, level) — 高級=3
   var SENTENCE_LIFE_START = 10;      // "ชีวิต" ของประโยคนี้ เริ่ม 10 (ก่อนคูณระดับ/คอมโบ/คำทอง) — ตรงตาราง MASTER ข้อ1
@@ -24,7 +24,7 @@
   function woComboMult(streak){ return streak >= 8 ? 3 : (streak >= 5 ? 2 : (streak >= 3 ? 1.5 : 1)); } // คอมโบ 3/5/8×1.5/2/3 (ข้อ3)
 
   // ══════ SRS engine (ลอกจาก reading-game.html RG_SRS ทุกจุด + เพิ่ม everHinted สำหรับข้อยกเว้น 3.6) ══════
-  var WO_SRS_CFG = { INTERVALS: [1, 7, 16], CLEAN_ROUNDS_TO_MASTER: 3 };
+  var WO_SRS_CFG = { INTERVALS: [1, 7], CLEAN_ROUNDS_TO_MASTER: 3 }; // New → Day 1 → Day 7 → Mastered
   var WO_SRS = {
     cfg: WO_SRS_CFG,
     twDate: function(ms){ var d=(ms==null)?new Date():new Date(ms); try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(d); }catch(e){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); } },
@@ -71,6 +71,14 @@
   }
   var __woSrsSyncPromise=null;
   window.__woSrsSyncedOnce=false;
+  var __woLearningOwnerEpoch=0;
+  function woResetAccountStateAtBoundary(){
+    var epoch=(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
+    if(!epoch||epoch===__woLearningOwnerEpoch)return false;
+    __woLearningOwnerEpoch=epoch;srsRecords={};
+    __woSrsSyncPromise=null;window.__woSrsSyncedOnce=false;
+    return true;
+  }
   function woSyncSrsFromServer(force){
     try{ if(!force && !woLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
     if(__woSrsSyncPromise) return __woSrsSyncPromise;
@@ -117,6 +125,7 @@
     try{
       if(window.SITE_AUTH && SITE_AUTH.onChange){
         SITE_AUTH.onChange(function(u){
+          woResetAccountStateAtBoundary();
           if(!u) return;
           if(!window.__woSrsSyncedOnce){ woSyncSrsFromServer(true).then(function(){ woReinitSafe(); }); }
           else { __woSrsSyncPromise=null; woSyncSrsFromServer(true); }
@@ -352,15 +361,18 @@
     box.style.display = isOpen ? 'none' : '';
     btn.textContent = isOpen ? '查看詳細解說' : '收起詳細解說';
   };
-  // Lin 2026-07-30: ปุ่ม 🔖 เซฟทั้งประโยคเข้า 單字庫 (คลังรวม 30 ช่องเดียวกับคำ ตามที่ Lin สั่ง) — โชว์เฉพาะตอนเฉลย
+  // Phase 1 2026-08-14: ประโยคแยกบ้านไป 我的句子 (10 รายการ) ไม่ปน 我的單字.
   function woShowVault(){
     var slot = document.getElementById('wo-vault-btn-slot');
-    if (!slot || !window.WordVault) return;
+    if (!slot || !window.SentenceVault) return;
     var s = curSentence();
     if (!s) { slot.innerHTML = ''; return; }
     WordVault.injectStyles();
     slot.innerHTML = ''; // ล้างปุ่มของประโยคก่อนหน้าเสมอ กันปุ่มค้าง
-    slot.appendChild(WordVault.createSaveBtn(s.th, { zh: s.zh || '', source: 'word-order' }, {
+    var romanization = woWordReads(s).map(function (row) { return row.en; }).filter(Boolean).join(' ');
+    slot.appendChild(SentenceVault.createSaveBtn(s.th, {
+      zh: s.zh || '', readingTH: s.readingTH || '', en: romanization, source: 'word-order'
+    }, {
       onSave: function(){ try{ gtag('event','word_order_vault_save',{category:'game', sentence: s.th}); }catch(e){} },
       onRemove: function(){ try{ gtag('event','word_order_vault_remove',{category:'game', sentence: s.th}); }catch(e){} }
     }));
@@ -379,14 +391,15 @@
   var maxCombo = 0;     // 這局最高連續乾淨過關數
   var totalStars = 0;   // 帳號累積星星（跨遊戲共用）
   var totalBadges = 0;  // 帳號累積勳章數（跨遊戲共用）
-  var roundLog = []; // {th,zh,wrong,failed,guide,pts,srsDue,mastered} ต่อประโยค — ทำรายงาน PDF ท้ายรอบ — Lin 2026-07-08
+  var roundLog = []; // {th,zh,userAnswer,correctAnswer,wrong,...} ต่อประโยค
+  var lastSubmittedAnswer = '';
   function woLogSentence(o){
     try{
       var s = curSentence();
       // wordsArr: รายคำ (s.words[].th) ใช้ตอนทำ PDF เท่านั้น — ใส่จุดตัดคำที่มองไม่เห็น (ZWSP) ระหว่างคำ
       // กันประโยคยาวไม่มีเว้นวรรค (เขียนไทยจริงไม่เว้นวรรคระหว่างคำ) ตกขอบหน้ากระดาษ/ถูกตัดกลางคำ — Lin 2026-07-31
       var wordsArr = (s && s.words && s.words.length) ? s.words.map(function(w){return w.th;}) : null;
-      var base = {th:s?s.th:'', wordsArr:wordsArr, zh:s?s.zh:'', wrong:(typeof wrongCount!=='undefined'?wrongCount:0), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
+      var base = {th:s?s.th:'', wordsArr:wordsArr, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'（未保留逐次答案）', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
     } catch(e){}
@@ -402,14 +415,17 @@
   // ════════════════════════════════════════════════════════════
   window.woShowMistakes = function(){
     try{ if(window.gtag) gtag('event','word_order_mistakes_open',{category:'game'}); }catch(e){}
-    var items = roundLog.filter(function(w){ return (w.wrong||0)>0 || w.failed; });
+    var items = roundLog.slice();
     var list = document.getElementById('wo-mistake-list');
     if (list) {
       list.innerHTML = items.length
         ? items.map(function(w){
-            return '<div class="gsh-mistake-item gsh-mistake-wrong">'
+            return '<div class="gsh-mistake-item'+(((w.wrong||0)>0||w.failed)?' gsh-mistake-wrong':'')+'">'
               + '<div class="gsh-mistake-q">' + woEsc(w.th) + '</div>'
               + '<div class="gsh-mistake-row">' + woEsc(w.zh) + '</div>'
+              + '<div class="gsh-mistake-row">你的作答：<b>' + woEsc(w.userAnswer) + '</b></div>'
+              + '<div class="gsh-mistake-row">正確答案：<b>' + woEsc(w.correctAnswer) + '</b></div>'
+              + '<div class="gsh-mistake-row">狀態：<b>' + (((w.wrong||0)>0||w.failed)?'✗ 需要複習':'✓ 答對') + '</b></div>'
               + '<div class="gsh-mistake-row">排錯 <b>' + (w.wrong||0) + '</b> 次' + (w.failed ? '・這句沒排出來，直接看了答案' : '') + '</div>'
               + '</div>';
           }).join('')
@@ -442,7 +458,10 @@
         idx: idx,
         score: score,
         correctFirstTry: correctFirstTry,
-        cleanC: cleanC
+        cleanC: cleanC,
+        curCombo: curCombo,
+        maxCombo: maxCombo,
+        roundLog: roundLog
       });
     }catch(e){}
   }
@@ -536,6 +555,7 @@
   function rgSaveStreak(s) { try { localStorage.setItem(TF_STREAK_KEY, JSON.stringify(s)); } catch(e) {} }
   function rgTodayStr() { var d = new Date(); return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
   function rgApplyStreak() {
+    if(!woLoggedIn())return {state:{streak:0,freezes:0,setsToday:0},events:{goalMetToday:false,freezeUsed:false,freezeEarned:0}};
     var s = rgLoadStreak(), cfg = RG_GAME_CFG, today = rgTodayStr();
     var yest = (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
     s.setsToday = (s.lastPlay === today) ? ((s.setsToday || 0) + 1) : 1;
@@ -675,9 +695,9 @@
     var b = document.getElementById('wo-resume-banner');
     if (!b) { startFreshRound(); return; } // DOM ไม่พร้อม (ไม่ควรเกิด) → กันเงียบ เริ่มรอบใหม่แทนดีกว่าค้าง
     var savedIdx = Math.min(Math.max(0, state.idx||0), restoredSet.length-1);
-    var t = document.getElementById('wo-resume-title'); if (t) t.textContent = '上次還沒玩完，要繼續嗎？';
+    var t = document.getElementById('wo-resume-title'); if (t) t.textContent = '上次的安全進度還在';
     var d = document.getElementById('wo-resume-detail');
-    if (d) d.textContent = '進度：第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句・目前分數 ' + (state.score||0) + ' 分';
+    if (d) d.textContent = '遊戲：語序練習・第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句・目前分數 ' + (state.score||0) + ' 分';
     var g = document.getElementById('game'); if (g) g.style.display = 'none';
     var e = document.getElementById('end'); if (e) e.style.display = 'none';
     b.style.display = '';
@@ -688,12 +708,19 @@
     var p = _woPendingResume; _woPendingResume = null;
     woResumeContinue(p.state, p.restoredSet);
   };
-  window.woResumeRestartClick = function(){
+  window.woResumeRestartSameClick = function(){
+    if(!_woPendingResume){hideResumeBanner();startFreshRound();return;}
+    var p=_woPendingResume;_woPendingResume=null;hideResumeBanner();woClearResume();
+    SET=p.restoredSet;idx=0;score=0;correctFirstTry=0;cleanC=0;curCombo=0;maxCombo=0;roundLog=[];practiceMode=false;
+    document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';refreshUI();loadSentence();woSaveResume();
+  };
+  window.woResumeNewRoundClick = function(){
     try{ if(window.gtag) gtag('event','word_order_resume_restart',{category:'game'}); }catch(e){}
     _woPendingResume = null;
     woClearResume();
     startFreshRound();
   };
+  window.woResumeRestartClick = window.woResumeNewRoundClick;
   function woResumeContinue(state, restoredSet){
     hideResumeBanner();
     SET = restoredSet;
@@ -701,8 +728,8 @@
     score = state.score||0;
     correctFirstTry = state.correctFirstTry||0;
     cleanC = state.cleanC||0;
-    curCombo = 0; maxCombo = 0; // ไม่ serialize คอมโบระหว่างประโยค (ตามที่ยอมรับ granularity — resume สดที่ตำแหน่งประโยคนั้น ไม่ใช่ resume กลางการลาก)
-    roundLog = [];              // รายงานท้ายรอบจะมีเฉพาะประโยคที่เล่นหลัง resume (ของก่อนปิดแท็บไม่ได้ serialize ไว้)
+    curCombo = state.curCombo||0; maxCombo = state.maxCombo||0;
+    roundLog = Array.isArray(state.roundLog)?state.roundLog:[];
     practiceMode = false;
     if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
     refreshUI();
@@ -744,23 +771,55 @@
     var now = Date.now();
     var allIdx = ADV_SENTENCES.map(function(_, i){ return i; });
     practiceMode = false;
+    // Direct practice from 我的句子. Reuse the existing practice mode so this
+    // entry does not invent score/SRS state or mutate a saved item's history.
+    var requestedSentence = '';
+    try {
+      var match = location.search.match(/[?&]sentence=([^&]+)/);
+      if (match) requestedSentence = decodeURIComponent(match[1]);
+    } catch (e) {}
+    if (requestedSentence) {
+      var requestedIndex = -1;
+      for (var ri = 0; ri < ADV_SENTENCES.length; ri++) {
+        if (ADV_SENTENCES[ri].th === requestedSentence) { requestedIndex = ri; break; }
+      }
+      if (requestedIndex !== -1) {
+        practiceMode = true;
+        SET = [requestedIndex];
+        idx = 0; score = 0; correctFirstTry = 0;
+        cleanC = 0; curCombo = 0; maxCombo = 0;
+        roundLog = [];
+        if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
+        refreshUI();
+        try { rgRenderGameBar(); } catch (e) {}
+        document.getElementById('end').style.display = 'none';
+        document.getElementById('game').style.display = 'flex';
+        loadSentence();
+        return;
+      }
+    }
     var pool;
+    var _srsAllocated = false;
     // งานที่7 (SRS): กรองด้วย stage-based SRS เฉพาะตอนล็อกอินเท่านั้น — ไม่ล็อกอิน = เล่นได้ทุกประโยค ไม่จำ (ข้อ0/ข้อ7)
     if (woLoggedIn()) {
-      pool = allIdx.filter(function(i){
+      var _dueIdx = allIdx.filter(function(i){
         var rec = srsRecords[woSrsKey(ADV_SENTENCES[i].th)];
-        if (rec && rec.mastered) return false;          // เชี่ยวชาญแล้ว (ตัดออกถาวร)
-        if (rec && !WO_SRS.isDue(rec, now)) return false; // ยังไม่ครบกำหนดทบทวน
-        return true;
+        return !!(rec && !rec.mastered && WO_SRS.isDue(rec, now));
       });
-      if (pool.length === 0) pool = allIdx.filter(function(i){ var rec = srsRecords[woSrsKey(ADV_SENTENCES[i].th)]; return !(rec && rec.mastered); });
+      var _regularIdx = allIdx.filter(function(i){ var rec=srsRecords[woSrsKey(ADV_SENTENCES[i].th)]; return !(rec&&rec.mastered)&&_dueIdx.indexOf(i)===-1; });
+      if (window.GameFlow && GameFlow.allocateSrs && (_dueIdx.length || _regularIdx.length)) {
+        pool = GameFlow.allocateSrs({tier:'free',total:Math.min(WO_ROUND_SIZE,_dueIdx.length+_regularIdx.length),due:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return woSrsKey(ADV_SENTENCES[i].th);},scope:'word-order'}).items;
+        _srsAllocated = true;
+      } else pool = _dueIdx.concat(_regularIdx);
       if (pool.length === 0) { practiceMode = true; pool = allIdx.slice(); } // จำครบทุกประโยคแล้ว → ทบทวนฟรี 0 แต้ม (กันฟาร์ม)
     } else {
       pool = allIdx.slice();
     }
     // Lin 2026-07-13: SRS กรอง pool ก่อนแล้ว (ข้างบน) — เลือก "ลำดับ" ในเซ็ตด้วย pickAdaptive
     // (เน้นประโยคที่เพิ่งพลาดบ่อยจาก reading_sessions ขึ้นมาก่อน ไม่ทับ/ไม่ยุ่ง SRS)
-    if (window.READING_AUTH && typeof READING_AUTH.pickAdaptive === 'function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()) {
+    if (_srsAllocated) {
+      SET = pool.slice();
+    } else if (window.READING_AUTH && typeof READING_AUTH.pickAdaptive === 'function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()) {
       var _items = pool.map(function(i){ return {idx:i, th:ADV_SENTENCES[i].th}; });
       var _picked = READING_AUTH.pickAdaptive(_items, Math.min(WO_ROUND_SIZE,_items.length));
       SET = _picked.map(function(p){ return p.idx; });
@@ -781,6 +840,7 @@
   }
 
   function loadSentence(){
+    if(window.GameFlow)GameFlow.cancel('word-order');
     var s = curSentence();
     answer = []; used = {};
     attemptedWrongThisSentence = false;
@@ -826,6 +886,12 @@
 
     renderSlots(s);
     renderBank();
+  }
+
+  function woStartAutoNext(){
+    if(!window.GameFlow)return;
+    var nextButton=document.getElementById('wo-next-btn');
+    setTimeout(function(){GameFlow.start({key:'word-order',nextButton:nextButton,delaySeconds:3});},0);
   }
 
   // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ — ทองเข้มตอนเต็ม ไล่ลงเป็นแดงตอนใกล้ตาย (ชุดเดียวทุกเกม)
@@ -934,6 +1000,7 @@
       : '這句先看答案～綠色就是正確順序，我們下一句再加油 💪（本句不計分）';
         woRevealExtras(s.th);
     document.getElementById('wo-next-btn').disabled = false;
+    woStartAutoNext();
     document.getElementById('wo-hint-btn').disabled = true;
     // Lin 2026-07-12: ซ่อนกล่องคำในคลัง (ใช้ครบแล้ว แต่ opacity:0 ยังกินที่อยู่) กันช่องว่างเปล่าๆ ก่อนถึง popup ผลลัพธ์
     var _wob0=document.getElementById('wo-bank'); if(_wob0)_wob0.style.display='none';
@@ -953,6 +1020,7 @@
 
   function checkAnswer(){
     var s = curSentence();
+    lastSubmittedAnswer = answer.map(function(i){return s.words&&s.words[i]?s.words[i].th:'';}).filter(Boolean).join(' ');
     var isCorrect = answer.every(function(v, i){ return v === i; });
     var banner = document.getElementById('wo-banner');
     var srsKey = woSrsKey(s.th);
@@ -979,6 +1047,7 @@
         banner.textContent = passedClean ? '真的記得！這句標記為熟練 ✓（不計分、不加星）' : '中途排錯過，這句先留在複習清單裡 🔁';
                 woRevealExtras(s.th);
         document.getElementById('wo-next-btn').disabled = false;
+        woStartAutoNext();
         document.getElementById('wo-hint-btn').disabled = true;
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
@@ -1006,11 +1075,11 @@
 
       // ── SRS (เฉพาะล็อกอิน+ไม่ใช่ practiceMode) ──
       if (woLoggedIn() && !practiceMode) {
-        var rec = srsRecords[srsKey] || WO_SRS.blank();
-        var isFinalReview = (rec.stage === (WO_SRS.cfg.CLEAN_ROUNDS_TO_MASTER - 1)) && !rec.mastered;
-        // MASTER ข้อ3.6: ด่านตัดสิน day16 ห้ามใช้提示เด็ดขาด — ใช้提示ตอน day16 ถือว่าไม่ผ่าน กลับ day1 (ต่างจาก day1/day7 ที่提示ยังผ่านได้ปกติแค่ลดคุณภาพดาว)
-        if (!attemptedWrongThisSentence && !(hintUsedThisSentence && isFinalReview)) {
-          if (hintUsedThisSentence) rec.everHinted = true;
+        var existingRec = srsRecords[srsKey] || null;
+        var srsPassed = life === SENTENCE_LIFE_START && !attemptedWrongThisSentence && !hintUsedThisSentence;
+        // Phase 1 entry/checkpoint: คะแนนฐานต้อง 10/10 เท่านั้น; bonus/combo/golden ห้ามช่วยผ่าน
+        if (srsPassed) {
+          var rec = existingRec || WO_SRS.blank();
           var res = WO_SRS.advanceOnClean(rec, Date.now());
           rec = res.rec;
           woServerFinish(s.th, true, {starClean: !rec.everFailed && !rec.everHinted}); // Phase 4: เลื่อนขั้น (จำเอง/คำใบ้ = 3/1⭐)
@@ -1026,12 +1095,16 @@
               }
             } catch(e){}
           }
+          srsRecords[srsKey] = rec;
+          woSaveSrs();
         } else {
-          rec = WO_SRS.resetOnFail(rec);
-          woServerFinish(s.th, false); // Phase 4: ผิด/ใช้คำใบ้ตอน day16 = รีเซ็ต
+          // item ใหม่ที่ต่ำกว่า 10 ยังอยู่ Normal Pool และต้องไม่สร้าง SRS row/local record
+          if (existingRec) {
+            srsRecords[srsKey] = WO_SRS.resetOnFail(existingRec);
+            woSaveSrs();
+          }
+          woServerFinish(s.th, false); // Edge จะตอบ below_entry_score ถ้ายังไม่มี SRS row
         }
-        srsRecords[srsKey] = rec;
-        woSaveSrs();
       }
 
       banner.className = 'result-banner ok show gsh-feedback-slot';
@@ -1065,6 +1138,7 @@
       // Lin 2026-07-12: คำในคลังใช้หมดแล้ว (มองไม่เห็นแต่ยังกินพื้นที่อยู่ opacity:0) → ซ่อนกล่องทั้งกล่องไปเลย กันช่องว่างเปล่าๆ ระหว่างช่องเฉลยกับ popup ผลลัพธ์
       var _wob=document.getElementById('wo-bank'); if(_wob)_wob.style.display='none';
       document.getElementById('wo-next-btn').disabled = false;
+      woStartAutoNext();
       document.getElementById('wo-hint-btn').disabled = true;
       updateHintWarning();
       if (pts > 0) popScore('+' + pts);
@@ -1195,6 +1269,7 @@
     woClearResume(); // E3: จบรอบแล้ว ไม่มีอะไรให้ resume ต่อ
     document.getElementById('game').style.display = 'none';
     document.getElementById('end').style.display = 'flex';
+    if(window.GameFlow)GameFlow.markResult('#end');
     document.getElementById('pf').style.width = '100%';
     document.getElementById('prog-txt').textContent = SET.length + '/' + SET.length;
     var _woQnEnd = document.getElementById('wo-qn'); if (_woQnEnd) _woQnEnd.textContent = SET.length;
@@ -1217,6 +1292,7 @@
       } catch(e){}
       try { rgRenderGameBar(); } catch(e){}
       refreshUI();
+      if(window.GameFlow)GameFlow.enhanceResult({key:'word-order-result',root:'#end',actions:'#end .gsh-end-actions',correct:cleanC,total:SET.length,onReplay:woRestart});
       setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
       return;
     }
@@ -1247,6 +1323,11 @@
     }
     detail += ' · 累積共 ' + totalStars + ' 顆星';
     document.getElementById('wo-end-detail').textContent = detail;
+    if(window.GameFlow){
+      var _hl=[];
+      if(woLoggedIn()&&window.GAME_ACCOUNT){var _gs=GAME_ACCOUNT.getStreak();if(_gs)_hl.push('🔥 連續 '+_gs+' 天');var _gb=GAME_ACCOUNT.earnedBadges();if(_gb.length)_hl.push('🎖️ '+_gb[_gb.length-1].zh);}
+      GameFlow.enhanceResult({key:'word-order-result',root:'#end',actions:'#end .gsh-end-actions',correct:cleanC,total:SET.length,highlights:_hl,onReplay:woRestart});
+    }
 
     try{ if(window.gtag) gtag('event','word_order_complete',{category:'game',practice: false, score: weightedScore}); }catch(e){}
     // 嘗試存分數到共用排行榜系統（若後端還沒開放 'word_order' 這個 game key，
@@ -1301,7 +1382,7 @@
     var rows = roundLog.map(function(w, i){
       return '<tr>'
         +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-        +'<td style="padding:7px 6px;font-size:14px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'</td>'
+        +'<td style="padding:7px 6px;font-size:14px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div></td>'
         +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'

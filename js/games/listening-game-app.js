@@ -49,6 +49,14 @@
     idx: 0,
     correct: 0,
     wrong: 0,
+    primaryTotal: 0,
+    typingBonusTotal: 0,
+    listenCount: 0,
+    typingWrong: 0,
+    roundActive: false,
+    roundSeq: 0,
+    savedRoundSeq: 0,
+    listenToken: 0,
     answered: false,
     log: [],        // Phase F2/F4: ประวัติทุกข้อของรอบนี้ {th, zh, userAnswer, correct} — เติมทีละข้อ ไม่แตะ logic ตรวจคำตอบ
     _pendingResume: null // Phase E3: รอบที่กู้มาจาก GameResume แต่ผู้เล่นยังไม่กด 繼續練習/重新開始
@@ -69,6 +77,8 @@
     el.qt = qs('lg-qt');
     el.okCount = qs('lg-ok');
     el.badCount = qs('lg-bad');
+    el.scoreCount = qs('lg-score');
+    el.listenCount = qs('lg-listens');
     el.progFill = qs('lg-prog-fill');
     el.progTxt = qs('lg-prog-txt');
     el.soundBtn = qs('lg-sound-btn');
@@ -90,6 +100,7 @@
     el.resumeDetail = qs('lg-resume-detail');
     el.resumeContinueBtn = qs('lg-resume-continue');
     el.resumeRestartBtn = qs('lg-resume-restart');
+    el.resumeNewBtn = qs('lg-resume-new');
     // Phase F2: 查看錯題
     el.mistakeScreen = qs('lg-mistakes');
     el.mistakeList = qs('lg-mistake-list');
@@ -135,10 +146,15 @@
 
   // ── mode tabs ──
   function setMode(mode) {
+    if (state.roundActive && mode !== state.mode) {
+      try { alert('本回合模式已鎖定，完成後再切換模式'); } catch (e) {}
+      return false;
+    }
     state.mode = mode;
     Array.prototype.forEach.call(el.modeTabs, function (t) {
       t.classList.toggle('active', t.getAttribute('data-mode') === mode);
     });
+    return true;
   }
 
   function initModeTabs() {
@@ -163,6 +179,10 @@
     state.idx = 0;
     state.correct = 0;
     state.wrong = 0;
+    state.primaryTotal = 0;
+    state.typingBonusTotal = 0;
+    state.roundActive = true;
+    state.roundSeq++;
     state.log = [];
     state._pendingResume = null;
     if (el.resumeBanner) el.resumeBanner.style.display = 'none';
@@ -181,6 +201,8 @@
     el.qt.textContent = String(n);
     el.okCount.textContent = '0';
     el.badCount.textContent = '0';
+    if (el.scoreCount) el.scoreCount.textContent = '0';
+    if (el.listenCount) el.listenCount.textContent = '0';
 
     try { if (window.gtag) gtag('event', 'listening_game_start', { category: 'game', mode: state.mode, pool_size: state.pool.length }); } catch (e) {}
 
@@ -199,8 +221,15 @@
     el.progTxt.textContent = doneCount + '/' + n;
   }
 
-  function showQuestion() {
+  function showQuestion(options) {
+    if (window.GameFlow) window.GameFlow.cancel('listening-game');
+    options = options || {};
     state.answered = false;
+    if (!options.preserveAttempt) {
+      state.listenCount = 0;
+      state.typingWrong = 0;
+    }
+    state.listenToken++;
     var w = currentWord();
 
     el.qn.textContent = String(state.idx + 1);
@@ -212,6 +241,7 @@
     el.reveal.innerHTML = '';
     el.nextBtn.style.display = 'none';
     el.nextBtn.disabled = true;
+    updateAttemptHud(w);
 
     if (window.WordAudio) window.WordAudio.setCurrent(w.th);
 
@@ -242,12 +272,52 @@
     }
 
     // เล่นเสียงทันที — เรียกอยู่ในสายเดียวกับ click ของปุ่ม 開始/下一題 (user gesture) กัน browser บล็อก autoplay
-    playCurrent();
+    if (!options.skipAutoPlay) playCurrent();
+  }
+
+  function thaiWordCount(text) {
+    return window.LISTENING_SCORE ? LISTENING_SCORE.wordCount(text) : 1;
+  }
+
+  function listeningScore(mode, word, listens) {
+    return window.LISTENING_SCORE ? LISTENING_SCORE.primary(mode, word && word.th, listens) : 0;
+  }
+
+  function typingUnitCount(word) {
+    return window.LISTENING_SCORE ? LISTENING_SCORE.typingUnitCount(word) : thaiWordCount(word && word.th);
+  }
+
+  function typingBonus(word) {
+    if (state.mode !== 'type') return 0;
+    return window.LISTENING_SCORE ? LISTENING_SCORE.typingBonus(word, state.typingWrong) : 0;
+  }
+
+  function updateAttemptHud(word) {
+    if (el.listenCount) el.listenCount.textContent = String(state.listenCount);
+    if (el.scoreCount) el.scoreCount.textContent = String(state.primaryTotal + state.typingBonusTotal);
+    var score = listeningScore(state.mode, word || currentWord(), state.listenCount || 1);
+    if (el.soundBtn) el.soundBtn.title = '聽發音（本題聽力分數 ' + score + '）';
   }
 
   function playCurrent() {
     var w = currentWord();
-    if (window.WordAudio && w) window.WordAudio.play(w.th, el.soundBtn);
+    if (!window.WordAudio || !w || state.answered) return;
+    var token = state.listenToken;
+    state.listenCount++;
+    updateAttemptHud(w);
+    var played = window.WordAudio.play(w.th, el.soundBtn);
+    Promise.resolve(played).then(function (ok) {
+      if (token !== state.listenToken || state.answered) return;
+      if (!ok) {
+        state.listenCount = Math.max(0, state.listenCount - 1);
+        updateAttemptHud(w);
+        el.resultBanner.className = 'result-banner no show';
+        el.resultBanner.textContent = '⚠️ 音檔播放失敗，這次不計入聆聽次數，請再試一次';
+        return;
+      }
+      saveResumeState();
+      if (listeningScore(state.mode, w, state.listenCount) === 0) finishListeningAtZero(w);
+    });
   }
 
   function renderMC(w) {
@@ -270,13 +340,17 @@
   function handleMCPick(choice, btn, correctWord) {
     state.answered = true;
     var isCorrect = choice.th === correctWord.th;
-    state.log.push({ th: correctWord.th, zh: correctWord.zh, userAnswer: choice.th, correct: isCorrect }); // Phase F2/F4: บันทึกผลข้อนี้ไว้ดูย้อนหลัง — ไม่แตะการคำนวณ isCorrect ด้านบน
     Array.prototype.forEach.call(el.mcWrap.querySelectorAll('.lg-opt'), function (b) {
       b.classList.add('locked');
       if (b.textContent === correctWord.th) b.classList.add('correct');
     });
     if (!isCorrect) btn.classList.add('wrong');
-    finishAnswer(isCorrect, correctWord);
+    finishAnswer(isCorrect, correctWord, {
+      userAnswer: choice.th,
+      primaryScore: isCorrect ? listeningScore('mc', correctWord, state.listenCount) : 0,
+      typingBonus: 0,
+      requeue: !isCorrect
+    });
     try { if (window.gtag) gtag('event', 'listening_game_answer', { category: 'game', mode: 'mc', correct: isCorrect }); } catch (e) {}
   }
 
@@ -307,13 +381,31 @@
     var w = currentWord();
     var val = (el.typeInput.value || '').trim();
     if (!val) return;
-    state.answered = true;
     var isCorrect = val === w.th;
-    state.log.push({ th: w.th, zh: w.zh, userAnswer: val, correct: isCorrect }); // Phase F2/F4: บันทึกผลข้อนี้ไว้ดูย้อนหลัง — ไม่แตะการคำนวณ isCorrect ด้านบน
-    el.typeInput.disabled = true;
-    el.typeSubmitBtn.disabled = true;
-    el.typeInput.classList.add(isCorrect ? 'lg-correct' : 'lg-wrong');
-    finishAnswer(isCorrect, w);
+    if (!isCorrect) {
+      state.typingWrong++;
+      el.typeInput.classList.add('lg-wrong');
+      el.resultBanner.className = 'result-banner no show';
+      el.resultBanner.textContent = '差一點，再試一次就會更熟悉 🌱；繼續輸入到正確為止（Typing Bonus：' + typingBonus(w) + '）';
+      setTimeout(function () {
+        if (!el.typeInput || state.answered) return;
+        el.typeInput.classList.remove('lg-wrong');
+        el.typeInput.value = '';
+        try { el.typeInput.focus({ preventScroll: true }); } catch (e) { try { el.typeInput.focus(); } catch (_) {} }
+      }, 220);
+      saveResumeState();
+    } else {
+      state.answered = true;
+      el.typeInput.disabled = true;
+      el.typeSubmitBtn.disabled = true;
+      el.typeInput.classList.add('lg-correct');
+      finishAnswer(true, w, {
+        userAnswer: val,
+        primaryScore: listeningScore('type', w, state.listenCount),
+        typingBonus: typingBonus(w),
+        requeue: false
+      });
+    }
     try { if (window.gtag) gtag('event', 'listening_game_answer', { category: 'game', mode: 'type', correct: isCorrect }); } catch (e) {}
   }
 
@@ -330,13 +422,71 @@
     el.reveal.innerHTML = html;
   }
 
-  function finishAnswer(isCorrect, w) {
+  function levelNumber(word) {
+    return ({ '初': 1, '中': 2, '高': 3 })[(word && word.level) || '初'] || 1;
+  }
+
+  function sendListeningSrs(word, primaryScore) {
+    try {
+      if (window.TONE_SERVER && TONE_SERVER.available()) {
+        TONE_SERVER.finishRound({
+          game: 'listening', word: word.th, level: levelNumber(word),
+          clean: primaryScore === 10
+        }).then(function (res) {
+          if (res && !res.ok && res.reason !== 'below_entry_score' && res.reason !== 'not_due' && window.console) {
+            console.log('[listening-srs] server not-ok:', res.reason);
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  function finishListeningAtZero(w) {
+    if (state.answered) return;
+    state.answered = true;
+    if (state.mode === 'mc') {
+      Array.prototype.forEach.call(el.mcWrap.querySelectorAll('.lg-opt'), function (b) {
+        b.classList.add('locked');
+        if (b.textContent === w.th) b.classList.add('correct');
+      });
+    } else {
+      el.typeInput.disabled = true;
+      el.typeSubmitBtn.disabled = true;
+      el.typeInput.classList.add('lg-wrong');
+    }
+    finishAnswer(false, w, {
+      userAnswer: '（聆聽次數已用完）', primaryScore: 0,
+      typingBonus: state.mode === 'type' ? typingBonus(w) : 0,
+      requeue: true,
+      zeroByListening: true
+    });
+  }
+
+  function finishAnswer(isCorrect, w, detail) {
+    detail = detail || {};
     if (isCorrect) state.correct++; else state.wrong++;
+    var primary = Number(detail.primaryScore) || 0;
+    var bonus = Number(detail.typingBonus) || 0;
+    state.primaryTotal += primary;
+    state.typingBonusTotal += bonus;
+    state.log.push({
+      th: w.th, zh: w.zh, userAnswer: detail.userAnswer || '', correct: isCorrect,
+      mode: state.mode, listens: state.listenCount,
+      listeningScore: primary, typingBonus: bonus, totalScore: primary + bonus,
+      typingWrong: state.typingWrong
+    });
+    if (detail.requeue) {
+      state.round.push(w);
+      el.qt.textContent = String(state.round.length);
+    }
     el.okCount.textContent = String(state.correct);
     el.badCount.textContent = String(state.wrong);
+    updateAttemptHud(w);
 
-    el.resultBanner.classList.add('show', isCorrect ? 'ok' : 'no');
-    el.resultBanner.textContent = isCorrect ? '✓ 答對了！' : ('✗ 答錯了，正確答案是「' + w.th + '」');
+    el.resultBanner.className = 'result-banner gsh-feedback-slot show ' + (isCorrect ? 'ok' : 'no');
+    el.resultBanner.textContent = isCorrect
+      ? ('✓ 做得很好！聽力 ' + primary + (state.mode === 'type' ? ' + Typing Bonus ' + bonus : ''))
+      : ((detail.zeroByListening ? '這題先看答案' : '差一點，再記一次就會更熟') + '：正確答案是「' + w.th + '」；稍後會再出現 🌱');
 
     state.lastAnswered = w;
     el.reveal.classList.add('show');
@@ -346,7 +496,9 @@
     el.nextBtn.disabled = false;
     el.nextBtn.textContent = (state.idx + 1 >= state.round.length) ? '看結果 →' : '下一題 →';
 
+    sendListeningSrs(w, primary);
     saveResumeState(); // Phase E3: กันหายถ้าปิดแท็บ/รีเฟรชก่อนกด 下一題
+    if (window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
   }
 
   function goNext() {
@@ -371,6 +523,11 @@
         idx: state.idx,
         correct: state.correct,
         wrong: state.wrong,
+        primaryTotal: state.primaryTotal,
+        typingBonusTotal: state.typingBonusTotal,
+        listenCount: state.listenCount,
+        typingWrong: state.typingWrong,
+        answered: state.answered,
         log: state.log
       });
     } catch (e) {}
@@ -403,17 +560,24 @@
       try { window.GameResume.clear('listening-game'); } catch (e) {}
       return;
     }
+    var resumeIdx = saved.answered ? saved.idx + 1 : saved.idx;
     state._pendingResume = {
       mode: saved.mode === 'type' ? 'type' : 'mc',
       round: round,
-      idx: saved.idx,
+      idx: resumeIdx,
+      completed: resumeIdx >= round.length,
       correct: typeof saved.correct === 'number' ? saved.correct : 0,
       wrong: typeof saved.wrong === 'number' ? saved.wrong : 0,
+      primaryTotal: typeof saved.primaryTotal === 'number' ? saved.primaryTotal : 0,
+      typingBonusTotal: typeof saved.typingBonusTotal === 'number' ? saved.typingBonusTotal : 0,
+      listenCount: saved.answered ? 0 : (typeof saved.listenCount === 'number' ? saved.listenCount : 0),
+      typingWrong: saved.answered ? 0 : (typeof saved.typingWrong === 'number' ? saved.typingWrong : 0),
+      preserveAttempt: !saved.answered,
       log: Array.isArray(saved.log) ? saved.log : []
     };
     if (el.resumeDetail) {
-      el.resumeDetail.textContent = '模式：' + (state._pendingResume.mode === 'type' ? '輸入答案' : '選擇答案') +
-        '・進度：第 ' + (saved.idx + 1) + '/' + saved.wordIds.length + ' 題';
+      el.resumeDetail.textContent = '遊戲：聽力練習・模式：' + (state._pendingResume.mode === 'type' ? '輸入答案' : '選擇答案') +
+        '・進度：' + (state._pendingResume.completed ? '本輪已答完，查看結果' : ('第 ' + (resumeIdx + 1) + '/' + saved.wordIds.length + ' 題'));
     }
     el.resumeBanner.style.display = 'block';
   }
@@ -427,9 +591,15 @@
     state.idx = pend.idx;
     state.correct = pend.correct;
     state.wrong = pend.wrong;
+    state.primaryTotal = pend.primaryTotal;
+    state.typingBonusTotal = pend.typingBonusTotal;
+    state.listenCount = pend.listenCount;
+    state.typingWrong = pend.typingWrong;
     state.log = pend.log;
     state._pendingResume = null;
     setMode(pend.mode);
+    state.roundActive = true;
+    state.roundSeq++;
 
     el.poolNote.style.display = 'none';
     el.startScreen.style.display = 'none';
@@ -438,16 +608,31 @@
     el.qt.textContent = String(state.round.length);
     el.okCount.textContent = String(state.correct);
     el.badCount.textContent = String(state.wrong);
+    updateAttemptHud(state.round[Math.min(state.idx, state.round.length - 1)]);
 
     try { if (window.gtag) gtag('event', 'listening_game_resume', { category: 'game', mode: pend.mode }); } catch (e) {}
-    showQuestion(); // ใช้ flow เดิมเป๊ะ (รวมการเล่นเสียงอัตโนมัติ) ไม่สร้างเส้นทางเล่นเสียงใหม่ซ้อน
+    if (pend.completed) showEnd();
+    else showQuestion({ preserveAttempt: pend.preserveAttempt, skipAutoPlay: pend.preserveAttempt });
   }
 
   function resumeRestart() {
+    var pend = state._pendingResume;
     el.resumeBanner.style.display = 'none';
     state._pendingResume = null;
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
-    try { if (window.gtag) gtag('event', 'listening_game_resume_discard', { category: 'game' }); } catch (e) {}
+    if (!pend) return;
+    state.pool = buildPool(); state.round = pend.round; state.idx = 0; state.correct = 0; state.wrong = 0;
+    state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.log = [];
+    state.roundActive = true; state.roundSeq++; setMode(pend.mode);
+    el.startScreen.style.display='none';el.endScreen.style.display='none';el.gameScreen.style.display='flex';el.qt.textContent=String(state.round.length);el.okCount.textContent='0';el.badCount.textContent='0';
+    showQuestion();
+    try { if (window.gtag) gtag('event', 'listening_game_resume_restart_same', { category: 'game' }); } catch (e) {}
+  }
+
+  function resumeNewRound() {
+    el.resumeBanner.style.display='none';state._pendingResume=null;
+    try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch(e){}
+    startRound();
   }
 
   function showEnd() {
@@ -455,19 +640,46 @@
     el.progTxt.textContent = state.round.length + '/' + state.round.length;
     el.gameScreen.style.display = 'none';
     el.endScreen.style.display = 'flex';
-    el.endScoreBig.textContent = state.correct + ' / ' + state.round.length;
-    var pct = state.round.length ? Math.round((state.correct / state.round.length) * 100) : 0;
-    el.endDetail.textContent = '答對 ' + state.correct + ' 題，答錯 ' + state.wrong + ' 題（正確率 ' + pct + '%）';
+    if (window.GameFlow) window.GameFlow.markResult(el.endScreen);
+    state.roundActive = false;
+    var attempts = state.log.length;
+    el.endScoreBig.textContent = (state.primaryTotal + state.typingBonusTotal) + ' 分';
+    var pct = attempts ? Math.round((state.correct / attempts) * 100) : 0;
+    el.endDetail.textContent = '聽力分數 ' + state.primaryTotal +
+      (state.typingBonusTotal ? ' ＋ Typing Bonus ' + state.typingBonusTotal : '') +
+      '・答對 ' + state.correct + ' 次，答錯 ' + state.wrong + ' 次（正確率 ' + pct + '%）';
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // รอบจบแล้ว ไม่มีอะไรต้องกู้ต่อ
     try { if (window.gtag) gtag('event', 'listening_game_complete', { category: 'game', mode: state.mode, score: state.correct, total: state.round.length }); } catch (e) {}
+    saveAccountRound();
+    if(window.GameFlow){
+      var _hl=[];
+      try{if(window.READING_AUTH&&READING_AUTH.user&&window.GAME_ACCOUNT){var _gs=GAME_ACCOUNT.getStreak();if(_gs)_hl.push('🔥 連續 '+_gs+' 天');var _gb=GAME_ACCOUNT.earnedBadges();if(_gb.length)_hl.push('🎖️ '+_gb[_gb.length-1].zh);}}catch(e){}
+      GameFlow.enhanceResult({key:'listening-result',root:el.endScreen,actions:el.endScreen.querySelector('.gsh-end-actions'),correct:state.correct,total:state.round.length,highlights:_hl,onReplay:startRound});
+    }
+  }
+
+  function saveAccountRound() {
+    if (state.savedRoundSeq === state.roundSeq) return;
+    if (!window.READING_AUTH || !READING_AUTH.user || !READING_AUTH.saveScore) return;
+    state.savedRoundSeq = state.roundSeq;
+    var evidence = state.log.map(function (entry) {
+      return {
+        th: entry.th, zh: entry.zh, wrong: entry.correct ? 0 : 1,
+        mode: entry.mode, listens: entry.listens,
+        listening_score: entry.listeningScore,
+        typing_bonus: entry.typingBonus,
+        typing_wrong: entry.typingWrong
+      };
+    });
+    READING_AUTH.saveScore(state.primaryTotal + state.typingBonusTotal, 1, 'listening', evidence);
   }
 
   // ── Phase F2: 查看錯題 (read-only, ใช้ state.log ที่เก็บจริงระหว่างเล่นเท่านั้น) ──
   function renderMistakes() {
     if (!el.mistakeList) return;
-    var wrongEntries = state.log.filter(function (e) { return !e.correct; });
+    var wrongEntries = state.log.slice();
     if (!wrongEntries.length) {
-      el.mistakeList.innerHTML = '<div style="text-align:center;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:var(--ink-muted);padding:20px 10px;">這輪沒有答錯的題目，太棒了！🎉</div>';
+      el.mistakeList.innerHTML = '<div style="text-align:center;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:var(--ink-muted);padding:20px 10px;">這輪沒有作答紀錄</div>';
       return;
     }
     el.mistakeList.innerHTML = wrongEntries.map(function (e) {
@@ -476,6 +688,7 @@
         + '<div class="gsh-mistake-row">你的答案：<b>' + escapeHtml(e.userAnswer || '（空白）') + '</b></div>'
         + '<div class="gsh-mistake-row">正確答案：<b>' + escapeHtml(e.th) + '</b></div>'
         + '<div class="gsh-mistake-row">意思：' + escapeHtml(e.zh || '') + '</div>'
+        + '<div class="gsh-mistake-row">狀態：<b>' + (e.correct ? '✓ 答對' : '✗ 答錯') + '</b></div>'
         + '</div>';
     }).join('');
   }
@@ -504,7 +717,7 @@
         + '<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">' + (i + 1) + '</td>'
         + '<td style="padding:7px 6px;font-size:15px;font-weight:700;">' + escapeHtml(e.th) + '</td>'
         + '<td style="padding:7px 6px;font-size:12px;color:#666;">' + escapeHtml(e.zh || '') + '</td>'
-        + '<td style="padding:7px 6px;font-size:13px;">' + escapeHtml(e.userAnswer || '（空白）') + '</td>'
+        + '<td style="padding:7px 6px;font-size:13px;">作答：' + escapeHtml(e.userAnswer || '（空白）') + '<br>正解：' + escapeHtml(e.th) + '</td>'
         + '<td style="padding:7px 6px;font-size:12px;text-align:center;">' + (e.correct ? '<span style="color:#2e7d32;">✓ 答對</span>' : '<span style="color:#c62828;">✗ 答錯</span>') + '</td>'
         + '</tr>';
     }).join('');
@@ -556,6 +769,7 @@
   }
 
   function restart() {
+    state.roundActive = false;
     el.endScreen.style.display = 'none';
     el.gameScreen.style.display = 'none';
     el.startScreen.style.display = 'flex';
@@ -597,6 +811,7 @@
     }
     if (el.resumeContinueBtn) el.resumeContinueBtn.addEventListener('click', resumeContinue);
     if (el.resumeRestartBtn) el.resumeRestartBtn.addEventListener('click', resumeRestart);
+    if (el.resumeNewBtn) el.resumeNewBtn.addEventListener('click', resumeNewRound);
     if (el.mistakeBtn) el.mistakeBtn.addEventListener('click', showMistakes);
     if (el.mistakeBackBtn) el.mistakeBackBtn.addEventListener('click', backToEndFromMistakes);
     if (el.printBtn) el.printBtn.addEventListener('click', printListeningReport);

@@ -1,0 +1,130 @@
+/* Temporary client-side Textbook access deterrent.
+   This is intentionally not a security boundary; real authentication is Future Work. */
+html.textbook-gate-pending body > *:not(.textbook-access-gate) {
+  display: none !important;
+}
+
+.textbook-access-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(200, 151, 58, 0.18), transparent 34%),
+    linear-gradient(150deg, #f7f2e8 0%, #ebe2d2 100%);
+  color: #2d2a22;
+  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  box-sizing: border-box;
+}
+
+.textbook-access-gate *,
+.textbook-access-gate *::before,
+.textbook-access-gate *::after {
+  box-sizing: border-box;
+}
+
+.textbook-access-card {
+  width: min(100%, 440px);
+  padding: 34px 30px 30px;
+  border: 1px solid rgba(74, 103, 65, 0.2);
+  border-radius: 22px;
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: 0 18px 55px rgba(63, 53, 35, 0.16);
+  text-align: center;
+}
+
+.textbook-access-mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: #e9dfc9;
+  color: #4a6741;
+  font-size: 27px;
+}
+
+.textbook-access-card h1 {
+  margin: 0 0 10px;
+  color: #33482f;
+  font: 700 clamp(24px, 6vw, 30px)/1.35 "Noto Serif TC", Georgia, serif;
+}
+
+.textbook-access-card p {
+  margin: 0 0 22px;
+  color: #746d60;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.textbook-access-card label {
+  display: block;
+  margin-bottom: 8px;
+  color: #4d493f;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.textbook-access-card input {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 1.5px solid #cfc5b3;
+  border-radius: 12px;
+  outline: none;
+  background: #fff;
+  color: #2d2a22;
+  font: 600 17px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+}
+
+.textbook-access-card input:focus {
+  border-color: #4a6741;
+  box-shadow: 0 0 0 3px rgba(74, 103, 65, 0.13);
+}
+
+.textbook-access-submit {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #4a6741;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.textbook-access-submit:hover,
+.textbook-access-submit:focus-visible {
+  background: #385132;
+}
+
+.textbook-access-error {
+  min-height: 24px;
+  margin: 10px 0 0 !important;
+  color: #a33c32 !important;
+  font-size: 14px !important;
+}
+
+.textbook-access-note {
+  margin: 14px 0 0 !important;
+  color: #918878 !important;
+  font-size: 12px !important;
+}
+
+@media (max-width: 480px) {
+  .textbook-access-gate { padding: 16px; }
+  .textbook-access-card { padding: 28px 20px 24px; border-radius: 18px; }
+}
+
+@media print {
+  .textbook-access-gate { display: none !important; }
+}

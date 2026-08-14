@@ -9,6 +9,7 @@
   var KEY = 'thai_game_acct_v1';
   function load() { try { var r = localStorage.getItem(KEY); return r ? JSON.parse(r) : {}; } catch (e) { return {}; } }
   function save(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }
+  function loggedIn() { try { return !!(window.READING_AUTH && window.READING_AUTH.user); } catch (e) { return false; } }
   // Lin 2026-07-04: ผูกเวลาไต้หวัน (Asia/Taipei, UTC+8) เสมอ — ไม่อิงนาฬิกาเครื่องผู้เล่น (กันขึ้นวันใหม่/streak เพี้ยนตาม timezone เครื่อง)
   function dstr(ts) {
     var d = (ts == null) ? new Date() : new Date(ts);
@@ -95,9 +96,10 @@
     getStars: function () { return load().stars || 0; },
     addStars: function (n) { var a = load(); a.stars = (a.stars || 0) + (n || 0); save(a); return a.stars; },
     starsForRound: starsForRound,
-    getStreak: function () { return load().streak || 0; },
+    getStreak: function () { return loggedIn() ? (load().streak || 0) : 0; },
     // เล่นเกมไหนก็ได้ในวันนั้น = นับ streak ต่อเนื่อง (บัญชีเดียว)
     bumpStreakToday: function () {
+      if (!loggedIn()) return 0;
       var a = load(), t = dstr(Date.now());
       if (a.lastPlay === t) return a.streak || 0;          // เล่นแล้ววันนี้ ไม่บวกซ้ำ
       var y = dstr(Date.now() - 86400000);
