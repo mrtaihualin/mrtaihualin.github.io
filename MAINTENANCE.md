@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-14 23:49 Asia/Bangkok** — P1-F-05/F-07 bilingual consent/privacy copy local pass; Lin wording review/dashboard/browser/deploy/PV waiting
+**Updated: 2026-08-15 01:35 Asia/Bangkok** — S13 Core 5 deferred-config boot hotfix + executable race regression local pass; GitHub Desktop push + protected Pages workflow/PV waiting
+
+## 2026-08-15 — S13 Production Source Switch Hotfix (`PASS_LOCAL / PUSH_REQUIRED`)
+
+- หลัง large release commit `2297906cfbe8e3195dbb14be31903ac62be19501` และ Pages run `31826509591` สำเร็จ Production พบ Tone/Reading/Typing/Word Order เรียก `GameContentLoader.boot()` ก่อน deferred `supabase-config.js` ทำงาน จึง fail closed ด้วย `Supabase config unavailable`; Listening รอ `DOMContentLoaded` อยู่แล้วจึงผ่าน.
+- แก้เฉพาะ loader กลางให้รอ `DOMContentLoaded` ก่อนอ่าน config/fetch Edge และ bump `game-content-client.js?v=7` ใน Core 5 ทั้งห้าหน้า; ไม่เพิ่ม config fallback, ไม่เปลี่ยน entitlement/quota/audio architecture และไม่แตะ Challenge/Lego/Leaderboard/Resource Hub/nav.
+- Verification: network recovery 10/10 (รวมจำลอง boot ก่อน deferred config, missing-config fail-closed/retry และ Listening after-DOM path), S13 protected architecture 41/41 และ `node scripts/check-site.js` ผ่านทั้งหมด 908 project files. Local browser จาก protected Pages artifact ทั้งห้าหน้าไม่เกิด config-unavailable อีกและเรียก protected Edge path; localhost CORS ทำให้ full gameplay เป็น NV จน Production deploy.
+- ยังห้ามปิด S13: ต้องให้ Lin commit/push ชุด S13 ผ่าน GitHub Desktop, รอ standard Pages build แล้วรัน manual `Deploy protected Pages artifact`; จากนั้นตรวจ Core 5, public master/manifest 404, signed audio/expiry/missing/fail-closed บน Production.
 
 ## 2026-08-14 — P1-F-05/F-07 Consent and Privacy Copy (`LOCAL_DONE / SV_STATIC_PASS`)
 
