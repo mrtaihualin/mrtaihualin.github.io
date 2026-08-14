@@ -76,10 +76,6 @@ const DESTINATIONS = [
     "title": "【遊戲】泰語造句練習室（樂高）— 挑詞組句子小遊戲"
   },
   {
-    "id": "game-challenge",
-    "title": "【遊戲】泰語綜合挑戰關卡 — 同一個字連闖三關"
-  },
-  {
     "id": "course-trial",
     "title": "預約免費體驗課"
   },

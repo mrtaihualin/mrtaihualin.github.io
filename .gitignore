@@ -66,3 +66,6 @@ _to_delete/
 _staging-build/
 # สำเนาตรวจซ้ำก่อนขึ้น Netlify (P7-02) — สร้างใหม่ได้จาก scripts/build-staging.js เหมือนกัน ห้าม commit
 _staging-build-verify/
+
+# Protected GitHub Pages artifact — generated locally/CI, never commit the output.
+_pages-build/

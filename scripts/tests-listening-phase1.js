@@ -11,6 +11,9 @@ const app = fs.readFileSync(path.join(root, 'js/games/listening-game-app.js'), '
 const html = fs.readFileSync(path.join(root, 'listening-game.html'), 'utf8');
 const edge = fs.readFileSync(path.join(root, 'supabase/functions/tone-round/index.ts'), 'utf8');
 const auth = fs.readFileSync(path.join(root, 'js/games/reading-auth.js'), 'utf8');
+const board = fs.readFileSync(path.join(root, 'listening-board.html'), 'utf8');
+const boardClient = fs.readFileSync(path.join(root, 'js/score/reading-leaderboard.js'), 'utf8');
+const boardSql = fs.readFileSync(path.join(root, 'supabase/sql/2026-08-14_core5_leaderboard_contract.sql'), 'utf8');
 
 const sandbox = { window: {} };
 vm.runInNewContext(typingScore, sandbox, { filename: 'typing-score.js' });
@@ -44,6 +47,12 @@ check('Listening โหลด auth/server/shared score ก่อน app boot', /
 check('Listening มี 玩法 ที่เปิดดูซ้ำได้และอธิบายกติกา 0 แยกสอง score', /id="lg-howto-modal"/.test(html) && /📖 玩法/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html));
 check('Edge แยก SRS game=listening', /"reading", "listening", "typing"/.test(edge));
 check('item ใหม่ต่ำกว่า 10 ไม่สร้าง SRS', /below_entry_score/.test(edge));
+check('tone-round rate-limit fail-closed ก่อนเขียน SRS', /if \(rlErr\) return json\(\{ error: "rate_limit_unavailable" \}, 503\)/.test(edge));
+check('Listening อ่าน SRS ของ game=listening กลับจาก server', /from\('tone_srs_state'\)[\s\S]*\.eq\('game', 'listening'\)/.test(app));
+check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier: 'free'/.test(app) && /GameFlow\.allocateSrs/.test(app));
+check('Listening มี leaderboard ของตัวเองและ auth ชี้ถูกหน้า', /READING_BOARD_GAME = 'listening'/.test(board) && /listening-board\.html/.test(auth));
+check('Leaderboard client รองรับ game=listening', /READING_BOARD_GAME === 'listening'/.test(boardClient) && /listening-game\.html/.test(boardClient));
+check('Core 5 SQL contract รองรับ Listening และ weekly เริ่มวันจันทร์ Taipei', /'reading', 'listening', 'typing', 'word_order'/.test(boardSql) && /date_trunc\('week', timezone\('Asia\/Taipei'/.test(boardSql));
 
 if (failures.length) {
   console.error('\n❌ Listening Phase 1 ไม่ผ่าน ' + failures.length + ' ข้อ:');

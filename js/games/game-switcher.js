@@ -5,7 +5,7 @@
 // FILE MAP: [01] tab config → [02] render → [03] DOM-ready init
 (function () {
   var TABS = [
-    { id: 'challenge',      href: 'games-challenge.html', label: '🎮 綜合遊戲',   selfFrom: 'challenge_game' }, // ของเดิม games-challenge.html ใช้ from:'challenge_game' (ไม่ใช่ 'challenge' เหมือนหน้าอื่นอ้างถึง) — คงพฤติกรรมเดิมไว้ ไม่แก้
+    // Phase 1: Challenge is Paid-only and Paid runtime is not launched, so it must not appear on Free surfaces.
     { id: 'tone_finder',    href: 'tone-finder.html',     label: '🎵 聲調練習室', selfFrom: 'tone_finder' },
     { id: 'reading_game',   href: 'reading-game.html',    label: '✍️ 拼讀練習室', selfFrom: 'reading_game' },
     { id: 'typing_game',    href: 'typing-game.html',     label: '⌨️ 打字練習室', selfFrom: 'typing_game' },

@@ -111,6 +111,7 @@ runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 // เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');
 runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
+runTest(['scripts/tests-s13-protected-architecture.js'], 'S13 protected content/audio architecture tests');
 // เพิ่ม 2026-08-13 — Guest activity ห้ามกลายเป็น account Progress/SRS/Mastered หลัง Login
 runTest(['scripts/tests-phase1-account-boundary.js'], 'Phase 1 Guest/Login account-boundary tests');
 runTest(['scripts/tests-my-learning-phase1.js'], 'Phase 1 我的學習 tests');
@@ -123,6 +124,15 @@ runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
 runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export tests');
 runTest(['scripts/tests-shared-games-phase1.js'], 'Phase 1 shared-game-system tests');
 runTest(['scripts/tests-game-flow-delta.js'], 'Locked five-game flow tests');
+runTest(['scripts/tests-phase1-challenge-gate.js'], 'Phase 1 Challenge access-gate tests');
+runTest(['scripts/tests-resource-search-phase1.js'], 'Phase 1 Resource Search tests');
+runTest(['scripts/tests-vault-consent-phase1.js'], 'Phase 1 Vault consent-gate tests');
+runTest(['scripts/tests-personal-search-phase1.js'], 'Phase 1 Personal Search tests');
+runTest(['scripts/tests-phase1-network-recovery.js'], 'Phase 1 offline/network/timeout recovery tests');
+runTest(['scripts/tests-phase1-error-ux.js'], 'Phase 1 audio/loading/auth error UX tests');
+runTest(['scripts/tests-auth-session-phase1.js'], 'Phase 1 auth session verification tests');
+runTest(['scripts/tests-phase1-save-retry.js'], 'Phase 1 API/Edge/save/retry safety tests');
+runTest(['scripts/tests-phase1-consent-coverage.js'], 'Phase 1 all-page analytics consent coverage tests');
 // เพิ่ม 2026-08-11 (P5-B) — ตัวทดสอบคุ้มกันกฎห้องเรียนที่เคยพังมาแล้วจริง
 // (กฎล็อกเพิ่ม/เลื่อน/ยกเลิก · สำรองก่อนแตะ Calendar · ตรวจคาบชนตอนย้าย · p_original_time ·
 //  ซิงค์ตารางหลังย้าย · ระบบเก่าที่ลบถาวรห้ามกลับมา · รีเซ็ตธงเตือน · ปุ่ม LINE พก d=/t=)

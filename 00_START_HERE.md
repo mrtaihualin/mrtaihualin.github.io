@@ -1,7 +1,7 @@
 # Repo Start Here — mrtaihualin.com
 
 > สถานะ: Current pointer index · **REPO CLEANUP = CLOSED**
-> อัปเดต: 2026-08-14 Document Placement Phase 1
+> อัปเดต: 2026-08-14 23:49 P1-F-05/F-07 bilingual consent/privacy copy local pass; dashboard/browser/deploy/PV hard stop before P1-G-01
 > หน้าที่: บอกทางไปข้อมูลปัจจุบันเท่านั้น ห้ามคัดลอกสถานะยาวมาเก็บซ้ำในไฟล์นี้
 
 ## Current Source of Truth
@@ -10,7 +10,9 @@
 - Shared Rules canonical + Startup Gate สำหรับ Claude/Codex: `/Users/taihualin/Documents/Claude/Projects/AGENTS.md`
 - Executing agent สำหรับงานต่อของ `mrtaihualin.com`: **Codex เท่านั้น**; Claude คง routing compatibility แต่ไม่รับ implementation task
 - สถานะและงาน Active ของเว็บไซต์: `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md`
+- Product Decision ปัจจุบัน: `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/GPT Chat/CURRENT_SOURCE_OF_TRUTH_2026-08-14_1845.md`
 - แผนงานหลัก: `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
+- Phase 1 Guest Free + Login Free checklist: `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/PLANS/website/2026-08-14_1958_PHASE1_GUEST_LOGIN_FREE_MASTER_PLAN_CURRENT.md` — ทุกงาน Phase 1 ต้องอัปเดตสถานะกลับแผนนี้เพียงชุดเดียว
 - กฎการทำงานใน repo: `/Users/taihualin/Developer/mrtaihualin.github.io/AGENTS.md`
 - หลักฐานการเปลี่ยนโค้ด/โครงสร้างล่าสุด: `/Users/taihualin/Developer/mrtaihualin.github.io/MAINTENANCE.md`
 
@@ -18,7 +20,7 @@
 
 - อ่านรายการ Active ล่าสุดจากศูนย์บัญชาการและแผนงานหลักด้านบน ห้ามใช้ Handoff หรือ Backup แทน Current Source.
 - งานที่พักไว้หรือทำภายหลังอยู่ที่ `/Users/taihualin/Developer/mrtaihualin.github.io/_แผนงาน/ทำต่อในอนาคต.md` เพียงที่เดียว.
-- `GAME_REWARD_AUTH` ยังเป็น `ACTIVE / NOT IMPLEMENTED OR VERIFIED`; operational plan อยู่ที่ `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/PLANS/website/2026-08-13_1857_PLAN_GAME_REWARD_AUTH_CURRENT.md`.
+- `GAME_REWARD_AUTH` เป็น `PARKED / PAID FUTURE / NOT PHASE 1`; ไม่ใช่ Phase 1 blocker. แผนอยู่ที่ `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/PLANS/website/2026-08-13_1857_PLAN_GAME_REWARD_AUTH_CURRENT.md`.
 
 ## Closed / Historical
 
@@ -39,4 +41,6 @@
 
 ## Next Action
 
+- Local-safe run ปิดถึง `P1-F-05/F-06` แล้ว. งานถัดไป `P1-G-01` เป็น true hard stop: ต้อง confirm Clarity dashboard, browser/real account, deploy/Production evidence และ separate release authorization ก่อน.
 - Document Placement Phase 1 = `CLOSED / PASS` เมื่อ 2026-08-14; Phase 2 Repo Cleanup และ move candidates ทั้งหมดเป็นงานแยกที่ยัง `PARKED / NOT AUTHORIZED`.
+- Latest game closeout: `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/STATUS/2026-08-14_2028_GAMES_PHASE3_CORE5_LOCAL_CLOSEOUT.md` (`PASS_LOCAL / PRODUCTION_VERIFY_NEEDED`; Lego deferred).

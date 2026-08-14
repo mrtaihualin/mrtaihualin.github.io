@@ -94,8 +94,13 @@
     var _fetchTP = window.getCachedFetch
       ? window.getCachedFetch('tone_progress:' + user.id, function () { return sb.from('tone_progress').select('data').eq('user_id', user.id).maybeSingle(); })
       : sb.from('tone_progress').select('data').eq('user_id', user.id).maybeSingle();
-    _fetchTP
+    var guardedPull = window.NetworkGuard
+      ? window.NetworkGuard.request(function () { return _fetchTP; }, 'tone-progress-pull', {}, 10000, null)
+      : Promise.resolve(_fetchTP);
+    guardedPull
       .then(function (res) {
+        // A resolved PostgREST error is still a failed read. Never merge an empty value or push over remote state.
+        if (!res || res.error) { try { console.warn('[progress-sync] pull failed:', res && res.error); } catch (e0) {} return; }
         var remote = (res && res.data && res.data.data) ? res.data.data : {};
         applyMerged(remote);
         pulled = true;
@@ -105,13 +110,28 @@
   }
 
   // ── ดันความก้าวหน้าปัจจุบันขึ้น Supabase (ตอนจบรอบ) ──
-  var pushTimer = null;
+  var pushTimer = null, pushInFlight = false, pushAgain = false, pushPending = false;
   function push() {
     if (!sb || !user || !ownerReady()) return;
+    if (pushInFlight) { pushAgain = true; return; }
     var row = { user_id: user.id, data: collectLocal(), updated_at: new Date().toISOString() };
-    sb.from('tone_progress').upsert(row, { onConflict: 'user_id' }).then(function () {}, function () {});
+    pushInFlight = true;
+    var write = sb.from('tone_progress').upsert(row, { onConflict: 'user_id' });
+    var guardedWrite = window.NetworkGuard
+      ? window.NetworkGuard.request(function () { return write; }, 'tone-progress-push', {}, 10000, null)
+      : Promise.resolve(write);
+    guardedWrite.then(function (res) {
+      finishPush(res && res.error);
+    }, function (error) { finishPush(error); });
+  }
+  function finishPush(error) {
+    pushInFlight = false;
+    pushPending = !!error;
+    if (error) try { console.warn('[progress-sync] push failed; waiting for retry:', error); } catch (e) {}
+    if (pushAgain) { pushAgain = false; push(); }
   }
   function pushDebounced() { if (pushTimer) clearTimeout(pushTimer); pushTimer = setTimeout(push, 800); }
+  if (window.addEventListener) window.addEventListener('online', function () { if (pushPending) pushDebounced(); });
 
   // ── ผูกกับสถานะล็อกอิน ──
   if (sb) {
