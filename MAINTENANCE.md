@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 13:42 Asia/Bangkok** — S29 Action 2 SQL/RLS/RPC PASS; client release remains blocked
+**Updated: 2026-08-15 15:14 Asia/Bangkok** — S29 CLOSED_VERIFIED in Production
+
+## 2026-08-15 — S29 Production Authenticated Attack/E2E (`CLOSED_VERIFIED`)
+
+- Production valid-score E2E รอบแรกพบ `503 rate_limit_unavailable`; read-only diagnostic ยืนยัน PostgreSQL `42P10` ใน legacy `rl_check`. แก้ `score-submit` ให้ใช้ server-only `game_content_rl_check` เดิมด้วย key ต่อ JWT user และเพดานเดิม 30/user/600s; local S29 + `node scripts/check-site.js` PASS 919 files/secret scan 1142.
+- Deploy เฉพาะ `score-submit`; Production inventory = `ACTIVE` v2, `verify_jwt=true`, source SHA-256 `f64ad118…c942`. Backup/SQL/RLS เดิมไม่รันซ้ำและไม่มี Git action.
+- Authenticated Production E2E PASS: valid Core 5 (50/50/50/5/60), forged/negative/malformed/wrong game/difficulty/user blocked, missing/invalid auth 401, exact replay idempotent, changed replay 409, concurrent duplicate one write, request 31/10m = 429.
+- Direct INSERT/UPDATE/DELETE บน authoritative/tone/reading ถูกบล็อก 9/9; weekly/all-time RPC 4/4 ผ่าน ordering, tie 50/50, aggregate 100/50/50 และไม่คืน `user_id`/email. Browser กระดาน Production 5 หน้าโหลดครบโดยไม่มี console error.
+- บัญชีและข้อมูลทดสอบล้างครบ `remaining=0`. S29 ปิด `CLOSED_VERIFIED`; nickname moderation/report/admin hide-reset ยังเป็น Phase 1 item แยก ไม่เปิด S29 กลับ.
 
 ## 2026-08-15 — S29 Production Action 2 (`SQL_RLS_RPC_PASS / CLIENT_NOT_DEPLOYED`)
 
