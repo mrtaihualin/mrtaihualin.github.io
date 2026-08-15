@@ -15,6 +15,29 @@
 (function () {
   'use strict';
   var boxEl = document.getElementById('line-cb-box');
+  var CALLBACK_TIMEOUT_MS = 12000;
+
+  function withCallbackTimeout(promise, label, uncertain) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        var error = new Error(label + '逾時');
+        error.uncertain = !!uncertain;
+        reject(error);
+      }, CALLBACK_TIMEOUT_MS);
+      Promise.resolve(promise).then(function (value) {
+        if (settled) return;
+        settled = true; clearTimeout(timer); resolve(value);
+      }, function (error) {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        if (uncertain && error && typeof error === 'object' && error.uncertain == null) error.uncertain = true;
+        reject(error);
+      });
+    });
+  }
 
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
@@ -34,6 +57,15 @@
       '<h1 style="font-family:\'Noto Serif TC\',serif;font-size:17px;margin:0 0 8px;color:#C0392B;">登入失敗</h1>' +
       '<p>' + esc(msg) + '</p>' +
       '<a class="btn" href="' + esc(returnTo()) + '">返回上一頁</a>';
+  }
+
+  function showUncertain(msg) {
+    if (!boxEl) return;
+    boxEl.innerHTML =
+      '<div style="font-size:34px;margin-bottom:10px;">⏳</div>' +
+      '<h1 style="font-family:\'Noto Serif TC\',serif;font-size:17px;margin:0 0 8px;color:#8B6310;">尚未確認完成</h1>' +
+      '<p>' + esc(msg) + '</p>' +
+      '<a class="btn" href="' + esc(returnTo()) + '">返回並檢查狀態</a>';
   }
 
   function run() {
@@ -76,23 +108,27 @@
     function callEdgeFn(extraBody, extraHeaders) {
       var body = { code: code, redirect_uri: redirectUri, nonce: nonce };
       for (var k in extraBody) { if (extraBody.hasOwnProperty(k)) body[k] = extraBody[k]; }
-      return sb.functions.invoke('line-login', { body: body, headers: extraHeaders || {} }).then(function (res) {
+      var invocation = Promise.resolve(sb.functions.invoke('line-login', { body: body, headers: extraHeaders || {} })).then(function (res) {
         if (res.error || !res.data || !res.data.ok) {
           if (res.error && res.error.context && typeof res.error.context.json === 'function') {
             return res.error.context.json().then(function (body2) {
               throw new Error((body2 && (body2.detail || body2.error)) || res.error.message || '未知錯誤');
             });
           }
-          throw new Error((res.data && (res.data.detail || res.data.error)) || (res.error && res.error.message) || '未知錯誤');
+          var invokeError = new Error((res.data && (res.data.detail || res.data.error)) || (res.error && res.error.message) || '未知錯誤');
+          // A client/network invocation error has no authoritative remote result.
+          if (res.error && !res.error.context) invokeError.uncertain = true;
+          throw invokeError;
         }
         return res.data;
       });
+      return withCallbackTimeout(invocation, '等待 LINE 伺服器回應', true);
     }
 
     if (linkMode) {
       // v16 (LIN 2026-07-26): โหมดผูก LINE เข้ากับบัญชีที่ล็อกอินอยู่แล้ว (ไม่ใช่ล็อกอินใหม่)
       // ต้องส่ง access token ของบัญชีปัจจุบันไปให้ Edge Function ยืนยันตัวจริงฝั่งเซิร์ฟเวอร์
-      sb.auth.getSession().then(function (sres) {
+      withCallbackTimeout(sb.auth.getSession(), '確認目前登入狀態', false).then(function (sres) {
         var token = sres && sres.data && sres.data.session && sres.data.session.access_token;
         if (!token) throw new Error('請先登入才能連接 LINE 帳號');
         return callEdgeFn({ link: true }, { Authorization: 'Bearer ' + token });
@@ -104,7 +140,7 @@
         // หน้าเว็บอ่านค่า "已連接" จาก JWT เก่ายังเห็นเป็นยังไม่ผูก ทั้งที่หลังบ้านผูกสำเร็จแล้วจริง —
         // แก้โดยสั่ง refreshSession() ให้ออก JWT ใบใหม่ทันทีหลังผูกสำเร็จ ก่อนเด้งกลับหน้าเดิม
         // (best-effort — ถ้า refresh พลาดก็ไม่เป็นไร ข้อมูลผูกจริงในฐานข้อมูลถูกต้องอยู่แล้ว แค่ badge จะช้าไปรอบเดียว)
-        return sb.auth.refreshSession().catch(function () {});
+        return withCallbackTimeout(sb.auth.refreshSession(), '更新登入狀態', false).catch(function () {});
       }).then(function () {
         if (boxEl) {
           boxEl.innerHTML =
@@ -117,7 +153,11 @@
       }).catch(function (e) {
         var msg = (e && e.message) || String(e);
         if (msg === 'already_linked_to_other_account') msg = '這個 LINE 帳號已經連接過別的帳號了';
-        showError('連接失敗（' + esc(msg).slice(0, 120) + '）');
+        if (e && e.uncertain) {
+          showUncertain('無法確認 LINE 是否已連接。請返回上一頁檢查帳號狀態；確認前請勿連續重複連接。');
+        } else {
+          showError('連接失敗（' + esc(msg).slice(0, 120) + '）');
+        }
       });
       return;
     }
@@ -125,7 +165,10 @@
     callEdgeFn({})
       .then(function (data) {
         if (!data.hashed_token) throw new Error('伺服器沒有回傳登入憑證');
-        return sb.auth.verifyOtp({ token_hash: data.hashed_token, type: 'email' }).then(function (r2) {
+        return withCallbackTimeout(
+          sb.auth.verifyOtp({ token_hash: data.hashed_token, type: 'email' }),
+          '確認 LINE 登入狀態', true
+        ).then(function (r2) {
           if (r2.error) throw new Error(r2.error.message);
           // ให้ reading-auth.js รู้ว่าเพิ่งล็อกอินสำเร็จด้วย LINE จริงๆ (ยิง GA4 login_success ให้ครบ)
           try { sessionStorage.setItem('rg_login_pending', 'line'); } catch (e) {}
@@ -133,7 +176,11 @@
         });
       })
       .catch(function (e) {
-        showError('連接 LINE 時發生問題（' + esc((e && e.message) || String(e)).slice(0, 120) + '）請改用 Email 驗證碼登入');
+        if (e && e.uncertain) {
+          showUncertain('無法確認 LINE 登入是否完成。請返回上一頁檢查是否已登入；若仍未登入，再重新開始一次 LINE 登入。');
+        } else {
+          showError('連接 LINE 時發生問題（' + esc((e && e.message) || String(e)).slice(0, 120) + '）請改用 Email 驗證碼登入');
+        }
       });
   }
 
