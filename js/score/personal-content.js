@@ -85,10 +85,11 @@
   function practiceSection(item, games) {
     var section = el('section', 'pc-detail-section');
     section.appendChild(el('h4', '', '練習紀錄'));
-    var rows = provenance(item);
+    // Save provenance records where an item was bookmarked, not whether the
+    // learner attempted it. Keep the action neutral until verified gameplay
+    // evidence exists for this exact item.
     games.forEach(function (game) {
-      var played = rows.some(function (row) { return row.source === game.source; });
-      var link = el('a', 'pc-practice', (played ? '再練習 · ' : '開始練習 · ') + game.label);
+      var link = el('a', 'pc-practice', '開始練習 · ' + game.label);
       link.href = game.href + encodeURIComponent(item.th);
       section.appendChild(link);
     });

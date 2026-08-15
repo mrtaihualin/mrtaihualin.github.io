@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 21:35 Asia/Bangkok** — Version-control PR #8 ready for Lin review
+**Updated: 2026-08-15 23:07 Asia/Bangkok** — Phase 1 Save provenance is not Played guard
+
+## 2026-08-15 — P1-D-07 Save ≠ Played Guard (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
+
+- แก้ `我的內容` ไม่ให้ Save provenance ถูกตีความว่าเคยเล่น: ปุ่มฝึกใช้ข้อความกลาง `開始練習` จนกว่าจะมี gameplay/attempt/completed-play evidence ของ item นั้นจริง; ข้อมูลแหล่งที่ Save ยังคงแสดงแยกใน `儲存資訊` ตามเดิม.
+- เพิ่ม negative regression ยืนยันว่า Save อย่างเดียวห้ามสร้าง `再練習`/Played label และ bump cache ของ `personal-content.js` ที่ `vault.html`; ไม่เปลี่ยน schema, SQL, Supabase หรือ Production.
 
 ## 2026-08-15 — Version Control Lin-Gated Workflow (`READY_FOR_LIN_REVIEW`)
 
