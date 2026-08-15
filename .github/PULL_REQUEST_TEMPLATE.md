@@ -13,3 +13,17 @@ Write-Set:
 ## Verification
 
 <!-- Required tests and their result. -->
+
+## Lin final merge gate
+
+Base `main` SHA:
+
+Exact PR head SHA:
+
+Required checks:
+
+Changed files / risk / visual verification:
+
+`READY_FOR_LIN_REVIEW`: NO
+
+Lin merge authorization: WAITING
