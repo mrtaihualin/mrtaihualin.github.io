@@ -549,9 +549,17 @@
       saveToast('⚠️ 分數儲存失敗：' + msg, false);
       try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
     }
+    function requestScoreSubmit() {
+      if (!window.NetworkGuard || !NetworkGuard.request) {
+        return Promise.reject(new Error('網路保護尚未就緒'));
+      }
+      return NetworkGuard.request(function () {
+        return sb.functions.invoke('score-submit', { body: payload });
+      }, 'score-submit', {}, 12000, null);
+    }
     function submit(attempt) {
       try {
-        sb.functions.invoke('score-submit', { body: payload }).then(function (res) {
+        requestScoreSubmit().then(function (res) {
           if (!res.error && res.data && res.data.ok) {
             saveToast('✅ 分數已驗證並儲存 +' + res.data.score + ' 分', true);
             return;

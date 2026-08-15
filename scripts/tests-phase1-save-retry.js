@@ -49,14 +49,24 @@ test('server SRS protects retry and concurrent duplicate writes', () => {
 });
 test('client score retry reuses one idempotent payload', () => {
   assert.match(readingAuth, /submission_id: scoreSubmissionId\(\)/);
+  assert.strictEqual((readingAuth.match(/submission_id: scoreSubmissionId\(\)/g) || []).length, 1);
   assert.match(readingAuth, /if \(attempt === 0\) \{ setTimeout\(function \(\) \{ submit\(1\); \}, 800\); return; \}/);
   assert.match(scoreSql, /submission_id uuid primary key/);
   assert.match(scoreSubmit, /idempotent: true/);
   assert.match(scoreSubmit, /replay_conflict/);
 });
+test('hung client score submissions time out before the same payload retries once', () => {
+  assert.match(readingAuth, /function requestScoreSubmit\(\)/);
+  assert.match(readingAuth, /NetworkGuard\.request\(function \(\) \{[\s\S]{0,120}sb\.functions\.invoke\('score-submit', \{ body: payload \}\);[\s\S]{0,80}'score-submit', \{\}, 12000, null\)/);
+  assert.match(readingAuth, /if \(!window\.NetworkGuard \|\| !NetworkGuard\.request\)[\s\S]{0,120}Promise\.reject/);
+  assert.strictEqual((readingAuth.match(/submit\(1\)/g) || []).length, 2);
+});
 test('Core 5 ship the current round-save client', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-    assert.match(read(page), /tone-server\.js\?v=3/);
+    const html = read(page);
+    assert.match(html, /tone-server\.js\?v=3/);
+    assert.match(html, /network-guard\.js\?v=1/);
+    assert.match(html, /reading-auth\.js\?v=20/);
   });
 });
 
