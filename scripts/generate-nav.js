@@ -116,7 +116,7 @@ PAGES.forEach(function (file) {
   const navBlockHTML = '<nav class="site-nav">' + NAV.renderNavHTML(file) + '</nav>';
   let next = original.replace(NAV_RE, navBlockHTML);
   next = next.replace(/data\/nav-template\.js\?v=\d+/g, 'data/nav-template.js?v=3');
-  next = next.replace(/js\/core\/shared\.min\.js\?v=\d+/g, 'js/core/shared.min.js?v=30');
+  next = next.replace(/js\/core\/shared\.min\.js\?v=\d+/g, 'js/core/shared.min.js?v=31');
 
   // ── nav responsive auto-fit script — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกทันทีหลัง </nav> ──
   const navFitHTML = NAV.renderNavFitScriptHTML();

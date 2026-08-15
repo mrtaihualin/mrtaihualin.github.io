@@ -94,24 +94,56 @@ window.registerGameModal = window.registerGameModal || function (opts) {
 // ═══════════════════════════════════════════════════════════
 window.GameResume = window.GameResume || (function () {
   function key(gameId) { return 'gsh_resume_' + gameId; }
+  var accountKey = 'phase1_account_resume_v1';
+  function accountReady() {
+    try {
+      var user = window.SITE_AUTH && window.SITE_AUTH.user;
+      var boundary = window.PHASE1_ACCOUNT_BOUNDARY;
+      return !!(user && boundary && localStorage.getItem(boundary.ownerKey) === String(user.id));
+    } catch (e) { return false; }
+  }
+  function accountRows() {
+    try { return JSON.parse(localStorage.getItem(accountKey) || '{}'); } catch (e) { return {}; }
+  }
+  function saveAccountRows(rows) {
+    try {
+      localStorage.setItem(accountKey, JSON.stringify(rows));
+      if (window.PHASE1_CANONICAL) window.PHASE1_CANONICAL.schedule();
+    } catch (e) {}
+  }
   return {
     // state: ก้อนข้อมูลที่จำเป็นจริงในการกลับมาเล่นต่อ (เช่น {level, idx, total, score, ...}) — แต่ละเกมกำหนดฟิลด์เอง
     save: function (gameId, state) {
       try {
         var payload = state ? JSON.parse(JSON.stringify(state)) : {};
         payload._savedAt = Date.now();
-        localStorage.setItem(key(gameId), JSON.stringify(payload));
+        if (accountReady()) {
+          var rows = accountRows();
+          rows[gameId] = payload;
+          saveAccountRows(rows);
+        } else {
+          localStorage.setItem(key(gameId), JSON.stringify(payload));
+        }
       } catch (e) {}
     },
     load: function (gameId) {
       try {
+        if (accountReady()) return accountRows()[gameId] || null;
         var raw = localStorage.getItem(key(gameId));
         if (!raw) return null;
         return JSON.parse(raw);
       } catch (e) { return null; }
     },
     clear: function (gameId) {
-      try { localStorage.removeItem(key(gameId)); } catch (e) {}
+      try {
+        if (accountReady()) {
+          var rows = accountRows();
+          delete rows[gameId];
+          saveAccountRows(rows);
+        } else {
+          localStorage.removeItem(key(gameId));
+        }
+      } catch (e) {}
     }
   };
 })();

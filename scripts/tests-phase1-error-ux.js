@@ -45,7 +45,7 @@ test('content loading error has retry, home and support recovery', () => {
 test('all Core 5 pages ship current auth/audio error handling', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
-    assert.match(html, /auth-widget\.js\?v=7/);
+    assert.match(html, /auth-widget\.js\?v=8/);
     assert.match(html, /protected-word-audio\.js\?v=2/);
   });
 });

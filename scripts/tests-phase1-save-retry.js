@@ -6,7 +6,7 @@ const path = require('path');
 const assert = require('assert');
 const root = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
-const progress = read('js/score/progress-sync.js');
+const progress = read('js/score/phase1-canonical-state.js');
 const toneServer = read('js/games/tone-server.js');
 const edge = read('supabase/functions/tone-round/index.ts');
 const readingAuth = read('js/games/reading-auth.js');
@@ -19,25 +19,25 @@ function test(label, fn) {
 }
 
 test('failed progress read cannot be treated as empty remote state and overwritten', () => {
-  const pullStart = progress.indexOf("window.NetworkGuard.request(function () { return _fetchTP;");
+  const pullStart = progress.indexOf("guarded(request, 'phase1-canonical-pull')");
   const guard = progress.indexOf('if (!res || res.error)', pullStart);
-  const merge = progress.indexOf('applyMerged(remote)', pullStart);
-  const push = progress.indexOf('push();   // เขียนผลรวมกลับขึ้นไป', pullStart);
-  assert.ok(guard >= 0 && guard < merge && merge < push);
+  const apply = progress.indexOf('applyRemote(remoteData', pullStart);
+  assert.ok(pullStart >= 0 && guard > pullStart && guard < apply);
 });
 test('progress writes are serialized and keep a retry-pending state', () => {
-  assert.match(progress, /pushInFlight[\s\S]*pushAgain[\s\S]*pushPending/);
+  assert.match(progress, /pushInFlight[\s\S]*pushAgain[\s\S]*retryPending/);
   assert.match(progress, /if \(pushInFlight\) \{ pushAgain = true; return; \}/);
-  assert.match(progress, /pushPending = !!error/);
+  assert.match(progress, /retryPending = true/);
 });
 test('progress retry happens on a later online event, without a tight error loop', () => {
-  assert.match(progress, /addEventListener\('online'[\s\S]*if \(pushPending\) pushDebounced\(\)/);
-  const finish = progress.slice(progress.indexOf('function finishPush'), progress.indexOf('function pushDebounced'));
+  assert.match(progress, /addEventListener\('online'[\s\S]*if \(retryPending\) pull\(false\)/);
+  const finish = progress.slice(progress.indexOf('function finishPush'), progress.indexOf('function push(meta)'));
   assert.doesNotMatch(finish, /if \(error\)[^\n]*push\(\)/);
 });
 test('progress reads and writes have bounded waits', () => {
-  assert.match(progress, /tone-progress-pull'[\s\S]{0,80}10000/);
-  assert.match(progress, /tone-progress-push'[\s\S]{0,80}10000/);
+  assert.match(progress, /NetworkGuard\.request\(promiseFactory, label, \{\}, 10000/);
+  assert.match(progress, /phase1-canonical-pull/);
+  assert.match(progress, /phase1-canonical-push/);
 });
 test('round-save Edge call has a bounded wait and fails closed', () => {
   assert.match(toneServer, /NetworkGuard\.request[\s\S]*tone-round'[\s\S]{0,80}12000/);

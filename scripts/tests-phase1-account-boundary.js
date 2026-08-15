@@ -87,7 +87,7 @@ function makeStorage(seed) {
 
 // Static guards for the write paths that caused the real mismatch.
 {
-  const progress = read('js/score/progress-sync.js');
+  const progress = read('js/score/phase1-canonical-state.js');
   const tone = read('js/games/tone-finder-game.js');
   const reading = read('js/games/reading-game-app.js');
   const typing = read('js/games/typing-game-app.js');
@@ -98,8 +98,8 @@ function makeStorage(seed) {
   const readingAuth = read('js/games/reading-auth.js');
   const scoreSql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
 
-  check('progress pull ต้องผ่าน verified owner boundary', /function pull\(\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\)\) return;/.test(progress));
-  check('progress push ต้องผ่าน verified owner boundary', /function push\(\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\)\) return;/.test(progress));
+  check('progress pull ต้องผ่าน verified owner boundary', /function pull\(fromConflict\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\)\) return;/.test(progress));
+  check('progress push ต้องผ่าน verified owner boundary', /function push\(meta\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\) \|\| !hasPending\(meta\)\) return;/.test(progress));
   check('tone Guest completion ไม่ถูกเก็บรอ Login', /if \(!API\.user\) return;/.test(readingAuth) && !/lastSession|pendingGuestScore/.test(readingAuth));
   check('tone session ป้องกัน complete event ซ้ำในรอบเดียวกัน', /submission_id: scoreSubmissionId\(\)/.test(readingAuth) && /submission_id uuid primary key/.test(scoreSql));
   check('Tone SRS หยุดทันทีเมื่อเป็น Guest', /if \(!tfSrsLoggedIn\(\)\) return; \/\/ Guest Free ไม่มี SRS/.test(tone));

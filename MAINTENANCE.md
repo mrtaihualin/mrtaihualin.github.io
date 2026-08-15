@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 15:14 Asia/Bangkok** — S29 CLOSED_VERIFIED in Production
+**Updated: 2026-08-15 19:06 Asia/Bangkok** — P1-B-07 canonical persistence local architecture PASS
+
+## 2026-08-15 — P1-B-07 Canonical Login Free Persistence (`PASS_LOCAL / DEPLOY_AND_TWO_DEVICE_PV_NEEDED`)
+
+- เพิ่ม `phase1-canonical-state.js` เป็น client persistence owner กลาง: server-owned profile/score/session/SRS/personal data คง canonical table เดิม; client-owned SRS/progress cache และ Account Resume ใช้ versioned envelope ใน `tone_progress.data` เดิม จึงไม่สร้าง schema/SQL ใหม่.
+- การเขียน `tone_progress` เปลี่ยนเป็น compare-and-swap ด้วย `updated_at` token: เครื่องที่ถือ baseline เก่าต้อง re-read/rebase pending slices ก่อน retry, read failure ห้ามแปลเป็น remote ว่าง, write serialize และ mutation ใหม่ที่เกิดระหว่าง request ไม่ถูก acknowledge ทิ้ง.
+- Guest Resume ยังคง local เฉพาะเครื่อง; Login Free Resume แยกเป็น `phase1_account_resume_v1`, ผูก verified account owner และ sync ครบ Core 5 โดยไม่ import Guest state หรือข้อมูล account ก่อนหน้า.
+- เพิ่ม regression 9 ข้อและผูก central gate; bump `auth-widget` v8, `progress-sync` v5 compatibility facade และ `shared.min.js` v31 ครบ 78 หน้า. Targeted account/save/shared tests PASS; Browser local smoke โหลด Tone + Learning Center runtime/Guest recovery ได้ ไม่มี canonical/auth runtime error.
+- `node scripts/check-site.js` PASS ทั้งหมด 921 project files/secret scan 1144. ยังไม่มี Git, SQL, schema, Supabase/Production mutation หรือ deploy; ต้อง authorized client deploy + controlled authenticated two-device E2E ก่อนยก PV/D-03/D-04 เป็น PASS.
 
 ## 2026-08-15 — S29 Production Authenticated Attack/E2E (`CLOSED_VERIFIED`)
 
