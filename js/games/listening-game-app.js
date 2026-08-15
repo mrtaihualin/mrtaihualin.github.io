@@ -65,7 +65,80 @@
   var el = {};
   var listeningSrs = {};
   var listeningSrsSynced = false;
-  var listeningSrsSyncPromise = null;
+
+  // ===== LISTENING_SRS_RACE_GUARD_START =====
+  function createListeningSrsRaceGuard(options) {
+    var activeRequest = null;
+    var requestSeq = 0;
+    var startPending = false;
+    var startSeq = 0;
+
+    function sameOwner(expected) {
+      var current = options.owner();
+      return !!(expected && current &&
+        current.uid === expected.uid && current.epoch === expected.epoch);
+    }
+
+    function sync(force) {
+      if (!force && options.isSynced()) return Promise.resolve(true);
+      var owner = options.owner();
+      if (!owner || !owner.uid) return Promise.resolve(false);
+      if (activeRequest && activeRequest.owner.uid === owner.uid && activeRequest.owner.epoch === owner.epoch) {
+        return activeRequest.promise;
+      }
+
+      var request = { id: ++requestSeq, owner: owner, promise: null };
+      request.promise = Promise.resolve().then(function () {
+        return options.load(owner);
+      }).then(function (res) {
+        if (activeRequest !== request || !sameOwner(owner)) return false;
+        if (!res || res.error || !Array.isArray(res.data)) return false;
+        options.apply(res.data);
+        options.setSynced(true);
+        return true;
+      }).catch(function () {
+        return false;
+      }).then(function (ok) {
+        // A late request from an old owner must not clear the newer owner's request.
+        if (activeRequest === request) activeRequest = null;
+        return ok;
+      });
+      activeRequest = request;
+      return request.promise;
+    }
+
+    function start(begin) {
+      if (startPending || options.isRoundActive()) return Promise.resolve(false);
+      startPending = true;
+      var token = ++startSeq;
+      var owner = options.owner();
+      var wait = owner && owner.uid && !options.isSynced() ? sync(true) : Promise.resolve(true);
+
+      function finish() {
+        if (token !== startSeq) return false;
+        startPending = false;
+        if (!sameOwner(owner) || options.isRoundActive()) return false;
+        begin();
+        return true;
+      }
+
+      // Do not dead-end Start on a slow SRS read. The same-owner request may still
+      // populate SRS for later rounds, but this race settles only once and cannot
+      // start the current round again when that request eventually resolves.
+      return Promise.race([wait, options.delay(1500)]).then(finish, finish);
+    }
+
+    function reset() {
+      requestSeq++;
+      activeRequest = null;
+      options.setSynced(false);
+      startSeq++;
+      startPending = false;
+    }
+
+    return { sync: sync, start: start, reset: reset };
+  }
+  // ===== LISTENING_SRS_RACE_GUARD_END =====
 
   function qs(id) { return document.getElementById(id); }
 
@@ -152,31 +225,64 @@
     var rec = listeningSrs[srsKey(word)];
     return !!(rec && !rec.mastered && rec.dueDate && rec.dueDate <= taipeiDate());
   }
-  function syncListeningSrs(force) {
-    if (!force && listeningSrsSynced) return Promise.resolve(true);
-    if (!window.READING_AUTH || !READING_AUTH.user) return Promise.resolve(false);
-    if (listeningSrsSyncPromise) return listeningSrsSyncPromise;
+
+  function listeningOwnerSnapshot() {
+    var user = window.READING_AUTH && READING_AUTH.user;
+    return {
+      uid: user && user.id || '',
+      epoch: Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0
+    };
+  }
+
+  function loadListeningSrs(owner) {
     var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
-    if (!sb || !sb.from) return Promise.resolve(false);
-    listeningSrsSyncPromise = sb.from('tone_srs_state')
-      .select('level, word, stage, due_date, ever_failed, mastered')
-      .eq('game', 'listening')
-      .then(function (res) {
-        if (res.error || !res.data) return false;
-        listeningSrs = {};
-        res.data.forEach(function (row) {
-          listeningSrs[(row.word || '') + '@' + (row.level || 0)] = {
-            stage: row.stage || 0, dueDate: row.due_date || '',
-            everFailed: !!row.ever_failed, mastered: !!row.mastered
-          };
-        });
-        listeningSrsSynced = true;
-        return true;
-      }).catch(function () { return false; }).then(function (ok) {
-        listeningSrsSyncPromise = null;
-        return ok;
+    if (!sb || !sb.from) return Promise.reject(new Error('SRS_CLIENT_UNAVAILABLE'));
+    if (!window.NetworkGuard || typeof NetworkGuard.request !== 'function') {
+      return Promise.reject(new Error('SRS_NETWORK_GUARD_UNAVAILABLE'));
+    }
+    return NetworkGuard.request(function () {
+      return sb.from('tone_srs_state')
+        .select('level, word, stage, due_date, ever_failed, mastered')
+        .eq('game', 'listening')
+        .eq('user_id', owner.uid);
+    }, 'listening-srs', {}, 10000, null);
+  }
+
+  var listeningSrsGuard = createListeningSrsRaceGuard({
+    owner: listeningOwnerSnapshot,
+    isSynced: function () { return listeningSrsSynced; },
+    setSynced: function (value) { listeningSrsSynced = !!value; },
+    isRoundActive: function () { return state.roundActive; },
+    load: loadListeningSrs,
+    apply: function (rows) {
+      var next = {};
+      rows.forEach(function (row) {
+        next[(row.word || '') + '@' + (row.level || 0)] = {
+          stage: row.stage || 0, dueDate: row.due_date || '',
+          everFailed: !!row.ever_failed, mastered: !!row.mastered
+        };
       });
-    return listeningSrsSyncPromise;
+      listeningSrs = next;
+    },
+    delay: function (ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+  });
+  var listeningSrsOwner = listeningOwnerSnapshot();
+
+  function ensureListeningSrsOwner() {
+    var nextOwner = listeningOwnerSnapshot();
+    if (nextOwner.uid !== listeningSrsOwner.uid || nextOwner.epoch !== listeningSrsOwner.epoch) {
+      listeningSrsOwner = nextOwner;
+      listeningSrs = {};
+      listeningSrsGuard.reset();
+    }
+    return nextOwner;
+  }
+
+  function syncListeningSrs(force) {
+    ensureListeningSrsOwner();
+    return listeningSrsGuard.sync(force);
   }
 
   function allocateListeningRound(pool, n) {
@@ -221,11 +327,8 @@
 
   // ── round flow ──
   function startRound() {
-    if (window.READING_AUTH && READING_AUTH.user && !listeningSrsSynced) {
-      syncListeningSrs(true).then(startRoundNow);
-      return;
-    }
-    startRoundNow();
+    ensureListeningSrsOwner();
+    listeningSrsGuard.start(startRoundNow);
   }
 
   function startRoundNow() {
@@ -893,8 +996,8 @@
 
     if (window.SITE_AUTH && SITE_AUTH.onChange) {
       SITE_AUTH.onChange(function () {
-        listeningSrs = {}; listeningSrsSynced = false; listeningSrsSyncPromise = null;
-        if (window.READING_AUTH && READING_AUTH.user) syncListeningSrs(true);
+        var nextOwner = ensureListeningSrsOwner();
+        if (nextOwner.uid && !listeningSrsSynced) syncListeningSrs(true);
       });
     }
 
