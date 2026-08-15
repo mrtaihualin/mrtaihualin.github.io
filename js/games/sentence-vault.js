@@ -13,6 +13,7 @@
   var COLS = 'word_th,zh,en,source_raw,saved_at,deleted_at';
   var _sb = null;
   var _uid = null;
+  var _ownerGeneration = 0;
   var _deleteInFlight = Object.create(null);
   var DELETE_TIMEOUT_MS = 10000;
 
@@ -37,6 +38,12 @@
   }
   function warn(where, error) {
     try { console.warn('[sentence-vault] ' + where + ':', error && error.message || error); } catch (e) {}
+  }
+  function ownerSnapshot() {
+    return { client: _sb, uid: _uid, generation: _ownerGeneration };
+  }
+  function ownerIsCurrent(owner) {
+    return !!(owner && owner.client === _sb && owner.uid === _uid && owner.generation === _ownerGeneration);
   }
   function bounded(operation, label, done) {
     var settled = false;
@@ -68,17 +75,19 @@
     if (pending && pending.deleted_at === deletedAt) { delete state.pendingDeletes[th]; saveState(state); }
   }
   function pendingDeleteCount() { return Object.keys(loadState().pendingDeletes).length; }
-  function flushPendingDeletes() {
-    if (!ready()) return;
+  function flushPendingDeletes(owner) {
+    owner = owner || ownerSnapshot();
+    if (!ownerIsCurrent(owner)) return;
     Object.keys(loadState().pendingDeletes).forEach(function (th) {
       if (_deleteInFlight[th]) return;
       var pending = pendingDelete(th); if (!pending) return;
       _deleteInFlight[th] = true;
       bounded(function () {
-        return _sb.from(TABLE).upsert([{
-          user_id: _uid, vault_key: VAULT_KEY, word_th: th, deleted_at: pending.deleted_at
+        return owner.client.from(TABLE).upsert([{
+          user_id: owner.uid, vault_key: VAULT_KEY, word_th: th, deleted_at: pending.deleted_at
         }], { onConflict: 'user_id,vault_key,word_th' });
       }, 'delete failed', function (error) {
+        if (!ownerIsCurrent(owner)) return;
         delete _deleteInFlight[th];
         if (error) { warn('delete failed', error); return; }
         clearPendingDelete(th, pending.deleted_at); changed();
@@ -133,24 +142,27 @@
     }
     return changedMeta;
   }
-  function rowFor(entry) {
+  function rowFor(entry, ownerUid) {
     return {
-      user_id: _uid, vault_key: VAULT_KEY, word_th: entry.th,
+      user_id: ownerUid || _uid, vault_key: VAULT_KEY, word_th: entry.th,
       zh: entry.zh || null, en: entry.en || null,
       source_raw: sourceRaw(entry), tags: [], deleted_at: null
     };
   }
-  function push(entry) {
-    if (!ready()) return;
-    _sb.from(TABLE).upsert([rowFor(entry)], { onConflict: 'user_id,vault_key,word_th' })
+  function push(entry, owner) {
+    owner = owner || ownerSnapshot();
+    if (!ownerIsCurrent(owner)) return;
+    owner.client.from(TABLE).upsert([rowFor(entry, owner.uid)], { onConflict: 'user_id,vault_key,word_th' })
       .then(function (res) {
+        if (!ownerIsCurrent(owner)) return;
         if (res && res.error) { warn('save failed', res.error); return; }
         var rows = load();
         rows.forEach(function (row) { if (row.th === entry.th) row.synced = true; });
         save(rows);
-      }, function (error) { warn('save failed', error); });
+      }, function (error) { if (ownerIsCurrent(owner)) warn('save failed', error); });
   }
-  function mergeRemote(remote) {
+  function mergeRemote(remote, owner) {
+    if (!ownerIsCurrent(owner)) return;
     var state = loadState();
     var local = state.items;
     var pendingDeletes = state.pendingDeletes;
@@ -190,24 +202,34 @@
     });
     save(merged);
     changed();
-    upload.forEach(push);
-    flushPendingDeletes();
+    upload.forEach(function (entry) { push(entry, owner); });
+    flushPendingDeletes(owner);
   }
   function sync(client, userId) {
     var nextUid = userId || null;
+    var nextClient = client && client.from ? client : null;
     var previousUid = _uid;
     try {
       if (global.PHASE1_ACCOUNT_BOUNDARY && PHASE1_ACCOUNT_BOUNDARY.bind) PHASE1_ACCOUNT_BOUNDARY.bind(nextUid ? { id: nextUid } : null);
       else if (previousUid !== nextUid) localStorage.removeItem(STORAGE_KEY);
     } catch (e) {}
-    _sb = client && client.from ? client : null;
+    if (_sb !== nextClient || _uid !== nextUid) {
+      _ownerGeneration++;
+      _deleteInFlight = Object.create(null);
+    }
+    _sb = nextClient;
     _uid = nextUid;
     if (!ready()) { _sb = null; _uid = null; changed(); return; }
-    _sb.from(TABLE).select(COLS).eq('user_id', _uid).eq('vault_key', VAULT_KEY)
+    var owner = ownerSnapshot();
+    owner.client.from(TABLE).select(COLS).eq('user_id', owner.uid).eq('vault_key', VAULT_KEY)
       .then(function (res) {
-        if (res && res.error) { warn('read failed', res.error); flushPendingDeletes(); return; }
-        mergeRemote(res && res.data || []);
-      }, function (error) { warn('read failed', error); flushPendingDeletes(); });
+        if (!ownerIsCurrent(owner)) return;
+        if (res && res.error) { warn('read failed', res.error); flushPendingDeletes(owner); return; }
+        mergeRemote(res && res.data || [], owner);
+      }, function (error) {
+        if (!ownerIsCurrent(owner)) return;
+        warn('read failed', error); flushPendingDeletes(owner);
+      });
   }
   function addSentence(th, meta) {
     if (!ready()) { requireLogin(); return false; }
@@ -215,7 +237,7 @@
     var rows = load(), existing = null;
     rows.some(function (row) { if (row.th === th) { existing = row; return true; } return false; });
     if (existing) {
-      if (mergeMeta(existing, meta)) { save(rows); push(existing); changed(); }
+      if (mergeMeta(existing, meta)) { save(rows); push(existing, ownerSnapshot()); changed(); }
       return false;
     }
     if (rows.length >= MAX_SENTENCES) { fullToast(); return false; }
@@ -226,7 +248,7 @@
       provenance: meta && meta.source ? [{ source: meta.source, saved_at: now }] : [],
       saved_at: now
     };
-    rows.push(entry); save(rows); push(entry); changed(); return true;
+    rows.push(entry); save(rows); push(entry, ownerSnapshot()); changed(); return true;
   }
   function removeSentence(th) {
     if (!ready()) { requireLogin(); return false; }

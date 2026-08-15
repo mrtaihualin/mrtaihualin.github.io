@@ -122,6 +122,40 @@ function makeClient(remoteRows, opts) {
   return { client, log };
 }
 
+/** client แบบควบคุมลำดับ response — ใช้พิสูจ race ตอนสลับ account/logout */
+function makeDeferredClient() {
+  const pending = [];
+  const log = { upserts: [], deletes: [], selects: 0, tombstones: [] };
+  const client = {
+    from() {
+      const b = {
+        _mode: '', _rows: [], _eq: [],
+        select() { b._mode = 'select'; log.selects++; return b; },
+        upsert(rows) {
+          b._mode = 'upsert'; b._rows = rows;
+          if (rows.length && rows[0].deleted_at) log.tombstones.push(rows); else log.upserts.push(rows);
+          return b;
+        },
+        delete() { b._mode = 'delete'; return b; },
+        eq(col, value) { b._eq.push([col, value]); return b; },
+        then(resolve, reject) {
+          pending.push({ mode: b._mode, rows: b._rows, eq: b._eq.slice(), resolve, reject });
+          return b;
+        }
+      };
+      return b;
+    }
+  };
+  function settle(mode, result, reject) {
+    const index = pending.findIndex((request) => request.mode === mode);
+    if (index < 0) throw new Error('no pending ' + mode + ' request');
+    const request = pending.splice(index, 1)[0];
+    if (reject) request.reject(result); else request.resolve(result);
+    if (mode === 'delete') log.deletes.push(request.eq);
+  }
+  return { client, log, pending, resolve(mode, result) { settle(mode, result, false); }, reject(mode, error) { settle(mode, error, true); } };
+}
+
 const UID = 'user-1';
 const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w));
 
@@ -459,6 +493,56 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   reloadedVault.sync(recovered.client, UID);
   ok('16d remote active row ไม่ resurrect ระหว่าง pending delete', !reloadedVault.has('ข้าว'));
   ok('16e successful retry ปั๊ม tombstone idempotently และปิด pending', recovered.log.tombstones.length === 1 && reloadedVault.pendingDeleteCount() === 0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 17) response ของ owner เก่าที่มาช้า ต้องห้ามแตะ cache/pending/remote operation ของ owner ใหม่
+// ══════════════════════════════════════════════════════════════════════════════
+{
+  const { vault } = loadVault(true);
+  const ownerA = makeDeferredClient();
+  vault.sync(ownerA.client, 'user-a');
+  const ownerB = makeClient([{ word_th: 'ของบี', zh: 'B', tags: [], deleted_at: null }]);
+  vault.sync(ownerB.client, 'user-b');
+  ownerA.resolve('select', { data: [{ word_th: 'ความลับของเอ', zh: 'A', tags: [], deleted_at: null }], error: null });
+  ok('17a delayed A read ห้าม merge ข้อมูลข้ามเข้า account B',
+    vault.has('ของบี') && !vault.has('ความลับของเอ'), JSON.stringify(vault.getAll()));
+}
+{
+  const { vault } = loadVault(true);
+  const ownerA = makeDeferredClient();
+  vault.sync(ownerA.client, 'user-a');
+  vault.addWord('คำเดียวกัน', { zh: 'A' });
+  const ownerB = makeClient([], { upsertError: 'offline' });
+  vault.sync(ownerB.client, 'user-b');
+  vault.addWord('คำเดียวกัน', { zh: 'B' });
+  ownerA.resolve('upsert', { error: null });
+  const current = vault.getAll()[0];
+  ok('17b delayed A save ห้าม mark คำ key เดียวกันของ B ว่า synced',
+    current && current.zh === 'B' && current.synced !== true, JSON.stringify(current));
+}
+{
+  const { vault } = loadVault(true);
+  vault.sync(makeClient([{ word_th: 'ข้าว', zh: 'A', tags: [], deleted_at: null }]).client, 'user-a');
+  const ownerA = makeDeferredClient();
+  vault.sync(ownerA.client, 'user-a');
+  vault.removeWord('ข้าว');
+  const ownerB = makeClient([{ word_th: 'ข้าว', zh: 'B', tags: [], deleted_at: null }]);
+  vault.sync(ownerB.client, 'user-b');
+  ownerA.resolve('upsert', { error: { code: '42703', message: 'column deleted_at does not exist' } });
+  ok('17c stale missing-column fallback ห้าม hard-delete คำของ B',
+    ownerB.log.deletes.length === 0 && vault.has('ข้าว'), JSON.stringify(ownerB.log));
+}
+{
+  const { vault, win } = loadVault(true);
+  const ownerA = makeDeferredClient();
+  vault.sync(ownerA.client, 'user-a');
+  vault.sync(ownerA.client, null);
+  ownerA.resolve('select', { data: [{ word_th: 'ความลับหลังล็อกเอาท์', zh: 'A', tags: [] }], error: null });
+  const raw = JSON.parse(win.localStorage.getItem('linvault_v1') || '[]');
+  const rows = Array.isArray(raw) ? raw : (raw.items || []);
+  ok('17d delayed A read หลัง logout ห้ามเขียน account cache กลับมา',
+    !rows.some((row) => row.th === 'ความลับหลังล็อกเอาท์'), JSON.stringify(rows));
 }
 
 // ── สรุป ────────────────────────────────────────────────────────────────────

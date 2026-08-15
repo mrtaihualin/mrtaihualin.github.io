@@ -36,6 +36,9 @@ check('delete uses tombstone and does not touch SRS/history tables', /deleted_at
 check('personal deletes use bounded pending retry and online recovery',
   /DELETE_TIMEOUT_MS = 10000/.test(word) && /pendingDeleteCount/.test(word) && /addEventListener\('online', _flushPendingDeletes\)/.test(word) &&
   /DELETE_TIMEOUT_MS = 10000/.test(sentence) && /pendingDeleteCount/.test(sentence) && /addEventListener\('online', flushPendingDeletes\)/.test(sentence));
+check('personal vault async completions are scoped to the active owner generation',
+  /_ownerGeneration/.test(word) && /_ownerIsCurrent\(owner\)/.test(word) &&
+  /_ownerGeneration/.test(sentence) && /ownerIsCurrent\(owner\)/.test(sentence));
 check('delete UI does not claim durable success before remote confirmation',
   /已在本機移除/.test(word) && /正在同步刪除/.test(word) && /已在本機移除/.test(sentence) && /正在同步刪除/.test(sentence));
 check('account boundary owns sentence local cache', /'sentence_vault_v1'/.test(auth));
@@ -106,6 +109,124 @@ check('account export includes every vault key, not only words', /from\('learnin
   failTombstone = false;
   vault.retryPendingDeletes();
   check('sentence successful retry clears pending only after tombstone write', vault.pendingDeleteCount() === 0 && !vault.has('ฉันกินข้าว'));
+}
+
+// Execute delayed account transitions against the real SentenceVault runtime.
+// A response authorized for owner A must become inert after switching to B or Guest.
+{
+  function sentenceEnvironment() {
+    const store = {};
+    const win = {
+      localStorage: {
+        getItem: (key) => Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null,
+        setItem: (key, value) => { store[key] = String(value); },
+        removeItem: (key) => { delete store[key]; }
+      },
+      dispatchEvent() {}, CustomEvent: function () {}
+    };
+    const document = { createElement: () => ({ style: {}, setAttribute() {}, addEventListener() {} }), getElementById: () => null, body: { appendChild() {} } };
+    const load = new Function('window', 'localStorage', 'document', 'CustomEvent', 'console', sentence + '\nreturn window.SentenceVault;');
+    return { win, vault: load(win, win.localStorage, document, win.CustomEvent, { warn() {} }) };
+  }
+  function deferredSentenceClient() {
+    const pending = [];
+    const log = { tombstones: [], upserts: [] };
+    const client = {
+      from() {
+        const request = { mode: '', rows: [] };
+        return {
+          select() { request.mode = 'select'; return this; },
+          eq() { return this; },
+          upsert(rows) {
+            request.mode = 'upsert'; request.rows = rows;
+            if (rows[0] && rows[0].deleted_at) log.tombstones.push(rows); else log.upserts.push(rows);
+            return this;
+          },
+          then(resolve, reject) { pending.push({ mode: request.mode, resolve, reject }); return this; }
+        };
+      }
+    };
+    function settle(mode, result, reject) {
+      const index = pending.findIndex((request) => request.mode === mode);
+      if (index < 0) throw new Error('no pending sentence ' + mode + ' request');
+      const request = pending.splice(index, 1)[0];
+      if (reject) request.reject(result); else request.resolve(result);
+    }
+    return { client, log, pending, resolve(mode, result) { settle(mode, result, false); } };
+  }
+  function immediateSentenceClient(remote, options) {
+    options = options || {};
+    const log = { tombstones: [], upserts: [] };
+    return {
+      log,
+      client: {
+        from() {
+          let mode = '', rows = [];
+          return {
+            select() { mode = 'select'; return this; },
+            eq() { return this; },
+            upsert(nextRows) {
+              mode = 'upsert'; rows = nextRows;
+              if (rows[0] && rows[0].deleted_at) log.tombstones.push(rows); else log.upserts.push(rows);
+              return this;
+            },
+            then(resolve) {
+              if (mode === 'select') resolve({ data: remote || [], error: null });
+              else resolve({ error: options.upsertError ? { message: options.upsertError } : null });
+              return this;
+            }
+          };
+        }
+      }
+    };
+  }
+
+  {
+    const { vault } = sentenceEnvironment();
+    const ownerA = deferredSentenceClient();
+    vault.sync(ownerA.client, 'user-a');
+    const ownerB = immediateSentenceClient([{ word_th: 'ประโยคของบี', zh: 'B', source_raw: '', deleted_at: null }]);
+    vault.sync(ownerB.client, 'user-b');
+    ownerA.resolve('select', { data: [{ word_th: 'ความลับของเอ', zh: 'A', source_raw: '', deleted_at: null }], error: null });
+    check('sentence delayed A read cannot merge into account B', vault.has('ประโยคของบี') && !vault.has('ความลับของเอ'));
+  }
+  {
+    const { vault } = sentenceEnvironment();
+    const ownerA = deferredSentenceClient();
+    vault.sync(ownerA.client, 'user-a');
+    vault.addSentence('ประโยคเดียวกัน', { zh: 'A' });
+    const ownerB = immediateSentenceClient([], { upsertError: 'offline' });
+    vault.sync(ownerB.client, 'user-b');
+    vault.addSentence('ประโยคเดียวกัน', { zh: 'B' });
+    ownerA.resolve('upsert', { error: null });
+    const current = vault.getAll()[0];
+    check('sentence delayed A save cannot mark same-key B item synced', current && current.zh === 'B' && current.synced !== true);
+  }
+  {
+    const { vault } = sentenceEnvironment();
+    vault.sync(immediateSentenceClient([{ word_th: 'ฉันกินข้าว', zh: 'A', source_raw: '', deleted_at: null }]).client, 'user-a');
+    const ownerA = deferredSentenceClient();
+    vault.sync(ownerA.client, 'user-a');
+    vault.removeSentence('ฉันกินข้าว');
+    const ownerB = deferredSentenceClient();
+    vault.sync(ownerB.client, 'user-b');
+    ownerB.resolve('select', { data: [{ word_th: 'ฉันกินข้าว', zh: 'B', source_raw: '', deleted_at: null }], error: null });
+    vault.removeSentence('ฉันกินข้าว');
+    ownerA.resolve('upsert', { error: null });
+    vault.retryPendingDeletes();
+    check('sentence stale A delete completion cannot unlock duplicate B tombstone writes', ownerB.log.tombstones.length === 1);
+    ownerB.resolve('upsert', { error: null });
+  }
+  {
+    const { win, vault } = sentenceEnvironment();
+    const ownerA = deferredSentenceClient();
+    vault.sync(ownerA.client, 'user-a');
+    vault.sync(ownerA.client, null);
+    ownerA.resolve('select', { data: [{ word_th: 'ความลับหลังล็อกเอาท์', zh: 'A', source_raw: '' }], error: null });
+    const raw = JSON.parse(win.localStorage.getItem('sentence_vault_v1') || '[]');
+    const rows = Array.isArray(raw) ? raw : (raw.items || []);
+    check('sentence delayed A read after logout cannot restore account cache', !rows.some((row) => row.th === 'ความลับหลังล็อกเอาท์'));
+  }
 }
 
 if (failures.length) {

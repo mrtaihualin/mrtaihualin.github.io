@@ -64,6 +64,7 @@
   var VAULT_KEY = 'linvault';        // ตรงกับคอลัมน์ vault_key (คลังของเกมเลโก้ใช้ 'lego_vault' — ยังไม่แตะรอบนี้)
   var _sb = null;                    // supabase client (null = ยังไม่ล็อกอิน / ไม่มี client)
   var _uid = null;                   // user id ที่ล็อกอินอยู่
+  var _ownerGeneration = 0;         // invalidate async completions after account/client changes
   // ฐานข้อมูลนี้มีคอลัมน์ deleted_at (ตราการลบ) แล้วหรือยัง
   //   null = ยังไม่รู้ · true = มี · false = ยังไม่มี (ยังไม่ได้รัน 2026-08-11_word_vault_deletion_sync.sql)
   // ต้องมีตัวนี้เพราะโค้ดฝั่งเว็บถูก push ขึ้นเว็บก่อนที่ Lin จะรัน SQL บน production ได้
@@ -115,6 +116,14 @@
 
   function _warn(where, e) {
     try { console.warn('[word-vault] ' + where + ':', (e && e.message) || e); } catch (_) {}
+  }
+
+  function _ownerSnapshot() {
+    return { client: _sb, uid: _uid, generation: _ownerGeneration };
+  }
+
+  function _ownerIsCurrent(owner) {
+    return !!(owner && owner.client === _sb && owner.uid === _uid && owner.generation === _ownerGeneration);
   }
 
   function _bounded(operation, label, onDone) {
@@ -225,9 +234,9 @@
     return changed;
   }
 
-  function _rowFor(w) {
+  function _rowFor(w, ownerUid) {
     return {
-      user_id: _uid,
+      user_id: ownerUid || _uid,
       vault_key: VAULT_KEY,
       word_th: w.th,
       zh: w.zh || null,
@@ -242,14 +251,22 @@
   }
 
   /** เขียนคำขึ้นเซิร์ฟเวอร์ (upsert — กดซ้ำ/แข่งกันเขียนก็ไม่พัง) */
-  function _pushRows(rows, onDone) {
-    if (!_sb || !_uid || !rows.length) { if (onDone) onDone(); return; }
+  function _pushRows(rows, onDone, owner) {
+    owner = owner || _ownerSnapshot();
+    if (!_ownerIsCurrent(owner) || !rows.length) { if (onDone && _ownerIsCurrent(owner)) onDone(); return; }
     try {
-      _sb.from(TABLE).upsert(rows, { onConflict: 'user_id,vault_key,word_th' }).then(function (r) {
+      owner.client.from(TABLE).upsert(rows, { onConflict: 'user_id,vault_key,word_th' }).then(function (r) {
+        if (!_ownerIsCurrent(owner)) return;
         if (r && r.error) _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', r.error);
         if (onDone) onDone(r && r.error);
-      }, function (e) { _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e); });
-    } catch (e) { _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e); }
+      }, function (e) {
+        if (!_ownerIsCurrent(owner)) return;
+        _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e);
+      });
+    } catch (e) {
+      if (!_ownerIsCurrent(owner)) return;
+      _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e);
+    }
   }
 
   /** error นี้แปลว่า "ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at" ใช่ไหม
@@ -261,10 +278,12 @@
   }
 
   /** ลบคำแบบเก่า (ลบแถวทิ้งจริง) — ใช้เฉพาะฐานข้อมูลที่ยังไม่มีคอลัมน์ deleted_at */
-  function _hardDeleteRemote(th, pending) {
+  function _hardDeleteRemote(th, pending, owner) {
+    if (!_ownerIsCurrent(owner)) return;
     _bounded(function () {
-      return _sb.from(TABLE).delete().eq('user_id', _uid).eq('vault_key', VAULT_KEY).eq('word_th', th);
+      return owner.client.from(TABLE).delete().eq('user_id', owner.uid).eq('vault_key', VAULT_KEY).eq('word_th', th);
     }, 'ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', function (error) {
+      if (!_ownerIsCurrent(owner)) return;
       delete _deleteInFlight[th];
       if (error) { _warn('ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', error); return; }
       _clearPendingDelete(th, pending.deleted_at);
@@ -278,18 +297,20 @@
    *  เรียกเฉพาะตอนผู้ใช้กดลบเองเท่านั้น ระบบไม่เคยลบเอง (ห้ามลบอัตโนมัติเพราะเกินเพดาน) */
   function _deleteRemote(th) {
     if (!_sb || !_uid || _deleteInFlight[th]) return;
+    var owner = _ownerSnapshot();
     var pending = _pendingDelete(th);
     if (!pending) return;
     _deleteInFlight[th] = true;
-    if (_tombstoneOk === false) { _hardDeleteRemote(th, pending); return; }
-    var row = { user_id: _uid, vault_key: VAULT_KEY, word_th: th, deleted_at: pending.deleted_at };
+    if (_tombstoneOk === false) { _hardDeleteRemote(th, pending, owner); return; }
+    var row = { user_id: owner.uid, vault_key: VAULT_KEY, word_th: th, deleted_at: pending.deleted_at };
     _bounded(function () {
-      return _sb.from(TABLE).upsert([row], { onConflict: 'user_id,vault_key,word_th' });
+      return owner.client.from(TABLE).upsert([row], { onConflict: 'user_id,vault_key,word_th' });
     }, 'ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', function (error) {
+      if (!_ownerIsCurrent(owner)) return;
       if (error && _isMissingTombstoneColumn(error)) {
         _tombstoneOk = false;
         _warn('ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at — ถอยไปลบแบบเดิม (ยังไม่ได้รัน 2026-08-11_word_vault_deletion_sync.sql)', error);
-        _hardDeleteRemote(th, pending);
+        _hardDeleteRemote(th, pending, owner);
         return;
       }
       delete _deleteInFlight[th];
@@ -300,14 +321,15 @@
     });
   }
 
-  function _flushPendingDeletes() {
-    if (!_sb || !_uid) return;
+  function _flushPendingDeletes(owner) {
+    owner = owner || _ownerSnapshot();
+    if (!_ownerIsCurrent(owner)) return;
     Object.keys(_loadState().pendingDeletes).forEach(_deleteRemote);
   }
 
   /** ปั๊มว่าคำเหล่านี้ขึ้นเซิร์ฟเวอร์แล้ว (อ่าน localStorage ใหม่ตอนเขียน กันทับของที่เพิ่งเปลี่ยนระหว่างรอ network) */
-  function _markSynced(thList) {
-    if (!thList.length) return;
+  function _markSynced(thList, owner) {
+    if (!thList.length || !_ownerIsCurrent(owner)) return;
     var mark = {};
     thList.forEach(function (t) { mark[t] = true; });
     var list = load();
@@ -322,6 +344,7 @@
    */
   function sync(client, userId) {
     var nextUid = userId || null;
+    var nextClient = (client && client.from) ? client : null;
     var previousUid = _uid;
     try {
       if (global.PHASE1_ACCOUNT_BOUNDARY && global.PHASE1_ACCOUNT_BOUNDARY.bind) {
@@ -331,41 +354,55 @@
         localStorage.removeItem(STORAGE_KEY);
       }
     } catch (e) {}
-    _sb = (client && client.from) ? client : null;
+    if (_sb !== nextClient || _uid !== nextUid) {
+      _ownerGeneration++;
+      _deleteInFlight = Object.create(null);
+    }
+    _sb = nextClient;
     _uid = nextUid;
     if (!_sb || !_uid) { _sb = null; _uid = null; _fireChanged(); return; }
-
-    _readRemote(function (remote) { _mergeWith(remote); });
+    var owner = _ownerSnapshot();
+    _readRemote(function (remote) { _mergeWith(remote, owner); }, owner);
   }
 
   /** อ่านคลังคำจากเซิร์ฟเวอร์ — ลองแบบมีตราการลบก่อน ถ้าฐานข้อมูลยังไม่มีคอลัมน์ค่อยถอยไปแบบเดิม */
-  function _readRemote(onRows) {
+  function _readRemote(onRows, owner) {
+    owner = owner || _ownerSnapshot();
+    if (!_ownerIsCurrent(owner)) return;
     var cols = (_tombstoneOk === false) ? COLS_LEGACY : COLS_WITH_TOMBSTONE;
     try {
-      _sb.from(TABLE).select(cols).eq('user_id', _uid).eq('vault_key', VAULT_KEY)
+      owner.client.from(TABLE).select(cols).eq('user_id', owner.uid).eq('vault_key', VAULT_KEY)
         .then(function (r) {
+          if (!_ownerIsCurrent(owner)) return;
           if (r && r.error) {
             if (cols === COLS_WITH_TOMBSTONE && _isMissingTombstoneColumn(r.error)) {
               // ยังไม่ได้รันไฟล์ SQL บนฐานข้อมูลนี้ → ถอยไปอ่านแบบเดิม (sync ยังทำงาน ไม่พัง)
               _tombstoneOk = false;
               _warn('ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at — sync ทำงานแบบเดิมไปก่อน (ยังไม่มีการลบข้ามเครื่อง)', r.error);
-              _readRemote(onRows);
+              _readRemote(onRows, owner);
               return;
             }
             // อ่านไม่สำเร็จจริง (เน็ตหลุด/สิทธิ์ไม่พอ/ตารางยังไม่มี) → ไม่แตะอะไรเลย ปลอดภัยที่สุด
             _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', r.error);
-            _flushPendingDeletes();
+            _flushPendingDeletes(owner);
             return;
           }
-          if (!r) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', 'ไม่มีผลลัพธ์'); _flushPendingDeletes(); return; }
+          if (!r) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', 'ไม่มีผลลัพธ์'); _flushPendingDeletes(owner); return; }
           if (cols === COLS_WITH_TOMBSTONE) _tombstoneOk = true;
           onRows(r.data || []);
-        }, function (e) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); _flushPendingDeletes(); });
-    } catch (e) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); _flushPendingDeletes(); }
+        }, function (e) {
+          if (!_ownerIsCurrent(owner)) return;
+          _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); _flushPendingDeletes(owner);
+        });
+    } catch (e) {
+      if (!_ownerIsCurrent(owner)) return;
+      _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); _flushPendingDeletes(owner);
+    }
   }
 
   /** รวมของในเครื่องกับของบนเซิร์ฟเวอร์ตามกฎ 5 กรณี (ดูหัวไฟล์) */
-  function _mergeWith(remote) {
+  function _mergeWith(remote, owner) {
+    if (!_ownerIsCurrent(owner)) return;
     var state = _loadState();
     var local = state.items;
     var pendingDeletes = state.pendingDeletes;
@@ -438,9 +475,11 @@
 
     if (toPush.length) {
       var pushed = toPush.map(function (w) { return w.th; });
-      _pushRows(toPush.map(_rowFor), function (err) { if (!err) _markSynced(pushed); });
+      _pushRows(toPush.map(function (w) { return _rowFor(w, owner.uid); }), function (err) {
+        if (!err) _markSynced(pushed, owner);
+      }, owner);
     }
-    _flushPendingDeletes();
+    _flushPendingDeletes(owner);
   }
 
   // ── [03] API หลัก ─────────────────────────────────────────────
@@ -461,7 +500,10 @@
       // to provenance and synced onto the existing row instead of duplicating it.
       if (_mergeMetaIntoWord(existing, meta)) {
         save(list);
-        if (_sb && _uid) _pushRows([_rowFor(existing)], null);
+        if (_sb && _uid) {
+          var existingOwner = _ownerSnapshot();
+          _pushRows([_rowFor(existing, existingOwner.uid)], null, existingOwner);
+        }
         _fireChanged();
       }
       return false;
@@ -482,7 +524,10 @@
     // ล็อกอินอยู่ → ส่งขึ้นเซิร์ฟเวอร์ทันที (ไม่รอผล ไม่บล็อก UI) · ส่งไม่สำเร็จก็ยังอยู่ในเครื่อง
     // และจะถูกส่งขึ้นให้เองในการ sync รอบหน้า เพราะยังไม่มีธง synced (ตามกฎกรณี ข.)
     if (_sb && _uid) {
-      _pushRows([_rowFor(entry)], function (err) { if (!err) _markSynced([th]); });
+      var entryOwner = _ownerSnapshot();
+      _pushRows([_rowFor(entry, entryOwner.uid)], function (err) {
+        if (!err) _markSynced([th], entryOwner);
+      }, entryOwner);
     }
     return true;
   }
@@ -532,7 +577,10 @@
     });
     save(list);
     // ป้ายกำกับต้องตามไปทุกเครื่องด้วย (upsert ทับแถวเดิม ไม่สร้างซ้ำ)
-    if (changed && _sb && _uid) _pushRows([_rowFor(changed)], null);
+    if (changed && _sb && _uid) {
+      var tagOwner = _ownerSnapshot();
+      _pushRows([_rowFor(changed, tagOwner.uid)], null, tagOwner);
+    }
     return !!changed;
   }
 
