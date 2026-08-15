@@ -42,7 +42,7 @@ check('mode ถูกล็อกตลอดรอบ', /if \(state\.roundActiv
 check('audio fail ไม่หักจำนวนครั้งฟัง', /if \(!ok\) \{[\s\S]*state\.listenCount = Math\.max\(0, state\.listenCount - 1\)/.test(app));
 check('Listening Score และ Typing Bonus เก็บแยกใน evidence', /listening_score: entry\.listeningScore/.test(app) && /typing_bonus: entry\.typingBonus/.test(app));
 check('จบรอบบันทึก account session เป็น game=listening', /READING_AUTH\.saveScore\(state\.primaryTotal \+ state\.typingBonusTotal, 1, 'listening'/.test(app));
-check('reading-auth รองรับ route/game listening', /listening-game/.test(auth) && /game === 'listening'/.test(auth));
+check('reading-auth รองรับ route/game listening', /listening-game/.test(auth) && /'listening'/.test(auth) && /score-submit/.test(auth));
 check('Listening โหลด auth/server/shared score ก่อน app boot', /reading-auth\.js\?v=/.test(html) && /tone-server\.js\?v=/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
 check('Listening มี 玩法 ที่เปิดดูซ้ำได้และอธิบายกติกา 0 แยกสอง score', /id="lg-howto-modal"/.test(html) && /📖 玩法/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html));
 check('Edge แยก SRS game=listening', /"reading", "listening", "typing"/.test(edge));

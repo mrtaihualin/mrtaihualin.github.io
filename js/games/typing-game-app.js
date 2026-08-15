@@ -1124,7 +1124,13 @@ function endRound(){
   document.getElementById('end-detail').textContent=detail;
   // 本輪詳細紀錄使用完整 roundLog，答對與答錯都可查看。
   try{ var _mb=document.getElementById('tg-mistakes-btn'); if(_mb)_mb.style.display=roundLog.length?'':'none'; }catch(e){}
-  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'typing',rgWrongItemsFromLog()); }catch(e){}   // เซฟแต้มขึ้นลีกเกมพิมพ์ (ถ้าล็อกอิน) · ระบุเกมชัดเจน — 2026-07-02 · เฟส 3: แนบคำที่พลาด — 2026-07-13
+  try{
+    if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'typing',rgWrongItemsFromLog(),{
+      difficulty:curLevel,
+      items:roundLog.map(function(w){return {key:w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+      roundBonus:roundBonus,srsBonus:0
+    });
+  }catch(e){} // S29: คะแนน Core 5 ผ่าน score-submit เท่านั้น
   // ── weekly challenge + streak freeze ──
   var _isPerfect = (cleanC === roundTotal && roundTotal > 0);
   var _maxCombo = maxStreak; // max combo ที่ทำได้ในรอบนี้

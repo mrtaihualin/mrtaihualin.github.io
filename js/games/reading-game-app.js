@@ -1361,7 +1361,13 @@ function endRound(){
   }
   if(roundBonus)detail+='・含完成獎勵 +'+roundBonus;
   document.getElementById('end-detail').textContent=detail;
-  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'reading',rgWrongItemsFromLog()); }catch(e){}   // เฟส 2: เซฟแต้มขึ้นลีกเกมอ่าน (ถ้าล็อกอิน) · ระบุเกมชัดเจน — 2026-07-02 · เฟส 3: แนบคำที่พลาด — 2026-07-13
+  try{
+    if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'reading',rgWrongItemsFromLog(),{
+      difficulty:curLevel,
+      items:roundLog.map(function(w){return {key:w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+      roundBonus:roundBonus,srsBonus:0
+    });
+  }catch(e){} // S29: server-authoritative score submission พร้อมหลักฐาน First Check ต่อ item
   // ── weekly challenge + streak freeze ──
   var _maxCombo = maxStreak; // max combo ที่ทำได้ในรอบนี้
   try { rgChallengeBump(_maxCombo, _isPerfect); } catch(e){}

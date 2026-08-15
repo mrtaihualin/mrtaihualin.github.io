@@ -1,6 +1,51 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 09:11 Asia/Bangkok** — P1-F-05/F-06 GA pre-consent cookie root cause fixed locally; tests/order PASS, manual cookie reverify required before deploy
+**Updated: 2026-08-15 13:42 Asia/Bangkok** — S29 Action 2 SQL/RLS/RPC PASS; client release remains blocked
+
+## 2026-08-15 — S29 Production Action 2 (`SQL_RLS_RPC_PASS / CLIENT_NOT_DEPLOYED`)
+
+- Preserved the earlier successful precheck backup evidence from run `31869728662`; the authorized Action 2 used the later fresh encrypted backup run `31869733162` (`backup_2026-08-15_1335-th.tar.gz.gpg`, 1,783,037 bytes) with remote-size verification PASS and retention deletion 0 files.
+- Read-only Production precheck on PostgreSQL 17.6 passed: required schema/types/dependencies/RLS/RPC signatures were compatible; conflicting indexes/dependencies, target locks and incoming-bound violations were 0.
+- Executed only `supabase/sql/2026-08-15_s29_authoritative_score_security.sql` (SHA-256 `ad668ccae16faaf3d8040be4483e02835557a2e40b44eb3d91fe259e6445b1a4`). The transaction committed without migration error.
+- Postcheck passed: authoritative table/indexes/constraints exist; RLS is enabled; `anon` and `authenticated` have no INSERT/UPDATE/DELETE on authoritative or legacy score tables; four anonymous leaderboard RPCs returned HTTP 200 without `user_id` or email in their contracts.
+- `score-submit` still passes OPTIONS/CORS 200 and missing-auth 401 without a data write. No client/Git deployment or authenticated attack/E2E was performed; Action 3 is the isolated client release, followed by a separately authorized controlled Production E2E.
+- Action 3 local preflight keeps the public `mix-board.html` and `lego-board.html` URLs but disables their obsolete leaderboard runtimes; the five allowed boards remain Tone, Reading, Listening, Typing and Word Order. S29 regression and the full 919-file site gate pass after this alignment.
+
+## 2026-08-15 — S29 `score-submit` Production Action 1 (`DEPLOY_PASS / E2E_BLOCKED`)
+
+- Deployed only `supabase/functions/score-submit` to Production project `qzkxlhpcputsvbqmtqfi`; CLI uploaded `index.ts` and `score-engine.mjs` and reported success. Function inventory confirms `ACTIVE`, version 1, `verify_jwt=true`.
+- Non-writing verification passed: Production OPTIONS/CORS returned 200 from Supabase Edge Runtime for `https://mrtaihualin.com`; unauthenticated POST returned 401 `UNAUTHORIZED_NO_AUTH_HEADER`. No deploy/runtime error was observed in these probes and no score/data write was attempted.
+- No SQL migration, RLS/policy change, client deploy, other deploy, Git action or Production data mutation was performed. S29 remains blocked; next separately authorized gate is a fresh backup/read-only schema-policy-function precheck before any SQL authorization.
+
+## 2026-08-15 — Phase 1 Consent + Public Search PV (`PASS`)
+
+- Lin manual Production cookie-consent matrix on commit `2219a59245ded859b7aa3168dbd42539ec778ba2` passed all four states: `BEFORE_ACCEPT`, `ACCEPT`, `REVOKE` and `FRESH_REJECT`; `P1-F-05` and `P1-F-06` are closed `DONE`.
+- Production Website Search passed desktop/mobile `聲調` results and unknown-query safe fallback. Game Search passed desktop/mobile `打字` → `/typing-game.html` and unknown-query recovery guidance; console warning/error 0. `P1-E-02` and `P1-E-03` are closed `DONE`.
+- Verification after central update: Search behavioral 14/14, consent coverage 88 analytics pages + Vault, Vault 6/6 and `node scripts/check-site.js` PASS 919 project files/secret scan 1142.
+- Critical Path now requires authorized S29 backend/client release + Production attacks/valid-board E2E (`P1-B-03`) and a separate canonical persistence architecture decision/authorization (`P1-B-07`); no Decision, Git, SQL, Edge deploy or other Production mutation was created in this closeout.
+
+## 2026-08-15 — S14–S18 / S29 Score Security Foundation (`LOCAL_PASS / PRODUCTION_ACTIONS_REQUIRED`)
+
+- ตัด browser direct INSERT คะแนนของ Core 5 ออก: `reading-auth.js` ส่ง JWT-authenticated evidence ไป `score-submit`; Tone ไม่ดัก GA4 เขียน `tone_sessions` แล้ว และทั้ง Tone/Reading/Listening/Typing/Word Order ส่ง proof contract เดียวกัน.
+- Edge source derive `user_id` จาก JWT, ตรวจ canonical protected content, คำนวณ final score ใหม่จาก evidence + difficulty, บังคับ game/item/score bounds, UUIDv4 idempotency, replay conflict, unique concurrency guard, fail-closed rate limit 30/user/10 นาที และไม่รับ identity/time/derived fields จาก client.
+- SQL source สร้าง authoritative `game_score_submissions`, ปิด direct INSERT/UPDATE/DELETE บน authoritative + legacy score tables, ทำ RPC กระดาน 5 เกมไม่คืน `user_id`/email และเก็บ current-user marker เป็น boolean. Combined cross-game total ถูกถอดตาม `PD-SCORE-01`; `all-board.html` คง URL เดิมเป็น hub เลือก 5 กระดาน.
+- Regression: S29 attack contract ครบ VALID/forged high/negative/malformed/wrong user/game/difficulty/no-auth contract/replay/concurrency/rate/direct-write/update/privacy; Core 5 regressions และ `node scripts/check-site.js` PASS 919 files, secret scan 1142; minified runtime rebuilt และ syntax PASS.
+- Threat boundary ที่ยืนยันได้คือ accepted score ต้องอยู่ในสูตร/จำนวนข้อ/ลำดับคอมโบ/โบนัสที่เกมทำได้และผูก JWT/เวลา server; ระบบเว็บไม่อ้างว่าแยกผู้เล่นมนุษย์ออกจาก automation ที่ส่งผล perfect ซึ่งยังทำได้จริงตามกติกา. ถ้าต้องการ human-play attestation ต้องออกแบบ per-action challenge/telemetry แยก ไม่ใช่เพิ่ม client secret.
+- ยังไม่มี Git/SQL/Edge deploy/Production mutation. S29 ยังไม่ `CLOSED_VERIFIED`: ต้องอนุมัติและทำ backup/precheck → deploy Edge → run SQL → deploy client → controlled Production attacks/valid board E2E. Legacy score rowsถูกเก็บเป็น private history แต่ไม่ย้ายเข้ากระดาน authoritative เพราะพิสูจน์ย้อนหลังไม่ได้; กระดานจะเริ่มสะสมใหม่หลัง rollout. Nickname moderation/report/admin hide-reset ตาม `P1-DN-03` ยังเป็น blocker แยก.
+
+## 2026-08-15 — Automation Enforcement (`SOURCE_PASS / REMOTE_RULESET_REQUIRED`)
+
+- Final state source: required tests run automatically on Pull Request/`main`/merge queue; PR Task-ID + exact Write-Set is fail-closed; tracked pre-commit hook checks staged files against local `.task-write-set.json`.
+- PASS criteria verified locally: enforcement unit tests cover exact path, directory scope, traversal/broad-pattern rejection, missing contract and outside-file failure; canonical `node scripts/check-site.js` passes after integration.
+- Changed only developer workflow/CI files; no Product Decision, website behavior, Production, deploy, SQL, Supabase or external mutation.
+- Remaining hard gate: GitHub owner must enable the tracked hook locally and configure a `main` ruleset requiring Pull Request, no bypass, and `Required checks / required-tests-and-write-set`. Until remote ruleset is active, GitHub cannot pre-block direct push/merge from repository source alone.
+
+## 2026-08-15 — GA4 Pre-consent Cookie Hotfix Deploy (`DEPLOY_PASS / PV_PARTIAL`)
+
+- GitHub protected Pages run `31858936871` deployed commit `2219a59245ded859b7aa3168dbd42539ec778ba2` successfully to `https://mrtaihualin.com/`.
+- Production Chinese/English source uses consent default → `gtag('js')` → config → async loader (`461 < 587 < 613 < 708`); bilingual banner/runtime source is present and browser console warning/error is 0.
+- Re-ran consent coverage (88 analytics pages + Vault), Vault 6/6 and `node scripts/check-site.js`; all PASS for 908 project files and secret scan 1131.
+- Exact Production `_ga*` state before Accept and after Reject/Revoke is still `NOT_VERIFIED`: in-app Browser policy blocks cookie/localStorage inspection and forbids workarounds. Lin must complete one fresh-session manual cookie check before P1-F-05/F-06 can PASS. No SQL/Supabase or other Phase 1 Production mutation.
 
 ## 2026-08-15 — GA4 Pre-consent Cookie Hotfix (`LOCAL_TEST_PASS / MANUAL_COOKIE_VERIFY_NEEDED`)
 

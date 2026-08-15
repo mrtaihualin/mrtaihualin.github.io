@@ -1,14 +1,14 @@
 // ════════════════════════════════════════════════════════════
 // tone-companion.js — ส่วนที่ "เกมเสียง" (tone-finder.html) ใช้เฉพาะ ไม่มีในอีก 4 เกม
-// FILE MAP: [01] GA event bridge → [02] tone session persistence → [03] score feedback → [04] admin unlock → [05] auth binding
+// FILE MAP: [01] admin unlock → [02] auth binding
 // Lin 2026-07-16: แยกออกมาจาก supabase-auth.js ตอนรวมระบบล็อกอินของเกมเสียงเข้ากับ reading-auth.js
 //   (เดิมเกมเสียงมีระบบล็อกอิน/ปุ่ม/modal เป็นของตัวเอง แยกจากอีก 4 เกม — ตอนนี้ใช้ไฟล์เดียวกันหมดแล้ว
 //    ปุ่ม/modal ล็อกอินทั้งหมดอยู่ใน reading-auth.js ไฟล์นี้ไม่มีปุ่ม/modal ล็อกอินเลย)
 // ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, auth-widget.js (SITE_AUTH), reading-auth.js (READING_AUTH)
 //
-// สิ่งที่ย้ายมา (ของเดิมเฉพาะเกมเสียง ไม่มีในอีก 4 เกม):
-//   1) เซฟคะแนนรอบเล่นลงตาราง tone_sessions (คนละตารางกับ reading_sessions ของอีก 4 เกม — ยังไม่รวม ต้องคุยแยกถ้าจะรวม)
-//   2) ปลดล็อกเหรียญรางวัลอัตโนมัติสำหรับบัญชี Lin (admin)
+// S29 2026-08-15: ยกเลิกการดัก GA4 เพื่อเขียน tone_sessions โดยตรงแล้ว
+// คะแนนเกมเสียงส่งหลักฐานผ่าน READING_AUTH.saveScore() → score-submit เหมือน Core 5 เกมอื่น
+// ไฟล์นี้เหลือเฉพาะปลดล็อกเหรียญรางวัลอัตโนมัติสำหรับบัญชี Lin (admin)
 //
 // ⚠️ สิ่งที่ "ไม่ได้" ย้ายมา (ของเดิมมีแต่ตัดออกตอนรวมระบบ — Lin รับทราบแล้ว):
 //   - "lead gate" เก็บอีเมลแบบไม่ยืนยันแล้วเล่นต่อได้ (submitLeadEmail/leads table) — requireLogin ตายอยู่แล้วมาตลอด ไม่เคยบังคับจริง
@@ -29,89 +29,9 @@
               window.supabase && window.supabase.createClient;
   if (!ready) return; // Supabase ยังไม่ตั้งค่า/โหลดไม่ได้ — เกมเล่นได้ปกติ แค่ไม่มีฟีเจอร์พวกนี้
 
-  var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
   var ADMIN_EMAIL = 'mr.taihualin@gmail.com';
 
-  // ════════ 1) เซฟคะแนนรอบเล่นลง tone_sessions (ดักจาก GA4 events ที่เกมยิงอยู่แล้ว) ════════
-  var sessionMode = null;
-  var wrongBuffer = [];
-  var sessionSeq = 0;
-  var saveStates = {};      // กัน event complete ซ้ำในรอบเดียวกัน
-
-  var origGtag = window.gtag || function () {};
-  window.gtag = function () {
-    try { origGtag.apply(this, arguments); } catch (e) {}
-    try {
-      if (arguments[0] === 'event') handleEvent(arguments[1], arguments[2] || {});
-    } catch (e) { /* อย่าให้พังการเล่นเกม */ }
-  };
-
-  function handleEvent(name, params) {
-    if (name === 'tone_finder_start') {
-      sessionSeq++;
-      sessionMode = params.mode || null;
-      wrongBuffer = [];
-    } else if (name === 'tone_answer_wrong') {
-      wrongBuffer.push({ word: params.word, selected: params.selected, correct: params.correct });
-    } else if (name === 'tone_finder_complete') {
-      var completedSession = {
-        _client_session_seq: sessionSeq,
-        mode: sessionMode,
-        score: typeof params.score === 'number' ? params.score : null,
-        total: typeof params.total === 'number' ? params.total : null,
-        wrong_words: wrongBuffer.slice()
-      };
-      saveSession(completedSession);
-    }
-  }
-
-  function saveSession(s) {
-    if (!s) return;
-    var u = window.READING_AUTH && READING_AUTH.user;
-    if (!u) return; // Guest รอบนี้ไม่นับย้อนหลังหลัง Login (Lin 2026-08-13)
-    var saveKey = String(u.id) + ':' + String(s._client_session_seq || 0);
-    if (saveStates[saveKey]) return;
-    saveStates[saveKey] = 'pending';
-    // v2 (LIN 2026-07-25, audit): ใช้ window.isSiteAdmin (email + user id) แทนเช็ค email อย่างเดียว
-    //   กัน Facebook/LINE ของแอดมิน (อาจไม่มี email) หลุดรอดเข้า leaderboard เกมเสียง
-    if ((window.isSiteAdmin && window.isSiteAdmin(u)) || (u.email || '') === ADMIN_EMAIL) { saveStates[saveKey] = 'done'; return; } // admin: ไม่นับคะแนนใน ranking
-    var row = {
-      user_id: u.id,
-      mode: s.mode,
-      score: typeof s.score === 'number' ? s.score : null,
-      total: typeof s.total === 'number' ? s.total : null,
-      wrong_words: s.wrong_words || []
-    };
-    sb.from('tone_sessions').insert(row).then(function (res) {
-      if (res.error) {
-        delete saveStates[saveKey]; // อนุญาต retry ของรอบบัญชีเดิมหลัง error
-        console.warn('[tone-finder] บันทึกไม่สำเร็จ:', res.error.message);
-        showScoreToast('⚠️ 分數儲存失敗：' + res.error.message, false);
-        try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: res.error.message, mode: s.mode || '' }); } catch (e) {}
-      } else {
-        console.info('[tone-finder] บันทึกผลแล้ว score=' + s.score);
-        saveStates[saveKey] = 'done';
-        showScoreToast('✅ 已儲存分數 ' + (s.score || 0) + ' 分', true);
-        try { if (window.gtag) gtag('event','score_saved',{category:'game', score: s.score || 0, mode: s.mode || '' }); } catch (e) {}
-      }
-    });
-  }
-
-  function showScoreToast(msg, ok) {
-    var old = document.getElementById('tf-score-toast');
-    if (old) old.remove();
-    var d = document.createElement('div');
-    d.id = 'tf-score-toast';
-    d.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:99999;' +
-      'background:' + (ok ? '#2d7a2d' : '#8b2020') + ';color:#fff;border-radius:20px;' +
-      'padding:8px 18px;font-size:13px;font-family:"Noto Sans TC",sans-serif;' +
-      'box-shadow:0 4px 16px rgba(0,0,0,0.25);white-space:nowrap;pointer-events:none;';
-    d.textContent = msg;
-    document.body.appendChild(d);
-    setTimeout(function () { if (d.parentNode) d.remove(); }, 3500);
-  }
-
-  // ════════ 2) admin: ปลดล็อกทุก badge สำหรับ mr.taihualin@gmail.com ════════
+  // ════════ admin: ปลดล็อกทุก badge สำหรับ mr.taihualin@gmail.com ════════
   function adminUnlockAll(email) {
     if (email !== ADMIN_EMAIL) return;
     try {

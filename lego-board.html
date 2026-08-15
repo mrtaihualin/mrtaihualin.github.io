@@ -54,8 +54,17 @@
   <a href="games.html">泰語・遊戲</a>
 </div>
 
-<!-- CONTENT -->
-<div class="section-wrap" style="padding-top:34px;padding-bottom:60px;">
+<section class="section-wrap" data-phase1-access="no-lego-leaderboard" style="padding-top:44px;padding-bottom:70px;text-align:center;">
+  <div style="max-width:640px;margin:0 auto;background:#fff;border:1.5px solid #e0d2a8;border-radius:18px;padding:34px 24px;box-shadow:0 10px 30px rgba(90,62,10,.10);">
+    <div style="font-size:46px;line-height:1;margin-bottom:14px;" aria-hidden="true">🚫</div>
+    <h1 style="font-family:'Noto Serif TC',serif;color:#5a3e10;font-size:27px;margin:0 0 12px;">造句練習室沒有排行榜</h1>
+    <p style="font-family:'Noto Sans TC',sans-serif;color:#6f624c;line-height:1.8;margin:0 0 22px;">Phase 1 只保留聲調、拼讀、聽力、打字與語序 5 個獨立排行榜。</p>
+    <a href="all-board.html" style="display:inline-block;background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;text-decoration:none;border-radius:999px;padding:11px 24px;font-weight:800;">選擇排行榜 →</a>
+  </div>
+</section>
+
+<!-- Historical board markup retained but inaccessible; no leaderboard runtime is loaded. -->
+<div class="section-wrap" hidden inert aria-hidden="true" style="padding-top:34px;padding-bottom:60px;">
   <div style="text-align:center;margin-bottom:8px;">
     <span class="eyebrow" style="color:var(--gold-bright);">造句玩家排行榜</span>
     <h2 class="section-heading" style="margin:6px 0 0;">🧱 造句排行榜</h2>
@@ -80,7 +89,7 @@
   <!-- 其他排行榜 cross-link -->
   <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);text-align:center;margin:22px 0 0;">
     其他排行榜：
-    <a href="all-board.html" style="color:#8B6310;font-weight:800;text-decoration:underline;text-underline-offset:3px;">🏆 總排行榜</a>
+    <a href="all-board.html" style="color:#8B6310;font-weight:800;text-decoration:underline;text-underline-offset:3px;">🏆 選擇排行榜</a>
     ·
     <a href="leaderboard.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{category:'game',target:'leaderboard',from:'lego_board'})}catch(e){}">🎵 聲調排行榜</a>
     ·
@@ -101,10 +110,6 @@
 
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=30"></script>
-<script src="js/core/auth-widget.js?v=7"></script>
-<script>try{ if(window.SITE_AUTH) SITE_AUTH.renderBadge('lb-userslot', { leaderboardHref:'lego-board.html', progressHref:'my-progress.html' }); }catch(e){}</script>
-<script>window.READING_BOARD_GAME = 'lego';</script>
-<script src="js/score/reading-leaderboard.js?v=4"></script>
 <script>
 // ── GA4 Event Tracking: lego-board.html ───────────────────────────
 

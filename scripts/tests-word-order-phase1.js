@@ -61,7 +61,8 @@ test('Guest can play while account SRS writes remain login-gated', () => {
 });
 
 test('round completion writes account evidence as word_order', () => {
-  assert.match(app, /READING_AUTH\.saveScore\(weightedScore,1,'word_order',rgWrongItemsFromLog\(\)\)/);
+  assert.match(app, /READING_AUTH\.saveScore\(weightedScore,1,'word_order',rgWrongItemsFromLog\(\),\{/);
+  assert.match(app, /items:roundLog\.map/);
 });
 
 test('玩法 explains correction and prescribed order', () => {

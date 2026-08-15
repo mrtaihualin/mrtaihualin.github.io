@@ -9,7 +9,9 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const progress = read('js/score/progress-sync.js');
 const toneServer = read('js/games/tone-server.js');
 const edge = read('supabase/functions/tone-round/index.ts');
-const toneCompanion = read('js/games/tone-companion.js');
+const readingAuth = read('js/games/reading-auth.js');
+const scoreSubmit = read('supabase/functions/score-submit/index.ts');
+const scoreSql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
 let passed = 0;
 function test(label, fn) {
   try { fn(); passed++; console.log('✓ ' + label); }
@@ -45,10 +47,12 @@ test('server SRS protects retry and concurrent duplicate writes', () => {
   assert.match(edge, /if \(!TF_SRS\.isDue\(rec, nowMs\)\) return reject\('not_due'/);
   assert.match(edge, /reason: "race_retry"/);
 });
-test('client score event dedup allows retry only after failure', () => {
-  assert.match(toneCompanion, /saveStates\[saveKey\] = 'pending'/);
-  assert.match(toneCompanion, /delete saveStates\[saveKey\]/);
-  assert.match(toneCompanion, /saveStates\[saveKey\] = 'done'/);
+test('client score retry reuses one idempotent payload', () => {
+  assert.match(readingAuth, /submission_id: scoreSubmissionId\(\)/);
+  assert.match(readingAuth, /if \(attempt === 0\) \{ setTimeout\(function \(\) \{ submit\(1\); \}, 800\); return; \}/);
+  assert.match(scoreSql, /submission_id uuid primary key/);
+  assert.match(scoreSubmit, /idempotent: true/);
+  assert.match(scoreSubmit, /replay_conflict/);
 });
 test('Core 5 ship the current round-save client', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {

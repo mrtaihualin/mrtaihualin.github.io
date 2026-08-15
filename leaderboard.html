@@ -79,7 +79,7 @@
   <!-- 其他排行榜 cross-link — LIN 2026-07-02 -->
   <p style="font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);text-align:center;margin:22px 0 0;">
     其他排行榜：
-    <a href="all-board.html" style="color:#8B6310;font-weight:800;text-decoration:underline;text-underline-offset:3px;">🏆 總排行榜</a>
+    <a href="all-board.html" style="color:#8B6310;font-weight:800;text-decoration:underline;text-underline-offset:3px;">🏆 選擇排行榜</a>
     ·
     <a href="reading-board.html" style="color:#8B6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;" onclick="try{gtag('event','game_link_click',{category:'game',target:'reading_board',from:'leaderboard'})}catch(e){}">✍️ 拼讀排行榜</a>
     ·
@@ -101,7 +101,7 @@
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=30"></script>
 <script src="js/core/auth-widget.js?v=7"></script>
-<script src="js/score/leaderboard.js?v=9"></script>
+<script src="js/score/leaderboard.js?v=10"></script>
 <script>
 window.addEventListener('DOMContentLoaded', function () {
   if (window.SITE_AUTH) SITE_AUTH.renderBadge('lb-userslot', { leaderboardHref: 'leaderboard.html', progressHref: 'my-progress.html' });

@@ -535,7 +535,9 @@
       th: w.th, zh: w.zh, userAnswer: detail.userAnswer || '', correct: isCorrect,
       mode: state.mode, listens: state.listenCount,
       listeningScore: primary, typingBonus: bonus, totalScore: primary + bonus,
-      typingWrong: state.typingWrong
+      typingWrong: state.typingWrong,
+      wordCount: LISTENING_SCORE.wordCount(w.th),
+      unitCount: LISTENING_SCORE.typingUnitCount(w)
     });
     if (detail.requeue) {
       state.round.push(w);
@@ -733,7 +735,18 @@
         typing_wrong: entry.typingWrong
       };
     });
-    READING_AUTH.saveScore(state.primaryTotal + state.typingBonusTotal, 1, 'listening', evidence);
+    READING_AUTH.saveScore(state.primaryTotal + state.typingBonusTotal, 1, 'listening', evidence, {
+      difficulty: 'mixed',
+      items: state.log.map(function (entry) {
+        return {
+          key: entry.th, points: entry.totalScore, wrong: entry.correct ? 0 : 1,
+          guide: false, failed: false, mastered: false,
+          mode: entry.mode, listens: entry.listens, correct: entry.correct,
+          wordCount: entry.wordCount, unitCount: entry.unitCount, typingWrong: entry.typingWrong
+        };
+      }),
+      roundBonus: 0, srsBonus: 0
+    });
   }
 
   // ── Phase F2: 查看錯題 (read-only, ใช้ state.log ที่เก็บจริงระหว่างเล่นเท่านั้น) ──

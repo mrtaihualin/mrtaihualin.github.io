@@ -1330,9 +1330,17 @@
     }
 
     try{ if(window.gtag) gtag('event','word_order_complete',{category:'game',practice: false, score: weightedScore}); }catch(e){}
-    // 嘗試存分數到共用排行榜系統（若後端還沒開放 'word_order' 這個 game key，
-    // 這行會安全地無效果，不會讓遊戲壞掉 — 之後要接排行榜要請 Lin 到 Supabase 確認）
-    try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog()); }catch(e){}   // เฟส 3: แนบประโยคที่พลาด — 2026-07-13
+    try{
+      if(window.READING_AUTH && READING_AUTH.saveScore){
+        var _woItemScore=roundLog.reduce(function(sum,w){return sum+(Number(w.pts)||0);},0);
+        var _woSrsBonus=Math.max(0,score-roundBonus-_woItemScore);
+        READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog(),{
+          difficulty:'高',
+          items:roundLog.map(function(w){return {key:w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+          roundBonus:roundBonus,srsBonus:_woSrsBonus
+        });
+      }
+    }catch(e){} // S29: คะแนน Core 5 ผ่าน score-submit เท่านั้น
 
     // 每週挑戰 + 連續天數／護盾（跟其他遊戲共用同一套邏輯）
     try { rgChallengeBump(maxCombo, isPerfect); } catch(e){}

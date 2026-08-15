@@ -2586,6 +2586,14 @@ function stepSessionSummary() {
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event','tone_finder_complete',{category:'game',score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
   try{ if(window.gtag) gtag('event','game_complete',{category:'game',game:'tone_finder', score: weightedScore, total: total}); }catch(e){}
+  try{
+    if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
+      difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
+      items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,mastered:false};}),
+      roundBonus:Number(session.bonusAwarded)||0,
+      srsBonus:Number(session.srsReviewBonus)||0
+    });
+  }catch(e){} // S29: ยกเลิก GA interception/direct tone_sessions insert
   // Lin 2026-07-10: ลบ branch บังคับล็อกอินทิ้ง (requireLogin=false ตายอยู่แล้ว ไม่เคยทำงานจริง) — เหลือแค่คำเชิญ "ขอ單字速查表" หลังเล่นจบรอบ
   setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   var rows = results.map(function(r, i){

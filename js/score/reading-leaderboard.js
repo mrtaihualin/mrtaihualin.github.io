@@ -90,7 +90,7 @@
       var f = PACER.factors[i % PACER.factors.length];
       var sc = Math.max(1, Math.round(anchor * f));
       var games = Math.min(maxGames, Math.max(2, Math.round(sc / per)));
-      return { user_id: 'pacer-' + period + '-' + i, nickname: nm, avatar: LB_PACER_AVATARS[i % LB_PACER_AVATARS.length], badge_id: '', total_score: sc, games: games, _bot: true };
+      return { nickname: nm, avatar: LB_PACER_AVATARS[i % LB_PACER_AVATARS.length], badge_id: '', total_score: sc, games: games, is_current_user: false, _bot: true };
     });
   }
 
@@ -244,7 +244,7 @@
     html += '<div style="background:#fff;border-radius:16px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.05);">';
     rows.forEach(function (r, i) {
       var rank = i + 1;
-      var mine = currentUser && r.user_id === currentUser.id;
+      var mine = !!(currentUser && r.is_current_user === true);
       // "อีก X แต้มแซง [คนข้างบน]" — โชว์ใต้แถวของผู้เล่นเอง (ถ้ายังไม่ใช่ที่ 1)
       var pacerHint = '';
       if (mine && i > 0) {

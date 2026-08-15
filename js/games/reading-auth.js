@@ -1,5 +1,5 @@
 // ============================================================
-// reading-auth.js — ล็อกอิน + เซฟแต้มเกมอ่าน/เกมพิมพ์/เกมเรียงประโยค (ลีกรายสัปดาห์)
+// reading-auth.js — ล็อกอิน + ส่งหลักฐานคะแนน Core 5 ไปให้ server ตรวจและบันทึก
 // FILE MAP: [01] bootstrap/environment → [02] login UI/providers/OTP → [03] user/adaptive state → [04] score save → [05] session/OAuth return
 // ใช้ session ร่วมกับเกมเสียง (same-origin) → ล็อกอินที่เกมไหนก็รู้จักกัน
 // guard เต็ม: ถ้า Supabase/ตารางยังไม่พร้อม → เกมเล่นได้ปกติ ไม่พัง
@@ -84,7 +84,7 @@
   // v4 (LIN 2026-07-03): เพิ่ม 'word_order' (เกมเรียงประโยค/語序練習室) — เดิมมีแค่ typing/reading
   // v5 (LIN 2026-07-03): เพิ่ม 'lego' (造句練習室/樂高式造句) — เกมนี้กับ word_order เป็นคนละเกม ห้ามใช้ key เดียวกัน
   // v6 (LIN 2026-07-16): เพิ่ม 'tone_finder' (เกมเสียง/tone-finder.html) — รวมระบบล็อกอินเข้ามาใช้ไฟล์นี้ร่วมกับอีก 4 เกม
-  //   (เดิมเกมเสียงใช้ supabase-auth.js แยกของตัวเอง) — คะแนนเกมเสียงยังเก็บคนละตาราง (tone_sessions) ไม่ผ่าน saveScore() ที่นี่
+  //   (เดิมเกมเสียงใช้ supabase-auth.js แยกของตัวเอง) — ตั้งแต่ S29 คะแนน Core 5 ผ่าน score-submit จุดเดียว
   //   เพิ่มแค่ branch นี้ให้ badge/🏆 ลิงก์ถูกที่ ไม่กระทบ 4 เกมเดิม
   // v7 (LIN 2026-07-31): เพิ่ม 'mix' (綜合遊戲/mix.html) — ให้ล็อกอิน+เซฟคะแนนใช้ระบบเดียวกับ 5 เกมเดิม
   // v8 (LIN 2026-08-01): เปลี่ยนชื่อไฟล์ mix.html → games-challenge.html + เปลี่ยน id 'mix' → 'challenge'
@@ -478,9 +478,9 @@
     return rgShuffle(res).slice(0, n);
   };
 
-  // ── เซฟแต้มรอบนี้ขึ้นลีก (เฉพาะตอนล็อกอิน) + sync ดาว/streak ──
-  // v3 (LIN 2026-07-02): ระบุเกม 'reading'/'typing' ต่อแถว · กัน email แอดมิน ·
-  // ถ้าคอลัมน์ game ยังไม่ถูกสร้างใน Supabase → ลองเซฟใหม่แบบไม่มี game (พฤติกรรมเดิม)
+  // ── ส่งหลักฐานรอบนี้ให้ score-submit ตรวจ (เฉพาะตอนล็อกอิน) + sync ดาว/streak ──
+  // S29 (2026-08-15): browser ไม่มีสิทธิ์เขียน score table โดยตรงอีกต่อไป
+  // user_id/created_at/คะแนน authoritative มาจาก JWT + server validation เท่านั้น
   // RELIABILITY: โชว์ผลจริงเสมอ (toast) — สำเร็จจริงค่อยขึ้น ✅, พังต้องเตือน ห้ามเงียบ
   var ADMIN_EMAIL = 'mr.taihualin@gmail.com';
 
@@ -500,19 +500,18 @@
     } catch (e) {}
   }
 
-  // error จาก PostgREST ที่แปลว่า "คอลัมน์ game ยังไม่มีใน schema" — จับกว้างไว้ก่อน
-  function isMissingColumn(err, colName) {
-    if (!err) return false;
-    if (err.code === 'PGRST204') return true; // Could not find the column ... in the schema cache
-    var m = String(err.message || '');
-    return new RegExp(colName, 'i').test(m) && /(column|schema|cache|find)/i.test(m);
+  function scoreSubmissionId() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    var bytes = new Uint8Array(16);
+    try { crypto.getRandomValues(bytes); } catch (e) { for (var i=0;i<16;i++) bytes[i]=(Math.random()*256)|0; }
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    var h = Array.prototype.map.call(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
   }
-  function isMissingGameColumn(err) { return isMissingColumn(err, 'game'); }
 
-  // 2026-07-13 Lin：เพิ่ม wrongItems (4th param) — เก็บคำ/ประโยคที่พลาดในรอบนั้น (เหมือน tone_sessions.wrong_words)
-  // ใช้เป็นฐานข้อมูลจุดอ่อนให้เกมอ่าน/พิมพ์/เรียงคำ/ต่อประโยค — เดิมมีแค่คะแนน ไม่มีรายละเอียดคำผิด
-  // ต้องรัน SQL เพิ่มคอลัมน์ wrong_items ก่อน (ไฟล์ SQL แยก) — ถ้ายังไม่รัน จะ fallback เซฟแบบไม่มีคอลัมน์นี้ ให้คะแนนไม่หาย
-  function saveScore(score, games, game, wrongItems) {
+  // proof = {difficulty, items, roundBonus, srsBonus}; wrongItems เป็น private learning history เท่านั้น
+  function saveScore(score, games, game, wrongItems, proof) {
     if (!API.user) return; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
     // Phase 1 fail-closed: Challenge is Paid-only and has no Leaderboard. Paid runtime is not launched.
     if (game === 'challenge' || pageGame() === 'challenge') return;
@@ -522,40 +521,50 @@
       console.info('[board] admin account — score not saved (excluded from leaderboard)');
       return;
     }
-    var gm = (game === 'typing' || game === 'reading' || game === 'listening' || game === 'word_order' || game === 'lego') ? game : pageGame();
-    var base = { user_id: API.user.id, score: (score || 0) | 0, games: (games || 1) | 0 };
-    var withGame = { user_id: base.user_id, score: base.score, games: base.games, game: gm };
-    var full = { user_id: withGame.user_id, score: withGame.score, games: withGame.games, game: withGame.game, wrong_items: Array.isArray(wrongItems) ? wrongItems : [] };
+    var gm = game === 'tone_finder' ? 'tone' : game;
+    if (['tone','reading','listening','typing','word_order'].indexOf(gm) < 0) return;
+    if (!proof || !Array.isArray(proof.items) || !proof.items.length) {
+      saveToast('⚠️ 分數未儲存：缺少驗證資料', false);
+      return;
+    }
+    var submittedScore = Number(score);
+    if (!Number.isFinite(submittedScore) || !Number.isInteger(submittedScore)) {
+      saveToast('⚠️ 分數未儲存：格式不正確', false);
+      return;
+    }
+    var payload = {
+      submission_id: scoreSubmissionId(),
+      game: gm,
+      difficulty: proof.difficulty,
+      client_score: submittedScore,
+      evidence: {
+        items: proof.items,
+        roundBonus: Number(proof.roundBonus) || 0,
+        srsBonus: Number(proof.srsBonus) || 0
+      },
+      wrong_items: Array.isArray(wrongItems) ? wrongItems.slice(0, 100) : []
+    };
     function onFail(msg) {
       console.warn('[board] save failed:', msg);
       saveToast('⚠️ 分數儲存失敗：' + msg, false);
       try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
     }
-    try {
-      sb.from('reading_sessions').insert(full).then(function (res) {
-        if (!res.error) { saveToast('✅ 分數已儲存 +' + base.score + ' 分', true); return; }
-        if (isMissingColumn(res.error, 'wrong_items')) {
-          // Lin ยังไม่รัน SQL เพิ่มคอลัมน์ wrong_items → เซฟแบบเดิม (ไม่มี wrong_items) ให้คะแนนไม่หาย
-          console.warn('[board] wrong_items column not ready — saved without it');
-          sb.from('reading_sessions').insert(withGame).then(function (res2) {
-            if (!res2.error) { saveToast('✅ 分數已儲存 +' + base.score + ' 分', true); return; }
-            if (isMissingGameColumn(res2.error)) {
-              console.warn('[board] game column not ready — saved without game');
-              sb.from('reading_sessions').insert(base).then(function (res3) {
-                if (res3.error) onFail(res3.error.message);
-                else saveToast('✅ 分數已儲存 +' + base.score + ' 分', true);
-              }, function (e3) { onFail(e3 && e3.message || '網路錯誤'); });
-            } else onFail(res2.error.message);
-          }, function (e2) { onFail(e2 && e2.message || '網路錯誤'); });
-        } else if (isMissingGameColumn(res.error)) {
-          console.warn('[board] game column not ready — saved without game');
-          sb.from('reading_sessions').insert(base).then(function (res2) {
-            if (res2.error) onFail(res2.error.message);
-            else saveToast('✅ 分數已儲存 +' + base.score + ' 分', true);
-          }, function (e2) { onFail(e2 && e2.message || '網路錯誤'); });
-        } else onFail(res.error.message);
-      }, function (e) { onFail(e && e.message || '網路錯誤'); });
-    } catch (e) { onFail(e && e.message || String(e)); }
+    function submit(attempt) {
+      try {
+        sb.functions.invoke('score-submit', { body: payload }).then(function (res) {
+          if (!res.error && res.data && res.data.ok) {
+            saveToast('✅ 分數已驗證並儲存 +' + res.data.score + ' 分', true);
+            return;
+          }
+          if (attempt === 0) { setTimeout(function () { submit(1); }, 800); return; }
+          onFail((res.error && res.error.message) || (res.data && res.data.error) || '伺服器驗證失敗');
+        }, function (e) {
+          if (attempt === 0) { setTimeout(function () { submit(1); }, 800); return; }
+          onFail(e && e.message || '網路錯誤');
+        });
+      } catch (e) { onFail(e && e.message || String(e)); }
+    }
+    submit(0);
     if (window.GAME_ACCOUNT && GAME_ACCOUNT.sync) { try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {} }
   }
 
