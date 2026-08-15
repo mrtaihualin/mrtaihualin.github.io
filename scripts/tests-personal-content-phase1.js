@@ -15,6 +15,8 @@ const wordOrder = read('js/games/word-order-app.js');
 const exportFn = read('supabase/functions/account-export/index.ts');
 const failures = [];
 let passes = 0;
+const practiceBody = (ui.match(/function practiceSection\(item, games\) \{([\s\S]*?)\n  \}/) || [])[1] || '';
+const savedInfoBody = (ui.match(/function savedInfo\(item\) \{([\s\S]*?)\n  \}/) || [])[1] || '';
 function check(label, condition) {
   if (condition) { passes++; console.log('✓ ' + label); }
   else failures.push(label);
@@ -36,7 +38,8 @@ check('Personal Search stays inside the account render path', /function renderAc
 check('near-limit and full-gate messages exist', /remaining <= 3/.test(ui) && /已達免費儲存上限/.test(ui));
 check('full gate offers management and disabled upgrade', /管理已儲存內容/.test(ui) && /升級方案/.test(ui) && /upgrade\.disabled = true/.test(ui));
 check('item detail exposes three optional information fields', /คำอ่านไทย/.test(ui) && /Romanization/.test(ui) && /中文翻譯/.test(ui));
-check('practice records and save provenance are per item', /練習紀錄/.test(ui) && /儲存資訊/.test(ui) && /provenance\(item\)/.test(ui));
+check('practice actions and save provenance stay separated per item', /練習紀錄/.test(practiceBody) && /儲存資訊/.test(savedInfoBody) && /provenance\(item\)/.test(savedInfoBody));
+check('Save provenance alone never labels an item as Played or re-practice', /開始練習/.test(practiceBody) && !/provenance\(item\)|再練習|played/.test(practiceBody));
 check('word-order Save writes sentence library', /SentenceVault\.createSaveBtn/.test(wordOrder) && !/WordVault\.createSaveBtn\(s\.th/.test(wordOrder));
 check('sentence direct practice reuses existing practice mode', /location\.search\.match\(\/\[\?&\]sentence=/.test(wordOrder) && /practiceMode = true;[\s\S]{0,160}SET = \[requestedIndex\]/.test(wordOrder));
 check('account export includes every vault key, not only words', /from\('learning_saved_items'\)/.test(exportFn) && !/eq\('vault_key', 'linvault'\)/.test(exportFn));
