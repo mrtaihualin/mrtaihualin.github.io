@@ -87,13 +87,32 @@ function readLocalContract(file) {
   return { taskId: contract.taskId, writeSet: Array.isArray(contract.writeSet) ? contract.writeSet : [] };
 }
 
+function pathsFromNameStatus(output) {
+  const tokens = String(output || '').split('\0');
+  if (tokens[tokens.length - 1] === '') tokens.pop();
+  const files = [];
+  for (let index = 0; index < tokens.length;) {
+    const status = tokens[index++];
+    if (!/^[A-Z][0-9]*$/.test(status)) throw new Error(`อ่าน staged status ไม่สำเร็จ: ${JSON.stringify(status)}`);
+    const oldPath = tokens[index++];
+    if (!oldPath) throw new Error(`staged status ${status} ขาด path`);
+    files.push(oldPath);
+    if (/^[RC]/.test(status)) {
+      const newPath = tokens[index++];
+      if (!newPath) throw new Error(`staged status ${status} ขาด destination path`);
+      files.push(newPath);
+    }
+  }
+  return [...new Set(files)];
+}
+
 function stagedFiles() {
-  const result = cp.spawnSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMRDTUXB', '-z'], {
+  const result = cp.spawnSync('git', ['diff', '--cached', '--name-status', '--diff-filter=ACMRDTUXB', '-z'], {
     cwd: root,
     encoding: 'utf8',
   });
   if (result.status !== 0) throw new Error(`อ่าน staged files ไม่สำเร็จ: ${result.stderr.trim()}`);
-  return result.stdout.split('\0').filter(Boolean);
+  return pathsFromNameStatus(result.stdout);
 }
 
 function githubJson(url, token) {
@@ -127,9 +146,18 @@ async function pullRequestFiles(repository, number, token) {
   for (let page = 1; ; page++) {
     const url = `https://api.github.com/repos/${repository}/pulls/${number}/files?per_page=100&page=${page}`;
     const batch = await githubJson(url, token);
-    files.push(...batch.map((item) => item.filename));
-    if (batch.length < 100) return files;
+    files.push(...pathsFromPullRequestBatch(batch));
+    if (batch.length < 100) return [...new Set(files)];
   }
+}
+
+function pathsFromPullRequestBatch(batch) {
+  const files = [];
+  for (const item of batch) {
+    if (item.previous_filename) files.push(item.previous_filename);
+    files.push(item.filename);
+  }
+  return [...new Set(files)];
 }
 
 async function runEvent(eventFile) {
@@ -176,4 +204,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { isAllowed, normalizePattern, parsePullRequestBody, validateTaskContract };
+module.exports = { isAllowed, normalizePattern, parsePullRequestBody, pathsFromNameStatus, pathsFromPullRequestBatch, validateTaskContract };
