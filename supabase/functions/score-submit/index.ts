@@ -73,9 +73,8 @@ serve(async (req) => {
     catch (error) { return reply(origin, { error: error?.code || 'invalid_score_evidence' }, 400); }
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-    const { data: rateOk, error: rateError } = await admin.rpc('rl_check', {
-      p_user: user.id,
-      p_fn: 'score-submit',
+    const { data: rateOk, error: rateError } = await admin.rpc('game_content_rl_check', {
+      p_key: `score-submit:${user.id}`,
       p_limit: 30,
       p_window: 600,
     });
