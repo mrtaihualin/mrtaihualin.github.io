@@ -1,6 +1,20 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 08:28 Asia/Bangkok** — P1-F-05/F-06 Hard Gate 3 local bugfix + Browser rerun PASS; authorized deploy/Production Verification waiting
+**Updated: 2026-08-15 09:11 Asia/Bangkok** — P1-F-05/F-06 GA pre-consent cookie root cause fixed locally; tests/order PASS, manual cookie reverify required before deploy
+
+## 2026-08-15 — GA4 Pre-consent Cookie Hotfix (`LOCAL_TEST_PASS / MANUAL_COOKIE_VERIFY_NEEDED`)
+
+- Manual Production PV พบ `_ga_DKVQE30982` บน fresh session ก่อน Accept/Reject. Root cause คือ default consent ถูก queue หลัง `gtag('js')` และ async loaderอยู่ก่อน inline default จึงเกิด cached-loader raceก่อน denied state.
+- แก้ canonical `scripts/apply-cookie-consent.js` และ sync 88 standard analytics pagesเป็น dataLayer/function → stored/default consent → js → config → async loader; รองรับ formatted/minified snippetsและ config options.
+- เพิ่ม regressionบังคับ defaultก่อน js/config/loader, exactly one default/loader, fixture normalization + idempotency. Generator rerun 0 changes; consent 88 + Vault, Vault 6/6 และ `node scripts/check-site.js` PASS 908 files/secret scan 1131.
+- Fresh unique local origin แสดง bannerก่อน choiceและ DOM order `461 < 587 < 613 < 708` หลังรอ loader 5 วินาที. Browser policy บล็อก exact cookie-store inspection จึงยังต้อง Lin manual verify `_ga*`=0 บน fresh local ก่อน deploy. ไม่มี Git/deploy/SQL/Supabase mutation.
+
+## 2026-08-15 — P1-F-05/F-06 Production Deploy (`DEPLOY_PASS / PV_PARTIAL_FAIL`)
+
+- Lin อนุมัติ deploy และ manual protected Pages run `31857228251` สำเร็จจาก commit `f8787f1a9757a595d3a735d40ae82c399488f04f` ไป `https://mrtaihualin.com/`.
+- Production Chinese/English มี deployed GA revoke cleanup + Clarity loader markers; Reject/Accept/Revoke/reload persistence ผ่าน. Vault external Clarity absent เมื่อ denied, present หลัง Accept และ absent อีกครั้งหลัง Revoke; หน้าใช้งานได้และ console warning/error 0.
+- Exact Production cookies `_ga`, `_ga_*`, `_clck`, `_clsk` และ event/network payloadsยัง `NV`: Browser security policy บล็อก cookie/localStorage inspection และสั่งห้าม workaround. Local isolated Hard Gate 3 cookie evidenceยัง PASS แต่ไม่ใช้แทน Production.
+- ไม่มี SQL, Supabase mutation หรือการเปลี่ยน Phase 1 ระบบอื่น.
 
 ## 2026-08-15 — P1-F-05/F-06 Hard Gate 3 Fix (`PASS_LOCAL / PRODUCTION_VERIFY_NEEDED`)
 

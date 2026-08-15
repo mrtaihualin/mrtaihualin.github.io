@@ -38,9 +38,15 @@ for (const file of files) {
   }
   if (hasGA) {
     const defaultAt = html.indexOf("gtag('consent', 'default'");
+    const jsAt = html.indexOf("gtag('js', new Date())");
     const configMatch = /gtag\(\s*['"]config['"]/.exec(html);
     const configAt = configMatch ? configMatch.index : -1;
+    const loaderAt = html.indexOf('https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982');
+    check(rel + ': GA has exactly one default consent command', (html.match(/gtag\('consent', 'default'/g) || []).length === 1);
+    check(rel + ': GA has exactly one async loader', (html.match(/https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=G-DKVQE30982/g) || []).length === 1);
+    check(rel + ': GA default consent is declared before js bootstrap', defaultAt >= 0 && jsAt > defaultAt);
     check(rel + ': GA default consent is declared before config', defaultAt >= 0 && configAt > defaultAt);
+    check(rel + ': GA default consent is queued before async loader can run', loaderAt > configAt && configAt > jsAt);
     check(rel + ': GA analytics defaults denied without stored grant', /analytics_storage: savedConsent === 'granted' \? 'granted' : 'denied'/.test(html));
     check(rel + ': revoke clears GA cookies', html.includes("name === '_ga' || name.indexOf('_ga_') === 0") && html.includes('__clearGaCookiesAfterRevoke'));
   }
@@ -63,8 +69,30 @@ check('English privacy matches current analytics tools', englishPrivacy.includes
 check('English privacy says Clarity cookies require consent', englishPrivacy.includes('Microsoft Clarity uses analytics cookies only after you consent'));
 check('English privacy discloses limited cookieless tracking after rejection', /reject[\s\S]{0,180}cookieless[\s\S]{0,100}Consent API V2/i.test(englishPrivacy));
 const generator = fs.readFileSync(path.join(root, 'scripts/apply-cookie-consent.js'), 'utf8');
+const { normalizeGaBootstrap } = require('./apply-cookie-consent.js');
 check('canonical consent generator emits Clarity V2', generator.includes("window.clarity('consentv2'"));
 check('canonical consent generator has one results declaration', (generator.match(/const results =/g) || []).length === 1);
+const bootstrapFixture = `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
+  var savedConsent = localStorage.getItem('cookieConsent');
+  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });
+  gtag('config', 'G-DKVQE30982');
+</script>`;
+const normalizedFixture = normalizeGaBootstrap(bootstrapFixture);
+check('canonical generator normalizes GA bootstrap fixture', typeof normalizedFixture === 'string');
+if (typeof normalizedFixture === 'string') {
+  const fixtureDefaultAt = normalizedFixture.indexOf("gtag('consent', 'default'");
+  const fixtureJsAt = normalizedFixture.indexOf("gtag('js', new Date())");
+  const fixtureConfigAt = normalizedFixture.indexOf("gtag('config', 'G-DKVQE30982')");
+  const fixtureLoaderAt = normalizedFixture.indexOf('https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982');
+  check('canonical generator puts default before js/config/loader', fixtureDefaultAt >= 0 && fixtureDefaultAt < fixtureJsAt && fixtureJsAt < fixtureConfigAt && fixtureConfigAt < fixtureLoaderAt);
+  check('canonical generator is idempotent', normalizeGaBootstrap(normalizedFixture) === normalizedFixture);
+}
 if (failures.length) {
   console.error('❌ Phase 1 consent coverage failed (' + failures.length + ')');
   failures.forEach((failure) => console.error('- ' + failure));

@@ -1,7 +1,7 @@
 # Repo Start Here — mrtaihualin.com
 
 > สถานะ: Current pointer index · **REPO CLEANUP = CLOSED**
-> อัปเดต: 2026-08-15 08:28 P1-F-05/F-06 Hard Gate 3 local PASS; authorized deploy/Production Verification hard stop before P1-G-01
+> อัปเดต: 2026-08-15 09:11 P1-F-05/F-06 Production pre-consent cookie FAIL; GA bootstrap hotfix local PASS, manual fresh-local cookie verify requiredก่อน deploy
 > หน้าที่: บอกทางไปข้อมูลปัจจุบันเท่านั้น ห้ามคัดลอกสถานะยาวมาเก็บซ้ำในไฟล์นี้
 
 ## Current Source of Truth
@@ -41,6 +41,6 @@
 
 ## Next Action
 
-- Local-safe run ปิดถึง `P1-F-05/F-06` และ Hard Gate 3 ผ่านแล้ว. งานถัดไปเป็น authorized deploy + exact Production Verification; `P1-G-01` ยังเป็น true hard stopจนกว่า Production evidenceและ separate release authorization จะครบ.
+- `P1-F-05/F-06` local GA bootstrap hotfixผ่าน static/fresh-origin orderแล้ว. งานถัดไปคือ manual fresh-local `_ga*`=0; ห้าม deployจนกว่าจะผ่าน แล้วจึง reverify Productionก่อน `P1-G-01`.
 - Document Placement Phase 1 = `CLOSED / PASS` เมื่อ 2026-08-14; Phase 2 Repo Cleanup และ move candidates ทั้งหมดเป็นงานแยกที่ยัง `PARKED / NOT AUTHORIZED`.
 - Latest game closeout: `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/STATUS/2026-08-14_2028_GAMES_PHASE3_CORE5_LOCAL_CLOSEOUT.md` (`PASS_LOCAL / PRODUCTION_VERIFY_NEEDED`; Lego deferred).

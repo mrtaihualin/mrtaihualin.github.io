@@ -37,6 +37,12 @@ const BANNER_BLOCK_RE = /<!-- Cookie consent banner \(Google Consent Mode v2\)[\
 
 // regex จับ gtag('js', new Date()); ทั้งแบบเว้นวรรค และแบบ minify (คนละ quote ก็จับได้)
 const GTAG_JS_CALL_RE = /gtag\(\s*(['"])js\1\s*,\s*new Date\(\)\s*\)\s*;/;
+const GTAG_JS_LINE_RE = /^([ \t]*)gtag\(\s*(['"])js\2\s*,\s*new Date\(\)\s*\)\s*;[ \t]*$/m;
+const GA_CONFIG_CALL_RE = new RegExp(`gtag\\(\\s*(['"])config\\1\\s*,\\s*(['"])${GA_ID}\\2`);
+const GA_LOADER_TAG_RE = new RegExp(
+  `<script\\s+async\\s+src=(["'])https://www\\.googletagmanager\\.com/gtag/js\\?id=${GA_ID}\\1\\s*><\\/script>`
+);
+const CONSENT_DEFAULT_BLOCK_RE = /^[ \t]*\/\/ Consent Mode v2[^\n]*\n[ \t]*var savedConsent = localStorage\.getItem\('cookieConsent'\);\n[ \t]*gtag\('consent', 'default', \{ analytics_storage: savedConsent === 'granted' \? 'granted' : 'denied', ad_storage: 'denied' \}\);[ \t]*\n?/m;
 
 // literal บรรทัดปิด IIFE ของ Clarity (คงที่ทุกไฟล์ที่ตรวจแล้ว)
 const CLARITY_CLOSE_LITERAL = `})(window, document, "clarity", "script", "${CLARITY_ID}");`;
@@ -59,13 +65,47 @@ function walk(dir, out) {
   return out;
 }
 
-function buildConsentDefaultSnippet() {
+function buildConsentDefaultSnippet(indent = '  ') {
   return (
-    `\n  // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ ` +
+    `${indent}// Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ ` +
     `scripts/apply-cookie-consent.js)\n` +
-    `  var savedConsent = localStorage.getItem('cookieConsent');\n` +
-    `  gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });`
+    `${indent}var savedConsent = localStorage.getItem('cookieConsent');\n` +
+    `${indent}gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });`
   );
+}
+
+function normalizeGaBootstrap(content) {
+  const loaderMatch = content.match(GA_LOADER_TAG_RE);
+  const jsMatch = content.match(GTAG_JS_CALL_RE);
+  const configMatch = content.match(GA_CONFIG_CALL_RE);
+  if (!loaderMatch || !jsMatch || !configMatch) return null;
+
+  // Consent default must be queued before both gtag('js') and the async loader.
+  // Otherwise a cached loader can execute first and create _ga* on a fresh visit.
+  let out = content.replace(CONSENT_DEFAULT_BLOCK_RE, '');
+  if (GTAG_JS_LINE_RE.test(out)) {
+    out = out.replace(GTAG_JS_LINE_RE, (line, indent) =>
+      `${buildConsentDefaultSnippet(indent)}\n${indent}gtag('js', new Date());`
+    );
+  } else {
+    out = out.replace(GTAG_JS_CALL_RE, (call) =>
+      `\n${buildConsentDefaultSnippet('  ')}\n  ${call}`
+    );
+  }
+
+  const loaderTag = loaderMatch[0];
+  const loaderWithWhitespace = new RegExp(`\\s*${GA_LOADER_TAG_RE.source}\\s*`);
+  out = out.replace(loaderWithWhitespace, '\n');
+  out = out.replace(/(<!-- Google tag \(gtag\.js\) -->)\s*(<script>)/, '$1\n$2');
+
+  const normalizedConfig = out.match(GA_CONFIG_CALL_RE);
+  if (!normalizedConfig) return null;
+  const scriptEnd = out.indexOf('</script>', normalizedConfig.index + normalizedConfig[0].length);
+  if (scriptEnd < 0) return null;
+  const insertAt = scriptEnd + '</script>'.length;
+  const beforeLoader = out.slice(0, insertAt).replace(/[ \t]+$/, '');
+  const afterLoader = out.slice(insertAt).replace(/^\s*/, '');
+  return beforeLoader + `\n${loaderTag}\n` + afterLoader;
 }
 
 function buildClaritySnippet() {
@@ -208,7 +248,10 @@ function processFile(filePath) {
     if (!content.includes(BANNER_COMMENT) || !BANNER_BLOCK_RE.test(content)) {
       return { status: 'skipped', rel, reason: 'มี cookieConsentBanner แต่ไม่ใช่ standard banner ที่รู้จัก' };
     }
-    let out = content;
+    let out = normalizeGaBootstrap(content);
+    if (out === null) {
+      return { status: 'skipped', rel, reason: 'normalize GA bootstrap ไม่สำเร็จ' };
+    }
     if (isEnglish && !out.includes(CLARITY_CLOSE_LITERAL)) {
       const headEnd = out.indexOf('</head>');
       if (headEnd < 0) return { status: 'skipped', rel, reason: 'English page ไม่มี </head> สำหรับ Clarity loader' };
@@ -228,17 +271,12 @@ function processFile(filePath) {
     return { status: 'skipped', rel, reason: 'ไม่มี </body> ในไฟล์' };
   }
 
-  const gaMatch = content.match(GTAG_JS_CALL_RE);
-  if (!gaMatch) {
-    return { status: 'skipped', rel, reason: 'หา gtag(\'js\', new Date()); ไม่เจอ (โครงสร้างต่างจากที่คาด)' };
+  let out = normalizeGaBootstrap(content);
+  if (out === null) {
+    return { status: 'skipped', rel, reason: 'normalize GA bootstrap ไม่สำเร็จ' };
   }
 
-  let out = content;
-
-  // 1) แทรก consent default หลัง gtag('js', new Date());
-  out = out.replace(GTAG_JS_CALL_RE, (m) => m + buildConsentDefaultSnippet());
-
-  // 2) English analytics pages ใช้ Clarity architecture เดียวกับ Chinese
+  // 1) English analytics pages ใช้ Clarity architecture เดียวกับ Chinese
   if (isEnglish && !out.includes(CLARITY_CLOSE_LITERAL)) {
     const headEnd = out.indexOf('</head>');
     if (headEnd < 0) return { status: 'skipped', rel, reason: 'English page ไม่มี </head> สำหรับ Clarity loader' };
@@ -247,7 +285,7 @@ function processFile(filePath) {
     out = out.replace(CLARITY_CLOSE_LITERAL, CLARITY_CLOSE_LITERAL + buildClaritySnippet());
   }
 
-  // 3) แทรก banner ก่อน </body> ตัวสุดท้าย (กันไฟล์ที่มีหลายจุด ป้องกันพลาด)
+  // 2) แทรก banner ก่อน </body> ตัวสุดท้าย (กันไฟล์ที่มีหลายจุด ป้องกันพลาด)
   const lastBodyIdx = out.lastIndexOf('</body>');
   out = out.slice(0, lastBodyIdx) + buildBannerBlock(isEnglish) + '\n' + out.slice(lastBodyIdx);
 
@@ -284,4 +322,6 @@ function main() {
   results.errors.forEach((r) => console.log(`  [ERROR] ${r.rel} — ${r.reason}`));
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { normalizeGaBootstrap };

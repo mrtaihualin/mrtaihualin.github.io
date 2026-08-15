@@ -10,14 +10,14 @@
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <title>線上教室 — 泰華老師</title>
 <!-- GA4 (เพิ่ม 2026-07-24 ตามที่ Lin อนุมัติ — เก็บแค่ "เกิดอะไรขึ้น" ห้ามใส่ชื่อจริง/token/อีเมลลงพารามิเตอร์ เพราะเป็นพื้นที่ส่วนตัวครู/นักเรียน) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
+
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
   // Consent Mode v2 — ปฏิเสธเป็นค่าเริ่มต้นจนกว่าผู้ใช้จะกดยอมรับ (แทรกอัตโนมัติ scripts/apply-cookie-consent.js)
   var savedConsent = localStorage.getItem('cookieConsent');
   gtag('consent', 'default', { analytics_storage: savedConsent === 'granted' ? 'granted' : 'denied', ad_storage: 'denied' });
+  gtag('js', new Date());
   gtag('config', 'G-DKVQE30982', { anonymize_ip: true });
   // เช็คว่าเข้ามาทาง LINE (in-app browser) หรือเว็บทั่วไป — เช็คจาก User-Agent เท่านั้น ไม่เก็บ token/ชื่อ
   gtag('event', 'classroom_entry', {
@@ -25,6 +25,7 @@
     entry_channel: /Line/i.test(navigator.userAgent) ? 'line' : 'web'
   });
 </script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DKVQE30982"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
