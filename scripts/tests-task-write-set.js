@@ -6,6 +6,8 @@ const {
   isAllowed,
   normalizePattern,
   parsePullRequestBody,
+  pathsFromNameStatus,
+  pathsFromPullRequestBatch,
   validateTaskContract,
 } = require('./check-task-write-set');
 
@@ -15,6 +17,18 @@ assert.strictEqual(isAllowed('README.md', ['scripts/**']), false);
 assert.throws(() => normalizePattern('**'), /กว้างทั้ง repository/);
 assert.throws(() => normalizePattern('scripts/*.js'), /รองรับเฉพาะ/);
 assert.throws(() => normalizePattern('../outside'), /ไม่ใช่ repository-relative/);
+assert.deepStrictEqual(
+  pathsFromNameStatus('R100\0outside.txt\0inside.txt\0D\0deleted.txt\0'),
+  ['outside.txt', 'inside.txt', 'deleted.txt'],
+);
+assert.throws(
+  () => validateTaskContract('AE-RENAME', ['inside.txt'], pathsFromNameStatus('R100\0outside.txt\0inside.txt\0')),
+  /outside\.txt/,
+);
+assert.deepStrictEqual(
+  pathsFromPullRequestBatch([{ filename: 'inside.txt', previous_filename: 'outside.txt' }]),
+  ['outside.txt', 'inside.txt'],
+);
 
 const contract = parsePullRequestBody(`
 Task-ID: AE-2026-08-15
