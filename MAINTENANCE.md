@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 19:32 Asia/Bangkok** — P1-B-07 client deployed; authenticated two-device PV blocked on test sessions
+**Updated: 2026-08-15 21:35 Asia/Bangkok** — Version-control PR #8 ready for Lin review
+
+## 2026-08-15 — Version Control Lin-Gated Workflow (`READY_FOR_LIN_REVIEW`)
+
+- Canonical workflow remains outside the repo in Projects `AGENTS.md`; repo-local `AGENTS.md` keeps a single redirect and no GitHub Desktop-only override. The PR template now captures base/head, exact required checks, changed files/risk/visual evidence, `READY_FOR_LIN_REVIEW` and Lin merge authorization.
+- Developer workflow states 1 Task = 1 `codex/*` branch, separate worktree when concurrent, serialized latest-main integration, no direct/force push, and revert-via-PR recovery. No Product Decision, website runtime, deploy, SQL, Supabase or Production state changed.
+- Remote ruleset `20885102` was inspected and consolidated in place on default `main`: bypass list empty, PR required, deletion restricted, force push blocked, required check `required-tests-and-write-set`, and strict latest-main status checks enabled. Branch `codex/version-control-live-proof` → commit `bb380491…` → PR #8 completed the live push/PR proof; required run `31890188247` passed on that head with exact 3-file Write-Set. This evidence-record commit must receive its own exact-head required check before Lin approval and merge.
 
 ## 2026-08-15 — P1-B-07 Client Deploy (`DEPLOY_PASS / AUTH_TWO_DEVICE_BLOCKED`)
 
