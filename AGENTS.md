@@ -1,109 +1,52 @@
-# AGENTS.md — กฎสำหรับ Codex ในเว็บไซต์ของ Lin
+# AGENTS.md — Repository Rules for mrtaihualin.com
 
-ไฟล์นี้ใช้กับทั้ง repository `/Users/taihualin/Developer/mrtaihualin.github.io/`
+> Applies to: `/Users/taihualin/Developer/mrtaihualin.github.io/`
+> Role: repository-specific safety and technical exceptions only
+> Global workflow authority: `/Users/taihualin/Documents/Claude/Projects/AGENTS.md`
+> Repository router: `/Users/taihualin/Developer/mrtaihualin.github.io/00_START_HERE.md`
 
-## Startup Gate — ต้องผ่านก่อนแก้ไฟล์
+## Authority Boundary
 
-กฎ Startup Gate ฉบับ canonical สำหรับ Claude + Codex อยู่ที่ `/Users/taihualin/Documents/Claude/Projects/AGENTS.md` หัวข้อ **Startup Gate กลาง** — ห้ามคัดลอกกฎซ้ำมาไว้ในไฟล์นี้
+- Startup Gate, Minimal Read, Delta-first, ownership/collision, parallel work, Git safety, verification, central update, closeout และ Document Placement ใช้ `Projects/AGENTS.md` เท่านั้น
+- ก่อนงานใน repo ให้ยืนยันว่า Context มีไฟล์นี้, repo router และ global authority แล้ว จากนั้น route ตาม repo router ไป Current task authority
+- ตั้งแต่ 2026-08-14 งาน implementation ของ `mrtaihualin.com` ใช้ Codex เป็น executing agent; คง Claude routing compatibility แต่ไม่ส่ง implementation task ให้ Claude เว้นแต่ Lin เปลี่ยน global authority
+- Product Decision, UX, Tier, Product Pending และ Product NEXT ต้องเข้าผ่าน Website router; Product NEXT ไม่ใช่ implementation authorization
+- Main Plan เป็น roadmap-only และ Website Start Here เป็น router-only; ห้ามเขียน implementation status หรือ closeout ลงสองไฟล์นี้
 
-กฎเลือกบ้านเอกสาร canonical อยู่ไฟล์เดียวกัน หัวข้อ **Document Output Boundary — Projects vs Repository** — Audit, Planning, Recovery, Handoff และ Business documents ทั่วไปห้ามใช้ repo เป็น default destination; repo รับเฉพาะ technical exception ที่พิสูจน์ dependency ได้ โดยคง exact-path exception `/Users/taihualin/Developer/mrtaihualin.github.io/_แผนงาน/ทำต่อในอนาคต.md`
+## Repository Scope
 
-ตั้งแต่ 2026-08-14 งานต่อของ `mrtaihualin.com` ใช้ **Codex เท่านั้นเป็น executing agent**. ต้องคง Claude routing compatibility แต่ห้ามเสนอหรือส่ง implementation task ให้ Claude เว้นแต่ Lin เปลี่ยนกฎ canonical ใน Shared Rules ภายหลัง
-
-ก่อนเริ่มทุกงานใน repo นี้:
-
-0. โหลดหรือยืนยันว่า Context มี `AGENTS.md` ไฟล์นี้และ `/Users/taihualin/Developer/mrtaihualin.github.io/00_START_HERE.md` แล้ว
-1. โหลด Shared Rules canonical ที่ `/Users/taihualin/Documents/Claude/Projects/AGENTS.md` และกฎประหยัดที่ `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/AI_EFFICIENCY_RULES.md` ถ้ายังไม่มีใน Context
-2. ตาม routing เดียวกับ Claude: repo `00_START_HERE.md` → `/Users/taihualin/Documents/Claude/Projects/00_START_HERE.md` → `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md` → authority ตามประเภทงาน
-3. ทำ Startup Gate ตาม canonical rule และรายงาน `STARTUP GATE: PASS` แบบสั้นก่อน `edit / create / move / delete`
-4. ถ้า Context ยังครบและไฟล์ไม่เปลี่ยน ห้ามอ่านซ้ำโดยไม่มีเหตุ
-
-หลังผ่านขั้นอ่านกฎ ให้เปิดเฉพาะ Current Source ที่เกี่ยวกับงาน:
-
-3. งานตามแผน งานสถานะ งานส่งต่อ หรือการแก้เว็บไซต์: อ่านส่วนล่าสุดที่เกี่ยวข้องใน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md` และ `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
-4. งานสมาชิกเกม สิทธิ์ เนื้อหาจ่ายเงิน หรือการชำระเงิน: อ่าน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/04_สเปกสมาชิกเกม_CURRENT.md`
-5. ก่อนแตะโค้ด: อ่านส่วนที่เกี่ยวข้องใน `CLAUDE.md`; อ่าน `README.md` หรือ `MAINTENANCE.md` เมื่อจำเป็นต่อโครงสร้าง พฤติกรรมเดิม หรือผลตรวจล่าสุด
-
-งาน Product Decision, UX, Product NEXT, Pending หรือ Verify ต้องตาม GPT Current ที่ Website Command Center ชี้ก่อนเสมอ; Product NEXT ไม่ใช่ authorization ให้ implement.
-
-ห้ามเปิด Master, History หรือ Audit ทั้งหมดโดยอัตโนมัติ หากข้อมูลขัดกัน ให้ตรวจโค้ดและระบบจริง แล้วบันทึกความขัดแย้ง ห้ามเลือกคำตอบเองจากเอกสารเก่า
-
-## วิธีคุยกับ Lin
-
-- ตอบภาษาไทยง่ายและสั้น เพราะ Lin ไม่รู้เรื่องโค้ด
-- ห้ามเดา ต้องตรวจของจริงและแนบหลักฐาน
-- Lin ตัดสินใจเรื่องธุรกิจ เนื้อหาภาษา ราคา และข้อมูลเกม
-- ข้อมูลภาษาในเกมต้องมาจาก Lin และต้องให้ Lin ตรวจ 100% ก่อนใช้จริง
-
-## ขอบเขตระบบ
-
-เว็บไซต์มีสามส่วน:
+เว็บไซต์มีสาม Area:
 
 1. เว็บหานักเรียน
 2. ห้องเรียนและหนังสือเรียน
 3. เกมทั้งหมด
 
-โค้ด `shared` เป็นชั้นกลาง ไม่ใช่ส่วนที่สี่
+`shared` เป็น common layer ไม่ใช่ Area ที่สี่
 
-เป้าหมายปัจจุบันคือจัดโฟลเดอร์และโค้ดให้ได้มาตรฐาน แล้วเตรียมเกมไปสู่การเปิดขายอย่างปลอดภัย
+## Repository Safety
 
-## กฎก่อนแก้
-
-- ห้ามแก้เว็บไซต์ก่อน Lin อนุมัติขอบเขต
-- ตรวจ dependency และพฤติกรรมเดิมก่อนย้ายหรือลบไฟล์
-- ห้ามใส่ secret, token, service-role key หรือข้อมูลนักเรียนในโค้ด เอกสาร log หรือข้อความตอบ
-- หากพบค่าลับ ให้บันทึกเฉพาะชื่อและตำแหน่ง ห้ามแสดงค่าจริง
-- ห้ามรัน migration, เปลี่ยน RLS, rotate key, deploy, ส่ง LINE, สร้าง booking หรือเปลี่ยนระบบภายนอกโดยไม่มีคำอนุมัติชัดเจน
+- ก่อนย้าย ลบ หรือเปลี่ยนโครงสร้าง ต้องตรวจ dependency และพฤติกรรมเดิมที่เกี่ยวข้อง
+- ห้ามใส่ secret, token, service-role key หรือข้อมูลนักเรียนใน source, docs, logs หรือรายงาน; ถ้าพบให้บอกเฉพาะชื่อและตำแหน่ง
+- Migration, RLS, key rotation, deploy, Production mutation, LINE message, booking และ external-system mutation ต้องมีคำอนุมัติชัดเจนตาม action
 - ห้ามใช้ Git ผ่าน terminal หรือ sandbox ใน repository นี้
-- คำว่า push หมายถึงเตรียมงานและ commit message ให้ Lin เท่านั้น Lin ใช้ GitHub Desktop เอง
-- รักษา URL ของหน้า HTML สาธารณะ
-- ห้ามแก้ไฟล์ vendor โดยไม่จำเป็น
+- คำว่า `push` สำหรับ repo นี้หมายถึงเตรียมงานและ commit message ให้ Lin ใช้ GitHub Desktop เว้นแต่ Lin เปลี่ยนกฎ repo นี้โดยชัดเจน
+- รักษา public HTML URLs และห้ามแก้ vendor files โดยไม่มี dependency ที่พิสูจน์ได้
+- ข้อมูลภาษาไทยในเกมต้องมาจาก Lin และต้องให้ Lin ตรวจ 100% ก่อนใช้จริง
 
-## มาตรฐานงานโค้ด
+## Technical Standard
 
-- แต่ละฟีเจอร์ควรมีบ้านชัดเจน
-- แยก UI, logic, data และ tests เมื่อช่วยให้ดูแลง่ายและไม่ทำพฤติกรรมเปลี่ยน
-- ใช้ของเดิมก่อนสร้างของใหม่
-- ทุกการย้ายต้องมีตัวทดสอบคุ้มกันก่อน
-- งานสำคัญต้องทดสอบกรณีปกติ ข้อมูลผิด กดซ้ำ ขอบเขต สิทธิ์ ระบบภายนอกล้มเหลว การบันทึก และการกู้คืน
-- ก่อนส่งงานเว็บ อย่างน้อยต้องรัน `node scripts/check-site.js`
-- บอกสิ่งที่ยังทดสอบไม่ได้อย่างตรงไปตรงมา
+- ใช้ของเดิมก่อนสร้างของใหม่ และให้แต่ละ feature มีบ้าน/owner ชัดเจน
+- แยก UI, logic, data และ tests เมื่อช่วยให้ดูแลง่ายโดยไม่เปลี่ยน behavior
+- การย้ายหรือ refactor ที่กระทบ behavior ต้องมี regression guard ก่อน
+- Verification ต้องครอบคลุมตามความเสี่ยง รวม normal/error/retry/boundary/permission/external-failure/persistence/recovery เมื่อเกี่ยวข้อง
+- ก่อนส่งงานที่แก้ source เว็บไซต์ อย่างน้อยต้องรัน `node scripts/check-site.js` และรายงานสิ่งที่ยังทดสอบไม่ได้
+- อ่าน `CLAUDE.md`, `README.md` หรือ `MAINTENANCE.md` เฉพาะส่วนที่ Current task ต้องใช้; ห้ามอ่านซ้ำเมื่อ verified unchanged
 
-## Workflow บังคับของทุกแชท
+## Repository Documentation Boundary
 
-### เริ่มแชท
-
-1. อ่านศูนย์บัญชาการและแผนงานหลักเฉพาะงานตามแผน งานสถานะ งานส่งต่อ หรือการแก้เว็บไซต์ และอ่านเฉพาะส่วนที่เกี่ยวข้องก่อน
-2. ตรวจสถานะกับโค้ดหรือระบบจริง
-3. เลือกงานรหัสเดียวหรือกลุ่มเดียวจากแผนหลัก
-4. ระบุขอบเขต สิ่งที่ห้ามทำ และหลักฐานที่จะใช้ตัดสินว่าเสร็จ
-5. ถ้ามีงานค้างจาก AI ตัวอื่น ห้ามแก้ไฟล์ชุดเดียวกันพร้อมกัน
-
-### จบแชทที่มีงานจริง
-
-1. รันทดสอบตามความเสี่ยง
-2. อัปเดตสถานะและหลักฐานใน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
-3. อัปเดตงานถัดไปใน `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md`
-4. อัปเดต `MAINTENANCE.md` เมื่อโค้ดหรือโครงสร้างเว็บเปลี่ยน
-5. เก็บงานที่พักไว้ใน `/Users/taihualin/Developer/mrtaihualin.github.io/_แผนงาน/ทำต่อในอนาคต.md` เพียงที่เดียว
-6. สรุปให้ Lin ว่าเสร็จอะไร เหลืออะไร และควรเปลี่ยนแชทหรือไม่
-
-ห้ามทำเครื่องหมาย `เสร็จแล้ว` ถ้าไม่มีหลักฐานที่ตรวจย้อนกลับได้
-
-## เมื่อควรเปลี่ยนแชท
-
-เปลี่ยนเมื่อจบ phase หรือเปลี่ยนระบบใหญ่ เช่น จากความปลอดภัยไปฐานข้อมูล หรือจากฐานข้อมูลไปจัดเกม ก่อนเปลี่ยนต้องอัปเดตเอกสารกลางและเตรียมข้อความเริ่มแชทใหม่ให้ Lin
-
-## เมื่องานแบ่งทำหลายแชทได้
-
-- ถ้างานมีส่วนอิสระเพียงพอ ให้จัดชุด 5–7 แชท Codex เขียนคำสั่งพร้อมใช้ทั้งหมด และให้แชทที่ไม่มี dependency เริ่มพร้อมกัน
-- แบ่งตามผลลัพธ์หรือเจ้าของไฟล์ ห้ามหลายแชทตรวจ วิเคราะห์ หรือแก้เรื่องเดียวกันซ้ำโดยไม่มีเหตุ
-- งานที่ไฟล์ชนกัน ต้องรับผลจากงานก่อน หรือการแยกทำให้ย้อนตรวจและแก้ซ้ำ ให้ทำตามลำดับ ลดจำนวนแชท หรือทำในแชทเดียว
-- จำนวน 5–7 เป็นเป้าหมายเมื่อแยกได้จริง ห้ามฝืนให้ครบถ้าทำให้ซ้ำซ้อน คุณภาพลด หรือความเสี่ยงเพิ่ม
-- ต้องมีแชทหัวหน้ารวมผลเพียงหนึ่งแชท ผู้ตรวจย่อยเขียนรายงานคนละไฟล์และห้ามแก้เอกสารกลางหรือไฟล์ชุดเดียวกัน
-- ทุกคำสั่งต้องบอก model, effort, รหัสงาน, ขอบเขต, ไฟล์ที่เกี่ยวข้อง, ข้อห้าม, หลักฐานจบ และตำแหน่งรายงาน
-- ทุกแชทย่อยต้องอ่านแผนกลางและต้นทางชุดเดียวกัน รู้ upstream, downstream และ dependency ของตน รายงานต้องมีหลักฐาน สิ่งที่ยังยืนยันไม่ได้ ความขัดแย้ง ผลกระทบต่องานอื่น และหัวข้อ `สิ่งที่ต้องส่งต่อให้แชทหัวหน้า`
-- แชทย่อยห้ามประกาศว่างานกลุ่มเสร็จหรือแก้เรื่องที่กระทบแชทอื่น แชทหัวหน้าต้องรอรายงานครบ ตรวจความขัดแย้งกับของจริง รวมผลเป็นคำตอบเดียว แล้วจึงแก้เอกสารกลางและเปิดงานถัดไป
-- ก่อนจบการรวมผล แชทหัวหน้าต้องบอก Lin ว่ารายงานใดครบหรือขาด จุดขัดแย้งตัดสินจากหลักฐานใด และเรื่องใดยังรอ Lin
-- ต้องให้คำสั่งแชทรวมผลไว้พร้อมกันตั้งแต่ต้น และบอกว่าแต่ละแชทเริ่มทันทีหรือรอ dependency ใด
-- ถ้าแยกอย่างปลอดภัยไม่ได้ ห้ามฝืนให้ครบจำนวน โดยเฉพาะ migration, RLS, การเปลี่ยนค่าลับ, deploy และการเปลี่ยนระบบภายนอก
+- Audit, Plan, Spec, Status, Recovery และ Handoff ใช้บ้านตาม `Projects/AGENTS.md`; repo ไม่ใช่ default destination
+- Technical evidence ของ code/structure ที่เปลี่ยนให้ update `MAINTENANCE.md` เฉพาะ delta
+- Phase 1 implementation/verification ให้ update row เดิมใน Phase 1 Plan ที่ Website router ชี้
+- งานอื่นให้ update exact Current task authority; ถ้าไม่มี pointer ให้รายงาน `ROUTING_GAP / NOT_AUTHORIZED`
+- Deferred repository-dependent work ใช้ exact-path exception `/Users/taihualin/Developer/mrtaihualin.github.io/_แผนงาน/ทำต่อในอนาคต.md` เพียงจุดเดียว
+- ห้ามสร้าง roadmap, status, handoff หรือ global workflow authority คู่ขนานใน repo
