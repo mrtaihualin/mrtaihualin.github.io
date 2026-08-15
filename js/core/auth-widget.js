@@ -67,7 +67,7 @@
   //   เช็คแค่ email อย่างเดียวจะพลาด (email ว่าง ≠ ADMIN_EMAIL เสมอ) ต้องมี user id สำรองด้วย
   //   วิธีใช้: หลัง Lin ทดสอบล็อกอินด้วย Facebook/LINE ครั้งแรก ไปเอา user id จาก Supabase Dashboard
   //   → Authentication → Users มาใส่ในลิสต์นี้ (ใช้ร่วมกันทุกไฟล์ที่ต้องกันแอดมิน: reading-auth.js, tone-companion.js)
-  //   ⚠️ อย่าลืมอัปเดต SQL ฟังก์ชัน combined_leaderboard ให้กันด้วย (ตอนนี้กันแค่ email อย่างเดียวเหมือนกัน)
+  //   S29: กระดานแยกเกมกรองแอดมินใน RPC; ไม่มี cross-game total ตาม PD-SCORE-01
   var SITE_ADMIN_USER_IDS = []; // เช่น ['xxxxxxxx-xxxx-...'] — ใส่ user id ที่ Lin เอามาเติมเอง
   window.SITE_ADMIN_USER_IDS = SITE_ADMIN_USER_IDS;
   function isSiteAdmin(u) {

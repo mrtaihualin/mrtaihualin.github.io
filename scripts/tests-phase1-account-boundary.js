@@ -88,7 +88,6 @@ function makeStorage(seed) {
 // Static guards for the write paths that caused the real mismatch.
 {
   const progress = read('js/score/progress-sync.js');
-  const companion = read('js/games/tone-companion.js');
   const tone = read('js/games/tone-finder-game.js');
   const reading = read('js/games/reading-game-app.js');
   const typing = read('js/games/typing-game-app.js');
@@ -97,11 +96,12 @@ function makeStorage(seed) {
   const legoVault = read('js/games/lego-vault.js');
   const sentenceVault = read('js/games/sentence-vault.js');
   const readingAuth = read('js/games/reading-auth.js');
+  const scoreSql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
 
   check('progress pull ต้องผ่าน verified owner boundary', /function pull\(\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\)\) return;/.test(progress));
   check('progress push ต้องผ่าน verified owner boundary', /function push\(\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\)\) return;/.test(progress));
-  check('tone Guest completion ไม่ถูกเก็บรอ Login', /if \(!u\) return; \/\/ Guest รอบนี้ไม่นับย้อนหลังหลัง Login/.test(companion) && !/lastSession/.test(companion));
-  check('tone session ป้องกัน complete event ซ้ำในรอบเดียวกัน', /saveStates\[saveKey\]/.test(companion));
+  check('tone Guest completion ไม่ถูกเก็บรอ Login', /if \(!API\.user\) return;/.test(readingAuth) && !/lastSession|pendingGuestScore/.test(readingAuth));
+  check('tone session ป้องกัน complete event ซ้ำในรอบเดียวกัน', /submission_id: scoreSubmissionId\(\)/.test(readingAuth) && /submission_id uuid primary key/.test(scoreSql));
   check('Tone SRS หยุดทันทีเมื่อเป็น Guest', /if \(!tfSrsLoggedIn\(\)\) return; \/\/ Guest Free ไม่มี SRS/.test(tone));
   check('Reading reset in-memory SRS เมื่อ owner เปลี่ยน', /rgResetAccountStateAtBoundary\(\);\s*if\(!u\) return;/.test(reading));
   check('Typing reset in-memory SRS เมื่อ owner เปลี่ยน', /tgResetAccountStateAtBoundary\(\);\s*if\(!u\) return;/.test(typing));
