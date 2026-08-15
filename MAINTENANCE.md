@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 23:59 Asia/Bangkok** — Phase 1 canonical NetworkGuard bootstrap
+**Updated: 2026-08-16 00:42 Asia/Bangkok** — Phase 1 client failure hardening batch
+
+## 2026-08-16 — P1-F-02 Client Failure Hardening Batch (`PASS_LOCAL / BATCH_IN_PROGRESS`)
+
+- Core 5 score submission ใช้ bounded wait 12 วินาทีและ retry ครั้งเดียวด้วย `submission_id` เดิม; personal word/sentence delete เก็บ pending tombstone ข้าม network failure/reload, กัน remote resurrection และไม่อ้างว่าลบบน server สำเร็จก่อนยืนยัน.
+- Profile/nickname, account export/unlink/delete และ LINE callback มี bounded deadlines; mutation ที่ผลลัพธ์ไม่แน่ชัดไม่ retry อัตโนมัติและบอกให้ reload ตรวจสถานะก่อน. Cache versions ถูก bump เฉพาะ runtime ที่เปลี่ยน; ไม่เปลี่ยนสูตรเกม, SQL, Edge Function หรือ Production ในรอบ local นี้.
 
 ## 2026-08-15 — P1-F-02 Canonical NetworkGuard Bootstrap (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
 
