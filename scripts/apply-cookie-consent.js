@@ -76,6 +76,19 @@ function buildClaritySnippet() {
   );
 }
 
+function buildClarityLoaderBlock() {
+  return `
+<!-- Microsoft Clarity — sync โดย scripts/apply-cookie-consent.js -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "${CLARITY_ID}");${buildClaritySnippet()}
+</script>
+`;
+}
+
 function buildBannerBlock(isEnglish) {
   const fontFamily = isEnglish ? "Arial,sans-serif" : "'Noto Sans TC',sans-serif";
   const dialogLabel = isEnglish ? 'Cookie and analytics settings' : 'Cookie 與分析設定';
@@ -112,11 +125,40 @@ function buildBannerBlock(isEnglish) {
   </div>
 </div>
 <script>
+  window.__clearGaCookies = function() {
+    var names = document.cookie.split(';').map(function(part) {
+      return part.split('=')[0].trim();
+    }).filter(function(name) {
+      return name === '_ga' || name.indexOf('_ga_') === 0;
+    });
+    var hostname = window.location.hostname;
+    var domains = [];
+    if (hostname && hostname !== 'localhost' && !/^\\d+(?:\\.\\d+){3}$/.test(hostname) && hostname.indexOf(':') === -1) {
+      domains.push(hostname);
+      var parts = hostname.split('.');
+      if (parts.length > 2) domains.push(parts.slice(-2).join('.'));
+    }
+    names.forEach(function(name) {
+      var expired = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;Max-Age=0;path=/';
+      document.cookie = expired;
+      domains.forEach(function(domain) {
+        document.cookie = expired + ';domain=' + domain;
+        document.cookie = expired + ';domain=.' + domain;
+      });
+    });
+  };
+  window.__clearGaCookiesAfterRevoke = function() {
+    window.__clearGaCookies();
+    window.setTimeout(window.__clearGaCookies, 0);
+    window.setTimeout(window.__clearGaCookies, 100);
+    window.setTimeout(window.__clearGaCookies, 1000);
+  };
   window.__cookieConsentDecide = function(granted) {
     localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
     if (typeof gtag === 'function') {
       gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
     }
+    if (!granted) window.__clearGaCookiesAfterRevoke();
     if (typeof window.clarity === 'function') {
       window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: granted ? 'granted' : 'denied' });
       if (!granted) window.clarity('consent', false); // erase any cookies from an earlier grant
@@ -132,6 +174,9 @@ function buildBannerBlock(isEnglish) {
   if (!localStorage.getItem('cookieConsent')) {
     var __b0 = document.getElementById('cookieConsentBanner');
     if (__b0) __b0.style.display = 'block';
+  }
+  if (localStorage.getItem('cookieConsent') === 'denied') {
+    window.__clearGaCookiesAfterRevoke();
   }
 </script>
 `;
@@ -163,7 +208,13 @@ function processFile(filePath) {
     if (!content.includes(BANNER_COMMENT) || !BANNER_BLOCK_RE.test(content)) {
       return { status: 'skipped', rel, reason: 'มี cookieConsentBanner แต่ไม่ใช่ standard banner ที่รู้จัก' };
     }
-    const out = content.replace(BANNER_BLOCK_RE, buildBannerBlock(isEnglish).trim());
+    let out = content;
+    if (isEnglish && !out.includes(CLARITY_CLOSE_LITERAL)) {
+      const headEnd = out.indexOf('</head>');
+      if (headEnd < 0) return { status: 'skipped', rel, reason: 'English page ไม่มี </head> สำหรับ Clarity loader' };
+      out = out.slice(0, headEnd) + buildClarityLoaderBlock() + out.slice(headEnd);
+    }
+    out = out.replace(BANNER_BLOCK_RE, buildBannerBlock(isEnglish).trim());
     if (out === content) return { status: 'already-applied', rel };
     try {
       fs.writeFileSync(filePath, out, 'utf8');
@@ -187,8 +238,12 @@ function processFile(filePath) {
   // 1) แทรก consent default หลัง gtag('js', new Date());
   out = out.replace(GTAG_JS_CALL_RE, (m) => m + buildConsentDefaultSnippet());
 
-  // 2) แทรกด่าน consent ให้ Clarity ถ้าไฟล์นี้มี Clarity snippet
-  if (out.includes(CLARITY_CLOSE_LITERAL)) {
+  // 2) English analytics pages ใช้ Clarity architecture เดียวกับ Chinese
+  if (isEnglish && !out.includes(CLARITY_CLOSE_LITERAL)) {
+    const headEnd = out.indexOf('</head>');
+    if (headEnd < 0) return { status: 'skipped', rel, reason: 'English page ไม่มี </head> สำหรับ Clarity loader' };
+    out = out.slice(0, headEnd) + buildClarityLoaderBlock() + out.slice(headEnd);
+  } else if (out.includes(CLARITY_CLOSE_LITERAL)) {
     out = out.replace(CLARITY_CLOSE_LITERAL, CLARITY_CLOSE_LITERAL + buildClaritySnippet());
   }
 

@@ -24,6 +24,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@300;400;700;800&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+
+<!-- Microsoft Clarity — sync โดย scripts/apply-cookie-consent.js -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkbihw56tf");
+    // Clarity Consent API v2 — ส่ง stored/default state ทุก page view; ads ไม่เปิดใน Phase 1
+    var claritySavedConsent = localStorage.getItem('cookieConsent');
+    window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: claritySavedConsent === 'granted' ? 'granted' : 'denied' });
+</script>
 </head>
 <body>
 
@@ -166,11 +178,40 @@ function toggleFaq(btn) {
   </div>
 </div>
 <script>
+  window.__clearGaCookies = function() {
+    var names = document.cookie.split(';').map(function(part) {
+      return part.split('=')[0].trim();
+    }).filter(function(name) {
+      return name === '_ga' || name.indexOf('_ga_') === 0;
+    });
+    var hostname = window.location.hostname;
+    var domains = [];
+    if (hostname && hostname !== 'localhost' && !/^\d+(?:\.\d+){3}$/.test(hostname) && hostname.indexOf(':') === -1) {
+      domains.push(hostname);
+      var parts = hostname.split('.');
+      if (parts.length > 2) domains.push(parts.slice(-2).join('.'));
+    }
+    names.forEach(function(name) {
+      var expired = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;Max-Age=0;path=/';
+      document.cookie = expired;
+      domains.forEach(function(domain) {
+        document.cookie = expired + ';domain=' + domain;
+        document.cookie = expired + ';domain=.' + domain;
+      });
+    });
+  };
+  window.__clearGaCookiesAfterRevoke = function() {
+    window.__clearGaCookies();
+    window.setTimeout(window.__clearGaCookies, 0);
+    window.setTimeout(window.__clearGaCookies, 100);
+    window.setTimeout(window.__clearGaCookies, 1000);
+  };
   window.__cookieConsentDecide = function(granted) {
     localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
     if (typeof gtag === 'function') {
       gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
     }
+    if (!granted) window.__clearGaCookiesAfterRevoke();
     if (typeof window.clarity === 'function') {
       window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: granted ? 'granted' : 'denied' });
       if (!granted) window.clarity('consent', false); // erase any cookies from an earlier grant
@@ -186,6 +227,9 @@ function toggleFaq(btn) {
   if (!localStorage.getItem('cookieConsent')) {
     var __b0 = document.getElementById('cookieConsentBanner');
     if (__b0) __b0.style.display = 'block';
+  }
+  if (localStorage.getItem('cookieConsent') === 'denied') {
+    window.__clearGaCookiesAfterRevoke();
   }
 </script>
 

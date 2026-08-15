@@ -199,11 +199,40 @@
   </div>
 </div>
 <script>
+  window.__clearGaCookies = function() {
+    var names = document.cookie.split(';').map(function(part) {
+      return part.split('=')[0].trim();
+    }).filter(function(name) {
+      return name === '_ga' || name.indexOf('_ga_') === 0;
+    });
+    var hostname = window.location.hostname;
+    var domains = [];
+    if (hostname && hostname !== 'localhost' && !/^\d+(?:\.\d+){3}$/.test(hostname) && hostname.indexOf(':') === -1) {
+      domains.push(hostname);
+      var parts = hostname.split('.');
+      if (parts.length > 2) domains.push(parts.slice(-2).join('.'));
+    }
+    names.forEach(function(name) {
+      var expired = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;Max-Age=0;path=/';
+      document.cookie = expired;
+      domains.forEach(function(domain) {
+        document.cookie = expired + ';domain=' + domain;
+        document.cookie = expired + ';domain=.' + domain;
+      });
+    });
+  };
+  window.__clearGaCookiesAfterRevoke = function() {
+    window.__clearGaCookies();
+    window.setTimeout(window.__clearGaCookies, 0);
+    window.setTimeout(window.__clearGaCookies, 100);
+    window.setTimeout(window.__clearGaCookies, 1000);
+  };
   window.__cookieConsentDecide = function(granted) {
     localStorage.setItem('cookieConsent', granted ? 'granted' : 'denied');
     if (typeof gtag === 'function') {
       gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
     }
+    if (!granted) window.__clearGaCookiesAfterRevoke();
     if (typeof window.clarity === 'function') {
       window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: granted ? 'granted' : 'denied' });
       if (!granted) window.clarity('consent', false); // erase any cookies from an earlier grant
@@ -219,6 +248,9 @@
   if (!localStorage.getItem('cookieConsent')) {
     var __b0 = document.getElementById('cookieConsentBanner');
     if (__b0) __b0.style.display = 'block';
+  }
+  if (localStorage.getItem('cookieConsent') === 'denied') {
+    window.__clearGaCookiesAfterRevoke();
   }
 </script>
 

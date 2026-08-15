@@ -31,6 +31,7 @@ for (const file of files) {
     if (rel.startsWith('en/')) {
       check(rel + ': English page has English banner controls', /href="\/en\/privacy\.html"[\s\S]*?>Privacy Policy<[\s\S]*?>\s*Reject\s*<[\s\S]*?>\s*Accept\s*</.test(html));
       check(rel + ': English banner does not show Chinese controls', !/>\s*拒絕\s*</.test(html) && !/>\s*接受\s*</.test(html));
+      check(rel + ': English page loads Clarity runtime', hasClarity);
     } else {
       check(rel + ': Chinese page links the Chinese privacy policy', /href="\/privacy\.html"[\s\S]*?>隱私權政策</.test(html));
     }
@@ -41,6 +42,7 @@ for (const file of files) {
     const configAt = configMatch ? configMatch.index : -1;
     check(rel + ': GA default consent is declared before config', defaultAt >= 0 && configAt > defaultAt);
     check(rel + ': GA analytics defaults denied without stored grant', /analytics_storage: savedConsent === 'granted' \? 'granted' : 'denied'/.test(html));
+    check(rel + ': revoke clears GA cookies', html.includes("name === '_ga' || name.indexOf('_ga_') === 0") && html.includes('__clearGaCookiesAfterRevoke'));
   }
   if (hasClarity) {
     check(rel + ': Clarity sends Consent API V2 state', /clarity\('consentv2', \{ ad_Storage: 'denied', analytics_Storage: claritySavedConsent === 'granted' \? 'granted' : 'denied' \}\)/.test(html));

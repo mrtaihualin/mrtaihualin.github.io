@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 01:35 Asia/Bangkok** — S13 Core 5 deferred-config boot hotfix + executable race regression local pass; GitHub Desktop push + protected Pages workflow/PV waiting
+**Updated: 2026-08-15 08:28 Asia/Bangkok** — P1-F-05/F-06 Hard Gate 3 local bugfix + Browser rerun PASS; authorized deploy/Production Verification waiting
+
+## 2026-08-15 — P1-F-05/F-06 Hard Gate 3 Fix (`PASS_LOCAL / PRODUCTION_VERIFY_NEEDED`)
+
+- แก้ standard consent runtime ให้ลบ GA4 `_ga`/`_ga_*` ครบเมื่อ Reject/Revoke รวม delayed cleanup หลัง async write และเพิ่ม regression บังคับทุก GA page มี revoke cleanup.
+- English analytics pages 7/7 ใช้ Clarity Consent API V2 runtime เดียวกับ Chinese; canonical generator sync แบบ idempotentและ coverage test บังคับ runtime ทุก English page.
+- Verification: consent coverage PASS 88 analytics HTML pages + Vault, Vault 6/6, generator rerun 0 changes, `node scripts/check-site.js` PASS 908 project files/secret scan 1131. Local Browser Hard Gate 3 PASS ครบ Chinese/English/Vault สำหรับ before consent, Accept, fresh Reject, Revoke, reload persistence, cookies/localStorage/network/dataLayer/Clarity และ console warning/error 0.
+- ยังไม่ได้ Git/deploy/Production/SQL/Supabase mutation. Production ยังต้อง authorized deploy และ exact verification.
 
 ## 2026-08-15 — S13 Production Source Switch Hotfix (`PASS_LOCAL / PUSH_REQUIRED`)
 
