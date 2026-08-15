@@ -155,10 +155,26 @@ const dueOnly = GameFlow.allocateSrs({ tier: 'free', total: 3, due, regular: [],
 assert.strictEqual(dueOnly.items.length, 3, 'an all-Due queue must remain playable and carry quota debt forward');
 assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt for later rounds');
 
+[null, 42, 'bad-shape', [], '{malformed'].forEach((badState, index) => {
+  storage.gsh_srs_quota_v1 = typeof badState === 'string' && badState === '{malformed'
+    ? badState
+    : JSON.stringify(badState);
+  const scope = `recover-${index}`;
+  const first = GameFlow.allocateSrs({ tier: 'free', total: 3, due, regular, idOf: (x) => x.id, scope });
+  const second = GameFlow.allocateSrs({ tier: 'free', total: 3, due, regular, idOf: (x) => x.id, scope });
+  const repaired = JSON.parse(storage.gsh_srs_quota_v1);
+  assert.strictEqual(first.items.length, 3, 'invalid quota state must recover to a playable first round');
+  assert.strictEqual(second.items.length, 3, 'repaired quota state must remain playable after refresh/reopen');
+  assert.strictEqual(first.selectedDue.length + second.selectedDue.length, 1,
+    'recovered quota state must preserve fractional carry across rounds');
+  assert(repaired && typeof repaired === 'object' && !Array.isArray(repaired),
+    'invalid quota state must be replaced by a durable object record');
+});
+
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=2'), `${file} must load the shared flow`);
+  assert(html.includes('js/games/game-flow.js?v=3'), `${file} must load the shared flow`);
   assert(/繼續上次練習/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
   assert(/重新開始本次練習/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
   assert(/開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);

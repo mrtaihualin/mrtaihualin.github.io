@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 23:07 Asia/Bangkok** — Phase 1 Save provenance is not Played guard
+**Updated: 2026-08-15 23:35 Asia/Bangkok** — Phase 1 invalid SRS quota recovery
+
+## 2026-08-15 — P1-F-03 Invalid SRS Quota Recovery (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
+
+- `game-flow.js` บังคับ quota state ที่อ่านจาก localStorage ให้เป็น object record ก่อนคำนวณ SRS; `null`, number, string, array และ malformed JSON จึงกู้เป็นสถานะใหม่ที่เล่นต่อได้ แทนการ throw หรือทำ fractional carry หายหลัง refresh/reopen.
+- เพิ่ม regression ครอบ invalid shape + durable carry และ bump `game-flow.js` เป็น v3 ใน Core 5; ไม่มีการเปลี่ยนสูตร Free 20%/Review1, Paid architecture 30%/Review4, score, SQL, Supabase หรือ Production.
 
 ## 2026-08-15 — P1-D-07 Save ≠ Played Guard (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
 
