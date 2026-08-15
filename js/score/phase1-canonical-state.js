@@ -38,6 +38,10 @@
   var pushAgain = false;
   var retryPending = false;
   var booted = false;
+  var ownerGeneration = 0;
+  var requestSequence = 0;
+  var boundOwnerEpoch = 0;
+  var latestPullRequest = 0;
 
   function storageGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function storageSet(key, value) { try { localStorage.setItem(key, value); return true; } catch (e) { return false; } }
@@ -71,6 +75,25 @@
     try {
       global.PHASE1_ACCOUNT_BOUNDARY.bind(user);
       return storageGet(global.PHASE1_ACCOUNT_BOUNDARY.ownerKey) === String(user.id);
+    } catch (e) { return false; }
+  }
+  function ownerEpoch() {
+    return Number(global.SITE_AUTH && global.SITE_AUTH.learningOwnerEpoch) || 0;
+  }
+  function ownerContext() {
+    return {
+      ownerId: user && String(user.id) || '',
+      ownerEpoch: ownerEpoch(),
+      generation: ownerGeneration,
+      requestId: ++requestSequence
+    };
+  }
+  function contextIsCurrent(context) {
+    if (!context || !user || String(user.id) !== context.ownerId || ownerGeneration !== context.generation) return false;
+    if (ownerEpoch() !== context.ownerEpoch) return false;
+    try {
+      return !!(global.PHASE1_ACCOUNT_BOUNDARY &&
+        storageGet(global.PHASE1_ACCOUNT_BOUNDARY.ownerKey) === context.ownerId);
     } catch (e) { return false; }
   }
   function localValue(key) {
@@ -139,8 +162,9 @@
   function warn(where, error) {
     try { console.warn('[phase1-canonical] ' + where + ':', error && error.message || error); } catch (e) {}
   }
-  function finishPush(error, result, sent) {
-    pushInFlight = false;
+  function finishPush(error, result, sent, context, flight) {
+    if (pushInFlight !== flight || !contextIsCurrent(context)) return;
+    pushInFlight = null;
     if (error) {
       retryPending = true;
       if (error.code === '23505') pull(true);
@@ -167,14 +191,16 @@
   function push(meta) {
     if (!sb || !user || !ownerReady() || !hasPending(meta)) return;
     if (pushInFlight) { pushAgain = true; return; }
-    pushInFlight = true;
+    var context = ownerContext();
+    var flight = { requestId: context.requestId, ownerId: context.ownerId, generation: context.generation };
+    pushInFlight = flight;
     var sent = clone(meta.pending);
     var updatedAt = new Date().toISOString();
-    var row = { user_id: user.id, data: buildWrite(meta), updated_at: updatedAt };
+    var row = { user_id: context.ownerId, data: buildWrite(meta), updated_at: updatedAt };
     var request;
     if (meta.baseToken) {
       request = function () {
-        return sb.from(TABLE).update(row).eq('user_id', user.id).eq('updated_at', meta.baseToken)
+        return sb.from(TABLE).update(row).eq('user_id', context.ownerId).eq('updated_at', meta.baseToken)
           .select('data,updated_at').maybeSingle();
       };
     } else {
@@ -183,8 +209,8 @@
       };
     }
     guarded(request, 'phase1-canonical-push').then(function (res) {
-      finishPush(res && res.error, res, sent);
-    }, function (error) { finishPush(error, null, sent); });
+      finishPush(res && res.error, res, sent, context, flight);
+    }, function (error) { finishPush(error, null, sent, context, flight); });
   }
   function flush() {
     if (!sb || !user || !ownerReady()) return;
@@ -197,22 +223,49 @@
   }
   function pull(fromConflict) {
     if (!sb || !user || !ownerReady()) return;
+    var context = ownerContext();
+    latestPullRequest = context.requestId;
     var request = function () {
-      return sb.from(TABLE).select('data,updated_at').eq('user_id', user.id).maybeSingle();
+      return sb.from(TABLE).select('data,updated_at').eq('user_id', context.ownerId).maybeSingle();
     };
     guarded(request, 'phase1-canonical-pull').then(function (res) {
+      if (!contextIsCurrent(context) || latestPullRequest !== context.requestId) return;
       if (!res || res.error) { retryPending = true; warn('read failed', res && res.error); return; }
       remoteData = clone(res.data && res.data.data || {});
       var meta = applyRemote(remoteData, res.data && res.data.updated_at);
       meta = scanLocal(meta);
       if (hasPending(meta)) push(meta);
       else if (fromConflict) retryPending = false;
-    }, function (error) { retryPending = true; warn('read failed', error); });
+    }, function (error) {
+      if (!contextIsCurrent(context) || latestPullRequest !== context.requestId) return;
+      retryPending = true; warn('read failed', error);
+    });
+  }
+  function resetOwnerRuntime() {
+    ownerGeneration += 1;
+    latestPullRequest = ++requestSequence;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = null;
+    pushInFlight = null;
+    pushAgain = false;
+    retryPending = false;
+    remoteData = {};
   }
   function bind(nextUser) {
-    user = nextUser && nextUser.id ? nextUser : null;
-    if (!user) { retryPending = false; remoteData = {}; return; }
+    var next = nextUser && nextUser.id ? nextUser : null;
+    var before = user && String(user.id) || '';
+    var after = next && String(next.id) || '';
+    user = next;
+    var nextEpoch = ownerEpoch();
+    if (before !== after || boundOwnerEpoch !== nextEpoch) resetOwnerRuntime();
+    boundOwnerEpoch = nextEpoch;
+    if (!user) return;
     if (!ownerReady()) return;
+    nextEpoch = ownerEpoch();
+    if (boundOwnerEpoch !== nextEpoch) {
+      resetOwnerRuntime();
+      boundOwnerEpoch = nextEpoch;
+    }
     pull(false);
   }
   function init() {

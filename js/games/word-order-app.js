@@ -72,28 +72,41 @@
   var __woSrsSyncPromise=null;
   window.__woSrsSyncedOnce=false;
   var __woLearningOwnerEpoch=0;
+  var __woSrsRequestSequence=0;
+  var __woLatestSrsRequest=0;
+  function woSrsOwnerCurrent(ownerId,ownerEpoch,requestId){
+    var currentId=(window.READING_AUTH&&READING_AUTH.user&&String(READING_AUTH.user.id))||'';
+    var currentEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
+    if(currentId!==ownerId||currentEpoch!==ownerEpoch)return false;
+    if(requestId!=null&&requestId!==__woLatestSrsRequest)return false;
+    try{return !!(window.PHASE1_ACCOUNT_BOUNDARY&&localStorage.getItem(PHASE1_ACCOUNT_BOUNDARY.ownerKey)===ownerId);}catch(e){return false;}
+  }
   function woResetAccountStateAtBoundary(){
     var epoch=(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
     if(!epoch||epoch===__woLearningOwnerEpoch)return false;
     __woLearningOwnerEpoch=epoch;srsRecords={};
+    __woLatestSrsRequest=++__woSrsRequestSequence;
     __woSrsSyncPromise=null;window.__woSrsSyncedOnce=false;
     return true;
   }
   function woSyncSrsFromServer(force){
-    try{ if(!force && !woLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
+    try{ if(!woLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
     if(__woSrsSyncPromise) return __woSrsSyncPromise;
     var sb=window.getSupabaseClient?window.getSupabaseClient():null;
     if(!sb||!sb.from) return Promise.resolve(false);
     // dedupe fetch 2026-07-20: woWireSrsSync รีเซ็ต __woSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
     //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-    var _uid=(window.READING_AUTH && READING_AUTH.user && READING_AUTH.user.id) || 'anon';
+    var _uid=String(READING_AUTH.user.id);
+    var _ownerEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
+    var _requestId=++__woSrsRequestSequence;__woLatestSrsRequest=_requestId;
     var _fetchSrs = window.getCachedFetch
       ? window.getCachedFetch('tone_srs_state:wordorder:'+_uid, function(){
-          return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game','wordorder');
+          return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','wordorder');
         })
-      : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game','wordorder');
+      : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','wordorder');
     __woSrsSyncPromise = _fetchSrs
       .then(function(res){
+        if(!woSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false;
         if(res.error||!res.data){ window.__woSrsSyncedOnce=true; return false; }
         var changed=false;
         res.data.forEach(function(row){
@@ -111,7 +124,7 @@
         window.__woSrsSyncedOnce=true;
         return changed;
       })
-      .catch(function(){ window.__woSrsSyncedOnce=true; return false; });
+      .catch(function(){ if(!woSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false; window.__woSrsSyncedOnce=true; return false; });
     return __woSrsSyncPromise;
   }
   // เรียก init() แบบปลอดภัย — ถ้า DOM ยังโหลดไม่เสร็จ (สคริปต์นี้รันก่อน DOMContentLoaded) ให้รอก่อน กัน getElementById เป็น null
@@ -127,7 +140,8 @@
         SITE_AUTH.onChange(function(u){
           woResetAccountStateAtBoundary();
           if(!u) return;
-          if(!window.__woSrsSyncedOnce){ woSyncSrsFromServer(true).then(function(){ woReinitSafe(); }); }
+          var ownerId=String(u.id),ownerEpoch=Number(SITE_AUTH.learningOwnerEpoch)||0;
+          if(!window.__woSrsSyncedOnce){ woSyncSrsFromServer(true).then(function(){ if(woSrsOwnerCurrent(ownerId,ownerEpoch))woReinitSafe(); }); }
           else { __woSrsSyncPromise=null; woSyncSrsFromServer(true); }
         });
       }
@@ -138,7 +152,7 @@
       _woT++;
       try{
         if(window.__woSrsSyncedOnce){ clearInterval(_woIv); return; }
-        if(woLoggedIn()) woSyncSrsFromServer(true).then(function(){ woReinitSafe(); });
+        if(woLoggedIn()){ var ownerId=String(READING_AUTH.user.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; woSyncSrsFromServer(true).then(function(){ if(woSrsOwnerCurrent(ownerId,ownerEpoch))woReinitSafe(); }); }
       }catch(e){}
       if(_woT>=24) clearInterval(_woIv);
     }, 500);

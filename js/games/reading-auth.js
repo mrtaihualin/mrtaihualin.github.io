@@ -416,13 +416,28 @@
   var ADAPTIVE_HISTORY_LIMIT = 50;
   var adaptiveWrongCounts = {};   // { th: จำนวนครั้งที่พลาด }
   var adaptiveLoaded = false;
+  var adaptiveRequestSequence = 0;
+  var latestAdaptiveRequest = 0;
 
   // 2026-07-13 Lin: เพิ่ม fallback กันคอลัมน์ game/wrong_items ยังไม่มีใน Supabase (รอรัน SQL migration)
   // เดิม: ถ้า SELECT error (เช่น column game does not exist, HTTP 400) โค้ดเก่ายังตั้ง adaptiveLoaded = true
   // ทั้งที่ไม่ได้ข้อมูลจริงเลย (บั๊ก) — ตอนนี้แยก apply()/disable() ให้ error จริงไม่ทำให้เข้าใจผิดว่าพร้อมใช้
   // จงใจไม่ fallback ไปคิวรีแบบไม่กรอง game (จะผสมคำผิดข้ามเกม ความหมายผิด) — ปิดฟีเจอร์ทบทวนไปก่อนจนกว่าจะมีคอลัมน์ครบ
   function loadAdaptiveHistory() {
+    var requestId = ++adaptiveRequestSequence;
+    latestAdaptiveRequest = requestId;
     if (!API.user) { adaptiveLoaded = false; adaptiveWrongCounts = {}; return; }
+    var ownerId = String(API.user.id);
+    var ownerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+    function ownerStillCurrent() {
+      var currentId = API.user && String(API.user.id) || '';
+      var currentEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+      if (requestId !== latestAdaptiveRequest || currentId !== ownerId || currentEpoch !== ownerEpoch) return false;
+      try {
+        return !!(window.PHASE1_ACCOUNT_BOUNDARY &&
+          localStorage.getItem(PHASE1_ACCOUNT_BOUNDARY.ownerKey) === ownerId);
+      } catch (e) { return false; }
+    }
     function apply(res) {
       adaptiveWrongCounts = {};
       if (res && res.data) {
@@ -444,14 +459,18 @@
     }
     sb.from('reading_sessions')
       .select('wrong_items')
-      .eq('user_id', API.user.id)
+      .eq('user_id', ownerId)
       .eq('game', pageGame())
       .order('created_at', { ascending: false })
       .limit(ADAPTIVE_HISTORY_LIMIT)
       .then(function (res) {
+        if (!ownerStillCurrent()) return;
         if (res && !res.error) { apply(res); }
         else { disable(res && res.error && res.error.message || 'unknown error'); }
-      }, function (e) { disable(e && e.message || 'เครือข่ายผิดพลาด'); });
+      }, function (e) {
+        if (!ownerStillCurrent()) return;
+        disable(e && e.message || 'เครือข่ายผิดพลาด');
+      });
   }
   function rgShuffle(a) {
     a = a.slice();
