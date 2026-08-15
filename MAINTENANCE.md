@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 19:06 Asia/Bangkok** — P1-B-07 canonical persistence local architecture PASS
+**Updated: 2026-08-15 19:32 Asia/Bangkok** — P1-B-07 client deployed; authenticated two-device PV blocked on test sessions
+
+## 2026-08-15 — P1-B-07 Client Deploy (`DEPLOY_PASS / AUTH_TWO_DEVICE_BLOCKED`)
+
+- Remote isolation PASS: branch `codex/p1-b07-canonical-persistence` = 1 commit ahead / 0 behind `main`, exact 90-file scope, no SQL/Supabase/Owner Map. PR #5 required checks PASS แล้ว squash merge เป็น `3858eb398349047a5433997626d11b145827eb45`.
+- `main` Required checks run `31884751916` PASS และ GitHub Pages deployment run `31884751192` PASS ใน 48 วินาที.
+- Production source verification 7/7 surfaces (Tone, Reading, Listening, Typing, Word Order, Learning Center, Vault) โหลด `phase1-canonical-state.js?v=1`, `auth-widget.js?v=8`, `shared.min.js?v=31`; Tone โหลด `progress-sync.js?v=5`; console error 0.
+- Authenticated Device A/B behavior ยัง `NV`: in-app Browser เป็น Guest และไม่มี Browser/อุปกรณ์ที่สองเชื่อมต่อ จึงไม่สร้างบัญชี ไม่ใช้ข้อมูลจริง และไม่จำลองสองอุปกรณ์ด้วย storage workaround.
+- ไม่มี SQL/schema/Supabase mutation. Next gate คือ controlled test account ที่ login พร้อมกันบนสอง Browser/อุปกรณ์จริง แล้วทดสอบ latest-save/CAS, Resume, SRS/progress/streak-badge และ personal-data persistence ตาม Phase 1 scope.
 
 ## 2026-08-15 — P1-B-07 Canonical Login Free Persistence (`PASS_LOCAL / DEPLOY_AND_TWO_DEVICE_PV_NEEDED`)
 
