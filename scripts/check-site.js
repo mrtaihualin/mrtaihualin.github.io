@@ -133,6 +133,7 @@ runTest(['scripts/tests-phase1-network-recovery.js'], 'Phase 1 offline/network/t
 runTest(['scripts/tests-phase1-error-ux.js'], 'Phase 1 audio/loading/auth error UX tests');
 runTest(['scripts/tests-auth-session-phase1.js'], 'Phase 1 auth session verification tests');
 runTest(['scripts/tests-phase1-save-retry.js'], 'Phase 1 API/Edge/save/retry safety tests');
+runTest(['scripts/tests-phase1-canonical-state.js'], 'Phase 1 canonical persistence tests');
 runTest(['scripts/tests-phase1-consent-coverage.js'], 'Phase 1 all-page analytics consent coverage tests');
 // เพิ่ม 2026-08-11 (P5-B) — ตัวทดสอบคุ้มกันกฎห้องเรียนที่เคยพังมาแล้วจริง
 // (กฎล็อกเพิ่ม/เลื่อน/ยกเลิก · สำรองก่อนแตะ Calendar · ตรวจคาบชนตอนย้าย · p_original_time ·
