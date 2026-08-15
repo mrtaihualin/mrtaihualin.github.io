@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 23:35 Asia/Bangkok** — Phase 1 invalid SRS quota recovery
+**Updated: 2026-08-15 23:59 Asia/Bangkok** — Phase 1 canonical NetworkGuard bootstrap
+
+## 2026-08-15 — P1-F-02 Canonical NetworkGuard Bootstrap (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
+
+- หน้า Learning Center และ Vault โหลด `network-guard.js` ก่อน `phase1-canonical-state.js` แล้ว ทำให้ canonical pull/save ใช้ timeout 15 วินาทีและคืน failure ที่ retry ได้ แทนการตกไปใช้ Supabase promise แบบไม่จำกัดเวลารอเมื่อเครือข่ายค้าง.
+- เพิ่ม regression ตรวจทั้ง presence และลำดับโหลดของ runtime ในสองหน้าที่เคยขาด; ไม่เปลี่ยน UI, สูตรเกม, schema, SQL, Supabase หรือ Production.
 
 ## 2026-08-15 — P1-F-03 Invalid SRS Quota Recovery (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
 
