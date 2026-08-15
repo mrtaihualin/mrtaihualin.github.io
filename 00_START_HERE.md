@@ -30,7 +30,7 @@
 
 ## ห้ามแตะโดยไม่มีคำสั่งเฉพาะจาก Lin
 
-- ใช้ข้อห้ามและ Safety Rules ใน `AGENTS.md` เป็นหลัก โดยเฉพาะ runtime, secret, SQL/migration, production, deploy และ Git write operations.
+- ใช้ข้อห้ามและ Safety Rules ใน `AGENTS.md` เป็นหลัก โดยเฉพาะ runtime, secret, SQL/migration, production และ deploy; Git handoff route ไป canonical Gate ใน Projects `AGENTS.md` หัวข้อ 8.
 - รายการ SQL หรือไฟล์ path-sensitive ที่ถูกพัก/ล็อกไว้ ให้ตรวจ Decision ใน `_แผนงาน/ทำต่อในอนาคต.md` ก่อนเสมอ ห้ามย้าย ลบ rename หรือรันจากชื่อไฟล์เพียงอย่างเดียว.
 
 ## Intentionally Deferred — ไม่ใช่ Cleanup blocker

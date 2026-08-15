@@ -28,8 +28,7 @@
 - ก่อนย้าย ลบ หรือเปลี่ยนโครงสร้าง ต้องตรวจ dependency และพฤติกรรมเดิมที่เกี่ยวข้อง
 - ห้ามใส่ secret, token, service-role key หรือข้อมูลนักเรียนใน source, docs, logs หรือรายงาน; ถ้าพบให้บอกเฉพาะชื่อและตำแหน่ง
 - Migration, RLS, key rotation, deploy, Production mutation, LINE message, booking และ external-system mutation ต้องมีคำอนุมัติชัดเจนตาม action
-- ห้ามใช้ Git ผ่าน terminal หรือ sandbox ใน repository นี้
-- คำว่า `push` สำหรับ repo นี้หมายถึงเตรียมงานและ commit message ให้ Lin ใช้ GitHub Desktop เว้นแต่ Lin เปลี่ยนกฎ repo นี้โดยชัดเจน
+- Git handoff, `git`/`gh`, branch, commit, push, Pull Request, checks, merge และ remote verification ใช้ canonical Gate ใน `Projects/AGENTS.md` หัวข้อ 8 เพียงจุดเดียว; repo นี้ไม่กำหนด desktop-only channel หรือข้อห้าม Git ผ่าน Terminal เพิ่ม
 - รักษา public HTML URLs และห้ามแก้ vendor files โดยไม่มี dependency ที่พิสูจน์ได้
 - ข้อมูลภาษาไทยในเกมต้องมาจาก Lin และต้องให้ Lin ตรวจ 100% ก่อนใช้จริง
 
