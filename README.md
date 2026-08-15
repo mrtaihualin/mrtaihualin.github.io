@@ -40,6 +40,13 @@ node scripts/check-site.js
 
 คำสั่งนี้ตรวจ syntax ของ JavaScript, ลิงก์ไฟล์ภายใน HTML/CSS, ID ซ้ำ และชุดทดสอบข้อมูล โดยไม่แก้ไฟล์และไม่ deploy
 
+## Automation enforcement
+
+- GitHub Actions `Required checks / required-tests-and-write-set` รัน `node scripts/check-site.js` อัตโนมัติบน Pull Request, `main`, merge queue และ manual run
+- Pull Request ต้องระบุ `Task-ID` และ `Write-Set` ใน template; รองรับ exact path หรือ `directory/**` และ check จะ fail หากมีไฟล์นอกขอบเขตปน
+- ก่อน commit ในเครื่อง ให้คัดลอก `.task-write-set.example.json` เป็น `.task-write-set.json`, ใส่ Task/write-set จริง และเปิดใช้ tracked hook ที่ `.githooks/pre-commit`
+- การบล็อก merge/direct push ต้องตั้ง GitHub ruleset ให้ `main` รับการเปลี่ยนผ่าน Pull Request เท่านั้น, ห้าม bypass และ require check ชื่อข้างต้น; source ใน repo ไม่สามารถเปิด ruleset ของ remote แทน owner ได้
+
 ### แต่ละตัวตรวจอะไร · ไม่ผ่านแปลว่าอะไร
 
 `check-site.js` เป็นตัวรวม — เรียกตัวตรวจย่อยด้านล่างให้ทั้งหมด (รันแยกทีละตัวก็ได้)

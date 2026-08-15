@@ -1,0 +1,35 @@
+name: Required checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: required-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  enforce:
+    name: required-tests-and-write-set
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify enforcement logic
+        run: node scripts/tests-task-write-set.js
+      - name: Enforce Pull Request Task/write-set
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/check-task-write-set.js --event "$GITHUB_EVENT_PATH"
+      - name: Run required repository tests
+        run: node scripts/check-site.js

@@ -1,0 +1,7 @@
+{
+  "taskId": "AE-2026-08-15",
+  "writeSet": [
+    "exact/path.ext",
+    "allowed-directory/**"
+  ]
+}

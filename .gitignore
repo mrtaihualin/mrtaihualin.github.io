@@ -24,6 +24,9 @@ _backup_*/
 # node_modules (ถ้ามี)
 node_modules/
 
+# Task contract เฉพาะเครื่องสำหรับ pre-commit Write-Set enforcement
+.task-write-set.json
+
 # ค่าลับและ credential เฉพาะเครื่อง — ห้ามเข้า repository
 .env
 .env.*
