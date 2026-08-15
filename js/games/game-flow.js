@@ -285,6 +285,9 @@
     var due = uniqueItems(options.due, idOf, seen);
     var regular = uniqueItems(options.regular, idOf, seen);
     var quotaState = safeRead(SRS_QUOTA_KEY, {});
+    if (!quotaState || typeof quotaState !== 'object' || Array.isArray(quotaState)) {
+      quotaState = {};
+    }
     var scope = String(options.scope || 'default') + ':' + tier;
     // Negative carry is quota debt from a round that had no regular items left.
     // It prevents an all-Due queue from producing an empty round while preserving
