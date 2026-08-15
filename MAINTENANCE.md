@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 00:42 Asia/Bangkok** — Phase 1 client failure hardening batch
+**Updated: 2026-08-16 01:10 Asia/Bangkok** — Phase 1 owner-switch race hardening
+
+## 2026-08-16 — P1-D-09 Owner-Switch Race Hardening (`PASS_LOCAL / BATCH_IN_PROGRESS`)
+
+- Canonical progress, GameAccount, adaptive history, Core 5 SRS และ personal word/sentence vault จับ account owner + generation/request identity ก่อนเริ่ม async work; response ของ Account A ที่กลับมาหลัง switch/logout จึงไม่เขียน cache, sync flags, pending delete หรือ state ของ Account B/Guest และ stale completion ไม่ล้าง request ใหม่.
+- Listening เริ่มรอบจาก local/empty SRS ภายใน 1.5 วินาทีเมื่อ remote read ค้าง, ป้องกัน double start และยอมให้ late response ของ owner เดิมมีผลเฉพาะรอบถัดไป. เพิ่ม deferred-response regressions, rebuild minified Core 4 ด้วย Terser 5.50.0 และ bump cache เฉพาะ runtime ที่เปลี่ยน; ไม่เปลี่ยนสูตรเกม, SQL, Edge Function หรือ Production.
 
 ## 2026-08-16 — P1-F-02 Client Failure Hardening Batch (`PASS_LOCAL / BATCH_IN_PROGRESS`)
 
