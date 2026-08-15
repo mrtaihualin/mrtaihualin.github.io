@@ -26,9 +26,18 @@ check('Login Free word limit = 20', /var MAX_WORDS = 20;/.test(word));
 check('Login Free sentence limit = 10', /var MAX_SENTENCES = 10;/.test(sentence));
 check('Guest cannot add word/sentence personal content', /if \(!_accountReady\(\)\) \{ _requireLogin\(\); return false; \}/.test(word) && /if \(!ready\(\)\) \{ requireLogin\(\); return false; \}/.test(sentence));
 check('sentence library reuses account-backed saved-items table', /var TABLE = 'learning_saved_items'/.test(sentence) && /var VAULT_KEY = 'sentence_vault'/.test(sentence));
+check('all personal-content surfaces ship current durable-delete clients',
+  ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','vault.html']
+    .every((name) => /word-vault\.js\?v=6/.test(read(name))) &&
+  ['word-order.html','vault.html'].every((name) => /sentence-vault\.js\?v=2/.test(read(name))));
 check('same content merges provenance instead of duplicating', /_mergeMetaIntoWord\(existing, meta\)/.test(word) && /mergeMeta\(existing, meta\)/.test(sentence));
 check('Save from a new surface adds provenance before delete behavior', /!_hasSource\(th, meta\.source\)/.test(word) && /!hasSource\(th, meta\.source\)/.test(sentence));
 check('delete uses tombstone and does not touch SRS/history tables', /deleted_at: new Date\(\)\.toISOString\(\)/.test(sentence) && !/tone_srs_state|learning_memory|practice_events/.test(sentence));
+check('personal deletes use bounded pending retry and online recovery',
+  /DELETE_TIMEOUT_MS = 10000/.test(word) && /pendingDeleteCount/.test(word) && /addEventListener\('online', _flushPendingDeletes\)/.test(word) &&
+  /DELETE_TIMEOUT_MS = 10000/.test(sentence) && /pendingDeleteCount/.test(sentence) && /addEventListener\('online', flushPendingDeletes\)/.test(sentence));
+check('delete UI does not claim durable success before remote confirmation',
+  /已在本機移除/.test(word) && /正在同步刪除/.test(word) && /已在本機移除/.test(sentence) && /正在同步刪除/.test(sentence));
 check('account boundary owns sentence local cache', /'sentence_vault_v1'/.test(auth));
 check('auth syncs sentence vault on account transition', /SentenceVault\.sync\(sb, uid\)/.test(readingAuth));
 check('one page has word and sentence tabs', /personal-content-root/.test(page) && /我的單字/.test(ui) && /我的句子/.test(ui));
@@ -57,14 +66,21 @@ check('account export includes every vault key, not only words', /from\('learnin
     dispatchEvent() {}, CustomEvent: function () {}
   };
   const upserts = [];
+  let failTombstone = false;
+  let remoteRows = [];
   const client = {
     from() {
       let mode = '';
+      let currentRows = [];
       return {
         select() { mode = 'select'; return this; },
         eq() { return this; },
-        upsert(rows) { mode = 'upsert'; upserts.push(rows); return this; },
-        then(resolve) { resolve(mode === 'select' ? { data: [], error: null } : { error: null }); return this; }
+        upsert(rows) { mode = 'upsert'; currentRows = rows; upserts.push(rows); return this; },
+        then(resolve) {
+          if (mode === 'select') resolve({ data: remoteRows, error: null });
+          else resolve({ error: failTombstone && currentRows[0] && currentRows[0].deleted_at ? { message: 'offline' } : null });
+          return this;
+        }
       };
     }
   };
@@ -79,6 +95,17 @@ check('account export includes every vault key, not only words', /from\('learnin
   check('sentence duplicate runtime stays one item with both provenance rows', saved.length === 1 && sources.join(',') === 'reading-game,word-order');
   const last = upserts[upserts.length - 1] && upserts[upserts.length - 1][0];
   check('sentence duplicate provenance is upserted to account storage', !!(last && JSON.parse(last.source_raw).provenance.length === 2));
+
+  remoteRows = [{ word_th: 'ฉันกินข้าว', zh: '我吃飯', source_raw: '', deleted_at: null }];
+  failTombstone = true;
+  vault.removeSentence('ฉันกินข้าว');
+  check('sentence failed delete remains hidden with durable pending marker', !vault.has('ฉันกินข้าว') && vault.pendingDeleteCount() === 1);
+  check('sentence pending delete blocks a racing re-save', vault.addSentence('ฉันกินข้าว', { zh: '我吃飯' }) === false);
+  vault.sync(client, 'user-1');
+  check('sentence remote active row cannot resurrect while delete is pending', !vault.has('ฉันกินข้าว') && vault.pendingDeleteCount() === 1);
+  failTombstone = false;
+  vault.retryPendingDeletes();
+  check('sentence successful retry clears pending only after tombstone write', vault.pendingDeleteCount() === 0 && !vault.has('ฉันกินข้าว'));
 }
 
 if (failures.length) {

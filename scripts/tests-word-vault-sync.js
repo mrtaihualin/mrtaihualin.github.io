@@ -56,17 +56,20 @@ function makeWindow() {
   return win;
 }
 
-/** โหลด word-vault.js ตัวจริงเข้า sandbox (คนละชุดต่อการทดสอบ 1 เคส) */
-function loadVault(guest) {
+function loadVaultFromWindow(win) {
   const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'games', 'word-vault.js'), 'utf8');
-  const win = makeWindow();
   const sandboxGlobals = {
     window: win, localStorage: win.localStorage, document: win.document,
     CustomEvent: win.CustomEvent, console: { warn() {} }
   };
-  // word-vault.js เป็น IIFE ที่รับ global เข้าไป — ยิง (window) ให้ตรงกับของจริงในเบราว์เซอร์
   const fn = new Function(...Object.keys(sandboxGlobals), src + '\n;return window.WordVault;');
-  const vault = fn(...Object.values(sandboxGlobals));
+  return fn(...Object.values(sandboxGlobals));
+}
+
+/** โหลด word-vault.js ตัวจริงเข้า sandbox (คนละชุดต่อการทดสอบ 1 เคส) */
+function loadVault(guest) {
+  const win = makeWindow();
+  const vault = loadVaultFromWindow(win);
   // Account tests start from a verified Login owner. The offline write response
   // leaves newly-added words unsynced so the following explicit sync can test retry/merge.
   if (!guest) vault.sync(makeClient([], { upsertError: 'offline' }).client, UID);
@@ -102,6 +105,8 @@ function makeClient(remoteRows, opts) {
             onOk(opts.selectError ? { error: { message: opts.selectError } } : { data: remoteRows, error: null });
           } else if (b._mode === 'upsert' && opts.noTombstoneColumn && b._rows && b._rows[0] && b._rows[0].deleted_at) {
             onOk({ error: { code: '42703', message: 'column learning_saved_items.deleted_at does not exist' } });
+          } else if (b._mode === 'upsert' && opts.tombstoneError && b._rows && b._rows[0] && b._rows[0].deleted_at) {
+            onOk({ error: { message: opts.tombstoneError } });
           } else if (b._mode === 'delete') {
             log.deletes.push(b._eq.slice());
             onOk({ error: null });
@@ -427,6 +432,33 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   const pushedMeta = lastBatch[0] && JSON.parse(lastBatch[0].source_raw);
   ok('15c provenance ใหม่ถูกส่งขึ้นบัญชี',
      pushedMeta && pushedMeta.provenance.length === 2, JSON.stringify(lastBatch));
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 16) ลบตอน network fail → pending ต้องอยู่ข้าม reload, remote active ห้าม resurrect,
+//     และ explicit sync/retry ที่สำเร็จจึงค่อยปิด pending
+// ════════════════════════════════════════════════════════════════════════════
+{
+  const first = loadVault();
+  first.vault.addWord('ข้าว', { zh: '飯' });
+  first.vault.sync(makeClient([]).client, UID);
+
+  const failed = makeClient([{ word_th: 'ข้าว', zh: '飯', tags: [], deleted_at: null }], { tombstoneError: 'offline' });
+  first.vault.sync(failed.client, UID);
+  first.vault.removeWord('ข้าว');
+  ok('16a delete failure ซ่อนเฉพาะ local และเก็บ pending durable', !first.vault.has('ข้าว') && first.vault.pendingDeleteCount() === 1);
+  ok('16b pending delete บล็อกการ save ซ้อนระหว่าง operation ค้าง', first.vault.addWord('ข้าว', { zh: '飯' }) === false);
+
+  // Production reload binds through the shared account boundary, so the same
+  // verified owner keeps this account-local pending queue instead of taking
+  // the no-auth-widget fallback that intentionally clears local data.
+  first.win.PHASE1_ACCOUNT_BOUNDARY = { bind() {} };
+  const reloadedVault = loadVaultFromWindow(first.win);
+  ok('16c pending delete อยู่ครบหลัง reload', reloadedVault.pendingDeleteCount() === 1 && !reloadedVault.has('ข้าว'));
+  const recovered = makeClient([{ word_th: 'ข้าว', zh: '飯', tags: [], deleted_at: null }]);
+  reloadedVault.sync(recovered.client, UID);
+  ok('16d remote active row ไม่ resurrect ระหว่าง pending delete', !reloadedVault.has('ข้าว'));
+  ok('16e successful retry ปั๊ม tombstone idempotently และปิด pending', recovered.log.tombstones.length === 1 && reloadedVault.pendingDeleteCount() === 0);
 }
 
 // ── สรุป ────────────────────────────────────────────────────────────────────
