@@ -449,7 +449,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <p style="margin:0 0 10px;">星星不是拼對一次就有，是這個字經過複習、真的「精通」了才拿到（跟其他遊戲共用）。星星累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 列印／儲存學習紀錄</div>
-      <p style="margin:0 0 10px;">每輪結束可以按「列印／儲存學習紀錄」，裡面有這輪總分、答對題數、每個字的狀況（是否精通、用過提示、拼錯幾次、得幾分、下次複習日期），還有「弱點分析」列出這輪拼錯最多的字。</p>
+      <p style="margin:0 0 10px;">每輪結束可以按「列印／儲存學習紀錄」，裡面有這輪總分、答對題數，以及每個字的作答、正解、意思、狀態、拼錯次數和得分；登入後會自動加上既有的複習進度。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
       <p style="margin:0;">拼錯或用過提示的字，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。不登入的話，每次進來都是全部字重新開始，沒有記憶功能。</p>
@@ -719,7 +719,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=29']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=30']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->

@@ -413,7 +413,8 @@
       // wordsArr: รายคำ (s.words[].th) ใช้ตอนทำ PDF เท่านั้น — ใส่จุดตัดคำที่มองไม่เห็น (ZWSP) ระหว่างคำ
       // กันประโยคยาวไม่มีเว้นวรรค (เขียนไทยจริงไม่เว้นวรรคระหว่างคำ) ตกขอบหน้ากระดาษ/ถูกตัดกลางคำ — Lin 2026-07-31
       var wordsArr = (s && s.words && s.words.length) ? s.words.map(function(w){return w.th;}) : null;
-      var base = {th:s?s.th:'', wordsArr:wordsArr, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'（未保留逐次答案）', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
+      var wordGlosses = (s && s.words && s.words.length) ? s.words.map(function(w){return {th:w.th||'', zh:w.zh||''};}) : null;
+      var base = {th:s?s.th:'', wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'（未保留逐次答案）', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
     } catch(e){}
@@ -1378,7 +1379,7 @@
   window.woRerenderBar = rgRenderGameBar; // Lin 2026-07-12: ให้ reading-auth.js เรียก re-render แถบชวนล็อกอินได้ตอน auth เสร็จ (กันการ์ด "登入解鎖" ค้างทั้งที่ล็อกอินแล้ว)
 
   // ════════════════════════════════════════════
-  // PDF 報告（本輪排過的句子 + 錯誤分析 + SRS下次複習日期）— Lin 2026-07-08
+  // PDF 報告（本輪排過的句子 + 逐字意思 + 登入後 SRS 下次複習日期）— Lin 2026-07-08
   // Lin 2026-07-20: เปลี่ยนจาก html2canvas+jsPDF (โหลด CDN ทุกครั้ง เสี่ยงพัง/ช้า) → หน้าต่าง print เหมือนเกมเสียง
   //   (เกมเสียงเคยเจอ html2canvas ออกไฟล์ว่างเปล่าบนคอม + ค้างบนมือถือ มาแล้ว เปลี่ยนเป็น print window ตั้งแต่ 2026-06-19 เสถียรกว่า)
   // ════════════════════════════════════════════
@@ -1395,6 +1396,10 @@
     // แก้ด้วยการต่อคำจาก wordsArr (แยกคำมาแล้วจากข้อมูลจริง) ด้วยช่องว่างมองไม่เห็น (Zero-Width Space ​) —
     // ให้เบราว์เซอร์ตัดบรรทัดได้ "ระหว่างคำ" เท่านั้น ไม่มีทางตัดกลางคำ + ไม่มีวรรคที่มองเห็นโผล่มา (ตัวเขียนหน้าตาเหมือนเดิมทุกอย่าง)
     function wrapThai(w){ return (w.wordsArr && w.wordsArr.length) ? w.wordsArr.map(esc).join('​') : esc(w.th); }
+    function wordBreakdown(w){
+      if (!w.wordGlosses || !w.wordGlosses.length) return '';
+      return '<div style="font-size:10px;font-weight:400;color:#777;line-height:1.5;margin-top:4px;">逐字：'+w.wordGlosses.map(function(g){ return esc(g.th)+'＝'+esc(g.zh); }).join('・')+'</div>';
+    }
     function statusLabel(w){
       if (w.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
       if (w.guide) return '<span style="color:#b06020;">💡 用提示</span>';
@@ -1404,19 +1409,14 @@
     var rows = roundLog.map(function(w, i){
       return '<tr>'
         +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-        +'<td style="padding:7px 6px;font-size:14px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div></td>'
+        +'<td style="padding:7px 6px;font-size:14px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div>'+wordBreakdown(w)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;font-weight:700;color:#8B6310;">+'+(w.pts||0)+'</td>'
-        +'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+(w.mastered?'已精通':(w.srsDue?w.srsDue:(loggedIn?'—':'未登入')))+'</td>'
+        +(loggedIn?'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+(w.mastered?'已精通':(w.srsDue||'—'))+'</td>':'')
         +'</tr>';
     }).join('');
-
-    var weak = roundLog.filter(function(w){ return (w.wrong||0) > 0; }).sort(function(a,b){ return (b.wrong||0)-(a.wrong||0); }).slice(0,8);
-    var weakHtml = weak.length
-      ? weak.map(function(w){ return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'（錯 '+w.wrong+' 次）</span>'; }).join('')
-      : '<span style="font-size:12px;color:#888;">這輪沒有排錯的句子，太棒了！🎉</span>';
 
     var innerHtml =
       '<div style="max-width:640px;margin:0 auto;padding:24px;background:#FBF5E7;box-sizing:border-box;font-family:'+SERIF+';color:#1C1C1C;">'
@@ -1442,12 +1442,8 @@
       +'<th style="font-size:11px;color:#8B6310;padding:5px;">狀態</th>'
       +'<th style="font-size:11px;color:#8B6310;padding:5px;">排錯次數</th>'
       +'<th style="font-size:11px;color:#8B6310;padding:5px;">得分</th>'
-      +'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>'
+      +(loggedIn?'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>':'')
       +'</tr></thead><tbody>'+rows+'</tbody></table>'
-      +'<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
-      +'<div style="font-size:13px;font-weight:700;color:#8B6310;margin-bottom:6px;">⚠️ 弱點分析（排錯最多的句子）</div>'
-      +'<div>'+weakHtml+'</div>'
-      +(loggedIn?'':'<div style="margin-top:12px;font-size:11px;color:#b06020;">💡 登入後系統會記住每句的複習進度，下次能從弱點練起</div>')
       +'</div></div>'
       +'<div style="text-align:center;font-family:'+SANS+';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'
       +'</div>';

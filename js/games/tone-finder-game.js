@@ -2483,10 +2483,10 @@ function showCoursePromoPopup() {
 }
 
 // Lin 2026-07-31: 改版 — 報告樣式統一成跟 reading-game/typing-game/word-order 完全同一套版型
-// （深色頂欄+金邊卡片、同一份表格欄位、同樣的弱點分析色塊）ทำให้เหมือน เกมพิม/เกมอ่าน ตามที่ Lin สั่ง
+// （深色頂欄+金邊卡片、同一份表格欄位）ทำให้เหมือน เกมพิม/เกมอ่าน ตามที่ Lin สั่ง
 // เดิมใช้ CSS var(--gold-bright) แต่หน้าต่างรายงานนี้เป็นเอกสารแยก ไม่ได้โหลด :root ของเว็บหลัก → ตัวแปรใช้ไม่ได้จริง (ไม่มี fallback)
-// เปลี่ยนมาใช้เลขสี hex ตรงๆ เหมือน 3 เกมที่เหลือ + คงตาราง "聲調掌握度" (คุณค่าเดิมของเกมนี้) ไว้ต่อท้ายแบบสไตล์เดียวกัน
-// getBreakdown/generateAnalysis/deriveText ไม่ได้ใช้ในรายงานนี้แล้ว (deriveText เหลือไว้เฉยๆ เผื่อจุดอื่นอ้างถึง ไม่ได้ลบเพราะไม่ใช่จุดที่ขอให้แก้)
+// เปลี่ยนมาใช้เลขสี hex ตรงๆ เหมือน 3 เกมที่เหลือ; รายงานใช้ข้อเท็จจริงของรอบนี้ และเพิ่ม SRS เดิมเฉพาะผู้ใช้ที่ล็อกอิน
+// getBreakdown/generateAnalysis/deriveText ไม่ได้ใช้ในรายงานนี้
 function buildReportInner() {
   var SERIF="'Noto Serif TC','PingFang TC',serif";
   var SANS="'Noto Sans TC','PingFang TC',sans-serif";
@@ -2502,7 +2502,7 @@ function buildReportInner() {
   function srsRecFor(r){ try{ return tfGetSrsRecord(r.entry.word, selectedLevel); }catch(e){ return null; } }
   function statusLabel(r){
     var rec = srsRecFor(r);
-    if (rec && rec.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
+    if (loggedIn && rec && rec.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
     if ((r.mistakes||0) > 0) return '<span style="color:#c62828;">✗ 待加強</span>';
     return '<span style="color:#2e7d32;">✓ 答對</span>';
   }
@@ -2510,7 +2510,7 @@ function buildReportInner() {
     var rec = srsRecFor(r);
     if (rec && rec.mastered) return '已精通';
     if (rec && rec.dueDate) return rec.dueDate;
-    return loggedIn ? '—' : '未登入';
+    return '—';
   }
 
   var rows = results.map(function(r,i){
@@ -2521,38 +2521,9 @@ function buildReportInner() {
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(r)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(r.mistakes||0)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;font-weight:700;color:#8B6310;">+'+(r.score||0)+'</td>'
-      +'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+srsCell(r)+'</td>'
+      +(loggedIn?'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+srsCell(r)+'</td>':'')
       +'</tr>';
   }).join('');
-
-  var weak = results.filter(function(r){ return (r.mistakes||0)>0; }).sort(function(a,b){ return (b.mistakes||0)-(a.mistakes||0); }).slice(0,8);
-  var weakHtml = weak.length
-    ? weak.map(function(r){ return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;white-space:nowrap;word-break:keep-all;">'+esc(r.entry.word)+'（錯 '+r.mistakes+' 次）</span>'; }).join('')
-    : '<span style="font-size:12px;color:#888;">這輪沒有猜錯的字，太棒了！🎉</span>';
-
-  // ── 保留本遊戲原本的特色分析：各聲調一次答對率（樣式改成跟上面同一套配色/卡片語言）──
-  var toneStat = {}, weakest=null, weakestRate=2;
-  results.forEach(function(r){
-    var t = r.tone!=null?r.tone:computeTone(r.entry.word);
-    if(!t) return;
-    if(!toneStat[t]) toneStat[t]={appeared:0,firstTry:0};
-    toneStat[t].appeared++;
-    if(r.mistakes===0) toneStat[t].firstTry++;
-  });
-  var masteryRows=[];
-  for (var ti=1; ti<=5; ti++){
-    var st=toneStat[ti]; if(!st) continue;
-    var rate=st.firstTry/st.appeared, tl=TONES[ti]||{}, pct=Math.round(rate*100);
-    masteryRows.push('<div style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;">'+
-      '<div style="width:56px;font-weight:700;flex-shrink:0;color:'+(tl.color||'#666')+';">'+(tl.zh||('第'+ti+'聲'))+'</div>'+
-      '<div style="flex:1;height:11px;background:#eee4cc;border-radius:6px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+(tl.color||'#999')+';"></div></div>'+
-      '<div style="width:92px;text-align:right;color:#6a5320;flex-shrink:0;">'+st.firstTry+'/'+st.appeared+'（'+pct+'%）</div></div>');
-    if (rate<weakestRate){ weakestRate=rate; weakest=ti; }
-  }
-  var masteryHtml = masteryRows.length
-    ? '<div style="font-size:13px;font-weight:700;color:#8B6310;margin:14px 0 6px;">🎯 聲調掌握度（一次答對率）</div>'+masteryRows.join('')
-      +'<div style="margin-top:8px;font-size:12px;color:#8B6310;">'+(weakest ? '💡 建議：下次重點練習「'+((TONES[weakest]||{}).zh||('第'+weakest+'聲'))+'」，這是你目前最不穩的聲調。' : '💡 表現很穩，可以挑戰更難的主題！')+'</div>'
-    : '';
 
   var innerHtml =
     '<div style="max-width:640px;margin:0 auto;padding:24px;background:#FBF5E7;box-sizing:border-box;font-family:'+SERIF+';color:#1C1C1C;">'
@@ -2578,13 +2549,8 @@ function buildReportInner() {
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">狀態</th>'
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">猜錯次數</th>'
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">得分</th>'
-    +'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>'
+    +(loggedIn?'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>':'')
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
-    +'<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
-    +'<div style="font-size:13px;font-weight:700;color:#8B6310;margin-bottom:6px;">⚠️ 弱點分析（猜錯最多的字）</div>'
-    +'<div>'+weakHtml+'</div>'
-    + masteryHtml
-    +(loggedIn?'':'<div style="margin-top:12px;font-size:11px;color:#b06020;">💡 登入後系統會記住每個字的複習進度，下次能從弱點練起</div>')
     +'</div></div>'
     +'<div style="text-align:center;font-family:'+SANS+';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'
     +'</div>';
@@ -2650,27 +2616,6 @@ function stepSessionSummary() {
       (bonusAwarded ? '<div class="tf-score-summary-bonus">' +
         (isPerfect ? '🎉 完美通關獎勵 ' : '✅ 完成獎勵 ') + '+' + bonusAwarded + '</div>' : '') +
     '</div>';
-  // analysis
-  var wrongWords = results.filter(function(r){ return r.mistakes > 0; });
-  var toneCounts = {};
-  results.forEach(function(r){
-    var t = r.tone != null ? r.tone : computeTone(r.entry.word);
-    if (t) toneCounts[t] = (toneCounts[t]||0)+1;
-  });
-  var topTones = Object.keys(toneCounts).sort(function(a,b){ return toneCounts[b]-toneCounts[a]; });
-  var correctWords = results.filter(function(r){ return r.mistakes === 0; });
-  var analysisLines = [];
-  analysisLines.push('<p>📝 共練習 <strong>'+total+'</strong> 個單字。</p>');
-  analysisLines.push('<p>✅ 已正確（一次答對）：'+(correctWords.length ? correctWords.map(function(r){ return r.entry.word+'（'+r.entry.zh+'）'; }).join('、') : '—')+'</p>');
-  analysisLines.push('<p>📌 需要再複習的字：'+(wrongWords.length ? wrongWords.map(function(r){ var ct=r.tone!=null?r.tone:computeTone(r.entry.word); return r.entry.word+'（'+r.entry.zh+'）→ 正確：'+(TONES[ct]?TONES[ct].zh:'—'); }).join('、') : '無，全部答對！🎉')+'</p>');
-  if (wrongWords.length) {
-    var needTones = {};
-    wrongWords.forEach(function(r){ var t=r.tone!=null?r.tone:computeTone(r.entry.word); if(t) needTones[t]=(needTones[t]||0)+1; });
-    var nt = Object.keys(needTones).sort(function(a,b){ return needTones[b]-needTones[a]; }).map(function(t){ return TONES[t]?TONES[t].zh:t; }).join('、');
-    analysisLines.push('<p>💪 需要加強：'+nt+' 的辨識。</p>');
-  } else {
-    analysisLines.push('<p>💪 需要加強：無，表現很好！</p>');
-  }
   // ── สเตจ 2/3: น้องมีนา + Daily Streak + เป้ารายวัน + แบดจ์ ──
   var sr = session.streakResult || null;
   var ev = sr && sr.events || {};
@@ -2731,7 +2676,6 @@ function stepSessionSummary() {
     '</div>' +
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
-    '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
     ((window.READING_AUTH && READING_AUTH.user) ? '' :
       '<div style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
         '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +

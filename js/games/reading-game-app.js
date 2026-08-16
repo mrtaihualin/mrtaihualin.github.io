@@ -235,7 +235,8 @@ function rgLogWord(o){
     var idx=roundQueue[cur];
     var w=WORDS[idx];
     var totalWrong=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.reduce(function(a,b){return a+(b||0);},0):(typeof wrongCount!=='undefined'?wrongCount:0);
-    var base={th:w?w.th:'',zh:w?w.zh:'',reading:w&&w.readingTH?w.readingTH:'',userAnswer:(picks||[]).join(' + '),correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,failed:false,guide:false,pts:0,srsDue:'',mastered:false};
+    var wordGlosses=(w&&w.words&&w.words.length)?w.words.map(function(part){return {th:part.th||'',zh:part.zh||''};}):null;
+    var base={th:w?w.th:'',zh:w?w.zh:'',wordGlosses:wordGlosses,reading:w&&w.readingTH?w.readingTH:'',userAnswer:(picks||[]).join(' + '),correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
   }catch(e){}
@@ -1411,7 +1412,7 @@ function endRound(){
 function restart(){try{ if(typeof gtag==='function') gtag('event','reading_game_restart_click',{category:'game'}); }catch(e){}rgClearResumeState();initGame();}
 
 // ════════════════════════════════════════════
-// PDF 報告（本輪打過的字 + 錯誤分析 + SRS下次複習日期）— Lin 2026-07-07
+// PDF 報告（本輪作答事實 + 登入後 SRS 下次複習日期）— Lin 2026-07-07
 // Lin 2026-07-20: เปลี่ยนจาก html2canvas+jsPDF (โหลด CDN ทุกครั้ง เสี่ยงพัง/ช้า) → หน้าต่าง print เหมือนเกมเสียง
 //   (เกมเสียงเคยเจอ html2canvas ออกไฟล์ว่างเปล่าบนคอม + ค้างบนมือถือ มาแล้ว เปลี่ยนเป็น print window ตั้งแต่ 2026-06-19 เสถียรกว่า)
 // ════════════════════════════════════════════
@@ -1425,6 +1426,10 @@ function rgDownloadReport(){
   var loggedIn=rgLoggedIn();
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function wordBreakdown(w){
+    if(!w.wordGlosses||!w.wordGlosses.length)return '';
+    return '<div style="font-size:10px;font-weight:400;color:#777;line-height:1.5;margin-top:4px;">逐字：'+w.wordGlosses.map(function(g){return esc(g.th)+'＝'+esc(g.zh);}).join('・')+'</div>';
+  }
   function statusLabel(w){
     if(w.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
     if(w.guide) return '<span style="color:#b06020;">💡 用提示</span>';
@@ -1434,19 +1439,14 @@ function rgDownloadReport(){
   var rows=roundLog.map(function(w,i){
     return '<tr>'
       +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(w.th)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div></td>'
+      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(w.th)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div>'+wordBreakdown(w)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;font-weight:700;color:#8B6310;">+'+(w.pts||0)+'</td>'
-      +'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+(w.mastered?'已精通':(w.srsDue?w.srsDue:(loggedIn?'—':'未登入')))+'</td>'
+      +(loggedIn?'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+(w.mastered?'已精通':(w.srsDue||'—'))+'</td>':'')
       +'</tr>';
   }).join('');
-
-  var weak=roundLog.filter(function(w){return (w.wrong||0)>0;}).sort(function(a,b){return (b.wrong||0)-(a.wrong||0);}).slice(0,8);
-  var weakHtml = weak.length
-    ? weak.map(function(w){return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;white-space:nowrap;word-break:keep-all;">'+esc(w.th)+'（錯 '+w.wrong+' 次）</span>';}).join('')
-    : '<span style="font-size:12px;color:#888;">這輪沒有打錯的字，太棒了！🎉</span>';
 
   var innerHtml =
     '<div style="max-width:640px;margin:0 auto;padding:24px;background:#FBF5E7;box-sizing:border-box;font-family:'+SERIF+';color:#1C1C1C;">'
@@ -1472,12 +1472,8 @@ function rgDownloadReport(){
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">狀態</th>'
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">打錯次數</th>'
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">得分</th>'
-    +'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>'
+    +(loggedIn?'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>':'')
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
-    +'<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
-    +'<div style="font-size:13px;font-weight:700;color:#8B6310;margin-bottom:6px;">⚠️ 弱點分析（打錯最多的字）</div>'
-    +'<div>'+weakHtml+'</div>'
-    +(loggedIn?'':'<div style="margin-top:12px;font-size:11px;color:#b06020;">💡 登入後系統會記住每個字的複習進度，下次能從弱點練起</div>')
     +'</div></div>'
     +'<div style="text-align:center;font-family:'+SANS+';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'
     +'</div>';

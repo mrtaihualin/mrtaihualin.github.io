@@ -497,7 +497,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <p style="margin:0 0 4px;">星星不是答對一題就有，是這個字經過複習、真的「精通」了才拿到一顆（跟其他遊戲共用）。星星累積解鎖稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。每天練習累積連續天數，斷一天有「護盾」保護連續紀錄不歸零（次數有限）。每週換一次每週挑戰，完成有額外獎勵。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 一輪結束後</div>
-      <p style="margin:0 0 4px;">畫面顯示這輪總分、答對題數、星星累積，還可以按「📄 下載 PDF 報告」產生本輪報告：本輪得分、答對題數、每個字表現（狀態／打錯次數／得分／下次複習日期）、「弱點分析」列出這輪打錯最多的字。沒登入的話，PDF 會提醒：登入後系統才會記住每個字的複習進度。</p>
+      <p style="margin:0 0 4px;">畫面顯示這輪總分和答對題數，還可以按「📄 下載 PDF 報告」查看本輪得分、答對題數，以及每個字的作答、正解、意思、狀態、打錯次數和得分；登入後會自動加上既有的複習進度。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
       <p style="margin:0;">打錯過的字會排時間回來複習：第一次答對排隔天複習，隔天再答對排約一週後複習，兩次都答對就直接標記「已精通」。</p>
@@ -771,7 +771,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=28']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=29']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->

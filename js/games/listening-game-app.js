@@ -629,6 +629,7 @@
 
   function finishAnswer(isCorrect, w, detail) {
     detail = detail || {};
+    var existingSrs = listeningSrs[srsKey(w)] || {};
     if (isCorrect) state.correct++; else state.wrong++;
     var primary = Number(detail.primaryScore) || 0;
     var bonus = Number(detail.typingBonus) || 0;
@@ -640,7 +641,10 @@
       listeningScore: primary, typingBonus: bonus, totalScore: primary + bonus,
       typingWrong: state.typingWrong,
       wordCount: LISTENING_SCORE.wordCount(w.th),
-      unitCount: LISTENING_SCORE.typingUnitCount(w)
+      unitCount: LISTENING_SCORE.typingUnitCount(w),
+      srsDue: existingSrs.dueDate || '',
+      reviewNeeded: isSrsDue(w),
+      mastered: !!existingSrs.mastered
     });
     if (detail.requeue) {
       state.round.push(w);
@@ -889,6 +893,7 @@
     var SANS = "'Noto Sans TC',sans-serif";
     var today = new Date().toLocaleDateString('zh-TW');
     var pct = state.round.length ? Math.round((state.correct / state.round.length) * 100) : 0;
+    var loggedIn = !!(window.READING_AUTH && READING_AUTH.user);
 
     var rows = state.log.map(function (e, i) {
       return '<tr>'
@@ -897,6 +902,7 @@
         + '<td style="padding:7px 6px;font-size:12px;color:#666;">' + escapeHtml(e.zh || '') + '</td>'
         + '<td style="padding:7px 6px;font-size:13px;">作答：' + escapeHtml(e.userAnswer || '（空白）') + '<br>正解：' + escapeHtml(e.th) + '</td>'
         + '<td style="padding:7px 6px;font-size:12px;text-align:center;">' + (e.correct ? '<span style="color:#2e7d32;">✓ 答對</span>' : '<span style="color:#c62828;">✗ 答錯</span>') + '</td>'
+        + (loggedIn ? '<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">' + (e.mastered ? '已精通' : (e.reviewNeeded ? '待複習' + (e.srsDue ? '<br>' + escapeHtml(e.srsDue) : '') : (escapeHtml(e.srsDue) || '—'))) + '</td>' : '')
         + '</tr>';
     }).join('');
 
@@ -923,6 +929,7 @@
       + '<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">意思</th>'
       + '<th style="font-size:11px;color:#8B6310;padding:5px;text-align:left;">你的答案</th>'
       + '<th style="font-size:11px;color:#8B6310;padding:5px;">結果</th>'
+      + (loggedIn ? '<th style="font-size:11px;color:#8B6310;padding:5px;">複習狀態</th>' : '')
       + '</tr></thead><tbody>' + rows + '</tbody></table>'
       + '</div></div>'
       + '<div style="text-align:center;font-family:' + SANS + ';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'

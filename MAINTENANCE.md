@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 17:06 Asia/Bangkok** — S13 standard Pages exclusion guard
+**Updated: 2026-08-16 17:20 Asia/Bangkok** — Phase 1 Learning Report scope alignment
+
+## 2026-08-16 — Guest/Login Free Learning Report (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Aligned Tone, Reading, Listening, Typing and Word Order reports to `PD-REPORT-01`: Guest output contains only current-round facts; all weakness/strength analysis, recommendation, next-action and AI-style sections were removed without replacement. Tone Result also no longer renders the former personalized analysis block.
+- Existing Login Free fields remain automatic and non-configurable: SRS next-review / Review Needed / Mastered data is shown only when authenticated. Guest no longer receives placeholder Login entitlement columns. No new Progress, SRS, Resume, analysis or report subsystem was created.
+- Sentence reports reuse the existing structured `words[].th` / `words[].zh` data for per-word segmentation and meanings in Reading, Typing and Word Order. Listening round evidence now retains the already-loaded per-game SRS/Review/Mastered snapshot for its authenticated report; no database/schema/write-path change was made.
+- Rebuilt the four minified game bundles, bumped the five game runtime cache keys and added report/tier regression coverage. Verification: shared game system 10/10, Reading 7/7, Listening 37/37, Typing 8/8, Word Order 9/9, SRS 17/17, owner-switch 12/12, locked flow PASS and `node scripts/check-site.js` PASS for 928 project files.
+- Paid remains deferred. No SQL, migration, Supabase/Edge change, deploy, player-data mutation or Production verification was performed in this batch.
 
 ## 2026-08-16 — S13 Standard Pages Exclusion Guard (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
 
