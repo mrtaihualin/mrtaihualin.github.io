@@ -81,7 +81,7 @@ test('Core 5 ship the current round-save client', () => {
     const html = read(page);
     assert.match(html, /tone-server\.js\?v=4/);
     assert.match(html, /network-guard\.js\?v=1/);
-    assert.match(html, /reading-auth\.js\?v=23/);
+    assert.match(html, /reading-auth\.js\?v=24/);
   });
 });
 

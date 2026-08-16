@@ -200,9 +200,7 @@
     badgeBindings.forEach(function (b) { paintBadge(b.containerId, b.opts); });
   }
 
-  function doLogout() {
-    // onAuthStateChange จะเคลียร์ user + สั่ง re-render ให้เองอัตโนมัติ
-    sb.auth.signOut();
+  function clearAuthUiCaches() {
     // 2026-08-08 (P6-09~12 ก้อน 1): เคลียร์ localStorage cache ที่ไม่ใช่ session token ด้วย
     //   sb.auth.signOut() ลบแค่ token ของ Supabase เอง ไม่ลบ cache ที่แอปเขียนเองพวกนี้
     //   ผลถ้าไม่เคลียร์: บนเครื่องสาธารณะ/ใช้ร่วมกัน คนถัดไปที่เปิดเว็บ (ก่อนล็อกอิน) จะยังเห็น
@@ -217,6 +215,22 @@
       localStorage.removeItem(LOGSESS_KEY);
       localStorage.removeItem('rg_last_login_provider');
     } catch (e) {}
+  }
+
+  function doLogout() {
+    // ออกจาก session ของอุปกรณ์นี้เท่านั้น; ปุ่ม "ออกทุกอุปกรณ์" ใช้ global scope แยกด้านล่าง
+    // เคลียร์ cache หลัง server/client ยืนยัน sign-out สำเร็จเท่านั้น เพื่อไม่ทำข้อมูล UI หายเมื่อ network ล้มเหลว
+    return sb.auth.signOut({ scope: 'local' }).then(function (res) {
+      if (res && res.error) {
+        console.warn('[auth] signOut failed:', res.error.message || res.error);
+        return res;
+      }
+      clearAuthUiCaches();
+      return res;
+    }, function (error) {
+      console.warn('[auth] signOut failed:', (error && error.message) || error);
+      return { error: error };
+    });
   }
 
   // เคยเด้งชวนตั้งชื่อเล่นให้ user นี้ไปแล้วหรือยัง — จำถาวร (ไม่ใช่แค่ในหน่วยความจำ)
@@ -577,14 +591,16 @@
 
   // ── ข้อ 6: ออกจากระบบทุกอุปกรณ์ (ต่างจาก doLogout() ปกติที่ signOut scope 'local' แค่เครื่องนี้) ──
   function doLogoutAllDevices() {
-    return sb.auth.signOut({ scope: 'global' }).then(function () {
-      try {
-        localStorage.removeItem(AVATAR_KEY);
-        localStorage.removeItem(PIN_BADGE_KEY);
-        localStorage.removeItem(NICK_PROMPT_KEY);
-        localStorage.removeItem(LOGSESS_KEY);
-        localStorage.removeItem('rg_last_login_provider');
-      } catch (e) {}
+    return sb.auth.signOut({ scope: 'global' }).then(function (res) {
+      if (res && res.error) {
+        console.warn('[auth] global signOut failed:', res.error.message || res.error);
+        return res;
+      }
+      clearAuthUiCaches();
+      return res;
+    }, function (error) {
+      console.warn('[auth] global signOut failed:', (error && error.message) || error);
+      return { error: error };
     });
   }
   API.doLogoutAllDevices = doLogoutAllDevices;

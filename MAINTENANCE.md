@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 15:37 Asia/Bangkok** — Phase 1 authoritative LINE-link status
+**Updated: 2026-08-16 17:21 Asia/Bangkok** — Phase 1 Email OTP/Auth security delta
+
+## 2026-08-16 — P1-G-05 Email OTP/Auth Security (`FIXED_PASS_LOCAL / PRODUCTION_E2E_BLOCKED`)
+
+- Read-only Production verification confirmed Email Auth/signups enabled, six-digit OTP, 3,600-second expiry, custom SMTP, 60-second per-email resend interval, and native request/verify limits of 30 per 5 minutes per IP. Access tokens expire after 3,600 seconds, compromised refresh-token detection is enabled with a 10-second reuse interval, CAPTCHA is disabled, and the Dashboard did not expose a numeric project-wide email-send cap.
+- The login client now accepts exactly six digits, blocks duplicate request/verify submissions, handles rejected auth promises, returns a generic public send failure, and requires the verified response to contain a session user before reporting success. Existing same-page resume and auth-state close behavior remain unchanged.
+- Normal logout now explicitly uses Supabase local scope and clears UI/account caches only after success; all-device logout explicitly uses global scope with the same failure-safe cache behavior. This preserves the expected current-device/all-device distinction and avoids presenting a failed logout as complete.
+- Reused current P1-D-09/P1-G-04/P1-G-06 account-isolation, authenticated mutation and two-client CAS evidence without re-running those settled Production mutations. Regression verification passed 11/11 auth/session checks, and `node scripts/check-site.js` passed all checks for 926 project files.
+- No OTP email was sent, no account/test/player data was created or changed, and no SQL, Edge Function, Supabase setting, deploy or other Production mutation occurred. Full Production OTP send/verify/expiry/reuse/logout proof remains blocked on one separately authorized controlled inbox lifecycle; changing the project-wide email cap or enabling Turnstile also requires separate Production authorization if selected.
 
 ## 2026-08-16 — P1-G-05 LINE Link Truth (`PASS_LOCAL / EDGE_AND_CLIENT_DEPLOY_NEEDED`)
 

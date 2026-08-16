@@ -88,14 +88,14 @@ test('content loading error has retry, home and support recovery', () => {
 test('all Core 5 pages ship current auth/audio error handling', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
-    assert.match(html, /auth-widget\.js\?v=10/);
+    assert.match(html, /auth-widget\.js\?v=11/);
     assert.match(html, /protected-word-audio\.js\?v=2/);
   });
 });
 test('all affected account and callback surfaces ship current failure-handling clients', () => {
   ['leaderboard.html','lego.html','listening-board.html','listening-game.html','my-progress.html','reading-board.html',
     'reading-game.html','tone-finder.html','typing-board.html','typing-game.html','vault.html','word-order-board.html','word-order.html']
-    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=10/, page));
+    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=11/, page));
   assert.match(read('leaderboard.html'), /leaderboard\.js\?v=11/);
   ['reading-board.html','listening-board.html','typing-board.html','word-order-board.html']
     .forEach((page) => assert.match(read(page), /reading-leaderboard\.js\?v=7/, page));

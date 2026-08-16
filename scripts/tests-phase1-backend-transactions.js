@@ -119,12 +119,12 @@ test('current pages ship the transaction-aware clients in dependency order', () 
   for (const page of ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html']) {
     const html = read(page);
     assert.match(html, /tone-server\.js\?v=4/, page);
-    assert.match(html, /reading-auth\.js\?v=23/, page);
+    assert.match(html, /reading-auth\.js\?v=24/, page);
   }
   const lego = read('lego.html');
   assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=3/);
-  assert.match(lego, /reading-auth\.js\?v=23/);
-  assert.match(read('vault.html'), /reading-auth\.js\?v=23/);
+  assert.match(lego, /reading-auth\.js\?v=24/);
+  assert.match(read('vault.html'), /reading-auth\.js\?v=24/);
 });
 
 if (!process.exitCode) console.log('\n✅ Phase 1 backend transaction contracts passed (' + passed + ' checks)');
