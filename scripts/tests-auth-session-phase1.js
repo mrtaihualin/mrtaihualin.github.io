@@ -8,6 +8,8 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/core/auth-widget.js'), 'utf8');
+const leaderboardSource = fs.readFileSync(path.join(root, 'js/score/leaderboard.js'), 'utf8');
+const skillLeaderboardSource = fs.readFileSync(path.join(root, 'js/score/reading-leaderboard.js'), 'utf8');
 const LEARNING_KEYS = [
   'tf_srs_v1', 'rgv3_save', 'wo_srs_v1',
   'tf_badges_v1', 'tf_streak_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1',
@@ -101,6 +103,19 @@ async function test(label, fn) {
 
 (async function run() {
   const user = { id: 'user-valid', email: 'mr.taihualin@gmail.com', user_metadata: {} };
+
+  await test('normal logout is local while logout-all is explicitly global', async () => {
+    assert.match(source, /function doLogout\(\)[\s\S]{0,260}signOut\(\{ scope: 'local' \}\)/);
+    assert.match(source, /function doLogoutAllDevices\(\)[\s\S]{0,260}signOut\(\{ scope: 'global' \}\)/);
+    assert.doesNotMatch(source, /sb\.auth\.signOut\(\);/);
+  });
+
+  await test('leaderboards reuse the shared auth client', async () => {
+    [leaderboardSource, skillLeaderboardSource].forEach((boardSource) => {
+      assert.match(boardSource, /window\.getSupabaseClient \? window\.getSupabaseClient\(\)/);
+      assert.doesNotMatch(boardSource, /var sb = window\.supabase\.createClient/);
+    });
+  });
 
   await test('valid session is accepted and binds the verified account owner', async () => {
     const h = createHarness(() => Promise.resolve({ data: { session: { user } }, error: null }));

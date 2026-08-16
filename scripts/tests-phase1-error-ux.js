@@ -96,9 +96,9 @@ test('all affected account and callback surfaces ship current failure-handling c
   ['leaderboard.html','lego.html','listening-board.html','listening-game.html','my-progress.html','reading-board.html',
     'reading-game.html','tone-finder.html','typing-board.html','typing-game.html','vault.html','word-order-board.html','word-order.html']
     .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=10/, page));
-  assert.match(read('leaderboard.html'), /leaderboard\.js\?v=11/);
+  assert.match(read('leaderboard.html'), /leaderboard\.js\?v=12/);
   ['reading-board.html','listening-board.html','typing-board.html','word-order-board.html']
-    .forEach((page) => assert.match(read(page), /reading-leaderboard\.js\?v=7/, page));
+    .forEach((page) => assert.match(read(page), /reading-leaderboard\.js\?v=8/, page));
   assert.match(read('line-callback.html'), /line-callback\.js\?v=5/);
 });
 

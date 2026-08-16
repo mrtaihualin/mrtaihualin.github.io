@@ -51,7 +51,7 @@
   if (!root) return;
   if (!ready) { root.innerHTML = box('⚙️', '系統尚未就緒', 'Supabase 尚未設定完成'); return; }
 
-  var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
+  var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
   var currentUser = null;
   var myNick = null;
   var nicknameSavePending = false;

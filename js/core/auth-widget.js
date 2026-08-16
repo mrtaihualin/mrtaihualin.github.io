@@ -202,7 +202,9 @@
 
   function doLogout() {
     // onAuthStateChange จะเคลียร์ user + สั่ง re-render ให้เองอัตโนมัติ
-    sb.auth.signOut();
+    // ต้องระบุ local ชัดเจน: Supabase ใช้ global เป็นค่า default ซึ่งจะทำให้ปุ่ม
+    // ออกจากระบบปกติมีผลเหมือนปุ่ม "登出所有裝置" ที่อยู่ในหน้าจัดการบัญชี
+    sb.auth.signOut({ scope: 'local' });
     // 2026-08-08 (P6-09~12 ก้อน 1): เคลียร์ localStorage cache ที่ไม่ใช่ session token ด้วย
     //   sb.auth.signOut() ลบแค่ token ของ Supabase เอง ไม่ลบ cache ที่แอปเขียนเองพวกนี้
     //   ผลถ้าไม่เคลียร์: บนเครื่องสาธารณะ/ใช้ร่วมกัน คนถัดไปที่เปิดเว็บ (ก่อนล็อกอิน) จะยังเห็น
