@@ -1,0 +1,6 @@
+exclude:
+  - data/words-data.js
+  - data/adv-sentences.js
+  - data/audio-manifest.js
+  - assets/word-audio
+  - assets/sentence-audio

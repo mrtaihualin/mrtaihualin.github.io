@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 15:37 Asia/Bangkok** — Phase 1 authoritative LINE-link status
+**Updated: 2026-08-16 17:06 Asia/Bangkok** — S13 standard Pages exclusion guard
+
+## 2026-08-16 — S13 Standard Pages Exclusion Guard (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
+
+- Production verification after PR #19 found that the standard GitHub Pages build had republished `data/words-data.js`, `data/adv-sentences.js` and `data/audio-manifest.js` as HTTP 200 even though the protected artifact builder still excluded them correctly. The same branch-source build could also republish the static word/sentence audio directories after any later merge.
+- Added root Jekyll `_config.yml` exclusions for the three master/catalog files plus `assets/word-audio` and `assets/sentence-audio`. GitHub Pages applies `exclude` paths before generating a branch-source site, so ordinary Pages deployments now preserve the same protected boundary as the manual artifact workflow without moving source files or changing game runtime behavior.
+- Extended the S13 architecture regression to require Jekyll mode and all five standard-Pages exclusions. The manual protected-artifact workflow remains available as defense in depth; no content, audio, Supabase, SQL, entitlement or Production data changed in this source delta.
 
 ## 2026-08-16 — P1-G-05 LINE Link Truth (`PASS_LOCAL / EDGE_AND_CLIENT_DEPLOY_NEEDED`)
 
