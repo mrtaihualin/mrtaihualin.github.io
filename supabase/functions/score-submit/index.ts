@@ -45,6 +45,13 @@ async function sha256(value: unknown) {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function canonicalMirrorItems(accepted: any) {
+  const keyName = accepted.game === 'tone' ? 'word' : 'th';
+  return accepted.evidence.items
+    .filter((item: any) => item.wrong > 0 || item.failed === true)
+    .map((item: any) => ({ [keyName]: item.key, wrong: item.wrong }));
+}
+
 serve(async (req) => {
   const origin = req.headers.get('Origin') || '';
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors(origin) });
@@ -114,53 +121,34 @@ serve(async (req) => {
       evidence: accepted.evidence,
     });
 
-    const row = {
-      submission_id: accepted.submissionId,
-      user_id: user.id,
-      game: accepted.game,
-      difficulty: accepted.difficulty,
-      score: accepted.score,
-      total: accepted.total,
-      evidence_hash: evidenceHash,
-      score_version: 's29-v1',
-    };
-    const inserted = await admin.from('game_score_submissions').insert(row).select('submission_id').maybeSingle();
-    if (inserted.error) {
-      if (inserted.error.code !== '23505') return reply(origin, { error: 'score_write_unavailable' }, 503);
-      const existing = await admin.from('game_score_submissions')
-        .select('user_id,game,score,total,evidence_hash')
-        .eq('submission_id', accepted.submissionId).maybeSingle();
-      const same = existing.data && existing.data.user_id === user.id && existing.data.game === accepted.game &&
-        existing.data.score === accepted.score && existing.data.total === accepted.total && existing.data.evidence_hash === evidenceHash;
-      if (same) return reply(origin, { ok: true, idempotent: true, score: accepted.score, total: accepted.total });
-      return reply(origin, { error: 'replay_conflict' }, 409);
+    // One SECURITY DEFINER RPC owns the authoritative row, private legacy mirror and marker.
+    // Any failure rolls the whole PostgreSQL transaction back. Raw body.wrong_items is ignored;
+    // mirror input is derived only from validated/hash-covered canonical evidence.
+    const committed = await admin.rpc('phase1_score_submit_commit', {
+      p_submission_id: accepted.submissionId,
+      p_user_id: user.id,
+      p_game: accepted.game,
+      p_difficulty: accepted.difficulty,
+      p_score: accepted.score,
+      p_total: accepted.total,
+      p_evidence_hash: evidenceHash,
+      p_mirror_items: canonicalMirrorItems(accepted),
+    });
+    if (committed.error) return reply(origin, { error: 'score_write_unavailable' }, 503);
+    const result = committed.data;
+    if (!result || typeof result !== 'object') return reply(origin, { error: 'score_write_unavailable' }, 503);
+    if (result.ok !== true) {
+      if (result.reason === 'replay_conflict') return reply(origin, { error: 'replay_conflict' }, 409);
+      if (result.reason === 'legacy_mirror_ambiguous') return reply(origin, { error: 'legacy_mirror_ambiguous' }, 409);
+      return reply(origin, { error: 'score_write_unavailable' }, 503);
     }
 
-    // Preserve private learning-history consumers. These mirrors are never leaderboard authority.
-    let mirror;
-    if (accepted.game === 'tone') {
-      mirror = await admin.from('tone_sessions').insert({
-        user_id: user.id,
-        mode: accepted.difficulty,
-        score: accepted.score,
-        total: accepted.total,
-        wrong_words: Array.isArray(body.wrong_items) ? body.wrong_items.slice(0, 100) : [],
-      });
-    } else {
-      mirror = await admin.from('reading_sessions').insert({
-        user_id: user.id,
-        score: accepted.score,
-        games: 1,
-        game: accepted.game,
-        wrong_items: Array.isArray(body.wrong_items) ? body.wrong_items.slice(0, 100) : [],
-      });
-    }
-    if (!mirror.error) {
-      await admin.from('game_score_submissions').update({ legacy_mirrored_at: new Date().toISOString() })
-        .eq('submission_id', accepted.submissionId);
-    }
-
-    return reply(origin, { ok: true, idempotent: false, score: accepted.score, total: accepted.total });
+    return reply(origin, {
+      ok: true,
+      idempotent: result.idempotent === true,
+      score: result.score,
+      total: result.total,
+    });
   } catch (error) {
     return reply(origin, { error: 'score_submit_unavailable' }, 503);
   }

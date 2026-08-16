@@ -529,7 +529,7 @@
     return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
   }
 
-  // proof = {difficulty, items, roundBonus, srsBonus}; wrongItems เป็น private learning history เท่านั้น
+  // proof = {difficulty, items, roundBonus, srsBonus}; Edge derives private mirror items from validated evidence.
   function saveScore(score, games, game, wrongItems, proof) {
     if (!API.user) return; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
     // Phase 1 fail-closed: Challenge is Paid-only and has no Leaderboard. Paid runtime is not launched.
@@ -560,8 +560,7 @@
         items: proof.items,
         roundBonus: Number(proof.roundBonus) || 0,
         srsBonus: Number(proof.srsBonus) || 0
-      },
-      wrong_items: Array.isArray(wrongItems) ? wrongItems.slice(0, 100) : []
+      }
     };
     function onFail(msg) {
       console.warn('[board] save failed:', msg);
