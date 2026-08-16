@@ -82,4 +82,25 @@ test('snapshot reuses the existing score ladder without a new component formula'
   assert.strictEqual(context.rgSnapshotExistingAttemptScore(), 0);
 });
 
+test('resume report restore fails safe and cannot strand the question UI', () => {
+  const restoreSource = block('function rgRestoreRoundReport(', '// เรียกครั้งเดียวตอนโหลดหน้า');
+  const context = {
+    curLevel: '中',
+    window: { RoundReport: null },
+  };
+  context.window.RoundReport = {
+    restore() { throw new Error('legacy snapshot'); },
+    create(defaults) { return { fallback: true, defaults }; },
+  };
+  context.RoundReport = context.window.RoundReport;
+  vm.createContext(context);
+  vm.runInContext(restoreSource, context);
+  const restored = context.rgRestoreRoundReport('malformed');
+  assert.strictEqual(restored.fallback, true);
+  assert.strictEqual(restored.defaults.game_type, 'reading');
+  const resume = block('function rgResumeContinue()', 'function rgResumeRestartSame()');
+  assert.match(resume, /roundReport=rgRestoreRoundReport\(st\.report\)/);
+  assert.match(resume, /refreshUI\(\);\s*loadWord\(\)/);
+});
+
 console.log(`\n${passed} Phase 1 Reading tests passed.`);

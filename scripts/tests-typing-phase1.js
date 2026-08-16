@@ -90,4 +90,10 @@ test('Typing report uses the Thai target and never stores raw keystrokes', () =>
   assert.doesNotMatch(source, /rawKeystrokes|raw_keystrokes|keypresses/);
 });
 
+test('non-perfect result copy never claims every question was correct', () => {
+  const result = functionBlock('endRound', 'restart');
+  assert.match(result, /乾淨答對 '\+cleanC\+'\/\'\+roundTotal\+' 題/);
+  assert.doesNotMatch(result, /答對 '\+cleanC\+'\/\'\+roundTotal\+' 題全對/);
+});
+
 console.log(`\n${passed} Phase 1 Typing tests passed.`);

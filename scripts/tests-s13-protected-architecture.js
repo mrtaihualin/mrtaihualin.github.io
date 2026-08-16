@@ -4,6 +4,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const vm = require('vm');
 const { spawnSync } = require('child_process');
 const root = path.resolve(__dirname, '..');
 const failures = [];
@@ -48,6 +49,28 @@ check('game-audio ไม่มี catalog/list response', !/audioAvailable|\.lis
 const sql = read('supabase/sql/2026-08-14_private_game_audio.sql');
 check('private bucket SQL ล็อก public=false', /game-audio-private/.test(sql) && /public, file_size_limit/.test(sql) && /false, 10485760/.test(sql));
 check('audio_assets ยังคง revoke client direct access', /revoke all on table public\.audio_assets from anon, authenticated/.test(sql));
+
+const audioContext = { window: {} };
+vm.runInNewContext(read('data/adv-sentences.js'), audioContext, { filename: 'adv-sentences.js' });
+vm.runInNewContext(read('data/audio-manifest.js'), audioContext, { filename: 'audio-manifest.js' });
+const sentenceTexts = new Set((audioContext.window.ADV_SENTENCES || []).map((row) => row.th));
+const sentenceAudio = audioContext.window.AUDIO_MANIFEST && audioContext.window.AUDIO_MANIFEST.sentences || {};
+['ขอบคุณมาก', 'ขอเมนูหน่อย', 'เก็บเงินด้วย'].forEach((text) => {
+  check('source/manifest exact audio key: ' + text,
+    sentenceTexts.has(text) && !!sentenceAudio[text] && fs.existsSync(path.join(root, sentenceAudio[text])));
+});
+['ขอบคุณมากครับ', 'ขอเมนูหน่อยครับ', 'เก็บเงินด้วยครับ'].forEach((text) => {
+  check('manifest ไม่มี polite-suffix orphan: ' + text, !sentenceAudio[text]);
+});
+const exactAudioMigration = read('supabase/migrations/20260816131431_phase1_sentence_audio_exact_text_fix.sql');
+check('exact audio migration ถูกประกาศเป็น source-only และไม่ deploy เอง',
+  /SOURCE ONLY/.test(exactAudioMigration) && /Do not apply/.test(exactAudioMigration));
+['ขอบคุณมาก', 'ขอเมนูหน่อย', 'เก็บเงินด้วย'].forEach((text) => {
+  check('exact audio migration มี metadata: ' + text,
+    exactAudioMigration.includes("'" + text + "'") && exactAudioMigration.includes(sentenceAudio[text]));
+});
+check('exact audio migration ปิด orphan โดยไม่ลบ audit row',
+  /status = 'needs_fix'/.test(exactAudioMigration) && /storage_path = null/.test(exactAudioMigration) && !/delete\s+from\s+public\.audio_assets/i.test(exactAudioMigration));
 
 const protectedPaths = read('scripts/protected-runtime-paths.js');
 ['data/words-data.js', 'data/adv-sentences.js', 'data/audio-manifest.js', 'assets/word-audio/', 'assets/sentence-audio/']

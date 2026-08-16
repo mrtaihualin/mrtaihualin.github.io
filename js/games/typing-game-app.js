@@ -1141,7 +1141,7 @@ function endRound(){
     document.body.appendChild(sb);
     setTimeout(function(){if(sb.parentNode)sb.parentNode.removeChild(sb);},2200);
   } else {
-    detail='答對 '+cleanC+'/'+roundTotal+' 題全對 · 累積共 '+totalStars+' 顆星 · 全對可拿完成獎勵！';
+    detail='乾淨答對 '+cleanC+'/'+roundTotal+' 題 · 累積共 '+totalStars+' 顆星 · 全對可拿完成獎勵！';
   }
   if(roundBonus)detail+='・含完成獎勵 +'+roundBonus;
   document.getElementById('end-detail').textContent=detail;

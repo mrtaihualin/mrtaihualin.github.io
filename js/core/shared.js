@@ -968,21 +968,26 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     if(!isOpen){ btn.classList.add('open'); body.classList.add('open'); }
   }
 
-  function openLightbox(img) {
+  window.openLightbox = function(img) {
     var lb = document.getElementById('lightbox');
-    document.getElementById('lightbox-img').src = img.src;
+    var lbImg = document.getElementById('lightbox-img');
+    if (!lb || !lbImg || !img) return false;
+    lbImg.src = img.src;
     lb.style.display = 'flex';
     requestAnimationFrame(function(){ lb.classList.add('lb-open'); });
     document.body.style.overflow = 'hidden';
-  }
-  function closeLightbox() {
+    return true;
+  };
+  window.closeLightbox = function() {
     var lb = document.getElementById('lightbox');
+    if (!lb) return false;
     lb.classList.remove('lb-open');
     setTimeout(function(){ lb.style.display = 'none'; }, 380);
     document.body.style.overflow = '';
-  }
+    return true;
+  };
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'Escape' && document.getElementById('lightbox')) window.closeLightbox();
   });
   // ===== 🎉 Sent popup (ส่งแล้วนะ) =====
   window._showSentPopup = function() {

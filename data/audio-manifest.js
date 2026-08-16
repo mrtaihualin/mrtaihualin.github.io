@@ -1,6 +1,6 @@
 // ROLE: generated runtime asset manifest; do not hand-edit or reorganize entries
 // data/audio-manifest.js — เสียงคำศัพท์+ประโยคไทย (generate อัตโนมัติ ห้ามแก้มือ)
-// voice: th-TH-Chirp3-HD-Leda · อัปเดตล่าสุด: 2026-07-17 · sentences คีย์ด้วยตัวข้อความจริง (เหมือน words)
+// voice: th-TH-Chirp3-HD-Leda · อัปเดตล่าสุด: 2026-08-16 · sentences คีย์ด้วยตัวข้อความจริง (เหมือน words)
 window.AUDIO_MANIFEST = {
   voiceId: 'th-TH-Chirp3-HD-Leda',
   baseUrl: '',
@@ -361,14 +361,14 @@ window.AUDIO_MANIFEST = {
   "เราหิวแล้ว": "assets/sentence-audio/th/google-chirp3hd/eb/eb4ecde335543e78454db560740fbe3bf0426af8fbc4acf7a3f4d0a600cc7995.mp3",
   "เขาไม่มีเวลา": "assets/sentence-audio/th/google-chirp3hd/13/13f2b1d6b43f210bbc36726adc5fcb2c939300d918a4d60b66d2179dd74f9c42.mp3",
   "วันนี้อากาศดีมาก": "assets/sentence-audio/th/google-chirp3hd/2d/2d39eab4b233d4350c3348c13f78ad78582cc26b7cfbe73219da70b2e9df690c.mp3",
-  "ขอบคุณมากครับ": "assets/sentence-audio/th/google-chirp3hd/b1/b10b6562a52cb21557cee22a77c1088ec13bb793634985c7ea8dc8819cbecdb5.mp3",
+  "ขอบคุณมาก": "assets/sentence-audio/th/google-chirp3hd/13/133e3ff63a47df9060618d6d28be8e1760389910531041b23313016333fa3883.mp3",
   "ร้านนี้อร่อยมาก": "assets/sentence-audio/th/google-chirp3hd/d4/d4fc7c0c904f02138e0283f728f5235f1063495722a64622bd6c8e6b8b6d9576.mp3",
   "ผมอยากพักผ่อน": "assets/sentence-audio/th/google-chirp3hd/95/95be6f25e39bb56baaaa0464b4eea8be842db4457cf41eaa2bf21eaace6d61b9.mp3",
-  "ขอเมนูหน่อยครับ": "assets/sentence-audio/th/google-chirp3hd/6f/6fb9042903b141f32e29772be134ecbce2ec8a8d72045f2e7f74f426c3caa172.mp3",
+  "ขอเมนูหน่อย": "assets/sentence-audio/th/google-chirp3hd/86/86c510f76a50f1fc21b1bd4c2db9073c955d0decff0055c6d673b7cae89d6cba.mp3",
   "อาหารจานนี้เผ็ดไหม": "assets/sentence-audio/th/google-chirp3hd/a8/a8217ca59a2fca281cd52fbb96bfeb968196d91e74b0472eaba985c6431a32de.mp3",
   "ผมเอาข้าวผัดกุ้ง": "assets/sentence-audio/th/google-chirp3hd/a0/a029ff5745eaf1913aa3e1af36e54a6214c313cb6cbb69024ea51a1bf898f40b.mp3",
   "ไม่ใส่ผักชีนะ": "assets/sentence-audio/th/google-chirp3hd/f3/f340d42be679b9cea0b4edc439d7799b20f93ee150b51b60471607e92956d172.mp3",
-  "เก็บเงินด้วยครับ": "assets/sentence-audio/th/google-chirp3hd/be/bec9003ffc07c92952f1ab7fbcd909cb1bec529cf4b56d0f8be61a69851be263.mp3",
+  "เก็บเงินด้วย": "assets/sentence-audio/th/google-chirp3hd/81/814f261e277d95b2029ac97f69e64d820c4a2ca1bff9bfc3c08bcc1f168d89ca.mp3",
   "ผมตื่นนอนตอนหกโมงเช้า": "assets/sentence-audio/th/google-chirp3hd/fa/fa414c79776631d8326e539d67d41cf55075de840a46801dcd7f4b020fc36b88.mp3",
   "เขาชอบอาบน้ำก่อนนอน": "assets/sentence-audio/th/google-chirp3hd/5c/5cc6439cb7ab6cb7933910ef5ba3668295e4d70f255eab9682fbcaee52b110f6.mp3",
   "เราดื่มกาแฟทุกเช้า": "assets/sentence-audio/th/google-chirp3hd/9f/9fc860d158573237f38343b181350fd1f9eeb60801141a52a7aa9f6e082d4a8a.mp3",
