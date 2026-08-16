@@ -48,6 +48,8 @@ test('tone-round Edge fails closed on reads/commit and never performs split writ
   assert.match(toneEdge, /if \(srsRead\.error\).*srs_read_unavailable/);
   assert.match(toneEdge, /admin\.rpc\("phase1_tone_round_commit"/);
   assert.match(toneEdge, /tone_round_operations[\s\S]+request_hash,response/);
+  assert.match(toneEdge, /const earlyReplay = await committedReplayResponse\(\)/);
+  assert.match(toneEdge, /if \(!R\.ok\) \{[\s\S]{0,120}const concurrentReplay = await committedReplayResponse\(\)/);
   assert.doesNotMatch(toneEdge, /from\("tone_srs_state"\)\s*\.update/);
   assert.doesNotMatch(toneEdge, /from\("game_accounts"\)\.upsert/);
   assert.doesNotMatch(toneEdge, /from\("star_ledger"\)\.insert/);
