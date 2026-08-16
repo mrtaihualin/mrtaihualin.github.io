@@ -7,6 +7,7 @@ const assert = require('assert');
 const root = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const auth = read('js/core/auth-widget.js');
+const readingAuth = read('js/games/reading-auth.js');
 const audio = read('js/games/protected-word-audio.js');
 const content = read('js/games/game-content-client.js');
 const toneBoard = read('js/score/leaderboard.js');
@@ -47,6 +48,12 @@ test('account operations have bounded requests and never invite blind mutation r
   assert.match(auth, /function uncertainMutationMessage[\s\S]*確認前請勿連續重複送出/);
   assert.match(auth, /callAccountFnFresh[\s\S]*withClientTimeout\(sb\.auth\.refreshSession/);
   assert.doesNotMatch(auth, /可安全重新點擊再試一次/);
+});
+test('login modal always distinguishes login from linking another provider', () => {
+  assert.match(readingAuth, /id="rg-account-method-warning"/);
+  assert.match(readingAuth, /已有帳號？先用原本的方式登入/);
+  assert.match(readingAuth, /登入後，再到「✏️ 個人檔案」連接 Facebook／LINE/);
+  assert.match(readingAuth, /可能會建立另一個帳號，原本進度不會跟過去/);
 });
 test('both leaderboard clients wait for confirmed nickname saves and bound duplicate clicks', () => {
   [toneBoard, coreBoards].forEach((source) => {
