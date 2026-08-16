@@ -715,8 +715,11 @@ Deno.serve(async (req: Request) => {
   // ── rate limit: กันสคริปต์ยิงรัวถล่ม DB (เพดานดาว+ปฏิทินกันดาวเกินอยู่แล้ว อันนี้เกราะเสริม) ──
   //   60 รอบ/นาที/คน — คนเล่นเร็วสุด ~20-30/นาที, สคริปต์ยิงเป็นพัน → 60 ไม่บล็อกคนจริง
   //   fail-closed: ถ้าด่านตรวจล่ม ให้หยุดก่อนเขียน SRS/ดาว ป้องกันการยิงข้าม rate limit
-  const { data: rlOk, error: rlErr } = await admin.rpc("rl_check", {
-    p_user: user.id, p_fn: "tone-round", p_limit: 60, p_window: 60,
+  // Use the canonical text-key limiter that is present in the tracked Production schema.
+  // The older rl_check dependency was not part of the recoverable schema contract and a
+  // missing/signature-mismatched function made every authenticated round fail closed.
+  const { data: rlOk, error: rlErr } = await admin.rpc("game_content_rl_check", {
+    p_key: `tone-round:${user.id}`, p_limit: 60, p_window_seconds: 60,
   });
   if (rlErr) return json({ error: "rate_limit_unavailable" }, 503);
   if (rlOk !== true) return json({ error: "rate_limited" }, 429);
