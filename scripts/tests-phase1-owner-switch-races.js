@@ -338,13 +338,13 @@ test('all affected pages ship the owner-safe runtime versions', async () => {
     const html = read(page);
     assert.match(html, /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
     assert.match(html, /game-account\.js\?v=4/, page + ' GameAccount cache');
-    assert.match(html, /reading-auth\.js\?v=25/, page + ' reading-auth cache');
+    assert.match(html, /reading-auth\.js\?v=26/, page + ' reading-auth cache');
   }
   for (const page of ['my-progress.html', 'vault.html']) {
     assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
   }
   for (const page of ['lego.html', 'vault.html']) {
-    assert.match(read(page), /reading-auth\.js\?v=25/, page + ' reading-auth cache');
+    assert.match(read(page), /reading-auth\.js\?v=26/, page + ' reading-auth cache');
   }
   assert.match(read('lego.html'), /game-account\.js\?v=4/);
   assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=51/);

@@ -230,7 +230,8 @@ async function test(label, fn) {
     const requestFlow = otpSource.slice(otpSource.indexOf('function startOtp'), otpSource.indexOf('function verifyCode'));
     assert.ok(/暫時無法寄送驗證碼，請稍後再試/.test(requestFlow));
     assert.ok(!/setMsg\([^\n]*error\.message/.test(requestFlow));
-    assert.ok(/Promise\.resolve\(request\)[\s\S]*, failRequest\)/.test(requestFlow));
+    assert.ok(/challengePromise\.then\([\s\S]*\.catch\(failRequest\)/.test(requestFlow));
+    assert.ok(/sb\.functions\.invoke\('email-otp-auth'/.test(requestFlow));
   });
 
   await test('successful OTP binds the returned session and resumes on the same page', async () => {

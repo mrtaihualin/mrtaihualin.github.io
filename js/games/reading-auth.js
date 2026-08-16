@@ -143,8 +143,67 @@
   }
 
   // ── modal ล็อกอิน: Email OTP 6 หลัก + Google (เหมือนเกมเสียง) LIN 2026-06-27 ──
-  var rgGate = null, otpEmail = '', otpCooldown = 0, otpTimer = null;
+  var rgGate = null, otpEmail = '', otpChallengeId = '', otpCooldown = 0, otpTimer = null;
   var otpRequestPending = false, otpVerifyPending = false;
+  var otpFlowEpoch = 0, turnstileWidgetId = null, turnstileLoader = null;
+
+  // Safe rollout default: native remains active until the broker SQL/Edge/secrets/widget
+  // have passed the separate staging proof and Production activation gate.
+  function otpSecurityConfig() { return window.EMAIL_OTP_SECURITY_CONFIG || {}; }
+  function otpBrokerEnabled() { return otpSecurityConfig().mode === 'broker'; }
+  function clearTurnstileWidget() {
+    if (turnstileWidgetId !== null && window.turnstile && window.turnstile.remove) {
+      try { window.turnstile.remove(turnstileWidgetId); } catch (e) {}
+    }
+    turnstileWidgetId = null;
+  }
+  function loadTurnstile() {
+    if (window.turnstile && window.turnstile.render) return Promise.resolve(window.turnstile);
+    if (turnstileLoader) return turnstileLoader;
+    turnstileLoader = new Promise(function (resolve, reject) {
+      var existing = document.querySelector && document.querySelector('script[data-email-otp-turnstile]');
+      var script = existing || document.createElement('script');
+      var timer = setTimeout(function () { reject(new Error('turnstile_load_timeout')); }, 10000);
+      function readyTurnstile() {
+        if (!(window.turnstile && window.turnstile.render)) return;
+        clearTimeout(timer);
+        resolve(window.turnstile);
+      }
+      script.addEventListener('load', readyTurnstile);
+      script.addEventListener('error', function () { clearTimeout(timer); reject(new Error('turnstile_load_failed')); });
+      if (!existing) {
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.setAttribute('data-email-otp-turnstile', '1');
+        document.head.appendChild(script);
+      }
+      readyTurnstile();
+    }).catch(function (error) { turnstileLoader = null; throw error; });
+    return turnstileLoader;
+  }
+  function getTurnstileToken(action) {
+    var siteKey = String(otpSecurityConfig().turnstileSiteKey || '');
+    if (!otpBrokerEnabled() || !siteKey) return Promise.reject(new Error('turnstile_not_configured'));
+    return loadTurnstile().then(function (turnstile) {
+      var container = rgGate && rgGate.querySelector('#rg-turnstile');
+      if (!container) throw new Error('turnstile_container_missing');
+      clearTurnstileWidget();
+      container.innerHTML = '';
+      return new Promise(function (resolve, reject) {
+        turnstileWidgetId = turnstile.render(container, {
+          sitekey: siteKey,
+          action: action,
+          theme: 'light',
+          size: 'flexible',
+          callback: function (token) { resolve(token); },
+          'error-callback': function () { reject(new Error('turnstile_failed')); },
+          'expired-callback': function () { reject(new Error('turnstile_expired')); },
+          'timeout-callback': function () { reject(new Error('turnstile_timeout')); }
+        });
+      });
+    });
+  }
 
   function doLogin() { openGate(); }
 
@@ -154,6 +213,10 @@
     rgGate.style.display = 'flex';
   }
   function closeGate() {
+    otpFlowEpoch++;
+    otpRequestPending = false;
+    otpVerifyPending = false;
+    clearTurnstileWidget();
     if (rgGate) rgGate.style.display = 'none';
     if (otpTimer) { clearInterval(otpTimer); otpTimer = null; }
   }
@@ -170,8 +233,10 @@
   }
   function renderGate() {
     if (!rgGate) return;
+    clearTurnstileWidget();
     var inAppCh = inAppChannel();
     var inApp = !!inAppCh;
+    var brokerMode = otpBrokerEnabled();
     // v12 (LIN 2026-07-25): เปลี่ยนปุ่ม Google/Facebook/LINE เป็น "แค่โลโก้" ทรงกลม เรียงแถวเดียวกัน
     //   (เดิมเต็มความกว้าง+ข้อความ ซ้อนกัน 3 แถวสูงมาก เสี่ยงล้นจอมือถือจอเล็ก) ตาม Lin สั่ง 2026-07-25
     //   มี title/aria-label เก็บข้อความเดิมไว้ให้คนอ่านหน้าจอ/hover เห็นความหมาย ไม่เสียการเข้าถึง
@@ -214,6 +279,7 @@
       accountMethodWarning +
       '<input id="rg-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
       '<button id="rg-send" style="margin-top:10px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">寄送驗證碼 →</button>' +
+      (brokerMode ? '<div id="rg-turnstile" style="margin-top:10px;min-height:1px;"></div>' : '') +
       '<div id="rg-step2" style="display:none;margin-top:12px;">' +
         '<input id="rg-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="輸入 6 位數驗證碼" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:18px;letter-spacing:4px;text-align:center;color:#5C4410;outline:none;">' +
         '<button id="rg-verify" style="margin-top:10px;width:100%;border:none;background:#2E7D4F;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">確認登入</button>' +
@@ -333,6 +399,7 @@
     email = (email || '').trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setMsg('Email 格式不正確', true); return; }
     otpEmail = email;
+    var flowEpoch = ++otpFlowEpoch;
     otpRequestPending = true;
     var requestBtn = rgGate && rgGate.querySelector(isResend ? '#rg-resend' : '#rg-send');
     if (requestBtn) { requestBtn.disabled = true; requestBtn.style.opacity = '0.5'; }
@@ -343,30 +410,49 @@
       if (requestBtn) { requestBtn.disabled = false; requestBtn.style.opacity = '1'; }
     }
     function failRequest(error) {
+      if (flowEpoch !== otpFlowEpoch) return;
       finishRequest();
       // Keep the public response generic. Account existence and provider details must not leak here.
       setMsg('暫時無法寄送驗證碼，請稍後再試', true);
       trackLogin('login_fail', 'email', { step: isResend ? 'resend' : 'send', reason: String(error && error.message || error || '').slice(0, 90) });
     }
-    var request;
-    try {
-      request = sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
-    } catch (error) { failRequest(error); return; }
-    Promise.resolve(request)
+    var challengePromise = otpBrokerEnabled()
+      ? getTurnstileToken('email_otp_request')
+      : Promise.resolve('');
+    challengePromise.then(function (turnstileToken) {
+      if (flowEpoch !== otpFlowEpoch) throw new Error('stale_otp_request');
+      if (otpBrokerEnabled()) {
+        return sb.functions.invoke('email-otp-auth', {
+          body: { action: 'request', email: email, turnstile_token: turnstileToken }
+        });
+      }
+      return sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
+    })
       .then(function (res) {
+        if (flowEpoch !== otpFlowEpoch) return;
         if (res && res.error) { failRequest(res.error); return; }
+        if (otpBrokerEnabled()) {
+          var challengeId = res && res.data && res.data.challenge_id;
+          if (!res.data.ok || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(String(challengeId || ''))) {
+            failRequest(new Error('invalid_broker_response'));
+            return;
+          }
+          otpChallengeId = challengeId;
+        }
         finishRequest();
         var step2 = rgGate.querySelector('#rg-step2'); if (step2) step2.style.display = 'block';
         var sBtn = rgGate.querySelector('#rg-send'); if (sBtn) sBtn.style.display = 'none';
         setMsg('驗證碼已寄到 ' + esc(email) + '，請查看信箱（含垃圾信匣）', false);
         var ci = rgGate.querySelector('#rg-code'); if (ci) ci.focus();
         startCooldown();
-      }, failRequest);
+      }, failRequest).catch(failRequest);
   }
   function verifyCode(code) {
     if (otpVerifyPending) return;
     code = (code || '').trim();
     if (!/^\d{6}$/.test(code)) { setMsg('請輸入 6 位數驗證碼', true); return; }
+    if (otpBrokerEnabled() && !otpChallengeId) { setMsg('請先重新寄送驗證碼', true); return; }
+    var flowEpoch = ++otpFlowEpoch;
     otpVerifyPending = true;
     var verifyBtn = rgGate && rgGate.querySelector('#rg-verify');
     if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.style.opacity = '0.5'; }
@@ -374,18 +460,47 @@
     trackLogin('login_attempt', 'email', { step: 'verify' });
     markPendingLogin('email');
     function failVerify(error) {
+      if (flowEpoch !== otpFlowEpoch) return;
       otpVerifyPending = false;
       if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.style.opacity = '1'; }
       setMsg('驗證碼錯誤或已過期，請重新輸入', true);
       trackLogin('login_fail', 'email', { step: 'verify', reason: String(error && error.message || error || '').slice(0, 90) });
       takePendingLogin();
     }
-    var verification;
-    try {
-      verification = sb.auth.verifyOtp({ email: otpEmail, token: code, type: 'email' });
-    } catch (error) { failVerify(error); return; }
-    Promise.resolve(verification)
+    var challengePromise = otpBrokerEnabled()
+      ? getTurnstileToken('email_otp_verify')
+      : Promise.resolve('');
+    challengePromise.then(function (turnstileToken) {
+      if (flowEpoch !== otpFlowEpoch) throw new Error('stale_otp_verify');
+      if (otpBrokerEnabled()) {
+        return sb.functions.invoke('email-otp-auth', {
+          body: {
+            action: 'verify', challenge_id: otpChallengeId, email: otpEmail,
+            code: code, turnstile_token: turnstileToken
+          }
+        }).then(function (res) {
+          if (res && res.error) return res;
+          var session = res && res.data && res.data.session;
+          var userId = res && res.data && res.data.user_id;
+          if (!(res && res.data && res.data.ok && session && session.access_token && session.refresh_token && userId)) {
+            return { error: new Error('invalid_broker_session') };
+          }
+          return sb.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token })
+            .then(function (setResult) {
+              var boundUser = setResult && setResult.data && setResult.data.session && setResult.data.session.user;
+              if ((setResult && setResult.error) || !boundUser || boundUser.id !== userId) {
+                return Promise.resolve(sb.auth.signOut({ scope: 'local' })).then(function () {
+                  return { error: (setResult && setResult.error) || new Error('session_binding_failed') };
+                });
+              }
+              return setResult;
+            });
+        });
+      }
+      return sb.auth.verifyOtp({ email: otpEmail, token: code, type: 'email' });
+    })
       .then(function (res) {
+        if (flowEpoch !== otpFlowEpoch) return;
         if ((res && res.error) || !(res && res.data && res.data.session && res.data.session.user)) {
           failVerify((res && res.error) || new Error('missing_session'));
           return;
@@ -393,15 +508,20 @@
         otpVerifyPending = false;
         setMsg('驗證成功，登入中…', false);
         // สำเร็จ → onAuthStateChange → setUser → closeGate ปิดให้เอง
-      }, failVerify);
+      }, failVerify).catch(failVerify);
   }
   function startCooldown() {
-    otpCooldown = 60;
+    otpCooldown = otpBrokerEnabled() ? 15 * 60 : 60;
     if (otpTimer) clearInterval(otpTimer);
     function tick() {
       var b = rgGate && rgGate.querySelector('#rg-resend');
       if (!b) { clearInterval(otpTimer); return; }
-      if (otpCooldown > 0) { b.disabled = true; b.style.opacity = '0.5'; b.style.cursor = 'default'; b.textContent = '重新寄送 (' + otpCooldown + ')'; otpCooldown--; }
+      if (otpCooldown > 0) {
+        var mins = Math.floor(otpCooldown / 60);
+        var secs = String(otpCooldown % 60); if (secs.length < 2) secs = '0' + secs;
+        b.disabled = true; b.style.opacity = '0.5'; b.style.cursor = 'default';
+        b.textContent = '重新寄送 (' + mins + ':' + secs + ')'; otpCooldown--;
+      }
       else { clearInterval(otpTimer); otpTimer = null; b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer'; b.textContent = '重新寄送驗證碼'; }
     }
     tick();
