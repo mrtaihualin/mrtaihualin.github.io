@@ -695,11 +695,14 @@ Deno.serve(async (req: Request) => {
   });
 
   // Exact retry after an HTTP timeout returns the committed result before rate limiting or re-resolving SRS.
-  const replay = await admin.from("tone_round_operations")
-    .select("user_id,game,level,word,request_hash,response")
-    .eq("operation_id", operationId).maybeSingle();
-  if (replay.error) return json({ error: "round_replay_unavailable" }, 503);
-  if (replay.data) {
+  // The second call below closes a concurrent-request window: another invocation may commit after this
+  // first lookup but before our SRS read, which would otherwise be misreported as not_due/already_mastered.
+  async function committedReplayResponse() {
+    const replay = await admin.from("tone_round_operations")
+      .select("user_id,game,level,word,request_hash,response")
+      .eq("operation_id", operationId).maybeSingle();
+    if (replay.error) return json({ error: "round_replay_unavailable" }, 503);
+    if (!replay.data) return null;
     const same = replay.data.user_id === user.id && replay.data.game === game &&
       Number(replay.data.level) === level && replay.data.word === word && replay.data.request_hash === requestHash;
     if (!same) return json({ error: "replay_conflict" }, 409);
@@ -711,6 +714,8 @@ Deno.serve(async (req: Request) => {
       totalStars: Number(currentAccount.data?.stars ?? replay.data.response?.totalStars ?? 0),
     }));
   }
+  const earlyReplay = await committedReplayResponse();
+  if (earlyReplay) return earlyReplay;
 
   // ── rate limit: กันสคริปต์ยิงรัวถล่ม DB (เพดานดาว+ปฏิทินกันดาวเกินอยู่แล้ว อันนี้เกราะเสริม) ──
   //   60 รอบ/นาที/คน — คนเล่นเร็วสุด ~20-30/นาที, สคริปต์ยิงเป็นพัน → 60 ไม่บล็อกคนจริง
@@ -751,7 +756,11 @@ Deno.serve(async (req: Request) => {
     opts: { knownCheck: !!body.knownCheck, spellingGame, spellingClean: !!body.clean,
             starClean: (typeof body.starClean === "boolean") ? body.starClean : undefined },
   });
-  if (!R.ok) return json({ ok: false, reason: R.reason, totalStars: account.stars });
+  if (!R.ok) {
+    const concurrentReplay = await committedReplayResponse();
+    if (concurrentReplay) return concurrentReplay;
+    return json({ ok: false, reason: R.reason, totalStars: account.stars });
+  }
 
   // One RPC owns the SRS transition, account increment, ledger and durable replay result.
   // PostgreSQL rolls every write back together on any failure and serializes all rewards per account.
