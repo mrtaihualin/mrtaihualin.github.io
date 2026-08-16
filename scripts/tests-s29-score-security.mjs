@@ -122,17 +122,20 @@ assert.doesNotMatch(edge, /admin\.rpc\(['"]rl_check['"]/);
 assert.match(edge, /p_limit:\s*30/);
 assert.match(edge, /p_window:\s*600/);
 assert.match(edge, /rate_limit_unavailable/);
-assert.match(edge, /inserted\.error\.code !== '23505'/);
+assert.match(edge, /admin\.rpc\('phase1_score_submit_commit'/);
 assert.match(edge, /evidence_hash/);
 assert.match(edge, /replay_conflict/);
-assert.match(edge, /idempotent: true/);
+assert.match(edge, /idempotent: result\.idempotent === true/);
+assert.match(edge, /canonicalMirrorItems\(accepted\)/);
+assert.doesNotMatch(edge, /Array\.isArray\(body\.wrong_items\)/);
 console.log('NO_AUTH=REJECT (handler contract)');
 console.log('EXPIRED_OR_INVALID_AUTH=REJECT (getUser contract)');
 console.log('REPLAY_SUBMISSION=REJECT_OR_IDEMPOTENT');
-console.log('CONCURRENT_DUPLICATE=SAFE (UUID PK + 23505 path)');
+console.log('CONCURRENT_DUPLICATE=SAFE (transactional RPC + UUID advisory lock)');
 console.log('RATE_LIMIT=ENFORCED (30/user/600s fail-closed)');
 
 const sql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
+const atomicSql = read('supabase/sql/2026-08-16_phase1_score_submit_atomic.sql');
 assert.match(sql, /submission_id uuid primary key/);
 assert.match(sql, /revoke all on table public\.game_score_submissions from public, anon, authenticated/);
 assert.match(sql, /revoke insert, update, delete on table public\.reading_sessions from public, anon, authenticated/);
@@ -141,6 +144,10 @@ assert.match(sql, /tone_sessions_score_sane check \(score between 0 and 3000\) n
 assert.match(sql, /reading_sessions_games_sane check \(games between 1 and 10\) not valid/);
 assert.match(sql, /for select to authenticated\s+using \(auth\.uid\(\) = user_id\)/);
 assert.doesNotMatch(sql, /create function public\.combined_leaderboard_/);
+assert.match(atomicSql, /create or replace function public\.phase1_score_submit_commit/);
+assert.match(atomicSql, /score_version, legacy_mirrored_at[\s\S]*'s29-v2-atomic', null/);
+assert.match(atomicSql, /legacy_mirror_ambiguous/);
+assert.match(atomicSql, /revoke all on function public\.phase1_score_submit_commit/);
 for (const signature of sql.matchAll(/returns table\(([^)]+)\)/g)) {
   assert.doesNotMatch(signature[1], /\buser_id\b|\bemail\b/);
   assert.match(signature[1], /is_current_user boolean/);

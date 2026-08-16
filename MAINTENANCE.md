@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 01:10 Asia/Bangkok** — Phase 1 owner-switch race hardening
+**Updated: 2026-08-16 09:18 Asia/Bangkok** — Phase 1 transactional backend redesign (source only)
+
+## 2026-08-16 — P1-F-02 Transactional Backend Redesign (`SOURCE_PASS / PRODUCTION_LOCKED`)
+
+- เพิ่ม additive service-role-only RPC 3 ตัว: `phase1_tone_round_commit` รวม SRS + account stars + ledger + replay result ใน transaction เดียว, `phase1_score_submit_commit` รวม authoritative score + private legacy mirror + marker และ `lego_consume_daily_idempotent` ผูก quota consume กับ identity/day/request UUID. `anon`/`authenticated` ไม่มีสิทธิ์เรียก RPC หรือตาราง operation/request โดยตรง.
+- Tone และ Lego client สร้าง request UUID ครั้งเดียว, bounded retry ด้วย UUID เดิม และทิ้ง response เมื่อ account owner/epoch เปลี่ยน; score mirror ไม่เชื่อ `body.wrong_items` แล้ว แต่ derive จาก canonical evidence ที่ validate และอยู่ใน evidence hash. Existing `s29-v1` ที่ marker เป็น null ถูกหยุดเป็น `legacy_mirror_ambiguous` แทนการเดาแล้วสร้าง mirror ซ้ำ.
+- PostgreSQL 17.10 ชั่วคราวใน `/private/tmp` ผ่าน migration compile, forced failure rollback ที่ SRS/account/ledger, authoritative/mirror/marker และ Lego count/request; concurrent same-ID/different-word tests ยืนยัน no lost update, score/mirror exactly-once และ Lego consume exactly-once. Local static contracts 9/9, save/retry 10/10, SRS 17/17, S29 PASS; ไม่มี SQL apply, Edge deploy, config/data/schema mutation หรือ action ใดบน Production.
+- Production changeset ต้องเรียง additive SQL → Edge `tone-round`/`score-submit`/`lego-daily-limit` → client cache release; stale client ที่ยังไม่มี request UUID ต้อง fail closed จน refresh. Rollback ต้องย้อน client ก่อน Edge และปล่อย additive SQL inert จนยืนยันไม่มี caller; ต้อง precheck จำนวน legacy `s29-v1` marker-null และทำ staging transaction/concurrency test ก่อนขอ Production authorization.
 
 ## 2026-08-16 — P1-D-09 Owner-Switch Race Hardening (`PASS_LOCAL / BATCH_IN_PROGRESS`)
 

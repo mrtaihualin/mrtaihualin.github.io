@@ -8,6 +8,7 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const edge = fs.readFileSync(path.join(root, 'supabase/functions/tone-round/index.ts'), 'utf8');
+const atomicSql = fs.readFileSync(path.join(root, 'supabase/sql/2026-08-16_phase1_tone_round_atomic.sql'), 'utf8');
 const start = edge.indexOf('var TF_SRS_CFG =');
 const end = edge.indexOf('/* ===== scoreEngine ===== */');
 if (start < 0 || end < 0) throw new Error('หา SRS engine ใน tone-round ไม่พบ');
@@ -50,7 +51,9 @@ listening = SRS.resetOnFail(listening);
 check('Fail รีเซ็ตที่ skill ต้นทางเท่านั้น', listening.stage === 0 && listening.everFailed === true && reading.stage === 1);
 
 check('Edge มี isDue gate ก่อนเขียน state', /if \(!TF_SRS\.isDue\(rec, nowMs\)\) return reject\('not_due'/.test(edge));
-check('Edge กัน concurrent duplicate ด้วย optimistic stage+due', /\.eq\("stage", oldStage\)\.eq\("due_date", oldDue\)/.test(edge) && /reason: "race_retry"/.test(edge));
+check('Edge กัน concurrent duplicate ด้วย transactional owner lock + expected snapshot',
+  /phase1_tone_round_commit/.test(edge) && /pg_advisory_xact_lock/.test(atomicSql) &&
+  /v_state\.stage is distinct from p_expected_stage/.test(atomicSql) && /'race_retry'/.test(atomicSql));
 check('Edge กัน retry หลัง Mastered', /if \(rec\.mastered\) return reject\('already_mastered'/.test(edge));
 check('คะแนนต่ำกว่า 10 ของ item ใหม่ไม่สร้าง SRS row', /if \(!hadSrsRecord\) return reject\('below_entry_score'/.test(edge));
 check('Edge รองรับ Listening เป็น skill แยก', /"reading", "listening", "typing"/.test(edge));
