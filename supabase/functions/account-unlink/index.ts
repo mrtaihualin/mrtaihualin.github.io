@@ -238,9 +238,10 @@ serve(async (req) => {
     console.warn('[account-unlink] client ส่ง user_id มาใน body (' + String(body.user_id) + ') — เพิกเฉยเสมอ ใช้แค่ user id จาก JWT ที่ยืนยันแล้วเท่านั้น');
   }
 
+  const action = body && body.action === 'status' ? 'status' : 'unlink';
   const provider = body && body.provider;
-  if (!provider) return json({ error: 'missing_provider', message: 'ต้องระบุ provider ที่จะถอด' }, 400);
-  if (!UNLINKABLE_PROVIDERS.includes(provider)) {
+  if (action === 'unlink' && !provider) return json({ error: 'missing_provider', message: 'ต้องระบุ provider ที่จะถอด' }, 400);
+  if (action === 'unlink' && !UNLINKABLE_PROVIDERS.includes(provider)) {
     return json({ error: 'invalid_provider', message: 'ช่องทางล็อกอินนี้ไม่รองรับการถอด', allowed: UNLINKABLE_PROVIDERS }, 400);
   }
 
@@ -261,28 +262,30 @@ serve(async (req) => {
     const user = userData.user;
     const userId = user.id; // ← ตัวแปรเดียวที่ใช้กำหนดว่า "บัญชีของใคร" ทั้งไฟล์นี้ ไม่รับค่าจากที่อื่น
 
-    // ── เช็คว่า JWT "เพิ่งออกใหม่จริง" (re-auth) — เพิ่ม 2026-08-08 ให้เหมือน account-delete ─────
-    const claims = decodeJwtPayloadUnsafe(jwt);
-    const iat = claims?.iat;
-    if (!iat || typeof iat !== 'number') {
-      return json({ error: 'cannot_verify_session_freshness', message: 'token ไม่มี iat อ่านไม่ได้ กรุณาล็อกอินใหม่' }, 401);
-    }
-    const ageSeconds = Math.floor(Date.now() / 1000) - iat;
-    if (ageSeconds > FRESH_JWT_MAX_AGE_SECONDS || ageSeconds < -30) {
-      return json({
-        error: 'stale_session',
-        message: 'session เก่าเกินไป กรุณาออกจากระบบแล้วล็อกอินใหม่ก่อนถอดช่องทางล็อกอิน',
-        jwt_age_seconds: ageSeconds,
-        max_allowed_seconds: FRESH_JWT_MAX_AGE_SECONDS,
-      }, 401);
-    }
+    if (action === 'unlink') {
+      // ── เช็คว่า JWT "เพิ่งออกใหม่จริง" (re-auth) เฉพาะ mutation ───────────────────────────
+      // status เป็น read-only และใช้ JWT ที่ตรวจด้วย getUser() แล้ว จึงไม่บังคับ refresh ทุกครั้งที่เปิดโปรไฟล์
+      const claims = decodeJwtPayloadUnsafe(jwt);
+      const iat = claims?.iat;
+      if (!iat || typeof iat !== 'number') {
+        return json({ error: 'cannot_verify_session_freshness', message: 'token ไม่มี iat อ่านไม่ได้ กรุณาล็อกอินใหม่' }, 401);
+      }
+      const ageSeconds = Math.floor(Date.now() / 1000) - iat;
+      if (ageSeconds > FRESH_JWT_MAX_AGE_SECONDS || ageSeconds < -30) {
+        return json({
+          error: 'stale_session',
+          message: 'session เก่าเกินไป กรุณาออกจากระบบแล้วล็อกอินใหม่ก่อนถอดช่องทางล็อกอิน',
+          jwt_age_seconds: ageSeconds,
+          max_allowed_seconds: FRESH_JWT_MAX_AGE_SECONDS,
+        }, 401);
+      }
 
-    // ── rate limit เกราะเสริม (fail-open — ถ้า rl_check พังไม่บล็อกงาน) ────────────────────
-    // 🔶 10 ครั้ง/10 นาที เป็นค่าประเมินเอง (การถอด/ผูกช่องทางไม่ควรเกิดถี่ในการใช้งานจริง) Lin ปรับได้
-    const { data: rlOk, error: rlErr } = await admin.rpc('rl_check', {
-      p_user: userId, p_fn: 'account-unlink', p_limit: 10, p_window: 600,
-    });
-    if (!rlErr && rlOk === false) return json({ error: 'rate_limited', message: '請稍後再試' }, 429);
+      // ── rate limit เกราะเสริม (fail-open — ถ้า rl_check พังไม่บล็อกงาน) ──────────────────
+      const { data: rlOk, error: rlErr } = await admin.rpc('rl_check', {
+        p_user: userId, p_fn: 'account-unlink', p_limit: 10, p_window: 600,
+      });
+      if (!rlErr && rlOk === false) return json({ error: 'rate_limited', message: '請稍後再試' }, 429);
+    }
 
     // ── ดึงแถว line_identities ของผู้ใช้นี้ (service_role เท่านั้นที่อ่านตารางนี้ได้ — ดูหัวข้ออธิบาย
     // ด้านบนไฟล์) ── ไม่ maybeSingle() เพราะทางทฤษฎีมีได้มากกว่า 1 แถว (ดูหมายเหตุด้านบน)
@@ -292,6 +295,11 @@ serve(async (req) => {
       .eq('user_id', userId);
     if (lineErr) return json({ error: 'db_lookup_failed', message: 'ตรวจสอบช่องทางล็อกอินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', detail: lineErr.message }, 500);
     const lineLinked = (lineRows || []).length > 0;
+
+    // แหล่งจริงของ LINE คือ line_identities ไม่ใช่ app_metadata ใน JWT ซึ่งค้างได้หลัง unlink/ข้อมูลเก่า
+    if (action === 'status') {
+      return json({ ok: true, action: 'status', line_linked: lineLinked });
+    }
 
     // ── นับช่องทางล็อกอิน "จริง" ทั้งหมด (native identities ที่ไม่ใช่อีเมลปลอมของ LINE + LINE ถ้ามี) ──
     const nativeIdentities = user.identities || [];
@@ -369,6 +377,16 @@ serve(async (req) => {
           completed: false,
           message: 'ถอดช่องทาง LINE ยังไม่สำเร็จแน่ชัด กรุณาอย่าปิดหน้านี้ แล้วแจ้งครูให้ตรวจสอบให้',
         }, 500);
+      }
+      // app_metadata เป็น cache เพื่อความเข้ากันได้เท่านั้น; ล้าง best-effort หลัง source of truth ถูกลบแล้ว
+      // UI รุ่นใหม่จะไม่เชื่อค่านี้เพื่อแสดงสถานะเชื่อมต่ออีกต่อไป
+      try {
+        const { error: metaErr } = await admin.auth.admin.updateUserById(userId, {
+          app_metadata: { ...(user.app_metadata || {}), line_linked: false, line_user_id: null },
+        });
+        if (metaErr) console.warn('[account-unlink] LINE mapping removed but app_metadata cleanup failed:', metaErr.message);
+      } catch (e) {
+        console.warn('[account-unlink] LINE mapping removed but app_metadata cleanup threw:', String((e && e.message) || e));
       }
       removedDetail = { line_user_ids: removedLineUserIds };
     } else {

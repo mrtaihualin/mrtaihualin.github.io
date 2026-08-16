@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 15:06 Asia/Bangkok** — Phase 1 Tone how-to Escape follow-up
+**Updated: 2026-08-16 15:37 Asia/Bangkok** — Phase 1 authoritative LINE-link status
+
+## 2026-08-16 — P1-G-05 LINE Link Truth (`PASS_LOCAL / EDGE_AND_CLIENT_DEPLOY_NEEDED`)
+
+- Human provider E2E proved an account-integrity mismatch on one device: the main `Lin` UI claimed LINE was connected and showed existing progress, but direct LINE login returned a separate empty `Taihua Lin` account. This is a real defect, not user error; no account was merged, deleted, unlinked or otherwise mutated during diagnosis.
+- Root cause: profile/account-management UI trusted stale `app_metadata.line_linked` / `line_user_id` from the browser JWT, while actual LINE login is owned by the service-role-only `line_identities` mapping. The existing unlink path also removed the mapping without clearing that metadata cache.
+- `account-unlink` now exposes an authenticated read-only `status` action sourced from `line_identities`; profile and account management wait for that authoritative result before claiming LINE is connected. Successful LINE unlink also clears stale metadata best-effort after verified mapping removal. `auth-widget.js` cache moves v9 → v10 on its 13 existing surfaces.
+- Source fix does not decide which of the two existing accounts is canonical and does not repair Production data automatically. After authorized Edge/client deploy, Lin must choose the canonical account and separately authorize any exact account-mapping repair; until then LINE provider E2E and two-device UI remain blocked.
 
 ## 2026-08-16 — P1-F-04 Core 5 False Crash Banner (`PASS_LOCAL / DEPLOY_PV_NEEDED`)
 
