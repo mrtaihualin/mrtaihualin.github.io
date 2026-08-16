@@ -114,13 +114,9 @@ assert.strictEqual(GameFlow.markResult(result), true);
 assert.strictEqual(result.getAttribute('data-shared-result-ui'), 'v1');
 assert(result.classList.contains('gsh-shared-result'));
 
-assert.strictEqual(GameFlow.feedbackCopy(undefined, 0.5).text, '表現得不錯喔！');
-assert.strictEqual(GameFlow.feedbackCopy(0.5, 0.7).text, '這次有進步喔！');
-assert.strictEqual(GameFlow.feedbackCopy(0.5, 0.52).text, '保持得不錯喔！');
-assert.strictEqual(GameFlow.feedbackCopy(0.7, 0.5).text, '不錯喔，繼續保持！');
-Object.values({first:'表現得不錯喔！',up:'這次有進步喔！',same:'保持得不錯喔！',down:'不錯喔，繼續保持！'}).forEach((copy) => {
-  assert(!/\d/.test(copy), 'result feedback must never expose numeric comparison');
-});
+assert.strictEqual(GameFlow.feedbackCopy(undefined, 0.5), null);
+assert.strictEqual(GameFlow.recordResultFeedback('test', 1, 2), null);
+assert(!flowSource.includes('gsh_result_feedback_v1'), 'Guest/Login result must not persist cross-round feedback');
 
 const resultActions = new FakeElement('div');
 const resultStatus = new FakeElement('div');
@@ -174,7 +170,7 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=3'), `${file} must load the shared flow`);
+  assert(html.includes('js/games/game-flow.js?v=4'), `${file} must load the shared flow`);
   assert(/繼續上次練習/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
   assert(/重新開始本次練習/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
   assert(/開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);

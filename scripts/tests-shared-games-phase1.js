@@ -53,9 +53,71 @@ test('all five games provide recoverable round resume UI', () => {
   }
 });
 
+test('all five games load and persist one current-round DTO identity', () => {
+  for (const g of games) {
+    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=1/, `${g.id}: missing Round Report DTO loader`);
+    assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: missing Login summary loader`);
+    assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
+    assert.match(g.appText, /report:/, `${g.id}: active GameResume must carry the report snapshot`);
+  }
+});
+
 test('all five games provide read-only mistake review after a round', () => {
   for (const g of games) {
     assert.match(g.htmlText + g.appText, /查看錯題|錯題複習|答錯的題目|打錯的字/, `${g.id}: ไม่มี mistake review`);
+  }
+});
+
+test('Guest/Login Free reports contain facts only and no personalized analysis or recommendation', () => {
+  function block(text, start, end) {
+    const from = text.indexOf(start);
+    const to = text.indexOf(end, from + start.length);
+    assert.ok(from >= 0 && to > from, `หา report block ${start} ไม่พบ`);
+    return text.slice(from, to);
+  }
+  const reportBlocks = [
+    ['tone', games.find((g) => g.id === 'tone').appText, 'function buildReportInner()', 'function buildReportHTML()'],
+    ['reading', games.find((g) => g.id === 'reading').appText, 'function rgDownloadReport()', '// ── กฎ15:'],
+    ['listening', games.find((g) => g.id === 'listening').appText, 'function printListeningReport()', 'function restart()'],
+    ['typing', games.find((g) => g.id === 'typing').appText, 'function rgDownloadReport()', 'function trackBookCTA()'],
+    ['wordorder', games.find((g) => g.id === 'wordorder').appText, 'window.woDownloadReport = function()', '// Lin 2026-08-02:'],
+  ];
+  for (const [id, text, start, end] of reportBlocks) {
+    const report = block(text, start, end);
+    assert.doesNotMatch(report, /弱點分析|個人化|建議|需要加強|最不穩|analysisLines|weakHtml/, `${id}: report มี analysis/recommendation`);
+    assert.match(report, /作答|你的答案/, `${id}: report ต้องคงคำตอบผู้เรียน`);
+    assert.match(report, /正解|正確答案/, `${id}: report ต้องคงคำตอบที่ถูก`);
+    assert.doesNotMatch(report, /未登入/, `${id}: Guest report ต้องไม่แสดงช่อง entitlement ของ Login`);
+  }
+  for (const id of ['tone', 'reading', 'listening', 'typing', 'wordorder']) {
+    const row = reportBlocks.find((entry) => entry[0] === id);
+    const report = block(row[1], row[2], row[3]);
+    assert.match(report, /loggedIn[\s\S]*(?:下次複習|複習狀態)/, `${id}: Login report ต้องเพิ่ม SRS เดิมแบบอัตโนมัติ`);
+  }
+  for (const id of ['reading', 'typing', 'wordorder']) {
+    const row = reportBlocks.find((entry) => entry[0] === id);
+    const report = block(row[1], row[2], row[3]);
+    assert.match(report, /wordGlosses[\s\S]*逐字/, `${id}: sentence report ต้องใช้คำแยกและคำแปลรายคำจาก structured data เดิม`);
+  }
+  const toneSummary = block(
+    games.find((g) => g.id === 'tone').appText,
+    'function stepSessionSummary()',
+    'function stepMistakeReview()'
+  );
+  assert.doesNotMatch(toneSummary, /tf-sum-analysis|analysisLines|需要加強|需要再複習|建議/, 'Tone Result มี personalized analysis/recommendation');
+  const toneStats = block(
+    games.find((g) => g.id === 'tone').appText,
+    'function showStats()',
+    'function clearTodayStats()'
+  );
+  const toneStatsDownload = block(
+    games.find((g) => g.id === 'tone').appText,
+    'function buildStatsReportText(',
+    'function downloadStats()'
+  );
+  assert.doesNotMatch(toneStats + toneStatsDownload, /最常選錯|今日課程重點|LESSON_TIPS/, 'Tone Login history must not infer weaknesses or recommendations');
+  for (const g of games) {
+    assert.doesNotMatch(g.htmlText, /「弱點分析」/, `${g.id}: help ยังอ้าง personalized report section`);
   }
 });
 

@@ -539,25 +539,25 @@
 
   // proof = {difficulty, items, roundBonus, srsBonus}; Edge derives private mirror items from validated evidence.
   function saveScore(score, games, game, wrongItems, proof) {
-    if (!API.user) return; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
+    if (!API.user) return null; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
     // Phase 1 fail-closed: Challenge is Paid-only and has no Leaderboard. Paid runtime is not launched.
-    if (game === 'challenge' || pageGame() === 'challenge') return;
+    if (game === 'challenge' || pageGame() === 'challenge') return null;
     // v11 (LIN 2026-07-25, audit): ใช้ window.isSiteAdmin (ตรวจทั้ง email + user id) แทนเช็ค email อย่างเดียว
     //   กัน Facebook/LINE ของแอดมินเอง (อาจไม่มี email) หลุดรอดเข้า leaderboard ตอนทดสอบ
     if ((window.isSiteAdmin && window.isSiteAdmin(API.user)) || (API.user.email || '').toLowerCase() === ADMIN_EMAIL) {
       console.info('[board] admin account — score not saved (excluded from leaderboard)');
-      return;
+      return null;
     }
     var gm = game === 'tone_finder' ? 'tone' : game;
-    if (['tone','reading','listening','typing','word_order'].indexOf(gm) < 0) return;
+    if (['tone','reading','listening','typing','word_order'].indexOf(gm) < 0) return null;
     if (!proof || !Array.isArray(proof.items) || !proof.items.length) {
       saveToast('⚠️ 分數未儲存：缺少驗證資料', false);
-      return;
+      return null;
     }
     var submittedScore = Number(score);
     if (!Number.isFinite(submittedScore) || !Number.isInteger(submittedScore)) {
       saveToast('⚠️ 分數未儲存：格式不正確', false);
-      return;
+      return null;
     }
     var payload = {
       submission_id: scoreSubmissionId(),
@@ -600,6 +600,7 @@
     }
     submit(0);
     if (window.GAME_ACCOUNT && GAME_ACCOUNT.sync) { try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {} }
+    return payload.submission_id;
   }
 
   // ── session กลาง: ใช้ window.SITE_AUTH (auth-widget.js) ถ้ามี — client เดียวกับทุกหน้า ──

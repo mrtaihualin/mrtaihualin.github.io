@@ -1,6 +1,16 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 17:06 Asia/Bangkok** — S13 standard Pages exclusion guard
+**Updated: 2026-08-16 18:10 Asia/Bangkok** — Phase 1 Learning Report data foundation
+
+## 2026-08-16 — Guest/Login Free Learning Report (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Added one shared current-round DTO (`RoundReport`) and wired Tone, Reading, Listening, Typing and Word Order to keep one UUID round identity through Resume, submitted attempts, factual item results, score and the existing score-submission linkage. The DTO rejects raw keystroke capture and exposes a pure `practice_events` draft adapter only; it does not write to Supabase/Edge or create Phase 1.5 persistence.
+- Aligned all five reports to `PD-REPORT-01`: Guest output contains only current-round facts; all weakness/strength analysis, recommendation, next-action and AI-style sections were removed without replacement. Tone Result and authenticated daily statistics no longer rank weak steps/words or generate error-derived lesson tips.
+- Added one read-only canonical Login summary layer over the existing session/SRS sources and reused it from Learning Center and game reports. Login fields are automatic and non-configurable (`Progress`, `SRS`, `Review Needed`, `Mastered`, `Resume`); Guest receives none of those fields and no long-term history. No new Progress, SRS, Resume, analysis or report subsystem was created.
+- Sentence reports reuse the existing structured `words[].th` / `words[].zh` data for per-word segmentation and meanings in Reading, Typing and Word Order. Listening round evidence retains the already-loaded per-game SRS/Review/Mastered snapshot; no database/schema/write-path change was made.
+- Rebuilt the four minified game bundles, moved the five game cache keys forward, and moved `reading-auth.js` v23 → v24 on the five in-scope game surfaces so successful score writes can return their stable submission ID while retry keeps the same idempotent payload. Unrelated Lego/Vault loaders remain unchanged.
+- Verification: Round Report 12/12, Learning Center 26/26, shared game system 11/11, Reading 8/8, Listening 38/38, Typing 9/9, Word Order 10/10, save/retry 10/10, Challenge 16/16, owner-switch 12/12, backend transaction 9/9, browser static load for all five games + Learning Center, and `node scripts/check-site.js` PASS for 931 project files.
+- Paid remains deferred. No SQL, migration, Supabase/Edge change, deploy, player-data mutation or Production verification was performed in this batch.
 
 ## 2026-08-16 — S13 Standard Pages Exclusion Guard (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
 

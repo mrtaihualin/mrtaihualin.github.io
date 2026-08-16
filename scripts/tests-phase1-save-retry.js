@@ -60,6 +60,7 @@ test('client score retry reuses one idempotent payload', () => {
   assert.match(readingAuth, /submission_id: scoreSubmissionId\(\)/);
   assert.strictEqual((readingAuth.match(/submission_id: scoreSubmissionId\(\)/g) || []).length, 1);
   assert.match(readingAuth, /if \(attempt === 0\) \{ setTimeout\(function \(\) \{ submit\(1\); \}, 800\); return; \}/);
+  assert.match(readingAuth, /return payload\.submission_id;/);
   assert.match(scoreSql, /submission_id uuid primary key/);
   assert.match(scoreSubmit, /phase1_score_submit_commit/);
   assert.match(scoreAtomicSql, /'idempotent', true/);
@@ -81,7 +82,7 @@ test('Core 5 ship the current round-save client', () => {
     const html = read(page);
     assert.match(html, /tone-server\.js\?v=4/);
     assert.match(html, /network-guard\.js\?v=1/);
-    assert.match(html, /reading-auth\.js\?v=23/);
+    assert.match(html, /reading-auth\.js\?v=24/);
   });
 });
 

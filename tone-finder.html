@@ -42,7 +42,9 @@
 <script defer src="js/games/game-account.js?v=4"></script><!-- v4: owner-scoped sync guard; server remains authoritative for stars -->
 <script defer src="js/core/auth-widget.js?v=10"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=23"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="js/games/reading-auth.js?v=24"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="js/score/learning-summary.js?v=1"></script>
+<script defer src="js/games/round-report.js?v=1"></script>
 <script defer src="js/games/tone-companion.js?v=3"></script><!-- S29: เหลือ admin badge unlock; คะแนนส่งผ่าน score-submit กลาง -->
 <script defer src="js/games/tone-server.js?v=4"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="js/score/progress-sync.js?v=5"></script>
@@ -781,8 +783,6 @@ if (document.fonts && document.fonts.load) {
   .tf-sum-table th { color:#8B6310; font-weight:600; padding:6px 8px; border-bottom:1px solid rgba(139,99,16,0.2); text-align:left; }
   .tf-sum-table td { padding:6px 8px; border-bottom:1px solid rgba(0,0,0,0.05); }
   .tf-sum-th { font-family:'Sarabun',sans-serif; font-size:16px; }
-  .tf-sum-analysis { background:#f5f2ec; border-radius:10px; padding:12px 16px; font-family:'Noto Sans TC',sans-serif; font-size:13px; color:#5a3e0a; line-height:1.7; }
-  .tf-sum-analysis p { margin:4px 0; }
   /* ── RESULT page (path chip + reanalyze button still used by stepResult()) ── */
   .tf-result-path-item {
     font-family: 'Noto Sans TC', sans-serif;
@@ -1564,7 +1564,7 @@ document.addEventListener('contextmenu', function(e){
 
         <!-- F3 (2026-08-10): 修正措辭 — 這個功能其實是開新視窗印出來（可用瀏覽器的「另存為 PDF」），不是直接下載檔案，改成準確的說法 -->
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">📄 列印／儲存學習紀錄</div>
-        <p style="margin:0 0 10px;">玩完一輪可以列印或儲存這輪的學習紀錄，裡面有這輪總分、有沒有解鎖新勳章、每個字的表現（讀音／結果／得分），還有「弱點分析」列出需要加強的聲調規則。</p>
+        <p style="margin:0 0 10px;">玩完一輪可以列印或儲存這輪的學習紀錄，裡面有這輪總分和每個字的作答、正解、意思、結果與得分；登入後會自動加上既有的複習進度。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
         <p style="margin:0;">推導錯過或偷看過「？」的字，會排時間回來複習：隔天先複習一次，答對再排大約一週後，兩次都答對就直接標記「已精通」。</p>
@@ -1694,7 +1694,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=49']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=51']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -1719,7 +1719,7 @@ document.addEventListener('contextmenu', function(e){
      ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=31"></script>
-<script src="js/games/game-flow.js?v=3"></script>
+<script src="js/games/game-flow.js?v=4"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)

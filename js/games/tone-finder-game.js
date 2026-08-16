@@ -286,6 +286,7 @@ var randomEntry = null;
 var selectedLevel = null;
 var selectedCategory = null;
 var session = null;
+var roundReport = null;
 var _sessionsThisVisit = 0;  // นับ session ที่เล่นจบในรอบเข้าเว็บนี้ (สำหรับ popup โปรโมท)
 var flash = null;  // 字母字卡狀態：{ title, cards:[], order:[], index, flipped, back }
 
@@ -527,8 +528,8 @@ var TF_SRS = {
 
 // ── localStorage: state SRS ต่อคำ (แยกจาก game-account.js เพราะผูกกับเกมเสียงเท่านั้น) ──
 var TF_SRS_KEY = 'tf_srs_v1';
-function tfLoadSrs() { try { return JSON.parse(localStorage.getItem(TF_SRS_KEY) || '{}') || {}; } catch (e) { return {}; } }
-function tfSaveSrs(o) { try { localStorage.setItem(TF_SRS_KEY, JSON.stringify(o)); } catch (e) {} }
+function tfLoadSrs() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(TF_SRS_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function tfSaveSrs(o) { if(!tfSrsLoggedIn())return;try { localStorage.setItem(TF_SRS_KEY, JSON.stringify(o)); } catch (e) {} }
 function tfGetSrsRecord(word, level) {
   var all = tfLoadSrs();
   var k = TF_SRS.keyFor(word, level);
@@ -1059,9 +1060,9 @@ function tfGuideNoteHtml() {
 
 // ── สถิติคำที่ตอบผิดรายคำ (localStorage) + หน้า 全部 แบบ 50/50 เน้นคำที่ยังไม่แม่น — LIN 2026-06-20 ──
 var TF_WORD_WRONG_KEY = 'tf_word_wrong_v1';
-function tfLoadWordWrong() { try { return JSON.parse(localStorage.getItem(TF_WORD_WRONG_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function tfLoadWordWrong() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(TF_WORD_WRONG_KEY) || '{}') || {}; } catch (e) { return {}; } }
 function tfRecordWordWrong(results) {
-  if (!results) return;
+  if (!results || !tfSrsLoggedIn()) return;
   var m = tfLoadWordWrong(), changed = false;
   results.forEach(function (r) {
     if ((r.mistakes || 0) > 0 || r.forced) { var w = r.entry.word; m[w] = (m[w] || 0) + 1; changed = true; }
@@ -1173,6 +1174,7 @@ function tfResetWordScoring() {
   // ── Lin 2026-07-04: สถานะปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ต่อคำ/ประโยคนี้ ──
   session.hintUsed = false;      // กด ? ไปแล้วหรือยังในคำนี้ (ครั้งแรกนับผิด 1 ครั้ง, ครั้งถัดไปฟรี — ดู tfUseHint)
   session.curWordGuesses = {};   // Phase 4: เก็บ "คำเดาวรรณยุกต์" รายพยางค์ (index → 1-5/0) ส่งให้เซิร์ฟเวอร์ตรวจ
+  session.currentWordToneAttempts = [];
 }
 
 // คำปัจจุบันเป็นหลายพยางค์ไหม (readingTH มี '-')
@@ -1575,12 +1577,14 @@ function tfCommitWordAndAdvance(opts) {
     session.score += wordScore;                                   // บวกเข้าคะแนนรวมครั้งเดียว (รายพยางค์ไม่บวกแล้ว)
     tfUpdateScoreHud(); tfUpdateBarsHud();
   }
-  session.results.push({
+    session.results.push({
     entry: entry,
     tone: tone,
     mistakes: mistakes,
     initialGuess: session.initialGuess,
     finalAnswer: session.finalAnswer,
+    attempts: (session.currentWordToneAttempts || []).slice(),
+    hintUsed: !!session.hintUsed,
     // ── ฟิลด์คะแนน ── (clamp ล่าง = SCORE_FAIL_ZERO = 0 เท่านั้น กันติดลบ · ไม่ยัด floor 1 ให้คำที่ fail 0)
     score: Math.max(TF_SCORE_CFG.SCORE_FAIL_ZERO, session.currentWordScore || 0),
     firstTry: firstTry,
@@ -1588,6 +1592,23 @@ function tfCommitWordAndAdvance(opts) {
     forced: !!opts.forced,
     needReview: !!opts.forced || mistakes > 0 || !firstTry
   });
+  if (roundReport && window.RoundReport) {
+    var _tfResult = session.results[session.results.length - 1];
+    var _tfSentence = selectedLevel === 3 && advSentenceCtx && advSentenceCtx.th;
+    var _tfRec = tfSrsLoggedIn() ? tfGetSrsRecord(entry.word, selectedLevel) : null;
+    RoundReport.addItem(roundReport, {
+      content_ref: { source: _tfSentence ? 'game_sentences' : 'game_words', key: _tfSentence || (entry.word + '@' + (selectedLevel || 1)) },
+      question: entry.word, meaning: entry.zh || '', attempts: _tfResult.attempts,
+      user_answer: _tfResult.attempts.length ? _tfResult.attempts[_tfResult.attempts.length - 1].answer : '',
+      correct_answer: TONES[tone] ? TONES[tone].zh : String(tone || ''),
+      is_correct: mistakes === 0 && firstTry && !opts.forced,
+      wrong_count: mistakes, item_score: _tfResult.score, hint_used: _tfResult.hintUsed,
+      linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, read_syls: entry.readSyls || null, correct_tone: tone },
+      words: (_tfSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : [],
+      srs_state: _tfRec && (_tfRec.dueDate || _tfRec.stage) || null,
+      mastered_state: !!(_tfRec && _tfRec.mastered)
+    });
+  }
   // ── สเปก 2026-07-03 ข้อ 3+4: อัปเดต SRS ต่อคำ/ประโยค + แจกดาวเงินตอน mastered ──
   // ทำงานเฉพาะตอนล็อกอิน (ข้อ 0) · หน่วย SRS = ทั้งคำ/ประโยค ไม่ใช่รายพยางค์ → ใช้ entry.word ทั้งก้อน
   try { if (tfSrsLoggedIn()) tfProcessSrsOnWordCommit(entry, mistakes, firstTry, !!opts.forced); } catch (e) {}
@@ -1872,23 +1893,6 @@ var STEP_LABELS = {
   h_no: '判斷工具：母音類型'
 };
 
-// 依「步驟」整理出來的簡易課程重點，用於今日統計的學習建議
-var LESSON_TIPS = {
-  s1: '看單字上方有沒有聲調符號（่ ้ ๊ ๋）。有符號才能選「有聲調符號」，沒有就選「無聲調符號」。',
-  s2a: '先找出單字的「起首子音」，再對照低子音表（ค คร คล ฅ ฆ ง ช ซ ฌ ญ...）判斷是不是低子音。',
-  s2a_other: '不是低子音的話，再分清楚是中子音、高子音，還是 ห/อ 開頭的「前引字」組合。',
-  s2a_low: '核對單字上方真正的聲調符號是哪一個（่ ้ ๊ ๋），再依低子音的規則往下選。',
-  s2a_mid: '核對單字上方真正的聲調符號是哪一個（่ ้ ๊ ๋），再依中子音的規則往下選。',
-  s2a_hi: '核對單字上方真正的聲調符號是哪一個（่ ้ ๊ ๋），再依高子音的規則往下選。',
-  s2b: '判斷活音／死音：有「長尾音」或長母音收尾 ＝ 活音；有「短尾音」或短母音收尾 ＝ 死音。',
-  s2b_live: '活音字要再看起首子音：中子音／低子音走一條路，高子音／前引字走另一條路。',
-  s2b_dead: '死音字先看起首子音是不是低子音，是低子音才會進入下一步看母音長短。',
-  s2b_dl: '死音＋低子音時，要再分清楚母音是長母音還是短母音。',
-  helper: '使用判斷工具時，先看清楚單字最後有沒有「尾音」子音。',
-  h_with: '有尾音的話，要分清楚尾音是短尾音還是長尾音。',
-  h_no: '沒有尾音的話，要分清楚使用的母音是短母音還是長母音。'
-};
-
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
 // Lin 2026-07-04: วันที่แบบไต้หวัน (Asia/Taipei, UTC+8) เสมอ — ใช้ตัด "วันนี้/ขึ้นวันใหม่" ของ streak + SRS ให้ตรงกันทั้งไฟล์
@@ -1905,6 +1909,7 @@ function timeStr() {
 }
 
 function loadStats() {
+  if(!tfSrsLoggedIn())return {};
   try {
     var raw = localStorage.getItem(STATS_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -1912,6 +1917,7 @@ function loadStats() {
 }
 
 function saveStats(data) {
+  if(!tfSrsLoggedIn())return;
   try {
     // Keep only the most recent STATS_KEEP_DAYS days
     var days = Object.keys(data).sort();
@@ -1936,22 +1942,6 @@ function recordMistake(choiceLabel, errMsg) {
   saveStats(data);
   // Session mistake tracking
   if (session) session.currentWordMistakes = (session.currentWordMistakes || 0) + 1;
-}
-
-// Count occurrences of a key in entries, return sorted desc [{key,count}, ...]
-function countBy(entries, keyFn) {
-  var counts = {};
-  entries.forEach(function(e){
-    var k = keyFn(e);
-    counts[k] = (counts[k]||0) + 1;
-  });
-  return Object.keys(counts).map(function(k){
-    return { key:k, count:counts[k] };
-  }).sort(function(a,b){ return b.count - a.count; });
-}
-
-function pctStr(n, total) {
-  return total ? (n/total*100).toFixed(1) : '0.0';
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2254,7 +2244,7 @@ function render() {
         var total=session&&session.results?session.results.length:0;
         var hl=[];
         if(tfSrsLoggedIn()&&window.GAME_ACCOUNT){var gs=GAME_ACCOUNT.getStreak();if(gs)hl.push('🔥 連續 '+gs+' 天');if(session&&session.newBadges&&session.newBadges.length)hl.push('🎖️ '+session.newBadges[session.newBadges.length-1].zh);}
-        GameFlow.enhanceResult({key:'tone-result',root:body,actions:actions,correct:correct,total:total,highlights:hl,onReplay:function(){TF._startRandom5();}});
+        GameFlow.enhanceResult({key:'tone-result',root:body,actions:actions,correct:roundReport?roundReport.correct_count:correct,total:roundReport?roundReport.total_items:total,highlights:hl,report:roundReport,onReplay:function(){TF._startRandom5();}});
       },0);
     }
   }
@@ -2422,24 +2412,6 @@ function getBreakdown(word) {
   return { init: init, finalCons: finalCons, vowelType: vowelType };
 }
 
-function generateAnalysis(results) {
-  var wrong = results.filter(function(r){ return !r.correct; });
-  if (wrong.length === 0) return '<p>🎉 全部答對！聲調規則掌握得很好，繼續保持！</p>';
-  var toneErrors = {};
-  wrong.forEach(function(r){
-    var k = TONES[r.correctTone].zh;
-    toneErrors[k] = (toneErrors[k]||0) + 1;
-  });
-  var hardTones = Object.keys(toneErrors).sort(function(a,b){ return toneErrors[b]-toneErrors[a]; });
-  var lines = [];
-  lines.push('答錯 '+wrong.length+' 題：' + wrong.map(function(r){ return r.entry.zh+'（'+r.entry.word+'）'; }).join('、') + '。');
-  if (hardTones.length) lines.push('需要加強：<strong>'+hardTones[0]+'</strong> 的辨識。');
-  var correct = results.filter(function(r){ return r.correct; });
-  if (correct.length) lines.push('答對 '+correct.length+' 題，繼續練習效果會更好！');
-  lines.push('建議：多聆聽'+hardTones[0]+'的發音，配合聲調規則複習。');
-  return lines.map(function(l){ return '<p>'+l+'</p>'; }).join('');
-}
-
 // ════════════════════════════════════════════════════════════
 // SESSION STEP BUILDERS
 // ════════════════════════════════════════════════════════════
@@ -2483,76 +2455,43 @@ function showCoursePromoPopup() {
 }
 
 // Lin 2026-07-31: 改版 — 報告樣式統一成跟 reading-game/typing-game/word-order 完全同一套版型
-// （深色頂欄+金邊卡片、同一份表格欄位、同樣的弱點分析色塊）ทำให้เหมือน เกมพิม/เกมอ่าน ตามที่ Lin สั่ง
+// （深色頂欄+金邊卡片、同一份表格欄位）ทำให้เหมือน เกมพิม/เกมอ่าน ตามที่ Lin สั่ง
 // เดิมใช้ CSS var(--gold-bright) แต่หน้าต่างรายงานนี้เป็นเอกสารแยก ไม่ได้โหลด :root ของเว็บหลัก → ตัวแปรใช้ไม่ได้จริง (ไม่มี fallback)
-// เปลี่ยนมาใช้เลขสี hex ตรงๆ เหมือน 3 เกมที่เหลือ + คงตาราง "聲調掌握度" (คุณค่าเดิมของเกมนี้) ไว้ต่อท้ายแบบสไตล์เดียวกัน
-// getBreakdown/generateAnalysis/deriveText ไม่ได้ใช้ในรายงานนี้แล้ว (deriveText เหลือไว้เฉยๆ เผื่อจุดอื่นอ้างถึง ไม่ได้ลบเพราะไม่ใช่จุดที่ขอให้แก้)
+// เปลี่ยนมาใช้เลขสี hex ตรงๆ เหมือน 3 เกมที่เหลือ; รายงานใช้ข้อเท็จจริงของรอบนี้ และเพิ่ม SRS เดิมเฉพาะผู้ใช้ที่ล็อกอิน
+// getBreakdown/generateAnalysis/deriveText ไม่ได้ใช้ในรายงานนี้
 function buildReportInner() {
   var SERIF="'Noto Serif TC','PingFang TC',serif";
   var SANS="'Noto Sans TC','PingFang TC',sans-serif";
   var results = session.results;
+  var reportItems = roundReport && roundReport.items ? roundReport.items : [];
   var today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
   var levelChar = ({1:'初',2:'中',3:'高'})[selectedLevel] || '—';
   var loggedIn = tfSrsLoggedIn();
-  var total = results.length;
-  var perfectCount = results.filter(function(r){ return r.firstTry; }).length;
-  var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
+  var total = reportItems.length;
+  var perfectCount = reportItems.filter(function(r){ return r.is_correct; }).length;
+  var weightedScore = roundReport ? roundReport.score : TF_SCORE.weightedScore(session.score || 0, selectedLevel);
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function srsRecFor(r){ try{ return tfGetSrsRecord(r.entry.word, selectedLevel); }catch(e){ return null; } }
   function statusLabel(r){
-    var rec = srsRecFor(r);
-    if (rec && rec.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
-    if ((r.mistakes||0) > 0) return '<span style="color:#c62828;">✗ 待加強</span>';
+    if (loggedIn && r.mastered_state) return '<span style="color:#8B6310;">✓ 已精通</span>';
+    if (!r.is_correct) return '<span style="color:#c62828;">✗ 答錯</span>';
     return '<span style="color:#2e7d32;">✓ 答對</span>';
   }
   function srsCell(r){
-    var rec = srsRecFor(r);
-    if (rec && rec.mastered) return '已精通';
-    if (rec && rec.dueDate) return rec.dueDate;
-    return loggedIn ? '—' : '未登入';
+    return r.mastered_state ? '已精通' : (r.srs_state || '—');
   }
 
-  var rows = results.map(function(r,i){
+  var rows = reportItems.map(function(r,i){
     return '<tr>'
       +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(r.entry.word)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(r.finalAnswer&&TONES[r.finalAnswer]?TONES[r.finalAnswer].zh:'（未保留）')+'<br>正解：'+esc(TONES[r.tone]?TONES[r.tone].zh:'—')+'</div></td>'
-      +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(r.entry.zh)+'</td>'
+      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(r.question)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(r.user_answer||'（未作答）')+'<br>正解：'+esc(r.correct_answer||'—')+(r.linguistic&&r.linguistic.reading_th?'<br>讀音：'+esc(r.linguistic.reading_th):'')+'</div></td>'
+      +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(r.meaning)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(r)+'</td>'
-      +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(r.mistakes||0)+'</td>'
-      +'<td style="padding:7px 6px;font-size:12px;text-align:center;font-weight:700;color:#8B6310;">+'+(r.score||0)+'</td>'
-      +'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+srsCell(r)+'</td>'
+      +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(r.wrong_count||0)+'</td>'
+      +'<td style="padding:7px 6px;font-size:12px;text-align:center;font-weight:700;color:#8B6310;">+'+(r.item_score||0)+'</td>'
+      +(loggedIn?'<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">'+srsCell(r)+'</td>':'')
       +'</tr>';
   }).join('');
-
-  var weak = results.filter(function(r){ return (r.mistakes||0)>0; }).sort(function(a,b){ return (b.mistakes||0)-(a.mistakes||0); }).slice(0,8);
-  var weakHtml = weak.length
-    ? weak.map(function(r){ return '<span style="display:inline-block;background:#fff3d8;border:1px solid #e8c070;border-radius:8px;padding:4px 10px;margin:3px;font-size:12px;white-space:nowrap;word-break:keep-all;">'+esc(r.entry.word)+'（錯 '+r.mistakes+' 次）</span>'; }).join('')
-    : '<span style="font-size:12px;color:#888;">這輪沒有猜錯的字，太棒了！🎉</span>';
-
-  // ── 保留本遊戲原本的特色分析：各聲調一次答對率（樣式改成跟上面同一套配色/卡片語言）──
-  var toneStat = {}, weakest=null, weakestRate=2;
-  results.forEach(function(r){
-    var t = r.tone!=null?r.tone:computeTone(r.entry.word);
-    if(!t) return;
-    if(!toneStat[t]) toneStat[t]={appeared:0,firstTry:0};
-    toneStat[t].appeared++;
-    if(r.mistakes===0) toneStat[t].firstTry++;
-  });
-  var masteryRows=[];
-  for (var ti=1; ti<=5; ti++){
-    var st=toneStat[ti]; if(!st) continue;
-    var rate=st.firstTry/st.appeared, tl=TONES[ti]||{}, pct=Math.round(rate*100);
-    masteryRows.push('<div style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;">'+
-      '<div style="width:56px;font-weight:700;flex-shrink:0;color:'+(tl.color||'#666')+';">'+(tl.zh||('第'+ti+'聲'))+'</div>'+
-      '<div style="flex:1;height:11px;background:#eee4cc;border-radius:6px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+(tl.color||'#999')+';"></div></div>'+
-      '<div style="width:92px;text-align:right;color:#6a5320;flex-shrink:0;">'+st.firstTry+'/'+st.appeared+'（'+pct+'%）</div></div>');
-    if (rate<weakestRate){ weakestRate=rate; weakest=ti; }
-  }
-  var masteryHtml = masteryRows.length
-    ? '<div style="font-size:13px;font-weight:700;color:#8B6310;margin:14px 0 6px;">🎯 聲調掌握度（一次答對率）</div>'+masteryRows.join('')
-      +'<div style="margin-top:8px;font-size:12px;color:#8B6310;">'+(weakest ? '💡 建議：下次重點練習「'+((TONES[weakest]||{}).zh||('第'+weakest+'聲'))+'」，這是你目前最不穩的聲調。' : '💡 表現很穩，可以挑戰更難的主題！')+'</div>'
-    : '';
 
   var innerHtml =
     '<div style="max-width:640px;margin:0 auto;padding:24px;background:#FBF5E7;box-sizing:border-box;font-family:'+SERIF+';color:#1C1C1C;">'
@@ -2578,13 +2517,9 @@ function buildReportInner() {
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">狀態</th>'
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">猜錯次數</th>'
     +'<th style="font-size:11px;color:#8B6310;padding:5px;">得分</th>'
-    +'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>'
+    +(loggedIn?'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>':'')
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
-    +'<hr style="border:none;border-top:1px solid rgba(139,99,16,0.2);margin:14px 0;">'
-    +'<div style="font-size:13px;font-weight:700;color:#8B6310;margin-bottom:6px;">⚠️ 弱點分析（猜錯最多的字）</div>'
-    +'<div>'+weakHtml+'</div>'
-    + masteryHtml
-    +(loggedIn?'':'<div style="margin-top:12px;font-size:11px;color:#b06020;">💡 登入後系統會記住每個字的複習進度，下次能從弱點練起</div>')
+    +(window.RoundReport?RoundReport.loginSectionsHtml(roundReport):'')
     +'</div></div>'
     +'<div style="text-align:center;font-family:'+SANS+';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'
     +'</div>';
@@ -2604,6 +2539,15 @@ function openReportPrint() {
   setTimeout(function(){ try{ win.print(); }catch(e){} }, 600);
 }
 
+function tfAttachLoginSummary(){
+  if(!roundReport||!window.LearningSummary||!tfSrsLoggedIn())return;
+  LearningSummary.loadForGame('tone','tone-finder').then(function(summary){
+    if(!roundReport||!window.RoundReport)return;
+    RoundReport.setLoginSummary(roundReport,summary);
+    if(window.GameFlow)GameFlow.attachReport(document.querySelector('[data-shared-result-ui="v1"]'),roundReport);
+  });
+}
+
 function stepSessionSummary() {
   if (!session) return '';
   var results = session.results;
@@ -2613,28 +2557,34 @@ function stepSessionSummary() {
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event','tone_finder_complete',{category:'game',score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
   try{ if(window.gtag) gtag('event','game_complete',{category:'game',game:'tone_finder', score: weightedScore, total: total}); }catch(e){}
-  try{
-    if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
-      difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
-      items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,mastered:false};}),
-      roundBonus:Number(session.bonusAwarded)||0,
-      srsBonus:Number(session.srsReviewBonus)||0
-    });
-  }catch(e){} // S29: ยกเลิก GA interception/direct tone_sessions insert
+  if(!session.submissionLinked){
+    var _tfSubmissionId=null;
+    try{
+      if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
+        difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
+        items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,mastered:false};}),
+        roundBonus:Number(session.bonusAwarded)||0,
+        srsBonus:Number(session.srsReviewBonus)||0
+      });
+    }catch(e){} // S29: ยกเลิก GA interception/direct tone_sessions insert
+    session.submissionLinked=true;
+    if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:weightedScore,submission_id:_tfSubmissionId});
+    tfAttachLoginSummary();
+  }
   // Lin 2026-07-10: ลบ branch บังคับล็อกอินทิ้ง (requireLogin=false ตายอยู่แล้ว ไม่เคยทำงานจริง) — เหลือแค่คำเชิญ "ขอ單字速查表" หลังเล่นจบรอบ
   setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
-  var rows = results.map(function(r, i){
-    var tone = r.tone != null ? r.tone : computeTone(r.entry.word);
+  var rows = (roundReport&&roundReport.items?roundReport.items:[]).map(function(r, i){
+    var tone = r.linguistic && r.linguistic.correct_tone;
     var tl = TONES[tone] || {};
-    var ok = r.mistakes === 0;
-    var resultTxt = r.forced ? '📌 再複習' : (ok ? '✓' : '💪 ×'+r.mistakes);
+    var ok = r.is_correct;
+    var resultTxt = ok ? '✓' : '✗ ×'+r.wrong_count;
     return '<tr>' +
       '<td style="color:#bbb;font-size:12px;width:24px;">'+(i+1)+'</td>' +
-      '<td class="tf-sum-th">'+r.entry.word+'</td>' +
-      '<td>'+r.entry.zh+'</td>' +
+      '<td class="tf-sum-th">'+r.question+'<div style="font-size:10px;font-weight:400;color:#999;">作答：'+(r.user_answer||'—')+'<br>正解：'+(r.correct_answer||'—')+'</div></td>' +
+      '<td>'+r.meaning+'</td>' +
       '<td style="color:'+(tl.color||'#666')+'">'+(tl.zh||'—')+'</td>' +
       '<td style="color:'+(ok?'#7ec87e':'#ff7c7c')+';font-weight:700">'+resultTxt+'</td>' +
-      '<td style="color:#8B6310;font-weight:700;text-align:right;">'+(r.score||0)+'</td>' +
+      '<td style="color:#8B6310;font-weight:700;text-align:right;">'+(r.item_score||0)+'</td>' +
     '</tr>';
   }).join('');
   // ── สเตจ 1: สรุปคะแนน ──
@@ -2650,27 +2600,6 @@ function stepSessionSummary() {
       (bonusAwarded ? '<div class="tf-score-summary-bonus">' +
         (isPerfect ? '🎉 完美通關獎勵 ' : '✅ 完成獎勵 ') + '+' + bonusAwarded + '</div>' : '') +
     '</div>';
-  // analysis
-  var wrongWords = results.filter(function(r){ return r.mistakes > 0; });
-  var toneCounts = {};
-  results.forEach(function(r){
-    var t = r.tone != null ? r.tone : computeTone(r.entry.word);
-    if (t) toneCounts[t] = (toneCounts[t]||0)+1;
-  });
-  var topTones = Object.keys(toneCounts).sort(function(a,b){ return toneCounts[b]-toneCounts[a]; });
-  var correctWords = results.filter(function(r){ return r.mistakes === 0; });
-  var analysisLines = [];
-  analysisLines.push('<p>📝 共練習 <strong>'+total+'</strong> 個單字。</p>');
-  analysisLines.push('<p>✅ 已正確（一次答對）：'+(correctWords.length ? correctWords.map(function(r){ return r.entry.word+'（'+r.entry.zh+'）'; }).join('、') : '—')+'</p>');
-  analysisLines.push('<p>📌 需要再複習的字：'+(wrongWords.length ? wrongWords.map(function(r){ var ct=r.tone!=null?r.tone:computeTone(r.entry.word); return r.entry.word+'（'+r.entry.zh+'）→ 正確：'+(TONES[ct]?TONES[ct].zh:'—'); }).join('、') : '無，全部答對！🎉')+'</p>');
-  if (wrongWords.length) {
-    var needTones = {};
-    wrongWords.forEach(function(r){ var t=r.tone!=null?r.tone:computeTone(r.entry.word); if(t) needTones[t]=(needTones[t]||0)+1; });
-    var nt = Object.keys(needTones).sort(function(a,b){ return needTones[b]-needTones[a]; }).map(function(t){ return TONES[t]?TONES[t].zh:t; }).join('、');
-    analysisLines.push('<p>💪 需要加強：'+nt+' 的辨識。</p>');
-  } else {
-    analysisLines.push('<p>💪 需要加強：無，表現很好！</p>');
-  }
   // ── สเตจ 2/3: น้องมีนา + Daily Streak + เป้ารายวัน + แบดจ์ ──
   var sr = session.streakResult || null;
   var ev = sr && sr.events || {};
@@ -2731,7 +2660,6 @@ function stepSessionSummary() {
     '</div>' +
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
-    '<div class="tf-sum-analysis">'+analysisLines.join('')+'</div>' +
     ((window.READING_AUTH && READING_AUTH.user) ? '' :
       '<div style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
         '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +
@@ -2750,19 +2678,18 @@ function stepSessionSummary() {
 
 // ── F2 (2026-08-10): 查看錯題 — หน้าอ่านอย่างเดียว (read-only) ใช้ session.results ที่มีอยู่แล้วเท่านั้น ไม่คำนวณ/แก้คะแนนใดๆ ──
 function stepMistakeReview() {
-  if (!session || !session.results) return '';
-  var results = session.results;
-  var reviewList = results.filter(function (r) { return r.needReview; });
-  var listSource = results;
+  if (!roundReport || !roundReport.items) return '';
+  var listSource = roundReport.items;
   var itemsHtml = listSource.map(function (r) {
-    var correctTone = TONES[r.tone] || {};
-    var guessTone = (r.finalAnswer != null && r.finalAnswer !== 0 && TONES[r.finalAnswer]) ? TONES[r.finalAnswer] : null;
-    var isWrong = !!(r.needReview);
+    var isWrong = !r.is_correct;
     return '<div class="gsh-mistake-item' + (isWrong ? ' gsh-mistake-wrong' : '') + '">' +
-      '<div class="gsh-mistake-q">' + (r.entry && r.entry.word || '—') + (r.entry && r.entry.zh ? '　<span style="font-weight:400;color:#999;font-size:13px;">' + r.entry.zh + '</span>' : '') + '</div>' +
-      '<div class="gsh-mistake-row">正確聲調：<b>' + (correctTone.zh || '—') + '</b></div>' +
-      '<div class="gsh-mistake-row">你的答案：<b>' + (guessTone ? guessTone.zh : '（未保留逐次答案）') + '</b></div>' +
-      '<div class="gsh-mistake-row">再練次數：<b>' + (r.mistakes || 0) + '</b>' + (r.golden ? '　🌟 黃金米題' : '') + (r.forced ? '　📌 已顯示答案' : '') + '</div>' +
+      '<div class="gsh-mistake-q">' + (r.question || '—') + (r.meaning ? '　<span style="font-weight:400;color:#999;font-size:13px;">' + r.meaning + '</span>' : '') + '</div>' +
+      '<div class="gsh-mistake-row">正確聲調：<b>' + (r.correct_answer || '—') + '</b></div>' +
+      '<div class="gsh-mistake-row">你的答案：<b>' + (r.user_answer || '（未作答）') + '</b></div>' +
+      '<div class="gsh-mistake-row">狀態：<b>' + (r.is_correct?'✓ 答對':'✗ 答錯') + '</b>・答錯 <b>' + (r.wrong_count || 0) + '</b> 次・得分 <b>' + (r.item_score || 0) + '</b>' + (r.hint_used ? '　💡 使用提示' : '') + '</div>' +
+      (r.linguistic&&r.linguistic.reading_th?'<div class="gsh-mistake-row">讀音：<b>'+r.linguistic.reading_th+'</b></div>':'')+
+      (r.attempts&&r.attempts.length>1?'<div class="gsh-mistake-row">送出紀錄：'+r.attempts.map(function(a){return a.answer;}).join(' → ')+'</div>':'')+
+      (r.words&&r.words.length?'<div class="gsh-mistake-row">逐字：'+r.words.map(function(w){return w.th+'＝'+w.zh;}).join('・')+'</div>':'')+
     '</div>';
   }).join('');
   return '<div class="tf-session-summary">' +
@@ -2955,7 +2882,8 @@ function tfSaveResumeState() {
       score: session.score || 0,
       combo: session.combo || 0,
       maxCombo: session.maxCombo || 0,
-      hardStarsEarned: session.hardStarsEarned || 0
+      hardStarsEarned: session.hardStarsEarned || 0,
+      report: roundReport && window.RoundReport ? RoundReport.snapshot(roundReport) : null
     });
   } catch (e) {}
 }
@@ -3009,6 +2937,7 @@ function tfRestoreSavedProgress(data) {
   session.combo = Number(data.combo) || 0;
   session.maxCombo = Number(data.maxCombo) || 0;
   session.hardStarsEarned = Number(data.hardStarsEarned) || 0;
+  roundReport = window.RoundReport ? RoundReport.restore(data.report,{game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
   hist = []; histPos = -1;
   tfSetupNextWord();
   tfSaveResumeState();
@@ -3037,6 +2966,7 @@ function startSetSession(words, opts) {
     currentWordDeduction: 0, currentWordScored: false,
     currentWordFirstTry: false, currentWordScore: 0,
     sessionScored: false,
+    submissionLinked: false,
     // ── สเตจ 2 + หลายพยางค์ ──
     curWordAllFirstTry: true, scoredSyls: {},
     currentWordGolden: tfRollGolden(),
@@ -3045,6 +2975,7 @@ function startSetSession(words, opts) {
     // ── Analytics 2026-07-23: ยิง tone_finder_start ตอนผู้เล่น "ตอบข้อแรกจริง" เท่านั้น (ไม่ใช่ตอนโหลดหน้า) — กัน start นับ pageview ──
     startFired: false
   };
+  roundReport = window.RoundReport ? RoundReport.create({game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 สำหรับคำแรกของ session
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
@@ -3299,6 +3230,8 @@ function stepSessionGuess() {
     var clickAct = act(function(){
       tfFireStartOnce();  // Analytics 2026-07-23: ตอบข้อแรก = เริ่มเล่นจริง
       session.initialGuess = captureN;
+      session.currentWordToneAttempts = session.currentWordToneAttempts || [];
+      session.currentWordToneAttempts.push({answer:TONES[captureN]?TONES[captureN].zh:String(captureN),is_correct:captureN===computeTone(word),syllable:tfCurWordIsMulti()?(S.selectedSyl+1):1});
       try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = captureN; } catch(e){}  // Phase 4: จำคำเดารายพยางค์
       // ── โหมดเร็ว (Approach A): ตอบถูกตั้งแต่แรก → ข้าม推導ไป result เลย; ผิด/คำนวณไม่ได้ → 推導สอนเหมือนเดิม ──
       var correctTone = computeTone(word);              // computeTone คืน 1–5 (null ถ้าคำนวณไม่ได้)
@@ -3324,6 +3257,8 @@ function stepSessionGuess() {
   var dontKnowAct = act(function(){
     tfFireStartOnce();  // Analytics 2026-07-23: กด "ไม่มั่นใจ" ข้อแรกก็นับว่าเริ่มเล่นจริง
     session.initialGuess = 0;
+    session.currentWordToneAttempts = session.currentWordToneAttempts || [];
+    session.currentWordToneAttempts.push({answer:'不確定',is_correct:false,syllable:tfCurWordIsMulti()?(S.selectedSyl+1):1});
     try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = 0; } catch(e){}  // Phase 4: จำ "ไม่มั่นใจ" รายพยางค์
     if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // 🤷 = เข้า推導 ไม่นับ first-try
     navigateToInflection();  // Lin 2026-07-16: กด "ไม่แน่ใจ" → เข้าหน้าตรวจเลย ไม่มี popup
@@ -3590,33 +3525,6 @@ function showStats() {
   if (!total) {
     bodyHtml = '<div class="tf-stats-empty">今天還沒有答錯紀錄 🎉</div>';
   } else {
-    var stepCounts = countBy(entries, function(e){ return e.step; });
-    var wordCounts = countBy(entries, function(e){ return e.word; });
-
-    // ── 最常選錯的關卡 ──
-    var stepRows = stepCounts.map(function(s){
-      var label = STEP_LABELS[s.key] || s.key;
-      var pct = pctStr(s.count, total);
-      return '<div class="tf-stats-bar-row">' +
-        '<div class="tf-stats-bar-label"><span>'+label+'</span><b>'+s.count+' 次（'+pct+'%）</b></div>' +
-        '<div class="tf-stats-bar-track"><div class="tf-stats-bar-fill" style="width:'+pct+'%;"></div></div>' +
-      '</div>';
-    }).join('');
-
-    // ── 最常選錯的字 ──
-    var wordChips = wordCounts.map(function(w){
-      var pct = pctStr(w.count, total);
-      return '<span class="tf-stats-word-chip">'+w.key+'<b>×'+w.count+'（'+pct+'%）</b></span>';
-    }).join('');
-
-    // ── 今日課程重點（依出現頻率排序）──
-    var lessons = stepCounts.map(function(s){
-      var tip = LESSON_TIPS[s.key];
-      if (!tip) return '';
-      var label = STEP_LABELS[s.key] || s.key;
-      return '<div class="tf-stats-lesson"><b>'+label+'：</b>'+tip+'</div>';
-    }).join('');
-
     // ── 詳細紀錄（時間倒序）──
     var entryRows = entries.slice().reverse().map(function(e){
       var stepLabel = STEP_LABELS[e.step] || e.step;
@@ -3631,9 +3539,6 @@ function showStats() {
     }).join('');
 
     bodyHtml =
-      '<div class="tf-stats-section"><div class="tf-stats-section-title">最常選錯的關卡</div>' + stepRows + '</div>' +
-      '<div class="tf-stats-section"><div class="tf-stats-section-title">最常選錯的字</div><div class="tf-stats-words">' + wordChips + '</div></div>' +
-      (lessons ? '<div class="tf-stats-section"><div class="tf-stats-section-title">今日課程重點</div>' + lessons + '</div>' : '') +
       '<div class="tf-stats-section"><div class="tf-stats-section-title">詳細紀錄</div></div>' +
       entryRows;
   }
@@ -3673,37 +3578,11 @@ function clearTodayStats() {
 
 function buildStatsReportText(day, entries) {
   var total = entries.length;
-  var stepCounts = countBy(entries, function(e){ return e.step; });
-  var wordCounts = countBy(entries, function(e){ return e.word; });
   var lines = [];
 
   lines.push('泰語聲調練習室 － 今日統計報告');
   lines.push('日期：' + day);
   lines.push('今日答錯總數：' + total + ' 次');
-  lines.push('');
-
-  lines.push('【最常選錯的關卡】');
-  stepCounts.forEach(function(s, i){
-    var label = STEP_LABELS[s.key] || s.key;
-    lines.push((i+1) + '. ' + label + ' － ' + s.count + ' 次（' + pctStr(s.count, total) + '%）');
-  });
-  lines.push('');
-
-  lines.push('【最常選錯的字】');
-  wordCounts.forEach(function(w, i){
-    lines.push((i+1) + '. ' + w.key + ' － ' + w.count + ' 次（' + pctStr(w.count, total) + '%）');
-  });
-  lines.push('');
-
-  lines.push('【今日課程重點】');
-  var hasLesson = false;
-  stepCounts.forEach(function(s){
-    var tip = LESSON_TIPS[s.key];
-    if (!tip) return;
-    hasLesson = true;
-    lines.push('・' + (STEP_LABELS[s.key] || s.key) + '：' + tip);
-  });
-  if (!hasLesson) lines.push('（無）');
   lines.push('');
 
   lines.push('【詳細紀錄】');
@@ -4149,32 +4028,19 @@ var TF = {
   downloadSummary: function() {
     if (!session) return;
     var catZh = {ทั้งหมด:'全部',ตัวเลข:'數字',สี:'顏色',กริยา:'動詞',คำขยาย:'形容詞',ร้านอาหาร:'餐廳',การเดินทาง:'交通',โรงแรม:'住宿',งาน:'工作','ช้อปปิ้ง':'購物','อื่นๆ':'其他','นามร่างกาย':'名詞·身體','นามคน':'名詞·家庭與人','นามอาหาร':'名詞·食物','นามของใช้':'名詞·生活物品'};
-    var results = session.results;
+    var items = roundReport && roundReport.items ? roundReport.items : [];
     var lines = [
       '泰語聲調練習報告',
       '==================',
       '日期：' + new Date().toLocaleDateString('zh-TW'),
       '等級：' + ({1:'初級',2:'中級',3:'高級'}[selectedLevel]||'—'),
       '主題：' + (catZh[selectedCategory]||selectedCategory||'全部'),
-      '練習字數：' + results.length,
+      '練習字數：' + items.length,
       '', '練習記錄：', '----------'
     ];
-    results.forEach(function(r,i){
-      var tone = r.tone != null ? r.tone : computeTone(r.entry.word);
-      var tl = TONES[tone] || {};
-      var ok = r.mistakes === 0;
-      lines.push((i+1)+'. '+(ok?'✓':'✗')+' '+r.entry.word+' ('+r.entry.zh+') — 聲調：'+(tl.zh||'—')+(ok?'':' ／選錯'+r.mistakes+'次'));
+    items.forEach(function(r,i){
+      lines.push((i+1)+'. '+(r.is_correct?'✓':'✗')+' '+r.question+' ('+r.meaning+') — 作答：'+(r.user_answer||'—')+' ／正解：'+(r.correct_answer||'—')+(r.wrong_count?' ／選錯'+r.wrong_count+'次':''));
     });
-    lines.push('', '聲調分析：', '----------');
-    var toneCounts = {};
-    results.forEach(function(r){
-      var t = r.tone != null ? r.tone : computeTone(r.entry.word);
-      if (t) toneCounts[t] = (toneCounts[t]||0)+1;
-    });
-    Object.keys(toneCounts).sort().forEach(function(t){
-      lines.push('- '+(TONES[t]?TONES[t].zh:t)+'：'+toneCounts[t]+'次');
-    });
-    lines.push('', '建議多聆聽泰語發音，配合聲調規則反覆練習！');
     var blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a'); a.href=url; a.download='泰語聲調練習_'+new Date().toISOString().slice(0,10)+'.txt'; a.click();

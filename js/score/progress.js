@@ -134,21 +134,16 @@
     return total ? Math.round(correctCount(row) / total * 100) : null;
   }
   function normalizeGame(value) {
+    if (window.LearningSummary) return LearningSummary.normalizeGame(value);
     if (value === 'word_order') return 'wordorder';
     return value || 'reading'; // legacy reading_sessions rows predate the game column
   }
   function queryData(userId) {
-    var tone = sb.from('tone_sessions')
-      .select('created_at,mode,score,total,wrong_words').eq('user_id', userId)
-      .order('created_at', { ascending: true }).limit(200);
-    var sessions = sb.from('reading_sessions')
-      .select('created_at,score,games,game,wrong_items').eq('user_id', userId)
-      .order('created_at', { ascending: true }).limit(500);
-    var srs = sb.from('tone_srs_state')
-      .select('game,stage,due_date,mastered').eq('user_id', userId);
-    return Promise.all([Promise.resolve(tone), Promise.resolve(sessions), Promise.resolve(srs)]);
+    if (!window.LearningSummary) return Promise.reject(new Error('learning summary unavailable'));
+    return LearningSummary.queryData(sb, userId);
   }
   function emptySkillData() {
+    if (window.LearningSummary) return LearningSummary.emptySkillData();
     var result = {};
     SKILLS.forEach(function (skill) {
       result[skill.code] = { sessions: [], srs: [], lastAt: null };
@@ -156,6 +151,7 @@
     return result;
   }
   function organize(toneRows, sessionRows, srsRows) {
+    if (window.LearningSummary) return LearningSummary.organize(toneRows, sessionRows, srsRows);
     var result = emptySkillData();
     toneRows.forEach(function (row) { result.tone.sessions.push(row); });
     sessionRows.forEach(function (row) {

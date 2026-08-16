@@ -28,6 +28,13 @@ test('attempt score and correction evidence reset for every new word', () => {
   assert.match(loadWord, /readingAttemptScore=null;readingCorrectionAttempts=0;readingFirstCheckDone=false/);
 });
 
+test('report captures only snapshots submitted by Check', () => {
+  const check = block('function check()', 'function evaluateBonus()');
+  assert.match(check, /readingSubmittedAttempts\.push\(rgSubmittedAttemptSnapshot\(\)\)/);
+  assert.match(source, /userAnswer:readingSubmittedAttempts\.length/);
+  assert.doesNotMatch(source, /userAnswer:\(picks\|\|\[\]\)\.join/);
+});
+
 test('the displayed score uses the first-check snapshot once available', () => {
   const score = block('function rgCurSyllableScore()', 'var HIGH_RAW_START_IDX');
   assert.match(score, /readingAttemptScore!=null/);

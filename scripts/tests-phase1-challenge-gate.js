@@ -46,7 +46,7 @@ check(!/id:\s*['"]game-challenge['"]/.test(search), 'local Search index excludes
 check(!/["']id["']:\s*["']game-challenge["']/.test(searchEdge), 'Search Edge whitelist excludes Challenge');
 check(!/\[[^\]]*["']challenge["'][^\]]*\]\.includes\(game\)/.test(toneRound), 'tone-round rejects Challenge state writes');
 check(!/VALID_GAMES\s*=\s*\[[^\]]*["']challenge["']/.test(reward), 'game-reward rejects Challenge activity');
-check(/if \(game === 'challenge' \|\| pageGame\(\) === 'challenge'\) return;/.test(readingAuth), 'client score save fails closed for Challenge');
+check(/if \(game === 'challenge' \|\| pageGame\(\) === 'challenge'\) return null;/.test(readingAuth), 'client score save fails closed for Challenge');
 check(/aria-disabled="true"[^>]*aria-label="綜合挑戰 — 付費功能，尚未開放"/.test(hub), 'Games hub shows Challenge as disabled Paid-only');
 check(!/<a[^>]+href=["']games-challenge\.html["'][^>]*class="gh-main-card"/.test(hub), 'Games hub has no playable Challenge card');
 
