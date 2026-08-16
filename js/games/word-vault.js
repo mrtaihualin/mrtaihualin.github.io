@@ -64,11 +64,14 @@
   var VAULT_KEY = 'linvault';        // ตรงกับคอลัมน์ vault_key (คลังของเกมเลโก้ใช้ 'lego_vault' — ยังไม่แตะรอบนี้)
   var _sb = null;                    // supabase client (null = ยังไม่ล็อกอิน / ไม่มี client)
   var _uid = null;                   // user id ที่ล็อกอินอยู่
+  var _ownerGeneration = 0;         // invalidate async completions after account/client changes
   // ฐานข้อมูลนี้มีคอลัมน์ deleted_at (ตราการลบ) แล้วหรือยัง
   //   null = ยังไม่รู้ · true = มี · false = ยังไม่มี (ยังไม่ได้รัน 2026-08-11_word_vault_deletion_sync.sql)
   // ต้องมีตัวนี้เพราะโค้ดฝั่งเว็บถูก push ขึ้นเว็บก่อนที่ Lin จะรัน SQL บน production ได้
   // → ถ้าไม่เผื่อไว้ sync จะพังทั้งระบบระหว่างช่วงรอยต่อนั้น (แย่กว่าเดิม)
   var _tombstoneOk = null;
+  var _deleteInFlight = Object.create(null);
+  var DELETE_TIMEOUT_MS = 10000;
   var COLS_WITH_TOMBSTONE = 'word_th,zh,en,source_raw,tags,saved_at,deleted_at';
   var COLS_LEGACY        = 'word_th,zh,en,source_raw,tags,saved_at';
 
@@ -86,12 +89,25 @@
   }
 
   // ── โหลด/บันทึก ──────────────────────────────────────────────
-  function load() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-    catch(e) { return []; }
+  function _loadState() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      if (Array.isArray(parsed)) return { items: parsed, pendingDeletes: {} };
+      if (!parsed || typeof parsed !== 'object') return { items: [], pendingDeletes: {} };
+      return {
+        items: Array.isArray(parsed.items) ? parsed.items : [],
+        pendingDeletes: parsed.pendingDeletes && typeof parsed.pendingDeletes === 'object' ? parsed.pendingDeletes : {}
+      };
+    } catch(e) { return { items: [], pendingDeletes: {} }; }
   }
+  function _saveState(state) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+  function load() { return _loadState().items; }
   function save(list) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch(e) {}
+    var state = _loadState();
+    state.items = list;
+    _saveState(state);
   }
 
   // ── [02] sync ข้ามเครื่อง ─────────────────────────────────────
@@ -101,6 +117,55 @@
   function _warn(where, e) {
     try { console.warn('[word-vault] ' + where + ':', (e && e.message) || e); } catch (_) {}
   }
+
+  function _ownerSnapshot() {
+    return { client: _sb, uid: _uid, generation: _ownerGeneration };
+  }
+
+  function _ownerIsCurrent(owner) {
+    return !!(owner && owner.client === _sb && owner.uid === _uid && owner.generation === _ownerGeneration);
+  }
+
+  function _bounded(operation, label, onDone) {
+    var settled = false;
+    var timer = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      var error = new Error('NETWORK_TIMEOUT');
+      error.code = 'NETWORK_TIMEOUT';
+      _warn(label, error);
+      onDone(error, null);
+    }, DELETE_TIMEOUT_MS);
+    function finish(error, result) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      onDone(error, result);
+    }
+    try {
+      var request = operation();
+      if (!request || typeof request.then !== 'function') { finish(new Error('REQUEST_UNAVAILABLE'), null); return; }
+      request.then(function (result) { finish(result && result.error, result); }, function (error) { finish(error, null); });
+    } catch (error) { finish(error, null); }
+  }
+
+  function _pendingDelete(th) { return _loadState().pendingDeletes[th] || null; }
+  function _queueDelete(th) {
+    var state = _loadState();
+    if (!state.pendingDeletes[th]) state.pendingDeletes[th] = { deleted_at: new Date().toISOString() };
+    state.items = state.items.filter(function (word) { return word.th !== th; });
+    _saveState(state);
+    return state.pendingDeletes[th];
+  }
+  function _clearPendingDelete(th, deletedAt) {
+    var state = _loadState();
+    var pending = state.pendingDeletes[th];
+    if (pending && pending.deleted_at === deletedAt) {
+      delete state.pendingDeletes[th];
+      _saveState(state);
+    }
+  }
+  function _pendingDeleteCount() { return Object.keys(_loadState().pendingDeletes).length; }
 
   /** บอกหน้าเว็บว่าคลังคำเปลี่ยนแล้ว (vault.html ฟัง event นี้เพื่อ render ใหม่หลัง sync เสร็จ) */
   function _fireChanged() {
@@ -169,9 +234,9 @@
     return changed;
   }
 
-  function _rowFor(w) {
+  function _rowFor(w, ownerUid) {
     return {
-      user_id: _uid,
+      user_id: ownerUid || _uid,
       vault_key: VAULT_KEY,
       word_th: w.th,
       zh: w.zh || null,
@@ -186,14 +251,22 @@
   }
 
   /** เขียนคำขึ้นเซิร์ฟเวอร์ (upsert — กดซ้ำ/แข่งกันเขียนก็ไม่พัง) */
-  function _pushRows(rows, onDone) {
-    if (!_sb || !_uid || !rows.length) { if (onDone) onDone(); return; }
+  function _pushRows(rows, onDone, owner) {
+    owner = owner || _ownerSnapshot();
+    if (!_ownerIsCurrent(owner) || !rows.length) { if (onDone && _ownerIsCurrent(owner)) onDone(); return; }
     try {
-      _sb.from(TABLE).upsert(rows, { onConflict: 'user_id,vault_key,word_th' }).then(function (r) {
+      owner.client.from(TABLE).upsert(rows, { onConflict: 'user_id,vault_key,word_th' }).then(function (r) {
+        if (!_ownerIsCurrent(owner)) return;
         if (r && r.error) _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', r.error);
         if (onDone) onDone(r && r.error);
-      }, function (e) { _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e); });
-    } catch (e) { _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e); }
+      }, function (e) {
+        if (!_ownerIsCurrent(owner)) return;
+        _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e);
+      });
+    } catch (e) {
+      if (!_ownerIsCurrent(owner)) return;
+      _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e);
+    }
   }
 
   /** error นี้แปลว่า "ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at" ใช่ไหม
@@ -205,12 +278,17 @@
   }
 
   /** ลบคำแบบเก่า (ลบแถวทิ้งจริง) — ใช้เฉพาะฐานข้อมูลที่ยังไม่มีคอลัมน์ deleted_at */
-  function _hardDeleteRemote(th) {
-    try {
-      _sb.from(TABLE).delete().eq('user_id', _uid).eq('vault_key', VAULT_KEY).eq('word_th', th)
-        .then(function (r) { if (r && r.error) _warn('ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', r.error); },
-              function (e) { _warn('ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', e); });
-    } catch (e) { _warn('ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', e); }
+  function _hardDeleteRemote(th, pending, owner) {
+    if (!_ownerIsCurrent(owner)) return;
+    _bounded(function () {
+      return owner.client.from(TABLE).delete().eq('user_id', owner.uid).eq('vault_key', VAULT_KEY).eq('word_th', th);
+    }, 'ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', function (error) {
+      if (!_ownerIsCurrent(owner)) return;
+      delete _deleteInFlight[th];
+      if (error) { _warn('ลบคำบนเซิร์ฟเวอร์ไม่สำเร็จ', error); return; }
+      _clearPendingDelete(th, pending.deleted_at);
+      _fireChanged();
+    });
   }
 
   /** ผู้ใช้กดลบคำเอง → **ปั๊มตราว่าถูกลบ** ไม่ลบแถวทิ้ง
@@ -218,33 +296,40 @@
    *  → ต้องเก็บของไว้เพื่อความปลอดภัย = คำที่ลบแล้วไม่หายจากเครื่องอื่น (ปัญหาที่รอบนี้แก้)
    *  เรียกเฉพาะตอนผู้ใช้กดลบเองเท่านั้น ระบบไม่เคยลบเอง (ห้ามลบอัตโนมัติเพราะเกินเพดาน) */
   function _deleteRemote(th) {
-    if (!_sb || !_uid) return;
-    if (_tombstoneOk === false) { _hardDeleteRemote(th); return; }
-    var row = { user_id: _uid, vault_key: VAULT_KEY, word_th: th, deleted_at: new Date().toISOString() };
-    try {
-      // upsert = ปั๊มตราได้ทั้งกรณีมีแถวอยู่แล้ว และกรณีคำนั้นยังไม่เคยขึ้นเซิร์ฟเวอร์
-      // (กรณีหลังสำคัญ: กันเครื่องอื่นที่มีคำนั้นค้างอยู่เอากลับขึ้นมาใหม่)
-      // ส่งแค่ 4 ช่อง → คำแปล/ป้ายกำกับเดิมบนเซิร์ฟเวอร์ไม่ถูกล้างทิ้ง
-      _sb.from(TABLE).upsert([row], { onConflict: 'user_id,vault_key,word_th' }).then(function (r) {
-        if (r && r.error) {
-          if (_isMissingTombstoneColumn(r.error)) {
-            // ยังไม่ได้รันไฟล์ SQL → ถอยไปใช้วิธีเดิม (ลบข้ามเครื่องยังไม่ทำงาน แต่ไม่พัง)
-            _tombstoneOk = false;
-            _warn('ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at — ถอยไปลบแบบเดิม (ยังไม่ได้รัน 2026-08-11_word_vault_deletion_sync.sql)', r.error);
-            _hardDeleteRemote(th);
-          } else {
-            _warn('ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', r.error);
-          }
-          return;
-        }
-        _tombstoneOk = true;
-      }, function (e) { _warn('ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', e); });
-    } catch (e) { _warn('ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', e); }
+    if (!_sb || !_uid || _deleteInFlight[th]) return;
+    var owner = _ownerSnapshot();
+    var pending = _pendingDelete(th);
+    if (!pending) return;
+    _deleteInFlight[th] = true;
+    if (_tombstoneOk === false) { _hardDeleteRemote(th, pending, owner); return; }
+    var row = { user_id: owner.uid, vault_key: VAULT_KEY, word_th: th, deleted_at: pending.deleted_at };
+    _bounded(function () {
+      return owner.client.from(TABLE).upsert([row], { onConflict: 'user_id,vault_key,word_th' });
+    }, 'ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', function (error) {
+      if (!_ownerIsCurrent(owner)) return;
+      if (error && _isMissingTombstoneColumn(error)) {
+        _tombstoneOk = false;
+        _warn('ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at — ถอยไปลบแบบเดิม (ยังไม่ได้รัน 2026-08-11_word_vault_deletion_sync.sql)', error);
+        _hardDeleteRemote(th, pending, owner);
+        return;
+      }
+      delete _deleteInFlight[th];
+      if (error) { _warn('ปั๊มตราการลบบนเซิร์ฟเวอร์ไม่สำเร็จ', error); return; }
+      _tombstoneOk = true;
+      _clearPendingDelete(th, pending.deleted_at);
+      _fireChanged();
+    });
+  }
+
+  function _flushPendingDeletes(owner) {
+    owner = owner || _ownerSnapshot();
+    if (!_ownerIsCurrent(owner)) return;
+    Object.keys(_loadState().pendingDeletes).forEach(_deleteRemote);
   }
 
   /** ปั๊มว่าคำเหล่านี้ขึ้นเซิร์ฟเวอร์แล้ว (อ่าน localStorage ใหม่ตอนเขียน กันทับของที่เพิ่งเปลี่ยนระหว่างรอ network) */
-  function _markSynced(thList) {
-    if (!thList.length) return;
+  function _markSynced(thList, owner) {
+    if (!thList.length || !_ownerIsCurrent(owner)) return;
     var mark = {};
     thList.forEach(function (t) { mark[t] = true; });
     var list = load();
@@ -259,6 +344,7 @@
    */
   function sync(client, userId) {
     var nextUid = userId || null;
+    var nextClient = (client && client.from) ? client : null;
     var previousUid = _uid;
     try {
       if (global.PHASE1_ACCOUNT_BOUNDARY && global.PHASE1_ACCOUNT_BOUNDARY.bind) {
@@ -268,46 +354,64 @@
         localStorage.removeItem(STORAGE_KEY);
       }
     } catch (e) {}
-    _sb = (client && client.from) ? client : null;
+    if (_sb !== nextClient || _uid !== nextUid) {
+      _ownerGeneration++;
+      _deleteInFlight = Object.create(null);
+    }
+    _sb = nextClient;
     _uid = nextUid;
     if (!_sb || !_uid) { _sb = null; _uid = null; _fireChanged(); return; }
-
-    _readRemote(function (remote) { _mergeWith(remote); });
+    var owner = _ownerSnapshot();
+    _readRemote(function (remote) { _mergeWith(remote, owner); }, owner);
   }
 
   /** อ่านคลังคำจากเซิร์ฟเวอร์ — ลองแบบมีตราการลบก่อน ถ้าฐานข้อมูลยังไม่มีคอลัมน์ค่อยถอยไปแบบเดิม */
-  function _readRemote(onRows) {
+  function _readRemote(onRows, owner) {
+    owner = owner || _ownerSnapshot();
+    if (!_ownerIsCurrent(owner)) return;
     var cols = (_tombstoneOk === false) ? COLS_LEGACY : COLS_WITH_TOMBSTONE;
     try {
-      _sb.from(TABLE).select(cols).eq('user_id', _uid).eq('vault_key', VAULT_KEY)
+      owner.client.from(TABLE).select(cols).eq('user_id', owner.uid).eq('vault_key', VAULT_KEY)
         .then(function (r) {
+          if (!_ownerIsCurrent(owner)) return;
           if (r && r.error) {
             if (cols === COLS_WITH_TOMBSTONE && _isMissingTombstoneColumn(r.error)) {
               // ยังไม่ได้รันไฟล์ SQL บนฐานข้อมูลนี้ → ถอยไปอ่านแบบเดิม (sync ยังทำงาน ไม่พัง)
               _tombstoneOk = false;
               _warn('ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at — sync ทำงานแบบเดิมไปก่อน (ยังไม่มีการลบข้ามเครื่อง)', r.error);
-              _readRemote(onRows);
+              _readRemote(onRows, owner);
               return;
             }
             // อ่านไม่สำเร็จจริง (เน็ตหลุด/สิทธิ์ไม่พอ/ตารางยังไม่มี) → ไม่แตะอะไรเลย ปลอดภัยที่สุด
             _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', r.error);
+            _flushPendingDeletes(owner);
             return;
           }
-          if (!r) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', 'ไม่มีผลลัพธ์'); return; }
+          if (!r) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', 'ไม่มีผลลัพธ์'); _flushPendingDeletes(owner); return; }
           if (cols === COLS_WITH_TOMBSTONE) _tombstoneOk = true;
           onRows(r.data || []);
-        }, function (e) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); });
-    } catch (e) { _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); }
+        }, function (e) {
+          if (!_ownerIsCurrent(owner)) return;
+          _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); _flushPendingDeletes(owner);
+        });
+    } catch (e) {
+      if (!_ownerIsCurrent(owner)) return;
+      _warn('อ่านคลังคำจากเซิร์ฟเวอร์ไม่สำเร็จ', e); _flushPendingDeletes(owner);
+    }
   }
 
   /** รวมของในเครื่องกับของบนเซิร์ฟเวอร์ตามกฎ 5 กรณี (ดูหัวไฟล์) */
-  function _mergeWith(remote) {
-    var local = load();
+  function _mergeWith(remote, owner) {
+    if (!_ownerIsCurrent(owner)) return;
+    var state = _loadState();
+    var local = state.items;
+    var pendingDeletes = state.pendingDeletes;
 
     // แยกของบนเซิร์ฟเวอร์เป็น 2 กอง: คำที่ยังอยู่ vs ตราการลบ
     var activeRemote = {}, deletedRemote = {};
     remote.forEach(function (x) {
       if (!x || !x.word_th) return;
+      if (pendingDeletes[x.word_th]) return;
       if (x.deleted_at) deletedRemote[x.word_th] = x; else activeRemote[x.word_th] = x;
     });
     var inLocal = {};
@@ -350,7 +454,7 @@
     // ฉ. ของที่มีแต่บนเซิร์ฟเวอร์ (และยังใช้งานอยู่) ดึงลงมาให้ครบ
     //    ห้ามตัดทิ้งแม้รวมกันเกินเพดาน · ตราการลบไม่ต้องดึงลงมาเก็บ
     remote.forEach(function (x) {
-      if (!x || !x.word_th || x.deleted_at || inLocal[x.word_th]) return;
+      if (!x || !x.word_th || x.deleted_at || inLocal[x.word_th] || pendingDeletes[x.word_th]) return;
       var ts = Date.now();
       if (x.saved_at) { var p = Date.parse(x.saved_at); if (!isNaN(p)) ts = p; }
       var sourceMeta = _decodeSourceRaw(x.source_raw, ts);
@@ -371,8 +475,11 @@
 
     if (toPush.length) {
       var pushed = toPush.map(function (w) { return w.th; });
-      _pushRows(toPush.map(_rowFor), function (err) { if (!err) _markSynced(pushed); });
+      _pushRows(toPush.map(function (w) { return _rowFor(w, owner.uid); }), function (err) {
+        if (!err) _markSynced(pushed, owner);
+      }, owner);
     }
+    _flushPendingDeletes(owner);
   }
 
   // ── [03] API หลัก ─────────────────────────────────────────────
@@ -384,6 +491,7 @@
    */
   function addWord(th, meta) {
     if (!_accountReady()) { _requireLogin(); return false; }
+    if (_pendingDelete(th)) { _showToast('正在同步刪除，請稍後再儲存'); _flushPendingDeletes(); return false; }
     var list = load();
     var existing = null;
     list.some(function(w){ if (w.th === th) { existing = w; return true; } return false; });
@@ -392,7 +500,10 @@
       // to provenance and synced onto the existing row instead of duplicating it.
       if (_mergeMetaIntoWord(existing, meta)) {
         save(list);
-        if (_sb && _uid) _pushRows([_rowFor(existing)], null);
+        if (_sb && _uid) {
+          var existingOwner = _ownerSnapshot();
+          _pushRows([_rowFor(existing, existingOwner.uid)], null, existingOwner);
+        }
         _fireChanged();
       }
       return false;
@@ -413,7 +524,10 @@
     // ล็อกอินอยู่ → ส่งขึ้นเซิร์ฟเวอร์ทันที (ไม่รอผล ไม่บล็อก UI) · ส่งไม่สำเร็จก็ยังอยู่ในเครื่อง
     // และจะถูกส่งขึ้นให้เองในการ sync รอบหน้า เพราะยังไม่มีธง synced (ตามกฎกรณี ข.)
     if (_sb && _uid) {
-      _pushRows([_rowFor(entry)], function (err) { if (!err) _markSynced([th]); });
+      var entryOwner = _ownerSnapshot();
+      _pushRows([_rowFor(entry, entryOwner.uid)], function (err) {
+        if (!err) _markSynced([th], entryOwner);
+      }, entryOwner);
     }
     return true;
   }
@@ -421,8 +535,9 @@
   /** ลบคำออกจากคลัง — เป็นการลบที่ "ผู้ใช้สั่งเอง" เท่านั้น (ระบบไม่เคยลบเองอัตโนมัติ) */
   function removeWord(th) {
     if (!_accountReady()) { _requireLogin(); return false; }
-    save(load().filter(function(w){ return w.th !== th; }));
-    _deleteRemote(th);   // ล็อกอินอยู่ → ลบบนเซิร์ฟเวอร์ด้วย ไม่ให้กลับมาตอน sync รอบหน้า
+    _queueDelete(th);
+    _fireChanged();
+    _flushPendingDeletes();
     return true;
   }
 
@@ -462,7 +577,10 @@
     });
     save(list);
     // ป้ายกำกับต้องตามไปทุกเครื่องด้วย (upsert ทับแถวเดิม ไม่สร้างซ้ำ)
-    if (changed && _sb && _uid) _pushRows([_rowFor(changed)], null);
+    if (changed && _sb && _uid) {
+      var tagOwner = _ownerSnapshot();
+      _pushRows([_rowFor(changed, tagOwner.uid)], null, tagOwner);
+    }
     return !!changed;
   }
 
@@ -499,7 +617,7 @@
           _updateBtnState(btn, false);
           _notifyBadges();
           if (opts.onRemove) opts.onRemove(th);
-          _showToast('已移除「' + th + '」');  // popup ตอนเอาออก เหมือนตอนบันทึก (Lin 2026-07-02)
+          _showToast('已在本機移除「' + th + '」，正在同步刪除');
         }
       } else {
         if (isFull()) { _showFullToast(); return; }
@@ -613,7 +731,11 @@
     createSaveBtn: createSaveBtn,
     injectStyles: injectStyles,
     // sync ข้ามเครื่อง — เรียกจาก setUser() ใน js/games/reading-auth.js (จุดเดียวกับ GAME_ACCOUNT.sync)
-    sync: sync
+    sync: sync,
+    retryPendingDeletes: _flushPendingDeletes,
+    pendingDeleteCount: _pendingDeleteCount
   };
+
+  if (global.addEventListener) global.addEventListener('online', _flushPendingDeletes);
 
 })(window);

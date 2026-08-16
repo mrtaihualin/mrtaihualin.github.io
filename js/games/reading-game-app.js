@@ -570,28 +570,41 @@ function rgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=rgSrsRan
 var __rgSrsSyncPromise=null;
 window.__rgSrsSyncedOnce=false;
 var __rgLearningOwnerEpoch=0;
+var __rgSrsRequestSequence=0;
+var __rgLatestSrsRequest=0;
+function rgSrsOwnerCurrent(ownerId,ownerEpoch,requestId){
+  var currentId=(window.READING_AUTH&&READING_AUTH.user&&String(READING_AUTH.user.id))||'';
+  var currentEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
+  if(currentId!==ownerId||currentEpoch!==ownerEpoch)return false;
+  if(requestId!=null&&requestId!==__rgLatestSrsRequest)return false;
+  try{return !!(window.PHASE1_ACCOUNT_BOUNDARY&&localStorage.getItem(PHASE1_ACCOUNT_BOUNDARY.ownerKey)===ownerId);}catch(e){return false;}
+}
 function rgResetAccountStateAtBoundary(){
   var epoch=(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
   if(!epoch||epoch===__rgLearningOwnerEpoch)return false;
   __rgLearningOwnerEpoch=epoch;srsRecords={};totalStars=0;totalBadges=0;
+  __rgLatestSrsRequest=++__rgSrsRequestSequence;
   __rgSrsSyncPromise=null;window.__rgSrsSyncedOnce=false;
   return true;
 }
 function rgSyncSrsFromServer(force){
-  try{ if(!force && !rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
+  try{ if(!rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
   if(__rgSrsSyncPromise) return __rgSrsSyncPromise;
   var sb=window.getSupabaseClient?window.getSupabaseClient():null;
   if(!sb||!sb.from) return Promise.resolve(false);
   // dedupe fetch 2026-07-20: rgWireSrsSync รีเซ็ต __rgSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
   //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-  var _uid=(window.READING_AUTH && READING_AUTH.user && READING_AUTH.user.id) || 'anon';
+  var _uid=String(READING_AUTH.user.id);
+  var _ownerEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
+  var _requestId=++__rgSrsRequestSequence;__rgLatestSrsRequest=_requestId;
   var _fetchSrs = window.getCachedFetch
     ? window.getCachedFetch('tone_srs_state:reading:'+_uid, function(){
-        return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game','reading');
+        return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','reading');
       })
-    : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game','reading');
+    : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','reading');
   __rgSrsSyncPromise = _fetchSrs
     .then(function(res){
+      if(!rgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false;
       if(res.error||!res.data){ window.__rgSrsSyncedOnce=true; return false; }
       var changed=false;
       res.data.forEach(function(row){
@@ -607,7 +620,7 @@ function rgSyncSrsFromServer(force){
       window.__rgSrsSyncedOnce=true;
       return changed;
     })
-    .catch(function(){ window.__rgSrsSyncedOnce=true; return false; });
+    .catch(function(){ if(!rgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false; window.__rgSrsSyncedOnce=true; return false; });
   return __rgSrsSyncPromise;
 }
 // ทริกเกอร์: ล็อกอินครั้งแรกของหน้า → ซิงก์แล้ว rebuild รอบให้ใช้ SRS ที่ตามมาข้ามเครื่อง (ครอบเคสรีเฟรช/เครื่องใหม่) · ล็อกอินซ้ำ → ซิงก์เฉยๆ
@@ -618,7 +631,8 @@ function rgWireSrsSync(){
       SITE_AUTH.onChange(function(u){
         rgResetAccountStateAtBoundary();
         if(!u) return;
-        if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
+        var ownerId=String(u.id),ownerEpoch=Number(SITE_AUTH.learningOwnerEpoch)||0;
+        if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true).then(function(){ if(!rgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
         else { __rgSrsSyncPromise=null; rgSyncSrsFromServer(true); }
       });
     }
@@ -628,7 +642,7 @@ function rgWireSrsSync(){
     _rgT++;
     try{
       if(window.__rgSrsSyncedOnce){ clearInterval(_rgIv); return; }
-      if(rgLoggedIn()) rgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} });
+      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.user.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; rgSyncSrsFromServer(true).then(function(){ if(!rgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
     }catch(e){}
     if(_rgT>=24) clearInterval(_rgIv);
   }, 500);

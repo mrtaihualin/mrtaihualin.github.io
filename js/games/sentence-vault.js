@@ -13,17 +13,86 @@
   var COLS = 'word_th,zh,en,source_raw,saved_at,deleted_at';
   var _sb = null;
   var _uid = null;
+  var _ownerGeneration = 0;
+  var _deleteInFlight = Object.create(null);
+  var DELETE_TIMEOUT_MS = 10000;
 
   function ready() { return !!(_sb && _uid); }
-  function load() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-    catch (e) { return []; }
+  function loadState() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      if (Array.isArray(parsed)) return { items: parsed, pendingDeletes: {} };
+      if (!parsed || typeof parsed !== 'object') return { items: [], pendingDeletes: {} };
+      return {
+        items: Array.isArray(parsed.items) ? parsed.items : [],
+        pendingDeletes: parsed.pendingDeletes && typeof parsed.pendingDeletes === 'object' ? parsed.pendingDeletes : {}
+      };
+    } catch (e) { return { items: [], pendingDeletes: {} }; }
   }
+  function saveState(state) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function load() { return loadState().items; }
   function save(rows) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); } catch (e) {}
+    var state = loadState(); state.items = rows; saveState(state);
   }
   function warn(where, error) {
     try { console.warn('[sentence-vault] ' + where + ':', error && error.message || error); } catch (e) {}
+  }
+  function ownerSnapshot() {
+    return { client: _sb, uid: _uid, generation: _ownerGeneration };
+  }
+  function ownerIsCurrent(owner) {
+    return !!(owner && owner.client === _sb && owner.uid === _uid && owner.generation === _ownerGeneration);
+  }
+  function bounded(operation, label, done) {
+    var settled = false;
+    var timer = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      var error = new Error('NETWORK_TIMEOUT'); error.code = 'NETWORK_TIMEOUT';
+      warn(label, error); done(error);
+    }, DELETE_TIMEOUT_MS);
+    function finish(error) {
+      if (settled) return;
+      settled = true; clearTimeout(timer); done(error || null);
+    }
+    try {
+      var request = operation();
+      if (!request || typeof request.then !== 'function') { finish(new Error('REQUEST_UNAVAILABLE')); return; }
+      request.then(function (res) { finish(res && res.error); }, finish);
+    } catch (error) { finish(error); }
+  }
+  function pendingDelete(th) { return loadState().pendingDeletes[th] || null; }
+  function queueDelete(th) {
+    var state = loadState();
+    if (!state.pendingDeletes[th]) state.pendingDeletes[th] = { deleted_at: new Date().toISOString() };
+    state.items = state.items.filter(function (row) { return row.th !== th; });
+    saveState(state); return state.pendingDeletes[th];
+  }
+  function clearPendingDelete(th, deletedAt) {
+    var state = loadState(); var pending = state.pendingDeletes[th];
+    if (pending && pending.deleted_at === deletedAt) { delete state.pendingDeletes[th]; saveState(state); }
+  }
+  function pendingDeleteCount() { return Object.keys(loadState().pendingDeletes).length; }
+  function flushPendingDeletes(owner) {
+    owner = owner || ownerSnapshot();
+    if (!ownerIsCurrent(owner)) return;
+    Object.keys(loadState().pendingDeletes).forEach(function (th) {
+      if (_deleteInFlight[th]) return;
+      var pending = pendingDelete(th); if (!pending) return;
+      _deleteInFlight[th] = true;
+      bounded(function () {
+        return owner.client.from(TABLE).upsert([{
+          user_id: owner.uid, vault_key: VAULT_KEY, word_th: th, deleted_at: pending.deleted_at
+        }], { onConflict: 'user_id,vault_key,word_th' });
+      }, 'delete failed', function (error) {
+        if (!ownerIsCurrent(owner)) return;
+        delete _deleteInFlight[th];
+        if (error) { warn('delete failed', error); return; }
+        clearPendingDelete(th, pending.deleted_at); changed();
+      });
+    });
   }
   function changed() {
     try { global.dispatchEvent(new CustomEvent('sentencevault:changed')); } catch (e) {}
@@ -73,28 +142,34 @@
     }
     return changedMeta;
   }
-  function rowFor(entry) {
+  function rowFor(entry, ownerUid) {
     return {
-      user_id: _uid, vault_key: VAULT_KEY, word_th: entry.th,
+      user_id: ownerUid || _uid, vault_key: VAULT_KEY, word_th: entry.th,
       zh: entry.zh || null, en: entry.en || null,
       source_raw: sourceRaw(entry), tags: [], deleted_at: null
     };
   }
-  function push(entry) {
-    if (!ready()) return;
-    _sb.from(TABLE).upsert([rowFor(entry)], { onConflict: 'user_id,vault_key,word_th' })
+  function push(entry, owner) {
+    owner = owner || ownerSnapshot();
+    if (!ownerIsCurrent(owner)) return;
+    owner.client.from(TABLE).upsert([rowFor(entry, owner.uid)], { onConflict: 'user_id,vault_key,word_th' })
       .then(function (res) {
+        if (!ownerIsCurrent(owner)) return;
         if (res && res.error) { warn('save failed', res.error); return; }
         var rows = load();
         rows.forEach(function (row) { if (row.th === entry.th) row.synced = true; });
         save(rows);
-      }, function (error) { warn('save failed', error); });
+      }, function (error) { if (ownerIsCurrent(owner)) warn('save failed', error); });
   }
-  function mergeRemote(remote) {
-    var local = load();
+  function mergeRemote(remote, owner) {
+    if (!ownerIsCurrent(owner)) return;
+    var state = loadState();
+    var local = state.items;
+    var pendingDeletes = state.pendingDeletes;
     var active = {}, deleted = {};
     (remote || []).forEach(function (row) {
       if (!row || !row.word_th) return;
+      if (pendingDeletes[row.word_th]) return;
       if (row.deleted_at) deleted[row.word_th] = row; else active[row.word_th] = row;
     });
     var seen = {}, merged = [], upload = [];
@@ -117,7 +192,7 @@
       }
     });
     (remote || []).forEach(function (row) {
-      if (!row || !row.word_th || row.deleted_at || seen[row.word_th]) return;
+      if (!row || !row.word_th || row.deleted_at || seen[row.word_th] || pendingDeletes[row.word_th]) return;
       var meta = decode(row.source_raw, row.saved_at);
       merged.push({
         th: row.word_th, zh: row.zh || '', en: row.en || '', readingTH: meta.readingTH,
@@ -127,30 +202,42 @@
     });
     save(merged);
     changed();
-    upload.forEach(push);
+    upload.forEach(function (entry) { push(entry, owner); });
+    flushPendingDeletes(owner);
   }
   function sync(client, userId) {
     var nextUid = userId || null;
+    var nextClient = client && client.from ? client : null;
     var previousUid = _uid;
     try {
       if (global.PHASE1_ACCOUNT_BOUNDARY && PHASE1_ACCOUNT_BOUNDARY.bind) PHASE1_ACCOUNT_BOUNDARY.bind(nextUid ? { id: nextUid } : null);
       else if (previousUid !== nextUid) localStorage.removeItem(STORAGE_KEY);
     } catch (e) {}
-    _sb = client && client.from ? client : null;
+    if (_sb !== nextClient || _uid !== nextUid) {
+      _ownerGeneration++;
+      _deleteInFlight = Object.create(null);
+    }
+    _sb = nextClient;
     _uid = nextUid;
     if (!ready()) { _sb = null; _uid = null; changed(); return; }
-    _sb.from(TABLE).select(COLS).eq('user_id', _uid).eq('vault_key', VAULT_KEY)
+    var owner = ownerSnapshot();
+    owner.client.from(TABLE).select(COLS).eq('user_id', owner.uid).eq('vault_key', VAULT_KEY)
       .then(function (res) {
-        if (res && res.error) { warn('read failed', res.error); return; }
-        mergeRemote(res && res.data || []);
-      }, function (error) { warn('read failed', error); });
+        if (!ownerIsCurrent(owner)) return;
+        if (res && res.error) { warn('read failed', res.error); flushPendingDeletes(owner); return; }
+        mergeRemote(res && res.data || [], owner);
+      }, function (error) {
+        if (!ownerIsCurrent(owner)) return;
+        warn('read failed', error); flushPendingDeletes(owner);
+      });
   }
   function addSentence(th, meta) {
     if (!ready()) { requireLogin(); return false; }
+    if (pendingDelete(th)) { toast('正在同步刪除，請稍後再儲存'); flushPendingDeletes(); return false; }
     var rows = load(), existing = null;
     rows.some(function (row) { if (row.th === th) { existing = row; return true; } return false; });
     if (existing) {
-      if (mergeMeta(existing, meta)) { save(rows); push(existing); changed(); }
+      if (mergeMeta(existing, meta)) { save(rows); push(existing, ownerSnapshot()); changed(); }
       return false;
     }
     if (rows.length >= MAX_SENTENCES) { fullToast(); return false; }
@@ -161,17 +248,11 @@
       provenance: meta && meta.source ? [{ source: meta.source, saved_at: now }] : [],
       saved_at: now
     };
-    rows.push(entry); save(rows); push(entry); changed(); return true;
+    rows.push(entry); save(rows); push(entry, ownerSnapshot()); changed(); return true;
   }
   function removeSentence(th) {
     if (!ready()) { requireLogin(); return false; }
-    save(load().filter(function (row) { return row.th !== th; }));
-    changed();
-    _sb.from(TABLE).upsert([{
-      user_id: _uid, vault_key: VAULT_KEY, word_th: th, deleted_at: new Date().toISOString()
-    }], { onConflict: 'user_id,vault_key,word_th' }).then(function (res) {
-      if (res && res.error) warn('delete failed', res.error);
-    }, function (error) { warn('delete failed', error); });
+    queueDelete(th); changed(); flushPendingDeletes();
     return true;
   }
   function has(th) { return ready() && load().some(function (row) { return row.th === th; }); }
@@ -202,7 +283,7 @@
           addSentence(th, meta); refresh(); toast('已更新句子的儲存來源');
           if (options.onSave) options.onSave(th);
         } else {
-          removeSentence(th); refresh(); toast('已從「我的句子」移除');
+          removeSentence(th); refresh(); toast('已在本機移除，正在同步刪除');
           if (options.onRemove) options.onRemove(th);
         }
       } else if (addSentence(th, meta)) {
@@ -230,6 +311,8 @@
     addSentence: addSentence, removeSentence: removeSentence,
     getAll: getAll, has: has, isFull: isFull,
     count: function () { return ready() ? load().length : 0; },
-    MAX_SENTENCES: MAX_SENTENCES, createSaveBtn: createSaveBtn, sync: sync
+    MAX_SENTENCES: MAX_SENTENCES, createSaveBtn: createSaveBtn, sync: sync,
+    retryPendingDeletes: flushPendingDeletes, pendingDeleteCount: pendingDeleteCount
   };
+  if (global.addEventListener) global.addEventListener('online', flushPendingDeletes);
 })(window);

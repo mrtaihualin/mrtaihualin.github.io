@@ -416,13 +416,28 @@
   var ADAPTIVE_HISTORY_LIMIT = 50;
   var adaptiveWrongCounts = {};   // { th: จำนวนครั้งที่พลาด }
   var adaptiveLoaded = false;
+  var adaptiveRequestSequence = 0;
+  var latestAdaptiveRequest = 0;
 
   // 2026-07-13 Lin: เพิ่ม fallback กันคอลัมน์ game/wrong_items ยังไม่มีใน Supabase (รอรัน SQL migration)
   // เดิม: ถ้า SELECT error (เช่น column game does not exist, HTTP 400) โค้ดเก่ายังตั้ง adaptiveLoaded = true
   // ทั้งที่ไม่ได้ข้อมูลจริงเลย (บั๊ก) — ตอนนี้แยก apply()/disable() ให้ error จริงไม่ทำให้เข้าใจผิดว่าพร้อมใช้
   // จงใจไม่ fallback ไปคิวรีแบบไม่กรอง game (จะผสมคำผิดข้ามเกม ความหมายผิด) — ปิดฟีเจอร์ทบทวนไปก่อนจนกว่าจะมีคอลัมน์ครบ
   function loadAdaptiveHistory() {
+    var requestId = ++adaptiveRequestSequence;
+    latestAdaptiveRequest = requestId;
     if (!API.user) { adaptiveLoaded = false; adaptiveWrongCounts = {}; return; }
+    var ownerId = String(API.user.id);
+    var ownerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+    function ownerStillCurrent() {
+      var currentId = API.user && String(API.user.id) || '';
+      var currentEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+      if (requestId !== latestAdaptiveRequest || currentId !== ownerId || currentEpoch !== ownerEpoch) return false;
+      try {
+        return !!(window.PHASE1_ACCOUNT_BOUNDARY &&
+          localStorage.getItem(PHASE1_ACCOUNT_BOUNDARY.ownerKey) === ownerId);
+      } catch (e) { return false; }
+    }
     function apply(res) {
       adaptiveWrongCounts = {};
       if (res && res.data) {
@@ -444,14 +459,18 @@
     }
     sb.from('reading_sessions')
       .select('wrong_items')
-      .eq('user_id', API.user.id)
+      .eq('user_id', ownerId)
       .eq('game', pageGame())
       .order('created_at', { ascending: false })
       .limit(ADAPTIVE_HISTORY_LIMIT)
       .then(function (res) {
+        if (!ownerStillCurrent()) return;
         if (res && !res.error) { apply(res); }
         else { disable(res && res.error && res.error.message || 'unknown error'); }
-      }, function (e) { disable(e && e.message || 'เครือข่ายผิดพลาด'); });
+      }, function (e) {
+        if (!ownerStillCurrent()) return;
+        disable(e && e.message || 'เครือข่ายผิดพลาด');
+      });
   }
   function rgShuffle(a) {
     a = a.slice();
@@ -510,7 +529,7 @@
     return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
   }
 
-  // proof = {difficulty, items, roundBonus, srsBonus}; wrongItems เป็น private learning history เท่านั้น
+  // proof = {difficulty, items, roundBonus, srsBonus}; Edge derives private mirror items from validated evidence.
   function saveScore(score, games, game, wrongItems, proof) {
     if (!API.user) return; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
     // Phase 1 fail-closed: Challenge is Paid-only and has no Leaderboard. Paid runtime is not launched.
@@ -541,17 +560,24 @@
         items: proof.items,
         roundBonus: Number(proof.roundBonus) || 0,
         srsBonus: Number(proof.srsBonus) || 0
-      },
-      wrong_items: Array.isArray(wrongItems) ? wrongItems.slice(0, 100) : []
+      }
     };
     function onFail(msg) {
       console.warn('[board] save failed:', msg);
       saveToast('⚠️ 分數儲存失敗：' + msg, false);
       try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
     }
+    function requestScoreSubmit() {
+      if (!window.NetworkGuard || !NetworkGuard.request) {
+        return Promise.reject(new Error('網路保護尚未就緒'));
+      }
+      return NetworkGuard.request(function () {
+        return sb.functions.invoke('score-submit', { body: payload });
+      }, 'score-submit', {}, 12000, null);
+    }
     function submit(attempt) {
       try {
-        sb.functions.invoke('score-submit', { body: payload }).then(function (res) {
+        requestScoreSubmit().then(function (res) {
           if (!res.error && res.data && res.data.ok) {
             saveToast('✅ 分數已驗證並儲存 +' + res.data.score + ' 分', true);
             return;

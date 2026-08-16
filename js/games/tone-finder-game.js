@@ -568,6 +568,26 @@ function tfSrsPickAdvanced(a, b) {
 }
 var __tfSrsSyncPromise = null;
 window.__tfSrsSyncedOnce = false;
+var __tfLearningOwnerEpoch = 0;
+var __tfSrsRequestSequence = 0;
+var __tfLatestSrsRequest = 0;
+function tfSrsOwnerCurrent(ownerId, ownerEpoch, requestId) {
+  var currentId = (window.READING_AUTH && READING_AUTH.user && String(READING_AUTH.user.id)) || '';
+  var currentEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+  if (currentId !== ownerId || currentEpoch !== ownerEpoch) return false;
+  if (requestId != null && requestId !== __tfLatestSrsRequest) return false;
+  try { return !!(window.PHASE1_ACCOUNT_BOUNDARY && localStorage.getItem(PHASE1_ACCOUNT_BOUNDARY.ownerKey) === ownerId); }
+  catch (e) { return false; }
+}
+function tfResetAccountStateAtBoundary() {
+  var epoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+  if (epoch === __tfLearningOwnerEpoch) return false;
+  __tfLearningOwnerEpoch = epoch;
+  __tfLatestSrsRequest = ++__tfSrsRequestSequence;
+  __tfSrsSyncPromise = null;
+  window.__tfSrsSyncedOnce = false;
+  return true;
+}
 function tfSyncSrsFromServer() {
   if (__tfSrsSyncPromise) return __tfSrsSyncPromise;
   __tfSrsSyncPromise = (function () {
@@ -578,14 +598,18 @@ function tfSyncSrsFromServer() {
       if (!sb || !sb.from) return Promise.resolve(false);
       // dedupe fetch 2026-07-20: tfWireSrsSync รีเซ็ต __tfSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
       //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-      var _uid = (window.READING_AUTH && READING_AUTH.user && READING_AUTH.user.id) || 'anon';
+      var _uid = String(READING_AUTH.user.id);
+      var _ownerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+      var _requestId = ++__tfSrsRequestSequence;
+      __tfLatestSrsRequest = _requestId;
       var _fetchSrs = window.getCachedFetch
         ? window.getCachedFetch('tone_srs_state:tone:' + _uid, function () {
-            return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game', 'tone');
+            return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id', _uid).eq('game', 'tone');
           })
-        : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game', 'tone');
+        : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id', _uid).eq('game', 'tone');
       return _fetchSrs
         .then(function (res) {
+          if (!tfSrsOwnerCurrent(_uid, _ownerEpoch, _requestId)) return false;
           if (res.error || !res.data) return false;
           var local = tfLoadSrs(), changed = false;
           res.data.forEach(function (row) {
@@ -603,7 +627,7 @@ function tfSyncSrsFromServer() {
           window.__tfSrsSyncedOnce = true;
           return changed;
         })
-        .catch(function () { window.__tfSrsSyncedOnce = true; return false; });
+        .catch(function () { if (!tfSrsOwnerCurrent(_uid, _ownerEpoch, _requestId)) return false; window.__tfSrsSyncedOnce = true; return false; });
     } catch (e) { window.__tfSrsSyncedOnce = true; return Promise.resolve(false); }
   })();
   return __tfSrsSyncPromise;
@@ -613,7 +637,10 @@ function tfSyncSrsFromServer() {
 function tfWireSrsSync() {
   try {
     if (window.SITE_AUTH && SITE_AUTH.onChange) {
-      SITE_AUTH.onChange(function (u) { if (u) { __tfSrsSyncPromise = null; window.__tfSrsSyncedOnce = false; tfSyncSrsFromServer(); } });
+      SITE_AUTH.onChange(function (u) {
+        tfResetAccountStateAtBoundary();
+        if (u) { __tfSrsSyncPromise = null; window.__tfSrsSyncedOnce = false; tfSyncSrsFromServer(); }
+      });
     }
   } catch (e) {}
   // fallback แบบ poll — กันกรณี onChange ไม่ยิงตอนโหลด หรือ READING_AUTH พร้อมช้า · ลองทุก 0.5วิ จนซิงก์สำเร็จ สูงสุด ~12วิ

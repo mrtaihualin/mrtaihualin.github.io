@@ -81,13 +81,13 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/word-order-app.js -->
-<script defer src="js/games/game-account.js?v=3"></script>
-<script defer src="js/core/auth-widget.js?v=8"></script>
-<script defer src="js/score/phase1-canonical-state.js?v=1"></script>
-<script defer src="js/games/reading-auth.js?v=19"></script>
-<script defer src="js/games/tone-server.js?v=3"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
-<script src="js/games/word-vault.js?v=5"></script>
-<script src="js/games/sentence-vault.js?v=1"></script>
+<script defer src="js/games/game-account.js?v=4"></script>
+<script defer src="js/core/auth-widget.js?v=9"></script>
+<script defer src="js/score/phase1-canonical-state.js?v=2"></script>
+<script defer src="js/games/reading-auth.js?v=22"></script>
+<script defer src="js/games/tone-server.js?v=4"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
+<script src="js/games/word-vault.js?v=6"></script>
+<script src="js/games/sentence-vault.js?v=2"></script>
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=7"></script>
 <script src="js/games/protected-word-audio.js?v=2"></script><!-- Core 5: private audio via entitlement-checked signed URL -->
@@ -560,7 +560,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/word-order-app.min.js?v=22']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=23']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

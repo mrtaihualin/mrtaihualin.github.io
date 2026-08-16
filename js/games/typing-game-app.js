@@ -341,28 +341,41 @@ function tgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=tgSrsRan
 var __tgSrsSyncPromise=null;
 window.__tgSrsSyncedOnce=false;
 var __tgLearningOwnerEpoch=0;
+var __tgSrsRequestSequence=0;
+var __tgLatestSrsRequest=0;
+function tgSrsOwnerCurrent(ownerId,ownerEpoch,requestId){
+  var currentId=(window.READING_AUTH&&READING_AUTH.user&&String(READING_AUTH.user.id))||'';
+  var currentEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
+  if(currentId!==ownerId||currentEpoch!==ownerEpoch)return false;
+  if(requestId!=null&&requestId!==__tgLatestSrsRequest)return false;
+  try{return !!(window.PHASE1_ACCOUNT_BOUNDARY&&localStorage.getItem(PHASE1_ACCOUNT_BOUNDARY.ownerKey)===ownerId);}catch(e){return false;}
+}
 function tgResetAccountStateAtBoundary(){
   var epoch=(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
   if(!epoch||epoch===__tgLearningOwnerEpoch)return false;
   __tgLearningOwnerEpoch=epoch;srsRecords={};totalStars=0;totalBadges=0;
+  __tgLatestSrsRequest=++__tgSrsRequestSequence;
   __tgSrsSyncPromise=null;window.__tgSrsSyncedOnce=false;
   return true;
 }
 function tgSyncSrsFromServer(force){
-  try{ if(!force && !rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
+  try{ if(!rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
   if(__tgSrsSyncPromise) return __tgSrsSyncPromise;
   var sb=window.getSupabaseClient?window.getSupabaseClient():null;
   if(!sb||!sb.from) return Promise.resolve(false);
   // dedupe fetch 2026-07-20: tgWireSrsSync รีเซ็ต __tgSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
   //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-  var _uid=(window.READING_AUTH && READING_AUTH.user && READING_AUTH.user.id) || 'anon';
+  var _uid=String(READING_AUTH.user.id);
+  var _ownerEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
+  var _requestId=++__tgSrsRequestSequence;__tgLatestSrsRequest=_requestId;
   var _fetchSrs = window.getCachedFetch
     ? window.getCachedFetch('tone_srs_state:typing:'+_uid, function(){
-        return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game','typing');
+        return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','typing');
       })
-    : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('game','typing');
+    : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','typing');
   __tgSrsSyncPromise = _fetchSrs
     .then(function(res){
+      if(!tgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false;
       if(res.error||!res.data){ window.__tgSrsSyncedOnce=true; return false; }
       var changed=false;
       res.data.forEach(function(row){
@@ -378,7 +391,7 @@ function tgSyncSrsFromServer(force){
       window.__tgSrsSyncedOnce=true;
       return changed;
     })
-    .catch(function(){ window.__tgSrsSyncedOnce=true; return false; });
+    .catch(function(){ if(!tgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false; window.__tgSrsSyncedOnce=true; return false; });
   return __tgSrsSyncPromise;
 }
 // ⚠️ ต้องลงทะเบียน "หลัง DOM พร้อม" เพราะสคริปต์เกม (inline) รันก่อนสคริปต์ defer (auth-widget) → ตอน parse ยังไม่มี SITE_AUTH
@@ -388,7 +401,8 @@ function tgWireSrsSync(){
       SITE_AUTH.onChange(function(u){
         tgResetAccountStateAtBoundary();
         if(!u) return;
-        if(!window.__tgSrsSyncedOnce){ tgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} }); }
+        var ownerId=String(u.id),ownerEpoch=Number(SITE_AUTH.learningOwnerEpoch)||0;
+        if(!window.__tgSrsSyncedOnce){ tgSyncSrsFromServer(true).then(function(){ if(!tgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
         else { __tgSrsSyncPromise=null; tgSyncSrsFromServer(true); }
       });
     }
@@ -398,7 +412,7 @@ function tgWireSrsSync(){
     _tgT++;
     try{
       if(window.__tgSrsSyncedOnce){ clearInterval(_tgIv); return; }
-      if(rgLoggedIn()) tgSyncSrsFromServer(true).then(function(){ try{ initGame(); }catch(e){} });
+      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.user.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; tgSyncSrsFromServer(true).then(function(){ if(!tgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
     }catch(e){}
     if(_tgT>=24) clearInterval(_tgIv);
   }, 500);

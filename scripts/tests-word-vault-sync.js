@@ -56,17 +56,20 @@ function makeWindow() {
   return win;
 }
 
-/** โหลด word-vault.js ตัวจริงเข้า sandbox (คนละชุดต่อการทดสอบ 1 เคส) */
-function loadVault(guest) {
+function loadVaultFromWindow(win) {
   const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'games', 'word-vault.js'), 'utf8');
-  const win = makeWindow();
   const sandboxGlobals = {
     window: win, localStorage: win.localStorage, document: win.document,
     CustomEvent: win.CustomEvent, console: { warn() {} }
   };
-  // word-vault.js เป็น IIFE ที่รับ global เข้าไป — ยิง (window) ให้ตรงกับของจริงในเบราว์เซอร์
   const fn = new Function(...Object.keys(sandboxGlobals), src + '\n;return window.WordVault;');
-  const vault = fn(...Object.values(sandboxGlobals));
+  return fn(...Object.values(sandboxGlobals));
+}
+
+/** โหลด word-vault.js ตัวจริงเข้า sandbox (คนละชุดต่อการทดสอบ 1 เคส) */
+function loadVault(guest) {
+  const win = makeWindow();
+  const vault = loadVaultFromWindow(win);
   // Account tests start from a verified Login owner. The offline write response
   // leaves newly-added words unsynced so the following explicit sync can test retry/merge.
   if (!guest) vault.sync(makeClient([], { upsertError: 'offline' }).client, UID);
@@ -102,6 +105,8 @@ function makeClient(remoteRows, opts) {
             onOk(opts.selectError ? { error: { message: opts.selectError } } : { data: remoteRows, error: null });
           } else if (b._mode === 'upsert' && opts.noTombstoneColumn && b._rows && b._rows[0] && b._rows[0].deleted_at) {
             onOk({ error: { code: '42703', message: 'column learning_saved_items.deleted_at does not exist' } });
+          } else if (b._mode === 'upsert' && opts.tombstoneError && b._rows && b._rows[0] && b._rows[0].deleted_at) {
+            onOk({ error: { message: opts.tombstoneError } });
           } else if (b._mode === 'delete') {
             log.deletes.push(b._eq.slice());
             onOk({ error: null });
@@ -115,6 +120,40 @@ function makeClient(remoteRows, opts) {
     }
   };
   return { client, log };
+}
+
+/** client แบบควบคุมลำดับ response — ใช้พิสูจ race ตอนสลับ account/logout */
+function makeDeferredClient() {
+  const pending = [];
+  const log = { upserts: [], deletes: [], selects: 0, tombstones: [] };
+  const client = {
+    from() {
+      const b = {
+        _mode: '', _rows: [], _eq: [],
+        select() { b._mode = 'select'; log.selects++; return b; },
+        upsert(rows) {
+          b._mode = 'upsert'; b._rows = rows;
+          if (rows.length && rows[0].deleted_at) log.tombstones.push(rows); else log.upserts.push(rows);
+          return b;
+        },
+        delete() { b._mode = 'delete'; return b; },
+        eq(col, value) { b._eq.push([col, value]); return b; },
+        then(resolve, reject) {
+          pending.push({ mode: b._mode, rows: b._rows, eq: b._eq.slice(), resolve, reject });
+          return b;
+        }
+      };
+      return b;
+    }
+  };
+  function settle(mode, result, reject) {
+    const index = pending.findIndex((request) => request.mode === mode);
+    if (index < 0) throw new Error('no pending ' + mode + ' request');
+    const request = pending.splice(index, 1)[0];
+    if (reject) request.reject(result); else request.resolve(result);
+    if (mode === 'delete') log.deletes.push(request.eq);
+  }
+  return { client, log, pending, resolve(mode, result) { settle(mode, result, false); }, reject(mode, error) { settle(mode, error, true); } };
 }
 
 const UID = 'user-1';
@@ -427,6 +466,83 @@ const words = (list) => list.map((w) => (typeof w === 'string' ? { th: w } : w))
   const pushedMeta = lastBatch[0] && JSON.parse(lastBatch[0].source_raw);
   ok('15c provenance ใหม่ถูกส่งขึ้นบัญชี',
      pushedMeta && pushedMeta.provenance.length === 2, JSON.stringify(lastBatch));
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 16) ลบตอน network fail → pending ต้องอยู่ข้าม reload, remote active ห้าม resurrect,
+//     และ explicit sync/retry ที่สำเร็จจึงค่อยปิด pending
+// ════════════════════════════════════════════════════════════════════════════
+{
+  const first = loadVault();
+  first.vault.addWord('ข้าว', { zh: '飯' });
+  first.vault.sync(makeClient([]).client, UID);
+
+  const failed = makeClient([{ word_th: 'ข้าว', zh: '飯', tags: [], deleted_at: null }], { tombstoneError: 'offline' });
+  first.vault.sync(failed.client, UID);
+  first.vault.removeWord('ข้าว');
+  ok('16a delete failure ซ่อนเฉพาะ local และเก็บ pending durable', !first.vault.has('ข้าว') && first.vault.pendingDeleteCount() === 1);
+  ok('16b pending delete บล็อกการ save ซ้อนระหว่าง operation ค้าง', first.vault.addWord('ข้าว', { zh: '飯' }) === false);
+
+  // Production reload binds through the shared account boundary, so the same
+  // verified owner keeps this account-local pending queue instead of taking
+  // the no-auth-widget fallback that intentionally clears local data.
+  first.win.PHASE1_ACCOUNT_BOUNDARY = { bind() {} };
+  const reloadedVault = loadVaultFromWindow(first.win);
+  ok('16c pending delete อยู่ครบหลัง reload', reloadedVault.pendingDeleteCount() === 1 && !reloadedVault.has('ข้าว'));
+  const recovered = makeClient([{ word_th: 'ข้าว', zh: '飯', tags: [], deleted_at: null }]);
+  reloadedVault.sync(recovered.client, UID);
+  ok('16d remote active row ไม่ resurrect ระหว่าง pending delete', !reloadedVault.has('ข้าว'));
+  ok('16e successful retry ปั๊ม tombstone idempotently และปิด pending', recovered.log.tombstones.length === 1 && reloadedVault.pendingDeleteCount() === 0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 17) response ของ owner เก่าที่มาช้า ต้องห้ามแตะ cache/pending/remote operation ของ owner ใหม่
+// ══════════════════════════════════════════════════════════════════════════════
+{
+  const { vault } = loadVault(true);
+  const ownerA = makeDeferredClient();
+  vault.sync(ownerA.client, 'user-a');
+  const ownerB = makeClient([{ word_th: 'ของบี', zh: 'B', tags: [], deleted_at: null }]);
+  vault.sync(ownerB.client, 'user-b');
+  ownerA.resolve('select', { data: [{ word_th: 'ความลับของเอ', zh: 'A', tags: [], deleted_at: null }], error: null });
+  ok('17a delayed A read ห้าม merge ข้อมูลข้ามเข้า account B',
+    vault.has('ของบี') && !vault.has('ความลับของเอ'), JSON.stringify(vault.getAll()));
+}
+{
+  const { vault } = loadVault(true);
+  const ownerA = makeDeferredClient();
+  vault.sync(ownerA.client, 'user-a');
+  vault.addWord('คำเดียวกัน', { zh: 'A' });
+  const ownerB = makeClient([], { upsertError: 'offline' });
+  vault.sync(ownerB.client, 'user-b');
+  vault.addWord('คำเดียวกัน', { zh: 'B' });
+  ownerA.resolve('upsert', { error: null });
+  const current = vault.getAll()[0];
+  ok('17b delayed A save ห้าม mark คำ key เดียวกันของ B ว่า synced',
+    current && current.zh === 'B' && current.synced !== true, JSON.stringify(current));
+}
+{
+  const { vault } = loadVault(true);
+  vault.sync(makeClient([{ word_th: 'ข้าว', zh: 'A', tags: [], deleted_at: null }]).client, 'user-a');
+  const ownerA = makeDeferredClient();
+  vault.sync(ownerA.client, 'user-a');
+  vault.removeWord('ข้าว');
+  const ownerB = makeClient([{ word_th: 'ข้าว', zh: 'B', tags: [], deleted_at: null }]);
+  vault.sync(ownerB.client, 'user-b');
+  ownerA.resolve('upsert', { error: { code: '42703', message: 'column deleted_at does not exist' } });
+  ok('17c stale missing-column fallback ห้าม hard-delete คำของ B',
+    ownerB.log.deletes.length === 0 && vault.has('ข้าว'), JSON.stringify(ownerB.log));
+}
+{
+  const { vault, win } = loadVault(true);
+  const ownerA = makeDeferredClient();
+  vault.sync(ownerA.client, 'user-a');
+  vault.sync(ownerA.client, null);
+  ownerA.resolve('select', { data: [{ word_th: 'ความลับหลังล็อกเอาท์', zh: 'A', tags: [] }], error: null });
+  const raw = JSON.parse(win.localStorage.getItem('linvault_v1') || '[]');
+  const rows = Array.isArray(raw) ? raw : (raw.items || []);
+  ok('17d delayed A read หลัง logout ห้ามเขียน account cache กลับมา',
+    !rows.some((row) => row.th === 'ความลับหลังล็อกเอาท์'), JSON.stringify(rows));
 }
 
 // ── สรุป ────────────────────────────────────────────────────────────────────

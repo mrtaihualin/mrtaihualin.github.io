@@ -7,6 +7,8 @@
 // ============================================================
 (function () {
   var KEY = 'thai_game_acct_v1';
+  var syncRequestSequence = 0;
+  var latestSyncRequest = 0;
   function load() { try { var r = localStorage.getItem(KEY); return r ? JSON.parse(r) : {}; } catch (e) { return {}; } }
   function save(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }
   function loggedIn() { try { return !!(window.READING_AUTH && window.READING_AUTH.user); } catch (e) { return false; } }
@@ -141,7 +143,21 @@
     sync: function (client, userId) {
       if (!client || !userId || !client.from) return;
       try {
-        client.from('game_accounts').select('stars,streak,last_play,hard_words_by_level').eq('user_id', userId).maybeSingle().then(function (r) {
+        var ownerId = String(userId);
+        var ownerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+        var requestId = ++syncRequestSequence;
+        latestSyncRequest = requestId;
+        function ownerStillCurrent() {
+          var currentId = window.READING_AUTH && READING_AUTH.user && String(READING_AUTH.user.id) || '';
+          var currentEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+          if (requestId !== latestSyncRequest || currentId !== ownerId || currentEpoch !== ownerEpoch) return false;
+          try {
+            return !!(window.PHASE1_ACCOUNT_BOUNDARY &&
+              localStorage.getItem(PHASE1_ACCOUNT_BOUNDARY.ownerKey) === ownerId);
+          } catch (e) { return false; }
+        }
+        client.from('game_accounts').select('stars,streak,last_play,hard_words_by_level').eq('user_id', ownerId).maybeSingle().then(function (r) {
+          if (!ownerStillCurrent()) return;
           var rem = (r && r.data) || {};
           var la = load();
           // ── Phase 4 (ล็อก 2026-07-11): เซิร์ฟเวอร์เป็นเจ้าของ "ดาว + ตัวนับเพดาน" (remote-authoritative) ──
@@ -157,7 +173,7 @@
           if (lp) la.lastPlay = lp;
           save(la);
           // ❌ เลิก upsert game_accounts จาก client — เดิมบรรทัดนี้คือ "รู" ให้เขียนดาวตรง · เซิร์ฟเวอร์เขียนเองแล้ว
-        }, function () {});
+        }, function () { if (!ownerStillCurrent()) return; });
       } catch (e) {}
     }
   };

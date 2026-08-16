@@ -613,6 +613,22 @@ function ok(reason, correct, justMastered, stars, capped, rec, account) {
     starsAwarded: stars, capped: capped, newSrsRecord: rec, newAccount: account };
 }
 
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return '[' + value.map(stableJson).join(',') + ']';
+  if (value && typeof value === 'object') {
+    return '{' + Object.keys(value).sort().map((key) => JSON.stringify(key) + ':' + stableJson(value[key])).join(',') + '}';
+  }
+  return JSON.stringify(value);
+}
+
+async function sha256(value: unknown) {
+  const bytes = new TextEncoder().encode(stableJson(value));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 
 /* ===== HTTP handler ===== */
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
@@ -648,17 +664,15 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(SB_URL, SB_SVC, { auth: { persistSession: false } });
 
-  // ── rate limit: กันสคริปต์ยิงรัวถล่ม DB (เพดานดาว+ปฏิทินกันดาวเกินอยู่แล้ว อันนี้เกราะเสริม) ──
-  //   60 รอบ/นาที/คน — คนเล่นเร็วสุด ~20-30/นาที, สคริปต์ยิงเป็นพัน → 60 ไม่บล็อกคนจริง
-  //   fail-closed: ถ้าด่านตรวจล่ม ให้หยุดก่อนเขียน SRS/ดาว ป้องกันการยิงข้าม rate limit
-  const { data: rlOk, error: rlErr } = await admin.rpc("rl_check", {
-    p_user: user.id, p_fn: "tone-round", p_limit: 60, p_window: 60,
-  });
-  if (rlErr) return json({ error: "rate_limit_unavailable" }, 503);
-  if (rlOk !== true) return json({ error: "rate_limited" }, 429);
-
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+
+  const suppliedOperationId = String(body.round_id || "").toLowerCase();
+  const legacyCompatibility = !suppliedOperationId;
+  if (suppliedOperationId && !UUID_V4.test(suppliedOperationId)) return json({ error: "invalid_round_id" }, 400);
+  // Old cached clients predate round_id. A server-generated operation keeps their write atomic;
+  // concurrent/late duplicates are still rejected by the expected SRS snapshot inside the RPC.
+  const operationId = suppliedOperationId || crypto.randomUUID();
 
   const word = String(body.word || "");
   const level = Number(body.level);
@@ -670,12 +684,53 @@ Deno.serve(async (req: Request) => {
   if (!["tone", "reading", "listening", "typing", "wordorder"].includes(game)) return json({ error: "bad game" }, 400);
   const spellingGame = game !== "tone"; // อ่าน/พิมพ์/เรียงประโยค = trust-clean (เซิร์ฟเวอร์ตรวจเองไม่ได้ → เชื่อ flag clean)
 
+  const requestHash = await sha256({
+    game, word, level,
+    clean: body.clean === true,
+    starClean: typeof body.starClean === "boolean" ? body.starClean : null,
+    initialGuess: body.initialGuess ?? null,
+    syllables: Array.isArray(body.syllables) ? body.syllables.map(String) : null,
+    guesses: Array.isArray(body.guesses) ? body.guesses : null,
+    knownCheck: body.knownCheck === true,
+  });
+
+  // Exact retry after an HTTP timeout returns the committed result before rate limiting or re-resolving SRS.
+  const replay = await admin.from("tone_round_operations")
+    .select("user_id,game,level,word,request_hash,response")
+    .eq("operation_id", operationId).maybeSingle();
+  if (replay.error) return json({ error: "round_replay_unavailable" }, 503);
+  if (replay.data) {
+    const same = replay.data.user_id === user.id && replay.data.game === game &&
+      Number(replay.data.level) === level && replay.data.word === word && replay.data.request_hash === requestHash;
+    if (!same) return json({ error: "replay_conflict" }, 409);
+    const currentAccount = await admin.from("game_accounts").select("stars")
+      .eq("user_id", user.id).maybeSingle();
+    if (currentAccount.error) return json({ error: "account_read_unavailable" }, 503);
+    return json(Object.assign({}, replay.data.response || {}, {
+      idempotent: true,
+      totalStars: Number(currentAccount.data?.stars ?? replay.data.response?.totalStars ?? 0),
+    }));
+  }
+
+  // ── rate limit: กันสคริปต์ยิงรัวถล่ม DB (เพดานดาว+ปฏิทินกันดาวเกินอยู่แล้ว อันนี้เกราะเสริม) ──
+  //   60 รอบ/นาที/คน — คนเล่นเร็วสุด ~20-30/นาที, สคริปต์ยิงเป็นพัน → 60 ไม่บล็อกคนจริง
+  //   fail-closed: ถ้าด่านตรวจล่ม ให้หยุดก่อนเขียน SRS/ดาว ป้องกันการยิงข้าม rate limit
+  const { data: rlOk, error: rlErr } = await admin.rpc("rl_check", {
+    p_user: user.id, p_fn: "tone-round", p_limit: 60, p_window: 60,
+  });
+  if (rlErr) return json({ error: "rate_limit_unavailable" }, 503);
+  if (rlOk !== true) return json({ error: "rate_limited" }, 429);
+
   // ── อ่าน state จริงจาก DB (source of truth) ──
-  const { data: acctRow } = await admin.from("game_accounts")
+  const accountRead = await admin.from("game_accounts")
     .select("stars, hard_words_by_level").eq("user_id", user.id).maybeSingle();
-  const { data: srsRow } = await admin.from("tone_srs_state")
+  if (accountRead.error) return json({ error: "account_read_unavailable" }, 503);
+  const srsRead = await admin.from("tone_srs_state")
     .select("stage, due_date, ever_failed, mastered")
     .eq("user_id", user.id).eq("game", game).eq("level", level).eq("word", word).maybeSingle();
+  if (srsRead.error) return json({ error: "srs_read_unavailable" }, 503);
+  const acctRow = accountRead.data;
+  const srsRow = srsRead.data;
 
   const account = { stars: acctRow?.stars || 0, hardWordsByLevel: acctRow?.hard_words_by_level || {} };
   const srsRecord = srsRow ? {
@@ -695,45 +750,38 @@ Deno.serve(async (req: Request) => {
   });
   if (!R.ok) return json({ ok: false, reason: R.reason, totalStars: account.stars });
 
-  // ── เขียน SRS แบบ optimistic (กัน race: ยิงพร้อมกัน 2 ครั้งจะสำเร็จแค่ครั้งเดียว) ──
+  // One RPC owns the SRS transition, account increment, ledger and durable replay result.
+  // PostgreSQL rolls every write back together on any failure and serializes all rewards per account.
   const rec = R.newSrsRecord;
-  const oldStage = srsRow?.stage ?? null;
-  const oldDue = srsRow?.due_date ?? null;
-  let wrote = true;
-  if (srsRow) {
-    const { data: upd } = await admin.from("tone_srs_state")
-      .update({ stage: rec.stage, due_date: rec.dueDate, ever_failed: rec.everFailed,
-                mastered: rec.mastered, updated_at: new Date().toISOString() })
-      .eq("user_id", user.id).eq("game", game).eq("level", level).eq("word", word)
-      .eq("stage", oldStage).eq("due_date", oldDue)   // ← เงื่อนไข optimistic
-      .select();
-    wrote = !!(upd && upd.length);                     // 0 แถว = มีคนอื่นเขียนไปแล้ว → ยกเลิกการให้ดาว
-  } else {
-    const { error } = await admin.from("tone_srs_state").insert({
-      user_id: user.id, game, level, word, stage: rec.stage, due_date: rec.dueDate,
-      ever_failed: rec.everFailed, mastered: rec.mastered,
-    });
-    wrote = !error;
-  }
-  if (!wrote) return json({ ok: false, reason: "race_retry", totalStars: account.stars });
-
-  // ── ให้ดาว "เฉพาะเมื่อ SRS ถูกเขียนสำเร็จ" (กันดาวเกินตอน race) ──
-  if (R.justMastered && R.starsAwarded > 0) {
-    await admin.from("game_accounts").upsert({
-      user_id: user.id, stars: R.newAccount.stars,
-      hard_words_by_level: R.newAccount.hardWordsByLevel,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
-  }
-  if (R.justMastered) {
-    await admin.from("star_ledger").insert({
-      user_id: user.id, game, word, level, stars: R.starsAwarded,
-      reason: R.capped ? "capped" : "mastered", clean: R.correct,
-    });
-  }
-  return json({
-    ok: true, reason: R.reason, correct: R.correct,
-    justMastered: R.justMastered, stars: R.starsAwarded, capped: R.capped,
-    totalStars: R.newAccount.stars,
+  const rewardClean = spellingGame && typeof body.starClean === "boolean"
+    ? body.starClean : !(srsRecord && srsRecord.everFailed);
+  const committed = await admin.rpc("phase1_tone_round_commit", {
+    p_operation_id: operationId,
+    p_user_id: user.id,
+    p_request_hash: requestHash,
+    p_game: game,
+    p_level: level,
+    p_word: word,
+    p_expected_exists: !!srsRow,
+    p_expected_stage: srsRow?.stage ?? null,
+    p_expected_due_date: srsRow?.due_date ?? null,
+    p_expected_ever_failed: srsRow?.ever_failed ?? null,
+    p_expected_mastered: srsRow?.mastered ?? null,
+    p_next_stage: rec.stage,
+    p_next_due_date: rec.dueDate,
+    p_next_ever_failed: rec.everFailed,
+    p_next_mastered: rec.mastered,
+    p_reason: R.reason,
+    p_correct: R.correct,
+    p_just_mastered: R.justMastered,
+    p_reward_clean: rewardClean,
   });
+  if (committed.error) return json({ error: "round_commit_unavailable" }, 503);
+  const result = committed.data;
+  if (!result || typeof result !== "object") return json({ error: "round_commit_unavailable" }, 503);
+  if (result.ok !== true && result.reason === "replay_conflict") return json({ error: "replay_conflict" }, 409);
+  return json(Object.assign({}, result, {
+    roundId: operationId,
+    compatibility: legacyCompatibility ? "legacy-no-id" : "explicit-id",
+  }));
 });

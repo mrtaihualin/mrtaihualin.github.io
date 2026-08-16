@@ -1,6 +1,29 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-15 23:59 Asia/Bangkok** — Phase 1 canonical NetworkGuard bootstrap
+**Updated: 2026-08-16 11:51 Asia/Bangkok** — Phase 1 mixed-version Edge/client compatibility bridge (source only)
+
+## 2026-08-16 — P1-F-02 Mixed-Version Rollout Compatibility (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Tone Edge source accepts old cached clients without `round_id` by assigning a server operation UUID while the deployed transactional RPC still serializes the account and rejects stale expected-SRS snapshots; malformed explicit IDs remain fail-closed and new clients retain exact-ID replay.
+- Lego Edge source accepts empty/legacy request bodies through a 30-second deterministic compatibility ID. Concurrent/retried legacy calls in the window share one SQL request key, recent committed legacy keys bridge bucket boundaries, and explicit IDs from new clients remain exact and never fall back silently. Guest/IP and verified-account identity remain server-derived.
+- Added executable old/new/mixed-version/retry/duplicate regressions and central gate coverage. This bridge is source-only: Production SQL from the separately authorized migration round remains active, while Edge/client versions, config and player data were not changed. Safe rollout order after separate authorization is compatibility Edge first, then current client/cache release.
+
+## 2026-08-16 — P1-F-02 Transactional Backend Redesign (`SOURCE_PASS / PRODUCTION_LOCKED`)
+
+- เพิ่ม additive service-role-only RPC 3 ตัว: `phase1_tone_round_commit` รวม SRS + account stars + ledger + replay result ใน transaction เดียว, `phase1_score_submit_commit` รวม authoritative score + private legacy mirror + marker และ `lego_consume_daily_idempotent` ผูก quota consume กับ identity/day/request UUID. `anon`/`authenticated` ไม่มีสิทธิ์เรียก RPC หรือตาราง operation/request โดยตรง.
+- Tone และ Lego client สร้าง request UUID ครั้งเดียว, bounded retry ด้วย UUID เดิม และทิ้ง response เมื่อ account owner/epoch เปลี่ยน; score mirror ไม่เชื่อ `body.wrong_items` แล้ว แต่ derive จาก canonical evidence ที่ validate และอยู่ใน evidence hash. Existing `s29-v1` ที่ marker เป็น null ถูกหยุดเป็น `legacy_mirror_ambiguous` แทนการเดาแล้วสร้าง mirror ซ้ำ.
+- PostgreSQL 17.10 ชั่วคราวใน `/private/tmp` ผ่าน migration compile, forced failure rollback ที่ SRS/account/ledger, authoritative/mirror/marker และ Lego count/request; concurrent same-ID/different-word tests ยืนยัน no lost update, score/mirror exactly-once และ Lego consume exactly-once. Local static contracts 9/9, save/retry 10/10, SRS 17/17, S29 PASS; ไม่มี SQL apply, Edge deploy, config/data/schema mutation หรือ action ใดบน Production.
+- Production changeset ต้องเรียง additive SQL → Edge `tone-round`/`score-submit`/`lego-daily-limit` → client cache release; stale client ที่ยังไม่มี request UUID ต้อง fail closed จน refresh. Rollback ต้องย้อน client ก่อน Edge และปล่อย additive SQL inert จนยืนยันไม่มี caller; ต้อง precheck จำนวน legacy `s29-v1` marker-null และทำ staging transaction/concurrency test ก่อนขอ Production authorization.
+
+## 2026-08-16 — P1-D-09 Owner-Switch Race Hardening (`PASS_LOCAL / BATCH_IN_PROGRESS`)
+
+- Canonical progress, GameAccount, adaptive history, Core 5 SRS และ personal word/sentence vault จับ account owner + generation/request identity ก่อนเริ่ม async work; response ของ Account A ที่กลับมาหลัง switch/logout จึงไม่เขียน cache, sync flags, pending delete หรือ state ของ Account B/Guest และ stale completion ไม่ล้าง request ใหม่.
+- Listening เริ่มรอบจาก local/empty SRS ภายใน 1.5 วินาทีเมื่อ remote read ค้าง, ป้องกัน double start และยอมให้ late response ของ owner เดิมมีผลเฉพาะรอบถัดไป. เพิ่ม deferred-response regressions, rebuild minified Core 4 ด้วย Terser 5.50.0 และ bump cache เฉพาะ runtime ที่เปลี่ยน; ไม่เปลี่ยนสูตรเกม, SQL, Edge Function หรือ Production.
+
+## 2026-08-16 — P1-F-02 Client Failure Hardening Batch (`PASS_LOCAL / BATCH_IN_PROGRESS`)
+
+- Core 5 score submission ใช้ bounded wait 12 วินาทีและ retry ครั้งเดียวด้วย `submission_id` เดิม; personal word/sentence delete เก็บ pending tombstone ข้าม network failure/reload, กัน remote resurrection และไม่อ้างว่าลบบน server สำเร็จก่อนยืนยัน.
+- Profile/nickname, account export/unlink/delete และ LINE callback มี bounded deadlines; mutation ที่ผลลัพธ์ไม่แน่ชัดไม่ retry อัตโนมัติและบอกให้ reload ตรวจสถานะก่อน. Cache versions ถูก bump เฉพาะ runtime ที่เปลี่ยน; ไม่เปลี่ยนสูตรเกม, SQL, Edge Function หรือ Production ในรอบ local นี้.
 
 ## 2026-08-15 — P1-F-02 Canonical NetworkGuard Bootstrap (`PASS_LOCAL / GIT_HANDOFF_PENDING`)
 

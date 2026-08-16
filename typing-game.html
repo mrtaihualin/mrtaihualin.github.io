@@ -88,13 +88,13 @@ if (document.fonts && document.fonts.load) {
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/typing-game-app.js -->
-<script defer src="js/games/game-account.js?v=3"></script>
-<script defer src="js/core/auth-widget.js?v=8"></script>
-<script defer src="js/score/phase1-canonical-state.js?v=1"></script>
-<script defer src="js/games/reading-auth.js?v=19"></script>
-<script defer src="js/games/tone-server.js?v=3"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
+<script defer src="js/games/game-account.js?v=4"></script>
+<script defer src="js/core/auth-widget.js?v=9"></script>
+<script defer src="js/score/phase1-canonical-state.js?v=2"></script>
+<script defer src="js/games/reading-auth.js?v=22"></script>
+<script defer src="js/games/tone-server.js?v=4"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="js/games/typing-score.js?v=1"></script><!-- สูตร 無提示 ชุดเดียวกับ Listening Typing Bonus -->
-<script src="js/games/word-vault.js?v=5"></script>
+<script src="js/games/word-vault.js?v=6"></script>
 <script src="js/games/protected-word-audio.js?v=2"></script><!-- Core 5: private audio via entitlement-checked signed URL -->
 <script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="js/core/network-guard.js?v=1"></script>
@@ -771,7 +771,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=27']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=28']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->

@@ -39,14 +39,14 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js/progress-sync.js/tone-finder-game.js -->
-<script defer src="js/games/game-account.js?v=3"></script><!-- v3: Phase 4 ล็อก — sync remote-authoritative + เลิก upsert (เซิร์ฟเวอร์เป็นเจ้าของดาว) -->
-<script defer src="js/core/auth-widget.js?v=8"></script>
-<script defer src="js/score/phase1-canonical-state.js?v=1"></script>
-<script defer src="js/games/reading-auth.js?v=19"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="js/games/game-account.js?v=4"></script><!-- v4: owner-scoped sync guard; server remains authoritative for stars -->
+<script defer src="js/core/auth-widget.js?v=9"></script>
+<script defer src="js/score/phase1-canonical-state.js?v=2"></script>
+<script defer src="js/games/reading-auth.js?v=22"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
 <script defer src="js/games/tone-companion.js?v=3"></script><!-- S29: เหลือ admin badge unlock; คะแนนส่งผ่าน score-submit กลาง -->
-<script defer src="js/games/tone-server.js?v=3"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
+<script defer src="js/games/tone-server.js?v=4"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="js/score/progress-sync.js?v=5"></script>
-<script src="js/games/word-vault.js?v=5"></script>
+<script src="js/games/word-vault.js?v=6"></script>
 <script src="js/games/protected-word-audio.js?v=2"></script><!-- Core 5: private audio via entitlement-checked signed URL -->
 <script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="js/core/network-guard.js?v=1"></script>
@@ -1694,7 +1694,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=48']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=49']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

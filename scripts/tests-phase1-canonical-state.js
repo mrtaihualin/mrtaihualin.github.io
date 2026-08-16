@@ -82,13 +82,13 @@ test('owner changes clear canonical account cache and metadata', () => {
 });
 test('all Login Free surfaces load the canonical runtime', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','my-progress.html','vault.html']
-    .forEach((page) => assert.match(read(page), /phase1-canonical-state\.js\?v=1/, page));
+    .forEach((page) => assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page));
 });
 test('Learning Center and Vault bootstrap NetworkGuard before canonical sync', () => {
   ['my-progress.html','vault.html'].forEach((page) => {
     const html = read(page);
     const guardIndex = html.indexOf('js/core/network-guard.js?v=1');
-    const canonicalIndex = html.indexOf('js/score/phase1-canonical-state.js?v=1');
+    const canonicalIndex = html.indexOf('js/score/phase1-canonical-state.js?v=2');
     assert.ok(guardIndex >= 0, page + ' missing NetworkGuard');
     assert.ok(canonicalIndex >= 0, page + ' missing canonical runtime');
     assert.ok(guardIndex < canonicalIndex, page + ' must load NetworkGuard before canonical runtime');

@@ -61,6 +61,46 @@
   }
 
   var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
+  var CLIENT_FAILURE_TIMEOUT_MS = 12000;
+
+  function clientFailureError(message, code, uncertain) {
+    var err = new Error(message);
+    err.code = code || 'client_failure';
+    err.uncertain = !!uncertain;
+    return err;
+  }
+
+  function withClientTimeout(promise, label, uncertain) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        reject(clientFailureError(label + '逾時', 'client_timeout', uncertain));
+      }, CLIENT_FAILURE_TIMEOUT_MS);
+      Promise.resolve(promise).then(function (value) {
+        if (settled) return;
+        settled = true; clearTimeout(timer); resolve(value);
+      }, function (error) {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        if (uncertain && error && typeof error === 'object' && error.uncertain == null) error.uncertain = true;
+        reject(error);
+      });
+    });
+  }
+
+  function isLegacyProfileShapeError(error) {
+    if (!error) return false;
+    var code = String(error.code || '');
+    var message = String(error.message || '');
+    return code === '42703' || code === 'PGRST204' || /(?:avatar|badge_id).*(?:column|schema cache|not found|does not exist)/i.test(message);
+  }
+
+  function isUncertainRemoteError(error) {
+    if (!error || error.code) return false;
+    return /(?:failed to fetch|network|load failed|timeout|timed out)/i.test(String(error.message || '') + ' ' + String(error.details || ''));
+  }
   var ADMIN_EMAIL = 'mr.taihualin@gmail.com';
   // v1 (LIN 2026-07-25, audit): กันแอดมิน (Lin เอง) โดนนับเข้า leaderboard ตอนทดสอบล็อกอินด้วย
   //   Facebook/LINE — 2 ช่องทางนี้อาจไม่มีอีเมลเลย (LINE เปิด "Allow users without email")
@@ -315,6 +355,7 @@
         '<div id="sap-badges" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' + badgeChoices + '</div>' +
         linkFacebookHtml +
         linkLineHtml +
+        '<div id="sap-save-msg" role="status" style="display:none;font-size:12px;color:#b45309;margin-bottom:10px;line-height:1.5;"></div>' +
         '<button id="sap-save" style="width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;">儲存</button>' +
         '<button id="sap-open-manage" style="width:100%;border:none;background:none;color:#A07A1E;font-size:12px;padding:10px 0 0;cursor:pointer;text-decoration:underline;">⚙️ 帳號管理（匯出資料 / 解除連結 / 刪除帳號）</button>' +
       '</div>';
@@ -374,15 +415,44 @@
       };
     });
     profileModal.querySelector('#sap-save').onclick = function () {
+      var saveBtn = profileModal.querySelector('#sap-save');
+      var saveMsg = profileModal.querySelector('#sap-save-msg');
       var nm = (profileModal.querySelector('#sap-name').value || '').trim().slice(0, 20);
-      setAvatarCache(selAvatar); setPinBadgeCache(selBadge);
-      myAvatar = selAvatar; myBadge = selBadge;
       var row = { user_id: API.user.id, avatar: selAvatar, badge_id: selBadge };
-      if (nm) { row.nickname = nm; myNick = nm; }
-      sb.from('profiles').upsert(row, { onConflict: 'user_id' }).then(function (res) {
+      if (nm) row.nickname = nm;
+      saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
+      saveMsg.style.display = 'none';
+      withClientTimeout(sb.from('profiles').upsert(row, { onConflict: 'user_id' }), '儲存個人檔案', true).then(function (res) {
+        if (!res || typeof res !== 'object') {
+          throw clientFailureError('伺服器回應格式不完整', 'invalid_response', true);
+        }
         // ถ้าคอลัมน์ avatar/badge_id ยังไม่มี → เซฟเฉพาะชื่อ (รูป/แบดจ์ยังอยู่ในแคชเครื่อง)
-        if (res.error && nm) sb.from('profiles').upsert({ user_id: API.user.id, nickname: nm }, { onConflict: 'user_id' });
+        if (res.error && nm && isLegacyProfileShapeError(res.error)) {
+          return withClientTimeout(
+            sb.from('profiles').upsert({ user_id: API.user.id, nickname: nm }, { onConflict: 'user_id' }),
+            '儲存暱稱', true
+          );
+        }
+        if (res.error && isUncertainRemoteError(res.error)) {
+          throw clientFailureError('網路中斷，伺服器結果尚未確認', 'network_unavailable', true);
+        }
+        return res;
+      }).then(function (res) {
+        if (!res || typeof res !== 'object') {
+          throw clientFailureError('伺服器回應格式不完整', 'invalid_response', true);
+        }
+        if (res && res.error) throw clientFailureError(res.error.message || '儲存失敗', 'profile_save_failed', false);
+        // Local display/cache follows the server confirmation; a timeout never looks like success.
+        setAvatarCache(selAvatar); setPinBadgeCache(selBadge);
+        myAvatar = selAvatar; myBadge = selBadge;
+        if (nm) myNick = nm;
         closeModal(); fireChange();
+      }).catch(function (error) {
+        saveBtn.disabled = false; saveBtn.textContent = '儲存';
+        saveMsg.style.display = 'block';
+        saveMsg.textContent = error && error.uncertain
+          ? '⚠️ 無法確認是否已儲存。請重新載入確認目前資料後，再決定是否重試。'
+          : '⚠️ 儲存失敗：' + (error && error.message || String(error));
       });
     };
   }
@@ -417,21 +487,57 @@
     return err;
   }
 
-  // เรียก Edge Function ธรรมดา (ไม่ต้องการ JWT สดใหม่) — ใช้ access_token ปัจจุบันของ session ตรงๆ
-  function callAccountFn(name, body) {
-    return sb.auth.getSession().then(function (sres) {
-      var token = sres && sres.data && sres.data.session && sres.data.session.access_token;
-      if (!token) return Promise.reject(new Error('ยังไม่ได้ล็อกอิน หรือ session หมดอายุ — กรุณาล็อกอินใหม่'));
-      return fetch(accountFnUrl(name), {
+  function accountFetch(name, token, body) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        if (controller) controller.abort();
+        reject(clientFailureError('連線逾時，伺服器結果尚未確認', 'client_timeout', true));
+      }, CLIENT_FAILURE_TIMEOUT_MS);
+      var options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
         body: JSON.stringify(body || {})
-      }).then(function (res) {
-        return res.json().catch(function () { return {}; }).then(function (json) {
+      };
+      if (controller) options.signal = controller.signal;
+      fetch(accountFnUrl(name), options).then(function (res) {
+        return res.json().catch(function () { return null; }).then(function (json) {
           if (!res.ok) throw accountFnError(name, res, json);
+          if (!json || typeof json !== 'object') {
+            throw clientFailureError('伺服器回應格式不完整，操作結果尚未確認', 'invalid_response', true);
+          }
           return json;
         });
+      }).then(function (json) {
+        if (settled) return;
+        settled = true; clearTimeout(timer); resolve(json);
+      }, function (error) {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        if (!error || (!error.status && !error.uncertain)) {
+          error = clientFailureError('網路中斷，伺服器結果尚未確認', 'network_unavailable', true);
+        }
+        reject(error);
       });
+    });
+  }
+
+  function uncertainMutationMessage(action) {
+    return '⚠️ 無法確認「' + action + '」是否已完成。請重新載入並檢查目前狀態；確認前請勿連續重複送出。';
+  }
+
+  // เรียก Edge Function ธรรมดา (ไม่ต้องการ JWT สดใหม่) — ใช้ access_token ปัจจุบันของ session ตรงๆ
+  function callAccountFn(name, body) {
+    return withClientTimeout(sb.auth.getSession(), '確認登入狀態', false).then(function (sres) {
+      if (sres && sres.error) {
+        throw clientFailureError('無法確認登入狀態，請稍後再試', 'session_unavailable', false);
+      }
+      var token = sres && sres.data && sres.data.session && sres.data.session.access_token;
+      if (!token) return Promise.reject(new Error('ยังไม่ได้ล็อกอิน หรือ session หมดอายุ — กรุณาล็อกอินใหม่'));
+      return accountFetch(name, token, body);
     });
   }
 
@@ -440,19 +546,13 @@
   // refresh ไม่ใช่แค่ยืดอายุของเดิม) — ฟังก์ชันฝั่งเซิร์ฟเวอร์เขียนคอมเมนต์ไว้ชัดว่ายอมรับวิธีนี้แทนการบังคับ
   // ให้ผู้ใช้ล็อกอินซ้ำเต็มรูปแบบผ่าน OAuth redirect ได้ (ง่ายกว่ามากฝั่ง UI ไม่ต้องพา redirect ออกนอกหน้า)
   function callAccountFnFresh(name, body) {
-    return sb.auth.refreshSession().then(function (r) {
+    return withClientTimeout(sb.auth.refreshSession(), '更新登入狀態', false).then(function (r) {
+      if (r && r.error) {
+        throw clientFailureError('無法更新登入狀態，請重新登入後再試', 'session_refresh_failed', false);
+      }
       var token = r && r.data && r.data.session && r.data.session.access_token;
       if (!token) throw new Error('ไม่สามารถต่อ session ได้ — กรุณาออกจากระบบแล้วล็อกอินใหม่ก่อนลองอีกครั้ง');
-      return fetch(accountFnUrl(name), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
-        body: JSON.stringify(body || {})
-      }).then(function (res) {
-        return res.json().catch(function () { return {}; }).then(function (json) {
-          if (!res.ok) throw accountFnError(name, res, json);
-          return json;
-        });
-      });
+      return accountFetch(name, token, body);
     });
   }
 
@@ -502,7 +602,7 @@
       closeManageModal();
       openAccountManageModal();
     }).catch(function (e) {
-      btn.disabled = false;
+      btn.disabled = !!(e && e.uncertain);
       // 2026-08-08: เดิมมี special-case เช็ค e.body.error === 'would_leave_zero_login_methods' แยกข้อความ
       // เอง — ตอนนี้เซิร์ฟเวอร์ส่ง message ที่เป็นมิตรมาให้ทุก error code แล้ว (รวมเคสนี้ด้วย) เลยไม่ต้อง
       // hardcode ซ้ำในนี้อีก ใช้ e.message ตรงๆ ได้เลยทุกกรณี (raw code ยัง log ไว้แล้วใน accountFnError())
@@ -527,7 +627,9 @@
       }
       if (msgEl) {
         msgEl.style.display = 'block';
-        msgEl.textContent = '⚠️ 解除失敗：' + (e && e.message || String(e));
+        msgEl.textContent = e && e.uncertain
+          ? uncertainMutationMessage('解除登入方式')
+          : '⚠️ 解除失敗：' + (e && e.message || String(e));
       }
     });
   }
@@ -576,9 +678,12 @@
         container.innerHTML = '<div style="font-size:13px;color:#2d6a4f;font-weight:700;">✅ 已取消刪除帳號請求，帳號已恢復正常。</div>';
         setTimeout(function () { renderDeleteStartButton(container); }, 1600);
       }).catch(function (e) {
-        goBtn.disabled = false; goBtn.textContent = '取消刪除帳號';
+        goBtn.disabled = !!(e && e.uncertain);
+        goBtn.textContent = e && e.uncertain ? '請重新載入確認' : '取消刪除帳號';
         msgEl.style.display = 'block';
-        msgEl.textContent = '⚠️ 取消失敗：' + (e && e.message || String(e)) + '（可安全重新點擊再試一次）';
+        msgEl.textContent = e && e.uncertain
+          ? uncertainMutationMessage('取消刪除帳號')
+          : '⚠️ 取消失敗：' + (e && e.message || String(e));
       });
     };
   }
@@ -634,9 +739,12 @@
         callAccountFnFresh('account-delete', { action: 'request', confirm: true }).then(function (result) {
           renderPendingDeletionBanner(container, { scheduled_delete_at: result.scheduled_delete_at });
         }).catch(function (e) {
-          goBtn.disabled = false; goBtn.textContent = '送出刪除請求';
+          goBtn.disabled = !!(e && e.uncertain);
+          goBtn.textContent = e && e.uncertain ? '請重新載入確認' : '送出刪除請求';
           msgEl.style.display = 'block';
-          msgEl.textContent = '⚠️ 送出失敗：' + (e && e.message || String(e)) + '（可安全重新點擊再試一次）';
+          msgEl.textContent = e && e.uncertain
+            ? uncertainMutationMessage('送出刪除請求')
+            : '⚠️ 送出失敗：' + (e && e.message || String(e));
         });
       };
     }).catch(function (e) {

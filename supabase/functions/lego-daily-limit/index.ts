@@ -32,6 +32,10 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  LEGACY_LEGO_DEDUPE_MS,
+  resolveLegoRequestId,
+} from '../_shared/phase1-rollout-compatibility.mjs';
 
 // 2026-08-08 (P7-03 defense-in-depth): จำกัด CORS จาก '*' เป็นโดเมนจริงของเว็บเท่านั้น —
 // ตรวจแล้วฟังก์ชันนี้เรียกจาก js/games/lego-game-app.js (lego.html) ล้วน ๆ ไม่มี LIFF SDK เกี่ยวข้อง
@@ -44,7 +48,6 @@ const ALLOWED_ORIGINS = [
   // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
   'https://gentle-moxie-bf64ad.netlify.app',
 ];
-
 // วันนี้ตามเวลาไต้หวัน (Asia/Taipei) — ให้วันขึ้นวันใหม่ตรงกับที่เว็บใช้อยู่แล้วทั้งเว็บ (streak/ดาว)
 // ไม่ใช้เวลาเครื่อง server เอง (อาจเป็น UTC) กันวันเพี้ยน
 function todayTaipei() {
@@ -89,8 +92,17 @@ serve(async (req) => {
   }
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) return json({ error: 'origin_not_allowed' }, 403);
 
   try {
+    const rawText = await req.text();
+    if (rawText.length > 2_000) return json({ error: 'invalid_payload_size' }, 400);
+    let body = {};
+    try { if (rawText.trim()) body = JSON.parse(rawText); }
+    catch { return json({ error: 'malformed_json' }, 400); }
+    if (!body || Array.isArray(body) || typeof body !== 'object') return json({ error: 'malformed_json' }, 400);
+    const hasExplicitRequestId = Object.prototype.hasOwnProperty.call(body, 'request_id');
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl, serviceKey);
@@ -114,14 +126,56 @@ serve(async (req) => {
     }
 
     const day = todayTaipei();
-    const { data: countData, error: rpcErr } = await supabase.rpc('lego_consume_daily', {
-      p_key: identityKey, p_day: day, p_cap: cap,
+    let request;
+    try {
+      let recentRows = [];
+      if (!hasExplicitRequestId) {
+        const recent = await supabase.from('lego_daily_limit_requests')
+          .select('request_id,created_at')
+          .eq('identity_key', identityKey).eq('day', day)
+          .order('created_at', { ascending: false }).limit(8);
+        if (recent.error) return json({ error: 'legacy_bridge_unavailable' }, 503);
+        recentRows = recent.data || [];
+      }
+      request = await resolveLegoRequestId({
+        hasExplicitRequestId,
+        explicitRequestId: body.request_id,
+        recentRows,
+        identityKey,
+        day,
+        nowMs: Date.now(),
+        windowMs: LEGACY_LEGO_DEDUPE_MS,
+      });
+    } catch (error) {
+      if (String(error && error.message) === 'invalid_explicit_request_id') {
+        return json({ error: 'idempotency_required' }, 400);
+      }
+      return json({ error: 'legacy_bridge_unavailable' }, 503);
+    }
+
+    const requestId = request.requestId;
+    const { data: quota, error: rpcErr } = await supabase.rpc('lego_consume_daily_idempotent', {
+      p_key: identityKey, p_day: day, p_cap: cap, p_request_id: requestId,
     });
     if (rpcErr) return json({ error: 'db_error', detail: rpcErr.message }, 500);
+    if (!quota || quota.ok !== true) {
+      if (quota && quota.reason === 'replay_conflict') return json({ error: 'replay_conflict' }, 409);
+      return json({ error: 'db_result_invalid' }, 500);
+    }
 
-    const used = countData; // -1 = เต็มโควต้าแล้ว (ไม่อนุญาตครั้งนี้) · อื่น ๆ = จำนวนที่ใช้ไปแล้วรวมครั้งนี้
-    const ok = used !== -1;
-    return json({ ok, used: ok ? used : cap, cap, loggedIn, remaining: ok ? Math.max(0, cap - used) : 0 });
+    const ok = quota.allowed === true;
+    return json({
+      ok,
+      reason: ok ? undefined : 'limit',
+      used: Number(quota.used),
+      cap,
+      loggedIn,
+      remaining: Number(quota.remaining),
+      requestId,
+      idempotent: quota.idempotent === true,
+      compatibility: request.legacyCompatibility ? 'legacy-no-id' : 'explicit-id',
+      legacyReplay: request.recentReplay === true,
+    });
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500);
   }

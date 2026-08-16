@@ -54,7 +54,38 @@
   var sb = window.supabase.createClient(cfg.url, cfg.anonKey);
   var currentUser = null;
   var myNick = null;
+  var nicknameSavePending = false;
+  var NICKNAME_SAVE_TIMEOUT_MS = 12000;
   var period = 'week'; // 'week' | 'all'
+
+  function saveNicknameWithTimeout(nickname) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        var error = new Error('暱稱儲存逾時');
+        error.uncertain = true;
+        reject(error);
+      }, NICKNAME_SAVE_TIMEOUT_MS);
+      Promise.resolve(sb.from('profiles').upsert({ user_id: currentUser.id, nickname: nickname }, { onConflict: 'user_id' }))
+        .then(function (res) {
+          if (settled) return;
+          settled = true; clearTimeout(timer); resolve(res);
+        }, function (error) {
+          if (settled) return;
+          settled = true; clearTimeout(timer);
+          if (error && typeof error === 'object') error.uncertain = true;
+          reject(error);
+        });
+    });
+  }
+
+  function nicknameSaveError(error) {
+    var failure = new Error((error && error.message) || '暱稱儲存失敗');
+    failure.uncertain = !!(error && !error.code && /(?:failed to fetch|network|load failed|timeout|timed out)/i.test(String(error.message || '') + ' ' + String(error.details || '')));
+    return failure;
+  }
 
   // ── ตั้งค่า "คู่ซ้อม" (pacer / หน้าม้า) v2 — ปรับได้ตรงนี้ ──────────
   // v2 (LIN 2026-07-31): เพิ่ม "เพดานบน" (ceilWeek/ceilAll) กันคะแนนโป่งเวอร์ตามคะแนนจริงที่ผิดปกติ
@@ -131,16 +162,29 @@
 
   // ── การตั้งชื่อเล่น ─────────────────────────────────────────
   function promptNickname() {
-    if (!currentUser) return;
+    if (!currentUser || nicknameSavePending) return;
     var nm = window.prompt('設定排行榜暱稱（1–20 字）：', myNick || '');
     if (nm == null) return;
     nm = nm.trim().slice(0, 20);
     if (!nm) { alert('暱稱不能空白'); return; }
-    sb.from('profiles').upsert({ user_id: currentUser.id, nickname: nm }, { onConflict: 'user_id' })
+    nicknameSavePending = true;
+    saveNicknameWithTimeout(nm)
       .then(function (res) {
-        if (res.error) { alert('暱稱儲存失敗：' + res.error.message); return; }
+        if (!res || typeof res !== 'object') {
+          var invalid = new Error('伺服器回應格式不完整');
+          invalid.uncertain = true;
+          throw invalid;
+        }
+        if (res.error) throw nicknameSaveError(res.error);
+        // Never update the visible nickname before the remote upsert confirms success.
         myNick = nm;
         load();
+      }).catch(function (error) {
+        alert(error && error.uncertain
+          ? '無法確認暱稱是否已儲存。請重新載入確認目前名稱後，再決定是否重試。'
+          : '暱稱儲存失敗：' + (error && error.message || String(error)));
+      }).then(function () {
+        nicknameSavePending = false;
       });
   }
 
