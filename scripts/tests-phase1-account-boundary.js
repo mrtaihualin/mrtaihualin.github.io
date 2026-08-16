@@ -96,6 +96,8 @@ function makeStorage(seed) {
   const legoVault = read('js/games/lego-vault.js');
   const sentenceVault = read('js/games/sentence-vault.js');
   const readingAuth = read('js/games/reading-auth.js');
+  const authWidget = read('js/core/auth-widget.js');
+  const accountUnlink = read('supabase/functions/account-unlink/index.ts');
   const scoreSql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
 
   check('progress pull ต้องผ่าน verified owner boundary', /function pull\(fromConflict\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\)\) return;/.test(progress));
@@ -111,6 +113,9 @@ function makeStorage(seed) {
   check('SentenceVault sync ผูก Phase 1 boundary ก่อนอ่านหรืออัปโหลด', /PHASE1_ACCOUNT_BOUNDARY\.bind\(nextUid \? \{ id: nextUid \} : null\)/.test(sentenceVault));
   check('LegoVault sync ใช้ account owner และ tombstone', /vault_key: VAULT_KEY/.test(legoVault) && /deleted_at: new Date\(\)\.toISOString\(\)/.test(legoVault));
   check('auth ส่ง owner transition ให้คลังคำ/ประโยคทุกระบบ', /WordVault\.sync\(sb, uid\)/.test(readingAuth) && /SentenceVault\.sync\(sb, uid\)/.test(readingAuth) && /LegoVault\.sync\(sb, uid\)/.test(readingAuth));
+  check('สถานะเชื่อม LINE อ่านจาก server source of truth ไม่เชื่อ app_metadata', /callAccountFn\('account-unlink', \{ action: 'status' \}\)/.test(authWidget) && !/var (?:alreadyLinkedLine|hasLine)\s*=/.test(authWidget));
+  check('LINE status endpoint ผูก owner จาก JWT และอ่าน line_identities แบบ read-only', /const action = body && body\.action === 'status'/.test(accountUnlink) && /const userId = user\.id/.test(accountUnlink) && /action === 'status'[\s\S]{0,220}line_linked: lineLinked/.test(accountUnlink));
+  check('ถอด LINE ล้าง metadata cache หลังยืนยัน mapping ถูกลบแล้ว', /verifyRows[\s\S]{0,900}line_linked: false, line_user_id: null/.test(accountUnlink));
 }
 
 if (failures.length) {

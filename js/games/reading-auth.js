@@ -196,6 +196,13 @@
     var lastProviderHint = lastProvider
       ? '<div style="margin:0 0 14px;background:#EAF4EC;border:1px solid #A9D3B4;border-radius:10px;padding:8px 12px;font-size:12.5px;color:#2d6a4f;line-height:1.5;">💡 上次你是用 <b>' + esc(providerLabel(lastProvider)) + '</b> 登入的，建議用同一種方式，分數才接得上</div>'
       : '';
+    // Phase 1 human E2E (2026-08-16): ผู้เล่นจริงแยก "ล็อกอิน" กับ "เชื่อมช่องทางเพิ่ม" ไม่ออก
+    // คำเตือนนี้ต้องเห็นทุกครั้ง แม้ logout จะล้าง last-provider hint เพื่อความเป็นส่วนตัวบนเครื่องร่วมกัน
+    var accountMethodWarning =
+      '<div id="rg-account-method-warning" style="margin:0 0 14px;background:#FFF4D8;border:1.5px solid #D7A63C;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#6B4B08;line-height:1.65;text-align:left;">' +
+        '<b>⚠️ 已有帳號？先用原本的方式登入</b><br>' +
+        '登入後，再到「✏️ 個人檔案」連接 Facebook／LINE。直接改按另一種登入方式，可能會建立另一個帳號，原本進度不會跟過去。' +
+      '</div>';
     rgGate.innerHTML =
       '<div style="position:relative;background:#fff;max-width:380px;width:100%;max-height:88vh;overflow-y:auto;border-radius:18px;padding:30px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
       '<button id="rg-x" aria-label="關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
@@ -203,6 +210,7 @@
       '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入排行榜</h2>' +
       '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">登入後分數<b>同步保存</b>、上<b>排行榜</b>，換手機也記得你！</p>' +
       lastProviderHint +
+      accountMethodWarning +
       '<input id="rg-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
       '<button id="rg-send" style="margin-top:10px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">寄送驗證碼 →</button>' +
       '<div id="rg-step2" style="display:none;margin-top:12px;">' +

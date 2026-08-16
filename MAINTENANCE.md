@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 15:06 Asia/Bangkok** — Phase 1 Tone how-to Escape follow-up
+**Updated: 2026-08-16 15:37 Asia/Bangkok** — Phase 1 authoritative LINE-link status
+
+## 2026-08-16 — P1-G-05 LINE Link Truth (`PASS_LOCAL / EDGE_AND_CLIENT_DEPLOY_NEEDED`)
+
+- Human provider E2E proved an account-integrity mismatch on one device: the main `Lin` UI claimed LINE was connected and showed existing progress, but direct LINE login returned a separate empty `Taihua Lin` account. This is a real defect, not user error; no account was merged, deleted, unlinked or otherwise mutated during diagnosis.
+- Root cause: profile/account-management UI trusted stale `app_metadata.line_linked` / `line_user_id` from the browser JWT, while actual LINE login is owned by the service-role-only `line_identities` mapping. The existing unlink path also removed the mapping without clearing that metadata cache.
+- `account-unlink` now exposes an authenticated read-only `status` action sourced from `line_identities`; profile and account management wait for that authoritative result before claiming LINE is connected. Successful LINE unlink also clears stale metadata best-effort after verified mapping removal. `auth-widget.js` cache moves v9 → v10 on its 13 existing surfaces.
+- The login modal now always explains that returning players must use their original method first, then connect Facebook/LINE from the signed-in profile; switching provider buttons can create a separate account whose progress does not follow. This warning does not depend on device-local last-login history, so it remains visible after logout and on a new device. `reading-auth.js` cache moves v22 → v23 on its seven existing surfaces.
+- Verification: account boundary 25/25, auth/error UX 13/13, save/retry 10/10, owner-switch races 12/12, backend transactions 9/9 and `node scripts/check-site.js` PASS for 928 project files.
+- Source fix does not decide which of the two existing accounts is canonical and does not repair Production data automatically. After authorized Edge/client deploy, Lin must choose the canonical account and separately authorize any exact account-mapping repair; until then LINE provider E2E and two-device UI remain blocked.
 
 ## 2026-08-16 — P1-F-04 Core 5 False Crash Banner (`PASS_LOCAL / DEPLOY_PV_NEEDED`)
 

@@ -7,6 +7,7 @@ const assert = require('assert');
 const root = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const auth = read('js/core/auth-widget.js');
+const readingAuth = read('js/games/reading-auth.js');
 const audio = read('js/games/protected-word-audio.js');
 const content = read('js/games/game-content-client.js');
 const toneBoard = read('js/score/leaderboard.js');
@@ -48,6 +49,12 @@ test('account operations have bounded requests and never invite blind mutation r
   assert.match(auth, /callAccountFnFresh[\s\S]*withClientTimeout\(sb\.auth\.refreshSession/);
   assert.doesNotMatch(auth, /可安全重新點擊再試一次/);
 });
+test('login modal always distinguishes login from linking another provider', () => {
+  assert.match(readingAuth, /id="rg-account-method-warning"/);
+  assert.match(readingAuth, /已有帳號？先用原本的方式登入/);
+  assert.match(readingAuth, /登入後，再到「✏️ 個人檔案」連接 Facebook／LINE/);
+  assert.match(readingAuth, /可能會建立另一個帳號，原本進度不會跟過去/);
+});
 test('both leaderboard clients wait for confirmed nickname saves and bound duplicate clicks', () => {
   [toneBoard, coreBoards].forEach((source) => {
     assert.match(source, /NICKNAME_SAVE_TIMEOUT_MS = 12000/);
@@ -81,14 +88,14 @@ test('content loading error has retry, home and support recovery', () => {
 test('all Core 5 pages ship current auth/audio error handling', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
-    assert.match(html, /auth-widget\.js\?v=9/);
+    assert.match(html, /auth-widget\.js\?v=10/);
     assert.match(html, /protected-word-audio\.js\?v=2/);
   });
 });
 test('all affected account and callback surfaces ship current failure-handling clients', () => {
   ['leaderboard.html','lego.html','listening-board.html','listening-game.html','my-progress.html','reading-board.html',
     'reading-game.html','tone-finder.html','typing-board.html','typing-game.html','vault.html','word-order-board.html','word-order.html']
-    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=9/, page));
+    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=10/, page));
   assert.match(read('leaderboard.html'), /leaderboard\.js\?v=11/);
   ['reading-board.html','listening-board.html','typing-board.html','word-order-board.html']
     .forEach((page) => assert.match(read(page), /reading-leaderboard\.js\?v=7/, page));

@@ -275,6 +275,34 @@
   // ป๊อปอัปแก้โปรไฟล์: ชื่อ + รูปอิโมจิสำเร็จรูป + เลือกแบดจ์ที่ปลดล็อกแล้ว (sync ผ่าน profiles)
   // (ก๊อปมาจาก supabase-auth.js เดิมทั้งดุ้น — ตัวนี้สมบูรณ์ที่สุด ใช้เป็นต้นแบบกลาง)
   var profileModal = null;
+  function canStartLineLink() {
+    return !!(window.READING_AUTH && typeof window.READING_AUTH.startLineLink === 'function' &&
+      window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.lineChannelId);
+  }
+
+  function lineConnectButtonHtml() {
+    if (!canStartLineLink()) return '<div style="font-size:12px;color:#A07A1E;margin-bottom:10px;">此頁無法連接 LINE，請到遊戲頁再試</div>';
+    return '<button id="sap-link-line" style="width:100%;border:1.5px solid #06C755;background:#fff;color:#06C755;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">' +
+      '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#06C755" d="M12 2C6.48 2 2 5.69 2 10.24c0 4.08 3.54 7.5 8.32 8.15.32.07.76.21.87.49.1.25.06.65.03.9l-.14.85c-.04.25-.19.98.86.53 1.05-.44 5.67-3.34 7.74-5.72C21.15 13.62 22 12.02 22 10.24 22 5.69 17.52 2 12 2z"/></svg>連接 LINE 帳號</button>';
+  }
+
+  function loadProfileLineStatus(host) {
+    if (!host) return;
+    callAccountFn('account-unlink', { action: 'status' }).then(function (status) {
+      if (!host.parentNode) return;
+      if (status && status.line_linked === true) {
+        host.innerHTML = '<div style="font-size:12px;color:#2d6a4f;margin-bottom:10px;">✅ 已連接 LINE 帳號</div>';
+        return;
+      }
+      host.innerHTML = lineConnectButtonHtml();
+      var btn = host.querySelector('#sap-link-line');
+      if (btn) btn.onclick = function () { window.READING_AUTH.startLineLink(); };
+    }).catch(function () {
+      if (!host.parentNode) return;
+      host.innerHTML = '<div style="font-size:12px;color:#b45309;margin-bottom:10px;">⚠️ 無法確認 LINE 連接狀態，請稍後再試</div>';
+    });
+  }
+
   function openProfileEditor() {
     if (!API.user) return;
     var meta = API.user.user_metadata || {};
@@ -312,17 +340,9 @@
     profileModal.id = 'sa-profile-modal';
     profileModal.style.cssText = 'position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:18px;' +
       'background:rgba(28,18,4,0.82);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);font-family:"Noto Sans TC",sans-serif;';
-    // v1 (LIN 2026-07-26): ปุ่ม "連接 LINE 帳號" — ให้คนที่ล็อกอินอยู่แล้ว (Google/Email/Facebook)
-    //   ผูก LINE เข้ากับบัญชีเดิมได้ กันได้บัญชีแยกตอนล็อกอินด้วย LINE ครั้งแรก (เจอจริงจาก Lin ทดสอบ)
-    //   โชว์เฉพาะตอนมี window.READING_AUTH.startLineLink (หน้าเกมที่โหลด reading-auth.js) +
-    //   ตั้งค่า lineChannelId แล้ว + ยังไม่เคยผูกมาก่อน (เช็คจาก app_metadata คร่าวๆ)
-    var alreadyLinkedLine = !!(API.user.app_metadata && (API.user.app_metadata.line_linked || API.user.app_metadata.line_user_id));
-    var canLinkLine = window.READING_AUTH && typeof window.READING_AUTH.startLineLink === 'function' &&
-      window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.lineChannelId && !alreadyLinkedLine;
-    var linkLineHtml = canLinkLine
-      ? '<button id="sap-link-line" style="width:100%;border:1.5px solid #06C755;background:#fff;color:#06C755;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">' +
-          '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#06C755" d="M12 2C6.48 2 2 5.69 2 10.24c0 4.08 3.54 7.5 8.32 8.15.32.07.76.21.87.49.1.25.06.65.03.9l-.14.85c-.04.25-.19.98.86.53 1.05-.44 5.67-3.34 7.74-5.72C21.15 13.62 22 12.02 22 10.24 22 5.69 17.52 2 12 2z"/></svg>連接 LINE 帳號</button>'
-      : (alreadyLinkedLine ? '<div style="font-size:12px;color:#2d6a4f;margin-bottom:10px;">✅ 已連接 LINE 帳號</div>' : '');
+    // LINE ใช้ตาราง line_identities เป็น source of truth; app_metadata ใน JWT ค้างหรือชี้ผิดบัญชีได้
+    // จึงแสดง placeholder ก่อน แล้วถามสถานะ read-only จาก server หลัง modal เปิด
+    var linkLineHtml = '<div id="sap-line-status"><div style="font-size:12px;color:#A07A1E;margin-bottom:10px;">正在確認 LINE 連接狀態…</div></div>';
 
     // v2 (LIN 2026-07-26，ตามที่ Lin สั่ง "ทำเลย"): ปุ่ม "連接 Facebook 帳號" — กันเหตุการณ์ซ้ำแบบ LINE
     //   (LINE ตอนแรกล็อกอินแล้วได้บัญชีแยก ไม่ merge กับบัญชีเดิม เพราะ LINE ใช้ Edge Function ของเราเอง
@@ -360,8 +380,7 @@
         '<button id="sap-open-manage" style="width:100%;border:none;background:none;color:#A07A1E;font-size:12px;padding:10px 0 0;cursor:pointer;text-decoration:underline;">⚙️ 帳號管理（匯出資料 / 解除連結 / 刪除帳號）</button>' +
       '</div>';
     document.body.appendChild(profileModal);
-    var linkLineBtn = profileModal.querySelector('#sap-link-line');
-    if (linkLineBtn) linkLineBtn.onclick = function () { window.READING_AUTH.startLineLink(); };
+    loadProfileLineStatus(profileModal.querySelector('#sap-line-status'));
     // v2 (LIN 2026-07-26): กดแล้ว redirect ไป Facebook ทันที (สำเร็จจะไม่เห็นโค้ดหลังจากนี้ เพราะหน้าเปลี่ยนไปแล้ว)
     //   error ที่เจอได้บ่อยสุด = ยังไม่ได้เปิด "Manual Linking" ใน Supabase Dashboard (ดู comment ด้านบน)
     var linkFbBtn = profileModal.querySelector('#sap-link-fb');
@@ -770,7 +789,6 @@
     var identities = API.user.identities || [];
     var linkedProviders = identities.map(function (i) { return i.provider; });
     var isSyntheticLineEmail = /^line-.+@users\.line\.invalid$/i.test(API.user.email || '');
-    var hasLine = !!(API.user.app_metadata && (API.user.app_metadata.line_linked || API.user.app_metadata.line_user_id));
     var providerLabel = { google: 'Google', facebook: 'Facebook', email: 'Email' };
     var providerRows = '';
     linkedProviders.forEach(function (p) {
@@ -778,8 +796,6 @@
       if (!providerLabel[p]) return;
       providerRows += manageProviderRow(p, providerLabel[p]);
     });
-    if (hasLine) providerRows += manageProviderRow('line', 'LINE');
-    if (!providerRows) providerRows = '<div style="font-size:12px;color:#A07A1E;">找不到已連結的登入方式資料</div>';
 
     manageModal.innerHTML =
       '<div style="background:#fff;max-width:380px;width:100%;border-radius:18px;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,0.35);max-height:88vh;overflow:auto;">' +
@@ -790,6 +806,7 @@
 
         '<div style="font-size:13px;color:#8B7340;font-weight:700;margin-bottom:6px;">登入方式</div>' +
         '<div id="sam-providers" style="margin-bottom:8px;">' + providerRows + '</div>' +
+        '<div id="sam-line-provider-status" style="font-size:12px;color:#A07A1E;margin-bottom:8px;">正在確認 LINE 連接狀態…</div>' +
         '<div id="sam-unlink-msg" style="display:none;font-size:12px;color:#b45309;margin-bottom:14px;line-height:1.5;"></div>' +
 
         '<div style="height:1px;background:#F0E6CC;margin:14px 0;"></div>' +
@@ -810,8 +827,27 @@
     manageModal.addEventListener('click', function (e) { if (e.target === manageModal) closeM(); });
 
     var unlinkMsg = manageModal.querySelector('#sam-unlink-msg');
-    [].forEach.call(manageModal.querySelectorAll('.sap-unlink-btn'), function (btn) {
-      btn.onclick = function () { doUnlinkProvider(btn.getAttribute('data-provider'), btn, unlinkMsg); };
+    function bindUnlinkButtons(root) {
+      [].forEach.call(root.querySelectorAll('.sap-unlink-btn'), function (btn) {
+        btn.onclick = function () { doUnlinkProvider(btn.getAttribute('data-provider'), btn, unlinkMsg); };
+      });
+    }
+    bindUnlinkButtons(manageModal);
+
+    var lineProviderStatus = manageModal.querySelector('#sam-line-provider-status');
+    callAccountFn('account-unlink', { action: 'status' }).then(function (status) {
+      if (!lineProviderStatus.parentNode) return;
+      if (status && status.line_linked === true) {
+        lineProviderStatus.innerHTML = manageProviderRow('line', 'LINE');
+        lineProviderStatus.style.color = '';
+        bindUnlinkButtons(lineProviderStatus);
+      } else {
+        lineProviderStatus.textContent = 'LINE 尚未連接到這個帳號';
+      }
+    }).catch(function () {
+      if (!lineProviderStatus.parentNode) return;
+      lineProviderStatus.textContent = '⚠️ 無法確認 LINE 連接狀態，請稍後再試';
+      lineProviderStatus.style.color = '#b45309';
     });
 
     var exportBtn = manageModal.querySelector('#sam-export');
