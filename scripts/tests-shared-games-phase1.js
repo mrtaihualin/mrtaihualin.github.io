@@ -76,6 +76,20 @@ test('Tone help layers own Escape and exit without leaking the key to page short
   assert.match(tone, /e\.stopImmediatePropagation\(\)[\s\S]{0,80}gtTourEnd\(\)/);
 });
 
+test('all five replayable help modals close on Escape and restore focus to their opener', () => {
+  const handles = {
+    tone: '__tfHowtoModalReg',
+    reading: '__rgHowtoModalReg',
+    listening: '__lgHowtoModalReg',
+    typing: '__tgHowtoModalReg',
+    wordorder: '__woHowtoModalReg',
+  };
+  for (const g of games) {
+    assert.match(g.htmlText + g.appText, new RegExp(`window\\.${handles[g.id]}\\s*=\\s*window\\.registerGameModal`), `${g.id}: help modal is not registered`);
+    assert.match(g.htmlText, new RegExp(`${handles[g.id]}\\)window\\.${handles[g.id]}\\.notifyOpen\\(this\\)`), `${g.id}: opener does not register focus return`);
+  }
+});
+
 test('all five game pages declare mobile viewport and responsive CSS', () => {
   for (const g of games) {
     assert.match(g.htmlText, /<meta name="viewport"[^>]+width=device-width/);
