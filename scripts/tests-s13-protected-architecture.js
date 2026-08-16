@@ -57,6 +57,16 @@ const workflow = read('.github/workflows/deploy-protected-pages.yml');
 check('Pages deploy เป็น manual only', /workflow_dispatch:/.test(workflow) && !/^\s*push:/m.test(workflow));
 check('Pages deploy ใช้ protected artifact builder', /build-pages-artifact\.js _pages-build/.test(workflow));
 
+const pagesConfig = read('_config.yml');
+check('standard Pages ยังใช้ Jekyll exclusion', !fs.existsSync(path.join(root, '.nojekyll')));
+[
+  'data/words-data.js',
+  'data/adv-sentences.js',
+  'data/audio-manifest.js',
+  'assets/word-audio',
+  'assets/sentence-audio',
+].forEach((value) => check('standard Pages excludes ' + value, pagesConfig.includes('- ' + value)));
+
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 's13-pages-'));
 const build = spawnSync(process.execPath, [path.join(root, 'scripts/build-pages-artifact.js'), temp], { encoding: 'utf8' });
 check('protected artifact build ผ่าน', build.status === 0);
