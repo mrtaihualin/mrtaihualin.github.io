@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 11:51 Asia/Bangkok** — Phase 1 mixed-version Edge/client compatibility bridge (source only)
+**Updated: 2026-08-16 14:15 Asia/Bangkok** — Phase 1 Production Tone replay hotfix and controlled mutation verification
+
+## 2026-08-16 — P1-F-02 Production Mutation / Retry / Concurrency PV (`PASS / HUMAN UI GATES REMAIN`)
+
+- Dedicated disposable Production accounts exposed two Tone rollout defects without touching real player data: the Edge dependency used an unavailable rate-limit RPC, then identical concurrent requests could observe the newly committed SRS row and return `not_due` before reading the durable replay operation. Scoped fixes replaced the limiter with the tracked `game_content_rl_check` contract and rechecked the operation record before returning a concurrent SRS rejection.
+- Fixes shipped through PR #13, #14 and #15; current main is `a3f8d0cf86a8347708e43cdac61fa04b28d1882e`. PR #15 required run `31933198200`, post-merge required run `31933232922` and Pages run `31933232674` passed. Production `tone-round` v43 is ACTIVE, `verify_jwt=true`, and downloaded source matches main exactly; Score v3, Lego v23, SQL and client/cache remain unchanged.
+- Production mutation PV passed for Tone exact retry/changed replay/concurrent duplicate/exactly-once, Score authoritative+legacy mirror retry/conflict/concurrency/RLS, Lego old/new/mixed retry/concurrency/quota count, and canonical two-client stale-CAS/rebase/RLS. Every test account and scoped row was removed; residue count was zero. Core 5, Lego, boards, Edge CORS/auth and full local gate (928 files) passed.
+- Remaining launch gates are browser/provider/device/human gates: fresh isolated Guest full gameplay/quota, authenticated OTP/OAuth UI, real two-device browser resume, provider callbacks, and Lin content/audio plus Final Go/No-Go.
 
 ## 2026-08-16 — P1-F-02 Mixed-Version Rollout Compatibility (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
