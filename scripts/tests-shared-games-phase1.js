@@ -69,6 +69,12 @@ test('first-time help is persistent for four mature games and explicit on Listen
   assert.match(listening, /聽力練習：這樣玩/);
 });
 
+test('Tone guided tour owns Escape and exits without leaking the key to page shortcuts', () => {
+  const tone = games.find((g) => g.id === 'tone').htmlText;
+  assert.match(tone, /e\.key!==['"]Escape['"]/);
+  assert.match(tone, /e\.stopImmediatePropagation\(\)[\s\S]{0,80}gtTourEnd\(\)/);
+});
+
 test('all five game pages declare mobile viewport and responsive CSS', () => {
   for (const g of games) {
     assert.match(g.htmlText, /<meta name="viewport"[^>]+width=device-width/);
