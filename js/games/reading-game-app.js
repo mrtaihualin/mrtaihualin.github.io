@@ -503,6 +503,16 @@ function rgSaveResumeState(){
   }catch(e){}
 }
 function rgClearResumeState(){ try{ if(window.GameResume) GameResume.clear(RG_RESUME_ID); }catch(e){} }
+function rgRestoreRoundReport(snapshot){
+  var defaults={game_type:'reading',difficulty:curLevel,mode:'phonics'};
+  if(!window.RoundReport)return null;
+  try{
+    if(snapshot&&typeof RoundReport.restore==='function')return RoundReport.restore(snapshot,defaults);
+  }catch(e){}
+  try{
+    return typeof RoundReport.create==='function'?RoundReport.create(defaults):null;
+  }catch(e){return null;}
+}
 // เรียกครั้งเดียวตอนโหลดหน้า (แทน initGame() ตรงๆ) — เจอ state ค้างไว้จริง → โชว์แบนเนอร์ถามก่อน ไม่เจอ → คืน false ให้ผู้เรียกไป initGame() ตามปกติ
 function rgTryLoadResumeBanner(){
   var banner=document.getElementById('rg-resume-banner');
@@ -541,7 +551,9 @@ function rgResumeContinue(){
   roundScore=st.roundScore||0;cleanC=st.cleanC||0;
   isWordPractice=false;
   roundLog=Array.isArray(st.roundLog)?st.roundLog:[];
-  roundReport=window.RoundReport?RoundReport.restore(st.report,{game_type:'reading',difficulty:curLevel,mode:'phonics'}):null;
+  // Resume must never strand the UI on the HTML placeholders. Old/malformed report snapshots
+  // fall back to a fresh report while the saved question queue and counters remain recoverable.
+  roundReport=rgRestoreRoundReport(st.report);
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
   refreshUI();

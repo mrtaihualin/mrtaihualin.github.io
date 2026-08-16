@@ -4,6 +4,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js/games/word-order-app.js'), 'utf8');
@@ -75,6 +76,23 @@ test('round completion writes account evidence as word_order', () => {
 test('玩法 explains correction and prescribed order', () => {
   assert.match(html, /正確順序/);
   assert.match(html, /放回去重排/);
+});
+
+test('resume advances past an already-counted sentence, including legacy snapshots', () => {
+  const helper = block('function woResumeCompletedCurrent(', 'function shuffle(');
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(helper, context);
+  assert.strictEqual(context.woResumeCompletedCurrent({ completedCurrent: true }, 'ประโยค'), true);
+  assert.strictEqual(context.woResumeCompletedCurrent({
+    report: { items: [{ content_ref: { key: 'ประโยค' } }] },
+  }, 'ประโยค'), true);
+  assert.strictEqual(context.woResumeCompletedCurrent({ roundLog: [{ th: 'ประโยค' }] }, 'ประโยค'), true);
+  assert.strictEqual(context.woResumeCompletedCurrent({ completedCurrent: false }, 'ประโยค'), false);
+  assert.match(app, /completedCurrent:\s*!!completedCurrent/);
+  assert.match(app, /if \(woResumeCompletedCurrent\(state, savedSentence&&savedSentence\.th\)\) idx\+\+/);
+  assert.match(app, /if \(idx >= SET\.length\) \{ finish\(\); return; \}/);
+  assert.strictEqual((app.match(/woSaveResume\(true\)/g) || []).length, 3);
 });
 
 console.log(`\n${passed} Phase 1 Word Order tests passed.`);

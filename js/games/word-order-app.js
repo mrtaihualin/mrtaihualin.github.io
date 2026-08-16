@@ -471,13 +471,14 @@
   //   บันทึกทุกครั้งที่ "ประโยคหนึ่งจบลง" (ตอบถูก/ตาย/ผ่านด่านพิสูจน์已記得) — อ่านค่าที่มีอยู่แล้วไปเก็บ ไม่แตะ life/hint/scoring เลย
   //   ข้าม practiceMode (ทบทวนฟรีไม่คิดคะแนน ไม่มีอะไรน่าเสียดายถ้าปิดแท็บกลางคัน)
   // ════════════════════════════════════════════════════════════
-  function woSaveResume(){
+  function woSaveResume(completedCurrent){
     try{
       if (practiceMode || !window.GameResume || !SET.length) return;
       if (idx >= SET.length) return; // จบรอบแล้ว ไม่ต้อง save (finish() จะ clear เอง)
       GameResume.save('word-order', {
         sentenceIds: SET.map(function(i){ return ADV_SENTENCES[i].th; }),
         idx: idx,
+        completedCurrent: !!completedCurrent,
         score: score,
         correctFirstTry: correctFirstTry,
         cleanC: cleanC,
@@ -490,6 +491,17 @@
   }
   function woClearResume(){
     try{ if (window.GameResume) GameResume.clear('word-order'); }catch(e){}
+  }
+  function woResumeCompletedCurrent(state, currentTh){
+    if(!state||!currentTh)return false;
+    if(state.completedCurrent===true)return true;
+    // Backward compatibility for snapshots written before completedCurrent existed.
+    var items=state.report&&Array.isArray(state.report.items)?state.report.items:[];
+    var lastItem=items.length?items[items.length-1]:null;
+    if(lastItem&&lastItem.content_ref&&lastItem.content_ref.key===currentTh)return true;
+    var log=Array.isArray(state.roundLog)?state.roundLog:[];
+    var lastLog=log.length?log[log.length-1]:null;
+    return !!(lastLog&&lastLog.th===currentTh);
   }
 
   function shuffle(arr){
@@ -718,9 +730,13 @@
     var b = document.getElementById('wo-resume-banner');
     if (!b) { startFreshRound(); return; } // DOM ไม่พร้อม (ไม่ควรเกิด) → กันเงียบ เริ่มรอบใหม่แทนดีกว่าค้าง
     var savedIdx = Math.min(Math.max(0, state.idx||0), restoredSet.length-1);
+    var savedSentence = ADV_SENTENCES[restoredSet[savedIdx]];
+    if (woResumeCompletedCurrent(state, savedSentence&&savedSentence.th)) savedIdx++;
     var t = document.getElementById('wo-resume-title'); if (t) t.textContent = '上次的安全進度還在';
     var d = document.getElementById('wo-resume-detail');
-    if (d) d.textContent = '遊戲：語序練習・第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句・目前分數 ' + (state.score||0) + ' 分';
+    if (d) d.textContent = savedIdx>=restoredSet.length
+      ? '遊戲：語序練習・本輪已完成・繼續查看結果'
+      : '遊戲：語序練習・第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句・目前分數 ' + (state.score||0) + ' 分';
     var g = document.getElementById('game'); if (g) g.style.display = 'none';
     var e = document.getElementById('end'); if (e) e.style.display = 'none';
     b.style.display = '';
@@ -755,7 +771,10 @@
     roundLog = Array.isArray(state.roundLog)?state.roundLog:[];
     roundReport = window.RoundReport?RoundReport.restore(state.report,{game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
     practiceMode = false;
+    var savedSentence = ADV_SENTENCES[SET[idx]];
+    if (woResumeCompletedCurrent(state, savedSentence&&savedSentence.th)) idx++;
     if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
+    if (idx >= SET.length) { finish(); return; }
     refreshUI();
     try { rgRenderGameBar(); } catch(e){}
     document.getElementById('end').style.display = 'none';
@@ -1039,7 +1058,7 @@
       woServerFinish(s.th, false); // Phase 4: ตาย/ล้มเหลว = รีเซ็ตฝั่งเซิร์ฟเวอร์ด้วย
     }
     woLogSentence({failed:true, pts:0, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
-    woSaveResume();
+    woSaveResume(true);
     curSentenceIsKnownCheck = false;
     curCombo = 0;
     woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เฉลยคำตอบแล้ว (แม้เรียงแพ้) ก็ถือว่าเห็นประโยคสมบูรณ์ → โชว์บรรทัดครับ/ค่ะ/คะ ได้
@@ -1080,7 +1099,7 @@
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
         woLogSentence({mastered:!!passedClean, pts:0, srsDue:passedClean?'已精通':((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '')});
-        woSaveResume();
+        woSaveResume(true);
         woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เรียงถูก (ด่านพิสูจน์已記得) → โชว์บรรทัดครับ/ค่ะ/คะ ได้
         return;
       }
@@ -1180,7 +1199,7 @@
         el.classList.add('correct');
       });
       woLogSentence({guide:!!hintUsedThisSentence, pts:pts, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
-      woSaveResume();
+      woSaveResume(true);
       try{ if(window.gtag) gtag('event','word_order_correct',{category:'game',sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
       try{ if(window.gtag) gtag('event','game_correct',{category:'game',game:'word_order'}); }catch(e){}
     } else {

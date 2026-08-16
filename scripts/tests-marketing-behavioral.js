@@ -61,6 +61,27 @@ function warn(label) {
   warnings.push(label);
 }
 
+(function checkSharedLightboxSafety() {
+  const shared = fs.readFileSync(path.join(root, 'js/core/shared.js'), 'utf8');
+  const start = shared.indexOf('window.openLightbox = function');
+  const end = shared.indexOf('// ===== 🎉 Sent popup', start);
+  const lightbox = start >= 0 && end > start ? shared.slice(start, end) : '';
+  if (!lightbox) {
+    fail('js/core/shared.js: ไม่พบ shared lightbox block');
+    return;
+  }
+  if (!/window\.closeLightbox = function\(\)/.test(lightbox) || !/if \(!lb\) return false/.test(lightbox)) {
+    fail('js/core/shared.js: closeLightbox ต้องเป็น global และ no-op เมื่อหน้าไม่มี lightbox');
+  } else {
+    pass('shared closeLightbox เป็น global และปลอดภัยบนหน้าที่ไม่มี lightbox');
+  }
+  if (!/e\.key === 'Escape' && document\.getElementById\('lightbox'\)/.test(lightbox)) {
+    fail('js/core/shared.js: Escape listener ยังเรียก closeLightbox บนหน้าที่ไม่มี lightbox');
+  } else {
+    pass('shared Escape listener เรียก closeLightbox เฉพาะหน้าที่มี lightbox');
+  }
+})();
+
 // ── 0) ยืนยันว่าไฟล์ในขอบเขตยังมีอยู่จริงทั้งหมด ────────────────────────────
 MARKETING_PAGES.forEach((rel) => {
   if (!fs.existsSync(path.join(root, rel))) {
