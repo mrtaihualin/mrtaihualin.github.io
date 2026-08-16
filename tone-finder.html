@@ -1845,10 +1845,19 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// Escape closes only the active Tone guided tour. Capture first so shared page shortcuts do not
-// also handle the same key while the tour overlay owns the screen.
+// Escape closes the active Tone help UI. Capture first so shared page shortcuts do not
+// also handle the same key while a help layer owns the screen.
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape') return;
+  var howto=document.getElementById('tf-howto-modal');
+  if(howto&&howto.style.display!=='none'&&howto.style.display!==''){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    howto.style.display='none';
+    var howtoBtn=document.getElementById('tf-howto-btn');
+    if(howtoBtn&&typeof howtoBtn.focus==='function') howtoBtn.focus();
+    return;
+  }
   var ov=document.getElementById('gt-tour-overlay');
   var card=document.getElementById('gt-tour-card');
   if(!ov||!ov.classList.contains('show')||!card||card.style.display==='none') return;

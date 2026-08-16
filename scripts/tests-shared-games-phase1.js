@@ -69,9 +69,10 @@ test('first-time help is persistent for four mature games and explicit on Listen
   assert.match(listening, /聽力練習：這樣玩/);
 });
 
-test('Tone guided tour owns Escape and exits without leaking the key to page shortcuts', () => {
+test('Tone help layers own Escape and exit without leaking the key to page shortcuts', () => {
   const tone = games.find((g) => g.id === 'tone').htmlText;
   assert.match(tone, /e\.key!==['"]Escape['"]/);
+  assert.match(tone, /howto&&howto\.style\.display!==['"]none['"][\s\S]{0,300}e\.stopImmediatePropagation\(\)[\s\S]{0,300}howto\.style\.display=['"]none['"]/);
   assert.match(tone, /e\.stopImmediatePropagation\(\)[\s\S]{0,80}gtTourEnd\(\)/);
 });
 
