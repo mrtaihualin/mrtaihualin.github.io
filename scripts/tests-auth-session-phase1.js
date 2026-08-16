@@ -10,10 +10,12 @@ const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/core/auth-widget.js'), 'utf8');
 const leaderboardSource = fs.readFileSync(path.join(root, 'js/score/leaderboard.js'), 'utf8');
 const skillLeaderboardSource = fs.readFileSync(path.join(root, 'js/score/reading-leaderboard.js'), 'utf8');
+const otpSource = fs.readFileSync(path.join(root, 'js/games/reading-auth.js'), 'utf8');
 const LEARNING_KEYS = [
   'tf_srs_v1', 'rgv3_save', 'wo_srs_v1',
   'tf_badges_v1', 'tf_streak_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1',
-  'thai_game_acct_v1', 'linvault_v1', 'sentence_vault_v1', 'lego_vault_v1'
+  'thai_game_acct_v1', 'linvault_v1', 'sentence_vault_v1', 'lego_vault_v1',
+  'phase1_account_resume_v1', 'phase1_canonical_meta_v1'
 ];
 
 function memoryStorage(initial) {
@@ -27,13 +29,14 @@ function memoryStorage(initial) {
   };
 }
 
-function createHarness(getSession, initialStorage) {
+function createHarness(getSession, initialStorage, signOut) {
   const localStorage = memoryStorage(initialStorage);
   const sessionStorage = memoryStorage();
   const warnings = [];
   const sb = {
     auth: {
       getSession,
+      signOut: signOut || (() => Promise.resolve({ error: null })),
       onAuthStateChange() {}
     },
     from() {
@@ -169,6 +172,74 @@ async function test(label, fn) {
       assert.ok(!h.localStorage.removed.includes(key), key + ' was removed');
     });
     assert.strictEqual(h.localStorage.getItem('phase1_learning_owner_v1'), 'old-user');
+  });
+
+  await test('device logout uses local scope and clears UI caches only after success', async () => {
+    const calls = [];
+    const h = createHarness(
+      () => Promise.resolve({ data: { session: { user } }, error: null }),
+      { tf_avatar: '🐘', tf_pinned_badge: 'badge', rg_last_login_provider: 'email' },
+      (options) => { calls.push(options); return Promise.resolve({ error: null }); }
+    );
+    await settle();
+    await h.api.doLogout();
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(calls[0].scope, 'local');
+    assert.strictEqual(h.localStorage.getItem('tf_avatar'), null);
+    assert.strictEqual(h.localStorage.getItem('tf_pinned_badge'), null);
+    assert.strictEqual(h.localStorage.getItem('rg_last_login_provider'), null);
+  });
+
+  await test('failed logout preserves account UI caches and reports the failure', async () => {
+    const failure = new Error('network unavailable');
+    const h = createHarness(
+      () => Promise.resolve({ data: { session: { user } }, error: null }),
+      { tf_avatar: '🐘', tf_pinned_badge: 'badge', rg_last_login_provider: 'email' },
+      () => Promise.resolve({ error: failure })
+    );
+    await settle();
+    const result = await h.api.doLogout();
+    assert.strictEqual(result.error, failure);
+    assert.strictEqual(h.localStorage.getItem('tf_avatar'), '🐘');
+    assert.strictEqual(h.localStorage.getItem('tf_pinned_badge'), 'badge');
+    assert.strictEqual(h.localStorage.getItem('rg_last_login_provider'), 'email');
+  });
+
+  await test('logout-all remains explicitly global', async () => {
+    const calls = [];
+    const h = createHarness(
+      () => Promise.resolve({ data: { session: { user } }, error: null }),
+      {},
+      (options) => { calls.push(options); return Promise.resolve({ error: null }); }
+    );
+    await settle();
+    await h.api.doLogoutAllDevices();
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(calls[0].scope, 'global');
+  });
+
+  await test('email OTP contract is six digits with duplicate-submit guards', async () => {
+    assert.ok(/maxlength="6" pattern="\[0-9\]\{6\}"/.test(otpSource));
+    assert.ok(/!\/\^\\d\{6\}\$\/.test\(code\)/.test(otpSource));
+    assert.ok(/otpRequestPending/.test(otpSource));
+    assert.ok(/otpVerifyPending/.test(otpSource));
+    assert.ok(/shouldCreateUser: true/.test(otpSource));
+  });
+
+  await test('email OTP public responses do not expose provider or account-existence errors', async () => {
+    const requestFlow = otpSource.slice(otpSource.indexOf('function startOtp'), otpSource.indexOf('function verifyCode'));
+    assert.ok(/暫時無法寄送驗證碼，請稍後再試/.test(requestFlow));
+    assert.ok(!/setMsg\([^\n]*error\.message/.test(requestFlow));
+    assert.ok(/Promise\.resolve\(request\)[\s\S]*, failRequest\)/.test(requestFlow));
+  });
+
+  await test('successful OTP binds the returned session and resumes on the same page', async () => {
+    const verifyFlow = otpSource.slice(otpSource.indexOf('function verifyCode'), otpSource.indexOf('function startCooldown'));
+    assert.ok(/verifyOtp\(\{ email: otpEmail, token: code, type: 'email' \}\)/.test(verifyFlow));
+    assert.ok(/res\.data\.session\.user/.test(verifyFlow));
+    assert.ok(!/location\.(?:href|replace|assign)/.test(verifyFlow));
+    assert.ok(/window\.SITE_AUTH\.onChange\(setUser\)/.test(otpSource));
+    assert.ok(/if \(API\.user\) closeGate\(\)/.test(otpSource));
   });
 
   if (!process.exitCode) console.log('\n✅ Phase 1 auth session verification passed (' + passed + ' checks)');
