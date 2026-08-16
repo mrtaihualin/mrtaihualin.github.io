@@ -91,7 +91,9 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/games/game-account.js?v=4"></script>
 <script defer src="js/core/auth-widget.js?v=10"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=23"></script>
+<script defer src="js/games/reading-auth.js?v=24"></script>
+<script defer src="js/score/learning-summary.js?v=1"></script>
+<script defer src="js/games/round-report.js?v=1"></script>
 <script defer src="js/games/tone-server.js?v=4"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="js/games/typing-score.js?v=1"></script><!-- สูตร 無提示 ชุดเดียวกับ Listening Typing Bonus -->
 <script src="js/games/word-vault.js?v=6"></script>
@@ -771,13 +773,13 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=29']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=30']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=31"></script>
-<script src="js/games/game-flow.js?v=3"></script>
+<script src="js/games/game-flow.js?v=4"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

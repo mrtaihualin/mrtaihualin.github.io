@@ -58,6 +58,8 @@
     savedRoundSeq: 0,
     listenToken: 0,
     answered: false,
+    itemAttempts: [],
+    report: null,
     log: [],        // Phase F2/F4: ประวัติทุกข้อของรอบนี้ {th, zh, userAnswer, correct} — เติมทีละข้อ ไม่แตะ logic ตรวจคำตอบ
     _pendingResume: null // Phase E3: รอบที่กู้มาจาก GameResume แต่ผู้เล่นยังไม่กด 繼續練習/重新開始
   };
@@ -348,6 +350,8 @@
     state.roundActive = true;
     state.roundSeq++;
     state.log = [];
+    state.itemAttempts = [];
+    state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: 'mixed', mode: state.mode }) : null;
     state._pendingResume = null;
     if (el.resumeBanner) el.resumeBanner.style.display = 'none';
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // เริ่มรอบใหม่แบบสด = ล้างรอบค้างเก่าทิ้ง (ไม่ให้มีของค้าง 2 รอบชนกัน)
@@ -392,6 +396,7 @@
     if (!options.preserveAttempt) {
       state.listenCount = 0;
       state.typingWrong = 0;
+      state.itemAttempts = [];
     }
     state.listenToken++;
     var w = currentWord();
@@ -504,6 +509,7 @@
   function handleMCPick(choice, btn, correctWord) {
     state.answered = true;
     var isCorrect = choice.th === correctWord.th;
+    state.itemAttempts.push({ answer: choice.th, is_correct: isCorrect, mode: 'mc' });
     Array.prototype.forEach.call(el.mcWrap.querySelectorAll('.lg-opt'), function (b) {
       b.classList.add('locked');
       if (b.textContent === correctWord.th) b.classList.add('correct');
@@ -546,6 +552,7 @@
     var val = (el.typeInput.value || '').trim();
     if (!val) return;
     var isCorrect = val === w.th;
+    state.itemAttempts.push({ answer: val, is_correct: isCorrect, mode: 'type' });
     if (!isCorrect) {
       state.typingWrong++;
       el.typeInput.classList.add('lg-wrong');
@@ -644,8 +651,24 @@
       unitCount: LISTENING_SCORE.typingUnitCount(w),
       srsDue: existingSrs.dueDate || '',
       reviewNeeded: isSrsDue(w),
-      mastered: !!existingSrs.mastered
+      mastered: !!existingSrs.mastered,
+      attempts: state.itemAttempts.slice()
     });
+    if (state.report && window.RoundReport) {
+      RoundReport.addItem(state.report, {
+        content_ref: { source: 'game_words', key: w.th + '@' + levelNumber(w) },
+        question: w.th, meaning: w.zh || '',
+        attempts: state.itemAttempts,
+        user_answer: state.itemAttempts.length ? state.itemAttempts[state.itemAttempts.length - 1].answer : (detail.userAnswer || ''),
+        correct_answer: w.th, is_correct: isCorrect,
+        wrong_count: state.mode === 'type' ? state.typingWrong : (isCorrect ? 0 : 1),
+        item_score: primary + bonus, listen_count: state.listenCount,
+        linguistic: { reading_th: w.readingTH || '', reading_en: w.en || '', level: w.level || '' },
+        srs_state: existingSrs.stage == null ? null : existingSrs.stage,
+        review_state: isSrsDue(w) ? 'needed' : 'not_due',
+        mastered_state: !!existingSrs.mastered
+      });
+    }
     if (detail.requeue) {
       state.round.push(w);
       el.qt.textContent = String(state.round.length);
@@ -699,7 +722,9 @@
         listenCount: state.listenCount,
         typingWrong: state.typingWrong,
         answered: state.answered,
-        log: state.log
+        itemAttempts: state.itemAttempts,
+        log: state.log,
+        report: state.report && window.RoundReport ? RoundReport.snapshot(state.report) : null
       });
     } catch (e) {}
   }
@@ -744,7 +769,9 @@
       listenCount: saved.answered ? 0 : (typeof saved.listenCount === 'number' ? saved.listenCount : 0),
       typingWrong: saved.answered ? 0 : (typeof saved.typingWrong === 'number' ? saved.typingWrong : 0),
       preserveAttempt: !saved.answered,
-      log: Array.isArray(saved.log) ? saved.log : []
+      itemAttempts: Array.isArray(saved.itemAttempts) ? saved.itemAttempts : [],
+      log: Array.isArray(saved.log) ? saved.log : [],
+      report: saved.report || null
     };
     if (el.resumeDetail) {
       el.resumeDetail.textContent = '遊戲：聽力練習・模式：' + (state._pendingResume.mode === 'type' ? '輸入答案' : '選擇答案') +
@@ -767,6 +794,8 @@
     state.listenCount = pend.listenCount;
     state.typingWrong = pend.typingWrong;
     state.log = pend.log;
+    state.itemAttempts = pend.itemAttempts;
+    state.report = window.RoundReport ? RoundReport.restore(pend.report, { game_type: 'listening', difficulty: 'mixed', mode: pend.mode }) : null;
     state._pendingResume = null;
     setMode(pend.mode);
     state.roundActive = true;
@@ -793,7 +822,8 @@
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
     if (!pend) return;
     state.pool = buildPool(); state.round = pend.round; state.idx = 0; state.correct = 0; state.wrong = 0;
-    state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.log = [];
+    state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.log = []; state.itemAttempts = [];
+    state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: 'mixed', mode: pend.mode }) : null;
     state.roundActive = true; state.roundSeq++; setMode(pend.mode);
     el.startScreen.style.display='none';el.endScreen.style.display='none';el.gameScreen.style.display='flex';el.qt.textContent=String(state.round.length);el.okCount.textContent='0';el.badCount.textContent='0';
     showQuestion();
@@ -821,17 +851,28 @@
       '・答對 ' + state.correct + ' 次，答錯 ' + state.wrong + ' 次（正確率 ' + pct + '%）';
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // รอบจบแล้ว ไม่มีอะไรต้องกู้ต่อ
     try { if (window.gtag) gtag('event', 'listening_game_complete', { category: 'game', mode: state.mode, score: state.correct, total: state.round.length }); } catch (e) {}
-    saveAccountRound();
+    var submissionId = saveAccountRound();
+    if (state.report && window.RoundReport) RoundReport.finish(state.report, { score: state.primaryTotal + state.typingBonusTotal, submission_id: submissionId });
     if(window.GameFlow){
       var _hl=[];
       try{if(window.READING_AUTH&&READING_AUTH.user&&window.GAME_ACCOUNT){var _gs=GAME_ACCOUNT.getStreak();if(_gs)_hl.push('🔥 連續 '+_gs+' 天');var _gb=GAME_ACCOUNT.earnedBadges();if(_gb.length)_hl.push('🎖️ '+_gb[_gb.length-1].zh);}}catch(e){}
-      GameFlow.enhanceResult({key:'listening-result',root:el.endScreen,actions:el.endScreen.querySelector('.gsh-end-actions'),correct:state.correct,total:state.round.length,highlights:_hl,onReplay:startRound});
+      GameFlow.enhanceResult({key:'listening-result',root:el.endScreen,actions:el.endScreen.querySelector('.gsh-end-actions'),correct:state.report?state.report.correct_count:state.correct,total:state.report?state.report.total_items:state.round.length,highlights:_hl,report:state.report,onReplay:startRound});
     }
+    attachLoginSummary();
+  }
+
+  function attachLoginSummary() {
+    if (!state.report || !window.LearningSummary || !(window.READING_AUTH && READING_AUTH.user)) return;
+    LearningSummary.loadForGame('listening', 'listening-game').then(function (summary) {
+      if (!state.report || !window.RoundReport) return;
+      RoundReport.setLoginSummary(state.report, summary);
+      if (window.GameFlow) GameFlow.attachReport(el.endScreen, state.report);
+    });
   }
 
   function saveAccountRound() {
-    if (state.savedRoundSeq === state.roundSeq) return;
-    if (!window.READING_AUTH || !READING_AUTH.user || !READING_AUTH.saveScore) return;
+    if (state.savedRoundSeq === state.roundSeq) return state.report && state.report.submission_id || null;
+    if (!window.READING_AUTH || !READING_AUTH.user || !READING_AUTH.saveScore) return null;
     state.savedRoundSeq = state.roundSeq;
     var evidence = state.log.map(function (entry) {
       return {
@@ -842,7 +883,7 @@
         typing_wrong: entry.typingWrong
       };
     });
-    READING_AUTH.saveScore(state.primaryTotal + state.typingBonusTotal, 1, 'listening', evidence, {
+    return READING_AUTH.saveScore(state.primaryTotal + state.typingBonusTotal, 1, 'listening', evidence, {
       difficulty: 'mixed',
       items: state.log.map(function (entry) {
         return {
@@ -859,18 +900,18 @@
   // ── Phase F2: 查看錯題 (read-only, ใช้ state.log ที่เก็บจริงระหว่างเล่นเท่านั้น) ──
   function renderMistakes() {
     if (!el.mistakeList) return;
-    var wrongEntries = state.log.slice();
+    var wrongEntries = state.report && state.report.items ? state.report.items.slice() : [];
     if (!wrongEntries.length) {
       el.mistakeList.innerHTML = '<div style="text-align:center;font-family:\'Noto Sans TC\',sans-serif;font-size:13.5px;color:var(--ink-muted);padding:20px 10px;">這輪沒有作答紀錄</div>';
       return;
     }
     el.mistakeList.innerHTML = wrongEntries.map(function (e) {
       return '<div class="gsh-mistake-item gsh-mistake-wrong">'
-        + '<div class="gsh-mistake-q">' + escapeHtml(e.th) + '</div>'
-        + '<div class="gsh-mistake-row">你的答案：<b>' + escapeHtml(e.userAnswer || '（空白）') + '</b></div>'
-        + '<div class="gsh-mistake-row">正確答案：<b>' + escapeHtml(e.th) + '</b></div>'
-        + '<div class="gsh-mistake-row">意思：' + escapeHtml(e.zh || '') + '</div>'
-        + '<div class="gsh-mistake-row">狀態：<b>' + (e.correct ? '✓ 答對' : '✗ 答錯') + '</b></div>'
+        + '<div class="gsh-mistake-q">' + escapeHtml(e.question) + '</div>'
+        + '<div class="gsh-mistake-row">你的答案：<b>' + escapeHtml(e.user_answer || '（空白）') + '</b></div>'
+        + '<div class="gsh-mistake-row">正確答案：<b>' + escapeHtml(e.correct_answer) + '</b></div>'
+        + '<div class="gsh-mistake-row">意思：' + escapeHtml(e.meaning || '') + '</div>'
+        + '<div class="gsh-mistake-row">狀態：<b>' + (e.is_correct ? '✓ 答對' : '✗ 答錯') + '</b></div>'
         + '</div>';
     }).join('');
   }
@@ -895,14 +936,16 @@
     var pct = state.round.length ? Math.round((state.correct / state.round.length) * 100) : 0;
     var loggedIn = !!(window.READING_AUTH && READING_AUTH.user);
 
-    var rows = state.log.map(function (e, i) {
+    var report = state.report;
+    var reportItems = report && report.items ? report.items : [];
+    var rows = reportItems.map(function (e, i) {
       return '<tr>'
         + '<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">' + (i + 1) + '</td>'
-        + '<td style="padding:7px 6px;font-size:15px;font-weight:700;">' + escapeHtml(e.th) + '</td>'
-        + '<td style="padding:7px 6px;font-size:12px;color:#666;">' + escapeHtml(e.zh || '') + '</td>'
-        + '<td style="padding:7px 6px;font-size:13px;">作答：' + escapeHtml(e.userAnswer || '（空白）') + '<br>正解：' + escapeHtml(e.th) + '</td>'
-        + '<td style="padding:7px 6px;font-size:12px;text-align:center;">' + (e.correct ? '<span style="color:#2e7d32;">✓ 答對</span>' : '<span style="color:#c62828;">✗ 答錯</span>') + '</td>'
-        + (loggedIn ? '<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">' + (e.mastered ? '已精通' : (e.reviewNeeded ? '待複習' + (e.srsDue ? '<br>' + escapeHtml(e.srsDue) : '') : (escapeHtml(e.srsDue) || '—'))) + '</td>' : '')
+        + '<td style="padding:7px 6px;font-size:15px;font-weight:700;">' + escapeHtml(e.question) + '</td>'
+        + '<td style="padding:7px 6px;font-size:12px;color:#666;">' + escapeHtml(e.meaning || '') + '</td>'
+        + '<td style="padding:7px 6px;font-size:13px;">作答：' + escapeHtml(e.user_answer || '（空白）') + '<br>正解：' + escapeHtml(e.correct_answer) + '<br>聆聽：' + (e.listen_count || 0) + ' 次・錯誤：' + e.wrong_count + ' 次・得分：' + e.item_score + '</td>'
+        + '<td style="padding:7px 6px;font-size:12px;text-align:center;">' + (e.is_correct ? '<span style="color:#2e7d32;">✓ 答對</span>' : '<span style="color:#c62828;">✗ 答錯</span>') + '</td>'
+        + (loggedIn ? '<td style="padding:7px 6px;font-size:11px;text-align:center;color:#8B6310;">' + (e.mastered_state ? '已精通' : (e.review_state === 'needed' ? '待複習' : '—')) + '</td>' : '')
         + '</tr>';
     }).join('');
 
@@ -931,6 +974,7 @@
       + '<th style="font-size:11px;color:#8B6310;padding:5px;">結果</th>'
       + (loggedIn ? '<th style="font-size:11px;color:#8B6310;padding:5px;">複習狀態</th>' : '')
       + '</tr></thead><tbody>' + rows + '</tbody></table>'
+      + (window.RoundReport ? RoundReport.loginSectionsHtml(report) : '')
       + '</div></div>'
       + '<div style="text-align:center;font-family:' + SANS + ';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'
       + '</div>';

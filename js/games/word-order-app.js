@@ -407,6 +407,12 @@
   var totalBadges = 0;  // 帳號累積勳章數（跨遊戲共用）
   var roundLog = []; // {th,zh,userAnswer,correctAnswer,wrong,...} ต่อประโยค
   var lastSubmittedAnswer = '';
+  var submittedAttempts = [];
+  var roundReport = null;
+  function woReportRows(){
+    if(!roundReport||!roundReport.items)return [];
+    return roundReport.items.map(function(i){return {th:i.question,wordsArr:i.words.map(function(w){return w.th;}),wordGlosses:i.words,zh:i.meaning,userAnswer:i.user_answer,correctAnswer:i.correct_answer,wrong:i.wrong_count,failed:!i.is_correct,guide:!!i.hint_used,pts:i.item_score,srsDue:i.srs_state||'',mastered:!!i.mastered_state,attempts:i.attempts};});
+  }
   function woLogSentence(o){
     try{
       var s = curSentence();
@@ -414,9 +420,10 @@
       // กันประโยคยาวไม่มีเว้นวรรค (เขียนไทยจริงไม่เว้นวรรคระหว่างคำ) ตกขอบหน้ากระดาษ/ถูกตัดกลางคำ — Lin 2026-07-31
       var wordsArr = (s && s.words && s.words.length) ? s.words.map(function(w){return w.th;}) : null;
       var wordGlosses = (s && s.words && s.words.length) ? s.words.map(function(w){return {th:w.th||'', zh:w.zh||''};}) : null;
-      var base = {th:s?s.th:'', wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'（未保留逐次答案）', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
+      var base = {th:s?s.th:'', wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
+      if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:'game_sentences',key:base.th},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
     } catch(e){}
   }
   // 2026-07-13 Lin：ดึงประโยคที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -430,7 +437,7 @@
   // ════════════════════════════════════════════════════════════
   window.woShowMistakes = function(){
     try{ if(window.gtag) gtag('event','word_order_mistakes_open',{category:'game'}); }catch(e){}
-    var items = roundLog.slice();
+    var items = woReportRows();
     var list = document.getElementById('wo-mistake-list');
     if (list) {
       list.innerHTML = items.length
@@ -476,7 +483,8 @@
         cleanC: cleanC,
         curCombo: curCombo,
         maxCombo: maxCombo,
-        roundLog: roundLog
+        roundLog: roundLog,
+        report: roundReport && window.RoundReport ? RoundReport.snapshot(roundReport) : null
       });
     }catch(e){}
   }
@@ -726,7 +734,7 @@
   window.woResumeRestartSameClick = function(){
     if(!_woPendingResume){hideResumeBanner();startFreshRound();return;}
     var p=_woPendingResume;_woPendingResume=null;hideResumeBanner();woClearResume();
-    SET=p.restoredSet;idx=0;score=0;correctFirstTry=0;cleanC=0;curCombo=0;maxCombo=0;roundLog=[];practiceMode=false;
+    SET=p.restoredSet;idx=0;score=0;correctFirstTry=0;cleanC=0;curCombo=0;maxCombo=0;roundLog=[];submittedAttempts=[];roundReport=window.RoundReport?RoundReport.create({game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;practiceMode=false;
     document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';refreshUI();loadSentence();woSaveResume();
   };
   window.woResumeNewRoundClick = function(){
@@ -745,6 +753,7 @@
     cleanC = state.cleanC||0;
     curCombo = state.curCombo||0; maxCombo = state.maxCombo||0;
     roundLog = Array.isArray(state.roundLog)?state.roundLog:[];
+    roundReport = window.RoundReport?RoundReport.restore(state.report,{game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
     practiceMode = false;
     if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
     refreshUI();
@@ -804,6 +813,7 @@
         idx = 0; score = 0; correctFirstTry = 0;
         cleanC = 0; curCombo = 0; maxCombo = 0;
         roundLog = [];
+        roundReport = window.RoundReport?RoundReport.create({game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
         if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
         refreshUI();
         try { rgRenderGameBar(); } catch (e) {}
@@ -844,6 +854,7 @@
     idx = 0; score = 0; correctFirstTry = 0;
     cleanC = 0; curCombo = 0; maxCombo = 0;
     roundLog = [];
+    roundReport = window.RoundReport?RoundReport.create({game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
     if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
     refreshUI();
     try { rgRenderGameBar(); } catch(e){}
@@ -862,6 +873,7 @@
     hintUsedThisSentence = false;
     locked = false;
     wrongCount = 0; sentenceFailed = false;
+    submittedAttempts = [];
     life = SENTENCE_LIFE_START;
     curSentenceIsKnownCheck = false;
     sentenceGolden = Math.random() < GOLDEN_SENTENCE_CHANCE;
@@ -1037,6 +1049,7 @@
     var s = curSentence();
     lastSubmittedAnswer = answer.map(function(i){return s.words&&s.words[i]?s.words[i].th:'';}).filter(Boolean).join(' ');
     var isCorrect = answer.every(function(v, i){ return v === i; });
+    submittedAttempts.push({answer:lastSubmittedAnswer,is_correct:isCorrect});
     var banner = document.getElementById('wo-banner');
     var srsKey = woSrsKey(s.th);
 
@@ -1307,7 +1320,9 @@
       } catch(e){}
       try { rgRenderGameBar(); } catch(e){}
       refreshUI();
-      if(window.GameFlow)GameFlow.enhanceResult({key:'word-order-result',root:'#end',actions:'#end .gsh-end-actions',correct:cleanC,total:SET.length,onReplay:woRestart});
+      if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:0,submission_id:null});
+      if(window.GameFlow)GameFlow.enhanceResult({key:'word-order-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:SET.length,report:roundReport,onReplay:woRestart});
+      woAttachLoginSummary();
       setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
       return;
     }
@@ -1322,6 +1337,7 @@
     score += roundBonus;
     // ตัวคูณระดับ (MASTER ข้อ2): เกมนี้ทั้งเกม=高級ล้วน → ×2 คงที่ คูณ "ทั้งรอบรวมโบนัส" ตอนจบ
     var weightedScore = Math.round(score * LEVEL_WEIGHT);
+    if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:weightedScore,submission_id:null});
     document.getElementById('wo-end-score').textContent = weightedScore;
 
     var detail = SET.length + ' 句中，第一次就排對 ' + correctFirstTry + ' 句（乾淨過關 ' + cleanC + ' 句）';
@@ -1341,7 +1357,7 @@
     if(window.GameFlow){
       var _hl=[];
       if(woLoggedIn()&&window.GAME_ACCOUNT){var _gs=GAME_ACCOUNT.getStreak();if(_gs)_hl.push('🔥 連續 '+_gs+' 天');var _gb=GAME_ACCOUNT.earnedBadges();if(_gb.length)_hl.push('🎖️ '+_gb[_gb.length-1].zh);}
-      GameFlow.enhanceResult({key:'word-order-result',root:'#end',actions:'#end .gsh-end-actions',correct:cleanC,total:SET.length,highlights:_hl,onReplay:woRestart});
+      GameFlow.enhanceResult({key:'word-order-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:SET.length,highlights:_hl,report:roundReport,onReplay:woRestart});
     }
 
     try{ if(window.gtag) gtag('event','word_order_complete',{category:'game',practice: false, score: weightedScore}); }catch(e){}
@@ -1349,11 +1365,12 @@
       if(window.READING_AUTH && READING_AUTH.saveScore){
         var _woItemScore=roundLog.reduce(function(sum,w){return sum+(Number(w.pts)||0);},0);
         var _woSrsBonus=Math.max(0,score-roundBonus-_woItemScore);
-        READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog(),{
+        var _woSubmissionId=READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog(),{
           difficulty:'高',
           items:roundLog.map(function(w){return {key:w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
           roundBonus:roundBonus,srsBonus:_woSrsBonus
         });
+        if(roundReport)roundReport.submission_id=_woSubmissionId||null;
       }
     }catch(e){} // S29: คะแนน Core 5 ผ่าน score-submit เท่านั้น
 
@@ -1371,8 +1388,18 @@
     } catch(e){}
     try { rgRenderGameBar(); } catch(e){}
     refreshUI();
+    woAttachLoginSummary();
     // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมอื่น)
     setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
+  }
+
+  function woAttachLoginSummary(){
+    if(!roundReport||!window.LearningSummary||!woLoggedIn())return;
+    LearningSummary.loadForGame('word_order','word-order').then(function(summary){
+      if(!roundReport||!window.RoundReport)return;
+      RoundReport.setLoginSummary(roundReport,summary);
+      if(window.GameFlow)GameFlow.attachReport('#end',roundReport);
+    });
   }
 
   window.woRestart = function(){ woClearResume(); init(); }; // E3: กดจากหน้าจบผลเท่านั้น (ไม่มีอะไรค้างให้ resume อยู่แล้ว) ล้างกันเหนียว
@@ -1406,7 +1433,7 @@
       if (w.failed) return '<span style="color:#c62828;">✗ 待加強</span>';
       return '<span style="color:#2e7d32;">✓ 答對</span>';
     }
-    var rows = roundLog.map(function(w, i){
+    var rows = woReportRows().map(function(w, i){
       return '<tr>'
         +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
         +'<td style="padding:7px 6px;font-size:14px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div>'+wordBreakdown(w)+'</td>'
@@ -1444,6 +1471,7 @@
       +'<th style="font-size:11px;color:#8B6310;padding:5px;">得分</th>'
       +(loggedIn?'<th style="font-size:11px;color:#8B6310;padding:5px;">下次複習</th>':'')
       +'</tr></thead><tbody>'+rows+'</tbody></table>'
+      +(window.RoundReport?RoundReport.loginSectionsHtml(roundReport):'')
       +'</div></div>'
       +'<div style="text-align:center;font-family:'+SANS+';font-size:9.5px;letter-spacing:0.15em;color:#8B6310;padding:16px 26px 4px;">泰華眼裡的泰語教學　·　mrtaihualin.com</div>'
       +'</div>';

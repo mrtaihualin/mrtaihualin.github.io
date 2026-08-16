@@ -53,6 +53,15 @@ test('all five games provide recoverable round resume UI', () => {
   }
 });
 
+test('all five games load and persist one current-round DTO identity', () => {
+  for (const g of games) {
+    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=1/, `${g.id}: missing Round Report DTO loader`);
+    assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: missing Login summary loader`);
+    assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
+    assert.match(g.appText, /report:/, `${g.id}: active GameResume must carry the report snapshot`);
+  }
+});
+
 test('all five games provide read-only mistake review after a round', () => {
   for (const g of games) {
     assert.match(g.htmlText + g.appText, /查看錯題|錯題複習|答錯的題目|打錯的字/, `${g.id}: ไม่มี mistake review`);
@@ -96,6 +105,17 @@ test('Guest/Login Free reports contain facts only and no personalized analysis o
     'function stepMistakeReview()'
   );
   assert.doesNotMatch(toneSummary, /tf-sum-analysis|analysisLines|需要加強|需要再複習|建議/, 'Tone Result มี personalized analysis/recommendation');
+  const toneStats = block(
+    games.find((g) => g.id === 'tone').appText,
+    'function showStats()',
+    'function clearTodayStats()'
+  );
+  const toneStatsDownload = block(
+    games.find((g) => g.id === 'tone').appText,
+    'function buildStatsReportText(',
+    'function downloadStats()'
+  );
+  assert.doesNotMatch(toneStats + toneStatsDownload, /最常選錯|今日課程重點|LESSON_TIPS/, 'Tone Login history must not infer weaknesses or recommendations');
   for (const g of games) {
     assert.doesNotMatch(g.htmlText, /「弱點分析」/, `${g.id}: help ยังอ้าง personalized report section`);
   }

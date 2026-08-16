@@ -26,6 +26,13 @@ function block(startText, endText) {
 test('answer is validated only against the prescribed target order', () => {
   const check = block('function checkAnswer()', 'function popScore(');
   assert.match(check, /answer\.every\(function\(v, i\)\{ return v === i; \}\)/);
+  assert.match(check, /submittedAttempts\.push\(\{answer:lastSubmittedAnswer,is_correct:isCorrect\}\)/);
+});
+
+test('report reuses canonical sentence words and submitted order', () => {
+  assert.match(app, /words:wordGlosses\|\|\[\]/);
+  assert.match(app, /attempts:submittedAttempts\.slice\(\)/);
+  assert.doesNotMatch(app, /parseGrammar/);
 });
 
 test('a wrong order remains playable and gives correction feedback', () => {

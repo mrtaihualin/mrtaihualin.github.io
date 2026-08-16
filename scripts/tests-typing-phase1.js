@@ -84,4 +84,10 @@ test('Typing and Listening share the same bonus score module', () => {
   assert.match(listening, /js\/games\/typing-score\.js\?v=1/);
 });
 
+test('Typing report uses the Thai target and never stores raw keystrokes', () => {
+  assert.match(source, /correctAnswer:submitted/);
+  assert.match(source, /attempts:submitted\?\[\{answer:submitted,is_correct:true\}\]/);
+  assert.doesNotMatch(source, /rawKeystrokes|raw_keystrokes|keypresses/);
+});
+
 console.log(`\n${passed} Phase 1 Typing tests passed.`);

@@ -42,7 +42,9 @@
 <script defer src="js/games/game-account.js?v=4"></script><!-- v4: owner-scoped sync guard; server remains authoritative for stars -->
 <script defer src="js/core/auth-widget.js?v=10"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=23"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="js/games/reading-auth.js?v=24"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
+<script defer src="js/score/learning-summary.js?v=1"></script>
+<script defer src="js/games/round-report.js?v=1"></script>
 <script defer src="js/games/tone-companion.js?v=3"></script><!-- S29: เหลือ admin badge unlock; คะแนนส่งผ่าน score-submit กลาง -->
 <script defer src="js/games/tone-server.js?v=4"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script defer src="js/score/progress-sync.js?v=5"></script>
@@ -1692,7 +1694,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=50']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=51']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -1717,7 +1719,7 @@ document.addEventListener('contextmenu', function(e){
      ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=31"></script>
-<script src="js/games/game-flow.js?v=3"></script>
+<script src="js/games/game-flow.js?v=4"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)

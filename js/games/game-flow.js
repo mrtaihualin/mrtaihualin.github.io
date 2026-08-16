@@ -7,7 +7,6 @@
 
   var flows = Object.create(null);
   var resultFlows = Object.create(null);
-  var RESULT_FEEDBACK_KEY = 'gsh_result_feedback_v1';
   var SRS_QUOTA_KEY = 'gsh_srs_quota_v1';
 
   function resolveElement(value) {
@@ -142,22 +141,27 @@
     } catch (e) {}
   }
 
-  function feedbackCopy(previous, current) {
-    if (typeof previous !== 'number' || !isFinite(previous)) return { kind: 'first', text: '表現得不錯喔！' };
-    var delta = current - previous;
-    if (delta > 0.05) return { kind: 'improved', text: '這次有進步喔！' };
-    if (delta < -0.05) return { kind: 'lower', text: '不錯喔，繼續保持！' };
-    return { kind: 'similar', text: '保持得不錯喔！' };
-  }
+  // Product Decision: Guest/Login Free have no cross-round personalized feedback.
+  // Keep the public hooks inert for compatibility with older callers.
+  function feedbackCopy() { return null; }
+  function recordResultFeedback() { return null; }
 
-  function recordResultFeedback(gameKey, correct, total) {
-    var key = String(gameKey || 'game');
-    var ratio = Number(total) > 0 ? Math.max(0, Math.min(1, Number(correct) / Number(total))) : 0;
-    var history = safeRead(RESULT_FEEDBACK_KEY, {});
-    var result = feedbackCopy(history[key], ratio);
-    history[key] = ratio;
-    safeWrite(RESULT_FEEDBACK_KEY, history);
-    return result;
+  function attachReport(root, report) {
+    root = resolveElement(root);
+    if (!root || !window.RoundReport) return false;
+    var html = RoundReport.loginSectionsHtml(report);
+    var slot = root.querySelector('.gsh-login-report-sections');
+    if (!html) {
+      if (slot && slot.parentNode) slot.parentNode.removeChild(slot);
+      return false;
+    }
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.className = 'gsh-login-report-sections';
+      root.appendChild(slot);
+    }
+    slot.innerHTML = html;
+    return true;
   }
 
   function cancelResult(key, keepMessage) {
@@ -232,9 +236,9 @@
     var correct = Math.max(0, Number(options.correct) || 0);
     var total = Math.max(0, Number(options.total) || 0);
     line('gsh-result-correct', '答對 ' + correct + ' / ' + total);
-    line('gsh-result-srs', '之後系統會幫你複習喔！');
-    var feedback = options.feedback || recordResultFeedback(options.key, correct, total);
-    line('gsh-result-feedback', feedback.text);
+    if (options.loginSrs === true) line('gsh-result-srs', '帳號的 SRS 狀態已列在下方。');
+    var feedback = options.feedback || null;
+    if (feedback && feedback.text) line('gsh-result-feedback', feedback.text);
     (options.highlights || []).filter(Boolean).slice(0, 2).forEach(function (text) {
       line('gsh-result-highlight', String(text));
     });
@@ -251,6 +255,7 @@
       seconds: 7,
       onComplete: options.onReplay
     });
+    if (options.report) attachReport(root, options.report);
     return feedback;
   }
 
@@ -353,6 +358,7 @@
     cancelResult: cancelResult,
     startResultCountdown: startResultCountdown,
     enhanceResult: enhanceResult,
+    attachReport: attachReport,
     feedbackCopy: feedbackCopy,
     recordResultFeedback: recordResultFeedback,
     allocateSrs: allocateSrs,
