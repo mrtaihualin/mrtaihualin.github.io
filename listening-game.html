@@ -264,7 +264,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 <div class="rg-tools-row">
   <div style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:var(--cream);border:1.5px solid var(--gold-bright);border-radius:16px;padding:10px 12px;">
     <span class="tf-streak-chip">🎧 一輪 10 題，聽音辨字</span>
-    <button class="tf-streak-chip" type="button" onclick="document.getElementById('lg-howto-modal').style.display='flex'" style="border:0;cursor:pointer;">📖 玩法</button>
+    <button class="tf-streak-chip" id="lg-howto-btn" type="button" onclick="document.getElementById('lg-howto-modal').style.display='flex';if(window.__lgHowtoModalReg)window.__lgHowtoModalReg.notifyOpen(this)" style="border:0;cursor:pointer;">📖 玩法</button>
     <span id="rg-login-slot" style="margin-left:auto;"></span>
   </div>
 </div>
@@ -378,6 +378,16 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 </div>
 
 </div><!-- /v3-page -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.registerGameModal) return;
+  window.__lgHowtoModalReg = window.registerGameModal({
+    isOpen: function () { var m = document.getElementById('lg-howto-modal'); return !!m && m.style.display === 'flex'; },
+    close: function () { var m = document.getElementById('lg-howto-modal'); if (m) m.style.display = 'none'; }
+  });
+});
+</script>
 
 <footer>
   專門教台灣人學泰文 · 專為台灣人設計的泰文課<span class="foot-sep"> · </span><br class="foot-mbr">泰華眼裡的泰語教學 · 累積超過 8,000 小時教學<br>

@@ -511,7 +511,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   <div id="rg-profile-wrap" class="gsh-player-status" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:#FAF4E8;border:1.5px solid #C8973A;border-radius:16px;padding:10px 12px;">
     <!-- Lin 2026-07-24: รวมแถวโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) — ทุกไอคอนมี title= ให้ hover/แตะแล้วขึ้นชื่อว่าคืออะไรอยู่แล้ว -->
     <div id="rg-login-slot" style="display:flex;align-items:center;"></div>
-    <span class="tf-streak-chip" id="rg-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="dismissHowtoHint('typing');document.getElementById('rg-howto-modal').style.display='flex';try{gtag('event','typing_game_howto_open',{category:'game'})}catch(e){}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
+    <span class="tf-streak-chip" id="rg-howto-btn" style="cursor:pointer;" role="button" tabindex="0" title="怎麼玩" onclick="dismissHowtoHint('typing');document.getElementById('rg-howto-modal').style.display='flex';if(window.__tgHowtoModalReg)window.__tgHowtoModalReg.notifyOpen(this);try{gtag('event','typing_game_howto_open',{category:'game'})}catch(e){}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📖 玩法</span>
     <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
     <div class="rg-stat-row" id="rg-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
       <span class="tf-streak-chip" title="連續天數">🔥 <b id="rg-streak-num">0</b></span>
