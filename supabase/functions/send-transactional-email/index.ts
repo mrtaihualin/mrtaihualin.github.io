@@ -1,25 +1,18 @@
 // ════════════════════════════════════════════════════════════════════════════
 // Supabase Edge Function: send-transactional-email
 // ────────────────────────────────────────────────────────────────────────────
-// สถานะไฟล์นี้: "ร่างเท่านั้น" (DRAFT — ยังไม่ deploy, ยังไม่ผูกกับ UI ใดๆ)
-// ห้าม deploy เองก่อน Lin ตรวจ + อนุมัติ (ตามกฎเว็บ CLAUDE.md ข้อ "เว็บต้องผ่าน Lin ก่อนเสมอ")
+// สถานะไฟล์นี้: ฟังก์ชันกลางมีอยู่แล้ว; รอบ Auth Security เพิ่มเฉพาะ source ของ Email OTP template
+// ห้าม deploy source delta รอบนี้จน Lin อนุมัติ Production rollout แยกต่างหาก
 //
-// 🔴🔴🔴 สำคัญที่สุด — ยังไม่ได้เลือก email provider 🔴🔴🔴
-//   ไฟล์นี้เขียนโครง "Resend" (https://resend.com) ไว้เป็น "ตัวอย่างอ้างอิง" เท่านั้น เพื่อให้เห็นภาพว่า
-//   สถาปัตยกรรมทำงานยังไง — ไม่ใช่การตัดสินใจเลือก provider ขั้นสุดท้าย ตามกฎที่ Lin สั่งไว้ชัดเจนว่า
-//   "ห้ามเลือก provider/สร้าง account/ตั้ง secret เอง" AI จึงไม่ได้สมัครบัญชี ไม่ได้ตั้ง secret ใดๆ จริง
-//   ก่อน deploy จริง Lin ต้อง: (1) เลือก provider เอง (ตัวเลือกที่เทียบไว้ในหัวข้อท้ายไฟล์) (2) สมัคร
-//   บัญชีเอง (3) verify โดเมนส่งเมลเอง (4) ตั้ง secret เอง (5) ถ้าเลือก provider อื่นที่ไม่ใช่ Resend
-//   ต้องแก้แค่ฟังก์ชัน sendViaProvider() ด้านล่างจุดเดียว — ส่วนอื่นทั้งไฟล์ (template, การเรียกใช้จาก
-//   ฟังก์ชันอื่น, การตรวจสิทธิ์) ไม่ต้องแก้เลย ออกแบบให้สลับ provider ทำได้ง่ายตามที่ Lin ขอ
+// Provider adapter ใน source นี้ใช้ Resend contract; account, DNS และ secrets อยู่นอก source และนอก
+// authorization รอบนี้ ถ้าจะเปลี่ยน provider ให้เปลี่ยนเฉพาะ sendViaProvider() หลังได้รับอนุมัติ
 //
 // หน้าที่: จุดกลางจุดเดียวสำหรับส่ง transactional email ของทั้งเว็บ (เพิ่มจากที่ไม่เคยมีระบบอีเมลแจ้งเตือน
 //   เลยมาก่อน — ตรวจแล้วไม่พบ Resend/SendGrid/Mailgun/Postmark/SES/nodemailer อยู่ในโปรเจกต์นี้เลยสักที่
 //   ก่อนเริ่มงานนี้ ความสามารถ "อีเมล" เดิมมีแค่ Supabase Auth OTP ซึ่งเป็นกลไกล็อกอิน ไม่ใช่ระบบแจ้งเนื้อหา
 //   ที่กำหนดเองได้ — ดูรายละเอียดการตรวจใน `docs/ACCOUNT_DATA_SAFETY_GAPS.md`)
 //
-// รอบนี้ทำแค่ 3 template ที่เกี่ยวกับ Account Deletion ตามที่ Lin สั่งมา แต่ตัวระบบ (template registry
-// ด้านล่าง) ออกแบบให้เพิ่ม template ใหม่ในอนาคตได้ง่ายๆ (เพิ่ม 1 entry ใน TEMPLATES ไม่ต้องแก้ที่อื่น)
+// Registry มี 3 Account Deletion templates และ 1 Email OTP login template
 // — Lin สั่งไว้ชัดว่า "ห้ามขยาย scope ไปสร้างระบบ marketing email" ไฟล์นี้จึงตั้งใจไม่มีอะไรเกี่ยวกับ
 // unsubscribe list / bulk send / marketing template เลย เป็น transactional เท่านั้น (แจ้งเหตุการณ์ที่เกิด
 // กับบัญชีของผู้ใช้เอง 1 คนต่อ 1 อีเมล ไม่ใช่ broadcast)
@@ -39,13 +32,13 @@
 //     (เรียกจาก Edge Function อื่นด้วย createClient(url, SERVICE_KEY) หรือ fetch() ตรงๆ ก็ได้ทั้งคู่
 //      ขอแค่แนบ header ให้ครบ 2 ตัวนี้เหมือนกัน)
 //   Body: { template: string, to: string, data: object }
-//     - template: ต้องอยู่ใน TEMPLATES ด้านล่างเท่านั้น (ตอนนี้มี 3 ตัว — ดูหัวข้อ TEMPLATES)
+//     - template: ต้องอยู่ใน TEMPLATES ด้านล่างเท่านั้น (ตอนนี้มี 4 ตัว — ดูหัวข้อ TEMPLATES)
 //     - to: อีเมลปลายทาง (ฟังก์ชันนี้ไม่ตรวจว่าเป็นอีเมลของใคร — ผู้เรียก (Edge Function อื่น) ต้อง
 //       ตรวจเองแล้วว่า to คืออีเมลที่ถูกต้องของเจ้าของเหตุการณ์จริง ก่อนเรียกมาที่นี่)
 //     - data: ตัวแปรสำหรับแทรกในเนื้อหาอีเมล (เช่น scheduled_delete_at) — แต่ละ template ต้องการ data
 //       ไม่เหมือนกัน ดูที่ TEMPLATES ว่าต้องการอะไรบ้าง
 //   Response 200: { ok: true, provider, provider_message_id }
-//   Response 400: { error: 'invalid_template' | 'missing_to' | 'missing_data_field', message }
+//   Response 400: { error: 'invalid_template' | 'missing_to' | 'missing_data_field' | 'invalid_template_data', message }
 //   Response 401: { error: 'forbidden', message }  — ไม่ใช่ service_role
 //   Response 500: { error: 'provider_error' | 'unexpected_error', message, detail }
 //     — ส่งไม่สำเร็จต้องตอบ 500 ชัดเจนเสมอ ห้ามตอบ 200 หลอกๆ (RELIABILITY FIRST) ผู้เรียก (account-delete/
@@ -99,6 +92,22 @@ function wrapHtml(bodyHtml) {
 }
 
 const TEMPLATES = {
+  // ── Email OTP login — broker-generated code, never Supabase's native OTP template ─────────────
+  email_login_otp: {
+    required: ['otp_code', 'expires_minutes'],
+    validate: function (data) {
+      return /^\d{6}$/.test(String(data.otp_code || '')) && Number(data.expires_minutes) === 10;
+    },
+    subject: function () { return '【' + SITE_NAME + '】您的登入驗證碼'; },
+    html: function (data) {
+      return wrapHtml(
+        '<p style="font-size:14px;line-height:1.7;">請使用以下 6 位數驗證碼登入：</p>' +
+        '<div style="margin:18px 0;padding:16px;border:1px solid #E5D9B8;border-radius:12px;background:#FFF9E8;text-align:center;font-size:30px;font-weight:800;letter-spacing:8px;color:#5C4410;">' + String(data.otp_code) + '</div>' +
+        '<p style="font-size:14px;line-height:1.7;">驗證碼將於 <b>10 分鐘</b>後失效，且成功使用後不能再次使用。</p>' +
+        '<p style="font-size:13px;line-height:1.7;color:#6b6b6b;">如果您沒有要求登入，請忽略此信，請勿將驗證碼告訴任何人。</p>'
+      );
+    },
+  },
   // ── (1) เพิ่งยื่นคำขอลบบัญชี — เข้าสู่ cooldown 7 วัน ──────────────────────────────
   account_deletion_requested: {
     // 🆕 2026-08-08 (รอบ 3 — ตามที่ Lin สั่ง): cron ลบจริงรันวันละครั้งเท่านั้น (pg_cron 20:00 UTC)
@@ -229,6 +238,9 @@ serve(async (req) => {
     const missingFields = tpl.required.filter(function (k) { return data[k] === undefined || data[k] === null; });
     if (missingFields.length) {
       return json({ error: 'missing_data_field', message: 'ขาดข้อมูลที่ template ต้องการ: ' + missingFields.join(', ') }, 400);
+    }
+    if (tpl.validate && !tpl.validate(data)) {
+      return json({ error: 'invalid_template_data', message: 'ข้อมูลสำหรับ template ไม่ถูกต้อง' }, 400);
     }
 
     const subject = tpl.subject(data);
