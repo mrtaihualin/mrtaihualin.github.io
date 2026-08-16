@@ -412,14 +412,28 @@
       return false;
     }
   }
+  // The crash banner means the playable game itself is no longer trustworthy. Do not show it
+  // for every same-origin script: navigation, analytics and other optional page enhancements
+  // can fail while gameplay remains fully usable (confirmed by Safari Phase 1 human E2E).
+  // Loading failures still use showErrorBanner() above; this allow-list is only for uncaught
+  // runtime errors after the game has loaded.
+  var CORE_GAME_SCRIPT_PATTERN = /\/js\/games\/(?:game-content-client|tone-finder-game|reading-game-app|listening-game-app|typing-game-app|word-order-app)(?:\.min)?\.js(?:[?#:]|$)/;
+  function isCoreGameplaySource(url) {
+    if (!isSameOriginSource(url)) return false;
+    try {
+      return CORE_GAME_SCRIPT_PATTERN.test(new URL(String(url), global.location.href).pathname);
+    } catch (e) {
+      return false;
+    }
+  }
   // stack trace ของ error ที่มาจากไฟล์เว็บเราเอง จะมีบรรทัดที่ระบุ URL เต็ม (origin เดียวกับ
   // location.origin) — error จาก console เอง (eval/VM/debugger eval code) หรือ extension
   // (chrome-extension://) จะไม่มีบรรทัดแบบนี้เลย
-  function stackHasSameOriginFrame(stack) {
+  function stackHasCoreGameplayFrame(stack) {
     if (!stack || typeof stack !== 'string') return false;
     try {
       var origin = global.location.origin;
-      return stack.indexOf(origin) !== -1;
+      return stack.indexOf(origin) !== -1 && CORE_GAME_SCRIPT_PATTERN.test(stack);
     } catch (e) {
       return false;
     }
@@ -429,8 +443,8 @@
       global.addEventListener('error', function (evt) {
         try {
           var err = (evt && (evt.error || evt.message)) || evt;
-          if (!isSameOriginSource(evt && evt.filename)) {
-            console.error('[game-content-client] error ที่ไม่ได้มาจากสคริปต์เว็บเรา (ข้ามไม่โชว์แถบแดง):', err, evt && evt.filename);
+          if (!isCoreGameplaySource(evt && evt.filename)) {
+            console.error('[game-content-client] error ที่ไม่ได้มาจากไฟล์หลักของเกม (ข้ามไม่โชว์แถบแดง):', err, evt && evt.filename);
             return;
           }
           showCrashBanner(err);
@@ -440,8 +454,8 @@
         try {
           var reason = evt && evt.reason;
           var stack = reason && reason.stack;
-          if (!stackHasSameOriginFrame(stack)) {
-            console.error('[game-content-client] unhandledrejection ที่ไม่ได้มาจากสคริปต์เว็บเรา (ข้ามไม่โชว์แถบแดง):', reason);
+          if (!stackHasCoreGameplayFrame(stack)) {
+            console.error('[game-content-client] unhandledrejection ที่ไม่ได้มาจากไฟล์หลักของเกม (ข้ามไม่โชว์แถบแดง):', reason);
             return;
           }
           showCrashBanner(reason);

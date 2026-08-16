@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 14:15 Asia/Bangkok** — Phase 1 Production Tone replay hotfix and controlled mutation verification
+**Updated: 2026-08-16 15:05 Asia/Bangkok** — Phase 1 Core 5 false crash-banner guard
+
+## 2026-08-16 — P1-F-04 Core 5 False Crash Banner (`PASS_LOCAL / DEPLOY_PV_NEEDED`)
+
+- Lin human Guest E2E on Safari confirmed gameplay remained usable while the shared top banner repeatedly claimed `遊戲發生錯誤`. This is a real error-UX defect, not incorrect use and not a gameplay crash.
+- Scoped the global runtime handler to the protected content loader and the five Core game application scripts. Uncaught errors from optional same-origin page enhancements remain logged for diagnosis but no longer present a fatal game-reload banner; genuine Core app crashes and protected-content load failures retain the existing recovery UI.
+- Bumped `game-content-client.js` from v7 to v8 across Tone, Reading, Listening, Typing and Word Order. Added executable regression proving optional same-origin errors do not show a fatal banner while a Core app error still does.
+- Tone first-time guided tour now owns `Escape` only while its overlay is open, closes through the existing safe `gtTourEnd()` path and prevents the same key from leaking into unrelated page shortcuts; a focused regression locks this behavior.
+- Verification: network recovery 12/12, Phase 1 error UX 12/12, game behavioral checks PASS and `node scripts/check-site.js` PASS for 928 project files. No gameplay formula, content, audio, auth, SQL, Edge, account/player data or Production state changed; Production human retry remains required after authorized merge/deploy.
 
 ## 2026-08-16 — P1-F-02 Production Mutation / Retry / Concurrency PV (`PASS / HUMAN UI GATES REMAIN`)
 
