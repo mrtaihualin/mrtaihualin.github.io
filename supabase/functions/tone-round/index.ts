@@ -719,7 +719,7 @@ Deno.serve(async (req: Request) => {
   // The older rl_check dependency was not part of the recoverable schema contract and a
   // missing/signature-mismatched function made every authenticated round fail closed.
   const { data: rlOk, error: rlErr } = await admin.rpc("game_content_rl_check", {
-    p_key: `tone-round:${user.id}`, p_limit: 60, p_window_seconds: 60,
+    p_key: `tone-round:${user.id}`, p_limit: 60, p_window: 60,
   });
   if (rlErr) return json({ error: "rate_limit_unavailable" }, 503);
   if (rlOk !== true) return json({ error: "rate_limited" }, 429);

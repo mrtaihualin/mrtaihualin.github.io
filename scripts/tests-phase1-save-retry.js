@@ -14,6 +14,7 @@ const scoreSubmit = read('supabase/functions/score-submit/index.ts');
 const scoreSql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
 const scoreAtomicSql = read('supabase/sql/2026-08-16_phase1_score_submit_atomic.sql');
 const toneAtomicSql = read('supabase/sql/2026-08-16_phase1_tone_round_atomic.sql');
+const contentSql = read('supabase/sql/2026-08-02_game_content_schema.sql');
 let passed = 0;
 function test(label, fn) {
   try { fn(); passed++; console.log('✓ ' + label); }
@@ -48,9 +49,10 @@ test('round-save Edge call has a bounded wait and fails closed', () => {
 test('server SRS protects retry and concurrent duplicate writes', () => {
   assert.match(edge, /if \(!TF_SRS\.isDue\(rec, nowMs\)\) return reject\('not_due'/);
   assert.match(edge, /admin\.rpc\("phase1_tone_round_commit"/);
-  assert.match(edge, /admin\.rpc\("game_content_rl_check"[\s\S]{0,180}p_key:\s*`tone-round:\$\{user\.id\}`[\s\S]{0,120}p_window_seconds:\s*60/);
+  assert.match(edge, /admin\.rpc\("game_content_rl_check"[\s\S]{0,180}p_key:\s*`tone-round:\$\{user\.id\}`[\s\S]{0,120}p_window:\s*60/);
   assert.match(edge, /p_key:\s*`tone-round:\$\{user\.id\}`[^\n]*p_limit:\s*60/);
   assert.doesNotMatch(edge, /admin\.rpc\(["']rl_check["']/);
+  assert.match(contentSql, /game_content_rl_check\(\s*p_key text, p_limit int default 60, p_window int default 60/);
   assert.match(toneAtomicSql, /return jsonb_build_object\('ok', false, 'reason', 'race_retry'\)/);
   assert.match(toneAtomicSql, /pg_advisory_xact_lock/);
 });
