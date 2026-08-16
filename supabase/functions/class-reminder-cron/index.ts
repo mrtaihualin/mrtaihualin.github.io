@@ -207,6 +207,17 @@ function localToUtcMs(dateStr, rawTimeStr, tz) {
 
 serve(async (req) => {
   try {
+    // This endpoint creates a service-role client, so the platform JWT check is
+    // not sufficient authorization: any valid user JWT can pass that layer.
+    // Reuse the established fail-closed cron secret contract before any read,
+    // write or external notification can occur.
+    const cronSecret = Deno.env.get('CRON_INTERNAL_SECRET');
+    if (!cronSecret || req.headers.get('x-cron-secret') !== cronSecret) {
+      return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
     const tz = Deno.env.get('CLASS_TIMEZONE') || 'Asia/Bangkok';
     if (!channelToken) {
