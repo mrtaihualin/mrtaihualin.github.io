@@ -142,8 +142,9 @@
     }
   }
 
-  // ── modal ล็อกอิน: Email OTP รหัส 6–10 หลัก + Google (เหมือนเกมเสียง) LIN 2026-06-27 ──
+  // ── modal ล็อกอิน: Email OTP 6 หลัก + Google (เหมือนเกมเสียง) LIN 2026-06-27 ──
   var rgGate = null, otpEmail = '', otpCooldown = 0, otpTimer = null;
+  var otpRequestPending = false, otpVerifyPending = false;
 
   function doLogin() { openGate(); }
 
@@ -214,7 +215,7 @@
       '<input id="rg-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +
       '<button id="rg-send" style="margin-top:10px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">寄送驗證碼 →</button>' +
       '<div id="rg-step2" style="display:none;margin-top:12px;">' +
-        '<input id="rg-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="輸入信中的驗證碼" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:18px;letter-spacing:4px;text-align:center;color:#5C4410;outline:none;">' +
+        '<input id="rg-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="輸入 6 位數驗證碼" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:18px;letter-spacing:4px;text-align:center;color:#5C4410;outline:none;">' +
         '<button id="rg-verify" style="margin-top:10px;width:100%;border:none;background:#2E7D4F;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">確認登入</button>' +
         '<button id="rg-resend" style="margin-top:8px;width:100%;border:1px solid #E5D9B8;background:#fff;color:#8B7340;border-radius:10px;padding:9px;cursor:pointer;font-size:13px;">重新寄送驗證碼</button>' +
       '</div>' +
@@ -328,31 +329,71 @@
     el.textContent = msg;
   }
   function startOtp(email, isResend) {
+    if (otpRequestPending) return;
     email = (email || '').trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setMsg('Email 格式不正確', true); return; }
     otpEmail = email;
+    otpRequestPending = true;
+    var requestBtn = rgGate && rgGate.querySelector(isResend ? '#rg-resend' : '#rg-send');
+    if (requestBtn) { requestBtn.disabled = true; requestBtn.style.opacity = '0.5'; }
     setMsg('寄送中…⏳', false);
-    sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } })
+    trackLogin('login_attempt', 'email', { step: isResend ? 'resend' : 'send' });
+    function finishRequest() {
+      otpRequestPending = false;
+      if (requestBtn) { requestBtn.disabled = false; requestBtn.style.opacity = '1'; }
+    }
+    function failRequest(error) {
+      finishRequest();
+      // Keep the public response generic. Account existence and provider details must not leak here.
+      setMsg('暫時無法寄送驗證碼，請稍後再試', true);
+      trackLogin('login_fail', 'email', { step: isResend ? 'resend' : 'send', reason: String(error && error.message || error || '').slice(0, 90) });
+    }
+    var request;
+    try {
+      request = sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
+    } catch (error) { failRequest(error); return; }
+    Promise.resolve(request)
       .then(function (res) {
-        if (res.error) { setMsg('寄送失敗：' + res.error.message, true); trackLogin('login_fail', 'email', { step: 'send', reason: String(res.error.message || '').slice(0, 90) }); return; }
+        if (res && res.error) { failRequest(res.error); return; }
+        finishRequest();
         var step2 = rgGate.querySelector('#rg-step2'); if (step2) step2.style.display = 'block';
         var sBtn = rgGate.querySelector('#rg-send'); if (sBtn) sBtn.style.display = 'none';
         setMsg('驗證碼已寄到 ' + esc(email) + '，請查看信箱（含垃圾信匣）', false);
         var ci = rgGate.querySelector('#rg-code'); if (ci) ci.focus();
         startCooldown();
-      });
+      }, failRequest);
   }
   function verifyCode(code) {
+    if (otpVerifyPending) return;
     code = (code || '').trim();
-    if (!/^\d{6,10}$/.test(code)) { setMsg('請輸入信中的驗證碼（純數字）', true); return; }
+    if (!/^\d{6}$/.test(code)) { setMsg('請輸入 6 位數驗證碼', true); return; }
+    otpVerifyPending = true;
+    var verifyBtn = rgGate && rgGate.querySelector('#rg-verify');
+    if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.style.opacity = '0.5'; }
     setMsg('驗證中…⏳', false);
     trackLogin('login_attempt', 'email', { step: 'verify' });
     markPendingLogin('email');
-    sb.auth.verifyOtp({ email: otpEmail, token: code, type: 'email' })
+    function failVerify(error) {
+      otpVerifyPending = false;
+      if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.style.opacity = '1'; }
+      setMsg('驗證碼錯誤或已過期，請重新輸入', true);
+      trackLogin('login_fail', 'email', { step: 'verify', reason: String(error && error.message || error || '').slice(0, 90) });
+      takePendingLogin();
+    }
+    var verification;
+    try {
+      verification = sb.auth.verifyOtp({ email: otpEmail, token: code, type: 'email' });
+    } catch (error) { failVerify(error); return; }
+    Promise.resolve(verification)
       .then(function (res) {
-        if (res.error) { setMsg('驗證碼錯誤或已過期，請重新輸入', true); trackLogin('login_fail', 'email', { step: 'verify', reason: String(res.error.message || '').slice(0, 90) }); takePendingLogin(); return; }
+        if ((res && res.error) || !(res && res.data && res.data.session && res.data.session.user)) {
+          failVerify((res && res.error) || new Error('missing_session'));
+          return;
+        }
+        otpVerifyPending = false;
+        setMsg('驗證成功，登入中…', false);
         // สำเร็จ → onAuthStateChange → setUser → closeGate ปิดให้เอง
-      });
+      }, failVerify);
   }
   function startCooldown() {
     otpCooldown = 60;

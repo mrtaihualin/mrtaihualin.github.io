@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 18:10 Asia/Bangkok** — Phase 1 Learning Report data foundation
+**Updated: 2026-08-16 18:49 Asia/Bangkok** — Phase 1 Email OTP/Auth security integration
+
+## 2026-08-16 — P1-G-05 Email OTP/Auth Security (`FIXED_PASS_LOCAL / PRODUCTION_E2E_BLOCKED`)
+
+- Read-only Production verification confirmed Email Auth/signups enabled, six-digit OTP, 3,600-second expiry, custom SMTP, 60-second per-email resend interval, and native request/verify limits of 30 per 5 minutes per IP. Access tokens expire after 3,600 seconds, compromised refresh-token detection is enabled with a 10-second reuse interval, CAPTCHA is disabled, and the Dashboard did not expose a numeric project-wide email-send cap.
+- The login client now accepts exactly six digits, blocks duplicate request/verify submissions, handles rejected auth promises, returns a generic public send failure, and requires the verified response to contain a session user before reporting success. Existing same-page resume and auth-state close behavior remain unchanged.
+- Normal logout keeps the merged PR #21 local/global scope distinction but clears UI/account caches only after sign-out succeeds. All five leaderboard surfaces retain the shared auth client and cache versions from PR #21.
+- The integration preserves PR #22 protected Pages exclusions, PR #23 tutorial Escape/focus behavior, and PR #25 Learning Report/summary loaders. Because `reading-auth.js` now contains both PR #25 report linkage and this OTP hardening, its seven existing loaders advance from v24 to v25; no gameplay or protected-content behavior was replaced.
+- Regression verification covers the auth/session lifecycle, account and owner boundaries, backend/save retry behavior, Core 5 shared/report behavior, and the full repository gate.
+- No OTP email was sent, no account/test/player data was created or changed, and no SQL, Edge Function, Supabase setting or other Production mutation occurred. Full Production OTP send/verify/expiry/reuse/logout proof remains blocked on one separately authorized controlled inbox lifecycle.
 
 ## 2026-08-16 — Guest/Login Free Learning Report (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
