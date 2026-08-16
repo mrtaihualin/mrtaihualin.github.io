@@ -11,33 +11,59 @@
   function client() {
     try { return window.getSupabaseClient ? window.getSupabaseClient() : null; } catch (e) { return null; }
   }
+  function roundId() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    var bytes = new Uint8Array(16);
+    try { crypto.getRandomValues(bytes); } catch (e2) { for (var i=0;i<16;i++) bytes[i]=(Math.random()*256)|0; }
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    var h = Array.prototype.map.call(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+  }
+  function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   // ส่ง 1 รอบให้เซิร์ฟเวอร์ตัดสิน · คืน Promise { ok, correct, justMastered, stars, totalStars, reason }
   async function finishRound(args) {
     var sb = client();
     if (!sb || !sb.functions) return { ok: false, reason: 'no_client' };
+    var payload = {
+      round_id: roundId(),
+      word: args.word,
+      level: args.level,
+      game: args.game,                    // 'tone'(default)/'reading'/'typing'/'wordorder' — แยก SRS ต่อเกม
+      clean: args.clean,                  // เกมสะกด/เรียงประโยค: รอบนี้เลื่อนขั้น(clean)ไหม
+      starClean: args.starClean,          // เกมเรียงประโยค: จำเอง(3⭐) vs ใช้คำใบ้/กู้(1⭐)
+      initialGuess: args.initialGuess,   // คำพยางค์เดียว (เกมเสียง)
+      syllables: args.syllables,          // คำหลายพยางค์ (ถ้ามี)
+      guesses: args.guesses,              // คำเดารายพยางค์ (ถ้ามี)
+      knownCheck: !!args.knownCheck
+    };
     try {
       if (!window.NetworkGuard || typeof window.NetworkGuard.request !== 'function') return { ok: false, reason: 'network_guard_unavailable' };
-      var r = await window.NetworkGuard.request(function () {
-        return sb.functions.invoke('tone-round', { body: {
-          word: args.word,
-          level: args.level,
-          game: args.game,                    // 'tone'(default)/'reading'/'typing'/'wordorder' — แยก SRS ต่อเกม
-          clean: args.clean,                  // เกมสะกด/เรียงประโยค: รอบนี้เลื่อนขั้น(clean)ไหม
-          starClean: args.starClean,          // เกมเรียงประโยค: จำเอง(3⭐) vs ใช้คำใบ้/กู้(1⭐)
-          initialGuess: args.initialGuess,   // คำพยางค์เดียว (เกมเสียง)
-          syllables: args.syllables,          // คำหลายพยางค์ (ถ้ามี)
-          guesses: args.guesses,              // คำเดารายพยางค์ (ถ้ามี)
-          knownCheck: !!args.knownCheck
-        } });
-      }, 'tone-round', {}, 12000, null);
-      if (r.error) {
+      for (var attempt=0; attempt<2; attempt++) {
+        var r;
+        try {
+          r = await window.NetworkGuard.request(function () {
+            return sb.functions.invoke('tone-round', { body: payload });
+          }, 'tone-round', {}, 12000, null);
+        } catch (requestError) {
+          if (attempt === 0) { await wait(800); continue; }
+          return { ok: false, reason: 'exception', detail: String(requestError) };
+        }
+        if (!r.error && r.data && r.data.ok) return r.data;
+        if (!r.error && r.data && r.data.reason === 'race_retry' && attempt === 0) {
+          await wait(800); continue;
+        }
+        if (r.error) {
         // Phase 5: โดน rate limit (429 = ยิงเกิน 60 รอบ/นาที) → บอกคนเล่นตรงๆ ว่ารอแป๊บ
-        var st = 0;
-        try { st = (r.error.context && r.error.context.status) || 0; } catch (e2) {}
-        if (st === 429) { showRateLimitToast(); return { ok: false, reason: 'rate_limited' }; }
-        return { ok: false, reason: 'net_error', detail: String(r.error) };
+          var st = 0;
+          try { st = (r.error.context && r.error.context.status) || 0; } catch (e3) {}
+          if (st === 429) { showRateLimitToast(); return { ok: false, reason: 'rate_limited' }; }
+          if (attempt === 0) { await wait(800); continue; }
+          return { ok: false, reason: 'net_error', detail: String(r.error) };
+        }
+        return r.data || { ok: false, reason: 'empty' };
       }
-      return r.data || { ok: false, reason: 'empty' };
+      return { ok: false, reason: 'net_error' };
     } catch (e) {
       return { ok: false, reason: 'exception', detail: String(e) };
     }
