@@ -1,6 +1,6 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 15:05 Asia/Bangkok** — Phase 1 Core 5 false crash-banner guard
+**Updated: 2026-08-16 15:06 Asia/Bangkok** — Phase 1 Tone how-to Escape follow-up
 
 ## 2026-08-16 — P1-F-04 Core 5 False Crash Banner (`PASS_LOCAL / DEPLOY_PV_NEEDED`)
 
@@ -8,6 +8,7 @@
 - Scoped the global runtime handler to the protected content loader and the five Core game application scripts. Uncaught errors from optional same-origin page enhancements remain logged for diagnosis but no longer present a fatal game-reload banner; genuine Core app crashes and protected-content load failures retain the existing recovery UI.
 - Bumped `game-content-client.js` from v7 to v8 across Tone, Reading, Listening, Typing and Word Order. Added executable regression proving optional same-origin errors do not show a fatal banner while a Core app error still does.
 - Tone first-time guided tour now owns `Escape` only while its overlay is open, closes through the existing safe `gtTourEnd()` path and prevents the same key from leaking into unrelated page shortcuts; a focused regression locks this behavior.
+- Production verification after PR #17 confirmed the visible false-fatal banner was suppressed, then exposed a separate hidden legacy `closeLightbox()` null error when `Escape` closed Tone's `📖 玩法` modal. A page-local capture guard now closes that modal, restores focus to its opener and stops the key before the unrelated shared lightbox listener; this follow-up intentionally does not change shared runtime or other pages.
 - Verification: network recovery 12/12, Phase 1 error UX 12/12, game behavioral checks PASS and `node scripts/check-site.js` PASS for 928 project files. No gameplay formula, content, audio, auth, SQL, Edge, account/player data or Production state changed; Production human retry remains required after authorized merge/deploy.
 
 ## 2026-08-16 — P1-F-02 Production Mutation / Retry / Concurrency PV (`PASS / HUMAN UI GATES REMAIN`)
