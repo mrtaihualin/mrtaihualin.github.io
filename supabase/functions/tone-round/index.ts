@@ -667,8 +667,12 @@ Deno.serve(async (req: Request) => {
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
 
-  const operationId = String(body.round_id || "").toLowerCase();
-  if (!UUID_V4.test(operationId)) return json({ error: "invalid_round_id" }, 400);
+  const suppliedOperationId = String(body.round_id || "").toLowerCase();
+  const legacyCompatibility = !suppliedOperationId;
+  if (suppliedOperationId && !UUID_V4.test(suppliedOperationId)) return json({ error: "invalid_round_id" }, 400);
+  // Old cached clients predate round_id. A server-generated operation keeps their write atomic;
+  // concurrent/late duplicates are still rejected by the expected SRS snapshot inside the RPC.
+  const operationId = suppliedOperationId || crypto.randomUUID();
 
   const word = String(body.word || "");
   const level = Number(body.level);
@@ -776,5 +780,8 @@ Deno.serve(async (req: Request) => {
   const result = committed.data;
   if (!result || typeof result !== "object") return json({ error: "round_commit_unavailable" }, 503);
   if (result.ok !== true && result.reason === "replay_conflict") return json({ error: "replay_conflict" }, 409);
-  return json(result);
+  return json(Object.assign({}, result, {
+    roundId: operationId,
+    compatibility: legacyCompatibility ? "legacy-no-id" : "explicit-id",
+  }));
 });

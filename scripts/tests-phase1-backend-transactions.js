@@ -92,9 +92,11 @@ test('Lego quota records one successful consume per identity/day/request id', ()
   serviceOnly(legoSql, 'lego_consume_daily_idempotent');
 });
 
-test('Lego Edge requires request id and keeps Guest/account identity server-derived', () => {
-  assert.match(legoEdge, /UUID_V4\.test\(requestId\)/);
+test('Lego Edge bridges missing legacy ids while invalid explicit ids fail closed', () => {
+  assert.match(legoEdge, /hasExplicitRequestId/);
+  assert.match(legoEdge, /resolveLegoRequestId/);
   assert.match(legoEdge, /idempotency_required/);
+  assert.match(legoEdge, /legacy_bridge_unavailable/);
   assert.match(legoEdge, /supabase\.auth\.getUser\(accessToken\)/);
   assert.match(legoEdge, /identityKey = 'user:' \+ authedUser\.user\.id/);
   assert.match(legoEdge, /identityKey = 'ip:' \+ \(await hashIp\(ip\)\)/);

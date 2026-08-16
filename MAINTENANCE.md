@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 09:18 Asia/Bangkok** — Phase 1 transactional backend redesign (source only)
+**Updated: 2026-08-16 11:51 Asia/Bangkok** — Phase 1 mixed-version Edge/client compatibility bridge (source only)
+
+## 2026-08-16 — P1-F-02 Mixed-Version Rollout Compatibility (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Tone Edge source accepts old cached clients without `round_id` by assigning a server operation UUID while the deployed transactional RPC still serializes the account and rejects stale expected-SRS snapshots; malformed explicit IDs remain fail-closed and new clients retain exact-ID replay.
+- Lego Edge source accepts empty/legacy request bodies through a 30-second deterministic compatibility ID. Concurrent/retried legacy calls in the window share one SQL request key, recent committed legacy keys bridge bucket boundaries, and explicit IDs from new clients remain exact and never fall back silently. Guest/IP and verified-account identity remain server-derived.
+- Added executable old/new/mixed-version/retry/duplicate regressions and central gate coverage. This bridge is source-only: Production SQL from the separately authorized migration round remains active, while Edge/client versions, config and player data were not changed. Safe rollout order after separate authorization is compatibility Edge first, then current client/cache release.
 
 ## 2026-08-16 — P1-F-02 Transactional Backend Redesign (`SOURCE_PASS / PRODUCTION_LOCKED`)
 
