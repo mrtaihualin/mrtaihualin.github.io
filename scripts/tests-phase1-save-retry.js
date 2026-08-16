@@ -49,6 +49,7 @@ test('server SRS protects retry and concurrent duplicate writes', () => {
   assert.match(edge, /if \(!TF_SRS\.isDue\(rec, nowMs\)\) return reject\('not_due'/);
   assert.match(edge, /admin\.rpc\("phase1_tone_round_commit"/);
   assert.match(edge, /admin\.rpc\("game_content_rl_check"[\s\S]{0,180}p_key:\s*`tone-round:\$\{user\.id\}`[\s\S]{0,120}p_window_seconds:\s*60/);
+  assert.match(edge, /p_key:\s*`tone-round:\$\{user\.id\}`[^\n]*p_limit:\s*60/);
   assert.doesNotMatch(edge, /admin\.rpc\(["']rl_check["']/);
   assert.match(toneAtomicSql, /return jsonb_build_object\('ok', false, 'reason', 'race_retry'\)/);
   assert.match(toneAtomicSql, /pg_advisory_xact_lock/);
