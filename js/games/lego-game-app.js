@@ -496,22 +496,74 @@ function legoRefreshBars(){
 // ข้อเสียที่ Lin ควรรู้: ถ้า Supabase/เน็ตมีปัญหาจริง ๆ (ไม่ใช่แค่คนพยายามข้าม) เกมนี้จะเล่นไม่ได้ชั่วคราว
 // ทั้งเว็บจนกว่าจะกลับมาปกติ — เป็น trade-off ที่จำเป็นถ้าจะเอาเพดานแข็งจริง (เลือกฝั่ง "กันเงินรั่ว"
 // มากกว่า "กันเกมล่ม" เพราะ Lin บอกว่าเกมนี้จะเป็นตัวหลักในการหาเงิน)
+var legoQuotaPendingAttempt=null;
+function legoQuotaRequestId(){
+  try{ if(window.crypto&&crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
+  var bytes=new Uint8Array(16);
+  try{ crypto.getRandomValues(bytes); }catch(e2){ for(var i=0;i<16;i++) bytes[i]=(Math.random()*256)|0; }
+  bytes[6]=(bytes[6]&15)|64; bytes[8]=(bytes[8]&63)|128;
+  var h=Array.prototype.map.call(bytes,function(b){return('0'+b.toString(16)).slice(-2);}).join('');
+  return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+}
+function legoQuotaOwnerSnapshot(){
+  try{
+    var auth=window.SITE_AUTH;
+    if(!auth) return null;
+    var uid=auth.user&&auth.user.id?String(auth.user.id):'';
+    var bound=auth.learningOwnerId?String(auth.learningOwnerId):'';
+    if(uid!==bound) return null;
+    return {uid:uid,epoch:Number(auth.learningOwnerEpoch)||0};
+  }catch(e){return null;}
+}
+function legoQuotaSameOwner(owner){
+  var current=legoQuotaOwnerSnapshot();
+  return !!current&&current.uid===owner.uid&&current.epoch===owner.epoch;
+}
+function legoQuotaAttempt(owner){
+  if(!legoQuotaPendingAttempt||legoQuotaPendingAttempt.uid!==owner.uid||legoQuotaPendingAttempt.epoch!==owner.epoch){
+    legoQuotaPendingAttempt={requestId:legoQuotaRequestId(),uid:owner.uid,epoch:owner.epoch};
+  }
+  return legoQuotaPendingAttempt;
+}
+function legoQuotaWait(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}
 async function legoCheckDailyQuota(){
   try{
     var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
     if(!sb) return {ok:false, reason:'no_client'};
+    if(!window.NetworkGuard||typeof NetworkGuard.request!=='function') return {ok:false,reason:'no_client'};
+    var owner=legoQuotaOwnerSnapshot();
+    if(!owner) return {ok:false,reason:'owner_unresolved'};
+    var attempt=legoQuotaAttempt(owner);
     var headers = {};
     try{
-      var sres = await sb.auth.getSession();
-      var token = sres && sres.data && sres.data.session && sres.data.session.access_token;
+      var sres = await NetworkGuard.request(function(){return sb.auth.getSession();},'lego-quota-session',{},5000,null);
+      var session=sres&&sres.data&&sres.data.session;
+      var sessionUid=session&&session.user&&session.user.id?String(session.user.id):'';
+      if(sessionUid!==owner.uid||!legoQuotaSameOwner(owner)) return {ok:false,reason:'owner_changed'};
+      var token = session && session.access_token;
       if(token) headers.Authorization = 'Bearer ' + token;
-    }catch(e){}
-    var res = await sb.functions.invoke('lego-daily-limit', { headers: headers });
-    if(res.error || !res.data){
-      console.warn('[lego-daily-limit] เช็คโควต้าไม่ได้:', res.error);
-      return {ok:false, reason:'network'};
+    }catch(e){return {ok:false,reason:'network'};}
+    for(var requestAttempt=0;requestAttempt<2;requestAttempt++){
+      var res;
+      try{
+        res=await NetworkGuard.request(function(){
+          return sb.functions.invoke('lego-daily-limit',{headers:headers,body:{request_id:attempt.requestId}});
+        },'lego-daily-limit',{},12000,null);
+      }catch(requestError){
+        if(requestAttempt===0){await legoQuotaWait(800);continue;}
+        return {ok:false,reason:'network'};
+      }
+      if(!legoQuotaSameOwner(owner)) return {ok:false,reason:'owner_changed'};
+      if(res.error||!res.data){
+        if(requestAttempt===0){await legoQuotaWait(800);continue;}
+        console.warn('[lego-daily-limit] เช็คโควต้าไม่ได้:',res.error);
+        return {ok:false,reason:'network'};
+      }
+      if(res.data.requestId!==attempt.requestId) return {ok:false,reason:'invalid_response'};
+      if(legoQuotaPendingAttempt===attempt) legoQuotaPendingAttempt=null;
+      return Object.assign({},res.data,{_owner:owner});
     }
-    return res.data; // {ok, used, cap, loggedIn, remaining}
+    return {ok:false,reason:'network'};
   }catch(e){
     console.warn('[lego-daily-limit] error:', e);
     return {ok:false, reason:'network'};
@@ -913,10 +965,12 @@ async function startTest(){
   if(legoQuotaCheckInFlight) return; // กำลังเช็คโควต้าค้างอยู่ — กันดับเบิลคลิก
   legoQuotaCheckInFlight=true;
   toast('檢查中…⏳',false);
-  const quota=await legoCheckDailyQuota();
-  legoQuotaCheckInFlight=false;
+  var quota;
+  try{quota=await legoCheckDailyQuota();}
+  finally{legoQuotaCheckInFlight=false;}
+  if(quota._owner&&!legoQuotaSameOwner(quota._owner)) quota={ok:false,reason:'owner_changed'};
   if(!quota.ok){
-    if(quota.reason==='network' || quota.reason==='no_client'){
+    if(quota.reason==='network'||quota.reason==='no_client'||quota.reason==='owner_unresolved'||quota.reason==='owner_changed'||quota.reason==='invalid_response'){
       toast('⚠️ 連線不穩，暫時無法測試，請稍等一下再試一次',true);
     }else{
       var cap=quota.cap||(quota.loggedIn?5:2);

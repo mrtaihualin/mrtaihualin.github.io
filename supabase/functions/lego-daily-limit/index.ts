@@ -44,6 +44,7 @@ const ALLOWED_ORIGINS = [
   // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
   'https://gentle-moxie-bf64ad.netlify.app',
 ];
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // วันนี้ตามเวลาไต้หวัน (Asia/Taipei) — ให้วันขึ้นวันใหม่ตรงกับที่เว็บใช้อยู่แล้วทั้งเว็บ (streak/ดาว)
 // ไม่ใช้เวลาเครื่อง server เอง (อาจเป็น UTC) กันวันเพี้ยน
@@ -89,8 +90,16 @@ serve(async (req) => {
   }
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) return json({ error: 'origin_not_allowed' }, 403);
 
   try {
+    const rawText = await req.text();
+    if (!rawText || rawText.length > 2_000) return json({ error: 'invalid_payload_size' }, 400);
+    let body;
+    try { body = JSON.parse(rawText); } catch { return json({ error: 'malformed_json' }, 400); }
+    const requestId = String(body && body.request_id || '').toLowerCase();
+    if (!UUID_V4.test(requestId)) return json({ error: 'idempotency_required' }, 400);
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl, serviceKey);
@@ -114,14 +123,26 @@ serve(async (req) => {
     }
 
     const day = todayTaipei();
-    const { data: countData, error: rpcErr } = await supabase.rpc('lego_consume_daily', {
-      p_key: identityKey, p_day: day, p_cap: cap,
+    const { data: quota, error: rpcErr } = await supabase.rpc('lego_consume_daily_idempotent', {
+      p_key: identityKey, p_day: day, p_cap: cap, p_request_id: requestId,
     });
     if (rpcErr) return json({ error: 'db_error', detail: rpcErr.message }, 500);
+    if (!quota || quota.ok !== true) {
+      if (quota && quota.reason === 'replay_conflict') return json({ error: 'replay_conflict' }, 409);
+      return json({ error: 'db_result_invalid' }, 500);
+    }
 
-    const used = countData; // -1 = เต็มโควต้าแล้ว (ไม่อนุญาตครั้งนี้) · อื่น ๆ = จำนวนที่ใช้ไปแล้วรวมครั้งนี้
-    const ok = used !== -1;
-    return json({ ok, used: ok ? used : cap, cap, loggedIn, remaining: ok ? Math.max(0, cap - used) : 0 });
+    const ok = quota.allowed === true;
+    return json({
+      ok,
+      reason: ok ? undefined : 'limit',
+      used: Number(quota.used),
+      cap,
+      loggedIn,
+      remaining: Number(quota.remaining),
+      requestId,
+      idempotent: quota.idempotent === true,
+    });
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500);
   }
