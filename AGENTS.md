@@ -1,9 +1,9 @@
 # AGENTS.md — Repository Rules for mrtaihualin.com
 
-> Applies to: `/Users/taihualin/Developer/mrtaihualin.github.io/`
+> Applies to: repository root (`mrtaihualin.github.io`)
 > Role: repository-specific safety and technical exceptions only
-> Global workflow authority: `/Users/taihualin/Documents/Claude/Projects/AGENTS.md`
-> Repository router: `/Users/taihualin/Developer/mrtaihualin.github.io/00_START_HERE.md`
+> Global workflow authority: Projects canonical global workflow authority resolved by the Codex global router
+> Repository router: `00_START_HERE.md`
 
 ## Authority Boundary
 
@@ -47,5 +47,5 @@
 - Technical evidence ของ code/structure ที่เปลี่ยนให้ update `MAINTENANCE.md` เฉพาะ delta
 - Phase 1 implementation/verification ให้ update row เดิมใน Phase 1 Plan ที่ Website router ชี้
 - งานอื่นให้ update exact Current task authority; ถ้าไม่มี pointer ให้รายงาน `ROUTING_GAP / NOT_AUTHORIZED`
-- Deferred repository-dependent work ใช้ exact-path exception `/Users/taihualin/Developer/mrtaihualin.github.io/_แผนงาน/ทำต่อในอนาคต.md` เพียงจุดเดียว
+- Deferred repository-dependent work ใช้ exact repo-relative path `_แผนงาน/ทำต่อในอนาคต.md` เพียงจุดเดียว
 - ห้ามสร้าง roadmap, status, handoff หรือ global workflow authority คู่ขนานใน repo
