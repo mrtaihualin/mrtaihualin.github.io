@@ -84,7 +84,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=20">
+<link rel="stylesheet" href="css/shared.css?v=21">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/typing-game-app.js -->
@@ -98,7 +98,7 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/games/typing-score.js?v=1"></script><!-- สูตร 無提示 ชุดเดียวกับ Listening Typing Bonus -->
 <script src="js/games/word-vault.js?v=6"></script>
 <script src="js/games/protected-word-audio.js?v=2"></script><!-- Core 5: private audio via entitlement-checked signed URL -->
-<script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
+<script src="js/games/word-menu.js?v=9"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=8"></script>
 <script src="data/tone-engine.js?v=3"></script>
@@ -433,7 +433,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 
 <div class="v3-page gsh-shell">
 
-<div class="page-header">
+<div class="page-header gsh-page-header">
   <h1 class="page-title" style="margin:0;">泰語打字練習室</h1>
   <div class="page-sub">照泰文鍵盤打出正確拼寫</div>
 </div>
@@ -528,7 +528,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 <!-- Phase C.1 (2026-08-10): level-tabs (難度) + top-bar (進度/成績) รวมเป็น Session Header เดียวกัน
      top-bar ย้ายออกจาก .gold-banner มาอยู่ตรงนี้แทน (ไม่กระทบ scoring/keyboard — แค่ตำแหน่งแสดงผล, id เดิมทุกตัว) -->
 <div class="gsh-session-header">
-  <div class="level-tabs">
+  <div class="level-tabs gsh-level-selector" aria-label="選擇等級">
     <button class="ltab active" id="ltab-初" onclick="setLevel('初')">初級</button>
     <button class="ltab"        id="ltab-中" onclick="setLevel('中')">中級</button>
     <button class="ltab"        id="ltab-高" onclick="setLevel('高')">高級</button>
@@ -544,7 +544,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 </div>
 
 <!-- Local-device resume prompt — โชว์เฉพาะตอนพบ session ที่เล่นค้างไว้จริงใน localStorage; ไม่อ้างว่า sync ข้ามเครื่อง -->
-<div class="gsh-resume-banner" id="tg-resume-banner" style="display:none;">
+<div class="gsh-resume-banner" id="tg-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;">
   <div class="gsh-resume-title">上次的安全進度還在</div>
   <div class="gsh-resume-detail" id="tg-resume-detail"></div>
   <div class="gsh-resume-actions">
@@ -554,9 +554,9 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
 </div>
 
-<div class="card" id="game">
-  <div class="gold-banner gsh-gameplay">
-    <div class="bars-wrap" id="bars-wrap">
+<div class="card gsh-gameplay" id="game">
+  <div class="gold-banner">
+    <div class="bars-wrap gsh-progress" id="bars-wrap">
       <div class="bar-row">
         <span>進度</span>
         <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
@@ -778,7 +778,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=32"></script>
+<script src="js/core/shared.min.js?v=33"></script>
 <script src="js/games/game-flow.js?v=4"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
@@ -791,7 +791,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="typing_game"></div>
-<script src="js/games/game-switcher.js?v=1"></script>
+<script src="js/games/game-switcher.js?v=2"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-24 ──

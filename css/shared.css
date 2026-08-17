@@ -619,14 +619,17 @@
    =================================================================== */
 
 /* กรอบกว้างของพื้นที่เกม — desktop โฟกัสตรงกลาง ไม่ยืดเต็มจอ, mobile margin ~16px ไม่ overflow */
-.gsh-shell { max-width:640px; margin:0 auto; padding:0 16px; width:100%; }
-@media(min-width:900px){ .gsh-shell { max-width:720px; padding:0 24px; } }
-@media(min-width:1200px){ .gsh-shell { max-width:760px; } }
+.gsh-shell { max-width:688px; margin:0 auto; padding-inline:24px; width:100%; box-sizing:border-box; }
+body .gsh-shell.tf-page { padding-top:8px; }
+
+.gsh-page-header { width:100%; max-width:640px; margin:0 auto 10px; text-align:center; }
+.gsh-page-header > h1 { font-size:clamp(20px,4vw,28px); }
 
 /* Player Status — compact, กลางจอ, ไม่แย่ง Gameplay */
 .gsh-player-status {
   display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
-  gap:6px 14px; padding:6px 0; font-family:'Noto Sans TC',sans-serif; font-size:12.5px; color:var(--ink-muted);
+  gap:6px 14px; padding:6px 0; width:100%; max-width:640px; margin-inline:auto; box-sizing:border-box;
+  font-family:'Noto Sans TC',sans-serif; font-size:12.5px; color:var(--ink-muted);
 }
 .gsh-player-status [role="button"] { cursor:pointer; }
 
@@ -634,23 +637,45 @@
    ลำดับที่แนะนำ (ตาม §10): game title → difficulty/category → progress → score */
 .gsh-session-header {
   display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
-  gap:4px 16px; padding:4px 0 10px; font-family:'Noto Sans TC',sans-serif; font-size:13px; color:var(--ink-muted);
+  gap:6px 16px; padding:4px 0 10px; width:100%; max-width:640px; margin-inline:auto; box-sizing:border-box;
+  font-family:'Noto Sans TC',sans-serif; font-size:13px; color:var(--ink-muted);
   text-align:center;
 }
 .gsh-session-header .gsh-title { font-family:'Noto Serif TC',serif; font-weight:900; color:var(--ink); font-size:15px; }
 .gsh-session-header .gsh-sep { opacity:0.4; }
 
 /* Gameplay — เด่นที่สุดเสมอ ไม่มีการ์ดซ้อนการ์ด ไม่มี sidebar/leaderboard/promotion ข้างๆ */
-.gsh-gameplay { margin-top:4px; width:100%; }
+.gsh-gameplay { margin:4px auto 0; width:100%; max-width:640px; box-sizing:border-box; }
+
+/* Tone/Reading/Typing share one compact selector without inventing levels for the other games. */
+.gsh-level-selector {
+  display:grid !important; grid-template-columns:repeat(3,minmax(70px,1fr)); flex:1 1 280px;
+  width:min(100%,300px) !important; max-width:300px !important; gap:8px !important; margin:0 !important;
+}
+.gsh-level-selector > button {
+  min-height:36px; padding:7px 12px !important; border-radius:999px !important;
+  font-family:'Noto Sans TC',sans-serif; font-size:13px !important; font-weight:800;
+}
+
+.gsh-progress { width:100%; max-width:640px; margin:0 0 12px; }
+
+/* Learning helpers remain beside the active content instead of becoming a fourth floating control. */
+.gsh-learning-tools {
+  width:100%; max-width:640px; margin:6px auto 2px; display:flex; align-items:center;
+  justify-content:center; flex-wrap:wrap; gap:8px;
+}
+.gsh-learning-tools .gsh-learning-tool button,
+.gsh-learning-tools button.gsh-learning-tool { min-width:40px; min-height:40px; }
 
 @media(max-width:600px){
-  .gsh-shell { padding:0 16px; }
+  .gsh-shell { padding-inline:16px; }
   .gsh-player-status { font-size:12px; gap:5px 10px; }
   .gsh-session-header { font-size:12px; gap:3px 10px; }
   .gsh-session-header .gsh-title { font-size:14px; }
+  .gsh-level-selector { flex-basis:100%; width:min(100%,288px) !important; }
 }
 @media(max-width:390px){
-  .gsh-shell { padding:0 14px; }
+  .gsh-shell { padding-inline:14px; }
 }
 
 /* Feedback inline — reserve พื้นที่กันจอกระโดดแรง (§12) ใช้แปะเสริม container feedback เดิมของแต่ละเกม
@@ -726,7 +751,12 @@
 .gsh-resume-continue { background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep)); color:#fff; }
 .gsh-resume-restart { background:#fff; border:1.5px solid var(--border) !important; color:var(--ink-soft); }
 .gsh-resume-new { background:transparent; border:1.5px solid var(--gold-bright) !important; color:var(--gold-deep); }
-@media(max-width:600px){ .gsh-resume-actions button{ flex:1; } }
+@media(max-width:600px){ .gsh-resume-actions button{ flex:1 1 30%; } }
+@media(max-width:480px){
+  .gsh-resume-banner { padding:14px; text-align:left; }
+  .gsh-resume-actions { flex-direction:column; }
+  .gsh-resume-actions button { width:100%; min-height:44px; }
+}
 
 /* 查看錯題 mistake review — ใช้ร่วมกัน 5 เกม (§21, Phase F2) read-only แสดงจาก roundLog/state จริงเท่านั้น */
 .gsh-mistake-list { display:flex; flex-direction:column; gap:10px; width:100%; max-width:640px; margin:0 auto; }

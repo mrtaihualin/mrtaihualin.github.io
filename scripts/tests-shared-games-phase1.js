@@ -6,6 +6,10 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
+const sharedCss = fs.readFileSync(path.join(root, 'css/shared.css'), 'utf8');
+const sharedJs = fs.readFileSync(path.join(root, 'js/core/shared.js'), 'utf8');
+const switcherJs = fs.readFileSync(path.join(root, 'js/games/game-switcher.js'), 'utf8');
+const wordMenuJs = fs.readFileSync(path.join(root, 'js/games/word-menu.js'), 'utf8');
 const games = [
   { id: 'tone', html: 'tone-finder.html', app: 'js/games/tone-finder-game.js', howto: 'tf-howto-modal', resume: 'tf-resume-banner' },
   { id: 'reading', html: 'reading-game.html', app: 'js/games/reading-game-app.js', howto: 'rg-howto-modal', resume: 'rg-resume-banner' },
@@ -32,6 +36,26 @@ test('all five games use one shared-width shell and one auth slot', () => {
   }
 });
 
+test('all five games expose the locked shared header, progress and resume semantics', () => {
+  for (const g of games) {
+    assert.match(g.htmlText, /gsh-page-header/, `${g.id}: header ยังไม่ใช้ shared contract`);
+    if (g.id === 'tone') assert.match(g.htmlText, /id="tf-session-counter"/, 'tone: compact progress host หาย');
+    else assert.match(g.htmlText, /gsh-progress/, `${g.id}: progress ยังไม่ใช้ shared contract`);
+    assert.match(g.htmlText, new RegExp(`id="${g.resume}"[^>]+role="region"[^>]+aria-label="繼續上次練習"`), `${g.id}: resume ไม่มี region label`);
+  }
+  for (const id of ['tone', 'reading', 'typing']) {
+    assert.match(games.find((g) => g.id === id).htmlText, /gsh-level-selector[^>]+aria-label="選擇等級"/, `${id}: level selector ยังไม่ใช้ shared contract`);
+  }
+  assert.match(games.find((g) => g.id === 'typing').htmlText, /<div class="card gsh-gameplay" id="game">/, 'Typing: gameplay class ต้องอยู่บน outer game card');
+});
+
+test('shared shell stays bounded and resume actions stack on narrow screens', () => {
+  assert.match(sharedCss, /\.gsh-shell\s*\{[^}]*max-width:688px[^}]*box-sizing:border-box/);
+  assert.match(sharedCss, /\.gsh-gameplay\s*\{[^}]*max-width:640px[^}]*box-sizing:border-box/);
+  assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]*?\.gsh-resume-actions\s*\{\s*flex-direction:column/);
+  assert.match(sharedCss, /\.gsh-resume-actions button\s*\{[^}]*min-height:44px/);
+});
+
 test('all five games expose a persistent 玩法 replay path', () => {
   for (const g of games) {
     assert.match(g.htmlText, new RegExp(`id="${g.howto}"`), `${g.id}: ไม่มี howto modal`);
@@ -44,6 +68,31 @@ test('all five games expose the shared cross-game switcher', () => {
     assert.match(g.htmlText, /id="game-switcher"[^>]+data-current=/, `${g.id}: ไม่มี game switcher`);
     assert.match(g.htmlText, /js\/games\/game-switcher\.js\?v=/, `${g.id}: ไม่ได้โหลด shared switcher`);
   }
+});
+
+test('shared switcher contains exactly the Phase 1 Core 5 in canonical order', () => {
+  const core5Block = switcherJs.slice(switcherJs.indexOf('var CORE5_TABS'), switcherJs.indexOf('var LEGACY_TABS'));
+  const ids = Array.from(core5Block.matchAll(/\{ id: '([^']+)'/g), (match) => match[1]);
+  assert.deepStrictEqual(ids, ['tone_finder', 'reading_game', 'listening_game', 'typing_game', 'word_order']);
+  assert.doesNotMatch(core5Block, /href: '(?:lego|vault|games-challenge)\.html'/);
+  assert.match(switcherJs, /core5 \? CORE5_TABS : LEGACY_TABS/, 'non-Core-5 pages ต้องคง switcher เดิม');
+  assert.match(switcherJs, /role="menuitem" aria-current="page"/);
+});
+
+test('floating controls use the locked switcher, focus and More Menu copy', () => {
+  assert.match(sharedJs, /menuBtn\.setAttribute\('aria-label', '遊戲選單'\)/);
+  assert.match(sharedJs, /isCore5Surface[\s\S]{0,120}\? \(on \? '離開專注模式' : '專注模式'\)/);
+  assert.match(sharedJs, /isCore5Game \? '更多功能' : '回報問題 \/ 心得分享'/);
+  assert.match(sharedJs, /fab\.innerHTML = \(isCore5Game \? '⋯' : '🪧'\)/);
+  assert.match(sharedJs, /fitMenuToViewport\(\)/);
+  assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
+});
+
+test('learning helpers remain inline and do not create the fallback rice menu', () => {
+  assert.match(wordMenuJs, /row\.classList\.add\('gsh-learning-tools'\)/);
+  assert.match(wordMenuJs, /row\.setAttribute\('data-wm-done', '1'\);[\s\S]{0,120}return;/);
+  assert.match(sharedJs, /querySelector\('\[data-wm-done="1"\]'\)\) return/);
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /id="zh-toggle-slot"/, 'Listening: translation control ต้องอยู่ใน inline learning tools');
 });
 
 test('all five games provide recoverable round resume UI', () => {

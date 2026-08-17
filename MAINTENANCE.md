@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 11:35 Asia/Bangkok** — Phase 1 public Leaderboard nickname safety source
+**Updated: 2026-08-17 11:35 Asia/Bangkok** — Phase 1 Core 5 UI alignment source
+
+## 2026-08-17 — P1-G-03 Core 5 UI Alignment (`PASS_LOCAL / HUMAN_GAMEPLAY_PV_BLOCKED`)
+
+- Aligned the five Free game surfaces to one centered shared shell, compact page/session/progress hierarchy and responsive level selectors without changing game formulas, answers, SRS or report data.
+- Kept learning helpers beside active content, limited the cross-game switcher to the locked Core 5 and added accessible resume regions plus truthful menu/focus-mode ARIA state. The game menu is viewport-bounded and closes with Escape while restoring focus.
+- Rebuilt `shared.min.js` with Terser and advanced only the five Core 5 loaders for the affected `shared.css`, `shared.min.js`, `word-menu` and `game-switcher` cache keys. `game-switcher.js` selects the five-item set only for Core 5 current IDs; Lego/Vault keep their original seven-item legacy switcher and unchanged loaders.
+- Shared 17/17, Typing 10/10, Word Order 11/11, Reading 9/9, Listening 38/38, Round Report 12/12 and `node scripts/check-site.js` PASS for 941 local project files. Browser smoke at desktop, 390×844 and 844×390 confirmed no horizontal overflow on all five pages, five Core 5 tabs, responsive selectors, inline toolbars and menu Escape recovery; Lego legacy switcher remained intact.
+- No deploy or Production mutation occurred. Final authenticated/Guest gameplay and device-specific responsive review remain Human gates.
 
 ## 2026-08-17 — P1-B-04 Public Leaderboard Nickname Safety (`PASS_LOCAL / DEPLOY_AND_HUMAN_PV_BLOCKED`)
 
