@@ -1418,9 +1418,6 @@ function refreshUI(){
   document.getElementById('pf').style.width=(cur/Math.max(1,roundQueue.length)*100)+'%';
   document.getElementById('prog-txt').textContent=cur+'/'+roundQueue.length;
   document.getElementById('qt').textContent=roundQueue.length;
-  document.getElementById('star-count').textContent=totalStars;
-  document.getElementById('badge-count').textContent=totalBadges;
-  document.getElementById('badge-emoji').textContent=badgeEmoji(totalBadges);
 }
 
 function updateCombo(){
