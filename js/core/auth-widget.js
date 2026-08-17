@@ -1094,18 +1094,14 @@
     if (pending.user_id !== API.user.id) { showAccountSwitchedToast(); return; } // โดนสลับบัญชีเงียบๆ — ต้องเตือนดังๆ
     var providersAfter = (API.user.identities || []).map(function (i) { return i.provider; });
     if (providersAfter.indexOf('facebook') === -1) { showFbLinkFailToast(); return; } // เชื่อมไม่สำเร็จ — ต้องบอกผู้เล่นตรงๆ ห้ามเงียบ
+    // Audit writes cross the authenticated Edge boundary. The browser supplies only
+    // the requested event/provider; the server re-verifies the JWT owner and current
+    // provider identity, derives both states, and invokes the privileged RPC itself.
     try {
-      sb.rpc('log_account_audit', {
-        p_user_id: API.user.id,
-        p_event_type: 'link',
-        p_provider: 'facebook',
-        p_before_state: { providers: pending.providers_before || [] },
-        p_after_state: { providers: providersAfter },
-        p_actor_type: 'user',
-        p_actor_id: API.user.id
-      }).then(function (res) {
-        if (res && res.error) console.error('log_account_audit failed (facebook link)', res.error);
-      }).catch(function (e) { console.error('log_account_audit threw (facebook link)', e); });
+      callAccountFn('account-unlink', {
+        action: 'audit_link',
+        provider: 'facebook'
+      }).catch(function (e) { console.error('account audit failed (facebook link)', e); });
     } catch (e) {}
   }
 

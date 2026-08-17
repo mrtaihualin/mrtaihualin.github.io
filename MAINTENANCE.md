@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 15:40 Asia/Bangkok** — Phase 1 cron reliability source readiness
+**Updated: 2026-08-17 15:45 Asia/Bangkok** — Phase 1 account audit integrity
+
+## 2026-08-17 — P1-D-09 Account Audit Integrity (`PASS_LOCAL / SQL_EDGE_CLIENT_ROLLOUT_BLOCKED`)
+
+- Removed the browser's direct call to the `SECURITY DEFINER` account-audit RPC. A Facebook link audit now crosses the existing authenticated `account-unlink` Edge boundary, which re-verifies the caller through Auth, derives the owner and provider states from server sources and calls the privileged RPC with the service role.
+- Added a source-only migration for the exact existing RPC signature that sets an empty search path, revokes `PUBLIC`/`anon`/`authenticated` execution and retains only `service_role`; its verification block aborts if any browser privilege remains. No audit/account rows are changed by the migration.
+- Deterministic source contracts and an ephemeral PostgreSQL privilege fixture cover browser denial, service-role execution, empty search path, unchanged existing audit rows, provider/owner verification and fail-closed rate/RPC errors. All 13 auth-widget consumers advance to cache v15.
+- No SQL was applied, no Edge/client source was deployed, and no Auth/provider/account/data/secret/config/Production mutation occurred. Ordered migration → Edge → client rollout and controlled Facebook-link lifecycle verification require separate explicit authorization.
 
 ## 2026-08-17 — P1-F-01/F-02/F-08 Cron Reliability B1 (`PASS_LOCAL / SOURCE_ONLY_NOT_DEPLOYED`)
 
