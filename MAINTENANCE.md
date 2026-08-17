@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 18:35 Asia/Bangkok** — Phase 1 Played/Gamification recovery
+**Updated: 2026-08-17 18:37 Asia/Bangkok** — Phase 1 PRIVATE_AUDIO_3 recovery artifact
+
+## 2026-08-17 — PRIVATE_AUDIO_3 scoped recovery artifact (`PASS_LOCAL / PRODUCTION_NOT_RUN`)
+
+- Added a recovery-only SQL source for exactly six affected `public.audio_assets` rows: restore the three authoritative legacy sentence rows and remove only the three exact-text replacement metadata rows.
+- Added a dry-run-first helper that can delete only the three canonical replacement objects through the Supabase Storage API, then verifies all three exact paths are absent through the read-only Storage list API; it never writes `storage.objects`, bucket configuration, RLS or policies.
+- Deterministic recovery regression and the full repository gate pass locally. No upload, object deletion, SQL apply, metadata mutation, deploy, Product/Checklist/Central update or Human audio approval was performed.
 
 ## 2026-08-17 — P1-D-05/D-07/D-08 Played + Gamification Recovery (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
