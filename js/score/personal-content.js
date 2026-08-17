@@ -7,6 +7,10 @@
   var user = null;
   var activeTab = 'words';
   var searchQuery = '';
+  var playedItems = {};
+  var playedCache = {};
+  var playedRequestKey = '';
+  var playedRequestFailed = false;
   try { activeTab = sessionStorage.getItem('personal_content_tab') || 'words'; } catch (e) {}
   if (location.hash === '#sentences') activeTab = 'sentences';
   if (location.hash === '#words') activeTab = 'words';
@@ -45,6 +49,30 @@
     } catch (e) { return String(value); }
   }
   function sourceLabel(source) { return SOURCE_LABELS[source] || source || '來源未記錄'; }
+  function playedKey(item, kind) { return (kind === 'sentence' ? 'sentence:' : 'word:') + String(item && item.th || ''); }
+  function playedFor(item, kind) { return playedItems[playedKey(item, kind)] || null; }
+
+  function loadPlayedStatus(items, kind) {
+    if (!user || !window.PracticeEvents || typeof PracticeEvents.status !== 'function') return;
+    var requestItems = items.map(function (item) { return { kind: kind, key: String(item.th || '') }; }).filter(function (item) { return item.key; });
+    var key = String(user.id || '') + '|' + kind + '|' + requestItems.map(function (item) { return item.key; }).sort().join('|');
+    if (!requestItems.length) return;
+    if (playedCache[key]) { playedItems = playedCache[key]; return; }
+    if (key === playedRequestKey) return;
+    playedRequestKey = key;
+    playedRequestFailed = false;
+    var ownerId = String(user.id || '');
+    PracticeEvents.status(requestItems).then(function (result) {
+      if (!user || String(user.id || '') !== ownerId || playedRequestKey !== key) return;
+      playedItems = result || {};
+      playedCache[key] = playedItems;
+      renderAccount();
+    }, function () {
+      if (!user || String(user.id || '') !== ownerId || playedRequestKey !== key) return;
+      playedRequestFailed = true;
+      renderAccount();
+    });
+  }
 
   function renderGuest() {
     root.innerHTML = '';
@@ -82,14 +110,21 @@
     button.setAttribute('aria-expanded', 'false');
     wrapper.appendChild(button); wrapper.appendChild(valueNode); return wrapper;
   }
-  function practiceSection(item, games) {
+  function practiceSection(item, games, kind) {
     var section = el('section', 'pc-detail-section');
     section.appendChild(el('h4', '', '練習紀錄'));
-    // Save provenance records where an item was bookmarked, not whether the
-    // learner attempted it. Keep the action neutral until verified gameplay
-    // evidence exists for this exact item.
+    // Save provenance records where an item was bookmarked. Only the
+    // authenticated practice-events status may label this exact item Played.
+    var evidence = playedFor(item, kind);
+    if (evidence && evidence.played) {
+      section.appendChild(el('p', 'pc-source', '已練習 · ' + formatDate(evidence.last_played_at)));
+    } else if (playedRequestFailed) {
+      var retry = el('button', 'pc-secondary', '重新載入練習紀錄'); retry.type = 'button';
+      retry.onclick = function () { delete playedCache[playedRequestKey]; playedRequestKey = ''; playedRequestFailed = false; renderAccount(); };
+      section.appendChild(retry);
+    }
     games.forEach(function (game) {
-      var link = el('a', 'pc-practice', '開始練習 · ' + game.label);
+      var link = el('a', 'pc-practice', (evidence && evidence.played ? '再練習 · ' : '開始練習 · ') + game.label);
       link.href = game.href + encodeURIComponent(item.th);
       section.appendChild(link);
     });
@@ -116,7 +151,7 @@
     details.appendChild(infoToggle('คำอ่านไทย', item.readingTH || ''));
     details.appendChild(infoToggle('Romanization', item.en || ''));
     details.appendChild(infoToggle('中文翻譯', item.zh || ''));
-    details.appendChild(practiceSection(item, kind === 'sentence' ? SENTENCE_GAMES : WORD_GAMES));
+    details.appendChild(practiceSection(item, kind === 'sentence' ? SENTENCE_GAMES : WORD_GAMES, kind));
     details.appendChild(savedInfo(item));
     var remove = el('button', 'pc-delete', '刪除'); remove.type = 'button';
     remove.onclick = function () {
@@ -178,6 +213,7 @@
     var items = kind === 'sentence'
       ? (window.SentenceVault ? SentenceVault.getAll() : [])
       : (window.WordVault ? WordVault.getAll() : []);
+    loadPlayedStatus(items, kind);
     var list = el('section', 'pc-list'); root.appendChild(list);
     function update(status) {
       list.innerHTML = '';
@@ -193,7 +229,18 @@
     update(controls.status);
   }
   function render() { if (!user) renderGuest(); else renderAccount(); }
-  function applyUser(nextUser) { user = nextUser || null; render(); }
+  function applyUser(nextUser) {
+    var previousId = user && user.id ? String(user.id) : '';
+    var nextId = nextUser && nextUser.id ? String(nextUser.id) : '';
+    user = nextUser || null;
+    if (previousId !== nextId) {
+      playedItems = {};
+      playedCache = {};
+      playedRequestKey = '';
+      playedRequestFailed = false;
+    }
+    render();
+  }
 
   window.addEventListener('wordvault:changed', render);
   window.addEventListener('sentencevault:changed', render);

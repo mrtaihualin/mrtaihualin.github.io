@@ -141,7 +141,8 @@
     'tf_srs_v1', 'rgv3_save', 'wo_srs_v1',
     'tf_badges_v1', 'tf_streak_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1',
     'thai_game_acct_v1', 'linvault_v1', 'sentence_vault_v1', 'lego_vault_v1',
-    'phase1_account_resume_v1', 'phase1_canonical_meta_v1'
+    'phase1_account_resume_v1', 'phase1_canonical_meta_v1',
+    'phase1_practice_event_pending_v1'
   ];
   function bindLearningOwner(user) {
     var uid = (user && user.id) ? String(user.id) : '';

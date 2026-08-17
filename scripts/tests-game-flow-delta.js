@@ -170,7 +170,7 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=4'), `${file} must load the shared flow`);
+  assert(html.includes('js/games/game-flow.js?v=5'), `${file} must load the shared flow`);
   assert(/繼續上次練習/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
   assert(/重新開始本次練習/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
   assert(/開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);
