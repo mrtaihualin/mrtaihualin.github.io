@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 18:37 Asia/Bangkok** — Phase 1 PRIVATE_AUDIO_3 recovery artifact
+**Updated: 2026-08-18 02:25 Asia/Bangkok** — Phase 1 Typing Guest startup defect
+
+## 2026-08-18 — P1-C-TYPING-01 Guest Startup (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- The deployed desktop/mobile lab exception matches the retired Free Star/badge HUD defect: Typing `refreshUI()` still wrote to three HUD elements already removed from the Phase 1 page.
+- Removed only those three stale Typing HUD writes, rebuilt only the Typing minified bundle and advanced its Typing-only cache key to v33. A regression now executes `refreshUI()` against the current reward-free Phase 1 HUD.
+- Typing, owner-switch, shared Core 5, Free gamification and the full repository gate pass locally. No Reading or other Core 5 runtime, gameplay/scoring/SRS/content, deploy, Production, account/data, Product, Checklist or Central state changed.
 
 ## 2026-08-17 — PRIVATE_AUDIO_3 scoped recovery artifact (`PASS_LOCAL / PRODUCTION_NOT_RUN`)
 
