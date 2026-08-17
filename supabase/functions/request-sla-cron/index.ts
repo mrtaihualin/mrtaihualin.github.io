@@ -33,14 +33,22 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 const SLA_HOURS = 48;
+const LINE_TIMEOUT_MS = 10000;
 
 async function pushLine(channelToken, targetUserId, text) {
-  const res = await fetch(LINE_PUSH_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
-    body: JSON.stringify({ to: targetUserId, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }),
-  });
-  if (!res.ok) throw new Error('LINE API ' + res.status + ': ' + (await res.text()));
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LINE_TIMEOUT_MS);
+  try {
+    const res = await fetch(LINE_PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+      body: JSON.stringify({ to: targetUserId, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error('LINE API ' + res.status + ': ' + (await res.text()));
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 serve(async (req) => {
@@ -305,7 +313,9 @@ serve(async (req) => {
       } catch (e) { errCount++; console.error('[request-sla-cron] เตือนครู (กิ่งสำรอง) ไม่สำเร็จ, id=' + r.id + '：', e && e.message ? e.message : e); }
     }
 
-    return new Response(JSON.stringify({ ok: true, checked: rows.length, sent, errors: errCount }), { status: 200 });
+    return new Response(JSON.stringify({ ok: errCount === 0, checked: rows.length, sent, errors: errCount }), {
+      status: errCount > 0 ? 500 : 200,
+    });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e && e.message || e) }), { status: 500 });
   }

@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 15:30 Asia/Bangkok** — Phase 1 account logout failure recovery
+**Updated: 2026-08-17 15:40 Asia/Bangkok** — Phase 1 cron reliability source readiness
+
+## 2026-08-17 — P1-F-01/F-02/F-08 Cron Reliability B1 (`PASS_LOCAL / SOURCE_ONLY_NOT_DEPLOYED`)
+
+- Bounded the external LINE request in `class-reminder-cron` and `request-sla-cron` to ten seconds with abort/timer cleanup, so a stalled provider cannot consume the full Edge request lifetime. A student lookup failure now stops class reminders before notification processing, and both handlers return non-2xx when any per-run notification/claim error occurred instead of reporting an unconditional success.
+- Added a dedicated B-only reliability gate and a read-only SQL snapshot that distinguishes missed schedule, response-retention gaps and HTTP transport status without returning cron commands, secret values, notification bodies or student identifiers. Current Production inspection remains evidence only; HTTP 2xx is not recipient-delivery proof.
+- No Edge deploy, SQL execution, cron/LINE invocation, restore, secret/config change, account/player-data mutation or other Production mutation occurred. The separate low-quota immediate browser caller and PR #37 scheduled backup/Drive-retention scope are intentionally excluded.
 
 ## 2026-08-17 — P1-D-02/D-09 Account Logout Failure Recovery (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
