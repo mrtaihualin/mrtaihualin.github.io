@@ -51,6 +51,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 const REMINDER24H_BEFORE_MIN = 24 * 60;
+const LINE_TIMEOUT_MS = 10000;
 const FOLLOWUP_AFTER_MIN = 60;  // ถ้าไม่มี end_time ให้สมมติคาบยาวกี่นาที (ใช้คำนวณเวลาจบ สำหรับโชว์ในข้อความเตือน 24 ชม.)
 // 🟠 2026-08-01 แก้ (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 11): เดิมตั้งไว้ 20 นาที = "เท่ากับรอบ cron ซิงค์ปฏิทิน
 //   (ทุก 20 นาที) พอดีเป๊ะ ไม่เหลือที่เผื่อเลยสักนาที" → คาบทุกสัปดาห์ที่เพิ่งเพิ่ม จะมีแถวใน
@@ -61,12 +62,19 @@ const FOLLOWUP_AFTER_MIN = 60;  // ถ้าไม่มี end_time ให้�
 const CATCH_WINDOW_MIN = 90;    // หน้าต่างจับเวลาหลังจุดที่ควรส่ง (กันพลาดถ้า cron รันไม่ตรงเป๊ะ)
 
 async function pushLineMessages(channelToken, targetUserId, messages) {
-  const res = await fetch(LINE_PUSH_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
-    body: JSON.stringify({ to: targetUserId, messages }),
-  });
-  if (!res.ok) throw new Error('LINE API ' + res.status + ': ' + (await res.text()));
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LINE_TIMEOUT_MS);
+  try {
+    const res = await fetch(LINE_PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + channelToken },
+      body: JSON.stringify({ to: targetUserId, messages }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error('LINE API ' + res.status + ': ' + (await res.text()));
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // 2026-07-26 เพิ่ม："จอง" ก่อนส่ง — atomic update (WHERE field=false) ให้ Postgres เป็นคนตัดสินว่า
@@ -252,10 +260,15 @@ serve(async (req) => {
     // 2026-07-14 加：เพิ่ม pending_student_tz — ต้องใช้ตอนแจ้งเตือนนักเรียน ให้โชว์เป็นเวลา
     // ของนักเรียนเอง ไม่ใช่เวลาไทยดิบๆ (Lin สั่งว่าแจ้งนักเรียนต้องเป็นเวลานักเรียนเสมอ)
     const tokens = [...new Set(rows.map(r => r.token))];
-    const { data: students } = await supabase
+    const { data: students, error: studentsError } = await supabase
       .from('classroom_students')
       .select('token, name, meet, line_user_id, pending_student_tz')
       .in('token', tokens);
+    if (studentsError) {
+      return new Response(JSON.stringify({ ok: false, error: 'student query failed' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
     const studentMap = {};
     (students || []).forEach(s => { studentMap[s.token] = s; });
 
@@ -392,8 +405,8 @@ serve(async (req) => {
       // 🔴 2026-07-31 เอาเตือนก่อนเรียน 30 นาที + ข้อความหลังเรียนออกแล้วตามที่ Lin สั่ง (ดูคอมเมนต์บนสุดไฟล์)
     }
 
-    return new Response(JSON.stringify({ ok: true, checked: rows.length, sent: sentCount, skipped: skipCount, errors: errCount }), {
-      status: 200, headers: { 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ ok: errCount === 0, checked: rows.length, sent: sentCount, skipped: skipCount, errors: errCount }), {
+      status: errCount > 0 ? 500 : 200, headers: { 'Content-Type': 'application/json' },
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e && e.message || e) }), { status: 500 });
