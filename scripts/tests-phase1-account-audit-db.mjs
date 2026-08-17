@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +13,7 @@ const migrationName = fs.readdirSync(path.join(root, 'supabase/migrations'))
   .find((name) => name.endsWith('_phase1_account_audit_rpc_hardening.sql'));
 assert.ok(migrationName, 'account-audit hardening migration exists');
 
-const tmp = fs.mkdtempSync('/private/tmp/phase1-account-audit-pg-');
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'phase1-account-audit-pg-'));
 const data = path.join(tmp, 'data');
 const socket = path.join(tmp, 'socket');
 const port = '55440';
