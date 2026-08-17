@@ -90,24 +90,23 @@ jobs:
             fi
           done
 
-      - name: บีบอัดรวมเป็นไฟล์เดียว (เข้ารหัสด้วยถ้าตั้งรหัสผ่านไว้)
+      - name: บีบอัดและเข้ารหัสรวมเป็นไฟล์เดียว (fail closed ถ้าไม่มีรหัสผ่าน)
         run: |
           set -euo pipefail
+          if [ -z "${PASSPHRASE:-}" ]; then
+            echo "::error::ไม่มี secret BACKUP_ENCRYPT_PASSPHRASE — หยุดก่อนสร้างหรืออัปโหลดฐานข้อมูลแบบไม่เข้ารหัส"
+            exit 1
+          fi
           STAMP=$(date -u -d '+7 hours' +'%Y-%m-%d_%H%M')-th
           tar -czf "backup_${STAMP}.tar.gz" -C dump roles.sql schema.sql data.sql
-          if [ -n "${PASSPHRASE:-}" ]; then
-            gpg --batch --yes --passphrase "$PASSPHRASE" -c "backup_${STAMP}.tar.gz"
-            rm -f "backup_${STAMP}.tar.gz"
-            echo "FINAL_FILE=backup_${STAMP}.tar.gz.gpg" >> "$GITHUB_ENV"
-            echo "เข้ารหัสไฟล์แล้ว"
-          else
-            echo "FINAL_FILE=backup_${STAMP}.tar.gz" >> "$GITHUB_ENV"
-            echo "ไม่ได้เข้ารหัส (ไม่ได้ตั้ง secret BACKUP_ENCRYPT_PASSPHRASE)"
-          fi
+          gpg --batch --yes --passphrase "$PASSPHRASE" -c "backup_${STAMP}.tar.gz"
+          rm -f "backup_${STAMP}.tar.gz"
+          echo "FINAL_FILE=backup_${STAMP}.tar.gz.gpg" >> "$GITHUB_ENV"
+          echo "เข้ารหัสไฟล์แล้ว"
         env:
           PASSPHRASE: ${{ secrets.BACKUP_ENCRYPT_PASSPHRASE }}
 
-      - name: อัปโหลดขึ้น Google Drive + ตรวจสอบขนาดไฟล์ + ลบของเก่าที่เกิน 30 วัน
+      - name: อัปโหลดขึ้น Google Drive + ตรวจขนาด/checksum + ลบเฉพาะ backup เก่าที่เกิน 30 วัน
         working-directory: .
         env:
           GDRIVE_CLIENT_ID: ${{ secrets.BACKUP_GDRIVE_CLIENT_ID }}

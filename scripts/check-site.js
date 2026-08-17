@@ -140,6 +140,7 @@ runTest(['scripts/tests-phase1-canonical-state.js'], 'Phase 1 canonical persiste
 runTest(['scripts/tests-phase1-owner-switch-races.js'], 'Phase 1 owner-switch late-response race tests');
 runTest(['scripts/tests-phase1-backend-transactions.js'], 'Phase 1 backend transaction/idempotency contract tests');
 runTest(['scripts/tests-phase1-rollout-compatibility.mjs'], 'Phase 1 mixed-version rollout compatibility tests');
+runTest(['scripts/tests-phase1-backup-safety.js'], 'Phase 1 encrypted backup/retention safety tests');
 runTest(['scripts/tests-phase1-consent-coverage.js'], 'Phase 1 all-page analytics consent coverage tests');
 // เพิ่ม 2026-08-11 (P5-B) — ตัวทดสอบคุ้มกันกฎห้องเรียนที่เคยพังมาแล้วจริง
 // (กฎล็อกเพิ่ม/เลื่อน/ยกเลิก · สำรองก่อนแตะ Calendar · ตรวจคาบชนตอนย้าย · p_original_time ·
