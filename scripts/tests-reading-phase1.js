@@ -8,6 +8,7 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/games/reading-game-app.js'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'reading-game.html'), 'utf8');
 let passed = 0;
 
 function test(name, fn) {
@@ -39,6 +40,36 @@ test('the displayed score uses the first-check snapshot once available', () => {
   const score = block('function rgCurSyllableScore()', 'var HIGH_RAW_START_IDX');
   assert.match(score, /readingAttemptScore!=null/);
   assert.match(score, /return readingAttemptScore/);
+});
+
+test('refresh tolerates the Phase 1 HUD without removed reward elements', () => {
+  const refresh = block('function refreshUI()', 'function updateCombo()');
+  const elements = {
+    'rg-ws-fill': { style: {} },
+    'rg-ws-num': { textContent: '' },
+    pf: { style: {} },
+    'prog-txt': { textContent: '' },
+    qt: { textContent: '' },
+  };
+  const context = {
+    SYL_SCORE: [10, 7, 4, 1],
+    wordUsedGuide: false,
+    rgCurSyllableScore: () => 10,
+    rgScoreBarColor: () => '#8B6310',
+    cur: 0,
+    roundQueue: [1, 2, 3, 4, 5],
+    Math,
+    document: { getElementById: (id) => elements[id] || null },
+  };
+  vm.createContext(context);
+  vm.runInContext(refresh, context);
+  vm.runInContext('refreshUI()', context);
+  assert.strictEqual(elements.qt.textContent, 5);
+  assert.doesNotMatch(refresh, /star-count|badge-count|badge-emoji/);
+});
+
+test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
+  assert.match(html, /reading-game-app\.min\.js\?v=34/);
 });
 
 test('single-syllable corrections cannot overwrite first-check score', () => {
