@@ -167,6 +167,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // (การนับ "จริง" ด้านล่างนับ provider แปลกใหม่ให้อัตโนมัติอยู่แล้ว แต่การ "เลือกถอด" ต้องรู้จักชื่อก่อนเสมอ
 // กันพิมพ์ชื่อมั่ว/พยายามยิง provider ที่ไม่รองรับเข้ามา)
 const UNLINKABLE_PROVIDERS = ['google', 'facebook', 'email', 'line'];
+const AUDITABLE_LINK_PROVIDERS = ['facebook'];
 
 // รูปแบบอีเมลปลอมที่ line-login/index.ts สร้างให้ผู้ใช้ LINE คนใหม่เสมอ (ดูฟังก์ชัน syntheticEmail()
 // ในไฟล์นั้น บรรทัด 78-83: 'line-' + lineUserId + '@users.line.invalid') โดเมน .invalid สงวนไว้ตาม
@@ -238,11 +239,20 @@ serve(async (req) => {
     console.warn('[account-unlink] client ส่ง user_id มาใน body (' + String(body.user_id) + ') — เพิกเฉยเสมอ ใช้แค่ user id จาก JWT ที่ยืนยันแล้วเท่านั้น');
   }
 
-  const action = body && body.action === 'status' ? 'status' : 'unlink';
+  const requestedAction = body && body.action;
+  const action = requestedAction === 'status' || requestedAction === 'audit_link'
+    ? requestedAction
+    : 'unlink';
   const provider = body && body.provider;
+  if (requestedAction && requestedAction !== 'status' && requestedAction !== 'audit_link') {
+    return json({ error: 'invalid_action', message: 'ไม่รองรับ action นี้' }, 400);
+  }
   if (action === 'unlink' && !provider) return json({ error: 'missing_provider', message: 'ต้องระบุ provider ที่จะถอด' }, 400);
   if (action === 'unlink' && !UNLINKABLE_PROVIDERS.includes(provider)) {
     return json({ error: 'invalid_provider', message: 'ช่องทางล็อกอินนี้ไม่รองรับการถอด', allowed: UNLINKABLE_PROVIDERS }, 400);
+  }
+  if (action === 'audit_link' && !AUDITABLE_LINK_PROVIDERS.includes(provider)) {
+    return json({ error: 'invalid_audit_provider', message: 'ไม่รองรับ provider นี้สำหรับ link audit', allowed: AUDITABLE_LINK_PROVIDERS }, 400);
   }
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -299,6 +309,55 @@ serve(async (req) => {
     // แหล่งจริงของ LINE คือ line_identities ไม่ใช่ app_metadata ใน JWT ซึ่งค้างได้หลัง unlink/ข้อมูลเก่า
     if (action === 'status') {
       return json({ ok: true, action: 'status', line_linked: lineLinked });
+    }
+
+    if (action === 'audit_link') {
+      // Browser state is evidence for UX only, never authorization or audit payload.
+      // Derive the current provider set from the freshly verified Auth user and the
+      // server-only LINE mapping. Synthetic LINE support email is not a login method.
+      const providersAfter = Array.from(new Set((user.identities || [])
+        .filter((idn) => {
+          const identityEmail = (idn.identity_data && idn.identity_data.email) || (idn.provider === 'email' ? user.email : null);
+          return !(idn.provider === 'email' && isSyntheticLineEmail(identityEmail));
+        })
+        .map((idn) => idn.provider)
+        .concat(lineLinked ? ['line'] : [])));
+      if (!providersAfter.includes(provider)) {
+        return json({
+          error: 'provider_not_linked',
+          provider,
+          audit_logged: false,
+          message: 'ยังยืนยันไม่ได้ว่าช่องทางนี้เชื่อมกับบัญชีปัจจุบันแล้ว',
+        }, 409);
+      }
+
+      // Fail closed on the abuse guard: an authenticated caller must not be able to
+      // manufacture an unbounded stream of privileged audit rows for their account.
+      const { data: auditRlOk, error: auditRlErr } = await admin.rpc('rl_check', {
+        p_user: userId, p_fn: 'account-audit-link', p_limit: 5, p_window: 600,
+      });
+      if (auditRlErr) {
+        return json({ error: 'audit_guard_unavailable', audit_logged: false, message: 'บันทึกประวัติยังไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' }, 503);
+      }
+      if (auditRlOk === false) {
+        return json({ error: 'rate_limited', audit_logged: false, message: '請稍後再試' }, 429);
+      }
+
+      const providersBefore = providersAfter.filter((name) => name !== provider);
+      const { error: auditErr } = await admin.rpc('log_account_audit', {
+        p_user_id: userId,
+        p_event_type: 'link',
+        p_provider: provider,
+        p_before_state: { providers: providersBefore },
+        p_after_state: { providers: providersAfter },
+        p_actor_type: 'user',
+        p_actor_id: userId,
+      });
+      if (auditErr) {
+        console.error('[account-unlink] log_account_audit failed for verified link', auditErr);
+        return json({ error: 'audit_log_failed', audit_logged: false, message: 'บันทึกประวัติยังไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' }, 500);
+      }
+      return json({ ok: true, action: 'audit_link', provider, audit_logged: true });
     }
 
     // ── นับช่องทางล็อกอิน "จริง" ทั้งหมด (native identities ที่ไม่ใช่อีเมลปลอมของ LINE + LINE ถ้ามี) ──

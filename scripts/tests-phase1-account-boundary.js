@@ -114,7 +114,7 @@ function makeStorage(seed) {
   check('LegoVault sync ใช้ account owner และ tombstone', /vault_key: VAULT_KEY/.test(legoVault) && /deleted_at: new Date\(\)\.toISOString\(\)/.test(legoVault));
   check('auth ส่ง owner transition ให้คลังคำ/ประโยคทุกระบบ', /WordVault\.sync\(sb, uid\)/.test(readingAuth) && /SentenceVault\.sync\(sb, uid\)/.test(readingAuth) && /LegoVault\.sync\(sb, uid\)/.test(readingAuth));
   check('สถานะเชื่อม LINE อ่านจาก server source of truth ไม่เชื่อ app_metadata', /callAccountFn\('account-unlink', \{ action: 'status' \}\)/.test(authWidget) && !/var (?:alreadyLinkedLine|hasLine)\s*=/.test(authWidget));
-  check('LINE status endpoint ผูก owner จาก JWT และอ่าน line_identities แบบ read-only', /const action = body && body\.action === 'status'/.test(accountUnlink) && /const userId = user\.id/.test(accountUnlink) && /action === 'status'[\s\S]{0,220}line_linked: lineLinked/.test(accountUnlink));
+  check('LINE status endpoint ผูก owner จาก JWT และอ่าน line_identities แบบ read-only', /const requestedAction = body && body\.action/.test(accountUnlink) && /requestedAction === 'status' \|\| requestedAction === 'audit_link'/.test(accountUnlink) && /const userId = user\.id/.test(accountUnlink) && /action === 'status'[\s\S]{0,220}line_linked: lineLinked/.test(accountUnlink));
   check('ถอด LINE ล้าง metadata cache หลังยืนยัน mapping ถูกลบแล้ว', /verifyRows[\s\S]{0,900}line_linked: false, line_user_id: null/.test(accountUnlink));
 }
 
