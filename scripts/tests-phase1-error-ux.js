@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
+const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const auth = read('js/core/auth-widget.js');
@@ -17,6 +18,92 @@ let passed = 0;
 function test(label, fn) {
   try { fn(); passed++; console.log('✓ ' + label); }
   catch (error) { console.error('✗ ' + label + ': ' + error.message); process.exitCode = 1; }
+}
+
+async function asyncTest(label, fn) {
+  try { await fn(); passed++; console.log('✓ ' + label); }
+  catch (error) { console.error('✗ ' + label + ': ' + error.message); process.exitCode = 1; }
+}
+
+function audioRuntimeHarness(invokeResults, playResults) {
+  const appended = [];
+  const audios = [];
+  let invokeCount = 0;
+  let playCount = 0;
+  const requestCalls = [];
+  const elements = Object.create(null);
+
+  function node(tag) {
+    const attrs = Object.create(null);
+    return {
+      tagName: String(tag || '').toUpperCase(),
+      style: {},
+      children: [],
+      setAttribute(name, value) { attrs[name] = String(value); },
+      getAttribute(name) { return attrs[name]; },
+      appendChild(child) { this.children.push(child); },
+      addEventListener() {},
+      remove() { this.removed = true; },
+    };
+  }
+
+  class FakeAudio {
+    constructor(src) {
+      this.src = src;
+      this.currentTime = 0;
+      audios.push(this);
+    }
+    pause() { this.paused = true; }
+    play() {
+      const result = playResults[playCount++];
+      return result instanceof Error ? Promise.reject(result) : Promise.resolve(result);
+    }
+  }
+
+  const document = {
+    readyState: 'complete',
+    head: { appendChild(child) { if (child.id) elements[child.id] = child; } },
+    body: { appendChild(child) { appended.push(child); if (child.id) elements[child.id] = child; } },
+    createElement: node,
+    getElementById(id) { return elements[id] || null; },
+    addEventListener() {},
+  };
+  const sandbox = {
+    Audio: FakeAudio,
+    Date,
+    Promise,
+    console,
+    document,
+    setTimeout() { return 1; },
+    clearTimeout() {},
+    getSupabaseClient() {
+      return {
+        functions: {
+          invoke() {
+            const result = invokeResults[invokeCount++];
+            return result instanceof Error ? Promise.reject(result) : Promise.resolve(result);
+          },
+        },
+      };
+    },
+    NetworkGuard: {
+      request(call, key, options, timeoutMs) {
+        requestCalls.push({ key, options, timeoutMs });
+        return call();
+      },
+    },
+  };
+  sandbox.window = sandbox;
+  vm.runInNewContext(audio, sandbox, { filename: 'protected-word-audio.js' });
+  sandbox.WordAudio.setAvailability(['กา']);
+  return {
+    WordAudio: sandbox.WordAudio,
+    button: node('button'),
+    appended,
+    audios,
+    requestCalls,
+    invokeCount: () => invokeCount,
+  };
 }
 
 test('missing auth dependency exposes Guest recovery instead of a blank widget', () => {
@@ -104,4 +191,49 @@ test('all affected account and callback surfaces ship current failure-handling c
   assert.match(read('line-callback.html'), /line-callback\.js\?v=5/);
 });
 
-if (!process.exitCode) console.log('\n✅ Phase 1 audio/loading/auth error UX passed (' + passed + ' checks)');
+(async function runRuntimeAudioRecovery() {
+  await asyncTest('protected audio timeout resets the button and exposes retry guidance', async () => {
+    const harness = audioRuntimeHarness([new Error('client_timeout')], []);
+    const result = await harness.WordAudio.play('กา', harness.button);
+    assert.strictEqual(result, false);
+    assert.strictEqual(harness.button.getAttribute('data-playing'), '0');
+    assert.deepStrictEqual(
+      { key: harness.requestCalls[0].key, timeoutMs: harness.requestCalls[0].timeoutMs },
+      { key: 'game-audio', timeoutMs: 10000 }
+    );
+    assert.match(harness.appended.at(-1).textContent, /請檢查網路後再試一次/);
+  });
+
+  await asyncTest('protected audio request rejection can recover on an explicit retry', async () => {
+    const harness = audioRuntimeHarness([
+      new Error('network rejected'),
+      { data: { signedUrl: 'https://audio.example/retry.mp3', expiresAt: Date.now() + 60000 } },
+    ], [undefined]);
+    assert.strictEqual(await harness.WordAudio.play('กา', harness.button), false);
+    assert.strictEqual(harness.button.getAttribute('data-playing'), '0');
+    assert.strictEqual(await harness.WordAudio.play('กา', harness.button), true);
+    assert.strictEqual(harness.invokeCount(), 2);
+    assert.strictEqual(harness.button.getAttribute('data-playing'), '1');
+    harness.audios[0].onended();
+    assert.strictEqual(harness.button.getAttribute('data-playing'), '0');
+  });
+
+  await asyncTest('audio.play rejection clears signed state and retries with a fresh URL', async () => {
+    const harness = audioRuntimeHarness([
+      { data: { signedUrl: 'https://audio.example/first.mp3', expiresAt: Date.now() + 60000 } },
+      { data: { signedUrl: 'https://audio.example/second.mp3', expiresAt: Date.now() + 60000 } },
+    ], [new Error('play rejected'), undefined]);
+    assert.strictEqual(await harness.WordAudio.play('กา', harness.button), false);
+    assert.strictEqual(harness.button.getAttribute('data-playing'), '0');
+    assert.strictEqual(await harness.WordAudio.play('กา', harness.button), true);
+    assert.strictEqual(harness.invokeCount(), 2);
+    assert.strictEqual(harness.button.getAttribute('data-playing'), '1');
+    harness.audios[1].onended();
+    assert.strictEqual(harness.button.getAttribute('data-playing'), '0');
+  });
+
+  if (!process.exitCode) console.log('\n✅ Phase 1 audio/loading/auth error UX passed (' + passed + ' checks)');
+})().catch((error) => {
+  console.error('\n❌ Phase 1 audio/loading/auth error UX runtime failed:', error);
+  process.exitCode = 1;
+});
