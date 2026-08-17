@@ -50,7 +50,7 @@
 <script defer src="js/score/progress-sync.js?v=5"></script>
 <script src="js/games/word-vault.js?v=6"></script>
 <script src="js/games/protected-word-audio.js?v=2"></script><!-- Core 5: private audio via entitlement-checked signed URL -->
-<script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
+<script src="js/games/word-menu.js?v=9"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=8"></script>
 <script src="data/tone-engine.js?v=3"></script>
@@ -82,7 +82,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=20">
+<link rel="stylesheet" href="css/shared.css?v=21">
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
      ผ่าน GameContentLoader.boot()) ต้องกดไม่ได้ก่อนสคริปต์โหลดเสร็จ — ดูสคริปต์ปลดล็อกท้ายไฟล์ */
@@ -1511,7 +1511,7 @@ document.addEventListener('contextmenu', function(e){
      max-width/margin/padding ซ้าย-ขวาทับ .gsh-shell (specificity เท่ากันแต่มาทีหลัง) ตอนนี้ถอด 3 อย่างนั้นออกจาก
      .tf-page แล้ว (เหลือแค่ padding บน-ล่าง + min-height) ให้ .gsh-shell คุมความกว้าง/จัดกึ่งกลาง/padding ซ้าย-ขวาแทน -->
 <div class="tf-page gsh-shell">
-  <div class="tf-page-header">
+  <div class="tf-page-header gsh-page-header">
     <h1 class="tf-page-title" style="margin:0;">🎵 泰語聲調練習室</h1>
     <div class="tf-page-hint" id="tf-hint">選擇等級與主題，開始練習聲調</div>
   </div>
@@ -1595,7 +1595,7 @@ document.addEventListener('contextmenu', function(e){
 
   <!-- E3 (2026-08-10): แถบชวนกลับไปเล่นชุดคำ/ประโยคที่ค้างไว้ (guest-only, localStorage ผ่าน window.GameResume ใน shared.js)
        ซ่อนอยู่โดย default — tone-finder-game.js เป็นคนสั่งโชว์ (tfShowResumeBannerIfAny) เฉพาะตอนเจอ resume state ค้างจริงเท่านั้น -->
-  <div class="gsh-resume-banner" id="tf-resume-banner" style="display:none;"></div>
+  <div class="gsh-resume-banner" id="tf-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;"></div>
 
   <!-- Phase C.1 (2026-08-10): #tf-session-counter (進度/🏆分數/🔥combo/黃金米題) ย้ายมาอยู่กลุ่มเดียวกับระดับ初/中/高
        เดิมทั้งก้อนนี้ถูกสร้างเป็น string ฝังอยู่ใน #tf-banner (banner.innerHTML) ผ่าน counterHtml ใน render()
@@ -1604,7 +1604,7 @@ document.addEventListener('contextmenu', function(e){
        ตรวจแล้ว: .tf-score-pop (เด้งคะแนน +N) เป็น position:fixed กลางจอ ไม่ได้ผูกตำแหน่งกับ #tf-score-hud เดิม
        จึงย้ายที่ตั้ง #tf-score-hud ได้โดยไม่กระทบ animation -->
   <div class="gsh-session-header">
-    <div class="tf-level-tabs" id="tf-level-tabs">
+    <div class="tf-level-tabs gsh-level-selector" id="tf-level-tabs" aria-label="選擇等級">
       <button class="tf-ltab" id="tf-ltab-1" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:1});}catch(e){}TF.selectLevel(1)">初級</button>
       <button class="tf-ltab" id="tf-ltab-2" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:2});}catch(e){}TF.selectLevel(2)">中級</button>
       <button class="tf-ltab" id="tf-ltab-3" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:3});}catch(e){}TF.selectLevel(3)">高級</button> <!-- Lin 2026-07-16: เปิดคืนตามที่ Lin สั่ง -->
@@ -1718,7 +1718,7 @@ document.addEventListener('contextmenu', function(e){
           → หน้านี้เป็นหน้าเดียวที่ผิดแถว = ของค้างจากตอนอัปโหลดชุดแรก (git: 6a10c58)
      ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=32"></script>
+<script src="js/core/shared.min.js?v=33"></script>
 <script src="js/games/game-flow.js?v=4"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
@@ -1776,7 +1776,7 @@ document.addEventListener('contextmenu', function(e){
 .tf-card{padding-bottom:132px;}}
 </style>
 <div id="game-switcher" data-current="tone_finder"></div>
-<script src="js/games/game-switcher.js?v=1"></script>
+<script src="js/games/game-switcher.js?v=2"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-24 ──

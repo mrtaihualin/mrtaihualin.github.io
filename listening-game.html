@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=20">
+<link rel="stylesheet" href="css/shared.css?v=21">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -92,7 +92,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <script defer src="js/games/listening-score.js?v=1"></script>
 <script src="js/games/word-vault.js?v=6"></script><!-- คลังคำ 🔖 -->
 <script src="js/games/protected-word-audio.js?v=2"></script><!-- Core 5: private audio via entitlement-checked signed URL -->
-<script src="js/games/word-menu.js?v=8"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ -->
+<script src="js/games/word-menu.js?v=9"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ -->
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=8"></script>
 <style>
@@ -245,7 +245,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 
 <div class="v3-page gsh-shell">
 
-<div class="page-header">
+<div class="page-header gsh-page-header">
   <h1 class="page-title" style="margin:0;">🎧 聽力練習室</h1>
   <div class="page-sub">聽發音，選出來或打出來</div>
 </div>
@@ -264,7 +264,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 </div>
 
 <div class="rg-tools-row">
-  <div style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:var(--cream);border:1.5px solid var(--gold-bright);border-radius:16px;padding:10px 12px;">
+  <div class="gsh-player-status" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:var(--cream);border:1.5px solid var(--gold-bright);border-radius:16px;padding:10px 12px;">
     <span class="tf-streak-chip">🎧 一輪 10 題，聽音辨字</span>
     <button class="tf-streak-chip" id="lg-howto-btn" type="button" onclick="document.getElementById('lg-howto-modal').style.display='flex';if(window.__lgHowtoModalReg)window.__lgHowtoModalReg.notifyOpen(this)" style="border:0;cursor:pointer;">📖 玩法</button>
     <span id="rg-login-slot" style="margin-left:auto;"></span>
@@ -277,7 +277,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 </div>
 
 <!-- RESUME BANNER — โชว์เฉพาะเมื่อมีรอบที่เล่นค้างไว้จริงใน localStorage (Phase E3) -->
-<div class="gsh-resume-banner" id="lg-resume-banner" style="display:none;">
+<div class="gsh-resume-banner" id="lg-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;">
   <div class="gsh-resume-title">上次的安全進度還在</div>
   <div class="gsh-resume-detail" id="lg-resume-detail"></div>
   <div class="gsh-resume-actions">
@@ -308,7 +308,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
         <div>聽 <span id="lg-listens">0</span></div>
       </div>
     </div>
-    <div class="bars-wrap">
+    <div class="bars-wrap gsh-progress">
       <div class="bar-row">
         <span>進度</span>
         <div class="bar-bg"><div class="bar-fill" id="lg-prog-fill" style="width:0%"></div></div>
@@ -326,12 +326,14 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <div id="lg-word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 0;flex-wrap:wrap;">
     <button id="lg-pron-toggle" class="word-ctl-btn" type="button"></button>
     <button id="lg-en-toggle" class="word-ctl-btn" type="button"></button>
+    <span id="zh-toggle-slot"></span>
     <span id="rg-vault-btn-slot"></span>
     <span id="font-toggle-slot"></span>
   </div>
   <script>document.addEventListener('DOMContentLoaded',function(){if(window.WordMenu)WordMenu.init({rowId:'lg-word-ctl-row',items:[
     {id:'lg-pron-toggle',    label:'讀音',     state:'pron'},
     {id:'lg-en-toggle',      label:'英文讀音', state:'en'},
+    {id:'zh-toggle-slot',    label:'翻譯',     state:'zh'},
     {id:'rg-vault-btn-slot', label:'單字庫',   state:'vault'},
     {id:'font-toggle-slot',  label:'字體',     state:'font'}
   ]});});</script>
@@ -398,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </footer>
 
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=32"></script>
+<script src="js/core/shared.min.js?v=33"></script>
 <script src="js/games/game-flow.js?v=4"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
@@ -411,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function () {
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="listening_game"></div>
-<script src="js/games/game-switcher.js?v=1"></script>
+<script src="js/games/game-switcher.js?v=2"></script>
 
 <script>document.addEventListener('DOMContentLoaded',function(){GameContentLoader.boot(['js/games/listening-game-app.js?v=11']);});</script>
 

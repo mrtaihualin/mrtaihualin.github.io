@@ -1832,6 +1832,8 @@ window.deleteFBComment = function(postId, idx) {
     try {
       var gs = document.getElementById('game-switcher');
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ (มี #game-switcher) — หน้าอื่นในเว็บไม่กระทบ
+      var currentGameId = gs.getAttribute('data-current') || '';
+      var isCore5Surface = ['tone_finder', 'reading_game', 'listening_game', 'typing_game', 'word_order'].indexOf(currentGameId) > -1;
 
       // Lin 2026-07-12: ห่อชื่อเกมด้วย .gs-lbl (ให้จัดสไตล์ได้) — โชว์ชื่อเสมอทั้งคอม+มือถือ (เลิกโหมดไอคอนล้วนแล้ว)
       // Lin 2026-07-25: เปลี่ยนไอคอนนำหน้าให้เป็นวงกลมไล่สีทอง (.ico) ให้หน้าตาเหมือนการ์ด .grw-item ของเมนู 🪧
@@ -1914,26 +1916,47 @@ window.deleteFBComment = function(postId, idx) {
       menuBtn.className = 'rg-ctl-fab';
       menuBtn.textContent = '🎮';
       menuBtn.setAttribute('aria-label', '遊戲選單');
+      menuBtn.setAttribute('aria-controls', 'game-switcher');
+      menuBtn.setAttribute('aria-haspopup', 'menu');
+      menuBtn.setAttribute('aria-expanded', 'false');
       menuBtn.title = '遊戲選單';
-      function closeMenu() { gs.classList.remove('gs-open'); }
+      function fitMenuToViewport() {
+        var closedTop = wrap.getBoundingClientRect().top;
+        var available = Math.max(96, Math.floor(closedTop - 22));
+        gs.style.maxHeight = Math.min(Math.floor(window.innerHeight * 0.6), available) + 'px';
+      }
+      function closeMenu() {
+        gs.classList.remove('gs-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
       var gsPanel = { isOpen: function () { return gs.classList.contains('gs-open'); }, close: closeMenu };
       window.GamePanels.add(gsPanel);
       menuBtn.onclick = function (e) {
         e.stopPropagation();
         var opening = !gs.classList.contains('gs-open');
         if (opening) window.GamePanels.closeOthers(gsPanel); // Lin 2026-07-24: เปิดตัวนี้ → ปิดกล่องอื่นที่เปิดค้างอยู่ก่อน
+        if (opening) fitMenuToViewport();
         gs.classList.toggle('gs-open');
+        menuBtn.setAttribute('aria-expanded', opening ? 'true' : 'false');
       };
       // เลือกเกมแล้ว หรือคลิกที่อื่น → ปิดดรอปดาวน์
       gs.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.gs-tab')) closeMenu(); });
       document.addEventListener('click', function (e) { if (e.target !== menuBtn && !gs.contains(e.target)) closeMenu(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && gsPanel.isOpen()) { closeMenu(); menuBtn.focus(); } });
+      window.addEventListener('resize', function () { if (gsPanel.isOpen()) fitMenuToViewport(); });
 
       // ปุ่มเต็มจอ ⛶
       var fab = document.createElement('button');
       fab.type = 'button';
       fab.className = 'rg-ctl-fab';
-      fab.setAttribute('aria-label', '全螢幕模式');
-      function renderFab() { fab.textContent = on ? '✕' : '⛶'; fab.title = on ? '離開全螢幕模式' : '全螢幕模式（隱藏其他選單）'; }
+      function renderFab() {
+        fab.textContent = on ? '✕' : '⛶';
+        fab.title = isCore5Surface
+          ? (on ? '離開專注模式' : '專注模式')
+          : (on ? '離開全螢幕模式' : '全螢幕模式（隱藏其他選單）');
+        fab.setAttribute('aria-label', fab.title);
+        fab.setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
       function applyState() {
         document.body.classList.toggle('rg-fake-fullscreen', on);
         try { wrap.classList.toggle('rg-ctl-fs', on); } catch (e) {} // Lin 2026-07-12: เต็มจอ = ชุดปุ่มลงขอบล่างสุด
@@ -2140,6 +2163,8 @@ window.deleteFBComment = function(postId, idx) {
       //   ใหม่ (เพิ่ม "challenge" เข้า VALID_GAMES) + รัน SQL เพิ่ม 'challenge' เข้า CHECK constraint ของ game_reward_events ก่อน
       //   ไม่งั้นปุ่มขึ้นแต่กดแล้วเซิร์ฟเวอร์ตีกลับ (Lin ต้องทำ 2 อย่างนี้เอง ดูคำสั่งที่แนบให้แยกต่างหาก)
       if (!GAME_ID) return; // หน้าเกมที่ยังไม่รู้จัก ไม่ต้องขึ้นปุ่มนี้
+      var isCore5Game = GAME_ID !== 'lego' && GAME_ID !== 'challenge';
+      var moreMenuId = isCore5Game ? 'core5-more-menu' : 'grw-feedback-menu';
 
       var FN_URL = 'https://qzkxlhpcputsvbqmtqfi.supabase.co/functions/v1/game-reward';
 
@@ -2149,13 +2174,16 @@ window.deleteFBComment = function(postId, idx) {
         '#grw-pts{position:absolute;top:-6px;left:-8px;background:#FAF4E8;border:1.5px solid #C8973A;color:#8B6310;font-size:10px;font-weight:800;border-radius:999px;padding:2px 6px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);}';
       document.head.appendChild(style);
 
-      // ── ปุ่มหลัก 🪧 (หน้าตาเหมือน .rg-ctl-fab ของ 🎮/⛶/🍙) ──
+      // ── Phase 1 shared More Menu ──
       var fab = document.createElement('button');
       fab.type = 'button';
       fab.className = 'rg-ctl-fab grw-fab';
-      fab.setAttribute('aria-label', '回報問題 / 心得分享');
-      fab.title = '回報問題 / 心得分享（累積點數）';
-      fab.innerHTML = '🪧<span id="grw-pts" style="display:none;"></span>';
+      fab.setAttribute('aria-label', isCore5Game ? '更多功能' : '回報問題 / 心得分享');
+      fab.setAttribute('aria-controls', moreMenuId);
+      fab.setAttribute('aria-haspopup', 'menu');
+      fab.setAttribute('aria-expanded', 'false');
+      fab.title = isCore5Game ? '更多功能' : '回報問題 / 心得分享（累積點數）';
+      fab.innerHTML = (isCore5Game ? '⋯' : '🪧') + '<span id="grw-pts" style="display:none;"></span>';
 
       // ── เมนูป๊อปอัพ (แจ้งปัญหา/รีวิว) — โผล่เหนือชุดปุ่มทั้งหมดเหมือนดรอปดาวน์ #game-switcher ──
       // Lin 2026-07-24: 「我有問題」（問老師的問答框，跟「回報問題」bug report 不一樣）合併進這個選單 — 只有頁面有 rgOpenAsk()/TF.openAsk() 才加這個項目（lego 目前還沒做這功能，先不顯示）
@@ -2168,6 +2196,9 @@ window.deleteFBComment = function(postId, idx) {
 
       var menu = document.createElement('div');
       menu.className = 'grw-menu';
+      menu.id = moreMenuId;
+      menu.setAttribute('role', 'menu');
+      menu.setAttribute('aria-label', isCore5Game ? '更多功能' : '回報問題 / 心得分享');
       menu.innerHTML =
         (hasAsk ? '<div class="grw-item" data-act="ask"><span class="ico">💬</span>有問題想問老師</div>' : '') +
         '<div class="grw-item" data-act="report"><span class="ico">🔧</span>回報問題</div>' +
@@ -2176,23 +2207,40 @@ window.deleteFBComment = function(postId, idx) {
         var it = e.target.closest('.grw-item');
         if (!it) return;
         menu.classList.remove('gs-open');
+        fab.setAttribute('aria-expanded', 'false');
         if (it.dataset.act === 'ask') callAsk();
         else if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
         else grwOpenReview(GAME_ID, FN_URL);
       });
       // Lin 2026-07-25: เมนูนี้ไม่เคยลงทะเบียนกับ GamePanels กลางมาก่อน → เปิด 🪧 พร้อม 🎮/🍚 ค้างไว้ได้ ซ้อนทับกันบนจอ (บั๊กจริงที่ Lin เจอ)
       // แก้: ลงทะเบียนเหมือนกล่องอื่น กันซ้อนทั้ง 2 ทาง (เปิด 🪧 ต้องปิดกล่องอื่นก่อน + กล่องอื่นเปิดต้องปิด 🪧 ได้ด้วย)
-      var grwPanel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: function () { menu.classList.remove('gs-open'); } };
+      function fitMoreMenuToViewport() {
+        var wrap = document.querySelector('.rg-ctl-wrap');
+        if (!wrap) return;
+        var closedTop = wrap.getBoundingClientRect().top;
+        var available = Math.max(96, Math.floor(closedTop - 22));
+        menu.style.maxHeight = Math.min(Math.floor(window.innerHeight * 0.6), available) + 'px';
+        menu.style.overflowY = 'auto';
+      }
+      function closeMoreMenu() {
+        menu.classList.remove('gs-open');
+        fab.setAttribute('aria-expanded', 'false');
+      }
+      var grwPanel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: closeMoreMenu };
       if (window.GamePanels) window.GamePanels.add(grwPanel);
       fab.onclick = function (e) {
         e.stopPropagation();
         var opening = !menu.classList.contains('gs-open');
         if (opening && window.GamePanels) window.GamePanels.closeOthers(grwPanel);
+        if (opening) fitMoreMenuToViewport();
         menu.classList.toggle('gs-open');
+        fab.setAttribute('aria-expanded', opening ? 'true' : 'false');
       };
       document.addEventListener('click', function (e) {
-        if (e.target !== fab && !fab.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
+        if (e.target !== fab && !fab.contains(e.target) && !menu.contains(e.target)) closeMoreMenu();
       });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && grwPanel.isOpen()) { closeMoreMenu(); fab.focus(); } });
+      window.addEventListener('resize', function () { if (grwPanel.isOpen()) fitMoreMenuToViewport(); });
 
       var wrap = document.querySelector('.rg-ctl-wrap');
       if (wrap) { wrap.insertBefore(menu, wrap.firstChild); wrap.appendChild(fab); }
@@ -2402,7 +2450,7 @@ window.deleteFBComment = function(postId, idx) {
   ready(function () {
     try {
       if (!document.getElementById('game-switcher')) return;
-      if (document.getElementById('word-ctl-row') || document.getElementById('tf-word-ctl-row')) return; // หน้านี้มี WordMenu จริงอยู่แล้ว
+      if (document.querySelector('[data-wm-done="1"]')) return; // หน้านี้มี inline WordMenu อยู่แล้ว
 
       function callFontToggle() {
         if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }

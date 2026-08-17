@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=20">
+<link rel="stylesheet" href="css/shared.css?v=21">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/word-order-app.js -->
@@ -93,7 +93,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=8"></script>
 <script src="js/games/protected-word-audio.js?v=2"></script><!-- Core 5: private audio via entitlement-checked signed URL -->
-<script src="js/games/word-menu.js?v=6"></script><!-- เมนู 🍚 (讀音/英文讀音/字體) — Lin 2026-07-25 -->
+<script src="js/games/word-menu.js?v=7"></script><!-- เมนู 🍚 (讀音/英文讀音/字體) — Lin 2026-07-25 -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (word-order-app.min.js โหลดแบบ async ผ่าน
@@ -294,7 +294,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 <div class="v3-page gsh-shell"><!-- Shared Game UI Phase A+C (2026-08-10): .gsh-shell มีผลจริงแล้ว (แก้ .v3-page ด้านบนให้เลิกชน max-width/padding แนวนอน) -->
 
-<div class="page-header">
+<div class="page-header gsh-page-header">
   <h1 class="page-title" style="margin:0;">🧩 泰語語序練習室</h1>
   <div class="page-sub">把打散的詞語，點回正確的句子順序（高級句型）</div>
 </div>
@@ -370,7 +370,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 
 <!-- Local-device resume banner — ซ่อนไว้ก่อนเสมอ โชว์เฉพาะ init() เจอรอบค้างจริงใน localStorage (window.GameResume) -->
-<div class="gsh-resume-banner" id="wo-resume-banner" style="display:none;">
+<div class="gsh-resume-banner" id="wo-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;">
   <div class="gsh-resume-title" id="wo-resume-title"></div>
   <div class="gsh-resume-detail" id="wo-resume-detail"></div>
   <div class="gsh-resume-actions">
@@ -395,7 +395,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       </div>
       <button class="btn btn-secondary" id="wo-hint-btn" onclick="woHint()" style="padding:6px 14px;font-size:12.5px;">💡 提示 (-2)</button>
     </div>
-    <div class="bars-wrap" id="bars-wrap">
+    <div class="bars-wrap gsh-progress" id="bars-wrap">
       <div class="bar-row">
         <span>進度</span>
         <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
@@ -517,7 +517,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=32"></script>
+<script src="js/core/shared.min.js?v=33"></script>
 <script src="js/games/game-flow.js?v=4"></script>
 
 <div id="gt-tour-overlay">
@@ -576,7 +576,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="word_order"></div>
-<script src="js/games/game-switcher.js?v=1"></script>
+<script src="js/games/game-switcher.js?v=2"></script>
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──
 function dismissHowtoHint(id){

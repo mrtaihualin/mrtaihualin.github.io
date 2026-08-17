@@ -85,7 +85,45 @@
     if (!cfg || !cfg.rowId || !cfg.items) return;
     var row = document.getElementById(cfg.rowId);
     if (!row || row.getAttribute('data-wm-done') === '1') return;
-    injectStyles();
+    // Phase 1 locked UI: learning helpers stay beside the current content.
+    // Keep each existing control and its original handler in place instead of moving it
+    // into the old floating rice-bowl menu. Game-specific code still owns availability.
+    row.classList.add('gsh-learning-tools');
+    row.setAttribute('role', 'toolbar');
+    row.setAttribute('aria-label', '學習工具');
+
+    var inlineItems = [];
+    cfg.items.forEach(function (item) {
+      var ctl = document.getElementById(item.id);
+      if (!ctl) return;
+      ctl.classList.add('gsh-learning-tool');
+      ctl.setAttribute('data-tool-label', item.label);
+      inlineItems.push({ el: ctl, label: item.label });
+    });
+
+    function refreshInline() {
+      inlineItems.forEach(function (item) {
+        var ctl = item.el;
+        var button = ctl.tagName === 'BUTTON' ? ctl : ctl.querySelector('button');
+        if (button) {
+          if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', item.label);
+          if (!button.getAttribute('title')) button.setAttribute('title', item.label);
+        }
+      });
+    }
+
+    try {
+      var inlineObserver = new MutationObserver(refreshInline);
+      inlineItems.forEach(function (item) {
+        inlineObserver.observe(item.el, { childList: true, subtree: true });
+      });
+    } catch (e) {}
+    refreshInline();
+    setTimeout(refreshInline, 300);
+    setTimeout(refreshInline, 1200);
+    row.setAttribute('data-wm-done', '1');
+    window.WordMenu.refresh = refreshInline;
+    return;
 
     var panel = document.createElement('div');
     panel.className = 'wm-panel';
