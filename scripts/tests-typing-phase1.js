@@ -72,6 +72,31 @@ test('page routes the mode control through the round lock', () => {
   assert.doesNotMatch(html, /id="guide-toggle"[^>]+setGuideMode\(_v\)/);
 });
 
+test('refresh tolerates the Phase 1 HUD without removed reward elements', () => {
+  const refresh = functionBlock('refreshUI', 'updateCombo');
+  const elements = {
+    pf: { style: {} },
+    'prog-txt': { textContent: '' },
+    qt: { textContent: '' },
+  };
+  const context = {
+    tgUpdateScoreBar() {},
+    cur: 0,
+    roundQueue: [1, 2, 3, 4, 5],
+    Math,
+    document: { getElementById: (id) => elements[id] || null },
+  };
+  vm.createContext(context);
+  vm.runInContext(refresh, context);
+  vm.runInContext('refreshUI()', context);
+  assert.strictEqual(elements.qt.textContent, 5);
+  assert.doesNotMatch(refresh, /star-count|badge-count|badge-emoji/);
+});
+
+test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
+  assert.match(html, /typing-game-app\.min\.js\?v=33/);
+});
+
 test('玩法 explains both locked Phase 1 typing rules', () => {
   assert.match(html, /開始作答後不能切換/);
   assert.match(html, /本題降到 0 分也要繼續打到正確為止/);
