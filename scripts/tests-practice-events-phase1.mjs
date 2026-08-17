@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { normalizeRecordBody, normalizeStatusBody, wordBase } from '../supabase/functions/practice-events/practice-events-engine.mjs';
 
@@ -72,9 +73,152 @@ check('personal content derives Played copy from server evidence, never provenan
 check('personal content exposes bounded status recovery', /PracticeEvents\.status\(requestItems\)/.test(personalContent) && /重新載入練習紀錄/.test(personalContent));
 check('all Core 5 games load the recorder before the updated shared flow', ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].every((name) => {
   const html = read(name);
-  return /practice-events\.js\?v=1[\s\S]*game-flow\.js\?v=5/.test(html);
+  return /practice-events\.js\?v=2[\s\S]*game-flow\.js\?v=5/.test(html);
 }));
-check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=1[\s\S]*personal-content\.js\?v=4/.test(read('vault.html')));
+check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=4/.test(read('vault.html')));
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((ok, fail) => { resolve = ok; reject = fail; });
+  return { promise, resolve, reject };
+}
+function memoryStorage() {
+  const values = new Map();
+  return {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, String(value)); },
+    removeItem(key) { values.delete(key); },
+  };
+}
+function report(roundId) {
+  return {
+    schema_version: 'round-report-v1',
+    round_id: roundId,
+    game_type: 'reading',
+    ended_at: '2026-08-17T03:00:00.000Z',
+    items: [{
+      content_ref: { source: 'game_words', key: 'กา@1' },
+      is_correct: true,
+      wrong_count: 0,
+      hint_used: false,
+      listen_count: 1,
+    }],
+  };
+}
+function runtimeHarness({ withNetworkGuard = true } = {}) {
+  const localStorage = memoryStorage();
+  const invocations = [];
+  const authListeners = [];
+  const eventListeners = {};
+  const context = {
+    Promise,
+    JSON,
+    Object,
+    Number,
+    String,
+    Math,
+    localStorage,
+    console: { warn() {} },
+    SITE_AUTH: {
+      user: { id: 'owner-a' },
+      learningOwnerEpoch: 1,
+      onChange(listener) { authListeners.push(listener); },
+    },
+    getSupabaseClient() {
+      return { functions: { invoke(_name, options) {
+        const pending = deferred();
+        invocations.push({ payload: options.body, ...pending });
+        return pending.promise;
+      } } };
+    },
+    addEventListener(name, listener) { eventListeners[name] = listener; },
+  };
+  if (withNetworkGuard) context.NetworkGuard = { request(request) { return request(); } };
+  context.window = context;
+  vm.runInNewContext(client, context, { filename: 'practice-events.js' });
+  return {
+    context,
+    invocations,
+    setOwner(id, epoch, emit = false) {
+      context.SITE_AUTH.user = id ? { id } : null;
+      context.SITE_AUTH.learningOwnerEpoch = epoch;
+      if (emit) authListeners.forEach((listener) => listener(context.SITE_AUTH.user));
+    },
+  };
+}
+async function tick() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+async function waitFor(predicate) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    if (predicate()) return true;
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  return predicate();
+}
+
+{
+  const h = runtimeHarness();
+  const first = h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  await tick();
+  const second = h.context.PracticeEvents.submitReport(report('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'));
+  check('one in-flight owner queue starts only the first report', h.invocations.length === 1 && h.context.PracticeEvents.pendingCount() === 2);
+  h.invocations[0].resolve({ data: { ok: true }, error: null });
+  const secondStarted = await waitFor(() => h.invocations.length === 2);
+  check('a report queued during an active flush is drained next instead of deleted', secondStarted && h.invocations[1].payload.round_id === 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' && h.context.PracticeEvents.pendingCount() === 1);
+  if (secondStarted) h.invocations[1].resolve({ data: { ok: true }, error: null });
+  await Promise.all([first, second]);
+  check('same-owner concurrent queue drains without residue', h.context.PracticeEvents.pendingCount() === 0);
+}
+
+{
+  const h = runtimeHarness();
+  const first = h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  await tick();
+  h.setOwner('owner-b', 2, true);
+  const second = h.context.PracticeEvents.submitReport(report('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'));
+  h.invocations[0].resolve({ data: { ok: true }, error: null });
+  const secondStarted = await waitFor(() => h.invocations.length === 2);
+  check('owner switch schedules the new owner queue after the old request', secondStarted && h.invocations[1].payload.round_id === 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+  check('late old-owner acknowledgement cannot delete the new owner report', h.context.PracticeEvents.pendingCount() === 1);
+  if (secondStarted) h.invocations[1].resolve({ data: { ok: true }, error: null });
+  await Promise.all([first, second]);
+  check('new owner queue drains without an external online event', h.context.PracticeEvents.pendingCount() === 0);
+}
+
+{
+  const h = runtimeHarness();
+  const first = h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  await tick();
+  h.invocations[0].reject(new Error('offline'));
+  await first;
+  check('transient failure preserves the queued report and releases the flush lock', h.context.PracticeEvents.pendingCount() === 1);
+  const retry = h.context.PracticeEvents.flush();
+  const retryStarted = await waitFor(() => h.invocations.length === 2);
+  check('explicit retry starts a new bounded invocation', retryStarted);
+  if (retryStarted) h.invocations[1].resolve({ data: { ok: true }, error: null });
+  await retry;
+  check('successful retry removes only its acknowledged report', h.context.PracticeEvents.pendingCount() === 0);
+}
+
+{
+  const h = runtimeHarness({ withNetworkGuard: false });
+  await h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  check('missing NetworkGuard fails closed without an unbounded Edge invocation', h.invocations.length === 0 && h.context.PracticeEvents.pendingCount() === 1);
+}
+
+{
+  const h = runtimeHarness();
+  const request = h.context.PracticeEvents.status([{ kind: 'word', key: 'กา' }]);
+  await tick();
+  h.setOwner('owner-b', 2);
+  h.invocations[0].resolve({ data: { ok: true, items: { 'word:กา': { played: true } } }, error: null });
+  const result = await request;
+  check('late Played status from an old owner is discarded', Object.keys(result).length === 0);
+}
 
 if (failures.length) {
   failures.forEach((label) => console.error('✗ ' + label));
