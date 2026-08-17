@@ -81,7 +81,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/word-order-app.js -->
-<script defer src="js/games/game-account.js?v=4"></script>
+<script defer src="js/games/game-account.js?v=5"></script>
 <script defer src="js/core/auth-widget.js?v=13"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
 <script defer src="js/games/reading-auth.js?v=26"></script>
@@ -360,9 +360,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
     <div class="rg-stat-row" id="rg-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
       <span class="tf-streak-chip" title="連續天數">🔥 <b id="rg-streak-num">0</b></span>
-      <span class="tf-streak-chip" title="護盾">🛡️ ×<b id="rg-freeze-num">0</b></span>
-      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="try{if(window.gtag)gtag('event','word_order_star_modal_open',{category:'game'});}catch(e){}openStar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStar()}">⭐ <b id="star-count">0</b></span>
-      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="try{if(window.gtag)gtag('event','word_order_badge_modal_open',{category:'game'});}catch(e){}openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b></span>
     </div>
     <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
   </div>
@@ -488,26 +485,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
-<!-- 成就（星星累積勳章）modal — 跟其他遊戲共用同一套 GAME_ACCOUNT 資料 -->
-<div class="v3-modal" id="badge-modal" onclick="try{if(window.gtag)gtag('event','word_order_badge_modal_close',{category:'game'});}catch(e){}this.classList.remove('show')">
-  <div class="v3-modal-box" onclick="event.stopPropagation()">
-    <h3>我的成就</h3>
-    <div class="star-progress" id="star-prog"></div>
-    <div class="star-prog-label" id="star-prog-label"></div>
-    <button class="btn btn-secondary" style="margin-top:16px" onclick="try{if(window.gtag)gtag('event','word_order_badge_modal_close',{category:'game'});}catch(e){}document.getElementById('badge-modal').classList.remove('show')">關閉</button>
-  </div>
-</div>
-
-<!-- Lin 2026-07-25: ⭐ กดปุ่มดาวแยกจากปุ่ม勳章 — ย้าย tree-area/tree-caption มาไว้ที่นี่ -->
-<div class="v3-modal" id="star-modal" onclick="try{if(window.gtag)gtag('event','word_order_star_modal_close',{category:'game'});}catch(e){}this.classList.remove('show')">
-  <div class="v3-modal-box" onclick="event.stopPropagation()">
-    <h3>累積星星</h3>
-    <div class="tree-area" id="star-tree-area">⭐</div>
-    <div class="tree-caption" id="star-tree-caption">累積星星（全部遊戲共用）</div>
-    <button class="btn btn-secondary" style="margin-top:16px" onclick="try{if(window.gtag)gtag('event','word_order_star_modal_close',{category:'game'});}catch(e){}document.getElementById('star-modal').classList.remove('show')">關閉</button>
-  </div>
-</div>
-
 </div><!-- /v3-page -->
 
 <footer>
@@ -518,7 +495,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=33"></script>
-<script src="js/games/practice-events.js?v=2"></script>
+<script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=5"></script>
 
 <div id="gt-tour-overlay">
@@ -563,7 +540,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/word-order-app.min.js?v=26']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=27']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -670,14 +647,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.__woHowtoModalReg = window.registerGameModal({
     isOpen: function () { var m = document.getElementById('wo-howto-modal'); return !!m && m.style.display === 'flex'; },
     close: function () { var m = document.getElementById('wo-howto-modal'); if (m) m.style.display = 'none'; }
-  });
-  window.__woStarModalReg = window.registerGameModal({
-    isOpen: function () { var m = document.getElementById('star-modal'); return !!m && m.classList.contains('show'); },
-    close: function () { var m = document.getElementById('star-modal'); if (m) m.classList.remove('show'); }
-  });
-  window.__woBadgeModalReg = window.registerGameModal({
-    isOpen: function () { var m = document.getElementById('badge-modal'); return !!m && m.classList.contains('show'); },
-    close: function () { var m = document.getElementById('badge-modal'); if (m) m.classList.remove('show'); }
   });
 });
 </script>

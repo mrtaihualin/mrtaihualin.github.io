@@ -359,8 +359,8 @@ function setRgGuideMode(on){
   // ป้ายบอกโหมด (Lin 2026-07-04): 有提示 = ฝึกฝนล้วน ไม่ได้อะไรเลย · 無提示 = เก็บแต้ม/ดาว/ความคืบหน้า
   var note=document.getElementById('rg-mode-note');
   if(note){
-    if(rgGuideMode){ note.innerHTML='💡 <b>練習模式</b>・純練習不計分（沒有分數、星星與複習進度）'; note.style.background='#fff3d8'; note.style.color='#9a6a10'; }
-    else { note.innerHTML='🔥 <b>計分模式</b>・答對得分、累積星星與複習進度'; note.style.background='#e8f5e9'; note.style.color='#2e7d32'; }
+    if(rgGuideMode){ note.innerHTML='💡 <b>練習模式</b>・純練習不計分，也不更新複習進度'; note.style.background='#fff3d8'; note.style.color='#9a6a10'; }
+    else { note.innerHTML='🔥 <b>計分模式</b>・答對得分並更新複習進度'; note.style.background='#e8f5e9'; note.style.color='#2e7d32'; }
   }
   updateActiveSlot();
 }
@@ -1406,16 +1406,11 @@ function endRound(){
   document.getElementById('end-score').textContent=weightedScore+' 分'+(levelWeight!==1?'（'+curLevel+'級 ×'+levelWeight+'）':'');
   var _isPerfect = (cleanC === roundTotal && roundTotal > 0);
   var detail='';
-  // ⭐ ดาวเงินแจกตอน mastered ใน finalizeWord แล้ว (มี toast) — จอจบรอบเหลือแค่ฉลอง perfect + สรุป
-  if(window.GAME_ACCOUNT){ GAME_ACCOUNT.bumpStreakToday(); totalStars=GAME_ACCOUNT.getStars(); totalBadges=GAME_ACCOUNT.earnedBadges().length; }
   doSave();
   if(_isPerfect){
-    detail='完美一輪！✨ 全部 '+roundTotal+' 題答對 · 累積共 '+totalStars+' 顆星';
-    var sb=document.createElement('div');sb.className='star-burst';sb.textContent='⭐';
-    document.body.appendChild(sb);
-    setTimeout(function(){if(sb.parentNode)sb.parentNode.removeChild(sb);},2200);
+    detail='完美一輪！✨ 全部 '+roundTotal+' 題答對';
   } else {
-    detail='答對 '+cleanC+'/'+roundTotal+' 題全對 · 累積共 '+totalStars+' 顆星 · 全對可拿完成獎勵！';
+    detail='答對 '+cleanC+'/'+roundTotal+' 題全對';
   }
   if(roundBonus)detail+='・含完成獎勵 +'+roundBonus;
   document.getElementById('end-detail').textContent=detail;
@@ -1569,7 +1564,7 @@ function rgShowAllMastered(){
   div.innerHTML='<div style="background:#fff;border-radius:18px;max-width:340px;width:100%;padding:28px 24px;text-align:center;font-family:\'Noto Sans TC\',sans-serif;">'+
     '<div style="font-size:46px;line-height:1;margin-bottom:8px;">🏆🌾</div>'+
     '<div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:6px;">全部精通！</div>'+
-    '<div style="font-size:14px;color:#555;line-height:1.7;margin-bottom:16px;">這個等級的字，你<b>全部都記住了</b>，太厲害了！🎉<br>星星已經收進你的收藏囉～</div>'+
+    '<div style="font-size:14px;color:#555;line-height:1.7;margin-bottom:16px;">這個等級的字，你<b>全部都記住了</b>，太厲害了！🎉</div>'+
     '<div style="display:flex;flex-direction:column;gap:8px;">'+
       '<button class="btn btn-primary" id="rg-am-review">繼續複習（不計分）</button>'+
       '<button class="btn btn-secondary" id="rg-am-level">挑戰其他等級</button>'+
@@ -1752,12 +1747,7 @@ function openBadge(){
 // WEEKLY CHALLENGE + STREAK FREEZE (เหมือนเกมเสียง)
 // share TF_STREAK_KEY → streak/freeze ข้ามเกมได้
 // ════════════════════════════════════════════════
-var TF_STREAK_KEY = 'tf_streak_v1';   // key เดียวกับ tone-finder
-var RG_GAME_CFG = {
-  DAILY_GOAL_SETS: 3,
-  STREAK_FREEZE_EARN_EVERY: 7,
-  STREAK_FREEZE_MAX: 2
-};
+var RG_GAME_CFG = {};
 var RG_CHALLENGES = [
   { id: 'c_correct30', title: '答對 30 個字', sub: '本週累積全對 30 字', type: 'correct', target: 30, emoji: '🎯' },
   { id: 'c_sets5',     title: '玩完 5 組',     sub: '本週完成 5 組練習',  type: 'sets',    target: 5,  emoji: '📚' },
@@ -1778,29 +1768,11 @@ function rgChallengeState() {
 }
 function rgSaveChallenge(st) { try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
 
-// streak+freeze — share key กับเกมเสียง
-function rgLoadStreak() { try { return JSON.parse(localStorage.getItem(TF_STREAK_KEY) || '{}') || {}; } catch(e) { return {}; } }
-function rgSaveStreak(s) { try { localStorage.setItem(TF_STREAK_KEY, JSON.stringify(s)); } catch(e) {} }
+function rgLoadStreak() { try { return {streak:(window.GAME_ACCOUNT&&GAME_ACCOUNT.getStreak())||0}; } catch(e) { return {streak:0}; } }
 // งานที่8 (2026-07-04): ล็อก timezone ไต้หวัน (Asia/Taipei) ทุกจุดที่ตัดสินวัน — เดิมใช้เวลาเครื่องผู้เล่นตรงๆ (ผิดสเปกข้อ0)
 function rgTodayStr() { try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date()); }catch(e){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); } }
 function rgApplyStreak() {
-  if(!rgLoggedIn())return {state:{streak:0,freezes:0,setsToday:0},events:{goalMetToday:false,freezeUsed:false,freezeEarned:0}};
-  var s = rgLoadStreak(), cfg = RG_GAME_CFG, today = rgTodayStr();
-  var yest = RG_SRS.twDatePlusDays(Date.now(),-1);
-  s.setsToday = (s.lastPlay === today) ? ((s.setsToday || 0) + 1) : 1;
-  var goalMet = s.setsToday >= cfg.DAILY_GOAL_SETS;
-  var streakEv = { goalMetToday: goalMet, freezeUsed: false, freezeEarned: 0 };
-  if (s.lastPlay !== today) {
-    if (s.lastPlay === yest) { s.streak = (s.streak || 0) + 1; }
-    else if (s.lastPlay && (s.freezes || 0) > 0) { s.freezes -= 1; s.streak = (s.streak || 0) + 1; streakEv.freezeUsed = true; }
-    else { s.streak = 1; }
-    if (cfg.STREAK_FREEZE_EARN_EVERY > 0 && s.streak % cfg.STREAK_FREEZE_EARN_EVERY === 0 && (s.freezes || 0) < cfg.STREAK_FREEZE_MAX) {
-      s.freezes = (s.freezes || 0) + 1; streakEv.freezeEarned = 1;
-    }
-    s.lastPlay = today;
-  }
-  rgSaveStreak(s);
-  return { state: s, events: streakEv };
+  return {state:rgLoadStreak(),events:{}};
 }
 
 // bump challenge ตอนจบรอบ
@@ -1839,7 +1811,7 @@ function rgRenderLoginCTA(){
       '<button onclick="var d=document.getElementById(\'rg-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>'+
     '</div>'+
     '<div id="rg-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">'+
-      '✅ 登入後可以：<br>⭐ 累積星星＋泰國米勳章或其他禮物<br>🧠 智慧複習：記住你哪些字學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你學習你的弱點'+
+      '✅ 登入後可以：<br>🔥 保留每天完成練習的連續紀錄<br>🧠 智慧複習：記住你哪些字學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你學習你的弱點'+
     '</div></div>';
 }
 // เปิด modal ล็อกอิน (ใช้ปุ่มล็อกอินเดิมของ auth-widget)
@@ -1851,7 +1823,6 @@ function rgRenderGameBar() {
   var cp = rgChallengeState(), st = rgLoadStreak();
   var pct = Math.min(100, Math.round(cp.st.progress / cp.ch.target * 100));
   var daysLeft = Math.max(0, Math.ceil((rgWeekEndMs() - Date.now()) / 86400000));
-  var alive = st.streak > 0 && (st.lastPlay === rgTodayStr() || RG_SRS.twDatePlusDays(Date.now(),-1) === st.lastPlay);
   var ban = document.getElementById('rg-challenge-banner');
   if (ban) ban.innerHTML =
     '<div class="tf-challenge-banner' + (cp.st.done ? ' done' : '') + '">' +
@@ -1863,8 +1834,8 @@ function rgRenderGameBar() {
       '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:' + pct + '%;"></div></div>' +
       '<div class="tf-ch-sub">' + cp.ch.sub + '　' + cp.st.progress + ' / ' + cp.ch.target + '</div>' +
     '</div>';
-  var sn = document.getElementById('rg-streak-num'); if (sn) sn.textContent = (alive ? (st.streak || 0) : 0);
-  var fn = document.getElementById('rg-freeze-num'); if (fn) fn.textContent = (st.freezes || 0);
+  var sn = document.getElementById('rg-streak-num'); if (sn) sn.textContent = (st.streak || 0);
+  var fn = document.getElementById('rg-freeze-num'); if (fn) fn.textContent = 0;
 }
 
 var _rgToastQueue = []; var _rgToastBusy = false; // กันข้อความ toast ทับ/แย่งกันแสดง — Lin 2026-07-12

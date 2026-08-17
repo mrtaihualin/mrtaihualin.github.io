@@ -564,8 +564,7 @@
   // 每週挑戰 + 連續天數／護盾（streak/freeze 用同一把 key，
   // 跟聲調・拼讀・打字遊戲共用 → 練哪個遊戲都算連續天數）
   // ════════════════════════════════════════════════════════════
-  var TF_STREAK_KEY = 'tf_streak_v1';   // 跟其他遊戲共用同一個 key
-  var RG_GAME_CFG = { DAILY_GOAL_SETS: 3, STREAK_FREEZE_EARN_EVERY: 7, STREAK_FREEZE_MAX: 2 };
+  var RG_GAME_CFG = {};
   var RG_CHALLENGES = [
     { id:'wo_correct30', title:'排對 30 句',     sub:'本週累積排對 30 句（第一次就對）', type:'correct', target:30, emoji:'🎯' },
     { id:'wo_sets5',     title:'玩完 5 組',       sub:'本週完成 5 組語序練習室',            type:'sets',    target:5,  emoji:'📚' },
@@ -586,27 +585,10 @@
   }
   function rgSaveChallenge(st) { try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
 
-  function rgLoadStreak() { try { return JSON.parse(localStorage.getItem(TF_STREAK_KEY) || '{}') || {}; } catch(e) { return {}; } }
-  function rgSaveStreak(s) { try { localStorage.setItem(TF_STREAK_KEY, JSON.stringify(s)); } catch(e) {} }
+  function rgLoadStreak() { try { return {streak:(window.GAME_ACCOUNT&&GAME_ACCOUNT.getStreak())||0}; } catch(e) { return {streak:0}; } }
   function rgTodayStr() { var d = new Date(); return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
   function rgApplyStreak() {
-    if(!woLoggedIn())return {state:{streak:0,freezes:0,setsToday:0},events:{goalMetToday:false,freezeUsed:false,freezeEarned:0}};
-    var s = rgLoadStreak(), cfg = RG_GAME_CFG, today = rgTodayStr();
-    var yest = (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
-    s.setsToday = (s.lastPlay === today) ? ((s.setsToday || 0) + 1) : 1;
-    var goalMet = s.setsToday >= cfg.DAILY_GOAL_SETS;
-    var streakEv = { goalMetToday: goalMet, freezeUsed: false, freezeEarned: 0 };
-    if (s.lastPlay !== today) {
-      if (s.lastPlay === yest) { s.streak = (s.streak || 0) + 1; }
-      else if (s.lastPlay && (s.freezes || 0) > 0) { s.freezes -= 1; s.streak = (s.streak || 0) + 1; streakEv.freezeUsed = true; }
-      else { s.streak = 1; }
-      if (cfg.STREAK_FREEZE_EARN_EVERY > 0 && s.streak % cfg.STREAK_FREEZE_EARN_EVERY === 0 && (s.freezes || 0) < cfg.STREAK_FREEZE_MAX) {
-        s.freezes = (s.freezes || 0) + 1; streakEv.freezeEarned = 1;
-      }
-      s.lastPlay = today;
-    }
-    rgSaveStreak(s);
-    return { state: s, events: streakEv };
+    return {state:rgLoadStreak(),events:{}};
   }
   function rgChallengeBump(maxComboArg, isPerfect) {
     var pack = rgChallengeState(), ch = pack.ch, st = pack.st;
@@ -629,7 +611,6 @@
     var cp = rgChallengeState(), st = rgLoadStreak();
     var pct = Math.min(100, Math.round(cp.st.progress / cp.ch.target * 100));
     var daysLeft = Math.max(0, Math.ceil((rgWeekEndMs() - Date.now()) / 86400000));
-    var alive = st.streak > 0 && (st.lastPlay === rgTodayStr() || (function(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })() === st.lastPlay);
     var ban = document.getElementById('rg-challenge-banner');
     if (ban) ban.innerHTML =
       '<div class="tf-challenge-banner' + (cp.st.done ? ' done' : '') + '">' +
@@ -641,8 +622,8 @@
         '<div class="tf-ch-bar"><div class="tf-ch-fill" style="width:' + pct + '%;"></div></div>' +
         '<div class="tf-ch-sub">' + cp.ch.sub + '　' + cp.st.progress + ' / ' + cp.ch.target + '</div>' +
       '</div>';
-    var sn = document.getElementById('rg-streak-num'); if (sn) sn.textContent = (alive ? (st.streak || 0) : 0);
-    var fn = document.getElementById('rg-freeze-num'); if (fn) fn.textContent = (st.freezes || 0);
+    var sn = document.getElementById('rg-streak-num'); if (sn) sn.textContent = (st.streak || 0);
+    var fn = document.getElementById('rg-freeze-num'); if (fn) fn.textContent = 0;
   }
   var _rgToastQueue = []; var _rgToastBusy = false; // กันข้อความ toast ทับ/แย่งกันแสดง — Lin 2026-07-12
   function rgToast(msg) {
@@ -1307,7 +1288,7 @@
         '<button onclick="var d=document.getElementById(\'wo-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>' +
       '</div>' +
       '<div id="wo-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">' +
-        '✅ 登入後可以：<br>⭐ 累積星星＋泰國米勳章或其他禮物<br>🧠 智慧複習：記住你哪些句子學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你練你的弱點' +
+        '✅ 登入後可以：<br>🔥 保留每天完成練習的連續紀錄<br>🧠 智慧複習：記住你哪些句子學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你練你的弱點' +
       '</div></div>';
   }
   window.woCtaLogin = function(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} };
@@ -1329,7 +1310,7 @@
     // จำครบทุกประโยคแล้ว (mastered หมด) → รอบนี้เป็นแค่ทบทวนฟรี ไม่คิดคะแนน/ดาว/ลีก (กันฟาร์ม MASTER ข้อ7)
     if (practiceMode) {
       document.getElementById('wo-end-score').textContent = '複習模式';
-      document.getElementById('wo-end-detail').textContent = '💡 這些句子都已經記熟了！這輪只是免費複習，不計分（之後有新句子上架時再來拿分數／星星）';
+      document.getElementById('wo-end-detail').textContent = '💡 這些句子都已經記熟了！這輪只是免費複習，不計分。';
       if (window.GAME_ACCOUNT) { GAME_ACCOUNT.bumpStreakToday(); totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
       try { rgChallengeBump(maxCombo, false); } catch(e){}
       try {
@@ -1363,15 +1344,9 @@
     if (roundBonus) detail += '・含完成獎勵 +' + roundBonus;
     detail += '（已含 ×' + LEVEL_WEIGHT + ' 高級倍率）';
 
-    // ⭐ 星星只在「真正記住（SRS mastered）」時發放 — 見 checkAnswer() 內的 addHardStars · 這裡只更新顯示，不再額外發星星（MASTER ข้อ8，舊的 starsForRound 已停用）
-    if (window.GAME_ACCOUNT) { GAME_ACCOUNT.bumpStreakToday(); totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
     if (isPerfect) {
       detail += ' · 完美一輪！✨';
-      var sb = document.createElement('div'); sb.className = 'star-burst'; sb.textContent = '⭐';
-      document.body.appendChild(sb);
-      setTimeout(function(){ if (sb.parentNode) sb.parentNode.removeChild(sb); }, 2200);
     }
-    detail += ' · 累積共 ' + totalStars + ' 顆星';
     document.getElementById('wo-end-detail').textContent = detail;
     if(window.GameFlow){
       var _hl=[];

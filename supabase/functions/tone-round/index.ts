@@ -706,12 +706,10 @@ Deno.serve(async (req: Request) => {
     const same = replay.data.user_id === user.id && replay.data.game === game &&
       Number(replay.data.level) === level && replay.data.word === word && replay.data.request_hash === requestHash;
     if (!same) return json({ error: "replay_conflict" }, 409);
-    const currentAccount = await admin.from("game_accounts").select("stars")
-      .eq("user_id", user.id).maybeSingle();
-    if (currentAccount.error) return json({ error: "account_read_unavailable" }, 503);
     return json(Object.assign({}, replay.data.response || {}, {
       idempotent: true,
-      totalStars: Number(currentAccount.data?.stars ?? replay.data.response?.totalStars ?? 0),
+      stars: 0,
+      totalStars: 0,
     }));
   }
   const earlyReplay = await committedReplayResponse();
@@ -730,17 +728,15 @@ Deno.serve(async (req: Request) => {
   if (rlOk !== true) return json({ error: "rate_limited" }, 429);
 
   // ── อ่าน state จริงจาก DB (source of truth) ──
-  const accountRead = await admin.from("game_accounts")
-    .select("stars, hard_words_by_level").eq("user_id", user.id).maybeSingle();
-  if (accountRead.error) return json({ error: "account_read_unavailable" }, 503);
   const srsRead = await admin.from("tone_srs_state")
     .select("stage, due_date, ever_failed, mastered")
     .eq("user_id", user.id).eq("game", game).eq("level", level).eq("word", word).maybeSingle();
   if (srsRead.error) return json({ error: "srs_read_unavailable" }, 503);
-  const acctRow = accountRead.data;
   const srsRow = srsRead.data;
 
-  const account = { stars: acctRow?.stars || 0, hardWordsByLevel: acctRow?.hard_words_by_level || {} };
+  // Phase 1 Free has no Star or XP. SRS remains authoritative, but every
+  // obsolete reward input/output is pinned to zero until cached clients age out.
+  const account = { stars: 0, hardWordsByLevel: {} };
   const srsRecord = srsRow ? {
     stage: srsRow.stage, dueDate: srsRow.due_date, dueAt: 0,
     everFailed: srsRow.ever_failed, mastered: srsRow.mastered,
@@ -759,7 +755,7 @@ Deno.serve(async (req: Request) => {
   if (!R.ok) {
     const concurrentReplay = await committedReplayResponse();
     if (concurrentReplay) return concurrentReplay;
-    return json({ ok: false, reason: R.reason, totalStars: account.stars });
+    return json({ ok: false, reason: R.reason, stars: 0, totalStars: 0 });
   }
 
   // One RPC owns the SRS transition, account increment, ledger and durable replay result.

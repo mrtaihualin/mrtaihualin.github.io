@@ -70,6 +70,14 @@
     var code = String(result && result.data && result.data.error || result && result.error && result.error.message || '');
     return /^(?:invalid_|duplicate_|unknown_content_ref|replay_conflict)/.test(code);
   }
+  function consumeGamification(owner, value) {
+    if (!ownerIsCurrent(owner) || !value || value.ok !== true) return;
+    try {
+      if (window.GAME_ACCOUNT && typeof GAME_ACCOUNT.consumeStatus === 'function') {
+        GAME_ACCOUNT.consumeStatus(value, owner.id);
+      }
+    } catch (e) {}
+  }
   function removeQueuedRound(owner, roundId) {
     if (!ownerIsCurrent(owner)) return;
     var latest = readQueue(owner);
@@ -92,6 +100,7 @@
         return invoke(queue.entries[roundId]).then(function (result) {
           if (!ownerIsCurrent(owner)) return;
           if (result && !result.error && result.data && result.data.ok) {
+            consumeGamification(owner, result.data.gamification);
             // Merge the acknowledgement into the latest persisted queue. A
             // stale snapshot must never erase reports queued during this call.
             removeQueuedRound(owner, roundId);
@@ -126,10 +135,23 @@
       throw new Error(String(result && result.data && result.data.error || 'practice_event_status_unavailable'));
     });
   }
+  function gamificationStatus() {
+    var owner = ownerSnapshot();
+    if (!owner) return Promise.resolve({ current_streak: 0 });
+    return invoke({ action: 'gamification_status' }).then(function (result) {
+      if (!ownerIsCurrent(owner)) return {};
+      if (result && !result.error && result.data && result.data.ok && result.data.gamification) {
+        consumeGamification(owner, result.data.gamification);
+        return result.data.gamification;
+      }
+      throw new Error(String(result && result.data && result.data.error || 'gamification_status_unavailable'));
+    });
+  }
 
   window.PracticeEvents = {
     submitReport: submitReport,
     status: status,
+    gamificationStatus: gamificationStatus,
     flush: flush,
     pendingCount: function () {
       var owner = ownerSnapshot();
@@ -139,5 +161,12 @@
   };
 
   window.addEventListener('online', flush);
-  try { if (window.SITE_AUTH && SITE_AUTH.onChange) SITE_AUTH.onChange(function (user) { if (user) flush(); }); } catch (e) {}
+  try {
+    if (window.SITE_AUTH && SITE_AUTH.onChange) SITE_AUTH.onChange(function (user) {
+      if (user) flush();
+    });
+  } catch (e) {}
+  window.addEventListener('load', function () {
+    try { if (currentUser()) gamificationStatus().catch(function () {}); } catch (e) {}
+  });
 })(window);

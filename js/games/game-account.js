@@ -1,180 +1,118 @@
-// ============================================================
-// บัญชีเกมรวม (ดาว + streak) ใช้ร่วม "เกมเสียง + เกมอ่าน"
-// เก็บใน localStorage (same-origin → 2 เกมแชร์กันได้ ไม่ต้องล็อกอิน)
-// ดาว = หน่วยกลางรวม 2 เกม · แต้ม (分) แยกเกม ไม่เกี่ยวกับไฟล์นี้
-// Lin 2026-06-27
-// FILE MAP: [01] storage/date → [02] hard-star rules/caps → [03] badges → [04] public API
-// ============================================================
+// Phase 1 Free gamification account facade.
+// Star/XP/freeze awards are retired. Daily Streak is read only from the
+// authenticated practice-events server contract and is never advanced here.
 (function () {
-  var KEY = 'thai_game_acct_v1';
-  var syncRequestSequence = 0;
-  var latestSyncRequest = 0;
-  function load() { try { var r = localStorage.getItem(KEY); return r ? JSON.parse(r) : {}; } catch (e) { return {}; } }
-  function save(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }
-  function loggedIn() { try { return !!(window.READING_AUTH && window.READING_AUTH.user); } catch (e) { return false; } }
-  // Lin 2026-07-04: ผูกเวลาไต้หวัน (Asia/Taipei, UTC+8) เสมอ — ไม่อิงนาฬิกาเครื่องผู้เล่น (กันขึ้นวันใหม่/streak เพี้ยนตาม timezone เครื่อง)
-  function dstr(ts) {
-    var d = (ts == null) ? new Date() : new Date(ts);
-    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); } // 'YYYY-MM-DD' ตามเวลาไต้หวัน
-    catch (e) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); } // fallback: เครื่อง (เบราว์เซอร์เก่ามาก)
+  'use strict';
+
+  var PREF_KEY = 'thai_game_acct_v1';
+
+  function currentUserId() {
+    try {
+      var user = (window.SITE_AUTH && SITE_AUTH.user) || (window.READING_AUTH && READING_AUTH.user);
+      return user && user.id ? String(user.id) : '';
+    } catch (e) { return ''; }
   }
 
-  // ── สเปก 2026-07-03: ดาวเงิน (hard currency) เปลี่ยนแหล่งที่มา ──
-  // เดิม: ดาว 1–3 ดวง/รอบ ตามความแม่น (starsForRound) → ปั๊มได้ ไม่ตรงสเปกใหม่
-  // ใหม่: ดาวเงินแจกเฉพาะตอน "จำได้จริง" (คำ/ประโยคถูกตัดออกจาก SRS เพราะจำได้แล้ว)
-  //   ให้ tone-finder.html (TF_SRS) เป็นคนคำนวณจำนวนดาว/คำแล้วเรียก addHardStars(n, level) เข้ามา
-  //   ฟังก์ชันนี้ (starsForRound) ยังเก็บไว้เผื่อโค้ดเก่าเรียกใช้ แต่ "ไม่ใช่แหล่งดาวเงินอีกต่อไป" — คืนค่า 0 เสมอ
-  //   (กันพังเงียบ: ถ้ามีจุดอื่นเรียกอยู่ จะไม่ทำให้ดาวเพิ่มมั่วๆ)
-  function starsForRound(cleanCount, total) {
-    return 0; // DEPRECATED สเปก 2026-07-03 — ห้ามใช้แจกดาวเงินอีก ดูหมายเหตุด้านบน
+  function readJson(key) {
+    try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; }
+    catch (e) { return {}; }
   }
 
-  // ── สเปก 2026-07-03 ข้อ 4: เพดานดาวเงินตลอดชีพต่อระดับ (ล็อกกันปั๊ม) ──
-  // เพดานจริง = min( floor(10% ของจำนวนคำทั้งหมดในระดับ), HARD_CAPS[level] )
-  //   HARD_CAPS = เพดานสูงสุดคงที่ตามสเปก · ครึ่ง "10% ของคำในระดับ" ส่งเข้ามาเป็น argument จาก tone-finder.html
-  //   (ถ้าไม่รู้จำนวนคำ = ไม่ส่ง/ส่ง 0 → fallback เป็น HARD_CAPS เดิม กันเพดานกลายเป็น 0 แล้วไม่มีใครได้ดาว) — Lin 2026-07-04
-  var HARD_CAPS = { 1: 200, 2: 300, 3: 200 };        // 初級/中級/高級 → เพดานสูงสุดคงที่ (จำนวน "คำ" ที่นับดาวได้ตลอดชีพ)
-
-  // ── สเปก 2026-07-04 (Lin เคาะ): จำนวนคำต่อระดับ = "ผลรวมทุกเกม" (เกมเสียง + เกมอ่าน) ──
-  //   ฐานเดียวกันทั้ง 2 เกม → เพดานดาวเงิน = 10% ของเลขรวมชุดนี้ (ทุกเกมนับรวมกัน ไม่แยกเกม)
-  //   นับจากโค้ดจริง (Lin 2026-07-04):
-  //     初級(1): เกมเสียง WORD_LIST level1 = 168 + เกมอ่าน WORDS 初 = 162 → 330
-  //     中級(2): เกมเสียง WORD_LIST level2 = 120 + เกมอ่าน WORDS 中 = 126 → 246
-  //     高級(3): เกมเสียงกับเกมอ่านใช้ "10 ประโยคชุดเดียวกัน" (ADV_SENTENCES / WORDS_HIGH เนื้อหาตรงกัน)
-  //             → หน่วยที่ไม่ซ้ำจริง = 10 (ไม่บวกซ้ำเป็น 20) ⚠️ Lin ช่วยยืนยันจุดนี้
-  var LEVEL_TOTAL_WORDS = { 1: 330, 2: 246, 3: 10 };
-
-  // คำนวณเพดานจริงต่อระดับ = min( floor(0.10 × LEVEL_TOTAL_WORDS[level]), HARD_CAPS[level] )
-  //   ใช้ LEVEL_TOTAL_WORDS เป็นฐานเสมอ (เลขรวมทุกเกม) — ไม่รับ per-game count จากภายนอกแล้ว
-  //   levelWordCount ที่ส่งเข้ามาถูกเมิน (คงพารามิเตอร์ไว้กันโค้ดเดิมพัง) — Lin 2026-07-04
-  function effectiveCap(level, levelWordCount) {
-    var hardCap = HARD_CAPS[level] || 0;
-    var wc = LEVEL_TOTAL_WORDS[level] || 0;
-    if (!(wc > 0)) return hardCap;                    // ไม่รู้จำนวนคำจริง → ใช้ cap เดิม (กันเพดาน 0)
-    var tenPct = Math.floor(0.10 * wc);
-    return Math.min(tenPct, hardCap);
-  }
-  var LEVEL_MULT = { 1: 1, 2: 1.5, 3: 2 };            // ตัวคูณระดับ
-  var BASE_CLEAN = 3, BASE_RECOVERED = 1;             // ฐาน/คำ: จำเอง=3 · กู้กลับมาได้=1
-
-  // นับ "คำที่เคยได้ดาวแล้ว" ต่อระดับ (เพื่อคุมเพดาน 200/300/200) — เก็บถาวรในบัญชีเดียวกัน ไม่รีเซ็ตเอง
-  function wordsCounted(a, level) {
-    var wc = a.hardWordsByLevel || {};
-    return wc[level] || 0;
-  }
-  function bumpWordsCounted(a, level) {
-    a.hardWordsByLevel = a.hardWordsByLevel || {};
-    a.hardWordsByLevel[level] = (a.hardWordsByLevel[level] || 0) + 1;
-    return a.hardWordsByLevel[level];
+  function writeJson(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
   }
 
-  // ── สเปก 2026-07-03 ข้อ 4: แจกดาวเงินตอนคำ/ประโยคถูก "ตัด" ออกจาก SRS (mastered) ──
-  // clean = จำได้เองไม่เคยแอบดู/ผิดเลยตลอดเส้นทาง SRS ของคำนี้ · recovered = เคยผิด/แอบดูระหว่างทาง แต่สุดท้ายจำได้
-  // level: 1=初級×1 · 2=中級×1.5 · 3=高級×2
-  // คืนค่า {stars, capped} — capped=true ถ้าคำนี้ชนเพดานระดับแล้ว (ตัดออกจาก SRS ปกติ แต่ไม่ได้ดาว)
-  function addHardStars(clean, level, levelWordCount) {
-    var a = load();
-    var cap = effectiveCap(level, levelWordCount);   // เพดานจริง = min(10% ของคำในระดับ, HARD_CAPS)
-    var used = wordsCounted(a, level);
-    if (used >= cap) { save(a); return { stars: 0, capped: true }; }
-    bumpWordsCounted(a, level);
-    var base = clean ? BASE_CLEAN : BASE_RECOVERED;
-    var mult = LEVEL_MULT[level] || 1;
-    var n = Math.round(base * mult);
-    a.stars = (a.stars || 0) + n;
-    save(a);
-    return { stars: n, capped: false };
+  function cleanLegacyRewards() {
+    var prefs = readJson(PREF_KEY);
+    ['stars', 'streak', 'lastPlay', 'hardWordsByLevel'].forEach(function (key) { delete prefs[key]; });
+    if (Object.keys(prefs).length) writeJson(PREF_KEY, prefs);
+    else { try { localStorage.removeItem(PREF_KEY); } catch (e) {} }
+    try { localStorage.removeItem('tf_streak_v1'); } catch (e) {}
   }
-  // แบดจ์พันธุ์ข้าว ตามดาวรวมสะสม (รูป SVG จริงใน assets/badges/)
-  var STAR_BADGES = [
-    { at: 10,  id: 'hommali',   img: 'assets/badges/hommali.svg',   zh: '茉莉香米', th: 'ข้าวหอมมะลิ',  emoji: '🍚' },
-    { at: 20,  id: 'khaoniaw',  img: 'assets/badges/khaoniaw.svg',  zh: '糯米',     th: 'ข้าวเหนียว',   emoji: '🍙' },
-    { at: 40,  id: 'riceberry', img: 'assets/badges/riceberry.svg', zh: '紫米',     th: 'ไรซ์เบอร์รี่', emoji: '🟣' },
-    { at: 60,  id: 'homnin',    img: 'assets/badges/homnin.svg',    zh: '香黑米',   th: 'ข้าวหอมนิล',   emoji: '⚫' },
-    { at: 100, id: 'sangyod',   img: 'assets/badges/sangyod.svg',   zh: '紅米',     th: 'ข้าวสังข์หยด', emoji: '🔴' }
-  ];
+
+  function readStatus() {
+    var ownerId = currentUserId();
+    if (!ownerId) return null;
+    var value = readJson(PREF_KEY);
+    if (value.gamification_owner_id !== ownerId || !value.gamification_status || value.gamification_status.ok !== true) return null;
+    return value.gamification_status;
+  }
+
+  function consumeStatus(status, ownerId) {
+    ownerId = String(ownerId || currentUserId());
+    if (!ownerId || ownerId !== currentUserId() || !status || status.ok !== true) return false;
+    var streak = Number(status.current_streak);
+    if (!Number.isInteger(streak) || streak < 0 || streak > 1000000) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(status.status_as_of || ''))) return false;
+    var prefs = readJson(PREF_KEY);
+    prefs.gamification_owner_id = ownerId;
+    prefs.gamification_status = {
+        ok: true,
+        current_streak: streak,
+        last_eligible_day: status.last_eligible_day || null,
+        status_as_of: String(status.status_as_of),
+        preserved_by_outage: status.preserved_by_outage === true
+    };
+    writeJson(PREF_KEY, prefs);
+    ['tf-streak-num', 'rg-streak-num'].forEach(function (id) {
+      try { var el = document.getElementById(id); if (el) el.textContent = streak; } catch (e) {}
+    });
+    try { window.dispatchEvent(new CustomEvent('phase1-gamification-status', { detail: { current_streak: streak } })); }
+    catch (e) {}
+    return true;
+  }
+
+  function requestStatus() {
+    try {
+      if (window.PracticeEvents && typeof PracticeEvents.gamificationStatus === 'function') {
+        return PracticeEvents.gamificationStatus();
+      }
+    } catch (e) {}
+    return Promise.resolve(null);
+  }
+
+  cleanLegacyRewards();
 
   window.GAME_ACCOUNT = {
-    getStars: function () { return load().stars || 0; },
-    addStars: function (n) { var a = load(); a.stars = (a.stars || 0) + (n || 0); save(a); return a.stars; },
-    starsForRound: starsForRound,
-    getStreak: function () { return loggedIn() ? (load().streak || 0) : 0; },
-    // เล่นเกมไหนก็ได้ในวันนั้น = นับ streak ต่อเนื่อง (บัญชีเดียว)
-    bumpStreakToday: function () {
-      if (!loggedIn()) return 0;
-      var a = load(), t = dstr(Date.now());
-      if (a.lastPlay === t) return a.streak || 0;          // เล่นแล้ววันนี้ ไม่บวกซ้ำ
-      var y = dstr(Date.now() - 86400000);
-      a.streak = (a.lastPlay === y) ? ((a.streak || 0) + 1) : 1;
-      a.lastPlay = t; save(a); return a.streak;
-    },
-    starBadges: STAR_BADGES,
-    earnedBadges: function () { var s = load().stars || 0; return STAR_BADGES.filter(function (b) { return s >= b.at; }); },
-    // เผื่อย้ายข้อมูลเก่า: ถ้าบัญชียังว่าง แต่เกมมีดาวเดิมในเครื่อง → เก็บเข้าบัญชีครั้งเดียว
-    seedIfEmpty: function (oldStars) { var a = load(); if (!a.stars && oldStars > 0) { a.stars = oldStars; save(a); } return a.stars || 0; },
+    // Free has no Star or XP. Compatibility methods fail closed at zero while
+    // old cached game code ages out.
+    getStars: function () { return 0; },
+    addStars: function () { return 0; },
+    starsForRound: function () { return 0; },
+    addHardStars: function () { return { stars: 0, capped: false, retired: true }; },
+    starBadges: [],
+    earnedBadges: function () { return []; },
+    seedIfEmpty: function () { cleanLegacyRewards(); return 0; },
 
-    // ── Lin 2026-07-04: แจ้งเตือน "มีคำศัพท์ใหม่" ข้ามเกม (ใช้ร่วมทุกเกม) ──
-    //  หลักคิด: จำ "จำนวนคำที่ผู้เล่นเคยเห็นครบแล้ว" ต่อ (เกม+ระดับ) — ตั้งค่าตอนจำได้ครบทั้งระดับ (全部精通)
-    //  ถ้าภายหลังเพิ่มคำใหม่ (count ปัจจุบัน > seen) = มีคำใหม่ยังไม่ได้เล่น → เกมเอาไปเด้งแจ้งเตือน
-    //  ผู้เล่นใหม่/ยังเล่นไม่ครบระดับ = ไม่มี seen = คืน 0 = ไม่เด้ง (กันสแปม)
-    //  หมายเหตุ: เก็บใน localStorage ต่อเครื่อง (ข้ามเครื่องต้องเพิ่มคอลัมน์ Supabase ทีหลัง)
+    getStreak: function () {
+      var status = readStatus();
+      return status ? status.current_streak : 0;
+    },
+    bumpStreakToday: function () { return this.getStreak(); },
+    consumeStatus: consumeStatus,
+    refreshStatus: requestStatus,
+
     markLevelSeen: function (game, level, totalCount) {
       if (!game) return 0;
-      var a = load(); a.seen = a.seen || {}; a.seen[game] = a.seen[game] || {};
-      a.seen[game][level] = totalCount || 0; save(a); return a.seen[game][level];
+      var prefs = readJson(PREF_KEY);
+      prefs.seen = prefs.seen || {};
+      prefs.seen[game] = prefs.seen[game] || {};
+      prefs.seen[game][level] = totalCount || 0;
+      writeJson(PREF_KEY, prefs);
+      return prefs.seen[game][level];
     },
-    // คืนจำนวน "คำใหม่ที่ยังไม่ได้เล่น" ของเกม+ระดับนี้ (0 = ไม่มี / ยังไม่เคยจำครบ)
     newWordsCount: function (game, level, currentCount) {
-      var a = load(); var g = a.seen && a.seen[game];
-      var seen = g && (g[level] != null ? g[level] : undefined);
-      if (seen == null) return 0;                       // ยังไม่เคยจำครบระดับนี้ → ไม่ถือว่ามีคำใหม่
+      var prefs = readJson(PREF_KEY);
+      var seen = prefs.seen && prefs.seen[game] && prefs.seen[game][level];
+      if (seen == null) return 0;
       return Math.max(0, (currentCount || 0) - seen);
     },
 
-    // ── สเปก 2026-07-03: ดาวเงิน (hard currency) จาก SRS mastery เท่านั้น ──
-    addHardStars: addHardStars,        // (clean:boolean, level:1|2|3) → {stars, capped}
-
-    // ── เฟส 2: sync ขึ้น Supabase (ถาวร + ข้ามเครื่อง) เมื่อล็อกอิน — Lin 2026-06-27 ──
-    // merge แบบ "เอาค่ามากสุด" กันข้อมูลหายตอนสลับเครื่อง · ปลอดภัยถ้ายังไม่มีตาราง (no-op)
-    // ── Lin 2026-07-04: เพิ่ม sync "hardWordsByLevel" (ตัวนับเพดานดาวเงินตลอดชีพต่อระดับ) ด้วย ──
-    // เดิม sync แค่ stars/streak/last_play → ตัวนับเพดานเป็น local-only ทำให้เล่นคนละเครื่อง/เบราว์เซอร์
-    // แล้วได้ดาวเงินเกินเพดานจริงได้ (เครื่องใหม่นับ 0 ใหม่ ไม่รู้ว่าเครื่องอื่นนับไปถึงไหนแล้ว) — ตอนนี้ merge แบบเอาค่ามากสุดเหมือนกัน
-    // ⚠️ ต้องมีคอลัมน์ "hard_words_by_level" (jsonb) ในตาราง game_accounts ที่ Supabase ก่อน ไม่งั้น query จะพังเงียบ (ห่อ try/catch ไว้แล้ว = ไม่ทำให้เกมพัง แต่จะไม่ sync จนกว่าจะเพิ่มคอลัมน์)
-    sync: function (client, userId) {
-      if (!client || !userId || !client.from) return;
-      try {
-        var ownerId = String(userId);
-        var ownerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
-        var requestId = ++syncRequestSequence;
-        latestSyncRequest = requestId;
-        function ownerStillCurrent() {
-          var currentId = window.READING_AUTH && READING_AUTH.user && String(READING_AUTH.user.id) || '';
-          var currentEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
-          if (requestId !== latestSyncRequest || currentId !== ownerId || currentEpoch !== ownerEpoch) return false;
-          try {
-            return !!(window.PHASE1_ACCOUNT_BOUNDARY &&
-              localStorage.getItem(PHASE1_ACCOUNT_BOUNDARY.ownerKey) === ownerId);
-          } catch (e) { return false; }
-        }
-        client.from('game_accounts').select('stars,streak,last_play,hard_words_by_level').eq('user_id', ownerId).maybeSingle().then(function (r) {
-          if (!ownerStillCurrent()) return;
-          var rem = (r && r.data) || {};
-          var la = load();
-          // ── Phase 4 (ล็อก 2026-07-11): เซิร์ฟเวอร์เป็นเจ้าของ "ดาว + ตัวนับเพดาน" (remote-authoritative) ──
-          //   เดิม: Math.max(local, remote) → localStorage ที่ถูกแก้มั่ว (เปิด DevTools ตั้งดาว 9999) ชนะ = โชว์ดาวปลอม
-          //   ใหม่: เอาค่าจากเซิร์ฟเวอร์มาโชว์ตรงๆ → ดาวปลอมใน localStorage ถูกทับด้วยค่าจริงทุกครั้งที่ sync
-          //   ดาวเพิ่มได้ทางเดียว = Edge Function tone-round (service_role) · client เขียน game_accounts ไม่ได้แล้ว (RLS ล็อก step2)
-          if (rem.stars != null) la.stars = rem.stars;
-          if (rem.hard_words_by_level != null) la.hardWordsByLevel = rem.hard_words_by_level;
-          // streak/last_play = ไม่ใช่เงิน · หลังล็อก RLS เขียนขึ้นเซิร์ฟเวอร์ไม่ได้ → คงแบบต่อเครื่อง (ดึงค่าที่มากกว่ามาโชว์)
-          la.streak = Math.max(la.streak || 0, rem.streak || 0);
-          var lp = la.lastPlay || null;
-          if (rem.last_play && (!lp || rem.last_play > lp)) lp = rem.last_play;
-          if (lp) la.lastPlay = lp;
-          save(la);
-          // ❌ เลิก upsert game_accounts จาก client — เดิมบรรทัดนี้คือ "รู" ให้เขียนดาวตรง · เซิร์ฟเวอร์เขียนเองแล้ว
-        }, function () { if (!ownerStillCurrent()) return; });
-      } catch (e) {}
+    // The client never reads or writes game_accounts. Authentication and the
+    // service-role Edge/RPC contract own every Daily Streak status transition.
+    sync: function (_client, userId) {
+      if (!userId || String(userId) !== currentUserId()) return;
+      requestStatus().catch(function () {});
     }
   };
 })();
