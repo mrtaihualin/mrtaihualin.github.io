@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 15:45 Asia/Bangkok** — Phase 1 account audit integrity
+**Updated: 2026-08-17 18:35 Asia/Bangkok** — Phase 1 Played/Gamification recovery
+
+## 2026-08-17 — P1-D-05/D-07/D-08 Played + Gamification Recovery (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Added one source-adjacent recovery artifact that locks the exact pre-D08 Played/client/tone-round Git blobs and reverses the combined rollout by dependency: client only when defective, previous Played Edge, previous tone Edge, then the prior tone SQL contract. The current client remains compatible with the previous Played response, so backend-only recovery can preserve item-level Played without a Pages rollback.
+- Recovery intentionally leaves the additive streak tables/RPCs unused instead of dropping or rewriting them. The executable psql recovery reasserts RLS, removes `PUBLIC`/`anon`/`authenticated` access, retains service-role-only access, and contains no delete/truncate/drop or player-row cleanup.
+- Deterministic recovery source checks pass 31/31; existing Played 38/38, Gamification 20/20, backend transaction 9/9 and mixed-version 12/12 gates remain PASS. PostgreSQL fixtures pass both the forward D08 sequential/concurrency contract and the combined recovery: exact Played and Gamification migrations apply, previous Played still records without streak mutation, the prior tone transaction is restored, and all RLS/privilege invariants hold. `node scripts/check-site.js` passes all 968 tracked project files. The artifact itself performs no SQL, Edge/client deploy, account/data write, cleanup, or other Production mutation.
 
 ## 2026-08-17 — P1-D-09 Account Audit Integrity (`PASS_LOCAL / SQL_EDGE_CLIENT_ROLLOUT_BLOCKED`)
 

@@ -121,6 +121,7 @@ runTest(['scripts/tests-my-learning-phase1.js'], 'Phase 1 我的學習 tests');
 runTest(['scripts/tests-personal-content-phase1.js'], 'Phase 1 我的內容 tests');
 runTest(['scripts/tests-practice-events-phase1.mjs'], 'Phase 1 Played-evidence tests');
 runTest(['scripts/tests-phase1-free-gamification.mjs'], 'Phase 1 Free Daily Streak/gamification tests');
+runTest(['scripts/tests-phase1-played-gamification-recovery.mjs'], 'Phase 1 Played/Gamification recovery artifact tests');
 runTest(['scripts/tests-phase1-srs.js'], 'Phase 1 SRS tests');
 runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');

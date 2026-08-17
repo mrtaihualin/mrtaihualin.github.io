@@ -1,0 +1,40 @@
+{
+  "schema_version": "phase1-played-gamification-recovery-v1",
+  "forward_source_commit": "988cabf4eb546975d62f5d179411ac7c58e5086f",
+  "previous_runtime_commit": "a037ec2b3785ee720b2d2dcc826e67c8a2650689",
+  "prepared_from_origin_main": "cf1d662405a25bd24b58606a83f0d842a9b00ef3",
+  "sql": {
+    "played_migration": {
+      "path": "supabase/migrations/20260817041014_phase1_practice_event_idempotency.sql",
+      "blob": "d454a628419084358358add13503b30f7fffeb0d"
+    },
+    "gamification_migration": {
+      "path": "supabase/migrations/20260817074413_phase1_free_gamification_streak.sql",
+      "blob": "5b4ddd9a31b53f96a1b8a83a47aa84f01351f075"
+    },
+    "previous_tone_round": {
+      "path": "supabase/sql/2026-08-16_phase1_tone_round_atomic.sql",
+      "blob": "6d86fd3894884f122be5fdfbb5dce3ebd44972c9"
+    }
+  },
+  "previous_runtime": [
+    { "path": "supabase/functions/practice-events/index.ts", "blob": "2f902c88ba525264461609161e9bd342cdec556a" },
+    { "path": "supabase/functions/practice-events/practice-events-engine.mjs", "blob": "3a387cc894e2b74c92c187ed36fca0f82498d8ed" },
+    { "path": "supabase/functions/tone-round/index.ts", "blob": "c90a8eba3e5bf38cce1129009e3747995e430e2d" },
+    { "path": "js/games/game-account.js", "blob": "3acec3bb56079aed7610bd9b285feddc1f90bbe6" },
+    { "path": "js/games/practice-events.js", "blob": "e03259ea19777bbebf23cebc834a1f5c3001a763" },
+    { "path": "js/games/reading-game-app.js", "blob": "39f535634636ed24c9637800c52bd612cc0cf87c" },
+    { "path": "js/games/reading-game-app.min.js", "blob": "c510ac9c6d73431e763b8565d00cb3b9b14c6fc8" },
+    { "path": "js/games/tone-finder-game.js", "blob": "545eee98b89694736a9d90670674b3c30dbff356" },
+    { "path": "js/games/tone-finder-game.min.js", "blob": "c59559e1e30ae5fd85ef7fc6f5067a678c30611a" },
+    { "path": "js/games/typing-game-app.js", "blob": "ba8bcb3e808332e8b7298575212d0a7d6ccdd48f" },
+    { "path": "js/games/typing-game-app.min.js", "blob": "a0b2397595941e60260f13bf0e41d82cb307f900" },
+    { "path": "js/games/word-order-app.js", "blob": "ae8f9cd15251274d6adcbcdc616aebf174a75689" },
+    { "path": "js/games/word-order-app.min.js", "blob": "0fc603f769abfe9bd989f327d2ab35537eaa2a95" },
+    { "path": "listening-game.html", "blob": "9bd9984d6cdbf2f030c2c270cc43a63d48731170" },
+    { "path": "reading-game.html", "blob": "14db10743da459c3ee83450cb658f38aa56f9cea" },
+    { "path": "tone-finder.html", "blob": "ce9acaf28c205a458e2563d281e42dccfa5c5084" },
+    { "path": "typing-game.html", "blob": "b88e9b0e4319d0a2e42b88baf469f32c10cf8e7c" },
+    { "path": "word-order.html", "blob": "f1fe50d0138225969294115cc5d6c8185d0780a6" }
+  ]
+}
