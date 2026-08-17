@@ -6,31 +6,31 @@
 
 ## Current Source of Truth
 
-- จุดเริ่มต้นรวมทุกโปรเจกต์: `/Users/taihualin/Documents/Claude/Projects/00_START_HERE.md`
-- Shared Rules canonical + Startup Gate สำหรับ Claude/Codex: `/Users/taihualin/Documents/Claude/Projects/AGENTS.md`
+- จุดเริ่มต้นรวมทุกโปรเจกต์: Codex global router → Projects canonical router (local-only resolution)
+- Shared Rules canonical + Startup Gate สำหรับ Claude/Codex: Projects canonical global workflow authority ซึ่ง Codex global router resolve ให้
 - Executing agent สำหรับงานต่อของ `mrtaihualin.com`: **Codex เท่านั้น**; Claude คง routing compatibility แต่ไม่รับ implementation task
-- สถานะและงาน Active ของเว็บไซต์: `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md`
-- Product Decision ปัจจุบัน: `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/GPT Chat/CURRENT_SOURCE_OF_TRUTH_2026-08-14_1845.md`
-- แผนงานหลัก: `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
-- Phase 1 Guest Free + Login Free checklist: `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/PLANS/website/2026-08-14_1958_PHASE1_GUEST_LOGIN_FREE_MASTER_PLAN_CURRENT.md` — ทุกงาน Phase 1 ต้องอัปเดตสถานะกลับแผนนี้เพียงชุดเดียว
-- กฎการทำงานใน repo: `/Users/taihualin/Developer/mrtaihualin.github.io/AGENTS.md`
-- หลักฐานการเปลี่ยนโค้ด/โครงสร้างล่าสุด: `/Users/taihualin/Developer/mrtaihualin.github.io/MAINTENANCE.md`
+- สถานะและงาน Active ของเว็บไซต์: Projects canonical router → Website canonical router
+- Product Decision ปัจจุบัน: Website canonical router → Current Product Source
+- แผนงานหลัก: Website canonical router → Website roadmap
+- Phase 1 Guest Free + Login Free: Website canonical router ต้อง resolve ทั้ง Current Master Plan และ Current Checklist; ห้าม hardcode local absolute path ใน tracked repo
+- กฎการทำงานใน repo: `AGENTS.md`
+- หลักฐานการเปลี่ยนโค้ด/โครงสร้างล่าสุด: `MAINTENANCE.md`
 
 ## Active Work
 
 - อ่านรายการ Active ล่าสุดจากศูนย์บัญชาการและแผนงานหลักด้านบน ห้ามใช้ Handoff หรือ Backup แทน Current Source.
-- งานที่พักไว้หรือทำภายหลังอยู่ที่ `/Users/taihualin/Developer/mrtaihualin.github.io/_แผนงาน/ทำต่อในอนาคต.md` เพียงที่เดียว.
-- `GAME_REWARD_AUTH` เป็น `PARKED / PAID FUTURE / NOT PHASE 1`; ไม่ใช่ Phase 1 blocker. แผนอยู่ที่ `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/PLANS/website/2026-08-13_1857_PLAN_GAME_REWARD_AUTH_CURRENT.md`.
+- งานที่พักไว้หรือทำภายหลังอยู่ที่ `_แผนงาน/ทำต่อในอนาคต.md` เพียงที่เดียว.
+- `GAME_REWARD_AUTH` เป็น `PARKED / PAID FUTURE / NOT PHASE 1`; ไม่ใช่ Phase 1 blocker. ใช้ Website canonical router เพื่อ resolve Paid/Future plan เมื่อ Lin เปิด phase.
 
 ## Closed / Historical
 
-- สถานะ `CLOSED` ล่าสุดดูที่ `/Users/taihualin/Documents/Claude/Projects/00_START_HERE.md` และหลักฐานงานเว็บดูที่ `MAINTENANCE.md`.
-- ตำแหน่งสุดท้ายของ Closed History / One-Time ยัง `NEED LIN DECISION`; ให้ตาม policy canonical ใน `/Users/taihualin/Documents/Claude/Projects/AGENTS.md` และห้ามย้าย/เปลี่ยน policy เอง.
-- Repo Cleanup closeout: `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/STATUS/2026-08-13_1941_REPO_CLEANUP_FINAL_CLOSEOUT.md`.
+- สถานะ `CLOSED` ล่าสุด resolve ผ่าน Projects canonical router และหลักฐานงานเว็บดูที่ `MAINTENANCE.md`.
+- ตำแหน่งสุดท้ายของ Closed History / One-Time ยัง `NEED LIN DECISION`; ให้ตาม Projects canonical global workflow authority และห้ามย้าย/เปลี่ยน policy เอง.
+- Repo Cleanup closeout: resolve exact evidence pointer ผ่าน Website canonical router; ห้าม hardcode local path ใน tracked repo.
 
 ## ห้ามแตะโดยไม่มีคำสั่งเฉพาะจาก Lin
 
-- ใช้ข้อห้ามและ Safety Rules ใน `AGENTS.md` เป็นหลัก โดยเฉพาะ runtime, secret, SQL/migration, production และ deploy; Git handoff route ไป canonical Gate ใน Projects `AGENTS.md` หัวข้อ 8.
+- ใช้ข้อห้ามและ Safety Rules ใน `AGENTS.md` เป็นหลัก โดยเฉพาะ runtime, secret, SQL/migration, production และ deploy; Git handoff route ผ่าน Projects canonical global workflow authority.
 - รายการ SQL หรือไฟล์ path-sensitive ที่ถูกพัก/ล็อกไว้ ให้ตรวจ Decision ใน `_แผนงาน/ทำต่อในอนาคต.md` ก่อนเสมอ ห้ามย้าย ลบ rename หรือรันจากชื่อไฟล์เพียงอย่างเดียว.
 
 ## Intentionally Deferred — ไม่ใช่ Cleanup blocker
@@ -43,4 +43,4 @@
 
 - `P1-F-05/F-06` local GA bootstrap hotfixผ่าน static/fresh-origin orderแล้ว. งานถัดไปคือ manual fresh-local `_ga*`=0; ห้าม deployจนกว่าจะผ่าน แล้วจึง reverify Productionก่อน `P1-G-01`.
 - Document Placement Phase 1 = `CLOSED / PASS` เมื่อ 2026-08-14; Phase 2 Repo Cleanup และ move candidates ทั้งหมดเป็นงานแยกที่ยัง `PARKED / NOT AUTHORIZED`.
-- Latest game closeout: `/Users/taihualin/Documents/Claude/Projects/_AI_SYSTEM/STATUS/2026-08-14_2028_GAMES_PHASE3_CORE5_LOCAL_CLOSEOUT.md` (`PASS_LOCAL / PRODUCTION_VERIFY_NEEDED`; Lego deferred).
+- Latest game closeout: resolve exact evidence pointer ผ่าน Website canonical router (`PASS_LOCAL / PRODUCTION_VERIFY_NEEDED`; Lego deferred).
