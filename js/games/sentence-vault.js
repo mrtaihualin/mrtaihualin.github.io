@@ -15,6 +15,9 @@
   var _uid = null;
   var _ownerGeneration = 0;
   var _deleteInFlight = Object.create(null);
+  var _deleteIntent = Object.create(null);
+  var _saveInFlight = Object.create(null);
+  var _saveAgain = Object.create(null);
   var DELETE_TIMEOUT_MS = 10000;
 
   function ready() { return !!(_sb && _uid); }
@@ -45,7 +48,7 @@
   function ownerIsCurrent(owner) {
     return !!(owner && owner.client === _sb && owner.uid === _uid && owner.generation === _ownerGeneration);
   }
-  function bounded(operation, label, done) {
+  function bounded(operation, label, done, onLate) {
     var settled = false;
     var timer = setTimeout(function () {
       if (settled) return;
@@ -54,7 +57,7 @@
       warn(label, error); done(error);
     }, DELETE_TIMEOUT_MS);
     function finish(error) {
-      if (settled) return;
+      if (settled) { if (onLate) onLate(error || null); return; }
       settled = true; clearTimeout(timer); done(error || null);
     }
     try {
@@ -67,6 +70,7 @@
   function queueDelete(th) {
     var state = loadState();
     if (!state.pendingDeletes[th]) state.pendingDeletes[th] = { deleted_at: new Date().toISOString() };
+    _deleteIntent[th] = state.pendingDeletes[th].deleted_at;
     state.items = state.items.filter(function (row) { return row.th !== th; });
     saveState(state); return state.pendingDeletes[th];
   }
@@ -75,6 +79,11 @@
     if (pending && pending.deleted_at === deletedAt) { delete state.pendingDeletes[th]; saveState(state); }
   }
   function pendingDeleteCount() { return Object.keys(loadState().pendingDeletes).length; }
+  function currentSentence(th) {
+    var found = null;
+    load().some(function (row) { if (row && row.th === th) { found = row; return true; } return false; });
+    return found;
+  }
   function flushPendingDeletes(owner) {
     owner = owner || ownerSnapshot();
     if (!ownerIsCurrent(owner)) return;
@@ -149,17 +158,57 @@
       source_raw: sourceRaw(entry), tags: [], deleted_at: null
     };
   }
-  function push(entry, owner) {
+  function sameRemoteRow(entry, remoteRow, ownerUid) {
+    if (!entry || !remoteRow) return false;
+    return JSON.stringify(rowFor(entry, ownerUid)) === JSON.stringify(remoteRow);
+  }
+  function push(th, owner) {
+    owner = owner || ownerSnapshot();
+    if (!ownerIsCurrent(owner) || pendingDelete(th)) return;
+    var entry = currentSentence(th);
+    if (!entry || entry.synced === true) return;
+    if (_saveInFlight[th]) { _saveAgain[th] = true; return; }
+    delete _saveAgain[th];
+    var remoteRow = rowFor(entry, owner.uid);
+    _saveInFlight[th] = true;
+    bounded(function () {
+      return owner.client.from(TABLE).upsert([remoteRow], { onConflict: 'user_id,vault_key,word_th' });
+    }, 'save failed', function (error) {
+      if (!ownerIsCurrent(owner)) return;
+      delete _saveInFlight[th];
+      if (error) { warn('save failed', error); return; }
+      var current = currentSentence(th);
+      if (_saveAgain[th] || (current && !sameRemoteRow(current, remoteRow, owner.uid))) {
+        delete _saveAgain[th];
+        if (current && !pendingDelete(th)) push(th, owner);
+        return;
+      }
+      if (!current || pendingDelete(th)) return;
+      var rows = load();
+      rows.forEach(function (row) { if (row.th === th) row.synced = true; });
+      save(rows); changed();
+    }, function () {
+      if (!ownerIsCurrent(owner)) return;
+      var deletedAt = _deleteIntent[th];
+      if (!deletedAt || currentSentence(th)) return;
+      var state = loadState();
+      if (!state.pendingDeletes[th]) state.pendingDeletes[th] = { deleted_at: deletedAt };
+      saveState(state);
+      flushPendingDeletes(owner);
+    });
+  }
+  function flushPendingSaves(owner) {
     owner = owner || ownerSnapshot();
     if (!ownerIsCurrent(owner)) return;
-    owner.client.from(TABLE).upsert([rowFor(entry, owner.uid)], { onConflict: 'user_id,vault_key,word_th' })
-      .then(function (res) {
-        if (!ownerIsCurrent(owner)) return;
-        if (res && res.error) { warn('save failed', res.error); return; }
-        var rows = load();
-        rows.forEach(function (row) { if (row.th === entry.th) row.synced = true; });
-        save(rows);
-      }, function (error) { if (ownerIsCurrent(owner)) warn('save failed', error); });
+    load().forEach(function (entry) {
+      if (entry && entry.th && entry.synced !== true && !pendingDelete(entry.th)) push(entry.th, owner);
+    });
+  }
+  function handleOnline() {
+    var owner = ownerSnapshot();
+    if (!ownerIsCurrent(owner)) return;
+    flushPendingDeletes(owner);
+    flushPendingSaves(owner);
   }
   function mergeRemote(remote, owner) {
     if (!ownerIsCurrent(owner)) return;
@@ -177,13 +226,15 @@
       if (!entry || !entry.th) return;
       seen[entry.th] = true;
       if (active[entry.th]) {
+        var needsUpload = entry.synced !== true;
         var remoteMeta = decode(active[entry.th].source_raw, active[entry.th].saved_at);
         mergeMeta(entry, { zh: active[entry.th].zh || '', en: active[entry.th].en || '', readingTH: remoteMeta.readingTH, source: remoteMeta.source });
         remoteMeta.provenance.forEach(function (row) {
           if (!provenance(entry).some(function (existing) { return existing.source === row.source; })) entry.provenance.push(row);
         });
-        entry.synced = true;
+        entry.synced = !needsUpload;
         merged.push(entry);
+        if (needsUpload) upload.push(entry);
       } else if (deleted[entry.th] && entry.synced === true) {
         // Explicit tombstone is the only condition that removes a synced local item.
       } else {
@@ -202,7 +253,7 @@
     });
     save(merged);
     changed();
-    upload.forEach(function (entry) { push(entry, owner); });
+    upload.forEach(function (entry) { push(entry.th, owner); });
     flushPendingDeletes(owner);
   }
   function sync(client, userId) {
@@ -216,6 +267,9 @@
     if (_sb !== nextClient || _uid !== nextUid) {
       _ownerGeneration++;
       _deleteInFlight = Object.create(null);
+      _deleteIntent = Object.create(null);
+      _saveInFlight = Object.create(null);
+      _saveAgain = Object.create(null);
     }
     _sb = nextClient;
     _uid = nextUid;
@@ -234,10 +288,11 @@
   function addSentence(th, meta) {
     if (!ready()) { requireLogin(); return false; }
     if (pendingDelete(th)) { toast('正在同步刪除，請稍後再儲存'); flushPendingDeletes(); return false; }
+    delete _deleteIntent[th];
     var rows = load(), existing = null;
     rows.some(function (row) { if (row.th === th) { existing = row; return true; } return false; });
     if (existing) {
-      if (mergeMeta(existing, meta)) { save(rows); push(existing, ownerSnapshot()); changed(); }
+      if (mergeMeta(existing, meta)) { existing.synced = false; save(rows); push(existing.th, ownerSnapshot()); changed(); }
       return false;
     }
     if (rows.length >= MAX_SENTENCES) { fullToast(); return false; }
@@ -248,10 +303,11 @@
       provenance: meta && meta.source ? [{ source: meta.source, saved_at: now }] : [],
       saved_at: now
     };
-    rows.push(entry); save(rows); push(entry, ownerSnapshot()); changed(); return true;
+    rows.push(entry); save(rows); push(entry.th, ownerSnapshot()); changed(); return true;
   }
   function removeSentence(th) {
     if (!ready()) { requireLogin(); return false; }
+    delete _saveAgain[th];
     queueDelete(th); changed(); flushPendingDeletes();
     return true;
   }
@@ -314,5 +370,5 @@
     MAX_SENTENCES: MAX_SENTENCES, createSaveBtn: createSaveBtn, sync: sync,
     retryPendingDeletes: flushPendingDeletes, pendingDeleteCount: pendingDeleteCount
   };
-  if (global.addEventListener) global.addEventListener('online', flushPendingDeletes);
+  if (global.addEventListener) global.addEventListener('online', handleOnline);
 })(window);

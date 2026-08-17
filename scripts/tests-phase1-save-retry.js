@@ -10,6 +10,8 @@ const progress = read('js/score/phase1-canonical-state.js');
 const toneServer = read('js/games/tone-server.js');
 const edge = read('supabase/functions/tone-round/index.ts');
 const readingAuth = read('js/games/reading-auth.js');
+const wordVault = read('js/games/word-vault.js');
+const sentenceVault = read('js/games/sentence-vault.js');
 const scoreSubmit = read('supabase/functions/score-submit/index.ts');
 const scoreSql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
 const scoreAtomicSql = read('supabase/sql/2026-08-16_phase1_score_submit_atomic.sql');
@@ -76,6 +78,14 @@ test('hung client score submissions time out before the same payload retries onc
   assert.match(readingAuth, /NetworkGuard\.request\(function \(\) \{[\s\S]{0,120}sb\.functions\.invoke\('score-submit', \{ body: payload \}\);[\s\S]{0,80}'score-submit', \{\}, 12000, null\)/);
   assert.match(readingAuth, /if \(!window\.NetworkGuard \|\| !NetworkGuard\.request\)[\s\S]{0,120}Promise\.reject/);
   assert.strictEqual((readingAuth.match(/submit\(1\)/g) || []).length, 2);
+});
+test('personal vault saves and deletes use bounded owner-safe online retry', () => {
+  assert.match(wordVault, /function _handleOnline\(\)[\s\S]*_flushPendingDeletes\(owner\)[\s\S]*_flushPendingSaves\(owner\)/);
+  assert.match(sentenceVault, /function handleOnline\(\)[\s\S]*flushPendingDeletes\(owner\)[\s\S]*flushPendingSaves\(owner\)/);
+  assert.match(wordVault, /_bounded\(function \(\) \{[\s\S]{0,220}upsert\(words\.map/);
+  assert.match(sentenceVault, /bounded\(function \(\) \{[\s\S]{0,180}upsert\(\[remoteRow\]/);
+  assert.match(wordVault, /if \(!_ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
+  assert.match(sentenceVault, /if \(!ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
 });
 test('Core 5 ship the current round-save client', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {

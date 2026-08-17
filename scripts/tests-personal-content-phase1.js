@@ -28,14 +28,17 @@ check('Guest cannot add word/sentence personal content', /if \(!_accountReady\(\
 check('sentence library reuses account-backed saved-items table', /var TABLE = 'learning_saved_items'/.test(sentence) && /var VAULT_KEY = 'sentence_vault'/.test(sentence));
 check('all personal-content surfaces ship current durable-delete clients',
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','vault.html']
-    .every((name) => /word-vault\.js\?v=6/.test(read(name))) &&
-  ['word-order.html','vault.html'].every((name) => /sentence-vault\.js\?v=2/.test(read(name))));
+    .every((name) => /word-vault\.js\?v=7/.test(read(name))) &&
+  ['word-order.html','vault.html'].every((name) => /sentence-vault\.js\?v=3/.test(read(name))));
 check('same content merges provenance instead of duplicating', /_mergeMetaIntoWord\(existing, meta\)/.test(word) && /mergeMeta\(existing, meta\)/.test(sentence));
 check('Save from a new surface adds provenance before delete behavior', /!_hasSource\(th, meta\.source\)/.test(word) && /!hasSource\(th, meta\.source\)/.test(sentence));
 check('delete uses tombstone and does not touch SRS/history tables', /deleted_at: new Date\(\)\.toISOString\(\)/.test(sentence) && !/tone_srs_state|learning_memory|practice_events/.test(sentence));
 check('personal deletes use bounded pending retry and online recovery',
-  /DELETE_TIMEOUT_MS = 10000/.test(word) && /pendingDeleteCount/.test(word) && /addEventListener\('online', _flushPendingDeletes\)/.test(word) &&
-  /DELETE_TIMEOUT_MS = 10000/.test(sentence) && /pendingDeleteCount/.test(sentence) && /addEventListener\('online', flushPendingDeletes\)/.test(sentence));
+  /DELETE_TIMEOUT_MS = 10000/.test(word) && /pendingDeleteCount/.test(word) && /addEventListener\('online', _handleOnline\)/.test(word) &&
+  /DELETE_TIMEOUT_MS = 10000/.test(sentence) && /pendingDeleteCount/.test(sentence) && /addEventListener\('online', handleOnline\)/.test(sentence));
+check('personal saves use bounded serialized retry and current-owner online recovery',
+  /_saveInFlight/.test(word) && /_flushPendingSaves/.test(word) && /_bounded\(function \(\) \{[\s\S]{0,220}upsert\(words\.map/.test(word) &&
+  /_saveInFlight/.test(sentence) && /flushPendingSaves/.test(sentence) && /bounded\(function \(\) \{[\s\S]{0,180}upsert\(\[remoteRow\]/.test(sentence));
 check('personal vault async completions are scoped to the active owner generation',
   /_ownerGeneration/.test(word) && /_ownerIsCurrent\(owner\)/.test(word) &&
   /_ownerGeneration/.test(sentence) && /ownerIsCurrent\(owner\)/.test(sentence));
@@ -229,6 +232,146 @@ check('account export includes every vault key, not only words', /from\('learnin
     const rows = Array.isArray(raw) ? raw : (raw.items || []);
     check('sentence delayed A read after logout cannot restore account cache', !rows.some((row) => row.th === 'ความลับหลังล็อกเอาท์'));
   }
+}
+
+// Execute the real word/sentence vault runtimes through deterministic offline,
+// online, timeout, account-switch and tombstone recovery transitions.
+{
+  function scheduler() {
+    let nextId = 1;
+    const pending = new Map();
+    return {
+      setTimeout(fn) { const id = nextId++; pending.set(id, fn); return id; },
+      clearTimeout(id) { pending.delete(id); },
+      runAll() {
+        const callbacks = Array.from(pending.values());
+        pending.clear();
+        callbacks.forEach((fn) => fn());
+      },
+      count() { return pending.size; }
+    };
+  }
+  function runtime(source, apiName) {
+    const store = {};
+    const listeners = {};
+    const clock = scheduler();
+    const win = {
+      localStorage: {
+        getItem: (key) => Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null,
+        setItem: (key, value) => { store[key] = String(value); },
+        removeItem: (key) => { delete store[key]; }
+      },
+      addEventListener(type, fn) { listeners[type] = fn; },
+      dispatchEvent() {}, CustomEvent: function () {}
+    };
+    const document = {
+      createElement: () => ({ style: {}, setAttribute() {}, addEventListener() {} }),
+      createEvent: () => ({ initEvent() {} }),
+      getElementById: () => null,
+      querySelectorAll: () => [],
+      body: { appendChild() {} }, head: { appendChild() {} }
+    };
+    const load = new Function('window', 'localStorage', 'document', 'CustomEvent', 'console', 'setTimeout', 'clearTimeout', source + '\nreturn window.' + apiName + ';');
+    return {
+      vault: load(win, win.localStorage, document, win.CustomEvent, { warn() {} }, clock.setTimeout, clock.clearTimeout),
+      clock,
+      online() { if (listeners.online) listeners.online(); }
+    };
+  }
+  function controlledClient() {
+    const state = { remote: [], failSave: false, failDelete: false, hangSave: false, hangDelete: false, deferSelect: false };
+    const log = { saves: [], deletes: [], hung: [], selects: [] };
+    const client = {
+      from() {
+        const request = { mode: '', rows: [] };
+        return {
+          select() { request.mode = 'select'; return this; },
+          delete() { request.mode = 'hard-delete'; return this; },
+          eq() { return this; },
+          upsert(rows) { request.rows = rows; request.mode = rows[0] && rows[0].deleted_at ? 'delete' : 'save'; return this; },
+          then(resolve, reject) {
+            if (request.mode === 'select') {
+              log.selects.push({ resolve, reject });
+              if (!state.deferSelect) resolve({ data: state.remote, error: null });
+              return this;
+            }
+            const isDelete = request.mode === 'delete' || request.mode === 'hard-delete';
+            (isDelete ? log.deletes : log.saves).push(request.rows);
+            if ((isDelete && state.hangDelete) || (!isDelete && state.hangSave)) {
+              log.hung.push({ mode: request.mode, resolve, reject });
+              return this;
+            }
+            resolve({ error: isDelete ? (state.failDelete ? { message: 'offline-delete' } : null) : (state.failSave ? { message: 'offline-save' } : null) });
+            return this;
+          }
+        };
+      }
+    };
+    return { client, state, log };
+  }
+
+  [
+    { name: 'word', source: word, api: 'WordVault', add: 'addWord', remove: 'removeWord', text: 'ทดสอบคำ', meta: { zh: '測試', source: 'reading-game' } },
+    { name: 'sentence', source: sentence, api: 'SentenceVault', add: 'addSentence', remove: 'removeSentence', text: 'ฉันทดสอบระบบ', meta: { zh: '我測試系統', source: 'word-order' } }
+  ].forEach((spec) => {
+    {
+      const env = runtime(spec.source, spec.api);
+      const remote = controlledClient();
+      env.vault.sync(remote.client, 'owner-1');
+      remote.state.failSave = true;
+      env.vault[spec.add](spec.text, spec.meta);
+      check(spec.name + ' offline save stays queued locally', env.vault.getAll().length === 1 && env.vault.getAll()[0].synced !== true && remote.log.saves.length === 1);
+      remote.state.failSave = false;
+      env.online();
+      check(spec.name + ' online callback retries save for the current owner', env.vault.getAll()[0].synced === true && remote.log.saves.length === 2);
+      remote.state.failDelete = true;
+      env.vault[spec.remove](spec.text);
+      check(spec.name + ' offline delete stays hidden behind a pending tombstone', !env.vault.has(spec.text) && env.vault.pendingDeleteCount() === 1);
+      remote.state.remote = [{ word_th: spec.text, zh: spec.meta.zh, source_raw: '', deleted_at: null }];
+      env.vault.sync(remote.client, 'owner-1');
+      check(spec.name + ' active remote row cannot resurrect a pending tombstone', !env.vault.has(spec.text) && env.vault.pendingDeleteCount() === 1);
+      remote.state.failDelete = false;
+      env.online();
+      check(spec.name + ' online callback retries delete and clears only after success', env.vault.pendingDeleteCount() === 0 && remote.log.deletes.length === 3);
+    }
+    {
+      const env = runtime(spec.source, spec.api);
+      const remote = controlledClient();
+      env.vault.sync(remote.client, 'owner-1');
+      remote.state.hangSave = true;
+      env.vault[spec.add](spec.text, spec.meta);
+      check(spec.name + ' hung save starts a bounded timer', env.clock.count() === 1 && env.vault.getAll()[0].synced !== true);
+      env.clock.runAll();
+      remote.state.hangSave = false;
+      env.online();
+      check(spec.name + ' timed-out save can recover on a later online event', env.vault.getAll()[0].synced === true && remote.log.saves.length === 2);
+      remote.log.hung[0].resolve({ error: null });
+      check(spec.name + ' late timed-out save response cannot corrupt recovered state', env.vault.getAll()[0].synced === true && remote.log.saves.length === 2);
+    }
+    {
+      const env = runtime(spec.source, spec.api);
+      const remote = controlledClient();
+      env.vault.sync(remote.client, 'owner-1');
+      remote.state.hangSave = true;
+      env.vault[spec.add](spec.text, spec.meta);
+      env.clock.runAll();
+      env.vault[spec.remove](spec.text);
+      check(spec.name + ' delete completes after an earlier save timeout', !env.vault.has(spec.text) && env.vault.pendingDeleteCount() === 0 && remote.log.deletes.length === 1);
+      remote.log.hung[0].resolve({ error: null });
+      check(spec.name + ' late timed-out save is followed by a repairing tombstone', !env.vault.has(spec.text) && env.vault.pendingDeleteCount() === 0 && remote.log.deletes.length === 2);
+    }
+    {
+      const env = runtime(spec.source, spec.api);
+      const ownerA = controlledClient();
+      ownerA.state.deferSelect = true;
+      env.vault.sync(ownerA.client, 'owner-a');
+      const ownerB = controlledClient();
+      ownerB.state.remote = [{ word_th: spec.text + '-บี', zh: 'B', source_raw: '', deleted_at: null }];
+      env.vault.sync(ownerB.client, 'owner-b');
+      ownerA.log.selects[0].resolve({ data: [{ word_th: spec.text + '-เอ', zh: 'A', source_raw: '', deleted_at: null }], error: null });
+      check(spec.name + ' late owner-A response is isolated from current owner B', env.vault.has(spec.text + '-บี') && !env.vault.has(spec.text + '-เอ'));
+    }
+  });
 }
 
 if (failures.length) {

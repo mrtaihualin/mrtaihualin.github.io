@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 14:10 Asia/Bangkok** — Phase 1 Played-evidence queue reliability
+**Updated: 2026-08-17 14:50 Asia/Bangkok** — Phase 1 Personal Vault retry recovery
+
+## 2026-08-17 — P1-D-06/F-01/F-02/F-03 Personal Vault Retry (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Fixed the word/sentence Vault online callback so it retries for the current verified owner instead of treating the browser event as an owner, and made offline sentence saves persist a durable retry marker.
+- Save and delete writes are bounded, serialized and owner-generation scoped. Late timed-out saves cannot clear newer recovery state or resurrect a tombstoned item; a following delete repairs the remote row when necessary.
+- Advanced `word-vault.js` v6→v7 on its six existing surfaces and `sentence-vault.js` v2→v3 on Word Order/Vault only. No game formula, content, SQL, Edge, account/player data or Production state changed.
+- Deterministic Personal Content 60/60, save/retry 11/11, word-vault sync 68/68, owner-switch 12/12, account-boundary 25/25, auth 13/13, Personal Search 8/8, Learning Center 26/26 and the full 949-file gate PASS.
 
 ## 2026-08-17 — P1-F-02/F-03 Played Queue Race (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
