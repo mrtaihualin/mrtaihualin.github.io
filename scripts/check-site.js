@@ -135,6 +135,7 @@ runTest(['scripts/tests-personal-search-phase1.js'], 'Phase 1 Personal Search te
 runTest(['scripts/tests-phase1-network-recovery.js'], 'Phase 1 offline/network/timeout recovery tests');
 runTest(['scripts/tests-phase1-error-ux.js'], 'Phase 1 audio/loading/auth error UX tests');
 runTest(['scripts/tests-auth-session-phase1.js'], 'Phase 1 auth session verification tests');
+runTest(['scripts/tests-account-lifecycle-phase1.js'], 'Phase 1 account lifecycle recovery tests');
 runTest(['scripts/tests-email-otp-auth-security.js'], 'Email OTP auth-security regression tests');
 runTest(['scripts/tests-phase1-save-retry.js'], 'Phase 1 API/Edge/save/retry safety tests');
 runTest(['scripts/tests-phase1-canonical-state.js'], 'Phase 1 canonical persistence tests');

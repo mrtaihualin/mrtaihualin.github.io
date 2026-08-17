@@ -218,18 +218,37 @@
     } catch (e) {}
   }
 
+  function showAuthActionFailure(message) {
+    try {
+      var old = document.getElementById('sa-auth-action-fail-toast');
+      if (old) old.remove();
+      var d = document.createElement('div');
+      d.id = 'sa-auth-action-fail-toast';
+      d.setAttribute('role', 'alert');
+      d.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:100003;' +
+        'max-width:88vw;background:#78350f;color:#fff;border-radius:12px;padding:10px 16px;' +
+        'font-size:13px;font-family:"Noto Sans TC",sans-serif;line-height:1.6;text-align:center;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,0.28);';
+      d.textContent = message || '⚠️ 登出失敗，請檢查網路後再試一次';
+      document.body.appendChild(d);
+      setTimeout(function () { if (d.parentNode) d.remove(); }, 6000);
+    } catch (e) {}
+  }
+
   function doLogout() {
     // ออกจาก session ของอุปกรณ์นี้เท่านั้น; ปุ่ม "ออกทุกอุปกรณ์" ใช้ global scope แยกด้านล่าง
     // เคลียร์ cache หลัง server/client ยืนยัน sign-out สำเร็จเท่านั้น เพื่อไม่ทำข้อมูล UI หายเมื่อ network ล้มเหลว
     return sb.auth.signOut({ scope: 'local' }).then(function (res) {
       if (res && res.error) {
         console.warn('[auth] signOut failed:', res.error.message || res.error);
+        showAuthActionFailure('⚠️ 登出失敗，登入狀態與本機資料仍保留，請檢查網路後再試一次');
         return res;
       }
       clearAuthUiCaches();
       return res;
     }, function (error) {
       console.warn('[auth] signOut failed:', (error && error.message) || error);
+      showAuthActionFailure('⚠️ 登出失敗，登入狀態與本機資料仍保留，請檢查網路後再試一次');
       return { error: error };
     });
   }
@@ -595,12 +614,14 @@
     return sb.auth.signOut({ scope: 'global' }).then(function (res) {
       if (res && res.error) {
         console.warn('[auth] global signOut failed:', res.error.message || res.error);
+        showAuthActionFailure('⚠️ 無法登出所有裝置，登入狀態仍保留，請檢查網路後再試一次');
         return res;
       }
       clearAuthUiCaches();
       return res;
     }, function (error) {
       console.warn('[auth] global signOut failed:', (error && error.message) || error);
+      showAuthActionFailure('⚠️ 無法登出所有裝置，登入狀態仍保留，請檢查網路後再試一次');
       return { error: error };
     });
   }
@@ -832,6 +853,7 @@
         '<button id="sam-export" style="width:100%;border:1.5px solid #C8973A;background:#fff;color:#8B6310;border-radius:10px;padding:10px;font-size:13.5px;font-weight:700;cursor:pointer;margin-bottom:8px;">📦 匯出我的資料</button>' +
         '<div id="sam-export-msg" style="display:none;font-size:12px;color:#b45309;margin-bottom:6px;line-height:1.5;"></div>' +
         '<button id="sam-logout-all" style="width:100%;border:1.5px solid #E5D9B8;background:#fff;color:#8B7340;border-radius:10px;padding:10px;font-size:13.5px;font-weight:700;cursor:pointer;">📴 登出所有裝置</button>' +
+        '<div id="sam-logout-all-msg" role="status" style="display:none;font-size:12px;color:#b45309;margin-top:6px;line-height:1.5;"></div>' +
 
         '<div style="height:1px;background:#F0E6CC;margin:14px 0;"></div>' +
 
@@ -871,8 +893,22 @@
     var exportMsg = manageModal.querySelector('#sam-export-msg');
     exportBtn.onclick = function () { doExportMyData(exportBtn, exportMsg); };
 
-    manageModal.querySelector('#sam-logout-all').onclick = function () {
-      doLogoutAllDevices().then(closeM);
+    var logoutAllBtn = manageModal.querySelector('#sam-logout-all');
+    var logoutAllMsg = manageModal.querySelector('#sam-logout-all-msg');
+    logoutAllBtn.onclick = function () {
+      logoutAllBtn.disabled = true;
+      logoutAllBtn.textContent = '登出中…';
+      logoutAllMsg.style.display = 'none';
+      doLogoutAllDevices().then(function (res) {
+        if (res && res.error) {
+          logoutAllBtn.disabled = false;
+          logoutAllBtn.textContent = '📴 登出所有裝置';
+          logoutAllMsg.style.display = 'block';
+          logoutAllMsg.textContent = '⚠️ 登出失敗，帳號仍保持登入，請檢查網路後再試一次。';
+          return;
+        }
+        closeM();
+      });
     };
 
     // 🆕 2026-08-08 (รอบ 2): เช็คสถานะคำขอลบทันทีตอนเปิด modal (ดูเหตุผลที่ renderDangerZone ด้านบน)
