@@ -112,14 +112,17 @@ runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');
 runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
 runTest(['scripts/tests-s13-protected-architecture.js'], 'S13 protected content/audio architecture tests');
+runTest(['scripts/tests-phase1-private-audio-3-recovery.js'], 'PRIVATE_AUDIO_3 scoped recovery tests');
 runTest(['scripts/tests-s29-score-security.mjs'], 'S29 score-security tests');
 runTest(['scripts/tests-phase1-nickname-safety.js'], 'Phase 1 nickname safety/security tests');
+runTest(['scripts/tests-phase1-nickname-recovery.js'], 'Phase 1 nickname recovery source/SQL tests');
 // เพิ่ม 2026-08-13 — Guest activity ห้ามกลายเป็น account Progress/SRS/Mastered หลัง Login
 runTest(['scripts/tests-phase1-account-boundary.js'], 'Phase 1 Guest/Login account-boundary tests');
 runTest(['scripts/tests-my-learning-phase1.js'], 'Phase 1 我的學習 tests');
 runTest(['scripts/tests-personal-content-phase1.js'], 'Phase 1 我的內容 tests');
 runTest(['scripts/tests-practice-events-phase1.mjs'], 'Phase 1 Played-evidence tests');
 runTest(['scripts/tests-phase1-free-gamification.mjs'], 'Phase 1 Free Daily Streak/gamification tests');
+runTest(['scripts/tests-phase1-played-gamification-recovery.mjs'], 'Phase 1 Played/Gamification recovery artifact tests');
 runTest(['scripts/tests-phase1-srs.js'], 'Phase 1 SRS tests');
 runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');
