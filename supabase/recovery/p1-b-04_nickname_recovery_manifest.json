@@ -1,0 +1,42 @@
+{
+  "artifact": "P1-B-04_NICKNAME_RECOVERY",
+  "source_baseline": "cf1d662405a25bd24b58606a83f0d842a9b00ef3",
+  "pre_nickname_ref": "575104d925273d30ef39b7068119f888a7444c09",
+  "risk": "HIGH_ONLY_AT_PRODUCTION_SQL_EDGE_CLIENT_MUTATION",
+  "preparation_risk": "LOW_SOURCE_ONLY",
+  "production_action": "NONE",
+  "ordered_recovery": [
+    "STOP_ROLLOUT_AND_PRESERVE_EVIDENCE",
+    "PREPARE_AND_VERIFY_PRIOR_CLIENT_EDGE_SOURCE",
+    "DEPLOY_EXACT_APPROVED_PRIOR_CLIENT_ADMIN_UI",
+    "DEPLOY_EXACT_APPROVED_PRIOR_ADMIN_EDGE",
+    "RUN_EXACT_APPROVED_RECOVERY_SQL",
+    "VERIFY_RPC_SIGNATURES_GRANTS_RLS_ROW_COUNTS_AND_FIVE_BOARDS"
+  ],
+  "source_preparer": "scripts/prepare-phase1-nickname-recovery.js",
+  "recovery_sql": "supabase/sql/2026-08-17_phase1_nickname_recovery.sql",
+  "postgres_fixture": "supabase/tests/2026-08-17_phase1_nickname_recovery_TEST.sql",
+  "generated_source_sha256": {
+    "admin-player-accounts.html": "d4ec71aeb5429ebbc480155ff6f94826a51084d8c1046be9e70b9805049549eb",
+    "js/score/leaderboard.js": "f5f67229838309a5b5667a68682b597d6f79143d8d98e81e5dc063c20d5b93c9",
+    "js/score/reading-leaderboard.js": "437b0cabc9f27bd6f9a36793e34ec17c97aa92d66e96a58272af5f3d63c6becc",
+    "supabase/functions/admin-player-accounts/index.ts": "6e3f2518bac0ee9b989f53bf271707369806f35afd6ce898438b08d623b1be14",
+    "js/core/auth-widget.js": "b304799ded3664921f75f617bde7081bdb45c2accb117fa3560d8429682154b0",
+    "leaderboard.html": "dc324fe900dd9922ad1a2c9cb41c1c69ba17bc3f3a3de3110a2e7bc6d071eef8",
+    "listening-board.html": "12210a76344c03ce2912d8d4bb2917ece01aa741d55ee483984a7acc4b46a9f1",
+    "reading-board.html": "bfb22ee08b6f868bcaec615af4ca8841c4140438b6798399bcbdcf7557c7b1c5",
+    "typing-board.html": "29ad54679b7c9b3948f83000162e98c158951d148499ebc1c54725f9c05f065a",
+    "word-order-board.html": "e66d22a66eebc3361516fcccd904f7075650dcc0f8d353131eb90669eb1156fd"
+  },
+  "preserve_objects": [
+    "public.leaderboard_public_identities",
+    "public.leaderboard_nickname_reports"
+  ],
+  "forbidden_actions": [
+    "DROP_ADDITIVE_TABLES",
+    "DELETE_ADDITIVE_ROWS",
+    "AUTH_ACCOUNT_MUTATION",
+    "SCORE_OR_PROGRESS_MUTATION",
+    "UNAPPROVED_PRODUCTION_ACTION"
+  ]
+}

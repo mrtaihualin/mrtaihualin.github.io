@@ -1,6 +1,18 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 15:45 Asia/Bangkok** — Phase 1 account audit integrity
+**Updated: 2026-08-17 18:37 Asia/Bangkok** — Phase 1 PRIVATE_AUDIO_3 recovery artifact
+
+## 2026-08-17 — PRIVATE_AUDIO_3 scoped recovery artifact (`PASS_LOCAL / PRODUCTION_NOT_RUN`)
+
+- Added a recovery-only SQL source for exactly six affected `public.audio_assets` rows: restore the three authoritative legacy sentence rows and remove only the three exact-text replacement metadata rows.
+- Added a dry-run-first helper that can delete only the three canonical replacement objects through the Supabase Storage API, then verifies all three exact paths are absent through the read-only Storage list API; it never writes `storage.objects`, bucket configuration, RLS or policies.
+- Deterministic recovery regression and the full repository gate pass locally. No upload, object deletion, SQL apply, metadata mutation, deploy, Product/Checklist/Central update or Human audio approval was performed.
+
+## 2026-08-17 — P1-D-05/D-07/D-08 Played + Gamification Recovery (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Added one source-adjacent recovery artifact that locks the exact pre-D08 Played/client/tone-round Git blobs and reverses the combined rollout by dependency: client only when defective, previous Played Edge, previous tone Edge, then the prior tone SQL contract. The current client remains compatible with the previous Played response, so backend-only recovery can preserve item-level Played without a Pages rollback.
+- Recovery intentionally leaves the additive streak tables/RPCs unused instead of dropping or rewriting them. The executable psql recovery reasserts RLS, removes `PUBLIC`/`anon`/`authenticated` access, retains service-role-only access, and contains no delete/truncate/drop or player-row cleanup.
+- Deterministic recovery source checks pass 31/31 in a full-history clone and in GitHub Actions' depth-1 merge checkout: full history verifies the immutable historical blobs and semantics directly, while a shallow checkout verifies the same pinned manifest, safe paths, and exact forward SQL blobs available in the working tree. Existing Played 38/38, Gamification 20/20, backend transaction 9/9 and mixed-version 12/12 gates remain PASS. PostgreSQL fixtures pass both the forward D08 sequential/concurrency contract and the combined recovery: exact Played and Gamification migrations apply, previous Played still records without streak mutation, the prior tone transaction is restored, and all RLS/privilege invariants hold. `node scripts/check-site.js` passes all 979 tracked project files. The artifact itself performs no SQL, Edge/client deploy, account/data write, cleanup, or other Production mutation.
 
 ## 2026-08-17 — P1-D-09 Account Audit Integrity (`PASS_LOCAL / SQL_EDGE_CLIENT_ROLLOUT_BLOCKED`)
 
@@ -60,6 +72,12 @@
 - Rebuilt `shared.min.js` with Terser and advanced only the five Core 5 loaders for the affected `shared.css`, `shared.min.js`, `word-menu` and `game-switcher` cache keys. `game-switcher.js` selects the five-item set only for Core 5 current IDs; Lego/Vault keep their original seven-item legacy switcher and unchanged loaders.
 - Shared 17/17, Typing 10/10, Word Order 11/11, Reading 9/9, Listening 38/38, Round Report 12/12 and `node scripts/check-site.js` PASS for 941 local project files. Browser smoke at desktop, 390×844 and 844×390 confirmed no horizontal overflow on all five pages, five Core 5 tabs, responsive selectors, inline toolbars and menu Escape recovery; Lego legacy switcher remained intact.
 - No deploy or Production mutation occurred. Final authenticated/Guest gameplay and device-specific responsive review remain Human gates.
+
+## 2026-08-17 — P1-B-04 Nickname Recovery Artifact (`PASS_LOCAL / HIGH_GATE_UNCHANGED`)
+
+- Added a source-only recovery transaction that restores the pre-nickname S29 board RPC contract, revokes browser access to nickname set/get/report, and leaves both additive moderation tables and rows intact behind RLS with no browser table grants.
+- Added deterministic client/Edge recovery preparation pinned to pre-nickname Git ref `575104d925273d30ef39b7068119f888a7444c09`, exact source/SQL assertions, and a rollback-only PostgreSQL fixture. The preparer performs no deploy, SQL, Git, account, or Production action.
+- Production execution remains HIGH risk and requires exact Lin approval for the target and artifact; this local recovery source does not change P1-B-04 Product behavior or Production status.
 
 ## 2026-08-17 — P1-B-04 Public Leaderboard Nickname Safety (`PASS_LOCAL / DEPLOY_AND_HUMAN_PV_BLOCKED`)
 
