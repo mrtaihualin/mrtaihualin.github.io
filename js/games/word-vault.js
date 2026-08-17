@@ -71,6 +71,9 @@
   // → ถ้าไม่เผื่อไว้ sync จะพังทั้งระบบระหว่างช่วงรอยต่อนั้น (แย่กว่าเดิม)
   var _tombstoneOk = null;
   var _deleteInFlight = Object.create(null);
+  var _deleteIntent = Object.create(null);
+  var _saveInFlight = Object.create(null);
+  var _saveAgain = Object.create(null);
   var DELETE_TIMEOUT_MS = 10000;
   var COLS_WITH_TOMBSTONE = 'word_th,zh,en,source_raw,tags,saved_at,deleted_at';
   var COLS_LEGACY        = 'word_th,zh,en,source_raw,tags,saved_at';
@@ -126,7 +129,7 @@
     return !!(owner && owner.client === _sb && owner.uid === _uid && owner.generation === _ownerGeneration);
   }
 
-  function _bounded(operation, label, onDone) {
+  function _bounded(operation, label, onDone, onLate) {
     var settled = false;
     var timer = setTimeout(function () {
       if (settled) return;
@@ -137,7 +140,7 @@
       onDone(error, null);
     }, DELETE_TIMEOUT_MS);
     function finish(error, result) {
-      if (settled) return;
+      if (settled) { if (onLate) onLate(error, result); return; }
       settled = true;
       clearTimeout(timer);
       onDone(error, result);
@@ -153,6 +156,7 @@
   function _queueDelete(th) {
     var state = _loadState();
     if (!state.pendingDeletes[th]) state.pendingDeletes[th] = { deleted_at: new Date().toISOString() };
+    _deleteIntent[th] = state.pendingDeletes[th].deleted_at;
     state.items = state.items.filter(function (word) { return word.th !== th; });
     _saveState(state);
     return state.pendingDeletes[th];
@@ -250,23 +254,99 @@
     };
   }
 
-  /** เขียนคำขึ้นเซิร์ฟเวอร์ (upsert — กดซ้ำ/แข่งกันเขียนก็ไม่พัง) */
-  function _pushRows(rows, onDone, owner) {
+  function _currentWord(th) {
+    var found = null;
+    load().some(function (word) { if (word && word.th === th) { found = word; return true; } return false; });
+    return found;
+  }
+
+  function _sameRemoteRow(word, remoteRow, ownerUid) {
+    if (!word || !remoteRow) return false;
+    return JSON.stringify(_rowFor(word, ownerUid)) === JSON.stringify(remoteRow);
+  }
+
+  function _hasLocalDelta(word, remoteRow) {
+    if (!word || !remoteRow) return true;
+    var remoteMeta = _decodeSourceRaw(remoteRow.source_raw, remoteRow.saved_at);
+    if (word.zh && word.zh !== (remoteRow.zh || '')) return true;
+    if (word.en && word.en !== (remoteRow.en || '')) return true;
+    if (word.readingTH && word.readingTH !== (remoteMeta.readingTH || '')) return true;
+    var remoteSources = {};
+    _provenanceFor({ source: remoteMeta.source, provenance: remoteMeta.provenance }).forEach(function (row) { remoteSources[row.source] = true; });
+    if (_provenanceFor(word).some(function (row) { return !remoteSources[row.source]; })) return true;
+    var remoteTags = remoteRow.tags || [];
+    return (word.tags || []).some(function (tag) { return remoteTags.indexOf(tag) === -1; });
+  }
+
+  /** เขียนคำขึ้นเซิร์ฟเวอร์แบบ bounded และ serialize ต่อคำ */
+  function _pushWords(thList, owner) {
     owner = owner || _ownerSnapshot();
-    if (!_ownerIsCurrent(owner) || !rows.length) { if (onDone && _ownerIsCurrent(owner)) onDone(); return; }
-    try {
-      owner.client.from(TABLE).upsert(rows, { onConflict: 'user_id,vault_key,word_th' }).then(function (r) {
-        if (!_ownerIsCurrent(owner)) return;
-        if (r && r.error) _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', r.error);
-        if (onDone) onDone(r && r.error);
-      }, function (e) {
-        if (!_ownerIsCurrent(owner)) return;
-        _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e);
-      });
-    } catch (e) {
+    if (!_ownerIsCurrent(owner)) return;
+    var rowsByWord = {};
+    (thList || []).forEach(function (th) {
+      if (!th || rowsByWord[th] || _pendingDelete(th)) return;
+      var word = _currentWord(th);
+      if (!word || word.synced === true) return;
+      if (_saveInFlight[th]) { _saveAgain[th] = true; return; }
+      delete _saveAgain[th];
+      rowsByWord[th] = _rowFor(word, owner.uid);
+      _saveInFlight[th] = true;
+    });
+    var words = Object.keys(rowsByWord);
+    if (!words.length) return;
+    _bounded(function () {
+      return owner.client.from(TABLE).upsert(words.map(function (th) { return rowsByWord[th]; }), { onConflict: 'user_id,vault_key,word_th' });
+    }, 'อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', function (error) {
       if (!_ownerIsCurrent(owner)) return;
-      _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', e); if (onDone) onDone(e);
-    }
+      words.forEach(function (th) { delete _saveInFlight[th]; });
+      if (error) { _warn('อัปโหลดคำขึ้นเซิร์ฟเวอร์ไม่สำเร็จ', error); return; }
+      var list = load();
+      var retry = [];
+      words.forEach(function (th) {
+        var current = null;
+        list.some(function (row) { if (row.th === th) { current = row; return true; } return false; });
+        if (_saveAgain[th] || (current && !_sameRemoteRow(current, rowsByWord[th], owner.uid))) {
+          delete _saveAgain[th];
+          if (current && !_pendingDelete(th)) retry.push(th);
+          return;
+        }
+        if (current && !_pendingDelete(th)) current.synced = true;
+      });
+      save(list);
+      _fireChanged();
+      if (retry.length) _pushWords(retry, owner);
+    }, function () {
+      if (!_ownerIsCurrent(owner)) return;
+      words.forEach(function (th) {
+        var deletedAt = _deleteIntent[th];
+        if (!deletedAt || _currentWord(th)) return;
+        var state = _loadState();
+        if (!state.pendingDeletes[th]) state.pendingDeletes[th] = { deleted_at: deletedAt };
+        _saveState(state);
+        _deleteRemote(th, owner);
+      });
+    });
+  }
+
+  function _pushWord(th, owner) { _pushWords([th], owner); }
+
+  function _flushPendingSaves(owner) {
+    owner = owner || _ownerSnapshot();
+    if (!_ownerIsCurrent(owner)) return;
+    _pushWords(load().filter(function (word) {
+      return word && word.th && word.synced !== true && !_pendingDelete(word.th);
+    }).map(function (word) { return word.th; }), owner);
+  }
+
+  function _handleOnline() {
+    var owner = _ownerSnapshot();
+    if (!_ownerIsCurrent(owner)) return;
+    _flushPendingDeletes(owner);
+    _flushPendingSaves(owner);
+  }
+
+  function _cancelQueuedSave(th) {
+    delete _saveAgain[th];
   }
 
   /** error นี้แปลว่า "ฐานข้อมูลยังไม่มีคอลัมน์ deleted_at" ใช่ไหม
@@ -295,9 +375,9 @@
    *  เหตุผล: ถ้าลบแถวทิ้ง เครื่องอื่นจะเห็นแค่ "ไม่มีแถว" ซึ่งแยกไม่ออกจาก "อ่านมาไม่ครบ"
    *  → ต้องเก็บของไว้เพื่อความปลอดภัย = คำที่ลบแล้วไม่หายจากเครื่องอื่น (ปัญหาที่รอบนี้แก้)
    *  เรียกเฉพาะตอนผู้ใช้กดลบเองเท่านั้น ระบบไม่เคยลบเอง (ห้ามลบอัตโนมัติเพราะเกินเพดาน) */
-  function _deleteRemote(th) {
-    if (!_sb || !_uid || _deleteInFlight[th]) return;
-    var owner = _ownerSnapshot();
+  function _deleteRemote(th, owner) {
+    owner = owner || _ownerSnapshot();
+    if (!_ownerIsCurrent(owner) || _deleteInFlight[th]) return;
     var pending = _pendingDelete(th);
     if (!pending) return;
     _deleteInFlight[th] = true;
@@ -324,17 +404,7 @@
   function _flushPendingDeletes(owner) {
     owner = owner || _ownerSnapshot();
     if (!_ownerIsCurrent(owner)) return;
-    Object.keys(_loadState().pendingDeletes).forEach(_deleteRemote);
-  }
-
-  /** ปั๊มว่าคำเหล่านี้ขึ้นเซิร์ฟเวอร์แล้ว (อ่าน localStorage ใหม่ตอนเขียน กันทับของที่เพิ่งเปลี่ยนระหว่างรอ network) */
-  function _markSynced(thList, owner) {
-    if (!thList.length || !_ownerIsCurrent(owner)) return;
-    var mark = {};
-    thList.forEach(function (t) { mark[t] = true; });
-    var list = load();
-    list.forEach(function (w) { if (mark[w.th]) w.synced = true; });
-    save(list);
+    Object.keys(_loadState().pendingDeletes).forEach(function (th) { _deleteRemote(th, owner); });
   }
 
   /**
@@ -357,6 +427,9 @@
     if (_sb !== nextClient || _uid !== nextUid) {
       _ownerGeneration++;
       _deleteInFlight = Object.create(null);
+      _deleteIntent = Object.create(null);
+      _saveInFlight = Object.create(null);
+      _saveAgain = Object.create(null);
     }
     _sb = nextClient;
     _uid = nextUid;
@@ -423,6 +496,7 @@
       if (!w || !w.th) return;
       // ก. มีทั้ง 2 ฝั่ง และยังใช้งานอยู่ → เก็บไว้
       if (activeRemote[w.th]) {
+        var needsUpload = w.synced !== true && _hasLocalDelta(w, activeRemote[w.th]);
         var remoteMeta = _decodeSourceRaw(activeRemote[w.th].source_raw, activeRemote[w.th].saved_at);
         _mergeMetaIntoWord(w, {
           zh: activeRemote[w.th].zh || '', en: activeRemote[w.th].en || '',
@@ -434,7 +508,9 @@
           if (!provenance.some(function (existing) { return existing.source === row.source; })) provenance.push(row);
           w.provenance = provenance;
         });
-        w.synced = true; merged.push(w); return;
+        w.synced = !needsUpload; merged.push(w);
+        if (needsUpload) toPush.push(w);
+        return;
       }
 
       if (deletedRemote[w.th]) {
@@ -473,12 +549,7 @@
     _notifyBadges();
     _fireChanged();
 
-    if (toPush.length) {
-      var pushed = toPush.map(function (w) { return w.th; });
-      _pushRows(toPush.map(function (w) { return _rowFor(w, owner.uid); }), function (err) {
-        if (!err) _markSynced(pushed, owner);
-      }, owner);
-    }
+    _pushWords(toPush.map(function (word) { return word.th; }), owner);
     _flushPendingDeletes(owner);
   }
 
@@ -492,6 +563,7 @@
   function addWord(th, meta) {
     if (!_accountReady()) { _requireLogin(); return false; }
     if (_pendingDelete(th)) { _showToast('正在同步刪除，請稍後再儲存'); _flushPendingDeletes(); return false; }
+    delete _deleteIntent[th];
     var list = load();
     var existing = null;
     list.some(function(w){ if (w.th === th) { existing = w; return true; } return false; });
@@ -499,11 +571,9 @@
       // Same content remains one item. A newly observed Save source is appended
       // to provenance and synced onto the existing row instead of duplicating it.
       if (_mergeMetaIntoWord(existing, meta)) {
+        existing.synced = false;
         save(list);
-        if (_sb && _uid) {
-          var existingOwner = _ownerSnapshot();
-          _pushRows([_rowFor(existing, existingOwner.uid)], null, existingOwner);
-        }
+        if (_sb && _uid) _pushWord(existing.th, _ownerSnapshot());
         _fireChanged();
       }
       return false;
@@ -523,18 +593,14 @@
     save(list);
     // ล็อกอินอยู่ → ส่งขึ้นเซิร์ฟเวอร์ทันที (ไม่รอผล ไม่บล็อก UI) · ส่งไม่สำเร็จก็ยังอยู่ในเครื่อง
     // และจะถูกส่งขึ้นให้เองในการ sync รอบหน้า เพราะยังไม่มีธง synced (ตามกฎกรณี ข.)
-    if (_sb && _uid) {
-      var entryOwner = _ownerSnapshot();
-      _pushRows([_rowFor(entry, entryOwner.uid)], function (err) {
-        if (!err) _markSynced([th], entryOwner);
-      }, entryOwner);
-    }
+    if (_sb && _uid) _pushWord(th, _ownerSnapshot());
     return true;
   }
 
   /** ลบคำออกจากคลัง — เป็นการลบที่ "ผู้ใช้สั่งเอง" เท่านั้น (ระบบไม่เคยลบเองอัตโนมัติ) */
   function removeWord(th) {
     if (!_accountReady()) { _requireLogin(); return false; }
+    _cancelQueuedSave(th);
     _queueDelete(th);
     _fireChanged();
     _flushPendingDeletes();
@@ -578,8 +644,9 @@
     save(list);
     // ป้ายกำกับต้องตามไปทุกเครื่องด้วย (upsert ทับแถวเดิม ไม่สร้างซ้ำ)
     if (changed && _sb && _uid) {
-      var tagOwner = _ownerSnapshot();
-      _pushRows([_rowFor(changed, tagOwner.uid)], null, tagOwner);
+      changed.synced = false;
+      save(list);
+      _pushWord(changed.th, _ownerSnapshot());
     }
     return !!changed;
   }
@@ -736,6 +803,6 @@
     pendingDeleteCount: _pendingDeleteCount
   };
 
-  if (global.addEventListener) global.addEventListener('online', _flushPendingDeletes);
+  if (global.addEventListener) global.addEventListener('online', _handleOnline);
 
 })(window);
