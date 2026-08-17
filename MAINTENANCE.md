@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 13:52 Asia/Bangkok** — Phase 1 authenticated Played evidence source
+**Updated: 2026-08-17 14:10 Asia/Bangkok** — Phase 1 Played-evidence queue reliability
+
+## 2026-08-17 — P1-F-02/F-03 Played Queue Race (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Fixed an account-owned retry race where a report queued during an active Played-evidence request could be erased by the older request's stale queue snapshot without ever reaching Edge.
+- Each acknowledgement now removes only its own round from the latest persisted owner queue. Reports and owner changes arriving in flight schedule a following drain, while late old-owner responses remain unable to mutate the new owner's state.
+- Missing `NetworkGuard` now fails closed and preserves the pending report instead of starting an unbounded direct invocation. Core 5 and Vault loaders advance only `practice-events.js` from v1 to v2.
+- Added deterministic runtime regressions for same-owner concurrency, owner switch, late response isolation, transient retry, lock release, missing guard and stale status results. Practice Events 38/38, owner-switch 12/12, save/retry 10/10, account boundary 25/25, auth 13/13, Personal Content 37/37, Round Report 12/12, shared games 17/17 and `node scripts/check-site.js` 949-file gate PASS. No SQL, Edge, account/player data or Production mutation occurred.
 
 ## 2026-08-17 — P1-D-05 Authenticated Played Evidence (`PASS_LOCAL / DEPLOY_AND_AUTH_E2E_BLOCKED`)
 

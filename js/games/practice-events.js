@@ -40,11 +40,9 @@
   function invoke(payload) {
     var sb = client();
     if (!sb || !sb.functions || !sb.functions.invoke) return Promise.reject(new Error('practice_events_client_unavailable'));
+    if (!window.NetworkGuard || !NetworkGuard.request) return Promise.reject(new Error('practice_events_network_guard_unavailable'));
     var request = function () { return sb.functions.invoke('practice-events', { body: payload }); };
-    if (window.NetworkGuard && NetworkGuard.request) {
-      return NetworkGuard.request(request, 'practice-events', {}, 12000, null);
-    }
-    return Promise.resolve(request());
+    return NetworkGuard.request(request, 'practice-events', {}, 12000, null);
   }
   function minimizedReport(report) {
     if (!report || report.schema_version !== 'round-report-v1' || !report.round_id || !report.ended_at || !Array.isArray(report.items) || !report.items.length) return null;
@@ -72,10 +70,20 @@
     var code = String(result && result.data && result.data.error || result && result.error && result.error.message || '');
     return /^(?:invalid_|duplicate_|unknown_content_ref|replay_conflict)/.test(code);
   }
+  function removeQueuedRound(owner, roundId) {
+    if (!ownerIsCurrent(owner)) return;
+    var latest = readQueue(owner);
+    if (!latest.entries[roundId]) return;
+    delete latest.entries[roundId];
+    writeQueue(owner, latest);
+  }
   function flush() {
     var owner = ownerSnapshot();
     if (!owner) return Promise.resolve(false);
-    if (activeFlush) return activeFlush;
+    // A report or owner change may arrive while a previous owner/round is in
+    // flight. Chain another drain after the active one instead of returning
+    // the old promise; otherwise the newly queued evidence can wait forever.
+    if (activeFlush) return activeFlush.then(function () { return flush(); }, function () { return flush(); });
     var queue = readQueue(owner);
     var ids = Object.keys(queue.entries);
     activeFlush = ids.reduce(function (chain, roundId) {
@@ -84,11 +92,11 @@
         return invoke(queue.entries[roundId]).then(function (result) {
           if (!ownerIsCurrent(owner)) return;
           if (result && !result.error && result.data && result.data.ok) {
-            delete queue.entries[roundId];
-            writeQueue(owner, queue);
+            // Merge the acknowledgement into the latest persisted queue. A
+            // stale snapshot must never erase reports queued during this call.
+            removeQueuedRound(owner, roundId);
           } else if (permanentError(result)) {
-            delete queue.entries[roundId];
-            writeQueue(owner, queue);
+            removeQueuedRound(owner, roundId);
             if (window.console && console.warn) console.warn('[practice-events] rejected:', result && (result.data || result.error));
           }
         }, function () {});
