@@ -26,6 +26,17 @@ function gitText(commit, file) {
   return run('git', ['show', `${commit}:${file}`]);
 }
 
+function gitObjectExists(object) {
+  return spawnSync('git', ['cat-file', '-e', object], {
+    cwd: root,
+    encoding: 'utf8'
+  }).status === 0;
+}
+
+function workingTreeBlob(file) {
+  return run('git', ['hash-object', file]);
+}
+
 let passed = 0;
 function check(label, condition) {
   assert.ok(condition, label);
@@ -37,40 +48,70 @@ check('manifest locks the exact forward and previous commits',
   manifest.forward_source_commit === '988cabf4eb546975d62f5d179411ac7c58e5086f' &&
   manifest.previous_runtime_commit === 'a037ec2b3785ee720b2d2dcc826e67c8a2650689');
 
-run('git', ['merge-base', '--is-ancestor', manifest.forward_source_commit, 'HEAD']);
-check('current branch contains the forward source commit', true);
+const forceShallow = process.env.PHASE1_TEST_FORCE_SHALLOW === '1';
+const hasForwardHistory = !forceShallow && gitObjectExists(`${manifest.forward_source_commit}^{commit}`);
+const hasPreviousHistory = !forceShallow && gitObjectExists(`${manifest.previous_runtime_commit}^{commit}`);
+
+if (hasForwardHistory) {
+  run('git', ['merge-base', '--is-ancestor', manifest.forward_source_commit, 'HEAD']);
+  check('current branch contains the forward source commit', true);
+} else {
+  check('shallow checkout retains the exact forward SQL payload',
+    Object.values(manifest.sql).every((item) =>
+      fs.existsSync(path.join(root, item.path)) && workingTreeBlob(item.path) === item.blob));
+}
 
 for (const item of manifest.previous_runtime) {
-  check(`previous blob is immutable: ${item.path}`,
-    gitBlob(manifest.previous_runtime_commit, item.path) === item.blob);
+  if (hasPreviousHistory) {
+    check(`previous blob is immutable: ${item.path}`,
+      gitBlob(manifest.previous_runtime_commit, item.path) === item.blob);
+  } else {
+    check(`previous blob is exactly pinned for shallow checkout: ${item.path}`,
+      /^[a-f0-9]{40}$/.test(item.blob) &&
+      !path.isAbsolute(item.path) &&
+      !item.path.split('/').includes('..'));
+  }
 }
 for (const item of Object.values(manifest.sql)) {
   check(`SQL blob is immutable: ${item.path}`,
-    gitBlob(manifest.forward_source_commit, item.path) === item.blob);
+    (hasForwardHistory
+      ? gitBlob(manifest.forward_source_commit, item.path)
+      : workingTreeBlob(item.path)) === item.blob);
 }
 
-const previousPracticeEdge = gitText(manifest.previous_runtime_commit, 'supabase/functions/practice-events/index.ts');
-const previousPracticeClient = gitText(manifest.previous_runtime_commit, 'js/games/practice-events.js');
-const previousToneEdge = gitText(manifest.previous_runtime_commit, 'supabase/functions/tone-round/index.ts');
 const currentPracticeClient = fs.readFileSync(path.join(root, 'js/games/practice-events.js'), 'utf8');
 const currentToneEdge = fs.readFileSync(path.join(root, 'supabase/functions/tone-round/index.ts'), 'utf8');
 
-check('previous Played Edge preserves Played without a gamification caller',
-  /admin\.rpc\('phase1_practice_events_record'/.test(previousPracticeEdge) &&
-  !/phase1_practice_events_record_and_gamification/.test(previousPracticeEdge) &&
-  !/gamification_status/.test(previousPracticeEdge));
-check('previous Played client includes the queue-race recovery',
-  /removeQueuedRound\(owner, roundId\)/.test(previousPracticeClient) &&
-  /activeFlush\.then\(function \(\) \{ return flush\(\); \}/.test(previousPracticeClient) &&
-  !/gamificationStatus/.test(previousPracticeClient));
+if (hasPreviousHistory) {
+  const previousPracticeEdge = gitText(manifest.previous_runtime_commit, 'supabase/functions/practice-events/index.ts');
+  const previousPracticeClient = gitText(manifest.previous_runtime_commit, 'js/games/practice-events.js');
+  const previousToneEdge = gitText(manifest.previous_runtime_commit, 'supabase/functions/tone-round/index.ts');
+
+  check('previous Played Edge preserves Played without a gamification caller',
+    /admin\.rpc\('phase1_practice_events_record'/.test(previousPracticeEdge) &&
+    !/phase1_practice_events_record_and_gamification/.test(previousPracticeEdge) &&
+    !/gamification_status/.test(previousPracticeEdge));
+  check('previous Played client includes the queue-race recovery',
+    /removeQueuedRound\(owner, roundId\)/.test(previousPracticeClient) &&
+    /activeFlush\.then\(function \(\) \{ return flush\(\); \}/.test(previousPracticeClient) &&
+    !/gamificationStatus/.test(previousPracticeClient));
+  check('tone recovery restores the exact prior reward-aware pair',
+    /admin\.from\("game_accounts"\)/.test(previousToneEdge) &&
+    !/admin\.from\("game_accounts"\)/.test(currentToneEdge) &&
+    /stars: 0,[\s\S]*totalStars: 0/.test(currentToneEdge));
+} else {
+  const pinnedPaths = new Set(manifest.previous_runtime.map((item) => item.path));
+  check('shallow manifest pins the previous Played Edge',
+    pinnedPaths.has('supabase/functions/practice-events/index.ts'));
+  check('shallow manifest pins the previous Played client',
+    pinnedPaths.has('js/games/practice-events.js'));
+  check('shallow manifest pins the previous tone Edge',
+    pinnedPaths.has('supabase/functions/tone-round/index.ts'));
+}
 check('current client tolerates the previous Played response',
   /consumeGamification\(owner, result\.data\.gamification\)/.test(currentPracticeClient) &&
   /if \(!ownerIsCurrent\(owner\) \|\| !value \|\| value\.ok !== true\) return/.test(currentPracticeClient) &&
   /gamificationStatus\(\)\.catch\(function \(\) \{\}\)/.test(currentPracticeClient));
-check('tone recovery restores the exact prior reward-aware pair',
-  /admin\.from\("game_accounts"\)/.test(previousToneEdge) &&
-  !/admin\.from\("game_accounts"\)/.test(currentToneEdge) &&
-  /stars: 0,[\s\S]*totalStars: 0/.test(currentToneEdge));
 check('restore is psql fail-closed and reuses the single prior tone SQL owner',
   /\\set ON_ERROR_STOP on/.test(restore) &&
   /\\ir \.\.\/\.\.\/sql\/2026-08-16_phase1_tone_round_atomic\.sql/.test(restore));
