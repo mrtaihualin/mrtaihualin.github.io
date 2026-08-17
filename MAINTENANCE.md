@@ -61,6 +61,12 @@
 - Shared 17/17, Typing 10/10, Word Order 11/11, Reading 9/9, Listening 38/38, Round Report 12/12 and `node scripts/check-site.js` PASS for 941 local project files. Browser smoke at desktop, 390×844 and 844×390 confirmed no horizontal overflow on all five pages, five Core 5 tabs, responsive selectors, inline toolbars and menu Escape recovery; Lego legacy switcher remained intact.
 - No deploy or Production mutation occurred. Final authenticated/Guest gameplay and device-specific responsive review remain Human gates.
 
+## 2026-08-17 — P1-B-04 Nickname Recovery Artifact (`PASS_LOCAL / HIGH_GATE_UNCHANGED`)
+
+- Added a source-only recovery transaction that restores the pre-nickname S29 board RPC contract, revokes browser access to nickname set/get/report, and leaves both additive moderation tables and rows intact behind RLS with no browser table grants.
+- Added deterministic client/Edge recovery preparation pinned to pre-nickname Git ref `575104d925273d30ef39b7068119f888a7444c09`, exact source/SQL assertions, and a rollback-only PostgreSQL fixture. The preparer performs no deploy, SQL, Git, account, or Production action.
+- Production execution remains HIGH risk and requires exact Lin approval for the target and artifact; this local recovery source does not change P1-B-04 Product behavior or Production status.
+
 ## 2026-08-17 — P1-B-04 Public Leaderboard Nickname Safety (`PASS_LOCAL / DEPLOY_AND_HUMAN_PV_BLOCKED`)
 
 - Separated the public Leaderboard identity from the private account/profile name, with NFKC/invisible/whitespace normalization and Thai/Traditional Chinese/English safety, evasion and contact-data filtering in both client and SQL contracts.
