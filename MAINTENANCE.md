@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 18:37 Asia/Bangkok** — Phase 1 PRIVATE_AUDIO_3 recovery artifact
+**Updated: 2026-08-18 02:05 Asia/Bangkok** — Phase 1 Reading Guest startup defect
+
+## 2026-08-18 — P1-C-READING-01 Guest Startup (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Chrome Incognito against the deployed page reproduced `TypeError: Cannot set properties of null (setting 'textContent')` at Reading `refreshUI()`: the app still wrote to retired Star/badge HUD elements removed by the Phase 1 Free gamification change.
+- Removed only those three stale Reading HUD writes, rebuilt the existing minified Reading bundle and advanced its Reading-only cache key to v34. Added a regression that executes `refreshUI()` against the current Phase 1 HUD without the retired reward elements.
+- Reading 11/11, shared Core 5 17/17, Free gamification 20/20, production-shaped local Chrome startup with the public Guest content contract, and the full 978-file site gate PASS. No other Core 5 source, gameplay/scoring/SRS/content, deploy, Production, account/data, Product, Checklist or Central state changed.
 
 ## 2026-08-17 — PRIVATE_AUDIO_3 scoped recovery artifact (`PASS_LOCAL / PRODUCTION_NOT_RUN`)
 
