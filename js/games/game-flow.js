@@ -255,7 +255,15 @@
       seconds: 7,
       onComplete: options.onReplay
     });
-    if (options.report) attachReport(root, options.report);
+    if (options.report) {
+      attachReport(root, options.report);
+      // P1-D-05: a completed RoundReport is the only client-side source for
+      // durable Played evidence. PracticeEvents performs its own Login,
+      // schema, retry and owner-generation checks before writing anything.
+      if (window.PracticeEvents && typeof window.PracticeEvents.submitReport === 'function') {
+        window.PracticeEvents.submitReport(options.report).catch(function () {});
+      }
+    }
     return feedback;
   }
 

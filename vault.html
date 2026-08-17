@@ -26,7 +26,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/shared.js -->
-<script defer src="js/core/auth-widget.js?v=12"></script>
+<script defer src="js/core/auth-widget.js?v=13"></script>
 <script defer src="js/core/network-guard.js?v=1"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
 <script defer src="js/games/reading-auth.js?v=26"></script>
@@ -269,8 +269,9 @@ renderList();
 // (word-vault.js ยิง event นี้ให้หลังรวมคำเสร็จทุกครั้ง)
 window.addEventListener('wordvault:changed', renderList);
 </script>
+<script src="js/games/practice-events.js?v=1"></script>
 <script src="js/score/personal-search.js?v=1"></script>
-<script src="js/score/personal-content.js?v=3"></script>
+<script src="js/score/personal-content.js?v=4"></script>
 
 <div id="cookieConsentBanner" role="dialog" aria-label="Cookie 與分析設定" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
   background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);

@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 11:35 Asia/Bangkok** — Phase 1 Core 5 UI alignment source
+**Updated: 2026-08-17 13:52 Asia/Bangkok** — Phase 1 authenticated Played evidence source
+
+## 2026-08-17 — P1-D-05 Authenticated Played Evidence (`PASS_LOCAL / DEPLOY_AND_AUTH_E2E_BLOCKED`)
+
+- Implemented a minimized, account-only `practice_events` writer from completed `round-report-v1` evidence for Tone, Reading, Listening, Typing and Word Order. Guest never queues or writes; raw answers/keystrokes are excluded; retry is owner-scoped and idempotent by round/position.
+- Added a JWT-authenticated `practice-events` Edge source that validates protected `learning_items`, rate-limits both record/status actions and calls service-role-only invoker RPCs. The migration adds a retry-unique index, advisory-locked batch replay detection and a read-only latest Played-status RPC; browser roles receive no execute access.
+- `我的內容` now labels an exact word/sentence `已練習` / `再練習` only from authenticated gameplay evidence. Save provenance remains a separate `儲存資訊` section and can never create Played state. Status failure keeps neutral actions and exposes an explicit retry.
+- PostgreSQL 17 ephemeral validation applied the exact migration and passed first-write/idempotent-replay/status/grant assertions. Practice Events 27/27, Personal Content 37/37, Round Report 12/12, locked game flow, error/recovery and `node scripts/check-site.js` PASS for 950 local project files.
+- No migration, Edge Function, client deployment, account/player mutation or Production write occurred. Authorized staging/deploy plus controlled authenticated gameplay/status verification remains required before this item can be marked DONE.
 
 ## 2026-08-17 — P1-G-03 Core 5 UI Alignment (`PASS_LOCAL / HUMAN_GAMEPLAY_PV_BLOCKED`)
 

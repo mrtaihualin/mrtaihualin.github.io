@@ -22,7 +22,7 @@ const items = [
 ];
 
 test('Personal Search is loaded before the personal-content UI', () => {
-  assert.match(html, /personal-search\.js\?v=1[\s\S]*personal-content\.js\?v=3/);
+  assert.match(html, /personal-search\.js\?v=1[\s\S]*personal-content\.js\?v=4/);
 });
 test('search control only belongs to the authenticated render path', () => {
   const guestEnd = ui.indexOf('function renderLimit');
