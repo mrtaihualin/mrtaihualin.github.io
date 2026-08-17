@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 15:10 Asia/Bangkok** — Phase 1 Free Daily Streak contract
+**Updated: 2026-08-17 15:30 Asia/Bangkok** — Phase 1 account logout failure recovery
+
+## 2026-08-17 — P1-D-02/D-09 Account Logout Failure Recovery (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Local-device logout remains explicitly `scope: local`; logout-all remains explicitly `scope: global`. Both now clear account UI caches only after Supabase confirms success.
+- A resolved or rejected sign-out failure keeps the current session/cache state, shows an accessible visible retry message, and keeps Account Management open instead of silently closing as if every device had logged out.
+- Added deterministic lifecycle coverage for local/global failure, cache preservation, confirmed success, server-owned unlink identity and cooldown/cancel deletion boundaries. All 13 existing `auth-widget.js` consumers advance to cache v14 so boards, Core 5, Learning Center, Lego and Vault cannot retain the silent-failure client.
+- Account lifecycle 6/6, Auth session 13/13, account boundary 25/25, account export 7/7, Email OTP security 13/13 and the full site gate PASS. No provider login/email, account/data mutation, SQL, Edge/Auth config or Production deployment occurred.
 
 ## 2026-08-17 — P1-D-08 Free Daily Streak (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
