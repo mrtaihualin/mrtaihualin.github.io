@@ -1,51 +1,48 @@
-# AGENTS.md — Repository Rules for mrtaihualin.com
+# AGENTS.md — Repository constraints for mrtaihualin.com
 
-> Applies to: repository root (`mrtaihualin.github.io`)
-> Role: repository-specific safety and technical exceptions only
-> Global workflow authority: Projects canonical global workflow authority resolved by the Codex global router
+> Applies to this repository only.
+> Universal authority: `/Users/taihualin/Documents/Claude/Projects/AGENTS.md`
 > Repository router: `00_START_HERE.md`
 
-## Authority Boundary
+## Repository boundary
 
-- Startup Gate, Minimal Read, Delta-first, ownership/collision, parallel work, Git safety, verification, central update, closeout และ Document Placement ใช้ `Projects/AGENTS.md` เท่านั้น
-- ก่อนงานใน repo ให้ยืนยันว่า Context มีไฟล์นี้, repo router และ global authority แล้ว จากนั้น route ตาม repo router ไป Current task authority
-- ตั้งแต่ 2026-08-14 งาน implementation ของ `mrtaihualin.com` ใช้ Codex เป็น executing agent; คง Claude routing compatibility แต่ไม่ส่ง implementation task ให้ Claude เว้นแต่ Lin เปลี่ยน global authority
-- Product Decision, UX, Tier, Product Pending และ Product NEXT ต้องเข้าผ่าน Website router; Product NEXT ไม่ใช่ implementation authorization
-- Main Plan เป็น roadmap-only และ Website Start Here เป็น router-only; ห้ามเขียน implementation status หรือ closeout ลงสองไฟล์นี้
+- The site has three Areas: student acquisition; classroom/textbook; games. `shared` is a common layer, not a fourth Area.
+- Product, UX, tier, Phase and pending decisions route through the Website router. Product NEXT and backlog are not implementation authorization.
+- Preserve public HTML URLs. Inspect dependencies before moving, renaming or deleting files.
+- Do not edit vendor files without a proven dependency and scoped reason.
+- Use existing feature/system owners before creating a parallel implementation.
 
-## Repository Scope
+## Static-site and data safety
 
-เว็บไซต์มีสาม Area:
+- This is a public static client: every shipped HTML/JS value is readable by visitors. Never place a password, private key, service-role key, token, secret, student data or identifiable private-user data in source, docs, logs or evidence.
+- Client-visible provider keys must remain public-client credentials with provider restrictions and server-side/RLS controls; they are never treated as secrets.
+- Report a discovered sensitive value by name and location only; do not print its value.
+- Real database, Auth, account/data, restore, cron/notification and other Production actions follow the canonical risk model and exact Production Safety workflow.
 
-1. เว็บหานักเรียน
-2. ห้องเรียนและหนังสือเรียน
-3. เกมทั้งหมด
+## Repository verification
 
-`shared` เป็น common layer ไม่ใช่ Area ที่สี่
+- Choose targeted checks by changed scope. Before completing a website source change, run `node scripts/check-site.js` unless the exact task is documentation-only and cannot affect the site gate.
+- Add regression protection before a refactor/move that can change behavior.
+- Keep UI, logic, data and tests separated when it improves maintenance without changing locked behavior.
+- Record verified code/structure evidence as a Delta in `MAINTENANCE.md`; do not copy Product or Current status there.
 
-## Repository Safety
+## Human-owned content
 
-- ก่อนย้าย ลบ หรือเปลี่ยนโครงสร้าง ต้องตรวจ dependency และพฤติกรรมเดิมที่เกี่ยวข้อง
-- ห้ามใส่ secret, token, service-role key หรือข้อมูลนักเรียนใน source, docs, logs หรือรายงาน; ถ้าพบให้บอกเฉพาะชื่อและตำแหน่ง
-- Migration, RLS, key rotation, deploy, Production mutation, LINE message, booking และ external-system mutation ต้องมีคำอนุมัติชัดเจนตาม action
-- Git handoff, `git`/`gh`, branch, commit, push, Pull Request, checks, merge และ remote verification ใช้ canonical Gate ใน `Projects/AGENTS.md` หัวข้อ 8 เพียงจุดเดียว; repo นี้ไม่กำหนด desktop-only channel หรือข้อห้าม Git ผ่าน Terminal เพิ่ม
-- รักษา public HTML URLs และห้ามแก้ vendor files โดยไม่มี dependency ที่พิสูจน์ได้
-- ข้อมูลภาษาไทยในเกมต้องมาจาก Lin และต้องให้ Lin ตรวจ 100% ก่อนใช้จริง
+- Thai game words, sentences, translations and readings come from Lin. Computed language fields require Lin's 100% review before publish.
+- Detailed game-content procedure: `data/README.md`.
+- Visual/brand changes use the Current Brand/Product authority and applicable Human verification; do not invent new style decisions from historical repo text.
 
-## Technical Standard
+## Technical procedure pointers
 
-- ใช้ของเดิมก่อนสร้างของใหม่ และให้แต่ละ feature มีบ้าน/owner ชัดเจน
-- แยก UI, logic, data และ tests เมื่อช่วยให้ดูแลง่ายโดยไม่เปลี่ยน behavior
-- การย้ายหรือ refactor ที่กระทบ behavior ต้องมี regression guard ก่อน
-- Verification ต้องครอบคลุมตามความเสี่ยง รวม normal/error/retry/boundary/permission/external-failure/persistence/recovery เมื่อเกี่ยวข้อง
-- ก่อนส่งงานที่แก้ source เว็บไซต์ อย่างน้อยต้องรัน `node scripts/check-site.js` และรายงานสิ่งที่ยังทดสอบไม่ได้
-- อ่าน `CLAUDE.md`, `README.md` หรือ `MAINTENANCE.md` เฉพาะส่วนที่ Current task ต้องใช้; ห้ามอ่านซ้ำเมื่อ verified unchanged
+- Classroom/Calendar invariants: `js/classroom/README.md`
+- LINE webhook operations: `supabase/functions/line-webhook/README.md`
+- Game-content Edge gate: `supabase/functions/game-content/README.md`
+- Learning Foundation: `supabase/LEARNING_FOUNDATION.md`
+- SQL authoring/source map: `supabase/sql/README.md` and `supabase/sql/00_ฟังก์ชันไหนอยู่ไฟล์ไหน.md`
 
-## Repository Documentation Boundary
+## Repository documentation
 
-- Audit, Plan, Spec, Status, Recovery และ Handoff ใช้บ้านตาม `Projects/AGENTS.md`; repo ไม่ใช่ default destination
-- Technical evidence ของ code/structure ที่เปลี่ยนให้ update `MAINTENANCE.md` เฉพาะ delta
-- Phase 1 implementation/verification ให้ update row เดิมใน Phase 1 Plan ที่ Website router ชี้
-- งานอื่นให้ update exact Current task authority; ถ้าไม่มี pointer ให้รายงาน `ROUTING_GAP / NOT_AUTHORIZED`
-- Deferred repository-dependent work ใช้ exact repo-relative path `_แผนงาน/ทำต่อในอนาคต.md` เพียงจุดเดียว
-- ห้ามสร้าง roadmap, status, handoff หรือ global workflow authority คู่ขนานใน repo
+- `00_START_HERE.md` is pointer-only.
+- Phase 1 outcome/status/evidence updates belong to the Current Phase 1 Checklist selected by the Website router, never the roadmap or Master Plan.
+- Deferred repository-dependent Product work stays at `_แผนงาน/ทำต่อในอนาคต.md` only.
+- Audit, Plan, Spec, Status, Recovery and Handoff use the canonical Document Placement workflow. Do not create a parallel roadmap, status, handoff or global authority in this repo.

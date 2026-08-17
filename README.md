@@ -4,7 +4,7 @@
 
 ประวัติงานจัดระบบและผลตรวจล่าสุดอยู่ใน [MAINTENANCE.md](MAINTENANCE.md)
 
-กฎสำหรับ Codex อยู่ใน [AGENTS.md](AGENTS.md) และแผนงานหลักจากจัดระบบถึงเปิดขายเกมอยู่ที่ `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/03_แผนงานหลัก_จากจัดระบบถึงเปิดขายเกม_CURRENT.md`
+กฎเฉพาะ repository อยู่ใน [AGENTS.md](AGENTS.md); Product, Phase, Master Plan และ Current Checklist ให้ route จาก `/Users/taihualin/Documents/Claude/Projects/01_WEBSITE/00_ศูนย์บัญชาการ_START-HERE.md`
 
 ## โครงสร้างหลัก
 
@@ -46,7 +46,7 @@ node scripts/check-site.js
 - Pull Request ต้องระบุ `Task-ID` และ `Write-Set` ใน template; รองรับ exact path หรือ `directory/**` และ check จะ fail หากมีไฟล์นอกขอบเขตปน
 - ก่อน commit ในเครื่อง ให้คัดลอก `.task-write-set.example.json` เป็น `.task-write-set.json`, ใส่ Task/write-set จริง และเปิดใช้ tracked hook ที่ `.githooks/pre-commit`
 - การบล็อก merge/direct push ต้องตั้ง GitHub ruleset ให้ `main` รับการเปลี่ยนผ่าน Pull Request เท่านั้น, ห้าม bypass และ require check ชื่อข้างต้น; source ใน repo ไม่สามารถเปิด ruleset ของ remote แทน owner ได้
-- หนึ่ง Task ใช้หนึ่ง `codex/*` branch และแยก worktree เมื่อทำพร้อมกัน; การเข้า `main` serialize ทีละ PR. เมื่อ exact-head required check ผ่านและเทียบกับ `main` ล่าสุดแล้ว ให้กรอก `READY_FOR_LIN_REVIEW=YES`; ห้าม merge จน Lin อนุมัติ exact PR/head ตาม canonical Gate ใน Projects `AGENTS.md`
+- หนึ่ง Task ใช้หนึ่ง `codex/*` branch และแยก worktree เมื่อทำพร้อมกัน; independent branches เตรียม/push คู่ขนานได้ และ MAIN serialize เฉพาะ collision/integration/default-branch merge. เมื่อ exact-head required check ผ่านและเทียบกับ `main` ล่าสุดแล้ว ให้ใช้ canonical LOW/MEDIUM/HIGH gate: authorized LOW-risk merge ทำต่อและ verify ได้เอง; หยุดขอ Lin เฉพาะ exact gate ที่ Current authority กำหนด
 - Rollback ใช้ revert PR/commit ผ่าน task branch ใหม่และ required check เดิม ห้าม force-push หรือ rewrite `main`
 
 ### แต่ละตัวตรวจอะไร · ไม่ผ่านแปลว่าอะไร
