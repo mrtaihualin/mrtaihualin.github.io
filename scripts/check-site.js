@@ -119,6 +119,7 @@ runTest(['scripts/tests-phase1-account-boundary.js'], 'Phase 1 Guest/Login accou
 runTest(['scripts/tests-my-learning-phase1.js'], 'Phase 1 我的學習 tests');
 runTest(['scripts/tests-personal-content-phase1.js'], 'Phase 1 我的內容 tests');
 runTest(['scripts/tests-practice-events-phase1.mjs'], 'Phase 1 Played-evidence tests');
+runTest(['scripts/tests-phase1-free-gamification.mjs'], 'Phase 1 Free Daily Streak/gamification tests');
 runTest(['scripts/tests-phase1-srs.js'], 'Phase 1 SRS tests');
 runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');

@@ -39,7 +39,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/game-account.js/shared.js/progress-sync.js/tone-finder-game.js -->
-<script defer src="js/games/game-account.js?v=4"></script><!-- v4: owner-scoped sync guard; server remains authoritative for stars -->
+<script defer src="js/games/game-account.js?v=5"></script><!-- v5: server-authoritative Free Daily Streak; no Star/XP/freeze -->
 <script defer src="js/core/auth-widget.js?v=13"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
 <script defer src="js/games/reading-auth.js?v=26"></script><!-- Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (เดิมใช้ supabase-auth.js แยกของตัวเอง) -->
@@ -1584,9 +1584,6 @@ document.addEventListener('contextmenu', function(e){
       <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
       <div class="tf-stat-row" id="tf-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
         <span class="tf-streak-chip" title="連續天數">🔥 <b id="tf-streak-num">0</b></span>
-        <span class="tf-streak-chip" title="護盾">🛡️ ×<b id="tf-freeze-num">0</b></span>
-        <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_stars_view',{category:'game'});}catch(e){}TF.showStars()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showStars()}">⭐ <b id="tf-star-count">0</b></span>
-        <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_badges_view',{category:'game'});}catch(e){}TF.showBadges()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TF.showBadges()}"><span id="tf-badge-emoji">🌱</span> <b id="tf-badge-count">0</b></span>
       </div>
       <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
     </div>
@@ -1694,7 +1691,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=51']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=52']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -1719,7 +1716,7 @@ document.addEventListener('contextmenu', function(e){
      ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=33"></script>
-<script src="js/games/practice-events.js?v=2"></script>
+<script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=5"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
@@ -1897,16 +1894,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.__tfHowtoModalReg = window.registerGameModal({
     isOpen: function () { var m = document.getElementById('tf-howto-modal'); return !!m && m.style.display !== 'none' && m.style.display !== ''; },
     close: function () { var m = document.getElementById('tf-howto-modal'); if (m) m.style.display = 'none'; }
-  });
-  // ⭐ 累積星星 (TF.showStars() สร้าง <div id="tf-star-ov"> แล้ว appendChild เข้า body — ไม่มีฟังก์ชันปิดเฉพาะ ปิดด้วย .remove() ตรงๆ เหมือนของเดิม)
-  window.__tfStarModalReg = window.registerGameModal({
-    isOpen: function () { return !!document.getElementById('tf-star-ov'); },
-    close: function () { var o = document.getElementById('tf-star-ov'); if (o) o.remove(); }
-  });
-  // 🎖️ 我的徽章 (TF.showBadges() สร้าง <div id="tf-badges-ov"> เหมือนกัน)
-  window.__tfBadgesModalReg = window.registerGameModal({
-    isOpen: function () { return !!document.getElementById('tf-badges-ov'); },
-    close: function () { var o = document.getElementById('tf-badges-ov'); if (o) o.remove(); }
   });
   // ❓ 我有問題 (TF.openAsk()/TF.closeAsk() — เรียกฟังก์ชันปิดเดิมของเกมตรงๆ ถ้ามี ไม่งั้น fallback ไป .remove())
   window.__tfAskModalReg = window.registerGameModal({

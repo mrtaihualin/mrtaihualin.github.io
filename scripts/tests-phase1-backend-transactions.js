@@ -43,8 +43,8 @@ test('tone-round transaction serializes per account and persists an exact replay
   serviceOnly(toneSql, 'phase1_tone_round_commit');
 });
 
-test('tone-round Edge fails closed on reads/commit and never performs split writes', () => {
-  assert.match(toneEdge, /if \(accountRead\.error\).*account_read_unavailable/);
+test('tone-round Edge fails closed on SRS reads/commit and never performs reward-table writes', () => {
+  assert.doesNotMatch(toneEdge, /accountRead|account_read_unavailable|from\("game_accounts"\)/);
   assert.match(toneEdge, /if \(srsRead\.error\).*srs_read_unavailable/);
   assert.match(toneEdge, /admin\.rpc\("phase1_tone_round_commit"/);
   assert.match(toneEdge, /tone_round_operations[\s\S]+request_hash,response/);
@@ -53,6 +53,7 @@ test('tone-round Edge fails closed on reads/commit and never performs split writ
   assert.doesNotMatch(toneEdge, /from\("tone_srs_state"\)\s*\.update/);
   assert.doesNotMatch(toneEdge, /from\("game_accounts"\)\.upsert/);
   assert.doesNotMatch(toneEdge, /from\("star_ledger"\)\.insert/);
+  assert.match(toneEdge, /stars:\s*0,[\s\S]{0,80}totalStars:\s*0/);
 });
 
 test('tone-round client retries once with the same generated round id', () => {

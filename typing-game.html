@@ -88,7 +88,7 @@ if (document.fonts && document.fonts.load) {
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=5"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/typing-game-app.js -->
-<script defer src="js/games/game-account.js?v=4"></script>
+<script defer src="js/games/game-account.js?v=5"></script>
 <script defer src="js/core/auth-widget.js?v=13"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
 <script defer src="js/games/reading-auth.js?v=26"></script>
@@ -517,9 +517,6 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     <!-- 連續天數／護盾／星星／勳章：沒登入就整條不顯示 — Lin 2026-07-24 -->
     <div class="rg-stat-row" id="rg-stat-row" style="display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;">
       <span class="tf-streak-chip" title="連續天數">🔥 <b id="rg-streak-num">0</b></span>
-      <span class="tf-streak-chip" title="護盾">🛡️ ×<b id="rg-freeze-num">0</b></span>
-      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="openStar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStar()}">⭐ <b id="star-count">0</b></span>
-      <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b></span>
     </div>
     <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
   </div>
@@ -709,25 +706,6 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   <button type="button" class="btn btn-secondary gsh-mistake-back" onclick="tgHideMistakes()">← 返回結果</button>
 </div>
 
-<div class="v3-modal" id="badge-modal" onclick="this.classList.remove('show');try{gtag('event','typing_game_badge_modal_close',{category:'game'})}catch(e){}">
-  <div class="v3-modal-box" onclick="event.stopPropagation()">
-    <h3>我的成就</h3>
-    <div class="star-progress" id="star-prog"></div>
-    <div class="star-prog-label" id="star-prog-label"></div>
-    <button class="btn btn-secondary" style="margin-top:16px" onclick="document.getElementById('badge-modal').classList.remove('show');try{gtag('event','typing_game_badge_modal_close',{category:'game'})}catch(e){}">關閉</button>
-  </div>
-</div>
-
-<!-- Lin 2026-07-25: ⭐ กดปุ่มดาวแยกจากปุ่มวรรณยุกต์/勳章 — ย้าย tree-area/tree-caption มาไว้ที่นี่ -->
-<div class="v3-modal" id="star-modal" onclick="this.classList.remove('show');try{gtag('event','typing_game_star_modal_close',{category:'game'})}catch(e){}">
-  <div class="v3-modal-box" onclick="event.stopPropagation()">
-    <h3>累積星星</h3>
-    <div class="tree-area" id="star-tree-area">⭐</div>
-    <div class="tree-caption" id="star-tree-caption">累積星星（全部遊戲共用）</div>
-    <button class="btn btn-secondary" style="margin-top:16px" onclick="document.getElementById('star-modal').classList.remove('show');try{gtag('event','typing_game_star_modal_close',{category:'game'})}catch(e){}">關閉</button>
-  </div>
-</div>
-
 <!-- 逐步導覽（滑鼠一格一格指出功能）— Lin 2026-07-24 -->
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>
@@ -773,13 +751,13 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=31']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=32']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=33"></script>
-<script src="js/games/practice-events.js?v=2"></script>
+<script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=5"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->

@@ -216,24 +216,25 @@ test('canonical older same-owner pull cannot overwrite a newer pull result', asy
   assert.strictEqual(h.window.PHASE1_CANONICAL.status().baseToken, 'new-token');
 });
 
-test('GAME_ACCOUNT ignores an older owner response and preserves the newer request result', async () => {
+test('GAME_ACCOUNT rejects stale owner status and never reads the retired reward table', async () => {
   const localStorage = storage({ phase1_learning_owner_v1: 'account-a' });
   const client = deferredClient();
   const SITE_AUTH = { learningOwnerEpoch: 1 };
   const boundary = { ownerKey: 'phase1_learning_owner_v1' };
-  const window = { localStorage, SITE_AUTH, PHASE1_ACCOUNT_BOUNDARY: boundary, READING_AUTH: { user: { id: 'account-a' } } };
-  vm.runInNewContext(read('js/games/game-account.js'), { window, localStorage, SITE_AUTH, PHASE1_ACCOUNT_BOUNDARY: boundary, READING_AUTH: window.READING_AUTH, Intl, Date, Math, JSON }, { filename: 'game-account.js' });
+  let statusRequests = 0;
+  const PracticeEvents = { gamificationStatus() { statusRequests++; return Promise.resolve(null); } };
+  const window = { localStorage, SITE_AUTH, PracticeEvents, PHASE1_ACCOUNT_BOUNDARY: boundary, READING_AUTH: { user: { id: 'account-a' } } };
+  vm.runInNewContext(read('js/games/game-account.js'), { window, localStorage, SITE_AUTH, PracticeEvents, PHASE1_ACCOUNT_BOUNDARY: boundary, READING_AUTH: window.READING_AUTH, Intl, Date, Math, JSON, Promise }, { filename: 'game-account.js' });
   window.GAME_ACCOUNT.sync(client, 'account-a');
   window.READING_AUTH.user = { id: 'account-b' }; SITE_AUTH.learningOwnerEpoch = 2;
   localStorage.setItem(boundary.ownerKey, 'account-b'); localStorage.removeItem('thai_game_acct_v1');
   window.GAME_ACCOUNT.sync(client, 'account-b');
-  const [requestA, requestB] = client.requests;
-  requestB.resolve({ data: { stars: 7, streak: 2, hard_words_by_level: { 1: 2 } } });
-  await settle();
-  requestA.resolve({ data: { stars: 99, streak: 9, hard_words_by_level: { 1: 99 } } });
-  await settle();
-  assert.strictEqual(window.GAME_ACCOUNT.getStars(), 7);
-  assert.deepStrictEqual(requestA.filters.find(([key]) => key === 'user_id'), ['user_id', 'account-a']);
+  assert.strictEqual(statusRequests, 2);
+  assert.strictEqual(client.requests.length, 0);
+  assert.strictEqual(window.GAME_ACCOUNT.consumeStatus({ ok: true, current_streak: 2, status_as_of: '2026-08-17' }, 'account-b'), true);
+  assert.strictEqual(window.GAME_ACCOUNT.consumeStatus({ ok: true, current_streak: 99, status_as_of: '2026-08-17' }, 'account-a'), false);
+  assert.strictEqual(window.GAME_ACCOUNT.getStreak(), 2);
+  assert.strictEqual(window.GAME_ACCOUNT.getStars(), 0);
 });
 
 function adaptiveHarness() {
@@ -337,7 +338,7 @@ test('all affected pages ship the owner-safe runtime versions', async () => {
   for (const page of corePages) {
     const html = read(page);
     assert.match(html, /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
-    assert.match(html, /game-account\.js\?v=4/, page + ' GameAccount cache');
+    assert.match(html, /game-account\.js\?v=5/, page + ' GameAccount cache');
     assert.match(html, /reading-auth\.js\?v=26/, page + ' reading-auth cache');
   }
   for (const page of ['my-progress.html', 'vault.html']) {
@@ -347,10 +348,10 @@ test('all affected pages ship the owner-safe runtime versions', async () => {
     assert.match(read(page), /reading-auth\.js\?v=26/, page + ' reading-auth cache');
   }
   assert.match(read('lego.html'), /game-account\.js\?v=4/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=51/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=32/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=31/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=26/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=52/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=33/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=32/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=27/);
   assert.match(read('listening-game.html'), /listening-game-app\.js\?v=11/);
 });
 

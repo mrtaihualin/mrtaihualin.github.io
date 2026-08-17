@@ -89,6 +89,11 @@ export function normalizeStatusBody(body) {
   return { action: 'status', items };
 }
 
+export function normalizeGamificationStatusBody(body) {
+  if (!body || body.action !== 'gamification_status') throw new Error('invalid_action');
+  return { action: 'gamification_status' };
+}
+
 export function wordBase(contentKey) {
   const value = String(contentKey || '');
   const marker = value.lastIndexOf('@');

@@ -3,7 +3,12 @@
 // @ts-nocheck
 
 import { createClient } from 'npm:@supabase/supabase-js@2.112.3';
-import { normalizeRecordBody, normalizeStatusBody, wordBase } from './practice-events-engine.mjs';
+import {
+  normalizeGamificationStatusBody,
+  normalizeRecordBody,
+  normalizeStatusBody,
+  wordBase,
+} from './practice-events-engine.mjs';
 
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
@@ -86,7 +91,7 @@ async function record(admin: any, userId: string, normalized: any) {
     completed_at: normalized.completed_at,
     items: resolved,
   });
-  const committed = await admin.rpc('phase1_practice_events_record', {
+  const committed = await admin.rpc('phase1_practice_events_record_and_gamification', {
     p_user_id: userId,
     p_round_id: normalized.round_id,
     p_surface_code: normalized.surface,
@@ -103,7 +108,14 @@ async function record(admin: any, userId: string, normalized: any) {
     ok: true,
     idempotent: committed.data.idempotent === true,
     recorded: Number(committed.data.recorded) || 0,
+    gamification: committed.data.gamification,
   };
+}
+
+async function gamificationStatus(admin: any, userId: string) {
+  const result = await admin.rpc('phase1_free_gamification_status', { p_user_id: userId });
+  if (result.error || !result.data?.ok) throw new Error('gamification_status_unavailable');
+  return { ok: true, gamification: result.data };
 }
 
 async function status(admin: any, userId: string, normalized: any) {
@@ -158,6 +170,10 @@ Deno.serve(async (req: Request) => {
       return result.error ? reply(origin, { error: result.error }, result.status) : reply(origin, result);
     }
     if (body.action === 'status') return reply(origin, await status(clients.admin, clients.user.id, normalizeStatusBody(body)));
+    if (body.action === 'gamification_status') {
+      normalizeGamificationStatusBody(body);
+      return reply(origin, await gamificationStatus(clients.admin, clients.user.id));
+    }
     return reply(origin, { error: 'invalid_action' }, 400);
   } catch (error) {
     const code = String(error?.message || 'practice_events_unavailable');

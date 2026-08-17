@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-17 14:50 Asia/Bangkok** — Phase 1 Personal Vault retry recovery
+**Updated: 2026-08-17 15:10 Asia/Bangkok** — Phase 1 Free Daily Streak contract
+
+## 2026-08-17 — P1-D-08 Free Daily Streak (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Retired Star/XP/freeze and the client-local three-round Daily Streak threshold from the five Free games. Guest receives no streak; Login Free displays only the authenticated authoritative streak status.
+- A completed `round-report-v1` saved through Played evidence is the only eligibility trigger. The service-role-only PostgreSQL transaction uses Asia/Taipei days, counts at most one completed round per account/day, serializes per account and keeps retries/replays idempotent.
+- Missing days reset streak. A gap is preserved only when every missing day has confirmed evidence classified as a platform or responsible-dependency outage; missing, partial or unconfirmed evidence never acts as grace and never awards a missing day.
+- `game-account.js` no longer reads/writes `game_accounts` or advances streak locally. It accepts owner-bound status from `practice-events`, clears retired local reward state and keeps Star compatibility calls fail-closed at zero while cached clients age out.
+- Core 5 loaders advance `game-account.js` v4→v5 and `practice-events.js` v2→v3; the four changed minified game bundles were rebuilt deterministically. No SQL was applied, no Edge/client code was deployed, and no Production/account/config mutation occurred.
+
 
 ## 2026-08-17 — P1-D-06/F-01/F-02/F-03 Personal Vault Retry (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
 

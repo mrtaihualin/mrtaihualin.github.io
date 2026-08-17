@@ -694,63 +694,16 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // ════════════════════════════════════════════════════════════
 var TF_GAME_CFG = {
   GOLDEN_WORD_CHANCE: 0.18,   // โอกาสคำทอง (~18%)
-  GOLDEN_WORD_MULT: 2,        // คำทองตอบได้ ×2
-  STREAK_FREEZE_EARN_EVERY: 7,// ได้ Streak Freeze +1 ทุก 7 วันติด
-  STREAK_FREEZE_MAX: 2,       // ถือ freeze สูงสุด
-  DAILY_GOAL_SETS: 1          // เป้ารายวัน: จบกี่ชุด/วัน
+  GOLDEN_WORD_MULT: 2         // คำทองตอบได้ ×2
 };
 
-// เครื่องคิด Daily Streak (บริสุทธิ์ ไม่แตะ DOM/localStorage — เทสต์ได้)
+// Daily Streak is now an authenticated server status, never client math.
 var TF_STREAK = {
-  // จำนวนวันห่างระหว่าง 'YYYY-MM-DD' สองวัน (b - a)
-  dayDiff: function (a, b) {
-    if (!a || !b) return null;
-    var pa = a.split('-'), pb = b.split('-');
-    var da = Date.UTC(+pa[0], +pa[1] - 1, +pa[2]);
-    var db = Date.UTC(+pb[0], +pb[1] - 1, +pb[2]);
-    return Math.round((db - da) / 86400000);
+  applySetComplete: function () {
+    var streak = (window.GAME_ACCOUNT && GAME_ACCOUNT.getStreak()) || 0;
+    return { state: { streak: streak }, events: {} };
   },
-
-  // เมื่อเล่นจบ 1 ชุด: อัปเดต state ตามวันนี้ คืน {state, events}
-  applySetComplete: function (state, today, cfg) {
-    state = state || {};
-    var s = {
-      lastGoalDay: state.lastGoalDay || null,
-      streak: state.streak || 0,
-      freezes: state.freezes || 0,
-      setsDay: state.setsDay || null,
-      setsToday: state.setsToday || 0
-    };
-    var ev = { goalMetToday: false, streakIncreased: false, freezeUsed: false, freezeEarned: 0 };
-
-    if (s.setsDay !== today) { s.setsDay = today; s.setsToday = 0; }
-    s.setsToday += 1;
-
-    // ทำเป้าครบ "พอดี" → ต่อสตรีค (นับครั้งเดียว/วัน)
-    if (s.setsToday === cfg.DAILY_GOAL_SETS && s.lastGoalDay !== today) {
-      ev.goalMetToday = true;
-      var gap = s.lastGoalDay ? this.dayDiff(s.lastGoalDay, today) : null;
-      if (gap === 1) { s.streak += 1; ev.streakIncreased = true; }
-      else if (gap === 2 && s.freezes > 0) { s.freezes -= 1; s.streak += 1; ev.freezeUsed = true; ev.streakIncreased = true; }
-      else { s.streak = 1; ev.streakIncreased = true; } // เริ่มใหม่ / ขาดเกิน freeze
-      s.lastGoalDay = today;
-      // สะสม freeze ทุก N วันติด
-      if (cfg.STREAK_FREEZE_EARN_EVERY > 0 && s.streak % cfg.STREAK_FREEZE_EARN_EVERY === 0 && s.freezes < cfg.STREAK_FREEZE_MAX) {
-        s.freezes += 1; ev.freezeEarned = 1;
-      }
-    }
-    return { state: s, events: ev };
-  },
-
-  // สตรีคยัง "มีชีวิต" ไหมเมื่อเทียบกับวันนี้ (ขาด >1 วัน และไม่มี freeze = ตาย)
-  isAlive: function (state, today) {
-    if (!state || !state.lastGoalDay) return false;
-    var gap = this.dayDiff(state.lastGoalDay, today);
-    if (gap == null) return false;
-    if (gap <= 1) return true;
-    if (gap === 2 && (state.freezes || 0) > 0) return true; // freeze ช่วยได้
-    return false;
-  }
+  isAlive: function (state) { return !!(state && state.streak > 0); }
 };
 // ===== TF_GAME ENGINE END =====
 
@@ -1135,21 +1088,12 @@ function _tfProcessToastQueue() {
   } catch (e) { _tfToastBusy = false; }
 }
 
-// ── streak: โหลด/เซฟ localStorage ──
-var TF_STREAK_KEY = 'tf_streak_v1';
 function tfLoadStreak() {
-  try { var r = localStorage.getItem(TF_STREAK_KEY); return r ? JSON.parse(r) : {}; }
-  catch (e) { return {}; }
+  try { return { streak: (window.GAME_ACCOUNT && GAME_ACCOUNT.getStreak()) || 0 }; }
+  catch (e) { return { streak: 0 }; }
 }
-function tfSaveStreak(s) {
-  try { localStorage.setItem(TF_STREAK_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
-}
-// เรียกเมื่อเล่นจบ 1 ชุด → อัปเดต streak + คืน events ให้หน้าสรุปโชว์
 function tfApplyStreakOnSetComplete() {
-  if(!tfSrsLoggedIn())return {state:{streak:0,freezes:0,setsToday:0},events:{goalMetToday:false,freezeUsed:false,freezeEarned:0}};
-  var res = TF_STREAK.applySetComplete(tfLoadStreak(), todayStr(), TF_GAME_CFG);
-  tfSaveStreak(res.state);
-  return { state: res.state, events: res.events };
+  return TF_STREAK.applySetComplete();
 }
 
 // ── สเตจ 1: ตัวเชื่อมคะแนนกับเกม (แตะ DOM/state) ──
@@ -2606,15 +2550,11 @@ function stepSessionSummary() {
   var stState = sr && sr.state || tfLoadStreak();
   var minaKey = isPerfect ? 'perfect' : (perfectCount / Math.max(1,total) >= 0.6 ? 'greatSet' : 'goodSet');
   var minaMsg = tfMinaSay(minaKey);
-  if (ev.goalMetToday) minaMsg = tfMinaSay('goalMet', { n: stState.streak });
-  if (ev.freezeUsed) minaMsg = tfMinaSay('freezeUsed');
   var minaBlock = tfMinaBubble(minaMsg, 'big');
 
   var streakBlock =
     '<div class="tf-streak-row">' +
       '<span class="tf-streak-chip">🔥 連續 ' + (stState.streak || 0) + ' 天</span>' +
-      '<span class="tf-streak-chip">🛡️ 護盾 ×' + (stState.freezes || 0) + '</span>' +
-      '<span class="tf-streak-chip ' + (ev.goalMetToday ? 'done' : '') + '">🎯 今日目標 ' + (ev.goalMetToday ? '✓ 達標' : ((stState.setsToday||0) + '/' + TF_GAME_CFG.DAILY_GOAL_SETS)) + '</span>' +
     '</div>';
 
   var badgeBlock = '';
@@ -2628,16 +2568,6 @@ function stepSessionSummary() {
       }).join('') + '</div></div>';
   }
 
-  // ── สเปก 2026-07-03: ดาวเงิน (⭐) มาจาก "จำได้จริง" (SRS mastery) เท่านั้น ไม่ใช่ความแม่นในรอบนี้แล้ว ──
-  var starBlock = '';
-  var _se = session.starsEarned || 0, _stars = session.totalStars || 0;
-  if (total > 0) {
-    starBlock = '<div style="margin-top:14px;padding:12px;background:#FFF8E6;border:1px solid #F0D480;border-radius:14px;text-align:center;">' +
-      '<div style="font-size:24px;line-height:1.2;letter-spacing:2px;">' + (_se >= 1 ? '⭐'.repeat(Math.min(_se, 20)) : '—') + '</div>' +
-      '<div style="font-size:14px;font-weight:800;color:#B07D00;margin-top:2px;">' + (_se >= 1 ? '獲得 ' + _se + ' 顆星（真正記住的字/句）' : '這次還沒有字通過長期記憶檢驗') + '</div>' +
-      '<div style="font-size:12px;color:#A08A5A;margin-top:2px;">累積共 ' + _stars + ' 顆星（全部遊戲共用・私人，不上排行榜）</div></div>';
-  }
-
   // F2 (2026-08-10): ปุ่ม 查看錯題 — โชว์เฉพาะเมื่อมีผลอย่างน้อย 1 คำ (ปกติมีเสมอถ้าเล่นจบรอบจริง)
   var mistakeBtnHtml = total > 0
     ? '<button type="button" class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mistake_review_open\',{category:\'game\'});}catch(e){}TF.showMistakeReview()">查看本輪詳細紀錄</button>'
@@ -2647,7 +2577,6 @@ function stepSessionSummary() {
     scoreSummary +
     streakBlock +
     badgeBlock +
-    starBlock +
     // F1 (2026-08-10): เพิ่ม class gsh-end-score/gsh-end-title (css/shared.css) ให้ตรงกับเกมอื่น — ยังคง class เดิม (tf-sum-score/tf-sum-score-label) ไว้ด้วย ไม่ลบของเดิม ไม่เปลี่ยนเนื้อหา/ตำแหน่ง
     '<div class="tf-sum-score gsh-end-score">'+perfectCount+' / '+total+'</div>' +
     '<div class="tf-sum-score-label gsh-end-title">'+(perfectCount===total?'全部一次答對！太厲害了 🎉':'我們一起繼續加油！💪')+'</div>' +
@@ -2839,7 +2768,7 @@ function tfRenderTopBanners() {
         '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_top_banner_detail_toggle\',{category:\'game\'});}catch(e){}var d=document.getElementById(\'tf-cta-detail\');var s=d.style.display===\'none\';d.style.display=s?\'block\':\'none\';this.textContent=s?\'收起 ▲\':\'更多福利 ▾\';" style="background:transparent;border:none;color:#854F0B;font-size:13px;cursor:pointer;font-weight:700;">更多福利 ▾</button>' +
       '</div>' +
       '<div id="tf-cta-detail" style="display:none;margin-top:10px;border-top:0.5px solid #EF9F27;padding-top:10px;font-size:13px;color:#633806;line-height:1.8;">' +
-        '✅ 登入後可以：<br>⭐ 累積星星＋泰國米勳章或其他禮物<br>🧠 智慧複習：記住你哪些字學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你學習你的弱點' +
+        '✅ 登入後可以：<br>🔥 保留每天完成練習的連續紀錄<br>🧠 智慧複習：記住你哪些字學會了、哪些還要練，到期自動幫你排進來<br>🏆 登上排行榜和大家一起比<br>📈 下次打開，直接讓你學習你的弱點' +
       '</div>' +
     '</div>');
 }
@@ -3626,7 +3555,7 @@ function tfShowAllMastered(pool) {
     '<div class="tf-ask-box" style="text-align:center;">' +
       '<div style="font-size:46px;line-height:1;margin-bottom:8px;">🏆🌾</div>' +
       '<div class="tf-ask-title">全部精通！</div>' +
-      '<div class="tf-ask-sub">這個等級的單字，你<b>全部都記住了</b>，太厲害了！🎉<br>星星已經收進你的收藏囉～</div>' +
+      '<div class="tf-ask-sub">這個等級的單字，你<b>全部都記住了</b>，太厲害了！🎉</div>' +
       '<div class="tf-ask-actions" style="flex-direction:column;gap:8px;">' +
         '<button class="tf-ask-send" id="tf-am-review">繼續複習（不計分）</button>' +
         '<button class="tf-ask-cancel" id="tf-am-level">挑戰其他等級</button>' +
@@ -4252,9 +4181,8 @@ function tfRenderExtBar() {
       '</div>';
     // streak chips
     var st = tfLoadStreak();
-    var alive = TF_STREAK.isAlive(st, todayStr());
-    var sn = document.getElementById('tf-streak-num'); if (sn) sn.textContent = (alive ? (st.streak || 0) : 0);
-    var fn = document.getElementById('tf-freeze-num'); if (fn) fn.textContent = (st.freezes || 0);
+    var sn = document.getElementById('tf-streak-num'); if (sn) sn.textContent = (st.streak || 0);
+    var fn = document.getElementById('tf-freeze-num'); if (fn) fn.textContent = 0;
     // ⭐ ดาว + 🌱 แบดจ์
     var stars = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0;
     var badges = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.earnedBadges() : [];
