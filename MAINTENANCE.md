@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-16 18:49 Asia/Bangkok** — Phase 1 Email OTP/Auth security integration
+**Updated: 2026-08-17 11:35 Asia/Bangkok** — Phase 1 public Leaderboard nickname safety source
+
+## 2026-08-17 — P1-B-04 Public Leaderboard Nickname Safety (`PASS_LOCAL / DEPLOY_AND_HUMAN_PV_BLOCKED`)
+
+- Separated the public Leaderboard identity from the private account/profile name, with NFKC/invisible/whitespace normalization and Thai/Traditional Chinese/English safety, evasion and contact-data filtering in both client and SQL contracts.
+- Added authenticated set/get/report RPCs, safe fallback/escaped board rendering and Report actions across Tone, Reading, Listening, Typing and Word Order. Report rows are private; public board RPCs expose no user ID, email or private profile nickname.
+- Admin hide/reset is scoped only to `leaderboard_public_identities` and moderation report state; it does not delete or mutate auth accounts, private profiles, scores or progress.
+- PostgreSQL 17 ephemeral validation applied the exact migration after correcting its Unicode-regex hyphen syntax, then passed normalization, rejection, privacy, duplicate-report and privilege assertions. Nickname targeted tests, security/auth/error regressions, `git diff --check` and `node scripts/check-site.js` PASS for 946 local project files.
+- No migration, Edge/client deployment, account/player mutation or Production write occurred. Authorized staging/deploy and controlled moderation UX verification remain required before this item can be marked DONE.
 
 ## 2026-08-16 — P1-G-05 Email OTP/Auth Security (`FIXED_PASS_LOCAL / PRODUCTION_E2E_BLOCKED`)
 

@@ -26,6 +26,8 @@
   .btn{border:none;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;}
   .btn-view{background:var(--green);color:#fff;}
   .btn-note{background:#fff;color:var(--amber-dark);border:1.5px solid var(--amber);}
+  .btn-hide{background:#fde68a;color:var(--amber-dark);}
+  .btn-reset{background:#fecaca;color:#7f1d1d;}
   .empty{color:var(--ink-muted);font-size:14px;padding:16px 0;}
   .status{font-size:12px;margin-top:8px;color:var(--ink-muted);}
   table{border-collapse:collapse;width:100%;max-width:720px;font-size:13px;}
@@ -110,7 +112,9 @@ function apaAccountCard(acc){
   var methodsHtml = (acc.login_methods||[]).map(function(m){ return '<span class="tag">'+apaEsc(m.provider)+'</span>'; }).join('');
   if(acc.has_synthetic_line_email){ methodsHtml += '<span class="tag warn">มีอีเมลปลอมของ LINE</span>'; }
   div.innerHTML =
-    '<div class="title">'+apaEsc(acc.nickname||'(ไม่มีชื่อเล่น)')+'</div>'+
+    '<div class="title">ชื่อโปรไฟล์ส่วนตัว: '+apaEsc(acc.nickname||'(ไม่มี)')+'</div>'+
+    '<div class="meta">Leaderboard: '+apaEsc(acc.leaderboard_nickname||'ผู้เล่น')+
+      (acc.leaderboard_nickname_hidden?' · 🚫 ซ่อนอยู่':'')+' · report ค้าง '+apaEsc(acc.pending_nickname_reports||0)+'</div>'+
     '<div class="meta">user_id: '+apaEsc(acc.user_id)+'<br>อีเมล: '+apaEsc(acc.email||'(ไม่มี)')+' · สมัครเมื่อ '+(acc.created_at?new Date(acc.created_at).toLocaleString('zh-TW'):'-')+'</div>'+
     '<div class="meta">⭐ '+apaEsc(acc.stars)+' · streak '+apaEsc(acc.streak)+' · ช่องทางล็อกอินจริง: '+apaEsc(acc.real_method_count)+'</div>'+
     '<div>'+methodsHtml+'</div>'+
@@ -189,6 +193,29 @@ function apaLoadDetail(userId){
     };
     card.appendChild(noteBox);
     card.appendChild(noteStatus);
+
+    if(acc.leaderboard_public_identity_id){
+      var moderationBox=document.createElement('div'); moderationBox.className='noteBox';
+      moderationBox.innerHTML='<button class="btn btn-hide" data-nickname-action="hide">🚫 ซ่อนชื่อเล่น</button><button class="btn btn-reset" data-nickname-action="reset">♻️ รีเซ็ตชื่อเล่น</button>';
+      var moderationStatus=document.createElement('div'); moderationStatus.className='status';
+      moderationBox.querySelectorAll('[data-nickname-action]').forEach(function(button){
+        button.onclick=function(){
+          var nicknameAction=button.getAttribute('data-nickname-action');
+          var promptText=nicknameAction==='hide'
+            ? 'ซ่อนชื่อนี้และใช้ชื่อสำรอง “ผู้เล่น” บนทั้ง 5 Leaderboard?'
+            : 'ลบชื่อ Leaderboard นี้และให้ผู้เล่นตั้งใหม่? ไม่กระทบบัญชี/คะแนน';
+          if(!confirm(promptText)) return;
+          moderationStatus.textContent='กำลังปรับ...';
+          apaCall('moderate_leaderboard_nickname', {user_id:userId, nickname_action:nicknameAction}).then(function(res){
+            if(res.error){ moderationStatus.textContent='❌ '+res.error+' '+(res.message||''); return; }
+            moderationStatus.textContent='✅ เสร็จแล้ว';
+            apaLoadDetail(userId);
+          }).catch(function(){ moderationStatus.textContent='❌ ปรับไม่สำเร็จ ลองใหม่'; });
+        };
+      });
+      card.appendChild(moderationBox);
+      card.appendChild(moderationStatus);
+    }
 
     var logHtml='<h2 style="font-size:14px;">ประวัติ (audit log) — ล่าสุด '+log.length+' รายการ</h2>';
     if(!log.length){ logHtml+='<div class="empty">ยังไม่มีประวัติของบัญชีนี้</div>'; }
