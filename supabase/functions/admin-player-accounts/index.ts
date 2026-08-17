@@ -119,6 +119,22 @@ async function loadAccountSummary(admin, userId) {
 
   const { data: lineRows } = await admin.from('line_identities').select('line_user_id').eq('user_id', userId);
   const { data: profile } = await admin.from('profiles').select('user_id, nickname, avatar, badge_id').eq('user_id', userId).maybeSingle();
+  const { data: publicIdentity, error: publicIdentityErr } = await admin
+    .from('leaderboard_public_identities')
+    .select('public_identity_id, nickname, nickname_hidden, nickname_updated_at, moderated_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (publicIdentityErr) throw publicIdentityErr;
+  let pendingNicknameReports = 0;
+  if (publicIdentity) {
+    const { count, error: reportCountErr } = await admin
+      .from('leaderboard_nickname_reports')
+      .select('report_id', { count: 'exact', head: true })
+      .eq('target_public_identity_id', publicIdentity.public_identity_id)
+      .eq('status', 'pending');
+    if (reportCountErr) throw reportCountErr;
+    pendingNicknameReports = count || 0;
+  }
   const { data: gameAccount } = await admin.from('game_accounts').select('user_id, stars, streak, last_play').eq('user_id', userId).maybeSingle();
   const loginMethods = await buildLoginMethods(admin, authUser, lineRows || []);
 
@@ -129,6 +145,12 @@ async function loadAccountSummary(admin, userId) {
     created_at: authUser.created_at,
     last_sign_in_at: authUser.last_sign_in_at || null,
     nickname: profile ? profile.nickname : null,
+    leaderboard_nickname: publicIdentity ? publicIdentity.nickname : null,
+    leaderboard_nickname_hidden: publicIdentity ? !!publicIdentity.nickname_hidden : false,
+    leaderboard_public_identity_id: publicIdentity ? publicIdentity.public_identity_id : null,
+    leaderboard_nickname_updated_at: publicIdentity ? publicIdentity.nickname_updated_at : null,
+    leaderboard_moderated_at: publicIdentity ? publicIdentity.moderated_at : null,
+    pending_nickname_reports: pendingNicknameReports,
     avatar: profile ? profile.avatar : null,
     badge_id: profile ? profile.badge_id : null,
     stars: gameAccount ? gameAccount.stars : 0,
@@ -192,9 +214,13 @@ serve(async (req) => {
         if (error) throw error;
         userIds = (data || []).map((r) => r.user_id);
       } else if (qType === 'nickname') {
-        const { data, error } = await admin.from('profiles').select('user_id').ilike('nickname', `%${q}%`).limit(50);
-        if (error) throw error;
-        userIds = (data || []).map((r) => r.user_id);
+        const [privateResult, publicResult] = await Promise.all([
+          admin.from('profiles').select('user_id').ilike('nickname', `%${q}%`).limit(50),
+          admin.from('leaderboard_public_identities').select('user_id').ilike('nickname', `%${q}%`).limit(50),
+        ]);
+        if (privateResult.error) throw privateResult.error;
+        if (publicResult.error) throw publicResult.error;
+        userIds = (privateResult.data || []).concat(publicResult.data || []).map((r) => r.user_id);
       } else if (qType === 'email') {
         // auth.users ไม่เปิดผ่าน PostgREST — ต้องไล่หน้า listUsers() แล้วกรองในโค้ด (สเกลระบบนี้เล็ก รับได้)
         let page = 1;
@@ -347,6 +373,59 @@ serve(async (req) => {
       }
 
       return json({ ok: true, message: 'บันทึกหมายเหตุแล้ว' });
+    }
+
+    // Scoped P1-DN-03 moderation: changes only the separate public Leaderboard identity.
+    // It never updates auth.users, private profiles, scores, progress, or account lifecycle state.
+    if (action === 'moderate_leaderboard_nickname') {
+      const userId = body.user_id;
+      const nickname_action = body.nickname_action;
+      if (!userId) return json({ error: 'missing_user_id' }, 400);
+      if (nickname_action !== 'hide' && nickname_action !== 'reset') {
+        return json({ error: 'invalid_nickname_action', message: 'ใช้ได้เฉพาะ hide/reset' }, 400);
+      }
+
+      const { data: before, error: beforeErr } = await admin
+        .from('leaderboard_public_identities')
+        .select('public_identity_id, nickname, nickname_hidden')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (beforeErr) throw beforeErr;
+      if (!before) return json({ error: 'nickname_not_found', message: 'บัญชีนี้ยังไม่มีชื่อเล่น Leaderboard' }, 404);
+
+      const patch = nickname_action === 'hide'
+        ? { nickname_hidden: true, moderated_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        : { nickname: null, nickname_key: null, nickname_hidden: false, moderated_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+      const { data: after, error: updateErr } = await admin
+        .from('leaderboard_public_identities')
+        .update(patch)
+        .eq('user_id', userId)
+        .select('public_identity_id, nickname, nickname_hidden')
+        .single();
+      if (updateErr) throw updateErr;
+
+      const { error: reportErr } = await admin
+        .from('leaderboard_nickname_reports')
+        .update({ status: 'reviewed', reviewed_at: new Date().toISOString() })
+        .eq('target_public_identity_id', before.public_identity_id)
+        .eq('status', 'pending');
+      if (reportErr) throw reportErr;
+
+      const { error: auditErr } = await admin.rpc('log_account_audit', {
+        p_user_id: userId,
+        p_event_type: 'admin_correction',
+        p_before_state: { leaderboard_nickname: before.nickname, nickname_hidden: before.nickname_hidden },
+        p_after_state: { leaderboard_nickname: after.nickname, nickname_hidden: after.nickname_hidden, nickname_action },
+        p_actor_type: 'admin',
+        p_actor_id: null,
+        p_provider: 'leaderboard_nickname',
+      });
+      if (auditErr) {
+        console.error('[admin-player-accounts] nickname moderation audit failed', { userId, nickname_action, error: auditErr.message });
+        return json({ error: 'audit_log_failed', message: 'ปรับชื่อเล่นแล้วแต่บันทึก audit ไม่สำเร็จ ให้หยุดและตรวจสอบ', nickname_changed: true }, 500);
+      }
+
+      return json({ ok: true, nickname_action, public_identity: after });
     }
 
     return json({ error: 'unknown_action' }, 400);

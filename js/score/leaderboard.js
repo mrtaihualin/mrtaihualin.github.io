@@ -33,10 +33,12 @@
   var root = document.getElementById('lb-root');
   if (!root) return;
   if (!ready) { root.innerHTML = box('⚙️', '系統尚未就緒', 'Supabase 尚未設定完成'); return; }
+  if (!window.NICKNAME_SAFETY) { root.innerHTML = box('⚙️', '系統尚未就緒', '暱稱安全模組載入失敗'); return; }
 
   var sb = window.getSupabaseClient ? window.getSupabaseClient() : window.supabase.createClient(cfg.url, cfg.anonKey);
   var currentUser = null;
   var myNick = null;
+  var nicknameModerated = false;
   var nicknameSavePending = false;
   var NICKNAME_SAVE_TIMEOUT_MS = 12000;
   var period = 'week'; // 'week' | 'all'
@@ -51,7 +53,7 @@
         error.uncertain = true;
         reject(error);
       }, NICKNAME_SAVE_TIMEOUT_MS);
-      Promise.resolve(sb.from('profiles').upsert({ user_id: currentUser.id, nickname: nickname }, { onConflict: 'user_id' }))
+      Promise.resolve(sb.rpc('set_leaderboard_nickname', { p_nickname: nickname }))
         .then(function (res) {
           if (settled) return;
           settled = true; clearTimeout(timer); resolve(res);
@@ -65,7 +67,12 @@
   }
 
   function nicknameSaveError(error) {
-    var failure = new Error((error && error.message) || '暱稱儲存失敗');
+    var raw = String((error && error.message) || '');
+    var codeMatch = raw.match(/NICKNAME_(EMPTY|TOO_LONG|INVALID_CHARACTERS|CONTACT_DATA|INAPPROPRIATE|MODERATED)/);
+    var message = codeMatch
+      ? (codeMatch[1] === 'MODERATED' ? '這個排行榜暱稱已被隱藏，請聯絡管理員' : window.NICKNAME_SAFETY.messageFor(codeMatch[1].toLowerCase()))
+      : (raw || '暱稱儲存失敗');
+    var failure = new Error(message);
     failure.uncertain = !!(error && !error.code && /(?:failed to fetch|network|load failed|timeout|timed out)/i.test(String(error.message || '') + ' ' + String(error.details || '')));
     return failure;
   }
@@ -148,8 +155,9 @@
     if (!currentUser || nicknameSavePending) return;
     var nm = window.prompt('設定排行榜暱稱（1–20 字）：', myNick || '');
     if (nm == null) return;
-    nm = nm.trim().slice(0, 20);
-    if (!nm) { alert('暱稱不能空白'); return; }
+    var checked = window.NICKNAME_SAFETY.validate(nm);
+    if (!checked.ok) { alert(checked.message); return; }
+    nm = checked.value;
     nicknameSavePending = true;
     saveNicknameWithTimeout(nm)
       .then(function (res) {
@@ -160,7 +168,9 @@
         }
         if (res.error) throw nicknameSaveError(res.error);
         // Never update the visible nickname before the remote upsert confirms success.
-        myNick = nm;
+        var saved = res.data && res.data[0];
+        myNick = (saved && saved.nickname) || nm;
+        nicknameModerated = false;
         load();
       }).catch(function (error) {
         alert(error && error.uncertain
@@ -172,11 +182,22 @@
   }
 
   async function fetchMyNick() {
-    if (!currentUser) { myNick = null; return; }
+    if (!currentUser) { myNick = null; nicknameModerated = false; return; }
     try {
-      var res = await sb.from('profiles').select('nickname').eq('user_id', currentUser.id).maybeSingle();
-      myNick = (res.data && res.data.nickname) || null;
-    } catch (e) { myNick = null; }
+      var res = await sb.rpc('get_my_leaderboard_identity');
+      var row = res.data && res.data[0];
+      nicknameModerated = !!(row && row.nickname_hidden);
+      myNick = (!nicknameModerated && row && row.nickname) || null;
+    } catch (e) { myNick = null; nicknameModerated = false; }
+  }
+
+  function reportNickname(publicIdentityId) {
+    if (!currentUser) { alert('請先登入，才能報告不當暱稱'); return; }
+    if (!publicIdentityId || !window.confirm('要報告這個排行榜暱稱嗎？')) return;
+    sb.rpc('report_leaderboard_nickname', { p_public_identity_id: publicIdentityId }).then(function (res) {
+      if (res.error) throw res.error;
+      alert(res.data === 'already_reported' ? '你已報告過這個暱稱' : '已收到報告，謝謝你');
+    }).catch(function () { alert('報告失敗，請稍後再試'); });
   }
 
   // ── โหลด + แสดงกระดาน ───────────────────────────────────────
@@ -196,6 +217,9 @@
     });
     var setn = root.querySelector('#lb-setnick');
     if (setn) setn.onclick = promptNickname;
+    [].forEach.call(root.querySelectorAll('[data-report-nickname]'), function (button) {
+      button.onclick = function () { reportNickname(button.getAttribute('data-report-nickname')); };
+    });
   }
 
   function nickBar() {
@@ -203,11 +227,14 @@
       return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">' +
         '在遊戲頁登入即可參加排行 · <a href="games.html" style="color:#A07A1E;">前往遊戲</a></div>';
     }
+    if (nicknameModerated) {
+      return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">你的排行榜暱稱已被隱藏，排行將顯示「玩家」。</div>';
+    }
     if (!myNick) {
       return '<div style="text-align:center;margin-bottom:16px;">' +
         '<button id="lb-setnick" style="background:#C8973A;color:#fff;border:none;border-radius:999px;padding:9px 20px;cursor:pointer;font-weight:700;font-size:14px;">✏️ 設定暱稱來上榜</button></div>';
     }
-    return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">你的暱稱：<b style="color:#5C4410;">' + esc(myNick) +
+    return '<div style="text-align:center;font-size:13px;color:#8B7340;margin-bottom:16px;">你的排行榜暱稱：<b style="color:#5C4410;">' + esc(window.NICKNAME_SAFETY.publicDisplayName(myNick)) +
       '</b> · <a id="lb-setnick" href="javascript:void(0)" style="color:#A07A1E;">更改</a></div>';
   }
 
@@ -250,6 +277,7 @@
     rows.forEach(function (r, i) {
       var rank = i + 1;
       var mine = !!(currentUser && r.is_current_user === true);
+      var displayName = window.NICKNAME_SAFETY.publicDisplayName(r.nickname);
       // "อีก X แต้มแซง [คนข้างบน]" — โชว์ใต้แถวของผู้เล่นเอง (ถ้ายังไม่ใช่ที่ 1)
       var pacerHint = '';
       if (mine && i > 0) {
@@ -257,7 +285,7 @@
         var gap = (above.total_score || 0) - (r.total_score || 0);
         if (gap > 0) {
           pacerHint = '<div style="font-size:11.5px;color:#C8973A;padding:2px 12px 8px 50px;">再 <b>' + gap +
-            '</b> 分就超越 <b>' + esc(above.nickname || '(無暱稱)') + '</b> 囉！💪</div>';
+            '</b> 分就超越 <b>' + esc(window.NICKNAME_SAFETY.publicDisplayName(above.nickname)) + '</b> 囉！💪</div>';
         }
       }
       html +=
@@ -266,9 +294,10 @@
           '<div style="font-size:17px;min-width:26px;text-align:center;">' + medal(rank) + '</div>' +
           lbAvatar(r.avatar) +
           '<div style="flex:1;min-width:0;font-weight:700;color:#5C4410;display:flex;align-items:center;gap:5px;overflow:hidden;">' +
-            '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.nickname || '(無暱稱)') + '</span>' +
+            '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName) + '</span>' +
             (r.badge_id ? lbBadgeIcon(r.badge_id, 18) : '') +
-            (mine ? '<span style="font-size:11px;color:#C8973A;flex-shrink:0;">(你)</span>' : '') + '</div>' +
+            (mine ? '<span style="font-size:11px;color:#C8973A;flex-shrink:0;">(你)</span>' : '') +
+            (!mine && !r._bot && r.public_identity_id ? '<button type="button" data-report-nickname="' + esc(r.public_identity_id) + '" aria-label="報告不當暱稱" title="報告不當暱稱" style="border:0;background:transparent;color:#A07A1E;cursor:pointer;padding:4px;font-size:12px;flex-shrink:0;">⚑</button>' : '') + '</div>' +
           '<div style="text-align:right;white-space:nowrap;">' +
             '<span style="font-family:\'Playfair Display\',serif;font-weight:900;color:#C8973A;font-size:18px;">' + (r.total_score != null ? r.total_score : 0) + '</span>' +
             '<span style="font-size:11px;color:#B0A080;margin-left:5px;">' + (r.games || 0) + ' 場</span>' +
