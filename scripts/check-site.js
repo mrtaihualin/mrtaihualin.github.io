@@ -125,6 +125,7 @@ runTest(['scripts/tests-phase1-free-gamification.mjs'], 'Phase 1 Free Daily Stre
 runTest(['scripts/tests-phase1-played-gamification-recovery.mjs'], 'Phase 1 Played/Gamification recovery artifact tests');
 runTest(['scripts/tests-phase1-srs.js'], 'Phase 1 SRS tests');
 runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
+runTest(['scripts/tests-phase1-game-content-rl-grants.mjs'], 'Phase 1 game-content rate-limit grant tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');
 runTest(['scripts/tests-reading-phase1.js'], 'Phase 1 Reading tests');
 runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
@@ -150,6 +151,7 @@ runTest(['scripts/tests-phase1-backup-safety.js'], 'Phase 1 encrypted backup/ret
 runTest(['scripts/tests-phase1-consent-coverage.js'], 'Phase 1 all-page analytics consent coverage tests');
 runTest(['scripts/tests-cron-internal-auth.js'], 'Phase 1 cron/browser authorization contract tests');
 runTest(['scripts/tests-phase1-cron-reliability.js'], 'Phase 1 cron reliability/readiness tests');
+runTest(['scripts/tests-phase1-calendar-reliability.mjs'], 'Phase 1 Calendar rate-limit/idempotency tests');
 // เพิ่ม 2026-08-11 (P5-B) — ตัวทดสอบคุ้มกันกฎห้องเรียนที่เคยพังมาแล้วจริง
 // (กฎล็อกเพิ่ม/เลื่อน/ยกเลิก · สำรองก่อนแตะ Calendar · ตรวจคาบชนตอนย้าย · p_original_time ·
 //  ซิงค์ตารางหลังย้าย · ระบบเก่าที่ลบถาวรห้ามกลับมา · รีเซ็ตธงเตือน · ปุ่ม LINE พก d=/t=)

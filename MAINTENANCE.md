@@ -1,6 +1,21 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-18 10:53 Asia/Bangkok** — Phase 1 low-quota browser/cron authorization contract
+**Updated: 2026-08-18 17:45 Asia/Bangkok** — Phase 1 Listening Review1/Due20 + game-content RPC least privilege
+
+## 2026-08-18 — P1-B-02/C-LISTENING-02 Review1/Due20 + RPC ACL (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Listening now binds the Free allocator's selected Due items to a per-round Review policy: each Due item can consume one actual attempt, a failed Due item cannot re-enter the same round, and its SRS submission is claimed once before the request. The policy persists through safe resume; restart removes already-attempted Due items, and legacy resume state without the policy starts a fresh round instead of guessing while Auth may still be resolving.
+- Added negative runtime regressions for failed-Due requeue, second Review attempt, duplicate SRS submission, resume claim preservation, fail-closed Review1 and 2/10 actual Due attempts. The Listening-only cache key advances from v11 to v12; no Phase 1.2 UX work or other game formula changed.
+- Fixed fresh-install SQL source and added a rerunnable existing-deployment migration that prechecks the exact SECURITY DEFINER signature, revokes `PUBLIC`/`anon`/`authenticated`, grants only `service_role`, and aborts if the effective postcheck is not least privilege. Its recovery route re-runs the same closed ACL; it never restores browser execute access or changes rate-counter rows/function code.
+- Listening 46/46, Phase 1 SRS 17/17, Game Flow, S29 score/security, save/retry 11/11, backend transactions 9/9, owner-switch 12/12, SQL source checks, ephemeral PostgreSQL pre/post/idempotent-recovery proof, `git diff --check` and the full 987-file site gate pass locally. No Production SQL, client/Edge deploy, account/data mutation, secret access, provider action, PR #44 action or Phase 1.2 implementation occurred.
+
+## 2026-08-18 — P1-F-02/F-03 Calendar Rate Limit + False Success (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Traced the LINE delete/move paths and confirmed that request claims happened only after one or more Google Calendar reads. Repeated buttons were therefore write-deduplicated but could still burst duplicate provider reads before the lock. All three delete/reschedule handlers now claim before their first Calendar request, and move reuses the claimed precheck snapshot instead of immediately reading the same event again.
+- Added one shared bounded Google Calendar request policy: exponential backoff applies to read failures and explicit provider rate-limit rejections; ambiguous PATCH/DELETE network or server failures are never replayed automatically. Delete/move verification failures preserve the request lock and recovery backup instead of treating the operation as safely retryable, and delete never automatically reclaims such a stale lock.
+- Calendar outcomes now use `SUCCESS`, `PARTIAL_SUCCESS`, `RETRY_PENDING` and `FAILED`. Final LINE responses enumerate confirmed work and pending schedule/request/notification work; provider payloads are logged only for diagnosis and are never shown to LINE users. Delete notification now runs after confirmed Calendar deletion but before request finalization, so a follow-up database failure cannot silently skip the student notice.
+- Targeted regressions cover normal success, HTTP 403 `usageLimits/rateLimitExceeded`, bounded retry, ambiguous mutation non-replay, early repeated-action dedupe, partial delete follow-up, notification ordering and raw-payload redaction. Calendar reliability, classroom behavioral, syntax and the full 987-file site gate pass locally.
+- No Google Calendar/LINE request, SQL, Edge/client deploy, secret/config, account/student-data or other Production mutation occurred.
 
 ## 2026-08-18 — P1-G-02/F-02/F-08 Low-Quota Dual Authorization (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
 

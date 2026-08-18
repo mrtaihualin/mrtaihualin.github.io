@@ -109,8 +109,9 @@ begin
   return v_cnt <= p_limit;   -- true = ยังไม่เกิน · false = เกินเพดาน
 end; $$;
 
--- ล็อกไม่ให้ client เรียกเอง (เรียกได้เฉพาะฝั่งเซิร์ฟเวอร์ผ่าน service_role)
-revoke execute on function public.game_content_rl_check(text, int, int) from anon, authenticated;
+-- ล็อกไม่ให้ client เรียกเอง (Postgres ให้ EXECUTE แก่ PUBLIC โดย default จึงต้อง revoke PUBLIC ด้วย)
+revoke execute on function public.game_content_rl_check(text, int, int) from public, anon, authenticated;
+grant execute on function public.game_content_rl_check(text, int, int) to service_role;
 
 -- (ทางเลือก) ลบแถวช่องเวลาเก่ากันตารางบวม — รันเป็นครั้งคราว หรือตั้ง cron ทีหลัง:
 --   delete from public.game_content_rl where window_start < now() - interval '1 day';
