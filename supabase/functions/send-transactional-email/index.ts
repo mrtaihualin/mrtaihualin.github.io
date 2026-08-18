@@ -4,8 +4,8 @@
 // สถานะไฟล์นี้: ฟังก์ชันกลางมีอยู่แล้ว; รอบ Auth Security เพิ่มเฉพาะ source ของ Email OTP template
 // ห้าม deploy source delta รอบนี้จน Lin อนุมัติ Production rollout แยกต่างหาก
 //
-// Provider adapter ใน source นี้ใช้ Resend contract; account, DNS และ secrets อยู่นอก source และนอก
-// authorization รอบนี้ ถ้าจะเปลี่ยน provider ให้เปลี่ยนเฉพาะ sendViaProvider() หลังได้รับอนุมัติ
+// Provider ที่อนุมัติแล้วคือ Resend; account, DNS, dashboard metadata และ secrets ยังเป็น Human/Production
+// gates แยกต่างหากและอยู่นอก source authorization รอบนี้
 //
 // หน้าที่: จุดกลางจุดเดียวสำหรับส่ง transactional email ของทั้งเว็บ (เพิ่มจากที่ไม่เคยมีระบบอีเมลแจ้งเตือน
 //   เลยมาก่อน — ตรวจแล้วไม่พบ Resend/SendGrid/Mailgun/Postmark/SES/nodemailer อยู่ในโปรเจกต์นี้เลยสักที่
@@ -18,19 +18,18 @@
 // กับบัญชีของผู้ใช้เอง 1 คนต่อ 1 อีเมล ไม่ใช่ broadcast)
 //
 // ── ใครเรียกฟังก์ชันนี้ได้ (กันคนแปลกหน้ามาใช้เป็นเครื่องส่งสแปม) ──────────────────────────────
-//   ฟังก์ชันนี้ "ไม่รับ JWT ของผู้ใช้ทั่วไปเด็ดขาด" — เรียกได้เฉพาะจาก Edge Function อื่นในโปรเจกต์นี้
-//   เท่านั้น (ผ่าน service_role key) เหตุผล: ถ้าเปิดให้ authenticated เรียกตรงได้ ใครก็ตามที่ล็อกอินอยู่
+//   Email OTP เรียกได้เฉพาะจาก email-otp-auth ผ่าน named Supabase secret API key
+//   `email-otp-mailer` ใน header `apikey` เหตุผล: ถ้าเปิดให้ authenticated เรียกตรงได้ ใครก็ตามที่ล็อกอินอยู่
 //   จะสั่งให้ระบบส่งอีเมลไปหาใครก็ได้ (ใส่ to เป็นอีเมลใครก็ได้) กลายเป็นเครื่องมือส่งสแปม/ฟิชชิ่งฟรีทันที
-//   วิธีตรวจ: decode JWT (หลังผ่านเกตเวย์ verify_jwt ของ Supabase มาแล้ว แปลว่าเป็น JWT ของโปรเจกต์นี้จริง)
-//   แล้วเช็ค claim `role` ต้องเป็น 'service_role' เท่านั้น — แพทเทิร์นเดียวกับการเช็ค role จาก JWT ที่ใช้
-//   อยู่แล้วทั่วทั้ง repo (ดู CLAUDE.md หัวข้อ Secrets Audit: "JWT ที่เจอในโค้ดฝั่งเว็บถอดแล้วเป็น anon
-//   role ทั้งหมด" — โค้ดนี้ใช้หลักการเดียวกันแต่กลับด้าน คือ "ต้องเป็น service_role เท่านั้นถึงจะผ่าน")
+//   Gateway JWT verification ต้องปิดสำหรับฟังก์ชันนี้ตาม key model ปัจจุบัน แล้ว source จะตรวจ exact named key
+//   เองก่อนอ่าน body; missing/wrong key, publishable key, user JWT และ Authorization header ล้วน fail closed
+//   Existing account-delete/account-delete-cron callers keep their exact prior dual-header service-role path only
+//   for the three account-deletion templates; that compatibility path can never invoke email_login_otp
 //
 // ── Request/Response contract ─────────────────────────────────────────────────────
 //   Method: POST
-//   Headers: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>, apikey: <SUPABASE_SERVICE_ROLE_KEY>
-//     (เรียกจาก Edge Function อื่นด้วย createClient(url, SERVICE_KEY) หรือ fetch() ตรงๆ ก็ได้ทั้งคู่
-//      ขอแค่แนบ header ให้ครบ 2 ตัวนี้เหมือนกัน)
+//   Headers: apikey: <named Supabase secret API key `email-otp-mailer`>
+//     ห้ามใส่ key นี้ใน Authorization และห้ามส่งไป browser
 //   Body: { template: string, to: string, data: object }
 //     - template: ต้องอยู่ใน TEMPLATES ด้านล่างเท่านั้น (ตอนนี้มี 4 ตัว — ดูหัวข้อ TEMPLATES)
 //     - to: อีเมลปลายทาง (ฟังก์ชันนี้ไม่ตรวจว่าเป็นอีเมลของใคร — ผู้เรียก (Edge Function อื่น) ต้อง
@@ -39,19 +38,16 @@
 //       ไม่เหมือนกัน ดูที่ TEMPLATES ว่าต้องการอะไรบ้าง
 //   Response 200: { ok: true, provider, provider_message_id }
 //   Response 400: { error: 'invalid_template' | 'missing_to' | 'missing_data_field' | 'invalid_template_data', message }
-//   Response 401: { error: 'forbidden', message }  — ไม่ใช่ service_role
+//   Response 401: { error: 'forbidden', message }  — ไม่ใช่ exact named server caller
 //   Response 500: { error: 'provider_error' | 'unexpected_error', message, detail }
 //     — ส่งไม่สำเร็จต้องตอบ 500 ชัดเจนเสมอ ห้ามตอบ 200 หลอกๆ (RELIABILITY FIRST) ผู้เรียก (account-delete/
 //     account-delete-cron) ต้องดักผลนี้เอง แล้วตัดสินใจว่าจะ retry/log/แจ้ง Lin ยังไง — ฟังก์ชันนี้แค่
 //     "พยายามส่ง 1 ครั้งแล้วรายงานผลจริง" ไม่มี retry queue ในตัวเอง (ยังไม่ทำ — ดูหมายเหตุท้ายไฟล์)
 //
-// วิธี deploy (สำหรับ Lin ทำเองภายหลัง หลังเลือก provider + ตั้ง secret แล้วเท่านั้น):
-//   1. เลือก provider (ดูตารางเทียบท้ายไฟล์) → สมัครบัญชี → verify โดเมนส่งเมล (เช่น noreply@mrtaihualin.com)
-//   2. ตั้ง secret: supabase secrets set EMAIL_PROVIDER_API_KEY=xxxxxxxx
-//      ถ้าไม่ใช่ Resend ต้องแก้ฟังก์ชัน sendViaProvider() ให้ตรงกับ API ของ provider ที่เลือกด้วย
-//   3. supabase functions deploy send-transactional-email
-//      ⚠️ ไม่ต้องใส่ --no-verify-jwt — ต้องการให้เกตเวย์เช็คว่าเป็น JWT ของโปรเจกต์นี้จริงก่อนเข้าโค้ดเรา
-//      (ชั้นที่ 2 คือเช็ค role='service_role' ในโค้ดเอง — 2 ชั้นซ้อนกัน)
+// วิธี deploy (ภายหลังและต้องมี exact approval แยกทุก mutation):
+//   1. ยืนยัน Resend domain/from-address/API-key metadata ที่อนุมัติไว้แล้ว
+//   2. ตั้ง provider secret และสร้าง named Supabase secret API key `email-otp-mailer`
+//   3. deploy send-transactional-email ด้วย verify_jwt=false; source ตรวจ named `apikey` เอง
 //   4. ทดสอบส่งจริง 1 ฉบับไปอีเมลของ Lin เองก่อน ตรวจว่าไม่ตกไปถังขยะ (SPF/DKIM ของโดเมนตั้งถูกไหม)
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -59,6 +55,11 @@
 // @ts-nocheck  (Supabase Edge Function รันบน Deno ไม่ใช่ Node — IDE อาจฟ้อง type error ปกติ ไม่กระทบตอน deploy จริง)
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import {
+  isEmailMailerRequestAuthorized,
+  isEmailMailerTemplateAuthorized,
+  isLegacyAccountMailerRequestAuthorized,
+} from '../_shared/email-mailer-auth.mjs';
 
 // ─────────────────────────────────────────────────────────────────────────
 // TEMPLATES — เพิ่ม template ใหม่ในอนาคตแค่เพิ่ม entry ตรงนี้ 1 อัน (ตามที่ Lin สั่งให้ออกแบบขยายได้)
@@ -154,34 +155,6 @@ function corsHeaders() {
   return { 'Content-Type': 'application/json' };
 }
 
-// ── ตรวจว่าผู้เรียกเป็น service_role จริง ──────────────────────────────────────────
-//   🆕 2026-08-09 (แก้บั๊กจริงที่เจอตอนทดสอบ): เดิมเช็คด้วยการ decode JWT อ่าน claim `role` เท่านั้น
-//   แต่ Supabase เปลี่ยนระบบ API key เป็นแบบใหม่ (`sb_secret_...`) ซึ่ง "ไม่ใช่ JWT" (ไม่มี 3 ส่วนคั่นด้วย
-//   จุดแบบ JWT) → decode ไม่ได้เลย ตกไปที่ forbidden เสมอแม้ใช้ key ถูกต้อง (พิสูจน์จริงจาก curl ทดสอบ
-//   2026-08-09: ได้ error "forbidden" ทั้งที่ใช้ secret key ใหม่ที่ถูกต้องจริง)
-//   แก้โดยเช็ค 2 ทางควบคู่กัน (ผ่านทางใดทางหนึ่งพอ ไม่ลดความปลอดภัย เพราะทั้งคู่ต้องรู้ค่าลับจริงเท่านั้น):
-//     (1) เทียบ raw string ตรงๆ กับ SUPABASE_SERVICE_ROLE_KEY ที่ Supabase inject ให้ทุก Edge Function
-//         อัตโนมัติอยู่แล้ว (ใช้ได้ทั้ง key แบบเก่า (JWT) และแบบใหม่ (sb_secret_...) เพราะเทียบ string ตรงๆ
-//         ไม่ต้อง decode) — เป็นทางหลักที่ควรผ่านตอนนี้
-//     (2) decode JWT อ่าน claim role (ของเดิม) — เก็บไว้เผื่อ Supabase project ไหนยังใช้ key แบบเก่าอยู่
-function decodeJwtPayloadUnsafe(jwt) {
-  try {
-    const parts = String(jwt || '').split('.');
-    if (parts.length !== 3) return null;
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
-    return JSON.parse(atob(padded));
-  } catch (e) {
-    return null;
-  }
-}
-function isServiceRoleCaller(jwt) {
-  const envKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (envKey && jwt && jwt === envKey) return true;
-  const claims = decodeJwtPayloadUnsafe(jwt);
-  return !!(claims && claims.role === 'service_role');
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔴 sendViaProvider() — จุดเดียวที่ต้องแก้ถ้า Lin เลือก provider อื่นที่ไม่ใช่ Resend
 //   โครงด้านล่างคือตัวอย่างอ้างอิงของ Resend API (https://resend.com/docs/api-reference/emails/send-email)
@@ -216,10 +189,15 @@ serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed', message: 'ใช้ POST เท่านั้น' }, 405);
 
   try {
-    // ── ต้องเป็น service_role เท่านั้น (ดูเหตุผลเต็มในหัวไฟล์) ──
-    const authHeader = req.headers.get('Authorization') || '';
-    const jwt = authHeader.replace(/^Bearer\s+/i, '');
-    if (!isServiceRoleCaller(jwt)) {
+    // Must be deployed with verify_jwt=false. This exact named-key check is the
+    // Email OTP caller contract. The legacy branch is restricted after parsing
+    // to account-recovery templates and exists only to preserve current callers.
+    const caller = isEmailMailerRequestAuthorized(req.headers, Deno.env.get('SUPABASE_SECRET_KEYS'))
+      ? 'email-otp'
+      : (isLegacyAccountMailerRequestAuthorized(req.headers, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))
+        ? 'account-recovery'
+        : '');
+    if (!caller) {
       return json({ error: 'forbidden', message: 'ฟังก์ชันนี้เรียกได้เฉพาะจาก server อื่นในระบบเท่านั้น' }, 401);
     }
 
@@ -229,6 +207,10 @@ serve(async (req) => {
     const templateName = body && body.template;
     const to = body && body.to;
     const data = (body && body.data) || {};
+
+    if (!isEmailMailerTemplateAuthorized(caller, templateName)) {
+      return json({ error: 'forbidden', message: 'caller นี้ไม่มีสิทธิ์ใช้ template นี้' }, 401);
+    }
 
     const tpl = TEMPLATES[templateName];
     if (!tpl) return json({ error: 'invalid_template', message: 'ไม่รู้จัก template: ' + templateName, known_templates: Object.keys(TEMPLATES) }, 400);
@@ -255,29 +237,12 @@ serve(async (req) => {
     return json({
       error: code,
       message: code === 'provider_not_configured'
-        ? 'ระบบอีเมลยังไม่ได้ตั้งค่า provider จริง (Lin ยังไม่ได้เลือก/ตั้ง secret) — ไม่ใช่บั๊ก เป็นสถานะที่คาดไว้ก่อน deploy จริง'
+        ? 'ระบบอีเมลยังไม่มี provider runtime configuration ที่พร้อมใช้งาน'
         : 'ส่งอีเมลไม่สำเร็จ',
       detail: String((e && e.message) || e),
     }, 500);
   }
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-// ตัวเลือก email provider ที่เทียบไว้ให้ Lin ตัดสินใจ (ยังไม่ได้เลือก — AI ห้ามเลือกเอง)
-// ════════════════════════════════════════════════════════════════════════════
-// | Provider  | ข้อดี | ข้อสังเกต |
-// |-----------|-------|-----------|
-// | Resend    | API เรียบง่ายที่สุด (1 endpoint, JSON ธรรมดา) เหมาะกับ transactional email โดยเฉพาะ
-// |           | มี free tier (ราว 3,000 ฉบับ/เดือน ณ ที่ตรวจล่าสุด — ควรเช็คราคาปัจจุบันเองก่อนตัดสินใจ
-// |           | เพราะราคาผู้ให้บริการเปลี่ยนได้ตลอด) เอกสารทันสมัย รองรับ React Email template (ไม่จำเป็น
-// |           | ต้องใช้ก็ได้) — โค้ดตัวอย่างในไฟล์นี้เขียนไว้ให้แล้ว
-// | Postmark  | ชื่อเสียงเรื่อง deliverability (อีเมลไม่ตกถังขยะ) ดีมากในกลุ่ม transactional-only โดยเฉพาะ
-// |           | แยกโควตา transactional/marketing ชัดเจน (marketing ต้องขอ approve เพิ่ม) เหมาะกับ "ห้ามมี
-// |           | marketing email" ตามที่ Lin สั่ง เพราะระบบเขาบังคับแยกอยู่แล้วในตัว
-// | SendGrid  | ผู้เล่นใหญ่ที่สุด/เก่าแก่สุด มี free tier แต่ API ซับซ้อนกว่า 2 ตัวบน ประวัติเรื่อง
-// |           | deliverability มีทั้งดีและมีเคสร้องเรียนบ้างในอดีต ควรอ่านรีวิวล่าสุดเองก่อนตัดสินใจ
-// |
-// ทุกตัวต้องมีขั้นตอนเดียวกัน: สมัครบัญชี → verify โดเมนส่งเมล (เพิ่ม DNS record บนโดเมน mrtaihualin.com
-// — ต้องเข้าถึงที่จัดการ DNS ของโดเมนได้) → ได้ API key → ตั้ง secret → (ถ้าไม่ใช่ Resend) แก้
-// sendViaProvider() ด้านบนให้ตรงกับ API ของ provider นั้น
-// ════════════════════════════════════════════════════════════════════════════
+// Resend is the approved provider. Dashboard metadata, DNS/provider changes,
+// secrets, live delivery and every deploy remain separate Human/Production gates.

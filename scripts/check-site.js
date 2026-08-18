@@ -142,6 +142,7 @@ runTest(['scripts/tests-auth-session-phase1.js'], 'Phase 1 auth session verifica
 runTest(['scripts/tests-account-lifecycle-phase1.js'], 'Phase 1 account lifecycle recovery tests');
 runTest(['scripts/tests-phase1-account-audit-integrity.js'], 'Phase 1 account audit trust-boundary tests');
 runTest(['scripts/tests-email-otp-auth-security.js'], 'Email OTP auth-security regression tests');
+runTest(['scripts/tests-email-otp-service-client-contract.mjs'], 'Email OTP service/client activation contract tests');
 runTest(['scripts/tests-phase1-save-retry.js'], 'Phase 1 API/Edge/save/retry safety tests');
 runTest(['scripts/tests-phase1-canonical-state.js'], 'Phase 1 canonical persistence tests');
 runTest(['scripts/tests-phase1-owner-switch-races.js'], 'Phase 1 owner-switch late-response race tests');

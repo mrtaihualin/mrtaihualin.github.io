@@ -23,6 +23,18 @@ window.SUPABASE_CONFIG = {
 };
 
 // ════════════════════════════════════════════════════════════
+// EMAIL OTP ACTIVATION — public client artifact owned only by this config file
+// Native Supabase Email OTP remains the safe default. A later separately approved
+// rollout may switch mode to "broker" and add the public Turnstile site key only
+// after the migration, both Edge Functions, secrets/config and backend proof pass.
+// Never place the named mailer key or any other server secret here.
+// ════════════════════════════════════════════════════════════
+window.EMAIL_OTP_SECURITY_CONFIG = Object.freeze({
+  mode: 'native',
+  turnstileSiteKey: ''
+});
+
+// ════════════════════════════════════════════════════════════
 // [02] SHARED SUPABASE CLIENT (singleton) — กัน warning "Multiple GoTrueClient instances"
 // ทุกไฟล์ควรเรียก window.getSupabaseClient() แทนการ createClient เอง
 // คืน client ตัวเดิมเสมอ (สร้างครั้งเดียวต่อหน้า) · คืน null ถ้ายังตั้งค่าไม่พร้อม
