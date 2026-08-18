@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-18 10:53 Asia/Bangkok** — Phase 1 low-quota browser/cron authorization contract
+**Updated: 2026-08-18 Asia/Bangkok** — Phase 1 Calendar rate-limit/false-success reliability
+
+## 2026-08-18 — P1-F-02/F-03 Calendar Rate Limit + False Success (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Traced the LINE delete/move paths and confirmed that request claims happened only after one or more Google Calendar reads. Repeated buttons were therefore write-deduplicated but could still burst duplicate provider reads before the lock. All three delete/reschedule handlers now claim before their first Calendar request, and move reuses the claimed precheck snapshot instead of immediately reading the same event again.
+- Added one shared bounded Google Calendar request policy: exponential backoff applies to read failures and explicit provider rate-limit rejections; ambiguous PATCH/DELETE network or server failures are never replayed automatically. Delete/move verification failures preserve the request lock and recovery backup instead of treating the operation as safely retryable, and delete never automatically reclaims such a stale lock.
+- Calendar outcomes now use `SUCCESS`, `PARTIAL_SUCCESS`, `RETRY_PENDING` and `FAILED`. Final LINE responses enumerate confirmed work and pending schedule/request/notification work; provider payloads are logged only for diagnosis and are never shown to LINE users. Delete notification now runs after confirmed Calendar deletion but before request finalization, so a follow-up database failure cannot silently skip the student notice.
+- Targeted regressions cover normal success, HTTP 403 `usageLimits/rateLimitExceeded`, bounded retry, ambiguous mutation non-replay, early repeated-action dedupe, partial delete follow-up, notification ordering and raw-payload redaction. Calendar reliability, classroom behavioral, syntax and the full 987-file site gate pass locally.
+- No Google Calendar/LINE request, SQL, Edge/client deploy, secret/config, account/student-data or other Production mutation occurred.
 
 ## 2026-08-18 — P1-G-02/F-02/F-08 Low-Quota Dual Authorization (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
