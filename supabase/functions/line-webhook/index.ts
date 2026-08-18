@@ -114,6 +114,12 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  CALENDAR_TERMINAL_STATE,
+  formatCalendarTerminalMessage,
+  googleCalendarRequest,
+  terminalStateForCalendarFailure,
+} from '../_shared/calendar-reliability.mjs';
 
 const LINE_REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
@@ -197,11 +203,13 @@ async function pushLineChecked(channelToken, targetUserId, text) {
     });
     if (!res.ok) {
       const detail = await res.text().catch(function () { return ''; });
-      return { ok: false, reason: 'LINE 回應 ' + res.status + (detail ? '：' + detail.slice(0, 150) : '') };
+      console.error('[line-webhook] LINE push provider error:', res.status, detail.slice(0, 500));
+      return { ok: false, reason: 'LINE 暫時無法送出通知' };
     }
     return { ok: true, reason: '' };
   } catch (e) {
-    return { ok: false, reason: (e && e.message) ? e.message : String(e) };
+    console.error('[line-webhook] LINE push network error:', (e && e.message) ? e.message : String(e));
+    return { ok: false, reason: 'LINE 暫時無法送出通知' };
   }
 }
 
@@ -361,12 +369,12 @@ async function deleteCalendarEventById(eventId, expectedDateStr, beforeDeleteHoo
     // ความจริงคือไม่มีสิทธิ์เห็น calendar นี้เลยตั้งแต่ต้น ไม่เคยแตะ event จริงเลย)
     // แก้：ต้อง GET "ก่อน" ลบก่อนเสมอ พิสูจน์ว่า service account เห็น event ตัวนี้จริงๆ (status สด ๆ)
     // เห็นแล้วค่อยลบ — ถ้า GET ก่อนลบก็ 404 อยู่แล้ว แปลว่าปัญหาอยู่ที่การเชื่อมต่อ/สิทธิ์ ไม่ใช่ลบสำเร็จ
-    const preRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
+    const preRes = await googleCalendarRequest(fetch, eventUrl, { headers: { Authorization: 'Bearer ' + token } });
     if (preRes.status === 404 || preRes.status === 410) {
       return { ok: false, reason: 'not_visible_before_delete', detail: 'ก่อนลบ service account มองไม่เห็น event นี้เลย (' + preRes.status + ') — เช็ค: (1) แชร์ Google Calendar ให้อีเมล service account สิทธิ์ "Make changes to events" แล้วหรือยัง (2) GOOGLE_CALENDAR_ID ตรงกับปฏิทินจริงไหม' };
     }
     if (preRes.ok) {
-      preEventData = await preRes.json().catch(() => ({}));
+      preEventData = preRes.json || {};
       if (preEventData.status === 'cancelled') {
         // ถูกลบไปแล้วจากที่อื่นก่อนหน้านี้ — เราไม่ได้ลบอะไรเลย
         // ยังเรียก hook ให้เขียนแถวสำรองเหมือนพฤติกรรมเดิมก่อน 2026-08-01 แต่ **พังได้ไม่เป็นไร**
@@ -399,8 +407,7 @@ async function deleteCalendarEventById(eventId, expectedDateStr, beforeDeleteHoo
         }
       }
     } else {
-      const detail = await preRes.text().catch(() => '');
-      return { ok: false, reason: 'pre_check_http_' + preRes.status, detail: detail.slice(0, 300) };
+      return { ok: false, reason: preRes.reason || ('pre_check_http_' + preRes.status), rateLimited: !!preRes.rateLimited };
     }
 
     // ── 🔴 2026-08-01 เพิ่ม (ตรวจระบบยกเลิก/เพิ่มคาบ ข้อ 2) — สำรองข้อมูล "ก่อน" ลบ ──────────────
@@ -430,22 +437,31 @@ async function deleteCalendarEventById(eventId, expectedDateStr, beforeDeleteHoo
       }
     }
 
-    const delRes = await fetch(eventUrl, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+    const delRes = await googleCalendarRequest(fetch, eventUrl, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
     if (!delRes.ok && delRes.status !== 404 && delRes.status !== 410) {
-      const detail = await delRes.text().catch(() => '');
-      return { ok: false, reason: 'http_' + delRes.status, detail: detail.slice(0, 300) };
+      return {
+        ok: false,
+        reason: delRes.reason || ('http_' + delRes.status),
+        rateLimited: !!delRes.rateLimited,
+        eventDeletedButUnverified: !!delRes.ambiguousMutation,
+      };
     }
     // ── ยืนยันซ้ำว่าลบจริง (ตอนนี้พิสูจน์แล้วว่ามองเห็น calendar/event นี้จริงตั้งแต่ก่อนลบ (preRes.ok
     // ด้านบน) ดังนั้น 404 ตรงนี้แปลว่า "ลบสำเร็จจริง" ไม่ใช่ "มองไม่เห็นตั้งแต่ต้น" อีกแล้ว) ──
-    const verifyRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
+    const verifyRes = await googleCalendarRequest(fetch, eventUrl, { headers: { Authorization: 'Bearer ' + token } });
     if (verifyRes.status === 404 || verifyRes.status === 410) return { ok: true, eventData: preEventData };
     if (verifyRes.ok) {
-      const verifyData = await verifyRes.json().catch(() => ({}));
+      const verifyData = verifyRes.json || {};
       if (verifyData.status === 'cancelled') return { ok: true, eventData: preEventData };
       return { ok: false, reason: 'still_exists', detail: 'GET ยืนยันแล้วเจอ event ยังอยู่ (status=' + (verifyData.status || '-') + ')' };
     }
     // ยืนยันไม่ได้ (เช่น network พัง) — ไม่กล้าฟันธงว่าสำเร็จ ให้ครูไปเช็คเองที่เว็บ
-    return { ok: false, reason: 'verify_failed_http_' + verifyRes.status };
+    return {
+      ok: false,
+      reason: verifyRes.reason || ('verify_failed_http_' + verifyRes.status),
+      rateLimited: !!verifyRes.rateLimited,
+      eventDeletedButUnverified: true,
+    };
   } catch (e) {
     return { ok: false, reason: 'fetch_error', detail: e.message };
   }
@@ -693,15 +709,14 @@ async function fetchCalendarEventById(eventId) {
   if (!calendarId) return { ok: false, reason: 'no_calendar_id', detail: 'ยังไม่ได้ตั้ง secret GOOGLE_CALENDAR_ID' };
   const eventUrl = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(eventId);
   try {
-    const res = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
+    const res = await googleCalendarRequest(fetch, eventUrl, { headers: { Authorization: 'Bearer ' + token } });
     if (res.status === 404 || res.status === 410) {
-      return { ok: false, reason: 'not_visible', detail: '服務帳號目前看不到這個 event（' + res.status + '）——請確認 Calendar 有分享給服務帳號、GOOGLE_CALENDAR_ID 有沒有寫對' };
+      return { ok: false, reason: 'not_visible' };
     }
     if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      return { ok: false, reason: 'http_' + res.status, detail: detail.slice(0, 300) };
+      return { ok: false, reason: res.reason || ('http_' + res.status), rateLimited: !!res.rateLimited };
     }
-    const ev = await res.json().catch(() => ({}));
+    const ev = res.json || {};
     if (ev.status === 'cancelled') {
       return { ok: false, reason: 'already_cancelled', detail: '這堂課的 Calendar 事件已經被刪除了，沒辦法搬' };
     }
@@ -716,22 +731,18 @@ async function fetchCalendarEventById(eventId) {
 // confirmAcceptedOfferInner 的邏輯一樣，只是這裡用服務帳號直接動 Calendar，不用等老師開電腦。
 // 一樣先 GET 證明服務帳號看得到這個 event、PATCH 完再 GET 驗證時間真的改了（RELIABILITY FIRST，
 // 跟 deleteCalendarEventById／createCalendarEventById 同一套「不能只信任 API 回應」原則）。
-async function moveCalendarEventById(eventId, newDateStr, newTimeStrOrNull) {
+async function moveCalendarEventById(eventId, newDateStr, newTimeStrOrNull, verifiedPreEventData) {
   const token = await getGoogleCalendarToken();
   if (!token) return { ok: false, reason: 'no_token' };
   const calendarId = Deno.env.get('GOOGLE_CALENDAR_ID');
   if (!calendarId) return { ok: false, reason: 'no_calendar_id', detail: 'ยังไม่ได้ตั้ง secret GOOGLE_CALENDAR_ID' };
   const eventUrl = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(eventId);
   try {
-    const preRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
-    if (preRes.status === 404 || preRes.status === 410) {
-      return { ok: false, reason: 'not_visible', detail: '服務帳號目前看不到這個 event（' + preRes.status + '）——請確認 Calendar 有分享給服務帳號、GOOGLE_CALENDAR_ID 有沒有寫對' };
-    }
-    if (!preRes.ok) {
-      const detail = await preRes.text().catch(() => '');
-      return { ok: false, reason: 'pre_check_http_' + preRes.status, detail: detail.slice(0, 300) };
-    }
-    const preEventData = await preRes.json().catch(() => ({}));
+    // The handler has already fetched and validated this exact event while
+    // holding the request claim. Reuse that snapshot instead of immediately
+    // issuing a duplicate GET before PATCH.
+    const preEventData = verifiedPreEventData || {};
+    if (!preEventData.id) return { ok: false, reason: 'missing_verified_event' };
     if (preEventData.status === 'cancelled') {
       return { ok: false, reason: 'already_cancelled', detail: '這堂課的 Calendar 事件已經被刪除了，沒辦法搬' };
     }
@@ -740,20 +751,29 @@ async function moveCalendarEventById(eventId, newDateStr, newTimeStrOrNull) {
     // ไม่ได้เปลี่ยนพฤติกรรมอะไร) เพื่อให้ "ด่านตรวจก่อนย้าย" กับ "การย้ายจริง" ใช้สูตรชุดเดียวกันเสมอ
     const { newStartIso, newEndIso } = computeMovedTimes(preEventData, newDateStr, newTimeStrOrNull);
 
-    const patchRes = await fetch(eventUrl, {
+    const patchRes = await googleCalendarRequest(fetch, eventUrl, {
       method: 'PATCH',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ start: { dateTime: newStartIso, timeZone: 'Asia/Bangkok' }, end: { dateTime: newEndIso, timeZone: 'Asia/Bangkok' } }),
     });
     if (!patchRes.ok) {
-      const detail = await patchRes.text().catch(() => '');
-      return { ok: false, reason: 'http_' + patchRes.status, detail: detail.slice(0, 300) };
+      return {
+        ok: false,
+        reason: patchRes.reason || ('http_' + patchRes.status),
+        rateLimited: !!patchRes.rateLimited,
+        eventMovedButUnverified: !!patchRes.ambiguousMutation,
+      };
     }
 
     // PATCH 完一定要回頭 GET 確認時間真的改了，不能只信任 PATCH 當下的回應（RELIABILITY FIRST）
-    const verifyRes = await fetch(eventUrl, { headers: { Authorization: 'Bearer ' + token } });
-    if (!verifyRes.ok) return { ok: false, reason: 'verify_failed_http_' + verifyRes.status, eventMovedButUnverified: true };
-    const verifyEv = await verifyRes.json();
+    const verifyRes = await googleCalendarRequest(fetch, eventUrl, { headers: { Authorization: 'Bearer ' + token } });
+    if (!verifyRes.ok) return {
+      ok: false,
+      reason: verifyRes.reason || ('verify_failed_http_' + verifyRes.status),
+      rateLimited: !!verifyRes.rateLimited,
+      eventMovedButUnverified: true,
+    };
+    const verifyEv = verifyRes.json || {};
     const actualStart = verifyEv.start && (verifyEv.start.dateTime || verifyEv.start.date);
     if (!actualStart || Math.abs(new Date(actualStart).getTime() - new Date(newStartIso).getTime()) > 60000) {
       return { ok: false, reason: 'verify_mismatch', detail: 'Calendar 顯示的時間跟預期不一樣（顯示：' + (actualStart || '無') + '）', eventMovedButUnverified: true };
@@ -832,12 +852,11 @@ async function listConflictingEventsService(startIso, endIso, excludeEventId) {
     + '&timeMax=' + encodeURIComponent(endIso)
     + '&singleEvents=true&orderBy=startTime&maxResults=50';
   try {
-    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    const res = await googleCalendarRequest(fetch, url, { headers: { Authorization: 'Bearer ' + token } });
     if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      return { ok: false, reason: 'http_' + res.status, detail: detail.slice(0, 300) };
+      return { ok: false, reason: res.reason || ('http_' + res.status), rateLimited: !!res.rateLimited };
     }
-    const data = await res.json().catch(() => null);
+    const data = res.json;
     // อ่านคำตอบไม่ออก / ไม่มีช่อง items = ไม่กล้าตีความว่า "ว่าง" (บทเรียนเดียวกับ freeBusy 2026-07-31)
     if (!data || !Array.isArray(data.items)) {
       return { ok: false, reason: 'no_items_field',
@@ -876,8 +895,8 @@ async function precheckRescheduleMoveTarget(eventId, targetDate, targetTimeOrNul
     return {
       ok: false,
       logReason: 'read_event_' + (pre.reason || 'unknown'),
+      rateLimited: !!pre.rateLimited,
       replyText: '🛑 讀不到這堂課的行事曆資料（' + (pre.reason || '未知') + '），完全沒有動任何東西。\n' +
-        (pre.detail ? pre.detail + '\n' : '') +
         '請稍後再按一次，或到網站處理：' + siteLink,
     };
   }
@@ -954,8 +973,8 @@ async function precheckRescheduleMoveTarget(eventId, targetDate, targetTimeOrNul
     return {
       ok: false,
       logReason: 'conflictcheck_failed_' + (cf.reason || 'unknown'),
+      rateLimited: !!cf.rateLimited,
       replyText: '🛑 沒辦法檢查行事曆有沒有衝突（' + (cf.reason || '未知') + '），所以這次沒有搬任何課堂。\n' +
-        (cf.detail ? cf.detail + '\n' : '') +
         '「檢查不了」一律當成「不可以搬」，避免不小心搬到已經有課的時段。\n' +
         '請稍後再按一次，或到網站處理：' + siteLink,
     };
@@ -1063,6 +1082,53 @@ async function syncScheduleRowAfterMove(supabase, calendarEventId, newDateStr, n
     return { ok: true, why: '', count: count || 0 };
   } catch (e) {
     return { ok: false, why: (e && e.message) ? e.message : String(e), count: 0 };
+  }
+}
+
+// Claim before the first Google Calendar read. The old handlers performed
+// multiple GET/list calls before claiming, so a repeated LINE button produced
+// duplicate provider traffic even though the later write was deduplicated.
+async function claimCalendarOperation(supabase, requestId, allowStale) {
+  let query = supabase
+    .from('classroom_requests')
+    .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
+    .eq('id', requestId)
+    .eq('status', 'pending');
+  if (allowStale) {
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    query = query.or('processing_started_at.is.null,processing_started_at.lt.' + cutoff);
+  } else {
+    query = query.is('processing_started_at', null);
+  }
+  const { error, count } = await query.select('id');
+  return { ok: !error && !!count, error: error || null };
+}
+
+async function releaseCalendarOperationClaim(supabase, requestId, label) {
+  const { error } = await supabase.from('classroom_requests')
+    .update({ processing_started_at: null })
+    .eq('id', requestId)
+    .eq('status', 'pending');
+  if (error) console.error('[line-webhook] ⚠️ ' + label + ': release Calendar claim failed:', error.message, 'request=', requestId);
+  return !error;
+}
+
+async function notifyStudentOfCalendarCancel(supabase, channelToken, requestRow) {
+  if (!requestRow.token || !channelToken) return { ok: false, reason: 'notification_unavailable' };
+  try {
+    const { data: student, error } = await supabase.from('classroom_students')
+      .select('line_user_id')
+      .eq('token', requestRow.token)
+      .maybeSingle();
+    if (error || !student || !student.line_user_id) return { ok: false, reason: 'student_line_unavailable' };
+    const originalLabel = (requestRow.original_date || '')
+      + (requestRow.original_time ? ' ' + requestRow.original_time : '');
+    const pushed = await pushLineChecked(channelToken, student.line_user_id,
+      '✅ 老師已確認，' + originalLabel + ' 的課程已經取消囉');
+    return pushed.ok ? { ok: true, reason: '' } : { ok: false, reason: 'line_delivery_failed' };
+  } catch (error) {
+    console.error('[line-webhook] cancel notification failed:', (error && error.message) || error);
+    return { ok: false, reason: 'notification_error' };
   }
 }
 
@@ -1431,49 +1497,27 @@ serve(async (req) => {
             '這次是照學生目前選的時間（' + (reqRowMove.requested_date || '-') + ' ' + (reqRowMove.requested_time || '') + '）搬的。';
         }
 
+        // Claim before any Calendar GET/list call. This suppresses repeated
+        // button deliveries before they can create a provider request burst.
+        const claimMove = await claimCalendarOperation(supabase, requestIdMove, false);
+        if (!claimMove.ok) {
+          if (claimMove.error) console.error('[line-webhook] ⚠️ confirm_reschedule_move: claim failed:', claimMove.error.message, 'request=', requestIdMove);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+            claimMove.error ? '⚠️ 準備搬課失敗，還沒動 Calendar' : 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          continue;
+        }
+
         // ── 🔴 2026-08-01 เพิ่ม (งาน B2/B3/B4) — ด่านตรวจก่อนแตะ Calendar ────────────────
-        // อยู่ "ก่อน" แย่งล็อกทั้งหมด (อ่านอย่างเดียว ไม่แตะอะไร) → ปฏิเสธแล้วไม่มีอะไรต้องปลดคืน
-        // รายละเอียดว่าทำไมต้องมีแต่ละด่าน อ่านที่ precheckRescheduleMoveTarget ด้านบน
         const preMove = await precheckRescheduleMoveTarget(
           reqRowMove.calendar_event_id, reqRowMove.requested_date, reqRowMove.requested_time || null,
           reqRowMove.original_date, requestIdMove);
         if (!preMove.ok) {
           console.error('[line-webhook] ⚠️ confirm_reschedule_move: ไม่ผ่านด่านก่อนย้าย (' + preMove.logReason + ') ยังไม่ได้แตะ Calendar. request=', requestIdMove);
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, preMove.replyText);
-          continue;
-        }
-
-        // ── 原子鎖：跟 confirm_reschedule_pick 同一套（ห้ามแย่ง）──
-        // 🔴 2026-08-02 แก้ (รอบตรวจ 3 ระบบ ข้อ 4.12) — เดิมที่นี่ "แย่งล็อกค้าง 10 นาทีได้"
-        //
-        // 🕳️ ทำไมของเดิมอันตราย: ก้อนนี้มี 2 จุดที่ **จงใจทิ้งล็อกค้างไว้** เพราะคาบอาจถูกย้ายไปแล้ว
-        //     (1) moveResult.eventMovedButUnverified — ส่งคำสั่งย้ายไปแล้วแต่ตรวจซ้ำไม่ได้
-        //     (2) ย้ายสำเร็จ แต่ปิดคำขอไม่สำเร็จ
-        //   พอใช้กฎ "แย่งได้เมื่อครบ 10 นาที" = ล็อกที่ตั้งใจกันไว้ 2 จุดนั้นถูกปลดเองอัตโนมัติ
-        //   → ทั้งเว็บและ LINE เข้าไปย้ายซ้ำได้ · ด่านที่กันไว้คือ B4 (เทียบ original_date)
-        //     แต่ B4 **ข้ามทั้งด่านถ้า original_date ว่าง** → ย้ายซ้ำ + ได้แถวสำรองขยะเพิ่ม
-        //   เหตุผลเดิมที่เขียนไว้ว่า "ย้ายซ้ำไม่อันตราย" ใช้ไม่ได้กับ 2 จุดนั้น เพราะตอนนั้น
-        //   ฐานข้อมูลกับ Calendar ไม่ตรงกันอยู่แล้ว การย้ายซ้ำจึงทำให้สับสนหนักกว่าเดิม
-        //
-        // ✅ ตอนนี้ใช้กฎเดียวกับ pick / confirm_add_class: ห้ามแย่ง
-        //   ล็อกค้างเพราะเน็ตหลุดจริง ปลดด้วยปุ่ม 🔓 解鎖這筆 บนการ์ดคิวฝั่งเว็บ (ขึ้นเองเมื่อค้าง > 10 นาที)
-        // ⚠️ ต้องแก้ฝั่งเว็บพร้อมกันเสมอ (classroom/index.html → claimRescheduleRequest)
-        //    ไม่งั้นรูแค่ย้ายที่ จาก LINE→LINE ไปเป็น LINE→เว็บ (บทเรียนจริง 2026-07-31)
-        const { error: claimErrMove, count: claimCountMove } = await supabase
-          .from('classroom_requests')
-          .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
-          .eq('id', requestIdMove)
-          .eq('status', 'pending')
-          .is('processing_started_at', null)
-          .select('id');
-
-        if (claimErrMove) {
-          console.error('[line-webhook] ⚠️ confirm_reschedule_move: ล็อกก่อนย้ายพัง:', claimErrMove.message, 'request=', requestIdMove);
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 準備搬課失敗：' + claimErrMove.message + '\n還沒動 Calendar');
-          continue;
-        }
-        if (!claimCountMove) {
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          await releaseCalendarOperationClaim(supabase, requestIdMove, 'confirm_reschedule_move precheck');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+            preMove.rateLimited
+              ? formatCalendarTerminalMessage({ state: CALENDAR_TERMINAL_STATE.RETRY_PENDING, reason: 'RATE_LIMIT' })
+              : preMove.replyText);
           continue;
         }
 
@@ -1495,12 +1539,17 @@ serve(async (req) => {
           continue;
         }
 
-        const moveResult = await moveCalendarEventById(reqRowMove.calendar_event_id, reqRowMove.requested_date, reqRowMove.requested_time || null);
+        const moveResult = await moveCalendarEventById(
+          reqRowMove.calendar_event_id, reqRowMove.requested_date,
+          reqRowMove.requested_time || null, preMove.preEvent);
         if (!moveResult.ok) {
           console.error('[line-webhook] ⚠️ confirm_reschedule_move 搬 Calendar 失敗:', JSON.stringify(moveResult), 'request=', requestIdMove);
           if (moveResult.eventMovedButUnverified) {
-            // 可能已經搬了但驗證失敗——不敢放鎖讓人重按（可能搬兩次、時間亂掉），請 Lin 手動檢查
-            if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ Calendar 可能已經搬了但無法確認狀態，請直接到 Google Calendar／Supabase 手動檢查這筆（id: ' + requestIdMove + '），先不要重複點這顆按鈕');
+            if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+              formatCalendarTerminalMessage({
+                state: CALENDAR_TERMINAL_STATE.RETRY_PENDING,
+                reason: moveResult.rateLimited ? 'RATE_LIMIT' : 'VERIFY_PENDING',
+              }));
             continue;
           }
           // 2026-08-01 (แก้จากรอบตรวจซ้ำ): ย้ายไม่สำเร็จ = แถวสำรองที่เพิ่งเขียนไว้ไม่มีประโยชน์ ต้องลบทิ้ง
@@ -1509,7 +1558,11 @@ serve(async (req) => {
           const { error: unlockErrMove } = await supabase.from('classroom_requests').update({ processing_started_at: null }).eq('id', requestIdMove);
           if (unlockErrMove) console.error('[line-webhook] ⚠️ confirm_reschedule_move: 解鎖失敗:', unlockErrMove.message, 'request=', requestIdMove);
           if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken, '⚠️ 搬 Calendar 失敗（可以重新點一次，或到網站手動處理）\n原因：' + (moveResult.reason || '未知') + (moveResult.detail ? '\n' + moveResult.detail : ''));
+            await replyLine(channelToken, event.replyToken,
+              formatCalendarTerminalMessage({
+                state: terminalStateForCalendarFailure(moveResult),
+                reason: moveResult.rateLimited ? 'RATE_LIMIT' : 'FAILED',
+              }));
           }
           continue;
         }
@@ -1574,20 +1627,27 @@ serve(async (req) => {
         if (updErrMove || !updCountMove) {
           console.error('[line-webhook] ⚠️ confirm_reschedule_move: Calendar 搬成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrMove ? updErrMove.message : '更新 0 筆', 'request=', requestIdMove);
           if (channelToken && event.replyToken) {
-            // 2026-08-02：ต้องบอกด้วยว่า "นักเรียนได้รับแจ้งแล้วหรือยัง" ไม่งั้นครูไม่รู้ว่าต้องตามบอกเองไหม
-            await replyLine(channelToken, event.replyToken,
-              '⚠️ Calendar 已經搬成功了' + (studentWarnMove ? '' : '，學生也通知過了') +
-              '，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdMove + '）' +
-              schedWarnMove + oldCardNoteMove + studentWarnMove);
+            const pendingMoveFinalize = ['申請狀態更新'];
+            if (schedWarnMove) pendingMoveFinalize.push('課表資料庫同步');
+            if (studentWarnMove) pendingMoveFinalize.push('學生通知');
+            await replyLine(channelToken, event.replyToken, formatCalendarTerminalMessage({
+              state: CALENDAR_TERMINAL_STATE.PARTIAL_SUCCESS,
+              completed: ['Calendar 已搬到新時間'].concat(studentWarnMove ? [] : ['學生已通知']),
+              pending: pendingMoveFinalize,
+            }) + oldCardNoteMove);
           }
           continue;
         }
 
         if (channelToken && event.replyToken) {
-          // 2026-08-01: ต่อท้ายด้วยคำเตือนเรื่องตารางเรียน/แจ้งนักเรียน (ถ้ามี)
-          //   ห้ามขึ้น "สำเร็จ" เฉยๆ ทั้งที่มีบางส่วนพลาด
-          await replyLine(channelToken, event.replyToken,
-            '✅ 已把課搬到新時間' + (studentWarnMove ? '' : '，並通知學生了') + schedWarnMove + oldCardNoteMove + studentWarnMove);
+          const movePending = [];
+          if (schedWarnMove) movePending.push('課表資料庫同步');
+          if (studentWarnMove) movePending.push('學生通知');
+          await replyLine(channelToken, event.replyToken, formatCalendarTerminalMessage({
+            state: movePending.length ? CALENDAR_TERMINAL_STATE.PARTIAL_SUCCESS : CALENDAR_TERMINAL_STATE.SUCCESS,
+            completed: ['Calendar 已搬到新時間', '申請狀態已更新'].concat(studentWarnMove ? [] : ['學生已通知']),
+            pending: movePending,
+          }) + oldCardNoteMove);
         }
         continue;
       }
@@ -1697,34 +1757,25 @@ serve(async (req) => {
             '這次是照學生目前申請的第 ' + (optIdx + 1) + ' 個時間（' + (chosenPick.date || '-') + ' ' + (chosenPick.time || '') + '）搬的。';
         }
 
+        const claimPick = await claimCalendarOperation(supabase, requestIdPick, false);
+        if (!claimPick.ok) {
+          if (claimPick.error) console.error('[line-webhook] ⚠️ confirm_reschedule_pick: claim failed:', claimPick.error.message, 'request=', requestIdPick);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+            claimPick.error ? '⚠️ 準備搬課失敗，還沒動 Calendar' : 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          continue;
+        }
+
         // ── 🔴 2026-08-01 เพิ่ม (งาน B2/B3/B4) — ด่านตรวจก่อนแตะ Calendar ────────────────
-        // อยู่ "ก่อน" แย่งล็อกทั้งหมด (อ่านอย่างเดียว) → ปฏิเสธแล้วไม่มีอะไรต้องปลดคืน
-        // รายละเอียดว่าทำไมต้องมีแต่ละด่าน อ่านที่ precheckRescheduleMoveTarget ด้านบน
         const prePick = await precheckRescheduleMoveTarget(
           reqRowPick.calendar_event_id, chosenPick.date, chosenPick.time || null,
           reqRowPick.original_date, requestIdPick);
         if (!prePick.ok) {
           console.error('[line-webhook] ⚠️ confirm_reschedule_pick: ไม่ผ่านด่านก่อนย้าย (' + prePick.logReason + ') ยังไม่ได้แตะ Calendar. request=', requestIdPick);
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, prePick.replyText);
-          continue;
-        }
-
-        // ── 原子鎖：跟其他 confirm_* action 同一個欄位、同一套語意 ──
-        const { error: claimErrPick, count: claimCountPick } = await supabase
-          .from('classroom_requests')
-          .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
-          .eq('id', requestIdPick)
-          .eq('status', 'pending')
-          .is('processing_started_at', null)
-          .select('id');
-
-        if (claimErrPick) {
-          console.error('[line-webhook] ⚠️ confirm_reschedule_pick: ล็อกก่อนย้ายพัง:', claimErrPick.message, 'request=', requestIdPick);
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ 準備搬課失敗：' + claimErrPick.message + '\n還沒動 Calendar');
-          continue;
-        }
-        if (!claimCountPick) {
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          await releaseCalendarOperationClaim(supabase, requestIdPick, 'confirm_reschedule_pick precheck');
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+            prePick.rateLimited
+              ? formatCalendarTerminalMessage({ state: CALENDAR_TERMINAL_STATE.RETRY_PENDING, reason: 'RATE_LIMIT' })
+              : prePick.replyText);
           continue;
         }
 
@@ -1745,11 +1796,17 @@ serve(async (req) => {
           continue;
         }
 
-        const moveResultPick = await moveCalendarEventById(reqRowPick.calendar_event_id, chosenPick.date, chosenPick.time || null);
+        const moveResultPick = await moveCalendarEventById(
+          reqRowPick.calendar_event_id, chosenPick.date,
+          chosenPick.time || null, prePick.preEvent);
         if (!moveResultPick.ok) {
           console.error('[line-webhook] ⚠️ confirm_reschedule_pick 搬 Calendar 失敗:', JSON.stringify(moveResultPick), 'request=', requestIdPick);
           if (moveResultPick.eventMovedButUnverified) {
-            if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ Calendar 可能已經搬了但無法確認狀態，請直接到 Google Calendar／Supabase 手動檢查這筆（id: ' + requestIdPick + '），先不要重複點這顆按鈕');
+            if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+              formatCalendarTerminalMessage({
+                state: CALENDAR_TERMINAL_STATE.RETRY_PENDING,
+                reason: moveResultPick.rateLimited ? 'RATE_LIMIT' : 'VERIFY_PENDING',
+              }));
             continue;
           }
           // 2026-08-01 (แก้จากรอบตรวจซ้ำ): ย้ายไม่สำเร็จ = ลบแถวสำรองที่เพิ่งเขียนทิ้ง (เหตุผลเดียวกับก้อน move)
@@ -1757,7 +1814,11 @@ serve(async (req) => {
           const { error: unlockErrPick } = await supabase.from('classroom_requests').update({ processing_started_at: null }).eq('id', requestIdPick);
           if (unlockErrPick) console.error('[line-webhook] ⚠️ confirm_reschedule_pick: 解鎖失敗:', unlockErrPick.message, 'request=', requestIdPick);
           if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken, '⚠️ 搬 Calendar 失敗（可以重新點一次，或到網站手動處理）\n原因：' + (moveResultPick.reason || '未知') + (moveResultPick.detail ? '\n' + moveResultPick.detail : ''));
+            await replyLine(channelToken, event.replyToken,
+              formatCalendarTerminalMessage({
+                state: terminalStateForCalendarFailure(moveResultPick),
+                reason: moveResultPick.rateLimited ? 'RATE_LIMIT' : 'FAILED',
+              }));
           }
           continue;
         }
@@ -1813,18 +1874,27 @@ serve(async (req) => {
         if (updErrPick || !updCountPick) {
           console.error('[line-webhook] ⚠️ confirm_reschedule_pick: Calendar 搬成功但更新申請狀態失敗（鎖故意維持鎖住）:', updErrPick ? updErrPick.message : '更新 0 筆', 'request=', requestIdPick);
           if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken,
-              '⚠️ Calendar 已經搬成功了' + (studentWarnPick ? '' : '，學生也通知過了') +
-              '，但更新申請狀態失敗，請直接到 Supabase 手動確認這筆（id: ' + requestIdPick + '）' +
-              schedWarnPick + oldCardNotePick + studentWarnPick);
+            const pendingPickFinalize = ['申請狀態更新'];
+            if (schedWarnPick) pendingPickFinalize.push('課表資料庫同步');
+            if (studentWarnPick) pendingPickFinalize.push('學生通知');
+            await replyLine(channelToken, event.replyToken, formatCalendarTerminalMessage({
+              state: CALENDAR_TERMINAL_STATE.PARTIAL_SUCCESS,
+              completed: ['Calendar 已搬到新時間'].concat(studentWarnPick ? [] : ['學生已通知']),
+              pending: pendingPickFinalize,
+            }) + oldCardNotePick);
           }
           continue;
         }
 
         if (channelToken && event.replyToken) {
-          // 2026-08-01: ต่อท้ายด้วยคำเตือนตารางเรียน + หมายเหตุการ์ดรุ่นเก่า + ผลแจ้งนักเรียน (ถ้ามี)
-          await replyLine(channelToken, event.replyToken,
-            '✅ 已把課搬到新時間' + (studentWarnPick ? '' : '，並通知學生了') + schedWarnPick + oldCardNotePick + studentWarnPick);
+          const pickPending = [];
+          if (schedWarnPick) pickPending.push('課表資料庫同步');
+          if (studentWarnPick) pickPending.push('學生通知');
+          await replyLine(channelToken, event.replyToken, formatCalendarTerminalMessage({
+            state: pickPending.length ? CALENDAR_TERMINAL_STATE.PARTIAL_SUCCESS : CALENDAR_TERMINAL_STATE.SUCCESS,
+            completed: ['Calendar 已搬到新時間', '申請狀態已更新'].concat(studentWarnPick ? [] : ['學生已通知']),
+            pending: pickPending,
+          }) + oldCardNotePick);
         }
         continue;
       }
@@ -2571,6 +2641,17 @@ serve(async (req) => {
           continue;
         }
 
+        // Never reclaim a stale lock automatically here. A prior DELETE may
+        // already have reached Google even if the worker stopped before local
+        // finalization; replaying that operation is not provably safe.
+        const claimCancel = await claimCalendarOperation(supabase, requestIdCancel, false);
+        if (!claimCancel.ok) {
+          if (claimCancel.error) console.error('[line-webhook] ⚠️ confirm_cancel_delete: claim failed:', claimCancel.error.message, 'request=', requestIdCancel);
+          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+            claimCancel.error ? '⚠️ 準備刪除失敗，還沒動 Calendar' : 'ℹ️ 這筆已經在別的地方處理中或處理完了');
+          continue;
+        }
+
         // 🟡 2026-07-31 เพิ่ม (งาน C10) — เช็คก่อนว่าคาบนี้ "ถูกบันทึกว่าเรียนไปแล้ว" หรือยัง
         //
         // พังยังไงถ้าไม่มีด่านนี้: คาบที่บันทึกเข้าเรียนแล้ว = โควตาถูกหักไปแล้ว
@@ -2580,7 +2661,7 @@ serve(async (req) => {
         //
         // ทำไมเลือก "ปฏิเสธ" ไม่ใช่ "เตือนแล้วทำต่อ": ใน LINE ถามครูกลางทางไม่ได้ (กดปุ่มไปแล้วถอยไม่ได้)
         //   → ส่งไปให้ตัดสินใจที่เว็บ ซึ่งมีกล่องยืนยันให้อ่านก่อนกด (เหมือนที่ทำกับเคส "วันไม่ตรง")
-        // เช็คก่อนแย่งล็อก จะได้ไม่ต้องปลดล็อกคืน
+        // ด่านนี้ทำหลังจับล็อกแล้ว เพื่อให้การอ่าน Calendar จากปุ่มซ้ำถูก dedupe ด้วย
         // 🟠 2026-07-31 เพิ่ม (งาน C10 ที่เหลือ) — original_date ว่าง → ลองคำนวณจาก Calendar event แทน
         //   เดิม: original_date ว่าง = ข้ามด่านทั้งก้อนไปเงียบๆ ปล่อยลบไม่มีคำเตือน
         //   พอร์ตแนวคิดเดียวกับฝั่งเว็บ (classroom/index.html:7962 — cancelDayForAtt) มาที่นี่:
@@ -2590,16 +2671,16 @@ serve(async (req) => {
         let attDateForCancel = reqRowCancel.original_date || null;
         if (!attDateForCancel && reqRowCancel.calendar_event_id) {
           try {
-            const gTokenForAtt = await getGoogleCalendarToken();
-            const calIdForAtt = Deno.env.get('GOOGLE_CALENDAR_ID');
-            if (gTokenForAtt && calIdForAtt) {
-              const evUrlForAtt = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calIdForAtt) + '/events/' + encodeURIComponent(reqRowCancel.calendar_event_id);
-              const evResForAtt = await fetch(evUrlForAtt, { headers: { Authorization: 'Bearer ' + gTokenForAtt } });
-              if (evResForAtt.ok) {
-                const evDataForAtt = await evResForAtt.json().catch(() => ({}));
-                const startIsoForAtt = evDataForAtt.start && (evDataForAtt.start.dateTime || evDataForAtt.start.date);
-                attDateForCancel = extractBangkokDateStr(startIsoForAtt) || null;
-              }
+            const evForAtt = await fetchCalendarEventById(reqRowCancel.calendar_event_id);
+            if (evForAtt.rateLimited) {
+              await releaseCalendarOperationClaim(supabase, requestIdCancel, 'confirm_cancel_delete attendance Calendar rate limit');
+              if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+                formatCalendarTerminalMessage({ state: CALENDAR_TERMINAL_STATE.RETRY_PENDING, reason: 'RATE_LIMIT' }));
+              continue;
+            }
+            if (evForAtt.ok) {
+              const startIsoForAtt = evForAtt.event.start && (evForAtt.event.start.dateTime || evForAtt.event.start.date);
+              attDateForCancel = extractBangkokDateStr(startIsoForAtt) || null;
             }
           } catch (e) {
             console.warn('[line-webhook] ⚠️ confirm_cancel_delete: หาวันที่จาก Calendar event แทน original_date ที่ว่างไม่สำเร็จ (ไม่บล็อก):', e && e.message ? e.message : e, 'request=', requestIdCancel);
@@ -2619,6 +2700,7 @@ serve(async (req) => {
               await replyLine(channelToken, event.replyToken,
                 '⚠️ 查不到上課紀錄（' + attErrCancel.message + '），為了安全沒有刪除任何東西。\n請到網站處理：https://mrtaihualin.com/classroom/#req-row-' + requestIdCancel);
             }
+            await releaseCalendarOperationClaim(supabase, requestIdCancel, 'confirm_cancel_delete attendance read');
             continue;
           }
           if (attRowsCancel && attRowsCancel.length) {
@@ -2628,46 +2710,14 @@ serve(async (req) => {
                 '刪掉的話，堂數已經扣掉但 Calendar 會變空的，兩邊對不起來。\n' +
                 '請到網站確認後再決定：https://mrtaihualin.com/classroom/#req-row-' + requestIdCancel);
             }
+            await releaseCalendarOperationClaim(supabase, requestIdCancel, 'confirm_cancel_delete attendance guard');
             continue;
           }
         }
 
-        // ── 2026-07-19 เพิ่ม（แก้ ORANGE：ครูกดลบจาก LINE กับเว็บพร้อมกัน ชนกันได้）──
-        // เดิม: เช็คแค่ status ด้านบน (อ่านเฉยๆ ไม่ atomic) แล้วยิงลบ Calendar เลย → ถ้าเว็บกับ LINE
-        // อ่านผ่านพร้อมกันภายในไม่กี่วินาที ทั้งคู่จะยิง deleteCalendarEventById ซ้อนกันจริง
-        // ตอนนี้ต้อง "ล็อกแบบ atomic" ก่อนแตะ Calendar เสมอ — ใช้คอลัมน์ processing_started_at แยกจาก
-        // status (status มี CHECK constraint classroom_requests_status_check รองรับแค่
-        // pending/acknowledged เท่านั้น เอามาใช้เป็นล็อกที่ 3 ไม่ได้) ฝั่งเว็บ (classroom/index.html
-        // claimRequestForProcessing) ใช้ล็อกคอลัมน์เดียวกัน ความหมายเดียวกัน
-        // 🟠 2026-07-31 แก้ (งาน C6 — ล็อกค้างถาวร): เดิมบังคับว่าช่องล็อกต้อง "ว่างเปล่า" เท่านั้นถึงจะจับได้
-        //   → ถ้าครูกดแล้วคอมพับ/ปิดแท็บ/เน็ตหลุดก่อนทำเสร็จ ล็อกจะค้างตลอดไป
-        //     คำขอนั้นตายสนิท ทั้งเว็บและ LINE ตอบว่า "กำลังถูกจัดการที่อื่น" ตลอดกาล
-        //     ทางออกเดียวคือให้ Lin เข้าไปแก้มือใน Supabase
-        //   ตอนนี้: ล็อกที่เก่ากว่า 10 นาที = ถือว่าค้าง แย่งใหม่ได้เลย
-        //   ทำไม 10 นาที: งานจริงที่ยาวที่สุดในเส้นทางนี้ (อ่าน Calendar + ลบ + ตรวจซ้ำ + ส่ง LINE)
-        //     ปกติจบใน 5-10 วินาที · เผื่อไว้ 10 นาทีคือเผื่อเกินร้อยเท่า ปลอดภัยกว่าตั้งสั้น
-        //   ⚠️ ต้องแก้ "ทั้ง 2 ฝั่ง" ให้ใช้เลขเดียวกัน (ฝั่งเว็บ classroom/index.html claimRequestForProcessing)
-        //      ถ้าแก้ฝั่งเดียว เว็บกับ LINE จะเข้าใจคำว่า "ล็อกค้าง" ไม่ตรงกัน = อันตรายกว่าเดิม
-        const staleLockCutoffCancel = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const { data: claimDataCancel, error: claimErrCancel, count: claimCountCancel } = await supabase
-          .from('classroom_requests')
-          .update({ processing_started_at: new Date().toISOString() }, { count: 'exact' })
-          .eq('id', requestIdCancel)
-          .eq('status', 'pending')
-          .or('processing_started_at.is.null,processing_started_at.lt.' + staleLockCutoffCancel)
-          .select('id');
-
-        if (claimErrCancel) {
-          console.error('[line-webhook] ⚠️ confirm_cancel_delete: ล็อกก่อนลบพัง:', claimErrCancel.message, 'request=', requestIdCancel);
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, '⚠️ เตรียมประมวลผลไม่สำเร็จ：' + claimErrCancel.message + '\nยังไม่ได้แตะ Calendar');
-          continue;
-        }
-        if (!claimCountCancel) {
-          // ล็อกไม่ได้ = อีกฝั่ง (เว็บ หรือกด LINE ซ้ำ) กำลังทำอยู่/ทำเสร็จไปแล้ว → ห้ามแตะ Calendar ซ้ำ
-          if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken, 'ℹ️ 這筆已經在別的地方處理中或處理完了');
-          continue;
-        }
-
+        // คำขอนี้ถูกล็อกแบบ atomic ก่อน Calendar GET แรกแล้ว ปุ่มซ้ำจึงไม่ยิง provider ซ้ำ
+        // และจงใจไม่แย่งล็อกเก่าอัตโนมัติ: ถ้า worker หยุดหลังส่ง DELETE แต่ก่อน finalize
+        // สถานะจริงอาจกำกวม ต้องตรวจสอบก่อน ไม่ใช่ replay การลบ
         // 🟠 2026-07-31 (งาน C4): ส่ง original_date ไปด้วย = "ลบได้ต่อเมื่อคาบยังอยู่วันเดิมจริงเท่านั้น"
         //    ค่านี้ถูกอ่านมาตั้งแต่บรรทัดต้นก้อนแล้ว แต่เดิมเอาไปใช้แค่ตอนพิมพ์ข้อความบอกนักเรียนเท่านั้น
         // 🔴 2026-08-01 (ข้อ 2): ส่งงาน "เขียนแถวสำรอง" เข้าไปให้ทำ **ก่อน** ลบ
@@ -2684,6 +2734,18 @@ serve(async (req) => {
           },
         );
         if (!delResult.ok) {
+          if (delResult.eventDeletedButUnverified) {
+            // DELETE may have reached Google. Preserve both the request lock and
+            // the backup; replaying or deleting the backup could create the
+            // wrong event state. The next step is verification, not mutation.
+            console.error('[line-webhook] ⚠️ confirm_cancel_delete: delete may have completed but verification is pending:', JSON.stringify(delResult), 'request=', requestIdCancel);
+            if (channelToken && event.replyToken) await replyLine(channelToken, event.replyToken,
+              formatCalendarTerminalMessage({
+                state: CALENDAR_TERMINAL_STATE.RETRY_PENDING,
+                reason: delResult.rateLimited ? 'RATE_LIMIT' : 'VERIFY_PENDING',
+              }));
+            continue;
+          }
           // 🔴 2026-08-01 (ตรวจซ้ำ): สำรองเขียนไปแล้ว แต่สุดท้ายลบ Calendar ไม่สำเร็จ (Google 5xx / ยืนยันไม่ได้)
           //   → ต้องเก็บแถวสำรองนั้นทิ้ง ไม่งั้นจะเหลือหลักฐานว่า "เคยลบคาบนี้" ทั้งที่คาบยังอยู่ครบ
           //   → การ์ด ↩️ 最近處理（還能復原）จะโชว์ให้กด แล้วสร้างคาบเดิมกลับมาอีกใบ = **คาบซ้อนกัน 2 คาบ**
@@ -2720,7 +2782,11 @@ serve(async (req) => {
                 '但 Calendar 上這堂課現在的日期是 ' + (delResult.actualDate || '—') + '（中間可能已經被改期過了）。\n' +
                 '請到網站處理比較安全：https://mrtaihualin.com/classroom/#req-row-' + requestIdCancel);
             } else {
-              await replyLine(channelToken, event.replyToken, '⚠️ 刪除 Calendar 失敗（不要重複點這顆按鈕，請到網站手動處理）\n原因：' + (delResult.reason || '未知') + (delResult.detail ? '\n' + delResult.detail : ''));
+              await replyLine(channelToken, event.replyToken,
+                formatCalendarTerminalMessage({
+                  state: terminalStateForCalendarFailure(delResult),
+                  reason: delResult.rateLimited ? 'RATE_LIMIT' : 'FAILED',
+                }));
             }
           }
           continue;
@@ -2736,19 +2802,28 @@ serve(async (req) => {
         // 現在 Calendar 刪除確認成功後「立刻」順手刪掉這筆，不用等 20 分鐘週期同步。
         // Calendar 才是事實來源，這裡失敗不擋取消本身（RELIABILITY FIRST：不吞錯誤，失敗要留紀錄，
         // 但不能因為這裡失敗就讓整個取消流程卡住/報錯給老師——20 分鐘後排程還會再清一次當保底）。
+        let scheduleCleanupPendingCancel = false;
         try {
           const { error: schedDelErrCancel, count: schedDelCountCancel } = await supabase
             .from('classroom_schedule')
             .delete({ count: 'exact' })
             .eq('calendar_event_id', reqRowCancel.calendar_event_id);
           if (schedDelErrCancel) {
+            scheduleCleanupPendingCancel = true;
             console.warn('[line-webhook] ⚠️ confirm_cancel_delete: 立即清 classroom_schedule 失敗（不影響取消本身，20 分鐘後排程還會再清一次）:', schedDelErrCancel.message, 'request=', requestIdCancel);
           } else if (!schedDelCountCancel) {
             console.warn('[line-webhook] ℹ️ confirm_cancel_delete: classroom_schedule 找不到 calendar_event_id=' + reqRowCancel.calendar_event_id + ' 的資料列（可能還沒同步進去，不影響取消）');
           }
         } catch (e) {
+          scheduleCleanupPendingCancel = true;
           console.warn('[line-webhook] ⚠️ confirm_cancel_delete: 立即清 classroom_schedule 發生例外（不影響取消本身）:', e && e.message ? e.message : e);
         }
+
+        // Calendar is already authoritative at this point. Notify before
+        // finalizing the request so a database finalization failure cannot
+        // silently skip the student message.
+        const cancelNotify = await notifyStudentOfCalendarCancel(supabase, channelToken, reqRowCancel);
+        const studentNotifiedCancel = cancelNotify.ok;
 
         // Calendar ลบสำเร็จแล้วจริง — ปิดสถานะ + ปลดล็อกพร้อมกันในคำสั่งเดียว (atomic)
         // 2026-07-19 加：ถ้า update นี้ล้มเหลว แปลว่า Calendar ลบสำเร็จแล้วแต่บันทึกฐานข้อมูลพัง —
@@ -2771,52 +2846,27 @@ serve(async (req) => {
           const whyCancel = updErrCancel ? updErrCancel.message : 'อัปเดตได้ 0 แถว (สถานะถูกเปลี่ยนไประหว่างทาง)';
           console.error('[line-webhook] ⚠️ confirm_cancel_delete: Calendar ลบแล้วแต่อัปเดตฐานข้อมูลไม่สำเร็จ (ล็อกจะค้างไว้ตั้งใจ ต้องเช็คมือ):', whyCancel, 'request=', requestIdCancel);
           if (channelToken && event.replyToken) {
-            await replyLine(channelToken, event.replyToken,
-              '⚠️ Calendar 課程已經刪除了，但這筆申請的狀態沒有存進資料庫\n原因：' + whyCancel +
-              '\n請到 Supabase 把這筆的 status 改成 acknowledged、processing_started_at 清成空白（id: ' + requestIdCancel + '）');
+            const pendingAfterDelete = ['申請狀態更新'];
+            if (scheduleCleanupPendingCancel) pendingAfterDelete.push('課表資料庫同步');
+            if (!studentNotifiedCancel) pendingAfterDelete.push('學生通知');
+            await replyLine(channelToken, event.replyToken, formatCalendarTerminalMessage({
+              state: CALENDAR_TERMINAL_STATE.PARTIAL_SUCCESS,
+              completed: ['Calendar 課程已刪除'].concat(studentNotifiedCancel ? ['學生已通知'] : []),
+              pending: pendingAfterDelete,
+            }));
           }
           continue;
         }
 
-        // 🔴 2026-07-31 แก้ (งาน C2): ย้ายการแจ้งนักเรียนมาไว้ "ก่อน" ตอบครู แล้วตอบตามผลจริง
-        //    เดิม: ตอบครูว่า「✅ 已刪除 Calendar 課程，並通知學生了」ทันที
-        //          แล้วค่อยส่งหานักเรียนทีหลัง ในกล่อง try/catch เปล่าๆ ที่กลืน error ทุกอย่าง
-        //          และไม่เคยเช็คว่านักเรียนผูก LINE ไว้หรือยัง
-        //    → นักเรียนที่ยังไม่ผูก LINE หรือ LINE ล่มชั่วคราว = ไม่ได้รับอะไรเลย
-        //      แต่ครูเชื่อสนิทใจว่าแจ้งไปแล้ว (ผิดกฎ RELIABILITY FIRST: ห้ามขึ้นว่าสำเร็จถ้ายังไม่ตรวจ)
-        //    ฝั่งเว็บทำถูกอยู่แล้ว (classroom/index.html:7797-7801) — ลอกพฤติกรรมนั้นมาทั้งชุด
-        //    ⚠️ replyToken ของ LINE ใช้ได้ครั้งเดียวต่อการกด 1 ครั้ง → ต้องรวมเป็นข้อความเดียว ห้ามยิง 2 รอบ
-        let replyMsgCancel = '✅ 已刪除 Calendar 課程，並通知學生了';
-        try {
-          if (!reqRowCancel.token) {
-            replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但這筆沒有記錄學生代碼，沒辦法通知學生，記得自己說一聲';
-          } else if (!channelToken) {
-            replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但系統缺少 LINE 金鑰，沒通知到學生，記得自己說一聲';
-          } else {
-            const { data: stuRowCancel, error: stuErrCancel } = await supabase
-              .from('classroom_students').select('line_user_id').eq('token', reqRowCancel.token).maybeSingle();
-            if (stuErrCancel) {
-              replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但查不到學生資料（' + stuErrCancel.message + '），沒通知到學生，記得自己說一聲';
-            } else if (!stuRowCancel || !stuRowCancel.line_user_id) {
-              replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但學生還沒連結 LINE，沒收到通知，記得自己說一聲';
-            } else {
-              const odateMsg = (reqRowCancel.original_date || '') + (reqRowCancel.original_time ? ' ' + reqRowCancel.original_time : '');
-              const pushResCancel = await pushLineChecked(channelToken, stuRowCancel.line_user_id,
-                '✅ 老師已確認，' + odateMsg + ' 的課程已經取消囉');
-              if (!pushResCancel.ok) {
-                console.error('[line-webhook] ⚠️ confirm_cancel_delete: แจ้งนักเรียนไม่สำเร็จ:', pushResCancel.reason, 'request=', requestIdCancel);
-                replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但 LINE 通知學生失敗（' + pushResCancel.reason + '），請自己再跟學生說一聲';
-              }
-            }
-          }
-        } catch (e) {
-          const whyNotify = (e && e.message) ? e.message : String(e);
-          console.error('[line-webhook] ⚠️ confirm_cancel_delete: แจ้งนักเรียนพังกลางคัน:', whyNotify, 'request=', requestIdCancel);
-          replyMsgCancel = '✅ 已刪除 Calendar 課程\n⚠️ 但通知學生時出錯（' + whyNotify + '），請自己再跟學生說一聲';
-        }
-
         if (channelToken && event.replyToken) {
-          await replyLine(channelToken, event.replyToken, replyMsgCancel);
+          const cancelPending = [];
+          if (scheduleCleanupPendingCancel) cancelPending.push('課表資料庫同步');
+          if (!studentNotifiedCancel) cancelPending.push('學生通知');
+          await replyLine(channelToken, event.replyToken, formatCalendarTerminalMessage({
+            state: cancelPending.length ? CALENDAR_TERMINAL_STATE.PARTIAL_SUCCESS : CALENDAR_TERMINAL_STATE.SUCCESS,
+            completed: ['Calendar 課程已刪除', '申請狀態已更新'].concat(studentNotifiedCancel ? ['學生已通知'] : []),
+            pending: cancelPending,
+          }));
         }
         continue;
       }
