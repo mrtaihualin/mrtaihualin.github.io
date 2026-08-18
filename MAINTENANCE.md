@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-18 02:25 Asia/Bangkok** — Phase 1 Typing Guest startup defect
+**Updated: 2026-08-18 10:53 Asia/Bangkok** — Phase 1 low-quota browser/cron authorization contract
+
+## 2026-08-18 — P1-G-02/F-02/F-08 Low-Quota Dual Authorization (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Preserved the immediate best-effort last-lesson check after successful teacher attendance: the browser now sends the existing verified teacher session JWT and only the attended student token; it never receives or sends the internal cron secret.
+- `low-quota-cron` now accepts exactly two fail-closed entry modes before service-role access: the existing `x-cron-secret` scheduler contract, or a server-verified Supabase session for the established teacher email. Teacher calls are token-scoped, while only the internal scheduler may run the all-student scan. Scoped CORS/preflight support covers the existing website origins without exposing the cron header.
+- Regression coverage scans every classroom JavaScript caller and locks the active attendance invocation, anon-bearer rejection, no-browser-secret boundary, teacher identity rejection, teacher token scope, internal-secret preservation, authorization-before-service-role order and CORS boundary. Cron authorization 32/32, cron reliability 18/18, classroom behavioral, Phase 1 auth-session 13/13, `git diff --check` and the full 985-file site gate pass locally.
+- No SQL, Edge/client deployment, secret/Auth/config change, cron/LINE invocation, account/student data mutation or other Production action occurred. Production rollout and notification verification remain separately authorized gates.
 
 ## 2026-08-18 — P1-C-TYPING-01 Guest Startup (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
 

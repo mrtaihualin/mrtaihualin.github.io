@@ -43,6 +43,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 const LOW_QUOTA_THRESHOLD = 1; // เหลือ ≤ เท่านี้ถือว่า "ใกล้หมด" (เท่ากับเกณฑ์ป้ายเตือนหน้าเว็บครูเดิม)
+const TEACHER_EMAIL = 'mr.taihualin@gmail.com';
+const ALLOWED_ORIGINS = [
+  'https://mrtaihualin.com',
+  'https://www.mrtaihualin.com',
+  'https://mrtaihualin.github.io',
+  'https://gentle-moxie-bf64ad.netlify.app',
+];
 
 async function pushLine(channelToken, targetUserId, text) {
   const res = await fetch(LINE_PUSH_URL, {
@@ -80,22 +87,59 @@ function computeCurrentCourse(pays, atts) {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin') || '';
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  function corsHeaders() {
+    return {
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Vary': 'Origin',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    };
+  }
+  function json(body, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status, headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+    });
+  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
+  if (req.method !== 'POST') return json({ ok: false, error: 'method not allowed' }, 405);
+
   try {
     // This endpoint creates a service-role client, so the platform JWT check is
-    // not sufficient authorization: any valid user JWT can pass that layer.
-    // Reuse the established fail-closed cron secret contract before any read,
-    // write or external notification can occur.
+    // not sufficient authorization: accept either the existing internal cron
+    // secret or the one established teacher identity used by the classroom UI.
     const cronSecret = Deno.env.get('CRON_INTERNAL_SECRET');
-    if (!cronSecret || req.headers.get('x-cron-secret') !== cronSecret) {
-      return new Response(JSON.stringify({ ok: false, error: 'forbidden' }), {
-        status: 403, headers: { 'Content-Type': 'application/json' },
-      });
+    let authMode = cronSecret && req.headers.get('x-cron-secret') === cronSecret ? 'cron' : null;
+    if (!authMode) {
+      const authHeader = req.headers.get('Authorization') || '';
+      const jwt = authHeader.replace(/^Bearer\s+/i, '');
+      if (jwt) {
+        const asUser = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_ANON_KEY'), {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: userData, error: userErr } = await asUser.auth.getUser(jwt);
+        const callerEmail = (userData?.user?.email || '').toLowerCase();
+        authMode = userErr || callerEmail !== TEACHER_EMAIL ? null : 'teacher';
+      }
+    }
+    if (!authMode) return json({ ok: false, error: 'forbidden' }, 403);
+
+    // The internal scheduler may scan everyone. The teacher browser entry is
+    // intentionally narrower and may only check the student just recorded.
+    let bodyToken = null;
+    try {
+      const body = await req.json();
+      bodyToken = body && body.token ? String(body.token).trim() : null;
+    } catch (e) { /* ไม่มี body ส่งมา (เรียกจาก cron) ถือว่าปกติ ไม่ใช่ error */ }
+    if (authMode === 'teacher' && !bodyToken) {
+      return json({ ok: false, error: 'teacher request requires student token' }, 400);
     }
 
     const channelToken = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN');
     const teacherUserId = Deno.env.get('LINE_TEACHER_USER_ID'); // ไม่บังคับต้องตั้ง — ถ้าไม่มีก็แค่ไม่ส่งสำเนาให้ครู
     if (!channelToken) {
-      return new Response(JSON.stringify({ error: 'missing LINE_CHANNEL_ACCESS_TOKEN' }), { status: 500 });
+      return json({ error: 'missing LINE_CHANNEL_ACCESS_TOKEN' }, 500);
     }
     const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
 
@@ -110,12 +154,6 @@ serve(async (req) => {
     //   (1) cron วันละครั้ง ไม่ส่ง body มา → เช็คนักเรียนทุกคนที่ผูก LINE ไว้ (เหมือนเดิม)
     //   (2) เรียกจาก classroom/index.html ทันทีหลังบันทึกเข้าเรียน (ส่ง {token} มา) → เช็คแค่คนนั้นคนเดียว
     //       ให้ได้รับ LINE ทันทีถ้าคาบที่เพิ่งบันทึกเป็นคาบสุดท้ายของรอบพอดี ไม่ต้องรอ cron ตอน 9 โมงเช้า
-    let bodyToken = null;
-    try {
-      const body = await req.json();
-      bodyToken = body && body.token ? String(body.token) : null;
-    } catch (e) { /* ไม่มี body ส่งมา (เรียกจาก cron) ถือว่าปกติ ไม่ใช่ error */ }
-
     let studentsQuery = supabase
       .from('classroom_students')
       .select('token, name, line_user_id')
@@ -124,10 +162,10 @@ serve(async (req) => {
     if (bodyToken) studentsQuery = studentsQuery.eq('token', bodyToken);
 
     const { data: studentsRaw, error: stuErr } = await studentsQuery;
-    if (stuErr) return new Response(JSON.stringify({ error: stuErr.message }), { status: 500 });
+    if (stuErr) return json({ error: stuErr.message }, 500);
     // 2026-07-18 加：เดิมเช็คทุกคน ตอนนี้กรองเหลือเฉพาะคนที่มีคาบเรียนวันนี้จริงๆ
     const students = (studentsRaw || []).filter((s) => todayTokens.has(s.token));
-    if (!students.length) return new Response(JSON.stringify({ ok: true, checked: 0, note: 'no students have class today' }), { status: 200 });
+    if (!students.length) return json({ ok: true, checked: 0, note: 'no students have class today' });
 
     let sent = 0, errCount = 0, checked = 0;
 
@@ -226,8 +264,8 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, checked, sent, errors: errCount }), { status: 200 });
+    return json({ ok: true, checked, sent, errors: errCount });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e && e.message || e) }), { status: 500 });
+    return json({ error: String(e && e.message || e) }, 500);
   }
 });
