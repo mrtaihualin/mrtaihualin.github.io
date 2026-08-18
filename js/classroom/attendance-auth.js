@@ -36,9 +36,9 @@ async function recordAttendance(token) {
   try {
     fetch(LOW_QUOTA_CHECK_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + window.SUPABASE_CONFIG.anonKey },
+      headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_CONFIG.anonKey, 'Authorization': 'Bearer ' + (await teacherAuthHeader()) },
       body: JSON.stringify({ token: token })
-    });
+    }).catch(function() { /* best-effort — cron รายวันยังเป็นตาข่ายสำรอง */ });
   } catch (e) { /* best-effort เฉยๆ ไม่ critical — cron วันละครั้งเป็นตาข่ายสำรองอยู่แล้ว */ }
 }
 

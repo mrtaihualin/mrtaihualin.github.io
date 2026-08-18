@@ -1,0 +1,33 @@
+{
+  "schema_version": "phase1-auth-security-recovery-v1",
+  "scope": [
+    "P1-D-01",
+    "P1-D-09"
+  ],
+  "prepared_from_commit": "1d2902ce27105a385acdfabc1e3bce65372c7921",
+  "production_target_if_separately_authorized": "qzkxlhpcputsvbqmtqfi",
+  "forward_sql": [
+    {
+      "name": "email_otp_auth_security",
+      "path": "supabase/sql/2026-08-16_email_otp_auth_security.sql",
+      "source_commit": "ea5cafb9cade01ccd4628faa1feb0ba7c2d22a47",
+      "source_parent": "95100f543f853a99b77b31dc43de20d4067b4764",
+      "git_blob": "75de1e0739aeeed68379073f1a4545830dd4f2d5",
+      "sha256": "52bc32c9ed8b99f1e3079c9ad8e3aa088cf0a47e168b6d3ea8a7771811d3dc58"
+    },
+    {
+      "name": "account_audit_rpc_hardening",
+      "path": "supabase/migrations/20260817084202_phase1_account_audit_rpc_hardening.sql",
+      "source_commit": "a0a3061b6832b3174ceea68fa69d9f164dc9b955",
+      "source_parent": "7bf10b7e684c93cbd8509e677a27a71ba260420e",
+      "git_blob": "faaaf810a1f2f0fd99a9675f8b3426c2a9ee3302",
+      "sha256": "1920e989f33c0f3d75389e4ad22cf1e49c6f265809a17756d90089f7f67b2a9d"
+    }
+  ],
+  "recovery": {
+    "path": "supabase/recovery/phase1-auth-security/recover.sql",
+    "mode": "disable_email_otp_service_entrypoints_and_preserve_all_additive_data",
+    "account_audit_browser_execute": "must_remain_revoked",
+    "destructive_rollback": "intentionally_not_provided"
+  }
+}
