@@ -142,6 +142,85 @@
   }
   // ===== LISTENING_SRS_RACE_GUARD_END =====
 
+  // ===== LISTENING_REVIEW_POLICY_START =====
+  function createListeningReviewPolicy(options) {
+    var reviewKeys = Object.create(null);
+    var attempts = Object.create(null);
+    var submissions = Object.create(null);
+    var limitPerItem = 0;
+
+    function keyOf(word) { return String(options.keyOf(word) || ''); }
+    function reset() {
+      reviewKeys = Object.create(null);
+      attempts = Object.create(null);
+      submissions = Object.create(null);
+      limitPerItem = 0;
+    }
+    function begin(selectedDue, reviewLimit) {
+      reset();
+      limitPerItem = Math.max(0, Math.min(1, Math.floor(Number(reviewLimit) || 0)));
+      (selectedDue || []).forEach(function (word) {
+        var key = keyOf(word);
+        if (key) reviewKeys[key] = true;
+      });
+    }
+    function restore(saved) {
+      reset();
+      if (!saved || saved.version !== 1 || !Array.isArray(saved.reviewKeys)) return false;
+      limitPerItem = Math.max(0, Math.min(1, Math.floor(Number(saved.limitPerItem) || 0)));
+      saved.reviewKeys.slice(0, 100).forEach(function (key) {
+        key = String(key || '');
+        if (key) reviewKeys[key] = true;
+      });
+      (saved.attemptedKeys || []).slice(0, 100).forEach(function (key) {
+        key = String(key || '');
+        if (reviewKeys[key]) attempts[key] = limitPerItem;
+      });
+      (saved.submittedKeys || []).slice(0, 100).forEach(function (key) {
+        key = String(key || '');
+        if (reviewKeys[key]) submissions[key] = true;
+      });
+      return true;
+    }
+    function isReview(word) { return !!reviewKeys[keyOf(word)]; }
+    function hasAttempted(word) { return (attempts[keyOf(word)] || 0) >= limitPerItem && limitPerItem > 0; }
+    function claimAttempt(word) {
+      var key = keyOf(word);
+      if (!reviewKeys[key]) return true;
+      if (!limitPerItem || (attempts[key] || 0) >= limitPerItem) return false;
+      attempts[key] = (attempts[key] || 0) + 1;
+      return true;
+    }
+    function shouldRequeue(word, requested) { return !!requested && !isReview(word); }
+    function claimSubmission(word) {
+      var key = keyOf(word);
+      if (!reviewKeys[key]) return true;
+      if (submissions[key]) return false;
+      submissions[key] = true;
+      return true;
+    }
+    function snapshot() {
+      return {
+        version: 1,
+        limitPerItem: limitPerItem,
+        reviewKeys: Object.keys(reviewKeys),
+        attemptedKeys: Object.keys(attempts),
+        submittedKeys: Object.keys(submissions)
+      };
+    }
+    return {
+      begin: begin,
+      restore: restore,
+      isReview: isReview,
+      hasAttempted: hasAttempted,
+      claimAttempt: claimAttempt,
+      shouldRequeue: shouldRequeue,
+      claimSubmission: claimSubmission,
+      snapshot: snapshot
+    };
+  }
+  // ===== LISTENING_REVIEW_POLICY_END =====
+
   function qs(id) { return document.getElementById(id); }
 
   function cacheEls() {
@@ -218,6 +297,7 @@
   }
 
   function srsKey(word) { return (word && word.th || '') + '@' + levelNumber(word); }
+  var listeningReviewPolicy = createListeningReviewPolicy({ keyOf: srsKey });
   function taipeiDate(value) {
     var d = value == null ? new Date() : new Date(value);
     try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); }
@@ -288,16 +368,21 @@
   }
 
   function allocateListeningRound(pool, n) {
-    if (!window.READING_AUTH || !READING_AUTH.user || !window.GameFlow || !GameFlow.allocateSrs) return sampleRound(pool, n);
+    if (!window.READING_AUTH || !READING_AUTH.user || !window.GameFlow || !GameFlow.allocateSrs) {
+      listeningReviewPolicy.begin([], 0);
+      return sampleRound(pool, n);
+    }
     var due = shuffle(pool.filter(isSrsDue));
     var regular = shuffle(pool.filter(function (word) {
       var rec = listeningSrs[srsKey(word)];
       return !isSrsDue(word) && !(rec && rec.mastered);
     }));
-    return GameFlow.allocateSrs({
+    var allocation = GameFlow.allocateSrs({
       tier: 'free', total: Math.min(n, due.length + regular.length),
       due: due, regular: regular, idOf: srsKey, scope: 'listening'
-    }).items;
+    });
+    listeningReviewPolicy.begin(allocation.selectedDue, allocation.reviewLimit);
+    return allocation.items;
   }
 
   function pickDistractors(correctWord, pool, n) {
@@ -599,17 +684,20 @@
 
   function sendListeningSrs(word, primaryScore) {
     try {
-      if (window.TONE_SERVER && TONE_SERVER.available()) {
-        TONE_SERVER.finishRound({
-          game: 'listening', word: word.th, level: levelNumber(word),
-          clean: primaryScore === 10
-        }).then(function (res) {
-          if (res && res.ok) listeningSrsSynced = false;
-          if (res && !res.ok && res.reason !== 'below_entry_score' && res.reason !== 'not_due' && window.console) {
-            console.log('[listening-srs] server not-ok:', res.reason);
-          }
-        });
-      }
+      if (!window.TONE_SERVER || !TONE_SERVER.available()) return;
+      if (!listeningReviewPolicy.claimSubmission(word)) return;
+      // Persist the claim before starting the request. A refresh/restart cannot
+      // generate a second request id for the same Review Needed item.
+      saveResumeState();
+      TONE_SERVER.finishRound({
+        game: 'listening', word: word.th, level: levelNumber(word),
+        clean: primaryScore === 10
+      }).then(function (res) {
+        if (res && res.ok) listeningSrsSynced = false;
+        if (res && !res.ok && res.reason !== 'below_entry_score' && res.reason !== 'not_due' && window.console) {
+          console.log('[listening-srs] server not-ok:', res.reason);
+        }
+      });
     } catch (e) {}
   }
 
@@ -636,7 +724,9 @@
 
   function finishAnswer(isCorrect, w, detail) {
     detail = detail || {};
+    if (!listeningReviewPolicy.claimAttempt(w)) return;
     var existingSrs = listeningSrs[srsKey(w)] || {};
+    var isReviewAttempt = listeningReviewPolicy.isReview(w);
     if (isCorrect) state.correct++; else state.wrong++;
     var primary = Number(detail.primaryScore) || 0;
     var bonus = Number(detail.typingBonus) || 0;
@@ -650,7 +740,7 @@
       wordCount: LISTENING_SCORE.wordCount(w.th),
       unitCount: LISTENING_SCORE.typingUnitCount(w),
       srsDue: existingSrs.dueDate || '',
-      reviewNeeded: isSrsDue(w),
+      reviewNeeded: isReviewAttempt,
       mastered: !!existingSrs.mastered,
       attempts: state.itemAttempts.slice()
     });
@@ -665,11 +755,12 @@
         item_score: primary + bonus, listen_count: state.listenCount,
         linguistic: { reading_th: w.readingTH || '', reading_en: w.en || '', level: w.level || '' },
         srs_state: existingSrs.stage == null ? null : existingSrs.stage,
-        review_state: isSrsDue(w) ? 'needed' : 'not_due',
+        review_state: isReviewAttempt ? 'needed' : 'not_due',
         mastered_state: !!existingSrs.mastered
       });
     }
-    if (detail.requeue) {
+    var requeueThisRound = listeningReviewPolicy.shouldRequeue(w, detail.requeue);
+    if (requeueThisRound) {
       state.round.push(w);
       el.qt.textContent = String(state.round.length);
     }
@@ -680,7 +771,8 @@
     el.resultBanner.className = 'result-banner gsh-feedback-slot show ' + (isCorrect ? 'ok' : 'no');
     el.resultBanner.textContent = isCorrect
       ? ('✓ 做得很好！聽力 ' + primary + (state.mode === 'type' ? ' + Typing Bonus ' + bonus : ''))
-      : ((detail.zeroByListening ? '這題先看答案' : '差一點，再記一次就會更熟') + '：正確答案是「' + w.th + '」；稍後會再出現 🌱');
+      : ((detail.zeroByListening ? '這題先看答案' : '差一點，再記一次就會更熟') + '：正確答案是「' + w.th + '」；' +
+        (requeueThisRound ? '稍後會再出現 🌱' : '本回合已完成這次復習 🌱'));
 
     state.lastAnswered = w;
     el.reveal.classList.add('show');
@@ -723,6 +815,7 @@
         typingWrong: state.typingWrong,
         answered: state.answered,
         itemAttempts: state.itemAttempts,
+        listeningReviewPolicy: listeningReviewPolicy.snapshot(),
         log: state.log,
         report: state.report && window.RoundReport ? RoundReport.snapshot(state.report) : null
       });
@@ -770,6 +863,7 @@
       typingWrong: saved.answered ? 0 : (typeof saved.typingWrong === 'number' ? saved.typingWrong : 0),
       preserveAttempt: !saved.answered,
       itemAttempts: Array.isArray(saved.itemAttempts) ? saved.itemAttempts : [],
+      listeningReviewPolicy: saved.listeningReviewPolicy || null,
       log: Array.isArray(saved.log) ? saved.log : [],
       report: saved.report || null
     };
@@ -784,6 +878,15 @@
     var pend = state._pendingResume;
     el.resumeBanner.style.display = 'none';
     if (!pend) return;
+    // A v11 resume has no selected-Due ledger. Start fresh instead of guessing;
+    // auth may still be resolving here, so this must not depend on current user.
+    if (!pend.listeningReviewPolicy) {
+      state._pendingResume = null;
+      try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
+      startRound();
+      return;
+    }
+    listeningReviewPolicy.restore(pend.listeningReviewPolicy);
     state.pool = buildPool();
     state.round = pend.round;
     state.idx = pend.idx;
@@ -821,7 +924,13 @@
     state._pendingResume = null;
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
     if (!pend) return;
-    state.pool = buildPool(); state.round = pend.round; state.idx = 0; state.correct = 0; state.wrong = 0;
+    listeningReviewPolicy.restore(pend.listeningReviewPolicy);
+    state.pool = buildPool();
+    state.round = pend.round.filter(function (word) {
+      return !listeningReviewPolicy.isReview(word) || !listeningReviewPolicy.hasAttempted(word);
+    });
+    if (!state.round.length) { startRound(); return; }
+    state.idx = 0; state.correct = 0; state.wrong = 0;
     state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.log = []; state.itemAttempts = [];
     state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: 'mixed', mode: pend.mode }) : null;
     state.roundActive = true; state.roundSeq++; setMode(pend.mode);

@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-18 10:53 Asia/Bangkok** — Phase 1 low-quota browser/cron authorization contract
+**Updated: 2026-08-18 17:45 Asia/Bangkok** — Phase 1 Listening Review1/Due20 + game-content RPC least privilege
+
+## 2026-08-18 — P1-B-02/C-LISTENING-02 Review1/Due20 + RPC ACL (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Listening now binds the Free allocator's selected Due items to a per-round Review policy: each Due item can consume one actual attempt, a failed Due item cannot re-enter the same round, and its SRS submission is claimed once before the request. The policy persists through safe resume; restart removes already-attempted Due items, and legacy resume state without the policy starts a fresh round instead of guessing while Auth may still be resolving.
+- Added negative runtime regressions for failed-Due requeue, second Review attempt, duplicate SRS submission, resume claim preservation, fail-closed Review1 and 2/10 actual Due attempts. The Listening-only cache key advances from v11 to v12; no Phase 1.2 UX work or other game formula changed.
+- Fixed fresh-install SQL source and added a rerunnable existing-deployment migration that prechecks the exact SECURITY DEFINER signature, revokes `PUBLIC`/`anon`/`authenticated`, grants only `service_role`, and aborts if the effective postcheck is not least privilege. Its recovery route re-runs the same closed ACL; it never restores browser execute access or changes rate-counter rows/function code.
+- Listening 46/46, Phase 1 SRS 17/17, Game Flow, S29 score/security, save/retry 11/11, backend transactions 9/9, owner-switch 12/12, SQL source checks, ephemeral PostgreSQL pre/post/idempotent-recovery proof, `git diff --check` and the full 987-file site gate pass locally. No Production SQL, client/Edge deploy, account/data mutation, secret access, provider action, PR #44 action or Phase 1.2 implementation occurred.
 
 ## 2026-08-18 — P1-G-02/F-02/F-08 Low-Quota Dual Authorization (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
 

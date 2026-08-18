@@ -28,6 +28,14 @@ vm.runInNewContext(raceGuardMatch[1] + '\nthis.createGuard = createListeningSrsR
 });
 const createGuard = raceSandbox.createGuard;
 
+const reviewPolicyMatch = app.match(/\/\/ ===== LISTENING_REVIEW_POLICY_START =====\n([\s\S]*?)\/\/ ===== LISTENING_REVIEW_POLICY_END =====/);
+if (!reviewPolicyMatch) throw new Error('Listening Review Needed policy source not found');
+const reviewSandbox = {};
+vm.runInNewContext(reviewPolicyMatch[1] + '\nthis.createPolicy = createListeningReviewPolicy;', reviewSandbox, {
+  filename: 'listening-review-policy.js'
+});
+const createReviewPolicy = reviewSandbox.createPolicy;
+
 let passes = 0;
 const failures = [];
 function check(label, condition) {
@@ -45,7 +53,8 @@ check('輸入 1–2 คำ scoring = 10,10,7,4,1,0', values('type', 'กิน �
 check('輸入 3+ คำ scoring = 10,10,10,7,4,1,0', values('type', 'ฉัน กิน ข้าว', 7) === '10,10,10,7,4,1,0');
 check('Typing Bonus เรียกสูตร 無提示 ชุดเดียว', score.typingBonus({ th: 'กิน', readingTH: 'กิน' }, 4) === sandbox.window.TYPING_SCORE.score(1, 4));
 check('Typing Bonus 0 แล้วยังอยู่ branch ให้พิมพ์ต่อ', /if \(!isCorrect\) \{[\s\S]*state\.typingWrong\+\+[\s\S]*繼續輸入到正確為止/.test(app));
-check('Listening score 0 จบ attempt และ requeue', /finishListeningAtZero\(w\)/.test(app) && /state\.round\.push\(w\)/.test(app));
+check('Listening score 0 จบ attempt และ requeue เฉพาะ item ที่ไม่ใช่ Due',
+  /finishListeningAtZero\(w\)/.test(app) && /listeningReviewPolicy\.shouldRequeue\(w, detail\.requeue\)/.test(app));
 check('mode ถูกล็อกตลอดรอบ', /if \(state\.roundActive && mode !== state\.mode\)/.test(app));
 check('audio fail ไม่หักจำนวนครั้งฟัง', /if \(!ok\) \{[\s\S]*state\.listenCount = Math\.max\(0, state\.listenCount - 1\)/.test(app));
 check('Listening Score และ Typing Bonus เก็บแยกใน evidence', /listening_score: entry\.listeningScore/.test(app) && /typing_bonus: entry\.typingBonus/.test(app));
@@ -61,10 +70,58 @@ check('Listening อ่าน SRS ของ game=listening กลับจาก
 check('Listening SRS query ผูก captured owner เป็น defense-in-depth', /\.eq\('game', 'listening'\)\s*\.eq\('user_id', owner\.uid\)/.test(app) && /options\.load\(owner\)/.test(app));
 check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier: 'free'/.test(app) && /GameFlow\.allocateSrs/.test(app));
 check('Listening SRS read ใช้ NetworkGuard แบบ bounded และไม่ retry blind', /NetworkGuard\.request\([\s\S]*'listening-srs', \{\}, 10000, null\)/.test(app));
-check('Listening start fallback สูงสุด 1500ms และ cache version ตรง v11', /options\.delay\(1500\)/.test(app) && /listening-game-app\.js\?v=11/.test(html));
+check('Listening start fallback สูงสุด 1500ms และ cache version ตรง v12', /options\.delay\(1500\)/.test(app) && /listening-game-app\.js\?v=12/.test(html));
 check('Listening มี leaderboard ของตัวเองและ auth ชี้ถูกหน้า', /READING_BOARD_GAME = 'listening'/.test(board) && /listening-board\.html/.test(auth));
 check('Leaderboard client รองรับ game=listening', /READING_BOARD_GAME === 'listening'/.test(boardClient) && /listening-game\.html/.test(boardClient));
 check('Core 5 SQL contract รองรับ Listening และ weekly เริ่มวันจันทร์ Taipei', /'reading', 'listening', 'typing', 'word_order'/.test(boardSql) && /date_trunc\('week', timezone\('Asia\/Taipei'/.test(boardSql));
+
+function reviewWord(th) { return { th, level: '初' }; }
+function reviewKey(word) { return word.th + '@1'; }
+
+{
+  const dueA = reviewWord('due-a');
+  const dueB = reviewWord('due-b');
+  const regular = reviewWord('regular');
+  const policy = createReviewPolicy({ keyOf: reviewKey });
+  policy.begin([dueA, dueB], 1);
+
+  check('Due item ได้ Review Needed attempt แรกเพียงครั้งเดียว', policy.claimAttempt(dueA) === true);
+  check('Due item เดิมถูกปฏิเสธเมื่อพยายามทำ attempt ที่สองในรอบเดียว', policy.claimAttempt(dueA) === false);
+  check('failed Due ไม่ถูก requeue แต่ failed regular ยังใช้ flow เดิม',
+    policy.shouldRequeue(dueA, true) === false && policy.shouldRequeue(regular, true) === true);
+  check('Due SRS submission เป็น idempotent หนึ่ง request ต่อ item ต่อรอบ',
+    policy.claimSubmission(dueA) === true && policy.claimSubmission(dueA) === false);
+
+  const restored = createReviewPolicy({ keyOf: reviewKey });
+  check('Review/attempt/submission claims อยู่ครบหลัง resume restore',
+    restored.restore(policy.snapshot()) === true && restored.hasAttempted(dueA) === true &&
+    restored.claimAttempt(dueA) === false && restored.claimSubmission(dueA) === false);
+
+  const capped = createReviewPolicy({ keyOf: reviewKey });
+  capped.begin([dueB], 4);
+  check('Listening Free fail-closed ที่ Review1 แม้ metadata ผิดเป็นค่ามากกว่า 1',
+    capped.claimAttempt(dueB) === true && capped.claimAttempt(dueB) === false);
+}
+
+{
+  const due = [reviewWord('due-1'), reviewWord('due-2')];
+  const regular = Array.from({ length: 8 }, (_, i) => reviewWord('regular-' + i));
+  const policy = createReviewPolicy({ keyOf: reviewKey });
+  policy.begin(due, 1);
+  const attempts = due.concat(regular);
+  attempts.slice().forEach((word) => {
+    if (policy.claimAttempt(word) && policy.shouldRequeue(word, due.includes(word))) attempts.push(word);
+  });
+  check('10-item Free round keeps failed Due actual attempts at 2/10 (Due20)',
+    attempts.length === 10 && attempts.filter((word) => due.includes(word)).length === 2);
+}
+
+check('actual Listening flow consumes allocation selectedDue/reviewLimit and guards attempt/submission',
+  /listeningReviewPolicy\.begin\(allocation\.selectedDue, allocation\.reviewLimit\)/.test(app) &&
+  /if \(!listeningReviewPolicy\.claimAttempt\(w\)\) return/.test(app) &&
+  /if \(!listeningReviewPolicy\.claimSubmission\(word\)\) return/.test(app) &&
+  /!listeningReviewPolicy\.isReview\(word\) \|\| !listeningReviewPolicy\.hasAttempted\(word\)/.test(app) &&
+  /if \(!pend\.listeningReviewPolicy\) \{[\s\S]*GameResume\.clear\('listening-game'\)[\s\S]*startRound\(\)/.test(app));
 
 function deferred() {
   let resolve;
