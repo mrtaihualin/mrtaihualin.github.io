@@ -125,6 +125,7 @@ runTest(['scripts/tests-phase1-free-gamification.mjs'], 'Phase 1 Free Daily Stre
 runTest(['scripts/tests-phase1-played-gamification-recovery.mjs'], 'Phase 1 Played/Gamification recovery artifact tests');
 runTest(['scripts/tests-phase1-srs.js'], 'Phase 1 SRS tests');
 runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
+runTest(['scripts/tests-phase1-game-content-rl-grants.mjs'], 'Phase 1 game-content rate-limit grant tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');
 runTest(['scripts/tests-reading-phase1.js'], 'Phase 1 Reading tests');
 runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
