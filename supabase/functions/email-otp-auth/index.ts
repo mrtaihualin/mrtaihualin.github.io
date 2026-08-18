@@ -5,12 +5,14 @@
 // deno-lint-ignore-file no-explicit-any
 
 import { createClient } from 'npm:@supabase/supabase-js@2.112.3';
+import { readEmailMailerSecret } from '../_shared/email-mailer-auth.mjs';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const EMAIL_OTP_HMAC_SECRET = Deno.env.get('EMAIL_OTP_HMAC_SECRET') || '';
 const TURNSTILE_SECRET_KEY = Deno.env.get('TURNSTILE_SECRET_KEY') || '';
+const EMAIL_MAILER_API_KEY = readEmailMailerSecret(Deno.env.get('SUPABASE_SECRET_KEYS'));
 
 const OTP_TTL_MINUTES = 10;
 const MIN_PUBLIC_RESPONSE_MS = 450;
@@ -157,11 +159,11 @@ async function invalidateChallenge(challengeId: string, emailHmac: string, ipHma
 }
 
 async function sendOtpEmail(email: string, code: string) {
+  if (!EMAIL_MAILER_API_KEY) return false;
   const result = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      'apikey': SUPABASE_SERVICE_ROLE_KEY,
+      'apikey': EMAIL_MAILER_API_KEY,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -216,7 +218,7 @@ async function requestOtp(req: Request, origin: string, body: any, startedAt: nu
   }
 
   const email = normalizeEmail(body?.email);
-  if (!email || !hmacSecretReady || !SUPABASE_SERVICE_ROLE_KEY) {
+  if (!email || !hmacSecretReady || !SUPABASE_SERVICE_ROLE_KEY || !EMAIL_MAILER_API_KEY) {
     await waitForPublicFloor(startedAt);
     return response(origin, { ok: true, challenge_id: publicChallengeId }, 202);
   }

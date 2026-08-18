@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-18 17:45 Asia/Bangkok** — Phase 1 Listening Review1/Due20 + game-content RPC least privilege
+**Updated: 2026-08-18 19:57 Asia/Bangkok** — Phase 1 Email OTP service/client source preparation
+
+## 2026-08-18 — P1-D-01/D-02/D-09/G-05 Email OTP Service + Client Activation Source (`PASS_LOCAL / NATIVE_OFF / PRODUCTION_UNCHANGED`)
+
+- Replaced the Email OTP broker's broad mailer credential with one exact named Supabase secret API-key contract: `email-otp-auth` sends it only in `apikey`, while `send-transactional-email` is prepared for `verify_jwt=false` and rejects missing, malformed, publishable, user-JWT, Bearer and alternate-key inputs before reading request content. The existing account-delete callers retain their exact prior dual-header path only for the three account-recovery templates and cannot invoke the OTP template.
+- Added the sole public Email OTP activation artifact to `js/core/supabase-config.js`, frozen at `mode: native` with no Turnstile site key. Only its seven existing Auth consumers advance the config cache binding from v5 to v6; no server credential is browser-visible and `reading-auth.js` remains unchanged.
+- Disposable local contract proof passes 7/7; existing Email OTP security 13/13, account lifecycle 6/6, account-audit integrity 10/10, secret scanning, `git diff --check` and the full 991-file site gate pass. Resend remains the approved provider, but no dashboard sign-in, secret/config/key read or write, DNS/Auth/SQL/Edge/client deploy, mail send, account/data lifecycle, Production mutation or PR #44 action occurred.
 
 ## 2026-08-18 — P1-B-02/C-LISTENING-02 Review1/Due20 + RPC ACL (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
