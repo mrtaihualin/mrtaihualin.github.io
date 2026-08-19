@@ -9,6 +9,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const {
   isManagedBackupName,
+  parseBackupOnly,
   parseRetentionDays,
   uploadAndRotate,
 } = require(path.join(root, 'scripts/backup/upload-and-rotate.js'));
@@ -94,6 +95,15 @@ function makeDrive({ localSize, localMd5, pages = [[]], verify = {}, listError =
     }
   });
 
+  await check('backup-only accepts an explicit boolean string only', () => {
+    assert.strictEqual(parseBackupOnly(undefined), true);
+    assert.strictEqual(parseBackupOnly('false'), false);
+    assert.strictEqual(parseBackupOnly('TRUE'), true);
+    for (const value of ['1', 'yes', 'no', '']) {
+      assert.throws(() => parseBackupOnly(value), /BACKUP_ONLY/);
+    }
+  });
+
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'phase1-backup-safety-'));
   const filePath = path.join(tempDir, 'backup_2026-08-17_0315-th.tar.gz.gpg');
   const content = Buffer.alloc(512, 0x5a);
@@ -139,6 +149,63 @@ function makeDrive({ localSize, localMd5, pages = [[]], verify = {}, listError =
       assert.match(drive.calls.list[0].fields, /nextPageToken/);
       assert.deepStrictEqual(drive.calls.delete.map((call) => call.fileId), ['old-1', 'old-2']);
       assert.match(drive.calls.get[0].fields, /md5Checksum/);
+    });
+
+    await check('backup-only verified upload never lists or deletes Drive files', async () => {
+      const drive = makeDrive({ localSize, localMd5 });
+      const result = await uploadAndRotate({
+        drive,
+        filePath,
+        folderId: 'folder-id',
+        retentionDays: 30,
+        backupOnly: true,
+        logger: { log() {}, error() {} },
+      });
+      assert.deepStrictEqual(result, {
+        uploadedId: 'new-id',
+        uploaded: true,
+        retentionComplete: false,
+        deletedCount: 0,
+        backupOnly: true,
+      });
+      assert.strictEqual(drive.calls.create.length, 1);
+      assert.strictEqual(drive.calls.get.length, 1);
+      assert.strictEqual(drive.calls.list.length, 0);
+      assert.strictEqual(drive.calls.delete.length, 0);
+    });
+
+    await check('backup-only checksum failure never deletes the new Drive file', async () => {
+      const drive = makeDrive({ localSize, localMd5, verify: { md5: '0'.repeat(32) } });
+      await assert.rejects(
+        uploadAndRotate({
+          drive,
+          filePath,
+          folderId: 'folder-id',
+          retentionDays: 30,
+          backupOnly: true,
+          logger: { log() {}, error() {} },
+        }),
+        /ไม่ตรงกับต้นทาง/
+      );
+      assert.strictEqual(drive.calls.list.length, 0);
+      assert.strictEqual(drive.calls.delete.length, 0);
+    });
+
+    await check('backup-only verification lookup failure never deletes the new Drive file', async () => {
+      const drive = makeDrive({ localSize, localMd5, verify: { error: new Error('verify unavailable') } });
+      await assert.rejects(
+        uploadAndRotate({
+          drive,
+          filePath,
+          folderId: 'folder-id',
+          retentionDays: 30,
+          backupOnly: true,
+          logger: { log() {}, error() {} },
+        }),
+        /ตรวจสอบไฟล์บน Drive ไม่สำเร็จ/
+      );
+      assert.strictEqual(drive.calls.list.length, 0);
+      assert.strictEqual(drive.calls.delete.length, 0);
     });
 
     await check('checksum mismatch deletes only the new incomplete upload and aborts retention', async () => {
@@ -211,12 +278,26 @@ function makeDrive({ localSize, localMd5, pages = [[]], verify = {}, listError =
         path.join(root, '.github/workflows/backup-database-to-drive.yml'), 'utf8'
       );
       const guard = workflow.indexOf('if [ -z "${PASSPHRASE:-}" ]');
-      const archive = workflow.indexOf('tar -czf "backup_${STAMP}.tar.gz"');
+      const archive = workflow.indexOf('tar -czf "$ARCHIVE"');
       const upload = workflow.indexOf('node scripts/backup/upload-and-rotate.js');
       assert.ok(guard >= 0 && guard < archive && archive < upload);
       assert.ok(workflow.includes('BACKUP_ENCRYPT_PASSPHRASE'));
       assert.ok(!workflow.includes('ไม่ได้เข้ารหัส'));
       assert.ok(!workflow.includes('FINAL_FILE=backup_${STAMP}.tar.gz"'));
+    });
+
+    await check('manual workflow is hard-bound to no-delete backup-only with encrypted archive verification', () => {
+      const workflow = fs.readFileSync(
+        path.join(root, '.github/workflows/backup-database-to-drive.yml'), 'utf8'
+      );
+      assert.ok(workflow.includes(
+        "BACKUP_ONLY: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}"
+      ));
+      assert.ok(workflow.includes('--output "$VERIFY_DIR/verify.tar.gz" --decrypt "$ENCRYPTED"'));
+      assert.ok(workflow.includes('gzip -t "$VERIFY_DIR/verify.tar.gz"'));
+      assert.ok(workflow.includes('EXPECTED=(roles.sql schema.sql data.sql)'));
+      assert.ok(workflow.includes('SOURCE_HASH=$(sha256sum "dump/${EXPECTED[$i]}"'));
+      assert.ok(workflow.includes('ARCHIVE_HASH=$(tar -xOzf "$VERIFY_DIR/verify.tar.gz"'));
     });
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });

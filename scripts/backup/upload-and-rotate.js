@@ -36,6 +36,16 @@ function parseRetentionDays(raw) {
   return days;
 }
 
+function parseBackupOnly(raw) {
+  // Fail closed: ถ้า caller ไม่ส่งโหมดมา ให้ถือว่าเป็น backup-only และห้ามลบ
+  // Scheduled workflow ต้องส่ง false แบบ explicit เท่านั้นจึงจะเข้า retention path เดิม
+  const value = String(raw == null ? 'true' : raw).trim().toLowerCase();
+  if (value !== 'true' && value !== 'false') {
+    throw new Error(`BACKUP_ONLY ต้องเป็น true หรือ false เท่านั้น แต่ได้รับ ${JSON.stringify(value)}`);
+  }
+  return value === 'true';
+}
+
 function isManagedBackupName(name) {
   return BACKUP_FILE_RE.test(String(name || ''));
 }
@@ -76,7 +86,15 @@ async function listAllFiles(drive, folderId) {
   return files;
 }
 
-async function uploadAndRotate({ drive, filePath, folderId, retentionDays, now = Date.now(), logger = console }) {
+async function uploadAndRotate({
+  drive,
+  filePath,
+  folderId,
+  retentionDays,
+  backupOnly = false,
+  now = Date.now(),
+  logger = console,
+}) {
   const fileName = path.basename(filePath);
 
   if (!fs.existsSync(filePath)) {
@@ -116,16 +134,35 @@ async function uploadAndRotate({ drive, filePath, folderId, retentionDays, now =
     remoteSize = parseInt(verifyRes.data.size || '0', 10);
     remoteMd5 = String(verifyRes.data.md5Checksum || '').toLowerCase();
   } catch (err) {
-    await removeIncompleteUpload(drive, uploadedId, logger);
+    if (!backupOnly) {
+      await removeIncompleteUpload(drive, uploadedId, logger);
+    } else {
+      logger.error('::warning::BACKUP_ONLY=true — ไม่ลบไฟล์บน Drive แม้ตรวจสอบไฟล์ใหม่ไม่สำเร็จ');
+    }
     throw new Error(`ตรวจสอบไฟล์บน Drive ไม่สำเร็จ: ${err.message}`);
   }
   if (remoteSize !== localSize || remoteMd5 !== localMd5) {
-    await removeIncompleteUpload(drive, uploadedId, logger);
+    if (!backupOnly) {
+      await removeIncompleteUpload(drive, uploadedId, logger);
+    } else {
+      logger.error('::warning::BACKUP_ONLY=true — ไม่ลบไฟล์บน Drive แม้ไฟล์ใหม่ตรวจสอบไม่ผ่าน');
+    }
     throw new Error(
       `ไฟล์บน Drive ไม่ตรงกับต้นทาง (size ${remoteSize}/${localSize}, checksum ${remoteMd5 || 'missing'}/${localMd5})`
     );
   }
   logger.log(`✅ ยืนยันแล้ว: ไฟล์บน Drive ตรงกับต้นทางทั้งขนาดและ checksum (${remoteSize} ไบต์)`);
+
+  if (backupOnly) {
+    logger.log('เสร็จสิ้นแบบ BACKUP_ONLY: อัปโหลดและตรวจสอบสำเร็จ 1 ไฟล์; ไม่เรียก files.list/files.delete');
+    return {
+      uploadedId,
+      uploaded: true,
+      retentionComplete: false,
+      deletedCount: 0,
+      backupOnly: true,
+    };
+  }
 
   // 3) ลบของเก่าที่เกินกำหนด — มาถึงบรรทัดนี้ได้แปลว่าของใหม่ผ่านการตรวจสอบแล้วเท่านั้น
   const cutoff = new Date(now - retentionDays * 24 * 60 * 60 * 1000);
@@ -162,12 +199,13 @@ async function main() {
   const refreshToken = required('GDRIVE_REFRESH_TOKEN');
   const folderId = required('GDRIVE_FOLDER_ID');
   const filePath = required('FILE_PATH');
+  const backupOnly = parseBackupOnly(process.env.BACKUP_ONLY);
   const retentionDays = parseRetentionDays(process.env.RETENTION_DAYS);
   const { google } = require('googleapis');
   const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
   oauth2Client.setCredentials({ refresh_token: refreshToken });
   const drive = google.drive({ version: 'v3', auth: oauth2Client });
-  await uploadAndRotate({ drive, filePath, folderId, retentionDays });
+  await uploadAndRotate({ drive, filePath, folderId, retentionDays, backupOnly });
 }
 
 module.exports = {
@@ -175,6 +213,7 @@ module.exports = {
   isManagedBackupName,
   listAllFiles,
   md5File,
+  parseBackupOnly,
   parseRetentionDays,
   uploadAndRotate,
 };
