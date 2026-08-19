@@ -43,8 +43,22 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client-17
-          pg_dump --version
-          pg_dumpall --version
+          # GitHub-hosted runner may prepend a cached PostgreSQL 16 bin directory to PATH.
+          # Pin the package-owned v17 executables and fail closed before any Production read.
+          PG_BIN=/usr/lib/postgresql/17/bin
+          for tool in pg_dump pg_dumpall; do
+            if [ ! -x "${PG_BIN}/${tool}" ]; then
+              echo "::error::ไม่พบ ${PG_BIN}/${tool} หลังติดตั้ง postgresql-client-17"
+              exit 1
+            fi
+            VERSION_OUTPUT=$("${PG_BIN}/${tool}" --version)
+            echo "$VERSION_OUTPUT"
+            if [[ "$VERSION_OUTPUT" != *"(PostgreSQL) 17."* ]]; then
+              echo "::error::${tool} ต้องเป็น PostgreSQL 17.x แต่ได้รับเวอร์ชันอื่น"
+              exit 1
+            fi
+          done
+          echo "PG_BIN=$PG_BIN" >> "$GITHUB_ENV"
 
       - name: ติดตั้ง Node.js
         uses: actions/setup-node@v4
@@ -77,10 +91,14 @@ jobs:
             echo "::error::ไม่มี secret BACKUP_DB_PASSWORD — ตั้งค่าก่อนตามคู่มือ (ใส่เฉพาะรหัสผ่าน ไม่ใช่ connection string ทั้งบรรทัด)"
             exit 1
           fi
+          if [ "${PG_BIN:-}" != "/usr/lib/postgresql/17/bin" ]; then
+            echo "::error::PG_BIN ไม่ได้ผูกกับ PostgreSQL 17 — หยุดก่อนอ่าน Production"
+            exit 1
+          fi
           mkdir -p dump
-          pg_dumpall --roles-only  -f dump/roles.sql
-          pg_dump    --schema-only -f dump/schema.sql
-          pg_dump    --data-only   -f dump/data.sql
+          "${PG_BIN}/pg_dumpall" --roles-only  -f dump/roles.sql
+          "${PG_BIN}/pg_dump"    --schema-only -f dump/schema.sql
+          "${PG_BIN}/pg_dump"    --data-only   -f dump/data.sql
           for f in dump/roles.sql dump/schema.sql dump/data.sql; do
             size=$(stat -c%s "$f")
             echo "$f = $size bytes"
