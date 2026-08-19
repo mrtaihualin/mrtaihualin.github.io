@@ -513,9 +513,19 @@ function rgRestoreRoundReport(snapshot){
     return typeof RoundReport.create==='function'?RoundReport.create(defaults):null;
   }catch(e){return null;}
 }
-// เรียกครั้งเดียวตอนโหลดหน้า (แทน initGame() ตรงๆ) — เจอ state ค้างไว้จริง → โชว์แบนเนอร์ถามก่อน ไม่เจอ → คืน false ให้ผู้เรียกไป initGame() ตามปกติ
+function rgHasDirectWordQuery(){
+  try{ return /(?:^|[?&])word=[^&]+/.test(location.search||''); }
+  catch(e){ return false; }
+}
+// เรียกครั้งเดียวตอนโหลดหน้า (แทน initGame() ตรงๆ) — direct ?word= ต้องชนะ device-local Resume เสมอ
+// โดยข้ามเฉพาะแบนเนอร์รอบนี้ ไม่ลบ Resume ที่บันทึกไว้; หน้าเล่นปกติยัง Resume ได้เหมือนเดิม
 function rgTryLoadResumeBanner(){
   var banner=document.getElementById('rg-resume-banner');
+  if(rgHasDirectWordQuery()){
+    if(banner)banner.style.display='none';
+    window.__rgPendingResume=null;
+    return false;
+  }
   if(!banner||!window.GameResume)return false;
   var st=null;
   try{ st=GameResume.load(RG_RESUME_ID); }catch(e){ st=null; }
