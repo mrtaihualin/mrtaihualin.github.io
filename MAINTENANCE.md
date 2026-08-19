@@ -1,12 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-19 21:57 Asia/Bangkok** — Phase 1 PostgreSQL 17 backup runtime pin
+**Updated: 2026-08-19 22:43 Asia/Bangkok** — Phase 1 PostgreSQL 17 backup runtime pin + manual backup-only guard
 
-## 2026-08-19 — Phase 1 PostgreSQL 17 Backup Runtime Pin (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+## 2026-08-19 — Phase 1 PostgreSQL 17 Backup Runtime Pin + Manual Backup-Only Guard (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
 - Current `main` installed `postgresql-client-17` but still invoked bare `pg_dump`/`pg_dumpall`, allowing a cached PostgreSQL 16 directory earlier on the GitHub-hosted runner `PATH` to shadow the required client. The narrowly isolated fix reuses PR #44's proven exact-binary approach: validate `/usr/lib/postgresql/17/bin/pg_dump` and `pg_dumpall`, export that directory through `GITHUB_ENV`, recheck it immediately before the database read, and invoke only those exact executables for roles/schema/data.
-- Added a focused eight-check regression to lock the package path, version fail-closed guard, pre-read guard, all three exact dump commands and absence of PATH-dependent dump calls; registered it in the repository site gate. PR #44's retention/upload/LINE behavior and its broader backup-safety implementation remain untouched and unmerged.
-- Targeted runtime-pin regression 8/8, `git diff --check`, JavaScript syntax/secret scan and the full 992-file site gate PASS locally. Source/tests/docs only: no backup or workflow dispatch, Drive action, Production read/write, SQL, restore, deploy, retention/LINE behavior change, PR #44 action, merge or Phase 1.2 work occurred.
+- Added the minimum fail-closed manual guard without importing PR #44's retention implementation: `workflow_dispatch` is hard-bound to `BACKUP_ONLY=true`; `schedule` remains explicitly `BACKUP_ONLY=false` and continues through the existing upload-and-30-day-rotation script. Missing/unknown mode defaults to the upload-only branch. That branch performs one upload and one remote size/MD5 verification, contains no Drive list/delete/retention call, and both LINE steps require the exact scheduled/false mode.
+- Extended the existing focused regression to 14 checks covering the package path/version/pre-read guards, three exact dump commands, manual/scheduled mode binding, ambiguous-mode fail-closed behavior, upload-before-remote-integrity verification, absence of manual list/delete/retention, and schedule-only LINE paths; the test remains registered in the repository site gate.
+- Targeted regression 14/14, `git diff --check`, JavaScript syntax/secret scan and the full site gate PASS locally. Source/tests/docs only: no backup or workflow dispatch, Drive action, Production read/write, SQL, restore, deploy, retention rotation, LINE notification, PR #44 action, merge or Phase 1.2 work occurred.
 
 ## 2026-08-19 — P1-B-05/D-06/E-05/F-03/G-06 Reading Direct-Word Resume Precedence (`FIXED_PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
