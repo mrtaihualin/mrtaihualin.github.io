@@ -43,8 +43,22 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client-17
-          pg_dump --version
-          pg_dumpall --version
+          # GitHub-hosted runner may prepend a cached PostgreSQL 16 bin directory to PATH.
+          # Pin the package-owned v17 executables and fail closed before any Production read.
+          PG_BIN=/usr/lib/postgresql/17/bin
+          for tool in pg_dump pg_dumpall; do
+            if [ ! -x "${PG_BIN}/${tool}" ]; then
+              echo "::error::ไม่พบ ${PG_BIN}/${tool} หลังติดตั้ง postgresql-client-17"
+              exit 1
+            fi
+            VERSION_OUTPUT=$("${PG_BIN}/${tool}" --version)
+            echo "$VERSION_OUTPUT"
+            if [[ "$VERSION_OUTPUT" != *"(PostgreSQL) 17."* ]]; then
+              echo "::error::${tool} ต้องเป็น PostgreSQL 17.x แต่ได้รับเวอร์ชันอื่น"
+              exit 1
+            fi
+          done
+          echo "PG_BIN=$PG_BIN" >> "$GITHUB_ENV"
 
       - name: ติดตั้ง Node.js
         uses: actions/setup-node@v4
@@ -77,10 +91,14 @@ jobs:
             echo "::error::ไม่มี secret BACKUP_DB_PASSWORD — ตั้งค่าก่อนตามคู่มือ (ใส่เฉพาะรหัสผ่าน ไม่ใช่ connection string ทั้งบรรทัด)"
             exit 1
           fi
+          if [ "${PG_BIN:-}" != "/usr/lib/postgresql/17/bin" ]; then
+            echo "::error::PG_BIN ไม่ได้ผูกกับ PostgreSQL 17 — หยุดก่อนอ่าน Production"
+            exit 1
+          fi
           mkdir -p dump
-          pg_dumpall --roles-only  -f dump/roles.sql
-          pg_dump    --schema-only -f dump/schema.sql
-          pg_dump    --data-only   -f dump/data.sql
+          "${PG_BIN}/pg_dumpall" --roles-only  -f dump/roles.sql
+          "${PG_BIN}/pg_dump"    --schema-only -f dump/schema.sql
+          "${PG_BIN}/pg_dump"    --data-only   -f dump/data.sql
           for f in dump/roles.sql dump/schema.sql dump/data.sql; do
             size=$(stat -c%s "$f")
             echo "$f = $size bytes"
@@ -90,30 +108,64 @@ jobs:
             fi
           done
 
-      - name: บีบอัดรวมเป็นไฟล์เดียว (เข้ารหัสด้วยถ้าตั้งรหัสผ่านไว้)
+      - name: บีบอัดและเข้ารหัสรวมเป็นไฟล์เดียว (fail closed ถ้าไม่มีรหัสผ่าน)
         run: |
           set -euo pipefail
-          STAMP=$(date -u -d '+7 hours' +'%Y-%m-%d_%H%M')-th
-          tar -czf "backup_${STAMP}.tar.gz" -C dump roles.sql schema.sql data.sql
-          if [ -n "${PASSPHRASE:-}" ]; then
-            gpg --batch --yes --passphrase "$PASSPHRASE" -c "backup_${STAMP}.tar.gz"
-            rm -f "backup_${STAMP}.tar.gz"
-            echo "FINAL_FILE=backup_${STAMP}.tar.gz.gpg" >> "$GITHUB_ENV"
-            echo "เข้ารหัสไฟล์แล้ว"
-          else
-            echo "FINAL_FILE=backup_${STAMP}.tar.gz" >> "$GITHUB_ENV"
-            echo "ไม่ได้เข้ารหัส (ไม่ได้ตั้ง secret BACKUP_ENCRYPT_PASSPHRASE)"
+          if [ -z "${PASSPHRASE:-}" ]; then
+            echo "::error::ไม่มี secret BACKUP_ENCRYPT_PASSPHRASE — หยุดก่อนสร้างหรืออัปโหลดฐานข้อมูลแบบไม่เข้ารหัส"
+            exit 1
           fi
+          STAMP=$(date -u -d '+7 hours' +'%Y-%m-%d_%H%M')-th
+          ARCHIVE="backup_${STAMP}.tar.gz"
+          ENCRYPTED="${ARCHIVE}.gpg"
+          VERIFY_DIR=$(mktemp -d)
+          trap 'rm -rf "$VERIFY_DIR"' EXIT
+
+          tar -czf "$ARCHIVE" -C dump roles.sql schema.sql data.sql
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" -c "$ARCHIVE"
+          rm -f "$ARCHIVE"
+
+          # พิสูจน์ว่าไฟล์ encrypted ถอดได้จริง, gzip/tar สมบูรณ์, มีสมาชิกตรง 3 ไฟล์
+          # และ payload ภายในตรงกับ dump ต้นทางทุก byte ก่อนอัปโหลด
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+            --output "$VERIFY_DIR/verify.tar.gz" --decrypt "$ENCRYPTED"
+          gzip -t "$VERIFY_DIR/verify.tar.gz"
+          mapfile -t MEMBERS < <(tar -tzf "$VERIFY_DIR/verify.tar.gz")
+          EXPECTED=(roles.sql schema.sql data.sql)
+          if [ "${#MEMBERS[@]}" -ne "${#EXPECTED[@]}" ]; then
+            echo "::error::สมาชิกใน encrypted archive ไม่ตรงจำนวนที่กำหนด"
+            exit 1
+          fi
+          for i in "${!EXPECTED[@]}"; do
+            if [ "${MEMBERS[$i]}" != "${EXPECTED[$i]}" ]; then
+              echo "::error::สมาชิกใน encrypted archive ไม่ตรงลำดับ/ชื่อที่กำหนด"
+              exit 1
+            fi
+            SOURCE_HASH=$(sha256sum "dump/${EXPECTED[$i]}" | awk '{print $1}')
+            ARCHIVE_HASH=$(tar -xOzf "$VERIFY_DIR/verify.tar.gz" "${EXPECTED[$i]}" | sha256sum | awk '{print $1}')
+            if [ "$SOURCE_HASH" != "$ARCHIVE_HASH" ]; then
+              echo "::error::hash ภายใน encrypted archive ไม่ตรงกับ dump ต้นทาง"
+              exit 1
+            fi
+          done
+          rm -rf "$VERIFY_DIR"
+          trap - EXIT
+
+          echo "FINAL_FILE=$ENCRYPTED" >> "$GITHUB_ENV"
+          echo "เข้ารหัสและตรวจความสมบูรณ์ของ archive แล้ว"
         env:
           PASSPHRASE: ${{ secrets.BACKUP_ENCRYPT_PASSPHRASE }}
 
-      - name: อัปโหลดขึ้น Google Drive + ตรวจสอบขนาดไฟล์ + ลบของเก่าที่เกิน 30 วัน
+      - name: อัปโหลดขึ้น Google Drive + ตรวจขนาด/checksum + แยก manual backup-only ออกจาก scheduled rotation
         working-directory: .
         env:
           GDRIVE_CLIENT_ID: ${{ secrets.BACKUP_GDRIVE_CLIENT_ID }}
           GDRIVE_CLIENT_SECRET: ${{ secrets.BACKUP_GDRIVE_CLIENT_SECRET }}
           GDRIVE_REFRESH_TOKEN: ${{ secrets.BACKUP_GDRIVE_REFRESH_TOKEN }}
           GDRIVE_FOLDER_ID: ${{ secrets.BACKUP_GDRIVE_FOLDER_ID }}
+          # Manual dispatch เป็น backup-only แบบ hard-bound: ห้าม list/delete ทุกกรณี
+          # Schedule เดิมยังใช้ retention 30 วันเหมือนเดิม
+          BACKUP_ONLY: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
           RETENTION_DAYS: '30'
           FILE_PATH: ${{ env.FINAL_FILE }}
         run: node scripts/backup/upload-and-rotate.js
