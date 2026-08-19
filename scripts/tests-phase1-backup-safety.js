@@ -286,6 +286,20 @@ function makeDrive({ localSize, localMd5, pages = [[]], verify = {}, listError =
       assert.ok(!workflow.includes('FINAL_FILE=backup_${STAMP}.tar.gz"'));
     });
 
+    await check('workflow pins PostgreSQL 17 dump executables before Production reads', () => {
+      const workflow = fs.readFileSync(
+        path.join(root, '.github/workflows/backup-database-to-drive.yml'), 'utf8'
+      );
+      assert.ok(workflow.includes('PG_BIN=/usr/lib/postgresql/17/bin'));
+      assert.ok(workflow.includes('echo "PG_BIN=$PG_BIN" >> "$GITHUB_ENV"'));
+      assert.ok(workflow.includes('if [[ "$VERSION_OUTPUT" != *"(PostgreSQL) 17."* ]]'));
+      assert.ok(workflow.includes('if [ "${PG_BIN:-}" != "/usr/lib/postgresql/17/bin" ]'));
+      assert.ok(workflow.includes('"${PG_BIN}/pg_dumpall" --roles-only'));
+      assert.ok(workflow.includes('"${PG_BIN}/pg_dump"    --schema-only'));
+      assert.ok(workflow.includes('"${PG_BIN}/pg_dump"    --data-only'));
+      assert.ok(!/^\s+pg_dump(?:all)?\s+--(?:roles|schema|data)-only/m.test(workflow));
+    });
+
     await check('manual workflow is hard-bound to no-delete backup-only with encrypted archive verification', () => {
       const workflow = fs.readFileSync(
         path.join(root, '.github/workflows/backup-database-to-drive.yml'), 'utf8'

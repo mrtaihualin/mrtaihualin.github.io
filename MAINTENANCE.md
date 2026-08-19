@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-19 10:28 Asia/Bangkok** — Phase 1 Reading direct-word Resume precedence
+**Updated: 2026-08-19 18:17 Asia/Bangkok** — PR44 PostgreSQL 17 backup executable pin
+
+## 2026-08-19 — PR44 PostgreSQL 17 Backup Executable Pin (`SOURCE_DELTA / PRODUCTION_UNCHANGED`)
+
+- Manual backup-only run `32245577653` proved dump/encryption/archive/remote-size+MD5 and no-list/no-delete behavior, but runtime evidence showed the GitHub-hosted runner's cached PostgreSQL 16 binaries shadowed the installed v17 package on `PATH`.
+- The workflow now invokes only `/usr/lib/postgresql/17/bin/pg_dump` and `pg_dumpall`, verifies both report PostgreSQL 17.x, exports that exact directory through `GITHUB_ENV`, and rechecks it immediately before any Production read.
+- Added a deterministic source regression that rejects bare PATH-dependent dump commands and locks all three roles/schema/data exports to the exact v17 executables. Backup-only/retention behavior, scheduled 30-day rotation and encryption/upload verification are unchanged.
+- Backup safety passes 15/15, `git diff --check` passes, and the full site gate passes all 991 project files.
+- Source and tests only: no backup trigger, Drive list/delete/upload, SQL, deploy, E2E, secret/config access, PR merge or Phase 1.2 action occurred in this Delta.
 
 ## 2026-08-19 — P1-B-05/D-06/E-05/F-03/G-06 Reading Direct-Word Resume Precedence (`FIXED_PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
