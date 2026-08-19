@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-18 19:57 Asia/Bangkok** — Phase 1 Email OTP service/client source preparation
+**Updated: 2026-08-19 10:28 Asia/Bangkok** — Phase 1 Reading direct-word Resume precedence
+
+## 2026-08-19 — P1-B-05/D-06/E-05/F-03/G-06 Reading Direct-Word Resume Precedence (`FIXED_PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Direct `reading-game.html?word=…` practice now bypasses the device-local unfinished-round Resume banner before it can select an unrelated saved word. The bypass hides only the current banner and clears only the pending runtime pointer; it does not delete the stored Resume, so a later normal Reading visit still offers the unfinished round.
+- Rebuilt only `reading-game-app.min.js`, advanced only the Reading cache key v34→v35, and added executable coverage for both direct-word precedence and unchanged normal Resume behavior. The existing owner-switch cache assertion advances to the same v35 contract.
+- Reading 12/12, owner-switch 12/12, shared games 17/17, Personal Content 60/60, game behavioral, JavaScript syntax, `git diff --check` and the full 991-file site gate PASS locally. No merge, deploy, Production/account/data mutation, cleanup, Phase 1.2 work or PR #44 action occurred.
 
 ## 2026-08-18 — P1-D-01/D-02/D-09/G-05 Email OTP Service + Client Activation Source (`PASS_LOCAL / NATIVE_OFF / PRODUCTION_UNCHANGED`)
 
