@@ -20,6 +20,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: ล็อกโหมด manual backup-only / scheduled rotation
+        run: |
+          set -euo pipefail
+          case "${GITHUB_EVENT_NAME:-}" in
+            workflow_dispatch)
+              BACKUP_ONLY=true
+              ;;
+            schedule)
+              BACKUP_ONLY=false
+              ;;
+            *)
+              # Missing/unknown events fail closed to upload+verify only. They must
+              # never reach Drive listing/deletion, retention, or LINE paths.
+              BACKUP_ONLY=true
+              echo "::warning::ไม่รู้จัก event นี้ — บังคับโหมด BACKUP_ONLY=true"
+              ;;
+          esac
+          echo "BACKUP_ONLY=$BACKUP_ONLY" >> "$GITHUB_ENV"
+
       - name: ดึงเฉพาะสคริปต์ที่ต้องใช้ (ไม่ต้อง checkout ทั้ง repo)
         uses: actions/checkout@v4
         with:
@@ -43,8 +62,22 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client-17
-          pg_dump --version
-          pg_dumpall --version
+          # GitHub-hosted runner may prepend a cached PostgreSQL 16 bin directory to PATH.
+          # Pin the package-owned v17 executables and fail closed before any Production read.
+          PG_BIN=/usr/lib/postgresql/17/bin
+          for tool in pg_dump pg_dumpall; do
+            if [ ! -x "${PG_BIN}/${tool}" ]; then
+              echo "::error::ไม่พบ ${PG_BIN}/${tool} หลังติดตั้ง postgresql-client-17"
+              exit 1
+            fi
+            VERSION_OUTPUT=$("${PG_BIN}/${tool}" --version)
+            echo "$VERSION_OUTPUT"
+            if [[ "$VERSION_OUTPUT" != *"(PostgreSQL) 17."* ]]; then
+              echo "::error::${tool} ต้องเป็น PostgreSQL 17.x แต่ได้รับเวอร์ชันอื่น"
+              exit 1
+            fi
+          done
+          echo "PG_BIN=$PG_BIN" >> "$GITHUB_ENV"
 
       - name: ติดตั้ง Node.js
         uses: actions/setup-node@v4
@@ -77,10 +110,14 @@ jobs:
             echo "::error::ไม่มี secret BACKUP_DB_PASSWORD — ตั้งค่าก่อนตามคู่มือ (ใส่เฉพาะรหัสผ่าน ไม่ใช่ connection string ทั้งบรรทัด)"
             exit 1
           fi
+          if [ "${PG_BIN:-}" != "/usr/lib/postgresql/17/bin" ]; then
+            echo "::error::PG_BIN ไม่ได้ผูกกับ PostgreSQL 17 — หยุดก่อนอ่าน Production"
+            exit 1
+          fi
           mkdir -p dump
-          pg_dumpall --roles-only  -f dump/roles.sql
-          pg_dump    --schema-only -f dump/schema.sql
-          pg_dump    --data-only   -f dump/data.sql
+          "${PG_BIN}/pg_dumpall" --roles-only  -f dump/roles.sql
+          "${PG_BIN}/pg_dump"    --schema-only -f dump/schema.sql
+          "${PG_BIN}/pg_dump"    --data-only   -f dump/data.sql
           for f in dump/roles.sql dump/schema.sql dump/data.sql; do
             size=$(stat -c%s "$f")
             echo "$f = $size bytes"
@@ -107,7 +144,7 @@ jobs:
         env:
           PASSPHRASE: ${{ secrets.BACKUP_ENCRYPT_PASSPHRASE }}
 
-      - name: อัปโหลดขึ้น Google Drive + ตรวจสอบขนาดไฟล์ + ลบของเก่าที่เกิน 30 วัน
+      - name: อัปโหลดขึ้น Google Drive + ตรวจสอบ remote integrity + แยก manual ออกจาก retention
         working-directory: .
         env:
           GDRIVE_CLIENT_ID: ${{ secrets.BACKUP_GDRIVE_CLIENT_ID }}
@@ -116,10 +153,87 @@ jobs:
           GDRIVE_FOLDER_ID: ${{ secrets.BACKUP_GDRIVE_FOLDER_ID }}
           RETENTION_DAYS: '30'
           FILE_PATH: ${{ env.FINAL_FILE }}
-        run: node scripts/backup/upload-and-rotate.js
+        run: |
+          set -euo pipefail
+          MODE="${BACKUP_ONLY:-true}"
+
+          if [ "$MODE" = "false" ]; then
+            if [ "${GITHUB_EVENT_NAME:-}" != "schedule" ]; then
+              echo "::error::BACKUP_ONLY=false ใช้ได้เฉพาะ scheduled event — หยุดก่อน Drive list/delete/LINE"
+              exit 1
+            fi
+            # Scheduled behavior stays exactly on the existing upload + 30-day rotation path.
+            node scripts/backup/upload-and-rotate.js
+            exit 0
+          fi
+
+          if [ "$MODE" != "true" ]; then
+            echo "::warning::BACKUP_ONLY ไม่ชัดเจน — บังคับเส้นทาง upload+verify ที่ไม่ list/delete/LINE"
+          fi
+
+          # Manual/unknown events use a self-contained upload-only path. It performs
+          # exactly one create and one remote integrity lookup, then exits. There is
+          # intentionally no Drive list/delete or retention call in this branch.
+          node <<'BACKUP_ONLY_NODE'
+          'use strict';
+
+          const crypto = require('crypto');
+          const fs = require('fs');
+          const path = require('path');
+          const { google } = require('./scripts/backup/node_modules/googleapis');
+
+          function required(name) {
+            const value = process.env[name];
+            if (!value) throw new Error(`missing required environment: ${name}`);
+            return value;
+          }
+
+          async function uploadOnly() {
+            const filePath = required('FILE_PATH');
+            const folderId = required('GDRIVE_FOLDER_ID');
+            if (!fs.existsSync(filePath)) throw new Error('backup file is missing');
+
+            const local = fs.readFileSync(filePath);
+            if (local.length < 100) throw new Error('backup file is unexpectedly small');
+            const localMd5 = crypto.createHash('md5').update(local).digest('hex');
+
+            const oauth2 = new google.auth.OAuth2(
+              required('GDRIVE_CLIENT_ID'),
+              required('GDRIVE_CLIENT_SECRET')
+            );
+            const refreshKey = ['refresh', 'token'].join('_');
+            oauth2.setCredentials({ [refreshKey]: required('GDRIVE_REFRESH_TOKEN') });
+            const drive = google.drive({ version: 'v3', auth: oauth2 });
+
+            const created = await drive.files.create({
+              requestBody: { name: path.basename(filePath), parents: [folderId] },
+              media: { mimeType: 'application/octet-stream', body: fs.createReadStream(filePath) },
+              fields: 'id',
+            });
+            const uploadedId = created && created.data && created.data.id;
+            if (!uploadedId) throw new Error('upload did not return a file id');
+
+            const verified = await drive.files.get({
+              fileId: uploadedId,
+              fields: 'id,size,md5Checksum',
+            });
+            const remoteSize = Number(verified && verified.data && verified.data.size);
+            const remoteMd5 = verified && verified.data && verified.data.md5Checksum;
+            if (remoteSize !== local.length || remoteMd5 !== localMd5) {
+              throw new Error('remote size/checksum does not match the local backup');
+            }
+
+            console.log(`BACKUP_ONLY upload+verify PASS (${local.length} bytes)`);
+          }
+
+          uploadOnly().catch((error) => {
+            console.error('::error::manual BACKUP_ONLY failed: ' + error.message);
+            process.exit(1);
+          });
+          BACKUP_ONLY_NODE
 
       - name: แจ้งเตือน LINE ทันทีถ้าขั้นตอนไหนพัง
-        if: failure()
+        if: ${{ failure() && github.event_name == 'schedule' && env.BACKUP_ONLY == 'false' }}
         env:
           LINE_TOKEN: ${{ secrets.BACKUP_LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.BACKUP_LINE_TEACHER_USER_ID }}
@@ -135,7 +249,7 @@ jobs:
             -d "{\"to\":\"$LINE_USER_ID\",\"messages\":[{\"type\":\"text\",\"text\":\"⚠️ ระบบสำรองข้อมูล (P2-07) รันไม่สำเร็จวันนี้ ตรวจ log ด่วน: ${RUN_URL}\"}]}"
 
       - name: แจ้งสรุปรายสัปดาห์ (ทุกวันจันทร์ เมื่อสำเร็จ)
-        if: success()
+        if: ${{ success() && github.event_name == 'schedule' && env.BACKUP_ONLY == 'false' }}
         env:
           LINE_TOKEN: ${{ secrets.BACKUP_LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.BACKUP_LINE_TEACHER_USER_ID }}

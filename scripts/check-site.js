@@ -148,6 +148,7 @@ runTest(['scripts/tests-phase1-canonical-state.js'], 'Phase 1 canonical persiste
 runTest(['scripts/tests-phase1-owner-switch-races.js'], 'Phase 1 owner-switch late-response race tests');
 runTest(['scripts/tests-phase1-backend-transactions.js'], 'Phase 1 backend transaction/idempotency contract tests');
 runTest(['scripts/tests-phase1-rollout-compatibility.mjs'], 'Phase 1 mixed-version rollout compatibility tests');
+runTest(['scripts/tests-phase1-backup-pg17-runtime.js'], 'Phase 1 backup PostgreSQL 17 runtime-pin tests');
 runTest(['scripts/tests-phase1-consent-coverage.js'], 'Phase 1 all-page analytics consent coverage tests');
 runTest(['scripts/tests-cron-internal-auth.js'], 'Phase 1 cron/browser authorization contract tests');
 runTest(['scripts/tests-phase1-cron-reliability.js'], 'Phase 1 cron reliability/readiness tests');
