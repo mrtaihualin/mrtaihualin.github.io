@@ -31,8 +31,21 @@ const toneRound = read('supabase/functions/tone-round/index.ts');
 const reward = read('supabase/functions/game-reward/index.ts');
 const readingAuth = read('js/games/reading-auth.js');
 
+function legacyChallengeDisplay(html) {
+  const style = (html.match(/<style>([\s\S]*?)<\/style>/i) || [])[1] || '';
+  const hasHiddenContract = /id="phase1-challenge-legacy" hidden inert aria-hidden="true"/.test(html);
+  const legacyLayoutCanDisplay = /\.v3-page\s*\{[^}]*\bdisplay\s*:\s*flex\b/i.test(style);
+  const hiddenGuardWins = /#phase1-challenge-legacy\[hidden\]\s*\{[^}]*\bdisplay\s*:\s*none\s*!important\b/i.test(style);
+
+  if (!hasHiddenContract) return 'visible';
+  if (hiddenGuardWins) return 'none';
+  return legacyLayoutCanDisplay ? 'flex' : 'none';
+}
+
 check(/data-phase1-access="paid-only"/.test(page), 'direct Challenge URL renders the Paid-only gate');
-check(/id="phase1-challenge-legacy" hidden inert aria-hidden="true"/.test(page), 'legacy Challenge UI is inaccessible');
+check(/id="phase1-challenge-legacy" hidden inert aria-hidden="true"/.test(page), 'legacy Challenge UI keeps hidden/inert/aria-hidden access guards');
+check(legacyChallengeDisplay(page) === 'none', 'legacy Challenge computed display stays none despite .v3-page display:flex');
+check(legacyChallengeDisplay(page.replace(/#phase1-challenge-legacy\[hidden\]\s*\{[^}]*\}/i, '')) === 'flex', 'regression detects the former hidden-container CSS leak');
 check(!/<script[^>]+games-challenge-app\.js/i.test(page), 'Challenge gameplay bundle is not loaded');
 check(!/GameContentLoader\.boot\s*\(/.test(page), 'Challenge content boot cannot run');
 check(!/<div id="game-switcher"/.test(page), 'locked Challenge page exposes no game switcher');
