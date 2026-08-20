@@ -58,10 +58,15 @@ window.GameUiCopy = window.GameUiCopy || (function () {
       continueAction: '▶ 繼續上次',
       restartAction: '↺ 重新開始',
       newAction: '＋ 開始新一輪'
+    },
+    result: {
+      completed: '完成',
+      firstCorrect: '首次答對'
     }
   };
   return {
     resume: messages.resume,
+    result: messages.result,
     resumeLine: function (game, level, progress) {
       return messages.resume.prefix + [game, level, progress].filter(Boolean).join('・');
     }

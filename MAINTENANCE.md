@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Result replay Enter Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 truthful Result summary Delta
+
+## 2026-08-20 — PD-P12-RESULT-TRUTH-01 Core 5 Truthful Summary (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- The shared Core 5 Result summary now reports `完成 X / N` independently from `首次答對 X / N`; first-correct counts only items answered correctly without an earlier wrong attempt or guidance, while completion remains the number of completed report items.
+- Added the two labels to the existing shared Traditional Chinese UI-copy spine, advanced only the shared and Result-flow cache keys, rebuilt `shared.min.js`, and extended the executable Result/shared regressions. No Result action/order/PDF/detail change, gameplay/scoring/SRS/content/analytics expansion, deploy, Production/Auth/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Result replay Enter Delta
 
 ## 2026-08-20 — P12-C-02 Result `再玩一輪` Enter (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

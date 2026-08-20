@@ -237,7 +237,15 @@
 
     var correct = Math.max(0, Number(options.correct) || 0);
     var total = Math.max(0, Number(options.total) || 0);
-    line('gsh-result-correct', '答對 ' + correct + ' / ' + total);
+    var reportItems = options.report && Array.isArray(options.report.items) ? options.report.items : null;
+    var completed = reportItems ? reportItems.length : total;
+    var firstCorrect = reportItems ? reportItems.filter(function (item) {
+      var firstAttempt = item && item.attempts && item.attempts[0];
+      return !!(item && item.is_correct && !item.hint_used && Number(item.wrong_count || 0) === 0 && (!firstAttempt || firstAttempt.is_correct));
+    }).length : correct;
+    var resultCopy = window.GameUiCopy && window.GameUiCopy.result || { completed: '完成', firstCorrect: '首次答對' };
+    line('gsh-result-completed', resultCopy.completed + ' ' + completed + ' / ' + total);
+    line('gsh-result-first-correct', resultCopy.firstCorrect + ' ' + firstCorrect + ' / ' + total);
     if (options.loginSrs === true) line('gsh-result-srs', '帳號的 SRS 狀態已列在下方。');
     var feedback = options.feedback || null;
     if (feedback && feedback.text) line('gsh-result-feedback', feedback.text);

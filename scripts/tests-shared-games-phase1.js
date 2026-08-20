@@ -87,7 +87,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=36/, 'Listening must load the current shared mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=37/, 'Listening must load the current shared mapping version');
 });
 
 test('shared font control binds after asynchronous Core 5 game startup', () => {
@@ -135,7 +135,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
     assert.match(g.htmlText, /css\/shared\.css\?v=22/, `${g.id}: must load compact resume CSS`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=36/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=37/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });

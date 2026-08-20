@@ -149,6 +149,17 @@ enterHandler({ key: 'Enter', target: { closest() { return {}; } }, preventDefaul
 assert.strictEqual(replayButton.clicks, 1, 'Enter from an editable/control context must not replay');
 enterHandler({ key: 'Enter', repeat: true, target: { closest() { return null; } }, preventDefault() { prevented += 1; } });
 assert.strictEqual(replayButton.clicks, 1, 'repeated Enter must not replay again');
+GameFlow.enhanceResult({
+  key: 'truth-result', root: enterResult, actions: enterActions, correct: 2, total: 3,
+  report: { items: [
+    { is_correct: true, wrong_count: 0, hint_used: false, attempts: [{ is_correct: true }] },
+    { is_correct: true, wrong_count: 1, hint_used: false, attempts: [{ is_correct: false }, { is_correct: true }] },
+    { is_correct: false, wrong_count: 0, hint_used: false, attempts: [] }
+  ] }
+});
+const truthMeta = enterResult.querySelector('[data-game-result-meta="v1"]');
+assert.strictEqual(truthMeta.querySelector('.gsh-result-completed').textContent, '完成 3 / 3');
+assert.strictEqual(truthMeta.querySelector('.gsh-result-first-correct').textContent, '首次答對 1 / 3', 'later correction must not count as first-attempt proof');
 
 delete storage.gsh_srs_quota_v1;
 const due = Array.from({ length: 8 }, (_, i) => ({ id: `d${i}` }));
@@ -190,7 +201,7 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=6'), `${file} must load the shared flow`);
+  assert(html.includes('js/games/game-flow.js?v=7'), `${file} must load the shared flow`);
   assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
   assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
   assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);
