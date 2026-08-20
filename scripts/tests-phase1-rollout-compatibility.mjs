@@ -141,7 +141,7 @@ await test('new Tone/Lego clients still send one stable id per retry payload', (
 
 await test('rollout bridge is Edge-only and keeps current client cache versions unchanged', () => {
   assert.match(read('tone-finder.html'), /tone-server\.js\?v=4/);
-  assert.match(read('lego.html'), /lego-game-app\.js\?v=3/);
+  assert.match(read('lego.html'), /lego-game-app\.js\?v=4/);
   assert.match(legoEdge, /compatibility: request\.legacyCompatibility \? 'legacy-no-id' : 'explicit-id'/);
 });
 

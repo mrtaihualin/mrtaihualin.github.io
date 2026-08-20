@@ -126,6 +126,15 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   assert.doesNotMatch(legoHtml + legoApp, /games_particle_mode|rg-particle-toggle|ToggleParticle/, 'Lego must not receive the particle control');
 });
 
+test('Lego exposes only the locked minimum-release presentation', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  assert.match(legoHtml, /<h1>泰語造句練習室<\/h1>/);
+  assert.match(legoHtml, /<p>用學過的單字，組出你真正想說的泰語。<\/p>/);
+  assert.match(legoHtml, /id="levels" hidden aria-hidden="true"/, 'unauthorized Level 2/3 entry UI must not be exposed');
+  assert.doesNotMatch(legoHtml, /id="rg-challenge-banner"/, 'Weekly Challenge must stay out of the minimum release');
+  assert.doesNotMatch(legoHtml, /lego_freebie_banner_click|免費領取「泰語聲調速查表」/, 'removed lead magnet must not interrupt Lego gameplay');
+});
+
 test('learning helpers remain inline and do not create the fallback rice menu', () => {
   assert.match(wordMenuJs, /row\.classList\.add\('gsh-learning-tools'\)/);
   assert.match(wordMenuJs, /row\.setAttribute\('data-wm-done', '1'\);[\s\S]{0,120}return;/);

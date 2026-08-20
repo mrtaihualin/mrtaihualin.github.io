@@ -375,13 +375,6 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   <a href="games.html">泰語・遊戲</a>
 </div>
 
-<div onclick="try{if(window.gtag)gtag('event','lego_freebie_banner_click',{category:'game'});}catch(e){}openModal('modal-freebie')" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--gold-light);border:1.5px solid var(--gold-bright);border-radius:10px;padding:13px 18px;margin:0 auto 14px;max-width:640px;font-family:'Noto Sans TC',sans-serif;box-sizing:border-box;">
-  <span style="font-size:14px;color:var(--gold-deep);font-weight:700;"><img src="assets/icons/gift-box.svg" alt="" style="width:18px;height:18px;vertical-align:-4px;margin-right:3px;">免費領取「泰語聲調速查表」一張表搞懂五個聲調</span>
-  <span style="font-size:13px;background:var(--gold-bright);color:#fff;font-weight:700;padding:6px 16px;border-radius:6px;">立即索取 →</span>
-</div>
-
-<div id="rg-challenge-banner"></div>
-
 <!-- Lin 2026-07-24: รวมโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) -->
 <div class="rg-stat-row">
   <div id="rg-login-slot" style="display:flex;align-items:center;flex-shrink:0;"></div>
@@ -400,9 +393,8 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
 <div class="page">
 
   <header class="head">
-    <span class="eyebrow">泰語句子結構 · 樂高式造句</span>
-    <h1>🧱 泰語句子組裝台</h1>
-    <p>分級學習：從句子結構，到情態與否定，一步步組出完整的泰語句子。</p>
+    <h1>泰語造句練習室</h1>
+    <p>用學過的單字，組出你真正想說的泰語。</p>
   </header>
 
   <div class="gold-banner">
@@ -415,8 +407,8 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
     </div>
   </div>
 
-  <div class="levels" id="levels"></div>
-  <div class="lv-intro" id="lvIntro"></div>
+  <div class="levels" id="levels" hidden aria-hidden="true"></div>
+  <div class="lv-intro hidden" id="lvIntro" aria-hidden="true"></div>
 
   <!-- PRE / TEACHING PANEL -->
   <div class="card teach hidden" id="teachPanel">

@@ -73,7 +73,7 @@ check('personal content derives Played copy from server evidence, never provenan
 check('personal content exposes bounded status recovery', /PracticeEvents\.status\(requestItems\)/.test(personalContent) && /重新載入練習紀錄/.test(personalContent));
 check('all Core 5 games load the recorder before the updated shared flow', ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].every((name) => {
   const html = read(name);
-  return /practice-events\.js\?v=3[\s\S]*game-flow\.js\?v=5/.test(html);
+  return /practice-events\.js\?v=3[\s\S]*game-flow\.js\?v=8/.test(html);
 }));
 check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=4/.test(read('vault.html')));
 

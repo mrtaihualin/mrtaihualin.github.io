@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared six-game Exit Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Lego minimum-presentation Delta
+
+## 2026-08-20 — PD-P12-LEGO-01 Minimum Presentation (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego now uses the locked title `泰語造句練習室` and subtitle `用學過的單字，組出你真正想說的泰語。`; the unauthorized Level 2/3 entry surface, Weekly Challenge banner, and removed `單字速查表` lead interruption are no longer learner-visible in the minimum-release target.
+- Extended the existing shared regression and corrected three stale executable cache-version assertions to the already-shipped shared-flow v8/Lego v4 bindings, restoring the full 993-file site gate to PASS. No Lego gameplay/slot/content/scoring/Result/PDF implementation, deploy, Production/Auth/account/data/analytics change, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared six-game Exit Delta
 
 ## 2026-08-20 — PD-P12-EXIT-01 Shared Six-Game Exit (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
