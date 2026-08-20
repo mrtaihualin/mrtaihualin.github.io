@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 truthful Result summary Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared Core 5 Result order Delta
+
+## 2026-08-20 — PD-P12-RESULT-TRUTH-01 Core 5 Shared Result Order (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Core 5 Result now presents the locked sequence through one shared runtime: truthful completion/first-correct summary and countdown, then `再玩一輪`/`換個遊戲`, game-owned detail, `列印／儲存`/`查看本輪詳細紀錄`, the existing visible `預約免費體驗課 →` card, and finally `回到首頁`. Existing buttons/links and their game-owned handlers are moved rather than replaced, so no action or gameplay meaning was added.
+- Added semantic Result roles to the five pages/Tone renderer, put the locked action labels in the existing minimal locale-ready copy layer, rebuilt the shared/Tone bundles, advanced only affected shared CSS/runtime cache keys, and extended existing flow/shared/owner regressions. No PDF-content expansion, Lego Result, Exit/Landscape work, gameplay/scoring/SRS/content/analytics change, deploy, Production/Auth/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 truthful Result summary Delta
 
 ## 2026-08-20 — PD-P12-RESULT-TRUTH-01 Core 5 Truthful Summary (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

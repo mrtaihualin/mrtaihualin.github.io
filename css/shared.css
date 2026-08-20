@@ -716,6 +716,8 @@ body .gsh-shell.tf-page { padding-top:8px; }
 .gsh-end-score { text-align:center; font-family:'Noto Serif TC',serif; font-weight:900; font-size:clamp(28px,6vw,40px); color:var(--gold-deep); }
 .gsh-end-actions { display:flex; flex-direction:column; gap:10px; align-items:stretch; max-width:320px; margin:16px auto 0; }
 @media(min-width:600px){ .gsh-end-actions { flex-direction:row; flex-wrap:wrap; justify-content:center; max-width:none; } }
+.gsh-result-actions { display:flex; flex-direction:column; gap:10px; align-items:stretch; max-width:320px; margin:16px auto 0; }
+@media(min-width:600px){ .gsh-result-actions { flex-direction:row; flex-wrap:wrap; justify-content:center; max-width:none; } }
 
 /* ═══════════════════════════════════════════════════════════
    Phase D/E/F (2026-08-10) — เพิ่มชุด class ใหม่ 3 กลุ่ม ใช้ prefix .gsh- ต่อจากชุดเดิมด้านบน

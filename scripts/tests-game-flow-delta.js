@@ -32,20 +32,40 @@ class FakeElement {
   setAttribute(name, value) { this.attributes[name] = String(value); }
   getAttribute(name) { return this.attributes[name] || null; }
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
-  appendChild(child) { child.parentNode = this; this.children.push(child); return child; }
+  appendChild(child) {
+    if (child.parentNode) child.parentNode.children = child.parentNode.children.filter((item) => item !== child);
+    child.parentNode = this;
+    this.children.push(child);
+    return child;
+  }
   insertBefore(child, before) {
+    if (child === before) return child;
+    if (child.parentNode) child.parentNode.children = child.parentNode.children.filter((item) => item !== child);
     child.parentNode = this;
     const index = this.children.indexOf(before);
     if (index < 0) this.children.push(child); else this.children.splice(index, 0, child);
     return child;
   }
   get firstChild() { return this.children[0] || null; }
+  get nextSibling() {
+    if (!this.parentNode) return null;
+    const index = this.parentNode.children.indexOf(this);
+    return this.parentNode.children[index + 1] || null;
+  }
   removeChild(child) { this.children = this.children.filter((item) => item !== child); child.parentNode = null; return child; }
   querySelector(selector) {
-    if (selector.startsWith('.')) return this.children.find((child) => String(child.className || '').split(/\s+/).includes(selector.slice(1))) || null;
-    const match = selector.match(/\[([^=]+)="([^"]+)"\]/);
-    if (!match) return null;
-    return this.children.find((child) => child.getAttribute(match[1]) === match[2]) || null;
+    const direct = selector.startsWith('.')
+      ? this.children.find((child) => String(child.className || '').split(/\s+/).includes(selector.slice(1)))
+      : (() => {
+          const match = selector.match(/\[([^=]+)="([^"]+)"\]/);
+          return match ? this.children.find((child) => child.getAttribute(match[1]) === match[2]) : null;
+        })();
+    if (direct) return direct;
+    for (const child of this.children) {
+      const nested = child.querySelector(selector);
+      if (nested) return nested;
+    }
+    return null;
   }
   click() {
     (this.listeners.click || []).forEach((fn) => fn({ target: this }));
@@ -138,7 +158,7 @@ enterActions.className = 'gsh-end-actions';
 const replayButton = new FakeElement('button');
 replayButton.setAttribute('data-game-result-replay', 'v1');
 enterResult.appendChild(enterActions);
-enterResult.appendChild(replayButton);
+enterActions.appendChild(replayButton);
 GameFlow.enhanceResult({ key: 'enter-result', root: enterResult, actions: enterActions, correct: 5, total: 5, onReplay() {} });
 const enterHandler = document.listeners.keydown[0];
 let prevented = 0;
@@ -201,11 +221,19 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=7'), `${file} must load the shared flow`);
+  assert(html.includes('js/games/game-flow.js?v=8'), `${file} must load the shared flow`);
   assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
   assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
   assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);
   assert(/data-game-result-replay="v1"/.test(html) || file === 'tone-finder.html', `${file} must expose the shared Result replay action`);
+  ['switch', 'print', 'detail-action', 'cta', 'home'].forEach((role) => {
+    assert(new RegExp(`data-game-result-${role}="v1"`).test(html) || file === 'tone-finder.html', `${file} must expose the shared Result ${role} role`);
+  });
+});
+
+const toneSource = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.js'), 'utf8');
+['switch', 'print', 'detail-action', 'cta', 'home'].forEach((role) => {
+  assert(toneSource.includes(`data-game-result-${role}="v1"`), `Tone must expose the shared Result ${role} role`);
 });
 
 const integrations = {

@@ -85,7 +85,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=22">
+<link rel="stylesheet" href="css/shared.css?v=23">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=6"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/reading-game-app.js -->
@@ -631,19 +631,19 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="book-cta">
     <div class="book-cta-title">想把泰文唸得標準嗎？🇹🇭</div>
     <div class="book-cta-sub">跟 老師 1 對 1，聲調發音一次到位</div>
-    <a class="btn btn-book" href="pricing.html?from=reading_game#pricing" onclick="if(window.bookFromGame){bookFromGame('reading_game','end_screen');return false;}trackBookCTA()">預約免費體驗課 →</a>
+    <a class="btn btn-book" data-game-result-cta="v1" href="pricing.html?from=reading_game#pricing" onclick="if(window.bookFromGame){bookFromGame('reading_game','end_screen');return false;}trackBookCTA()">預約免費體驗課 →</a>
   </div>
   <!-- ▲ CTA ▲ -->
 
   <div class="gsh-end-actions end-actions">
     <button class="btn btn-primary" id="rg-replay-btn" data-game-result-replay="v1" onclick="restart()">再玩一輪</button>
     <!-- F3 (2026-08-10): 改文字 — 機制其實是開新視窗 print()，不是真的下載檔案，原本「下載PDF」字樣不準確 -->
-    <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 列印／儲存學習紀錄</button>
+    <button class="btn btn-secondary" id="rg-pdf-btn" data-game-result-print="v1" onclick="rgDownloadReport()">📄 列印／儲存學習紀錄</button>
     <!-- F2 (2026-08-10): 查看錯題 — 唯讀檢視這輪 roundLog 裡答錯/失敗的字，不影響分數/狀態 -->
-    <button class="btn btn-secondary" onclick="rgShowMistakes()">📋 查看本輪詳細紀錄</button>
+    <button class="btn btn-secondary" data-game-result-detail-action="v1" onclick="rgShowMistakes()">📋 查看本輪詳細紀錄</button>
     <a class="btn btn-secondary" href="reading-board.html" onclick="try{gtag('event', 'game_link_click', {category:'game', target:'reading_board',from:'reading_game'})}catch(e){}">🏆 看排行榜</a>
-    <a class="btn btn-secondary" href="games.html" onclick="trackToneLink()">換個遊戲</a>
-    <a class="btn btn-secondary" href="index.html">回到首頁</a>
+    <a class="btn btn-secondary" data-game-result-switch="v1" href="games.html" onclick="trackToneLink()">換個遊戲</a>
+    <a class="btn btn-secondary" data-game-result-home="v1" href="index.html">回到首頁</a>
   </div>
 </div>
 
@@ -704,9 +704,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=37"></script>
+<script src="js/core/shared.min.js?v=38"></script>
 <script src="js/games/practice-events.js?v=3"></script>
-<script src="js/games/game-flow.js?v=7"></script>
+<script src="js/games/game-flow.js?v=8"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

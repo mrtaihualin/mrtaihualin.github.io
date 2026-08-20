@@ -61,7 +61,13 @@ window.GameUiCopy = window.GameUiCopy || (function () {
     },
     result: {
       completed: '完成',
-      firstCorrect: '首次答對'
+      firstCorrect: '首次答對',
+      replay: '再玩一輪',
+      switchGame: '換個遊戲',
+      print: '列印／儲存',
+      detail: '查看本輪詳細紀錄',
+      trial: '預約免費體驗課 →',
+      home: '回到首頁'
     }
   };
   return {

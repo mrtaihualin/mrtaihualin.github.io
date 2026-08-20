@@ -2590,7 +2590,7 @@ function stepSessionSummary() {
 
   // F2 (2026-08-10): ปุ่ม 查看錯題 — โชว์เฉพาะเมื่อมีผลอย่างน้อย 1 คำ (ปกติมีเสมอถ้าเล่นจบรอบจริง)
   var mistakeBtnHtml = total > 0
-    ? '<button type="button" class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mistake_review_open\',{category:\'game\'});}catch(e){}TF.showMistakeReview()">查看本輪詳細紀錄</button>'
+    ? '<button type="button" class="tf-restart-btn" data-game-result-detail-action="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mistake_review_open\',{category:\'game\'});}catch(e){}TF.showMistakeReview()">查看本輪詳細紀錄</button>'
     : '';
   return '<div class="tf-session-summary">' +
     minaBlock +
@@ -2605,7 +2605,7 @@ function stepSessionSummary() {
     '<div style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
       '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
       '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
-      '<button class="tf-session-next-btn" style="background:#C8973A;color:#fff;" onclick="if(typeof bookFromGame===\'function\'){bookFromGame(\'tone_finder\',\'session_end\')}else if(typeof openModal===\'function\'){openModal(\'modal-line-qr\')}">預約免費體驗課 →</button>' +
+      '<button class="tf-session-next-btn" data-game-result-cta="v1" style="background:#C8973A;color:#fff;" onclick="if(typeof bookFromGame===\'function\'){bookFromGame(\'tone_finder\',\'session_end\')}else if(typeof openModal===\'function\'){openModal(\'modal-line-qr\')}">預約免費體驗課 →</button>' +
     '</div>' +
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
@@ -2616,11 +2616,11 @@ function stepSessionSummary() {
       '</div>') +
     // F1 (2026-08-10): แถวปุ่มท้ายผลลัพธ์ เปลี่ยนจาก inline flex style เดิม → class gsh-end-actions (shared.css: column บนมือถือ, row บนจอใหญ่ ≥600px) เพิ่มปุ่ม 查看錯題 (F2) เข้าแถวเดียวกัน — ปุ่ม/ลิงก์เดิมทุกปุ่มยังอยู่ครบ ไม่มีปุ่มไหนถูกลบ ไม่เปลี่ยน onclick/href ใดๆ เลย
     '<div class="gsh-end-actions">' +
-      '<button class="tf-session-next-btn" id="tf-pdf-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 列印／儲存學習紀錄</button>' +
+      '<button class="tf-session-next-btn" id="tf-pdf-btn" data-game-result-print="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 列印／儲存學習紀錄</button>' +
       mistakeBtnHtml +
       '<button class="tf-restart-btn" data-game-result-replay="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF._startRandom5()">再玩一輪</button>' +
-      '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">換個遊戲</a>' +
-      '<a class="tf-restart-btn" href="index.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">回到首頁</a>' +
+      '<a class="tf-restart-btn" data-game-result-switch="v1" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">換個遊戲</a>' +
+      '<a class="tf-restart-btn" data-game-result-home="v1" href="index.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">回到首頁</a>' +
     '</div>' +
   '</div>';
 }

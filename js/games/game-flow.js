@@ -159,7 +159,9 @@
     if (!slot) {
       slot = document.createElement('div');
       slot.className = 'gsh-login-report-sections';
-      root.appendChild(slot);
+      var utility = root.querySelector('.gsh-result-utility-actions');
+      if (utility && utility.parentNode) utility.parentNode.insertBefore(slot, utility);
+      else root.appendChild(slot);
     }
     slot.innerHTML = html;
     return true;
@@ -212,9 +214,53 @@
     meta = document.createElement('div');
     meta.className = 'gsh-result-meta';
     meta.setAttribute('data-game-result-meta', 'v1');
-    if (actions && actions.parentNode === root) root.insertBefore(meta, actions);
-    else root.appendChild(meta);
+    var layout = actions && actions.parentNode || root;
+    layout.insertBefore(meta, layout.firstChild);
     return meta;
+  }
+
+  function normalizeResultOrder(root, actions, meta, copy) {
+    if (!actions || !actions.parentNode) return;
+    var layout = actions.parentNode;
+    var primary = layout.querySelector('.gsh-result-primary-actions');
+    var utility = layout.querySelector('.gsh-result-utility-actions');
+    var homeGroup = layout.querySelector('.gsh-result-home-actions');
+    if (!primary) {
+      primary = document.createElement('div');
+      primary.className = 'gsh-result-actions gsh-result-primary-actions';
+    }
+    if (!utility) {
+      utility = document.createElement('div');
+      utility.className = 'gsh-result-actions gsh-result-utility-actions';
+    }
+    if (!homeGroup) {
+      homeGroup = document.createElement('div');
+      homeGroup.className = 'gsh-result-actions gsh-result-home-actions';
+    }
+
+    var replay = actions.querySelector('[data-game-result-replay="v1"]');
+    var switchGame = actions.querySelector('[data-game-result-switch="v1"]');
+    var print = actions.querySelector('[data-game-result-print="v1"]');
+    var detail = actions.querySelector('[data-game-result-detail-action="v1"]');
+    var home = actions.querySelector('[data-game-result-home="v1"]');
+    var cta = layout.querySelector('[data-game-result-cta="v1"]');
+    if (replay) { replay.textContent = copy.replay; primary.appendChild(replay); }
+    if (switchGame) { switchGame.textContent = copy.switchGame; primary.appendChild(switchGame); }
+    if (print) { print.textContent = copy.print; utility.appendChild(print); }
+    if (detail) { detail.textContent = copy.detail; utility.appendChild(detail); }
+    while (actions.firstChild) utility.appendChild(actions.firstChild);
+    if (home) { home.textContent = copy.home; homeGroup.appendChild(home); }
+    if (cta) cta.textContent = copy.trial;
+
+    if (meta.nextSibling) layout.insertBefore(primary, meta.nextSibling);
+    else layout.appendChild(primary);
+    layout.appendChild(utility);
+    var trialCard = cta && cta.parentNode;
+    if (trialCard && trialCard !== layout) layout.appendChild(trialCard);
+    else if (cta) layout.appendChild(cta);
+    layout.appendChild(homeGroup);
+    actions.hidden = true;
+    actions.setAttribute('data-game-result-actions-normalized', 'v1');
   }
 
   function enhanceResult(options) {
@@ -243,21 +289,40 @@
       var firstAttempt = item && item.attempts && item.attempts[0];
       return !!(item && item.is_correct && !item.hint_used && Number(item.wrong_count || 0) === 0 && (!firstAttempt || firstAttempt.is_correct));
     }).length : correct;
-    var resultCopy = window.GameUiCopy && window.GameUiCopy.result || { completed: '完成', firstCorrect: '首次答對' };
+    var resultCopy = window.GameUiCopy && window.GameUiCopy.result || {
+      completed: '完成', firstCorrect: '首次答對', replay: '再玩一輪', switchGame: '換個遊戲',
+      print: '列印／儲存', detail: '查看本輪詳細紀錄', trial: '預約免費體驗課 →', home: '回到首頁'
+    };
     line('gsh-result-completed', resultCopy.completed + ' ' + completed + ' / ' + total);
     line('gsh-result-first-correct', resultCopy.firstCorrect + ' ' + firstCorrect + ' / ' + total);
-    if (options.loginSrs === true) line('gsh-result-srs', '帳號的 SRS 狀態已列在下方。');
-    var feedback = options.feedback || null;
-    if (feedback && feedback.text) line('gsh-result-feedback', feedback.text);
-    (options.highlights || []).filter(Boolean).slice(0, 2).forEach(function (text) {
-      line('gsh-result-highlight', String(text));
-    });
     var countdown = line('gsh-result-countdown', '');
+    normalizeResultOrder(root, actions, meta, resultCopy);
+    var details = root.querySelector('.gsh-result-shared-details');
+    if (!details) {
+      details = document.createElement('div');
+      details.className = 'gsh-result-shared-details';
+    }
+    while (details.firstChild) details.removeChild(details.firstChild);
+    var primaryActions = meta.parentNode && meta.parentNode.querySelector('.gsh-result-primary-actions');
+    if (primaryActions && primaryActions.nextSibling) primaryActions.parentNode.insertBefore(details, primaryActions.nextSibling);
+    else if (primaryActions && primaryActions.parentNode) primaryActions.parentNode.appendChild(details);
+    function detailLine(className, text) {
+      var el = document.createElement('div');
+      el.className = className;
+      el.textContent = text;
+      details.appendChild(el);
+    }
+    if (options.loginSrs === true) detailLine('gsh-result-srs', '帳號的 SRS 狀態已列在下方。');
+    var feedback = options.feedback || null;
+    if (feedback && feedback.text) detailLine('gsh-result-feedback', feedback.text);
+    (options.highlights || []).filter(Boolean).slice(0, 2).forEach(function (text) {
+      detailLine('gsh-result-highlight', String(text));
+    });
 
     var key = String(options.key || 'default');
-    if (actions && !actions.__gshResultCancelBound) {
-      actions.__gshResultCancelBound = true;
-      actions.addEventListener('click', function () { cancelResult(key); }, true);
+    if (!root.__gshResultCancelBound) {
+      root.__gshResultCancelBound = true;
+      root.addEventListener('click', function () { cancelResult(key); }, true);
     }
     startResultCountdown({
       key: key,

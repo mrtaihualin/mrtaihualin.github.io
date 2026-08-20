@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=22">
+<link rel="stylesheet" href="css/shared.css?v=23">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=6"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -368,15 +368,15 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <div class="book-cta">
     <div class="book-cta-title">想把聽力練得更準嗎？🇹🇭</div>
     <div class="book-cta-sub">跟老師 1 對 1，發音、聽力一起練</div>
-    <a class="btn btn-book" href="pricing.html?from=listening_game#pricing" onclick="if(window.bookFromGame){bookFromGame('listening_game','end_screen');return false;}">預約免費體驗課 →</a>
+    <a class="btn btn-book" data-game-result-cta="v1" href="pricing.html?from=listening_game#pricing" onclick="if(window.bookFromGame){bookFromGame('listening_game','end_screen');return false;}">預約免費體驗課 →</a>
   </div>
 
   <div class="end-actions gsh-end-actions">
     <button class="btn btn-primary lg-restart-btn" id="lg-replay-btn" data-game-result-replay="v1" type="button">再玩一輪</button>
-    <button class="btn btn-secondary" id="lg-mistake-btn" type="button">📕 查看本輪詳細紀錄</button>
-    <button class="btn btn-secondary" id="lg-print-btn" type="button">📄 列印／儲存學習紀錄</button>
-    <a class="btn btn-secondary" href="games.html">換個遊戲</a>
-    <a class="btn btn-secondary" href="index.html">回到首頁</a>
+    <button class="btn btn-secondary" id="lg-mistake-btn" data-game-result-detail-action="v1" type="button">📕 查看本輪詳細紀錄</button>
+    <button class="btn btn-secondary" id="lg-print-btn" data-game-result-print="v1" type="button">📄 列印／儲存學習紀錄</button>
+    <a class="btn btn-secondary" data-game-result-switch="v1" href="games.html">換個遊戲</a>
+    <a class="btn btn-secondary" data-game-result-home="v1" href="index.html">回到首頁</a>
   </div>
 </div>
 
@@ -406,9 +406,9 @@ document.addEventListener('DOMContentLoaded', function () {
 </footer>
 
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=37"></script>
+<script src="js/core/shared.min.js?v=38"></script>
 <script src="js/games/practice-events.js?v=3"></script>
-<script src="js/games/game-flow.js?v=7"></script>
+<script src="js/games/game-flow.js?v=8"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
 <style>
