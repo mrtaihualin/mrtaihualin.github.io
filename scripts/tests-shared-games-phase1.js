@@ -86,6 +86,8 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fab\.innerHTML = \(isCore5Game \? '⋯' : '🪧'\)/);
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
+  assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=35/, 'Listening must load the shared More mapping version');
 });
 
 test('shared font control binds after asynchronous Core 5 game startup', () => {

@@ -2167,6 +2167,7 @@ window.deleteFBComment = function(postId, idx) {
       var GAME_ID = null;
       if (path.indexOf('typing-game') > -1) GAME_ID = 'typing';
       else if (path.indexOf('reading-game') > -1) GAME_ID = 'reading';
+      else if (path.indexOf('listening-game') > -1) GAME_ID = 'listening';
       else if (path.indexOf('lego') > -1) GAME_ID = 'lego';
       else if (path.indexOf('word-order') > -1) GAME_ID = 'word_order';
       else if (path.indexOf('tone-finder') > -1) GAME_ID = 'tone_finder';

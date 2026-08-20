@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Lego shared font-adapter Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening shared More-menu mapping Delta
+
+## 2026-08-20 — P12-B-06 Listening Shared More Mapping (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Added Listening to the existing Core 5 shared More `⋯` path, restoring the same accessible overflow wrapper, focus/Escape handling and existing report/review actions without creating a Listening-only menu or moving game-owned Audio/Mode/Level controls.
+- Rebuilt `shared.min.js`, advanced only Listening's shared cache key `v34→v35`, and extended the existing shared-game regression. Reading and the other recognized Core games keep their existing shared mapping. No new menu action, analytics expansion, deploy, Production/Auth/account/data change, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Lego shared font-adapter Delta
 
 ## 2026-08-20 — P12-A-05 Lego Shared Font Adapter (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
