@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 locked Typing hint playability Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Reading option-uniqueness Delta
+
+## 2026-08-20 — P12-F-01 Reading Visually Unique Options (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Reading now deduplicates generated choices by their rendered value, not only by the raw vowel key, so distinct internal vowel forms that display identically cannot appear as duplicate choices. The generator still returns the required count and exactly one correct choice across every current consonant, vowel, final and tone candidate.
+- Preserved first-check scoring/retry behavior, rebuilt only `reading-game-app.min.js`, advanced only its page cache key `v35→v36`, and extended the existing Reading/owner regressions. No learner content, copy, analytics, deploy, Production/Auth/account/data mutation, beta, final regression or Phase 1 PASS occurred.
 
 ## 2026-08-20 — P12-A-03 Typing Active-Hint Zero Lock (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

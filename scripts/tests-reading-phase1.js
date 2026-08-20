@@ -69,7 +69,46 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=35/);
+  assert.match(html, /reading-game-app\.min\.js\?v=36/);
+});
+
+test('Reading option generator keeps displayed vowel choices complete and unique', () => {
+  const dataStart = source.indexOf('var VOWEL_SYMBOL=');
+  const dataEnd = source.indexOf('// ════════════════════════════════════════════\n// PHONETIC MAPS', dataStart);
+  const readStart = source.indexOf('var VOWEL_READ=');
+  const readEnd = source.indexOf('// ════════════════════════════════════════════\n// WORDS', readStart);
+  const utilStart = source.indexOf('function shuffle(');
+  const utilEnd = source.indexOf('// ════════════════════════════════════════════\n// LEVEL SWITCH', utilStart);
+  assert.ok(dataStart >= 0 && dataEnd > dataStart && readStart >= 0 && readEnd > readStart && utilStart >= 0 && utilEnd > utilStart);
+  const math = Object.create(Math);
+  math.random = () => 0;
+  const context = { Math: math, W: { cluster: '' } };
+  vm.createContext(context);
+  vm.runInContext(source.slice(dataStart, dataEnd), context);
+  vm.runInContext(source.slice(readStart, readEnd), context);
+  vm.runInContext(source.slice(utilStart, utilEnd), context);
+  const raw = context.buildOpts('อา', 'vowel', [['อา']], ['อา', 'อั', 'อะ', 'เออ', 'เอิ', 'โอ'], 4, null, []);
+  const shown = raw.map((value) => context.dispOpt('vowel', value));
+  assert.strictEqual(raw.length, 4);
+  assert.strictEqual(new Set(shown).size, 4);
+  assert.strictEqual(shown.filter((value) => value === context.dispOpt('vowel', 'อา')).length, 1);
+  const cases = [
+    ['cons', context.CONS_GROUPS, context.CP],
+    ['vowel', context.VOWEL_GROUPS, context.VP],
+    ['final', context.FINAL_GROUPS, context.FP],
+    ['tone', [context.TONE_POOL], context.TONE_POOL],
+  ];
+  for (const [comp, groups, pool] of cases) {
+    for (const answer of pool) {
+      for (const count of [2, 3, 4]) {
+        const options = context.buildOpts(answer, comp, groups, pool, count, null, []);
+        const visible = options.map((value) => context.dispOpt(comp, value));
+        assert.strictEqual(options.length, count, `${comp}/${answer} should have ${count} options`);
+        assert.strictEqual(new Set(visible).size, count, `${comp}/${answer} should be visually unique`);
+        assert.strictEqual(visible.filter((value) => value === context.dispOpt(comp, answer)).length, 1, `${comp}/${answer} should have one answer`);
+      }
+    }
+  }
 });
 
 test('single-syllable corrections cannot overwrite first-check score', () => {
