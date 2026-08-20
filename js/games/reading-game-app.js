@@ -536,7 +536,7 @@ function rgTryLoadResumeBanner(){
   window.__rgPendingResume=st;
   var lvName=(st.level==='中')?'中級':(st.level==='高')?'高級':'初級';
   var detail=document.getElementById('rg-resume-detail');
-  if(detail)detail.textContent='遊戲：閱讀練習・'+lvName+'・第 '+(st.cur+1)+'/'+st.wordIds.length+' 字';
+  if(detail)detail.textContent=GameUiCopy.resumeLine('閱讀練習',lvName,'第 '+(st.cur+1)+'/'+st.wordIds.length+' 字');
   banner.style.display='';
   return true;
 }
@@ -696,23 +696,25 @@ function buildOpts(ans,comp,groups,pool2,count,exclude,avoid){
   var grp=null;
   for(var i=0;i<groups.length;i++){if(groups[i].indexOf(ans)>=0){grp=groups[i].slice();break;}}
   if(!grp)grp=[ans];
-  if(exclude)grp=grp.filter(function(x){return x!==exclude;});
-  grp=grp.filter(function(x){return x===ans || (dispOpt(comp,x)!==ansDisp && avoid.indexOf(dispOpt(comp,x))<0);});
-  var opts=grp.slice();
-  if(opts.length>count){opts=opts.filter(function(x){return x!==ans;});opts=shuffle(opts).slice(0,count-1);opts.push(ans);}
+  var opts=[ans],visible={};visible[ansDisp]=true;
+  function addVisibleOption(x){
+    if(x==null||x===exclude||opts.indexOf(x)>=0)return false;
+    var shown=dispOpt(comp,x);
+    if(shown===ansDisp||avoid.indexOf(shown)>=0||visible[shown])return false;
+    opts.push(x);visible[shown]=true;return true;
+  }
+  shuffle(grp.filter(function(x){return x!==ans;})).forEach(function(x){if(opts.length<count)addVisibleOption(x);});
   var guard=0;
   while(opts.length<count && guard<500){
     guard++;
     var r=rnd(pool2);
-    if(r!==exclude && opts.indexOf(r)<0 && (r===ans || (dispOpt(comp,r)!==ansDisp && avoid.indexOf(dispOpt(comp,r))<0))) opts.push(r);
+    addVisibleOption(r);
   }
-  // กันหลุด (pool2 เล็กเกินจนหาตัวลวงไม่ครบเพราะกันซ้ำ) — พยายามกันไม่ให้ซ้ำคำตอบที่ถูกก่อน ถ้าหาไม่ได้จริงๆ ค่อยยอมเติมแบบไม่กันเพื่อไม่ให้ค้าง
+  // fallback แบบ deterministic เมื่อการสุ่มชนค่าที่ใช้แล้วหลายครั้ง; ยังห้ามตัวเลือกที่แสดงซ้ำเสมอ
   while(opts.length<count){
-    var strict=pool2.filter(function(r2){return r2!==exclude && opts.indexOf(r2)<0 && dispOpt(comp,r2)!==ansDisp;});
-    var loose=pool2.filter(function(r2){return r2!==exclude && opts.indexOf(r2)<0;});
-    var pick=strict.length?rnd(strict):(loose.length?rnd(loose):null);
-    if(!pick)break; // pool2 หมดจริงๆ กันลูปค้าง
-    opts.push(pick);
+    var remaining=pool2.filter(function(r2){var shown=dispOpt(comp,r2);return r2!==exclude&&opts.indexOf(r2)<0&&shown!==ansDisp&&avoid.indexOf(shown)<0&&!visible[shown];});
+    if(!remaining.length)break;
+    addVisibleOption(remaining[0]);
   }
   return shuffle(opts);
 }
@@ -1410,7 +1412,6 @@ function endRound(){
     refreshUI();
     if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:0,submission_id:null});
     if(window.GameFlow)GameFlow.enhanceResult({key:'reading-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:roundTotal,report:roundReport,onReplay:restart});
-    setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
     return;
   }
   document.getElementById('end-score').textContent=weightedScore+' 分'+(levelWeight!==1?'（'+curLevel+'級 ×'+levelWeight+'）':'');
@@ -1454,8 +1455,6 @@ function endRound(){
     GameFlow.enhanceResult({key:'reading-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:roundTotal,highlights:_hl,report:roundReport,onReplay:restart});
   }
   rgAttachLoginSummary();
-  // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมเสียง)
-  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
 }
 
 function rgAttachLoginSummary(){
@@ -1478,6 +1477,11 @@ function restart(){try{ if(typeof gtag==='function') gtag('event','reading_game_
 // ════════════════════════════════════════════
 function rgDownloadReport(){
   try{ if(typeof gtag==='function') gtag('event','reading_game_pdf_download',{category:'game'}); }catch(e){}
+  if(window.RoundReport&&typeof RoundReport.openPrint==='function'){
+    if(RoundReport.openPrint({gameType:'reading',report:roundReport,title:'泰語閱讀練習・本輪報告',documentTitle:'閱讀練習報告',difficulty:curLevel+'級'}))return;
+    try{rgToast('請允許彈出視窗才能列印報告 🙏');}catch(e0){alert('請允許彈出視窗才能列印報告');}
+    return;
+  }
   var SERIF="'Noto Serif TC','PingFang TC',serif";
   var SANS="'Noto Sans TC','PingFang TC',sans-serif";
   var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});

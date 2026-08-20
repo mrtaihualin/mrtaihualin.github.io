@@ -12,6 +12,8 @@ const ui = read('js/score/personal-content.js');
 const auth = read('js/core/auth-widget.js');
 const readingAuth = read('js/games/reading-auth.js');
 const wordOrder = read('js/games/word-order-app.js');
+const lego = read('lego.html');
+const legoApp = read('js/games/lego-game-app.js');
 const exportFn = read('supabase/functions/account-export/index.ts');
 const failures = [];
 let passes = 0;
@@ -29,7 +31,7 @@ check('sentence library reuses account-backed saved-items table', /var TABLE = '
 check('all personal-content surfaces ship current durable-delete clients',
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','vault.html']
     .every((name) => /word-vault\.js\?v=7/.test(read(name))) &&
-  ['word-order.html','vault.html'].every((name) => /sentence-vault\.js\?v=3/.test(read(name))));
+  ['word-order.html','lego.html','vault.html'].every((name) => /sentence-vault\.js\?v=3/.test(read(name))));
 check('same content merges provenance instead of duplicating', /_mergeMetaIntoWord\(existing, meta\)/.test(word) && /mergeMeta\(existing, meta\)/.test(sentence));
 check('Save from a new surface adds provenance before delete behavior', /!_hasSource\(th, meta\.source\)/.test(word) && /!hasSource\(th, meta\.source\)/.test(sentence));
 check('delete uses tombstone and does not touch SRS/history tables', /deleted_at: new Date\(\)\.toISOString\(\)/.test(sentence) && !/tone_srs_state|learning_memory|practice_events/.test(sentence));
@@ -58,6 +60,15 @@ check('Save provenance alone never labels an item as Played or re-practice', /�
 check('verified gameplay evidence alone enables Played and re-practice copy', /evidence && evidence\.played/.test(practiceBody) && /已練習/.test(practiceBody) && /再練習/.test(practiceBody));
 check('Played status has an explicit retry path without changing saved provenance', /playedRequestFailed/.test(practiceBody) && /重新載入練習紀錄/.test(practiceBody) && !/savedInfo\(/.test(practiceBody));
 check('word-order Save writes sentence library', /SentenceVault\.createSaveBtn/.test(wordOrder) && !/WordVault\.createSaveBtn\(s\.th/.test(wordOrder));
+check('Lego Login Result alone exposes sentence-library selection',
+  /class="lego-result-save hidden" id="lego-result-save"/.test(lego) &&
+  /window\.READING_AUTH&&window\.READING_AUTH\.user&&window\.SentenceVault/.test(legoApp) &&
+  /data-lego-save-index/.test(legoApp) && /全部選取/.test(legoApp) && /儲存到句子庫/.test(legoApp));
+check('Lego Result save uses confirmed sentences only and preserves user-created typing',
+  /legoCompletedSentences\.forEach\(\(sentence,index\)/.test(legoApp) &&
+  /const sentence=legoCompletedSentences\[Number/.test(legoApp) &&
+  /source:sentence\.custom\?'lego-user-created':'lego'/.test(legoApp) &&
+  !/legoCurrentSentence\(\)[\s\S]{0,300}SentenceVault\.addSentence/.test(legoApp));
 check('sentence direct practice reuses existing practice mode', /location\.search\.match\(\/\[\?&\]sentence=/.test(wordOrder) && /practiceMode = true;[\s\S]{0,160}SET = \[requestedIndex\]/.test(wordOrder));
 check('account export includes every vault key, not only words', /from\('learning_saved_items'\)/.test(exportFn) && !/eq\('vault_key', 'linvault'\)/.test(exportFn));
 

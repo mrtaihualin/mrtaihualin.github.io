@@ -7,6 +7,7 @@
 
   var flows = Object.create(null);
   var resultFlows = Object.create(null);
+  var activeResultReplay = null;
   var SRS_QUOTA_KEY = 'gsh_srs_quota_v1';
 
   function resolveElement(value) {
@@ -158,7 +159,9 @@
     if (!slot) {
       slot = document.createElement('div');
       slot.className = 'gsh-login-report-sections';
-      root.appendChild(slot);
+      var utility = root.querySelector('.gsh-result-utility-actions');
+      if (utility && utility.parentNode) utility.parentNode.insertBefore(slot, utility);
+      else root.appendChild(slot);
     }
     slot.innerHTML = html;
     return true;
@@ -211,9 +214,53 @@
     meta = document.createElement('div');
     meta.className = 'gsh-result-meta';
     meta.setAttribute('data-game-result-meta', 'v1');
-    if (actions && actions.parentNode === root) root.insertBefore(meta, actions);
-    else root.appendChild(meta);
+    var layout = actions && actions.parentNode || root;
+    layout.insertBefore(meta, layout.firstChild);
     return meta;
+  }
+
+  function normalizeResultOrder(root, actions, meta, copy) {
+    if (!actions || !actions.parentNode) return;
+    var layout = actions.parentNode;
+    var primary = layout.querySelector('.gsh-result-primary-actions');
+    var utility = layout.querySelector('.gsh-result-utility-actions');
+    var homeGroup = layout.querySelector('.gsh-result-home-actions');
+    if (!primary) {
+      primary = document.createElement('div');
+      primary.className = 'gsh-result-actions gsh-result-primary-actions';
+    }
+    if (!utility) {
+      utility = document.createElement('div');
+      utility.className = 'gsh-result-actions gsh-result-utility-actions';
+    }
+    if (!homeGroup) {
+      homeGroup = document.createElement('div');
+      homeGroup.className = 'gsh-result-actions gsh-result-home-actions';
+    }
+
+    var replay = actions.querySelector('[data-game-result-replay="v1"]');
+    var switchGame = actions.querySelector('[data-game-result-switch="v1"]');
+    var print = actions.querySelector('[data-game-result-print="v1"]');
+    var detail = actions.querySelector('[data-game-result-detail-action="v1"]');
+    var home = actions.querySelector('[data-game-result-home="v1"]');
+    var cta = layout.querySelector('[data-game-result-cta="v1"]');
+    if (replay) { replay.textContent = copy.replay; primary.appendChild(replay); }
+    if (switchGame) { switchGame.textContent = copy.switchGame; primary.appendChild(switchGame); }
+    if (print) { print.textContent = copy.print; utility.appendChild(print); }
+    if (detail) { detail.textContent = copy.detail; utility.appendChild(detail); }
+    while (actions.firstChild) utility.appendChild(actions.firstChild);
+    if (home) { home.textContent = copy.home; homeGroup.appendChild(home); }
+    if (cta) cta.textContent = copy.trial;
+
+    if (meta.nextSibling) layout.insertBefore(primary, meta.nextSibling);
+    else layout.appendChild(primary);
+    layout.appendChild(utility);
+    var trialCard = cta && cta.parentNode;
+    if (trialCard && trialCard !== layout) layout.appendChild(trialCard);
+    else if (cta) layout.appendChild(cta);
+    layout.appendChild(homeGroup);
+    actions.hidden = true;
+    actions.setAttribute('data-game-result-actions-normalized', 'v1');
   }
 
   function enhanceResult(options) {
@@ -222,6 +269,7 @@
     if (!root) return false;
     markResult(root);
     var actions = resolveElement(options.actions) || root.querySelector('.gsh-end-actions');
+    var replay = root.querySelector('[data-game-result-replay="v1"]');
     var meta = ensureResultMeta(root, actions);
     while (meta.firstChild) meta.removeChild(meta.firstChild);
 
@@ -235,19 +283,48 @@
 
     var correct = Math.max(0, Number(options.correct) || 0);
     var total = Math.max(0, Number(options.total) || 0);
-    line('gsh-result-correct', '答對 ' + correct + ' / ' + total);
-    if (options.loginSrs === true) line('gsh-result-srs', '帳號的 SRS 狀態已列在下方。');
-    var feedback = options.feedback || null;
-    if (feedback && feedback.text) line('gsh-result-feedback', feedback.text);
-    (options.highlights || []).filter(Boolean).slice(0, 2).forEach(function (text) {
-      line('gsh-result-highlight', String(text));
-    });
+    var reportItems = options.report && Array.isArray(options.report.items) ? options.report.items : null;
+    var completed = reportItems ? reportItems.length : total;
+    var firstCorrect = reportItems ? reportItems.filter(function (item) {
+      var firstAttempt = item && item.attempts && item.attempts[0];
+      return !!(item && item.is_correct && !item.hint_used && Number(item.wrong_count || 0) === 0 && (!firstAttempt || firstAttempt.is_correct));
+    }).length : correct;
+    var resultCopy = window.GameUiCopy && window.GameUiCopy.result || {
+      completed: '完成', firstCorrect: '首次答對', replay: '再玩一輪', switchGame: '換個遊戲',
+      print: '列印／儲存', detail: '查看本輪詳細紀錄', trial: '預約免費體驗課 →', home: '回到首頁'
+    };
+    line('gsh-result-completed', resultCopy.completed + ' ' + completed + ' / ' + total);
+    if (options.showFirstCorrect !== false) line('gsh-result-first-correct', resultCopy.firstCorrect + ' ' + firstCorrect + ' / ' + total);
     var countdown = line('gsh-result-countdown', '');
+    normalizeResultOrder(root, actions, meta, resultCopy);
+    var details = root.querySelector('.gsh-result-shared-details');
+    if (!details) {
+      details = document.createElement('div');
+      details.className = 'gsh-result-shared-details';
+    }
+    while (details.firstChild) details.removeChild(details.firstChild);
+    var primaryActions = meta.parentNode && meta.parentNode.querySelector('.gsh-result-primary-actions');
+    if (primaryActions && primaryActions.nextSibling) primaryActions.parentNode.insertBefore(details, primaryActions.nextSibling);
+    else if (primaryActions && primaryActions.parentNode) primaryActions.parentNode.appendChild(details);
+    function detailLine(className, text) {
+      var el = document.createElement('div');
+      el.className = className;
+      el.textContent = text;
+      details.appendChild(el);
+    }
+    if (options.loginSrs === true) detailLine('gsh-result-srs', '帳號的 SRS 狀態已列在下方。');
+    var dailyText = options.dailyActivityText || (options.report && window.RoundReport && typeof RoundReport.dailyActivityText === 'function' ? RoundReport.dailyActivityText(options.report.game_type) : '');
+    if (dailyText) detailLine('gsh-result-daily', dailyText);
+    var feedback = options.feedback || null;
+    if (feedback && feedback.text) detailLine('gsh-result-feedback', feedback.text);
+    (options.highlights || []).filter(Boolean).slice(0, 2).forEach(function (text) {
+      detailLine('gsh-result-highlight', String(text));
+    });
 
     var key = String(options.key || 'default');
-    if (actions && !actions.__gshResultCancelBound) {
-      actions.__gshResultCancelBound = true;
-      actions.addEventListener('click', function () { cancelResult(key); }, true);
+    if (!root.__gshResultCancelBound) {
+      root.__gshResultCancelBound = true;
+      root.addEventListener('click', function () { cancelResult(key); }, true);
     }
     startResultCountdown({
       key: key,
@@ -255,6 +332,7 @@
       seconds: 7,
       onComplete: options.onReplay
     });
+    activeResultReplay = replay ? { key: key, root: root, button: replay } : null;
     if (options.report) {
       attachReport(root, options.report);
       // P1-D-05: a completed RoundReport is the only client-side source for
@@ -266,6 +344,23 @@
     }
     return feedback;
   }
+
+  document.addEventListener('keydown', function (event) {
+    if (!activeResultReplay || event.key !== 'Enter' || event.defaultPrevented || event.repeat || event.isComposing) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    var target = event.target || document.activeElement;
+    if (target && target.closest && target.closest('input,textarea,select,button,a,[contenteditable="true"]')) return;
+    var root = activeResultReplay.root;
+    var button = activeResultReplay.button;
+    if (!root || !button || root.hidden || button.hidden || button.disabled) return;
+    var rootStyle = window.getComputedStyle ? window.getComputedStyle(root) : root.style;
+    var buttonStyle = window.getComputedStyle ? window.getComputedStyle(button) : button.style;
+    if ((rootStyle && (rootStyle.display === 'none' || rootStyle.visibility === 'hidden')) ||
+        (buttonStyle && (buttonStyle.display === 'none' || buttonStyle.visibility === 'hidden'))) return;
+    event.preventDefault();
+    cancelResult(activeResultReplay.key);
+    button.click();
+  });
 
   function uniqueItems(items, idOf, seen) {
     var output = [];

@@ -85,7 +85,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=21">
+<link rel="stylesheet" href="css/shared.css?v=25">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=6"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/reading-game-app.js -->
@@ -94,7 +94,7 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
 <script defer src="js/games/reading-auth.js?v=26"></script>
 <script defer src="js/score/learning-summary.js?v=1"></script>
-<script defer src="js/games/round-report.js?v=1"></script>
+<script defer src="js/games/round-report.js?v=2"></script>
 <script defer src="js/games/tone-server.js?v=4"></script><!-- Phase 4: ตัวเชื่อมเซิร์ฟเวอร์กันโกงดาว -->
 <script src="js/games/word-vault.js?v=7"></script>
 <script src="js/games/protected-word-audio.js?v=2"></script><!-- Core 5: private audio via entitlement-checked signed URL -->
@@ -384,7 +384,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 }
 </script>
 </head>
-<body>
+<body data-gsh-game="reading">
 <!--ANN-BAND:START--><script>try{if(sessionStorage.getItem('annDismissed')==='1')document.documentElement.classList.add('ann-off');}catch(e){}</script><div class="avail-band" id="ann-band" style="position:relative"><div class="avail-row"><span class="avail-dot"></span><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><button class="avail-cta" onclick="openModal('modal-line-qr')">立即預約</button></div><div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;"><button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button><div style="display:flex;align-items:center;gap:6px;"><span onclick="annGoTo(0)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:var(--gold);transition:background 0.2s;"></span><span onclick="annGoTo(1)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(2)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(3)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(4)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span></div><button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button></div><button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button></div><!--ANN-BAND:END-->
 
 
@@ -500,9 +500,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="gsh-resume-title">上次的安全進度還在</div>
   <div class="gsh-resume-detail" id="rg-resume-detail"></div>
   <div class="gsh-resume-actions">
-    <button type="button" class="gsh-resume-continue" onclick="rgResumeContinue()">繼續上次練習</button>
-    <button type="button" class="gsh-resume-restart" onclick="rgResumeRestartSame()">重新開始本次練習</button>
-    <button type="button" class="gsh-resume-new" onclick="rgResumeNewRound()">開始新一輪</button>
+    <button type="button" class="gsh-resume-continue" onclick="rgResumeContinue()">▶ 繼續上次</button>
+    <button type="button" class="gsh-resume-restart" onclick="rgResumeRestartSame()">↺ 重新開始</button>
+    <button type="button" class="gsh-resume-new" onclick="rgResumeNewRound()">＋ 開始新一輪</button>
   </div>
 </div>
 
@@ -631,19 +631,19 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="book-cta">
     <div class="book-cta-title">想把泰文唸得標準嗎？🇹🇭</div>
     <div class="book-cta-sub">跟 老師 1 對 1，聲調發音一次到位</div>
-    <a class="btn btn-book" href="pricing.html?from=reading_game#pricing" onclick="if(window.bookFromGame){bookFromGame('reading_game','end_screen');return false;}trackBookCTA()">預約免費體驗課 →</a>
+    <a class="btn btn-book" data-game-result-cta="v1" href="pricing.html?from=reading_game#pricing" onclick="if(window.bookFromGame){bookFromGame('reading_game','end_screen');return false;}trackBookCTA()">預約免費體驗課 →</a>
   </div>
   <!-- ▲ CTA ▲ -->
 
   <div class="gsh-end-actions end-actions">
-    <button class="btn btn-primary" id="rg-replay-btn" onclick="restart()">再玩一輪</button>
+    <button class="btn btn-primary" id="rg-replay-btn" data-game-result-replay="v1" onclick="restart()">再玩一輪</button>
     <!-- F3 (2026-08-10): 改文字 — 機制其實是開新視窗 print()，不是真的下載檔案，原本「下載PDF」字樣不準確 -->
-    <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 列印／儲存學習紀錄</button>
+    <button class="btn btn-secondary" id="rg-pdf-btn" data-game-result-print="v1" onclick="rgDownloadReport()">📄 列印／儲存學習紀錄</button>
     <!-- F2 (2026-08-10): 查看錯題 — 唯讀檢視這輪 roundLog 裡答錯/失敗的字，不影響分數/狀態 -->
-    <button class="btn btn-secondary" onclick="rgShowMistakes()">📋 查看本輪詳細紀錄</button>
+    <button class="btn btn-secondary" data-game-result-detail-action="v1" onclick="rgShowMistakes()">📋 查看本輪詳細紀錄</button>
     <a class="btn btn-secondary" href="reading-board.html" onclick="try{gtag('event', 'game_link_click', {category:'game', target:'reading_board',from:'reading_game'})}catch(e){}">🏆 看排行榜</a>
-    <a class="btn btn-secondary" href="games.html" onclick="trackToneLink()">換個遊戲</a>
-    <a class="btn btn-secondary" href="index.html">回到首頁</a>
+    <a class="btn btn-secondary" data-game-result-switch="v1" href="games.html" onclick="trackToneLink()">換個遊戲</a>
+    <a class="btn btn-secondary" data-game-result-home="v1" href="index.html">回到首頁</a>
   </div>
 </div>
 
@@ -699,14 +699,14 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=35']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=39']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=33"></script>
+<script src="js/core/shared.min.js?v=40"></script>
 <script src="js/games/practice-events.js?v=3"></script>
-<script src="js/games/game-flow.js?v=5"></script>
+<script src="js/games/game-flow.js?v=10"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

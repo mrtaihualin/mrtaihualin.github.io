@@ -193,7 +193,7 @@ var GOLDEN_WORD_MULT=2;                        // คำทองตอบถู
 // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
 function tgScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
 // 本題分數: คะแนนที่จะได้ของคำนี้ตอนนี้ ตามจำนวนครั้งที่ผิดสะสม · ตาย/ใช้คำใบ้=0
-function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide&&typeof guideMode!=='undefined'&&guideMode))return 0; var sc=tgScoreSylCount(); return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
+function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide))return 0; var sc=tgScoreSylCount(); return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
 function tgUpdateScoreBar(){ var max=10, sc=Math.max(0,Math.min(10,tgCurWordScore())); var pw=document.getElementById('tg-ws-fill'); if(pw){pw.style.width=Math.max(0,Math.min(100,sc/max*100))+'%'; pw.style.background=tgScoreBarColor(sc,max);} var pn=document.getElementById('tg-ws-num'); if(pn)pn.textContent=sc; }
 function rgQuotaFor(sylCount){return window.TYPING_SCORE?TYPING_SCORE.quotaFor(sylCount):Math.min(4+Math.max(0,(sylCount||1)-4),9);}
 function rgWrongScore(sylCount,wrongN){
@@ -202,7 +202,7 @@ function rgWrongScore(sylCount,wrongN){
 var RG_LEVEL_TO_NUM={'初':1,'中':2,'高':3}; // map ให้ตรงกับ GAME_ACCOUNT.addHardStars(clean, level:1|2|3) — ลอกเกมอ่านเป๊ะ (Lin 2026-07-05, แก้บั๊กเดิมที่ 高 เคยตกไปนับเป็นระดับ 1)
 var curLevel='初';
 var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,roundTotal=0,roundHadGuide=false;
-var tgRoundActive=false; // Phase 1: โหมด 有提示/無提示 ล็อกตลอดรอบ เปลี่ยนได้เฉพาะก่อนเริ่มตอบข้อแรกหรือหลังจบรอบ
+var tgRoundActive=false;
 var roundLog=[]; // {th,zh,wrong,failed,guide,pts,srsDue,mastered} ต่อคำ — เอาไว้ทำรายงาน PDF ท้ายรอบ — Lin 2026-07-07
 var roundReport=null;
 function tgReportRows(){
@@ -455,6 +455,7 @@ function dispOpt(comp,x){
 // LEVEL SWITCH
 // ════════════════════════════════════════════
 function setLevel(lv){
+  tgCloseMobileKeyboard();
   try{ if(typeof gtag==='function') gtag('event','typing_game_level_change',{category:'game', level: lv}); }catch(e){}
   curLevel=lv;
   try{localStorage.setItem('tg_level',lv);}catch(e){} // Lin 2026-07-12: จำระดับที่เลือกไว้ → รีเฟรชแล้วไม่ต้องเลือกใหม่
@@ -869,8 +870,8 @@ function finalizeWord(){
   }
 
   // ── เปิดคำใบ้ระหว่างพิมพ์คำนี้ → 0 คะแนน + ไม่แตะ SRS เลย เหมือนยังไม่ได้ทำ (กฎ MASTER ข้อ9) ──
-  // Lin 2026-07-12: บังคับให้เงื่อนไขนี้ทำงานเฉพาะโหมด 有提示 เท่านั้น — โหมด無提示 ไม่มีคำใบ้ให้ใช้ ห้ามโดนหักเป็น 0 เด็ดขาด (แก้บั๊ก無提示ได้ 0)
-  if(wordUsedGuide && guideMode){
+  // เมื่อคำนี้เคยแสดง提示แล้ว คะแนนต้องคงเป็น 0 แม้ผู้เล่นปิด提示ก่อนตอบจบ
+  if(wordUsedGuide){
     okC++;
     roundHadGuide=true;
     b.textContent='這次用了提示，先不計分（下次試試看不看提示！）';b.className='gsh-feedback-slot result-banner show half';
@@ -1110,6 +1111,7 @@ function nextWord(){
 }
 
 function endRound(){
+  tgCloseMobileKeyboard();
   tgRoundActive=false;
   try{ if(window.GameResume) GameResume.clear('typing-game'); }catch(e){} // Phase E3: จบรอบแล้ว ไม่มีอะไรให้ resume อีก
   document.getElementById('game').style.display='none';
@@ -1174,8 +1176,6 @@ function endRound(){
     GameFlow.enhanceResult({key:'typing-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:roundTotal,highlights:_hl,report:roundReport,onReplay:restart});
   }
   tgAttachLoginSummary();
-  // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมเสียง)
-  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
 }
 
 function tgAttachLoginSummary(){
@@ -1236,6 +1236,7 @@ function tgHideMistakes(){
 }
 
 function restart(){
+  tgCloseMobileKeyboard();
   try{ if(typeof gtag==='function') gtag('event','typing_game_restart_click',{category:'game'}); }catch(e){}
   try{ if(window.GameResume) GameResume.clear('typing-game'); }catch(e){} // Phase F5/E3: กด "再玩一次" (มาถึงได้จากหน้าจบรอบเท่านั้น) = ล้าง session ค้างเก่าทิ้งเสมอ
   initGame();
@@ -1269,7 +1270,7 @@ function tgTryResume(){
     var banner=document.getElementById('tg-resume-banner');
     var detailEl=document.getElementById('tg-resume-detail');
     if(!banner||!detailEl)return;
-    detailEl.textContent='遊戲：打字練習・'+(saved.level||'初')+'級・第 '+(saved.cur+1)+'/'+saved.wordIds.length+' 字・上次分數 '+(saved.roundScore||0)+' 分';
+    detailEl.textContent=GameUiCopy.resumeLine('打字練習',(saved.level||'初')+'級','第 '+(saved.cur+1)+'/'+saved.wordIds.length+' 字');
     banner.style.display='block';
     window.__tgResumeData=saved;
   }catch(e){}
@@ -1332,6 +1333,11 @@ function tgResumeRestart(){tgResumeNewRound();}
 // ════════════════════════════════════════════
 function rgDownloadReport(){
   try{ if(typeof gtag==='function') gtag('event','typing_game_pdf_download',{category:'game'}); }catch(e){}
+  if(window.RoundReport&&typeof RoundReport.openPrint==='function'){
+    if(RoundReport.openPrint({gameType:'typing',report:roundReport,title:'泰語打字練習室・本輪報告',documentTitle:'打字練習報告',difficulty:curLevel+'級'}))return;
+    try{rgToast('請允許彈出視窗才能列印報告 🙏');}catch(e0){alert('請允許彈出視窗才能列印報告');}
+    return;
+  }
   var SERIF="'Noto Serif TC','PingFang TC',serif";
   var SANS="'Noto Sans TC','PingFang TC',sans-serif";
   var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
@@ -1834,24 +1840,11 @@ function setGuideMode(on){
 }
 setGuideMode(guideMode); // ตั้งสถานะปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 
-// Phase 1: โหมดเป็นกติกาของ "ทั้งรอบ" ไม่ใช่ตัวช่วยที่เปิดปิดกลางคำ
-// ถ้ายังไม่ได้พิมพ์ตัวแรก อนุญาตให้เลือกแล้วเริ่มรอบใหม่ทันที; หลังจากนั้นปฏิเสธการสลับจนกว่าจะจบรอบ
+// Phase 1.2: เปิด/ปิด提示ได้ระหว่างคำเดิมโดยไม่เริ่มคำหรือรอบใหม่
+// rgTypeHighlightNextKey() จะล็อก wordUsedGuide ทันทีเมื่อแสดง提示จริง และ loadWord() คงสถานะล่าสุดเป็นค่าเริ่มต้นของคำถัดไป
 function tgChooseGuideMode(on){
-  var pristine=false;
-  try{
-    pristine=tgRoundActive && cur===0 && roundScore===0 && okC===0 && badC===0 &&
-      (!roundLog || roundLog.length===0) && RG_TYPE.pos===0 && RG_TYPE.wrong===0 &&
-      RG_CONT_WRONG===0 && !checked;
-  }catch(e){}
-  if(tgRoundActive && !pristine){
-    rgToast('本輪模式已鎖定，請完成本輪後再切換 🙂');
-    return false;
-  }
   setGuideMode(!!on);
-  if(pristine){
-    try{ if(window.GameResume) GameResume.clear('typing-game'); }catch(e){}
-    initGame();
-  }
+  try{tgUpdateScoreBar();}catch(e){}
   return true;
 }
 
@@ -1952,6 +1945,7 @@ function rgApplyTypeModeUI(){
 // บั๊กเดิม: ปล่อยให้ค้างโชว์ทั้งที่ไม่เกี่ยวแล้ว ทำให้ดูเหมือนหน้าว่างยาว/บังกล่องอธิบายด้านล่างจนนึกว่าไม่มีคำอธิบาย
 // จะโชว์กลับมาอัตโนมัติตอนขึ้นคำ/พยางค์ถัดไป (ดู loadSyl wrapper ด้านล่าง)
 function rgHideTypePanelForReveal(){
+  tgCloseMobileKeyboard();
   var panel=document.getElementById('type-panel');
   if(panel)panel.style.display='none';
 }
@@ -2008,6 +2002,7 @@ function rgTypeSuccessBranch(){
     finalizeWord();
     document.getElementById('btn-next').textContent='下一題 →';
   } else {
+    tgCloseMobileKeyboard();
     var b=document.getElementById('banner');
     b.textContent='✓';b.className='gsh-feedback-slot result-banner show ok'; // LIN 2026-07-03: ย่อข้อความ+ลดเวลาหน่วง ให้พิมพ์ยาวๆ ต่อเนื่องมากขึ้น ไม่รู้สึกเหมือนถูกตัดแบ่งพยางค์
     document.getElementById('btn-next').textContent='下一個音節 →';
@@ -2029,6 +2024,7 @@ function rgTypeFailBranch(){
     finalizeWord();
     document.getElementById('btn-next').textContent='下一題 →';
   } else {
+    tgCloseMobileKeyboard();
     var b=document.getElementById('banner');
     b.textContent='這個音節再看一下 — 接著打下一個音節';b.className='gsh-feedback-slot result-banner show no';
     document.getElementById('btn-next').textContent='下一個音節 →';
@@ -2276,6 +2272,20 @@ document.addEventListener('keydown',function(e){
 //  3) ค่อยล้างช่องจริง (mi.value='') ที่ "จุดจบธรรมชาติ" เท่านั้น (ขึ้นพยางค์/คำใหม่, กด Backspace, กด Enter) ไม่ใช่ระหว่างพิมพ์
 //  4) เพิ่ม fallback ฝั่ง Android: บาง IME ไม่ยิง keydown Backspace จริงตอนกดปุ่มลบบนคีย์บอร์ดจอ (ส่งมาเป็น input event inputType:'deleteContentBackward' แทน) เดิมโค้ดไม่ดักไว้เลย ปุ่มลบเลยไม่ทำงานบน Android บางรุ่น
 var RG_MI_LASTVAL=''; // ค่าล่าสุดที่ประมวลผลไปแล้วในช่องพิมพ์มือถือ (ใช้ diff)
+function tgCloseMobileKeyboard(){
+  try{
+    var mi=document.getElementById('rg-mobile-input');
+    if(mi&&document.activeElement===mi)mi.blur();
+    document.body.classList.remove('tg-kbd-typing');
+  }catch(e){}
+}
+function tgInitKeyboardDismissControls(){
+  document.addEventListener('click',function(event){
+    var target=event.target&&event.target.closest?event.target.closest('#wm-trigger, #rg-howto-btn'):null;
+    if(target)tgCloseMobileKeyboard();
+  },true);
+}
+tgInitKeyboardDismissControls();
 function rgMobileInputReset(){ // เรียกตอน "จุดจบธรรมชาติ" เท่านั้น (ขึ้นคำ/พยางค์ใหม่ ฯลฯ) — ห้ามเรียกกลางคันตอนกำลังพิมพ์
   RG_MI_LASTVAL='';
   try{ var mi0=document.getElementById('rg-mobile-input'); if(mi0)mi0.value=''; }catch(e){}

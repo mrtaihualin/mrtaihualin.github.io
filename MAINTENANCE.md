@@ -1,6 +1,175 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-19 22:43 Asia/Bangkok** — Phase 1 PostgreSQL 17 backup runtime pin + manual backup-only guard
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 six-game Mobile Landscape Delta
+
+## 2026-08-21 — PD-P12-MOBILE-LANDSCAPE-01 Six-Game Two-Hand Layout (`PASS_LOCAL / HUMAN_DEVICE_PENDING / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Added the locked short-screen Mobile Landscape presentation to Tone, Reading, Listening, Typing, Word Order and Lego only. The existing controls now occupy safe-area-aware top-left, top-centre, top-right, centre-question and two lower thumb zones; Tone keeps its exact 1/2/3 versus 4/5/uncertain mapping, Choice/Tiles split evenly, typed/keyboarding inputs stay lower-centre, and Lego keeps categories left, sentence centre and its open vocabulary menu right.
+- Existing Result actions are repositioned without replacement: result content remains centred, real secondary/home actions remain left, and real replay/switch/continue actions remain right. Portrait and Desktop remain outside the landscape media query; no control, gameplay rule, Product behavior, feature, gate, analytics path, Auth/security/data path or schema was added.
+- Advanced only the shared CSS cache binding to v25 and extended the existing shared six-game regression. Targeted flow/shared checks and the full 992-file repository gate PASS. In-app visual verification could not load the local file under the browser URL policy, and the sandbox would not bind a local test server without approval; no escalation was requested. Physical Mobile Landscape visual/gameplay beta remains Human-only. No deploy, Production mutation, final beta, Final Go/No-Go or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 completed-round VocabPopup removal Delta
+
+## 2026-08-21 — PD-P12-LEAD-REMOVE-01 Completed-Round Interruption Removal (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Removed the locked `單字速查表` VocabPopup implementation and every completed-round trigger from Tone, Reading, Typing, Word Order and Lego. Completing or viewing a Result can no longer increment its old five-round browser counter, open the email/consent overlay, write through that feature-specific lead path or redirect away from play.
+- Preserved the public `/vocab-thank-you.html` URL and unrelated explicit site lead/contact surfaces exactly; Listening had no VocabPopup trigger. Rebuilt the shared and four affected minified game bundles and advanced only the shared/game cache bindings used by the six games.
+- Targeted game, Result, owner/rollout/backend and marketing checks plus the full repository gate PASS. No existing lead/data cleanup, analytics expansion, redirect, deploy, Production/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 shared six-game Result/Print Delta
+
+## 2026-08-21 — PD-P12-PRINT-PDF-01 Shared Result / Browser Print (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Tone, Reading, Listening, Typing, Word Order and Lego now route their existing `列印／儲存` action through one shared zh-TW-ready browser Print renderer with the same Result-summary → daily-activity → full-detail → applicable account-data section order. The shared output uses A4 portrait and browser-supported row/section page-break protection; direct PDF download remains excluded.
+- Game-owned semantics remain intact: Word Order omits Level, Listening separates Choice/Typed detail and keeps Listening versus Typing scores separate, hint-using games show the resulting item score, and Lego prints only completed sentence + zh-TW while keeping the exact custom-input disclaimer sentence-conditional. Dynamic learner content is escaped before print rendering.
+- Finished Core 5 RoundReport identities update a device-local, per-game daily activity count once per round; Lego reuses its existing completed-sentence daily count. The same game-specific daily label is now visible in Result. Rebuilt the four affected minified game bundles and advanced only the RoundReport, GameFlow and six game runtime cache bindings. Targeted checks and the full repository gate PASS. No analytics/network/schema/Auth/account/Production mutation, direct-download feature, deploy, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego custom-input Delta
+
+## 2026-08-21 — PD-P12-LEGO-CUSTOM-INPUT-01 Locked Custom Fields (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Time, Subject, `ไป` Location and Who now expose the locked `ใส่เอง` path, while Subject retains the separate `ชื่อ` path. Player-created entries remain confined to the current builder and Resume payload and never enter the locked candidate pools; `นอน` still permits only `อยู่บ้าน` and never exposes a custom Location.
+- Thai input is accepted as entered. An optional player-supplied zh-TW translation is reused without inference; when it is absent, the completed translation remains blank except that a proper name may remain Thai. The exact custom-input disclaimer appears only on completed sentences containing custom input, and Resume preserves the custom/name typing and supplied translation.
+- Advanced only Lego's app cache binding to v9 and extended the existing shared/cache-contract regressions. Targeted checks and the full repository gate PASS. No deploy, Production/Auth/account/data/analytics mutation, candidate-pool expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego Resume Delta
+
+## 2026-08-21 — PD-P12-LEGO-FLOW-01 Game-Owned Resume (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego now uses the shared compact Resume presentation and exact three actions. `繼續上次` restores the validated current builder or reveal plus every confirmed sentence; `重新開始` discards only the current unconfirmed builder while retaining confirmed sentences; `開始新一輪` clears the saved Lego session and starts empty.
+- The game-owned v1 payload stores only the locked builder fields, conditional custom marker, confirmed sentence/translation rows and build/reveal view. Restore rejects malformed/stale words, reapplies current verb/object/location/`กับ` branch rules, preserves custom translation blanks, and never restores an unconfirmed draft into Result/library data. Successful Result clears Resume only after rendering; the error path rewrites the recoverable confirmed data.
+- Advanced only Lego's app cache binding to v8 and extended the existing shared/cache-contract regressions. Targeted checks and the full repository gate PASS. No server schema, cross-device claim, deploy, Production/Auth/account/data/analytics mutation, Landscape/Print-category expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego Login Result sentence-library Delta
+
+## 2026-08-21 — PD-P12-LEGO-PERSISTENCE-01/RESULT-01 Login Result Save (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego Login Result now shows `選擇要儲存的句子`, one checkbox for every sentence confirmed by `完成句子`, and the locked `全部選取` / `儲存到句子庫` actions. The unconfirmed builder draft never enters this path; Guest and an empty Result receive no account-library controls.
+- Reused the current account-scoped `SentenceVault` client and its existing ten-sentence ceiling, full-library notice, durable retry, owner isolation and account-storage sync. Canonical Lego saves use `lego` provenance, while completed custom-input sentences use `lego-user-created`; their missing translation remains blank and the conditional disclaimer is preserved. No schema, RLS, Auth, quota or separate Lego library was added.
+- Advanced only Lego's app cache binding to v7 and extended the existing Personal Content and cache-contract regressions. Targeted checks and the full repository gate PASS. No deploy, Production/account/data mutation, Resume/Landscape/Print-category expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego locked content/branch-rules Delta
+
+## 2026-08-21 — PD-P12-LEGO-CONTENT-01 Locked Content and Branch Rules (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego's learner-visible build surface now uses only the locked Time, Subject, front-grammar, Verb, food/buy Object, Location, Who and sentence-particle sets. Eat/buy branches show only compatible objects; `ไป` requires a direct location without `ที่` and may then expose only `กับ` + Who; `นอน` has no object and only optional `อยู่บ้าน`; `ไปนอน` ends at the verb.
+- Front grammar stays optional. `กำลัง` defaults rear `อยู่` and permits its removal, while an object branch without front grammar keeps rear `อยู่` mandatory. The active first-time tour and persistent instructions now describe only the locked confirm/reveal/Result flow, and the obsolete per-word save interruption is absent from the build surface.
+- Advanced only Lego's app cache binding to v6 and extended the existing shared regression plus current cache-contract assertions. Targeted checks and the full repository gate PASS. No Login Result sentence-library save, Resume/Landscape/Print-category expansion, deploy, Production/Auth/account/data/analytics mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego locked build/reveal/Result flow Delta
+
+## 2026-08-21 — PD-P12-LEGO-FLOW-01/RESULT-01 Locked Build → Reveal → Result (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego now exposes the locked primary actions `完成句子` / `結束遊戲`; a valid confirmed sentence is retained in the current session and shown in a sentence-plus-zh-TW reveal with `繼續造句` / `結束遊戲`, while ending excludes the current unconfirmed draft and reaches the shared Result shell. The bounded error path shows the locked error copy and still permits ending with all prior confirmed sentences intact.
+- Lego Result now has shared replay/countdown/Enter behavior, existing Games/CTA/Home routing, browser Print/Save, full read-only session detail, and a device-local daily confirmed-sentence count. Custom input without a player translation stays blank rather than inferred and carries the exact disclaimer. Guest save controls remain absent; Login sentence-selection/library saving is not claimed complete in this Delta.
+- Added Lego to shared flow v9 with a non-applicable-first-attempt option, advanced only affected cache bindings, updated existing cache-contract assertions, and extended existing shared/flow regressions. Targeted checks and the full 993-file gate PASS. No old scoring/quota/SRS mutation, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Lego minimum-presentation Delta
+
+## 2026-08-20 — PD-P12-LEGO-01 Minimum Presentation (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego now uses the locked title `泰語造句練習室` and subtitle `用學過的單字，組出你真正想說的泰語。`; the unauthorized Level 2/3 entry surface, Weekly Challenge banner, and removed `單字速查表` lead interruption are no longer learner-visible in the minimum-release target.
+- Extended the existing shared regression and corrected three stale executable cache-version assertions to the already-shipped shared-flow v8/Lego v4 bindings, restoring the full 993-file site gate to PASS. No Lego gameplay/slot/content/scoring/Result/PDF implementation, deploy, Production/Auth/account/data/analytics change, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared six-game Exit Delta
+
+## 2026-08-20 — PD-P12-EXIT-01 Shared Six-Game Exit (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Tone, Reading, Listening, Typing, Word Order and Lego now expose one shared More-menu exit path with the exact dialog `要離開遊戲嗎？` and actions `繼續遊戲` / `離開遊戲`; continuing or Escape restores the current game, while leaving always routes to `/games.html`. Existing game-owned Resume/save payloads are untouched.
+- Reused the existing More control instead of adding another shell button or gate, kept the early-excluded Challenge unchanged, placed the copy in the minimal locale-ready layer, rebuilt `shared.min.js`, advanced the six affected shared CSS/runtime cache keys, and extended the existing shared regression. No gameplay/scoring/SRS/content/analytics change, deploy, Production/Auth/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared Core 5 Result order Delta
+
+## 2026-08-20 — PD-P12-RESULT-TRUTH-01 Core 5 Shared Result Order (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Core 5 Result now presents the locked sequence through one shared runtime: truthful completion/first-correct summary and countdown, then `再玩一輪`/`換個遊戲`, game-owned detail, `列印／儲存`/`查看本輪詳細紀錄`, the existing visible `預約免費體驗課 →` card, and finally `回到首頁`. Existing buttons/links and their game-owned handlers are moved rather than replaced, so no action or gameplay meaning was added.
+- Added semantic Result roles to the five pages/Tone renderer, put the locked action labels in the existing minimal locale-ready copy layer, rebuilt the shared/Tone bundles, advanced only affected shared CSS/runtime cache keys, and extended existing flow/shared/owner regressions. No PDF-content expansion, Lego Result, Exit/Landscape work, gameplay/scoring/SRS/content/analytics change, deploy, Production/Auth/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 truthful Result summary Delta
+
+## 2026-08-20 — PD-P12-RESULT-TRUTH-01 Core 5 Truthful Summary (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- The shared Core 5 Result summary now reports `完成 X / N` independently from `首次答對 X / N`; first-correct counts only items answered correctly without an earlier wrong attempt or guidance, while completion remains the number of completed report items.
+- Added the two labels to the existing shared Traditional Chinese UI-copy spine, advanced only the shared and Result-flow cache keys, rebuilt `shared.min.js`, and extended the executable Result/shared regressions. No Result action/order/PDF/detail change, gameplay/scoring/SRS/content/analytics expansion, deploy, Production/Auth/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Result replay Enter Delta
+
+## 2026-08-20 — P12-C-02 Result `再玩一輪` Enter (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- The shared Core 5 Result flow now lets a plain, non-repeated Enter activate the real visible `再玩一輪` button and cancel the automatic replay countdown. Enter from inputs, editable content, buttons or links remains owned by that control and cannot trigger a duplicate replay.
+- Marked only the five real Core 5 replay actions, advanced their shared `game-flow.js` cache key `v5→v6`, rebuilt/advanced Tone because its Result button is dynamic, and extended the existing executable flow/owner regressions. No new Result action, gameplay/scoring/SRS/content/analytics change, deploy, Production/Auth/account/data expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 compact mobile Resume Delta
+
+## 2026-08-20 — PD-P12-MOBILE-RESUME-01 Core 5 Compact Resume (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Core 5 Resume now uses one shared semantic-copy source for `上次進度：<game>・<level>・<progress>` and the exact actions `▶ 繼續上次`, `↺ 重新開始`, `＋ 開始新一輪`; game-owned payload validation and resume/restart/new-round meanings remain unchanged.
+- At phone width the old stacked full-width buttons are replaced by one compact horizontal action row. Rebuilt the shared and four minified game bundles, advanced only the affected Core 5 CSS/shared/app cache keys, and extended existing shared/game/owner regressions. No Lego Resume implementation, new locale, selector/detection, gameplay/scoring/content/analytics change, deploy, Production/Auth/account/data expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening shared More-menu mapping Delta
+
+## 2026-08-20 — P12-B-06 Listening Shared More Mapping (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Added Listening to the existing Core 5 shared More `⋯` path, restoring the same accessible overflow wrapper, focus/Escape handling and existing report/review actions without creating a Listening-only menu or moving game-owned Audio/Mode/Level controls.
+- Rebuilt `shared.min.js`, advanced only Listening's shared cache key `v34→v35`, and extended the existing shared-game regression. Reading and the other recognized Core games keep their existing shared mapping. No new menu action, analytics expansion, deploy, Production/Auth/account/data change, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Lego shared font-adapter Delta
+
+## 2026-08-20 — P12-A-05 Lego Shared Font Adapter (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego now consumes the same shared standard/modern font-control path and `rg_modern_font` preference as Reading, Listening, Typing and Word Order; the existing shared fallback menu owns the visible control and Lego supplies only its game-local adapter and Thai-text selectors.
+- The locked negative boundary remains explicit: Lego has no `games_particle_mode` or particle control. Advanced only Lego's shared cache key `v32→v34` and app cache key `v3→v4`, and extended the existing shared-game regression. No gameplay/content/scoring/analytics change, Challenge adapter, deploy, Production/Auth/account/data expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared Core 5 font-control readiness Delta
+
+## 2026-08-20 — P12-A-05 Core 5 Font-Control Async Readiness (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- The existing shared font-control adapter now binds idempotently after the asynchronously loaded Core 5 game API becomes available, so the five existing `#font-toggle-slot` hosts no longer remain empty when DOM readiness precedes `GameContentLoader` completion.
+- Preserved every existing game-owned font mode and persistence path, added no font mode or particle control, rebuilt `shared.min.js`, advanced only the five Core 5 shared cache keys `v33→v34`, and extended the existing shared-game regression. No Lego/Challenge adapter, shell redesign, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Typing mobile-keyboard lifecycle Delta
+
+## 2026-08-20 — Typing Mobile Software Keyboard Lifecycle (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Typing now blurs the native mobile input on completed-syllable transitions, reveal, Result/restart, level selection, More menu and 玩法; the existing next-question loader remains the only path that refocuses it when typing is required again.
+- Rebuilt only `typing-game-app.min.js`, advanced only its page cache key `v34→v35`, and extended existing Typing/owner regressions. No IME redesign, draft persistence, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+## 2026-08-20 — Listening Mobile Software Keyboard Lifecycle (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Listening now blurs the Thai input whenever typing is no longer required: Typed→Choice, submit/reveal, skip, score-zero completion, next-mode selection, Result/restart, More menu and 玩法. A new Typed question remains the only path that focuses the input again.
+- Advanced only the Listening cache key `v15→v16` and extended existing Listening/owner regressions. No IME redesign, draft persistence, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+## 2026-08-20 — P12-B-07 Listening Levels and Two-Row Hierarchy (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Listening now exposes `初級 / 中級 / 高級` in a dedicated Level row. Initial and Intermediate are enabled only when the existing protected-audio registry proves playable items; Advanced stays visible and locked. The selected Level filters the existing word pool and persists through round state, Resume and report/account evidence; no content or audio was added.
+- The separate status row now renders exactly `第 X / Y 字` and `🏆 คะแนน`, with progress and gameplay below; Level and status are not combined on Portrait/Desktop. Advanced only the Listening cache key `v14→v15` and extended existing Listening/owner regressions. No shared responsive/Landscape redesign, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+## 2026-08-20 — P12-B-05/B-10 Listening Audio Failure and Skip (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Listening now shows the locked recovery message and `跳過此題` action only after an actual playback failure. Failed starts leave the successful-listen count unchanged; a later successful retry clears the error/action.
+- Skip immediately completes only the current question with zero score increase, zero penalty, no wrong count, no submitted attempt, no SRS claim and the actual successful-listen count preserved. It then reuses the fresh next-mode boundary from B01–B04. Advanced only the Listening cache key `v13→v14` and extended existing Listening/owner regressions. No deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+## 2026-08-20 — P12-B-01–B-04 Listening Active Mode Switching (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Listening now allows only the locked active unanswered `輸入答案 → 選擇答案` transition on the same question. It preserves the round and successful-listen count, discards typed text/wrong/attempt interaction state, cancels stale input-reset focus, and continues scoring by the mode actually submitted; active `選擇答案 → 輸入答案` remains blocked.
+- After each non-final reveal, the prior mode is no longer carried forward: the player must freshly choose `選擇答案` or `輸入答案` before Next/countdown can start. The selected next mode is applied only when advancing and survives safe Resume; completed-question evidence remains unchanged. Advanced only the Listening cache key `v12→v13` and updated existing Listening/owner regressions. No deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+## 2026-08-20 — P12-F-01 Reading Visually Unique Options (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Reading now deduplicates generated choices by their rendered value, not only by the raw vowel key, so distinct internal vowel forms that display identically cannot appear as duplicate choices. The generator still returns the required count and exactly one correct choice across every current consonant, vowel, final and tone candidate.
+- Preserved first-check scoring/retry behavior, rebuilt only `reading-game-app.min.js`, advanced only its page cache key `v35→v36`, and extended the existing Reading/owner regressions. No learner content, copy, analytics, deploy, Production/Auth/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+## 2026-08-20 — P12-A-03 Typing Active-Hint Zero Lock (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Typing now lets the player toggle guidance during the same active word without restarting the word or round. Showing the next-key guidance once permanently locks that word to zero even after toggle-off, and the latest state becomes the following word's default.
+- Removed the obsolete whole-round mode lock, kept completed-word evidence immutable, rebuilt only `typing-game-app.min.js`, advanced only its page cache key `v33→v34`, and updated the existing Typing regression and learner instructions. No deploy, Production/Auth/account/data/analytics mutation, beta, final regression or Phase 1 PASS occurred.
+
+## 2026-08-20 — P12-A-03 Tone Active-Hint Zero Lock (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Tone now records Choice-style guidance per active question: opening guidance once permanently locks that item to zero even after toggle-off, revokes provisional single-word points, keeps multi-syllable scoring at zero, records hint evidence and prevents guided SRS movement. The latest toggle state remains the next question's default; changing the default on a completed Result does not rewrite that Result.
+- Rebuilt only `tone-finder-game.min.js`, advanced only its page cache key `v52→v53`, and extended existing shared-game and owner-version regressions. Targeted suites, `git diff --check`, secret/syntax checks and the full 992-file site gate PASS locally. No deploy, Production/Auth/account/data/analytics mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-19 22:43 Asia/Bangkok** — Phase 1 PostgreSQL 17 backup runtime pin + manual backup-only guard
 
 ## 2026-08-19 — Phase 1 PostgreSQL 17 Backup Runtime Pin + Manual Backup-Only Guard (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 

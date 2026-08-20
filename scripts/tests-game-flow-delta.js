@@ -32,20 +32,40 @@ class FakeElement {
   setAttribute(name, value) { this.attributes[name] = String(value); }
   getAttribute(name) { return this.attributes[name] || null; }
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
-  appendChild(child) { child.parentNode = this; this.children.push(child); return child; }
+  appendChild(child) {
+    if (child.parentNode) child.parentNode.children = child.parentNode.children.filter((item) => item !== child);
+    child.parentNode = this;
+    this.children.push(child);
+    return child;
+  }
   insertBefore(child, before) {
+    if (child === before) return child;
+    if (child.parentNode) child.parentNode.children = child.parentNode.children.filter((item) => item !== child);
     child.parentNode = this;
     const index = this.children.indexOf(before);
     if (index < 0) this.children.push(child); else this.children.splice(index, 0, child);
     return child;
   }
   get firstChild() { return this.children[0] || null; }
+  get nextSibling() {
+    if (!this.parentNode) return null;
+    const index = this.parentNode.children.indexOf(this);
+    return this.parentNode.children[index + 1] || null;
+  }
   removeChild(child) { this.children = this.children.filter((item) => item !== child); child.parentNode = null; return child; }
   querySelector(selector) {
-    if (selector.startsWith('.')) return this.children.find((child) => String(child.className || '').split(/\s+/).includes(selector.slice(1))) || null;
-    const match = selector.match(/\[([^=]+)="([^"]+)"\]/);
-    if (!match) return null;
-    return this.children.find((child) => child.getAttribute(match[1]) === match[2]) || null;
+    const direct = selector.startsWith('.')
+      ? this.children.find((child) => String(child.className || '').split(/\s+/).includes(selector.slice(1)))
+      : (() => {
+          const match = selector.match(/\[([^=]+)="([^"]+)"\]/);
+          return match ? this.children.find((child) => child.getAttribute(match[1]) === match[2]) : null;
+        })();
+    if (direct) return direct;
+    for (const child of this.children) {
+      const nested = child.querySelector(selector);
+      if (nested) return nested;
+    }
+    return null;
   }
   click() {
     (this.listeners.click || []).forEach((fn) => fn({ target: this }));
@@ -59,9 +79,11 @@ const timerQueue = [];
 const storage = {};
 const document = {
   readyState: 'complete',
+  listeners: {},
+  activeElement: null,
   createElement: (tag) => new FakeElement(tag),
   querySelector: () => null,
-  addEventListener: () => {}
+  addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
 };
 const window = {
   document,
@@ -130,6 +152,35 @@ GameFlow.cancelResult('result-cancel');
 while (timerQueue.length) timerQueue.shift()();
 assert.strictEqual(replayed, 1, 'result action cancellation must stop replay');
 
+const enterResult = new FakeElement('section');
+const enterActions = new FakeElement('div');
+enterActions.className = 'gsh-end-actions';
+const replayButton = new FakeElement('button');
+replayButton.setAttribute('data-game-result-replay', 'v1');
+enterResult.appendChild(enterActions);
+enterActions.appendChild(replayButton);
+GameFlow.enhanceResult({ key: 'enter-result', root: enterResult, actions: enterActions, correct: 5, total: 5, onReplay() {} });
+const enterHandler = document.listeners.keydown[0];
+let prevented = 0;
+enterHandler({ key: 'Enter', target: { closest() { return null; } }, preventDefault() { prevented += 1; } });
+assert.strictEqual(prevented, 1, 'plain Enter on a visible Result must be consumed');
+assert.strictEqual(replayButton.clicks, 1, 'plain Enter must activate the real replay button');
+enterHandler({ key: 'Enter', target: { closest() { return {}; } }, preventDefault() { prevented += 1; } });
+assert.strictEqual(replayButton.clicks, 1, 'Enter from an editable/control context must not replay');
+enterHandler({ key: 'Enter', repeat: true, target: { closest() { return null; } }, preventDefault() { prevented += 1; } });
+assert.strictEqual(replayButton.clicks, 1, 'repeated Enter must not replay again');
+GameFlow.enhanceResult({
+  key: 'truth-result', root: enterResult, actions: enterActions, correct: 2, total: 3,
+  report: { items: [
+    { is_correct: true, wrong_count: 0, hint_used: false, attempts: [{ is_correct: true }] },
+    { is_correct: true, wrong_count: 1, hint_used: false, attempts: [{ is_correct: false }, { is_correct: true }] },
+    { is_correct: false, wrong_count: 0, hint_used: false, attempts: [] }
+  ] }
+});
+const truthMeta = enterResult.querySelector('[data-game-result-meta="v1"]');
+assert.strictEqual(truthMeta.querySelector('.gsh-result-completed').textContent, '完成 3 / 3');
+assert.strictEqual(truthMeta.querySelector('.gsh-result-first-correct').textContent, '首次答對 1 / 3', 'later correction must not count as first-attempt proof');
+
 delete storage.gsh_srs_quota_v1;
 const due = Array.from({ length: 8 }, (_, i) => ({ id: `d${i}` }));
 const regular = Array.from({ length: 12 }, (_, i) => ({ id: `r${i}` }));
@@ -170,10 +221,19 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=5'), `${file} must load the shared flow`);
-  assert(/繼續上次練習/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
-  assert(/重新開始本次練習/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
-  assert(/開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);
+  assert(html.includes('js/games/game-flow.js?v=10'), `${file} must load the shared flow`);
+  assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
+  assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
+  assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);
+  assert(/data-game-result-replay="v1"/.test(html) || file === 'tone-finder.html', `${file} must expose the shared Result replay action`);
+  ['switch', 'print', 'detail-action', 'cta', 'home'].forEach((role) => {
+    assert(new RegExp(`data-game-result-${role}="v1"`).test(html) || file === 'tone-finder.html', `${file} must expose the shared Result ${role} role`);
+  });
+});
+
+const toneSource = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.js'), 'utf8');
+['switch', 'print', 'detail-action', 'cta', 'home'].forEach((role) => {
+  assert(toneSource.includes(`data-game-result-${role}="v1"`), `Tone must expose the shared Result ${role} role`);
 });
 
 const integrations = {
@@ -193,4 +253,4 @@ Object.entries(integrations).forEach(([file, marker]) => {
 assert(!/roundScore|totalStars|srsRecords|mastered\s*=/.test(flowSource),
   'shared flow must not change scoring, SRS, stars, or mastered rules');
 
-console.log('PASS tests-game-flow-delta: auto-next/pause, resume actions, X/N feedback/countdown, SRS quota/carry/dedupe/distribution, scoring boundary');
+console.log('PASS tests-game-flow-delta: auto-next/pause, compact resume, Result Enter/replay/countdown, SRS quota/carry/dedupe/distribution, scoring boundary');

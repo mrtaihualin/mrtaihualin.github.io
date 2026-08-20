@@ -49,11 +49,42 @@ test('all five games expose the locked shared header, progress and resume semant
   assert.match(games.find((g) => g.id === 'typing').htmlText, /<div class="card gsh-gameplay" id="game">/, 'Typing: gameplay class ต้องอยู่บน outer game card');
 });
 
-test('shared shell stays bounded and resume actions stack on narrow screens', () => {
+test('shared shell stays bounded and resume actions stay compact on narrow screens', () => {
   assert.match(sharedCss, /\.gsh-shell\s*\{[^}]*max-width:688px[^}]*box-sizing:border-box/);
   assert.match(sharedCss, /\.gsh-gameplay\s*\{[^}]*max-width:640px[^}]*box-sizing:border-box/);
-  assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]*?\.gsh-resume-actions\s*\{\s*flex-direction:column/);
-  assert.match(sharedCss, /\.gsh-resume-actions button\s*\{[^}]*min-height:44px/);
+  assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]*?\.gsh-resume-actions\s*\{\s*flex-direction:row/);
+  assert.match(sharedCss, /\.gsh-resume-actions button\s*\{[^}]*min-height:36px/);
+});
+
+test('all six games bind the locked two-hand mobile landscape layout', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const expectedBodies = {
+    tone: games.find((g) => g.id === 'tone').htmlText,
+    reading: games.find((g) => g.id === 'reading').htmlText,
+    listening: games.find((g) => g.id === 'listening').htmlText,
+    typing: games.find((g) => g.id === 'typing').htmlText,
+    'word-order': games.find((g) => g.id === 'wordorder').htmlText,
+    lego: legoHtml,
+  };
+  for (const [id, html] of Object.entries(expectedBodies)) {
+    assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
+    assert.match(html, /css\/shared\.css\?v=25/, `${id}: must load current landscape CSS`);
+  }
+  assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
+  assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,260}top:var\(--gsh-safe-t\); left:50%/);
+  assert.match(sharedCss, /\.rg-tools-row,[\s\S]{0,500}max-width:29% !important/);
+  assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-primary-actions \{[\s\S]{0,180}right:var\(--gsh-safe-r\)/);
+  assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-utility-actions,[\s\S]{0,240}left:var\(--gsh-safe-l\)/);
+  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.sg-tone-grid \{[\s\S]{0,160}grid-template-rows:repeat\(3,auto\); grid-auto-flow:column/);
+  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.tf-options:has\(> :nth-child\(3\):last-child\) > :first-child/);
+  for (const id of ['reading', 'typing']) {
+    assert.match(sharedCss, new RegExp(`data-gsh-game="${id}"\\] #pool`), `${id}: lower split-answer zone missing`);
+  }
+  assert.match(sharedCss, /data-gsh-game="listening"\] #lg-mc-wrap[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(sharedCss, /data-gsh-game="listening"\] #lg-type-wrap[\s\S]{0,180}left:29%; right:29%/);
+  assert.match(sharedCss, /data-gsh-game="word-order"\] #wo-bank[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate[\s\S]{0,260}left:var\(--gsh-safe-l\); width:28%/);
+  assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate \.slot-menu[\s\S]{0,220}right:var\(--gsh-safe-r\)/);
 });
 
 test('all five games expose a persistent 玩法 replay path', () => {
@@ -86,6 +117,152 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fab\.innerHTML = \(isCore5Game \? '⋯' : '🪧'\)/);
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
+  assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=40/, 'Listening must load the current shared mapping version');
+});
+
+test('all six games use the shared locked exit dialog without another shell gate', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  assert.match(sharedJs, /title: '要離開遊戲嗎？'/);
+  assert.match(sharedJs, /continueAction: '繼續遊戲'/);
+  assert.match(sharedJs, /leaveAction: '離開遊戲'/);
+  assert.match(sharedJs, /data-act="exit"/);
+  assert.match(sharedJs, /window\.location\.assign\('\/games\.html'\)/, 'Leave must always route to the Games hub');
+  assert.match(sharedJs, /GAME_ID !== 'challenge'[^\n]+data-act="exit"/, 'early implementation must not activate Challenge');
+  assert.match(sharedJs, /event\.key !== 'Escape'/, 'Escape must continue the current game');
+  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=40/, `${g.id}: must load shared exit runtime`);
+  assert.match(legoHtml, /shared\.min\.js\?v=40/, 'Lego must load shared exit runtime');
+  assert.match(sharedCss, /\.gsh-game-exit-overlay/);
+});
+
+test('completed rounds no longer interrupt play with the removed VocabPopup lead flow', () => {
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  assert.doesNotMatch(sharedJs, /window\.VocabPopup|vocab_popup_rounds|vocab_popup_shown|id=['"]vp-pop/);
+  for (const g of games) assert.doesNotMatch(g.appText, /VocabPopup/, `${g.id}: removed popup trigger remains`);
+  assert.doesNotMatch(legoApp, /VocabPopup/, 'lego: removed popup trigger remains');
+  assert.ok(fs.existsSync(path.join(root, 'vocab-thank-you.html')), 'public URL must remain untouched');
+});
+
+test('shared font control binds after asynchronous Core 5 game startup', () => {
+  assert.match(sharedJs, /function bindFontSlot\(\)/, 'shared font adapter must have one idempotent binder');
+  assert.match(sharedJs, /if \(!bindFontSlot\(\)\)[\s\S]{0,300}setInterval/, 'shared font adapter must retry after DOM ready');
+  assert.match(sharedJs, /bindFontSlot\(\) \|\| fontBindAttempts >= 160/, 'font retry must stop after the existing loader window');
+  assert.match(sharedJs, /fontSlot\.querySelector\('button'\)/, 'font adapter must not duplicate the shared control');
+  for (const g of games) {
+    assert.match(g.htmlText, /id="font-toggle-slot"/, `${g.id}: missing shared font slot`);
+  }
+});
+
+test('Lego consumes the shared two-mode font path without a particle control', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  assert.match(legoHtml, /shared\.min\.js\?v=40/, 'Lego must load the current shared game runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=11/, 'Lego must load its locked-flow runtime');
+  assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
+  assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
+  assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
+  assert.match(legoHtml, /body\.rg-modern-font \.out-th[\s\S]{0,500}Noto Sans Thai/, 'Lego Thai gameplay text must respond to the shared mode');
+  assert.doesNotMatch(legoHtml + legoApp, /games_particle_mode|rg-particle-toggle|ToggleParticle/, 'Lego must not receive the particle control');
+});
+
+test('Lego exposes only the locked minimum-release presentation', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  assert.match(legoHtml, /<h1>泰語造句練習室<\/h1>/);
+  assert.match(legoHtml, /<p>用學過的單字，組出你真正想說的泰語。<\/p>/);
+  assert.match(legoHtml, /id="levels" hidden aria-hidden="true"/, 'unauthorized Level 2/3 entry UI must not be exposed');
+  assert.doesNotMatch(legoHtml, /id="rg-challenge-banner"/, 'Weekly Challenge must stay out of the minimum release');
+  assert.doesNotMatch(legoHtml, /lego_freebie_banner_click|免費領取「泰語聲調速查表」/, 'removed lead magnet must not interrupt Lego gameplay');
+  assert.match(legoHtml, /onclick="legoCompleteSentence\(\)">完成句子<\/button>/);
+  assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
+  assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
+  assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must contain only the full sentence and zh-TW translation before actions');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=10/, 'Lego Result must use the shared flow runtime');
+  for (const role of ['replay','print','detail-action','switch','cta','home']) {
+    assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
+  }
+  assert.match(legoApp, /let legoCompletedSentences=\[\]/, 'confirmed sentences need one session collection');
+  assert.match(legoApp, /legoCompletedSentences\.push\(sentence\)/, '完成句子 must retain the confirmed sentence');
+  assert.match(legoApp, /missingCustomTranslation\?'':buildZhFull\(\)/, 'custom input without player translation must not receive inferred translation');
+  assert.match(legoApp, /自訂內容由玩家自行輸入，系統不會檢查或修正內容。/);
+  assert.match(legoApp, /showFirstCorrect:false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
+});
+
+test('Lego exposes only the locked word sets and branch grammar', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  const block = (start, end) => {
+    const from = legoApp.indexOf(start);
+    const to = legoApp.indexOf(end, from + start.length);
+    assert.ok(from >= 0 && to > from, `missing Lego block ${start}`);
+    return legoApp.slice(from, to);
+  };
+  const words = block('const WORDS={', '// ════════ SESSION POOL');
+  const locations = block('const LOCATION_WORDS=[', 'const SLEEP_LOCATION');
+  for (const th of ['ตอนนี้','วันนี้','พรุ่งนี้','เรา','ผม','พี่','อยาก','จะ','กำลัง','กิน','ไป','ไปกิน','นอน','ไปนอน','ซื้อ','ไปซื้อ','ข้าว','ขนม','ผลไม้','ไก่ย่าง','ก๋วยเตี๋ยว','ของกิน','เสื้อ','รองเท้า','กระเป๋า','กางเกง','ตั๋ว','อยู่','พ่อ','แม่','เพื่อน','แฟน','นะ','นะครับ','นะคะ','อะ','ครับ','ค่ะ']) {
+    assert.match(words, new RegExp(`th:'${th}'`), `locked word ${th} is missing`);
+  }
+  for (const th of ['ห้าง','บ้านเพื่อน','เซเว่น','ร้านอาหาร']) {
+    assert.match(locations, new RegExp(`th:'${th}'`), `locked location ${th} is missing`);
+  }
+  const active = block('function activeSlots(){', '// ════════ CSS VARS');
+  assert.match(active, /verb==='ไป'\|\|verb==='นอน'/, 'only ไป/นอน may expose a location branch');
+  assert.match(active, /verb==='ไป'&&!!state\.advObj/, 'Who must follow a selected ไป location');
+  const renderBaseplate = block('function renderBaseplate(){', 'function applyOpen(){');
+  assert.match(renderBaseplate, /sessionPool\.obj\|\|\[\]\)\.filter\(isObjCompatible\)/, 'Eat and buy branches must show only compatible objects');
+  const actions = block('function pickWord(id,th){', 'function addCustomSubj(){');
+  assert.match(actions, /word\.th==='กำลัง'\?WORDS\.prog\[0\]:null/, 'กำลัง must default to rear อยู่');
+  assert.match(actions, /id==='prog'&&!state\.modal/, 'rear อยู่ must not be removable without front grammar');
+  const output = block('function renderOut(){', 'function render(){');
+  assert.match(output, /thParts\.push\('กับ'\+w\.th\)/, 'Who must use กับ after ไป and a location');
+  assert.doesNotMatch(output, /thParts\.push\('ที่'/, 'ไป location must not insert ที่');
+  assert.doesNotMatch(legoApp, /title="加入我的造句單字庫/, 'word saving must not interrupt the build surface');
+  assert.match(legoHtml, /沒有前置文法時，句尾的 อยู่ 會保留/);
+  assert.match(legoHtml, /只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存/);
+  assert.doesNotMatch(legoApp.slice(legoApp.indexOf('var GT_TOUR_STEPS=[')), /loadExample\(\)|startTest\(\)|#levels/, 'active tour must describe only the locked flow');
+});
+
+test('Lego custom fields stay inside the locked slots and translation boundary', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  const renderStart = legoApp.indexOf('function renderBaseplate(){');
+  const renderEnd = legoApp.indexOf('function applyOpen(){', renderStart);
+  const render = legoApp.slice(renderStart, renderEnd);
+  const customStart = legoApp.indexOf('function addCustomSubj(){');
+  const customEnd = legoApp.indexOf('function clearAll(){', customStart);
+  const custom = legoApp.slice(customStart, customEnd);
+  assert.match(render, /\['time','subj','adv'\]\.includes\(s\.id\)/, 'custom input must be limited to Time, Subject and Who by default');
+  assert.match(render, /s\.id==='advObj'&&state\.verb&&state\.verb\.th==='ไป'/, 'custom Location must exist only in the ไป branch');
+  assert.match(render, /<span>ชื่อ<\/span>/, 'Subject must preserve the player-name field');
+  assert.match(render, /<span>ใส่เอง<\/span>/, 'locked custom-input label must be visible');
+  assert.match(custom, /\['time','subj','adv','advObj'\]\.includes\(id\)/);
+  assert.match(custom, /id==='advObj'&&\(!state\.verb\|\|state\.verb\.th!=='ไป'\)/, 'custom Location must fail closed outside ไป');
+  assert.match(custom, /const w=\{th:name,zh:name,custom:true,customType:'name'\}/, 'a proper name may stay Thai in the translated sentence');
+  assert.match(custom, /state\[id\]=\{th:th,zh:zh,custom:true,customType:'custom'\}/, 'player translation must remain player-owned data');
+  assert.doesNotMatch(custom, /WORDS\.(?:time|subj|adv)\.push|sessionPool\.(?:time|subj|adv)\.push/, 'custom input must not expand the locked candidate pools');
+  assert.match(legoApp, /missingCustomTranslation=customWords\.some\(word=>word\.customType!=='name'&&!String\(word\.zh\|\|''\)\.trim\(\)\)/);
+  assert.match(legoApp, /customType:word\.customType\|\|''/, 'Resume must preserve custom-input typing');
+  assert.match(legoHtml, /中文翻譯可選填，未填時系統不會推測/);
+  assert.match(legoHtml, /input\.lego-custom-zh\{font-family:'Noto Sans TC'/, 'translation input must use the current zh-TW font path');
+});
+
+test('Lego Resume preserves confirmed sentences and validates its game-owned builder payload', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  assert.match(legoHtml, /id="lego-resume-banner"[^>]+role="region"[^>]+aria-label="繼續上次練習"/);
+  assert.match(legoHtml, /onclick="legoResumeContinue\(\)"[^>]*>▶ 繼續上次/);
+  assert.match(legoHtml, /onclick="legoResumeRestartCurrent\(\)"[^>]*>↺ 重新開始/);
+  assert.match(legoHtml, /onclick="legoResumeNewSession\(\)"[^>]*>＋ 開始新一輪/);
+  assert.match(legoApp, /GameResume\.save\('lego',[\s\S]{0,260}completed:legoCompletedSentences\.map/);
+  assert.match(legoApp, /version:1,view:view==='reveal'\?'reveal':'build',builder:builder/);
+  assert.match(legoApp, /function legoNormalizeBuilder\(saved\)/);
+  assert.match(legoApp, /if\(saved\.view==='reveal'&&!completed\.length\)return null/);
+  assert.match(legoApp, /legoCompletedSentences=pending\.completed/);
+  assert.match(legoApp, /legoCompletedSentences=pending\?pending\.completed:\[\]/, 'restart current sentence must retain prior confirmed sentences');
+  assert.match(legoApp, /function legoResumeNewSession\(\)[\s\S]{0,180}legoCompletedSentences=\[\]/, 'new round must clear the saved session');
+  assert.match(legoApp, /GameUiCopy\.resumeLine\(LEGO_UI_COPY\.resume\.game,LEGO_UI_COPY\.resume\.mode,progress\)/);
+  assert.match(legoApp, /function legoShowLockedError\(\)[\s\S]{0,260}legoSaveResume\('build'\)/, 'error recovery must retain confirmed data');
+  assert.match(legoApp, /GameFlow\.enhanceResult\([\s\S]{0,260}legoClearResume\(\)/, 'only a successfully rendered Result may clear Resume');
 });
 
 test('learning helpers remain inline and do not create the fallback rice menu', () => {
@@ -102,13 +279,47 @@ test('all five games provide recoverable round resume UI', () => {
   }
 });
 
+test('mobile resume uses one compact shared-copy line and three horizontal actions', () => {
+  assert.match(sharedJs, /window\.GameUiCopy[\s\S]{0,700}prefix: '上次進度：'/, 'resume copy must live outside game logic');
+  assert.match(sharedJs, /continueAction: '▶ 繼續上次'/);
+  assert.match(sharedJs, /restartAction: '↺ 重新開始'/);
+  assert.match(sharedJs, /newAction: '＋ 開始新一輪'/);
+  assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
+  assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
+  for (const g of games) {
+    assert.match(g.htmlText, /css\/shared\.css\?v=25/, `${g.id}: must load current shared game CSS`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=40/, `${g.id}: must load shared resume copy`);
+    assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
+  }
+});
+
 test('all five games load and persist one current-round DTO identity', () => {
   for (const g of games) {
-    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=1/, `${g.id}: missing Round Report DTO loader`);
+    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=2/, `${g.id}: missing Round Report DTO loader`);
     assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: missing Login summary loader`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
     assert.match(g.appText, /report:/, `${g.id}: active GameResume must carry the report snapshot`);
   }
+});
+
+test('all six games use the shared A4 browser Print structure and daily Result activity', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  const roundReport = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
+  const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
+  for (const g of games) {
+    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=2/, `${g.id}: must load shared print renderer`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=10/, `${g.id}: must load daily Result runtime`);
+    assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
+  }
+  assert.match(legoHtml, /js\/games\/round-report\.js\?v=2/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=10/);
+  assert.match(legoApp, /RoundReport\.openPrint/);
+  assert.match(roundReport, /@page\{size:A4 portrait/);
+  assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);
+  assert.match(roundReport, /groupListeningModes/);
+  assert.match(roundReport, /customDisclaimer/);
+  assert.match(gameFlow, /RoundReport\.dailyActivityText/);
 });
 
 test('all five games provide read-only mistake review after a round', () => {
@@ -214,6 +425,21 @@ test('Typing has native mobile input while Listening typed mode is keyboard-focu
   assert.match(typing, /id="rg-mobile-input"[^>]+inputmode="text"/);
   assert.match(listening, /id="lg-type-input"[^>]+autocomplete="off"/);
   assert.match(games.find((g) => g.id === 'listening').appText, /typeInput\.focus/);
+});
+
+test('Tone active-question guidance permanently locks that question to zero', () => {
+  const toneGame = games.find((g) => g.id === 'tone');
+  const tone = toneGame.appText;
+  const toneMin = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.min.js'), 'utf8');
+  assert.match(tone, /currentWordGuideUsed\s*=\s*!!tfGuideMode/, 'Tone: next question must inherit the latest guide state');
+  assert.match(tone, /tfGuideMode\s*\|\|\s*\(session\s*&&\s*session\.currentWordGuideUsed\)/, 'Tone: toggling guidance off must not restore scoring');
+  assert.match(tone, /function tfLockCurrentWordForGuide\(\)[\s\S]{0,600}session\.score\s*=\s*Math\.max\(0,[\s\S]{0,120}- awarded\)/, 'Tone: points already awarded in the active question must be revoked');
+  assert.match(tone, /S\.step\s*!==\s*'result'/, 'Tone: changing the default on a completed answer must not rewrite that result');
+  assert.match(tone, /S\s*=\s*ns;\s*if \(tfGuideMode\) tfLockCurrentWordForGuide\(\);\s*render\(\);/, 'Tone: a carried guide state must lock the next active syllable before render');
+  assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
+  assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
+  assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=58/, 'Tone: page must request the rebuilt runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);

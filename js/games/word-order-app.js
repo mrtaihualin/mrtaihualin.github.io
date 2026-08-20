@@ -715,9 +715,11 @@
     if (woResumeCompletedCurrent(state, savedSentence&&savedSentence.th)) savedIdx++;
     var t = document.getElementById('wo-resume-title'); if (t) t.textContent = '上次的安全進度還在';
     var d = document.getElementById('wo-resume-detail');
-    if (d) d.textContent = savedIdx>=restoredSet.length
-      ? '遊戲：語序練習・本輪已完成・繼續查看結果'
-      : '遊戲：語序練習・第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句・目前分數 ' + (state.score||0) + ' 分';
+    if (d) d.textContent = GameUiCopy.resumeLine(
+      '語序練習',
+      '高級',
+      savedIdx>=restoredSet.length ? '本輪完成・查看結果' : '第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句'
+    );
     var g = document.getElementById('game'); if (g) g.style.display = 'none';
     var e = document.getElementById('end'); if (e) e.style.display = 'none';
     b.style.display = '';
@@ -1323,7 +1325,6 @@
       if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:0,submission_id:null});
       if(window.GameFlow)GameFlow.enhanceResult({key:'word-order-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:SET.length,report:roundReport,onReplay:woRestart});
       woAttachLoginSummary();
-      setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
       return;
     }
 
@@ -1383,8 +1384,6 @@
     try { rgRenderGameBar(); } catch(e){}
     refreshUI();
     woAttachLoginSummary();
-    // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมอื่น)
-    setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   }
 
   function woAttachLoginSummary(){
@@ -1405,6 +1404,11 @@
   //   (เกมเสียงเคยเจอ html2canvas ออกไฟล์ว่างเปล่าบนคอม + ค้างบนมือถือ มาแล้ว เปลี่ยนเป็น print window ตั้งแต่ 2026-06-19 เสถียรกว่า)
   // ════════════════════════════════════════════
   window.woDownloadReport = function(){
+    if(window.RoundReport&&typeof RoundReport.openPrint==='function'){
+      if(RoundReport.openPrint({gameType:'wordorder',report:roundReport,title:'泰語語序練習室・本輪報告',documentTitle:'語序練習室報告',showDifficulty:false}))return;
+      try{rgToast('請允許彈出視窗才能列印報告 🙏');}catch(e0){alert('請允許彈出視窗才能列印報告');}
+      return;
+    }
     var SERIF = "'Noto Serif TC','PingFang TC',serif";
     var SANS = "'Noto Sans TC','PingFang TC',sans-serif";
     var today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});

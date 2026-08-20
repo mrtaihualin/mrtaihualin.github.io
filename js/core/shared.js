@@ -47,6 +47,55 @@ window.GamePanels = window.GamePanels || (function () {
 })();
 
 // ===================================================================
+// [01.2a] SHARED GAME UI COPY — current zh-TW labels kept outside game logic
+// Phase 1.2 intentionally provides only the smallest locale-ready message surface.
+// It does not select/detect locales or add translations.
+// ===================================================================
+window.GameUiCopy = window.GameUiCopy || (function () {
+  var messages = {
+    resume: {
+      prefix: '上次進度：',
+      continueAction: '▶ 繼續上次',
+      restartAction: '↺ 重新開始',
+      newAction: '＋ 開始新一輪'
+    },
+    result: {
+      completed: '完成',
+      firstCorrect: '首次答對',
+      replay: '再玩一輪',
+      switchGame: '換個遊戲',
+      print: '列印／儲存',
+      detail: '查看本輪詳細紀錄',
+      trial: '預約免費體驗課 →',
+      home: '回到首頁'
+    },
+    exit: {
+      title: '要離開遊戲嗎？',
+      continueAction: '繼續遊戲',
+      leaveAction: '離開遊戲'
+    }
+  };
+  return {
+    resume: messages.resume,
+    result: messages.result,
+    exit: messages.exit,
+    resumeLine: function (game, level, progress) {
+      return messages.resume.prefix + [game, level, progress].filter(Boolean).join('・');
+    }
+  };
+})();
+(function () {
+  function syncResumeActions() {
+    var copy = window.GameUiCopy.resume;
+    document.querySelectorAll('.gsh-resume-continue').forEach(function (button) { button.textContent = copy.continueAction; });
+    document.querySelectorAll('.gsh-resume-restart').forEach(function (button) { button.textContent = copy.restartAction; });
+    document.querySelectorAll('.gsh-resume-new').forEach(function (button) { button.textContent = copy.newAction; });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncResumeActions);
+  else syncResumeActions();
+})();
+
+// ===================================================================
 // [01.3] 🪟 GAME MODAL REGISTRY HELPER — Shared Game UI Phase B1 (Lin 2026-08-10)
 //   Audit 2026-08-10 เจอว่า modal ของแต่ละเกมเอง (howto/star/badge/ask ฯลฯ) ไม่เคยลงทะเบียนกับ
 //   window.GamePanels ด้านบน ([01.2]) → เปิดซ้อนกับเมนู 🎮/🍚/🪧 ของ shared.js ได้ (เคยเป็นบั๊กจริงมาแล้วกับ 🪧 เอง)
@@ -776,62 +825,6 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     try{ if(typeof sheetLog==='function') sheetLog({ email:fields.email||'', name:fields.name||'', source:fields.source||'' }); }catch(e){}
   };
 
-  // ── 單字速查表 邀請彈窗（兩個遊戲共用・玩約 5 回合後出現「一次」・可關閉繼續玩・免費）LIN 2026-06-27 ──
-  // เกมยังเล่นฟรีไม่จำกัด — popup เป็นแค่คำเชิญ ปิดได้เล่นต่อ · เกมเรียก window.VocabPopup.maybe() ตอนจบรอบ
-  // ใช้ key 'tf_lead_captured' ตัวเดียวกับ supabase-auth.js → ถ้าให้อีเมลที่ใดที่หนึ่งแล้วจะไม่กวนซ้ำ
-  (function(){
-    var ROUNDS_KEY='vocab_popup_rounds', SHOWN_KEY='vocab_popup_shown', LEAD_KEY='tf_lead_captured', TRIGGER=5;
-    function getRounds(){ try{ return parseInt(localStorage.getItem(ROUNDS_KEY)||'0',10)||0; }catch(e){ return 0; } }
-    function bumpRounds(){ var n=getRounds()+1; try{ localStorage.setItem(ROUNDS_KEY,String(n)); }catch(e){} return n; }
-    function alreadyShown(){ try{ return localStorage.getItem(SHOWN_KEY)==='1'; }catch(e){ return false; } }
-    function markShown(){ try{ localStorage.setItem(SHOWN_KEY,'1'); }catch(e){} }
-    function leadCaptured(){ try{ return localStorage.getItem(LEAD_KEY)==='1'; }catch(e){ return false; } }
-    function show(){
-      if(document.getElementById('vp-pop')) return;
-      markShown();
-      try{ if(typeof gtag==='function') gtag('event','vocab_popup_show',{category:window.GA_CATEGORY||'unknown',}); }catch(e){}
-      var ov=document.createElement('div');
-      ov.id='vp-pop';
-      ov.style.cssText='position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(40,30,10,0.45);font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;';
-      ov.innerHTML=
-        '<div style="position:relative;background:#fff;max-width:360px;width:100%;border-radius:18px;padding:28px 24px 22px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">'+
-          '<button id="vp-x" aria-label="關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>'+
-          '<div style="font-size:40px;line-height:1;margin-bottom:10px;">📖</div>'+
-          '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">玩得不錯！送你單字速查表 🎁</h2>'+
-          '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">老師精選 <b>60 個常用泰語單字</b>（含子音・母音・尾音・拼音・中文對照）。留 Email 免費領取，<b>關掉也能繼續玩</b>～</p>'+
-          '<input id="vp-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:16px;color:#5C4410;outline:none;">'+
-          '<div id="vp-err" style="display:none;color:#C0392B;font-size:12px;margin:6px 0 0;text-align:left;"></div>'+
-          '<button id="vp-go" style="margin-top:12px;width:100%;border:none;background:#C8973A;color:#fff;border-radius:10px;padding:13px;cursor:pointer;font-size:16px;font-weight:800;">免費領取 →</button>'+
-          '<p style="margin:12px 0 0;font-size:11px;color:#B0A080;line-height:1.5;">輸入 Email 代表同意<a href="/terms.html" style="color:#A07A1E;">服務條款與資料收集</a>，只用來寄學習資訊，不會外流</p>'+
-          '<p style="margin:8px 0 0;font-size:12px;color:#A07A1E;">點右上角 ✕ 可關閉繼續玩</p>'+
-        '</div>';
-      document.body.appendChild(ov);
-      function close(){ try{ ov.remove(); }catch(e){} try{ if(typeof gtag==='function') gtag('event','vocab_popup_close',{category:window.GA_CATEGORY||'unknown',}); }catch(e){} }
-      ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
-      ov.querySelector('#vp-x').onclick=close;
-      var inp=ov.querySelector('#vp-email'), err=ov.querySelector('#vp-err');
-      function submit(){
-        var em=(inp.value||'').trim();
-        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ err.textContent='Email 格式不正確'; err.style.display='block'; return; }
-        try{ if(window.saveLead) saveLead({ email:em, source:'遊戲・單字表' }); }catch(e){}
-        try{ localStorage.setItem(LEAD_KEY,'1'); }catch(e){}
-        try{ if(typeof gtag==='function') gtag('event','lead_magnet_submit',{category:window.GA_CATEGORY||'unknown', source:'遊戲・單字表' }); }catch(e){}
-        location.href='/vocab-thank-you.html';
-      }
-      ov.querySelector('#vp-go').onclick=submit;
-      inp.addEventListener('keydown',function(ev){ if(ev.key==='Enter') submit(); });
-    }
-    // เรียกตอนจบรอบ: นับ +1 ครบ TRIGGER และยังไม่เคยโชว์ + ยังไม่เคยให้อีเมล → เด้งครั้งเดียว
-    window.VocabPopup={
-      maybe:function(){
-        var n=bumpRounds();
-        if(alreadyShown()) return;
-        if(leadCaptured()){ markShown(); return; }
-        if(n<TRIGGER) return;
-        show();
-      }
-    };
-  })();
   async function submitFeedback() {
     const nameEl = document.getElementById('fb-name');
     const textEl = document.getElementById('fb-text');
@@ -2005,14 +1998,17 @@ window.deleteFBComment = function(postId, idx) {
       }
       // rg-modern-font = word-order/typing/reading, tf-modern-font = ทำนอง/เกมเสียง — เช็คทั้งคู่ เพราะแต่ละเกมตั้งชื่อ class เองคนละอัน
       function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
-      var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
-
       // ── ✍️ ปุ่มสลับฟอนต์ = อีกแถวหนึ่งในเมนู 🍚 (ช่อง #font-toggle-slot ในหน้า) — Lin 2026-07-25 v2
       //    ย้ายมาจากเมนู 🎮 เดิม (ตามที่ Lin สั่ง) — ใส่เป็นแถวปกติในเมนู ไม่ทำดรอปดาวน์ซ้อน
       //    Lin 2026-07-25 v4: ย้ายขึ้นมาไว้ "ก่อนด่าน isWordOrder return" — เกมเรียงคำมีเมนู 🍚 ของตัวเองแล้ว
       //    ต้องได้ปุ่ม 字體 ด้วย แต่ยังไม่เอาปุ่ม 翻譯 (คำแปลคุมด้วยปุ่ม 🍙 ใต้คำที่เฉลยแทน)
-      var fontSlot = document.getElementById('font-toggle-slot');
-      if (fontSlot && hasFontToggle && !fontSlot.querySelector('button')) {
+      // Phase 1.2: Core 5 game bundles load asynchronously after DOM ready. Retry only this
+      // shared adapter until the existing game-owned font API is ready; do not add a font mode.
+      function bindFontSlot() {
+        var fontSlot = document.getElementById('font-toggle-slot');
+        var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
+        if (!fontSlot || fontSlot.querySelector('button')) return true;
+        if (!hasFontToggle) return false;
         var fontOn = isFontOn();
         var fontBtn = document.createElement('button');
         fontBtn.type = 'button';
@@ -2032,6 +2028,14 @@ window.deleteFBComment = function(postId, idx) {
           }
         };
         fontSlot.appendChild(fontBtn);
+        return true;
+      }
+      if (!bindFontSlot()) {
+        var fontBindAttempts = 0;
+        var fontBindTimer = setInterval(function () {
+          fontBindAttempts += 1;
+          if (bindFontSlot() || fontBindAttempts >= 160) clearInterval(fontBindTimer);
+        }, 100);
       }
 
       var isWordOrder = (location.pathname || '').toLowerCase().indexOf('word-order') > -1;
@@ -2156,6 +2160,7 @@ window.deleteFBComment = function(postId, idx) {
       var GAME_ID = null;
       if (path.indexOf('typing-game') > -1) GAME_ID = 'typing';
       else if (path.indexOf('reading-game') > -1) GAME_ID = 'reading';
+      else if (path.indexOf('listening-game') > -1) GAME_ID = 'listening';
       else if (path.indexOf('lego') > -1) GAME_ID = 'lego';
       else if (path.indexOf('word-order') > -1) GAME_ID = 'word_order';
       else if (path.indexOf('tone-finder') > -1) GAME_ID = 'tone_finder';
@@ -2193,6 +2198,44 @@ window.deleteFBComment = function(postId, idx) {
         return false;
       }
       var hasAsk = typeof window.rgOpenAsk === 'function' || (window.TF && typeof window.TF.openAsk === 'function');
+      var exitCopy = window.GameUiCopy.exit;
+
+      function openGameExit(trigger) {
+        var old = document.getElementById('gsh-game-exit-dialog');
+        if (old) old.remove();
+        var overlay = document.createElement('div');
+        overlay.id = 'gsh-game-exit-dialog';
+        overlay.className = 'gsh-game-exit-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-labelledby', 'gsh-game-exit-title');
+        overlay.innerHTML =
+          '<div class="gsh-game-exit-box">' +
+            '<div id="gsh-game-exit-title" class="gsh-game-exit-title">' + exitCopy.title + '</div>' +
+            '<div class="gsh-game-exit-actions">' +
+              '<button type="button" data-game-exit-continue>' + exitCopy.continueAction + '</button>' +
+              '<button type="button" data-game-exit-leave>' + exitCopy.leaveAction + '</button>' +
+            '</div>' +
+          '</div>';
+        var continueButton = overlay.querySelector('[data-game-exit-continue]');
+        var leaveButton = overlay.querySelector('[data-game-exit-leave]');
+        function closeExit() {
+          document.removeEventListener('keydown', onExitKeydown);
+          overlay.remove();
+          if (trigger && trigger.focus) trigger.focus();
+        }
+        function onExitKeydown(event) {
+          if (event.key !== 'Escape') return;
+          event.preventDefault();
+          closeExit();
+        }
+        continueButton.onclick = closeExit;
+        leaveButton.onclick = function () { window.location.assign('/games.html'); };
+        overlay.addEventListener('click', function (event) { if (event.target === overlay) closeExit(); });
+        document.addEventListener('keydown', onExitKeydown);
+        document.body.appendChild(overlay);
+        continueButton.focus();
+      }
 
       var menu = document.createElement('div');
       menu.className = 'grw-menu';
@@ -2202,7 +2245,8 @@ window.deleteFBComment = function(postId, idx) {
       menu.innerHTML =
         (hasAsk ? '<div class="grw-item" data-act="ask"><span class="ico">💬</span>有問題想問老師</div>' : '') +
         '<div class="grw-item" data-act="report"><span class="ico">🔧</span>回報問題</div>' +
-        '<div class="grw-item" data-act="review"><span class="ico">💭</span>心得 / 學到了什麼</div>';
+        '<div class="grw-item" data-act="review"><span class="ico">💭</span>心得 / 學到了什麼</div>' +
+        (GAME_ID !== 'challenge' ? '<div class="grw-item" data-act="exit"><span class="ico">↩</span>' + exitCopy.leaveAction + '</div>' : '');
       menu.addEventListener('click', function (e) {
         var it = e.target.closest('.grw-item');
         if (!it) return;
@@ -2210,7 +2254,8 @@ window.deleteFBComment = function(postId, idx) {
         fab.setAttribute('aria-expanded', 'false');
         if (it.dataset.act === 'ask') callAsk();
         else if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
-        else grwOpenReview(GAME_ID, FN_URL);
+        else if (it.dataset.act === 'review') grwOpenReview(GAME_ID, FN_URL);
+        else if (it.dataset.act === 'exit') openGameExit(it);
       });
       // Lin 2026-07-25: เมนูนี้ไม่เคยลงทะเบียนกับ GamePanels กลางมาก่อน → เปิด 🪧 พร้อม 🎮/🍚 ค้างไว้ได้ ซ้อนทับกันบนจอ (บั๊กจริงที่ Lin เจอ)
       // แก้: ลงทะเบียนเหมือนกล่องอื่น กันซ้อนทั้ง 2 ทาง (เปิด 🪧 ต้องปิดกล่องอื่นก่อน + กล่องอื่นเปิดต้องปิด 🪧 ได้ด้วย)
