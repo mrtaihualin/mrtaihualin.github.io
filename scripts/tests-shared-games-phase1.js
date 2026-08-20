@@ -118,7 +118,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=8/, 'Lego must load its locked-flow runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=9/, 'Lego must load its locked-flow runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -144,7 +144,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   }
   assert.match(legoApp, /let legoCompletedSentences=\[\]/, 'confirmed sentences need one session collection');
   assert.match(legoApp, /legoCompletedSentences\.push\(sentence\)/, '完成句子 must retain the confirmed sentence');
-  assert.match(legoApp, /custom\?'':buildZhFull\(\)/, 'custom input without player translation must not receive inferred translation');
+  assert.match(legoApp, /missingCustomTranslation\?'':buildZhFull\(\)/, 'custom input without player translation must not receive inferred translation');
   assert.match(legoApp, /自訂內容由玩家自行輸入，系統不會檢查或修正內容。/);
   assert.match(legoApp, /showFirstCorrect:false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
 });
@@ -181,6 +181,30 @@ test('Lego exposes only the locked word sets and branch grammar', () => {
   assert.match(legoHtml, /沒有前置文法時，句尾的 อยู่ 會保留/);
   assert.match(legoHtml, /只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存/);
   assert.doesNotMatch(legoApp.slice(legoApp.indexOf('var GT_TOUR_STEPS=[')), /loadExample\(\)|startTest\(\)|#levels/, 'active tour must describe only the locked flow');
+});
+
+test('Lego custom fields stay inside the locked slots and translation boundary', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  const renderStart = legoApp.indexOf('function renderBaseplate(){');
+  const renderEnd = legoApp.indexOf('function applyOpen(){', renderStart);
+  const render = legoApp.slice(renderStart, renderEnd);
+  const customStart = legoApp.indexOf('function addCustomSubj(){');
+  const customEnd = legoApp.indexOf('function clearAll(){', customStart);
+  const custom = legoApp.slice(customStart, customEnd);
+  assert.match(render, /\['time','subj','adv'\]\.includes\(s\.id\)/, 'custom input must be limited to Time, Subject and Who by default');
+  assert.match(render, /s\.id==='advObj'&&state\.verb&&state\.verb\.th==='ไป'/, 'custom Location must exist only in the ไป branch');
+  assert.match(render, /<span>ชื่อ<\/span>/, 'Subject must preserve the player-name field');
+  assert.match(render, /<span>ใส่เอง<\/span>/, 'locked custom-input label must be visible');
+  assert.match(custom, /\['time','subj','adv','advObj'\]\.includes\(id\)/);
+  assert.match(custom, /id==='advObj'&&\(!state\.verb\|\|state\.verb\.th!=='ไป'\)/, 'custom Location must fail closed outside ไป');
+  assert.match(custom, /const w=\{th:name,zh:name,custom:true,customType:'name'\}/, 'a proper name may stay Thai in the translated sentence');
+  assert.match(custom, /state\[id\]=\{th:th,zh:zh,custom:true,customType:'custom'\}/, 'player translation must remain player-owned data');
+  assert.doesNotMatch(custom, /WORDS\.(?:time|subj|adv)\.push|sessionPool\.(?:time|subj|adv)\.push/, 'custom input must not expand the locked candidate pools');
+  assert.match(legoApp, /missingCustomTranslation=customWords\.some\(word=>word\.customType!=='name'&&!String\(word\.zh\|\|''\)\.trim\(\)\)/);
+  assert.match(legoApp, /customType:word\.customType\|\|''/, 'Resume must preserve custom-input typing');
+  assert.match(legoHtml, /中文翻譯可選填，未填時系統不會推測/);
+  assert.match(legoHtml, /input\.lego-custom-zh\{font-family:'Noto Sans TC'/, 'translation input must use the current zh-TW font path');
 });
 
 test('Lego Resume preserves confirmed sentences and validates its game-owned builder payload', () => {

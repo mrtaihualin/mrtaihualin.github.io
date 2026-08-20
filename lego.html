@@ -197,8 +197,10 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .opt-clear{padding:10px 16px;font-size:12px;color:var(--ink-muted);cursor:pointer;text-align:center;background:rgba(0,0,0,.025);border-bottom:1px solid rgba(184,134,44,.12);letter-spacing:1px;}
 .opt-clear:hover{background:rgba(196,87,79,.1);color:#c4574f;}
 .opt.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
-.opt-custom{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid rgba(184,134,44,.12);background:rgba(0,0,0,.02);}
+.opt-custom{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid rgba(184,134,44,.12);background:rgba(0,0,0,.02);}
+.opt-custom span{font-size:12px;font-weight:800;color:var(--gold-deep);flex:0 0 100%;}
 .opt-custom input{flex:1;min-width:0;border:1.5px solid rgba(154,131,56,.35);border-radius:10px;padding:6px 8px;font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:16px;color:var(--ink);}
+.opt-custom input.lego-custom-zh{font-family:'Noto Sans TC',sans-serif!important;font-size:13px;}
 .opt-custom button{border:none;border-radius:10px;padding:0 12px;background:var(--sc);color:#fff;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .dep-hint{padding:14px 16px;text-align:center;font-size:13px;color:var(--ink-muted);font-style:italic;}
 
@@ -551,6 +553,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
     <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">從下方欄位選詞，組出你想說的泰語句子。</p>
     <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
       <li>依序選擇時間、主語、文法、動詞及目前動詞適用的後續欄位。</li>
+      <li>時間、主語、地點與「誰」可用 ใส่เอง 輸入自訂泰文；中文翻譯可選填，未填時系統不會推測。</li>
       <li>沒有前置文法時，句尾的 อยู่ 會保留；選擇 กำลัง 時也會先帶入 อยู่，你仍可移除。</li>
       <li>按「完成句子」確認並保留目前句子，再選「繼續造句」或「結束遊戲」。</li>
       <li>只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存。</li>
@@ -584,7 +587,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   </div>
 </div>
 
-<script src="js/games/lego-game-app.js?v=8"></script>
+<script src="js/games/lego-game-app.js?v=9"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 — Lin 2026-07-08: เลโก้ขาดแถบนี้ไปเดิม เพิ่มให้ครบเหมือนเกมอื่น ── -->
 <style>

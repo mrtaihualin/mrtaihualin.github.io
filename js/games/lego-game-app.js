@@ -95,8 +95,7 @@ const WORDS={
   ],
 };
 
-// ════════ SESSION POOL: 每輪每類最多 3 詞 ════════
-const POOL_SIZE=3;
+// ════════ SESSION POOL: locked visible candidate sets ════════
 let sessionPool={};
 
 function createSessionPool(){
@@ -268,10 +267,18 @@ function renderBaseplate(){
       opts+=`<div class="dep-hint">先選「${depLabel}」</div>`;
     }else{
       if(s.id==='subj'){
-        opts+=`<div class="opt-custom"><input type="text" id="subjNameInput" maxlength="10"
+        opts+=`<div class="opt-custom"><span>ชื่อ</span><input type="text" id="subjNameInput"
           placeholder="輸入自己的名字…"
           onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomSubj();}">
           <button onclick="try{if(window.gtag)gtag('event','lego_custom_subject_add',{category:'game'});}catch(e){}addCustomSubj()">加入</button></div>`;
+      }
+      const customAllowed=['time','subj','adv'].includes(s.id)||(s.id==='advObj'&&state.verb&&state.verb.th==='ไป');
+      if(customAllowed){
+        opts+=`<div class="opt-custom"><span>ใส่เอง</span><input type="text" id="legoCustomTh-${s.id}" placeholder="自訂泰文…"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomWord('${s.id}');}">
+          <input class="lego-custom-zh" type="text" id="legoCustomZh-${s.id}" placeholder="中文翻譯（選填）…"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomWord('${s.id}');}">
+          <button type="button" onclick="addCustomWord('${s.id}')">加入</button></div>`;
       }
       if(s.opt){
         opts+=`<div class="opt-clear" role="button" tabindex="0" onclick="try{if(window.gtag)gtag('event','lego_slot_clear',{category:'game',slot:'${s.id}'});}catch(e){}clearSlot('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_slot_clear',{category:'game',slot:'${s.id}'});}catch(e){}clearSlot('${s.id}')}">— 清除 —</div>`;
@@ -393,15 +400,21 @@ function addCustomSubj(){
   const inp=document.getElementById('subjNameInput');
   const name=(inp&&inp.value||'').trim();
   if(!name){toast('請先輸入名字',true);return;}
-  if(name.length>10){toast('名字太長囉',true);return;}
-  let w=WORDS.subj.find(o=>o.th===name);
-  if(!w){w={th:name,zh:'',custom:true};WORDS.subj.push(w);}
-  if(!sessionPool.subj) sessionPool.subj=[];
-  if(!sessionPool.subj.find(x=>x.th===name)){
-    if(sessionPool.subj.length>=POOL_SIZE) sessionPool.subj.shift();
-    sessionPool.subj.push(w);
-  }
+  const w={th:name,zh:name,custom:true,customType:'name'};
   state.subj=w;openSlot=null;render();legoSaveResume('build');toast('已加入：'+name);
+}
+
+function addCustomWord(id){
+  if(!['time','subj','adv','advObj'].includes(id))return;
+  if(id==='advObj'&&(!state.verb||state.verb.th!=='ไป'))return;
+  const thInput=document.getElementById('legoCustomTh-'+id);
+  const zhInput=document.getElementById('legoCustomZh-'+id);
+  const th=(thInput&&thInput.value||'').trim();
+  const zh=(zhInput&&zhInput.value||'').trim();
+  if(!th){toast('請先輸入自訂泰文',true);return;}
+  state[id]={th:th,zh:zh,custom:true,customType:'custom'};
+  if(id==='advObj')state.adv=null;
+  openSlot=null;render();legoSaveResume('build');toast('已加入自訂內容');
 }
 
 function clearAll(){
@@ -429,7 +442,7 @@ function legoSerializedBuilder(){
   const builder={};
   SLOTS.forEach(slot=>{
     const word=state[slot.id];
-    builder[slot.id]=word?{th:String(word.th||''),zh:String(word.zh||''),custom:word.custom===true}:null;
+    builder[slot.id]=word?{th:String(word.th||''),zh:String(word.zh||''),custom:word.custom===true,customType:word.customType||''}:null;
   });
   return builder;
 }
@@ -467,7 +480,11 @@ function legoNormalizeBuilder(saved){
     const raw=saved[slot.id];if(!raw)continue;
     if(typeof raw.th!=='string'||!raw.th)return null;
     let word=null;
-    if(slot.id==='subj'&&raw.custom===true&&raw.th.length<=10)word={th:raw.th,zh:'',custom:true};
+    if(raw.custom===true&&['time','subj','adv','advObj'].includes(slot.id)){
+      if(typeof raw.zh!=='string')return null;
+      const customType=slot.id==='subj'&&raw.customType==='name'?'name':'custom';
+      word={th:raw.th,zh:customType==='name'?raw.th:raw.zh,custom:true,customType:customType};
+    }
     else if(slot.id==='advObj')word=LOCATION_WORDS.concat([SLEEP_LOCATION]).find(item=>item.th===raw.th)||null;
     else word=(WORDS[slot.id]||[]).find(item=>item.th===raw.th&&item.custom!==true)||null;
     if(!word)return null;
@@ -570,8 +587,10 @@ function legoCurrentSentence(){
   if(['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb)&&!state.modal&&!state.prog) return null;
   const th=(document.getElementById('sentTh').textContent||'').trim();
   if(!th) return null;
-  const custom=SLOTS.some(s=>state[s.id]&&state[s.id].custom===true);
-  return {th:th,zh:custom?'':buildZhFull(),custom:custom};
+  const customWords=SLOTS.map(s=>state[s.id]).filter(word=>word&&word.custom===true);
+  const custom=customWords.length>0;
+  const missingCustomTranslation=customWords.some(word=>word.customType!=='name'&&!String(word.zh||'').trim());
+  return {th:th,zh:missingCustomTranslation?'':buildZhFull(),custom:custom};
 }
 
 function legoDailyActivity(increment){

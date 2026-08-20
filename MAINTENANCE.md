@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego Resume Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego custom-input Delta
+
+## 2026-08-21 — PD-P12-LEGO-CUSTOM-INPUT-01 Locked Custom Fields (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Time, Subject, `ไป` Location and Who now expose the locked `ใส่เอง` path, while Subject retains the separate `ชื่อ` path. Player-created entries remain confined to the current builder and Resume payload and never enter the locked candidate pools; `นอน` still permits only `อยู่บ้าน` and never exposes a custom Location.
+- Thai input is accepted as entered. An optional player-supplied zh-TW translation is reused without inference; when it is absent, the completed translation remains blank except that a proper name may remain Thai. The exact custom-input disclaimer appears only on completed sentences containing custom input, and Resume preserves the custom/name typing and supplied translation.
+- Advanced only Lego's app cache binding to v9 and extended the existing shared/cache-contract regressions. Targeted checks and the full repository gate PASS. No deploy, Production/Auth/account/data/analytics mutation, candidate-pool expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego Resume Delta
 
 ## 2026-08-21 — PD-P12-LEGO-FLOW-01 Game-Owned Resume (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
