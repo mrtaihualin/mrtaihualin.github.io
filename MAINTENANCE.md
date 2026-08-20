@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 shared six-game Result/Print Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 completed-round VocabPopup removal Delta
+
+## 2026-08-21 — PD-P12-LEAD-REMOVE-01 Completed-Round Interruption Removal (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Removed the locked `單字速查表` VocabPopup implementation and every completed-round trigger from Tone, Reading, Typing, Word Order and Lego. Completing or viewing a Result can no longer increment its old five-round browser counter, open the email/consent overlay, write through that feature-specific lead path or redirect away from play.
+- Preserved the public `/vocab-thank-you.html` URL and unrelated explicit site lead/contact surfaces exactly; Listening had no VocabPopup trigger. Rebuilt the shared and four affected minified game bundles and advanced only the shared/game cache bindings used by the six games.
+- Targeted game, Result, owner/rollout/backend and marketing checks plus the full repository gate PASS. No existing lead/data cleanup, analytics expansion, redirect, deploy, Production/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 shared six-game Result/Print Delta
 
 ## 2026-08-21 — PD-P12-PRINT-PDF-01 Shared Result / Browser Print (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

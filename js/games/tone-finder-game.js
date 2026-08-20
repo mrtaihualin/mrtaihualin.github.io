@@ -2541,8 +2541,6 @@ function stepSessionSummary() {
     if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:weightedScore,submission_id:_tfSubmissionId});
     tfAttachLoginSummary();
   }
-  // Lin 2026-07-10: ลบ branch บังคับล็อกอินทิ้ง (requireLogin=false ตายอยู่แล้ว ไม่เคยทำงานจริง) — เหลือแค่คำเชิญ "ขอ單字速查表" หลังเล่นจบรอบ
-  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   var rows = (roundReport&&roundReport.items?roundReport.items:[]).map(function(r, i){
     var tone = r.linguistic && r.linguistic.correct_tone;
     var tl = TONES[tone] || {};

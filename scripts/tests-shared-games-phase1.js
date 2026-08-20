@@ -87,7 +87,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=39/, 'Listening must load the current shared mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=40/, 'Listening must load the current shared mapping version');
 });
 
 test('all six games use the shared locked exit dialog without another shell gate', () => {
@@ -99,9 +99,17 @@ test('all six games use the shared locked exit dialog without another shell gate
   assert.match(sharedJs, /window\.location\.assign\('\/games\.html'\)/, 'Leave must always route to the Games hub');
   assert.match(sharedJs, /GAME_ID !== 'challenge'[^\n]+data-act="exit"/, 'early implementation must not activate Challenge');
   assert.match(sharedJs, /event\.key !== 'Escape'/, 'Escape must continue the current game');
-  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=39/, `${g.id}: must load shared exit runtime`);
-  assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load shared exit runtime');
+  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=40/, `${g.id}: must load shared exit runtime`);
+  assert.match(legoHtml, /shared\.min\.js\?v=40/, 'Lego must load shared exit runtime');
   assert.match(sharedCss, /\.gsh-game-exit-overlay/);
+});
+
+test('completed rounds no longer interrupt play with the removed VocabPopup lead flow', () => {
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  assert.doesNotMatch(sharedJs, /window\.VocabPopup|vocab_popup_rounds|vocab_popup_shown|id=['"]vp-pop/);
+  for (const g of games) assert.doesNotMatch(g.appText, /VocabPopup/, `${g.id}: removed popup trigger remains`);
+  assert.doesNotMatch(legoApp, /VocabPopup/, 'lego: removed popup trigger remains');
+  assert.ok(fs.existsSync(path.join(root, 'vocab-thank-you.html')), 'public URL must remain untouched');
 });
 
 test('shared font control binds after asynchronous Core 5 game startup', () => {
@@ -117,8 +125,8 @@ test('shared font control binds after asynchronous Core 5 game startup', () => {
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-  assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=10/, 'Lego must load its locked-flow runtime');
+  assert.match(legoHtml, /shared\.min\.js\?v=40/, 'Lego must load the current shared game runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=11/, 'Lego must load its locked-flow runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -249,7 +257,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
     assert.match(g.htmlText, /css\/shared\.css\?v=24/, `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=39/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=40/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });
@@ -400,7 +408,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=57/, 'Tone: page must request the rebuilt runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=58/, 'Tone: page must request the rebuilt runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);

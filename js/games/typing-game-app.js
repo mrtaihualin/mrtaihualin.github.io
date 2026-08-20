@@ -1176,8 +1176,6 @@ function endRound(){
     GameFlow.enhanceResult({key:'typing-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:roundTotal,highlights:_hl,report:roundReport,onReplay:restart});
   }
   tgAttachLoginSummary();
-  // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมเสียง)
-  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
 }
 
 function tgAttachLoginSummary(){

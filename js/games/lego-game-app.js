@@ -943,8 +943,6 @@ function finishLegoRound(){
   }catch(e){}
   try{ legoRenderGameBar(); }catch(e){}
   refreshLegoAcctUI();
-  // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมอื่น)
-  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   return '🎉 完成一輪（'+count+' 句）！本輪 +'+weightedScore+' 分'+(isPerfect?'・全部乾淨過關 ✨':'')+'（已含 ×'+LEVEL_WEIGHT+' 高級倍率）· 下一句是 ✨黃金句 ×2，記得測試！';
 }
 

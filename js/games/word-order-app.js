@@ -1325,7 +1325,6 @@
       if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:0,submission_id:null});
       if(window.GameFlow)GameFlow.enhanceResult({key:'word-order-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:SET.length,report:roundReport,onReplay:woRestart});
       woAttachLoginSummary();
-      setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
       return;
     }
 
@@ -1385,8 +1384,6 @@
     try { rgRenderGameBar(); } catch(e){}
     refreshUI();
     woAttachLoginSummary();
-    // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมอื่น)
-    setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
   }
 
   function woAttachLoginSummary(){

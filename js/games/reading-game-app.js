@@ -1412,7 +1412,6 @@ function endRound(){
     refreshUI();
     if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:0,submission_id:null});
     if(window.GameFlow)GameFlow.enhanceResult({key:'reading-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:roundTotal,report:roundReport,onReplay:restart});
-    setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
     return;
   }
   document.getElementById('end-score').textContent=weightedScore+' 分'+(levelWeight!==1?'（'+curLevel+'級 ×'+levelWeight+'）':'');
@@ -1456,8 +1455,6 @@ function endRound(){
     GameFlow.enhanceResult({key:'reading-result',root:'#end',actions:'#end .gsh-end-actions',correct:roundReport?roundReport.correct_count:cleanC,total:roundReport?roundReport.total_items:roundTotal,highlights:_hl,report:roundReport,onReplay:restart});
   }
   rgAttachLoginSummary();
-  // เกมฟรี: นับรอบ + เด้งคำเชิญ "ขอ單字速查表" ครั้งเดียวหลัง ~5 รอบ (ปิดได้เล่นต่อ · เหมือนเกมเสียง)
-  setTimeout(function(){ if (window.VocabPopup) window.VocabPopup.maybe(); }, 1100);
 }
 
 function rgAttachLoginSummary(){

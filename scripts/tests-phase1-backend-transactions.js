@@ -123,7 +123,7 @@ test('current pages ship the transaction-aware clients in dependency order', () 
     assert.match(html, /reading-auth\.js\?v=26/, page);
   }
   const lego = read('lego.html');
-  assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=10/);
+  assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=11/);
   assert.match(lego, /reading-auth\.js\?v=26/);
   assert.match(read('vault.html'), /reading-auth\.js\?v=26/);
 });
