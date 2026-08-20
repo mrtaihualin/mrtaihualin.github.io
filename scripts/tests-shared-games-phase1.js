@@ -98,6 +98,18 @@ test('shared font control binds after asynchronous Core 5 game startup', () => {
   }
 });
 
+test('Lego consumes the shared two-mode font path without a particle control', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  assert.match(legoHtml, /shared\.min\.js\?v=34/, 'Lego must load the current shared font-control runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=4/, 'Lego must load its font adapter version');
+  assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
+  assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
+  assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
+  assert.match(legoHtml, /body\.rg-modern-font \.out-th[\s\S]{0,500}Noto Sans Thai/, 'Lego Thai gameplay text must respond to the shared mode');
+  assert.doesNotMatch(legoHtml + legoApp, /games_particle_mode|rg-particle-toggle|ToggleParticle/, 'Lego must not receive the particle control');
+});
+
 test('learning helpers remain inline and do not create the fallback rice menu', () => {
   assert.match(wordMenuJs, /row\.classList\.add\('gsh-learning-tools'\)/);
   assert.match(wordMenuJs, /row\.setAttribute\('data-wm-done', '1'\);[\s\S]{0,120}return;/);

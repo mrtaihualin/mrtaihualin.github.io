@@ -2,6 +2,19 @@
 // FILE MAP: slots/words/examples/levels → state/render/actions → scoring/account → sentence test → teaching/tour/init
 // แยกออกมาจาก lego.html (เดิมฝัง inline <script> 1,182 บรรทัด) — Lin สั่ง 2026-08-02 ให้แยก logic ออกจาก UI ตามแพทเทิร์นเกมอื่น
 // ย้ายมาแบบคัดลอกตรงๆ ไม่มีการแก้ logic ใดๆ — พฤติกรรมต้องเหมือนเดิม 100%
+
+// Shared Phase 1.2 font adapter: keep the same two existing modes and storage key
+// used by Reading, Listening, Typing and Word Order. shared.js owns the control UI.
+window.rgToggleFont = function () {
+  var on = document.body.classList.toggle('rg-modern-font');
+  try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch (e) {}
+};
+(function () {
+  try {
+    if (localStorage.getItem('rg_modern_font') === '1') document.body.classList.add('rg-modern-font');
+  } catch (e) {}
+})();
+
 // ════════ SLOTS ════════
 // adv (副詞: ที่/กับ) + advObj (跟著變：ที่→地點、กับ→誰) 配對
 const SLOTS=[

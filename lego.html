@@ -249,6 +249,14 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 @keyframes tshake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
 .test-bank{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-bottom:8px;}
 .test-tile{min-width:56px;padding:9px 15px;border-radius:14px;border:2px solid var(--gold-bright);background:var(--white);color:var(--gold-deep);font-size:18px;font-weight:700;cursor:pointer;font-family:'Sarabun','Noto Sans Thai',sans-serif;text-align:center;user-select:none;transition:transform .1s,opacity .15s;}
+body.rg-modern-font .out-th,
+body.rg-modern-font .slot-btn .sth,
+body.rg-modern-font .opt .oth,
+body.rg-modern-font .tpiece .pth,
+body.rg-modern-font .teach-full .th,
+body.rg-modern-font .test-slot,
+body.rg-modern-font .test-tile,
+body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',sans-serif!important;}
 .test-tile:hover{background:var(--gold-light);}
 .test-tile.used{opacity:0;pointer-events:none;transform:scale(.6);}
 .test-banner{text-align:center;font-size:13.5px;font-weight:700;padding:8px 10px;border-radius:10px;margin-top:6px;min-height:18px;}
@@ -530,7 +538,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 </footer>
 
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=32"></script>
+<script src="js/core/shared.min.js?v=34"></script>
 
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>
@@ -548,7 +556,7 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
   </div>
 </div>
 
-<script src="js/games/lego-game-app.js?v=3"></script>
+<script src="js/games/lego-game-app.js?v=4"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 — Lin 2026-07-08: เลโก้ขาดแถบนี้ไปเดิม เพิ่มให้ครบเหมือนเกมอื่น ── -->
 <style>

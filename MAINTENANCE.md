@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared Core 5 font-control readiness Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Lego shared font-adapter Delta
+
+## 2026-08-20 — P12-A-05 Lego Shared Font Adapter (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego now consumes the same shared standard/modern font-control path and `rg_modern_font` preference as Reading, Listening, Typing and Word Order; the existing shared fallback menu owns the visible control and Lego supplies only its game-local adapter and Thai-text selectors.
+- The locked negative boundary remains explicit: Lego has no `games_particle_mode` or particle control. Advanced only Lego's shared cache key `v32→v34` and app cache key `v3→v4`, and extended the existing shared-game regression. No gameplay/content/scoring/analytics change, Challenge adapter, deploy, Production/Auth/account/data expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared Core 5 font-control readiness Delta
 
 ## 2026-08-20 — P12-A-05 Core 5 Font-Control Async Readiness (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
