@@ -16,28 +16,26 @@ window.rgToggleFont = function () {
 })();
 
 // ════════ SLOTS ════════
-// adv (副詞: ที่/กับ) + advObj (跟著變：ที่→地點、กับ→誰) 配對
+// Locked minimum-release sentence slots. Visible branches are selected by activeSlots().
 const SLOTS=[
   {id:'time',  label:'時間', opt:true,  c:'time'},
   {id:'subj',  label:'主語', opt:false, c:'subj'},
-  {id:'neg',   label:'否定', opt:true,  c:'neg'},
   {id:'modal', label:'文法', opt:true,  c:'modal'},
   {id:'verb',  label:'動詞', opt:false, c:'verb'},
   {id:'obj',   label:'受詞', opt:true,  c:'obj'},
   {id:'prog',  label:'文法', opt:true,  c:'prog'},
-  {id:'adv',   label:'副詞', opt:true,  c:'place'},
-  {id:'advObj',label:'地點／誰', opt:true, c:'place', dep:'adv'},
+  {id:'advObj',label:'地點', opt:true, c:'place'},
+  {id:'adv',   label:'誰', opt:true,  c:'comp'},
   {id:'end',   label:'句尾', opt:true,  c:'end'},
 ];
 
-// 動詞本身帶方向，不需要 ที่
-const NO_PLACE_VERBS=['ไป','มา','เที่ยว'];
-
-// 副詞選什麼 → 下一格出現什麼
-const ADV_OBJ={
-  'ที่':[{th:'ห้าง',zh:'商場'},{th:'บ้านเพื่อน',zh:'朋友家'}],
-  'กับ':[{th:'แม่',zh:'媽媽'},{th:'เพื่อน',zh:'朋友'}],
-};
+const LOCATION_WORDS=[
+  {th:'ห้าง',zh:'商場'},
+  {th:'บ้านเพื่อน',zh:'朋友的家'},
+  {th:'เซเว่น',zh:'便利商店'},
+  {th:'ร้านอาหาร',zh:'餐廳'},
+];
+const SLEEP_LOCATION={th:'อยู่บ้าน',zh:'家裡'};
 
 // ════════ WORDS (with semantic tags) ════════
 const WORDS={
@@ -45,80 +43,55 @@ const WORDS={
     {th:'ตอนนี้',  zh:'現在'},
     {th:'วันนี้',  zh:'今天'},
     {th:'พรุ่งนี้', zh:'明天'},
-    {th:'เมื่อวาน', zh:'昨天'},
-    {th:'เดี๋ยว',  zh:'待會'},
-    {th:'เดี๋ยวนี้',zh:'馬上'},
-    {th:'วันเสาร์', zh:'星期六'},
-    {th:'เย็นนี้', zh:'今晚'},
-    {th:'ตอนเช้า', zh:'早上'},
-    {th:'ตอนเย็น', zh:'傍晚'},
   ],
   subj:[
     {th:'เรา',  zh:'我／我們'},
     {th:'ผม',  zh:'我（男）'},
     {th:'พี่',  zh:'我（哥姐）'},
   ],
-  neg:[
-    {th:'ไม่',     zh:'不'},
-    {th:'ไม่ได้',  zh:'並沒有'},
-    {th:'ไม่ค่อย', zh:'不太'},
-  ],
   modal:[
-    {th:'จะ',      zh:'要'},
     {th:'อยาก',    zh:'想'},
+    {th:'จะ',      zh:'要'},
     {th:'กำลัง',   zh:'正在'},
-    {th:'อยากจะ',  zh:'想要'},
-    {th:'ชอบ',     zh:'喜歡'},
-    {th:'กำลังจะ', zh:'正要'},
-    {th:'ต้อง',    zh:'必須'},
-    {th:'อยากได้', zh:'想要（東西）'},
   ],
   verb:[
-    // objTags: [] = 不帶受詞, null/undefined = 無限制
-    {th:'กิน',      zh:'吃',      objTags:['food','drink']},
+    {th:'กิน',      zh:'吃',      objTags:['food']},
     {th:'ไป',       zh:'去',      objTags:[]},
+    {th:'ไปกิน',    zh:'去吃',    objTags:['food']},
     {th:'นอน',      zh:'睡',      objTags:[]},
-    {th:'ดื่ม',     zh:'喝',      objTags:['drink']},
-    {th:'มา',       zh:'來',      objTags:[]},
-    {th:'ดู',       zh:'看',      objTags:['media']},
-    {th:'ซื้อ',     zh:'買',      objTags:['food','drink','thing','game']},
-    {th:'อ่าน',     zh:'讀',      objTags:['reading']},
-    {th:'เล่น',     zh:'玩',      objTags:['game','activity']},
-    {th:'วิ่ง',     zh:'跑',      objTags:[]},
-    {th:'ทำงาน',   zh:'工作',     objTags:[]},
-    {th:'โทรหา',   zh:'打給',     objTags:['person']},
-    {th:'เที่ยว',  zh:'玩／旅行',  objTags:[]},
-    {th:'เริ่ม',    zh:'開始',    objTags:['activity']},
-    {th:'ฟัง',      zh:'聽',      objTags:['audio']},
-    {th:'กลับบ้าน', zh:'回家',    objTags:[]},
+    {th:'ไปนอน',    zh:'去睡',    objTags:[]},
+    {th:'ซื้อ',     zh:'買',      objTags:['buy']},
+    {th:'ไปซื้อ',   zh:'去買',    objTags:['buy']},
   ],
   obj:[
-    {th:'ข้าว',        zh:'飯',  tags:['food']},
-    {th:'น้ำ',         zh:'水',  tags:['drink','food']},
-    {th:'กาแฟ',        zh:'咖啡', tags:['drink']},
-    {th:'หนัง',        zh:'電影', tags:['media']},
-    {th:'เพลง',        zh:'歌',  tags:['audio']},
-    {th:'หนังสือ',     zh:'書',  tags:['reading']},
-    {th:'เกม',         zh:'遊戲', tags:['game','activity']},
-    {th:'ของขวัญ',     zh:'禮物', tags:['thing']},
-    {th:'เงิน',        zh:'錢',  tags:['thing']},
-    {th:'รองเท้าใหม่', zh:'新鞋', tags:['thing']},
-    {th:'ผลไม้',       zh:'水果', tags:['food']},
-    {th:'เธอ',         zh:'你',  tags:['person']},
+    {th:'ข้าว',       zh:'飯', tags:['food']},
+    {th:'ขนม',        zh:'零食', tags:['food']},
+    {th:'ผลไม้',      zh:'水果', tags:['food']},
+    {th:'ไก่ย่าง',    zh:'烤雞', tags:['food']},
+    {th:'ก๋วยเตี๋ยว', zh:'麵', tags:['food']},
+    {th:'ของกิน',     zh:'食物', tags:['food']},
+    {th:'เสื้อ',      zh:'衣服', tags:['buy']},
+    {th:'รองเท้า',    zh:'鞋', tags:['buy']},
+    {th:'กระเป๋า',    zh:'包包', tags:['buy']},
+    {th:'กางเกง',     zh:'褲子', tags:['buy']},
+    {th:'ตั๋ว',       zh:'票', tags:['buy']},
   ],
   prog:[
     {th:'อยู่', zh:'（進行中）'},
   ],
   adv:[
-    {th:'ที่',  zh:'在・at'},
-    {th:'กับ', zh:'和・with'},
+    {th:'พ่อ',zh:'爸爸'},
+    {th:'แม่',zh:'媽媽'},
+    {th:'เพื่อน',zh:'朋友'},
+    {th:'แฟน',zh:'男／朋友'},
   ],
   end:[
-    {th:'ครับ', zh:'（男敬）'},
-    {th:'ค่ะ',  zh:'（女敬）'},
-    {th:'แล้ว', zh:'了'},
-    {th:'นะ',   zh:'（柔和）'},
-    {th:'เลย',  zh:'（馬上）'},
+    {th:'นะ',zh:'喔'},
+    {th:'นะครับ',zh:'喔'},
+    {th:'นะคะ',zh:'喔'},
+    {th:'อะ',zh:'強調語氣'},
+    {th:'ครับ',zh:'男生禮貌助詞'},
+    {th:'ค่ะ',zh:'女生禮貌助詞'},
   ],
 };
 
@@ -128,11 +101,10 @@ let sessionPool={};
 
 function createSessionPool(){
   sessionPool={};
-  // แสดงแค่ 3 คำแรกต่อหมวด (fixed, ไม่ random) คำที่เหลือซ่อนไว้ · 句尾ตอนนี้โชว์แค่ ครับ/ค่ะ
   Object.keys(WORDS).forEach(cat=>{
-    const n=(cat==='end')?2:POOL_SIZE;
-    sessionPool[cat]=WORDS[cat].slice(0,n);
+    sessionPool[cat]=WORDS[cat].slice();
   });
+  sessionPool.advObj=LOCATION_WORDS.slice();
 }
 
 // ════════ COMPATIBILITY: obj ←→ verb ════════
@@ -160,8 +132,7 @@ const SUBJ_EXTRA=[
 
 function findWord(slotId,th){
   if(slotId==='advObj'){
-    for(const k in ADV_OBJ){const w=ADV_OBJ[k].find(x=>x.th===th);if(w)return w;}
-    return null;
+    return LOCATION_WORDS.concat([SLEEP_LOCATION]).find(x=>x.th===th)||null;
   }
   let w=(WORDS[slotId]||[]).find(x=>x.th===th);
   if(!w&&slotId==='subj') w=SUBJ_EXTRA.find(x=>x.th===th);
@@ -237,6 +208,7 @@ function setLevel(k){
     document.getElementById('teachPanel').classList.add('hidden');
     document.getElementById('buildPanel').classList.remove('hidden');
     SLOTS.forEach(s=>state[s.id]=null);
+    state.prog=WORDS.prog[0];
     exIdx=0;
     createSessionPool();
     render();
@@ -244,7 +216,14 @@ function setLevel(k){
 }
 
 function activeSlots(){
-  return SLOTS.filter(s=>!(s.id==='neg'&&LEVELS[curLevel].hideNeg));
+  const verb=state.verb&&state.verb.th;
+  return SLOTS.filter(s=>{
+    if(s.id==='obj') return ['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb);
+    if(s.id==='advObj') return verb==='ไป'||verb==='นอน';
+    if(s.id==='adv') return verb==='ไป'&&!!state.advObj;
+    if(s.id==='prog'||s.id==='end') return ['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb);
+    return true;
+  });
 }
 
 // ════════ CSS VARS HELPER ════════
@@ -260,9 +239,7 @@ function renderBaseplate(){
     const allowedTags=(s.id==='obj')?getAllowedObjTags():null;
     const objLocked=(s.id==='obj')&&allowedTags!==null&&allowedTags.length===0;
 
-    // ── label（advObj 跟著副詞變）──
     let label=s.label;
-    if(s.id==='advObj') label=state.adv?(state.adv.th==='กับ'?'誰':'地點'):'地點／誰';
 
     // ── slot button ──
     let btn;
@@ -282,8 +259,8 @@ function renderBaseplate(){
 
     // ── dropdown content ──
     const pool=(s.id==='advObj')
-      ?(state.adv?(ADV_OBJ[state.adv.th]||[]):[])
-      :(sessionPool[s.id]||[]);
+      ?(state.verb&&state.verb.th==='นอน'?[SLEEP_LOCATION]:LOCATION_WORDS)
+      :(s.id==='obj'?(sessionPool.obj||[]).filter(isObjCompatible):(sessionPool[s.id]||[]));
     let opts=`<div class="pool-badge">本輪 ${pool.length} 詞</div>`;
 
     if(depUnmet){
@@ -302,17 +279,8 @@ function renderBaseplate(){
       pool.forEach(o=>{
         const sel=(w&&w.th===o.th)?' sel':'';
         let disabled=false, label2=o.zh;
-        if(s.id==='obj'&&allowedTags!==null){
-          const ok=allowedTags.length>0&&(o.tags||[]).some(t=>allowedTags.includes(t));
-          if(!ok){disabled=true;label2=o.zh+'・不符';}
-        }
-        // ไป/มา/เที่ยว 自帶方向 → ที่ 用不到
-        if(s.id==='adv'&&o.th==='ที่'&&state.verb&&NO_PLACE_VERBS.includes(state.verb.th)){
-          disabled=true;label2=o.zh+'・此動詞不用';
-        }
         opts+=`<div class="opt${sel}${disabled?' disabled':''}" ${disabled?'':`role="button" tabindex="0" onclick="pickWord('${s.id}','${o.th}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickWord('${s.id}','${o.th}')}"`}>
-          <span class="oth">${o.th}</span><span class="ozh">${label2}</span>
-          <span class="lego-vault-save" onclick="event.stopPropagation();try{if(window.gtag)gtag('event','lego_vault_word_save',{category:'game',word:'${o.th}'});}catch(e){}legoVaultSave('${o.th}','${o.zh}')" title="加入我的造句單字庫（最多15個）">${(window.LegoVault&&LegoVault.has(o.th))?'🔖':'📑'}</span></div>`;
+          <span class="oth">${o.th}</span><span class="ozh">${label2}</span></div>`;
       });
     }
 
@@ -340,13 +308,13 @@ function buildZhFull(){
   let s='';
   if(state.time) s+=cleanZh(state.time.zh);
   if(state.subj) s+=cleanZh(state.subj.zh);
-  if(state.neg)  s+=cleanZh(state.neg.zh);
   let modalZh=state.modal?cleanZh(state.modal.zh):'';
   if(!modalZh&&state.prog) modalZh='正在'; // มีแค่ อยู่ ก็แปลว่ากำลังทำ
   s+=modalZh;
-  if(state.adv&&state.advObj) s+=(state.adv.th==='กับ'?'和':'在')+cleanZh(state.advObj.zh);
   if(state.verb) s+=cleanZh(state.verb.zh);
   if(state.obj)  s+=cleanZh(state.obj.zh);
+  if(state.advObj) s+=cleanZh(state.advObj.zh);
+  if(state.adv) s+='和'+cleanZh(state.adv.zh);
   if(state.end)  s+=(END_ZH[state.end.th]!==undefined?END_ZH[state.end.th]:cleanZh(state.end.zh));
   return s.replace('正在在','正在');
 }
@@ -365,13 +333,7 @@ function renderOut(){
     const w=state[s.id];
     if(!w) return;
     if(s.id==='adv'){
-      if(state.advObj){
-        thParts.push(w.th+state.advObj.th);
-        zhParts.push(w.zh+'・'+state.advObj.zh);
-        skip.add('advObj');
-      }else{
-        thParts.push(w.th); zhParts.push(w.zh);
-      }
+      thParts.push('กับ'+w.th); zhParts.push('和・'+w.zh);
     }else{
       thParts.push(w.th); zhParts.push(w.zh);
     }
@@ -395,31 +357,32 @@ function toggleMenu(id){openSlot=openSlot===id?null:id;applyOpen();}
 
 function pickWord(id,th){
   let word;
-  if(id==='advObj') word=state.adv?(ADV_OBJ[state.adv.th]||[]).find(w=>w.th===th):null;
+  if(id==='advObj') word=(state.verb&&state.verb.th==='นอน'?[SLEEP_LOCATION]:LOCATION_WORDS).find(w=>w.th===th);
   else word=(sessionPool[id]||WORDS[id]||[]).find(w=>w.th===th);
   if(!word) return;
   state[id]=word;
-  // cascade clear on parent change（副詞換了 → 後面那格清掉）
-  if(id==='adv') state.advObj=null;
+  if(id==='modal'){
+    state.prog=word.th==='กำลัง'?WORDS.prog[0]:null;
+  }
   if(id==='verb'){
     // clear obj if incompatible with new verb
     if(state.obj&&!isObjCompatible(state.obj)){
       state.obj=null;
       toast('受詞與動詞不符，已自動清除');
     }
-    // ไป/มา/เที่ยว 不需要 ที่ → 已選的 ที่+地點 清掉
-    if(NO_PLACE_VERBS.includes(word.th)&&state.adv&&state.adv.th==='ที่'){
-      state.adv=null; state.advObj=null;
-      toast('「'+word.th+'」不需要 ที่，已自動清除');
-    }
+    state.adv=null;state.advObj=null;
+    if(['ไป','นอน','ไปนอน'].includes(word.th)){state.obj=null;state.prog=null;state.end=null;}
+    else if(!state.modal) state.prog=WORDS.prog[0];
   }
   openSlot=null;
   render();
 }
 
 function clearSlot(id){
+  if(id==='prog'&&!state.modal){toast('沒有前置文法時，อยู่ 不能移除',true);return;}
   state[id]=null;
-  if(id==='adv') state.advObj=null;
+  if(id==='modal') state.prog=WORDS.prog[0];
+  if(id==='advObj') state.adv=null;
   openSlot=null;
   render();
 }
@@ -441,6 +404,7 @@ function addCustomSubj(){
 
 function clearAll(){
   SLOTS.forEach(s=>state[s.id]=null);
+  state.prog=WORDS.prog[0];
   openSlot=null;render();toast('已清空');
 }
 
@@ -451,6 +415,10 @@ let legoCompletedSentences=[];
 
 function legoCurrentSentence(){
   if(!state.subj||!state.verb) return null;
+  const verb=state.verb.th;
+  if(['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb)&&!state.obj) return null;
+  if(verb==='ไป'&&!state.advObj) return null;
+  if(['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb)&&!state.modal&&!state.prog) return null;
   const th=(document.getElementById('sentTh').textContent||'').trim();
   if(!th) return null;
   const custom=SLOTS.some(s=>state[s.id]&&state[s.id].custom===true);
@@ -486,7 +454,7 @@ function legoShowLockedError(){
 function legoCompleteSentence(){
   try{
     const sentence=legoCurrentSentence();
-    if(!sentence){toast('至少要有「主語」和「動詞」',true);return;}
+    if(!sentence){toast('請先完成目前句子的必填欄位',true);return;}
     legoCompletedSentences.push(sentence);
     legoDailyActivity(true);
     document.getElementById('buildPanel').classList.add('hidden');
@@ -1400,11 +1368,10 @@ function dismissHowtoHint(id){
 // ── 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用過一次就不再自動跳出 — Lin 2026-07-31 ──
 var GT_TOUR_STEPS=[
   {sel:'.out-banner',                         title:'這裡會顯示組好的句子', text:'選好的詞會自動排成完整的泰語句子，下面還會顯示中文翻譯。'},
-  {sel:'#baseplate',                          title:'點格子選詞，組出句子', text:'每一格代表一種詞性（主語、動詞、受詞…），點格子選詞，至少要選「主語」和「動詞」才能組成一句話。'},
-  {sel:'#levels',                             title:'選關卡練習', text:'從左到右關卡越來越難，練熟前面的關卡，新關卡就會解鎖。'},
-  {sel:'button[onclick="loadExample()"]',     title:'不知道怎麼組？看範例', text:'點「看範例」可以看已經組好的完整句子，照著範例的邏輯試試看。'},
-  {sel:'button[onclick="startTest()"]',       title:'組好了？來測驗拿分', text:'按「🧪 測試（拿分）」，句子會被打散成詞卡，依照正確順序點回去，排對了才算過關拿分。'},
-  {sel:'.rg-stat-row',                        title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章・📑單字庫<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
+  {sel:'#baseplate',                          title:'點格子選詞，組出句子', text:'每一格代表句子的一部分。先選主語和動詞，再依照動詞補上需要的內容。'},
+  {sel:'button[onclick="legoCompleteSentence()"]', title:'完成後確認句子', text:'按「完成句子」後，會顯示完整泰語句子和中文翻譯。'},
+  {sel:'button[onclick="legoEndGame()"]',     title:'隨時結束遊戲', text:'想查看這次完成的句子時，按「結束遊戲」前往結果頁。'},
+  {sel:'.rg-stat-row',                        title:'帳號與玩法', text:'這裡可查看登入狀態；忘記玩法時，按「📖 怎麼玩」即可重新閱讀。'}
 ];
 var gtTourIdx=0;
 function gtTourPosition(){
@@ -1457,16 +1424,15 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// รอให้ baseplate + levels พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
+// รอให้ baseplate พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
 (function(){
   try{
     if(localStorage.getItem('howto_tour_seen_lego')) return;
     var tries=0;
     var waitReady=setInterval(function(){
       tries++;
-      var levels=document.getElementById('levels');
       var bp=document.getElementById('baseplate');
-      var ready=levels && levels.children.length>0 && bp && bp.children.length>0 && document.querySelector('.out-banner') && document.querySelector('button[onclick="loadExample()"]') && document.querySelector('button[onclick="startTest()"]');
+      var ready=bp && bp.children.length>0 && document.querySelector('.out-banner') && document.querySelector('button[onclick="legoCompleteSentence()"]') && document.querySelector('button[onclick="legoEndGame()"]');
       if(ready || tries>25){
         clearInterval(waitReady);
         if(ready) setTimeout(gtTourStart, 500);

@@ -118,7 +118,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=5/, 'Lego must load its locked-flow runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=6/, 'Lego must load its locked-flow runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -147,6 +147,40 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoApp, /custom\?'':buildZhFull\(\)/, 'custom input without player translation must not receive inferred translation');
   assert.match(legoApp, /自訂內容由玩家自行輸入，系統不會檢查或修正內容。/);
   assert.match(legoApp, /showFirstCorrect:false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
+});
+
+test('Lego exposes only the locked word sets and branch grammar', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  const block = (start, end) => {
+    const from = legoApp.indexOf(start);
+    const to = legoApp.indexOf(end, from + start.length);
+    assert.ok(from >= 0 && to > from, `missing Lego block ${start}`);
+    return legoApp.slice(from, to);
+  };
+  const words = block('const WORDS={', '// ════════ SESSION POOL');
+  const locations = block('const LOCATION_WORDS=[', 'const SLEEP_LOCATION');
+  for (const th of ['ตอนนี้','วันนี้','พรุ่งนี้','เรา','ผม','พี่','อยาก','จะ','กำลัง','กิน','ไป','ไปกิน','นอน','ไปนอน','ซื้อ','ไปซื้อ','ข้าว','ขนม','ผลไม้','ไก่ย่าง','ก๋วยเตี๋ยว','ของกิน','เสื้อ','รองเท้า','กระเป๋า','กางเกง','ตั๋ว','อยู่','พ่อ','แม่','เพื่อน','แฟน','นะ','นะครับ','นะคะ','อะ','ครับ','ค่ะ']) {
+    assert.match(words, new RegExp(`th:'${th}'`), `locked word ${th} is missing`);
+  }
+  for (const th of ['ห้าง','บ้านเพื่อน','เซเว่น','ร้านอาหาร']) {
+    assert.match(locations, new RegExp(`th:'${th}'`), `locked location ${th} is missing`);
+  }
+  const active = block('function activeSlots(){', '// ════════ CSS VARS');
+  assert.match(active, /verb==='ไป'\|\|verb==='นอน'/, 'only ไป/นอน may expose a location branch');
+  assert.match(active, /verb==='ไป'&&!!state\.advObj/, 'Who must follow a selected ไป location');
+  const renderBaseplate = block('function renderBaseplate(){', 'function applyOpen(){');
+  assert.match(renderBaseplate, /sessionPool\.obj\|\|\[\]\)\.filter\(isObjCompatible\)/, 'Eat and buy branches must show only compatible objects');
+  const actions = block('function pickWord(id,th){', 'function addCustomSubj(){');
+  assert.match(actions, /word\.th==='กำลัง'\?WORDS\.prog\[0\]:null/, 'กำลัง must default to rear อยู่');
+  assert.match(actions, /id==='prog'&&!state\.modal/, 'rear อยู่ must not be removable without front grammar');
+  const output = block('function renderOut(){', 'function render(){');
+  assert.match(output, /thParts\.push\('กับ'\+w\.th\)/, 'Who must use กับ after ไป and a location');
+  assert.doesNotMatch(output, /thParts\.push\('ที่'/, 'ไป location must not insert ที่');
+  assert.doesNotMatch(legoApp, /title="加入我的造句單字庫/, 'word saving must not interrupt the build surface');
+  assert.match(legoHtml, /沒有前置文法時，句尾的 อยู่ 會保留/);
+  assert.match(legoHtml, /只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存/);
+  assert.doesNotMatch(legoApp.slice(legoApp.indexOf('var GT_TOUR_STEPS=[')), /loadExample\(\)|startTest\(\)|#levels/, 'active tour must describe only the locked flow');
 });
 
 test('learning helpers remain inline and do not create the fallback rice menu', () => {

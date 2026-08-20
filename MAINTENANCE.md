@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego locked build/reveal/Result flow Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego locked content/branch-rules Delta
+
+## 2026-08-21 — PD-P12-LEGO-CONTENT-01 Locked Content and Branch Rules (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego's learner-visible build surface now uses only the locked Time, Subject, front-grammar, Verb, food/buy Object, Location, Who and sentence-particle sets. Eat/buy branches show only compatible objects; `ไป` requires a direct location without `ที่` and may then expose only `กับ` + Who; `นอน` has no object and only optional `อยู่บ้าน`; `ไปนอน` ends at the verb.
+- Front grammar stays optional. `กำลัง` defaults rear `อยู่` and permits its removal, while an object branch without front grammar keeps rear `อยู่` mandatory. The active first-time tour and persistent instructions now describe only the locked confirm/reveal/Result flow, and the obsolete per-word save interruption is absent from the build surface.
+- Advanced only Lego's app cache binding to v6 and extended the existing shared regression plus current cache-contract assertions. Targeted checks and the full repository gate PASS. No Login Result sentence-library save, Resume/Landscape/Print-category expansion, deploy, Production/Auth/account/data/analytics mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego locked build/reveal/Result flow Delta
 
 ## 2026-08-21 — PD-P12-LEGO-FLOW-01/RESULT-01 Locked Build → Reveal → Result (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

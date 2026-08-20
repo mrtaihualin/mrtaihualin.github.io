@@ -193,9 +193,6 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .opt.sel .oth,.opt.sel .ozh{color:#fff;}
 .opt .oth{font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:19px;font-weight:700;color:var(--sc);}
 .opt .ozh{font-size:12.5px;color:var(--ink-muted);letter-spacing:.5px;}
-.lego-vault-save{font-size:15px;cursor:pointer;opacity:.55;transition:opacity .15s,transform .15s;flex-shrink:0;}
-.lego-vault-save:hover{opacity:1;transform:scale(1.15);}
-.opt.sel .lego-vault-save{opacity:.85;}
 .opt-clear{padding:10px 16px;font-size:12px;color:var(--ink-muted);cursor:pointer;text-align:center;background:rgba(0,0,0,.025);border-bottom:1px solid rgba(184,134,44,.12);letter-spacing:1px;}
 .opt-clear:hover{background:rgba(196,87,79,.1);color:#c4574f;}
 .opt.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
@@ -387,17 +384,8 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
 <!-- Lin 2026-07-24: รวมโปรไฟล์ + สถิติให้อยู่บรรทัดเดียวกัน (เดิมแยก 2 บรรทัด) -->
 <div class="rg-stat-row">
   <div id="rg-login-slot" style="display:flex;align-items:center;flex-shrink:0;"></div>
-  <span class="tf-streak-chip">🔥 連續 <b id="rg-streak-num">0</b> 天</span>
-  <span class="tf-streak-chip">🛡️ ×<b id="rg-freeze-num">0</b></span>
-  <!-- Lin 2026-07-25: กดได้แล้ว — โชว์ดาวสะสม (ทุกเกมรวมกัน) แยกจากปุ่มวรรณยุกต์ -->
-  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="累積星星" onclick="try{if(window.gtag)gtag('event','lego_star_modal_open',{category:'game'});}catch(e){}openStar()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_star_modal_open',{category:'game'});}catch(e){}openStar()}">⭐ <b id="star-count">0</b> 顆星</span>
-  <span class="tf-streak-chip" style="cursor:pointer;" role="button" tabindex="0" title="勳章" onclick="try{if(window.gtag)gtag('event','lego_badge_modal_open',{category:'game'});}catch(e){}openBadge()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_badge_modal_open',{category:'game'});}catch(e){}openBadge()}"><span id="badge-emoji">🌱</span> <b id="badge-count">0</b> 枚勳章</span>
-  <span class="tf-streak-chip" style="cursor:pointer;" onclick="try{if(window.gtag)gtag('event','lego_vault_modal_open',{category:'game'});}catch(e){}legoVaultOpen()">📑 <b id="lego-vault-count">0</b>/15 單字庫</span>
   <span class="tf-streak-chip" id="lego-howto-btn" style="cursor:pointer;" onclick="try{if(window.gtag)gtag('event','lego_howto_modal_open',{category:'game'});}catch(e){}dismissHowtoHint('lego');document.getElementById('lego-howto-modal').style.display='flex'">📖 怎麼玩</span>
 </div>
-
-<!-- Lin 2026-07-06: CTA ชวนล็อกอิน (MASTER ข้อ13) — เดิมเลโก้ไม่มี เพิ่มให้เหมือนเกมอื่น -->
-<div id="rg-cta-login" style="max-width:640px;margin:8px auto 0;padding:0 12px;box-sizing:border-box;"></div>
 
 <div class="page">
 
@@ -405,16 +393,6 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
     <h1>泰語造句練習室</h1>
     <p>用學過的單字，組出你真正想說的泰語。</p>
   </header>
-
-  <div class="gold-banner">
-    <div class="bars-wrap" id="lego-bars-wrap">
-      <div class="bar-row">
-        <span>進度</span>
-        <div class="bar-bg"><div class="bar-fill prog" id="lego-pf" style="width:0%"></div></div>
-        <span class="bar-label" id="lego-prog-txt">0/5</span>
-      </div>
-    </div>
-  </div>
 
   <div class="levels" id="levels" hidden aria-hidden="true"></div>
   <div class="lv-intro hidden" id="lvIntro" aria-hidden="true"></div>
@@ -548,24 +526,13 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   <div style="background:#fff;border-radius:16px;max-width:400px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
     <button onclick="document.getElementById('lego-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
     <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🧱 怎麼玩？</div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">自己動手，把泰語句子一塊一塊組出來，比死背文法有感覺多了 😊</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">從下方欄位選詞，組出你想說的泰語句子。</p>
     <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
-      <li>「句子底板」上每一格代表一種詞性（時間／主語／否定／文法／動詞／受詞…），點格子選詞組句子</li>
-      <li>至少要選「主語」和「動詞」才能組成一句話，其他格子都可以先不填</li>
-      <li>組好之後按「🧪 測試（拿分）」，把打散的詞卡依照正確順序點回去，排對了才算過關拿分</li>
-      <li>點錯了？點一下格子裡的詞卡，就能拿回來重排</li>
+      <li>依序選擇時間、主語、文法、動詞及目前動詞適用的後續欄位。</li>
+      <li>沒有前置文法時，句尾的 อยู่ 會保留；選擇 กำลัง 時也會先帶入 อยู่，你仍可移除。</li>
+      <li>按「完成句子」確認並保留目前句子，再選「繼續造句」或「結束遊戲」。</li>
+      <li>只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存。</li>
     </ul>
-    <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
-      <ul style="margin:0;padding-left:18px;line-height:2;">
-        <li>每句從 <strong>10 分</strong>開始：排錯一次扣一些分（10→7→4→1），用「提示」每次扣 <strong>2 分</strong>，兩種扣分共用同一個分數</li>
-        <li>扣到 0 分這句就直接看解答，本句 0 分，可以重排再挑戰</li>
-        <li>完成一輪（<strong>5 句</strong>）過關 <strong>+20</strong>，整輪 5 句都第一次就排對、沒用提示（乾淨過關）再 <strong>+50</strong></li>
-        <li>每完成一輪後，<strong>下一句保證是 ✨黃金句 ×2</strong>！乾淨過關分數直接翻倍，記得把握</li>
-      </ul>
-    </div>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;">句子底板上的詞卡可以按 📑 加進「單字庫」（最多 15 個），方便之後複習。</p>
-    <p style="font-size:13px;color:#2e7d32;background:#e8f5e9;border-radius:8px;padding:10px 14px;margin:0 0 12px;">🔑 <b>登入</b>後：系統會記住連續練習天數、護盾，還有你收藏的單字庫，下次回來接著練 ⭐</p>
-    <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:0;">泰語語序跟中文不太一樣，多排幾次就會抓到感覺 😄 <a href="pricing.html" style="color:#8B6310;font-weight:700;">想學更多可以來上課喔</a></p>
   </div>
 </div>
 
@@ -583,7 +550,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   <div id="gt-tour-spot"></div>
 </div>
 <div id="gt-tour-card" style="display:none;">
-  <div class="gt-step" id="gt-tour-step">1 / 6</div>
+  <div class="gt-step" id="gt-tour-step">1 / 5</div>
   <div class="gt-title" id="gt-tour-title"></div>
   <div class="gt-text" id="gt-tour-text"></div>
   <div class="gt-actions">
@@ -595,7 +562,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   </div>
 </div>
 
-<script src="js/games/lego-game-app.js?v=5"></script>
+<script src="js/games/lego-game-app.js?v=6"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 — Lin 2026-07-08: เลโก้ขาดแถบนี้ไปเดิม เพิ่มให้ครบเหมือนเกมอื่น ── -->
 <style>
