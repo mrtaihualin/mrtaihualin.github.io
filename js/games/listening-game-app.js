@@ -443,8 +443,20 @@
     });
   }
 
+  function closeTypeKeyboard() {
+    try { if (el.typeInput && document.activeElement === el.typeInput) el.typeInput.blur(); } catch (e) {}
+  }
+
+  function initKeyboardDismissControls() {
+    document.addEventListener('click', function (event) {
+      var target = event.target && event.target.closest ? event.target.closest('#wm-trigger, #lg-howto-btn') : null;
+      if (target) closeTypeKeyboard();
+    }, true);
+  }
+
   function switchTypedQuestionToChoice() {
     state.mode = 'mc';
+    closeTypeKeyboard();
     state.typingResetToken++;
     state.typingWrong = 0;
     state.itemAttempts = [];
@@ -479,6 +491,7 @@
     if (state.answered) {
       if (state.idx + 1 >= state.round.length) return false;
       state.nextMode = mode;
+      closeTypeKeyboard();
       renderModeTabs(mode);
       el.nextBtn.disabled = false;
       el.nextBtn.textContent = '下一題 →';
@@ -616,6 +629,7 @@
     }
 
     if (state.mode === 'mc') {
+      closeTypeKeyboard();
       el.mcWrap.style.display = 'flex';
       el.typeWrap.style.display = 'none';
       renderMC(w);
@@ -640,6 +654,7 @@
     state.answered = false;
     state.nextMode = null;
     state.awaitingModeForCurrent = true;
+    closeTypeKeyboard();
     renderModeTabs(null);
     el.qn.textContent = String(state.idx + 1);
     updateProgress();
@@ -713,6 +728,7 @@
     if (state.answered || !state.audioFailed) return;
     var w = currentWord();
     state.answered = true;
+    closeTypeKeyboard();
     state.audioFailed = false;
     state.itemAttempts = [];
     state.log.push({
@@ -817,6 +833,7 @@
       saveResumeState();
     } else {
       state.answered = true;
+      closeTypeKeyboard();
       el.typeInput.disabled = true;
       el.typeSubmitBtn.disabled = true;
       el.typeInput.classList.add('lg-correct');
@@ -869,6 +886,7 @@
   function finishListeningAtZero(w) {
     if (state.answered) return;
     state.answered = true;
+    closeTypeKeyboard();
     if (state.mode === 'mc') {
       Array.prototype.forEach.call(el.mcWrap.querySelectorAll('.lg-opt'), function (b) {
         b.classList.add('locked');
@@ -889,6 +907,7 @@
 
   function finishAnswer(isCorrect, w, detail) {
     detail = detail || {};
+    closeTypeKeyboard();
     state.audioFailed = false;
     if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
     if (!listeningReviewPolicy.claimAttempt(w)) return;
@@ -1143,6 +1162,7 @@
   }
 
   function showEnd() {
+    closeTypeKeyboard();
     el.progFill.style.width = '100%';
     el.progTxt.textContent = state.round.length + '/' + state.round.length;
     el.gameScreen.style.display = 'none';
@@ -1307,6 +1327,7 @@
   }
 
   function restart() {
+    closeTypeKeyboard();
     state.roundActive = false;
     state.nextMode = null;
     state.awaitingModeForCurrent = false;
@@ -1323,6 +1344,7 @@
     if (!el.startScreen) return; // กันพังถ้า DOM ไม่ครบ
     initModeTabs();
     initLevelTabs();
+    initKeyboardDismissControls();
     setMode('mc');
     initTypeMode();
     initNextKey();

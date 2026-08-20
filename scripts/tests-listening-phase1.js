@@ -79,6 +79,13 @@ check('submitted item records the actual immutable mode before next-mode selecti
 check('resume keeps or requests the fresh next-question mode',
   /nextMode: state\.nextMode/.test(app) && /awaitModeSelection: !!saved\.answered/.test(app) &&
   /else if \(pend\.awaitModeSelection\) showModeSelectionForCurrent\(\)/.test(app));
+check('mobile software keyboard closes whenever Listening no longer needs typed input',
+  /function closeTypeKeyboard\(\) \{[\s\S]*el\.typeInput\.blur\(\)/.test(app) &&
+  /function switchTypedQuestionToChoice\(\) \{[\s\S]*closeTypeKeyboard\(\)/.test(app) &&
+  /function finishAnswer\([\s\S]*closeTypeKeyboard\(\)/.test(app) &&
+  /function showModeSelectionForCurrent\(\) \{[\s\S]*closeTypeKeyboard\(\)/.test(app) &&
+  /function showQuestion\([\s\S]*state\.mode === 'mc'\) \{[\s\S]*closeTypeKeyboard\(\)/.test(app) &&
+  /closest\('#wm-trigger, #lg-howto-btn'\)/.test(app));
 check('level selector uses only playable audio and keeps Advanced visibly locked',
   /function buildPlayablePool\(\) \{[\s\S]*window\.WordAudio\.has\(w\.th\)/.test(app) &&
   /function buildPool\(level\) \{[\s\S]*w\.level === level/.test(app) &&
@@ -116,7 +123,7 @@ check('Listening อ่าน SRS ของ game=listening กลับจาก
 check('Listening SRS query ผูก captured owner เป็น defense-in-depth', /\.eq\('game', 'listening'\)\s*\.eq\('user_id', owner\.uid\)/.test(app) && /options\.load\(owner\)/.test(app));
 check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier: 'free'/.test(app) && /GameFlow\.allocateSrs/.test(app));
 check('Listening SRS read ใช้ NetworkGuard แบบ bounded และไม่ retry blind', /NetworkGuard\.request\([\s\S]*'listening-srs', \{\}, 10000, null\)/.test(app));
-check('Listening start fallback สูงสุด 1500ms และ cache version ตรง v15', /options\.delay\(1500\)/.test(app) && /listening-game-app\.js\?v=15/.test(html));
+check('Listening start fallback สูงสุด 1500ms และ cache version ตรง v16', /options\.delay\(1500\)/.test(app) && /listening-game-app\.js\?v=16/.test(html));
 check('Listening มี leaderboard ของตัวเองและ auth ชี้ถูกหน้า', /READING_BOARD_GAME = 'listening'/.test(board) && /listening-board\.html/.test(auth));
 check('Leaderboard client รองรับ game=listening', /READING_BOARD_GAME === 'listening'/.test(boardClient) && /listening-game\.html/.test(boardClient));
 check('Core 5 SQL contract รองรับ Listening และ weekly เริ่มวันจันทร์ Taipei', /'reading', 'listening', 'typing', 'word_order'/.test(boardSql) && /date_trunc\('week', timezone\('Asia\/Taipei'/.test(boardSql));
