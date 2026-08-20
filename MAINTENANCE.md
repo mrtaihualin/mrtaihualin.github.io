@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 completed-round VocabPopup removal Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 six-game Mobile Landscape Delta
+
+## 2026-08-21 — PD-P12-MOBILE-LANDSCAPE-01 Six-Game Two-Hand Layout (`PASS_LOCAL / HUMAN_DEVICE_PENDING / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Added the locked short-screen Mobile Landscape presentation to Tone, Reading, Listening, Typing, Word Order and Lego only. The existing controls now occupy safe-area-aware top-left, top-centre, top-right, centre-question and two lower thumb zones; Tone keeps its exact 1/2/3 versus 4/5/uncertain mapping, Choice/Tiles split evenly, typed/keyboarding inputs stay lower-centre, and Lego keeps categories left, sentence centre and its open vocabulary menu right.
+- Existing Result actions are repositioned without replacement: result content remains centred, real secondary/home actions remain left, and real replay/switch/continue actions remain right. Portrait and Desktop remain outside the landscape media query; no control, gameplay rule, Product behavior, feature, gate, analytics path, Auth/security/data path or schema was added.
+- Advanced only the shared CSS cache binding to v25 and extended the existing shared six-game regression. Targeted flow/shared checks and the full 992-file repository gate PASS. In-app visual verification could not load the local file under the browser URL policy, and the sandbox would not bind a local test server without approval; no escalation was requested. Physical Mobile Landscape visual/gameplay beta remains Human-only. No deploy, Production mutation, final beta, Final Go/No-Go or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 completed-round VocabPopup removal Delta
 
 ## 2026-08-21 — PD-P12-LEAD-REMOVE-01 Completed-Round Interruption Removal (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

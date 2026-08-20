@@ -776,3 +776,212 @@ body .gsh-shell.tf-page { padding-top:8px; }
 .gsh-mistake-row b { color:var(--ink-soft); }
 .gsh-mistake-item.gsh-mistake-wrong { border-color:#e0a0a0; background:#fdf5f5; }
 .gsh-mistake-back { margin:14px auto 0; display:block; }
+
+/* Locked Phase 1.2 playability: six-game two-hand layout on short landscape screens only. */
+@media (orientation:landscape) and (max-width:1024px) and (max-height:600px) {
+  html:has(body[data-gsh-game]),
+  body[data-gsh-game] { width:100%; height:100%; overflow:hidden; }
+  body[data-gsh-game] {
+    --gsh-safe-l:max(12px,env(safe-area-inset-left));
+    --gsh-safe-r:max(12px,env(safe-area-inset-right));
+    --gsh-safe-t:max(8px,env(safe-area-inset-top));
+    --gsh-safe-b:max(8px,env(safe-area-inset-bottom));
+    position:fixed; inset:0; min-height:0; padding:0 !important;
+  }
+  body[data-gsh-game] > .avail-band,
+  body[data-gsh-game] > .site-nav,
+  body[data-gsh-game] > .page-strip,
+  body[data-gsh-game] > #bottom-nav,
+  body[data-gsh-game] .gsh-page-header,
+  body[data-gsh-game] .tf-tools-row,
+  body[data-gsh-game] .head,
+  body[data-gsh-game] .bp-title,
+  body[data-gsh-game] .bp-hint { display:none !important; }
+  body[data-gsh-game] .gsh-shell,
+  body[data-gsh-game] .page {
+    position:fixed; inset:0; width:auto; max-width:none; height:100dvh;
+    min-height:0; margin:0; padding:0 !important; overflow:hidden;
+  }
+  body[data-gsh-game] .gsh-gameplay {
+    position:fixed; inset:0; width:auto; max-width:none; min-height:0;
+    margin:0; padding:0; border:0; border-radius:0; box-shadow:none;
+    overflow:visible;
+  }
+  body[data-gsh-game] .bars-wrap,
+  body[data-gsh-game] .gsh-progress { display:none !important; }
+
+  /* Existing rare shell controls stay in one top-centre row. */
+  body[data-gsh-game] .rg-ctl-wrap {
+    position:fixed !important; z-index:90; top:var(--gsh-safe-t); left:50%;
+    width:auto !important; max-width:38%; margin:0 !important;
+    transform:translateX(-50%); flex-wrap:nowrap !important;
+  }
+  body[data-gsh-game] .rg-ctl-wrap .grw-menu,
+  body[data-gsh-game] .rg-ctl-wrap .wm-menu { top:calc(100% + 6px); }
+
+  /* Help and session controls occupy the top-left thumb zone. */
+  body[data-gsh-game] .rg-tools-row,
+  body[data-gsh-game] .gsh-session-header,
+  body[data-gsh-game] > .gsh-level-selector,
+  body[data-gsh-game] .gsh-shell > .level-tabs,
+  body[data-gsh-game] .gsh-shell > .mode-tabs {
+    position:fixed !important; z-index:50; top:var(--gsh-safe-t); left:var(--gsh-safe-l);
+    width:auto !important; max-width:29% !important; margin:0 !important;
+  }
+  body[data-gsh-game] .gsh-shell > .mode-tabs { top:calc(var(--gsh-safe-t) + 42px); }
+  body[data-gsh-game] .gsh-shell > .level-tabs { top:calc(var(--gsh-safe-t) + 82px); }
+  body[data-gsh-game] .gsh-session-header { padding:0; }
+  body[data-gsh-game] .gsh-player-status { padding:4px 6px !important; gap:4px !important; }
+  body[data-gsh-game] .gsh-player-status > :first-child { display:none; }
+  body[data-gsh-game="tone"] .gsh-session-header,
+  body[data-gsh-game="reading"] .gsh-session-header,
+  body[data-gsh-game="typing"] .gsh-session-header,
+  body[data-gsh-game="word-order"] .gsh-session-header { top:calc(var(--gsh-safe-t) + 44px); }
+  body[data-gsh-game="listening"] .gsh-session-header { top:calc(var(--gsh-safe-t) + 124px); }
+
+  /* Result content remains centred; real secondary/back and primary/continue actions split left/right. */
+  body[data-gsh-game] [data-shared-result-ui="v1"] {
+    position:fixed !important; z-index:60; inset:10% 30% 18%; width:auto !important;
+    max-width:none !important; max-height:72%; margin:0 !important; padding:10px !important;
+    justify-content:center; overflow:auto;
+  }
+  body[data-gsh-game] [data-shared-result-ui="v1"] .gsh-result-primary-actions {
+    position:fixed; right:var(--gsh-safe-r); bottom:var(--gsh-safe-b);
+    width:28%; max-width:28%; justify-content:flex-end;
+  }
+  body[data-gsh-game] [data-shared-result-ui="v1"] .gsh-result-utility-actions,
+  body[data-gsh-game] [data-shared-result-ui="v1"] .gsh-result-home-actions {
+    position:fixed; left:var(--gsh-safe-l); bottom:var(--gsh-safe-b);
+    width:28%; max-width:28%; justify-content:flex-start;
+  }
+  body[data-gsh-game] [data-shared-result-ui="v1"] .gsh-result-home-actions {
+    bottom:calc(var(--gsh-safe-b) + 46px);
+  }
+
+  /* Reading and Typing: question centre, answer choices split across both lower thumb zones. */
+  body[data-gsh-game="reading"] .word-area,
+  body[data-gsh-game="typing"] .word-area {
+    position:fixed; z-index:20; top:30%; left:31%; right:31%; margin:0; text-align:center;
+  }
+  body[data-gsh-game="reading"] #slot-row,
+  body[data-gsh-game="typing"] #slot-row {
+    position:fixed; z-index:20; left:31%; right:31%; bottom:78px; width:auto; margin:0;
+  }
+  body[data-gsh-game="reading"] #pool,
+  body[data-gsh-game="typing"] #pool {
+    position:fixed; z-index:20; left:var(--gsh-safe-l); right:var(--gsh-safe-r); bottom:var(--gsh-safe-b);
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 38%; width:auto; margin:0;
+  }
+  body[data-gsh-game="reading"] .btn-row,
+  body[data-gsh-game="typing"] .btn-row { display:contents; }
+  body[data-gsh-game="reading"] #btn-remember,
+  body[data-gsh-game="typing"] #btn-remember {
+    position:fixed; z-index:55; left:var(--gsh-safe-l); top:calc(var(--gsh-safe-t) + 126px);
+  }
+  body[data-gsh-game="reading"] #btn-check,
+  body[data-gsh-game="reading"] #btn-next,
+  body[data-gsh-game="reading"] #btn-next-syl,
+  body[data-gsh-game="typing"] #btn-check,
+  body[data-gsh-game="typing"] #btn-next {
+    position:fixed; z-index:55; right:var(--gsh-safe-r); top:var(--gsh-safe-t);
+  }
+  body[data-gsh-game="typing"] #type-panel {
+    position:fixed; z-index:30; left:29%; right:29%; bottom:var(--gsh-safe-b);
+    width:auto; max-height:44%; margin:0; overflow:auto;
+  }
+  body[data-gsh-game="typing"]:has(#type-panel:not([style*="display:none"]):not([style*="display: none"])) #pool {
+    display:none;
+  }
+
+  /* Listening: four choices become two per side; typed input spans the lower centre. */
+  body[data-gsh-game="listening"] .lg-word-area {
+    position:fixed; z-index:20; top:30%; left:31%; right:31%; margin:0;
+  }
+  body[data-gsh-game="listening"] #lg-mc-wrap {
+    position:fixed; z-index:20; left:var(--gsh-safe-l); right:var(--gsh-safe-r); bottom:var(--gsh-safe-b);
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 38%; width:auto; margin:0;
+  }
+  body[data-gsh-game="listening"] #lg-type-wrap {
+    position:fixed; z-index:20; left:29%; right:29%; bottom:var(--gsh-safe-b); width:auto; margin:0;
+  }
+  body[data-gsh-game="listening"] #lg-type-submit,
+  body[data-gsh-game="listening"] #lg-skip-btn,
+  body[data-gsh-game="listening"] #lg-next-btn {
+    position:fixed; z-index:55; right:var(--gsh-safe-r); top:var(--gsh-safe-t);
+  }
+
+  /* Word Order: current sentence centre, tiles evenly split across lower thumb zones. */
+  body[data-gsh-game="word-order"] #wo-slots {
+    position:fixed; z-index:20; top:30%; left:31%; right:31%; width:auto; min-height:0; margin:0;
+  }
+  body[data-gsh-game="word-order"] #wo-bank {
+    position:fixed; z-index:20; left:var(--gsh-safe-l); right:var(--gsh-safe-r); bottom:var(--gsh-safe-b);
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 38%; width:auto; margin:0;
+  }
+  body[data-gsh-game="word-order"] .btn-row { display:contents; }
+  body[data-gsh-game="word-order"] #wo-hint-btn,
+  body[data-gsh-game="word-order"] #wo-remember-btn {
+    position:fixed; z-index:55; left:var(--gsh-safe-l); top:calc(var(--gsh-safe-t) + 126px);
+  }
+  body[data-gsh-game="word-order"] #wo-remember-btn { top:calc(var(--gsh-safe-t) + 170px); }
+  body[data-gsh-game="word-order"] #wo-next-btn,
+  body[data-gsh-game="word-order"] .btn-row .btn-secondary:not(#wo-remember-btn) {
+    position:fixed; z-index:55; right:var(--gsh-safe-r); top:var(--gsh-safe-t);
+  }
+  body[data-gsh-game="word-order"] .btn-row .btn-secondary:not(#wo-remember-btn) { top:calc(var(--gsh-safe-t) + 46px); }
+
+  /* Tone: prompt centre; normal 1/2/3 and 4/5/uncertain mapping in the lower two-hand zone. */
+  body[data-gsh-game="tone"] #tf-banner {
+    position:fixed; z-index:20; top:22%; left:31%; right:31%; padding:6px; background:transparent;
+  }
+  body[data-gsh-game="tone"] #tf-body .tf-qbox {
+    position:fixed; z-index:20; top:43%; left:31%; right:31%; margin:0;
+  }
+  body[data-gsh-game="tone"] #tf-body .tf-options,
+  body[data-gsh-game="tone"] #tf-body .tf-mark-opts,
+  body[data-gsh-game="tone"] #tf-body .sg-tone-grid {
+    position:fixed; z-index:20; left:var(--gsh-safe-l); right:var(--gsh-safe-r); bottom:var(--gsh-safe-b);
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 38%; width:auto; margin:0;
+  }
+  body[data-gsh-game="tone"] #tf-body .sg-tone-grid {
+    grid-template-rows:repeat(3,auto); grid-auto-flow:column;
+  }
+  body[data-gsh-game="tone"] #tf-body .tf-options:has(> :nth-child(3):last-child) > :first-child {
+    grid-column:1; grid-row:1 / span 2;
+  }
+  body[data-gsh-game="tone"] #tf-body .tf-options:has(> :nth-child(3):last-child) > :nth-child(2) {
+    grid-column:2; grid-row:1;
+  }
+  body[data-gsh-game="tone"] #tf-body .tf-options:has(> :nth-child(3):last-child) > :nth-child(3) {
+    grid-column:2; grid-row:2;
+  }
+  body[data-gsh-game="tone"] #tf-nav-bar {
+    position:fixed; z-index:55; top:var(--gsh-safe-t); right:var(--gsh-safe-r); width:29%; margin:0;
+  }
+
+  /* Lego: category selector left, sentence centre, vocabulary dropdown right. */
+  body[data-gsh-game="lego"] #buildPanel { position:fixed; inset:0; }
+  body[data-gsh-game="lego"] .out { position:static; margin:0; box-shadow:none; }
+  body[data-gsh-game="lego"] .out-banner {
+    position:fixed; z-index:20; top:30%; left:31%; right:31%; padding:8px; background:transparent;
+  }
+  body[data-gsh-game="lego"] .out-actions {
+    position:fixed; z-index:55; top:var(--gsh-safe-t); right:var(--gsh-safe-r); width:29%;
+    padding:0; justify-content:flex-end;
+  }
+  body[data-gsh-game="lego"] #baseplate {
+    position:fixed; z-index:30; top:calc(var(--gsh-safe-t) + 48px); bottom:var(--gsh-safe-b);
+    left:var(--gsh-safe-l); width:28%; padding:6px; display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; align-content:center; overflow:auto;
+  }
+  body[data-gsh-game="lego"] #baseplate .slot-btn { min-width:0; min-height:42px; padding:4px; }
+  body[data-gsh-game="lego"] #baseplate .slot-menu {
+    position:fixed; z-index:80; top:calc(var(--gsh-safe-t) + 48px); right:var(--gsh-safe-r);
+    bottom:var(--gsh-safe-b); left:auto; width:28%; min-width:0; max-height:none;
+    margin:0; transform:none;
+  }
+  body[data-gsh-game="lego"] #lego-reveal,
+  body[data-gsh-game="lego"] [data-shared-result-ui="v1"] {
+    position:fixed !important; z-index:60; inset:20% 31%; width:auto !important; margin:0 !important;
+  }
+}

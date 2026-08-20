@@ -56,6 +56,37 @@ test('shared shell stays bounded and resume actions stay compact on narrow scree
   assert.match(sharedCss, /\.gsh-resume-actions button\s*\{[^}]*min-height:36px/);
 });
 
+test('all six games bind the locked two-hand mobile landscape layout', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const expectedBodies = {
+    tone: games.find((g) => g.id === 'tone').htmlText,
+    reading: games.find((g) => g.id === 'reading').htmlText,
+    listening: games.find((g) => g.id === 'listening').htmlText,
+    typing: games.find((g) => g.id === 'typing').htmlText,
+    'word-order': games.find((g) => g.id === 'wordorder').htmlText,
+    lego: legoHtml,
+  };
+  for (const [id, html] of Object.entries(expectedBodies)) {
+    assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
+    assert.match(html, /css\/shared\.css\?v=25/, `${id}: must load current landscape CSS`);
+  }
+  assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
+  assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,260}top:var\(--gsh-safe-t\); left:50%/);
+  assert.match(sharedCss, /\.rg-tools-row,[\s\S]{0,500}max-width:29% !important/);
+  assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-primary-actions \{[\s\S]{0,180}right:var\(--gsh-safe-r\)/);
+  assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-utility-actions,[\s\S]{0,240}left:var\(--gsh-safe-l\)/);
+  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.sg-tone-grid \{[\s\S]{0,160}grid-template-rows:repeat\(3,auto\); grid-auto-flow:column/);
+  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.tf-options:has\(> :nth-child\(3\):last-child\) > :first-child/);
+  for (const id of ['reading', 'typing']) {
+    assert.match(sharedCss, new RegExp(`data-gsh-game="${id}"\\] #pool`), `${id}: lower split-answer zone missing`);
+  }
+  assert.match(sharedCss, /data-gsh-game="listening"\] #lg-mc-wrap[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(sharedCss, /data-gsh-game="listening"\] #lg-type-wrap[\s\S]{0,180}left:29%; right:29%/);
+  assert.match(sharedCss, /data-gsh-game="word-order"\] #wo-bank[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate[\s\S]{0,260}left:var\(--gsh-safe-l\); width:28%/);
+  assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate \.slot-menu[\s\S]{0,220}right:var\(--gsh-safe-r\)/);
+});
+
 test('all five games expose a persistent 玩法 replay path', () => {
   for (const g of games) {
     assert.match(g.htmlText, new RegExp(`id="${g.howto}"`), `${g.id}: ไม่มี howto modal`);
@@ -256,7 +287,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    assert.match(g.htmlText, /css\/shared\.css\?v=24/, `${g.id}: must load current shared game CSS`);
+    assert.match(g.htmlText, /css\/shared\.css\?v=25/, `${g.id}: must load current shared game CSS`);
     assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=40/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
