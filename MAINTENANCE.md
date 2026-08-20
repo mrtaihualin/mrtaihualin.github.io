@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Typing mobile-keyboard lifecycle Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared Core 5 font-control readiness Delta
+
+## 2026-08-20 — P12-A-05 Core 5 Font-Control Async Readiness (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- The existing shared font-control adapter now binds idempotently after the asynchronously loaded Core 5 game API becomes available, so the five existing `#font-toggle-slot` hosts no longer remain empty when DOM readiness precedes `GameContentLoader` completion.
+- Preserved every existing game-owned font mode and persistence path, added no font mode or particle control, rebuilt `shared.min.js`, advanced only the five Core 5 shared cache keys `v33→v34`, and extended the existing shared-game regression. No Lego/Challenge adapter, shell redesign, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Typing mobile-keyboard lifecycle Delta
 
 ## 2026-08-20 — Typing Mobile Software Keyboard Lifecycle (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

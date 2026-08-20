@@ -88,6 +88,16 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
 });
 
+test('shared font control binds after asynchronous Core 5 game startup', () => {
+  assert.match(sharedJs, /function bindFontSlot\(\)/, 'shared font adapter must have one idempotent binder');
+  assert.match(sharedJs, /if \(!bindFontSlot\(\)\)[\s\S]{0,300}setInterval/, 'shared font adapter must retry after DOM ready');
+  assert.match(sharedJs, /bindFontSlot\(\) \|\| fontBindAttempts >= 160/, 'font retry must stop after the existing loader window');
+  assert.match(sharedJs, /fontSlot\.querySelector\('button'\)/, 'font adapter must not duplicate the shared control');
+  for (const g of games) {
+    assert.match(g.htmlText, /id="font-toggle-slot"/, `${g.id}: missing shared font slot`);
+  }
+});
+
 test('learning helpers remain inline and do not create the fallback rice menu', () => {
   assert.match(wordMenuJs, /row\.classList\.add\('gsh-learning-tools'\)/);
   assert.match(wordMenuJs, /row\.setAttribute\('data-wm-done', '1'\);[\s\S]{0,120}return;/);

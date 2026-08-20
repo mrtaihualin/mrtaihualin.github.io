@@ -2005,14 +2005,17 @@ window.deleteFBComment = function(postId, idx) {
       }
       // rg-modern-font = word-order/typing/reading, tf-modern-font = ทำนอง/เกมเสียง — เช็คทั้งคู่ เพราะแต่ละเกมตั้งชื่อ class เองคนละอัน
       function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
-      var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
-
       // ── ✍️ ปุ่มสลับฟอนต์ = อีกแถวหนึ่งในเมนู 🍚 (ช่อง #font-toggle-slot ในหน้า) — Lin 2026-07-25 v2
       //    ย้ายมาจากเมนู 🎮 เดิม (ตามที่ Lin สั่ง) — ใส่เป็นแถวปกติในเมนู ไม่ทำดรอปดาวน์ซ้อน
       //    Lin 2026-07-25 v4: ย้ายขึ้นมาไว้ "ก่อนด่าน isWordOrder return" — เกมเรียงคำมีเมนู 🍚 ของตัวเองแล้ว
       //    ต้องได้ปุ่ม 字體 ด้วย แต่ยังไม่เอาปุ่ม 翻譯 (คำแปลคุมด้วยปุ่ม 🍙 ใต้คำที่เฉลยแทน)
-      var fontSlot = document.getElementById('font-toggle-slot');
-      if (fontSlot && hasFontToggle && !fontSlot.querySelector('button')) {
+      // Phase 1.2: Core 5 game bundles load asynchronously after DOM ready. Retry only this
+      // shared adapter until the existing game-owned font API is ready; do not add a font mode.
+      function bindFontSlot() {
+        var fontSlot = document.getElementById('font-toggle-slot');
+        var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
+        if (!fontSlot || fontSlot.querySelector('button')) return true;
+        if (!hasFontToggle) return false;
         var fontOn = isFontOn();
         var fontBtn = document.createElement('button');
         fontBtn.type = 'button';
@@ -2032,6 +2035,14 @@ window.deleteFBComment = function(postId, idx) {
           }
         };
         fontSlot.appendChild(fontBtn);
+        return true;
+      }
+      if (!bindFontSlot()) {
+        var fontBindAttempts = 0;
+        var fontBindTimer = setInterval(function () {
+          fontBindAttempts += 1;
+          if (bindFontSlot() || fontBindAttempts >= 160) clearInterval(fontBindTimer);
+        }, 100);
       }
 
       var isWordOrder = (location.pathname || '').toLowerCase().indexOf('word-order') > -1;
