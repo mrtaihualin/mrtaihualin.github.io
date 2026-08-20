@@ -87,7 +87,21 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=38/, 'Listening must load the current shared mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=39/, 'Listening must load the current shared mapping version');
+});
+
+test('all six games use the shared locked exit dialog without another shell gate', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  assert.match(sharedJs, /title: '要離開遊戲嗎？'/);
+  assert.match(sharedJs, /continueAction: '繼續遊戲'/);
+  assert.match(sharedJs, /leaveAction: '離開遊戲'/);
+  assert.match(sharedJs, /data-act="exit"/);
+  assert.match(sharedJs, /window\.location\.assign\('\/games\.html'\)/, 'Leave must always route to the Games hub');
+  assert.match(sharedJs, /GAME_ID !== 'challenge'[^\n]+data-act="exit"/, 'early implementation must not activate Challenge');
+  assert.match(sharedJs, /event\.key !== 'Escape'/, 'Escape must continue the current game');
+  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=39/, `${g.id}: must load shared exit runtime`);
+  assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load shared exit runtime');
+  assert.match(sharedCss, /\.gsh-game-exit-overlay/);
 });
 
 test('shared font control binds after asynchronous Core 5 game startup', () => {
@@ -103,7 +117,7 @@ test('shared font control binds after asynchronous Core 5 game startup', () => {
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-  assert.match(legoHtml, /shared\.min\.js\?v=34/, 'Lego must load the current shared font-control runtime');
+  assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load the current shared game runtime');
   assert.match(legoHtml, /lego-game-app\.js\?v=4/, 'Lego must load its font adapter version');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
@@ -134,8 +148,8 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    assert.match(g.htmlText, /css\/shared\.css\?v=23/, `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=38/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, /css\/shared\.css\?v=24/, `${g.id}: must load current shared game CSS`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=39/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });

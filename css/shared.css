@@ -718,6 +718,12 @@ body .gsh-shell.tf-page { padding-top:8px; }
 @media(min-width:600px){ .gsh-end-actions { flex-direction:row; flex-wrap:wrap; justify-content:center; max-width:none; } }
 .gsh-result-actions { display:flex; flex-direction:column; gap:10px; align-items:stretch; max-width:320px; margin:16px auto 0; }
 @media(min-width:600px){ .gsh-result-actions { flex-direction:row; flex-wrap:wrap; justify-content:center; max-width:none; } }
+.gsh-game-exit-overlay{position:fixed;inset:0;z-index:100100;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.48);font-family:'Noto Sans TC',sans-serif;}
+.gsh-game-exit-box{width:min(360px,100%);padding:26px 22px;background:#fff;border:1.5px solid rgba(139,99,16,.25);border-radius:18px;box-shadow:0 18px 56px rgba(0,0,0,.28);text-align:center;}
+.gsh-game-exit-title{font-family:'Noto Serif TC',serif;font-size:21px;font-weight:900;color:#5a3e0a;margin-bottom:18px;}
+.gsh-game-exit-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.gsh-game-exit-actions button{min-height:42px;padding:9px 18px;border-radius:999px;border:1.5px solid #C8973A;background:#fff;color:#8B6310;font:700 14px 'Noto Sans TC',sans-serif;cursor:pointer;}
+.gsh-game-exit-actions [data-game-exit-leave]{background:#8B6310;color:#fff;}
 
 /* ═══════════════════════════════════════════════════════════
    Phase D/E/F (2026-08-10) — เพิ่มชุด class ใหม่ 3 กลุ่ม ใช้ prefix .gsh- ต่อจากชุดเดิมด้านบน

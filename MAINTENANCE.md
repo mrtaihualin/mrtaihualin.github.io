@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared Core 5 Result order Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared six-game Exit Delta
+
+## 2026-08-20 — PD-P12-EXIT-01 Shared Six-Game Exit (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Tone, Reading, Listening, Typing, Word Order and Lego now expose one shared More-menu exit path with the exact dialog `要離開遊戲嗎？` and actions `繼續遊戲` / `離開遊戲`; continuing or Escape restores the current game, while leaving always routes to `/games.html`. Existing game-owned Resume/save payloads are untouched.
+- Reused the existing More control instead of adding another shell button or gate, kept the early-excluded Challenge unchanged, placed the copy in the minimal locale-ready layer, rebuilt `shared.min.js`, advanced the six affected shared CSS/runtime cache keys, and extended the existing shared regression. No gameplay/scoring/SRS/content/analytics change, deploy, Production/Auth/account/data mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 shared Core 5 Result order Delta
 
 ## 2026-08-20 — PD-P12-RESULT-TRUTH-01 Core 5 Shared Result Order (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
