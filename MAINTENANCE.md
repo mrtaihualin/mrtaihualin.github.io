@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Reading option-uniqueness Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening active-mode Delta
+
+## 2026-08-20 — P12-B-01–B-04 Listening Active Mode Switching (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Listening now allows only the locked active unanswered `輸入答案 → 選擇答案` transition on the same question. It preserves the round and successful-listen count, discards typed text/wrong/attempt interaction state, cancels stale input-reset focus, and continues scoring by the mode actually submitted; active `選擇答案 → 輸入答案` remains blocked.
+- After each non-final reveal, the prior mode is no longer carried forward: the player must freshly choose `選擇答案` or `輸入答案` before Next/countdown can start. The selected next mode is applied only when advancing and survives safe Resume; completed-question evidence remains unchanged. Advanced only the Listening cache key `v12→v13` and updated existing Listening/owner regressions. No deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
 
 ## 2026-08-20 — P12-F-01 Reading Visually Unique Options (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

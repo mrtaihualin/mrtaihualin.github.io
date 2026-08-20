@@ -352,7 +352,7 @@ test('all affected pages ship the owner-safe runtime versions', async () => {
   assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=36/);
   assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=34/);
   assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=27/);
-  assert.match(read('listening-game.html'), /listening-game-app\.js\?v=12/);
+  assert.match(read('listening-game.html'), /listening-game-app\.js\?v=13/);
 });
 
 process.on('beforeExit', () => {

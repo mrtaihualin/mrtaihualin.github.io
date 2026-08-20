@@ -57,7 +57,10 @@
     roundSeq: 0,
     savedRoundSeq: 0,
     listenToken: 0,
+    typingResetToken: 0,
     answered: false,
+    nextMode: null,
+    awaitingModeForCurrent: false,
     itemAttempts: [],
     report: null,
     log: [],        // Phase F2/F4: ประวัติทุกข้อของรอบนี้ {th, zh, userAnswer, correct} — เติมทีละข้อ ไม่แตะ logic ตรวจคำตอบ
@@ -391,23 +394,73 @@
   }
 
   // ── mode tabs ──
-  function setMode(mode) {
-    if (state.roundActive && mode !== state.mode) {
-      try { alert('本回合模式已鎖定，完成後再切換模式'); } catch (e) {}
-      return false;
-    }
-    state.mode = mode;
+  function renderModeTabs(mode) {
     Array.prototype.forEach.call(el.modeTabs, function (t) {
       t.classList.toggle('active', t.getAttribute('data-mode') === mode);
     });
-    return true;
+  }
+
+  function switchTypedQuestionToChoice() {
+    state.mode = 'mc';
+    state.typingResetToken++;
+    state.typingWrong = 0;
+    state.itemAttempts = [];
+    el.typeInput.value = '';
+    el.typeInput.disabled = false;
+    el.typeInput.className = 'lg-type-input';
+    el.typeSubmitBtn.disabled = false;
+    el.typeWrap.style.display = 'none';
+    el.mcWrap.style.display = 'flex';
+    el.resultBanner.className = 'result-banner';
+    el.resultBanner.textContent = '';
+    renderMC(currentWord());
+    renderModeTabs('mc');
+    updateAttemptHud(currentWord());
+    saveResumeState();
+  }
+
+  function setMode(mode) {
+    if (mode !== 'mc' && mode !== 'type') return false;
+    if (!state.roundActive) {
+      state.mode = mode;
+      renderModeTabs(mode);
+      return true;
+    }
+    if (state.awaitingModeForCurrent) {
+      state.mode = mode;
+      state.awaitingModeForCurrent = false;
+      renderModeTabs(mode);
+      showQuestion();
+      return true;
+    }
+    if (state.answered) {
+      if (state.idx + 1 >= state.round.length) return false;
+      state.nextMode = mode;
+      renderModeTabs(mode);
+      el.nextBtn.disabled = false;
+      el.nextBtn.textContent = '下一題 →';
+      saveResumeState();
+      if (window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
+      return true;
+    }
+    if (mode === state.mode) return true;
+    if (state.mode === 'type' && mode === 'mc') {
+      switchTypedQuestionToChoice();
+      return true;
+    }
+    if (state.mode === 'mc' && mode === 'type') {
+      try { alert('選擇答案開始後不能改成輸入答案；請先完成本題'); } catch (e) {}
+      return false;
+    }
+    return false;
   }
 
   function initModeTabs() {
     Array.prototype.forEach.call(el.modeTabs, function (t) {
       t.addEventListener('click', function () {
-        setMode(t.getAttribute('data-mode'));
-        try { if (window.gtag) gtag('event', 'listening_game_mode_switch', { category: 'game', mode: t.getAttribute('data-mode') }); } catch (e) {}
+        var mode = t.getAttribute('data-mode');
+        if (!setMode(mode)) return;
+        try { if (window.gtag) gtag('event', 'listening_game_mode_switch', { category: 'game', mode: mode }); } catch (e) {}
       });
     });
   }
@@ -433,6 +486,8 @@
     state.primaryTotal = 0;
     state.typingBonusTotal = 0;
     state.roundActive = true;
+    state.nextMode = null;
+    state.awaitingModeForCurrent = false;
     state.roundSeq++;
     state.log = [];
     state.itemAttempts = [];
@@ -478,6 +533,10 @@
     if (window.GameFlow) window.GameFlow.cancel('listening-game');
     options = options || {};
     state.answered = false;
+    state.typingResetToken++;
+    state.nextMode = null;
+    state.awaitingModeForCurrent = false;
+    renderModeTabs(state.mode);
     if (!options.preserveAttempt) {
       state.listenCount = 0;
       state.typingWrong = 0;
@@ -527,6 +586,25 @@
 
     // เล่นเสียงทันที — เรียกอยู่ในสายเดียวกับ click ของปุ่ม 開始/下一題 (user gesture) กัน browser บล็อก autoplay
     if (!options.skipAutoPlay) playCurrent();
+  }
+
+  function showModeSelectionForCurrent() {
+    if (window.GameFlow) window.GameFlow.cancel('listening-game');
+    state.answered = false;
+    state.nextMode = null;
+    state.awaitingModeForCurrent = true;
+    renderModeTabs(null);
+    el.qn.textContent = String(state.idx + 1);
+    updateProgress();
+    el.mcWrap.innerHTML = '';
+    el.mcWrap.style.display = 'none';
+    el.typeWrap.style.display = 'none';
+    el.reveal.className = 'lg-reveal';
+    el.reveal.innerHTML = '';
+    el.nextBtn.style.display = 'none';
+    el.nextBtn.disabled = true;
+    el.resultBanner.className = 'result-banner gsh-feedback-slot show';
+    el.resultBanner.textContent = '請先選擇這一題要用「選擇答案」或「輸入答案」';
   }
 
   function thaiWordCount(text) {
@@ -643,8 +721,9 @@
       el.typeInput.classList.add('lg-wrong');
       el.resultBanner.className = 'result-banner no show';
       el.resultBanner.textContent = '差一點，再試一次就會更熟悉 🌱；繼續輸入到正確為止（Typing Bonus：' + typingBonus(w) + '）';
+      var resetToken = ++state.typingResetToken;
       setTimeout(function () {
-        if (!el.typeInput || state.answered) return;
+        if (!el.typeInput || state.answered || resetToken !== state.typingResetToken) return;
         el.typeInput.classList.remove('lg-wrong');
         el.typeInput.value = '';
         try { el.typeInput.focus({ preventScroll: true }); } catch (e) { try { el.typeInput.focus(); } catch (_) {} }
@@ -778,17 +857,25 @@
     el.reveal.classList.add('show');
     renderReveal();
 
+    var hasNextQuestion = state.idx + 1 < state.round.length;
+    state.nextMode = null;
     el.nextBtn.style.display = 'inline-flex';
-    el.nextBtn.disabled = false;
-    el.nextBtn.textContent = (state.idx + 1 >= state.round.length) ? '看結果 →' : '下一題 →';
+    el.nextBtn.disabled = hasNextQuestion;
+    el.nextBtn.textContent = hasNextQuestion ? '請先選擇下一題模式' : '看結果 →';
+    if (hasNextQuestion) renderModeTabs(null);
 
     sendListeningSrs(w, primary);
     saveResumeState(); // Phase E3: กันหายถ้าปิดแท็บ/รีเฟรชก่อนกด 下一題
-    if (window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
+    if (!hasNextQuestion && window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
   }
 
   function goNext() {
     if (!state.answered) return; // กันกดข้ามก่อนตอบ (ปุ่มถูกซ่อนอยู่แล้ว แต่กันไว้อีกชั้น)
+    if (state.idx + 1 < state.round.length) {
+      if (!state.nextMode) return;
+      state.mode = state.nextMode;
+      state.nextMode = null;
+    }
     state.idx++;
     if (state.idx >= state.round.length) {
       showEnd();
@@ -814,6 +901,7 @@
         listenCount: state.listenCount,
         typingWrong: state.typingWrong,
         answered: state.answered,
+        nextMode: state.nextMode,
         itemAttempts: state.itemAttempts,
         listeningReviewPolicy: listeningReviewPolicy.snapshot(),
         log: state.log,
@@ -850,8 +938,11 @@
       return;
     }
     var resumeIdx = saved.answered ? saved.idx + 1 : saved.idx;
+    var savedNextMode = saved.nextMode === 'type' ? 'type' : (saved.nextMode === 'mc' ? 'mc' : null);
     state._pendingResume = {
-      mode: saved.mode === 'type' ? 'type' : 'mc',
+      mode: savedNextMode || (saved.mode === 'type' ? 'type' : 'mc'),
+      nextMode: savedNextMode,
+      awaitModeSelection: !!saved.answered && resumeIdx < round.length && !savedNextMode,
       round: round,
       idx: resumeIdx,
       completed: resumeIdx >= round.length,
@@ -896,6 +987,8 @@
     state.typingBonusTotal = pend.typingBonusTotal;
     state.listenCount = pend.listenCount;
     state.typingWrong = pend.typingWrong;
+    state.nextMode = pend.nextMode;
+    state.awaitingModeForCurrent = false;
     state.log = pend.log;
     state.itemAttempts = pend.itemAttempts;
     state.report = window.RoundReport ? RoundReport.restore(pend.report, { game_type: 'listening', difficulty: 'mixed', mode: pend.mode }) : null;
@@ -915,6 +1008,7 @@
 
     try { if (window.gtag) gtag('event', 'listening_game_resume', { category: 'game', mode: pend.mode }); } catch (e) {}
     if (pend.completed) showEnd();
+    else if (pend.awaitModeSelection) showModeSelectionForCurrent();
     else showQuestion({ preserveAttempt: pend.preserveAttempt, skipAutoPlay: pend.preserveAttempt });
   }
 
@@ -931,9 +1025,9 @@
     });
     if (!state.round.length) { startRound(); return; }
     state.idx = 0; state.correct = 0; state.wrong = 0;
-    state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.log = []; state.itemAttempts = [];
+    state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.nextMode = null; state.awaitingModeForCurrent = false; state.log = []; state.itemAttempts = [];
     state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: 'mixed', mode: pend.mode }) : null;
-    state.roundActive = true; state.roundSeq++; setMode(pend.mode);
+    setMode(pend.mode); state.roundActive = true; state.roundSeq++;
     el.startScreen.style.display='none';el.endScreen.style.display='none';el.gameScreen.style.display='flex';el.qt.textContent=String(state.round.length);el.okCount.textContent='0';el.badCount.textContent='0';
     showQuestion();
     try { if (window.gtag) gtag('event', 'listening_game_resume_restart_same', { category: 'game' }); } catch (e) {}
@@ -952,6 +1046,8 @@
     el.endScreen.style.display = 'flex';
     if (window.GameFlow) window.GameFlow.markResult(el.endScreen);
     state.roundActive = false;
+    state.nextMode = null;
+    state.awaitingModeForCurrent = false;
     var attempts = state.log.length;
     el.endScoreBig.textContent = (state.primaryTotal + state.typingBonusTotal) + ' 分';
     var pct = attempts ? Math.round((state.correct / attempts) * 100) : 0;
@@ -1108,6 +1204,8 @@
 
   function restart() {
     state.roundActive = false;
+    state.nextMode = null;
+    state.awaitingModeForCurrent = false;
     el.endScreen.style.display = 'none';
     el.gameScreen.style.display = 'none';
     el.startScreen.style.display = 'flex';

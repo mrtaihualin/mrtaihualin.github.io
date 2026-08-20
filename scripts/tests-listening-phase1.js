@@ -47,6 +47,12 @@ function values(mode, text, max) {
   for (let i = 1; i <= max; i++) result.push(score.primary(mode, text, i));
   return result.join(',');
 }
+function appFunction(name, nextName) {
+  const start = app.indexOf(`function ${name}(`);
+  const end = app.indexOf(`function ${nextName}(`, start + 1);
+  if (start < 0 || end <= start) return '';
+  return app.slice(start, end);
+}
 
 check('選擇答案 scoring = 5,5,3,2,1,0', values('mc', 'กิน', 6) === '5,5,3,2,1,0');
 check('輸入 1–2 คำ scoring = 10,10,7,4,1,0', values('type', 'กิน ข้าว', 6) === '10,10,7,4,1,0');
@@ -55,7 +61,24 @@ check('Typing Bonus เรียกสูตร 無提示 ชุดเดีย�
 check('Typing Bonus 0 แล้วยังอยู่ branch ให้พิมพ์ต่อ', /if \(!isCorrect\) \{[\s\S]*state\.typingWrong\+\+[\s\S]*繼續輸入到正確為止/.test(app));
 check('Listening score 0 จบ attempt และ requeue เฉพาะ item ที่ไม่ใช่ Due',
   /finishListeningAtZero\(w\)/.test(app) && /listeningReviewPolicy\.shouldRequeue\(w, detail\.requeue\)/.test(app));
-check('mode ถูกล็อกตลอดรอบ', /if \(state\.roundActive && mode !== state\.mode\)/.test(app));
+check('active Typed→Choice keeps the question and clears only typed interaction state',
+  /if \(state\.mode === 'type' && mode === 'mc'\) \{[\s\S]*switchTypedQuestionToChoice\(\)/.test(app) &&
+  /state\.typingWrong = 0;[\s\S]*state\.itemAttempts = \[\];[\s\S]*el\.typeInput\.value = '';[\s\S]*renderMC\(currentWord\(\)\)/.test(appFunction('switchTypedQuestionToChoice', 'setMode')) &&
+  /state\.typingResetToken\+\+/.test(appFunction('switchTypedQuestionToChoice', 'setMode')) &&
+  /resetToken !== state\.typingResetToken/.test(appFunction('submitTypeAnswer', 'renderReveal')) &&
+  !/state\.listenCount\s*=/.test(appFunction('switchTypedQuestionToChoice', 'setMode')));
+check('active Choice→Typed is rejected without changing the current mode',
+  /if \(state\.mode === 'mc' && mode === 'type'\) \{[\s\S]*return false;/.test(app));
+check('answered question requires a fresh next mode and applies it only in goNext',
+  /state\.nextMode = null;[\s\S]*el\.nextBtn\.disabled = hasNextQuestion/.test(app) &&
+  /if \(state\.answered\) \{[\s\S]*state\.nextMode = mode;[\s\S]*el\.nextBtn\.disabled = false/.test(app) &&
+  /if \(!state\.nextMode\) return;[\s\S]*state\.mode = state\.nextMode/.test(app));
+check('submitted item records the actual immutable mode before next-mode selection',
+  /state\.log\.push\(\{[\s\S]*mode: state\.mode/.test(app) &&
+  /state\.nextMode = mode;[\s\S]*saveResumeState\(\)/.test(app));
+check('resume keeps or requests the fresh next-question mode',
+  /nextMode: state\.nextMode/.test(app) && /awaitModeSelection: !!saved\.answered/.test(app) &&
+  /else if \(pend\.awaitModeSelection\) showModeSelectionForCurrent\(\)/.test(app));
 check('audio fail ไม่หักจำนวนครั้งฟัง', /if \(!ok\) \{[\s\S]*state\.listenCount = Math\.max\(0, state\.listenCount - 1\)/.test(app));
 check('Listening Score และ Typing Bonus เก็บแยกใน evidence', /listening_score: entry\.listeningScore/.test(app) && /typing_bonus: entry\.typingBonus/.test(app));
 check('Listening DTO เก็บเฉพาะค่าที่ Submit และ listen count', /itemAttempts\.push\(\{ answer: val, is_correct: isCorrect, mode: 'type' \}\)/.test(app) && /listen_count: state\.listenCount/.test(app) && !/rawKeystrokes|raw_keystrokes/.test(app));
@@ -70,7 +93,7 @@ check('Listening อ่าน SRS ของ game=listening กลับจาก
 check('Listening SRS query ผูก captured owner เป็น defense-in-depth', /\.eq\('game', 'listening'\)\s*\.eq\('user_id', owner\.uid\)/.test(app) && /options\.load\(owner\)/.test(app));
 check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier: 'free'/.test(app) && /GameFlow\.allocateSrs/.test(app));
 check('Listening SRS read ใช้ NetworkGuard แบบ bounded และไม่ retry blind', /NetworkGuard\.request\([\s\S]*'listening-srs', \{\}, 10000, null\)/.test(app));
-check('Listening start fallback สูงสุด 1500ms และ cache version ตรง v12', /options\.delay\(1500\)/.test(app) && /listening-game-app\.js\?v=12/.test(html));
+check('Listening start fallback สูงสุด 1500ms และ cache version ตรง v13', /options\.delay\(1500\)/.test(app) && /listening-game-app\.js\?v=13/.test(html));
 check('Listening มี leaderboard ของตัวเองและ auth ชี้ถูกหน้า', /READING_BOARD_GAME = 'listening'/.test(board) && /listening-board\.html/.test(auth));
 check('Leaderboard client รองรับ game=listening', /READING_BOARD_GAME === 'listening'/.test(boardClient) && /listening-game\.html/.test(boardClient));
 check('Core 5 SQL contract รองรับ Listening และ weekly เริ่มวันจันทร์ Taipei', /'reading', 'listening', 'typing', 'word_order'/.test(boardSql) && /date_trunc\('week', timezone\('Asia\/Taipei'/.test(boardSql));
