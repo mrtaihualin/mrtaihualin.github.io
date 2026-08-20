@@ -939,7 +939,7 @@
         correct_answer: w.th, is_correct: isCorrect,
         wrong_count: state.mode === 'type' ? state.typingWrong : (isCorrect ? 0 : 1),
         item_score: primary + bonus, listen_count: state.listenCount,
-        linguistic: { reading_th: w.readingTH || '', reading_en: w.en || '', level: w.level || '' },
+        linguistic: { reading_th: w.readingTH || '', reading_en: w.en || '', level: w.level || '', answer_mode: state.mode, listening_score: primary, typing_score: bonus },
         srs_state: existingSrs.stage == null ? null : existingSrs.stage,
         review_state: isReviewAttempt ? 'needed' : 'not_due',
         mastered_state: !!existingSrs.mastered
@@ -1262,6 +1262,26 @@
 
   // ── Phase F3/F4: 列印／儲存學習紀錄 — ก๊อปแพทเทิร์นเดียวกับเกมอื่น (window.open + document.write + print) ไม่ใช้ library ใดๆ ──
   function printListeningReport() {
+    if (window.RoundReport && typeof RoundReport.openPrint === 'function') {
+      var sharedReport = state.report;
+      var sharedItems = sharedReport && sharedReport.items || [];
+      var firstCorrect = sharedItems.filter(function (item) {
+        var first = item.attempts && item.attempts[0];
+        return item.is_correct && Number(item.wrong_count || 0) === 0 && (!first || first.is_correct);
+      }).length;
+      var didOpen = RoundReport.openPrint({
+        gameType: 'listening', report: sharedReport, title: '泰語聽力練習・本輪報告', documentTitle: '聽力練習紀錄',
+        difficulty: state.level + '級', groupListeningModes: true,
+        summaryRows: [
+          { label: '聽力分數', value: state.primaryTotal + ' 分', primary: true },
+          { label: 'Typing 分數', value: state.typingBonusTotal + ' 分' },
+          { label: '完成', value: sharedItems.length + ' / ' + sharedItems.length },
+          { label: '首次答對', value: firstCorrect + ' / ' + sharedItems.length }
+        ]
+      });
+      if (!didOpen) { try { alert('請允許彈出視窗才能列印／儲存學習紀錄 🙏'); } catch (sharedError) {} }
+      return;
+    }
     var SERIF = "'Noto Serif TC',serif";
     var SANS = "'Noto Sans TC',sans-serif";
     var today = new Date().toLocaleDateString('zh-TW');

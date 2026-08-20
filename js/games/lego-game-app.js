@@ -725,7 +725,7 @@ function legoEndGame(){
     const result=document.getElementById('lego-result');result.classList.remove('hidden');
     if(window.GameFlow)GameFlow.enhanceResult({
       key:'lego-result',root:result,actions:'#lego-result .gsh-end-actions',correct:0,total:count,
-      showFirstCorrect:false,onReplay:legoStartNewSession
+      showFirstCorrect:false,dailyActivityText:'今日完成造句：'+legoDailyActivity(false)+' 句',onReplay:legoStartNewSession
     });
     legoClearResume();
   }catch(e){legoShowLockedError();}
@@ -753,6 +753,16 @@ function legoHideDetail(){
 }
 
 function legoPrintResult(){
+  if(window.RoundReport&&typeof RoundReport.openPrint==='function'){
+    const report=RoundReport.create({game_type:'lego',difficulty:null,mode:'sentence-builder'});
+    legoCompletedSentences.forEach(sentence=>RoundReport.addItem(report,{
+      content_ref:{source:'game_sentences',key:sentence.th},question:sentence.th,meaning:sentence.zh||'',
+      attempts:[{answer:sentence.th,is_correct:true}],user_answer:sentence.th,correct_answer:sentence.th,is_correct:true,
+      wrong_count:0,item_score:0,hint_used:null,linguistic:{custom:!!sentence.custom}
+    }));
+    if(RoundReport.openPrint({gameType:'lego',report:report,title:'泰語造句練習室・本輪報告',documentTitle:'泰語造句練習紀錄',showDifficulty:false,dailyCount:legoDailyActivity(false),summaryRows:[{label:'完成',value:legoCompletedSentences.length+' 句',primary:true}]}))return;
+    toast('請允許彈出視窗才能列印／儲存學習紀錄',true);return;
+  }
   const result=document.getElementById('lego-result');
   result.classList.add('lego-printing');
   const cleanup=()=>result.classList.remove('lego-printing');

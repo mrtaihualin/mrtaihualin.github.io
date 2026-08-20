@@ -118,7 +118,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=9/, 'Lego must load its locked-flow runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=10/, 'Lego must load its locked-flow runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -138,7 +138,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
   assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must contain only the full sentence and zh-TW translation before actions');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=9/, 'Lego Result must use the shared flow runtime');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=10/, 'Lego Result must use the shared flow runtime');
   for (const role of ['replay','print','detail-action','switch','cta','home']) {
     assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
   }
@@ -256,11 +256,31 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
 
 test('all five games load and persist one current-round DTO identity', () => {
   for (const g of games) {
-    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=1/, `${g.id}: missing Round Report DTO loader`);
+    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=2/, `${g.id}: missing Round Report DTO loader`);
     assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: missing Login summary loader`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
     assert.match(g.appText, /report:/, `${g.id}: active GameResume must carry the report snapshot`);
   }
+});
+
+test('all six games use the shared A4 browser Print structure and daily Result activity', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  const roundReport = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
+  const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
+  for (const g of games) {
+    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=2/, `${g.id}: must load shared print renderer`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=10/, `${g.id}: must load daily Result runtime`);
+    assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
+  }
+  assert.match(legoHtml, /js\/games\/round-report\.js\?v=2/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=10/);
+  assert.match(legoApp, /RoundReport\.openPrint/);
+  assert.match(roundReport, /@page\{size:A4 portrait/);
+  assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);
+  assert.match(roundReport, /groupListeningModes/);
+  assert.match(roundReport, /customDisclaimer/);
+  assert.match(gameFlow, /RoundReport\.dailyActivityText/);
 });
 
 test('all five games provide read-only mistake review after a round', () => {
@@ -380,7 +400,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=56/, 'Tone: page must request the rebuilt runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=57/, 'Tone: page must request the rebuilt runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);

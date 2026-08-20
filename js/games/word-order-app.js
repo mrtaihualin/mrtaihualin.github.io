@@ -1407,6 +1407,11 @@
   //   (เกมเสียงเคยเจอ html2canvas ออกไฟล์ว่างเปล่าบนคอม + ค้างบนมือถือ มาแล้ว เปลี่ยนเป็น print window ตั้งแต่ 2026-06-19 เสถียรกว่า)
   // ════════════════════════════════════════════
   window.woDownloadReport = function(){
+    if(window.RoundReport&&typeof RoundReport.openPrint==='function'){
+      if(RoundReport.openPrint({gameType:'wordorder',report:roundReport,title:'泰語語序練習室・本輪報告',documentTitle:'語序練習室報告',showDifficulty:false}))return;
+      try{rgToast('請允許彈出視窗才能列印報告 🙏');}catch(e0){alert('請允許彈出視窗才能列印報告');}
+      return;
+    }
     var SERIF = "'Noto Serif TC','PingFang TC',serif";
     var SANS = "'Noto Sans TC','PingFang TC',sans-serif";
     var today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});

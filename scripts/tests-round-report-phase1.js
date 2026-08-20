@@ -68,10 +68,44 @@ RR.setLoginSummary(report, {
 const loginHtml = RR.loginSectionsHtml(report);
 for (const label of ['Progress', 'SRS', 'Review Needed', 'Mastered', 'Resume']) assert.match(loginHtml, new RegExp(label));
 
+const dailyRound = RR.create({ game_type: 'reading', difficulty: '初', mode: 'phonics' });
+RR.addItem(dailyRound, {
+  content_ref: { source: 'game_words', key: 'กา@1' }, question: 'กา', meaning: '烏鴉',
+  attempts: [{ answer: 'กา', is_correct: true }], correct_answer: 'กา', is_correct: true, item_score: 10
+});
+RR.finish(dailyRound, { score: 10 });
+RR.finish(dailyRound, { score: 10 });
+assert.strictEqual(RR.dailyActivity('reading'), 1, 'daily activity must count one finished round only once');
+assert.strictEqual(RR.dailyActivityText('reading'), '今日拼讀：1 字');
+
+const listening = RR.create({ game_type: 'listening', difficulty: '初', mode: 'mc' });
+RR.addItem(listening, {
+  content_ref: { source: 'game_words', key: 'กิน@1' }, question: '<กิน>', meaning: '吃',
+  attempts: [{ answer: 'กิน', is_correct: true, mode: 'mc' }], correct_answer: 'กิน', is_correct: true,
+  item_score: 8, listen_count: 1, linguistic: { answer_mode: 'mc', listening_score: 8, typing_score: 0 }
+});
+RR.addItem(listening, {
+  content_ref: { source: 'game_words', key: 'นอน@1' }, question: 'นอน', meaning: '睡覺',
+  attempts: [{ answer: 'นอน', is_correct: true, mode: 'type' }], correct_answer: 'นอน', is_correct: true,
+  item_score: 12, listen_count: 2, linguistic: { answer_mode: 'type', listening_score: 7, typing_score: 5 }
+});
+RR.finish(listening, { score: 20 });
+const printHtml = RR.printDocument({ gameType: 'listening', report: listening, title: '泰語聽力練習・本輪報告', groupListeningModes: true });
+assert.match(printHtml, /<html lang="zh-TW">/);
+assert.match(printHtml, /@page\{size:A4 portrait/);
+assert.ok(printHtml.indexOf('data-print-section="summary"') < printHtml.indexOf('data-print-section="activity"'));
+assert.ok(printHtml.indexOf('data-print-section="activity"') < printHtml.indexOf('data-print-section="detail"'));
+assert.match(printHtml, /選擇答案/);
+assert.match(printHtml, /輸入答案/);
+assert.match(printHtml, /聽力分數：7・Typing 分數：5/);
+assert.doesNotMatch(printHtml, /<กิน>/, 'print content must be escaped');
+assert.match(printHtml, /&lt;กิน&gt;/);
+assert.doesNotMatch(source, /html2canvas|jsPDF|download\s*=|createObjectURL/, 'shared Phase 1.2 print path must remain browser Print only');
+
 // Guest current-round lifecycle: only the active snapshot is kept, then explicitly expired.
 context.localStorage.setItem('gsh_resume_test', JSON.stringify(RR.snapshot(report)));
 assert.strictEqual(JSON.parse(context.localStorage.getItem('gsh_resume_test')).round_id, firstRoundId);
 context.localStorage.removeItem('gsh_resume_test');
 assert.strictEqual(context.localStorage.getItem('gsh_resume_test'), null);
 
-console.log('Round Report Phase 1: 12/12 PASS');
+console.log('Round Report Phase 1: DTO + shared print PASS');

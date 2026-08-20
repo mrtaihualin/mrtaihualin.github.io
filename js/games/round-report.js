@@ -8,6 +8,20 @@
     rawKeystrokes: true, raw_keystrokes: true, keystrokes: true,
     keypresses: true, keyEvents: true, key_events: true
   };
+  var DAILY_KEY = 'gsh_game_daily_activity_v1';
+  var PRINT_COPY = {
+    summary: '本輪摘要', activity: '今日活動', detail: '本輪詳細紀錄', account: '帳號學習資料',
+    score: '本輪得分', completed: '完成', firstCorrect: '首次答對', question: '題目', meaning: '意思',
+    answer: '作答', correctAnswer: '正解', result: '結果', correct: '答對', incorrect: '待加強',
+    wrongCount: '錯誤次數', itemScore: '本題得分', hintEffect: '提示影響', hintScore: '使用提示後本題得分',
+    listenCount: '聆聽次數', words: '逐字', choiceMode: '選擇答案', typedMode: '輸入答案',
+    listeningScore: '聽力分數', typingScore: 'Typing 分數', noItems: '本輪沒有可列印的紀錄',
+    customDisclaimer: '自訂內容由玩家自行輸入，系統不會檢查或修正內容。'
+  };
+  var DAILY_LABELS = {
+    tone: ['今日聲調練習', '字'], reading: ['今日拼讀', '字'], listening: ['今日聆聽', '題'],
+    typing: ['今日打字', '字'], wordorder: ['今日語序練習', '句'], lego: ['今日完成造句', '句']
+  };
 
   function clone(value) {
     if (value == null) return value;
@@ -131,7 +145,59 @@
     report.total_items = report.items.length;
     report.correct_count = report.items.filter(function (row) { return row.is_correct; }).length;
     report.wrong_count = report.total_items - report.correct_count;
+    recordDailyActivity(report.game_type, report.total_items, report.round_id);
     return report;
+  }
+
+  function taipeiDay(value) {
+    var date = value ? new Date(value) : new Date();
+    try {
+      var parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+      var out = {};
+      parts.forEach(function (part) { if (part.type !== 'literal') out[part.type] = part.value; });
+      if (out.year && out.month && out.day) return out.year + '-' + out.month + '-' + out.day;
+    } catch (e) {}
+    return date.toISOString().slice(0, 10);
+  }
+
+  function readDaily() {
+    var day = taipeiDay();
+    var data = null;
+    try { data = JSON.parse(root.localStorage && root.localStorage.getItem(DAILY_KEY) || 'null'); } catch (e) {}
+    if (!data || data.day !== day || !data.games || typeof data.games !== 'object') data = { day: day, games: {} };
+    return data;
+  }
+
+  function writeDaily(data) {
+    try { if (root.localStorage) root.localStorage.setItem(DAILY_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  function recordDailyActivity(gameType, count, roundId) {
+    gameType = String(gameType || '');
+    count = Math.max(0, number(count, 0));
+    if (!gameType || !count) return dailyActivity(gameType);
+    var data = readDaily();
+    var row = data.games[gameType] || { count: 0, rounds: {} };
+    if (!row.rounds || typeof row.rounds !== 'object') row.rounds = {};
+    var identity = String(roundId || '');
+    if (identity && row.rounds[identity]) return Math.max(0, number(row.count, 0));
+    row.count = Math.max(0, number(row.count, 0)) + count;
+    if (identity) row.rounds[identity] = true;
+    data.games[gameType] = row;
+    writeDaily(data);
+    return row.count;
+  }
+
+  function dailyActivity(gameType) {
+    var row = readDaily().games[String(gameType || '')];
+    return row ? Math.max(0, number(row.count, 0)) : 0;
+  }
+
+  function dailyActivityText(gameType, count) {
+    gameType = String(gameType || '');
+    var label = DAILY_LABELS[gameType] || ['今日完成', '題'];
+    var total = count == null ? dailyActivity(gameType) : Math.max(0, number(count, 0));
+    return label[0] + '：' + total + ' ' + label[1];
   }
 
   function setLoginSummary(report, summary) {
@@ -195,6 +261,96 @@
     return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function itemMode(row) {
+    var mode = row && row.linguistic && row.linguistic.answer_mode;
+    if (!mode && row && row.attempts && row.attempts.length) mode = row.attempts[row.attempts.length - 1].mode;
+    return mode === 'type' ? 'type' : 'mc';
+  }
+
+  function firstCorrectCount(report) {
+    return (report && report.items || []).filter(function (row) {
+      var first = row && row.attempts && row.attempts[0];
+      return !!(row && row.is_correct && !row.hint_used && Number(row.wrong_count || 0) === 0 && (!first || first.is_correct));
+    }).length;
+  }
+
+  function printSummaryRows(config, report) {
+    if (Array.isArray(config.summaryRows)) return config.summaryRows;
+    var total = report && report.items ? report.items.length : 0;
+    return [
+      { label: PRINT_COPY.score, value: number(report && report.score, 0) + ' 分', primary: true },
+      { label: PRINT_COPY.completed, value: total + ' / ' + total },
+      { label: PRINT_COPY.firstCorrect, value: firstCorrectCount(report) + ' / ' + total }
+    ];
+  }
+
+  function printDetailRows(items, config) {
+    if (!items.length) return '<div class="rr-empty">' + PRINT_COPY.noItems + '</div>';
+    return '<table class="rr-detail-table"><thead><tr><th>#</th><th>' + PRINT_COPY.question + '</th><th>' + PRINT_COPY.meaning + '</th><th>' + PRINT_COPY.result + '</th></tr></thead><tbody>'
+      + items.map(function (row, index) {
+        var extra = [];
+        if (row.user_answer) extra.push(PRINT_COPY.answer + '：' + esc(row.user_answer));
+        if (row.correct_answer) extra.push(PRINT_COPY.correctAnswer + '：' + esc(row.correct_answer));
+        if (row.linguistic && row.linguistic.reading_th && config.gameType !== 'lego') extra.push('讀音：' + esc(row.linguistic.reading_th));
+        if (row.listen_count != null) extra.push(PRINT_COPY.listenCount + '：' + Math.max(0, number(row.listen_count, 0)));
+        if (row.wrong_count != null) extra.push(PRINT_COPY.wrongCount + '：' + Math.max(0, number(row.wrong_count, 0)));
+        extra.push(PRINT_COPY.itemScore + '：' + number(row.item_score, 0));
+        if (row.hint_used) extra.push(PRINT_COPY.hintEffect + '：' + PRINT_COPY.hintScore + ' ' + number(row.item_score, 0));
+        if (row.words && row.words.length) extra.push(PRINT_COPY.words + '：' + row.words.map(function (word) { return esc(word.th) + '＝' + esc(word.zh); }).join('・'));
+        if (row.linguistic && row.linguistic.custom) extra.push(PRINT_COPY.customDisclaimer);
+        return '<tr><td>' + (index + 1) + '</td><td><strong>' + esc(row.question) + '</strong><div class="rr-item-extra">' + extra.join('<br>') + '</div></td>'
+          + '<td>' + esc(row.meaning || '') + '</td><td class="rr-status ' + (row.is_correct ? 'ok' : 'bad') + '">' + (row.is_correct ? PRINT_COPY.correct : PRINT_COPY.incorrect) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function modeSections(report, config) {
+    if (!config.groupListeningModes) return printDetailRows(report.items || [], config);
+    return ['mc', 'type'].map(function (mode) {
+      var items = (report.items || []).filter(function (row) { return itemMode(row) === mode; });
+      if (!items.length) return '';
+      var listening = 0, typing = 0;
+      items.forEach(function (row) {
+        listening += number(row.linguistic && row.linguistic.listening_score, mode === 'mc' ? row.item_score : 0);
+        typing += number(row.linguistic && row.linguistic.typing_score, 0);
+      });
+      return '<div class="rr-mode"><h3>' + (mode === 'type' ? PRINT_COPY.typedMode : PRINT_COPY.choiceMode) + '</h3>'
+        + '<div class="rr-mode-score">' + PRINT_COPY.listeningScore + '：' + listening + (mode === 'type' ? '・' + PRINT_COPY.typingScore + '：' + typing : '') + '</div>'
+        + printDetailRows(items, config) + '</div>';
+    }).join('');
+  }
+
+  function printDocument(config) {
+    config = config || {};
+    var report = config.report || create({ game_type: config.gameType || '' });
+    var gameType = String(config.gameType || report.game_type || '');
+    var today = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    var summary = printSummaryRows(config, report).map(function (row) {
+      return '<div class="rr-summary-row"><span>' + esc(row.label) + '</span><strong' + (row.primary ? ' class="primary"' : '') + '>' + esc(row.value) + '</strong></div>';
+    }).join('');
+    var difficulty = config.showDifficulty === false ? '' : String(config.difficulty == null ? (report.difficulty || '') : config.difficulty);
+    var dailyCount = config.dailyCount == null ? dailyActivity(gameType) : config.dailyCount;
+    var account = loginSectionsHtml(report);
+    return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>' + esc(config.documentTitle || config.title || '本輪學習紀錄') + '</title>'
+      + '<style>@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#1c1c1c;font-family:"Noto Sans TC","PingFang TC",sans-serif}.rr-page{max-width:190mm;margin:0 auto;background:#fbf5e7;padding:8mm}.rr-card{background:#fff;border:1px solid #c8973a}.rr-head{display:flex;justify-content:space-between;gap:10mm;background:#1c1c1c;border-bottom:3px solid #c8973a;color:#fff;padding:7mm}.rr-head h1{margin:0;font:700 20px "Noto Serif TC","PingFang TC",serif}.rr-brand{color:#c8973a;font-size:9px;letter-spacing:.2em;margin-top:4px}.rr-head-meta{text-align:right;color:#c8973a;font-size:11px;white-space:nowrap}.rr-body{padding:6mm}.rr-section{margin:0 0 6mm;break-inside:avoid-page;page-break-inside:avoid}.rr-section.rr-detail{break-inside:auto;page-break-inside:auto}.rr-section h2{font-size:15px;color:#8b6310;border-bottom:1px solid rgba(139,99,16,.25);padding-bottom:3px;margin:0 0 3mm}.rr-summary-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}.rr-summary-row strong.primary{font-size:19px;color:#5a3e0a}.rr-activity{font-weight:700;color:#5a3e0a}.rr-detail-table{width:100%;border-collapse:collapse;font-size:11px}.rr-detail-table th{color:#8b6310;text-align:left;border-bottom:1.5px solid #c8973a;padding:5px}.rr-detail-table td{padding:6px 5px;border-bottom:1px solid #eadfc9;vertical-align:top;overflow-wrap:anywhere}.rr-detail-table tr{break-inside:avoid;page-break-inside:avoid}.rr-item-extra{font-size:9.5px;color:#666;line-height:1.45;margin-top:3px}.rr-status.ok{color:#2e7d32}.rr-status.bad{color:#c62828}.rr-mode{margin:0 0 5mm}.rr-mode h3{font-size:13px;color:#5a3e0a;margin:0 0 2px}.rr-mode-score{font-size:10px;color:#8b6310;margin-bottom:2mm}.rr-empty{font-size:12px;color:#777}.gsh-login-summary{font-size:11px;line-height:1.55}.rr-footer{text-align:center;color:#8b6310;font-size:9px;letter-spacing:.15em;padding:5mm 2mm 1mm}@media print{.rr-page{padding:0;background:#fff}}</style>'
+      + '</head><body><main class="rr-page"><div class="rr-card"><header class="rr-head"><div><h1>' + esc(config.title || '本輪學習紀錄') + '</h1><div class="rr-brand">mrtaihualin.com</div></div><div class="rr-head-meta"><div>' + esc(today) + '</div>' + (difficulty ? '<div>' + esc(difficulty) + '</div>' : '') + '</div></header><div class="rr-body">'
+      + '<section class="rr-section" data-print-section="summary"><h2>' + PRINT_COPY.summary + '</h2>' + summary + '</section>'
+      + '<section class="rr-section" data-print-section="activity"><h2>' + PRINT_COPY.activity + '</h2><div class="rr-activity">' + esc(dailyActivityText(gameType, dailyCount)) + '</div></section>'
+      + '<section class="rr-section rr-detail" data-print-section="detail"><h2>' + PRINT_COPY.detail + '</h2>' + modeSections(report, { gameType: gameType, groupListeningModes: !!config.groupListeningModes }) + '</section>'
+      + (account ? '<section class="rr-section" data-print-section="account">' + account + '</section>' : '')
+      + '</div></div><footer class="rr-footer">泰華眼裡的泰語教學　·　mrtaihualin.com</footer></main></body></html>';
+  }
+
+  function openPrint(config) {
+    var win = root.open ? root.open('', '_blank') : null;
+    if (!win) return false;
+    win.document.open();
+    win.document.write(printDocument(config));
+    win.document.close();
+    win.focus();
+    root.setTimeout(function () { try { win.print(); } catch (e) {} }, 600);
+    return true;
+  }
+
   function loginSectionsHtml(report) {
     var s = report && report.login_summary;
     if (!s) return '';
@@ -224,6 +380,11 @@
     validate: validate,
     toPracticeEventDraft: toPracticeEventDraft,
     loginSectionsHtml: loginSectionsHtml,
+    recordDailyActivity: recordDailyActivity,
+    dailyActivity: dailyActivity,
+    dailyActivityText: dailyActivityText,
+    printDocument: printDocument,
+    openPrint: openPrint,
     uuid: uuid
   };
 })(typeof window !== 'undefined' ? window : globalThis);

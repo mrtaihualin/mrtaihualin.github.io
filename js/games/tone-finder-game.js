@@ -2497,6 +2497,12 @@ function buildReportHTML() {
     +'</head><body>'+buildReportInner()+'</body></html>';
 }
 function openReportPrint() {
+  if (window.RoundReport && typeof RoundReport.openPrint === 'function') {
+    var levelChar = ({1:'初',2:'中',3:'高'})[selectedLevel] || '';
+    if (RoundReport.openPrint({gameType:'tone',report:roundReport,title:'泰語聲調練習・本輪報告',documentTitle:'聲調練習報告',difficulty:levelChar ? levelChar+'級' : ''})) return;
+    showComingSoon();
+    return;
+  }
   var win = window.open('', '_blank');
   if (!win) { showComingSoon(); return; }
   win.document.open(); win.document.write(buildReportHTML()); win.document.close(); win.focus();

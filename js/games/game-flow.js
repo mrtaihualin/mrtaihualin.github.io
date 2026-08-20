@@ -313,6 +313,8 @@
       details.appendChild(el);
     }
     if (options.loginSrs === true) detailLine('gsh-result-srs', '帳號的 SRS 狀態已列在下方。');
+    var dailyText = options.dailyActivityText || (options.report && window.RoundReport && typeof RoundReport.dailyActivityText === 'function' ? RoundReport.dailyActivityText(options.report.game_type) : '');
+    if (dailyText) detailLine('gsh-result-daily', dailyText);
     var feedback = options.feedback || null;
     if (feedback && feedback.text) detailLine('gsh-result-feedback', feedback.text);
     (options.highlights || []).filter(Boolean).slice(0, 2).forEach(function (text) {

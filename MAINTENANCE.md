@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego custom-input Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 shared six-game Result/Print Delta
+
+## 2026-08-21 — PD-P12-PRINT-PDF-01 Shared Result / Browser Print (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Tone, Reading, Listening, Typing, Word Order and Lego now route their existing `列印／儲存` action through one shared zh-TW-ready browser Print renderer with the same Result-summary → daily-activity → full-detail → applicable account-data section order. The shared output uses A4 portrait and browser-supported row/section page-break protection; direct PDF download remains excluded.
+- Game-owned semantics remain intact: Word Order omits Level, Listening separates Choice/Typed detail and keeps Listening versus Typing scores separate, hint-using games show the resulting item score, and Lego prints only completed sentence + zh-TW while keeping the exact custom-input disclaimer sentence-conditional. Dynamic learner content is escaped before print rendering.
+- Finished Core 5 RoundReport identities update a device-local, per-game daily activity count once per round; Lego reuses its existing completed-sentence daily count. The same game-specific daily label is now visible in Result. Rebuilt the four affected minified game bundles and advanced only the RoundReport, GameFlow and six game runtime cache bindings. Targeted checks and the full repository gate PASS. No analytics/network/schema/Auth/account/Production mutation, direct-download feature, deploy, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego custom-input Delta
 
 ## 2026-08-21 — PD-P12-LEGO-CUSTOM-INPUT-01 Locked Custom Fields (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

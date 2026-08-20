@@ -1335,6 +1335,11 @@ function tgResumeRestart(){tgResumeNewRound();}
 // ════════════════════════════════════════════
 function rgDownloadReport(){
   try{ if(typeof gtag==='function') gtag('event','typing_game_pdf_download',{category:'game'}); }catch(e){}
+  if(window.RoundReport&&typeof RoundReport.openPrint==='function'){
+    if(RoundReport.openPrint({gameType:'typing',report:roundReport,title:'泰語打字練習室・本輪報告',documentTitle:'打字練習報告',difficulty:curLevel+'級'}))return;
+    try{rgToast('請允許彈出視窗才能列印報告 🙏');}catch(e0){alert('請允許彈出視窗才能列印報告');}
+    return;
+  }
   var SERIF="'Noto Serif TC','PingFang TC',serif";
   var SANS="'Noto Sans TC','PingFang TC',sans-serif";
   var today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
