@@ -1272,7 +1272,7 @@ function tgTryResume(){
     var banner=document.getElementById('tg-resume-banner');
     var detailEl=document.getElementById('tg-resume-detail');
     if(!banner||!detailEl)return;
-    detailEl.textContent='遊戲：打字練習・'+(saved.level||'初')+'級・第 '+(saved.cur+1)+'/'+saved.wordIds.length+' 字・上次分數 '+(saved.roundScore||0)+' 分';
+    detailEl.textContent=GameUiCopy.resumeLine('打字練習',(saved.level||'初')+'級','第 '+(saved.cur+1)+'/'+saved.wordIds.length+' 字');
     banner.style.display='block';
     window.__tgResumeData=saved;
   }catch(e){}

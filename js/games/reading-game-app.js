@@ -536,7 +536,7 @@ function rgTryLoadResumeBanner(){
   window.__rgPendingResume=st;
   var lvName=(st.level==='中')?'中級':(st.level==='高')?'高級':'初級';
   var detail=document.getElementById('rg-resume-detail');
-  if(detail)detail.textContent='遊戲：閱讀練習・'+lvName+'・第 '+(st.cur+1)+'/'+st.wordIds.length+' 字';
+  if(detail)detail.textContent=GameUiCopy.resumeLine('閱讀練習',lvName,'第 '+(st.cur+1)+'/'+st.wordIds.length+' 字');
   banner.style.display='';
   return true;
 }

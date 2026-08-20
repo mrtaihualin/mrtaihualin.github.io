@@ -47,6 +47,38 @@ window.GamePanels = window.GamePanels || (function () {
 })();
 
 // ===================================================================
+// [01.2a] SHARED GAME UI COPY — current zh-TW labels kept outside game logic
+// Phase 1.2 intentionally provides only the smallest locale-ready message surface.
+// It does not select/detect locales or add translations.
+// ===================================================================
+window.GameUiCopy = window.GameUiCopy || (function () {
+  var messages = {
+    resume: {
+      prefix: '上次進度：',
+      continueAction: '▶ 繼續上次',
+      restartAction: '↺ 重新開始',
+      newAction: '＋ 開始新一輪'
+    }
+  };
+  return {
+    resume: messages.resume,
+    resumeLine: function (game, level, progress) {
+      return messages.resume.prefix + [game, level, progress].filter(Boolean).join('・');
+    }
+  };
+})();
+(function () {
+  function syncResumeActions() {
+    var copy = window.GameUiCopy.resume;
+    document.querySelectorAll('.gsh-resume-continue').forEach(function (button) { button.textContent = copy.continueAction; });
+    document.querySelectorAll('.gsh-resume-restart').forEach(function (button) { button.textContent = copy.restartAction; });
+    document.querySelectorAll('.gsh-resume-new').forEach(function (button) { button.textContent = copy.newAction; });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncResumeActions);
+  else syncResumeActions();
+})();
+
+// ===================================================================
 // [01.3] 🪟 GAME MODAL REGISTRY HELPER — Shared Game UI Phase B1 (Lin 2026-08-10)
 //   Audit 2026-08-10 เจอว่า modal ของแต่ละเกมเอง (howto/star/badge/ask ฯลฯ) ไม่เคยลงทะเบียนกับ
 //   window.GamePanels ด้านบน ([01.2]) → เปิดซ้อนกับเมนู 🎮/🍚/🪧 ของ shared.js ได้ (เคยเป็นบั๊กจริงมาแล้วกับ 🪧 เอง)

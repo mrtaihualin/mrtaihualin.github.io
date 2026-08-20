@@ -1076,8 +1076,11 @@
       report: saved.report || null
     };
     if (el.resumeDetail) {
-      el.resumeDetail.textContent = '遊戲：聽力練習・等級：' + (state._pendingResume.level === '中' ? '中級' : '初級') + '・模式：' + (state._pendingResume.mode === 'type' ? '輸入答案' : '選擇答案') +
-        '・進度：' + (state._pendingResume.completed ? '本輪已答完，查看結果' : ('第 ' + (resumeIdx + 1) + '/' + saved.wordIds.length + ' 題'));
+      el.resumeDetail.textContent = GameUiCopy.resumeLine(
+        '聽力練習',
+        state._pendingResume.level === '中' ? '中級' : '初級',
+        state._pendingResume.completed ? '本輪完成・查看結果' : ('第 ' + (resumeIdx + 1) + '/' + saved.wordIds.length + ' 題')
+      );
     }
     el.resumeBanner.style.display = 'block';
   }

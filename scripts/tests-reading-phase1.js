@@ -69,7 +69,7 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=36/);
+  assert.match(html, /reading-game-app\.min\.js\?v=37/);
 });
 
 test('Reading option generator keeps displayed vowel choices complete and unique', () => {
@@ -182,6 +182,9 @@ test('direct word practice bypasses a saved Resume without deleting it', () => {
   const GameResume = {
     load() { loadCount++; return saved; },
   };
+  const GameUiCopy = {
+    resumeLine(game, level, progress) { return '上次進度：' + [game, level, progress].join('・'); },
+  };
   const context = {
     RG_RESUME_ID: 'reading-game',
     location: { search: '?word=%E0%B8%81%E0%B8%B4%E0%B8%99' },
@@ -193,7 +196,8 @@ test('direct word practice bypasses a saved Resume without deleting it', () => {
       },
     },
     GameResume,
-    window: { GameResume, __rgPendingResume: { stale: true } },
+    GameUiCopy,
+    window: { GameResume, GameUiCopy, __rgPendingResume: { stale: true } },
   };
   vm.createContext(context);
   vm.runInContext(resumeGate, context);

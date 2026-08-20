@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=21">
+<link rel="stylesheet" href="css/shared.css?v=22">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=6"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/word-order-app.js -->
@@ -371,9 +371,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="gsh-resume-title" id="wo-resume-title"></div>
   <div class="gsh-resume-detail" id="wo-resume-detail"></div>
   <div class="gsh-resume-actions">
-    <button class="gsh-resume-continue" onclick="woResumeContinueClick()">繼續上次練習</button>
-    <button class="gsh-resume-restart" onclick="woResumeRestartSameClick()">重新開始本次練習</button>
-    <button class="gsh-resume-new" onclick="woResumeNewRoundClick()">開始新一輪</button>
+    <button class="gsh-resume-continue" onclick="woResumeContinueClick()">▶ 繼續上次</button>
+    <button class="gsh-resume-restart" onclick="woResumeRestartSameClick()">↺ 重新開始</button>
+    <button class="gsh-resume-new" onclick="woResumeNewRoundClick()">＋ 開始新一輪</button>
   </div>
 </div>
 
@@ -494,7 +494,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=34"></script>
+<script src="js/core/shared.min.js?v=36"></script>
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=5"></script>
 
@@ -540,7 +540,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/word-order-app.min.js?v=27']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=28']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

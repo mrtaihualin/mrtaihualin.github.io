@@ -715,9 +715,11 @@
     if (woResumeCompletedCurrent(state, savedSentence&&savedSentence.th)) savedIdx++;
     var t = document.getElementById('wo-resume-title'); if (t) t.textContent = '上次的安全進度還在';
     var d = document.getElementById('wo-resume-detail');
-    if (d) d.textContent = savedIdx>=restoredSet.length
-      ? '遊戲：語序練習・本輪已完成・繼續查看結果'
-      : '遊戲：語序練習・第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句・目前分數 ' + (state.score||0) + ' 分';
+    if (d) d.textContent = GameUiCopy.resumeLine(
+      '語序練習',
+      '高級',
+      savedIdx>=restoredSet.length ? '本輪完成・查看結果' : '第 ' + (savedIdx+1) + '/' + restoredSet.length + ' 句'
+    );
     var g = document.getElementById('game'); if (g) g.style.display = 'none';
     var e = document.getElementById('end'); if (e) e.style.display = 'none';
     b.style.display = '';

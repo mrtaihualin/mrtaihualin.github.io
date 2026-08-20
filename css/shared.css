@@ -753,9 +753,11 @@ body .gsh-shell.tf-page { padding-top:8px; }
 .gsh-resume-new { background:transparent; border:1.5px solid var(--gold-bright) !important; color:var(--gold-deep); }
 @media(max-width:600px){ .gsh-resume-actions button{ flex:1 1 30%; } }
 @media(max-width:480px){
-  .gsh-resume-banner { padding:14px; text-align:left; }
-  .gsh-resume-actions { flex-direction:column; }
-  .gsh-resume-actions button { width:100%; min-height:44px; }
+  .gsh-resume-banner { padding:11px 10px; text-align:left; }
+  .gsh-resume-title { display:none; }
+  .gsh-resume-detail { margin-bottom:8px; font-size:12.5px; line-height:1.4; }
+  .gsh-resume-actions { flex-direction:row; flex-wrap:nowrap; gap:4px; }
+  .gsh-resume-actions button { flex:1 1 0; width:auto; min-width:0; min-height:36px; padding:6px 3px; font-size:11px; white-space:nowrap; }
 }
 
 /* 查看錯題 mistake review — ใช้ร่วมกัน 5 เกม (§21, Phase F2) read-only แสดงจาก roundLog/state จริงเท่านั้น */

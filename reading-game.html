@@ -85,7 +85,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=21">
+<link rel="stylesheet" href="css/shared.css?v=22">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=6"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/reading-game-app.js -->
@@ -500,9 +500,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="gsh-resume-title">上次的安全進度還在</div>
   <div class="gsh-resume-detail" id="rg-resume-detail"></div>
   <div class="gsh-resume-actions">
-    <button type="button" class="gsh-resume-continue" onclick="rgResumeContinue()">繼續上次練習</button>
-    <button type="button" class="gsh-resume-restart" onclick="rgResumeRestartSame()">重新開始本次練習</button>
-    <button type="button" class="gsh-resume-new" onclick="rgResumeNewRound()">開始新一輪</button>
+    <button type="button" class="gsh-resume-continue" onclick="rgResumeContinue()">▶ 繼續上次</button>
+    <button type="button" class="gsh-resume-restart" onclick="rgResumeRestartSame()">↺ 重新開始</button>
+    <button type="button" class="gsh-resume-new" onclick="rgResumeNewRound()">＋ 開始新一輪</button>
   </div>
 </div>
 
@@ -699,12 +699,12 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=36']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=37']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=3"></script>
-<script src="js/core/shared.min.js?v=34"></script>
+<script src="js/core/shared.min.js?v=36"></script>
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=5"></script>
 

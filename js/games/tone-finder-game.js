@@ -2862,14 +2862,15 @@ function tfShowResumeBannerIfAny(data) {
     var el = document.getElementById('tf-resume-banner');
     if (!el) return;
     var lvl = tfResumeLevelLabel(data.level);
-    var unitLabel = (data.level === 3) ? '句子' : (total + ' 個字');
+    var progress = '第 ' + (done + 1) + ' / ' + total + (data.level === 3 ? ' 句' : ' 字');
+    var resumeCopy = window.GameUiCopy.resume;
     el.innerHTML =
       '<div class="gsh-resume-title">上次的安全進度還在</div>' +
-      '<div class="gsh-resume-detail">遊戲：聲調練習・' + lvl + '・' + unitLabel + '・第 ' + (done + 1) + ' / ' + total + '</div>' +
+      '<div class="gsh-resume-detail">' + GameUiCopy.resumeLine('聲調練習', lvl, progress) + '</div>' +
       '<div class="gsh-resume-actions">' +
-        '<button type="button" class="gsh-resume-continue" onclick="TF.resumeSavedSession()">繼續上次練習</button>' +
-        '<button type="button" class="gsh-resume-restart" onclick="TF.restartSavedSession()">重新開始本次練習</button>' +
-        '<button type="button" class="gsh-resume-new" onclick="TF.startNewFromResume()">開始新一輪</button>' +
+        '<button type="button" class="gsh-resume-continue" onclick="TF.resumeSavedSession()">' + resumeCopy.continueAction + '</button>' +
+        '<button type="button" class="gsh-resume-restart" onclick="TF.restartSavedSession()">' + resumeCopy.restartAction + '</button>' +
+        '<button type="button" class="gsh-resume-new" onclick="TF.startNewFromResume()">' + resumeCopy.newAction + '</button>' +
       '</div>';
     el.style.display = 'block';
     __tfResumeSnapshot = data;

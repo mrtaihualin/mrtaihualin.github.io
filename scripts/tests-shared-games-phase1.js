@@ -49,11 +49,11 @@ test('all five games expose the locked shared header, progress and resume semant
   assert.match(games.find((g) => g.id === 'typing').htmlText, /<div class="card gsh-gameplay" id="game">/, 'Typing: gameplay class ต้องอยู่บน outer game card');
 });
 
-test('shared shell stays bounded and resume actions stack on narrow screens', () => {
+test('shared shell stays bounded and resume actions stay compact on narrow screens', () => {
   assert.match(sharedCss, /\.gsh-shell\s*\{[^}]*max-width:688px[^}]*box-sizing:border-box/);
   assert.match(sharedCss, /\.gsh-gameplay\s*\{[^}]*max-width:640px[^}]*box-sizing:border-box/);
-  assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]*?\.gsh-resume-actions\s*\{\s*flex-direction:column/);
-  assert.match(sharedCss, /\.gsh-resume-actions button\s*\{[^}]*min-height:44px/);
+  assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]*?\.gsh-resume-actions\s*\{\s*flex-direction:row/);
+  assert.match(sharedCss, /\.gsh-resume-actions button\s*\{[^}]*min-height:36px/);
 });
 
 test('all five games expose a persistent 玩法 replay path', () => {
@@ -87,7 +87,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=35/, 'Listening must load the shared More mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=36/, 'Listening must load the current shared mapping version');
 });
 
 test('shared font control binds after asynchronous Core 5 game startup', () => {
@@ -123,6 +123,20 @@ test('all five games provide recoverable round resume UI', () => {
   for (const g of games) {
     assert.match(g.htmlText, new RegExp(`id="${g.resume}"`), `${g.id}: ไม่มี resume banner`);
     assert.match(g.htmlText + g.appText, /GameResume/, `${g.id}: ไม่มี resume storage wiring`);
+  }
+});
+
+test('mobile resume uses one compact shared-copy line and three horizontal actions', () => {
+  assert.match(sharedJs, /window\.GameUiCopy[\s\S]{0,700}prefix: '上次進度：'/, 'resume copy must live outside game logic');
+  assert.match(sharedJs, /continueAction: '▶ 繼續上次'/);
+  assert.match(sharedJs, /restartAction: '↺ 重新開始'/);
+  assert.match(sharedJs, /newAction: '＋ 開始新一輪'/);
+  assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
+  assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
+  for (const g of games) {
+    assert.match(g.htmlText, /css\/shared\.css\?v=22/, `${g.id}: must load compact resume CSS`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=36/, `${g.id}: must load shared resume copy`);
+    assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });
 
@@ -252,7 +266,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=53/, 'Tone: page must request the rebuilt runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=54/, 'Tone: page must request the rebuilt runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);

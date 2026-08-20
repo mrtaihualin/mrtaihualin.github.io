@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening shared More-menu mapping Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 compact mobile Resume Delta
+
+## 2026-08-20 — PD-P12-MOBILE-RESUME-01 Core 5 Compact Resume (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Core 5 Resume now uses one shared semantic-copy source for `上次進度：<game>・<level>・<progress>` and the exact actions `▶ 繼續上次`, `↺ 重新開始`, `＋ 開始新一輪`; game-owned payload validation and resume/restart/new-round meanings remain unchanged.
+- At phone width the old stacked full-width buttons are replaced by one compact horizontal action row. Rebuilt the shared and four minified game bundles, advanced only the affected Core 5 CSS/shared/app cache keys, and extended existing shared/game/owner regressions. No Lego Resume implementation, new locale, selector/detection, gameplay/scoring/content/analytics change, deploy, Production/Auth/account/data expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening shared More-menu mapping Delta
 
 ## 2026-08-20 — P12-B-06 Listening Shared More Mapping (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
