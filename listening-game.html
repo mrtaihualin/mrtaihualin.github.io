@@ -349,6 +349,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <div class="lg-reveal" id="lg-reveal"></div>
 
   <div class="btn-row">
+    <button class="btn btn-secondary" id="lg-skip-btn" type="button" style="display:none;">跳過此題</button>
     <button class="btn btn-primary" id="lg-next-btn" type="button" style="display:none;">下一題 →</button>
   </div>
 </div>
@@ -416,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div id="game-switcher" data-current="listening_game"></div>
 <script src="js/games/game-switcher.js?v=2"></script>
 
-<script>document.addEventListener('DOMContentLoaded',function(){GameContentLoader.boot(['js/games/listening-game-app.js?v=13']);});</script>
+<script>document.addEventListener('DOMContentLoaded',function(){GameContentLoader.boot(['js/games/listening-game-app.js?v=14']);});</script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
 <div id="cookieConsentBanner" role="dialog" aria-label="Cookie 與分析設定" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;

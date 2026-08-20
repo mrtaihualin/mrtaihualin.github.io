@@ -58,6 +58,7 @@
     savedRoundSeq: 0,
     listenToken: 0,
     typingResetToken: 0,
+    audioFailed: false,
     answered: false,
     nextMode: null,
     awaitingModeForCurrent: false,
@@ -248,6 +249,7 @@
     el.typeSubmitBtn = qs('lg-type-submit');
     el.resultBanner = qs('lg-result-banner');
     el.reveal = qs('lg-reveal');
+    el.skipBtn = qs('lg-skip-btn');
     el.nextBtn = qs('lg-next-btn');
     el.endScoreBig = qs('lg-end-score');
     el.endDetail = qs('lg-end-detail');
@@ -488,6 +490,7 @@
     state.roundActive = true;
     state.nextMode = null;
     state.awaitingModeForCurrent = false;
+    state.audioFailed = false;
     state.roundSeq++;
     state.log = [];
     state.itemAttempts = [];
@@ -536,6 +539,7 @@
     state.typingResetToken++;
     state.nextMode = null;
     state.awaitingModeForCurrent = false;
+    state.audioFailed = false;
     renderModeTabs(state.mode);
     if (!options.preserveAttempt) {
       state.listenCount = 0;
@@ -554,6 +558,7 @@
     el.reveal.innerHTML = '';
     el.nextBtn.style.display = 'none';
     el.nextBtn.disabled = true;
+    if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
     updateAttemptHud(w);
 
     if (window.WordAudio) window.WordAudio.setCurrent(w.th);
@@ -603,6 +608,8 @@
     el.reveal.innerHTML = '';
     el.nextBtn.style.display = 'none';
     el.nextBtn.disabled = true;
+    state.audioFailed = false;
+    if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
     el.resultBanner.className = 'result-banner gsh-feedback-slot show';
     el.resultBanner.textContent = '請先選擇這一題要用「選擇答案」或「輸入答案」';
   }
@@ -642,14 +649,51 @@
       if (token !== state.listenToken || state.answered) return;
       if (!ok) {
         state.listenCount = Math.max(0, state.listenCount - 1);
+        state.audioFailed = true;
         updateAttemptHud(w);
         el.resultBanner.className = 'result-banner no show';
-        el.resultBanner.textContent = '⚠️ 音檔播放失敗，這次不計入聆聽次數，請再試一次';
+        el.resultBanner.textContent = '音檔暫時無法播放，請點「跳過此題」';
+        if (el.skipBtn) { el.skipBtn.style.display = 'inline-flex'; el.skipBtn.disabled = false; }
         return;
+      }
+      if (state.audioFailed) {
+        state.audioFailed = false;
+        el.resultBanner.className = 'result-banner';
+        el.resultBanner.textContent = '';
+        if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
       }
       saveResumeState();
       if (listeningScore(state.mode, w, state.listenCount) === 0) finishListeningAtZero(w);
     });
+  }
+
+  function skipCurrentQuestion() {
+    if (state.answered || !state.audioFailed) return;
+    var w = currentWord();
+    state.answered = true;
+    state.audioFailed = false;
+    state.itemAttempts = [];
+    state.log.push({
+      th: w.th, zh: w.zh, userAnswer: '', correct: false, skipped: true,
+      mode: state.mode, listens: state.listenCount,
+      listeningScore: 0, typingBonus: 0, totalScore: 0,
+      typingWrong: 0, wordCount: LISTENING_SCORE.wordCount(w.th),
+      unitCount: LISTENING_SCORE.typingUnitCount(w), attempts: []
+    });
+    if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
+    el.resultBanner.className = 'result-banner gsh-feedback-slot show';
+    el.resultBanner.textContent = '已跳過這題：不加分、不扣分，也不算作答';
+    state.lastAnswered = w;
+    el.reveal.classList.add('show');
+    renderReveal();
+    var hasNextQuestion = state.idx + 1 < state.round.length;
+    state.nextMode = null;
+    el.nextBtn.style.display = 'inline-flex';
+    el.nextBtn.disabled = hasNextQuestion;
+    el.nextBtn.textContent = hasNextQuestion ? '請先選擇下一題模式' : '看結果 →';
+    if (hasNextQuestion) renderModeTabs(null);
+    saveResumeState();
+    if (!hasNextQuestion && window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
   }
 
   function renderMC(w) {
@@ -803,6 +847,8 @@
 
   function finishAnswer(isCorrect, w, detail) {
     detail = detail || {};
+    state.audioFailed = false;
+    if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
     if (!listeningReviewPolicy.claimAttempt(w)) return;
     var existingSrs = listeningSrs[srsKey(w)] || {};
     var isReviewAttempt = listeningReviewPolicy.isReview(w);
@@ -1222,6 +1268,7 @@
     initNextKey();
     el.startBtn.addEventListener('click', startRound);
     el.nextBtn.addEventListener('click', goNext);
+    if (el.skipBtn) el.skipBtn.addEventListener('click', skipCurrentQuestion);
     Array.prototype.forEach.call(el.restartBtns, function (b) { b.addEventListener('click', restart); });
     if (el.soundBtn) {
       el.soundBtn.addEventListener('click', function (e) {

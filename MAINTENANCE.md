@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening active-mode Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening audio-failure/skip Delta
+
+## 2026-08-20 — P12-B-05/B-10 Listening Audio Failure and Skip (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Listening now shows the locked recovery message and `跳過此題` action only after an actual playback failure. Failed starts leave the successful-listen count unchanged; a later successful retry clears the error/action.
+- Skip immediately completes only the current question with zero score increase, zero penalty, no wrong count, no submitted attempt, no SRS claim and the actual successful-listen count preserved. It then reuses the fresh next-mode boundary from B01–B04. Advanced only the Listening cache key `v13→v14` and extended existing Listening/owner regressions. No deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
 
 ## 2026-08-20 — P12-B-01–B-04 Listening Active Mode Switching (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
