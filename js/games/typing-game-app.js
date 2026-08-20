@@ -455,6 +455,7 @@ function dispOpt(comp,x){
 // LEVEL SWITCH
 // ════════════════════════════════════════════
 function setLevel(lv){
+  tgCloseMobileKeyboard();
   try{ if(typeof gtag==='function') gtag('event','typing_game_level_change',{category:'game', level: lv}); }catch(e){}
   curLevel=lv;
   try{localStorage.setItem('tg_level',lv);}catch(e){} // Lin 2026-07-12: จำระดับที่เลือกไว้ → รีเฟรชแล้วไม่ต้องเลือกใหม่
@@ -1110,6 +1111,7 @@ function nextWord(){
 }
 
 function endRound(){
+  tgCloseMobileKeyboard();
   tgRoundActive=false;
   try{ if(window.GameResume) GameResume.clear('typing-game'); }catch(e){} // Phase E3: จบรอบแล้ว ไม่มีอะไรให้ resume อีก
   document.getElementById('game').style.display='none';
@@ -1236,6 +1238,7 @@ function tgHideMistakes(){
 }
 
 function restart(){
+  tgCloseMobileKeyboard();
   try{ if(typeof gtag==='function') gtag('event','typing_game_restart_click',{category:'game'}); }catch(e){}
   try{ if(window.GameResume) GameResume.clear('typing-game'); }catch(e){} // Phase F5/E3: กด "再玩一次" (มาถึงได้จากหน้าจบรอบเท่านั้น) = ล้าง session ค้างเก่าทิ้งเสมอ
   initGame();
@@ -1939,6 +1942,7 @@ function rgApplyTypeModeUI(){
 // บั๊กเดิม: ปล่อยให้ค้างโชว์ทั้งที่ไม่เกี่ยวแล้ว ทำให้ดูเหมือนหน้าว่างยาว/บังกล่องอธิบายด้านล่างจนนึกว่าไม่มีคำอธิบาย
 // จะโชว์กลับมาอัตโนมัติตอนขึ้นคำ/พยางค์ถัดไป (ดู loadSyl wrapper ด้านล่าง)
 function rgHideTypePanelForReveal(){
+  tgCloseMobileKeyboard();
   var panel=document.getElementById('type-panel');
   if(panel)panel.style.display='none';
 }
@@ -1995,6 +1999,7 @@ function rgTypeSuccessBranch(){
     finalizeWord();
     document.getElementById('btn-next').textContent='下一題 →';
   } else {
+    tgCloseMobileKeyboard();
     var b=document.getElementById('banner');
     b.textContent='✓';b.className='gsh-feedback-slot result-banner show ok'; // LIN 2026-07-03: ย่อข้อความ+ลดเวลาหน่วง ให้พิมพ์ยาวๆ ต่อเนื่องมากขึ้น ไม่รู้สึกเหมือนถูกตัดแบ่งพยางค์
     document.getElementById('btn-next').textContent='下一個音節 →';
@@ -2016,6 +2021,7 @@ function rgTypeFailBranch(){
     finalizeWord();
     document.getElementById('btn-next').textContent='下一題 →';
   } else {
+    tgCloseMobileKeyboard();
     var b=document.getElementById('banner');
     b.textContent='這個音節再看一下 — 接著打下一個音節';b.className='gsh-feedback-slot result-banner show no';
     document.getElementById('btn-next').textContent='下一個音節 →';
@@ -2263,6 +2269,20 @@ document.addEventListener('keydown',function(e){
 //  3) ค่อยล้างช่องจริง (mi.value='') ที่ "จุดจบธรรมชาติ" เท่านั้น (ขึ้นพยางค์/คำใหม่, กด Backspace, กด Enter) ไม่ใช่ระหว่างพิมพ์
 //  4) เพิ่ม fallback ฝั่ง Android: บาง IME ไม่ยิง keydown Backspace จริงตอนกดปุ่มลบบนคีย์บอร์ดจอ (ส่งมาเป็น input event inputType:'deleteContentBackward' แทน) เดิมโค้ดไม่ดักไว้เลย ปุ่มลบเลยไม่ทำงานบน Android บางรุ่น
 var RG_MI_LASTVAL=''; // ค่าล่าสุดที่ประมวลผลไปแล้วในช่องพิมพ์มือถือ (ใช้ diff)
+function tgCloseMobileKeyboard(){
+  try{
+    var mi=document.getElementById('rg-mobile-input');
+    if(mi&&document.activeElement===mi)mi.blur();
+    document.body.classList.remove('tg-kbd-typing');
+  }catch(e){}
+}
+function tgInitKeyboardDismissControls(){
+  document.addEventListener('click',function(event){
+    var target=event.target&&event.target.closest?event.target.closest('#wm-trigger, #rg-howto-btn'):null;
+    if(target)tgCloseMobileKeyboard();
+  },true);
+}
+tgInitKeyboardDismissControls();
 function rgMobileInputReset(){ // เรียกตอน "จุดจบธรรมชาติ" เท่านั้น (ขึ้นคำ/พยางค์ใหม่ ฯลฯ) — ห้ามเรียกกลางคันตอนกำลังพิมพ์
   RG_MI_LASTVAL='';
   try{ var mi0=document.getElementById('rg-mobile-input'); if(mi0)mi0.value=''; }catch(e){}

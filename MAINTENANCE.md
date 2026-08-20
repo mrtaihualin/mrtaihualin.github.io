@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening mobile-keyboard lifecycle Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Typing mobile-keyboard lifecycle Delta
+
+## 2026-08-20 — Typing Mobile Software Keyboard Lifecycle (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Typing now blurs the native mobile input on completed-syllable transitions, reveal, Result/restart, level selection, More menu and 玩法; the existing next-question loader remains the only path that refocuses it when typing is required again.
+- Rebuilt only `typing-game-app.min.js`, advanced only its page cache key `v34→v35`, and extended existing Typing/owner regressions. No IME redesign, draft persistence, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
 
 ## 2026-08-20 — Listening Mobile Software Keyboard Lifecycle (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
