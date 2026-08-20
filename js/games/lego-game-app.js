@@ -376,6 +376,7 @@ function pickWord(id,th){
   }
   openSlot=null;
   render();
+  legoSaveResume('build');
 }
 
 function clearSlot(id){
@@ -385,6 +386,7 @@ function clearSlot(id){
   if(id==='advObj') state.adv=null;
   openSlot=null;
   render();
+  legoSaveResume('build');
 }
 
 function addCustomSubj(){
@@ -399,7 +401,7 @@ function addCustomSubj(){
     if(sessionPool.subj.length>=POOL_SIZE) sessionPool.subj.shift();
     sessionPool.subj.push(w);
   }
-  state.subj=w;openSlot=null;render();toast('已加入：'+name);
+  state.subj=w;openSlot=null;render();legoSaveResume('build');toast('已加入：'+name);
 }
 
 function clearAll(){
@@ -415,9 +417,150 @@ const LEGO_UI_COPY={
   resultSave:{
     title:'選擇要儲存的句子',selectAll:'全部選取',save:'儲存到句子庫',
     empty:'請先選擇要儲存的句子',done:'已送出所選句子。',full:'句子庫已滿，請先刪除既有句子。'
-  }
+  },
+  resume:{game:'造句練習',mode:'自由造句',revealed:'等待繼續',draft:'句子未確認',ready:'準備下一句'}
 };
 let legoCompletedSentences=[];
+let legoPendingResume=null;
+
+function legoClearResume(){try{if(window.GameResume)window.GameResume.clear('lego');}catch(e){}}
+
+function legoSerializedBuilder(){
+  const builder={};
+  SLOTS.forEach(slot=>{
+    const word=state[slot.id];
+    builder[slot.id]=word?{th:String(word.th||''),zh:String(word.zh||''),custom:word.custom===true}:null;
+  });
+  return builder;
+}
+
+function legoHasDraft(builder){
+  return SLOTS.some(slot=>slot.id!=='prog'&&builder&&builder[slot.id]&&builder[slot.id].th);
+}
+
+function legoSaveResume(view){
+  try{
+    if(!window.GameResume)return;
+    const builder=legoSerializedBuilder();
+    if(!legoCompletedSentences.length&&!legoHasDraft(builder)){legoClearResume();return;}
+    window.GameResume.save('lego',{
+      version:1,view:view==='reveal'?'reveal':'build',builder:builder,
+      completed:legoCompletedSentences.map(sentence=>({th:String(sentence.th||''),zh:String(sentence.zh||''),custom:sentence.custom===true}))
+    });
+  }catch(e){}
+}
+
+function legoNormalizeCompleted(rows){
+  if(!Array.isArray(rows))return null;
+  const completed=[];
+  for(const row of rows){
+    if(!row||typeof row.th!=='string'||!row.th.trim()||typeof row.zh!=='string')return null;
+    completed.push({th:row.th,zh:row.zh,custom:row.custom===true});
+  }
+  return completed;
+}
+
+function legoNormalizeBuilder(saved){
+  if(!saved||typeof saved!=='object')return null;
+  const restored={};SLOTS.forEach(slot=>restored[slot.id]=null);
+  for(const slot of SLOTS){
+    const raw=saved[slot.id];if(!raw)continue;
+    if(typeof raw.th!=='string'||!raw.th)return null;
+    let word=null;
+    if(slot.id==='subj'&&raw.custom===true&&raw.th.length<=10)word={th:raw.th,zh:'',custom:true};
+    else if(slot.id==='advObj')word=LOCATION_WORDS.concat([SLEEP_LOCATION]).find(item=>item.th===raw.th)||null;
+    else word=(WORDS[slot.id]||[]).find(item=>item.th===raw.th&&item.custom!==true)||null;
+    if(!word)return null;
+    restored[slot.id]=word;
+  }
+  const verb=restored.verb&&restored.verb.th;
+  const objectBranch=['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb);
+  if(restored.obj){
+    const verbDef=WORDS.verb.find(word=>word.th===verb);
+    const allowed=verbDef&&Array.isArray(verbDef.objTags)?verbDef.objTags:[];
+    if(!objectBranch||!(restored.obj.tags||[]).some(tag=>allowed.includes(tag)))restored.obj=null;
+  }
+  if(objectBranch){
+    restored.adv=null;restored.advObj=null;
+    if(!restored.modal)restored.prog=WORDS.prog[0];
+    else if(restored.modal.th!=='กำลัง')restored.prog=null;
+  }else if(verb==='ไป'){
+    restored.obj=null;restored.prog=null;restored.end=null;
+    if(restored.advObj&&restored.advObj.th===SLEEP_LOCATION.th)restored.advObj=null;
+    if(!restored.advObj)restored.adv=null;
+  }else if(verb==='นอน'){
+    restored.obj=null;restored.prog=null;restored.end=null;restored.adv=null;
+    if(restored.advObj&&restored.advObj.th!==SLEEP_LOCATION.th)restored.advObj=null;
+  }else if(verb==='ไปนอน'){
+    restored.obj=null;restored.prog=null;restored.end=null;restored.adv=null;restored.advObj=null;
+  }else{
+    restored.obj=null;restored.end=null;restored.adv=null;restored.advObj=null;
+    if(!restored.modal)restored.prog=WORDS.prog[0];
+    else if(restored.modal.th!=='กำลัง')restored.prog=null;
+  }
+  return restored;
+}
+
+function legoNormalizeResume(saved){
+  if(!saved||saved.version!==1||!['build','reveal'].includes(saved.view))return null;
+  const completed=legoNormalizeCompleted(saved.completed);
+  const builder=legoNormalizeBuilder(saved.builder);
+  if(!completed||!builder)return null;
+  if(saved.view==='reveal'&&!completed.length)return null;
+  return {view:saved.view,completed:completed,builder:builder};
+}
+
+function legoApplyBuilder(builder){
+  SLOTS.forEach(slot=>{state[slot.id]=builder[slot.id]||null;});
+  openSlot=null;render();
+}
+
+function legoHideResumeBanner(){const banner=document.getElementById('lego-resume-banner');if(banner)banner.style.display='none';}
+
+function legoTryResume(){
+  if(!window.GameResume)return false;
+  let normalized=null;
+  try{normalized=legoNormalizeResume(window.GameResume.load('lego'));}catch(e){}
+  if(!normalized){legoClearResume();return false;}
+  legoPendingResume=normalized;
+  const completed=normalized.completed.length;
+  const progress=completed+' 句・'+(normalized.view==='reveal'?LEGO_UI_COPY.resume.revealed:(legoHasDraft(normalized.builder)?LEGO_UI_COPY.resume.draft:LEGO_UI_COPY.resume.ready));
+  const detail=document.getElementById('lego-resume-detail');
+  if(detail)detail.textContent=GameUiCopy.resumeLine(LEGO_UI_COPY.resume.game,LEGO_UI_COPY.resume.mode,progress);
+  legoHideLockedPanels();
+  const build=document.getElementById('buildPanel');if(build)build.classList.add('hidden');
+  const banner=document.getElementById('lego-resume-banner');if(banner)banner.style.display='';
+  return true;
+}
+
+function legoResumeContinue(){
+  const pending=legoPendingResume;legoPendingResume=null;legoHideResumeBanner();
+  if(!pending){legoClearResume();document.getElementById('buildPanel').classList.remove('hidden');return;}
+  legoCompletedSentences=pending.completed;
+  legoApplyBuilder(pending.builder);
+  if(pending.view==='reveal'){
+    const sentence=legoCompletedSentences[legoCompletedSentences.length-1];
+    document.getElementById('buildPanel').classList.add('hidden');
+    document.getElementById('lego-reveal-th').textContent=sentence.th;
+    document.getElementById('lego-reveal-zh').textContent=sentence.zh;
+    document.getElementById('lego-reveal-disclaimer').classList.toggle('hidden',!sentence.custom);
+    document.getElementById('lego-reveal').classList.remove('hidden');
+  }else document.getElementById('buildPanel').classList.remove('hidden');
+  legoSaveResume(pending.view);
+}
+
+function legoResumeRestartCurrent(){
+  const pending=legoPendingResume;legoPendingResume=null;legoHideResumeBanner();
+  legoCompletedSentences=pending?pending.completed:[];
+  SLOTS.forEach(slot=>state[slot.id]=null);state.prog=WORDS.prog[0];openSlot=null;render();
+  legoHideLockedPanels();document.getElementById('buildPanel').classList.remove('hidden');legoSaveResume('build');
+}
+
+function legoResumeNewSession(){
+  legoPendingResume=null;legoClearResume();legoHideResumeBanner();legoCompletedSentences=[];
+  SLOTS.forEach(slot=>state[slot.id]=null);state.prog=WORDS.prog[0];openSlot=null;render();
+  legoHideLockedPanels();document.getElementById('buildPanel').classList.remove('hidden');
+}
 
 function legoCurrentSentence(){
   if(!state.subj||!state.verb) return null;
@@ -455,6 +598,7 @@ function legoShowLockedError(){
   legoHideLockedPanels();
   const build=document.getElementById('buildPanel');if(build)build.classList.add('hidden');
   const error=document.getElementById('lego-flow-error');if(error)error.classList.remove('hidden');
+  legoSaveResume('build');
 }
 
 function legoCompleteSentence(){
@@ -469,6 +613,7 @@ function legoCompleteSentence(){
     document.getElementById('lego-reveal-disclaimer').classList.toggle('hidden',!sentence.custom);
     document.getElementById('lego-flow-error').classList.add('hidden');
     document.getElementById('lego-reveal').classList.remove('hidden');
+    legoSaveResume('reveal');
   }catch(e){legoShowLockedError();}
 }
 
@@ -477,6 +622,7 @@ function legoContinueBuilding(){
     legoHideLockedPanels();
     clearAll();
     document.getElementById('buildPanel').classList.remove('hidden');
+    legoSaveResume('build');
   }catch(e){legoShowLockedError();}
 }
 
@@ -562,6 +708,7 @@ function legoEndGame(){
       key:'lego-result',root:result,actions:'#lego-result .gsh-end-actions',correct:0,total:count,
       showFirstCorrect:false,onReplay:legoStartNewSession
     });
+    legoClearResume();
   }catch(e){legoShowLockedError();}
 }
 
@@ -569,6 +716,7 @@ function legoStartNewSession(){
   try{
     if(window.GameFlow)GameFlow.cancelResult('lego-result');
     legoCompletedSentences=[];
+    legoClearResume();
     legoHideLockedPanels();
     clearAll();
     document.getElementById('buildPanel').classList.remove('hidden');
@@ -1416,6 +1564,7 @@ function _processMinaToastQueue(){
 // ── INIT ──
 renderLevels();
 setLevel('lv1');
+legoTryResume();
 refreshLegoAcctUI();
 try{ legoRenderGameBar(); }catch(e){}
 document.addEventListener('DOMContentLoaded',function(){
@@ -1500,7 +1649,8 @@ function gtTourStart(){
     var waitReady=setInterval(function(){
       tries++;
       var bp=document.getElementById('baseplate');
-      var ready=bp && bp.children.length>0 && document.querySelector('.out-banner') && document.querySelector('button[onclick="legoCompleteSentence()"]') && document.querySelector('button[onclick="legoEndGame()"]');
+      var resume=document.getElementById('lego-resume-banner');
+      var ready=resume && resume.style.display==='none' && bp && bp.children.length>0 && document.querySelector('.out-banner') && document.querySelector('button[onclick="legoCompleteSentence()"]') && document.querySelector('button[onclick="legoEndGame()"]');
       if(ready || tries>25){
         clearInterval(waitReady);
         if(ready) setTimeout(gtTourStart, 500);

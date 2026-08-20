@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego Login Result sentence-library Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego Resume Delta
+
+## 2026-08-21 — PD-P12-LEGO-FLOW-01 Game-Owned Resume (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego now uses the shared compact Resume presentation and exact three actions. `繼續上次` restores the validated current builder or reveal plus every confirmed sentence; `重新開始` discards only the current unconfirmed builder while retaining confirmed sentences; `開始新一輪` clears the saved Lego session and starts empty.
+- The game-owned v1 payload stores only the locked builder fields, conditional custom marker, confirmed sentence/translation rows and build/reveal view. Restore rejects malformed/stale words, reapplies current verb/object/location/`กับ` branch rules, preserves custom translation blanks, and never restores an unconfirmed draft into Result/library data. Successful Result clears Resume only after rendering; the error path rewrites the recoverable confirmed data.
+- Advanced only Lego's app cache binding to v8 and extended the existing shared/cache-contract regressions. Targeted checks and the full repository gate PASS. No server schema, cross-device claim, deploy, Production/Auth/account/data/analytics mutation, Landscape/Print-category expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego Login Result sentence-library Delta
 
 ## 2026-08-21 — PD-P12-LEGO-PERSISTENCE-01/RESULT-01 Login Result Save (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
