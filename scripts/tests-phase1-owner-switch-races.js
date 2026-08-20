@@ -348,7 +348,7 @@ test('all affected pages ship the owner-safe runtime versions', async () => {
     assert.match(read(page), /reading-auth\.js\?v=26/, page + ' reading-auth cache');
   }
   assert.match(read('lego.html'), /game-account\.js\?v=4/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=52/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=53/);
   assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=35/);
   assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=33/);
   assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=27/);

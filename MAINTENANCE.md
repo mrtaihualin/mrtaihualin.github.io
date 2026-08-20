@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-19 22:43 Asia/Bangkok** — Phase 1 PostgreSQL 17 backup runtime pin + manual backup-only guard
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 locked Tone hint playability Delta
+
+## 2026-08-20 — P12-A-03 Tone Active-Hint Zero Lock (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Tone now records Choice-style guidance per active question: opening guidance once permanently locks that item to zero even after toggle-off, revokes provisional single-word points, keeps multi-syllable scoring at zero, records hint evidence and prevents guided SRS movement. The latest toggle state remains the next question's default; changing the default on a completed Result does not rewrite that Result.
+- Rebuilt only `tone-finder-game.min.js`, advanced only its page cache key `v52→v53`, and extended existing shared-game and owner-version regressions. Targeted suites, `git diff --check`, secret/syntax checks and the full 992-file site gate PASS locally. No deploy, Production/Auth/account/data/analytics mutation, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-19 22:43 Asia/Bangkok** — Phase 1 PostgreSQL 17 backup runtime pin + manual backup-only guard
 
 ## 2026-08-19 — Phase 1 PostgreSQL 17 Backup Runtime Pin + Manual Backup-Only Guard (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
