@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Lego minimum-presentation Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego locked build/reveal/Result flow Delta
+
+## 2026-08-21 — PD-P12-LEGO-FLOW-01/RESULT-01 Locked Build → Reveal → Result (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego now exposes the locked primary actions `完成句子` / `結束遊戲`; a valid confirmed sentence is retained in the current session and shown in a sentence-plus-zh-TW reveal with `繼續造句` / `結束遊戲`, while ending excludes the current unconfirmed draft and reaches the shared Result shell. The bounded error path shows the locked error copy and still permits ending with all prior confirmed sentences intact.
+- Lego Result now has shared replay/countdown/Enter behavior, existing Games/CTA/Home routing, browser Print/Save, full read-only session detail, and a device-local daily confirmed-sentence count. Custom input without a player translation stays blank rather than inferred and carries the exact disclaimer. Guest save controls remain absent; Login sentence-selection/library saving is not claimed complete in this Delta.
+- Added Lego to shared flow v9 with a non-applicable-first-attempt option, advanced only affected cache bindings, updated existing cache-contract assertions, and extended existing shared/flow regressions. Targeted checks and the full 993-file gate PASS. No old scoring/quota/SRS mutation, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 Lego minimum-presentation Delta
 
 ## 2026-08-20 — PD-P12-LEGO-01 Minimum Presentation (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

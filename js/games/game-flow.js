@@ -294,7 +294,7 @@
       print: '列印／儲存', detail: '查看本輪詳細紀錄', trial: '預約免費體驗課 →', home: '回到首頁'
     };
     line('gsh-result-completed', resultCopy.completed + ' ' + completed + ' / ' + total);
-    line('gsh-result-first-correct', resultCopy.firstCorrect + ' ' + firstCorrect + ' / ' + total);
+    if (options.showFirstCorrect !== false) line('gsh-result-first-correct', resultCopy.firstCorrect + ' ' + firstCorrect + ' / ' + total);
     var countdown = line('gsh-result-countdown', '');
     normalizeResultOrder(root, actions, meta, resultCopy);
     var details = root.querySelector('.gsh-result-shared-details');

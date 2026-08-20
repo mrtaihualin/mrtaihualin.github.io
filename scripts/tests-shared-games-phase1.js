@@ -118,7 +118,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=4/, 'Lego must load its font adapter version');
+  assert.match(legoHtml, /lego-game-app\.js\?v=5/, 'Lego must load its locked-flow runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -128,11 +128,25 @@ test('Lego consumes the shared two-mode font path without a particle control', (
 
 test('Lego exposes only the locked minimum-release presentation', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /<h1>泰語造句練習室<\/h1>/);
   assert.match(legoHtml, /<p>用學過的單字，組出你真正想說的泰語。<\/p>/);
   assert.match(legoHtml, /id="levels" hidden aria-hidden="true"/, 'unauthorized Level 2/3 entry UI must not be exposed');
   assert.doesNotMatch(legoHtml, /id="rg-challenge-banner"/, 'Weekly Challenge must stay out of the minimum release');
   assert.doesNotMatch(legoHtml, /lego_freebie_banner_click|免費領取「泰語聲調速查表」/, 'removed lead magnet must not interrupt Lego gameplay');
+  assert.match(legoHtml, /onclick="legoCompleteSentence\(\)">完成句子<\/button>/);
+  assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
+  assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
+  assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must contain only the full sentence and zh-TW translation before actions');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=9/, 'Lego Result must use the shared flow runtime');
+  for (const role of ['replay','print','detail-action','switch','cta','home']) {
+    assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
+  }
+  assert.match(legoApp, /let legoCompletedSentences=\[\]/, 'confirmed sentences need one session collection');
+  assert.match(legoApp, /legoCompletedSentences\.push\(sentence\)/, '完成句子 must retain the confirmed sentence');
+  assert.match(legoApp, /custom\?'':buildZhFull\(\)/, 'custom input without player translation must not receive inferred translation');
+  assert.match(legoApp, /自訂內容由玩家自行輸入，系統不會檢查或修正內容。/);
+  assert.match(legoApp, /showFirstCorrect:false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
 });
 
 test('learning helpers remain inline and do not create the fallback rice menu', () => {

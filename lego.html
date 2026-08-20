@@ -233,6 +233,15 @@ body{background:var(--bg1);color:var(--ink);font-family:'Noto Sans TC',sans-seri
 .toast.show{opacity:1;}
 .toast.err{background:#c4574f;}
 .hidden{display:none !important;}
+.lego-flow-card{margin:0 auto 24px;padding:24px 20px;text-align:center;max-width:640px;}
+.lego-flow-th{font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:clamp(24px,5vw,36px);font-weight:700;color:var(--gold-deep);line-height:1.55;word-break:break-word;}
+.lego-flow-zh{font-size:15px;color:var(--ink-muted);margin-top:8px;min-height:22px;}
+.lego-flow-note{margin-top:12px;padding:9px 12px;border-radius:10px;background:var(--cream);color:#8B6310;font-size:12px;}
+.lego-flow-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:18px;}
+.lego-result-list{display:grid;gap:10px;width:100%;margin-top:14px;text-align:left;}
+.lego-result-item{padding:11px 13px;border:1px solid rgba(139,99,16,.2);border-radius:12px;background:var(--cream);}
+.lego-result-item .th{font-size:19px;font-weight:700;color:var(--gold-deep);}
+@media print{body *{visibility:hidden!important}.lego-printing,.lego-printing *{visibility:visible!important}.lego-printing{position:absolute!important;inset:0 auto auto 0!important;width:100%!important;box-shadow:none!important}.rg-ctl-wrap,#bottom-nav,.site-nav,.page-strip{display:none!important}}
 
 /* ── TEST MODAL (拆句測驗，測試通過才給分) ── */
 .test-overlay{display:none;position:fixed;inset:0;background:rgba(28,20,6,.55);z-index:500;align-items:center;justify-content:center;padding:16px;}
@@ -438,10 +447,8 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
         <div class="out-zh-full" id="sentZhFull"></div>
       </div>
       <div class="out-actions">
-        <button class="btn btn-gold" onclick="startTest()">🧪 測試（拿分）</button>
-        <button class="btn btn-line" onclick="try{if(window.gtag)gtag('event','lego_copy_sentence',{category:'game'});}catch(e){}copySentence()">複製句子</button>
-        <button class="btn btn-line" onclick="try{if(window.gtag)gtag('event','lego_example_view',{category:'game'});}catch(e){}loadExample()">看範例</button>
-        <button class="btn btn-line" onclick="try{if(window.gtag)gtag('event','lego_clear_all',{category:'game'});}catch(e){}clearAll()">清空</button>
+        <button class="btn btn-gold" type="button" onclick="legoCompleteSentence()">完成句子</button>
+        <button class="btn btn-line" type="button" onclick="legoEndGame()">結束遊戲</button>
       </div>
     </div>
 
@@ -449,6 +456,45 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
     <div class="bp-hint">必填：主語、動詞</div>
     <div class="baseplate" id="baseplate"></div>
   </div>
+
+  <section id="lego-reveal" class="card lego-flow-card hidden" aria-live="polite">
+    <div class="lego-flow-th" id="lego-reveal-th"></div>
+    <div class="lego-flow-zh" id="lego-reveal-zh"></div>
+    <div class="lego-flow-note hidden" id="lego-reveal-disclaimer">自訂內容由玩家自行輸入，系統不會檢查或修正內容。</div>
+    <div class="lego-flow-actions">
+      <button class="btn btn-gold" type="button" onclick="legoContinueBuilding()">繼續造句</button>
+      <button class="btn btn-line" type="button" onclick="legoEndGame()">結束遊戲</button>
+    </div>
+  </section>
+
+  <section id="lego-result" class="card lego-flow-card hidden">
+    <h2 class="gsh-end-title">本輪造句完成</h2>
+    <div class="gsh-end-score" id="lego-result-count"></div>
+    <div id="lego-result-daily"></div>
+    <div class="lego-result-list" id="lego-result-list"></div>
+    <div class="book-cta" style="margin-top:18px;">
+      <div class="book-cta-title">想把自己造的句子真正說出口嗎？</div>
+      <a class="btn btn-gold" data-game-result-cta="v1" href="pricing.html?from=lego#pricing" onclick="if(window.bookFromGame){bookFromGame('lego','end_screen');return false;}">預約免費體驗課 →</a>
+    </div>
+    <div class="gsh-end-actions">
+      <button class="btn btn-gold" data-game-result-replay="v1" type="button" onclick="legoStartNewSession()">再玩一輪</button>
+      <button class="btn btn-line" data-game-result-print="v1" type="button" onclick="legoPrintResult()">列印／儲存</button>
+      <button class="btn btn-line" data-game-result-detail-action="v1" type="button" onclick="legoShowDetail()">查看本輪詳細紀錄</button>
+      <a class="btn btn-line" data-game-result-switch="v1" href="games.html">換個遊戲</a>
+      <a class="btn btn-line" data-game-result-home="v1" href="index.html">回到首頁</a>
+    </div>
+  </section>
+
+  <section id="lego-result-detail" class="card lego-flow-card hidden">
+    <h2 class="gsh-end-title">本輪詳細紀錄</h2>
+    <div class="lego-result-list" id="lego-result-detail-list"></div>
+    <button class="btn btn-line" type="button" onclick="legoHideDetail()">← 返回結果</button>
+  </section>
+
+  <section id="lego-flow-error" class="card lego-flow-card hidden" role="alert">
+    <div>發生錯誤，請再試一次。</div>
+    <button class="btn btn-line" type="button" onclick="legoEndGame()">結束遊戲</button>
+  </section>
 
 </div>
 
@@ -531,6 +577,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
 
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=39"></script>
+<script src="js/games/game-flow.js?v=9"></script>
 
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>
@@ -548,7 +595,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   </div>
 </div>
 
-<script src="js/games/lego-game-app.js?v=4"></script>
+<script src="js/games/lego-game-app.js?v=5"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 — Lin 2026-07-08: เลโก้ขาดแถบนี้ไปเดิม เพิ่มให้ครบเหมือนเกมอื่น ── -->
 <style>
