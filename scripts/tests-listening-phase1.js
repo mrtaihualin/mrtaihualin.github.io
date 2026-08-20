@@ -79,6 +79,21 @@ check('submitted item records the actual immutable mode before next-mode selecti
 check('resume keeps or requests the fresh next-question mode',
   /nextMode: state\.nextMode/.test(app) && /awaitModeSelection: !!saved\.answered/.test(app) &&
   /else if \(pend\.awaitModeSelection\) showModeSelectionForCurrent\(\)/.test(app));
+check('level selector uses only playable audio and keeps Advanced visibly locked',
+  /function buildPlayablePool\(\) \{[\s\S]*window\.WordAudio\.has\(w\.th\)/.test(app) &&
+  /function buildPool\(level\) \{[\s\S]*w\.level === level/.test(app) &&
+  /data-level="高"[^>]+disabled[^>]+aria-disabled="true"/.test(html));
+check('Listening keeps Level Row 1 separate from status Row 2 on Portrait/Desktop DOM',
+  html.indexOf('id="lg-level-tabs"') < html.indexOf('id="lg-game"') &&
+  /id="lg-level-tabs"[\s\S]*data-level="初"[\s\S]*data-level="中"[\s\S]*data-level="高"/.test(html) &&
+  /第 <span id="lg-qn">1<\/span> \/ <span id="lg-qt">10<\/span> 字/.test(html) &&
+  /🏆 <span id="lg-score">0<\/span> คะแนน/.test(html) &&
+  !/<div class="top-bar[^>]*">[\s\S]*data-level=/.test(html.slice(html.indexOf('id="lg-game"'), html.indexOf('<!-- END SCREEN -->'))));
+check('level identity survives round, report and Resume without mixed-pool fallback',
+  /level: state\.level/.test(app) &&
+  /difficulty: state\.level/.test(app) &&
+  /state\.level = pend\.level;[\s\S]*state\.pool = buildPool\(state\.level\)/.test(app) &&
+  /legacyLevels\.length === 1/.test(app));
 check('audio failure alone shows the locked skip recovery and successful retry clears it',
   /if \(!ok\) \{[\s\S]*state\.listenCount = Math\.max\(0, state\.listenCount - 1\)[\s\S]*音檔暫時無法播放，請點「跳過此題」[\s\S]*el\.skipBtn\.style\.display = 'inline-flex'/.test(app) &&
   /if \(state\.audioFailed\) \{[\s\S]*state\.audioFailed = false;[\s\S]*el\.resultBanner\.textContent = '';[\s\S]*el\.skipBtn\.style\.display = 'none'/.test(app));
@@ -86,6 +101,7 @@ check('skip advances with no score, penalty, wrong or attempt mutation',
   /state\.itemAttempts = \[\];[\s\S]*skipped: true[\s\S]*listeningScore: 0, typingBonus: 0, totalScore: 0/.test(appFunction('skipCurrentQuestion', 'renderMC')) &&
   !/state\.(correct|wrong|primaryTotal|typingBonusTotal)\+\+/.test(appFunction('skipCurrentQuestion', 'renderMC')) &&
   !/finishAnswer\(|claimAttempt\(|sendListeningSrs\(/.test(appFunction('skipCurrentQuestion', 'renderMC')) &&
+  /entry\.correct \|\| entry\.skipped \? 0 : 1/.test(app) &&
   /id="lg-skip-btn"[^>]+display:none/.test(html));
 check('Listening Score และ Typing Bonus เก็บแยกใน evidence', /listening_score: entry\.listeningScore/.test(app) && /typing_bonus: entry\.typingBonus/.test(app));
 check('Listening DTO เก็บเฉพาะค่าที่ Submit และ listen count', /itemAttempts\.push\(\{ answer: val, is_correct: isCorrect, mode: 'type' \}\)/.test(app) && /listen_count: state\.listenCount/.test(app) && !/rawKeystrokes|raw_keystrokes/.test(app));
@@ -100,7 +116,7 @@ check('Listening อ่าน SRS ของ game=listening กลับจาก
 check('Listening SRS query ผูก captured owner เป็น defense-in-depth', /\.eq\('game', 'listening'\)\s*\.eq\('user_id', owner\.uid\)/.test(app) && /options\.load\(owner\)/.test(app));
 check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier: 'free'/.test(app) && /GameFlow\.allocateSrs/.test(app));
 check('Listening SRS read ใช้ NetworkGuard แบบ bounded และไม่ retry blind', /NetworkGuard\.request\([\s\S]*'listening-srs', \{\}, 10000, null\)/.test(app));
-check('Listening start fallback สูงสุด 1500ms และ cache version ตรง v14', /options\.delay\(1500\)/.test(app) && /listening-game-app\.js\?v=14/.test(html));
+check('Listening start fallback สูงสุด 1500ms และ cache version ตรง v15', /options\.delay\(1500\)/.test(app) && /listening-game-app\.js\?v=15/.test(html));
 check('Listening มี leaderboard ของตัวเองและ auth ชี้ถูกหน้า', /READING_BOARD_GAME = 'listening'/.test(board) && /listening-board\.html/.test(auth));
 check('Leaderboard client รองรับ game=listening', /READING_BOARD_GAME === 'listening'/.test(boardClient) && /listening-game\.html/.test(boardClient));
 check('Core 5 SQL contract รองรับ Listening และ weekly เริ่มวันจันทร์ Taipei', /'reading', 'listening', 'typing', 'word_order'/.test(boardSql) && /date_trunc\('week', timezone\('Asia\/Taipei'/.test(boardSql));

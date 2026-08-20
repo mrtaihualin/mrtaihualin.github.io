@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening audio-failure/skip Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Listening level/two-row Delta
+
+## 2026-08-20 — P12-B-07 Listening Levels and Two-Row Hierarchy (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Listening now exposes `初級 / 中級 / 高級` in a dedicated Level row. Initial and Intermediate are enabled only when the existing protected-audio registry proves playable items; Advanced stays visible and locked. The selected Level filters the existing word pool and persists through round state, Resume and report/account evidence; no content or audio was added.
+- The separate status row now renders exactly `第 X / Y 字` and `🏆 คะแนน`, with progress and gameplay below; Level and status are not combined on Portrait/Desktop. Advanced only the Listening cache key `v14→v15` and extended existing Listening/owner regressions. No shared responsive/Landscape redesign, deploy, Production/Auth/account/data/analytics expansion, beta, final regression or Phase 1 PASS occurred.
 
 ## 2026-08-20 — P12-B-05/B-10 Listening Audio Failure and Skip (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

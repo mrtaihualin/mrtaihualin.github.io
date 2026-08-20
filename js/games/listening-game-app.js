@@ -44,6 +44,7 @@
 
   var state = {
     mode: 'mc',     // 'mc' = 選擇答案 · 'type' = 輸入答案
+    level: '初',
     pool: [],       // คำทั้งหมดที่มีเสียงจริง (buildWordsForPhonicsGames shape: .th/.zh/.en/.level/.readingTH)
     round: [],      // 10 คำที่สุ่มมาใช้ในรอบนี้
     idx: 0,
@@ -232,6 +233,7 @@
     el.gameScreen = qs('lg-game');
     el.endScreen = qs('lg-end');
     el.modeTabs = document.querySelectorAll('.mtab');
+    el.levelTabs = document.querySelectorAll('.ltab[data-level]');
     el.startBtn = qs('lg-start-btn');
     el.poolNote = qs('lg-pool-note');
     el.qn = qs('lg-qn');
@@ -289,11 +291,50 @@
   }
 
   // ── pool / round ──
-  function buildPool() {
+  function buildPlayablePool() {
     if (!window.WORDS_MASTER || !window.buildWordsForPhonicsGames || !window.WordAudio) return [];
     var words = window.buildWordsForPhonicsGames(window.WORDS_MASTER);
     return words.filter(function (w) {
       return w && w.th && window.WordAudio.has(w.th);
+    });
+  }
+
+  function buildPool(level) {
+    level = level || state.level;
+    return buildPlayablePool().filter(function (w) { return w.level === level; });
+  }
+
+  function renderLevelTabs() {
+    var playable = buildPlayablePool();
+    var available = { '初': false, '中': false, '高': false };
+    playable.forEach(function (w) { if (w && (w.level === '初' || w.level === '中')) available[w.level] = true; });
+    if (!available[state.level]) state.level = available['初'] ? '初' : (available['中'] ? '中' : '初');
+    Array.prototype.forEach.call(el.levelTabs, function (tab) {
+      var level = tab.getAttribute('data-level');
+      var enabled = level !== '高' && !!available[level];
+      tab.disabled = !enabled || state.roundActive;
+      tab.setAttribute('aria-disabled', tab.disabled ? 'true' : 'false');
+      tab.classList.toggle('active', level === state.level);
+    });
+  }
+
+  function setListeningLevel(level) {
+    if (state.roundActive || (level !== '初' && level !== '中')) return false;
+    if (!buildPool(level).length) return false;
+    state.level = level;
+    try { localStorage.setItem('listening_game_level', level); } catch (e) {}
+    renderLevelTabs();
+    return true;
+  }
+
+  function initLevelTabs() {
+    try {
+      var saved = localStorage.getItem('listening_game_level');
+      if (saved === '初' || saved === '中') state.level = saved;
+    } catch (e) {}
+    renderLevelTabs();
+    Array.prototype.forEach.call(el.levelTabs, function (tab) {
+      tab.addEventListener('click', function () { setListeningLevel(tab.getAttribute('data-level')); });
     });
   }
 
@@ -474,7 +515,7 @@
   }
 
   function startRoundNow() {
-    state.pool = buildPool();
+    state.pool = buildPool(state.level);
     if (!state.pool.length) {
       el.poolNote.textContent = '目前還沒有可以用的題目（缺少語音檔），麻煩告訴老師 Lin。';
       el.poolNote.style.display = 'block';
@@ -488,13 +529,14 @@
     state.primaryTotal = 0;
     state.typingBonusTotal = 0;
     state.roundActive = true;
+    renderLevelTabs();
     state.nextMode = null;
     state.awaitingModeForCurrent = false;
     state.audioFailed = false;
     state.roundSeq++;
     state.log = [];
     state.itemAttempts = [];
-    state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: 'mixed', mode: state.mode }) : null;
+    state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: state.level, mode: state.mode }) : null;
     state._pendingResume = null;
     if (el.resumeBanner) el.resumeBanner.style.display = 'none';
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // เริ่มรอบใหม่แบบสด = ล้างรอบค้างเก่าทิ้ง (ไม่ให้มีของค้าง 2 รอบชนกัน)
@@ -938,6 +980,7 @@
       if (!window.GameResume || !state.round.length) return;
       window.GameResume.save('listening-game', {
         mode: state.mode,
+        level: state.level,
         wordIds: state.round.map(function (w) { return w.th; }),
         idx: state.idx,
         correct: state.correct,
@@ -976,7 +1019,15 @@
       try { window.GameResume.clear('listening-game'); } catch (e) {}
       return;
     }
-    var pool = buildPool();
+    var savedLevel = saved.level === '初' || saved.level === '中' ? saved.level : null;
+    if (!savedLevel) {
+      var allPlayable = buildPlayablePool(), levels = {};
+      allPlayable.forEach(function (w) { if (saved.wordIds.indexOf(w.th) >= 0) levels[w.level] = true; });
+      var legacyLevels = Object.keys(levels).filter(function (level) { return level === '初' || level === '中'; });
+      if (legacyLevels.length === 1) savedLevel = legacyLevels[0];
+      else { try { window.GameResume.clear('listening-game'); } catch (e) {} return; }
+    }
+    var pool = buildPool(savedLevel);
     var round = rebuildRoundFromIds(saved.wordIds, pool);
     if (round.length !== saved.wordIds.length) {
       // คำในรอบเดิมบางคำหายไปจาก pool แล้ว (เช่นเสียงถูกปิด) — กู้แบบเพี้ยนดีกว่าไม่กู้เลย ไม่คุ้ม ล้างทิ้ง
@@ -987,6 +1038,7 @@
     var savedNextMode = saved.nextMode === 'type' ? 'type' : (saved.nextMode === 'mc' ? 'mc' : null);
     state._pendingResume = {
       mode: savedNextMode || (saved.mode === 'type' ? 'type' : 'mc'),
+      level: savedLevel,
       nextMode: savedNextMode,
       awaitModeSelection: !!saved.answered && resumeIdx < round.length && !savedNextMode,
       round: round,
@@ -1005,7 +1057,7 @@
       report: saved.report || null
     };
     if (el.resumeDetail) {
-      el.resumeDetail.textContent = '遊戲：聽力練習・模式：' + (state._pendingResume.mode === 'type' ? '輸入答案' : '選擇答案') +
+      el.resumeDetail.textContent = '遊戲：聽力練習・等級：' + (state._pendingResume.level === '中' ? '中級' : '初級') + '・模式：' + (state._pendingResume.mode === 'type' ? '輸入答案' : '選擇答案') +
         '・進度：' + (state._pendingResume.completed ? '本輪已答完，查看結果' : ('第 ' + (resumeIdx + 1) + '/' + saved.wordIds.length + ' 題'));
     }
     el.resumeBanner.style.display = 'block';
@@ -1024,7 +1076,9 @@
       return;
     }
     listeningReviewPolicy.restore(pend.listeningReviewPolicy);
-    state.pool = buildPool();
+    state.level = pend.level;
+    renderLevelTabs();
+    state.pool = buildPool(state.level);
     state.round = pend.round;
     state.idx = pend.idx;
     state.correct = pend.correct;
@@ -1037,10 +1091,11 @@
     state.awaitingModeForCurrent = false;
     state.log = pend.log;
     state.itemAttempts = pend.itemAttempts;
-    state.report = window.RoundReport ? RoundReport.restore(pend.report, { game_type: 'listening', difficulty: 'mixed', mode: pend.mode }) : null;
+    state.report = window.RoundReport ? RoundReport.restore(pend.report, { game_type: 'listening', difficulty: state.level, mode: pend.mode }) : null;
     state._pendingResume = null;
     setMode(pend.mode);
     state.roundActive = true;
+    renderLevelTabs();
     state.roundSeq++;
 
     el.poolNote.style.display = 'none';
@@ -1065,15 +1120,17 @@
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
     if (!pend) return;
     listeningReviewPolicy.restore(pend.listeningReviewPolicy);
-    state.pool = buildPool();
+    state.level = pend.level;
+    renderLevelTabs();
+    state.pool = buildPool(state.level);
     state.round = pend.round.filter(function (word) {
       return !listeningReviewPolicy.isReview(word) || !listeningReviewPolicy.hasAttempted(word);
     });
     if (!state.round.length) { startRound(); return; }
     state.idx = 0; state.correct = 0; state.wrong = 0;
     state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.nextMode = null; state.awaitingModeForCurrent = false; state.log = []; state.itemAttempts = [];
-    state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: 'mixed', mode: pend.mode }) : null;
-    setMode(pend.mode); state.roundActive = true; state.roundSeq++;
+    state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: state.level, mode: pend.mode }) : null;
+    setMode(pend.mode); state.roundActive = true; renderLevelTabs(); state.roundSeq++;
     el.startScreen.style.display='none';el.endScreen.style.display='none';el.gameScreen.style.display='flex';el.qt.textContent=String(state.round.length);el.okCount.textContent='0';el.badCount.textContent='0';
     showQuestion();
     try { if (window.gtag) gtag('event', 'listening_game_resume_restart_same', { category: 'game' }); } catch (e) {}
@@ -1094,6 +1151,7 @@
     state.roundActive = false;
     state.nextMode = null;
     state.awaitingModeForCurrent = false;
+    renderLevelTabs();
     var attempts = state.log.length;
     el.endScoreBig.textContent = (state.primaryTotal + state.typingBonusTotal) + ' 分';
     var pct = attempts ? Math.round((state.correct / attempts) * 100) : 0;
@@ -1127,7 +1185,7 @@
     state.savedRoundSeq = state.roundSeq;
     var evidence = state.log.map(function (entry) {
       return {
-        th: entry.th, zh: entry.zh, wrong: entry.correct ? 0 : 1,
+        th: entry.th, zh: entry.zh, wrong: entry.correct || entry.skipped ? 0 : 1,
         mode: entry.mode, listens: entry.listens,
         listening_score: entry.listeningScore,
         typing_bonus: entry.typingBonus,
@@ -1135,10 +1193,10 @@
       };
     });
     return READING_AUTH.saveScore(state.primaryTotal + state.typingBonusTotal, 1, 'listening', evidence, {
-      difficulty: 'mixed',
+      difficulty: state.level,
       items: state.log.map(function (entry) {
         return {
-          key: entry.th, points: entry.totalScore, wrong: entry.correct ? 0 : 1,
+          key: entry.th, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
           guide: false, failed: false, mastered: false,
           mode: entry.mode, listens: entry.listens, correct: entry.correct,
           wordCount: entry.wordCount, unitCount: entry.unitCount, typingWrong: entry.typingWrong
@@ -1252,6 +1310,7 @@
     state.roundActive = false;
     state.nextMode = null;
     state.awaitingModeForCurrent = false;
+    renderLevelTabs();
     el.endScreen.style.display = 'none';
     el.gameScreen.style.display = 'none';
     el.startScreen.style.display = 'flex';
@@ -1263,6 +1322,7 @@
     cacheEls();
     if (!el.startScreen) return; // กันพังถ้า DOM ไม่ครบ
     initModeTabs();
+    initLevelTabs();
     setMode('mc');
     initTypeMode();
     initNextKey();

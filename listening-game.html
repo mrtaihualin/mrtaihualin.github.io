@@ -105,16 +105,17 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 
 .card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(28,28,28,.1);width:100%;max-width:640px;padding:22px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden;}
 
-/* ── mode tabs (สไตล์เดียวกับ level-tabs ของเกมพิมพ์) ── */
-.mode-tabs{display:flex;gap:8px;margin-bottom:12px;width:100%;max-width:640px;}
-.mtab{flex:1;padding:10px 8px;border-radius:999px;border:2px solid var(--gold-bright);background:#fff;color:var(--gold);font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:all .15s;}
-.mtab:hover{background:var(--gold-light);}
-.mtab.active{background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border-color:transparent;}
+/* ── level + mode settings stay in dedicated rows, separate from game status ── */
+.level-tabs,.mode-tabs{display:flex;gap:8px;margin-bottom:12px;width:100%;max-width:640px;}
+.ltab,.mtab{flex:1;padding:10px 8px;border-radius:999px;border:2px solid var(--gold-bright);background:#fff;color:var(--gold);font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:all .15s;}
+.ltab:hover:not(:disabled),.mtab:hover{background:var(--gold-light);}
+.ltab.active,.mtab.active{background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;border-color:transparent;}
+.ltab:disabled{cursor:not-allowed;opacity:.48;background:#f5f1e8;color:#8d806c;border-color:#d8cdb9;}
 
 /* ── gold banner (คะแนน/ความคืบหน้า) — เหมือน tone-finder/typing-game ── */
 .gold-banner{width:calc(100% + 40px);margin:-22px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,var(--gold-light) 0%,var(--cream) 100%);border-bottom:2px solid rgba(139,99,16,.5);}
 .gold-banner .bars-wrap{margin-bottom:0;}
-.top-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;width:100%;margin-bottom:10px;}
+.top-bar{display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:10px;}
 .score-bar{display:flex;gap:12px;font-size:13px;color:var(--gold);font-family:'Noto Sans TC',sans-serif;}
 .score-bar span{font-weight:700;color:var(--gold-deep);}
 
@@ -276,6 +277,12 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <button class="mtab" data-mode="type" type="button">輸入答案</button>
 </div>
 
+<div class="level-tabs gsh-level-selector" id="lg-level-tabs" aria-label="選擇等級">
+  <button class="ltab active" data-level="初" type="button">初級</button>
+  <button class="ltab" data-level="中" type="button">中級</button>
+  <button class="ltab" data-level="高" type="button" disabled aria-disabled="true">高級 🔒</button>
+</div>
+
 <!-- RESUME BANNER — โชว์เฉพาะเมื่อมีรอบที่เล่นค้างไว้จริงใน localStorage (Phase E3) -->
 <div class="gsh-resume-banner" id="lg-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;">
   <div class="gsh-resume-title">上次的安全進度還在</div>
@@ -301,11 +308,9 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <div class="gold-banner">
     <div class="top-bar gsh-session-header">
       <div class="score-bar">
-        <div>第 <span id="lg-qn">1</span>/<span id="lg-qt">10</span> 題</div>
-        <div>✓ <span id="lg-ok">0</span></div>
-        <div>✗ <span id="lg-bad">0</span></div>
-        <div>總分 <span id="lg-score">0</span></div>
-        <div>聽 <span id="lg-listens">0</span></div>
+        <div>第 <span id="lg-qn">1</span> / <span id="lg-qt">10</span> 字</div>
+        <div>🏆 <span id="lg-score">0</span> คะแนน</div>
+        <span id="lg-ok" hidden>0</span><span id="lg-bad" hidden>0</span><span id="lg-listens" hidden>0</span>
       </div>
     </div>
     <div class="bars-wrap gsh-progress">
@@ -417,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div id="game-switcher" data-current="listening_game"></div>
 <script src="js/games/game-switcher.js?v=2"></script>
 
-<script>document.addEventListener('DOMContentLoaded',function(){GameContentLoader.boot(['js/games/listening-game-app.js?v=14']);});</script>
+<script>document.addEventListener('DOMContentLoaded',function(){GameContentLoader.boot(['js/games/listening-game-app.js?v=15']);});</script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
 <div id="cookieConsentBanner" role="dialog" aria-label="Cookie 與分析設定" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
