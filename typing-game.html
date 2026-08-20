@@ -449,7 +449,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
       <li>照畫面上的字，用泰文鍵盤一個字一個字打出來，電腦鍵盤、手機鍵盤、螢幕鍵盤都可以</li>
       <li>照畫面順序由左到右打，打對自動跳下一步，不用按確認鍵</li>
-      <li>💡有提示會亮下一個該按的鍵／🔥無提示全靠自己記；每輪開始前選定，開始作答後不能切換</li>
+      <li>💡有提示會亮下一個該按的鍵／🔥無提示全靠自己記；作答中可以隨時切換，但本題只要開過提示就不計分</li>
     </ul>
 
     <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
@@ -476,8 +476,8 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <p style="margin:0 0 4px;">照畫面上寫的順序、由左到右打就對了。泰文有些母音寫在子音前面（เ, แ, โ, ใ, ไ），這種字第一鍵反而是母音——照螢幕順序打不會錯。多音節字，音節之間自動接續，不用按鍵切換。電腦實體鍵盤跟手機鍵盤都能打，或按 ⌨️ 開螢幕鍵盤用滑鼠／觸控輸入。打對自動跳下一步，不用按確認鍵。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔥💡 兩種模式</div>
-      <p style="margin:0 0 4px;"><strong>💡 有提示（練習模式）</strong>：鍵盤亮下一個該按的鍵，不計分、不算星星、不算複習進度，適合剛學或想穩基礎時用。</p>
-      <p style="margin:0 0 4px;"><strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己記，答對才有分數、複習進度（星星要等這個字真正「精通」才會拿到，不是答對一次就有）。兩種模式要在每輪開始前選定，開始作答後會鎖定到本輪結束。</p>
+      <p style="margin:0 0 4px;"><strong>💡 有提示（練習模式）</strong>：鍵盤亮下一個該按的鍵，不計分、不算星星、不算複習進度，適合剛學或想穩基礎時用。作答中可以隨時開關；本題只要開過一次提示就固定不計分，最新狀態會帶到下一題。</p>
+      <p style="margin:0 0 4px;"><strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己記，答對才有分數、複習進度（星星要等這個字真正「精通」才會拿到，不是答對一次就有）。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">⚠️ 打錯了怎麼辦</div>
       <p style="margin:0 0 4px;">每個字的分數會依打錯次數下降（字越長，降到 0 分前的次數越寬鬆）。即使本題已是 0 分，仍要繼續打到正確；系統不會自動公佈答案或替你跳題。</p>
@@ -751,7 +751,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=33']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=34']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->

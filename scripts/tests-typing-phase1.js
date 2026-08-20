@@ -60,16 +60,26 @@ test('continuous typing zero score keeps accepting input without reveal/finish',
   assert.doesNotMatch(block, /RG_TYPE\.pos\s*=\s*RG_TYPE\.target\.length/);
 });
 
-test('guide/challenge mode cannot switch after the round has begun', () => {
+test('guide mode toggles in place and refreshes the current score', () => {
   const block = functionBlock('tgChooseGuideMode', 'rgToggleWebKbd');
-  assert.match(block, /tgRoundActive\s*&&\s*!pristine/);
-  assert.match(block, /本輪模式已鎖定/);
-  assert.match(block, /if\s*\(pristine\)\s*\{/);
+  assert.match(block, /setGuideMode\(!!on\)/);
+  assert.match(block, /tgUpdateScoreBar\(\)/);
+  assert.doesNotMatch(block, /initGame\s*\(/);
+  assert.doesNotMatch(block, /GameResume\.clear/);
 });
 
-test('page routes the mode control through the round lock', () => {
+test('page routes the mode control through the active-question toggle', () => {
   assert.match(html, /id="guide-toggle"[^>]+tgChooseGuideMode\(_v\)/);
   assert.doesNotMatch(html, /id="guide-toggle"[^>]+setGuideMode\(_v\)/);
+});
+
+test('opening a guide permanently zeroes the current word after toggle-off', () => {
+  const score = functionBlock('tgCurWordScore', 'tgUpdateScoreBar');
+  const finalize = functionBlock('finalizeWord', 'next');
+  assert.match(score, /wordUsedGuide/);
+  assert.doesNotMatch(score, /wordUsedGuide[^\n]+guideMode/);
+  assert.match(finalize, /if\(wordUsedGuide\)\s*\{/);
+  assert.doesNotMatch(finalize, /wordUsedGuide\s*&&\s*guideMode/);
 });
 
 test('refresh tolerates the Phase 1 HUD without removed reward elements', () => {
@@ -94,11 +104,12 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=33/);
+  assert.match(html, /typing-game-app\.min\.js\?v=34/);
 });
 
-test('玩法 explains both locked Phase 1 typing rules', () => {
-  assert.match(html, /開始作答後不能切換/);
+test('玩法 explains both locked typing rules', () => {
+  assert.match(html, /作答中可以隨時切換/);
+  assert.match(html, /本題只要開過提示就不計分/);
   assert.match(html, /本題降到 0 分也要繼續打到正確為止/);
   assert.doesNotMatch(html, /額度用完直接公佈答案/);
 });

@@ -193,7 +193,7 @@ var GOLDEN_WORD_MULT=2;                        // คำทองตอบถู
 // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ ทองเข้ม→แดง (ชุดเดียวทุกเกม)
 function tgScoreBarColor(sc,max){ if(sc<=0)return '#b83227'; var f=Math.max(0,Math.min(1,sc/(max||10))); var hue=f>=0.4?40:Math.round(40*(f/0.4)); var light=f>=0.4?42:38; return 'hsl('+hue+',78%,'+light+'%)'; }
 // 本題分數: คะแนนที่จะได้ของคำนี้ตอนนี้ ตามจำนวนครั้งที่ผิดสะสม · ตาย/ใช้คำใบ้=0
-function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide&&typeof guideMode!=='undefined'&&guideMode))return 0; var sc=tgScoreSylCount(); return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
+function tgCurWordScore(){ try{ if((typeof wordFailed!=='undefined'&&wordFailed)||(typeof wordUsedGuide!=='undefined'&&wordUsedGuide))return 0; var sc=tgScoreSylCount(); return rgWrongScore(sc,(typeof wordWrongTotal!=='undefined'?wordWrongTotal:0)); }catch(e){return 10;} }
 function tgUpdateScoreBar(){ var max=10, sc=Math.max(0,Math.min(10,tgCurWordScore())); var pw=document.getElementById('tg-ws-fill'); if(pw){pw.style.width=Math.max(0,Math.min(100,sc/max*100))+'%'; pw.style.background=tgScoreBarColor(sc,max);} var pn=document.getElementById('tg-ws-num'); if(pn)pn.textContent=sc; }
 function rgQuotaFor(sylCount){return window.TYPING_SCORE?TYPING_SCORE.quotaFor(sylCount):Math.min(4+Math.max(0,(sylCount||1)-4),9);}
 function rgWrongScore(sylCount,wrongN){
@@ -202,7 +202,7 @@ function rgWrongScore(sylCount,wrongN){
 var RG_LEVEL_TO_NUM={'初':1,'中':2,'高':3}; // map ให้ตรงกับ GAME_ACCOUNT.addHardStars(clean, level:1|2|3) — ลอกเกมอ่านเป๊ะ (Lin 2026-07-05, แก้บั๊กเดิมที่ 高 เคยตกไปนับเป็นระดับ 1)
 var curLevel='初';
 var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,roundTotal=0,roundHadGuide=false;
-var tgRoundActive=false; // Phase 1: โหมด 有提示/無提示 ล็อกตลอดรอบ เปลี่ยนได้เฉพาะก่อนเริ่มตอบข้อแรกหรือหลังจบรอบ
+var tgRoundActive=false;
 var roundLog=[]; // {th,zh,wrong,failed,guide,pts,srsDue,mastered} ต่อคำ — เอาไว้ทำรายงาน PDF ท้ายรอบ — Lin 2026-07-07
 var roundReport=null;
 function tgReportRows(){
@@ -869,8 +869,8 @@ function finalizeWord(){
   }
 
   // ── เปิดคำใบ้ระหว่างพิมพ์คำนี้ → 0 คะแนน + ไม่แตะ SRS เลย เหมือนยังไม่ได้ทำ (กฎ MASTER ข้อ9) ──
-  // Lin 2026-07-12: บังคับให้เงื่อนไขนี้ทำงานเฉพาะโหมด 有提示 เท่านั้น — โหมด無提示 ไม่มีคำใบ้ให้ใช้ ห้ามโดนหักเป็น 0 เด็ดขาด (แก้บั๊ก無提示ได้ 0)
-  if(wordUsedGuide && guideMode){
+  // เมื่อคำนี้เคยแสดง提示แล้ว คะแนนต้องคงเป็น 0 แม้ผู้เล่นปิด提示ก่อนตอบจบ
+  if(wordUsedGuide){
     okC++;
     roundHadGuide=true;
     b.textContent='這次用了提示，先不計分（下次試試看不看提示！）';b.className='gsh-feedback-slot result-banner show half';
@@ -1834,24 +1834,11 @@ function setGuideMode(on){
 }
 setGuideMode(guideMode); // ตั้งสถานะปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 
-// Phase 1: โหมดเป็นกติกาของ "ทั้งรอบ" ไม่ใช่ตัวช่วยที่เปิดปิดกลางคำ
-// ถ้ายังไม่ได้พิมพ์ตัวแรก อนุญาตให้เลือกแล้วเริ่มรอบใหม่ทันที; หลังจากนั้นปฏิเสธการสลับจนกว่าจะจบรอบ
+// Phase 1.2: เปิด/ปิด提示ได้ระหว่างคำเดิมโดยไม่เริ่มคำหรือรอบใหม่
+// rgTypeHighlightNextKey() จะล็อก wordUsedGuide ทันทีเมื่อแสดง提示จริง และ loadWord() คงสถานะล่าสุดเป็นค่าเริ่มต้นของคำถัดไป
 function tgChooseGuideMode(on){
-  var pristine=false;
-  try{
-    pristine=tgRoundActive && cur===0 && roundScore===0 && okC===0 && badC===0 &&
-      (!roundLog || roundLog.length===0) && RG_TYPE.pos===0 && RG_TYPE.wrong===0 &&
-      RG_CONT_WRONG===0 && !checked;
-  }catch(e){}
-  if(tgRoundActive && !pristine){
-    rgToast('本輪模式已鎖定，請完成本輪後再切換 🙂');
-    return false;
-  }
   setGuideMode(!!on);
-  if(pristine){
-    try{ if(window.GameResume) GameResume.clear('typing-game'); }catch(e){}
-    initGame();
-  }
+  try{tgUpdateScoreBar();}catch(e){}
   return true;
 }
 

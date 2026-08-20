@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 locked Tone hint playability Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 locked Typing hint playability Delta
+
+## 2026-08-20 — P12-A-03 Typing Active-Hint Zero Lock (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Typing now lets the player toggle guidance during the same active word without restarting the word or round. Showing the next-key guidance once permanently locks that word to zero even after toggle-off, and the latest state becomes the following word's default.
+- Removed the obsolete whole-round mode lock, kept completed-word evidence immutable, rebuilt only `typing-game-app.min.js`, advanced only its page cache key `v33→v34`, and updated the existing Typing regression and learner instructions. No deploy, Production/Auth/account/data/analytics mutation, beta, final regression or Phase 1 PASS occurred.
 
 ## 2026-08-20 — P12-A-03 Tone Active-Hint Zero Lock (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
