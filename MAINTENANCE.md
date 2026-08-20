@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 compact mobile Resume Delta
+**Updated: 2026-08-20 Asia/Bangkok** — Phase 1.2 Result replay Enter Delta
+
+## 2026-08-20 — P12-C-02 Result `再玩一輪` Enter (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- The shared Core 5 Result flow now lets a plain, non-repeated Enter activate the real visible `再玩一輪` button and cancel the automatic replay countdown. Enter from inputs, editable content, buttons or links remains owned by that control and cannot trigger a duplicate replay.
+- Marked only the five real Core 5 replay actions, advanced their shared `game-flow.js` cache key `v5→v6`, rebuilt/advanced Tone because its Result button is dynamic, and extended the existing executable flow/owner regressions. No new Result action, gameplay/scoring/SRS/content/analytics change, deploy, Production/Auth/account/data expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-20 Asia/Bangkok** — Phase 1.2 compact mobile Resume Delta
 
 ## 2026-08-20 — PD-P12-MOBILE-RESUME-01 Core 5 Compact Resume (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

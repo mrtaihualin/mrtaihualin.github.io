@@ -689,7 +689,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   <!-- ▲ CTA ▲ -->
 
   <div class="end-actions gsh-end-actions">
-    <button class="btn btn-primary" id="tg-replay-btn" onclick="restart()">再玩一輪</button>
+    <button class="btn btn-primary" id="tg-replay-btn" data-game-result-replay="v1" onclick="restart()">再玩一輪</button>
     <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 列印／儲存學習紀錄</button>
     <!-- Shared Game UI Phase F2 (2026-08-10): 查看錯題 — 只在這輪有打錯的字才出現（見 endRound 裡的 tg-mistakes-btn 顯示邏輯） -->
     <button class="btn btn-secondary" id="tg-mistakes-btn" onclick="tgShowMistakes()">📝 查看本輪詳細紀錄</button>
@@ -758,7 +758,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=36"></script>
 <script src="js/games/practice-events.js?v=3"></script>
-<script src="js/games/game-flow.js?v=5"></script>
+<script src="js/games/game-flow.js?v=6"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

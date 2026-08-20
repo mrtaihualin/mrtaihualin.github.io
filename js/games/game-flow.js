@@ -7,6 +7,7 @@
 
   var flows = Object.create(null);
   var resultFlows = Object.create(null);
+  var activeResultReplay = null;
   var SRS_QUOTA_KEY = 'gsh_srs_quota_v1';
 
   function resolveElement(value) {
@@ -222,6 +223,7 @@
     if (!root) return false;
     markResult(root);
     var actions = resolveElement(options.actions) || root.querySelector('.gsh-end-actions');
+    var replay = root.querySelector('[data-game-result-replay="v1"]');
     var meta = ensureResultMeta(root, actions);
     while (meta.firstChild) meta.removeChild(meta.firstChild);
 
@@ -255,6 +257,7 @@
       seconds: 7,
       onComplete: options.onReplay
     });
+    activeResultReplay = replay ? { key: key, root: root, button: replay } : null;
     if (options.report) {
       attachReport(root, options.report);
       // P1-D-05: a completed RoundReport is the only client-side source for
@@ -266,6 +269,23 @@
     }
     return feedback;
   }
+
+  document.addEventListener('keydown', function (event) {
+    if (!activeResultReplay || event.key !== 'Enter' || event.defaultPrevented || event.repeat || event.isComposing) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    var target = event.target || document.activeElement;
+    if (target && target.closest && target.closest('input,textarea,select,button,a,[contenteditable="true"]')) return;
+    var root = activeResultReplay.root;
+    var button = activeResultReplay.button;
+    if (!root || !button || root.hidden || button.hidden || button.disabled) return;
+    var rootStyle = window.getComputedStyle ? window.getComputedStyle(root) : root.style;
+    var buttonStyle = window.getComputedStyle ? window.getComputedStyle(button) : button.style;
+    if ((rootStyle && (rootStyle.display === 'none' || rootStyle.visibility === 'hidden')) ||
+        (buttonStyle && (buttonStyle.display === 'none' || buttonStyle.visibility === 'hidden'))) return;
+    event.preventDefault();
+    cancelResult(activeResultReplay.key);
+    button.click();
+  });
 
   function uniqueItems(items, idOf, seen) {
     var output = [];

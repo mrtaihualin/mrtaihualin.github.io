@@ -2618,7 +2618,7 @@ function stepSessionSummary() {
     '<div class="gsh-end-actions">' +
       '<button class="tf-session-next-btn" id="tf-pdf-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 列印／儲存學習紀錄</button>' +
       mistakeBtnHtml +
-      '<button class="tf-restart-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF._startRandom5()">再玩一輪</button>' +
+      '<button class="tf-restart-btn" data-game-result-replay="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF._startRandom5()">再玩一輪</button>' +
       '<a class="tf-restart-btn" href="games.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;" onclick="try{gtag(\'event\',\'game_link_click\',{category:\'game\',target:\'games_hub\',from:\'tone_finder\'})}catch(e){}">換個遊戲</a>' +
       '<a class="tf-restart-btn" href="index.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">回到首頁</a>' +
     '</div>' +

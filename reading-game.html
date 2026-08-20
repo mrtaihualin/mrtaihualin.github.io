@@ -636,7 +636,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <!-- ▲ CTA ▲ -->
 
   <div class="gsh-end-actions end-actions">
-    <button class="btn btn-primary" id="rg-replay-btn" onclick="restart()">再玩一輪</button>
+    <button class="btn btn-primary" id="rg-replay-btn" data-game-result-replay="v1" onclick="restart()">再玩一輪</button>
     <!-- F3 (2026-08-10): 改文字 — 機制其實是開新視窗 print()，不是真的下載檔案，原本「下載PDF」字樣不準確 -->
     <button class="btn btn-secondary" id="rg-pdf-btn" onclick="rgDownloadReport()">📄 列印／儲存學習紀錄</button>
     <!-- F2 (2026-08-10): 查看錯題 — 唯讀檢視這輪 roundLog 裡答錯/失敗的字，不影響分數/狀態 -->
@@ -706,7 +706,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=36"></script>
 <script src="js/games/practice-events.js?v=3"></script>
-<script src="js/games/game-flow.js?v=5"></script>
+<script src="js/games/game-flow.js?v=6"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

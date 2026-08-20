@@ -59,9 +59,11 @@ const timerQueue = [];
 const storage = {};
 const document = {
   readyState: 'complete',
+  listeners: {},
+  activeElement: null,
   createElement: (tag) => new FakeElement(tag),
   querySelector: () => null,
-  addEventListener: () => {}
+  addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
 };
 const window = {
   document,
@@ -130,6 +132,24 @@ GameFlow.cancelResult('result-cancel');
 while (timerQueue.length) timerQueue.shift()();
 assert.strictEqual(replayed, 1, 'result action cancellation must stop replay');
 
+const enterResult = new FakeElement('section');
+const enterActions = new FakeElement('div');
+enterActions.className = 'gsh-end-actions';
+const replayButton = new FakeElement('button');
+replayButton.setAttribute('data-game-result-replay', 'v1');
+enterResult.appendChild(enterActions);
+enterResult.appendChild(replayButton);
+GameFlow.enhanceResult({ key: 'enter-result', root: enterResult, actions: enterActions, correct: 5, total: 5, onReplay() {} });
+const enterHandler = document.listeners.keydown[0];
+let prevented = 0;
+enterHandler({ key: 'Enter', target: { closest() { return null; } }, preventDefault() { prevented += 1; } });
+assert.strictEqual(prevented, 1, 'plain Enter on a visible Result must be consumed');
+assert.strictEqual(replayButton.clicks, 1, 'plain Enter must activate the real replay button');
+enterHandler({ key: 'Enter', target: { closest() { return {}; } }, preventDefault() { prevented += 1; } });
+assert.strictEqual(replayButton.clicks, 1, 'Enter from an editable/control context must not replay');
+enterHandler({ key: 'Enter', repeat: true, target: { closest() { return null; } }, preventDefault() { prevented += 1; } });
+assert.strictEqual(replayButton.clicks, 1, 'repeated Enter must not replay again');
+
 delete storage.gsh_srs_quota_v1;
 const due = Array.from({ length: 8 }, (_, i) => ({ id: `d${i}` }));
 const regular = Array.from({ length: 12 }, (_, i) => ({ id: `r${i}` }));
@@ -170,10 +190,11 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=5'), `${file} must load the shared flow`);
-  assert(/繼續上次練習/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
-  assert(/重新開始本次練習/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
-  assert(/開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);
+  assert(html.includes('js/games/game-flow.js?v=6'), `${file} must load the shared flow`);
+  assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
+  assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
+  assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);
+  assert(/data-game-result-replay="v1"/.test(html) || file === 'tone-finder.html', `${file} must expose the shared Result replay action`);
 });
 
 const integrations = {
@@ -193,4 +214,4 @@ Object.entries(integrations).forEach(([file, marker]) => {
 assert(!/roundScore|totalStars|srsRecords|mastered\s*=/.test(flowSource),
   'shared flow must not change scoring, SRS, stars, or mastered rules');
 
-console.log('PASS tests-game-flow-delta: auto-next/pause, resume actions, X/N feedback/countdown, SRS quota/carry/dedupe/distribution, scoring boundary');
+console.log('PASS tests-game-flow-delta: auto-next/pause, compact resume, Result Enter/replay/countdown, SRS quota/carry/dedupe/distribution, scoring boundary');

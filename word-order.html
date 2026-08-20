@@ -470,7 +470,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     </div>
 
     <div class="end-actions gsh-end-actions">
-      <button class="btn btn-primary" id="wo-replay-btn" onclick="try{if(window.gtag)gtag('event','word_order_restart_click',{category:'game'});}catch(e){}woRestart()">再玩一輪</button>
+      <button class="btn btn-primary" id="wo-replay-btn" data-game-result-replay="v1" onclick="try{if(window.gtag)gtag('event','word_order_restart_click',{category:'game'});}catch(e){}woRestart()">再玩一輪</button>
       <button class="btn btn-secondary" onclick="woShowMistakes()">📋 查看本輪詳細紀錄</button>
       <button class="btn btn-secondary" id="wo-pdf-btn" onclick="try{if(window.gtag)gtag('event','word_order_pdf_download',{category:'game'});}catch(e){}woDownloadReport()">📄 列印／儲存學習紀錄</button>
       <a class="btn btn-secondary" href="games.html">換個遊戲</a>
@@ -496,7 +496,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script src="data/nav-template.js?v=3"></script>
 <script src="js/core/shared.min.js?v=36"></script>
 <script src="js/games/practice-events.js?v=3"></script>
-<script src="js/games/game-flow.js?v=5"></script>
+<script src="js/games/game-flow.js?v=6"></script>
 
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>

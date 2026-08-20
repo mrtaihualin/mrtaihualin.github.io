@@ -266,7 +266,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=54/, 'Tone: page must request the rebuilt runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=55/, 'Tone: page must request the rebuilt runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);
