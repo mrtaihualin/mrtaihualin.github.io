@@ -411,6 +411,12 @@ function clearAll(){
 // ════════ PHASE 1.2 LOCKED BUILD → REVEAL → RESULT FLOW ════════
 const LEGO_CUSTOM_DISCLAIMER='自訂內容由玩家自行輸入，系統不會檢查或修正內容。';
 const LEGO_DAILY_ACTIVITY_KEY='lego_daily_activity_v1';
+const LEGO_UI_COPY={
+  resultSave:{
+    title:'選擇要儲存的句子',selectAll:'全部選取',save:'儲存到句子庫',
+    empty:'請先選擇要儲存的句子',done:'已送出所選句子。',full:'句子庫已滿，請先刪除既有句子。'
+  }
+};
 let legoCompletedSentences=[];
 
 function legoCurrentSentence(){
@@ -488,6 +494,59 @@ function legoRenderSentenceRows(host,detail){
   });
 }
 
+function legoCanSaveResult(){
+  return !!(window.READING_AUTH&&window.READING_AUTH.user&&window.SentenceVault&&window.SentenceVault.addSentence);
+}
+
+function legoRenderResultSaveControls(){
+  const host=document.getElementById('lego-result-save');
+  if(!host)return;
+  const available=legoCanSaveResult()&&legoCompletedSentences.length>0;
+  host.classList.toggle('hidden',!available);
+  host.textContent='';
+  if(!available)return;
+  const copy=LEGO_UI_COPY.resultSave;
+  const title=document.createElement('h3');title.textContent=copy.title;host.appendChild(title);
+  const list=document.createElement('div');list.className='lego-result-save-list';
+  legoCompletedSentences.forEach((sentence,index)=>{
+    const row=document.createElement('label');row.className='lego-result-save-row';
+    const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.setAttribute('data-lego-save-index',String(index));
+    const text=document.createElement('span');text.className='lego-result-save-text';
+    const th=document.createElement('span');th.className='th';th.textContent=sentence.th;text.appendChild(th);
+    if(sentence.zh){const zh=document.createElement('small');zh.textContent=sentence.zh;text.appendChild(zh);}
+    if(sentence.custom){const note=document.createElement('small');note.textContent=LEGO_CUSTOM_DISCLAIMER;text.appendChild(note);}
+    row.appendChild(checkbox);row.appendChild(text);list.appendChild(row);
+  });
+  host.appendChild(list);
+  const actions=document.createElement('div');actions.className='lego-result-save-actions';
+  const selectAll=document.createElement('button');selectAll.type='button';selectAll.className='btn btn-line';selectAll.textContent=copy.selectAll;
+  selectAll.onclick=()=>host.querySelectorAll('[data-lego-save-index]').forEach(box=>{box.checked=true;});
+  const save=document.createElement('button');save.type='button';save.className='btn btn-gold';save.textContent=copy.save;save.onclick=legoSaveSelectedSentences;
+  actions.appendChild(selectAll);actions.appendChild(save);host.appendChild(actions);
+  const status=document.createElement('div');status.className='lego-result-save-status';status.id='lego-result-save-status';host.appendChild(status);
+}
+
+function legoSaveSelectedSentences(){
+  if(!legoCanSaveResult())return;
+  const host=document.getElementById('lego-result-save');
+  const selected=Array.from(host.querySelectorAll('[data-lego-save-index]:checked'));
+  if(!selected.length){toast(LEGO_UI_COPY.resultSave.empty,true);return;}
+  let full=false;
+  selected.some(box=>{
+    const sentence=legoCompletedSentences[Number(box.getAttribute('data-lego-save-index'))];
+    if(!sentence)return false;
+    if(window.SentenceVault.isFull()&&!window.SentenceVault.has(sentence.th)){
+      window.SentenceVault.addSentence(sentence.th,{zh:sentence.zh||'',source:sentence.custom?'lego-user-created':'lego'});
+      full=true;return true;
+    }
+    window.SentenceVault.addSentence(sentence.th,{zh:sentence.zh||'',source:sentence.custom?'lego-user-created':'lego'});
+    return false;
+  });
+  legoRenderResultSaveControls();
+  const status=document.getElementById('lego-result-save-status');
+  if(status)status.textContent=full?LEGO_UI_COPY.resultSave.full:LEGO_UI_COPY.resultSave.done;
+}
+
 function legoEndGame(){
   try{
     legoHideLockedPanels();
@@ -497,6 +556,7 @@ function legoEndGame(){
     document.getElementById('lego-result-daily').textContent='今日完成造句：'+legoDailyActivity(false)+' 句';
     legoRenderSentenceRows(document.getElementById('lego-result-list'),false);
     legoRenderSentenceRows(document.getElementById('lego-result-detail-list'),true);
+    legoRenderResultSaveControls();
     const result=document.getElementById('lego-result');result.classList.remove('hidden');
     if(window.GameFlow)GameFlow.enhanceResult({
       key:'lego-result',root:result,actions:'#lego-result .gsh-end-actions',correct:0,total:count,
@@ -1358,6 +1418,14 @@ renderLevels();
 setLevel('lv1');
 refreshLegoAcctUI();
 try{ legoRenderGameBar(); }catch(e){}
+document.addEventListener('DOMContentLoaded',function(){
+  try{
+    if(window.SITE_AUTH&&window.SITE_AUTH.onChange)window.SITE_AUTH.onChange(function(){
+      const result=document.getElementById('lego-result');
+      if(result&&!result.classList.contains('hidden'))legoRenderResultSaveControls();
+    });
+  }catch(e){}
+});
 
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──
 function dismissHowtoHint(id){

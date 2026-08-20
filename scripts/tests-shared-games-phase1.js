@@ -118,7 +118,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=39/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=6/, 'Lego must load its locked-flow runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=7/, 'Lego must load its locked-flow runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');

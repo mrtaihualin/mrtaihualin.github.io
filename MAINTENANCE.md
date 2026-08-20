@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego locked content/branch-rules Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego Login Result sentence-library Delta
+
+## 2026-08-21 — PD-P12-LEGO-PERSISTENCE-01/RESULT-01 Login Result Save (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
+
+- Lego Login Result now shows `選擇要儲存的句子`, one checkbox for every sentence confirmed by `完成句子`, and the locked `全部選取` / `儲存到句子庫` actions. The unconfirmed builder draft never enters this path; Guest and an empty Result receive no account-library controls.
+- Reused the current account-scoped `SentenceVault` client and its existing ten-sentence ceiling, full-library notice, durable retry, owner isolation and account-storage sync. Canonical Lego saves use `lego` provenance, while completed custom-input sentences use `lego-user-created`; their missing translation remains blank and the conditional disclaimer is preserved. No schema, RLS, Auth, quota or separate Lego library was added.
+- Advanced only Lego's app cache binding to v7 and extended the existing Personal Content and cache-contract regressions. Targeted checks and the full repository gate PASS. No deploy, Production/account/data mutation, Resume/Landscape/Print-category expansion, beta, final regression or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 Lego locked content/branch-rules Delta
 
 ## 2026-08-21 — PD-P12-LEGO-CONTENT-01 Locked Content and Branch Rules (`PASS_LOCAL / NOT_MERGED / PRODUCTION_UNCHANGED`)
 
