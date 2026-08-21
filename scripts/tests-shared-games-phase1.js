@@ -73,7 +73,7 @@ test('all six games bind one shared live-node Mobile Landscape stage', () => {
     assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
     assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current shared CSS`);
     assert.match(html, /css\/mobile-landscape\.css\?v=1/, `${id}: missing shared landscape CSS`);
-    assert.match(html, /js\/core\/mobile-landscape\.js\?v=1/, `${id}: missing shared landscape controller`);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=2/, `${id}: missing shared landscape controller`);
     assert.match(html, /viewport-fit=cover/, `${id}: missing safe-area viewport contract`);
   }
   assert.doesNotMatch(sharedCss, /--gsh-safe-l|max-height:600px|data-gsh-game="lego"\] #baseplate \.slot-menu/);
@@ -87,7 +87,10 @@ test('all six games bind one shared live-node Mobile Landscape stage', () => {
   assert.match(mobileLandscapeCss, /#gsh-ml-stage\[data-gsh-ml-view="custom-input"\]/);
   assert.match(mobileLandscapeJs, /function mountExistingNode\(node, target\)/);
   assert.match(mobileLandscapeJs, /document\.createComment\('gsh-ml:' /);
-  assert.match(mobileLandscapeJs, /for \(var i = moveOrder\.length - 1/);
+  assert.match(mobileLandscapeJs, /var restoring = moveOrder\.slice\(\)/);
+  assert.match(mobileLandscapeJs, /for \(var i = restoring\.length - 1/);
+  assert.match(mobileLandscapeJs, /if \(!record\.marker\.isConnected\)/);
+  assert.doesNotMatch(mobileLandscapeJs, /record\.originalParent && record\.originalParent\.isConnected/);
   assert.doesNotMatch(mobileLandscapeJs, /cloneNode\(/);
   assert.match(mobileLandscapeJs, /new MutationObserver\(scheduleSync\)/);
   assert.match(mobileLandscapeJs, /\.gsh-next-countdown', '\.gsh-pause-btn/);

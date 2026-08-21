@@ -2120,3 +2120,9 @@ node scripts/check-site.js
 - Added shared Mode/Level/Tools dropdowns, a fixed main-action slot, exclusive Login/Resume/Result handling, safe-area containment and shared split Kedmanee keyboard rendering for Typing and Listening Typed. Typing and Listening Typed suppress the native keyboard only while this layout is active; Lego custom input retains native keyboard behavior and follows `visualViewport`.
 - Retired the former coordinate-based landscape block, advanced the affected cache keys, moved the Core 5 pre-game countdown from three to five seconds and kept the existing seven-second result countdown unchanged.
 - Deterministic geometry, flow and per-game source tests plus the full site gate pass locally. No commit, push, PR, deploy, SQL, account/player-data or Production mutation occurred. Exact physical iPhone viewport/rotation/custom-input verification remains a Human gate.
+
+## 2026-08-22 — Mobile Landscape lifecycle correction (`PASS_LOCAL / HUMAN_GATE_NOT_STARTED`)
+
+- Stopped Listening Typed from rebuilding its shared Thai keyboard during unrelated observer/frame syncs; renders now occur only on entry, source/layout change or Shift transition, while native input policy still restores on exit.
+- Made the placeholder marker authoritative for moved-node lifetime so an original-parent rerender removes the stale staged node and record instead of resurrecting obsolete content.
+- Added deterministic runtime coverage for idle key identity/render stability, Thai input, one-shot Shift, Backspace, input-policy restoration, stale-marker cleanup and normal reverse restoration. No merge, deploy or physical-iPhone verification occurred.

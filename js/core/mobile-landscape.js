@@ -16,6 +16,11 @@
   var active = false;
   var listeningKeyboard = null;
   var listeningShifted = false;
+  var listeningKeyboardSource = null;
+  var listeningKeyboardRenderer = null;
+  var listeningKeyboardLayout = null;
+  var listeningKeyboardInput = null;
+  var listeningKeyboardRenderedShifted = null;
   var inputPolicies = new Map();
 
   function q(selector, root) { return (root || document).querySelector(selector); }
@@ -101,24 +106,22 @@
     if (!record) return;
     if (record.marker.isConnected) {
       record.marker.replaceWith(node);
-    } else if (record.originalParent && record.originalParent.isConnected) {
-      var anchor = record.originalNextSibling && record.originalNextSibling.isConnected &&
-        record.originalNextSibling.parentNode === record.originalParent ? record.originalNextSibling : null;
-      record.originalParent.insertBefore(node, anchor);
     } else if (node.isConnected) {
       node.remove();
     }
     moved.delete(node);
+    moveOrder = moveOrder.filter(function (item) { return item !== node; });
   }
 
   function restoreAll() {
-    for (var i = moveOrder.length - 1; i >= 0; i -= 1) restoreExistingNode(moveOrder[i]);
-    moveOrder.length = 0;
+    var restoring = moveOrder.slice();
+    for (var i = restoring.length - 1; i >= 0; i -= 1) restoreExistingNode(restoring[i]);
+    moveOrder = moveOrder.filter(function (node) { return moved.has(node); });
   }
 
   function cleanupStaleMovedNodes() {
     moved.forEach(function (record, node) {
-      if (!record.marker.isConnected && (!record.originalParent || !record.originalParent.isConnected)) {
+      if (!record.marker.isConnected) {
         if (node.isConnected) node.remove();
         moved.delete(node);
       }
@@ -293,19 +296,24 @@
 
   function renderListeningKeyboard() {
     var input = q('#lg-type-input');
-    if (!input || !window.GSHThaiKeyboard) return;
+    var source = window.GSHThaiKeyboard;
+    if (!input || !source) return false;
+    var layout = source.layoutVersion || JSON.stringify([source.codeRows, source.baseMap, source.shiftMap]);
     if (!listeningKeyboard) {
       listeningKeyboard = document.createElement('div');
       listeningKeyboard.id = 'lg-ml-keyboard';
       listeningKeyboard.className = 'tkbd';
       slot('split-keyboard').appendChild(listeningKeyboard);
     }
-    window.GSHThaiKeyboard.render({
+    if (listeningKeyboardSource === source && listeningKeyboardRenderer === source.render && listeningKeyboardLayout === layout &&
+        listeningKeyboardInput === input && listeningKeyboardRenderedShifted === listeningShifted &&
+        listeningKeyboard.children.length) return false;
+    source.render({
       root: listeningKeyboard,
       split: true,
       shifted: listeningShifted,
       onCode: function (code) {
-        var map = listeningShifted ? window.GSHThaiKeyboard.shiftMap : window.GSHThaiKeyboard.baseMap;
+        var map = listeningShifted ? source.shiftMap : source.baseMap;
         var character = map[code] || '';
         if (!character) return;
         input.value += character;
@@ -318,6 +326,23 @@
         input.dispatchEvent(new Event('input', { bubbles: true, inputType: 'deleteContentBackward' }));
       }
     });
+    listeningKeyboardSource = source;
+    listeningKeyboardRenderer = source.render;
+    listeningKeyboardLayout = layout;
+    listeningKeyboardInput = input;
+    listeningKeyboardRenderedShifted = listeningShifted;
+    return true;
+  }
+
+  function clearListeningKeyboard() {
+    if (listeningKeyboard) listeningKeyboard.remove();
+    listeningKeyboard = null;
+    listeningShifted = false;
+    listeningKeyboardSource = null;
+    listeningKeyboardRenderer = null;
+    listeningKeyboardLayout = null;
+    listeningKeyboardInput = null;
+    listeningKeyboardRenderedShifted = null;
   }
 
   function syncKeyboard(game) {
@@ -329,7 +354,7 @@
       var typed = isVisible(q('#lg-type-wrap'));
       setInputPolicy(q('#lg-type-input'), typed);
       if (typed) renderListeningKeyboard();
-      else if (listeningKeyboard) { listeningKeyboard.remove(); listeningKeyboard = null; listeningShifted = false; }
+      else clearListeningKeyboard();
     }
   }
 
@@ -460,9 +485,7 @@
     });
     var keyboardToggle = q('[data-gsh-ml-keyboard-toggle]');
     if (keyboardToggle) keyboardToggle.removeAttribute('data-gsh-ml-keyboard-toggle');
-    if (listeningKeyboard) listeningKeyboard.remove();
-    listeningKeyboard = null;
-    listeningShifted = false;
+    clearListeningKeyboard();
     restoreAll();
     if (stage) stage.remove();
     stage = null;
@@ -503,6 +526,24 @@
   document.addEventListener('focusout', scheduleSync, true);
   window.addEventListener('pagehide', destroy, { once: true });
 
-  window.GSHMobileLandscape = { query: QUERY, activate: activate, sync: sync, deactivate: deactivate, destroy: destroy };
+  var api = { query: QUERY, activate: activate, sync: sync, deactivate: deactivate, destroy: destroy };
+  if (window.__GSH_ML_TEST__) {
+    api.__test = {
+      mountExistingNode: mountExistingNode,
+      restoreAll: restoreAll,
+      cleanupStaleMovedNodes: cleanupStaleMovedNodes,
+      syncKeyboard: syncKeyboard,
+      setSlot: function (name, node) { slots[name] = node; },
+      state: function () {
+        return {
+          movedCount: moved.size,
+          moveOrderLength: moveOrder.length,
+          listeningKeyboard: listeningKeyboard,
+          listeningShifted: listeningShifted
+        };
+      }
+    };
+  }
+  window.GSHMobileLandscape = api;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', handleMedia, { once: true }); else handleMedia();
 })(window, document);
