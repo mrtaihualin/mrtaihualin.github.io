@@ -496,7 +496,7 @@
       el.nextBtn.disabled = false;
       el.nextBtn.textContent = '下一題 →';
       saveResumeState();
-      if (window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
+      if (window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 5 });
       return true;
     }
     if (mode === state.mode) return true;
@@ -751,7 +751,7 @@
     el.nextBtn.textContent = hasNextQuestion ? '請先選擇下一題模式' : '看結果 →';
     if (hasNextQuestion) renderModeTabs(null);
     saveResumeState();
-    if (!hasNextQuestion && window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
+    if (!hasNextQuestion && window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 5 });
   }
 
   function renderMC(w) {
@@ -973,7 +973,7 @@
 
     sendListeningSrs(w, primary);
     saveResumeState(); // Phase E3: กันหายถ้าปิดแท็บ/รีเฟรชก่อนกด 下一題
-    if (!hasNextQuestion && window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
+    if (!hasNextQuestion && window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 5 });
   }
 
   function goNext() {

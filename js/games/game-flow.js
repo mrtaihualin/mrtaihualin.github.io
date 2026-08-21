@@ -64,7 +64,7 @@
     var controls = ensureControls(key, nextButton);
     if (!controls) return false;
 
-    var delaySeconds = Number(options.delaySeconds) || 3;
+    var delaySeconds = Number(options.delaySeconds) || 5;
     var flow = {
       token: 1,
       timer: null,
@@ -455,9 +455,17 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', normalizeResumeUI);
   else normalizeResumeUI();
 
+  function cancelAll() {
+    Object.keys(flows).forEach(function (key) { clearFlow(key); });
+    Object.keys(resultFlows).forEach(function (key) { cancelResult(key); });
+  }
+  window.addEventListener('pagehide', cancelAll);
+  window.addEventListener('unload', cancelAll);
+
   window.GameFlow = {
     start: start,
     cancel: function (key) { clearFlow(String(key || 'default')); },
+    cancelAll: cancelAll,
     cancelResult: cancelResult,
     startResultCountdown: startResultCountdown,
     enhanceResult: enhanceResult,

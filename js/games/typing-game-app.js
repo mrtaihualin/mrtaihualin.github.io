@@ -1441,7 +1441,7 @@ function setGameBtns(mode){
     if(window.GameFlow)GameFlow.cancel('typing-game');
   } else {
     if(re)re.style.display='none';ch.style.display='none';nx.style.display='';
-    if(window.GameFlow)setTimeout(function(){GameFlow.start({key:'typing-game',nextButton:nx,delaySeconds:3});},0);
+    if(window.GameFlow)setTimeout(function(){GameFlow.start({key:'typing-game',nextButton:nx,delaySeconds:5});},0);
   }
 }
 
@@ -1770,18 +1770,8 @@ function _processMinaToastQueue(){
 // 用真實鍵盤鍵位打出音節，答對自動跳下一步；答錯 3 次視同原本「3 次沒選對」規則
 // 只是「多一種輸入方式」，不影響/取代原本點選版
 // ════════════════════════════════════════════
-var RG_BASE_MAP={ // 沒按 Shift 的鍵位
-  Backquote:'_',Digit1:'ๅ',Digit2:'/',Digit3:'-',Digit4:'ภ',Digit5:'ถ',Digit6:'ุ',Digit7:'ึ',Digit8:'ค',Digit9:'ต',Digit0:'จ',Minus:'ข',Equal:'ช',
-  KeyQ:'ๆ',KeyW:'ไ',KeyE:'ำ',KeyR:'พ',KeyT:'ะ',KeyY:'ั',KeyU:'ี',KeyI:'ร',KeyO:'น',KeyP:'ย',BracketLeft:'บ',BracketRight:'ล',
-  KeyA:'ฟ',KeyS:'ห',KeyD:'ก',KeyF:'ด',KeyG:'เ',KeyH:'้',KeyJ:'่',KeyK:'า',KeyL:'ส',Semicolon:'ว',Quote:'ง',Backslash:'ฃ',
-  KeyZ:'ผ',KeyX:'ป',KeyC:'แ',KeyV:'อ',KeyB:'ิ',KeyN:'ื',KeyM:'ท',Comma:'ม',Period:'ใ',Slash:'ฝ'
-};
-var RG_SHIFT_MAP={ // กด Shift ค้าง
-  Backquote:'%',Digit1:'+',Digit2:'๑',Digit3:'๒',Digit4:'๓',Digit5:'๔',Digit6:'ู',Digit7:'฿',Digit8:'๕',Digit9:'๖',Digit0:'๗',Minus:'๘',Equal:'๙',
-  KeyQ:'๐',KeyW:'"',KeyE:'ฎ',KeyR:'ฑ',KeyT:'ธ',KeyY:'ํ',KeyU:'๊',KeyI:'ณ',KeyO:'ฯ',KeyP:'ญ',BracketLeft:'ฐ',BracketRight:',',
-  KeyA:'ฤ',KeyS:'ฆ',KeyD:'ฏ',KeyF:'โ',KeyG:'ฌ',KeyH:'็',KeyJ:'๋',KeyK:'ษ',KeyL:'ศ',Semicolon:'ซ',Quote:'.',Backslash:'ฅ',
-  KeyZ:'(',KeyX:')',KeyC:'ฉ',KeyV:'ฮ',KeyB:'ฺ',KeyN:'์',KeyM:'?',Comma:'ฒ',Period:'ฬ',Slash:'ฦ'
-};
+var RG_BASE_MAP=window.GSHThaiKeyboard.baseMap;
+var RG_SHIFT_MAP=window.GSHThaiKeyboard.shiftMap;
 var RG_REVERSE={}; // ตัวอักษร → {code, shift} ใช้ชี้ปุ่มถัดไปที่ต้องกด
 (function(){
   Object.keys(RG_BASE_MAP).forEach(function(c){ RG_REVERSE[RG_BASE_MAP[c]]={code:c,shift:false}; });
@@ -1888,11 +1878,11 @@ function rgToggleWebKbd(){
       document.body.classList.add('tg-kbd-typing');
     });
     mi.addEventListener('blur', function(){ document.body.classList.remove('tg-kbd-typing'); });
-    var landscapeQuery=window.matchMedia(TG_LANDSCAPE_KBD_QUERY);
-    if(landscapeQuery.addEventListener)landscapeQuery.addEventListener('change',tgSyncLandscapeKeyboardPolicy);
-    else if(landscapeQuery.addListener)landscapeQuery.addListener(tgSyncLandscapeKeyboardPolicy);
-    window.addEventListener('orientationchange',tgSyncLandscapeKeyboardPolicy);
-    window.addEventListener('resize',tgSyncLandscapeKeyboardPolicy);
+    document.addEventListener('gsh:mobile-landscape-change',function(){
+      tgSyncLandscapeKeyboardPolicy();
+      rgBuildKeyboard();
+      try{rgTypeHighlightNextKey();}catch(e){}
+    });
     tgSyncLandscapeKeyboardPolicy();
   }catch(e){}
 })();
@@ -1902,46 +1892,16 @@ function rgToggleWebKbd(){
 function rgNoFocusSteal(el){ if(el)el.addEventListener('mousedown',function(e){e.preventDefault();}); }
 function rgBuildKeyboard(){
   var box=document.getElementById('rg-kbd');
-  if(!box)return;
-  var rows=[
-    ['Backquote','Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9','Digit0','Minus','Equal'],
-    ['KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP','BracketLeft','BracketRight'],
-    ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','Quote','Backslash'],
-    ['KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN','KeyM','Comma','Period','Slash']
-  ];
-  box.innerHTML='';
-  rows.forEach(function(codes){
-    var rowEl=document.createElement('div');rowEl.className='tk-row';
-    codes.forEach(function(code){
-      var k=document.createElement('div');
-      k.className='tk-key';k.dataset.code=code;
-      var sh=RG_SHIFT_MAP[code]||'';var un=RG_BASE_MAP[code]||'';
-      k.innerHTML='<span class="tk-shift">'+sh+'</span><span class="tk-base">'+un+'</span>';
-      k.onclick=function(){ rgVirtualPress(code); };
-      // Lin 2026-07-15 (audit): ให้กดด้วยคีย์บอร์ด/โปรแกรมอ่านหน้าจอได้
-      k.setAttribute('role','button');
-      k.setAttribute('tabindex','0');
-      k.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); k.onclick(); } };
-      rgNoFocusSteal(k); // Lin 2026-07-16: แตะปุ่มจอแล้วคีย์บอร์ดเครื่องต้องไม่หุบ
-      rowEl.appendChild(k);
-    });
-    box.appendChild(rowEl);
+  if(!box||!window.GSHThaiKeyboard)return;
+  window.GSHThaiKeyboard.render({
+    root:box,
+    split:tgLandscapeUsesGameKeyboardOnly(),
+    shifted:RG_TYPE.shiftOn,
+    shiftId:'rg-shift-key',
+    onCode:rgVirtualPress,
+    onShift:function(){RG_TYPE.shiftOn=!RG_TYPE.shiftOn;rgBuildKeyboard();try{rgTypeHighlightNextKey();}catch(e){}},
+    onBackspace:rgTypeBackspace
   });
-  var lastRow=document.createElement('div');lastRow.className='tk-row';
-  var shiftKey=document.createElement('div');shiftKey.className='tk-key tk-wide';shiftKey.id='rg-shift-key';shiftKey.textContent='⇧ Shift';
-  shiftKey.onclick=function(){ RG_TYPE.shiftOn=!RG_TYPE.shiftOn; shiftKey.classList.toggle('active',RG_TYPE.shiftOn); };
-  shiftKey.setAttribute('role','button');shiftKey.setAttribute('tabindex','0');
-  shiftKey.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); shiftKey.onclick(); } };
-  // ปุ่มเว้นวรรค: ไม่มีคำไหนในเกมมีช่องว่าง → ทำเป็นปุ่มโชว์เฉยๆ (inert) กันกดแล้วโดนนับผิด — Lin 2026-07-02
-  var spaceKey=document.createElement('div');spaceKey.className='tk-key tk-space';spaceKey.textContent='空白鍵';
-  spaceKey.style.opacity='.45';spaceKey.style.cursor='default';
-  var backKey=document.createElement('div');backKey.className='tk-key tk-wide';backKey.textContent='⌫ 退格';
-  backKey.onclick=function(){ rgTypeBackspace(); };
-  backKey.setAttribute('role','button');backKey.setAttribute('tabindex','0');
-  backKey.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); backKey.onclick(); } };
-  rgNoFocusSteal(shiftKey);rgNoFocusSteal(backKey);rgNoFocusSteal(spaceKey); // Lin 2026-07-16: แตะปุ่มจอแล้วคีย์บอร์ดเครื่องต้องไม่หุบ
-  lastRow.appendChild(shiftKey);lastRow.appendChild(spaceKey);lastRow.appendChild(backKey);
-  box.appendChild(lastRow);
 }
 function rgVirtualPress(code){
   var ch=RG_TYPE.shiftOn?(RG_SHIFT_MAP[code]||''):(RG_BASE_MAP[code]||'');

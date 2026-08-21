@@ -11,6 +11,8 @@ const source = fs.readFileSync(path.join(root, 'js/games/typing-game-app.js'), '
 const html = fs.readFileSync(path.join(root, 'typing-game.html'), 'utf8');
 const listeningHtml = fs.readFileSync(path.join(root, 'listening-game.html'), 'utf8');
 const legoSource = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+const thaiKeyboardSource = fs.readFileSync(path.join(root, 'js/games/thai-keyboard.js'), 'utf8');
+const mobileLandscapeSource = fs.readFileSync(path.join(root, 'js/core/mobile-landscape.js'), 'utf8');
 const scoreSource = fs.readFileSync(path.join(root, 'js/games/typing-score.js'), 'utf8');
 let passed = 0;
 
@@ -112,14 +114,25 @@ test('mobile landscape Typing uses only its equivalent in-game keyboard', () => 
   assert.match(policy, /setAttribute\('inputmode','text'\)/);
   assert.match(source, /if\(tgLandscapeUsesGameKeyboardOnly\(\)\)\{ mi\.blur\(\); return; \}/);
   assert.match(source, /RG_MOBILE_KBD_USED && rgIsTouchDevice\(\) && !tgLandscapeUsesGameKeyboardOnly\(\)/);
+  assert.match(source, /RG_BASE_MAP=window\.GSHThaiKeyboard\.baseMap/);
+  assert.match(source, /GSHThaiKeyboard\.render\(\{/);
+  assert.match(source, /split:tgLandscapeUsesGameKeyboardOnly\(\)/);
+  assert.match(source, /gsh:mobile-landscape-change/);
   assert.match(html, /body\.tg-landscape-game-keyboard-only \.tkbd\{display:flex !important/);
   assert.match(html, /orientation:landscape[\s\S]{0,300}pointer:coarse[\s\S]{0,220}\.mobile-kbd-input\{pointer-events:none !important;\}/);
   assert.match(html, /id="rg-kbd"/);
 });
 
-test('free-text inputs without an equivalent in-game keyboard remain native', () => {
+test('Listening Typed shares the keyboard while Lego custom input remains native', () => {
   assert.match(listeningHtml, /<input type="text" id="lg-type-input"/);
   assert.doesNotMatch(listeningHtml, /id="lg-type-input"[^>]+(?:readonly|inputmode="none")/);
+  assert.match(listeningHtml, /js\/games\/thai-keyboard\.js\?v=1/);
+  assert.match(mobileLandscapeSource, /input\.readOnly = true/);
+  assert.match(mobileLandscapeSource, /input\.setAttribute\('inputmode', 'none'\)/);
+  assert.match(mobileLandscapeSource, /input\.value \+= character/);
+  assert.match(thaiKeyboardSource, /var codeRows = \[/);
+  assert.match(thaiKeyboardSource, /var baseMap = \{/);
+  assert.match(thaiKeyboardSource, /var shiftMap = \{/);
   assert.match(legoSource, /<input type="text" id="legoCustomTh-/);
   assert.match(legoSource, /<input class="lego-custom-zh" type="text" id="legoCustomZh-/);
   assert.doesNotMatch(legoSource, /legoCustom(?:Th|Zh)[^\n]+(?:readOnly|inputmode=['"]none)/);
@@ -147,7 +160,7 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=39/);
+  assert.match(html, /typing-game-app\.min\.js\?v=40/);
 });
 
 test('玩法 explains both locked typing rules', () => {

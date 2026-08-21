@@ -1502,7 +1502,8 @@ function teachPrev(){if(teachStep>0){teachStep--;renderTeach();}}
 
 // ════════ CLOSE ON OUTSIDE CLICK ════════
 document.addEventListener('click',e=>{
-  if(!e.target.closest('.slot')&&openSlot){openSlot=null;applyOpen();}
+  const landscapeMenu=e.target.closest('[data-gsh-ml-role="lego-menu"],[data-gsh-ml-custom-input]');
+  if(!e.target.closest('.slot')&&!landscapeMenu&&openSlot){openSlot=null;applyOpen();}
 });
 
 // ════════ กด Enter ไปข้อถัดไป (ตอนตอบถูก/เฉลยแล้ว มีปุ่ม「繼續 →」โผล่มา) — Lin 2026-07-20

@@ -2198,7 +2198,7 @@ function render() {
   if (window.GameFlow) {
     GameFlow.cancel('tone-finder');
     if (S.step === 'result' && session) {
-      setTimeout(function () { GameFlow.start({ key: 'tone-finder', nextButton: '#tf-session-next-btn', delaySeconds: 3 }); }, 0);
+      setTimeout(function () { GameFlow.start({ key: 'tone-finder', nextButton: '#tf-session-next-btn', delaySeconds: 5 }); }, 0);
     }
     if (S.step === 'session-summary') {
       GameFlow.markResult(body);

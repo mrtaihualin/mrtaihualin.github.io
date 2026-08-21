@@ -1621,7 +1621,7 @@ function setGameBtns(mode){
     if(window.GameFlow)GameFlow.cancel('reading-game');
   } else {
     if(re)re.style.display='none';ch.style.display='none';nx.style.display='';
-    if(window.GameFlow)setTimeout(function(){GameFlow.start({key:'reading-game',nextButton:nx,delaySeconds:3});},0);
+    if(window.GameFlow)setTimeout(function(){GameFlow.start({key:'reading-game',nextButton:nx,delaySeconds:5});},0);
   }
 }
 

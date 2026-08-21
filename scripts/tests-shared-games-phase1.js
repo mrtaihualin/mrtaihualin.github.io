@@ -7,6 +7,9 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const sharedCss = fs.readFileSync(path.join(root, 'css/shared.css'), 'utf8');
+const mobileLandscapeCss = fs.readFileSync(path.join(root, 'css/mobile-landscape.css'), 'utf8');
+const mobileLandscapeJs = fs.readFileSync(path.join(root, 'js/core/mobile-landscape.js'), 'utf8');
+const thaiKeyboardJs = fs.readFileSync(path.join(root, 'js/games/thai-keyboard.js'), 'utf8');
 const sharedJs = fs.readFileSync(path.join(root, 'js/core/shared.js'), 'utf8');
 const switcherJs = fs.readFileSync(path.join(root, 'js/games/game-switcher.js'), 'utf8');
 const wordMenuJs = fs.readFileSync(path.join(root, 'js/games/word-menu.js'), 'utf8');
@@ -56,7 +59,7 @@ test('shared shell stays bounded and resume actions stay compact on narrow scree
   assert.match(sharedCss, /\.gsh-resume-actions button\s*\{[^}]*min-height:36px/);
 });
 
-test('all six games bind the locked two-hand mobile landscape layout', () => {
+test('all six games bind one shared live-node Mobile Landscape stage', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const expectedBodies = {
     tone: games.find((g) => g.id === 'tone').htmlText,
@@ -68,28 +71,37 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
-    assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current landscape CSS`);
+    assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current shared CSS`);
+    assert.match(html, /css\/mobile-landscape\.css\?v=1/, `${id}: missing shared landscape CSS`);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=1/, `${id}: missing shared landscape controller`);
+    assert.match(html, /viewport-fit=cover/, `${id}: missing safe-area viewport contract`);
   }
-  assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
-  assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,260}top:var\(--gsh-safe-t\); left:50%/);
-  assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,520}flex-direction:row !important/);
-  assert.match(sharedCss, /#mina-toast,[\s\S]{0,100}#tf-mina-toast \{ display:none !important; \}/);
-  assert.match(sharedCss, /#gc-cap-banner \{[\s\S]{0,260}top:50% !important;[\s\S]{0,260}left:31% !important/);
-  assert.match(sharedCss, /\.gsh-resume-banner \{[\s\S]{0,300}top:50%; left:24%; right:24%/);
-  assert.match(sharedCss, /> footer,/);
-  assert.match(sharedCss, /\.rg-tools-row,[\s\S]{0,500}max-width:29% !important/);
-  assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-primary-actions \{[\s\S]{0,180}right:var\(--gsh-safe-r\)/);
-  assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-utility-actions,[\s\S]{0,240}left:var\(--gsh-safe-l\)/);
-  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.sg-tone-grid \{[\s\S]{0,160}grid-template-rows:repeat\(3,auto\); grid-auto-flow:column/);
-  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.tf-options:has\(> :nth-child\(3\):last-child\) > :first-child/);
-  for (const id of ['reading', 'typing']) {
-    assert.match(sharedCss, new RegExp(`data-gsh-game="${id}"\\] #pool`), `${id}: lower split-answer zone missing`);
-  }
-  assert.match(sharedCss, /data-gsh-game="listening"\] #lg-mc-wrap[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(sharedCss, /data-gsh-game="listening"\] #lg-type-wrap[\s\S]{0,180}left:29%; right:29%/);
-  assert.match(sharedCss, /data-gsh-game="word-order"\] #wo-bank[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate[\s\S]{0,260}left:var\(--gsh-safe-l\); width:28%/);
-  assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate \.slot-menu[\s\S]{0,220}right:var\(--gsh-safe-r\)/);
+  assert.doesNotMatch(sharedCss, /--gsh-safe-l|max-height:600px|data-gsh-game="lego"\] #baseplate \.slot-menu/);
+  assert.doesNotMatch(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
+  assert.match(mobileLandscapeCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)/);
+  assert.match(mobileLandscapeCss, /grid-template-columns: minmax\(0, 31fr\) minmax\(0, 38fr\) minmax\(0, 31fr\)/);
+  assert.match(mobileLandscapeCss, /env\(safe-area-inset-left\)/);
+  assert.match(mobileLandscapeCss, /\[data-gsh-ml-slot="split-keyboard"\]/);
+  assert.match(mobileLandscapeCss, /\.gsh-ml-dropdown-panel\[hidden\]/);
+  assert.match(mobileLandscapeCss, /#gsh-ml-stage\[data-gsh-ml-view="result"\]/);
+  assert.match(mobileLandscapeCss, /#gsh-ml-stage\[data-gsh-ml-view="custom-input"\]/);
+  assert.match(mobileLandscapeJs, /function mountExistingNode\(node, target\)/);
+  assert.match(mobileLandscapeJs, /document\.createComment\('gsh-ml:' /);
+  assert.match(mobileLandscapeJs, /for \(var i = moveOrder\.length - 1/);
+  assert.doesNotMatch(mobileLandscapeJs, /cloneNode\(/);
+  assert.match(mobileLandscapeJs, /new MutationObserver\(scheduleSync\)/);
+  assert.match(mobileLandscapeJs, /\.gsh-next-countdown', '\.gsh-pause-btn/);
+  assert.match(mobileLandscapeJs, /stage\.inert = loginOpen/);
+  assert.match(mobileLandscapeJs, /data-gsh-ml-view', 'resume'/);
+  assert.match(mobileLandscapeJs, /data-gsh-ml-view', 'result'/);
+  assert.match(mobileLandscapeJs, /data-gsh-ml-view', 'custom-input'/);
+  assert.match(mobileLandscapeJs, /customCancel\.textContent = '取消'/);
+  assert.match(mobileLandscapeJs, /focused\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(thaiKeyboardJs, /Math\.ceil\(codes\.length \/ 2\)/);
+  assert.match(thaiKeyboardJs, /left\.dataset\.gshSide = 'left'/);
+  assert.match(thaiKeyboardJs, /right\.dataset\.gshSide = 'right'/);
+  assert.match(thaiKeyboardJs, /event\.preventDefault\(\)/);
+  assert.match(thaiKeyboardJs, /if \(split\) \{[\s\S]*leftFunctions[\s\S]*rightFunctions[\s\S]*\} else \{[\s\S]*space/);
 });
 
 test('all five games expose a persistent 玩法 replay path', () => {
@@ -162,7 +174,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=40/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=11/, 'Lego must load its locked-flow runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=12/, 'Lego must load its locked-flow runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -182,7 +194,8 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
   assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must contain only the full sentence and zh-TW translation before actions');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=10/, 'Lego Result must use the shared flow runtime');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/, 'Lego Result must use the shared flow runtime');
+  assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=12/, 'Lego must load the landscape-aware menu runtime');
   for (const role of ['replay','print','detail-action','switch','cta','home']) {
     assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
   }
@@ -191,6 +204,8 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoApp, /missingCustomTranslation\?'':buildZhFull\(\)/, 'custom input without player translation must not receive inferred translation');
   assert.match(legoApp, /自訂內容由玩家自行輸入，系統不會檢查或修正內容。/);
   assert.match(legoApp, /showFirstCorrect:false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
+  assert.match(legoApp, /data-gsh-ml-role="lego-menu"/, 'moved landscape menus must remain inside Lego click handling');
+  assert.match(legoApp, /data-gsh-ml-custom-input/, 'exclusive custom input must remain inside Lego click handling');
 });
 
 test('Lego exposes only the locked word sets and branch grammar', () => {
@@ -314,11 +329,11 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
     assert.match(g.htmlText, /js\/games\/round-report\.js\?v=2/, `${g.id}: must load shared print renderer`);
-    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=10/, `${g.id}: must load daily Result runtime`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=11/, `${g.id}: must load daily Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
   assert.match(legoHtml, /js\/games\/round-report\.js\?v=2/);
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=10/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/);
   assert.match(legoApp, /RoundReport\.openPrint/);
   assert.match(roundReport, /@page\{size:A4 portrait/);
   assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);
@@ -444,7 +459,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=58/, 'Tone: page must request the rebuilt runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=59/, 'Tone: page must request the rebuilt runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);

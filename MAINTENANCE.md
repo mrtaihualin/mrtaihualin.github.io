@@ -2114,3 +2114,9 @@ fix(backup): เพิ่ม package-lock.json ให้ scripts/backup + เป
 ```bash
 node scripts/check-site.js
 ```
+## 2026-08-21 — Six-game Mobile Landscape shared stage (`PASS_LOCAL / PHYSICAL_IPHONE_BLOCKED`)
+
+- Added one shared landscape stage for Tone, Reading, Listening, Typing, Word Order and Lego at the locked 1024×600 landscape boundary, using live-node movement with restoration on exit instead of cloned gameplay state.
+- Added shared Mode/Level/Tools dropdowns, a fixed main-action slot, exclusive Login/Resume/Result handling, safe-area containment and shared split Kedmanee keyboard rendering for Typing and Listening Typed. Typing and Listening Typed suppress the native keyboard only while this layout is active; Lego custom input retains native keyboard behavior and follows `visualViewport`.
+- Retired the former coordinate-based landscape block, advanced the affected cache keys, moved the Core 5 pre-game countdown from three to five seconds and kept the existing seven-second result countdown unchanged.
+- Deterministic geometry, flow and per-game source tests plus the full site gate pass locally. No commit, push, PR, deploy, SQL, account/player-data or Production mutation occurred. Exact physical iPhone viewport/rotation/custom-input verification remains a Human gate.

@@ -920,7 +920,7 @@
   function woStartAutoNext(){
     if(!window.GameFlow)return;
     var nextButton=document.getElementById('wo-next-btn');
-    setTimeout(function(){GameFlow.start({key:'word-order',nextButton:nextButton,delaySeconds:3});},0);
+    setTimeout(function(){GameFlow.start({key:'word-order',nextButton:nextButton,delaySeconds:5});},0);
   }
 
   // Lin 2026-07-06: สีหลอดคะแนนต่อข้อ — ทองเข้มตอนเต็ม ไล่ลงเป็นแดงตอนใกล้ตาย (ชุดเดียวทุกเกม)
