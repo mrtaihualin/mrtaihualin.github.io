@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1.2 six-game Mobile Landscape Delta
+**Updated: 2026-08-21 Asia/Bangkok** — Phase 1 Mobile Landscape regression fix
+
+## 2026-08-21 — PD-P12-MOBILE-LANDSCAPE-01 / MOBILE-KEYBOARD-01 Regression Fix (`PASS_LOCAL / HUMAN_DEVICE_PENDING / PRODUCTION_UNCHANGED`)
+
+- Corrected only the locked short-screen landscape presentation for Tone, Reading, Listening, Typing, Word Order and Lego: shared shell controls are now one horizontal top-centre row; help/session areas no longer occupy the same top-left space; Resume and entitlement notices use a deliberate centred state; transient toast/footer layers no longer cover gameplay; centre question, left/right answer zones and Lego's existing selector/sentence/vocabulary zones stay within the locked layout.
+- Locked and implemented the Mobile Landscape keyboard boundary in Typing: because Typing already has an equivalent Thai keyboard, the native mobile input is blurred/read-only with `inputmode=none` and the in-game keyboard remains visible. Portrait Typing is unchanged. Listening Typed and Lego custom/translation free-text inputs keep their native mobile keyboard because they have no equivalent in-game input.
+- Rebuilt only `typing-game-app.min.js`, advanced its cache binding to v39 and the six-game shared CSS binding to v26, and extended only the existing Typing/shared/owner regressions. Syntax, 16 Typing checks, 29 shared six-game checks, 12 owner-switch checks and the existing non-blocking mobile-accessibility audit PASS. The exact local build could not fetch protected game content from localhost under the browser CORS boundary; no Production proxy or remote mutation was used. Physical Mobile Landscape gameplay remains Human-only. No redesign, feature, analytics, Auth/data/security change, final regression/beta, Final Go/No-Go or Phase 1 PASS occurred.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1.2 six-game Mobile Landscape Delta
 
 ## 2026-08-21 — PD-P12-MOBILE-LANDSCAPE-01 Six-Game Two-Hand Layout (`PASS_LOCAL / HUMAN_DEVICE_PENDING / NOT_MERGED / PRODUCTION_UNCHANGED`)
 

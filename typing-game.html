@@ -84,7 +84,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=25">
+<link rel="stylesheet" href="css/shared.css?v=26">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=6"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน game-account.js/auth-widget.js/shared.js/typing-game-app.js -->
@@ -356,6 +356,20 @@ body.tg-kbd-typing{padding-top:0 !important;}
 .tkbd{display:flex;flex-direction:column;gap:4px;width:100%;max-width:520px;}
 /* 無提示(挑戰)模式: ซ่อนคีย์บอร์ดบนจอเป็นค่าเริ่มต้น ให้พิมพ์ด้วยคีย์บอร์ดจริง(เครื่อง/มือถือ)ล้วนๆ ท้าทายความจำ — 有提示 ยังบังคับโชว์คีย์บอร์ดในเกมเป็นไกด์เหมือนเดิม — ผู้เล่นกดปุ่ม "⌨️ 開啟螢幕鍵盤" เปิดเองได้ถ้าต้องการ (.tg-kbd-open) — ใช้กฎเดียวกันทั้งคอมและมือถือ — Lin 2026-07-12 */
 body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
+@media (orientation:landscape) and (max-width:1024px) and (max-height:600px){
+  body.tg-landscape-game-keyboard-only .tkbd{display:flex !important;gap:2px;}
+  body.tg-landscape-game-keyboard-only #rg-mobile-kbd-btn{display:none !important;}
+  body.tg-landscape-game-keyboard-only .mobile-kbd-input{pointer-events:none !important;}
+  body.tg-landscape-game-keyboard-only .tk-row{gap:2px;}
+  body.tg-landscape-game-keyboard-only .tk-key{height:29px;min-width:14px;border-radius:5px;}
+  body.tg-landscape-game-keyboard-only .tk-key .tk-base{font-size:12px;}
+  body.tg-landscape-game-keyboard-only .tk-key .tk-shift{font-size:7px;}
+}
+@media (orientation:landscape) and (max-width:1024px) and (max-height:600px) and (hover:none) and (pointer:coarse){
+  .tkbd{display:flex !important;gap:2px;}
+  #rg-mobile-kbd-btn{display:none !important;}
+  .mobile-kbd-input{pointer-events:none !important;}
+}
 .tk-row{display:flex;gap:3px;justify-content:center;}
 .tk-key{flex:1;max-width:38px;min-width:20px;height:40px;border:1.5px solid #d4b87a;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;cursor:pointer;user-select:none;transition:all .1s;overflow:hidden;}
 .tk-key:active{transform:scale(.92);background:#fff3d8;}
@@ -751,7 +765,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=38']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=39']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->

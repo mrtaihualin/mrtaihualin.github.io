@@ -68,10 +68,15 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
-    assert.match(html, /css\/shared\.css\?v=25/, `${id}: must load current landscape CSS`);
+    assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current landscape CSS`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
   assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,260}top:var\(--gsh-safe-t\); left:50%/);
+  assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,520}flex-direction:row !important/);
+  assert.match(sharedCss, /#mina-toast,[\s\S]{0,100}#tf-mina-toast \{ display:none !important; \}/);
+  assert.match(sharedCss, /#gc-cap-banner \{[\s\S]{0,260}top:50% !important;[\s\S]{0,260}left:31% !important/);
+  assert.match(sharedCss, /\.gsh-resume-banner \{[\s\S]{0,300}top:50%; left:24%; right:24%/);
+  assert.match(sharedCss, /> footer,/);
   assert.match(sharedCss, /\.rg-tools-row,[\s\S]{0,500}max-width:29% !important/);
   assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-primary-actions \{[\s\S]{0,180}right:var\(--gsh-safe-r\)/);
   assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-utility-actions,[\s\S]{0,240}left:var\(--gsh-safe-l\)/);
@@ -287,7 +292,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    assert.match(g.htmlText, /css\/shared\.css\?v=25/, `${g.id}: must load current shared game CSS`);
+    assert.match(g.htmlText, /css\/shared\.css\?v=26/, `${g.id}: must load current shared game CSS`);
     assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=40/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
