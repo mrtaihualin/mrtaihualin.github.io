@@ -9,6 +9,8 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/games/typing-game-app.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'typing-game.html'), 'utf8');
+const listeningHtml = fs.readFileSync(path.join(root, 'listening-game.html'), 'utf8');
+const legoSource = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
 const scoreSource = fs.readFileSync(path.join(root, 'js/games/typing-score.js'), 'utf8');
 let passed = 0;
 
@@ -95,6 +97,34 @@ test('mobile software keyboard closes outside active Typing input states', () =>
   assert.match(functionBlock('endRound', 'tgAttachLoginSummary'), /tgCloseMobileKeyboard\(\)/);
 });
 
+test('mobile landscape Typing uses only its equivalent in-game keyboard', () => {
+  const start = source.indexOf('function tgLandscapeUsesGameKeyboardOnly(');
+  const end = source.indexOf('// ── โหมดไกด์ไลน์', start);
+  const policy = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(source, /TG_LANDSCAPE_KBD_QUERY='\(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)'/);
+  assert.match(policy, /navigator\.maxTouchPoints/);
+  assert.match(policy, /rgIsTouchDevice\(\)/);
+  assert.match(policy, /document\.activeElement===mi\)mi\.blur\(\)/);
+  assert.match(policy, /mi\.readOnly=true/);
+  assert.match(policy, /setAttribute\('inputmode','none'\)/);
+  assert.match(policy, /mi\.readOnly=false/);
+  assert.match(policy, /setAttribute\('inputmode','text'\)/);
+  assert.match(source, /if\(tgLandscapeUsesGameKeyboardOnly\(\)\)\{ mi\.blur\(\); return; \}/);
+  assert.match(source, /RG_MOBILE_KBD_USED && rgIsTouchDevice\(\) && !tgLandscapeUsesGameKeyboardOnly\(\)/);
+  assert.match(html, /body\.tg-landscape-game-keyboard-only \.tkbd\{display:flex !important/);
+  assert.match(html, /orientation:landscape[\s\S]{0,300}pointer:coarse[\s\S]{0,220}\.mobile-kbd-input\{pointer-events:none !important;\}/);
+  assert.match(html, /id="rg-kbd"/);
+});
+
+test('free-text inputs without an equivalent in-game keyboard remain native', () => {
+  assert.match(listeningHtml, /<input type="text" id="lg-type-input"/);
+  assert.doesNotMatch(listeningHtml, /id="lg-type-input"[^>]+(?:readonly|inputmode="none")/);
+  assert.match(legoSource, /<input type="text" id="legoCustomTh-/);
+  assert.match(legoSource, /<input class="lego-custom-zh" type="text" id="legoCustomZh-/);
+  assert.doesNotMatch(legoSource, /legoCustom(?:Th|Zh)[^\n]+(?:readOnly|inputmode=['"]none)/);
+});
+
 test('refresh tolerates the Phase 1 HUD without removed reward elements', () => {
   const refresh = functionBlock('refreshUI', 'updateCombo');
   const elements = {
@@ -117,7 +147,7 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=38/);
+  assert.match(html, /typing-game-app\.min\.js\?v=39/);
 });
 
 test('玩法 explains both locked typing rules', () => {

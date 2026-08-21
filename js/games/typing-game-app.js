@@ -1805,6 +1805,35 @@ function rgIsTouchDevice(){ return !window.matchMedia('(hover:hover) and (pointe
 // เคยโฟกัสช่องพิมพ์มือถือมาก่อนไหม (เอาไว้ตัดสินใจว่าต้องดึงคีย์บอร์ดเครื่องกลับมาอัตโนมัติตอนขึ้นคำใหม่หรือเปล่า) — Lin 2026-07-13
 var RG_MOBILE_KBD_USED=false;
 
+// Mobile Landscape has an equivalent in-game Thai keyboard, so the native keyboard must stay closed.
+// Portrait keeps the existing native-keyboard path; free-text inputs in other games are not touched.
+var TG_LANDSCAPE_KBD_QUERY='(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)';
+function tgLandscapeUsesGameKeyboardOnly(){
+  try{
+    var touch=(navigator.maxTouchPoints||0)>0||rgIsTouchDevice();
+    return touch&&window.matchMedia(TG_LANDSCAPE_KBD_QUERY).matches;
+  }catch(e){return false;}
+}
+function tgSyncLandscapeKeyboardPolicy(){
+  var gameOnly=tgLandscapeUsesGameKeyboardOnly();
+  try{
+    var mi=document.getElementById('rg-mobile-input');
+    document.body.classList.toggle('tg-landscape-game-keyboard-only',gameOnly);
+    if(!mi)return gameOnly;
+    if(gameOnly){
+      if(document.activeElement===mi)mi.blur();
+      mi.readOnly=true;
+      mi.setAttribute('inputmode','none');
+      RG_MOBILE_KBD_USED=false;
+    }else{
+      mi.readOnly=false;
+      mi.removeAttribute('readonly');
+      mi.setAttribute('inputmode','text');
+    }
+  }catch(e){}
+  return gameOnly;
+}
+
 // ── โหมดไกด์ไลน์ ใช้ร่วมทุกระดับ 初/中/高 (Lin 2026-07-02) ──
 // true = highlight ปุ่มถัดไปบนคีย์บอร์ด + โชว์ need บน shift · false = ปิดหมด · จำค่าไว้ใน localStorage
 var guideMode=(function(){try{return localStorage.getItem('tg_guide_mode')==='1';}catch(e){return false;}})(); // กฎ MASTER ข้อ9: default = 無提示 (โหมดเก็บแต้ม)
@@ -1812,15 +1841,7 @@ function setGuideMode(on){
   guideMode=!!on;
   try{localStorage.setItem('tg_guide_mode',guideMode?'1':'0');}catch(e){}
   try{ document.body.classList.toggle('tg-guide-hint', guideMode); }catch(e){}
-  // Lin 2026-07-16: ยกเลิกการบล็อกคีย์บอร์ดเครื่องในโหมดมีคำใบ้ (เดิม 2026-07-08 ตั้ง readonly+inputmode=none บนมือถือ)
-  // เหตุผล: Lin แจ้งว่าอยากพิมพ์ด้วยคีย์บอร์ดมือถือได้ "ทุกโหมด" — โหมดมีคำใบ้ยังโชว์คีย์บอร์ดในเกมเป็นไกด์เหมือนเดิม แต่พิมพ์ด้วยคีย์บอร์ดเครื่องก็ได้
-  try{
-    var mi2=document.getElementById('rg-mobile-input');
-    if(mi2){
-      mi2.removeAttribute('readonly');
-      mi2.setAttribute('inputmode','text');
-    }
-  }catch(e){}
+  tgSyncLandscapeKeyboardPolicy();
   // Lin 2026-07-19: ปุ่มวงเดียว กดสลับ — 有提示 โชว์ 💡 · 無提示 โชว์ 🔥
   var gt=document.getElementById('guide-toggle');
   if(gt){ gt.textContent=guideMode?'💡':'🔥'; gt.title=guideMode?'有提示（練習）':'無提示（挑戰）'; }
@@ -1861,8 +1882,18 @@ function rgToggleWebKbd(){
   try{
     var mi=document.getElementById('rg-mobile-input');
     if(!mi)return;
-    mi.addEventListener('focus',function(){ RG_MOBILE_KBD_USED=true; document.body.classList.add('tg-kbd-typing'); }); // Lin 2026-07-16: โหมดมีคำใบ้ก็ใช้คีย์บอร์ดเครื่องได้แล้ว → ซ่อนหัวเว็บให้เหมือนกันทุกโหมด
+    mi.addEventListener('focus',function(){
+      if(tgLandscapeUsesGameKeyboardOnly()){ mi.blur(); return; }
+      RG_MOBILE_KBD_USED=true;
+      document.body.classList.add('tg-kbd-typing');
+    });
     mi.addEventListener('blur', function(){ document.body.classList.remove('tg-kbd-typing'); });
+    var landscapeQuery=window.matchMedia(TG_LANDSCAPE_KBD_QUERY);
+    if(landscapeQuery.addEventListener)landscapeQuery.addEventListener('change',tgSyncLandscapeKeyboardPolicy);
+    else if(landscapeQuery.addListener)landscapeQuery.addListener(tgSyncLandscapeKeyboardPolicy);
+    window.addEventListener('orientationchange',tgSyncLandscapeKeyboardPolicy);
+    window.addEventListener('resize',tgSyncLandscapeKeyboardPolicy);
+    tgSyncLandscapeKeyboardPolicy();
   }catch(e){}
 })();
 // Lin 2026-07-16: กันปุ่มบนจอ "แย่งโฟกัส" จากช่องพิมพ์มือถือ — เดิมแตะปุ่มคีย์บอร์ดในเกม/ปุ่มวรรณยุกต์/ปุ่มข้าม แล้วโฟกัสย้ายไปที่ปุ่ม (div tabindex=0 / button โฟกัสได้)
@@ -2250,7 +2281,7 @@ document.addEventListener('keydown',function(e){
     // ขึ้นคำ/พยางค์ใหม่แล้วคีย์บอร์ดเครื่องไม่เด้งกลับมาเอง ต้องแตะกล่องคำเองใหม่ทุกครั้ง ดูเหมือน "พิมพ์ไม่ได้"
     // แก้: ถ้าเคยใช้คีย์บอร์ดมือถือมาก่อน (RG_MOBILE_KBD_USED) + เป็นจอสัมผัส → ดึงโฟกัสกลับให้อัตโนมัติ (Lin 2026-07-16: โหมดมีคำใบ้ก็ใช้คีย์บอร์ดเครื่องได้แล้ว เลยเอาเงื่อนไขกัน guideMode ออก)
     try{
-      if(RG_MOBILE_KBD_USED && rgIsTouchDevice()){
+      if(RG_MOBILE_KBD_USED && rgIsTouchDevice() && !tgLandscapeUsesGameKeyboardOnly()){
         var _mi=document.getElementById('rg-mobile-input');
         if(_mi)_mi.focus();
       }
