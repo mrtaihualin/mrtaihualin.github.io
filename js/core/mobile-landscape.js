@@ -22,6 +22,11 @@
   var listeningKeyboardInput = null;
   var listeningKeyboardRenderedShifted = null;
   var inputPolicies = new Map();
+  var activeResultRoot = null;
+  var activeResultActions = [];
+  var syncCount = 0;
+  var mountMoveCount = 0;
+  var observerCallbackCount = 0;
 
   function q(selector, root) { return (root || document).querySelector(selector); }
   function qa(selector, root) { return Array.prototype.slice.call((root || document).querySelectorAll(selector)); }
@@ -32,6 +37,9 @@
   }
   function isRenderableControl(node) {
     return isVisible(node) && !node.classList.contains('used');
+  }
+  function isSourceVisible(node) {
+    return !!node && !node.hidden && node.style.display !== 'none' && isVisible(node);
   }
 
   function slot(name) { return slots[name] || null; }
@@ -85,7 +93,10 @@
     var focused = document.activeElement && node.contains(document.activeElement) ? document.activeElement : null;
     var record = moved.get(node);
     if (record) {
-      if (node.parentNode !== target) target.appendChild(node);
+      if (node.parentNode !== target) {
+        target.appendChild(node);
+        mountMoveCount += 1;
+      }
       if (focused && document.activeElement !== focused && focused.focus) focused.focus({ preventScroll: true });
       return true;
     }
@@ -97,6 +108,7 @@
     moved.set(node, { marker: marker, originalParent: originalParent, originalNextSibling: originalNextSibling });
     moveOrder.push(node);
     target.appendChild(node);
+    mountMoveCount += 1;
     if (focused && document.activeElement !== focused && focused.focus) focused.focus({ preventScroll: true });
     return true;
   }
@@ -227,7 +239,11 @@
     mountExistingNode(q('.rg-ctl-wrap'), slot('shared-controls'));
     mountExistingNode(q('#rg-login-slot'), slot('account'));
     if (game === 'tone') {
-      mountMany(['#tf-banner', '#tf-body'], slot('question'));
+      mountMany(['#tf-banner'], slot('question'));
+      var toneBody = q('#tf-body');
+      if (!toneBody || toneBody.getAttribute('data-shared-result-active') !== 'true') {
+        mountExistingNode(toneBody, slot('question'));
+      }
       mountMany(['#tf-nav-bar'], slot('main-action'));
     } else if (game === 'reading') {
       mountMany(['.word-area', '#slot-row'], slot('question'));
@@ -377,36 +393,89 @@
   }
 
   function visibleResume() {
-    return qa('#tf-resume-banner, #rg-resume-banner, #lg-resume-banner, #tg-resume-banner, #wo-resume-banner, #lego-resume-banner').filter(isVisible)[0] || null;
+    return qa('#tf-resume-banner, #rg-resume-banner, #lg-resume-banner, #tg-resume-banner, #wo-resume-banner, #lego-resume-banner').filter(isSourceVisible)[0] || null;
   }
 
-  function syncExclusiveView(game) {
+  function resolveExclusiveView(game) {
     var focused = document.activeElement;
     var custom = game === 'lego' && focused && focused.closest ? focused.closest('.opt-custom') : null;
+    var resume = visibleResume();
+    var result = qa('[data-shared-result-ui="v1"][data-shared-result-active="true"]').filter(isSourceVisible)[0] || null;
+    return { custom: custom, resume: resume, result: result };
+  }
+
+  function restoreActiveResult(nextRoot, deactivateState) {
+    if (!activeResultRoot || activeResultRoot === nextRoot) return;
+    activeResultActions.slice().forEach(restoreExistingNode);
+    restoreExistingNode(activeResultRoot);
+    if (deactivateState && window.GameFlow && typeof window.GameFlow.unmarkResult === 'function') {
+      window.GameFlow.unmarkResult(activeResultRoot);
+    }
+    activeResultRoot = null;
+    activeResultActions = [];
+  }
+
+  function prepareExclusiveView(view) {
     qa('[data-gsh-ml-custom-input]', stage).forEach(function (node) {
-      if (node !== custom) {
+      if (node !== view.custom) {
         node.removeAttribute('data-gsh-ml-custom-input');
         restoreExistingNode(node);
       }
     });
-    var resume = visibleResume();
-    var result = qa('[data-shared-result-ui="v1"]').filter(isVisible)[0] || null;
-    if (custom) {
-      custom.setAttribute('data-gsh-ml-custom-input', 'active');
-      mountExistingNode(custom, slot('exclusive-center'));
-      stage.setAttribute('data-gsh-ml-view', 'custom-input');
-    } else if (resume) {
-      mountExistingNode(resume, slot('exclusive-center'));
-      stage.setAttribute('data-gsh-ml-view', 'resume');
-    } else if (result) {
-      mountExistingNode(result, slot('exclusive-center'));
-      mountMany(['.gsh-result-primary-actions'], slot('exclusive-right'));
-      mountMany(['.gsh-result-utility-actions', '.gsh-result-home-actions'], slot('exclusive-left'));
-      stage.setAttribute('data-gsh-ml-view', 'result');
-    } else {
-      stage.setAttribute('data-gsh-ml-view', 'gameplay');
+    restoreActiveResult(view.result, true);
+  }
+
+  function setExclusiveInertness(viewName) {
+    var exclusiveActive = viewName !== 'gameplay';
+    var top = q('.gsh-ml-top', stage);
+    var play = q('.gsh-ml-play', stage);
+    var exclusive = q('.gsh-ml-exclusive', stage);
+    [top, play].forEach(function (node) {
+      if (!node) return;
+      node.inert = exclusiveActive;
+      if (exclusiveActive) node.setAttribute('aria-hidden', 'true'); else node.removeAttribute('aria-hidden');
+    });
+    if (exclusive) {
+      exclusive.inert = !exclusiveActive;
+      if (exclusiveActive) exclusive.removeAttribute('aria-hidden'); else exclusive.setAttribute('aria-hidden', 'true');
     }
-    if (window.visualViewport && custom) {
+    var keyboard = slot('split-keyboard');
+    if (keyboard) keyboard.inert = exclusiveActive;
+    var focused = document.activeElement;
+    if (exclusiveActive && focused && ((top && top.contains(focused)) || (play && play.contains(focused))) && focused.blur) {
+      focused.blur();
+    }
+  }
+
+  function syncExclusiveView(game, view) {
+    var viewName = 'gameplay';
+    if (view.custom) {
+      view.custom.setAttribute('data-gsh-ml-custom-input', 'active');
+      mountExistingNode(view.custom, slot('exclusive-center'));
+      viewName = 'custom-input';
+    } else if (view.resume) {
+      mountExistingNode(view.resume, slot('exclusive-center'));
+      viewName = 'resume';
+    } else if (view.result) {
+      var groups = activeResultRoot === view.result ? activeResultActions.filter(function (node) { return moved.has(node); }) : [];
+      qa('.gsh-result-primary-actions, .gsh-result-utility-actions, .gsh-result-home-actions', view.result).forEach(function (node) {
+        if (groups.indexOf(node) < 0) groups.push(node);
+      });
+      mountExistingNode(view.result, slot('exclusive-center'));
+      groups.forEach(function (node) {
+        var target = node.classList.contains('gsh-result-primary-actions') ? slot('exclusive-right') : slot('exclusive-left');
+        mountExistingNode(node, target);
+      });
+      activeResultRoot = view.result;
+      activeResultActions = groups;
+      viewName = 'result';
+    } else {
+      activeResultRoot = null;
+      activeResultActions = [];
+    }
+    stage.setAttribute('data-gsh-ml-view', viewName);
+    setExclusiveInertness(viewName);
+    if (window.visualViewport && view.custom) {
       stage.style.height = Math.max(1, Math.round(window.visualViewport.height)) + 'px';
       stage.style.top = Math.max(0, Math.round(window.visualViewport.offsetTop || 0)) + 'px';
       stage.style.bottom = 'auto';
@@ -429,15 +498,18 @@
   function sync() {
     if (!active || !stage || syncing) return;
     syncing = true;
+    syncCount += 1;
     try {
       cleanupStaleMovedNodes();
       var game = document.body.getAttribute('data-gsh-game') || '';
+      var exclusiveView = resolveExclusiveView(game);
+      prepareExclusiveView(exclusiveView);
       mountStaticGameNodes(game);
       syncSplitContent(game);
       if (game === 'lego') syncLegoMenu();
       syncDynamicMainAction();
       syncKeyboard(game);
-      syncExclusiveView(game);
+      syncExclusiveView(game, exclusiveView);
     } finally {
       syncing = false;
     }
@@ -456,7 +528,10 @@
     document.body.classList.add('gsh-ml-active');
     configureDropdowns(document.body.getAttribute('data-gsh-game') || '');
     mountStaticGameNodes(document.body.getAttribute('data-gsh-game') || '');
-    observer = new MutationObserver(scheduleSync);
+    observer = new MutationObserver(function () {
+      observerCallbackCount += 1;
+      scheduleSync();
+    });
     observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'disabled'] });
     sync();
     document.dispatchEvent(new CustomEvent('gsh:mobile-landscape-change', { detail: { active: true } }));
@@ -468,6 +543,29 @@
       if (original.inputmode == null) input.removeAttribute('inputmode'); else input.setAttribute('inputmode', original.inputmode);
     });
     inputPolicies.clear();
+  }
+
+  function restoreDynamicMainActions() {
+    qa('[data-game-flow-status]', stage).forEach(function (status) {
+      var key = status.getAttribute('data-game-flow-status');
+      var next = qa('[data-game-flow-key]').filter(function (node) {
+        return node.getAttribute('data-game-flow-key') === key;
+      })[0] || null;
+      if (!next) return;
+      var pause = qa('[data-game-flow-pause]', stage).filter(function (node) {
+        return node.getAttribute('data-game-flow-pause') === key;
+      })[0] || null;
+      restoreExistingNode(next);
+      restoreExistingNode(status);
+      if (next.parentNode) next.parentNode.insertBefore(status, next);
+      if (pause) {
+        restoreExistingNode(pause);
+        if (next.parentNode) {
+          if (next.nextSibling) next.parentNode.insertBefore(pause, next.nextSibling);
+          else next.parentNode.appendChild(pause);
+        }
+      }
+    });
   }
 
   function deactivate() {
@@ -486,6 +584,8 @@
     var keyboardToggle = q('[data-gsh-ml-keyboard-toggle]');
     if (keyboardToggle) keyboardToggle.removeAttribute('data-gsh-ml-keyboard-toggle');
     clearListeningKeyboard();
+    restoreActiveResult(null, false);
+    restoreDynamicMainActions();
     restoreAll();
     if (stage) stage.remove();
     stage = null;
@@ -502,12 +602,52 @@
     document.removeEventListener('keydown', documentKeydown, true);
     document.removeEventListener('focusin', scheduleSync, true);
     document.removeEventListener('focusout', scheduleSync, true);
+    window.removeEventListener('keydown', windowKeydown, true);
+    window.removeEventListener('pointerdown', windowPointerGuard, true);
+    window.removeEventListener('click', windowPointerGuard, true);
     if (window.visualViewport) window.visualViewport.removeEventListener('resize', scheduleSync);
   }
   function documentClick(event) {
     if (!active) return;
     if (!event.target.closest('.gsh-ml-dropdown')) closeDropdowns();
     scheduleSync();
+  }
+  function exclusiveRegion() { return stage && q('.gsh-ml-exclusive', stage); }
+  function isExclusiveView() {
+    return stage && stage.getAttribute('data-gsh-ml-view') !== 'gameplay';
+  }
+  function windowPointerGuard(event) {
+    if (!active || !isExclusiveView()) return;
+    var exclusive = exclusiveRegion();
+    if (exclusive && event.target && exclusive.contains(event.target)) return;
+    if (event.preventDefault) event.preventDefault();
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+  }
+  function windowKeydown(event) {
+    if (!active || !isExclusiveView()) return;
+    var exclusive = exclusiveRegion();
+    var insideExclusive = !!(exclusive && event.target && exclusive.contains(event.target));
+    var viewName = stage.getAttribute('data-gsh-ml-view');
+    if (event.key === 'Escape' && stage.getAttribute('data-gsh-ml-view') === 'custom-input') {
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      scheduleSync();
+      if (event.preventDefault) event.preventDefault();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+      return;
+    }
+    if (!insideExclusive && viewName === 'result' && event.key === 'Enter' && !event.repeat && !event.isComposing &&
+        !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      var replay = activeResultRoot && q('[data-game-result-replay="v1"]', exclusive);
+      if (replay && !replay.hidden && !replay.disabled) {
+        if (event.preventDefault) event.preventDefault();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        replay.click();
+        return;
+      }
+    }
+    if (insideExclusive) return;
+    if (event.preventDefault) event.preventDefault();
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation();
   }
   function documentKeydown(event) {
     if (!active || event.key !== 'Escape') return;
@@ -524,6 +664,9 @@
   document.addEventListener('keydown', documentKeydown, true);
   document.addEventListener('focusin', scheduleSync, true);
   document.addEventListener('focusout', scheduleSync, true);
+  window.addEventListener('keydown', windowKeydown, true);
+  window.addEventListener('pointerdown', windowPointerGuard, true);
+  window.addEventListener('click', windowPointerGuard, true);
   window.addEventListener('pagehide', destroy, { once: true });
 
   var api = { query: QUERY, activate: activate, sync: sync, deactivate: deactivate, destroy: destroy };
@@ -533,11 +676,21 @@
       restoreAll: restoreAll,
       cleanupStaleMovedNodes: cleanupStaleMovedNodes,
       syncKeyboard: syncKeyboard,
+      restoreDynamicMainActions: restoreDynamicMainActions,
+      windowKeydown: windowKeydown,
+      windowPointerGuard: windowPointerGuard,
       setSlot: function (name, node) { slots[name] = node; },
       state: function () {
         return {
+          active: active,
+          stage: stage,
           movedCount: moved.size,
           moveOrderLength: moveOrder.length,
+          activeResultRoot: activeResultRoot,
+          activeResultActionCount: activeResultActions.length,
+          syncCount: syncCount,
+          mountMoveCount: mountMoveCount,
+          observerCallbackCount: observerCallbackCount,
           listeningKeyboard: listeningKeyboard,
           listeningShifted: listeningShifted
         };

@@ -2126,3 +2126,11 @@ node scripts/check-site.js
 - Stopped Listening Typed from rebuilding its shared Thai keyboard during unrelated observer/frame syncs; renders now occur only on entry, source/layout change or Shift transition, while native input policy still restores on exit.
 - Made the placeholder marker authoritative for moved-node lifetime so an original-parent rerender removes the stale staged node and record instead of resurrecting obsolete content.
 - Added deterministic runtime coverage for idle key identity/render stability, Thai input, one-shot Shift, Backspace, input-policy restoration, stale-marker cleanup and normal reverse restoration. No merge, deploy or physical-iPhone verification occurred.
+
+## 2026-08-22 — Remaining Mobile Landscape lifecycle fixes (`PASS_LOCAL / HUMAN_GATE_NOT_STARTED`)
+
+- Made Tone Result ownership explicit across summary, mistake review, replay and the next round so the live `#tf-body` cannot oscillate between gameplay and Result slots.
+- Restored Result action groups before their Result root, preserved live countdown/pause nodes and timer state across Landscape/Portrait rotation, and enforced exclusive inertness for Resume, Result and Lego custom input.
+- Added deterministic two-round Tone/shared-Result lifecycle, action restoration, rotation countdown/pause, input exclusivity and observer-stability coverage.
+- Rendered browser verification passed for all required lifecycle states at 740×360 and for Landscape, Portrait and Desktop across all six games, with no duplicate IDs or leaked movement markers.
+- No Product/UX redesign, merge, deploy or physical-iPhone verification occurred; Draft PR #61 remains the only delivery path.

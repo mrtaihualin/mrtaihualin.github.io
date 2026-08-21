@@ -14,8 +14,10 @@ class FakeEvent {
     this.detail = options.detail || 0;
     this.defaultPrevented = false;
     this.target = null;
+    Object.assign(this, options);
   }
   preventDefault() { this.defaultPrevented = true; }
+  stopImmediatePropagation() { this.immediatePropagationStopped = true; }
 }
 
 class FakeClassList {
@@ -48,11 +50,15 @@ class FakeNode {
     this.hidden = false;
     this.disabled = false;
     this.readOnly = false;
+    this.inert = false;
+    this.offsetParent = {};
     this.value = '';
     this.textContent = '';
     this._innerHTML = '';
+    this.clicks = 0;
   }
   get children() { return this.childNodes.filter((node) => node.nodeType === 1); }
+  get firstChild() { return this.childNodes[0] || null; }
   get nextSibling() {
     if (!this.parentNode) return null;
     const index = this.parentNode.childNodes.indexOf(this);
@@ -82,6 +88,7 @@ class FakeNode {
   removeAttribute(name) {
     this.attributes.delete(name);
     if (name === 'class') this.classList.set('');
+    if (name.startsWith('data-')) delete this.dataset[dataKey(name)];
   }
   append(...nodes) { nodes.forEach((node) => this.appendChild(node)); }
   appendChild(node) {
@@ -91,6 +98,7 @@ class FakeNode {
     return node;
   }
   insertBefore(node, reference) {
+    if (node === reference) return node;
     if (node.parentNode) node.parentNode._detach(node);
     const index = reference == null ? this.childNodes.length : this.childNodes.indexOf(reference);
     assert(index >= 0, 'insertBefore reference must belong to parent');
@@ -117,11 +125,21 @@ class FakeNode {
     if (index >= 0) this.childNodes.splice(index, 1);
     node.parentNode = null;
   }
+  removeChild(node) { this._detach(node); return node; }
   remove() { if (this.parentNode) this.parentNode._detach(this); }
   contains(node) {
     for (let current = node; current; current = current.parentNode) if (current === this) return true;
     return false;
   }
+  matches(selector) { return matchesSelector(this, selector); }
+  closest(selector) {
+    for (let current = this; current && current.nodeType === 1; current = current.parentNode) {
+      if (matchesSelector(current, selector)) return current;
+    }
+    return null;
+  }
+  querySelector(selector) { return queryWithin(this, selector)[0] || null; }
+  querySelectorAll(selector) { return queryWithin(this, selector); }
   addEventListener(type, listener) { (this.listeners[type] ||= []).push(listener); }
   removeEventListener(type, listener) {
     this.listeners[type] = (this.listeners[type] || []).filter((item) => item !== listener);
@@ -129,9 +147,12 @@ class FakeNode {
   dispatchEvent(event) {
     if (!event.target) event.target = this;
     (this.listeners[event.type] || []).slice().forEach((listener) => listener.call(this, event));
-    if (event.bubbles && this.parentNode) this.parentNode.dispatchEvent(event);
+    if (typeof this['on' + event.type] === 'function') this['on' + event.type].call(this, event);
+    if (event.type === 'click') this.clicks += 1;
+    if (event.bubbles && !event.immediatePropagationStopped && this.parentNode) this.parentNode.dispatchEvent(event);
     return !event.defaultPrevented;
   }
+  click() { this.dispatchEvent(new FakeEvent('click', { bubbles: true })); }
   focus() { this.ownerDocument.activeElement = this; }
   blur() { if (this.ownerDocument.activeElement === this) this.ownerDocument.activeElement = this.ownerDocument.body; }
 }
@@ -146,17 +167,69 @@ class FakeDocument {
   }
   createElement(tagName) { return new FakeNode(this, tagName); }
   createComment(data) { return new FakeNode(this, null, 8, data); }
-  querySelector(selector) { return this.selectors.get(selector) || null; }
   querySelectorAll(selector) {
     const value = this.selectors.get(selector);
-    if (!value) return [];
+    if (!value) return queryWithin(this.body, selector, true);
     return Array.isArray(value) ? value : [value];
+  }
+  querySelector(selector) {
+    if (this.selectors.has(selector)) return this.selectors.get(selector);
+    return queryWithin(this.body, selector, true)[0] || null;
   }
   getElementById(id) { return this.querySelector('#' + id); }
   addEventListener(type, listener) { (this.listeners[type] ||= []).push(listener); }
   removeEventListener(type, listener) {
     this.listeners[type] = (this.listeners[type] || []).filter((item) => item !== listener);
   }
+  dispatchEvent(event) {
+    (this.listeners[event.type] || []).slice().forEach((listener) => listener.call(this, event));
+  }
+}
+
+function dataKey(name) {
+  return name.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+function matchesSimple(node, selector) {
+  if (!node || node.nodeType !== 1) return false;
+  const nots = [...selector.matchAll(/:not\(([^)]+)\)/g)].map((match) => match[1]);
+  selector = selector.replace(/:not\([^)]+\)/g, '');
+  if (nots.some((part) => matchesSimple(node, part))) return false;
+  const tag = selector.match(/^[a-z][a-z0-9-]*/i);
+  if (tag && node.tagName !== tag[0].toUpperCase()) return false;
+  for (const id of selector.matchAll(/#([\w-]+)/g)) if (node.id !== id[1]) return false;
+  for (const cls of selector.matchAll(/\.([\w-]+)/g)) if (!node.classList.contains(cls[1])) return false;
+  for (const attr of selector.matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/g)) {
+    const name = attr[1];
+    const value = node.getAttribute(name) ?? (name.startsWith('data-') ? node.dataset[dataKey(name)] : null);
+    if (value == null || (attr[2] != null && String(value) !== attr[2])) return false;
+  }
+  return true;
+}
+
+function matchesSelector(node, selector) {
+  return String(selector).split(',').some((branch) => {
+    const parts = branch.trim().split(/\s+/).filter(Boolean);
+    let current = node;
+    if (!parts.length || !matchesSimple(current, parts.pop())) return false;
+    while (parts.length) {
+      const expected = parts.pop();
+      current = current.parentNode;
+      while (current && !matchesSimple(current, expected)) current = current.parentNode;
+      if (!current) return false;
+    }
+    return true;
+  });
+}
+
+function queryWithin(root, selector, includeRoot = false) {
+  const nodes = [];
+  function visit(node, include) {
+    if (include && matchesSelector(node, selector)) nodes.push(node);
+    node.childNodes.forEach((child) => visit(child, true));
+  }
+  visit(root, includeRoot);
+  return nodes;
 }
 
 function descendants(node) {
@@ -171,6 +244,16 @@ function click(node) {
 const root = path.resolve(__dirname, '..');
 const document = new FakeDocument();
 const animationFrames = [];
+const windowListeners = Object.create(null);
+const timerQueue = [];
+let timerId = 0;
+class FakeMutationObserver {
+  constructor(callback) { this.callback = callback; FakeMutationObserver.instances.push(this); }
+  observe() { this.observing = true; }
+  disconnect() { this.observing = false; }
+  trigger() { if (this.observing) this.callback([]); }
+}
+FakeMutationObserver.instances = [];
 const window = {
   __GSH_ML_TEST__: true,
   document,
@@ -178,8 +261,14 @@ const window = {
   innerHeight: 360,
   matchMedia() { return { matches: false, addEventListener() {}, removeEventListener() {} }; },
   requestAnimationFrame(callback) { animationFrames.push(callback); return animationFrames.length; },
-  addEventListener() {},
-  removeEventListener() {},
+  setTimeout(callback) { const id = ++timerId; timerQueue.push({ id, callback, cancelled: false }); return id; },
+  clearTimeout(id) { const timer = timerQueue.find((item) => item.id === id); if (timer) timer.cancelled = true; },
+  addEventListener(type, listener) { (windowListeners[type] ||= []).push(listener); },
+  removeEventListener(type, listener) {
+    windowListeners[type] = (windowListeners[type] || []).filter((item) => item !== listener);
+  },
+  localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+  gtag() {},
   getComputedStyle(node) {
     return {
       display: node.hidden ? 'none' : node.style.display || 'block',
@@ -194,7 +283,8 @@ const context = vm.createContext({
   document,
   Event: FakeEvent,
   CustomEvent: FakeEvent,
-  MutationObserver: class { observe() {} disconnect() {} },
+  MutationObserver: FakeMutationObserver,
+  console,
   Map,
   Math,
   Number,
@@ -203,6 +293,7 @@ const context = vm.createContext({
   Array
 });
 vm.runInContext(fs.readFileSync(path.join(root, 'js/games/thai-keyboard.js'), 'utf8'), context);
+vm.runInContext(fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8'), context);
 vm.runInContext(fs.readFileSync(path.join(root, 'js/core/mobile-landscape.js'), 'utf8'), context);
 
 const hooks = window.GSHMobileLandscape.__test;
@@ -301,4 +392,306 @@ assert.deepStrictEqual(normalParent.children, [normalChild]);
 assert.strictEqual(hooks.state().movedCount, 0);
 assert.strictEqual(hooks.state().moveOrderLength, 0);
 
-console.log('PASS Mobile Landscape runtime lifecycle: idle Listening keyboard stability, input controls, stale-marker cleanup and reverse restoration');
+function flushAnimationFrames() {
+  while (animationFrames.length) animationFrames.shift()();
+}
+
+function runNextTimer() {
+  while (timerQueue.length) {
+    const timer = timerQueue.shift();
+    if (!timer.cancelled) { timer.callback(); return true; }
+  }
+  return false;
+}
+
+function runAllTimers(limit = 30) {
+  let count = 0;
+  while (runNextTimer()) {
+    count += 1;
+    assert(count <= limit, 'timer queue must remain bounded');
+  }
+}
+
+function allNodes(node) {
+  return node.childNodes.flatMap((child) => [child, ...allNodes(child)]);
+}
+
+function restorationMarkerCount() {
+  return allNodes(document.body).filter((node) => node.nodeType === 8 && String(node.data).startsWith('gsh-ml:')).length;
+}
+
+function duplicateIds() {
+  const ids = allNodes(document.body).filter((node) => node.nodeType === 1 && node.id).map((node) => node.id);
+  return ids.filter((id, index) => ids.indexOf(id) !== index);
+}
+
+function stableForFrames(label) {
+  const before = hooks.state();
+  const markersBefore = restorationMarkerCount();
+  const observer = FakeMutationObserver.instances[FakeMutationObserver.instances.length - 1];
+  if (observer) {
+    observer.trigger();
+    observer.trigger();
+    observer.trigger();
+  }
+  flushAnimationFrames();
+  const afterObserver = hooks.state();
+  assert(afterObserver.syncCount - before.syncCount <= 1, `${label}: observer callbacks must coalesce to one sync`);
+  assert(afterObserver.observerCallbackCount - before.observerCallbackCount <= 3, `${label}: observer callbacks must stay bounded`);
+  const moves = afterObserver.mountMoveCount;
+  for (let index = 0; index < 12; index += 1) window.requestAnimationFrame(() => window.GSHMobileLandscape.sync());
+  flushAnimationFrames();
+  const after = hooks.state();
+  assert.strictEqual(after.syncCount - afterObserver.syncCount, 12, `${label}: ten-plus idle frames must produce only requested syncs`);
+  assert.strictEqual(after.mountMoveCount, moves, `${label}: idle frames must not move nodes between slots`);
+  assert.strictEqual(restorationMarkerCount(), markersBefore, `${label}: restoration marker count must not leak`);
+  assert.strictEqual(restorationMarkerCount(), after.movedCount, `${label}: every marker must belong to one live move record`);
+  assert.deepStrictEqual(duplicateIds(), [], `${label}: duplicate IDs are forbidden`);
+}
+
+function makeButton(id, className) {
+  const button = document.createElement('button');
+  if (id) button.id = id;
+  if (className) button.className = className;
+  return button;
+}
+
+function makeResultGroups(prefix) {
+  const primary = document.createElement('div');
+  const utility = document.createElement('div');
+  const home = document.createElement('div');
+  primary.className = 'gsh-result-actions gsh-result-primary-actions';
+  utility.className = 'gsh-result-actions gsh-result-utility-actions';
+  home.className = 'gsh-result-actions gsh-result-home-actions';
+  primary.id = `${prefix}-primary`;
+  utility.id = `${prefix}-utility`;
+  home.id = `${prefix}-home`;
+  const replay = makeButton(`${prefix}-replay`);
+  replay.setAttribute('data-game-result-replay', 'v1');
+  primary.appendChild(replay);
+  utility.appendChild(makeButton(`${prefix}-detail`));
+  home.appendChild(makeButton(`${prefix}-home-button`));
+  return { primary, utility, home };
+}
+
+function assertExclusive(viewName, gameplayControl, exclusiveControl) {
+  const stage = hooks.state().stage;
+  const top = stage.querySelector('.gsh-ml-top');
+  const play = stage.querySelector('.gsh-ml-play');
+  const exclusive = stage.querySelector('.gsh-ml-exclusive');
+  assert.strictEqual(stage.getAttribute('data-gsh-ml-view'), viewName);
+  assert.strictEqual(top.inert, true);
+  assert.strictEqual(play.inert, true);
+  assert.strictEqual(top.getAttribute('aria-hidden'), 'true');
+  assert.strictEqual(play.getAttribute('aria-hidden'), 'true');
+  assert.strictEqual(exclusive.inert, false);
+  assert.strictEqual(exclusive.getAttribute('aria-hidden'), null);
+  assert.strictEqual(stage.querySelector('[data-gsh-ml-slot="split-keyboard"]').inert, true);
+  const pointer = new FakeEvent('pointerdown', { target: gameplayControl });
+  hooks.windowPointerGuard(pointer);
+  assert.strictEqual(pointer.defaultPrevented, true, `${viewName}: pointer must not reach hidden gameplay`);
+  assert.strictEqual(pointer.immediatePropagationStopped, true, `${viewName}: hidden pointer propagation must stop`);
+  const enter = new FakeEvent('keydown', { key: 'Enter', target: gameplayControl });
+  hooks.windowKeydown(enter);
+  assert.strictEqual(enter.defaultPrevented, true, `${viewName}: Enter must not reach hidden gameplay`);
+  assert.strictEqual(enter.immediatePropagationStopped, true, `${viewName}: hidden keyboard propagation must stop`);
+  if (exclusiveControl) {
+    const allowed = new FakeEvent('keydown', { key: 'Enter', target: exclusiveControl });
+    hooks.windowKeydown(allowed);
+    assert.strictEqual(allowed.defaultPrevented, false, `${viewName}: exclusive control keeps its native key behavior`);
+    assert.strictEqual(allowed.immediatePropagationStopped, undefined, `${viewName}: exclusive control keeps its own handlers`);
+  }
+}
+
+function resetPage(game) {
+  if (hooks.state().active) window.GSHMobileLandscape.deactivate();
+  document.body.replaceChildren();
+  document.selectors.clear();
+  document.activeElement = document.body;
+  document.body.setAttribute('data-gsh-game', game);
+}
+
+// Tone owns one live #tf-body across gameplay, detail and two Result rounds.
+resetPage('tone');
+const toneCard = document.createElement('section');
+const toneControls = document.createElement('div');
+const toneGameplayControl = makeButton('tone-gameplay-control');
+toneControls.className = 'rg-ctl-wrap';
+toneControls.appendChild(toneGameplayControl);
+const toneBanner = document.createElement('div');
+toneBanner.id = 'tf-banner';
+const toneBody = document.createElement('div');
+toneBody.id = 'tf-body';
+toneCard.append(toneBanner, toneBody);
+document.body.append(toneControls, toneCard);
+
+function toneQuestion(id) {
+  const options = document.createElement('div');
+  options.className = 'tf-options';
+  options.id = id;
+  for (let index = 0; index < 6; index += 1) options.appendChild(makeButton(`${id}-${index}`));
+  return options;
+}
+
+toneBody.appendChild(toneQuestion('tone-q1'));
+window.GSHMobileLandscape.activate();
+stableForFrames('Tone normal question');
+toneBody.replaceChildren(toneQuestion('tone-q2'));
+window.GSHMobileLandscape.sync();
+stableForFrames('Tone next question');
+
+let toneGroups = makeResultGroups('tone-r1');
+toneBody.replaceChildren(toneGroups.primary, toneGroups.utility, toneGroups.home);
+window.GameFlow.markResult(toneBody);
+toneGameplayControl.focus();
+window.GSHMobileLandscape.sync();
+assert.strictEqual(document.activeElement, document.body, 'Tone Result must clear focus from hidden gameplay');
+assertExclusive('result', toneGameplayControl, toneGroups.primary.children[0]);
+stableForFrames('Tone Result');
+
+const detail = document.createElement('div');
+detail.id = 'tone-mistake-review';
+toneBody.replaceChildren(detail);
+window.GSHMobileLandscape.sync();
+assert.strictEqual(hooks.state().activeResultRoot, toneBody, 'Tone mistake detail remains an active Result');
+stableForFrames('Tone mistake detail');
+
+toneGroups = makeResultGroups('tone-r1-back');
+toneBody.replaceChildren(toneGroups.primary, toneGroups.utility, toneGroups.home);
+window.GSHMobileLandscape.sync();
+stableForFrames('Tone back to Result');
+
+window.GameFlow.unmarkResult(toneBody);
+toneBody.replaceChildren(toneQuestion('tone-q3'));
+window.GSHMobileLandscape.sync();
+assert.strictEqual(hooks.state().stage.getAttribute('data-gsh-ml-view'), 'gameplay', 'Tone replay must close Result');
+assert.strictEqual(hooks.state().stage.querySelector('.gsh-ml-top').inert, false);
+assert.strictEqual(hooks.state().stage.querySelector('.gsh-ml-exclusive').inert, true);
+assert.strictEqual(document.querySelectorAll('#tf-body').length, 1);
+assert.strictEqual(document.querySelectorAll('.tf-options').length, 1);
+stableForFrames('Tone replay normal question');
+
+toneGroups = makeResultGroups('tone-r2');
+let toneRoundTwoActions = 0;
+[toneGroups.primary, toneGroups.utility, toneGroups.home].forEach((group) => {
+  group.children[0].addEventListener('click', () => { toneRoundTwoActions += 1; });
+});
+toneBody.replaceChildren(toneGroups.primary, toneGroups.utility, toneGroups.home);
+window.GameFlow.markResult(toneBody);
+window.GSHMobileLandscape.sync();
+stableForFrames('Tone second Result');
+assert.strictEqual(document.querySelectorAll('#tf-body').length, 1);
+assert.strictEqual(document.querySelectorAll('.gsh-result-primary-actions').length, 1);
+assert.strictEqual(document.querySelectorAll('.gsh-result-utility-actions').length, 1);
+assert.strictEqual(document.querySelectorAll('.gsh-result-home-actions').length, 1);
+[toneGroups.primary, toneGroups.utility, toneGroups.home].forEach((group) => group.children[0].click());
+assert.strictEqual(toneRoundTwoActions, 3, 'all Tone Result actions must work in round two');
+
+// Shared countdown keeps the same live controls and timer across two rotations.
+resetPage('reading');
+const readingWord = document.createElement('div');
+readingWord.className = 'word-area';
+const readingParent = document.createElement('div');
+const readingNext = makeButton('btn-next');
+readingParent.appendChild(readingNext);
+document.body.append(readingWord, readingParent);
+window.GSHMobileLandscape.activate();
+assert.strictEqual(window.GameFlow.start({ key: 'reading-rotation', nextButton: readingNext, delaySeconds: 5 }), true);
+const countdown = document.querySelector('[data-game-flow-status="reading-rotation"]');
+const pause = document.querySelector('[data-game-flow-pause="reading-rotation"]');
+assert.strictEqual(countdown.textContent, '5');
+runNextTimer();
+assert.strictEqual(countdown.textContent, '4');
+window.GSHMobileLandscape.deactivate();
+assert.deepStrictEqual(readingParent.children.slice(-3), [countdown, readingNext, pause]);
+assert.strictEqual(countdown.textContent, '4');
+window.GSHMobileLandscape.activate();
+assert.strictEqual(document.querySelector('[data-game-flow-status="reading-rotation"]'), countdown);
+assert.strictEqual(document.querySelector('[data-game-flow-pause="reading-rotation"]'), pause);
+runAllTimers();
+assert.strictEqual(readingNext.clicks, 1, 'rotated countdown must advance exactly once');
+
+assert.strictEqual(window.GameFlow.start({ key: 'reading-rotation', nextButton: readingNext, delaySeconds: 5 }), true);
+pause.click();
+const clicksBeforePausedRotation = readingNext.clicks;
+assert.match(countdown.textContent, /已暫停/);
+window.GSHMobileLandscape.deactivate();
+window.GSHMobileLandscape.activate();
+assert.strictEqual(document.querySelector('[data-game-flow-status="reading-rotation"]'), countdown);
+assert.match(countdown.textContent, /已暫停/, 'pause state must survive Portrait and Landscape');
+runAllTimers();
+assert.strictEqual(readingNext.clicks, clicksBeforePausedRotation, 'paused rotation must not auto-advance');
+
+// Shared Result action groups restore on exit and remain live in round two.
+const sharedResultParent = document.createElement('div');
+const sharedResult = document.createElement('section');
+sharedResult.id = 'shared-result';
+sharedResultParent.appendChild(sharedResult);
+document.body.appendChild(sharedResultParent);
+const sharedGroups = makeResultGroups('shared');
+sharedResult.append(sharedGroups.primary, sharedGroups.utility, sharedGroups.home);
+let sharedActionClicks = 0;
+[sharedGroups.primary, sharedGroups.utility, sharedGroups.home].forEach((group) => {
+  group.children[0].addEventListener('click', () => { sharedActionClicks += 1; });
+});
+window.GameFlow.markResult(sharedResult);
+window.GSHMobileLandscape.sync();
+stableForFrames('shared Result');
+sharedResult.style.display = 'none';
+window.GSHMobileLandscape.sync();
+assert.strictEqual(sharedResult.parentNode, sharedResultParent, 'Result root must restore before gameplay resumes');
+assert.deepStrictEqual(sharedResult.children, [sharedGroups.primary, sharedGroups.utility, sharedGroups.home]);
+assert.strictEqual(sharedResult.getAttribute('data-shared-result-active'), null);
+sharedResult.style.display = 'flex';
+window.GameFlow.markResult(sharedResult);
+window.GSHMobileLandscape.sync();
+stableForFrames('shared second Result');
+const resultEnter = new FakeEvent('keydown', { key: 'Enter', target: document.body });
+hooks.windowKeydown(resultEnter);
+assert.strictEqual(resultEnter.defaultPrevented, true, 'Result Enter must be consumed by the exclusive replay action');
+assert.strictEqual(sharedActionClicks, 1, 'Result Enter must trigger replay without reaching gameplay');
+[sharedGroups.primary, sharedGroups.utility, sharedGroups.home].forEach((group) => group.children[0].click());
+assert.strictEqual(sharedActionClicks, 4, 'all shared Result actions must work in round two');
+assert.strictEqual(document.querySelectorAll('.gsh-result-primary-actions').length, 1);
+assert.strictEqual(document.querySelectorAll('.gsh-result-utility-actions').length, 1);
+assert.strictEqual(document.querySelectorAll('.gsh-result-home-actions').length, 1);
+
+// Resume is truly exclusive and returns inert ownership to gameplay on exit.
+sharedResult.style.display = 'none';
+window.GSHMobileLandscape.sync();
+const resume = document.createElement('div');
+resume.id = 'rg-resume-banner';
+const resumeButton = makeButton('resume-action');
+resume.appendChild(resumeButton);
+document.body.appendChild(resume);
+window.GSHMobileLandscape.sync();
+assertExclusive('resume', readingNext, resumeButton);
+stableForFrames('Resume');
+resume.style.display = 'none';
+window.GSHMobileLandscape.sync();
+assert.strictEqual(hooks.state().stage.getAttribute('data-gsh-ml-view'), 'gameplay');
+assert.strictEqual(hooks.state().stage.querySelector('.gsh-ml-play').inert, false);
+
+// Lego Custom Input is exclusive, keyboard-disabled and stable.
+resetPage('lego');
+const legoBase = document.createElement('div');
+legoBase.id = 'baseplate';
+const legoGameplay = makeButton('lego-gameplay');
+legoBase.appendChild(legoGameplay);
+const legoCustom = document.createElement('div');
+legoCustom.className = 'opt-custom';
+const legoInput = document.createElement('input');
+legoCustom.appendChild(legoInput);
+document.body.append(legoBase, legoCustom);
+legoInput.focus();
+window.GSHMobileLandscape.activate();
+assertExclusive('custom-input', legoGameplay, legoInput);
+stableForFrames('Lego Custom Input');
+legoInput.blur();
+window.GSHMobileLandscape.sync();
+assert.strictEqual(hooks.state().stage.getAttribute('data-gsh-ml-view'), 'gameplay');
+assert.strictEqual(legoCustom.parentNode, document.body, 'Lego Custom Input must restore to its source marker');
+window.GSHMobileLandscape.deactivate();
+assert.strictEqual(restorationMarkerCount(), 0, 'Landscape teardown must leave no restoration markers');
+
+console.log('PASS Mobile Landscape runtime lifecycle: keyboard stability, marker cleanup, Tone/shared two-round Result, action restoration, countdown rotation, exclusive inertness and observer stability');

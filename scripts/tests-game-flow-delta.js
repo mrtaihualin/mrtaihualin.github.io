@@ -31,6 +31,7 @@ class FakeElement {
   }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   getAttribute(name) { return this.attributes[name] || null; }
+  removeAttribute(name) { delete this.attributes[name]; }
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
   appendChild(child) {
     if (child.parentNode) child.parentNode.children = child.parentNode.children.filter((item) => item !== child);
@@ -139,7 +140,11 @@ assert.strictEqual(GameFlow.selectLatestSuccessful([older, failed, newest]), new
 const result = new FakeElement('section');
 assert.strictEqual(GameFlow.markResult(result), true);
 assert.strictEqual(result.getAttribute('data-shared-result-ui'), 'v1');
+assert.strictEqual(result.getAttribute('data-shared-result-active'), 'true');
 assert(result.classList.contains('gsh-shared-result'));
+assert.strictEqual(GameFlow.unmarkResult(result), true);
+assert.strictEqual(result.getAttribute('data-shared-result-ui'), 'v1', 'persistent Result identity must remain available');
+assert.strictEqual(result.getAttribute('data-shared-result-active'), null, 'Result activity must close explicitly');
 
 assert.strictEqual(GameFlow.feedbackCopy(undefined, 0.5), null);
 assert.strictEqual(GameFlow.recordResultFeedback('test', 1, 2), null);
@@ -226,7 +231,7 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=11'), `${file} must load the shared flow`);
+  assert(html.includes('js/games/game-flow.js?v=12'), `${file} must load the shared flow`);
   assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
   assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
   assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);

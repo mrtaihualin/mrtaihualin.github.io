@@ -126,6 +126,18 @@
     if (!root) return false;
     root.classList.add('gsh-shared-result');
     root.setAttribute('data-shared-result-ui', 'v1');
+    root.setAttribute('data-shared-result-active', 'true');
+    return true;
+  }
+
+  function unmarkResult(root) {
+    root = resolveElement(root);
+    if (!root) return false;
+    root.removeAttribute('data-shared-result-active');
+    if (activeResultReplay && activeResultReplay.root === root) {
+      cancelResult(activeResultReplay.key);
+      activeResultReplay = null;
+    }
     return true;
   }
 
@@ -474,6 +486,7 @@
     recordResultFeedback: recordResultFeedback,
     allocateSrs: allocateSrs,
     markResult: markResult,
+    unmarkResult: unmarkResult,
     selectLatestSuccessful: selectLatestSuccessful,
     copy: {
       correct: '做得很好，繼續保持 🌱',

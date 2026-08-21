@@ -73,7 +73,7 @@ test('all six games bind one shared live-node Mobile Landscape stage', () => {
     assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
     assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current shared CSS`);
     assert.match(html, /css\/mobile-landscape\.css\?v=1/, `${id}: missing shared landscape CSS`);
-    assert.match(html, /js\/core\/mobile-landscape\.js\?v=2/, `${id}: missing shared landscape controller`);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=3/, `${id}: missing shared landscape controller`);
     assert.match(html, /viewport-fit=cover/, `${id}: missing safe-area viewport contract`);
   }
   assert.doesNotMatch(sharedCss, /--gsh-safe-l|max-height:600px|data-gsh-game="lego"\] #baseplate \.slot-menu/);
@@ -92,12 +92,15 @@ test('all six games bind one shared live-node Mobile Landscape stage', () => {
   assert.match(mobileLandscapeJs, /if \(!record\.marker\.isConnected\)/);
   assert.doesNotMatch(mobileLandscapeJs, /record\.originalParent && record\.originalParent\.isConnected/);
   assert.doesNotMatch(mobileLandscapeJs, /cloneNode\(/);
-  assert.match(mobileLandscapeJs, /new MutationObserver\(scheduleSync\)/);
+  assert.match(mobileLandscapeJs, /new MutationObserver\(function \(\)/);
+  assert.match(mobileLandscapeJs, /data-shared-result-active/);
+  assert.match(mobileLandscapeJs, /restoreDynamicMainActions\(\)/);
+  assert.match(mobileLandscapeJs, /node\.inert = exclusiveActive/);
   assert.match(mobileLandscapeJs, /\.gsh-next-countdown', '\.gsh-pause-btn/);
   assert.match(mobileLandscapeJs, /stage\.inert = loginOpen/);
-  assert.match(mobileLandscapeJs, /data-gsh-ml-view', 'resume'/);
-  assert.match(mobileLandscapeJs, /data-gsh-ml-view', 'result'/);
-  assert.match(mobileLandscapeJs, /data-gsh-ml-view', 'custom-input'/);
+  assert.match(mobileLandscapeJs, /viewName = 'resume'/);
+  assert.match(mobileLandscapeJs, /viewName = 'result'/);
+  assert.match(mobileLandscapeJs, /viewName = 'custom-input'/);
   assert.match(mobileLandscapeJs, /customCancel\.textContent = '取消'/);
   assert.match(mobileLandscapeJs, /focused\.focus\(\{ preventScroll: true \}\)/);
   assert.match(thaiKeyboardJs, /Math\.ceil\(codes\.length \/ 2\)/);
@@ -197,7 +200,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
   assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must contain only the full sentence and zh-TW translation before actions');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/, 'Lego Result must use the shared flow runtime');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=12/, 'Lego Result must use the shared flow runtime');
   assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=12/, 'Lego must load the landscape-aware menu runtime');
   for (const role of ['replay','print','detail-action','switch','cta','home']) {
     assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
@@ -332,11 +335,11 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
     assert.match(g.htmlText, /js\/games\/round-report\.js\?v=2/, `${g.id}: must load shared print renderer`);
-    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=11/, `${g.id}: must load daily Result runtime`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=12/, `${g.id}: must load daily Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
   assert.match(legoHtml, /js\/games\/round-report\.js\?v=2/);
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=12/);
   assert.match(legoApp, /RoundReport\.openPrint/);
   assert.match(roundReport, /@page\{size:A4 portrait/);
   assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);
@@ -462,7 +465,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=59/, 'Tone: page must request the rebuilt runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=60/, 'Tone: page must request the rebuilt runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);
