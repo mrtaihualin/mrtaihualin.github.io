@@ -2194,14 +2194,18 @@ function render() {
 
   // Main body
   var body = document.getElementById('tf-body');
+  var toneResultActive = S.step === 'session-summary' || S.step === 'mistake-review';
+  if (window.GameFlow) {
+    if (toneResultActive) GameFlow.markResult(body);
+    else GameFlow.unmarkResult(body);
+  }
   body.innerHTML = buildStep();
   if (window.GameFlow) {
     GameFlow.cancel('tone-finder');
     if (S.step === 'result' && session) {
-      setTimeout(function () { GameFlow.start({ key: 'tone-finder', nextButton: '#tf-session-next-btn', delaySeconds: 3 }); }, 0);
+      setTimeout(function () { GameFlow.start({ key: 'tone-finder', nextButton: '#tf-session-next-btn', delaySeconds: 5 }); }, 0);
     }
     if (S.step === 'session-summary') {
-      GameFlow.markResult(body);
       setTimeout(function(){
         var actions=body.querySelector('.gsh-end-actions');
         var correct=session&&session.results?session.results.filter(function(r){return (r.mistakes||0)===0;}).length:0;
@@ -2514,7 +2518,7 @@ function tfAttachLoginSummary(){
   LearningSummary.loadForGame('tone','tone-finder').then(function(summary){
     if(!roundReport||!window.RoundReport)return;
     RoundReport.setLoginSummary(roundReport,summary);
-    if(window.GameFlow)GameFlow.attachReport(document.querySelector('[data-shared-result-ui="v1"]'),roundReport);
+    if(window.GameFlow)GameFlow.attachReport(document.querySelector('[data-shared-result-ui="v1"][data-shared-result-active="true"]'),roundReport);
   });
 }
 

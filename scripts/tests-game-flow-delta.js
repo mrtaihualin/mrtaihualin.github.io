@@ -31,6 +31,7 @@ class FakeElement {
   }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   getAttribute(name) { return this.attributes[name] || null; }
+  removeAttribute(name) { delete this.attributes[name]; }
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
   appendChild(child) {
     if (child.parentNode) child.parentNode.children = child.parentNode.children.filter((item) => item !== child);
@@ -80,13 +81,16 @@ const storage = {};
 const document = {
   readyState: 'complete',
   listeners: {},
+  nodes: [],
   activeElement: null,
   createElement: (tag) => new FakeElement(tag),
   querySelector: () => null,
+  querySelectorAll() { return this.nodes; },
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
 };
 const window = {
   document,
+  addEventListener() {},
   setTimeout(fn) { timerQueue.push(fn); return timerQueue.length; },
   clearTimeout() {},
   gtag() {},
@@ -104,19 +108,23 @@ const GameFlow = window.GameFlow;
 const parent = new FakeElement('div');
 const next = new FakeElement('button');
 parent.appendChild(next);
-assert.strictEqual(GameFlow.start({ key: 'test-game', nextButton: next, delaySeconds: 3 }), true);
+assert.strictEqual(GameFlow.start({ key: 'test-game', nextButton: next, delaySeconds: 5 }), true);
 const status = parent.querySelector('[data-game-flow-status="test-game"]');
 const pause = parent.querySelector('[data-game-flow-pause="test-game"]');
-assert.strictEqual(status.textContent, '3', 'countdown must start at 3');
+assert.strictEqual(status.textContent, '5', 'countdown must start at 5');
 assert.strictEqual(pause.textContent, '暫停', 'pause control must be available');
+timerQueue.shift()();
+assert.strictEqual(status.textContent, '4');
+timerQueue.shift()();
+assert.strictEqual(status.textContent, '3');
 timerQueue.shift()();
 assert.strictEqual(status.textContent, '2');
 timerQueue.shift()();
 assert.strictEqual(status.textContent, '1');
 timerQueue.shift()();
-assert.strictEqual(next.clicks, 1, 'countdown must advance automatically after 3→2→1');
+assert.strictEqual(next.clicks, 1, 'countdown must advance automatically after 5→4→3→2→1');
 
-GameFlow.start({ key: 'test-game', nextButton: next, delaySeconds: 3 });
+GameFlow.start({ key: 'test-game', nextButton: next, delaySeconds: 5 });
 const clicksBeforePause = next.clicks;
 pause.onclick();
 while (timerQueue.length) timerQueue.shift()();
@@ -134,7 +142,26 @@ assert.strictEqual(GameFlow.selectLatestSuccessful([older, failed, newest]), new
 const result = new FakeElement('section');
 assert.strictEqual(GameFlow.markResult(result), true);
 assert.strictEqual(result.getAttribute('data-shared-result-ui'), 'v1');
+assert.strictEqual(result.getAttribute('data-shared-result-active'), 'true');
 assert(result.classList.contains('gsh-shared-result'));
+assert.strictEqual(GameFlow.unmarkResult(result), true);
+assert.strictEqual(result.getAttribute('data-shared-result-ui'), 'v1', 'persistent Result identity must remain available');
+assert.strictEqual(result.getAttribute('data-shared-result-active'), null, 'Result activity must close explicitly');
+
+const separateDetail = new FakeElement('section');
+document.nodes = [result, separateDetail];
+assert.strictEqual(GameFlow.markResultDetail(result, separateDetail), true);
+assert.strictEqual(result.getAttribute('data-shared-result-active'), 'true');
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-ui'), 'v1');
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-active'), 'true');
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-owner'), result.getAttribute('data-shared-result-detail-owner'));
+assert.strictEqual(GameFlow.unmarkResultDetail(result, separateDetail), true);
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-active'), null);
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-owner'), null);
+assert.strictEqual(result.getAttribute('data-shared-result-detail-owner'), null);
+assert.strictEqual(result.getAttribute('data-shared-result-active'), 'true', 'Back from Detail must preserve active Result ownership');
+GameFlow.unmarkResult(result);
+document.nodes = [];
 
 assert.strictEqual(GameFlow.feedbackCopy(undefined, 0.5), null);
 assert.strictEqual(GameFlow.recordResultFeedback('test', 1, 2), null);
@@ -180,6 +207,13 @@ GameFlow.enhanceResult({
 const truthMeta = enterResult.querySelector('[data-game-result-meta="v1"]');
 assert.strictEqual(truthMeta.querySelector('.gsh-result-completed').textContent, '完成 3 / 3');
 assert.strictEqual(truthMeta.querySelector('.gsh-result-first-correct').textContent, '首次答對 1 / 3', 'later correction must not count as first-attempt proof');
+const countdownDetail = new FakeElement('section');
+document.nodes = [enterResult, countdownDetail];
+GameFlow.markResultDetail(enterResult, countdownDetail);
+while (timerQueue.length) timerQueue.shift()();
+assert.strictEqual(replayButton.clicks, 1, 'opening separate Result Detail must cancel rather than restart the 7-second replay countdown');
+GameFlow.unmarkResultDetail(enterResult, countdownDetail);
+document.nodes = [];
 
 delete storage.gsh_srs_quota_v1;
 const due = Array.from({ length: 8 }, (_, i) => ({ id: `d${i}` }));
@@ -221,7 +255,7 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=10'), `${file} must load the shared flow`);
+  assert(html.includes('js/games/game-flow.js?v=13'), `${file} must load the shared flow`);
   assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
   assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
   assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);

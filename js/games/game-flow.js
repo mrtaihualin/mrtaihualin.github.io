@@ -8,6 +8,7 @@
   var flows = Object.create(null);
   var resultFlows = Object.create(null);
   var activeResultReplay = null;
+  var resultDetailSequence = 0;
   var SRS_QUOTA_KEY = 'gsh_srs_quota_v1';
 
   function resolveElement(value) {
@@ -64,7 +65,7 @@
     var controls = ensureControls(key, nextButton);
     if (!controls) return false;
 
-    var delaySeconds = Number(options.delaySeconds) || 3;
+    var delaySeconds = Number(options.delaySeconds) || 5;
     var flow = {
       token: 1,
       timer: null,
@@ -126,6 +127,54 @@
     if (!root) return false;
     root.classList.add('gsh-shared-result');
     root.setAttribute('data-shared-result-ui', 'v1');
+    root.setAttribute('data-shared-result-active', 'true');
+    return true;
+  }
+
+  function resultDetailNodes(token) {
+    return Array.prototype.slice.call(document.querySelectorAll('[data-shared-result-detail-owner]')).filter(function (node) {
+      return node.getAttribute('data-shared-result-detail-owner') === token;
+    });
+  }
+
+  function markResultDetail(root, detail) {
+    root = resolveElement(root);
+    detail = resolveElement(detail);
+    if (!root || !detail || root === detail) return false;
+    markResult(root);
+    if (activeResultReplay && activeResultReplay.root === root) cancelResult(activeResultReplay.key);
+    var token = root.getAttribute('data-shared-result-detail-owner') || detail.getAttribute('data-shared-result-detail-owner') ||
+      ('gsh-result-detail-' + (++resultDetailSequence));
+    root.setAttribute('data-shared-result-detail-owner', token);
+    detail.setAttribute('data-shared-result-detail-owner', token);
+    detail.setAttribute('data-shared-result-detail-ui', 'v1');
+    detail.setAttribute('data-shared-result-detail-active', 'true');
+    return true;
+  }
+
+  function unmarkResultDetail(root, detail) {
+    root = resolveElement(root);
+    detail = resolveElement(detail);
+    var token = detail && detail.getAttribute('data-shared-result-detail-owner') ||
+      root && root.getAttribute('data-shared-result-detail-owner');
+    if (!token) return false;
+    resultDetailNodes(token).forEach(function (node) {
+      node.removeAttribute('data-shared-result-detail-owner');
+      node.removeAttribute('data-shared-result-detail-active');
+      node.removeAttribute('data-shared-result-detail-ui');
+    });
+    return true;
+  }
+
+  function unmarkResult(root) {
+    root = resolveElement(root);
+    if (!root) return false;
+    unmarkResultDetail(root, null);
+    root.removeAttribute('data-shared-result-active');
+    if (activeResultReplay && activeResultReplay.root === root) {
+      cancelResult(activeResultReplay.key);
+      activeResultReplay = null;
+    }
     return true;
   }
 
@@ -455,9 +504,17 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', normalizeResumeUI);
   else normalizeResumeUI();
 
+  function cancelAll() {
+    Object.keys(flows).forEach(function (key) { clearFlow(key); });
+    Object.keys(resultFlows).forEach(function (key) { cancelResult(key); });
+  }
+  window.addEventListener('pagehide', cancelAll);
+  window.addEventListener('unload', cancelAll);
+
   window.GameFlow = {
     start: start,
     cancel: function (key) { clearFlow(String(key || 'default')); },
+    cancelAll: cancelAll,
     cancelResult: cancelResult,
     startResultCountdown: startResultCountdown,
     enhanceResult: enhanceResult,
@@ -466,6 +523,9 @@
     recordResultFeedback: recordResultFeedback,
     allocateSrs: allocateSrs,
     markResult: markResult,
+    markResultDetail: markResultDetail,
+    unmarkResult: unmarkResult,
+    unmarkResultDetail: unmarkResultDetail,
     selectLatestSuccessful: selectLatestSuccessful,
     copy: {
       correct: '做得很好，繼續保持 🌱',
