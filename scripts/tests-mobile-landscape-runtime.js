@@ -155,6 +155,7 @@ class FakeNode {
   click() { this.dispatchEvent(new FakeEvent('click', { bubbles: true })); }
   focus() { this.ownerDocument.activeElement = this; }
   blur() { if (this.ownerDocument.activeElement === this) this.ownerDocument.activeElement = this.ownerDocument.body; }
+  getBoundingClientRect() { return { left: 12, right: 92, top: 8, bottom: 48, width: 80, height: 40 }; }
 }
 
 class FakeDocument {
@@ -523,7 +524,29 @@ toneBanner.id = 'tf-banner';
 const toneBody = document.createElement('div');
 toneBody.id = 'tf-body';
 toneCard.append(toneBanner, toneBody);
-document.body.append(toneControls, toneCard);
+const toneLevelSource = document.createElement('div');
+const toneLevelTabs = document.createElement('div');
+toneLevelTabs.id = 'tf-level-tabs';
+toneLevelSource.appendChild(toneLevelTabs);
+const toneToolSource = document.createElement('div');
+const toneToolIds = [
+  'tf-howto-btn',
+  'tf-alpha-btn',
+  'rg-pron-toggle',
+  'zh-toggle-slot',
+  'tf-vault-btn-slot',
+  'tf-guide-toggle',
+  'font-toggle-slot',
+  'tf-particle-toggle'
+];
+let toneToolClicks = 0;
+const toneTools = toneToolIds.map((id) => {
+  const tool = makeButton(id);
+  tool.addEventListener('click', () => { toneToolClicks += 1; });
+  toneToolSource.appendChild(tool);
+  return tool;
+});
+document.body.append(toneControls, toneLevelSource, toneToolSource, toneCard);
 
 function toneQuestion(id) {
   const options = document.createElement('div');
@@ -535,6 +558,20 @@ function toneQuestion(id) {
 
 toneBody.appendChild(toneQuestion('tone-q1'));
 window.GSHMobileLandscape.activate();
+const toneToolsDropdown = hooks.state().stage.querySelector('[data-gsh-dropdown="tools"]');
+const toneToolsPanel = toneToolsDropdown && toneToolsDropdown.querySelector('.gsh-ml-dropdown-panel');
+assert(toneToolsPanel, 'Tone Tools dropdown must exist');
+assert.strictEqual(toneToolsPanel.children.length, toneTools.length, 'Tone Tools must expose every existing live control');
+toneTools.forEach((tool, index) => {
+  assert.strictEqual(toneToolsPanel.children[index], tool, `Tone Tool ${toneToolIds[index]} must retain live-node identity and order`);
+});
+assert.deepStrictEqual(
+  toneTools.map((tool) => tool.getAttribute('data-gsh-ml-tool-label')),
+  ['玩法', '字母練習區', '讀音', '翻譯', '單字庫', '提示', '字體', '禮貌詞'],
+  'Tone Tools must expose the locked helper/display labels'
+);
+toneTools.forEach((tool) => tool.click());
+assert.strictEqual(toneToolClicks, toneTools.length, 'every live Tone Tools control must preserve its original click handler');
 stableForFrames('Tone normal question');
 toneBody.replaceChildren(toneQuestion('tone-q2'));
 window.GSHMobileLandscape.sync();
@@ -586,6 +623,158 @@ assert.strictEqual(document.querySelectorAll('.gsh-result-utility-actions').leng
 assert.strictEqual(document.querySelectorAll('.gsh-result-home-actions').length, 1);
 [toneGroups.primary, toneGroups.utility, toneGroups.home].forEach((group) => group.children[0].click());
 assert.strictEqual(toneRoundTwoActions, 3, 'all Tone Result actions must work in round two');
+window.GSHMobileLandscape.deactivate();
+assert.strictEqual(toneToolSource.children.length, toneTools.length, 'Portrait/Desktop must restore every Tone Tool');
+toneTools.forEach((tool, index) => {
+  assert(toneToolSource.children[index] === tool, `Portrait/Desktop must restore ${toneToolIds[index]} in exact source order`);
+});
+toneTools.forEach((tool) => assert.strictEqual(tool.getAttribute('data-gsh-ml-tool-label'), null, 'Landscape-only tool labels must be removed on exit'));
+
+// Typing moves the existing live Tools row, preserves Kedmanee order and restores every policy on exit.
+resetPage('typing');
+const typingControls = document.createElement('div');
+typingControls.className = 'rg-ctl-wrap';
+const typingMenu = makeButton('typing-game-menu', 'rg-ctl-fab');
+const typingFullscreen = makeButton('typing-fullscreen', 'rg-ctl-fab');
+typingFullscreen.setAttribute('aria-pressed', 'false');
+typingControls.append(typingMenu, typingFullscreen);
+
+const typingLevelSource = document.createElement('div');
+const typingLevels = document.createElement('div');
+typingLevels.className = 'gsh-level-selector';
+let typingLevelClicks = 0;
+['initial', 'middle', 'high'].forEach((id) => {
+  const button = makeButton('typing-level-' + id);
+  button.addEventListener('click', () => { typingLevelClicks += 1; });
+  typingLevels.appendChild(button);
+});
+typingLevelSource.appendChild(typingLevels);
+
+const typingProfile = document.createElement('div');
+const typingHowto = makeButton('rg-howto-btn');
+typingProfile.appendChild(typingHowto);
+const typingQuestionSource = document.createElement('div');
+const typingWordArea = document.createElement('div');
+typingWordArea.className = 'word-area';
+const typingWord = document.createElement('div');
+typingWord.id = 'wth';
+const typingToolRow = document.createElement('div');
+typingToolRow.id = 'word-ctl-row';
+const typingToolIds = [
+  'rg-sound-toggle', 'rg-pron-toggle', 'rg-en-toggle', 'zh-toggle-slot',
+  'rg-vault-btn-slot', 'guide-toggle', 'rg-webkbd-toggle', 'font-toggle-slot', 'rg-particle-toggle'
+];
+let typingToolClicks = 0;
+const typingWordTools = typingToolIds.map((id) => {
+  const tool = makeButton(id);
+  tool.addEventListener('click', () => { typingToolClicks += 1; });
+  typingToolRow.appendChild(tool);
+  return tool;
+});
+typingWordArea.append(typingWord, typingToolRow);
+const typingSlots = document.createElement('div');
+typingSlots.id = 'slot-row';
+typingQuestionSource.append(typingWordArea, typingSlots);
+
+const typingInputSource = document.createElement('div');
+const typingTypeWrap = document.createElement('div');
+typingTypeWrap.id = 'rg-type-wrap';
+const typingInput = document.createElement('input');
+typingInput.id = 'rg-mobile-input';
+typingInput.setAttribute('inputmode', 'text');
+typingTypeWrap.appendChild(typingInput);
+typingInputSource.appendChild(typingTypeWrap);
+
+const typingKeyboardSource = document.createElement('div');
+const typingKeyboard = document.createElement('div');
+typingKeyboard.id = 'rg-kbd';
+let typingShifted = false;
+let typingValue = '';
+function renderTypingKeyboard() {
+  window.GSHThaiKeyboard.render({
+    root: typingKeyboard,
+    split: true,
+    shifted: typingShifted,
+    onCode(code) {
+      const map = typingShifted ? window.GSHThaiKeyboard.shiftMap : window.GSHThaiKeyboard.baseMap;
+      typingValue += map[code] || '';
+      if (typingShifted) { typingShifted = false; renderTypingKeyboard(); }
+    },
+    onShift() { typingShifted = !typingShifted; renderTypingKeyboard(); },
+    onBackspace() { typingValue = typingValue.slice(0, -1); }
+  });
+}
+renderTypingKeyboard();
+typingKeyboardSource.appendChild(typingKeyboard);
+
+const typingActionSource = document.createElement('div');
+const typingRemember = makeButton('btn-remember');
+const typingCheck = makeButton('btn-check');
+const typingNext = makeButton('btn-next');
+let typingActionClicks = 0;
+[typingHowto, typingRemember, typingCheck, typingNext].forEach((button) => {
+  button.addEventListener('click', () => { typingActionClicks += 1; });
+});
+typingActionSource.append(typingRemember, typingCheck, typingNext);
+document.body.append(
+  typingControls, typingLevelSource, typingProfile, typingQuestionSource,
+  typingInputSource, typingKeyboardSource, typingActionSource
+);
+
+window.GSHMobileLandscape.activate();
+const typingStage = hooks.state().stage;
+const typingLevelDropdown = typingStage.querySelector('[data-gsh-dropdown="level"]');
+const typingToolsDropdown = typingStage.querySelector('[data-gsh-dropdown="tools"]');
+const typingToolsPanel = typingToolsDropdown.querySelector('.gsh-ml-dropdown-panel');
+assert.deepStrictEqual(typingLevelDropdown.querySelector('.gsh-ml-dropdown-panel').children, [typingLevels], 'Typing Level must own the existing live selector');
+assert.deepStrictEqual(typingToolsPanel.children, [typingHowto, typingRemember, typingToolRow], 'Typing Tools must own How-to, Remember and the complete live Tool row');
+assert.strictEqual(typingToolRow.children.length, typingToolIds.length, 'Typing Tools must not clone or extract children from #word-ctl-row');
+assert.strictEqual(document.querySelectorAll('#word-ctl-row').length, 1, 'Typing must keep one live #word-ctl-row');
+assert.strictEqual(typingStage.querySelector('[data-gsh-ml-slot="question"]').contains(typingRemember), false, 'Remember must not remain in center gameplay');
+assert.strictEqual(typingStage.querySelector('[data-gsh-ml-slot="question"]').contains(typingToolRow), false, 'Tool row must not remain in center gameplay');
+assert.strictEqual(typingStage.querySelector('[data-gsh-ml-slot="shared-controls"] button.rg-ctl-fab[aria-pressed]'), typingFullscreen, 'Full Screen must retain the stable semantic selector used by Mobile Landscape CSS');
+const typingWebKeyboard = document.getElementById('rg-webkbd-toggle');
+assert.strictEqual(typingWebKeyboard.disabled, true, 'Typing web-keyboard toggle must be disabled in Mobile Landscape');
+assert.strictEqual(typingWebKeyboard.getAttribute('data-gsh-ml-keyboard-toggle'), 'disabled', 'Typing web-keyboard toggle must be hidden by its scoped marker');
+assert.strictEqual(typingInput.readOnly, true, 'Typing native input must be read-only in Mobile Landscape');
+assert.strictEqual(typingInput.getAttribute('inputmode'), 'none', 'Typing native input must suppress the native keyboard');
+
+click(typingLevelDropdown.querySelector('.gsh-ml-dropdown-trigger'));
+typingLevels.children.forEach(click);
+click(typingToolsDropdown.querySelector('.gsh-ml-dropdown-trigger'));
+click(typingHowto);
+click(typingRemember);
+typingWordTools.filter((tool) => tool !== typingWebKeyboard && !tool.disabled).forEach(click);
+click(typingCheck);
+click(typingNext);
+assert.strictEqual(typingLevelClicks, 3, 'every Typing Level control must remain clickable');
+assert.strictEqual(typingToolClicks, typingWordTools.length - 1, 'every visible enabled Typing Tool must remain clickable');
+assert.strictEqual(typingActionClicks, 4, 'How-to, Remember and both Typing main actions must retain handlers');
+
+const typingRows = typingKeyboard.children.slice(0, 4);
+typingRows.forEach((row, rowIndex) => {
+  const codes = row.children.flatMap((half) => half.children.map((key) => key.dataset.code));
+  assert.deepStrictEqual(codes, Array.from(window.GSHThaiKeyboard.codeRows[rowIndex]), `Typing Kedmanee row ${rowIndex + 1} must keep normal order split only at its midpoint`);
+});
+click(descendants(typingKeyboard).find((node) => node.dataset.code === 'Digit1'));
+click(descendants(typingKeyboard).find((node) => node.textContent === '⇧ Shift'));
+click(descendants(typingKeyboard).find((node) => node.dataset.code === 'Digit1'));
+assert.strictEqual(typingValue, 'ๅ+', 'Typing Shift must apply to exactly one Thai character');
+assert.strictEqual(typingShifted, false, 'Typing Shift must reset after one character');
+click(descendants(typingKeyboard).find((node) => node.textContent === '⌫ 退格'));
+assert.strictEqual(typingValue, 'ๅ', 'Typing Backspace must remove the latest character');
+stableForFrames('Typing gameplay');
+
+window.GSHMobileLandscape.deactivate();
+assert.strictEqual(typingInput.readOnly, false, 'Portrait/Desktop must restore Typing readOnly');
+assert.strictEqual(typingInput.getAttribute('inputmode'), 'text', 'Portrait/Desktop must restore Typing inputmode');
+assert.strictEqual(typingWebKeyboard.disabled, false, 'Portrait/Desktop must restore the web-keyboard toggle');
+assert.strictEqual(typingWebKeyboard.getAttribute('data-gsh-ml-keyboard-toggle'), null, 'Portrait/Desktop must clear the keyboard marker');
+assert.deepStrictEqual(typingWordArea.children, [typingWord, typingToolRow], 'Portrait/Desktop must restore #word-ctl-row to the original word area');
+assert.deepStrictEqual(typingActionSource.children, [typingRemember, typingCheck, typingNext], 'Portrait/Desktop must restore Typing actions in exact order');
+assert.strictEqual(typingKeyboard.parentNode, typingKeyboardSource, 'Portrait/Desktop must restore the same Typing keyboard root');
+assert.deepStrictEqual(duplicateIds(), [], 'Typing Portrait/Desktop restoration must not duplicate IDs');
+assert.strictEqual(restorationMarkerCount(), 0, 'Typing Portrait/Desktop restoration must not leak markers');
 
 // Shared countdown keeps the same live controls and timer across two rotations.
 resetPage('reading');

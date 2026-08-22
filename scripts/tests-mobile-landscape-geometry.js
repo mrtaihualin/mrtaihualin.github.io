@@ -2,6 +2,8 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 
 function clamp(min, value, max) { return Math.max(min, Math.min(value, max)); }
 function intersects(a, b, tolerance = 1) {
@@ -38,8 +40,37 @@ function layout(width, height, safe = { left: 12, right: 12, top: 8, bottom: 8 }
   return { viewport: { x: 0, y: 0, width, height }, usable, top, play };
 }
 
+function toneChoiceLayout(width, height, safe) {
+  const stage = layout(width, height, safe);
+  const size = clamp(64, height * 0.24, 96);
+  const gap = clamp(4, height * 0.013, 10);
+  const leftX = stage.play.left.x + (stage.play.left.width - size) / 2;
+  const rightX = stage.play.right.x + (stage.play.right.width - size) / 2;
+  const leftGroupHeight = size * 3 + gap * 2;
+  const rightGroupHeight = size * 2 + gap;
+  const leftY = stage.play.left.y + (stage.play.left.height - leftGroupHeight) / 2;
+  const rightY = stage.play.right.y + (stage.play.right.height - rightGroupHeight) / 2;
+  return {
+    stage,
+    size,
+    left: [0, 1, 2].map((index) => ({ x: leftX, y: leftY + index * (size + gap), width: size, height: size })),
+    right: [0, 1].map((index) => ({ x: rightX, y: rightY + index * (size + gap), width: size, height: size }))
+  };
+}
+
+function typingKeyboardLayout(width, height, safe) {
+  const stage = layout(width, height, safe);
+  const gap = clamp(1, height * 0.002, 1.5);
+  const keyHeight = clamp(40, height * 0.115, 56);
+  const sideWidth = stage.usable.width * 0.4;
+  const widestHalfCount = 7;
+  const keyWidth = (sideWidth - gap * (widestHalfCount - 1)) / widestHalfCount;
+  return { gap, keyHeight, keyWidth, functionWidth: sideWidth };
+}
+
 const targets = [
   { name: 'synthetic-short', width: 740, height: 360 },
+  { name: 'physical-iphone', width: 932, height: 430 },
   { name: 'max-contract', width: 1024, height: 600 }
 ];
 const exact = process.env.REAL_IPHONE_CSS_VIEWPORT;
@@ -63,7 +94,38 @@ for (const target of targets) {
   assert(!intersects(result.play.center, result.play.right), `${target.name}: center collided with right`);
   assert(result.play.left.width >= 200 || target.width < 740, `${target.name}: left thumb zone too narrow`);
   assert(result.play.right.width >= 200 || target.width < 740, `${target.name}: right thumb zone too narrow`);
+  const tone = toneChoiceLayout(target.width, target.height, { left: 12, right: 12, top: 8, bottom: 8 });
+  const choices = tone.left.concat(tone.right);
+  choices.forEach((choice) => {
+    assert.strictEqual(choice.width, choice.height, `${target.name}: Tone choice must be square before circular radius`);
+    assert(contained(choice, tone.stage.usable), `${target.name}: Tone choice escaped the safe area`);
+    assert(!intersects(choice, tone.stage.play.center), `${target.name}: Tone choice entered the center column`);
+  });
+  assert(tone.size >= 64 && tone.size <= 96, `${target.name}: Tone choice size escaped locked responsive bounds`);
+  assert(Math.abs((tone.left[0].y + tone.left[2].y + tone.size) / 2 - (tone.stage.play.left.y + tone.stage.play.left.height / 2)) <= 1,
+    `${target.name}: left Tone choices are not centered in their own side column`);
+  assert(Math.abs((tone.right[0].y + tone.right[1].y + tone.size) / 2 - (tone.stage.play.right.y + tone.stage.play.right.height / 2)) <= 1,
+    `${target.name}: right Tone choices are not centered in their own side column`);
+  const typing = typingKeyboardLayout(target.width, target.height, { left: 12, right: 12, top: 8, bottom: 8 });
+  if (target.width === 740) assert(typing.keyWidth >= 40, `${target.name}: Typing keys must remain at least 40 CSS px wide`);
+  if (target.width === 932) assert(typing.keyWidth >= 48 && typing.keyWidth <= 52, `${target.name}: Typing keys must approximate the physical mobile keyboard`);
+  if (target.width === 1024) assert(typing.keyWidth >= 48, `${target.name}: Typing keys must retain a large touch width`);
+  assert(typing.keyHeight >= 40, `${target.name}: Typing keys must remain at least 40 CSS px high`);
+  assert(typing.functionWidth >= typing.keyWidth * 2, `${target.name}: Shift and Backspace must remain thumb-friendly function keys`);
+  console.log(`  Typing keyboard key=${typing.keyWidth.toFixed(1)}x${typing.keyHeight.toFixed(1)} function=${typing.functionWidth.toFixed(1)}x${typing.keyHeight.toFixed(1)}`);
   console.log(`✓ ${target.name} ${target.width}x${target.height} safe grid`);
 }
+
+const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'mobile-landscape.css'), 'utf8');
+assert.match(css, /--gsh-ml-tone-choice:\s*clamp\(64px,\s*24dvh,\s*96px\)/, 'Tone choices must use the locked responsive square size');
+assert.match(css, /\.sg-tone-grid > \.sg-tone-btn[\s\S]*?aspect-ratio:\s*1;[\s\S]*?border-radius:\s*50%/, 'Tone choices must be true circles');
+assert.match(css, /data-gsh-game="tone"[\s\S]*?data-gsh-ml-split="tone"[\s\S]*?overflow-y:\s*hidden/, 'Tone split answers must forbid vertical scrolling');
+assert.match(css, /data-gsh-ml-slot="shared-controls"[\s\S]*?button\.rg-ctl-fab\[aria-pressed\][\s\S]*?display:\s*none/, 'Mobile Landscape must hide the existing Full Screen control only inside the stage');
+assert.doesNotMatch(css, /rg-ctl-fab:nth-child/, 'Full Screen must never use nth-child guessing');
+assert.match(css, /\.sg-tone-grid \+ div[\s\S]*?display:\s*none/, 'Tone desktop keyboard hint must be hidden only by the Mobile Landscape stylesheet');
+assert.match(css, /--gsh-ml-key-h:\s*clamp\(40px,\s*11\.5dvh,\s*56px\)/, 'Typing keys must use the responsive thumb-target height');
+assert.match(css, /gsh-split-kbd-row[\s\S]*?grid-template-columns:\s*minmax\(0,\s*40fr\)\s+minmax\(0,\s*20fr\)\s+minmax\(0,\s*40fr\)/, 'Typing keyboard overlay must use its allowed 40/20/40 thumb zones');
+assert.match(css, /data-gsh-game="typing"[\s\S]*?data-gsh-ml-slot="center"[\s\S]*?justify-content:\s*flex-start/, 'Typing center must remain question-first and top-biased');
+assert.match(css, /data-gsh-game="typing"[\s\S]*?data-gsh-ml-slot="left"[\s\S]*?overflow:\s*hidden/, 'Typing gameplay must forbid vertical side scrolling');
 
 console.log(`Mobile Landscape geometry contracts: ${targets.length}/${targets.length} passed`);

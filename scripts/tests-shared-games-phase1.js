@@ -72,8 +72,8 @@ test('all six games bind one shared live-node Mobile Landscape stage', () => {
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
     assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current shared CSS`);
-    assert.match(html, /css\/mobile-landscape\.css\?v=2/, `${id}: missing shared landscape CSS`);
-    assert.match(html, /js\/core\/mobile-landscape\.js\?v=4/, `${id}: missing shared landscape controller`);
+    assert.match(html, /css\/mobile-landscape\.css\?v=3/, `${id}: missing shared landscape CSS`);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=5/, `${id}: missing shared landscape controller`);
     assert.match(html, /viewport-fit=cover/, `${id}: missing safe-area viewport contract`);
   }
   assert.doesNotMatch(sharedCss, /--gsh-safe-l|max-height:600px|data-gsh-game="lego"\] #baseplate \.slot-menu/);
