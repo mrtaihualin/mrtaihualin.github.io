@@ -630,6 +630,112 @@ toneTools.forEach((tool, index) => {
 });
 toneTools.forEach((tool) => assert.strictEqual(tool.getAttribute('data-gsh-ml-tool-label'), null, 'Landscape-only tool labels must be removed on exit'));
 
+// Reading exposes every existing helper/display control, keeps choices in their side columns and restores live DOM.
+resetPage('reading');
+const readingControls = document.createElement('div');
+readingControls.className = 'rg-ctl-wrap';
+const readingFullscreen = makeButton('reading-fullscreen', 'rg-ctl-fab');
+readingFullscreen.setAttribute('aria-pressed', 'false');
+readingControls.appendChild(readingFullscreen);
+const readingLevelSource = document.createElement('div');
+const readingLevels = document.createElement('div');
+readingLevels.className = 'gsh-level-selector';
+readingLevelSource.appendChild(readingLevels);
+const readingProfile = document.createElement('div');
+const readingHowto = makeButton('rg-howto-btn');
+readingProfile.appendChild(readingHowto);
+const readingQuestionSource = document.createElement('div');
+const readingWordArea = document.createElement('div');
+readingWordArea.className = 'word-area';
+const readingToolRow = document.createElement('div');
+readingToolRow.id = 'word-ctl-row';
+const readingToolIds = [
+  'rg-sound-toggle', 'rg-pron-toggle', 'rg-en-toggle', 'zh-toggle-slot',
+  'rg-vault-btn-slot', 'rg-guide-toggle', 'font-toggle-slot', 'rg-particle-toggle'
+];
+const readingDisplayTools = readingToolIds.map((id) => {
+  const tool = makeButton(id);
+  readingToolRow.appendChild(tool);
+  return tool;
+});
+readingWordArea.appendChild(readingToolRow);
+const readingSyllables = document.createElement('div');
+readingSyllables.id = 'syl-strip';
+const readingSlots = document.createElement('div');
+readingSlots.id = 'slot-row';
+const readingSlotBoxes = ['cons', 'vowel', 'final', 'tone'].map((id) => makeButton('sb-' + id));
+readingSlotBoxes.forEach((box) => readingSlots.appendChild(box));
+readingQuestionSource.append(readingWordArea, readingSyllables, readingSlots);
+const readingPoolSource = document.createElement('div');
+const readingPool = document.createElement('div');
+readingPool.id = 'pool';
+const readingChoices = Array.from({ length: 10 }, (_, index) => {
+  const choice = makeButton('reading-choice-' + index, 'opt');
+  readingPool.appendChild(choice);
+  return choice;
+});
+readingPoolSource.appendChild(readingPool);
+const readingActionSource = document.createElement('div');
+const readingRemember = makeButton('btn-remember');
+const readingCheck = makeButton('btn-check');
+readingCheck.disabled = true;
+const readingMainNext = makeButton('btn-next');
+const readingMainNextSyl = makeButton('btn-next-syl');
+readingActionSource.append(readingRemember, readingCheck, readingMainNext, readingMainNextSyl);
+let readingToolClicks = 0;
+let readingChoiceClicks = 0;
+let readingSlotClicks = 0;
+let readingActionClicks = 0;
+[readingHowto, readingRemember, ...readingDisplayTools].forEach((control) => control.addEventListener('click', () => { readingToolClicks += 1; }));
+readingChoices.forEach((control) => control.addEventListener('click', () => { readingChoiceClicks += 1; }));
+readingSlotBoxes.forEach((control) => control.addEventListener('click', () => { readingSlotClicks += 1; }));
+[readingMainNext, readingMainNextSyl].forEach((control) => control.addEventListener('click', () => { readingActionClicks += 1; }));
+document.body.append(
+  readingControls, readingLevelSource, readingProfile, readingQuestionSource,
+  readingPoolSource, readingActionSource
+);
+window.GSHMobileLandscape.activate();
+const readingStage = hooks.state().stage;
+const readingToolsPanel = readingStage.querySelector('[data-gsh-dropdown="tools"] .gsh-ml-dropdown-panel');
+const expectedReadingTools = [readingHowto, readingRemember, ...readingDisplayTools];
+assert.deepStrictEqual(readingToolsPanel.children, expectedReadingTools, 'Reading Tools must own every existing helper/display control in locked order');
+assert.deepStrictEqual(
+  expectedReadingTools.map((tool) => tool.getAttribute('data-gsh-ml-tool-label')),
+  ['玩法', '已記得', '發音', '讀音', '英文讀音', '翻譯', '單字庫', '提示', '字體', '禮貌詞'],
+  'Reading Tools labels must describe the existing live controls'
+);
+assert.strictEqual(readingStage.querySelector('[data-gsh-ml-slot="question"]').contains(readingWordArea), true);
+assert.strictEqual(readingStage.querySelector('[data-gsh-ml-slot="question"]').contains(readingSlots), true);
+assert.strictEqual(readingStage.querySelector('[data-gsh-ml-slot="split-content"]').contains(readingPool), true);
+assert.strictEqual(readingPool.dataset.gshMaxSideCount, '5', 'Reading live maximum must use five no-scroll rows per side');
+readingChoices.forEach((choice, index) => {
+  const expectedSide = index < 5 ? 'left' : 'right';
+  assert.strictEqual(choice.dataset.gshSide, expectedSide, `Reading choice ${index} must stay in its side column`);
+  assert.strictEqual(choice.dataset.gshSideIndex, String(index % 5), `Reading choice ${index} must use an in-column row`);
+  assert.strictEqual(choice.dataset.gshSideCount, '5');
+});
+assert.strictEqual(readingStage.querySelector('[data-gsh-ml-slot="main-action"]').children.length, 3, 'Reading main-action geometry must retain Check, Next and Next Syllable including disabled Check');
+assert.strictEqual(readingCheck.disabled, true, 'moving disabled Check must preserve state');
+expectedReadingTools.forEach(click);
+readingChoices.forEach(click);
+readingSlotBoxes.forEach(click);
+[readingMainNext, readingMainNextSyl].forEach(click);
+assert.strictEqual(readingToolClicks, expectedReadingTools.length, 'every visible Reading Tool must retain its click handler');
+assert.strictEqual(readingChoiceClicks, readingChoices.length, 'every Reading choice must retain its click handler');
+assert.strictEqual(readingSlotClicks, readingSlotBoxes.length, 'every Reading answer target must retain its click handler');
+assert.strictEqual(readingActionClicks, 2, 'every enabled Reading main action must retain its click handler');
+assert.strictEqual(readingStage.querySelector('[data-gsh-ml-slot="shared-controls"] button.rg-ctl-fab[aria-pressed]'), readingFullscreen, 'Reading Full Screen must retain the scoped Mobile Landscape hide selector');
+stableForFrames('Reading gameplay');
+window.GSHMobileLandscape.deactivate();
+assert.deepStrictEqual(readingToolRow.children, readingDisplayTools, 'Portrait/Desktop must restore Reading display controls in exact order');
+assert.deepStrictEqual(readingActionSource.children, [readingRemember, readingCheck, readingMainNext, readingMainNextSyl], 'Portrait/Desktop must restore Reading actions in exact order');
+assert.strictEqual(readingPool.parentNode, readingPoolSource, 'Portrait/Desktop must restore the same Reading pool');
+assert.strictEqual(readingPool.dataset.gshMaxSideCount, undefined, 'Portrait/Desktop must clear Reading row metadata');
+readingChoices.forEach((choice) => assert.strictEqual(choice.dataset.gshSide, undefined));
+expectedReadingTools.forEach((tool) => assert.strictEqual(tool.getAttribute('data-gsh-ml-tool-label'), null));
+assert.deepStrictEqual(duplicateIds(), [], 'Reading Portrait/Desktop restoration must not duplicate IDs');
+assert.strictEqual(restorationMarkerCount(), 0, 'Reading Portrait/Desktop restoration must not leak markers');
+
 // Typing moves the existing live Tools row, preserves Kedmanee order and restores every policy on exit.
 resetPage('typing');
 const typingControls = document.createElement('div');

@@ -20,7 +20,6 @@
     --gsh-ml-control-h: clamp(34px, 10dvh, 48px);
     --gsh-ml-answer-h: clamp(38px, 16dvh, 56px);
     --gsh-ml-tone-choice: clamp(64px, 24dvh, 96px);
-    --gsh-ml-reading-choice-h: clamp(56px, calc((100dvh - var(--gsh-ml-safe-t) - var(--gsh-ml-safe-b) - var(--gsh-ml-top-h) - (4 * var(--gsh-ml-gap)) - (2 * var(--gsh-ml-pad))) / 2), 96px);
     --gsh-ml-key-h: clamp(40px, 11.5dvh, 56px);
     --gsh-ml-kbd-gap: clamp(1px, .2dvh, 1.5px);
     position: fixed;
@@ -615,14 +614,23 @@
     overscroll-behavior-y: none;
   }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] {
-    grid-template-rows: repeat(2, var(--gsh-ml-reading-choice-h));
+    --gsh-ml-reading-rows: 1;
+    --gsh-ml-reading-choice-h: clamp(56px, calc((100% - (2 * var(--gsh-ml-pad)) - ((var(--gsh-ml-reading-rows) - 1) * var(--gsh-ml-gap))) / var(--gsh-ml-reading-rows)), 96px);
+    grid-template-rows: repeat(var(--gsh-ml-reading-rows), var(--gsh-ml-reading-choice-h));
     grid-auto-rows: var(--gsh-ml-reading-choice-h);
     align-content: center;
     overflow-x: auto;
     overscroll-behavior-x: contain;
   }
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"][data-gsh-max-side-count="2"] { --gsh-ml-reading-rows: 2; }
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"][data-gsh-max-side-count="3"] { --gsh-ml-reading-rows: 3; }
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"][data-gsh-max-side-count="4"] { --gsh-ml-reading-rows: 4; }
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"][data-gsh-max-side-count="5"] { --gsh-ml-reading-rows: 5; }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="0"] { grid-row: 1; }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="1"] { grid-row: 2; }
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="2"] { grid-row: 3; }
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="3"] { grid-row: 4; }
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="4"] { grid-row: 5; }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-count="1"] {
     grid-row: 1 / span 2;
     align-self: center;

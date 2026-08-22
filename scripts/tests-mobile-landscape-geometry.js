@@ -68,6 +68,25 @@ function typingKeyboardLayout(width, height, safe) {
   return { gap, keyHeight, keyWidth, functionWidth: sideWidth };
 }
 
+function readingChoiceLayout(width, height, totalChoices, safe) {
+  const stage = layout(width, height, safe);
+  const gap = clamp(4, height * 0.013, 10);
+  const pad = clamp(6, height * 0.017, 12);
+  const leftCount = Math.ceil(totalChoices / 2);
+  const rightCount = totalChoices - leftCount;
+  const rows = Math.max(leftCount, rightCount);
+  const choiceHeight = clamp(56, (stage.play.left.height - pad * 2 - gap * (rows - 1)) / rows, 96);
+  const makeSide = (region, count) => {
+    const groupHeight = count * choiceHeight + Math.max(0, count - 1) * gap;
+    const y = region.y + (region.height - groupHeight) / 2;
+    return Array.from({ length: count }, (_, index) => ({
+      x: region.x + pad, y: y + index * (choiceHeight + gap),
+      width: region.width - pad * 2, height: choiceHeight
+    }));
+  };
+  return { stage, choiceHeight, left: makeSide(stage.play.left, leftCount), right: makeSide(stage.play.right, rightCount) };
+}
+
 const targets = [
   { name: 'synthetic-short', width: 740, height: 360 },
   { name: 'physical-iphone', width: 932, height: 430 },
@@ -106,6 +125,18 @@ for (const target of targets) {
     `${target.name}: left Tone choices are not centered in their own side column`);
   assert(Math.abs((tone.right[0].y + tone.right[1].y + tone.size) / 2 - (tone.stage.play.right.y + tone.stage.play.right.height / 2)) <= 1,
     `${target.name}: right Tone choices are not centered in their own side column`);
+  [4, 10].forEach((totalChoices) => {
+    const reading = readingChoiceLayout(target.width, target.height, totalChoices, { left: 12, right: 12, top: 8, bottom: 8 });
+    reading.left.forEach((choice) => {
+      assert(contained(choice, reading.stage.play.left), `${target.name}: Reading left choice escaped its side column`);
+      assert(!intersects(choice, reading.stage.play.center), `${target.name}: Reading left choice entered the center column`);
+    });
+    reading.right.forEach((choice) => {
+      assert(contained(choice, reading.stage.play.right), `${target.name}: Reading right choice escaped its side column`);
+      assert(!intersects(choice, reading.stage.play.center), `${target.name}: Reading right choice entered the center column`);
+    });
+    assert(reading.choiceHeight >= 56, `${target.name}: Reading choice touch height fell below 56 CSS px`);
+  });
   const typing = typingKeyboardLayout(target.width, target.height, { left: 12, right: 12, top: 8, bottom: 8 });
   if (target.width === 740) assert(typing.keyWidth >= 40, `${target.name}: Typing keys must remain at least 40 CSS px wide`);
   if (target.width === 932) assert(typing.keyWidth >= 48 && typing.keyWidth <= 52, `${target.name}: Typing keys must approximate the physical mobile keyboard`);
@@ -122,6 +153,10 @@ assert.match(css, /\.sg-tone-grid > \.sg-tone-btn[\s\S]*?aspect-ratio:\s*1;[\s\S
 assert.match(css, /data-gsh-game="tone"[\s\S]*?data-gsh-ml-split="tone"[\s\S]*?overflow-y:\s*hidden/, 'Tone split answers must forbid vertical scrolling');
 assert.match(css, /data-gsh-ml-slot="shared-controls"[\s\S]*?button\.rg-ctl-fab\[aria-pressed\][\s\S]*?display:\s*none/, 'Mobile Landscape must hide the existing Full Screen control only inside the stage');
 assert.doesNotMatch(css, /rg-ctl-fab:nth-child/, 'Full Screen must never use nth-child guessing');
+assert.match(css, /data-gsh-game="reading"[\s\S]*?data-gsh-ml-split="reading"[\s\S]*?overflow-y:\s*hidden/, 'Reading split choices must forbid vertical scrolling');
+assert.match(css, /data-gsh-max-side-count="5"[\s\S]*?--gsh-ml-reading-rows:\s*5/, 'Reading must fit its live maximum of five choices per side');
+assert.match(css, /data-gsh-side-index="4"[\s\S]*?grid-row:\s*5/, 'Reading fifth side choice must receive an in-viewport row');
+assert.match(css, /data-gsh-game="reading"[\s\S]*?data-gsh-ml-slot="question"[\s\S]*?justify-content:\s*flex-start/, 'Reading center must remain question-first and top-biased');
 assert.match(css, /\.sg-tone-grid \+ div[\s\S]*?display:\s*none/, 'Tone desktop keyboard hint must be hidden only by the Mobile Landscape stylesheet');
 assert.match(css, /--gsh-ml-key-h:\s*clamp\(40px,\s*11\.5dvh,\s*56px\)/, 'Typing keys must use the responsive thumb-target height');
 assert.match(css, /gsh-split-kbd-row[\s\S]*?grid-template-columns:\s*minmax\(0,\s*40fr\)\s+minmax\(0,\s*20fr\)\s+minmax\(0,\s*40fr\)/, 'Typing keyboard overlay must use its allowed 40/20/40 thumb zones');

@@ -302,7 +302,11 @@
     if (!container) return;
     container.setAttribute('data-gsh-ml-split', game);
     var children = Array.prototype.filter.call(container.children, isRenderableControl);
-    Array.prototype.forEach.call(container.children, function (child) { child.removeAttribute('data-gsh-side'); });
+    Array.prototype.forEach.call(container.children, function (child) {
+      child.removeAttribute('data-gsh-side');
+      child.removeAttribute('data-gsh-side-index');
+      child.removeAttribute('data-gsh-side-count');
+    });
     var leftCount;
     if (game === 'tone') {
       leftCount = children.length === 6 ? 3 : children.length === 3 ? 1 : children.length === 2 ? 1 : Math.ceil(children.length / 2);
@@ -311,6 +315,7 @@
     } else {
       leftCount = Math.ceil(children.length / 2);
     }
+    container.dataset.gshMaxSideCount = String(Math.max(leftCount, children.length - leftCount));
     var leftIndex = 0;
     var rightIndex = 0;
     children.forEach(function (child, index) {
@@ -666,10 +671,11 @@
     closeDropdowns();
     restoreInputs();
     restoreControls();
-    qa('[data-gsh-side], [data-gsh-side-index], [data-gsh-side-count], [data-gsh-ml-split], [data-gsh-ml-role], [data-gsh-ml-custom-input]').forEach(function (node) {
+    qa('[data-gsh-side], [data-gsh-side-index], [data-gsh-side-count], [data-gsh-max-side-count], [data-gsh-ml-split], [data-gsh-ml-role], [data-gsh-ml-custom-input]').forEach(function (node) {
       node.removeAttribute('data-gsh-side');
       node.removeAttribute('data-gsh-side-index');
       node.removeAttribute('data-gsh-side-count');
+      node.removeAttribute('data-gsh-max-side-count');
       node.removeAttribute('data-gsh-ml-split');
       node.removeAttribute('data-gsh-ml-role');
       node.removeAttribute('data-gsh-ml-custom-input');
