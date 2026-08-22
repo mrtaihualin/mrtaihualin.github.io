@@ -87,6 +87,17 @@ function readingChoiceLayout(width, height, totalChoices, safe) {
   return { stage, choiceHeight, left: makeSide(stage.play.left, leftCount), right: makeSide(stage.play.right, rightCount) };
 }
 
+function wordOrderLayout(width, height, safe) {
+  const stage = layout(width, height, safe);
+  const rowGap = clamp(5, height * 0.016, 8);
+  const paddingBlock = clamp(4, height * 0.012, 8);
+  const tileWidth = clamp(92, width * 0.15, 150);
+  const tileHeight = clamp(46, height * 0.12, 58);
+  const slotWidth = clamp(54, width * 0.08, 76);
+  const slotHeight = clamp(42, height * 0.11, 50);
+  return { stage, rowGap, paddingBlock, tileWidth, tileHeight, slotWidth, slotHeight };
+}
+
 const targets = [
   { name: 'synthetic-short', width: 740, height: 360 },
   { name: 'physical-iphone', width: 932, height: 430 },
@@ -143,7 +154,15 @@ for (const target of targets) {
   if (target.width === 1024) assert(typing.keyWidth >= 48, `${target.name}: Typing keys must retain a large touch width`);
   assert(typing.keyHeight >= 40, `${target.name}: Typing keys must remain at least 40 CSS px high`);
   assert(typing.functionWidth >= typing.keyWidth * 2, `${target.name}: Shift and Backspace must remain thumb-friendly function keys`);
+  const wordOrder = wordOrderLayout(target.width, target.height, { left: 12, right: 12, top: 8, bottom: 8 });
+  assert(wordOrder.tileWidth <= wordOrder.stage.play.left.width, `${target.name}: Word Order tile must fit its own side column`);
+  assert(wordOrder.tileWidth <= wordOrder.stage.play.right.width, `${target.name}: Word Order tile must fit the right side column`);
+  const threeTileHeight = wordOrder.tileHeight * 3 + wordOrder.rowGap * 2 + wordOrder.paddingBlock * 2;
+  assert(threeTileHeight <= wordOrder.stage.play.left.height, `${target.name}: three left-side Word Order tiles must fit without vertical scrolling`);
+  assert(wordOrder.slotWidth <= wordOrder.stage.play.center.width, `${target.name}: Word Order slot must fit the center column`);
+  assert(wordOrder.slotHeight * 4 <= wordOrder.stage.play.center.height, `${target.name}: wrapped Word Order slots must fit the center without page scrolling`);
   console.log(`  Typing keyboard key=${typing.keyWidth.toFixed(1)}x${typing.keyHeight.toFixed(1)} function=${typing.functionWidth.toFixed(1)}x${typing.keyHeight.toFixed(1)}`);
+  console.log(`  Word Order tile=${wordOrder.tileWidth.toFixed(1)}x${wordOrder.tileHeight.toFixed(1)} slot=${wordOrder.slotWidth.toFixed(1)}x${wordOrder.slotHeight.toFixed(1)}`);
   console.log(`✓ ${target.name} ${target.width}x${target.height} safe grid`);
 }
 
@@ -162,5 +181,8 @@ assert.match(css, /--gsh-ml-key-h:\s*clamp\(40px,\s*11\.5dvh,\s*56px\)/, 'Typing
 assert.match(css, /gsh-split-kbd-row[\s\S]*?grid-template-columns:\s*minmax\(0,\s*40fr\)\s+minmax\(0,\s*20fr\)\s+minmax\(0,\s*40fr\)/, 'Typing keyboard overlay must use its allowed 40/20/40 thumb zones');
 assert.match(css, /data-gsh-game="typing"[\s\S]*?data-gsh-ml-slot="center"[\s\S]*?justify-content:\s*flex-start/, 'Typing center must remain question-first and top-biased');
 assert.match(css, /data-gsh-game="typing"[\s\S]*?data-gsh-ml-slot="left"[\s\S]*?overflow:\s*hidden/, 'Typing gameplay must forbid vertical side scrolling');
+assert.match(css, /data-gsh-game="word-order"[\s\S]*?data-gsh-ml-split="word-order"[\s\S]*?overflow-y:\s*hidden[\s\S]*?overflow-x:\s*hidden/, 'Word Order split bank must forbid gameplay scrolling');
+assert.match(css, /data-gsh-ml-split="word-order"[\s\S]*?> \.wo-tile[\s\S]*?min-width:\s*clamp\(92px,\s*15vw,\s*150px\)[\s\S]*?min-height:\s*clamp\(46px,\s*12dvh,\s*58px\)/, 'Word Order tiles must use responsive thumb-friendly bounds');
+assert.match(css, /data-gsh-game="word-order"[\s\S]*?#wo-slots \.wo-slot[\s\S]*?min-width:\s*clamp\(54px,\s*8vw,\s*76px\)[\s\S]*?min-height:\s*clamp\(42px,\s*11dvh,\s*50px\)/, 'Word Order slots must use responsive center-fit bounds');
 
 console.log(`Mobile Landscape geometry contracts: ${targets.length}/${targets.length} passed`);

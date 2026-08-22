@@ -252,9 +252,21 @@
         setControlDisabled(keyboardToggle, true);
       }
     } else if (game === 'word-order') {
-      var reset = q('.btn-row .btn-secondary:not(#wo-remember-btn):not(#wo-next-btn)');
-      tools = nodesFor(['#wo-howto-btn', '#wo-hint-btn', '#wo-remember-btn']);
-      if (reset) tools.push(reset);
+      var reset = q('[onclick*="woResetSentence("]');
+      tools = [
+        labeledNode('#wo-howto-btn', '玩法'),
+        labeledNode('#wo-hint-btn', '提示'),
+        labeledNode('#wo-remember-btn', '已記得'),
+        labeledNode('#rg-pron-toggle', '讀音'),
+        labeledNode('#rg-en-toggle', '英文讀音'),
+        labeledNode('#wo-zh-word-toggle', '逐字翻譯'),
+        labeledNode('#font-toggle-slot', '字體'),
+        labeledNode('#rg-particle-toggle', '禮貌詞')
+      ];
+      if (reset) {
+        reset.setAttribute('data-gsh-ml-tool-label', '重排這句');
+        tools.push(reset);
+      }
     } else if (game === 'lego') {
       tools = nodesFor(['#lego-howto-btn']);
     }
@@ -269,7 +281,9 @@
 
   function mountStaticGameNodes(game) {
     mountExistingNode(q('.rg-ctl-wrap'), slot('shared-controls'));
-    mountExistingNode(q('#rg-login-slot'), slot('account'));
+    if (game !== 'word-order') {
+      mountExistingNode(q('#rg-login-slot'), slot('account'));
+    }
     if (game === 'tone') {
       mountMany(['#tf-banner'], slot('question'));
       var toneBody = q('#tf-body');
@@ -301,7 +315,12 @@
   function assignSides(container, game) {
     if (!container) return;
     container.setAttribute('data-gsh-ml-split', game);
-    var children = Array.prototype.filter.call(container.children, isRenderableControl);
+    var children;
+    if (game === 'word-order') {
+      children = Array.prototype.slice.call(container.children);
+    } else {
+      children = Array.prototype.filter.call(container.children, isRenderableControl);
+    }
     Array.prototype.forEach.call(container.children, function (child) {
       child.removeAttribute('data-gsh-side');
       child.removeAttribute('data-gsh-side-index');

@@ -277,6 +277,50 @@
     font-size: var(--gsh-ml-font);
   }
 
+  body.gsh-ml-active[data-gsh-game="word-order"]
+  [data-gsh-ml-split="word-order"] {
+    align-content: center;
+    row-gap: clamp(5px, 1.6dvh, 8px);
+    padding-block: clamp(4px, 1.2dvh, 8px) !important;
+    overflow-y: hidden;
+    overflow-x: hidden;
+  }
+  body.gsh-ml-active[data-gsh-game="word-order"]
+  [data-gsh-ml-split="word-order"] > .wo-tile {
+    min-width: clamp(92px, 15vw, 150px);
+    max-width: min(100%, 230px);
+    min-height: clamp(46px, 12dvh, 58px);
+    padding:
+      clamp(7px, 1.8dvh, 11px)
+      clamp(12px, 2vw, 20px) !important;
+    border-radius: clamp(12px, 2vw, 16px);
+    font-size: clamp(18px, 4.7dvh, 23px);
+    line-height: 1.12;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  body.gsh-ml-active[data-gsh-game="word-order"]
+  [data-gsh-ml-slot="center"] {
+    justify-content: flex-start;
+    padding-top: clamp(6px, 2dvh, 12px);
+  }
+  body.gsh-ml-active[data-gsh-game="word-order"]
+  [data-gsh-ml-slot="question"] {
+    justify-content: flex-start;
+  }
+  body.gsh-ml-active[data-gsh-game="word-order"] #wo-slots {
+    gap: clamp(4px, 1.3dvh, 8px) !important;
+    padding: clamp(5px, 1.5dvh, 8px) !important;
+    min-height: 0;
+  }
+  body.gsh-ml-active[data-gsh-game="word-order"] #wo-slots .wo-slot {
+    min-width: clamp(54px, 8vw, 76px);
+    min-height: clamp(42px, 11dvh, 50px);
+    padding: 4px clamp(7px, 1.2vw, 10px);
+    font-size: clamp(18px, 4.8dvh, 23px);
+    line-height: 1.1;
+  }
+
   body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard {
     width: 100%;
     height: 100%;

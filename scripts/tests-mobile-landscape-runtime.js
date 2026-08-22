@@ -152,7 +152,7 @@ class FakeNode {
     if (event.bubbles && !event.immediatePropagationStopped && this.parentNode) this.parentNode.dispatchEvent(event);
     return !event.defaultPrevented;
   }
-  click() { this.dispatchEvent(new FakeEvent('click', { bubbles: true })); }
+  click() { if (!this.disabled) this.dispatchEvent(new FakeEvent('click', { bubbles: true })); }
   focus() { this.ownerDocument.activeElement = this; }
   blur() { if (this.ownerDocument.activeElement === this) this.ownerDocument.activeElement = this.ownerDocument.body; }
   getBoundingClientRect() { return { left: 12, right: 92, top: 8, bottom: 48, width: 80, height: 40 }; }
@@ -200,10 +200,12 @@ function matchesSimple(node, selector) {
   if (tag && node.tagName !== tag[0].toUpperCase()) return false;
   for (const id of selector.matchAll(/#([\w-]+)/g)) if (node.id !== id[1]) return false;
   for (const cls of selector.matchAll(/\.([\w-]+)/g)) if (!node.classList.contains(cls[1])) return false;
-  for (const attr of selector.matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/g)) {
+  for (const attr of selector.matchAll(/\[([\w-]+)(?:(\*?=)"([^"]*)")?\]/g)) {
     const name = attr[1];
     const value = node.getAttribute(name) ?? (name.startsWith('data-') ? node.dataset[dataKey(name)] : null);
-    if (value == null || (attr[2] != null && String(value) !== attr[2])) return false;
+    if (value == null) return false;
+    if (attr[2] === '=' && String(value) !== attr[3]) return false;
+    if (attr[2] === '*=' && !String(value).includes(attr[3])) return false;
   }
   return true;
 }
@@ -882,6 +884,123 @@ assert.strictEqual(typingKeyboard.parentNode, typingKeyboardSource, 'Portrait/De
 assert.deepStrictEqual(duplicateIds(), [], 'Typing Portrait/Desktop restoration must not duplicate IDs');
 assert.strictEqual(restorationMarkerCount(), 0, 'Typing Portrait/Desktop restoration must not leak markers');
 
+// Word Order keeps all live Tools, hides Login only in Landscape and preserves tile-side ownership.
+resetPage('word-order');
+const wordOrderControls = document.createElement('div');
+wordOrderControls.className = 'rg-ctl-wrap';
+const wordOrderProfileSource = document.createElement('div');
+const wordOrderLogin = document.createElement('div');
+wordOrderLogin.id = 'rg-login-slot';
+wordOrderProfileSource.appendChild(wordOrderLogin);
+const wordOrderHowtoSource = document.createElement('div');
+const wordOrderActionSource = document.createElement('div');
+wordOrderActionSource.className = 'btn-row';
+const wordOrderToolSource = document.createElement('div');
+const wordOrderQuestionSource = document.createElement('div');
+const wordOrderSlots = document.createElement('div');
+wordOrderSlots.id = 'wo-slots';
+wordOrderQuestionSource.appendChild(wordOrderSlots);
+const wordOrderBankSource = document.createElement('div');
+const wordOrderBank = document.createElement('div');
+wordOrderBank.id = 'wo-bank';
+wordOrderBankSource.appendChild(wordOrderBank);
+
+const wordOrderHowto = makeButton('wo-howto-btn');
+wordOrderHowto.textContent = '玩法';
+wordOrderHowtoSource.appendChild(wordOrderHowto);
+const wordOrderHint = makeButton('wo-hint-btn');
+wordOrderHint.textContent = '提示';
+const wordOrderRemember = makeButton('wo-remember-btn');
+wordOrderRemember.textContent = '已記得';
+const wordOrderReset = makeButton();
+wordOrderReset.textContent = '重排這句';
+wordOrderReset.setAttribute('onclick', 'woResetSentence()');
+const wordOrderNext = makeButton('wo-next-btn');
+wordOrderNext.textContent = '下一句 →';
+wordOrderNext.disabled = true;
+wordOrderActionSource.append(wordOrderHint, wordOrderRemember, wordOrderReset, wordOrderNext);
+
+const wordOrderDisplayIds = ['rg-pron-toggle', 'rg-en-toggle', 'wo-zh-word-toggle', 'font-toggle-slot', 'rg-particle-toggle'];
+const wordOrderDisplayLabels = ['讀音', '英文讀音', '逐字翻譯', '字體', '禮貌詞'];
+const wordOrderDisplayTools = wordOrderDisplayIds.map((id, index) => {
+  const tool = makeButton(id);
+  tool.textContent = wordOrderDisplayLabels[index];
+  wordOrderToolSource.appendChild(tool);
+  return tool;
+});
+const wordOrderTools = [wordOrderHowto, wordOrderHint, wordOrderRemember].concat(wordOrderDisplayTools, wordOrderReset);
+let wordOrderToolClicks = 0;
+wordOrderTools.forEach((tool) => {
+  tool.disabled = true;
+  tool.addEventListener('click', () => { wordOrderToolClicks += 1; });
+});
+let wordOrderNextClicks = 0;
+wordOrderNext.addEventListener('click', () => { wordOrderNextClicks += 1; });
+const wordOrderTiles = Array.from({ length: 5 }, (_, index) => {
+  const tile = makeButton(`wo-tile-${index}`, 'wo-tile');
+  wordOrderBank.appendChild(tile);
+  return tile;
+});
+document.body.append(
+  wordOrderControls,
+  wordOrderProfileSource,
+  wordOrderHowtoSource,
+  wordOrderActionSource,
+  wordOrderToolSource,
+  wordOrderQuestionSource,
+  wordOrderBankSource
+);
+
+window.GSHMobileLandscape.activate();
+const wordOrderStage = hooks.state().stage;
+const wordOrderToolsDropdown = wordOrderStage.querySelector('[data-gsh-dropdown="tools"]');
+const wordOrderToolsPanel = wordOrderToolsDropdown && wordOrderToolsDropdown.querySelector('.gsh-ml-dropdown-panel');
+assert(wordOrderToolsPanel, 'Word Order Tools dropdown must exist');
+assert.deepStrictEqual(wordOrderToolsPanel.children, wordOrderTools, 'Word Order Tools must move every existing live node once in locked order');
+assert.deepStrictEqual(
+  wordOrderTools.map((tool) => tool.getAttribute('data-gsh-ml-tool-label')),
+  ['玩法', '提示', '已記得', '讀音', '英文讀音', '逐字翻譯', '字體', '禮貌詞', '重排這句'],
+  'Word Order Tools must expose every locked helper/display label'
+);
+assert.strictEqual(wordOrderStage.querySelector('[data-gsh-ml-slot="account"]').children.length, 0, 'Word Order Landscape account slot must stay empty');
+assert.strictEqual(wordOrderLogin.parentNode, wordOrderProfileSource, 'Word Order Login must remain intact at its Portrait/Desktop source');
+assert(wordOrderTools.every((tool) => tool.disabled), 'pre-gc-ready disabled state must survive Landscape mounting');
+wordOrderTools.forEach((tool) => { tool.disabled = false; tool.click(); });
+assert.strictEqual(wordOrderToolClicks, wordOrderTools.length, 'every Word Order Tool must preserve exactly one existing click handler');
+wordOrderNext.click();
+assert.strictEqual(wordOrderNextClicks, 0, 'disabled Word Order Next must remain truly disabled');
+wordOrderNext.disabled = false;
+wordOrderNext.click();
+assert.strictEqual(wordOrderNextClicks, 1, 'enabled Word Order Next must preserve its existing click handler');
+assert.strictEqual(wordOrderNext.parentNode, wordOrderStage.querySelector('[data-gsh-ml-slot="main-action"]'), 'Word Order Next must be the top-right Main Action');
+
+assert.deepStrictEqual(wordOrderTiles.map((tile) => tile.dataset.gshSide), ['left', 'left', 'left', 'right', 'right']);
+wordOrderTiles[0].classList.add('used');
+hooks.assignSides(wordOrderBank, 'word-order');
+assert.deepStrictEqual(wordOrderTiles.map((tile) => tile.dataset.gshSide), ['left', 'left', 'left', 'right', 'right'], 'using a left tile must not redistribute right-side ownership');
+wordOrderTiles[0].classList.remove('used');
+wordOrderTiles[4].classList.add('used');
+hooks.assignSides(wordOrderBank, 'word-order');
+assert.deepStrictEqual(wordOrderTiles.map((tile) => tile.dataset.gshSide), ['left', 'left', 'left', 'right', 'right'], 'using a right tile must not redistribute left-side ownership');
+wordOrderTiles[4].classList.remove('used');
+hooks.assignSides(wordOrderBank, 'word-order');
+assert.deepStrictEqual(wordOrderTiles.map((tile) => tile.dataset.gshSide), ['left', 'left', 'left', 'right', 'right'], 'removing or resetting tiles must restore their original side');
+assert.deepStrictEqual(duplicateIds(), [], 'Word Order Landscape must not duplicate live DOM IDs');
+stableForFrames('Word Order gameplay');
+
+window.GSHMobileLandscape.deactivate();
+assert.strictEqual(wordOrderLogin.parentNode, wordOrderProfileSource, 'Portrait must retain the existing Word Order Login path');
+assert.deepStrictEqual(wordOrderHowtoSource.children, [wordOrderHowto]);
+assert.deepStrictEqual(wordOrderActionSource.children, [wordOrderHint, wordOrderRemember, wordOrderReset, wordOrderNext]);
+assert.deepStrictEqual(wordOrderToolSource.children, wordOrderDisplayTools, 'Portrait/Desktop must restore every Word Order display control');
+assert.strictEqual(wordOrderSlots.parentNode, wordOrderQuestionSource, 'Portrait/Desktop must restore #wo-slots');
+assert.strictEqual(wordOrderBank.parentNode, wordOrderBankSource, 'Portrait/Desktop must restore #wo-bank');
+wordOrderTools.forEach((tool) => assert.strictEqual(tool.getAttribute('data-gsh-ml-tool-label'), null, 'Portrait/Desktop must clear Word Order Landscape labels'));
+assert.strictEqual(restorationMarkerCount(), 0, 'Word Order Portrait restoration must not leak markers');
+assert.deepStrictEqual(duplicateIds(), [], 'Word Order Portrait restoration must not duplicate IDs');
+const wordOrderHtml = fs.readFileSync(path.join(root, 'word-order.html'), 'utf8');
+assert.match(wordOrderHtml, /html:not\(\.gc-ready\)[\s\S]*?\[onclick\*="woResetSentence\("\][\s\S]*?pointer-events:none!important/, 'Word Order gc-ready CSS gate must continue blocking pre-ready controls');
+
 // Shared countdown keeps the same live controls and timer across two rotations.
 resetPage('reading');
 const readingWord = document.createElement('div');
@@ -1074,4 +1193,4 @@ assert.strictEqual(teardownResult.getAttribute('data-shared-result-detail-owner'
 assert.strictEqual(teardownDetail.getAttribute('data-shared-result-detail-active'), null, 'page teardown must clear Detail activity');
 assert.strictEqual(restorationMarkerCount(), 0, 'page teardown must not leak markers');
 
-console.log('PASS Mobile Landscape runtime lifecycle: keyboard stability, marker cleanup, Tone/shared two-round Result, separate Result Detail rotation, action restoration, countdown rotation, exclusive inertness and observer stability');
+console.log('PASS Mobile Landscape runtime lifecycle: keyboard stability, marker cleanup, Tone/Typing/Word Order controls, stable Word Order sides/Login restoration, shared two-round Result, separate Result Detail rotation, action restoration, countdown rotation, exclusive inertness and observer stability');
