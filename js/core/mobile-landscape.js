@@ -24,6 +24,8 @@
   var inputPolicies = new Map();
   var activeResultRoot = null;
   var activeResultActions = [];
+  var activeResultDetailRoot = null;
+  var activeResultDetailOwner = null;
   var syncCount = 0;
   var mountMoveCount = 0;
   var observerCallbackCount = 0;
@@ -400,19 +402,39 @@
     var focused = document.activeElement;
     var custom = game === 'lego' && focused && focused.closest ? focused.closest('.opt-custom') : null;
     var resume = visibleResume();
+    var detail = qa('[data-shared-result-detail-ui="v1"][data-shared-result-detail-active="true"]').filter(isSourceVisible)[0] || null;
+    var detailToken = detail && detail.getAttribute('data-shared-result-detail-owner');
+    var detailOwner = detailToken ? qa('[data-shared-result-ui="v1"][data-shared-result-detail-owner]').filter(function (node) {
+      return node.getAttribute('data-shared-result-detail-owner') === detailToken;
+    })[0] || null : null;
     var result = qa('[data-shared-result-ui="v1"][data-shared-result-active="true"]').filter(isSourceVisible)[0] || null;
-    return { custom: custom, resume: resume, result: result };
+    return { custom: custom, resume: resume, result: result, detail: detail, detailOwner: detailOwner };
+  }
+
+  function restoreActiveResultLayout() {
+    if (!activeResultRoot) return;
+    activeResultActions.slice().forEach(restoreExistingNode);
+    restoreExistingNode(activeResultRoot);
   }
 
   function restoreActiveResult(nextRoot, deactivateState) {
     if (!activeResultRoot || activeResultRoot === nextRoot) return;
-    activeResultActions.slice().forEach(restoreExistingNode);
-    restoreExistingNode(activeResultRoot);
+    restoreActiveResultLayout();
     if (deactivateState && window.GameFlow && typeof window.GameFlow.unmarkResult === 'function') {
       window.GameFlow.unmarkResult(activeResultRoot);
     }
     activeResultRoot = null;
     activeResultActions = [];
+  }
+
+  function restoreActiveResultDetail(nextDetail, deactivateState) {
+    if (!activeResultDetailRoot || activeResultDetailRoot === nextDetail) return;
+    restoreExistingNode(activeResultDetailRoot);
+    if (deactivateState && window.GameFlow && typeof window.GameFlow.unmarkResultDetail === 'function') {
+      window.GameFlow.unmarkResultDetail(activeResultDetailOwner, activeResultDetailRoot);
+    }
+    activeResultDetailRoot = null;
+    activeResultDetailOwner = null;
   }
 
   function prepareExclusiveView(view) {
@@ -422,7 +444,13 @@
         restoreExistingNode(node);
       }
     });
-    restoreActiveResult(view.result, true);
+    restoreActiveResultDetail(view.detail, true);
+    if (view.detail && view.detailOwner) {
+      restoreActiveResult(view.detailOwner, true);
+      restoreActiveResultLayout();
+    } else {
+      restoreActiveResult(view.result, true);
+    }
   }
 
   function setExclusiveInertness(viewName) {
@@ -456,6 +484,15 @@
     } else if (view.resume) {
       mountExistingNode(view.resume, slot('exclusive-center'));
       viewName = 'resume';
+    } else if (view.detail && view.detailOwner) {
+      if (!activeResultRoot) {
+        activeResultRoot = view.detailOwner;
+        activeResultActions = qa('.gsh-result-primary-actions, .gsh-result-utility-actions, .gsh-result-home-actions', view.detailOwner);
+      }
+      mountExistingNode(view.detail, slot('exclusive-center'));
+      activeResultDetailRoot = view.detail;
+      activeResultDetailOwner = view.detailOwner;
+      viewName = 'result-detail';
     } else if (view.result) {
       var groups = activeResultRoot === view.result ? activeResultActions.filter(function (node) { return moved.has(node); }) : [];
       qa('.gsh-result-primary-actions, .gsh-result-utility-actions, .gsh-result-home-actions', view.result).forEach(function (node) {
@@ -584,6 +621,7 @@
     var keyboardToggle = q('[data-gsh-ml-keyboard-toggle]');
     if (keyboardToggle) keyboardToggle.removeAttribute('data-gsh-ml-keyboard-toggle');
     clearListeningKeyboard();
+    restoreActiveResultDetail(null, false);
     restoreActiveResult(null, false);
     restoreDynamicMainActions();
     restoreAll();
@@ -596,7 +634,17 @@
 
   function handleMedia() { if (media.matches) activate(); else deactivate(); }
   function destroy() {
+    var lifecycle = resolveExclusiveView(document.body.getAttribute('data-gsh-game') || '');
+    var detailRoot = activeResultDetailRoot || lifecycle.detail;
+    var detailOwner = activeResultDetailOwner || lifecycle.detailOwner;
+    var resultRoot = activeResultRoot || lifecycle.result || detailOwner;
     deactivate();
+    if (window.GameFlow && typeof window.GameFlow.unmarkResultDetail === 'function' && (detailRoot || detailOwner)) {
+      window.GameFlow.unmarkResultDetail(detailOwner, detailRoot);
+    }
+    if (window.GameFlow && typeof window.GameFlow.unmarkResult === 'function' && resultRoot) {
+      window.GameFlow.unmarkResult(resultRoot);
+    }
     if (media.removeEventListener) media.removeEventListener('change', handleMedia); else if (media.removeListener) media.removeListener(handleMedia);
     document.removeEventListener('click', documentClick, true);
     document.removeEventListener('keydown', documentKeydown, true);
@@ -688,6 +736,8 @@
           moveOrderLength: moveOrder.length,
           activeResultRoot: activeResultRoot,
           activeResultActionCount: activeResultActions.length,
+          activeResultDetailRoot: activeResultDetailRoot,
+          activeResultDetailOwner: activeResultDetailOwner,
           syncCount: syncCount,
           mountMoveCount: mountMoveCount,
           observerCallbackCount: observerCallbackCount,

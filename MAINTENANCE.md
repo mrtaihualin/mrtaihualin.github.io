@@ -2134,3 +2134,10 @@ node scripts/check-site.js
 - Added deterministic two-round Tone/shared-Result lifecycle, action restoration, rotation countdown/pause, input exclusivity and observer-stability coverage.
 - Rendered browser verification passed for all required lifecycle states at 740×360 and for Landscape, Portrait and Desktop across all six games, with no duplicate IDs or leaked movement markers.
 - No Product/UX redesign, merge, deploy or physical-iPhone verification occurred; Draft PR #61 remains the only delivery path.
+
+## 2026-08-22 — Mobile Landscape separate Result-detail lifecycle (`PASS_LOCAL / HUMAN_GATE_NOT_STARTED`)
+
+- Added one shared explicit owner contract for separate Result Detail roots in Reading, Listening, Typing and Lego; Tone and Word Order keep their existing same-root/nested detail flows.
+- Mobile Landscape now keeps separate Detail screens exclusive, restores Result actions/root before Detail, preserves the live Detail state through Portrait rotation, and remounts the same Result/actions on Back without a second countdown.
+- Added runtime/static coverage for all four owner/detail pairs, rotation while Detail is open, Back/Replay/page-teardown cleanup, inertness, local scrolling, node identity, duplicate controls and marker cleanup.
+- Rendered browser verification passed at 740×360 → 390×844 → 740×360 for Result → Detail → Portrait → Landscape → Back → Replay. No merge, deploy or physical-iPhone verification occurred.

@@ -694,4 +694,89 @@ assert.strictEqual(legoCustom.parentNode, document.body, 'Lego Custom Input must
 window.GSHMobileLandscape.deactivate();
 assert.strictEqual(restorationMarkerCount(), 0, 'Landscape teardown must leave no restoration markers');
 
-console.log('PASS Mobile Landscape runtime lifecycle: keyboard stability, marker cleanup, Tone/shared two-round Result, action restoration, countdown rotation, exclusive inertness and observer stability');
+// Separate Result Detail roots stay exclusive, restore through rotation and return to the same live Result.
+[
+  { game: 'reading', resultId: 'end', detailId: 'rg-mistakes' },
+  { game: 'listening', resultId: 'lg-end', detailId: 'lg-mistakes' },
+  { game: 'typing', resultId: 'end', detailId: 'tg-mistakes-panel' },
+  { game: 'lego', resultId: 'lego-result', detailId: 'lego-result-detail' }
+].forEach(({ game, resultId, detailId }) => {
+  resetPage(game);
+  const source = document.createElement('div');
+  const result = document.createElement('section');
+  const detail = document.createElement('section');
+  result.id = resultId;
+  detail.id = detailId;
+  detail.style.display = 'none';
+  const groups = makeResultGroups(`${game}-detail`);
+  result.append(groups.primary, groups.utility, groups.home);
+  source.append(result, detail);
+  document.body.appendChild(source);
+  window.GSHMobileLandscape.activate();
+  window.GameFlow.markResult(result);
+  window.GSHMobileLandscape.sync();
+  assert.strictEqual(hooks.state().stage.getAttribute('data-gsh-ml-view'), 'result');
+
+  window.GameFlow.markResultDetail(result, detail);
+  result.style.display = 'none';
+  detail.style.display = 'flex';
+  window.GSHMobileLandscape.sync();
+  assertExclusive('result-detail', result, detail.querySelector('button'));
+  assert.strictEqual(hooks.state().activeResultRoot, result, `${game}: Result owner must remain active behind Detail`);
+  assert.strictEqual(hooks.state().activeResultDetailRoot, detail, `${game}: live Detail root must be tracked`);
+  assert.strictEqual(detail.parentNode, hooks.state().stage.querySelector('[data-gsh-ml-slot="exclusive-center"]'));
+  assert.strictEqual(result.parentNode, source, `${game}: Result root must restore while Detail owns the exclusive center`);
+  assert.deepStrictEqual(result.children, [groups.primary, groups.utility, groups.home], `${game}: action groups must restore into Result before Detail`);
+  stableForFrames(`${game} Result Detail`);
+
+  window.GSHMobileLandscape.deactivate();
+  assert.strictEqual(detail.parentNode, source, `${game}: Portrait must restore the same Detail root`);
+  assert.strictEqual(result.parentNode, source, `${game}: Portrait must restore the same Result root`);
+  assert.strictEqual(detail.getAttribute('data-shared-result-detail-active'), 'true', `${game}: rotation must preserve Detail activity`);
+  assert.strictEqual(restorationMarkerCount(), 0, `${game}: Portrait rotation must clear movement markers`);
+  window.GSHMobileLandscape.activate();
+  assert.strictEqual(hooks.state().stage.getAttribute('data-gsh-ml-view'), 'result-detail', `${game}: Landscape must re-enter Detail`);
+  assert.strictEqual(hooks.state().activeResultDetailRoot, detail, `${game}: rotation must retain live Detail identity`);
+
+  window.GameFlow.unmarkResultDetail(result, detail);
+  detail.style.display = 'none';
+  result.style.display = 'flex';
+  window.GSHMobileLandscape.sync();
+  assert.strictEqual(detail.parentNode, source, `${game}: Back must restore Detail to its exact marker`);
+  assert.strictEqual(hooks.state().stage.getAttribute('data-gsh-ml-view'), 'result', `${game}: Back must re-enter Result exclusivity`);
+  assert.strictEqual(document.querySelectorAll('.gsh-result-primary-actions').length, 1);
+  assert.strictEqual(document.querySelectorAll('.gsh-result-utility-actions').length, 1);
+  assert.strictEqual(document.querySelectorAll('.gsh-result-home-actions').length, 1);
+
+  result.style.display = 'none';
+  window.GSHMobileLandscape.sync();
+  assert.strictEqual(hooks.state().stage.getAttribute('data-gsh-ml-view'), 'gameplay', `${game}: Replay/new round must exit Result Detail lifecycle`);
+  assert.strictEqual(result.getAttribute('data-shared-result-active'), null);
+  assert.strictEqual(result.getAttribute('data-shared-result-detail-owner'), null);
+  assert.strictEqual(detail.getAttribute('data-shared-result-detail-active'), null);
+  window.GSHMobileLandscape.deactivate();
+  assert.strictEqual(restorationMarkerCount(), 0, `${game}: lifecycle exit must not leak markers`);
+});
+
+resetPage('reading');
+const teardownSource = document.createElement('div');
+const teardownResult = document.createElement('section');
+const teardownDetail = document.createElement('section');
+teardownResult.id = 'end';
+teardownDetail.id = 'rg-mistakes';
+teardownSource.append(teardownResult, teardownDetail);
+document.body.appendChild(teardownSource);
+window.GSHMobileLandscape.activate();
+window.GameFlow.markResultDetail(teardownResult, teardownDetail);
+teardownResult.style.display = 'none';
+teardownDetail.style.display = 'flex';
+window.GSHMobileLandscape.sync();
+window.GSHMobileLandscape.destroy();
+assert.strictEqual(teardownResult.parentNode, teardownSource, 'page teardown must restore Result root');
+assert.strictEqual(teardownDetail.parentNode, teardownSource, 'page teardown must restore Detail root first');
+assert.strictEqual(teardownResult.getAttribute('data-shared-result-active'), null, 'page teardown must clear Result activity');
+assert.strictEqual(teardownResult.getAttribute('data-shared-result-detail-owner'), null, 'page teardown must clear Result-detail ownership');
+assert.strictEqual(teardownDetail.getAttribute('data-shared-result-detail-active'), null, 'page teardown must clear Detail activity');
+assert.strictEqual(restorationMarkerCount(), 0, 'page teardown must not leak markers');
+
+console.log('PASS Mobile Landscape runtime lifecycle: keyboard stability, marker cleanup, Tone/shared two-round Result, separate Result Detail rotation, action restoration, countdown rotation, exclusive inertness and observer stability');

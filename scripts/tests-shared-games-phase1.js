@@ -72,8 +72,8 @@ test('all six games bind one shared live-node Mobile Landscape stage', () => {
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
     assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current shared CSS`);
-    assert.match(html, /css\/mobile-landscape\.css\?v=1/, `${id}: missing shared landscape CSS`);
-    assert.match(html, /js\/core\/mobile-landscape\.js\?v=3/, `${id}: missing shared landscape controller`);
+    assert.match(html, /css\/mobile-landscape\.css\?v=2/, `${id}: missing shared landscape CSS`);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=4/, `${id}: missing shared landscape controller`);
     assert.match(html, /viewport-fit=cover/, `${id}: missing safe-area viewport contract`);
   }
   assert.doesNotMatch(sharedCss, /--gsh-safe-l|max-height:600px|data-gsh-game="lego"\] #baseplate \.slot-menu/);
@@ -180,7 +180,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=40/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=12/, 'Lego must load its locked-flow runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=13/, 'Lego must load its locked-flow runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -200,8 +200,8 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
   assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must contain only the full sentence and zh-TW translation before actions');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=12/, 'Lego Result must use the shared flow runtime');
-  assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=12/, 'Lego must load the landscape-aware menu runtime');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=13/, 'Lego Result must use the shared flow runtime');
+  assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=13/, 'Lego must load the landscape-aware menu runtime');
   for (const role of ['replay','print','detail-action','switch','cta','home']) {
     assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
   }
@@ -335,11 +335,11 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
     assert.match(g.htmlText, /js\/games\/round-report\.js\?v=2/, `${g.id}: must load shared print renderer`);
-    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=12/, `${g.id}: must load daily Result runtime`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=13/, `${g.id}: must load daily Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
   assert.match(legoHtml, /js\/games\/round-report\.js\?v=2/);
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=12/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=13/);
   assert.match(legoApp, /RoundReport\.openPrint/);
   assert.match(roundReport, /@page\{size:A4 portrait/);
   assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);
@@ -352,6 +352,22 @@ test('all five games provide read-only mistake review after a round', () => {
   for (const g of games) {
     assert.match(g.htmlText + g.appText, /查看錯題|錯題複習|答錯的題目|打錯的字/, `${g.id}: ไม่มี mistake review`);
   }
+});
+
+test('separate Result Detail screens use the shared explicit owner lifecycle', () => {
+  const reading = games.find((g) => g.id === 'reading').appText;
+  const listening = games.find((g) => g.id === 'listening').appText;
+  const typing = games.find((g) => g.id === 'typing').appText;
+  const tone = games.find((g) => g.id === 'tone').appText;
+  const wordOrder = games.find((g) => g.id === 'wordorder').appText;
+  const lego = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  [reading, listening, typing, lego].forEach((source, index) => {
+    const game = ['reading', 'listening', 'typing', 'lego'][index];
+    assert.match(source, /GameFlow\.markResultDetail\(/, `${game}: Detail open must declare its Result owner`);
+    assert.match(source, /GameFlow\.unmarkResultDetail\(/, `${game}: Detail back must close explicit ownership`);
+  });
+  assert.doesNotMatch(tone, /markResultDetail|unmarkResultDetail/, 'Tone shares one Result/detail root and must remain unchanged');
+  assert.doesNotMatch(wordOrder, /markResultDetail|unmarkResultDetail/, 'Word Order detail remains inside its Result root');
 });
 
 test('Guest/Login Free reports contain facts only and no personalized analysis or recommendation', () => {

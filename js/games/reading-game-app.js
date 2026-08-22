@@ -281,12 +281,18 @@ function rgShowMistakes(){
       }).join('');
     }
   }
-  var endEl=document.getElementById('end'); if(endEl)endEl.style.display='none';
-  var m=document.getElementById('rg-mistakes'); if(m)m.style.display='flex';
+  var endEl=document.getElementById('end');
+  var m=document.getElementById('rg-mistakes');
+  if(window.GameFlow&&endEl&&m)GameFlow.markResultDetail(endEl,m);
+  if(endEl)endEl.style.display='none';
+  if(m)m.style.display='flex';
 }
 function rgBackToEndFromMistakes(){
-  var m=document.getElementById('rg-mistakes'); if(m)m.style.display='none';
-  var endEl=document.getElementById('end'); if(endEl)endEl.style.display='flex';
+  var m=document.getElementById('rg-mistakes');
+  var endEl=document.getElementById('end');
+  if(window.GameFlow&&endEl&&m)GameFlow.unmarkResultDetail(endEl,m);
+  if(m)m.style.display='none';
+  if(endEl)endEl.style.display='flex';
 }
 var roundHadGuide=false; // (เลิกใช้แล้ว — คำใบ้เป็นรายคำ) เก็บตัวแปรไว้กันโค้ดเดิมอ้างถึง
 var isWordPractice=false; // ?word= ฝึกคำเดียว / ทบทวนหลังจำครบ = ไม่คิดคะแนน/ลีก (G + กฎ15)

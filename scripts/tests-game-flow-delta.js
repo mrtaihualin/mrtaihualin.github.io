@@ -81,9 +81,11 @@ const storage = {};
 const document = {
   readyState: 'complete',
   listeners: {},
+  nodes: [],
   activeElement: null,
   createElement: (tag) => new FakeElement(tag),
   querySelector: () => null,
+  querySelectorAll() { return this.nodes; },
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
 };
 const window = {
@@ -146,6 +148,21 @@ assert.strictEqual(GameFlow.unmarkResult(result), true);
 assert.strictEqual(result.getAttribute('data-shared-result-ui'), 'v1', 'persistent Result identity must remain available');
 assert.strictEqual(result.getAttribute('data-shared-result-active'), null, 'Result activity must close explicitly');
 
+const separateDetail = new FakeElement('section');
+document.nodes = [result, separateDetail];
+assert.strictEqual(GameFlow.markResultDetail(result, separateDetail), true);
+assert.strictEqual(result.getAttribute('data-shared-result-active'), 'true');
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-ui'), 'v1');
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-active'), 'true');
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-owner'), result.getAttribute('data-shared-result-detail-owner'));
+assert.strictEqual(GameFlow.unmarkResultDetail(result, separateDetail), true);
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-active'), null);
+assert.strictEqual(separateDetail.getAttribute('data-shared-result-detail-owner'), null);
+assert.strictEqual(result.getAttribute('data-shared-result-detail-owner'), null);
+assert.strictEqual(result.getAttribute('data-shared-result-active'), 'true', 'Back from Detail must preserve active Result ownership');
+GameFlow.unmarkResult(result);
+document.nodes = [];
+
 assert.strictEqual(GameFlow.feedbackCopy(undefined, 0.5), null);
 assert.strictEqual(GameFlow.recordResultFeedback('test', 1, 2), null);
 assert(!flowSource.includes('gsh_result_feedback_v1'), 'Guest/Login result must not persist cross-round feedback');
@@ -190,6 +207,13 @@ GameFlow.enhanceResult({
 const truthMeta = enterResult.querySelector('[data-game-result-meta="v1"]');
 assert.strictEqual(truthMeta.querySelector('.gsh-result-completed').textContent, '完成 3 / 3');
 assert.strictEqual(truthMeta.querySelector('.gsh-result-first-correct').textContent, '首次答對 1 / 3', 'later correction must not count as first-attempt proof');
+const countdownDetail = new FakeElement('section');
+document.nodes = [enterResult, countdownDetail];
+GameFlow.markResultDetail(enterResult, countdownDetail);
+while (timerQueue.length) timerQueue.shift()();
+assert.strictEqual(replayButton.clicks, 1, 'opening separate Result Detail must cancel rather than restart the 7-second replay countdown');
+GameFlow.unmarkResultDetail(enterResult, countdownDetail);
+document.nodes = [];
 
 delete storage.gsh_srs_quota_v1;
 const due = Array.from({ length: 8 }, (_, i) => ({ id: `d${i}` }));
@@ -231,7 +255,7 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=12'), `${file} must load the shared flow`);
+  assert(html.includes('js/games/game-flow.js?v=13'), `${file} must load the shared flow`);
   assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
   assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
   assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);

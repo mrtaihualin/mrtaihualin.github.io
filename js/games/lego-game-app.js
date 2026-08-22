@@ -743,13 +743,19 @@ function legoStartNewSession(){
 }
 
 function legoShowDetail(){
-  document.getElementById('lego-result').classList.add('hidden');
-  document.getElementById('lego-result-detail').classList.remove('hidden');
+  const result=document.getElementById('lego-result');
+  const detail=document.getElementById('lego-result-detail');
+  if(window.GameFlow)GameFlow.markResultDetail(result,detail);
+  result.classList.add('hidden');
+  detail.classList.remove('hidden');
 }
 
 function legoHideDetail(){
-  document.getElementById('lego-result-detail').classList.add('hidden');
-  document.getElementById('lego-result').classList.remove('hidden');
+  const result=document.getElementById('lego-result');
+  const detail=document.getElementById('lego-result-detail');
+  if(window.GameFlow)GameFlow.unmarkResultDetail(result,detail);
+  detail.classList.add('hidden');
+  result.classList.remove('hidden');
 }
 
 function legoPrintResult(){

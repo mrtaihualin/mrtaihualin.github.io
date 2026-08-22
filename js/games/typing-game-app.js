@@ -1226,13 +1226,19 @@ function tgRenderMistakes(){
 function tgShowMistakes(){
   try{ if(typeof gtag==='function') gtag('event','typing_game_mistakes_open',{category:'game'}); }catch(e){}
   tgRenderMistakes();
-  document.getElementById('end').style.display='none';
-  var p=document.getElementById('tg-mistakes-panel'); if(p)p.style.display='flex';
+  var endEl=document.getElementById('end');
+  var p=document.getElementById('tg-mistakes-panel');
+  if(window.GameFlow&&endEl&&p)GameFlow.markResultDetail(endEl,p);
+  if(endEl)endEl.style.display='none';
+  if(p)p.style.display='flex';
 }
 function tgHideMistakes(){
   try{ if(typeof gtag==='function') gtag('event','typing_game_mistakes_close',{category:'game'}); }catch(e){}
-  var p=document.getElementById('tg-mistakes-panel'); if(p)p.style.display='none';
-  document.getElementById('end').style.display='flex';
+  var p=document.getElementById('tg-mistakes-panel');
+  var endEl=document.getElementById('end');
+  if(window.GameFlow&&endEl&&p)GameFlow.unmarkResultDetail(endEl,p);
+  if(p)p.style.display='none';
+  if(endEl)endEl.style.display='flex';
 }
 
 function restart(){

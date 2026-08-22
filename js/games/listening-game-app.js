@@ -1250,12 +1250,14 @@
 
   function showMistakes() {
     renderMistakes();
+    if (window.GameFlow) window.GameFlow.markResultDetail(el.endScreen, el.mistakeScreen);
     el.endScreen.style.display = 'none';
     el.mistakeScreen.style.display = 'flex';
     try { if (window.gtag) gtag('event', 'listening_game_view_mistakes', { category: 'game', count: state.log.filter(function (e) { return !e.correct; }).length }); } catch (e) {}
   }
 
   function backToEndFromMistakes() {
+    if (window.GameFlow) window.GameFlow.unmarkResultDetail(el.endScreen, el.mistakeScreen);
     el.mistakeScreen.style.display = 'none';
     el.endScreen.style.display = 'flex';
   }
