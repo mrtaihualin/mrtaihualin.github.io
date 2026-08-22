@@ -252,17 +252,8 @@
         setControlDisabled(keyboardToggle, true);
       }
     } else if (game === 'word-order') {
-      var reset = q('[onclick*="woResetSentence("]');
-      tools = nodesFor([
-        '#wo-howto-btn',
-        '#wo-hint-btn',
-        '#wo-remember-btn',
-        '#rg-pron-toggle',
-        '#rg-en-toggle',
-        '#wo-zh-word-toggle',
-        '#font-toggle-slot',
-        '#rg-particle-toggle'
-      ]);
+      var reset = q('.btn-row .btn-secondary:not(#wo-remember-btn):not(#wo-next-btn)');
+      tools = nodesFor(['#wo-howto-btn', '#wo-hint-btn', '#wo-remember-btn']);
       if (reset) tools.push(reset);
     } else if (game === 'lego') {
       tools = nodesFor(['#lego-howto-btn']);
@@ -278,9 +269,7 @@
 
   function mountStaticGameNodes(game) {
     mountExistingNode(q('.rg-ctl-wrap'), slot('shared-controls'));
-    if (game !== 'word-order') {
-      mountExistingNode(q('#rg-login-slot'), slot('account'));
-    }
+    mountExistingNode(q('#rg-login-slot'), slot('account'));
     if (game === 'tone') {
       mountMany(['#tf-banner'], slot('question'));
       var toneBody = q('#tf-body');
@@ -312,12 +301,7 @@
   function assignSides(container, game) {
     if (!container) return;
     container.setAttribute('data-gsh-ml-split', game);
-    var children;
-    if (game === 'word-order') {
-      children = Array.prototype.slice.call(container.children);
-    } else {
-      children = Array.prototype.filter.call(container.children, isRenderableControl);
-    }
+    var children = Array.prototype.filter.call(container.children, isRenderableControl);
     Array.prototype.forEach.call(container.children, function (child) { child.removeAttribute('data-gsh-side'); });
     var leftCount;
     if (game === 'tone') {
