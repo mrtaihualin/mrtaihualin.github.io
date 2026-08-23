@@ -67,6 +67,7 @@ check('migration keeps RPCs invoker-scoped and revokes browser roles', /security
 check('client queue is account-bound and minimized', /phase1_practice_event_pending_v1/.test(client) && /function minimizedReport/.test(client) && !/user_answer/.test((client.match(/function minimizedReport[\s\S]*?\n  \}/) || [''])[0]));
 check('Guest never queues Played evidence', /if \(!owner \|\| !payload\) return Promise\.resolve\(false\)/.test(client));
 check('network failure keeps a retryable queue and online flush exists', /window\.addEventListener\('online', flush\)/.test(client) && /function flush\(\)/.test(client));
+check('HTTP 400 and 409 are permanent while auth, quota, server and network failures remain retryable', /status === 400 \|\| status === 409/.test(client) && !/status === 401/.test((client.match(/function permanentError[\s\S]*?\n  \}/) || [''])[0]) && !/status === 429/.test((client.match(/function permanentError[\s\S]*?\n  \}/) || [''])[0]));
 check('completed RoundReport submits through the Played-evidence client', /PracticeEvents\.submitReport\(options\.report\)/.test(gameFlow));
 check('account switch clears pending Played evidence', /'phase1_practice_event_pending_v1'/.test(authWidget));
 check('personal content derives Played copy from server evidence, never provenance', /playedFor\(item, kind\)/.test(personalContent) && /evidence && evidence\.played/.test(personalContent) && !/provenance\(item\)[\s\S]{0,200}再練習/.test(personalContent));
@@ -202,6 +203,33 @@ async function waitFor(predicate) {
   if (retryStarted) h.invocations[1].resolve({ data: { ok: true }, error: null });
   await retry;
   check('successful retry removes only its acknowledged report', h.context.PracticeEvents.pendingCount() === 0);
+}
+
+{
+  const h = runtimeHarness();
+  const request = h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  await tick();
+  h.invocations[0].resolve({ data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { status: 400 } } });
+  await request;
+  check('Supabase HTTP 400 context is treated as permanent and removed from the queue', h.context.PracticeEvents.pendingCount() === 0);
+}
+
+{
+  const h = runtimeHarness();
+  const request = h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  await tick();
+  h.invocations[0].resolve({ data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { status: 409 } } });
+  await request;
+  check('Supabase HTTP 409 context is treated as permanent and removed from the queue', h.context.PracticeEvents.pendingCount() === 0);
+}
+
+for (const statusCode of [401, 429, 500, 503]) {
+  const h = runtimeHarness();
+  const request = h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  await tick();
+  h.invocations[0].resolve({ data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { status: statusCode } } });
+  await request;
+  check('HTTP ' + statusCode + ' remains retryable in the pending queue', h.context.PracticeEvents.pendingCount() === 1);
 }
 
 {

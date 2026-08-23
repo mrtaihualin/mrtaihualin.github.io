@@ -66,7 +66,20 @@
       })
     };
   }
+  function resultHttpStatus(result) {
+    try {
+      var error = result && result.error;
+      var value = error && (error.status || error.statusCode || (error.context && error.context.status));
+      var status = Number(value);
+      return Number.isInteger(status) && status > 0 ? status : 0;
+    } catch (e) { return 0; }
+  }
   function permanentError(result) {
+    var status = resultHttpStatus(result);
+    // Supabase FunctionsHttpError keeps the Edge response status in error.context.
+    // 400 means the payload/content identity is permanently invalid; 409 is an
+    // idempotency/replay conflict. Neither becomes valid by retrying later.
+    if (status === 400 || status === 409) return true;
     var code = String(result && result.data && result.data.error || result && result.error && result.error.message || '');
     return /^(?:invalid_|duplicate_|unknown_content_ref|replay_conflict)/.test(code);
   }
