@@ -77,7 +77,9 @@ jobs:
         run: |
           mkdir -p deliverable
           PACKAGE="deliverable/mobile-landscape-pr61-${FINAL_SHORT}-netlify-drop.zip"
+          rm -rf source/_pr61-human-gate-build/.netlify
           find source/_pr61-human-gate-build -name '.DS_Store' -delete
+          test ! -e source/_pr61-human-gate-build/.netlify
           (cd source/_pr61-human-gate-build && zip -qr "../../${PACKAGE}" .)
           HASH="$(sha256sum "$PACKAGE" | awk '{print $1}')"
           cat > deliverable/HUMAN_GATE_RECEIPT.txt <<EOF
@@ -93,6 +95,7 @@ jobs:
           READY_FOR_MERGE=NO
           EOF
           unzip -l "$PACKAGE" | grep -F '__human_gate__.html'
+          if unzip -l "$PACKAGE" | grep -F '.netlify/'; then exit 1; fi
           sha256sum "$PACKAGE"
 
       - name: Upload exact Human Gate artifact
