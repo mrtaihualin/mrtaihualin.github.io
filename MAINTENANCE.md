@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-23 Asia/Bangkok** — Game Search V2.3 + Global Search game integration release
+**Updated: 2026-08-23 Asia/Bangkok** — Search entitlement correction
+
+## 2026-08-23 — Game/Global Search Login Free entitlement (`PASS_LOCAL / RELEASE_AUTHORIZED`)
+
+- Reconciled only the locked entitlement Delta onto fresh `origin/main` `58535a6…`. Guest `games.html` now renders no dropdown/input/Search button and shows the locked login message only after Auth resolves; Login Free receives one input that accepts either a direct game name or a learning problem, and every non-empty search claims the existing authenticated daily quota before any classifier result or direct navigation.
+- Global Search still uses `GameProblemSearch` as its only game-intent classifier, but every direct/problem game intent now exposes only the canonical `/games.html` hub. Guest keeps public Global Search without quota calls; Login Free direct/problem intent shares the same one-success/day endpoint, while exhausted/service-failure states fail closed and generic/Gemini practice destinations cannot leak a per-game URL.
+- Added executable entitlement coverage for Guest zero-call/no-controls, direct/problem first success, both second-search denial orders, bidirectional Game↔Global shared quota, hub-only results and Gemini rejection. Entitlement runtime 10/10, adapter 5/5, static/security 18/18, locked Product 52/52, Frozen 120/120, canonical classification/recommendation 736/736, existing Search suites, syntax, diff-check and the full 1,002-file site gate pass. The V2.3 corpus, Frozen answers, classifier mapping, SQL and Edge Function are unchanged; no Supabase mutation occurred.
 
 ## 2026-08-23 — Game Search V2.3 + Global Search game integration (`PASS_LOCAL / RELEASE_AUTHORIZED`)
 

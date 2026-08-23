@@ -1,12 +1,15 @@
 // ===================================================================
-// GAMES SEARCH UI — Game Search V2.3
-// Direct 6-game selection is unlimited. Natural-language Problem Search is
-// Login Free 1/day and uses server-verified quota. No raw query is logged.
+// GAMES SEARCH UI — locked Login Free entitlement
+// Guest sees no usable search controls. Login Free receives one successful
+// game-name OR learning-problem search per account/Taipei day through the
+// existing server quota. No raw query or client-supplied user id is sent.
 // ===================================================================
 (function () {
   'use strict';
 
   var PENDING_KEY = 'problem_search_pending_v1';
+  var GUEST_MESSAGE = '登入後可搜尋遊戲名稱或輸入你的學習問題。';
+  var LIMIT_MESSAGE = '今天的遊戲搜尋已使用 1 次。付費方案可不限次數搜尋。';
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -14,56 +17,13 @@
     });
   }
 
-  function show(out, html) {
-    out.style.display = 'block';
-    out.innerHTML = html;
-  }
-
-  function renderError(out, message) {
-    show(out, '<div class="gh-search-empty">' + esc(message) + '</div>');
-  }
-
-  function directNavigate(entry) {
-    if (!entry || !entry.href) return;
-    window.location.href = entry.href;
-  }
-
   function authState() {
     var auth = window.SITE_AUTH;
     if (!auth) return { resolved: false, unavailable: false, user: null };
-    if (auth.ready === false || auth.authError === 'unavailable') {
+    if (auth.ready === false || auth.authError === 'unavailable' || auth.authError === 'session_unavailable') {
       return { resolved: true, unavailable: true, user: null };
     }
     return { resolved: !!auth.authResolved, unavailable: false, user: auth.user || null };
-  }
-
-  function waitForAuth() {
-    var state = authState();
-    if (state.resolved) return Promise.resolve(state);
-
-    return new Promise(function (resolve) {
-      var settled = false;
-      var timer = setTimeout(function () {
-        if (settled) return;
-        settled = true;
-        resolve({ resolved: false, unavailable: true, user: null });
-      }, 5000);
-
-      if (!window.SITE_AUTH || typeof window.SITE_AUTH.onChange !== 'function') {
-        clearTimeout(timer);
-        resolve({ resolved: true, unavailable: true, user: null });
-        return;
-      }
-
-      window.SITE_AUTH.onChange(function () {
-        if (settled) return;
-        var next = authState();
-        if (!next.resolved) return;
-        settled = true;
-        clearTimeout(timer);
-        resolve(next);
-      });
-    });
   }
 
   function requestId() {
@@ -135,16 +95,12 @@
     });
   }
 
-  function claimProblemSearch(user, query) {
+  function claimGameSearch(user, query) {
     var uid = String(user && user.id || '');
-    if (!uid) return Promise.resolve({ allowed: false, reason: 'guest' });
+    if (!uid) return Promise.resolve({ allowed: false, reason: 'auth_unavailable' });
 
     var queryKey = window.GameProblemSearch.compact(query);
-    var pending = readPending(uid, queryKey) || {
-      uid: uid,
-      queryKey: queryKey,
-      requestId: requestId()
-    };
+    var pending = readPending(uid, queryKey) || { uid: uid, queryKey: queryKey, requestId: requestId() };
     writePending(pending);
 
     return getAccessToken().then(function (token) {
@@ -153,19 +109,13 @@
       function attempt(remaining) {
         return postQuota(token, pending.requestId).then(function (result) {
           if (result.ok && result.body && result.body.ok === true && result.body.allowed === true) {
-            return {
-              allowed: true,
-              requestId: pending.requestId,
-              idempotent: result.body.idempotent === true,
-              used: Number(result.body.used || 1),
-              cap: Number(result.body.cap || 1)
-            };
+            return { allowed: true, requestId: pending.requestId, idempotent: result.body.idempotent === true };
           }
           if (result.status === 429 || (result.body && result.body.reason === 'limit')) {
             clearPending(pending.requestId);
-            return { allowed: false, reason: 'limit', used: Number(result.body.used || 1), cap: 1 };
+            return { allowed: false, reason: 'limit' };
           }
-          if (result.status === 401) return { allowed: false, reason: 'auth_unavailable' };
+          if (result.status === 401 || result.status === 403) return { allowed: false, reason: 'auth_unavailable' };
           if (remaining > 0) return attempt(remaining - 1);
           return { allowed: false, reason: 'service_error' };
         }).catch(function () {
@@ -189,109 +139,147 @@
   function renderProblemResult(out, analysis) {
     var cls = analysis.classification || {};
     var recs = analysis.recommendations || [];
-    if (recs.length < 2) {
-      renderError(out, '搜尋結果暫時不完整，請稍後再試。');
-      return false;
-    }
+    if (recs.length < 2) return false;
 
     var intro;
-    if (cls.directRoute) {
-      intro = '<div class="gh-search-match-note">依照你的問題，最適合先練這兩個：</div>';
-    } else if (cls.status === 'UNSUPPORTED_NOW' || cls.status === 'AMBIGUOUS') {
-      intro = '<div class="gh-search-match-note">這個問題目前沒有直接對應的遊戲，先給你兩個最接近的練習：</div>';
-    } else {
-      intro = '<div class="gh-search-match-note">我還不能百分之百確定，先給你兩個最接近的練習：</div>';
-    }
+    if (cls.directRoute) intro = '依照你的問題，最適合先練這兩個：';
+    else if (cls.status === 'UNSUPPORTED_NOW' || cls.status === 'AMBIGUOUS') intro = '這個問題目前沒有直接對應的遊戲，先給你兩個最接近的練習：';
+    else intro = '我還不能百分之百確定，先給你兩個最接近的練習：';
 
-    show(out, intro + recommendationCard(recs[0], 'primary') + recommendationCard(recs[1], 'secondary'));
+    out.style.display = 'block';
+    out.innerHTML = '<div class="gh-search-match-note">' + esc(intro) + '</div>' +
+      recommendationCard(recs[0], 'primary') + recommendationCard(recs[1], 'secondary') +
+      '<div class="gh-search-limit">' + esc(LIMIT_MESSAGE) + '</div>';
     return true;
   }
 
-  function init() {
+  function renderMessage(out, message) {
+    out.style.display = 'block';
+    out.innerHTML = '<div class="gh-search-empty">' + esc(message) + '</div>';
+  }
+
+  function directNavigate(entry) {
+    if (entry && entry.href) window.location.href = entry.href;
+  }
+
+  function mountLoginSearch(gate, user) {
+    var uid = String(user && user.id || '');
+    gate.setAttribute('data-search-owner', uid);
+    gate.innerHTML = '<div class="gh-search-prompt">搜尋遊戲</div>' +
+      '<div class="gh-search-row">' +
+        '<input type="search" id="gameSearchInput" class="gh-search-input" aria-label="搜尋遊戲名稱或學習問題" placeholder="輸入遊戲名稱或你的學習問題..." autocomplete="off" maxlength="200">' +
+        '<button type="button" id="gameSearchBtn" class="gh-search-btn">搜尋</button>' +
+      '</div>' +
+      '<div id="gameSearchResult" class="gh-search-result" aria-live="polite"></div>';
+
     var input = document.getElementById('gameSearchInput');
-    var select = document.getElementById('gameSearchSelect');
     var btn = document.getElementById('gameSearchBtn');
     var out = document.getElementById('gameSearchResult');
-    if (!input || !select || !btn || !out) return;
-
-    select.addEventListener('change', function () {
-      var id = select.value;
-      if (!id || !window.SEARCH_INDEX || !Array.isArray(window.SEARCH_INDEX.GAMES)) return;
-      var entry = window.SEARCH_INDEX.GAMES.find(function (row) { return row.id === id; });
-      if (entry) directNavigate(entry);
-    });
+    if (!input || !btn || !out) return;
 
     var running = false;
+    function disableSearch() {
+      input.disabled = true;
+      btn.disabled = true;
+    }
 
     function run() {
-      if (running) return;
+      if (running || input.disabled) return;
       var query = input.value.trim();
       if (!query) return;
 
-      if (!window.GameProblemSearch || !window.SEARCH_INDEX) {
-        renderError(out, '搜尋功能還沒載入完成，重新整理頁面再試一次。');
+      var state = authState();
+      if (!state.resolved || state.unavailable || !state.user || String(state.user.id || '') !== uid) {
+        disableSearch();
+        renderMessage(out, '登入狀態暫時無法確認，遊戲搜尋目前不可用。');
         return;
       }
-
-      var analysis = window.GameProblemSearch.analyze(query);
-      if (analysis.kind === 'direct-game' && analysis.directEntry) {
-        directNavigate(analysis.directEntry);
+      if (!window.GameProblemSearch || !window.SEARCH_INDEX) {
+        disableSearch();
+        renderMessage(out, '搜尋功能還沒載入完成，重新整理頁面再試一次。');
         return;
       }
 
       running = true;
       btn.disabled = true;
-      show(out, '<div class="gh-search-empty">搜尋中…</div>');
+      renderMessage(out, '搜尋中…');
 
-      waitForAuth().then(function (auth) {
-        if (auth.unavailable || !auth.resolved) {
-          renderError(out, '登入狀態暫時無法確認，問題搜尋目前不可用。直接選擇上面的 6 個遊戲仍可正常使用。');
-          return null;
+      // Locked order: authenticated account -> shared server quota -> analyze/action.
+      claimGameSearch(state.user, query).then(function (quota) {
+        var live = authState();
+        if (!live.resolved || live.unavailable || !live.user || String(live.user.id || '') !== uid) {
+          disableSearch();
+          renderMessage(out, '登入狀態已變更，這次不顯示搜尋結果。');
+          return;
         }
-        if (!auth.user) {
-          renderError(out, '問題搜尋提供給登入會員每天 1 次。你仍可直接選擇上面的 6 個遊戲，不限次數。');
-          return null;
-        }
-        return claimProblemSearch(auth.user, query);
-      }).then(function (quota) {
-        if (!quota) return;
         if (!quota.allowed) {
-          if (quota.reason === 'limit') {
-            renderError(out, '今天的問題搜尋已使用 1 次。你仍可直接選擇 6 個遊戲，不限次數。');
-          } else if (quota.reason === 'auth_unavailable') {
-            renderError(out, '登入狀態暫時無法確認，這次不顯示問題分析結果。');
-          } else {
-            renderError(out, '問題搜尋暫時無法使用，請稍後再試。');
-          }
+          disableSearch();
+          if (quota.reason === 'limit') renderMessage(out, LIMIT_MESSAGE);
+          else renderMessage(out, '遊戲搜尋暫時無法使用，請稍後再試。');
           return;
         }
 
-        var displayed = renderProblemResult(out, analysis);
-        if (displayed) clearPending(quota.requestId);
+        var analysis = window.GameProblemSearch.analyze(query);
+        clearPending(quota.requestId);
+        if (analysis.kind === 'direct-game' && analysis.directEntry) {
+          directNavigate(analysis.directEntry);
+          return;
+        }
+
+        disableSearch();
+        if (!renderProblemResult(out, analysis)) renderMessage(out, LIMIT_MESSAGE);
 
         if (typeof gtag === 'function') {
-          try {
-            gtag('event', 'game_search', {
-              category: 'game',
-              confident: !!(analysis.classification && analysis.classification.directRoute)
-            });
-          } catch (_) {}
+          try { gtag('event', 'game_search', { category: 'game', confident: !!(analysis.classification && analysis.classification.directRoute) }); } catch (_) {}
         }
       }).catch(function () {
-        renderError(out, '問題搜尋暫時無法使用，請稍後再試。');
+        disableSearch();
+        renderMessage(out, '遊戲搜尋暫時無法使用，請稍後再試。');
       }).finally(function () {
         running = false;
-        btn.disabled = false;
+        if (!input.disabled) btn.disabled = false;
       });
     }
 
     btn.addEventListener('click', run);
     input.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        run();
-      }
+      if (event.key === 'Enter') { event.preventDefault(); run(); }
     });
+  }
+
+  function init() {
+    var gate = document.getElementById('gameSearchGate');
+    if (!gate) return;
+    var timeout = null;
+
+    function renderAuth() {
+      var state = authState();
+      if (!state.resolved) {
+        gate.removeAttribute('data-search-owner');
+        gate.innerHTML = '<div class="gh-search-auth-message">正在確認登入狀態…</div>';
+        return;
+      }
+      if (timeout) { clearTimeout(timeout); timeout = null; }
+      if (state.unavailable) {
+        gate.removeAttribute('data-search-owner');
+        gate.innerHTML = '<div class="gh-search-auth-message">登入狀態暫時無法確認，遊戲搜尋目前不可用。</div>';
+        return;
+      }
+      if (!state.user) {
+        gate.removeAttribute('data-search-owner');
+        gate.innerHTML = '<div class="gh-search-auth-message">' + esc(GUEST_MESSAGE) + '</div>';
+        return;
+      }
+      var uid = String(state.user.id || '');
+      if (gate.getAttribute('data-search-owner') === uid && document.getElementById('gameSearchInput')) return;
+      mountLoginSearch(gate, state.user);
+    }
+
+    renderAuth();
+    timeout = setTimeout(function () {
+      if (!authState().resolved) gate.innerHTML = '<div class="gh-search-auth-message">登入狀態暫時無法確認，遊戲搜尋目前不可用。</div>';
+    }, 5000);
+    if (window.SITE_AUTH && typeof window.SITE_AUTH.onChange === 'function') window.SITE_AUTH.onChange(renderAuth);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -17,6 +17,15 @@
 })(typeof self !== 'undefined' ? self : this, function (SearchEngine, GameProblemSearch, SEARCH_INDEX) {
   'use strict';
 
+  var GAME_HUB_ENTRY = {
+    id: 'game-hub',
+    category: 'game-hub',
+    access: 'free',
+    title: '泰語遊戲中心',
+    desc: '登入後可搜尋遊戲名稱或輸入你的學習問題。',
+    href: '/games.html'
+  };
+
   function nonGamePool() {
     var all = SEARCH_INDEX && Array.isArray(SEARCH_INDEX.ALL) ? SEARCH_INDEX.ALL : [];
     return all.filter(function (entry) { return entry && entry.category !== 'practice'; });
@@ -53,20 +62,14 @@
   }
 
   // Related Results contract for the Global public area: max 3.
-  // Direct game names are always eligible. Natural-language problem game
-  // recommendations are eligible only after the caller has passed entitlement.
-  function related(plan, allowProblemSearch) {
+  // Every direct/problem game intent is intentionally collapsed to the single
+  // public Game Hub. Per-game destinations stay behind the Login Free quota on
+  // games.html and can never leak from legacy public ranking.
+  function related(plan) {
     var out = [], seen = Object.create(null);
-    var analysis = plan && plan.gameAnalysis;
     var intent = gameIntent(plan);
 
-    if (intent === 'direct') {
-      addUnique(out, seen, analysis.directEntry, 'game-direct');
-    } else if (intent === 'problem' && allowProblemSearch) {
-      (analysis.recommendations || []).slice(0, 2).forEach(function (row) {
-        addUnique(out, seen, row && row.entry, 'game-problem');
-      });
-    }
+    if (intent === 'direct' || intent === 'problem') addUnique(out, seen, GAME_HUB_ENTRY, 'game-hub');
 
     (plan && plan.publicResults || []).forEach(function (row) {
       if (out.length >= 3) return;
@@ -80,6 +83,7 @@
     analyze: analyze,
     gameIntent: gameIntent,
     related: related,
-    nonGamePool: nonGamePool
+    nonGamePool: nonGamePool,
+    gameHubEntry: GAME_HUB_ENTRY
   };
 });
