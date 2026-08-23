@@ -7,11 +7,12 @@
   var ACCOUNT_KEY='gsh_study_plan_account_v1';
   var GUEST_KEY='gsh_study_plan_guest_v1';
   var PLAN_KEY='gsh_auto_plan_session_v1';
+  var PROPOSAL_KEY='gsh_time_plan_proposal_v1';
   var IDLE_MS=3*60*1000;
   var SEGMENT_SECONDS=10*60;
   var saveCounter=0,started=false,paused=false,lastInteraction=Date.now();
   var currentGame=gameFromPath(location.pathname);
-  var cachedState=null,cachedStateKey='',timerStarted=false,planEnsureInFlight=false,initializedOwner=null;
+  var cachedState=null,cachedStateKey='',timerStarted=false,confirmInFlight=false,initializedOwner=null;
 
   function safeRead(key,fallback){
     try{var raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(_){return fallback;}
@@ -19,6 +20,9 @@
   function safeWrite(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch(_){}}
   function sessionRead(){try{var x=JSON.parse(sessionStorage.getItem(PLAN_KEY)||'null');return x&&x.active?x:null;}catch(_){return null;}}
   function sessionWrite(v){try{if(v)sessionStorage.setItem(PLAN_KEY,JSON.stringify(v));else sessionStorage.removeItem(PLAN_KEY);}catch(_){}}
+  function proposalRead(){try{var x=JSON.parse(sessionStorage.getItem(PROPOSAL_KEY)||'null');return x&&x.version===1?x:null;}catch(_){return null;}}
+  function proposalWrite(v){try{if(v)sessionStorage.setItem(PROPOSAL_KEY,JSON.stringify(v));else sessionStorage.removeItem(PROPOSAL_KEY);}catch(_){}}
+  function clone(v){return JSON.parse(JSON.stringify(v));}
   function taipeiDay(){
     try{
       var parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
@@ -77,19 +81,12 @@
     return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
   }
 
-  function takeNextGame(){
-    var s=state(),loggedIn=!!auth().user;
-    var n=Core.nextFromRotation(s.rotation,s.performance,loggedIn);
-    s.rotation=n.rotation;persist(s);
-    return n.game;
-  }
-
   function previewGames(count){
     var s=state(),loggedIn=!!auth().user,rot=JSON.parse(JSON.stringify(s.rotation||{})),out=[];
     for(var i=0;i<count;i++){
       var n=Core.nextFromRotation(rot,s.performance,loggedIn);out.push(n.game);rot=n.rotation;
     }
-    return out;
+    return {games:out,rotation:rot};
   }
 
   function startPlan(minutes){
@@ -97,18 +94,36 @@
     if(!a.resolved||a.unavailable)return {ok:false,reason:'auth_unavailable'};
     var valid=Core.validateMinutes(minutes,!!a.user);
     if(!valid.ok)return {ok:false,reason:'minutes',min:valid.min,max:valid.max};
-    var first=takeNextGame();
-    var plan={
-      version:1,active:true,requestId:uuid(),quotaCommitted:false,
-      owner:ownerIdentity(),targetMinutes:valid.minutes,segmentSeconds:0,currentGame:first,
-      roundInProgress:false,atBoundary:false,systemNavigation:true,
-      initialGames:previewGames(a.user?2:1),startedAt:Date.now()
+    var preview=previewGames(a.user?2:1);
+    var proposal={
+      version:1,requestId:uuid(),owner:ownerIdentity(),minutes:valid.minutes,
+      recommendedItems:preview.games.map(function(game){
+        return {game:game,level:Core.defaultLevel(game),selected:true};
+      }),
+      rotationCheckpoint:preview.rotation
     };
-    plan.initialGames.unshift(first);
-    plan.initialGames=plan.initialGames.filter(function(v,i,a2){return a2.indexOf(v)===i;}).slice(0,a.user?2:1);
-    sessionWrite(plan);
-    location.href=Core.URLS[first];
-    return {ok:true};
+    proposalWrite(proposal);renderProposalUi();
+    return {ok:true,proposal:clone(proposal)};
+  }
+
+  function updateProposal(game,selected,level){
+    var p=proposalRead();if(!p)return false;
+    var found=false;
+    p.recommendedItems.forEach(function(item){
+      if(item.game!==game)return;
+      if(typeof selected==='boolean')item.selected=selected;
+      if(level!==undefined){var normalized=Core.normalizeLevel(game,level);if(normalized!=null)item.level=normalized;}
+      found=true;
+    });
+    if(found){proposalWrite(p);renderProposalUi();}
+    return found;
+  }
+
+  function cancelProposal(){if(confirmInFlight)return false;proposalWrite(null);renderProposalUi();setHubMessage('');return true;}
+
+  function selectedProposalItems(proposal){
+    var raw=(proposal&&proposal.recommendedItems||[]).filter(function(item){return item&&item.selected;});
+    return Core.validateSelectedGames(raw);
   }
 
   function endPlan(reason){
@@ -149,39 +164,75 @@
     });
   }
 
+  function confirmProposal(){
+    if(confirmInFlight)return Promise.resolve({ok:false,reason:'in_flight'});
+    var proposal=proposalRead(),a=auth();
+    if(!proposal||!a.resolved||a.unavailable||proposal.owner!==ownerIdentity()){
+      setHubMessage('目前無法開始安排，請稍後再試。');
+      return Promise.resolve({ok:false,reason:'auth_unavailable'});
+    }
+    var selected=selectedProposalItems(proposal);
+    if(!selected.ok){setHubMessage('請至少選擇一個遊戲。');renderProposalUi();return Promise.resolve({ok:false,reason:'selection'});}
+    confirmInFlight=true;renderProposalUi();setHubMessage('');
+    var requestId=proposal.requestId;
+    return commitQuota(proposal).then(function(q){
+      var live=proposalRead();
+      if(!live||live.requestId!==requestId||live.owner!==ownerIdentity()){
+        setHubMessage('目前無法開始安排，請稍後再試。');
+        return {ok:false,reason:'auth_unavailable'};
+      }
+      if(!q.allowed){
+        setHubMessage(q.reason==='limit'?'今天的自動安排已使用 1 次。':'目前無法開始安排，請稍後再試。');
+        return {ok:false,reason:q.reason};
+      }
+      var s=state();s.rotation=clone(live.rotationCheckpoint);persist(s);
+      var first=selected.items[0];
+      var plan={
+        version:2,active:true,requestId:live.requestId,quotaCommitted:true,
+        owner:live.owner,targetMinutes:live.minutes,selectedGames:selected.items,
+        currentIndex:0,currentGame:first.game,segmentSeconds:0,roundInProgress:false,
+        atBoundary:false,systemNavigation:true,startedAt:Date.now()
+      };
+      sessionWrite(plan);proposalWrite(null);location.href=Core.URLS[first.game];
+      return {ok:true,plan:clone(plan)};
+    }).finally(function(){confirmInFlight=false;renderProposalUi();});
+  }
+
   function ensurePlanOnGame(){
     var p=sessionRead();
-    if(!p||!currentGame||planEnsureInFlight)return;
+    if(!p||!currentGame)return;
     var identity=ownerIdentity();
-    if(p.owner!==identity||p.currentGame!==currentGame){endPlan('identity_or_navigation_mismatch');return;}
-    if(p.quotaCommitted){
-      p.systemNavigation=false;sessionWrite(p);renderPlanUi();return;
+    var selected=Core.validateSelectedGames(p.selectedGames),item=selected.ok&&selected.items[p.currentIndex];
+    if(p.version!==2||!p.quotaCommitted||p.owner!==identity||!item||item.game!==currentGame||p.currentGame!==currentGame){
+      endPlan('identity_or_navigation_mismatch');
+      location.replace('/games.html?time_plan=service_error');
+      return;
     }
-    planEnsureInFlight=true;
-    var requestId=p.requestId;
-    commitQuota(p).then(function(q){
-      var live=sessionRead();
-      if(!live||live.requestId!==requestId)return;
-      if(live.owner!==ownerIdentity()||live.currentGame!==currentGame){endPlan('identity_changed');return;}
-      if(!q.allowed){
-        endPlan(q.reason);
-        location.replace('/games.html?time_plan='+encodeURIComponent(q.reason));
-        return;
-      }
-      live.quotaCommitted=true;live.systemNavigation=false;sessionWrite(live);
-      renderPlanUi();
-    }).finally(function(){planEnsureInFlight=false;});
+    p.selectedGames=selected.items;p.systemNavigation=false;sessionWrite(p);renderPlanUi();
   }
 
   function advance(reason){
     var p=sessionRead();if(!p||!p.active)return;
-    var next=takeNextGame();
+    var selected=Core.validateSelectedGames(p.selectedGames);if(!selected.ok){endPlan('invalid_selection');return;}
+    p.selectedGames=selected.items;
+    if(selected.items.length===1){
+      if(reason==='skip'){endPlan('skip_single');location.href='/games.html';return;}
+      p.segmentSeconds=0;p.roundInProgress=false;p.atBoundary=false;sessionWrite(p);renderPlanUi();return;
+    }
+    p.currentIndex=(Math.max(0,Number(p.currentIndex)||0)+1)%selected.items.length;
+    var next=selected.items[p.currentIndex].game;
     p.currentGame=next;p.segmentSeconds=0;p.roundInProgress=false;p.atBoundary=false;
     p.systemNavigation=true;p.advanceReason=reason||'segment';sessionWrite(p);
     location.href=Core.URLS[next];
   }
 
   function skip(){advance('skip');}
+
+  function preferredLevel(game){
+    var p=sessionRead();if(!p||p.version!==2||!p.quotaCommitted||p.currentGame!==game)return null;
+    var selected=Core.validateSelectedGames(p.selectedGames),item=selected.ok&&selected.items[p.currentIndex];
+    return item&&item.game===game?item.level:null;
+  }
 
   function recordReport(report){
     var a=auth();
@@ -255,6 +306,35 @@
     var b=document.getElementById('gsh-auto-plan-skip');if(b)b.onclick=skip;
   }
 
+  function escapeHtml(value){
+    return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});
+  }
+
+  function setHubMessage(text){var msg=document.getElementById('timePlanMessage');if(msg)msg.textContent=text||'';}
+
+  function renderProposalUi(){
+    var host=document.getElementById('timePlanProposal'),list=document.getElementById('timePlanProposalList');
+    var confirm=document.getElementById('timePlanConfirm'),cancel=document.getElementById('timePlanCancel');
+    var build=document.getElementById('timePlanBtn');if(!host||!list||!confirm)return;
+    if(build)build.disabled=confirmInFlight||!auth().resolved||auth().unavailable;
+    if(cancel)cancel.disabled=confirmInFlight;
+    var p=proposalRead();
+    if(!p){host.hidden=true;list.innerHTML='';confirm.disabled=true;return;}
+    host.hidden=false;
+    list.innerHTML=(p.recommendedItems||[]).map(function(item){
+      var title=Core.GAME_TITLES[item.game]||item.game,options=Core.levelOptions(item.game),checked=item.selected?' checked':'';
+      var levelControl='';
+      if(options.length===1){
+        levelControl='<span class="time-plan-fixed-level">'+escapeHtml(options[0].label)+'</span>';
+      }else{
+        levelControl='<select class="time-plan-level" data-plan-level="'+escapeHtml(item.game)+'" aria-label="'+escapeHtml(title)+'等級"'+(item.selected&&!confirmInFlight?'':' disabled')+'>'+
+          options.map(function(option){return '<option value="'+escapeHtml(option.value)+'"'+(option.value===item.level?' selected':'')+'>'+escapeHtml(option.label)+'</option>';}).join('')+'</select>';
+      }
+      return '<div class="time-plan-proposal-row"><label class="time-plan-game-choice"><input type="checkbox" data-plan-game="'+escapeHtml(item.game)+'" aria-label="選擇'+escapeHtml(title)+'"'+checked+(confirmInFlight?' disabled':'')+'> <span>'+escapeHtml(title)+'</span></label>'+levelControl+'</div>';
+    }).join('');
+    confirm.disabled=confirmInFlight||!(p.recommendedItems||[]).some(function(item){return item.selected;});
+  }
+
   function showHubResult(){
     var msg=document.getElementById('timePlanMessage');if(!msg)return;
     var reason='';
@@ -265,6 +345,7 @@
 
   function bindTimePlanUi(){
     var input=document.getElementById('timePlanMinutes'),btn=document.getElementById('timePlanBtn'),msg=document.getElementById('timePlanMessage');
+    var list=document.getElementById('timePlanProposalList'),confirm=document.getElementById('timePlanConfirm'),cancel=document.getElementById('timePlanCancel');
     if(!input||!btn)return;
     function paint(){
       var a=auth();
@@ -274,12 +355,22 @@
       var hint=document.getElementById('timePlanHint');
       if(hint)hint.textContent=a.user?'登入會員：每天 1 次・5–20 分鐘':'訪客：每天 1 次・5–10 分鐘';
     }
-    paint();showHubResult();
+    paint();showHubResult();renderProposalUi();
     if(window.SITE_AUTH&&SITE_AUTH.onChange)SITE_AUTH.onChange(paint);
     btn.onclick=function(){
       var r=startPlan(input.value);
       if(!r.ok&&msg)msg.textContent=r.reason==='minutes'?'請輸入 '+r.min+'–'+r.max+' 分鐘':'目前無法開始安排，請稍後再試。';
+      else if(r.ok)setHubMessage('');
     };
+    if(list)list.onchange=function(event){
+      var target=event&&event.target;if(!target||!target.getAttribute)return;
+      var game=target.getAttribute('data-plan-game');
+      if(game)updateProposal(game,!!target.checked);
+      var levelGame=target.getAttribute('data-plan-level');
+      if(levelGame)updateProposal(levelGame,undefined,target.value);
+    };
+    if(confirm)confirm.onclick=function(){confirmProposal();};
+    if(cancel)cancel.onclick=cancelProposal;
   }
 
   function initializeGame(){
@@ -319,7 +410,8 @@
   }
 
   window.StudyPlan={
-    start:startPlan,end:endPlan,skip:skip,state:state,plan:sessionRead,
-    recordReport:recordReport,advance:advance
+    start:startPlan,confirm:confirmProposal,cancelProposal:cancelProposal,updateProposal:updateProposal,
+    proposal:proposalRead,end:endPlan,skip:skip,state:state,plan:sessionRead,
+    preferredLevel:preferredLevel,recordReport:recordReport,advance:advance
   };
 })(window,document);

@@ -133,6 +133,7 @@ runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export test
 runTest(['scripts/tests-shared-games-phase1.js'], 'Phase 1 shared-game-system tests');
 runTest(['scripts/tests-game-flow-delta.js'], 'Locked five-game flow tests');
 runTest(['scripts/tests-study-plan-core.js'], 'Time Auto Plan core tests');
+runTest(['scripts/tests-study-plan-confirmation.js'], 'Time Auto Plan confirmation tests');
 runTest(['scripts/tests-study-plan-integration.js'], 'Time Auto Plan integration tests');
 runTest(['scripts/tests-phase1-challenge-gate.js'], 'Phase 1 Challenge access-gate tests');
 runTest(['scripts/tests-resource-search-phase1.js'], 'Phase 1 Resource Search tests');

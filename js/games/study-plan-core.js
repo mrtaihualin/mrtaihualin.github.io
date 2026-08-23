@@ -15,6 +15,17 @@
     word_order:'/word-order.html',
     lego:'/lego.html'
   };
+  var GAME_TITLES={
+    tone:'聲調',reading:'拼讀',listening:'聽力',typing:'打字',word_order:'語序',lego:'造句'
+  };
+  var LEVEL_MATRIX={
+    tone:[{value:1,label:'初級'},{value:2,label:'中級'},{value:3,label:'高級'}],
+    reading:[{value:'初',label:'初級'},{value:'中',label:'中級'},{value:'高',label:'高級'}],
+    listening:[{value:'初',label:'初級'},{value:'中',label:'中級'}],
+    typing:[{value:'初',label:'初級'},{value:'中',label:'中級'},{value:'高',label:'高級'}],
+    word_order:[{value:'高',label:'高級（此遊戲目前只有高級）'}],
+    lego:[{value:'lv1',label:'第一級'}]
+  };
 
   function num(v,f){v=Number(v);return isFinite(v)?v:(f||0);}
   function clamp10(v){return Math.max(0,Math.min(10,num(v,0)));}
@@ -117,6 +128,35 @@
     return {ok:minutes>=min&&minutes<=max,minutes:minutes,min:min,max:max};
   }
 
+  function levelOptions(game){
+    return (LEVEL_MATRIX[game]||[]).map(function(option){
+      return {value:option.value,label:option.label};
+    });
+  }
+
+  function normalizeLevel(game,value){
+    if(game==='tone'&&value!==''&&value!=null)value=Number(value);
+    var options=LEVEL_MATRIX[game]||[];
+    for(var i=0;i<options.length;i++)if(options[i].value===value)return value;
+    return null;
+  }
+
+  function defaultLevel(game){
+    var options=LEVEL_MATRIX[game]||[];
+    return options.length?options[0].value:null;
+  }
+
+  function validateSelectedGames(items){
+    if(!Array.isArray(items)||!items.length)return {ok:false,reason:'selection'};
+    var seen={},normalized=[];
+    for(var i=0;i<items.length;i++){
+      var item=items[i]||{},game=normalizeGameType(item.game),level=normalizeLevel(game,item.level);
+      if(!game||seen[game]||level==null)return {ok:false,reason:'selection'};
+      seen[game]=true;normalized.push({game:game,level:level});
+    }
+    return {ok:true,items:normalized};
+  }
+
   function nextFromRotation(rotation,perf,useWeakness){
     rotation=rotation||{};
     var order=Array.isArray(rotation.order)&&rotation.order.length===6?rotation.order.slice():buildCycle(perf,useWeakness);
@@ -140,12 +180,18 @@
     GAME_ORDER:GAME_ORDER,
     SCORE_GAMES:SCORE_GAMES,
     URLS:URLS,
+    GAME_TITLES:GAME_TITLES,
+    LEVEL_MATRIX:LEVEL_MATRIX,
     normalizeGameType:normalizeGameType,
     normalizeReport:normalizeReport,
     emptyPerf:emptyPerf,
     applyContributions:applyContributions,
     buildCycle:buildCycle,
     validateMinutes:validateMinutes,
+    levelOptions:levelOptions,
+    normalizeLevel:normalizeLevel,
+    defaultLevel:defaultLevel,
+    validateSelectedGames:validateSelectedGames,
     nextFromRotation:nextFromRotation,
     formatSeconds:formatSeconds
   };

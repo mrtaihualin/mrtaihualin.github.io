@@ -32,7 +32,7 @@ function storage(backing=new Map()){
 }
 
 class FakeElement{
-  constructor(id,doc){this.id=id||'';this.doc=doc;this.value='5';this.disabled=false;this.style={};this.textContent='';this.onclick=null;this._innerHTML='';}
+  constructor(id,doc){this.id=id||'';this.doc=doc;this.value='5';this.disabled=false;this.hidden=false;this.checked=false;this.style={};this.textContent='';this.onclick=null;this.onchange=null;this._innerHTML='';}
   set innerHTML(value){
     this._innerHTML=String(value);
     if(this._innerHTML.includes('id="gsh-auto-plan-skip"'))this.doc.elements['gsh-auto-plan-skip']=new FakeElement('gsh-auto-plan-skip',this.doc);
@@ -58,8 +58,9 @@ class FakeDocument{
 
 function activePlan(overrides={}){
   return Object.assign({
-    version:1,active:true,requestId:'00000000-0000-4000-8000-000000000001',quotaCommitted:false,
-    owner:'guest',targetMinutes:5,segmentSeconds:0,currentGame:'tone',roundInProgress:false,
+    version:2,active:true,requestId:'00000000-0000-4000-8000-000000000001',quotaCommitted:true,
+    owner:'guest',targetMinutes:5,selectedGames:[{game:'tone',level:1},{game:'reading',level:'初'}],
+    currentIndex:0,segmentSeconds:0,currentGame:'tone',roundInProgress:false,
     atBoundary:false,systemNavigation:true,startedAt:1
   },overrides);
 }
@@ -67,7 +68,7 @@ function activePlan(overrides={}){
 function harness(options={}){
   const pathname=options.pathname||'/games.html';
   const hub=pathname==='/games.html';
-  const doc=new FakeDocument(hub?['timePlanMinutes','timePlanBtn','timePlanHint','timePlanMessage']:[]);
+  const doc=new FakeDocument(hub?['timePlanMinutes','timePlanBtn','timePlanHint','timePlanMessage','timePlanProposal','timePlanProposalList','timePlanConfirm','timePlanCancel']:[]);
   const local=options.localStorage||storage();
   const session=options.sessionStorage||storage();
   if(options.plan)session.setItem('gsh_auto_plan_session_v1',JSON.stringify(options.plan));
@@ -134,7 +135,7 @@ async function main(){
       'lego.html':'lego-game-app'
     };
     for(const [page,app] of Object.entries(pages)){
-      const html=read(page),core=html.indexOf('study-plan-core.js?v=1'),plan=html.indexOf('study-plan.js?v=1'),game=html.lastIndexOf(app);
+      const html=read(page),core=html.indexOf('study-plan-core.js?v=2'),plan=html.indexOf('study-plan.js?v=2'),game=html.lastIndexOf(app);
       assert(core>=0&&plan>core&&game>plan,page+' script order');
     }
   });
@@ -166,39 +167,115 @@ async function main(){
     assert.match(source,/legoStudyRoundActive=false;[\s\S]+gsh:round-complete/);
   });
 
-  await test('Guest and Login minute gates start locally without consuming quota on the hub',()=>{
+  await test('Guest and Login minute gates build proposals without quota, active plan, or navigation',()=>{
     const guest=harness();
     assert.strictEqual(guest.doc.getElementById('timePlanBtn').disabled,false);
     assert.match(guest.doc.getElementById('timePlanHint').textContent,/5–10/);
     assert.strictEqual(guest.context.StudyPlan.start(11).ok,false);
     assert.strictEqual(guest.context.StudyPlan.start(10).ok,true);
     assert.strictEqual(guest.fetchCalls.length,0);
-    assert.strictEqual(guest.loc.href,'/tone-finder.html');
+    assert.strictEqual(guest.loc.href,'https://mrtaihualin.com/games.html');
+    assert.strictEqual(guest.context.StudyPlan.plan(),null);
+    assert.strictEqual(guest.context.StudyPlan.proposal().recommendedItems.length,1);
+    assert.strictEqual(guest.context.StudyPlan.proposal().recommendedItems[0].level,1);
+    assert.strictEqual(guest.doc.getElementById('timePlanProposal').hidden,false);
 
     const login=harness({user:{id:'account-a'}});
     assert.match(login.doc.getElementById('timePlanHint').textContent,/5–20/);
     assert.strictEqual(login.context.StudyPlan.start(21).ok,false);
     assert.strictEqual(login.context.StudyPlan.start(20).ok,true);
     assert.strictEqual(login.fetchCalls.length,0);
+    assert.strictEqual(login.loc.href,'https://mrtaihualin.com/games.html');
+    assert.strictEqual(login.context.StudyPlan.plan(),null);
+    assert.strictEqual(login.context.StudyPlan.proposal().recommendedItems.length,2);
   });
 
-  await test('quota waits for resolved identity and commits only after the first game page opens',async()=>{
-    const h=harness({pathname:'/tone-finder.html',resolved:false,plan:activePlan({owner:'user:account-a'})});
+  await test('confirmation claims quota exactly once on the hub before creating v2 plan and navigating',async()=>{
+    const h=harness();
+    const before=JSON.stringify(h.context.StudyPlan.state().rotation);
+    assert.strictEqual(h.context.StudyPlan.start(5).ok,true);
+    const proposal=h.context.StudyPlan.proposal();
     assert.strictEqual(h.fetchCalls.length,0);
-    assert(h.context.StudyPlan.plan());
-    h.auth.resolve({id:'account-a'});await settleAll();
+    assert.strictEqual(JSON.stringify(h.context.StudyPlan.state().rotation),before);
+    const result=await h.context.StudyPlan.confirm();
+    assert.strictEqual(result.ok,true);
     assert.strictEqual(h.fetchCalls.length,1);
     assert.deepStrictEqual(Object.keys(h.fetchCalls[0].body),['request_id']);
+    assert.strictEqual(h.fetchCalls[0].body.request_id,proposal.requestId);
     assert.match(h.fetchCalls[0].url,/time-plan-daily-limit$/);
+    assert.strictEqual(h.loc.href,'/tone-finder.html');
+    assert.strictEqual(h.context.StudyPlan.plan().version,2);
     assert.strictEqual(h.context.StudyPlan.plan().quotaCommitted,true);
+    assert.strictEqual(h.context.StudyPlan.proposal(),null);
   });
 
-  await test('backend failure before commit fails closed and never marks quota committed',async()=>{
-    const h=harness({pathname:'/tone-finder.html',backend:'error',plan:activePlan()});
-    await settleAll();
+  await test('backend failure on confirmation fails closed on hub and preserves request id for retry',async()=>{
+    const h=harness({backend:'error'});
+    h.context.StudyPlan.start(5);
+    const requestId=h.context.StudyPlan.proposal().requestId;
+    const result=await h.context.StudyPlan.confirm();
+    assert.strictEqual(result.ok,false);
     assert.strictEqual(h.fetchCalls.length,1);
     assert.strictEqual(h.context.StudyPlan.plan(),null);
-    assert.match(h.loc.replaced,/time_plan=service_error/);
+    assert.strictEqual(h.loc.href,'https://mrtaihualin.com/games.html');
+    assert.strictEqual(h.context.StudyPlan.proposal().requestId,requestId);
+    await h.context.StudyPlan.confirm();
+    assert.strictEqual(h.fetchCalls[1].body.request_id,requestId);
+  });
+
+  await test('daily limit stays on hub with no transient active plan or navigation',async()=>{
+    const h=harness({backend:'limit'});
+    h.context.StudyPlan.start(5);
+    const result=await h.context.StudyPlan.confirm();
+    assert.strictEqual(result.reason,'limit');
+    assert.strictEqual(h.context.StudyPlan.plan(),null);
+    assert.strictEqual(h.loc.href,'https://mrtaihualin.com/games.html');
+    assert.match(h.doc.getElementById('timePlanMessage').textContent,/已使用 1 次/);
+  });
+
+  await test('cancel and zero-selection validation consume no quota and do not commit rotation',async()=>{
+    const h=harness();
+    const rotation=JSON.stringify(h.context.StudyPlan.state().rotation);
+    h.context.StudyPlan.start(5);
+    h.context.StudyPlan.cancelProposal();
+    assert.strictEqual(h.context.StudyPlan.proposal(),null);
+    assert.strictEqual(JSON.stringify(h.context.StudyPlan.state().rotation),rotation);
+    assert.strictEqual(h.fetchCalls.length,0);
+    h.context.StudyPlan.start(5);
+    const game=h.context.StudyPlan.proposal().recommendedItems[0].game;
+    h.context.StudyPlan.updateProposal(game,false);
+    assert.strictEqual(h.doc.getElementById('timePlanConfirm').disabled,true);
+    const result=await h.context.StudyPlan.confirm();
+    assert.strictEqual(result.reason,'selection');
+    assert.strictEqual(h.fetchCalls.length,0);
+    assert.strictEqual(JSON.stringify(h.context.StudyPlan.state().rotation),rotation);
+  });
+
+  await test('confirmation rejects an owner change before quota call',async()=>{
+    const h=harness({user:{id:'account-a'}});
+    h.context.StudyPlan.start(5);
+    h.auth.resolve({id:'account-b'});
+    const result=await h.context.StudyPlan.confirm();
+    assert.strictEqual(result.reason,'auth_unavailable');
+    assert.strictEqual(h.fetchCalls.length,0);
+    assert.strictEqual(h.context.StudyPlan.plan(),null);
+    assert.strictEqual(h.loc.href,'https://mrtaihualin.com/games.html');
+  });
+
+  await test('unchecked recommendations never enter the plan and chosen level is exposed to the game',async()=>{
+    const h=harness({user:{id:'account-a'}});
+    h.context.StudyPlan.start(20);
+    const items=h.context.StudyPlan.proposal().recommendedItems;
+    assert.strictEqual(items.length,2);
+    h.context.StudyPlan.updateProposal(items[0].game,false);
+    h.context.StudyPlan.updateProposal(items[1].game,undefined,'高');
+    const result=await h.context.StudyPlan.confirm();
+    assert.strictEqual(result.ok,true);
+    assert.strictEqual(result.plan.selectedGames.length,1);
+    assert.strictEqual(result.plan.selectedGames[0].game,items[1].game);
+    assert.strictEqual(result.plan.selectedGames[0].level,'高');
+    assert.strictEqual(h.loc.href,Core.URLS[items[1].game]);
+    assert.strictEqual(h.context.StudyPlan.preferredLevel(items[1].game),'高');
   });
 
   await test('Daily Timer counts active foreground seconds, persists pagehide, pauses, idles, and resumes',()=>{
@@ -246,6 +323,21 @@ async function main(){
     h.context.StudyPlan.skip();
     assert.strictEqual(h.loc.href,'/reading-game.html');
     assert.strictEqual(h.context.StudyPlan.plan().segmentSeconds,0);
+  });
+
+  await test('one selected game resets at a soft boundary and Skip ends at the hub',async()=>{
+    const plan=activePlan({selectedGames:[{game:'tone',level:3}],segmentSeconds:599});
+    const h=harness({pathname:'/tone-finder.html',plan});
+    await settleAll();
+    assert.strictEqual(h.context.StudyPlan.preferredLevel('tone'),3);
+    h.emitWindow('gsh:round-start',{report:{game_type:'tone',items:[]}});
+    h.advanceNow(1000);h.intervals[0]();
+    h.emitWindow('gsh:round-complete',{report:{game_type:'tone',items:[]}});
+    assert.strictEqual(h.loc.href,'https://mrtaihualin.com/tone-finder.html');
+    assert.strictEqual(h.context.StudyPlan.plan().segmentSeconds,0);
+    h.context.StudyPlan.skip();
+    assert.strictEqual(h.loc.href,'/games.html');
+    assert.strictEqual(h.context.StudyPlan.plan(),null);
   });
 
   await test('manual game switch ends Auto Plan',async()=>{

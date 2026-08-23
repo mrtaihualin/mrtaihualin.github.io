@@ -2091,8 +2091,11 @@ function rgCheckWholeWord(){
 }
 
 // Lin 2026-07-12: รีเฟรชหน้าแล้วต้องอยู่ระดับ(初/中/高)เดิม ไม่กระเด้งกลับ 初級 default เสมอ
+// Time Auto Plan proposal level wins for this entry only; normal entry still restores the remembered level.
+var _autoPlanReadingLevel=(window.StudyPlan&&StudyPlan.preferredLevel)?StudyPlan.preferredLevel('reading'):null;
+if(_autoPlanReadingLevel!=='初'&&_autoPlanReadingLevel!=='中'&&_autoPlanReadingLevel!=='高')_autoPlanReadingLevel=null;
 try{
-  var _savedLv=localStorage.getItem('rg_reading_level');
+  var _savedLv=_autoPlanReadingLevel||localStorage.getItem('rg_reading_level');
   if(_savedLv==='初'||_savedLv==='中'||_savedLv==='高'){
     curLevel=_savedLv;
     document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
@@ -2102,7 +2105,7 @@ try{
 }catch(e){}
 loadSave();
 // E3: มี "รอบที่ยังเล่นไม่จบ" ค้างอยู่จาก session ก่อน (localStorage, guest-only) → โชว์แบนเนอร์ให้เลือกก่อน ไม่งั้นเริ่มรอบใหม่ตามปกติ
-if(!rgTryLoadResumeBanner()){ initGame(); }
+if(_autoPlanReadingLevel||!rgTryLoadResumeBanner()){ initGame(); }
 try { rgRenderGameBar(); } catch(e){}
 
 // ── GA: ปุ่ม/องค์ประกอบที่สร้างโดยโมดูลกลาง (word-audio.js/word-menu.js/shared.js) — ผูก listener แยกต่างหาก ไม่แก้ไฟล์โมดูลกลาง ──

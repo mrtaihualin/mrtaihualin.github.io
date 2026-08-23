@@ -11,6 +11,22 @@ assert.strictEqual(Core.validateMinutes(5,true).ok,true);
 assert.strictEqual(Core.validateMinutes(20,true).ok,true);
 assert.strictEqual(Core.validateMinutes(21,true).ok,false);
 
+assert.deepStrictEqual(Core.levelOptions('tone').map(x=>x.value),[1,2,3]);
+assert.deepStrictEqual(Core.levelOptions('reading').map(x=>x.value),['初','中','高']);
+assert.deepStrictEqual(Core.levelOptions('listening').map(x=>x.value),['初','中']);
+assert.deepStrictEqual(Core.levelOptions('typing').map(x=>x.value),['初','中','高']);
+assert.deepStrictEqual(Core.levelOptions('word_order'),[{value:'高',label:'高級（此遊戲目前只有高級）'}]);
+assert.deepStrictEqual(Core.levelOptions('lego'),[{value:'lv1',label:'第一級'}]);
+assert.strictEqual(Core.defaultLevel('tone'),1);
+assert.strictEqual(Core.defaultLevel('reading'),'初');
+assert.strictEqual(Core.normalizeLevel('tone','3'),3);
+assert.strictEqual(Core.normalizeLevel('listening','高'),null);
+assert.strictEqual(Core.normalizeLevel('lego','pre'),null);
+assert.deepStrictEqual(Core.validateSelectedGames([{game:'tone',level:'2'},{game:'listening',level:'中'}]),{
+  ok:true,items:[{game:'tone',level:2},{game:'listening',level:'中'}]
+});
+assert.strictEqual(Core.validateSelectedGames([]).ok,false);
+
 const report={game_type:'listening',items:[
   {item_score:5,linguistic:{answer_mode:'mc',listening_score:5,typing_score:0}},
   {item_score:20,linguistic:{answer_mode:'type',listening_score:8,typing_score:6}}
