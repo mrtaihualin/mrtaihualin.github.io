@@ -791,6 +791,14 @@ const LEVEL_WEIGHT=2; // นับเป็น高級ทั้งเกม (Lin �
 // 2026-07-03 改版：以前是「複製句子」就給分，現在改成一定要按🧪測試、把打散的詞排對，才算數
 const SENTENCES_PER_ROUND=5;
 let sentencesThisRound=0;
+let legoStudyRoundActive=false;
+function legoDispatchStudyRound(name,report){
+  try{
+    if(window.dispatchEvent&&window.CustomEvent){
+      window.dispatchEvent(new CustomEvent(name,{detail:{report:report}}));
+    }
+  }catch(e){}
+}
 // ⚡ คะแนนสะสมของรอบนี้ — เพิ่ม 2026-07-03 เพื่อโชว์หลอด 進度/⚡ เหมือนเกมอื่น
 // ใช้ pts จริงที่ checkTestAnswer() คำนวณต่อการทดสอบผ่านแต่ละครั้ง ไม่ได้เดา/ให้คะแนนลอยๆ
 let roundScoreLego=0;
@@ -943,6 +951,10 @@ function finishLegoRound(){
   }catch(e){}
   try{ legoRenderGameBar(); }catch(e){}
   refreshLegoAcctUI();
+  legoStudyRoundActive=false;
+  legoDispatchStudyRound('gsh:round-complete',{
+    game_type:'lego',score:weightedScore,total_items:count,items:[]
+  });
   return '🎉 完成一輪（'+count+' 句）！本輪 +'+weightedScore+' 分'+(isPerfect?'・全部乾淨過關 ✨':'')+'（已含 ×'+LEVEL_WEIGHT+' 高級倍率）· 下一句是 ✨黃金句 ×2，記得測試！';
 }
 
@@ -1329,6 +1341,10 @@ async function startTest(){
   document.getElementById('testBanner').textContent='';
   updateTestHintWarning();
   document.getElementById('testOverlay').classList.add('show');
+  if(!legoStudyRoundActive){
+    legoStudyRoundActive=true;
+    legoDispatchStudyRound('gsh:round-start',{game_type:'lego',items:[]});
+  }
   try{ if(window.gtag) gtag('event', 'lego_start', {category:'game', words: testWords.length}); }catch(e){}
   try{ if(window.gtag) gtag('event', 'game_start', {category:'game', game:'lego'}); }catch(e){}
   if(!window._minaWelcomed){ window._minaWelcomed=true; setTimeout(function(){minaToast('welcome',{dur:3400});},700); } // มีนาทักทายครั้งแรก — Lin 2026-07-10
