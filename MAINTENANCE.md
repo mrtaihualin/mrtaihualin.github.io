@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-23 Asia/Bangkok** — Search entitlement correction
+**Updated: 2026-08-23 Asia/Bangkok** — Time Auto Plan production release
+
+## 2026-08-23 — Time Plan / Auto Plan (`PASS_LOCAL / PRODUCTION_BACKEND_PASS / RELEASE_PENDING`)
+
+- Reconciled the supplied Time Auto Plan blueprint onto fresh `origin/main` `f288050…` after the Search entitlement release. Added the separate Guest/Login Free one-start-per-Taipei-day Time Plan, shared six-game Daily Study Timer, soft ten-active-minute round-boundary rotation, Skip/manual-exit behavior, Login-only Core-5 weakness rotation, RoundReport lifecycle events and Lego five-sentence lifecycle without changing the released Search UI, quota, classifier, V2.3 corpus or Frozen answers.
+- The supplied core, browser, SQL, Edge and core-test files were retained as the blueprint. Technical reconciliation delays identity/quota work until Auth resolves, keeps timer seconds in a page-local cache between persistence checkpoints, rejects owner/navigation races, reports quota failure on the hub, normalizes the current `wordorder` alias and adds executable integration coverage plus the active SQL source-map entry. No Product contract was changed.
+- Local Time Plan core/integration contracts, all existing Search and six-game regressions, JavaScript syntax, `git diff --check`, Frozen 120/120, Product examples 52/52, Canonical 736/736 and the full 1,008-file site gate pass. Staging `xufxvwcelbovzsxywawg` applied only `time_plan_daily_usage` and deployed `time-plan-daily-limit` v1 ACTIVE with `verify_jwt=true`; Guest runtime passed first consume, idempotent replay and same-day 429, transaction-scoped SQL passed next-day reset/cross-account isolation, and RLS/browser denial/service-role-only execute passed. The exact test row was removed with zero residue; the only scoped advisor result is the expected INFO for a server-only RLS table with no browser policy.
+- Production `qzkxlhpcputsvbqmtqfi` applied only migration `20260823103221 time_plan_daily_usage` and deployed `time-plan-daily-limit` v1 ACTIVE with `verify_jwt=true`. Guest runtime passed first consume, idempotent replay and same-day 429; invalid JWT/payload, raw-query and client-user-id requests were rejected. Transaction-scoped SQL passed next-day reset/cross-account isolation, RLS/browser denial and service-role-only execute; identity storage contains only hashed IP/user keys, the exact test row was removed with zero residue, and the scoped advisor result is only the expected INFO for a server-only RLS table with no browser policy. Source release remains isolated on its fresh release branch pending PR/checks/merge; no Netlify credential or account recovery was attempted.
 
 ## 2026-08-23 — Game/Global Search Login Free entitlement (`PASS_LOCAL / RELEASE_AUTHORIZED`)
 

@@ -28,6 +28,17 @@
     return JSON.parse(JSON.stringify(value));
   }
 
+  function dispatchRoundEvent(name, report) {
+    var gameType = String(report && report.game_type || '').toLowerCase().replace(/-/g, '_');
+    if (gameType === 'wordorder') gameType = 'word_order';
+    if (['tone', 'reading', 'listening', 'typing', 'word_order'].indexOf(gameType) < 0) return;
+    try {
+      if (root.dispatchEvent && root.CustomEvent) {
+        root.dispatchEvent(new root.CustomEvent(name, { detail: { report: clone(report) } }));
+      }
+    } catch (e) {}
+  }
+
   function uuid() {
     try { if (root.crypto && root.crypto.randomUUID) return root.crypto.randomUUID(); } catch (e) {}
     var bytes = new Uint8Array(16);
@@ -100,7 +111,7 @@
 
   function create(input) {
     input = input || {};
-    return {
+    var report = {
       schema_version: 'round-report-v1',
       round_id: input.round_id || uuid(),
       game_type: String(input.game_type || ''),
@@ -116,6 +127,8 @@
       items: Array.isArray(input.items) ? input.items.map(item) : [],
       login_summary: input.login_summary ? clone(input.login_summary) : null
     };
+    dispatchRoundEvent('gsh:round-start', report);
+    return report;
   }
 
   function restore(snapshot, defaults) {
@@ -146,6 +159,7 @@
     report.correct_count = report.items.filter(function (row) { return row.is_correct; }).length;
     report.wrong_count = report.total_items - report.correct_count;
     recordDailyActivity(report.game_type, report.total_items, report.round_id);
+    dispatchRoundEvent('gsh:round-complete', report);
     return report;
   }
 

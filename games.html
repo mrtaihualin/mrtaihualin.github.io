@@ -114,6 +114,7 @@
   .gh-search-auth-message{font-size:13.5px;color:#6f644c;line-height:1.7;background:#fff;border:1.5px solid #e0d2a8;border-radius:12px;padding:14px 16px;}
   .gh-search-prompt{font-size:15px;font-weight:700;color:#5a3e10;margin-bottom:10px;text-align:left;}
   .gh-search-row{display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:8px;align-items:stretch;}
+  .gh-time-plan-row{grid-template-columns:minmax(120px,220px) auto auto;align-items:center;}
   .gh-search-input{width:100%;padding:13px 16px;border:1.5px solid #e0d2a8;border-radius:6px;background:#fff;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;color:#2d2a22;}
   .gh-search-input:focus{outline:none;border-color:#C8973A;}
   .gh-search-btn{padding:13px 22px;background:#C8973A;color:#1C1C1C;border:none;border-radius:6px;font-weight:900;font-size:13.5px;cursor:pointer;white-space:nowrap;}
@@ -129,6 +130,8 @@
   .gh-search-empty{font-size:13px;color:#8b8060;line-height:1.8;}
   @media(max-width:760px){
     .gh-search-row{grid-template-columns:1fr;}
+    .gh-time-plan-row{grid-template-columns:minmax(0,1fr) auto;}
+    .gh-time-plan-row .gh-search-btn{grid-column:1/-1;}
     .gh-search-btn{width:100%;}
   }
 </style>
@@ -219,6 +222,17 @@
     <div class="gh-search-auth-message">正在確認登入狀態…</div>
   </div>
 
+  <section class="gh-search-wrap" aria-labelledby="timePlanTitle">
+    <div class="gh-search-prompt" id="timePlanTitle">今天有多少時間？</div>
+    <div class="gh-search-row gh-time-plan-row">
+      <input id="timePlanMinutes" class="gh-search-input" type="number" min="5" max="10" step="1" value="5" inputmode="numeric" aria-label="今天可練習的分鐘數">
+      <span aria-hidden="true">分鐘</span>
+      <button id="timePlanBtn" class="gh-search-btn" type="button" disabled>幫我安排</button>
+    </div>
+    <div id="timePlanHint" class="gh-search-match-note" style="margin-top:8px">正在確認登入狀態…</div>
+    <div id="timePlanMessage" class="gh-search-empty" role="status" aria-live="polite"></div>
+  </section>
+
   <!-- 🆕 2026-08-10 — IA 重整：3 การ์ดหลักแทน 5 เกมเล็กแยกกัน (5 เกมย้ายไปอยู่ใน games-practice.html)
        ตามที่ Lin สั่ง: 泰語遊戲練習室 / 綜合挑戰 / 造句練習 — เท่ากันทุกมิติ ห้ามให้ใบไหนเด่นกว่าใบอื่น -->
   <div class="gh-main-grid">
@@ -286,6 +300,8 @@
 <script src="js/core/supabase-config.js?v=5"></script>
 <script src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script src="js/core/auth-widget.js?v=15"></script>
+<script src="js/games/study-plan-core.js?v=1"></script>
+<script src="js/games/study-plan.js?v=1"></script>
 <script src="data/search-index.js?v=1"></script>
 <script src="data/game-problem-corpus-v2_3.js?v=1"></script>
 <script src="js/core/search-engine.js?v=3"></script>
