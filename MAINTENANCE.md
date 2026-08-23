@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-23 Asia/Bangkok** — Time Auto Plan confirmation fix local verification
+**Updated: 2026-08-23 Asia/Bangkok** — Time Auto Plan Initial Queue → Rotation local fix
+
+## 2026-08-23 — Time Auto Plan Initial Queue → persistent Rotation (`PASS_LOCAL / RELEASE_REVIEW_PENDING`)
+
+- Reconciled only the post-PR #69 Product correction onto exact Production `ea77426…`. Checked Proposal games are now a finite `initialQueue` with their confirmed levels; after that queue is consumed by a soft round boundary or Skip, the active plan continues through the existing persistent Default/Login weakness rotation instead of cycling a permanent selected-game whitelist or ending a one-game plan.
+- Confirmation still commits the persistent rotation checkpoint after every proposed recommendation, including unchecked recommendations, so an unchecked proposal game is skipped for that proposal window and cannot rebound immediately. Proposal UI, pre-navigation Time Plan quota, Daily Timer, soft ten-active-minute round boundary, manual-switch end, Search quota, normalization and backend contracts are unchanged. The shared Study Plan runtime cache key advances to v3 on the hub and six game pages; no SQL/Edge/Search/corpus/Frozen/Paid file changes and no Production mutation occurred.
+- Added executable one-/two-selected, unchecked, Skip, last-initial soft-boundary and Default/Weakness cursor coverage while retaining the existing confirmation/integration and required full regression gates. No commit, push, PR, merge or deploy occurred.
 
 ## 2026-08-23 — Time Auto Plan confirmation / pre-navigation quota / level picker (`PASS_LOCAL / RELEASE_REVIEW_PENDING`)
 
