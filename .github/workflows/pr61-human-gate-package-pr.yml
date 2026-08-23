@@ -1,0 +1,102 @@
+name: PR61 exact Human Gate package — PR gate
+
+on:
+  pull_request:
+    branches:
+      - work/mobile-landscape-873-gpt-candidate
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr61-exact-human-gate-package-pr
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FINAL_SHA: ca89449c0b88e67ea5493ef6e9adbda60f9d983e
+      FINAL_SHORT: ca89449c0b88
+      BACKEND_MODE: PRODUCTION_PUBLIC_GUEST_ONLY
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          ref: ca89449c0b88e67ea5493ef6e9adbda60f9d983e
+          path: source
+          fetch-depth: 1
+
+      - name: Checkout packaging helper only
+        uses: actions/checkout@v4
+        with:
+          ref: work/mobile-landscape-873-gpt-final
+          path: helper
+          fetch-depth: 1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify exact source and repository checks
+        run: |
+          cd source
+          test "$(git rev-parse HEAD)" = "$FINAL_SHA"
+          node scripts/check-site.js
+
+      - name: Extract the reviewed bounded package builder
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          workflow = Path('helper/.github/workflows/pr61-human-gate-package.yml').read_text(encoding='utf-8')
+          begin_token = "          node <<'NODE'\n"
+          end_token = "\n          NODE\n"
+          begin = workflow.index(begin_token) + len(begin_token)
+          end = workflow.index(end_token, begin)
+          block = workflow[begin:end]
+          lines = [line[10:] if line.startswith('          ') else line for line in block.splitlines()]
+          Path('/tmp/build-pr61-human-gate.js').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          PY
+          grep -F "PR #61 — Physical iPhone Human Gate" /tmp/build-pr61-human-gate.js
+          grep -F "PRODUCTION_PUBLIC_GUEST_ONLY" helper/.github/workflows/pr61-human-gate-package.yml
+
+      - name: Build exact Guest-only package
+        run: |
+          cd source
+          node /tmp/build-pr61-human-gate.js
+          test -f _pr61-human-gate-build/__human_gate__.html
+          test -f _pr61-human-gate-build/netlify.toml
+          grep -F "$FINAL_SHA" _pr61-human-gate-build/__human_gate__.html
+          grep -F "$BACKEND_MODE" _pr61-human-gate-build/__human_gate__.html
+
+      - name: Create deploy ZIP and receipt
+        run: |
+          mkdir -p deliverable
+          PACKAGE="deliverable/mobile-landscape-pr61-${FINAL_SHORT}-netlify-drop.zip"
+          find source/_pr61-human-gate-build -name '.DS_Store' -delete
+          (cd source/_pr61-human-gate-build && zip -qr "../../${PACKAGE}" .)
+          HASH="$(sha256sum "$PACKAGE" | awk '{print $1}')"
+          cat > deliverable/HUMAN_GATE_RECEIPT.txt <<EOF
+          HUMAN_GATE_PACKAGE_STATUS=READY_FOR_MANUAL_UPLOAD
+          FINAL_CANDIDATE_SHA=${FINAL_SHA}
+          BACKEND_MODE=${BACKEND_MODE}
+          HUMAN_GATE_PATH=/__human_gate__.html
+          PACKAGE_FILE=$(basename "$PACKAGE")
+          PACKAGE_SHA256=${HASH}
+          DEPLOYED=NO
+          STABLE_URL_SHA_VERIFIED=NO
+          PHYSICAL_IPHONE_GATE=PENDING
+          READY_FOR_MERGE=NO
+          EOF
+          unzip -l "$PACKAGE" | grep -F '__human_gate__.html'
+          sha256sum "$PACKAGE"
+
+      - name: Upload exact Human Gate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-landscape-pr61-ca89449c0b88-netlify-drop
+          path: deliverable/*
+          if-no-files-found: error
+          retention-days: 14
