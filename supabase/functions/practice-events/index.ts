@@ -8,6 +8,7 @@ import {
   normalizeGamificationStatusBody,
   normalizeRecordBody,
   normalizeStatusBody,
+  resolveContentRefItemIds,
   wordBase,
 } from './practice-events-engine.mjs';
 
@@ -78,10 +79,15 @@ async function record(admin: any, userId: string, normalized: any) {
   }));
   const sources = Array.from(new Set(refs.map((ref: any) => ref.source)));
   const keys = Array.from(new Set(refs.map((ref: any) => ref.key)));
-  const rows = await learningItemRows(admin, sources, keys);
-  const byRef = new Map(rows.map((row: any) => [row.content_source + ':' + row.content_key, row.item_id]));
+  let rows = await learningItemRows(admin, sources, keys);
+  let ids = resolveContentRefItemIds(refs, rows);
+  if (ids.some((id: any) => !id) && refs.some((ref: any) => ref.source === 'game_words')) {
+    const allWordRows = await learningItemRows(admin, ['game_words']);
+    rows = rows.concat(allWordRows);
+    ids = resolveContentRefItemIds(refs, rows);
+  }
   const resolved = normalized.items.map((item: any, index: number) => ({
-    item_id: byRef.get(refs[index].source + ':' + refs[index].key),
+    item_id: ids[index],
     ordinal: item.ordinal,
     is_correct: item.is_correct,
     wrong_count: item.wrong_count,
