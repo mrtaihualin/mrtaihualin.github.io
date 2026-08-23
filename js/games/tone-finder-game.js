@@ -4227,12 +4227,17 @@ function tfRenderExtBar() {
 }
 
 // Lin 2026-07-10: เข้าเกมมาให้เริ่มเล่น 初級 คำแรกทันทีเหมือนเกมอื่น (ไม่ต้องกดเลือกระดับก่อน)
+// Time Auto Plan: ระดับที่ยืนยันจาก proposal ชนะเฉพาะ active matching plan และไม่เปิด resume เก่ามาทับ
+var __tfAutoPlanLevel = (window.StudyPlan && StudyPlan.preferredLevel) ? StudyPlan.preferredLevel('tone') : null;
+if (__tfAutoPlanLevel !== 1 && __tfAutoPlanLevel !== 2 && __tfAutoPlanLevel !== 3) __tfAutoPlanLevel = null;
 // E3 (2026-08-10): อ่าน resume ที่ค้างไว้ "ก่อน" TF.selectLevel(1) เสมอ — เพราะ selectLevel(1) จะเรียก
 // startSetSession() ซึ่ง save resume ของ session ใหม่ทับ localStorage ทันที ถ้าไปอ่านทีหลังจะเจอแต่ของใหม่ ไม่เจอของเก่า
-try { __tfResumeSnapshot = (window.GameResume && GameResume.load('tone-finder')) || null; } catch (e) { __tfResumeSnapshot = null; }
-TF.selectLevel(1);
+if (!__tfAutoPlanLevel) {
+  try { __tfResumeSnapshot = (window.GameResume && GameResume.load('tone-finder')) || null; } catch (e) { __tfResumeSnapshot = null; }
+}
+TF.selectLevel(__tfAutoPlanLevel || 1);
 setTimeout(tfRenderExtBar, 0);
-if (__tfResumeSnapshot) { var __tfResumeCaptured = __tfResumeSnapshot; setTimeout(function () { tfShowResumeBannerIfAny(__tfResumeCaptured); }, 0); }
+if (!__tfAutoPlanLevel && __tfResumeSnapshot) { var __tfResumeCaptured = __tfResumeSnapshot; setTimeout(function () { tfShowResumeBannerIfAny(__tfResumeCaptured); }, 0); }
 
 // Lin 2026-07-10: ซ่อนแถบ page-strip ล่างจอเฉพาะตอนเบราว์เซอร์เข้าโหมดเต็มจอจริง (Fullscreen API)
 (function () {
