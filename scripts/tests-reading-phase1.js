@@ -8,6 +8,7 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/games/reading-game-app.js'), 'utf8');
+const gameContentClient = fs.readFileSync(path.join(root, 'js/games/game-content-client.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'reading-game.html'), 'utf8');
 let passed = 0;
 
@@ -70,6 +71,31 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
   assert.match(html, /reading-game-app\.min\.js\?v=40/);
+});
+
+test('direct word boot binds the protected level before Reading starts and restores preferences', () => {
+  const start = gameContentClient.indexOf('var restoreDirectReadingWordLevel = null;');
+  const end = gameContentClient.indexOf('// ── UI ระหว่างโหลด/error', start);
+  assert.ok(start >= 0 && end > start, 'direct-word protected-level bridge missing');
+  const bridge = gameContentClient.slice(start, end);
+  assert.match(bridge, /reading-game\\\.html/);
+  assert.match(bridge, /row\.word === wanted/);
+  assert.match(bridge, /row\.level === '初' \|\| row\.level === '中'/);
+  assert.match(bridge, /if \(rows\.length !== 1\) return null/);
+  assert.match(bridge, /localStorage\.setItem\('rg_reading_level', level\)/);
+  assert.match(bridge, /studyPlan\.preferredLevel = function \(game\)/);
+  assert.match(bridge, /if \(game === 'reading'\) return level/);
+  assert.match(bridge, /if \(hadStoredLevel\) localStorage\.setItem\('rg_reading_level', storedLevel\)/);
+  assert.match(bridge, /else localStorage\.removeItem\('rg_reading_level'\)/);
+  assert.match(bridge, /studyPlan\.preferredLevel = originalPreferredLevel/);
+
+  const bootStart = gameContentClient.indexOf('global.GameContentLoader = {');
+  const bootEnd = gameContentClient.indexOf('// ════════════════════════════════════════════════════════════\n  // GLOBAL CRASH HANDLER', bootStart);
+  assert.ok(bootStart >= 0 && bootEnd > bootStart, 'game-content boot block missing');
+  const boot = gameContentClient.slice(bootStart, bootEnd);
+  assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('global.WORDS_MASTER = data.words;'));
+  assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('injectScript(src)'));
+  assert.strictEqual((boot.match(/restoreDirectReadingWordLevelOverride\(\)/g) || []).length, 2);
 });
 
 test('Reading option generator keeps displayed vowel choices complete and unique', () => {
