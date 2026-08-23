@@ -743,13 +743,19 @@ function legoStartNewSession(){
 }
 
 function legoShowDetail(){
-  document.getElementById('lego-result').classList.add('hidden');
-  document.getElementById('lego-result-detail').classList.remove('hidden');
+  const result=document.getElementById('lego-result');
+  const detail=document.getElementById('lego-result-detail');
+  if(window.GameFlow)GameFlow.markResultDetail(result,detail);
+  result.classList.add('hidden');
+  detail.classList.remove('hidden');
 }
 
 function legoHideDetail(){
-  document.getElementById('lego-result-detail').classList.add('hidden');
-  document.getElementById('lego-result').classList.remove('hidden');
+  const result=document.getElementById('lego-result');
+  const detail=document.getElementById('lego-result-detail');
+  if(window.GameFlow)GameFlow.unmarkResultDetail(result,detail);
+  detail.classList.add('hidden');
+  result.classList.remove('hidden');
 }
 
 function legoPrintResult(){
@@ -1502,7 +1508,8 @@ function teachPrev(){if(teachStep>0){teachStep--;renderTeach();}}
 
 // ════════ CLOSE ON OUTSIDE CLICK ════════
 document.addEventListener('click',e=>{
-  if(!e.target.closest('.slot')&&openSlot){openSlot=null;applyOpen();}
+  const landscapeMenu=e.target.closest('[data-gsh-ml-role="lego-menu"],[data-gsh-ml-custom-input]');
+  if(!e.target.closest('.slot')&&!landscapeMenu&&openSlot){openSlot=null;applyOpen();}
 });
 
 // ════════ กด Enter ไปข้อถัดไป (ตอนตอบถูก/เฉลยแล้ว มีปุ่ม「繼續 →」โผล่มา) — Lin 2026-07-20

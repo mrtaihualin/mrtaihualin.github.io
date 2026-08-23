@@ -69,7 +69,7 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=39/);
+  assert.match(html, /reading-game-app\.min\.js\?v=41/);
 });
 
 test('Reading option generator keeps displayed vowel choices complete and unique', () => {

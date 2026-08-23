@@ -2114,3 +2114,30 @@ fix(backup): เพิ่ม package-lock.json ให้ scripts/backup + เป
 ```bash
 node scripts/check-site.js
 ```
+## 2026-08-21 — Six-game Mobile Landscape shared stage (`PASS_LOCAL / PHYSICAL_IPHONE_BLOCKED`)
+
+- Added one shared landscape stage for Tone, Reading, Listening, Typing, Word Order and Lego at the locked 1024×600 landscape boundary, using live-node movement with restoration on exit instead of cloned gameplay state.
+- Added shared Mode/Level/Tools dropdowns, a fixed main-action slot, exclusive Login/Resume/Result handling, safe-area containment and shared split Kedmanee keyboard rendering for Typing and Listening Typed. Typing and Listening Typed suppress the native keyboard only while this layout is active; Lego custom input retains native keyboard behavior and follows `visualViewport`.
+- Retired the former coordinate-based landscape block, advanced the affected cache keys, moved the Core 5 pre-game countdown from three to five seconds and kept the existing seven-second result countdown unchanged.
+- Deterministic geometry, flow and per-game source tests plus the full site gate pass locally. No commit, push, PR, deploy, SQL, account/player-data or Production mutation occurred. Exact physical iPhone viewport/rotation/custom-input verification remains a Human gate.
+
+## 2026-08-22 — Mobile Landscape lifecycle correction (`PASS_LOCAL / HUMAN_GATE_NOT_STARTED`)
+
+- Stopped Listening Typed from rebuilding its shared Thai keyboard during unrelated observer/frame syncs; renders now occur only on entry, source/layout change or Shift transition, while native input policy still restores on exit.
+- Made the placeholder marker authoritative for moved-node lifetime so an original-parent rerender removes the stale staged node and record instead of resurrecting obsolete content.
+- Added deterministic runtime coverage for idle key identity/render stability, Thai input, one-shot Shift, Backspace, input-policy restoration, stale-marker cleanup and normal reverse restoration. No merge, deploy or physical-iPhone verification occurred.
+
+## 2026-08-22 — Remaining Mobile Landscape lifecycle fixes (`PASS_LOCAL / HUMAN_GATE_NOT_STARTED`)
+
+- Made Tone Result ownership explicit across summary, mistake review, replay and the next round so the live `#tf-body` cannot oscillate between gameplay and Result slots.
+- Restored Result action groups before their Result root, preserved live countdown/pause nodes and timer state across Landscape/Portrait rotation, and enforced exclusive inertness for Resume, Result and Lego custom input.
+- Added deterministic two-round Tone/shared-Result lifecycle, action restoration, rotation countdown/pause, input exclusivity and observer-stability coverage.
+- Rendered browser verification passed for all required lifecycle states at 740×360 and for Landscape, Portrait and Desktop across all six games, with no duplicate IDs or leaked movement markers.
+- No Product/UX redesign, merge, deploy or physical-iPhone verification occurred; Draft PR #61 remains the only delivery path.
+
+## 2026-08-22 — Mobile Landscape separate Result-detail lifecycle (`PASS_LOCAL / HUMAN_GATE_NOT_STARTED`)
+
+- Added one shared explicit owner contract for separate Result Detail roots in Reading, Listening, Typing and Lego; Tone and Word Order keep their existing same-root/nested detail flows.
+- Mobile Landscape now keeps separate Detail screens exclusive, restores Result actions/root before Detail, preserves the live Detail state through Portrait rotation, and remounts the same Result/actions on Back without a second countdown.
+- Added runtime/static coverage for all four owner/detail pairs, rotation while Detail is open, Back/Replay/page-teardown cleanup, inertness, local scrolling, node identity, duplicate controls and marker cleanup.
+- Rendered browser verification passed at 740×360 → 390×844 → 740×360 for Result → Detail → Portrait → Landscape → Back → Replay. No merge, deploy or physical-iPhone verification occurred.
