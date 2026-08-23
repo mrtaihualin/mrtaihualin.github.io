@@ -21,6 +21,7 @@ const legoEdge = read('supabase/functions/lego-daily-limit/index.ts');
 const practiceEdge = read('supabase/functions/practice-events/index.ts');
 const toneSql = read('supabase/sql/2026-08-16_phase1_tone_round_atomic.sql');
 const legoSql = read('supabase/sql/2026-08-16_phase1_lego_daily_idempotency.sql');
+const serverRpcAclSql = read('supabase/migrations/20260824000000_phase1_server_rpc_least_privilege.sql');
 const toneClient = read('js/games/tone-server.js');
 const legoClient = read('js/games/lego-game-app.js');
 let passed = 0;
@@ -177,6 +178,24 @@ await test('new Tone/Lego clients still send one stable id per retry payload', (
   assert.match(legoClient, /legoQuotaPendingAttempt/);
   assert.match(legoClient, /body:\{request_id:attempt\.requestId\}/);
   assert.match(legoClient, /for\(var requestAttempt=0;requestAttempt<2;requestAttempt\+\+\)/);
+});
+
+await test('server-only RPC least privilege closes browser execute without touching public RLS guards', () => {
+  for (const signature of [
+    'rl_check\\(uuid, text, integer, integer\\)',
+    'payout_precheck\\(uuid\\)',
+    'lego_consume_daily\\(text, date, integer\\)',
+  ]) {
+    assert.match(serverRpcAclSql, new RegExp('revoke all on function public\\.' + signature + '[\\s\\S]+from public, anon, authenticated'));
+    assert.match(serverRpcAclSql, new RegExp('grant execute on function public\\.' + signature + '[\\s\\S]+to service_role'));
+  }
+  assert.match(serverRpcAclSql, /has_function_privilege\('anon', v_signature, 'execute'\)/);
+  assert.match(serverRpcAclSql, /has_function_privilege\('authenticated', v_signature, 'execute'\)/);
+  assert.match(serverRpcAclSql, /has_function_privilege\('service_role', v_signature, 'execute'\)/);
+  assert.doesNotMatch(serverRpcAclSql, /revoke all on function public\.reading_sessions_rate_ok/);
+  assert.doesNotMatch(serverRpcAclSql, /revoke all on function public\.tone_sessions_rate_ok/);
+  assert.doesNotMatch(serverRpcAclSql, /revoke all on function public\.anon_game_events_rate_ok/);
+  assert.doesNotMatch(serverRpcAclSql, /revoke all on function public\.leads_rate_ok/);
 });
 
 await test('rollout bridge is Edge-only and keeps current client cache versions unchanged', () => {
