@@ -9,11 +9,13 @@ import {
   legacyLegoRequestId,
   resolveLegoRequestId,
 } from '../supabase/functions/_shared/phase1-rollout-compatibility.mjs';
+import { canonicalContentKey } from '../supabase/functions/practice-events/practice-events-engine.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const toneEdge = read('supabase/functions/tone-round/index.ts');
 const legoEdge = read('supabase/functions/lego-daily-limit/index.ts');
+const practiceEdge = read('supabase/functions/practice-events/index.ts');
 const toneSql = read('supabase/sql/2026-08-16_phase1_tone_round_atomic.sql');
 const legoSql = read('supabase/sql/2026-08-16_phase1_lego_daily_idempotency.sql');
 const toneClient = read('js/games/tone-server.js');
@@ -114,6 +116,16 @@ await test('Lego bridge preserves server-derived Guest/account identity and atom
   assert.match(legoEdge, /rpc\('lego_consume_daily_idempotent'/);
   assert.match(legoSql, /primary key \(identity_key, day, request_id\)/);
   assert.match(legoSql, /pg_advisory_xact_lock/);
+});
+
+await test('Played bridge maps numeric word levels to canonical learning-item labels only at lookup', () => {
+  assert.equal(canonicalContentKey('game_words', 'เขา@1'), 'เขา@初');
+  assert.equal(canonicalContentKey('game_words', 'กินข้าว@2'), 'กินข้าว@中');
+  assert.equal(canonicalContentKey('game_words', 'คำ@3'), 'คำ@高');
+  assert.equal(canonicalContentKey('game_words', 'เขา@初'), 'เขา@初');
+  assert.equal(canonicalContentKey('game_sentences', 'ฉันมีอีเมล@1'), 'ฉันมีอีเมล@1');
+  assert.match(practiceEdge, /canonicalContentKey\(item\.content_ref\.source, item\.content_ref\.key\)/);
+  assert.match(practiceEdge, /byRef\.get\(refs\[index\]\.source \+ ':' \+ refs\[index\]\.key\)/);
 });
 
 await test('Tone accepts missing ids but rejects malformed explicit ids', () => {
