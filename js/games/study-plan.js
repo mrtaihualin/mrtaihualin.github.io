@@ -81,6 +81,13 @@
     return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
   }
 
+  function takeNextGame(){
+    var s=state(),loggedIn=!!auth().user;
+    var n=Core.nextFromRotation(s.rotation,s.performance,loggedIn);
+    s.rotation=n.rotation;persist(s);
+    return n.game;
+  }
+
   function previewGames(count){
     var s=state(),loggedIn=!!auth().user,rot=JSON.parse(JSON.stringify(s.rotation||{})),out=[];
     for(var i=0;i<count;i++){
@@ -124,6 +131,18 @@
   function selectedProposalItems(proposal){
     var raw=(proposal&&proposal.recommendedItems||[]).filter(function(item){return item&&item.selected;});
     return Core.validateSelectedGames(raw);
+  }
+
+  function normalizePlanQueue(plan){
+    var raw=Array.isArray(plan&&plan.initialQueue)?plan.initialQueue:plan&&plan.selectedGames;
+    var queue=Core.validateSelectedGames(raw);
+    if(!queue.ok)return queue;
+    var rawIndex=plan&&plan.initialIndex;
+    if(rawIndex==null)rawIndex=plan&&plan.currentIndex;
+    var index=Math.max(0,Math.floor(Number(rawIndex)||0));
+    var phase=((plan&&plan.phase==='rotation')||index>=queue.items.length)?'rotation':'initial';
+    if(phase==='rotation')index=queue.items.length;
+    return {ok:true,items:queue.items,index:index,phase:phase,item:phase==='initial'?queue.items[index]:null};
   }
 
   function endPlan(reason){
@@ -189,8 +208,8 @@
       var first=selected.items[0];
       var plan={
         version:2,active:true,requestId:live.requestId,quotaCommitted:true,
-        owner:live.owner,targetMinutes:live.minutes,selectedGames:selected.items,
-        currentIndex:0,currentGame:first.game,segmentSeconds:0,roundInProgress:false,
+        owner:live.owner,targetMinutes:live.minutes,initialQueue:selected.items,
+        initialIndex:0,phase:'initial',currentGame:first.game,segmentSeconds:0,roundInProgress:false,
         atBoundary:false,systemNavigation:true,startedAt:Date.now()
       };
       sessionWrite(plan);proposalWrite(null);location.href=Core.URLS[first.game];
@@ -202,25 +221,27 @@
     var p=sessionRead();
     if(!p||!currentGame)return;
     var identity=ownerIdentity();
-    var selected=Core.validateSelectedGames(p.selectedGames),item=selected.ok&&selected.items[p.currentIndex];
-    if(p.version!==2||!p.quotaCommitted||p.owner!==identity||!item||item.game!==currentGame||p.currentGame!==currentGame){
+    var queue=normalizePlanQueue(p),expected=queue.ok&&(queue.item?queue.item.game:Core.normalizeGameType(p.currentGame));
+    if(p.version!==2||!p.quotaCommitted||p.owner!==identity||!queue.ok||!expected||expected!==currentGame||p.currentGame!==currentGame){
       endPlan('identity_or_navigation_mismatch');
       location.replace('/games.html?time_plan=service_error');
       return;
     }
-    p.selectedGames=selected.items;p.systemNavigation=false;sessionWrite(p);renderPlanUi();
+    p.initialQueue=queue.items;p.initialIndex=queue.index;p.phase=queue.phase;
+    delete p.selectedGames;delete p.currentIndex;
+    p.systemNavigation=false;sessionWrite(p);renderPlanUi();
   }
 
   function advance(reason){
     var p=sessionRead();if(!p||!p.active)return;
-    var selected=Core.validateSelectedGames(p.selectedGames);if(!selected.ok){endPlan('invalid_selection');return;}
-    p.selectedGames=selected.items;
-    if(selected.items.length===1){
-      if(reason==='skip'){endPlan('skip_single');location.href='/games.html';return;}
-      p.segmentSeconds=0;p.roundInProgress=false;p.atBoundary=false;sessionWrite(p);renderPlanUi();return;
+    var queue=normalizePlanQueue(p);if(!queue.ok){endPlan('invalid_selection');return;}
+    p.initialQueue=queue.items;delete p.selectedGames;delete p.currentIndex;
+    var next;
+    if(queue.phase==='initial'&&queue.index+1<queue.items.length){
+      p.phase='initial';p.initialIndex=queue.index+1;next=queue.items[p.initialIndex].game;
+    }else{
+      p.phase='rotation';p.initialIndex=queue.items.length;next=takeNextGame();
     }
-    p.currentIndex=(Math.max(0,Number(p.currentIndex)||0)+1)%selected.items.length;
-    var next=selected.items[p.currentIndex].game;
     p.currentGame=next;p.segmentSeconds=0;p.roundInProgress=false;p.atBoundary=false;
     p.systemNavigation=true;p.advanceReason=reason||'segment';sessionWrite(p);
     location.href=Core.URLS[next];
@@ -230,7 +251,7 @@
 
   function preferredLevel(game){
     var p=sessionRead();if(!p||p.version!==2||!p.quotaCommitted||p.currentGame!==game)return null;
-    var selected=Core.validateSelectedGames(p.selectedGames),item=selected.ok&&selected.items[p.currentIndex];
+    var queue=normalizePlanQueue(p),item=queue.ok&&queue.item;
     return item&&item.game===game?item.level:null;
   }
 

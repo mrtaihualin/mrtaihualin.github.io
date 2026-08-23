@@ -67,9 +67,10 @@ check('quota confirmation sends request_id only while still on the hub',()=>{
   assert.doesNotMatch(source,/body:JSON\.stringify\(\{[^}]*user_id/);
 });
 
-check('active v2 plan stores selected games, levels, and current index',()=>{
+check('active v2 plan stores an initial queue with levels and phase',()=>{
   const source=read('js/games/study-plan.js');
-  assert.match(source,/version:2,active:true[\s\S]+selectedGames:selected\.items[\s\S]+currentIndex:0/);
+  assert.match(source,/version:2,active:true[\s\S]+initialQueue:selected\.items[\s\S]+initialIndex:0,phase:'initial'/);
+  assert.doesNotMatch(source,/version:2,active:true[\s\S]+selectedGames:selected\.items/);
 });
 
 check('rotation checkpoint commits only in allowed confirmation branch',()=>{
@@ -85,11 +86,12 @@ check('game page never owns the quota request anymore',()=>{
   assert.match(ensure,/!p\.quotaCommitted/);
 });
 
-check('selected-only rotation handles multi-game and single-game paths',()=>{
+check('initial queue transitions into normal rotation instead of becoming a closed cycle',()=>{
   const source=read('js/games/study-plan.js');
-  assert.match(source,/if\(selected\.items\.length===1\)/);
-  assert.match(source,/if\(reason==='skip'\)\{endPlan\('skip_single'\);location\.href='\/games\.html'/);
-  assert.match(source,/p\.currentIndex=.*%selected\.items\.length/);
+  const advance=source.slice(source.indexOf('function advance'),source.indexOf('function skip'));
+  assert.match(advance,/queue\.phase==='initial'&&queue\.index\+1<queue\.items\.length/);
+  assert.match(advance,/p\.phase='rotation'[\s\S]+next=takeNextGame\(\)/);
+  assert.doesNotMatch(advance,/%queue\.items\.length|skip_single|location\.href='\/games\.html'/);
 });
 
 check('Tone applies proposal preference before auto-start and suppresses old resume',()=>{

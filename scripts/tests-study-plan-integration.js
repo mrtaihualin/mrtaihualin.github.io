@@ -21,6 +21,9 @@ function test(label,fn){
 function response(status,body){return {ok:status>=200&&status<300,status,json:async()=>body};}
 function settle(){return new Promise(resolve=>setImmediate(resolve));}
 async function settleAll(){for(let i=0;i<8;i++)await settle();}
+function savedState(rotation,performance=Core.emptyPerf()){
+  return {performance,rotation,daily:{day:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date()),seconds:0}};
+}
 
 function storage(backing=new Map()){
   return {
@@ -59,8 +62,8 @@ class FakeDocument{
 function activePlan(overrides={}){
   return Object.assign({
     version:2,active:true,requestId:'00000000-0000-4000-8000-000000000001',quotaCommitted:true,
-    owner:'guest',targetMinutes:5,selectedGames:[{game:'tone',level:1},{game:'reading',level:'初'}],
-    currentIndex:0,segmentSeconds:0,currentGame:'tone',roundInProgress:false,
+    owner:'guest',targetMinutes:5,initialQueue:[{game:'tone',level:1},{game:'reading',level:'初'}],
+    initialIndex:0,phase:'initial',segmentSeconds:0,currentGame:'tone',roundInProgress:false,
     atBoundary:false,systemNavigation:true,startedAt:1
   },overrides);
 }
@@ -135,7 +138,7 @@ async function main(){
       'lego.html':'lego-game-app'
     };
     for(const [page,app] of Object.entries(pages)){
-      const html=read(page),core=html.indexOf('study-plan-core.js?v=2'),plan=html.indexOf('study-plan.js?v=2'),game=html.lastIndexOf(app);
+      const html=read(page),core=html.indexOf('study-plan-core.js?v=2'),plan=html.indexOf('study-plan.js?v=3'),game=html.lastIndexOf(app);
       assert(core>=0&&plan>core&&game>plan,page+' script order');
     }
   });
@@ -271,11 +274,141 @@ async function main(){
     h.context.StudyPlan.updateProposal(items[1].game,undefined,'高');
     const result=await h.context.StudyPlan.confirm();
     assert.strictEqual(result.ok,true);
-    assert.strictEqual(result.plan.selectedGames.length,1);
-    assert.strictEqual(result.plan.selectedGames[0].game,items[1].game);
-    assert.strictEqual(result.plan.selectedGames[0].level,'高');
+    assert.strictEqual(result.plan.initialQueue.length,1);
+    assert.strictEqual(result.plan.initialQueue[0].game,items[1].game);
+    assert.strictEqual(result.plan.initialQueue[0].level,'高');
     assert.strictEqual(h.loc.href,Core.URLS[items[1].game]);
     assert.strictEqual(h.context.StudyPlan.preferredLevel(items[1].game),'高');
+  });
+
+  await test('Typing-only initial queue continues after the full Typing/Word Order proposal window',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_account_v1',JSON.stringify(savedState({order:Core.GAME_ORDER,nextIndex:3})));
+    const h=harness({user:{id:'account-a'},localStorage:local});
+    h.context.StudyPlan.start(20);
+    const proposed=h.context.StudyPlan.proposal().recommendedItems;
+    assert.deepStrictEqual(Array.from(proposed,x=>x.game),['typing','word_order']);
+    h.context.StudyPlan.updateProposal('word_order',false);
+    const result=await h.context.StudyPlan.confirm();
+    assert.deepStrictEqual(Array.from(result.plan.initialQueue,x=>x.game),['typing']);
+    assert.strictEqual(h.context.StudyPlan.state().rotation.nextIndex,5);
+    h.context.StudyPlan.advance('round_complete');
+    assert.strictEqual(h.loc.href,'/lego.html');
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'rotation');
+  });
+
+  await test('selecting both proposed games plays both once before normal rotation',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_account_v1',JSON.stringify(savedState({order:Core.GAME_ORDER,nextIndex:3})));
+    const h=harness({user:{id:'account-a'},localStorage:local});
+    h.context.StudyPlan.start(20);
+    await h.context.StudyPlan.confirm();
+    h.context.StudyPlan.advance('round_complete');
+    assert.strictEqual(h.loc.href,'/word-order.html');
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'initial');
+    assert.strictEqual(h.context.StudyPlan.plan().initialIndex,1);
+    assert.strictEqual(h.context.StudyPlan.state().rotation.nextIndex,5);
+    h.context.StudyPlan.advance('round_complete');
+    assert.strictEqual(h.loc.href,'/lego.html');
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'rotation');
+  });
+
+  await test('an unchecked proposed game does not rebound immediately after the selected game',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_account_v1',JSON.stringify(savedState({order:Core.GAME_ORDER,nextIndex:3})));
+    const h=harness({user:{id:'account-a'},localStorage:local});
+    h.context.StudyPlan.start(20);
+    h.context.StudyPlan.updateProposal('word_order',false);
+    await h.context.StudyPlan.confirm();
+    h.context.StudyPlan.advance('round_complete');
+    assert.strictEqual(h.loc.href,'/lego.html');
+    assert.notStrictEqual(h.loc.href,'/word-order.html');
+  });
+
+  await test('Skip with one selected initial game enters rotation and never ends Auto Plan',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_account_v1',JSON.stringify(savedState({order:Core.GAME_ORDER,nextIndex:3})));
+    const h=harness({user:{id:'account-a'},localStorage:local});
+    h.context.StudyPlan.start(20);
+    h.context.StudyPlan.updateProposal('word_order',false);
+    await h.context.StudyPlan.confirm();
+    h.context.StudyPlan.skip();
+    assert.strictEqual(h.loc.href,'/lego.html');
+    assert.strictEqual(h.context.StudyPlan.plan().active,true);
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'rotation');
+  });
+
+  await test('Skip on the first of two selected games advances to the second initial game',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_account_v1',JSON.stringify(savedState({order:Core.GAME_ORDER,nextIndex:3})));
+    const h=harness({user:{id:'account-a'},localStorage:local});
+    h.context.StudyPlan.start(20);
+    await h.context.StudyPlan.confirm();
+    h.context.StudyPlan.skip();
+    assert.strictEqual(h.loc.href,'/word-order.html');
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'initial');
+    assert.strictEqual(h.context.StudyPlan.plan().initialIndex,1);
+  });
+
+  await test('Skip on the last initial game enters the next persistent rotation game',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_account_v1',JSON.stringify(savedState({order:Core.GAME_ORDER,nextIndex:3})));
+    const h=harness({user:{id:'account-a'},localStorage:local});
+    h.context.StudyPlan.start(20);
+    await h.context.StudyPlan.confirm();
+    h.context.StudyPlan.skip();
+    h.context.StudyPlan.skip();
+    assert.strictEqual(h.loc.href,'/lego.html');
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'rotation');
+  });
+
+  await test('soft boundary after the last initial game enters normal rotation',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_account_v1',JSON.stringify(savedState({order:Core.GAME_ORDER,nextIndex:5})));
+    const plan=activePlan({owner:'user:account-a',initialQueue:[{game:'typing',level:'初'}],currentGame:'typing',segmentSeconds:599});
+    const h=harness({pathname:'/typing-game.html',user:{id:'account-a'},localStorage:local,plan});
+    await settleAll();
+    h.emitWindow('gsh:round-start',{report:{game_type:'typing',items:[]}});
+    h.advanceNow(1000);h.intervals[0]();
+    assert.strictEqual(h.loc.href,'https://mrtaihualin.com/typing-game.html');
+    h.emitWindow('gsh:round-complete',{report:{game_type:'typing',items:[]}});
+    assert.strictEqual(h.loc.href,'/lego.html');
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'rotation');
+  });
+
+  await test('Default and Weakness rotation cursors remain persistent after all proposed recommendations',async()=>{
+    const weak=Core.emptyPerf();
+    weak.tone={count:100,totalScore:100,averageScore:1};
+    weak.reading={count:100,totalScore:200,averageScore:2};
+    weak.listening={count:1,totalScore:3,averageScore:3};
+    weak.typing={count:1,totalScore:4,averageScore:4};
+    weak.word_order={count:1,totalScore:5,averageScore:5};
+    const local=storage();
+    local.setItem('gsh_study_plan_account_v1',JSON.stringify(savedState({order:null,nextIndex:0},weak)));
+    const h=harness({user:{id:'account-a'},localStorage:local});
+    h.context.StudyPlan.start(20);
+    const proposed=h.context.StudyPlan.proposal().recommendedItems;
+    assert.deepStrictEqual(Array.from(proposed,x=>x.game),['tone','listening']);
+    h.context.StudyPlan.updateProposal('listening',false);
+    await h.context.StudyPlan.confirm();
+    assert.deepStrictEqual(Array.from(h.context.StudyPlan.state().rotation.order),['tone','listening','reading','typing','word_order','lego']);
+    assert.strictEqual(h.context.StudyPlan.state().rotation.nextIndex,2);
+    h.context.StudyPlan.advance('round_complete');
+    assert.strictEqual(h.loc.href,'/reading-game.html');
+    assert.strictEqual(h.context.StudyPlan.state().rotation.nextIndex,3);
+  });
+
+  await test('an active PR #69 selectedGames session migrates into the finite initial queue',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_guest_v1',JSON.stringify(savedState({order:Core.GAME_ORDER,nextIndex:1})));
+    const legacy=activePlan({initialQueue:undefined,initialIndex:undefined,phase:undefined,selectedGames:[{game:'tone',level:2}],currentIndex:0});
+    const h=harness({pathname:'/tone-finder.html',localStorage:local,plan:legacy});
+    await settleAll();
+    assert.deepStrictEqual(Array.from(h.context.StudyPlan.plan().initialQueue,x=>x.game),['tone']);
+    assert.strictEqual('selectedGames' in h.context.StudyPlan.plan(),false);
+    h.context.StudyPlan.advance('round_complete');
+    assert.strictEqual(h.loc.href,'/reading-game.html');
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'rotation');
   });
 
   await test('Daily Timer counts active foreground seconds, persists pagehide, pauses, idles, and resumes',()=>{
@@ -325,19 +458,22 @@ async function main(){
     assert.strictEqual(h.context.StudyPlan.plan().segmentSeconds,0);
   });
 
-  await test('one selected game resets at a soft boundary and Skip ends at the hub',async()=>{
-    const plan=activePlan({selectedGames:[{game:'tone',level:3}],segmentSeconds:599});
-    const h=harness({pathname:'/tone-finder.html',plan});
+  await test('one selected game enters normal rotation at a soft boundary and Skip keeps Auto Plan active',async()=>{
+    const local=storage();
+    local.setItem('gsh_study_plan_guest_v1',JSON.stringify({performance:Core.emptyPerf(),rotation:{order:Core.GAME_ORDER,nextIndex:1},daily:{day:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date()),seconds:0}}));
+    const plan=activePlan({initialQueue:[{game:'tone',level:3}],segmentSeconds:599});
+    const h=harness({pathname:'/tone-finder.html',localStorage:local,plan});
     await settleAll();
     assert.strictEqual(h.context.StudyPlan.preferredLevel('tone'),3);
     h.emitWindow('gsh:round-start',{report:{game_type:'tone',items:[]}});
     h.advanceNow(1000);h.intervals[0]();
     h.emitWindow('gsh:round-complete',{report:{game_type:'tone',items:[]}});
-    assert.strictEqual(h.loc.href,'https://mrtaihualin.com/tone-finder.html');
+    assert.strictEqual(h.loc.href,'/reading-game.html');
     assert.strictEqual(h.context.StudyPlan.plan().segmentSeconds,0);
+    assert.strictEqual(h.context.StudyPlan.plan().phase,'rotation');
     h.context.StudyPlan.skip();
-    assert.strictEqual(h.loc.href,'/games.html');
-    assert.strictEqual(h.context.StudyPlan.plan(),null);
+    assert.strictEqual(h.loc.href,'/listening-game.html');
+    assert.strictEqual(h.context.StudyPlan.plan().active,true);
   });
 
   await test('manual game switch ends Auto Plan',async()=>{
