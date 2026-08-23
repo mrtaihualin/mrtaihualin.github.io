@@ -144,6 +144,27 @@
     });
   }
 
+  // A direct Vault Reading route must inherit the protected word's real level before the
+  // Reading bundle evaluates its remembered level. This prevents a stale prior tab level
+  // (for example 高) from turning `?word=เขา` into `เขา@高` / Reading SRS level 3.
+  // Fail closed: only one exact protected word match may update the remembered Reading level.
+  function applyDirectReadingWordLevel(data) {
+    try {
+      if (!global.location || !/(?:^|\/)reading-game\.html$/.test(String(global.location.pathname || ''))) return null;
+      var match = String(global.location.search || '').match(/[?&]word=([^&]+)/);
+      if (!match) return null;
+      var wanted = decodeURIComponent(match[1]);
+      var rows = (data && Array.isArray(data.words) ? data.words : []).filter(function (row) {
+        return row && row.word === wanted && (row.level === '初' || row.level === '中');
+      });
+      if (rows.length !== 1) return null;
+      if (typeof localStorage !== 'undefined') localStorage.setItem('rg_reading_level', rows[0].level);
+      return rows[0].level;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // ── UI ระหว่างโหลด/error (ไม่พึ่ง css/shared.css — ทำ style ในตัวเอง กันชนกับสไตล์เกม) ──
   // 🆕 2026-08-08 (P6-17): เปลี่ยนสีจากฟ้า/แดงทั่วไปเป็นสีธีมทองของเว็บ (CLAUDE.md หัวข้อ
   // "🎨 กฎถาวรของเกม — สีธีม/ดีไซน์เว็บ") — ยัง hardcode ค่า hex ตรงๆ เหมือนเดิม (ไม่ใช้
@@ -366,6 +387,7 @@
         if (global.WordAudio && typeof global.WordAudio.setAvailability === 'function') {
           global.WordAudio.setAvailability(data.audioAvailable);
         }
+        applyDirectReadingWordLevel(data);
         global.WORDS_MASTER = data.words;
         global.ADV_SENTENCES = data.sentences;
         var chain = Promise.resolve();
