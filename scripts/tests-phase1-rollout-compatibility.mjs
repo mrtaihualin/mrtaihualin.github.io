@@ -9,7 +9,10 @@ import {
   legacyLegoRequestId,
   resolveLegoRequestId,
 } from '../supabase/functions/_shared/phase1-rollout-compatibility.mjs';
-import { canonicalContentKey } from '../supabase/functions/practice-events/practice-events-engine.mjs';
+import {
+  canonicalContentKey,
+  resolveContentRefItemIds,
+} from '../supabase/functions/practice-events/practice-events-engine.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
@@ -125,7 +128,32 @@ await test('Played bridge maps numeric word levels to canonical learning-item la
   assert.equal(canonicalContentKey('game_words', 'เขา@初'), 'เขา@初');
   assert.equal(canonicalContentKey('game_sentences', 'ฉันมีอีเมล@1'), 'ฉันมีอีเมล@1');
   assert.match(practiceEdge, /canonicalContentKey\(item\.content_ref\.source, item\.content_ref\.key\)/);
-  assert.match(practiceEdge, /byRef\.get\(refs\[index\]\.source \+ ':' \+ refs\[index\]\.key\)/);
+});
+
+await test('Played stale-level fallback accepts only one unambiguous canonical word base', () => {
+  const exactRows = [{ item_id: 'item-initial', content_source: 'game_words', content_key: 'เขา@初' }];
+  assert.deepEqual(
+    resolveContentRefItemIds([{ source: 'game_words', key: 'เขา@初' }], exactRows),
+    ['item-initial']
+  );
+  assert.deepEqual(
+    resolveContentRefItemIds([{ source: 'game_words', key: 'เขา@高' }], exactRows),
+    ['item-initial']
+  );
+  const ambiguousRows = [
+    { item_id: 'item-a', content_source: 'game_words', content_key: 'เขา@初' },
+    { item_id: 'item-b', content_source: 'game_words', content_key: 'เขา@中' },
+  ];
+  assert.deepEqual(
+    resolveContentRefItemIds([{ source: 'game_words', key: 'เขา@高' }], ambiguousRows),
+    [null]
+  );
+  assert.deepEqual(
+    resolveContentRefItemIds([{ source: 'game_sentences', key: 'เขา@高' }], exactRows),
+    [null]
+  );
+  assert.match(practiceEdge, /learningItemRows\(admin, \['game_words'\]\)/);
+  assert.match(practiceEdge, /if \(resolved\.some\(\(item: any\) => !item\.item_id\)\) throw new Error\('unknown_content_ref'\)/);
 });
 
 await test('Tone accepts missing ids but rejects malformed explicit ids', () => {

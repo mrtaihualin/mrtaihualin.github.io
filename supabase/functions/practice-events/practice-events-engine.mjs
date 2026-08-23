@@ -36,6 +36,32 @@ export function canonicalContentKey(source, value) {
   return key.replace(/@([123])$/, (_match, level) => '@' + WORD_LEVEL_SUFFIX[level]);
 }
 
+export function resolveContentRefItemIds(refs, rows) {
+  const exact = new Map();
+  const wordCandidates = new Map();
+  (rows || []).forEach((row) => {
+    const source = String(row?.content_source || '');
+    const key = String(row?.content_key || '');
+    const itemId = row?.item_id || null;
+    if (!source || !key || !itemId) return;
+    const exactKey = source + ':' + key;
+    if (!exact.has(exactKey)) exact.set(exactKey, itemId);
+    else if (exact.get(exactKey) !== itemId) exact.set(exactKey, null);
+    if (source !== 'game_words') return;
+    const base = wordBase(key);
+    const current = wordCandidates.get(base);
+    if (!current) wordCandidates.set(base, { item_id: itemId, ambiguous: false });
+    else if (current.item_id !== itemId) current.ambiguous = true;
+  });
+  return (refs || []).map((ref) => {
+    const exactId = exact.get(ref.source + ':' + ref.key);
+    if (exactId) return exactId;
+    if (ref.source !== 'game_words') return null;
+    const candidate = wordCandidates.get(wordBase(ref.key));
+    return candidate && !candidate.ambiguous ? candidate.item_id : null;
+  });
+}
+
 function normalizeRef(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_content_ref');
   const source = text(value.source, 32);
