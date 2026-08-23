@@ -144,10 +144,10 @@
     });
   }
 
-  // A direct Vault Reading route must inherit the protected word's real level before the
-  // Reading bundle evaluates its remembered level. This prevents a stale prior tab level
-  // (for example 高) from turning `?word=เขา` into `เขา@高` / Reading SRS level 3.
-  // Fail closed: only one exact protected word match may update the remembered Reading level.
+  // Direct Vault Reading must inherit the protected word's real level before the Reading
+  // bundle evaluates remembered level / Auto Plan. The override exists only during bundle
+  // boot, then both local preference and StudyPlan behavior are restored.
+  var restoreDirectReadingWordLevel = null;
   function applyDirectReadingWordLevel(data) {
     try {
       if (!global.location || !/(?:^|\/)reading-game\.html$/.test(String(global.location.pathname || ''))) return null;
@@ -158,11 +158,42 @@
         return row && row.word === wanted && (row.level === '初' || row.level === '中');
       });
       if (rows.length !== 1) return null;
-      if (typeof localStorage !== 'undefined') localStorage.setItem('rg_reading_level', rows[0].level);
-      return rows[0].level;
+      var level = rows[0].level;
+      var hadStoredLevel = false;
+      var storedLevel = null;
+      if (typeof localStorage !== 'undefined') {
+        storedLevel = localStorage.getItem('rg_reading_level');
+        hadStoredLevel = storedLevel !== null;
+        localStorage.setItem('rg_reading_level', level);
+      }
+      var studyPlan = global.StudyPlan;
+      var originalPreferredLevel = studyPlan && typeof studyPlan.preferredLevel === 'function'
+        ? studyPlan.preferredLevel
+        : null;
+      if (originalPreferredLevel) {
+        studyPlan.preferredLevel = function (game) {
+          if (game === 'reading') return level;
+          return originalPreferredLevel.apply(this, arguments);
+        };
+      }
+      restoreDirectReadingWordLevel = function () {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            if (hadStoredLevel) localStorage.setItem('rg_reading_level', storedLevel);
+            else localStorage.removeItem('rg_reading_level');
+          }
+          if (studyPlan && originalPreferredLevel) studyPlan.preferredLevel = originalPreferredLevel;
+        } catch (e) {}
+        restoreDirectReadingWordLevel = null;
+      };
+      return level;
     } catch (e) {
       return null;
     }
+  }
+  function restoreDirectReadingWordLevelOverride() {
+    if (!restoreDirectReadingWordLevel) return;
+    restoreDirectReadingWordLevel();
   }
 
   // ── UI ระหว่างโหลด/error (ไม่พึ่ง css/shared.css — ทำ style ในตัวเอง กันชนกับสไตล์เกม) ──
@@ -396,8 +427,10 @@
         });
         return chain;
       }).then(function () {
+        restoreDirectReadingWordLevelOverride();
         hideLoadingBanner();
       }).catch(function (err) {
+        restoreDirectReadingWordLevelOverride();
         showErrorBanner(err);
         throw err;
       });
