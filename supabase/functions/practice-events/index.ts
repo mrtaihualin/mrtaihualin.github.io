@@ -4,6 +4,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.112.3';
 import {
+  canonicalContentKey,
   normalizeGamificationStatusBody,
   normalizeRecordBody,
   normalizeStatusBody,
@@ -71,13 +72,16 @@ async function learningItemRows(admin: any, sources: string[], keys?: string[]) 
 }
 
 async function record(admin: any, userId: string, normalized: any) {
-  const refs = normalized.items.map((item: any) => item.content_ref);
+  const refs = normalized.items.map((item: any) => ({
+    source: item.content_ref.source,
+    key: canonicalContentKey(item.content_ref.source, item.content_ref.key),
+  }));
   const sources = Array.from(new Set(refs.map((ref: any) => ref.source)));
   const keys = Array.from(new Set(refs.map((ref: any) => ref.key)));
   const rows = await learningItemRows(admin, sources, keys);
   const byRef = new Map(rows.map((row: any) => [row.content_source + ':' + row.content_key, row.item_id]));
-  const resolved = normalized.items.map((item: any) => ({
-    item_id: byRef.get(item.content_ref.source + ':' + item.content_ref.key),
+  const resolved = normalized.items.map((item: any, index: number) => ({
+    item_id: byRef.get(refs[index].source + ':' + refs[index].key),
     ordinal: item.ordinal,
     is_correct: item.is_correct,
     wrong_count: item.wrong_count,
