@@ -1,0 +1,232 @@
+name: PR61 exact guest-only Human Gate package
+
+on:
+  push:
+    branches:
+      - work/mobile-landscape-873-gpt-final
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr61-exact-human-gate-package
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FINAL_SHA: ca89449c0b88e67ea5493ef6e9adbda60f9d983e
+      FINAL_SHORT: ca89449c0b88
+      BACKEND_MODE: PRODUCTION_PUBLIC_GUEST_ONLY
+    steps:
+      - name: Checkout exact final candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ca89449c0b88e67ea5493ef6e9adbda60f9d983e
+          fetch-depth: 1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify exact source and repository checks
+        run: |
+          test "$(git rev-parse HEAD)" = "$FINAL_SHA"
+          node scripts/check-site.js
+
+      - name: Build bounded public Guest-only package
+        run: |
+          node <<'NODE'
+          'use strict';
+          const fs = require('fs');
+          const path = require('path');
+          const { isProtectedRuntimePath } = require('./scripts/protected-runtime-paths.js');
+
+          const root = process.cwd();
+          const out = path.join(root, '_pr61-human-gate-build');
+          const sha = process.env.FINAL_SHA;
+          const backend = process.env.BACKEND_MODE;
+          const excluded = new Set([
+            '.git', '.github', '.DS_Store', '_pr61-human-gate-build',
+            '_staging-build', '_staging-build-verify', '_pages-build',
+            '_archive', '_to_delete', '_dev', '_แผนงาน', '_บทความ-เตรียมเขียน',
+            'CLAUDE.md', 'scripts', 'supabase', 'node_modules'
+          ]);
+
+          function shouldExclude(name) {
+            if (excluded.has(name)) return true;
+            if (name.startsWith('.fuse_hidden')) return true;
+            if (name.startsWith('_staging-build')) return true;
+            if (name.startsWith('_backup_')) return true;
+            if (name === '.task-write-set.json') return true;
+            if (/\.docx$/i.test(name)) return true;
+            if (/^\.env(?:\.|$)/.test(name)) return true;
+            return false;
+          }
+
+          function copyRecursive(src, dest) {
+            const stat = fs.statSync(src);
+            if (stat.isDirectory()) {
+              fs.mkdirSync(dest, { recursive: true });
+              for (const entry of fs.readdirSync(src)) {
+                if (shouldExclude(entry)) continue;
+                const child = path.join(src, entry);
+                const relative = path.relative(root, child).replace(/\\/g, '/');
+                if (isProtectedRuntimePath(relative)) continue;
+                copyRecursive(child, path.join(dest, entry));
+              }
+              return;
+            }
+            fs.copyFileSync(src, dest);
+          }
+
+          fs.rmSync(out, { recursive: true, force: true });
+          fs.mkdirSync(out, { recursive: true });
+          for (const entry of fs.readdirSync(root)) {
+            if (shouldExclude(entry)) continue;
+            const child = path.join(root, entry);
+            const relative = path.relative(root, child).replace(/\\/g, '/');
+            if (isProtectedRuntimePath(relative)) continue;
+            copyRecursive(child, path.join(out, entry));
+          }
+
+          const games = [
+            ['Tone', '/tone-finder.html'],
+            ['Reading', '/reading-game.html'],
+            ['Listening', '/listening-game.html'],
+            ['Typing', '/typing-game.html'],
+            ['Word Order', '/word-order.html'],
+            ['Lego', '/lego.html']
+          ];
+          const gameButtons = games.map(([label, href]) =>
+            `<a class="game" href="${href}">${label}</a>`
+          ).join('');
+
+          const html = `<!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <title>PR #61 — Physical iPhone Human Gate</title>
+            <style>
+              :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#211b12;background:#f6f1e8}
+              *{box-sizing:border-box}body{margin:0;padding:max(18px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+              main{max-width:920px;margin:0 auto}.card{background:#fffdf8;border:1px solid #c8973a;border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 8px 30px rgba(90,62,10,.10)}
+              h1{font-size:clamp(24px,5vw,38px);margin:0 0 12px}.sha{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;background:#f0e5cd;padding:10px;border-radius:10px}
+              .warning{font-weight:700;color:#7a3f00;line-height:1.55}.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.game,button{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;border:1.5px solid #9a6f18;background:#fff;color:#6d4d0d;text-decoration:none;font-weight:800;padding:10px 14px;cursor:pointer}
+              table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;padding:8px;border-bottom:1px solid #e6dcc9}th{width:34%;color:#6d4d0d}td{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+              .checklist{columns:2;column-gap:28px;line-height:1.65}.checklist label{display:block;break-inside:avoid}.note{font-size:14px;color:#665b4b;line-height:1.55}@media(max-width:600px){.checklist{columns:1}}
+            </style>
+          </head>
+          <body>
+            <main>
+              <section class="card">
+                <h1>PR #61 — Physical iPhone Human Gate</h1>
+                <p><strong>Exact candidate:</strong></p>
+                <div class="sha" id="candidate">${sha}</div>
+                <p><strong>Guest-only Human Gate</strong> — do not submit Login/OTP and do not test score saving.</p>
+                <p><strong>Backend mode:</strong> <span id="backend">${backend}</span></p>
+                <p class="warning">This page records only the test environment and does not declare the Human Gate result.</p>
+              </section>
+
+              <section class="card">
+                <h2>Open all six games from this exact build</h2>
+                <div class="games">${gameButtons}</div>
+                <p class="note">Listening is one game, but exercise both Choice and Typed modes.</p>
+              </section>
+
+              <section class="card">
+                <h2>Device diagnostics</h2>
+                <table><tbody id="diagnostics"></tbody></table>
+                <p><button type="button" id="copy">Copy diagnostics</button></p>
+              </section>
+
+              <section class="card">
+                <h2>Human checklist</h2>
+                <div class="checklist">
+                  <label><input type="checkbox"> Viewport fits</label>
+                  <label><input type="checkbox"> No normal vertical scroll</label>
+                  <label><input type="checkbox"> Tools work</label>
+                  <label><input type="checkbox"> Level/Mode works where applicable</label>
+                  <label><input type="checkbox"> Choices/input work</label>
+                  <label><input type="checkbox"> Main Action works</label>
+                  <label><input type="checkbox"> Every visible active control is clickable</label>
+                  <label><input type="checkbox"> Reveal/answer state fits</label>
+                  <label><input type="checkbox"> Result works</label>
+                  <label><input type="checkbox"> Resume works where applicable</label>
+                  <label><input type="checkbox"> Portrait restoration works</label>
+                  <label><input type="checkbox"> Keyboard lifecycle works</label>
+                </div>
+              </section>
+            </main>
+            <script>
+              (function(){
+                var vv=window.visualViewport;
+                var rows=[
+                  ['Candidate SHA','${sha}'],
+                  ['Backend mode','${backend}'],
+                  ['navigator.userAgent',navigator.userAgent],
+                  ['window.innerWidth × window.innerHeight',window.innerWidth+' × '+window.innerHeight],
+                  ['visualViewport.width × visualViewport.height',vv?Math.round(vv.width)+' × '+Math.round(vv.height):'unavailable'],
+                  ['visualViewport.offsetLeft / offsetTop',vv?Math.round(vv.offsetLeft)+' / '+Math.round(vv.offsetTop):'unavailable'],
+                  ['screen.width × screen.height',screen.width+' × '+screen.height],
+                  ['devicePixelRatio',String(window.devicePixelRatio)],
+                  ['screen.orientation.type',screen.orientation&&screen.orientation.type||'unavailable'],
+                  ['current URL',location.href],
+                  ['timestamp',new Date().toISOString()]
+                ];
+                var body=document.getElementById('diagnostics');
+                rows.forEach(function(row){var tr=document.createElement('tr');var th=document.createElement('th');var td=document.createElement('td');th.textContent=row[0];td.textContent=row[1];tr.append(th,td);body.appendChild(tr);});
+                document.getElementById('copy').addEventListener('click',function(){
+                  var text=rows.map(function(row){return row[0]+': '+row[1];}).join('\n');
+                  Promise.resolve(navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(text):null).then(function(){document.getElementById('copy').textContent='Copied';},function(){window.prompt('Copy diagnostics',text);});
+                });
+              })();
+            </script>
+          </body>
+          </html>`;
+
+          fs.writeFileSync(path.join(out, '__human_gate__.html'), html, 'utf8');
+          fs.writeFileSync(path.join(out, 'netlify.toml'), '[build]\ncommand = "echo \'Using prebuilt PR61 Mobile Landscape guest-only artifact\'"\npublish = "."\n', 'utf8');
+
+          for (const required of ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','lego.html','__human_gate__.html','netlify.toml']) {
+            if (!fs.existsSync(path.join(out, required))) throw new Error('Missing package file: ' + required);
+          }
+          if (!html.includes(sha) || !html.includes(backend)) throw new Error('Human Gate metadata missing');
+          if (/LOGIN_OTP_TEST=|saveScore\s*\(/.test(html)) throw new Error('Forbidden Human Gate action found');
+          console.log('HUMAN_GATE_BUILD=' + out);
+          NODE
+
+      - name: Create exact deploy ZIP and receipt
+        run: |
+          mkdir -p _pr61-artifacts
+          PACKAGE="_pr61-artifacts/mobile-landscape-pr61-${FINAL_SHORT}-netlify-drop.zip"
+          find _pr61-human-gate-build -name '.DS_Store' -delete
+          (cd _pr61-human-gate-build && zip -qr "../${PACKAGE}" .)
+          HASH="$(sha256sum "$PACKAGE" | awk '{print $1}')"
+          cat > _pr61-artifacts/HUMAN_GATE_RECEIPT.txt <<EOF
+          HUMAN_GATE_PACKAGE_STATUS=READY_FOR_MANUAL_UPLOAD
+          FINAL_CANDIDATE_SHA=${FINAL_SHA}
+          BACKEND_MODE=${BACKEND_MODE}
+          HUMAN_GATE_PATH=/__human_gate__.html
+          PACKAGE_FILE=$(basename "$PACKAGE")
+          PACKAGE_SHA256=${HASH}
+          DEPLOYED=NO
+          PHYSICAL_IPHONE_GATE=PENDING
+          READY_FOR_MERGE=NO
+          EOF
+          grep -F "$FINAL_SHA" _pr61-human-gate-build/__human_gate__.html
+          grep -F "$BACKEND_MODE" _pr61-human-gate-build/__human_gate__.html
+          unzip -l "$PACKAGE" | grep -F '__human_gate__.html'
+          sha256sum "$PACKAGE"
+
+      - name: Upload exact Human Gate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-landscape-pr61-ca89449c0b88-netlify-drop
+          path: _pr61-artifacts/*
+          if-no-files-found: error
+          retention-days: 14
