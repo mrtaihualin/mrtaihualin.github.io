@@ -59,7 +59,9 @@ jobs:
           lines = [line[10:] if line.startswith('          ') else line for line in block.splitlines()]
           Path('/tmp/build-pr61-human-gate.js').write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
+          sed -i "s#require('./scripts/protected-runtime-paths.js')#require(path.join(process.cwd(), 'scripts', 'protected-runtime-paths.js'))#" /tmp/build-pr61-human-gate.js
           grep -F "PR #61 — Physical iPhone Human Gate" /tmp/build-pr61-human-gate.js
+          grep -F "protected-runtime-paths.js" /tmp/build-pr61-human-gate.js
           grep -F "PRODUCTION_PUBLIC_GUEST_ONLY" helper/.github/workflows/pr61-human-gate-package.yml
 
       - name: Build exact Guest-only package
