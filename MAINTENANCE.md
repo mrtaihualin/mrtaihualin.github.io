@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-23 Asia/Bangkok** — Time Auto Plan production release
+**Updated: 2026-08-23 Asia/Bangkok** — Time Auto Plan confirmation fix local verification
+
+## 2026-08-23 — Time Auto Plan confirmation / pre-navigation quota / level picker (`PASS_LOCAL / RELEASE_REVIEW_PENDING`)
+
+- Reconciled the locked confirmation UX Delta onto exact Production baseline `f780548…`: `幫我安排` now creates a non-mutating Guest-one/Login-two proposal, and only explicit `開始這個安排` claims the existing Time Plan quota on `games.html`. Limit/service/owner errors stay on the hub with no active plan or transient game navigation; cancel/edit and zero-selection consume no quota, and a retry keeps the same request id.
+- Added the exact playable level matrix and active-plan v2 selected-game state. Auto Plan cycles only through checked games, a one-game plan remains on that game at the soft boundary and ends on Skip, and Tone/Reading/Listening/Typing apply the confirmed level for the matching Auto Plan entry without overwriting normal remembered preferences. Word Order remains high-only and Lego remains `lv1`; timer, weakness, score normalization and Search behavior are unchanged.
+- Rebuilt the three affected minified game bundles, advanced only the affected runtime and shared Study Plan cache keys, and added focused confirmation plus expanded integration coverage. Focused 16/16, Time Plan integration 18/18, Search entitlement 10/10, Product 52/52, Frozen 120/120, Canonical 736/736, existing Search/six-game suites, JavaScript syntax, `git diff --check` and the full local site gate pass. Time Plan SQL/Edge, Search SQL/Edge/classifier/corpus/Frozen answers and Production are unchanged; no commit, push, PR, merge or deploy occurred.
 
 ## 2026-08-23 — Time Plan / Auto Plan (`PASS_LOCAL / PRODUCTION_BACKEND_PASS / RELEASE_PENDING`)
 

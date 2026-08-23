@@ -70,6 +70,8 @@
   };
 
   var el = {};
+  var autoPlanListeningLevel = (window.StudyPlan && StudyPlan.preferredLevel) ? StudyPlan.preferredLevel('listening') : null;
+  if (autoPlanListeningLevel !== '初' && autoPlanListeningLevel !== '中') autoPlanListeningLevel = null;
   var listeningSrs = {};
   var listeningSrsSynced = false;
 
@@ -328,7 +330,8 @@
   }
 
   function initLevelTabs() {
-    try {
+    if (autoPlanListeningLevel) state.level = autoPlanListeningLevel;
+    else try {
       var saved = localStorage.getItem('listening_game_level');
       if (saved === '初' || saved === '中') state.level = saved;
     } catch (e) {}
@@ -1411,7 +1414,7 @@
       });
     }
 
-    tryShowResumeBanner(); // Phase E3: เช็คตอนเปิดหน้าครั้งเดียว ก่อนผู้เล่นกดอะไรทั้งนั้น
+    if (!autoPlanListeningLevel) tryShowResumeBanner(); // Auto Plan selection must not be replaced by an older resume level.
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

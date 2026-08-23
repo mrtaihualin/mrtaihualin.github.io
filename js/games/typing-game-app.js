@@ -2506,9 +2506,11 @@ function rgCheckWholeWord(){
   }
 }
 
-// Lin 2026-07-12: รีเฟรชหน้าแล้วต้องอยู่ระดับ(初/中/高)เดิม ไม่กระเด้งกลับ 初級 default เสมอ
+// Time Auto Plan proposal level wins for this entry only; normal entry still restores the remembered level.
+var _autoPlanTypingLevel=(window.StudyPlan&&StudyPlan.preferredLevel)?StudyPlan.preferredLevel('typing'):null;
+if(_autoPlanTypingLevel!=='初'&&_autoPlanTypingLevel!=='中'&&_autoPlanTypingLevel!=='高')_autoPlanTypingLevel=null;
 try{
-  var _savedLv=localStorage.getItem('tg_level');
+  var _savedLv=_autoPlanTypingLevel||localStorage.getItem('tg_level');
   if(_savedLv==='初'||_savedLv==='中'||_savedLv==='高'){
     curLevel=_savedLv;
     document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
@@ -2517,7 +2519,7 @@ try{
   }
 }catch(e){}
 loadSave();
-try{ tgTryResume(); }catch(e){} // Phase E3: อ่าน+เก็บ session ค้างไว้ในตัวแปรก่อน initGame() จะเขียนทับ localStorage ด้วยรอบใหม่
+if(!_autoPlanTypingLevel){try{ tgTryResume(); }catch(e){}} // Auto Plan selection must not be replaced by an older resume level.
 initGame();
 try { rgRenderGameBar(); } catch(e){}
 
