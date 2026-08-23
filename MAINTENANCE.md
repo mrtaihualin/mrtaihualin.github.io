@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-21 Asia/Bangkok** — Phase 1 Mobile Landscape regression fix
+**Updated: 2026-08-23 Asia/Bangkok** — Game Search V2.3 + Global Search game integration release
+
+## 2026-08-23 — Game Search V2.3 + Global Search game integration (`PASS_LOCAL / RELEASE_AUTHORIZED`)
+
+- Reconciled only the authorized Search/Game delta onto fresh `origin/main` `873592b…`, preserving the current Phase 1.2 game changes and excluding unrelated `codex/workflow-v1` history. Added the unchanged 736-row V2.3 corpus, shared six-game `GameProblemSearch`, Product 1+1 Game Search UI, Global Search adapter and authenticated one-success-per-Taipei-day quota Edge/SQL source; Challenge remains excluded.
+- The quota migration keeps idempotency scoped per account/day and intentionally has no global `UNIQUE(request_id)`. Browser roles cannot access the quota table or privileged consume function; the client sends only `request_id`, while the Edge Function derives the account from the verified JWT. No raw query is stored.
+- Locked Product examples passed 52/52; the supplied Frozen CSV exactly matched the executable answers and passed 120/120; canonical classification/recommendation passed 736/736; adapter/static/runtime entitlement contracts, all existing Search suites and the full 1,001-file repository gate passed. Fresh-main reconciliation kept `supabase-config.js?v=5` on Home/Games because v6 is reserved by the current Email OTP contract for exactly seven Auth consumers; no runtime configuration or Product behavior changed. No Product Decision, V2.3 corpus, Frozen answer, Content/Library Search, Popular Pool, Paid behavior or unrelated feature is changed.
+- Staging `xufxvwcelbovzsxywawg` applied only the quota migration and deployed `problem-search-daily-limit` v2 ACTIVE with `verify_jwt=true`. An existing staging test identity passed authenticated malformed/extra-field rejection, first consume, idempotent replay and same-day limit; transaction-scoped SQL passed cross-account isolation, next-day reset, RLS, browser-denial, service-role-only execute and no-global-request-id/no-raw-query checks. The test session was logged out, the exact quota test row was removed with zero residue, recent function logs had no 5xx, and the advisor added only the expected INFO for a server-only RLS table with no browser policy.
+
+**Prior update: 2026-08-21 Asia/Bangkok** — Phase 1 Mobile Landscape regression fix
 
 ## 2026-08-21 — PD-P12-MOBILE-LANDSCAPE-01 / MOBILE-KEYBOARD-01 Regression Fix (`PASS_LOCAL / HUMAN_DEVICE_PENDING / PRODUCTION_UNCHANGED`)
 

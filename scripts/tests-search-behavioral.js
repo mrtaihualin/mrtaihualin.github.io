@@ -250,18 +250,18 @@ if (failures.length) {
 
   if (!searchUi) {
     fail('js/core/search-ui.js หายไป');
-  } else if (!/SearchEngine\.searchSite\s*\(/.test(searchUi)) {
-    fail('js/core/search-ui.js ไม่ได้เรียก SearchEngine.searchSite(...) — หน้าแรกอาจไม่ต่อกับ search engine แล้ว');
+  } else if (!/GlobalSearchGameAdapter\.analyze\s*\(/.test(searchUi)) {
+    fail('js/core/search-ui.js ไม่ได้เรียก GlobalSearchGameAdapter.analyze(...) — หน้าแรกอาจไม่ต่อกับ Global Search + Game Search แล้ว');
   } else {
-    pass('js/core/search-ui.js ยังเรียก SearchEngine.searchSite(...) อยู่จริง');
+    pass('js/core/search-ui.js เรียก GlobalSearchGameAdapter.analyze(...) อยู่จริง');
   }
 
   if (!gamesSearchUi) {
     fail('js/games/games-search-ui.js หายไป');
-  } else if (!/SearchEngine\.searchGamesOnly\s*\(/.test(gamesSearchUi)) {
-    fail('js/games/games-search-ui.js ไม่ได้เรียก SearchEngine.searchGamesOnly(...) — games.html อาจไม่ต่อกับ search engine แล้ว');
+  } else if (!/GameProblemSearch\.analyze\s*\(/.test(gamesSearchUi)) {
+    fail('js/games/games-search-ui.js ไม่ได้เรียก GameProblemSearch.analyze(...) — games.html อาจไม่ต่อกับ Game Search V2.3 แล้ว');
   } else {
-    pass('js/games/games-search-ui.js ยังเรียก SearchEngine.searchGamesOnly(...) อยู่จริง');
+    pass('js/games/games-search-ui.js เรียก GameProblemSearch.analyze(...) อยู่จริง');
   }
 })();
 
