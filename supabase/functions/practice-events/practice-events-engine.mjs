@@ -9,6 +9,7 @@ const SURFACES = Object.freeze({
   wordorder: 'word_order',
   word_order: 'word_order',
 });
+const WORD_LEVEL_SUFFIX = Object.freeze({ 1: '初', 2: '中', 3: '高' });
 
 function text(value, max) {
   const output = String(value == null ? '' : value).trim();
@@ -29,11 +30,17 @@ function integer(value, min, max) {
   return output;
 }
 
+export function canonicalContentKey(source, value) {
+  const key = text(value, 512);
+  if (source !== 'game_words') return key;
+  return key.replace(/@([123])$/, (_match, level) => '@' + WORD_LEVEL_SUFFIX[level]);
+}
+
 function normalizeRef(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_content_ref');
   const source = text(value.source, 32);
   if (!SOURCES.has(source)) throw new Error('invalid_content_source');
-  return { source, key: text(value.key, 512) };
+  return { source, key: canonicalContentKey(source, value.key) };
 }
 
 export function normalizeRecordBody(body) {
