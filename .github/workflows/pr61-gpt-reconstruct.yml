@@ -1,0 +1,91 @@
+name: PR61 GPT isolated reconstruction
+
+on:
+  push:
+    branches:
+      - work/mobile-landscape-873-gpt-final
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr61-gpt-isolated-reconstruction
+  cancel-in-progress: true
+
+jobs:
+  reconstruct-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout isolated runner branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/mobile-landscape-873-gpt-final
+          fetch-depth: 0
+
+      - name: Preserve runner outside candidate tree
+        run: cp scripts/apply-pr61-gpt-listening-final.js /tmp/apply-pr61-gpt-listening-final.js
+
+      - name: Start clean candidate from verified PR head
+        run: |
+          git fetch origin e22866be0320d2be939d565acc0d0060e98ad303
+          git checkout --detach e22866be0320d2be939d565acc0d0060e98ad303
+          git switch -c work/mobile-landscape-873-gpt-candidate
+
+      - name: Apply state-driven Listening integration and final shared cleanup
+        run: node /tmp/apply-pr61-gpt-listening-final.js
+
+      - name: Verify bounded write-set
+        run: |
+          git diff --check
+          ACTUAL="$(git diff --name-only | LC_ALL=C sort)"
+          EXPECTED="$(printf '%s\n' \
+            css/mobile-landscape.css \
+            js/core/mobile-landscape.js \
+            scripts/tests-mobile-landscape-geometry.js \
+            scripts/tests-mobile-landscape-runtime.js | LC_ALL=C sort)"
+          printf 'ACTUAL_CHANGED_FILES\n%s\n' "$ACTUAL"
+          test "$ACTUAL" = "$EXPECTED"
+          test -z "$(git diff -- js/games/game-content-client.js)"
+
+      - name: Run Mobile Landscape geometry
+        run: node scripts/tests-mobile-landscape-geometry.js
+
+      - name: Run Mobile Landscape runtime
+        run: node scripts/tests-mobile-landscape-runtime.js
+
+      - name: Run shared game regression
+        run: node scripts/tests-shared-games-phase1.js
+
+      - name: Run shared lifecycle regression
+        run: node scripts/tests-game-flow-delta.js
+
+      - name: Run Reading regression
+        run: node scripts/tests-reading-phase1.js
+
+      - name: Run Listening regression
+        run: node scripts/tests-listening-phase1.js
+
+      - name: Run Typing regression
+        run: node scripts/tests-typing-phase1.js
+
+      - name: Run Word Order regression
+        run: node scripts/tests-word-order-phase1.js
+
+      - name: Run full repository check
+        run: node scripts/check-site.js
+
+      - name: Commit exact verified candidate
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            css/mobile-landscape.css \
+            js/core/mobile-landscape.js \
+            scripts/tests-mobile-landscape-geometry.js \
+            scripts/tests-mobile-landscape-runtime.js
+          git commit -m "fix(mobile-landscape): complete Listening integration"
+          git show --stat --oneline --summary HEAD
+
+      - name: Push isolated verified candidate
+        run: git push origin HEAD:refs/heads/work/mobile-landscape-873-gpt-candidate
