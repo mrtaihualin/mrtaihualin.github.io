@@ -40,7 +40,7 @@ function normalizeRef(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_content_ref');
   const source = text(value.source, 32);
   if (!SOURCES.has(source)) throw new Error('invalid_content_source');
-  return { source, key: canonicalContentKey(source, value.key) };
+  return { source, key: text(value.key, 512) };
 }
 
 export function normalizeRecordBody(body) {
