@@ -87,6 +87,32 @@ function readingChoiceLayout(width, height, totalChoices, safe) {
   return { stage, choiceHeight, left: makeSide(stage.play.left, leftCount), right: makeSide(stage.play.right, rightCount) };
 }
 
+function listeningChoiceLayout(width, height, totalChoices, safe) {
+  const stage = layout(width, height, safe);
+  const gap = clamp(4, height * 0.013, 10);
+  const pad = clamp(6, height * 0.017, 12);
+  const leftCount = Math.min(2, Math.ceil(totalChoices / 2));
+  const rightCount = totalChoices - leftCount;
+  const rows = Math.max(leftCount, rightCount);
+  const choiceHeight = clamp(56, (stage.play.left.height - pad * 2 - gap * (rows - 1)) / rows, 88);
+  const makeSide = (region, count) => {
+    const groupHeight = count * choiceHeight + Math.max(0, count - 1) * gap;
+    const y = region.y + (region.height - groupHeight) / 2;
+    return Array.from({ length: count }, (_, index) => ({
+      x: region.x + pad,
+      y: y + index * (choiceHeight + gap),
+      width: region.width - pad * 2,
+      height: choiceHeight
+    }));
+  };
+  return {
+    stage,
+    choiceHeight,
+    left: makeSide(stage.play.left, leftCount),
+    right: makeSide(stage.play.right, rightCount)
+  };
+}
+
 function wordOrderLayout(width, height, safe) {
   const stage = layout(width, height, safe);
   const rowGap = clamp(5, height * 0.016, 8);
@@ -100,7 +126,8 @@ function wordOrderLayout(width, height, safe) {
 
 const targets = [
   { name: 'synthetic-short', width: 740, height: 360 },
-  { name: 'physical-iphone', width: 932, height: 430 },
+  { name: 'physical-iphone-safari', width: 932, height: 366 },
+  { name: 'physical-iphone-screen', width: 932, height: 430 },
   { name: 'max-contract', width: 1024, height: 600 }
 ];
 const exact = process.env.REAL_IPHONE_CSS_VIEWPORT;
@@ -148,6 +175,16 @@ for (const target of targets) {
     });
     assert(reading.choiceHeight >= 56, `${target.name}: Reading choice touch height fell below 56 CSS px`);
   });
+  const listening = listeningChoiceLayout(target.width, target.height, 4, { left: 12, right: 12, top: 8, bottom: 8 });
+  listening.left.forEach((choice) => {
+    assert(contained(choice, listening.stage.play.left), target.name + ': Listening left choice escaped its side column');
+    assert(!intersects(choice, listening.stage.play.center), target.name + ': Listening left choice entered the center column');
+  });
+  listening.right.forEach((choice) => {
+    assert(contained(choice, listening.stage.play.right), target.name + ': Listening right choice escaped its side column');
+    assert(!intersects(choice, listening.stage.play.center), target.name + ': Listening right choice entered the center column');
+  });
+  assert(listening.choiceHeight >= 56, target.name + ': Listening choice touch height fell below 56 CSS px');
   const typing = typingKeyboardLayout(target.width, target.height, { left: 12, right: 12, top: 8, bottom: 8 });
   if (target.width === 740) assert(typing.keyWidth >= 40, `${target.name}: Typing keys must remain at least 40 CSS px wide`);
   if (target.width === 932) assert(typing.keyWidth >= 48 && typing.keyWidth <= 52, `${target.name}: Typing keys must approximate the physical mobile keyboard`);
@@ -185,4 +222,9 @@ assert.match(css, /data-gsh-game="word-order"[\s\S]*?data-gsh-ml-split="word-ord
 assert.match(css, /data-gsh-ml-split="word-order"[\s\S]*?> \.wo-tile[\s\S]*?min-width:\s*clamp\(92px,\s*15vw,\s*150px\)[\s\S]*?min-height:\s*clamp\(46px,\s*12dvh,\s*58px\)/, 'Word Order tiles must use responsive thumb-friendly bounds');
 assert.match(css, /data-gsh-game="word-order"[\s\S]*?#wo-slots \.wo-slot[\s\S]*?min-width:\s*clamp\(54px,\s*8vw,\s*76px\)[\s\S]*?min-height:\s*clamp\(42px,\s*11dvh,\s*50px\)/, 'Word Order slots must use responsive center-fit bounds');
 
+assert.match(css, /data-gsh-game="listening"[\s\S]*?data-gsh-ml-split="listening"[\s\S]*?overflow-y:\s*hidden/, 'Listening Choice must forbid vertical scrolling');
+assert.match(css, /data-gsh-ml-split="listening"[\s\S]*?grid-template-rows:\s*repeat\(2,\s*var\(--gsh-ml-listening-choice-h\)\)/, 'Listening Choice must keep two large rows per side');
+assert.match(css, /data-gsh-game="listening"[\s\S]*?gsh-split-thai-keyboard[\s\S]*?pointer-events:\s*none/, 'Listening keyboard layer must not intercept the center or inactive states');
+assert.match(css, /gsh-split-thai-keyboard \.gsh-kbd-key[\s\S]*?pointer-events:\s*auto/, 'Listening keyboard keys must remain interactive');
+assert.match(css, /body\.gsh-ml-active #gc-cap-banner\s*\{[^}]*display:\s*none\s*!important;/, 'Mobile Landscape must hide #gc-cap-banner without changing entitlement logic');
 console.log(`Mobile Landscape geometry contracts: ${targets.length}/${targets.length} passed`);

@@ -45,6 +45,21 @@
     return !!node && !node.hidden && node.style.display !== 'none' && isVisible(node);
   }
 
+  // Listening owns several mutually exclusive source states. Unlike the
+  // generic visibility helper, this walks source ancestors so controls inside
+  // #lg-game are not mounted while that screen is still display:none.
+  function isDisplayedInTree(node) {
+    if (!node || !node.isConnected || node.hidden) return false;
+    var current = node;
+    while (current && current.nodeType === 1) {
+      var style = window.getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      if (current === document.body || current === stage) break;
+      current = current.parentNode;
+    }
+    return true;
+  }
+
   function slot(name) { return slots[name] || null; }
 
   function makeSlot(name, tag) {
@@ -242,7 +257,15 @@
       ];
     } else if (game === 'listening') {
       levels = nodesFor(['#lg-level-tabs']);
-      tools = nodesFor(['#lg-howto-btn', '#lg-skip-btn']);
+      tools = [
+        labeledNode('#lg-howto-btn', '玩法'),
+        q('#lg-skip-btn'),
+        labeledNode('#lg-pron-toggle', '讀音'),
+        labeledNode('#lg-en-toggle', '英文讀音'),
+        labeledNode('#zh-toggle-slot', '翻譯'),
+        labeledNode('#rg-vault-btn-slot', '單字庫'),
+        labeledNode('#font-toggle-slot', '字體')
+      ];
     } else if (game === 'typing') {
       levels = nodesFor(['.gsh-level-selector']);
       tools = nodesFor(['#rg-howto-btn', '#btn-remember', '#word-ctl-row']);
@@ -295,9 +318,8 @@
       mountMany(['.word-area', '#syl-strip', '#slot-row'], slot('question'));
       mountMany(['#btn-check', '#btn-next', '#btn-next-syl'], slot('main-action'));
     } else if (game === 'listening') {
-      mountMany(['.lg-word-area'], slot('question'));
-      mountMany(['#lg-type-wrap'], slot('current-input'));
-      mountMany(['#lg-type-submit', '#lg-next-btn'], slot('main-action'));
+      // Listening start / Choice / Typed / Reveal are state-owned and are
+      // mounted by syncListeningGameplay(), never all at once.
     } else if (game === 'typing') {
       mountMany(['.word-area', '#slot-row'], slot('question'));
       mountMany(['#rg-type-wrap'], slot('current-input'));
@@ -349,12 +371,82 @@
     var container = null;
     if (game === 'tone') container = q('#tf-body .tf-options, #tf-body .tf-mark-opts, #tf-body .sg-tone-grid');
     else if (game === 'reading') container = q('#pool');
-    else if (game === 'listening') container = q('#lg-mc-wrap');
     else if (game === 'word-order') container = q('#wo-bank');
     if (container) {
       mountExistingNode(container, slot('split-content'));
       assignSides(container, game);
     }
+  }
+
+  function resolveListeningGameplay() {
+    var startScreen = q('#lg-start');
+    var gameScreen = q('#lg-game');
+    var wordArea = q('.lg-word-area');
+    var mcWrap = q('#lg-mc-wrap');
+    var typeWrap = q('#lg-type-wrap');
+    var typeSubmit = q('#lg-type-submit');
+    var feedback = q('#lg-result-banner');
+    var reveal = q('#lg-reveal');
+    var next = q('#lg-next-btn');
+    var startVisible = isDisplayedInTree(startScreen);
+    var gameVisible = isDisplayedInTree(gameScreen);
+    var revealVisible = gameVisible && isDisplayedInTree(reveal);
+    var typed = gameVisible && !revealVisible && isDisplayedInTree(typeWrap);
+    var choice = gameVisible && !revealVisible && !typed && isDisplayedInTree(mcWrap);
+    return {
+      startScreen: startScreen,
+      gameScreen: gameScreen,
+      wordArea: wordArea,
+      mcWrap: mcWrap,
+      typeWrap: typeWrap,
+      typeSubmit: typeSubmit,
+      feedback: feedback,
+      reveal: reveal,
+      next: next,
+      startVisible: startVisible,
+      gameVisible: gameVisible,
+      wordAreaVisible: gameVisible && isDisplayedInTree(wordArea),
+      choice: choice,
+      typed: typed,
+      submitVisible: typed && isDisplayedInTree(typeSubmit),
+      feedbackVisible: gameVisible && isDisplayedInTree(feedback),
+      revealVisible: revealVisible,
+      nextVisible: revealVisible && isDisplayedInTree(next)
+    };
+  }
+
+  function restoreListeningNode(node) {
+    if (node && moved.has(node)) restoreExistingNode(node);
+  }
+
+  function syncListeningGameplay(view) {
+    view = view || resolveListeningGameplay();
+
+    // Restore inactive children before their parent so nested markers stay
+    // authoritative when Typed exits to Choice / Reveal / Result.
+    if (!view.submitVisible) restoreListeningNode(view.typeSubmit);
+    if (!view.typed) restoreListeningNode(view.typeWrap);
+    if (!view.choice) restoreListeningNode(view.mcWrap);
+    if (!view.nextVisible) restoreListeningNode(view.next);
+    if (!view.revealVisible) restoreListeningNode(view.reveal);
+    if (!view.feedbackVisible) restoreListeningNode(view.feedback);
+    if (!view.wordAreaVisible) restoreListeningNode(view.wordArea);
+    if (!view.startVisible) restoreListeningNode(view.startScreen);
+
+    if (view.startVisible) mountExistingNode(view.startScreen, slot('question'));
+    if (view.wordAreaVisible) mountExistingNode(view.wordArea, slot('question'));
+    if (view.choice) {
+      mountExistingNode(view.mcWrap, slot('split-content'));
+      assignSides(view.mcWrap, 'listening');
+    }
+    if (view.typed) {
+      mountExistingNode(view.typeWrap, slot('current-input'));
+      if (view.submitVisible) mountExistingNode(view.typeSubmit, slot('main-action'));
+    }
+    if (view.feedbackVisible) mountExistingNode(view.feedback, slot('question'));
+    if (view.revealVisible) mountExistingNode(view.reveal, slot('question'));
+    if (view.nextVisible) mountExistingNode(view.next, slot('main-action'));
+    return view;
   }
 
   function setInputPolicy(input, suppress) {
@@ -435,13 +527,13 @@
     listeningKeyboardRenderedShifted = null;
   }
 
-  function syncKeyboard(game) {
+  function syncKeyboard(game, listeningView) {
     if (game === 'typing') {
       var keyboard = q('#rg-kbd');
       if (keyboard) mountExistingNode(keyboard, slot('split-keyboard'));
       setInputPolicy(q('#rg-mobile-input'), true);
     } else if (game === 'listening') {
-      var typed = isVisible(q('#lg-type-wrap'));
+      var typed = listeningView ? listeningView.typed : isDisplayedInTree(q('#lg-type-wrap'));
       setInputPolicy(q('#lg-type-input'), typed);
       if (typed) renderListeningKeyboard();
       else clearListeningKeyboard();
@@ -614,10 +706,11 @@
       var exclusiveView = resolveExclusiveView(game);
       prepareExclusiveView(exclusiveView);
       mountStaticGameNodes(game);
+      var listeningView = game === 'listening' ? syncListeningGameplay() : null;
       syncSplitContent(game);
       if (game === 'lego') syncLegoMenu();
       syncDynamicMainAction();
-      syncKeyboard(game);
+      syncKeyboard(game, listeningView);
       syncExclusiveView(game, exclusiveView);
     } finally {
       syncing = false;
@@ -806,6 +899,8 @@
       restoreAll: restoreAll,
       cleanupStaleMovedNodes: cleanupStaleMovedNodes,
       syncKeyboard: syncKeyboard,
+      resolveListeningGameplay: resolveListeningGameplay,
+      syncListeningGameplay: syncListeningGameplay,
       restoreDynamicMainActions: restoreDynamicMainActions,
       assignSides: assignSides,
       windowKeydown: windowKeydown,

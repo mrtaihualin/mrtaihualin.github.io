@@ -514,6 +514,236 @@ function resetPage(game) {
   document.body.setAttribute('data-gsh-game', game);
 }
 
+// Listening mounts only the current source state: Start -> Choice -> Typed -> Reveal.
+resetPage('listening');
+const listeningControls = document.createElement('div');
+listeningControls.className = 'rg-ctl-wrap';
+const listeningMenu = makeButton('listening-game-menu', 'rg-ctl-fab');
+const listeningFullscreen = makeButton('listening-fullscreen', 'rg-ctl-fab');
+listeningFullscreen.setAttribute('aria-pressed', 'false');
+listeningControls.append(listeningMenu, listeningFullscreen);
+
+const listeningProfileSource = document.createElement('div');
+const listeningLogin = document.createElement('div');
+listeningLogin.id = 'rg-login-slot';
+listeningProfileSource.appendChild(listeningLogin);
+
+const listeningModeSource = document.createElement('div');
+const listeningModes = document.createElement('div');
+listeningModes.className = 'mode-tabs';
+const listeningModeChoice = makeButton('listening-mode-choice');
+const listeningModeTyped = makeButton('listening-mode-typed');
+listeningModes.append(listeningModeChoice, listeningModeTyped);
+listeningModeSource.appendChild(listeningModes);
+
+const listeningLevelSource = document.createElement('div');
+const listeningLevels = document.createElement('div');
+listeningLevels.id = 'lg-level-tabs';
+listeningLevels.append(makeButton('listening-level-basic'), makeButton('listening-level-intermediate'));
+listeningLevelSource.appendChild(listeningLevels);
+
+const listeningHowtoSource = document.createElement('div');
+const listeningHowto = makeButton('lg-howto-btn');
+listeningHowtoSource.appendChild(listeningHowto);
+
+const listeningStartSource = document.createElement('div');
+const listeningStart = document.createElement('section');
+listeningStart.id = 'lg-start';
+listeningStart.style.display = 'flex';
+const listeningStartButton = makeButton('lg-start-btn');
+listeningStart.appendChild(listeningStartButton);
+listeningStartSource.appendChild(listeningStart);
+
+const listeningGame = document.createElement('section');
+listeningGame.id = 'lg-game';
+listeningGame.style.display = 'none';
+const listeningWordArea = document.createElement('div');
+listeningWordArea.className = 'lg-word-area';
+const listeningSound = makeButton('lg-sound-btn');
+listeningWordArea.appendChild(listeningSound);
+
+const listeningToolRow = document.createElement('div');
+listeningToolRow.id = 'lg-word-ctl-row';
+const listeningPron = makeButton('lg-pron-toggle');
+const listeningEn = makeButton('lg-en-toggle');
+const listeningZh = document.createElement('span');
+listeningZh.id = 'zh-toggle-slot';
+listeningZh.appendChild(makeButton('listening-zh-button'));
+const listeningVault = document.createElement('span');
+listeningVault.id = 'rg-vault-btn-slot';
+listeningVault.appendChild(makeButton('listening-vault-button'));
+const listeningFont = document.createElement('span');
+listeningFont.id = 'font-toggle-slot';
+listeningFont.appendChild(makeButton('listening-font-button'));
+listeningToolRow.append(listeningPron, listeningEn, listeningZh, listeningVault, listeningFont);
+
+const listeningChoiceWrap = document.createElement('div');
+listeningChoiceWrap.id = 'lg-mc-wrap';
+listeningChoiceWrap.style.display = 'flex';
+const listeningChoices = Array.from({ length: 4 }, (_, index) => {
+  const choice = makeButton('listening-choice-' + index, 'lg-opt');
+  listeningChoiceWrap.appendChild(choice);
+  return choice;
+});
+
+const listeningTypeWrap = document.createElement('div');
+listeningTypeWrap.id = 'lg-type-wrap';
+listeningTypeWrap.style.display = 'none';
+const listeningInput = document.createElement('input');
+listeningInput.id = 'lg-type-input';
+listeningInput.setAttribute('inputmode', 'text');
+const listeningSubmit = makeButton('lg-type-submit');
+listeningTypeWrap.append(listeningInput, listeningSubmit);
+
+const listeningFeedback = document.createElement('div');
+listeningFeedback.id = 'lg-result-banner';
+listeningFeedback.style.display = 'none';
+const listeningReveal = document.createElement('div');
+listeningReveal.id = 'lg-reveal';
+listeningReveal.style.display = 'none';
+const listeningActionRow = document.createElement('div');
+const listeningSkip = makeButton('lg-skip-btn');
+listeningSkip.style.display = 'none';
+const listeningNext = makeButton('lg-next-btn');
+listeningNext.style.display = 'none';
+listeningActionRow.append(listeningSkip, listeningNext);
+listeningGame.append(
+  listeningWordArea,
+  listeningToolRow,
+  listeningChoiceWrap,
+  listeningTypeWrap,
+  listeningFeedback,
+  listeningReveal,
+  listeningActionRow
+);
+
+let listeningStartClicks = 0;
+let listeningChoiceClicks = 0;
+let listeningSubmitClicks = 0;
+let listeningNextClicks = 0;
+let listeningToolClicks = 0;
+listeningStartButton.addEventListener('click', () => { listeningStartClicks += 1; });
+listeningChoices.forEach((choice) => choice.addEventListener('click', () => { listeningChoiceClicks += 1; }));
+listeningSubmit.addEventListener('click', () => { listeningSubmitClicks += 1; });
+listeningNext.addEventListener('click', () => { listeningNextClicks += 1; });
+[listeningHowto, listeningPron, listeningEn, listeningZh.children[0], listeningVault.children[0], listeningFont.children[0], listeningSkip]
+  .forEach((tool) => tool.addEventListener('click', () => { listeningToolClicks += 1; }));
+
+document.body.append(
+  listeningControls,
+  listeningProfileSource,
+  listeningModeSource,
+  listeningLevelSource,
+  listeningHowtoSource,
+  listeningStartSource,
+  listeningGame
+);
+
+window.GSHMobileLandscape.activate();
+const listeningStage = hooks.state().stage;
+const listeningQuestionSlot = listeningStage.querySelector('[data-gsh-ml-slot="question"]');
+const listeningInputSlot = listeningStage.querySelector('[data-gsh-ml-slot="current-input"]');
+const listeningSplitSlot = listeningStage.querySelector('[data-gsh-ml-slot="split-content"]');
+const listeningKeyboardSlot = listeningStage.querySelector('[data-gsh-ml-slot="split-keyboard"]');
+const listeningMainSlot = listeningStage.querySelector('[data-gsh-ml-slot="main-action"]');
+const listeningToolsDropdown = listeningStage.querySelector('[data-gsh-dropdown="tools"]');
+const listeningToolsPanel = listeningToolsDropdown.querySelector('.gsh-ml-dropdown-panel');
+
+assert.strictEqual(listeningStart.parentNode, listeningQuestionSlot, 'Listening Start must be the only mounted center state before play');
+assert.strictEqual(listeningWordArea.parentNode, listeningGame, 'hidden gameplay must remain at its source before Start');
+assert.strictEqual(listeningSubmit.parentNode, listeningTypeWrap, 'hidden Typed submit must not mount before Typed state');
+assert.strictEqual(listeningMainSlot.children.length, 0, 'Listening Start must not expose a stale Main Action');
+assert.deepStrictEqual(
+  listeningToolsPanel.children,
+  [listeningHowto, listeningSkip, listeningPron, listeningEn, listeningZh, listeningVault, listeningFont],
+  'Listening Tools must own every live helper/display node in locked order'
+);
+assert.deepStrictEqual(
+  [listeningHowto, listeningSkip, listeningPron, listeningEn, listeningZh, listeningVault, listeningFont]
+    .map((node) => node.getAttribute('data-gsh-ml-tool-label')),
+  ['玩法', null, '讀音', '英文讀音', '翻譯', '單字庫', '字體'],
+  'Listening Tools labels must remain complete while hidden Skip keeps its own copy'
+);
+listeningStartButton.click();
+assert.strictEqual(listeningStartClicks, 1, 'Listening Start must retain its handler after live movement');
+stableForFrames('Listening Start');
+
+listeningStart.style.display = 'none';
+listeningGame.style.display = 'flex';
+window.GSHMobileLandscape.sync();
+assert.strictEqual(listeningStart.parentNode, listeningStartSource, 'Starting play must restore the Start root to its exact marker');
+assert.strictEqual(listeningWordArea.parentNode, listeningQuestionSlot, 'Choice must mount the live audio question');
+assert.strictEqual(listeningChoiceWrap.parentNode, listeningSplitSlot, 'Choice must own the split side region');
+assert.strictEqual(listeningTypeWrap.parentNode, listeningGame, 'Choice must not mount hidden Typed input');
+assert.strictEqual(listeningSubmit.parentNode, listeningTypeWrap, 'Choice must not expose Typed Submit');
+assert.strictEqual(listeningKeyboardSlot.children.length, 0, 'Choice must not create the Typed keyboard');
+listeningChoices.forEach((choice) => choice.click());
+assert.strictEqual(listeningChoiceClicks, 4, 'all visible Choice controls must retain their handlers');
+stableForFrames('Listening Choice');
+
+listeningChoiceWrap.style.display = 'none';
+listeningTypeWrap.style.display = 'flex';
+window.GSHMobileLandscape.sync();
+assert.strictEqual(listeningChoiceWrap.parentNode, listeningGame, 'Typed must restore Choice to source');
+assert.strictEqual(listeningTypeWrap.parentNode, listeningInputSlot, 'Typed must mount the live input wrapper');
+assert.strictEqual(listeningSubmit.parentNode, listeningMainSlot, 'Typed Submit must be the sole state-owned Main Action');
+assert.strictEqual(listeningInput.readOnly, true, 'Typed must suppress the native keyboard');
+assert.strictEqual(listeningInput.getAttribute('inputmode'), 'none', 'Typed must use the shared in-game Thai keyboard');
+assert(hooks.state().listeningKeyboard, 'Typed must create the shared Thai keyboard');
+listeningSubmit.click();
+assert.strictEqual(listeningSubmitClicks, 1, 'Typed Submit must retain its handler');
+stableForFrames('Listening Typed');
+
+listeningFeedback.style.display = 'block';
+window.GSHMobileLandscape.sync();
+assert.strictEqual(listeningFeedback.parentNode, listeningQuestionSlot, 'Typed retry feedback must remain visible without leaving Typed');
+assert.strictEqual(listeningTypeWrap.parentNode, listeningInputSlot, 'Typed retry feedback must not remove input ownership');
+
+listeningReveal.style.display = 'block';
+listeningNext.style.display = 'inline-flex';
+window.GSHMobileLandscape.sync();
+assert.strictEqual(listeningTypeWrap.parentNode, listeningGame, 'Reveal must restore the Typed wrapper');
+assert.strictEqual(listeningSubmit.parentNode, listeningTypeWrap, 'Reveal must remove stale Typed Submit from Main Action');
+assert.strictEqual(listeningReveal.parentNode, listeningQuestionSlot, 'Reveal must mount the live answer explanation');
+assert.strictEqual(listeningNext.parentNode, listeningMainSlot, 'Reveal Next must own Main Action');
+assert.strictEqual(listeningInput.readOnly, false, 'Reveal must restore the native-input policy');
+assert.strictEqual(listeningInput.getAttribute('inputmode'), 'text', 'Reveal must restore the original inputmode');
+assert.strictEqual(hooks.state().listeningKeyboard, null, 'Reveal must remove the Typed keyboard layer');
+listeningNext.click();
+assert.strictEqual(listeningNextClicks, 1, 'Reveal Next must retain its handler');
+stableForFrames('Listening Reveal');
+
+listeningReveal.style.display = 'none';
+listeningNext.style.display = 'none';
+listeningTypeWrap.style.display = 'none';
+listeningFeedback.style.display = 'block';
+window.GSHMobileLandscape.sync();
+assert.strictEqual(listeningFeedback.parentNode, listeningQuestionSlot, 'Mode-selection feedback must remain visible');
+assert.strictEqual(listeningMainSlot.children.length, 0, 'Mode selection must expose no stale Submit or Next');
+assert.strictEqual(listeningSplitSlot.children.length, 0, 'Mode selection must expose no stale Choice controls');
+assert.strictEqual(listeningKeyboardSlot.children.length, 0, 'Mode selection must expose no stale keyboard layer');
+stableForFrames('Listening Mode Selection');
+
+listeningFeedback.style.display = 'none';
+listeningChoiceWrap.style.display = 'flex';
+listeningSkip.style.display = 'inline-flex';
+window.GSHMobileLandscape.sync();
+listeningSkip.click();
+assert.strictEqual(listeningToolClicks, 1, 'Listening Skip must preserve its live handler when it becomes visible in Tools');
+[listeningHowto, listeningPron, listeningEn, listeningZh.children[0], listeningVault.children[0], listeningFont.children[0]].forEach((tool) => tool.click());
+assert.strictEqual(listeningToolClicks, 7, 'every visible Listening Tool must preserve its handler');
+assert.deepStrictEqual(duplicateIds(), [], 'Listening state changes must never duplicate live IDs');
+
+window.GSHMobileLandscape.deactivate();
+assert.strictEqual(listeningStart.parentNode, listeningStartSource, 'Portrait/Desktop must restore Listening Start');
+assert.strictEqual(listeningWordArea.parentNode, listeningGame, 'Portrait/Desktop must restore Listening question');
+assert.strictEqual(listeningChoiceWrap.parentNode, listeningGame, 'Portrait/Desktop must restore Listening Choice');
+assert.deepStrictEqual(listeningTypeWrap.children, [listeningInput, listeningSubmit], 'Portrait/Desktop must restore Typed input and Submit order');
+assert.deepStrictEqual(listeningActionRow.children, [listeningSkip, listeningNext], 'Portrait/Desktop must restore Skip and Next order');
+assert.deepStrictEqual(listeningToolRow.children, [listeningPron, listeningEn, listeningZh, listeningVault, listeningFont], 'Portrait/Desktop must restore every Listening display control');
+assert.strictEqual(restorationMarkerCount(), 0, 'Listening Portrait/Desktop restoration must not leak markers');
+assert.deepStrictEqual(duplicateIds(), [], 'Listening Portrait/Desktop restoration must not duplicate IDs');
+
 // Tone owns one live #tf-body across gameplay, detail and two Result rounds.
 resetPage('tone');
 const toneCard = document.createElement('section');
@@ -1193,4 +1423,4 @@ assert.strictEqual(teardownResult.getAttribute('data-shared-result-detail-owner'
 assert.strictEqual(teardownDetail.getAttribute('data-shared-result-detail-active'), null, 'page teardown must clear Detail activity');
 assert.strictEqual(restorationMarkerCount(), 0, 'page teardown must not leak markers');
 
-console.log('PASS Mobile Landscape runtime lifecycle: keyboard stability, marker cleanup, Tone/Typing/Word Order controls, stable Word Order sides/Login restoration, shared two-round Result, separate Result Detail rotation, action restoration, countdown rotation, exclusive inertness and observer stability');
+console.log('PASS Mobile Landscape runtime lifecycle: Listening Start/Choice/Typed/Reveal ownership, keyboard stability, marker cleanup, Tone/Typing/Word Order controls, stable Word Order sides/Login restoration, shared two-round Result, separate Result Detail rotation, action restoration, countdown rotation, exclusive inertness and observer stability');
