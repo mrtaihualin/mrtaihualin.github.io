@@ -9,6 +9,8 @@ function expect(cond,msg){if(!cond)failures.push(msg);else{pass++;console.log('�
 const ui=read('js/core/search-ui.js');
 const adapter=read('js/core/global-search-game-adapter.js');
 const index=read('index.html');
+const games=read('games.html');
+const gameUi=read('js/games/games-search-ui.js');
 const quotaEdge=read('supabase/functions/problem-search-daily-limit/index.ts');
 expect(ui.includes('GlobalSearchGameAdapter.analyze(query)'), 'Global UI delegates game/public composition to shared adapter');
 expect(!ui.includes('SearchEngine.searchSite(query)'), 'Global UI no longer uses legacy searchSite game ranking');
@@ -17,9 +19,17 @@ expect(ui.includes("body: JSON.stringify({ request_id: reqId })"), 'quota reques
 expect(!/JSON\.stringify\(\{[^}]*query\s*:/.test(ui), 'quota payload does not send raw query');
 expect(ui.includes("result.entry.category === 'practice'"), 'Gemini public fallback cannot bypass game entitlement');
 expect(adapter.includes("entry.category !== 'practice'"), 'generic Global public pool excludes practice/game entries');
+expect(adapter.includes("href: '/games.html'")&&adapter.includes("id: 'game-hub'"), 'all Global game intent maps to the canonical Game Hub');
+expect(!adapter.includes("analysis.directEntry, 'game-direct'")&&!adapter.includes("'game-problem'"), 'Global adapter never returns per-game classifier details');
+expect(ui.includes('claimGameSearch(query, session)')&&!ui.includes("intent === 'direct' || intent === 'none'"), 'Global direct and problem intents share the Login Free quota path');
+expect(ui.includes('登入後可搜尋遊戲名稱或輸入你的學習問題。'), 'Global Guest receives the locked Game Hub login message');
+expect(!games.includes('id="gameSearchSelect"')&&!games.includes('id="gameSearchInput"')&&!games.includes('id="gameSearchBtn"'), 'games.html ships no usable Guest search controls');
+expect(games.includes('id="gameSearchGate"')&&gameUi.includes('登入後可搜尋遊戲名稱或輸入你的學習問題。'), 'games.html has an auth-resolved gate and locked Guest message');
+expect(gameUi.includes('claimGameSearch(state.user, query).then')&&gameUi.indexOf('claimGameSearch(state.user, query).then')<gameUi.indexOf('GameProblemSearch.analyze(query)'), 'Game Search claims quota before direct/problem analysis');
+expect(!gameUi.includes('gameSearchSelect')&&gameUi.includes('body: JSON.stringify({ request_id: reqId })'), 'Game Search removes direct selector and sends request_id only');
 expect(quotaEdge.indexOf("service.auth.getUser(accessToken)")<quotaEdge.indexOf("const raw = await req.text()"), 'quota Edge authenticates before parsing the request payload');
 expect(quotaEdge.includes("keys.length !== 1 || keys[0] !== 'request_id'"), 'quota Edge rejects raw query, user id, and every extra client field');
-const scripts=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','data/search-index.js?v=1','data/game-problem-corpus-v2_3.js?v=1','js/core/search-engine.js?v=3','js/games/game-problem-search.js?v=2','js/core/global-search-game-adapter.js?v=1','js/core/search-ui.js?v=4'];
+const scripts=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','data/search-index.js?v=1','data/game-problem-corpus-v2_3.js?v=1','js/core/search-engine.js?v=3','js/games/game-problem-search.js?v=2','js/core/global-search-game-adapter.js?v=2','js/core/search-ui.js?v=5'];
 let last=-1, orderOk=true;
 for(const src of scripts){const i=index.indexOf(src); if(i<0||i<=last){orderOk=false;break;} last=i;}
 expect(orderOk,'index.html loads auth client, corpus, shared GameProblemSearch, adapter, then Global UI in order');

@@ -109,12 +109,13 @@
   .gh-links-row a{color:#8b6310;font-weight:700;text-decoration:underline;text-underline-offset:3px;}
   .gh-links-row .sep{color:#b0a080;font-weight:400;}
 
-  /* Game Search V2.3 — 6-game direct selector + Login Free Problem Search */
+  /* Game Search V2.3 — Guest hidden controls + Login Free shared daily quota */
   .gh-search-wrap{max-width:860px;margin:0 0 30px;text-align:left;}
+  .gh-search-auth-message{font-size:13.5px;color:#6f644c;line-height:1.7;background:#fff;border:1.5px solid #e0d2a8;border-radius:12px;padding:14px 16px;}
   .gh-search-prompt{font-size:15px;font-weight:700;color:#5a3e10;margin-bottom:10px;text-align:left;}
-  .gh-search-row{display:grid;grid-template-columns:minmax(190px,.75fr) minmax(260px,1.25fr) auto;gap:8px;align-items:stretch;}
-  .gh-search-select,.gh-search-input{width:100%;padding:13px 16px;border:1.5px solid #e0d2a8;border-radius:6px;background:#fff;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;color:#2d2a22;}
-  .gh-search-select:focus,.gh-search-input:focus{outline:none;border-color:#C8973A;}
+  .gh-search-row{display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:8px;align-items:stretch;}
+  .gh-search-input{width:100%;padding:13px 16px;border:1.5px solid #e0d2a8;border-radius:6px;background:#fff;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;color:#2d2a22;}
+  .gh-search-input:focus{outline:none;border-color:#C8973A;}
   .gh-search-btn{padding:13px 22px;background:#C8973A;color:#1C1C1C;border:none;border-radius:6px;font-weight:900;font-size:13.5px;cursor:pointer;white-space:nowrap;}
   .gh-search-btn:hover{background:#b07820;}
   .gh-search-btn:disabled{opacity:.55;cursor:not-allowed;}
@@ -124,6 +125,7 @@
   .gh-search-reason{font-size:12.5px;color:#8b6310;margin-bottom:10px;}
   .gh-search-secondary{font-size:12px;color:#8b8060;margin-top:10px;padding-top:10px;border-top:1px solid #f0e6cc;}
   .gh-search-secondary a{color:#8b6310;font-weight:700;text-decoration:underline;}
+  .gh-search-limit{font-size:12px;color:#8b6310;margin-top:12px;padding-top:10px;border-top:1px solid #f0e6cc;line-height:1.7;}
   .gh-search-empty{font-size:13px;color:#8b8060;line-height:1.8;}
   @media(max-width:760px){
     .gh-search-row{grid-template-columns:1fr;}
@@ -213,24 +215,8 @@
   <h1>🎮 泰語遊戲中心</h1>
   <p class="gh-sub">邊玩邊學泰文，選一個開始練習。</p>
 
-  <div class="gh-search-wrap">
-    <div class="gh-search-prompt">想學～</div>
-    <div class="gh-search-row">
-      <select id="gameSearchSelect" class="gh-search-select" aria-label="選擇想練的內容">
-        <option value="">選擇想練的內容</option>
-        <option value="game-tone">聲調</option>
-        <option value="game-reading">拼讀</option>
-        <option value="game-listening">聽力</option>
-        <option value="game-typing">打字</option>
-        <option value="game-word-order">語序</option>
-        <option value="game-lego">造句</option>
-      </select>
-      <input type="search" id="gameSearchInput" class="gh-search-input"
-             placeholder="輸入你的問題..."
-             autocomplete="off" maxlength="200">
-      <button type="button" id="gameSearchBtn" class="gh-search-btn">搜尋</button>
-    </div>
-    <div id="gameSearchResult" class="gh-search-result" aria-live="polite"></div>
+  <div id="gameSearchGate" class="gh-search-wrap" aria-live="polite">
+    <div class="gh-search-auth-message">正在確認登入狀態…</div>
   </div>
 
   <!-- 🆕 2026-08-10 — IA 重整：3 การ์ดหลักแทน 5 เกมเล็กแยกกัน (5 เกมย้ายไปอยู่ใน games-practice.html)
@@ -304,7 +290,7 @@
 <script src="data/game-problem-corpus-v2_3.js?v=1"></script>
 <script src="js/core/search-engine.js?v=3"></script>
 <script src="js/games/game-problem-search.js?v=1"></script>
-<script src="js/games/games-search-ui.js?v=4"></script>
+<script src="js/games/games-search-ui.js?v=5"></script>
 <script src="js/core/shared.min.js?v=32"></script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->

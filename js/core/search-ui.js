@@ -2,8 +2,8 @@
 // GLOBAL SEARCH UI — Game Search integration
 // Game results always come from GameProblemSearch. Generic SearchEngine
 // ranking is used only for non-game public entries.
-// Login Free natural-language game Problem Search shares the same server
-// daily quota used by games.html. Direct six-game names never consume quota.
+// Guest game intent is hub-only and never consumes quota. Login Free direct
+// names and learning problems share the same one-success/day server quota.
 // ===================================================================
 (function () {
   'use strict';
@@ -130,7 +130,7 @@
     });
   }
 
-  function claimProblemSearch(query, session) {
+  function claimGameSearch(query, session) {
     if (!session || !session.user || !session.token) return Promise.resolve({ allowed: false, reason: 'guest' });
 
     var uid = String(session.user.id || '');
@@ -185,9 +185,9 @@
     var intent = window.GlobalSearchGameAdapter.gameIntent(plan);
     show(out, '<div class="hs-empty">搜尋中…</div>');
 
-    function finish(allowProblem, note) {
+    function finish(note) {
       if (serial !== renderSerial) return Promise.resolve();
-      var rows = window.GlobalSearchGameAdapter.related(plan, allowProblem);
+      var rows = window.GlobalSearchGameAdapter.related(plan);
       if (rows.length) {
         renderRelated(out, rows, note);
         return Promise.resolve();
@@ -200,25 +200,25 @@
     }
 
     var work;
-    if (intent === 'direct' || intent === 'none') {
-      work = finish(false, '');
+    if (intent === 'none') {
+      work = finish('');
     } else {
       work = getSession().then(function (session) {
         if (session.unavailable) {
-          return finish(false, '登入狀態暫時無法確認；網站內容仍可搜尋，問題找遊戲暫時不顯示。');
+          return finish('登入狀態暫時無法確認；網站內容仍可搜尋，遊戲搜尋目前不可用。');
         }
         if (!session.user || !session.token) {
-          return finish(false, '登入會員可使用每天 1 次的「問題找遊戲」；其他網站內容仍可正常搜尋。');
+          return finish('登入後可搜尋遊戲名稱或輸入你的學習問題。');
         }
-        return claimProblemSearch(query, session).then(function (quota) {
+        return claimGameSearch(query, session).then(function (quota) {
           if (quota.allowed) {
             clearPending(quota.requestId);
-            return finish(true, '');
+            return finish('今天的遊戲搜尋已使用 1 次。前往遊戲中心繼續。');
           }
           if (quota.reason === 'limit') {
-            return finish(false, '今天的「問題找遊戲」已使用 1 次；其他網站內容仍可正常搜尋。');
+            return finish('今天的遊戲搜尋已使用 1 次。付費方案可不限次數搜尋。');
           }
-          return finish(false, '問題找遊戲暫時無法使用；其他網站內容仍可正常搜尋。');
+          return finish('遊戲搜尋暫時無法使用；網站內容仍可正常搜尋。');
         });
       });
     }
