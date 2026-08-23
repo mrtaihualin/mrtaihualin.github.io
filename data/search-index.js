@@ -20,7 +20,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // ── 練習 (เกม 7 ตัว) — keyword ตาม mapping ที่ Lin กำหนดไว้ใน 73_CLAUDE_UPDATE หัวข้อ D ──
+  // ── 練習 (6 เกมหลัก; Challenge excluded) ──
   var GAMES = [
     {
       id: 'game-tone', category: 'practice', access: 'free',
