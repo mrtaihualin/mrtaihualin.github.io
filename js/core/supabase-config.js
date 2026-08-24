@@ -31,7 +31,7 @@ window.SUPABASE_CONFIG = {
 // ════════════════════════════════════════════════════════════
 window.EMAIL_OTP_SECURITY_CONFIG = Object.freeze({
   mode: 'broker',
-  turnstileSiteKey: '0x4AAAAAAAEZt-tXuiX-ztGXd'
+  turnstileSiteKey: '0x4AAAAAAEZt-tXuix-ztGXd'
 });
 
 // ════════════════════════════════════════════════════════════
