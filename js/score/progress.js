@@ -75,13 +75,30 @@
     if (!email) return;
     email = email.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Email 格式不正確'); return; }
-    sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } }).then(function (res) {
-      if (res.error) { alert('驗證碼寄送失敗：' + res.error.message); return; }
-      var code = window.prompt('驗證碼已寄出，請輸入信中的驗證碼：');
+    if (!window.EmailOtpClient) { alert('登入服務尚未就緒，請稍後再試'); return; }
+    var turnstileContainer = document.getElementById('pg-email-turnstile');
+    window.EmailOtpClient.request(sb, {
+      email: email,
+      turnstileContainer: turnstileContainer
+    }).then(function (res) {
+      if (res && res.error) { alert('驗證碼寄送失敗，請稍後再試'); return; }
+      var challengeId = res && res.data && res.data.challenge_id;
+      var code = window.prompt('驗證碼已寄出，請輸入信中的 6 位數驗證碼：');
       if (!code) return;
-      sb.auth.verifyOtp({ email: email, token: code.trim(), type: 'email' }).then(function (verified) {
-        if (verified.error) alert('驗證碼錯誤或已過期，請重新登入');
+      code = code.trim();
+      if (!/^\d{6}$/.test(code)) { alert('請輸入 6 位數驗證碼'); return; }
+      window.EmailOtpClient.verify(sb, {
+        email: email,
+        code: code,
+        challengeId: challengeId,
+        turnstileContainer: turnstileContainer
+      }).then(function (verified) {
+        if (verified && verified.error) alert('驗證碼錯誤或已過期，請重新登入');
+      }).catch(function () {
+        alert('驗證碼錯誤或已過期，請重新登入');
       });
+    }).catch(function () {
+      alert('驗證碼寄送失敗，請稍後再試');
     });
   }
   function renderGuest() {
@@ -98,6 +115,7 @@
         '<li><b>我的句子</b> — 保存實用泰語句子</li>' +
         '<li><b>跨裝置同步</b> — 手機、電腦接著學</li>' +
       '</ul>' +
+      '<div id="pg-email-turnstile" style="max-width:320px;margin:14px auto 0"></div>' +
       '<div class="pg-actions"><button id="pg-login-primary" class="pg-btn pg-btn-primary">免費登入</button>' +
         '<button id="pg-email" class="pg-btn pg-btn-secondary">使用 Email 登入</button>' +
         '<a class="pg-btn pg-btn-secondary" href="games.html">繼續免費練習</a>' +
