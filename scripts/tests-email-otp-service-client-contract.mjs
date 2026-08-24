@@ -77,11 +77,11 @@ test('shared Email OTP client routes non-game surfaces without a native bypass',
 });
 
 test('shared client is loaded after config and before each non-game consumer', () => {
-  assert.ok(myProgressPage.indexOf('js/core/supabase-config.js?v=7') <
+  assert.ok(myProgressPage.indexOf('js/core/supabase-config.js?v=8') <
     myProgressPage.indexOf('js/core/email-otp-client.js?v=1'));
   assert.ok(myProgressPage.indexOf('js/core/email-otp-client.js?v=1') <
     myProgressPage.indexOf('js/score/progress.js'));
-  assert.ok(classroomPage.indexOf('../js/core/supabase-config.js?v=7') <
+  assert.ok(classroomPage.indexOf('../js/core/supabase-config.js?v=8') <
     classroomPage.indexOf('../js/core/email-otp-client.js?v=1'));
   assert.ok(classroomPage.indexOf('../js/core/email-otp-client.js?v=1') <
     classroomPage.indexOf('../js/classroom/attendance-auth.js'));
@@ -161,7 +161,7 @@ test('shared config owns the frozen broker/on Email OTP activation artifact', ()
   const sandbox = { window: {} };
   vm.runInNewContext(config, sandbox, { filename: 'js/core/supabase-config.js' });
   assert.equal(sandbox.window.EMAIL_OTP_SECURITY_CONFIG.mode, 'broker');
-  assert.equal(sandbox.window.EMAIL_OTP_SECURITY_CONFIG.turnstileSiteKey, '0x4AAAAAAEZt-tXuiX-ztGXd');
+  assert.equal(sandbox.window.EMAIL_OTP_SECURITY_CONFIG.turnstileSiteKey, '0x4AAAAAAAEZt-tXuiX-ztGXd');
   assert.equal(Object.isFrozen(sandbox.window.EMAIL_OTP_SECURITY_CONFIG), true);
   assert.match(client, /window\.EMAIL_OTP_SECURITY_CONFIG \|\| \{\}/);
   assert.match(client, /return otpSecurityConfig\(\)\.mode === 'broker'/);
@@ -170,12 +170,12 @@ test('shared config owns the frozen broker/on Email OTP activation artifact', ()
 test('only the exact eight root Auth consumers advance the config cache binding', () => {
   const actual = fs.readdirSync(root)
     .filter((file) => file.endsWith('.html'))
-    .filter((file) => /js\/core\/supabase-config\.js\?v=7/.test(read(file)))
+    .filter((file) => /js\/core\/supabase-config\.js\?v=8/.test(read(file)))
     .sort();
   assert.deepEqual(actual, expectedConsumers);
   for (const file of expectedConsumers) {
     const html = read(file);
-    assert.match(html, /js\/core\/supabase-config\.js\?v=7/);
+    assert.match(html, /js\/core\/supabase-config\.js\?v=8/);
   }
   for (const file of expectedReadingAuthConsumers) {
     const html = read(file);
