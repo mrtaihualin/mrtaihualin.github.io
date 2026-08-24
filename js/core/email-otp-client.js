@@ -1,5 +1,5 @@
 // Shared Email OTP client for non-game surfaces.
-// Safe rollout: native remains the default until the coordinated Production activation.
+// Safe rollout: native remains the default until the coordinated Production activation; broker mode fails closed.
 (function () {
   'use strict';
 
