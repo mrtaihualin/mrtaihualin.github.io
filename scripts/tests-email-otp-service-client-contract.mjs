@@ -170,12 +170,12 @@ test('shared config owns the frozen broker/on Email OTP activation artifact', ()
 test('only the exact eight root Auth consumers advance the config cache binding', () => {
   const actual = fs.readdirSync(root)
     .filter((file) => file.endsWith('.html'))
-    .filter((file) => /js\/core\/supabase-config\.js\?v=6/.test(read(file)))
+    .filter((file) => /js\/core\/supabase-config\.js\?v=7/.test(read(file)))
     .sort();
   assert.deepEqual(actual, expectedConsumers);
   for (const file of expectedConsumers) {
     const html = read(file);
-    assert.match(html, /js\/core\/supabase-config\.js\?v=6/);
+    assert.match(html, /js\/core\/supabase-config\.js\?v=7/);
   }
   for (const file of expectedReadingAuthConsumers) {
     const html = read(file);
