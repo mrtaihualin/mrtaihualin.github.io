@@ -680,16 +680,30 @@ function renderTeacherLogin() {
         '<input id="tLoginCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="輸入信中的驗證碼" style="width:100%;padding:11px;border:1px solid #e9dcb8;border-radius:9px;margin:10px 0;font-size:1.05rem;letter-spacing:3px;text-align:center;box-sizing:border-box;" />' +
         '<button class="btn-add-student" style="width:100%;" onclick="teacherVerifyOtp()">登入</button>' +
       '</div>' +
+      '<div id="tLoginTurnstile" style="margin:8px 0;"></div>' +
       '<div id="tLoginMsg" style="display:none;margin-top:12px;font-size:0.85rem;font-family:\'Noto Sans TC\',sans-serif;"></div>' +
     '</div>';
 }
 
+var teacherOtpChallengeId = '';
+
 async function teacherSendOtp() {
   var email = (document.getElementById('tLoginEmail').value || '').trim();
   if (email.toLowerCase() !== TEACHER_EMAIL) { setTeacherLoginMsg('此信箱無權限登入', true); return; }
+  if (!window.EmailOtpClient) { setTeacherLoginMsg('登入服務尚未就緒，請稍後再試', true); return; }
   setTeacherLoginMsg('寄送中…⏳', false);
-  var res = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
-  if (res.error) { setTeacherLoginMsg('寄送失敗：' + res.error.message, true); return; }
+  var res;
+  try {
+    res = await window.EmailOtpClient.request(sb, {
+      email: email,
+      turnstileContainer: document.getElementById('tLoginTurnstile')
+    });
+  } catch (error) {
+    setTeacherLoginMsg('暫時無法寄送驗證碼，請稍後再試', true);
+    return;
+  }
+  if (res && res.error) { setTeacherLoginMsg('暫時無法寄送驗證碼，請稍後再試', true); return; }
+  teacherOtpChallengeId = res && res.data && res.data.challenge_id || '';
   document.getElementById('tLoginStep1').style.display = 'none';
   document.getElementById('tLoginStep2').style.display = 'block';
   setTeacherLoginMsg('驗證碼已寄到信箱（含垃圾信匣），請輸入', false);
@@ -697,12 +711,27 @@ async function teacherSendOtp() {
 
 async function teacherVerifyOtp() {
   var code = (document.getElementById('tLoginCode').value || '').trim();
-  if (!/^\d{6,10}$/.test(code)) { setTeacherLoginMsg('請輸入信中的驗證碼（純數字）', true); return; }
+  if (!/^\d{6}$/.test(code)) { setTeacherLoginMsg('請輸入信中的 6 位數驗證碼', true); return; }
+  if (!window.EmailOtpClient) { setTeacherLoginMsg('登入服務尚未就緒，請稍後再試', true); return; }
   setTeacherLoginMsg('驗證中…⏳', false);
-  var res = await sb.auth.verifyOtp({ email: TEACHER_EMAIL, token: code, type: 'email' });
-  if (res.error) { setTeacherLoginMsg('驗證碼錯誤或已過期，請重新輸入', true); return; }
+  var res;
+  try {
+    res = await window.EmailOtpClient.verify(sb, {
+      email: TEACHER_EMAIL,
+      code: code,
+      challengeId: teacherOtpChallengeId,
+      turnstileContainer: document.getElementById('tLoginTurnstile')
+    });
+  } catch (error) {
+    setTeacherLoginMsg('驗證碼錯誤或已過期，請重新輸入', true);
+    return;
+  }
+  if (res && res.error) { setTeacherLoginMsg('驗證碼錯誤或已過期，請重新輸入', true); return; }
   if (await isTeacherAuthed()) { markTeacherAuthed(); renderTeacherView(); }
-  else setTeacherLoginMsg('此帳號無權限', true);
+  else {
+    await sb.auth.signOut({ scope: 'local' });
+    setTeacherLoginMsg('此帳號無權限', true);
+  }
 }
 
 async function bootTeacher() {

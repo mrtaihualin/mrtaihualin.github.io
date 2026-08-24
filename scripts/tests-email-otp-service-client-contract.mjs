@@ -19,15 +19,22 @@ const broker = read('supabase/functions/email-otp-auth/index.ts');
 const mailer = read('supabase/functions/send-transactional-email/index.ts');
 const client = read('js/games/reading-auth.js');
 const config = read('js/core/supabase-config.js');
+const sharedEmailOtpClient = read('js/core/email-otp-client.js');
+const progressClient = read('js/score/progress.js');
+const classroomAuth = read('js/classroom/attendance-auth.js');
+const myProgressPage = read('my-progress.html');
+const classroomPage = read('classroom/index.html');
 const expectedConsumers = [
   'lego.html',
   'listening-game.html',
+  'my-progress.html',
   'reading-game.html',
   'tone-finder.html',
   'typing-game.html',
   'vault.html',
   'word-order.html',
 ];
+const expectedReadingAuthConsumers = expectedConsumers.filter((file) => file !== 'my-progress.html');
 
 let passed = 0;
 function test(label, fn) {
@@ -46,6 +53,38 @@ const otherSecret = ['sb', 'secret', 'other', 'test', 'only', '9876543210'].join
 const secretKeys = JSON.stringify({
   [EMAIL_MAILER_SECRET_NAME]: testSecret,
   'unrelated-caller': otherSecret,
+});
+
+test('shared Email OTP client routes non-game surfaces without a native bypass', () => {
+  assert.match(sharedEmailOtpClient, /function isBrokerEnabled\(\)/);
+  assert.match(sharedEmailOtpClient, /getTurnstileToken\([^,\n]+, 'email_otp_request'\)/);
+  assert.match(sharedEmailOtpClient, /getTurnstileToken\([^,\n]+, 'email_otp_verify'\)/);
+  assert.match(sharedEmailOtpClient, /sb\.functions\.invoke\('email-otp-auth'/);
+  assert.match(sharedEmailOtpClient, /sb\.auth\.setSession/);
+  assert.match(sharedEmailOtpClient, /boundUser\.id !== userId \|\| boundEmail !== email/);
+  assert.match(sharedEmailOtpClient, /sb\.auth\.signOut\(\{ scope: 'local' \}\)/);
+  assert.doesNotMatch(sharedEmailOtpClient, /service_role|SUPABASE_SECRET_KEYS|email_otp_mailer/);
+
+  for (const source of [progressClient, classroomAuth]) {
+    assert.match(source, /window\.EmailOtpClient\.request/);
+    assert.match(source, /window\.EmailOtpClient\.verify/);
+    assert.doesNotMatch(source, /sb\.auth\.signInWithOtp|sb\.auth\.verifyOtp/);
+  }
+  assert.match(progressClient, /id="pg-email-turnstile"/);
+  assert.match(classroomAuth, /id="tLoginTurnstile"/);
+  assert.match(classroomAuth, /email\.toLowerCase\(\) !== TEACHER_EMAIL/);
+  assert.match(classroomAuth, /teacherOtpChallengeId/);
+});
+
+test('shared client is loaded after config and before each non-game consumer', () => {
+  assert.ok(myProgressPage.indexOf('js/core/supabase-config.js?v=6') <
+    myProgressPage.indexOf('js/core/email-otp-client.js?v=1'));
+  assert.ok(myProgressPage.indexOf('js/core/email-otp-client.js?v=1') <
+    myProgressPage.indexOf('js/score/progress.js'));
+  assert.ok(classroomPage.indexOf('../js/core/supabase-config.js?v=6') <
+    classroomPage.indexOf('../js/core/email-otp-client.js?v=1'));
+  assert.ok(classroomPage.indexOf('../js/core/email-otp-client.js?v=1') <
+    classroomPage.indexOf('../js/classroom/attendance-auth.js'));
 });
 
 test('exact named Supabase secret key authorizes the server caller', () => {
@@ -137,6 +176,9 @@ test('only the exact seven Auth consumers advance the config cache binding', () 
   for (const file of expectedConsumers) {
     const html = read(file);
     assert.match(html, /js\/core\/supabase-config\.js\?v=6/);
+  }
+  for (const file of expectedReadingAuthConsumers) {
+    const html = read(file);
     assert.match(html, /js\/games\/reading-auth\.js\?v=26/);
   }
 });
