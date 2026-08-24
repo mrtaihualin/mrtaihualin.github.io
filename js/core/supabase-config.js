@@ -24,14 +24,14 @@ window.SUPABASE_CONFIG = {
 
 // ════════════════════════════════════════════════════════════
 // EMAIL OTP ACTIVATION — public client artifact owned only by this config file
-// Native Supabase Email OTP remains the safe default. A later separately approved
-// rollout may switch mode to "broker" and add the public Turnstile site key only
-// after the migration, both Edge Functions, secrets/config and backend proof pass.
-// Never place the named mailer key or any other server secret here.
+// Phase 1 broker mode is enabled only after the Production SQL, Edge Functions,
+// secrets, Turnstile widget and all-surface client routing passed their gates.
+// The site key is public. Never place the Turnstile secret, named mailer key,
+// service role key or any other server secret in this client artifact.
 // ════════════════════════════════════════════════════════════
 window.EMAIL_OTP_SECURITY_CONFIG = Object.freeze({
-  mode: 'native',
-  turnstileSiteKey: ''
+  mode: 'broker',
+  turnstileSiteKey: '0x4AAAAAAEZt-tXuiX-ztGXd'
 });
 
 // ════════════════════════════════════════════════════════════
