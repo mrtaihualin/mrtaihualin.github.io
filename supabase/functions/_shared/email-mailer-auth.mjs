@@ -1,4 +1,5 @@
-// Supabase secret API key names permit lowercase letters, digits, and underscores.\nexport const EMAIL_MAILER_SECRET_NAME = 'email_otp_mailer';
+// Supabase secret API key names permit lowercase letters, digits, and underscores.
+export const EMAIL_MAILER_SECRET_NAME = 'email_otp_mailer';
 
 /**
  * Resolve the one named Supabase secret API key allowed to invoke the mailer.
