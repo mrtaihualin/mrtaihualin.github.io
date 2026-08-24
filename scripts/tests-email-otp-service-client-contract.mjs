@@ -57,8 +57,8 @@ const secretKeys = JSON.stringify({
 
 test('shared Email OTP client routes non-game surfaces without a native bypass', () => {
   assert.match(sharedEmailOtpClient, /function isBrokerEnabled\(\)/);
-  assert.match(sharedEmailOtpClient, /action: 'email_otp_request'/);
-  assert.match(sharedEmailOtpClient, /action: 'email_otp_verify'/);
+  assert.match(sharedEmailOtpClient, /getTurnstileToken\([^,\n]+, 'email_otp_request'\)/);
+  assert.match(sharedEmailOtpClient, /getTurnstileToken\([^,\n]+, 'email_otp_verify'\)/);
   assert.match(sharedEmailOtpClient, /sb\.functions\.invoke\('email-otp-auth'/);
   assert.match(sharedEmailOtpClient, /sb\.auth\.setSession/);
   assert.match(sharedEmailOtpClient, /boundUser\.id !== userId \|\| boundEmail !== email/);
