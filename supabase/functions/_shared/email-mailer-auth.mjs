@@ -1,4 +1,4 @@
-export const EMAIL_MAILER_SECRET_NAME = 'email-otp-mailer';
+export const EMAIL_MAILER_SECRET_NAME = 'email_otp_mailer';
 
 /**
  * Resolve the one named Supabase secret API key allowed to invoke the mailer.
