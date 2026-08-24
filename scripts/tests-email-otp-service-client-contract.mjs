@@ -49,7 +49,7 @@ const secretKeys = JSON.stringify({
 });
 
 test('exact named Supabase secret key authorizes the server caller', () => {
-  assert.equal(EMAIL_MAILER_SECRET_NAME, 'email-otp-mailer');
+  assert.equal(EMAIL_MAILER_SECRET_NAME, 'email_otp_mailer');
   assert.equal(readEmailMailerSecret(secretKeys), testSecret);
   assert.equal(isEmailMailerRequestAuthorized(new Headers({ apikey: testSecret }), secretKeys), true);
 });
@@ -87,7 +87,7 @@ test('broker sends only the named key in apikey and never a browser or Bearer se
   assert.match(send, /if \(!EMAIL_MAILER_API_KEY\) return false/);
   assert.match(send, /'apikey': EMAIL_MAILER_API_KEY/);
   assert.doesNotMatch(send, /Authorization|SUPABASE_SERVICE_ROLE_KEY/);
-  assert.doesNotMatch(config, /EMAIL_MAILER_API_KEY|SUPABASE_SECRET_KEYS|email-otp-mailer/);
+  assert.doesNotMatch(config, /EMAIL_MAILER_API_KEY|SUPABASE_SECRET_KEYS|email_otp_mailer/);
 });
 
 test('mailer binds the OTP caller before body parsing without JWT decoding', () => {
