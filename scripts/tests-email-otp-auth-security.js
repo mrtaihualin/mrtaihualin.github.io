@@ -2,6 +2,7 @@
 'use strict';
 
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -13,6 +14,7 @@ const client = read('js/games/reading-auth.js');
 const mailer = read('supabase/functions/send-transactional-email/index.ts');
 const proof = read('scripts/prove-email-otp-native-bypass.mjs');
 const sqlTest = read('supabase/tests/2026-08-16_email_otp_auth_security_TEST.sql');
+const retention = read('supabase/migrations/20260824025500_phase1_email_otp_retention_cron.sql');
 
 let passed = 0;
 function test(label, fn) {
@@ -147,6 +149,29 @@ test('security logging is sanitized, private, retained, and service-only', () =>
   assert.match(sql, /revoke all on table private\.email_otp_security_events from public, anon, authenticated/);
   assert.match(sql, /grant execute on function public\.log_email_otp_security_internal[\s\S]*to service_role/);
   assert.doesNotMatch(sql, /metadata\s*[,=][^\n]*(?:p_email|p_code|p_ip)/i);
+});
+
+test('retention schedule runs the locked purge daily, is idempotent, and fails closed on drift', () => {
+  const lockedSqlHash = crypto.createHash('sha256').update(sql, 'utf8').digest('hex');
+  assert.strictEqual(lockedSqlHash, '52bc32c9ed8b99f1e3079c9ad8e3aa088cf0a47e168b6d3ea8a7771811d3dc58');
+  assert.match(sql, /create function public\.purge_email_otp_security_internal\(\)/);
+  assert.match(sql, /occurred_at < clock_timestamp\(\) - interval '30 days'/);
+  assert.match(sql, /issued_at < clock_timestamp\(\) - interval '24 hours'/);
+  assert.match(sql, /updated_at < clock_timestamp\(\) - interval '24 hours'/);
+
+  assert.match(retention, /jobname = 'email-otp-retention-daily'/);
+  assert.match(retention, /schedule = '30 20 \* \* \*'/);
+  assert.match(retention, /pg_catalog\.btrim\(command\) = 'select public\.purge_email_otp_security_internal\(\);'/);
+  assert.match(retention, /if v_existing_count = 1 and v_exact_count <> 1 then[\s\S]*EMAIL_OTP_RETENTION_PRECHECK_EXISTING_JOB_DRIFT/);
+  assert.match(retention, /if not exists \([\s\S]*jobname = 'email-otp-retention-daily'[\s\S]*perform cron\.schedule/);
+  assert.match(retention, /if v_exact_count <> 1 then[\s\S]*EMAIL_OTP_RETENTION_POSTCHECK_INVALID_JOB_COUNT/);
+
+  const executable = retention
+    .replace(/--[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(executable, /https?:\/\/|net\.http|x-cron-secret|authorization|vault\.|decrypted_secret|create_secret/i);
+  assert.doesNotMatch(executable, /send-transactional-email|email-otp-auth|line[_-]|mail/i);
+  assert.doesNotMatch(executable, /create\s+(?:or\s+replace\s+)?function\s+public\.purge_email_otp_security_internal/i);
 });
 
 test('transactional login email accepts only a six-digit ten-minute OTP contract', () => {
