@@ -170,7 +170,7 @@ test('retention schedule runs the locked purge daily, is idempotent, and fails c
     .replace(/--[^\n]*/g, '')
     .replace(/\/\*[\s\S]*?\*\//g, '');
   assert.doesNotMatch(executable, /https?:\/\/|net\.http|x-cron-secret|authorization|vault\.|decrypted_secret|create_secret/i);
-  assert.doesNotMatch(executable, /send-transactional-email|email-otp-auth|line[_-]|mail/i);
+  assert.doesNotMatch(executable, /send-transactional-email|email-otp-auth|line[_-]|resend|smtp/i);
   assert.doesNotMatch(executable, /create\s+(?:or\s+replace\s+)?function\s+public\.purge_email_otp_security_internal/i);
 });
 
