@@ -443,8 +443,15 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /S\s*=\s*ns;\s*if \(tfGuideMode\) tfLockCurrentWordForGuide\(\);\s*render\(\);/, 'Tone: a carried guide state must lock the next active syllable before render');
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
+  assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: a new guided question must stop at the intro gate');
+  assert.match(tone, /currentWordGuideIntroPending[\s\S]{0,500}開始練習/, 'Tone: the intro gate must hide choices behind the explicit start action');
+  assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,300}currentWordGuideIntroPending\s*=\s*false/, 'Tone: the start action must release the active question');
+  assert.match(tone, /if \(S\.step === 'session-guess' && !tfCurWordNoTools\(\)\)[\s\S]{0,120}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active question must return to the explicit start gate');
+  assert.match(tone, /function tfArmGuideIntroForPageReturn\(\)[\s\S]{0,400}currentWordGuideIntroPending\s*=\s*true/, 'Tone: returning to a preserved page must re-arm the guided-question gate');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=60/, 'Tone: page must request the rebuilt Guest runtime version');
+  assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
+  assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=63/, 'Tone: page must request the rebuilt Guest runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);

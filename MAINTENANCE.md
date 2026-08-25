@@ -2167,3 +2167,10 @@ node scripts/check-site.js
 - Active game pages no longer execute account, SRS/Review, personal vault, Played-event, Study Plan, or canonical persistence bundles; their source and database data remain preserved for the Phase 1 return.
 - The generated navigation hides personal Learning and leaderboard claims across all 78 routed pages, while parked direct routes fail closed before personal runtime can start.
 - Verification after the full overlay: `node scripts/check-site.js` passed all checks across 1,015 project files.
+
+# 2026-08-25 — Minimum Guest Launch Core 5 UI delta
+
+- Reapplied only the Guest-compatible Desktop UI work on top of the active Minimum Guest Launch build; Login/account and personal runtime remain parked.
+- Tone Finder now requires an explicit `開始練習` action before each guided question, including after returning to the page or enabling Hint.
+- Reading keeps the fixed `子音 → 母音 → 尾音 → 聲調` slot order and refreshes the zero-score HUD immediately when Hint is used.
+- Verification: affected game tests, Minimum Guest Launch gate, owner-switch race gate, full site check, and candidate browser checks.

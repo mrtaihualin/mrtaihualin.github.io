@@ -1013,6 +1013,20 @@ function tfGuideNoteHtml() {
   return '<div class="tf-guide-note">💡 <b>練習模式</b>・純練習不計分（沒有分數、星星與複習進度）</div>';
 }
 
+// Browser back/restore can preserve an already-rendered active question.
+// Re-arm the explicit guided-question start gate when the page is restored.
+function tfArmGuideIntroForPageReturn() {
+  if (!tfGuideMode || !session || !S || S.step !== 'session-guess' || tfCurWordNoTools()) return false;
+  session.currentWordGuideIntroPending = true;
+  return true;
+}
+window.addEventListener('pagehide', function () {
+  tfArmGuideIntroForPageReturn();
+});
+window.addEventListener('pageshow', function (event) {
+  if (event.persisted && tfArmGuideIntroForPageReturn()) render();
+});
+
 // ── สถิติคำที่ตอบผิดรายคำ (localStorage) + หน้า 全部 แบบ 50/50 เน้นคำที่ยังไม่แม่น — LIN 2026-06-20 ──
 var TF_WORD_WRONG_KEY = 'tf_word_wrong_v1';
 function tfLoadWordWrong() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(TF_WORD_WRONG_KEY) || '{}') || {}; } catch (e) { return {}; } }
@@ -1714,6 +1728,7 @@ function tfSetupNextWord() {
   var w = nx.word;
   session.currentWordGolden = tfRollGolden();
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 ก่อนตั้งคำถัดไป
+  session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย ไล่ตามลำดับอัตโนมัติ
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
     var _syls0 = nx.readingTH.split('-');
@@ -1723,6 +1738,9 @@ function tfSetupNextWord() {
   }
   hist.push(S); histPos++;
   render();
+  if (!session.currentWordGuideIntroPending) {
+    try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
+  }
 }
 
 // เข้าหน้าสรุป + คิดโบนัสจบชุด/perfect (ครั้งเดียว)
@@ -2923,6 +2941,7 @@ function startSetSession(words, opts) {
     currentWordDeduction: 0, currentWordScored: false,
     currentWordFirstTry: false, currentWordScore: 0,
     currentWordGuideUsed: !!tfGuideMode,
+    currentWordGuideIntroPending: false,
     sessionScored: false,
     submissionLinked: false,
     // ── สเตจ 2 + หลายพยางค์ ──
@@ -2936,6 +2955,7 @@ function startSetSession(words, opts) {
   roundReport = window.RoundReport ? RoundReport.create({game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 สำหรับคำแรกของ session
+  session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
   if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
@@ -2947,6 +2967,9 @@ function startSetSession(words, opts) {
   hist.push(S); histPos = 0;
   tfSaveResumeState(); // E3: บันทึก resume ทุกครั้งที่เริ่ม session ใหม่ (ทับของเก่าเสมอ — 1 session ล่าสุดต่อเกม)
   render();
+  if (!session.currentWordGuideIntroPending) {
+    try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
+  }
   // น้องมีนาทักทายตอนเริ่มเล่น (เฉพาะรอบแรกของหน้า กันทักซ้ำทุกชุด) — Lin 2026-07-10
   if (!window._tfMinaWelcomed) { window._tfMinaWelcomed = true; setTimeout(function () { tfMinaToast('welcome', { dur: 3400 }); }, 700); }
 }
@@ -3145,6 +3168,11 @@ function stepSessionGuess() {
   if (!session) return step1(); // กันเหนียว: ถ้าหลุดมาที่ step นี้โดยไม่มี session ให้ใช้ flow วิเคราะห์อิสระแทนหน้าว่าง
   var entry = session.words[session.index];
   var word = S.word || entry.word;
+  if (tfGuideMode && session.currentWordGuideIntroPending && !tfCurWordNoTools()) {
+    return '<div style="text-align:center;padding:18px 0 14px;">' +
+      '<button class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">開始練習</button>' +
+    '</div>';
+  }
   var bd = getBreakdown(word);
   var cls = TH.getInitClass(word);
   var clsLabel = TH.classLabel(cls);
@@ -4034,14 +4062,30 @@ var TF = {
   // ── ปุ่ม 提示 (คำใบ้) — Lin 2026-07-25 ──
   // เปิด = ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 แต่ทั้งรอบ "ไม่ได้คะแนน/ดาว/ความคืบหน้า" อะไรเลย
   toggleGuide: function() {
+    var wasGuideIntroPending = !!(session && session.currentWordGuideIntroPending);
     tfGuideMode = !tfGuideMode;
     try { localStorage.setItem('rg_guide_mode', tfGuideMode ? '1' : '0'); } catch(e){}
     if (tfGuideMode && session && session.words && session.index < session.words.length && S && S.word && S.step !== 'result') {
       tfLockCurrentWordForGuide();
+      if (S.step === 'session-guess' && !tfCurWordNoTools()) {
+        session.currentWordGuideIntroPending = true;
+      }
+    }
+    if (!tfGuideMode && wasGuideIntroPending) {
+      session.currentWordGuideIntroPending = false;
     }
     tfSyncGuideBtn();
     render();   // วาดใหม่ทั้งหน้า: ป้ายบอกโหมด + ไฮไลต์ตัวเลือก อัปเดตพร้อมกัน
+    if (!tfGuideMode && wasGuideIntroPending) {
+      try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
+    }
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  },
+  startGuidedQuestion: function() {
+    if (!session || !session.currentWordGuideIntroPending || !S || S.step !== 'session-guess') return;
+    session.currentWordGuideIntroPending = false;
+    render();
+    try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
   },
   // ── D2 (2026-08-10): ปุ่ม [ 查看詳細解說 ] opt-in ในหน้าเฉลย — สลับเปิด/ปิดกล่อง .gsh-detail-box ที่อยู่ถัดจากปุ่มนี้ ──
   //   ไม่แตะข้อมูล/การคำนวณ ansHtml ใดๆ แค่ show/hide DOM ที่ render() สร้างไว้แล้ว
