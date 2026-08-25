@@ -2148,3 +2148,9 @@ fix(backup): เพิ่ม package-lock.json ให้ scripts/backup + เป
 ```bash
 node scripts/check-site.js
 ```
+# 2026-08-25 — Minimum Guest Launch reversible client gate
+
+- Added one shared launch flag that forces the six public games to run without reading an authenticated identity.
+- Account score sync, SRS/account facade writes, Login UI, personal save controls, Leaderboards, Learning Center personal routes and Challenge routes are parked without deleting their source or stored data.
+- Direct parked URLs return visitors to the game hub. Existing browser sessions are neither signed out nor mutated.
+- Verification: `node scripts/tests-minimum-guest-launch.js` plus the normal site gate and affected browser/viewports before release.

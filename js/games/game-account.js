@@ -4,6 +4,20 @@
 (function () {
   'use strict';
 
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true) {
+    window.GAME_ACCOUNT = {
+      getStars: function () { return 0; }, addStars: function () { return 0; },
+      starsForRound: function () { return 0; },
+      addHardStars: function () { return { stars: 0, capped: false, parked: true }; },
+      starBadges: [], earnedBadges: function () { return []; }, seedIfEmpty: function () { return 0; },
+      getStreak: function () { return 0; }, bumpStreakToday: function () { return 0; },
+      consumeStatus: function () { return false; }, refreshStatus: function () { return Promise.resolve(null); },
+      markLevelSeen: function () { return 0; }, newWordsCount: function () { return 0; },
+      sync: function () {}
+    };
+    return;
+  }
+
   var PREF_KEY = 'thai_game_acct_v1';
 
   function currentUserId() {
