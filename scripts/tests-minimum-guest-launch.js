@@ -4,13 +4,18 @@ var fs = require('fs');
 var path = require('path');
 var root = path.resolve(__dirname, '..');
 var activePages = [
-  'games.html', 'tone-finder.html', 'reading-game.html', 'listening-game.html',
+  'games.html', 'games-practice.html', 'tone-finder.html', 'reading-game.html', 'listening-game.html',
   'typing-game.html', 'word-order.html', 'lego.html'
 ];
 var parkedPages = [
   'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html',
   'reading-board.html', 'listening-board.html', 'typing-board.html',
   'word-order-board.html', 'lego-board.html', 'mix-board.html', 'games-challenge.html'
+];
+var staticParkedPages = [
+  'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html',
+  'reading-board.html', 'listening-board.html', 'typing-board.html',
+  'word-order-board.html', 'lego-board.html', 'mix-board.html', 'line-callback.html'
 ];
 
 function read(file) { return fs.readFileSync(path.join(root, file), 'utf8'); }
@@ -19,10 +24,17 @@ function ok(value, message) {
   process.stdout.write('PASS ' + message + '\n');
 }
 
-activePages.concat(parkedPages).forEach(function (file) {
+activePages.concat(['games-challenge.html']).forEach(function (file) {
   var html = read(file);
   ok(html.indexOf('js/core/minimum-guest-launch.js?v=1') !== -1, file + ' loads the launch gate');
   ok(html.indexOf('js/core/minimum-guest-launch.js?v=1') < html.indexOf('</head>'), file + ' loads the launch gate in head');
+});
+
+staticParkedPages.forEach(function (file) {
+  var html = read(file);
+  var gateAt = html.indexOf("var target='/games.html?guest_launch=1'");
+  var authAt = html.indexOf('auth-widget.js');
+  ok(gateAt !== -1 && (authAt === -1 || gateAt < authAt), file + ' fails closed before personal runtime');
 });
 
 var gate = read('js/core/minimum-guest-launch.js');
@@ -30,6 +42,39 @@ ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is expli
 ok(gate.indexOf('window.location.replace') !== -1, 'parked direct routes fail closed');
 ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1, 'account and Challenge routes are parked');
 ok(gate.indexOf('vault-btn-slot') !== -1, 'personal save controls are hidden');
+
+var config = read('js/core/supabase-config.js');
+ok(config.indexOf("runtimeMode: 'minimum-guest'") !== -1, 'one reversible runtime mode is canonical');
+ok(config.indexOf('getAnonymousSupabaseClient') !== -1 && config.indexOf('persistSession: false') !== -1 &&
+  config.indexOf('autoRefreshToken: false') !== -1 && config.indexOf('detectSessionInUrl: false') !== -1,
+  'isolated anonymous Supabase client cannot inherit browser auth');
+
+var sixGames = ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','lego.html'];
+var parkedBundles = ['auth-widget.js','game-account.js','reading-auth.js','phase1-canonical-state.js','learning-summary.js','study-plan.js','tone-server.js','word-vault.js','sentence-vault.js','practice-events.js'];
+sixGames.forEach(function (file) {
+  var html = read(file);
+  parkedBundles.forEach(function (bundle) { ok(html.indexOf(bundle) === -1, file + ' does not execute parked ' + bundle); });
+  ok(!/(?:reading|typing|listening|word-order|lego)-board\.html/.test(html), file + ' does not expose a leaderboard route');
+});
+
+var contentClient = read('js/games/game-content-client.js');
+ok(contentClient.indexOf('minimumGuest ? cfg.anonKey') !== -1, 'protected game content ignores stored Login token');
+ok(contentClient.indexOf('isAnon && !minimumGuest') !== -1, 'content cap exposes no Login CTA');
+
+var audioClient = read('js/games/protected-word-audio.js');
+ok(audioClient.indexOf('getAnonymousSupabaseClient') !== -1, 'protected audio uses isolated Guest client');
+
+var legoApp = read('js/games/lego-game-app.js');
+ok(legoApp.indexOf("return {uid:'minimum-guest',epoch:0}") !== -1, 'Lego quota has a Guest owner boundary');
+ok(legoApp.indexOf('res.data.loggedIn!==false') !== -1, 'Lego quota rejects authenticated response leakage');
+
+['js/games/tone-finder-game.js','js/games/reading-game-app.js','js/games/typing-game-app.js','js/games/word-order-app.js'].forEach(function (file) {
+  var source = read(file);
+  ok(source.indexOf('MinimumGuestOnly') !== -1, file + ' parks local SRS/Challenge state');
+});
+
+var report = read('js/games/round-report.js');
+ok(report.indexOf('isMinimumGuestOnly') !== -1, 'Result stays in-memory without daily progress persistence');
 
 ['js/core/auth-widget.js', 'js/games/reading-auth.js', 'js/games/game-account.js'].forEach(function (file) {
   var source = read(file);

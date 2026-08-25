@@ -594,6 +594,7 @@ function legoCurrentSentence(){
 }
 
 function legoDailyActivity(increment){
+  if(typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly()) return 0;
   const day=new Date().toISOString().slice(0,10);
   let value={day:day,count:0};
   try{
@@ -844,6 +845,9 @@ function legoRefreshBars(){
 // ทั้งเว็บจนกว่าจะกลับมาปกติ — เป็น trade-off ที่จำเป็นถ้าจะเอาเพดานแข็งจริง (เลือกฝั่ง "กันเงินรั่ว"
 // มากกว่า "กันเกมล่ม" เพราะ Lin บอกว่าเกมนี้จะเป็นตัวหลักในการหาเงิน)
 var legoQuotaPendingAttempt=null;
+function legoMinimumGuestOnly(){
+  return typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly();
+}
 function legoQuotaRequestId(){
   try{ if(window.crypto&&crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
   var bytes=new Uint8Array(16);
@@ -854,6 +858,7 @@ function legoQuotaRequestId(){
 }
 function legoQuotaOwnerSnapshot(){
   try{
+    if(legoMinimumGuestOnly()) return {uid:'minimum-guest',epoch:0};
     var auth=window.SITE_AUTH;
     if(!auth) return null;
     var uid=auth.user&&auth.user.id?String(auth.user.id):'';
@@ -875,21 +880,26 @@ function legoQuotaAttempt(owner){
 function legoQuotaWait(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}
 async function legoCheckDailyQuota(){
   try{
-    var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    var minimumGuest=legoMinimumGuestOnly();
+    var sb = minimumGuest
+      ? (window.getAnonymousSupabaseClient ? window.getAnonymousSupabaseClient() : null)
+      : (window.getSupabaseClient ? window.getSupabaseClient() : null);
     if(!sb) return {ok:false, reason:'no_client'};
     if(!window.NetworkGuard||typeof NetworkGuard.request!=='function') return {ok:false,reason:'no_client'};
     var owner=legoQuotaOwnerSnapshot();
     if(!owner) return {ok:false,reason:'owner_unresolved'};
     var attempt=legoQuotaAttempt(owner);
     var headers = {};
-    try{
-      var sres = await NetworkGuard.request(function(){return sb.auth.getSession();},'lego-quota-session',{},5000,null);
-      var session=sres&&sres.data&&sres.data.session;
-      var sessionUid=session&&session.user&&session.user.id?String(session.user.id):'';
-      if(sessionUid!==owner.uid||!legoQuotaSameOwner(owner)) return {ok:false,reason:'owner_changed'};
-      var token = session && session.access_token;
-      if(token) headers.Authorization = 'Bearer ' + token;
-    }catch(e){return {ok:false,reason:'network'};}
+    if(!minimumGuest){
+      try{
+        var sres = await NetworkGuard.request(function(){return sb.auth.getSession();},'lego-quota-session',{},5000,null);
+        var session=sres&&sres.data&&sres.data.session;
+        var sessionUid=session&&session.user&&session.user.id?String(session.user.id):'';
+        if(sessionUid!==owner.uid||!legoQuotaSameOwner(owner)) return {ok:false,reason:'owner_changed'};
+        var token = session && session.access_token;
+        if(token) headers.Authorization = 'Bearer ' + token;
+      }catch(e){return {ok:false,reason:'network'};}
+    }
     for(var requestAttempt=0;requestAttempt<2;requestAttempt++){
       var res;
       try{
@@ -907,6 +917,7 @@ async function legoCheckDailyQuota(){
         return {ok:false,reason:'network'};
       }
       if(res.data.requestId!==attempt.requestId) return {ok:false,reason:'invalid_response'};
+      if(minimumGuest&&res.data.loggedIn!==false) return {ok:false,reason:'invalid_response'};
       if(legoQuotaPendingAttempt===attempt) legoQuotaPendingAttempt=null;
       return Object.assign({},res.data,{_owner:owner});
     }
@@ -939,12 +950,12 @@ function finishLegoRound(){
   legoMaxCombo=0;
   legoNextTestGolden=true; // กฎ2026-07-05: ทดสอบผ่านครบรอบแล้ว → ประโยคถัดไป (ที่6) การันตีคำทอง ×2
   legoRefreshBars();
-  if(window.GAME_ACCOUNT){GAME_ACCOUNT.bumpStreakToday();}
-  try{ legoChallengeRecordProgress(cleanCount,count,comboSnapshot); }catch(e){}
+  if(!legoMinimumGuestOnly()&&window.GAME_ACCOUNT){GAME_ACCOUNT.bumpStreakToday();}
+  if(!legoMinimumGuestOnly()){try{ legoChallengeRecordProgress(cleanCount,count,comboSnapshot); }catch(e){}}
   // 存分數到共用排行榜（'lego' key 已在 reading-auth.js 註冊，跟 word_order 分開算，不會混榜）
-  try{ if(window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'lego',legoWrongItemsFromLog()); }catch(e){}   // เฟส 3: แนบประโยคที่พลาด — 2026-07-13
+  try{ if(!legoMinimumGuestOnly()&&window.READING_AUTH && READING_AUTH.saveScore) READING_AUTH.saveScore(weightedScore,1,'lego',legoWrongItemsFromLog()); }catch(e){}   // เฟส 3: แนบประโยคที่พลาด — 2026-07-13
   legoRoundLog=[]; // ล้างรอบ กันข้อมูลรอบเก่าค้างไปติดรอบถัดไป
-  try{
+  if(!legoMinimumGuestOnly())try{
     const _sv=legoApplyStreak();
     if(_sv.events.freezeUsed) setTimeout(()=>toast('護盾幫你保住連續紀錄！🛡️'),900);
     if(_sv.events.freezeEarned) setTimeout(()=>toast('獲得新護盾 🛡️ ×1！連續'+_sv.state.streak+'天'),900);
@@ -1084,11 +1095,12 @@ const TF_STREAK_KEY='tf_streak_v1';
 const LEGO_GAME_CFG={STREAK_FREEZE_EARN_EVERY:7,STREAK_FREEZE_MAX:2};
 
 function legoLoadStreak(){try{return JSON.parse(localStorage.getItem(TF_STREAK_KEY)||'{}')||{};}catch(e){return {};}}
-function legoSaveStreak(s){try{localStorage.setItem(TF_STREAK_KEY,JSON.stringify(s));}catch(e){}}
+function legoSaveStreak(s){if(legoMinimumGuestOnly())return;try{localStorage.setItem(TF_STREAK_KEY,JSON.stringify(s));}catch(e){}}
 function legoTodayStr(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 function legoYestStr(){const d=new Date();d.setDate(d.getDate()-1);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 
 function legoApplyStreak(){
+  if(legoMinimumGuestOnly()) return {state:{streak:0,freezes:0},events:{freezeUsed:false,freezeEarned:0}};
   const s=legoLoadStreak(), cfg=LEGO_GAME_CFG, today=legoTodayStr(), yest=legoYestStr();
   const streakEv={freezeUsed:false,freezeEarned:0};
   if(s.lastPlay!==today){
@@ -1323,7 +1335,9 @@ async function startTest(){
       toast('⚠️ 連線不穩，暫時無法測試，請稍等一下再試一次',true);
     }else{
       var cap=quota.cap||(quota.loggedIn?5:2);
-      toast(quota.loggedIn
+      toast(legoMinimumGuestOnly()
+        ? ('👧🏻 米娜：今天已經測試 '+cap+' 句囉！明天再回來繼續造句吧 🌙')
+        : quota.loggedIn
         ? ('👧🏻 米娜：今天已經測試 '+cap+' 句囉！明天再回來繼續造句吧 🌙')
         : ('👧🏻 米娜：今天已經測試 '+cap+' 句囉！登入帳號可以多測到每天 5 句，明天也可以再回來 🌙'),
         true);

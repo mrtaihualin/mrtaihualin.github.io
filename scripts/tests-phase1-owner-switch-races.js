@@ -333,25 +333,25 @@ test('Tone SRS resets on logout and discards the late authenticated response', a
   assert.strictEqual(h.context.__tfSrsSyncPromise, null);
 });
 
-test('all affected pages ship the owner-safe runtime versions', async () => {
+test('Minimum Guest pages park owner-safe account runtimes but preserve their source', async () => {
   const corePages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
   for (const page of corePages) {
     const html = read(page);
-    assert.match(html, /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
-    assert.match(html, /game-account\.js\?v=5/, page + ' GameAccount cache');
-    assert.match(html, /reading-auth\.js\?v=26/, page + ' reading-auth cache');
+    assert.doesNotMatch(html, /phase1-canonical-state\.js/, page + ' canonical runtime parked');
+    assert.doesNotMatch(html, /game-account\.js/, page + ' GameAccount runtime parked');
+    assert.doesNotMatch(html, /reading-auth\.js/, page + ' reading-auth runtime parked');
   }
   for (const page of ['my-progress.html', 'vault.html']) {
     assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
   }
-  for (const page of ['lego.html', 'vault.html']) {
+  for (const page of ['vault.html']) {
     assert.match(read(page), /reading-auth\.js\?v=26/, page + ' reading-auth cache');
   }
-  assert.match(read('lego.html'), /game-account\.js\?v=4/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=59/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=40/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=40/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=30/);
+  assert.doesNotMatch(read('lego.html'), /game-account\.js/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=60/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=41/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=41/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=31/);
   assert.match(read('listening-game.html'), /listening-game-app\.js\?v=19/);
 });
 

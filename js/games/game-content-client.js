@@ -121,7 +121,8 @@
 
   function fetchGameContent() {
     var cfg = currentConfig();
-    var token = readAccessTokenGuess(cfg.url) || cfg.anonKey;
+    var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
+    var token = minimumGuest ? cfg.anonKey : (readAccessTokenGuess(cfg.url) || cfg.anonKey);
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       return Promise.reject(new Error('NETWORK_OFFLINE'));
     }
@@ -367,9 +368,10 @@
       if (!anyCapped(data && data.capped)) return;
       if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(CAP_BANNER_SESSION_KEY) === '1') return;
 
+      var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
       var isAnon = data.tier === 'anon';
       var msg = isAnon
-        ? '🎉 免費內容你都練過一輪囉！登入帳號（完全免費）可以解鎖更多單字和句子'
+        ? (minimumGuest ? '🎉 今日免費題庫已練完，明天再回來繼續吧！' : '🎉 免費內容你都練過一輪囉！登入帳號（完全免費）可以解鎖更多單字和句子')
         : '📚 目前開放的內容你都練過了，我們持續在新增題庫，敬請期待';
 
       var el = document.createElement('div');
@@ -380,7 +382,7 @@
         'box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;');
       el.innerHTML =
         '<div style="flex:1;">' + msg + '</div>' +
-        (isAnon ? '<button type="button" id="gc-cap-login-btn" style="flex-shrink:0;padding:7px 14px;border:none;border-radius:20px;' +
+        (isAnon && !minimumGuest ? '<button type="button" id="gc-cap-login-btn" style="flex-shrink:0;padding:7px 14px;border:none;border-radius:20px;' +
           'background:' + THEME.cream + ';color:' + THEME.goldDeep + ';font-weight:700;font-family:' + FONT_STACK + ';cursor:pointer;white-space:nowrap;">🔑 登入</button>' : '') +
         '<button type="button" id="gc-cap-close-btn" aria-label="關閉" style="flex-shrink:0;background:none;border:none;color:' + THEME.cream + ';font-size:18px;line-height:1;cursor:pointer;padding:2px 4px;">✕</button>';
       document.body.appendChild(el);
@@ -389,7 +391,7 @@
       var closeBtn = document.getElementById('gc-cap-close-btn');
       if (closeBtn) closeBtn.addEventListener('click', function () { if (el.parentNode) el.parentNode.removeChild(el); });
 
-      if (isAnon) {
+      if (isAnon && !minimumGuest) {
         var loginBtn = document.getElementById('gc-cap-login-btn');
         if (loginBtn) loginBtn.addEventListener('click', triggerLoginGate);
       }

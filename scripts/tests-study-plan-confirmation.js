@@ -10,13 +10,10 @@ const Core=require(path.join(root,'js/games/study-plan-core.js'));
 let passed=0;
 function check(label,fn){fn();passed++;console.log('✓ '+label);}
 
-check('proposal UI copy and controls are present only inside the Time Plan section',()=>{
+check('Minimum Guest parks the Time Plan UI without deleting its core module',()=>{
   const html=read('games.html');
-  assert.match(html,/id="timePlanTitle"[\s\S]+id="timePlanProposal"[\s\S]+建議這樣練/);
-  assert.match(html,/勾選想玩的遊戲，選好等級後再開始。/);
-  assert.match(html,/id="timePlanConfirm"[\s\S]+開始這個安排/);
-  assert.match(html,/id="timePlanCancel"[\s\S]+取消/);
-  assert.strictEqual((html.match(/id="gameSearchGate"/g)||[]).length,1);
+  assert.doesNotMatch(html,/id="timePlanTitle"|id="timePlanProposal"|id="timePlanConfirm"|id="timePlanCancel"/);
+  assert.doesNotMatch(html,/study-plan(?:-core)?\.js/);
   assert.doesNotMatch(html,/id="gameSearchInput"/);
 });
 

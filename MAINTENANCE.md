@@ -2155,3 +2155,7 @@ node scripts/check-site.js
 - Direct parked URLs return visitors to the game hub. Existing browser sessions are neither signed out nor mutated.
 - Question and Result countdowns are removed across all six games; learners advance or replay explicitly.
 - Verification: `node scripts/tests-minimum-guest-launch.js` plus the normal site gate and affected browser/viewports before release.
+- The launch runtime now uses an isolated anonymous Supabase client for protected content and audio, ignores stored Login tokens, and requires an anonymous quota response for Lego.
+- Active game pages no longer execute account, SRS/Review, personal vault, Played-event, Study Plan, or canonical persistence bundles; their source and database data remain preserved for the Phase 1 return.
+- The generated navigation hides personal Learning and leaderboard claims across all 78 routed pages, while parked direct routes fail closed before personal runtime can start.
+- Verification after the full overlay: `node scripts/check-site.js` passed all checks across 1,015 project files.

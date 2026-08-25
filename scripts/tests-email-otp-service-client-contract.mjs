@@ -25,16 +25,10 @@ const classroomAuth = read('js/classroom/attendance-auth.js');
 const myProgressPage = read('my-progress.html');
 const classroomPage = read('classroom/index.html');
 const expectedConsumers = [
-  'lego.html',
-  'listening-game.html',
   'my-progress.html',
-  'reading-game.html',
-  'tone-finder.html',
-  'typing-game.html',
   'vault.html',
-  'word-order.html',
 ];
-const expectedReadingAuthConsumers = expectedConsumers.filter((file) => file !== 'my-progress.html');
+const expectedReadingAuthConsumers = ['vault.html'];
 
 let passed = 0;
 function test(label, fn) {
@@ -167,7 +161,7 @@ test('shared config owns the frozen broker/on Email OTP activation artifact', ()
   assert.match(client, /return otpSecurityConfig\(\)\.mode === 'broker'/);
 });
 
-test('only the exact eight root Auth consumers advance the config cache binding', () => {
+test('only preserved personal Auth surfaces retain the parked config cache binding', () => {
   const actual = fs.readdirSync(root)
     .filter((file) => file.endsWith('.html'))
     .filter((file) => /js\/core\/supabase-config\.js\?v=9/.test(read(file)))

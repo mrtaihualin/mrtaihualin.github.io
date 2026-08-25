@@ -71,8 +71,8 @@ check('Core apps contain no local Daily Streak writes or three-round daily goal'
   !/localStorage\.setItem\(TF_STREAK_KEY/.test(coreApps) &&
   !/DAILY_GOAL_SETS\s*:\s*3/.test(coreApps) &&
   !/STREAK_FREEZE_EARN_EVERY\s*:/.test(coreApps));
-check('all five games load the current authoritative account and Played clients',
-  coreHtml.every((html) => /game-account\.js\?v=5/.test(html) && /practice-events\.js\?v=3/.test(html)));
+check('Minimum Guest parks authoritative account and Played clients on all five games',
+  coreHtml.every((html) => !/game-account\.js/.test(html) && !/practice-events\.js/.test(html)));
 check('Free game markup no longer exposes Star, badge, or freeze controls',
   coreHtml.every((html) => !/(?:tf|rg)-freeze-num|(?:tf-)?star-count|(?:tf-)?badge-count|id="star-modal"|id="badge-modal"/.test(html)));
 
