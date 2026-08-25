@@ -120,15 +120,12 @@ function harness(options={}){
 }
 
 async function main(){
-  await test('hub keeps Search gate separate and exposes the locked Time Plan UI',()=>{
+  await test('Minimum Guest hub parks Search and Time Plan UI',()=>{
     const html=read('games.html');
-    assert.match(html,/id="gameSearchGate"[\s\S]+id="timePlanTitle">今天有多少時間？/);
-    assert.match(html,/id="timePlanMinutes"[\s\S]+分鐘[\s\S]+id="timePlanBtn"[\s\S]+幫我安排/);
-    assert.strictEqual((html.match(/id="gameSearchGate"/g)||[]).length,1);
-    assert.doesNotMatch(html,/id="gameSearchInput"/);
+    assert.doesNotMatch(html,/id="gameSearchGate"|id="gameSearchInput"|id="timePlanTitle"|id="timePlanMinutes"|id="timePlanBtn"/);
   });
 
-  await test('all six games load lifecycle listeners before gameplay',()=>{
+  await test('all six Guest games park personal lifecycle listeners',()=>{
     const pages={
       'tone-finder.html':'tone-finder-game',
       'reading-game.html':'reading-game-app',
@@ -138,8 +135,8 @@ async function main(){
       'lego.html':'lego-game-app'
     };
     for(const [page,app] of Object.entries(pages)){
-      const html=read(page),core=html.indexOf('study-plan-core.js?v=2'),plan=html.indexOf('study-plan.js?v=3'),game=html.lastIndexOf(app);
-      assert(core>=0&&plan>core&&game>plan,page+' script order');
+      const html=read(page),game=html.lastIndexOf(app);
+      assert(game>=0 && !/study-plan(?:-core)?\.js/.test(html),page+' parks Study Plan');
     }
   });
 

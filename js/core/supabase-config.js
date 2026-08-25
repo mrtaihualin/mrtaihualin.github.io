@@ -19,7 +19,14 @@ window.SUPABASE_CONFIG = {
   //   false = เล่นได้เลย ล็อกอินเป็นออปชั่น (ค่าปัจจุบัน — ปลอดภัยตอน Google ยังตั้งไม่เสร็จ)
   //   true  = ต้องล็อกอินก่อนถึงเล่นได้
   // ⚠️ เปลี่ยนเป็น true ก็ต่อเมื่อ Google login ใน Supabase พร้อมใช้งานแล้วเท่านั้น
-  requireLogin: false  // เปิดเล่นได้เลย ไม่บังคับล็อกอิน · ล็อกอินเป็นออปชั่น (สะสมคะแนน/ขึ้นกระดาน) — Lin 2026-06-26
+  requireLogin: false,
+  // Reversible Minimum Guest Launch gate. Unlike requireLogin:false, this
+  // deliberately ignores any authenticated browser session underneath.
+  runtimeMode: 'minimum-guest'
+};
+
+window.isMinimumGuestOnly = function () {
+  return !!(window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.runtimeMode === 'minimum-guest');
 };
 
 // ════════════════════════════════════════════════════════════
@@ -49,4 +56,20 @@ window.getSupabaseClient = function () {
   if (!ok) return null;
   window.__SB_CLIENT = window.supabase.createClient(c.url, c.anonKey);
   return window.__SB_CLIENT;
+};
+
+// Isolated client for Guest-only content/audio/quota calls. It neither reads
+// nor refreshes the existing browser auth session.
+window.getAnonymousSupabaseClient = function () {
+  if (window.__SB_ANON_CLIENT) return window.__SB_ANON_CLIENT;
+  var c = window.SUPABASE_CONFIG || {};
+  var ok = c.url && c.anonKey &&
+           String(c.url).indexOf('YOUR_') === -1 &&
+           String(c.anonKey).indexOf('YOUR_') === -1 &&
+           window.supabase && window.supabase.createClient;
+  if (!ok) return null;
+  window.__SB_ANON_CLIENT = window.supabase.createClient(c.url, c.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+  });
+  return window.__SB_ANON_CLIENT;
 };

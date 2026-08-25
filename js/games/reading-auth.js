@@ -12,6 +12,20 @@
 //   มี fallback: ถ้า SITE_AUTH โหลดไม่ทัน ยังมี client+listener สำรองของตัวเอง เกมไม่พัง)
 // ============================================================
 (function () {
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true) {
+    window.READING_AUTH = {
+      ready: true,
+      user: null,
+      saveScore: function () { return null; },
+      render: function () {
+        var host = document.getElementById('rg-login-slot');
+        if (host) host.innerHTML = '';
+      },
+      startLineLink: function () {},
+      openLoginGate: function () {}
+    };
+    return;
+  }
   var cfg = window.SUPABASE_CONFIG || {};
   var ready = cfg.url && cfg.anonKey &&
               cfg.url.indexOf('YOUR_') === -1 && cfg.anonKey.indexOf('YOUR_') === -1 &&

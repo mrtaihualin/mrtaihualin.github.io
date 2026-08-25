@@ -28,6 +28,7 @@ var DEFS = {
 // เสียงครูอ่านจริงสำหรับ 字卡 (โหลด manifest แล้วเล่น mp3 ที่ trim เสียงเงียบ/ลมหายใจแล้ว) — LIN 2026-06-20
 var TF_FLASH_AUDIO = null;
 var TF_FLASH_AUDIO_READY = false; // true = โหลดเสร็จ (สำเร็จหรือล้มเหลว)
+function tfMinimumGuestOnly(){return typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly();}
 var TF_FLASH_AUDIO_PROMISE = (function(){ try { return fetch('assets/flashcard-audio/manifest.json')
   .then(function(r){ return r.json(); })
   .then(function(j){ TF_FLASH_AUDIO = j; TF_FLASH_AUDIO_READY = true; })
@@ -544,6 +545,7 @@ function tfSetSrsRecord(word, level, rec) {
 // Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (window.READING_AUTH) — เลิกใช้ window.TF_AUTH/supabase-auth.js
 // เดิมยอมรับ "ให้อีเมล (lead) แต่ไม่ได้ล็อกอินจริง" ด้วย (hasAccess) ตอนนี้ต้องล็อกอินจริงเท่านั้น เหมือน 4 เกมที่เหลือ (Lin ยืนยันแล้ว)
 function tfSrsLoggedIn() {
+  if(tfMinimumGuestOnly()) return false;
   return !!(window.READING_AUTH && READING_AUTH.user);
 }
 // proxy-click ปุ่มล็อกอินกลาง (#rg-login-slot) — แพทเทิร์นเดียวกับ rgCtaLogin()/woCtaLogin()/legoCtaLogin() ในอีก 4 เกม
@@ -1039,6 +1041,7 @@ function tfWeekIndex() { return Math.floor(Date.now() / TF_WEEK_MS); }          
 function tfWeekEndMs() { return (tfWeekIndex() + 1) * TF_WEEK_MS; }             // เวลาเริ่มสัปดาห์ถัดไป (เดดไลน์)
 function tfActiveChallenge() { return TF_CHALLENGES[tfWeekIndex() % TF_CHALLENGES.length]; }
 function tfLoadChallenge() {
+  if(tfMinimumGuestOnly()) return {};
   try { var r = JSON.parse(localStorage.getItem(TF_CHALLENGE_KEY) || '{}') || {}; return r; } catch (e) { return {}; }
 }
 function tfChallengeState() {
@@ -1046,7 +1049,7 @@ function tfChallengeState() {
   if (saved.week !== wk || saved.id !== ch.id) saved = { week: wk, id: ch.id, progress: 0, done: false };
   return { ch: ch, st: saved };
 }
-function tfSaveChallenge(st) { try { localStorage.setItem(TF_CHALLENGE_KEY, JSON.stringify(st)); } catch (e) {} }
+function tfSaveChallenge(st) { if(tfMinimumGuestOnly())return;try { localStorage.setItem(TF_CHALLENGE_KEY, JSON.stringify(st)); } catch (e) {} }
 // เรียกตอนจบรอบ: บวกความคืบหน้าชาเลนจ์ + ฉลองถ้าครบ
 function tfChallengeBump(session) {
   if (!session) return;

@@ -262,7 +262,8 @@ function rgSrsKey(w){ return (w&&w.th||'')+'@'+(RG_LEVEL_TO_NUM[w&&w.level]||0);
 var srsRecords={}; // key = rgSrsKey(word) → SRS record
 function rgSrsGet(key){return srsRecords[key]||null;}
 function rgSrsSet(key,rec){srsRecords[key]=rec;}
-function rgLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
+function rgMinimumGuestOnly(){return typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly();}
+function rgLoggedIn(){ if(rgMinimumGuestOnly())return false;try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
 var SAVE_KEY='rgv3_save';
 var rememberStep=0,rememberTimer=null,curWordIsKnownCheck=false; // curWordIsKnownCheck: ด่านพิสูจน์ 已記得 (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
 var wordUsedGuide=false; // งาน 9: เปิดคำใบ้ระหว่างคำนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS/ดาว)
@@ -326,12 +327,14 @@ function updateActiveSlot(){
 // STORAGE
 // ════════════════════════════════════════════
 function loadSave(){
+  if(rgMinimumGuestOnly()){srsRecords={};totalStars=0;totalBadges=0;return;}
   try{
     var raw=localStorage.getItem(SAVE_KEY);
     if(raw){var d=JSON.parse(raw);srsRecords=d.srsRecords||{};totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
   }catch(e){}
 }
 function doSave(){
+  if(rgMinimumGuestOnly())return;
   try{localStorage.setItem(SAVE_KEY,JSON.stringify({srsRecords:srsRecords,totalStars:totalStars,totalBadges:totalBadges}));}catch(e){}
 }
 
@@ -1616,13 +1619,13 @@ function rgWeekIndex() { return Math.floor(Date.now() / RG_WEEK_MS); }
 function rgWeekEndMs() { return (rgWeekIndex() + 1) * RG_WEEK_MS; }
 function rgActiveChallenge() { return RG_CHALLENGES[rgWeekIndex() % RG_CHALLENGES.length]; }
 var RG_CH_KEY = 'rg_challenge_v1';
-function rgLoadChallenge() { try { return JSON.parse(localStorage.getItem(RG_CH_KEY) || '{}') || {}; } catch(e) { return {}; } }
+function rgLoadChallenge() { if(rgMinimumGuestOnly())return {};try { return JSON.parse(localStorage.getItem(RG_CH_KEY) || '{}') || {}; } catch(e) { return {}; } }
 function rgChallengeState() {
   var ch = rgActiveChallenge(), wk = rgWeekIndex(), saved = rgLoadChallenge();
   if (saved.week !== wk || saved.id !== ch.id) saved = { week: wk, id: ch.id, progress: 0, done: false };
   return { ch: ch, st: saved };
 }
-function rgSaveChallenge(st) { try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
+function rgSaveChallenge(st) { if(rgMinimumGuestOnly())return;try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
 
 // streak+freeze — share key กับเกมเสียง
 function rgLoadStreak() { try { return {streak:(window.GAME_ACCOUNT&&GAME_ACCOUNT.getStreak())||0}; } catch(e) { return {streak:0}; } }

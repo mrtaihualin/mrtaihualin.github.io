@@ -175,6 +175,7 @@
   }
 
   function readDaily() {
+    if (typeof root.isMinimumGuestOnly === 'function' && root.isMinimumGuestOnly()) return { day: taipeiDay(), games: {} };
     var day = taipeiDay();
     var data = null;
     try { data = JSON.parse(root.localStorage && root.localStorage.getItem(DAILY_KEY) || 'null'); } catch (e) {}
@@ -183,10 +184,12 @@
   }
 
   function writeDaily(data) {
+    if (typeof root.isMinimumGuestOnly === 'function' && root.isMinimumGuestOnly()) return;
     try { if (root.localStorage) root.localStorage.setItem(DAILY_KEY, JSON.stringify(data)); } catch (e) {}
   }
 
   function recordDailyActivity(gameType, count, roundId) {
+    if (typeof root.isMinimumGuestOnly === 'function' && root.isMinimumGuestOnly()) return 0;
     gameType = String(gameType || '');
     count = Math.max(0, number(count, 0));
     if (!gameType || !count) return dailyActivity(gameType);

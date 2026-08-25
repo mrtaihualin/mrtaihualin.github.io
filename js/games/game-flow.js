@@ -1,5 +1,5 @@
 /*
- * Shared locked game flow for the five practice games.
+ * Shared locked game flow for the six practice games.
  * UI only: scoring, SRS, mastered state, and game-specific answer rules stay in each game.
  */
 (function (window, document) {
@@ -25,35 +25,6 @@
     delete flows[key];
   }
 
-  function ensureControls(key, nextButton) {
-    var parent = nextButton.parentNode;
-    if (!parent) return null;
-
-    var status = parent.querySelector('[data-game-flow-status="' + key + '"]');
-    if (!status) {
-      status = document.createElement('span');
-      status.className = 'gsh-next-countdown';
-      status.id = 'gsh-next-countdown-' + String(key).replace(/[^a-z0-9_-]+/gi, '-');
-      status.setAttribute('data-game-flow-status', key);
-      status.setAttribute('aria-live', 'polite');
-      status.setAttribute('aria-atomic', 'true');
-      parent.insertBefore(status, nextButton);
-    }
-
-    var pauseButton = parent.querySelector('[data-game-flow-pause="' + key + '"]');
-    if (!pauseButton) {
-      pauseButton = document.createElement('button');
-      pauseButton.type = 'button';
-      pauseButton.className = 'btn btn-secondary gsh-pause-btn';
-      pauseButton.setAttribute('data-game-flow-pause', key);
-      pauseButton.textContent = '暫停';
-      if (nextButton.nextSibling) parent.insertBefore(pauseButton, nextButton.nextSibling);
-      else parent.appendChild(pauseButton);
-    }
-    pauseButton.hidden = false;
-    return { status: status, pauseButton: pauseButton };
-  }
-
   function start(options) {
     options = options || {};
     var key = String(options.key || 'default');
@@ -61,63 +32,14 @@
     if (!nextButton || nextButton.disabled || nextButton.offsetParent === null) return false;
 
     clearFlow(key);
-    var controls = ensureControls(key, nextButton);
-    if (!controls) return false;
-
-    var delaySeconds = Number(options.delaySeconds) || 3;
-    var flow = {
-      token: 1,
-      timer: null,
-      status: controls.status,
-      pauseButton: controls.pauseButton,
-      nextButton: nextButton,
-      remaining: delaySeconds,
-      paused: false
-    };
-    flows[key] = flow;
-    var token = flow.token;
-
-    function immediate() {
-      clearFlow(key);
-    }
-    if (!nextButton.__gshImmediateHandler) {
-      nextButton.__gshImmediateHandler = function () {
-        var activeKey = nextButton.getAttribute('data-game-flow-key');
-        if (activeKey) clearFlow(activeKey);
-      };
-      nextButton.addEventListener('click', nextButton.__gshImmediateHandler, true);
-    }
-    nextButton.setAttribute('data-game-flow-key', key);
-    nextButton.setAttribute('aria-describedby', controls.status.id || '');
-
-    controls.pauseButton.onclick = function () {
-      var active = flows[key];
-      if (!active || active.token !== token) return;
-      active.paused = true;
-      if (active.timer) window.clearTimeout(active.timer);
-      active.status.textContent = '已暫停，準備好時按「下一題」繼續';
-      active.pauseButton.hidden = true;
-      nextButton.focus();
-      try {
-        if (typeof window.gtag === 'function') window.gtag('event', 'game_auto_next_pause', { category: 'game', game: key });
-      } catch (e) {}
-    };
-
-    function tick() {
-      var active = flows[key];
-      if (!active || active.token !== token || active.paused) return;
-      if (active.remaining <= 0) {
-        immediate();
-        if (typeof options.beforeNext === 'function') options.beforeNext();
-        nextButton.click();
-        return;
-      }
-      active.status.textContent = String(active.remaining);
-      active.remaining -= 1;
-      active.timer = window.setTimeout(tick, 1000);
-    }
-
-    tick();
+    try { window.dispatchEvent(new CustomEvent('gsh:question-reveal')); } catch (e) {}
+    var parent = nextButton.parentNode;
+    var oldStatus = parent && parent.querySelector('[data-game-flow-status="' + key + '"]');
+    var oldPause = parent && parent.querySelector('[data-game-flow-pause="' + key + '"]');
+    if (oldStatus) oldStatus.textContent = '';
+    if (oldPause) oldPause.hidden = true;
+    nextButton.removeAttribute('data-game-flow-key');
+    nextButton.removeAttribute('aria-describedby');
     return true;
   }
 
@@ -181,30 +103,8 @@
     options = options || {};
     var key = String(options.key || 'default');
     var status = resolveElement(options.status);
-    if (!status) return false;
     cancelResult(key);
-    var flow = {
-      token: 1,
-      timer: null,
-      status: status,
-      remaining: Number(options.seconds) || 7
-    };
-    resultFlows[key] = flow;
-    var token = flow.token;
-    function tick() {
-      var active = resultFlows[key];
-      if (!active || active.token !== token) return;
-      if (active.remaining <= 0) {
-        cancelResult(key, true);
-        active.status.textContent = '';
-        if (typeof options.onComplete === 'function') options.onComplete();
-        return;
-      }
-      active.status.textContent = '下一輪將在 ' + active.remaining + ' 秒後開始';
-      active.remaining -= 1;
-      active.timer = window.setTimeout(tick, 1000);
-    }
-    tick();
+    if (status) status.textContent = '';
     return true;
   }
 
@@ -295,7 +195,6 @@
     };
     line('gsh-result-completed', resultCopy.completed + ' ' + completed + ' / ' + total);
     if (options.showFirstCorrect !== false) line('gsh-result-first-correct', resultCopy.firstCorrect + ' ' + firstCorrect + ' / ' + total);
-    var countdown = line('gsh-result-countdown', '');
     normalizeResultOrder(root, actions, meta, resultCopy);
     var details = root.querySelector('.gsh-result-shared-details');
     if (!details) {
@@ -326,19 +225,14 @@
       root.__gshResultCancelBound = true;
       root.addEventListener('click', function () { cancelResult(key); }, true);
     }
-    startResultCountdown({
-      key: key,
-      status: countdown,
-      seconds: 7,
-      onComplete: options.onReplay
-    });
+    cancelResult(key);
     activeResultReplay = replay ? { key: key, root: root, button: replay } : null;
     if (options.report) {
       attachReport(root, options.report);
       // P1-D-05: a completed RoundReport is the only client-side source for
       // durable Played evidence. PracticeEvents performs its own Login,
       // schema, retry and owner-generation checks before writing anything.
-      if (window.PracticeEvents && typeof window.PracticeEvents.submitReport === 'function') {
+      if (window.MRT_MINIMUM_GUEST_LAUNCH !== true && window.PracticeEvents && typeof window.PracticeEvents.submitReport === 'function') {
         window.PracticeEvents.submitReport(options.report).catch(function () {});
       }
     }

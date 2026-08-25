@@ -38,10 +38,8 @@
     //    (ปุ่มกรอบทอง คนละแบบกับ 免費試聽 ที่เป็นปุ่มทึบทอง primary CTA)
     { type: 'link', label: '🎮 遊戲', href: '/games.html', className: 'nav-cta-secondary' },
 
-    // 2) 學習 → ปลายทางชื่อ 學習中心
-    { type: 'link', label: '學習', href: '/my-progress.html' },
-
-    // 3) 學習資源 — 2026-08-14: content.html เป็น Hub หลักและมีทางเข้าตรงครบ 3 หมวด
+    // Learning Center is parked during Minimum Guest Launch.
+    // 2) 學習資源 — public learning resources stay available.
     //    URL เดิมของ blog/resources/content คงเดิมทั้งหมด
     {
       type: 'dropdown',
@@ -118,7 +116,7 @@
   //   emoji+text = ข้อความ | cta = ป้ายปุ่ม | href = ลิงก์ หรือ modal = id โมดัล
   var ANN = [
     { emoji: '🎁', text: '首堂 30 分鐘體驗課免費・中文授課', cta: '立即預約', modal: 'modal-line-qr' },
-    { emoji: '🎮', text: '5 款免費泰語遊戲上線！聲調・拼讀・打字・造句・語序，每款都有排行榜可以比賽', cta: '前往遊戲', href: 'games.html' },
+    { emoji: '🎮', text: '6 款免費 Guest 泰語遊戲上線！不需要登入，開啟就能玩', cta: '前往遊戲', href: 'games.html' },
     { emoji: '🎵', text: '用歌曲學泰語！精選泰文歌曲逐句拆解歌詞，邊聽邊學發音', cta: '去聽歌學泰語', href: 'resources.html#songs' },
     { emoji: '📖', text: '免費泰語學習文章上線！生活情境單字、聲調技巧，隨看隨學', cta: '去讀文章', href: 'blog.html#articles' },
     { emoji: '📺', text: 'YouTube 播放清單整理好了！依主題分類，找教學影片更方便', cta: '去看播放清單', href: 'resources.html#playlists' }
@@ -131,8 +129,7 @@
   var BOTTOM_NAV_ITEMS = [
     { icon: '🏠', label: '首頁', href: '/index.html' },
     { icon: '📞', label: '試聽', modal: CTA_MODAL, cta: true },
-    { icon: '🎮', label: '遊戲', href: '/games.html' },
-    { icon: '📚', label: '學習', href: '/my-progress.html' }
+    { icon: '🎮', label: '遊戲', href: '/games.html' }
   ];
 
   // ── ของพิเศษเฉพาะบางหน้า (ไม่เปลี่ยนพฤติกรรมเดิม แค่ทำให้ generate ได้จากจุดเดียว) ──

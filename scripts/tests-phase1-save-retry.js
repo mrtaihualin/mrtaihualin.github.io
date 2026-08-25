@@ -87,12 +87,12 @@ test('personal vault saves and deletes use bounded owner-safe online retry', () 
   assert.match(wordVault, /if \(!_ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
   assert.match(sentenceVault, /if \(!ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
 });
-test('Core 5 ship the current round-save client', () => {
+test('Core 5 park personal round-save clients in Minimum Guest mode', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
-    assert.match(html, /tone-server\.js\?v=4/);
+    assert.doesNotMatch(html, /tone-server\.js/);
     assert.match(html, /network-guard\.js\?v=1/);
-    assert.match(html, /reading-auth\.js\?v=26/);
+    assert.doesNotMatch(html, /reading-auth\.js/);
   });
 });
 

@@ -2148,3 +2148,14 @@ fix(backup): เพิ่ม package-lock.json ให้ scripts/backup + เป
 ```bash
 node scripts/check-site.js
 ```
+# 2026-08-25 — Minimum Guest Launch reversible client gate
+
+- Added one shared launch flag that forces the six public games to run without reading an authenticated identity.
+- Account score sync, SRS/account facade writes, Login UI, personal save controls, Leaderboards, Learning Center personal routes and Challenge routes are parked without deleting their source or stored data.
+- Direct parked URLs return visitors to the game hub. Existing browser sessions are neither signed out nor mutated.
+- Question and Result countdowns are removed across all six games; learners advance or replay explicitly.
+- Verification: `node scripts/tests-minimum-guest-launch.js` plus the normal site gate and affected browser/viewports before release.
+- The launch runtime now uses an isolated anonymous Supabase client for protected content and audio, ignores stored Login tokens, and requires an anonymous quota response for Lego.
+- Active game pages no longer execute account, SRS/Review, personal vault, Played-event, Study Plan, or canonical persistence bundles; their source and database data remain preserved for the Phase 1 return.
+- The generated navigation hides personal Learning and leaderboard claims across all 78 routed pages, while parked direct routes fail closed before personal runtime can start.
+- Verification after the full overlay: `node scripts/check-site.js` passed all checks across 1,015 project files.

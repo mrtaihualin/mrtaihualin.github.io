@@ -28,6 +28,20 @@
 (function () {
   'use strict';
 
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true) {
+    function clearGuestHost(containerId) {
+      var host = document.getElementById(containerId);
+      if (host) host.innerHTML = '';
+    }
+    window.SITE_AUTH = {
+      ready: true, user: null, authResolved: true, authError: null,
+      learningOwnerChanged: false, learningOwnerEpoch: 0, learningOwnerId: null,
+      onChange: function (cb) { if (typeof cb === 'function') cb(null); },
+      doLogout: function () {}, openProfileEditor: function () {}, renderBadge: clearGuestHost
+    };
+    return;
+  }
+
   // ----- [01] BOOTSTRAP + PUBLIC API -----
   var cfg = window.SUPABASE_CONFIG || {};
   var ready = cfg.url && cfg.anonKey &&

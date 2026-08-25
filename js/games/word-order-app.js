@@ -8,6 +8,7 @@
 // ════════════════════════════════════════════════════════════════
 (function(){
   'use strict';
+  function woMinimumGuestOnly(){return typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly();}
 
   // ══════ CONFIG (ตัวเลขทั้งหมดอ้างจากกฎ MASTER + คำตอบที่ Lin ยืนยันแล้วในคำสั่ง 2026-07-05) ══════
   var ROUND_COMPLETE_BONUS = 20;     // จบรอบ +20 (ข้อ5)
@@ -52,9 +53,9 @@
   // ก่อนหน้านี้ถ้า Lin แก้/เพิ่ม/ลบ/สลับลำดับประโยคใน data/adv-sentences.js ความจำ SRS ของนักเรียนจะไปติดผิดประโยคแบบเงียบๆ
   var srsRecords = {};           // key = woSrsKey(ประโยค) → SRS record
   var SRS_SAVE_KEY = 'wo_srs_v1';
-  function woLoadSrs(){ try{ var raw=localStorage.getItem(SRS_SAVE_KEY); srsRecords = raw ? (JSON.parse(raw)||{}) : {}; }catch(e){ srsRecords = {}; } }
-  function woSaveSrs(){ try{ localStorage.setItem(SRS_SAVE_KEY, JSON.stringify(srsRecords)); }catch(e){} }
-  function woLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
+  function woLoadSrs(){ if(woMinimumGuestOnly()){srsRecords={};return;}try{ var raw=localStorage.getItem(SRS_SAVE_KEY); srsRecords = raw ? (JSON.parse(raw)||{}) : {}; }catch(e){ srsRecords = {}; } }
+  function woSaveSrs(){ if(woMinimumGuestOnly())return;try{ localStorage.setItem(SRS_SAVE_KEY, JSON.stringify(srsRecords)); }catch(e){} }
+  function woLoggedIn(){ if(woMinimumGuestOnly())return false;try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
 
   // ════════════════════════════════════════════
   // ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='wordorder') → merge เข้า srsRecords ──
@@ -577,13 +578,13 @@
   function rgWeekEndMs() { return (rgWeekIndex() + 1) * RG_WEEK_MS; }
   function rgActiveChallenge() { return RG_CHALLENGES[rgWeekIndex() % RG_CHALLENGES.length]; }
   var RG_CH_KEY = 'wo_challenge_v1';   // 這個遊戲自己的每週挑戰進度（跟其他遊戲分開算）
-  function rgLoadChallenge() { try { return JSON.parse(localStorage.getItem(RG_CH_KEY) || '{}') || {}; } catch(e) { return {}; } }
+  function rgLoadChallenge() { if(woMinimumGuestOnly())return {};try { return JSON.parse(localStorage.getItem(RG_CH_KEY) || '{}') || {}; } catch(e) { return {}; } }
   function rgChallengeState() {
     var ch = rgActiveChallenge(), wk = rgWeekIndex(), saved = rgLoadChallenge();
     if (saved.week !== wk || saved.id !== ch.id) saved = { week: wk, id: ch.id, progress: 0, done: false };
     return { ch: ch, st: saved };
   }
-  function rgSaveChallenge(st) { try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
+  function rgSaveChallenge(st) { if(woMinimumGuestOnly())return;try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
 
   function rgLoadStreak() { try { return {streak:(window.GAME_ACCOUNT&&GAME_ACCOUNT.getStreak())||0}; } catch(e) { return {streak:0}; } }
   function rgTodayStr() { var d = new Date(); return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }

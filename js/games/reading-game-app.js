@@ -297,7 +297,8 @@ var checked=false,wrongCount=0;
 var sylWrongCount=[];          // งานที่1: จำนวนครั้งที่ผิดก่อนถูก แยกรายพยางค์ (index ตรงกับ sylList)
 var wordUsedGuide=false;       // งานที่3: เปิดคำใบ้ระหว่างเช็คคำตอบหน่วยนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS)
 var curWordIsKnownCheck=false; // งานที่7: กำลังอยู่ในด่านพิสูจน์ "已記得" ของคำนี้ไหม (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
-function rgLoggedIn(){ try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
+function rgMinimumGuestOnly(){return typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly();}
+function rgLoggedIn(){ if(rgMinimumGuestOnly())return false;try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
 // ── SRS ใหม่ (งานที่4 — ลอกจาก TF_SRS ในเกมเสียง tone-finder.html ~2939-3018 ทุกจุด) ──
 // แทนที่ masteredSet/correctCountMap/reviewDates เดิม (นับถูกติดกันธรรมดา ไม่รีเซ็ตเมื่อผิด) ด้วย stage-based 1→7→16 วัน
 var RG_SRS_CFG={INTERVALS:[1,7],CLEAN_ROUNDS_TO_MASTER:3}; // New → Day 1 → Day 7 → Mastered
@@ -472,12 +473,14 @@ setRgEnMode(rgEnMode); // ตั้งไอคอนปุ่มตามค่
 // STORAGE
 // ════════════════════════════════════════════
 function loadSave(){
+  if(rgMinimumGuestOnly()){srsRecords={};totalStars=0;totalBadges=0;return;}
   try{
     var raw=localStorage.getItem(SAVE_KEY);
     if(raw){var d=JSON.parse(raw);srsRecords=d.srsRecords||{};totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
   }catch(e){}
 }
 function doSave(){
+  if(rgMinimumGuestOnly())return;
   try{localStorage.setItem(SAVE_KEY,JSON.stringify({srsRecords,totalStars,totalBadges}));}catch(e){}
 }
 
@@ -1771,13 +1774,13 @@ function rgWeekIndex() { return Math.floor(Date.now() / RG_WEEK_MS); }
 function rgWeekEndMs() { return (rgWeekIndex() + 1) * RG_WEEK_MS; }
 function rgActiveChallenge() { return RG_CHALLENGES[rgWeekIndex() % RG_CHALLENGES.length]; }
 var RG_CH_KEY = 'rg_challenge_v1';
-function rgLoadChallenge() { try { return JSON.parse(localStorage.getItem(RG_CH_KEY) || '{}') || {}; } catch(e) { return {}; } }
+function rgLoadChallenge() { if(rgMinimumGuestOnly())return {};try { return JSON.parse(localStorage.getItem(RG_CH_KEY) || '{}') || {}; } catch(e) { return {}; } }
 function rgChallengeState() {
   var ch = rgActiveChallenge(), wk = rgWeekIndex(), saved = rgLoadChallenge();
   if (saved.week !== wk || saved.id !== ch.id) saved = { week: wk, id: ch.id, progress: 0, done: false };
   return { ch: ch, st: saved };
 }
-function rgSaveChallenge(st) { try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
+function rgSaveChallenge(st) { if(rgMinimumGuestOnly())return;try { localStorage.setItem(RG_CH_KEY, JSON.stringify(st)); } catch(e) {} }
 
 function rgLoadStreak() { try { return {streak:(window.GAME_ACCOUNT&&GAME_ACCOUNT.getStreak())||0}; } catch(e) { return {streak:0}; } }
 // งานที่8 (2026-07-04): ล็อก timezone ไต้หวัน (Asia/Taipei) ทุกจุดที่ตัดสินวัน — เดิมใช้เวลาเครื่องผู้เล่นตรงๆ (ผิดสเปกข้อ0)

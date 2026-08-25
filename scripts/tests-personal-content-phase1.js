@@ -28,10 +28,10 @@ check('Login Free word limit = 20', /var MAX_WORDS = 20;/.test(word));
 check('Login Free sentence limit = 10', /var MAX_SENTENCES = 10;/.test(sentence));
 check('Guest cannot add word/sentence personal content', /if \(!_accountReady\(\)\) \{ _requireLogin\(\); return false; \}/.test(word) && /if \(!ready\(\)\) \{ requireLogin\(\); return false; \}/.test(sentence));
 check('sentence library reuses account-backed saved-items table', /var TABLE = 'learning_saved_items'/.test(sentence) && /var VAULT_KEY = 'sentence_vault'/.test(sentence));
-check('all personal-content surfaces ship current durable-delete clients',
-  ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','vault.html']
-    .every((name) => /word-vault\.js\?v=7/.test(read(name))) &&
-  ['word-order.html','lego.html','vault.html'].every((name) => /sentence-vault\.js\?v=3/.test(read(name))));
+check('Minimum Guest parks personal clients on games while preserving current Vault clients',
+  ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','lego.html']
+    .every((name) => !/(?:word|sentence)-vault\.js/.test(read(name))) &&
+  /word-vault\.js\?v=7/.test(read('vault.html')) && /sentence-vault\.js\?v=3/.test(read('vault.html')));
 check('same content merges provenance instead of duplicating', /_mergeMetaIntoWord\(existing, meta\)/.test(word) && /mergeMeta\(existing, meta\)/.test(sentence));
 check('Save from a new surface adds provenance before delete behavior', /!_hasSource\(th, meta\.source\)/.test(word) && /!hasSource\(th, meta\.source\)/.test(sentence));
 check('delete uses tombstone and does not touch SRS/history tables', /deleted_at: new Date\(\)\.toISOString\(\)/.test(sentence) && !/tone_srs_state|learning_memory|practice_events/.test(sentence));

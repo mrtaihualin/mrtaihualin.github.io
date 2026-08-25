@@ -22,7 +22,12 @@
   function has(text) { return !!available[String(text || '')]; }
 
   function client() {
-    try { return global.getSupabaseClient ? global.getSupabaseClient() : null; }
+    try {
+      if (typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly()) {
+        return global.getAnonymousSupabaseClient ? global.getAnonymousSupabaseClient() : null;
+      }
+      return global.getSupabaseClient ? global.getSupabaseClient() : null;
+    }
     catch (e) { return null; }
   }
 
