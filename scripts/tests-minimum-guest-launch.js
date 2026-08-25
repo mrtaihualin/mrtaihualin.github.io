@@ -45,4 +45,9 @@ ok(readingAuth.indexOf('saveScore: function () { return null; }') !== -1, 'score
 var gameAccount = read('js/games/game-account.js');
 ok(gameAccount.indexOf('sync: function () {}') !== -1, 'account sync is disabled in launch mode');
 
+var gameFlow = read('js/games/game-flow.js');
+ok(gameFlow.indexOf('game_auto_next_pause') === -1, 'question countdown and pause controls are removed');
+ok(gameFlow.indexOf('下一輪將在') === -1, 'Result auto-replay countdown is removed');
+ok(gameFlow.indexOf('MRT_MINIMUM_GUEST_LAUNCH !== true') !== -1, 'durable report submission is disabled in launch mode');
+
 process.stdout.write('MINIMUM_GUEST_LAUNCH_STATIC_PASS\n');

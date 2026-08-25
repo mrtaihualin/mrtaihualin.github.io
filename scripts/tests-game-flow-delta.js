@@ -31,6 +31,7 @@ class FakeElement {
   }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   getAttribute(name) { return this.attributes[name] || null; }
+  removeAttribute(name) { delete this.attributes[name]; }
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
   appendChild(child) {
     if (child.parentNode) child.parentNode.children = child.parentNode.children.filter((item) => item !== child);
@@ -81,6 +82,7 @@ const document = {
   readyState: 'complete',
   listeners: {},
   activeElement: null,
+  body: new FakeElement('body'),
   createElement: (tag) => new FakeElement(tag),
   querySelector: () => null,
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
@@ -104,26 +106,14 @@ const GameFlow = window.GameFlow;
 const parent = new FakeElement('div');
 const next = new FakeElement('button');
 parent.appendChild(next);
+const timersBeforeQuestion = timerQueue.length;
 assert.strictEqual(GameFlow.start({ key: 'test-game', nextButton: next, delaySeconds: 3 }), true);
 const status = parent.querySelector('[data-game-flow-status="test-game"]');
 const pause = parent.querySelector('[data-game-flow-pause="test-game"]');
-assert.strictEqual(status.textContent, '3', 'countdown must start at 3');
-assert.strictEqual(pause.textContent, '暫停', 'pause control must be available');
-timerQueue.shift()();
-assert.strictEqual(status.textContent, '2');
-timerQueue.shift()();
-assert.strictEqual(status.textContent, '1');
-timerQueue.shift()();
-assert.strictEqual(next.clicks, 1, 'countdown must advance automatically after 3→2→1');
-
-GameFlow.start({ key: 'test-game', nextButton: next, delaySeconds: 3 });
-const clicksBeforePause = next.clicks;
-pause.onclick();
-while (timerQueue.length) timerQueue.shift()();
-assert.strictEqual(next.clicks, clicksBeforePause, 'pause must stop automatic progress');
-assert.match(status.textContent, /已暫停/);
-next.click();
-assert.strictEqual(next.clicks, clicksBeforePause + 1, 'next remains available for immediate progress');
+assert.strictEqual(status, null, 'question reveal must not create a countdown on any viewport');
+assert.strictEqual(pause, null, 'question reveal must not create a countdown stop control');
+assert.strictEqual(timerQueue.length, timersBeforeQuestion, 'question reveal must wait for manual next on every viewport');
+assert.strictEqual(next.clicks, 0, 'question reveal must never auto-advance');
 
 const older = { device: 'A', _savedAt: 100, saved: true, state: { index: 2 } };
 const newest = { device: 'B', _savedAt: 200, saved: true, state: { index: 4 } };
@@ -143,14 +133,16 @@ assert(!flowSource.includes('gsh_result_feedback_v1'), 'Guest/Login result must 
 const resultActions = new FakeElement('div');
 const resultStatus = new FakeElement('div');
 let replayed = 0;
+const timersBeforeResult = timerQueue.length;
 GameFlow.startResultCountdown({ key: 'result-test', status: resultStatus, seconds: 7, onComplete() { replayed += 1; } });
-assert.match(resultStatus.textContent, /7 秒/);
+assert.strictEqual(resultStatus.textContent, '', 'legacy result countdown API must render no countdown');
 while (timerQueue.length) timerQueue.shift()();
-assert.strictEqual(replayed, 1, '7-second result countdown must replay after 7→1');
+assert.strictEqual(replayed, 0, 'legacy result countdown API must never auto-replay');
+assert.strictEqual(timerQueue.length, timersBeforeResult, 'Result must create no countdown timer');
 GameFlow.startResultCountdown({ key: 'result-cancel', status: resultStatus, seconds: 7, onComplete() { replayed += 1; } });
 GameFlow.cancelResult('result-cancel');
 while (timerQueue.length) timerQueue.shift()();
-assert.strictEqual(replayed, 1, 'result action cancellation must stop replay');
+assert.strictEqual(replayed, 0, 'Result remains manual after cancellation');
 
 const enterResult = new FakeElement('section');
 const enterActions = new FakeElement('div');
@@ -160,6 +152,7 @@ replayButton.setAttribute('data-game-result-replay', 'v1');
 enterResult.appendChild(enterActions);
 enterActions.appendChild(replayButton);
 GameFlow.enhanceResult({ key: 'enter-result', root: enterResult, actions: enterActions, correct: 5, total: 5, onReplay() {} });
+assert.strictEqual(enterResult.querySelector('.gsh-result-countdown'), null, 'shared Result must render no countdown');
 const enterHandler = document.listeners.keydown[0];
 let prevented = 0;
 enterHandler({ key: 'Enter', target: { closest() { return null; } }, preventDefault() { prevented += 1; } });
@@ -218,16 +211,16 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
     'invalid quota state must be replaced by a durable object record');
 });
 
-const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html'];
+const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html', 'lego.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=10'), `${file} must load the shared flow`);
-  assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html', `${file} must expose resume continue where markup is static`);
-  assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html', `${file} must expose restart-same where markup is static`);
-  assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html', `${file} must expose new-round where markup is static`);
-  assert(/data-game-result-replay="v1"/.test(html) || file === 'tone-finder.html', `${file} must expose the shared Result replay action`);
+  assert(html.includes('js/games/game-flow.js?v=11'), `${file} must load the countdown-free shared flow`);
+  assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose resume continue where markup is static`);
+  assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose restart-same where markup is static`);
+  assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose new-round where markup is static`);
+  assert(/data-game-result-replay="v1"/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose the shared Result replay action`);
   ['switch', 'print', 'detail-action', 'cta', 'home'].forEach((role) => {
-    assert(new RegExp(`data-game-result-${role}="v1"`).test(html) || file === 'tone-finder.html', `${file} must expose the shared Result ${role} role`);
+    assert(new RegExp(`data-game-result-${role}="v1"`).test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose the shared Result ${role} role`);
   });
 });
 
@@ -245,12 +238,15 @@ const integrations = {
 };
 Object.entries(integrations).forEach(([file, marker]) => {
   const source = fs.readFileSync(path.join(root, 'js/games', file), 'utf8');
-  assert(source.includes(marker), `${file} must use the shared automatic-next flow`);
+  assert(source.includes(marker), `${file} must use the shared question-next flow`);
   assert(source.includes('GameFlow.markResult'), `${file} must mark the shared result structure`);
-  assert(source.includes('GameFlow.enhanceResult'), `${file} must use shared X/N, feedback, and 7-second result flow`);
+  assert(source.includes('GameFlow.enhanceResult'), `${file} must use shared manual Result flow`);
 });
+const legoSource = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+assert(legoSource.includes('GameFlow.enhanceResult'), 'Lego must use the shared manual Result flow');
+assert(!/下一輪將在|gsh-result-countdown/.test(flowSource), 'shared flow must contain no countdown UI copy or Result countdown element');
 
 assert(!/roundScore|totalStars|srsRecords|mastered\s*=/.test(flowSource),
   'shared flow must not change scoring, SRS, stars, or mastered rules');
 
-console.log('PASS tests-game-flow-delta: auto-next/pause, compact resume, Result Enter/replay/countdown, SRS quota/carry/dedupe/distribution, scoring boundary');
+console.log('PASS tests-game-flow-delta: all-viewport manual question-next, six-game manual Result, compact resume, Result Enter/replay, SRS quota/carry/dedupe/distribution, scoring boundary');

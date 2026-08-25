@@ -2153,4 +2153,5 @@ node scripts/check-site.js
 - Added one shared launch flag that forces the six public games to run without reading an authenticated identity.
 - Account score sync, SRS/account facade writes, Login UI, personal save controls, Leaderboards, Learning Center personal routes and Challenge routes are parked without deleting their source or stored data.
 - Direct parked URLs return visitors to the game hub. Existing browser sessions are neither signed out nor mutated.
+- Question and Result countdowns are removed across all six games; learners advance or replay explicitly.
 - Verification: `node scripts/tests-minimum-guest-launch.js` plus the normal site gate and affected browser/viewports before release.

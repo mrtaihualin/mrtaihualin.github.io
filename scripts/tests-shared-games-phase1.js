@@ -182,7 +182,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
   assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must contain only the full sentence and zh-TW translation before actions');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=10/, 'Lego Result must use the shared flow runtime');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/, 'Lego Result must use the countdown-free shared flow runtime');
   for (const role of ['replay','print','detail-action','switch','cta','home']) {
     assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
   }
@@ -314,11 +314,11 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
     assert.match(g.htmlText, /js\/games\/round-report\.js\?v=2/, `${g.id}: must load shared print renderer`);
-    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=10/, `${g.id}: must load daily Result runtime`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=11/, `${g.id}: must load countdown-free Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
   assert.match(legoHtml, /js\/games\/round-report\.js\?v=2/);
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=10/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/);
   assert.match(legoApp, /RoundReport\.openPrint/);
   assert.match(roundReport, /@page\{size:A4 portrait/);
   assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);
