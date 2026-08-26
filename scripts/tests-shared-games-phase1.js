@@ -457,6 +457,7 @@ test('Guest/Login Free reports contain facts only and no personalized analysis o
   assert.match(toneSummary, /reportResults\.length === total[\s\S]{0,180}!r\.is_skipped && r\.is_correct[\s\S]{0,180}!r\.skipped && r\.firstTry/, 'Tone Result count must use the same first-time-correct evidence as its detail rows');
   assert.doesNotMatch(toneSummary, /perfectCount\s*=\s*results\.filter\(function\(r\)\{ return !r\.skipped && r\.mistakes === 0;/, 'Tone Result must not treat a wrong initial guess as first-time correct');
   assert.match(toneSummary, /class="gsh-end-actions tf-result-actions"/, 'Tone Result must expose its scoped action layout');
+  assert.match(games.find((g) => g.id === 'tone').htmlText, /\.tf-result-actions\[data-game-result-actions-normalized="v1"\] \{\s*display:none !important; height:0 !important; margin:0 !important;/, 'Tone Result must not leave the emptied normalized action wrapper as a visual gap');
   assert.match(toneSummary, /data-game-result-replay="v1"[\s\S]{0,300}data-game-result-switch="v1"/, 'Tone Result must keep replay and switch adjacent');
   assert.doesNotMatch(toneSummary, /今日聲調練習：|>完成\s*['"+]|>首次答對/, 'Tone Result must not restore duplicate top metrics');
   const toneStats = block(
