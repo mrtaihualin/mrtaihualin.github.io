@@ -453,6 +453,8 @@ test('Guest/Login Free reports contain facts only and no personalized analysis o
   assert.match(toneSummary, /tfDesktopOrPortrait\(\)[\s\S]{0,180}user_answer[\s\S]{0,100}correct_answer/, 'Tone Result must name the wrong and correct answers on Desktop/Portrait');
   assert.match(toneSummary, /class="tf-score-summary-formula"/, 'Tone Result must separate the weighted-score formula from the total');
   assert.match(toneSummary, /class="tf-result-reward-row"[\s\S]{0,300}tf-score-summary-bonus[\s\S]{0,300}tf-streak-chip/, 'Tone Result must keep reward and streak in one visual row');
+  assert.match(toneSummary, /reportResults\.length === total[\s\S]{0,180}!r\.is_skipped && r\.is_correct[\s\S]{0,180}!r\.skipped && r\.firstTry/, 'Tone Result count must use the same first-time-correct evidence as its detail rows');
+  assert.doesNotMatch(toneSummary, /perfectCount\s*=\s*results\.filter\(function\(r\)\{ return !r\.skipped && r\.mistakes === 0;/, 'Tone Result must not treat a wrong initial guess as first-time correct');
   assert.match(toneSummary, /class="gsh-end-actions tf-result-actions"/, 'Tone Result must expose its scoped action layout');
   assert.match(toneSummary, /data-game-result-replay="v1"[\s\S]{0,300}data-game-result-switch="v1"/, 'Tone Result must keep replay and switch adjacent');
   assert.doesNotMatch(toneSummary, /今日聲調練習：|>完成\s*['"+]|>首次答對/, 'Tone Result must not restore duplicate top metrics');
@@ -543,7 +545,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=69/, 'Tone: page must request the rebuilt Result runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=70/, 'Tone: page must request the rebuilt Result runtime version');
 });
 
 test('Tone Mobile Portrait keeps Desktop gameplay with compact touch-only controls', () => {

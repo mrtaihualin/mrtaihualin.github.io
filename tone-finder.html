@@ -689,17 +689,38 @@ if (document.fonts && document.fonts.load) {
     }
     body[data-gsh-game="tone"] .result-v2-actions .gsh-desktop-hint-off { order:1; }
     body[data-gsh-game="tone"] .result-v2-actions #tf-session-next-btn { order:2; }
-    body[data-gsh-game="tone"] .tf-session-summary { padding:10px 0 6px; }
+    body[data-gsh-game="tone"] .tf-session-summary {
+      display:flex; flex-direction:column; align-items:stretch; gap:18px; padding:10px 0 6px;
+    }
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-mina,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-score-summary,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-result-reward-row,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-badge-unlock,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-sum-score,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-sum-score-label,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-sum-table,
+    body[data-gsh-game="tone"] .tf-session-summary > .gsh-result-primary-actions,
+    body[data-gsh-game="tone"] .tf-session-summary > .gsh-result-utility-actions,
+    body[data-gsh-game="tone"] .tf-session-summary > .gsh-result-home-actions,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-result-trial-card,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-result-login-card {
+      margin-top:0 !important; margin-bottom:0 !important;
+    }
+    body[data-gsh-game="tone"] .tf-result-trial-card {
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+    }
+    body[data-gsh-game="tone"] .tf-result-trial-title,
+    body[data-gsh-game="tone"] .tf-result-trial-copy,
+    body[data-gsh-game="tone"] .tf-result-trial-card .tf-session-next-btn { margin:0 !important; }
     body[data-gsh-game="tone"] .tf-score-summary { margin-bottom:0; }
     body[data-gsh-game="tone"] .tf-score-summary-formula { margin-top:8px; line-height:1.5; }
     body[data-gsh-game="tone"] .tf-result-reward-row {
-      flex-direction:row; flex-wrap:nowrap; gap:10px; margin:12px 0 18px;
+      flex-direction:row; flex-wrap:nowrap; gap:10px;
     }
     body[data-gsh-game="tone"] .tf-result-reward-row > span {
       display:inline-flex; align-items:center; justify-content:center; min-height:32px; box-sizing:border-box;
     }
-    body[data-gsh-game="tone"] .tf-sum-score-label { margin-top:6px; margin-bottom:20px; line-height:1.5; }
-    body[data-gsh-game="tone"] .tf-sum-table { margin:18px 0; }
+    body[data-gsh-game="tone"] .tf-sum-score-label { line-height:1.5; }
     body[data-gsh-game="tone"] .tf-sum-table th,
     body[data-gsh-game="tone"] .tf-sum-table td { padding-top:9px; padding-bottom:9px; line-height:1.45; }
     body[data-gsh-game="tone"] .gsh-result-primary-actions {
@@ -814,21 +835,43 @@ if (document.fonts && document.fonts.load) {
     }
     body[data-gsh-game="tone"] .result-v2-actions #tf-session-next-btn { order:2; }
     body[data-gsh-game="tone"] [data-game-result-print="v1"] { display:none !important; }
-    body[data-gsh-game="tone"] .tf-session-summary { padding:6px 0 2px; }
+    body[data-gsh-game="tone"] .tf-session-summary {
+      display:flex; flex-direction:column; align-items:stretch; gap:14px; padding:6px 0 2px;
+    }
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-mina,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-score-summary,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-result-reward-row,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-badge-unlock,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-sum-score,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-sum-score-label,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-sum-table,
+    body[data-gsh-game="tone"] .tf-session-summary > .gsh-result-primary-actions,
+    body[data-gsh-game="tone"] .tf-session-summary > .gsh-result-utility-actions,
+    body[data-gsh-game="tone"] .tf-session-summary > .gsh-result-home-actions,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-result-trial-card,
+    body[data-gsh-game="tone"] .tf-session-summary > .tf-result-login-card {
+      margin-top:0 !important; margin-bottom:0 !important;
+    }
+    body[data-gsh-game="tone"] .tf-result-trial-card {
+      display:flex; flex-direction:column; align-items:center; gap:10px;
+    }
+    body[data-gsh-game="tone"] .tf-result-trial-title,
+    body[data-gsh-game="tone"] .tf-result-trial-copy,
+    body[data-gsh-game="tone"] .tf-result-trial-card .tf-session-next-btn { margin:0 !important; }
     body[data-gsh-game="tone"] .tf-score-summary { margin-bottom:0; }
     body[data-gsh-game="tone"] .tf-score-summary-total { font-size:38px; }
     body[data-gsh-game="tone"] .tf-score-summary-formula { margin-top:7px; line-height:1.45; }
     body[data-gsh-game="tone"] .tf-result-reward-row {
-      flex-direction:row; flex-wrap:nowrap; gap:6px; margin:10px 0 14px;
+      flex-direction:row; flex-wrap:nowrap; gap:6px;
     }
     body[data-gsh-game="tone"] .tf-result-reward-row > span {
       display:inline-flex; align-items:center; justify-content:center; min-height:30px;
       padding:4px 9px; box-sizing:border-box; font-size:12px; white-space:nowrap;
     }
     body[data-gsh-game="tone"] .tf-sum-score { font-size:36px; line-height:1.2; }
-    body[data-gsh-game="tone"] .tf-sum-score-label { margin-top:5px; margin-bottom:16px; line-height:1.45; }
+    body[data-gsh-game="tone"] .tf-sum-score-label { line-height:1.45; }
     body[data-gsh-game="tone"] .tf-sum-table {
-      display:block; overflow-x:auto; margin:14px 0; font-size:11.5px; -webkit-overflow-scrolling:touch;
+      display:block; overflow-x:auto; font-size:11.5px; -webkit-overflow-scrolling:touch;
     }
     body[data-gsh-game="tone"] .tf-sum-table th,
     body[data-gsh-game="tone"] .tf-sum-table td { padding:7px 6px; line-height:1.4; white-space:nowrap; }
@@ -1932,7 +1975,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=69']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=70']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

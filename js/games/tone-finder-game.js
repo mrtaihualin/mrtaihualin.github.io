@@ -2581,7 +2581,13 @@ function stepSessionSummary() {
   if (!session) return '';
   var results = session.results;
   var total = results.length;
-  var perfectCount = results.filter(function(r){ return !r.skipped && r.mistakes === 0; }).length;
+  var reportResults = roundReport && roundReport.items ? roundReport.items : [];
+  // The visible Result table treats a wrong first guess as not first-time correct,
+  // even when the later derivation has no additional mistakes. Keep the headline
+  // count on that same evidence instead of counting only derivation mistakes.
+  var perfectCount = reportResults.length === total
+    ? reportResults.filter(function(r){ return !r.is_skipped && r.is_correct; }).length
+    : results.filter(function(r){ return !r.skipped && r.firstTry; }).length;
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event','tone_finder_complete',{category:'game',score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
@@ -2621,7 +2627,7 @@ function stepSessionSummary() {
   // ── สเตจ 1: สรุปคะแนน ──
   var totalScore = session.score || 0;
   var bonusAwarded = session.bonusAwarded || 0;
-  var isPerfect = !!session.isPerfect;
+  var isPerfect = total > 0 && perfectCount === total && !!session.isPerfect;
   var useAlignedResultLayout = tfDesktopOrPortrait();
   // แสดงคะแนนถ่วงน้ำหนักตามระดับบนหน้าจอ (Lin 2026-07-03): 初×1.5 / 中×2.25 / 高×3
   var levelWeightShown = TF_SCORE_CFG.LEVEL_WEIGHT[selectedLevel] || 1;
@@ -2673,15 +2679,15 @@ function stepSessionSummary() {
     '<div class="tf-sum-score-label gsh-end-title">'+(perfectCount===total?'全部一次答對！太厲害了 🎉':'我們一起繼續加油！💪')+'</div>' +
     // ⭐ การ์ดชวนจอง — ดันขึ้นมาก่อนตารางคะแนน เพื่อให้ผู้เล่นเห็นก่อนปิดหน้า
     // Lin/spec ข้อ F1 บอกว่า "ห้ามใส่ promotion/sales CTA กลาง result" แต่การ์ดนี้เป็นการ์ดจองคอร์สที่ตั้งใจมีอยู่แล้วทั้งเว็บ (นโยบายธุรกิจ ไม่ใช่ของที่ UI spec รอบนี้จะสั่งถอดเองได้) — คงไว้ตามเดิมทุกประการ ไม่แตะ
-    '<div style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
-      '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
-      '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
+    '<div class="tf-result-trial-card" style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
+      '<div class="tf-result-trial-title" style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
+      '<div class="tf-result-trial-copy" style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
       '<button class="tf-session-next-btn" data-game-result-cta="v1" style="background:#C8973A;color:#fff;" onclick="if(typeof bookFromGame===\'function\'){bookFromGame(\'tone_finder\',\'session_end\')}else if(typeof openModal===\'function\'){openModal(\'modal-line-qr\')}">預約免費體驗課 →</button>' +
     '</div>' +
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
     ((window.READING_AUTH && READING_AUTH.user) ? '' :
-      '<div style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
+      '<div class="tf-result-login-card" style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
         '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +
         '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_summary_login_click\',{category:\'game\'});}catch(e){}tfCtaLogin()" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
       '</div>') +
