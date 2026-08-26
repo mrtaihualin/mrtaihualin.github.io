@@ -696,6 +696,109 @@ if (document.fonts && document.fonts.load) {
     .tf-nondesktop-remember-copy { display:none; }
   }
 
+  /* Tone Mobile Portrait: Desktop content/gameplay with compact touch controls. */
+  @media (max-width:768px) and (orientation:portrait) {
+    body[data-gsh-game="tone"] .tf-page {
+      padding-top:calc(var(--nav-h) + 10px);
+      padding-bottom:calc(154px + env(safe-area-inset-bottom,0px));
+    }
+    body[data-gsh-game="tone"] .gsh-shell { padding-left:10px; padding-right:10px; }
+    body[data-gsh-game="tone"] .tf-page-header { margin-bottom:7px; }
+    body[data-gsh-game="tone"] .tf-page-title { font-size:21px; line-height:1.25; letter-spacing:1px; }
+    body[data-gsh-game="tone"] .tf-page-hint { display:none !important; }
+
+    body[data-gsh-game="tone"] .tf-tools-row { gap:6px; margin-bottom:7px; flex-wrap:nowrap; }
+    body[data-gsh-game="tone"] #rg-profile-wrap {
+      min-width:0 !important; padding:5px 6px !important; gap:4px !important;
+      border-radius:12px !important; flex:1 1 auto;
+    }
+    body[data-gsh-game="tone"] #rg-cta-login { min-width:0 !important; }
+    body[data-gsh-game="tone"] #tf-howto-btn { min-height:32px; padding:5px 8px; box-sizing:border-box; }
+    body[data-gsh-game="tone"] #tf-alpha-btn {
+      flex:0 0 auto; min-height:34px; padding:5px 9px; font-size:11px; white-space:nowrap;
+      background:linear-gradient(135deg,#F3E4C2,#EAD09A); border-color:#C8973A;
+      color:#5A3E0A; font-weight:800;
+    }
+
+    body[data-gsh-game="tone"] .gsh-session-header { gap:6px; padding:0 0 7px; }
+    body[data-gsh-game="tone"] .tf-level-tabs { gap:5px; }
+    body[data-gsh-game="tone"] .tf-ltab {
+      min-height:40px; padding:6px 4px; border-width:1.5px; font-size:13px;
+    }
+    body[data-gsh-game="tone"] #tf-session-counter,
+    body[data-gsh-game="tone"] #tf-session-counter .tf-banner-counter {
+      display:flex; align-items:center; justify-content:center; min-height:22px;
+      margin:0; line-height:22px; text-align:center;
+    }
+    body[data-gsh-game="tone"] #tf-session-counter .tf-score-hud {
+      display:inline-flex; align-items:center; justify-content:center; min-height:22px; margin-left:6px;
+    }
+
+    body[data-gsh-game="tone"] .gsh-resume-banner {
+      margin:0 0 7px !important; padding:8px !important; border-radius:12px;
+    }
+    body[data-gsh-game="tone"] .gsh-resume-detail { margin-bottom:6px; font-size:11.5px; }
+    body[data-gsh-game="tone"] .gsh-resume-actions { gap:4px; flex-wrap:nowrap; }
+    body[data-gsh-game="tone"] .gsh-resume-actions button {
+      min-height:34px; padding:5px 2px; font-size:10.5px; white-space:nowrap;
+    }
+    body[data-gsh-game="tone"] .gsh-shell:has(> .gsh-resume-banner:not([style*="display:none"]):not([style*="display: none"])) > .gsh-session-header,
+    body[data-gsh-game="tone"] .gsh-shell:has(> .gsh-resume-banner:not([style*="display:none"]):not([style*="display: none"])) > .gsh-gameplay {
+      display:none !important;
+    }
+
+    body[data-gsh-game="tone"] .tf-card { border-radius:15px; padding-bottom:118px; }
+    body[data-gsh-game="tone"] .tf-word-banner { padding:10px 10px 6px; }
+    body[data-gsh-game="tone"] .tf-banner-word { font-size:34px; line-height:1.35; }
+    body[data-gsh-game="tone"] #tf-word-ctl-row { gap:5px !important; padding:0 8px 8px !important; }
+    body[data-gsh-game="tone"] .tf-body { padding:12px 10px; }
+    body[data-gsh-game="tone"] .sg-question { margin-bottom:11px; font-size:15px; }
+    body[data-gsh-game="tone"] .sg-tone-grid { gap:7px; margin-bottom:10px; flex-wrap:nowrap; }
+    body[data-gsh-game="tone"] .sg-tone-btn {
+      width:clamp(44px,12vw,52px); height:clamp(44px,12vw,52px); flex:0 1 52px;
+      border-width:2px; font-size:19px;
+    }
+    body[data-gsh-game="tone"] .sg-dontknow-btn {
+      min-height:40px; max-width:230px; padding:8px 14px; font-size:12px;
+    }
+    body[data-gsh-game="tone"] .tf-known-bar { margin-top:10px; }
+    body[data-gsh-game="tone"] .tf-known-btn { min-height:38px; padding:7px 18px; font-size:12px; }
+    body[data-gsh-game="tone"] .tf-nav-bar { gap:6px; }
+    body[data-gsh-game="tone"] .tf-nav-btn,
+    body[data-gsh-game="tone"] .tf-session-next-btn,
+    body[data-gsh-game="tone"] .tf-result-secondary { min-height:40px; padding:8px 14px; font-size:12px; }
+
+    body[data-gsh-game="tone"] .gsh-learning-tools { gap:4px; }
+    body[data-gsh-game="tone"] .gsh-learning-tools .gsh-learning-tool button,
+    body[data-gsh-game="tone"] .gsh-learning-tools button.gsh-learning-tool,
+    body[data-gsh-game="tone"] .word-ctl-btn { min-width:36px; min-height:36px; padding:5px; }
+    body[data-gsh-game="tone"] .rg-ctl-wrap { gap:4px !important; }
+    body[data-gsh-game="tone"] .rg-ctl-wrap > button { min-width:40px; min-height:40px; padding:6px; }
+
+    body[data-gsh-game="tone"] .result-v2 { padding:2px 0 4px; }
+    body[data-gsh-game="tone"] .result-v2-word { font-size:32px; }
+    body[data-gsh-game="tone"] .result-v2-tone-card { padding:9px 10px; margin-bottom:7px; }
+    body[data-gsh-game="tone"] .result-v2-actions { gap:6px; margin-top:4px; }
+    body[data-gsh-game="tone"] .result-v2-actions .gsh-desktop-hint-off[data-visible="true"] {
+      display:inline-flex !important; order:1;
+    }
+    body[data-gsh-game="tone"] .result-v2-actions #tf-session-next-btn { order:2; }
+    body[data-gsh-game="tone"] [data-game-result-print="v1"] { display:none !important; }
+
+    body[data-gsh-game="tone"] .gsh-next-countdown,
+    body[data-gsh-game="tone"] .gsh-result-countdown,
+    body[data-gsh-game="tone"] [data-game-flow-status],
+    body[data-gsh-game="tone"] [data-game-flow-pause] { display:none !important; }
+    body[data-gsh-game="tone"] .gsh-desktop-only { display:none !important; }
+    body[data-gsh-game="tone"] .tf-desktop-skip-copy { display:inline; }
+    body[data-gsh-game="tone"] .tf-nondesktop-remember-copy { display:none; }
+
+    body[data-gsh-game="tone"] .tf-alpha-surface {
+      background:linear-gradient(180deg,#FFF9EC 0%,#F5E6C7 100%);
+      border:1.5px solid rgba(139,99,16,.25); border-radius:14px; padding:12px;
+    }
+  }
+
   /* ── 依難度漸層配色 difficulty colour-grading ── */
   /* 初級 beginner — green */
   .tf-lvl-1 { background: linear-gradient(180deg,#D4ECAC 0%,#FFFFFF 100%); border-color: rgba(99,153,34,0.35); }
@@ -1751,7 +1854,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=66']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=67']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -1832,8 +1935,8 @@ document.addEventListener('contextmenu', function(e){
 /* LIN 2026-07-04: มือถือแถบสลับเกมลอยสูงกว่า → เพิ่มที่ว่างล่างการ์ดกันบังปุ่มตอบ */
 .tf-card{padding-bottom:132px;}}
 </style>
-<div id="game-switcher" data-current="tone_finder" data-include-lego-desktop="1"></div>
-<script src="js/games/game-switcher.js?v=3"></script>
+<div id="game-switcher" data-current="tone_finder" data-include-lego="1"></div>
+<script src="js/games/game-switcher.js?v=4"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-24 ──
@@ -1845,7 +1948,7 @@ function dismissHowtoHint(id){
 // ── 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用過一次就不再自動跳出 — Lin 2026-07-24 ──
 var GT_TOUR_STEPS=[
   {sel:'#tf-banner',       title:'這裡是題目卡', text:'顯示現在第幾題，還有現在要判斷聲調的泰文字。'},
-  {sel:'.sg-tone-grid',    title:'猜猜是第幾聲？', text:'泰語有 5 個聲調，看到字先猜猜看是第幾聲，點數字或直接按鍵盤 1–5 都可以。'},
+  {sel:'.sg-tone-grid',    title:'猜猜是第幾聲？', text:(window.matchMedia&&window.matchMedia('(max-width:768px) and (orientation:portrait)').matches)?'泰語有 5 個聲調，看到字先猜猜看是第幾聲，點選 1–5 就可以。':'泰語有 5 個聲調，看到字先猜猜看是第幾聲，點數字或直接按鍵盤 1–5 都可以。'},
   {sel:'.sg-dontknow-btn', title:'不確定嗎？沒關係', text:'點這裡會帶你一步一步分析這個字的聲調規則，慢慢學會怎麼判斷，不用硬猜。'},
   {sel:'#wm-trigger',      title:'更多功能都在這裡', text:'點 🍚 打開選單：讀音、翻譯、收藏單字、提示、換字體、🙏禮貌詞（高級句子專用）都在裡面。'},
   {sel:'#tf-alpha-btn',    title:'還不熟字母嗎？', text:'可以先來這裡單獨練習泰文字母的發音，練熟了再回來玩。'},

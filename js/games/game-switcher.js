@@ -35,7 +35,8 @@
     var core5 = CORE5_TABS.some(function (tab) { return tab.id === current; });
     var includeLegoDesktop = container.getAttribute('data-include-lego-desktop') === '1'
       && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 601px)').matches;
-    var tabs = core5 ? (includeLegoDesktop ? CORE6_TABS : CORE5_TABS) : LEGACY_TABS;
+    var includeLego = container.getAttribute('data-include-lego') === '1' || includeLegoDesktop;
+    var tabs = core5 ? (includeLego ? CORE6_TABS : CORE5_TABS) : LEGACY_TABS;
     var track = container.getAttribute('data-track') !== '0'; // vault.html ตั้ง data-track="0"
     var currentTab = null;
     tabs.forEach(function (t) { if (t.id === current) currentTab = t; });

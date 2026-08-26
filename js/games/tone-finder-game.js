@@ -663,6 +663,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // ใช้เฉพาะหน้าเดา (session-guess) เท่านั้น + ปิดเมื่อกำลังพิมพ์ในช่อง input/textarea หรือมี popup เปิดอยู่ (กันชนกับ 開始聲調推導/我有問題)
 function tfWireToneKeyboard() {
   document.addEventListener('keydown', function (e) {
+    if (tfMobilePortrait()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -681,10 +682,19 @@ function tfOrdinaryDesktop() {
   return !!(window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 601px)').matches);
 }
 
+function tfMobilePortrait() {
+  return !!(window.matchMedia && window.matchMedia('(max-width: 768px) and (orientation: portrait)').matches);
+}
+
+function tfDesktopOrPortrait() {
+  return tfOrdinaryDesktop() || tfMobilePortrait();
+}
+
 // Desktop Enter starts an explicit guided question or uses the visible Next action.
 // It must never activate the remembered/skip action or collide with editable controls.
 function tfWireEnterNext() {
   document.addEventListener('keydown', function (e) {
+    if (tfMobilePortrait()) return;
     if (e.key !== 'Enter' || e.defaultPrevented || e.repeat || e.isComposing) return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
     var active = e.target || document.activeElement;
@@ -2262,7 +2272,7 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      body.innerHTML += tfOrdinaryDesktop()
+      body.innerHTML += tfDesktopOrPortrait()
         ? '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>'
         : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
     }
@@ -3190,7 +3200,7 @@ function stepSessionGuess() {
   var word = S.word || entry.word;
   if (tfGuideMode && session.currentWordGuideIntroPending && !tfCurWordNoTools()) {
     return '<div style="text-align:center;padding:18px 0 14px;">' +
-      '<button type="button" id="tf-guide-start-btn" class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">開始練習</button>' +
+      '<button type="button" id="tf-guide-start-btn" class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">'+(tfMobilePortrait() ? '開始推導' : '開始練習')+'</button>' +
     '</div>';
   }
   var bd = getBreakdown(word);
@@ -3293,7 +3303,7 @@ function stepSessionGuess() {
     '<div class="sg-divider"></div>'+
     '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
-    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#a08a5a;margin-top:4px;">💡 電腦也可以直接按鍵盤 1–5</div>'+
+    (tfMobilePortrait() ? '' : '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#a08a5a;margin-top:4px;">💡 電腦也可以直接按鍵盤 1–5</div>')+
     dontKnowHtml+
   '</div>';
 }
@@ -3364,7 +3374,7 @@ function stepResult() {
     var initialGuess = session.initialGuess;
     var igTone = initialGuess && initialGuess !== 0 ? TONES[initialGuess] : null;
     var igLabel = initialGuess === 0 ? '不確定' : (igTone ? igTone.zh : '—');
-    var guessRow = (tfOrdinaryDesktop() && initialGuess == null) ? '' : '<div style="margin-bottom:8px;">'+
+    var guessRow = (tfDesktopOrPortrait() && initialGuess == null) ? '' : '<div style="margin-bottom:8px;">'+
       '<span class="result-v2-guess-label" style="margin-right:5px;">你的選擇</span>'+
       '<span class="result-v2-guess-val" style="color:'+(igTone ? igTone.color : '#aaa')+';">'+igLabel+'</span>'+
     '</div>';
@@ -3849,9 +3859,9 @@ var TF = {
     hist.push(S); histPos++;
     render();
   },
-  // Desktop neutral skip: no answer, score, Combo, SRS, or countdown.
+  // Desktop and mobile Portrait neutral skip: no answer, score, Combo, SRS, or countdown.
   skipCurrentWord: function() {
-    if (!session || !tfOrdinaryDesktop()) return;
+    if (!session || !tfDesktopOrPortrait()) return;
     var entry = session.words[session.index];
     if (!entry) return;
     var awarded = Math.max(0, Number(session.currentWordScore) || 0);
@@ -4161,7 +4171,7 @@ var TF = {
   startGuidedQuestion: function() {
     if (!session || !session.currentWordGuideIntroPending || !S || S.step !== 'session-guess') return;
     session.currentWordGuideIntroPending = false;
-    if (tfOrdinaryDesktop()) {
+    if (tfDesktopOrPortrait()) {
       tfFireStartOnce();
       session.initialGuess = undefined;
       session.currentWordToneAttempts = [];

@@ -172,8 +172,8 @@ test('shared switcher contains exactly the Phase 1 Core 5 in canonical order', (
   assert.deepStrictEqual(ids, ['tone_finder', 'reading_game', 'listening_game', 'typing_game', 'word_order']);
   assert.doesNotMatch(core5Block, /href: '(?:lego|vault|games-challenge)\.html'/);
   assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'Tone Desktop switcher variant must include Lego');
-  assert.match(switcherJs, /includeLegoDesktop \? CORE6_TABS : CORE5_TABS/, 'Core 5 pages without the opt-in must keep the original switcher');
-  assert.match(games.find((g) => g.id === 'tone').htmlText, /data-include-lego-desktop="1"/, 'Tone Desktop must opt into the six-game switcher');
+  assert.match(switcherJs, /includeLego \? CORE6_TABS : CORE5_TABS/, 'Core 5 pages without the opt-in must keep the original switcher');
+  assert.match(games.find((g) => g.id === 'tone').htmlText, /data-include-lego="1"/, 'Tone must opt into the six-game switcher on every viewport');
   assert.match(switcherJs, /role="menuitem" aria-current="page"/);
 });
 
@@ -514,7 +514,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /tfOrdinaryDesktop\(\) \? document\.getElementById\('tf-guide-start-btn'\)/, 'Tone: Desktop Enter must prefer guided Start and never infer Skip');
   assert.match(tone, /active\.closest\('\.tf-known-btn'\)[\s\S]{0,120}e\.preventDefault\(\)[\s\S]{0,120}return;/, 'Tone: Enter on the focused Skip action must be blocked');
   assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,520}currentWordGuideIntroPending\s*=\s*false[\s\S]{0,320}navigateToInflection\(\)/, 'Tone: Desktop guided Start must bypass tone choice and enter derivation directly');
-  assert.match(tone, /guessRow\s*=\s*\(tfOrdinaryDesktop\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice');
+  assert.match(tone, /guessRow\s*=\s*\(tfDesktopOrPortrait\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice on Desktop or Portrait');
   assert.match(tone, /TF\.skipCurrentWord\(\)[^>]*>跳過<\/button>/, 'Tone: Desktop gameplay must expose neutral 跳過');
   assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
   assert.match(tone, /if \(S\.step === 'session-guess' && !tfCurWordNoTools\(\)\)[\s\S]{0,120}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active question must return to the explicit start gate');
@@ -522,7 +522,23 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=66/, 'Tone: page must request the rebuilt Guest runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=67/, 'Tone: page must request the rebuilt Portrait runtime version');
+});
+
+test('Tone Mobile Portrait keeps Desktop gameplay with compact touch-only controls', () => {
+  const tone = games.find((g) => g.id === 'tone');
+  assert.match(tone.appText, /function tfMobilePortrait\(\)[\s\S]{0,180}max-width: 768px[\s\S]{0,100}orientation: portrait/, 'Tone must identify only Portrait mobile');
+  assert.match(tone.appText, /function tfWireToneKeyboard\(\)[\s\S]{0,140}if \(tfMobilePortrait\(\)\) return;/, 'Portrait must ignore number-key gameplay');
+  assert.match(tone.appText, /function tfWireEnterNext\(\)[\s\S]{0,140}if \(tfMobilePortrait\(\)\) return;/, 'Portrait must ignore Enter gameplay');
+  assert.match(tone.appText, /\(tfMobilePortrait\(\) \? '' : '<div[\s\S]{0,220}電腦也可以直接按鍵盤 1–5/, 'Portrait must omit the computer keyboard hint');
+  assert.match(tone.appText, /body\.innerHTML \+= tfDesktopOrPortrait\(\)[\s\S]{0,240}>跳過<\/button>/, 'Portrait must use the neutral Skip action');
+  assert.match(tone.appText, /startGuidedQuestion:[\s\S]{0,300}if \(tfDesktopOrPortrait\(\)\)[\s\S]{0,180}navigateToInflection\(\)/, 'Portrait Hint must enter derivation directly');
+  assert.match(tone.htmlText, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,7000}\.gsh-next-countdown,[\s\S]{0,220}\{ display:none !important; \}/, 'Portrait must render no countdown surface');
+  assert.match(tone.htmlText, /\.sg-tone-btn \{[\s\S]{0,180}width:clamp\(44px,12vw,52px\)/, 'Portrait tone choices must stay compact and tappable');
+  assert.match(tone.htmlText, /\.gsh-resume-actions button \{[\s\S]{0,180}min-height:34px/, 'Portrait Resume must stay compact in the Desktop position');
+  assert.match(tone.htmlText, /gsh-shell:has\(> \.gsh-resume-banner[^}]+> \.gsh-gameplay \{[\s\S]{0,80}display:none !important/, 'Portrait Resume must remain the same exclusive pre-play state as Desktop');
+  assert.match(tone.htmlText, /game-switcher\.js\?v=4/, 'Tone must request the Lego-capable switcher');
+  assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
 });
 
 test('active Desktop D4-D5 keeps manual question/result flow and optional Hint carry-off', () => {
