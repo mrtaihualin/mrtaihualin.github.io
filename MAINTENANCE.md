@@ -2187,3 +2187,9 @@ node scripts/check-site.js
 - Added a bounded retry for the four idempotent protected-content reads when PostgREST transiently returns HTTP 401; the rate-limit RPC is never retried, and persistent failures still fail closed.
 - Preserved content caps, JWT-derived tiering, Database/Auth configuration, protected catalog boundaries, Listening closure, and all game UI.
 - Verification: targeted game behavioral coverage plus `git diff --check` and `node scripts/check-site.js` passed across 1,014 project files.
+
+# 2026-08-27 — Remove the shared Leave Game control
+
+- Removed the `離開遊戲` item and its confirmation dialog from the shared game More menu for every game surface; Lego's distinct `結束遊戲` round-completion action is preserved.
+- Rebuilt the shared runtime, advanced its generated-page cache key to v41, and changed the shared regression to prevent the removed control or dialog from returning.
+- No gameplay, scoring, content, Database, Auth, Edge Function, user-data, Listening availability, or Mobile Landscape source changed.
