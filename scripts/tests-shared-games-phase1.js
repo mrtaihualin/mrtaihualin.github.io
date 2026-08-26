@@ -4,6 +4,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const sharedCss = fs.readFileSync(path.join(root, 'css/shared.css'), 'utf8');
@@ -36,6 +37,43 @@ test('all five games use one shared-width shell and one auth slot', () => {
   }
 });
 
+test('Listening keeps its ordinary Desktop Account Bar compact without changing mobile surfaces', () => {
+  const listening = games.find((g) => g.id === 'listening').htmlText;
+  assert.match(listening, /tf-streak-chip lg-account-context-chip/, 'Listening needs an explicit hook for its duplicate round context');
+  assert.match(listening, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,180}\.lg-account-context-chip\{display:none;\}/, 'Listening must hide only the duplicate context on ordinary Desktop');
+});
+
+test('Listening is temporarily closed without deleting its paused game implementation', () => {
+  const practice = fs.readFileSync(path.join(root, 'games-practice.html'), 'utf8');
+  const listening = games.find((g) => g.id === 'listening').htmlText;
+  assert.match(practice, /class="gh-card gh-soon"[^>]+data-game-availability="coming-soon"/);
+  assert.doesNotMatch(practice, /<a[^>]+href="listening-game\.html"/);
+  assert.match(listening, /data-listening-availability="coming-soon"/);
+  assert.match(listening, /id="listening-coming-soon"[\s\S]{0,500}即將開幕/);
+  assert.match(listening, /id="listening-live-game"[^>]+aria-hidden="true"/);
+  assert.match(listening, /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
+  assert.doesNotMatch(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
+});
+
+test('Tone ordinary Desktop main and secondary headers exactly match the Core game header contract', () => {
+  const toneGame = games.find((g) => g.id === 'tone');
+  const tone = toneGame.htmlText;
+  const toneApp = toneGame.appText;
+  const toneMin = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.min.js'), 'utf8');
+  assert.match(tone, /\.tf-page-header\s*\{[\s\S]{0,100}margin-bottom:\s*10px/);
+  assert.match(tone, /\.tf-page-title\s*\{[\s\S]{0,260}font-family:\s*'Noto Serif TC',\s*serif;[\s\S]{0,80}font-size:\s*clamp\(20px,\s*4vw,\s*28px\);[\s\S]{0,80}font-weight:\s*900;[\s\S]{0,80}color:\s*#8B6310;[\s\S]{0,80}letter-spacing:\s*2px;/);
+  assert.match(tone, /\.tf-page-hint\s*\{[\s\S]{0,220}font-family:\s*'Noto Sans TC',\s*sans-serif;[\s\S]{0,80}font-size:\s*12px;[\s\S]{0,80}color:\s*#b08040;[\s\S]{0,80}margin-top:\s*3px;/);
+  const toneTitleBlock = tone.match(/\.tf-page-title\s*\{([^}]*)\}/)[1];
+  assert.doesNotMatch(toneTitleBlock, /margin-(?:top|bottom):/);
+  assert.strictEqual((toneApp.match(/getElementById\('tf-hint'\)\.style\.display\s*=\s*'block'/g) || []).length, 2, 'Tone: secondary header must remain visible in every game state');
+  assert.doesNotMatch(toneApp, /getElementById\('tf-hint'\)\.style\.display\s*=\s*(?:'none'|\(S\.step)/, 'Tone: source runtime must not hide the secondary header');
+  assert.match(toneMin, /getElementById\("tf-hint"\)\.style\.display="block"/, 'Tone: deployed runtime must keep the secondary header visible');
+  assert.doesNotMatch(toneMin, /getElementById\("tf-hint"\)\.style\.display=(?:"none"|"level-select")/, 'Tone: deployed runtime must not hide the secondary header');
+  assert.match(tone, /<!--ANN-BAND:START-->[\s\S]*?<div class="avail-band" id="ann-band"[\s\S]*?<!--ANN-BAND:END-->/, 'Tone must keep the generated announcement structure for nav consistency');
+  assert.match(tone, /body\[data-gsh-game="tone"\] > \.avail-band \{ display:none !important; \}/, 'Tone must hide the generated announcement strip');
+  assert.match(tone, /@media \(min-width:1025px\), \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,420}#tf-syl-strip\[style\*="display: flex"\] \+ \.tf-body\s*\{\s*padding-top:0;/, 'Tone syllable spacing must cover tall and wide-short Desktop without changing mobile landscape');
+});
+
 test('all five games expose the locked shared header, progress and resume semantics', () => {
   for (const g of games) {
     assert.match(g.htmlText, /gsh-page-header/, `${g.id}: header ยังไม่ใช้ shared contract`);
@@ -47,6 +85,43 @@ test('all five games expose the locked shared header, progress and resume semant
     assert.match(games.find((g) => g.id === id).htmlText, /gsh-level-selector[^>]+aria-label="選擇等級"/, `${id}: level selector ยังไม่ใช้ shared contract`);
   }
   assert.match(games.find((g) => g.id === 'typing').htmlText, /<div class="card gsh-gameplay" id="game">/, 'Typing: gameplay class ต้องอยู่บน outer game card');
+});
+
+test('active Desktop games keep the canonical level, progress and gameplay order', () => {
+  for (const id of ['tone', 'reading', 'typing']) {
+    const html = games.find((g) => g.id === id).htmlText;
+    const toolsAt = html.indexOf(id === 'tone' ? '<div class="tf-tools-row">' : '<div class="rg-tools-row">');
+    const sessionAt = html.indexOf('<div class="gsh-session-header">', toolsAt);
+    const resumeAt = html.indexOf('class="gsh-resume-banner"', sessionAt);
+    const gameplayAt = html.indexOf('gsh-gameplay', resumeAt);
+    assert.ok(toolsAt > -1 && sessionAt > toolsAt && resumeAt > sessionAt && gameplayAt > resumeAt, `${id}: Desktop order must be account/tools → level/progress → resume → gameplay`);
+  }
+  assert.match(sharedCss, /@media \(min-width:769px\) and \(min-height:601px\)\{[\s\S]*?data-gsh-game="tone"\] \.gsh-session-header,[\s\S]*?data-gsh-game="reading"\] \.gsh-session-header,[\s\S]*?data-gsh-game="typing"\] \.gsh-session-header \{[\s\S]*?flex-direction:column; flex-wrap:nowrap;/, 'ordinary Desktop games with Level must keep Level and round status on two rows');
+  const wordOrder = games.find((g) => g.id === 'wordorder').htmlText;
+  assert.doesNotMatch(wordOrder, /gsh-level-selector/, 'Word Order must not invent a level selector');
+  assert.match(wordOrder, /class="card gsh-gameplay"[\s\S]{0,500}class="gsh-session-header"[\s\S]{0,500}class="bars-wrap gsh-progress"/, 'Word Order keeps its single-level session status above progress inside gameplay');
+});
+
+test('Tone keeps one equal four-button Level and alphabet row on Desktop and Portrait', () => {
+  const tone = games.find((g) => g.id === 'tone').htmlText;
+  const header = tone.slice(tone.indexOf('<div class="gsh-session-header">'), tone.indexOf('<div class="gsh-resume-banner"'));
+  assert.strictEqual((header.match(/class="tf-ltab"/g) || []).length, 4, 'Tone header must contain exactly four equal buttons');
+  assert.match(header, /id="tf-ltab-1"[\s\S]*id="tf-ltab-2"[\s\S]*id="tf-ltab-3"[\s\S]*id="tf-alpha-btn"/, 'Tone order must be 初級 → 中級 → 高級 → 字母練習區');
+  assert.strictEqual((tone.match(/id="tf-alpha-btn"/g) || []).length, 1, 'Tone alphabet entry must remain a single button');
+  assert.match(tone, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,700}gsh-session-header > \.gsh-level-selector[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,120}max-width:640px !important/, 'Desktop must show four equal buttons in one full row');
+  assert.match(tone, /#tf-session-counter:empty \{\s*display:none; min-height:0; line-height:0;/, 'Tone must remove the empty counter row before Result and detail cards');
+  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1900}\.tf-level-tabs \{[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,100}max-width:none !important/, 'Portrait must show four equal buttons across the available width');
+  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1500}\.gsh-session-header \{ gap:7px; padding:0 0 7px; \}[\s\S]{0,100}\.gsh-gameplay \{ margin-top:0; \}/, 'Portrait top rows must keep one 7px vertical rhythm through the gameplay card');
+  assert.match(tone, /#tf-alpha-btn \{[\s\S]{0,180}font-size:11\.5px !important; white-space:nowrap;[\s\S]{0,100}#tf-alpha-btn \.tf-alpha-icon \{ display:none; \}/, 'Portrait alphabet label must fit without changing the four equal button widths');
+  assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)[\s\S]{0,180}#tf-alpha-btn \{ display:none !important; \}/, 'Mobile Landscape must preserve the accepted three-level Switch surface');
+  assert.doesNotMatch(tone.slice(tone.indexOf('<div class="tf-tools-row">'), tone.indexOf('<div class="gsh-session-header">')), /id="tf-alpha-btn"/, 'Account bar must no longer share width with the alphabet button');
+});
+
+test('active ordinary Desktop cards and toolbars keep the locked Gold Standard', () => {
+  assert.match(sharedCss, /data-gsh-game="tone"\] \.gsh-gameplay,[\s\S]{0,220}data-gsh-game="word-order"\] \.gsh-gameplay \{[\s\S]{0,100}border:1\.5px solid rgba\(139,99,16,0\.15\)/, 'active cards must use the approved Tone border');
+  assert.match(sharedCss, /gsh-resume-banner:not\(\[style\*="display:none"\]\):not\(\[style\*="display: none"\]\)[\s\S]{0,420}> \.gsh-gameplay \{[\s\S]{0,80}display:none !important/, 'Resume must remain an exclusive pre-play state');
+  assert.match(sharedCss, /#rg-sound-toggle \{ order:1; \}[\s\S]{0,900}#font-toggle-slot \{ order:5; \}[\s\S]{0,900}#rg-vault-btn-slot \{ order:9; \}/, 'ordinary Desktop tools must follow the canonical order');
+  assert.match(sharedCss, /data-gsh-game="typing"\] \.gsh-learning-tools > #rg-webkbd-toggle \{ display:none !important; \}/, 'Typing must not expose a standalone ordinary-Desktop screen-keyboard tool');
 });
 
 test('shared shell stays bounded and resume actions stay compact on narrow screens', () => {
@@ -67,8 +142,9 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
     lego: legoHtml,
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
-    assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
-    assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current landscape CSS`);
+    assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${id}"[^>]*>`), `${id}: missing landscape scope marker`);
+    const sharedCssVersion = ['tone', 'reading', 'typing', 'word-order'].includes(id) ? 29 : 26;
+    assert.match(html, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${id}: must load current landscape CSS`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
   assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,260}top:var\(--gsh-safe-t\); left:50%/);
@@ -107,11 +183,13 @@ test('all five games expose the shared cross-game switcher', () => {
 });
 
 test('shared switcher contains exactly the Phase 1 Core 5 in canonical order', () => {
-  const core5Block = switcherJs.slice(switcherJs.indexOf('var CORE5_TABS'), switcherJs.indexOf('var LEGACY_TABS'));
+  const core5Block = switcherJs.slice(switcherJs.indexOf('var CORE5_TABS'), switcherJs.indexOf('var CORE6_TABS'));
   const ids = Array.from(core5Block.matchAll(/\{ id: '([^']+)'/g), (match) => match[1]);
   assert.deepStrictEqual(ids, ['tone_finder', 'reading_game', 'listening_game', 'typing_game', 'word_order']);
   assert.doesNotMatch(core5Block, /href: '(?:lego|vault|games-challenge)\.html'/);
-  assert.match(switcherJs, /core5 \? CORE5_TABS : LEGACY_TABS/, 'non-Core-5 pages ต้องคง switcher เดิม');
+  assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'Tone Desktop switcher variant must include Lego');
+  assert.match(switcherJs, /includeLego \? CORE6_TABS : CORE5_TABS/, 'Core 5 pages without the opt-in must keep the original switcher');
+  assert.match(games.find((g) => g.id === 'tone').htmlText, /data-include-lego="1"/, 'Tone must opt into the six-game switcher on every viewport');
   assert.match(switcherJs, /role="menuitem" aria-current="page"/);
 });
 
@@ -292,7 +370,8 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    assert.match(g.htmlText, /css\/shared\.css\?v=26/, `${g.id}: must load current shared game CSS`);
+    const sharedCssVersion = ['tone', 'reading', 'typing', 'wordorder'].includes(g.id) ? 29 : 26;
+    assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
     assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=40/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
@@ -300,7 +379,8 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
 
 test('all five games keep one in-memory current-round DTO identity without Login summary', () => {
   for (const g of games) {
-    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=3/, `${g.id}: missing Round Report DTO loader`);
+    const reportVersion = g.id === 'tone' ? 4 : 3;
+    assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: missing Round Report DTO loader`);
     assert.doesNotMatch(g.htmlText, /js\/score\/learning-summary\.js/, `${g.id}: Login summary must stay parked in Minimum Guest Launch`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
     assert.match(g.appText, /report:/, `${g.id}: active GameResume must carry the report snapshot`);
@@ -313,7 +393,8 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const roundReport = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
-    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=3/, `${g.id}: must load shared print renderer`);
+    const reportVersion = g.id === 'tone' ? 4 : 3;
+    assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: must load shared print renderer`);
     assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=11/, `${g.id}: must load countdown-free Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
@@ -370,6 +451,15 @@ test('Guest/Login Free reports contain facts only and no personalized analysis o
     'function stepMistakeReview()'
   );
   assert.doesNotMatch(toneSummary, /tf-sum-analysis|analysisLines|需要加強|需要再複習|建議/, 'Tone Result มี personalized analysis/recommendation');
+  assert.match(toneSummary, /tfDesktopOrPortrait\(\)[\s\S]{0,180}user_answer[\s\S]{0,100}correct_answer/, 'Tone Result must name the wrong and correct answers on Desktop/Portrait');
+  assert.match(toneSummary, /class="tf-score-summary-formula"/, 'Tone Result must separate the weighted-score formula from the total');
+  assert.match(toneSummary, /class="tf-result-reward-row"[\s\S]{0,300}tf-score-summary-bonus[\s\S]{0,300}tf-streak-chip/, 'Tone Result must keep reward and streak in one visual row');
+  assert.match(toneSummary, /reportResults\.length === total[\s\S]{0,180}!r\.is_skipped && r\.is_correct[\s\S]{0,180}!r\.skipped && r\.firstTry/, 'Tone Result count must use the same first-time-correct evidence as its detail rows');
+  assert.doesNotMatch(toneSummary, /perfectCount\s*=\s*results\.filter\(function\(r\)\{ return !r\.skipped && r\.mistakes === 0;/, 'Tone Result must not treat a wrong initial guess as first-time correct');
+  assert.match(toneSummary, /class="gsh-end-actions tf-result-actions"/, 'Tone Result must expose its scoped action layout');
+  assert.match(games.find((g) => g.id === 'tone').htmlText, /\.tf-result-actions\[data-game-result-actions-normalized="v1"\] \{\s*display:none !important; height:0 !important; margin:0 !important;/, 'Tone Result must not leave the emptied normalized action wrapper as a visual gap');
+  assert.match(toneSummary, /data-game-result-replay="v1"[\s\S]{0,300}data-game-result-switch="v1"/, 'Tone Result must keep replay and switch adjacent');
+  assert.doesNotMatch(toneSummary, /今日聲調練習：|>完成\s*['"+]|>首次答對/, 'Tone Result must not restore duplicate top metrics');
   const toneStats = block(
     games.find((g) => g.id === 'tone').appText,
     'function showStats()',
@@ -443,8 +533,90 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /S\s*=\s*ns;\s*if \(tfGuideMode\) tfLockCurrentWordForGuide\(\);\s*render\(\);/, 'Tone: a carried guide state must lock the next active syllable before render');
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
+  assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: a new guided question must stop at the intro gate');
+  assert.match(tone, /currentWordGuideIntroPending[\s\S]{0,500}開始練習/, 'Tone: the intro gate must hide choices behind the explicit start action');
+  assert.match(tone, /id="tf-guide-start-btn"[\s\S]{0,180}開始練習/, 'Tone: guided Start must expose a stable Enter target');
+  assert.match(tone, /tfOrdinaryDesktop\(\) \? document\.getElementById\('tf-guide-start-btn'\)/, 'Tone: Desktop Enter must prefer guided Start and never infer Skip');
+  assert.match(tone, /active\.closest\('\.tf-known-btn'\)[\s\S]{0,120}e\.preventDefault\(\)[\s\S]{0,120}return;/, 'Tone: Enter on the focused Skip action must be blocked');
+  assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,520}currentWordGuideIntroPending\s*=\s*false[\s\S]{0,320}navigateToInflection\(\)/, 'Tone: Desktop guided Start must bypass tone choice and enter derivation directly');
+  assert.match(tone, /guessRow\s*=\s*\(tfDesktopOrPortrait\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice on Desktop or Portrait');
+  assert.match(tone, /TF\.skipCurrentWord\(\)[^>]*>跳過<\/button>/, 'Tone: Desktop gameplay must expose neutral 跳過');
+  assert.match(tone, /เดาเสียงผิดต้องนับผิด 1 ครั้ง[\s\S]{0,700}recordMistake\([\s\S]{0,140}TF_WORDSCORE\.onWrong\(session\)[\s\S]{0,100}TF_WORDSCORE\.onNextStep\(session\)/, 'Tone: a wrong initial tone answer must count once and drop the score ladder before derivation');
+  assert.match(tone, /function tfResetWordScoring\(\)[\s\S]{0,220}currentWordMistakesTotal\s*=\s*0/, 'Tone: each new word must reset its total mistake evidence');
+  assert.match(tone, /function recordMistake\([\s\S]{0,900}currentWordMistakesTotal\s*=\s*\(session\.currentWordMistakesTotal \|\| 0\) \+ 1/, 'Tone: every real wrong answer must update the total mistake evidence');
+  assert.match(tone, /function tfCommitWordAndAdvance\(opts\)[\s\S]{0,260}var mistakes = session\.currentWordMistakesTotal/, 'Tone: Result must retain mistake totals across syllables');
+  assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
+  assert.match(tone, /if \(S\.step === 'session-guess' && !tfCurWordNoTools\(\)\)[\s\S]{0,120}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active question must return to the explicit start gate');
+  assert.match(tone, /function tfArmGuideIntroForPageReturn\(\)[\s\S]{0,400}currentWordGuideIntroPending\s*=\s*true/, 'Tone: returning to a preserved page must re-arm the guided-question gate');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=60/, 'Tone: page must request the rebuilt Guest runtime version');
+  assert.match(toneMin, /currentWordMistakesTotal/, 'Tone: deployed minified bundle must preserve the real wrong-answer total');
+  assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
+  assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
+  assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=71/, 'Tone: page must request the rebuilt Result runtime version');
+});
+
+test('Tone Mobile Portrait keeps Desktop gameplay with compact touch-only controls', () => {
+  const tone = games.find((g) => g.id === 'tone');
+  assert.match(tone.appText, /function tfMobilePortrait\(\)[\s\S]{0,180}max-width: 768px[\s\S]{0,100}orientation: portrait/, 'Tone must identify only Portrait mobile');
+  assert.match(tone.appText, /function tfWireToneKeyboard\(\)[\s\S]{0,140}if \(tfMobilePortrait\(\)\) return;/, 'Portrait must ignore number-key gameplay');
+  assert.match(tone.appText, /function tfWireEnterNext\(\)[\s\S]{0,140}if \(tfMobilePortrait\(\)\) return;/, 'Portrait must ignore Enter gameplay');
+  assert.match(tone.appText, /\(tfMobilePortrait\(\) \? '' : '<div[\s\S]{0,220}電腦也可以直接按鍵盤 1–5/, 'Portrait must omit the computer keyboard hint');
+  assert.match(tone.appText, /body\.innerHTML \+= tfDesktopOrPortrait\(\)[\s\S]{0,240}>跳過<\/button>/, 'Portrait must use the neutral Skip action');
+  assert.match(tone.appText, /startGuidedQuestion:[\s\S]{0,300}if \(tfDesktopOrPortrait\(\)\)[\s\S]{0,180}navigateToInflection\(\)/, 'Portrait Hint must enter derivation directly');
+  assert.match(tone.htmlText, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,12000}\.gsh-next-countdown,[\s\S]{0,220}\{ display:none !important; \}/, 'Portrait must render no countdown surface');
+  assert.match(tone.htmlText, /\.sg-tone-btn \{[\s\S]{0,180}width:clamp\(44px,12vw,52px\)/, 'Portrait tone choices must stay compact and tappable');
+  assert.match(tone.htmlText, /\.gsh-resume-actions button \{[\s\S]{0,180}min-height:34px/, 'Portrait Resume must stay compact in the Desktop position');
+  assert.match(tone.htmlText, /gsh-shell:has\(> \.gsh-resume-banner[^}]+> \.gsh-gameplay \{[\s\S]{0,80}display:none !important/, 'Portrait Resume must remain the same exclusive pre-play state as Desktop');
+  assert.match(tone.htmlText, /\.tf-page \{[\s\S]{0,100}padding-top:10px;/, 'Portrait must not count the fixed navigation height twice above the Tone title');
+  assert.match(tone.htmlText, /\.tf-result-login-card \{[\s\S]{0,180}padding-top:12px !important; padding-bottom:12px !important;[\s\S]{0,100}line-height:1\.5 !important;/, 'Portrait Result login card must keep equal top and bottom spacing');
+  assert.match(tone.htmlText, /\.tf-result-login-card button \{[\s\S]{0,100}display:block; margin:9px auto 0 !important;/, 'Portrait Result login button must stay visibly separated from its copy');
+  assert.match(tone.htmlText, /game-switcher\.js\?v=4/, 'Tone must request the Lego-capable switcher');
+  assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
+});
+
+test('active Desktop D4-D5 keeps manual question/result flow and optional Hint carry-off', () => {
+  const tone = games.find((g) => g.id === 'tone');
+  const reading = games.find((g) => g.id === 'reading');
+  const typing = games.find((g) => g.id === 'typing');
+  const wordOrder = games.find((g) => g.id === 'wordorder');
+  const flow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
+
+  for (const game of [tone, reading, typing, wordOrder]) {
+    assert.match(game.htmlText, /css\/shared\.css\?v=29/, `${game.id}: must request the D4 Desktop CSS`);
+    assert.match(game.appText, /GameFlow\.enhanceResult/, `${game.id}: Result must keep the shared manual replay flow`);
+  }
+  assert.doesNotMatch(flow, /下一輪將在|game_auto_next_pause/, 'shared question/Result flow must not restore countdown copy or pause controls');
+  assert.match(flow, /event\.key !== 'Enter'[\s\S]{0,1200}button\.click\(\)/, 'Result Enter must replay only through the visible shared action');
+
+  assert.match(tone.appText, /nextBtnLabel\s*=\s*session\s*\?\s*'下一題 →'/, 'Tone question transition must use 下一題');
+  assert.match(tone.appText, /tfGuideMode\s*&&\s*\(!isMultiSyl\s*\|\|\s*isLastSyl\)[\s\S]{0,240}gsh-desktop-hint-off[\s\S]{0,120}TF\.toggleGuide\(\)/, 'Tone must offer optional Hint-off only at the end of a question');
+  assert.match(tone.htmlText, /result-v2-actions \.gsh-desktop-hint-off \{ order:1; \}[\s\S]{0,140}result-v2-actions #tf-session-next-btn \{ order:2; \}/, 'Tone Desktop must order Hint-off before Next');
+  assert.match(tone.htmlText, /#tf-session-counter \{[\s\S]{0,180}align-items:center; justify-content:center;[\s\S]{0,120}line-height:24px/, 'Tone Desktop counter must be vertically centered');
+  assert.match(tone.htmlText, /\.tf-tools-row \{ gap:10px; margin-bottom:10px; \}[\s\S]{0,180}\.gsh-session-header \{ gap:10px; padding:0 0 10px; \}/, 'Tone Desktop utility, level and counter rows must use one vertical rhythm');
+  assert.match(tone.appText, /function tfFinalizeAlignedResultPresentation\(root\)[\s\S]{0,420}tfDesktopOrPortrait\(\)[\s\S]{0,220}data-game-result-meta="v1"[\s\S]{0,220}gsh-result-shared-details/, 'Tone Desktop/Portrait must remove the duplicated shared Result summary after runtime normalization');
+  assert.match(tone.appText, /GameFlow\.enhanceResult\([\s\S]{0,700}tfFinalizeAlignedResultPresentation\(body\)/, 'Tone must clean the shared Result only after the shared runtime has assembled it');
+  assert.match(tone.htmlText, /\.gsh-result-primary-actions \{[\s\S]{0,180}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/, 'Tone Result replay and game-switch actions must use the actual normalized two-button row');
+  const finalizeStart = tone.appText.indexOf('function tfFinalizeAlignedResultPresentation(root)');
+  const finalizeEnd = tone.appText.indexOf('\n}\n\nfunction stepSessionSummary', finalizeStart) + 2;
+  const finalizeResult = vm.runInNewContext(`(${tone.appText.slice(finalizeStart, finalizeEnd)})`, { tfDesktopOrPortrait: () => true });
+  const removedSharedResultNodes = [];
+  finalizeResult({
+    querySelector(selector) {
+      return { remove() { removedSharedResultNodes.push(selector); } };
+    },
+  });
+  assert.deepStrictEqual(Array.from(removedSharedResultNodes), ['[data-game-result-meta="v1"]', '.gsh-result-shared-details'], 'Tone must remove both duplicated runtime blocks after assembly');
+  assert.match(tone.appText, /tf-level-select tf-alpha-surface/g, 'Tone alphabet pages must share one complete color surface');
+  assert.match(reading.htmlText, /id="btn-next"[^>]*>下一題 →<\/button>[\s\S]{0,260}id="rg-hint-off-next"[^>]+data-visible="false"[^>]+setRgGuideMode\(false\)[^>]*>關閉提示<\/button>/, 'Reading feedback must keep manual Next plus optional Hint-off');
+  assert.match(typing.htmlText, /id="btn-next"[^>]*>下一題 →<\/button>[\s\S]{0,260}id="tg-hint-off-next"[^>]+data-visible="false"[^>]+tgChooseGuideMode\(false\)[^>]*>關閉提示<\/button>/, 'Typing feedback must keep manual Next plus optional Hint-off');
+  assert.match(reading.appText, /function rgSyncHintOffAction\(\)[\s\S]{0,360}rgGuideMode[\s\S]{0,160}nextButton\.style\.display!==['"]none['"]/, 'Reading Hint-off visibility must follow the carried Hint state and visible Next action');
+  assert.match(typing.appText, /function tgSyncHintOffAction\(\)[\s\S]{0,360}guideMode[\s\S]{0,160}nextButton\.style\.display!==['"]none['"]/, 'Typing Hint-off visibility must follow the carried Hint state and visible Next action');
+  assert.match(sharedCss, /\.gsh-desktop-hint-off \{ display:none !important; \}/, 'Hint-off action must default to hidden outside ordinary Desktop');
+  assert.match(sharedCss, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]*?gsh-desktop-hint-off\[data-visible="true"\] \{ display:inline-flex !important; \}/, 'Hint-off action must become available only in ordinary Desktop');
+
+  assert.match(wordOrder.htmlText, /id="wo-next-btn"[^>]*>下一題 →<\/button>/, 'Word Order button must use 下一題');
+  assert.match(wordOrder.appText, /document\.addEventListener\('keydown'[\s\S]*?event\.key!==['"]Enter['"][\s\S]*?nextButton\.click\(\)[\s\S]{0,80}true\);/, 'Word Order Enter must trigger the enabled visible Next action once');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);

@@ -12,6 +12,9 @@
     { id: 'typing_game',    href: 'typing-game.html',     label: '⌨️ 打字練習室', selfFrom: 'typing_game' },
     { id: 'word_order',     href: 'word-order.html',      label: '🧩 語序練習室', selfFrom: 'word_order' }
   ];
+  var CORE6_TABS = CORE5_TABS.concat([
+    { id: 'lego',           href: 'lego.html',            label: '🧱 造句練習室', selfFrom: 'lego' }
+  ]);
 
   // Preserve the pre-Phase-1 switcher on non-Core-5 pages; this worker does not
   // redefine navigation or gameplay for Lego/Vault.
@@ -30,7 +33,10 @@
     container.setAttribute('aria-label', '切換遊戲');
     var current = container.getAttribute('data-current');
     var core5 = CORE5_TABS.some(function (tab) { return tab.id === current; });
-    var tabs = core5 ? CORE5_TABS : LEGACY_TABS;
+    var includeLegoDesktop = container.getAttribute('data-include-lego-desktop') === '1'
+      && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 601px)').matches;
+    var includeLego = container.getAttribute('data-include-lego') === '1' || includeLegoDesktop;
+    var tabs = core5 ? (includeLego ? CORE6_TABS : CORE5_TABS) : LEGACY_TABS;
     var track = container.getAttribute('data-track') !== '0'; // vault.html ตั้ง data-track="0"
     var currentTab = null;
     tabs.forEach(function (t) { if (t.id === current) currentTab = t; });

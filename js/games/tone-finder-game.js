@@ -377,7 +377,7 @@ var TF_SCORE = {
 // ===== TF_WORDSCORE (Lin 2026-07-04) — state คะแนนต่อคำ บันได [10,7,4,1,0] · pure logic ทดสอบได้จริง =====
 //  ทำงานบน object ที่มีฟิลด์: currentWordDeduct (ขั้นบันได), stepWrong, stepFreePeekUsed
 //  กติกา (ยืนยันกับ Lin ผ่านหลอดคะแนน 2026-07-04):
-//   • เดาวรรณยุกต์ผิด/กด "ไม่มั่นใจ" ตอนแรก (ก่อน推導) = ฟรี ไม่เรียกที่นี่ (เสียแค่คอมโบ)
+//   • เดาวรรณยุกต์ผิดตอนแรก (ก่อน推導) = หัก 1 ขั้น; กด "ไม่มั่นใจ" ยังฟรีแต่ไม่ได้ first-try
 //   • กดผิดในขั้น推導 (onWrong) = หัก 1 ขั้น + ได้สิทธิ์ "แอบดูฟรี 1 ครั้ง" ในขั้นนั้น
 //   • แอบดู(?) หลังเพิ่งผิดในขั้นนี้ (ครั้งแรก) = ฟรี · แอบดูอื่นๆ = หัก 1 (ไม่นับ "กดผิดจริง")
 //   • หักครบ 4 (แต้มเหลือ 0) = ตาย → เฉลย + SRS รีเซ็ต day1
@@ -663,6 +663,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // ใช้เฉพาะหน้าเดา (session-guess) เท่านั้น + ปิดเมื่อกำลังพิมพ์ในช่อง input/textarea หรือมี popup เปิดอยู่ (กันชนกับ 開始聲調推導/我有問題)
 function tfWireToneKeyboard() {
   document.addEventListener('keydown', function (e) {
+    if (tfMobilePortrait()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -677,16 +678,41 @@ function tfWireToneKeyboard() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireToneKeyboard); else tfWireToneKeyboard();
 
-// ── กด Enter = กดปุ่ม tf-session-next-btn (ปุ่มเดียวกัน 4 ข้อความ: 下一個音節→ / 太棒了，我們繼續→ / 來看看我們的成果吧🎉 / 分析新單字) — Lin สั่ง 2026-07-31 ──
-// ล้อกับตรรกะเดียวกับเกมอ่าน/เกมพิมพ์: ห้ามชนกับการพิมพ์ในช่อง input/textarea หรือมี popup เปิดอยู่
+function tfOrdinaryDesktop() {
+  return !!(window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 601px)').matches);
+}
+
+function tfMobilePortrait() {
+  return !!(window.matchMedia && window.matchMedia('(max-width: 768px) and (orientation: portrait)').matches);
+}
+
+function tfDesktopOrPortrait() {
+  return tfOrdinaryDesktop() || tfMobilePortrait();
+}
+
+// Desktop Enter starts an explicit guided question or uses the visible Next action.
+// It must never activate the remembered/skip action or collide with editable controls.
 function tfWireEnterNext() {
   document.addEventListener('keydown', function (e) {
-    if (e.key !== 'Enter') return;
-    var tag = (document.activeElement && document.activeElement.tagName) || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (tfMobilePortrait()) return;
+    if (e.key !== 'Enter' || e.defaultPrevented || e.repeat || e.isComposing) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    var active = e.target || document.activeElement;
+    var tag = (active && active.tagName) || '';
+    if (tfOrdinaryDesktop() && active && active.closest && active.closest('.tf-known-btn')) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(tag) || (active && active.isContentEditable)) return;
     if (document.querySelector('.sg-start-overlay, .tf-ask-overlay, #tf-reveal-ov, #tf-ask-ov')) return; // popup เปิดอยู่ ห้ามชน
-    var btn = document.getElementById('tf-session-next-btn');
-    if (btn && btn.offsetParent !== null) { btn.click(); e.preventDefault(); }
+    var btn = tfOrdinaryDesktop() ? document.getElementById('tf-guide-start-btn') : null;
+    if (!btn) btn = document.getElementById('tf-session-next-btn');
+    if (btn && btn.offsetParent !== null && !btn.disabled) {
+      btn.click();
+      e.preventDefault();
+      e.stopPropagation();
+    }
   });
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireEnterNext); else tfWireEnterNext();
@@ -1013,6 +1039,20 @@ function tfGuideNoteHtml() {
   return '<div class="tf-guide-note">💡 <b>練習模式</b>・純練習不計分（沒有分數、星星與複習進度）</div>';
 }
 
+// Browser back/restore can preserve an already-rendered active question.
+// Re-arm the explicit guided-question start gate when the page is restored.
+function tfArmGuideIntroForPageReturn() {
+  if (!tfGuideMode || !session || !S || S.step !== 'session-guess' || tfCurWordNoTools()) return false;
+  session.currentWordGuideIntroPending = true;
+  return true;
+}
+window.addEventListener('pagehide', function () {
+  tfArmGuideIntroForPageReturn();
+});
+window.addEventListener('pageshow', function (event) {
+  if (event.persisted && tfArmGuideIntroForPageReturn()) render();
+});
+
 // ── สถิติคำที่ตอบผิดรายคำ (localStorage) + หน้า 全部 แบบ 50/50 เน้นคำที่ยังไม่แม่น — LIN 2026-06-20 ──
 var TF_WORD_WRONG_KEY = 'tf_word_wrong_v1';
 function tfLoadWordWrong() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(TF_WORD_WRONG_KEY) || '{}') || {}; } catch (e) { return {}; } }
@@ -1056,7 +1096,7 @@ function tfChallengeBump(session) {
   var pack = tfChallengeState(), ch = pack.ch, st = pack.st;
   if (st.done) { tfSaveChallenge(st); return; }
   var add = 0;
-  if (ch.type === 'correct') add = session.results.filter(function (r) { return (r.mistakes || 0) === 0 && !r.forced; }).length;
+  if (ch.type === 'correct') add = session.results.filter(function (r) { return !r.skipped && (r.mistakes || 0) === 0 && !r.forced; }).length;
   else if (ch.type === 'sets') add = 1;
   else if (ch.type === 'perfect') add = session.isPerfect ? 1 : 0;
   else if (ch.type === 'combo') add = (session.maxCombo || 0) >= ch.target ? ch.target : 0;
@@ -1103,6 +1143,7 @@ function tfApplyStreakOnSetComplete() {
 function tfResetWordScoring() {
   if (!session) return;
   session.currentWordMistakes = 0;
+  session.currentWordMistakesTotal = 0; // รวมทุกพยางค์เพื่อให้ Result/SRS ตรงกับการตอบจริง
   session.currentWordDeduction = 0;
   session.currentWordDeduct = 0;      // Lin 2026-07-04: ขั้นบันไดคะแนน (กดผิด+แอบดูที่โดนหัก)
   session.stepWrong = false;          // เพิ่งผิดในขั้น推導ปัจจุบันไหม (คุมสิทธิ์ free peek)
@@ -1513,7 +1554,9 @@ function tfCommitWordAndAdvance(opts) {
   opts = opts || {};
   var entry = session.words[session.index];
   var tone = (S && S.tone != null) ? S.tone : computeTone(entry.word);
-  var mistakes = session.currentWordMistakes || 0;
+  var mistakes = session.currentWordMistakesTotal != null
+    ? session.currentWordMistakesTotal
+    : (session.currentWordMistakes || 0);
   var isMulti = tfCurWordIsMulti();
   // หลายพยางค์: นับ firstTry เฉพาะเมื่อทำครบทุกพยางค์ + ทุกพยางค์ถูกครั้งแรก (กันกด "ต่อ" ข้ามพยางค์แล้วได้ perfect ฟรี)
   var sylCount = (S && S.syllables && S.syllables.length) || (entry.readingTH ? entry.readingTH.split('-').length : 1);
@@ -1714,6 +1757,7 @@ function tfSetupNextWord() {
   var w = nx.word;
   session.currentWordGolden = tfRollGolden();
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 ก่อนตั้งคำถัดไป
+  session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย ไล่ตามลำดับอัตโนมัติ
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
     var _syls0 = nx.readingTH.split('-');
@@ -1723,6 +1767,9 @@ function tfSetupNextWord() {
   }
   hist.push(S); histPos++;
   render();
+  if (!session.currentWordGuideIntroPending) {
+    try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
+  }
 }
 
 // เข้าหน้าสรุป + คิดโบนัสจบชุด/perfect (ครั้งเดียว)
@@ -1908,7 +1955,10 @@ function recordMistake(choiceLabel, errMsg) {
   });
   saveStats(data);
   // Session mistake tracking
-  if (session) session.currentWordMistakes = (session.currentWordMistakes || 0) + 1;
+  if (session) {
+    session.currentWordMistakes = (session.currentWordMistakes || 0) + 1;
+    session.currentWordMistakesTotal = (session.currentWordMistakesTotal || 0) + 1;
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2173,7 +2223,7 @@ function render() {
     // แถวปุ่มใต้คำศัพท์ (อยู่นอก banner เพื่อไม่โดน innerHTML ล้างปุ่ม 🍙 ของ shared.js ทิ้ง) — โชว์คู่กับ banner เสมอ
     var _ctlRow = document.getElementById('tf-word-ctl-row');
     if (_ctlRow) _ctlRow.style.display = S.word ? 'flex' : 'none';
-    document.getElementById('tf-hint').style.display = 'none';
+    document.getElementById('tf-hint').style.display = 'block';
   } else {
     banner.style.display = 'none';
     var _ctlRow2 = document.getElementById('tf-word-ctl-row');
@@ -2184,7 +2234,7 @@ function render() {
     // กันเลขเก่าจากคำถามก่อนหน้าค้างโชว์ทั้งที่ .tf-level-tabs แถบนี้อยู่เหนือการ์ดตลอด ไม่เคยถูกซ่อน
     var _tfCounterEl2 = document.getElementById('tf-session-counter');
     if (_tfCounterEl2) _tfCounterEl2.innerHTML = '';
-    document.getElementById('tf-hint').style.display = (S.step === 'level-select') ? 'block' : 'none';
+    document.getElementById('tf-hint').style.display = 'block';
   }
 
   // Breadcrumb — Lin 2026-07-31: ลบแถบนี้ออกจากเกมเสียงทุกระดับตามที่ Lin สั่ง (ซ่อนถาวร ไม่โชว์อีกต่อไป)
@@ -2207,11 +2257,12 @@ function render() {
       GameFlow.markResult(body);
       setTimeout(function(){
         var actions=body.querySelector('.gsh-end-actions');
-        var correct=session&&session.results?session.results.filter(function(r){return (r.mistakes||0)===0;}).length:0;
+        var correct=session&&session.results?session.results.filter(function(r){return !r.skipped&&(r.mistakes||0)===0;}).length:0;
         var total=session&&session.results?session.results.length:0;
         var hl=[];
         if(tfSrsLoggedIn()&&window.GAME_ACCOUNT){var gs=GAME_ACCOUNT.getStreak();if(gs)hl.push('🔥 連續 '+gs+' 天');if(session&&session.newBadges&&session.newBadges.length)hl.push('🎖️ '+session.newBadges[session.newBadges.length-1].zh);}
         GameFlow.enhanceResult({key:'tone-result',root:body,actions:actions,correct:roundReport?roundReport.correct_count:correct,total:roundReport?roundReport.total_items:total,highlights:hl,report:roundReport,onReplay:function(){TF._startRandom5();}});
+        tfFinalizeAlignedResultPresentation(body);
       },0);
     }
   }
@@ -2228,7 +2279,9 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+      body.innerHTML += tfDesktopOrPortrait()
+        ? '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>'
+        : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
     }
   }
 
@@ -2440,6 +2493,7 @@ function buildReportInner() {
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function statusLabel(r){
+    if (r.is_skipped) return '<span style="color:#8B6310;">跳過</span>';
     if (loggedIn && r.mastered_state) return '<span style="color:#8B6310;">✓ 已精通</span>';
     if (!r.is_correct) return '<span style="color:#c62828;">✗ 答錯</span>';
     return '<span style="color:#2e7d32;">✓ 答對</span>';
@@ -2521,11 +2575,25 @@ function tfAttachLoginSummary(){
   });
 }
 
+function tfFinalizeAlignedResultPresentation(root) {
+  if (!root || !tfDesktopOrPortrait()) return;
+  var duplicatedMeta = root.querySelector('[data-game-result-meta="v1"]');
+  if (duplicatedMeta) duplicatedMeta.remove();
+  var duplicatedDetails = root.querySelector('.gsh-result-shared-details');
+  if (duplicatedDetails) duplicatedDetails.remove();
+}
+
 function stepSessionSummary() {
   if (!session) return '';
   var results = session.results;
   var total = results.length;
-  var perfectCount = results.filter(function(r){ return r.mistakes === 0; }).length;
+  var reportResults = roundReport && roundReport.items ? roundReport.items : [];
+  // The visible Result table treats a wrong first guess as not first-time correct,
+  // even when the later derivation has no additional mistakes. Keep the headline
+  // count on that same evidence instead of counting only derivation mistakes.
+  var perfectCount = reportResults.length === total
+    ? reportResults.filter(function(r){ return !r.is_skipped && r.is_correct; }).length
+    : results.filter(function(r){ return !r.skipped && r.firstTry; }).length;
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event','tone_finder_complete',{category:'game',score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
@@ -2535,7 +2603,7 @@ function stepSessionSummary() {
     try{
       if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
         difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
-        items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,mastered:false};}),
+        items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,skipped:!!r.skipped,mastered:false};}),
         roundBonus:Number(session.bonusAwarded)||0,
         srsBonus:Number(session.srsReviewBonus)||0
       });
@@ -2548,27 +2616,32 @@ function stepSessionSummary() {
     var tone = r.linguistic && r.linguistic.correct_tone;
     var tl = TONES[tone] || {};
     var ok = r.is_correct;
-    var resultTxt = ok ? '✓' : '✗ ×'+r.wrong_count;
+    var resultTxt = r.is_skipped ? '跳過' : (ok ? '✓' : '✗ ×'+r.wrong_count);
+    if (tfDesktopOrPortrait() && !r.is_skipped && !ok) {
+      resultTxt = '✗ ' + (r.user_answer || '—') + ' → ' + (r.correct_answer || '—');
+    }
+    var resultColor = r.is_skipped ? '#8B6310' : (ok ? '#7ec87e' : '#ff7c7c');
     return '<tr>' +
       '<td style="color:#bbb;font-size:12px;width:24px;">'+(i+1)+'</td>' +
       '<td class="tf-sum-th">'+r.question+'<div style="font-size:10px;font-weight:400;color:#999;">作答：'+(r.user_answer||'—')+'<br>正解：'+(r.correct_answer||'—')+'</div></td>' +
       '<td>'+r.meaning+'</td>' +
       '<td style="color:'+(tl.color||'#666')+'">'+(tl.zh||'—')+'</td>' +
-      '<td style="color:'+(ok?'#7ec87e':'#ff7c7c')+';font-weight:700">'+resultTxt+'</td>' +
+      '<td style="color:'+resultColor+';font-weight:700">'+resultTxt+'</td>' +
       '<td style="color:#8B6310;font-weight:700;text-align:right;">'+(r.item_score||0)+'</td>' +
     '</tr>';
   }).join('');
   // ── สเตจ 1: สรุปคะแนน ──
   var totalScore = session.score || 0;
   var bonusAwarded = session.bonusAwarded || 0;
-  var isPerfect = !!session.isPerfect;
+  var isPerfect = total > 0 && perfectCount === total && !!session.isPerfect;
+  var useAlignedResultLayout = tfDesktopOrPortrait();
   // แสดงคะแนนถ่วงน้ำหนักตามระดับบนหน้าจอ (Lin 2026-07-03): 初×1.5 / 中×2.25 / 高×3
   var levelWeightShown = TF_SCORE_CFG.LEVEL_WEIGHT[selectedLevel] || 1;
   var scoreSummary =
     '<div class="tf-score-summary">' +
       '<div class="tf-score-summary-total">🏆 ' + weightedScore + ' <span>分</span></div>' +
-      (levelWeightShown !== 1 ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08a5a;margin-top:-2px;">（原始 ' + totalScore + ' 分 × 等級加成 ' + levelWeightShown + '）</div>' : '') +
-      (bonusAwarded ? '<div class="tf-score-summary-bonus">' +
+      (levelWeightShown !== 1 ? '<div class="tf-score-summary-formula">（原始 ' + totalScore + ' 分 × 等級加成 ' + levelWeightShown + '）</div>' : '') +
+      (!useAlignedResultLayout && bonusAwarded ? '<div class="tf-score-summary-bonus">' +
         (isPerfect ? '🎉 完美通關獎勵 ' : '✅ 完成獎勵 ') + '+' + bonusAwarded + '</div>' : '') +
     '</div>';
   // ── สเตจ 2/3: น้องมีนา + Daily Streak + เป้ารายวัน + แบดจ์ ──
@@ -2579,10 +2652,13 @@ function stepSessionSummary() {
   var minaMsg = tfMinaSay(minaKey);
   var minaBlock = tfMinaBubble(minaMsg, 'big');
 
-  var streakBlock =
-    '<div class="tf-streak-row">' +
-      '<span class="tf-streak-chip">🔥 連續 ' + (stState.streak || 0) + ' 天</span>' +
-    '</div>';
+  var rewardBlock = useAlignedResultLayout
+    ? '<div class="tf-result-reward-row">' +
+        (bonusAwarded ? '<span class="tf-score-summary-bonus">' +
+          (isPerfect ? '🎉 完美通關獎勵 ' : '✅ 完成獎勵 ') + '+' + bonusAwarded + '</span>' : '') +
+        '<span class="tf-streak-chip">🔥 連續 ' + (stState.streak || 0) + ' 天</span>' +
+      '</div>'
+    : '<div class="tf-streak-row"><span class="tf-streak-chip">🔥 連續 ' + (stState.streak || 0) + ' 天</span></div>';
 
   var badgeBlock = '';
   if (session.newBadges && session.newBadges.length) {
@@ -2602,27 +2678,27 @@ function stepSessionSummary() {
   return '<div class="tf-session-summary">' +
     minaBlock +
     scoreSummary +
-    streakBlock +
+    rewardBlock +
     badgeBlock +
     // F1 (2026-08-10): เพิ่ม class gsh-end-score/gsh-end-title (css/shared.css) ให้ตรงกับเกมอื่น — ยังคง class เดิม (tf-sum-score/tf-sum-score-label) ไว้ด้วย ไม่ลบของเดิม ไม่เปลี่ยนเนื้อหา/ตำแหน่ง
     '<div class="tf-sum-score gsh-end-score">'+perfectCount+' / '+total+'</div>' +
     '<div class="tf-sum-score-label gsh-end-title">'+(perfectCount===total?'全部一次答對！太厲害了 🎉':'我們一起繼續加油！💪')+'</div>' +
     // ⭐ การ์ดชวนจอง — ดันขึ้นมาก่อนตารางคะแนน เพื่อให้ผู้เล่นเห็นก่อนปิดหน้า
     // Lin/spec ข้อ F1 บอกว่า "ห้ามใส่ promotion/sales CTA กลาง result" แต่การ์ดนี้เป็นการ์ดจองคอร์สที่ตั้งใจมีอยู่แล้วทั้งเว็บ (นโยบายธุรกิจ ไม่ใช่ของที่ UI spec รอบนี้จะสั่งถอดเองได้) — คงไว้ตามเดิมทุกประการ ไม่แตะ
-    '<div style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
-      '<div style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
-      '<div style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
+    '<div class="tf-result-trial-card" style="margin-top:18px;padding:16px;background:linear-gradient(180deg,#FBF5E7,#fff);border:1px solid rgba(200,151,58,0.4);border-radius:14px;text-align:center;">' +
+      '<div class="tf-result-trial-title" style="font-size:15px;font-weight:800;color:#5C4410;margin-bottom:4px;">想真正開口說泰語嗎？🎯</div>' +
+      '<div class="tf-result-trial-copy" style="font-size:13px;color:#8B7340;line-height:1.6;margin-bottom:12px;">一對一中文授課・30 分鐘免費體驗課，老師直接幫你抓出聲調盲點。</div>' +
       '<button class="tf-session-next-btn" data-game-result-cta="v1" style="background:#C8973A;color:#fff;" onclick="if(typeof bookFromGame===\'function\'){bookFromGame(\'tone_finder\',\'session_end\')}else if(typeof openModal===\'function\'){openModal(\'modal-line-qr\')}">預約免費體驗課 →</button>' +
     '</div>' +
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
     ((window.READING_AUTH && READING_AUTH.user) ? '' :
-      '<div style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
+      '<div class="tf-result-login-card" style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
         '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +
         '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_summary_login_click\',{category:\'game\'});}catch(e){}tfCtaLogin()" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
       '</div>') +
     // F1 (2026-08-10): แถวปุ่มท้ายผลลัพธ์ เปลี่ยนจาก inline flex style เดิม → class gsh-end-actions (shared.css: column บนมือถือ, row บนจอใหญ่ ≥600px) เพิ่มปุ่ม 查看錯題 (F2) เข้าแถวเดียวกัน — ปุ่ม/ลิงก์เดิมทุกปุ่มยังอยู่ครบ ไม่มีปุ่มไหนถูกลบ ไม่เปลี่ยน onclick/href ใดๆ เลย
-    '<div class="gsh-end-actions">' +
+    '<div class="gsh-end-actions tf-result-actions">' +
       '<button class="tf-session-next-btn" id="tf-pdf-btn" data-game-result-print="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 列印／儲存學習紀錄</button>' +
       mistakeBtnHtml +
       '<button class="tf-restart-btn" data-game-result-replay="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF._startRandom5()">再玩一輪</button>' +
@@ -2664,7 +2740,7 @@ function stepAlphaHome() {
     {emoji:'🔡', label:'母音', sub:'短母音／長母音', fn:'TF.alphaVowels()'},
     {emoji:'🔚', label:'尾音', sub:'8 個尾音類別', fn:'TF.alphaEndings()'}
   ];
-  return '<div class="tf-level-select">' +
+  return '<div class="tf-level-select tf-alpha-surface">' +
     '<div class="tf-level-title">字母練習區</div>' +
     cats.map(function(c){
       return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_category_select\',{category:\'game\',category_name:\''+c.label+'\'});}catch(e){}'+c.fn+'">' +
@@ -2684,7 +2760,7 @@ function stepAlphaConsonant() {
     {label:'低子音', sub:ALPHA.consonant.low.sub,  fn:"TF.startFlashcards('low')"},
     {label:'遺忘版', sub:'三類少用字母混合複習', fn:"TF.startFlashcards('forgot')"}
   ];
-  return '<div class="tf-level-select">' +
+  return '<div class="tf-level-select tf-alpha-surface">' +
     '<div class="tf-level-title">子音 — 選擇分類</div>' +
     btns.map(function(b){
       return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_subcat_select\',{category:\'game\',subcat:\''+b.label+'\'});}catch(e){}'+b.fn+'">' +
@@ -2702,7 +2778,7 @@ function stepAlphaVowel() {
     {label:'長母音', sub:'15 個', fn:"TF.startFlashcards('v_long')"},
     {label:'全部混合', sub:'短母音＋長母音', fn:"TF.startFlashcards('v_all')"}
   ];
-  return '<div class="tf-level-select">' +
+  return '<div class="tf-level-select tf-alpha-surface">' +
     '<div class="tf-level-title">母音 — 選擇分類</div>' +
     btns.map(function(b){
       return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_subcat_select\',{category:\'game\',subcat:\''+b.label+'\'});}catch(e){}'+b.fn+'">' +
@@ -2741,7 +2817,7 @@ function stepAlphaFlashcard() {
     actionBtn = '<button class="afc-audio-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_play_audio\',{category:\'game\'});}catch(e){}TF.flashSpeak()">🔊 播放發音</button>';
     var frontTap = '點擊翻面看注音／拼音';
   }
-  return '<div class="tf-level-select">' +
+  return '<div class="tf-level-select tf-alpha-surface">' +
     '<div class="tf-level-title">'+flash.title+'</div>' +
     '<div class="afc-scene">' +
       '<div class="afc-card'+(flash.flipped?' flipped':'')+'" id="afc-card" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_flip_click\',{category:\'game\'});}catch(e){}TF.flashFlip()">' +
@@ -2923,6 +2999,7 @@ function startSetSession(words, opts) {
     currentWordDeduction: 0, currentWordScored: false,
     currentWordFirstTry: false, currentWordScore: 0,
     currentWordGuideUsed: !!tfGuideMode,
+    currentWordGuideIntroPending: false,
     sessionScored: false,
     submissionLinked: false,
     // ── สเตจ 2 + หลายพยางค์ ──
@@ -2936,6 +3013,7 @@ function startSetSession(words, opts) {
   roundReport = window.RoundReport ? RoundReport.create({game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 สำหรับคำแรกของ session
+  session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
   if (entry.readingTH && entry.readingTH.indexOf('-') !== -1) {
@@ -2947,6 +3025,9 @@ function startSetSession(words, opts) {
   hist.push(S); histPos = 0;
   tfSaveResumeState(); // E3: บันทึก resume ทุกครั้งที่เริ่ม session ใหม่ (ทับของเก่าเสมอ — 1 session ล่าสุดต่อเกม)
   render();
+  if (!session.currentWordGuideIntroPending) {
+    try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
+  }
   // น้องมีนาทักทายตอนเริ่มเล่น (เฉพาะรอบแรกของหน้า กันทักซ้ำทุกชุด) — Lin 2026-07-10
   if (!window._tfMinaWelcomed) { window._tfMinaWelcomed = true; setTimeout(function () { tfMinaToast('welcome', { dur: 3400 }); }, 700); }
 }
@@ -3145,6 +3226,11 @@ function stepSessionGuess() {
   if (!session) return step1(); // กันเหนียว: ถ้าหลุดมาที่ step นี้โดยไม่มี session ให้ใช้ flow วิเคราะห์อิสระแทนหน้าว่าง
   var entry = session.words[session.index];
   var word = S.word || entry.word;
+  if (tfGuideMode && session.currentWordGuideIntroPending && !tfCurWordNoTools()) {
+    return '<div style="text-align:center;padding:18px 0 14px;">' +
+      '<button type="button" id="tf-guide-start-btn" class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">'+(tfMobilePortrait() ? '開始推導' : '開始練習')+'</button>' +
+    '</div>';
+  }
   var bd = getBreakdown(word);
   var cls = TH.getInitClass(word);
   var clsLabel = TH.classLabel(cls);
@@ -3200,8 +3286,17 @@ function stepSessionGuess() {
         else tfScoreFirstTry();                          // สเตจ 1: ถูกครั้งแรก +100 (×คอมโบ)
         goToResult(captureN);
       } else {
-        // Lin 2026-07-04: เดาวรรณยุกต์ผิดตอนแรก + กด "🤷 ไม่มั่นใจ" = "ไม่นับกดผิด" (ฟรี) — เสียแค่คอมโบ · คะแนนหักเฉพาะกดผิดในขั้น推導 + ปุ่มแอบดู
-        if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // เดาผิด → ตัดสิทธิ์ first-try + คอมโบขาด
+        // Lin 2026-08-26: เดาเสียงผิดต้องนับผิด 1 ครั้งและลดบันไดคะแนนทันที
+        // (ปุ่ม 不確定 ยังเป็นทางเข้า推導แบบไม่เดาคำตอบ จึงไม่ใช้กฎนี้)
+        if (session) {
+          session.curWordWrongGuess = true;
+          session.combo = 0;
+          if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
+          recordMistake(TONES[captureN] ? TONES[captureN].zh : String(captureN), '聲調選擇錯誤');
+          TF_WORDSCORE.onWrong(session);
+          TF_WORDSCORE.onNextStep(session);
+          tfUpdateWordScoreGauge();
+        }
         // รอบตัดสิน Day 7 หรือ known-check ไม่มี推導; ผิดแล้วรีเซ็ต SRS ทันที
         // รอบปกติยังเข้า推導ทีละขั้นได้ แต่ final-check/known-check ต้องนึกเองโดยไม่มีเครื่องมือช่วย
         // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ก็เฉลยทันทีเหมือนกัน — ไม่มีกฎมาตรฐานให้推導จริง เดินขั้นไปก็สอนผิด
@@ -3245,7 +3340,7 @@ function stepSessionGuess() {
     '<div class="sg-divider"></div>'+
     '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
-    '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#a08a5a;margin-top:4px;">💡 電腦也可以直接按鍵盤 1–5</div>'+
+    (tfMobilePortrait() ? '' : '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#a08a5a;margin-top:4px;">💡 電腦也可以直接按鍵盤 1–5</div>')+
     dontKnowHtml+
   '</div>';
 }
@@ -3316,7 +3411,7 @@ function stepResult() {
     var initialGuess = session.initialGuess;
     var igTone = initialGuess && initialGuess !== 0 ? TONES[initialGuess] : null;
     var igLabel = initialGuess === 0 ? '不確定' : (igTone ? igTone.zh : '—');
-    var guessRow = '<div style="margin-bottom:8px;">'+
+    var guessRow = (tfDesktopOrPortrait() && initialGuess == null) ? '' : '<div style="margin-bottom:8px;">'+
       '<span class="result-v2-guess-label" style="margin-right:5px;">你的選擇</span>'+
       '<span class="result-v2-guess-val" style="color:'+(igTone ? igTone.color : '#aaa')+';">'+igLabel+'</span>'+
     '</div>';
@@ -3344,13 +3439,12 @@ function stepResult() {
       '</div>' : '');
   }
 
-  var isLastSessionWord = session && (session.index + 1 >= session.words.length);
   var nextBtnLabel, nextBtnOnclick;
   if (isMultiSyl && !isLastSyl) {
     nextBtnLabel = '下一個音節 →';
     nextBtnOnclick = 'TF.nextSyllable()';
   } else {
-    nextBtnLabel = session ? (isLastSessionWord ? '來看看我們的成果吧 🎉' : '太棒了，我們繼續 →') : '分析新單字';
+    nextBtnLabel = session ? '下一題 →' : '分析新單字';
     nextBtnOnclick = 'TF.nextWord()';
   }
 
@@ -3392,8 +3486,12 @@ function stepResult() {
     (tfEnMode ? '🔡' : '🔠') + '</button>';
 
   // Lin 2026-07-12: ย้ายปุ่ม "太棒了/看看成果" ขึ้นมาอยู่เหนือส่วน 音節拆解 (ใน sessionBlock) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) เหลือแค่หน้าผลสรุปจบรอบ
+  var hintOffBtnHtml = session && tfGuideMode && (!isMultiSyl || isLastSyl)
+    ? '<button type="button" class="tf-result-secondary gsh-desktop-hint-off" data-visible="true" onclick="TF.toggleGuide()">關閉提示</button>'
+    : '';
   var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:10px;">'+
       '<button class="tf-session-next-btn" id="tf-session-next-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_result_next_click\',{category:\'game\'});}catch(e){}'+nextBtnOnclick+'">'+nextBtnLabel+'</button>'+
+      hintOffBtnHtml+
       (session ? '' : '<button class="tf-result-secondary" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_reanalyze_click\',{category:\'game\'});}catch(e){}'+againAct+'">↺ 重新分析</button>')+
     '</div>';
 
@@ -3798,6 +3896,60 @@ var TF = {
     hist.push(S); histPos++;
     render();
   },
+  // Desktop and mobile Portrait neutral skip: no answer, score, Combo, SRS, or countdown.
+  skipCurrentWord: function() {
+    if (!session || !tfDesktopOrPortrait()) return;
+    var entry = session.words[session.index];
+    if (!entry) return;
+    var awarded = Math.max(0, Number(session.currentWordScore) || 0);
+    if (awarded) session.score = Math.max(0, (Number(session.score) || 0) - awarded);
+    session.currentWordScore = 0;
+    session.curWordSylRawSum = 0;
+    session.hadSkip = true;
+    session.results.push({
+      entry: entry,
+      tone: computeTone(entry.word),
+      mistakes: 0,
+      initialGuess: undefined,
+      finalAnswer: undefined,
+      attempts: [],
+      hintUsed: false,
+      score: 0,
+      firstTry: false,
+      golden: false,
+      forced: false,
+      skipped: true,
+      skipReason: 'user_skip',
+      needReview: false
+    });
+    if (roundReport && window.RoundReport) {
+      var _skipSentence = selectedLevel === 3 && advSentenceCtx && advSentenceCtx.th;
+      RoundReport.addItem(roundReport, {
+        content_ref: { source: _skipSentence ? 'game_sentences' : 'game_words', key: _skipSentence || (entry.word + '@' + (selectedLevel || 1)) },
+        question: entry.word,
+        meaning: entry.zh || '',
+        attempts: [],
+        user_answer: '',
+        correct_answer: '',
+        is_correct: false,
+        is_skipped: true,
+        skip_reason: 'user_skip',
+        wrong_count: 0,
+        item_score: 0,
+        hint_used: false,
+        linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, read_syls: entry.readSyls || null },
+        words: (_skipSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : []
+      });
+    }
+    session.index++;
+    tfResetWordScoring();
+    session.initialGuess = undefined;
+    session.finalAnswer = undefined;
+    session.currentWordGolden = false;
+    tfSaveResumeState();
+    if (session.index >= session.words.length) tfGoToSummary();
+    else tfSetupNextWord();
+  },
   // 高級：เริ่มเล่นประโยคเต็ม 1 ประโยค — words[] ของประโยคกลายเป็น session เดียว (Lin 2026-07-03)
   // ใช้ startSetSession เดิมทุกอย่าง (คำทอง/คอมโบ/โบนัสจบชุด) แค่ส่ง entry object ตรงๆ ไม่ query WORD_LIST + ห้ามสลับลำดับคำ
   startAdvSentence: function(idx) {
@@ -4034,14 +4186,37 @@ var TF = {
   // ── ปุ่ม 提示 (คำใบ้) — Lin 2026-07-25 ──
   // เปิด = ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 แต่ทั้งรอบ "ไม่ได้คะแนน/ดาว/ความคืบหน้า" อะไรเลย
   toggleGuide: function() {
+    var wasGuideIntroPending = !!(session && session.currentWordGuideIntroPending);
     tfGuideMode = !tfGuideMode;
     try { localStorage.setItem('rg_guide_mode', tfGuideMode ? '1' : '0'); } catch(e){}
     if (tfGuideMode && session && session.words && session.index < session.words.length && S && S.word && S.step !== 'result') {
       tfLockCurrentWordForGuide();
+      if (S.step === 'session-guess' && !tfCurWordNoTools()) {
+        session.currentWordGuideIntroPending = true;
+      }
+    }
+    if (!tfGuideMode && wasGuideIntroPending) {
+      session.currentWordGuideIntroPending = false;
     }
     tfSyncGuideBtn();
     render();   // วาดใหม่ทั้งหน้า: ป้ายบอกโหมด + ไฮไลต์ตัวเลือก อัปเดตพร้อมกัน
+    if (!tfGuideMode && wasGuideIntroPending) {
+      try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
+    }
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
+  },
+  startGuidedQuestion: function() {
+    if (!session || !session.currentWordGuideIntroPending || !S || S.step !== 'session-guess') return;
+    session.currentWordGuideIntroPending = false;
+    if (tfDesktopOrPortrait()) {
+      tfFireStartOnce();
+      session.initialGuess = undefined;
+      session.currentWordToneAttempts = [];
+      navigateToInflection();
+    } else {
+      render();
+    }
+    try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
   },
   // ── D2 (2026-08-10): ปุ่ม [ 查看詳細解說 ] opt-in ในหน้าเฉลย — สลับเปิด/ปิดกล่อง .gsh-detail-box ที่อยู่ถัดจากปุ่มนี้ ──
   //   ไม่แตะข้อมูล/การคำนวณ ansHtml ใดๆ แค่ show/hide DOM ที่ render() สร้างไว้แล้ว

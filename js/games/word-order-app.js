@@ -1280,6 +1280,26 @@
     }
   };
 
+  document.addEventListener('keydown', function(event){
+    if(event.key!=='Enter'||event.defaultPrevented||event.repeat||event.isComposing)return;
+    if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
+    var target=event.target||document.activeElement;
+    if(target&&target.closest&&target.closest('input,textarea,select,button,a,[contenteditable="true"]'))return;
+    var game=document.getElementById('game');
+    var nextButton=document.getElementById('wo-next-btn');
+    if(!game||game.style.display==='none'||!nextButton||nextButton.disabled||nextButton.offsetParent===null)return;
+    var howto=document.getElementById('wo-howto-modal');
+    if(howto&&howto.style.display==='flex')return;
+    if(document.getElementById('rg-ask-ov'))return;
+    var badge=document.getElementById('badge-modal');
+    if(badge&&badge.classList.contains('show'))return;
+    var star=document.getElementById('star-modal');
+    if(star&&star.classList.contains('show'))return;
+    event.preventDefault();
+    event.stopPropagation();
+    nextButton.click();
+  }, true);
+
   // CTA ล็อกอิน (MASTER ข้อ13) — โชว์เฉพาะตอนยังไม่ล็อกอิน · สั้น + ปุ่ม 更多福利 กางดูสิทธิพิเศษ
   function woRenderLoginCTA(){
     var el = document.getElementById('rg-cta-login'); if (!el) return;

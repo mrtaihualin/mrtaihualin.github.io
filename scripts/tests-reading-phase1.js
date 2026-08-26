@@ -70,7 +70,20 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=41/);
+  assert.match(html, /reading-game-app\.min\.js\?v=44/);
+});
+
+test('every Reading syllable uses the locked consonant-vowel-final-tone slot order', () => {
+  const slotOrder = block('function getSlotOrder()', '// ════════════════════════════════════════════\n// PHONETIC MAPS');
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(slotOrder, context);
+  assert.deepStrictEqual(Array.from(context.getSlotOrder()), ['cons', 'vowel', 'final', 'tone']);
+});
+
+test('Hint immediately refreshes the permanently zero word-score HUD', () => {
+  const guideMode = block('function setRgGuideMode(on)', 'function updateActiveSlot()');
+  assert.match(guideMode, /updateActiveSlot\(\);\s*\/\/ Hint[^\n]*\n\s*refreshUI\(\);/);
 });
 
 test('direct word boot binds the protected level before Reading starts and restores preferences', () => {

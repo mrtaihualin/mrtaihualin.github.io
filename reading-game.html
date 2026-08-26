@@ -85,7 +85,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=26">
+<link rel="stylesheet" href="css/shared.css?v=29">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -588,7 +588,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div class="btn-row">
     <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
     <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
-    <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一字 →</button>
+    <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一題 →</button>
+    <button class="btn btn-secondary gsh-desktop-hint-off" id="rg-hint-off-next" type="button" data-visible="false" onclick="setRgGuideMode(false)">關閉提示</button>
     <!-- Lin 2026-07-31: ย้ายปุ่ม 下一個音節 เข้ามาอยู่ในแถวเดียวกับ 已記得/檢查 (เดิมอยู่นอก .btn-row ทำให้ตกไปอีกบรรทัด) -->
     <button class="btn btn-secondary" id="btn-next-syl" onclick="try{gtag('event','reading_game_syllable_nav',{category:'game',syllable:sylIdx+2})}catch(e){}rgGotoSyl(sylIdx+1)" style="display:none">下一個音節 →</button>
   </div>
@@ -692,7 +693,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=41']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=44']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->

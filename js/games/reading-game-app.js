@@ -84,27 +84,10 @@ var TONE_POOL=['่','้','๊','๋','์'];
 function poolOf(g){var p=[];g.forEach(function(x){x.forEach(function(y){if(p.indexOf(y)<0)p.push(y);});});return p;}
 var CP=poolOf(CONS_GROUPS),VP=poolOf(VOWEL_GROUPS),FP=poolOf(FINAL_GROUPS);
 
-// ลำดับ slot ตามการเขียนจริง: ซ้ายไปขวา + ล่างขึ้นบน
-// → สระหน้าเดี่ยวๆ ไม่มีอะไรต่อท้ายพยัญชนะ (โอ ไอ ใอ) เขียนสระก่อนจริง → ให้สระขึ้นก่อน
-// → สระหน้าที่ "ห่อ" พยัญชนะ (มีเศษสระต่อท้ายพยัญชนะอีกที เช่น เอา/เอีย/เอือ) Lin สั่ง 2026-07-24 ให้พยัญชนะขึ้นก่อนแทน (ตามลำดับเสียงอ่านจริง ไม่ใช่ลำดับตัวเขียน)
-// → ทุกสระอื่น: พยัญชนะก่อน แล้วสระ แล้ววรรณยุกต์
-// Lin 2026-07-24: เพิ่ม เอะ/แอะ/เอ็/แอ็ (มีในเกมแล้ว) + เอียะ/เอือะ (ยังไม่มีในเกม แต่ล็อกกฎไว้ล่วงหน้า เผื่ออนาคตเพิ่มเข้ามา)
-var WRAP_FRONT_V={'เอา':1,'เออ':1,'เอาะ':1,'เออะ':1,'เอีย':1,'เอือ':1,'เอิ':1,'โอะ':1,'เอะ':1,'แอะ':1,'เอ็':1,'แอ็':1,'เอียะ':1,'เอือะ':1};
-function getSlotOrder(vowel,final){
-  var sym=VOWEL_SYMBOL[vowel]||vowel;
-  // สระหน้าที่ห่อพยัญชนะ: พยัญชนะ → วรรณยุกต์ → สระ → ตัวสะกด
-  if(WRAP_FRONT_V[vowel])return['cons','tone','vowel','final'];
-  // สระหน้าเดี่ยวๆ ไม่มีตัวต่อท้าย (โอ ไอ ใอ): สระ → พยัญชนะ → วรรณยุกต์ → ตัวสะกด
-  if(FRONT_V_SET[sym[0]])return['vowel','cons','tone','final'];
-  // สระบน/ล่าง เกาะพยัญชนะ (ิ ี ึ ื ั ุ ู ็): วรรณยุกต์ซ้อนบนสระ → พยัญชนะ → สระ → วรรณยุกต์ → ตัวสะกด
-  // ยกเว้น "อัว" ที่มีตัวสะกด (เช่น ด้วย/ช่วย) → ั หาย เขียนเป็น ว ลอย วรรณยุกต์กลับไปอยู่บนพยัญชนะ
-  var attached=false;
-  if(!(vowel==='อัว'&&final)){
-    for(var i=0;i<sym.length;i++){ if(isCombining(sym[i])){ attached=true; break; } }
-  }
-  if(attached)return['cons','vowel','tone','final'];
-  // สระขวา/ลอย (า อ ะ ำ): วรรณยุกต์เขียนบนพยัญชนะ จึงมาก่อนสระ → พยัญชนะ → วรรณยุกต์ → สระ → ตัวสะกด
-  return['cons','tone','vowel','final'];
+// Lin 2026-08-25: ล็อกลำดับช่องเกมอ่านทุกคำเป็นชุดเดียว
+// 子音 → 母音 → 尾音 → 聲調符; ช่องที่พยางค์นั้นไม่มีจะถูก filter ออกตอน loadSyl()
+function getSlotOrder(){
+  return['cons','vowel','final','tone'];
 }
 
 // ════════════════════════════════════════════
@@ -364,6 +347,15 @@ function setRgGuideMode(on){
     else { note.innerHTML='🔥 <b>計分模式</b>・答對得分並更新複習進度'; note.style.background='#e8f5e9'; note.style.color='#2e7d32'; }
   }
   updateActiveSlot();
+  // Hint ที่แสดงแล้วล็อกคะแนนคำนี้เป็น 0 ทันที; ปิด Hint ภายหลังต้องไม่ทำให้ HUD คืนเป็น 10
+  refreshUI();
+  rgSyncHintOffAction();
+}
+function rgSyncHintOffAction(){
+  var action=document.getElementById('rg-hint-off-next');
+  var nextButton=document.getElementById('btn-next');
+  if(!action)return;
+  action.setAttribute('data-visible',rgGuideMode&&nextButton&&nextButton.style.display!=='none'?'true':'false');
 }
 function updateActiveSlot(){
   slotSeq.forEach(function(c){
@@ -1626,6 +1618,7 @@ function setGameBtns(mode){
     if(re)re.style.display='none';ch.style.display='none';nx.style.display='';
     if(window.GameFlow)setTimeout(function(){GameFlow.start({key:'reading-game',nextButton:nx,delaySeconds:3});},0);
   }
+  rgSyncHintOffAction();
 }
 
 function markOpts(){
