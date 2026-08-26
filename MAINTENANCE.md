@@ -2417,3 +2417,11 @@ node scripts/check-site.js
 - Propagated `contentKey` through reports, SRS calls, direct practice, and Resume without changing existing single-meaning SRS keys; object-use metadata is intentionally absent from the catalog and review flow.
 - Added an unapplied database migration, safe release/rollback order, focused regressions, and refreshed generated game bundles. No Production SQL, content sync, Edge/static deploy, Auth, or user-data mutation was performed.
 - Verification: focused data/game/rollout/race checks, minified-source freshness, `git diff --check`, and the full site gate.
+## 2026-08-27 — Review Needed hidden/local candidate
+
+- Added a standalone read-only five-game contract and adapter over the existing `tone_srs_state` read shape; no game, Auth, Supabase, navigation, or public runtime file loads it.
+- Raw attempts are rejected as state, histories remain per game, not-due/same-day records do not advance, and Mastered rows stay outside the due queue.
+- Historical initial candidate configuration used Free Due `20%` / Review Needed `1` and dormant Paid Due `30%` / maximum `4`; later candidate commits supersede this metadata with the current pre-SRS Free `1` / Paid `3` attempt and `20%` / `30%` allocation contract without enabling Paid runtime.
+- Added synthetic Day 0/1/8 and empty/loading/error/access-denied fixtures plus a developer-only preview that is default OFF, localhost-only, explicitly enabled, initially hidden, unlinked, and `noindex`.
+- Verification: hidden-candidate tests `12/12`; existing Phase 1 SRS `17/17`; game-flow and Listening regressions PASS; local browser confirmed OFF produces no visible content and explicit localhost Day 1 shows five isolated rows with no links/forms or console warnings/errors; `node scripts/check-site.js` PASS across 1,021 files including secret scan.
+- No Production/Staging call or mutation, database/schema/RPC/Edge/Auth/test-identity/automation change, public activation, push, PR, merge, or deploy.
