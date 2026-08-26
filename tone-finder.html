@@ -635,6 +635,13 @@ if (document.fonts && document.fonts.load) {
     body[data-gsh-game="tone"] .tf-tools-row { gap:10px; margin-bottom:10px; }
     body[data-gsh-game="tone"] .gsh-session-header { gap:10px; padding:0 0 10px; }
     body[data-gsh-game="tone"] .gsh-gameplay { margin-top:0; }
+    /* Keep the active syllable row equally close to the question card above/below. */
+    body[data-gsh-game="tone"] #tf-syl-strip[style*="display: flex"] {
+      margin-top:8px; margin-bottom:8px;
+    }
+    body[data-gsh-game="tone"] #tf-syl-strip[style*="display: flex"] + .tf-body {
+      padding-top:0;
+    }
     body[data-gsh-game="tone"] #tf-session-counter {
       display:flex; align-items:center; justify-content:center;
       min-height:24px; line-height:24px; margin:0;

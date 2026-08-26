@@ -68,6 +68,8 @@ test('Tone ordinary Desktop main and secondary headers exactly match the Core ga
   assert.doesNotMatch(toneApp, /getElementById\('tf-hint'\)\.style\.display\s*=\s*(?:'none'|\(S\.step)/, 'Tone: source runtime must not hide the secondary header');
   assert.match(toneMin, /getElementById\("tf-hint"\)\.style\.display="block"/, 'Tone: deployed runtime must keep the secondary header visible');
   assert.doesNotMatch(toneMin, /getElementById\("tf-hint"\)\.style\.display=(?:"none"|"level-select")/, 'Tone: deployed runtime must not hide the secondary header');
+  assert.match(tone, /<!--ANN-BAND:START-->[\s\S]{0,240}<div class="avail-band" id="ann-band"/, 'Tone must retain the shared announcement band');
+  assert.match(tone, /#tf-syl-strip\[style\*="display: flex"\] \+ \.tf-body\s*\{\s*padding-top:0;/, 'Tone Desktop syllable row must not keep the old extra body gap');
 });
 
 test('all five games expose the locked shared header, progress and resume semantics', () => {
