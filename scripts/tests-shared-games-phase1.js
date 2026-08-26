@@ -42,6 +42,15 @@ test('Listening keeps its ordinary Desktop Account Bar compact without changing 
   assert.match(listening, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,180}\.lg-account-context-chip\{display:none;\}/, 'Listening must hide only the duplicate context on ordinary Desktop');
 });
 
+test('Tone ordinary Desktop main and secondary headers exactly match the Core game header contract', () => {
+  const tone = games.find((g) => g.id === 'tone').htmlText;
+  assert.match(tone, /\.tf-page-header\s*\{[\s\S]{0,100}margin-bottom:\s*10px/);
+  assert.match(tone, /\.tf-page-title\s*\{[\s\S]{0,260}font-family:\s*'Noto Serif TC',\s*serif;[\s\S]{0,80}font-size:\s*clamp\(20px,\s*4vw,\s*28px\);[\s\S]{0,80}font-weight:\s*900;[\s\S]{0,80}color:\s*#8B6310;[\s\S]{0,80}letter-spacing:\s*2px;/);
+  assert.match(tone, /\.tf-page-hint\s*\{[\s\S]{0,220}font-family:\s*'Noto Sans TC',\s*sans-serif;[\s\S]{0,80}font-size:\s*12px;[\s\S]{0,80}color:\s*#b08040;[\s\S]{0,80}margin-top:\s*3px;/);
+  const toneTitleBlock = tone.match(/\.tf-page-title\s*\{([^}]*)\}/)[1];
+  assert.doesNotMatch(toneTitleBlock, /margin-(?:top|bottom):/);
+});
+
 test('all five games expose the locked shared header, progress and resume semantics', () => {
   for (const g of games) {
     assert.match(g.htmlText, /gsh-page-header/, `${g.id}: header ยังไม่ใช้ shared contract`);
