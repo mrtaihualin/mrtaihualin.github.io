@@ -2174,3 +2174,10 @@ node scripts/check-site.js
 - Tone Finder now requires an explicit `開始練習` action before each guided question, including after returning to the page or enabling Hint.
 - Reading keeps the fixed `子音 → 母音 → 尾音 → 聲調` slot order and refreshes the zero-score HUD immediately when Hint is used.
 - Verification: affected game tests, Minimum Guest Launch gate, owner-switch race gate, full site check, and candidate browser checks.
+
+# 2026-08-27 — Desktop + Mobile Portrait release candidate
+
+- Packaged only the accepted Desktop and Mobile Portrait UI checkpoints; Mobile Landscape source files remain unchanged from `main`.
+- Listening remains parked as `即將開幕`; no Database, Auth, Edge Function, or user-data mutation is included.
+- Updated the Tone owner-switch cache assertion to runtime v71 and restored the generated announcement markup while the locked Tone CSS keeps the strip hidden.
+- Verification: `git diff --check` and `node scripts/check-site.js` passed across 1,014 project files.
