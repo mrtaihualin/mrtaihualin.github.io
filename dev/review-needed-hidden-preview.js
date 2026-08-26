@@ -29,6 +29,6 @@
   }).join('');
   output.innerHTML = '<p>Tier config: <code>Due ' + (snapshot.config.dueRatio * 100) +
     '% / Review Needed ' + snapshot.config.maxReviewAttempts + '</code></p>' +
-    '<table><thead><tr><th>Game</th><th>History</th><th>Due</th><th>Selected due</th><th>Mastered</th><th>Attempt limit</th></tr></thead><tbody>' +
+    '<table><caption>Technical fixture summary by isolated game</caption><thead><tr><th scope="col">Game</th><th scope="col">History</th><th scope="col">Due</th><th scope="col">Selected due</th><th scope="col">Mastered</th><th scope="col">Attempt limit</th></tr></thead><tbody>' +
     rows + '</tbody></table>';
 })(window, document);

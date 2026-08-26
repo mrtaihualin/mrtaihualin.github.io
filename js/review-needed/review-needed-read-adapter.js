@@ -9,7 +9,37 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (contract) {
   'use strict';
 
-  var SELECT_FIELDS = 'game,level,word,stage,due_date,ever_failed,mastered';
+  var READ_MAPPING = {
+    table: 'tone_srs_state',
+    selectFields: ['game', 'level', 'word', 'stage', 'due_date', 'ever_failed', 'mastered'],
+    userFilter: 'user_id',
+    identityFields: ['game', 'level', 'word'],
+    recordType: 'srs_state',
+    mode: 'read-only'
+  };
+  var SELECT_FIELDS = READ_MAPPING.selectFields.join(',');
+
+  function copy(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function getReadMapping() {
+    return copy(READ_MAPPING);
+  }
+
+  function mapReadRow(row) {
+    row = row || {};
+    return {
+      record_type: READ_MAPPING.recordType,
+      game: row.game,
+      level: row.level,
+      word: row.word,
+      stage: row.stage,
+      due_date: row.due_date,
+      ever_failed: row.ever_failed,
+      mastered: row.mastered
+    };
+  }
 
   function classifyError(error) {
     var status = Number(error && (error.status || error.statusCode));
@@ -25,20 +55,19 @@
       denied.status = 403;
       return Promise.reject(denied);
     }
-    var query = client.from('tone_srs_state').select(SELECT_FIELDS).eq('user_id', String(userId));
+    var query = client.from(READ_MAPPING.table).select(SELECT_FIELDS).eq(READ_MAPPING.userFilter, String(userId));
     return Promise.resolve(query).then(function (result) {
       if (result && result.error) throw result.error;
-      return (result && result.data || []).map(function (row) {
-        var copy = Object.assign({}, row);
-        copy.record_type = 'srs_state';
-        return copy;
-      });
+      if (!result || !Array.isArray(result.data)) throw new Error('READ_RESULT_INVALID');
+      return result.data.map(mapReadRow);
     });
   }
 
   function load(client, userId, options) {
     options = options || {};
-    return readRows(client, userId).then(function (rows) {
+    return Promise.resolve().then(function () {
+      return readRows(client, userId);
+    }).then(function (rows) {
       var snapshot = contract.buildSnapshot(rows, options);
       return contract.viewState(snapshot.totals.history ? 'ready' : 'empty', { snapshot: snapshot });
     }).catch(function (error) {
@@ -48,6 +77,8 @@
 
   return {
     SELECT_FIELDS: SELECT_FIELDS,
+    getReadMapping: getReadMapping,
+    mapReadRow: mapReadRow,
     classifyError: classifyError,
     readRows: readRows,
     load: load

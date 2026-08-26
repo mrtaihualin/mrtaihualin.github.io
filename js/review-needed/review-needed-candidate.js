@@ -25,6 +25,18 @@
     return error;
   }
 
+  function assertState(condition, code, message) {
+    if (!condition) throw errorWithCode(code, message);
+  }
+
+  function isCalendarDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    var parts = value.split('-').map(Number);
+    var date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    return date.getUTCFullYear() === parts[0] &&
+      date.getUTCMonth() === parts[1] - 1 && date.getUTCDate() === parts[2];
+  }
+
   function normalizeGame(value) {
     var game = String(value || '').toLowerCase();
     if (game === 'word_order') game = 'wordorder';
@@ -43,22 +55,35 @@
     if (!row || typeof row !== 'object') return null;
     var recordType = row.record_type || row.recordType;
     if (recordType && recordType !== 'srs_state') return null;
-    if (!Object.prototype.hasOwnProperty.call(row, 'stage') ||
-        !Object.prototype.hasOwnProperty.call(row, 'mastered')) return null;
+    assertState(Object.prototype.hasOwnProperty.call(row, 'stage'), 'MALFORMED_STATE_ROW', 'stage is required');
+    assertState(Object.prototype.hasOwnProperty.call(row, 'mastered'), 'MALFORMED_STATE_ROW', 'mastered is required');
     var game = normalizeGame(row.game);
     var key = itemKey(row);
-    if (!game || !key) return null;
+    assertState(!!game, 'UNKNOWN_GAME', 'unknown SRS game');
+    assertState(!!key, 'MALFORMED_STATE_ROW', 'item identity is required');
     var stage = Number(row.stage);
-    if (!isFinite(stage) || stage < 0) return null;
+    assertState(isFinite(stage) && stage >= 0 && Math.floor(stage) === stage,
+      'MALFORMED_STATE_ROW', 'stage must be a non-negative integer');
+    assertState(typeof row.mastered === 'boolean', 'MALFORMED_STATE_ROW', 'mastered must be boolean');
+    if (Object.prototype.hasOwnProperty.call(row, 'ever_failed')) {
+      assertState(typeof row.ever_failed === 'boolean', 'MALFORMED_STATE_ROW', 'ever_failed must be boolean');
+    }
+    if (Object.prototype.hasOwnProperty.call(row, 'everFailed')) {
+      assertState(typeof row.everFailed === 'boolean', 'MALFORMED_STATE_ROW', 'everFailed must be boolean');
+    }
+    var dueDate = String(row.due_date || row.dueDate || '');
+    assertState(!dueDate || isCalendarDate(dueDate), 'MALFORMED_STATE_ROW', 'due date must be YYYY-MM-DD');
+    assertState(row.mastered || stage === 0 || !!dueDate,
+      'MALFORMED_STATE_ROW', 'non-mastered stage above zero requires a due date');
     return {
       recordType: 'srs_state',
       game: game,
       itemKey: key,
       level: row.level == null ? null : row.level,
       word: row.word == null ? null : String(row.word),
-      stage: Math.floor(stage),
-      dueDate: String(row.due_date || row.dueDate || ''),
-      mastered: row.mastered === true,
+      stage: stage,
+      dueDate: dueDate,
+      mastered: row.mastered,
       everFailed: row.ever_failed === true || row.everFailed === true
     };
   }
@@ -96,7 +121,7 @@
   function buildSnapshot(rows, options) {
     options = options || {};
     var today = String(options.today || '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) throw errorWithCode('INVALID_TODAY');
+    if (!isCalendarDate(today)) throw errorWithCode('INVALID_TODAY');
     var config = tierConfig(options.tier || 'free');
     if (!config.runtimeEnabled && options.allowDormantTier !== true) {
       throw errorWithCode('TIER_DISABLED', 'Dormant tier cannot be activated');
@@ -104,9 +129,14 @@
 
     var games = emptyGames();
     var ignoredRows = 0;
-    (rows || []).forEach(function (raw) {
+    var identities = Object.create(null);
+    assertState(Array.isArray(rows), 'INVALID_ROWS', 'SRS rows must be an array');
+    rows.forEach(function (raw) {
       var row = normalizeStateRow(raw);
       if (!row) { ignoredRows += 1; return; }
+      var identity = row.game + '\u0000' + row.itemKey;
+      assertState(!identities[identity], 'DUPLICATE_STATE_ROW', 'duplicate game/item SRS state');
+      identities[identity] = true;
       games[row.game].history.push(row);
     });
 
@@ -122,7 +152,7 @@
       sortRows(bucket.history);
       bucket.history.forEach(function (row) {
         if (row.mastered) bucket.masteredCount += 1;
-        else if (row.dueDate && row.dueDate <= today) bucket.due.push(row);
+        else if ((row.stage === 0 && !row.dueDate) || (row.dueDate && row.dueDate <= today)) bucket.due.push(row);
         else bucket.notDueCount += 1;
       });
       bucket.selectedDue = bucket.due.slice(0, Math.min(bucket.dueQuota, bucket.due.length));
@@ -141,6 +171,23 @@
       games: games,
       totals: totals,
       ignoredRows: ignoredRows
+    };
+  }
+
+  function reviewAttemptWindow(tier, attemptsUsed, options) {
+    options = options || {};
+    var config = tierConfig(tier || 'free');
+    if (!config.runtimeEnabled && options.allowDormantTier !== true) throw errorWithCode('TIER_DISABLED');
+    var used = Number(attemptsUsed);
+    assertState(isFinite(used) && used >= 0 && Math.floor(used) === used,
+      'INVALID_ATTEMPT_COUNT', 'attempt count must be a non-negative integer');
+    var remaining = Math.max(0, config.maxReviewAttempts - used);
+    return {
+      tier: config.id,
+      maxReviewAttempts: config.maxReviewAttempts,
+      attemptsUsed: used,
+      attemptsRemaining: remaining,
+      canAttempt: remaining > 0
     };
   }
 
@@ -178,6 +225,7 @@
     normalizeGame: normalizeGame,
     normalizeStateRow: normalizeStateRow,
     buildSnapshot: buildSnapshot,
+    reviewAttemptWindow: reviewAttemptWindow,
     viewState: viewState,
     createCandidate: createCandidate
   };
