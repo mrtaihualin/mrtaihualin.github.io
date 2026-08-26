@@ -66,6 +66,20 @@ function json(body, status, origin) {
   return new Response(JSON.stringify(body), { status: status || 200, headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) } });
 }
 
+// PostgREST occasionally rejected one request from the concurrent service-role batch with 401
+// while the sibling requests using the same key succeeded. Retry only idempotent reads, with a
+// short bounded delay. The rate-limit RPC is intentionally excluded so a retry cannot count twice.
+const TRANSIENT_READ_AUTH_RETRY_DELAYS_MS = [120, 360];
+async function readWithTransientAuthRetry(queryFactory) {
+  let result = await queryFactory();
+  for (const delayMs of TRANSIENT_READ_AUTH_RETRY_DELAYS_MS) {
+    if (!result?.error || result.status !== 401) return result;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    result = await queryFactory();
+  }
+  return result;
+}
+
 serve(async (req) => {
   const origin = req.headers.get('Origin') || '';
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(origin) });
@@ -101,12 +115,15 @@ serve(async (req) => {
     // ไม่กระทบความปลอดภัย แค่กิน DB เกินจำเป็นเล็กน้อยเฉพาะตอนโดนบล็อกเท่านั้น)
     const [rl, w1, w2, sent] = await Promise.all([
       admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 }),
-      admin.from('game_words').select('word,en,zh,level,category,syls,reading_th,read_syls')
-        .eq('level', '初').order('rank', { ascending: true }).limit(caps['初']),
-      admin.from('game_words').select('word,en,zh,level,category,syls,reading_th,read_syls')
-        .eq('level', '中').order('rank', { ascending: true }).limit(caps['中']),
-      admin.from('game_sentences').select('th,zh,reading_th,wc,polite_f,words')
-        .order('rank', { ascending: true }).limit(caps.sentences),
+      readWithTransientAuthRetry(() => admin.from('game_words')
+        .select('word,en,zh,level,category,syls,reading_th,read_syls')
+        .eq('level', '初').order('rank', { ascending: true }).limit(caps['初'])),
+      readWithTransientAuthRetry(() => admin.from('game_words')
+        .select('word,en,zh,level,category,syls,reading_th,read_syls')
+        .eq('level', '中').order('rank', { ascending: true }).limit(caps['中'])),
+      readWithTransientAuthRetry(() => admin.from('game_sentences')
+        .select('th,zh,reading_th,wc,polite_f,words')
+        .order('rank', { ascending: true }).limit(caps.sentences)),
     ]);
     if (rl.error) return json({ error: 'rate_limit_unavailable — 請稍後再試' }, 503, origin);
     if (rl.data !== true) return json({ error: 'rate_limited — 請稍後再試' }, 429, origin);
@@ -132,8 +149,8 @@ serve(async (req) => {
     // Audio availability is derived server-side from private metadata and filtered to this response's
     // entitled content. Never return storage paths, hashes, filenames, or a catalog-wide manifest.
     const entitledTexts = new Set(words.map((row) => row.word).concat(sentences.map((row) => row.th)));
-    const { data: audioRows, error: audioError } = await admin.from('audio_assets')
-      .select('text_th').in('status', ['generated', 'approved']).not('storage_path', 'is', null);
+    const { data: audioRows, error: audioError } = await readWithTransientAuthRetry(() => admin.from('audio_assets')
+      .select('text_th').in('status', ['generated', 'approved']).not('storage_path', 'is', null));
     if (audioError) return json({ error: 'audio_availability_unavailable' }, 503, origin);
     const audioAvailable = Array.from(new Set((audioRows || [])
       .map((row) => row.text_th)

@@ -2181,3 +2181,9 @@ node scripts/check-site.js
 - Listening remains parked as `即將開幕`; no Database, Auth, Edge Function, or user-data mutation is included.
 - Updated the Tone owner-switch cache assertion to runtime v71 and restored the generated announcement markup while the locked Tone CSS keeps the strip hidden.
 - Verification: `git diff --check` and `node scripts/check-site.js` passed across 1,014 project files.
+
+# 2026-08-27 — game-content transient authorization hotfix
+
+- Added a bounded retry for the four idempotent protected-content reads when PostgREST transiently returns HTTP 401; the rate-limit RPC is never retried, and persistent failures still fail closed.
+- Preserved content caps, JWT-derived tiering, Database/Auth configuration, protected catalog boundaries, Listening closure, and all game UI.
+- Verification: targeted game behavioral coverage plus `git diff --check` and `node scripts/check-site.js` passed across 1,014 project files.

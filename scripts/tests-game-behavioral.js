@@ -173,6 +173,14 @@ GAME_PAGES.forEach((page) => {
     else ok('C: game-content/index.ts ไม่อ่าน tier/isLoggedIn จาก body ที่ client ส่งมา (กันปลอม tier)');
     if (!/if \(rl\.error\) return json\(\{ error: 'rate_limit_unavailable/.test(fn)) fail('C: game-content/index.ts', 'rate-limit error ยังไม่ fail-closed');
     else ok('C: game-content rate-limit error fail-closed ด้วย HTTP 503');
+    const retryHelper = /const TRANSIENT_READ_AUTH_RETRY_DELAYS_MS = \[120, 360\];[\s\S]*async function readWithTransientAuthRetry\(queryFactory\)[\s\S]*result\.status !== 401[\s\S]*return result;/.test(fn);
+    if (!retryHelper) fail('C: game-content/index.ts', 'ไม่มี bounded retry สำหรับ transient service-role 401');
+    else ok('C: game-content retry เฉพาะ transient 401 แบบ bounded และยัง fail-closed');
+    const retriedReads = (fn.match(/readWithTransientAuthRetry\(\(\) => admin\.from\(/g) || []).length;
+    if (retriedReads !== 4) fail('C: game-content/index.ts', 'protected content reads ต้องใช้ bounded retry ครบ 4 จุด');
+    else ok('C: game-content protected content reads ใช้ bounded retry ครบ 4 จุด');
+    if (!/Promise\.all\(\[\s*admin\.rpc\('game_content_rl_check'/.test(fn)) fail('C: game-content/index.ts', 'rate-limit RPC ต้องไม่ถูก retry จนนับซ้ำ');
+    else ok('C: game-content rate-limit RPC ไม่ถูก retry ซ้ำ');
     if (!/if \(!words\.length \|\| !sentences\.length\)/.test(fn)) fail('C: game-content/index.ts', 'ไม่บล็อก required dataset ที่ว่าง');
     else ok('C: game-content ไม่ส่ง required dataset ว่างเข้าเกม');
   }
