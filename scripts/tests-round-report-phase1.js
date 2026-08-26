@@ -78,6 +78,18 @@ RR.finish(dailyRound, { score: 10 });
 assert.strictEqual(RR.dailyActivity('reading'), 1, 'daily activity must count one finished round only once');
 assert.strictEqual(RR.dailyActivityText('reading'), '今日拼讀：1 字');
 
+const skippedRound = RR.create({ game_type: 'tone', difficulty: '初', mode: 'tone' });
+RR.addItem(skippedRound, {
+  content_ref: { source: 'game_words', key: 'มา@1' }, question: 'มา', meaning: '來',
+  attempts: [], is_correct: false, is_skipped: true, skip_reason: 'user_skip',
+  wrong_count: 0, item_score: 0
+});
+RR.finish(skippedRound, { score: 0 });
+assert.strictEqual(skippedRound.correct_count, 0);
+assert.strictEqual(skippedRound.wrong_count, 0, 'neutral Skip must not count as wrong');
+assert.strictEqual(RR.toPracticeEventDraft(skippedRound)[0].result, 'skipped');
+assert.match(RR.printDocument({ gameType: 'tone', report: skippedRound }), /跳過/);
+
 const listening = RR.create({ game_type: 'listening', difficulty: '初', mode: 'mc' });
 RR.addItem(listening, {
   content_ref: { source: 'game_words', key: 'กิน@1' }, question: '<กิน>', meaning: '吃',

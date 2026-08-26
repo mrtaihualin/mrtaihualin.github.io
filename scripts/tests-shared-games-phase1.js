@@ -164,11 +164,13 @@ test('all five games expose the shared cross-game switcher', () => {
 });
 
 test('shared switcher contains exactly the Phase 1 Core 5 in canonical order', () => {
-  const core5Block = switcherJs.slice(switcherJs.indexOf('var CORE5_TABS'), switcherJs.indexOf('var LEGACY_TABS'));
+  const core5Block = switcherJs.slice(switcherJs.indexOf('var CORE5_TABS'), switcherJs.indexOf('var CORE6_TABS'));
   const ids = Array.from(core5Block.matchAll(/\{ id: '([^']+)'/g), (match) => match[1]);
   assert.deepStrictEqual(ids, ['tone_finder', 'reading_game', 'listening_game', 'typing_game', 'word_order']);
   assert.doesNotMatch(core5Block, /href: '(?:lego|vault|games-challenge)\.html'/);
-  assert.match(switcherJs, /core5 \? CORE5_TABS : LEGACY_TABS/, 'non-Core-5 pages ต้องคง switcher เดิม');
+  assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'Tone Desktop switcher variant must include Lego');
+  assert.match(switcherJs, /includeLegoDesktop \? CORE6_TABS : CORE5_TABS/, 'Core 5 pages without the opt-in must keep the original switcher');
+  assert.match(games.find((g) => g.id === 'tone').htmlText, /data-include-lego-desktop="1"/, 'Tone Desktop must opt into the six-game switcher');
   assert.match(switcherJs, /role="menuitem" aria-current="page"/);
 });
 
@@ -358,7 +360,8 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
 
 test('all five games keep one in-memory current-round DTO identity without Login summary', () => {
   for (const g of games) {
-    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=3/, `${g.id}: missing Round Report DTO loader`);
+    const reportVersion = g.id === 'tone' ? 4 : 3;
+    assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: missing Round Report DTO loader`);
     assert.doesNotMatch(g.htmlText, /js\/score\/learning-summary\.js/, `${g.id}: Login summary must stay parked in Minimum Guest Launch`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
     assert.match(g.appText, /report:/, `${g.id}: active GameResume must carry the report snapshot`);
@@ -371,7 +374,8 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const roundReport = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
-    assert.match(g.htmlText, /js\/games\/round-report\.js\?v=3/, `${g.id}: must load shared print renderer`);
+    const reportVersion = g.id === 'tone' ? 4 : 3;
+    assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: must load shared print renderer`);
     assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=11/, `${g.id}: must load countdown-free Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
@@ -503,13 +507,19 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: a new guided question must stop at the intro gate');
   assert.match(tone, /currentWordGuideIntroPending[\s\S]{0,500}開始練習/, 'Tone: the intro gate must hide choices behind the explicit start action');
-  assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,300}currentWordGuideIntroPending\s*=\s*false/, 'Tone: the start action must release the active question');
+  assert.match(tone, /id="tf-guide-start-btn"[\s\S]{0,180}開始練習/, 'Tone: guided Start must expose a stable Enter target');
+  assert.match(tone, /tfOrdinaryDesktop\(\) \? document\.getElementById\('tf-guide-start-btn'\)/, 'Tone: Desktop Enter must prefer guided Start and never infer Skip');
+  assert.match(tone, /active\.closest\('\.tf-known-btn'\)[\s\S]{0,120}e\.preventDefault\(\)[\s\S]{0,120}return;/, 'Tone: Enter on the focused Skip action must be blocked');
+  assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,520}currentWordGuideIntroPending\s*=\s*false[\s\S]{0,320}navigateToInflection\(\)/, 'Tone: Desktop guided Start must bypass tone choice and enter derivation directly');
+  assert.match(tone, /guessRow\s*=\s*\(tfOrdinaryDesktop\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice');
+  assert.match(tone, /TF\.skipCurrentWord\(\)[^>]*>跳過<\/button>/, 'Tone: Desktop gameplay must expose neutral 跳過');
+  assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
   assert.match(tone, /if \(S\.step === 'session-guess' && !tfCurWordNoTools\(\)\)[\s\S]{0,120}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active question must return to the explicit start gate');
   assert.match(tone, /function tfArmGuideIntroForPageReturn\(\)[\s\S]{0,400}currentWordGuideIntroPending\s*=\s*true/, 'Tone: returning to a preserved page must re-arm the guided-question gate');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=65/, 'Tone: page must request the rebuilt Guest runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=66/, 'Tone: page must request the rebuilt Guest runtime version');
 });
 
 test('active Desktop D4-D5 keeps manual question/result flow and optional Hint carry-off', () => {
@@ -528,6 +538,10 @@ test('active Desktop D4-D5 keeps manual question/result flow and optional Hint c
 
   assert.match(tone.appText, /nextBtnLabel\s*=\s*session\s*\?\s*'下一題 →'/, 'Tone question transition must use 下一題');
   assert.match(tone.appText, /tfGuideMode\s*&&\s*\(!isMultiSyl\s*\|\|\s*isLastSyl\)[\s\S]{0,240}gsh-desktop-hint-off[\s\S]{0,120}TF\.toggleGuide\(\)/, 'Tone must offer optional Hint-off only at the end of a question');
+  assert.match(tone.htmlText, /result-v2-actions \.gsh-desktop-hint-off \{ order:1; \}[\s\S]{0,140}result-v2-actions #tf-session-next-btn \{ order:2; \}/, 'Tone Desktop must order Hint-off before Next');
+  assert.match(tone.htmlText, /#tf-session-counter \{[\s\S]{0,180}align-items:center; justify-content:center;[\s\S]{0,120}line-height:24px/, 'Tone Desktop counter must be vertically centered');
+  assert.match(tone.htmlText, /\.tf-tools-row \{ gap:10px; margin-bottom:10px; \}[\s\S]{0,180}\.gsh-session-header \{ gap:10px; padding:0 0 10px; \}/, 'Tone Desktop utility, level and counter rows must use one vertical rhythm');
+  assert.match(tone.appText, /tf-level-select tf-alpha-surface/g, 'Tone alphabet pages must share one complete color surface');
   assert.match(reading.htmlText, /id="btn-next"[^>]*>下一題 →<\/button>[\s\S]{0,260}id="rg-hint-off-next"[^>]+data-visible="false"[^>]+setRgGuideMode\(false\)[^>]*>關閉提示<\/button>/, 'Reading feedback must keep manual Next plus optional Hint-off');
   assert.match(typing.htmlText, /id="btn-next"[^>]*>下一題 →<\/button>[\s\S]{0,260}id="tg-hint-off-next"[^>]+data-visible="false"[^>]+tgChooseGuideMode\(false\)[^>]*>關閉提示<\/button>/, 'Typing feedback must keep manual Next plus optional Hint-off');
   assert.match(reading.appText, /function rgSyncHintOffAction\(\)[\s\S]{0,360}rgGuideMode[\s\S]{0,160}nextButton\.style\.display!==['"]none['"]/, 'Reading Hint-off visibility must follow the carried Hint state and visible Next action');

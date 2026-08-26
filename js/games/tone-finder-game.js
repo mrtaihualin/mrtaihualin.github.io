@@ -677,16 +677,32 @@ function tfWireToneKeyboard() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireToneKeyboard); else tfWireToneKeyboard();
 
-// ── กด Enter = กดปุ่ม tf-session-next-btn (ปุ่มเดียวกัน 4 ข้อความ: 下一個音節→ / 太棒了，我們繼續→ / 來看看我們的成果吧🎉 / 分析新單字) — Lin สั่ง 2026-07-31 ──
-// ล้อกับตรรกะเดียวกับเกมอ่าน/เกมพิมพ์: ห้ามชนกับการพิมพ์ในช่อง input/textarea หรือมี popup เปิดอยู่
+function tfOrdinaryDesktop() {
+  return !!(window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 601px)').matches);
+}
+
+// Desktop Enter starts an explicit guided question or uses the visible Next action.
+// It must never activate the remembered/skip action or collide with editable controls.
 function tfWireEnterNext() {
   document.addEventListener('keydown', function (e) {
-    if (e.key !== 'Enter') return;
-    var tag = (document.activeElement && document.activeElement.tagName) || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.key !== 'Enter' || e.defaultPrevented || e.repeat || e.isComposing) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    var active = e.target || document.activeElement;
+    var tag = (active && active.tagName) || '';
+    if (tfOrdinaryDesktop() && active && active.closest && active.closest('.tf-known-btn')) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(tag) || (active && active.isContentEditable)) return;
     if (document.querySelector('.sg-start-overlay, .tf-ask-overlay, #tf-reveal-ov, #tf-ask-ov')) return; // popup เปิดอยู่ ห้ามชน
-    var btn = document.getElementById('tf-session-next-btn');
-    if (btn && btn.offsetParent !== null) { btn.click(); e.preventDefault(); }
+    var btn = tfOrdinaryDesktop() ? document.getElementById('tf-guide-start-btn') : null;
+    if (!btn) btn = document.getElementById('tf-session-next-btn');
+    if (btn && btn.offsetParent !== null && !btn.disabled) {
+      btn.click();
+      e.preventDefault();
+      e.stopPropagation();
+    }
   });
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tfWireEnterNext); else tfWireEnterNext();
@@ -1070,7 +1086,7 @@ function tfChallengeBump(session) {
   var pack = tfChallengeState(), ch = pack.ch, st = pack.st;
   if (st.done) { tfSaveChallenge(st); return; }
   var add = 0;
-  if (ch.type === 'correct') add = session.results.filter(function (r) { return (r.mistakes || 0) === 0 && !r.forced; }).length;
+  if (ch.type === 'correct') add = session.results.filter(function (r) { return !r.skipped && (r.mistakes || 0) === 0 && !r.forced; }).length;
   else if (ch.type === 'sets') add = 1;
   else if (ch.type === 'perfect') add = session.isPerfect ? 1 : 0;
   else if (ch.type === 'combo') add = (session.maxCombo || 0) >= ch.target ? ch.target : 0;
@@ -2225,7 +2241,7 @@ function render() {
       GameFlow.markResult(body);
       setTimeout(function(){
         var actions=body.querySelector('.gsh-end-actions');
-        var correct=session&&session.results?session.results.filter(function(r){return (r.mistakes||0)===0;}).length:0;
+        var correct=session&&session.results?session.results.filter(function(r){return !r.skipped&&(r.mistakes||0)===0;}).length:0;
         var total=session&&session.results?session.results.length:0;
         var hl=[];
         if(tfSrsLoggedIn()&&window.GAME_ACCOUNT){var gs=GAME_ACCOUNT.getStreak();if(gs)hl.push('🔥 連續 '+gs+' 天');if(session&&session.newBadges&&session.newBadges.length)hl.push('🎖️ '+session.newBadges[session.newBadges.length-1].zh);}
@@ -2246,7 +2262,9 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      body.innerHTML += '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+      body.innerHTML += tfOrdinaryDesktop()
+        ? '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>'
+        : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
     }
   }
 
@@ -2458,6 +2476,7 @@ function buildReportInner() {
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function statusLabel(r){
+    if (r.is_skipped) return '<span style="color:#8B6310;">跳過</span>';
     if (loggedIn && r.mastered_state) return '<span style="color:#8B6310;">✓ 已精通</span>';
     if (!r.is_correct) return '<span style="color:#c62828;">✗ 答錯</span>';
     return '<span style="color:#2e7d32;">✓ 答對</span>';
@@ -2543,7 +2562,7 @@ function stepSessionSummary() {
   if (!session) return '';
   var results = session.results;
   var total = results.length;
-  var perfectCount = results.filter(function(r){ return r.mistakes === 0; }).length;
+  var perfectCount = results.filter(function(r){ return !r.skipped && r.mistakes === 0; }).length;
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event','tone_finder_complete',{category:'game',score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
@@ -2553,7 +2572,7 @@ function stepSessionSummary() {
     try{
       if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
         difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
-        items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,mastered:false};}),
+        items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,skipped:!!r.skipped,mastered:false};}),
         roundBonus:Number(session.bonusAwarded)||0,
         srsBonus:Number(session.srsReviewBonus)||0
       });
@@ -2566,13 +2585,14 @@ function stepSessionSummary() {
     var tone = r.linguistic && r.linguistic.correct_tone;
     var tl = TONES[tone] || {};
     var ok = r.is_correct;
-    var resultTxt = ok ? '✓' : '✗ ×'+r.wrong_count;
+    var resultTxt = r.is_skipped ? '跳過' : (ok ? '✓' : '✗ ×'+r.wrong_count);
+    var resultColor = r.is_skipped ? '#8B6310' : (ok ? '#7ec87e' : '#ff7c7c');
     return '<tr>' +
       '<td style="color:#bbb;font-size:12px;width:24px;">'+(i+1)+'</td>' +
       '<td class="tf-sum-th">'+r.question+'<div style="font-size:10px;font-weight:400;color:#999;">作答：'+(r.user_answer||'—')+'<br>正解：'+(r.correct_answer||'—')+'</div></td>' +
       '<td>'+r.meaning+'</td>' +
       '<td style="color:'+(tl.color||'#666')+'">'+(tl.zh||'—')+'</td>' +
-      '<td style="color:'+(ok?'#7ec87e':'#ff7c7c')+';font-weight:700">'+resultTxt+'</td>' +
+      '<td style="color:'+resultColor+';font-weight:700">'+resultTxt+'</td>' +
       '<td style="color:#8B6310;font-weight:700;text-align:right;">'+(r.item_score||0)+'</td>' +
     '</tr>';
   }).join('');
@@ -2682,7 +2702,7 @@ function stepAlphaHome() {
     {emoji:'🔡', label:'母音', sub:'短母音／長母音', fn:'TF.alphaVowels()'},
     {emoji:'🔚', label:'尾音', sub:'8 個尾音類別', fn:'TF.alphaEndings()'}
   ];
-  return '<div class="tf-level-select">' +
+  return '<div class="tf-level-select tf-alpha-surface">' +
     '<div class="tf-level-title">字母練習區</div>' +
     cats.map(function(c){
       return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_category_select\',{category:\'game\',category_name:\''+c.label+'\'});}catch(e){}'+c.fn+'">' +
@@ -2702,7 +2722,7 @@ function stepAlphaConsonant() {
     {label:'低子音', sub:ALPHA.consonant.low.sub,  fn:"TF.startFlashcards('low')"},
     {label:'遺忘版', sub:'三類少用字母混合複習', fn:"TF.startFlashcards('forgot')"}
   ];
-  return '<div class="tf-level-select">' +
+  return '<div class="tf-level-select tf-alpha-surface">' +
     '<div class="tf-level-title">子音 — 選擇分類</div>' +
     btns.map(function(b){
       return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_subcat_select\',{category:\'game\',subcat:\''+b.label+'\'});}catch(e){}'+b.fn+'">' +
@@ -2720,7 +2740,7 @@ function stepAlphaVowel() {
     {label:'長母音', sub:'15 個', fn:"TF.startFlashcards('v_long')"},
     {label:'全部混合', sub:'短母音＋長母音', fn:"TF.startFlashcards('v_all')"}
   ];
-  return '<div class="tf-level-select">' +
+  return '<div class="tf-level-select tf-alpha-surface">' +
     '<div class="tf-level-title">母音 — 選擇分類</div>' +
     btns.map(function(b){
       return '<button class="tf-level-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_alpha_subcat_select\',{category:\'game\',subcat:\''+b.label+'\'});}catch(e){}'+b.fn+'">' +
@@ -2759,7 +2779,7 @@ function stepAlphaFlashcard() {
     actionBtn = '<button class="afc-audio-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_play_audio\',{category:\'game\'});}catch(e){}TF.flashSpeak()">🔊 播放發音</button>';
     var frontTap = '點擊翻面看注音／拼音';
   }
-  return '<div class="tf-level-select">' +
+  return '<div class="tf-level-select tf-alpha-surface">' +
     '<div class="tf-level-title">'+flash.title+'</div>' +
     '<div class="afc-scene">' +
       '<div class="afc-card'+(flash.flipped?' flipped':'')+'" id="afc-card" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_flash_flip_click\',{category:\'game\'});}catch(e){}TF.flashFlip()">' +
@@ -3170,7 +3190,7 @@ function stepSessionGuess() {
   var word = S.word || entry.word;
   if (tfGuideMode && session.currentWordGuideIntroPending && !tfCurWordNoTools()) {
     return '<div style="text-align:center;padding:18px 0 14px;">' +
-      '<button class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">開始練習</button>' +
+      '<button type="button" id="tf-guide-start-btn" class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">開始練習</button>' +
     '</div>';
   }
   var bd = getBreakdown(word);
@@ -3344,7 +3364,7 @@ function stepResult() {
     var initialGuess = session.initialGuess;
     var igTone = initialGuess && initialGuess !== 0 ? TONES[initialGuess] : null;
     var igLabel = initialGuess === 0 ? '不確定' : (igTone ? igTone.zh : '—');
-    var guessRow = '<div style="margin-bottom:8px;">'+
+    var guessRow = (tfOrdinaryDesktop() && initialGuess == null) ? '' : '<div style="margin-bottom:8px;">'+
       '<span class="result-v2-guess-label" style="margin-right:5px;">你的選擇</span>'+
       '<span class="result-v2-guess-val" style="color:'+(igTone ? igTone.color : '#aaa')+';">'+igLabel+'</span>'+
     '</div>';
@@ -3829,6 +3849,60 @@ var TF = {
     hist.push(S); histPos++;
     render();
   },
+  // Desktop neutral skip: no answer, score, Combo, SRS, or countdown.
+  skipCurrentWord: function() {
+    if (!session || !tfOrdinaryDesktop()) return;
+    var entry = session.words[session.index];
+    if (!entry) return;
+    var awarded = Math.max(0, Number(session.currentWordScore) || 0);
+    if (awarded) session.score = Math.max(0, (Number(session.score) || 0) - awarded);
+    session.currentWordScore = 0;
+    session.curWordSylRawSum = 0;
+    session.hadSkip = true;
+    session.results.push({
+      entry: entry,
+      tone: computeTone(entry.word),
+      mistakes: 0,
+      initialGuess: undefined,
+      finalAnswer: undefined,
+      attempts: [],
+      hintUsed: false,
+      score: 0,
+      firstTry: false,
+      golden: false,
+      forced: false,
+      skipped: true,
+      skipReason: 'user_skip',
+      needReview: false
+    });
+    if (roundReport && window.RoundReport) {
+      var _skipSentence = selectedLevel === 3 && advSentenceCtx && advSentenceCtx.th;
+      RoundReport.addItem(roundReport, {
+        content_ref: { source: _skipSentence ? 'game_sentences' : 'game_words', key: _skipSentence || (entry.word + '@' + (selectedLevel || 1)) },
+        question: entry.word,
+        meaning: entry.zh || '',
+        attempts: [],
+        user_answer: '',
+        correct_answer: '',
+        is_correct: false,
+        is_skipped: true,
+        skip_reason: 'user_skip',
+        wrong_count: 0,
+        item_score: 0,
+        hint_used: false,
+        linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, read_syls: entry.readSyls || null },
+        words: (_skipSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : []
+      });
+    }
+    session.index++;
+    tfResetWordScoring();
+    session.initialGuess = undefined;
+    session.finalAnswer = undefined;
+    session.currentWordGolden = false;
+    tfSaveResumeState();
+    if (session.index >= session.words.length) tfGoToSummary();
+    else tfSetupNextWord();
+  },
   // 高級：เริ่มเล่นประโยคเต็ม 1 ประโยค — words[] ของประโยคกลายเป็น session เดียว (Lin 2026-07-03)
   // ใช้ startSetSession เดิมทุกอย่าง (คำทอง/คอมโบ/โบนัสจบชุด) แค่ส่ง entry object ตรงๆ ไม่ query WORD_LIST + ห้ามสลับลำดับคำ
   startAdvSentence: function(idx) {
@@ -4087,7 +4161,14 @@ var TF = {
   startGuidedQuestion: function() {
     if (!session || !session.currentWordGuideIntroPending || !S || S.step !== 'session-guess') return;
     session.currentWordGuideIntroPending = false;
-    render();
+    if (tfOrdinaryDesktop()) {
+      tfFireStartOnce();
+      session.initialGuess = undefined;
+      session.currentWordToneAttempts = [];
+      navigateToInflection();
+    } else {
+      render();
+    }
     try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
   },
   // ── D2 (2026-08-10): ปุ่ม [ 查看詳細解說 ] opt-in ในหน้าเฉลย — สลับเปิด/ปิดกล่อง .gsh-detail-box ที่อยู่ถัดจากปุ่มนี้ ──
