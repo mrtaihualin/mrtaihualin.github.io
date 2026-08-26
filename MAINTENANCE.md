@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-23 Asia/Bangkok** — Time Auto Plan Initial Queue → Rotation local fix
+**Updated: 2026-08-26 Asia/Bangkok** — Login callback credential-fragment fail-closed fix
+
+## 2026-08-26 — Login callback credential-fragment fail-closed (`PASS_LOCAL / RELEASE_PENDING`)
+
+- A controlled Google Login preview proved that a redirect not present in the Production Auth allow-list falls back to the Production Site URL. Minimum Guest mode intentionally does not initialize an Auth client, so the OAuth credential fragment could remain visible in the address bar instead of being consumed.
+- `minimum-guest-launch.js` now removes only recognized Auth callback fragments before any Guest routing/UI work. Ordinary anchors remain unchanged, Login stays publicly off and no SRS/feature/game UI behavior is enabled.
+- Added executable coverage for credential-fragment removal and normal-anchor preservation. No credential value, private identity or session identifier is recorded; no Auth/config, account, database, SRS or Production mutation is part of this source Delta.
+
+**Prior update: 2026-08-23 Asia/Bangkok** — Time Auto Plan Initial Queue → Rotation local fix
 
 ## 2026-08-23 — Time Auto Plan Initial Queue → persistent Rotation (`PASS_LOCAL / RELEASE_REVIEW_PENDING`)
 
