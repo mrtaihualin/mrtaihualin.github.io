@@ -345,7 +345,11 @@
       // (เช่น ผู้เล่นเคยกดลิงก์ href="#" ในหน้า) Supabase จะเอา redirectTo นี้ไปต่อท้ายด้วย #access_token=...
       // กลายเป็น "##access_token=..." ซึ่ง Google มองว่า URL ผิดรูปแบบ แล้วปฏิเสธด้วยหน้า error ตรงๆ ("400. That's an error.")
       var cleanRedirect = location.href.split('#')[0];
-      sb.auth.signInWithOAuth({ provider: supabaseProvider, options: { redirectTo: cleanRedirect } })
+      var oauthOptions = { redirectTo: cleanRedirect };
+      // Account-switch safety: Google otherwise reuses the provider session and
+      // silently signs the previous account back in after a local logout.
+      if (supabaseProvider === 'google') oauthOptions.queryParams = { prompt: 'select_account' };
+      sb.auth.signInWithOAuth({ provider: supabaseProvider, options: oauthOptions })
         .then(function (res) { if (res && res.error) onFail(res.error.message); }, function (e) { onFail(e && e.message || e); })
         .catch(function (e) { onFail(e && e.message || e); });
     } catch (e) { onFail(e && e.message || e); }

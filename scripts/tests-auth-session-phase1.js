@@ -226,6 +226,13 @@ async function test(label, fn) {
     assert.ok(/shouldCreateUser: true/.test(otpSource));
   });
 
+  await test('Google login always opens account chooser for safe account switching', async () => {
+    const oauthFlow = otpSource.slice(otpSource.indexOf('function oauthLogin'), otpSource.indexOf('function randomToken'));
+    assert.match(oauthFlow, /supabaseProvider === 'google'/);
+    assert.match(oauthFlow, /queryParams = \{ prompt: 'select_account' \}/);
+    assert.match(oauthFlow, /signInWithOAuth\(\{ provider: supabaseProvider, options: oauthOptions \}\)/);
+  });
+
   await test('email OTP public responses do not expose provider or account-existence errors', async () => {
     const requestFlow = otpSource.slice(otpSource.indexOf('function startOtp'), otpSource.indexOf('function verifyCode'));
     assert.ok(/暫時無法寄送驗證碼，請稍後再試/.test(requestFlow));

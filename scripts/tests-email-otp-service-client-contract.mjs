@@ -173,7 +173,7 @@ test('only preserved personal Auth surfaces retain the parked config cache bindi
   }
   for (const file of expectedReadingAuthConsumers) {
     const html = read(file);
-    assert.match(html, /js\/games\/reading-auth\.js\?v=26/);
+    assert.match(html, /js\/games\/reading-auth\.js\?v=27/);
   }
 });
 
