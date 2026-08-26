@@ -83,6 +83,20 @@ test('all five games expose the locked shared header, progress and resume semant
   assert.match(games.find((g) => g.id === 'typing').htmlText, /<div class="card gsh-gameplay" id="game">/, 'Typing: gameplay class ต้องอยู่บน outer game card');
 });
 
+test('active Desktop games keep the canonical level, progress and gameplay order', () => {
+  for (const id of ['tone', 'reading', 'typing']) {
+    const html = games.find((g) => g.id === id).htmlText;
+    const toolsAt = html.indexOf(id === 'tone' ? '<div class="tf-tools-row">' : '<div class="rg-tools-row">');
+    const sessionAt = html.indexOf('<div class="gsh-session-header">', toolsAt);
+    const resumeAt = html.indexOf('class="gsh-resume-banner"', sessionAt);
+    const gameplayAt = html.indexOf('gsh-gameplay', resumeAt);
+    assert.ok(toolsAt > -1 && sessionAt > toolsAt && resumeAt > sessionAt && gameplayAt > resumeAt, `${id}: Desktop order must be account/tools → level/progress → resume → gameplay`);
+  }
+  const wordOrder = games.find((g) => g.id === 'wordorder').htmlText;
+  assert.doesNotMatch(wordOrder, /gsh-level-selector/, 'Word Order must not invent a level selector');
+  assert.match(wordOrder, /class="card gsh-gameplay"[\s\S]{0,500}class="gsh-session-header"[\s\S]{0,500}class="bars-wrap gsh-progress"/, 'Word Order keeps its single-level session status above progress inside gameplay');
+});
+
 test('shared shell stays bounded and resume actions stay compact on narrow screens', () => {
   assert.match(sharedCss, /\.gsh-shell\s*\{[^}]*max-width:688px[^}]*box-sizing:border-box/);
   assert.match(sharedCss, /\.gsh-gameplay\s*\{[^}]*max-width:640px[^}]*box-sizing:border-box/);

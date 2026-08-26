@@ -1580,10 +1580,6 @@ document.addEventListener('contextmenu', function(e){
     <button class="tf-tool-btn" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlpha()">🔤 字母練習區</button>
   </div>
 
-  <!-- E3 (2026-08-10): แถบชวนกลับไปเล่นชุดคำ/ประโยคที่ค้างไว้ (guest-only, localStorage ผ่าน window.GameResume ใน shared.js)
-       ซ่อนอยู่โดย default — tone-finder-game.js เป็นคนสั่งโชว์ (tfShowResumeBannerIfAny) เฉพาะตอนเจอ resume state ค้างจริงเท่านั้น -->
-  <div class="gsh-resume-banner" id="tf-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;"></div>
-
   <!-- Phase C.1 (2026-08-10): #tf-session-counter (進度/🏆分數/🔥combo/黃金米題) ย้ายมาอยู่กลุ่มเดียวกับระดับ初/中/高
        เดิมทั้งก้อนนี้ถูกสร้างเป็น string ฝังอยู่ใน #tf-banner (banner.innerHTML) ผ่าน counterHtml ใน render()
        (tone-finder-game.js) — แก้ render() ให้แยก counterHtml ออกมาใส่ container นี้แทน ส่วนหลอด進度/⚡ (tfBarsHtml())
@@ -1598,6 +1594,11 @@ document.addEventListener('contextmenu', function(e){
     </div>
     <div class="tf-banner-counter" id="tf-session-counter"></div>
   </div>
+
+  <!-- E3 (2026-08-10): แถบชวนกลับไปเล่นชุดคำ/ประโยคที่ค้างไว้ (guest-only, localStorage ผ่าน window.GameResume ใน shared.js)
+       ซ่อนอยู่โดย default — tone-finder-game.js เป็นคนสั่งโชว์ (tfShowResumeBannerIfAny) เฉพาะตอนเจอ resume state ค้างจริงเท่านั้น
+       Desktop order: header → account/tools → level/progress → resume → gameplay, matching Reading/Typing. -->
+  <div class="gsh-resume-banner" id="tf-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;"></div>
 
   <div class="tf-card gsh-gameplay">
     <div class="tf-word-banner" id="tf-banner"></div>
