@@ -181,6 +181,9 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 /* ── 工具列 ── */
 .rg-tools-row{display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:640px;padding-bottom:2px;}
 .tf-streak-chip{font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:700;background:rgba(139,99,16,0.10);color:var(--gold);border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;}
+@media (min-width:769px) and (min-height:601px){
+  body[data-gsh-game="listening"] .lg-account-context-chip{display:none;}
+}
 
 /* ── mobile breakpoints (เหมือนเกมพิมพ์/เกมลำดับคำ) ── */
 @media(max-width:420px){
@@ -260,7 +263,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
 
 <div class="rg-tools-row">
   <div class="gsh-player-status" style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;width:100%;box-sizing:border-box;background:var(--cream);border:1.5px solid var(--gold-bright);border-radius:16px;padding:10px 12px;">
-    <span class="tf-streak-chip">🎧 一輪 10 題，聽音辨字</span>
+    <span class="tf-streak-chip lg-account-context-chip">🎧 一輪 10 題，聽音辨字</span>
     <button class="tf-streak-chip" id="lg-howto-btn" type="button" onclick="document.getElementById('lg-howto-modal').style.display='flex';if(window.__lgHowtoModalReg)window.__lgHowtoModalReg.notifyOpen(this)" style="border:0;cursor:pointer;">📖 玩法</button>
     <span id="rg-login-slot" style="margin-left:auto;"></span>
   </div>

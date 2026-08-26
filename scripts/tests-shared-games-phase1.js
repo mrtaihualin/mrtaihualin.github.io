@@ -36,6 +36,12 @@ test('all five games use one shared-width shell and one auth slot', () => {
   }
 });
 
+test('Listening keeps its ordinary Desktop Account Bar compact without changing mobile surfaces', () => {
+  const listening = games.find((g) => g.id === 'listening').htmlText;
+  assert.match(listening, /tf-streak-chip lg-account-context-chip/, 'Listening needs an explicit hook for its duplicate round context');
+  assert.match(listening, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,180}\.lg-account-context-chip\{display:none;\}/, 'Listening must hide only the duplicate context on ordinary Desktop');
+});
+
 test('all five games expose the locked shared header, progress and resume semantics', () => {
   for (const g of games) {
     assert.match(g.htmlText, /gsh-page-header/, `${g.id}: header ยังไม่ใช้ shared contract`);
