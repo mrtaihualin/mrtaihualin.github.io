@@ -52,11 +52,16 @@ GAME_PAGES.forEach((page) => {
   if (text === null) { fail(`A: ${page}`, 'ไม่พบไฟล์'); return; }
   const hasLoaderScript = /src=["']js\/games\/game-content-client\.js/.test(text);
   const hasBootCall = /GameContentLoader\.boot\(/.test(text);
+  const isPausedListening = page === 'listening-game.html' &&
+    /data-listening-availability="coming-soon"/.test(text) &&
+    /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/.test(text);
   const hasOldDataScript = /src=["']data\/(words-data|adv-sentences)\.js/.test(text);
   if (!hasLoaderScript) fail(`A: ${page}`, 'ไม่โหลด js/games/game-content-client.js');
-  if (!hasBootCall) fail(`A: ${page}`, 'ไม่เรียก GameContentLoader.boot(...)');
+  if (!hasBootCall && !isPausedListening) fail(`A: ${page}`, 'ไม่เรียก GameContentLoader.boot(...)');
   if (hasOldDataScript) fail(`A: ${page}`, 'ยังโหลด data/words-data.js หรือ data/adv-sentences.js ตรงๆ (ช่องโหว่เดิมที่แก้ไปแล้วอาจกลับมา)');
-  if (hasLoaderScript && hasBootCall && !hasOldDataScript) ok(`A: ${page} โหลดผ่าน game-content-client.js อย่างเดียว`);
+  if (hasLoaderScript && (hasBootCall || isPausedListening) && !hasOldDataScript) {
+    ok(isPausedListening ? `A: ${page} เก็บ runtime ไว้แต่ไม่ boot ระหว่างขึ้น 即將開幕` : `A: ${page} โหลดผ่าน game-content-client.js อย่างเดียว`);
+  }
 });
 
 // lego.html ตั้งใจไม่ใช้ระบบนี้ (คนละคลังข้อมูล) — เช็คว่าไม่มีร่องรอยเก่าหลงเหลือที่จะ error เงียบ

@@ -75,7 +75,8 @@
   .gh-desc{font-size:12.5px;color:#8b6310;line-height:1.5;min-height:2.25em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .gh-go{margin-top:4px;background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;font-weight:700;font-size:13px;padding:7px 18px;border-radius:999px;display:inline-block;}
   .gh-body{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0;width:100%;}
-  .gh-soon{opacity:.55;}
+  .gh-soon{opacity:.55;cursor:default;}
+  .gh-soon:hover{transform:none;box-shadow:0 4px 20px rgba(90,62,10,.08);}
   .gh-soon .gh-go{background:#d8d0c0;}
   .gh-badge{position:absolute;top:-9px;right:12px;background:#8B6310;color:#F3E4C2;font-size:10px;font-weight:900;padding:3px 9px;border-radius:999px;}
   .gh-section-label{font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:#5a3e10;margin:36px 0 14px;text-align:left;}
@@ -267,7 +268,7 @@
   <a class="gh-back" href="games.html">← 返回遊戲中心</a>
 
   <h1>🎮 泰語遊戲練習室</h1>
-  <p class="gh-sub">5 款 Guest 練習遊戲，不需要登入，選一個開始玩。</p>
+  <p class="gh-sub">4 款 Guest 練習遊戲直接開始，聽力練習室即將開幕。</p>
 
   <!-- 5 การ์ดเกม — ทางเลือกเท่าเทียมกัน ห้ามเกมไหนเด่นกว่าเกมอื่น (Decision 2026-08-10) -->
   <div class="gh-grid">
@@ -289,15 +290,15 @@
       </div>
     </a>
 
-    <a class="gh-card" href="listening-game.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'listening_game',from:'games_practice'})">
-      <span class="gh-badge">測試中</span>
+    <div class="gh-card gh-soon" data-game-availability="coming-soon" role="status" aria-label="泰語聽力練習室 即將開幕">
+      <span class="gh-badge">即將開幕</span>
       <div class="gh-emoji">🎧</div>
       <div class="gh-body">
         <div class="gh-title">泰語聽力練習室</div>
         <div class="gh-desc">聽發音選出來或打出來，練耳朵也練拼寫。</div>
-        <span class="gh-go">開始玩 →</span>
+        <span class="gh-go">即將開幕</span>
       </div>
-    </a>
+    </div>
 
     <a class="gh-card" href="typing-game.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'typing_game',from:'games_practice'})">
       <div class="gh-emoji">⌨️</div>

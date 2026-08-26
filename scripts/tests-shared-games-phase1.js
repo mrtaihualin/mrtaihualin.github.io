@@ -42,6 +42,18 @@ test('Listening keeps its ordinary Desktop Account Bar compact without changing 
   assert.match(listening, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,180}\.lg-account-context-chip\{display:none;\}/, 'Listening must hide only the duplicate context on ordinary Desktop');
 });
 
+test('Listening is temporarily closed without deleting its paused game implementation', () => {
+  const practice = fs.readFileSync(path.join(root, 'games-practice.html'), 'utf8');
+  const listening = games.find((g) => g.id === 'listening').htmlText;
+  assert.match(practice, /class="gh-card gh-soon"[^>]+data-game-availability="coming-soon"/);
+  assert.doesNotMatch(practice, /<a[^>]+href="listening-game\.html"/);
+  assert.match(listening, /data-listening-availability="coming-soon"/);
+  assert.match(listening, /id="listening-coming-soon"[\s\S]{0,500}即將開幕/);
+  assert.match(listening, /id="listening-live-game"[^>]+aria-hidden="true"/);
+  assert.match(listening, /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
+  assert.doesNotMatch(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
+});
+
 test('Tone ordinary Desktop main and secondary headers exactly match the Core game header contract', () => {
   const toneGame = games.find((g) => g.id === 'tone');
   const tone = toneGame.htmlText;
@@ -89,7 +101,7 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
     lego: legoHtml,
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
-    assert.match(html, new RegExp(`<body data-gsh-game="${id}">`), `${id}: missing landscape scope marker`);
+    assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${id}"[^>]*>`), `${id}: missing landscape scope marker`);
     assert.match(html, /css\/shared\.css\?v=26/, `${id}: must load current landscape CSS`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
