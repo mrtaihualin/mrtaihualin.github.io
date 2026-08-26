@@ -1446,6 +1446,7 @@ function setGameBtns(mode){
     if(re)re.style.display='none';ch.style.display='none';nx.style.display='';
     if(window.GameFlow)setTimeout(function(){GameFlow.start({key:'typing-game',nextButton:nx,delaySeconds:3});},0);
   }
+  tgSyncHintOffAction();
 }
 
 function markOpts(){
@@ -1861,6 +1862,13 @@ function setGuideMode(on){
     else { note.innerHTML='🔥 <b>計分模式</b>・答對得分並更新複習進度'; note.style.background='#e8f5e9'; note.style.color='#2e7d32'; }
   });
   try{rgTypeHighlightNextKey();}catch(e){}
+  tgSyncHintOffAction();
+}
+function tgSyncHintOffAction(){
+  var action=document.getElementById('tg-hint-off-next');
+  var nextButton=document.getElementById('btn-next');
+  if(!action)return;
+  action.setAttribute('data-visible',guideMode&&nextButton&&nextButton.style.display!=='none'?'true':'false');
 }
 setGuideMode(guideMode); // ตั้งสถานะปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 

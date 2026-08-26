@@ -124,7 +124,7 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${id}"[^>]*>`), `${id}: missing landscape scope marker`);
-    const sharedCssVersion = ['tone', 'reading', 'typing', 'word-order'].includes(id) ? 28 : 26;
+    const sharedCssVersion = ['tone', 'reading', 'typing', 'word-order'].includes(id) ? 29 : 26;
     assert.match(html, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${id}: must load current landscape CSS`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
@@ -349,7 +349,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    const sharedCssVersion = ['tone', 'reading', 'typing', 'wordorder'].includes(g.id) ? 28 : 26;
+    const sharedCssVersion = ['tone', 'reading', 'typing', 'wordorder'].includes(g.id) ? 29 : 26;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
     assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=40/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
@@ -509,7 +509,34 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=64/, 'Tone: page must request the rebuilt Guest runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=65/, 'Tone: page must request the rebuilt Guest runtime version');
+});
+
+test('active Desktop D4-D5 keeps manual question/result flow and optional Hint carry-off', () => {
+  const tone = games.find((g) => g.id === 'tone');
+  const reading = games.find((g) => g.id === 'reading');
+  const typing = games.find((g) => g.id === 'typing');
+  const wordOrder = games.find((g) => g.id === 'wordorder');
+  const flow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
+
+  for (const game of [tone, reading, typing, wordOrder]) {
+    assert.match(game.htmlText, /css\/shared\.css\?v=29/, `${game.id}: must request the D4 Desktop CSS`);
+    assert.match(game.appText, /GameFlow\.enhanceResult/, `${game.id}: Result must keep the shared manual replay flow`);
+  }
+  assert.doesNotMatch(flow, /下一輪將在|game_auto_next_pause/, 'shared question/Result flow must not restore countdown copy or pause controls');
+  assert.match(flow, /event\.key !== 'Enter'[\s\S]{0,1200}button\.click\(\)/, 'Result Enter must replay only through the visible shared action');
+
+  assert.match(tone.appText, /nextBtnLabel\s*=\s*session\s*\?\s*'下一題 →'/, 'Tone question transition must use 下一題');
+  assert.match(tone.appText, /tfGuideMode\s*&&\s*\(!isMultiSyl\s*\|\|\s*isLastSyl\)[\s\S]{0,240}gsh-desktop-hint-off[\s\S]{0,120}TF\.toggleGuide\(\)/, 'Tone must offer optional Hint-off only at the end of a question');
+  assert.match(reading.htmlText, /id="btn-next"[^>]*>下一題 →<\/button>[\s\S]{0,260}id="rg-hint-off-next"[^>]+data-visible="false"[^>]+setRgGuideMode\(false\)[^>]*>關閉提示<\/button>/, 'Reading feedback must keep manual Next plus optional Hint-off');
+  assert.match(typing.htmlText, /id="btn-next"[^>]*>下一題 →<\/button>[\s\S]{0,260}id="tg-hint-off-next"[^>]+data-visible="false"[^>]+tgChooseGuideMode\(false\)[^>]*>關閉提示<\/button>/, 'Typing feedback must keep manual Next plus optional Hint-off');
+  assert.match(reading.appText, /function rgSyncHintOffAction\(\)[\s\S]{0,360}rgGuideMode[\s\S]{0,160}nextButton\.style\.display!==['"]none['"]/, 'Reading Hint-off visibility must follow the carried Hint state and visible Next action');
+  assert.match(typing.appText, /function tgSyncHintOffAction\(\)[\s\S]{0,360}guideMode[\s\S]{0,160}nextButton\.style\.display!==['"]none['"]/, 'Typing Hint-off visibility must follow the carried Hint state and visible Next action');
+  assert.match(sharedCss, /\.gsh-desktop-hint-off \{ display:none !important; \}/, 'Hint-off action must default to hidden outside ordinary Desktop');
+  assert.match(sharedCss, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]*?gsh-desktop-hint-off\[data-visible="true"\] \{ display:inline-flex !important; \}/, 'Hint-off action must become available only in ordinary Desktop');
+
+  assert.match(wordOrder.htmlText, /id="wo-next-btn"[^>]*>下一題 →<\/button>/, 'Word Order button must use 下一題');
+  assert.match(wordOrder.appText, /document\.addEventListener\('keydown'[\s\S]*?event\.key!==['"]Enter['"][\s\S]*?nextButton\.click\(\)[\s\S]{0,80}true\);/, 'Word Order Enter must trigger the enabled visible Next action once');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);

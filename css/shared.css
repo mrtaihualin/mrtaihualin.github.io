@@ -657,6 +657,9 @@ body .gsh-shell.tf-page { padding-top:8px; }
   font-family:'Noto Sans TC',sans-serif; font-size:13px !important; font-weight:800;
 }
 
+/* D4: optional Hint-off action belongs to ordinary Desktop question feedback only. */
+.gsh-desktop-hint-off { display:none !important; }
+
 /* Ordinary Desktop: games with Level always keep Level and round status on two separate rows. */
 @media (min-width:769px) and (min-height:601px){
   body[data-gsh-game="tone"] .gsh-session-header,
@@ -696,6 +699,7 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game] .gsh-learning-tools > #tf-vault-btn-slot,
   body[data-gsh-game] .gsh-learning-tools > #rg-vault-btn-slot { order:9; }
   body[data-gsh-game="typing"] .gsh-learning-tools > #rg-webkbd-toggle { display:none !important; }
+  body[data-gsh-game] .gsh-desktop-hint-off[data-visible="true"] { display:inline-flex !important; }
 }
 
 .gsh-progress { width:100%; max-width:640px; margin:0 0 12px; }

@@ -349,6 +349,13 @@ function setRgGuideMode(on){
   updateActiveSlot();
   // Hint ที่แสดงแล้วล็อกคะแนนคำนี้เป็น 0 ทันที; ปิด Hint ภายหลังต้องไม่ทำให้ HUD คืนเป็น 10
   refreshUI();
+  rgSyncHintOffAction();
+}
+function rgSyncHintOffAction(){
+  var action=document.getElementById('rg-hint-off-next');
+  var nextButton=document.getElementById('btn-next');
+  if(!action)return;
+  action.setAttribute('data-visible',rgGuideMode&&nextButton&&nextButton.style.display!=='none'?'true':'false');
 }
 function updateActiveSlot(){
   slotSeq.forEach(function(c){
@@ -1611,6 +1618,7 @@ function setGameBtns(mode){
     if(re)re.style.display='none';ch.style.display='none';nx.style.display='';
     if(window.GameFlow)setTimeout(function(){GameFlow.start({key:'reading-game',nextButton:nx,delaySeconds:3});},0);
   }
+  rgSyncHintOffAction();
 }
 
 function markOpts(){

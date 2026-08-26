@@ -84,7 +84,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=28">
+<link rel="stylesheet" href="css/shared.css?v=29">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -656,7 +656,8 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   <div class="btn-row">
     <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
     <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
-    <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一字 →</button>
+    <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一題 →</button>
+    <button class="btn btn-secondary gsh-desktop-hint-off" id="tg-hint-off-next" type="button" data-visible="false" onclick="tgChooseGuideMode(false)">關閉提示</button>
   </div>
 
   <div class="retry-hint" id="retry-hint">沒關係～再看看，換一個試試 🌱</div>
@@ -758,7 +759,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=41']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=42']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->

@@ -3372,13 +3372,12 @@ function stepResult() {
       '</div>' : '');
   }
 
-  var isLastSessionWord = session && (session.index + 1 >= session.words.length);
   var nextBtnLabel, nextBtnOnclick;
   if (isMultiSyl && !isLastSyl) {
     nextBtnLabel = '下一個音節 →';
     nextBtnOnclick = 'TF.nextSyllable()';
   } else {
-    nextBtnLabel = session ? (isLastSessionWord ? '來看看我們的成果吧 🎉' : '太棒了，我們繼續 →') : '分析新單字';
+    nextBtnLabel = session ? '下一題 →' : '分析新單字';
     nextBtnOnclick = 'TF.nextWord()';
   }
 
@@ -3420,8 +3419,12 @@ function stepResult() {
     (tfEnMode ? '🔡' : '🔠') + '</button>';
 
   // Lin 2026-07-12: ย้ายปุ่ม "太棒了/看看成果" ขึ้นมาอยู่เหนือส่วน 音節拆解 (ใน sessionBlock) + เอาปุ่ม "🎲 再來 5 字" ออกจากหน้านี้ (ระหว่างเล่น) เหลือแค่หน้าผลสรุปจบรอบ
+  var hintOffBtnHtml = session && tfGuideMode && (!isMultiSyl || isLastSyl)
+    ? '<button type="button" class="tf-result-secondary gsh-desktop-hint-off" data-visible="true" onclick="TF.toggleGuide()">關閉提示</button>'
+    : '';
   var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:10px;">'+
       '<button class="tf-session-next-btn" id="tf-session-next-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_result_next_click\',{category:\'game\'});}catch(e){}'+nextBtnOnclick+'">'+nextBtnLabel+'</button>'+
+      hintOffBtnHtml+
       (session ? '' : '<button class="tf-result-secondary" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_reanalyze_click\',{category:\'game\'});}catch(e){}'+againAct+'">↺ 重新分析</button>')+
     '</div>';
 

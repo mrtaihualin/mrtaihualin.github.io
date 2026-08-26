@@ -70,7 +70,7 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=43/);
+  assert.match(html, /reading-game-app\.min\.js\?v=44/);
 });
 
 test('every Reading syllable uses the locked consonant-vowel-final-tone slot order', () => {
