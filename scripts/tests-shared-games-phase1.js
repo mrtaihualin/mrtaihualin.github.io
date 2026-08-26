@@ -98,6 +98,13 @@ test('active Desktop games keep the canonical level, progress and gameplay order
   assert.match(wordOrder, /class="card gsh-gameplay"[\s\S]{0,500}class="gsh-session-header"[\s\S]{0,500}class="bars-wrap gsh-progress"/, 'Word Order keeps its single-level session status above progress inside gameplay');
 });
 
+test('active ordinary Desktop cards and toolbars keep the locked Gold Standard', () => {
+  assert.match(sharedCss, /data-gsh-game="tone"\] \.gsh-gameplay,[\s\S]{0,220}data-gsh-game="word-order"\] \.gsh-gameplay \{[\s\S]{0,100}border:1\.5px solid rgba\(139,99,16,0\.15\)/, 'active cards must use the approved Tone border');
+  assert.match(sharedCss, /gsh-resume-banner:not\(\[style\*="display:none"\]\):not\(\[style\*="display: none"\]\)[\s\S]{0,420}> \.gsh-gameplay \{[\s\S]{0,80}display:none !important/, 'Resume must remain an exclusive pre-play state');
+  assert.match(sharedCss, /#rg-sound-toggle \{ order:1; \}[\s\S]{0,900}#font-toggle-slot \{ order:5; \}[\s\S]{0,900}#rg-vault-btn-slot \{ order:9; \}/, 'ordinary Desktop tools must follow the canonical order');
+  assert.match(sharedCss, /data-gsh-game="typing"\] \.gsh-learning-tools > #rg-webkbd-toggle \{ display:none !important; \}/, 'Typing must not expose a standalone ordinary-Desktop screen-keyboard tool');
+});
+
 test('shared shell stays bounded and resume actions stay compact on narrow screens', () => {
   assert.match(sharedCss, /\.gsh-shell\s*\{[^}]*max-width:688px[^}]*box-sizing:border-box/);
   assert.match(sharedCss, /\.gsh-gameplay\s*\{[^}]*max-width:640px[^}]*box-sizing:border-box/);
@@ -117,7 +124,7 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${id}"[^>]*>`), `${id}: missing landscape scope marker`);
-    const sharedCssVersion = ['tone', 'reading', 'typing'].includes(id) ? 27 : 26;
+    const sharedCssVersion = ['tone', 'reading', 'typing', 'word-order'].includes(id) ? 28 : 26;
     assert.match(html, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${id}: must load current landscape CSS`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
@@ -342,7 +349,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    const sharedCssVersion = ['tone', 'reading', 'typing'].includes(g.id) ? 27 : 26;
+    const sharedCssVersion = ['tone', 'reading', 'typing', 'wordorder'].includes(g.id) ? 28 : 26;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
     assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=40/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);

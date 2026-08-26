@@ -669,6 +669,33 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game="typing"] .gsh-session-header > .gsh-level-selector {
     flex:none;
   }
+
+  /* D3: active ordinary-Desktop cards keep the approved Tone border and one shared tool order. */
+  body[data-gsh-game="tone"] .gsh-gameplay,
+  body[data-gsh-game="reading"] .gsh-gameplay,
+  body[data-gsh-game="typing"] .gsh-gameplay,
+  body[data-gsh-game="word-order"] .gsh-gameplay {
+    border:1.5px solid rgba(139,99,16,0.15);
+  }
+  body[data-gsh-game] .gsh-shell:has(> .gsh-resume-banner:not([style*="display:none"]):not([style*="display: none"])) > .gsh-session-header,
+  body[data-gsh-game] .gsh-shell:has(> .gsh-resume-banner:not([style*="display:none"]):not([style*="display: none"])) > .gsh-gameplay {
+    display:none !important;
+  }
+  body[data-gsh-game] .gsh-learning-tools > #rg-sound-toggle { order:1; }
+  body[data-gsh-game] .gsh-learning-tools > #rg-pron-toggle { order:2; }
+  body[data-gsh-game] .gsh-learning-tools > #rg-en-toggle { order:3; }
+  body[data-gsh-game] .gsh-learning-tools > #zh-toggle-slot,
+  body[data-gsh-game] .gsh-learning-tools > #wo-zh-word-toggle { order:4; }
+  body[data-gsh-game] .gsh-learning-tools > #font-toggle-slot { order:5; }
+  body[data-gsh-game] .gsh-learning-tools > #tf-guide-toggle,
+  body[data-gsh-game] .gsh-learning-tools > #rg-guide-toggle,
+  body[data-gsh-game] .gsh-learning-tools > #guide-toggle { order:6; }
+  body[data-gsh-game] .gsh-learning-tools > #rg-webkbd-toggle { order:7; }
+  body[data-gsh-game] .gsh-learning-tools > #tf-particle-toggle,
+  body[data-gsh-game] .gsh-learning-tools > #rg-particle-toggle { order:8; }
+  body[data-gsh-game] .gsh-learning-tools > #tf-vault-btn-slot,
+  body[data-gsh-game] .gsh-learning-tools > #rg-vault-btn-slot { order:9; }
+  body[data-gsh-game="typing"] .gsh-learning-tools > #rg-webkbd-toggle { display:none !important; }
 }
 
 .gsh-progress { width:100%; max-width:640px; margin:0 0 12px; }
