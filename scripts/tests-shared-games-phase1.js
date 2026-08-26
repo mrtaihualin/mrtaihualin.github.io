@@ -4,6 +4,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const sharedCss = fs.readFileSync(path.join(root, 'css/shared.css'), 'utf8');
@@ -542,7 +543,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=68/, 'Tone: page must request the rebuilt Result runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=69/, 'Tone: page must request the rebuilt Result runtime version');
 });
 
 test('Tone Mobile Portrait keeps Desktop gameplay with compact touch-only controls', () => {
@@ -580,6 +581,19 @@ test('active Desktop D4-D5 keeps manual question/result flow and optional Hint c
   assert.match(tone.htmlText, /result-v2-actions \.gsh-desktop-hint-off \{ order:1; \}[\s\S]{0,140}result-v2-actions #tf-session-next-btn \{ order:2; \}/, 'Tone Desktop must order Hint-off before Next');
   assert.match(tone.htmlText, /#tf-session-counter \{[\s\S]{0,180}align-items:center; justify-content:center;[\s\S]{0,120}line-height:24px/, 'Tone Desktop counter must be vertically centered');
   assert.match(tone.htmlText, /\.tf-tools-row \{ gap:10px; margin-bottom:10px; \}[\s\S]{0,180}\.gsh-session-header \{ gap:10px; padding:0 0 10px; \}/, 'Tone Desktop utility, level and counter rows must use one vertical rhythm');
+  assert.match(tone.appText, /function tfFinalizeAlignedResultPresentation\(root\)[\s\S]{0,420}tfDesktopOrPortrait\(\)[\s\S]{0,220}data-game-result-meta="v1"[\s\S]{0,220}gsh-result-shared-details/, 'Tone Desktop/Portrait must remove the duplicated shared Result summary after runtime normalization');
+  assert.match(tone.appText, /GameFlow\.enhanceResult\([\s\S]{0,700}tfFinalizeAlignedResultPresentation\(body\)/, 'Tone must clean the shared Result only after the shared runtime has assembled it');
+  assert.match(tone.htmlText, /\.gsh-result-primary-actions \{[\s\S]{0,180}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/, 'Tone Result replay and game-switch actions must use the actual normalized two-button row');
+  const finalizeStart = tone.appText.indexOf('function tfFinalizeAlignedResultPresentation(root)');
+  const finalizeEnd = tone.appText.indexOf('\n}\n\nfunction stepSessionSummary', finalizeStart) + 2;
+  const finalizeResult = vm.runInNewContext(`(${tone.appText.slice(finalizeStart, finalizeEnd)})`, { tfDesktopOrPortrait: () => true });
+  const removedSharedResultNodes = [];
+  finalizeResult({
+    querySelector(selector) {
+      return { remove() { removedSharedResultNodes.push(selector); } };
+    },
+  });
+  assert.deepStrictEqual(Array.from(removedSharedResultNodes), ['[data-game-result-meta="v1"]', '.gsh-result-shared-details'], 'Tone must remove both duplicated runtime blocks after assembly');
   assert.match(tone.appText, /tf-level-select tf-alpha-surface/g, 'Tone alphabet pages must share one complete color surface');
   assert.match(reading.htmlText, /id="btn-next"[^>]*>下一題 →<\/button>[\s\S]{0,260}id="rg-hint-off-next"[^>]+data-visible="false"[^>]+setRgGuideMode\(false\)[^>]*>關閉提示<\/button>/, 'Reading feedback must keep manual Next plus optional Hint-off');
   assert.match(typing.htmlText, /id="btn-next"[^>]*>下一題 →<\/button>[\s\S]{0,260}id="tg-hint-off-next"[^>]+data-visible="false"[^>]+tgChooseGuideMode\(false\)[^>]*>關閉提示<\/button>/, 'Typing feedback must keep manual Next plus optional Hint-off');

@@ -2256,6 +2256,7 @@ function render() {
         var hl=[];
         if(tfSrsLoggedIn()&&window.GAME_ACCOUNT){var gs=GAME_ACCOUNT.getStreak();if(gs)hl.push('🔥 連續 '+gs+' 天');if(session&&session.newBadges&&session.newBadges.length)hl.push('🎖️ '+session.newBadges[session.newBadges.length-1].zh);}
         GameFlow.enhanceResult({key:'tone-result',root:body,actions:actions,correct:roundReport?roundReport.correct_count:correct,total:roundReport?roundReport.total_items:total,highlights:hl,report:roundReport,onReplay:function(){TF._startRandom5();}});
+        tfFinalizeAlignedResultPresentation(body);
       },0);
     }
   }
@@ -2566,6 +2567,14 @@ function tfAttachLoginSummary(){
     RoundReport.setLoginSummary(roundReport,summary);
     if(window.GameFlow)GameFlow.attachReport(document.querySelector('[data-shared-result-ui="v1"]'),roundReport);
   });
+}
+
+function tfFinalizeAlignedResultPresentation(root) {
+  if (!root || !tfDesktopOrPortrait()) return;
+  var duplicatedMeta = root.querySelector('[data-game-result-meta="v1"]');
+  if (duplicatedMeta) duplicatedMeta.remove();
+  var duplicatedDetails = root.querySelector('.gsh-result-shared-details');
+  if (duplicatedDetails) duplicatedDetails.remove();
 }
 
 function stepSessionSummary() {
