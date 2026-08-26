@@ -101,6 +101,19 @@ test('active Desktop games keep the canonical level, progress and gameplay order
   assert.match(wordOrder, /class="card gsh-gameplay"[\s\S]{0,500}class="gsh-session-header"[\s\S]{0,500}class="bars-wrap gsh-progress"/, 'Word Order keeps its single-level session status above progress inside gameplay');
 });
 
+test('Tone keeps one equal four-button Level and alphabet row on Desktop and Portrait', () => {
+  const tone = games.find((g) => g.id === 'tone').htmlText;
+  const header = tone.slice(tone.indexOf('<div class="gsh-session-header">'), tone.indexOf('<div class="gsh-resume-banner"'));
+  assert.strictEqual((header.match(/class="tf-ltab"/g) || []).length, 4, 'Tone header must contain exactly four equal buttons');
+  assert.match(header, /id="tf-ltab-1"[\s\S]*id="tf-ltab-2"[\s\S]*id="tf-ltab-3"[\s\S]*id="tf-alpha-btn"/, 'Tone order must be 初級 → 中級 → 高級 → 字母練習區');
+  assert.strictEqual((tone.match(/id="tf-alpha-btn"/g) || []).length, 1, 'Tone alphabet entry must remain a single button');
+  assert.match(tone, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,700}gsh-session-header > \.gsh-level-selector[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,120}max-width:640px !important/, 'Desktop must show four equal buttons in one full row');
+  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1900}\.tf-level-tabs \{[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,100}max-width:none !important/, 'Portrait must show four equal buttons across the available width');
+  assert.match(tone, /#tf-alpha-btn \{[\s\S]{0,180}font-size:11\.5px !important; white-space:nowrap;[\s\S]{0,100}#tf-alpha-btn \.tf-alpha-icon \{ display:none; \}/, 'Portrait alphabet label must fit without changing the four equal button widths');
+  assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)[\s\S]{0,180}#tf-alpha-btn \{ display:none !important; \}/, 'Mobile Landscape must preserve the accepted three-level Switch surface');
+  assert.doesNotMatch(tone.slice(tone.indexOf('<div class="tf-tools-row">'), tone.indexOf('<div class="gsh-session-header">')), /id="tf-alpha-btn"/, 'Account bar must no longer share width with the alphabet button');
+});
+
 test('active ordinary Desktop cards and toolbars keep the locked Gold Standard', () => {
   assert.match(sharedCss, /data-gsh-game="tone"\] \.gsh-gameplay,[\s\S]{0,220}data-gsh-game="word-order"\] \.gsh-gameplay \{[\s\S]{0,100}border:1\.5px solid rgba\(139,99,16,0\.15\)/, 'active cards must use the approved Tone border');
   assert.match(sharedCss, /gsh-resume-banner:not\(\[style\*="display:none"\]\):not\(\[style\*="display: none"\]\)[\s\S]{0,420}> \.gsh-gameplay \{[\s\S]{0,80}display:none !important/, 'Resume must remain an exclusive pre-play state');

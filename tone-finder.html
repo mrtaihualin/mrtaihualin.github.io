@@ -648,6 +648,10 @@ if (document.fonts && document.fonts.load) {
   @media (min-width:769px) and (min-height:601px) {
     body[data-gsh-game="tone"] .tf-tools-row { gap:10px; margin-bottom:10px; }
     body[data-gsh-game="tone"] .gsh-session-header { gap:10px; padding:0 0 10px; }
+    body[data-gsh-game="tone"] .gsh-session-header > .gsh-level-selector {
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      width:100% !important; max-width:640px !important;
+    }
     body[data-gsh-game="tone"] .gsh-gameplay { margin-top:0; }
     body[data-gsh-game="tone"] #tf-session-counter {
       display:flex; align-items:center; justify-content:center;
@@ -658,13 +662,6 @@ if (document.fonts && document.fonts.load) {
     }
     body[data-gsh-game="tone"] #tf-session-counter .tf-score-hud {
       display:inline-flex; align-items:center; justify-content:center; min-height:24px; box-sizing:border-box;
-    }
-    body[data-gsh-game="tone"] #tf-alpha-btn {
-      background:linear-gradient(135deg,#F3E4C2,#EAD09A);
-      border-color:#C8973A; color:#5A3E0A; font-weight:800;
-    }
-    body[data-gsh-game="tone"] #tf-alpha-btn:hover {
-      background:linear-gradient(135deg,#EAD09A,#DFC079); border-color:#8B6310;
     }
     body[data-gsh-game="tone"] .tf-alpha-surface {
       background:linear-gradient(180deg,#FFF9EC 0%,#F5E6C7 100%);
@@ -714,17 +711,19 @@ if (document.fonts && document.fonts.load) {
     }
     body[data-gsh-game="tone"] #rg-cta-login { min-width:0 !important; }
     body[data-gsh-game="tone"] #tf-howto-btn { min-height:32px; padding:5px 8px; box-sizing:border-box; }
-    body[data-gsh-game="tone"] #tf-alpha-btn {
-      flex:0 0 auto; min-height:34px; padding:5px 9px; font-size:11px; white-space:nowrap;
-      background:linear-gradient(135deg,#F3E4C2,#EAD09A); border-color:#C8973A;
-      color:#5A3E0A; font-weight:800;
-    }
-
     body[data-gsh-game="tone"] .gsh-session-header { gap:6px; padding:0 0 7px; }
-    body[data-gsh-game="tone"] .tf-level-tabs { gap:5px; }
+    body[data-gsh-game="tone"] .tf-level-tabs {
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      width:100% !important; max-width:none !important; gap:5px;
+    }
     body[data-gsh-game="tone"] .tf-ltab {
       min-height:40px; padding:6px 4px; border-width:1.5px; font-size:13px;
     }
+    body[data-gsh-game="tone"] #tf-alpha-btn {
+      padding-left:3px !important; padding-right:3px !important;
+      font-size:11.5px !important; white-space:nowrap;
+    }
+    body[data-gsh-game="tone"] #tf-alpha-btn .tf-alpha-icon { display:none; }
     body[data-gsh-game="tone"] #tf-session-counter,
     body[data-gsh-game="tone"] #tf-session-counter .tf-banner-counter {
       display:flex; align-items:center; justify-content:center; min-height:22px;
@@ -797,6 +796,11 @@ if (document.fonts && document.fonts.load) {
       background:linear-gradient(180deg,#FFF9EC 0%,#F5E6C7 100%);
       border:1.5px solid rgba(139,99,16,.25); border-radius:14px; padding:12px;
     }
+  }
+
+  /* Mobile Landscape keeps the accepted three-level Switch surface unchanged. */
+  @media (orientation:landscape) and (max-width:1024px) and (max-height:600px) {
+    body[data-gsh-game="tone"] #tf-alpha-btn { display:none !important; }
   }
 
   /* ── 依難度漸層配色 difficulty colour-grading ── */
@@ -1749,7 +1753,6 @@ document.addEventListener('contextmenu', function(e){
       </div>
       <div id="rg-cta-login" style="flex:1;min-width:220px;"></div>
     </div>
-    <button class="tf-tool-btn" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlpha()">🔤 字母練習區</button>
   </div>
 
   <!-- Phase C.1 (2026-08-10): #tf-session-counter (進度/🏆分數/🔥combo/黃金米題) ย้ายมาอยู่กลุ่มเดียวกับระดับ初/中/高
@@ -1763,6 +1766,7 @@ document.addEventListener('contextmenu', function(e){
       <button class="tf-ltab" id="tf-ltab-1" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:1});}catch(e){}TF.selectLevel(1)">初級</button>
       <button class="tf-ltab" id="tf-ltab-2" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:2});}catch(e){}TF.selectLevel(2)">中級</button>
       <button class="tf-ltab" id="tf-ltab-3" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:3});}catch(e){}TF.selectLevel(3)">高級</button> <!-- Lin 2026-07-16: เปิดคืนตามที่ Lin สั่ง -->
+      <button class="tf-ltab" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlpha()"><span class="tf-alpha-icon" aria-hidden="true">🔤</span> 字母練習區</button>
     </div>
     <div class="tf-banner-counter" id="tf-session-counter"></div>
   </div>
