@@ -125,7 +125,7 @@ test('Minimum Guest pages park personal transaction clients while preserving sou
   const lego = read('lego.html');
   assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=12/);
   assert.doesNotMatch(lego, /reading-auth\.js/);
-  assert.match(read('vault.html'), /reading-auth\.js\?v=26/);
+  assert.match(read('vault.html'), /reading-auth\.js\?v=27/);
 });
 
 if (!process.exitCode) console.log('\n✅ Phase 1 backend transaction contracts passed (' + passed + ' checks)');
