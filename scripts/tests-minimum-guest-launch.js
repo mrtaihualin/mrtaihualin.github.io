@@ -2,6 +2,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var vm = require('vm');
 var root = path.resolve(__dirname, '..');
 var activePages = [
   'games.html', 'games-practice.html', 'tone-finder.html', 'reading-game.html', 'listening-game.html',
@@ -42,6 +43,36 @@ ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is expli
 ok(gate.indexOf('window.location.replace') !== -1, 'parked direct routes fail closed');
 ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1, 'account and Challenge routes are parked');
 ok(gate.indexOf('vault-btn-slot') !== -1, 'personal save controls are hidden');
+
+function runGateAt(hash) {
+  var replacedUrl = null;
+  var windowStub = {
+    location: {
+      hash: hash,
+      pathname: '/',
+      search: '?guest_launch=1',
+      replace: function (url) { replacedUrl = url; }
+    },
+    history: {
+      state: null,
+      replaceState: function (_state, _title, url) { replacedUrl = url; }
+    }
+  };
+  var documentStub = {
+    title: 'Guest',
+    readyState: 'complete',
+    documentElement: { classList: { add: function () {} } },
+    head: { appendChild: function () {} },
+    createElement: function () { return { setAttribute: function () {}, textContent: '' }; },
+    querySelectorAll: function () { return []; }
+  };
+  vm.runInNewContext(gate, { window: windowStub, document: documentStub });
+  return replacedUrl;
+}
+
+ok(runGateAt('#access_token=redacted&refresh_token=redacted') === '/?guest_launch=1',
+  'OAuth credential fragments are removed before Guest launch continues');
+ok(runGateAt('#articles') === null, 'normal page anchors remain untouched');
 
 var config = read('js/core/supabase-config.js');
 ok(config.indexOf("runtimeMode: 'minimum-guest'") !== -1, 'one reversible runtime mode is canonical');

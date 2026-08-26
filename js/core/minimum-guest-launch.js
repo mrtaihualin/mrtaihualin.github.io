@@ -4,6 +4,24 @@
 (function (window, document) {
   'use strict';
 
+  // OAuth may fall back to the Production Site URL when a preview redirect is
+  // not allow-listed. Minimum Guest mode deliberately does not initialize an
+  // Auth client, so remove any callback credential fragment before doing
+  // anything else. Normal page anchors remain untouched.
+  function clearAuthCallbackFragment() {
+    var fragment = String(window.location.hash || '').replace(/^#/, '');
+    var hasAuthPayload = /(?:^|&)(?:access_token|refresh_token|provider_token|provider_refresh_token|expires_at|expires_in|token_type|error|error_code|error_description)=/.test(fragment);
+    if (!hasAuthPayload) return;
+
+    var cleanUrl = String(window.location.pathname || '/') + String(window.location.search || '');
+    try {
+      window.history.replaceState(window.history.state, document.title, cleanUrl);
+    } catch (error) {
+      window.location.replace(cleanUrl);
+    }
+  }
+
+  clearAuthCallbackFragment();
   window.MRT_MINIMUM_GUEST_LAUNCH = true;
   document.documentElement.classList.add('minimum-guest-launch');
 
