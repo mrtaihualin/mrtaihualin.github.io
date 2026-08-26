@@ -2191,7 +2191,7 @@ function render() {
     // แถวปุ่มใต้คำศัพท์ (อยู่นอก banner เพื่อไม่โดน innerHTML ล้างปุ่ม 🍙 ของ shared.js ทิ้ง) — โชว์คู่กับ banner เสมอ
     var _ctlRow = document.getElementById('tf-word-ctl-row');
     if (_ctlRow) _ctlRow.style.display = S.word ? 'flex' : 'none';
-    document.getElementById('tf-hint').style.display = 'none';
+    document.getElementById('tf-hint').style.display = 'block';
   } else {
     banner.style.display = 'none';
     var _ctlRow2 = document.getElementById('tf-word-ctl-row');
@@ -2202,7 +2202,7 @@ function render() {
     // กันเลขเก่าจากคำถามก่อนหน้าค้างโชว์ทั้งที่ .tf-level-tabs แถบนี้อยู่เหนือการ์ดตลอด ไม่เคยถูกซ่อน
     var _tfCounterEl2 = document.getElementById('tf-session-counter');
     if (_tfCounterEl2) _tfCounterEl2.innerHTML = '';
-    document.getElementById('tf-hint').style.display = (S.step === 'level-select') ? 'block' : 'none';
+    document.getElementById('tf-hint').style.display = 'block';
   }
 
   // Breadcrumb — Lin 2026-07-31: ลบแถบนี้ออกจากเกมเสียงทุกระดับตามที่ Lin สั่ง (ซ่อนถาวร ไม่โชว์อีกต่อไป)

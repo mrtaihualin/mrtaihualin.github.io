@@ -43,12 +43,19 @@ test('Listening keeps its ordinary Desktop Account Bar compact without changing 
 });
 
 test('Tone ordinary Desktop main and secondary headers exactly match the Core game header contract', () => {
-  const tone = games.find((g) => g.id === 'tone').htmlText;
+  const toneGame = games.find((g) => g.id === 'tone');
+  const tone = toneGame.htmlText;
+  const toneApp = toneGame.appText;
+  const toneMin = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.min.js'), 'utf8');
   assert.match(tone, /\.tf-page-header\s*\{[\s\S]{0,100}margin-bottom:\s*10px/);
   assert.match(tone, /\.tf-page-title\s*\{[\s\S]{0,260}font-family:\s*'Noto Serif TC',\s*serif;[\s\S]{0,80}font-size:\s*clamp\(20px,\s*4vw,\s*28px\);[\s\S]{0,80}font-weight:\s*900;[\s\S]{0,80}color:\s*#8B6310;[\s\S]{0,80}letter-spacing:\s*2px;/);
   assert.match(tone, /\.tf-page-hint\s*\{[\s\S]{0,220}font-family:\s*'Noto Sans TC',\s*sans-serif;[\s\S]{0,80}font-size:\s*12px;[\s\S]{0,80}color:\s*#b08040;[\s\S]{0,80}margin-top:\s*3px;/);
   const toneTitleBlock = tone.match(/\.tf-page-title\s*\{([^}]*)\}/)[1];
   assert.doesNotMatch(toneTitleBlock, /margin-(?:top|bottom):/);
+  assert.strictEqual((toneApp.match(/getElementById\('tf-hint'\)\.style\.display\s*=\s*'block'/g) || []).length, 2, 'Tone: secondary header must remain visible in every game state');
+  assert.doesNotMatch(toneApp, /getElementById\('tf-hint'\)\.style\.display\s*=\s*(?:'none'|\(S\.step)/, 'Tone: source runtime must not hide the secondary header');
+  assert.match(toneMin, /getElementById\("tf-hint"\)\.style\.display="block"/, 'Tone: deployed runtime must keep the secondary header visible');
+  assert.doesNotMatch(toneMin, /getElementById\("tf-hint"\)\.style\.display=(?:"none"|"level-select")/, 'Tone: deployed runtime must not hide the secondary header');
 });
 
 test('all five games expose the locked shared header, progress and resume semantics', () => {
@@ -466,7 +473,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=63/, 'Tone: page must request the rebuilt Guest runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=64/, 'Tone: page must request the rebuilt Guest runtime version');
 });
 
 console.log(`\n${passed} shared Phase 1 game-system tests passed.`);
