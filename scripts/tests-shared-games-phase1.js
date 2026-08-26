@@ -568,6 +568,9 @@ test('Tone Mobile Portrait keeps Desktop gameplay with compact touch-only contro
   assert.match(tone.htmlText, /\.sg-tone-btn \{[\s\S]{0,180}width:clamp\(44px,12vw,52px\)/, 'Portrait tone choices must stay compact and tappable');
   assert.match(tone.htmlText, /\.gsh-resume-actions button \{[\s\S]{0,180}min-height:34px/, 'Portrait Resume must stay compact in the Desktop position');
   assert.match(tone.htmlText, /gsh-shell:has\(> \.gsh-resume-banner[^}]+> \.gsh-gameplay \{[\s\S]{0,80}display:none !important/, 'Portrait Resume must remain the same exclusive pre-play state as Desktop');
+  assert.match(tone.htmlText, /\.tf-page \{[\s\S]{0,100}padding-top:10px;/, 'Portrait must not count the fixed navigation height twice above the Tone title');
+  assert.match(tone.htmlText, /\.tf-result-login-card \{[\s\S]{0,180}padding-top:12px !important; padding-bottom:12px !important;[\s\S]{0,100}line-height:1\.5 !important;/, 'Portrait Result login card must keep equal top and bottom spacing');
+  assert.match(tone.htmlText, /\.tf-result-login-card button \{[\s\S]{0,100}display:block; margin:9px auto 0 !important;/, 'Portrait Result login button must stay visibly separated from its copy');
   assert.match(tone.htmlText, /game-switcher\.js\?v=4/, 'Tone must request the Lego-capable switcher');
   assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
 });
