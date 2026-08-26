@@ -657,6 +657,20 @@ body .gsh-shell.tf-page { padding-top:8px; }
   font-family:'Noto Sans TC',sans-serif; font-size:13px !important; font-weight:800;
 }
 
+/* Ordinary Desktop: games with Level always keep Level and round status on two separate rows. */
+@media (min-width:769px) and (min-height:601px){
+  body[data-gsh-game="tone"] .gsh-session-header,
+  body[data-gsh-game="reading"] .gsh-session-header,
+  body[data-gsh-game="typing"] .gsh-session-header {
+    flex-direction:column; flex-wrap:nowrap; gap:6px;
+  }
+  body[data-gsh-game="tone"] .gsh-session-header > .gsh-level-selector,
+  body[data-gsh-game="reading"] .gsh-session-header > .gsh-level-selector,
+  body[data-gsh-game="typing"] .gsh-session-header > .gsh-level-selector {
+    flex:none;
+  }
+}
+
 .gsh-progress { width:100%; max-width:640px; margin:0 0 12px; }
 
 /* Learning helpers remain beside the active content instead of becoming a fourth floating control. */
