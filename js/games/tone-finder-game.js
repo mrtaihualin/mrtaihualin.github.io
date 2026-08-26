@@ -377,7 +377,7 @@ var TF_SCORE = {
 // ===== TF_WORDSCORE (Lin 2026-07-04) — state คะแนนต่อคำ บันได [10,7,4,1,0] · pure logic ทดสอบได้จริง =====
 //  ทำงานบน object ที่มีฟิลด์: currentWordDeduct (ขั้นบันได), stepWrong, stepFreePeekUsed
 //  กติกา (ยืนยันกับ Lin ผ่านหลอดคะแนน 2026-07-04):
-//   • เดาวรรณยุกต์ผิด/กด "ไม่มั่นใจ" ตอนแรก (ก่อน推導) = ฟรี ไม่เรียกที่นี่ (เสียแค่คอมโบ)
+//   • เดาวรรณยุกต์ผิดตอนแรก (ก่อน推導) = หัก 1 ขั้น; กด "ไม่มั่นใจ" ยังฟรีแต่ไม่ได้ first-try
 //   • กดผิดในขั้น推導 (onWrong) = หัก 1 ขั้น + ได้สิทธิ์ "แอบดูฟรี 1 ครั้ง" ในขั้นนั้น
 //   • แอบดู(?) หลังเพิ่งผิดในขั้นนี้ (ครั้งแรก) = ฟรี · แอบดูอื่นๆ = หัก 1 (ไม่นับ "กดผิดจริง")
 //   • หักครบ 4 (แต้มเหลือ 0) = ตาย → เฉลย + SRS รีเซ็ต day1
@@ -1143,6 +1143,7 @@ function tfApplyStreakOnSetComplete() {
 function tfResetWordScoring() {
   if (!session) return;
   session.currentWordMistakes = 0;
+  session.currentWordMistakesTotal = 0; // รวมทุกพยางค์เพื่อให้ Result/SRS ตรงกับการตอบจริง
   session.currentWordDeduction = 0;
   session.currentWordDeduct = 0;      // Lin 2026-07-04: ขั้นบันไดคะแนน (กดผิด+แอบดูที่โดนหัก)
   session.stepWrong = false;          // เพิ่งผิดในขั้น推導ปัจจุบันไหม (คุมสิทธิ์ free peek)
@@ -1553,7 +1554,9 @@ function tfCommitWordAndAdvance(opts) {
   opts = opts || {};
   var entry = session.words[session.index];
   var tone = (S && S.tone != null) ? S.tone : computeTone(entry.word);
-  var mistakes = session.currentWordMistakes || 0;
+  var mistakes = session.currentWordMistakesTotal != null
+    ? session.currentWordMistakesTotal
+    : (session.currentWordMistakes || 0);
   var isMulti = tfCurWordIsMulti();
   // หลายพยางค์: นับ firstTry เฉพาะเมื่อทำครบทุกพยางค์ + ทุกพยางค์ถูกครั้งแรก (กันกด "ต่อ" ข้ามพยางค์แล้วได้ perfect ฟรี)
   var sylCount = (S && S.syllables && S.syllables.length) || (entry.readingTH ? entry.readingTH.split('-').length : 1);
@@ -1952,7 +1955,10 @@ function recordMistake(choiceLabel, errMsg) {
   });
   saveStats(data);
   // Session mistake tracking
-  if (session) session.currentWordMistakes = (session.currentWordMistakes || 0) + 1;
+  if (session) {
+    session.currentWordMistakes = (session.currentWordMistakes || 0) + 1;
+    session.currentWordMistakesTotal = (session.currentWordMistakesTotal || 0) + 1;
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -3280,8 +3286,17 @@ function stepSessionGuess() {
         else tfScoreFirstTry();                          // สเตจ 1: ถูกครั้งแรก +100 (×คอมโบ)
         goToResult(captureN);
       } else {
-        // Lin 2026-07-04: เดาวรรณยุกต์ผิดตอนแรก + กด "🤷 ไม่มั่นใจ" = "ไม่นับกดผิด" (ฟรี) — เสียแค่คอมโบ · คะแนนหักเฉพาะกดผิดในขั้น推導 + ปุ่มแอบดู
-        if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // เดาผิด → ตัดสิทธิ์ first-try + คอมโบขาด
+        // Lin 2026-08-26: เดาเสียงผิดต้องนับผิด 1 ครั้งและลดบันไดคะแนนทันที
+        // (ปุ่ม 不確定 ยังเป็นทางเข้า推導แบบไม่เดาคำตอบ จึงไม่ใช้กฎนี้)
+        if (session) {
+          session.curWordWrongGuess = true;
+          session.combo = 0;
+          if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
+          recordMistake(TONES[captureN] ? TONES[captureN].zh : String(captureN), '聲調選擇錯誤');
+          TF_WORDSCORE.onWrong(session);
+          TF_WORDSCORE.onNextStep(session);
+          tfUpdateWordScoreGauge();
+        }
         // รอบตัดสิน Day 7 หรือ known-check ไม่มี推導; ผิดแล้วรีเซ็ต SRS ทันที
         // รอบปกติยังเข้า推導ทีละขั้นได้ แต่ final-check/known-check ต้องนึกเองโดยไม่มีเครื่องมือช่วย
         // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ก็เฉลยทันทีเหมือนกัน — ไม่มีกฎมาตรฐานให้推導จริง เดินขั้นไปก็สอนผิด

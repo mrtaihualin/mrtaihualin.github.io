@@ -109,6 +109,7 @@ test('Tone keeps one equal four-button Level and alphabet row on Desktop and Por
   assert.match(header, /id="tf-ltab-1"[\s\S]*id="tf-ltab-2"[\s\S]*id="tf-ltab-3"[\s\S]*id="tf-alpha-btn"/, 'Tone order must be 初級 → 中級 → 高級 → 字母練習區');
   assert.strictEqual((tone.match(/id="tf-alpha-btn"/g) || []).length, 1, 'Tone alphabet entry must remain a single button');
   assert.match(tone, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,700}gsh-session-header > \.gsh-level-selector[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,120}max-width:640px !important/, 'Desktop must show four equal buttons in one full row');
+  assert.match(tone, /#tf-session-counter:empty \{\s*display:none; min-height:0; line-height:0;/, 'Tone must remove the empty counter row before Result and detail cards');
   assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1900}\.tf-level-tabs \{[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,100}max-width:none !important/, 'Portrait must show four equal buttons across the available width');
   assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1500}\.gsh-session-header \{ gap:7px; padding:0 0 7px; \}[\s\S]{0,100}\.gsh-gameplay \{ margin-top:0; \}/, 'Portrait top rows must keep one 7px vertical rhythm through the gameplay card');
   assert.match(tone, /#tf-alpha-btn \{[\s\S]{0,180}font-size:11\.5px !important; white-space:nowrap;[\s\S]{0,100}#tf-alpha-btn \.tf-alpha-icon \{ display:none; \}/, 'Portrait alphabet label must fit without changing the four equal button widths');
@@ -539,13 +540,19 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,520}currentWordGuideIntroPending\s*=\s*false[\s\S]{0,320}navigateToInflection\(\)/, 'Tone: Desktop guided Start must bypass tone choice and enter derivation directly');
   assert.match(tone, /guessRow\s*=\s*\(tfDesktopOrPortrait\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice on Desktop or Portrait');
   assert.match(tone, /TF\.skipCurrentWord\(\)[^>]*>跳過<\/button>/, 'Tone: Desktop gameplay must expose neutral 跳過');
+  assert.match(tone, /เดาเสียงผิดต้องนับผิด 1 ครั้ง[\s\S]{0,700}recordMistake\([\s\S]{0,140}TF_WORDSCORE\.onWrong\(session\)[\s\S]{0,100}TF_WORDSCORE\.onNextStep\(session\)/, 'Tone: a wrong initial tone answer must count once and drop the score ladder before derivation');
+  assert.match(tone, /function tfResetWordScoring\(\)[\s\S]{0,220}currentWordMistakesTotal\s*=\s*0/, 'Tone: each new word must reset its total mistake evidence');
+  assert.match(tone, /function recordMistake\([\s\S]{0,900}currentWordMistakesTotal\s*=\s*\(session\.currentWordMistakesTotal \|\| 0\) \+ 1/, 'Tone: every real wrong answer must update the total mistake evidence');
+  assert.match(tone, /function tfCommitWordAndAdvance\(opts\)[\s\S]{0,260}var mistakes = session\.currentWordMistakesTotal/, 'Tone: Result must retain mistake totals across syllables');
   assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
   assert.match(tone, /if \(S\.step === 'session-guess' && !tfCurWordNoTools\(\)\)[\s\S]{0,120}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active question must return to the explicit start gate');
   assert.match(tone, /function tfArmGuideIntroForPageReturn\(\)[\s\S]{0,400}currentWordGuideIntroPending\s*=\s*true/, 'Tone: returning to a preserved page must re-arm the guided-question gate');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
+  assert.match(toneMin, /currentWordMistakesTotal/, 'Tone: deployed minified bundle must preserve the real wrong-answer total');
+  assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=70/, 'Tone: page must request the rebuilt Result runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=71/, 'Tone: page must request the rebuilt Result runtime version');
 });
 
 test('Tone Mobile Portrait keeps Desktop gameplay with compact touch-only controls', () => {

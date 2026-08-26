@@ -657,6 +657,9 @@ if (document.fonts && document.fonts.load) {
       display:flex; align-items:center; justify-content:center;
       min-height:24px; line-height:24px; margin:0;
     }
+    body[data-gsh-game="tone"] #tf-session-counter:empty {
+      display:none; min-height:0; line-height:0;
+    }
     body[data-gsh-game="tone"] #tf-session-counter .tf-banner-counter {
       display:flex; align-items:center; justify-content:center; min-height:24px; line-height:24px;
     }
@@ -764,6 +767,9 @@ if (document.fonts && document.fonts.load) {
     body[data-gsh-game="tone"] #tf-howto-btn { min-height:32px; padding:5px 8px; box-sizing:border-box; }
     body[data-gsh-game="tone"] .gsh-session-header { gap:7px; padding:0 0 7px; }
     body[data-gsh-game="tone"] .gsh-gameplay { margin-top:0; }
+    body[data-gsh-game="tone"] #tf-session-counter:empty {
+      display:none; min-height:0; line-height:0;
+    }
     body[data-gsh-game="tone"] .tf-level-tabs {
       grid-template-columns:repeat(4,minmax(0,1fr));
       width:100% !important; max-width:none !important; gap:5px;
@@ -1975,7 +1981,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=70']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=71']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
