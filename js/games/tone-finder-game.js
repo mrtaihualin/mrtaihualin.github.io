@@ -2596,6 +2596,9 @@ function stepSessionSummary() {
     var tl = TONES[tone] || {};
     var ok = r.is_correct;
     var resultTxt = r.is_skipped ? '跳過' : (ok ? '✓' : '✗ ×'+r.wrong_count);
+    if (tfDesktopOrPortrait() && !r.is_skipped && !ok) {
+      resultTxt = '✗ ' + (r.user_answer || '—') + ' → ' + (r.correct_answer || '—');
+    }
     var resultColor = r.is_skipped ? '#8B6310' : (ok ? '#7ec87e' : '#ff7c7c');
     return '<tr>' +
       '<td style="color:#bbb;font-size:12px;width:24px;">'+(i+1)+'</td>' +
@@ -2610,13 +2613,14 @@ function stepSessionSummary() {
   var totalScore = session.score || 0;
   var bonusAwarded = session.bonusAwarded || 0;
   var isPerfect = !!session.isPerfect;
+  var useAlignedResultLayout = tfDesktopOrPortrait();
   // แสดงคะแนนถ่วงน้ำหนักตามระดับบนหน้าจอ (Lin 2026-07-03): 初×1.5 / 中×2.25 / 高×3
   var levelWeightShown = TF_SCORE_CFG.LEVEL_WEIGHT[selectedLevel] || 1;
   var scoreSummary =
     '<div class="tf-score-summary">' +
       '<div class="tf-score-summary-total">🏆 ' + weightedScore + ' <span>分</span></div>' +
-      (levelWeightShown !== 1 ? '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:#a08a5a;margin-top:-2px;">（原始 ' + totalScore + ' 分 × 等級加成 ' + levelWeightShown + '）</div>' : '') +
-      (bonusAwarded ? '<div class="tf-score-summary-bonus">' +
+      (levelWeightShown !== 1 ? '<div class="tf-score-summary-formula">（原始 ' + totalScore + ' 分 × 等級加成 ' + levelWeightShown + '）</div>' : '') +
+      (!useAlignedResultLayout && bonusAwarded ? '<div class="tf-score-summary-bonus">' +
         (isPerfect ? '🎉 完美通關獎勵 ' : '✅ 完成獎勵 ') + '+' + bonusAwarded + '</div>' : '') +
     '</div>';
   // ── สเตจ 2/3: น้องมีนา + Daily Streak + เป้ารายวัน + แบดจ์ ──
@@ -2627,10 +2631,13 @@ function stepSessionSummary() {
   var minaMsg = tfMinaSay(minaKey);
   var minaBlock = tfMinaBubble(minaMsg, 'big');
 
-  var streakBlock =
-    '<div class="tf-streak-row">' +
-      '<span class="tf-streak-chip">🔥 連續 ' + (stState.streak || 0) + ' 天</span>' +
-    '</div>';
+  var rewardBlock = useAlignedResultLayout
+    ? '<div class="tf-result-reward-row">' +
+        (bonusAwarded ? '<span class="tf-score-summary-bonus">' +
+          (isPerfect ? '🎉 完美通關獎勵 ' : '✅ 完成獎勵 ') + '+' + bonusAwarded + '</span>' : '') +
+        '<span class="tf-streak-chip">🔥 連續 ' + (stState.streak || 0) + ' 天</span>' +
+      '</div>'
+    : '<div class="tf-streak-row"><span class="tf-streak-chip">🔥 連續 ' + (stState.streak || 0) + ' 天</span></div>';
 
   var badgeBlock = '';
   if (session.newBadges && session.newBadges.length) {
@@ -2650,7 +2657,7 @@ function stepSessionSummary() {
   return '<div class="tf-session-summary">' +
     minaBlock +
     scoreSummary +
-    streakBlock +
+    rewardBlock +
     badgeBlock +
     // F1 (2026-08-10): เพิ่ม class gsh-end-score/gsh-end-title (css/shared.css) ให้ตรงกับเกมอื่น — ยังคง class เดิม (tf-sum-score/tf-sum-score-label) ไว้ด้วย ไม่ลบของเดิม ไม่เปลี่ยนเนื้อหา/ตำแหน่ง
     '<div class="tf-sum-score gsh-end-score">'+perfectCount+' / '+total+'</div>' +
@@ -2670,7 +2677,7 @@ function stepSessionSummary() {
         '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_summary_login_click\',{category:\'game\'});}catch(e){}tfCtaLogin()" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
       '</div>') +
     // F1 (2026-08-10): แถวปุ่มท้ายผลลัพธ์ เปลี่ยนจาก inline flex style เดิม → class gsh-end-actions (shared.css: column บนมือถือ, row บนจอใหญ่ ≥600px) เพิ่มปุ่ม 查看錯題 (F2) เข้าแถวเดียวกัน — ปุ่ม/ลิงก์เดิมทุกปุ่มยังอยู่ครบ ไม่มีปุ่มไหนถูกลบ ไม่เปลี่ยน onclick/href ใดๆ เลย
-    '<div class="gsh-end-actions">' +
+    '<div class="gsh-end-actions tf-result-actions">' +
       '<button class="tf-session-next-btn" id="tf-pdf-btn" data-game-result-print="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 列印／儲存學習紀錄</button>' +
       mistakeBtnHtml +
       '<button class="tf-restart-btn" data-game-result-replay="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_replay_click\',{category:\'game\'});}catch(e){}TF._startRandom5()">再玩一輪</button>' +
