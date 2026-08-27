@@ -11,6 +11,15 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const authWidget = read('js/core/auth-widget.js');
+const authWidgetConsumers = [
+  'leaderboard.html',
+  'listening-board.html',
+  'my-progress.html',
+  'reading-board.html',
+  'typing-board.html',
+  'vault.html',
+  'word-order-board.html',
+];
 const accountUnlink = read('supabase/functions/account-unlink/index.ts');
 const migrationName = fs.readdirSync(path.join(root, 'supabase/migrations'))
   .find((name) => name.endsWith('_phase1_account_audit_rpc_hardening.sql'));
@@ -52,6 +61,12 @@ check('fresh verified user replaces cached UI user before link audit', () => {
   const auditAt = callback[0].indexOf("callAccountFn('account-unlink'", refreshAt);
   assert.ok(refreshAt >= 0 && changeAt > refreshAt && auditAt > changeAt,
     'verified user refreshes listeners before audit');
+});
+
+check('all existing Auth widget consumers load the fresh callback cache binding', () => {
+  for (const file of authWidgetConsumers) {
+    assert.match(read(file), /js\/core\/auth-widget\.js\?v=17/, file + ' uses auth-widget v17');
+  }
 });
 
 check('Edge recognizes only the locked Facebook link-audit provider', () => {

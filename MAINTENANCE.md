@@ -5,7 +5,7 @@
 ## 2026-08-27 — LOGIN-L7 Facebook link callback fresh-user verification (`PASS_LOCAL / HIDDEN_PREVIEW_PENDING`)
 
 - Corrected the Facebook manual-link callback to verify the current user and identities with Auth before deciding success, failure or an account switch. This prevents the post-OAuth callback from treating the stale pre-redirect session identity list as a failed link after Auth already attached Facebook.
-- The verified user now refreshes the shared Auth UI state before the existing server-owned `audit_link` request. The browser still supplies only the locked Facebook event/provider, account-switch detection remains fail-closed, and an unavailable verification reports an uncertain state without encouraging another link attempt.
+- The verified user now refreshes the shared Auth UI state before the existing server-owned `audit_link` request. The browser still supplies only the locked Facebook event/provider, account-switch detection remains fail-closed, and an unavailable verification reports an uncertain state without encouraging another link attempt. The seven existing consumers advance only their shared Auth cache binding from v16 to v17 so the corrected callback is not masked by an older browser cache.
 - Added focused fresh-user, same-account, non-stale-provider and UI-before-audit regression coverage. Login audit integrity passed 12/12 and the complete site gate passed. Facebook is currently restored on the same Staging test account; no account mutation, Google/LINE/Production change, Public Login enablement or non-Login feature change is part of this source Delta.
 
 **Prior update: 2026-08-27 Asia/Bangkok** — Six-game automatic Login popup removal
