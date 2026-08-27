@@ -234,6 +234,13 @@ test('shared font control binds after asynchronous Core 5 game startup', () => {
   }
 });
 
+test('Tone question words and advanced sentences both follow the shared font mode', () => {
+  const tone = games.find((g) => g.id === 'tone');
+  assert.match(tone.htmlText, /body\.tf-modern-font \.tf-banner-word[\s\S]{0,700}Noto Sans Thai/, 'Tone: initial and intermediate question words must switch to Modern');
+  assert.match(tone.htmlText, /body\.tf-modern-font \.tf-adv-sent-main[\s\S]{0,500}Noto Sans Thai/, 'Tone: advanced question sentences must switch to Modern');
+  assert.match(tone.appText, /mainBoxHtml = '<div class="tf-adv-sent-main">'/, 'Tone: advanced questions must retain the covered sentence class');
+});
+
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');

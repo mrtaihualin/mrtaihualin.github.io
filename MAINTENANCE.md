@@ -2205,3 +2205,9 @@ node scripts/check-site.js
 - Preserved the locked mapping `Standard = Sarabun` and `Modern = Noto Sans Thai`, but changed the shared font control to derive its label, `aria-pressed`, and explicit mode from the live game class instead of a cached boolean.
 - The shared control now resynchronizes after game-owned class changes and across tabs using the existing `rg_modern_font` preference; gameplay is not reloaded or reset.
 - Rebuilt the shared runtime, advanced the generated-page cache key to v42, and added regression coverage. No game UI layout, Database, Auth, Edge Function, user data, Listening availability, or Mobile Landscape source changed.
+
+# 2026-08-27 — Complete Tone question font coverage
+
+- Audited the Thai question-word and question-sentence selectors across the game set. Reading, Typing, Word Order, Lego, and Challenge already use selectors covered by their Standard/Modern rules.
+- Added the missing Tone `tf-adv-sent-main` selector so 高級 question sentences now switch with the same `Standard = Sarabun` and `Modern = Noto Sans Thai` preference already used by 初級/中級 question words.
+- Kept the toolbar control icon-only and made no layout, gameplay, Database, Auth, Edge Function, user-data, Listening-availability, or Mobile Landscape change.
