@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-27 Asia/Bangkok** — Tone floating controls horizontal layout
+**Updated: 2026-08-27 Asia/Bangkok** — Six-game automatic Login popup removal
+
+## 2026-08-27 — Six-game automatic Login cap popup removal (`PASS_LOCAL / PREVIEW_PENDING`)
+
+- Removed the shared automatic bottom popup that announced exhausted free content and prompted Guest players to log in. It can no longer be created on Tone, Reading, Listening, Typing or Word Order; Lego never used this popup and executable coverage keeps it absent there too.
+- Existing non-popup account/login controls remain available. Content caps, cap-hit analytics, game loading, gameplay, Listening `即將開幕`, Auth behavior and all Database/Edge/user-data contracts are unchanged.
+- Removed the obsolete Mobile Landscape placement rule and advanced the five consuming pages to `game-content-client.js?v=11`. Targeted and full verification plus shareable preview remain pending.
+
+**Prior update: 2026-08-27 Asia/Bangkok** — Tone floating controls horizontal layout
 
 ## 2026-08-27 — Tone Desktop + Mobile Portrait floating controls (`PASS_LOCAL / PREVIEW_PASS / HUMAN_REVIEW_PENDING`)
 
