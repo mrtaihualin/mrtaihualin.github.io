@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-26 Asia/Bangkok** — Login callback credential-fragment fail-closed fix
+**Updated: 2026-08-27 Asia/Bangkok** — LOGIN-L5 Login-only candidate correction
+
+## 2026-08-27 — LOGIN-L5 Login-only candidate correction (`PASS_LOCAL / HIDDEN_PREVIEW_PENDING`)
+
+- Hidden the parked Leaderboard/Progress links only on the exact Login candidate badge through a reversible `showParkedAccountLinks: false` option; the underlying routes and systems remain intact.
+- Replaced score/Leaderboard promises in the guest entry and Login modal with neutral Login-only copy while preserving Email OTP, Google, Facebook, LINE and the existing account-method safety warning.
+- Advanced `reading-auth.js` on Vault from v27 to v28 and `auth-widget.js` on its seven existing consumers from v15 to v16. Public Login and the Minimum Guest gate remain unchanged.
+
+**Prior update: 2026-08-26 Asia/Bangkok** — Login callback credential-fragment fail-closed fix
 
 ## 2026-08-26 — Login callback credential-fragment fail-closed (`PASS_LOCAL / RELEASE_PENDING`)
 
