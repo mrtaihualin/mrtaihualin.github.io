@@ -4,7 +4,7 @@
 // ใช้ session ร่วมกับเกมเสียง (same-origin) → ล็อกอินที่เกมไหนก็รู้จักกัน
 // guard เต็ม: ถ้า Supabase/ตารางยังไม่พร้อม → เกมเล่นได้ปกติ ไม่พัง
 // ต้องโหลดหลัง: supabase-js CDN, supabase-config.js, game-account.js, auth-widget.js
-// Lin 2026-06-27 (v2: badge เหมือนเกมเสียง + ปุ่ม 登入保存分數)
+// Lin 2026-06-27 (v2: badge เหมือนเกมเสียง + ปุ่ม Login-only)
 // Lin 2026-07-02 (v3: แยกเกม reading/typing + กัน email แอดมิน + retry ถ้าคอลัมน์ game ยังไม่มี)
 // Lin 2026-07-03 (v4: badge (ชื่อ/✏️/🏆/📊/登出) เปลี่ยนไปใช้ window.SITE_AUTH ตัวกลาง
 //   — เดิมมี client + session listener แยกของตัวเอง + editor เป็น prompt() ธรรมดา
@@ -128,17 +128,21 @@
   }
 
   // ── badge (ล็อกอินแล้ว): ให้ window.SITE_AUTH (auth-widget.js) วาดให้ — เหมือนกับทุกหน้า ──
-  // ── ยังไม่ล็อกอิน: ปุ่ม "🔑 登入保存分數" ของหน้านี้เอง (เปิด modal OTP/Google ด้านล่าง) ──
+  // ── ยังไม่ล็อกอิน: ปุ่ม Login-only ของหน้านี้เอง (เปิด modal OTP/Google ด้านล่าง) ──
   function render() {
     var el = slot(); if (!el) return;
     if (API.user) {
-      // ล้างปุ่ม "🔑 登入保存分數" เดิม (ถ้ายังค้างจากตอนยังไม่ล็อกอิน) ก่อน — เหลือแค่ badge ของ SITE_AUTH
+      // ล้างปุ่ม Login-only เดิม (ถ้ายังค้างจากตอนยังไม่ล็อกอิน) ก่อน — เหลือแค่ badge ของ SITE_AUTH
       // (กันโชว์ซ้อนกันสองอัน: ปุ่มเดิม + badge ใหม่) LIN 2026-07-03
       Array.prototype.slice.call(el.children).forEach(function (child) {
         if (child.id !== 'sa-badge-rg-login-slot') child.remove();
       });
       if (window.SITE_AUTH && window.SITE_AUTH.ready) {
-        window.SITE_AUTH.renderBadge('rg-login-slot', { leaderboardHref: boardHref(), progressHref: 'my-progress.html' });
+        window.SITE_AUTH.renderBadge('rg-login-slot', {
+          leaderboardHref: boardHref(),
+          progressHref: 'my-progress.html',
+          showParkedAccountLinks: false
+        });
       }
     } else {
       // v2 (Lin 2026-07-10): หน้าเกม (reading/typing/word-order/lego/tone-finder) มีแบนเนอร์เหลือง "先玩玩看...登入解鎖"
@@ -150,7 +154,7 @@
         'background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;border:none;border-radius:20px;' +
         'padding:6px 16px;cursor:pointer;font-size:12.5px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;' +
         'box-shadow:0 2px 8px rgba(139,99,16,0.28);letter-spacing:0.3px;transition:filter .15s;"' +
-        ' onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">🔑 登入保存分數</button>';
+        ' onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">🔑 登入</button>';
       var b = document.getElementById('rg-login-btn');
       if (b) b.onclick = doLogin;
     }
@@ -274,7 +278,7 @@
     // v9 (LIN 2026-07-25): เตือน "ครั้งที่แล้วล็อกอินด้วยอะไร" — กันสับสนไปกดคนละช่องทางแล้วได้บัญชีใหม่ (คะแนนหาย)
     var lastProvider = getLastProvider();
     var lastProviderHint = lastProvider
-      ? '<div style="margin:0 0 14px;background:#EAF4EC;border:1px solid #A9D3B4;border-radius:10px;padding:8px 12px;font-size:12.5px;color:#2d6a4f;line-height:1.5;">💡 上次你是用 <b>' + esc(providerLabel(lastProvider)) + '</b> 登入的，建議用同一種方式，分數才接得上</div>'
+      ? '<div style="margin:0 0 14px;background:#EAF4EC;border:1px solid #A9D3B4;border-radius:10px;padding:8px 12px;font-size:12.5px;color:#2d6a4f;line-height:1.5;">💡 上次你是用 <b>' + esc(providerLabel(lastProvider)) + '</b> 登入的，建議用同一種方式，避免登入到不同帳號</div>'
       : '';
     // Phase 1 human E2E (2026-08-16): ผู้เล่นจริงแยก "ล็อกอิน" กับ "เชื่อมช่องทางเพิ่ม" ไม่ออก
     // คำเตือนนี้ต้องเห็นทุกครั้ง แม้ logout จะล้าง last-provider hint เพื่อความเป็นส่วนตัวบนเครื่องร่วมกัน
@@ -286,9 +290,9 @@
     rgGate.innerHTML =
       '<div style="position:relative;background:#fff;max-width:380px;width:100%;max-height:88vh;overflow-y:auto;border-radius:18px;padding:30px 26px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;">' +
       '<button id="rg-x" aria-label="關閉" style="position:absolute;top:10px;right:12px;border:none;background:none;font-size:20px;line-height:1;color:#C3B594;cursor:pointer;">✕</button>' +
-      '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🏆</div>' +
-      '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入排行榜</h2>' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">登入後分數<b>同步保存</b>、上<b>排行榜</b>，換手機也記得你！</p>' +
+      '<div style="font-size:40px;line-height:1;margin-bottom:10px;">🔐</div>' +
+      '<h2 style="margin:0 0 6px;font-size:20px;color:#5C4410;font-weight:800;">登入</h2>' +
+      '<p style="margin:0 0 16px;font-size:14px;color:#8B7340;line-height:1.6;">使用 Email 驗證碼，或選擇下方方式登入。</p>' +
       lastProviderHint +
       accountMethodWarning +
       '<input id="rg-email" type="email" inputmode="email" autocomplete="email" placeholder="輸入 Email" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5D9B8;border-radius:10px;font-size:15px;color:#5C4410;outline:none;">' +

@@ -988,6 +988,9 @@
     }
     var leaderboardHref = opts.leaderboardHref || 'leaderboard.html';
     var progressHref = opts.progressHref || 'my-progress.html';
+    var parkedAccountLinksHTML = opts.showParkedAccountLinks === false ? '' :
+      '<a href="' + esc(leaderboardHref) + '" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
+      '<a href="' + esc(progressHref) + '" title="進度" style="text-decoration:none;font-size:13px;">📊</a>';
 
     el.style.display = anyModalOpen() ? 'none' : 'inline-flex';
     el.innerHTML =
@@ -998,8 +1001,7 @@
       '<span class="sa-nick" title="點此編輯個人檔案" style="color:#5C4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">' + esc(displayName) + '</span>' +
       pinHTML +
       '<button class="sa-edit" title="編輯" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>' +
-      '<a href="' + esc(leaderboardHref) + '" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
-      '<a href="' + esc(progressHref) + '" title="進度" style="text-decoration:none;font-size:13px;">📊</a>' +
+      parkedAccountLinksHTML +
       '<button class="sa-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
       'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>' +
       '</div>';

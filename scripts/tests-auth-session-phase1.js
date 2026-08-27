@@ -226,6 +226,14 @@ async function test(label, fn) {
     assert.ok(/shouldCreateUser: true/.test(otpSource));
   });
 
+  await test('Login-only candidate hides parked score, leaderboard and progress controls', async () => {
+    assert.doesNotMatch(otpSource, /登入保存分數|登入排行榜|登入後分數/);
+    assert.match(otpSource, />🔑 登入<\/button>/);
+    assert.match(otpSource, /<h2[^>]*>登入<\/h2>/);
+    assert.match(otpSource, /showParkedAccountLinks: false/);
+    assert.match(source, /opts\.showParkedAccountLinks === false \? ''/);
+  });
+
   await test('Google login always opens account chooser for safe account switching', async () => {
     const oauthFlow = otpSource.slice(otpSource.indexOf('function oauthLogin'), otpSource.indexOf('function randomToken'));
     assert.match(oauthFlow, /supabaseProvider === 'google'/);
