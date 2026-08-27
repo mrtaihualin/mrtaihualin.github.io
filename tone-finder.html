@@ -43,7 +43,7 @@
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
 <script src="js/games/word-menu.js?v=9"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
 <script src="js/core/network-guard.js?v=1"></script>
-<script src="js/games/game-content-client.js?v=10"></script>
+<script src="js/games/game-content-client.js?v=11"></script>
 <script src="data/tone-engine.js?v=3"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -632,6 +632,32 @@ if (document.fonts && document.fonts.load) {
   /* Desktop Core-game contract: Tone never renders the shared site announcement. */
   body[data-gsh-game="tone"] > .avail-band { display:none !important; }
 
+  /* Tone Desktop + Mobile Portrait: keep the three floating controls on one row,
+     with both popup menus anchored above it. The short-screen landscape surface
+     is intentionally excluded and remains governed by css/shared.css. */
+  @media (min-width:1025px),
+         (min-width:769px) and (min-height:601px),
+         (max-width:768px) and (orientation:portrait) {
+    body[data-gsh-game="tone"] #cookieConsentBanner {
+      z-index:100100 !important;
+    }
+    body[data-gsh-game="tone"] .rg-ctl-wrap {
+      flex-direction:row !important;
+      align-items:center !important;
+      gap:8px !important;
+    }
+    body[data-gsh-game="tone"] .rg-ctl-wrap > #game-switcher,
+    body[data-gsh-game="tone"] .rg-ctl-wrap > .grw-menu {
+      position:absolute !important;
+      right:0 !important;
+      bottom:calc(100% + 8px) !important;
+      top:auto !important;
+      left:auto !important;
+      margin:0 !important;
+      transform:none !important;
+    }
+  }
+
   /* Cover both tall Desktop and wide-but-short Desktop without touching mobile
      Portrait or the <=1024px mobile-landscape surface. */
   @media (min-width:1025px), (min-width:769px) and (min-height:601px) {
@@ -832,7 +858,6 @@ if (document.fonts && document.fonts.load) {
     body[data-gsh-game="tone"] .gsh-learning-tools .gsh-learning-tool button,
     body[data-gsh-game="tone"] .gsh-learning-tools button.gsh-learning-tool,
     body[data-gsh-game="tone"] .word-ctl-btn { min-width:36px; min-height:36px; padding:5px; }
-    body[data-gsh-game="tone"] .rg-ctl-wrap { gap:4px !important; }
     body[data-gsh-game="tone"] .rg-ctl-wrap > button { min-width:40px; min-height:40px; padding:6px; }
 
     body[data-gsh-game="tone"] .result-v2 { padding:2px 0 4px; }

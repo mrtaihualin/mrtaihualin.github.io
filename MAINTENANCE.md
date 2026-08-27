@@ -1,6 +1,23 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-27 Asia/Bangkok** — LOGIN-L5 Login-only candidate correction
+**Updated: 2026-08-27 Asia/Bangkok** — Six-game automatic Login popup removal
+
+## 2026-08-27 — Six-game automatic Login cap popup removal (`PASS_LOCAL / HUMAN_PASS / RELEASE_PENDING`)
+
+- Removed the shared automatic bottom popup that announced exhausted free content and prompted Guest players to log in. It can no longer be created on Tone, Reading, Listening, Typing or Word Order; Lego never used this popup and executable coverage keeps it absent there too.
+- Existing non-popup account/login controls remain available. Content caps, cap-hit analytics, game loading, gameplay, Listening `即將開幕`, Auth behavior and all Database/Edge/user-data contracts are unchanged.
+- Removed the obsolete Mobile Landscape placement rule and advanced the five consuming pages to `game-content-client.js?v=11`. Targeted coverage, the full 1,015-file site gate and local browser smoke on all six game pages at Desktop 1280×720 and Portrait 390×844 pass with no popup node or removed copy rendered; Lin accepted this removal.
+
+**Prior update: 2026-08-27 Asia/Bangkok** — Tone floating controls horizontal layout
+
+## 2026-08-27 — Tone Desktop + Mobile Portrait floating controls (`PASS_LOCAL / PREVIEW_PASS / HUMAN_PASS / RELEASE_PENDING`)
+
+- Tone Desktop and Mobile Portrait now place the existing game switcher, focus/fullscreen and More controls in one horizontal row. Both existing dropdown panels are anchored above that row.
+- The first-visit Cookie consent banner now remains in the top stacking layer above those controls and either open dropdown, so its copy and decision buttons cannot be covered.
+- The change is scoped only to Tone ordinary Desktop and Mobile Portrait. The short-screen Mobile Landscape media boundary and its implementation files remain unchanged; no gameplay, Listening availability, Auth, Database, Edge Function or user-data behavior changed.
+- Targeted coverage and the full site gate pass. Netlify Preview `pr87-cookie-layer-preview` loads live Tone content and passes browser checks at Desktop 1280×720 and Portrait 390×844: the three controls stay horizontal, both menus open upward after consent, and first-visit Cookie consent stays above their `100000` stacking layer while its decision buttons remain clickable. The existing 844×390 Mobile Landscape position remains unchanged; Lin accepted the preview.
+
+**Prior update: 2026-08-27 Asia/Bangkok** — LOGIN-L5 Login-only candidate correction
 
 ## 2026-08-27 — LOGIN-L5 Login-only candidate correction (`PASS_LOCAL / HIDDEN_PREVIEW_PENDING`)
 

@@ -857,12 +857,6 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game] .gsh-progress,
   body[data-gsh-game] #mina-toast,
   body[data-gsh-game] #tf-mina-toast { display:none !important; }
-  body[data-gsh-game] #gc-cap-banner {
-    top:50% !important; right:31% !important; bottom:auto !important; left:31% !important;
-    width:auto !important; max-width:none !important; padding:8px !important;
-    transform:translateY(-50%); border-radius:12px; z-index:121 !important;
-  }
-
   /* Existing rare shell controls stay in one top-centre row. */
   body[data-gsh-game] .rg-ctl-wrap {
     position:fixed !important; z-index:90; top:var(--gsh-safe-t); left:50%;

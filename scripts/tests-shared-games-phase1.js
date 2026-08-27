@@ -150,7 +150,7 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,260}top:var\(--gsh-safe-t\); left:50%/);
   assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,520}flex-direction:row !important/);
   assert.match(sharedCss, /#mina-toast,[\s\S]{0,100}#tf-mina-toast \{ display:none !important; \}/);
-  assert.match(sharedCss, /#gc-cap-banner \{[\s\S]{0,260}top:50% !important;[\s\S]{0,260}left:31% !important/);
+  assert.doesNotMatch(sharedCss, /#gc-cap-banner/, 'removed Login cap popup must not retain a Landscape presentation');
   assert.match(sharedCss, /\.gsh-resume-banner \{[\s\S]{0,300}top:50%; left:24%; right:24%/);
   assert.match(sharedCss, /> footer,/);
   assert.match(sharedCss, /\.rg-tools-row,[\s\S]{0,500}max-width:29% !important/);
@@ -202,6 +202,26 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
   assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=42/, 'Listening must load the current shared mapping version');
+});
+
+test('all game pages permanently omit the automatic Login cap popup', () => {
+  const gameContentClient = fs.readFileSync(path.join(root, 'js/games/game-content-client.js'), 'utf8');
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  assert.doesNotMatch(gameContentClient, /gc-cap-banner|showCapBanner|gc_cap_banner_shown|gc-cap-login-btn/);
+  assert.doesNotMatch(gameContentClient, /免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
+  for (const g of games) {
+    assert.doesNotMatch(g.htmlText, /gc-cap-banner/, `${g.id}: removed Login popup marker remains`);
+    assert.match(g.htmlText, /game-content-client\.js\?v=11/, `${g.id}: must load the popup-free game content client`);
+  }
+  assert.doesNotMatch(legoHtml, /gc-cap-banner|免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
+});
+
+test('Tone Desktop and Mobile Portrait keep all three controls horizontal with menus opening upward', () => {
+  const tone = games.find((g) => g.id === 'tone').htmlText;
+  assert.match(tone, /#cookieConsentBanner \{\s*z-index:100100 !important;/, 'Tone cookie consent must stay above the floating controls and their menus');
+  assert.match(tone, /@media \(min-width:1025px\),\s*\(min-width:769px\) and \(min-height:601px\),\s*\(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,360}\.rg-ctl-wrap \{[\s\S]{0,140}flex-direction:row !important;[\s\S]{0,100}align-items:center !important;/);
+  assert.match(tone, /\.rg-ctl-wrap > #game-switcher,\s*body\[data-gsh-game="tone"\] \.rg-ctl-wrap > \.grw-menu \{[\s\S]{0,260}position:absolute !important;[\s\S]{0,120}bottom:calc\(100% \+ 8px\) !important;/);
+  assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/, 'Tone must retain the separate Mobile Landscape boundary');
 });
 
 test('all games omit the removed leave-game control and dialog', () => {
